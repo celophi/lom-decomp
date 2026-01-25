@@ -5,4 +5,7 @@
 disc/*
 
 # Assembly output folder from splat
-asm
+asm/
+
+# Linker scripts and auto-generated undefined symbols/functions lists
+linker/

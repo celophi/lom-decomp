@@ -13,7 +13,7 @@ options:
   build_path: build
   # create_asm_dependencies: True
 
-  ld_script_path: slus_010.13.ld
+  ld_script_path: linker/slus_010.13.ld
   ld_dependencies: True
 
   find_file_boundaries: False
@@ -27,12 +27,12 @@ options:
   # auto_link_sections: [".data", ".rodata", ".bss"]
 
   symbol_addrs_path:
-    - symbol_addrs.txt
+    - config/symbol_addrs.txt
   reloc_addrs_path:
-    - reloc_addrs.txt
+    - config/reloc_addrs.txt
 
-  undefined_funcs_auto_path: undefined_funcs_auto.txt
-  undefined_syms_auto_path: undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/undefined_syms_auto.txt
 
   extensions_path: tools/splat_ext
 
@@ -58,7 +58,11 @@ segments:
     subsegments:
       # .rdata (read-only data before code)
       # file offset 0x800 → VRAM 0x80010000 to 0x80010d57
-      - [0x800, rodata, early_rdata] 
+      # Note that splat detected some jump tables here and suggested splitting them into their own sections.
+      - [0x800, rodata, rodata_800] 
+      - [0x844, rodata, rodata_844]
+      - [0xA50, rodata, rodata_a50]
+      - [0xB44, rodata, rodata_b44]
 
       # .text (code/functions)
       # file offset 0xd58 → VRAM 0x80010d58 to 0x80035197
