@@ -35,7 +35,8 @@ Legend of Mana Decompilation Project
         binutils-mipsel-linux-gnu \
         make python3
     ```
-7. Build C files
+7. Build
     ```bash
-    mipsel-linux-gnu-gcc -Iinclude -mips1 -mfp32 -mno-abicalls -fno-pic -mno-shared -c src/main.c -o build/asm/main.o
+    make clean
+    make
     ```
