@@ -15,7 +15,7 @@ OBJCOPY       := $(CROSS)objcopy
 
 # Flags - tune these to match your game's original compiler settings
 CFLAGS        := -Iinclude -O2 -mips1 -mfp32 -mno-abicalls -fno-pic -mno-shared \
-                 -G 0 -funsigned-char -fno-common \
+                 -G 4 -funsigned-char -fno-common \
                  -nostdinc -nostdlib -fno-builtin -fomit-frame-pointer \
                  -Wall
 

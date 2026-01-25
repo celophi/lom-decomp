@@ -56,7 +56,7 @@ segments:
       - [0x800, c, main]
 
       # .data (initialized)
-      - [0x25998, data, initialized]
+      - [0x25990, data, initialized]
 
       # .sdata (small initialized, GP-relative)
       - [0x2f414, sdata, gp_data]
