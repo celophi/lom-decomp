@@ -3,7 +3,7 @@
 # ---------------- Configuration ----------------
 
 GAME          := slus_010.13
-TARGET        := $(GAME).elf
+TARGET        := build/$(GAME).elf
 MAPFILE       := build/$(GAME).map
 
 # Toolchain (adjust if using a different prefix, e.g. mips-linux-gnu-)
@@ -48,11 +48,8 @@ C_OBJECTS     := $(patsubst %.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
 # NONMATCH_OBJ  := $(patsubst %.s,$(BUILD_DIR)/%.o,$(NONMATCH_ASM))
 
 # Data / header asm
+# Note: rodata files are NOT here - they're included in main.c via inline asm
 OTHER_ASM     := $(ASM_DIR)/header.s \
-                 $(ASM_DIR)/data/800.rodata.s \
-                 $(ASM_DIR)/data/844.rodata.s \
-                 $(ASM_DIR)/data/A50.rodata.s \
-                 $(ASM_DIR)/data/B44.rodata.s \
                  $(ASM_DIR)/data/initialized.data.s \
                  $(ASM_DIR)/data/gp_data.sdata.s \
                  $(ASM_DIR)/data/sbss.sbss.s \

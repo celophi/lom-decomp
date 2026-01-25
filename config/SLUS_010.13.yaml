@@ -52,24 +52,17 @@ segments:
     vram: 0x80010000
     bss_size: 0x11050
     subsegments:
-      # .rodata (read-only data before code)
-      - [0x800, rodata]
-      - [0x844, rodata]
-      - [0xA50, rodata]
-      - [0xB44, rodata]
-
-      # .text (code/functions)
-      - [0xd58, c, main]
+      # Rodata and text together in one C file (like the original compilation)
+      - [0x800, c, main]
 
       # .data (initialized)
       - [0x25998, data, initialized]
 
-      # .sdata (small initialized, GP-relative) - only 12 bytes
+      # .sdata (small initialized, GP-relative)
       - [0x2f414, sdata, gp_data]
-      # Explicitly end sdata here (next segment starts at offset after sdata)
       - [0x2f420]
       
-      # BSS - no file data, only VRAM
+      # BSS
       - { vram: 0x8003EC20, type: sbss, name: sbss }
       - { vram: 0x8003EC88, type: bss, name: bss }
   

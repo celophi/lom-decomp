@@ -1,6 +1,6 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/main", func_80010558);
+INCLUDE_ASM("asm/nonmatchings/main", func_80010000);
 
 INCLUDE_ASM("asm/nonmatchings/main", func_80010D58);
 
