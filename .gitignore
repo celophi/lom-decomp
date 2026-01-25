@@ -9,3 +9,6 @@ asm/
 
 # Linker scripts and auto-generated undefined symbols/functions lists
 linker/
+
+# Build output folder
+build/
