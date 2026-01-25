@@ -21,3 +21,21 @@ Legend of Mana Decompilation Project
     ```bash
     splat split config/SLUS_010.13.yaml
     ```
+
+5. Install WSL and dependencies
+    ```bash
+    wsl --install
+    ```
+6. On Ubuntu-22.04
+    ```bash
+    sudo apt update
+    sudo apt install -y \
+        build-essential \
+        gcc-mipsel-linux-gnu \
+        binutils-mipsel-linux-gnu \
+        make python3
+    ```
+7. Build C files
+    ```bash
+    mipsel-linux-gnu-gcc -Iinclude -mips1 -mfp32 -mno-abicalls -fno-pic -mno-shared -c src/main.c -o build/asm/main.o
+    ```
