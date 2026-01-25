@@ -1,0 +1,5 @@
+# Ignore the python virtual environment folder
+.venv/
+
+# Game data files placed in the disc folder cannot be committed due to copyright issues
+disc/*
