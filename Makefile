@@ -47,15 +47,16 @@ C_OBJECTS     := $(patsubst %.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
 # NONMATCH_ASM  := $(wildcard $(NONMATCH_DIR)/**/*.s)
 # NONMATCH_OBJ  := $(patsubst %.s,$(BUILD_DIR)/%.o,$(NONMATCH_ASM))
 
-# Data / header asm (adjust paths if different)
-# Exclude 2F800.bss.s and 2F800.sbss.s because they duplicate symbols in gp_data.sdata.s
+# Data / header asm
 OTHER_ASM     := $(ASM_DIR)/header.s \
                  $(ASM_DIR)/data/800.rodata.s \
                  $(ASM_DIR)/data/844.rodata.s \
                  $(ASM_DIR)/data/A50.rodata.s \
                  $(ASM_DIR)/data/B44.rodata.s \
                  $(ASM_DIR)/data/initialized.data.s \
-                 $(ASM_DIR)/data/gp_data.sdata.s
+                 $(ASM_DIR)/data/gp_data.sdata.s \
+                 $(ASM_DIR)/data/sbss.sbss.s \
+                 $(ASM_DIR)/data/bss.bss.s
 OTHER_OBJ     := $(patsubst %.s,$(BUILD_DIR)/%.o,$(OTHER_ASM))
 
 # All objects to link (nonmatching asm is included via INCLUDE_ASM, not as separate objects)
