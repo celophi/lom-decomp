@@ -15,9 +15,10 @@ OBJCOPY       := $(CROSS)objcopy
 
 # Flags - tune these to match your game's original compiler settings
 CFLAGS        := -Iinclude -O2 -mips1 -mfp32 -mno-abicalls -fno-pic -mno-shared \
-                 -G 4 -funsigned-char -fno-common \
+                 -G0 -funsigned-char -fno-common \
                  -nostdinc -nostdlib -fno-builtin -fomit-frame-pointer \
-                 -Wall
+                 -Wall -EL \
+				 -mno-gpopt -mno-local-sdata -mno-extern-sdata
 
 # AS_FLAGS only has assembler flags, no GCC flags
 AS_FLAGS      := -Iinclude -march=r3000 -mtune=r3000 -no-pad-sections -EL
@@ -35,6 +36,10 @@ SRC_DIR       := src
 ASM_DIR       := asm
 NONMATCH_DIR  := $(ASM_DIR)/nonmatchings
 DATA_DIR      := $(ASM_DIR)/data
+
+# BIN output to produce a matching binary
+BIN           := build/$(GAME).bin
+PAD_SIZE      := 992
 
 # ---------------- Files ----------------
 
@@ -85,10 +90,19 @@ $(BUILD_DIR)/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s
 	@mkdir -p $(@D)
 	cat $< | $(MASPSX) $(MASPSX_FLAGS_ASM) | $(AS) $(AS_FLAGS) -o $@
 
+# ---------------- Binary output + padding ----------------
+
+$(BIN): $(TARGET)
+	$(OBJCOPY) -O binary $(TARGET) $@
+	@echo "Padding $@ with $(PAD_SIZE) bytes of 0x00..."
+	dd if=/dev/zero bs=1 count=$(PAD_SIZE) >> $@
+
+bin: $(BIN)
+
 clean:
 	rm -rf build/ $(TARGET) $(MAPFILE)
 
-.PHONY: all clean
+.PHONY: all clean bin
 
 # Optional: rebuild a single function quickly
 # make build/nonmatchings/subdir/func.o
