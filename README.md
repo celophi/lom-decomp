@@ -15,3 +15,9 @@ Legend of Mana Decompilation Project
     .\venv\Scripts\activate    # Windows
     pip install -r requirements-dev.txt
     ```
+3. Copy your copy of SLUS_010.13 to the `disc` folder.
+
+4. Split the binary using the following command. The output will go to the `asm` folder.
+    ```bash
+    splat split config/SLUS_010.13.yaml
+    ```

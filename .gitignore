@@ -3,3 +3,6 @@
 
 # Game data files placed in the disc folder cannot be committed due to copyright issues
 disc/*
+
+# Assembly output folder from splat
+asm

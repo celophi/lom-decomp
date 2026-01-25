@@ -1,0 +1,85 @@
+name: SLUS_010.13
+sha1: d11dfdd50d412ac3fa3e2eb80fbde138da118f27
+options:
+  basename: slus_010.13
+  target_path: disc/SLUS_010.13
+  elf_path: build/slus_010.13.elf
+  base_path: ../
+  platform: psx
+  compiler: PSYQ
+
+  asm_path: asm
+  src_path: src
+  build_path: build
+  # create_asm_dependencies: True
+
+  ld_script_path: slus_010.13.ld
+  ld_dependencies: True
+
+  find_file_boundaries: False
+  gp_value: 0x8003EC14
+  # ld_gp_expression: main_SCOMMON_START + 0x7FF0
+
+  o_as_suffix: True
+  use_legacy_include_asm: False
+
+  section_order: [".rodata", ".text", ".data", ".bss"]
+  # auto_link_sections: [".data", ".rodata", ".bss"]
+
+  symbol_addrs_path:
+    - symbol_addrs.txt
+  reloc_addrs_path:
+    - reloc_addrs.txt
+
+  undefined_funcs_auto_path: undefined_funcs_auto.txt
+  undefined_syms_auto_path: undefined_syms_auto.txt
+
+  extensions_path: tools/splat_ext
+
+  subalign: 2
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+  rodata_string_guesser_level: 2
+  data_string_guesser_level: 2
+
+  # Uncomment this line if you need to use the maspsx reorder workaround hack
+  # https://github.com/mkst/maspsx?tab=readme-ov-file#include_asm-reordering-workaround-hack
+  # include_asm_macro_style: maspsx_hack
+segments:
+  - name: header
+    type: header
+    start: 0x0
+
+  - name: main
+    type: code
+    start: 0x800
+    vram: 0x80010000
+    subsegments:
+      # .rdata (read-only data before code)
+      # file offset 0x800 → VRAM 0x80010000 to 0x80010d57
+      - [0x800, rodata, early_rdata] 
+
+      # .text (code/functions)
+      # file offset 0xd58 → VRAM 0x80010d58 to 0x80035197
+      - [0xd58, c, main]
+
+       # .data (initialized)
+       # file offset for VRAM 0x80035198
+      - [0x25998, data, initialized]
+
+      # .sdata (small initialized, GP-relative)
+      - [0x2f414, sdata, gp_data]
+
+  # GP-relative small BSS (uninitialized, no file content)
+  - name: sbss
+    type: sbss
+    vram: 0x8003ec20
+
+  # Main BSS (uninitialized, no file content)
+  - name: bss
+    type: bss
+    vram: 0x8003ec88
+  
+  # Explicit end-of-file marker (helps splat know the binary ends here)
+  - [0x2F800]
