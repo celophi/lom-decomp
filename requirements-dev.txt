@@ -1,0 +1,6 @@
+# requirements-dev.txt
+# Development dependencies for Legend of Mana PS1 decomp
+# Install with: pip install -r requirements-dev.txt
+
+# splat from local submodule (editable mode) with MIPS/PS1 support
+-e tools/splat[mips]
