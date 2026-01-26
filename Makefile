@@ -39,7 +39,6 @@ DATA_DIR      := $(ASM_DIR)/data
 
 # BIN output to produce a matching binary
 BIN           := build/$(GAME).bin
-PAD_SIZE      := 992
 
 # ---------------- Files ----------------
 
@@ -56,9 +55,7 @@ C_OBJECTS     := $(patsubst %.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
 # Note: rodata files are NOT here - they're included in main.c via inline asm
 OTHER_ASM     := $(ASM_DIR)/header.s \
                  $(ASM_DIR)/data/initialized.data.s \
-                 $(ASM_DIR)/data/gp_data.sdata.s \
-                 $(ASM_DIR)/data/sbss.sbss.s \
-                 $(ASM_DIR)/data/bss.bss.s
+                 $(ASM_DIR)/data/sdata.data.s 
 OTHER_OBJ     := $(patsubst %.s,$(BUILD_DIR)/%.o,$(OTHER_ASM))
 
 # All objects to link (nonmatching asm is included via INCLUDE_ASM, not as separate objects)
@@ -94,8 +91,6 @@ $(BUILD_DIR)/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s
 
 $(BIN): $(TARGET)
 	$(OBJCOPY) -O binary $(TARGET) $@
-	@echo "Padding $@ with $(PAD_SIZE) bytes of 0x00..."
-	dd if=/dev/zero bs=1 count=$(PAD_SIZE) >> $@
 
 bin: $(BIN)
 
