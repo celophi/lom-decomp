@@ -50,20 +50,15 @@ segments:
     type: code
     start: 0x800
     vram: 0x80010000
-    bss_size: 0x10fe8
+    align: 4
     subsegments:
-      # Rodata and text together in one C file (like the original compilation)
       - [0x800, c, main]
-
-      # .data (initialized)
       - [0x25990, data, initialized]
 
-      # .sdata (small initialized, GP-relative)
-      - [0x2f414, sdata, gp_data]
-      - [0x2f420]  # End of file data
-      
-      # BSS sections (uninitialized, not in file)
-      - { vram: 0x8003EC20, type: sbss, name: sbss }
-      - { vram: 0x8003EC88, type: bss, name: bss }
-  
+  - name: sdata
+    type: data
+    start: 0x2F414
+    vram: 0x8003EC14
+    subsegments:
+      - [0x2F420]
   - [0x2F800]

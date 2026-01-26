@@ -41,7 +41,4 @@ Legend of Mana Decompilation Project
     make
     make bin
     ```
-
-## Notes Regarding Linkers
-At this time, I have not yet been able to get splat to produce a linker script that maps .sdata correctly. I'm still working on it. 
-Therefore, I've added `config/slus_010.13.ld` which is a custom linker that can be used to compile a byte-for-byte matching ELF.
+The output will be placed in the `build` directory.
