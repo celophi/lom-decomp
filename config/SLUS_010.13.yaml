@@ -52,9 +52,7 @@ segments:
     vram: 0x80010000
     align: 4
     subsegments:
-       # Rodata and text together in one C file (like the original compilation)
       - [0x800, c, main]
-      # .data (initialized)
       - [0x25990, data, initialized]
 
   - name: sdata
@@ -62,6 +60,5 @@ segments:
     start: 0x2F414
     vram: 0x8003EC14
     subsegments:
-      - [0x2F420]  # End sdata
-
+      - [0x2F420]
   - [0x2F800]
