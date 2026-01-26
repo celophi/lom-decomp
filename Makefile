@@ -39,6 +39,7 @@ DATA_DIR      := $(ASM_DIR)/data
 
 # BIN output to produce a matching binary
 BIN           := build/$(GAME).bin
+PAD_SIZE      := 992
 
 # ---------------- Files ----------------
 
@@ -91,6 +92,8 @@ $(BUILD_DIR)/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s
 
 $(BIN): $(TARGET)
 	$(OBJCOPY) -O binary $(TARGET) $@
+	@echo "Padding $@ with $(PAD_SIZE) bytes of 0x00..."
+	dd if=/dev/zero bs=1 count=$(PAD_SIZE) >> $@
 
 bin: $(BIN)
 
