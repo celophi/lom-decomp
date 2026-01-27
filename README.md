@@ -42,3 +42,13 @@ Legend of Mana Decompilation Project
     make bin
     ```
 The output will be placed in the `build` directory.
+
+
+// build the gcc dependencies
+docker build -t old-gcc/gcc-2.7.2-psx -f tools/old-gcc/gcc-2.7.2-psx.Dockerfile tools/old-gcc
+
+// build dev env
+ docker build -t lom-dev .
+
+ // run env
+  docker run --rm -ti -v "${PWD}:/lom" lom-dev
