@@ -1,5 +1,5 @@
 # Stage 1: grab compiler artifacts
-FROM old-gcc/gcc-2.7.2-psx AS toolchain
+FROM old-gcc/gcc-2.8.0-psx AS toolchain
 
 # Use Ubuntu LTS for stability and wide package availability
 FROM ubuntu:22.04
