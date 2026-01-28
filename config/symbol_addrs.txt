@@ -1,0 +1,2 @@
+CD_SetAudioVolume = 0x80013fd0;
+CdMix = 0x8001e894;

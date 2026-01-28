@@ -26,7 +26,35 @@ INCLUDE_ASM("asm/nonmatchings/main", func_80013F2C);
 
 INCLUDE_ASM("asm/nonmatchings/main", func_80013F64);
 
-INCLUDE_ASM("asm/nonmatchings/main", func_80013FD0);
+/*
+ * Set audio volume for a specific stereo channel
+ *
+ * Params:
+ *   volume - Volume level to set (0-255)
+ *   stereoChannel - 0 for left channel, non-zero for right channel
+ *
+ * Returns: void
+ * 
+ * decomp.me link: https://decomp.me/scratch/XbegS
+ * decomp.me (%): 99.12%
+ */
+void CD_SetAudioVolume(u_char volume, int stereoChannel)
+{
+    CdlATV audioConfig[2];
+    
+    if (stereoChannel != 0) {
+        audioConfig[0].val0 = volume;
+        audioConfig[0].val1 = 0;
+        audioConfig[0].val2 = volume;
+    } else {
+        audioConfig[0].val0 = volume;
+        audioConfig[0].val1 = volume;
+        audioConfig[0].val2 = 0;
+        audioConfig[0].val3 = 0;
+    }
+    
+    CdMix(audioConfig);
+}
 
 INCLUDE_ASM("asm/nonmatchings/main", func_80014014);
 
@@ -314,7 +342,7 @@ INCLUDE_ASM("asm/nonmatchings/main", func_8001E614);
 
 INCLUDE_ASM("asm/nonmatchings/main", func_8001E748);
 
-INCLUDE_ASM("asm/nonmatchings/main", func_8001E894);
+INCLUDE_ASM("asm/nonmatchings/main", CdMix);
 
 INCLUDE_ASM("asm/nonmatchings/main", func_8001E8B4);
 
