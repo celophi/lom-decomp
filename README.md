@@ -28,10 +28,10 @@ Copy your `SLUS_010.13` file into the `disc` folder in the project directory.
 
 ### 3. Build the Compiler Container
 
-The project uses an old PlayStation compiler (gcc-2.7.2) that runs in Docker. Build it with:
+The project uses an old PlayStation compiler (gcc-2.8.0) that runs in Docker. Build it with:
 
 ```bash
-docker build -t old-gcc/gcc-2.7.2-psx -f tools/old-gcc/gcc-2.7.2-psx.Dockerfile tools/old-gcc
+docker build -t old-gcc/gcc-2.8.0-psx -f tools/old-gcc/gcc-2.8.0-psx.Dockerfile tools/old-gcc
 ```
 
 This step may take several minutes.

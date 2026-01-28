@@ -79,10 +79,9 @@ COPY_SENTINEL := $(WORK_DIR)/.sources_copied
 # ---------------- Rules ----------------
 
 all: $(TARGET)
-	@echo "Copying $(TARGET) to $(FINAL_TARGET)..."
+	@echo "Copying build artifacts from $(WORK_DIR)/build/ to build/..."
 	@mkdir -p build
-	@cp $(TARGET) $(FINAL_TARGET)
-	@cp $(MAPFILE) $(FINAL_MAPFILE)
+	@cp -r $(WORK_DIR)/build/* build/
 	@echo "Build complete: $(FINAL_TARGET)"
 
 # Copy all source files to /tmp_build mirroring exact directory structure
