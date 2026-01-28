@@ -4,3 +4,6 @@
 [submodule "tools/maspsx"]
 	path = tools/maspsx
 	url = https://github.com/mkst/maspsx
+[submodule "tools/old-gcc"]
+	path = tools/old-gcc
+	url = https://github.com/decompals/old-gcc
