@@ -1,0 +1,87 @@
+name: Build and Generate Progress Report
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-and-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout repository with submodules
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      # Step 2: Set up Docker Buildx for better caching
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # Step 3: Build Docker image
+      - name: Build Docker image
+        run: docker build -t lom-decomp .
+      
+      # Step 4: Split with splat (generates full assembly files)
+      - name: Run splat split
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/lom \
+            lom-decomp \
+            python3 -m splat split config/SLUS_010.13.yaml --make-full-disasm-for-code
+      
+      # Step 5: Build the project (matching build)
+      - name: Build project
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/lom \
+            lom-decomp \
+            make all
+      
+      # Step 6: Build objdiff objects (target + base)
+      - name: Build objdiff objects
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/lom \
+            lom-decomp \
+            make objdiff-objects
+      
+      # Step 7: Generate objdiff.json
+      - name: Generate objdiff.json
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/lom \
+            lom-decomp \
+            make objdiff-config
+      
+      # Step 8: Download objdiff-cli
+      - name: Download objdiff-cli
+        run: |
+          wget https://github.com/encounter/objdiff/releases/latest/download/objdiff-cli-linux-x86_64 -O objdiff-cli
+          chmod +x objdiff-cli
+      
+      # Step 9: Generate progress report
+      - name: Generate progress report
+        run: ./objdiff-cli report generate -o build/report.json
+      
+      # Step 10: Upload progress report as artifact
+      - name: Upload progress report
+        uses: actions/upload-artifact@v4
+        with:
+          name: SLUS_010.13_report
+          path: build/report.json
+          if-no-files-found: error
+      
+      # Step 11: Upload matched binary as artifact (optional but useful)
+      - name: Upload matched binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: SLUS_010.13_build
+          path: |
+            build/slus_010.13.elf
+            build/slus_010.13.map
+          if-no-files-found: warn
