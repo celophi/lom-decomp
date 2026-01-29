@@ -11,6 +11,7 @@ typedef struct {
 	u_char	val3;		/* volume for CD(R) -> SPU (R) */
 } CdlATV;	
 
+void CD_SetAudioVolume(u_char volume, int stereoChannel);
 int CdMix(CdlATV *vol);
 
 #endif
