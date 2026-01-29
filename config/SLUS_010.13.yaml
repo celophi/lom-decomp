@@ -53,6 +53,8 @@ segments:
     align: 4
     subsegments:
       - [0x800, c, main]
+      - [0x47D0, c, audio]
+      - [0x4814, c, main_continued]
       - [0x25990, data, initialized]
 
   - name: sdata
