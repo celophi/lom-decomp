@@ -4,3 +4,6 @@
 
 # splat from local submodule (editable mode) with MIPS/PS1 support
 -e tools/splat[mips]
+
+# PyYAML for objdiff config generation
+PyYAML>=6.0

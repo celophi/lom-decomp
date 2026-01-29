@@ -10,7 +10,7 @@ import yaml
 from pathlib import Path
 
 # Project paths
-PROJECT_ROOT = Path(__file__).parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 CONFIG_PATH = PROJECT_ROOT / "config" / "SLUS_010.13.yaml"
 OUTPUT_PATH = PROJECT_ROOT / "objdiff.json"
 
