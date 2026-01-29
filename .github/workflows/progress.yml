@@ -22,11 +22,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      # Step 3: Build Docker image
-      - name: Build Docker image
+      # Step 3: Build old-gcc compiler image (dependency)
+      - name: Build old-gcc compiler image
+        run: docker build -t old-gcc/gcc-2.8.0-psx -f tools/old-gcc/gcc-2.8.0-psx.Dockerfile tools/old-gcc
+      
+      # Step 4: Build main Docker image
+      - name: Build main Docker image
         run: docker build -t lom-decomp .
       
-      # Step 4: Split with splat (generates full assembly files)
+      # Step 5: Split with splat (generates full assembly files)
       - name: Run splat split
         run: |
           docker run --rm \
@@ -34,7 +38,7 @@ jobs:
             lom-decomp \
             python3 -m splat split config/SLUS_010.13.yaml --make-full-disasm-for-code
       
-      # Step 5: Build the project (matching build)
+      # Step 6: Build the project (matching build)
       - name: Build project
         run: |
           docker run --rm \
@@ -42,7 +46,7 @@ jobs:
             lom-decomp \
             make all
       
-      # Step 6: Build objdiff objects (target + base)
+      # Step 7: Build objdiff objects (target + base)
       - name: Build objdiff objects
         run: |
           docker run --rm \
@@ -50,7 +54,7 @@ jobs:
             lom-decomp \
             make objdiff-objects
       
-      # Step 7: Generate objdiff.json
+      # Step 8: Generate objdiff.json
       - name: Generate objdiff.json
         run: |
           docker run --rm \
@@ -58,17 +62,17 @@ jobs:
             lom-decomp \
             make objdiff-config
       
-      # Step 8: Download objdiff-cli
+      # Step 9: Download objdiff-cli
       - name: Download objdiff-cli
         run: |
           wget https://github.com/encounter/objdiff/releases/latest/download/objdiff-cli-linux-x86_64 -O objdiff-cli
           chmod +x objdiff-cli
       
-      # Step 9: Generate progress report
+      # Step 10: Generate progress report
       - name: Generate progress report
         run: ./objdiff-cli report generate -o build/report.json
       
-      # Step 10: Upload progress report as artifact
+      # Step 11: Upload progress report as artifact
       - name: Upload progress report
         uses: actions/upload-artifact@v4
         with:
@@ -76,7 +80,7 @@ jobs:
           path: build/report.json
           if-no-files-found: error
       
-      # Step 11: Upload matched binary as artifact (optional but useful)
+      # Step 12: Upload matched binary as artifact (optional but useful)
       - name: Upload matched binary
         uses: actions/upload-artifact@v4
         with:
