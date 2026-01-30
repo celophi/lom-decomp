@@ -53,3 +53,9 @@ jobs:
         run: |
           chmod +x ./tools/objdiff/objdiff-cli-linux-x86_64
           ./tools/objdiff/objdiff-cli-linux-x86_64 report generate -o build/report.json
+
+      - name: Upload progress report
+        uses: actions/upload-artifact@v4
+        with:
+          name: SLUS_010.13_report
+          path: build/report.json
