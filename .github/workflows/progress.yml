@@ -26,11 +26,14 @@ jobs:
       
       - name: Copy ROM file
         run: |
-          echo "Workspace: $GITHUB_WORKSPACE"
-          ls -la $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE/lom
           cp /rom/SLUS_010.13 $GITHUB_WORKSPACE/lom/disc/
 
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip install -r $GITHUB_WORKSPACE/lom/requirements.txt
+          pip install -r requirements.txt
+
+      - name: Run splat
+        run: |
+          splat split config/SLUS_010.13.yaml --make-full-disasm-for-code
