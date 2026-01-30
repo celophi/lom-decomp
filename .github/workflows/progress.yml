@@ -1,61 +1,72 @@
-name: Copy ROM to Repository
+name: Build and Progress Report
 
 on:
   push:
     branches:
-      - '**'  # Triggers on all branches
+      - '**'
   pull_request:
     branches:
       - '**'
 
+env:
+  # Project configuration
+  ROM_ID: SLUS_010.13
+  WORKING_DIR: lom
+  CONTAINER_IMAGE: ghcr.io/celophi/slus-01013:v1.1
+  
+  # Tool paths (relative to working directory)
+  OBJDIFF_CLI: ./tools/objdiff/objdiff-cli-linux-x86_64
+  OBJDIFF_CONFIG_GENERATOR: tools/objdiff/generate_objdiff_config.py
+  
+  # Build artifacts
+  PROGRESS_REPORT: build/progress.json
+
 jobs:
-  copy-rom:
+  build-and-report:
     runs-on: ubuntu-latest
     
-    # Use your private container image
     container:
-      image: ghcr.io/celophi/slus-01013:v1.1
+      image: ${{ env.CONTAINER_IMAGE }}
+    
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          path: lom
+          path: ${{ env.WORKING_DIR }}
           submodules: recursive
           ref: ${{ github.head_ref || github.ref_name }}
       
-      - name: Copy ROM file
-        working-directory: ${{ github.workspace }}/lom
-        run: |
-          cp /rom/SLUS_010.13 disc/
+      - name: Copy ROM from container
+        run: cp /rom/${{ env.ROM_ID }} disc/
 
-      - name: Install Python dependencies
-        working-directory: ${{ github.workspace }}/lom
+      - name: Setup Python environment
         run: |
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run splat
-        working-directory: ${{ github.workspace }}/lom
+      - name: Split ROM with splat
+        run: splat split config/${{ env.ROM_ID }}.yaml --make-full-disasm-for-code
+
+      - name: Generate objdiff configuration
+        run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }}
+
+      - name: Build objects for comparison
         run: |
-          splat split config/SLUS_010.13.yaml --make-full-disasm-for-code
-
-      - name: Generate objdiff config
-        working-directory: ${{ github.workspace }}/lom
-        run: python3 tools/objdiff/generate_objdiff_config.py
-
-      - name: Build target objects
-        working-directory: ${{ github.workspace }}/lom
-        run: make clean && make objdiff-objects
+          make clean
+          make objdiff-objects
         
-      - name: Generate objdiff report
-        working-directory: ${{ github.workspace }}/lom
+      - name: Generate progress report
         run: |
-          chmod +x ./tools/objdiff/objdiff-cli-linux-x86_64
-          ./tools/objdiff/objdiff-cli-linux-x86_64 report generate -o build/report.json
+          chmod +x ${{ env.OBJDIFF_CLI }}
+          ${{ env.OBJDIFF_CLI }} report generate -o ${{ env.PROGRESS_REPORT }}
 
       - name: Upload progress report
         uses: actions/upload-artifact@v4
         with:
-          name: SLUS_010.13_report
-          path: ${{ github.workspace }}/lom/build/report.json
+          name: ${{ env.ROM_ID }}_progress_report
+          path: ${{ env.WORKING_DIR }}/${{ env.PROGRESS_REPORT }}
+          if-no-files-found: error
