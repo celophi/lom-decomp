@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/encounter/objdiff/main/config.schema.json",
+  "custom_make": "make objdiff-objects",
+  "build_target": true,
+  "build_base": true,
+  "units": [
+    {
+      "name": "main/main",
+      "target_path": "build/asm/main.o",
+      "base_path": "build/src/main.o"
+    },
+    {
+      "name": "main/audio",
+      "target_path": "build/asm/audio.o",
+      "base_path": "build/src/audio.o"
+    },
+    {
+      "name": "main/main_continued",
+      "target_path": "build/asm/main_continued.o",
+      "base_path": "build/src/main_continued.o"
+    }
+  ]
+}

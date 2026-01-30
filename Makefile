@@ -158,7 +158,40 @@ recopy:
 	rm -f $(COPY_SENTINEL)
 	$(MAKE) $(COPY_SENTINEL)
 
-.PHONY: all clean bin recopy
+# ---------------- Target Objects (for objdiff) ----------------
+
+# Target assembly files (full .s files from splat)
+TARGET_ASM := $(ASM_DIR)/main.s $(ASM_DIR)/audio.s $(ASM_DIR)/main_continued.s
+TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(WORK_DIR)/build/$(ASM_DIR)/%.o,$(TARGET_ASM))
+
+# Build target objects from asm/*.s files (these are already processed by splat)
+$(TARGET_OBJ): $(WORK_DIR)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
+	@mkdir -p $(@D)
+	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | $(AS) $(AS_FLAGS) -Iinclude -o build/$(ASM_DIR)/$*.o
+
+# Build all target objects (for objdiff progress tracking)
+target-objects: $(COPY_SENTINEL) $(TARGET_OBJ)
+	@echo "Copying target objects from $(WORK_DIR)/build/asm/ to build/asm/..."
+	@mkdir -p build/asm
+	@cp -r $(WORK_DIR)/build/$(ASM_DIR)/* build/asm/ 2>/dev/null || true
+	@echo "Target objects built successfully"
+
+# Build all base objects (for objdiff progress tracking)
+base-objects: $(COPY_SENTINEL) $(C_OBJECTS)
+	@echo "Copying base objects from $(WORK_DIR)/build/src/ to build/src/..."
+	@mkdir -p build/src
+	@cp -r $(WORK_DIR)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
+	@echo "Base objects built successfully"
+
+# Build both target and base objects
+objdiff-objects: target-objects base-objects
+	@echo "All objdiff objects built successfully"
+
+# Generate objdiff.json configuration file
+objdiff-config:
+	python3 tools/generate_objdiff_config.py
+
+.PHONY: all clean bin recopy target-objects base-objects objdiff-objects objdiff-config
 
 # Optional: rebuild a single function quickly
 # make /tmp_build/build/src/main.o
