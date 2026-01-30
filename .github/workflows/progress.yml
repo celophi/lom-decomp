@@ -39,3 +39,19 @@ jobs:
         working-directory: ${{ github.workspace }}/lom
         run: |
           splat split config/SLUS_010.13.yaml --make-full-disasm-for-code
+
+      - name: Generate objdiff config
+        working-directory: ${{ github.workspace }}/lom
+        run: python3 tools/objdiff/generate_objdiff_config.py
+
+      - name: Build target objects
+        working-directory: ${{ github.workspace }}/lom
+        run: make target-objects
+        
+      - name: Build objdiff objects
+        working-directory: ${{ github.workspace }}/lom
+        run: make objdiff-objects
+        
+      - name: Generate objdiff report
+        working-directory: ${{ github.workspace }}/lom
+        run: ./tools/objdiff/objdiff-cli-linux-x86_64 report generate -o build/report.json
