@@ -50,4 +50,6 @@ jobs:
         
       - name: Generate objdiff report
         working-directory: ${{ github.workspace }}/lom
-        run: ./tools/objdiff/objdiff-cli-linux-x86_64 report generate -o build/report.json
+        run: |
+          chmod +x ./tools/objdiff/objdiff-cli-linux-x86_64
+          ./tools/objdiff/objdiff-cli-linux-x86_64 report generate -o build/report.json
