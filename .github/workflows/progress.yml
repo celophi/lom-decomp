@@ -25,7 +25,9 @@ jobs:
       
       - name: Copy ROM file
         run: |
-          cp /rom/SLUS_010.13 /github/workspace/lom/disc/
+          echo "Workspace: $GITHUB_WORKSPACE"
+          ls -la $GITHUB_WORKSPACE
+          cp /rom/SLUS_010.13 $GITHUB_WORKSPACE/lom/disc/
       
       - name: Verify file copied
         run: |
