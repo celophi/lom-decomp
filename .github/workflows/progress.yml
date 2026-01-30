@@ -3,10 +3,10 @@ name: Build and Progress Report
 on:
   push:
     branches:
-      - '**'
+      - 'master'
   pull_request:
     branches:
-      - '**'
+      - 'master'
 
 env:
   # Project configuration
