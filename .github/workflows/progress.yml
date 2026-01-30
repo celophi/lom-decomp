@@ -25,15 +25,17 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
       
       - name: Copy ROM file
+        working-directory: ${{ github.workspace }}/lom
         run: |
-          cd $GITHUB_WORKSPACE/lom
-          cp /rom/SLUS_010.13 $GITHUB_WORKSPACE/lom/disc/
+          cp /rom/SLUS_010.13 disc/
 
       - name: Install Python dependencies
+        working-directory: ${{ github.workspace }}/lom
         run: |
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run splat
+        working-directory: ${{ github.workspace }}/lom
         run: |
           splat split config/SLUS_010.13.yaml --make-full-disasm-for-code
