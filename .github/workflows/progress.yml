@@ -46,11 +46,7 @@ jobs:
 
       - name: Build target objects
         working-directory: ${{ github.workspace }}/lom
-        run: make target-objects && ls /tmp_build/asm/nonmatchings/main
-        
-      - name: Build objdiff objects
-        working-directory: ${{ github.workspace }}/lom
-        run: ls /tmp_build/asm/nonmatchings/main && make objdiff-objects
+        run: make clean && make target-objects && ls /tmp_build/asm/nonmatchings/main && make objdiff-objects
         
       - name: Generate objdiff report
         working-directory: ${{ github.workspace }}/lom
