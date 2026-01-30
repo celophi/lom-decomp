@@ -50,7 +50,7 @@ jobs:
         
       - name: Build objdiff objects
         working-directory: ${{ github.workspace }}/lom
-        run: make objdiff-objects
+        run: ls -R && make objdiff-objects
         
       - name: Generate objdiff report
         working-directory: ${{ github.workspace }}/lom
