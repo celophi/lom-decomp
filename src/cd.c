@@ -1,7 +1,22 @@
 #include "cd.h"
 #include "psyq/libetc.h"
 
-
+/*
+ * Handle CD synchronization error and reset CD subsystem state.
+ *
+ * Clears active CD callbacks, resets command and retry state,
+ * updates status flags to signal an error condition, and records
+ * the current VSync timestamp for recovery timing.
+ *
+ * Params:
+ *   None
+ *
+ * Returns:
+ *   void
+ * 
+ * decomp.me link: https://decomp.me/scratch/lU7lO
+ * decomp.me (%): 100%
+ */
 void CD_HandleSyncError(void)
 {
     CdSyncCallback((CdlCB) 0x0);
