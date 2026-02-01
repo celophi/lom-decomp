@@ -31,7 +31,7 @@ typedef struct CdCommandQueue {
 } CdCommandQueue;
 
 typedef struct BigCdStruct {
-    CdStatusArray g_cdStatusFlags;
+    u_int g_cdStatusFlags;
     undefined1 g_cdAudioEnabled;
     undefined1 g_cdPlaybackState;
     undefined1 g_cdPlaybackFlag;
@@ -131,6 +131,7 @@ extern BigCdStruct g_bigCdStruct;
 
 
 // Prototypes
+void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 
 #endif
