@@ -12,3 +12,8 @@ linker/
 
 # Build output folder
 build/
+output/
+
+# Ignore generated main.c and main_continued.c files because it prevents splat from creating some definitions.
+src/main.c
+src/main_continued.c
