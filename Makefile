@@ -37,7 +37,7 @@ AS_FLAGS      := -march=r3000 -mtune=r3000 -no-pad-sections -EL
 # maspsx - note: NO --run-assembler flag, we pipe to AS instead
 # --macro-inc is needed to define ASPSX directives like 'nonmatching', 'dlabel', etc.
 MASPSX        := python3 tools/maspsx/maspsx.py
-MASPSX_FLAGS  := --expand-div --aspsx-version=2.78
+MASPSX_FLAGS  := 
 MASPSX_FLAGS_C := $(MASPSX_FLAGS)
 MASPSX_FLAGS_ASM := $(MASPSX_FLAGS) --macro-inc
 
@@ -161,7 +161,7 @@ recopy:
 # ---------------- Target Objects (for objdiff) ----------------
 
 # Target assembly files (full .s files from splat)
-TARGET_ASM := $(ASM_DIR)/main.s $(ASM_DIR)/audio.s $(ASM_DIR)/main_continued.s
+TARGET_ASM := $(ASM_DIR)/main.s $(ASM_DIR)/cd.s $(ASM_DIR)/main_continued.s
 TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(WORK_DIR)/build/$(ASM_DIR)/%.o,$(TARGET_ASM))
 
 # Build target objects from asm/*.s files (these are already processed by splat)
