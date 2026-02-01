@@ -1,4 +1,29 @@
-#include "common.h"
+#include "cd.h"
+
+void CD_HandleSyncError(void)
+{
+  u_int temp;
+  volatile u_int *pStatus;
+    int result;
+  
+  CdSyncCallback((CdlCB)0x0);
+  CdReadyCallback((CdlCB)0x0);
+  g_bigCdStruct.g_cdInitState = 0;
+  g_bigCdStruct.g_cdCurrentCommand = 0;
+  g_bigCdStruct.g_cdInitCommand = 0;
+  g_bigCdStruct.g_cdRetryCount = 0;
+  g_bigCdStruct.g_cdRetryCounter = 0;
+  pStatus = (volatile u_int*)&g_bigCdStruct;
+  temp = *pStatus;
+  temp = temp | 1;
+  *pStatus = temp;
+  temp = temp & 0xffffffef;
+  *pStatus = temp;
+    result = VSync(-1);
+  g_bigCdStruct.g_cdVSyncTimestamp = result;
+  return;
+}
+
 
 /*
  * Set audio volume for a specific stereo channel

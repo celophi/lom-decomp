@@ -88,3 +88,9 @@ After initial setup, your typical workflow is:
 - If Docker commands fail, ensure Docker Desktop is running
 - On Windows, use PowerShell or Command Prompt, not Git Bash, for the `docker run` command
 - The `${PWD}` variable should automatically expand to your current directory path
+
+## Matching
+You can use `spimdisasm` to help with matching after producing a binary:
+```bash
+spimdisasm elfObjDisasm build/slus_010.13.elf output/
+```
