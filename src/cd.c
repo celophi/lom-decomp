@@ -1,6 +1,32 @@
 #include "cd.h"
 #include "psyq/libetc.h"
 
+/**
+ * Blocks execution until CD command queue is completely empty
+ * 
+ * Params:
+ *  None
+ * 
+ * Returns: 
+ *  void
+ * 
+ * Notes: Polls CD_UpdateAndProcessQueue in a tight loop with VSync sync.
+ *  Each iteration waits one frame via VSync(0) to avoid busy-waiting.
+ *  Returns only when queue size reaches zero.
+ *  Used to ensure all pending CD commands complete before proceeding.
+ * 
+ * decomp.me link: https://decomp.me/scratch/rE8hd
+ * decomp.me (%): 100%
+ */
+void CD_WaitForQueueEmpty(void)
+{
+    int state;
+    
+    while (state = CD_UpdateAndProcessQueue(), state != 0) {
+        VSync(0);
+    }
+}
+
 /*
  * Handle CD synchronization error and reset CD subsystem state.
  *
@@ -9,10 +35,14 @@
  * the current VSync timestamp for recovery timing.
  *
  * Params:
- *   None
+ *  None
  *
  * Returns:
- *   void
+ *  void
+ * 
+ * TODO: Verify the discrepency between makefile produced binary and decomp.me
+ * This indicates some kind of toolchain problem. 
+ * Consider looking at decomp.me compilers repository to see if there are any differences in the image.
  * 
  * decomp.me link: https://decomp.me/scratch/lU7lO
  * decomp.me (%): 100%
@@ -36,8 +66,8 @@ void CD_HandleSyncError(void)
  * Set audio volume for a specific stereo channel
  *
  * Params:
- *   volume - Volume level to set (0-255)
- *   stereoChannel - 0 for left channel, non-zero for right channel
+ *  volume - Volume level to set (0-255)
+ *  stereoChannel - 0 for left channel, non-zero for right channel
  *
  * Returns: void
  * 
@@ -60,4 +90,4 @@ void CD_SetAudioVolume(u_char volume, int stereoChannel)
      } audioConfig[0].val3 = 0; 
  } while (0);
   CdMix(audioConfig);
-} 
+}
