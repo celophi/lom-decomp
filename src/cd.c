@@ -91,3 +91,66 @@ void CD_SetAudioVolume(u_char volume, int stereoChannel)
  } while (0);
   CdMix(audioConfig);
 }
+
+INCLUDE_ASM("asm/nonmatchings/cd", func_80014014);
+
+INCLUDE_ASM("asm/nonmatchings/cd", func_800140D4);
+
+/**
+ * Initializes CD resource entry for disc location seeking
+ * 
+ * Params:
+ * lba - Logical Block Address (sector) on the CD to prepare
+ * dataSizeBytes - Size of data in bytes associated with this location
+ * 
+ * Returns:
+ * void
+ * 
+ * Notes: Synchronizes with VSync using stored timestamp to prevent command conflicts.
+ * Clears the default CD resource location structure (4 bytes zeroed).
+ * Converts LBA to CD-ROM MSF format and stores in global resource entry.
+ * Queues command 0x06 with SKCDPOSE_DAT as target buffer.
+ * SKCDPOSE_DAT likely stands for "Seek CD POSition Entry DATa".
+ * This appears to be a table of CdlLOC positions for disc seeking operations.
+ * Blocks until CD command queue is empty before setting audio volume.
+ * Sets CD audio volume to 128 (0x80) which may be default/mid-level.
+ * 
+ * decomp.me link: https://decomp.me/scratch/4PljL
+ * decomp.me (%): 99.65% (Hexadecimal immediates instead of decimal)
+ * 
+ * TODO: Figure out why g_SKCDPOSE_DAT is an undefined reference and not included in splat output.
+ */
+void CD_InitLocationEntries (int lba, int dataSizeBytes)
+{
+    CdlLOC *location;
+    int vsyncOffset;
+    int vsyncDelta;
+    BigCdStruct *cdStruct;
+    
+    vsyncOffset = -3;
+    vsyncDelta = VSync(-1);
+    vsyncDelta = g_bigCdStruct.g_cdVSyncTimestamp - (vsyncDelta + vsyncOffset);
+    
+    if (vsyncDelta > 0)
+    {
+        if (vsyncDelta == 1)
+        {
+            vsyncDelta = 0;
+        }
+        
+        VSync(vsyncDelta);
+    }
+    
+    cdStruct = &g_bigCdStruct;
+    location = &cdStruct->g_defaultCdResource.Location;
+    *(u_int*)&cdStruct->g_defaultCdResource.Location = 0;
+    cdStruct->g_defaultCdResource.dataSize = dataSizeBytes;
+    
+    CdIntToPos(lba, location);
+
+    // 0x801ed998 is &g_SKCDPOSE_DAT
+    CD_QueueAudioPlayback(6, 0xffff, 0x801ed998, 0);
+
+    CD_WaitForQueueEmpty();
+    CD_SetAudioVolume(128, 1);
+}
