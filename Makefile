@@ -18,23 +18,19 @@ FINAL_MAPFILE := /lom/build/$(GAME).map
 # Toolchain (adjust if using a different prefix, e.g. mips-linux-gnu-)
 CROSS         := mipsel-linux-gnu-
 CC            := gcc
-AS            := $(CROSS)as
 LD            := $(CROSS)ld
 OBJCOPY       := $(CROSS)objcopy
 
 # Flags - tune these to match your game's original compiler settings
 # NOTE: -Iinclude removed - we use -Iinclude when cd'd into $(WORK_DIR)
-CFLAGS        := -O2 -mips1 -mfp32 -mno-abicalls -fno-pic \
-                 -G0 -funsigned-char -fno-common \
-                 -nostdinc -nostdlib -fno-builtin -fomit-frame-pointer \
-                 -Wall -EL \
-				 -mno-gpopt
+CFLAGS        := -O2 -G0 
 
-# AS_FLAGS only has assembler flags, no GCC flags
-# NOTE: -Iinclude removed - we use -Iinclude when cd'd into $(WORK_DIR)
-AS_FLAGS      := -march=r3000 -mtune=r3000 -no-pad-sections -EL
+# maspsx with --run-assembler flag (this replaces the AS variable)
+# We call maspsx.py --run-assembler which internally calls the system assembler
+MASPSX_AS     := python3 tools/maspsx/maspsx.py --run-assembler
+MASPSX_AS_FLAGS := 
 
-# maspsx - note: NO --run-assembler flag, we pipe to AS instead
+# maspsx for preprocessing only (no --run-assembler)
 # --macro-inc is needed to define ASPSX directives like 'nonmatching', 'dlabel', etc.
 MASPSX        := python3 tools/maspsx/maspsx.py
 MASPSX_FLAGS  := 
@@ -126,14 +122,15 @@ $(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(WORK_DIR)/linker/$(GAME).ld
 		-Map build/$(GAME).map
 	@echo "Linked $@"
 
-# --- Decompiled C → GCC asm → maspsx → object ---
-# Use pipes like Croc does: GCC | MASPSX | AS
+# --- Decompiled C → GCC asm → maspsx --run-assembler → object ---
+# Call maspsx.py with --run-assembler flag which handles assembly internally
 # C files don't need --macro-inc since GCC output doesn't use ASPSX directives
 # Compile from /tmp_build/src/*.c with includes from /tmp_build/include
 # Static pattern rule: for each src/X.c, build /tmp_build/build/src/X.o from /tmp_build/src/X.c
 $(C_OBJECTS): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(WORK_DIR) && $(CC) $(CFLAGS) -Iinclude -c $(SRC_DIR)/$*.c -S -o - | python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_C) | $(AS) $(AS_FLAGS) -Iinclude -o build/$(SRC_DIR)/$*.o
+	cd $(WORK_DIR) && $(CC) $(CFLAGS) -Iinclude -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
 
 # --- Asm files with ASPSX directives (non-matching + data + header) ---
 # These need --macro-inc to handle directives like 'nonmatching', 'dlabel', etc.
@@ -141,7 +138,9 @@ $(C_OBJECTS): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 # Static pattern rule: for each asm/X.s, build /tmp_build/build/asm/X.o from /tmp_build/asm/X.s
 $(OTHER_OBJ): $(WORK_DIR)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | $(AS) $(AS_FLAGS) -Iinclude -o build/$(ASM_DIR)/$*.o
+	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | \
+		python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | \
+		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
 
 # ---------------- Binary output + padding ----------------
 
@@ -167,7 +166,9 @@ TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(WORK_DIR)/build/$(ASM_DIR)/%.o,$(TARGE
 # Build target objects from asm/*.s files (these are already processed by splat)
 $(TARGET_OBJ): $(WORK_DIR)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | $(AS) $(AS_FLAGS) -Iinclude -o build/$(ASM_DIR)/$*.o
+	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | \
+		python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | \
+		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
 
 # Build all target objects (for objdiff progress tracking)
 target-objects: $(COPY_SENTINEL) $(TARGET_OBJ)
