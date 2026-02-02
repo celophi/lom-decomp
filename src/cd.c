@@ -135,6 +135,8 @@ Notes: Synchronizes with VSync using stored timestamp to prevent command conflic
  * 
  * decomp.me link: https://decomp.me/scratch/4PljL
  * decomp.me (%): 99.65% (Hexadecimal immediates instead of decimal)
+ * 
+ * TODO: Figure out why g_SKCDPOSE_DAT is an undefined reference and not included in splat output.
  */
 void CD_InitLocationEntries (int lba, int dataSizeBytes)
 {
@@ -163,7 +165,10 @@ void CD_InitLocationEntries (int lba, int dataSizeBytes)
     cdStruct->g_defaultCdResource.dataSize = dataSizeBytes;
     
     CdIntToPos(lba, location);
-    CD_QueueAudioPlayback(6, 0xffff, &g_SKCDPOSE_DAT, 0);
+
+    // 0x801ed998 is &g_SKCDPOSE_DAT
+    CD_QueueAudioPlayback(6, 0xffff, 0x801ed998, 0);
+    
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }
