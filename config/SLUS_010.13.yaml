@@ -54,7 +54,7 @@ segments:
     subsegments:
       - [0x800, c, main]
       - [0x472C, c, cd]
-      - [0x4814, c, main_continued]
+      - [0x49EC, c, main_continued]
       - [0x25990, data, initialized]
 
   - name: sdata
