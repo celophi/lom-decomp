@@ -96,24 +96,6 @@ INCLUDE_ASM("asm/nonmatchings/cd", func_80014014);
 
 INCLUDE_ASM("asm/nonmatchings/cd", func_800140D4);
 
-/* Description: Initializes CD resource entry for disc location seeking
-
-Params:
-  lba - Logical Block Address (sector) on the CD to prepare
-  dataSizeBytes - Size of data in bytes associated with this location
-
-Returns: 
-void
-
-Notes: Synchronizes with VSync using stored timestamp to prevent command conflicts.
-  Clears the default CD resource location structure (4 bytes zeroed).
-  Converts LBA to CD-ROM MSF format and stores in global resource entry.
-  Queues command 0x06 with SKCDPOSE_DAT as target buffer.
-  SKCDPOSE_DAT likely stands for "Seek CD POSition Entry DATa".
-  This appears to be a table of CdlLOC positions for disc seeking operations.
-  Blocks until CD command queue is empty before setting audio volume.
-  Sets CD audio volume to 128 (0x80) which may be default/mid-level. */
-
 /**
  * Initializes CD resource entry for disc location seeking
  * 
@@ -168,7 +150,7 @@ void CD_InitLocationEntries (int lba, int dataSizeBytes)
 
     // 0x801ed998 is &g_SKCDPOSE_DAT
     CD_QueueAudioPlayback(6, 0xffff, 0x801ed998, 0);
-    
+
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }
