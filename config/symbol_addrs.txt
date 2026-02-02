@@ -4,7 +4,7 @@ CD_UpdateAndProcessQueue    = 0x800122c0;
 CD_WaitForQueueEmpty        = 0x80013f2c;
 CD_HandleSyncError          = 0x80013f64;
 CD_SetAudioVolume           = 0x80013fd0;
-CD_InitAudioPlayback        = 0x80014140;
+CD_InitLocationEntries      = 0x80014140;
 
 // PSY-Q Functions
 CdSyncCallback              = 0x8001e4b0;

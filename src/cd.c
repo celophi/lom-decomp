@@ -96,62 +96,74 @@ INCLUDE_ASM("asm/nonmatchings/cd", func_80014014);
 
 INCLUDE_ASM("asm/nonmatchings/cd", func_800140D4);
 
-/* Description:
-     Prepares and queues CD audio playback starting from a specified LBA.
-     Initializes global playback state, synchronizes timing with VSync,
-     converts the LBA to MSF format, and enqueues a CD read command.
-   
-   Params:
-     sector        - Logical Block Address (LBA) on the CD to start playback from.
-     dataSizeBytes - Size of audio data in bytes to be associated with the playback.
-   
-   Returns:
-     void
-   
-   Behavior:
-     - Computes a delay relative to the last recorded CD VSync timestamp and
-       synchronizes with VSync to align CD operations with video timing.
-     - Clears and initializes the global CD location structure.
-     - Stores dataSizeBytes in g_cdDefaultLocation.dataSize for later reference.
-     - Converts the starting LBA to CD-ROM minute:second:sector (MSF) format
-       via CdIntToPos and stores it in g_cdDefaultLocation.Location.
-     - Queues a CD read command (CdlReadN) with parameter 0xFFFF and a predefined
-       audio data descriptor.
-     - Blocks until the CD command queue becomes empty.
-     - Sets the CD audio mixer volume to 0x80 (mid-level stereo volume).
-   
-   Notes:
-     - Uses g_cdVSyncTimestamp to enforce a minimum inter-command delay.
-     - The queued command uses a fixed parameter (0xFFFF), likely indicating
-       an open-ended or streaming read length.
-     - Audio playback does not necessarily begin immediately; this function
-       prepares and schedules the necessary CD operations.
-   
-   Decompilation:
-     https://decomp.me/scratch/pF5sN */
+/* Description: Initializes CD resource entry for disc location seeking
 
-void CD_InitAudioPlayback(int lba,int dataSizeBytes)
+Params:
+  lba - Logical Block Address (sector) on the CD to prepare
+  dataSizeBytes - Size of data in bytes associated with this location
+
+Returns: 
+void
+
+Notes: Synchronizes with VSync using stored timestamp to prevent command conflicts.
+  Clears the default CD resource location structure (4 bytes zeroed).
+  Converts LBA to CD-ROM MSF format and stores in global resource entry.
+  Queues command 0x06 with SKCDPOSE_DAT as target buffer.
+  SKCDPOSE_DAT likely stands for "Seek CD POSition Entry DATa".
+  This appears to be a table of CdlLOC positions for disc seeking operations.
+  Blocks until CD command queue is empty before setting audio volume.
+  Sets CD audio volume to 128 (0x80) which may be default/mid-level. */
+
+/**
+ * Initializes CD resource entry for disc location seeking
+ * 
+ * Params:
+ * lba - Logical Block Address (sector) on the CD to prepare
+ * dataSizeBytes - Size of data in bytes associated with this location
+ * 
+ * Returns:
+ * void
+ * 
+ * Notes: Synchronizes with VSync using stored timestamp to prevent command conflicts.
+ * Clears the default CD resource location structure (4 bytes zeroed).
+ * Converts LBA to CD-ROM MSF format and stores in global resource entry.
+ * Queues command 0x06 with SKCDPOSE_DAT as target buffer.
+ * SKCDPOSE_DAT likely stands for "Seek CD POSition Entry DATa".
+ * This appears to be a table of CdlLOC positions for disc seeking operations.
+ * Blocks until CD command queue is empty before setting audio volume.
+ * Sets CD audio volume to 128 (0x80) which may be default/mid-level.
+ * 
+ * decomp.me link: https://decomp.me/scratch/4PljL
+ * decomp.me (%): 99.65% (Hexadecimal immediates instead of decimal)
+ */
+void CD_InitLocationEntries (int lba, int dataSizeBytes)
 {
-  int vsyncDelta;
-  
-  vsyncDelta = VSync(-1);
-  vsyncDelta = g_bigCdStruct.g_cdVSyncTimestamp - (vsyncDelta + -3);
-  if (0 < vsyncDelta) {
-    if (vsyncDelta == 1) {
-      vsyncDelta = 0;
+    CdlLOC *location;
+    int vsyncOffset;
+    int vsyncDelta;
+    BigCdStruct *cdStruct;
+    
+    vsyncOffset = -3;
+    vsyncDelta = VSync(-1);
+    vsyncDelta = g_bigCdStruct.g_cdVSyncTimestamp - (vsyncDelta + vsyncOffset);
+    
+    if (vsyncDelta > 0)
+    {
+        if (vsyncDelta == 1)
+        {
+            vsyncDelta = 0;
+        }
+        
+        VSync(vsyncDelta);
     }
-    VSync(vsyncDelta);
-  }
-
-  g_bigCdStruct.g_defaultCdResource.Location.minute = 0;
-  g_bigCdStruct.g_defaultCdResource.Location.second = 0;
-  g_bigCdStruct.g_defaultCdResource.Location.sector = 0;
-  g_bigCdStruct.g_defaultCdResource.Location.track = 0;
-  g_bigCdStruct.g_defaultCdResource.dataSize = dataSizeBytes;
-
-  CdIntToPos(lba, &g_bigCdStruct.g_defaultCdResource.Location);
-  CD_QueueAudioPlayback(CdlReadN, 0xffff, 0x801ed998, 0);
-  CD_WaitForQueueEmpty();
-  CD_SetAudioVolume(128, 1);
-  return;
+    
+    cdStruct = &g_bigCdStruct;
+    location = &cdStruct->g_defaultCdResource.Location;
+    *(u_int*)&cdStruct->g_defaultCdResource.Location = 0;
+    cdStruct->g_defaultCdResource.dataSize = dataSizeBytes;
+    
+    CdIntToPos(lba, location);
+    CD_QueueAudioPlayback(6, 0xffff, &g_SKCDPOSE_DAT, 0);
+    CD_WaitForQueueEmpty();
+    CD_SetAudioVolume(128, 1);
 }

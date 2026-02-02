@@ -138,7 +138,7 @@ extern SKCDPOSE_DAT g_SKCDPOSE_DAT;
 // Prototypes
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
-void CD_InitAudioPlayback(int lba, int dataSizeBytes);
+void CD_InitLocationEntries(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
 int CD_QueueAudioPlayback(char command, u_short resourceIndex, u_int dstBuffer, u_int callback);
 
