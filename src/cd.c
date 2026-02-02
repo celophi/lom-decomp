@@ -91,3 +91,67 @@ void CD_SetAudioVolume(u_char volume, int stereoChannel)
  } while (0);
   CdMix(audioConfig);
 }
+
+INCLUDE_ASM("asm/nonmatchings/cd", func_80014014);
+
+INCLUDE_ASM("asm/nonmatchings/cd", func_800140D4);
+
+/* Description:
+     Prepares and queues CD audio playback starting from a specified LBA.
+     Initializes global playback state, synchronizes timing with VSync,
+     converts the LBA to MSF format, and enqueues a CD read command.
+   
+   Params:
+     sector        - Logical Block Address (LBA) on the CD to start playback from.
+     dataSizeBytes - Size of audio data in bytes to be associated with the playback.
+   
+   Returns:
+     void
+   
+   Behavior:
+     - Computes a delay relative to the last recorded CD VSync timestamp and
+       synchronizes with VSync to align CD operations with video timing.
+     - Clears and initializes the global CD location structure.
+     - Stores dataSizeBytes in g_cdDefaultLocation.dataSize for later reference.
+     - Converts the starting LBA to CD-ROM minute:second:sector (MSF) format
+       via CdIntToPos and stores it in g_cdDefaultLocation.Location.
+     - Queues a CD read command (CdlReadN) with parameter 0xFFFF and a predefined
+       audio data descriptor.
+     - Blocks until the CD command queue becomes empty.
+     - Sets the CD audio mixer volume to 0x80 (mid-level stereo volume).
+   
+   Notes:
+     - Uses g_cdVSyncTimestamp to enforce a minimum inter-command delay.
+     - The queued command uses a fixed parameter (0xFFFF), likely indicating
+       an open-ended or streaming read length.
+     - Audio playback does not necessarily begin immediately; this function
+       prepares and schedules the necessary CD operations.
+   
+   Decompilation:
+     https://decomp.me/scratch/pF5sN */
+
+void CD_InitAudioPlayback(int lba,int dataSizeBytes)
+{
+  int vsyncDelta;
+  
+  vsyncDelta = VSync(-1);
+  vsyncDelta = g_bigCdStruct.g_cdVSyncTimestamp - (vsyncDelta + -3);
+  if (0 < vsyncDelta) {
+    if (vsyncDelta == 1) {
+      vsyncDelta = 0;
+    }
+    VSync(vsyncDelta);
+  }
+
+  g_bigCdStruct.g_defaultCdResource.Location.minute = 0;
+  g_bigCdStruct.g_defaultCdResource.Location.second = 0;
+  g_bigCdStruct.g_defaultCdResource.Location.sector = 0;
+  g_bigCdStruct.g_defaultCdResource.Location.track = 0;
+  g_bigCdStruct.g_defaultCdResource.dataSize = dataSizeBytes;
+
+  CdIntToPos(lba, &g_bigCdStruct.g_defaultCdResource.Location);
+  CD_QueueAudioPlayback(CdlReadN, 0xffff, 0x801ed998, 0);
+  CD_WaitForQueueEmpty();
+  CD_SetAudioVolume(128, 1);
+  return;
+}

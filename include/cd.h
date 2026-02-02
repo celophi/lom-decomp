@@ -126,12 +126,20 @@ typedef struct BigCdStruct {
     CdResourceEntry g_defaultCdResource;
 } BigCdStruct;
 
+typedef struct SKCDPOSE_DAT {
+    CdResourceEntry resources[178];
+    char unknown[45065];
+} SKCDPOSE_DAT;
+
 // Externs
 extern BigCdStruct g_bigCdStruct;
-
+extern SKCDPOSE_DAT g_SKCDPOSE_DAT; 
 
 // Prototypes
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
+void CD_InitAudioPlayback(int lba, int dataSizeBytes);
+u_int CD_UpdateAndProcessQueue(void);
+int CD_QueueAudioPlayback(char command, u_short resourceIndex, u_int dstBuffer, u_int callback);
 
 #endif
