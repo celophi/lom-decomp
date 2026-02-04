@@ -116,7 +116,7 @@ INCLUDE_ASM("asm/nonmatchings/cd", func_800140D4);
  * Sets CD audio volume to 128 (0x80) which may be default/mid-level.
  * 
  * decomp.me link: https://decomp.me/scratch/4PljL
- * decomp.me (%): 99.65% (Hexadecimal immediates instead of decimal)
+ * decomp.me (%): 100%
  * 
  * TODO: Figure out why g_SKCDPOSE_DAT is an undefined reference and not included in splat output.
  */
