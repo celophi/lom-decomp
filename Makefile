@@ -23,15 +23,12 @@ OBJCOPY       := $(CROSS)objcopy
 
 # Flags - tune these to match your game's original compiler settings
 # NOTE: -Iinclude removed - we use -Iinclude when cd'd into $(WORK_DIR)
-CFLAGS        := -O2 -mips1 -mfp32 -mno-abicalls -fno-pic \
-				-G0 -funsigned-char -fno-common \
-				-nostdinc -nostdlib -fno-builtin -fomit-frame-pointer \
-				-Wall -EL \
+CFLAGS        := -O2 -G0
 
 # maspsx with --run-assembler flag (this replaces the AS variable)
 # We call maspsx.py --run-assembler which internally calls the system assembler
 MASPSX_AS     := python3 tools/maspsx/maspsx.py --run-assembler
-MASPSX_AS_FLAGS := 
+MASPSX_AS_FLAGS := -no-pad-sections --aspsx-version=2.79
 
 # maspsx for preprocessing only (no --run-assembler)
 # --macro-inc is needed to define ASPSX directives like 'nonmatching', 'dlabel', etc.
