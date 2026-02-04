@@ -1,15 +1,27 @@
 // CD Functions
+CD_InitializeSubsystem      = 0x80011710;
 CD_QueueAudioPlayback       = 0x800120a0;
 CD_UpdateAndProcessQueue    = 0x800122c0;
+FUN_80012b48                = 0x80012b48;
+CD_SyncCallback_Handler2    = 0x80012e88;
+CD_SyncCallback_Handler     = 0x800130a8;
+CD_ReadyCallback            = 0x80013584;
+CD_HandleSectorReadComplete = 0x80013744;
+CD_ExecuteCommand           = 0x80013a00;
+FUN_80013d74                = 0x80013d74;
 CD_WaitForQueueEmpty        = 0x80013f2c;
 CD_HandleSyncError          = 0x80013f64;
 CD_SetAudioVolume           = 0x80013fd0;
 CD_InitLocationEntries      = 0x80014140;
 
 // PSY-Q Functions
+CdInit                      = 0x8001e1cc;
+CdSetDebug                  = 0x8001e3f4;
 CdSyncCallback              = 0x8001e4b0;
 CdReadyCallback             = 0x8001e4c4;
+CdControlB                  = 0x8001e748;
 CdMix                       = 0x8001e894;
+CdDiskReady                 = 0x8002010c;
 CdIntToPos                  = 0x800203bc;
 VSync                       = 0x8002054c;
 

@@ -1,6 +1,31 @@
 #include "cd.h"
 #include "psyq/libetc.h"
 
+INCLUDE_ASM("asm/nonmatchings/cd", CD_InitializeSubsystem);
+
+INCLUDE_ASM("asm/nonmatchings/cd", func_800118DC);
+
+INCLUDE_ASM("asm/nonmatchings/cd", func_800119C0);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_QueueAudioPlayback);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_UpdateAndProcessQueue);
+
+INCLUDE_ASM("asm/nonmatchings/cd", FUN_80012b48);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler2);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_ReadyCallback);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_HandleSectorReadComplete);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_ExecuteCommand);
+
+INCLUDE_ASM("asm/nonmatchings/cd", FUN_80013d74);
+
+
 /**
  * Blocks execution until CD command queue is completely empty
  * 
