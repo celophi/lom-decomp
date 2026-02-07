@@ -163,7 +163,8 @@ recopy:
 # ---------------- Target Objects (for objdiff) ----------------
 
 # Target assembly files (full .s files from splat)
-TARGET_ASM := $(ASM_DIR)/main.s $(ASM_DIR)/cd.s $(ASM_DIR)/main_continued.s
+ALL_ASM := $(call rwildcard,$(ASM_DIR),*.s)
+TARGET_ASM := $(filter-out $(ASM_DIR)/nonmatchings/% $(ASM_DIR)/data/% , $(ALL_ASM))
 TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(WORK_DIR)/build/$(ASM_DIR)/%.o,$(TARGET_ASM))
 
 # Build target objects from asm/*.s files (these are already processed by splat)
