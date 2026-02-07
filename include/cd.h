@@ -72,9 +72,9 @@ typedef struct BigCdStruct {
     undefined field38_0x14b;
     undefined4 g_cdVSyncTimestamp;
     undefined1 g_cdSetModeBuffer;
-    undefined1 field41_0x151;
-    undefined1 field42_0x152;
-    undefined1 field43_0x153;
+    undefined1 field42_0x151;
+    undefined1 field43_0x152;
+    undefined1 field44_0x153;
     undefined1 g_cdModeParams;
     undefined1 field45_0x155;
     undefined1 field46_0x156;
@@ -89,8 +89,8 @@ typedef struct BigCdStruct {
     undefined field55_0x165;
     undefined field56_0x166;
     undefined field57_0x167;
-    undefined4 g_cdPreviousSyncCallback;
-    undefined4 g_cdPreviousReadyCallback;
+    CdlCB g_cdPreviousSyncCallback;
+    CdlCB g_cdPreviousReadyCallback;
     undefined1 field60_0x170;
     undefined1 field61_0x171;
     undefined1 field62_0x172;
