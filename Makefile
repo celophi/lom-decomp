@@ -45,12 +45,15 @@ DATA_DIR      := $(ASM_DIR)/data
 
 # BIN output to produce a matching binary
 BIN           := build/$(GAME).bin
-PAD_SIZE      := 992
 
 # ---------------- Files ----------------
 
 # Collect all .c files in src/ (from mounted directory before copying)
-C_SOURCES     := $(wildcard $(SRC_DIR)/*.c)
+rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
+            $(filter $(subst *,%,$2),$1)
+
+C_SOURCES := $(call rwildcard,$(SRC_DIR),*.c)
+
 # Objects will be built in /tmp_build/build/src/*.o
 C_OBJECTS     := $(patsubst $(SRC_DIR)/%.c,$(WORK_DIR)/build/$(SRC_DIR)/%.o,$(C_SOURCES))
 
@@ -160,7 +163,8 @@ recopy:
 # ---------------- Target Objects (for objdiff) ----------------
 
 # Target assembly files (full .s files from splat)
-TARGET_ASM := $(ASM_DIR)/main.s $(ASM_DIR)/cd.s $(ASM_DIR)/main_continued.s
+ALL_ASM := $(call rwildcard,$(ASM_DIR),*.s)
+TARGET_ASM := $(filter-out $(ASM_DIR)/nonmatchings/% $(ASM_DIR)/data/% , $(ALL_ASM))
 TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(WORK_DIR)/build/$(ASM_DIR)/%.o,$(TARGET_ASM))
 
 # Build target objects from asm/*.s files (these are already processed by splat)
