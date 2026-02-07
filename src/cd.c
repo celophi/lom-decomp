@@ -1,8 +1,29 @@
 #include "cd.h"
 #include "psyq/libetc.h"
 
-//INCLUDE_ASM("asm/nonmatchings/cd", CD_InitializeSubsystem);
-
+/**
+ * Initializes the CD-ROM subsystem and resets all CD state
+ * 
+ * Params:
+ *  None
+ * 
+ * Returns: 
+ *  void
+ * 
+ * Notes: Blocks until CdInit succeeds before proceeding with initialization.
+ *  Stores previous sync and ready callbacks before clearing them.
+ *  Resets resource index to 0xfffe (invalid marker value).
+ *  Clears all CD state flags, counters, and command queue indices.
+ *  Preserves only bit 7 (0x80) of status flags by masking bits 0-6 and 5.
+ *  Initializes 16 command queue entries with scratchpad buffer addresses.
+ *  Sets CD mode to 0xa0 (double speed with auto-pause).
+ *  Waits for disc ready if shell open flag (0x10) is set in status byte.
+ *  Applies CD mode settings via CdControlB command 0x0e.
+ *  Captures VSync timestamp at completion for timing reference.
+ * 
+ * decomp.me link: https://decomp.me/scratch/MuV6g
+ * decomp.me (%): 100%
+ */
 void CD_InitializeSubsystem(void)
 {
     volatile CdCommandQueueItem *queueItem;
