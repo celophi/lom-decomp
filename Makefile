@@ -50,7 +50,11 @@ PAD_SIZE      := 992
 # ---------------- Files ----------------
 
 # Collect all .c files in src/ (from mounted directory before copying)
-C_SOURCES     := $(wildcard $(SRC_DIR)/*.c)
+rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
+            $(filter $(subst *,%,$2),$1)
+
+C_SOURCES := $(call rwildcard,$(SRC_DIR),*.c)
+
 # Objects will be built in /tmp_build/build/src/*.o
 C_OBJECTS     := $(patsubst $(SRC_DIR)/%.c,$(WORK_DIR)/build/$(SRC_DIR)/%.o,$(C_SOURCES))
 

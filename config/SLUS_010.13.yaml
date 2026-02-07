@@ -55,6 +55,8 @@ segments:
       - [0x800, c, main]
       - [0x1F10, c, cd]
       - [0x49EC, c, main_continued]
+      - [0xEB2C, c, psyq/libcd/SYS]
+      - [0xF13C, c, psyq_continued]
       - [0x25990, data, initialized]
 
   - name: sdata
