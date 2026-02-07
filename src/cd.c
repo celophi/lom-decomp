@@ -2,6 +2,155 @@
 #include "psyq/libetc.h"
 
 /**
+ * Initializes the CD-ROM subsystem and resets all CD state
+ * 
+ * Params:
+ *  None
+ * 
+ * Returns: 
+ *  void
+ * 
+ * Notes: Blocks until CdInit succeeds before proceeding with initialization.
+ *  Stores previous sync and ready callbacks before clearing them.
+ *  Resets resource index to 0xfffe (invalid marker value).
+ *  Clears all CD state flags, counters, and command queue indices.
+ *  Preserves only bit 7 (0x80) of status flags by masking bits 0-6 and 5.
+ *  Initializes 16 command queue entries with scratchpad buffer addresses.
+ *  Sets CD mode to 0xa0 (double speed with auto-pause).
+ *  Waits for disc ready if shell open flag (0x10) is set in status byte.
+ *  Applies CD mode settings via CdControlB command 0x0e.
+ *  Captures VSync timestamp at completion for timing reference.
+ * 
+ * decomp.me link: https://decomp.me/scratch/MuV6g
+ * decomp.me (%): 100%
+ */
+void CD_InitializeSubsystem(void)
+{
+    volatile CdCommandQueueItem *queueItem;
+    u_int *statusFlagsPtr;
+    int result;
+    int queueCount;
+    u_int scratchpadAddr;
+    int endMarker;
+    
+    // Wait for CD-ROM system to initialize
+    do {
+        result = CdInit();
+    } while (result == 0);
+    
+    CdSetDebug(0);
+    
+    // Store previous callbacks before setting new ones
+    g_bigCdStruct.g_cdPreviousSyncCallback = CdSyncCallback(0);
+    g_bigCdStruct.g_cdPreviousReadyCallback = CdReadyCallback(0);
+    
+    // Initialize queue loop variables
+    queueCount = 15;
+    scratchpadAddr = 0x1f800000;
+    endMarker = -1;
+    queueItem = &g_bigCdStruct.g_CdCommandQueue.Items[11];
+    
+    // Reset resource index to invalid value
+    g_bigCdStruct.g_cdResourceIndex = 0xfffe;
+    
+    // Clear all CD state flags and counters
+    g_bigCdStruct.g_cdAudioEnabled = 0;
+    g_bigCdStruct.g_cdPlaybackState = 0;
+    g_bigCdStruct.g_cdLoopCounter = 0;
+    g_bigCdStruct.g_cdPlaybackFlag = 0;
+    g_bigCdStruct.g_cdCurrentResourceIndex = 0;
+    g_bigCdStruct.g_cdCurrentDataSize = 0;
+    g_bigCdStruct.g_cdTargetDataSize = 0;
+    g_bigCdStruct.g_cdSyncComplete = 0;
+    g_bigCdStruct.g_cdInitState = 0;
+    g_bigCdStruct.g_cdCurrentCommand = 0;
+    g_bigCdStruct.g_cdInitCommand = 0;
+    g_bigCdStruct.g_cdRetryCount = 0;
+    g_bigCdStruct.g_cdRetryCounter = 0;
+    g_bigCdStruct.g_cdLastCommand = 0;
+    g_bigCdStruct.g_cdDstBuffer = 0;
+    g_bigCdStruct.g_cdCallback = 0;
+    g_bigCdStruct.g_cdQueueReadIndex = 0;
+    g_bigCdStruct.g_cdQueueWriteIndex = 0;
+    
+    // Preserve only bit 7 (0x80) by masking off all other bits
+    statusFlagsPtr = &g_bigCdStruct.g_cdStatusFlags;
+    *statusFlagsPtr = *statusFlagsPtr & ~0x01;
+    *statusFlagsPtr = *statusFlagsPtr & ~0x02;
+    *statusFlagsPtr = *statusFlagsPtr & ~0x04;
+    *statusFlagsPtr = *statusFlagsPtr & ~0x08;
+    *statusFlagsPtr = *statusFlagsPtr & ~0x10;
+    *statusFlagsPtr = *statusFlagsPtr & ~0x40;
+    *statusFlagsPtr = *statusFlagsPtr & ~0x20;
+    
+    // Clear upper 3 bytes of status flags
+    ((u_char*)statusFlagsPtr)[1] = 0;
+    ((u_char*)statusFlagsPtr)[2] = 0;
+    ((u_char*)statusFlagsPtr)[3] = 0;
+    
+    // Initialize command queue entries with scratchpad buffer
+    do {
+        queueItem[4].command = 0;
+        queueItem[4].resourceIndex = 0;
+        queueItem[4].dstBuffer = scratchpadAddr;
+        queueItem[4].location = (CdlLOC*)scratchpadAddr;
+        queueItem[4].callback = 0;
+        queueItem--;
+        queueCount--;
+    } while (queueCount != endMarker);
+    
+    // Set CD-ROM mode parameters
+    g_bigCdStruct.g_cdSetModeBuffer = 0xa0;
+    g_bigCdStruct.field42_0x151 = 0;
+    g_bigCdStruct.field43_0x152 = 0;
+    g_bigCdStruct.field44_0x153 = 0;
+    
+    // Get CD-ROM status
+    do {
+        result = CdControlB(1, 0, &g_bigCdStruct.g_cdStatusByte);
+    } while (result == 0);
+    
+    // Wait for disc to be ready if shell is open
+    if ((g_bigCdStruct.g_cdStatusByte & 0x10) != 0) {
+        result = CdDiskReady(1);
+        while (result != 2) {
+            result = CdDiskReady(0);
+        }
+    }
+    
+    // Set CD-ROM mode
+    do {
+        result = CdControlB(14, &g_bigCdStruct.g_cdSetModeBuffer, 0);
+    } while (result == 0);
+    
+    // Store current VSync counter
+    g_bigCdStruct.g_cdVSyncTimestamp = VSync(-1);
+}
+
+INCLUDE_ASM("asm/nonmatchings/cd", func_800118DC);
+
+INCLUDE_ASM("asm/nonmatchings/cd", func_800119C0);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_QueueAudioPlayback);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_UpdateAndProcessQueue);
+
+INCLUDE_ASM("asm/nonmatchings/cd", FUN_80012b48);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler2);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_ReadyCallback);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_HandleSectorReadComplete);
+
+INCLUDE_ASM("asm/nonmatchings/cd", CD_ExecuteCommand);
+
+INCLUDE_ASM("asm/nonmatchings/cd", FUN_80013d74);
+
+
+/**
  * Blocks execution until CD command queue is completely empty
  * 
  * Params:
