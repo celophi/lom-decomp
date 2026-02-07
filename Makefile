@@ -45,7 +45,6 @@ DATA_DIR      := $(ASM_DIR)/data
 
 # BIN output to produce a matching binary
 BIN           := build/$(GAME).bin
-PAD_SIZE      := 992
 
 # ---------------- Files ----------------
 

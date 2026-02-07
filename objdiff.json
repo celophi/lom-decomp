@@ -18,6 +18,16 @@
       "name": "main/main_continued",
       "target_path": "build/asm/main_continued.o",
       "base_path": "build/src/main_continued.o"
+    },
+    {
+      "name": "main/psyq/libcd/SYS",
+      "target_path": "build/asm/psyq/libcd/SYS.o",
+      "base_path": "build/src/psyq/libcd/SYS.o"
+    },
+    {
+      "name": "main/psyq_continued",
+      "target_path": "build/asm/psyq_continued.o",
+      "base_path": "build/src/psyq_continued.o"
     }
   ]
 }
