@@ -21,18 +21,18 @@
  *  Applies CD mode settings via CdControlB command 0x0e.
  *  Captures VSync timestamp at completion for timing reference.
  * 
- * decomp.me link: https://decomp.me/scratch/MuV6g
- * decomp.me (%): 100%
+ * decomp.me link: https://decomp.me/scratch/823QB
+ * decomp.me (%): 99.74% (register usage discrepancy)
  */
 void CD_InitializeSubsystem(void)
 {
+    int endMarker;
+    int queueCount;
     volatile CdCommandQueueItem *queueItem;
+    u_int scratchpadAddr;
     u_int *statusFlagsPtr;
     int result;
-    int queueCount;
-    u_int scratchpadAddr;
-    int endMarker;
-    
+   
     // Wait for CD-ROM system to initialize
     do {
         result = CdInit();
@@ -41,14 +41,20 @@ void CD_InitializeSubsystem(void)
     CdSetDebug(0);
     
     // Store previous callbacks before setting new ones
-    g_bigCdStruct.g_cdPreviousSyncCallback = CdSyncCallback(0);
-    g_bigCdStruct.g_cdPreviousReadyCallback = CdReadyCallback(0);
+    g_cdSyncCallbackResult = CdSyncCallback(0);
+
+    // Force branch delay slot for "0" argument
+    do {} while (0);
+     
+    g_cdReadyCallbackResult = CdReadyCallback(0);
     
-    // Initialize queue loop variables
+    statusFlagsPtr = &g_bigCdStruct.g_cdStatusFlags;
+    
     queueCount = 15;
     scratchpadAddr = 0x1f800000;
+    
     endMarker = -1;
-    queueItem = &g_bigCdStruct.g_CdCommandQueue.Items[11];
+    queueItem = &g_otherQueue;
     
     // Reset resource index to invalid value
     g_bigCdStruct.g_cdResourceIndex = 0xfffe;
@@ -74,7 +80,6 @@ void CD_InitializeSubsystem(void)
     g_bigCdStruct.g_cdQueueWriteIndex = 0;
     
     // Preserve only bit 7 (0x80) by masking off all other bits
-    statusFlagsPtr = &g_bigCdStruct.g_cdStatusFlags;
     *statusFlagsPtr = *statusFlagsPtr & ~0x01;
     *statusFlagsPtr = *statusFlagsPtr & ~0x02;
     *statusFlagsPtr = *statusFlagsPtr & ~0x04;
@@ -107,11 +112,11 @@ void CD_InitializeSubsystem(void)
     
     // Get CD-ROM status
     do {
-        result = CdControlB(1, 0, &g_bigCdStruct.g_cdStatusByte);
+        result = CdControlB(1, 0, &g_bigCdStruct.cdStatusByte);
     } while (result == 0);
     
     // Wait for disc to be ready if shell is open
-    if ((g_bigCdStruct.g_cdStatusByte & 0x10) != 0) {
+    if ((g_cdStatusByte & 0x10) != 0) {
         result = CdDiskReady(1);
         while (result != 2) {
             result = CdDiskReady(0);
@@ -124,7 +129,7 @@ void CD_InitializeSubsystem(void)
     } while (result == 0);
     
     // Store current VSync counter
-    g_bigCdStruct.g_cdVSyncTimestamp = VSync(-1);
+    g_cdVSyncTimestamp = VSync(-1);
 }
 
 INCLUDE_ASM("asm/nonmatchings/cd", func_800118DC);
@@ -278,7 +283,7 @@ void CD_InitLocationEntries (int lba, int dataSizeBytes)
     
     vsyncOffset = -3;
     vsyncDelta = VSync(-1);
-    vsyncDelta = g_bigCdStruct.g_cdVSyncTimestamp - (vsyncDelta + vsyncOffset);
+    vsyncDelta = g_cdVSyncTimestamp - (vsyncDelta + vsyncOffset);
     
     if (vsyncDelta > 0)
     {
@@ -291,15 +296,12 @@ void CD_InitLocationEntries (int lba, int dataSizeBytes)
     }
     
     cdStruct = &g_bigCdStruct;
-    location = &cdStruct->g_defaultCdResource.Location;
-    *(u_int*)&cdStruct->g_defaultCdResource.Location = 0;
-    cdStruct->g_defaultCdResource.dataSize = dataSizeBytes;
+    location = &cdStruct->defaultCdResource.Location;
+    *(u_int*)&cdStruct->defaultCdResource.Location = 0;
+    cdStruct->defaultCdResource.dataSize = dataSizeBytes;
     
     CdIntToPos(lba, location);
-
-    // 0x801ed998 is &g_SKCDPOSE_DAT
-    CD_QueueAudioPlayback(6, 0xffff, 0x801ed998, 0);
-
+    CD_QueueAudioPlayback(6, 0xffff, &g_SKCDPOSE_DAT, 0);
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }

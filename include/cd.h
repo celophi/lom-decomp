@@ -81,7 +81,7 @@ typedef struct BigCdStruct {
     undefined1 field47_0x157;
     undefined4 g_cdCommandParamBuffer;
     undefined4 g_cdReadParams;
-    undefined1 g_cdStatusByte;
+    undefined1 cdStatusByte;
     undefined1 g_cdFilterModeFlags;
     undefined field52_0x162;
     undefined field53_0x163;
@@ -123,7 +123,7 @@ typedef struct BigCdStruct {
     undefined field89_0x18d;
     undefined field90_0x18e;
     undefined field91_0x18f;
-    CdResourceEntry g_defaultCdResource;
+    CdResourceEntry defaultCdResource;
 } BigCdStruct;
 
 typedef struct SKCDPOSE_DAT {
@@ -132,11 +132,14 @@ typedef struct SKCDPOSE_DAT {
 } SKCDPOSE_DAT;
 
 // Externs
-//extern BigCdStruct g_bigCdStruct;
-//extern SKCDPOSE_DAT g_SKCDPOSE_DAT; 
-// TODO: Figure out why externs are causing problems with .o generation and not included in splat output even when defined.
-// For now, define these as macros to their respective addresses. 
-#define g_bigCdStruct (*(struct BigCdStruct*)0x801ED800)
+extern CdlCB g_cdSyncCallbackResult;
+extern CdlCB g_cdReadyCallbackResult;
+extern int g_cdVSyncTimestamp;
+extern u_char g_cdStatusByte;
+
+#define g_bigCdStruct (*(struct BigCdStruct*)0x801ed800)
+#define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ed998)
+#define g_otherQueue (*(CdCommandQueueItem*)0x801ed8f0)
 
 // Prototypes
 void CD_HandleSyncError(void);

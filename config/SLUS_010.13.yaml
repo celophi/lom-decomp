@@ -19,6 +19,7 @@ options:
   find_file_boundaries: False
   gp_value: 0x8003EC14
 
+  make_full_disasm_for_code: True
   o_as_suffix: True
   use_legacy_include_asm: False
 
