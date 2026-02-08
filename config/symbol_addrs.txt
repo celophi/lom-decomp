@@ -47,4 +47,10 @@ VSync                       = 0x8002054c;
 
 // Globals
 g_bigCdStruct               = 0x801ed800;
+g_cdVSyncTimestamp          = 0x801ed94c;
+g_cdSetModeArg              = 0x801ed950;
+g_cdStatusByte              = 0x801ed960;
+g_cdSyncCallbackResult      = 0x801ed968;
+g_cdReadyCallbackResult     = 0x801ed96c;
+g_defaultCdResource         = 0x801ed990;
 g_SKCDPOSE_DAT              = 0x801ed998;
