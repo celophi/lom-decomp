@@ -48,7 +48,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Split ROM with splat
-        run: splat split config/${{ env.ROM_ID }}.yaml --make-full-disasm-for-code
+        run: splat split config/${{ env.ROM_ID }}.yaml
 
       - name: Generate objdiff configuration
         run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }}
