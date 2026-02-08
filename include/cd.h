@@ -132,8 +132,11 @@ typedef struct SKCDPOSE_DAT {
 } SKCDPOSE_DAT;
 
 // Externs
-extern BigCdStruct g_bigCdStruct;
-extern SKCDPOSE_DAT g_SKCDPOSE_DAT; 
+//extern BigCdStruct g_bigCdStruct;
+//extern SKCDPOSE_DAT g_SKCDPOSE_DAT; 
+// TODO: Figure out why externs are causing problems with .o generation and not included in splat output even when defined.
+// For now, define these as macros to their respective addresses. 
+#define g_bigCdStruct (*(struct BigCdStruct*)0x801ED800)
 
 // Prototypes
 void CD_HandleSyncError(void);
