@@ -19,6 +19,13 @@ def load_splat_config():
     with open(CONFIG_PATH, 'r') as f:
         return yaml.safe_load(f)
 
+def is_psyq_file(file_name: str) -> bool:
+    """Check if the file belongs to the psyq library folder."""
+    # Matches psyq/something.c, psyq/libc/something.c, etc.
+    parts = file_name.split('/')
+    return 'psyq' in parts
+
+
 def generate_objdiff_config():
     """Generate objdiff.json from splat config."""
     config = load_splat_config()
@@ -47,6 +54,10 @@ def generate_objdiff_config():
                 if isinstance(subseg, list) and len(subseg) >= 3 and subseg[1] == 'c':
                     file_name = subseg[2]
                     
+                    # Skip psyq / SDK files
+                    if is_psyq_file(file_name):
+                        continue
+                    
                     # Create unit entry
                     unit = {
                         "name": f"main/{file_name}",
@@ -69,9 +80,10 @@ def generate_objdiff_config():
         json.dump(objdiff_config, f, indent=2)
     
     print(f"Generated {OUTPUT_PATH}")
-    print(f"Found {len(units)} units:")
+    print(f"Found {len(units)} units (psyq files excluded):")
     for unit in units:
         print(f"  - {unit['name']}")
+
 
 if __name__ == "__main__":
     generate_objdiff_config()
