@@ -30,9 +30,19 @@ typedef struct CdCommandQueue {
     CdCommandQueueItem Items[16];
 } CdCommandQueue;
 
+typedef union {
+    u_int word;
+    struct {
+        u_char b0;
+        u_char b1;
+        u_char b2;
+        u_char b3;
+    } bytes;
+} CdStatusFlags;
+
 typedef struct BigCdStruct {
-    u_int g_cdStatusFlags;
-    undefined1 g_cdAudioEnabled;
+    CdStatusFlags cdStatusFlags;
+    undefined1 cdAudioEnabled;
     undefined1 g_cdPlaybackState;
     undefined1 g_cdPlaybackFlag;
     undefined field4_0x7;
@@ -70,7 +80,7 @@ typedef struct BigCdStruct {
     undefined field36_0x149;
     undefined field37_0x14a;
     undefined field38_0x14b;
-    undefined4 g_cdVSyncTimestamp;
+    undefined4 cdVSyncTimestamp;
     undefined1 g_cdSetModeBuffer;
     undefined1 field42_0x151;
     undefined1 field43_0x152;
@@ -136,6 +146,7 @@ extern CdlCB g_cdSyncCallbackResult;
 extern CdlCB g_cdReadyCallbackResult;
 extern int g_cdVSyncTimestamp;
 extern u_char g_cdStatusByte;
+extern u_char g_cdAudioEnabled;
 
 #define g_bigCdStruct (*(struct BigCdStruct*)0x801ed800)
 #define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ed998)

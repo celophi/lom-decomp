@@ -1,5 +1,6 @@
 // CD Functions
 CD_InitializeSubsystem      = 0x80011710;
+CD_PauseAndClearState        = 0x800118dc;
 CD_QueueAudioPlayback       = 0x800120a0;
 CD_UpdateAndProcessQueue    = 0x800122c0;
 FUN_80012b48                = 0x80012b48;
@@ -40,6 +41,16 @@ CdGetSector2                = 0x8001e8d4;
 CdDataCallback              = 0x8001e8f4;
 CdDataSync                  = 0x8001e918;
 
+// psyq/libetc/INTR.c
+ResetCallback               = 0x8002076c;
+InterruptCallback           = 0x8002079c;
+DMACallback                 = 0x800207cc;
+VSyncCallback               = 0x800207fc;
+VSyncCallbacks              = 0x80020830;
+StopCallback                = 0x80020860;
+RestartCallback             = 0x80020890;
+CheckCallback               = 0x800208c0;
+
 // Other PSY-Q
 CdDiskReady                 = 0x8002010c;
 CdIntToPos                  = 0x800203bc;
@@ -47,6 +58,7 @@ VSync                       = 0x8002054c;
 
 // Globals
 g_bigCdStruct               = 0x801ed800;
+g_cdAudioEnabled            = 0x801ed804;
 g_cdVSyncTimestamp          = 0x801ed94c;
 g_cdSetModeArg              = 0x801ed950;
 g_cdStatusByte              = 0x801ed960;
