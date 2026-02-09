@@ -206,7 +206,119 @@ INCLUDE_ASM("asm/nonmatchings/cd", CD_QueueAudioPlayback);
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_UpdateAndProcessQueue);
 
-INCLUDE_ASM("asm/nonmatchings/cd", FUN_80012b48);
+/**
+ * Description: Processes CD-ROM initialization state machine across multiple VSync frames
+ * 
+ * Params:
+ *   None
+ * 
+ * Returns: 1 if CD not initialized, 0 otherwise
+ * 
+ * TODO: Verify exact timing values for VSync delays (1, 4, 30 frames)
+ * TODO: Confirm command codes 0x10, 0x11, 0x12 mappings
+ * TODO: Determine why state 3 subtracts 30 from timestamp instead of resetting
+ * TODO: Decomp better :)
+ * 
+ * Notes: State machine with 4 states (0-3) for asynchronous CD initialization.
+ * State 0: Calls CdFlush() and advances to state 1 after 1 VSync frame.
+ * State 1: Configures mode 0xa0, sets sync/ready callbacks, sends CdlSetmode command, waits 4 VSync frames.
+ * State 2: Sets filter mode with parameters (1,1), advances to state 3 immediately.
+ * State 3: Waits for g_cdSyncComplete flag or 30 frame timeout, then issues follow-up commands.
+ * Uses cdVSyncTimestamp field to track frame delays between state transitions.
+ * Command 0x11 triggers CdlDemute, 0x12 triggers CdlPause, others trigger CdlSetfilter with reset to 0x10.
+ * Early exits return 0 to indicate "still processing", non-zero only if CD hardware not ready.
+ * 
+ * decomp.me link: https://decomp.me/scratch/J6JQ8
+ * decomp.me (%): 81.65%
+ */
+int CD_ProcessInitStateMachine(void)
+{
+    int timestamp;
+    u_char com;
+    u_char local_18 [8];
+    int initState;
+  
+    if ((g_bigCdStruct.cdStatusFlags.word & 8) == 0) {
+        return 1;
+    }
+
+    initState = g_bigCdStruct.g_cdInitState;
+    
+    switch (initState) {
+        case 0:
+            CdFlush();
+            g_bigCdStruct.g_cdInitState = 1;
+            timestamp = VSync(-1);
+            timestamp += 1;
+            g_bigCdStruct.cdVSyncTimestamp = timestamp;
+            return 0;
+
+        case 1:
+            timestamp = VSync(-1);
+        
+            if (g_bigCdStruct.cdVSyncTimestamp <= timestamp) {
+                g_bigCdStruct.g_cdModeParams = 0xa0;
+                g_bigCdStruct.field45_0x155 = 0;
+                g_bigCdStruct.field46_0x156 = 0;
+                g_bigCdStruct.field47_0x157 = 0;
+                
+                CdSyncCallback(CD_SyncCallback_Handler);
+                CdReadyCallback((CdlCB)0x0);
+                
+                g_bigCdStruct.g_cdInitCommand = 0x10;
+                
+                CdControlF(CdlSetmode, &g_bigCdStruct.g_cdModeParams);
+                timestamp = VSync(-1);
+                
+                g_bigCdStruct.cdVSyncTimestamp = timestamp + 4;
+                return 0;
+            }
+            
+            return 0;
+
+        case 2:
+            CdSyncCallback(CD_SyncCallback_Handler);
+            g_bigCdStruct.g_cdInitCommand = 0x11;
+            local_18[0] = '\x01';
+            local_18[1] = 1;
+            CdControlF('\r',local_18);
+            g_bigCdStruct.g_cdInitState = 3;
+            g_bigCdStruct.cdVSyncTimestamp = VSync(-1);
+            return 0;
+
+        case 3:
+            if (g_bigCdStruct.g_cdSyncComplete == '\x01') {
+            g_bigCdStruct.cdVSyncTimestamp = VSync(-1);
+            g_bigCdStruct.g_cdSyncComplete = 0;
+            return 0;
+          }
+          timestamp = VSync(-1);
+          if (timestamp < g_bigCdStruct.cdVSyncTimestamp + 0x1e) {
+            return 0;
+          }
+          CdSyncCallback(CD_SyncCallback_Handler);
+          if (g_bigCdStruct.g_cdInitCommand == 0x11) {
+            com = '\f';
+          }
+          else {
+            if ((g_bigCdStruct.g_cdInitCommand < 0x12) || (g_bigCdStruct.g_cdInitCommand != 0x12)) {
+              local_18[0] = '\x01';
+              local_18[1] = 1;
+              CdControlF(CdlSetfilter,local_18);
+              g_bigCdStruct.g_cdInitCommand = 0x10;
+              goto LAB_80012d48;
+            }
+            com = '\t';
+          }
+          CdControlF(com,(u_char *)0x0);
+        LAB_80012d48:
+          g_bigCdStruct.cdVSyncTimestamp = g_bigCdStruct.cdVSyncTimestamp + -0x1e;
+          return 0;
+
+        default:
+            return 0;
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler2);
 
