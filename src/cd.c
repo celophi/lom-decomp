@@ -22,7 +22,7 @@
  *  Captures VSync timestamp at completion for timing reference.
  * 
  * decomp.me link: https://decomp.me/scratch/xzkLK
- * decomp.me (%): 99.74% (register usage discrepancy)
+ * decomp.me (%): 100%
  */
 void CD_InitializeSubsystem(void)
 {
