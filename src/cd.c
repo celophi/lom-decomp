@@ -21,7 +21,7 @@
  *  Applies CD mode settings via CdControlB command 0x0e.
  *  Captures VSync timestamp at completion for timing reference.
  * 
- * decomp.me link: https://decomp.me/scratch/823QB
+ * decomp.me link: https://decomp.me/scratch/xzkLK
  * decomp.me (%): 99.74% (register usage discrepancy)
  */
 void CD_InitializeSubsystem(void)
@@ -48,7 +48,8 @@ void CD_InitializeSubsystem(void)
      
     g_cdReadyCallbackResult = CdReadyCallback(0);
     
-    statusFlagsPtr = &g_bigCdStruct.g_cdStatusFlags;
+    // Reset resource index to invalid value
+    statusFlagsPtr = &g_bigCdStruct.cdStatusFlags.word;
     
     queueCount = 15;
     scratchpadAddr = 0x1f800000;
@@ -56,11 +57,10 @@ void CD_InitializeSubsystem(void)
     endMarker = -1;
     queueItem = &g_otherQueue;
     
-    // Reset resource index to invalid value
     g_bigCdStruct.g_cdResourceIndex = 0xfffe;
     
     // Clear all CD state flags and counters
-    g_bigCdStruct.g_cdAudioEnabled = 0;
+    g_bigCdStruct.cdAudioEnabled = 0;
     g_bigCdStruct.g_cdPlaybackState = 0;
     g_bigCdStruct.g_cdLoopCounter = 0;
     g_bigCdStruct.g_cdPlaybackFlag = 0;
@@ -79,7 +79,9 @@ void CD_InitializeSubsystem(void)
     g_bigCdStruct.g_cdQueueReadIndex = 0;
     g_bigCdStruct.g_cdQueueWriteIndex = 0;
     
+    
     // Preserve only bit 7 (0x80) by masking off all other bits
+    
     *statusFlagsPtr = *statusFlagsPtr & ~0x01;
     *statusFlagsPtr = *statusFlagsPtr & ~0x02;
     *statusFlagsPtr = *statusFlagsPtr & ~0x04;
@@ -132,7 +134,50 @@ void CD_InitializeSubsystem(void)
     g_cdVSyncTimestamp = VSync(-1);
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", func_800118DC);
+
+void func_800118DC(void) 
+{
+    int result;
+    BigCdStruct* reference;
+
+    reference = &g_bigCdStruct;
+
+    if (g_cdAudioEnabled != 0) {
+        func_80014014();
+    }
+
+    reference->cdStatusFlags.word = g_bigCdStruct.cdStatusFlags.word & 0xffffffbf;
+
+    CdSyncCallback((CdlCB)0x0);
+    CdReadyCallback((CdlCB)0x0);
+
+    do {
+    result = CdControlB(CdlPause,(u_char *)0x0,(u_char *)0x0);
+    } while (result == 0);
+
+    g_bigCdStruct.g_cdResourceIndex = 0xfffe;
+    g_bigCdStruct.g_cdPlaybackFlag = 0;
+    g_bigCdStruct.g_cdCurrentResourceIndex = 0;
+    g_bigCdStruct.g_cdCurrentDataSize = 0;
+    g_bigCdStruct.g_cdTargetDataSize = 0;
+    g_bigCdStruct.g_cdPlaybackState = 0;
+    g_bigCdStruct.g_cdLoopCounter = 0;
+    g_bigCdStruct.g_cdCurrentCommand = 0;
+    g_bigCdStruct.g_cdInitCommand = 0;
+    g_bigCdStruct.g_cdRetryCount = 0;
+    g_bigCdStruct.g_cdRetryCounter = 0;
+    g_bigCdStruct.g_cdLastCommand = 0;
+    g_bigCdStruct.g_cdDstBuffer = 0;
+    g_bigCdStruct.g_cdCallback = 0;
+    g_bigCdStruct.cdStatusFlags.word = g_bigCdStruct.cdStatusFlags.word & 0xffffffef;
+    g_bigCdStruct.cdVSyncTimestamp = VSync(-1);
+    g_bigCdStruct.cdStatusFlags.bytes.b1 = 0;
+    g_bigCdStruct.cdStatusFlags.bytes.b2 = 0;
+    g_bigCdStruct.g_cdQueueReadIndex = 0;
+    g_bigCdStruct.g_cdQueueWriteIndex = 0;
+
+    CdFlush();
+}
 
 INCLUDE_ASM("asm/nonmatchings/cd", func_800119C0);
 
@@ -203,17 +248,17 @@ void CD_WaitForQueueEmpty(void)
  */
 void CD_HandleSyncError(void)
 {
-    CdSyncCallback((CdlCB) 0x0);
-    CdReadyCallback((CdlCB) 0x0);
+    CdSyncCallback(0);
+    CdReadyCallback(0);
     
-    g_bigCdStruct.g_cdStatusFlags |= 1;    
     g_bigCdStruct.g_cdInitState = 0;
+    g_bigCdStruct.cdStatusFlags.word |= 1;    
     g_bigCdStruct.g_cdCurrentCommand = 0;
     g_bigCdStruct.g_cdInitCommand = 0;
     g_bigCdStruct.g_cdRetryCount = 0;
     g_bigCdStruct.g_cdRetryCounter = 0;
-    g_bigCdStruct.g_cdStatusFlags &= ~0x10;
-    g_bigCdStruct.g_cdVSyncTimestamp = VSync(-1);
+    g_bigCdStruct.cdStatusFlags.word &= ~0x10;
+    g_bigCdStruct.cdVSyncTimestamp = VSync(-1);
 }
 
 /*
