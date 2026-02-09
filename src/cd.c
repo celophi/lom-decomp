@@ -134,8 +134,29 @@ void CD_InitializeSubsystem(void)
     g_cdVSyncTimestamp = VSync(-1);
 }
 
-
-void func_800118DC(void) 
+/**
+ * Description: Stops CD playback and resets CD subsystem to idle state
+ * 
+ * Params:
+ *   None
+ * 
+ * Returns: void
+ * 
+ * Notes: Stops audio playback via func_80014014 if CD audio is enabled.
+ *   Clears bit 6 (0x40) from status flags before pausing.
+ *   Removes sync and ready callbacks before issuing pause command.
+ *   Blocks until CdControlB pause command succeeds.
+ *   Resets resource index to 0xfffe (invalid marker value).
+ *   Clears all playback state, counters, command flags, and buffers to 0.
+ *   Clears bit 4 (0x10) from status flags after state reset.
+ *   Captures VSync timestamp for timing reference.
+ *   Resets status bytes b1 and b2 along with queue read/write indices.
+ *   Flushes CD buffer at completion.
+ * 
+ * decomp.me link: https://decomp.me/scratch/izusq
+ * decomp.me (%): 100%
+ */
+void CD_PauseAndClearState(void)
 {
     int result;
     BigCdStruct* reference;
