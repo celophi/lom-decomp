@@ -40,6 +40,16 @@ CdGetSector2                = 0x8001e8d4;
 CdDataCallback              = 0x8001e8f4;
 CdDataSync                  = 0x8001e918;
 
+// psyq/libetc/INTR.c
+ResetCallback               = 0x8002076c;
+InterruptCallback           = 0x8002079c;
+DMACallback                 = 0x800207cc;
+VSyncCallback               = 0x800207fc;
+VSyncCallbacks              = 0x80020830;
+StopCallback                = 0x80020860;
+RestartCallback             = 0x80020890;
+CheckCallback               = 0x800208c0;
+
 // Other PSY-Q
 CdDiskReady                 = 0x8002010c;
 CdIntToPos                  = 0x800203bc;
