@@ -229,95 +229,98 @@ INCLUDE_ASM("asm/nonmatchings/cd", CD_UpdateAndProcessQueue);
  * Early exits return 0 to indicate "still processing", non-zero only if CD hardware not ready.
  * 
  * decomp.me link: https://decomp.me/scratch/J6JQ8
- * decomp.me (%): 81.65%
+ * decomp.me (%): 94.89%
  */
-int CD_ProcessInitStateMachine(void)
-{
+int CD_ProcessInitStateMachine(void) {
     int timestamp;
     u_char com;
-    u_char local_18 [8];
-    int initState;
-  
+    u_char local_18[8];
+    u_char * p;
+
     if ((g_bigCdStruct.cdStatusFlags.word & 8) == 0) {
         return 1;
     }
 
-    initState = g_bigCdStruct.g_cdInitState;
-    
-    switch (initState) {
-        case 0:
-            CdFlush();
-            g_bigCdStruct.g_cdInitState = 1;
-            timestamp = VSync(-1);
-            timestamp += 1;
-            g_bigCdStruct.cdVSyncTimestamp = timestamp;
-            return 0;
+    switch (g_bigCdStruct.g_cdInitState) {
+    case 0:
+        CdFlush();
+        g_bigCdStruct.g_cdInitState = 1;
 
-        case 1:
-            timestamp = VSync(-1);
-        
-            if (g_bigCdStruct.cdVSyncTimestamp <= timestamp) {
-                g_bigCdStruct.g_cdModeParams = 0xa0;
-                g_bigCdStruct.field45_0x155 = 0;
-                g_bigCdStruct.field46_0x156 = 0;
-                g_bigCdStruct.field47_0x157 = 0;
-                
-                CdSyncCallback(CD_SyncCallback_Handler);
-                CdReadyCallback((CdlCB)0x0);
-                
-                g_bigCdStruct.g_cdInitCommand = 0x10;
-                
-                CdControlF(CdlSetmode, &g_bigCdStruct.g_cdModeParams);
-                timestamp = VSync(-1);
-                
-                g_bigCdStruct.cdVSyncTimestamp = timestamp + 4;
-                return 0;
-            }
-            
-            return 0;
+        g_bigCdStruct.cdVSyncTimestamp = VSync(-1) + 1;
+        goto return_zero;
 
-        case 2:
+    case 1:
+        timestamp = VSync(-1);
+
+        if (g_bigCdStruct.cdVSyncTimestamp <= timestamp) {
+            g_bigCdStruct.g_cdModeParams = 0xa0;
+            g_bigCdStruct.field45_0x155 = 0;
+            g_bigCdStruct.field46_0x156 = 0;
+            g_bigCdStruct.field47_0x157 = 0;
+
             CdSyncCallback(CD_SyncCallback_Handler);
-            g_bigCdStruct.g_cdInitCommand = 0x11;
-            local_18[0] = '\x01';
-            local_18[1] = 1;
-            CdControlF('\r',local_18);
-            g_bigCdStruct.g_cdInitState = 3;
-            g_bigCdStruct.cdVSyncTimestamp = VSync(-1);
-            return 0;
+            CdReadyCallback((CdlCB) 0x0);
 
-        case 3:
-            if (g_bigCdStruct.g_cdSyncComplete == '\x01') {
+            g_bigCdStruct.g_cdInitCommand = 0x10;
+
+            CdControlF(CdlSetmode, & g_bigCdStruct.g_cdModeParams);
+
+            timestamp = VSync(-1);
+
+            g_bigCdStruct.cdVSyncTimestamp = timestamp + 4;
+            goto return_zero;
+        }
+
+        return 0;
+
+    case 2:
+        CdSyncCallback(CD_SyncCallback_Handler);
+        g_bigCdStruct.g_cdInitCommand = 0x11;
+        local_18[0] = 1;
+        local_18[1] = 1;
+        CdControlF('\r', local_18);
+        g_bigCdStruct.g_cdInitState = 3;
+        g_bigCdStruct.cdVSyncTimestamp = VSync(-1);
+        goto return_zero;
+
+    case 3:
+        if (g_bigCdStruct.g_cdSyncComplete == 1) {
             g_bigCdStruct.cdVSyncTimestamp = VSync(-1);
             g_bigCdStruct.g_cdSyncComplete = 0;
-            return 0;
-          }
-          timestamp = VSync(-1);
-          if (timestamp < g_bigCdStruct.cdVSyncTimestamp + 0x1e) {
-            return 0;
-          }
-          CdSyncCallback(CD_SyncCallback_Handler);
-          if (g_bigCdStruct.g_cdInitCommand == 0x11) {
-            com = '\f';
-          }
-          else {
-            if ((g_bigCdStruct.g_cdInitCommand < 0x12) || (g_bigCdStruct.g_cdInitCommand != 0x12)) {
-              local_18[0] = '\x01';
-              local_18[1] = 1;
-              CdControlF(CdlSetfilter,local_18);
-              g_bigCdStruct.g_cdInitCommand = 0x10;
-              goto LAB_80012d48;
-            }
-            com = '\t';
-          }
-          CdControlF(com,(u_char *)0x0);
+            goto return_zero;
+        }
+        timestamp = VSync(-1);
+        if (timestamp < g_bigCdStruct.cdVSyncTimestamp + 0x1e) {
+            goto return_zero;
+        }
+        CdSyncCallback(CD_SyncCallback_Handler);
+        if (g_bigCdStruct.g_cdInitCommand != 0x11) {
+            do {
+                if (g_bigCdStruct.g_cdInitCommand < 0x12) {
+                    goto do_setfilter;
+                }
+                if (g_bigCdStruct.g_cdInitCommand == 0x12) {
+                    CdControlF(0x09, (u_char * ) 0x0);
+                    goto LAB_80012d48;
+                }
+                do_setfilter: local_18[0] = 1;
+                local_18[1] = 1;
+                CdControlF(0x0d, local_18);
+                g_bigCdStruct.g_cdInitCommand = 0x10;
+            } while (0);
+        } else {
+            CdControlF(0x0c, (u_char * ) 0x0);
+        }
         LAB_80012d48:
-          g_bigCdStruct.cdVSyncTimestamp = g_bigCdStruct.cdVSyncTimestamp + -0x1e;
-          return 0;
+            g_bigCdStruct.cdVSyncTimestamp = g_bigCdStruct.cdVSyncTimestamp + -0x1e;
+        goto return_zero;
 
-        default:
-            return 0;
+    default:
+        goto return_zero;
     }
+
+return_zero:
+        return 0;
 }
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler2);
