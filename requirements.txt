@@ -7,3 +7,7 @@
 
 # PyYAML for objdiff config generation
 PyYAML>=6.0
+
+# Required by decomp-permuter
+pycparser==2.23
+toml==0.10.2
