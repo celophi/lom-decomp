@@ -66,8 +66,7 @@ C_OBJECTS     := $(patsubst $(SRC_DIR)/%.c,$(WORK_DIR)/build/$(SRC_DIR)/%.o,$(C_
 # Note: rodata files are NOT here - they're included in main.c via inline asm
 OTHER_ASM     := $(ASM_DIR)/header.s \
                  $(ASM_DIR)/data/initialized.data.s \
-                 $(ASM_DIR)/data/sdata.data.s \
-				 $(ASM_DIR)/data/jumptables.rodata.s
+                 $(ASM_DIR)/data/sdata.data.s 
 OTHER_OBJ     := $(patsubst $(ASM_DIR)/%.s,$(WORK_DIR)/build/$(ASM_DIR)/%.o,$(OTHER_ASM))
 
 # All objects to link (nonmatching asm is included via INCLUDE_ASM, not as separate objects)
