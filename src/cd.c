@@ -200,7 +200,7 @@ void CD_PauseAndClearState(void)
     CdFlush();
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", func_800119C0);
+INCLUDE_ASM("asm/nonmatchings/cd", CD_StreamAudioData);
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_QueueAudioPlayback);
 

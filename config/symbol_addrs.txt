@@ -14,6 +14,7 @@ CD_WaitForQueueEmpty        = 0x80013f2c;
 CD_HandleSyncError          = 0x80013f64;
 CD_SetAudioVolume           = 0x80013fd0;
 CD_InitLocationEntries      = 0x80014140;
+CD_DecompressData           = 0x80014448;
 
 // PSY-Q Functions
 CdInit                      = 0x8001e1cc;
@@ -66,3 +67,39 @@ g_cdSyncCallbackResult      = 0x801ed968;
 g_cdReadyCallbackResult     = 0x801ed96c;
 g_defaultCdResource         = 0x801ed990;
 g_SKCDPOSE_DAT              = 0x801ed998;
+
+// Uncategorized
+__main = 0x8002e850;
+SetMem = 0x8001679c;
+SetConf = 0x8001689c;
+ResetGraph = 0x8001940c;
+SetGraphDebug = 0x80019580;
+SetDispMask = 0x800196f0;
+FUN_80016784 = 0x80016784;
+FUN_8002129c = 0x8002129c;
+SsUtReverbOff = 0x800212cc;
+FUN_80015c18 = 0x80015c18;
+InitGeom = 0x8001cbf4;
+InitCARD = 0x800172ec;
+StartCARD = 0x8001737c;
+_bu_init = 0x8001676c;
+McxStartCom = 0x800319d8;
+ChangeClearPAD = 0x8001688c;
+InitializeControllers = 0x80014adc;
+FUN_80021fbc = 0x80021fbc;
+CD_StreamAudioData = 0x800119c0;
+InitVSyncController = 0x80015770;
+srand = 0x80016f8c;
+FUN_80015c28 = 0x80015c28;
+FUN_8004fd14 = 0x8004fd14;
+DrawSync = 0x80019788;
+FUN_80140018 = 0x80140018;
+FUN_80015c58 = 0x80015c58;
+FUN_80022aa8 = 0x80022aa8;
+FUN_80022ac8 = 0x80022ac8;
+FUN_8002279c = 0x8002279c;
+FUN_80015c38 = 0x80015c38;
+FUN_80011358 = 0x80011358;
+ClearImage = 0x8001990c;
+FUN_80060814 = 0x80060814;
+FUN_80011638 = 0x80011638;
