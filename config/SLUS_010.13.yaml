@@ -58,6 +58,8 @@ segments:
       - [0xAAC, c, main_u2]
       - [0x1F10, c, cd]
       - [0x49EC, c, main_u3]
+      - [0x4C48, c, decompression]
+      - [0x5088, c, main_u4]
       - [0xEB2C, c, psyq/libcd/SYS]
       - [0xF13C, c, psyq_u1]
       - [0x10F6C, c, psyq/libetc/INTR]
