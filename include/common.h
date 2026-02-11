@@ -12,4 +12,9 @@ typedef unsigned char undefined1;
 typedef unsigned short undefined2;
 typedef unsigned int undefined4;
 
+typedef int s32;
+typedef unsigned int u32;
+typedef unsigned char u8;
+typedef signed char s8;
+
 #endif
