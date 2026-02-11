@@ -202,7 +202,7 @@ void CD_PauseAndClearState(void)
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_StreamAudioData);
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_QueueAudioPlayback);
+INCLUDE_ASM("asm/nonmatchings/cd", CD_EnqueueCommand);
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_UpdateAndProcessQueue);
 
@@ -482,7 +482,7 @@ void CD_InitLocationEntries (int lba, int dataSizeBytes)
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
     
     CdIntToPos(lba, location);
-    CD_QueueAudioPlayback(6, 0xffff, &g_SKCDPOSE_DAT, 0);
+    CD_EnqueueCommand(6, 0xffff, &g_SKCDPOSE_DAT, 0);
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }

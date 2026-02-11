@@ -1,7 +1,7 @@
 // CD Functions
 CD_InitializeSubsystem      = 0x80011710;
 CD_PauseAndClearState        = 0x800118dc;
-CD_QueueAudioPlayback       = 0x800120a0;
+CD_EnqueueCommand       = 0x800120a0;
 CD_UpdateAndProcessQueue    = 0x800122c0;
 CD_ProcessInitStateMachine  = 0x80012b48;
 CD_SyncCallback_Handler2    = 0x80012e88;
@@ -103,3 +103,4 @@ FUN_80011358 = 0x80011358;
 ClearImage = 0x8001990c;
 FUN_80060814 = 0x80060814;
 FUN_80011638 = 0x80011638;
+FUN_800141ec = 0x800141ec;
