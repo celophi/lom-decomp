@@ -40,7 +40,7 @@ typedef union {
     } bytes;
 } CdStatusFlags;
 
-typedef struct BigCdStruct {
+typedef struct CdSystem {
     CdStatusFlags statusFlags;
     undefined1 audioEnabled;
     undefined1 playbackState;
@@ -103,7 +103,7 @@ typedef struct BigCdStruct {
     undefined4 u_188;
     undefined4 u_18c;
     CdResourceEntry defaultCdResource;
-} BigCdStruct;
+} CdSystem;
 
 typedef struct SKCDPOSE_DAT {
     CdResourceEntry resources[178];
@@ -117,7 +117,7 @@ extern int g_cdVSyncTimestamp;
 extern u_char g_cdStatusByte;
 extern u_char g_cdAudioEnabled;
 
-#define g_bigCdStruct (*(struct BigCdStruct*)0x801ed800)
+#define g_cdSystem (*(struct CdSystem*)0x801ed800)
 #define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ed998)
 #define g_otherQueue (*(CdCommandQueueItem*)0x801ed8f0)
 
