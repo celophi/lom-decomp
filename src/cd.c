@@ -205,7 +205,8 @@ void CD_PauseAndClearState(void)
  * decom.me link: https://decomp.me/scratch/8sOtx
  * decomp.me (%): 90.71%
  */
-s32 CD_StreamData(s32 index, u32 dst) {
+s32 CD_StreamData(s32 index, u32 dst) 
+{
     s32 bufferRemainder;
     s32 newBufferStart;
     s32 wrapAmount;
