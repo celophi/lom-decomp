@@ -129,5 +129,8 @@ u_int CD_UpdateAndProcessQueue(void);
 int CD_EnqueueCommand(char command, u_short resourceIndex, u_int dstBuffer, u_int callback);
 void CD_SyncCallback_Handler(char intr, u_char *status);
 void CD_SyncCallback_Handler2(char intr, u_char *result);
+s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
+void FUN_80014ad0(undefined1 *param_1);
+undefined4* FUN_80014888(int param_1, u_int param_2);
 
 #endif
