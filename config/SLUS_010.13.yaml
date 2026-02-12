@@ -53,16 +53,16 @@ segments:
     vram: 0x80010000
     align: 4
     subsegments:
-      - [0x800, c, main_u1]
-      - [0xAAC, c, main_u2]
+      - [0x800, c, unk1]
+      - [0xAAC, c, unk2]
       - [0x1F10, c, cd]
-      - [0x49EC, c, main_u3]
+      - [0x49EC, c, unk3]
       - [0x4C48, c, decompression]
-      - [0x5088, c, main_u4]
+      - [0x5088, c, unk4]
       - [0xEB2C, c, psyq/libcd/SYS]
-      - [0xF13C, c, psyq_u1]
+      - [0xF13C, c, unk5]
       - [0x10F6C, c, psyq/libetc/INTR]
-      - [0x110D0, c, psyq_u2]
+      - [0x110D0, c, unk6]
       - [0x25990, data, initialized]
 
   - name: sdata
