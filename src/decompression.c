@@ -11,7 +11,8 @@
  * decomp.me link: https://decomp.me/scratch/ecuJv
  * decomp.me (%): 96.42% (register usage)
  */
-s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd) {
+s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd) 
+{
 
     u32 iterations;
     u32 opcode;
