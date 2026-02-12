@@ -664,7 +664,7 @@ void CD_SetAudioVolume(u_char volume, int stereoChannel)
   CdMix(audioConfig);
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", func_80014014);
+INCLUDE_ASM("asm/nonmatchings/cd", CD_ResetSystem);
 
 INCLUDE_ASM("asm/nonmatchings/cd", func_800140D4);
 
