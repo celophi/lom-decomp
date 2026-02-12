@@ -201,7 +201,130 @@ void CD_PauseAndClearState(void)
     CdFlush();
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_StreamAudioData);
+/**
+ * decom.me link: https://decomp.me/scratch/8sOtx
+ * decomp.me (%): 90.71%
+ */
+s32 CD_StreamData(s32 index, u32 dst) 
+{
+    s32 bufferRemainder;
+    s32 newBufferStart;
+    s32 wrapAmount;
+    s32 currentBufferSize;
+    s32 processedLength;
+    s32 oldBufferStart;
+    
+    s32 timestamp;
+    s32 remainingDataSize;
+    s32 bytesToCopy;
+    s32* wrapDstPtr;
+    s32* wrapSrcPtr;
+    u32 srcEnd;
+
+    u8* scratchpad;
+    u8 isReady;
+    u8* scratchRef;
+    u32 initialDst;
+
+    while (CD_UpdateAndProcessQueue() != 0) {
+        VSync(0);
+    }
+
+    initialDst = dst;
+    scratchpad = (u8*) 0x1F800000;
+    
+    *(s32* )(scratchpad + 0x18) = 0;
+    *(u8* )(scratchpad) = 0U;
+    *(u8* )(scratchpad + 0x01) = 0U;
+    *(s32* )(scratchpad + 0x14) = 0;
+    
+    remainingDataSize = CD_EnqueueCommand(6, index & 0xFFFF, 0U, (u32) &FUN_80014888) - 1;
+   
+    while (1) {
+
+        timestamp = VSync(-1);
+        scratchRef = scratchpad;
+        isReady = 1;
+        
+wait_for_command_complete:
+        if (VSync(-1) >= (timestamp + 30)) {
+            goto CD_StreamData_process;
+        }
+        
+        if (*(u8* )scratchRef != isReady) {
+            goto wait_for_command_complete;
+        }
+    
+        while (1) {
+                
+                currentBufferSize = *(s32* )(scratchRef + 0x0C);
+                
+                if (currentBufferSize < remainingDataSize) {
+                    srcEnd = (*(s32* )(scratchRef + 0x04) + currentBufferSize) - 280;
+                } else {
+                    srcEnd = *(s32* )(scratchRef + 0x04) + remainingDataSize;
+                }
+                
+                if (CD_DecompressData((u32* )0x1F800008, &dst, srcEnd, -4U) == 0) {
+                    return dst - initialDst;
+                }
+    
+                if (currentBufferSize != *(s32* )(0x1F80000C)) {
+                    continue;
+                }
+    
+                processedLength = *(s32* )(scratchRef + 0x08) - *(s32* )(scratchRef + 0x04);
+                *(s32* )(scratchRef + 0x14) = processedLength;
+    
+                // zero's out the address, so clear out the src data pointer.
+                FUN_80014ad0(0x1F800000);
+                
+                remainingDataSize -= processedLength;
+                if (*(u8* )(scratchRef + 0x01) != isReady) {
+                    continue;
+                }
+    
+                wrapAmount = *(s32* )(scratchRef + 0x10);
+                
+                if (wrapAmount != 0) {
+                    bufferRemainder = *(s32* )(scratchRef + 0x0C) - processedLength;
+                    newBufferStart = 0x801DC118 - bufferRemainder;
+                    
+                    oldBufferStart = *(s32* )(scratchRef + 0x04);
+                    *(s32* )(scratchRef + 0x08) = newBufferStart;
+                    *(s32* )(scratchRef + 0x04) = newBufferStart;
+                    
+                    bytesToCopy = ((4 - (bufferRemainder & 3) & 3));
+
+                    wrapDstPtr = newBufferStart - bytesToCopy;
+                    wrapSrcPtr = (oldBufferStart + processedLength) - bytesToCopy;
+    
+                    bytesToCopy = bufferRemainder + 3;
+    
+                    *(s32* )(scratchRef + 0x0C) = wrapAmount + bufferRemainder;
+                    
+                    if (bytesToCopy < 0) {
+                        bytesToCopy = bufferRemainder + 6;
+                    }
+    
+                    for (bufferRemainder = (bytesToCopy >> 2) - 1; bufferRemainder != 1; bufferRemainder--) {
+                        *wrapDstPtr++ = *wrapSrcPtr++;
+                    }
+                } else {
+                    *(s32* )(scratchRef + 0x04) += processedLength;
+                    *(s32* )(scratchRef + 0x0C) -= processedLength;
+                }
+
+                *(u8* )(scratchRef) = isReady;    
+                continue;
+            }
+
+CD_StreamData_process:
+        CD_UpdateAndProcessQueue();
+        timestamp = VSync(-1);
+    }
+}
+
 
 /**
  * decomp.me link: https://decomp.me/scratch/tWHW2
