@@ -20,3 +20,6 @@ src/main_continued.c
 
 # Local generated files for matching purposes
 .matching/
+
+# Ignore generated C files
+src/unk*.c

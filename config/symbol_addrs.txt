@@ -58,7 +58,7 @@ CdIntToPos                  = 0x800203bc;
 VSync                       = 0x8002054c;
 
 // Globals
-g_bigCdStruct               = 0x801ed800;
+g_cdSystem                  = 0x801ed800;
 g_cdAudioEnabled            = 0x801ed804;
 g_cdVSyncTimestamp          = 0x801ed94c;
 g_cdSetModeArg              = 0x801ed950;
