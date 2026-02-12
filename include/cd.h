@@ -6,7 +6,7 @@
 
 // Structures
 typedef struct CdResourceEntry {
-    CdlLOC Location;
+    CdlLOC location;
     int dataSize;
 } CdResourceEntry;
 
@@ -27,7 +27,7 @@ typedef struct CdCommandQueueItem {
 } CdCommandQueueItem;
 
 typedef struct CdCommandQueue {
-    CdCommandQueueItem Items[16];
+    CdCommandQueueItem items[16];
 } CdCommandQueue;
 
 typedef union {
@@ -128,5 +128,6 @@ void CD_InitLocationEntries(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
 int CD_EnqueueCommand(char command, u_short resourceIndex, u_int dstBuffer, u_int callback);
 void CD_SyncCallback_Handler(char intr, u_char *status);
+void CD_SyncCallback_Handler2(char intr, u_char *result);
 
 #endif
