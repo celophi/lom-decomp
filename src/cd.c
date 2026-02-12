@@ -1,5 +1,6 @@
 #include "cd.h"
 #include "psyq/libetc.h"
+#include "psyq/libcd.h"
 
 /**
  * Initializes the CD-ROM subsystem and resets all CD state
@@ -202,7 +203,120 @@ void CD_PauseAndClearState(void)
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_StreamAudioData);
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_EnqueueCommand);
+/**
+ * decomp.me link: https://decomp.me/scratch/tWHW2
+ * decomp.me (%): 97.54% 
+ */
+s32 CD_EnqueueCommand(u8 command, u16 resourceIndex, s32 dstBuffer, s32 callback) {
+    s32 temp_a0;
+    s32 temp_a1;
+    s32 queueWriteIndex;
+    s32 temp_a1_3;
+    s32 temp_v1;
+    s32 var_v0;
+    CdResourceEntry* resourceEntry;
+    
+    u8 currentCommand;
+    
+    if (g_cdSystem.statusFlags.word & 0x40) {
+        return -3;
+    }
+    
+    temp_a1 = resourceIndex & 0xFFFF;
+    
+    if (temp_a1 == 0xFFFF) {
+        resourceEntry = (void* )0x801ED990;
+    } else {
+        resourceEntry = (temp_a1 * 8) + 0x801ED998;
+    }
+
+    if ( g_cdSystem.currentCommand == 0) {
+        
+        if (g_cdSystem.initCommand != 0) {
+            goto CD_EnqueueCommand_check_params;
+        }
+
+        goto CD_EnqueueCommand_end;
+    }
+
+CD_EnqueueCommand_check_params:
+    
+    if (
+        (g_cdSystem.lastCommand != (command & 0xFF)) || 
+        (g_cdSystem.resourceIndex != (resourceIndex & 0xFFFF)) || (g_cdSystem.dstBuffer != dstBuffer) || (g_cdSystem.callback != callback)) {
+        
+        var_v0 = -2;
+        if (*(u_int*)&resourceEntry->location != 0) {
+            
+            if (resourceEntry->dataSize == 0) {
+                return -2;
+            }
+            
+            queueWriteIndex = g_cdSystem.queueWriteIndex;
+            
+            if (g_cdSystem.queueReadIndex == ((queueWriteIndex + 1) & 0xF)) {
+                return -1;
+            }
+
+            queueWriteIndex = g_cdSystem.queueWriteIndex;
+            g_cdSystem.commandQueue.items[queueWriteIndex].command = command;
+            g_cdSystem.lastCommand = command;
+
+            queueWriteIndex = g_cdSystem.queueWriteIndex;
+            g_cdSystem.commandQueue.items[queueWriteIndex].resourceIndex = resourceIndex;
+            g_cdSystem.resourceIndex = resourceIndex;
+
+            queueWriteIndex = g_cdSystem.queueWriteIndex;
+            g_cdSystem.commandQueue.items[queueWriteIndex].location = &resourceEntry->location;
+
+            queueWriteIndex = g_cdSystem.queueWriteIndex;
+            g_cdSystem.commandQueue.items[queueWriteIndex].dstBuffer = dstBuffer;
+
+            g_cdSystem.dstBuffer = dstBuffer;
+            
+            queueWriteIndex = g_cdSystem.queueWriteIndex;
+            g_cdSystem.commandQueue.items[g_cdSystem.queueWriteIndex].callback = callback;
+            g_cdSystem.callback = callback;
+            
+            queueWriteIndex = g_cdSystem.queueWriteIndex;
+            g_cdSystem.queueWriteIndex = (s32) ((g_cdSystem.queueWriteIndex + 1) & 0xF);
+            
+            temp_a0 = VSync(-1);
+
+            currentCommand = g_cdSystem.currentCommand;
+            if ((currentCommand == 0) && (g_cdSystem.initCommand  == 0)) {
+                
+                temp_a1_3 = g_cdSystem.statusFlags.word;
+                
+                if (!(temp_a1_3 & 0xF)) {
+                    
+                    g_cdSystem.vsyncTimestamp = temp_a0;
+                    g_cdSystem.playbackFlag = 1;
+                    g_cdSystem.currentResourceIndex = resourceIndex;
+                    temp_v1 = resourceEntry->dataSize;
+                    g_cdSystem.currentCommand = 1U;
+                    g_cdSystem.statusFlags.word = (s32) (temp_a1_3 | 0x10);
+                    g_cdSystem.playbackState  = 0;
+                    g_cdSystem.loopCounter = 0;
+                    g_cdSystem.targetDataSize = temp_v1;
+                    g_cdSystem.currentDataSize = temp_v1;
+                    
+                    CdSyncCallback(&CD_SyncCallback_Handler2);
+                    CdSync(0, 0);
+                    CdControlF(CdlNop, 0);
+                }
+            }
+            goto CD_EnqueueCommand_end;
+        }
+        /* Duplicate return node #21. Try simplifying control flow for better match */
+        return var_v0;
+    }
+
+CD_EnqueueCommand_end:
+    var_v0 = resourceEntry->dataSize;
+    return var_v0;
+}
+
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_UpdateAndProcessQueue);
 
@@ -477,8 +591,8 @@ void CD_InitLocationEntries (int lba, int dataSizeBytes)
     }
     
     cdStruct = &g_cdSystem;
-    location = &cdStruct->defaultCdResource.Location;
-    *(u_int*)&cdStruct->defaultCdResource.Location = 0;
+    location = &cdStruct->defaultCdResource.location;
+    *(u_int*)&cdStruct->defaultCdResource.location = 0;
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
     
     CdIntToPos(lba, location);
