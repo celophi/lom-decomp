@@ -70,8 +70,6 @@ g_defaultCdResource         = 0x801ed990;
 g_SKCDPOSE_DAT              = 0x801ed998;
 
 
-
-
 // Uncategorized
 __main = 0x8002e850;
 SetMem = 0x8001679c;
@@ -114,3 +112,4 @@ CD_ResetSystem = 0x80014014;
 DecDCToutCallback = 0x800181A8;
 DrawSyncCallback = 0x80019690;
 FUN_80023010 = 0x80023010;
+CD_CanQueueResourceIndex = 0x800140d4;
