@@ -664,7 +664,53 @@ void CD_SetAudioVolume(u_char volume, int stereoChannel)
   CdMix(audioConfig);
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_ResetSystem);
+/**
+ * Resets CD subsystem to idle state and stops any ongoing audio playback
+ * 
+ * Params:
+ *  None
+ *
+ * Returns:
+ *  void
+ * 
+ * decomp.me link: https://decomp.me/scratch/fnucZ
+ * decomp.me (%): 100%
+ */
+void CD_ResetSystem(void)
+{
+    u32 value;
+    u32* callback;
+    volatile u32* ptr = (u32*)0x801ED500;
+    
+    callback = (u32*)ptr[0x0E];
+    DecDCToutCallback(callback);
+
+    callback = (u32*)ptr[0x0F];
+    DrawSyncCallback(callback);
+    
+    CdSyncCallback(0);
+    CdReadyCallback(0);
+    
+    do {
+        value = CdControlB(9U, 0, 0);
+    } while (value == 0);
+    
+    if (g_cdAudioReady != 0) {
+        FUN_80023010();
+    }
+    
+    g_cdSystem.audioEnabled = 0;
+    g_cdSystem.currentCommand = 0;
+    g_cdSystem.initCommand = 0;
+    g_cdSystem.queueReadIndex = 0;
+    g_cdSystem.queueWriteIndex = 0;
+    g_cdSystem.retryCounter = 0;
+    g_cdSystem.playbackState = 0;
+    g_cdSystem.loopCounter = 0;
+    
+    g_cdSystem.statusFlags.word = (s32) (g_cdSystem.statusFlags.word & ~0x10);
+    g_cdSystem.vsyncTimestamp = VSync(-1);
+}
 
 INCLUDE_ASM("asm/nonmatchings/cd", func_800140D4);
 
