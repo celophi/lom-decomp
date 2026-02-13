@@ -712,7 +712,43 @@ void CD_ResetSystem(void)
     g_cdSystem.vsyncTimestamp = VSync(-1);
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", func_800140D4);
+/**
+ * Checks if a CD command with the specified resource index can be queued without duplication
+ * 
+ * decomp.me link: https://decomp.me/scratch/rGrTJ
+ * decomp.me (%): 97.04%
+ */
+s32 CD_CanQueueResourceIndex(s32 arg0) {
+    
+    s32 writeIndex;
+    s32 index;
+
+    index = g_cdSystem.queueReadIndex;
+    writeIndex = g_cdSystem.queueWriteIndex;
+    
+    index = ((- index + writeIndex ) & 0x0F);
+    index -= 1;
+    
+    if (index != -1) {
+
+        while (1) {
+
+            if (g_cdSystem.commandQueue.items[writeIndex].resourceIndex == (arg0 & 0xFFFF)) {
+                return 0;
+            }
+
+            writeIndex = (writeIndex & 0xF) + 1;
+            index -= 1;
+            
+            if (index == -1) {
+                break;
+            }
+        }
+    }
+
+    return 1;
+}
+
 
 /**
  * Initializes CD resource entry for disc location seeking
