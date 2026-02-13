@@ -116,6 +116,7 @@ extern CdlCB g_cdReadyCallbackResult;
 extern int g_cdVSyncTimestamp;
 extern u_char g_cdStatusByte;
 extern u_char g_cdAudioEnabled;
+extern u_char g_cdAudioReady;
 
 #define g_cdSystem (*(struct CdSystem*)0x801ed800)
 #define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ed998)
