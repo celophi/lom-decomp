@@ -722,7 +722,6 @@ s32 CD_CanQueueResourceIndex(s32 arg0) {
     
     s32 writeIndex;
     s32 index;
-    s32 pos;
     
     index = g_cdSystem.queueReadIndex;
     writeIndex = g_cdSystem.queueWriteIndex;
