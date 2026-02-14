@@ -61,6 +61,8 @@ VSync                       = 0x8002054c;
 g_cdAudioReady              = 0x801ed591;
 g_cdSystem                  = 0x801ed800;
 g_cdAudioEnabled            = 0x801ed804;
+g_playbackState             = 0x801ed805;
+g_size                      = 0x801ed828;
 g_cdVSyncTimestamp          = 0x801ed94c;
 g_cdSetModeArg              = 0x801ed950;
 g_cdStatusByte              = 0x801ed960;
@@ -68,6 +70,7 @@ g_cdSyncCallbackResult      = 0x801ed968;
 g_cdReadyCallbackResult     = 0x801ed96c;
 g_defaultCdResource         = 0x801ed990;
 g_SKCDPOSE_DAT              = 0x801ed998;
+
 
 
 // Uncategorized
@@ -113,3 +116,4 @@ DecDCToutCallback = 0x800181A8;
 DrawSyncCallback = 0x80019690;
 FUN_80023010 = 0x80023010;
 CD_CanQueueResourceIndex = 0x800140d4;
+

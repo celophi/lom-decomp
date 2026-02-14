@@ -165,7 +165,7 @@ void CD_PauseAndClearState(void)
     reference = &g_cdSystem;
 
     if (g_cdAudioEnabled != 0) {
-        func_80014014();
+        CD_ResetSystem();
     }
 
     reference->statusFlags.word = g_cdSystem.statusFlags.word & 0xffffffbf;
@@ -568,7 +568,192 @@ INCLUDE_ASM("asm/nonmatchings/cd", CD_ReadyCallback);
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_HandleSectorReadComplete);
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_ExecuteCommand);
+/**
+ * decomp.me link: https://decomp.me/scratch/byGEu
+ * decomp.me (%): 96.59%
+ */
+void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode) 
+{
+    u8* paramBufferSpecialCmd;
+    s32 cmdId;
+    s32 nextReadIndex;
+    s32 dataSize;
+    s32 controlParam;
+    s32 commandCheck;
+    s32* queuedLocation;
+    u8 actualCommand;
+    void (*callbackHandler)(u8, u8*);
+    void* queueEntryPtr;
+    void* queueBufferPtr;
+    CdSystem *cdSystem;
+
+    actualCommand = command;
+    queuedLocation = 0;
+
+    // Handle SeekL command specially - skip past any queued SeekL commands
+    if ((actualCommand & 0xFF) == CdlSeekL) {
+
+        while (1) {
+            // Calculate next read index with circular buffer wrapping
+            nextReadIndex = (g_cdSystem.queueReadIndex + 1) & 0xF;
+
+            // Wait if buffer is full (write index == next read index)
+            if (g_cdSystem.queueWriteIndex == nextReadIndex) {
+                continue;
+            }
+
+            // Advance read index and get next command
+            g_cdSystem.queueReadIndex = nextReadIndex;
+            actualCommand = g_cdSystem.commandQueue.items[nextReadIndex].command;
+
+            // Skip if it's another SeekL command
+            if (actualCommand == CdlSeekL) {
+                continue;
+            }
+
+            break;
+        }
+
+        if ((actualCommand & 0xFF) == CdlSeekL) {
+            goto reset_playback_state;
+        }
+    }
+    
+    cmdId = actualCommand & 0xFF;
+
+    // Handle Read/Play commands
+    if ((cmdId == CdlReadN) || (cmdId == CdlReadS)) {
+        if (cmdId != CdlSeekL) {
+            if (g_playbackState == 0) {
+                goto reset_playback_state;
+            }
+        } else {
+reset_playback_state:
+            // Reset playback state and get queue location
+            queuedLocation = (s32*)g_cdSystem.queueReadIndex;
+            g_cdSystem.loopCounter = 0;
+            g_cdSystem.playbackState = 0;
+            
+            queuedLocation = g_cdSystem.commandQueue.items[(u_int)queuedLocation].location;
+            g_cdSystem.commandParamBuffer = (s32) *queuedLocation;
+        }
+
+        // Handle different execution modes
+        switch (executionMode) {
+            case 1:
+                g_cdSystem.currentCommand = actualCommand;
+                CdControlF(actualCommand & 0xFF, 0x801ED958);
+    
+                while (1) {
+                    if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                        break;
+                    }
+                }
+                
+                commandCheck = actualCommand & 0xFF;
+                break;
+
+            case 2:
+                commandCheck = actualCommand & 0xFF;
+                
+                if (executionMode == 2) {
+    
+                    while (1) {
+                        if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                            break;
+                        }
+                    }
+                        
+                    CdSync(0, 0);
+                    commandCheck = actualCommand & 0xFF;
+                }
+                
+                break;
+        }
+        
+        if ((commandCheck == CdlReadN) || (commandCheck == CdlReadS)) {
+            
+            queueEntryPtr = (g_cdSystem.queueReadIndex * 0x10) + 0x801ED800;
+            
+            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (g_cdSystem.dstBuffer2 == *((u32*)queueEntryPtr + 0x12) )) {
+                g_cdSystem.playbackState = 0;
+            }
+            cdSystem = &g_cdSystem;
+            if (g_playbackState == 0) {
+                dataSize = *((s32*)queuedLocation + 1);
+                queueBufferPtr = (void*)((cdSystem->queueReadIndex * 0x10) + 0x801ED800);
+                g_cdSystem.sizeCopy = dataSize;
+                g_cdSystem.size = dataSize;
+                g_cdSystem.dstBuffer2 = (s32) *((u32*)queueBufferPtr + 0x12);
+                g_cdSystem.loopCounter = (s32) *((u32*)queueBufferPtr + 0x13);
+            }
+            if (executionMode == 0) {
+                g_cdSystem.statusFlags.bytes.b2 = 0;
+                callbackHandler = CD_ReadyCallback;
+                goto set_callback;
+            }
+            goto after_callback;
+        }
+        
+        if (executionMode == 1) {
+            callbackHandler = 0;
+set_callback:
+            CdReadyCallback(callbackHandler);
+after_callback:
+            if (executionMode != 1) {
+                goto continue_execution;
+            }
+        } else {
+continue_execution:
+            g_cdSystem.currentCommand = actualCommand;
+            CdControlF(actualCommand & 0xFF, 0x801ED958);
+        }
+        g_playbackState = 0;
+        return;
+    }
+
+    // Handle other commands based on execution mode
+    switch (executionMode) {
+        case 0:
+            g_cdSystem.currentCommand = actualCommand;
+            
+            if (cmdId == 0xE) {
+                controlParam = 0xE;
+                paramBufferSpecialCmd = 0x801ED950;
+            } else {
+                controlParam = cmdId;
+                paramBufferSpecialCmd = 0;
+            }
+            break;
+        case 1:
+            CdReadyCallback(0);
+            g_cdSystem.currentCommand = actualCommand;
+            CdControlF(cmdId, 0);
+
+             // Wait for sector read
+            while (1) {
+                if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                    break;
+                }
+            }
+            return;
+        case 2:
+            // Wait for sector read first
+            while(1) {
+                if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                    break;
+                }
+            }
+            g_cdSystem.currentCommand = actualCommand;
+            controlParam = actualCommand & 0xFF;
+            paramBufferSpecialCmd = 0;
+            break;
+        default:
+            return;
+    }
+
+    CdControlF(controlParam, paramBufferSpecialCmd);
+}
 
 INCLUDE_ASM("asm/nonmatchings/cd", FUN_80013d74);
 
