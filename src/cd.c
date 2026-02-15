@@ -179,27 +179,72 @@ void CD_Initialize(void)
  * decomp.me link: https://decomp.me/scratch/izusq
  * decomp.me (%): 100%
  */
-void CD_PauseAndClearState(void)
+
+/**
+ * @brief Stops all CD-ROM operations and resets the subsystem state
+ * 
+ * Gracefully halts CD-ROM playback and prepares the system for either
+ * shutdown or new operations. Pauses the drive and clears all internal state.
+ * 
+ * @details
+ * Performs a complete stop of the CD-ROM subsystem with the following steps:
+ * 
+ * 1. If audio is enabled, performs a full system reset
+ * 2. Clears the "playing" status flag (bit 6)
+ * 3. Removes all sync and ready callbacks
+ * 4. Repeatedly sends pause commands until successful
+ * 5. Resets all CdSystem state variables to their default values
+ * 6. Updates timestamp and clears status flags
+ * 7. Flushes the CD command queue
+ * 
+ * The function ensures the CD drive is properly paused before clearing
+ * internal state to prevent any unexpected behavior.
+ * 
+ * @note
+ * - The status flag clearing (0xFFFFFFBF) specifically targets bit 6 (playing flag)
+ *   while preserving all other bits
+ * - The while(TRUE) loop with CdControlB ensures the pause command is
+ *   successfully received by the CD hardware
+ * - All state variables are explicitly zeroed to ensure clean state
+ * - VSync timestamp is recorded at the end of the operation for timeout tracking
+ * 
+ * @warning
+ * - This function blocks until the CD drive acknowledges the pause command
+ * - Any pending CD operations will be aborted
+ * - Callbacks are cleared, so any pending operations relying on them will be lost
+ * - Should not be called from within a CD callback to avoid deadlock
+ * 
+ * @param None
+ * @return void
+ * 
+ * @see decomp.me: (100%) https://decomp.me/scratch/M39vT
+ */
+void CD_Stop(void)
 {
-    int result;
-    CdSystem* reference;
-
-    reference = &g_cdSystem;
-
+    int cdResult;
+    CdSystem* cdSystem;
+    
+    cdSystem = &g_cdSystem;
+    
     if (g_cdAudioEnabled != 0) {
         CD_ResetSystem();
     }
+    
+    // Clear the "playing" flag (bit 6) while preserving other status bits
+    cdSystem->statusFlags.word &= 0xFFFFFFBF;
+    
+    CdSyncCallback(NULL);
+    CdReadyCallback(NULL);
 
-    reference->statusFlags.word = g_cdSystem.statusFlags.word & 0xffffffbf;
-
-    CdSyncCallback((CdlCB)0x0);
-    CdReadyCallback((CdlCB)0x0);
-
-    do {
-    result = CdControlB(CdlPause,(u_char *)0x0,(u_char *)0x0);
-    } while (result == 0);
-
-    g_cdSystem.resourceIndex = 0xfffe;
+    // Repeatedly send pause command until drive acknowledges
+    while(TRUE) {
+        cdResult = CdControlB(CdlPause, NULL, NULL);
+        if (cdResult != 0) {
+            break;
+        }
+    }
+    
+    g_cdSystem.resourceIndex = CD_RESOURCE_INDEX_INVALID;
     g_cdSystem.playbackFlag = 0;
     g_cdSystem.currentResourceIndex = 0;
     g_cdSystem.currentDataSize = 0;
@@ -213,13 +258,13 @@ void CD_PauseAndClearState(void)
     g_cdSystem.lastCommand = 0;
     g_cdSystem.dstBuffer = 0;
     g_cdSystem.callback = 0;
-    g_cdSystem.statusFlags.word = g_cdSystem.statusFlags.word & 0xffffffef;
+    g_cdSystem.statusFlags.word &= 0xFFFFFFEF;
     g_cdSystem.vsyncTimestamp = VSync(-1);
     g_cdSystem.statusFlags.bytes.b1 = 0;
     g_cdSystem.statusFlags.bytes.b2 = 0;
     g_cdSystem.queueReadIndex = 0;
     g_cdSystem.queueWriteIndex = 0;
-
+    
     CdFlush();
 }
 
