@@ -3,64 +3,79 @@
 #include "psyq/libcd.h"
 
 /**
- * Initializes the CD-ROM subsystem and resets all CD state
+ * @brief Cold-start initialization of the CD-ROM subsystem
  * 
- * Params:
- *  None
+ * Performs complete hardware and software initialization of the PlayStation's
+ * CD-ROM drive. This function must be called before any other CD operations.
  * 
- * Returns: 
- *  void
+ * @details
+ * Spin-waits on CdInit() until the hardware is ready, then performs the
+ * following initialization steps:
  * 
- * Notes: Blocks until CdInit succeeds before proceeding with initialization.
- *  Stores previous sync and ready callbacks before clearing them.
- *  Resets resource index to 0xfffe (invalid marker value).
- *  Clears all CD state flags, counters, and command queue indices.
- *  Preserves only bit 7 (0x80) of status flags by masking bits 0-6 and 5.
- *  Initializes 16 command queue entries with scratchpad buffer addresses.
- *  Sets CD mode to 0xa0 (double speed with auto-pause).
- *  Waits for disc ready if shell open flag (0x10) is set in status byte.
- *  Applies CD mode settings via CdControlB command 0x0e.
- *  Captures VSync timestamp at completion for timing reference.
+ * 1. Saves and clears previous sync/ready callbacks
+ * 2. Resets all CdSystem state (flags, counters, queue indices, command state)
+ * 3. Clears statusFlags bits 0-6 individually (preserves only bit 7)
+ * 4. Zeros all 16 command queue entries, defaulting buffers to scratchpad RAM
+ * 5. Sets CD mode to CdlModeSpeed | CdlModeSize1 (double speed + XA filter)
+ * 6. Polls CdlNop to read current drive status
+ * 7. If shell is open, blocks until disc becomes ready
+ * 8. Applies mode via CdlSetmode and records VSync timestamp
  * 
- * decomp.me link: https://decomp.me/scratch/xzkLK
- * decomp.me (%): 100%
+ * @note
+ * - The per-bit status flag clearing (0x01 through 0x40, out of order) matches
+ *   the original assembly's individual AND instructions exactly for 100% matching
+ * - g_commandQueueOffset points to items[11]; the loop uses queueItem[4] to walk
+ *   through all 16 entries via negative indexing
+ * - Scratchpad RAM at 0x1F800000 is used as default buffer for queue entries
+ * - Spin-waits on CdInit() and CdControlB() ensure hardware is ready before proceeding
+ * 
+ * @warning
+ * - This function blocks until the CD hardware is initialized
+ * - If the disc tray is open, it will block until a disc is inserted and ready
+ * - Should only be called once during system startup
+ * 
+ * @param None
+ * @return void
+ * 
+ * @see decomp.me: (100%) https://decomp.me/scratch/DBYkw
  */
-void CD_InitializeSubsystem(void)
+void CD_Initialize(void)
 {
-    int endMarker;
+    int queueEndMarker;
     int queueCount;
     volatile CdCommandQueueItem *queueItem;
-    u_int scratchpadAddr;
-    u_int *statusFlagsPtr;
-    int result;
+    CdResourceEntry* scratchpadAddr;
+    CdStatusFlags *statusFlagsPtr;
+    int cdResult;
    
     // Wait for CD-ROM system to initialize
-    do {
-        result = CdInit();
-    } while (result == 0);
+    while (TRUE) {
+        if (CdInit() != 0) {
+            break;
+        }
+    }
     
     CdSetDebug(0);
     
-    // Store previous callbacks before setting new ones
-    g_cdSyncCallbackResult = CdSyncCallback(0);
-
-    // Force branch delay slot for "0" argument
-    do {} while (0);
-     
-    g_cdReadyCallbackResult = CdReadyCallback(0);
+    // Save previous callbacks, then clear them
+    g_cdSyncCallbackResult = CdSyncCallback(NULL);
+    g_cdReadyCallbackResult = CdReadyCallback(NULL);
     
-    // Reset resource index to invalid value
-    statusFlagsPtr = &g_cdSystem.statusFlags.word;
+    statusFlagsPtr = &g_cdSystem.statusFlags;
     
-    queueCount = 15;
-    scratchpadAddr = 0x1f800000;
+    queueCount = CD_COMMAND_QUEUE_SIZE - 1;
+    scratchpadAddr = (CdResourceEntry*)g_scratchpad;
     
-    endMarker = -1;
-    queueItem = &g_otherQueue;
+    queueEndMarker = -1;
     
-    g_cdSystem.resourceIndex = 0xfffe;
+    // g_commandQueueOffset is commandQueue.items[11]. 
+    // The loop uses queueItem[4] to walk items[15] down to items[0] (all 16 entries).
+    queueItem = &g_commandQueueOffset;
     
-    // Clear all CD state flags and counters
+    // 0xFFFE = invalid/no resource loaded
+    g_cdSystem.resourceIndex = CD_RESOURCE_INDEX_INVALID;
+    
+    // Reset all runtime state to zero
     g_cdSystem.audioEnabled = 0;
     g_cdSystem.playbackState = 0;
     g_cdSystem.loopCounter = 0;
@@ -80,58 +95,65 @@ void CD_InitializeSubsystem(void)
     g_cdSystem.queueReadIndex = 0;
     g_cdSystem.queueWriteIndex = 0;
     
-    
-    // Preserve only bit 7 (0x80) by masking off all other bits
-    
-    *statusFlagsPtr = *statusFlagsPtr & ~0x01;
-    *statusFlagsPtr = *statusFlagsPtr & ~0x02;
-    *statusFlagsPtr = *statusFlagsPtr & ~0x04;
-    *statusFlagsPtr = *statusFlagsPtr & ~0x08;
-    *statusFlagsPtr = *statusFlagsPtr & ~0x10;
-    *statusFlagsPtr = *statusFlagsPtr & ~0x40;
-    *statusFlagsPtr = *statusFlagsPtr & ~0x20;
+    // Clear statusFlags bits 0-6, preserving only bit 7 (0x80).
+    // Each bit is cleared individually to match the original assembly output.
+    statusFlagsPtr->word &= ~0x01;
+    statusFlagsPtr->word &= ~0x02;
+    statusFlagsPtr->word &= ~0x04;
+    statusFlagsPtr->word &= ~0x08;
+    statusFlagsPtr->word &= ~0x10;
+    statusFlagsPtr->word &= ~0x40;
+    statusFlagsPtr->word &= ~0x20;
     
     // Clear upper 3 bytes of status flags
-    ((u_char*)statusFlagsPtr)[1] = 0;
-    ((u_char*)statusFlagsPtr)[2] = 0;
-    ((u_char*)statusFlagsPtr)[3] = 0;
+    statusFlagsPtr->bytes.b1 = 0;
+    statusFlagsPtr->bytes.b2 = 0;
+    statusFlagsPtr->bytes.b3 = 0;
     
-    // Initialize command queue entries with scratchpad buffer
-    do {
+    // Zero all 16 command queue entries, setting default buffer to scratchpad
+    while (queueCount != queueEndMarker) {
         queueItem[4].command = 0;
         queueItem[4].resourceIndex = 0;
         queueItem[4].dstBuffer = scratchpadAddr;
-        queueItem[4].entry = (CdResourceEntry*)scratchpadAddr;
+        queueItem[4].entry = scratchpadAddr;
         queueItem[4].callback = 0;
         queueItem--;
         queueCount--;
-    } while (queueCount != endMarker);
+    }
     
-    // Set CD-ROM mode parameters
-    g_cdSystem.setModeBuffer = 0xa0;
+    g_cdSystem.setModeBuffer = (CdlModeSpeed | CdlModeSize1);
     g_cdSystem.u_151 = 0;
     g_cdSystem.u_152 = 0;
     g_cdSystem.u_153 = 0;
     
-    // Get CD-ROM status
-    do {
-        result = CdControlB(1, 0, &g_cdSystem.statusByte);
-    } while (result == 0);
-    
-    // Wait for disc to be ready if shell is open
-    if ((g_cdStatusByte & 0x10) != 0) {
-        result = CdDiskReady(1);
-        while (result != 2) {
-            result = CdDiskReady(0);
+    // CdlNop (1) — read current drive status into statusByte
+    while (TRUE) {
+        cdResult = CdControlB(CdlNop, NULL, &g_cdSystem.statusByte);
+        
+        if (cdResult != 0) {
+            break;
         }
     }
     
-    // Set CD-ROM mode
-    do {
-        result = CdControlB(14, &g_cdSystem.setModeBuffer, 0);
-    } while (result == 0);
+    // If shell-open flag (0x10) is set, block until disc becomes ready
+    if ((g_cdStatusByte & CdlStatShellOpen) != 0) {
+        cdResult = CdDiskReady(1);
+        
+        while (cdResult != CdlComplete) {
+            cdResult = CdDiskReady(0);
+        }
+    }
     
-    // Store current VSync counter
+    // CdlSetmode (14) — apply mode byte (0xA0) to the drive
+    while (TRUE) {
+        cdResult = CdControlB(CdlSetmode, &g_cdSystem.setModeBuffer, NULL);
+        
+        if (cdResult != 0) {
+            break;
+        }
+    }
+    
+    // Record current frame counter for timeout tracking
     g_cdVSyncTimestamp = VSync(-1);
 }
 
