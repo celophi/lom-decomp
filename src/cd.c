@@ -214,7 +214,7 @@ void CD_Stop(void)
     CdReadyCallback(NULL);
 
     // Repeatedly send pause command until drive acknowledges
-    while(TRUE) {
+    while (TRUE) {
         cdResult = CdControlB(CdlPause, NULL, NULL);
         if (cdResult != 0) {
             break;
