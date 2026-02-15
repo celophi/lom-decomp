@@ -1,6 +1,6 @@
 // CD Functions
 CD_Initialize               = 0x80011710;
-CD_PauseAndClearState       = 0x800118dc;
+CD_Stop                     = 0x800118dc;
 CD_EnqueueCommand           = 0x800120a0;
 CD_UpdateAndProcessQueue    = 0x800122c0;
 CD_ProcessInitStateMachine  = 0x80012b48;
