@@ -21,7 +21,7 @@ typedef struct CdCommandQueueItem {
     u_char command;
     u_char padding;
     unsigned short resourceIndex;
-    CdlLOC *location;
+    CdResourceEntry *entry;
     unsigned int dstBuffer;
     unsigned int callback;
 } CdCommandQueueItem;
@@ -119,6 +119,11 @@ extern u_char g_cdAudioEnabled;
 extern u_char g_cdAudioReady;
 extern u8 g_playbackState;
 extern u32 g_size;
+extern u8 g_cdAudioReady;
+extern s32 g_cdResource176;
+extern s8 g_cdStatusByte3;
+extern u8 g_initState;
+extern s8 g_playbackFlag;
 
 #define g_cdSystem (*(struct CdSystem*)0x801ed800)
 #define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ed998)
@@ -138,5 +143,8 @@ undefined4* FUN_80014888(int param_1, u_int param_2);
 void CD_ReadyCallback(char mode);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
+void FUN_80013d74(char param_1);
+void FUN_80022400(u_int param_1);
+undefined FUN_80140d48(void);
 
 #endif

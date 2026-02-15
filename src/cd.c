@@ -101,7 +101,7 @@ void CD_InitializeSubsystem(void)
         queueItem[4].command = 0;
         queueItem[4].resourceIndex = 0;
         queueItem[4].dstBuffer = scratchpadAddr;
-        queueItem[4].location = (CdlLOC*)scratchpadAddr;
+        queueItem[4].entry = (CdResourceEntry*)scratchpadAddr;
         queueItem[4].callback = 0;
         queueItem--;
         queueCount--;
@@ -390,7 +390,7 @@ CD_EnqueueCommand_check_params:
             g_cdSystem.resourceIndex = resourceIndex;
 
             queueWriteIndex = g_cdSystem.queueWriteIndex;
-            g_cdSystem.commandQueue.items[queueWriteIndex].location = &resourceEntry->location;
+            g_cdSystem.commandQueue.items[queueWriteIndex].entry = resourceEntry;
 
             queueWriteIndex = g_cdSystem.queueWriteIndex;
             g_cdSystem.commandQueue.items[queueWriteIndex].dstBuffer = dstBuffer;
@@ -440,8 +440,325 @@ CD_EnqueueCommand_end:
     return var_v0;
 }
 
+/**
+ * decomp.me link: https://decomp.me/scratch/Jfb6t
+ * decomp.me (%): 87.92%
+ */
+u32 CD_UpdateAndProcessQueue(void) {
+    s32 statusFlags;
+    s32 controlResult;
+    s32 temp_a0_3;
+    s32 queueReadIndex;
+    s32 temp_a1_2;
+    s32 diskReadyResult;
+    s32 temp_v0_5;
+    s32 temp_v1;
+    s32 var_a2;
+    s32 var_v0_2;
+    s32 var_v1_2;
+    s8 indexDiff;
+    s8 var_v0;
+    u8 initState;
+    u8 retryCounter;
+    u8 temp_v0_6;
+    u8 var_a0;
+    u8* var_a1;
+    void* commandItem;
+    void* temp_v1_2;
+    volatile CdSystem* cdSystem;
+    CdCommandQueueItem* queueItem;
+    s32 indexDiff2;
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_UpdateAndProcessQueue);
+    statusFlags = g_cdSystem.statusFlags.word;
+    var_v0 = 0;
+    
+    if (!(statusFlags & 8)) {
+        
+        initState = 1U;
+        
+        if (statusFlags & 7) {
+
+            
+            indexDiff2 = (g_cdSystem.queueWriteIndex - g_cdSystem.queueReadIndex);
+            
+            g_cdSystem.playbackFlag = indexDiff2 & 0xF;
+
+            
+            
+            if (g_cdSystem.initState == 0) {
+                
+                g_cdSystem.initState = initState;
+
+                
+                if (g_cdSystem.playbackFlag != 0) {
+
+                    queueItem = &g_cdSystem.commandQueue.items[g_cdSystem.queueReadIndex];
+                    
+                    g_cdSystem.currentResourceIndex = (u16) queueItem->resourceIndex;
+                    g_cdSystem.targetDataSize = (s32) g_cdSystem.size;
+                    g_cdSystem.currentDataSize = (s32) (queueItem->entry)->dataSize;
+                }
+                
+                if (g_cdSystem.audioEnabled != 0) {
+                    cdSystem = (void* )0x801ED800;
+                    if (g_cdAudioReady != 0) {
+                        FUN_80022400(3);
+                        goto block_8;
+                    }
+                } else {
+block_8:
+                    cdSystem = (CdSystem* )0x801ED800;
+                }
+                if (cdSystem->loopCounter != 0) {
+                    cdSystem->playbackState = 1;
+                } else {
+                    cdSystem->playbackState = 0;
+                }
+                g_cdStatusByte3 = 0;
+            }
+            
+            if (VSync(-1) >= ((s32)g_cdSystem.vsyncTimestamp + 0x1E)) {
+
+                
+                if (g_cdSystem.initState != 8) {
+                    g_cdSystem.vsyncTimestamp = VSync(-1);
+                }
+                
+                controlResult = CdControlB(1U, 0, (u8* )0x801ED960);
+                if (!(g_cdSystem.statusByte & 0x10)) {
+                    if (controlResult != 0) {
+                        initState = g_cdSystem.initState;
+                        switch (initState) {        /* switch 1 */
+                        case 1:                     /* switch 1 */
+                            g_cdSystem.initState = 2U;
+                            g_cdSystem.statusFlags.word = (s32) ((g_cdSystem.statusFlags.word & ~1) | 6);
+                            /* fallthrough */
+                        case 2:                     /* switch 1 */
+                            temp_a0_3 = CdControlB(0x13U, 0, (u8* )0x801ED960);
+                            if ((g_cdSystem.statusByte & 2) && (temp_a0_3 != 0)) {
+                                g_cdSystem.initState = 3U;
+                                g_cdSystem.retryCounter = 0U;
+                            }
+                            break;
+                        case 3:                     /* switch 1 */
+                            if (CdDiskReady(1) == 2) {
+                                g_initState = 4;
+                            } else {
+                                retryCounter = g_cdSystem.retryCounter;
+                                g_cdSystem.retryCounter = (u8) (retryCounter + 2);
+                                if ((u32) ((retryCounter + 1) & 0xFF) >= 0xDU) {
+                                    g_cdSystem.initState = 4U;
+                                }
+                            }
+                            break;
+                        case 4:                     /* switch 1 */
+                            diskReadyResult = CdDiskReady(0);
+                            if (diskReadyResult != 2) {
+                                if (diskReadyResult == 0x10) {
+                                    g_initState = 1;
+                                } else {
+                                    goto block_32;
+                                }
+                            } else {
+block_32:
+                                g_initState = 5;
+                            }
+                            break;
+                        case 5:                     /* switch 1 */
+                            temp_v0_5 = CdGetDiskType();
+                            switch (temp_v0_5) {    /* switch 2; irregular */
+                            case 0:                 /* switch 2 */
+                                g_cdSystem.initState = 0x20U;
+                                var_v0_2 = g_cdSystem.statusFlags.word;
+                                var_v1_2 = -3;
+                                goto block_63;
+                            case 1:                 /* switch 2 */
+                                CdDiskReady(0);
+                                CdGetDiskType();
+                                /* fallthrough */
+                            case 2:                 /* switch 2 */
+                                g_cdSystem.initState = 6U;
+                                g_cdSystem.vsyncTimestamp = (s32) (g_cdSystem.vsyncTimestamp - 0x1E);
+                                break;
+                            }
+                            break;
+                        case 6:                     /* switch 1 */
+                            g_cdSystem.modeParams = 0xA0;
+                            g_cdSystem.u_155 = 0;
+                            g_cdSystem.u_156 = 0;
+                            g_cdSystem.u_157 = 0;
+                            CdSyncCallback(CD_SyncCallback_Handler);
+                            CdReadyCallback(0);
+                            g_cdSystem.initCommand = 0x20U;
+                            CdControlF(0xEU, (u8* )0x801ED954);
+                            g_cdSystem.vsyncTimestamp = (s32) (g_cdSystem.vsyncTimestamp - 0x1A);
+                            break;
+                        case 7:                     /* switch 1 */
+                            g_cdSystem.readParams = (s32) g_cdResource176;
+                            g_cdSystem.statusFlags.word = (s32) (g_cdSystem.statusFlags.word | 0x10);
+                            CdSyncCallback(CD_SyncCallback_Handler);
+                            CdReadyCallback((void (*)(u8, u8*)) FUN_80013d74);
+                            g_cdSystem.initCommand = 0x21U;
+                            g_cdSystem.initState = 8U;
+                            CdControlF(6U, (u8* )0x801ED95C);
+                            g_cdSystem.vsyncTimestamp = (s32) (g_cdSystem.vsyncTimestamp - 0x1E);
+                            break;
+                        case 8:                     /* switch 1 */
+
+                            cdSystem = &g_cdSystem;
+                            if (cdSystem->syncComplete == 1) {
+                                cdSystem->vsyncTimestamp = VSync(-1);
+                                cdSystem->syncComplete = 0U;
+                            } else if (VSync(-1) >= ((s32)g_cdSystem.vsyncTimestamp + 0x10E)) {
+                                temp_v1 = g_cdSystem.initCommand & 0xFF;
+                                switch (temp_v1) {  /* switch 3; irregular */
+                                default:            /* switch 3 */
+                                    CdSyncCallback(CD_SyncCallback_Handler);
+                                    CdReadyCallback((void (*)(u8, u8*)) FUN_80013d74);
+                                    g_cdSystem.initCommand = 0x21U;
+                                    var_a0 = 6;
+                                    var_a1 = (u8* )0x801ED95C;
+                                    break;
+                                case 34:            /* switch 3 */
+                                    CdSyncCallback(CD_SyncCallback_Handler);
+                                    var_a0 = 9;
+                                    var_a1 = 0;
+                                    break;
+                                case 35:            /* switch 3 */
+                                    CdSyncCallback(CD_SyncCallback_Handler);
+                                    var_a0 = 0xE;
+                                    var_a1 = (u8* )0x801ED950;
+                                    break;
+                                }
+                                CdControlF(var_a0, var_a1);
+                                g_cdSystem.vsyncTimestamp = (s32) (g_cdSystem.vsyncTimestamp - 0x1E);
+                            }
+                            break;
+                        case 32:                    /* switch 1 */
+                            do {
+
+                            } while (CdControlB(8U, 0, 0) == 0);
+                            g_initState = 0x21;
+                            break;
+                        }
+                    } else {
+                        goto block_58;
+                    }
+                } else {
+block_58:
+                    if ((u8) g_initState >= 6U) {
+                        g_cdSystem.statusFlags.word = (s32) (g_cdSystem.statusFlags.word & ~0x10);
+                        CdSyncCallback(0);
+                        CdReadyCallback(0);
+                        do {
+
+                        } while (CdControlB(9U, 0, 0) == 0);
+                        g_cdSystem.initCommand = 0U;
+                    }
+                    g_cdSystem.initState = 1U;
+                    var_v0_2 = (g_cdSystem.statusFlags.word | 1) & ~2;
+                    var_v1_2 = -5;
+block_63:
+                    g_cdSystem.statusFlags.word = (s32) (var_v0_2 & var_v1_2);
+                }
+            }
+        } else {
+            var_a2 = 0;
+            if ((g_cdSystem.currentCommand != 0) || (g_cdSystem.initCommand != 0)) {
+                do {
+                    if (g_cdSystem.syncComplete == 1) {
+                        var_a2 = 1;
+                        g_cdSystem.syncComplete = 0U;
+                    }
+                    temp_a1_2 = g_cdSystem.queueReadIndex;
+                    indexDiff = (g_cdSystem.queueWriteIndex - temp_a1_2) & 0xF;
+                    if (indexDiff != 0) {
+                        g_cdSystem.currentResourceIndex= (u16) g_cdSystem.commandQueue.items[g_cdSystem.queueReadIndex].resourceIndex;
+                        g_cdSystem.targetDataSize = (s32) g_cdSystem.size;
+                        g_cdSystem.currentDataSize = (s32) (g_cdSystem.commandQueue.items[g_cdSystem.queueReadIndex].entry)->dataSize;
+                    }
+                } while (g_cdSystem.syncComplete != 0);
+                if (var_a2 == 0) {
+                    if (VSync(-1) >= (g_cdSystem.vsyncTimestamp + 0xF0)) {
+                        if (g_cdSystem.initCommand == 0) {
+                            g_cdSystem.currentCommand = 1U;
+                            if (g_cdSystem.loopCounter != 0) {
+                                g_cdSystem.playbackState = 1;
+                            } else {
+                                g_cdSystem.playbackState = 0;
+                            }
+                            CdSyncCallback((void (*)(u8, u8*)) CD_SyncCallback_Handler2);
+                            CdReadyCallback(0);
+                            do {
+
+                            } while (CdControlB(1U, 0, (u8* )0x801ED960) == 0);
+                        } else {
+                            CdSyncCallback(CD_SyncCallback_Handler);
+                            CdReadyCallback(0);
+                            do {
+
+                            } while (CdControlB(1U, 0, (u8* )0x801ED960) == 0);
+                        }
+                        goto block_83;
+                    }
+                } else {
+block_83:
+                    g_cdVSyncTimestamp = VSync(-1);
+                }
+                g_playbackFlag = indexDiff;
+            } else if (g_cdSystem.queueReadIndex != g_cdSystem.queueWriteIndex) {
+                g_cdSystem.vsyncTimestamp = VSync(-1);
+                g_cdSystem.currentCommand = 1U;
+                g_cdSystem.statusFlags.word = (s32) (g_cdSystem.statusFlags.word | 0x10);
+                if (g_cdSystem.loopCounter != 0) {
+                    g_cdSystem.playbackState = 1;
+                } else {
+                    g_cdSystem.playbackState = 0;
+                }
+                CdSyncCallback((void (*)(u8, u8*)) CD_SyncCallback_Handler2);
+                CdReadyCallback(0);
+                CdSync(0, 0);
+                CdControlF(1U, 0);
+                indexDiff2 = (g_cdSystem.queueWriteIndex - g_cdSystem.queueReadIndex);
+                indexDiff = indexDiff2 & 0xF;
+            } else {
+                g_cdSystem.loopCounter = 0;
+                g_cdSystem.playbackState = 0;
+                if (!(statusFlags & 0x20)) {
+                    indexDiff = 0;
+                    if (VSync(-1) >= (g_cdSystem.vsyncTimestamp + 0x1E)) {
+                        if (CdControlB(1U, 0, (u8* )0x801ED960) != 0) {
+                            if (g_cdSystem.statusByte & 0x10) {
+                                CD_HandleSyncError();
+                            }
+                            g_cdSystem.syncComplete = 0U;
+                            g_cdSystem.retryCounter = 0U;
+                            g_cdSystem.vsyncTimestamp = VSync(-1);
+                        } else {
+                            temp_v0_6 = g_cdSystem.retryCounter;
+                            g_cdSystem.retryCounter = (u8) (temp_v0_6 + 1);
+                            if ((u32) (temp_v0_6 & 0xFF) >= 0xBU) {
+                                CD_HandleSyncError();
+                            }
+                        }
+                        goto block_98;
+                    }
+                } else {
+block_98:
+                    indexDiff = 0;
+                }
+                g_playbackFlag = 0;
+            }
+        }
+        var_v0 = indexDiff;
+        if (g_cdAudioEnabled != 0) {
+            FUN_80140d48();
+            var_v0 = indexDiff;
+        }
+    }
+    return (u32) var_v0;
+}
+
 
 /**
  * Description: Processes CD-ROM initialization state machine across multiple VSync frames
@@ -634,7 +951,7 @@ reset_playback_state:
             g_cdSystem.loopCounter = 0;
             g_cdSystem.playbackState = 0;
             
-            queuedLocation = g_cdSystem.commandQueue.items[(u_int)queuedLocation].location;
+            queuedLocation = g_cdSystem.commandQueue.items[(u_int)queuedLocation].entry;
             g_cdSystem.commandParamBuffer = (s32) *queuedLocation;
         }
 
