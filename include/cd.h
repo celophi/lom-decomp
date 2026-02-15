@@ -4,18 +4,15 @@
 #include "common.h"
 #include "psyq/libcd.h"
 
+#define CD_RESOURCE_INDEX_INVALID 0xFFFE
+#define CD_RESOURCE_INDEX_DEFAULT 0xFFFF
+#define CD_COMMAND_QUEUE_SIZE 16
+
 // Structures
 typedef struct CdResourceEntry {
     CdlLOC location;
     int dataSize;
 } CdResourceEntry;
-
-typedef struct CdStatusArray {
-    u_char u0;
-    u_char u1;
-    u_char u2;
-    u_char u3;
-} CdStatusArray;
 
 typedef struct CdCommandQueueItem {
     u_char command;
@@ -27,7 +24,7 @@ typedef struct CdCommandQueueItem {
 } CdCommandQueueItem;
 
 typedef struct CdCommandQueue {
-    CdCommandQueueItem items[16];
+    CdCommandQueueItem items[CD_COMMAND_QUEUE_SIZE];
 } CdCommandQueue;
 
 typedef union {
@@ -125,11 +122,13 @@ extern s8 g_cdStatusByte3;
 extern u8 g_initState;
 extern s8 g_playbackFlag;
 
-#define g_cdSystem (*(struct CdSystem*)0x801ed800)
-#define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ed998)
-#define g_otherQueue (*(CdCommandQueueItem*)0x801ed8f0)
+#define g_cdSystem (*(struct CdSystem*)0x801ED800)
+#define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ED998)
+#define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
+#define g_scratchpad ((void*)0x1F800000)
 
 // Prototypes
+void CD_Initialize(void);
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitLocationEntries(int lba, int dataSizeBytes);
