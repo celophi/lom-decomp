@@ -121,8 +121,11 @@ extern s32 g_cdResource176;
 extern s8 g_cdStatusByte3;
 extern u8 g_initState;
 extern s8 g_playbackFlag;
+extern CdSystem g_cdSystem;
 
-#define g_cdSystem (*(struct CdSystem*)0x801ED800)
+#define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
+#define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
+#define g_cdResourceArray ((CdResourceEntry*)0x801ED998)
 #define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
 #define g_scratchpad ((void*)0x1F800000)
@@ -133,7 +136,7 @@ void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitLocationEntries(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
-int CD_EnqueueCommand(char command, u_short resourceIndex, u_int dstBuffer, u_int callback);
+s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback);
 void CD_SyncCallback_Handler(char intr, u_char *status);
 void CD_SyncCallback_Handler2(char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
