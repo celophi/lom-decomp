@@ -19,7 +19,7 @@ typedef struct CdCommandQueueItem {
     u_char padding;
     unsigned short resourceIndex;
     CdResourceEntry *entry;
-    unsigned int dstBuffer;
+    CdResourceEntry *dstBuffer;
     unsigned int callback;
 } CdCommandQueueItem;
 
