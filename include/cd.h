@@ -137,7 +137,7 @@ int CD_EnqueueCommand(char command, u_short resourceIndex, u_int dstBuffer, u_in
 void CD_SyncCallback_Handler(char intr, u_char *status);
 void CD_SyncCallback_Handler2(char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
-void FUN_80014ad0(undefined1 *param_1);
+void ClearPointer(void *pointer);
 undefined4* FUN_80014888(int param_1, u_int param_2);
 void CD_ReadyCallback(char mode);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);

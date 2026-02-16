@@ -321,7 +321,7 @@ wait_for_command_complete:
                 *(s32* )(scratchRef + 0x14) = processedLength;
     
                 // zero's out the address, so clear out the src data pointer.
-                FUN_80014ad0(0x1F800000);
+                ClearPointer(0x1F800000);
                 
                 remainingDataSize -= processedLength;
                 if (*(u8* )(scratchRef + 0x01) != isReady) {
