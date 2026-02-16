@@ -473,7 +473,7 @@ do_vsync:
  *
  * @see CD_UpdateAndProcessQueue — drains the queue each frame
  * @see CD_SyncCallback_Handler2 — installed as sync callback when execution starts
- * @see decomp.me: (97.54%) https://decomp.me/scratch/tWHW2
+ * @see decomp.me: (100%) https://decomp.me/scratch/izXP3
  */
 s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback) {
     s32 timestamp;
