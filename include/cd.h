@@ -136,7 +136,7 @@ void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitLocationEntries(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
-int CD_EnqueueCommand(char command, u_short resourceIndex, u_int dstBuffer, u_int callback);
+s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback);
 void CD_SyncCallback_Handler(char intr, u_char *status);
 void CD_SyncCallback_Handler2(char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);

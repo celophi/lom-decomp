@@ -312,7 +312,7 @@ s32 CD_StreamData(s32 command, u32 destination) {
     
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = CD_EnqueueCommand(CdlReadN, command, NULL, &FUN_80014888) - 1;
+    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &FUN_80014888) - 1;
     timestamp = VSync(-1);
 
     streamState = (u8*)g_scratchpad;
@@ -424,25 +424,73 @@ do_vsync:
     }
 }
 
-
 /**
- * decomp.me link: https://decomp.me/scratch/tWHW2
- * decomp.me (%): 97.54% 
+ * @brief Enqueues a CD-ROM command into the circular command queue
+ *
+ * Validates and inserts a command into the 16-entry circular command queue.
+ * If the system is idle and no error/init flags are active, immediately
+ * starts command execution by issuing CdlNop to kick off the state machine.
+ *
+ * @details
+ * The function performs several layers of validation before enqueueing:
+ *
+ * 1. Rejects the command immediately if the "playing" status flag (bit 6) is set
+ * 2. Resolves the resource index to a CdResourceEntry pointer:
+ *    - 0xFFFF (CD_RESOURCE_INDEX_DEFAULT) maps to g_defaultCdResource
+ *    - All other indices index into g_cdResourceArray
+ * 3. Deduplicates: if the system is already processing a command and the
+ *    new command matches the last-enqueued (command, resourceIndex, dstBuffer,
+ *    callback), the enqueue is skipped and the existing dataSize is returned
+ * 4. Validates the resource entry has a non-zero disc location and data size
+ * 5. Checks the circular queue is not full ((writeIndex + 1) & 0xF != readIndex)
+ *
+ * Once enqueued, if no command is currently active and no low-nibble status
+ * flags (bits 0-3) are set, the function bootstraps execution:
+ * - Sets currentCommand to 1, marks the "busy" flag (bit 4)
+ * - Installs CD_SyncCallback_Handler2 and sends CdlNop to begin processing
+ *
+ * @param command        CD-ROM command byte (e.g., CdlReadN, CdlSeekL)
+ * @param resourceIndex  Index into g_cdResourceArray, or 0xFFFF for the default resource
+ * @param dstBuffer      Destination buffer for read data (may be NULL for non-read commands)
+ * @param callback       Callback function pointer invoked on command completion
+ *
+ * @return The resource's dataSize on success, or a negative error code:
+ *         -3 if the system is in "playing" state (bit 6 set)
+ *         -2 if the resource entry has no valid location or zero data size
+ *         -1 if the command queue is full
+ *
+ * @note
+ * - The separate re-reads of queueWriteIndex for each field store match the
+ *   original assembly's volatile access pattern and must not be optimized
+ * - The "last command" cache (lastCommand, resourceIndex, dstBuffer, callback)
+ *   enables the deduplication check on subsequent calls
+ * - When the system is already busy (currentCommand or initCommand != 0),
+ *   the command is silently queued without starting execution
+ *
+ * @warning
+ * - Not interrupt-safe; must not be called from within a CD callback
+ * - The caller must ensure resourceIndex is valid or 0xFFFF
+ *
+ * @see CD_UpdateAndProcessQueue — drains the queue each frame
+ * @see CD_SyncCallback_Handler2 — installed as sync callback when execution starts
+ * @see decomp.me: (97.54%) https://decomp.me/scratch/tWHW2
  */
-s32 CD_EnqueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback) {
+s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback) {
     s32 timestamp;
-    s32 index;
-    s32 index2;
+    s32 writeIndex;
+    s32 writeIndex2;
     s32 statusFlags;
     s32 dataSize;
-    u8 currentCommand;
+    u8 activeCommand;
     CdResourceEntry* resourceEntry;
     volatile CdSystem* cdSystem;
     
+    // Reject immediately if the "playing" flag (bit 6) is set
     if (g_cdSystem.statusFlags.word & 0x40) {
         return -3;
     }
     
+    // Resolve resource index to entry pointer
     if (resourceIndex == CD_RESOURCE_INDEX_DEFAULT) {
         resourceEntry = &g_defaultCdResource;
     } else {
@@ -451,6 +499,8 @@ s32 CD_EnqueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer,
 
     cdSystem = &CD_SYSTEM;
 
+    // Deduplicate: skip enqueue if system is busy AND the command matches
+    // the previously enqueued one exactly (same command, resource, buffer, callback)
     if ((cdSystem->currentCommand == 0 && cdSystem->initCommand == 0) || 
         (
             (CD_SYSTEM.lastCommand != command) || 
@@ -459,47 +509,54 @@ s32 CD_EnqueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer,
             (CD_SYSTEM.callback != callback))
        ) {
         
+        // Validate resource entry has a valid disc location and non-zero size
         if ((*(u32*)&resourceEntry->location == 0) || (resourceEntry->dataSize == 0)) {
             return -2;
         }
         
-        index = CD_SYSTEM.queueWriteIndex;
+        // Check circular queue is not full
+        writeIndex = CD_SYSTEM.queueWriteIndex;
         
-        if (CD_SYSTEM.queueReadIndex == ((index + 1) & 0xF)) {
+        if (CD_SYSTEM.queueReadIndex == ((writeIndex + 1) & 0xF)) {
             return -1;
         }
 
-        index = CD_SYSTEM.queueWriteIndex;
-        CD_SYSTEM.commandQueue.items[index].command = command;
+        // Write command fields into the queue entry at the current write index.
+        // Each field re-reads queueWriteIndex to match the original volatile access pattern.
+        writeIndex = CD_SYSTEM.queueWriteIndex;
+        CD_SYSTEM.commandQueue.items[writeIndex].command = command;
         CD_SYSTEM.lastCommand = command;
 
-        index2 = CD_SYSTEM.queueWriteIndex;
-        CD_SYSTEM.commandQueue.items[index2].resourceIndex = resourceIndex;
+        writeIndex2 = CD_SYSTEM.queueWriteIndex;
+        CD_SYSTEM.commandQueue.items[writeIndex2].resourceIndex = resourceIndex;
         CD_SYSTEM.resourceIndex = resourceIndex;
 
-        index2 = CD_SYSTEM.queueWriteIndex;
-        CD_SYSTEM.commandQueue.items[index2].entry = resourceEntry;
+        writeIndex2 = CD_SYSTEM.queueWriteIndex;
+        CD_SYSTEM.commandQueue.items[writeIndex2].entry = resourceEntry;
 
-        index2 = CD_SYSTEM.queueWriteIndex;
-        CD_SYSTEM.commandQueue.items[index2].dstBuffer = dstBuffer;
+        writeIndex2 = CD_SYSTEM.queueWriteIndex;
+        CD_SYSTEM.commandQueue.items[writeIndex2].dstBuffer = dstBuffer;
 
         CD_SYSTEM.dstBuffer = dstBuffer;
         
         CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueWriteIndex].callback = callback;
         CD_SYSTEM.callback = callback;
         
+        // Advance write index with circular wrap (mod 16)
         CD_SYSTEM.queueWriteIndex = ((CD_SYSTEM.queueWriteIndex + 1) & 0xF);
         
         timestamp = VSync(-1);
 
-        currentCommand = CD_SYSTEM.currentCommand;
+        // If a command is already in progress, just queue and return
+        activeCommand = CD_SYSTEM.currentCommand;
         
-        if ((currentCommand != 0) || (CD_SYSTEM.initCommand != 0)) {
+        if ((activeCommand != 0) || (CD_SYSTEM.initCommand != 0)) {
             return resourceEntry->dataSize;
         }
 
         statusFlags = CD_SYSTEM.statusFlags.word;
         
+        // If no error/init flags (bits 0-3) are active, bootstrap execution
         if (!(statusFlags & 0xF)) {
             
             CD_SYSTEM.vsyncTimestamp = timestamp;
@@ -513,6 +570,7 @@ s32 CD_EnqueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer,
             CD_SYSTEM.targetDataSize = dataSize;
             CD_SYSTEM.currentDataSize = dataSize;
             
+            // Install sync callback and send CdlNop to kick off the state machine
             CdSyncCallback(&CD_SyncCallback_Handler2);
             CdSync(0, NULL);
             CdControlF(CdlNop, NULL);
@@ -1386,7 +1444,7 @@ void CD_InitLocationEntries (int lba, int dataSizeBytes)
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
     
     CdIntToPos(lba, location);
-    CD_EnqueueCommand(6, 0xffff, &g_SKCDPOSE_DAT, 0);
+    CD_QueueCommand(6, 0xffff, &g_SKCDPOSE_DAT, 0);
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }
