@@ -246,125 +246,183 @@ void CD_Stop(void)
 }
 
 /**
- * decom.me link: https://decomp.me/scratch/8sOtx
- * decomp.me (%): 90.71%
+ * @brief Streams and decompresses CD-ROM sector data into a destination buffer
+ *
+ * Reads sectors from disc via DMA into a ring buffer (managed through
+ * scratchpad RAM), then incrementally decompresses the buffered data
+ * into the caller's destination address.
+ *
+ * @details
+ * Scratchpad RAM (0x1F800000) is used as a shared communication struct
+ * between this function and the CD read callback (FUN_80014888):
+ *
+ *   Offset  Type  Description
+ *   ------  ----  -----------
+ *   +0x00   u8    dataReady      — Set to 1 by callback when new sectors arrive
+ *   +0x01   u8    bufferWrapped  — Set to 1 when the ring buffer has wrapped
+ *   +0x04   s32   readPtr        — Current read position in ring buffer
+ *   +0x08   s32   writePtr       — Current write position in ring buffer
+ *   +0x0C   s32   bytesBuffered  — Number of valid bytes available to read
+ *   +0x10   s32   wrapOverflow   — Bytes that overflowed past ring buffer end
+ *   +0x14   s32   bytesConsumed  — Bytes consumed by decompressor this pass
+ *   +0x18   s32   (reserved)     — Initialized to 0
+ *
+ * The ring buffer ends at 0x801DC118. When it wraps, leftover unprocessed
+ * bytes are relocated to just before that address with word alignment,
+ * and the wrapOverflow count is merged into bytesBuffered.
+ *
+ * @param command      Resource index (lower 16 bits) identifying the disc data to read
+ * @param destination  RAM address where decompressed output is written
+ *
+ * @return Total number of decompressed bytes written to destination
+ *
+ * @note decomp.me: (97.84%) https://decomp.me/scratch/CSYVd
  */
-s32 CD_StreamData(s32 index, u32 dst) 
-{
-    s32 bufferRemainder;
-    s32 newBufferStart;
+s32 CD_StreamData(s32 command, u32 destination) {
+    s32 unprocessedBytes;
+    s32 relocDstAddr;
     s32 wrapAmount;
-    s32 currentBufferSize;
-    s32 processedLength;
-    s32 oldBufferStart;
-    
+    s32 bytesBuffered;
+    s32 bytesConsumed;
+    s32 prevReadPtr;
+    s32 copySize;
     s32 timestamp;
     s32 remainingDataSize;
-    s32 bytesToCopy;
-    s32* wrapDstPtr;
-    s32* wrapSrcPtr;
-    u32 srcEnd;
+    s32* wrapDestinationPtr;
+    s32* relocSrcPtr;
+    u32 decompressEnd;
 
     u8* scratchpad;
-    u8 isReady;
-    u8* scratchRef;
-    u32 initialDst;
+    u32 destStart;
+    u8* streamState;
+    s32 alignRemainder;
+    s32 sentinel;
+    s32 addr;
 
+    /* Block until any in-progress CD commands finish */
     while (CD_UpdateAndProcessQueue() != 0) {
         VSync(0);
     }
 
-    initialDst = dst;
-    scratchpad = (u8*) 0x1F800000;
+    destStart = destination;
+    scratchpad = (u8*)0x1F800000;
     
-    *(s32* )(scratchpad + 0x18) = 0;
-    *(u8* )(scratchpad) = 0U;
-    *(u8* )(scratchpad + 0x01) = 0U;
-    *(s32* )(scratchpad + 0x14) = 0;
+    /* Zero out the scratchpad streaming state */
+    *(s32*)(scratchpad + 0x18) = 0;       /* reserved */
+    *(u8*)(scratchpad) = 0U;              /* dataReady = false */
+    *(u8*)(scratchpad + 0x01) = 0U;       /* bufferWrapped = false */
+    *(s32*)(scratchpad + 0x14) = 0;       /* bytesConsumed = 0 */
     
-    remainingDataSize = CD_EnqueueCommand(6, index & 0xFFFF, 0U, (u32) &FUN_80014888) - 1;
-   
-    while (1) {
+    /* Enqueue a CdlReadN command; return value is the resource's total data size.
+     * Subtract 1 to get the last valid byte offset for streaming. */
+    remainingDataSize = CD_EnqueueCommand(CdlReadN, command & 0xFFFF, 0U, &FUN_80014888) - 1;
+    timestamp = VSync(-1);
 
-        timestamp = VSync(-1);
-        scratchRef = scratchpad;
-        isReady = 1;
-        
-wait_for_command_complete:
-        if (VSync(-1) >= (timestamp + 30)) {
-            goto CD_StreamData_process;
-        }
-        
-        if (*(u8* )scratchRef != isReady) {
-            goto wait_for_command_complete;
-        }
-    
-        while (1) {
-                
-                currentBufferSize = *(s32* )(scratchRef + 0x0C);
-                
-                if (currentBufferSize < remainingDataSize) {
-                    srcEnd = (*(s32* )(scratchRef + 0x04) + currentBufferSize) - 280;
-                } else {
-                    srcEnd = *(s32* )(scratchRef + 0x04) + remainingDataSize;
-                }
-                
-                if (CD_DecompressData((u32* )0x1F800008, &dst, srcEnd, -4U) == 0) {
-                    return dst - initialDst;
-                }
-    
-                if (currentBufferSize != *(s32* )(0x1F80000C)) {
-                    continue;
-                }
-    
-                processedLength = *(s32* )(scratchRef + 0x08) - *(s32* )(scratchRef + 0x04);
-                *(s32* )(scratchRef + 0x14) = processedLength;
-    
-                // zero's out the address, so clear out the src data pointer.
-                ClearPointer(0x1F800000);
-                
-                remainingDataSize -= processedLength;
-                if (*(u8* )(scratchRef + 0x01) != isReady) {
-                    continue;
-                }
-    
-                wrapAmount = *(s32* )(scratchRef + 0x10);
-                
-                if (wrapAmount != 0) {
-                    bufferRemainder = *(s32* )(scratchRef + 0x0C) - processedLength;
-                    newBufferStart = 0x801DC118 - bufferRemainder;
-                    
-                    oldBufferStart = *(s32* )(scratchRef + 0x04);
-                    *(s32* )(scratchRef + 0x08) = newBufferStart;
-                    *(s32* )(scratchRef + 0x04) = newBufferStart;
-                    
-                    bytesToCopy = ((4 - (bufferRemainder & 3) & 3));
+    streamState = (u8*)0x1F800000;
 
-                    wrapDstPtr = newBufferStart - bytesToCopy;
-                    wrapSrcPtr = (oldBufferStart + processedLength) - bytesToCopy;
-    
-                    bytesToCopy = bufferRemainder + 3;
-    
-                    *(s32* )(scratchRef + 0x0C) = wrapAmount + bufferRemainder;
-                    
-                    if (bytesToCopy < 0) {
-                        bytesToCopy = bufferRemainder + 6;
-                    }
-    
-                    for (bufferRemainder = (bytesToCopy >> 2) - 1; bufferRemainder != 1; bufferRemainder--) {
-                        *wrapDstPtr++ = *wrapSrcPtr++;
-                    }
-                } else {
-                    *(s32* )(scratchRef + 0x04) += processedLength;
-                    *(s32* )(scratchRef + 0x0C) -= processedLength;
-                }
-
-                *(u8* )(scratchRef) = isReady;    
+    /* === Main streaming loop === */
+    while (TRUE) {
+        if (VSync(-1) < (timestamp + 30)) {
+            /* Timeout hasn't elapsed — check if callback signaled new data */
+            if (*(u8*)streamState != 1) {
                 continue;
             }
+            
+            /* === Decompression loop: process all available buffered data === */
+            while (TRUE) {
+                bytesBuffered = *(s32*)(streamState + 0x0C);
+                
+                /* Calculate source-end boundary for decompression.
+                 * If we have fewer bytes buffered than total remaining, hold back
+                 * 0x118 bytes as a safety margin to avoid reading incomplete sectors.
+                 * Otherwise use the exact remaining size as the boundary. */
+                if (bytesBuffered < remainingDataSize) {
+                    decompressEnd = (*(s32*)(streamState + 0x04) + bytesBuffered) - 0x118;
+                } else {
+                    decompressEnd = *(s32*)(streamState + 0x04) + remainingDataSize;
+                }
+                
+                /* Decompress a chunk; returns 0 when all output is complete */
+                if (CD_DecompressData((u32*)(0x1F800008), &destination, decompressEnd, -4U) == 0) {
+                    return destination - destStart;
+                }
+        
+                /* If bytesBuffered changed mid-iteration (callback wrote more data),
+                 * re-loop to recalculate the decompression boundary */
+                if (bytesBuffered != *(s32*)(0x1F80000C)) {
+                    continue;
+                }
+        
+                /* All currently buffered data has been fed to the decompressor */
+                bytesConsumed = *(s32*)(streamState + 0x08) - *(s32*)(streamState + 0x04);
+                *(s32*)(streamState + 0x14) = bytesConsumed;
+                ClearPointer(0x1F800000);
+                remainingDataSize -= bytesConsumed;
+                
+                /* If the ring buffer hasn't wrapped, yield to let more data arrive */
+                if (*(u8*)(streamState + 0x01) != 1) {
+                    goto do_vsync;
+                }
 
-CD_StreamData_process:
+                /* --- Handle ring buffer wrap-around --- */
+                decompressEnd = *(s32*)(streamState + 0x10);  /* wrapOverflow amount */
+                if (decompressEnd != 0) {
+                    /* Relocate unprocessed tail bytes to just before the ring buffer
+                     * end (0x801DC118), making the data contiguous again. */
+                    unprocessedBytes = *(s32*)(streamState + 0x0C) - bytesConsumed;
+                    alignRemainder = (unprocessedBytes & 3);
+                    relocDstAddr = 0x801DC118 - unprocessedBytes;
+                    prevReadPtr = *(s32*)(streamState + 0x04);
+                    
+                    /* Word-align the relocation destination downward */
+                    copySize = 4 - alignRemainder;
+                    *(s32*)(streamState + 0x08) = relocDstAddr;
+                    *(s32*)(streamState + 0x04) = relocDstAddr;
+                    copySize = copySize & 3;
+                    
+                    /* Adjust pointers to include alignment padding bytes */
+                    relocDstAddr = (s32*)(relocDstAddr - copySize);
+                    relocSrcPtr = (s32*)((prevReadPtr + bytesConsumed) - copySize);
+                    
+                    /* Merge overflow bytes into the new contiguous buffer region */
+                    *(s32*)(streamState + 0x0C) = decompressEnd + unprocessedBytes;
+                    copySize = unprocessedBytes + 3;
+                    
+                    if (copySize < 0) {
+                        copySize = unprocessedBytes + 6;
+                    }
+
+                    /* Copy unprocessed bytes word-by-word to the relocated position */
+                    sentinel = -1;
+                    unprocessedBytes = (copySize >> 2) - 1;
+                    if (unprocessedBytes != -1) {
+                        while(TRUE) {
+                            *(s32*)relocDstAddr = *relocSrcPtr++;
+                            relocDstAddr+=4;
+                            unprocessedBytes--;
+                            if (unprocessedBytes == sentinel) {
+                                break;
+                            }
+                        }
+                    }
+                    
+                } else {
+                    /* No wrap — simply advance the read pointer past consumed data */
+                    *(s32*)(streamState + 0x04) += bytesConsumed;
+                    *(s32*)(streamState + 0x0C) -= bytesConsumed;
+                }
+
+                /* Memory barrier: prevent compiler from reordering the ready flag write */
+                __asm__ volatile ("" ::: "memory");
+                *(u8*)streamState = 1;
+                
+                goto do_vsync;
+            }
+        } 
+        
+        /* Timeout elapsed without data — pump the CD command queue */
         CD_UpdateAndProcessQueue();
+do_vsync:
         timestamp = VSync(-1);
     }
 }
