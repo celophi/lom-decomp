@@ -121,8 +121,11 @@ extern s32 g_cdResource176;
 extern s8 g_cdStatusByte3;
 extern u8 g_initState;
 extern s8 g_playbackFlag;
+extern CdSystem g_cdSystem;
 
-#define g_cdSystem (*(struct CdSystem*)0x801ED800)
+#define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
+#define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
+#define g_cdResourceArray ((CdResourceEntry*)0x801ED998)
 #define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
 #define g_scratchpad ((void*)0x1F800000)
