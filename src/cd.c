@@ -291,7 +291,6 @@ s32 CD_StreamData(s32 command, u32 destination) {
     s32* wrapDestinationPtr;
     s32* relocSrcPtr;
     u32 decompressEnd;
-
     u8* scratchpad;
     u32 destStart;
     u8* streamState;
@@ -305,7 +304,7 @@ s32 CD_StreamData(s32 command, u32 destination) {
     }
 
     destStart = destination;
-    scratchpad = (u8*)0x1F800000;
+    scratchpad = (u8*)g_scratchpad;
     
     /* Zero out the scratchpad streaming state */
     *(s32*)(scratchpad + 0x18) = 0;       /* reserved */
@@ -315,16 +314,16 @@ s32 CD_StreamData(s32 command, u32 destination) {
     
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = CD_EnqueueCommand(CdlReadN, command & 0xFFFF, 0U, &FUN_80014888) - 1;
+    remainingDataSize = CD_EnqueueCommand(CdlReadN, command, NULL, &FUN_80014888) - 1;
     timestamp = VSync(-1);
 
-    streamState = (u8*)0x1F800000;
+    streamState = (u8*)g_scratchpad;
 
     /* === Main streaming loop === */
     while (TRUE) {
         if (VSync(-1) < (timestamp + 30)) {
             /* Timeout hasn't elapsed — check if callback signaled new data */
-            if (*(u8*)streamState != 1) {
+            if (*streamState != 1) {
                 continue;
             }
             
@@ -334,29 +333,29 @@ s32 CD_StreamData(s32 command, u32 destination) {
                 
                 /* Calculate source-end boundary for decompression.
                  * If we have fewer bytes buffered than total remaining, hold back
-                 * 0x118 bytes as a safety margin to avoid reading incomplete sectors.
+                 * 280 bytes as a safety margin to avoid reading incomplete sectors.
                  * Otherwise use the exact remaining size as the boundary. */
                 if (bytesBuffered < remainingDataSize) {
-                    decompressEnd = (*(s32*)(streamState + 0x04) + bytesBuffered) - 0x118;
+                    decompressEnd = (*(s32*)(streamState + 0x04) + bytesBuffered) - 280;
                 } else {
                     decompressEnd = *(s32*)(streamState + 0x04) + remainingDataSize;
                 }
                 
                 /* Decompress a chunk; returns 0 when all output is complete */
-                if (CD_DecompressData((u32*)(0x1F800008), &destination, decompressEnd, -4U) == 0) {
+                if (CD_DecompressData((u32*)(g_scratchpad + 0x08), &destination, decompressEnd, -4U) == 0) {
                     return destination - destStart;
                 }
         
                 /* If bytesBuffered changed mid-iteration (callback wrote more data),
                  * re-loop to recalculate the decompression boundary */
-                if (bytesBuffered != *(s32*)(0x1F80000C)) {
+                if (bytesBuffered != *(s32*)(g_scratchpad + 0x0C)) {
                     continue;
                 }
         
                 /* All currently buffered data has been fed to the decompressor */
                 bytesConsumed = *(s32*)(streamState + 0x08) - *(s32*)(streamState + 0x04);
                 *(s32*)(streamState + 0x14) = bytesConsumed;
-                ClearPointer(0x1F800000);
+                ClearPointer(g_scratchpad);
                 remainingDataSize -= bytesConsumed;
                 
                 /* If the ring buffer hasn't wrapped, yield to let more data arrive */
