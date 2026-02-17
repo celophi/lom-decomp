@@ -274,7 +274,7 @@ void CD_Stop(void)
  *
  * @return Total number of decompressed bytes written to destination
  *
- * @note decomp.me: (97.84%) https://decomp.me/scratch/CSYVd
+ * @note decomp.me: (98.05%) https://decomp.me/scratch/CSYVd
  */
 s32 CD_StreamData(s32 command, u32 destination) {
     s32 unprocessedBytes;
@@ -410,8 +410,7 @@ s32 CD_StreamData(s32 command, u32 destination) {
                 }
 
                 /* Memory barrier: prevent compiler from reordering the ready flag write */
-                __asm__ volatile ("" ::: "memory");
-                *(u8*)streamState = 1;
+                *(volatile u8*)streamState = 1;
                 
                 goto do_vsync;
             }
@@ -594,6 +593,7 @@ u32 CD_UpdateAndProcessQueue(void) {
     s32 temp_v0_5;
     s32 temp_v1;
     s32 var_a2;
+
     s32 var_v0_2;
     s32 var_v1_2;
     s8 indexDiff;
@@ -1355,38 +1355,71 @@ void CD_ResetSystem(void)
 }
 
 /**
- * Checks if a CD command with the specified resource index can be queued without duplication
- * 
- * decomp.me link: https://decomp.me/scratch/rGrTJ
- * decomp.me (%): 98.89%
+ * @brief Checks whether a resource index is absent from the pending command queue
+ *
+ * Scans every entry currently sitting in the circular command queue and
+ * compares its resource index against the requested one. Returns 1 (true)
+ * if no matching entry is found, meaning the caller is free to enqueue a
+ * new command for that resource without creating a duplicate.
+ *
+ * @details
+ * The scan walks from the current read index forward through the number
+ * of pending entries (writeIndex - readIndex, masked to 4 bits for the
+ * 16-entry circular buffer). For each slot, the stored resourceIndex is
+ * compared against the lower 16 bits of the argument.
+ *
+ * The index variable is masked with 0xF on each iteration before
+ * incrementing, which keeps it within the 16-entry circular buffer bounds.
+ *
+ * @param resourceIndex  Resource index to search for (lower 16 bits used)
+ *
+ * @return 1 if the resource index is not already queued (safe to enqueue),
+ *         0 if a matching entry was found (duplicate present)
+ *
+ * @note
+ * - Only the lower 16 bits of resourceIndex are compared, matching the
+ *   unsigned short storage in CdCommandQueueItem
+ * - The sentinel value -1 and the separate compare variable match the
+ *   original assembly's register usage
+ *
+ * @see CD_QueueCommand — the function that actually enqueues commands
+ * @see decomp.me: (100%) https://decomp.me/scratch/mpPwi
  */
-s32 CD_CanQueueResourceIndex(s32 arg0) {
+s32 CD_CanQueueResourceIndex(s32 resourceIndex) {
+    s32 queuedResourceIndex;
+    s32 scanIndex;
+    s32 remainingEntries;
+    s32 sentinel;
     
-    s32 writeIndex;
-    s32 index;
+    scanIndex = CD_SYSTEM.queueReadIndex;
     
-    index = CD_SYSTEM.queueReadIndex;
-    writeIndex = CD_SYSTEM.queueWriteIndex;
+    // Calculate number of pending entries in the circular queue
+    remainingEntries = ((CD_SYSTEM.queueWriteIndex - scanIndex) & 0x0F);
+    remainingEntries -= 1;
+    sentinel = -1;
     
-    index = ((- index + writeIndex ) & 0x0F);
-    index -= 1;
-    
-    if (index != -1) {
+    // If queue is non-empty, scan all pending entries for a match
+    if (remainingEntries != sentinel) {
 
         while (1) {
 
-            if (CD_SYSTEM.commandQueue.items[writeIndex].resourceIndex == (arg0 & 0xFFFF)) {
+            // Check if this queued entry already targets the same resource
+            queuedResourceIndex = CD_SYSTEM.commandQueue.items[scanIndex].resourceIndex;
+            
+            if ((resourceIndex & 0xFFFF) == queuedResourceIndex) {
                 return 0;
             }
 
-            writeIndex = (writeIndex & 0xF);
-            writeIndex += 1;
-            index -= 1;
+            // Advance scan index with circular wrap (mod 16)
+            scanIndex = (scanIndex & 0xF);
+            scanIndex += 1;
+            remainingEntries -= 1;
             
-            if (index == -1) {
+            if (remainingEntries == -1) {
                 break;
             }
         }
+        
     }
 
     return 1;
