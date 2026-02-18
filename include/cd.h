@@ -98,7 +98,6 @@ typedef struct CdSystem {
     undefined4 u_180;
     undefined4 u_184;
     undefined4 u_188;
-    undefined4 u_18c;
     CdResourceEntry defaultCdResource;
 } CdSystem;
 
@@ -126,8 +125,7 @@ extern CdSystem g_cdSystem;
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define AUDIO_SYSTEM ((void*)0x801ED500)
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
-#define g_cdResourceArray ((CdResourceEntry*)0x801ED998)
-#define g_SKCDPOSE_DAT (*(struct SKCDPOSE_DAT*)0x801ED998)
+#define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
 #define g_scratchpad ((void*)0x1F800000)
 
@@ -135,7 +133,7 @@ extern CdSystem g_cdSystem;
 void CD_Initialize(void);
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
-void CD_InitLocationEntries(int lba, int dataSizeBytes);
+void CD_InitResources(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
 s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback);
 void CD_SyncCallback_Handler(char intr, u_char *status);
@@ -150,5 +148,6 @@ void FUN_80013d74(char param_1);
 void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 int CD_RecoveryStateMachine(void);
+void FUN_80023010(void);
 
 #endif
