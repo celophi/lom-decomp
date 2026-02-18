@@ -1235,7 +1235,7 @@ Done:
  * - Executes in interrupt context; must not call blocking functions
  * - Modifies CD_SYSTEM state directly; not safe to call from main thread
  *
- * @see decomp.me: (87.29%) https://decomp.me/scratch/F0oiy
+ * @see decomp.me: (91.68%) https://decomp.me/scratch/F0oiy
  */
 void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     u8 nextCommand;
@@ -1244,7 +1244,7 @@ void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     u8 nopCommand;
     s32 statusFlags;
     volatile s32 vsyncArg;
-    CdSystem* cdSystem;
+    volatile CdSystem* cdSystem;
 
     // Signal to main-loop poller that a sync event occurred
     CD_SYSTEM.syncComplete = 1;
@@ -1263,7 +1263,8 @@ void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     }
 
     // Command completed — dispatch based on which command just finished
-    switch (CD_SYSTEM.currentCommand) {
+    cdSystem = &CD_SYSTEM;
+    switch (cdSystem->currentCommand) {
     default:
     case 1:
     case 2:
@@ -1291,7 +1292,8 @@ void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     case 26:
     case 27:
         // Read the command at the current queue head
-        nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
+        cdSystem = &CD_SYSTEM;
+        nextCommand = cdSystem->commandQueue.items[CD_SYSTEM.queueReadIndex].command;
 
         // Skip past consecutive CdlNop (1) entries in the queue
         if (nextCommand == 1) {
@@ -1336,6 +1338,7 @@ DispatchCommand:
 
     // Special case: command 0x1B (audio start) — enable audio and remap to CdlSeekL
     if (nextCommand == 0x1B) {
+        cdSystem = &CD_SYSTEM;
         if (g_cdAudioEnabled == 0) {
             CD_SYSTEM.audioEnabled = 1;
         }
@@ -1345,7 +1348,8 @@ DispatchCommand:
 
 HandleIncomplete:
     // Command did not complete — if not already probing with CdlNop, retry with CdlNop
-    if (CD_SYSTEM.currentCommand != 1) {
+    cdSystem = &CD_SYSTEM;
+    if (cdSystem->currentCommand != 1) {
         CD_SYSTEM.currentCommand = 1;
         CdControlF(1, NULL);
         return;
@@ -1374,11 +1378,186 @@ ReadQueueHead:
 
 ExecuteNext:
     CD_ExecuteCommand(nextCommand, 0, 0);
-    return;
-
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler);
+/**
+ * decomp.me: (73.39%) https://decomp.me/scratch/0Dz2i
+ */
+void CD_SyncCallback_Handler(s8 intr, u8* status) {
+    u8 sp10;
+    s8 sp11;
+    s32 temp_v1;
+    s32 temp_v1_2;
+    s32 var_v1;
+    s8 var_v0_2;
+    s8 var_v0_3;
+    u8 temp_a0;
+    u8 temp_v0;
+    u8 temp_v0_2;
+    u8 var_a0;
+    u8 var_a0_2;
+    u8 var_v0;
+    u8* var_a1;
+    CdSystem* cdSystem;
+
+    CD_SYSTEM.syncComplete = 1;
+    if (CD_SYSTEM.initCommand & 0x80) {
+        if (!(CD_SYSTEM.statusFlags.word & 8)) {
+            cdSystem = &CD_SYSTEM;
+            if (*status & 0x10) {
+                CD_HandleSyncError();
+                return;
+            }
+            goto block_6;
+        }
+        goto block_5;
+    }
+block_5:
+    cdSystem = &CD_SYSTEM;
+block_6:
+    var_v1 = intr & 0xFF;
+    if (((cdSystem->initCommand & 0x7F) == 0x21) && (cdSystem->statusByte & 1)) {
+        if (cdSystem->filterModeFlags & 0x40) {
+            CdSyncCallback(NULL);
+            CdReadyCallback(NULL);
+            cdSystem->initState = 0x20;
+            cdSystem->initCommand = 0U;
+            cdSystem->statusFlags.word = (s32) (cdSystem->statusFlags.word & ~0x10 & ~4);
+            var_v1 = intr & 0xFF;
+        }
+    }
+    if (var_v1 == 2) {
+        CD_SYSTEM.initCommand = (u8) (CD_SYSTEM.initCommand & 0x7F);
+        temp_v0 = CD_SYSTEM.initCommand;
+        switch (temp_v0) {                          /* switch 1 */
+        case 1:                                     /* switch 1 */
+        case 3:                                     /* switch 1 */
+            CD_SYSTEM.initCommand = 0U;
+            if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex) {
+                CdSyncCallback(CD_OnCommandComplete);
+                temp_a0 = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
+                if ((temp_a0 == 0x1B) && (CD_SYSTEM.audioEnabled == 0)) {
+                    CD_SYSTEM.audioEnabled = 1U;
+                }
+                CD_SYSTEM.playbackState = 0;
+                CD_SYSTEM.loopCounter = 0;
+                CD_ExecuteCommand(temp_a0 & 0xFF, 0, 0);
+            } else {
+                CdSyncCallback(NULL);
+            }
+            break;
+        case 2:                                     /* switch 1 */
+            var_a0 = 0xE;
+            var_v0 = CD_SYSTEM.initCommand;
+            var_a1 = (u8* )0x801ED950;
+block_25:
+            CD_SYSTEM.initCommand = (u8) (var_v0 + 1);
+            CdControlF(var_a0, var_a1);
+            break;
+        case 16:                                    /* switch 1 */
+            var_v0_2 = 2;
+block_29:
+            CD_SYSTEM.initState = var_v0_2;
+            CdSyncCallback(NULL);
+            CD_SYSTEM.initCommand = 0U;
+            break;
+        case 17:                                    /* switch 1 */
+            var_a0 = 0xC;
+block_24:
+            var_v0 = CD_SYSTEM.initCommand;
+            var_a1 = NULL;
+            goto block_25;
+        case 18:                                    /* switch 1 */
+            var_a0 = 9;
+            goto block_24;
+        case 19:                                    /* switch 1 */
+            CdSyncCallback(NULL);
+            CD_SYSTEM.initState = 0;
+            CD_SYSTEM.initCommand = 0U;
+            CD_SYSTEM.statusFlags.word = (s32) (CD_SYSTEM.statusFlags.word & ~8);
+            break;
+        case 33:                                    /* switch 1 */
+            CdSyncCallback(NULL);
+            CD_SYSTEM.initCommand = 0U;
+            break;
+        case 32:                                    /* switch 1 */
+        case 34:                                    /* switch 1 */
+            var_v0_2 = 7;
+            goto block_29;
+        case 35:                                    /* switch 1 */
+            CD_SYSTEM.initCommand = 0U;
+            CD_SYSTEM.initState = 0;
+            CD_SYSTEM.retryCounter = 0;
+            temp_v1 = CD_SYSTEM.statusFlags.word & ~1;
+            CD_SYSTEM.statusFlags.word = temp_v1;
+            temp_v1_2 = temp_v1 & ~2 & ~4;
+            CD_SYSTEM.statusFlags.word = temp_v1_2;
+            if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex) {
+                CD_SYSTEM.currentCommand = 1;
+                CD_SYSTEM.statusFlags.word = (s32) (temp_v1_2 | 0x10);
+                CdSyncCallback(CD_OnCommandComplete);
+                CdSync(0, NULL);
+                CdControlF(1U, NULL);
+            } else {
+                CdSyncCallback(NULL);
+                CD_SYSTEM.statusFlags.word = (s32) (CD_SYSTEM.statusFlags.word & ~0x10);
+            }
+            if ((g_cdAudioEnabled != 0) && (g_cdAudioReady != 0)) {
+                *((u8*)AUDIO_SYSTEM + 0x92) = 1;
+            }
+            break;
+        }
+        g_cdVSyncTimestamp = VSync(-1);
+        return;
+    }
+    if (!(CD_SYSTEM.initCommand & 0x80)) {
+        CD_SYSTEM.initCommand = (u8) (CD_SYSTEM.initCommand | 0x80);
+        CdControlF(1U, NULL);
+        return;
+    }
+    CD_SYSTEM.initCommand = (u8) (CD_SYSTEM.initCommand & 0x7F);
+    temp_v0_2 = CD_SYSTEM.initCommand;
+    switch (temp_v0_2) {                            /* switch 2 */
+    case 3:                                         /* switch 2 */
+        CdControlF(0xEU, (u8* )0x801ED950);
+        return;
+    case 16:                                        /* switch 2 */
+        CD_SYSTEM.initState = 1;
+        CdSyncCallback(NULL);
+        CD_SYSTEM.initCommand = 0U;
+        return;
+    case 17:                                        /* switch 2 */
+        sp10 = 1;
+        sp11 = 1;
+        CdControlF(0xDU, &sp10);
+        return;
+    case 18:                                        /* switch 2 */
+        var_a0_2 = 0xC;
+block_46:
+        CdControlF(var_a0_2, NULL);
+        return;
+    case 1:                                         /* switch 2 */
+    case 2:                                         /* switch 2 */
+    case 19:                                        /* switch 2 */
+        var_a0_2 = 9;
+        goto block_46;
+    case 33:                                        /* switch 2 */
+        CdControlF(6U, (u8* )0x801ED95C);
+        return;
+    case 34:                                        /* switch 2 */
+        var_v0_3 = 7;
+block_50:
+        CD_SYSTEM.initState = var_v0_3;
+        CD_SYSTEM.initCommand = 0U;
+        CdSyncCallback(NULL);
+    default:                                        /* switch 2 */
+        return;
+    case 32:                                        /* switch 2 */
+    case 35:                                        /* switch 2 */
+        var_v0_3 = 6;
+        goto block_50;
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_ReadyCallback);
 
