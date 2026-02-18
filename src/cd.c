@@ -1131,7 +1131,7 @@ s32 CD_RecoveryStateMachine(void) {
         
         filterParams[0] = 1;
         filterParams[1] = 1;
-        CdControlF(CdlSetfilter, &filterParams);
+        CdControlF(CdlSetfilter, filterParams);
         CD_SYSTEM.initState = 3U;
         CD_SYSTEM.vsyncTimestamp = VSync(-1);
         goto Done;
@@ -1167,7 +1167,7 @@ ApplySetfilter:
                 // initCommand 0x10 or unknown: re-send CdlSetfilter with file=1, channel=1
                 filterParams[0] = 1;
                 filterParams[1] = 1;
-                CdControlF(CdlSetfilter, &filterParams);
+                CdControlF(CdlSetfilter, filterParams);
                 
             } while (0);
             CD_SYSTEM.initCommand = 0x10U;
