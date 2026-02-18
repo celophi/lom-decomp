@@ -14,10 +14,6 @@ linker/
 build/
 output/
 
-# Ignore generated main.c and main_continued.c files because it prevents splat from creating some definitions.
-src/main.c
-src/main_continued.c
-
 # Local generated files for matching purposes
 .matching/
 
