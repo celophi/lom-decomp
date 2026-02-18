@@ -13,7 +13,7 @@ FUN_80013d74                = 0x80013d74;
 CD_WaitForQueueEmpty        = 0x80013f2c;
 CD_HandleSyncError          = 0x80013f64;
 CD_SetAudioVolume           = 0x80013fd0;
-CD_InitLocationEntries      = 0x80014140;
+CD_InitResources            = 0x80014140;
 CD_DecompressData           = 0x80014448;
 
 // PSY-Q Functions

@@ -436,7 +436,7 @@ do_vsync:
  * 1. Rejects the command immediately if the "playing" status flag (bit 6) is set
  * 2. Resolves the resource index to a CdResourceEntry pointer:
  *    - 0xFFFF (CD_RESOURCE_INDEX_DEFAULT) maps to g_defaultCdResource
- *    - All other indices index into g_cdResourceArray
+ *    - All other indices index into CD_RESOURCE_ENTRIES
  * 3. Deduplicates: if the system is already processing a command and the
  *    new command matches the last-enqueued (command, resourceIndex, dstBuffer,
  *    callback), the enqueue is skipped and the existing dataSize is returned
@@ -449,7 +449,7 @@ do_vsync:
  * - Installs CD_OnCommandComplete and sends CdlNop to begin processing
  *
  * @param command        CD-ROM command byte (e.g., CdlReadN, CdlSeekL)
- * @param resourceIndex  Index into g_cdResourceArray, or 0xFFFF for the default resource
+ * @param resourceIndex  Index into CD_RESOURCE_ENTRIES, or 0xFFFF for the default resource
  * @param dstBuffer      Destination buffer for read data (may be NULL for non-read commands)
  * @param callback       Callback function pointer invoked on command completion
  *
@@ -491,7 +491,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s
     if (resourceIndex == CD_RESOURCE_INDEX_DEFAULT) {
         resourceEntry = &g_defaultCdResource;
     } else {
-        resourceEntry = &g_cdResourceArray[resourceIndex];
+        resourceEntry = &CD_RESOURCE_ENTRIES[resourceIndex];
     }
 
     cdSystem = &CD_SYSTEM;
@@ -1827,7 +1827,7 @@ void CD_HandleSyncError(void)
  * decomp.me (%): 100%
  */
 
-void CD_SetAudioVolume(u_char volume, int stereoChannel)
+void CD_SetAudioVolume(u_char volume, s32 stereoChannel)
 {
   CdlATV audioConfig[2];
  do { 
@@ -1963,36 +1963,53 @@ s32 CD_CanQueueResourceIndex(s32 resourceIndex) {
     return 1;
 }
 
-
 /**
- * Initializes CD resource entry for disc location seeking
- * 
- * Params:
- * lba - Logical Block Address (sector) on the CD to prepare
- * dataSizeBytes - Size of data in bytes associated with this location
- * 
- * Returns:
- * void
- * 
- * Notes: Synchronizes with VSync using stored timestamp to prevent command conflicts.
- * Clears the default CD resource location structure (4 bytes zeroed).
- * Converts LBA to CD-ROM MSF format and stores in global resource entry.
- * Queues command 0x06 with SKCDPOSE_DAT as target buffer.
- * SKCDPOSE_DAT likely stands for "Seek CD POSition Entry DATa".
- * This appears to be a table of CdlLOC positions for disc seeking operations.
- * Blocks until CD command queue is empty before setting audio volume.
- * Sets CD audio volume to 128 (0x80) which may be default/mid-level.
- * 
- * decomp.me link: https://decomp.me/scratch/4PljL
- * decomp.me (%): 100%
- * 
- * TODO: Figure out why g_SKCDPOSE_DAT is an undefined reference and not included in splat output.
+ * @brief Initializes the default CD resource entry and seeks to a disc location
+ *
+ * Converts a raw LBA sector address into MSF format, stores it as the default
+ * CD resource, then enqueues a seek command and applies a default audio volume.
+ *
+ * @details
+ * Performs the following steps in order:
+ *
+ * 1. Synchronizes with the VSync timestamp recorded in g_cdVSyncTimestamp:
+ *    computes the delta between now and (g_cdVSyncTimestamp - 3) and calls
+ *    VSync(delta) to stall the required number of frames, preventing command
+ *    conflicts with any in-flight CD operation.
+ * 2. Clears the default CD resource's location field (4 bytes zeroed via
+ *    a single u32 write) and sets its dataSize to dataSizeBytes.
+ * 3. Converts lba to CD-ROM MSF format via CdIntToPos() and writes the result
+ *    into CD_SYSTEM.defaultCdResource.location.
+ * 4. Enqueues command 0x06 (CdlSeekL) with resource index 0xFFFF
+ *    (CD_RESOURCE_INDEX_DEFAULT) and CD_RESOURCE_ENTRIES as the destination
+ *    buffer.
+ * 5. Blocks via CD_WaitForQueueEmpty() until the seek command completes.
+ * 6. Calls CD_SetAudioVolume(128, 1) to apply a default mid-level CD audio
+ *    volume (0x80).
+ *
+ * @param lba           Logical Block Address of the target sector on disc.
+ * @param dataSizeBytes Size in bytes of the data associated with this location;
+ *                      stored as the default resource's dataSize.
+ *
+ * @return void
+ *
+ * @note
+ * - The VSync stall uses an offset of -3 frames to match the original
+ *   assembly's addiu exactly; the off-by-one branch (delta == 1 → 0) also
+ *   matches the original to avoid a 1-frame over-wait.
+ * - CD_RESOURCE_ENTRIES is a table of CdlLOC seek-position
+ *   entries passed as the dstBuffer;
+ *
+ * @warning
+ * - Blocks the caller until the CD command queue is fully drained.
+ * - Must not be called from within a CD callback.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
  */
-void CD_InitLocationEntries (int lba, int dataSizeBytes)
-{
-    CdlLOC *location;
+void CD_InitResources(s32 lba, s32 dataSizeBytes) {
     int vsyncOffset;
     int vsyncDelta;
+    CdlLOC *location;
     CdSystem *cdStruct;
     
     vsyncOffset = -3;
@@ -2011,11 +2028,11 @@ void CD_InitLocationEntries (int lba, int dataSizeBytes)
     
     cdStruct = &CD_SYSTEM;
     location = &cdStruct->defaultCdResource.location;
-    *(u_int*)&cdStruct->defaultCdResource.location = 0;
+    *(u32*)&cdStruct->defaultCdResource.location = 0;
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
     
     CdIntToPos(lba, location);
-    CD_QueueCommand(6, 0xffff, &g_SKCDPOSE_DAT, 0);
+    CD_QueueCommand(6, 0xffff, CD_RESOURCE_ENTRIES, 0);
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }
