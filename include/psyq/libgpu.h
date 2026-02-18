@@ -1,4 +1,4 @@
-﻿/* $PSLibId: Run-time Library Release 4.6$ */
+/* $PSLibId: Run-time Library Release 4.6$ */
 #ifndef _LIBGPU_H_
 #define _LIBGPU_H_
 /*
