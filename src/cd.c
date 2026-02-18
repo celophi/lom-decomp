@@ -1240,8 +1240,8 @@ Done:
  *
  * @see decomp.me: (91.68%) https://decomp.me/scratch/F0oiy
  */
-void CD_OnCommandComplete(s32 status, u8* resultPtr) {
-    u8 nextCommand;
+void CD_OnCommandComplete(u_char intr, u_char* result) {
+ u8 nextCommand;
     u32 readIndex;
     u32 writeIndex;
     u8 nopCommand;
@@ -1252,16 +1252,16 @@ void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     // Signal to main-loop poller that a sync event occurred
     CD_SYSTEM.syncComplete = 1;
 
-    // If we sent CdlNop to probe status, check for drive errors
+    // If we sent CdlNop to probe intr, check for drive errors
     if (CD_SYSTEM.currentCommand == 1) {
-        if (*resultPtr & 0x10) {
+        if (*result & 0x10) {
             CD_HandleSyncError();
             return;
         }
     }
 
     // If the command did not complete successfully, handle retry/fallthrough
-    if ((status & 0xFF) != CdlComplete) {
+    if ((intr & 0xFF) != CdlComplete) {
         goto HandleIncomplete;
     }
 

@@ -9,6 +9,8 @@
 #define CD_COMMAND_QUEUE_SIZE 16
 
 // Structures
+typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
+
 typedef struct CdResourceEntry {
     CdlLOC location;
     int dataSize;
@@ -20,7 +22,7 @@ typedef struct CdCommandQueueItem {
     unsigned short resourceIndex;
     CdResourceEntry *entry;
     CdResourceEntry *dstBuffer;
-    unsigned int callback;
+    CdCommandCallback callback;
 } CdCommandQueueItem;
 
 typedef struct CdCommandQueue {
@@ -59,8 +61,8 @@ typedef struct CdSystem {
     undefined2 resourceIndex;
     undefined u_1e;
     undefined u_1f;
-    undefined4 dstBuffer;
-    undefined4 callback;
+    CdResourceEntry * dstBuffer;
+    CdCommandCallback callback;
     u_int size;
     undefined4 sizeCopy;
     undefined4 dstBuffer2;
@@ -106,8 +108,6 @@ typedef struct SKCDPOSE_DAT {
     char unknown[45065];
 } SKCDPOSE_DAT;
 
-typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
-
 // Externs
 extern CdlCB g_cdSyncCallbackResult;
 extern CdlCB g_cdReadyCallbackResult;
@@ -139,7 +139,7 @@ void CD_InitResources(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
 s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, CdCommandCallback callback);
 void CD_SyncCallback_Handler(char intr, u_char *status);
-void CD_OnCommandComplete(char intr, u_char *result);
+void CD_OnCommandComplete(u_char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
 u32* UnknownCallback(s32 param_1, u32 param_2);
