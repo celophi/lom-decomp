@@ -13,7 +13,8 @@ FUN_80013d74                = 0x80013d74;
 CD_WaitForQueueEmpty        = 0x80013f2c;
 CD_HandleSyncError          = 0x80013f64;
 CD_SetAudioVolume           = 0x80013fd0;
-CD_InitLocationEntries      = 0x80014140;
+CD_IsQueueAvailable         = 0x800140d4;
+CD_InitResources            = 0x80014140;
 CD_DecompressData           = 0x80014448;
 
 // PSY-Q Functions
@@ -119,7 +120,7 @@ CD_ResetSystem = 0x80014014;
 DecDCToutCallback = 0x800181A8;
 DrawSyncCallback = 0x80019690;
 FUN_80023010 = 0x80023010;
-CD_CanQueueResourceIndex = 0x800140d4;
+
 CdGetDiskType = 0x80020248;
 FUN_80022400 = 0x80022400;
 FUN_80140d48 = 0x80140d48;
