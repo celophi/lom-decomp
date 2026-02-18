@@ -1895,35 +1895,44 @@ void CD_ResetSystem(void)
 /**
  * @brief Checks whether a resource index is absent from the pending command queue
  *
- * Scans every entry currently sitting in the circular command queue and
- * compares its resource index against the requested one. Returns 1 (true)
- * if no matching entry is found, meaning the caller is free to enqueue a
- * new command for that resource without creating a duplicate.
+ * Scans every pending entry in the circular command queue and returns whether
+ * the given resource index is not already present, indicating it is safe to
+ * enqueue a new command for that resource without creating a duplicate.
  *
  * @details
- * The scan walks from the current read index forward through the number
- * of pending entries (writeIndex - readIndex, masked to 4 bits for the
- * 16-entry circular buffer). For each slot, the stored resourceIndex is
- * compared against the lower 16 bits of the argument.
+ * The scan performs the following steps:
  *
- * The index variable is masked with 0xF on each iteration before
- * incrementing, which keeps it within the 16-entry circular buffer bounds.
+ * 1. Reads queueReadIndex as the starting scan position
+ * 2. Computes the number of pending entries as (queueWriteIndex - queueReadIndex) & 0xF
+ * 3. Decrements that count by 1 and compares against a sentinel of -1 to detect an
+ *    empty queue (no iterations performed)
+ * 4. For each pending slot, compares the stored resourceIndex against the lower 16
+ *    bits of the argument; returns 0 immediately on a match (duplicate found)
+ * 5. Advances scanIndex by masking with 0xF before incrementing to maintain circular
+ *    wrap semantics within the 16-entry buffer
+ * 6. Returns 1 if the full queue was scanned with no match
  *
- * @param resourceIndex  Resource index to search for (lower 16 bits used)
+ * @note
+ * - Only the lower 16 bits of resourceIndex are compared, matching the u16 storage
+ *   in CdCommandQueueItem
+ * - The decrement-before-loop pattern and sentinel value of -1 match the original
+ *   assembly's register usage exactly and must not be restructured
+ * - The mask-then-increment sequence (scanIndex = (scanIndex & 0xF) + 1) matches
+ *   the original assembly's andi + addiu pair for register-level equivalence
  *
+ * @warning
+ * - Not interrupt-safe; the queue indices and entries may change between reads if
+ *   called while a CD callback is active
+ * - Does not prevent a race between this check and a subsequent CD_QueueCommand call;
+ *   the caller must not assume the result remains valid across VSync frames
+ *
+ * @param resourceIndex  Resource index to search for in the queue (lower 16 bits used)
  * @return 1 if the resource index is not already queued (safe to enqueue),
  *         0 if a matching entry was found (duplicate present)
  *
- * @note
- * - Only the lower 16 bits of resourceIndex are compared, matching the
- *   unsigned short storage in CdCommandQueueItem
- * - The sentinel value -1 and the separate compare variable match the
- *   original assembly's register usage
- *
- * @see CD_QueueCommand — the function that actually enqueues commands
- * @see decomp.me: (100%) https://decomp.me/scratch/mpPwi
+ * @see decomp.me: (100%) https://decomp.me/scratch/l4HlL
  */
-s32 CD_CanQueueResourceIndex(s32 resourceIndex) {
+s32 CD_IsQueueAvailable(s32 resourceIndex) {
     s32 queuedResourceIndex;
     s32 scanIndex;
     s32 remainingEntries;
