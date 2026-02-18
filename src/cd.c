@@ -1082,7 +1082,7 @@ UpdateStatusFlags:  // Update status flags with mask
  * @see decomp.me: (96.19%) https://decomp.me/scratch/rvy43
  */
 s32 CD_RecoveryStateMachine(void) {
-    u16 filterParams;
+    u_char filterParams[2];
     s32 temp_v1_2;
     u8 temp_v1;
     u8 var_a0;
@@ -1129,8 +1129,8 @@ s32 CD_RecoveryStateMachine(void) {
         CdSyncCallback(CD_SyncCallback_Handler);
         CD_SYSTEM.initCommand = 0x11;
         
-        *(u8*)(&filterParams) = 1;
-        *(u8*)(&filterParams + 1) = 1;
+        filterParams[0] = 1;
+        filterParams[1] = 1;
         CdControlF(CdlSetfilter, &filterParams);
         CD_SYSTEM.initState = 3U;
         CD_SYSTEM.vsyncTimestamp = VSync(-1);
@@ -1165,9 +1165,8 @@ s32 CD_RecoveryStateMachine(void) {
                 }
 ApplySetfilter:
                 // initCommand 0x10 or unknown: re-send CdlSetfilter with file=1, channel=1
-                *(u8*)(&filterParams) = 1;
-        *(u8*)(&filterParams + 1) = 1;
-                
+                filterParams[0] = 1;
+                filterParams[1] = 1;
                 CdControlF(CdlSetfilter, &filterParams);
                 
             } while (0);
@@ -1183,7 +1182,7 @@ UpdateTimestamp:
     default:
         goto Done;
     }
-  
+
 Done:
     return 0;
 }
@@ -1386,7 +1385,8 @@ ExecuteNext:
 /**
  * decomp.me: (73.39%) https://decomp.me/scratch/0Dz2i
  */
-void CD_SyncCallback_Handler(s8 intr, u8* status) {
+void CD_SyncCallback_Handler(u_char intr, u_char* result)
+{
     u8 sp10;
     s8 sp11;
     s32 temp_v1;
@@ -1407,7 +1407,7 @@ void CD_SyncCallback_Handler(s8 intr, u8* status) {
     if (CD_SYSTEM.initCommand & 0x80) {
         if (!(CD_SYSTEM.statusFlags.word & 8)) {
             cdSystem = &CD_SYSTEM;
-            if (*status & 0x10) {
+            if (*result & 0x10) {
                 CD_HandleSyncError();
                 return;
             }

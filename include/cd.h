@@ -138,7 +138,7 @@ void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
 s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, CdCommandCallback callback);
-void CD_SyncCallback_Handler(char intr, u_char *status);
+void CD_SyncCallback_Handler(u_char intr, u_char* result);
 void CD_OnCommandComplete(u_char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
