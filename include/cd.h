@@ -127,6 +127,7 @@ extern CdSystem g_cdSystem;
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
 #define AUDIO_SYSTEM ((void*)0x801ED500)
+#define CD_COMMAND_PARAM_BUFFER ((u_char*) 0x801ED958)
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)

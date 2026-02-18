@@ -1642,7 +1642,7 @@ reset_playback_state:
         switch (executionMode) {
             case 1:
                 CD_SYSTEM_V.currentCommand = actualCommand;
-                CdControlF(actualCommand & 0xFF, 0x801ED958);
+                CdControlF(actualCommand & 0xFF, CD_COMMAND_PARAM_BUFFER);
     
                 while (1) {
                     if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
