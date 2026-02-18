@@ -1578,12 +1578,14 @@ void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode)
     s32 dataSize;
     s32 controlParam;
     s32 commandCheck;
-    s32* queuedLocation;
+    CdResourceEntry* queuedLocation;
+    u32 locationIndex;
     u8 actualCommand;
     void (*callbackHandler)(u8, u8*);
     void* queueEntryPtr;
     void* queueBufferPtr;
     CdSystem *cdSystem;
+    
 
     actualCommand = command;
     queuedLocation = 0;
@@ -1593,16 +1595,16 @@ void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode)
 
         while (1) {
             // Calculate next read index with circular buffer wrapping
-            nextReadIndex = (CD_SYSTEM.queueReadIndex + 1) & 0xF;
+            nextReadIndex = (CD_SYSTEM_V.queueReadIndex + 1) & 0xF;
 
             // Wait if buffer is full (write index == next read index)
-            if (CD_SYSTEM.queueWriteIndex == nextReadIndex) {
+            if (CD_SYSTEM_V.queueWriteIndex == nextReadIndex) {
                 continue;
             }
 
             // Advance read index and get next command
-            CD_SYSTEM.queueReadIndex = nextReadIndex;
-            actualCommand = CD_SYSTEM.commandQueue.items[nextReadIndex].command;
+            CD_SYSTEM_V.queueReadIndex = nextReadIndex;
+            actualCommand = CD_SYSTEM_V.commandQueue.items[nextReadIndex].command;
 
             // Skip if it's another SeekL command
             if (actualCommand == CdlSeekL) {
@@ -1628,18 +1630,18 @@ void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode)
         } else {
 reset_playback_state:
             // Reset playback state and get queue location
-            queuedLocation = (s32*)CD_SYSTEM.queueReadIndex;
-            CD_SYSTEM.loopCounter = 0;
-            CD_SYSTEM.playbackState = 0;
+            locationIndex = CD_SYSTEM.queueReadIndex;
+            CD_SYSTEM_V.loopCounter = 0;
+            CD_SYSTEM_V.playbackState = 0;
             
-            queuedLocation = CD_SYSTEM.commandQueue.items[(u_int)queuedLocation].entry;
-            CD_SYSTEM.commandParamBuffer = (s32) *queuedLocation;
+            queuedLocation = CD_SYSTEM_V.commandQueue.items[locationIndex].entry;
+            CD_SYSTEM_V.commandParamBuffer = *(s32*)&queuedLocation->location;
         }
 
         // Handle different execution modes
         switch (executionMode) {
             case 1:
-                CD_SYSTEM.currentCommand = actualCommand;
+                CD_SYSTEM_V.currentCommand = actualCommand;
                 CdControlF(actualCommand & 0xFF, 0x801ED958);
     
                 while (1) {
@@ -1671,22 +1673,22 @@ reset_playback_state:
         
         if ((commandCheck == CdlReadN) || (commandCheck == CdlReadS)) {
             
-            queueEntryPtr = (CD_SYSTEM.queueReadIndex * 0x10) + 0x801ED800;
+            queueEntryPtr = (CD_SYSTEM_V.queueReadIndex * 0x10) + 0x801ED800;
             
-            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (CD_SYSTEM.dstBuffer2 == *((u32*)queueEntryPtr + 0x12) )) {
-                CD_SYSTEM.playbackState = 0;
+            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (CD_SYSTEM_V.dstBuffer2 == *((u32*)queueEntryPtr + 0x12) )) {
+                CD_SYSTEM_V.playbackState = 0;
             }
-            cdSystem = &CD_SYSTEM;
+            cdSystem = &CD_SYSTEM_V;
             if (g_playbackState == 0) {
                 dataSize = *((s32*)queuedLocation + 1);
                 queueBufferPtr = (void*)((cdSystem->queueReadIndex * 0x10) + 0x801ED800);
-                CD_SYSTEM.sizeCopy = dataSize;
-                CD_SYSTEM.size = dataSize;
-                CD_SYSTEM.dstBuffer2 = (s32) *((u32*)queueBufferPtr + 0x12);
-                CD_SYSTEM.loopCounter = (s32) *((u32*)queueBufferPtr + 0x13);
+                CD_SYSTEM_V.sizeCopy = dataSize;
+                CD_SYSTEM_V.size = dataSize;
+                CD_SYSTEM_V.dstBuffer2 = (s32) *((u32*)queueBufferPtr + 0x12);
+                CD_SYSTEM_V.loopCounter = (s32) *((u32*)queueBufferPtr + 0x13);
             }
             if (executionMode == 0) {
-                CD_SYSTEM.statusFlags.bytes.b2 = 0;
+                CD_SYSTEM_V.statusFlags.bytes.b2 = 0;
                 callbackHandler = CD_ReadyCallback;
                 goto set_callback;
             }
@@ -1703,7 +1705,7 @@ after_callback:
             }
         } else {
 continue_execution:
-            CD_SYSTEM.currentCommand = actualCommand;
+            CD_SYSTEM_V.currentCommand = actualCommand;
             CdControlF(actualCommand & 0xFF, 0x801ED958);
         }
         g_playbackState = 0;
@@ -1713,7 +1715,7 @@ continue_execution:
     // Handle other commands based on execution mode
     switch (executionMode) {
         case 0:
-            CD_SYSTEM.currentCommand = actualCommand;
+            CD_SYSTEM_V.currentCommand = actualCommand;
             
             if (cmdId == 0xE) {
                 controlParam = 0xE;
@@ -1725,7 +1727,7 @@ continue_execution:
             break;
         case 1:
             CdReadyCallback(0);
-            CD_SYSTEM.currentCommand = actualCommand;
+            CD_SYSTEM_V.currentCommand = actualCommand;
             CdControlF(cmdId, 0);
 
              // Wait for sector read
@@ -1742,7 +1744,7 @@ continue_execution:
                     break;
                 }
             }
-            CD_SYSTEM.currentCommand = actualCommand;
+            CD_SYSTEM_V.currentCommand = actualCommand;
             controlParam = actualCommand & 0xFF;
             paramBufferSpecialCmd = 0;
             break;

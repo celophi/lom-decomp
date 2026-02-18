@@ -125,6 +125,7 @@ extern s8 g_playbackFlag;
 extern CdSystem g_cdSystem;
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
+#define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
 #define AUDIO_SYSTEM ((void*)0x801ED500)
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
