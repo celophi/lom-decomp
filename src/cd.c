@@ -1235,7 +1235,7 @@ Done:
  * - Executes in interrupt context; must not call blocking functions
  * - Modifies CD_SYSTEM state directly; not safe to call from main thread
  *
- * @see decomp.me: (87.29%) https://decomp.me/scratch/F0oiy
+ * @see decomp.me: (91.68%) https://decomp.me/scratch/F0oiy
  */
 void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     u8 nextCommand;
@@ -1244,7 +1244,7 @@ void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     u8 nopCommand;
     s32 statusFlags;
     volatile s32 vsyncArg;
-    CdSystem* cdSystem;
+    volatile CdSystem* cdSystem;
 
     // Signal to main-loop poller that a sync event occurred
     CD_SYSTEM.syncComplete = 1;
@@ -1263,7 +1263,8 @@ void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     }
 
     // Command completed — dispatch based on which command just finished
-    switch (CD_SYSTEM.currentCommand) {
+    cdSystem = &CD_SYSTEM;
+    switch (cdSystem->currentCommand) {
     default:
     case 1:
     case 2:
@@ -1291,7 +1292,8 @@ void CD_OnCommandComplete(s32 status, u8* resultPtr) {
     case 26:
     case 27:
         // Read the command at the current queue head
-        nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
+        cdSystem = &CD_SYSTEM;
+        nextCommand = cdSystem->commandQueue.items[CD_SYSTEM.queueReadIndex].command;
 
         // Skip past consecutive CdlNop (1) entries in the queue
         if (nextCommand == 1) {
@@ -1336,6 +1338,7 @@ DispatchCommand:
 
     // Special case: command 0x1B (audio start) — enable audio and remap to CdlSeekL
     if (nextCommand == 0x1B) {
+        cdSystem = &CD_SYSTEM;
         if (g_cdAudioEnabled == 0) {
             CD_SYSTEM.audioEnabled = 1;
         }
@@ -1345,7 +1348,8 @@ DispatchCommand:
 
 HandleIncomplete:
     // Command did not complete — if not already probing with CdlNop, retry with CdlNop
-    if (CD_SYSTEM.currentCommand != 1) {
+    cdSystem = &CD_SYSTEM;
+    if (cdSystem->currentCommand != 1) {
         CD_SYSTEM.currentCommand = 1;
         CdControlF(1, NULL);
         return;
@@ -1374,8 +1378,6 @@ ReadQueueHead:
 
 ExecuteNext:
     CD_ExecuteCommand(nextCommand, 0, 0);
-    return;
-
 }
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler);
