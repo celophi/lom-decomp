@@ -125,7 +125,6 @@ extern CdSystem g_cdSystem;
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define AUDIO_SYSTEM ((void*)0x801ED500)
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
-#define g_cdResourceArray ((CdResourceEntry*)0x801ED998)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
 #define g_scratchpad ((void*)0x1F800000)
@@ -149,5 +148,6 @@ void FUN_80013d74(char param_1);
 void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 int CD_RecoveryStateMachine(void);
+void FUN_80023010(void);
 
 #endif

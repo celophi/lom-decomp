@@ -1,6 +1,8 @@
 #include "cd.h"
 #include "psyq/libetc.h"
 #include "psyq/libcd.h"
+#include "psyq/libpress.h"
+#include "psyq/libgpu.h"
 
 /**
  * @brief Cold-start initialization of the CD-ROM subsystem
@@ -274,7 +276,7 @@ void CD_Stop(void)
  *
  * @return Total number of decompressed bytes written to destination
  *
- * @see decomp.me: (98.05%) https://decomp.me/scratch/CSYVd
+ * @see decomp.me: (98.01%) https://decomp.me/scratch/CSYVd
  */
 s32 CD_StreamData(s32 command, u32 destination) {
     s32 unprocessedBytes;
@@ -340,13 +342,13 @@ s32 CD_StreamData(s32 command, u32 destination) {
                 }
                 
                 /* Decompress a chunk; returns 0 when all output is complete */
-                if (CD_DecompressData((u32*)(g_scratchpad + 0x08), &destination, decompressEnd, -4U) == 0) {
+                if (CD_DecompressData((u32*)(CD_RESOURCE_ENTRIES + 0x08), &destination, decompressEnd, -4U) == 0) {
                     return destination - destStart;
                 }
         
                 /* If bytesBuffered changed mid-iteration (callback wrote more data),
                  * re-loop to recalculate the decompression boundary */
-                if (bytesBuffered != *(s32*)(g_scratchpad + 0x0C)) {
+                if (bytesBuffered != *(s32*)(CD_RESOURCE_ENTRIES + 0x0C)) {
                     continue;
                 }
         
@@ -1858,9 +1860,8 @@ void CD_SetAudioVolume(u_char volume, s32 stereoChannel)
  */
 void CD_ResetSystem(void)
 {
-    u32 value;
     u32* callback;
-    volatile u32* ptr = (u32*)0x801ED500;
+    volatile u32* ptr = (u32*)AUDIO_SYSTEM;
     
     callback = (u32*)ptr[0x0E];
     DecDCToutCallback(callback);
@@ -1868,12 +1869,14 @@ void CD_ResetSystem(void)
     callback = (u32*)ptr[0x0F];
     DrawSyncCallback(callback);
     
-    CdSyncCallback(0);
-    CdReadyCallback(0);
-    
-    do {
-        value = CdControlB(9U, 0, 0);
-    } while (value == 0);
+    CdSyncCallback(NULL);
+    CdReadyCallback(NULL);
+
+    while (TRUE) {
+        if (CdControlB(CdlPause, NULL, NULL) != 0) {
+            break;
+        }
+    }
     
     if (g_cdAudioReady != 0) {
         FUN_80023010();
@@ -1887,8 +1890,7 @@ void CD_ResetSystem(void)
     CD_SYSTEM.retryCounter = 0;
     CD_SYSTEM.playbackState = 0;
     CD_SYSTEM.loopCounter = 0;
-    
-    CD_SYSTEM.statusFlags.word = (s32) (CD_SYSTEM.statusFlags.word & ~0x10);
+    CD_SYSTEM.statusFlags.word &= ~0x10;
     CD_SYSTEM.vsyncTimestamp = VSync(-1);
 }
 
