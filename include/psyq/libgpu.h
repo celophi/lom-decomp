@@ -1,4 +1,4 @@
-/* $PSLibId: Run-time Library Release 4.6$ */
+﻿/* $PSLibId: Run-time Library Release 4.6$ */
 #ifndef _LIBGPU_H_
 #define _LIBGPU_H_
 /*
@@ -19,8 +19,8 @@
  *      POLY_G4  | 9	|Gouraud|   4   |OFF    | Gouraud Quadrangle
  *      POLY_GT4 |13	|Gouraud|   4   |ON     | Gouraud Textured Quadrangle
  *      ---------+------+-------+-------+-------+------------------------
- *      LINE_F2  | 4	|Flat   |   2   | -     | unconnected Flat Line 
- *      LINE_G2  | 5	|Gouraud|   2   | -     | unconnected Gouraud Line 
+ *      LINE_F2  | 4	|Flat   |   2   | -     | unconnected Flat Line
+ *      LINE_G2  | 5	|Gouraud|   2   | -     | unconnected Gouraud Line
  *      LINE_F3  | 6	|Flat	|   3	| -     | 3-connected Flat Line
  *      LINE_G3  | 8	|Gouraud|   3	| -     | 3-connected Gouraud Line
  *      LINE_F4  | 7	|Flat	|   4	| -    	| 4-connected Flat Line
@@ -55,7 +55,7 @@
  *		Back	0.5	1.0	1.0	 1.0
  *
  *	tp: texture mode
- *		 tp	0	1	2	
+ *		 tp	0	1	2
  *		 -----------------------------
  *		 depth	4bit	8bit	16bit
  *		 color	CLUT	CLUT	DIRECT
@@ -80,19 +80,19 @@ extern	int (*GPU_printf)(char *fmt, ...);	/* printf() object */
  *	Set/Add Vector/Rectangle Attributes
  */
 #define setVector(v, _x, _y, _z) \
-	(v)->vx = _x, (v)->vy = _y, (v)->vz = _z	
+	(v)->vx = _x, (v)->vy = _y, (v)->vz = _z
 
 #define applyVector(v, _x, _y, _z, op) \
-	(v)->vx op _x, (v)->vy op _y, (v)->vz op _z	
+	(v)->vx op _x, (v)->vy op _y, (v)->vz op _z
 
 #define copyVector(v0, v1) \
-	(v0)->vx = (v1)->vx, (v0)->vy = (v1)->vy, (v0)->vz = (v1)->vz 
+	(v0)->vx = (v1)->vx, (v0)->vy = (v1)->vy, (v0)->vz = (v1)->vz
 
 #define addVector(v0, v1) \
 	(v0)->vx += (v1)->vx,	\
 	(v0)->vy += (v1)->vy,	\
-	(v0)->vz += (v1)->vz	
-	
+	(v0)->vz += (v1)->vz
+
 #define dumpVector(str, v)	\
 	GPU_printf("%s=(%d,%d,%d)\n", str, (v)->vx, (v)->vy, (v)->vz)
 
@@ -112,22 +112,22 @@ extern	int (*GPU_printf)(char *fmt, ...);	/* printf() object */
 
 #define setClut(p,x,y) \
 	((p)->clut = getClut(x,y))
-					   
+
 /*
  * Set Primitive Colors
  */
 #define setRGB0(p,_r0,_g0,_b0)						\
 	(p)->r0 = _r0,(p)->g0 = _g0,(p)->b0 = _b0
-	
+
 #define setRGB1(p,_r1,_g1,_b1)						\
 	(p)->r1 = _r1,(p)->g1 = _g1,(p)->b1 = _b1
 
 #define setRGB2(p,_r2,_g2,_b2)						\
 	(p)->r2 = _r2,(p)->g2 = _g2,(p)->b2 = _b2
-	
+
 #define setRGB3(p,_r3,_g3,_b3)						\
 	(p)->r3 = _r3,(p)->g3 = _g3,(p)->b3 = _b3
-	
+
 /*
  * Set Primitive Screen Points
  */
@@ -165,12 +165,12 @@ extern	int (*GPU_printf)(char *fmt, ...);	/* printf() object */
  */
 #define setUV0(p,_u0,_v0)						\
 	(p)->u0 = (_u0), (p)->v0 = (_v0)				\
-	
+
 #define setUV3(p,_u0,_v0,_u1,_v1,_u2,_v2)				\
 	(p)->u0 = (_u0), (p)->v0 = (_v0),				\
 	(p)->u1 = (_u1), (p)->v1 = (_v1),				\
 	(p)->u2 = (_u2), (p)->v2 = (_v2)
-	
+
 #define setUV4(p,_u0,_v0,_u1,_v1,_u2,_v2,_u3,_v3) 			\
 	(p)->u0 = (_u0), (p)->v0 = (_v0),				\
 	(p)->u1 = (_u1), (p)->v1 = (_v1),				\
@@ -183,16 +183,16 @@ extern	int (*GPU_printf)(char *fmt, ...);	/* printf() object */
 	(p)->u2 = (_u0),      (p)->v2 = (_v0)+(_h),			\
 	(p)->u3 = (_u0)+(_w), (p)->v3 = (_v0)+(_h)
 
-	
+
 /*
  * Dump Primivie Parameters
  */
 #define dumpRECT(r)	\
 	GPU_printf("(%d,%d)-(%d,%d)\n", (r)->x,(r)->y,(r)->w,(r)->h)
 
-#define dumpWH(p)	GPU_printf("(%d,%d)\n", (p)->w,  (p)->h ) 
-#define dumpXY0(p)	GPU_printf("(%d,%d)\n", (p)->x0, (p)->y0) 
-#define dumpUV0(p)	GPU_printf("(%d,%d)\n", (p)->u0, (p)->v0) 
+#define dumpWH(p)	GPU_printf("(%d,%d)\n", (p)->w,  (p)->h )
+#define dumpXY0(p)	GPU_printf("(%d,%d)\n", (p)->x0, (p)->y0)
+#define dumpUV0(p)	GPU_printf("(%d,%d)\n", (p)->u0, (p)->v0)
 
 #define dumpXY2(p)							\
 	GPU_printf("(%d,%d)-(%d,%d)\n",					\
@@ -216,19 +216,19 @@ extern	int (*GPU_printf)(char *fmt, ...);	/* printf() object */
 #define dumpUV4(p)							\
 	GPU_printf("(%d,%d)-(%d,%d)-(%d,%d)-(%d,%d)\n",			\
 	(p)->u0, (p)->v0, (p)->u1, (p)->v1,				\
-	(p)->u2, (p)->v2, (p)->u3, (p)->v3)			
+	(p)->u2, (p)->v2, (p)->u3, (p)->v3)
 
 #define dumpRGB0(p)							\
-	GPU_printf("(%3d,%3d,%3d)\n", (p)->r0, (p)->g0, (p)->b0) 	
-		   
+	GPU_printf("(%3d,%3d,%3d)\n", (p)->r0, (p)->g0, (p)->b0)
+
 #define dumpRGB1(p)							\
-	GPU_printf("(%3d,%3d,%3d)\n", (p)->r1, (p)->g1, (p)->b1)	
-		   
+	GPU_printf("(%3d,%3d,%3d)\n", (p)->r1, (p)->g1, (p)->b1)
+
 #define dumpRGB2(p)							\
-	GPU_printf("(%3d,%3d,%3d)\n", (p)->r2, (p)->g2, (p)->b2) 
-		   
+	GPU_printf("(%3d,%3d,%3d)\n", (p)->r2, (p)->g2, (p)->b2)
+
 #define dumpRGB3(p)							\
-	GPU_printf("(%3d,%3d,%3d)\n", (p)->r3, (p)->g3, (p)->b3) 	
+	GPU_printf("(%3d,%3d,%3d)\n", (p)->r3, (p)->g3, (p)->b3)
 
 /*
  * Primitive Handling Macros
@@ -314,7 +314,7 @@ extern	int (*GPU_printf)(char *fmt, ...);	/* printf() object */
         ((u_long *)p)[1] = _get_mode(dfe, dtd, tpage),	\
         ((u_long *)p)[2] = _get_tw((RECT *)tw)
 
-	
+
 /*	Primitive 	Lentgh		Code				*/
 /*--------------------------------------------------------------------	*/
 /*									*/
@@ -343,7 +343,7 @@ extern	int (*GPU_printf)(char *fmt, ...);	/* printf() object */
 #define setLineF4(p)	setlen(p, 6),  setcode(p, 0x4c),(p)->pad = 0x55555555
 #define setLineG4(p)	setlen(p, 9),  setcode(p, 0x5c),(p)->pad = 0x55555555, \
 			(p)->p2 = 0, (p)->p3 = 0
-	
+
 /*
  * Rectangle:
  */
@@ -358,25 +358,25 @@ typedef struct {
 } RECT32;
 
 /*
- * Environment 
+ * Environment
  */
 typedef struct {
 	u_long	tag;
 	u_long	code[15];
 } DR_ENV;				/* Packed Drawing Environment */
-	       
+
 typedef struct {
 	RECT	clip;		/* clip area */
 	short	ofs[2];		/* drawing offset */
 	RECT	tw;		/* texture window */
-	u_short tpage;		/* texture page */	
+	u_short tpage;		/* texture page */
 	u_char	dtd;		/* dither flag (0:off, 1:on) */
 	u_char	dfe;		/* flag to draw on display area (0:off 1:on) */
 	u_char	isbg;		/* enable to auto-clear */
 	u_char	r0, g0, b0;	/* initital background color */
 	DR_ENV	dr_env;		/* reserved */
 } DRAWENV;
-	       
+
 typedef struct {
 	RECT	disp;		/* display area */
 	RECT	screen;		/* display start point */
@@ -393,11 +393,11 @@ typedef struct {
 	unsigned 	len:   8;
 	u_char		r0, g0, b0, code;
 } P_TAG;
-	
+
 typedef struct {
 	u_char	r0, g0, b0, code;
 } P_CODE;
-	
+
 typedef struct {
 	u_long	tag;
 	u_char	r0, g0, b0, code;
@@ -568,14 +568,14 @@ typedef struct {
 	short	x0, 	y0;
 	u_char	u0, v0;	u_short	clut;
 } SPRT_16;				/* 16x16 Sprite */
-	       
+
 typedef struct {
 	u_long	tag;
 	u_char	r0, g0, b0, code;
 	short	x0, 	y0;
 	u_char	u0, v0;	u_short	clut;
 } SPRT_8;				/* 8x8 Sprite */
-	       
+
 /*
  * Tile Primitive Definitions
  */
@@ -616,17 +616,17 @@ typedef struct {
 	u_long	tag;
 	u_long	code[2];
 } DR_TWIN;				/* Texture Window */
-	       
+
 typedef struct {
 	u_long	tag;
 	u_long	code[2];
 } DR_AREA;				/* Drawing Area */
-	       
+
 typedef struct {
 	u_long	tag;
 	u_long	code[2];
 } DR_OFFSET;				/* Drawing Offset */
-	       
+
 typedef struct {			/* MoveImage */
 	u_long	tag;
 	u_long	code[5];
@@ -658,7 +658,7 @@ typedef struct {
  *	Multi-purpose Sony-TMD primitive
  */
 typedef struct {
-	u_long	id;	
+	u_long	id;
 	u_char	r0, g0, b0, p0;		/* Color of vertex 0 */
 	u_char	r1, g1, b1, p1;		/* Color of vertex 1 */
 	u_char	r2, g2, b2, p2;		/* Color of vertex 2 */
@@ -666,21 +666,21 @@ typedef struct {
 	u_short	tpage, clut;		/* texture page ID, clut ID */
 	u_char	u0, v0, u1, v1;		/* texture corner point */
 	u_char	u2, v2, u3, v3;
-	
+
 	/* independent vertex model */
 	SVECTOR	x0, x1, x2, x3;		/* 3D corner point */
 	SVECTOR	n0, n1, n2, n3;		/* 3D corner normal vector */
-	
+
 	/* Common vertex model */
 	SVECTOR	*v_ofs;			/* offset to vertex database */
 	SVECTOR	*n_ofs;			/* offset to normal database */
-	
+
 	u_short	vert0, vert1; 		/* index of vertex */
-	u_short	vert2, vert3;		
+	u_short	vert2, vert3;
 	u_short	norm0, norm1; 		/* index of normal */
 	u_short	norm2, norm3;
 
-	
+
 } TMD_PRIM;
 
 /*
@@ -693,7 +693,7 @@ typedef struct {
 	RECT	*prect;		/* texture image rectangle on frame buffer */
 	u_long	*paddr;		/* texture image address on main memory */
 } TIM_IMAGE;
-	       
+
 /*
  * Prototypes
  */
@@ -717,7 +717,7 @@ extern int FntPrint();
 extern int KanjiFntPrint();
 #endif /* _KANJIFNTPRINT_ */
 #endif
-	
+
 extern DISPENV *GetDispEnv(DISPENV *env);
 extern DISPENV *PutDispEnv(DISPENV *env);
 extern DISPENV *SetDefDispEnv(DISPENV *env, int x, int y, int w, int h);

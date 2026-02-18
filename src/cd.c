@@ -2,6 +2,7 @@
 #include "psyq/libetc.h"
 #include "psyq/libcd.h"
 #include "psyq/libpress.h"
+#include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
 /**
