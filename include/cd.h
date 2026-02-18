@@ -138,7 +138,7 @@ void CD_InitLocationEntries(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
 s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback);
 void CD_SyncCallback_Handler(char intr, u_char *status);
-void CD_SyncCallback_Handler2(char intr, u_char *result);
+void CD_OnCommandComplete(char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
 undefined4* FUN_80014888(int param_1, u_int param_2);

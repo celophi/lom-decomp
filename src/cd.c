@@ -446,7 +446,7 @@ do_vsync:
  * Once enqueued, if no command is currently active and no low-nibble status
  * flags (bits 0-3) are set, the function bootstraps execution:
  * - Sets currentCommand to 1, marks the "busy" flag (bit 4)
- * - Installs CD_SyncCallback_Handler2 and sends CdlNop to begin processing
+ * - Installs CD_OnCommandComplete and sends CdlNop to begin processing
  *
  * @param command        CD-ROM command byte (e.g., CdlReadN, CdlSeekL)
  * @param resourceIndex  Index into g_cdResourceArray, or 0xFFFF for the default resource
@@ -568,7 +568,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s
             CD_SYSTEM.currentDataSize = dataSize;
             
             // Install sync callback and send CdlNop to kick off the state machine
-            CdSyncCallback(&CD_SyncCallback_Handler2);
+            CdSyncCallback(&CD_OnCommandComplete);
             CdSync(0, NULL);
             CdControlF(CdlNop, NULL);
         }
@@ -606,7 +606,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s
  * **Branch 3 — Idle with queued commands (queue non-empty, no active command):**
  * Bootstraps execution of the next queued command:
  *   - Sets currentCommand to 1, marks busy flag (bit 4)
- *   - Installs CD_SyncCallback_Handler2 and sends CdlNop to start processing
+ *   - Installs CD_OnCommandComplete and sends CdlNop to start processing
  *   - If the queue is empty, performs periodic 30-frame status polls via CdlNop
  *     and triggers CD_HandleSyncError if the drive reports an error (bit 4)
  *
@@ -952,7 +952,7 @@ UpdateStatusFlags:  // Update status flags with mask
                             CD_SYSTEM.playbackState = 0;
                         }
 
-                        CdSyncCallback((void (*)(u8, u8*))CD_SyncCallback_Handler2);
+                        CdSyncCallback((void (*)(u8, u8*))CD_OnCommandComplete);
                         CdReadyCallback(0);
                         do {
 
@@ -982,7 +982,7 @@ UpdateStatusFlags:  // Update status flags with mask
                 CD_SYSTEM.playbackState = 0;
             }
 
-            CdSyncCallback((void (*)(u8, u8*))CD_SyncCallback_Handler2);
+            CdSyncCallback((void (*)(u8, u8*))CD_OnCommandComplete);
             CdReadyCallback(0);
             CdSync(0, 0);
             CdControlF(CdlNop, 0);
@@ -1186,7 +1186,197 @@ Done:
 }
 
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler2);
+/**
+ * @brief Sync callback invoked when a CD-ROM command completes or fails
+ *
+ * Installed as the CdSyncCallback during normal command queue processing.
+ * Handles command completion by advancing the circular queue, dispatching
+ * the next queued command, or cleaning up when the queue is drained.
+ *
+ * @details
+ * On entry, sets syncComplete to 1 so the main-loop poller knows progress
+ * was made. Then branches based on the interrupt status:
+ *
+ * **Error path (status byte bit 4 set during CdlNop):**
+ * If currentCommand is 1 (CdlNop probe) and the drive reports an error,
+ * calls CD_HandleSyncError() and returns immediately.
+ *
+ * **Incomplete path (status != CdlComplete):**
+ * If the command did not finish successfully:
+ *   - If currentCommand != 1, resets to CdlNop and retries
+ *   - Otherwise falls through to re-read the queue head and execute it
+ *
+ * **Complete path (status == CdlComplete):**
+ * Switches on currentCommand:
+ *   - **Case 21 (CdlPause):** Resets playback state and loop counter,
+ *     advances the queue read index. If the queue is now empty, clears
+ *     all execution state and returns. Otherwise dispatches the next command.
+ *   - **All other cases (default):** Reads the command at the queue head.
+ *     If it is CdlNop (1), skips forward through consecutive CdlNop entries
+ *     until a different command is found or the queue is exhausted.
+ *     Then dispatches the resolved command via CD_ExecuteCommand.
+ *
+ * Special handling: if the resolved command is 0x1B (audio start), enables
+ * CD_SYSTEM.audioEnabled and remaps the command to CdlSeekL (6) for execution.
+ *
+ * @param status    CD-ROM interrupt status byte (CdlComplete on success)
+ * @param resultPtr Pointer to the CD-ROM result byte array from the hardware
+ *
+ * @return void
+ *
+ * @note
+ * - This function runs in interrupt context as a CdSyncCallback
+ * - The volatile vsyncArg variable and separate statusFlags assignment
+ *   match the original assembly's register usage and must not be optimized
+ * - The large switch with explicit case labels for 1-27 (excluding 6, 21)
+ *   matches the original jump table layout in the binary
+ *
+ * @warning
+ * - Executes in interrupt context; must not call blocking functions
+ * - Modifies CD_SYSTEM state directly; not safe to call from main thread
+ *
+ * @see decomp.me: (87.29%) https://decomp.me/scratch/F0oiy
+ */
+void CD_OnCommandComplete(s32 status, u8* resultPtr) {
+    u8 nextCommand;
+    u32 readIndex;
+    u32 writeIndex;
+    u8 nopCommand;
+    s32 statusFlags;
+    volatile s32 vsyncArg;
+    CdSystem* cdSystem;
+
+    // Signal to main-loop poller that a sync event occurred
+    CD_SYSTEM.syncComplete = 1;
+
+    // If we sent CdlNop to probe status, check for drive errors
+    if (CD_SYSTEM.currentCommand == 1) {
+        if (*resultPtr & 0x10) {
+            CD_HandleSyncError();
+            return;
+        }
+    }
+
+    // If the command did not complete successfully, handle retry/fallthrough
+    if ((status & 0xFF) != CdlComplete) {
+        goto HandleIncomplete;
+    }
+
+    // Command completed — dispatch based on which command just finished
+    switch (CD_SYSTEM.currentCommand) {
+    default:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+    case 20:
+    case 22:
+    case 23:
+    case 24:
+    case 25:
+    case 26:
+    case 27:
+        // Read the command at the current queue head
+        nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
+
+        // Skip past consecutive CdlNop (1) entries in the queue
+        if (nextCommand == 1) {
+            writeIndex = CD_SYSTEM.queueWriteIndex;
+            nopCommand = 1;
+            do {
+                readIndex = CD_SYSTEM.queueReadIndex;
+                if (readIndex == writeIndex) {
+                    goto QueueDrained;
+                }
+                readIndex = (readIndex + 1) & 0xF;
+                CD_SYSTEM.queueReadIndex = readIndex;
+                nextCommand = CD_SYSTEM.commandQueue.items[readIndex].command;
+            } while (nextCommand == nopCommand);
+        }
+        goto DispatchCommand;
+
+    case 21:
+        // CdlPause completed — reset playback state and advance queue
+        CD_SYSTEM.playbackState = 0;
+        CD_SYSTEM.loopCounter = 0;
+        readIndex = (CD_SYSTEM.queueReadIndex + 1) & 0xF;
+        CD_SYSTEM.queueReadIndex = readIndex;
+
+        // If queue is now empty after pause, clean up and return
+        if (readIndex == CD_SYSTEM.queueWriteIndex) {
+            CdSyncCallback(NULL);
+            statusFlags = CD_SYSTEM.statusFlags.word;
+            CD_SYSTEM.currentCommand = 0;
+            CD_SYSTEM.initCommand = 0;
+            CD_SYSTEM.retryCounter = 0;
+            goto ApplyFlagsAndTimestamp;
+        }
+
+        // Queue still has entries — dispatch the next one
+        nextCommand = CD_SYSTEM.commandQueue.items[readIndex].command;
+        goto DispatchCommand;
+    }
+
+DispatchCommand:
+    //cdSystem = &CD_SYSTEM; // this seems to be necessary SOMEWHERE in order to force loading 801ed800, but I don't know where.
+
+    // Special case: command 0x1B (audio start) — enable audio and remap to CdlSeekL
+    if (nextCommand == 0x1B) {
+        if (g_cdAudioEnabled == 0) {
+            CD_SYSTEM.audioEnabled = 1;
+        }
+        nextCommand = 6;
+    }
+    goto ExecuteNext;
+
+HandleIncomplete:
+    // Command did not complete — if not already probing with CdlNop, retry with CdlNop
+    if (CD_SYSTEM.currentCommand != 1) {
+        CD_SYSTEM.currentCommand = 1;
+        CdControlF(1, NULL);
+        return;
+    }
+    // Already was CdlNop — fall through to re-read queue head and execute
+    goto ReadQueueHead;
+
+QueueDrained:
+    // All commands consumed — remove sync callback and reset execution state
+    CdSyncCallback(NULL);
+  
+    statusFlags = CD_SYSTEM.statusFlags.word & ~0x10;
+    vsyncArg = -1;
+    CD_SYSTEM.playbackState = 0;
+    CD_SYSTEM.loopCounter = 0;
+    CD_SYSTEM.currentCommand = 0;
+    CD_SYSTEM.retryCounter = 0;
+
+ApplyFlagsAndTimestamp:
+    CD_SYSTEM.statusFlags.word = statusFlags;
+    CD_SYSTEM.vsyncTimestamp = VSync(vsyncArg);
+    return;
+
+ReadQueueHead:
+    nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
+
+ExecuteNext:
+    CD_ExecuteCommand(nextCommand, 0, 0);
+    return;
+
+}
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler);
 
