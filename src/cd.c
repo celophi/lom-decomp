@@ -446,7 +446,7 @@ do_vsync:
  * Once enqueued, if no command is currently active and no low-nibble status
  * flags (bits 0-3) are set, the function bootstraps execution:
  * - Sets currentCommand to 1, marks the "busy" flag (bit 4)
- * - Installs CD_SyncCallback_Handler2 and sends CdlNop to begin processing
+ * - Installs CD_OnCommandComplete and sends CdlNop to begin processing
  *
  * @param command        CD-ROM command byte (e.g., CdlReadN, CdlSeekL)
  * @param resourceIndex  Index into g_cdResourceArray, or 0xFFFF for the default resource
@@ -568,7 +568,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s
             CD_SYSTEM.currentDataSize = dataSize;
             
             // Install sync callback and send CdlNop to kick off the state machine
-            CdSyncCallback(&CD_SyncCallback_Handler2);
+            CdSyncCallback(&CD_OnCommandComplete);
             CdSync(0, NULL);
             CdControlF(CdlNop, NULL);
         }
@@ -606,7 +606,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s
  * **Branch 3 — Idle with queued commands (queue non-empty, no active command):**
  * Bootstraps execution of the next queued command:
  *   - Sets currentCommand to 1, marks busy flag (bit 4)
- *   - Installs CD_SyncCallback_Handler2 and sends CdlNop to start processing
+ *   - Installs CD_OnCommandComplete and sends CdlNop to start processing
  *   - If the queue is empty, performs periodic 30-frame status polls via CdlNop
  *     and triggers CD_HandleSyncError if the drive reports an error (bit 4)
  *
@@ -952,7 +952,7 @@ UpdateStatusFlags:  // Update status flags with mask
                             CD_SYSTEM.playbackState = 0;
                         }
 
-                        CdSyncCallback((void (*)(u8, u8*))CD_SyncCallback_Handler2);
+                        CdSyncCallback((void (*)(u8, u8*))CD_OnCommandComplete);
                         CdReadyCallback(0);
                         do {
 
@@ -982,7 +982,7 @@ UpdateStatusFlags:  // Update status flags with mask
                 CD_SYSTEM.playbackState = 0;
             }
 
-            CdSyncCallback((void (*)(u8, u8*))CD_SyncCallback_Handler2);
+            CdSyncCallback((void (*)(u8, u8*))CD_OnCommandComplete);
             CdReadyCallback(0);
             CdSync(0, 0);
             CdControlF(CdlNop, 0);
@@ -1186,7 +1186,7 @@ Done:
 }
 
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler2);
+INCLUDE_ASM("asm/nonmatchings/cd", CD_OnCommandComplete);
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler);
 
