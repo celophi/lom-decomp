@@ -620,11 +620,11 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s
  *
  * @note
  * - Returns 0 immediately if statusFlags bit 3 is set (processing deferred
- *   to CD_ProcessInitStateMachine)
+ *   to CD_RecoveryStateMachine)
  * - Raw pointer arithmetic for queue item access is preserved from the
  *   original decompilation to maintain register-level matching
  * - The recovery state machine shares state numbers (initState) and command
- *   codes (initCommand 0x20-0x23) with CD_ProcessInitStateMachine but
+ *   codes (initCommand 0x20-0x23) with CD_RecoveryStateMachine but
  *   operates on a different set of transitions
  *
  * @warning
@@ -1026,124 +1026,165 @@ UpdateStatusFlags:  // Update status flags with mask
     return indexDiff;
 }
 
-
-
 /**
- * Description: Processes CD-ROM initialization state machine across multiple VSync frames
- * 
- * Params:
- *   None
- * 
- * Returns: 1 if CD not initialized, 0 otherwise
- * 
- * TODO: Verify exact timing values for VSync delays (1, 4, 30 frames)
- * TODO: Confirm command codes 0x10, 0x11, 0x12 mappings
- * TODO: Determine why state 3 subtracts 30 from timestamp instead of resetting
- * TODO: Decomp better :)
- * 
- * Notes: State machine with 4 states (0-3) for asynchronous CD initialization.
- * State 0: Calls CdFlush() and advances to state 1 after 1 VSync frame.
- * State 1: Configures mode 0xa0, sets sync/ready callbacks, sends CdlSetmode command, waits 4 VSync frames.
- * State 2: Sets filter mode with parameters (1,1), advances to state 3 immediately.
- * State 3: Waits for syncComplete flag or 30 frame timeout, then issues follow-up commands.
- * Uses cdVSyncTimestamp field to track frame delays between state transitions.
- * Command 0x11 triggers CdlDemute, 0x12 triggers CdlPause, others trigger CdlSetfilter with reset to 0x10.
- * Early exits return 0 to indicate "still processing", non-zero only if CD hardware not ready.
- * 
- * decomp.me link: https://decomp.me/scratch/J6JQ8
- * decomp.me (%): 94.89%
+ * @brief Processes the CD-ROM recovery/init state machine across multiple VSync frames
+ *
+ * Drives a 4-state asynchronous state machine that reconfigures the CD-ROM
+ * subsystem after an error or shell-open event. Each call advances at most
+ * one state transition, allowing the caller to poll once per frame.
+ *
+ * @details
+ * The state machine (stored in CD_SYSTEM.initState) progresses as follows:
+ *
+ * - **State 0 — Flush:** Calls CdFlush() to discard pending commands, then
+ *   advances to state 1 with a 1-frame delay.
+ *
+ * - **State 1 — Set mode:** Waits for the delay to expire, then configures
+ *   CD mode to 0xA0 (CdlModeSpeed | CdlModeSize1), installs
+ *   CD_SyncCallback_Handler, sends CdlSetmode, and waits 4 frames.
+ *   Returns 0 (still waiting) if the delay has not yet elapsed.
+ *
+ * - **State 2 — Set filter:** Installs sync callback, sends CdlSetfilter
+ *   with file=1 channel=1, sets initCommand to 0x11 (pending demute),
+ *   and advances to state 3 immediately.
+ *
+ * - **State 3 — Wait for sync / dispatch:** Waits for either the
+ *   syncComplete flag or a 30-frame timeout, then dispatches based on
+ *   initCommand:
+ *     - 0x10: Re-sends CdlSetfilter (retry/default)
+ *     - 0x11: Sends CdlDemute to unmute CD audio
+ *     - 0x12: Sends CdlPause (command 0x09) to halt the drive
+ *   After CdlSetfilter, resets initCommand to 0x10.
+ *   Subtracts 30 from vsyncTimestamp to allow immediate re-entry on the
+ *   next timeout cycle rather than resetting the timer.
+ *
+ * @param None
+ *
+ * @return 1 if the CD subsystem is not in recovery mode (statusFlags bit 3 clear),
+ *         0 while the state machine is still processing
+ *
+ * @note
+ * - initCommand acts as a sub-state within state 3 to sequence multiple
+ *   CD commands (setfilter -> demute -> pause) across successive timeouts
+ * - The filterParams buffer is written byte-by-byte to match the original
+ *   assembly's sb instructions for register-level matching
+ * - State 1 returns 0 early (not via the common exit) when the timestamp
+ *   delay has not yet expired, matching a distinct return instruction in
+ *   the original binary
+ *
+ * @warning
+ * - Must be called every frame for correct timeout behavior
+ * - The 1/4/30-frame delay constants assume NTSC (60 Hz) VSync rate
+ *
+ * @see decomp.me: (96.19%) https://decomp.me/scratch/rvy43
  */
-int CD_ProcessInitStateMachine(void) {
-    int timestamp;
-    u_char com;
-    u_char local_18[8];
-    u_char * p;
-
-    if ((CD_SYSTEM.statusFlags.word & 8) == 0) {
+s32 CD_RecoveryStateMachine(void) {
+    u16 filterParams;
+    s32 temp_v1_2;
+    u8 temp_v1;
+    u8 var_a0;
+    s32 timestamp;
+    u8 initCommandByte;
+    s32 initCommand;
+    
+    // Bail out if bit 3 (recovery mode) is not set
+    if (!(CD_SYSTEM.statusFlags.word & 8)) {
         return 1;
     }
-
+    
     switch (CD_SYSTEM.initState) {
     case 0:
+        // State 0: Flush pending CD commands and advance to state 1
         CdFlush();
-        CD_SYSTEM.initState = 1;
-
-        CD_SYSTEM.vsyncTimestamp = VSync(-1) + 1;
-        goto return_zero;
-
+        CD_SYSTEM.initState = 1U;
+        CD_SYSTEM.vsyncTimestamp = (s32) (VSync(-1) + 1);
+        goto Done;
     case 1:
+        // State 1: Wait for 1-frame delay, then configure CD mode
         timestamp = VSync(-1);
-
-        if (CD_SYSTEM.vsyncTimestamp <= timestamp) {
-            CD_SYSTEM.modeParams = 0xa0;
+        if (timestamp >= (s32)CD_SYSTEM.vsyncTimestamp) {
+            // Set mode to 0xA0 (double speed + XA filter size)
+            CD_SYSTEM.modeParams = 0xA0;
             CD_SYSTEM.u_155 = 0;
             CD_SYSTEM.u_156 = 0;
             CD_SYSTEM.u_157 = 0;
-
+            
             CdSyncCallback(CD_SyncCallback_Handler);
-            CdReadyCallback((CdlCB) 0x0);
-
-            CD_SYSTEM.initCommand = 0x10;
-
-            CdControlF(CdlSetmode, & CD_SYSTEM.modeParams);
-
+            
+            CdReadyCallback(NULL);
+            // initCommand 0x10 = pending setfilter; must be stored before CdControlF (not in delay slot)
+            CD_SYSTEM.initCommand = 0x10U;
+            CdControlF(CdlSetmode, (u8* )0x801ED954);
             timestamp = VSync(-1);
-
-            CD_SYSTEM.vsyncTimestamp = timestamp + 4;
-            goto return_zero;
+            CD_SYSTEM.vsyncTimestamp = (s32) (timestamp + 4);
+            goto Done;
         }
-
+        // Delay not yet elapsed — return without advancing state
         return 0;
-
     case 2:
+        // State 2: Send CdlSetfilter with file=1, channel=1, advance to state 3
         CdSyncCallback(CD_SyncCallback_Handler);
         CD_SYSTEM.initCommand = 0x11;
-        local_18[0] = 1;
-        local_18[1] = 1;
-        CdControlF('\r', local_18);
-        CD_SYSTEM.initState = 3;
+        
+        *(u8*)(&filterParams) = 1;
+        *(u8*)(&filterParams + 1) = 1;
+        CdControlF(CdlSetfilter, &filterParams);
+        CD_SYSTEM.initState = 3U;
         CD_SYSTEM.vsyncTimestamp = VSync(-1);
-        goto return_zero;
-
+        goto Done;
     case 3:
+        // State 3: Wait for syncComplete or 30-frame timeout, then dispatch
         if (CD_SYSTEM.syncComplete == 1) {
             CD_SYSTEM.vsyncTimestamp = VSync(-1);
-            CD_SYSTEM.syncComplete = 0;
-            goto return_zero;
+            CD_SYSTEM.syncComplete = 0U;
+            goto Done;
         }
         timestamp = VSync(-1);
-        if (timestamp < CD_SYSTEM.vsyncTimestamp + 0x1e) {
-            goto return_zero;
+        if (timestamp < (s32)(CD_SYSTEM.vsyncTimestamp + 30)) {
+            goto Done;
         }
+        
+        // Timeout expired — dispatch follow-up command based on initCommand
         CdSyncCallback(CD_SyncCallback_Handler);
-        if (CD_SYSTEM.initCommand != 0x11) {
+
+        initCommandByte = CD_SYSTEM.initCommand;
+        initCommand = (s32) initCommandByte;
+        
+        if (initCommand != 0x11) {
             do {
-                if (CD_SYSTEM.initCommand < 0x12) {
-                    goto do_setfilter;
+                if (initCommand < 0x12) {
+                    goto ApplySetfilter;
                 }
-                if (CD_SYSTEM.initCommand == 0x12) {
-                    CdControlF(0x09, (u_char * ) 0x0);
-                    goto LAB_80012d48;
+                // initCommand 0x12: send CdlPause to halt the drive
+                if (initCommand == 0x12) {
+                    CdControlF(0x09, NULL);
+                    goto UpdateTimestamp;
                 }
-                do_setfilter: local_18[0] = 1;
-                local_18[1] = 1;
-                CdControlF(0x0d, local_18);
-                CD_SYSTEM.initCommand = 0x10;
+ApplySetfilter:
+                // initCommand 0x10 or unknown: re-send CdlSetfilter with file=1, channel=1
+                *(u8*)(&filterParams) = 1;
+        *(u8*)(&filterParams + 1) = 1;
+                
+                CdControlF(CdlSetfilter, &filterParams);
+                
             } while (0);
+            CD_SYSTEM.initCommand = 0x10U;
         } else {
-            CdControlF(0x0c, (u_char * ) 0x0);
+            // initCommand 0x11: unmute CD audio
+            CdControlF(CdlDemute, NULL);
         }
-        LAB_80012d48:
-            CD_SYSTEM.vsyncTimestamp = CD_SYSTEM.vsyncTimestamp + -0x1e;
-        goto return_zero;
-
+UpdateTimestamp:
+        // Subtract 30 to allow immediate re-entry on the next timeout cycle
+        CD_SYSTEM.vsyncTimestamp = (s32) (CD_SYSTEM.vsyncTimestamp - 30);
+        goto Done;
     default:
-        goto return_zero;
+        goto Done;
     }
-
-return_zero:
-        return 0;
+  
+Done:
+    return 0;
 }
+
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_SyncCallback_Handler2);
 

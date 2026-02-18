@@ -148,5 +148,6 @@ void CD_ResetSystem(void);
 void FUN_80013d74(char param_1);
 void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
+int CD_RecoveryStateMachine(void);
 
 #endif
