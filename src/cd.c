@@ -2032,7 +2032,7 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes) {
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
     
     CdIntToPos(lba, location);
-    CD_QueueCommand(6, 0xffff, CD_RESOURCE_ENTRIES, 0);
+    CD_QueueCommand(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, 0);
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }
