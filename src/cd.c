@@ -315,7 +315,7 @@ s32 CD_StreamData(s32 command, u32 destination) {
     
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &FUN_80014888) - 1;
+    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &UnknownCallback) - 1;
     timestamp = VSync(-1);
 
     streamState = (u8*)g_scratchpad;
@@ -381,7 +381,7 @@ s32 CD_StreamData(s32 command, u32 destination) {
                     copySize = copySize & 3;
                     
                     /* Adjust pointers to include alignment padding bytes */
-                    relocDstAddr = (s32*)(relocDstAddr - copySize);
+                    relocDstAddr = relocDstAddr - copySize;
                     relocSrcPtr = (s32*)((prevReadPtr + bytesConsumed) - copySize);
                     
                     /* Merge overflow bytes into the new contiguous buffer region */
@@ -475,7 +475,7 @@ do_vsync:
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/izXP3
  */
-s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback) {
+s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, CdCommandCallback callback) {
     s32 timestamp;
     s32 writeIndex;
     s32 writeIndex2;
@@ -2044,7 +2044,7 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes) {
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
     
     CdIntToPos(lba, location);
-    CD_QueueCommand(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, 0);
+    CD_QueueCommand(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }
