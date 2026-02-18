@@ -342,13 +342,13 @@ s32 CD_StreamData(s32 command, u32 destination) {
                 }
                 
                 /* Decompress a chunk; returns 0 when all output is complete */
-                if (CD_DecompressData((u32*)(CD_RESOURCE_ENTRIES + 0x08), &destination, decompressEnd, -4U) == 0) {
+                if (CD_DecompressData((u32*)(g_scratchpad + 0x08), &destination, decompressEnd, -4U) == 0) {
                     return destination - destStart;
                 }
         
                 /* If bytesBuffered changed mid-iteration (callback wrote more data),
                  * re-loop to recalculate the decompression boundary */
-                if (bytesBuffered != *(s32*)(CD_RESOURCE_ENTRIES + 0x0C)) {
+                if (bytesBuffered != *(s32*)(g_scratchpad + 0x0C)) {
                     continue;
                 }
         
