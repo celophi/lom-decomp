@@ -1,6 +1,7 @@
 /* $PSLibId: Run-time Library Release 4.6$ */
 #ifndef _LIBGPU_H_
 #define _LIBGPU_H_
+
 /*
  *  (C) Copyright 1993-1995 Sony Corporation,Tokyo,Japan. All Rights Reserved
  *
