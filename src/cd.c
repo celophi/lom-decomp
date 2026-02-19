@@ -277,7 +277,7 @@ void CD_Stop(void)
  *
  * @return Total number of decompressed bytes written to destination
  *
- * @see decomp.me: (98.01%) https://decomp.me/scratch/CSYVd
+ * @see decomp.me: (100%) https://decomp.me/scratch/KtdxA
  */
 s32 CD_StreamData(s32 command, u32 destination) {
     s32 unprocessedBytes;
@@ -365,8 +365,11 @@ s32 CD_StreamData(s32 command, u32 destination) {
                 }
 
                 /* --- Handle ring buffer wrap-around --- */
-                decompressEnd = *(s32*)(streamState + 0x10);  /* wrapOverflow amount */
-                if (decompressEnd != 0) {
+  
+                if (*(s32*)(streamState + 0x10) != 0) {
+                    
+                    decompressEnd = *(s32*)(streamState + 0x10);  /* wrapOverflow amount */
+                    
                     /* Relocate unprocessed tail bytes to just before the ring buffer
                      * end (0x801DC118), making the data contiguous again. */
                     unprocessedBytes = *(s32*)(streamState + 0x0C) - bytesConsumed;
@@ -379,23 +382,26 @@ s32 CD_StreamData(s32 command, u32 destination) {
                     *(s32*)(streamState + 0x08) = relocDstAddr;
                     *(s32*)(streamState + 0x04) = relocDstAddr;
                     copySize = copySize & 3;
+                    alignRemainder = unprocessedBytes + 3;
                     
                     /* Adjust pointers to include alignment padding bytes */
-                    relocDstAddr = relocDstAddr - copySize;
+                    relocDstAddr = (s32)(relocDstAddr - copySize);
                     relocSrcPtr = (s32*)((prevReadPtr + bytesConsumed) - copySize);
                     
                     /* Merge overflow bytes into the new contiguous buffer region */
                     *(s32*)(streamState + 0x0C) = decompressEnd + unprocessedBytes;
-                    copySize = unprocessedBytes + 3;
+                    copySize = alignRemainder;
                     
                     if (copySize < 0) {
                         copySize = unprocessedBytes + 6;
                     }
 
                     /* Copy unprocessed bytes word-by-word to the relocated position */
-                    sentinel = -1;
-                    unprocessedBytes = (copySize >> 2) - 1;
+                    
+                    unprocessedBytes = (copySize >> 2);
+                    unprocessedBytes -= 1;
                     if (unprocessedBytes != -1) {
+                        sentinel = -1;
                         while(TRUE) {
                             *(s32*)relocDstAddr = *relocSrcPtr++;
                             relocDstAddr+=4;
