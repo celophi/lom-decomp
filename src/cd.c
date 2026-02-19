@@ -1581,12 +1581,11 @@ void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode)
     CdResourceEntry* queuedLocation;
     u32 locationIndex;
     u8 actualCommand;
-    void (*callbackHandler)(u8, u8*);
-    void* queueEntryPtr;
+    CdlCB callbackHandler;
+    u32 queueEntryPtr;
     void* queueBufferPtr;
-    CdSystem *cdSystem;
+    volatile CdSystem *cdSystem;
     
-
     actualCommand = command;
     queuedLocation = 0;
 
@@ -1706,7 +1705,7 @@ after_callback:
         } else {
 continue_execution:
             CD_SYSTEM_V.currentCommand = actualCommand;
-            CdControlF(actualCommand & 0xFF, 0x801ED958);
+            CdControlF(actualCommand & 0xFF, CD_COMMAND_PARAM_BUFFER);
         }
         g_playbackState = 0;
         return;
@@ -1719,7 +1718,7 @@ continue_execution:
             
             if (cmdId == 0xE) {
                 controlParam = 0xE;
-                paramBufferSpecialCmd = 0x801ED950;
+                paramBufferSpecialCmd = (u8*)0x801ED950;
             } else {
                 controlParam = cmdId;
                 paramBufferSpecialCmd = 0;

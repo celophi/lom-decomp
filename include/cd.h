@@ -145,7 +145,7 @@ void CD_OnCommandComplete(u_char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
 u32* UnknownCallback(s32 param_1, u32 param_2);
-void CD_ReadyCallback(char mode);
+void CD_ReadyCallback(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
 void FUN_80013d74(char param_1);
