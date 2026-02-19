@@ -10,6 +10,8 @@
 
 // Structures
 typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
+typedef void (*DecDCToutCallbackHandler)();
+typedef void (*DrawSyncCallbackHandler)();
 
 typedef struct CdResourceEntry {
     CdlLOC location;

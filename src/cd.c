@@ -1866,10 +1866,10 @@ void CD_ResetSystem(void)
     volatile u32* ptr = (u32*)AUDIO_SYSTEM;
     
     callback = (u32*)ptr[0x0E];
-    DecDCToutCallback(callback);
+    DecDCToutCallback((DecDCToutCallbackHandler)callback);
 
     callback = (u32*)ptr[0x0F];
-    DrawSyncCallback(callback);
+    DrawSyncCallback((DrawSyncCallbackHandler)callback);
     
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
