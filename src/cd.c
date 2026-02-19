@@ -385,7 +385,7 @@ s32 CD_StreamData(s32 command, u32 destination) {
                     alignRemainder = unprocessedBytes + 3;
                     
                     /* Adjust pointers to include alignment padding bytes */
-                    relocDstAddr = (s32*)(relocDstAddr - copySize);
+                    relocDstAddr = (s32)(relocDstAddr - copySize);
                     relocSrcPtr = (s32*)((prevReadPtr + bytesConsumed) - copySize);
                     
                     /* Merge overflow bytes into the new contiguous buffer region */
