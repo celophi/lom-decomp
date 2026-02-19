@@ -125,6 +125,7 @@ extern s8 g_cdStatusByte3;
 extern u8 g_initState;
 extern s8 g_playbackFlag;
 extern CdSystem g_cdSystem;
+extern u8 D_80035230;
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
@@ -150,7 +151,7 @@ u32* UnknownCallback(s32 param_1, u32 param_2);
 void CD_ReadyCallback(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
-void FUN_80013d74(char param_1);
+void FUN_80013d74(s8 param_1);
 void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 int CD_RecoveryStateMachine(void);

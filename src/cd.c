@@ -1754,7 +1754,83 @@ continue_execution:
     CdControlF(controlParam, paramBufferSpecialCmd);
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", FUN_80013d74);
+/**
+ * decomp.me link: https://decomp.me/scratch/7pvW0
+ * decomp.me (%): 90.32%
+ */
+void FUN_80013d74(s8 param_1) 
+{
+    u8 command;
+    u8 *params;
+     s32 temp_v1;
+    u32 var_v1;
+    u8 var_v0;
+    u8 *strPtr;
+     u8 *cdBase;
+    u8 *cdData;
+
+    CD_SYSTEM_V.syncComplete = 1;
+    if ((param_1 & 0xFF) == 1) {
+        do {
+
+        } while (CdGetSector(&CD_SYSTEM.readSectorBuffer, 3) == 0);
+        if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.readParams & 0xFFFFFF)) {
+            do {
+
+            } while (CdGetSector(&CD_SYSTEM.previousReadyCallback, 8) == 0);
+
+            cdData = (u8*)&CD_SYSTEM.previousReadyCallback;
+            var_v1 = D_80035230;
+            strPtr = &D_80035230;
+            
+            if (var_v1 != 0) {
+                strPtr++;
+                cdBase = (u8*)&CD_SYSTEM;
+loop_8:
+                if (((u32)((var_v1 + 0x80) & 0xFF) < 0x20U) || ((u32)((var_v1 + 0x20) & 0xFF) < 0x10U)) {
+                    if (var_v1 == *cdData) {
+                        cdData++;
+                        var_v1 = *cdData++;
+                        var_v0 = *strPtr++;
+                        goto block_13;
+                    }
+                    goto block_14;
+                }
+                var_v0 = *cdData++;
+block_13:
+                if (var_v1 != var_v0) {
+block_14:
+
+                    temp_v1 = *(u32*)cdBase & ~4;
+                    *(cdBase + 0x15) = 0x20;
+                    *(volatile u32*)cdBase = temp_v1;
+                    *(u32*)cdBase = (s32)(temp_v1 & ~0x10);
+                    CdReadyCallback(NULL);
+                    return;
+                }
+                var_v1 = *strPtr++;
+                if (var_v1 != 0) {
+                    goto loop_8;
+                }
+            }
+
+            CdReadyCallback(NULL);
+            CD_SYSTEM_V.initCommand = 0x23;
+            CdSyncCallback(CD_SyncCallback_Handler);
+            command = 0xE;
+            params = (u8*)0x801ED950;
+            goto block_18;
+        }
+    }
+
+    CdReadyCallback(NULL);
+    CD_SYSTEM_V.initCommand = 0x22;
+    CdSyncCallback(CD_SyncCallback_Handler);
+    command = CdlPause;
+    params = NULL;
+block_18:
+    CdControlF(command, params);
+}
 
 
 /**
