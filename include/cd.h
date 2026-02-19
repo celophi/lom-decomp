@@ -9,6 +9,10 @@
 #define CD_COMMAND_QUEUE_SIZE 16
 
 // Structures
+typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
+typedef void (*DecDCToutCallbackHandler)();
+typedef void (*DrawSyncCallbackHandler)();
+
 typedef struct CdResourceEntry {
     CdlLOC location;
     int dataSize;
@@ -20,7 +24,7 @@ typedef struct CdCommandQueueItem {
     unsigned short resourceIndex;
     CdResourceEntry *entry;
     CdResourceEntry *dstBuffer;
-    unsigned int callback;
+    CdCommandCallback callback;
 } CdCommandQueueItem;
 
 typedef struct CdCommandQueue {
@@ -59,8 +63,8 @@ typedef struct CdSystem {
     undefined2 resourceIndex;
     undefined u_1e;
     undefined u_1f;
-    undefined4 dstBuffer;
-    undefined4 callback;
+    CdResourceEntry * dstBuffer;
+    CdCommandCallback callback;
     u_int size;
     undefined4 sizeCopy;
     undefined4 dstBuffer2;
@@ -123,7 +127,9 @@ extern s8 g_playbackFlag;
 extern CdSystem g_cdSystem;
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
+#define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
 #define AUDIO_SYSTEM ((void*)0x801ED500)
+#define CD_COMMAND_PARAM_BUFFER ((u_char*) 0x801ED958)
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
@@ -135,13 +141,13 @@ void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
 u_int CD_UpdateAndProcessQueue(void);
-s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, s32 callback);
-void CD_SyncCallback_Handler(char intr, u_char *status);
-void CD_OnCommandComplete(char intr, u_char *result);
+s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, CdCommandCallback callback);
+void CD_SyncCallback_Handler(u_char intr, u_char* result);
+void CD_OnCommandComplete(u_char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
-undefined4* FUN_80014888(int param_1, u_int param_2);
-void CD_ReadyCallback(char mode);
+u32* UnknownCallback(s32 param_1, u32 param_2);
+void CD_ReadyCallback(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
 void FUN_80013d74(char param_1);

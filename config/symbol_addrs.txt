@@ -16,6 +16,7 @@ CD_SetAudioVolume           = 0x80013fd0;
 CD_IsQueueAvailable         = 0x800140d4;
 CD_InitResources            = 0x80014140;
 CD_DecompressData           = 0x80014448;
+UnknownCallback             = 0x80014888;
 
 // PSY-Q Functions
 CdInit                      = 0x8001e1cc;
@@ -115,7 +116,7 @@ FUN_80060814 = 0x80060814;
 FUN_80011638 = 0x80011638;
 FUN_800141ec = 0x800141ec;
 ClearPointer = 0x80014ad0;
-FUN_80014888 = 0x80014888;
+
 CD_ResetSystem = 0x80014014;
 DecDCToutCallback = 0x800181A8;
 DrawSyncCallback = 0x80019690;
