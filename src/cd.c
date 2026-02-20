@@ -1719,6 +1719,8 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             // Record frame counter for timeout tracking
             CD_SYSTEM.vsyncTimestamp = VSync(-1);
         }
+        
+        return;
     }
 
     // === Audio (XA) mode path ===
@@ -1754,11 +1756,10 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             CdControlF(CdlPause, NULL);
             CD_SYSTEM.vsyncTimestamp = VSync(-1);
         }
-        else {
+        else 
             // Audio continues — advance disc position to next sector
             CdIntToPos(CdPosToInt((CdlLOC*)0x801ED958) + 1, (CdlLOC*)0x801ED958);
-        }
-            
+        
         return;
     }
     
