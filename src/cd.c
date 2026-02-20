@@ -1570,7 +1570,107 @@ block_50:
 
 INCLUDE_ASM("asm/nonmatchings/cd", CD_ReadyCallback);
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_HandleSectorReadComplete);
+/**
+ * decomp.me link: https://decomp.me/scratch/NHhfl
+ * decomp.me (%): 95.97%
+ */
+void CD_HandleSectorReadComplete(s32 arg0) {
+    
+    void* buffer;
+    volatile CdSystem* cdSystem;
+    s32 flags;
+    u_char cmd;
+
+    CD_SYSTEM.retryCount = 0;
+    CD_SYSTEM.statusFlags.bytes.b3 = 0;
+    CD_SYSTEM.statusFlags.bytes.b2 = 0;
+    
+    if (CD_SYSTEM.audioEnabled != 1) {
+        if (CD_SYSTEM.loopCounter != NULL) {
+            buffer = CD_SYSTEM.loopCounter(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size);
+            if (buffer != NULL) {
+                goto block_5;
+            }
+            goto block_24;
+        }
+        buffer = CD_SYSTEM.dstBuffer2;
+block_5:
+        if ((u32) CD_SYSTEM.size >= 0x801U) {
+            do {
+
+            } while (CdGetSector(buffer, 0x200) == 0);
+            CdIntToPos(CdPosToInt((CdlLOC*)0x801ED958) + 1, (CdlLOC*)0x801ED958);
+            CD_SYSTEM.size = (u32) (CD_SYSTEM.size - 0x800);
+            if (CD_SYSTEM.loopCounter == NULL) {
+                CD_SYSTEM.dstBuffer2 = (void* ) (CD_SYSTEM.dstBuffer2 + 0x800);
+            }
+        } else {
+            CD_SYSTEM.playbackState = 0;
+            CD_SYSTEM.loopCounter = NULL;
+            flags = (CD_SYSTEM.queueReadIndex + 1) & 0xF;
+            CD_SYSTEM.queueReadIndex = flags;
+            if (flags != CD_SYSTEM.queueWriteIndex) {
+                CD_ExecuteCommand(CD_SYSTEM.commandQueue.items[flags].command, buffer, arg0 + 1);
+                return;
+            }
+            CD_SYSTEM.initCommand = 1;
+            CdSyncCallback((void (*)(u8, u8*)) CD_SyncCallback_Handler);
+            CdReadyCallback(NULL);
+            if (arg0 == 0) {
+                CdControlF(CdlPause, NULL);
+            }
+            do {
+
+            } while (CdGetSector(buffer, (s32) ((u32) (g_size + 3) >> 2)) == 0);
+            CD_SYSTEM.currentCommand = 0U;
+            CD_SYSTEM.retryCounter = 0;
+            CD_SYSTEM.statusFlags.word &= ~0x10;
+            if (arg0 == 0) {
+                goto block_22;
+            }
+            cmd = CdlPause;
+            goto block_21;
+        }
+    } else {
+        do {
+
+        } while (CdGetSector(&CD_READ_SECTOR_BUFFER, 3) == 0);
+        
+        cdSystem = &CD_SYSTEM;
+        
+        if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+            
+            
+            if (CD_SYSTEM.loopCounter(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size) == NULL) {
+                
+                CD_SYSTEM.queueReadIndex = (s32) ((CD_SYSTEM.queueReadIndex + 1) & 0xF);
+                CdSyncCallback((void (*)(u8, u8*)) CD_SyncCallback_Handler);
+                CdReadyCallback(NULL);
+                cmd = CdlPause;
+                cdSystem->setModeBuffer = 0xA0;
+                cdSystem->currentCommand = 0U;
+                cdSystem->initCommand = 2;
+                flags = (s32) (cdSystem->statusFlags.word & ~0x10);
+                cdSystem->audioEnabled = 0U;
+                cdSystem->playbackState= 0;
+                cdSystem->loopCounter = NULL;
+                cdSystem->retryCounter = 0;
+                cdSystem->statusFlags.word = flags;
+block_21:
+                CdControlF_1(cmd);
+block_22:
+                cdSystem->vsyncTimestamp = VSync(-1);
+                return;
+            }
+            
+            CdIntToPos(CdPosToInt((CdlLOC*)0x801ED958) + 1, (CdlLOC*)0x801ED958);
+            return;
+        }
+block_24:
+        CdControlF(cdSystem->currentCommand, (u8* )0x801ED958);
+    }
+}
+
 
 /**
  * decomp.me link: https://decomp.me/scratch/byGEu
@@ -1680,7 +1780,7 @@ reset_playback_state:
             
             queueEntryPtr = (CD_SYSTEM_V.queueReadIndex * 0x10) + 0x801ED800;
             
-            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (CD_SYSTEM_V.dstBuffer2 == *((u32*)queueEntryPtr + 0x12) )) {
+            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (*(u32*)CD_SYSTEM_V.dstBuffer2 == *((u32*)queueEntryPtr + 0x12) )) {
                 CD_SYSTEM_V.playbackState = 0;
             }
             cdSystem = &CD_SYSTEM_V;
@@ -1689,8 +1789,8 @@ reset_playback_state:
                 queueBufferPtr = (void*)((cdSystem->queueReadIndex * 0x10) + 0x801ED800);
                 CD_SYSTEM_V.sizeCopy = dataSize;
                 CD_SYSTEM_V.size = dataSize;
-                CD_SYSTEM_V.dstBuffer2 = (s32) *((u32*)queueBufferPtr + 0x12);
-                CD_SYSTEM_V.loopCounter = (s32) *((u32*)queueBufferPtr + 0x13);
+                CD_SYSTEM_V.dstBuffer2 = (void*) *((u32*)queueBufferPtr + 0x12);
+                CD_SYSTEM_V.loopCounter = (CdSystemDelegateU0) *((u32*)queueBufferPtr + 0x13);
             }
             if (executionMode == 0) {
                 CD_SYSTEM_V.statusFlags.bytes.b2 = 0;

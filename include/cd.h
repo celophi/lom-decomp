@@ -12,6 +12,7 @@
 typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
 typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
+typedef void* (*CdSystemDelegateU0)(s32, u32);
 
 typedef struct CdResourceEntry {
     CdlLOC location;
@@ -67,8 +68,8 @@ typedef struct CdSystem {
     CdCommandCallback callback;
     u_int size;
     undefined4 sizeCopy;
-    undefined4 dstBuffer2;
-    undefined4 loopCounter;
+    void* dstBuffer2;
+    CdSystemDelegateU0 loopCounter;
     undefined4 queueReadIndex;
     undefined4 queueWriteIndex;
     CdCommandQueue commandQueue;
@@ -130,11 +131,15 @@ extern u8 D_80035230;
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
 #define AUDIO_SYSTEM ((void*)0x801ED500)
+#define CD_READ_SECTOR_BUFFER (*(u32*)0x801ED940)
 #define CD_COMMAND_PARAM_BUFFER ((u_char*) 0x801ED958)
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
 #define g_scratchpad ((void*)0x1F800000)
+
+// Macros
+#define CdControlF_1(cmd) ((int (*)(u_char))CdControlF)(cmd)
 
 // Prototypes
 void CD_Initialize(void);
