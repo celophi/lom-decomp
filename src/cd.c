@@ -1719,6 +1719,8 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             // Record frame counter for timeout tracking
             CD_SYSTEM.vsyncTimestamp = VSync(-1);
         }
+        
+        return;
     }
 
     // === Audio (XA) mode path ===
