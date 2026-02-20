@@ -327,9 +327,9 @@ s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd) {
                 
                 srcPtr += 3;
                 iterations = (offsetLow >> 4) + 4;
-                tempPtr = param1;                                      /* low 8 bits of offset */
-                tempPtr = (u32)tempPtr | (u32)((offsetLow & 0xF) << 8); /* merge high 4 bits -> 12-bit offset */
-                tempPtr = dstPtr - (u32)tempPtr;                        /* back-reference start = dst - offset */
+                
+                tempPtr = (u8*)((u32)param1 | (u32)((offsetLow & 0xF) << 8)); /* merge high 4 bits -> 12-bit offset */
+                tempPtr = (u8*)(dstPtr - (u32)tempPtr);                        /* back-reference start = dst - offset */
                 
                 do {
                     *(u8*)dstPtr++ = tempPtr++[-1];  /* copy from offset-1 to handle overlap */
