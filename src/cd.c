@@ -1571,104 +1571,199 @@ block_50:
 INCLUDE_ASM("asm/nonmatchings/cd", CD_ReadyCallback);
 
 /**
- * decomp.me link: https://decomp.me/scratch/NHhfl
- * decomp.me (%): 95.97%
+ * @brief Handles completion of a CD-ROM sector read operation
+ *
+ * Called when the CD drive signals that a sector has been read into memory.
+ * Processes the received data differently depending on whether the system
+ * is in data mode or audio (XA) mode, and manages multi-sector transfers
+ * by re-issuing read commands until all data has been received.
+ *
+ * @details
+ * The function operates in two distinct modes based on audioEnabled:
+ *
+ * **Data mode (audioEnabled != 1):**
+ * 1. Invokes the loopCounter callback (if set) to obtain the destination
+ *    buffer; if the callback returns NULL, re-issues the current read
+ *    command to retry. Falls back to dstBuffer2 when no callback is set.
+ * 2. If more than one sector remains (size >= 0x801):
+ *    - Reads one full sector (0x800 bytes / 0x200 words) via CdGetSector
+ *    - Advances the disc position by one sector in the command param buffer
+ *    - Decrements remaining size by 0x800
+ *    - Advances dstBuffer2 by 0x800 if no loopCounter callback is set
+ * 3. If this is the final sector (size < 0x801):
+ *    - Resets playbackState and loopCounter
+ *    - Advances queueReadIndex; if more commands are queued, dispatches
+ *      the next one via CD_ExecuteCommand and returns
+ *    - Otherwise, transitions to idle: installs sync callback, removes
+ *      ready callback, reads the final partial sector, clears busy flag
+ *      (bit 4), and issues CdlPause
+ *    - The pause command timing depends on arg0: issued before the final
+ *      read when arg0 == 0, or after when arg0 != 0
+ *
+ * **Audio mode (audioEnabled == 1):**
+ * 1. Reads 3 words (12 bytes) from the sector into CD_READ_SECTOR_BUFFER
+ * 2. Compares the lower 24 bits of readSectorBuffer against commandParamBuffer
+ *    to verify the correct disc position; if mismatched, re-issues the
+ *    current command with the expected position parameters
+ * 3. If positions match, invokes the loopCounter callback:
+ *    - If callback returns NULL (end of audio track): advances the queue,
+ *      resets mode to 0xA0, disables audio, pauses the drive, and records
+ *      the VSync timestamp
+ *    - If callback returns non-NULL: advances disc position by one sector
+ *      and returns to continue streaming
+ *
+ * @param arg0  Execution mode passed from the caller:
+ *              0 = initial call from the ready callback (pause before final read)
+ *              non-zero = chained call from CD_ExecuteCommand (pause after final read)
+ *
+ * @return void
+ *
+ * @note
+ * - 0x801ED958 is used as the command parameter buffer holding the current
+ *   CdlLOC disc position for read commands
+ * - The 0xFFFFFF mask in audio mode extracts the minute/second/sector BCD
+ *   position, ignoring the mode byte
+ * - g_size is used for the final partial sector read, converted from bytes
+ *   to words via (g_size + 3) >> 2
+ *
+ * @warning
+ * - Spin-waits on CdGetSector until the sector data is available
+ * - Must only be called from the CD ready callback context
+ * - The loopCounter callback must be valid (non-NULL) in audio mode
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/43gwj
  */
 void CD_HandleSectorReadComplete(s32 arg0) {
     
     void* buffer;
     volatile CdSystem* cdSystem;
-    s32 flags;
-    u_char cmd;
 
+    cdSystem = &CD_SYSTEM;
+    
+    // Reset retry tracking and clear status flag bytes b2/b3
     CD_SYSTEM.retryCount = 0;
     CD_SYSTEM.statusFlags.bytes.b3 = 0;
     CD_SYSTEM.statusFlags.bytes.b2 = 0;
     
+    // === Data mode path ===
     if (CD_SYSTEM.audioEnabled != 1) {
+        
+        // Determine destination buffer via loopCounter callback or dstBuffer2
         if (CD_SYSTEM.loopCounter != NULL) {
+            // loopCounter(bytesTransferred, bytesRemaining) returns destination buffer
             buffer = CD_SYSTEM.loopCounter(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size);
-            if (buffer != NULL) {
-                goto block_5;
+            if (buffer == NULL) {
+                // Callback rejected the transfer — re-issue the current read command
+                CdControlF(cdSystem->currentCommand, (u8* )0x801ED958);
+                return;
             }
-            goto block_24;
         }
-        buffer = CD_SYSTEM.dstBuffer2;
-block_5:
-        if ((u32) CD_SYSTEM.size >= 0x801U) {
-            do {
-
-            } while (CdGetSector(buffer, 0x200) == 0);
+        else {
+            buffer = CD_SYSTEM.dstBuffer2;
+        }
+        
+        // More than one sector remaining — read a full 0x800-byte sector
+        if (CD_SYSTEM.size >= 0x801U) {
+            // Spin-wait until sector data is available (0x200 words = 0x800 bytes)
+            while (CdGetSector(buffer, 0x200) == 0);
+            
+            // Advance disc position to next sector
             CdIntToPos(CdPosToInt((CdlLOC*)0x801ED958) + 1, (CdlLOC*)0x801ED958);
-            CD_SYSTEM.size = (u32) (CD_SYSTEM.size - 0x800);
+            
+            // Decrease remaining byte count by one sector
+            CD_SYSTEM.size = (CD_SYSTEM.size - 0x800);
+            
+            // If no callback, linearly advance the destination pointer
             if (CD_SYSTEM.loopCounter == NULL) {
                 CD_SYSTEM.dstBuffer2 = (void* ) (CD_SYSTEM.dstBuffer2 + 0x800);
             }
         } else {
+            // === Final sector — complete the transfer ===
             CD_SYSTEM.playbackState = 0;
             CD_SYSTEM.loopCounter = NULL;
-            flags = (CD_SYSTEM.queueReadIndex + 1) & 0xF;
-            CD_SYSTEM.queueReadIndex = flags;
-            if (flags != CD_SYSTEM.queueWriteIndex) {
-                CD_ExecuteCommand(CD_SYSTEM.commandQueue.items[flags].command, buffer, arg0 + 1);
+            
+            // Advance queue read index (circular, mod 16)
+            CD_SYSTEM.queueReadIndex = (CD_SYSTEM.queueReadIndex + 1) & 0xF;
+            
+            // If more commands are queued, dispatch the next one immediately
+            if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex) {
+                CD_ExecuteCommand(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command, buffer, arg0 + 1);
                 return;
             }
+            
+            // No more queued commands — transition to idle state
             CD_SYSTEM.initCommand = 1;
-            CdSyncCallback((void (*)(u8, u8*)) CD_SyncCallback_Handler);
+            CdSyncCallback(CD_SyncCallback_Handler);
             CdReadyCallback(NULL);
+            
+            // If initial call (arg0 == 0), pause drive before reading final sector
             if (arg0 == 0) {
                 CdControlF(CdlPause, NULL);
             }
-            do {
-
-            } while (CdGetSector(buffer, (s32) ((u32) (g_size + 3) >> 2)) == 0);
-            CD_SYSTEM.currentCommand = 0U;
-            CD_SYSTEM.retryCounter = 0;
+            
+            // Read the final partial sector (size converted from bytes to words)
+            while(CdGetSector(buffer, (g_size + 3) >> 2) == 0);
+            
+            cdSystem = &CD_SYSTEM;
+            
+            // Clear busy flag (bit 4) and reset command/retry state
             CD_SYSTEM.statusFlags.word &= ~0x10;
-            if (arg0 == 0) {
-                goto block_22;
-            }
-            cmd = CdlPause;
-            goto block_21;
-        }
-    } else {
-        do {
-
-        } while (CdGetSector(&CD_READ_SECTOR_BUFFER, 3) == 0);
-        
-        cdSystem = &CD_SYSTEM;
-        
-        if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+            cdSystem->currentCommand = 0U;
+            cdSystem->retryCounter = 0;
             
-            
-            if (CD_SYSTEM.loopCounter(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size) == NULL) {
-                
-                CD_SYSTEM.queueReadIndex = (s32) ((CD_SYSTEM.queueReadIndex + 1) & 0xF);
-                CdSyncCallback((void (*)(u8, u8*)) CD_SyncCallback_Handler);
-                CdReadyCallback(NULL);
-                cmd = CdlPause;
-                cdSystem->setModeBuffer = 0xA0;
-                cdSystem->currentCommand = 0U;
-                cdSystem->initCommand = 2;
-                flags = (s32) (cdSystem->statusFlags.word & ~0x10);
-                cdSystem->audioEnabled = 0U;
-                cdSystem->playbackState= 0;
-                cdSystem->loopCounter = NULL;
-                cdSystem->retryCounter = 0;
-                cdSystem->statusFlags.word = flags;
-block_21:
-                CdControlF_1(cmd);
-block_22:
-                cdSystem->vsyncTimestamp = VSync(-1);
-                return;
+            // If chained call (arg0 != 0), pause drive after reading final sector
+            if (arg0 != 0) {
+                CdControlF(CdlPause, NULL);
             }
             
-            CdIntToPos(CdPosToInt((CdlLOC*)0x801ED958) + 1, (CdlLOC*)0x801ED958);
-            return;
+            // Record frame counter for timeout tracking
+            CD_SYSTEM.vsyncTimestamp = VSync(-1);
         }
-block_24:
-        CdControlF(cdSystem->currentCommand, (u8* )0x801ED958);
     }
+
+    // === Audio (XA) mode path ===
+        
+    // Read 3 words (12 bytes) of sector header into read buffer
+    while(CdGetSector(&CD_READ_SECTOR_BUFFER, 3) == 0);
+    
+    cdSystem = &CD_SYSTEM;
+    
+    // Verify disc position: compare lower 24 bits (min/sec/sector BCD)
+    // of the read sector against the expected command parameter position
+    if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+        
+        // Position matches — invoke loopCounter callback to check if audio is complete
+        if (CD_SYSTEM.loopCounter(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size) == NULL) {
+            
+            // Audio track complete — shut down audio playback
+            CD_SYSTEM.queueReadIndex = ((CD_SYSTEM.queueReadIndex + 1) & 0xF);
+            CdSyncCallback(CD_SyncCallback_Handler);
+            CdReadyCallback(NULL);
+            
+            // Restore default CD mode (double speed + XA filter)
+            cdSystem->setModeBuffer = 0xA0;
+            cdSystem->currentCommand = 0U;
+            cdSystem->initCommand = 2;
+            cdSystem->audioEnabled = 0U;
+            cdSystem->playbackState= 0;
+            cdSystem->loopCounter = NULL;
+            cdSystem->retryCounter = 0;
+            
+            // Clear busy flag (bit 4) and pause drive
+            CD_SYSTEM.statusFlags.word &= ~0x10;
+            CdControlF(CdlPause, NULL);
+            CD_SYSTEM.vsyncTimestamp = VSync(-1);
+        }
+        else {
+            // Audio continues — advance disc position to next sector
+            CdIntToPos(CdPosToInt((CdlLOC*)0x801ED958) + 1, (CdlLOC*)0x801ED958);
+        }
+            
+        return;
+    }
+    
+    // Position mismatch — re-issue read command with expected position
+    CdControlF(cdSystem->currentCommand, (u8* )0x801ED958);
 }
 
 
