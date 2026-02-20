@@ -18,9 +18,6 @@ CD_InitResources            = 0x80014140;
 CD_DecompressData           = 0x80014448;
 UnknownCallback             = 0x80014888;
 
-// PSY-Q Functions
-CdInit                      = 0x8001e1cc;
-
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
@@ -55,8 +52,11 @@ RestartCallback             = 0x80020890;
 CheckCallback               = 0x800208c0;
 
 // Other PSY-Q
+CdInit                      = 0x8001E1CC;
 CdDiskReady                 = 0x8002010c;
-CdIntToPos                  = 0x800203bc;
+CdGetDiskType               = 0x80020248;
+CdIntToPos                  = 0x800203BC;
+CdPosToInt                  = 0x800204C0;
 VSync                       = 0x8002054c;
 
 // Globals
@@ -116,13 +116,12 @@ FUN_80060814 = 0x80060814;
 FUN_80011638 = 0x80011638;
 FUN_800141ec = 0x800141ec;
 ClearPointer = 0x80014ad0;
-
 CD_ResetSystem = 0x80014014;
 DecDCToutCallback = 0x800181A8;
 DrawSyncCallback = 0x80019690;
 FUN_80023010 = 0x80023010;
-
-CdGetDiskType = 0x80020248;
 FUN_80022400 = 0x80022400;
 FUN_80140d48 = 0x80140d48;
 D_80035230 = 0x80035230;
+
+
