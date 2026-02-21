@@ -137,6 +137,7 @@ extern u8 D_80035230;
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
 #define g_scratchpad ((void*)0x1F800000)
+#define SCRATCHPAD ((void*)0x1F800000)
 
 // Macros
 #define CdControlF_1(cmd) ((int (*)(u_char))CdControlF)(cmd)

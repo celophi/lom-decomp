@@ -432,6 +432,286 @@ do_vsync:
     }
 }
 
+
+typedef u8* (*codeA)(int, int *);
+typedef void (*codeB)(int);
+
+/**
+ * decomp.me: (90.95%) https://decomp.me/scratch/Hfuse
+ */
+void FUN_80011bf4(undefined2 param_1, codeA param_2, codeB param_3)
+{
+    u8 srcByte;
+    int timestamp;
+    int decompressResult;
+    u32 srcWord;
+    int loopCount;
+    u32 alignCheck;
+    u32 decompressEnd;
+    u8 *srcPtr;
+    int totalProcessed;
+    int callbackCount;
+    int param2Arg;
+    u8 *destination;
+    u8 *destination2;
+    u8 *dstEnd2;
+    u8 *dstEnd;
+    s32 remainingDataSize;
+    int decompressMode;
+    s32 bytesBuffered;
+    s32 difference;
+    s32 bytesConsumed;
+    s32 unprocessedBytes;
+    s32 alignRemainder;
+    s32 copySize;
+    s32 relocDstAddr;
+    s32 prevReadPtr;
+    s32* relocSrcPtr;
+    u32 wrapOverflow;
+    u8* scratchpad;
+    u8* streamState;
+    s32 sentinel;
+    u8** destPtr;
+
+    scratchpad = (u8*)SCRATCHPAD;
+    *(u32*)(scratchpad + 0x18) = 0;
+    *scratchpad = 0;
+    *(scratchpad + 1) = 0;
+
+    remainingDataSize = CD_QueueCommand(6, param_1, NULL, UnknownCallback) - 1;
+    
+    totalProcessed = 0;
+    callbackCount = totalProcessed;
+    destination = param_2(0, &param2Arg);
+    
+    if (param2Arg == -1) {
+        dstEnd = (u8 *)0xfffffffc;
+        decompressMode = 0x1000;
+    } else {
+        dstEnd = destination + param2Arg - 0x418;
+        decompressMode = 0;
+    }
+    
+    destination2 = (u8*)0x801da000;
+    dstEnd2 = (u8*)0x801dbbe8;
+    
+    timestamp = VSync(-1);
+    streamState = (u8*)SCRATCHPAD;
+    sentinel = -1;
+    destPtr = &destination;
+    
+    while (1) {
+        if (VSync(-1) < timestamp + 30) {
+            
+            if (*streamState != 1) {
+                continue;
+            }
+
+            while (TRUE) {
+                bytesBuffered = *(s32*)(streamState + 0xc);
+                
+                if (bytesBuffered < remainingDataSize) {
+                    decompressEnd = (*(s32*)(streamState + 0x04) + bytesBuffered) - 280;
+                } else {
+                    decompressEnd = *(s32*)(streamState + 0x04) + remainingDataSize;
+                }
+                
+                if (decompressMode != 0 && destination < dstEnd) {
+                    CD_DecompressData((u32*)((u8*)SCRATCHPAD + 8), (u32*)&destination, decompressEnd, (u32)dstEnd);
+                } else {
+                    srcPtr = destination2;
+                    decompressResult = CD_DecompressData((u32*)((u8*)SCRATCHPAD + 8), (u32*)&destination2, decompressEnd, (u32)dstEnd2);
+                    difference = (int)destination2 - (int)srcPtr;
+                    
+                    if (difference == 0) goto LAB_80011f0c;
+                    
+LAB_loop_check:
+                    if (difference < param2Arg) goto LAB_after_inner;
+                    loopCount = param2Arg - 1;
+                    if (param2Arg != sentinel) goto LAB_big_copy;
+                    
+LAB_after_inner:
+                    totalProcessed = totalProcessed + difference;
+                    param2Arg = param2Arg - difference;
+                    alignCheck = (u32)destination & 3;
+                    if (alignCheck == 0) goto LAB_80011e10;
+                    if ((int)alignCheck < difference) {
+                        difference = difference - alignCheck;
+                        loopCount = alignCheck - 1;
+                        if (loopCount != sentinel) {
+                            s32 loopSent = -1;
+                            while (TRUE) {
+                                u8 *dest;
+                                srcByte = *srcPtr;
+                                srcPtr = srcPtr + 1;
+                                dest = *destPtr;
+                                loopCount = loopCount - 1;
+                                *dest = srcByte;
+                                *destPtr = dest + 1;
+                                if (loopCount == loopSent) break;
+                            }
+                        }
+                    }
+LAB_80011e10:
+                    alignCheck = (u32)srcPtr & 3;
+                    if (alignCheck == 0) {
+                        loopCount = difference >> 2;
+                        difference = difference - loopCount * 4;
+                        loopCount = loopCount - 1;
+                        if (loopCount != sentinel) {
+                            s32 loopSent2 = -1;
+                            while (TRUE) {
+                                u32 *dest;
+                                srcWord = *(u32 *)srcPtr;
+                                srcPtr = srcPtr + 4;
+                                dest = (u32 *)*destPtr;
+                                loopCount = loopCount - 1;
+                                *dest = srcWord;
+                                *destPtr = (u8*)(dest + 1);
+                                if (loopCount == loopSent2) break;
+                            }
+                        }
+                    }
+                    difference = difference - 1;
+                    if (difference != sentinel) {
+                        s32 loopSent3 = -1;
+                        while (TRUE) {
+                            u8 *dest;
+                            srcByte = *srcPtr;
+                            srcPtr = srcPtr + 1;
+                            dest = *destPtr;
+                            difference = difference - 1;
+                            *dest = srcByte;
+                            *destPtr = dest + 1;
+                            if (difference == loopSent3) break;
+                        }
+                    }
+                    goto LAB_80011f0c;
+                    
+LAB_big_copy:
+                    difference = difference - param2Arg;
+                    totalProcessed = totalProcessed + param2Arg;
+                    param2Arg = loopCount;
+                    if (loopCount != sentinel) {
+                        s32 loopSentinel2 = -1;
+                        while (TRUE) {
+                            u8 *dest = *destPtr;
+                            srcByte = *srcPtr;
+                            *dest = srcByte;
+                            *destPtr = dest + 1;
+                            loopCount = param2Arg;
+                            srcPtr = srcPtr + 1;
+                            loopCount = loopCount - 1;
+                            param2Arg = loopCount;
+                            if (loopCount == loopSentinel2) break;
+                        }
+                    }
+                    
+                    
+                    if (difference > 0 || decompressResult != 0) {
+                        param_3(callbackCount);
+                        callbackCount = callbackCount + 1;
+                        destination = param_2(totalProcessed, &param2Arg);
+                    }
+                    if (difference != 0) goto LAB_loop_check;
+                    goto LAB_80011f0c;
+LAB_80011f0c:
+                    if (decompressResult != 0) {
+                        s32 loopSentinel;
+                        destination2 = (u8*)0x801da000;
+                        srcPtr = srcPtr - 0x1000;
+                        difference = 0xfff;
+                        {
+                            u8 **firstPtr = &destination2;
+                            loopSentinel = -1;
+                            while (TRUE) {
+                                u8 *dest;
+                                srcByte = *srcPtr;
+                                srcPtr = srcPtr + 1;
+                                dest = *firstPtr;
+                                difference = difference - 1;
+                                *dest = srcByte;
+                                *firstPtr = dest + 1;
+                                if (difference == loopSentinel) {
+                                    break;
+                                }
+                            }
+                        }
+                        goto LAB_do_while_check;
+                    }
+                    
+                    param_3(callbackCount);
+                    return;
+                }
+LAB_do_while_check:
+                if (bytesBuffered != *(s32*)((u8*)SCRATCHPAD + 0xc)){
+                     continue;
+                }
+                
+                bytesConsumed = *(s32*)(streamState + 8) - *(s32*)(streamState + 4);
+                prevReadPtr = *(s32*)(streamState + 4);
+                
+                *streamState = 0;
+                *(s32*)(streamState + 0x14) = bytesConsumed;
+                remainingDataSize = remainingDataSize - bytesConsumed;
+                
+                if (*(streamState + 1) != 1) {
+                    goto do_vsync;
+                }
+                
+                wrapOverflow = *(u32*)(streamState + 0x10);
+                
+                if (wrapOverflow != 0) {
+                    unprocessedBytes = *(s32*)(streamState + 0xc) - bytesConsumed;
+                    alignRemainder = (unprocessedBytes & 3);
+                    relocDstAddr = 0x801dc118 - unprocessedBytes;
+                    
+                    copySize = 4 - alignRemainder;
+                    *(s32*)(streamState + 8) = relocDstAddr;
+                    *(s32*)(streamState + 4) = relocDstAddr;
+                    copySize = copySize & 3;
+                    alignRemainder = unprocessedBytes + 3;
+                    
+                    relocDstAddr = relocDstAddr - copySize;
+                    relocSrcPtr = (s32*)((prevReadPtr + bytesConsumed) - copySize);
+                    
+                    *(s32*)(streamState + 0xc) = wrapOverflow + unprocessedBytes;
+                    copySize = alignRemainder;
+                    
+                    if (copySize < 0) {
+                        copySize = unprocessedBytes + 6;
+                    }
+                    
+                    unprocessedBytes = (copySize >> 2);
+                    unprocessedBytes = unprocessedBytes - 1;
+                    if (unprocessedBytes != sentinel) {
+                        while (TRUE) {
+                            *(s32*)relocDstAddr = *relocSrcPtr++;
+                            relocDstAddr += 4;
+                            unprocessedBytes = unprocessedBytes - 1;
+                            if (unprocessedBytes == sentinel) {
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    *(s32*)(streamState + 4) = prevReadPtr + bytesConsumed;
+                    *(s32*)(streamState + 0xc) -= bytesConsumed;
+                }
+    
+                *(volatile u8*)streamState = 1;
+                
+                goto do_vsync;
+            }
+        }
+
+        CD_UpdateAndProcessQueue();
+do_vsync:
+        timestamp = VSync(-1);
+    }
+}
+
+
 /**
  * @brief Enqueues a CD-ROM command into the circular command queue
  *
