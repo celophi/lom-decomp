@@ -1848,7 +1848,102 @@ block_50:
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/cd", CD_ReadyCallback);
+/**
+ * decomp.me: (100%) https://decomp.me/scratch/kgBY4
+ */
+void CD_ReadyCallback(u_char intr, u_char *result)
+{
+    s32 temp_a0;
+    u8 temp_s1;
+    u8 temp_v0;
+    int temp2;
+    u8 temp_v0_2;
+    u8 temp_v0_3;
+    u8 var_a0;
+    u8* var_a1;
+    u8* addr;
+    int new_var;
+    
+    volatile CdSystem* cdSystem;
+
+    CD_SYSTEM.syncComplete = 1;
+    temp_s1 = CD_SYSTEM.audioEnabled;
+    if (temp_s1 != 1) {
+        
+        temp_a0 = intr & 0xFF;
+        if ((temp_a0 == 1) && (CD_SYSTEM.statusFlags.bytes.b2 == 0)) {
+            temp_v0 = CD_SYSTEM.statusFlags.bytes.b1;
+            temp2 = temp_v0 & 0xFF;
+            
+            if (temp2 == temp_a0) {
+                CD_SYSTEM.statusFlags.bytes.b2 = temp2;
+                return;
+            }
+            
+            do {
+
+            } while (CdGetSector((void* )0x801ED940, 3) == 0);
+            
+            if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+                CD_HandleSectorReadComplete(0);
+                return;
+            }
+        }
+
+        temp_v0_2 = CD_SYSTEM.retryCount;
+        CD_SYSTEM.retryCount = (u8) (temp_v0_2 + 1);
+        if ((u32) (temp_v0_2 & 0xFF) < 0x11U) {
+            var_a1 = (u8* )0x801ED958;
+            var_a0 = CD_SYSTEM.currentCommand;
+            CdControlF(var_a0, var_a1);
+            return;
+        } 
+        
+        CD_SYSTEM.statusFlags.bytes.b3 = 1U;
+        CD_SYSTEM.retryCount = 0U;
+        
+        if (CD_SYSTEM.loopCounter != 0) {
+            CD_SYSTEM.playbackState = 1U;
+        } else {
+            CD_SYSTEM.playbackState = 0U;
+        }
+        
+        CdReadyCallback(NULL);
+        cdSystem = &CD_SYSTEM;
+        cdSystem->currentCommand = 1U;
+        var_a0 = 1;
+        var_a1 = NULL;
+        CdControlF(var_a0, var_a1);
+        return;
+    }
+
+    new_var = intr & 0xFF;
+    temp2 = temp_s1;
+    if (new_var == temp2) {
+        var_a0 = D_801ED590 == 0;
+        addr = (u8*)0x801ED500;
+        if (var_a0 && ((*(((u8 *) addr) + 0x9C)) != 0)) {
+            (*((CdSystem *) 0x801ED800)).statusFlags.bytes.b2 = temp2;
+            return;
+        }
+        CD_HandleSectorReadComplete(0);
+        return;
+    }
+    
+    temp_v0_3 = CD_SYSTEM.retryCount;
+    CD_SYSTEM.retryCount = (u8) (temp_v0_3 + 1);
+    if ((u32) (temp_v0_3 & 0xFF) >= 0x11U) {
+        (*((CdSystem *) 0x801ED800)).statusFlags.bytes.b3 = temp2;
+        CD_SYSTEM.retryCount = 0U;
+        (*((CdSystem *) 0x801ED800)).playbackState = temp2;
+        CdReadyCallback(NULL);
+        var_a0 = 1;
+        var_a1 = NULL;
+        (*((CdSystem *) 0x801ED800)).currentCommand = temp2;
+        CdControlF(var_a0, var_a1);
+    }
+    return;
+}
 
 /**
  * @brief Handles completion of a CD-ROM sector read operation
