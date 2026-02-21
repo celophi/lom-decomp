@@ -127,6 +127,7 @@ extern u8 g_initState;
 extern s8 g_playbackFlag;
 extern CdSystem g_cdSystem;
 extern u8 D_80035230;
+extern u8 D_801ED590;
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
