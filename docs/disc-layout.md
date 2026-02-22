@@ -1,0 +1,1 @@
+MAP/FDATA/SK.DAT - The disc identifier that is used to verify that the correct disk is inserted. "SK" probably stands for "seiken" (聖剣). The first few bytes are SHIFT-JIS encoded "聖剣". 
