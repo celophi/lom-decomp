@@ -93,6 +93,15 @@ typedef struct CdSystem {
     CdResourceEntry defaultCdResource;
 } CdSystem;
 
+typedef struct {
+    u8 u_0[0x38];
+    DecDCToutCallbackHandler decDCToutCallbackHandler;
+    DrawSyncCallbackHandler drawSyncCallbackHandler;
+    u8 u_1[82];
+    u8 readFlag;
+    u8 u2[3];
+} AudioSystem;
+
 typedef struct SKCDPOSE_DAT {
     CdResourceEntry resources[178];
     char unknown[45065];
@@ -123,7 +132,7 @@ extern u8 D_801ED590;
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
-#define AUDIO_SYSTEM ((void*)0x801ED500)
+#define AUDIO_SYSTEM (*(AudioSystem*)0x801ED500)
 #define CD_SECTOR_HEADER_BUFFER (*(u32*)0x801ED940)
 #define CD_COMMAND_PARAM_BUFFER ((u_char*) 0x801ED958)
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
