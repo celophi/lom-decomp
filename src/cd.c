@@ -124,10 +124,10 @@ void CD_Initialize()
         queueCount--;
     }
     
-    CD_SYSTEM.setModeBuffer = (CdlModeSpeed | CdlModeSize1);
-    CD_SYSTEM.u_151 = 0;
-    CD_SYSTEM.u_152 = 0;
-    CD_SYSTEM.u_153 = 0;
+    CD_SYSTEM.setModeParamBlocking[0] = (CdlModeSpeed | CdlModeSize1);
+    CD_SYSTEM.setModeParamBlocking[1] = 0;
+    CD_SYSTEM.setModeParamBlocking[2] = 0;
+    CD_SYSTEM.setModeParamBlocking[3] = 0;
     
     // CdlNop (1) — read current drive status into statusByte
     while (TRUE) {
@@ -149,7 +149,7 @@ void CD_Initialize()
     
     // CdlSetmode (14) — apply mode byte (0xA0) to the drive
     while (TRUE) {
-        cdResult = CdControlB(CdlSetmode, &CD_SYSTEM.setModeBuffer, NULL);
+        cdResult = CdControlB(CdlSetmode, CD_SYSTEM.setModeParamBlocking, NULL);
         
         if (cdResult != 0) {
             break;
@@ -1097,10 +1097,10 @@ SetInitState5:
 
                     case 6:  // Set CD mode parameters
                         cdSystem = &CD_SYSTEM;
-                        cdSystem->modeParams = 0xA0;      // Mode flags
-                        cdSystem->u_155 = 0;
-                        cdSystem->u_156 = 0;
-                        CD_SYSTEM.u_157 = 0;
+                        cdSystem->setModeParamAsync[0] = (CdlModeSpeed | CdlModeSize1);
+                        cdSystem->setModeParamAsync[1] = 0;
+                        cdSystem->setModeParamAsync[2] = 0;
+                        CD_SYSTEM.setModeParamAsync[3] = 0;
                         CdSyncCallback(CD_SyncCallback_Handler);
                         CdReadyCallback(0);
                         cdSystem->initCommand = 0x20U;
@@ -1393,10 +1393,10 @@ s32 CD_RecoveryStateMachine(void) {
         timestamp = VSync(-1);
         if (timestamp >= (s32)CD_SYSTEM.vsyncTimestamp) {
             // Set mode to 0xA0 (double speed + XA filter size)
-            CD_SYSTEM.modeParams = 0xA0;
-            CD_SYSTEM.u_155 = 0;
-            CD_SYSTEM.u_156 = 0;
-            CD_SYSTEM.u_157 = 0;
+            CD_SYSTEM.setModeParamAsync[0] = (CdlModeSpeed | CdlModeSize1);
+            CD_SYSTEM.setModeParamAsync[1] = 0;
+            CD_SYSTEM.setModeParamAsync[2] = 0;
+            CD_SYSTEM.setModeParamAsync[3] = 0;
             
             CdSyncCallback(CD_SyncCallback_Handler);
             
@@ -2165,7 +2165,7 @@ void CD_HandleSectorReadComplete(s32 arg0)
             CdReadyCallback(NULL);
             
             // Restore default CD mode (double speed + XA filter)
-            cdSystem->setModeBuffer = 0xA0;
+            cdSystem->setModeParamBlocking[0] = 0xA0;
             cdSystem->currentCommand = 0U;
             cdSystem->initCommand = 2;
             cdSystem->audioEnabled = 0U;

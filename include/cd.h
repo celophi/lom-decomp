@@ -77,14 +77,8 @@ typedef struct CdSystem {
     CdCommandQueue commandQueue;
     u32 sectorHeaderBuffer[3];
     undefined4 vsyncTimestamp;
-    undefined1 setModeBuffer;
-    undefined1 u_151;
-    undefined1 u_152;
-    undefined1 u_153;
-    undefined1 modeParams;
-    undefined1 u_155;
-    undefined1 u_156;
-    undefined1 u_157;
+    u_char setModeParamBlocking[4];
+    u_char setModeParamAsync[4];
     CdlLOCRaw currentLocation;
     CdlLOCRaw recoveryReadPosition;
     undefined1 statusByte;
