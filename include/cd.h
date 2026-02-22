@@ -125,6 +125,11 @@ extern s8 g_cdStatusByte3;
 extern u8 g_initState;
 extern s8 g_playbackFlag;
 extern CdSystem g_cdSystem;
+
+/**
+ * This is the disc validation ID that is read from the disc during the disc validation process. 
+ * It is used to verify that the correct disc is inserted and can be used to prevent unauthorized copies of the game from being played.
+ */
 extern const u_char g_DiscValidationId[21];
 extern u8 D_801ED590;
 
