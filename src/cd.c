@@ -993,7 +993,7 @@ u32 CD_UpdateAndProcessQueue(void) {
                 readIndex = (u32)&CD_SYSTEM + (readIndex << 4);
                 CD_SYSTEM.currentResourceIndex = *(u16*) (readIndex + 0x42);
                 CD_SYSTEM.currentDataSize = *(s32*)(*((s32*) (readIndex + 0x44)) + 4);
-                CD_SYSTEM.targetDataSize = CD_SYSTEM.size;
+                CD_SYSTEM.targetDataSize = CD_SYSTEM.readRemainingBytes;
             }
 
             // Handle audio playback initialization
@@ -1221,7 +1221,7 @@ UpdateStatusFlags:  // Update status flags with mask
                 if (indexDiff != 0) {
                     CD_SYSTEM.currentResourceIndex = (u16)CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].resourceIndex;
                     CD_SYSTEM.currentDataSize = (s32)(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].entry)->dataSize;
-                    CD_SYSTEM.targetDataSize = (s32)CD_SYSTEM.size;
+                    CD_SYSTEM.targetDataSize = (s32)CD_SYSTEM.readRemainingBytes;
                 }
 
                 if (CD_SYSTEM.syncComplete == 0) {
@@ -2073,7 +2073,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
         // Determine destination buffer via transferCallback callback or dstBuffer2
         if (CD_SYSTEM.transferCallback != NULL) {
             // transferCallback(bytesTransferred, bytesRemaining) returns destination buffer
-            buffer = CD_SYSTEM.transferCallback(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size);
+            buffer = CD_SYSTEM.transferCallback(CD_SYSTEM.sizeCopy - CD_SYSTEM.readRemainingBytes, CD_SYSTEM.readRemainingBytes);
             if (buffer == NULL) {
                 // Callback rejected the transfer — re-issue the current read command
                 CdControlF(cdSystem->currentCommand, (u8* )0x801ED958);
@@ -2085,7 +2085,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
         }
         
         // More than one sector remaining — read a full 0x800-byte sector
-        if (CD_SYSTEM.size >= 0x801U) {
+        if (CD_SYSTEM.readRemainingBytes >= 0x801U) {
             // Spin-wait until sector data is available (0x200 words = 0x800 bytes)
             while (CdGetSector(buffer, 0x200) == 0);
             
@@ -2093,7 +2093,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             CdIntToPos(CdPosToInt((CdlLOC*)0x801ED958) + 1, (CdlLOC*)0x801ED958);
             
             // Decrease remaining byte count by one sector
-            CD_SYSTEM.size = (CD_SYSTEM.size - 0x800);
+            CD_SYSTEM.readRemainingBytes = (CD_SYSTEM.readRemainingBytes - 0x800);
             
             // If no callback, linearly advance the destination pointer
             if (CD_SYSTEM.transferCallback == NULL) {
@@ -2157,7 +2157,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
     if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
         
         // Position matches — invoke transferCallback callback to check if audio is complete
-        if (CD_SYSTEM.transferCallback(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size) == NULL) {
+        if (CD_SYSTEM.transferCallback(CD_SYSTEM.sizeCopy - CD_SYSTEM.readRemainingBytes, CD_SYSTEM.readRemainingBytes) == NULL) {
             
             // Audio track complete — shut down audio playback
             CD_SYSTEM.queueReadIndex = ((CD_SYSTEM.queueReadIndex + 1) & 0xF);
@@ -2307,7 +2307,7 @@ reset_playback_state:
                 dataSize = *((s32*)queuedLocation + 1);
                 queueBufferPtr = QUEUE_ITEM_BASE(cdSystem->queueReadIndex);
                 CD_SYSTEM_V.sizeCopy = dataSize;
-                CD_SYSTEM_V.size = dataSize;
+                CD_SYSTEM_V.readRemainingBytes = dataSize;
                 CD_SYSTEM_V.dstBuffer2 = (void*) QUEUE_ITEM_DST_BUFFER(queueBufferPtr);
                 CD_SYSTEM_V.transferCallback = QUEUE_ITEM_CALLBACK(queueBufferPtr);
             }

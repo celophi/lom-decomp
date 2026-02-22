@@ -63,7 +63,7 @@ typedef struct CdSystem {
     u16 padding_0x1E;
     CdResourceEntry * dstBuffer;
     CdCommandCallback callback;
-    u_int size;
+    u32 readRemainingBytes;
     undefined4 sizeCopy;
     void* dstBuffer2;
     CdCommandCallback transferCallback;
