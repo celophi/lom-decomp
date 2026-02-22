@@ -171,7 +171,7 @@ void CD_SyncCallback_Handler(u_char intr, u_char* result);
 void CD_OnCommandComplete(u_char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
-u32* UnknownCallback(s32 param_1, u32 param_2);
+u32* CD_StreamDataCallback(s32 param_1, u32 param_2);
 void CD_ReadyCallback(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
@@ -181,5 +181,7 @@ undefined FUN_80140d48(void);
 int CD_RecoveryStateMachine(void);
 void FUN_80023010(void);
 void CD_HandleSectorReadComplete(s32 arg0);
+void CD_StreamDataChunked(undefined2 param_1, codeA param_2, codeB param_3);
+void CD_RecoveryReadyHandler(void);
 
 #endif

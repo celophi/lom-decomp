@@ -315,7 +315,7 @@ s32 CD_StreamData(s32 command, u32 destination) {
     
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &UnknownCallback) - 1;
+    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &CD_StreamDataCallback) - 1;
     timestamp = VSync(-1);
 
     streamState = (u8*)g_scratchpad;
@@ -439,7 +439,7 @@ typedef void (*codeB)(int);
 /**
  * decomp.me: (90.95%) https://decomp.me/scratch/Hfuse
  */
-void FUN_80011bf4(undefined2 param_1, codeA param_2, codeB param_3)
+void CD_StreamDataChunked(undefined2 param_1, codeA param_2, codeB param_3)
 {
     u8 srcByte;
     int timestamp;
@@ -478,7 +478,7 @@ void FUN_80011bf4(undefined2 param_1, codeA param_2, codeB param_3)
     *scratchpad = 0;
     *(scratchpad + 1) = 0;
 
-    remainingDataSize = CD_QueueCommand(6, param_1, NULL, UnknownCallback) - 1;
+    remainingDataSize = CD_QueueCommand(6, param_1, NULL, CD_StreamDataCallback) - 1;
     
     totalProcessed = 0;
     callbackCount = totalProcessed;
@@ -1476,7 +1476,8 @@ Done:
 /**
  * decomp.me (100%) https://decomp.me/scratch/iWEyM
  */
-void FUN_80012d74(void) {
+void CD_RecoveryReadyHandler(void) 
+{
     u8 temp_v0;
     volatile CdSystem* cdSystem;
     volatile CdSystem **new_var;
