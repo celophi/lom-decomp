@@ -1839,7 +1839,7 @@ block_24:
                 CD_SYSTEM.statusFlags.word = (s32) (CD_SYSTEM.statusFlags.word & ~0x10);
             }
             if ((g_cdAudioEnabled != 0) && (g_cdAudioReady != 0)) {
-                *((u8*)AUDIO_SYSTEM + 0x92) = 1;
+                AUDIO_SYSTEM.readFlag = 1;
             }
             break;
         }
@@ -2477,9 +2477,9 @@ block_18:
  */
 void CD_WaitForQueueEmpty(void)
 {
-    int state;
+    int remaining;
     
-    while (state = CD_UpdateAndProcessQueue(), state != 0) {
+    while (remaining = CD_UpdateAndProcessQueue(), remaining != 0) {
         VSync(0);
     }
 }
@@ -2506,8 +2506,8 @@ void CD_WaitForQueueEmpty(void)
  */
 void CD_HandleSyncError(void)
 {
-    CdSyncCallback(0);
-    CdReadyCallback(0);
+    CdSyncCallback(NULL);
+    CdReadyCallback(NULL);
     
     CD_SYSTEM.initState = 0;
     CD_SYSTEM.statusFlags.word |= 1;    
@@ -2534,19 +2534,24 @@ void CD_HandleSyncError(void)
 
 void CD_SetAudioVolume(u_char volume, s32 stereoChannel)
 {
-  CdlATV audioConfig[2];
- do { 
-     if (stereoChannel != 0) { 
-         audioConfig[0].val0 = volume; 
-         audioConfig[0].val1 = 0; 
-         audioConfig[0].val2 = volume;
-     } else { 
-         audioConfig[0].val0 = volume; 
-         audioConfig[0].val1 = volume; 
-         audioConfig[0].val2 = 0; 
-     } audioConfig[0].val3 = 0; 
- } while (0);
-  CdMix(audioConfig);
+    CdlATV audioConfig[2];
+    
+    while (TRUE) {
+        if (stereoChannel != 0) { 
+            audioConfig[0].val0 = volume; 
+            audioConfig[0].val1 = 0; 
+            audioConfig[0].val2 = volume;
+        } else { 
+            audioConfig[0].val0 = volume; 
+            audioConfig[0].val1 = volume; 
+            audioConfig[0].val2 = 0; 
+        }
+
+        audioConfig[0].val3 = 0; 
+        break;
+    }
+    
+    CdMix(audioConfig);
 }
 
 /**
@@ -2563,23 +2568,15 @@ void CD_SetAudioVolume(u_char volume, s32 stereoChannel)
  */
 void CD_ResetSystem(void)
 {
-    u32* callback;
-    volatile u32* ptr = (u32*)AUDIO_SYSTEM;
+    AudioSystem* audioSystem = &AUDIO_SYSTEM;
     
-    callback = (u32*)ptr[0x0E];
-    DecDCToutCallback((DecDCToutCallbackHandler)callback);
-
-    callback = (u32*)ptr[0x0F];
-    DrawSyncCallback((DrawSyncCallbackHandler)callback);
+    DecDCToutCallback(audioSystem->decDCToutCallbackHandler);
+    DrawSyncCallback(audioSystem->drawSyncCallbackHandler);
     
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
 
-    while (TRUE) {
-        if (CdControlB(CdlPause, NULL, NULL) != 0) {
-            break;
-        }
-    }
+    while (CdControlB(CdlPause, NULL, NULL) == 0);
     
     if (g_cdAudioReady != 0) {
         FUN_80023010();
@@ -2641,37 +2638,25 @@ s32 CD_IsQueueAvailable(s32 resourceIndex) {
     s32 queuedResourceIndex;
     s32 scanIndex;
     s32 remainingEntries;
-    s32 sentinel;
     
     scanIndex = CD_SYSTEM.queueReadIndex;
     
     // Calculate number of pending entries in the circular queue
     remainingEntries = ((CD_SYSTEM.queueWriteIndex - scanIndex) & 0x0F);
-    remainingEntries -= 1;
-    sentinel = -1;
     
     // If queue is non-empty, scan all pending entries for a match
-    if (remainingEntries != sentinel) {
+    while (--remainingEntries != -1) {
 
-        while (1) {
-
-            // Check if this queued entry already targets the same resource
-            queuedResourceIndex = CD_SYSTEM.commandQueue.items[scanIndex].resourceIndex;
-            
-            if ((resourceIndex & 0xFFFF) == queuedResourceIndex) {
-                return 0;
-            }
-
-            // Advance scan index with circular wrap (mod 16)
-            scanIndex = (scanIndex & 0xF);
-            scanIndex += 1;
-            remainingEntries -= 1;
-            
-            if (remainingEntries == -1) {
-                break;
-            }
-        }
+        // Check if this queued entry already targets the same resource
+        queuedResourceIndex = CD_SYSTEM.commandQueue.items[scanIndex].resourceIndex;
         
+        if ((resourceIndex & 0xFFFF) == queuedResourceIndex) {
+            return 0;
+        }
+
+        // Advance scan index with circular wrap (mod 16)
+        scanIndex &= 0xF;
+        scanIndex++;
     }
 
     return 1;
@@ -2721,14 +2706,13 @@ s32 CD_IsQueueAvailable(s32 resourceIndex) {
  * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
  */
 void CD_InitResources(s32 lba, s32 dataSizeBytes) {
+    CdlLOC *location;
     int vsyncOffset;
     int vsyncDelta;
-    CdlLOC *location;
     CdSystem *cdStruct;
     
     vsyncOffset = -3;
-    vsyncDelta = VSync(-1);
-    vsyncDelta = g_cdVSyncTimestamp - (vsyncDelta + vsyncOffset);
+    vsyncDelta = g_cdVSyncTimestamp - (VSync(-1) + vsyncOffset);
     
     if (vsyncDelta > 0)
     {
