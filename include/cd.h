@@ -125,7 +125,7 @@ extern s8 g_cdStatusByte3;
 extern u8 g_initState;
 extern s8 g_playbackFlag;
 extern CdSystem g_cdSystem;
-extern u8 D_80035230;
+extern const u_char g_DiscValidationId[21];
 extern u8 D_801ED590;
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
@@ -157,7 +157,7 @@ u32* UnknownCallback(s32 param_1, u32 param_2);
 void CD_ReadyCallback(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
-void CD_DiskValidationCallback(s8 param_1);
+void CD_DiskValidationCallback(u_char intr, u_char *result);
 void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 int CD_RecoveryStateMachine(void);

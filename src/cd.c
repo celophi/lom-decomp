@@ -2381,21 +2381,21 @@ continue_execution:
 
 /**
  * decomp.me link: https://decomp.me/scratch/7pvW0
- * decomp.me (%): 90.32%
+ * decomp.me (%): 93.23%
  */
-void CD_DiskValidationCallback(s8 param_1) 
+void CD_DiskValidationCallback(u_char intr, u_char *result)
 {
     u8 command;
     u8 *params;
-     s32 temp_v1;
-    u32 var_v1;
+    s32 temp_v1;
+    u_char var_v1;
     u8 var_v0;
-    u8 *strPtr;
-     u8 *cdBase;
+    const u_char *strPtr;
+    u8 *cdBase;
     u8 *cdData;
 
     CD_SYSTEM_V.syncComplete = 1;
-    if ((param_1 & 0xFF) == 1) {
+    if ((intr & 0xFF) == 1) {
         do {
 
         } while (CdGetSector(&CD_SYSTEM.readSectorBuffer, 3) == 0);
@@ -2405,8 +2405,8 @@ void CD_DiskValidationCallback(s8 param_1)
             } while (CdGetSector(&CD_SYSTEM.previousReadyCallback, 8) == 0);
 
             cdData = (u8*)&CD_SYSTEM.previousReadyCallback;
-            var_v1 = D_80035230;
-            strPtr = &D_80035230;
+            var_v1 = g_DiscValidationId[0];
+            strPtr = g_DiscValidationId;
             
             if (var_v1 != 0) {
                 strPtr++;
