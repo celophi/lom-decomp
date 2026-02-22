@@ -1473,6 +1473,53 @@ Done:
     return 0;
 }
 
+/**
+ * decomp.me (100%) https://decomp.me/scratch/iWEyM
+ */
+void FUN_80012d74(void) {
+    u8 temp_v0;
+    volatile CdSystem* cdSystem;
+    volatile CdSystem **new_var;
+
+    cdSystem = &CD_SYSTEM;
+
+    if ((u8) g_cdStatusByte3 != 1) {
+        return;
+    }
+
+    if (cdSystem->audioEnabled != (u8) g_cdStatusByte3) {
+            do {
+
+            } while (CdGetSector((void* )0x801ED940, 3) == 0);
+            
+            if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+                CD_HandleSectorReadComplete(1);
+                return;
+            }
+            
+            temp_v0 = CD_SYSTEM.retryCount;
+            CD_SYSTEM.retryCount = (u8) (temp_v0 + 1);
+            
+            if ((u32) (temp_v0 & 0xFF) < 0x11U) {
+                CdControlF(CD_SYSTEM.currentCommand, (u8* )0x801ED958);
+            } else {
+                CD_SYSTEM.statusFlags.bytes.b3 = 1;
+                CD_SYSTEM.retryCount = 0U;
+                if (CD_SYSTEM.loopCounter != 0) {
+                    CD_SYSTEM.playbackState = 1;
+                } else {
+                    CD_SYSTEM.playbackState = 0;
+                }
+                cdSystem = &CD_SYSTEM;
+                (*(new_var = &cdSystem))->currentCommand = 1U;
+                CdControlF(1U, NULL);
+            }
+        } else {
+            CD_HandleSectorReadComplete(1);
+        }
+        
+        g_cdStatusByte3 = 0;
+}
 
 /**
  * @brief Sync callback invoked when a CD-ROM command completes or fails
