@@ -2006,12 +2006,12 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  * **Data mode (audioEnabled != 1):**
  * 1. Invokes the transferCallback callback (if set) to obtain the destination
  *    buffer; if the callback returns NULL, re-issues the current read
- *    command to retry. Falls back to dstBuffer2 when no callback is set.
+ *    command to retry. Falls back to currentWritePtr when no callback is set.
  * 2. If more than one sector remains (size >= 0x801):
  *    - Reads one full sector (0x800 bytes / 0x200 words) via CdGetSector
  *    - Advances the disc position by one sector in the command param buffer
  *    - Decrements remaining size by 0x800
- *    - Advances dstBuffer2 by 0x800 if no transferCallback callback is set
+ *    - Advances currentWritePtr by 0x800 if no transferCallback callback is set
  * 3. If this is the final sector (size < 0x801):
  *    - Resets playbackState and transferCallback
  *    - Advances queueReadIndex; if more commands are queued, dispatches
@@ -2055,7 +2055,8 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/43gwj
  */
-void CD_HandleSectorReadComplete(s32 arg0) {
+void CD_HandleSectorReadComplete(s32 arg0) 
+{
     
     void* buffer;
     volatile CdSystem* cdSystem;
@@ -2070,7 +2071,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
     // === Data mode path ===
     if (CD_SYSTEM.audioEnabled != 1) {
         
-        // Determine destination buffer via transferCallback callback or dstBuffer2
+        // Determine destination buffer via transferCallback callback or currentWritePtr
         if (CD_SYSTEM.transferCallback != NULL) {
             // transferCallback(bytesTransferred, bytesRemaining) returns destination buffer
             buffer = CD_SYSTEM.transferCallback(CD_SYSTEM.totalDataSize - CD_SYSTEM.readRemainingBytes, CD_SYSTEM.readRemainingBytes);
@@ -2081,7 +2082,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             }
         }
         else {
-            buffer = CD_SYSTEM.dstBuffer2;
+            buffer = CD_SYSTEM.currentWritePtr;
         }
         
         // More than one sector remaining — read a full 0x800-byte sector
@@ -2097,7 +2098,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             
             // If no callback, linearly advance the destination pointer
             if (CD_SYSTEM.transferCallback == NULL) {
-                CD_SYSTEM.dstBuffer2 = (void* ) (CD_SYSTEM.dstBuffer2 + 0x800);
+                CD_SYSTEM.currentWritePtr = (void* ) (CD_SYSTEM.currentWritePtr + 0x800);
             }
         } else {
             // === Final sector — complete the transfer ===
@@ -2299,7 +2300,7 @@ reset_playback_state:
             
             queueEntryPtr = (CD_SYSTEM_V.queueReadIndex * 0x10) + 0x801ED800;
             
-            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (*(u32*)CD_SYSTEM_V.dstBuffer2 == *((u32*)queueEntryPtr + 0x12) )) {
+            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (*(u32*)CD_SYSTEM_V.currentWritePtr == *((u32*)queueEntryPtr + 0x12) )) {
                 CD_SYSTEM_V.playbackState = 0;
             }
             cdSystem = &CD_SYSTEM_V;
@@ -2308,7 +2309,7 @@ reset_playback_state:
                 queueBufferPtr = QUEUE_ITEM_BASE(cdSystem->queueReadIndex);
                 CD_SYSTEM_V.totalDataSize = dataSize;
                 CD_SYSTEM_V.readRemainingBytes = dataSize;
-                CD_SYSTEM_V.dstBuffer2 = (void*) QUEUE_ITEM_DST_BUFFER(queueBufferPtr);
+                CD_SYSTEM_V.currentWritePtr = (void*) QUEUE_ITEM_DST_BUFFER(queueBufferPtr);
                 CD_SYSTEM_V.transferCallback = QUEUE_ITEM_CALLBACK(queueBufferPtr);
             }
             if (executionMode == 0) {

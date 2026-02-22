@@ -65,7 +65,7 @@ typedef struct CdSystem {
     CdCommandCallback callback;
     u32 readRemainingBytes;
     u32 totalDataSize;
-    void* dstBuffer2;
+    void* currentWritePtr;
     CdCommandCallback transferCallback;
     undefined4 queueReadIndex;
     undefined4 queueWriteIndex;
