@@ -1112,7 +1112,7 @@ SetInitState5:
                         CD_SYSTEM.readParams = (s32)g_cdResource176;
                         CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word | 0x10);
                         CdSyncCallback(CD_SyncCallback_Handler);
-                        CdReadyCallback((void (*)(u8, u8*))FUN_80013d74);
+                        CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
                         CD_SYSTEM.initCommand = 0x21U;
                         CD_SYSTEM.initState = 8U;
                         CdControlF(CdlReadN, (u8*)0x801ED95C);
@@ -1143,7 +1143,7 @@ SetInitState5:
 
 RetryRead:  // Retry read command
                             CdSyncCallback(CD_SyncCallback_Handler);
-                            CdReadyCallback((void (*)(u8, u8*))FUN_80013d74);
+                            CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
 
                             CD_SYSTEM.initCommand = 0x21;
                             cdCommand = CdlReadN;
@@ -2383,7 +2383,7 @@ continue_execution:
  * decomp.me link: https://decomp.me/scratch/7pvW0
  * decomp.me (%): 90.32%
  */
-void FUN_80013d74(s8 param_1) 
+void CD_DiskValidationCallback(s8 param_1) 
 {
     u8 command;
     u8 *params;
