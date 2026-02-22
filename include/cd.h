@@ -14,7 +14,7 @@ typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
 
 typedef struct CdResourceEntry {
-    CdlLOC location;
+    CdlLOCRaw location;
     int dataSize;
 } CdResourceEntry;
 
@@ -40,6 +40,11 @@ typedef union {
         u_char b3;
     } bytes;
 } CdStatusFlags;
+
+typedef union {
+    CdlLOC pos;
+    u32 raw;
+} CdlLOCRaw;
 
 typedef struct CdSystem {
     CdStatusFlags statusFlags;
@@ -80,7 +85,7 @@ typedef struct CdSystem {
     undefined1 u_155;
     undefined1 u_156;
     undefined1 u_157;
-    undefined4 commandParamBuffer;
+    CdlLOCRaw currentLocation;
     undefined4 readParams;
     undefined1 statusByte;
     undefined1 filterModeFlags;
