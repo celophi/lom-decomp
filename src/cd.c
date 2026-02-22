@@ -1492,7 +1492,7 @@ void FUN_80012d74(void) {
 
             } while (CdGetSector((void* )0x801ED940, 3) == 0);
             
-            if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
                 CD_HandleSectorReadComplete(1);
                 return;
             }
@@ -1931,7 +1931,7 @@ void CD_ReadyCallback(u_char intr, u_char *result)
 
             } while (CdGetSector((void* )0x801ED940, 3) == 0);
             
-            if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
                 CD_HandleSectorReadComplete(0);
                 return;
             }
@@ -2023,8 +2023,8 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  *      read when arg0 == 0, or after when arg0 != 0
  *
  * **Audio mode (audioEnabled == 1):**
- * 1. Reads 3 words (12 bytes) from the sector into CD_READ_SECTOR_BUFFER
- * 2. Compares the lower 24 bits of readSectorBuffer against commandParamBuffer
+ * 1. Reads 3 words (12 bytes) from the sector into sectorHeaderBuffer
+ * 2. Compares the lower 24 bits of sectorHeaderBuffer[0] against commandParamBuffer
  *    to verify the correct disc position; if mismatched, re-issues the
  *    current command with the expected position parameters
  * 3. If positions match, invokes the loopCounter callback:
@@ -2148,13 +2148,13 @@ void CD_HandleSectorReadComplete(s32 arg0) {
     // === Audio (XA) mode path ===
         
     // Read 3 words (12 bytes) of sector header into read buffer
-    while(CdGetSector(&CD_READ_SECTOR_BUFFER, 3) == 0);
+    while(CdGetSector(&CD_SECTOR_HEADER_BUFFER, 3) == 0);
     
     cdSystem = &CD_SYSTEM;
     
     // Verify disc position: compare lower 24 bits (min/sec/sector BCD)
     // of the read sector against the expected command parameter position
-    if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+    if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
         
         // Position matches — invoke loopCounter callback to check if audio is complete
         if (CD_SYSTEM.loopCounter(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size) == NULL) {
@@ -2398,8 +2398,8 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
     if ((intr & 0xFF) == 1) {
         do {
 
-        } while (CdGetSector(&CD_SYSTEM.readSectorBuffer, 3) == 0);
-        if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.readParams & 0xFFFFFF)) {
+        } while (CdGetSector(&CD_SYSTEM.sectorHeaderBuffer, 3) == 0);
+        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.readParams & 0xFFFFFF)) {
             do {
 
             } while (CdGetSector(&CD_SYSTEM.discValidationId, 8) == 0);

@@ -73,9 +73,7 @@ typedef struct CdSystem {
     undefined4 queueReadIndex;
     undefined4 queueWriteIndex;
     CdCommandQueue commandQueue;
-    undefined4 readSectorBuffer;
-    undefined4 u_144;
-    undefined4 u_148;
+    u32 sectorHeaderBuffer[3];
     undefined4 vsyncTimestamp;
     undefined1 setModeBuffer;
     undefined1 u_151;
@@ -129,7 +127,7 @@ extern u8 D_801ED590;
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
 #define AUDIO_SYSTEM ((void*)0x801ED500)
-#define CD_READ_SECTOR_BUFFER (*(u32*)0x801ED940)
+#define CD_SECTOR_HEADER_BUFFER (*(u32*)0x801ED940)
 #define CD_COMMAND_PARAM_BUFFER ((u_char*) 0x801ED958)
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
