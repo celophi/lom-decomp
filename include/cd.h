@@ -45,7 +45,7 @@ typedef struct CdSystem {
     CdStatusFlags statusFlags;
     undefined1 audioEnabled;
     undefined1 playbackState;
-    undefined1 playbackFlag;
+    u8 pendingQueueCount;
     u8 padding_0x7;
     undefined2 currentResourceIndex;
     u16 padding_0xA;
@@ -120,7 +120,13 @@ extern u8 g_cdAudioReady;
 extern s32 g_cdResource176;
 extern s8 g_cdStatusByte3;
 extern u8 g_initState;
-extern s8 g_playbackFlag;
+
+/**
+ * This is a flag that indicates the number of pending commands in the CD command queue.
+ * It is used to track how many commands are waiting to be processed.
+ * It can be used to manage the flow of commands and ensure that the system does not become overwhelmed with too many pending commands.
+ */
+extern u8 g_cdPendingQueueCount;
 extern CdSystem g_cdSystem;
 
 /**

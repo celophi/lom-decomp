@@ -82,7 +82,7 @@ void CD_Initialize()
     CD_SYSTEM.audioEnabled = 0;
     CD_SYSTEM.playbackState = 0;
     CD_SYSTEM.transferCallback = NULL;
-    CD_SYSTEM.playbackFlag = 0;
+    CD_SYSTEM.pendingQueueCount = 0;
     CD_SYSTEM.currentResourceIndex = 0;
     CD_SYSTEM.currentDataSize = 0;
     CD_SYSTEM.targetDataSize = 0;
@@ -223,7 +223,7 @@ void CD_Stop(void)
     }
     
     CD_SYSTEM.resourceIndex = CD_RESOURCE_INDEX_INVALID;
-    CD_SYSTEM.playbackFlag = 0;
+    CD_SYSTEM.pendingQueueCount = 0;
     CD_SYSTEM.currentResourceIndex = 0;
     CD_SYSTEM.currentDataSize = 0;
     CD_SYSTEM.targetDataSize = 0;
@@ -846,7 +846,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, C
         if (!(statusFlags & 0xF)) {
             
             CD_SYSTEM.vsyncTimestamp = timestamp;
-            CD_SYSTEM.playbackFlag = 1;
+            CD_SYSTEM.pendingQueueCount = 1;
             CD_SYSTEM.currentResourceIndex = resourceIndex;
             dataSize = resourceEntry->dataSize;
             CD_SYSTEM.currentCommand = 1;
@@ -980,14 +980,14 @@ u32 CD_UpdateAndProcessQueue(void) {
         readIndex = CD_SYSTEM.queueReadIndex;
         queueDiff = (CD_SYSTEM.queueWriteIndex - readIndex);
 
-        CD_SYSTEM.playbackFlag = queueDiff & 0xF;
+        CD_SYSTEM.pendingQueueCount = queueDiff & 0xF;
 
         // Initialize queue processing if not already initialized
         if (CD_SYSTEM.initState == 0) {
             CD_SYSTEM.initState = initState;
 
             // Load current queue item if queue is not empty
-            if (CD_SYSTEM.playbackFlag != 0) {
+            if (CD_SYSTEM.pendingQueueCount != 0) {
                 // Manual pointer arithmetic to access queue item
                 // (preserved from decompilation for register matching)
                 readIndex = (u32)&CD_SYSTEM + (readIndex << 4);
