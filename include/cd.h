@@ -12,7 +12,6 @@
 typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
 typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
-typedef void* (*CdSystemDelegateU0)(s32, u32);
 
 typedef struct CdResourceEntry {
     CdlLOC location;
@@ -47,10 +46,9 @@ typedef struct CdSystem {
     undefined1 audioEnabled;
     undefined1 playbackState;
     undefined1 playbackFlag;
-    undefined u_7;
+    u8 padding_0x7;
     undefined2 currentResourceIndex;
-    undefined u_a;
-    undefined u_b;
+    u16 padding_0xA;
     undefined4 currentDataSize;
     undefined4 targetDataSize;
     undefined1 syncComplete;
@@ -60,16 +58,15 @@ typedef struct CdSystem {
     undefined1 retryCount;
     undefined1 retryCounter;
     undefined1 lastCommand;
-    undefined u_1b;
+    u8 padding_0x1B;
     undefined2 resourceIndex;
-    undefined u_1e;
-    undefined u_1f;
+    u16 padding_0x1E;
     CdResourceEntry * dstBuffer;
     CdCommandCallback callback;
     u_int size;
     undefined4 sizeCopy;
     void* dstBuffer2;
-    CdSystemDelegateU0 loopCounter;
+    CdCommandCallback transferCallback;
     undefined4 queueReadIndex;
     undefined4 queueWriteIndex;
     CdCommandQueue commandQueue;
@@ -137,6 +134,12 @@ extern u8 D_801ED590;
 
 // Macros
 #define CdControlF_1(cmd) ((int (*)(u_char))CdControlF)(cmd)
+
+// Raw queue item access macros (required for asm matching)
+// Equivalent to accessing CD_SYSTEM.commandQueue.items[idx] but generates matching code
+#define QUEUE_ITEM_BASE(idx)        ((void*)(((idx) * 0x10) + (u8*)&CD_SYSTEM))
+#define QUEUE_ITEM_DST_BUFFER(ptr)  (*((u32*)(ptr) + 0x12))
+#define QUEUE_ITEM_CALLBACK(ptr)    (*((CdCommandCallback*)(ptr) + 0x13))
 
 // Prototypes
 void CD_Initialize(void);
