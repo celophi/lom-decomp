@@ -2387,12 +2387,12 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
 {
     u8 command;
     u8 *params;
-    s32 temp_v1;
+     s32 temp_v1;
     u_char var_v1;
     u8 var_v0;
     const u_char *strPtr;
-    u8 *cdBase;
-    u8 *cdData;
+     u8 *cdBase;
+    u_char *skDat;
 
     CD_SYSTEM_V.syncComplete = 1;
     if ((intr & 0xFF) == 1) {
@@ -2402,9 +2402,9 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
         if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.readParams & 0xFFFFFF)) {
             do {
 
-            } while (CdGetSector(&CD_SYSTEM.previousReadyCallback, 8) == 0);
+            } while (CdGetSector(&CD_SYSTEM.discValidationId, 8) == 0);
 
-            cdData = (u8*)&CD_SYSTEM.previousReadyCallback;
+            skDat = CD_SYSTEM.discValidationId;
             var_v1 = g_DiscValidationId[0];
             strPtr = g_DiscValidationId;
             
@@ -2413,15 +2413,15 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
                 cdBase = (u8*)&CD_SYSTEM;
 loop_8:
                 if (((u32)((var_v1 + 0x80) & 0xFF) < 0x20U) || ((u32)((var_v1 + 0x20) & 0xFF) < 0x10U)) {
-                    if (var_v1 == *cdData) {
-                        cdData++;
-                        var_v1 = *cdData++;
+                    if (var_v1 == *skDat) {
+                        skDat++;
+                        var_v1 = *skDat++;
                         var_v0 = *strPtr++;
                         goto block_13;
                     }
                     goto block_14;
                 }
-                var_v0 = *cdData++;
+                var_v0 = *skDat++;
 block_13:
                 if (var_v1 != var_v0) {
 block_14:

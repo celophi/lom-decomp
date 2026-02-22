@@ -94,14 +94,7 @@ typedef struct CdSystem {
     u32 u_164;
     u32 u_168;
     CdlCB previousSyncCallback;
-    CdlCB previousReadyCallback;
-    u32 u_174;
-    u32 u_178;
-    u32 u_17C;
-    u32 u_180;
-    u32 u_184;
-    u32 u_188;
-    u32 u_18C;
+    u_char discValidationId[32];
     CdResourceEntry defaultCdResource;
 } CdSystem;
 
