@@ -1257,7 +1257,7 @@ UpdateStatusFlags:  // Update status flags with mask
             }
             
             g_cdVSyncTimestamp = VSync(-1);
-            g_playbackFlag = indexDiff;
+            g_cdPendingQueueCount = indexDiff;
 
         } else if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex) {
             // Queue has items - start processing
@@ -1303,7 +1303,7 @@ UpdateStatusFlags:  // Update status flags with mask
                 }
             }
             indexDiff = 0;
-            g_playbackFlag = 0;
+            g_cdPendingQueueCount = 0;
         }
     }
 
