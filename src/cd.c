@@ -1839,7 +1839,7 @@ block_24:
                 CD_SYSTEM.statusFlags.word = (s32) (CD_SYSTEM.statusFlags.word & ~0x10);
             }
             if ((g_cdAudioEnabled != 0) && (g_cdAudioReady != 0)) {
-                *((u8*)AUDIO_SYSTEM + 0x92) = 1;
+                AUDIO_SYSTEM.readFlag = 1;
             }
             break;
         }
@@ -2563,23 +2563,15 @@ void CD_SetAudioVolume(u_char volume, s32 stereoChannel)
  */
 void CD_ResetSystem(void)
 {
-    u32* callback;
-    volatile u32* ptr = (u32*)AUDIO_SYSTEM;
+    AudioSystem* audioSystem = &AUDIO_SYSTEM;
     
-    callback = (u32*)ptr[0x0E];
-    DecDCToutCallback((DecDCToutCallbackHandler)callback);
-
-    callback = (u32*)ptr[0x0F];
-    DrawSyncCallback((DrawSyncCallbackHandler)callback);
+    DecDCToutCallback(audioSystem->decDCToutCallbackHandler);
+    DrawSyncCallback(audioSystem->drawSyncCallbackHandler);
     
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
 
-    while (TRUE) {
-        if (CdControlB(CdlPause, NULL, NULL) != 0) {
-            break;
-        }
-    }
+    while (CdControlB(CdlPause, NULL, NULL) == 0);
     
     if (g_cdAudioReady != 0) {
         FUN_80023010();
