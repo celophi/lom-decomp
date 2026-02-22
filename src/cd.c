@@ -2309,7 +2309,7 @@ reset_playback_state:
                 CD_SYSTEM_V.sizeCopy = dataSize;
                 CD_SYSTEM_V.size = dataSize;
                 CD_SYSTEM_V.dstBuffer2 = (void*) QUEUE_ITEM_DST_BUFFER(queueBufferPtr);
-                CD_SYSTEM_V.loopCounter = (CdSystemDelegateU0) QUEUE_ITEM_CALLBACK(queueBufferPtr);
+                CD_SYSTEM_V.loopCounter = QUEUE_ITEM_CALLBACK(queueBufferPtr);
             }
             if (executionMode == 0) {
                 CD_SYSTEM_V.statusFlags.bytes.b2 = 0;
