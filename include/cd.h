@@ -86,7 +86,7 @@ typedef struct CdSystem {
     undefined1 u_156;
     undefined1 u_157;
     CdlLOCRaw currentLocation;
-    undefined4 readParams;
+    CdlLOCRaw recoveryReadPosition;
     undefined1 statusByte;
     undefined1 filterModeFlags;
     u8 u_162;

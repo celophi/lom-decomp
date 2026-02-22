@@ -1109,7 +1109,7 @@ SetInitState5:
                         break;
 
                     case 7:  // Start reading
-                        CD_SYSTEM.readParams = (s32)g_cdResource176;
+                        CD_SYSTEM.recoveryReadPosition.raw = (s32)g_cdResource176;
                         CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word | 0x10);
                         CdSyncCallback(CD_SyncCallback_Handler);
                         CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
@@ -2399,7 +2399,7 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
         do {
 
         } while (CdGetSector(&CD_SYSTEM.sectorHeaderBuffer, 3) == 0);
-        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.readParams & 0xFFFFFF)) {
+        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.recoveryReadPosition.raw & 0xFFFFFF)) {
             do {
 
             } while (CdGetSector(&CD_SYSTEM.discValidationId, 8) == 0);
