@@ -2649,7 +2649,7 @@ s32 CD_IsQueueAvailable(s32 resourceIndex) {
     
     // If queue is non-empty, scan all pending entries for a match
     while (--remainingEntries != -1) {
-        
+
         // Check if this queued entry already targets the same resource
         queuedResourceIndex = CD_SYSTEM.commandQueue.items[scanIndex].resourceIndex;
         
@@ -2709,14 +2709,13 @@ s32 CD_IsQueueAvailable(s32 resourceIndex) {
  * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
  */
 void CD_InitResources(s32 lba, s32 dataSizeBytes) {
+    CdlLOC *location;
     int vsyncOffset;
     int vsyncDelta;
-    CdlLOC *location;
     CdSystem *cdStruct;
     
     vsyncOffset = -3;
-    vsyncDelta = VSync(-1);
-    vsyncDelta = g_cdVSyncTimestamp - (vsyncDelta + vsyncOffset);
+    vsyncDelta = g_cdVSyncTimestamp - (VSync(-1) + vsyncOffset);
     
     if (vsyncDelta > 0)
     {
