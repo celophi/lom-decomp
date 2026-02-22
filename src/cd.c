@@ -2477,9 +2477,9 @@ block_18:
  */
 void CD_WaitForQueueEmpty(void)
 {
-    int state;
+    int remaining;
     
-    while (state = CD_UpdateAndProcessQueue(), state != 0) {
+    while (remaining = CD_UpdateAndProcessQueue(), remaining != 0) {
         VSync(0);
     }
 }
@@ -2506,8 +2506,8 @@ void CD_WaitForQueueEmpty(void)
  */
 void CD_HandleSyncError(void)
 {
-    CdSyncCallback(0);
-    CdReadyCallback(0);
+    CdSyncCallback(NULL);
+    CdReadyCallback(NULL);
     
     CD_SYSTEM.initState = 0;
     CD_SYSTEM.statusFlags.word |= 1;    
@@ -2534,19 +2534,24 @@ void CD_HandleSyncError(void)
 
 void CD_SetAudioVolume(u_char volume, s32 stereoChannel)
 {
-  CdlATV audioConfig[2];
- do { 
-     if (stereoChannel != 0) { 
-         audioConfig[0].val0 = volume; 
-         audioConfig[0].val1 = 0; 
-         audioConfig[0].val2 = volume;
-     } else { 
-         audioConfig[0].val0 = volume; 
-         audioConfig[0].val1 = volume; 
-         audioConfig[0].val2 = 0; 
-     } audioConfig[0].val3 = 0; 
- } while (0);
-  CdMix(audioConfig);
+    CdlATV audioConfig[2];
+    
+    while (TRUE) {
+        if (stereoChannel != 0) { 
+            audioConfig[0].val0 = volume; 
+            audioConfig[0].val1 = 0; 
+            audioConfig[0].val2 = volume;
+        } else { 
+            audioConfig[0].val0 = volume; 
+            audioConfig[0].val1 = volume; 
+            audioConfig[0].val2 = 0; 
+        }
+
+        audioConfig[0].val3 = 0; 
+        break;
+    }
+    
+    CdMix(audioConfig);
 }
 
 /**
