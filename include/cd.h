@@ -138,6 +138,12 @@ extern u8 D_801ED590;
 // Macros
 #define CdControlF_1(cmd) ((int (*)(u_char))CdControlF)(cmd)
 
+// Raw queue item access macros (required for asm matching)
+// Equivalent to accessing CD_SYSTEM.commandQueue.items[idx] but generates matching code
+#define QUEUE_ITEM_BASE(idx)        ((void*)(((idx) * 0x10) + (u8*)&CD_SYSTEM))
+#define QUEUE_ITEM_DST_BUFFER(ptr)  (*((u32*)(ptr) + 0x12))
+#define QUEUE_ITEM_CALLBACK(ptr)    (*((u32*)(ptr) + 0x13))
+
 // Prototypes
 void CD_Initialize(void);
 void CD_HandleSyncError(void);

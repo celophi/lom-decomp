@@ -2305,11 +2305,11 @@ reset_playback_state:
             cdSystem = &CD_SYSTEM_V;
             if (g_playbackState == 0) {
                 dataSize = *((s32*)queuedLocation + 1);
-                queueBufferPtr = (void*)((cdSystem->queueReadIndex * 0x10) + 0x801ED800);
+                queueBufferPtr = QUEUE_ITEM_BASE(cdSystem->queueReadIndex);
                 CD_SYSTEM_V.sizeCopy = dataSize;
                 CD_SYSTEM_V.size = dataSize;
-                CD_SYSTEM_V.dstBuffer2 = (void*) *((u32*)queueBufferPtr + 0x12);
-                CD_SYSTEM_V.loopCounter = (CdSystemDelegateU0) *((u32*)queueBufferPtr + 0x13);
+                CD_SYSTEM_V.dstBuffer2 = (void*) QUEUE_ITEM_DST_BUFFER(queueBufferPtr);
+                CD_SYSTEM_V.loopCounter = (CdSystemDelegateU0) QUEUE_ITEM_CALLBACK(queueBufferPtr);
             }
             if (executionMode == 0) {
                 CD_SYSTEM_V.statusFlags.bytes.b2 = 0;
