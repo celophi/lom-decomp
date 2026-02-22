@@ -13,8 +13,13 @@ typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
 typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
 
+typedef union {
+    CdlLOC pos;
+    u32 raw;
+} CdlLOCRaw;
+
 typedef struct CdResourceEntry {
-    CdlLOC location;
+    CdlLOCRaw location;
     int dataSize;
 } CdResourceEntry;
 
@@ -45,7 +50,7 @@ typedef struct CdSystem {
     CdStatusFlags statusFlags;
     undefined1 audioEnabled;
     undefined1 playbackState;
-    undefined1 playbackFlag;
+    u8 pendingQueueCount;
     u8 padding_0x7;
     undefined2 currentResourceIndex;
     u16 padding_0xA;
@@ -63,25 +68,19 @@ typedef struct CdSystem {
     u16 padding_0x1E;
     CdResourceEntry * dstBuffer;
     CdCommandCallback callback;
-    u_int size;
-    undefined4 sizeCopy;
-    void* dstBuffer2;
+    u32 readRemainingBytes;
+    u32 totalDataSize;
+    void* currentWritePtr;
     CdCommandCallback transferCallback;
     undefined4 queueReadIndex;
     undefined4 queueWriteIndex;
     CdCommandQueue commandQueue;
     u32 sectorHeaderBuffer[3];
     undefined4 vsyncTimestamp;
-    undefined1 setModeBuffer;
-    undefined1 u_151;
-    undefined1 u_152;
-    undefined1 u_153;
-    undefined1 modeParams;
-    undefined1 u_155;
-    undefined1 u_156;
-    undefined1 u_157;
-    undefined4 commandParamBuffer;
-    undefined4 readParams;
+    u_char setModeParamBlocking[4];
+    u_char setModeParamAsync[4];
+    CdlLOCRaw currentLocation;
+    CdlLOCRaw recoveryReadPosition;
     undefined1 statusByte;
     undefined1 filterModeFlags;
     u8 u_162;
@@ -115,12 +114,23 @@ extern u_char g_cdStatusByte;
 extern u_char g_cdAudioEnabled;
 extern u_char g_cdAudioReady;
 extern u8 g_playbackState;
-extern u32 g_size;
+
+/**
+ * Tracks the remaining byte count during multi-sector CD read operations.
+ * Starts from the resource's dataSize and decrements by 0x800 (2048) for each sector read until it reaches zero.
+ */
+extern u32 g_cdReadRemainingBytes;
 extern u8 g_cdAudioReady;
 extern s32 g_cdResource176;
 extern s8 g_cdStatusByte3;
 extern u8 g_initState;
-extern s8 g_playbackFlag;
+
+/**
+ * This is a flag that indicates the number of pending commands in the CD command queue.
+ * It is used to track how many commands are waiting to be processed.
+ * It can be used to manage the flow of commands and ensure that the system does not become overwhelmed with too many pending commands.
+ */
+extern u8 g_cdPendingQueueCount;
 extern CdSystem g_cdSystem;
 
 /**
@@ -161,7 +171,7 @@ void CD_SyncCallback_Handler(u_char intr, u_char* result);
 void CD_OnCommandComplete(u_char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
-u32* UnknownCallback(s32 param_1, u32 param_2);
+u32* CD_StreamDataCallback(s32 param_1, u32 param_2);
 void CD_ReadyCallback(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
@@ -170,5 +180,8 @@ void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 int CD_RecoveryStateMachine(void);
 void FUN_80023010(void);
+void CD_HandleSectorReadComplete(s32 arg0);
+void CD_StreamDataChunked(undefined2 param_1, codeA param_2, codeB param_3);
+void CD_RecoveryReadyHandler(void);
 
 #endif

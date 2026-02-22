@@ -82,7 +82,7 @@ void CD_Initialize()
     CD_SYSTEM.audioEnabled = 0;
     CD_SYSTEM.playbackState = 0;
     CD_SYSTEM.transferCallback = NULL;
-    CD_SYSTEM.playbackFlag = 0;
+    CD_SYSTEM.pendingQueueCount = 0;
     CD_SYSTEM.currentResourceIndex = 0;
     CD_SYSTEM.currentDataSize = 0;
     CD_SYSTEM.targetDataSize = 0;
@@ -124,10 +124,10 @@ void CD_Initialize()
         queueCount--;
     }
     
-    CD_SYSTEM.setModeBuffer = (CdlModeSpeed | CdlModeSize1);
-    CD_SYSTEM.u_151 = 0;
-    CD_SYSTEM.u_152 = 0;
-    CD_SYSTEM.u_153 = 0;
+    CD_SYSTEM.setModeParamBlocking[0] = (CdlModeSpeed | CdlModeSize1);
+    CD_SYSTEM.setModeParamBlocking[1] = 0;
+    CD_SYSTEM.setModeParamBlocking[2] = 0;
+    CD_SYSTEM.setModeParamBlocking[3] = 0;
     
     // CdlNop (1) — read current drive status into statusByte
     while (TRUE) {
@@ -149,7 +149,7 @@ void CD_Initialize()
     
     // CdlSetmode (14) — apply mode byte (0xA0) to the drive
     while (TRUE) {
-        cdResult = CdControlB(CdlSetmode, &CD_SYSTEM.setModeBuffer, NULL);
+        cdResult = CdControlB(CdlSetmode, CD_SYSTEM.setModeParamBlocking, NULL);
         
         if (cdResult != 0) {
             break;
@@ -223,7 +223,7 @@ void CD_Stop(void)
     }
     
     CD_SYSTEM.resourceIndex = CD_RESOURCE_INDEX_INVALID;
-    CD_SYSTEM.playbackFlag = 0;
+    CD_SYSTEM.pendingQueueCount = 0;
     CD_SYSTEM.currentResourceIndex = 0;
     CD_SYSTEM.currentDataSize = 0;
     CD_SYSTEM.targetDataSize = 0;
@@ -315,7 +315,7 @@ s32 CD_StreamData(s32 command, u32 destination) {
     
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &UnknownCallback) - 1;
+    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &CD_StreamDataCallback) - 1;
     timestamp = VSync(-1);
 
     streamState = (u8*)g_scratchpad;
@@ -439,7 +439,7 @@ typedef void (*codeB)(int);
 /**
  * decomp.me: (90.95%) https://decomp.me/scratch/Hfuse
  */
-void FUN_80011bf4(undefined2 param_1, codeA param_2, codeB param_3)
+void CD_StreamDataChunked(undefined2 param_1, codeA param_2, codeB param_3)
 {
     u8 srcByte;
     int timestamp;
@@ -478,7 +478,7 @@ void FUN_80011bf4(undefined2 param_1, codeA param_2, codeB param_3)
     *scratchpad = 0;
     *(scratchpad + 1) = 0;
 
-    remainingDataSize = CD_QueueCommand(6, param_1, NULL, UnknownCallback) - 1;
+    remainingDataSize = CD_QueueCommand(6, param_1, NULL, CD_StreamDataCallback) - 1;
     
     totalProcessed = 0;
     callbackCount = totalProcessed;
@@ -846,7 +846,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, C
         if (!(statusFlags & 0xF)) {
             
             CD_SYSTEM.vsyncTimestamp = timestamp;
-            CD_SYSTEM.playbackFlag = 1;
+            CD_SYSTEM.pendingQueueCount = 1;
             CD_SYSTEM.currentResourceIndex = resourceIndex;
             dataSize = resourceEntry->dataSize;
             CD_SYSTEM.currentCommand = 1;
@@ -980,20 +980,20 @@ u32 CD_UpdateAndProcessQueue(void) {
         readIndex = CD_SYSTEM.queueReadIndex;
         queueDiff = (CD_SYSTEM.queueWriteIndex - readIndex);
 
-        CD_SYSTEM.playbackFlag = queueDiff & 0xF;
+        CD_SYSTEM.pendingQueueCount = queueDiff & 0xF;
 
         // Initialize queue processing if not already initialized
         if (CD_SYSTEM.initState == 0) {
             CD_SYSTEM.initState = initState;
 
             // Load current queue item if queue is not empty
-            if (CD_SYSTEM.playbackFlag != 0) {
+            if (CD_SYSTEM.pendingQueueCount != 0) {
                 // Manual pointer arithmetic to access queue item
                 // (preserved from decompilation for register matching)
                 readIndex = (u32)&CD_SYSTEM + (readIndex << 4);
                 CD_SYSTEM.currentResourceIndex = *(u16*) (readIndex + 0x42);
                 CD_SYSTEM.currentDataSize = *(s32*)(*((s32*) (readIndex + 0x44)) + 4);
-                CD_SYSTEM.targetDataSize = CD_SYSTEM.size;
+                CD_SYSTEM.targetDataSize = CD_SYSTEM.readRemainingBytes;
             }
 
             // Handle audio playback initialization
@@ -1097,10 +1097,10 @@ SetInitState5:
 
                     case 6:  // Set CD mode parameters
                         cdSystem = &CD_SYSTEM;
-                        cdSystem->modeParams = 0xA0;      // Mode flags
-                        cdSystem->u_155 = 0;
-                        cdSystem->u_156 = 0;
-                        CD_SYSTEM.u_157 = 0;
+                        cdSystem->setModeParamAsync[0] = (CdlModeSpeed | CdlModeSize1);
+                        cdSystem->setModeParamAsync[1] = 0;
+                        cdSystem->setModeParamAsync[2] = 0;
+                        CD_SYSTEM.setModeParamAsync[3] = 0;
                         CdSyncCallback(CD_SyncCallback_Handler);
                         CdReadyCallback(0);
                         cdSystem->initCommand = 0x20U;
@@ -1109,7 +1109,7 @@ SetInitState5:
                         break;
 
                     case 7:  // Start reading
-                        CD_SYSTEM.readParams = (s32)g_cdResource176;
+                        CD_SYSTEM.recoveryReadPosition.raw = (s32)g_cdResource176;
                         CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word | 0x10);
                         CdSyncCallback(CD_SyncCallback_Handler);
                         CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
@@ -1221,7 +1221,7 @@ UpdateStatusFlags:  // Update status flags with mask
                 if (indexDiff != 0) {
                     CD_SYSTEM.currentResourceIndex = (u16)CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].resourceIndex;
                     CD_SYSTEM.currentDataSize = (s32)(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].entry)->dataSize;
-                    CD_SYSTEM.targetDataSize = (s32)CD_SYSTEM.size;
+                    CD_SYSTEM.targetDataSize = (s32)CD_SYSTEM.readRemainingBytes;
                 }
 
                 if (CD_SYSTEM.syncComplete == 0) {
@@ -1257,7 +1257,7 @@ UpdateStatusFlags:  // Update status flags with mask
             }
             
             g_cdVSyncTimestamp = VSync(-1);
-            g_playbackFlag = indexDiff;
+            g_cdPendingQueueCount = indexDiff;
 
         } else if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex) {
             // Queue has items - start processing
@@ -1303,7 +1303,7 @@ UpdateStatusFlags:  // Update status flags with mask
                 }
             }
             indexDiff = 0;
-            g_playbackFlag = 0;
+            g_cdPendingQueueCount = 0;
         }
     }
 
@@ -1393,10 +1393,10 @@ s32 CD_RecoveryStateMachine(void) {
         timestamp = VSync(-1);
         if (timestamp >= (s32)CD_SYSTEM.vsyncTimestamp) {
             // Set mode to 0xA0 (double speed + XA filter size)
-            CD_SYSTEM.modeParams = 0xA0;
-            CD_SYSTEM.u_155 = 0;
-            CD_SYSTEM.u_156 = 0;
-            CD_SYSTEM.u_157 = 0;
+            CD_SYSTEM.setModeParamAsync[0] = (CdlModeSpeed | CdlModeSize1);
+            CD_SYSTEM.setModeParamAsync[1] = 0;
+            CD_SYSTEM.setModeParamAsync[2] = 0;
+            CD_SYSTEM.setModeParamAsync[3] = 0;
             
             CdSyncCallback(CD_SyncCallback_Handler);
             
@@ -1476,7 +1476,8 @@ Done:
 /**
  * decomp.me (100%) https://decomp.me/scratch/iWEyM
  */
-void FUN_80012d74(void) {
+void CD_RecoveryReadyHandler(void) 
+{
     u8 temp_v0;
     volatile CdSystem* cdSystem;
     volatile CdSystem **new_var;
@@ -1492,7 +1493,7 @@ void FUN_80012d74(void) {
 
             } while (CdGetSector((void* )0x801ED940, 3) == 0);
             
-            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.currentLocation.raw & 0xFFFFFF)) {
                 CD_HandleSectorReadComplete(1);
                 return;
             }
@@ -1931,7 +1932,7 @@ void CD_ReadyCallback(u_char intr, u_char *result)
 
             } while (CdGetSector((void* )0x801ED940, 3) == 0);
             
-            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.currentLocation.raw & 0xFFFFFF)) {
                 CD_HandleSectorReadComplete(0);
                 return;
             }
@@ -2006,12 +2007,12 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  * **Data mode (audioEnabled != 1):**
  * 1. Invokes the transferCallback callback (if set) to obtain the destination
  *    buffer; if the callback returns NULL, re-issues the current read
- *    command to retry. Falls back to dstBuffer2 when no callback is set.
+ *    command to retry. Falls back to currentWritePtr when no callback is set.
  * 2. If more than one sector remains (size >= 0x801):
  *    - Reads one full sector (0x800 bytes / 0x200 words) via CdGetSector
  *    - Advances the disc position by one sector in the command param buffer
  *    - Decrements remaining size by 0x800
- *    - Advances dstBuffer2 by 0x800 if no transferCallback callback is set
+ *    - Advances currentWritePtr by 0x800 if no transferCallback callback is set
  * 3. If this is the final sector (size < 0x801):
  *    - Resets playbackState and transferCallback
  *    - Advances queueReadIndex; if more commands are queued, dispatches
@@ -2024,7 +2025,7 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  *
  * **Audio mode (audioEnabled == 1):**
  * 1. Reads 3 words (12 bytes) from the sector into sectorHeaderBuffer
- * 2. Compares the lower 24 bits of sectorHeaderBuffer[0] against commandParamBuffer
+ * 2. Compares the lower 24 bits of sectorHeaderBuffer[0] against currentLocation
  *    to verify the correct disc position; if mismatched, re-issues the
  *    current command with the expected position parameters
  * 3. If positions match, invokes the transferCallback:
@@ -2045,8 +2046,8 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  *   CdlLOC disc position for read commands
  * - The 0xFFFFFF mask in audio mode extracts the minute/second/sector BCD
  *   position, ignoring the mode byte
- * - g_size is used for the final partial sector read, converted from bytes
- *   to words via (g_size + 3) >> 2
+ * - g_cdReadRemainingBytes is used for the final partial sector read, converted from bytes
+ *   to words via (g_cdReadRemainingBytes + 3) >> 2
  *
  * @warning
  * - Spin-waits on CdGetSector until the sector data is available
@@ -2055,8 +2056,8 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/43gwj
  */
-void CD_HandleSectorReadComplete(s32 arg0) {
-    
+void CD_HandleSectorReadComplete(s32 arg0) 
+{
     void* buffer;
     volatile CdSystem* cdSystem;
 
@@ -2070,10 +2071,10 @@ void CD_HandleSectorReadComplete(s32 arg0) {
     // === Data mode path ===
     if (CD_SYSTEM.audioEnabled != 1) {
         
-        // Determine destination buffer via transferCallback callback or dstBuffer2
+        // Determine destination buffer via transferCallback callback or currentWritePtr
         if (CD_SYSTEM.transferCallback != NULL) {
             // transferCallback(bytesTransferred, bytesRemaining) returns destination buffer
-            buffer = CD_SYSTEM.transferCallback(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size);
+            buffer = CD_SYSTEM.transferCallback(CD_SYSTEM.totalDataSize - CD_SYSTEM.readRemainingBytes, CD_SYSTEM.readRemainingBytes);
             if (buffer == NULL) {
                 // Callback rejected the transfer — re-issue the current read command
                 CdControlF(cdSystem->currentCommand, (u8* )0x801ED958);
@@ -2081,11 +2082,11 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             }
         }
         else {
-            buffer = CD_SYSTEM.dstBuffer2;
+            buffer = CD_SYSTEM.currentWritePtr;
         }
         
         // More than one sector remaining — read a full 0x800-byte sector
-        if (CD_SYSTEM.size >= 0x801U) {
+        if (CD_SYSTEM.readRemainingBytes >= 0x801U) {
             // Spin-wait until sector data is available (0x200 words = 0x800 bytes)
             while (CdGetSector(buffer, 0x200) == 0);
             
@@ -2093,11 +2094,11 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             CdIntToPos(CdPosToInt((CdlLOC*)0x801ED958) + 1, (CdlLOC*)0x801ED958);
             
             // Decrease remaining byte count by one sector
-            CD_SYSTEM.size = (CD_SYSTEM.size - 0x800);
+            CD_SYSTEM.readRemainingBytes = (CD_SYSTEM.readRemainingBytes - 0x800);
             
             // If no callback, linearly advance the destination pointer
             if (CD_SYSTEM.transferCallback == NULL) {
-                CD_SYSTEM.dstBuffer2 = (void* ) (CD_SYSTEM.dstBuffer2 + 0x800);
+                CD_SYSTEM.currentWritePtr = (void* ) (CD_SYSTEM.currentWritePtr + 0x800);
             }
         } else {
             // === Final sector — complete the transfer ===
@@ -2124,7 +2125,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             }
             
             // Read the final partial sector (size converted from bytes to words)
-            while(CdGetSector(buffer, (g_size + 3) >> 2) == 0);
+            while(CdGetSector(buffer, (g_cdReadRemainingBytes + 3) >> 2) == 0);
             
             cdSystem = &CD_SYSTEM;
             
@@ -2154,10 +2155,10 @@ void CD_HandleSectorReadComplete(s32 arg0) {
     
     // Verify disc position: compare lower 24 bits (min/sec/sector BCD)
     // of the read sector against the expected command parameter position
-    if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+    if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.currentLocation.raw & 0xFFFFFF)) {
         
         // Position matches — invoke transferCallback callback to check if audio is complete
-        if (CD_SYSTEM.transferCallback(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size) == NULL) {
+        if (CD_SYSTEM.transferCallback(CD_SYSTEM.totalDataSize - CD_SYSTEM.readRemainingBytes, CD_SYSTEM.readRemainingBytes) == NULL) {
             
             // Audio track complete — shut down audio playback
             CD_SYSTEM.queueReadIndex = ((CD_SYSTEM.queueReadIndex + 1) & 0xF);
@@ -2165,7 +2166,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             CdReadyCallback(NULL);
             
             // Restore default CD mode (double speed + XA filter)
-            cdSystem->setModeBuffer = 0xA0;
+            cdSystem->setModeParamBlocking[0] = 0xA0;
             cdSystem->currentCommand = 0U;
             cdSystem->initCommand = 2;
             cdSystem->audioEnabled = 0U;
@@ -2259,7 +2260,7 @@ reset_playback_state:
             CD_SYSTEM_V.playbackState = 0;
             
             queuedLocation = CD_SYSTEM_V.commandQueue.items[locationIndex].entry;
-            CD_SYSTEM_V.commandParamBuffer = *(s32*)&queuedLocation->location;
+            CD_SYSTEM.currentLocation = queuedLocation->location;
         }
 
         // Handle different execution modes
@@ -2269,7 +2270,7 @@ reset_playback_state:
                 CdControlF(actualCommand & 0xFF, CD_COMMAND_PARAM_BUFFER);
     
                 while (1) {
-                    if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                    if (CdGetSector(sectorBuffer, (u32) (g_cdReadRemainingBytes + 3) >> 2) != 0) {
                         break;
                     }
                 }
@@ -2283,7 +2284,7 @@ reset_playback_state:
                 if (executionMode == 2) {
     
                     while (1) {
-                        if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                        if (CdGetSector(sectorBuffer, (u32) (g_cdReadRemainingBytes + 3) >> 2) != 0) {
                             break;
                         }
                     }
@@ -2299,16 +2300,16 @@ reset_playback_state:
             
             queueEntryPtr = (CD_SYSTEM_V.queueReadIndex * 0x10) + 0x801ED800;
             
-            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (*(u32*)CD_SYSTEM_V.dstBuffer2 == *((u32*)queueEntryPtr + 0x12) )) {
+            if (( *((u32*)queueEntryPtr + 0x13) == 0) && (*(u32*)CD_SYSTEM_V.currentWritePtr == *((u32*)queueEntryPtr + 0x12) )) {
                 CD_SYSTEM_V.playbackState = 0;
             }
             cdSystem = &CD_SYSTEM_V;
             if (g_playbackState == 0) {
                 dataSize = *((s32*)queuedLocation + 1);
                 queueBufferPtr = QUEUE_ITEM_BASE(cdSystem->queueReadIndex);
-                CD_SYSTEM_V.sizeCopy = dataSize;
-                CD_SYSTEM_V.size = dataSize;
-                CD_SYSTEM_V.dstBuffer2 = (void*) QUEUE_ITEM_DST_BUFFER(queueBufferPtr);
+                CD_SYSTEM_V.totalDataSize = dataSize;
+                CD_SYSTEM_V.readRemainingBytes = dataSize;
+                CD_SYSTEM_V.currentWritePtr = (void*) QUEUE_ITEM_DST_BUFFER(queueBufferPtr);
                 CD_SYSTEM_V.transferCallback = QUEUE_ITEM_CALLBACK(queueBufferPtr);
             }
             if (executionMode == 0) {
@@ -2356,7 +2357,7 @@ continue_execution:
 
              // Wait for sector read
             while (1) {
-                if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                if (CdGetSector(sectorBuffer, (u32) (g_cdReadRemainingBytes + 3) >> 2) != 0) {
                     break;
                 }
             }
@@ -2364,7 +2365,7 @@ continue_execution:
         case 2:
             // Wait for sector read first
             while(1) {
-                if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                if (CdGetSector(sectorBuffer, (u32) (g_cdReadRemainingBytes + 3) >> 2) != 0) {
                     break;
                 }
             }
@@ -2399,7 +2400,7 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
         do {
 
         } while (CdGetSector(&CD_SYSTEM.sectorHeaderBuffer, 3) == 0);
-        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.readParams & 0xFFFFFF)) {
+        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.recoveryReadPosition.raw & 0xFFFFFF)) {
             do {
 
             } while (CdGetSector(&CD_SYSTEM.discValidationId, 8) == 0);
@@ -2706,7 +2707,7 @@ s32 CD_IsQueueAvailable(s32 resourceIndex) {
  * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
  */
 void CD_InitResources(s32 lba, s32 dataSizeBytes) {
-    CdlLOC *location;
+    CdlLOCRaw *location;
     int vsyncOffset;
     int vsyncDelta;
     CdSystem *cdStruct;
@@ -2726,10 +2727,10 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes) {
     
     cdStruct = &CD_SYSTEM;
     location = &cdStruct->defaultCdResource.location;
-    *(u32*)&cdStruct->defaultCdResource.location = 0;
+    cdStruct->defaultCdResource.location.raw = 0;
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
     
-    CdIntToPos(lba, location);
+    CdIntToPos(lba, &location->pos);
     CD_QueueCommand(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
