@@ -2641,19 +2641,15 @@ s32 CD_IsQueueAvailable(s32 resourceIndex) {
     s32 queuedResourceIndex;
     s32 scanIndex;
     s32 remainingEntries;
-    s32 sentinel;
     
     scanIndex = CD_SYSTEM.queueReadIndex;
     
     // Calculate number of pending entries in the circular queue
     remainingEntries = ((CD_SYSTEM.queueWriteIndex - scanIndex) & 0x0F);
-    remainingEntries -= 1;
-    sentinel = -1;
     
     // If queue is non-empty, scan all pending entries for a match
-    if (remainingEntries != sentinel) {
-
-        while (1) {
+    if (--remainingEntries != -1) {
+        while (TRUE) {
 
             // Check if this queued entry already targets the same resource
             queuedResourceIndex = CD_SYSTEM.commandQueue.items[scanIndex].resourceIndex;
@@ -2663,15 +2659,13 @@ s32 CD_IsQueueAvailable(s32 resourceIndex) {
             }
 
             // Advance scan index with circular wrap (mod 16)
-            scanIndex = (scanIndex & 0xF);
-            scanIndex += 1;
-            remainingEntries -= 1;
+            scanIndex &= 0xF;
+            scanIndex++;
             
-            if (remainingEntries == -1) {
+            if (--remainingEntries == -1) {
                 break;
             }
         }
-        
     }
 
     return 1;
