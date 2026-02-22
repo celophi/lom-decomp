@@ -157,7 +157,7 @@ u32* UnknownCallback(s32 param_1, u32 param_2);
 void CD_ReadyCallback(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
-void FUN_80013d74(s8 param_1);
+void CD_DiskValidationCallback(s8 param_1);
 void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 int CD_RecoveryStateMachine(void);
