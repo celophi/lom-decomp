@@ -2045,8 +2045,8 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  *   CdlLOC disc position for read commands
  * - The 0xFFFFFF mask in audio mode extracts the minute/second/sector BCD
  *   position, ignoring the mode byte
- * - g_size is used for the final partial sector read, converted from bytes
- *   to words via (g_size + 3) >> 2
+ * - g_cdReadRemainingBytes is used for the final partial sector read, converted from bytes
+ *   to words via (g_cdReadRemainingBytes + 3) >> 2
  *
  * @warning
  * - Spin-waits on CdGetSector until the sector data is available
@@ -2124,7 +2124,7 @@ void CD_HandleSectorReadComplete(s32 arg0) {
             }
             
             // Read the final partial sector (size converted from bytes to words)
-            while(CdGetSector(buffer, (g_size + 3) >> 2) == 0);
+            while(CdGetSector(buffer, (g_cdReadRemainingBytes + 3) >> 2) == 0);
             
             cdSystem = &CD_SYSTEM;
             
@@ -2269,7 +2269,7 @@ reset_playback_state:
                 CdControlF(actualCommand & 0xFF, CD_COMMAND_PARAM_BUFFER);
     
                 while (1) {
-                    if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                    if (CdGetSector(sectorBuffer, (u32) (g_cdReadRemainingBytes + 3) >> 2) != 0) {
                         break;
                     }
                 }
@@ -2283,7 +2283,7 @@ reset_playback_state:
                 if (executionMode == 2) {
     
                     while (1) {
-                        if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                        if (CdGetSector(sectorBuffer, (u32) (g_cdReadRemainingBytes + 3) >> 2) != 0) {
                             break;
                         }
                     }
@@ -2356,7 +2356,7 @@ continue_execution:
 
              // Wait for sector read
             while (1) {
-                if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                if (CdGetSector(sectorBuffer, (u32) (g_cdReadRemainingBytes + 3) >> 2) != 0) {
                     break;
                 }
             }
@@ -2364,7 +2364,7 @@ continue_execution:
         case 2:
             // Wait for sector read first
             while(1) {
-                if (CdGetSector(sectorBuffer, (u32) (g_size + 3) >> 2) != 0) {
+                if (CdGetSector(sectorBuffer, (u32) (g_cdReadRemainingBytes + 3) >> 2) != 0) {
                     break;
                 }
             }

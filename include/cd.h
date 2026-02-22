@@ -115,7 +115,12 @@ extern u_char g_cdStatusByte;
 extern u_char g_cdAudioEnabled;
 extern u_char g_cdAudioReady;
 extern u8 g_playbackState;
-extern u32 g_size;
+
+/**
+ * Tracks the remaining byte count during multi-sector CD read operations.
+ * Starts from the resource's dataSize and decrements by 0x800 (2048) for each sector read until it reaches zero.
+ */
+extern u32 g_cdReadRemainingBytes;
 extern u8 g_cdAudioReady;
 extern s32 g_cdResource176;
 extern s8 g_cdStatusByte3;
