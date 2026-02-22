@@ -13,6 +13,11 @@ typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
 typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
 
+typedef union {
+    CdlLOC pos;
+    u32 raw;
+} CdlLOCRaw;
+
 typedef struct CdResourceEntry {
     CdlLOCRaw location;
     int dataSize;
@@ -40,11 +45,6 @@ typedef union {
         u_char b3;
     } bytes;
 } CdStatusFlags;
-
-typedef union {
-    CdlLOC pos;
-    u32 raw;
-} CdlLOCRaw;
 
 typedef struct CdSystem {
     CdStatusFlags statusFlags;
@@ -186,5 +186,6 @@ void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 int CD_RecoveryStateMachine(void);
 void FUN_80023010(void);
+void CD_HandleSectorReadComplete(s32 arg0);
 
 #endif

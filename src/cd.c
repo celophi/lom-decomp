@@ -2057,7 +2057,6 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  */
 void CD_HandleSectorReadComplete(s32 arg0) 
 {
-    
     void* buffer;
     volatile CdSystem* cdSystem;
 
