@@ -10,7 +10,7 @@ CD_SyncCallback_Handler     = 0x800130A8;
 CD_ReadyCallback            = 0x80013584;
 CD_HandleSectorReadComplete = 0x80013744;
 CD_ExecuteCommand           = 0x80013A00;
-FUN_80013d74                = 0x80013D74;
+CD_DiskValidationCallback   = 0x80013D74;
 CD_WaitForQueueEmpty        = 0x80013F2C;
 CD_HandleSyncError          = 0x80013F64;
 CD_SetAudioVolume           = 0x80013FD0;
@@ -61,6 +61,7 @@ CdPosToInt                  = 0x800204C0;
 VSync                       = 0x8002054c;
 
 // Globals
+g_DiscValidationId          = 0x80035230;
 g_cdAudioReady              = 0x801ed591;
 g_cdSystem                  = 0x801ed800;
 g_cdStatusByte3             = 0x801ed802;
@@ -77,7 +78,6 @@ g_cdReadyCallbackResult     = 0x801ed96c;
 g_defaultCdResource         = 0x801ed990;
 g_SKCDPOSE_DAT              = 0x801ed998;
 g_cdResource176             = 0x801edf18;
-
 
 
 // Uncategorized
@@ -123,7 +123,7 @@ DrawSyncCallback = 0x80019690;
 FUN_80023010 = 0x80023010;
 FUN_80022400 = 0x80022400;
 FUN_80140d48 = 0x80140d48;
-D_80035230 = 0x80035230;
+
 FUN_80011bf4 = 0x80011bf4;
 
 

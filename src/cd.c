@@ -1112,7 +1112,7 @@ SetInitState5:
                         CD_SYSTEM.readParams = (s32)g_cdResource176;
                         CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word | 0x10);
                         CdSyncCallback(CD_SyncCallback_Handler);
-                        CdReadyCallback((void (*)(u8, u8*))FUN_80013d74);
+                        CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
                         CD_SYSTEM.initCommand = 0x21U;
                         CD_SYSTEM.initState = 8U;
                         CdControlF(CdlReadN, (u8*)0x801ED95C);
@@ -1143,7 +1143,7 @@ SetInitState5:
 
 RetryRead:  // Retry read command
                             CdSyncCallback(CD_SyncCallback_Handler);
-                            CdReadyCallback((void (*)(u8, u8*))FUN_80013d74);
+                            CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
 
                             CD_SYSTEM.initCommand = 0x21;
                             cdCommand = CdlReadN;
@@ -1492,7 +1492,7 @@ void FUN_80012d74(void) {
 
             } while (CdGetSector((void* )0x801ED940, 3) == 0);
             
-            if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
                 CD_HandleSectorReadComplete(1);
                 return;
             }
@@ -1931,7 +1931,7 @@ void CD_ReadyCallback(u_char intr, u_char *result)
 
             } while (CdGetSector((void* )0x801ED940, 3) == 0);
             
-            if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
                 CD_HandleSectorReadComplete(0);
                 return;
             }
@@ -2023,8 +2023,8 @@ void CD_ReadyCallback(u_char intr, u_char *result)
  *      read when arg0 == 0, or after when arg0 != 0
  *
  * **Audio mode (audioEnabled == 1):**
- * 1. Reads 3 words (12 bytes) from the sector into CD_READ_SECTOR_BUFFER
- * 2. Compares the lower 24 bits of readSectorBuffer against commandParamBuffer
+ * 1. Reads 3 words (12 bytes) from the sector into sectorHeaderBuffer
+ * 2. Compares the lower 24 bits of sectorHeaderBuffer[0] against commandParamBuffer
  *    to verify the correct disc position; if mismatched, re-issues the
  *    current command with the expected position parameters
  * 3. If positions match, invokes the loopCounter callback:
@@ -2148,13 +2148,13 @@ void CD_HandleSectorReadComplete(s32 arg0) {
     // === Audio (XA) mode path ===
         
     // Read 3 words (12 bytes) of sector header into read buffer
-    while(CdGetSector(&CD_READ_SECTOR_BUFFER, 3) == 0);
+    while(CdGetSector(&CD_SECTOR_HEADER_BUFFER, 3) == 0);
     
     cdSystem = &CD_SYSTEM;
     
     // Verify disc position: compare lower 24 bits (min/sec/sector BCD)
     // of the read sector against the expected command parameter position
-    if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
+    if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.commandParamBuffer & 0xFFFFFF)) {
         
         // Position matches — invoke loopCounter callback to check if audio is complete
         if (CD_SYSTEM.loopCounter(CD_SYSTEM.sizeCopy - CD_SYSTEM.size, CD_SYSTEM.size) == NULL) {
@@ -2381,47 +2381,47 @@ continue_execution:
 
 /**
  * decomp.me link: https://decomp.me/scratch/7pvW0
- * decomp.me (%): 90.32%
+ * decomp.me (%): 93.23%
  */
-void FUN_80013d74(s8 param_1) 
+void CD_DiskValidationCallback(u_char intr, u_char *result)
 {
     u8 command;
     u8 *params;
      s32 temp_v1;
-    u32 var_v1;
+    u_char var_v1;
     u8 var_v0;
-    u8 *strPtr;
+    const u_char *strPtr;
      u8 *cdBase;
-    u8 *cdData;
+    u_char *skDat;
 
     CD_SYSTEM_V.syncComplete = 1;
-    if ((param_1 & 0xFF) == 1) {
+    if ((intr & 0xFF) == 1) {
         do {
 
-        } while (CdGetSector(&CD_SYSTEM.readSectorBuffer, 3) == 0);
-        if ((CD_SYSTEM.readSectorBuffer & 0xFFFFFF) == (CD_SYSTEM.readParams & 0xFFFFFF)) {
+        } while (CdGetSector(&CD_SYSTEM.sectorHeaderBuffer, 3) == 0);
+        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.readParams & 0xFFFFFF)) {
             do {
 
-            } while (CdGetSector(&CD_SYSTEM.previousReadyCallback, 8) == 0);
+            } while (CdGetSector(&CD_SYSTEM.discValidationId, 8) == 0);
 
-            cdData = (u8*)&CD_SYSTEM.previousReadyCallback;
-            var_v1 = D_80035230;
-            strPtr = &D_80035230;
+            skDat = CD_SYSTEM.discValidationId;
+            var_v1 = g_DiscValidationId[0];
+            strPtr = g_DiscValidationId;
             
             if (var_v1 != 0) {
                 strPtr++;
                 cdBase = (u8*)&CD_SYSTEM;
 loop_8:
                 if (((u32)((var_v1 + 0x80) & 0xFF) < 0x20U) || ((u32)((var_v1 + 0x20) & 0xFF) < 0x10U)) {
-                    if (var_v1 == *cdData) {
-                        cdData++;
-                        var_v1 = *cdData++;
+                    if (var_v1 == *skDat) {
+                        skDat++;
+                        var_v1 = *skDat++;
                         var_v0 = *strPtr++;
                         goto block_13;
                     }
                     goto block_14;
                 }
-                var_v0 = *cdData++;
+                var_v0 = *skDat++;
 block_13:
                 if (var_v1 != var_v0) {
 block_14:
