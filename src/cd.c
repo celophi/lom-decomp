@@ -2381,81 +2381,80 @@ continue_execution:
 }
 
 /**
- * decomp.me link: https://decomp.me/scratch/wLbPa
- * decomp.me (%): 93.23%
+ * decomp.me link: https://decomp.me/scratch/XrcPe
+ * decomp.me (%): 100%
  */
 void CD_DiskValidationCallback(u_char intr, u_char *result)
 {
-    u8 command;
-    u8 *params;
-     s32 temp_v1;
-    u_char var_v1;
-    u8 var_v0;
-    const u_char *strPtr;
-     u8 *cdBase;
-    u_char *skDat;
+    s32 statusWord;
+    u_char expectedChar;
+    u_char discChar;
+    const u_char *expectedId;
+    u_char *discId;
 
-    CD_SYSTEM_V.syncComplete = 1;
-    if ((intr & 0xFF) == 1) {
-        do {
+    CD_SYSTEM_V.syncComplete = TRUE;
 
-        } while (CdGetSector(&CD_SYSTEM.sectorHeaderBuffer, 3) == 0);
-        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.recoveryReadPosition.raw & 0xFFFFFF)) {
-            do {
+    if (intr == 1)
+    {
+        // Wait until the sector header (3 words) is ready
+        while ((expectedChar = (CdGetSector(&CD_SYSTEM.sectorHeaderBuffer, 3) == 0)));
 
-            } while (CdGetSector(&CD_SYSTEM.discValidationId, 8) == 0);
+        // Verify the sector position matches the expected recovery read position (24-bit compare)
+        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.recoveryReadPosition.raw & 0xFFFFFF))
+        {
+            // Wait until the disc validation ID (8 words) is ready
+            while (CdGetSector(&CD_SYSTEM.discValidationId, 8) == 0);
 
-            skDat = CD_SYSTEM.discValidationId;
-            var_v1 = g_DiscValidationId[0];
-            strPtr = g_DiscValidationId;
-            
-            if (var_v1 != 0) {
-                strPtr++;
-                cdBase = (u8*)&CD_SYSTEM;
-loop_8:
-                if (((u32)((var_v1 + 0x80) & 0xFF) < 0x20U) || ((u32)((var_v1 + 0x20) & 0xFF) < 0x10U)) {
-                    if (var_v1 == *skDat) {
-                        skDat++;
-                        var_v1 = *skDat++;
-                        var_v0 = *strPtr++;
-                        goto block_13;
+            expectedId = g_DiscValidationId;
+            discId = CD_SYSTEM.discValidationId;
+            expectedChar = *expectedId++;
+
+            while (expectedChar != 0)
+            {
+                // Special-range characters [0x80,0x9F] or [0xE0,0xEF] use a two-byte match
+                // expectedChar must equal *pDiscData, then the following bytes are compared.
+                if (((u8)(expectedChar + 0x80) < 0x20u) || ((u8)(expectedChar + 0x20) < 0x10u))
+                {
+                    if (expectedChar != *discId++) {
+                        goto validation_failed;
                     }
-                    goto block_14;
+                        
+                    expectedChar = *discId++;
+                    discChar = *expectedId++;
                 }
-                var_v0 = *skDat++;
-block_13:
-                if (var_v1 != var_v0) {
-block_14:
+                else
+                {
+                    discChar = *discId++;
+                }
 
-                    temp_v1 = *(u32*)cdBase & ~4;
-                    *(cdBase + 0x15) = 0x20;
-                    *(volatile u32*)cdBase = temp_v1;
-                    *(u32*)cdBase = (s32)(temp_v1 & ~0x10);
+                if (expectedChar != discChar)
+                {
+validation_failed:
+                    statusWord = CD_SYSTEM.statusFlags.word & ~4u;
+                    CD_SYSTEM_V.initState = CdlModeSize1;
+                    CD_SYSTEM_V.statusFlags.word = statusWord;
+                    CD_SYSTEM.statusFlags.word = statusWord & ~CdlStatShellOpen;
                     CdReadyCallback(NULL);
                     return;
                 }
-                var_v1 = *strPtr++;
-                if (var_v1 != 0) {
-                    goto loop_8;
-                }
+
+                expectedChar = *expectedId++;
             }
 
+            // Validation passed: set disc mode and begin CD reads
             CdReadyCallback(NULL);
-            CD_SYSTEM_V.initCommand = 0x23;
+            CD_SYSTEM_V.initCommand = 0x23; // TODO: name this constant
             CdSyncCallback(CD_SyncCallback_Handler);
-            command = 0xE;
-            params = (u8*)0x801ED950;
-            goto block_18;
+            CdControlF(CdlSetmode, (u_char *)0x801ED950);
+            return;
         }
     }
 
+    // Sector position mismatch or wrong interrupt type: pause and signal error
     CdReadyCallback(NULL);
-    CD_SYSTEM_V.initCommand = 0x22;
+    CD_SYSTEM_V.initCommand = 0x22; // TODO: name this constant
     CdSyncCallback(CD_SyncCallback_Handler);
-    command = CdlPause;
-    params = NULL;
-block_18:
-    CdControlF(command, params);
+    CdControlF(CdlPause, NULL);
 }
 
 
