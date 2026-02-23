@@ -2405,6 +2405,9 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
             // Wait until the disc validation ID (8 words) is ready
             while (CdGetSector(&CD_SYSTEM.discValidationId, 8) == 0);
 
+            // Walk both strings simultaneously, verifying the disc contains the expected ID.
+            // Shift-JIS lead bytes (0x81-0x9F or 0xE0-0xEF) introduce two-byte characters;
+            // both the lead and trail byte must match before continuing.
             expectedId = g_DiscValidationId;
             discId = CD_SYSTEM.discValidationId;
             expectedChar = *expectedId++;
@@ -2415,15 +2418,18 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
                 // expectedChar must equal *pDiscData, then the following bytes are compared.
                 if (((u8)(expectedChar + 0x80) < 0x20u) || ((u8)(expectedChar + 0x20) < 0x10u))
                 {
+                    // Two-byte character: verify the lead byte matches first
                     if (expectedChar != *discId++) {
                         goto validation_failed;
                     }
-                        
+                    
+                    // Then load the trail bytes from each string for the main compare below
                     expectedChar = *discId++;
                     discChar = *expectedId++;
                 }
                 else
                 {
+                    // Single-byte ASCII character: just advance the disc pointer
                     discChar = *discId++;
                 }
 
