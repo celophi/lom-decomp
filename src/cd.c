@@ -2381,7 +2381,7 @@ continue_execution:
 }
 
 /**
- * decomp.me link: https://decomp.me/scratch/7pvW0
+ * decomp.me link: https://decomp.me/scratch/wLbPa
  * decomp.me (%): 93.23%
  */
 void CD_DiskValidationCallback(u_char intr, u_char *result)
