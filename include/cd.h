@@ -93,6 +93,18 @@ typedef struct CdSystem {
 } CdSystem;
 
 typedef struct {
+    u8 dataReady;
+    u8 bufferWrapped;
+    u8 pad[2];
+    s32 readPtr;
+    s32 writePtr;
+    s32 bytesBuffered;
+    s32 wrapOverflow;
+    s32 bytesConsumed;
+    s32 reserved;
+} CdStreamState;
+
+typedef struct {
     u8 u_0[0x38];
     DecDCToutCallbackHandler decDCToutCallbackHandler;
     DrawSyncCallbackHandler drawSyncCallbackHandler;
@@ -148,8 +160,8 @@ extern u8 D_801ED590;
 #define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
 #define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
-#define g_scratchpad ((void*)0x1F800000)
 #define SCRATCHPAD ((void*)0x1F800000)
+#define CD_STREAM_STATE (*(CdStreamState*)0x1F800000)
 
 // Macros
 #define CdControlF_1(cmd) ((int (*)(u_char))CdControlF)(cmd)
