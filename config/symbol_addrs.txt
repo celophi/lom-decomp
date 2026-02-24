@@ -1,4 +1,5 @@
 // CD Functions
+FUN_800116d8                = 0x800116D8;
 CD_Initialize               = 0x80011710;
 CD_Stop                     = 0x800118DC;
 CD_StreamDataChunked        = 0x80011BF4;
