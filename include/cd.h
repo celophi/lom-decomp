@@ -151,6 +151,11 @@ extern CdSystem g_cdSystem;
  */
 extern const u_char g_DiscValidationId[21];
 extern u8 D_801ED590;
+extern s16 D_80042FBC;
+extern s16 D_80042FBE;
+extern s16 D_80042FC0;
+extern s16 D_80042FC2;
+extern s16 D_80046FDC
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
