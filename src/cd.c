@@ -5,6 +5,23 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
+
+/**
+ * decomp.me link: (60.71%) https://decomp.me/scratch/DRBPP
+ */
+void FUN_800116d8(int arg0, s16 arg1, s16 arg2, s16 arg3) 
+{
+    D_80042FBC = arg0;
+    
+    if ((arg0 << 0x10) < 0) {
+        D_80046FDC = arg0;
+    }
+    
+    D_80042FBE = arg1;
+    D_80042FC0 = arg2;
+    D_80042FC2 = arg3;
+}
+
 /**
  * @brief Cold-start initialization of the CD-ROM subsystem
  * 
