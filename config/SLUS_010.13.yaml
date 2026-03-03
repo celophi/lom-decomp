@@ -55,7 +55,7 @@ segments:
     subsegments:
       - [0x800, c, unk1]
       - [0xAAC, c, unk2]
-      - [0x1ED8, c, cd]
+      - [0x1E38, c, cd]
       - [0x49EC, c, unk3]
       - [0x4C48, c, decompression]
       - [0x5088, c, unk4]
