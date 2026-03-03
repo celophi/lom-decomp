@@ -6,6 +6,14 @@
 #include "psyq/libgpu.h"
 
 /**
+ * decomp.me link (93.64%) https://decomp.me/scratch/mXgky
+ */
+void FUN_8001160c(void) 
+{
+    func_800227D0(D_80042FB8, 0x12C, 0);
+}
+
+/**
  * decomp.me link (87.50%) https://decomp.me/scratch/Oy5Dh
  */
 void FUN_80011638(s32 arg0)

@@ -160,6 +160,7 @@ extern s16 D_80042FC2;
 extern s16 D_80046FDC;
 extern s32 D_80042FB8;
 extern u8 D_80046FE0;
+extern s32 D_80042FB8;
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
 #define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
@@ -209,5 +210,6 @@ void func_80022AE8(undefined4 param_1,undefined4 param_2);
 s32 func_80022040(u8 *param_1);
 void FUN_8002279c(undefined4 param_1,u_int param_2);
 void CD_WaitForQueueEmpty(void);
+void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
 
 #endif
