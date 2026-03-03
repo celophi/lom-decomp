@@ -12,6 +12,8 @@
 typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
 typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
+typedef u8* (*codeA)(int, int *);
+typedef void (*codeB)(int);
 
 typedef union {
     CdlLOC pos;
@@ -204,7 +206,8 @@ void CD_StreamDataChunked(undefined2 param_1, codeA param_2, codeB param_3);
 void CD_RecoveryReadyHandler(void);
 void* func_80016E7C(u_char *param_1,u_char *param_2,int param_3);
 void func_80022AE8(undefined4 param_1,undefined4 param_2);
-s32 func_80022040(undefined4 *param_1);
+s32 func_80022040(u8 *param_1);
 void FUN_8002279c(undefined4 param_1,u_int param_2);
+void CD_WaitForQueueEmpty(void);
 
 #endif

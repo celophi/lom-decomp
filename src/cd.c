@@ -480,10 +480,6 @@ do_vsync:
     }
 }
 
-
-typedef u8* (*codeA)(int, int *);
-typedef void (*codeB)(int);
-
 /**
  * decomp.me: (90.95%) https://decomp.me/scratch/Hfuse
  */
