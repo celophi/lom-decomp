@@ -94,3 +94,6 @@ You can use `spimdisasm` to help with matching after producing a binary:
 ```bash
 spimdisasm elfObjDisasm build/slus_010.13.elf output/
 ```
+
+## Notes
+Current esearch points to a Psy-Q SDK version of 4.6 while game functions match somewhere around GCC 2.8.0.
