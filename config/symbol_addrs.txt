@@ -1,4 +1,5 @@
 // CD Functions
+FUN_8001160c                = 0x8001160C;
 FUN_800116d8                = 0x800116D8;
 CD_Initialize               = 0x80011710;
 CD_Stop                     = 0x800118DC;
