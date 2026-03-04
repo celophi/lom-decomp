@@ -23,7 +23,7 @@ OBJCOPY       := $(CROSS)objcopy
 
 # Flags - tune these to match your game's original compiler settings
 # NOTE: -Iinclude removed - we use -Iinclude when cd'd into $(WORK_DIR)
-CFLAGS        := -O2 -g -fsigned-char
+CFLAGS        := -O2 -G0 -g -fsigned-char
 
 # maspsx with --run-assembler flag (this replaces the AS variable)
 # We call maspsx.py --run-assembler which internally calls the system assembler
