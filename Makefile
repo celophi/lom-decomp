@@ -62,7 +62,8 @@ C_SOURCES_G0 := \
 	src/unk3.c \
 	src/unk4.c \
 	src/unk5.c \
-	src/unk6.c 
+	src/unk6.c \
+	src/decomp1.c
 
 C_SOURCES_G4 := src/cd.c
 
