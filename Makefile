@@ -23,7 +23,8 @@ OBJCOPY       := $(CROSS)objcopy
 
 # Flags - tune these to match your game's original compiler settings
 # NOTE: -Iinclude removed - we use -Iinclude when cd'd into $(WORK_DIR)
-CFLAGS        := -O2 -G0 -g -fsigned-char
+CFLAGS_G0     := -O2 -G0 -g -fsigned-char
+CFLAGS_G4	  := -O2 -G4 -g -fsigned-char
 
 # maspsx with --run-assembler flag (this replaces the AS variable)
 # We call maspsx.py --run-assembler which internally calls the system assembler
@@ -52,10 +53,23 @@ BIN           := build/$(GAME).bin
 rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
             $(filter $(subst *,%,$2),$1)
 
-C_SOURCES := $(call rwildcard,$(SRC_DIR),*.c)
+C_SOURCES_G0 := \
+	src/psyq/libcd/SYS.c \
+	src/psyq/libetc/INTR.c \
+	src/decompression.c \
+	src/unk1.c \
+	src/unk2.c \
+	src/unk3.c \
+	src/unk4.c \
+	src/unk5.c \
+	src/unk6.c 
+
+C_SOURCES_G4 := src/cd.c
 
 # Objects will be built in /tmp_build/build/src/*.o
-C_OBJECTS     := $(patsubst $(SRC_DIR)/%.c,$(WORK_DIR)/build/$(SRC_DIR)/%.o,$(C_SOURCES))
+C_OBJECTS_G0   := $(patsubst $(SRC_DIR)/%.c,$(WORK_DIR)/build/$(SRC_DIR)/%.o,$(C_SOURCES_G0))
+C_OBJECTS_G4   := $(patsubst $(SRC_DIR)/%.c,$(WORK_DIR)/build/$(SRC_DIR)/%.o,$(C_SOURCES_G4))
+C_OBJECTS      := $(C_OBJECTS_G0) $(C_OBJECTS_G4)
 
 # Collect non-matching asm files (e.g. asm/nonmatchings/subdir/func.s)
 # NOTE: These are NOT built as separate objects because they're included via INCLUDE_ASM in C files
@@ -130,9 +144,16 @@ $(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(WORK_DIR)/linker/$(GAME).ld
 # C files don't need --macro-inc since GCC output doesn't use ASPSX directives
 # Compile from /tmp_build/src/*.c with includes from /tmp_build/include
 # Static pattern rule: for each src/X.c, build /tmp_build/build/src/X.o from /tmp_build/src/X.c
-$(C_OBJECTS): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+# Static pattern rule: CFLAGS_A sources
+$(C_OBJECTS_G0): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(WORK_DIR) && $(CC) $(CFLAGS) -Iinclude -c $(SRC_DIR)/$*.c -S -o - | \
+	cd $(WORK_DIR) && $(CC) $(CFLAGS_G0) -Iinclude -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+
+# Static pattern rule: CFLAGS_B sources
+$(C_OBJECTS_G4): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+	@mkdir -p $(@D)
+	cd $(WORK_DIR) && $(CC) $(CFLAGS_G4) -Iinclude -c $(SRC_DIR)/$*.c -S -o - | \
 		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
 
 # --- Asm files with ASPSX directives (non-matching + data + header) ---
