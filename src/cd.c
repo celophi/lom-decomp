@@ -277,7 +277,7 @@ void CD_Stop(void)
  *
  * @return Total number of decompressed bytes written to destination
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/KtdxA
+ * @see decomp.me: (100%) https://decomp.me/scratch/TkBHq
  */
 s32 CD_StreamData(s32 command, u32 destination) 
 {
