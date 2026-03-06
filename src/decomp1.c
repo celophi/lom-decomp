@@ -1,4 +1,5 @@
 #include "decomp1.h"
+#include "psyq/libgpu.h"
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/mXgky

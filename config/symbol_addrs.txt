@@ -62,6 +62,13 @@ CdGetDiskType               = 0x80020248;
 CdIntToPos                  = 0x800203BC;
 CdPosToInt                  = 0x800204C0;
 VSync                       = 0x8002054c;
+MoveImage                   = 0x80019AF4;
+ClearOTagR                  = 0x80019C74;
+DrawOTag                    = 0x80019D7C;
+PutDrawEnv                  = 0x80019DEC;
+PutDispEnv                  = 0x80019FB8;
+SetDefDrawEnv               = 0x8001C56C;
+SetDefDispEnv               = 0x8001C62C;
 
 // Globals
 g_DiscValidationId          = 0x80035230;
@@ -126,3 +133,5 @@ DrawSyncCallback = 0x80019690;
 FUN_80023010 = 0x80023010;
 FUN_80022400 = 0x80022400;
 FUN_80140d48 = 0x80140d48;
+func_800157DC = 0x800157DC;
+func_800158E0 = 0x800158E0;
