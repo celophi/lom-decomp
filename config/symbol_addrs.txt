@@ -1,6 +1,9 @@
-// CD Functions
+GFX_Transition              = 0x80011358;
 FUN_8001160c                = 0x8001160C;
+FUN_80011638                = 0x80011638;
 FUN_800116d8                = 0x800116D8;
+
+// cd.c
 CD_Initialize               = 0x80011710;
 CD_Stop                     = 0x800118DC;
 CD_StreamDataChunked        = 0x80011BF4;
@@ -72,6 +75,8 @@ SetDefDispEnv               = 0x8001C62C;
 
 // Globals
 g_DiscValidationId          = 0x80035230;
+g_GfxDoubleBuffer           = 0x80042CA0;
+g_GfxPrimaryFrame           = 0x80042E20;
 g_cdAudioReady              = 0x801ed591;
 g_cdSystem                  = 0x801ed800;
 g_cdStatusByte3             = 0x801ed802;
@@ -88,7 +93,6 @@ g_cdReadyCallbackResult     = 0x801ed96c;
 g_defaultCdResource         = 0x801ed990;
 g_SKCDPOSE_DAT              = 0x801ed998;
 g_cdResource176             = 0x801edf18;
-
 
 // Uncategorized
 __main = 0x8002e850;
@@ -121,10 +125,8 @@ FUN_80022aa8 = 0x80022aa8;
 FUN_80022ac8 = 0x80022ac8;
 FUN_8002279c = 0x8002279c;
 FUN_80015c38 = 0x80015c38;
-FUN_80011358 = 0x80011358;
 ClearImage = 0x8001990c;
 FUN_80060814 = 0x80060814;
-FUN_80011638 = 0x80011638;
 FUN_800141ec = 0x800141ec;
 ClearPointer = 0x80014ad0;
 CD_ResetSystem = 0x80014014;
