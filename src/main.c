@@ -2,6 +2,9 @@
 
 u32 D_800102AC;
 
+/**
+ * decomp.me link (91.90%) https://decomp.me/scratch/No2jL
+ */
 void Main(void) 
 {
     RECT rect;
