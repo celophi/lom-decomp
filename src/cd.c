@@ -1361,18 +1361,13 @@ UpdateStatusFlags:  // Update status flags with mask
  * - Must be called every frame for correct timeout behavior
  * - The 1/4/30-frame delay constants assume NTSC (60 Hz) VSync rate
  *
- * @see decomp.me: (99.86%) https://decomp.me/scratch/GipRk
+ * @see decomp.me: (100%) https://decomp.me/scratch/IvxZG
  */
 s32 CD_RecoveryStateMachine(void) 
 {
     u_char filterParams[2];
     s32 timestamp;
     u8 initCommandByte;
-    s32 initCommand;
-    volatile CdSystem* cdSystem;
-    const u8 filterResult = 1;
-
-    cdSystem = &CD_SYSTEM_V;
    
     // Bail out if bit 3 (recovery mode) is not set
     if (!(CD_SYSTEM.statusFlags.word & 8)) 
@@ -1414,8 +1409,8 @@ s32 CD_RecoveryStateMachine(void)
             CdSyncCallback(CD_SyncCallback_Handler);
             CD_SYSTEM.initCommand = 0x11;
             
-            filterParams[0] = filterResult;
-            filterParams[1] = filterResult;
+            filterParams[0] = 1;
+            filterParams[1] = 1;
             CdControlF(CdlSetfilter, filterParams);
             CD_SYSTEM.initState = 3U;
             CD_SYSTEM.vsyncTimestamp = VSync(-1);
@@ -1439,29 +1434,22 @@ s32 CD_RecoveryStateMachine(void)
             CdSyncCallback(CD_SyncCallback_Handler);
 
             initCommandByte = CD_SYSTEM.initCommand;
-            initCommand = (s32) initCommandByte;
-            
-            if (initCommand != 0x11) 
+
+            switch (initCommandByte) 
             {
-                // Need to get rid of this silly do/while
-                do {
-                    if (initCommand >= 0x12 && (CD_SYSTEM.initCommand == 0x12))
-                    {
-                        CdControlF(0x09, NULL);
-                    }
-                    else 
-                    {
-                        filterParams[0] = filterResult;
-                        filterParams[1] = filterResult;
-                        CdControlF(CdlSetfilter, filterParams);
-                        cdSystem->initCommand = 0x10U;
-                    }
-                }
-                while(0);
-            }
-            else 
-            {
-                CdControlF(CdlDemute, NULL);
+                case 0x0:
+                default:
+                    filterParams[0] = 1;
+                    filterParams[1] = 1;
+                    CdControlF(CdlSetfilter, filterParams);
+                    CD_SYSTEM_V.initCommand = 0x10U;
+                    break;
+                case 0x11:
+                    CdControlF(CdlDemute, NULL);
+                    break;
+                case 0x12:
+                    CdControlF(CdlPause, NULL);
+                    break;
             }
 
             // Subtract 30 to allow immediate re-entry on the next timeout cycle
