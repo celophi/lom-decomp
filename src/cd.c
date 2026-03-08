@@ -2677,3 +2677,11 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes) {
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/OxunQ
+ */
+void FUN_800141ec(s32 arg0, u32 arg1) 
+{
+    CD_QueueCommand(6, arg0, arg1, 0);
+}
