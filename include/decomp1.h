@@ -2,6 +2,7 @@
 #define _DECOMP1_H
 
 #include "common.h"
+#include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
 typedef struct {
@@ -53,5 +54,22 @@ extern FrameBufferUnion g_GfxPrimaryFrame;
 // prototypes
 void func_800157DC(void);
 void func_800158E0(void);
+void FUN_80011638(int param_1);
+undefined* FUN_80015c18(void);
+undefined* FUN_80015c28(void);
+undefined* FUN_80015c38(void);
+int FUN_80015c58(void);
+void FUN_80016784(void);
+undefined4 FUN_8002129c(undefined4 param_1);
+undefined4 FUN_80021fbc(void);
+void FUN_8002279c(undefined4 param_1, u_int param_2);
+void FUN_80022aa8(void);
+void FUN_80022ac8(void);
+undefined4 FUN_8004fd14(undefined4 param_1);
+u32 FUN_80060814();
+u32 FUN_80140018(u32 param_1);
+void GFX_Transition(s32 skipScreenClear);
+void InitVSyncController(void);
+void InitializeControllers(undefined1 controllerMode);
 
 #endif

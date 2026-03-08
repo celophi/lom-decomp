@@ -1,3 +1,4 @@
+Main                        = 0x80010D58;
 GFX_Transition              = 0x80011358;
 FUN_8001160c                = 0x8001160C;
 FUN_80011638                = 0x80011638;
@@ -93,6 +94,7 @@ g_cdReadyCallbackResult     = 0x801ed96c;
 g_defaultCdResource         = 0x801ed990;
 g_SKCDPOSE_DAT              = 0x801ed998;
 g_cdResource176             = 0x801edf18;
+D_800102AC                  = 0x800102AC;
 
 // Uncategorized
 __main = 0x8002e850;
