@@ -26,6 +26,8 @@ OBJCOPY       := $(CROSS)objcopy
 CFLAGS_G0     := -O2 -G0 -g -fsigned-char
 CFLAGS_G4	  := -O2 -G4 -g -fsigned-char
 
+INCLUDE_FLAGS := -Iinclude -Iinclude/psyq
+
 # maspsx with --run-assembler flag (this replaces the AS variable)
 # We call maspsx.py --run-assembler which internally calls the system assembler
 MASPSX_AS     := python3 tools/maspsx/maspsx.py --run-assembler
@@ -149,14 +151,14 @@ $(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(WORK_DIR)/linker/$(GAME).ld
 # Static pattern rule: CFLAGS_A sources
 $(C_OBJECTS_G0): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(WORK_DIR) && $(CC) $(CFLAGS_G0) -Iinclude -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+	cd $(WORK_DIR) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
 
 # Static pattern rule: CFLAGS_B sources
 $(C_OBJECTS_G4): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(WORK_DIR) && $(CC) $(CFLAGS_G4) -Iinclude -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+	cd $(WORK_DIR) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
 
 # --- Asm files with ASPSX directives (non-matching + data + header) ---
 # These need --macro-inc to handle directives like 'nonmatching', 'dlabel', etc.
@@ -166,7 +168,7 @@ $(OTHER_OBJ): $(WORK_DIR)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | \
 		python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | \
-		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
 
 # ---------------- Binary output + padding ----------------
 
@@ -195,7 +197,7 @@ $(TARGET_OBJ): $(WORK_DIR)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | \
 		python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | \
-		$(MASPSX_AS) -Iinclude $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
 
 # Build all target objects (for objdiff progress tracking)
 target-objects: $(COPY_SENTINEL) $(TARGET_OBJ)

@@ -1,5 +1,7 @@
 #include "main.h"
 
+u32 D_800102AC;
+
 void Main(void) 
 {
     RECT rect;
