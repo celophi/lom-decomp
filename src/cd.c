@@ -2701,3 +2701,11 @@ void func_80014218(s32 arg0, s32 arg1)
 {
     CD_QueueCommand(6, arg0 & 0xFFFF, 0, arg1);
 }
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/iUUQh
+ */
+void func_80014244(s32 arg0) 
+{
+    CD_QueueCommand(21, arg0, 0, 0);
+}
