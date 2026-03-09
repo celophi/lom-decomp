@@ -277,7 +277,7 @@ void CD_Stop(void)
  *
  * @return Total number of decompressed bytes written to destination
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/TkBHq
+ * @see decomp.me: (100%) https://decomp.me/scratch/SvWOg
  */
 s32 CD_StreamData(s32 command, u32 destination) 
 {
@@ -300,7 +300,8 @@ s32 CD_StreamData(s32 command, u32 destination)
     s32 sentinel;
 
     /* Block until any in-progress CD commands finish */
-    while (CD_UpdateAndProcessQueue() != 0) {
+    while (CD_UpdateAndProcessQueue() != 0) 
+    {
         VSync(0);
     }
 
@@ -321,113 +322,120 @@ s32 CD_StreamData(s32 command, u32 destination)
     streamState2 = &CD_STREAM_STATE;
 
     /* === Main streaming loop === */
-    while (TRUE) {
-        if (VSync(-1) < (timestamp + 30)) {
+    while (TRUE) 
+    {
+        if (VSync(-1) < (timestamp + 30)) 
+        {
             /* Timeout hasn't elapsed — check if callback signaled new data */
             if (streamState2->dataReady != 1) {
                 continue;
             }
             
             /* === Decompression loop: process all available buffered data === */
-            while (TRUE) {
+            do
+            {
                 bytesBuffered = streamState2->bytesBuffered;
                 
                 /* Calculate source-end boundary for decompression.
                  * If we have fewer bytes buffered than total remaining, hold back
                  * 280 bytes as a safety margin to avoid reading incomplete sectors.
                  * Otherwise use the exact remaining size as the boundary. */
-                if (bytesBuffered < remainingDataSize) {
+                if (bytesBuffered < remainingDataSize) 
+                {
                     decompressEnd = (streamState2->readPtr + bytesBuffered) - 280;
-                } else {
+                } 
+                else 
+                {
                     decompressEnd = streamState2->readPtr + remainingDataSize;
                 }
                 
                 /* Decompress a chunk; returns 0 when all output is complete */
-                if (CD_DecompressData(&CD_STREAM_STATE.writePtr, &destination, decompressEnd, -4U) == 0) {
+                if (CD_DecompressData(&CD_STREAM_STATE.writePtr, &destination, decompressEnd, -4U) == 0) 
+                {
                     return destination - destStart;
                 }
-        
-                /* If bytesBuffered changed mid-iteration (callback wrote more data),
-                 * re-loop to recalculate the decompression boundary */
-                if (bytesBuffered != CD_STREAM_STATE.bytesBuffered) {
-                    continue;
-                }
-        
-                /* All currently buffered data has been fed to the decompressor */
-                bytesConsumed = streamState2->writePtr - streamState2->readPtr;
-                streamState2->bytesConsumed = bytesConsumed;
-                ClearPointer(&CD_STREAM_STATE.dataReady);
-                remainingDataSize -= bytesConsumed;
-                
-                /* If the ring buffer hasn't wrapped, yield to let more data arrive */
-                if (streamState2->bufferWrapped != 1) {
-                    goto do_vsync;
-                }
-
-                /* --- Handle ring buffer wrap-around --- */
-  
-                if (streamState2->wrapOverflow != 0) {
-                    
-                    decompressEnd = streamState2->wrapOverflow;  /* wrapOverflow amount */
-                    
-                    /* Relocate unprocessed tail bytes to just before the ring buffer
-                     * end (0x801DC118), making the data contiguous again. */
-                    unprocessedBytes = streamState2->bytesBuffered - bytesConsumed;
-                    alignRemainder = (unprocessedBytes & 3);
-                    relocDstAddr = 0x801DC118 - unprocessedBytes;
-                    prevReadPtr = streamState2->readPtr;
-                    
-                    /* Word-align the relocation destination downward */
-                    copySize = 4 - alignRemainder;
-                    streamState2->writePtr = relocDstAddr;
-                    streamState2->readPtr = relocDstAddr;
-                    copySize = copySize & 3;
-                    alignRemainder = unprocessedBytes + 3;
-                    
-                    /* Adjust pointers to include alignment padding bytes */
-                    relocDstAddr = (s32)(relocDstAddr - copySize);
-                    relocSrcPtr = (s32*)((prevReadPtr + bytesConsumed) - copySize);
-                    
-                    /* Merge overflow bytes into the new contiguous buffer region */
-                    streamState2->bytesBuffered = decompressEnd + unprocessedBytes;
-                    copySize = alignRemainder;
-                    
-                    if (copySize < 0) {
-                        copySize = unprocessedBytes + 6;
-                    }
-
-                    /* Copy unprocessed bytes word-by-word to the relocated position */
-                    
-                    unprocessedBytes = (copySize >> 2);
-                    unprocessedBytes -= 1;
-                    if (unprocessedBytes != -1) {
-                        sentinel = -1;
-                        while(TRUE) {
-                            *(s32*)relocDstAddr = *relocSrcPtr++;
-                            relocDstAddr+=4;
-                            unprocessedBytes--;
-                            if (unprocessedBytes == sentinel) {
-                                break;
-                            }
-                        }
-                    }
-                    
-                } else {
-                    /* No wrap — simply advance the read pointer past consumed data */
-                    streamState2->readPtr += bytesConsumed;
-                    streamState2->bytesBuffered -= bytesConsumed;
-                }
-
-                /* Memory barrier: prevent compiler from reordering the ready flag write */
-                *(volatile u8*)streamState2 = 1;
-                
-                goto do_vsync;
+            } 
+            while (bytesBuffered != CD_STREAM_STATE.bytesBuffered);
+            
+            /* All currently buffered data has been fed to the decompressor */
+            bytesConsumed = streamState2->writePtr - streamState2->readPtr;
+            streamState2->bytesConsumed = bytesConsumed;
+            ClearPointer(&CD_STREAM_STATE.dataReady);
+            remainingDataSize -= bytesConsumed;
+            
+            /* If the ring buffer hasn't wrapped, yield to let more data arrive */
+            if (streamState2->bufferWrapped != 1) 
+            {
+                timestamp = VSync(-1);
+                continue;
             }
-        } 
+
+            /* --- Handle ring buffer wrap-around --- */
+
+            if (streamState2->wrapOverflow != 0) 
+            {
+                
+                decompressEnd = streamState2->wrapOverflow;  /* wrapOverflow amount */
+                
+                /* Relocate unprocessed tail bytes to just before the ring buffer
+                 * end (0x801DC118), making the data contiguous again. */
+                unprocessedBytes = streamState2->bytesBuffered - bytesConsumed;
+                alignRemainder = (unprocessedBytes & 3);
+                relocDstAddr = 0x801DC118 - unprocessedBytes;
+                prevReadPtr = streamState2->readPtr;
+                
+                /* Word-align the relocation destination downward */
+                copySize = 4 - alignRemainder;
+                streamState2->writePtr = relocDstAddr;
+                streamState2->readPtr = relocDstAddr;
+                copySize = copySize & 3;
+                alignRemainder = unprocessedBytes + 3;
+                
+                /* Adjust pointers to include alignment padding bytes */
+                relocDstAddr = (s32)(relocDstAddr - copySize);
+                relocSrcPtr = (s32*)((prevReadPtr + bytesConsumed) - copySize);
+                
+                /* Merge overflow bytes into the new contiguous buffer region */
+                streamState2->bytesBuffered = decompressEnd + unprocessedBytes;
+                copySize = alignRemainder;
+                
+                if (copySize < 0) 
+                {
+                    copySize = unprocessedBytes + 6;
+                }
+
+                /* Copy unprocessed bytes word-by-word to the relocated position */
+                
+                unprocessedBytes = (copySize >> 2);
+                unprocessedBytes--;
+                
+                if (unprocessedBytes != -1)
+                {
+                    sentinel = -1;
+                    while (unprocessedBytes != sentinel) 
+                    {
+                        *(s32*)relocDstAddr = *relocSrcPtr++;
+                        relocDstAddr+=4;
+                        unprocessedBytes--;
+                    }
+                }
+            }
+            else 
+            {
+                /* No wrap — simply advance the read pointer past consumed data */
+                streamState2->readPtr += bytesConsumed;
+                streamState2->bytesBuffered -= bytesConsumed;
+            }
+
+            /* Memory barrier: prevent compiler from reordering the ready flag write */
+            *(volatile u8*)streamState2 = 1;
+            
+            timestamp = VSync(-1);
+            continue;
+        }
         
         /* Timeout elapsed without data — pump the CD command queue */
         CD_UpdateAndProcessQueue();
-do_vsync:
         timestamp = VSync(-1);
     }
 }
