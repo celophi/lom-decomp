@@ -58,7 +58,7 @@
  * - The destination buffer must be large enough to hold the fully decompressed
  *   output; no overflow check is performed beyond the `dstEnd` guard
  *
- * @see decomp.me: (99.70%) https://decomp.me/scratch/zMke3
+ * @see decomp.me: (99.83%) https://decomp.me/scratch/MlH6P
  */
 s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd) 
 {
@@ -77,12 +77,10 @@ s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
     u8 param2;
     u8 param3;
     
-    
+    u32 something;
     u32 tempSum;
     
     s32 seed;
-    s32 combined;
-    u32 valueHigh;
     
     srcPtr = *srcStart;
     dstPtr = *dstStart;
@@ -127,13 +125,13 @@ s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
                 
                 srcPtr += 3;
                 iterations = nextByte + 2;
-                param0 = param1 >> 4;
+                param2 = param1 >> 4;
                 param1 = param1 & 0xf;
                 
                 do 
                 {
                     dstPtr[0] = param1;
-                    dstPtr[1] = param0;
+                    dstPtr[1] = param2;
                     dstPtr += 2;
                 } 
                 while (--iterations != 0);
@@ -163,14 +161,12 @@ s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
                 nextByte = srcPtr[1];
                 
                 srcPtr += 5;
-                tempPtr = &dstPtr[2];
                 iterations = nextByte + 2;
                 
                 do {
                     *dstPtr = param1;
-                    tempPtr[-1] = param0;
-                    tempPtr[0] = param3;
-                    tempPtr += 3;
+                    (&dstPtr[2])[-1] = param0;
+                    (&dstPtr[2])[0] = param3;
                     dstPtr += 3;
                 } while (--iterations != 0);
                 
@@ -276,31 +272,31 @@ s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
                 
             case 0xFB:
                 param2 = srcPtr[2];
-                param0 = srcPtr[3];
+                something = srcPtr[3];
                 nextByte = srcPtr[1];
                 param3 = srcPtr[4];
             
                 iterations = nextByte + 3;
-                seed = (s32)param3 << 24;   // place param3 in the high byte for sign extension
+                seed = param3 << 24;   // place param3 in the high byte for sign extension
                 srcPtr += 5;
             
                 do {
                     // Write the two current bytes
                     ((u8*)dstPtr)[0] = param2;
-                    ((u8*)dstPtr)[1] = param0;
+                    ((u8*)dstPtr)[1] = something;
                     dstPtr += 2;
             
                     // Sign-extend param3 via arithmetic right shift
                      tempSum = seed >> 24;
             
                     // Form the 16-bit value (param0 << 8) | param2
-                    combined = param0;
-                    combined = (combined << 8) | param2;
-                    tempSum += combined;    // add to the sign-extended constant
+                    
+                    
+                    tempSum += (something << 8) | param2;    // add to the sign-extended constant
             
                     // Update for next iteration
-                    param2 = (u8)tempSum ;         // low byte
-                    param0 = (u8)(tempSum >> 8);  // high byte
+                    param2 = tempSum ;         // low byte
+                    something = (tempSum >> 8);  // high byte
                 } while (--iterations != 0);
                 break;
                 
@@ -321,7 +317,8 @@ s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
                 break;
                 
             case 0xFD:
-                param2 = srcPtr[1];
+                param1 = srcPtr[1];
+                param2 = param1;
                 nextByte = srcPtr[2];
     
                 srcPtr += 3;
