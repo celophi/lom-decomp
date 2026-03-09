@@ -2717,3 +2717,40 @@ s32 func_80014270(s32 arg0)
 {
     return CD_RESOURCE_ENTRIES[arg0 & 0xffff].dataSize;
 }
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/vfLUw
+ */
+s32 func_80014290(void)
+{
+    CdStatusFlags flags;
+
+    flags = CD_SYSTEM.statusFlags;
+    
+    if (flags.bytes.b0 & 1) 
+    {
+        return 1;
+    }
+    
+    if ((flags.bytes.b0 & 2) != 0) 
+    {
+        if (flags.bytes.b0 & 4) 
+        {
+            return 2;
+        }
+        
+        return 3;
+    }
+    
+    if (flags.bytes.b0 & 4) 
+    {
+        return 4;
+    }
+    
+    if (CD_SYSTEM.statusFlags.bytes.b3 == 1)
+    {
+        return 5;
+    }
+    
+    return 0;
+}
