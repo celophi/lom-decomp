@@ -2709,3 +2709,11 @@ void func_80014244(s32 arg0)
 {
     CD_QueueCommand(21, arg0, 0, 0);
 }
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/SGZF5
+ */
+s32 func_80014270(s32 arg0) 
+{
+    return CD_RESOURCE_ENTRIES[arg0 & 0xffff].dataSize;
+}

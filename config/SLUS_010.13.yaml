@@ -58,7 +58,7 @@ segments:
       - [0x1558, c, main]
       - [0x1B58, c, decomp1]
       - [0x1F10, c, cd]
-      - [0x4A70, c, unk3]
+      - [0x4A90, c, unk3]
       - [0x4C48, c, decompression]
       - [0x5088, c, unk4]
       - [0xEB2C, c, psyq/libcd/SYS]
