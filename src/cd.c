@@ -2783,3 +2783,29 @@ void func_800142F8(void)
 
     CdFlush();
 }
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/gsUc3
+ */
+s32 func_800143C0(void) 
+{
+    s32 flags;
+    s32 result;
+
+    flags = CD_SYSTEM.statusFlags.word;
+    result = 0;
+    
+    if (flags & 8) {
+        return 1;
+    }
+
+    if (CD_SYSTEM.currentCommand == 0) {
+        if ((CD_SYSTEM.initCommand == 0) && !(flags & 7) && (CD_SYSTEM.queueReadIndex == CD_SYSTEM.queueWriteIndex)) {
+            result = 1;
+            CD_SYSTEM.statusFlags.word |= 8;
+            CD_SYSTEM.initState = 0;
+        }
+    }
+    
+    return result;
+}
