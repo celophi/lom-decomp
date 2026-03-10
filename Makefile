@@ -61,7 +61,6 @@ C_SOURCES_G0 := \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
-	src/unk3.c \
 	src/unk4.c \
 	src/unk5.c \
 	src/unk6.c \

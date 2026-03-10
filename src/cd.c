@@ -2809,3 +2809,11 @@ s32 func_800143C0(void)
     
     return result;
 }
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/9bgSH
+ */
+void func_80014434(void) 
+{
+    D_801ED801 = 1;
+}
