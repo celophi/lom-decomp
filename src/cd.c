@@ -2727,30 +2727,59 @@ s32 func_80014290(void)
 
     flags = CD_SYSTEM.statusFlags;
     
-    if (flags.bytes.b0 & 1) 
-    {
+    if (flags.bytes.b0 & 1) {
         return 1;
     }
     
-    if ((flags.bytes.b0 & 2) != 0) 
-    {
-        if (flags.bytes.b0 & 4) 
-        {
+    if ((flags.bytes.b0 & 2) != 0) {
+        if (flags.bytes.b0 & 4) {
             return 2;
         }
         
         return 3;
     }
     
-    if (flags.bytes.b0 & 4) 
-    {
+    if (flags.bytes.b0 & 4) {
         return 4;
     }
     
-    if (CD_SYSTEM.statusFlags.bytes.b3 == 1)
-    {
+    if (CD_SYSTEM.statusFlags.bytes.b3 == 1) {
         return 5;
     }
     
     return 0;
+}
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/HSXMR
+ */
+void func_800142F8(void) 
+{
+    CdSyncCallback((CdlCB)CD_SYSTEM.u_168);
+    CdReadyCallback(CD_SYSTEM.previousSyncCallback);
+    
+    while (CdControlB(9U, NULL, NULL) == 0);
+    
+    CD_SYSTEM.resourceIndex = 0xFFFE;
+    CD_SYSTEM.pendingQueueCount = 0;
+    CD_SYSTEM.currentResourceIndex = 0;
+    CD_SYSTEM.currentDataSize = 0;
+    CD_SYSTEM.targetDataSize = 0;
+    CD_SYSTEM.playbackState = 0;
+    CD_SYSTEM.transferCallback = NULL;
+    CD_SYSTEM.currentCommand = 0;
+    CD_SYSTEM.initCommand = 0;
+    CD_SYSTEM.retryCount = 0;
+    CD_SYSTEM.retryCounter = 0;
+    CD_SYSTEM.lastCommand = 0;
+    CD_SYSTEM.dstBuffer = 0;
+    CD_SYSTEM.callback = NULL;
+    CD_SYSTEM.statusFlags.word &= ~0x10;
+    CD_SYSTEM.statusFlags.bytes.b1 = 0;
+    CD_SYSTEM.statusFlags.bytes.b2 = 0;
+    CD_SYSTEM.vsyncTimestamp = VSync(-1);
+    CD_SYSTEM.queueReadIndex = 0;
+    CD_SYSTEM.queueWriteIndex = 0;
+
+    CdFlush();
 }
