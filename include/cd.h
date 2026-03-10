@@ -138,6 +138,7 @@ extern u8 g_cdAudioReady;
 extern s32 g_cdResource176;
 extern s8 g_cdStatusByte3;
 extern u8 g_initState;
+extern s8 D_801ED801;
 
 /**
  * This is a flag that indicates the number of pending commands in the CD command queue.
