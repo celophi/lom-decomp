@@ -267,10 +267,10 @@ base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4)
 	@cp -r $(STAGING)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
 	@echo "Base objects built."
 
-objdiff-objects: target-objects base-objects
+objdiff-objects: target-objects base-objects $(addsuffix -objdiff,$(OVERLAYS))
 
 objdiff-config:
-	python3 tools/generate_objdiff_config.py
+	python3 tools/objdiff/generate_objdiff_config.py
 
 
 # ============================================================================
