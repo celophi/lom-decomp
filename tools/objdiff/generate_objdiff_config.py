@@ -1,89 +1,149 @@
 #!/usr/bin/env python3
 """
-Generate objdiff.json configuration for progress tracking.
-This script reads the splat YAML config and creates an objdiff.json
-that maps source files to their target and base objects.
+Generate objdiff.json for progress tracking across the main executable and overlays.
+
+Reads the splat YAML configs to discover all C translation units, then writes
+an objdiff.json with:
+  - One progress category per build target ("main", "checkps", etc.)
+  - One unit per C file, with target_path (splat asm) and base_path (compiled C)
+  - Units tagged with their category for per-overlay progress breakdowns
+
+Usage:
+    python3 tools/objdiff/generate_objdiff_config.py
 """
 
 import json
 import yaml
 from pathlib import Path
 
-# Project paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-CONFIG_PATH = PROJECT_ROOT / "config" / "SLUS_010.13.yaml"
+MAIN_CONFIG = PROJECT_ROOT / "config" / "SLUS_010.13.yaml"
+OVERLAY_CONFIG_DIR = PROJECT_ROOT / "config" / "overlays"
 OUTPUT_PATH = PROJECT_ROOT / "objdiff.json"
 
-def load_splat_config():
-    """Load the splat YAML configuration."""
-    with open(CONFIG_PATH, 'r') as f:
+# SDK files are not our code — skip them in progress tracking
+SKIP_PATHS = {"psyq"}
+
+
+def load_yaml(path: Path) -> dict:
+    with open(path, "r") as f:
         return yaml.safe_load(f)
 
-def is_psyq_file(file_name: str) -> bool:
-    """Check if the file belongs to the psyq library folder."""
-    # Matches psyq/something.c, psyq/libc/something.c, etc.
-    parts = file_name.split('/')
-    return 'psyq' in parts
 
-
-def generate_objdiff_config():
-    """Generate objdiff.json from splat config."""
-    config = load_splat_config()
-    
-    # Extract options
-    options = config.get('options', {})
-    game_name = options.get('basename', 'slus_010.13')
-    
-    # Units list - one for each C file in the code segments
-    units = []
-    
-    # Parse segments to find code segments with C files
-    segments = config.get('segments', [])
-    
-    for segment in segments:
-        # Skip if segment is a list (e.g. [0x2F800])
+def extract_c_subsegments(config: dict) -> list[str]:
+    """Pull out file names from [offset, 'c', name] subsegment entries."""
+    names = []
+    for segment in config.get("segments", []):
         if not isinstance(segment, dict):
             continue
-            
-        if segment.get('type') == 'code':
-            subsegments = segment.get('subsegments', [])
-            
-            for subseg in subsegments:
-                # Check if it's a C file subsegment
-                # Format: [offset, 'c', name] or similar
-                if isinstance(subseg, list) and len(subseg) >= 3 and subseg[1] == 'c':
-                    file_name = subseg[2]
-                    
-                    # Skip psyq / SDK files
-                    if is_psyq_file(file_name):
-                        continue
-                    
-                    # Create unit entry
-                    unit = {
-                        "name": f"main/{file_name}",
-                        "target_path": f"build/asm/{file_name}.o",
-                        "base_path": f"build/src/{file_name}.o"
-                    }
-                    units.append(unit)
-    
-    # Create objdiff.json structure
+        for subseg in segment.get("subsegments", []):
+            if isinstance(subseg, list) and len(subseg) >= 3 and subseg[1] == "c":
+                names.append(subseg[2])
+    return names
+
+
+def should_skip(file_name: str) -> bool:
+    return any(part in SKIP_PATHS for part in file_name.split("/"))
+
+
+def build_main_units(config: dict) -> list[dict]:
+    """Create units for the main SLUS executable."""
+    units = []
+    for name in extract_c_subsegments(config):
+        if should_skip(name):
+            continue
+        units.append({
+            "name": f"main/{name}",
+            "target_path": f"build/asm/{name}.o",
+            "base_path": f"build/src/{name}.o",
+            "metadata": {
+                "progress_categories": ["main"],
+            },
+        })
+    return units
+
+
+def build_overlay_units(config: dict, overlay_name: str) -> list[dict]:
+    """Create units for one overlay from its splat config."""
+    options = config.get("options", {})
+    asm_path = options.get("asm_path", f"asm/overlays/{overlay_name}")
+    build_path = options.get("build_path", f"build/overlays/{overlay_name}")
+    src_path = options.get("src_path", f"src/overlays/{overlay_name}")
+
+    units = []
+    for name in extract_c_subsegments(config):
+        if should_skip(name):
+            continue
+        units.append({
+            "name": f"{overlay_name}/{name}",
+            "target_path": f"{build_path}/target/{name}.o",
+            "base_path": f"{build_path}/{src_path}/{name}.o",
+            "metadata": {
+                "progress_categories": [overlay_name],
+            },
+        })
+    return units
+
+
+def discover_overlay_configs() -> list[Path]:
+    """Find all overlay YAML configs in config/overlays/."""
+    if not OVERLAY_CONFIG_DIR.is_dir():
+        return []
+    return sorted(OVERLAY_CONFIG_DIR.glob("*.yaml"))
+
+
+def overlay_name_from_config(config: dict) -> str:
+    """Derive the lowercase overlay directory name from the config.
+
+    Uses the segment name (e.g. 'checkps') which matches the directory
+    convention: src/overlays/checkps/, asm/overlays/checkps/, etc.
+    """
+    for segment in config.get("segments", []):
+        if isinstance(segment, dict) and "name" in segment:
+            return segment["name"]
+    # Fallback: lowercase the config basename without extension
+    return config.get("name", "unknown").split(".")[0].lower()
+
+
+def main():
+    categories = [{"id": "main", "name": "Main Executable"}]
+    units = []
+
+    # ── Main executable ──
+    if MAIN_CONFIG.exists():
+        main_cfg = load_yaml(MAIN_CONFIG)
+        units.extend(build_main_units(main_cfg))
+        print(f"Main executable: {len(units)} units")
+
+    # ── Overlays ──
+    for cfg_path in discover_overlay_configs():
+        cfg = load_yaml(cfg_path)
+        name = overlay_name_from_config(cfg)
+        overlay_units = build_overlay_units(cfg, name)
+        units.extend(overlay_units)
+        categories.append({"id": name, "name": name.upper()})
+        print(f"Overlay {name}: {len(overlay_units)} units")
+
+    # ── Write objdiff.json ──
     objdiff_config = {
         "$schema": "https://raw.githubusercontent.com/encounter/objdiff/main/config.schema.json",
-        "custom_make": "make objdiff-objects",
+        "custom_make": "make",
+        "custom_args": ["objdiff-objects"],
         "build_target": True,
         "build_base": True,
-        "units": units
+        "watch_patterns": [
+            "*.c", "*.h", "*.s", "*.inc",
+        ],
+        "units": units,
+        "progress_categories": categories,
     }
-    
-    # Write to objdiff.json
-    with open(OUTPUT_PATH, 'w') as f:
+
+    with open(OUTPUT_PATH, "w") as f:
         json.dump(objdiff_config, f, indent=2)
-    
-    print(f"Generated {OUTPUT_PATH}")
-    print(f"Found {len(units)} units (psyq files excluded):")
-    for unit in units:
-        print(f"  - {unit['name']}")
+        f.write("\n")
+
+    print(f"\nWrote {OUTPUT_PATH} — {len(units)} total units, {len(categories)} categories")
 
 
 if __name__ == "__main__":
-    generate_objdiff_config()
+    main()

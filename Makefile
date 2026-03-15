@@ -1,61 +1,100 @@
-# Makefile for PSX decomp project using maspsx + modern toolchain
-# Uses /tmp_build at container root to avoid "Value too large" filesystem errors
-# /tmp_build mirrors the exact same directory structure as the project
+# ============================================================================
+# Legend of Mana PSX Decompilation — Makefile
+# ============================================================================
+#
+# Build pipeline (what happens when you compile a .c file):
+#
+#   1. GCC 2.8.0 compiles your C code to MIPS assembly text      (gcc -S)
+#   2. maspsx translates GCC's asm syntax into Sony ASPSX format  (maspsx.py)
+#   3. The system assembler turns that into a .o object file      (as)
+#   4. The linker combines all .o files into an ELF executable    (ld)
+#
+#   Steps 2+3 are combined: maspsx.py --run-assembler does both in one pass.
+#
+# Why /staging?
+#   The Docker container mounts your project at /lom (a Windows filesystem).
+#   GCC 2.8.0 can't write files there (it fails to stat() mounted paths).
+#   So we copy everything to /staging (a native Linux ext4 path) first,
+#   compile there, then copy the results back to build/.
+#
+# Quick reference:
+#   make              — build the main SLUS ELF
+#   make bin          — also produce a raw .bin binary
+#   make checkps      — build just the CHECKPS overlay
+#   make overlays     — build all overlays
+#   make everything   — build SLUS + all overlays
+#   make clean        — remove all build artifacts
+#   make recopy       — force re-copy of source files to /staging
+#
+# ============================================================================
 
-# ---------------- Configuration ----------------
 
-# Working directory at container root - mirrors exact project structure
-# /tmp_build/src/, /tmp_build/asm/, /tmp_build/include/, etc.
-WORK_DIR      := /tmp_build
+# ─── Paths ──────────────────────────────────────────────────────────────────────
+#
+# STAGING  — native Linux directory inside the container where we compile.
+#            Everything under src/, asm/, include/, etc. is mirrored here.
+# MOUNT    — where Docker mounts the host project (read-only for GCC).
 
-GAME          := slus_010.13
-# Target ELF is built in /tmp_build/build/ then copied to mounted build/
-TARGET        := $(WORK_DIR)/build/$(GAME).elf
-MAPFILE       := $(WORK_DIR)/build/$(GAME).map
-FINAL_TARGET  := /lom/build/$(GAME).elf
-FINAL_MAPFILE := /lom/build/$(GAME).map
+STAGING      := /staging
+MOUNT        := /lom
 
-# Toolchain (adjust if using a different prefix, e.g. mips-linux-gnu-)
-CROSS         := mipsel-linux-gnu-
-CC            := gcc
-LD            := $(CROSS)ld
-OBJCOPY       := $(CROSS)objcopy
+GAME         := slus_010.13
+TARGET       := $(STAGING)/build/$(GAME).elf
+BIN          := build/$(GAME).bin
 
-# Flags - tune these to match your game's original compiler settings
-# NOTE: -Iinclude removed - we use -Iinclude when cd'd into $(WORK_DIR)
-CFLAGS_G0     := -O2 -G0 -g -fsigned-char
-CFLAGS_G4	  := -O2 -G4 -g -fsigned-char
+# Directories (relative — used for both the mount and staging mirror)
+SRC_DIR      := src
+ASM_DIR      := asm
 
-INCLUDE_FLAGS := -Iinclude -Iinclude/psyq
 
-# maspsx with --run-assembler flag (this replaces the AS variable)
-# We call maspsx.py --run-assembler which internally calls the system assembler
-MASPSX_AS     := python3 tools/maspsx/maspsx.py --run-assembler
+# ─── Toolchain ──────────────────────────────────────────────────────────────────
+#
+# CC       — GCC 2.8.0 cross-compiler for PSX (installed in /opt/psx-gcc/)
+# LD       — modern mipsel linker (binutils from apt)
+# OBJCOPY  — converts ELF ↔ raw binary
+
+CROSS        := mipsel-linux-gnu-
+CC           := gcc
+LD           := $(CROSS)ld
+OBJCOPY      := $(CROSS)objcopy
+
+
+# ─── Compiler & Assembler Flags ─────────────────────────────────────────────────
+#
+# -O2            Optimization level that matches the original compiler output.
+# -G0 / -G4     Controls the "small data" threshold. -G0 means nothing goes in
+#                the $gp-relative section; -G4 allows data ≤4 bytes to use $gp.
+#                Most files use -G0, but cd.c needs -G4 to match the original.
+# -g             Emit debug info (doesn't affect code generation on this GCC).
+# -fsigned-char  Treat bare 'char' as signed (PSX SDK convention).
+#
+# MASPSX_AS_FLAGS:
+#   --run-assembler     Have maspsx invoke the system assembler directly.
+#   -no-pad-sections    Don't pad sections to 16-byte alignment (matches ASPSX).
+#   --aspsx-version     Target ASPSX 2.77 behavior for asm translation.
+#   --macro-inc         Enable ASPSX directive macros (nonmatching, dlabel, etc.)
+#                       Only used for hand-written .s files, NOT for GCC output.
+
+CFLAGS_G0       := -O2 -G0 -g -fsigned-char
+CFLAGS_G4       := -O2 -G4 -g -fsigned-char
+
+INCLUDE_FLAGS   := -Iinclude -Iinclude/psyq
+
+MASPSX_AS       := python3 tools/maspsx/maspsx.py --run-assembler
 MASPSX_AS_FLAGS := -no-pad-sections --aspsx-version=2.77
+MASPSX_PP       := python3 tools/maspsx/maspsx.py
+MASPSX_PP_FLAGS := --macro-inc
 
-# maspsx for preprocessing only (no --run-assembler)
-# --macro-inc is needed to define ASPSX directives like 'nonmatching', 'dlabel', etc.
-MASPSX        := python3 tools/maspsx/maspsx.py
-MASPSX_FLAGS  := 
-MASPSX_FLAGS_C := $(MASPSX_FLAGS)
-MASPSX_FLAGS_ASM := $(MASPSX_FLAGS) --macro-inc
 
-# Directories (original mounted paths)
-SRC_DIR       := src
-ASM_DIR       := asm
-NONMATCH_DIR  := $(ASM_DIR)/nonmatchings
-DATA_DIR      := $(ASM_DIR)/data
+# ─── Source Files ───────────────────────────────────────────────────────────────
+#
+# C files are split by compiler flags. Most use CFLAGS_G0; only cd.c uses G4.
+# If a future file needs different flags, add it to the appropriate list.
+#
+# "Non-matching" .s files (asm/nonmatchings/) are NOT listed here — they get
+# pulled in automatically via the INCLUDE_ASM() macro inside C source files.
 
-# BIN output to produce a matching binary
-BIN           := build/$(GAME).bin
-
-# ---------------- Files ----------------
-
-# Collect all .c files in src/ (from mounted directory before copying)
-rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
-            $(filter $(subst *,%,$2),$1)
-
-C_SOURCES_G0 := \
+SRCS_G0 := \
 	src/psyq/libcd/SYS.c \
 	src/psyq/libetc/INTR.c \
 	src/decompression.c \
@@ -67,160 +106,310 @@ C_SOURCES_G0 := \
 	src/decomp1.c \
 	src/main.c
 
-C_SOURCES_G4 := src/cd.c
+SRCS_G4 := \
+	src/cd.c
 
-# Objects will be built in /tmp_build/build/src/*.o
-C_OBJECTS_G0   := $(patsubst $(SRC_DIR)/%.c,$(WORK_DIR)/build/$(SRC_DIR)/%.o,$(C_SOURCES_G0))
-C_OBJECTS_G4   := $(patsubst $(SRC_DIR)/%.c,$(WORK_DIR)/build/$(SRC_DIR)/%.o,$(C_SOURCES_G4))
-C_OBJECTS      := $(C_OBJECTS_G0) $(C_OBJECTS_G4)
+# Hand-written assembly (header + initialized data sections).
+# Rodata is NOT here — it's inlined into C files via asm directives.
+ASM_SRCS := \
+	asm/header.s \
+	asm/data/initialized.data.s \
+	asm/data/sdata.data.s
 
-# Collect non-matching asm files (e.g. asm/nonmatchings/subdir/func.s)
-# NOTE: These are NOT built as separate objects because they're included via INCLUDE_ASM in C files
-# NONMATCH_ASM  := $(wildcard $(NONMATCH_DIR)/**/*.s)
-# NONMATCH_OBJ  := $(patsubst %.s,$(WORK_DIR)/build/%.o,$(NONMATCH_ASM))
 
-# Data / header asm
-# Note: rodata files are NOT here - they're included in main.c via inline asm
-OTHER_ASM     := $(ASM_DIR)/header.s \
-                 $(ASM_DIR)/data/initialized.data.s \
-                 $(ASM_DIR)/data/sdata.data.s 
-OTHER_OBJ     := $(patsubst $(ASM_DIR)/%.s,$(WORK_DIR)/build/$(ASM_DIR)/%.o,$(OTHER_ASM))
+# ─── Object File Paths ─────────────────────────────────────────────────────────
+#
+# patsubst turns  src/foo/bar.c  →  /staging/build/src/foo/bar.o
+# This mirrors the source tree under the staging build directory.
 
-# All objects to link (nonmatching asm is included via INCLUDE_ASM, not as separate objects)
-OBJECTS       := $(C_OBJECTS) $(OTHER_OBJ)
+OBJS_G0  := $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
+OBJS_G4  := $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
+OBJS_ASM := $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
 
-# Sentinel file to track when sources have been copied
-COPY_SENTINEL := $(WORK_DIR)/.sources_copied
+OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_ASM)
 
-# ---------------- Rules ----------------
 
+# ─── Staging Sentinel ──────────────────────────────────────────────────────────
+#
+# A sentinel file tracks whether we've already copied sources to /staging.
+# If it exists, Make skips the copy step. Run `make recopy` to force a refresh.
+
+COPY_SENTINEL := $(STAGING)/.sources_copied
+
+# Directories to mirror into /staging (add new ones here as needed)
+STAGE_DIRS := src asm include linker tools assets
+
+
+# ─── Overlay Registry ──────────────────────────────────────────────────────────
+#
+# Register overlays here so they're available to all rules below.
+# The name must match the directory under src/overlays/, asm/overlays/, etc.
+# See the "Overlay System" section further below for full documentation.
+#
+# Optional per-overlay settings:
+#   overlay_<name>_cflags  — compiler flags (default: CFLAGS_G0)
+#   overlay_<name>_asset   — path to a .bin asset file (omit if none)
+
+OVERLAYS += checkps
+overlay_checkps_asset := assets/checkps.bin
+
+
+# ============================================================================
+#  Top-Level Targets
+# ============================================================================
+
+.PHONY: all bin clean recopy
+.PHONY: target-objects base-objects objdiff-objects objdiff-config
+.PHONY: overlays everything
+
+# Default target: build the main SLUS executable
 all: $(TARGET)
-	@echo "Copying build artifacts from $(WORK_DIR)/build/ to build/..."
 	@mkdir -p build
-	@cp -r $(WORK_DIR)/build/* build/
-	@echo "Build complete: $(FINAL_TARGET)"
+	@cp -r $(STAGING)/build/* build/
+	@echo "Build complete: build/$(GAME).elf"
 
-# Copy all source files to /tmp_build mirroring exact directory structure
-$(COPY_SENTINEL):
-	@echo "Copying source files to $(WORK_DIR) (mirroring directory structure)..."
-	@mkdir -p $(WORK_DIR)
-	@# Copy src/ directory
-	@if [ -d "$(SRC_DIR)" ]; then \
-		mkdir -p $(WORK_DIR)/$(SRC_DIR); \
-		cp -r $(SRC_DIR)/* $(WORK_DIR)/$(SRC_DIR)/ 2>/dev/null || true; \
-	fi
-	@# Copy asm/ directory
-	@if [ -d "$(ASM_DIR)" ]; then \
-		mkdir -p $(WORK_DIR)/$(ASM_DIR); \
-		cp -r $(ASM_DIR)/* $(WORK_DIR)/$(ASM_DIR)/ 2>/dev/null || true; \
-	fi
-	@# Copy include/ directory
-	@if [ -d "include" ]; then \
-		mkdir -p $(WORK_DIR)/include; \
-		cp -r include/* $(WORK_DIR)/include/ 2>/dev/null || true; \
-	fi
-	@# Copy linker/ directory
-	@if [ -d "linker" ]; then \
-		mkdir -p $(WORK_DIR)/linker; \
-		cp -r linker/* $(WORK_DIR)/linker/ 2>/dev/null || true; \
-	fi
-	@# Copy tools/ directory (for maspsx)
-	@if [ -d "tools" ]; then \
-		mkdir -p $(WORK_DIR)/tools; \
-		cp -r tools/* $(WORK_DIR)/tools/ 2>/dev/null || true; \
-	fi
-	@touch $(COPY_SENTINEL)
-	@echo "Source files copied successfully to $(WORK_DIR)"
-
-$(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(WORK_DIR)/linker/$(GAME).ld
-	@mkdir -p $(WORK_DIR)/build
-	cd $(WORK_DIR) && $(LD) -o build/$(GAME).elf \
-		-T linker/$(GAME).ld \
-		-T linker/undefined_syms_auto.txt \
-		-T linker/undefined_funcs_auto.txt \
-		$(patsubst $(WORK_DIR)/%,%,$(OBJECTS)) \
-		-Map build/$(GAME).map
-	@echo "Linked $@"
-
-# --- Decompiled C → GCC asm → maspsx --run-assembler → object ---
-# Call maspsx.py with --run-assembler flag which handles assembly internally
-# C files don't need --macro-inc since GCC output doesn't use ASPSX directives
-# Compile from /tmp_build/src/*.c with includes from /tmp_build/include
-# Static pattern rule: for each src/X.c, build /tmp_build/build/src/X.o from /tmp_build/src/X.c
-# Static pattern rule: CFLAGS_A sources
-$(C_OBJECTS_G0): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
-	@mkdir -p $(@D)
-	cd $(WORK_DIR) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
-
-# Static pattern rule: CFLAGS_B sources
-$(C_OBJECTS_G4): $(WORK_DIR)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
-	@mkdir -p $(@D)
-	cd $(WORK_DIR) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
-
-# --- Asm files with ASPSX directives (non-matching + data + header) ---
-# These need --macro-inc to handle directives like 'nonmatching', 'dlabel', etc.
-# Compile from /tmp_build/asm/*.s with includes from /tmp_build/include
-# Static pattern rule: for each asm/X.s, build /tmp_build/build/asm/X.o from /tmp_build/asm/X.s
-$(OTHER_OBJ): $(WORK_DIR)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
-	@mkdir -p $(@D)
-	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | \
-		python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
-
-# ---------------- Binary output + padding ----------------
-
-$(BIN): $(FINAL_TARGET)
-	$(OBJCOPY) -O binary $(FINAL_TARGET) $@
-
-bin: $(BIN)
+# Produce a raw binary from the ELF (for running on real hardware / emulators)
+bin: all
+	$(OBJCOPY) -O binary build/$(GAME).elf $(BIN)
 
 clean:
-	rm -rf build/ $(WORK_DIR) $(FINAL_TARGET) $(FINAL_MAPFILE)
+	rm -rf build/ $(STAGING)
 
-# Force recopy of sources (use if you modified source files)
 recopy:
 	rm -f $(COPY_SENTINEL)
 	$(MAKE) $(COPY_SENTINEL)
 
-# ---------------- Target Objects (for objdiff) ----------------
 
-# Target assembly files (full .s files from splat)
-ALL_ASM := $(call rwildcard,$(ASM_DIR),*.s)
-TARGET_ASM := $(filter-out $(ASM_DIR)/nonmatchings/% $(ASM_DIR)/data/% , $(ALL_ASM))
-TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(WORK_DIR)/build/$(ASM_DIR)/%.o,$(TARGET_ASM))
+# ============================================================================
+#  Staging (copy sources into /staging)
+# ============================================================================
+#
+# Mirrors each directory listed in STAGE_DIRS from /lom/ → /staging/.
+# The sentinel file prevents re-copying on every build.
 
-# Build target objects from asm/*.s files (these are already processed by splat)
-$(TARGET_OBJ): $(WORK_DIR)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
+$(COPY_SENTINEL):
+	@echo "Staging source files to $(STAGING)..."
+	@mkdir -p $(STAGING)
+	@$(foreach dir,$(STAGE_DIRS), \
+		if [ -d "$(dir)" ]; then \
+			mkdir -p $(STAGING)/$(dir) && \
+			cp -r $(dir)/* $(STAGING)/$(dir)/ 2>/dev/null || true; \
+		fi; \
+	)
+	@touch $@
+	@echo "Staging complete."
+
+
+# ============================================================================
+#  Compilation Rules — Main SLUS
+# ============================================================================
+#
+# Static pattern rules:
+#   $(TARGETS): $(STAGING)/build/src/%.o: src/%.c
+#   reads as: "for each file in TARGETS, the .o comes from the matching .c"
+#
+# The recipe pipes GCC asm output directly into maspsx:
+#   gcc -S -o -     → write asm to stdout
+#   | maspsx.py ... → translate to ASPSX syntax and assemble into .o
+
+# ── C files compiled with -G0 (most files) ──
+$(OBJS_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(WORK_DIR) && cat $(ASM_DIR)/$*.s | \
-		python3 tools/maspsx/maspsx.py $(MASPSX_FLAGS_ASM) | \
+	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+
+# ── C files compiled with -G4 (cd.c) ──
+$(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+	@mkdir -p $(@D)
+	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+
+# ── Hand-written assembly (header, data sections) ──
+# These use --macro-inc because they contain ASPSX directives (dlabel, etc.)
+# The pipeline: cat .s | maspsx (preprocess) | maspsx --run-assembler (assemble)
+$(OBJS_ASM): $(STAGING)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
+	@mkdir -p $(@D)
+	cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
+		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
 
-# Build all target objects (for objdiff progress tracking)
+
+# ============================================================================
+#  Linking — Main SLUS
+# ============================================================================
+
+$(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(STAGING)/linker/$(GAME).ld
+	@mkdir -p $(STAGING)/build
+	cd $(STAGING) && $(LD) -o build/$(GAME).elf \
+		-T linker/$(GAME).ld \
+		-T linker/undefined_syms_auto.txt \
+		-T linker/undefined_funcs_auto.txt \
+		$(patsubst $(STAGING)/%,%,$(OBJECTS)) \
+		-Map build/$(GAME).map
+
+
+# ============================================================================
+#  Objdiff — Main SLUS  (progress tracking / function matching)
+# ============================================================================
+#
+# "Target objects" = assembled from splat's original .s disassembly (the goal).
+# "Base objects"   = compiled from your decompiled .c source (your progress).
+# objdiff compares them function-by-function to show what matches.
+
+# Recursive wildcard helper (finds files in nested subdirectories)
+rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
+            $(filter $(subst *,%,$2),$1)
+
+# Gather all .s files, then exclude non-matchings, data, overlays, and
+# hand-written asm that already has its own build rule (ASM_SRCS).
+ALL_ASM    := $(call rwildcard,$(ASM_DIR),*.s)
+TARGET_ASM := $(filter-out $(ASM_DIR)/nonmatchings/% $(ASM_DIR)/data/% $(ASM_DIR)/overlays/% $(ASM_SRCS),$(ALL_ASM))
+TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(TARGET_ASM))
+
+$(TARGET_OBJ): $(STAGING)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
+	@mkdir -p $(@D)
+	cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
+		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
+
 target-objects: $(COPY_SENTINEL) $(TARGET_OBJ)
-	@echo "Copying target objects from $(WORK_DIR)/build/asm/ to build/asm/..."
 	@mkdir -p build/asm
-	@cp -r $(WORK_DIR)/build/$(ASM_DIR)/* build/asm/ 2>/dev/null || true
-	@echo "Target objects built successfully"
+	@cp -r $(STAGING)/build/$(ASM_DIR)/* build/asm/ 2>/dev/null || true
+	@echo "Target objects built."
 
-# Build all base objects (for objdiff progress tracking)
-base-objects: $(COPY_SENTINEL) $(C_OBJECTS)
-	@echo "Copying base objects from $(WORK_DIR)/build/src/ to build/src/..."
+base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4)
 	@mkdir -p build/src
-	@cp -r $(WORK_DIR)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
-	@echo "Base objects built successfully"
+	@cp -r $(STAGING)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
+	@echo "Base objects built."
 
-# Build both target and base objects
-objdiff-objects: target-objects base-objects
-	@echo "All objdiff objects built successfully"
+objdiff-objects: target-objects base-objects $(addsuffix -objdiff,$(OVERLAYS))
 
-# Generate objdiff.json configuration file
 objdiff-config:
-	python3 tools/generate_objdiff_config.py
+	python3 tools/objdiff/generate_objdiff_config.py
 
-.PHONY: all clean bin recopy target-objects base-objects objdiff-objects objdiff-config
 
-# Optional: rebuild a single function quickly
-# make /tmp_build/build/src/main.o
+# ============================================================================
+#  Overlay System
+# ============================================================================
+#
+# Overlays are small executables loaded on top of the main SLUS at runtime.
+# Each overlay follows the same directory convention:
+#
+#   src/overlays/<name>/         — decompiled C source files
+#   asm/overlays/<name>/         — splat-generated disassembly
+#   linker/overlays/<name>/      — linker scripts from splat
+#   build/overlays/<name>/       — compiled objects and output ELF
+#   assets/<name>.bin            — optional raw binary data segment
+#
+# ── How to add a new overlay ─────────────────────────────────────────────────
+#
+#   1. Create config/overlays/<NAME>.yaml  (follow CHECKPS.BIN.yaml as a template)
+#   2. Run: splat split config/overlays/<NAME>.yaml
+#   3. Register it in the "Overlay Registry" section near the top of this file:
+#
+#        OVERLAYS += myoverlay
+#        overlay_myoverlay_asset := assets/myoverlay.bin   # only if it has one
+#
+#      That's it. All build rules are generated automatically.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ── Overlay rule template ────────────────────────────────────────────────────
+#
+# This define block is a "macro" that generates all Make rules for one overlay.
+# It's called once per entry in OVERLAYS via $(eval $(call ...)) at the bottom.
+#
+# Inside the template:
+#   $(1)  = overlay name (e.g. "checkps")
+#   $$    = escaped $ (needed because eval expands variables twice)
+#
+# The $$(or ...) pattern provides a default value: if overlay_<name>_cflags
+# isn't set, it falls back to CFLAGS_G0.
+
+define overlay-rules
+
+# ── Derived paths for overlay '$(1)' ──
+$(1)_SRC_DIR   := src/overlays/$(1)
+$(1)_ASM_DIR   := asm/overlays/$(1)
+$(1)_LINK_DIR  := linker/overlays/$(1)
+$(1)_BUILD_DIR := build/overlays/$(1)
+$(1)_CFLAGS    := $$(or $$(overlay_$(1)_cflags),$(CFLAGS_G0))
+$(1)_TARGET    := $(STAGING)/$$($(1)_BUILD_DIR)/$(1).elf
+
+# ── Discover source files ──
+$(1)_C_SRCS    := $$(wildcard $$($(1)_SRC_DIR)/*.c)
+$(1)_C_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_C_SRCS))
+
+# ── Binary asset (only if overlay_<name>_asset is defined) ──
+$(1)_ASSET_SRC := $$(overlay_$(1)_asset)
+$(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
+
+# Rule: compile C → object  (same GCC → maspsx pipeline as main SLUS)
+$$($(1)_C_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+	@mkdir -p $$(@D)
+	cd $(STAGING) && $(CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+
+# Rule: convert binary asset → linkable .o  (only if asset is defined)
+ifneq ($$($(1)_ASSET_SRC),)
+$$($(1)_ASSET_OBJ): $(STAGING)/$$($(1)_ASSET_SRC)
+	@mkdir -p $$(@D)
+	cd $(STAGING) && $(OBJCOPY) -I binary -O elf32-tradlittlemips -B mips \
+		$$($(1)_ASSET_SRC) $$($(1)_BUILD_DIR)/assets/$(1).o
+endif
+
+# Rule: link the overlay ELF
+# Dependencies include the asset object only if the overlay has an asset.
+$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $(STAGING)/$$($(1)_LINK_DIR)/$(1).ld
+	@mkdir -p $$(@D)
+	cd $(STAGING) && $(LD) -o $$($(1)_BUILD_DIR)/$(1).elf \
+		-T $$($(1)_LINK_DIR)/$(1).ld \
+		-T $$($(1)_LINK_DIR)/undefined_funcs_auto.txt \
+		-T $$($(1)_LINK_DIR)/undefined_syms_auto.txt \
+		$$(patsubst $(STAGING)/%,%,$$($(1)_C_OBJS)) \
+		-Map $$($(1)_BUILD_DIR)/$(1).map
+	@echo "Linked overlay: $(1)"
+
+# ── Objdiff rules for this overlay ──
+$(1)_ALL_ASM    := $$(call rwildcard,$$($(1)_ASM_DIR),*.s)
+$(1)_TGT_ASM   := $$(filter-out $$($(1)_ASM_DIR)/nonmatchings/% $$($(1)_ASM_DIR)/data/%,$$($(1)_ALL_ASM))
+$(1)_TGT_OBJS  := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/target/%.o,$$($(1)_TGT_ASM))
+
+$$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL)
+	@mkdir -p $$(@D)
+	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
+		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/target/$$*.o
+
+# ── Phony convenience targets ──
+.PHONY: $(1) $(1)-target-objects $(1)-base-objects $(1)-objdiff
+
+$(1): $$($(1)_TARGET)
+	@mkdir -p $$($(1)_BUILD_DIR)
+	@cp -r $(STAGING)/$$($(1)_BUILD_DIR)/* $$($(1)_BUILD_DIR)/ 2>/dev/null || true
+	@echo "Overlay $(1) build complete."
+
+$(1)-target-objects: $(COPY_SENTINEL) $$($(1)_TGT_OBJS)
+	@mkdir -p $$($(1)_BUILD_DIR)/target
+	@cp -r $(STAGING)/$$($(1)_BUILD_DIR)/target/* $$($(1)_BUILD_DIR)/target/ 2>/dev/null || true
+
+$(1)-base-objects: $(COPY_SENTINEL) $$($(1)_C_OBJS)
+	@mkdir -p $$($(1)_BUILD_DIR)
+	@cp -r $(STAGING)/$$($(1)_BUILD_DIR)/* $$($(1)_BUILD_DIR)/ 2>/dev/null || true
+
+$(1)-objdiff: $(1)-target-objects $(1)-base-objects
+
+endef
+
+# ── Instantiate rules for every registered overlay ──
+# This line loops over OVERLAYS and calls the template above for each one.
+# $(eval) tells Make to treat the output as real Makefile syntax.
+$(foreach ov,$(OVERLAYS),$(eval $(call overlay-rules,$(ov))))
+
+# ── Aggregate overlay targets ──
+overlays: $(OVERLAYS)
+	@echo "All overlays built."
+
+everything: all overlays
+	@echo "Full build complete."
