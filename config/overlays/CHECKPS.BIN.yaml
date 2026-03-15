@@ -12,4 +12,8 @@ segments:
   - name: checkps
     type: decompress_overlay
     start: 0x1
+    vram: 0x8004FC70
+    subsegments:
+      - [0x1, bin, checkps]
+      - [0xA4, c, code]
   - [0xA77D]
