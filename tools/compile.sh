@@ -5,7 +5,7 @@ INPUT="$(realpath "$1")"
 OUTPUT="$(realpath "$3")"
 TMPASM=$(mktemp --suffix=.s)
 
-cd /tmp_build
+cd /staging
 
 # Stage 1: Compile to assembly
 PATH=/opt/psx-gcc:$PATH /opt/psx-gcc/gcc -O2 -G0 -g -fsigned-char -Iinclude -S "$INPUT" -o "$TMPASM"
