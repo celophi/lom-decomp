@@ -21,3 +21,5 @@ output/
 src/unk*.c
 
 tools/splat_ext/__pycache__/
+
+assets/

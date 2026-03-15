@@ -7,7 +7,7 @@ options:
   compiler: PSYQ
   target_path: disc/CHECKPS.BIN
   extensions_path: tools/splat_ext
-  asset_path: build/assets
+  asset_path: assets
   elf_path: build/overlays/checkps.elf
 
   # Overlay-specific output paths (separate from SLUS)
@@ -25,6 +25,7 @@ options:
 
   find_file_boundaries: False
   use_legacy_include_asm: False
+  o_as_suffix: True
   subalign: 2
 
   section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
