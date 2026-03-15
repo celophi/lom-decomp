@@ -46,6 +46,8 @@ void Main(void)
     InitializeControllers(0);
     CD_InitResources(0x18, 0xB598);
     FUN_80021fbc();
+
+    // MAP/FDATA/FONT.PRS
     CD_StreamData(0xB2, 0x801E1200);
     InitVSyncController();
     srand(1);
@@ -66,6 +68,7 @@ void Main(void)
     
     streamDst = new_var4;
     
+    // BIN/CHECKPS.BIN
     CD_StreamData(15, *streamDst);
     CD_WaitForQueueEmpty();
     FUN_8004fd14(0x80100000);
