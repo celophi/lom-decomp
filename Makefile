@@ -140,6 +140,20 @@ COPY_SENTINEL := $(STAGING)/.sources_copied
 STAGE_DIRS := src asm include linker tools assets
 
 
+# ─── Overlay Registry ──────────────────────────────────────────────────────────
+#
+# Register overlays here so they're available to all rules below.
+# The name must match the directory under src/overlays/, asm/overlays/, etc.
+# See the "Overlay System" section further below for full documentation.
+#
+# Optional per-overlay settings:
+#   overlay_<name>_cflags  — compiler flags (default: CFLAGS_G0)
+#   overlay_<name>_asset   — path to a .bin asset file (omit if none)
+
+OVERLAYS += checkps
+overlay_checkps_asset := assets/checkps.bin
+
+
 # ============================================================================
 #  Top-Level Targets
 # ============================================================================
@@ -246,9 +260,10 @@ $(TARGET): $(COPY_SENTINEL) $(OBJECTS) $(STAGING)/linker/$(GAME).ld
 rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
             $(filter $(subst *,%,$2),$1)
 
-# Gather all .s files, then exclude non-matchings, data, and overlay asm
+# Gather all .s files, then exclude non-matchings, data, overlays, and
+# hand-written asm that already has its own build rule (ASM_SRCS).
 ALL_ASM    := $(call rwildcard,$(ASM_DIR),*.s)
-TARGET_ASM := $(filter-out $(ASM_DIR)/nonmatchings/% $(ASM_DIR)/data/% $(ASM_DIR)/overlays/%,$(ALL_ASM))
+TARGET_ASM := $(filter-out $(ASM_DIR)/nonmatchings/% $(ASM_DIR)/data/% $(ASM_DIR)/overlays/% $(ASM_SRCS),$(ALL_ASM))
 TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(TARGET_ASM))
 
 $(TARGET_OBJ): $(STAGING)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
@@ -290,27 +305,14 @@ objdiff-config:
 #
 #   1. Create config/overlays/<NAME>.yaml  (follow CHECKPS.BIN.yaml as a template)
 #   2. Run: splat split config/overlays/<NAME>.yaml
-#   3. Register it here by adding TWO lines:
+#   3. Register it in the "Overlay Registry" section near the top of this file:
 #
 #        OVERLAYS += myoverlay
 #        overlay_myoverlay_asset := assets/myoverlay.bin   # only if it has one
 #
 #      That's it. All build rules are generated automatically.
 #
-# ── Optional per-overlay settings ────────────────────────────────────────────
-#
-#   overlay_<name>_cflags  — compiler flags (default: CFLAGS_G0)
-#   overlay_<name>_asset   — path to a .bin asset file (omit if none)
-#
 # ─────────────────────────────────────────────────────────────────────────────
-
-# ── Overlay registry ──
-# Add one line per overlay. The name must match the directory name.
-OVERLAYS += checkps
-
-# ── Per-overlay configuration ──
-overlay_checkps_asset := assets/checkps.bin
-# overlay_checkps_cflags := $(CFLAGS_G0)   # (default, no need to set)
 
 
 # ── Overlay rule template ────────────────────────────────────────────────────
@@ -394,7 +396,7 @@ $(1)-target-objects: $(COPY_SENTINEL) $$($(1)_TGT_OBJS)
 
 $(1)-base-objects: $(COPY_SENTINEL) $$($(1)_C_OBJS)
 	@mkdir -p $$($(1)_BUILD_DIR)
-	@cp -r $(STAGING)/$$($(1)_BUILD_DIR)/src/* $$($(1)_BUILD_DIR)/ 2>/dev/null || true
+	@cp -r $(STAGING)/$$($(1)_BUILD_DIR)/* $$($(1)_BUILD_DIR)/ 2>/dev/null || true
 
 $(1)-objdiff: $(1)-target-objects $(1)-base-objects
 

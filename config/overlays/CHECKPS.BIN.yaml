@@ -24,6 +24,7 @@ options:
     - config/symbol_addrs.txt
 
   find_file_boundaries: False
+  make_full_disasm_for_code: True
   use_legacy_include_asm: False
   o_as_suffix: True
   subalign: 2
