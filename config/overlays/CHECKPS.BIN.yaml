@@ -1,15 +1,15 @@
 name: CHECKPS.BIN
 sha1: 388f95071ba5107108eeeb2296439871c22c4185
 options:
+  base_path: ../../
   basename: CHECKPS.BIN
   platform: psx
   target_path: disc/CHECKPS.BIN
-  base_path: ../
   extensions_path: tools/splat_ext
-  asset_path: assets
+  asset_path: build/assets
 
 segments:
   - name: checkps
     type: decompress_overlay
-    start: 0x0
+    start: 0x1
   - [0xA77D]

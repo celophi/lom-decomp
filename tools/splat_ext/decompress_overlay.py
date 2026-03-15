@@ -1,10 +1,17 @@
+import importlib.util
+import sys
 from pathlib import Path
 from typing import Optional
 
 from splat.segtypes.common.segment import CommonSegment
 from splat.util import log, options
 
-from decompress import decompress
+# Load decompress.py from the same directory as this extension
+_ext_dir = Path(__file__).resolve().parent
+_spec = importlib.util.spec_from_file_location("decompress", _ext_dir / "decompress.py")
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+decompress = _mod.decompress
 
 
 class PSXSegDecompress_overlay(CommonSegment):

@@ -19,3 +19,5 @@ output/
 
 # Ignore generated C files
 src/unk*.c
+
+tools/splat_ext/__pycache__/
