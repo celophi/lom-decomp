@@ -361,8 +361,8 @@ $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 # Rule: compile C → object  (same GCC → maspsx pipeline as main SLUS)
 $$($(1)_C_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+	cd $(STAGING) && $(CKD_CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CKD) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
@@ -393,7 +393,7 @@ $$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/target/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CKD) -o $$($(1)_BUILD_DIR)/target/$$*.o
 
 # ── Phony convenience targets ──
 .PHONY: $(1) $(1)-target-objects $(1)-base-objects $(1)-objdiff
