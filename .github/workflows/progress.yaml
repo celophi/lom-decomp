@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     
     container:
-      image: ghcr.io/celophi/slus-01013:v1.1
+      image: ghcr.io/celophi/slus-01013:v1.2
     
     defaults:
       run:
@@ -40,15 +40,19 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
       
       - name: Copy ROM from container
-        run: cp /rom/${{ env.ROM_ID }} disc/
-
+        run: |
+          cp /rom/${{ env.ROM_ID }} disc/
+          cp /rom/BIN/CHECKPS.BIN disc/
+          
       - name: Setup Python environment
         run: |
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Split ROM with splat
-        run: splat split config/${{ env.ROM_ID }}.yaml
+        run: |
+          splat split config/${{ env.ROM_ID }}.yaml
+          splat split config/overlays/CHECKPS.BIN.yaml
 
       - name: Generate objdiff configuration
         run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }}
@@ -66,6 +70,6 @@ jobs:
       - name: Upload progress report
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ROM_ID }}_progress_report
+          name: ${{ env.ROM_ID }}_report
           path: ${{ env.WORKING_DIR }}/${{ env.PROGRESS_REPORT }}
           if-no-files-found: error

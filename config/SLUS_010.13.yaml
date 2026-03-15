@@ -1,10 +1,11 @@
 name: SLUS_010.13
 sha1: d11dfdd50d412ac3fa3e2eb80fbde138da118f27
 options:
-  basename: slus_010.13
+  base_path: ../
+  basename: SLUS_010.13
   target_path: disc/SLUS_010.13
   elf_path: build/slus_010.13.elf
-  base_path: ../
+  
   platform: psx
   compiler: PSYQ
 

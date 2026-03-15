@@ -1,0 +1,45 @@
+name: CHECKPS.BIN
+sha1: 388f95071ba5107108eeeb2296439871c22c4185
+options:
+  base_path: ../../
+  basename: CHECKPS.BIN
+  platform: psx
+  compiler: PSYQ
+  target_path: disc/CHECKPS.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets
+  elf_path: build/overlays/checkps.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/overlays/checkps
+  src_path: src/overlays/checkps
+  build_path: build/overlays/checkps
+
+  ld_script_path: linker/overlays/checkps/checkps.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/overlays/checkps/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/checkps/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: checkps
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x8004FC70
+    subsegments:
+      - [0x0, bin, checkps]
+      - [0xA5, c, code]
+  - [0xA77D]
