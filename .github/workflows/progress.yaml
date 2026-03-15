@@ -40,8 +40,10 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
       
       - name: Copy ROM from container
-        run: cp /rom/${{ env.ROM_ID }} disc/
-
+        run: |
+          cp /rom/${{ env.ROM_ID }} disc/
+          cp /rom/BIN/CHECKPS.BIN disc/
+          
       - name: Setup Python environment
         run: |
           python3 -m pip install --upgrade pip
