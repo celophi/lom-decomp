@@ -32,6 +32,7 @@ The project uses an old PlayStation compiler (gcc-2.8.0) that runs in Docker. Bu
 
 ```bash
 docker build -t old-gcc/gcc-2.8.0-psx -f tools/old-gcc/gcc-2.8.0-psx.Dockerfile tools/old-gcc
+docker build -t old-gcc/gcc-2.7.2-cdk -f tools/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/old-gcc
 ```
 
 This step may take several minutes.
