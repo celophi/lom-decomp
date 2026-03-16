@@ -1,0 +1,12 @@
+#ifndef _CHECKPS_H
+#define _CHECKPS_H
+
+#include "common.h"
+
+extern s32 D_8005D060;
+
+void func_80050080(void);
+void func_8004FEE8(int param_1);
+void func_8004FD68(int param_1);
+
+#endif
