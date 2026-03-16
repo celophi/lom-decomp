@@ -153,11 +153,14 @@ STAGE_DIRS := src asm include linker tools assets
 # See the "Overlay System" section further below for full documentation.
 #
 # Optional per-overlay settings:
-#   overlay_<name>_cflags  — compiler flags (default: CFLAGS_G0)
-#   overlay_<name>_asset   — path to a .bin asset file (omit if none)
+#   overlay_<name>_cflags    — compiler flags (default: CFLAGS_G0)
+#   overlay_<name>_asset     — path to a .bin asset file (omit if none)
+#   overlay_<name>_gcc_srcs  — files to compile with GCC+maspsx instead of CCPSX
+#                              (use for non-matching stubs that use INCLUDE_ASM)
 
 OVERLAYS += checkps
-overlay_checkps_asset := assets/checkps.bin
+overlay_checkps_asset    := assets/checkps.bin
+overlay_checkps_gcc_srcs := src/overlays/checkps/unk.c
 
 
 # ============================================================================
@@ -354,18 +357,30 @@ $(1)_CFLAGS    := $$(or $$(overlay_$(1)_cflags),$(CFLAGS_G0))
 $(1)_TARGET    := $(STAGING)/$$($(1)_BUILD_DIR)/$(1).elf
 
 # ── Discover source files ──
-$(1)_C_SRCS    := $$(wildcard $$($(1)_SRC_DIR)/*.c)
-$(1)_C_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_C_SRCS))
+# Split into CCPSX (matched) and GCC+maspsx (non-matching) groups.
+# Files listed in overlay_<name>_gcc_srcs use GCC+maspsx; everything else uses CCPSX.
+$(1)_C_SRCS      := $$(wildcard $$($(1)_SRC_DIR)/*.c)
+$(1)_GCC_SRCS    := $$(overlay_$(1)_gcc_srcs)
+$(1)_CCPSX_SRCS  := $$(filter-out $$($(1)_GCC_SRCS),$$($(1)_C_SRCS))
+$(1)_GCC_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_SRCS))
+$(1)_CCPSX_OBJS  := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CCPSX_SRCS))
+$(1)_C_OBJS      := $$($(1)_CCPSX_OBJS) $$($(1)_GCC_OBJS)
 
 # ── Binary asset (only if overlay_<name>_asset is defined) ──
 $(1)_ASSET_SRC := $$(overlay_$(1)_asset)
 $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 
-# Rule: compile C → object  (CCPSX writes .obj, then psyq-obj-parser converts to ELF .o)
-$$($(1)_C_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+# Rule: compile matched C files with CCPSX → .obj → ELF .o
+$$($(1)_CCPSX_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CCPSX) -DCCPSX $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj && \
 		$(PSYQ_OBJ_PARSER) $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+
+# Rule: compile non-matching C files with GCC+maspsx (handles GNU asm syntax in INCLUDE_ASM)
+$$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+	@mkdir -p $$(@D)
+	cd $(STAGING) && $(CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
