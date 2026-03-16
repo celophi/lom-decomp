@@ -202,10 +202,10 @@ $(COPY_SENTINEL):
 			cp -r $(dir)/* $(STAGING)/$(dir)/ 2>/dev/null || true; \
 		fi; \
 	)
-	@# CCPSX.EXE (via wibo) requires CRLF line endings for all input files.
-	@# In CI, git checks out with LF — convert staged sources so CCPSX can parse them.
-	@# Native GCC handles CRLF fine, so this is safe for both pipelines.
-	@find $(STAGING) \( -name '*.c' -o -name '*.h' -o -name '*.s' -o -name '*.inc' \) -exec unix2dos {} + 2>/dev/null || true
+	@# ASPSX (inside CCPSX) requires CRLF line endings for .s files it processes.
+	@# In CI, git checks out with LF — convert overlay .s files so ASPSX can parse them.
+	@# Only .s files need this; the C preprocessor/compiler handles LF fine.
+	@find $(STAGING)/asm/overlays -name '*.s' -exec unix2dos {} + 2>/dev/null || true
 	@touch $@
 	@echo "Staging complete."
 
