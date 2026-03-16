@@ -2,6 +2,8 @@
 #define _CHECKPS_H
 
 #include "common.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 
 extern s32 D_8005D060;
 
