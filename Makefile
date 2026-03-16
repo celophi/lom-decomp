@@ -202,6 +202,9 @@ $(COPY_SENTINEL):
 			cp -r $(dir)/* $(STAGING)/$(dir)/ 2>/dev/null || true; \
 		fi; \
 	)
+	@# ASPSX (inside CCPSX) requires CRLF line endings.
+	@# In CI, git checks out with LF — convert overlay .s files so ASPSX can parse them.
+	@find $(STAGING)/asm/overlays -name '*.s' -exec unix2dos {} + 2>/dev/null || true
 	@touch $@
 	@echo "Staging complete."
 

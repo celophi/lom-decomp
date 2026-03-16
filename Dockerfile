@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y -o APT::Immediate-Configure=false \
     gcc-mipsel-linux-gnu \
     binutils-mipsel-linux-gnu \
     less make vim git wget curl file \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # PSX gcc 2.8.0
