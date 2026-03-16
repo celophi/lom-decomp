@@ -78,7 +78,7 @@ void func_8004FD68(int arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/tlBGm
  */
-void func_8004FEE8(void* arg0)
+void func_8004FEE8(int arg0)
 {
     RECT rect;
 
