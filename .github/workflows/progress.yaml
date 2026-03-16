@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     
     container:
-      image: ghcr.io/celophi/slus-01013:v1.3
+      image: ghcr.io/celophi/slus-01013:v1.4
     
     defaults:
       run:
