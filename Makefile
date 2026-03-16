@@ -80,6 +80,9 @@ OBJCOPY      	:= $(CROSS)objcopy
 CFLAGS_G0       := -O2 -G0 -g -fsigned-char
 CFLAGS_G4       := -O2 -G4 -g -fsigned-char
 
+# CCPSX flags omit -g: psyq-obj-parser can't handle debug info from complex functions.
+CFLAGS_CCPSX_G0 := -O2 -G0 -fsigned-char
+
 INCLUDE_FLAGS   := -Iinclude -Iinclude/psyq
 
 MASPSX_AS       	:= python3 tools/maspsx/maspsx.py --run-assembler
@@ -240,7 +243,7 @@ $(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 # ── C files compiled with PSYQ 4.1 (GCC 2.7.2 CKD) -G0 (checkps overlay) ──
 $(OBJS_PSYQ41_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(STAGING) && $(CCPSX) -DCCPSX $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -o build/$(SRC_DIR)/$*.obj && \
+	cd $(STAGING) && $(CCPSX) -DCCPSX $(CFLAGS_CCPSX_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -o build/$(SRC_DIR)/$*.obj && \
 		$(PSYQ_OBJ_PARSER) build/$(SRC_DIR)/$*.obj -o build/$(SRC_DIR)/$*.o
 
 # ── Hand-written assembly (header, data sections) ──
@@ -373,7 +376,7 @@ $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 # Rule: compile matched C files with CCPSX → .obj → ELF .o
 $$($(1)_CCPSX_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CCPSX) -DCCPSX $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj && \
+	cd $(STAGING) && $(CCPSX) -DCCPSX $(CFLAGS_CCPSX_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj && \
 		$(PSYQ_OBJ_PARSER) $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile non-matching C files with GCC+maspsx (handles GNU asm syntax in INCLUDE_ASM)
