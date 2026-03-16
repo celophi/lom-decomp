@@ -74,3 +74,51 @@ void func_8004FD68(int arg0)
     func_800158E0();
     VSync(0);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/tlBGm
+ */
+void func_8004FEE8(int arg0)
+{
+    RECT rect;
+
+    func_8001D5AC(0x5DC);
+    func_8001D58C(0xA0, 0x78);
+    *(u16*)(arg0 + 0x40B0) = 0;
+    *(u16*)(arg0 + 0x40B2) = 0;
+    *(u16*)(arg0 + 0x40B4) = 0x140;
+    *(u16*)(arg0 + 0x40B6) = 0xF0;
+    *(u16*)(arg0 + 0xFD7C) = 0;
+    *(u16*)(arg0 + 0xFD7E) = 0xE8;
+    *(u16*)(arg0 + 0xFD80) = 0x140;
+    *(u16*)(arg0 + 0xFD82) = 0xF0;
+    DrawSync(0);
+    VSync(0);
+    
+    rect.w = 0x400;
+    rect.x = 0;
+    rect.y = 0;
+    rect.h = 0x200;
+    
+    ClearImage(&rect, 0, 0, 0);
+    SetDefDispEnv(arg0 + 0x4040, 0, 0, 0x140, 0xF0);
+    SetDefDispEnv(arg0 + 0xFD0C, 0, 0xE8, 0x140, 0xF0);
+    SetDefDrawEnv(arg0 + 0x4054, 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv(arg0 + 0xFD20, 0, 8, 0x140, 0xE0);
+    *(u8*)(arg0 + 0xFD36) = 0;
+    *(u8*)(arg0 + 0x406A) = 0;
+    
+    rect.x = 0x3C0;
+    rect.w = 0x40;
+    rect.y = 0;
+    rect.h = 0x100;
+    
+    ClearImage(&rect, 0, 0, 0);
+    func_8005239C();
+    func_80050228();
+    func_80050554(0x100, 0x100, 0x100, 0x14);
+    func_800506D0();
+    D_8005D060 = 0;
+    func_80050A0C();
+}
+
