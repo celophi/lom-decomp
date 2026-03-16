@@ -53,11 +53,12 @@ ASM_DIR      := asm
 # LD       — modern mipsel linker (binutils from apt)
 # OBJCOPY  — converts ELF ↔ raw binary
 
-CROSS        := mipsel-linux-gnu-
-CC           := gcc
-CKD_CC	     := /opt/cdk-gcc/gcc
-LD           := $(CROSS)ld
-OBJCOPY      := $(CROSS)objcopy
+CROSS        	:= mipsel-linux-gnu-
+CC           	:= gcc
+CCPSX		 	:= wibo /opt/psyq4.1/CCPSX.EXE
+PSYQ_OBJ_PARSER := /opt/psyq4.1/psyq-obj-parser
+LD           	:= $(CROSS)ld
+OBJCOPY      	:= $(CROSS)objcopy
 
 
 # ─── Compiler & Assembler Flags ─────────────────────────────────────────────────
@@ -83,7 +84,6 @@ INCLUDE_FLAGS   := -Iinclude -Iinclude/psyq
 
 MASPSX_AS       	:= python3 tools/maspsx/maspsx.py --run-assembler
 MASPSX_AS_FLAGS 	:= -no-pad-sections --aspsx-version=2.77
-MASPSX_AS_FLAGS_CKD := -no-pad-sections --aspsx-version=2.67
 MASPSX_PP       	:= python3 tools/maspsx/maspsx.py
 MASPSX_PP_FLAGS 	:= --macro-inc
 
@@ -111,7 +111,7 @@ SRCS_G0 := \
 SRCS_G4 := \
 	src/cd.c
 
-SRCS_CKD_G0 := \
+SRCS_PSYQ41_G0 := \
 	src/overlays/checkps/code.c
 
 # Hand-written assembly (header + initialized data sections).
@@ -127,12 +127,12 @@ ASM_SRCS := \
 # patsubst turns  src/foo/bar.c  →  /staging/build/src/foo/bar.o
 # This mirrors the source tree under the staging build directory.
 
-OBJS_G0  	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
-OBJS_G4  	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
-OBJS_CKD_G0 := $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_CKD_G0))
-OBJS_ASM 	:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
+OBJS_G0  		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
+OBJS_G4  		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
+OBJS_PSYQ41_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_PSYQ41_G0))
+OBJS_ASM 		:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
 
-OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_CKD_G0) $(OBJS_ASM)
+OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_PSYQ41_G0) $(OBJS_ASM)
 
 
 # ─── Staging Sentinel ──────────────────────────────────────────────────────────
@@ -230,12 +230,11 @@ $(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
 
-# ── C files compiled with GCC 2.7.2-CKD -G0 (checkps overlay) ──
-$(OBJS_CKD_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+# ── C files compiled with PSYQ 4.1 (GCC 2.7.2 CKD) -G0 (checkps overlay) ──
+$(OBJS_PSYQ41_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(STAGING) && $(CKD_CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CKD) -o build/$(SRC_DIR)/$*.o
-
+	cd $(STAGING) && $(CCPSX) -DCCPSX $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -o build/$(SRC_DIR)/$*.obj && \
+		$(PSYQ_OBJ_PARSER) build/$(SRC_DIR)/$*.obj -o build/$(SRC_DIR)/$*.o
 
 # ── Hand-written assembly (header, data sections) ──
 # These use --macro-inc because they contain ASPSX directives (dlabel, etc.)
@@ -290,7 +289,7 @@ target-objects: $(COPY_SENTINEL) $(TARGET_OBJ)
 	@cp -r $(STAGING)/build/$(ASM_DIR)/* build/asm/ 2>/dev/null || true
 	@echo "Target objects built."
 
-base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4) $(OBJS_CKD_G0)
+base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4) $(OBJS_PSYQ41_G0)
 	@mkdir -p build/src
 	@cp -r $(STAGING)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
 	@echo "Base objects built."
@@ -358,11 +357,11 @@ $(1)_C_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)
 $(1)_ASSET_SRC := $$(overlay_$(1)_asset)
 $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 
-# Rule: compile C → object  (same GCC → maspsx pipeline as main SLUS)
+# Rule: compile C → object  (CCPSX writes .obj, then psyq-obj-parser converts to ELF .o)
 $$($(1)_C_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CKD_CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CKD) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+	cd $(STAGING) && $(CCPSX) -DCCPSX $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj && \
+		$(PSYQ_OBJ_PARSER) $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
