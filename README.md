@@ -5,15 +5,11 @@
 [Progress]: https://decomp.dev/celophi/lom-decomp.svg?mode=shield&measure=code&category=all&label=Progress
 [progress site]: https://decomp.dev/celophi/lom-decomp
 
-## <img src="docs/lil-cactus.png" width="40" alt="Lil' Cactus"/> About
+## About
 
 This project is an in-progress matching decompilation of Legend of Mana for PlayStation 1. Specifically, it targets the US North America edition (SLUS_010.13) released on June 6, 2000. The goal is to convert the original game binary back into human-readable C code that compiles to identical machine code, preserving the original game's logic and behavior while enabling preservation, modding, and educational research.
 
 **Future Goals**: In time, support may be added for the JP version, which includes リングりんぐランド content for PocketStation.
-
-## Legal
-
-This project is for educational and archival purposes only. You must own a legal copy of Legend of Mana to extract the necessary resources. No copyrighted assets are distributed.
 
 ## Prerequisites
 
@@ -275,3 +271,9 @@ This project makes use of a variety of tools:
 - [psyq-obj-parser](https://github.com/mkst/psyq-obj-parser) — PSY-Q `.obj` to ELF `.o` converter
 - [decomp.me](https://decomp.me) — Collaborative decompilation platform
 - [decomp.dev](https://decomp.dev) — Progress tracking and visualization
+
+## Legal
+
+This project is for educational and archival purposes only. You must own a legal copy of Legend of Mana to extract the necessary resources. No copyrighted assets are distributed.
+
+<img src="docs/lil-cactus.png" width="84" alt="Lil' Cactus"/>
