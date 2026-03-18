@@ -178,3 +178,12 @@ void func_800501AC(void)
 {
     func_80022068(0);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/2R9zp
+ */
+void func_800501CC(void) 
+{
+    func_80022040(&D_8005D088);
+    FUN_8002279c(0, 0x7F);
+}
