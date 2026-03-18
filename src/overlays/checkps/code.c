@@ -195,3 +195,21 @@ void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
 {
     func_8002216C(arg1, 0, arg2, arg3);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/i9Kyk
+ */
+void func_80050228(void) 
+{
+    u32* addrA = &D_8005D078;
+    u32* addrB = &D_8005D068;
+    
+    *addrA = 0;
+    *(addrA + 1) = 0;
+    *(addrA + 2) = 0;
+    
+    *addrB = 0;
+    *(addrB + 1) = 0;
+    *(addrB + 2) = 0;
+    *(addrB + 3) = 0;
+}
