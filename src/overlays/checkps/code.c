@@ -170,3 +170,11 @@ void func_80050138(s32 arg0)
     func_80016E7C(ref + offs[0], &D_8005D088, offs[1] - offs[0]);
     func_80022AE8(offs[1] + (u32)ref, 1);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/K0uKO
+ */
+void func_800501AC(void) 
+{
+    func_80022068(0);
+}
