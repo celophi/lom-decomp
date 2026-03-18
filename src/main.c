@@ -99,11 +99,14 @@ void Main(void)
                 VSync(0);
                 DrawSync(0);
                 FUN_80015c28();
+
+                // BIN/FIELD.BIN
                 CD_StreamData(2, *streamDst);
                 
                 if (D_8003522C != 0) 
                 {
-                    CD_StreamData(0xB, 0x80140000);
+                    // BIN/MOVIE.BIN
+                    CD_StreamData(11, 0x80140000);
                     CD_WaitForQueueEmpty();
                     
                     if (D_8003522C == 9) 
