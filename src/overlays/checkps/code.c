@@ -187,3 +187,11 @@ void func_800501CC(void)
     func_80022040(&D_8005D088);
     FUN_8002279c(0, 0x7F);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/Fklyd
+ */
+void func_800501FC(u32 arg1, u32 arg2, u32 arg3) 
+{
+    func_8002216C(arg1, 0, arg2, arg3);
+}
