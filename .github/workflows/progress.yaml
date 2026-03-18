@@ -41,6 +41,7 @@ jobs:
       
       - name: Copy ROM from container
         run: |
+          mkdir -p disc/BIN
           cp /rom/${{ env.ROM_ID }} disc/
           cp /rom/BIN/CHECKPS.BIN disc/BIN/
           cp /rom/BIN/FIELD.BIN disc/BIN/
