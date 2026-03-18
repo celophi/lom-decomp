@@ -122,3 +122,33 @@ void func_8004FEE8(int arg0)
     func_80050A0C();
 }
 
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/4wbZH
+ */
+void func_80050080(void)
+{
+    u8* src;
+    u8* dst;
+    u32 count;
+    s32* ref;
+    u32* offs;
+    
+    if (((((D_80042FB0 == 2) || (D_80042FB0 == 3)) || (D_80042FB0 == 0)) || (D_80042FB0 == 6)) || (D_80042FB0 == 7) || (D_80042FB0 == 5))
+    {
+        return;
+    }
+    
+    ref = &D_80061088;
+    *ref = 0x8013C000;
+
+    offs = &D_80052428;
+    offs++;
+    
+    src = (u8 *) &D_80052428 + offs[0];
+    dst = (u8*) 0x8013C000;
+    count = offs[1] - offs[0];
+    
+    func_80016E7C(src, dst, count);
+    func_80021FFC(*ref);
+    func_80022AE8((u32)&D_80052428 + offs[1], 1);
+}
