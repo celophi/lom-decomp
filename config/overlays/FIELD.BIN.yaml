@@ -1,24 +1,24 @@
-name: CHECKPS.BIN
-sha1: 388f95071ba5107108eeeb2296439871c22c4185
+name: FIELD.BIN
+sha1: 5b0325f90d55daef8321606d9a439238b0a5518d
 options:
   base_path: ../../
-  basename: CHECKPS.BIN
+  basename: FIELD.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/CHECKPS.BIN
+  target_path: disc/BIN/FIELD.BIN
   extensions_path: tools/splat_ext
   asset_path: assets
-  elf_path: build/overlays/checkps.elf
+  elf_path: build/overlays/field.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/checkps
-  src_path: src/overlays/checkps
-  build_path: build/overlays/checkps
+  asm_path: asm/overlays/field
+  src_path: src/overlays/field
+  build_path: build/overlays/field
 
-  ld_script_path: linker/overlays/checkps/checkps.ld
+  ld_script_path: linker/overlays/field/field.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/checkps/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/checkps/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/overlays/field/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/field/undefined_syms_auto.txt
 
   symbol_addrs_path:
     - config/symbol_addrs.txt
@@ -35,12 +35,10 @@ options:
   data_string_encoding: ASCII
 
 segments:
-  - name: checkps
+  - name: field
     type: decompress_overlay
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x0, bin, checkps]
-      - [0xA5, c, code]
-      - [0x4C9, c, unk]
-  - [0xA77D]
+      - [0x0, bin, field]
+  - [0xD4368]

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     
     container:
-      image: ghcr.io/celophi/slus-01013:v1.5
+      image: ghcr.io/celophi/slus-01013:v1.7
     
     defaults:
       run:
@@ -41,8 +41,11 @@ jobs:
       
       - name: Copy ROM from container
         run: |
+          mkdir -p disc/BIN
           cp /rom/${{ env.ROM_ID }} disc/
-          cp /rom/BIN/CHECKPS.BIN disc/
+          cp /rom/BIN/CHECKPS.BIN disc/BIN/
+          cp /rom/BIN/FIELD.BIN disc/BIN/
+          cp /rom/BIN/MOVIE.BIN disc/BIN/
           
       - name: Setup Python environment
         run: |
@@ -53,6 +56,8 @@ jobs:
         run: |
           splat split config/${{ env.ROM_ID }}.yaml
           splat split config/overlays/CHECKPS.BIN.yaml
+          splat split config/overlays/FIELD.BIN.yaml
+          splat split config/overlays/MOVIE.BIN.yaml
 
       - name: Generate objdiff configuration
         run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }}
