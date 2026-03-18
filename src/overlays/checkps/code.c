@@ -152,3 +152,21 @@ void func_80050080(void)
     func_80021FFC(*ref);
     func_80022AE8((u32)&D_80052428 + offs[1], 1);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/Ptv27
+ */
+void func_80050138(s32 arg0) 
+{
+    u32* offs;
+    u8* ref;
+
+    FUN_800141ec((arg0 + 0x17) & 0xFFFF, 0x80180000);
+    CD_WaitForQueueEmpty();
+
+    offs = (u32*)0x80180004;
+    ref = (u8*)0x80180000;
+
+    func_80016E7C(ref + offs[0], &D_8005D088, offs[1] - offs[0]);
+    func_80022AE8(offs[1] + (u32)ref, 1);
+}
