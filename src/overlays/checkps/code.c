@@ -215,97 +215,82 @@ void func_80050228(void)
 }
 
 /**
- * decomp.me link (83.77%) https://decomp.me/scratch/o9VAE
+ * decomp.me link (100%) https://decomp.me/scratch/o9VAE
  */
-void func_80050258(s32* arg0) {
-    s32 temp_a0, temp_a2, temp_v1;
+void func_80050258(s32* arg0) 
+{
+    s32 temp_a2, temp_a0, temp_v1;
     s32 var_a1;
     u8 var_v0;
-    u32* temp_t4;
     u32* ref;
-    s32* addrA = &D_8005D068;
-    s32* addrB = &D_8005D078;
+    u32* arg0_40 = (u32*)(arg0 + 16);
 
-    // Load pointer stored at arg0 + 0x80b8 (8238 * 4)
     ref = *(u32**)(arg0 + 8238);
 
-    if (*(addrA + 3) != 0) {
-        temp_a2 = (*(addrA) - *(addrB)) / *(addrA + 3);
-        temp_a0 = (*(addrA + 1) - *(addrB + 1)) / *(addrA + 3);
-        temp_v1 = (*(addrA + 2) - *(addrB + 2)) / *(addrA + 3);
-        *(addrA + 3) = *(addrA + 3) - 1;
-        *(addrB) = *(addrB) + temp_a2;
-        *(addrB + 1) = *(addrB + 1) + temp_a0;
-        *(addrB + 2) = *(addrB + 2) + temp_v1;
+    if (D_8005D068[3] != 0) {
+        temp_a2 = (D_8005D068[0] - D_8005D078[0]) / D_8005D068[3];
+        temp_a0 = (D_8005D068[1] - D_8005D078[1]) / D_8005D068[3];
+        temp_v1 = (D_8005D068[2] - D_8005D078[2]) / D_8005D068[3];
+        D_8005D068[3]--;
+        D_8005D078[0] += temp_a2;
+        D_8005D078[1] += temp_a0;
+        D_8005D078[2] += temp_v1;
     } else {
-        *(addrB) = *(addrA);
-        *(addrB + 1) = *(addrA + 1);
-        *(addrB + 2) = *(addrA + 2);
+        D_8005D078[0] = D_8005D068[0];
+        D_8005D078[1] = D_8005D068[1];
+        D_8005D078[2] = D_8005D068[2];
     }
 
-    // If all three are 0x100, skip the rest
-    if (*(addrB) == 0x100 && *(addrB + 1) == *(addrB) && *(addrB + 2) == *(addrB + 1)) {
+    if (D_8005D078[0] == 0x100 && D_8005D078[1] == D_8005D078[0] && D_8005D078[2] == D_8005D078[1]) {
         goto end;
     }
 
-    // Store the three bytes at ref+4, ref+5, ref+6
-    if (*(addrB) >= 0x101) {
-        ((u8*)ref)[4] = (u8)(*(addrB) - 1);
-        ((u8*)ref)[5] = (u8)(*(addrB + 1) - 1);
-        var_v0 = (u8)(*(addrB + 2) - 1);
-        goto block_18;
+    if (D_8005D078[0] >= 0x101) {
+        ((u8*)ref)[4] = (u8)(D_8005D078[0] - 1);
+        ((u8*)ref)[5] = (u8)(D_8005D078[1] - 1);
+        var_v0 = (u8)(D_8005D078[2] - 1);
+        goto block_store_6;
     }
-
-    if (*(addrB) == 0x100) {
+    if (D_8005D078[0] == 0x100) {
         ((u8*)ref)[4] = 0;
     } else {
-        ((u8*)ref)[4] = ~(u8)(*(addrB));
+        ((u8*)ref)[4] = ~(u8)(D_8005D078[0]);
     }
-
-    if (*(addrB + 1) == 0x100) {
+    if (D_8005D078[1] == 0x100) {
         ((u8*)ref)[5] = 0;
     } else {
-        ((u8*)ref)[5] = ~(u8)(*(addrB + 1));
+        ((u8*)ref)[5] = ~(u8)(D_8005D078[1]);
     }
-
-    if (*(addrB + 2) == 0x100) {
+    if (D_8005D078[2] == 0x100) {
         ((u8*)ref)[6] = 0;
     } else {
-        var_v0 = ~(u8)(*(addrB + 2));
-block_18:
+        var_v0 = ~(u8)(D_8005D078[2]);
+block_store_6:
         ((u8*)ref)[6] = var_v0;
     }
 
-    // Common stores after the three bytes
     ((u8*)ref)[3] = 3;
     ((u8*)ref)[7] = 0x62;
-    *(u16*)((u8*)ref + 12) = 0x140;  // halfword at offset 12
-    *(u16*)((u8*)ref + 8)  = 0;      // halfword at offset 8
-    *(u16*)((u8*)ref + 10) = 0;      // halfword at offset 10
-    *(u16*)((u8*)ref + 14) = 0xF0;   // halfword at offset 14
+    *(u16*)((u8*)ref + 12) = 0x140;
+    *(u16*)((u8*)ref + 10) = 0;
+    *(u16*)((u8*)ref + 8)  = 0;
+    *(u16*)((u8*)ref + 14) = 0xF0;
 
-    // First word operation: update *ref using arg0+16
-    *ref = (*ref & 0xFF000000) | (*(u32*)(arg0 + 16) & 0x00FFFFFF);
-    *(u32*)(arg0 + 16) = (*(u32*)(arg0 + 16) & 0xFF000000) | ((u32)ref & 0x00FFFFFF);
-
-    // Prepare for next block
-    temp_t4 = (u32*)((u8*)ref + 0x10);  // byte offset 16
+    *ref = (*ref & 0xFF000000) | (*arg0_40 & 0x00FFFFFF);
+    *arg0_40 = (*arg0_40 & 0xFF000000) | ((u32)ref & 0x00FFFFFF);
 
     var_a1 = 0x25;
-    if (*(addrB) < 0x101) {
+    ref = (u32*)((u8*)ref + 0x10);   // advance in-place; lands in delay slot
+    if (D_8005D078[0] < 0x101) {
         var_a1 = 0x45;
     }
+    ((u8*)ref)[3] = 1;
+    *(u32*)((u8*)ref + 4) = (u32)var_a1 | 0xE1000000;
 
-    ((u8*)temp_t4)[3] = 1;
-    *(u32*)((u8*)temp_t4 + 4) = var_a1 | 0xE1000000;
+    *ref = (*ref & 0xFF000000) | (*arg0_40 & 0x00FFFFFF);
+    *arg0_40 = (*arg0_40 & 0xFF000000) | ((u32)ref & 0x00FFFFFF);
 
-    // Update word at temp_t4
-    *temp_t4 = (*temp_t4 & 0xFF000000) | (*(u32*)(arg0 + 16) & 0x00FFFFFF);
-    *(u32*)(arg0 + 16) = (*(u32*)(arg0 + 16) & 0xFF000000) | ((u32)temp_t4 & 0x00FFFFFF);
-
-    // Advance ref to temp_t4 + 8 (byte offset 24)
-    ref = (u32*)((u8*)temp_t4 + 8);
-
+    ref = (u32*)((u8*)ref + 8);      // second advance (+8), total = +0x18
 end:
-    *(u32*)(arg0 + 8238) = ref;
+    *(u32*)(arg0 + 8238) = (u32)ref;
 }
