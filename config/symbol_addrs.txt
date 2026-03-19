@@ -36,6 +36,9 @@ strcat                      = 0x80016F9C;
 // psyq/libc2/strcmp
 strcmp                      = 0x8001704C;
 
+// psyq/libc2/strcpy
+strcpy                      = 0x800170BC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
