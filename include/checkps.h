@@ -4,6 +4,7 @@
 #include "common.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
+#include "psyq/memory.h"
 
 extern s32 D_8005D060;
 extern u32 D_80052428;

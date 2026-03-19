@@ -148,7 +148,7 @@ void func_80050080(void)
     dst = (u8*) 0x8013C000;
     count = offs[1] - offs[0];
     
-    func_80016E7C(src, dst, count);
+    bcopy(src, dst, count);
     func_80021FFC(*ref);
     func_80022AE8((u32)&D_80052428 + offs[1], 1);
 }
@@ -167,7 +167,7 @@ void func_80050138(s32 arg0)
     offs = (u32*)0x80180004;
     ref = (u8*)0x80180000;
 
-    func_80016E7C(ref + offs[0], &D_8005D088, offs[1] - offs[0]);
+    bcopy(ref + offs[0], &D_8005D088, offs[1] - offs[0]);
     func_80022AE8(offs[1] + (u32)ref, 1);
 }
 
