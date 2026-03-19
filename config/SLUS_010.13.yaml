@@ -62,7 +62,7 @@ segments:
       - [0x4C48, c, decompression]
       - [0x5088, c, unk4]
       - [0x767C, c, psyq/libc2]
-      - [0x772C, c, unk5]
+      - [0x775C, c, unk5]
       - [0xEB2C, c, psyq/libcd/SYS]
       - [0xF13C, c, unk6]
       - [0x10F6C, c, psyq/libetc/INTR]

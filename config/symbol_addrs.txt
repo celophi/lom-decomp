@@ -76,6 +76,7 @@ SetDefDispEnv               = 0x8001C62C;
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
 memcpy                      = 0x80016EEC;
+memset                      = 0x80016F2C;
 
 // Globals
 g_DiscValidationId          = 0x80035230;
