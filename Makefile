@@ -102,6 +102,11 @@ MASPSX_PP_FLAGS 	:= --macro-inc
 SRCS_G0 := \
 	src/psyq/libcd/SYS.c \
 	src/psyq/libetc/INTR.c \
+	src/psyq/libc2/bcopy.c \
+	src/psyq/libc2/bzero.c \
+	src/psyq/libc2/memcpy.c \
+	src/psyq/libc2/memset.c \
+	src/psyq/libc2/rand.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
