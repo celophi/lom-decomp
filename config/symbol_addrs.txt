@@ -30,6 +30,9 @@ CD_StreamDataCallback       = 0x80014888;
 rand                        = 0x80016F5C;
 srand                       = 0x80016F8C;
 
+// psyq/libc2/strcat
+strcat                      = 0x80016F9C;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
