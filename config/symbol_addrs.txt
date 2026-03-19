@@ -45,6 +45,9 @@ strlen                      = 0x8001710C;
 // psyq/libc2/strncmp
 strncmp                     = 0x8001714C;
 
+// psyq/libc2/strncpy
+strncpy                     = 0x800171CC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
