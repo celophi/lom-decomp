@@ -111,6 +111,7 @@ SRCS_G0 := \
 	src/psyq/libc2/strcmp.c \
 	src/psyq/libc2/strcpy.c \
 	src/psyq/libc2/strlen.c \
+	src/psyq/libc2/strncmp.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
