@@ -107,6 +107,9 @@ SRCS_G0 := \
 	src/psyq/libc2/memcpy.c \
 	src/psyq/libc2/memset.c \
 	src/psyq/libc2/rand.c \
+	src/psyq/libc2/strcat.c \
+	src/psyq/libc2/strcmp.c \
+	src/psyq/libc2/strcpy.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
