@@ -26,6 +26,34 @@ CD_InitResources            = 0x80014140;
 CD_DecompressData           = 0x80014448;
 CD_StreamDataCallback       = 0x80014888;
 
+// psyq/libc2/rand
+rand                        = 0x80016F5C;
+srand                       = 0x80016F8C;
+
+// psyq/libc2/strcat
+strcat                      = 0x80016F9C;
+
+// psyq/libc2/strcmp
+strcmp                      = 0x8001704C;
+
+// psyq/libc2/strcpy
+strcpy                      = 0x800170BC;
+
+// psyq/libc2/strlen
+strlen                      = 0x8001710C;
+
+// psyq/libc2/strncmp
+strncmp                     = 0x8001714C;
+
+// psyq/libc2/strncpy
+strncpy                     = 0x800171CC;
+
+// psyq/libc2/exit
+exit                        = 0x8001723C;
+
+// psyq/libcard/C171
+_card_info                  = 0x8001724C;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
@@ -121,7 +149,6 @@ InitializeControllers = 0x80014adc;
 FUN_80021fbc = 0x80021fbc;
 CD_StreamData = 0x800119c0;
 InitVSyncController = 0x80015770;
-srand = 0x80016f8c;
 FUN_80015c28 = 0x80015c28;
 FUN_8004fd14 = 0x8004fd14;
 DrawSync = 0x80019788;
