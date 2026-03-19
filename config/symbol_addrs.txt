@@ -51,6 +51,9 @@ strncpy                     = 0x800171CC;
 // psyq/libc2/exit
 exit                        = 0x8001723C;
 
+// psyq/libcard/C171
+_card_info                  = 0x8001724C;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
