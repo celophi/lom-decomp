@@ -123,6 +123,19 @@ SRCS_G0 := \
 	src/psyq/libcard/CARD.c \
 	src/psyq/libcard/INIT.c \
 	src/psyq/libapi/PAD.c \
+	src/psyq/libapi/A18.c \
+	src/psyq/libapi/A19.c \
+	src/psyq/libapi/A20.c \
+	src/psyq/libapi/A21.c \
+	src/psyq/libapi/L02.c \
+	src/psyq/libapi/L03.c \
+	src/psyq/libapi/PATCH.c \
+	src/psyq/libapi/C68.c \
+	src/psyq/libapi/CHCLRPAD.c \
+	src/psyq/libcard/A74.c \
+	src/psyq/libcard/A75.c \
+	src/psyq/libcard/A76.c \
+	src/psyq/libcard/PATCH.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \

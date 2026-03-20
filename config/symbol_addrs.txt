@@ -84,6 +84,57 @@ PAD_init                    = 0x80017408;
 InitPAD                     = 0x80017498;
 StartPAD                    = 0x80017528;
 StopPAD                     = 0x80017558;
+PAD_OBJ_1A4                 = 0x80017590;
+PAD_OBJ_21C                 = 0x80017608;
+PAD_OBJ_254                 = 0x80017640;
+PAD_OBJ_2BC                 = 0x800176A8;
+
+// psyq/libapi/A18
+InitPAD2                    = 0x800176EC;
+
+// psyq/libapi/A19
+StartPAD2                   = 0x800176FC;
+
+// psyq/libapi/A20
+StopPAD2                    = 0x8001770C;
+
+// psyq/libapi/A21
+PAD_init2                   = 0x8001771C;
+
+// psyq/libapi/L02
+SysEnqIntRP                 = 0x8001772C;
+
+// psyq/libapi/L03
+SysDeqIntRP                 = 0x8001773C;
+
+// psyq/libapi/PATCH
+EnablePAD                   = 0x8001774C;
+DisablePAD                  = 0x80017760;
+_patch_pad                  = 0x80017774;
+
+// psyq/libapi/C68
+FlushCache                  = 0x800177EC;
+
+// psyq/libapi/CHCLRPAD
+_remove_ChgclrPAD           = 0x800177FC;
+
+// psyq/libcard/A74
+InitCARD2                   = 0x8001786C;
+
+// psyq/libcard/A75
+StartCARD2                  = 0x8001787C;
+
+// psyq/libcard/A76
+StopCARD2                   = 0x8001788C;
+
+// psyq/libcard/PATCH
+_patch_card_info            = 0x8001789C;
+PATCH_OBJ_44                = 0x800178E0;
+PATCH_OBJ_84                = 0x8001790C;
+PATCH_OBJ_B4                = 0x80017950;
+_patch_card                 = 0x80017978;
+_patch_card2                = 0x80017A0C;
+_copy_memcard_patch         = 0x80017A7C;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
