@@ -54,6 +54,37 @@ exit                        = 0x8001723C;
 // psyq/libcard/C171
 _card_info                  = 0x8001724C;
 
+// psyq/libcard/C172
+_card_load                  = 0x8001725C;
+
+// psyq/libcard/A78
+_card_write                 = 0x8001726C;
+
+// psyq/libcard/A79
+_card_read                  = 0x8001727C;
+
+// psyq/libcard/A80
+_new_card                   = 0x8001728C;
+
+// psyq/libcard/A93
+_card_wait                  = 0x8001729C;
+
+// psyq/libcard/CARD
+_card_clear                 = 0x800172AC;
+
+// psyq/libcard/INIT
+InitCARD                    = 0x800172EC;
+StartCARD                   = 0x8001737C;
+StopCARD                    = 0x800173C4;
+
+// psyq/libapi/PAD
+SetInitPadFlag              = 0x800173EC;
+ReadInitPadFlag             = 0x800173F8;
+PAD_init                    = 0x80017408;
+InitPAD                     = 0x80017498;
+StartPAD                    = 0x80017528;
+StopPAD                     = 0x80017558;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
@@ -140,8 +171,6 @@ FUN_8002129c = 0x8002129c;
 SsUtReverbOff = 0x800212cc;
 FUN_80015c18 = 0x80015c18;
 InitGeom = 0x8001cbf4;
-InitCARD = 0x800172ec;
-StartCARD = 0x8001737c;
 _bu_init = 0x8001676c;
 McxStartCom = 0x800319d8;
 ChangeClearPAD = 0x8001688c;
