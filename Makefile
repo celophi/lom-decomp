@@ -122,6 +122,7 @@ SRCS_G0 := \
 	src/psyq/libcard/A93.c \
 	src/psyq/libcard/CARD.c \
 	src/psyq/libcard/INIT.c \
+	src/psyq/libapi/PAD.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \

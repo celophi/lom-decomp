@@ -77,6 +77,14 @@ InitCARD                    = 0x800172EC;
 StartCARD                   = 0x8001737C;
 StopCARD                    = 0x800173C4;
 
+// psyq/libapi/PAD
+SetInitPadFlag              = 0x800173EC;
+ReadInitPadFlag             = 0x800173F8;
+PAD_init                    = 0x80017408;
+InitPAD                     = 0x80017498;
+StartPAD                    = 0x80017528;
+StopPAD                     = 0x80017558;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
