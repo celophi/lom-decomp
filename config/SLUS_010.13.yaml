@@ -81,7 +81,7 @@ segments:
       - [0x7A9C, c, psyq/libcard/A93]
       - [0x7AAC, c, psyq/libcard/CARD]
       - [0x7AEC, c, psyq/libcard/INIT]
-      - [0x7B7C, c, unk5]
+      - [0x7BC4, c, unk5]
       - [0xEB2C, c, psyq/libcd/SYS]
       - [0xF13C, c, unk6]
       - [0x10F6C, c, psyq/libetc/INTR]
