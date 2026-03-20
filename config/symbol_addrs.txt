@@ -107,6 +107,11 @@ SysEnqIntRP                 = 0x8001772C;
 // psyq/libapi/L03
 SysDeqIntRP                 = 0x8001773C;
 
+// psyq/libapi/PATCH
+EnablePAD                   = 0x8001774C;
+DisablePAD                  = 0x80017760;
+_patch_pad                  = 0x80017774;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
