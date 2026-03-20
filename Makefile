@@ -118,6 +118,7 @@ SRCS_G0 := \
 	src/psyq/libcard/C172.c \
 	src/psyq/libcard/A78.c \
 	src/psyq/libcard/A79.c \
+	src/psyq/libcard/A80.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
