@@ -84,6 +84,10 @@ PAD_init                    = 0x80017408;
 InitPAD                     = 0x80017498;
 StartPAD                    = 0x80017528;
 StopPAD                     = 0x80017558;
+PAD_OBJ_1A4                 = 0x80017590;
+PAD_OBJ_21C                 = 0x80017608;
+PAD_OBJ_254                 = 0x80017640;
+PAD_OBJ_2BC                 = 0x800176A8;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
