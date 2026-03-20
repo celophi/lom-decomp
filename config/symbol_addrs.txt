@@ -72,6 +72,9 @@ _card_wait                  = 0x8001729C;
 // psyq/libcard/CARD
 _card_clear                 = 0x800172AC;
 
+// psyq/libcard/INIT
+InitCARD                    = 0x800172EC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
@@ -158,7 +161,6 @@ FUN_8002129c = 0x8002129c;
 SsUtReverbOff = 0x800212cc;
 FUN_80015c18 = 0x80015c18;
 InitGeom = 0x8001cbf4;
-InitCARD = 0x800172ec;
 StartCARD = 0x8001737c;
 _bu_init = 0x8001676c;
 McxStartCom = 0x800319d8;
