@@ -75,6 +75,7 @@ _card_clear                 = 0x800172AC;
 // psyq/libcard/INIT
 InitCARD                    = 0x800172EC;
 StartCARD                   = 0x8001737C;
+StopCARD                    = 0x800173C4;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
