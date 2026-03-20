@@ -104,6 +104,9 @@ PAD_init2                   = 0x8001771C;
 // psyq/libapi/L02
 SysEnqIntRP                 = 0x8001772C;
 
+// psyq/libapi/L03
+SysDeqIntRP                 = 0x8001773C;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
