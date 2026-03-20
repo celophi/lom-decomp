@@ -95,6 +95,9 @@ InitPAD2                    = 0x800176EC;
 // psyq/libapi/A19
 StartPAD2                   = 0x800176FC;
 
+// psyq/libapi/A20
+StopPAD2                    = 0x8001770C;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
