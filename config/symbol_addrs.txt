@@ -133,6 +133,8 @@ PATCH_OBJ_44                = 0x800178E0;
 PATCH_OBJ_84                = 0x8001790C;
 PATCH_OBJ_B4                = 0x80017950;
 _patch_card                 = 0x80017978;
+_patch_card2                = 0x80017A0C;
+_copy_memcard_patch         = 0x80017A7C;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
