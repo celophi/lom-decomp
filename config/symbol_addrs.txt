@@ -60,6 +60,9 @@ _card_load                  = 0x8001725C;
 // psyq/libcard/A78
 _card_write                 = 0x8001726C;
 
+// psyq/libcard/A79
+_card_read                  = 0x8001727C;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
