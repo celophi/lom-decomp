@@ -112,6 +112,9 @@ EnablePAD                   = 0x8001774C;
 DisablePAD                  = 0x80017760;
 _patch_pad                  = 0x80017774;
 
+// psyq/libapi/C68
+FlushCache                  = 0x800177EC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;

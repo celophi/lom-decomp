@@ -130,6 +130,7 @@ SRCS_G0 := \
 	src/psyq/libapi/L02.c \
 	src/psyq/libapi/L03.c \
 	src/psyq/libapi/PATCH.c \
+	src/psyq/libapi/C68.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
