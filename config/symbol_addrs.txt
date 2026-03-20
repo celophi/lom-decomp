@@ -92,6 +92,9 @@ PAD_OBJ_2BC                 = 0x800176A8;
 // psyq/libapi/A18
 InitPAD2                    = 0x800176EC;
 
+// psyq/libapi/A19
+StartPAD2                   = 0x800176FC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;

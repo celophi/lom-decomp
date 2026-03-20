@@ -124,6 +124,7 @@ SRCS_G0 := \
 	src/psyq/libcard/INIT.c \
 	src/psyq/libapi/PAD.c \
 	src/psyq/libapi/A18.c \
+	src/psyq/libapi/A19.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
