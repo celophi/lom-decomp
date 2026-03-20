@@ -126,6 +126,7 @@ SRCS_G0 := \
 	src/psyq/libapi/A18.c \
 	src/psyq/libapi/A19.c \
 	src/psyq/libapi/A20.c \
+	src/psyq/libapi/A21.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
