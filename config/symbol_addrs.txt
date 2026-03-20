@@ -69,6 +69,9 @@ _new_card                   = 0x8001728C;
 // psyq/libcard/A93
 _card_wait                  = 0x8001729C;
 
+// psyq/libcard/CARD
+_card_clear                 = 0x800172AC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;

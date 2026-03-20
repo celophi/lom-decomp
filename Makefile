@@ -120,6 +120,7 @@ SRCS_G0 := \
 	src/psyq/libcard/A79.c \
 	src/psyq/libcard/A80.c \
 	src/psyq/libcard/A93.c \
+	src/psyq/libcard/CARD.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
