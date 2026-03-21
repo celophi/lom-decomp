@@ -136,6 +136,39 @@ _patch_card                 = 0x80017978;
 _patch_card2                = 0x80017A0C;
 _copy_memcard_patch         = 0x80017A7C;
 
+// psyq/libcard/END
+_ExitCard                   = 0x80017ABC;
+
+// psyq/libcard/FORMAT
+_card_format                = 0x80017B3C;
+
+// psyq/libcard/A92
+_card_status                = 0x80017EFC;
+
+// psyq/libpress/PRESS
+DecDCTReset                 = 0x80017F0C;
+DecDCTGetEnv                = 0x80017F40;
+DecDCTPutEnv                = 0x80017FCC;
+DecDCTin                    = 0x80018064;
+DecDCTout                   = 0x800180E0;
+DecDCTinSync                = 0x80018100;
+DecDCToutSync               = 0x8001813C;
+DecDCTinCallback            = 0x80018184;
+DecDCToutCallback           = 0x800181A8;
+MDEC_reset                  = 0x800181CC;
+MDEC_in                     = 0x800182BC;
+MDEC_out                    = 0x8001834C;
+MDEC_in_sync                = 0x800183D8;
+MDEC_out_sync               = 0x8001846C;
+MDEC_register               = 0x80018500;
+MDEC_timeout                = 0x80018518;
+
+// psyq/libc2/PRINTF
+printf                      = 0x8001859C;
+
+// psyq/libc2/PRNT
+prnt                        = 0x800185DC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
@@ -243,7 +276,6 @@ FUN_80060814 = 0x80060814;
 FUN_800141ec = 0x800141ec;
 ClearPointer = 0x80014ad0;
 CD_ResetSystem = 0x80014014;
-DecDCToutCallback = 0x800181A8;
 DrawSyncCallback = 0x80019690;
 FUN_80023010 = 0x80023010;
 FUN_80022400 = 0x80022400;
