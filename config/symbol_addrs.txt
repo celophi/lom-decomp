@@ -169,6 +169,13 @@ printf                      = 0x8001859C;
 // psyq/libc2/PRNT
 prnt                        = 0x800185DC;
 
+// psyq/libc2/CTYPE
+toupper                     = 0x80018C7C;
+tolower                     = 0x80018CB0;
+
+// psyq/libc2/MEMCHR
+memchr                      = 0x80018CEC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
