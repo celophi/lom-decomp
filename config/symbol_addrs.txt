@@ -139,7 +139,8 @@ _copy_memcard_patch         = 0x80017A7C;
 // psyq/libcard/END
 _ExitCard                   = 0x80017ABC;
 
-
+// psyq/libcard/FORMAT
+_card_format                = 0x80017B3C;
 
 
 // psyq/libcd/SYS.c
