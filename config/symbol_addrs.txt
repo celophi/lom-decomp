@@ -246,7 +246,8 @@ DrawOTag2                   = 0x8001C1F0;
 _GPU_ResetCallback          = 0x8001C2EC;
 SYS_OBJ_2F08                = 0x8001C314;
 
-
+// psyq/libapi/C73
+GPU_cw                      = 0x8001C33C;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
