@@ -142,6 +142,9 @@ _ExitCard                   = 0x80017ABC;
 // psyq/libcard/FORMAT
 _card_format                = 0x80017B3C;
 
+// psyq/libcard/A92
+_card_status                = 0x80017EFC;
+
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
