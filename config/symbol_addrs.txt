@@ -176,6 +176,11 @@ tolower                     = 0x80018CB0;
 // psyq/libc2/MEMCHR
 memchr                      = 0x80018CEC;
 
+// psyq/libc2/PUTCHAR
+_putchar                    = 0x80018D3C;
+_putchar_flash              = 0x80018E38;
+putchar                     = 0x80018E74;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
