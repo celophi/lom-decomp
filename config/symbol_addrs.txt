@@ -169,6 +169,85 @@ printf                      = 0x8001859C;
 // psyq/libc2/PRNT
 prnt                        = 0x800185DC;
 
+// psyq/libc2/CTYPE
+toupper                     = 0x80018C7C;
+tolower                     = 0x80018CB0;
+
+// psyq/libc2/MEMCHR
+memchr                      = 0x80018CEC;
+
+// psyq/libc2/PUTCHAR
+_putchar                    = 0x80018D3C;
+_putchar_flash              = 0x80018E38;
+putchar                     = 0x80018E74;
+
+// psyq/libpress/VLC_C
+DecDCTvlcSize2              = 0x80018F9C;
+DecDCTvlc2                  = 0x80018FCC;
+
+// psyq/libpress/BUILD
+DecDCTvlcBuild              = 0x8001931C;
+
+// psyq/libgpu/SYS
+ResetGraph                  = 0x8001940C;
+SetGraphDebug               = 0x80019580;
+SetGraphQueue               = 0x800195DC;
+GetGraphDebug               = 0x80019680;
+DrawSyncCallback            = 0x80019690;
+SetDispMask                 = 0x800196F0;
+DrawSync                    = 0x80019788;
+SYS_OBJ_3E4                 = 0x800197F0;
+ClearImage                  = 0x8001990C;
+ClearImage2                 = 0x8001999C;
+LoadImage                   = 0x80019A34;
+StoreImage                  = 0x80019A94;
+MoveImage                   = 0x80019AF4;
+ClearOTag                   = 0x80019BAC;
+ClearOTagR                  = 0x80019C74;
+DrawPrim                    = 0x80019D20;
+DrawOTag                    = 0x80019D7C;
+PutDrawEnv                  = 0x80019DEC;
+DrawOTagEnv                 = 0x80019EAC;
+GetDrawEnv                  = 0x80019F84;
+PutDispEnv                  = 0x80019FB8;
+GetDispEnv                  = 0x8001A4B0;
+GetODE                      = 0x8001A4E4;
+SetDrawArea                 = 0x8001A514;
+SetDrawOffset               = 0x8001A594;
+SetDrawEnv                  = 0x8001A5D4;
+SYS_OBJ_13C0                = 0x8001A7CC;
+SYS_OBJ_1630                = 0x8001AA3C;
+SYS_OBJ_1650                = 0x8001AA5C;
+SYS_OBJ_16E8                = 0x8001AAF4;
+SYS_OBJ_1780                = 0x8001AB8C;
+SYS_OBJ_179C                = 0x8001ABA8;
+SYS_OBJ_181C                = 0x8001AC28;
+SYS_OBJ_1834                = 0x8001AC40;
+SYS_OBJ_1914                = 0x8001AD20;
+SYS_OBJ_1B44                = 0x8001AF50;
+SYS_OBJ_1D80                = 0x8001B18C;
+SYS_OBJ_2000                = 0x8001B40C;
+SYS_OBJ_2024                = 0x8001B430;
+SYS_OBJ_2038                = 0x8001B444;
+SYS_OBJ_2078                = 0x8001B484;
+SYS_OBJ_20C0                = 0x8001B4CC;
+SYS_OBJ_20F0                = 0x8001B4FC;
+SYS_OBJ_2114                = 0x8001B520;
+SYS_OBJ_23C4                = 0x8001B7D0;
+SYS_OBJ_2624                = 0x8001BA30;
+SYS_OBJ_2774                = 0x8001BB80;
+SYS_OBJ_28B0                = 0x8001BCBC;
+SYS_OBJ_28E4                = 0x8001BCF0;
+SYS_OBJ_2A28                = 0x8001BE34;
+LoadImage2                  = 0x8001BED4;
+StoreImage2                 = 0x8001BFC0;
+MoveImage2                  = 0x8001C0AC;
+DrawOTag2                   = 0x8001C1F0;
+_GPU_ResetCallback          = 0x8001C2EC;
+SYS_OBJ_2F08                = 0x8001C314;
+
+
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
@@ -209,11 +288,6 @@ CdGetDiskType               = 0x80020248;
 CdIntToPos                  = 0x800203BC;
 CdPosToInt                  = 0x800204C0;
 VSync                       = 0x8002054c;
-MoveImage                   = 0x80019AF4;
-ClearOTagR                  = 0x80019C74;
-DrawOTag                    = 0x80019D7C;
-PutDrawEnv                  = 0x80019DEC;
-PutDispEnv                  = 0x80019FB8;
 SetDefDrawEnv               = 0x8001C56C;
 SetDefDispEnv               = 0x8001C62C;
 bcopy                       = 0x80016E7C;
@@ -247,9 +321,6 @@ D_800102AC                  = 0x800102AC;
 __main = 0x8002e850;
 SetMem = 0x8001679c;
 SetConf = 0x8001689c;
-ResetGraph = 0x8001940c;
-SetGraphDebug = 0x80019580;
-SetDispMask = 0x800196f0;
 FUN_80016784 = 0x80016784;
 FUN_8002129c = 0x8002129c;
 SsUtReverbOff = 0x800212cc;
@@ -264,19 +335,16 @@ CD_StreamData = 0x800119c0;
 InitVSyncController = 0x80015770;
 FUN_80015c28 = 0x80015c28;
 FUN_8004fd14 = 0x8004fd14;
-DrawSync = 0x80019788;
 FUN_80140018 = 0x80140018;
 FUN_80015c58 = 0x80015c58;
 FUN_80022aa8 = 0x80022aa8;
 FUN_80022ac8 = 0x80022ac8;
 FUN_8002279c = 0x8002279c;
 FUN_80015c38 = 0x80015c38;
-ClearImage = 0x8001990c;
 FUN_80060814 = 0x80060814;
 FUN_800141ec = 0x800141ec;
 ClearPointer = 0x80014ad0;
 CD_ResetSystem = 0x80014014;
-DrawSyncCallback = 0x80019690;
 FUN_80023010 = 0x80023010;
 FUN_80022400 = 0x80022400;
 FUN_80140d48 = 0x80140d48;

@@ -142,6 +142,12 @@ SRCS_G0 := \
 	src/psyq/libpress/PRESS.c \
 	src/psyq/libc2/PRINTF.c \
 	src/psyq/libc2/PRNT.c \
+	src/psyq/libc2/CTYPE.c \
+	src/psyq/libc2/MEMCHR.c \
+	src/psyq/libc2/PUTCHAR.c \
+	src/psyq/libpress/VLC_C.c \
+	src/psyq/libpress/BUILD.c \
+	src/psyq/libgpu/SYS.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
