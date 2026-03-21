@@ -146,6 +146,7 @@ SRCS_G0 := \
 	src/psyq/libc2/MEMCHR.c \
 	src/psyq/libc2/PUTCHAR.c \
 	src/psyq/libpress/VLC_C.c \
+	src/psyq/libpress/BUILD.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \

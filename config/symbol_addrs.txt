@@ -185,7 +185,8 @@ putchar                     = 0x80018E74;
 DecDCTvlcSize2              = 0x80018F9C;
 DecDCTvlc2                  = 0x80018FCC;
 
-
+// psyq/libpress/BUILD
+DecDCTvlcBuild              = 0x8001931C;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
