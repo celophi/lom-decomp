@@ -136,6 +136,12 @@ _patch_card                 = 0x80017978;
 _patch_card2                = 0x80017A0C;
 _copy_memcard_patch         = 0x80017A7C;
 
+// psyq/libcard/END
+_ExitCard                   = 0x80017ABC;
+
+
+
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
