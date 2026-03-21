@@ -139,6 +139,7 @@ SRCS_G0 := \
 	src/psyq/libcard/END.c \
 	src/psyq/libcard/FORMAT.c \
 	src/psyq/libcard/A92.c \
+	src/psyq/libpress/PRESS.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
