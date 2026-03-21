@@ -181,6 +181,12 @@ _putchar                    = 0x80018D3C;
 _putchar_flash              = 0x80018E38;
 putchar                     = 0x80018E74;
 
+// psyq/libpress/VLC_C
+DecDCTvlcSize2              = 0x80018F9C;
+DecDCTvlc2                  = 0x80018FCC;
+
+
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
