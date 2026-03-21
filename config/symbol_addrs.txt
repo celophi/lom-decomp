@@ -258,6 +258,10 @@ ContinueDraw                = 0x8001C440;
 SetDefDrawEnv               = 0x8001C56C;
 SetDefDispEnv               = 0x8001C62C;
 
+// psyq/libgpu/P17
+SetPolyFT4                  = 0x8001C66C;
+
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
