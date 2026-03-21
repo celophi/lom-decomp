@@ -149,6 +149,7 @@ SRCS_G0 := \
 	src/psyq/libpress/BUILD.c \
 	src/psyq/libgpu/SYS.c \
 	src/psyq/libapi/C73.c \
+	src/psyq/libgpu/BREAK.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \

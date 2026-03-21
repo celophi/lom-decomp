@@ -249,6 +249,12 @@ SYS_OBJ_2F08                = 0x8001C314;
 // psyq/libapi/C73
 GPU_cw                      = 0x8001C33C;
 
+// psyq/libgpu/BREAK
+BreakDraw                   = 0x8001C34C;
+IsIdleGPU                   = 0x8001C3E0;
+ContinueDraw                = 0x8001C440;
+
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
