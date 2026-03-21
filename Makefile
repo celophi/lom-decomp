@@ -150,6 +150,7 @@ SRCS_G0 := \
 	src/psyq/libgpu/SYS.c \
 	src/psyq/libapi/C73.c \
 	src/psyq/libgpu/BREAK.c \
+	src/psyq/libgpu/EXT.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
