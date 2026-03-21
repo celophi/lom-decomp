@@ -166,6 +166,9 @@ MDEC_timeout                = 0x80018518;
 // psyq/libc2/PRINTF
 printf                      = 0x8001859C;
 
+// psyq/libc2/PRNT
+prnt                        = 0x800185DC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
