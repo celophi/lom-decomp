@@ -291,6 +291,7 @@ SquareRoot0                 = 0x8001CC7C;
 InvSquareRoot               = 0x8001CD0C;
 VectorNormalS               = 0x8001CD98;
 MSC02_OBJ_100               = 0x8001CE0C;
+MatrixNormal                = 0x8001CECC;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
