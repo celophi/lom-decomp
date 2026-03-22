@@ -279,6 +279,7 @@ csincos                     = 0x8001C8EC;
 
 // psyq/libgte/COR_03
 csin_1                      = 0x8001CA0C;
+csin                        = 0x8001CAAC;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
