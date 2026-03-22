@@ -287,6 +287,8 @@ InitGeom                    = 0x8001CBF4;
 // psyq/libgte/MSC01
 SquareRoot0                 = 0x8001CC7C;
 
+// psyq/libgte/MSC02
+InvSquareRoot               = 0x8001CD0C;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;

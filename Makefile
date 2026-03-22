@@ -160,6 +160,7 @@ SRCS_G0 := \
 	src/psyq/libgte/COR_03.c \
 	src/psyq/libgte/MSC00.c \
 	src/psyq/libgte/MSC01.c \
+	src/psyq/libgte/MSC02.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
