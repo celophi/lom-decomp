@@ -293,6 +293,9 @@ VectorNormalS               = 0x8001CD98;
 MSC02_OBJ_100               = 0x8001CE0C;
 MatrixNormal                = 0x8001CECC;
 
+// psyq/libgte/MTX_003
+CompMatrix                  = 0x8001CFBC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
