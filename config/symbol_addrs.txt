@@ -281,6 +281,9 @@ csincos                     = 0x8001C8EC;
 csin_1                      = 0x8001CA0C;
 csin                        = 0x8001CAAC;
 
+// psyq/libgte/MSC00
+InitGeom                    = 0x8001CBF4;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
@@ -356,7 +359,6 @@ FUN_80016784 = 0x80016784;
 FUN_8002129c = 0x8002129c;
 SsUtReverbOff = 0x800212cc;
 FUN_80015c18 = 0x80015c18;
-InitGeom = 0x8001cbf4;
 _bu_init = 0x8001676c;
 McxStartCom = 0x800319d8;
 ChangeClearPAD = 0x8001688c;
