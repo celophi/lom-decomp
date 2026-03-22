@@ -268,6 +268,9 @@ SetPolyG4                   = 0x8001C68C;
 rsin                        = 0x8001C6AC;
 sin_1                       = 0x8001C6E8;
 
+// psyq/libgte/GEO_01
+rcos                        = 0x8001C77C;
+
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;

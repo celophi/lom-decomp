@@ -154,6 +154,7 @@ SRCS_G0 := \
 	src/psyq/libgpu/P17.c \
 	src/psyq/libgpu/P18.c \
 	src/psyq/libgte/GEO_00.c \
+	src/psyq/libgte/GEO_01.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
