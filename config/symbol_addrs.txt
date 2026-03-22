@@ -264,6 +264,11 @@ SetPolyFT4                  = 0x8001C66C;
 // psyq/libgpu/P18
 SetPolyG4                   = 0x8001C68C;
 
+// psyq/libgte/GEO_00
+rsin                        = 0x8001C6AC;
+sin_1                       = 0x8001C6E8;
+
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
