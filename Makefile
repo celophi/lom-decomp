@@ -156,6 +156,7 @@ SRCS_G0 := \
 	src/psyq/libgte/GEO_00.c \
 	src/psyq/libgte/GEO_01.c \
 	src/psyq/libgte/COR_02.c \
+	src/psyq/libgte/COR_01.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \

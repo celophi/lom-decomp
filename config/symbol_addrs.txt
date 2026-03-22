@@ -274,6 +274,9 @@ rcos                        = 0x8001C77C;
 // psyq/libgte/COR_02
 ccos                        = 0x8001C81C;
 
+// psyq/libgte/COR_01
+csincos                     = 0x8001C8EC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
