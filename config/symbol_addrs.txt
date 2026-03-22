@@ -289,6 +289,7 @@ SquareRoot0                 = 0x8001CC7C;
 
 // psyq/libgte/MSC02
 InvSquareRoot               = 0x8001CD0C;
+VectorNormalS               = 0x8001CD98;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
