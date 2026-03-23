@@ -318,6 +318,9 @@ SetTransMatrix              = 0x8001D56C;
 // psyq/libgte/REG12
 SetGeomOffset               = 0x8001D58C;
 
+// psyq/libgte/REG13
+SetGeomScreen               = 0x8001D5AC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
