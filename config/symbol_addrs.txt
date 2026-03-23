@@ -321,6 +321,9 @@ SetGeomOffset               = 0x8001D58C;
 // psyq/libgte/REG13
 SetGeomScreen               = 0x8001D5AC;
 
+// psyq/libgte/SMP_05
+NormalClip                  = 0x8001D5BC;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
