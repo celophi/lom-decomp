@@ -306,6 +306,8 @@ PopMatrix                   = 0x8001D320;
 // psyq/libgte/MTX_07
 TransMatrix                 = 0x8001D3CC;
 
+// psyq/libgte/MTX_08
+ScaleMatrix                 = 0x8001D3FC;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
