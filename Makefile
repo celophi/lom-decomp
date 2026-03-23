@@ -173,6 +173,7 @@ SRCS_G0 := \
 	src/psyq/libgte/SMP_05.c \
 	src/psyq/libgte/FGO_01.c \
 	src/psyq/libgte/FGO_04.c \
+	src/psyq/libgte/FGO_05.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
