@@ -309,6 +309,10 @@ TransMatrix                 = 0x8001D3CC;
 // psyq/libgte/MTX_08
 ScaleMatrix                 = 0x8001D3FC;
 
+// psyq/libgte/MTX_09
+SetRotMatrix                = 0x8001D53C;
+
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;

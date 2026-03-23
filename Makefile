@@ -166,6 +166,7 @@ SRCS_G0 := \
 	src/psyq/libgte/MTX_006.c \
 	src/psyq/libgte/MTX_07.c \
 	src/psyq/libgte/MTX_08.c \
+	src/psyq/libgte/MTX_09.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
