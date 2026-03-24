@@ -336,7 +336,8 @@ RotMatrixY                  = 0x8001DA1C;
 // psyq/libgte/FGO_06
 RotMatrixZ                  = 0x8001DBBC;
 
-
+// psyq/libgte/RMAT_01
+RotMatrix_gte               = 0x8001DD5C;
 
 
 
