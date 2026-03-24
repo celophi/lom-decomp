@@ -342,6 +342,9 @@ RotMatrix_gte               = 0x8001DD5C;
 // psyq/libgte/RATAN
 ratan2                      = 0x8001DF6C;
 
+// psyq/libgte/PATCHGTE
+_patch_gte                  = 0x8001E0EC;
+PATCHGTE_OBJ_AC             = 0x8001E198;
 
 
 // psyq/libcd/SYS.c
