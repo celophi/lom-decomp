@@ -280,6 +280,7 @@ csincos                     = 0x8001C8EC;
 // psyq/libgte/COR_03
 csin_1                      = 0x8001CA0C;
 csin                        = 0x8001CAAC;
+MSC00_OBJ_0                 = 0x8001CBEC;
 
 // psyq/libgte/MSC00
 InitGeom                    = 0x8001CBF4;
@@ -351,7 +352,7 @@ CdInit                      = 0x8001E1CC;
 EVENT_OBJ_90                = 0x8001E25C;
 EVENT_OBJ_CC                = 0x8001E298;
 EVENT_OBJ_F4                = 0x8001E2C0;
-
+EVENT_OBJ_11C               = 0x8001E2E8;
 
 
 // psyq/libcd/SYS.c
