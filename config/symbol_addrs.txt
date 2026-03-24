@@ -246,7 +246,116 @@ DrawOTag2                   = 0x8001C1F0;
 _GPU_ResetCallback          = 0x8001C2EC;
 SYS_OBJ_2F08                = 0x8001C314;
 
+// psyq/libapi/C73
+GPU_cw                      = 0x8001C33C;
 
+// psyq/libgpu/BREAK
+BreakDraw                   = 0x8001C34C;
+IsIdleGPU                   = 0x8001C3E0;
+ContinueDraw                = 0x8001C440;
+
+// psyq/libgpu/EXT
+SetDefDrawEnv               = 0x8001C56C;
+SetDefDispEnv               = 0x8001C62C;
+
+// psyq/libgpu/P17
+SetPolyFT4                  = 0x8001C66C;
+
+// psyq/libgpu/P18
+SetPolyG4                   = 0x8001C68C;
+
+// psyq/libgte/GEO_00
+rsin                        = 0x8001C6AC;
+sin_1                       = 0x8001C6E8;
+
+// psyq/libgte/GEO_01
+rcos                        = 0x8001C77C;
+
+// psyq/libgte/COR_02
+ccos                        = 0x8001C81C;
+
+// psyq/libgte/COR_01
+csincos                     = 0x8001C8EC;
+
+// psyq/libgte/COR_03
+csin_1                      = 0x8001CA0C;
+csin                        = 0x8001CAAC;
+MSC00_OBJ_0                 = 0x8001CBEC;
+
+// psyq/libgte/MSC00
+InitGeom                    = 0x8001CBF4;
+
+// psyq/libgte/MSC01
+SquareRoot0                 = 0x8001CC7C;
+
+// psyq/libgte/MSC02
+InvSquareRoot               = 0x8001CD0C;
+VectorNormalS               = 0x8001CD98;
+MSC02_OBJ_100               = 0x8001CE0C;
+MatrixNormal                = 0x8001CECC;
+
+// psyq/libgte/MTX_003
+CompMatrix                  = 0x8001CFBC;
+
+// psyq/libgte/MTX_004
+ApplyMatrixLV               = 0x8001D11C;
+
+// psyq/libgte/MTX_006
+PushMatrix                  = 0x8001D27C;
+PopMatrix                   = 0x8001D320;
+
+// psyq/libgte/MTX_07
+TransMatrix                 = 0x8001D3CC;
+
+// psyq/libgte/MTX_08
+ScaleMatrix                 = 0x8001D3FC;
+
+// psyq/libgte/MTX_09
+SetRotMatrix                = 0x8001D53C;
+
+// psyq/libgte/MTX_12
+SetTransMatrix              = 0x8001D56C;
+
+// psyq/libgte/REG12
+SetGeomOffset               = 0x8001D58C;
+
+// psyq/libgte/REG13
+SetGeomScreen               = 0x8001D5AC;
+
+// psyq/libgte/SMP_05
+NormalClip                  = 0x8001D5BC;
+
+// psyq/libgte/FGO_01
+RotMatrix                   = 0x8001D5EC;
+
+// psyq/libgte/FGO_04
+RotMatrixX                  = 0x8001D87C;
+
+// psyq/libgte/FGO_05
+RotMatrixY                  = 0x8001DA1C;
+
+// psyq/libgte/FGO_06
+RotMatrixZ                  = 0x8001DBBC;
+
+// psyq/libgte/RMAT_01
+RotMatrix_gte               = 0x8001DD5C;
+
+// psyq/libgte/RATAN
+ratan2                      = 0x8001DF6C;
+
+// psyq/libgte/PATCHGTE
+_patch_gte                  = 0x8001E0EC;
+PATCHGTE_OBJ_AC             = 0x8001E198;
+
+// psyq/libcd/EVENT
+CdInit                      = 0x8001E1CC;
+EVENT_OBJ_90                = 0x8001E25C;
+EVENT_OBJ_CC                = 0x8001E298;
+EVENT_OBJ_F4                = 0x8001E2C0;
+EVENT_OBJ_11C               = 0x8001E2E8;
+
+// psyq/libapi/A07
+DeliverEvent                = 0x8001E31C;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
@@ -282,14 +391,11 @@ RestartCallback             = 0x80020890;
 CheckCallback               = 0x800208c0;
 
 // Other PSY-Q
-CdInit                      = 0x8001E1CC;
 CdDiskReady                 = 0x8002010c;
 CdGetDiskType               = 0x80020248;
 CdIntToPos                  = 0x800203BC;
 CdPosToInt                  = 0x800204C0;
 VSync                       = 0x8002054c;
-SetDefDrawEnv               = 0x8001C56C;
-SetDefDispEnv               = 0x8001C62C;
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
 memcpy                      = 0x80016EEC;
@@ -325,7 +431,6 @@ FUN_80016784 = 0x80016784;
 FUN_8002129c = 0x8002129c;
 SsUtReverbOff = 0x800212cc;
 FUN_80015c18 = 0x80015c18;
-InitGeom = 0x8001cbf4;
 _bu_init = 0x8001676c;
 McxStartCom = 0x800319d8;
 ChangeClearPAD = 0x8001688c;

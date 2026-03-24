@@ -148,11 +148,42 @@ SRCS_G0 := \
 	src/psyq/libpress/VLC_C.c \
 	src/psyq/libpress/BUILD.c \
 	src/psyq/libgpu/SYS.c \
+	src/psyq/libapi/C73.c \
+	src/psyq/libgpu/BREAK.c \
+	src/psyq/libgpu/EXT.c \
+	src/psyq/libgpu/P17.c \
+	src/psyq/libgpu/P18.c \
+	src/psyq/libgte/GEO_00.c \
+	src/psyq/libgte/GEO_01.c \
+	src/psyq/libgte/COR_02.c \
+	src/psyq/libgte/COR_01.c \
+	src/psyq/libgte/COR_03.c \
+	src/psyq/libgte/MSC00.c \
+	src/psyq/libgte/MSC01.c \
+	src/psyq/libgte/MSC02.c \
+	src/psyq/libgte/MTX_003.c \
+	src/psyq/libgte/MTX_004.c \
+	src/psyq/libgte/MTX_006.c \
+	src/psyq/libgte/MTX_07.c \
+	src/psyq/libgte/MTX_08.c \
+	src/psyq/libgte/MTX_09.c \
+	src/psyq/libgte/MTX_12.c \
+	src/psyq/libgte/REG12.c \
+	src/psyq/libgte/REG13.c \
+	src/psyq/libgte/SMP_05.c \
+	src/psyq/libgte/FGO_01.c \
+	src/psyq/libgte/FGO_04.c \
+	src/psyq/libgte/FGO_05.c \
+	src/psyq/libgte/FGO_06.c \
+	src/psyq/libgte/RMAT_01.c \
+	src/psyq/libgte/RATAN.c \
+	src/psyq/libgte/PATCHGTE.c \
+	src/psyq/libcd/EVENT.c \
+	src/psyq/libapi/A07.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
 	src/unk4.c \
-	src/unk5.c \
 	src/unk6.c \
 	src/unk7.c \
 	src/decomp1.c \
