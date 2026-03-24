@@ -138,7 +138,7 @@ segments:
       - [0xE76C, c, psyq/libgte/RATAN]
       - [0xE8EC, c, psyq/libgte/PATCHGTE]
       - [0xE9CC, c, psyq/libcd/EVENT]
-      - [0xEA5C, c, unk5]
+      - [0xEA98, c, unk5]
       - [0xEB2C, c, psyq/libcd/SYS]
       - [0xF13C, c, unk6]
       - [0x10F6C, c, psyq/libetc/INTR]

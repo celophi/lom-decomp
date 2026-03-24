@@ -348,6 +348,9 @@ PATCHGTE_OBJ_AC             = 0x8001E198;
 
 // psyq/libcd/EVENT
 CdInit                      = 0x8001E1CC;
+EVENT_OBJ_90                = 0x8001E25C;
+EVENT_OBJ_CC                = 0x8001E298;
+
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
