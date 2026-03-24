@@ -346,6 +346,8 @@ ratan2                      = 0x8001DF6C;
 _patch_gte                  = 0x8001E0EC;
 PATCHGTE_OBJ_AC             = 0x8001E198;
 
+// psyq/libcd/EVENT
+CdInit                      = 0x8001E1CC;
 
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
@@ -381,7 +383,6 @@ RestartCallback             = 0x80020890;
 CheckCallback               = 0x800208c0;
 
 // Other PSY-Q
-CdInit                      = 0x8001E1CC;
 CdDiskReady                 = 0x8002010c;
 CdGetDiskType               = 0x80020248;
 CdIntToPos                  = 0x800203BC;
