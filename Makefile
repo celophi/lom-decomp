@@ -179,6 +179,7 @@ SRCS_G0 := \
 	src/psyq/libgte/RATAN.c \
 	src/psyq/libgte/PATCHGTE.c \
 	src/psyq/libcd/EVENT.c \
+	src/psyq/libapi/A07.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
