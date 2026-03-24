@@ -333,6 +333,13 @@ RotMatrixX                  = 0x8001D87C;
 // psyq/libgte/FGO_05
 RotMatrixY                  = 0x8001DA1C;
 
+// psyq/libgte/FGO_06
+RotMatrixZ                  = 0x8001DBBC;
+
+
+
+
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
