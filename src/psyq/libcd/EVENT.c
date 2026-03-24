@@ -3,3 +3,5 @@
 INCLUDE_ASM("asm/nonmatchings/psyq/libcd/EVENT", CdInit);
 
 INCLUDE_ASM("asm/nonmatchings/psyq/libcd/EVENT", EVENT_OBJ_90);
+
+INCLUDE_ASM("asm/nonmatchings/psyq/libcd/EVENT", EVENT_OBJ_CC);
