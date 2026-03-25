@@ -180,9 +180,7 @@ SRCS_G0 := \
 	src/psyq/libcd/EVENT.c \
 	src/psyq/libapi/A07.c \
 	src/psyq/libcd/SYS.c \
-	src/psyq/libcd/BIOS_1.c \
-	src/psyq/libcd/BIOS_2.c \
-	src/psyq/libcd/BIOS_3.c \
+	src/psyq/libcd/BIOS.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \

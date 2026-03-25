@@ -380,7 +380,7 @@ CdGetSector2                = 0x8001e8d4;
 CdDataCallback              = 0x8001e8f4;
 CdDataSync                  = 0x8001e918;
 
-// psyq/libcd/BIOS_1
+// psyq/libcd/BIOS
 BIOS_OBJ_0                  = 0x8001E93C;
 CD_sync                     = 0x8001EEA0;
 CD_ready                    = 0x8001F120;
@@ -391,12 +391,11 @@ CD_initvol                  = 0x8001F950;
 CD_initintr                 = 0x8001FA40;
 CD_init                     = 0x8001FA8C;
 CD_datasync                 = 0x8001FC6C;
-
-// psyq/libcd/BIOS_2
 CD_getsector                = 0x8001FDD4;
-
-// psyq/libcd/BIOS_3
 CD_getsector2               = 0x8001FED4;
+CD_set_test_parmnum         = 0x8001FFC0;
+BIOS_OBJ_1690               = 0x8001FFCC;
+
 
 // psyq/libetc/INTR.c
 ResetCallback               = 0x8002076c;
