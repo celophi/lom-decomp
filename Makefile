@@ -55,8 +55,7 @@ ASM_DIR      := asm
 
 CROSS        	:= mipsel-linux-gnu-
 CC           	:= gcc
-CCPSX		 	:= wibo /opt/psyq4.1/CCPSX.EXE
-PSYQ_OBJ_PARSER := /opt/psyq4.1/psyq-obj-parser
+CC_CDK       	:= /opt/cdk-gcc/gcc -B/opt/cdk-gcc/
 LD           	:= $(CROSS)ld
 OBJCOPY      	:= $(CROSS)objcopy
 
@@ -80,13 +79,14 @@ OBJCOPY      	:= $(CROSS)objcopy
 CFLAGS_G0       := -O2 -G0 -g -fsigned-char
 CFLAGS_G4       := -O2 -G4 -g -fsigned-char
 
-# CCPSX flags omit -g: psyq-obj-parser can't handle debug info from complex functions.
-CFLAGS_CCPSX_G0 := -O2 -G0 -fsigned-char
+# CDK (GCC 2.7.2-970404) flags: no -g/-fsigned-char; uses -msoft-float and COFF debug.
+CFLAGS_CDK_G0   := -O2 -G0 -msoft-float -gcoff
 
 INCLUDE_FLAGS   := -Iinclude -Iinclude/psyq
 
 MASPSX_AS       	:= python3 tools/maspsx/maspsx.py --run-assembler
 MASPSX_AS_FLAGS 	:= -no-pad-sections --aspsx-version=2.77
+MASPSX_AS_FLAGS_CDK := -no-pad-sections --aspsx-version=2.67 --expand-div
 MASPSX_PP       	:= python3 tools/maspsx/maspsx.py
 MASPSX_PP_FLAGS 	:= --macro-inc
 
@@ -192,7 +192,7 @@ SRCS_G0 := \
 SRCS_G4 := \
 	src/cd.c
 
-SRCS_PSYQ41_G0 := \
+SRCS_CDK_G0 := \
 	src/overlays/checkps/code.c
 
 # Hand-written assembly (header + initialized data sections).
@@ -210,10 +210,10 @@ ASM_SRCS := \
 
 OBJS_G0  		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
 OBJS_G4  		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
-OBJS_PSYQ41_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_PSYQ41_G0))
+OBJS_CDK_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_CDK_G0))
 OBJS_ASM 		:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
 
-OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_PSYQ41_G0) $(OBJS_ASM)
+OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_ASM)
 
 
 # ─── Staging Sentinel ──────────────────────────────────────────────────────────
@@ -236,7 +236,7 @@ STAGE_DIRS := src asm include linker tools assets
 # Optional per-overlay settings:
 #   overlay_<name>_cflags    — compiler flags (default: CFLAGS_G0)
 #   overlay_<name>_asset     — path to a .bin asset file (omit if none)
-#   overlay_<name>_gcc_srcs  — files to compile with GCC+maspsx instead of CCPSX
+#   overlay_<name>_gcc_srcs  — files to compile with GCC+maspsx instead of CDK gcc
 #                              (use for non-matching stubs that use INCLUDE_ASM)
 
 OVERLAYS += checkps
@@ -286,7 +286,7 @@ $(COPY_SENTINEL):
 			cp -r $(dir)/* $(STAGING)/$(dir)/ 2>/dev/null || true; \
 		fi; \
 	)
-	@# ASPSX (inside CCPSX) requires CRLF line endings for .s files it processes.
+	@# ASPSX requires CRLF line endings for .s files it processes.
 	@# In CI, git checks out with LF — convert overlay .s files so ASPSX can parse them.
 	@# Only .s files need this; the C preprocessor/compiler handles LF fine.
 	@find $(STAGING)/asm/overlays -name '*.s' -exec unix2dos {} + 2>/dev/null || true
@@ -318,11 +318,11 @@ $(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
 
-# ── C files compiled with PSYQ 4.1 (GCC 2.7.2 CKD) -G0 (checkps overlay) ──
-$(OBJS_PSYQ41_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+# ── C files compiled with CDK GCC 2.7.2 + maspsx -G0 (checkps overlay) ──
+$(OBJS_CDK_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(STAGING) && $(CCPSX) -DCCPSX $(CFLAGS_CCPSX_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -o build/$(SRC_DIR)/$*.obj && \
-		$(PSYQ_OBJ_PARSER) build/$(SRC_DIR)/$*.obj -o build/$(SRC_DIR)/$*.o
+	cd $(STAGING) && $(CC_CDK) $(CFLAGS_CDK_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o build/$(SRC_DIR)/$*.o
 
 # ── Hand-written assembly (header, data sections) ──
 # These use --macro-inc because they contain ASPSX directives (dlabel, etc.)
@@ -377,7 +377,7 @@ target-objects: $(COPY_SENTINEL) $(TARGET_OBJ)
 	@cp -r $(STAGING)/build/$(ASM_DIR)/* build/asm/ 2>/dev/null || true
 	@echo "Target objects built."
 
-base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4) $(OBJS_PSYQ41_G0)
+base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0)
 	@mkdir -p build/src
 	@cp -r $(STAGING)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
 	@echo "Base objects built."
@@ -438,24 +438,24 @@ $(1)_CFLAGS    := $$(or $$(overlay_$(1)_cflags),$(CFLAGS_G0))
 $(1)_TARGET    := $(STAGING)/$$($(1)_BUILD_DIR)/$(1).elf
 
 # ── Discover source files ──
-# Split into CCPSX (matched) and GCC+maspsx (non-matching) groups.
-# Files listed in overlay_<name>_gcc_srcs use GCC+maspsx; everything else uses CCPSX.
+# Split into CDK (matched) and GCC+maspsx (non-matching) groups.
+# Files listed in overlay_<name>_gcc_srcs use GCC+maspsx; everything else uses CDK gcc+maspsx.
 $(1)_C_SRCS      := $$(wildcard $$($(1)_SRC_DIR)/*.c)
 $(1)_GCC_SRCS    := $$(overlay_$(1)_gcc_srcs)
-$(1)_CCPSX_SRCS  := $$(filter-out $$($(1)_GCC_SRCS),$$($(1)_C_SRCS))
+$(1)_CDK_SRCS  := $$(filter-out $$($(1)_GCC_SRCS),$$($(1)_C_SRCS))
 $(1)_GCC_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_SRCS))
-$(1)_CCPSX_OBJS  := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CCPSX_SRCS))
-$(1)_C_OBJS      := $$($(1)_CCPSX_OBJS) $$($(1)_GCC_OBJS)
+$(1)_CDK_OBJS  := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CDK_SRCS))
+$(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS)
 
 # ── Binary asset (only if overlay_<name>_asset is defined) ──
 $(1)_ASSET_SRC := $$(overlay_$(1)_asset)
 $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 
-# Rule: compile matched C files with CCPSX → .obj → ELF .o
-$$($(1)_CCPSX_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+# Rule: compile matched C files with CDK GCC 2.7.2 + maspsx
+$$($(1)_CDK_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CCPSX) -DCCPSX $(CFLAGS_CCPSX_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj && \
-		$(PSYQ_OBJ_PARSER) $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+	cd $(STAGING) && $(CC_CDK) $(CFLAGS_CDK_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile non-matching C files with GCC+maspsx (handles GNU asm syntax in INCLUDE_ASM)
 $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
@@ -492,7 +492,7 @@ $$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CKD) -o $$($(1)_BUILD_DIR)/target/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o $$($(1)_BUILD_DIR)/target/$$*.o
 
 # ── Phony convenience targets ──
 .PHONY: $(1) $(1)-target-objects $(1)-base-objects $(1)-objdiff
