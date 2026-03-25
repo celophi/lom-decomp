@@ -392,6 +392,11 @@ CD_initintr                 = 0x8001FA40;
 CD_init                     = 0x8001FA8C;
 CD_datasync                 = 0x8001FC6C;
 
+// psyq/libcd/BIOS_2
+CD_getsector                = 0x8001FDD4;
+
+// psyq/libcd/BIOS_3
+CD_getsector2               = 0x8001FED4;
 
 // psyq/libetc/INTR.c
 ResetCallback               = 0x8002076c;
