@@ -100,7 +100,6 @@ MASPSX_PP_FLAGS 	:= --macro-inc
 # pulled in automatically via the INCLUDE_ASM() macro inside C source files.
 
 SRCS_G0 := \
-	src/psyq/libcd/SYS.c \
 	src/psyq/libetc/INTR.c \
 	src/psyq/libc2/bcopy.c \
 	src/psyq/libc2/bzero.c \
@@ -180,6 +179,8 @@ SRCS_G0 := \
 	src/psyq/libgte/PATCHGTE.c \
 	src/psyq/libcd/EVENT.c \
 	src/psyq/libapi/A07.c \
+	src/psyq/libcd/SYS.c \
+	src/psyq/libcd/BIOS_1.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
