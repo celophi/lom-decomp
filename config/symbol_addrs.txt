@@ -380,6 +380,19 @@ CdGetSector2                = 0x8001e8d4;
 CdDataCallback              = 0x8001e8f4;
 CdDataSync                  = 0x8001e918;
 
+// psyq/libcd/BIOS_1
+BIOS_OBJ_0                  = 0x8001E93C;
+CD_sync                     = 0x8001EEA0;
+CD_ready                    = 0x8001F120;
+CD_cw                       = 0x8001F3E8;
+CD_vol                      = 0x8001F7F4;
+CD_flush                    = 0x8001F87C;
+CD_initvol                  = 0x8001F950;
+CD_initintr                 = 0x8001FA40;
+CD_init                     = 0x8001FA8C;
+CD_datasync                 = 0x8001FC6C;
+
+
 // psyq/libetc/INTR.c
 ResetCallback               = 0x8002076c;
 InterruptCallback           = 0x8002079c;
