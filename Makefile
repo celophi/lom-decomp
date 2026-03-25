@@ -55,7 +55,7 @@ ASM_DIR      := asm
 
 CROSS        	:= mipsel-linux-gnu-
 CC           	:= gcc
-CC_CDK       	:= /opt/cdk-gcc/gcc
+CC_CDK       	:= /opt/cdk-gcc/gcc -B/opt/cdk-gcc/
 LD           	:= $(CROSS)ld
 OBJCOPY      	:= $(CROSS)objcopy
 
@@ -455,7 +455,7 @@ $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 $$($(1)_CDK_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_CDK) $(CFLAGS_CDK_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.obj -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile non-matching C files with GCC+maspsx (handles GNU asm syntax in INCLUDE_ASM)
 $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
