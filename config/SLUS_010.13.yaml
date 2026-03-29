@@ -150,7 +150,8 @@ segments:
       - [0x1162C, c, psyq/libapi/A23]
       - [0x1163C, c, psyq/libapi/A24]
       - [0x1164C, c, psyq/libapi/A25]
-      - [0x1165C, c, unk7]
+      - [0x1165C, c, psyq/libc2/SETJMP]
+      - [0x116DC, c, unk7]
       - [0x25990, data, initialized]
 
   - name: sdata

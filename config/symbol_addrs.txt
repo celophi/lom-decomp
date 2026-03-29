@@ -441,6 +441,10 @@ ResetEntryInt               = 0x80020E3C;
 // psyq/libapi/A25
 HookEntryInt                = 0x80020E4C;
 
+// psyq/libc2/SETJMP
+setjmp                      = 0x80020E5C;
+longjmp                     = 0x80020E98;
+
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
