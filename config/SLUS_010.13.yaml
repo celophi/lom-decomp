@@ -147,7 +147,8 @@ segments:
       - [0x10D4C, c, psyq/libetc/VSYNC]
       - [0x10F5C, c, psyq/libapi/L10]
       - [0x10F6C, c, psyq/libetc/INTR]
-      - [0x1162C, c, unk7]
+      - [0x1162C, c, psyq/libapi/A23]
+      - [0x1163C, c, unk7]
       - [0x25990, data, initialized]
 
   - name: sdata

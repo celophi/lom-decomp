@@ -432,6 +432,9 @@ INTR_OBJ_584                = 0x80020CF0;
 INTR_OBJ_624                = 0x80020D90;
 INTR_OBJ_69C                = 0x80020E08;
 
+// psyq/libapi/A23
+ReturnFromException         = 0x80020E2C;
+
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
