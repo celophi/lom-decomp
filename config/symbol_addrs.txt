@@ -480,6 +480,8 @@ _spu_FsetRXX                = 0x80021D58;
 _spu_FsetRXXa               = 0x80021D9C;
 _spu_FgetRXXa               = 0x80021E40;
 _spu_FsetPCR                = 0x80021E7C;
+SPU_OBJ_A88                 = 0x80021ED4;
+SPU_OBJ_AB0                 = 0x80021EFC;
 _spu_Fw1ts                  = 0x80021F24;
 
 

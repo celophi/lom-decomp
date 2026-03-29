@@ -19,3 +19,11 @@ INCLUDE_ASM("asm/nonmatchings/psyq/libspu/SPU", _spu_FsetRXX);
 INCLUDE_ASM("asm/nonmatchings/psyq/libspu/SPU", _spu_FsetRXXa);
 
 INCLUDE_ASM("asm/nonmatchings/psyq/libspu/SPU", _spu_FgetRXXa);
+
+INCLUDE_ASM("asm/nonmatchings/psyq/libspu/SPU", _spu_FsetPCR);
+
+INCLUDE_ASM("asm/nonmatchings/psyq/libspu/SPU", SPU_OBJ_A88);
+
+INCLUDE_ASM("asm/nonmatchings/psyq/libspu/SPU", SPU_OBJ_AB0);
+
+INCLUDE_ASM("asm/nonmatchings/psyq/libspu/SPU", _spu_Fw1ts);
