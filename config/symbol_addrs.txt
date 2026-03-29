@@ -468,6 +468,20 @@ SpuInit                     = 0x800212CC;
 _SpuInit                    = 0x800212EC;
 SpuStart                    = 0x800213D4;
 
+// psyq/libspu/SPU
+_spu_init                   = 0x8002144C;
+SPU_OBJ_280                 = 0x800216CC;
+_spu_FiDMA                  = 0x8002188C;
+_spu_Fr_                    = 0x80021948;
+_spu_t                      = 0x800219F0;
+_spu_Fw                     = 0x80021C70;
+_spu_Fr                     = 0x80021CF4;
+_spu_FsetRXX                = 0x80021D58;
+_spu_FsetRXXa               = 0x80021D9C;
+_spu_FgetRXXa               = 0x80021E40;
+_spu_FsetPCR                = 0x80021E7C;
+_spu_Fw1ts                  = 0x80021F24;
+
 
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
