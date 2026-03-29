@@ -192,6 +192,7 @@ SRCS_G0 := \
 	src/psyq/libc2/SETJMP.c \
 	src/psyq/libetc/INTR_VB.c \
 	src/psyq/libetc/INTR_DMA.c \
+	src/psyq/libetc/VMODE.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \

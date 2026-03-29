@@ -5,6 +5,7 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libapi.h"
+#include "psyq/libetc.h"
 
 extern u32 D_800102AC;
 extern u8* D_800351A0;
