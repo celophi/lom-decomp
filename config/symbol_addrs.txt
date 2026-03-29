@@ -415,14 +415,22 @@ VSYNC_OBJ_178               = 0x800206C4;
 ChangeClearRCnt             = 0x8002075C;
 
 // psyq/libetc/INTR.c
-ResetCallback               = 0x8002076c;
-InterruptCallback           = 0x8002079c;
-DMACallback                 = 0x800207cc;
-VSyncCallback               = 0x800207fc;
+ResetCallback               = 0x8002076C;
+InterruptCallback           = 0x8002079C;
+DMACallback                 = 0x800207CC;
+VSyncCallback               = 0x800207FC;
 VSyncCallbacks              = 0x80020830;
 StopCallback                = 0x80020860;
 RestartCallback             = 0x80020890;
-CheckCallback               = 0x800208c0;
+CheckCallback               = 0x800208C0;
+GetIntrMask                 = 0x800208D0;
+SetIntrMask                 = 0x800208E8;
+INTR_OBJ_194                = 0x80020900;
+INTR_OBJ_26C                = 0x800209D8;
+INTR_OBJ_43C                = 0x80020BA8;
+INTR_OBJ_584                = 0x80020CF0;
+INTR_OBJ_624                = 0x80020D90;
+INTR_OBJ_69C                = 0x80020E08;
 
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
