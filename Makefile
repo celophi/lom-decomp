@@ -184,11 +184,12 @@ SRCS_G0 := \
 	src/psyq/libc2/PUTS.c \
 	src/psyq/libcd/TYPE.c \
 	src/psyq/libcd/S_002.c \
+	src/psyq/libetc/VSYNC.c \
+	src/psyq/libapi/L10.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
 	src/unk4.c \
-	src/unk6.c \
 	src/unk7.c \
 	src/decomp1.c \
 	src/main.c
