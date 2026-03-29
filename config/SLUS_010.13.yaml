@@ -154,7 +154,8 @@ segments:
       - [0x116DC, c, psyq/libetc/INTR_VB]
       - [0x117FC, c, psyq/libetc/INTR_DMA]
       - [0x11A9C, c, psyq/libetc/VMODE]
-      - [0x11ACC, c, unk7]
+      - [0x11ACC, c, psyq/libspu/S_I]
+      - [0x11AEC, c, unk7]
       - [0x25990, data, initialized]
 
   - name: sdata

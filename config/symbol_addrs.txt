@@ -461,6 +461,11 @@ INTR_DMA_OBJ_278            = 0x80021274;
 SetVideoMode                = 0x8002129C;
 GetVideoMode                = 0x800212B0;
 
+// psyq/libspu/S_I
+SpuInit                     = 0x800212CC;
+
+
+
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
@@ -494,7 +499,6 @@ __main = 0x8002e850;
 SetMem = 0x8001679c;
 SetConf = 0x8001689c;
 FUN_80016784 = 0x80016784;
-SsUtReverbOff = 0x800212cc;
 FUN_80015c18 = 0x80015c18;
 _bu_init = 0x8001676c;
 McxStartCom = 0x800319d8;
