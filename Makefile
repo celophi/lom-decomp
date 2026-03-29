@@ -185,6 +185,7 @@ SRCS_G0 := \
 	src/psyq/libcd/TYPE.c \
 	src/psyq/libcd/S_002.c \
 	src/psyq/libetc/VSYNC.c \
+	src/psyq/libapi/L10.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \

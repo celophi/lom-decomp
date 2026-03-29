@@ -411,6 +411,8 @@ CdPosToInt                  = 0x800204C0;
 VSync                       = 0x8002054C;
 VSYNC_OBJ_178               = 0x800206C4;
 
+// psyq/libapi/L10
+ChangeClearRCnt             = 0x8002075C;
 
 // psyq/libetc/INTR.c
 ResetCallback               = 0x8002076c;

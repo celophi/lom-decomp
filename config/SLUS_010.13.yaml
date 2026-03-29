@@ -145,7 +145,7 @@ segments:
       - [0x1090C, c, psyq/libcd/TYPE]
       - [0x10BBC, c, psyq/libcd/S_002]
       - [0x10D4C, c, psyq/libetc/VSYNC]
-      - [0x10F5C, c, unk6]
+      - [0x10F5C, c, psyq/libapi/L10]
       - [0x10F6C, c, psyq/libetc/INTR]
       - [0x110D0, c, unk7]
       - [0x25990, data, initialized]
