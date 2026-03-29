@@ -182,6 +182,7 @@ SRCS_G0 := \
 	src/psyq/libcd/SYS.c \
 	src/psyq/libcd/BIOS.c \
 	src/psyq/libc2/PUTS.c \
+	src/psyq/libcd/TYPE.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
