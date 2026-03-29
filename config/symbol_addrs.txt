@@ -451,6 +451,12 @@ INTR_VB_OBJ_58              = 0x80020F34;
 INTR_VB_OBJ_C4              = 0x80020FA0;
 INTR_VB_OBJ_F0              = 0x80020FCC;
 
+// psyq/libetc/INTR_DMA
+startIntrDMA                = 0x80020FFC;
+INTR_DMA_OBJ_4C             = 0x80021048;
+INTR_DMA_OBJ_1CC            = 0x800211C8;
+INTR_DMA_OBJ_278            = 0x80021274;
+
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
