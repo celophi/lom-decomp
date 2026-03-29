@@ -407,6 +407,11 @@ CdGetDiskType               = 0x80020248;
 CdIntToPos                  = 0x800203BC;
 CdPosToInt                  = 0x800204C0;
 
+// psyq/libetc/VSYNC
+VSync                       = 0x8002054C;
+VSYNC_OBJ_178               = 0x800206C4;
+
+
 // psyq/libetc/INTR.c
 ResetCallback               = 0x8002076c;
 InterruptCallback           = 0x8002079c;
@@ -418,7 +423,6 @@ RestartCallback             = 0x80020890;
 CheckCallback               = 0x800208c0;
 
 // Other PSY-Q
-VSync                       = 0x8002054c;
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
 memcpy                      = 0x80016EEC;
