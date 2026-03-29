@@ -464,6 +464,9 @@ GetVideoMode                = 0x800212B0;
 // psyq/libspu/S_I
 SpuInit                     = 0x800212CC;
 
+// psyq/libspu/S_INI
+_SpuInit                    = 0x800212EC;
+SpuStart                    = 0x800213D4;
 
 
 // Other PSY-Q
