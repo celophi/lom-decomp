@@ -445,6 +445,12 @@ HookEntryInt                = 0x80020E4C;
 setjmp                      = 0x80020E5C;
 longjmp                     = 0x80020E98;
 
+// psyq/libetc/INTR_VB
+startIntrVSync              = 0x80020EDC;
+INTR_VB_OBJ_58              = 0x80020F34;
+INTR_VB_OBJ_C4              = 0x80020FA0;
+INTR_VB_OBJ_F0              = 0x80020FCC;
+
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
