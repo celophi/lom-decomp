@@ -60,7 +60,6 @@ undefined* FUN_80015c28(void);
 undefined* FUN_80015c38(void);
 int FUN_80015c58(void);
 void FUN_80016784(void);
-undefined4 FUN_8002129c(undefined4 param_1);
 undefined4 FUN_80021fbc(void);
 void FUN_8002279c(undefined4 param_1, u_int param_2);
 void FUN_80022aa8(void);

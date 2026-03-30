@@ -415,14 +415,77 @@ VSYNC_OBJ_178               = 0x800206C4;
 ChangeClearRCnt             = 0x8002075C;
 
 // psyq/libetc/INTR.c
-ResetCallback               = 0x8002076c;
-InterruptCallback           = 0x8002079c;
-DMACallback                 = 0x800207cc;
-VSyncCallback               = 0x800207fc;
+ResetCallback               = 0x8002076C;
+InterruptCallback           = 0x8002079C;
+DMACallback                 = 0x800207CC;
+VSyncCallback               = 0x800207FC;
 VSyncCallbacks              = 0x80020830;
 StopCallback                = 0x80020860;
 RestartCallback             = 0x80020890;
-CheckCallback               = 0x800208c0;
+CheckCallback               = 0x800208C0;
+GetIntrMask                 = 0x800208D0;
+SetIntrMask                 = 0x800208E8;
+INTR_OBJ_194                = 0x80020900;
+INTR_OBJ_26C                = 0x800209D8;
+INTR_OBJ_43C                = 0x80020BA8;
+INTR_OBJ_584                = 0x80020CF0;
+INTR_OBJ_624                = 0x80020D90;
+INTR_OBJ_69C                = 0x80020E08;
+
+// psyq/libapi/A23
+ReturnFromException         = 0x80020E2C;
+
+// psyq/libapi/A24
+ResetEntryInt               = 0x80020E3C;
+
+// psyq/libapi/A25
+HookEntryInt                = 0x80020E4C;
+
+// psyq/libc2/SETJMP
+setjmp                      = 0x80020E5C;
+longjmp                     = 0x80020E98;
+
+// psyq/libetc/INTR_VB
+startIntrVSync              = 0x80020EDC;
+INTR_VB_OBJ_58              = 0x80020F34;
+INTR_VB_OBJ_C4              = 0x80020FA0;
+INTR_VB_OBJ_F0              = 0x80020FCC;
+
+// psyq/libetc/INTR_DMA
+startIntrDMA                = 0x80020FFC;
+INTR_DMA_OBJ_4C             = 0x80021048;
+INTR_DMA_OBJ_1CC            = 0x800211C8;
+INTR_DMA_OBJ_278            = 0x80021274;
+
+// psyq/libetc/VMODE
+SetVideoMode                = 0x8002129C;
+GetVideoMode                = 0x800212B0;
+
+// psyq/libspu/S_I
+SpuInit                     = 0x800212CC;
+
+// psyq/libspu/S_INI
+_SpuInit                    = 0x800212EC;
+SpuStart                    = 0x800213D4;
+
+// psyq/libspu/SPU
+_spu_init                   = 0x8002144C;
+SPU_OBJ_280                 = 0x800216CC;
+_spu_FiDMA                  = 0x8002188C;
+_spu_Fr_                    = 0x80021948;
+_spu_t                      = 0x800219F0;
+_spu_Fw                     = 0x80021C70;
+_spu_Fr                     = 0x80021CF4;
+_spu_FsetRXX                = 0x80021D58;
+_spu_FsetRXXa               = 0x80021D9C;
+_spu_FgetRXXa               = 0x80021E40;
+_spu_FsetPCR                = 0x80021E7C;
+SPU_OBJ_A88                 = 0x80021ED4;
+SPU_OBJ_AB0                 = 0x80021EFC;
+_spu_Fw1ts                  = 0x80021F24;
+
+// psyq/libspu/S_DCB
+_SpuDataCallback            = 0x80021F8C;
 
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
@@ -457,8 +520,6 @@ __main = 0x8002e850;
 SetMem = 0x8001679c;
 SetConf = 0x8001689c;
 FUN_80016784 = 0x80016784;
-FUN_8002129c = 0x8002129c;
-SsUtReverbOff = 0x800212cc;
 FUN_80015c18 = 0x80015c18;
 _bu_init = 0x8001676c;
 McxStartCom = 0x800319d8;

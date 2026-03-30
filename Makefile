@@ -100,7 +100,6 @@ MASPSX_PP_FLAGS 	:= --macro-inc
 # pulled in automatically via the INCLUDE_ASM() macro inside C source files.
 
 SRCS_G0 := \
-	src/psyq/libetc/INTR.c \
 	src/psyq/libc2/bcopy.c \
 	src/psyq/libc2/bzero.c \
 	src/psyq/libc2/memcpy.c \
@@ -186,11 +185,24 @@ SRCS_G0 := \
 	src/psyq/libcd/S_002.c \
 	src/psyq/libetc/VSYNC.c \
 	src/psyq/libapi/L10.c \
+	src/psyq/libetc/INTR.c \
+	src/psyq/libapi/A23.c \
+	src/psyq/libapi/A24.c \
+	src/psyq/libapi/A25.c \
+	src/psyq/libc2/SETJMP.c \
+	src/psyq/libetc/INTR_VB.c \
+	src/psyq/libetc/INTR_DMA.c \
+	src/psyq/libetc/VMODE.c \
+	src/psyq/libspu/S_I.c \
+	src/psyq/libspu/S_INI.c \
+	src/psyq/libspu/SPU.c \
+	src/psyq/libspu/S_DCB.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
 	src/unk4.c \
 	src/unk7.c \
+	src/unk8.c \
 	src/decomp1.c \
 	src/main.c
 
