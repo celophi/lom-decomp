@@ -3401,3 +3401,12 @@ void func_80014A8C(u32 arg0, u32 arg1)
     arg0++;
     while (CD_DecompressData(&arg0, &arg1, -4U, -4U) != 0);
 }
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/Y4pUH
+ */
+void ClearPointer(s8* arg0) 
+{
+    volatile s8* ref = arg0;
+    *ref = 0;
+}
