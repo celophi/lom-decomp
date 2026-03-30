@@ -487,6 +487,9 @@ _spu_Fw1ts                  = 0x80021F24;
 // psyq/libspu/S_DCB
 _SpuDataCallback            = 0x80021F8C;
 
+// psyq/libspu/S_SI
+SpuSetIRQ                   = 0x800233C8;
+
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
