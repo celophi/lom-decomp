@@ -19,7 +19,7 @@
  * 2. Resets all CdSystem state (flags, counters, queue indices, command state)
  * 3. Clears statusFlags bits 0-6 individually (preserves only bit 7)
  * 4. Zeros all 16 command queue entries, defaulting buffers to scratchpad RAM
- * 5. Sets CD mode to CdlModeSpeed | CdlModeSize1 (double speed + XA filter)
+ * 5. Sets CD mode to CdlModeSpeed | CdlModeSize1 (double speed + 2340-byte sectors)
  * 6. Polls CdlNop to read current drive status
  * 7. If shell is open, blocks until disc becomes ready
  * 8. Applies mode via CdlSetmode and records VSync timestamp
@@ -1465,7 +1465,7 @@ s32 CD_RecoveryStateMachine(void)
             timestamp = VSync(-1);
             if (timestamp >= (s32)CD_SYSTEM.vsyncTimestamp) 
             {
-                // Set mode to 0xA0 (double speed + XA filter size)
+                // Set mode to 0xA0 (double speed + 2340-byte sectors)
                 CD_SYSTEM.setModeParamAsync[0] = (CdlModeSpeed | CdlModeSize1);
                 CD_SYSTEM.setModeParamAsync[1] = 0;
                 CD_SYSTEM.setModeParamAsync[2] = 0;
@@ -1736,13 +1736,13 @@ void CD_OnCommandComplete(u_char intr, u_char* result) {
 DispatchCommand:
     //cdSystem = &CD_SYSTEM; // this seems to be necessary SOMEWHERE in order to force loading 801ed800, but I don't know where.
 
-    // Special case: command 0x1B (audio start) — enable audio and remap to CdlSeekL
-    if (nextCommand == 0x1B) {
+    // Special case: command CdlReadS — used for CD-DA/XA streaming
+    if (nextCommand == CdlReadS) {
         cdSystem = &CD_SYSTEM;
         if (g_cdAudioEnabled == 0) {
             CD_SYSTEM.audioEnabled = 1;
         }
-        nextCommand = 6;
+        nextCommand = CdlReadN;
     }
     goto ExecuteNext;
 
@@ -2229,7 +2229,7 @@ void CD_HandleSectorReadComplete(s32 arg0)
             CdSyncCallback(CD_SyncCallback_Handler);
             CdReadyCallback(NULL);
             
-            // Restore default CD mode (double speed + XA filter)
+            // Restore default CD mode (double speed + 2340-byte sectors)
             cdSystem->setModeParamBlocking[0] = 0xA0;
             cdSystem->currentCommand = 0U;
             cdSystem->initCommand = 2;
@@ -2451,7 +2451,7 @@ void CD_DiskValidationCallback(u_char intr, u_char *result)
                 {
 validation_failed:
                     statusWord = CD_SYSTEM.statusFlags.word & ~4u;
-                    CD_SYSTEM_V.initState = CdlModeSize1;
+                    CD_SYSTEM_V.initState = CD_INIT_STATE_ERROR_PAUSE;
                     CD_SYSTEM_V.statusFlags.word = statusWord;
                     CD_SYSTEM.statusFlags.word = statusWord & ~CdlStatShellOpen;
                     CdReadyCallback(NULL);
@@ -2543,8 +2543,10 @@ void CD_HandleSyncError(void)
  * Set audio volume for a specific stereo channel
  *
  * Params:
- *  volume - Volume level to set (0-255)
- *  stereoChannel - 0 for left channel, non-zero for right channel
+ *   volume - Volume level to set (0-255)
+ *   mixMode - 
+ *     0: route both CD channels to SPU left only
+ *     1: route CD left to both SPU speakers (mono)
  *
  * Returns: void
  * 
@@ -2552,12 +2554,12 @@ void CD_HandleSyncError(void)
  * decomp.me (%): 100%
  */
 
-void CD_SetAudioVolume(u_char volume, s32 stereoChannel)
+void CD_SetAudioVolume(u_char volume, s32 mixMode)
 {
     CdlATV audioConfig[2];
     
     while (TRUE) {
-        if (stereoChannel != 0) { 
+        if (mixMode != 0) { 
             audioConfig[0].val0 = volume; 
             audioConfig[0].val1 = 0; 
             audioConfig[0].val2 = volume;
@@ -2699,10 +2701,10 @@ s32 CD_IsQueueAvailable(s32 resourceIndex) {
  *    a single u32 write) and sets its dataSize to dataSizeBytes.
  * 3. Converts lba to CD-ROM MSF format via CdIntToPos() and writes the result
  *    into CD_SYSTEM.defaultCdResource.location.
- * 4. Enqueues command 0x06 (CdlSeekL) with resource index 0xFFFF
+ * 4. Enqueues command 0x06 (CdlReadN) with resource index 0xFFFF
  *    (CD_RESOURCE_INDEX_DEFAULT) and CD_RESOURCE_ENTRIES as the destination
  *    buffer.
- * 5. Blocks via CD_WaitForQueueEmpty() until the seek command completes.
+ * 5. Blocks via CD_WaitForQueueEmpty() until the read command completes.
  * 6. Calls CD_SetAudioVolume(128, 1) to apply a default mid-level CD audio
  *    volume (0x80).
  *

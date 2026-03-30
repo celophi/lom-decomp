@@ -175,6 +175,8 @@ extern u8 D_801ED590;
 #define QUEUE_ITEM_DST_BUFFER(ptr)  (*((u32*)(ptr) + 0x12))
 #define QUEUE_ITEM_CALLBACK(ptr)    (*((CdCommandCallback*)(ptr) + 0x13))
 
+#define CD_INIT_STATE_ERROR_PAUSE 0x20
+
 // Prototypes
 void CD_Initialize(void);
 void CD_Stop(void);
@@ -189,7 +191,7 @@ void CD_OnCommandComplete(u_char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
 u32* CD_StreamDataCallback(s32 param_1, u32 param_2);
-void CD_ReadyCallback(u_char intr, u_char *result);
+void CD_ReadyHandler(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
 void CD_DiskValidationCallback(u_char intr, u_char *result);
