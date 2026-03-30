@@ -161,7 +161,7 @@ void func_80050138(s32 arg0)
     u32* offs;
     u8* ref;
 
-    FUN_800141ec((arg0 + 0x17) & 0xFFFF, 0x80180000);
+    CD_QueueRead((arg0 + 0x17) & 0xFFFF, 0x80180000);
     CD_WaitForQueueEmpty();
 
     offs = (u32*)0x80180004;

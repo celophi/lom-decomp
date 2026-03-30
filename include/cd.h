@@ -44,7 +44,7 @@ typedef union {
         u_char b0;
         u_char b1;
         u_char b2;
-        u_char b3;
+        u_char retryExhausted;
     } bytes;
 } CdStatusFlags;
 
@@ -88,8 +88,8 @@ typedef struct CdSystem {
     u8 u_162;
     u8 u_163;
     u32 u_164;
-    u32 u_168;
     CdlCB previousSyncCallback;
+    CdlCB previousReadyCallback;
     u_char discValidationId[32];
     CdResourceEntry defaultCdResource;
 } CdSystem;
@@ -175,6 +175,8 @@ extern u8 D_801ED590;
 #define QUEUE_ITEM_DST_BUFFER(ptr)  (*((u32*)(ptr) + 0x12))
 #define QUEUE_ITEM_CALLBACK(ptr)    (*((CdCommandCallback*)(ptr) + 0x13))
 
+#define CD_INIT_STATE_ERROR_PAUSE 0x20
+
 // Prototypes
 void CD_Initialize(void);
 void CD_Stop(void);
@@ -189,7 +191,7 @@ void CD_OnCommandComplete(u_char intr, u_char *result);
 s32 CD_DecompressData(u32* srcStart, u32* dstStart, u32 srcEnd, u32 dstEnd);
 void ClearPointer(void *pointer);
 u32* CD_StreamDataCallback(s32 param_1, u32 param_2);
-void CD_ReadyCallback(u_char intr, u_char *result);
+void CD_ReadyHandler(u_char intr, u_char *result);
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
 void CD_DiskValidationCallback(u_char intr, u_char *result);
@@ -205,6 +207,6 @@ s32 func_80022040(u8 *param_1);
 void FUN_8002279c(undefined4 param_1,u_int param_2);
 void CD_WaitForQueueEmpty(void);
 void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
-void FUN_800141ec(s32 arg0, u32 arg1);
+void CD_QueueRead(s32 arg0, u32 arg1);
 
 #endif
