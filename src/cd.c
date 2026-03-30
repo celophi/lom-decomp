@@ -2768,9 +2768,9 @@ void CD_QueueRead(s32 resourceIndex, u32 dstBuffer)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/5M5cV
  */
-void func_80014218(s32 arg0, s32 arg1)
+void CD_QueueReadWithCallback(s32 resourceIndex, s32 callback) 
 {
-    CD_QueueCommand(CdlReadN, arg0 & 0xFFFF, 0, arg1);
+    CD_QueueCommand(CdlReadN, resourceIndex & 0xFFFF, 0, callback);
 }
 
 /**
@@ -2826,8 +2826,8 @@ s32 CD_GetErrorStatus(void)
  */
 void CD_PauseAndRestoreCallbacks(void) 
 {
-    CdSyncCallback((CdlCB)CD_SYSTEM.u_168);
-    CdReadyCallback(CD_SYSTEM.previousSyncCallback);
+    CdSyncCallback(CD_SYSTEM.previousSyncCallback);
+    CdReadyCallback(CD_SYSTEM.previousReadyCallback);
     
     while (CdControlB(9U, NULL, NULL) == 0);
     
