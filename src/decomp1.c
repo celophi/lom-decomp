@@ -143,7 +143,7 @@ void FUN_80011638(s32 arg0)
     }
     
     base = (arg0 + 0x93) & 0xFFFF;
-    FUN_800141ec(base, 0x80180000);
+    CD_QueueRead(base, 0x80180000);
     CD_WaitForQueueEmpty();
 
     info = (s32 *) 0x80180004;
