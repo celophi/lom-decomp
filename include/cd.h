@@ -207,6 +207,6 @@ s32 func_80022040(u8 *param_1);
 void FUN_8002279c(undefined4 param_1,u_int param_2);
 void CD_WaitForQueueEmpty(void);
 void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
-void FUN_800141ec(s32 arg0, u32 arg1);
+void CD_QueueRead(s32 arg0, u32 arg1);
 
 #endif

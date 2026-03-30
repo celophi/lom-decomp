@@ -1963,7 +1963,7 @@ block_50:
 /**
  * decomp.me: (100%) https://decomp.me/scratch/kgBY4
  */
-void CD_ReadyCallback(u_char intr, u_char *result)
+void CD_ReadyHandler(u_char intr, u_char *result)
 {
     s32 temp_a0;
     u8 temp_s1;
@@ -2336,7 +2336,7 @@ void CD_ExecuteCommand(u8 cmd, void *sectorBuffer, s32 executionMode)
             if (executionMode == 0)
             {
                 CD_SYSTEM_V.statusFlags.bytes.b2 = 0;
-                CdReadyCallback(CD_ReadyCallback);
+                CdReadyCallback(CD_ReadyHandler);
             }
         } 
         else if (executionMode == 1)
@@ -2760,7 +2760,7 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes) {
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/OxunQ
  */
-void FUN_800141ec(s32 resourceIndex, u32 dstBuffer) 
+void CD_QueueRead(s32 resourceIndex, u32 dstBuffer) 
 {
     CD_QueueCommand(CdlReadN, resourceIndex, dstBuffer, 0);
 }
@@ -2792,7 +2792,7 @@ s32 CD_GetResourceDataSize(s32 resourceIndex)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/vfLUw
  */
-s32 func_80014290(void)
+s32 CD_GetErrorStatus(void)
 {
     CdStatusFlags flags;
 
@@ -2824,7 +2824,7 @@ s32 func_80014290(void)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/HSXMR
  */
-void func_800142F8(void) 
+void CD_PauseAndRestoreCallbacks(void) 
 {
     CdSyncCallback((CdlCB)CD_SYSTEM.u_168);
     CdReadyCallback(CD_SYSTEM.previousSyncCallback);
@@ -2858,7 +2858,7 @@ void func_800142F8(void)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/gsUc3
  */
-s32 func_800143C0(void) 
+s32 CD_EnterRecoveryMode(void) 
 {
     s32 flags;
     s32 result;
@@ -3398,7 +3398,7 @@ s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/JFLMN
  */
-void func_80014A8C(u32 srcStart, u32 dstStart) 
+void CD_DecompressBuffer(u32 srcStart, u32 dstStart) 
 {
     srcStart++;
     while (CD_DecompressData(&srcStart, &dstStart, -4U, -4U) != 0);
