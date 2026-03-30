@@ -490,6 +490,9 @@ _SpuDataCallback            = 0x80021F8C;
 // psyq/libspu/S_SI
 SpuSetIRQ                   = 0x800233C8;
 
+// psyq/libspu/S_SIA
+SpuSetIRQAddr               = 0x80023508;
+
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;
