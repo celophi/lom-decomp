@@ -3392,3 +3392,12 @@ s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
     }
     return (s32*)result;
 }
+
+/**
+ * decomp.me link: (100%) https://decomp.me/scratch/JFLMN
+ */
+void func_80014A8C(u32 arg0, u32 arg1) 
+{
+    arg0++;
+    while (CD_DecompressData(&arg0, &arg1, -4U, -4U) != 0);
+}

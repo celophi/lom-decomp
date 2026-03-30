@@ -59,7 +59,7 @@ segments:
       - [0x1558, c, main]
       - [0x1B58, c, decomp1]
       - [0x1F10, c, cd]
-      - [0x528C, c, unk4]
+      - [0x52D0, c, unk4]
       - [0x767C, c, psyq/libc2/bcopy]
       - [0x76BC, c, psyq/libc2/bzero]
       - [0x76EC, c, psyq/libc2/memcpy]
