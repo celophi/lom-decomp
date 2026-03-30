@@ -493,6 +493,9 @@ SpuSetIRQ                   = 0x800233C8;
 // psyq/libspu/S_SIA
 SpuSetIRQAddr               = 0x80023508;
 
+// psyq/libspu/S_STSA
+SpuSetTransferStartAddr     = 0x80023548;
+
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
 bzero                       = 0x80016EBC;

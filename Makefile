@@ -199,6 +199,7 @@ SRCS_G0 := \
 	src/psyq/libspu/S_DCB.c \
 	src/psyq/libspu/S_SI.c \
 	src/psyq/libspu/S_SIA.c \
+	src/psyq/libspu/S_STSA.c \
 	src/decompression.c \
 	src/unk1.c \
 	src/unk2.c \
