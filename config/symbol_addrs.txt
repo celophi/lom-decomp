@@ -484,6 +484,8 @@ SPU_OBJ_A88                 = 0x80021ED4;
 SPU_OBJ_AB0                 = 0x80021EFC;
 _spu_Fw1ts                  = 0x80021F24;
 
+// psyq/libspu/S_DCB
+_SpuDataCallback            = 0x80021F8C;
 
 // Other PSY-Q
 bcopy                       = 0x80016E7C;
