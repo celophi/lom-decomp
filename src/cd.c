@@ -255,7 +255,7 @@ void CD_Stop(void)
  *
  * @details
  * Scratchpad RAM (0x1F800000) is used as a shared communication struct
- * between this function and the CD read callback (FUN_80014888):
+ * between this function and the CD read callback (CD_StreamDataCallback):
  *
  *   Offset  Type  Description
  *   ------  ----  -----------
@@ -526,7 +526,7 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     scratchpad->bufferWrapped = 0;
 
     // Enqueue CdlReadN for this resource; subtract 1 to get the last valid compressed-byte offset.
-    remainingDataSize = CD_QueueCommand(6, resourceIndex, NULL, CD_StreamDataCallback) - 1;
+    remainingDataSize = CD_QueueCommand(CdlReadN, resourceIndex, NULL, CD_StreamDataCallback) - 1;
 
     totalBytesDelivered = 0;
     chunkIndex = 0;
@@ -2758,9 +2758,9 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes) {
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/OxunQ
  */
-void FUN_800141ec(s32 arg0, u32 arg1) 
+void FUN_800141ec(s32 resourceIndex, u32 dstBuffer) 
 {
-    CD_QueueCommand(6, arg0, arg1, 0);
+    CD_QueueCommand(CdlReadN, resourceIndex, dstBuffer, 0);
 }
 
 /**
@@ -2768,7 +2768,7 @@ void FUN_800141ec(s32 arg0, u32 arg1)
  */
 void func_80014218(s32 arg0, s32 arg1)
 {
-    CD_QueueCommand(6, arg0 & 0xFFFF, 0, arg1);
+    CD_QueueCommand(CdlReadN, arg0 & 0xFFFF, 0, arg1);
 }
 
 /**
@@ -2776,15 +2776,15 @@ void func_80014218(s32 arg0, s32 arg1)
  */
 void func_80014244(s32 arg0) 
 {
-    CD_QueueCommand(21, arg0, 0, 0);
+    CD_QueueCommand(CdlSeekL, arg0, 0, 0);
 }
 
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/SGZF5
  */
-s32 func_80014270(s32 arg0) 
+s32 CD_GetResourceDataSize(s32 resourceIndex)
 {
-    return CD_RESOURCE_ENTRIES[arg0 & 0xffff].dataSize;
+    return CD_RESOURCE_ENTRIES[resourceIndex & 0xffff].dataSize;
 }
 
 /**
@@ -3396,10 +3396,10 @@ s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/JFLMN
  */
-void func_80014A8C(u32 arg0, u32 arg1) 
+void func_80014A8C(u32 srcStart, u32 dstStart) 
 {
-    arg0++;
-    while (CD_DecompressData(&arg0, &arg1, -4U, -4U) != 0);
+    srcStart++;
+    while (CD_DecompressData(&srcStart, &dstStart, -4U, -4U) != 0);
 }
 
 /**
