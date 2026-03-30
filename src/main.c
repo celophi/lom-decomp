@@ -30,7 +30,7 @@ void Main(void)
     SetDispMask(0);
     FUN_80016784();
     ResetCallback();
-    FUN_8002129c(0);
+    SetVideoMode(0);
     SsUtReverbOff();
 
     ptrB = &D_8003EC88;
