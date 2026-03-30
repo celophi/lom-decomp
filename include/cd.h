@@ -44,7 +44,7 @@ typedef union {
         u_char b0;
         u_char b1;
         u_char b2;
-        u_char b3;
+        u_char retryExhausted;
     } bytes;
 } CdStatusFlags;
 

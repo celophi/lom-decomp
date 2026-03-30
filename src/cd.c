@@ -111,7 +111,7 @@ void CD_Initialize()
     // Clear upper 3 bytes of status flags
     statusFlagsPtr->bytes.b1 = 0;
     statusFlagsPtr->bytes.b2 = 0;
-    statusFlagsPtr->bytes.b3 = 0;
+    statusFlagsPtr->bytes.retryExhausted = 0;
     
     // Zero all 16 command queue entries, setting default buffer to scratchpad
     while (queueCount != queueEndMarker) {
@@ -1542,7 +1542,6 @@ s32 CD_RecoveryStateMachine(void)
  */
 void CD_RecoveryReadyHandler(void) 
 {
-    u8 temp_v0;
     volatile CdSystem* cdSystem;
     volatile CdSystem **new_var;
 
@@ -1553,37 +1552,32 @@ void CD_RecoveryReadyHandler(void)
     }
 
     if (cdSystem->audioEnabled != (u8) g_cdStatusByte3) {
-            do {
-
-            } while (CdGetSector((void* )0x801ED940, 3) == 0);
-            
-            if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.currentLocation.raw & 0xFFFFFF)) {
-                CD_HandleSectorReadComplete(1);
-                return;
-            }
-            
-            temp_v0 = CD_SYSTEM.retryCount;
-            CD_SYSTEM.retryCount = (u8) (temp_v0 + 1);
-            
-            if ((u32) (temp_v0 & 0xFF) < 0x11U) {
-                CdControlF(CD_SYSTEM.currentCommand, (u8* )0x801ED958);
-            } else {
-                CD_SYSTEM.statusFlags.bytes.b3 = 1;
-                CD_SYSTEM.retryCount = 0U;
-                if (CD_SYSTEM.transferCallback != NULL) {
-                    CD_SYSTEM.playbackState = 1;
-                } else {
-                    CD_SYSTEM.playbackState = 0;
-                }
-                cdSystem = &CD_SYSTEM;
-                (*(new_var = &cdSystem))->currentCommand = 1U;
-                CdControlF(1U, NULL);
-            }
-        } else {
+        while (CdGetSector((void* )0x801ED940, 3) == 0);
+        
+        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.currentLocation.raw & 0xFFFFFF)) {
             CD_HandleSectorReadComplete(1);
+            return;
         }
         
-        g_cdStatusByte3 = 0;
+        if (CD_SYSTEM.retryCount++ <= 16) {
+            CdControlF(CD_SYSTEM.currentCommand, (u8* )0x801ED958);
+        } else {
+            CD_SYSTEM.statusFlags.bytes.retryExhausted = 1;
+            CD_SYSTEM.retryCount = 0U;
+            if (CD_SYSTEM.transferCallback != NULL) {
+                CD_SYSTEM.playbackState = 1;
+            } else {
+                CD_SYSTEM.playbackState = 0;
+            }
+            cdSystem = &CD_SYSTEM;
+            (*(new_var = &cdSystem))->currentCommand = 1U;
+            CdControlF(1U, NULL);
+        }
+    } else {
+        CD_HandleSectorReadComplete(1);
+    }
+        
+    g_cdStatusByte3 = 0;
 }
 
 /**
@@ -2011,7 +2005,7 @@ void CD_ReadyHandler(u_char intr, u_char *result)
             return;
         } 
         
-        CD_SYSTEM.statusFlags.bytes.b3 = 1U;
+        CD_SYSTEM.statusFlags.bytes.retryExhausted = 1U;
         CD_SYSTEM.retryCount = 0U;
         
         if (CD_SYSTEM.transferCallback != NULL) {
@@ -2045,7 +2039,7 @@ void CD_ReadyHandler(u_char intr, u_char *result)
     temp_v0_3 = CD_SYSTEM.retryCount;
     CD_SYSTEM.retryCount = (u8) (temp_v0_3 + 1);
     if ((u32) (temp_v0_3 & 0xFF) >= 0x11U) {
-        (*((CdSystem *) 0x801ED800)).statusFlags.bytes.b3 = temp2;
+        (*((CdSystem *) 0x801ED800)).statusFlags.bytes.retryExhausted = temp2;
         CD_SYSTEM.retryCount = 0U;
         (*((CdSystem *) 0x801ED800)).playbackState = temp2;
         CdReadyCallback(NULL);
@@ -2127,9 +2121,9 @@ void CD_HandleSectorReadComplete(s32 arg0)
 
     cdSystem = &CD_SYSTEM;
     
-    // Reset retry tracking and clear status flag bytes b2/b3
+    // Reset retry tracking and clear status flag bytes b2/retryExhausted
     CD_SYSTEM.retryCount = 0;
-    CD_SYSTEM.statusFlags.bytes.b3 = 0;
+    CD_SYSTEM.statusFlags.bytes.retryExhausted = 0;
     CD_SYSTEM.statusFlags.bytes.b2 = 0;
     
     // === Data mode path ===
@@ -2814,7 +2808,7 @@ s32 CD_GetErrorStatus(void)
         return 4;
     }
     
-    if (CD_SYSTEM.statusFlags.bytes.b3 == 1) {
+    if (CD_SYSTEM.statusFlags.bytes.retryExhausted == 1) {
         return 5;
     }
     
