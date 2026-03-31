@@ -294,3 +294,14 @@ block_store_6:
 end:
     *(u32*)(arg0 + 8238) = (u32)ref;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/A5HgV
+ */
+void func_80050554(s32 arg0, s32 arg1, s32 arg2, s32 arg3) 
+{
+    D_8005D068[0] = arg0;
+    D_8005D068[1] = arg1;
+    D_8005D068[2] = arg2;
+    D_8005D068[3] = arg3;
+}
