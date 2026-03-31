@@ -305,3 +305,19 @@ void func_80050554(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     D_8005D068[2] = arg2;
     D_8005D068[3] = arg3;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/jEnBn
+ */
+void func_80050570(void) 
+{
+    s32 temp_v0;
+
+    func_8005088C();
+    temp_v0 = D_800610A0 - 1;
+    D_800610A0 = temp_v0;
+    
+    if (temp_v0 == 0) {
+        D_8005D060 = 2;
+    }
+}
