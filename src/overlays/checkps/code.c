@@ -321,3 +321,50 @@ void func_80050570(void)
         D_8005D060 = 2;
     }
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/WIqbI
+ */
+void func_800505B4(s32 arg0)
+{
+    u8 *base;
+    u8 *prim;
+    s32 w;
+    s32 new_var;
+    s32 h;
+    u_long *ot;
+    u32 cmd;
+    volatile u32 dummy;
+    
+    cmd = 0xE1000000;
+    base = ((u8 *) arg0) + 0x8000;
+    prim = *((u8 **) (base + 0xB8));
+
+    // Set RGB
+    *((u32 *) (prim + 4)) = 0x808080;
+    
+    setSprt((SPRT*)prim);
+    
+    w = D_80061098;
+    h = D_80061094;
+    
+    setUV0((SPRT*)prim, 0, 0);
+    setClut((SPRT*)prim, 0, 480);
+    setXY0((SPRT*)prim, (0x140 - (w * 4)) >> 1, (0xE0 - h) / 2);
+    
+    new_var = D_80061098;
+    w = new_var;
+    
+    ot = (u_long *) (arg0 + 0x40);
+    
+    setWH((SPRT*)prim, w * 4, D_80061094);
+    addPrim(ot, (SPRT*)prim);
+    
+    prim += 0x14;
+    
+    setDrawTPage((SPRT*)prim, 0, 0, 5);
+    addPrim(ot, (SPRT*)prim);
+    
+    prim += 8;
+    *((u8 **) (base + 0xB8)) = prim;
+}
