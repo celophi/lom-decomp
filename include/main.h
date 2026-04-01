@@ -7,16 +7,17 @@
 #include "psyq/libapi.h"
 #include "psyq/libetc.h"
 
-extern u32 D_800102AC;
+extern u32 g_gameState;
+extern u32 g_previousGameState;
+extern u32 g_overlayLoadAddress;
+
 extern u8* D_800351A0;
-extern u32 D_8003522C;
 extern u32 D_8003EC88;
 extern s32 D_8003EC8C;
 extern u16 D_8003EC90;
 extern s32 D_8003EC94;
 extern s32 D_8003EC98;
 extern s32 D_8003EC9C;
-extern u32 D_80042FB0;
 extern s32 D_80042FC4;
 extern s32 D_80042FCC;
 extern s32 D_80042FD0;

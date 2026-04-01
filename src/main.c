@@ -1,6 +1,6 @@
 #include "main.h"
 
-u32 D_800102AC;
+u32 g_overlayLoadAddress;
 
 /**
  * decomp.me link (91.90%) https://decomp.me/scratch/No2jL
@@ -61,8 +61,8 @@ void Main(void)
     D_800473E0 = 0;
     D_8003EC8C = 0xB;
     D_80042FD0 = 0x13;
-    D_8003522C = 8U;
-    new_var4 = &D_800102AC;
+    g_gameState = 8U;
+    new_var4 = &g_overlayLoadAddress;
     FUN_80015c28();
 
     
@@ -76,9 +76,9 @@ void Main(void)
     
     VSync(0);
     
-    ptrC = &D_80042FB0;
+    ptrC = &g_previousGameState;
     *ptrC = 0xFF;
-    ptrA = &D_800435C8;
+    ptrA = &g_gameDataBasePtr;
     temp_s2 = (tempU*)(*ptrA);
     temp_s2 = (tempU*)((u8*)temp_s2  - 0x5F0);
     
@@ -87,7 +87,7 @@ void Main(void)
     while (TRUE) 
     {
         
-    gameState = D_8003522C;
+    gameState = g_gameState;
     do {
         
         switch (gameState) 
@@ -103,13 +103,13 @@ void Main(void)
                 // BIN/FIELD.BIN
                 CD_StreamData(2, *streamDst);
                 
-                if (D_8003522C != 0) 
+                if (g_gameState != 0) 
                 {
                     // BIN/MOVIE.BIN
                     CD_StreamData(11, 0x80140000);
                     CD_WaitForQueueEmpty();
                     
-                    if (D_8003522C == 9) 
+                    if (g_gameState == 9) 
                     {
                         FUN_80140018(1);
                     } 
@@ -128,12 +128,12 @@ void Main(void)
                 
                 D_80042FCC = 0;
                 *ptrB = 0; // extra lui?
-                D_8003522C = FUN_80015c58();
+                g_gameState = FUN_80015c58();
                 
                 FUN_80022aa8();
                 FUN_80022ac8();
                 FUN_8002279c(0, 0x7F);
-                D_80042FB0 = 0;
+                g_previousGameState = 0;
                 break;
             case 1:                                 /* switch 1 */
                 FUN_80015c38();
@@ -260,7 +260,7 @@ void Main(void)
             }
             
         
-    } while (D_8003522C != 4);
-    D_8003522C = 2U;
+    } while (g_gameState != 4);
+        g_gameState = 2U;
     }
 }

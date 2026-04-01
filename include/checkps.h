@@ -6,9 +6,10 @@
 #include "psyq/libgpu.h"
 #include "psyq/memory.h"
 
+extern s32 g_previousGameState;
+
 extern s32 D_8005D060;
 extern u32 D_80052428;
-extern s32 D_80042FB0;
 extern s32 D_80061088;
 extern u8 D_8005D088;
 extern s32 D_8005D068[4];
