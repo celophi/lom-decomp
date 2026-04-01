@@ -522,9 +522,9 @@ g_cdReadyCallbackResult     = 0x801ed96c;
 g_defaultCdResource         = 0x801ed990;
 g_SKCDPOSE_DAT              = 0x801ed998;
 g_cdResource176             = 0x801edf18;
-D_800102AC                  = 0x800102AC;
 g_gameState                 = 0x8003522C;
 g_previousGameState         = 0x80042FB0;
+g_overlayLoadAddress        = 0x800102AC;
 
 // Uncategorized
 __main = 0x8002e850;

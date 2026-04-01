@@ -1,6 +1,6 @@
 #include "main.h"
 
-u32 D_800102AC;
+u32 g_overlayLoadAddress;
 
 /**
  * decomp.me link (91.90%) https://decomp.me/scratch/No2jL
@@ -62,7 +62,7 @@ void Main(void)
     D_8003EC8C = 0xB;
     D_80042FD0 = 0x13;
     g_gameState = 8U;
-    new_var4 = &D_800102AC;
+    new_var4 = &g_overlayLoadAddress;
     FUN_80015c28();
 
     
