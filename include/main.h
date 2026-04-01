@@ -10,6 +10,7 @@
 extern u32 g_gameState;
 extern u32 g_previousGameState;
 extern u32 g_overlayLoadAddress;
+extern u32 g_gameDataBasePtr;
 
 extern u8* D_800351A0;
 extern u32 D_8003EC88;
@@ -21,7 +22,6 @@ extern s32 D_8003EC9C;
 extern s32 D_80042FC4;
 extern s32 D_80042FCC;
 extern s32 D_80042FD0;
-extern u32 D_800435C8;
 extern s32 D_80046FD8;
 extern u16 D_80046FDE;
 extern s32 D_800473E0;
