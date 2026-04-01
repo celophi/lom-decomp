@@ -76,7 +76,7 @@ void Main(void)
     
     VSync(0);
     
-    ptrC = &D_80042FB0;
+    ptrC = &g_previousGameState;
     *ptrC = 0xFF;
     ptrA = &D_800435C8;
     temp_s2 = (tempU*)(*ptrA);
@@ -133,7 +133,7 @@ void Main(void)
                 FUN_80022aa8();
                 FUN_80022ac8();
                 FUN_8002279c(0, 0x7F);
-                D_80042FB0 = 0;
+                g_previousGameState = 0;
                 break;
             case 1:                                 /* switch 1 */
                 FUN_80015c38();

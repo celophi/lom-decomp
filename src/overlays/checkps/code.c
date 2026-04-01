@@ -133,7 +133,7 @@ void func_80050080(void)
     s32* ref;
     u32* offs;
     
-    if (((((D_80042FB0 == 2) || (D_80042FB0 == 3)) || (D_80042FB0 == 0)) || (D_80042FB0 == 6)) || (D_80042FB0 == 7) || (D_80042FB0 == 5))
+    if (((((g_previousGameState == 2) || (g_previousGameState == 3)) || (g_previousGameState == 0)) || (g_previousGameState == 6)) || (g_previousGameState == 7) || (g_previousGameState == 5))
     {
         return;
     }
