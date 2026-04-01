@@ -525,6 +525,8 @@ g_cdResource176             = 0x801edf18;
 g_gameState                 = 0x8003522C;
 g_previousGameState         = 0x80042FB0;
 g_overlayLoadAddress        = 0x800102AC;
+g_gameDataBasePtr           = 0x800435C8;
+
 
 // Uncategorized
 __main = 0x8002e850;

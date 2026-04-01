@@ -78,7 +78,7 @@ void Main(void)
     
     ptrC = &g_previousGameState;
     *ptrC = 0xFF;
-    ptrA = &D_800435C8;
+    ptrA = &g_gameDataBasePtr;
     temp_s2 = (tempU*)(*ptrA);
     temp_s2 = (tempU*)((u8*)temp_s2  - 0x5F0);
     
