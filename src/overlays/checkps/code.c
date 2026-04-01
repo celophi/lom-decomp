@@ -294,3 +294,77 @@ block_store_6:
 end:
     *(u32*)(arg0 + 8238) = (u32)ref;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/A5HgV
+ */
+void func_80050554(s32 arg0, s32 arg1, s32 arg2, s32 arg3) 
+{
+    D_8005D068[0] = arg0;
+    D_8005D068[1] = arg1;
+    D_8005D068[2] = arg2;
+    D_8005D068[3] = arg3;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/jEnBn
+ */
+void func_80050570(void) 
+{
+    s32 temp_v0;
+
+    func_8005088C();
+    temp_v0 = D_800610A0 - 1;
+    D_800610A0 = temp_v0;
+    
+    if (temp_v0 == 0) {
+        D_8005D060 = 2;
+    }
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/WIqbI
+ */
+void func_800505B4(s32 arg0)
+{
+    u8 *base;
+    u8 *prim;
+    s32 w;
+    s32 new_var;
+    s32 h;
+    u_long *ot;
+    u32 cmd;
+    volatile u32 dummy;
+    
+    cmd = 0xE1000000;
+    base = ((u8 *) arg0) + 0x8000;
+    prim = *((u8 **) (base + 0xB8));
+
+    // Set RGB
+    *((u32 *) (prim + 4)) = 0x808080;
+    
+    setSprt((SPRT*)prim);
+    
+    w = D_80061098;
+    h = D_80061094;
+    
+    setUV0((SPRT*)prim, 0, 0);
+    setClut((SPRT*)prim, 0, 480);
+    setXY0((SPRT*)prim, (0x140 - (w * 4)) >> 1, (0xE0 - h) / 2);
+    
+    new_var = D_80061098;
+    w = new_var;
+    
+    ot = (u_long *) (arg0 + 0x40);
+    
+    setWH((SPRT*)prim, w * 4, D_80061094);
+    addPrim(ot, (SPRT*)prim);
+    
+    prim += 0x14;
+    
+    setDrawTPage((SPRT*)prim, 0, 0, 5);
+    addPrim(ot, (SPRT*)prim);
+    
+    prim += 8;
+    *((u8 **) (base + 0xB8)) = prim;
+}
