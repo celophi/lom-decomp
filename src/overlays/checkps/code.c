@@ -418,3 +418,78 @@ void func_800506D0(void)
 
     LoadImage(pRect, (u32 *)(imageBlock + 0xC));
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/JLAOc
+ */
+s32 PollInputDevice(void)
+{
+    SCDRegs *regs = (SCDRegs *) 0x801ED600;
+    
+    u32 inputMask;
+    u32 rawButtons;
+    u32 remappedUpper;
+    u32 workingBits;
+    
+    s32 axisX;
+    s32 axisY;
+    
+    volatile u16 *axisPtrX;
+    u16 *axisPtrY;
+    u16 hiRead;
+    u16 loRead;
+    u16 axisRaw;
+    
+    if (regs->deviceState >= 0xFEU) {
+        return 0;
+    }
+    
+    // Raw button read (byte-swapped via two reads)
+    hiRead = *((volatile u16 *) (((u8 *) regs) + 2));
+    loRead = *((volatile u16 *) (((u8 *) regs) + 2));
+    inputMask = (((u32) hiRead) >> 8) | (((u32) loRead) << 8);
+    
+    rawButtons = inputMask;
+    
+    // Remap upper nibble bits (hardware → logical layout)
+    remappedUpper = (rawButtons & 0x40) >> 1;
+    workingBits   = (rawButtons & 0x20) << 1;
+    remappedUpper |= workingBits;
+    
+    workingBits   = (rawButtons & 0x80) >> 3;
+    remappedUpper |= workingBits;
+    
+    workingBits   = (rawButtons & 0x10) << 3;
+    remappedUpper |= workingBits;
+    
+    do {
+        workingBits = rawButtons & (~0xF0U);
+        inputMask = remappedUpper | workingBits;
+    } while (0);
+    
+    if (regs->deviceState != 0) {
+        // X axis → left/right flags
+        axisPtrX = (volatile u16 *) (((u8 *) regs) + 0x2C);
+        axisRaw = *axisPtrX;
+        axisX = (s32)((s16)axisRaw);
+        
+        if (axisX < -1) {
+            inputMask |= 0x8000U;
+        } else if (axisX >= 2) {
+            inputMask |= 0x2000U;
+        }
+        
+        // Y axis → up/down flags
+        axisPtrY = (u16 *) (((u8 *) regs) + 0x2E);
+        axisRaw = *axisPtrY;
+        axisY = (s32)((s16)axisRaw);
+        
+        if (axisY < -1) {
+            inputMask |= 0x1000U;
+        } else if (axisY >= 2) {
+            inputMask |= 0x4000U;
+        }
+    }
+    
+    return (s32) inputMask;
+}
