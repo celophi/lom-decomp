@@ -368,3 +368,53 @@ void func_800505B4(s32 arg0)
     prim += 8;
     *((u8 **) (base + 0xB8)) = prim;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/VRHxF
+ */
+void func_800506D0(void) 
+{
+    RECT rectLoad;                 
+    RECT rect;                    
+    RECT *pRect;                 
+    u8 *gfxBase;                   
+    u32 clutSize;                  
+    u8 *imageBlock;               
+    u16 loadX, loadY;              
+    register u16 *pHeader asm("v1"); 
+
+    pRect = &rect;
+    gfxBase = D_8005B744;
+
+    D_800610A0 = 0x78;
+
+    rectLoad.x = 0x140;
+    rectLoad.y = 0;
+    rectLoad.w = 0;
+    rectLoad.h = 0x1E0;
+
+    rect.x = 0;
+    rect.y = 0x1E0;
+    rect.w = *(u16 *)(gfxBase + 0x10) * *(u16 *)(gfxBase + 0x12);
+    rect.h = 1;
+
+    clutSize = *(u32 *)(gfxBase + 8);
+    LoadImage(pRect, (u32 *)(gfxBase + 0x14));
+
+    loadX = rectLoad.x;
+    loadY = rectLoad.y;
+
+    imageBlock = gfxBase + (clutSize + 8);
+
+    pHeader = (u16 *)(imageBlock + 8);
+
+    rect.x = loadX;
+    rect.y = loadY;
+    rect.w = *(u16 *)(imageBlock + 8);
+    rect.h = pHeader[1]; 
+
+    D_80061098 = *(u16 *)(imageBlock + 8);
+    D_80061094 = pHeader[1];
+
+    LoadImage(pRect, (u32 *)(imageBlock + 0xC));
+}
