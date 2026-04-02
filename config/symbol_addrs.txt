@@ -566,3 +566,6 @@ CD_EnterRecoveryMode = 0x800143C0;
 func_80014434 = 0x80014434;
 CD_GetResourceDataSize = 0x80014270;
 CD_DecompressBuffer = 0x80014A8C;
+
+// CHECKPS.BIN
+PollInputDevice = 0x800507B4;
