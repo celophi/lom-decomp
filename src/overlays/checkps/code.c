@@ -493,3 +493,83 @@ s32 PollInputDevice(void)
     
     return (s32) inputMask;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/C3tuU
+ */
+void ProcessControllerInput(void)
+{
+    SCDRegs *controllerRegs;
+    u32 processedButtons;
+    s16 axisX;
+    s16 axisY;
+    s32 finalButtonState;
+    
+    controllerRegs = (SCDRegs *)0x801ED600;
+    
+    if (((u8) D_801ED600) >= 0xFEU) {
+        finalButtonState = 0;
+    } else {
+        // Swap high and low bytes of button data
+        processedButtons = (controllerRegs->buttonData >> 8) | (controllerRegs->buttonData << 8);
+        
+        // Re-map some button bits
+        processedButtons = (((((processedButtons & 0x40) >> 1) | ((processedButtons & 0x20) << 1)) |
+                             ((processedButtons & 0x80) >> 3)) | ((processedButtons & 0x10) << 3)) |
+                            (processedButtons & (~0xF0));
+        
+        if (controllerRegs->deviceState != 0) {
+            axisX = (s16)controllerRegs->axisX;
+            
+            if (axisX < -1) {
+                processedButtons |= 0x8000;  // left
+            } else if (axisX >= 2) {
+                processedButtons |= 0x2000;  // right
+            }
+            
+            axisY = (s16)controllerRegs->axisY;
+            
+            if (axisY < -1) {
+                processedButtons |= 0x1000;  // up
+            } else if (axisY >= 2) {
+                processedButtons |= 0x4000;  // down
+            }
+        }
+        finalButtonState = processedButtons;
+    }
+    
+    D_80061090 = 0; // current active input
+    
+    if ((finalButtonState == D_800610A4) ||
+        ((D_800610A4 != 0) && ((finalButtonState & (D_800610A4 | 0xB6F)) != 0))) {
+        
+        if (finalButtonState == 0) {
+            goto reset_input_state;
+        } else {
+            // Keep only directional bits
+            if ((finalButtonState & 0xF000) != 0) {
+                finalButtonState &= 0xF000;
+            }
+            
+            if (D_800610A8 == 0) {
+                D_80061090 = finalButtonState;
+                D_800610A8 = 2; // input repeat timer
+            } else {
+                D_800610A8--;
+                D_80061090 = 0;
+            }
+        }
+        
+    } else {
+        if (finalButtonState == 0) {
+reset_input_state:
+            D_800610A8 = 0;
+            D_800610A4 = 0;
+            return;
+        } else {
+            D_80061090 = finalButtonState;
+            D_800610A4 = finalButtonState; // last button state
+            D_800610A8 = 0xF; // input repeat timer max
+        }
+    }
+}
