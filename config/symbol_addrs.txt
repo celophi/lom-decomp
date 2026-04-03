@@ -570,3 +570,4 @@ CD_DecompressBuffer = 0x80014A8C;
 // CHECKPS.BIN
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
+UpdateControllerInput = 0x80050A0C;

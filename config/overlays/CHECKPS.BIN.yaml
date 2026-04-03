@@ -42,5 +42,5 @@ segments:
     subsegments:
       - [0x0, bin, checkps]
       - [0xA5, c, code]
-      - [0xD9D, c, unk]
+      - [0xE95, c, unk]
   - [0xA77D]
