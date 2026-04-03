@@ -33,6 +33,7 @@ extern u8 D_801ED600;
 extern s32 D_80061090;
 extern s32 D_800610A4;
 extern s32 D_800610A8;
+extern s32 D_8005CFE8;
 
 void func_80050080(void);
 void func_8004FEE8(int param_1);
