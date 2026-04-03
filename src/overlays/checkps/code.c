@@ -563,3 +563,52 @@ void ProcessControllerInput(void)
         D_800610A8 = 0xF; // input repeat timer max
     }
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/qGA07
+ */
+void UpdateControllerInput(void)
+{
+    SCDRegs *regs;
+    unsigned int processedButtons;
+    short axisX, axisY;
+    unsigned int finalButtonState;
+
+    regs = ( SCDRegs *)0x801ED600;
+
+    D_80061090 = 0;
+
+    if (D_801ED600 >= 0xFEU) {
+        finalButtonState = 0;
+    } else {
+        /* Swap high and low bytes of button data */
+        processedButtons = (regs->buttonData >> 8) | (regs->buttonData << 8);
+
+        /* Re‑map button bits: 0x40→bit1, 0x20→bit5, 0x80→bit4, 0x10→bit3 */
+        processedButtons = (((((processedButtons & 0x40) >> 1) |
+                              ((processedButtons & 0x20) << 1)) |
+                             ((processedButtons & 0x80) >> 3)) |
+                            ((processedButtons & 0x10) << 3)) |
+                           (processedButtons & (~0xF0));
+
+        if (regs->deviceState != 0) {
+            axisX = regs->axisX;
+            if (axisX < -1) {
+                processedButtons |= 0x8000;   /* left */
+            } else if (axisX >= 2) {
+                processedButtons |= 0x2000;   /* right */
+            }
+
+            axisY = regs->axisY;
+            if (axisY < -1) {
+                processedButtons |= 0x1000;   /* up */
+            } else if (axisY >= 2) {
+                processedButtons |= 0x4000;   /* down */
+            }
+        }
+        finalButtonState = processedButtons;
+    }
+
+    D_800610A4 = finalButtonState;
+    D_800610A8 = 0xF;
+}
