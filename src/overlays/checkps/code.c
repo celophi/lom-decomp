@@ -612,3 +612,12 @@ void UpdateControllerInput(void)
     D_800610A4 = finalButtonState;
     D_800610A8 = 0xF;
 }
+
+/**
+ * decomp.me link (95%) https://decomp.me/scratch/EuGt8
+ */
+void func_80050B04(void) 
+{
+    s32 value = 1;
+    D_8005CFE8 = value;
+}
