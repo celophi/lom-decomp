@@ -495,7 +495,7 @@ s32 PollInputDevice(void)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/C3tuU
+ * decomp.me link (100%) https://decomp.me/scratch/BkOv2
  */
 void ProcessControllerInput(void)
 {
@@ -540,36 +540,26 @@ void ProcessControllerInput(void)
     
     D_80061090 = 0; // current active input
     
-    if ((finalButtonState == D_800610A4) ||
-        ((D_800610A4 != 0) && ((finalButtonState & (D_800610A4 | 0xB6F)) != 0))) {
-        
-        if (finalButtonState == 0) {
-            goto reset_input_state;
-        } else {
-            // Keep only directional bits
-            if ((finalButtonState & 0xF000) != 0) {
-                finalButtonState &= 0xF000;
-            }
-            
-            if (D_800610A8 == 0) {
-                D_80061090 = finalButtonState;
-                D_800610A8 = 2; // input repeat timer
-            } else {
-                D_800610A8--;
-                D_80061090 = 0;
-            }
+    if (((finalButtonState == D_800610A4) ||
+        ((D_800610A4 != 0) && ((finalButtonState & (D_800610A4 | 0xB6F))))) && (finalButtonState != 0)) {
+        // Keep only directional bits
+        if ((finalButtonState & 0xF000) != 0) {
+            finalButtonState &= 0xF000;
         }
         
-    } else {
-        if (finalButtonState == 0) {
-reset_input_state:
-            D_800610A8 = 0;
-            D_800610A4 = 0;
-            return;
-        } else {
+        if (D_800610A8 == 0) {
             D_80061090 = finalButtonState;
-            D_800610A4 = finalButtonState; // last button state
-            D_800610A8 = 0xF; // input repeat timer max
+            D_800610A8 = 2; // input repeat timer
+        } else {
+            D_800610A8--;
+            D_80061090 = 0;
         }
+    } else if (finalButtonState == 0) {
+        D_800610A8 = 0;
+        D_800610A4 = 0;
+    } else {
+        D_80061090 = finalButtonState;
+        D_800610A4 = finalButtonState; // last button state
+        D_800610A8 = 0xF; // input repeat timer max
     }
 }
