@@ -40,7 +40,9 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x0, bin, checkps]
+      - [0x1, rodata, rodata]
       - [0xA5, c, code]
-      - [0xEA5, c, unk]
+      - [0xEA5, c, unk1]
+      - [0x26ED, c, code2]
+      - [0x272D, c, unk2]
   - [0xA77D]
