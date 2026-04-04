@@ -1,6 +1,110 @@
 #include "checkps.h"
 
 /**
+ * decomp.me link (100%) https://decomp.me/scratch/6ygLn
+ */
+s32 func_80052004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    u32 *ptr;
+    u8 *font_data;
+    unsigned int new_var3;
+    int new_var4;
+    s32 slot;
+    int new_var;
+    unsigned int new_var2;
+    s32 new_var5;
+    RECT rect;
+
+    u8 *dest;
+    int inc;
+    int inc16;
+    int outer;
+    int middle;
+
+    u16 mask;
+    u8 font_byte;
+    volatile u8 *vptr;
+    u8 temp;
+
+    new_var5 = arg2;
+    slot = 0;
+    new_var3 = new_var5 & 0xFFFF;
+    ptr = D_800890C0;
+
+    while (slot < 0x100) {
+        if (new_var3 == ((u16)(*ptr))) {
+            return func_80052218(arg0, arg1, slot);
+        }
+        slot++;
+        ptr++;
+    }
+
+    font_data = func_8001687C(new_var5 & 0xFFFF);
+    if (font_data == ((u8 *)-1)) {
+        return arg0;
+    }
+
+    dest = D_800894C8;
+    inc = arg3 + 1;
+    inc16 = inc * 16;
+
+    for (outer = 0; outer < 15; outer++) {
+        new_var4 = inc16;
+
+        for (middle = 0; middle < 2; middle++) {
+            mask = 0x80;
+
+            for (slot = 0; slot < 4; slot++) {
+                *dest = ((*font_data) & mask) ? (inc) : (0);
+
+                mask >>= 1 & (new_var2 = 0xFFFFu);
+                new_var = (*font_data) & mask;
+
+                vptr = (volatile u8 *)dest;
+                temp = *vptr;
+
+                if (new_var) {
+                    temp += new_var4;
+                }
+
+                *vptr = temp;
+
+                mask >>= 1;
+                dest++;
+            }
+
+            font_data++;
+        }
+    }
+
+    slot = 0;
+    while ((slot < 0x100) && (D_800890C0[slot] != 0)) {
+        slot++;
+    }
+
+    if (slot == 0x100) {
+        return arg0;
+    }
+
+    D_800890C0[slot] = new_var5 & (0xFFFF & 0xFFFFFFFFu);
+    arg0 = func_80052218(arg0, arg1, slot);
+
+    D_800894D0 = (slot % 16) * 4;
+    D_800894D4 = slot & 0xF0;
+
+    rect.w = 4;
+    rect.h = 15;
+    rect.x = D_800894D0 + 0x3C0;
+    rect.y = D_800894D4;
+
+    LoadImage(&rect, (u_long *)D_800894C8);
+    DrawSync(0);
+
+    D_800894C8 += 0x80;
+    return arg0;
+}
+
+/**
  * decomp.me link (100%) https://decomp.me/scratch/FyrJc
  */
 void *func_80052218(void *arg0, s32 *arg1, s32 arg2)
