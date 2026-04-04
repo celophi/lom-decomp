@@ -6,15 +6,11 @@
 void* func_80052218(void* arg0, s32* arg1, s32 arg2)
 {
     s32 var_a0;
-    s32* temp_v1;
     SomeStruct* s = (SomeStruct*)arg0;
-    s32 old_unk0;
     s32 arg0_masked;
 
-    /* Block 1: update D_800890C0 entry */
-    temp_v1 = (s32*)&D_800890C0;
-    temp_v1 = (s32*)((char*)temp_v1 + (arg2 * 4));
-    *temp_v1 |= 0x10000;
+    /* Block 1: array indexing forces base→v0, index→v1, giving addu v1,v1,v0 */
+    D_800890C0[arg2] |= 0x10000;
 
     /* Block 2: init simple structure members */
     s->u.byte.unk3 = 3;
@@ -34,36 +30,31 @@ void* func_80052218(void* arg0, s32* arg1, s32 arg2)
     s->unkC = (s8)((arg2 - ((var_a0 >> 4) * 0x10)) * 0x10);
     s->unkD = (s8)(arg2 & 0xF0);
 
-    /* Force load of unk0 before any use of 0xFF000000 constant */
-    old_unk0 = (( SomeStruct*)s)->u.unk0;
-
-    /* Store unkE */
+    /*
+     * Write unkE then update unk0 inline (no pre-loaded temp).
+     * With v0 occupied by 0x7FC0, the compiler hoists lw v1,0(a3)
+     * before the sh, then loads *arg1 into v0 — exactly matching
+     * the target register allocation and instruction order.
+     */
     s->unkE = 0x7FC0;
+    s->u.unk0 = (s->u.unk0 & 0xFF000000) | (*arg1 & 0xFFFFFF);
 
-    /* Compute masked arg0 while mask 0xFFFFFF is still in a1 (from earlier) */
+    /* Compute masked arg0 (a3 still un-incremented) then advance pointer */
     arg0_masked = (s32)arg0 & 0xFFFFFF;
-
-    /* Update unk0 using the pre‑loaded old_unk0 and constant 0xFF000000 */
-    s->u.unk0 = (old_unk0 & 0xFF000000) | (*arg1 & 0xFFFFFF);
-
-    /* Increment pointer */
     arg0 = (char*)arg0 + 0x14;
 
-    /* Global updates – order forced to match target */
+    /* Global updates */
     {
         s32 old_c0 = D_800894C0;
         s32 new_c0 = old_c0 + 0x10;
-        s32 cond = (old_c0 + 0x20) < 0x280;
-
+        s32 cond   = (old_c0 + 0x20) < 0x280;
         D_800894C0 = new_c0;
         *arg1 = (*arg1 & 0xFF000000) | arg0_masked;
-
         if (!cond) {
             D_800894C0 = D_800894CC;
             D_800894C4 += 0x10;
         }
     }
-
     return arg0;
 }
 
