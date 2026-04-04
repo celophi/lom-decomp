@@ -34,7 +34,7 @@ extern s32 D_80061090;
 extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
-extern s32 D_800890C0;
+extern s32 D_800890C0[];
 extern s8  D_800810C0[];
 extern s32 D_8005D054;
 extern s32 D_800894C8;
@@ -43,7 +43,6 @@ extern s32 D_800894C4;
 extern s32 D_800894CC;
 
 
-/* Structure layout – named union/struct for C89 */
 typedef struct {
     union {
         s32 unk0;
