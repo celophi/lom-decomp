@@ -37,6 +37,7 @@ extern s32 D_8005CFE8;
 extern s32 D_800890C0;
 extern s8  D_800810C0[];
 extern s32 D_8005D054;
+extern s32 D_800894C8;
 
 void func_80050080(void);
 void func_8004FEE8(int param_1);
