@@ -1,6 +1,26 @@
 #include "checkps.h"
 
 /**
+ * decomp.me link (100%) https://decomp.me/scratch/PpMnG
+ */
+void func_80052320(void) 
+{
+    s32 var_a0;
+    u32 *var_v1;
+
+    D_800894C8 = (s32)&D_800810C0;
+    var_a0 = 0;
+    var_v1 = (u32*)&D_800890C0;
+
+    while (var_a0 < 0x100) {
+        var_a0++;
+        *var_v1 = (u32)(*(u16*)var_v1);
+        var_v1++;
+    }
+}
+
+
+/**
  * decomp.me link (100%) https://decomp.me/scratch/PuSGD
  */
 void func_8005235C(void)
