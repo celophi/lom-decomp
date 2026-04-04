@@ -37,18 +37,17 @@ void func_8005239C(void)
     // Force two‑step address calculation: base address + 0x3FC
     p = &D_800890C0;
     p = (s32*)((u_long)p + 0x3FC);
-    do {
+    
+    while (i >= 0) {
         *p = 0;
         p--;
         i--;
-    } while (i >= 0);
+    }
 
     // Second loop: zero 0x8000 bytes from D_800810C0
-    i = 0;
-    do {
+    for (i = 0; i <= 0x7FFF; i++) {
         D_800810C0[i] = 0;
-        i++;
-    } while (i <= 0x7FFF);
+    }
 
     // Assign RECT fields in the exact order required by the target assembly:
     // y, w, x, then h (h goes into the delay slot after the x store)
