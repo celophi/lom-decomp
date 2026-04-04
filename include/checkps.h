@@ -41,7 +41,8 @@ extern s32 D_800894C8;
 extern s32 D_800894C0;
 extern s32 D_800894C4;
 extern s32 D_800894CC;
-
+extern s32 D_800894D0;
+extern s32 D_800894D4;
 
 typedef struct {
     union {
