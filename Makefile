@@ -212,7 +212,8 @@ SRCS_G4 := \
 	src/cd.c
 
 SRCS_CDK_G0 := \
-	src/overlays/checkps/code.c
+	src/overlays/checkps/code.c \
+	src/overlays/checkps/code2.c 
 
 # Hand-written assembly (header + initialized data sections).
 # Rodata is NOT here — it's inlined into C files via asm directives.
@@ -260,7 +261,7 @@ STAGE_DIRS := src asm include linker tools assets
 
 OVERLAYS += checkps
 overlay_checkps_asset    := assets/checkps.bin
-overlay_checkps_gcc_srcs := src/overlays/checkps/unk.c
+overlay_checkps_gcc_srcs := src/overlays/checkps/unk1.c src/overlays/checkps/unk2.c
 
 
 # ============================================================================
