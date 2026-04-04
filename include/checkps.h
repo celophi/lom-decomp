@@ -34,10 +34,33 @@ extern s32 D_80061090;
 extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
-extern s32 D_800890C0;
+extern s32 D_800890C0[];
 extern s8  D_800810C0[];
 extern s32 D_8005D054;
 extern s32 D_800894C8;
+extern s32 D_800894C0;
+extern s32 D_800894C4;
+extern s32 D_800894CC;
+
+
+typedef struct {
+    union {
+        s32 unk0;
+        struct {
+            u8 _pad0[3];
+            u8 unk3;
+        } byte;
+    } u;
+    u8  unk4;
+    u8  unk5;
+    u8  unk6;
+    u8  unk7;
+    u16 unk8;
+    u16 unkA;
+    s8  unkC;
+    s8  unkD;
+    u16 unkE;
+} SomeStruct;
 
 void func_80050080(void);
 void func_8004FEE8(int param_1);
