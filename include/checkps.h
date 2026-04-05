@@ -18,6 +18,8 @@ typedef struct {
 } SCDRegs;
 
 extern s32 g_previousGameState;
+extern s32 g_textBufferAddr;
+extern s8 g_TextBuffer[];
 
 extern s32 D_8005D060;
 extern u32 D_80052428;
@@ -35,8 +37,6 @@ extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
 extern s32 D_800890C0[];
-extern s8  D_800810C0[];
-extern s32 D_8005D054;
 extern s32 D_800894C8;
 extern s32 D_800894C0;
 extern s32 D_800894C4;
