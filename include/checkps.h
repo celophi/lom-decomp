@@ -100,6 +100,20 @@ void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
 
 /**
+ * @brief Clears all invalid or unflagged entries from the glyph cache.
+ * 
+ * @details Iterates through the glyph cache and zeros out any entry that 
+ * does not have the 'isCached' flag (0x10000) set. This ensures that 
+ * only active, valid glyphs remain in the cache.
+ * 
+ * @param void No parameters.
+ * @return void No return value.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/PuSGD
+ */
+void ClearInvalidGlyphs(void);
+
+/**
  * @brief Resets the text renderer state and buffers.
  * 
  * @details This function initializes the text rendering system by clearing the 
@@ -111,7 +125,7 @@ void func_8004FD68(int param_1);
  * @param void No parameters.
  * @return void No return value.
  * 
- * @see decomp.me link (100%) https://decomp.me/scratch/Bdkvp
+ * @see decomp.me (100%) https://decomp.me/scratch/Bdkvp
  */
 void ResetTextRenderer(void);
 

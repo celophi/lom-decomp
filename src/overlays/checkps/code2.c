@@ -282,10 +282,7 @@ void func_80052320(void) {
     }
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/PuSGD
- */
-void func_8005235C(void) {
+void ClearInvalidGlyphs(void) {
     int new_var2;
     s32 var_a0;
     s32 *var_v1;
