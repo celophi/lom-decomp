@@ -190,7 +190,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     }
 
     slot = 0;
-    while ((slot < 0x100) && (g_characterCache[slot] != 0)) {
+    while ((slot < 0x100) && (g_characterCache[slot].raw != 0)) {
         slot++;
     }
 
@@ -198,7 +198,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
         return arg0;
     }
 
-    g_characterCache[slot] = new_var5 & (0xFFFF & 0xFFFFFFFFu);
+    g_characterCache[slot].raw = new_var5 & (0xFFFF & 0xFFFFFFFFu);
     arg0 = func_80052218(arg0, arg1, slot);
 
     D_800894D0 = (slot % 16) * 4;
@@ -228,7 +228,7 @@ void *func_80052218(void *arg0, s32 *arg1, s32 arg2) {
     s32 new_c0;
     s32 cond;
 
-    g_characterCache[arg2] |= 0x10000;
+    g_characterCache[arg2].raw |= 0x10000;
     s->u.byte.unk3 = 3;
     s->unk7 = 0x7C;
     s->unk5 = 0x80;
