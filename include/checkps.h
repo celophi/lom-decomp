@@ -43,6 +43,14 @@ extern s32 D_800894C4;
 extern s32 D_800894CC;
 extern s32 D_800894D0;
 extern s32 D_800894D4;
+extern u16 D_8005D030[];
+
+typedef struct
+{
+  u16 sp20;
+  u16 sp22;
+  s16 sp24;
+} Sp20Data;
 
 typedef struct {
     union {
