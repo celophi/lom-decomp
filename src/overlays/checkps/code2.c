@@ -1,5 +1,89 @@
 #include "checkps.h"
 
+void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
+{
+    u8* s = arg2;
+    s32 count = 0;
+    u32 old;
+    u16 val;
+    u8 *p;
+
+    /* Count characters */
+    if (*s >= 0x20) {
+        p = s;
+        do {
+            val = *p;
+
+            if (val >= 0x80)
+            {
+                p++;
+            }
+
+            p++;
+            count++;
+
+        } while (*p >= 0x20);
+    }
+
+    /* Alignment adjustment */
+    switch (arg6)
+    {
+        case 1:
+            arg3 -= 16 * count;
+            break;
+
+        case 2:
+            arg3 -= 8 * count;
+            break;
+
+        case 0:
+        default:
+            break;
+    }
+
+    D_800894CC = arg3;
+    D_800894C0 = arg3;
+    D_800894C4 = arg4;
+
+    /* Main loop */
+    while (1)
+    {
+        unsigned long c = *s;
+
+        if (c == 0x20) {
+            s++;
+            D_800894C0 += 0x10;
+            continue;
+        }
+
+        if (c >= 0x80) {
+            val = s[0];
+            val = (val << 8) | s[1];
+            s += 2;
+        } else {
+            if (c < 0x20) {
+                break;
+            }
+
+            val = (u16)(*s - 0x7AE1);
+            s++;
+        }
+
+        arg0 = func_80052004(arg0, arg1, val, arg5);
+    }
+
+    /* Final write */
+    ((u8 *)arg0)[3] = 1;
+    *((u32 *)((u8 *)arg0 + 4)) = 0xE100000F;
+
+    old = *((u32 *)arg0);
+    *((u32 *)arg0) = (old & 0xFF000000) | ((*arg1) & 0xFFFFFF);
+
+    *arg1 = ((*arg1) & 0xFF000000) | (((u32)arg0) & 0xFFFFFF);
+
+    return ((u8 *)arg0) + 8;
+}
+
 /**
  * decomp.me link (100%) https://decomp.me/scratch/6ygLn
  */
