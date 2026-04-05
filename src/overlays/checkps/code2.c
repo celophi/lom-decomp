@@ -283,22 +283,22 @@ void func_80052320(void) {
 }
 
 void ClearInvalidGlyphs(void) {
-    int new_var2;
-    s32 var_a0;
-    s32 *var_v1;
+    int flag;
+    s32 index;
+    GlyphCacheEntry *entry;
 
-    var_a0 = 0;
-    new_var2 = 0x10000;
-    var_v1 = &g_characterCache;
+    index = 0;
+    flag = GLYPH_CACHED_FLAG;
+    entry = g_characterCache;
 
-    do {
-        if (!((*var_v1) & new_var2)) {
-            *var_v1 = 0;
+    while (index < MAX_GLYPH_ENTRIES) {
+        if (!(entry->raw & flag)) {
+            entry->raw = 0;
         }
 
-        var_a0 += 1;
-        var_v1 += 1;
-    } while (var_a0 < 0x100);
+        index++;
+        entry++;
+    }
 }
 
 void ResetTextRenderer(void) {

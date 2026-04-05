@@ -11,6 +11,11 @@
  */
 #define MAX_GLYPH_ENTRIES 256
 
+/**
+ * Flag indicating that a glyph is currently cached and valid in the character cache.
+ */
+#define GLYPH_CACHED_FLAG 0x10000
+
 typedef struct {
     u8  deviceState;     // 0x00 - status / mode flag
     u8  _pad1;
