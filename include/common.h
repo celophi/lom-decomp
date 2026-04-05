@@ -25,4 +25,7 @@ typedef signed short    s16;
 #define FALSE   0
 #define NULL    ((void*)0)
 
+// Common sizes
+#define MAX_SHORT_VALUE 32767
+
 #endif

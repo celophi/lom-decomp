@@ -6,6 +6,16 @@
 #include "psyq/libgpu.h"
 #include "psyq/memory.h"
 
+/**
+ * The maximum number of glyph entries in the character cache
+ */
+#define MAX_GLYPH_ENTRIES 256
+
+/**
+ * Flag indicating that a glyph is currently cached and valid in the character cache.
+ */
+#define GLYPH_CACHED_FLAG 0x10000
+
 typedef struct {
     u8  deviceState;     // 0x00 - status / mode flag
     u8  _pad1;
@@ -17,7 +27,29 @@ typedef struct {
     s16 axisY;           // 0x2E - signed axis (negative/positive thresholded)
 } SCDRegs;
 
+/**
+ * Represents a single glyph's entry in the text cache, storing its ID and validity flag
+ */
+typedef union {
+    u32 raw;
+    struct {
+        u16 charId; 
+        struct {
+            u16 isCached : 1;  // Bit 16
+            u16 reserved : 15; // Bits 17-31
+        } flags;
+    } data;
+} GlyphCacheEntry;
+
 extern s32 g_previousGameState;
+extern s32 g_textBufferAddr;
+extern s8 g_TextBuffer[];
+
+/**
+ * Global character cache for text rendering, storing up to 256 glyph entries. 
+ * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
+ */
+extern GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
 
 extern s32 D_8005D060;
 extern u32 D_80052428;
@@ -34,9 +66,6 @@ extern s32 D_80061090;
 extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
-extern s32 D_800890C0[];
-extern s8  D_800810C0[];
-extern s32 D_8005D054;
 extern s32 D_800894C8;
 extern s32 D_800894C0;
 extern s32 D_800894C4;
@@ -74,5 +103,35 @@ typedef struct {
 void func_80050080(void);
 void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
+
+/**
+ * @brief Clears all invalid or unflagged entries from the glyph cache.
+ * 
+ * @details Iterates through the glyph cache and zeros out any entry that 
+ * does not have the 'isCached' flag (0x10000) set. This ensures that 
+ * only active, valid glyphs remain in the cache.
+ * 
+ * @param void No parameters.
+ * @return void No return value.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/ox3LP
+ */
+void ClearInvalidGlyphs(void);
+
+/**
+ * @brief Resets the text renderer state and buffers.
+ * 
+ * @details This function initializes the text rendering system by clearing the 
+ * character cache (256 entries) and zeroing out the global text buffer (32KB). 
+ * It also resets the image loading state by loading a minimal 1x16 rectangle 
+ * at the bottom of the screen area to clear the GPU's current text-related 
+ * texture state.
+ * 
+ * @param void No parameters.
+ * @return void No return value.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/Bdkvp
+ */
+void ResetTextRenderer(void);
 
 #endif
