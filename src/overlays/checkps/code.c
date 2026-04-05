@@ -51,7 +51,7 @@ void func_8004FD68(int arg0)
         func_80050258(var_s0);
         func_800505B4(var_s0);
         func_80050570();
-        func_8005235C();
+        ClearInvalidGlyphs();
         DrawSync(0);
         func_800157B0(2);
         VSync(2);

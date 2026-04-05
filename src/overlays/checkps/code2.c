@@ -3,41 +3,38 @@
 /**
  * decomp.me link (100%) https://decomp.me/scratch/jqJzK
  */
-void func_80051DD4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
-{
+void func_80051DD4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5) {
     s32 new_var;
     Sp20Data sp;
     s32 temp;
     u16 *new_var3;
     s32 new_var4;
-    
+
     new_var4 = arg2;
-    if (arg2 >= 0)
-    {
-    temp = arg2;
-    }
-    else
-    {
-    temp = new_var4 + 15;
+    if (arg2 >= 0) {
+        temp = arg2;
+    } else {
+        temp = new_var4 + 15;
     }
     temp >>= 4;
     new_var3 = &D_8005D030[temp];
-    do { } while (0);
+    do {
+    } while (0);
     new_var = temp << 4;
     sp.sp20 = *new_var3;
-    
+
     new_var = arg2 - new_var;
     sp.sp22 = D_8005D030[new_var];
     sp.sp24 = 0;
-    func_80051E58((void *) arg0, (s32 *) arg1, (u8 *) (&sp), arg3, arg4, 0, arg5);
+    func_80051E58((void *)arg0, (s32 *)arg1, (u8 *)(&sp), arg3, arg4, 0, arg5);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/gVtK1
  */
-void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
-{
-    u8* s = arg2;
+void *func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4,
+                    s32 arg5, s32 arg6) {
+    u8 *s = arg2;
     s32 count = 0;
     u32 old;
     u16 val;
@@ -49,8 +46,7 @@ void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg
         do {
             val = *p;
 
-            if (val >= 0x80)
-            {
+            if (val >= 0x80) {
                 p++;
             }
 
@@ -61,19 +57,18 @@ void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg
     }
 
     /* Alignment adjustment */
-    switch (arg6)
-    {
-        case 1:
-            arg3 -= 16 * count;
-            break;
+    switch (arg6) {
+    case 1:
+        arg3 -= 16 * count;
+        break;
 
-        case 2:
-            arg3 -= 8 * count;
-            break;
+    case 2:
+        arg3 -= 8 * count;
+        break;
 
-        case 0:
-        default:
-            break;
+    case 0:
+    default:
+        break;
     }
 
     D_800894CC = arg3;
@@ -81,8 +76,7 @@ void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg
     D_800894C4 = arg4;
 
     /* Main loop */
-    while (1)
-    {
+    while (1) {
         unsigned long c = *s;
 
         if (c == 0x20) {
@@ -104,7 +98,7 @@ void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg
             s++;
         }
 
-        arg0 = func_80052004(arg0, arg1, val, arg5);
+        arg0 = RenderGlyph(arg0, arg1, val, arg5);
     }
 
     /* Final write */
@@ -122,8 +116,7 @@ void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg
 /**
  * decomp.me link (100%) https://decomp.me/scratch/6ygLn
  */
-s32 func_80052004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
-{
+s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     u32 *ptr;
     u8 *font_data;
     unsigned int new_var3;
@@ -148,7 +141,7 @@ s32 func_80052004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     new_var5 = arg2;
     slot = 0;
     new_var3 = new_var5 & 0xFFFF;
-    ptr = D_800890C0;
+    ptr = g_characterCache;
 
     while (slot < 0x100) {
         if (new_var3 == ((u16)(*ptr))) {
@@ -197,7 +190,7 @@ s32 func_80052004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     }
 
     slot = 0;
-    while ((slot < 0x100) && (D_800890C0[slot] != 0)) {
+    while ((slot < 0x100) && (g_characterCache[slot].raw != 0)) {
         slot++;
     }
 
@@ -205,7 +198,7 @@ s32 func_80052004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         return arg0;
     }
 
-    D_800890C0[slot] = new_var5 & (0xFFFF & 0xFFFFFFFFu);
+    g_characterCache[slot].raw = new_var5 & (0xFFFF & 0xFFFFFFFFu);
     arg0 = func_80052218(arg0, arg1, slot);
 
     D_800894D0 = (slot % 16) * 4;
@@ -226,129 +219,113 @@ s32 func_80052004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/FyrJc
  */
-void *func_80052218(void *arg0, s32 *arg1, s32 arg2)
-{
+void *func_80052218(void *arg0, s32 *arg1, s32 arg2) {
     int new_var;
     s32 var_a0;
-    SomeStruct *s = (SomeStruct *) arg0;
+    SomeStruct *s = (SomeStruct *)arg0;
     s32 arg0_masked;
     s32 old_c0;
     s32 new_c0;
     s32 cond;
-    
-    D_800890C0[arg2] |= 0x10000;
+
+    g_characterCache[arg2].raw |= 0x10000;
     s->u.byte.unk3 = 3;
     s->unk7 = 0x7C;
     s->unk5 = 0x80;
     s->unk6 = 0x80;
     s->unk4 = 0x80;
     var_a0 = arg2;
-    s->unk8 = (u16) D_800894C0;
-    s->unkA = (u16) D_800894C4;
-    
-    if (arg2 < 0)
-    {
+    s->unk8 = (u16)D_800894C0;
+    s->unkA = (u16)D_800894C4;
+
+    if (arg2 < 0) {
         var_a0 = arg2 + 0xF;
     }
-    
-    s->unkC = (s8) ((arg2 - ((var_a0 >> 4) * 0x10)) * 0x10);
-    s->unkD = (s8) (arg2 & 0xF0);
+
+    s->unkC = (s8)((arg2 - ((var_a0 >> 4) * 0x10)) * 0x10);
+    s->unkD = (s8)(arg2 & 0xF0);
     s->unkE = 0x7FC0;
     s->u.unk0 = (s->u.unk0 & 0xFF000000) | ((*arg1) & 0xFFFFFF);
-    arg0_masked = ((s32) arg0) & 0xFFFFFF;
+    arg0_masked = ((s32)arg0) & 0xFFFFFF;
     new_var = (*arg1) & 0xFF000000;
-    arg0 = ((char *) arg0) + 0x14;
-    
+    arg0 = ((char *)arg0) + 0x14;
+
     old_c0 = D_800894C0;
     new_c0 = old_c0 + 0x10;
     cond = (old_c0 + 0x20) < 0x280;
     D_800894C0 = new_c0;
     *arg1 = new_var | arg0_masked;
-    
-    if (!cond)
-    {
+
+    if (!cond) {
         D_800894C0 = D_800894CC;
         D_800894C4 += 0x10;
     }
-    
+
     return arg0;
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/PpMnG
  */
-void func_80052320(void) 
-{
+void func_80052320(void) {
     s32 var_a0;
     u32 *var_v1;
 
-    D_800894C8 = (s32)&D_800810C0;
+    D_800894C8 = (s32)&g_TextBuffer;
     var_a0 = 0;
-    var_v1 = (u32*)&D_800890C0;
+    var_v1 = (u32 *)&g_characterCache;
 
     while (var_a0 < 0x100) {
         var_a0++;
-        *var_v1 = (u32)(*(u16*)var_v1);
+        *var_v1 = (u32)(*(u16 *)var_v1);
         var_v1++;
     }
 }
 
+void ClearInvalidGlyphs(void) {
+    int flag;
+    s32 index;
+    GlyphCacheEntry *entry;
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/PuSGD
- */
-void func_8005235C(void)
-{
-    int new_var2;
-    s32 var_a0;
-    s32 *var_v1;
+    index = 0;
+    flag = GLYPH_CACHED_FLAG;
+    entry = g_characterCache;
 
-    var_a0 = 0;
-    new_var2 = 0x10000;
-    var_v1 = &D_800890C0;
-
-    do {
-        if (!((*var_v1) & new_var2)) {
-            *var_v1 = 0;
+    while (index < MAX_GLYPH_ENTRIES) {
+        if (!(entry->raw & flag)) {
+            entry->raw = 0;
         }
 
-        var_a0 += 1;
-        var_v1 += 1;
-    } while (var_a0 < 0x100);
+        index++;
+        entry++;
+    }
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/2UOve
- */
-void func_8005239C(void) 
-{
-    s32 i;
-    s32 *p;
-    RECT rect;
+void ResetTextRenderer(void) {
+    s32 index;
+    GlyphCacheEntry *entryPtr;
+    RECT clearRect;
 
-    // First loop: zero 0x100 words from D_800890C0 to D_800890C0+0x3FC
-    i = 0xFF;
-    // Force two‑step address calculation: base address + 0x3FC
-    p = &D_800890C0;
-    p = (s32*)((u_long)p + 0x3FC);
-    
-    while (i >= 0) {
-        *p = 0;
-        p--;
-        i--;
+    // Clear the character cache entries (descending loop)
+    index = MAX_GLYPH_ENTRIES - 1;
+    entryPtr = &g_characterCache[index];
+
+    while (index >= 0) {
+        entryPtr->raw = 0;
+        entryPtr--;
+        index--;
     }
 
-    // Second loop: zero 0x8000 bytes from D_800810C0
-    for (i = 0; i <= 0x7FFF; i++) {
-        D_800810C0[i] = 0;
+    // Zero out the global text bitmap buffer (32KB)
+    for (index = 0; index <= MAX_SHORT_VALUE; index++) {
+        g_TextBuffer[index] = 0;
     }
 
-    // Assign RECT fields in the exact order required by the target assembly:
-    // y, w, x, then h (h goes into the delay slot after the x store)
-    rect.y = 0x1FF;
-    rect.w = 0x10;
-    rect.x = 0;
-    rect.h = 1;
+    // Set up a small rectangle to reset the GPU texture state
+    clearRect.y = 511;
+    clearRect.w = 16;
+    clearRect.x = 0;
+    clearRect.h = 1;
 
-    LoadImage(&rect, (u_long*)&D_8005D054);
+    LoadImage(&clearRect, (u_long *)&g_textBufferAddr);
 }
