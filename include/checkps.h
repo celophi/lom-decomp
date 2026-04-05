@@ -6,6 +6,11 @@
 #include "psyq/libgpu.h"
 #include "psyq/memory.h"
 
+/**
+ * The maximum number of glyph entries in the character cache
+ */
+#define MAX_GLYPH_ENTRIES 256
+
 typedef struct {
     u8  deviceState;     // 0x00 - status / mode flag
     u8  _pad1;
@@ -17,10 +22,29 @@ typedef struct {
     s16 axisY;           // 0x2E - signed axis (negative/positive thresholded)
 } SCDRegs;
 
+/**
+ * Represents a single glyph's entry in the text cache, storing its ID and validity flag
+ */
+typedef union {
+    u32 raw;
+    struct {
+        u16 charId; 
+        struct {
+            u16 isCached : 1;  // Bit 16
+            u16 reserved : 15; // Bits 17-31
+        } flags;
+    };
+} GlyphCacheEntry;
+
 extern s32 g_previousGameState;
 extern s32 g_textBufferAddr;
 extern s8 g_TextBuffer[];
-extern s32 g_characterCache[256];
+
+/**
+ * Global character cache for text rendering, storing up to 256 glyph entries. 
+ * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
+ */
+extern GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
 
 extern s32 D_8005D060;
 extern u32 D_80052428;
@@ -70,20 +94,6 @@ typedef struct {
     s8  unkD;
     u16 unkE;
 } SomeStruct;
-
-/**
- * Represents a single glyph's entry in the text cache, storing its ID and validity flag
- */
-typedef union {
-    u32 raw;
-    struct {
-        u16 charId; 
-        struct {
-            u16 isCached : 1;  // Bit 16
-            u16 reserved : 15; // Bits 17-31
-        } flags;
-    };
-} CharacterCacheEntry;
 
 void func_80050080(void);
 void func_8004FEE8(int param_1);

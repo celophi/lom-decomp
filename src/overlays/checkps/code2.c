@@ -320,22 +320,21 @@ void func_8005235C(void)
 void ResetTextRenderer(void)
 {
     s32 index;
-    CharacterCacheEntry *cachePtr;
+    GlyphCacheEntry *entryPtr;
     RECT clearRect;
 
     // Clear the character cache entries (descending loop)
-    index = 0xFF;
-    cachePtr = g_characterCache;
-    cachePtr = &cachePtr[255];
+    index = MAX_GLYPH_ENTRIES - 1;
+    entryPtr = &g_characterCache[index];
     
     while (index >= 0) {
-        cachePtr->raw = 0;
-        cachePtr--;
+        entryPtr->raw = 0;
+        entryPtr--;
         index--;
     }
 
     // Zero out the global text bitmap buffer (32KB)
-    for (index = 0; index < 32768; index++) {
+    for (index = 0; index <= MAX_SHORT_VALUE; index++) {
         g_TextBuffer[index] = 0;
     }
 
