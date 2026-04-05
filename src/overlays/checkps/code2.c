@@ -1,5 +1,8 @@
 #include "checkps.h"
 
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/gVtK1
+ */
 void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
 {
     u8* s = arg2;
