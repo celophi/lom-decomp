@@ -38,7 +38,7 @@ typedef union {
             u16 isCached : 1;  // Bit 16
             u16 reserved : 15; // Bits 17-31
         } flags;
-    };
+    } data;
 } GlyphCacheEntry;
 
 extern s32 g_previousGameState;
@@ -114,7 +114,7 @@ void func_8004FD68(int param_1);
  * @param void No parameters.
  * @return void No return value.
  * 
- * @see decomp.me (100%) https://decomp.me/scratch/PuSGD
+ * @see decomp.me (100%) https://decomp.me/scratch/ox3LP
  */
 void ClearInvalidGlyphs(void);
 
