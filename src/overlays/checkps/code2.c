@@ -104,7 +104,7 @@ void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg
             s++;
         }
 
-        arg0 = func_80052004(arg0, arg1, val, arg5);
+        arg0 = RenderGlyph(arg0, arg1, val, arg5);
     }
 
     /* Final write */
@@ -122,7 +122,7 @@ void* func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4, s32 arg
 /**
  * decomp.me link (100%) https://decomp.me/scratch/6ygLn
  */
-s32 func_80052004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     u32 *ptr;
     u8 *font_data;
@@ -317,38 +317,33 @@ void func_8005235C(void)
     } while (var_a0 < 0x100);
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/2UOve
- */
-void ResetTextRenderer(void) 
+void ResetTextRenderer(void)
 {
-    s32 i;
-    s32 *p;
-    RECT rect;
+    s32 index;
+    CharacterCacheEntry *cachePtr;
+    RECT clearRect;
 
-    // First loop: zero 0x100 words from D_800890C0 to D_800890C0+0x3FC
-    i = 0xFF;
-    // Force two‑step address calculation: base address + 0x3FC
-    p = &g_characterCache;
-    p = (s32*)((u_long)p + 0x3FC);
+    // Clear the character cache entries (descending loop)
+    index = 0xFF;
+    cachePtr = g_characterCache;
+    cachePtr = &cachePtr[255];
     
-    while (i >= 0) {
-        *p = 0;
-        p--;
-        i--;
+    while (index >= 0) {
+        cachePtr->raw = 0;
+        cachePtr--;
+        index--;
     }
 
-    // Second loop: zero 0x8000 bytes from g_TextBuffer
-    for (i = 0; i < 32768; i++) {
-        g_TextBuffer[i] = 0;
+    // Zero out the global text bitmap buffer (32KB)
+    for (index = 0; index < 32768; index++) {
+        g_TextBuffer[index] = 0;
     }
 
-    // Assign RECT fields in the exact order required by the target assembly:
-    // y, w, x, then h (h goes into the delay slot after the x store)
-    rect.y = 511;
-    rect.w = 16;
-    rect.x = 0;
-    rect.h = 1;
+    // Set up a small rectangle to reset the GPU texture state
+    clearRect.y = 511;
+    clearRect.w = 16;
+    clearRect.x = 0;
+    clearRect.h = 1;
 
-    LoadImage(&rect, (u_long*)&g_textBufferAddr);
+    LoadImage(&clearRect, (u_long*)&g_textBufferAddr);
 }

@@ -20,6 +20,7 @@ typedef struct {
 extern s32 g_previousGameState;
 extern s32 g_textBufferAddr;
 extern s8 g_TextBuffer[];
+extern s32 g_characterCache[256];
 
 extern s32 D_8005D060;
 extern u32 D_80052428;
@@ -36,7 +37,6 @@ extern s32 D_80061090;
 extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
-extern s32 D_800890C0[];
 extern s32 D_800894C8;
 extern s32 D_800894C0;
 extern s32 D_800894C4;
@@ -71,8 +71,38 @@ typedef struct {
     u16 unkE;
 } SomeStruct;
 
+/**
+ * Represents a single glyph's entry in the text cache, storing its ID and validity flag
+ */
+typedef union {
+    u32 raw;
+    struct {
+        u16 charId; 
+        struct {
+            u16 isCached : 1;  // Bit 16
+            u16 reserved : 15; // Bits 17-31
+        } flags;
+    };
+} CharacterCacheEntry;
+
 void func_80050080(void);
 void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
+
+/**
+ * @brief Resets the text renderer state and buffers.
+ * 
+ * @details This function initializes the text rendering system by clearing the 
+ * character cache (256 entries) and zeroing out the global text buffer (32KB). 
+ * It also resets the image loading state by loading a minimal 1x16 rectangle 
+ * at the bottom of the screen area to clear the GPU's current text-related 
+ * texture state.
+ * 
+ * @param void No parameters.
+ * @return void No return value.
+ * 
+ * @see decomp.me link (100%) https://decomp.me/scratch/Bdkvp
+ */
+void ResetTextRenderer(void);
 
 #endif
