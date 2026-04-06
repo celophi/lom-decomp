@@ -46,10 +46,29 @@ extern s32 g_textBufferAddr;
 extern s8 g_TextBuffer[];
 
 /**
+ * Global cursor pointing to the current position in the text buffer for glyph rendering.
+ */
+extern s32 g_glyphBufferCursor;
+
+/**
  * Global character cache for text rendering, storing up to 256 glyph entries. 
  * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
  */
 extern GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
+
+/**
+ * X coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
+ */
+extern s32 g_glyphAtlasX;
+
+/**
+ * Y coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
+ */
+extern s32 g_glyphAtlasY;
+
+extern s32 g_textCursorX;
+extern s32 g_textCursorY;
+extern s32 g_textOriginX;
 
 extern s32 D_8005D060;
 extern u32 D_80052428;
@@ -66,12 +85,6 @@ extern s32 D_80061090;
 extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
-extern s32 D_800894C8;
-extern s32 D_800894C0;
-extern s32 D_800894C4;
-extern s32 D_800894CC;
-extern s32 D_800894D0;
-extern s32 D_800894D4;
 extern u16 D_8005D030[];
 
 typedef struct
@@ -93,16 +106,54 @@ typedef struct {
     u8  unk5;
     u8  unk6;
     u8  unk7;
-    u16 unk8;
-    u16 unkA;
+    u16 positionX;
+    u16 positionY;
     s8  unkC;
     s8  unkD;
     u16 unkE;
-} SomeStruct;
+} GlyphInstance;
 
 void func_80050080(void);
 void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
+
+/**
+ * @brief Creates a new glyph instance and links it into the active text stream.
+ * 
+ * @details This function initializes a GlyphInstance with screen coordinates and 
+ * UV atlas offsets derived from the glyph's cache slot. It then links the instance 
+ * into a doubly-linked list of characters and advances the global text cursor. 
+ * If the cursor exceeds the right margin, it performs a line wrap.
+ * 
+ * @param instance Pointer to the memory for the new glyph instance.
+ * @param next Pointer to the handle of the previous glyph in the stream.
+ * @param index The index of the glyph in the character cache.
+ * 
+ * @return The pointer to the next available instance slot in the pool.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/FyrJc
+ */
+GlyphInstance* CreateGlyphInstance(GlyphInstance* instance, GlyphInstance** next, s32 index);
+
+/**
+ * @brief Prepares the text renderer for a new frame by resetting the write cursor and invalidating glyphs.
+ * 
+ * @details This function performs a "soft reset" of the text system:
+ * 1. Resets the global glyph buffer write pointer (g_glyphBufferCursor) to the start 
+ *    of the text buffer, allowing glyphs to be overwritten from the beginning.
+ * 2. Strips the 'isCached' flag from all entries in the glyph cache. This preserves 
+ *    the character ID mappings but forces the renderer to re-rasterize the actual 
+ *    pixels for every glyph upon the next request.
+ * 
+ * @note This is less destructive than ResetTextRenderer, as it keeps the glyph 
+ * cache slots assigned to their respective characters.
+ * 
+ * @param void No parameters.
+ * @return void No return value.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/9wpJn
+ */
+void InvalidateGlyphCache(void);
 
 /**
  * @brief Clears all invalid or unflagged entries from the glyph cache.

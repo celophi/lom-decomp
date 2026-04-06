@@ -47,7 +47,7 @@ void func_8004FD68(int arg0)
         temp_s1 = (u_long*)(var_s0 + 0x40);
         ClearOTagR(temp_s1, 0x1000);
         *(u32*)(var_s0 + 0x80B8) = (s32) (var_s0 + 0x40B8);
-        func_80052320();
+        InvalidateGlyphCache();
         func_80050258(var_s0);
         func_800505B4(var_s0);
         func_80050570();
