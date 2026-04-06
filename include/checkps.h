@@ -118,6 +118,24 @@ void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
 
 /**
+ * @brief Creates a new glyph instance and links it into the active text stream.
+ * 
+ * @details This function initializes a GlyphInstance with screen coordinates and 
+ * UV atlas offsets derived from the glyph's cache slot. It then links the instance 
+ * into a doubly-linked list of characters and advances the global text cursor. 
+ * If the cursor exceeds the right margin, it performs a line wrap.
+ * 
+ * @param instance Pointer to the memory for the new glyph instance.
+ * @param next Pointer to the handle of the previous glyph in the stream.
+ * @param index The index of the glyph in the character cache.
+ * 
+ * @return The pointer to the next available instance slot in the pool.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/FyrJc
+ */
+GlyphInstance* CreateGlyphInstance(GlyphInstance* instance, GlyphInstance** next, s32 index);
+
+/**
  * @brief Prepares the text renderer for a new frame by resetting the write cursor and invalidating glyphs.
  * 
  * @details This function performs a "soft reset" of the text system:
