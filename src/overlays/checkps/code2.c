@@ -235,8 +235,8 @@ void* CreateGlyphInstance(void *instance, s32 *next, s32 index) {
     s->unk6 = 0x80;
     s->unk4 = 0x80;
     var_a0 = index;
-    s->unk8 = (u16)g_textCursorX;
-    s->unkA = (u16)g_textCursorY;
+    s->positionX = (u16)g_textCursorX;
+    s->positionY = (u16)g_textCursorY;
 
     if (index < 0) {
         var_a0 = index + 0xF;

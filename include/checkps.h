@@ -106,8 +106,8 @@ typedef struct {
     u8  unk5;
     u8  unk6;
     u8  unk7;
-    u16 unk8;
-    u16 unkA;
+    u16 positionX;
+    u16 positionY;
     s8  unkC;
     s8  unkD;
     u16 unkE;
