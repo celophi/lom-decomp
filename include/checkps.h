@@ -66,6 +66,10 @@ extern s32 g_glyphAtlasX;
  */
 extern s32 g_glyphAtlasY;
 
+extern s32 g_textCursorX;
+extern s32 g_textCursorY;
+extern s32 g_textOriginX;
+
 extern s32 D_8005D060;
 extern u32 D_80052428;
 extern s32 D_80061088;
@@ -81,9 +85,6 @@ extern s32 D_80061090;
 extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
-extern s32 D_800894C0;
-extern s32 D_800894C4;
-extern s32 D_800894CC;
 extern u16 D_8005D030[];
 
 typedef struct

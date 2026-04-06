@@ -71,9 +71,9 @@ void *func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4,
         break;
     }
 
-    D_800894CC = arg3;
-    D_800894C0 = arg3;
-    D_800894C4 = arg4;
+    g_textOriginX = arg3;
+    g_textCursorX = arg3;
+    g_textCursorY = arg4;
 
     /* Main loop */
     while (1) {
@@ -81,7 +81,7 @@ void *func_80051E58(void *arg0, s32 *arg1, u8 *arg2, s32 arg3, s32 arg4,
 
         if (c == 0x20) {
             s++;
-            D_800894C0 += 0x10;
+            g_textCursorX += 0x10;
             continue;
         }
 
@@ -219,7 +219,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 /**
  * decomp.me link (100%) https://decomp.me/scratch/FyrJc
  */
-void *func_80052218(void *arg0, s32 *arg1, s32 arg2) {
+void* func_80052218(void *arg0, s32 *arg1, s32 arg2) {
     int new_var;
     s32 var_a0;
     SomeStruct *s = (SomeStruct *)arg0;
@@ -235,8 +235,8 @@ void *func_80052218(void *arg0, s32 *arg1, s32 arg2) {
     s->unk6 = 0x80;
     s->unk4 = 0x80;
     var_a0 = arg2;
-    s->unk8 = (u16)D_800894C0;
-    s->unkA = (u16)D_800894C4;
+    s->unk8 = (u16)g_textCursorX;
+    s->unkA = (u16)g_textCursorY;
 
     if (arg2 < 0) {
         var_a0 = arg2 + 0xF;
@@ -250,15 +250,15 @@ void *func_80052218(void *arg0, s32 *arg1, s32 arg2) {
     new_var = (*arg1) & 0xFF000000;
     arg0 = ((char *)arg0) + 0x14;
 
-    old_c0 = D_800894C0;
+    old_c0 = g_textCursorX;
     new_c0 = old_c0 + 0x10;
     cond = (old_c0 + 0x20) < 0x280;
-    D_800894C0 = new_c0;
+    g_textCursorX = new_c0;
     *arg1 = new_var | arg0_masked;
 
     if (!cond) {
-        D_800894C0 = D_800894CC;
-        D_800894C4 += 0x10;
+        g_textCursorX = g_textOriginX;
+        g_textCursorY += 0x10;
     }
 
     return arg0;
