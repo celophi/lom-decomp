@@ -43,6 +43,7 @@ segments:
       - [0x1, rodata, rodata]
       - [0xA5, c, code]
       - [0xEA5, c, unk1]
-      - [0x1DB5, c, code2]
+      - [0x1C99, c, code3]
+      - [0x1F45, c, code2]
       - [0x27B9, rodata, table]
   - [0xA77D]
