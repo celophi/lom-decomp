@@ -156,7 +156,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
         return arg0;
     }
 
-    dest = D_800894C8;
+    dest = g_glyphBufferCursor;
     inc = arg3 + 1;
     inc16 = inc * 16;
 
@@ -209,10 +209,10 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     rect.x = D_800894D0 + 0x3C0;
     rect.y = D_800894D4;
 
-    LoadImage(&rect, (u_long *)D_800894C8);
+    LoadImage(&rect, (u_long *)g_glyphBufferCursor);
     DrawSync(0);
 
-    D_800894C8 += 0x80;
+    g_glyphBufferCursor += 0x80;
     return arg0;
 }
 
@@ -264,21 +264,20 @@ void *func_80052218(void *arg0, s32 *arg1, s32 arg2) {
     return arg0;
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/PpMnG
- */
-void func_80052320(void) {
-    s32 var_a0;
-    u32 *var_v1;
+void InvalidateGlyphCache(void) {
+    s32 index;
+    GlyphCacheEntry* entry;
 
-    D_800894C8 = (s32)&g_TextBuffer;
-    var_a0 = 0;
-    var_v1 = (u32 *)&g_characterCache;
+    g_glyphBufferCursor = (s32)&g_TextBuffer;
+    
+    index = 0;
+    entry = g_characterCache;
 
-    while (var_a0 < 0x100) {
-        var_a0++;
-        *var_v1 = (u32)(*(u16 *)var_v1);
-        var_v1++;
+    // Strip all flags (including isCached) and keep only the charId
+    while (index < MAX_GLYPH_ENTRIES) {
+        entry->raw &= 0x0000FFFF;
+        entry++;
+        index++;
     }
 }
 

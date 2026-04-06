@@ -46,6 +46,11 @@ extern s32 g_textBufferAddr;
 extern s8 g_TextBuffer[];
 
 /**
+ * Global cursor pointing to the current position in the text buffer for glyph rendering.
+ */
+extern s32 g_glyphBufferCursor;
+
+/**
  * Global character cache for text rendering, storing up to 256 glyph entries. 
  * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
  */
@@ -66,7 +71,6 @@ extern s32 D_80061090;
 extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
-extern s32 D_800894C8;
 extern s32 D_800894C0;
 extern s32 D_800894C4;
 extern s32 D_800894CC;
@@ -103,6 +107,26 @@ typedef struct {
 void func_80050080(void);
 void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
+
+/**
+ * @brief Prepares the text renderer for a new frame by resetting the write cursor and invalidating glyphs.
+ * 
+ * @details This function performs a "soft reset" of the text system:
+ * 1. Resets the global glyph buffer write pointer (g_glyphBufferCursor) to the start 
+ *    of the text buffer, allowing glyphs to be overwritten from the beginning.
+ * 2. Strips the 'isCached' flag from all entries in the glyph cache. This preserves 
+ *    the character ID mappings but forces the renderer to re-rasterize the actual 
+ *    pixels for every glyph upon the next request.
+ * 
+ * @note This is less destructive than ResetTextRenderer, as it keeps the glyph 
+ * cache slots assigned to their respective characters.
+ * 
+ * @param void No parameters.
+ * @return void No return value.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/9wpJn
+ */
+void InvalidateGlyphCache(void);
 
 /**
  * @brief Clears all invalid or unflagged entries from the glyph cache.

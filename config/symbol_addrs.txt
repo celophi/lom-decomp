@@ -571,10 +571,12 @@ CD_DecompressBuffer = 0x80014A8C;
 g_textBufferAddr = 0x8005D054;
 g_TextBuffer = 0x800810C0;
 g_characterCache = 0x800890C0;
+g_glyphBufferCursor = 0x800894C8;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
 UpdateControllerInput = 0x80050A0C;
+RenderGlyph = 0x80052004;
+InvalidateGlyphCache = 0x80052320;
 ClearInvalidGlyphs = 0x8005235C;
 ResetTextRenderer = 0x8005239C;
-RenderGlyph = 0x80052004;
