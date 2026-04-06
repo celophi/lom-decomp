@@ -239,7 +239,7 @@ void* CreateGlyphInstance(void *instance, s32 *next, s32 index) {
     s->positionY = (u16)g_textCursorY;
 
     if (index < 0) {
-        var_a0 = index + 0xF;
+        var_a0 = index + 15;
     }
 
     s->unkC = (s8)((index - ((var_a0 >> 4) * 0x10)) * 0x10);
