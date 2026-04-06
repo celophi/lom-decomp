@@ -98,6 +98,12 @@ typedef struct
 } Sp20Data;
 
 typedef struct {
+    s16 unk0;
+    s16 unk2;
+    u32 unk4;
+} Arg0Struct;
+
+typedef struct {
     union {
         s32 unk0;
         struct {
