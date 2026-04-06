@@ -201,13 +201,13 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     g_characterCache[slot].raw = new_var5 & (0xFFFF & 0xFFFFFFFFu);
     arg0 = func_80052218(arg0, arg1, slot);
 
-    D_800894D0 = (slot % 16) * 4;
-    D_800894D4 = slot & 0xF0;
+    g_glyphAtlasX = (slot % 16) * 4;
+    g_glyphAtlasY = slot & 0xF0;
 
     rect.w = 4;
     rect.h = 15;
-    rect.x = D_800894D0 + 0x3C0;
-    rect.y = D_800894D4;
+    rect.x = g_glyphAtlasX + 0x3C0;
+    rect.y = g_glyphAtlasY;
 
     LoadImage(&rect, (u_long *)g_glyphBufferCursor);
     DrawSync(0);

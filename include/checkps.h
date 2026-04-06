@@ -56,6 +56,16 @@ extern s32 g_glyphBufferCursor;
  */
 extern GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
 
+/**
+ * X coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
+ */
+extern s32 g_glyphAtlasX;
+
+/**
+ * Y coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
+ */
+extern s32 g_glyphAtlasY;
+
 extern s32 D_8005D060;
 extern u32 D_80052428;
 extern s32 D_80061088;
@@ -74,8 +84,6 @@ extern s32 D_8005CFE8;
 extern s32 D_800894C0;
 extern s32 D_800894C4;
 extern s32 D_800894CC;
-extern s32 D_800894D0;
-extern s32 D_800894D4;
 extern u16 D_8005D030[];
 
 typedef struct
