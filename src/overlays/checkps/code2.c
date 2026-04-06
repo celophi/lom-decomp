@@ -219,10 +219,10 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 /**
  * decomp.me link (100%) https://decomp.me/scratch/FyrJc
  */
-void* CreateGlyphInstance(void *instance, s32 *next, s32 index) {
+GlyphInstance* CreateGlyphInstance(GlyphInstance *instance, s32 *next, s32 index) {
     int new_var;
     s32 var_a0;
-    GlyphInstance *s = (GlyphInstance *)instance;
+    GlyphInstance *s = instance;
     s32 arg0_masked;
     s32 old_c0;
     s32 new_c0;
