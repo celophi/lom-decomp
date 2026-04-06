@@ -1,6 +1,47 @@
 #include "checkps.h"
 
 /**
+ * decomp.me link (100%) https://decomp.me/scratch/8Otmf
+ */
+void func_80051BB4(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
+{
+    u16 sp20[7];
+    s32 var_a0;
+    s32 var_t2;
+    register s32 var_t6 asm("t6");
+
+    var_t2 = arg2;
+    if (var_t2 < 0) {
+        var_t2 = -var_t2;
+        var_t6 = 1;
+    } else {
+        var_t6 = 0;
+    }
+
+    sp20[1] = D_8005D018[var_t2 / 10000];
+    sp20[2] = D_8005D018[(var_t2 % 10000) / 1000];
+    sp20[3] = D_8005D018[(var_t2 % 1000) / 100];
+    sp20[4] = D_8005D018[(var_t2 % 100) / 10];
+    sp20[5] = D_8005D018[var_t2 % 10];
+
+    var_a0 = 1;
+
+    
+    sp20[6] = 0;
+
+    while (var_a0 < 5 && sp20[var_a0] == 0x4F82) {
+        var_a0++;
+    }
+
+    if (var_t6 != 0) {
+        var_a0--;
+        sp20[var_a0] = 0x5B81;
+    }
+
+    func_80051E58(arg0, arg1, (u8*)&sp20[var_a0], arg3, arg4, arg5, arg6);
+}
+
+/**
  * decomp.me link (100%) https://decomp.me/scratch/jqJzK
  */
 void func_80051DD4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
