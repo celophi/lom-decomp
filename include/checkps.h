@@ -86,6 +86,7 @@ extern s32 D_800610A4;
 extern s32 D_800610A8;
 extern s32 D_8005CFE8;
 extern u16 D_8005D030[];
+extern u16 D_8005D018[];
 
 typedef struct
 {
