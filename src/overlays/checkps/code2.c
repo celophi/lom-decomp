@@ -145,7 +145,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 
     while (slot < 0x100) {
         if (new_var3 == ((u16)(*ptr))) {
-            return func_80052218(arg0, arg1, slot);
+            return CreateGlyphInstance(arg0, arg1, slot);
         }
         slot++;
         ptr++;
@@ -199,7 +199,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     }
 
     g_characterCache[slot].raw = new_var5 & (0xFFFF & 0xFFFFFFFFu);
-    arg0 = func_80052218(arg0, arg1, slot);
+    arg0 = CreateGlyphInstance(arg0, arg1, slot);
 
     g_glyphAtlasX = (slot % 16) * 4;
     g_glyphAtlasY = slot & 0xF0;
@@ -219,7 +219,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 /**
  * decomp.me link (100%) https://decomp.me/scratch/FyrJc
  */
-void* func_80052218(void *arg0, s32 *arg1, s32 arg2) {
+void* CreateGlyphInstance(void *arg0, s32 *arg1, s32 arg2) {
     int new_var;
     s32 var_a0;
     SomeStruct *s = (SomeStruct *)arg0;

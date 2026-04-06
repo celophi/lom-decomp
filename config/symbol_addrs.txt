@@ -582,6 +582,7 @@ PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
 UpdateControllerInput = 0x80050A0C;
 RenderGlyph = 0x80052004;
+CreateGlyphInstance = 0x80052218;
 InvalidateGlyphCache = 0x80052320;
 ClearInvalidGlyphs = 0x8005235C;
 ResetTextRenderer = 0x8005239C;
