@@ -213,7 +213,8 @@ SRCS_G4 := \
 
 SRCS_CDK_G0 := \
 	src/overlays/checkps/code.c \
-	src/overlays/checkps/code2.c 
+	src/overlays/checkps/code2.c \
+	src/overlays/checkps/code3.c 
 
 # Hand-written assembly (header + initialized data sections).
 # Rodata is NOT here — it's inlined into C files via asm directives.
