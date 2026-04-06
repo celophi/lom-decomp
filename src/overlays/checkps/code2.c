@@ -219,49 +219,49 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 /**
  * decomp.me link (100%) https://decomp.me/scratch/FyrJc
  */
-void* CreateGlyphInstance(void *arg0, s32 *arg1, s32 arg2) {
+void* CreateGlyphInstance(void *instance, s32 *next, s32 index) {
     int new_var;
     s32 var_a0;
-    SomeStruct *s = (SomeStruct *)arg0;
+    SomeStruct *s = (SomeStruct *)instance;
     s32 arg0_masked;
     s32 old_c0;
     s32 new_c0;
     s32 cond;
 
-    g_characterCache[arg2].raw |= 0x10000;
+    g_characterCache[index].raw |= GLYPH_CACHED_FLAG;
     s->u.byte.unk3 = 3;
     s->unk7 = 0x7C;
     s->unk5 = 0x80;
     s->unk6 = 0x80;
     s->unk4 = 0x80;
-    var_a0 = arg2;
+    var_a0 = index;
     s->unk8 = (u16)g_textCursorX;
     s->unkA = (u16)g_textCursorY;
 
-    if (arg2 < 0) {
-        var_a0 = arg2 + 0xF;
+    if (index < 0) {
+        var_a0 = index + 0xF;
     }
 
-    s->unkC = (s8)((arg2 - ((var_a0 >> 4) * 0x10)) * 0x10);
-    s->unkD = (s8)(arg2 & 0xF0);
+    s->unkC = (s8)((index - ((var_a0 >> 4) * 0x10)) * 0x10);
+    s->unkD = (s8)(index & 0xF0);
     s->unkE = 0x7FC0;
-    s->u.unk0 = (s->u.unk0 & 0xFF000000) | ((*arg1) & 0xFFFFFF);
-    arg0_masked = ((s32)arg0) & 0xFFFFFF;
-    new_var = (*arg1) & 0xFF000000;
-    arg0 = ((char *)arg0) + 0x14;
+    s->u.unk0 = (s->u.unk0 & 0xFF000000) | ((*next) & 0xFFFFFF);
+    arg0_masked = ((s32)instance) & 0xFFFFFF;
+    new_var = (*next) & 0xFF000000;
+    instance = ((char *)instance) + 0x14;
 
     old_c0 = g_textCursorX;
     new_c0 = old_c0 + 0x10;
     cond = (old_c0 + 0x20) < 0x280;
     g_textCursorX = new_c0;
-    *arg1 = new_var | arg0_masked;
+    *next = new_var | arg0_masked;
 
     if (!cond) {
         g_textCursorX = g_textOriginX;
         g_textCursorY += 0x10;
     }
 
-    return arg0;
+    return instance;
 }
 
 void InvalidateGlyphCache(void) {
@@ -302,16 +302,16 @@ void ClearInvalidGlyphs(void) {
 
 void ResetTextRenderer(void) {
     s32 index;
-    GlyphCacheEntry *entryPtr;
+    GlyphCacheEntry *entry;
     RECT clearRect;
 
     // Clear the character cache entries (descending loop)
     index = MAX_GLYPH_ENTRIES - 1;
-    entryPtr = &g_characterCache[index];
+    entry = &g_characterCache[index];
 
     while (index >= 0) {
-        entryPtr->raw = 0;
-        entryPtr--;
+        entry->raw = 0;
+        entry--;
         index--;
     }
 
