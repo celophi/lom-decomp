@@ -222,7 +222,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
 void* CreateGlyphInstance(void *instance, s32 *next, s32 index) {
     int new_var;
     s32 var_a0;
-    SomeStruct *s = (SomeStruct *)instance;
+    GlyphInstance *s = (GlyphInstance *)instance;
     s32 arg0_masked;
     s32 old_c0;
     s32 new_c0;
@@ -252,13 +252,13 @@ void* CreateGlyphInstance(void *instance, s32 *next, s32 index) {
 
     old_c0 = g_textCursorX;
     new_c0 = old_c0 + 0x10;
-    cond = (old_c0 + 0x20) < 0x280;
+    cond = (old_c0 + 0x20) < 640;
     g_textCursorX = new_c0;
     *next = new_var | arg0_masked;
 
     if (!cond) {
         g_textCursorX = g_textOriginX;
-        g_textCursorY += 0x10;
+        g_textCursorY += 16;
     }
 
     return instance;

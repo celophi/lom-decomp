@@ -111,7 +111,7 @@ typedef struct {
     s8  unkC;
     s8  unkD;
     u16 unkE;
-} SomeStruct;
+} GlyphInstance;
 
 void func_80050080(void);
 void func_8004FEE8(int param_1);
