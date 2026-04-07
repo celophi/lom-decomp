@@ -103,6 +103,12 @@ typedef struct {
     u32 unk4;
 } Arg0Struct;
 
+typedef struct
+{
+  s16 unk0;
+  u16 unk2;
+} arg1struct;
+
 typedef struct {
     union {
         s32 unk0;
