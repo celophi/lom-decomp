@@ -2,6 +2,7 @@
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/cjji6
+ * PsyQ 4.3 / gcc 2.8.0
  */
 void func_80051830(u32 arg0, void* arg1, s32 arg2)
 {
