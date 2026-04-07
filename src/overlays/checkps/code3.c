@@ -44,7 +44,7 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
  * decomp.me link (100%) https://decomp.me/scratch/PIDIi
  * matches under Psy-Q 4.3 / gcc 2.8.0
  */
-void func_80051908(void* arg0, u8* arg1, s16 arg2)
+void func_80051908(void* arg0, u8* arg1, s32 arg2)
 {
     /* No intermediate pointer — reference arg0 directly so it gets s1 first */
     u8* var_s2 = arg1;     /* s2 */
