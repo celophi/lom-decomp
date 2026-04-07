@@ -1,6 +1,51 @@
 #include "checkps.h"
 
 /**
+ * decomp.me link (96.94%) https://decomp.me/scratch/rZ9Jk
+ */
+void func_80051710(void)
+{
+    DRAWENV sp18;
+    DISPENV sp78;
+    DR_ENV sp90;
+    unsigned long new_var;
+    u32 spD0[3];
+    FourShorts spE;
+    s32 var_a2;
+    s32 var_s0;
+    ResetGraph(1);
+    StopCallback();
+    ResetGraph(5);
+    *((s16*)0x1F801DAA) = 0;
+    SetDefDrawEnv(&sp18, 0, 0, 0x140, 0xF0);
+    SetDefDispEnv(&sp78, 0, 0, 0x140, 0xF0);
+    sp18.isbg = 1;
+    SetDrawEnv(&sp90, &sp18);
+    DrawPrim(&sp90);
+    PutDispEnv(&sp78);
+    spD0[0] = 0x02000000;
+    spD0[1] = 0xE6000002;
+    spD0[2] = 0;
+    DrawPrim(spD0);
+    var_a2 = 0xFFFF;
+
+    spE.c = 0x10;
+    spE.d = 1;
+
+    for (var_s0 = 0; var_s0 < 2; var_s0++)
+    {
+        spE.a = var_s0 + 0x50;
+        spE.b = var_s0 + 0x5C;
+        func_80051830((u32)(&D_8004FCC4), &spE, var_a2);
+        var_a2 = 0x8000;
+    }
+
+    func_80051A24();
+    SetDispMask(1);
+    exit();
+}
+
+/**
  * decomp.me link (100%) https://decomp.me/scratch/cjji6
  * PsyQ 4.3 / gcc 2.8.0
  */
@@ -12,8 +57,7 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
     u32 new_var;
     s32 local_arg2 = arg2;
 
-    //This is actually strlen((char*)arg0);
-    end = arg0 + strlen();
+    end = arg0 + strlen((char*)arg0);
     unk0 = ((arg1struct*)arg1)->unk0;
     if (arg0 < end)
     {
