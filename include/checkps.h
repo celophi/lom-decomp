@@ -5,6 +5,7 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/memory.h"
+#include "psyq/strings.h"
 
 /**
  * The maximum number of glyph entries in the character cache
@@ -103,6 +104,12 @@ typedef struct {
     u32 unk4;
 } Arg0Struct;
 
+typedef struct
+{
+  s16 unk0;
+  u16 unk2;
+} arg1struct;
+
 typedef struct {
     union {
         s32 unk0;
@@ -125,6 +132,8 @@ typedef struct {
 void func_80050080(void);
 void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
+void func_80051908(void* arg0, u8* arg1, s32 arg2);
+s32 func_8001687C(unsigned short);
 
 /**
  * @brief Creates a new glyph instance and links it into the active text stream.
