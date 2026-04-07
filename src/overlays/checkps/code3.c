@@ -4,6 +4,7 @@
  * decomp.me link (100%) https://decomp.me/scratch/cjji6
  * PsyQ 4.3 / gcc 2.8.0
  */
+
 void func_80051830(u32 arg0, void* arg1, s32 arg2)
 {
     u32 end;
@@ -11,7 +12,7 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
     u32 new_var;
     s32 local_arg2 = arg2;
     end = arg0 + strlen((char*)arg0);
-    unk0 = ((struct arg1struct*)arg1)->unk0;
+    unk0 = ((arg1struct*)arg1)->unk0;
     if (arg0 < end)
     {
         u8 nl = 0x0A;
@@ -22,16 +23,15 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
         {
             if ((*((u8*)arg0)) == nl)
             {
-                ((struct arg1struct*)arg1)->unk0 = unk0;
-                ((struct arg1struct*)arg1)->unk2 += 0x12;
+                ((arg1struct*)arg1)->unk0 = unk0;
+                ((arg1struct*)arg1)->unk2 += 0x12;
             }
             else
             {
                 int temp_a0 = *((u8*)arg0);
                 arg0++;
                 func_80051908(arg1, (u8*)func_8001687C((*((u8*)arg0)) | (temp_a0 << 8)), local_arg2);
-                ((struct arg1struct*)arg1)->unk0 =
-                    (end = (s16)(((0x11 * 0, (u16)((struct arg1struct*)arg1)->unk0)) + 0x11));
+                ((arg1struct*)arg1)->unk0 = (end = (s16)(((0x11 * 0, (u16)((arg1struct*)arg1)->unk0)) + 0x11));
             }
             arg0++;
         } while (arg0 < new_var);
