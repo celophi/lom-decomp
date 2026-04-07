@@ -11,7 +11,9 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
     int unk0;
     u32 new_var;
     s32 local_arg2 = arg2;
-    end = arg0 + strlen((char*)arg0);
+
+    //This is actually strlen((char*)arg0);
+    end = arg0 + strlen();
     unk0 = ((arg1struct*)arg1)->unk0;
     if (arg0 < end)
     {
