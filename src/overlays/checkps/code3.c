@@ -1,6 +1,42 @@
 #include "checkps.h"
 
 /**
+ * decomp.me link (83.42%%) https://decomp.me/scratch/vhWhP
+ */
+void func_80051620(int arg0)
+{
+    s32* ptr = 0;
+    s32 i;
+    u8* new_var;
+    s32 j;
+    s32 new_var2;
+    unsigned int new_var3;
+    *D_8005CFC8 = 1;
+    *D_8005CFD4 = 7;
+    j = arg0;
+    for (i = 0; i < 4; i++)
+    {
+        *ptr = i;
+    }
+
+    new_var3 = j * 4;
+    i = new_var3;
+    *D_8005CFC8 = 1;
+    *(new_var = D_8005CFD0) = 0x18;
+    new_var2 = i;
+    *D_8005CFC8 = 0;
+    for (j = j * 0; D_8005CF91[new_var3] > j; j++)
+    {
+        D_8005CFC8 += 0;
+        new_var3 = D_8005CFD8[j];
+        *new_var = new_var3;
+    }
+
+    *D_8005CFC8 = 0;
+    *(new_var = D_8005CFCC) = D_8005CF90[new_var2];
+}
+
+/**
  * decomp.me link (96.94%) https://decomp.me/scratch/rZ9Jk
  */
 void func_80051710(void)
