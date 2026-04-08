@@ -95,6 +95,13 @@ extern u16 D_8005D018[];
 extern u8 D_8004FD00[8];
 extern u8 D_8005CFF0[];
 extern u32 D_8004FCC4;
+extern s8 *D_8005CFC8;
+extern s8 *D_8005CFD4;
+extern u8 *D_8005CFD0;
+extern u8 D_8005CF91[];
+extern u8 D_8005CFD8[];
+extern u8 *D_8005CFCC;
+extern u8 D_8005CF90[];
 
 typedef struct
 {
