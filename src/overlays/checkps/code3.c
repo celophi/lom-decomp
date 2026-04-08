@@ -2,6 +2,7 @@
 
 /**
  * decomp.me link (83.42%%) https://decomp.me/scratch/vhWhP
+ * Note the compiler or flags may be wrong.
  */
 void func_80051620(int arg0)
 {
