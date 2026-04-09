@@ -54,7 +54,7 @@ ASM_DIR      := asm
 # OBJCOPY  — converts ELF ↔ raw binary
 
 CROSS        	:= mipsel-linux-gnu-
-CC           	:= gcc
+CC           	:= /opt/psx-gcc/gcc -B/opt/psx-gcc/
 CC_CDK       	:= /opt/cdk-gcc/gcc -B/opt/cdk-gcc/
 LD           	:= $(CROSS)ld
 OBJCOPY      	:= $(CROSS)objcopy

@@ -3,6 +3,7 @@
 # Stage 1: grab compiler artifacts
 FROM old-gcc/gcc-2.8.0-psx AS toolchain-psx
 FROM old-gcc/gcc-2.7.2-cdk AS toolchain-cdk
+FROM gcc-2.7.2-psx-gnu AS toolchain-gnu
 
 # Use Ubuntu LTS for stability and wide package availability
 FROM ubuntu:22.04
@@ -45,6 +46,15 @@ COPY --from=toolchain-cdk /gcc     /opt/cdk-gcc/gcc
 COPY --from=toolchain-cdk /cc1plus /opt/cdk-gcc/cc1plus
 COPY --from=toolchain-cdk /g++     /opt/cdk-gcc/g++
 
+## PSX GNU gcc 2.7.2
+COPY --from=toolchain-gnu /cpp      /opt/psx-gnu-gcc/cpp
+COPY --from=toolchain-gnu /cc1      /opt/psx-gnu-gcc/cc1
+COPY --from=toolchain-gnu /gcc      /opt/psx-gnu-gcc/gcc
+COPY --from=toolchain-gnu /cc1plus  /opt/psx-gnu-gcc/cc1plus
+COPY --from=toolchain-gnu /g++      /opt/psx-gnu-gcc/g++
+COPY --from=toolchain-gnu /as       /opt/psx-gnu-gcc/as
+COPY --from=toolchain-gnu /ld       /opt/psx-gnu-gcc/ld
+COPY --from=toolchain-gnu /objdump  /opt/psx-gnu-gcc/objdump
 
 # Wibo (WINE alternative)
 COPY --from=ghcr.io/decompals/wibo:1.0.1 /usr/local/bin/wibo /usr/bin/
@@ -65,8 +75,6 @@ tmpdir=/tmp
 EOF
 
 ENV SN_PATH=/opt/psyq4.1
-
-ENV PATH="/opt/psx-gcc:$PATH"
 
 # Create a directory for the game files
 WORKDIR /rom

@@ -4,6 +4,8 @@ FROM old-gcc/gcc-2.8.0-psx AS toolchain-psx
 # ── Stage 2: Cygnus CDK gcc 2.7.2 ───────────────────────────────────────────
 FROM old-gcc/gcc-2.7.2-cdk AS toolchain-cdk
 
+FROM gcc-2.7.2-psx-gnu AS toolchain-gnu
+
 # ── Stage 3: final runtime image ────────────────────────────────────────────
 FROM ubuntu:22.04
 
@@ -35,6 +37,16 @@ COPY --from=toolchain-cdk /gcc     /opt/cdk-gcc/gcc
 COPY --from=toolchain-cdk /cc1plus /opt/cdk-gcc/cc1plus
 COPY --from=toolchain-cdk /g++     /opt/cdk-gcc/g++
 
+## PSX GNU gcc 2.7.2
+COPY --from=toolchain-gnu /build/cpp      /opt/psx-gnu-gcc/cpp
+COPY --from=toolchain-gnu /build/cc1      /opt/psx-gnu-gcc/cc1
+COPY --from=toolchain-gnu /build/gcc      /opt/psx-gnu-gcc/gcc
+COPY --from=toolchain-gnu /build/cc1plus  /opt/psx-gnu-gcc/cc1plus
+COPY --from=toolchain-gnu /build/g++      /opt/psx-gnu-gcc/g++
+COPY --from=toolchain-gnu /build/as       /opt/psx-gnu-gcc/as
+COPY --from=toolchain-gnu /build/ld       /opt/psx-gnu-gcc/ld
+COPY --from=toolchain-gnu /build/objdump  /opt/psx-gnu-gcc/objdump
+
 # Wibo (WINE alternative)
 COPY --from=ghcr.io/decompals/wibo:1.0.1 /usr/local/bin/wibo /usr/bin/
 
@@ -54,8 +66,6 @@ tmpdir=/tmp
 EOF
 
 ENV SN_PATH=/opt/psyq4.1
-
-ENV PATH="/opt/psx-gcc:$PATH"
 
 COPY requirements.txt /build-lom/requirements.txt
 COPY tools            /build-lom/tools
