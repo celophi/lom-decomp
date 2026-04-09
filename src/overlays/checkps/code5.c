@@ -2,7 +2,7 @@
 
 /**
  * decomp.me link (83.42%%) https://decomp.me/scratch/vhWhP
- * Note the compiler or flags may be wrong.
+ * Matches 100% with GNU AS
  */
 void func_80051620(int arg0)
 {
@@ -39,6 +39,7 @@ void func_80051620(int arg0)
 
 /**
  * decomp.me link (96.94%) https://decomp.me/scratch/rZ9Jk
+ * Matches 100% with GNU AS
  */
 void func_80051710(void)
 {
