@@ -2,8 +2,8 @@
 #define _CHECKPS_H
 
 #include "common.h"
-#include "psyq/libgpu.h"
 #include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 #include "psyq/memory.h"
 #include "psyq/strings.h"
 
