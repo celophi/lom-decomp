@@ -668,8 +668,6 @@ void UpdateControllerInput(void)
 /**
  * decomp.me link (95%) https://decomp.me/scratch/EuGt8
  */
-void func_80050B04(void)
-{
-    s32 value = 1;
-    D_8005CFE8 = value;
+void func_80050B04(void) {
+    D_8005CFE8 = 1;
 }
