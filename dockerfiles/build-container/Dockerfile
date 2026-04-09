@@ -1,16 +1,17 @@
-# ── Stage 1: PSX gcc 2.8.0 ──────────────────────────────────────────────────
+# This dockerfile is for running the github pipeline for object diffing.
+
+# Stage 1: grab compiler artifacts
 FROM old-gcc/gcc-2.8.0-psx AS toolchain-psx
-
-# ── Stage 2: Cygnus CDK gcc 2.7.2 ───────────────────────────────────────────
 FROM old-gcc/gcc-2.7.2-cdk AS toolchain-cdk
-
 FROM ghcr.io/celophi/gcc-2.7.2-psx-gnu:v1.1 AS toolchain-gnu
 
-# ── Stage 3: final runtime image ────────────────────────────────────────────
+# Use Ubuntu LTS for stability and wide package availability
 FROM ubuntu:22.04
 
+# Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Update package lists and install required tools
 RUN apt-get update && apt-get install -y -o APT::Immediate-Configure=false \
     build-essential \
     python3 \
@@ -19,18 +20,26 @@ RUN apt-get update && apt-get install -y -o APT::Immediate-Configure=false \
     binutils-mips-linux-gnu \
     gcc-mipsel-linux-gnu \
     binutils-mipsel-linux-gnu \
-    less make vim git wget curl file \
+    less \
+    make \
+    vim \
+    git \
+    wget \
+    curl \
+    file \
     dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
-# PSX gcc 2.8.0
+# Copy GCC pieces from the toolchain stage
+
+## PSX gcc 2.8.0
 COPY --from=toolchain-psx /cpp     /opt/psx-gcc/cpp
 COPY --from=toolchain-psx /cc1     /opt/psx-gcc/cc1
 COPY --from=toolchain-psx /gcc     /opt/psx-gcc/gcc
 COPY --from=toolchain-psx /cc1plus /opt/psx-gcc/cc1plus
 COPY --from=toolchain-psx /g++     /opt/psx-gcc/g++
 
-# Cygnus CDK gcc 2.7.2
+## Cygnus CDK gcc 2.7.2
 COPY --from=toolchain-cdk /cpp     /opt/cdk-gcc/cpp
 COPY --from=toolchain-cdk /cc1     /opt/cdk-gcc/cc1
 COPY --from=toolchain-cdk /gcc     /opt/cdk-gcc/gcc
@@ -67,11 +76,12 @@ EOF
 
 ENV SN_PATH=/opt/psyq4.1
 
-COPY requirements.txt /build-lom/requirements.txt
-COPY tools            /build-lom/tools
+# Create a directory for the game files
+WORKDIR /rom
 
-WORKDIR /build-lom
-RUN pip install -r /build-lom/requirements.txt
-
-RUN mkdir /lom
-WORKDIR /lom
+# Copy your PSX game files into the container
+RUN mkdir -p BIN
+COPY extracted/SLUS_010.13 ./
+COPY extracted/BIN/CHECKPS.BIN ./BIN/
+COPY extracted/BIN/FIELD.BIN ./BIN/
+COPY extracted/BIN/MOVIE.BIN ./BIN/

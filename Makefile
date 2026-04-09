@@ -54,8 +54,10 @@ ASM_DIR      := asm
 # OBJCOPY  — converts ELF ↔ raw binary
 
 CROSS        	:= mipsel-linux-gnu-
-CC           	:= gcc
+CC           	:= /opt/psx-gcc/gcc -B/opt/psx-gcc/
 CC_CDK       	:= /opt/cdk-gcc/gcc -B/opt/cdk-gcc/
+CC_GNU       	:= /opt/psx-gnu-gcc/gcc -B/opt/psx-gnu-gcc/
+AS_GNU       	:= /opt/psx-gnu-gcc/as
 LD           	:= $(CROSS)ld
 OBJCOPY      	:= $(CROSS)objcopy
 
@@ -81,6 +83,10 @@ CFLAGS_G4       := -O2 -G4 -g -fsigned-char
 
 # CDK (GCC 2.7.2-970404) flags: no -g/-fsigned-char; uses -msoft-float and COFF debug.
 CFLAGS_CDK_G0   := -O2 -G0 -msoft-float -gcoff
+
+# PSX GNU GCC 2.7.2 flags: compiles to .s, then assembled with its own 'as'.
+CFLAGS_GNU_G0   := -O2 -G0
+AS_GNU_FLAGS    := -O -EL
 
 INCLUDE_FLAGS   := -Iinclude -Iinclude/psyq
 
@@ -262,6 +268,7 @@ STAGE_DIRS := src asm include linker tools assets
 OVERLAYS += checkps
 overlay_checkps_asset    := assets/checkps.bin
 overlay_checkps_gcc_srcs := src/overlays/checkps/unk1.c src/overlays/checkps/code3.c
+overlay_checkps_gnu_srcs := src/overlays/checkps/code4.c src/overlays/checkps/code5.c
 
 
 # ============================================================================
@@ -458,14 +465,17 @@ $(1)_CFLAGS    := $$(or $$(overlay_$(1)_cflags),$(CFLAGS_G0))
 $(1)_TARGET    := $(STAGING)/$$($(1)_BUILD_DIR)/$(1).elf
 
 # ── Discover source files ──
-# Split into CDK (matched) and GCC+maspsx (non-matching) groups.
-# Files listed in overlay_<name>_gcc_srcs use GCC+maspsx; everything else uses CDK gcc+maspsx.
+# Split into CDK (matched), GCC+maspsx (non-matching), and GNU gcc 2.7.2 groups.
+# Files listed in overlay_<name>_gcc_srcs use GCC+maspsx; overlay_<name>_gnu_srcs
+# use PSX GNU GCC 2.7.2 + its own assembler; everything else uses CDK gcc+maspsx.
 $(1)_C_SRCS      := $$(wildcard $$($(1)_SRC_DIR)/*.c)
 $(1)_GCC_SRCS    := $$(overlay_$(1)_gcc_srcs)
-$(1)_CDK_SRCS  := $$(filter-out $$($(1)_GCC_SRCS),$$($(1)_C_SRCS))
+$(1)_GNU_SRCS    := $$(overlay_$(1)_gnu_srcs)
+$(1)_CDK_SRCS    := $$(filter-out $$($(1)_GCC_SRCS) $$($(1)_GNU_SRCS),$$($(1)_C_SRCS))
 $(1)_GCC_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_SRCS))
-$(1)_CDK_OBJS  := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CDK_SRCS))
-$(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS)
+$(1)_GNU_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GNU_SRCS))
+$(1)_CDK_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CDK_SRCS))
+$(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS) $$($(1)_GNU_OBJS)
 
 # ── Binary asset (only if overlay_<name>_asset is defined) ──
 $(1)_ASSET_SRC := $$(overlay_$(1)_asset)
@@ -482,6 +492,12 @@ $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_S
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+
+# Rule: compile C files with PSX GNU GCC 2.7.2 + its own assembler (no maspsx)
+$$($(1)_GNU_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+	@mkdir -p $$(@D)
+	cd $(STAGING) && $(CC_GNU) $(CFLAGS_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o /tmp/$$*.s && \
+		$(AS_GNU) $(AS_GNU_FLAGS) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o /tmp/$$*.s
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
