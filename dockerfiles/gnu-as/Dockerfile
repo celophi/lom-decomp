@@ -1,0 +1,70 @@
+# This dockerfile builds a cross-compiler for the MIPS Sony PlayStation (PSX) target using GNU Binutils and GCC. 
+# It applies necessary patches to ensure compatibility with the PSX architecture and generates the required tools for assembling, linking, and compiling code for the PSX platform.
+# We need this for using the GNU assembler instead of the Sony one.
+
+FROM ubuntu:focal as build
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update
+RUN apt-get install -y build-essential gcc gcc-multilib wget texinfo 
+
+ENV VERSION=2.7.2
+ENV GNUPATH=old-gnu
+ENV BINUTILS_VERSION=2.38
+
+WORKDIR /work
+RUN wget https://ftp.gnu.org/${GNUPATH}/gcc/gcc-${VERSION}.tar.gz
+RUN tar xzf gcc-${VERSION}.tar.gz
+
+RUN wget https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.gz
+RUN tar xzf binutils-${BINUTILS_VERSION}.tar.gz
+
+WORKDIR /work/binutils-${BINUTILS_VERSION}
+RUN ./configure \
+    --target=mipsel-unknown-elf \
+    --host=i386-pc-linux \
+    --build=i386-pc-linux \
+    --disable-nls \
+    --disable-werror
+RUN make -j $(nproc)
+RUN mkdir -p /work/binutils-built && \
+    cp gas/as-new /work/binutils-built/as && \
+    cp ld/ld-new /work/binutils-built/ld && \
+    cp binutils/objdump /work/binutils-built/objdump
+
+WORKDIR /work/gcc-${VERSION}
+
+COPY patches /work/patches
+RUN sed -i -- 's/include <varargs.h>/include <stdarg.h>/g' *.c
+
+RUN patch -u -p1 obstack.h -i ../patches/obstack-2.7.2.h.patch
+RUN patch -u -p1 configure -i ../patches/configure.patch
+RUN patch -u -p1 config.sub -i ../patches/config.sub.patch
+RUN patch -u -p1 config/mips/mips.h -i ../patches/mipsel-2.7.patch
+RUN patch -su -p1 < ../patches/psx-2.5.7.patch
+
+RUN ./configure \
+    --target=mips-sony-psx \
+    --prefix=/opt/cross \
+    --with-endian-little \
+    --with-gnu-as \
+    --disable-gprof \
+    --disable-gdb \
+    --disable-werror \
+    --host=i386-pc-linux \
+    --build=i386-pc-linux \
+    --with-as=/work/binutils-built/as \
+    --with-ld=/work/binutils-built/ld
+
+RUN make --jobs $(nproc) cpp cc1 xgcc cc1plus g++ CFLAGS="-std=gnu89 -m32 -static"
+
+COPY tests /work/tests
+RUN ./cc1 -quiet -O2 /work/tests/little_endian.c && grep -E 'lbu\s\$2,0\(\$4\)' /work/tests/little_endian.s
+RUN ./cc1 -quiet -O2 /work/tests/section_attribute.c
+RUN ./cc1 -quiet -help </dev/null 2>&1 | grep -- -msoft-float
+
+RUN mv xgcc gcc
+RUN mkdir /build && cp cpp cc1 gcc cc1plus g++ /build/
+RUN cp /work/binutils-built/as /work/binutils-built/ld /work/binutils-built/objdump /build/
+
+FROM scratch AS export
+COPY --from=build /build/* .
