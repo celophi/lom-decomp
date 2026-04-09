@@ -497,7 +497,7 @@ $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_S
 $$($(1)_GNU_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_GNU) $(CFLAGS_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o /tmp/$$*.s && \
-		$(AS_GNU) $(AS_GNU_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o /tmp/$$*.s
+		$(AS_GNU) $(AS_GNU_FLAGS) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o /tmp/$$*.s
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
