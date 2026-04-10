@@ -29,6 +29,14 @@ typedef struct
     s16 axisY; // 0x2E - signed axis (negative/positive thresholded)
 } SCDRegs;
 
+typedef struct
+{
+  u8 unk0;
+  u8 unk1;
+} D_8005CFE0_t;
+
+extern D_8005CFE0_t D_8005CFE0;
+
 /**
  * Represents a single glyph's entry in the text cache, storing its ID and validity flag
  */
@@ -102,6 +110,9 @@ extern u8 D_8005CF91[];
 extern u8 D_8005CFD8[];
 extern u8 *D_8005CFCC;
 extern u8 D_8005CF90[];
+extern u8 D_8005CF92[];
+extern s32 D_8005CFEC;
+extern u8 D_8005CF93[];
 
 typedef struct
 {
