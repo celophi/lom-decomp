@@ -1,6 +1,92 @@
 #include "checkps.h"
 
 /**
+ * GNU AS (99.91%) match
+ */
+s32 func_8005144C(s32 arg0)
+{
+    u8 t2;
+    u8 val1;
+    u8 val2;
+    s32 temp_v1;
+    s32 temp_a2;
+    s32 i;
+    int new_var;
+    s32 idx;
+    s32 j;
+    t2 = D_8005CF93[arg0 * 4];
+    *D_8005CFC8 = 1;
+    val1 = *((volatile u8*)D_8005CFD4);
+    val2 = *((volatile u8*)D_8005CFD4);
+    if ((new_var = val1 & 7) == (val2 & 7))
+    {
+        temp_v1 = new_var;
+        temp_a2 = (unsigned char)temp_v1;
+        if (temp_a2 != 0)
+        {
+            D_8005CFEC = D_8005CFEC + temp_a2;
+            *D_8005CFC8 = 1;
+            *D_8005CFD4 = 7;
+            i = 0;
+            do
+            {
+                *((int*)0) = i;
+                i++;
+            } while (i < 4);
+            if (D_8005CFEC >= ((s32)t2))
+            {
+                j += 0;
+                D_8005CFEC = 0;
+                if (temp_v1 == 5)
+                {
+                    do
+                    {
+                        D_8005CFE0.unk0 = *D_8005CFCC;
+                    } while (0);
+                    D_8005CFE0.unk1 = *D_8005CFCC;
+                    *D_8005CFC8 = 1;
+                    *D_8005CFD0 = 0x1F;
+                    if (!(D_8005CFE0.unk0 & 0x10))
+                    {
+                        return -1;
+                    }
+
+                    return -2;
+                }
+                else
+                {
+                    temp_a2 = 0;
+                    idx = arg0 * 4;
+                    j = temp_a2;
+                    if (D_8005CF92[idx] != temp_a2)
+                    {
+                        do
+                        {
+                            ((u8*)(&D_8005CFE0))[j] = *D_8005CFCC;
+                            j++;
+                        } while (j < ((s32)(*((volatile u8*)(&D_8005CF92[idx])))));
+                    }
+                    *D_8005CFC8 = 1;
+                    *D_8005CFD0 = 0x1F;
+                    if (arg0 != 0xA)
+                    {
+                        j = D_8005CFE0.unk0;
+                        if (j & 0x10)
+                        {
+                            idx = 2;
+                            return -idx;
+                        }
+                    }
+                    return 1;
+                }
+            }
+            return 0;
+        }
+    }
+    return 0;
+}
+
+/**
  * decomp.me link (83.42%%) https://decomp.me/scratch/vhWhP
  * Matches 100% with GNU AS
  */
