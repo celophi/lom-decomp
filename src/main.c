@@ -28,7 +28,7 @@ void Main(void)
     ResetGraph(0);
     SetGraphDebug(0);
     SetDispMask(0);
-    FUN_80016784();
+    _96_remove();
     ResetCallback();
     SetVideoMode(0);
     SsUtReverbOff();

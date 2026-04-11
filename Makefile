@@ -106,6 +106,7 @@ MASPSX_PP_FLAGS 	:= --macro-inc
 # pulled in automatically via the INCLUDE_ASM() macro inside C source files.
 
 SRCS_G0 := \
+	src/psyq/libapi/C114.c \
 	src/psyq/libapi/A81.c \
 	src/psyq/libc2/bcopy.c \
 	src/psyq/libc2/bzero.c \
@@ -211,6 +212,7 @@ SRCS_G0 := \
 	src/unk2.c \
 	src/unk3.c \
 	src/unk4.c \
+	src/unk5.c \
 	src/unk7.c \
 	src/unk8.c \
 	src/decomp1.c \
