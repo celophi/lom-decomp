@@ -208,6 +208,7 @@ SRCS_G0 := \
 	src/psyq/libspu/S_STSA.c \
 	src/unk1.c \
 	src/unk2.c \
+	src/unk3.c \
 	src/unk4.c \
 	src/unk7.c \
 	src/unk8.c \
