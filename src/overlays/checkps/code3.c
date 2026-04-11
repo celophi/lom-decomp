@@ -31,7 +31,7 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
             {
                 int temp_a0 = *((u8*)arg0);
                 arg0++;
-                func_80051908(arg1, (u8*)func_8001687C((*((u8*)arg0)) | (temp_a0 << 8)), local_arg2);
+                func_80051908(arg1, (u8*)Krom2RawAdd((*((u8*)arg0)) | (temp_a0 << 8)), local_arg2);
                 ((arg1struct*)arg1)->unk0 = (end = (s16)(((0x11 * 0, (u16)((arg1struct*)arg1)->unk0)) + 0x11));
             }
             arg0++;

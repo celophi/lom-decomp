@@ -6,6 +6,7 @@
 #include "psyq/libgpu.h"
 #include "psyq/memory.h"
 #include "psyq/strings.h"
+#include "psyq/libapi.h"
 
 /**
  * The maximum number of glyph entries in the character cache
@@ -181,7 +182,6 @@ void func_80050080(void);
 void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
 void func_80051908(void* arg0, u8* arg1, s32 arg2);
-s32 func_8001687C(unsigned short);
 void DrawSymmetricTestPattern(void);
 
 /**

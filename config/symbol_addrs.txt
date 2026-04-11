@@ -26,6 +26,9 @@ CD_InitResources            = 0x80014140;
 CD_DecompressData           = 0x80014448;
 CD_StreamDataCallback       = 0x80014888;
 
+// psyq/libapi/A81
+Krom2RawAdd                 = 0x8001687C;
+
 // psyq/libc2/rand
 rand                        = 0x80016F5C;
 srand                       = 0x80016F8C;
