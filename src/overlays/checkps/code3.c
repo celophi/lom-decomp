@@ -49,70 +49,73 @@ void func_80051908(void* arg0, u8* arg1, s32 arg2)
     u8* var_s2 = arg1;     /* s2 */
     s16 local_arg2 = arg2; /* s4 */
 
-    /* Force exact stack offsets: sp10=0x10(sp), sp14=0x14(sp),
-       sp18=0x18(sp), sp1C=0x1C(sp), sp20=0x20(sp) */
+    /* Force exact stack offsets: tag=0x10(sp), code=0x14(sp),
+       xy=0x18(sp), wh=0x1C(sp), pixels=0x20(sp) */
     struct
     {
-        s32 sp10;
-        s32 sp14;
-        s32 sp18;
-        s32 sp1C;
-        s16 sp20[16];
-    } locals;
+        s32 tag;
+        s32 code;
+        s32 xy;
+        s32 wh;
+        s16 pixels[16];
+    } packet;
 
     s32 temp_s5; /* sign-extended, kept in s5 */
     s32 temp_s6; /* sign-extended, kept in s6 */
     s32 var_s3;  /* kept in s3, zeroed after loading arg->unk4 */
     s32 var_s0;
-    s16* next;
-    s16* curr;
+    s16* writePtr;
+    s16* pixelPtr;
     int bit;
-    s16 val;
+    s16 pixelValue;
 
     /* Exact instruction order from target */
     temp_s5 = ((Arg0Struct*)arg0)->unk0; /* first use of arg0 → allocates s1 */
     temp_s6 = ((Arg0Struct*)arg0)->unk2;
-    locals.sp10 = 0x0B000000; /* lui/sw -> 0x10(sp) */
-    locals.sp14 = 0xA0000000; /* lui/sw -> 0x14(sp) */
+
+    packet.tag = 0x0B000000;  // packet is 11 words long
+    packet.code = 0xA0000000; /* lui/sw -> 0x14(sp) */
+
     {
         s32 tmp = ((Arg0Struct*)arg0)->unk4; /* lw v0,4(s1) */
-        var_s3 = 0;                          /* move s3,zero */
-        locals.sp1C = tmp;                   /* sw v0,0x1c(sp) */
+        packet.wh = tmp;                     /* sw v0,0x1c(sp) */
     }
 
     /* The two nested loops – identical to target */
-    do
+    for (var_s3 = 0; var_s3 < 15; var_s3++)
     {
-        next = locals.sp20; /* addiu a2,sp,0x20 */
-        var_s0 = 0;
-        do
+        writePtr = packet.pixels; /* addiu a2,sp,0x20 */
+
+        for (var_s0 = 0; var_s0 < 2; var_s0++)
         {
             for (bit = 7; bit >= 0; bit--)
             {
-                curr = next;     /* move a1,a2 */
-                next = curr + 1; /* addiu a2,a1,2 */
-                val = 0;
+                pixelPtr = writePtr;     /* move a1,a2 */
+                writePtr = pixelPtr + 1; /* addiu a2,a1,2 */
+                pixelValue = 0;
+
                 if (((s32)(*var_s2) >> bit) & 1)
-                    val = local_arg2;
-                *curr = val; /* sh a0,0(a1) */
+                {
+                    pixelValue = local_arg2;
+                }
+
+                *pixelPtr = pixelValue; /* sh a0,0(a1) */
             }
-            var_s0++;
+
             var_s2++;
-        } while (var_s0 < 2);
+        }
 
-        var_s0 = 0;
-        do
+        for (var_s0 = 0; var_s0 < 2; var_s0++)
         {
-            locals.sp18 = *(s32*)&((Arg0Struct*)arg0)->unk0; /* lw v0,0(s1); sw v0,0x18(sp) */
-            DrawPrim(&locals.sp10);                          /* addiu a0,sp,0x10; jal DrawPrim */
-            var_s0++;
-            ((Arg0Struct*)arg0)->unk0 = (s16)((u16)((Arg0Struct*)arg0)->unk0 + 1);
-        } while (var_s0 < 2);
+            packet.xy = *(s32*)&((Arg0Struct*)arg0)->unk0; /* lw v0,0(s1); sw v0,0x18(sp) */
+            DrawPrim(&packet);
 
-        var_s3++;
+            ((Arg0Struct*)arg0)->unk0 = (s16)((u16)((Arg0Struct*)arg0)->unk0 + 1);
+        }
+
         ((Arg0Struct*)arg0)->unk0 = (s16)temp_s5;
         ((Arg0Struct*)arg0)->unk2 = (s16)((u16)((Arg0Struct*)arg0)->unk2 + 1);
-    } while (var_s3 < 0xF);
+    }
 
     ((Arg0Struct*)arg0)->unk2 = (s16)temp_s6;
 }
