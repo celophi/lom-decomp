@@ -143,11 +143,10 @@ typedef struct
     s16 d;
 } FourShorts;
 
-typedef struct
-{
-    s16 unk0;
+typedef struct {
+    s16 xy;
     s16 unk2;
-    u32 unk4;
+    u32 wh;
 } Arg0Struct;
 
 typedef struct

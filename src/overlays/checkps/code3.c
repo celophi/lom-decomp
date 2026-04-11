@@ -62,7 +62,7 @@ void func_80051908(void* arg0, u8* arg1, s32 arg2)
 
     s32 temp_s5; /* sign-extended, kept in s5 */
     s32 temp_s6; /* sign-extended, kept in s6 */
-    s32 var_s3;  /* kept in s3, zeroed after loading arg->unk4 */
+    s32 var_s3;  /* kept in s3, zeroed after loading arg->wh */
     s32 var_s0;
     s16* writePtr;
     s16* pixelPtr;
@@ -70,16 +70,12 @@ void func_80051908(void* arg0, u8* arg1, s32 arg2)
     s16 pixelValue;
 
     /* Exact instruction order from target */
-    temp_s5 = ((Arg0Struct*)arg0)->unk0; /* first use of arg0 → allocates s1 */
+    temp_s5 = ((Arg0Struct*)arg0)->xy; /* first use of arg0 → allocates s1 */
     temp_s6 = ((Arg0Struct*)arg0)->unk2;
 
     packet.tag = 0x0B000000;  // packet is 11 words long
-    packet.code = 0xA0000000; /* lui/sw -> 0x14(sp) */
-
-    {
-        s32 tmp = ((Arg0Struct*)arg0)->unk4; /* lw v0,4(s1) */
-        packet.wh = tmp;                     /* sw v0,0x1c(sp) */
-    }
+    packet.code = 0xA0000000;
+    packet.wh = ((Arg0Struct*)arg0)->wh;
 
     /* The two nested loops – identical to target */
     for (var_s3 = 0; var_s3 < 15; var_s3++)
@@ -93,12 +89,11 @@ void func_80051908(void* arg0, u8* arg1, s32 arg2)
                 pixelPtr = writePtr;     /* move a1,a2 */
                 writePtr = pixelPtr + 1; /* addiu a2,a1,2 */
                 pixelValue = 0;
-
-                if (((s32)(*var_s2) >> bit) & 1)
-                {
+                
+                if (((s32)(*var_s2) >> bit) & 1) {
                     pixelValue = local_arg2;
                 }
-
+                    
                 *pixelPtr = pixelValue; /* sh a0,0(a1) */
             }
 
@@ -107,13 +102,14 @@ void func_80051908(void* arg0, u8* arg1, s32 arg2)
 
         for (var_s0 = 0; var_s0 < 2; var_s0++)
         {
-            packet.xy = *(s32*)&((Arg0Struct*)arg0)->unk0; /* lw v0,0(s1); sw v0,0x18(sp) */
+            packet.xy = *(s32*)&((Arg0Struct*)arg0)->xy; /* lw v0,0(s1); sw v0,0x18(sp) */
             DrawPrim(&packet);
 
-            ((Arg0Struct*)arg0)->unk0 = (s16)((u16)((Arg0Struct*)arg0)->unk0 + 1);
+            ((Arg0Struct*)arg0)->xy = (s16)((u16)((Arg0Struct*)arg0)->xy + 1);
         }
 
-        ((Arg0Struct*)arg0)->unk0 = (s16)temp_s5;
+        
+        ((Arg0Struct*)arg0)->xy = (s16)temp_s5;
         ((Arg0Struct*)arg0)->unk2 = (s16)((u16)((Arg0Struct*)arg0)->unk2 + 1);
     }
 
