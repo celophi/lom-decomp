@@ -2,6 +2,7 @@
 
 /**
  * 68% match with GNU AS
+ * Note that this could be probably FUNCTIONALLY INCORRECT!
  */
 s32 func_80050B14(s32 arg0)
 {

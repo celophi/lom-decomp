@@ -4,65 +4,83 @@
  * decomp.me link (95.20%) https://decomp.me/scratch/taoth
  * Matches 100% with GNU AS
  */
-void func_80051A24(void)
+void DrawSymmetricTestPattern(void)
 {
-    s32 sp10[6];
-    u8 stack_buffer[8];
-    s32 outer_cnt;
-    s32 middle_cnt;
-    s32 inner_cnt;
-    s32* sp10_base;
-    u8* stack_base;
-    u8* local_buf;
-    s32* out_ptr;
-    s8* read_ptr;
+    s32 polyF4[6];
+    u8 mirrorSignBuffer[8];
+    s32 patternCount;
+    s32 quadCount;
+    s32 vertexCount;
+    s32* polyF4Base;
+    u8* signBufferBase;
+    s32* vertexCursor;
     u8* table;
-    s32 const16;
-    s32 temp_a3;
-    s32 lo_val;
-    s32 new_var;
-    u8* reg_local_buf;
-    s8* reg_read_ptr;
-    new_var = 0x280000FF;
-    outer_cnt = 0;
-    sp10_base = sp10;
-    stack_base = stack_buffer;
-    const16 = 0x10;
-    sp10[0] = 0x05000000;
-    sp10[1] = new_var;
-    do
+    s32 tableSizePairs;
+    s32 color;
+    u8* currentSignPtr;
+    s8* currentSignValue;
+
+    currentSignValue = (s8*)currentSignPtr;
+    color = 0x280000FF;
+    patternCount = 0;
+    polyF4Base = polyF4;
+    signBufferBase = mirrorSignBuffer;
+    tableSizePairs = 16;
+
+    polyF4[0] = 0x05000000;
+    polyF4[1] = color;
+
+    while (patternCount < 16)
     {
-        middle_cnt = 0;
-        reg_local_buf = stack_base;
-        do
+        quadCount = 0;
+        currentSignPtr = signBufferBase;
+
+        while (quadCount < 4)
         {
-            reg_local_buf++;
-            reg_local_buf--;
-            __builtin_memcpy(stack_buffer, D_8004FD00, 8);
-            inner_cnt = 0;
-            reg_read_ptr = (s8*)reg_local_buf;
-            out_ptr = sp10_base;
-            do
+            __builtin_memcpy(mirrorSignBuffer, g_testPatternVertexTable, 8);
+            vertexCount = 0;
+            currentSignValue = (s8*)currentSignPtr;
+            vertexCursor = polyF4Base;
+
+            while (vertexCount < 4)
             {
-                s32 a1 = (inner_cnt + 2) >> 2;
-                s32 v1 = outer_cnt + (inner_cnt & 1);
-                u8* ptr1 = D_8005CFF0 + ((const16 - v1) << 1);
-                u8* ptr2 = D_8005CFF0 + (v1 << 1);
-                s32 a3 = ((s8)reg_read_ptr[1]) * ptr1[a1];
-                s32 b3 = ((s8)reg_read_ptr[0]) * ptr2[a1];
-                out_ptr[2] = ((a3 + 0x78) << 16) | (b3 + 0xA0);
-                out_ptr++;
-                inner_cnt++;
-            } while (inner_cnt < 4);
-            DrawPrim(sp10);
-            middle_cnt++;
-            reg_local_buf += 2;
-        } while (middle_cnt < 4);
-        outer_cnt++;
-    } while (outer_cnt < 0x10);
-    sp10[2] = 0x00500070;
-    sp10[3] = 0x00480078;
-    sp10[4] = 0x00A800C8;
-    sp10[5] = 0x00A000D0;
-    DrawPrim(sp10);
+                // Calculate table index; results in 0,0,1,1 for vertices 0-3
+                s32 tableIndex = (vertexCount + 2) >> 2;
+
+                // Alternate between current outer loop index and the next one (patternCount, patternCount + 1)
+                s32 tableOffset = patternCount + (vertexCount & 1);
+
+                // Locate base coordinate offsets from the data table (g_testPatternSizeTable)
+                // ptr_mirror picks from the end of the table, ptr_base picks from the start
+                u8* ptr1 = g_testPatternSizeTable + ((tableSizePairs - tableOffset) << 1);
+                u8* ptr2 = g_testPatternSizeTable + (tableOffset << 1);
+
+                // Scale the base offsets by the sign pairs (1 or -1) from g_testPatternVertexTable
+                // currentSignValue[1] is the Y-scale, currentSignValue[0] is the X-scale
+                s32 offsetX = ((s8)currentSignValue[1]) * ptr1[tableIndex];
+                s32 offsetY = ((s8)currentSignValue[0]) * ptr2[tableIndex];
+
+                // Center the vertex on screen (X+120, Y+160) and pack as [Short X][Short Y] into a 32-bit word
+                vertexCursor[2] = ((offsetX + 120) << 16) | (offsetY + 160);
+
+                // Move to the next vertex slot in the POLY_F4 structure
+                vertexCursor++;
+                vertexCount++;
+            }
+
+            DrawPrim(polyF4);
+            quadCount++;
+            currentSignPtr += 2;
+        }
+
+        patternCount++;
+    }
+
+    // Draw final static center quad
+    polyF4[2] = 0x00500070;
+    polyF4[3] = 0x00480078;
+    polyF4[4] = 0x00A800C8;
+    polyF4[5] = 0x00A000D0;
+
+    DrawPrim(polyF4);
 }

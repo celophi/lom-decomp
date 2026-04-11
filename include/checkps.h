@@ -59,6 +59,16 @@ extern s32 g_textBufferAddr;
 extern s8 g_TextBuffer[];
 
 /**
+ * Lookup table for test pattern vertex offsets, used in DrawSymmetricTestPattern. Contains 4 pairs of X/Y sign values.
+ */
+extern u8 g_testPatternVertexTable[8];
+
+/**
+ * Lookup table for test pattern sizes, used in DrawSymmetricTestPattern. Contains 16 pairs of width/height values.
+ */
+extern u8 g_testPatternSizeTable[32];
+
+/**
  * Global cursor pointing to the current position in the text buffer for glyph rendering.
  */
 extern s32 g_glyphBufferCursor;
@@ -100,8 +110,6 @@ extern s32 D_800610A8;
 extern s32 D_8005CFE8;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
-extern u8 D_8004FD00[8];
-extern u8 D_8005CFF0[];
 extern u32 D_8004FCC4;
 extern s8 *D_8005CFC8;
 extern s8 *D_8005CFD4;
@@ -174,6 +182,7 @@ void func_8004FEE8(int param_1);
 void func_8004FD68(int param_1);
 void func_80051908(void* arg0, u8* arg1, s32 arg2);
 s32 func_8001687C(unsigned short);
+void DrawSymmetricTestPattern(void);
 
 /**
  * @brief Creates a new glyph instance and links it into the active text stream.
