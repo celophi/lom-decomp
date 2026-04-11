@@ -113,6 +113,11 @@ extern u8 D_8005CF90[];
 extern u8 D_8005CF92[];
 extern s32 D_8005CFEC;
 extern u8 D_8005CF93[];
+extern u8 D_800810B8[2];
+extern u8 D_8005CFE2;
+extern s32 D_800810B4;
+extern u8 D_8005CFE1[2];
+extern s32 D_800810B0;
 
 typedef struct
 {
