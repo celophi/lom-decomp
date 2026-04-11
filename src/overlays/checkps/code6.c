@@ -40,7 +40,7 @@ void DrawSymmetricTestPattern(void)
         {
             reg_local_buf++;
             reg_local_buf--;
-            __builtin_memcpy(stack_buffer, D_8004FD00, 8);
+            __builtin_memcpy(stack_buffer, g_testPatternVertexTable, 8);
             vertexCount = 0;
             reg_read_ptr = (s8*)reg_local_buf;
             out_ptr = sp10_base;
@@ -58,7 +58,7 @@ void DrawSymmetricTestPattern(void)
                 u8* ptr1 = g_testPatternSizeTable + ((const16 - tableOffset) << 1);
                 u8* ptr2 = g_testPatternSizeTable + (tableOffset << 1);
 
-                // Scale the base offsets by the sign pairs (1 or -1) from D_8004FD00
+                // Scale the base offsets by the sign pairs (1 or -1) from g_testPatternVertexTable
                 // reg_read_ptr[1] is the Y-scale, reg_read_ptr[0] is the X-scale
                 s32 offsetX = ((s8)reg_read_ptr[1]) * ptr1[tableIndex];
                 s32 offsetY = ((s8)reg_read_ptr[0]) * ptr2[tableIndex];
