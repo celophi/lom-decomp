@@ -59,6 +59,11 @@ extern s32 g_textBufferAddr;
 extern s8 g_TextBuffer[];
 
 /**
+ * Lookup table for test pattern sizes, used in DrawSymmetricTestPattern. Contains 16 pairs of width/height values.
+ */
+extern u8 g_testPatternSizeTable[32];
+
+/**
  * Global cursor pointing to the current position in the text buffer for glyph rendering.
  */
 extern s32 g_glyphBufferCursor;
@@ -101,7 +106,6 @@ extern s32 D_8005CFE8;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
 extern u8 D_8004FD00[8];
-extern u8 D_8005CFF0[];
 extern u32 D_8004FCC4;
 extern s8 *D_8005CFC8;
 extern s8 *D_8005CFD4;
