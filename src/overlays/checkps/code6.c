@@ -53,10 +53,10 @@ void DrawSymmetricTestPattern(void)
                 // Alternate between current outer loop index and the next one (outer_cnt, outer_cnt + 1)
                 s32 tableOffset = outer_cnt + (vertexCount & 1);
 
-                // Locate base coordinate offsets from the data table (D_8005CFF0)
+                // Locate base coordinate offsets from the data table (g_testPatternSizeTable)
                 // ptr_mirror picks from the end of the table, ptr_base picks from the start
-                u8* ptr1 = D_8005CFF0 + ((const16 - tableOffset) << 1);
-                u8* ptr2 = D_8005CFF0 + (tableOffset << 1);
+                u8* ptr1 = g_testPatternSizeTable + ((const16 - tableOffset) << 1);
+                u8* ptr2 = g_testPatternSizeTable + (tableOffset << 1);
 
                 // Scale the base offsets by the sign pairs (1 or -1) from D_8004FD00
                 // reg_read_ptr[1] is the Y-scale, reg_read_ptr[0] is the X-scale
