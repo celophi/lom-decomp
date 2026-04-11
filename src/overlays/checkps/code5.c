@@ -164,7 +164,7 @@ void func_80051710(void)
         var_a2 = 0x8000;
     }
 
-    func_80051A24();
+    DrawSymmetricTestPattern();
     SetDispMask(1);
     exit();
 }
