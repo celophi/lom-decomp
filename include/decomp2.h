@@ -9,6 +9,6 @@ extern u32 D_801026D0;
 
 u32* FUN_80015c28(void);
 u32* FUN_80015c38(void);
-
+u32* func_80015C48(void);
 
 #endif
