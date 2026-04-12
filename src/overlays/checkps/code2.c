@@ -214,7 +214,7 @@ s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         ptr++;
     }
 
-    font_data = func_8001687C(new_var5 & 0xFFFF);
+    font_data = Krom2RawAdd(new_var5 & 0xFFFF);
     if (font_data == ((u8*)-1))
     {
         return arg0;
