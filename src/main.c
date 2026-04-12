@@ -214,7 +214,9 @@ void Main(void)
 
             case 8:
                 func_80015C48();
-                CD_StreamData(0xB, 0x80140000);
+                
+                // BIN/MOVIE.BIN
+                CD_StreamData(11, 0x80140000);
                 GFX_Transition(0);
                 CD_WaitForQueueEmpty();
                 FUN_80140018(0);

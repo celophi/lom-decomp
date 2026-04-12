@@ -40,5 +40,6 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x0, bin, movie]
-  - [0x1914]
+      - [0x1, rodata, rodata]
+      - [0x19, c, code]
+  - [0x1053]
