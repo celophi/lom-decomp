@@ -574,6 +574,7 @@ CD_DecompressBuffer = 0x80014A8C;
 
 // CHECKPS.BIN
 g_testPatternVertexTable = 0x8004FD00;
+g_testPatternVertexTablePadding = 0x8004FD08;
 g_testPatternSizeTable = 0x8005CFF0;
 g_textBufferAddr = 0x8005D054;
 g_TextBuffer = 0x800810C0;
