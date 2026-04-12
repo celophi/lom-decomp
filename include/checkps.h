@@ -2,11 +2,11 @@
 #define _CHECKPS_H
 
 #include "common.h"
-#include "psyq/libgte.h"
+#include "psyq/libapi.h"
 #include "psyq/libgpu.h"
+#include "psyq/libgte.h"
 #include "psyq/memory.h"
 #include "psyq/strings.h"
-#include "psyq/libapi.h"
 
 /**
  * The maximum number of glyph entries in the character cache
@@ -32,8 +32,8 @@ typedef struct
 
 typedef struct
 {
-  u8 unk0;
-  u8 unk1;
+    u8 unk0;
+    u8 unk1;
 } D_8005CFE0_t;
 
 extern D_8005CFE0_t D_8005CFE0;
@@ -62,7 +62,10 @@ extern s8 g_TextBuffer[];
 /**
  * Lookup table for test pattern vertex offsets, used in DrawSymmetricTestPattern. Contains 4 pairs of X/Y sign values.
  */
-extern u8 g_testPatternVertexTable[8];
+const u8 g_testPatternVertexTable[20] = {
+    0x01, 0x01, 0xFF, 0x01, 0x01, 0xFF, 0xFF, 0xFF, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
 
 /**
  * Lookup table for test pattern sizes, used in DrawSymmetricTestPattern. Contains 16 pairs of width/height values.
@@ -112,12 +115,12 @@ extern s32 D_8005CFE8;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
 extern u32 D_8004FCC4;
-extern s8 *D_8005CFC8;
-extern s8 *D_8005CFD4;
-extern u8 *D_8005CFD0;
+extern s8* D_8005CFC8;
+extern s8* D_8005CFD4;
+extern u8* D_8005CFD0;
 extern u8 D_8005CF91[];
 extern u8 D_8005CFD8[];
-extern u8 *D_8005CFCC;
+extern u8* D_8005CFCC;
 extern u8 D_8005CF90[];
 extern u8 D_8005CF92[];
 extern s32 D_8005CFEC;
@@ -143,7 +146,8 @@ typedef struct
     s16 d;
 } FourShorts;
 
-typedef struct {
+typedef struct
+{
     s16 xy;
     s16 unk2;
     u32 wh;
