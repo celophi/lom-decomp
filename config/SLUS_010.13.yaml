@@ -61,7 +61,7 @@ segments:
       - [0x1F10, c, cd]
       - [0x52DC, c, unk4]
       - [0x6428, c, decomp2]
-      - [0x6438, c, unk6]
+      - [0x6448, c, unk6]
       - [0x6F84, c, psyq/libapi/C114]
       - [0x6F9C, c, unk5]
       - [0x707C, c, psyq/libapi/A81]
