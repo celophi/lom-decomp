@@ -41,7 +41,7 @@ segments:
     vram: 0x8004FC70
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x91, .rodata, code]
+      - [0x91, .rodata, data]
       - [0xA5, c, code]
       - [0xE95, c, code4]
       - [0xEA5, c, code7]
