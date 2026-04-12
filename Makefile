@@ -213,13 +213,15 @@ SRCS_G0 := \
 	src/unk3.c \
 	src/unk4.c \
 	src/unk5.c \
+	src/unk6.c \
 	src/unk7.c \
 	src/unk8.c \
 	src/decomp1.c \
 	src/main.c
 
 SRCS_G4 := \
-	src/cd.c
+	src/cd.c \
+	src/decomp2.c
 
 SRCS_CDK_G0 := \
 	src/overlays/checkps/code.c \
