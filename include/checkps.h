@@ -76,11 +76,6 @@ extern s32 g_glyphBufferCursor;
 extern GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
 
 /**
- * X coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
- */
-extern s32 g_glyphAtlasX;
-
-/**
  * Y coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
  */
 extern s32 g_glyphAtlasY;

@@ -1,6 +1,11 @@
 #include "checkps.h"
 
 /**
+ * X coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
+ */
+s32 g_glyphAtlasX = 0;
+
+/**
  * decomp.me link (100%) https://decomp.me/scratch/8Otmf
  */
 void func_80051BB4(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
@@ -422,3 +427,4 @@ void ResetTextRenderer(void)
 
     LoadImage(&clearRect, (u_long*)&g_textBufferAddr);
 }
+
