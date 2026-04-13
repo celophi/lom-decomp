@@ -26,7 +26,7 @@ void DrawSymmetricTestPattern(void)
     {
         for (quadCount = 0; quadCount < 4; quadCount++)
         {
-            s8 mirrorSignBuffer[][2] = {0x01, 0x01, 0xFF, 0x01, 0x01, 0xFF, 0xFF, 0xFF};
+            s8 g_testPatternVertexTable[][2] = {0x01, 0x01, 0xFF, 0x01, 0x01, 0xFF, 0xFF, 0xFF};
 
             for (vertexCount = 0; vertexCount < 4; vertexCount++)
             {
@@ -38,9 +38,9 @@ void DrawSymmetricTestPattern(void)
 
                 // Center the vertex on screen (X+120, Y+160) and pack as [Short X][Short Y] into a 32-bit word
                 polyF4[vertexCount + 2] =
-                    (((mirrorSignBuffer[quadCount][1] * g_testPatternSizeTable[16 - tableOffset][tableIndex]) + 120)
+                    (((g_testPatternVertexTable[quadCount][1] * g_testPatternSizeTable[16 - tableOffset][tableIndex]) + 120)
                      << 16) |
-                    ((mirrorSignBuffer[quadCount][0] * g_testPatternSizeTable[tableOffset][tableIndex]) + 160);
+                    ((g_testPatternVertexTable[quadCount][0] * g_testPatternSizeTable[tableOffset][tableIndex]) + 160);
             }
 
             DrawPrim(polyF4);
@@ -55,3 +55,7 @@ void DrawSymmetricTestPattern(void)
 
     DrawPrim(polyF4);
 }
+
+const u8 g_testPatternVertexTablePadding[12] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};

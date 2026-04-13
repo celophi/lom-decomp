@@ -60,17 +60,6 @@ extern s32 g_textBufferAddr;
 extern s8 g_TextBuffer[];
 
 /**
- * Lookup table for test pattern vertex offsets, used in DrawSymmetricTestPattern. Contains 4 pairs of X/Y sign values.
- */
-const s8 g_testPatternVertexTable[8] = {
-    1, 1, -1, 1, 1, -1, -1, -1,
-};
-
-const u8 g_testPatternVertexTablePadding[12] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
-
-/**
  * Lookup table for test pattern sizes, used in DrawSymmetricTestPattern. Contains 16 pairs of width/height values.
  */
 extern u8 g_testPatternSizeTable[][2];
