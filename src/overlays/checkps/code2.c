@@ -1,5 +1,8 @@
 #include "checkps.h"
 
+s32 g_textCursorX = 0;
+
+s32 g_textCursorY = 0;
 
 /**
  * Global cursor pointing to the current position in the text buffer for glyph rendering.

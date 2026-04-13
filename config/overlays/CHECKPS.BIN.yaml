@@ -50,5 +50,5 @@ segments:
       - [0x1DB5, c, code6]
       - [0x1F45, c, code2]
       - [0x27B9, rodata, table]
-      - [0x3985C, .rodata, code2]
+      - [0x39854, .rodata, code2]
   - [0x39868]
