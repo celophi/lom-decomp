@@ -50,7 +50,7 @@ segments:
       - [0x1DB5, c, code6]
       - [0x1F45, c, code2]
       - [0x27B9, rodata, table]
-      - [0x11419, .data, code]
+      - [0xD419, .data, code]
       - [0x31441, .data, code7]
       - [0x31451, .data, code2]
   - [0x39868]
