@@ -94,6 +94,8 @@ extern s32 g_textCursorX;
 extern s32 g_textCursorY;
 extern s32 g_textOriginX;
 
+extern const u32 D_8004FCC4[15];
+
 extern s32 D_8005D060;
 extern u32 D_80052428;
 extern s32 D_80061088;
@@ -111,7 +113,6 @@ extern s32 D_800610A8;
 extern s32 D_8005CFE8;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
-extern u32 D_8004FCC4;
 extern s8* D_8005CFC8;
 extern s8* D_8005CFD4;
 extern u8* D_8005CFD0;
