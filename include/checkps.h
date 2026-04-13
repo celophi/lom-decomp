@@ -56,7 +56,7 @@ typedef union
 } GlyphCacheEntry;
 
 extern s32 g_previousGameState;
-extern s32 g_textBufferAddr;
+extern s32 g_textureCacheResetData;
 
 /**
  * Lookup table for test pattern sizes, used in DrawSymmetricTestPattern. Contains 16 pairs of width/height values.

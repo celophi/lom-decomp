@@ -444,6 +444,6 @@ void ResetTextRenderer(void)
     clearRect.x = 0;
     clearRect.h = 1;
 
-    LoadImage(&clearRect, (u_long*)&g_textBufferAddr);
+    LoadImage(&clearRect, (u_long*)&g_textureCacheResetData);
 }
 
