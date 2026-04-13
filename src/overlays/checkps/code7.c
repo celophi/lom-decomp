@@ -1,5 +1,7 @@
 #include "checkps.h"
 
+u8 D_800810B8[2] = {0};
+
 /**
  * 68% match with GNU AS
  * Note that this could be probably FUNCTIONALLY INCORRECT!
