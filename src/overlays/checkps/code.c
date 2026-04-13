@@ -4,7 +4,7 @@ s32 D_800610A4 = 0;
 
 s32 D_800610A8 = 0;
 
-s32 g_D_800610A8_padding[32769] = {0}; 
+s32 g_D_800610AC[32769] = {0}; 
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/bzlSh
