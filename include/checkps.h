@@ -94,23 +94,7 @@ extern s32 g_textCursorX;
 extern s32 g_textCursorY;
 extern s32 g_textOriginX;
 
-const u32 D_8004FCC4[] = {
-    0xA790AD8B,
-    0xB997498F,
-    0xDC82B582,
-    0xBD82B582,
-    0x960A4281,
-    0x82CC917B,
-    0x91FC89AA,
-    0x82B382A2,
-    0x82C482EA,
-    0x0AE982A2,
-    0xBB82A882,
-    0xAA82EA82,
-    0xE882A082,
-    0xB782DC82,
-    0x00004281,
-};
+extern const u32 D_8004FCC4[15];
 
 extern s32 D_8005D060;
 extern u32 D_80052428;
