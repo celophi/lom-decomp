@@ -586,6 +586,7 @@ g_textCursorX = 0x800894C0;
 g_textCursorY = 0x800894C4;
 g_textOriginX = 0x800894CC;
 g_D_800610AC = 0x800610AC;
+D_8006109C = 0x8006109C;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
