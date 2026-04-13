@@ -1,5 +1,13 @@
 #include "checkps.h"
 
+
+/**
+ * Global cursor pointing to the current position in the text buffer for glyph rendering.
+ */
+s32 g_glyphBufferCursor = 0;
+
+s32 g_textOriginX = 0;
+
 /**
  * X coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
  */

@@ -65,11 +65,6 @@ extern s8 g_TextBuffer[];
 extern u8 g_testPatternSizeTable[][2];
 
 /**
- * Global cursor pointing to the current position in the text buffer for glyph rendering.
- */
-extern s32 g_glyphBufferCursor;
-
-/**
  * Global character cache for text rendering, storing up to 256 glyph entries.
  * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
  */
@@ -82,7 +77,6 @@ extern s32 g_glyphAtlasY;
 
 extern s32 g_textCursorX;
 extern s32 g_textCursorY;
-extern s32 g_textOriginX;
 
 const u32 D_8004FCC4[15] = {
     0xA790AD8B, 0xB997498F, 0xDC82B582, 0xBD82B582, 0x960A4281, 0x82CC917B, 0x91FC89AA, 0x82B382A2,
