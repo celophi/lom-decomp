@@ -75,7 +75,6 @@ const u32 D_8004FCC4[15] = {
 
 extern s32 D_8005D060;
 extern u32 D_80052428;
-extern s32 D_8005D068[4];
 extern u8 D_8005B744[];
 extern u8 D_801ED600;
 extern s32 D_8005CFE8;
