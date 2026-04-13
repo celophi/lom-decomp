@@ -1,5 +1,7 @@
 #include "checkps.h"
 
+s32 D_800610A8[32770] = {0};
+
 /**
  * decomp.me link (100%) https://decomp.me/scratch/bzlSh
  */
