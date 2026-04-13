@@ -1,5 +1,11 @@
 #include "checkps.h"
 
+s32 D_800810B0 = 0;
+
+s32 D_800810B4 = 0;
+
+u8 D_800810B8[2] = {0};
+
 /**
  * 68% match with GNU AS
  * Note that this could be probably FUNCTIONALLY INCORRECT!
