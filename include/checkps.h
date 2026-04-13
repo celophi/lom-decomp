@@ -65,12 +65,6 @@ extern s8 g_TextBuffer[];
 extern u8 g_testPatternSizeTable[][2];
 
 /**
- * Global character cache for text rendering, storing up to 256 glyph entries.
- * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
- */
-extern GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
-
-/**
  * Y coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
  */
 extern s32 g_glyphAtlasY;
