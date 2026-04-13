@@ -41,7 +41,7 @@ segments:
     vram: 0x8004FC70
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x91, rodata, data]
+      - [0x91, rodata, data] #Refer to docs/rodata-in-separate-file.md for reasons why this is not .rodata
       - [0xA5, c, code]
       - [0xE95, c, code4]
       - [0xEA5, c, code7]
