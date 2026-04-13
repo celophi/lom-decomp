@@ -1,5 +1,11 @@
 #include "checkps.h"
 
+u_long g_textureCacheResetData[] = {
+    0xFFFF0000,
+    0x0000BDEF,
+    0x00000000,
+};
+
 s8 g_TextBuffer[MAX_SHORT_VALUE + 1] = {0};
 
 /**
@@ -444,6 +450,5 @@ void ResetTextRenderer(void)
     clearRect.x = 0;
     clearRect.h = 1;
 
-    LoadImage(&clearRect, (u_long*)&g_textureCacheResetData);
+    LoadImage(&clearRect, g_textureCacheResetData);
 }
-
