@@ -4,7 +4,7 @@
  * Global character cache for text rendering, storing up to 256 glyph entries.
  * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
  */
-GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
+GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES] = {0};
 
 s32 g_textCursorX = 0;
 
