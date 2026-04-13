@@ -1,5 +1,7 @@
 #include "checkps.h"
 
+s8 g_TextBuffer[MAX_SHORT_VALUE + 1] = {0};
+
 /**
  * Global character cache for text rendering, storing up to 256 glyph entries.
  * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.

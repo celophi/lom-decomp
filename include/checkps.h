@@ -57,7 +57,6 @@ typedef union
 
 extern s32 g_previousGameState;
 extern s32 g_textBufferAddr;
-extern s8 g_TextBuffer[];
 
 /**
  * Lookup table for test pattern sizes, used in DrawSymmetricTestPattern. Contains 16 pairs of width/height values.
