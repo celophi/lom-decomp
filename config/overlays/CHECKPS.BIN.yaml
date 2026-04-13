@@ -40,7 +40,7 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, .rodata, code7]
       - [0x55, .rodata, code6]
       - [0xA5, c, code]
       - [0xE95, c, code4]
@@ -50,4 +50,7 @@ segments:
       - [0x1DB5, c, code6]
       - [0x1F45, c, code2]
       - [0x27B9, rodata, table]
-  - [0xA77D]
+      - [0x11419, .data, code]
+      - [0x31441, .data, code7]
+      - [0x31451, .data, code2]
+  - [0x39868]

@@ -57,7 +57,6 @@ typedef union
 
 extern s32 g_previousGameState;
 extern s32 g_textBufferAddr;
-extern s8 g_TextBuffer[];
 
 /**
  * Lookup table for test pattern sizes, used in DrawSymmetricTestPattern. Contains 16 pairs of width/height values.
@@ -65,29 +64,9 @@ extern s8 g_TextBuffer[];
 extern u8 g_testPatternSizeTable[][2];
 
 /**
- * Global cursor pointing to the current position in the text buffer for glyph rendering.
- */
-extern s32 g_glyphBufferCursor;
-
-/**
- * Global character cache for text rendering, storing up to 256 glyph entries.
- * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
- */
-extern GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
-
-/**
- * X coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
- */
-extern s32 g_glyphAtlasX;
-
-/**
  * Y coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
  */
 extern s32 g_glyphAtlasY;
-
-extern s32 g_textCursorX;
-extern s32 g_textCursorY;
-extern s32 g_textOriginX;
 
 const u32 D_8004FCC4[15] = {
     0xA790AD8B, 0xB997498F, 0xDC82B582, 0xBD82B582, 0x960A4281, 0x82CC917B, 0x91FC89AA, 0x82B382A2,
@@ -96,18 +75,11 @@ const u32 D_8004FCC4[15] = {
 
 extern s32 D_8005D060;
 extern u32 D_80052428;
-extern s32 D_80061088;
 extern u8 D_8005D088;
 extern s32 D_8005D068[4];
 extern s32 D_8005D078[3];
-extern s32 D_800610A0;
-extern s32 D_80061094;
-extern s32 D_80061098;
 extern u8 D_8005B744[];
 extern u8 D_801ED600;
-extern s32 D_80061090;
-extern s32 D_800610A4;
-extern s32 D_800610A8;
 extern s32 D_8005CFE8;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
@@ -121,11 +93,8 @@ extern u8 D_8005CF90[];
 extern u8 D_8005CF92[];
 extern s32 D_8005CFEC;
 extern u8 D_8005CF93[];
-extern u8 D_800810B8[2];
 extern u8 D_8005CFE2;
-extern s32 D_800810B4;
 extern u8 D_8005CFE1[2];
-extern s32 D_800810B0;
 
 typedef struct
 {
