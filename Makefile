@@ -272,9 +272,12 @@ STAGE_DIRS := src asm include linker tools assets
 #                              (use for non-matching stubs that use INCLUDE_ASM)
 
 OVERLAYS += checkps
-overlay_checkps_asset    := assets/checkps.bin
-overlay_checkps_gcc_srcs := src/overlays/checkps/code3.c
-overlay_checkps_gnu_srcs := src/overlays/checkps/code4.c src/overlays/checkps/code5.c src/overlays/checkps/code6.c src/overlays/checkps/code7.c
+overlay_checkps_asset      := assets/checkps.bin
+overlay_checkps_gcc_srcs   := src/overlays/checkps/code3.c
+overlay_checkps_gnu_srcs   := src/overlays/checkps/code4.c src/overlays/checkps/code5.c src/overlays/checkps/code6.c src/overlays/checkps/code7.c
+# data.c is compiled (provides base/data.o for objdiff) but NOT linked —
+# the binary's rodata comes from the assembled data.rodata.s reference instead.
+overlay_checkps_nolink_srcs := src/overlays/checkps/data.c
 
 OVERLAYS += movie
 
@@ -484,6 +487,12 @@ $(1)_GNU_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DI
 $(1)_CDK_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CDK_SRCS))
 $(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS) $$($(1)_GNU_OBJS)
 
+# Files compiled for objdiff but excluded from the overlay link (e.g. to avoid
+# duplicate-symbol conflicts when the same data lives in a .rodata.s reference).
+$(1)_NOLINK_SRCS := $$(overlay_$(1)_nolink_srcs)
+$(1)_NOLINK_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_NOLINK_SRCS))
+$(1)_LINK_OBJS   := $$(filter-out $$($(1)_NOLINK_OBJS),$$($(1)_C_OBJS))
+
 # ── Binary asset (only if overlay_<name>_asset is defined) ──
 $(1)_ASSET_SRC := $$(overlay_$(1)_asset)
 $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
@@ -522,7 +531,7 @@ $$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(
 		-T $$($(1)_LINK_DIR)/$(1).ld \
 		-T $$($(1)_LINK_DIR)/undefined_funcs_auto.txt \
 		-T $$($(1)_LINK_DIR)/undefined_syms_auto.txt \
-		$$(patsubst $(STAGING)/%,%,$$($(1)_C_OBJS)) \
+		$$(patsubst $(STAGING)/%,%,$$($(1)_LINK_OBJS)) \
 		-Map $$($(1)_BUILD_DIR)/$(1).map
 	@echo "Linked overlay: $(1)"
 
@@ -561,6 +570,21 @@ endef
 # This line loops over OVERLAYS and calls the template above for each one.
 # $(eval) tells Make to treat the output as real Makefile syntax.
 $(foreach ov,$(OVERLAYS),$(eval $(call overlay-rules,$(ov))))
+
+# ── Overlay-specific rodata target objects ──────────────────────────────────
+#
+# The `data` segment for checkps uses .rodata type in the yaml (linking from
+# data.c), so splat does not assemble a .s file for it.  We keep
+# data.rodata.s on disk as the reference disassembly and assemble it
+# explicitly here so objdiff has a target to compare data.o against.
+
+$(STAGING)/build/overlays/checkps/target/data.o: $(COPY_SENTINEL)
+	@mkdir -p $(@D)
+	cd $(STAGING) && cat asm/overlays/checkps/data/data.rodata.s | \
+		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o build/overlays/checkps/target/data.o
+
+checkps-target-objects: $(STAGING)/build/overlays/checkps/target/data.o
 
 # ── Aggregate overlay targets ──
 overlays: $(OVERLAYS)

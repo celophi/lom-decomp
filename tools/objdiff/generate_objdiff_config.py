@@ -24,6 +24,13 @@ OUTPUT_PATH = PROJECT_ROOT / "objdiff.json"
 # SDK files are not our code — skip them in progress tracking
 SKIP_PATHS = {"psyq"}
 
+# Per-overlay set of rodata segment names that have a compiled C counterpart.
+# These are built via nolink_srcs in the Makefile (compiled for objdiff but
+# excluded from the overlay link to avoid duplicate-symbol conflicts).
+OVERLAY_NOLINK_SRCS: dict[str, set[str]] = {
+    "checkps": {"data"},
+}
+
 
 def load_yaml(path: Path) -> dict:
     with open(path, "r") as f:
@@ -38,6 +45,22 @@ def extract_c_subsegments(config: dict) -> list[str]:
             continue
         for subseg in segment.get("subsegments", []):
             if isinstance(subseg, list) and len(subseg) >= 3 and subseg[1] == "c":
+                names.append(subseg[2])
+    return names
+
+
+def extract_rodata_subsegments(config: dict) -> list[str]:
+    """Pull out file names from [offset, 'rodata', name] subsegment entries.
+
+    These are binary-extracted .rodata.s references that also have a compiled
+    C counterpart built via nolink_srcs (compiled for objdiff but not linked).
+    """
+    names = []
+    for segment in config.get("segments", []):
+        if not isinstance(segment, dict):
+            continue
+        for subseg in segment.get("subsegments", []):
+            if isinstance(subseg, list) and len(subseg) >= 3 and subseg[1] == "rodata":
                 names.append(subseg[2])
     return names
 
@@ -70,6 +93,8 @@ def build_overlay_units(config: dict, overlay_name: str) -> list[dict]:
     build_path = options.get("build_path", f"build/overlays/{overlay_name}")
     src_path = options.get("src_path", f"src/overlays/{overlay_name}")
 
+    nolink = OVERLAY_NOLINK_SRCS.get(overlay_name, set())
+
     units = []
     for name in extract_c_subsegments(config):
         if should_skip(name):
@@ -82,6 +107,21 @@ def build_overlay_units(config: dict, overlay_name: str) -> list[dict]:
                 "progress_categories": [overlay_name],
             },
         })
+
+    # Also emit units for rodata segments that have a compiled C counterpart
+    # (built via nolink_srcs in the Makefile).
+    for name in extract_rodata_subsegments(config):
+        if should_skip(name) or name not in nolink:
+            continue
+        units.append({
+            "name": f"{overlay_name}/{name}",
+            "target_path": f"{build_path}/target/{name}.o",
+            "base_path": f"{build_path}/{src_path}/{name}.o",
+            "metadata": {
+                "progress_categories": [overlay_name],
+            },
+        })
+
     return units
 
 
