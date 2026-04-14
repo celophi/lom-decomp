@@ -121,6 +121,7 @@ loop:
         case 1:
         {
             u8* p = D_8005CFE1;
+
             new_var5 = 1;
             h = ((p[0] >> 4) * 10) + (p[0] & 0xF);
             m = (((p[1] >> 4) * 5) * 2) + (p[1] & 0xF);
@@ -528,20 +529,21 @@ loop:
         state = func_8005144C(0);
         switch (state)
         {
+        case 1:
+            D_8005CFE8 = (u32)state;
+
         case -1:
             D_8005CFE8 = 1;
             state = -1;
             break;
-
         case -2:
             func_80051620(0);
             state = 0x10;
             break;
 
-        case 1:
-            D_8005CFE8 = (u32)state;
-
         case 0:
+            state = 0x10;
+            break;
 
         default:
             state = 0x10;
@@ -564,10 +566,12 @@ loop:
             state = -1;
             break;
 
+        case 0:
+            state = 0x12;
+            break;
+
         case 1:
             D_8005CFE8 = 0;
-
-        case 0:
 
         default:
             state = 0x12;
