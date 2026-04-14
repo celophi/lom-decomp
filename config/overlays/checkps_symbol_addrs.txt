@@ -575,7 +575,7 @@ CD_DecompressBuffer = 0x80014A8C;
 g_testPatternVertexTable = 0x8004FD00;
 g_testPatternVertexTablePadding = 0x8004FD08;
 g_testPatternSizeTable = 0x8005CFF0;
-g_textBufferAddr = 0x8005D054;
+g_textureCacheResetData = 0x8005D054;
 g_TextBuffer = 0x800810C0;
 g_characterCache = 0x800890C0;
 g_glyphBufferCursor = 0x800894C8;
@@ -587,6 +587,7 @@ g_textOriginX = 0x800894CC;
 g_D_800610AC = 0x800610AC;
 D_8006109C = 0x8006109C;
 D_8006108C = 0x8006108C;
+D_8005D064 = 0x8005D064;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;

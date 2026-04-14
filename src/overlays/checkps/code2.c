@@ -1,28 +1,34 @@
 #include "checkps.h"
 
-s8 g_TextBuffer[MAX_SHORT_VALUE + 1] = {0};
+u_long g_textureCacheResetData[] = {
+    0xFFFF0000,
+    0x0000BDEF,
+    0x00000000,
+};
+
+s8 g_TextBuffer[MAX_SHORT_VALUE + 1];
 
 /**
  * Global character cache for text rendering, storing up to 256 glyph entries.
  * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
  */
-GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES] = {0};
+GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
 
-s32 g_textCursorX = 0;
+s32 g_textCursorX;
 
-s32 g_textCursorY = 0;
+s32 g_textCursorY;
 
 /**
  * Global cursor pointing to the current position in the text buffer for glyph rendering.
  */
-s32 g_glyphBufferCursor = 0;
+s32 g_glyphBufferCursor;
 
-s32 g_textOriginX = 0;
+s32 g_textOriginX;
 
 /**
  * X coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
  */
-s32 g_glyphAtlasX = 0;
+s32 g_glyphAtlasX;
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/8Otmf
@@ -444,6 +450,5 @@ void ResetTextRenderer(void)
     clearRect.x = 0;
     clearRect.h = 1;
 
-    LoadImage(&clearRect, (u_long*)&g_textBufferAddr);
+    LoadImage(&clearRect, g_textureCacheResetData);
 }
-

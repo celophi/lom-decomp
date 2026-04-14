@@ -56,7 +56,6 @@ typedef union
 } GlyphCacheEntry;
 
 extern s32 g_previousGameState;
-extern s32 g_textBufferAddr;
 
 /**
  * Lookup table for test pattern sizes, used in DrawSymmetricTestPattern. Contains 16 pairs of width/height values.
@@ -73,11 +72,7 @@ const u32 D_8004FCC4[15] = {
     0x82C482EA, 0x0AE982A2, 0xBB82A882, 0xAA82EA82, 0xE882A082, 0xB782DC82, 0x00004281,
 };
 
-extern s32 D_8005D060;
 extern u32 D_80052428;
-extern u8 D_8005D088;
-extern s32 D_8005D068[4];
-extern s32 D_8005D078[3];
 extern u8 D_8005B744[];
 extern u8 D_801ED600;
 extern s32 D_8005CFE8;
