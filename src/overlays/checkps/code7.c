@@ -152,20 +152,18 @@ loop:
 
     case 5:
     {
-        u8* p0;
-        u8* p1;
+        u8* base;
         state = func_8005144C(0xC);
-        p1 = &D_8005CFE0.unk1;
-        p0 = (u8*)((u32)(&D_8005CFE0)->unk0);
+        base = (u8*)&D_8005CFE0;
         switch (state)
         {
         case -1:
-            if (!(p0[0] & 1))
+            if (!(base[0] & 1))
             {
                 D_8005CFE8 = 1;
                 state = -1;
             }
-            else if ((*p1) & 0x40)
+            else if (base[1] & 0x40)
             {
                 u8* dst = D_8005CFD8;
                 state = 5;
