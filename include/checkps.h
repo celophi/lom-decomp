@@ -75,7 +75,7 @@ const u32 D_8004FCC4[15] = {
 extern u32 D_80052428;
 extern u8 D_8005B744[];
 extern u8 D_801ED600;
-extern s32 D_8005CFE8;
+extern s32 g_checkPSState;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
 extern s8* D_8005CFC8;
