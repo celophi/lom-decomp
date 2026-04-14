@@ -75,7 +75,7 @@ loop:
             state = -1;
             break;
         case 1:
-            D_8005CFD8[0] = (D_800810B4 >= 2) ? 2 : 0;
+            gCmdBuf[0] = (D_800810B4 >= 2) ? 2 : 0;
             func_80051620(2);
             g_checkPSState = 4;
         /* fall through */
@@ -152,7 +152,7 @@ loop:
             }
             else if (base[1] & 0x40)
             {
-                u8* dst = D_8005CFD8;
+                u8* dst = gCmdBuf;
                 state = 5;
                 dst[2] = 0;
                 dst[0] = D_800810B8[0];
@@ -206,7 +206,7 @@ loop:
 
         case 1:
         {
-            u8* dst = D_8005CFD8;
+            u8* dst = gCmdBuf;
             dst[2] = 0;
             dst[0] = D_800810B8[0];
             dst[1] = D_800810B8[1];
@@ -239,7 +239,7 @@ loop:
             break;
 
         case 1:
-            D_8005CFD8[0] = (u8)state;
+            gCmdBuf[0] = (u8)state;
             func_80051620(5);
             g_checkPSState = 8;
         /* fall through */
@@ -371,7 +371,7 @@ loop:
             break;
 
         case 1:
-            D_8005CFD8[0] = 4;
+            gCmdBuf[0] = 4;
             func_80051620(9);
             g_checkPSState = 0xD;
         /* fall through */
@@ -426,7 +426,7 @@ loop:
         new_var2 = VSync(-1);
         if ((D_800810B0 + 0xC8) < new_var2)
         {
-            D_8005CFD8[0] = 5;
+            gCmdBuf[0] = 5;
             func_80051620(0xA);
             g_checkPSState = 0xF;
         }

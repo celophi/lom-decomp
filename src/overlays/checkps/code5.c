@@ -114,7 +114,7 @@ void func_80051620(int arg0)
     {
         do
         {
-            *D_8005CFD0 = D_8005CFD8[j];
+            *D_8005CFD0 = gCmdBuf[j];
             j++;
         } while (j < D_8005CF91[idx]);
     }
