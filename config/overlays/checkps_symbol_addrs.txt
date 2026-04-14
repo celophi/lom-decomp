@@ -592,6 +592,10 @@ g_checkPSState = 0x8005CFE8;
 g_CmdBuf = 0x8005CFD8;
 g_statusFlag = 0x8005CFE0;
 g_RTCTimeBCD = 0x8005CFE1;
+g_clockMode = 0x8005CFE2;
+g_vsyncTimestamp = 0x800810B0;
+g_displayMode = 0x800810B4;
+g_timeBuffer = 0x800810B8;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;

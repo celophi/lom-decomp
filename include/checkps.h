@@ -88,7 +88,7 @@ extern u8 D_8005CF90[];
 extern u8 D_8005CF92[];
 extern s32 D_8005CFEC;
 extern u8 D_8005CF93[];
-extern u8 D_8005CFE2;
+extern u8 g_clockMode;
 extern u8 g_RTCTimeBCD[2];
 
 typedef struct

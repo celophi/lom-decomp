@@ -1,10 +1,10 @@
 #include "checkps.h"
 
-s32 D_800810B0 = 0;
+s32 g_vsyncTimestamp = 0;
 
-s32 D_800810B4 = 0;
+s32 g_displayMode = 0;
 
-u8 D_800810B8[2] = {0};
+u8 g_timeBuffer[2] = {0};
 
 /**
  * 68% match with GNU AS
@@ -48,7 +48,7 @@ loop:
             break;
 
         case 1:
-            D_800810B4 = D_8005CFE2;
+            g_displayMode = g_clockMode;
             state = 2;
             func_80051620(6);
             g_checkPSState = 3;
@@ -75,7 +75,7 @@ loop:
             state = -1;
             break;
         case 1:
-            g_CmdBuf[0] = (D_800810B4 >= 2) ? 2 : 0;
+            g_CmdBuf[0] = (g_displayMode >= 2) ? 2 : 0;
             func_80051620(2);
             g_checkPSState = 4;
         /* fall through */
@@ -119,11 +119,11 @@ loop:
             t = ((h * 60) + m) >> 1;
             hb = t / 60;
             mb = t % 60;
-            D_800810B8[0] = hb;
-            D_800810B8[1] = mb;
+            g_timeBuffer[0] = hb;
+            g_timeBuffer[1] = mb;
             hb = 7;
-            D_800810B8[0] = ((D_800810B8[0] / 10) << 4) | (D_800810B8[0] % 10);
-            D_800810B8[1] = ((D_800810B8[1] / 10) << 4) | (D_800810B8[0] % 10);
+            g_timeBuffer[0] = ((g_timeBuffer[0] / 10) << 4) | (g_timeBuffer[0] % 10);
+            g_timeBuffer[1] = ((g_timeBuffer[1] / 10) << 4) | (g_timeBuffer[0] % 10);
             func_80051620(0xC);
             state = hb;
             g_checkPSState = 5;
@@ -155,8 +155,8 @@ loop:
                 u8* dst = g_CmdBuf;
                 state = 5;
                 dst[2] = 0;
-                dst[0] = D_800810B8[0];
-                dst[1] = D_800810B8[1];
+                dst[0] = g_timeBuffer[0];
+                dst[1] = g_timeBuffer[1];
                 func_80051620(3);
                 g_checkPSState = 7;
             }
@@ -208,8 +208,8 @@ loop:
         {
             u8* dst = g_CmdBuf;
             dst[2] = 0;
-            dst[0] = D_800810B8[0];
-            dst[1] = D_800810B8[1];
+            dst[0] = g_timeBuffer[0];
+            dst[1] = g_timeBuffer[1];
             func_80051620(3);
             g_checkPSState = 7;
             state = 6;
@@ -270,7 +270,7 @@ loop:
             break;
 
         case 1:
-            D_800810B0 = VSync(-1);
+            g_vsyncTimestamp = VSync(-1);
             g_checkPSState = 9;
         /* fall through */
         case 0:
@@ -292,7 +292,7 @@ loop:
 
     case 9:
         state = 9;
-        new_var2 = (D_800810B0 + 3) < VSync(-1);
+        new_var2 = (g_vsyncTimestamp + 3) < VSync(-1);
         if (new_var2)
         {
             func_80051620(4);
@@ -402,7 +402,7 @@ loop:
             break;
 
         case 1:
-            D_800810B0 = VSync(-1);
+            g_vsyncTimestamp = VSync(-1);
             g_checkPSState = 0xE;
         /* fall through */
         case 0:
@@ -424,7 +424,7 @@ loop:
 
     case 14:
         new_var2 = VSync(-1);
-        if ((D_800810B0 + 0xC8) < new_var2)
+        if ((g_vsyncTimestamp + 0xC8) < new_var2)
         {
             g_CmdBuf[0] = 5;
             func_80051620(0xA);
@@ -450,7 +450,7 @@ loop:
             }
             else
             {
-                D_800810B0 = VSync(-1);
+                g_vsyncTimestamp = VSync(-1);
                 g_checkPSState = 0x13;
             }
         /* fall through */
@@ -561,7 +561,7 @@ loop:
 
     case 19:
         new_var2 = VSync(-1);
-        if ((D_800810B0 + 0xA) < new_var2)
+        if ((g_vsyncTimestamp + 0xA) < new_var2)
         {
             func_80051620(0xB);
             g_checkPSState = 0x12;
