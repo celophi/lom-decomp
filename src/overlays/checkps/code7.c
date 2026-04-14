@@ -13,18 +13,13 @@ u8 D_800810B8[2] = {0};
 s32 func_80050B14(s32 arg0)
 {
     s32 new_var2;
-    s32 state;
+    s32 state = 0;
     s32 h;
-    int new_var4;
     s32 m;
-    volatile unsigned int new_var5;
     s32 t;
-    int new_var3;
-    u8* new_var;
-    u8 hb;
-    unsigned char mb;
+    s32 hb;
+    s32 mb;
 
-    state = 0;
 loop:
     switch (D_8005CFE8)
     {
@@ -79,13 +74,12 @@ loop:
             D_8005CFE8 = 1;
             state = -1;
             break;
-        case 0:
-            state = 3;
-            break;
         case 1:
             D_8005CFD8[0] = (D_800810B4 >= 2) ? 2 : 0;
             func_80051620(2);
             D_8005CFE8 = 4;
+        /* fall through */
+        case 0:
             state = 3;
             break;
         case -2:
@@ -120,11 +114,8 @@ loop:
 
         case 1:
         {
-            u8* p = D_8005CFE1;
-
-            new_var5 = 1;
-            h = ((p[0] >> 4) * 10) + (p[0] & 0xF);
-            m = (((p[1] >> 4) * 5) * 2) + (p[1] & 0xF);
+            h = ((D_8005CFE1[0] >> 4) * 10) + (D_8005CFE1[0] & 0xF);
+            m = (((D_8005CFE1[1] >> 4) * 5) * 2) + (D_8005CFE1[1] & 0xF);
             t = ((h * 60) + m) >> 1;
             hb = t / 60;
             mb = t % 60;
@@ -132,7 +123,7 @@ loop:
             D_800810B8[1] = mb;
             hb = 7;
             D_800810B8[0] = ((D_800810B8[0] / 10) << 4) | (D_800810B8[0] % 10);
-            D_800810B8[1] = ((D_800810B8[1] / 10) << 4) | (D_800810B8[new_var5] % 10);
+            D_800810B8[1] = ((D_800810B8[1] / 10) << 4) | (D_800810B8[0] % 10);
             func_80051620(0xC);
             state = hb;
             D_8005CFE8 = 5;
@@ -247,14 +238,12 @@ loop:
             state = -1;
             break;
 
-        case 0:
-            state = 7;
-            break;
-
         case 1:
             D_8005CFD8[0] = (u8)state;
             func_80051620(5);
             D_8005CFE8 = 8;
+        /* fall through */
+        case 0:
             state = 7;
             break;
 
@@ -280,13 +269,11 @@ loop:
             state = -1;
             break;
 
-        case 0:
-            state = 8;
-            break;
-
         case 1:
             D_800810B0 = VSync(-1);
             D_8005CFE8 = 9;
+        /* fall through */
+        case 0:
             state = 8;
             break;
 
@@ -323,13 +310,11 @@ loop:
             state = -1;
             break;
 
-        case 0:
-            state = 0xA;
-            break;
-
         case 1:
             func_80051620(7);
             D_8005CFE8 = 0xB;
+        /* fall through */
+        case 0:
             state = 0xA;
             break;
 
@@ -355,13 +340,11 @@ loop:
             state = -1;
             break;
 
-        case 0:
-            state = 0xB;
-            break;
-
         case 1:
             func_80051620(8);
             D_8005CFE8 = 0xC;
+        /* fall through */
+        case 0:
             state = 0xB;
             break;
 
@@ -387,14 +370,12 @@ loop:
             state = -1;
             break;
 
-        case 0:
-            state = 0xC;
-            break;
-
         case 1:
             D_8005CFD8[0] = 4;
             func_80051620(9);
             D_8005CFE8 = 0xD;
+        /* fall through */
+        case 0:
             state = 0xC;
             break;
 
@@ -420,13 +401,11 @@ loop:
             state = -1;
             break;
 
-        case 0:
-            state = 0xD;
-            break;
-
         case 1:
             D_800810B0 = VSync(-1);
             D_8005CFE8 = 0xE;
+        /* fall through */
+        case 0:
             state = 0xD;
             break;
 
@@ -463,10 +442,6 @@ loop:
             state = -1;
             break;
 
-        case 0:
-            state = 0xF;
-            break;
-
         case 1:
             if (D_8005CFE1[0] != 0)
             {
@@ -478,6 +453,8 @@ loop:
                 D_800810B0 = VSync(-1);
                 D_8005CFE8 = 0x13;
             }
+        /* fall through */
+        case 0:
             state = 0xF;
             break;
 
@@ -531,6 +508,8 @@ loop:
         {
         case 1:
             D_8005CFE8 = (u32)state;
+            state = 0x10;
+            break;
 
         case -1:
             D_8005CFE8 = 1;
