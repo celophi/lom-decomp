@@ -589,7 +589,8 @@ D_8006109C = 0x8006109C;
 D_8006108C = 0x8006108C;
 D_8005D064 = 0x8005D064;
 g_checkPSState = 0x8005CFE8;
-gCmdBuf = 0x8005CFD8;
+g_CmdBuf = 0x8005CFD8;
+g_statusFlag = 0x8005CFE0;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
