@@ -21,7 +21,7 @@ s32 func_80050B14(s32 arg0)
     s32 mb;
 
 loop:
-    switch (D_8005CFE8)
+    switch (g_checkPSState)
     {
     case 0:
         state = 0;
@@ -29,7 +29,7 @@ loop:
 
     case 1:
         func_80051620(1);
-        D_8005CFE8 = 2;
+        g_checkPSState = 2;
         state = 1;
         break;
 
@@ -39,7 +39,7 @@ loop:
         {
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = 2;
             break;
 
@@ -51,7 +51,7 @@ loop:
             D_800810B4 = D_8005CFE2;
             state = 2;
             func_80051620(6);
-            D_8005CFE8 = 3;
+            g_checkPSState = 3;
             break;
 
         case -1:
@@ -71,20 +71,20 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
         case 1:
             D_8005CFD8[0] = (D_800810B4 >= 2) ? 2 : 0;
             func_80051620(2);
-            D_8005CFE8 = 4;
+            g_checkPSState = 4;
         /* fall through */
         case 0:
             state = 3;
             break;
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
         default:
@@ -98,13 +98,13 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -126,7 +126,7 @@ loop:
             D_800810B8[1] = ((D_800810B8[1] / 10) << 4) | (D_800810B8[0] % 10);
             func_80051620(0xC);
             state = hb;
-            D_8005CFE8 = 5;
+            g_checkPSState = 5;
             break;
         }
 
@@ -147,7 +147,7 @@ loop:
         case -1:
             if (!(base[0] & 1))
             {
-                D_8005CFE8 = 1;
+                g_checkPSState = 1;
                 state = -1;
             }
             else if (base[1] & 0x40)
@@ -158,7 +158,7 @@ loop:
                 dst[0] = D_800810B8[0];
                 dst[1] = D_800810B8[1];
                 func_80051620(3);
-                D_8005CFE8 = 7;
+                g_checkPSState = 7;
             }
             break;
 
@@ -168,13 +168,13 @@ loop:
 
         case 1:
             func_80051620(0xD);
-            D_8005CFE8 = 6;
+            g_checkPSState = 6;
             state = 5;
             break;
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -211,14 +211,14 @@ loop:
             dst[0] = D_800810B8[0];
             dst[1] = D_800810B8[1];
             func_80051620(3);
-            D_8005CFE8 = 7;
+            g_checkPSState = 7;
             state = 6;
             break;
         }
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -234,14 +234,14 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
         case 1:
             D_8005CFD8[0] = (u8)state;
             func_80051620(5);
-            D_8005CFE8 = 8;
+            g_checkPSState = 8;
         /* fall through */
         case 0:
             state = 7;
@@ -249,7 +249,7 @@ loop:
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -265,13 +265,13 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
         case 1:
             D_800810B0 = VSync(-1);
-            D_8005CFE8 = 9;
+            g_checkPSState = 9;
         /* fall through */
         case 0:
             state = 8;
@@ -279,7 +279,7 @@ loop:
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -296,7 +296,7 @@ loop:
         if (new_var2)
         {
             func_80051620(4);
-            D_8005CFE8 = 0xA;
+            g_checkPSState = 0xA;
         }
         state = 9;
         break;
@@ -306,13 +306,13 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
         case 1:
             func_80051620(7);
-            D_8005CFE8 = 0xB;
+            g_checkPSState = 0xB;
         /* fall through */
         case 0:
             state = 0xA;
@@ -320,7 +320,7 @@ loop:
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -336,13 +336,13 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
         case 1:
             func_80051620(8);
-            D_8005CFE8 = 0xC;
+            g_checkPSState = 0xC;
         /* fall through */
         case 0:
             state = 0xB;
@@ -350,7 +350,7 @@ loop:
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -366,14 +366,14 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
         case 1:
             D_8005CFD8[0] = 4;
             func_80051620(9);
-            D_8005CFE8 = 0xD;
+            g_checkPSState = 0xD;
         /* fall through */
         case 0:
             state = 0xC;
@@ -381,7 +381,7 @@ loop:
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -397,13 +397,13 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
         case 1:
             D_800810B0 = VSync(-1);
-            D_8005CFE8 = 0xE;
+            g_checkPSState = 0xE;
         /* fall through */
         case 0:
             state = 0xD;
@@ -411,7 +411,7 @@ loop:
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -428,7 +428,7 @@ loop:
         {
             D_8005CFD8[0] = 5;
             func_80051620(0xA);
-            D_8005CFE8 = 0xF;
+            g_checkPSState = 0xF;
         }
         state = 0xE;
         break;
@@ -438,7 +438,7 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
@@ -446,12 +446,12 @@ loop:
             if (D_8005CFE1[0] != 0)
             {
                 func_80051620(0);
-                D_8005CFE8 = 0x10;
+                g_checkPSState = 0x10;
             }
             else
             {
                 D_800810B0 = VSync(-1);
-                D_8005CFE8 = 0x13;
+                g_checkPSState = 0x13;
             }
         /* fall through */
         case 0:
@@ -460,7 +460,7 @@ loop:
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -476,7 +476,7 @@ loop:
         switch (state)
         {
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
@@ -491,7 +491,7 @@ loop:
 
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
 
@@ -507,12 +507,12 @@ loop:
         switch (state)
         {
         case 1:
-            D_8005CFE8 = (u32)state;
+            g_checkPSState = (u32)state;
             state = 0x10;
             break;
 
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
         case -2:
@@ -537,11 +537,11 @@ loop:
         {
         case -2:
             func_80051620(0);
-            D_8005CFE8 = 0x11;
+            g_checkPSState = 0x11;
             state = -1;
             break;
         case -1:
-            D_8005CFE8 = 1;
+            g_checkPSState = 1;
             state = -1;
             break;
 
@@ -550,7 +550,7 @@ loop:
             break;
 
         case 1:
-            D_8005CFE8 = 0;
+            g_checkPSState = 0;
 
         default:
             state = 0x12;
@@ -564,7 +564,7 @@ loop:
         if ((D_800810B0 + 0xA) < new_var2)
         {
             func_80051620(0xB);
-            D_8005CFE8 = 0x12;
+            g_checkPSState = 0x12;
         }
         state = 0x13;
         break;
