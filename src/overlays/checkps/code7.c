@@ -23,17 +23,17 @@ s32 func_80050B14(s32 arg0)
 loop:
     switch (g_checkPSState)
     {
-    case 0:
+    case 0: /* Idle / reset */
         state = 0;
         break;
 
-    case 1:
+    case 1: /* Init — show opening screen, advance to state 2 */
         func_80051620(1);
         g_checkPSState = 2;
         state = 1;
         break;
 
-    case 2:
+    case 2: /* Wait for response on screen 1; on confirm, latch clock mode and show screen 6 */
         state = func_8005144C(1);
         switch (state)
         {
@@ -66,7 +66,7 @@ loop:
 
         break;
 
-    case 3:
+    case 3: /* Wait for response on screen 6; on confirm, set command byte from display mode and show screen 2 */
         state = func_8005144C(6);
         switch (state)
         {
@@ -93,7 +93,7 @@ loop:
         }
         break;
 
-    case 4:
+    case 4: /* Wait for response on screen 2; on confirm, decode RTC BCD time into g_timeBuffer (halved) and show screen 0xC */
         state = func_8005144C(2);
         switch (state)
         {
@@ -137,7 +137,7 @@ loop:
 
         break;
 
-    case 5:
+    case 5: /* Wait for screen 0xC; on confirm button (statusFlag bit 6), fill g_CmdBuf with encoded time and send */
     {
         u8* base;
         state = func_8005144C(0xC);
@@ -186,7 +186,7 @@ loop:
         break;
     }
 
-    case 6:
+    case 6: /* Wait for screen 0xD; on confirm, fill g_CmdBuf with encoded time and send */
         h = func_8005144C(0xD);
         state = h;
         switch (state)
@@ -229,7 +229,7 @@ loop:
 
         break;
 
-    case 7:
+    case 7: /* Wait for screen 3 response; on confirm, set g_CmdBuf[0]=1 and show screen 5 */
         state = func_8005144C(3);
         switch (state)
         {
@@ -260,7 +260,7 @@ loop:
 
         break;
 
-    case 8:
+    case 8: /* Wait for screen 5 response; on confirm, record vsync timestamp and advance */
         state = func_8005144C(5);
         switch (state)
         {
@@ -290,7 +290,7 @@ loop:
 
         break;
 
-    case 9:
+    case 9: /* Wait 3 vsyncs, then show screen 4 */
         state = 9;
         new_var2 = (g_vsyncTimestamp + 3) < VSync(-1);
         if (new_var2)
@@ -301,7 +301,7 @@ loop:
         state = 9;
         break;
 
-    case 10:
+    case 10: /* Wait for screen 4 response; on confirm, show screen 7 */
         state = func_8005144C(4);
         switch (state)
         {
@@ -331,7 +331,7 @@ loop:
 
         break;
 
-    case 11:
+    case 11: /* Wait for screen 7 response; on confirm, show screen 8 */
         state = func_8005144C(7);
         switch (state)
         {
@@ -361,7 +361,7 @@ loop:
 
         break;
 
-    case 12:
+    case 12: /* Wait for screen 8 response; on confirm, set g_CmdBuf[0]=4 and show screen 9 */
         state = func_8005144C(8);
         switch (state)
         {
@@ -392,7 +392,7 @@ loop:
 
         break;
 
-    case 13:
+    case 13: /* Wait for screen 9 response; on confirm, record vsync timestamp and advance */
         state = func_8005144C(9);
         switch (state)
         {
@@ -422,7 +422,7 @@ loop:
 
         break;
 
-    case 14:
+    case 14: /* Wait ~200 vsyncs (~3.3s), then set g_CmdBuf[0]=5 and show screen 0xA */
         new_var2 = VSync(-1);
         if ((g_vsyncTimestamp + 0xC8) < new_var2)
         {
@@ -433,7 +433,7 @@ loop:
         state = 0xE;
         break;
 
-    case 15:
+    case 15: /* Wait for screen 0xA response; on confirm, branch on whether RTC hours is nonzero */
         state = func_8005144C(0xA);
         switch (state)
         {
@@ -471,7 +471,7 @@ loop:
 
         break;
 
-    case 16:
+    case 16: /* Wait for screen 0 response */
         state = func_8005144C(0);
         switch (state)
         {
@@ -502,7 +502,7 @@ loop:
 
         break;
 
-    case 17:
+    case 17: /* Wait for screen 0 response (retry path); on confirm, restart state machine from state 1 */
         state = func_8005144C(0);
         switch (state)
         {
@@ -531,7 +531,7 @@ loop:
 
         break;
 
-    case 18:
+    case 18: /* Wait for screen 0xB response; on confirm, reset state machine to state 0 */
         state = func_8005144C(0xB);
         switch (state)
         {
@@ -559,7 +559,7 @@ loop:
 
         break;
 
-    case 19:
+    case 19: /* Wait 10 vsyncs, then show screen 0xB */
         new_var2 = VSync(-1);
         if ((g_vsyncTimestamp + 0xA) < new_var2)
         {
