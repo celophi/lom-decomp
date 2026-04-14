@@ -114,8 +114,8 @@ loop:
 
         case 1:
         {
-            h = ((D_8005CFE1[0] >> 4) * 10) + (D_8005CFE1[0] & 0xF);
-            m = (((D_8005CFE1[1] >> 4) * 5) * 2) + (D_8005CFE1[1] & 0xF);
+            h = ((g_RTCTimeBCD[0] >> 4) * 10) + (g_RTCTimeBCD[0] & 0xF);
+            m = (((g_RTCTimeBCD[1] >> 4) * 5) * 2) + (g_RTCTimeBCD[1] & 0xF);
             t = ((h * 60) + m) >> 1;
             hb = t / 60;
             mb = t % 60;
@@ -443,7 +443,7 @@ loop:
             break;
 
         case 1:
-            if (D_8005CFE1[0] != 0)
+            if (g_RTCTimeBCD[0] != 0)
             {
                 func_80051620(0);
                 g_checkPSState = 0x10;
