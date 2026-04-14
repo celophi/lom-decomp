@@ -82,7 +82,7 @@ extern s8* D_8005CFC8;
 extern s8* D_8005CFD4;
 extern u8* D_8005CFD0;
 extern u8 D_8005CF91[];
-extern u8 D_8005CFD8[];
+extern u8 D_8005CFD8[3];
 extern u8* D_8005CFCC;
 extern u8 D_8005CF90[];
 extern u8 D_8005CF92[];
