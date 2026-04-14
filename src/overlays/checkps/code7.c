@@ -19,11 +19,11 @@ s32 func_80050B14(s32 arg0)
     s32 m;
     volatile unsigned int new_var5;
     s32 t;
-    volatile int new_var3;
+    int new_var3;
     u8* new_var;
     u8 hb;
     unsigned char mb;
-    ;
+
     state = 0;
 loop:
     switch (D_8005CFE8)
@@ -35,7 +35,7 @@ loop:
     case 1:
         func_80051620(1);
         D_8005CFE8 = 2;
-        state = 1 & 0xFFu;
+        state = 1;
         break;
 
     case 2:
@@ -79,29 +79,24 @@ loop:
             D_8005CFE8 = 1;
             state = -1;
             break;
-
         case 0:
             state = 3;
             break;
-
         case 1:
-            D_8005CFD8[0] = (D_800810B4 >= 2) ? (2) : (0);
+            D_8005CFD8[0] = (D_800810B4 >= 2) ? 2 : 0;
             func_80051620(2);
             D_8005CFE8 = 4;
             state = 3;
             break;
-
         case -2:
             func_80051620(0);
             D_8005CFE8 = 0x11;
             state = -1;
             break;
-
         default:
             state = 3;
             break;
         }
-
         break;
 
     case 4:
@@ -559,14 +554,13 @@ loop:
         state = func_8005144C(0xB);
         switch (state)
         {
-        case -1:
-            D_8005CFE8 = 1;
-            state = -1;
-            break;
-
         case -2:
             func_80051620(0);
             D_8005CFE8 = 0x11;
+            state = -1;
+            break;
+        case -1:
+            D_8005CFE8 = 1;
             state = -1;
             break;
 
