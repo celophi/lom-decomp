@@ -19,7 +19,14 @@
 #define GLYPH_CACHED_FLAG 0x10000
 
 /**
- * Remap of raw button bits from the controller's buttonData to the internal representation used by the game.
+ * Button bit masks for the game's internal controller state (g_lastInputState / g_debouncedInput).
+ *
+ * These differ from the raw PSX hardware bit positions. The SCD driver stores
+ * the two controller bytes in reversed order, so UpdateControllerInput byte-swaps
+ * buttonData first. The face button bits (4-7) are then remapped so the hardware
+ * order (Triangle, Circle, Cross, Square) becomes (Square, Cross, Circle, Triangle).
+ *
+ * Set bit = button pressed.
  */
 typedef enum {
     SQUARE   = 0x0010,
