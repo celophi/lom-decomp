@@ -36,7 +36,7 @@ typedef struct
     u8 unk1;
 } D_8005CFE0_t;
 
-extern D_8005CFE0_t D_8005CFE0;
+extern D_8005CFE0_t g_statusFlag;
 
 /**
  * Represents a single glyph's entry in the text cache, storing its ID and validity flag
@@ -75,21 +75,21 @@ const u32 D_8004FCC4[15] = {
 extern u32 D_80052428;
 extern u8 D_8005B744[];
 extern u8 D_801ED600;
-extern s32 D_8005CFE8;
+extern s32 g_checkPSState;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
 extern s8* D_8005CFC8;
 extern s8* D_8005CFD4;
 extern u8* D_8005CFD0;
 extern u8 D_8005CF91[];
-extern u8 D_8005CFD8[3];
+extern u8 g_CmdBuf[3];
 extern u8* D_8005CFCC;
 extern u8 D_8005CF90[];
 extern u8 D_8005CF92[];
 extern s32 D_8005CFEC;
 extern u8 D_8005CF93[];
-extern u8 D_8005CFE2;
-extern u8 D_8005CFE1[2];
+extern u8 g_clockMode;
+extern u8 g_RTCTimeBCD[2];
 
 typedef struct
 {
