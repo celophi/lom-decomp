@@ -554,7 +554,25 @@ s32 PollInputDevice(void)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/BkOv2
+ * @brief Reads controller hardware state and updates the debounced input globals.
+ *
+ * @details Reads the SCD registers at 0x801ED600 and transforms the raw button data
+ * into the game's internal format using the same byte-swap and face button remap as
+ * UpdateControllerInput. If deviceState is >= 0xFE (no controller present), the button
+ * state is forced to zero. Analog stick axes are thresholded and OR'd into the same
+ * D-pad bit positions if an analog controller is connected (deviceState != 0).
+ *
+ * After building the button state, debounce and key-repeat logic is applied:
+ * - New button press: written immediately to g_debouncedInput and g_lastInputState,
+ *   repeat timer reset to 15.
+ * - Held button: only directional bits (0xF000) are kept; g_debouncedInput is set once
+ *   the repeat timer counts down to zero, then resets to 2.
+ * - No input: g_debouncedInput, g_lastInputState, and g_inputRepeatTimer are all cleared.
+ *
+ * @param void No parameters.
+ * @return void No return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/BkOv2
  */
 void ProcessControllerInput(void)
 {
@@ -566,19 +584,24 @@ void ProcessControllerInput(void)
 
     controllerRegs = (SCDRegs*)0x801ED600;
 
+    // 0xFF = no controller (High-Z, pins floating); 
+    // 0xFE = probably a defensive boundary just to be safe?
     if (((u8)D_801ED600) >= 0xFEU)
     {
         finalButtonState = 0;
     }
     else
     {
-        // Swap high and low bytes of button data
+        // PSX sends face buttons in the high byte and D-pad in the low byte;
+        // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
         processedButtons = (controllerRegs->buttonData >> 8) | (controllerRegs->buttonData << 8);
 
-        // Re-map some button bits
-        processedButtons = (((((processedButtons & 0x40) >> 1) | ((processedButtons & 0x20) << 1)) |
-                             ((processedButtons & 0x80) >> 3)) |
-                            ((processedButtons & 0x10) << 3)) |
+        // Reorder face button bits 4-7 from hardware order (Triangle, Circle, Cross, Square)
+        // to game order (Square, Cross, Circle, Triangle) by swapping Triangle<->Square and Circle<->Cross.
+        // Keep D-pad and shoulder button bits (0-3, 8-15) unchanged.
+        processedButtons = (((((processedButtons & CIRCLE) >> 1) | ((processedButtons & CROSS) << 1)) |
+                             ((processedButtons & TRIANGLE) >> 3)) |
+                            ((processedButtons & SQUARE) << 3)) |
                            (processedButtons & ~0xF0);
 
         if (controllerRegs->deviceState != 0)
@@ -587,22 +610,22 @@ void ProcessControllerInput(void)
 
             if (axisX < -1)
             {
-                processedButtons |= 0x8000; // left
+                processedButtons |= LEFT;
             }
             else if (axisX >= 2)
             {
-                processedButtons |= 0x2000; // right
+                processedButtons |= RIGHT;
             }
 
             axisY = (s16)controllerRegs->axisY;
 
             if (axisY < -1)
             {
-                processedButtons |= 0x1000; // up
+                processedButtons |= UP;
             }
             else if (axisY >= 2)
             {
-                processedButtons |= 0x4000; // down
+                processedButtons |= DOWN;
             }
         }
         finalButtonState = processedButtons;
@@ -640,7 +663,7 @@ void ProcessControllerInput(void)
     {
         g_debouncedInput = finalButtonState;
         g_lastInputState = finalButtonState; // last button state
-        g_inputRepeatTimer = 0xF;            // input repeat timer max
+        g_inputRepeatTimer = 15;            // input repeat timer max
     }
 }
 
