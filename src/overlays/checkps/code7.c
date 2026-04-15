@@ -434,7 +434,7 @@ loop:
         break;
 
     case 15: /* Wait for screen 0xA response; on confirm, branch on whether RTC hours is nonzero */
-        state = func_8005144C(0xA);
+        state = func_8005144C(10);
         switch (state)
         {
         case -1:
@@ -446,26 +446,26 @@ loop:
             if (g_RTCTimeBCD[0] != 0)
             {
                 func_80051620(0);
-                g_checkPSState = 0x10;
+                g_checkPSState = 16;
             }
             else
             {
                 g_vsyncTimestamp = VSync(-1);
-                g_checkPSState = 0x13;
+                g_checkPSState = 19;
             }
         /* fall through */
         case 0:
-            state = 0xF;
+            state = 15;
             break;
 
         case -2:
             func_80051620(0);
-            g_checkPSState = 0x11;
+            g_checkPSState = 17;
             state = -1;
             break;
 
         default:
-            state = 0xF;
+            state = 15;
             break;
         }
 
@@ -481,22 +481,22 @@ loop:
             break;
 
         case 0:
-            state = 0x10;
+            state = 16;
             break;
 
         case 1:
-            state = 0x10;
+            state = 16;
             func_80051710();
             break;
 
         case -2:
             func_80051620(0);
-            g_checkPSState = 0x11;
+            g_checkPSState = 17;
             state = -1;
             break;
 
         default:
-            state = 0x10;
+            state = 16;
             break;
         }
 
@@ -508,7 +508,7 @@ loop:
         {
         case 1:
             g_checkPSState = (u32)state;
-            state = 0x10;
+            state = 16;
             break;
 
         case -1:
@@ -517,15 +517,15 @@ loop:
             break;
         case -2:
             func_80051620(0);
-            state = 0x10;
+            state = 16;
             break;
 
         case 0:
-            state = 0x10;
+            state = 16;
             break;
 
         default:
-            state = 0x10;
+            state = 16;
             break;
         }
 
@@ -561,12 +561,12 @@ loop:
 
     case 19: /* Wait 10 vsyncs, then show screen 0xB */
         new_var2 = VSync(-1);
-        if ((g_vsyncTimestamp + 0xA) < new_var2)
+        if ((g_vsyncTimestamp + 10) < new_var2)
         {
-            func_80051620(0xB);
-            g_checkPSState = 0x12;
+            func_80051620(11);
+            g_checkPSState = 18;
         }
-        state = 0x13;
+        state = 19;
         break;
 
     default:
