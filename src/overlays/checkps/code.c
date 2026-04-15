@@ -633,6 +633,8 @@ void ProcessControllerInput(void)
 
     g_debouncedInput = 0; // current active input
 
+    // 0x0B6F = L2 | R2 | L1 | R1 | Cross | Circle | Select | L3 | Start
+    // = 0x0001 | 0x0002 | 0x0004 | 0x0008 | 0x0020 | 0x0040 | 0x0100 | 0x0200 | 0x0800
     if (((finalButtonState == g_lastInputState) ||
          ((g_lastInputState != 0) && ((finalButtonState & (g_lastInputState | 0xB6F))))) &&
         (finalButtonState != 0))
@@ -646,7 +648,7 @@ void ProcessControllerInput(void)
         if (g_inputRepeatTimer == 0)
         {
             g_debouncedInput = finalButtonState;
-            g_inputRepeatTimer = 2; // input repeat timer
+            g_inputRepeatTimer = 2;
         }
         else
         {
@@ -662,8 +664,8 @@ void ProcessControllerInput(void)
     else
     {
         g_debouncedInput = finalButtonState;
-        g_lastInputState = finalButtonState; // last button state
-        g_inputRepeatTimer = 15;            // input repeat timer max
+        g_lastInputState = finalButtonState;
+        g_inputRepeatTimer = 15;
     }
 }
 
