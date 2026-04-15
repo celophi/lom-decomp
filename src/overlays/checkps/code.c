@@ -579,7 +579,7 @@ void ProcessControllerInput(void)
         processedButtons = (((((processedButtons & 0x40) >> 1) | ((processedButtons & 0x20) << 1)) |
                              ((processedButtons & 0x80) >> 3)) |
                             ((processedButtons & 0x10) << 3)) |
-                           (processedButtons & 0xFF0F);
+                           (processedButtons & ~0xF0);
 
         if (controllerRegs->deviceState != 0)
         {
@@ -670,7 +670,7 @@ void UpdateControllerInput(void)
         processedButtons = (((((processedButtons & CIRCLE) >> 1) | ((processedButtons & CROSS) << 1)) |
                              ((processedButtons & TRIANGLE) >> 3)) |
                             ((processedButtons & SQUARE) << 3)) |
-                           (processedButtons & 0xFF0F);
+                           (processedButtons & ~0xF0);
 
         if (regs->deviceState != 0)
         {
