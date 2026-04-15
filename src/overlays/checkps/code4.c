@@ -5,5 +5,5 @@
  * Matches 100% with GNU AS
  */
 void func_80050B04(void) {
-    D_8005CFE8 = 1;
+    g_checkPSState = 1;
 }

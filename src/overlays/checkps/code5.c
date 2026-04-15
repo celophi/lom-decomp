@@ -41,12 +41,12 @@ s32 func_8005144C(s32 arg0)
                 {
                     do
                     {
-                        D_8005CFE0.unk0 = *D_8005CFCC;
+                        g_statusFlag.unk0 = *D_8005CFCC;
                     } while (0);
-                    D_8005CFE0.unk1 = *D_8005CFCC;
+                    g_statusFlag.unk1 = *D_8005CFCC;
                     *D_8005CFC8 = 1;
                     *D_8005CFD0 = 0x1F;
-                    if (!(D_8005CFE0.unk0 & 0x10))
+                    if (!(g_statusFlag.unk0 & 0x10))
                     {
                         return -1;
                     }
@@ -62,7 +62,7 @@ s32 func_8005144C(s32 arg0)
                     {
                         do
                         {
-                            ((u8*)(&D_8005CFE0))[j] = *D_8005CFCC;
+                            ((u8*)(&g_statusFlag))[j] = *D_8005CFCC;
                             j++;
                         } while (j < ((s32)(*((volatile u8*)(&D_8005CF92[idx])))));
                     }
@@ -70,7 +70,7 @@ s32 func_8005144C(s32 arg0)
                     *D_8005CFD0 = 0x1F;
                     if (arg0 != 0xA)
                     {
-                        j = D_8005CFE0.unk0;
+                        j = g_statusFlag.unk0;
                         if (j & 0x10)
                         {
                             idx = 2;
@@ -114,7 +114,7 @@ void func_80051620(int arg0)
     {
         do
         {
-            *D_8005CFD0 = D_8005CFD8[j];
+            *D_8005CFD0 = g_CmdBuf[j];
             j++;
         } while (j < D_8005CF91[idx]);
     }
