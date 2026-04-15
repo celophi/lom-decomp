@@ -14,7 +14,7 @@ s32 D_80061088;
 
 s32 D_8006108C;
 
-s32 D_80061090;
+s32 g_debouncedInput;
 
 s32 D_80061094;
 
@@ -24,11 +24,11 @@ s32 D_8006109C;
 
 s32 D_800610A0;
 
-s32 D_800610A4;
+s32 g_lastInputState;
 
-s32 D_800610A8;
+s32 g_inputRepeatTimer;
 
-s32 g_D_800610AC[32769]; 
+s32 g_D_800610AC[32769];
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/bzlSh
@@ -209,7 +209,10 @@ void func_80050138(s32 arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/K0uKO
  */
-void func_800501AC(void) { func_80022068(0); }
+void func_800501AC(void)
+{
+    func_80022068(0);
+}
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/2R9zp
@@ -223,7 +226,10 @@ void func_800501CC(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/Fklyd
  */
-void func_800501FC(u32 arg1, u32 arg2, u32 arg3) { func_8002216C(arg1, 0, arg2, arg3); }
+void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
+{
+    func_8002216C(arg1, 0, arg2, arg3);
+}
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/i9Kyk
@@ -573,7 +579,7 @@ void ProcessControllerInput(void)
         processedButtons = (((((processedButtons & 0x40) >> 1) | ((processedButtons & 0x20) << 1)) |
                              ((processedButtons & 0x80) >> 3)) |
                             ((processedButtons & 0x10) << 3)) |
-                           (processedButtons & (~0xF0));
+                           (processedButtons & 0xFF0F);
 
         if (controllerRegs->deviceState != 0)
         {
@@ -602,9 +608,9 @@ void ProcessControllerInput(void)
         finalButtonState = processedButtons;
     }
 
-    D_80061090 = 0; // current active input
+    g_debouncedInput = 0; // current active input
 
-    if (((finalButtonState == D_800610A4) || ((D_800610A4 != 0) && ((finalButtonState & (D_800610A4 | 0xB6F))))) &&
+    if (((finalButtonState == g_lastInputState) || ((g_lastInputState != 0) && ((finalButtonState & (g_lastInputState | 0xB6F))))) &&
         (finalButtonState != 0))
     {
         // Keep only directional bits
@@ -613,27 +619,27 @@ void ProcessControllerInput(void)
             finalButtonState &= 0xF000;
         }
 
-        if (D_800610A8 == 0)
+        if (g_inputRepeatTimer == 0)
         {
-            D_80061090 = finalButtonState;
-            D_800610A8 = 2; // input repeat timer
+            g_debouncedInput = finalButtonState;
+            g_inputRepeatTimer = 2; // input repeat timer
         }
         else
         {
-            D_800610A8--;
-            D_80061090 = 0;
+            g_inputRepeatTimer--;
+            g_debouncedInput = 0;
         }
     }
     else if (finalButtonState == 0)
     {
-        D_800610A8 = 0;
-        D_800610A4 = 0;
+        g_inputRepeatTimer = 0;
+        g_lastInputState = 0;
     }
     else
     {
-        D_80061090 = finalButtonState;
-        D_800610A4 = finalButtonState; // last button state
-        D_800610A8 = 0xF;              // input repeat timer max
+        g_debouncedInput = finalButtonState;
+        g_lastInputState = finalButtonState; // last button state
+        g_inputRepeatTimer = 0xF;              // input repeat timer max
     }
 }
 
@@ -643,13 +649,13 @@ void ProcessControllerInput(void)
 void UpdateControllerInput(void)
 {
     SCDRegs* regs;
-    unsigned int processedButtons;
+    PadButton processedButtons;
     short axisX, axisY;
     unsigned int finalButtonState;
 
     regs = (SCDRegs*)0x801ED600;
 
-    D_80061090 = 0;
+    g_debouncedInput = 0;
 
     if (D_801ED600 >= 0xFEU)
     {
@@ -661,36 +667,36 @@ void UpdateControllerInput(void)
         processedButtons = (regs->buttonData >> 8) | (regs->buttonData << 8);
 
         /* Re‑map button bits: 0x40→bit1, 0x20→bit5, 0x80→bit4, 0x10→bit3 */
-        processedButtons = (((((processedButtons & 0x40) >> 1) | ((processedButtons & 0x20) << 1)) |
-                             ((processedButtons & 0x80) >> 3)) |
-                            ((processedButtons & 0x10) << 3)) |
-                           (processedButtons & (~0xF0));
+        processedButtons = (((((processedButtons & CIRCLE) >> 1) | ((processedButtons & CROSS) << 1)) |
+                             ((processedButtons & TRIANGLE) >> 3)) |
+                            ((processedButtons & SQUARE) << 3)) |
+                           (processedButtons & 0xFF0F);
 
         if (regs->deviceState != 0)
         {
             axisX = regs->axisX;
             if (axisX < -1)
             {
-                processedButtons |= 0x8000; /* left */
+                processedButtons |= LEFT;
             }
             else if (axisX >= 2)
             {
-                processedButtons |= 0x2000; /* right */
+                processedButtons |= RIGHT;
             }
 
             axisY = regs->axisY;
             if (axisY < -1)
             {
-                processedButtons |= 0x1000; /* up */
+                processedButtons |= UP;
             }
             else if (axisY >= 2)
             {
-                processedButtons |= 0x4000; /* down */
+                processedButtons |= DOWN;
             }
         }
         finalButtonState = processedButtons;
     }
 
-    D_800610A4 = finalButtonState;
-    D_800610A8 = 0xF;
+    g_lastInputState = finalButtonState;
+    g_inputRepeatTimer = 15;
 }

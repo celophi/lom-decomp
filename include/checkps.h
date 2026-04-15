@@ -18,6 +18,20 @@
  */
 #define GLYPH_CACHED_FLAG 0x10000
 
+/**
+ * Remap of raw button bits from the controller's buttonData to the internal representation used by the game.
+ */
+typedef enum {
+    SQUARE   = 0x0010,
+    CROSS    = 0x0020,
+    CIRCLE   = 0x0040,
+    TRIANGLE = 0x0080,
+    UP       = 0x1000,
+    RIGHT    = 0x2000,
+    DOWN     = 0x4000,
+    LEFT     = 0x8000
+} PadButton;
+
 typedef struct
 {
     u8 deviceState; // 0x00 - status / mode flag
