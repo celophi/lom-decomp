@@ -14,11 +14,7 @@ s32 func_80050B14(s32 arg0)
 {
     s32 new_var2;
     s32 state = 0;
-    s32 h;
-    s32 m;
-    s32 t;
-    s32 hb;
-    s32 mb;
+    
 
 loop:
     switch (g_checkPSState)
@@ -107,29 +103,34 @@ loop:
             state = -1;
             break;
 
-        default:
-            state = 7;
-            break;
-
         case 1:
         {
+            s32 h;
+            s32 m;
+            s32 t;
+            s32 hb;
+            s32 mb;
+            
             h = ((g_RTCTimeBCD[0] >> 4) * 10) + (g_RTCTimeBCD[0] & 0xF);
             m = (((g_RTCTimeBCD[1] >> 4) * 5) * 2) + (g_RTCTimeBCD[1] & 0xF);
             t = ((h * 60) + m) >> 1;
             hb = t / 60;
             mb = t % 60;
+            
             g_timeBuffer[0] = hb;
-            g_timeBuffer[1] = mb;
-            hb = 7;
             g_timeBuffer[0] = ((g_timeBuffer[0] / 10) << 4) | (g_timeBuffer[0] % 10);
+            
+            g_timeBuffer[1] = mb;
             g_timeBuffer[1] = ((g_timeBuffer[1] / 10) << 4) | (g_timeBuffer[0] % 10);
+            
             func_80051620(0xC);
-            state = hb;
+            state = 7;
             g_checkPSState = 5;
             break;
         }
 
         case 0:
+        default:
             state = 7;
             break;
         }
@@ -151,11 +152,10 @@ loop:
             }
             else if (base->unk1 & 0x40)
             {
-                u8* dst = g_CmdBuf;
                 state = 5;
-                dst[2] = 0;
-                dst[0] = g_timeBuffer[0];
-                dst[1] = g_timeBuffer[1];
+                g_CmdBuf[2] = 0;
+                g_CmdBuf[0] = g_timeBuffer[0];
+                g_CmdBuf[1] = g_timeBuffer[1];
                 func_80051620(3);
                 g_checkPSState = 7;
             }
@@ -186,8 +186,7 @@ loop:
     }
 
     case 6: /* Wait for screen 0xD; on confirm, fill g_CmdBuf with encoded time and send */
-        h = func_8005144C(0xD);
-        state = h;
+        state = func_8005144C(0xD);
         switch (state)
         {
         case -1:
@@ -205,10 +204,9 @@ loop:
 
         case 1:
         {
-            u8* dst = g_CmdBuf;
-            dst[2] = 0;
-            dst[0] = g_timeBuffer[0];
-            dst[1] = g_timeBuffer[1];
+            g_CmdBuf[2] = 0;
+            g_CmdBuf[0] = g_timeBuffer[0];
+            g_CmdBuf[1] = g_timeBuffer[1];
             func_80051620(3);
             g_checkPSState = 7;
             state = 6;
@@ -290,6 +288,7 @@ loop:
         break;
 
     case 9: /* Wait 3 vsyncs, then show screen 4 */
+        
         new_var2 = (g_vsyncTimestamp + 3) < VSync(-1);
         if (new_var2)
         {
