@@ -149,7 +149,7 @@ void func_8004FEE8(int baseAddress)
     ClearImage(&rect, 0, 0, 0);
     func_8005239C();
     ResetFadeState();
-    func_80050554(0x100, 0x100, 0x100, 0x14);
+    SetFadeTarget(256, 256, 256, 20);
     func_800506D0();
     D_8005D060 = 0;
     func_80050A0C();
@@ -347,12 +347,12 @@ void func_80050258(s32* arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/A5HgV
  */
-void func_80050554(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
 {
-    g_fadeTarget.red = arg0;
-    g_fadeTarget.green = arg1;
-    g_fadeTarget.blue = arg2;
-    g_fadeTarget.steps = arg3;
+    g_fadeTarget.red = red;
+    g_fadeTarget.green = green;
+    g_fadeTarget.blue = blue;
+    g_fadeTarget.steps = steps;
 }
 
 /**
