@@ -290,7 +290,6 @@ loop:
         break;
 
     case 9: /* Wait 3 vsyncs, then show screen 4 */
-        state = 9;
         new_var2 = (g_vsyncTimestamp + 3) < VSync(-1);
         if (new_var2)
         {
