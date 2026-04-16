@@ -24,7 +24,6 @@ loop:
     switch (g_checkPSState)
     {
     case 0: /* Idle / reset */
-        state = 0;
         break;
 
     case 1: /* Init — show opening screen, advance to state 2 */
