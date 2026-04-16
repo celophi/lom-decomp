@@ -36,7 +36,7 @@ s32 g_D_800610AC[32769];
 s32 RunCheckPS(s32 baseAddress)
 {
     func_80050080();
-    func_8004FEE8(baseAddress);
+    InitCheckPSDisplay(baseAddress);
 
     do
     {
@@ -111,7 +111,7 @@ void func_8004FD68(int baseAddress)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/tlBGm
  */
-void func_8004FEE8(int baseAddress)
+void InitCheckPSDisplay(int baseAddress)
 {
     RECT rect;
 
