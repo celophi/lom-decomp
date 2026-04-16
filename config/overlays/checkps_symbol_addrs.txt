@@ -600,6 +600,7 @@ g_debouncedInput = 0x80061090;
 g_lastInputState = 0x800610A4;
 g_inputRepeatTimer = 0x800610A8;
 g_fadeTarget = 0x8005D068;
+g_fadeCurrent = 0x8005D078;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;

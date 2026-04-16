@@ -6,7 +6,7 @@ s32 D_8005D064;
 
 s32 g_fadeTarget[4];
 
-s32 D_8005D078[4];
+s32 g_fadeCurrent[4];
 
 u8 D_8005D088[16384];
 
@@ -236,7 +236,7 @@ void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
  */
 void ResetFadeState(void)
 {
-    u32* addrA = &D_8005D078;
+    u32* addrA = &g_fadeCurrent;
     u32* addrB = &g_fadeTarget;
 
     *addrA = 0;
@@ -264,55 +264,55 @@ void func_80050258(s32* arg0)
 
     if (g_fadeTarget[3] != 0)
     {
-        temp_a2 = (g_fadeTarget[0] - D_8005D078[0]) / g_fadeTarget[3];
-        temp_a0 = (g_fadeTarget[1] - D_8005D078[1]) / g_fadeTarget[3];
-        temp_v1 = (g_fadeTarget[2] - D_8005D078[2]) / g_fadeTarget[3];
+        temp_a2 = (g_fadeTarget[0] - g_fadeCurrent[0]) / g_fadeTarget[3];
+        temp_a0 = (g_fadeTarget[1] - g_fadeCurrent[1]) / g_fadeTarget[3];
+        temp_v1 = (g_fadeTarget[2] - g_fadeCurrent[2]) / g_fadeTarget[3];
         g_fadeTarget[3]--;
-        D_8005D078[0] += temp_a2;
-        D_8005D078[1] += temp_a0;
-        D_8005D078[2] += temp_v1;
+        g_fadeCurrent[0] += temp_a2;
+        g_fadeCurrent[1] += temp_a0;
+        g_fadeCurrent[2] += temp_v1;
     }
     else
     {
-        D_8005D078[0] = g_fadeTarget[0];
-        D_8005D078[1] = g_fadeTarget[1];
-        D_8005D078[2] = g_fadeTarget[2];
+        g_fadeCurrent[0] = g_fadeTarget[0];
+        g_fadeCurrent[1] = g_fadeTarget[1];
+        g_fadeCurrent[2] = g_fadeTarget[2];
     }
 
-    if (D_8005D078[0] != 0x100 || D_8005D078[1] != D_8005D078[0] || D_8005D078[2] != D_8005D078[1])
+    if (g_fadeCurrent[0] != 0x100 || g_fadeCurrent[1] != g_fadeCurrent[0] || g_fadeCurrent[2] != g_fadeCurrent[1])
     {
 
-        if (D_8005D078[0] >= 0x101)
+        if (g_fadeCurrent[0] >= 0x101)
         {
-            ((u8*)ref)[4] = (u8)(D_8005D078[0] - 1);
-            ((u8*)ref)[5] = (u8)(D_8005D078[1] - 1);
-            ((u8*)ref)[6] = (u8)(D_8005D078[2] - 1);
+            ((u8*)ref)[4] = (u8)(g_fadeCurrent[0] - 1);
+            ((u8*)ref)[5] = (u8)(g_fadeCurrent[1] - 1);
+            ((u8*)ref)[6] = (u8)(g_fadeCurrent[2] - 1);
         }
         else
         {
-            if (D_8005D078[0] == 0x100)
+            if (g_fadeCurrent[0] == 0x100)
             {
                 ((u8*)ref)[4] = 0;
             }
             else
             {
-                ((u8*)ref)[4] = ~(u8)(D_8005D078[0]);
+                ((u8*)ref)[4] = ~(u8)(g_fadeCurrent[0]);
             }
-            if (D_8005D078[1] == 0x100)
+            if (g_fadeCurrent[1] == 0x100)
             {
                 ((u8*)ref)[5] = 0;
             }
             else
             {
-                ((u8*)ref)[5] = ~(u8)(D_8005D078[1]);
+                ((u8*)ref)[5] = ~(u8)(g_fadeCurrent[1]);
             }
-            if (D_8005D078[2] == 0x100)
+            if (g_fadeCurrent[2] == 0x100)
             {
                 ((u8*)ref)[6] = 0;
             }
             else
             {
-                ((u8*)ref)[6] = ~(u8)(D_8005D078[2]);
+                ((u8*)ref)[6] = ~(u8)(g_fadeCurrent[2]);
             }
         }
 
@@ -328,7 +328,7 @@ void func_80050258(s32* arg0)
 
         var_a1 = 0x25;
         ref = (u32*)((u8*)ref + 0x10); // advance in-place; lands in delay slot
-        if (D_8005D078[0] < 0x101)
+        if (g_fadeCurrent[0] < 0x101)
         {
             var_a1 = 0x45;
         }
