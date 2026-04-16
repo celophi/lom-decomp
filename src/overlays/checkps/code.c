@@ -114,17 +114,23 @@ void func_8004FD68(int baseAddress)
 void InitCheckPSDisplay(int baseAddress)
 {
     RECT rect;
+    DisplayBuffer* buf0;
+    DisplayBuffer* buf1;
 
-    func_8001D5AC(0x5DC);
+    func_8001D5AC(1500);
     func_8001D58C(160, 120);
-    *(u16*)(baseAddress + 0x40B0) = 0;
-    *(u16*)(baseAddress + 0x40B2) = 0;
-    *(u16*)(baseAddress + 0x40B4) = 320;
-    *(u16*)(baseAddress + 0x40B6) = 240;
-    *(u16*)(baseAddress + 0xFD7C) = 0;
-    *(u16*)(baseAddress + 0xFD7E) = 232;
-    *(u16*)(baseAddress + 0xFD80) = 320;
-    *(u16*)(baseAddress + 0xFD82) = 240;
+
+    buf0 = (DisplayBuffer*)(baseAddress + 0x4040);
+    buf1 = (DisplayBuffer*)(baseAddress + 0xFD0C);
+
+    buf0->clearRect.x = 0;
+    buf0->clearRect.y = 0;
+    buf0->clearRect.w = 320;
+    buf0->clearRect.h = 240;
+    buf1->clearRect.x = 0;
+    buf1->clearRect.y = 232;
+    buf1->clearRect.w = 320;
+    buf1->clearRect.h = 240;
     DrawSync(0);
     VSync(0);
 
@@ -134,12 +140,12 @@ void InitCheckPSDisplay(int baseAddress)
     rect.h = 512;
 
     ClearImage(&rect, 0, 0, 0);
-    SetDefDispEnv(baseAddress + 0x4040, 0, 0, 320, 240);
-    SetDefDispEnv(baseAddress + 0xFD0C, 0, 0xE8, 320, 240);
-    SetDefDrawEnv(baseAddress + 0x4054, 0, 240, 320, 224);
-    SetDefDrawEnv(baseAddress + 0xFD20, 0, 8, 320, 224);
-    *(u8*)(baseAddress + 0xFD36) = 0;
-    *(u8*)(baseAddress + 0x406A) = 0;
+    SetDefDispEnv(&buf0->disp, 0, 0, 320, 240);
+    SetDefDispEnv(&buf1->disp, 0, 232, 320, 240);
+    SetDefDrawEnv(&buf0->draw, 0, 240, 320, 224);
+    SetDefDrawEnv(&buf1->draw, 0, 8, 320, 224);
+    buf1->draw.dtd = 0;
+    buf0->draw.dtd = 0;
 
     rect.x = 960;
     rect.w = 64;

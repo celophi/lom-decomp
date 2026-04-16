@@ -173,6 +173,17 @@ typedef struct
     u16 unkE;
 } GlyphInstance;
 
+/**
+ * A double-buffer slot containing the display/draw environments and the clear rect.
+ * Two instances reside within baseAddress: buf0 at +0x4040, buf1 at +0xFD0C.
+ */
+typedef struct
+{
+    DISPENV disp;       // +0x00
+    DRAWENV draw;       // +0x14
+    RECT    clearRect;  // +0x70
+} DisplayBuffer;
+
 void func_80050080(void);
 void InitCheckPSDisplay(int baseAddress);
 void func_8004FD68(int param_1);
