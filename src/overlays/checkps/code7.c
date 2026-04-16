@@ -138,18 +138,18 @@ loop:
 
     case 5: /* Wait for screen 0xC; on confirm button (statusFlag bit 6), fill g_CmdBuf with encoded time and send */
     {
-        u8* base;
+        D_8005CFE0_t* base;
         state = func_8005144C(0xC);
-        base = (u8*)&g_statusFlag;
+        base = &g_statusFlag;
         switch (state)
         {
         case -1:
-            if (!(base[0] & 1))
+            if (!(base->unk0 & 1))
             {
                 g_checkPSState = 1;
                 state = -1;
             }
-            else if (base[1] & 0x40)
+            else if (base->unk1 & 0x40)
             {
                 u8* dst = g_CmdBuf;
                 state = 5;
