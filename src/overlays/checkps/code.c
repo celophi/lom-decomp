@@ -345,7 +345,20 @@ void func_80050258(s32* arg0)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/A5HgV
+ * @brief Sets the target colour and duration for the screen fade.
+ *
+ * @details Writes directly to g_fadeTarget. The fade system in func_80050258
+ * reads this each frame and interpolates g_fadeCurrent toward it over the
+ * given number of steps. Colour values use an internal scale where 0 = fully
+ * black and 0x100 = normal brightness (no colour modulation).
+ *
+ * @param red   Target red channel (0 = black, 0x100 = normal).
+ * @param green Target green channel (0 = black, 0x100 = normal).
+ * @param blue  Target blue channel (0 = black, 0x100 = normal).
+ * @param steps Number of frames to interpolate over. 0 snaps immediately.
+ * @return void No return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/A5HgV
  */
 void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
 {
