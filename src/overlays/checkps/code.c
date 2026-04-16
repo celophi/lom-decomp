@@ -4,7 +4,7 @@ s32 D_8005D060;
 
 s32 D_8005D064;
 
-s32 D_8005D068[4];
+s32 g_fadeTarget[4];
 
 s32 D_8005D078[4];
 
@@ -237,7 +237,7 @@ void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
 void ResetFadeState(void)
 {
     u32* addrA = &D_8005D078;
-    u32* addrB = &D_8005D068;
+    u32* addrB = &g_fadeTarget;
 
     *addrA = 0;
     *(addrA + 1) = 0;
@@ -262,21 +262,21 @@ void func_80050258(s32* arg0)
 
     ref = *(u32**)(arg0 + 8238);
 
-    if (D_8005D068[3] != 0)
+    if (g_fadeTarget[3] != 0)
     {
-        temp_a2 = (D_8005D068[0] - D_8005D078[0]) / D_8005D068[3];
-        temp_a0 = (D_8005D068[1] - D_8005D078[1]) / D_8005D068[3];
-        temp_v1 = (D_8005D068[2] - D_8005D078[2]) / D_8005D068[3];
-        D_8005D068[3]--;
+        temp_a2 = (g_fadeTarget[0] - D_8005D078[0]) / g_fadeTarget[3];
+        temp_a0 = (g_fadeTarget[1] - D_8005D078[1]) / g_fadeTarget[3];
+        temp_v1 = (g_fadeTarget[2] - D_8005D078[2]) / g_fadeTarget[3];
+        g_fadeTarget[3]--;
         D_8005D078[0] += temp_a2;
         D_8005D078[1] += temp_a0;
         D_8005D078[2] += temp_v1;
     }
     else
     {
-        D_8005D078[0] = D_8005D068[0];
-        D_8005D078[1] = D_8005D068[1];
-        D_8005D078[2] = D_8005D068[2];
+        D_8005D078[0] = g_fadeTarget[0];
+        D_8005D078[1] = g_fadeTarget[1];
+        D_8005D078[2] = g_fadeTarget[2];
     }
 
     if (D_8005D078[0] != 0x100 || D_8005D078[1] != D_8005D078[0] || D_8005D078[2] != D_8005D078[1])
@@ -349,10 +349,10 @@ void func_80050258(s32* arg0)
  */
 void func_80050554(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    D_8005D068[0] = arg0;
-    D_8005D068[1] = arg1;
-    D_8005D068[2] = arg2;
-    D_8005D068[3] = arg3;
+    g_fadeTarget[0] = arg0;
+    g_fadeTarget[1] = arg1;
+    g_fadeTarget[2] = arg2;
+    g_fadeTarget[3] = arg3;
 }
 
 /**
