@@ -22,7 +22,7 @@ s32 D_80061098;
 
 s32 D_8006109C;
 
-s32 D_800610A0;
+s32 g_frameTimer;
 
 s32 g_lastInputState;
 
@@ -397,8 +397,8 @@ void func_80050570(void)
     s32 temp_v0;
 
     func_8005088C();
-    temp_v0 = D_800610A0 - 1;
-    D_800610A0 = temp_v0;
+    temp_v0 = g_frameTimer - 1;
+    g_frameTimer = temp_v0;
 
     if (temp_v0 == 0)
     {
@@ -470,7 +470,7 @@ void func_800506D0(void)
     pRect = &rect;
     gfxBase = D_8005B744;
 
-    D_800610A0 = 0x78;
+    g_frameTimer = 120;
 
     rectLoad.x = 0x140;
     rectLoad.y = 0;
