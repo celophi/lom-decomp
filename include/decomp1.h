@@ -62,7 +62,7 @@ undefined4 FUN_80021fbc(void);
 void FUN_8002279c(undefined4 param_1, u_int param_2);
 void FUN_80022aa8(void);
 void FUN_80022ac8(void);
-undefined4 FUN_8004fd14(undefined4 param_1);
+s32 RunCheckPS(s32 baseAddress);
 u32 FUN_80060814();
 u32 FUN_80140018(u32 param_1);
 void GFX_Transition(s32 skipScreenClear);
