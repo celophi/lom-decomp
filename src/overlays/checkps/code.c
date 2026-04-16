@@ -33,14 +33,14 @@ s32 g_D_800610AC[32769];
 /**
  * decomp.me link (100%) https://decomp.me/scratch/bzlSh
  */
-s32 FUN_8004fd14(s32 arg0)
+s32 RunCheckPS(s32 baseAddress)
 {
     func_80050080();
-    func_8004FEE8(arg0);
+    func_8004FEE8(baseAddress);
 
     do
     {
-        func_8004FD68(arg0);
+        func_8004FD68(baseAddress);
     } while (D_8005D060 == 0);
 
     return 8;
@@ -49,7 +49,7 @@ s32 FUN_8004fd14(s32 arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/lBhMG
  */
-void func_8004FD68(int arg0)
+void func_8004FD68(int baseAddress)
 {
     RECT rect;
     u_long* temp_s1;
@@ -59,7 +59,7 @@ void func_8004FD68(int arg0)
     DrawSync(0);
     VSync(0);
 
-    var_s0 = arg0;
+    var_s0 = baseAddress;
     func_800158E0();
 
     rect.w = 320;
@@ -111,20 +111,20 @@ void func_8004FD68(int arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/tlBGm
  */
-void func_8004FEE8(int arg0)
+void func_8004FEE8(int baseAddress)
 {
     RECT rect;
 
     func_8001D5AC(0x5DC);
     func_8001D58C(0xA0, 0x78);
-    *(u16*)(arg0 + 0x40B0) = 0;
-    *(u16*)(arg0 + 0x40B2) = 0;
-    *(u16*)(arg0 + 0x40B4) = 0x140;
-    *(u16*)(arg0 + 0x40B6) = 0xF0;
-    *(u16*)(arg0 + 0xFD7C) = 0;
-    *(u16*)(arg0 + 0xFD7E) = 0xE8;
-    *(u16*)(arg0 + 0xFD80) = 0x140;
-    *(u16*)(arg0 + 0xFD82) = 0xF0;
+    *(u16*)(baseAddress + 0x40B0) = 0;
+    *(u16*)(baseAddress + 0x40B2) = 0;
+    *(u16*)(baseAddress + 0x40B4) = 0x140;
+    *(u16*)(baseAddress + 0x40B6) = 0xF0;
+    *(u16*)(baseAddress + 0xFD7C) = 0;
+    *(u16*)(baseAddress + 0xFD7E) = 0xE8;
+    *(u16*)(baseAddress + 0xFD80) = 0x140;
+    *(u16*)(baseAddress + 0xFD82) = 0xF0;
     DrawSync(0);
     VSync(0);
 
@@ -134,12 +134,12 @@ void func_8004FEE8(int arg0)
     rect.h = 0x200;
 
     ClearImage(&rect, 0, 0, 0);
-    SetDefDispEnv(arg0 + 0x4040, 0, 0, 0x140, 0xF0);
-    SetDefDispEnv(arg0 + 0xFD0C, 0, 0xE8, 0x140, 0xF0);
-    SetDefDrawEnv(arg0 + 0x4054, 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv(arg0 + 0xFD20, 0, 8, 0x140, 0xE0);
-    *(u8*)(arg0 + 0xFD36) = 0;
-    *(u8*)(arg0 + 0x406A) = 0;
+    SetDefDispEnv(baseAddress + 0x4040, 0, 0, 0x140, 0xF0);
+    SetDefDispEnv(baseAddress + 0xFD0C, 0, 0xE8, 0x140, 0xF0);
+    SetDefDrawEnv(baseAddress + 0x4054, 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv(baseAddress + 0xFD20, 0, 8, 0x140, 0xE0);
+    *(u8*)(baseAddress + 0xFD36) = 0;
+    *(u8*)(baseAddress + 0x406A) = 0;
 
     rect.x = 0x3C0;
     rect.w = 0x40;
