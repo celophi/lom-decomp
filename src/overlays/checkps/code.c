@@ -232,21 +232,28 @@ void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/i9Kyk
+ * @brief Resets the screen fade state to black.
+ *
+ * @details Zeroes both g_fadeCurrent and g_fadeTarget, setting all RGB channels
+ * to 0 (fully black) and the step counter to 0. Typically called before
+ * SetFadeTarget to ensure the fade starts from a known black state rather
+ * than whatever colour was previously active.
+ *
+ * @param void No parameters.
+ * @return void No return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/i9Kyk
  */
 void ResetFadeState(void)
 {
-    FadeColor* current = &g_fadeCurrent;
-    FadeColor* target = &g_fadeTarget;
+    g_fadeCurrent.red = 0;
+    g_fadeCurrent.green = 0;
+    g_fadeCurrent.blue = 0;
 
-    current->red = 0;
-    current->green = 0;
-    current->blue = 0;
-
-    target->red = 0;
-    target->green = 0;
-    target->blue = 0;
-    target->steps = 0;
+    g_fadeTarget.red = 0;
+    g_fadeTarget.green = 0;
+    g_fadeTarget.blue = 0;
+    g_fadeTarget.steps = 0;
 }
 
 /**
