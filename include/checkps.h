@@ -51,6 +51,17 @@ typedef struct
     s16 axisY; // 0x2E - signed axis (negative/positive thresholded)
 } SCDRegs;
 
+/**
+ * Represents a target or current RGB colour state used by the screen fade system.
+ * The "steps" field is used to track the number of frames remaining in a fade transition,
+ */
+typedef struct {
+    s32 red;
+    s32 green;
+    s32 blue;
+    s32 steps;
+} FadeColor;
+
 typedef struct
 {
     u8 unk0;

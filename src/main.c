@@ -55,7 +55,7 @@ void Main(void)
     // BIN/CHECKPS.BIN
     CD_StreamData(15, *streamDst);
     CD_WaitForQueueEmpty();
-    FUN_8004fd14(0x80100000);
+    RunCheckPS(0x80100000);
     DrawSync(0);
     VSync(0);
     g_previousGameState = 0xFF;
