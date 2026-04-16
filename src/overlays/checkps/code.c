@@ -109,7 +109,20 @@ void func_8004FD68(int baseAddress)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/tlBGm
+ * @brief Initialises the double-buffered display system for the CheckPS overlay.
+ *
+ * @details Sets up both render frames within the CheckPSState.
+ *  - Configures the screen geometry offset (160, 120) for a 320x240 display.
+ *  - Writes the screen-clear rects for each frame's display area.
+ *  - Clears all of VRAM (1024x512).
+ *  - Calls SetDefDispEnv / SetDefDrawEnv to configure the double-buffer swap chain.
+ *  - Clears the texture cache region of VRAM.
+ *  - Resets the text renderer, fade state, and input state.
+ *  - Triggers a fade-in to full brightness over 20 frames.
+ *
+ * @param state  Pointer to the CheckPS render state containing both frame buffers.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/tlBGm
  */
 void InitCheckPSDisplay(CheckPSState* state)
 {
@@ -286,7 +299,8 @@ void func_80050258(s32* arg0)
         g_fadeCurrent.blue = g_fadeTarget.blue;
     }
 
-    if (g_fadeCurrent.red != 0x100 || g_fadeCurrent.green != g_fadeCurrent.red || g_fadeCurrent.blue != g_fadeCurrent.green)
+    if (g_fadeCurrent.red != 0x100 || g_fadeCurrent.green != g_fadeCurrent.red ||
+        g_fadeCurrent.blue != g_fadeCurrent.green)
     {
 
         if (g_fadeCurrent.red >= 0x101)
@@ -604,7 +618,7 @@ void ProcessControllerInput(void)
 
     controllerRegs = (SCDRegs*)0x801ED600;
 
-    // 0xFF = no controller (High-Z, pins floating); 
+    // 0xFF = no controller (High-Z, pins floating);
     // 0xFE = probably a defensive boundary just to be safe?
     if (((u8)D_801ED600) >= 0xFEU)
     {
@@ -722,7 +736,7 @@ void UpdateControllerInput(void)
 
     g_debouncedInput = 0;
 
-    // 0xFF = no controller (High-Z, pins floating); 
+    // 0xFF = no controller (High-Z, pins floating);
     // 0xFE = probably a defensive boundary just to be safe?
     if (D_801ED600 >= 0xFEU)
     {
