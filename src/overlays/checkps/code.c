@@ -4,9 +4,9 @@ s32 D_8005D060;
 
 s32 D_8005D064;
 
-s32 g_fadeTarget[4];
+FadeColor g_fadeTarget;
 
-s32 g_fadeCurrent[4];
+FadeColor g_fadeCurrent;
 
 u8 D_8005D088[16384];
 
@@ -236,17 +236,17 @@ void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
  */
 void ResetFadeState(void)
 {
-    u32* addrA = &g_fadeCurrent;
-    u32* addrB = &g_fadeTarget;
+    FadeColor* current = &g_fadeCurrent;
+    FadeColor* target = &g_fadeTarget;
 
-    *addrA = 0;
-    *(addrA + 1) = 0;
-    *(addrA + 2) = 0;
+    current->red = 0;
+    current->green = 0;
+    current->blue = 0;
 
-    *addrB = 0;
-    *(addrB + 1) = 0;
-    *(addrB + 2) = 0;
-    *(addrB + 3) = 0;
+    target->red = 0;
+    target->green = 0;
+    target->blue = 0;
+    target->steps = 0;
 }
 
 /**
@@ -262,57 +262,57 @@ void func_80050258(s32* arg0)
 
     ref = *(u32**)(arg0 + 8238);
 
-    if (g_fadeTarget[3] != 0)
+    if (g_fadeTarget.steps != 0)
     {
-        temp_a2 = (g_fadeTarget[0] - g_fadeCurrent[0]) / g_fadeTarget[3];
-        temp_a0 = (g_fadeTarget[1] - g_fadeCurrent[1]) / g_fadeTarget[3];
-        temp_v1 = (g_fadeTarget[2] - g_fadeCurrent[2]) / g_fadeTarget[3];
-        g_fadeTarget[3]--;
-        g_fadeCurrent[0] += temp_a2;
-        g_fadeCurrent[1] += temp_a0;
-        g_fadeCurrent[2] += temp_v1;
+        temp_a2 = (g_fadeTarget.red - g_fadeCurrent.red) / g_fadeTarget.steps;
+        temp_a0 = (g_fadeTarget.green - g_fadeCurrent.green) / g_fadeTarget.steps;
+        temp_v1 = (g_fadeTarget.blue - g_fadeCurrent.blue) / g_fadeTarget.steps;
+        g_fadeTarget.steps--;
+        g_fadeCurrent.red += temp_a2;
+        g_fadeCurrent.green += temp_a0;
+        g_fadeCurrent.blue += temp_v1;
     }
     else
     {
-        g_fadeCurrent[0] = g_fadeTarget[0];
-        g_fadeCurrent[1] = g_fadeTarget[1];
-        g_fadeCurrent[2] = g_fadeTarget[2];
+        g_fadeCurrent.red = g_fadeTarget.red;
+        g_fadeCurrent.green = g_fadeTarget.green;
+        g_fadeCurrent.blue = g_fadeTarget.blue;
     }
 
-    if (g_fadeCurrent[0] != 0x100 || g_fadeCurrent[1] != g_fadeCurrent[0] || g_fadeCurrent[2] != g_fadeCurrent[1])
+    if (g_fadeCurrent.red != 0x100 || g_fadeCurrent.green != g_fadeCurrent.red || g_fadeCurrent.blue != g_fadeCurrent.green)
     {
 
-        if (g_fadeCurrent[0] >= 0x101)
+        if (g_fadeCurrent.red >= 0x101)
         {
-            ((u8*)ref)[4] = (u8)(g_fadeCurrent[0] - 1);
-            ((u8*)ref)[5] = (u8)(g_fadeCurrent[1] - 1);
-            ((u8*)ref)[6] = (u8)(g_fadeCurrent[2] - 1);
+            ((u8*)ref)[4] = (u8)(g_fadeCurrent.red - 1);
+            ((u8*)ref)[5] = (u8)(g_fadeCurrent.green - 1);
+            ((u8*)ref)[6] = (u8)(g_fadeCurrent.blue - 1);
         }
         else
         {
-            if (g_fadeCurrent[0] == 0x100)
+            if (g_fadeCurrent.red == 0x100)
             {
                 ((u8*)ref)[4] = 0;
             }
             else
             {
-                ((u8*)ref)[4] = ~(u8)(g_fadeCurrent[0]);
+                ((u8*)ref)[4] = ~(u8)(g_fadeCurrent.red);
             }
-            if (g_fadeCurrent[1] == 0x100)
+            if (g_fadeCurrent.green == 0x100)
             {
                 ((u8*)ref)[5] = 0;
             }
             else
             {
-                ((u8*)ref)[5] = ~(u8)(g_fadeCurrent[1]);
+                ((u8*)ref)[5] = ~(u8)(g_fadeCurrent.green);
             }
-            if (g_fadeCurrent[2] == 0x100)
+            if (g_fadeCurrent.blue == 0x100)
             {
                 ((u8*)ref)[6] = 0;
             }
             else
             {
-                ((u8*)ref)[6] = ~(u8)(g_fadeCurrent[2]);
+                ((u8*)ref)[6] = ~(u8)(g_fadeCurrent.blue);
             }
         }
 
@@ -328,7 +328,7 @@ void func_80050258(s32* arg0)
 
         var_a1 = 0x25;
         ref = (u32*)((u8*)ref + 0x10); // advance in-place; lands in delay slot
-        if (g_fadeCurrent[0] < 0x101)
+        if (g_fadeCurrent.red < 0x101)
         {
             var_a1 = 0x45;
         }
@@ -349,10 +349,10 @@ void func_80050258(s32* arg0)
  */
 void func_80050554(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    g_fadeTarget[0] = arg0;
-    g_fadeTarget[1] = arg1;
-    g_fadeTarget[2] = arg2;
-    g_fadeTarget[3] = arg3;
+    g_fadeTarget.red = arg0;
+    g_fadeTarget.green = arg1;
+    g_fadeTarget.blue = arg2;
+    g_fadeTarget.steps = arg3;
 }
 
 /**
