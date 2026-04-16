@@ -36,7 +36,7 @@ s32 g_D_800610AC[32769];
 s32 RunCheckPS(s32 baseAddress)
 {
     func_80050080();
-    InitCheckPSDisplay(baseAddress);
+    InitCheckPSDisplay((CheckPSState*)baseAddress);
 
     do
     {
@@ -111,26 +111,20 @@ void func_8004FD68(int baseAddress)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/tlBGm
  */
-void InitCheckPSDisplay(int baseAddress)
+void InitCheckPSDisplay(CheckPSState* state)
 {
     RECT rect;
-    DisplayBuffer* buf0;
-    DisplayBuffer* buf1;
 
     func_8001D5AC(1500);
     func_8001D58C(160, 120);
-
-    buf0 = (DisplayBuffer*)(baseAddress + 0x4040);
-    buf1 = (DisplayBuffer*)(baseAddress + 0xFD0C);
-
-    buf0->clearRect.x = 0;
-    buf0->clearRect.y = 0;
-    buf0->clearRect.w = 320;
-    buf0->clearRect.h = 240;
-    buf1->clearRect.x = 0;
-    buf1->clearRect.y = 232;
-    buf1->clearRect.w = 320;
-    buf1->clearRect.h = 240;
+    state->buf0.clearRect.x = 0;
+    state->buf0.clearRect.y = 0;
+    state->buf0.clearRect.w = 320;
+    state->buf0.clearRect.h = 240;
+    state->buf1.clearRect.x = 0;
+    state->buf1.clearRect.y = 232;
+    state->buf1.clearRect.w = 320;
+    state->buf1.clearRect.h = 240;
     DrawSync(0);
     VSync(0);
 
@@ -140,12 +134,12 @@ void InitCheckPSDisplay(int baseAddress)
     rect.h = 512;
 
     ClearImage(&rect, 0, 0, 0);
-    SetDefDispEnv(&buf0->disp, 0, 0, 320, 240);
-    SetDefDispEnv(&buf1->disp, 0, 232, 320, 240);
-    SetDefDrawEnv(&buf0->draw, 0, 240, 320, 224);
-    SetDefDrawEnv(&buf1->draw, 0, 8, 320, 224);
-    buf1->draw.dtd = 0;
-    buf0->draw.dtd = 0;
+    SetDefDispEnv(&state->buf0.disp, 0, 0, 320, 240);
+    SetDefDispEnv(&state->buf1.disp, 0, 232, 320, 240);
+    SetDefDrawEnv(&state->buf0.draw, 0, 240, 320, 224);
+    SetDefDrawEnv(&state->buf1.draw, 0, 8, 320, 224);
+    state->buf1.draw.dtd = 0;
+    state->buf0.draw.dtd = 0;
 
     rect.x = 960;
     rect.w = 64;

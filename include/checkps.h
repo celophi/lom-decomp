@@ -175,7 +175,6 @@ typedef struct
 
 /**
  * A double-buffer slot containing the display/draw environments and the clear rect.
- * Two instances reside within baseAddress: buf0 at +0x4040, buf1 at +0xFD0C.
  */
 typedef struct
 {
@@ -184,8 +183,22 @@ typedef struct
     RECT    clearRect;  // +0x70
 } DisplayBuffer;
 
+/**
+ * Top-level render state for the CheckPS overlay.
+ * Contains two double-buffer frames, each with an OTag and a DisplayBuffer.
+ */
+typedef struct
+{
+    u8      _pad0[0x40];        // +0x0000
+    u_long  oTag0[0x1000];      // +0x0040
+    DisplayBuffer buf0;         // +0x4040
+    u8      _pad1[0x7C54];      // +0x40B8
+    u_long  oTag1[0x1000];      // +0xBD0C
+    DisplayBuffer buf1;         // +0xFD0C
+} CheckPSState;
+
 void func_80050080(void);
-void InitCheckPSDisplay(int baseAddress);
+void InitCheckPSDisplay(CheckPSState* state);
 void func_8004FD68(int param_1);
 void func_80051908(void* arg0, u8* arg1, s32 arg2);
 void DrawSymmetricTestPattern(void);
