@@ -609,3 +609,4 @@ CreateGlyphInstance = 0x80052218;
 InvalidateGlyphCache = 0x80052320;
 ClearInvalidGlyphs = 0x8005235C;
 ResetTextRenderer = 0x8005239C;
+ResetFadeState = 0x80050228;

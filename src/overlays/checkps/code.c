@@ -148,7 +148,7 @@ void func_8004FEE8(int baseAddress)
 
     ClearImage(&rect, 0, 0, 0);
     func_8005239C();
-    func_80050228();
+    ResetFadeState();
     func_80050554(0x100, 0x100, 0x100, 0x14);
     func_800506D0();
     D_8005D060 = 0;
@@ -234,7 +234,7 @@ void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/i9Kyk
  */
-void func_80050228(void)
+void ResetFadeState(void)
 {
     u32* addrA = &D_8005D078;
     u32* addrB = &D_8005D068;
