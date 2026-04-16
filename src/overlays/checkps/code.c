@@ -88,7 +88,7 @@ void func_8004FD68(int baseAddress)
         func_800157B0(2);
         VSync(2);
         ClearImage(var_s0 + 0x40B0, 0, 0, 0);
-        var_v0 = arg0;
+        var_v0 = baseAddress;
         if (var_s0 == var_v0)
         {
             var_v0 = var_s0 + 0xBCCC;
