@@ -62,10 +62,10 @@ void func_8004FD68(int baseAddress)
     var_s0 = baseAddress;
     func_800158E0();
 
-    rect.w = 320;
+    rect.w = SCREEN_WIDTH;
     rect.x = 0;
     rect.y = 0;
-    rect.h = 472;
+    rect.h = VRAM_BACK_DISP_Y + SCREEN_HEIGHT;
 
     ClearImage(&rect, 0, 0, 0);
     ClearOTagR(var_s0 + 0x40, 0x1000);
@@ -132,12 +132,12 @@ void InitCheckPSDisplay(CheckPSState* state)
     func_8001D58C(160, 120);
     state->buf0.clearRect.x = 0;
     state->buf0.clearRect.y = 0;
-    state->buf0.clearRect.w = 320;
-    state->buf0.clearRect.h = 240;
+    state->buf0.clearRect.w = SCREEN_WIDTH;
+    state->buf0.clearRect.h = SCREEN_HEIGHT;
     state->buf1.clearRect.x = 0;
-    state->buf1.clearRect.y = 232;
-    state->buf1.clearRect.w = 320;
-    state->buf1.clearRect.h = 240;
+    state->buf1.clearRect.y = VRAM_BACK_DISP_Y;
+    state->buf1.clearRect.w = SCREEN_WIDTH;
+    state->buf1.clearRect.h = SCREEN_HEIGHT;
     DrawSync(0);
     VSync(0);
 
@@ -147,10 +147,10 @@ void InitCheckPSDisplay(CheckPSState* state)
     rect.h = 512;
 
     ClearImage(&rect, 0, 0, 0);
-    SetDefDispEnv(&state->buf0.disp, 0, 0, 320, 240);
-    SetDefDispEnv(&state->buf1.disp, 0, 232, 320, 240);
-    SetDefDrawEnv(&state->buf0.draw, 0, 240, 320, 224);
-    SetDefDrawEnv(&state->buf1.draw, 0, 8, 320, 224);
+    SetDefDispEnv(&state->buf0.disp, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&state->buf1.disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&state->buf0.draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&state->buf1.draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     state->buf1.draw.dtd = 0;
     state->buf0.draw.dtd = 0;
 

@@ -8,6 +8,14 @@
 #include "psyq/memory.h"
 #include "psyq/strings.h"
 
+#define SCREEN_WIDTH  320
+#define SCREEN_HEIGHT 240
+
+/* VRAM double-buffer layout */
+#define VRAM_BACK_DRAW_Y   8    /* Y start of back buffer draw region */
+#define VRAM_BACK_DISP_Y   232  /* Y start of back buffer display region */
+#define VRAM_DRAW_HEIGHT   224  /* Height of each draw region */
+
 /**
  * The maximum number of glyph entries in the character cache
  */
