@@ -3,7 +3,7 @@
 /**
  * GNU AS (99.91%) match
  */
-s32 func_8005144C(s32 arg0)
+s32 PollCdResponse(s32 arg0)
 {
     u8 t2;
     u8 val1;
@@ -14,38 +14,38 @@ s32 func_8005144C(s32 arg0)
     int new_var;
     s32 idx;
     s32 j;
-    t2 = D_8005CF93[arg0 * 4];
-    *D_8005CFC8 = 1;
-    val1 = *((volatile u8*)D_8005CFD4);
-    val2 = *((volatile u8*)D_8005CFD4);
+    t2 = (&g_cdCmdTable->irqThresh)[arg0 * 4];
+    *g_cdStatusRegister = 1;
+    val1 = *((volatile u8*)g_cdIrqRegister);
+    val2 = *((volatile u8*)g_cdIrqRegister);
     if ((new_var = val1 & 7) == (val2 & 7))
     {
         temp_v1 = new_var;
         temp_a2 = (unsigned char)temp_v1;
         if (temp_a2 != 0)
         {
-            D_8005CFEC = D_8005CFEC + temp_a2;
-            *D_8005CFC8 = 1;
-            *D_8005CFD4 = 7;
+            g_cdIrqAccum = g_cdIrqAccum + temp_a2;
+            *g_cdStatusRegister = 1;
+            *g_cdIrqRegister = 7;
             i = 0;
             do
             {
                 *((int*)0) = i;
                 i++;
             } while (i < 4);
-            if (D_8005CFEC >= ((s32)t2))
+            if (g_cdIrqAccum >= ((s32)t2))
             {
                 j += 0;
-                D_8005CFEC = 0;
+                g_cdIrqAccum = 0;
                 if (temp_v1 == 5)
                 {
                     do
                     {
-                        g_statusFlag.unk0 = *D_8005CFCC;
+                        g_statusFlag.unk0 = *g_cdResponseRegister;
                     } while (0);
-                    g_statusFlag.unk1 = *D_8005CFCC;
-                    *D_8005CFC8 = 1;
-                    *D_8005CFD0 = 0x1F;
+                    g_statusFlag.unk1 = *g_cdResponseRegister;
+                    *g_cdStatusRegister = 1;
+                    *g_cdDataRegister = 0x1F;
                     if (!(g_statusFlag.unk0 & 0x10))
                     {
                         return -1;
@@ -58,16 +58,16 @@ s32 func_8005144C(s32 arg0)
                     temp_a2 = 0;
                     idx = arg0 * 4;
                     j = temp_a2;
-                    if (D_8005CF92[idx] != temp_a2)
+                    if ((&g_cdCmdTable->respCount)[idx] != temp_a2)
                     {
                         do
                         {
-                            ((u8*)(&g_statusFlag))[j] = *D_8005CFCC;
+                            ((u8*)(&g_statusFlag))[j] = *g_cdResponseRegister;
                             j++;
-                        } while (j < ((s32)(*((volatile u8*)(&D_8005CF92[idx])))));
+                        } while (j < ((s32)(*((volatile u8*)(&(&g_cdCmdTable->respCount)[idx])))));
                     }
-                    *D_8005CFC8 = 1;
-                    *D_8005CFD0 = 0x1F;
+                    *g_cdStatusRegister = 1;
+                    *g_cdDataRegister = 0x1F;
                     if (arg0 != 0xA)
                     {
                         j = g_statusFlag.unk0;
@@ -90,44 +90,44 @@ s32 func_8005144C(s32 arg0)
  * decomp.me link (83.42%%) https://decomp.me/scratch/vhWhP
  * Matches 100% with GNU AS
  */
-void func_80051620(int arg0)
+void SendCdCommand(int arg0)
 {
     s32 i = 0;
     s32* ptr = 0;
     s32 j;
     unsigned int idx;
 
-    *D_8005CFC8 = 1;
-    *D_8005CFD4 = 7;
+    *g_cdStatusRegister = 1;
+    *g_cdIrqRegister = 7;
 
     for (i = 0; i < 4; i++)
         *ptr = i;
 
-    *D_8005CFC8 = 1;
-    *D_8005CFD0 = 0x18;
-    *D_8005CFC8 = 0;
+    *g_cdStatusRegister = 1;
+    *g_cdDataRegister = 0x18;
+    *g_cdStatusRegister = 0;
 
     idx = arg0 * 4;
 
     j = 0;
-    if (D_8005CF91[idx])
+    if ((&g_cdCmdTable->paramCount)[idx])
     {
         do
         {
-            *D_8005CFD0 = g_CmdBuf[j];
+            *g_cdDataRegister = g_CmdBuf[j];
             j++;
-        } while (j < D_8005CF91[idx]);
+        } while (j < (&g_cdCmdTable->paramCount)[idx]);
     }
 
-    *D_8005CFC8 = 0;
-    *D_8005CFCC = D_8005CF90[arg0 * 4];
+    *g_cdStatusRegister = 0;
+    *g_cdResponseRegister = (&g_cdCmdTable->opcode)[arg0 * 4];
 }
 
 /**
  * decomp.me link (96.94%) https://decomp.me/scratch/rZ9Jk
  * Matches 100% with GNU AS
  */
-void func_80051710(void)
+void ExitCheckPS(void)
 {
     DRAWENV sp18;
     DISPENV sp78;
