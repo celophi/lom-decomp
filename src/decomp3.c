@@ -84,3 +84,13 @@ s32 func_800220E4(s32 arg0, s32 arg1)
     func_80028E84(0xC0);
     return temp_v0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/jigab
+ */
+void func_8002213C(s32 arg0, s32 arg1)
+{
+    D_8004D430[0] = arg0;
+    D_8004D430[1] = arg1;
+    func_80028E84(0x12);
+}
