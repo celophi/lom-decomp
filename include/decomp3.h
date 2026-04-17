@@ -5,5 +5,6 @@
 
 s32 FUN_80021fbc(void);
 s32 func_80021FDC(void);
+s32 func_80021FFC(s32 arg0);
 
 #endif
