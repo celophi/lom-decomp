@@ -94,3 +94,22 @@ void func_8002213C(s32 arg0, s32 arg1)
     D_8004D430[1] = arg1;
     func_80028E84(0x12);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/9AZZL
+ */
+void func_8002216C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    s32 temp_a1;
+    s32 temp_a2;
+    s32 temp_a3;
+
+    D_8004D430[0] = (s32)(arg0 & 0x3FF);
+    temp_a1 = arg1 & 0xFFFFFF;
+    temp_a2 = arg2 & 0xFF;
+    temp_a3 = arg3 & 0x7F;
+    D_8004D430[1] = temp_a1;
+    D_8004D430[2] = temp_a2;
+    D_8004D430[3] = temp_a3;
+    func_80028E84(0x20);
+};

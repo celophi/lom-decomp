@@ -14,5 +14,6 @@ void func_80022090(void);
 void func_800220B0(s32 arg0, s32 arg1);
 s32 func_800220E4(s32 arg0, s32 arg1);
 void func_8002213C(s32 arg0, s32 arg1);
+void func_8002216C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 
 #endif
