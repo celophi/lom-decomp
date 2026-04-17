@@ -32,3 +32,12 @@ s32 func_80021FFC(s32 arg0)
     }
     return temp_v0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/iVOOb
+ */
+void func_80022040(s32 arg0)
+{
+    D_8004D430 = arg0;
+    func_80028E84(0x10);
+}
