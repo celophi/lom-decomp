@@ -120,7 +120,7 @@ void SendCdCommand(int arg0)
     }
 
     *g_cdStatusRegister = 0;
-    *g_cdResponseRegister = (&g_cdCmdTable->opcode)[idx];
+    *g_cdResponseRegister = (&g_cdCmdTable->opcode)[arg0 * 4];
 }
 
 /**
