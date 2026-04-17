@@ -22,7 +22,7 @@ s32 D_80061098;
 
 s32 D_8006109C;
 
-s32 D_800610A0;
+s32 g_frameTimer;
 
 s32 g_lastInputState;
 
@@ -36,7 +36,7 @@ s32 g_D_800610AC[32769];
 s32 RunCheckPS(s32 baseAddress)
 {
     func_80050080();
-    func_8004FEE8(baseAddress);
+    InitCheckPSDisplay((CheckPSState*)baseAddress);
 
     do
     {
@@ -62,10 +62,10 @@ void func_8004FD68(int baseAddress)
     var_s0 = baseAddress;
     func_800158E0();
 
-    rect.w = 320;
+    rect.w = SCREEN_WIDTH;
     rect.x = 0;
     rect.y = 0;
-    rect.h = 472;
+    rect.h = VRAM_BACK_DISP_Y + SCREEN_HEIGHT;
 
     ClearImage(&rect, 0, 0, 0);
     ClearOTagR(var_s0 + 0x40, 0x1000);
@@ -109,42 +109,55 @@ void func_8004FD68(int baseAddress)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/tlBGm
+ * @brief Initialises the double-buffered display system for the CheckPS overlay.
+ *
+ * @details Sets up both render frames within the CheckPSState.
+ *  - Configures the screen geometry offset (160, 120) for a 320x240 display.
+ *  - Writes the screen-clear rects for each frame's display area.
+ *  - Clears all of VRAM (1024x512).
+ *  - Calls SetDefDispEnv / SetDefDrawEnv to configure the double-buffer swap chain.
+ *  - Clears the texture cache region of VRAM.
+ *  - Resets the text renderer, fade state, and input state.
+ *  - Triggers a fade-in to full brightness over 20 frames.
+ *
+ * @param state  Pointer to the CheckPS render state containing both frame buffers.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/tlBGm
  */
-void func_8004FEE8(int baseAddress)
+void InitCheckPSDisplay(CheckPSState* state)
 {
     RECT rect;
 
-    func_8001D5AC(0x5DC);
-    func_8001D58C(0xA0, 0x78);
-    *(u16*)(baseAddress + 0x40B0) = 0;
-    *(u16*)(baseAddress + 0x40B2) = 0;
-    *(u16*)(baseAddress + 0x40B4) = 0x140;
-    *(u16*)(baseAddress + 0x40B6) = 0xF0;
-    *(u16*)(baseAddress + 0xFD7C) = 0;
-    *(u16*)(baseAddress + 0xFD7E) = 0xE8;
-    *(u16*)(baseAddress + 0xFD80) = 0x140;
-    *(u16*)(baseAddress + 0xFD82) = 0xF0;
+    func_8001D5AC(1500);
+    func_8001D58C(160, 120);
+    state->front.clearRect.x = 0;
+    state->front.clearRect.y = 0;
+    state->front.clearRect.w = SCREEN_WIDTH;
+    state->front.clearRect.h = SCREEN_HEIGHT;
+    state->back.clearRect.x = 0;
+    state->back.clearRect.y = VRAM_BACK_DISP_Y;
+    state->back.clearRect.w = SCREEN_WIDTH;
+    state->back.clearRect.h = SCREEN_HEIGHT;
     DrawSync(0);
     VSync(0);
 
-    rect.w = 0x400;
+    rect.w = 1024;
     rect.x = 0;
     rect.y = 0;
-    rect.h = 0x200;
+    rect.h = 512;
 
     ClearImage(&rect, 0, 0, 0);
-    SetDefDispEnv(baseAddress + 0x4040, 0, 0, 0x140, 0xF0);
-    SetDefDispEnv(baseAddress + 0xFD0C, 0, 0xE8, 0x140, 0xF0);
-    SetDefDrawEnv(baseAddress + 0x4054, 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv(baseAddress + 0xFD20, 0, 8, 0x140, 0xE0);
-    *(u8*)(baseAddress + 0xFD36) = 0;
-    *(u8*)(baseAddress + 0x406A) = 0;
+    SetDefDispEnv(&state->front.disp, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&state->back.disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&state->front.draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&state->back.draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    state->back.draw.dtd = 0;
+    state->front.draw.dtd = 0;
 
-    rect.x = 0x3C0;
-    rect.w = 0x40;
+    rect.x = 960;
+    rect.w = 64;
     rect.y = 0;
-    rect.h = 0x100;
+    rect.h = 256;
 
     ClearImage(&rect, 0, 0, 0);
     func_8005239C();
@@ -286,7 +299,8 @@ void func_80050258(s32* arg0)
         g_fadeCurrent.blue = g_fadeTarget.blue;
     }
 
-    if (g_fadeCurrent.red != 0x100 || g_fadeCurrent.green != g_fadeCurrent.red || g_fadeCurrent.blue != g_fadeCurrent.green)
+    if (g_fadeCurrent.red != 0x100 || g_fadeCurrent.green != g_fadeCurrent.red ||
+        g_fadeCurrent.blue != g_fadeCurrent.green)
     {
 
         if (g_fadeCurrent.red >= 0x101)
@@ -383,8 +397,8 @@ void func_80050570(void)
     s32 temp_v0;
 
     func_8005088C();
-    temp_v0 = D_800610A0 - 1;
-    D_800610A0 = temp_v0;
+    temp_v0 = g_frameTimer - 1;
+    g_frameTimer = temp_v0;
 
     if (temp_v0 == 0)
     {
@@ -456,7 +470,7 @@ void func_800506D0(void)
     pRect = &rect;
     gfxBase = D_8005B744;
 
-    D_800610A0 = 0x78;
+    g_frameTimer = 120;
 
     rectLoad.x = 0x140;
     rectLoad.y = 0;
@@ -604,7 +618,7 @@ void ProcessControllerInput(void)
 
     controllerRegs = (SCDRegs*)0x801ED600;
 
-    // 0xFF = no controller (High-Z, pins floating); 
+    // 0xFF = no controller (High-Z, pins floating);
     // 0xFE = probably a defensive boundary just to be safe?
     if (((u8)D_801ED600) >= 0xFEU)
     {
@@ -722,7 +736,7 @@ void UpdateControllerInput(void)
 
     g_debouncedInput = 0;
 
-    // 0xFF = no controller (High-Z, pins floating); 
+    // 0xFF = no controller (High-Z, pins floating);
     // 0xFE = probably a defensive boundary just to be safe?
     if (D_801ED600 >= 0xFEU)
     {

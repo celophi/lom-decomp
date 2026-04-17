@@ -601,6 +601,7 @@ g_lastInputState = 0x800610A4;
 g_inputRepeatTimer = 0x800610A8;
 g_fadeTarget = 0x8005D068;
 g_fadeCurrent = 0x8005D078;
+g_frameTimer = 0x800610A0;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
@@ -613,3 +614,4 @@ ClearInvalidGlyphs = 0x8005235C;
 ResetTextRenderer = 0x8005239C;
 ResetFadeState = 0x80050228;
 SetFadeTarget = 0x80050554;
+InitCheckPSDisplay = 0x8004FEE8;
