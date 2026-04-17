@@ -9,6 +9,33 @@
 #include "psyq/strings.h"
 
 /**
+ * The width of the visible screen area, excluding overscan. 
+ * This is used for setting up display environments and calculating text layout.
+ */
+#define SCREEN_WIDTH  320
+
+/**
+ * The visible height of the screen, excluding the overscan area. 
+ * This is used for setting up display environments and calculating text layout.
+ */
+#define SCREEN_HEIGHT 240
+
+/**
+ * Vertical start of the back buffer's draw region.
+ */
+#define VRAM_BACK_DRAW_Y   8
+
+/**
+ * Vertical start of the back buffer's display region. 
+ */
+#define VRAM_BACK_DISP_Y   232
+
+/**
+ * Height of the draw region for each buffer.
+ */
+#define VRAM_DRAW_HEIGHT   224
+
+/**
  * The maximum number of glyph entries in the character cache
  */
 #define MAX_GLYPH_ENTRIES 256
@@ -173,8 +200,32 @@ typedef struct
     u16 unkE;
 } GlyphInstance;
 
+/**
+ * A double-buffer slot containing the display/draw environments and the clear rect.
+ */
+typedef struct
+{
+    DISPENV disp;       // +0x00
+    DRAWENV draw;       // +0x14
+    RECT    clearRect;  // +0x70
+} DisplayBuffer;
+
+/**
+ * Top-level render state for the CheckPS overlay.
+ * Contains two double-buffer frames, each with an OTag and a DisplayBuffer.
+ */
+typedef struct
+{
+    u8      _pad0[0x40];            // +0x0000
+    u_long  oTagFront[0x1000];      // +0x0040
+    DisplayBuffer front;            // +0x4040
+    u8      _pad1[0x7C54];          // +0x40B8
+    u_long  oTagBack[0x1000];       // +0xBD0C
+    DisplayBuffer back;             // +0xFD0C
+} CheckPSState;
+
 void func_80050080(void);
-void func_8004FEE8(int param_1);
+void InitCheckPSDisplay(CheckPSState* state);
 void func_8004FD68(int param_1);
 void func_80051908(void* arg0, u8* arg1, s32 arg2);
 void DrawSymmetricTestPattern(void);
