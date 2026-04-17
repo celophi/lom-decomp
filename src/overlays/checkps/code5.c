@@ -12,8 +12,9 @@ s32 PollCdResponse(s32 arg0)
     s32 temp_a2;
     s32 i;
     int new_var;
+    s32 idx;
     s32 j;
-    t2 = g_cdCmdTable[arg0].irqThresh;
+    t2 = (&g_cdCmdTable->irqThresh)[arg0 * 4];
     *g_cdStatusRegister = 1;
     val1 = *((volatile u8*)g_cdIrqRegister);
     val2 = *((volatile u8*)g_cdIrqRegister);
@@ -55,14 +56,15 @@ s32 PollCdResponse(s32 arg0)
                 else
                 {
                     temp_a2 = 0;
+                    idx = arg0 * 4;
                     j = temp_a2;
-                    if (g_cdCmdTable[arg0].respCount != temp_a2)
+                    if ((&g_cdCmdTable->respCount)[idx] != temp_a2)
                     {
                         do
                         {
                             ((u8*)(&g_statusFlag))[j] = *g_cdResponseRegister;
                             j++;
-                        } while (j < ((s32)(*((volatile u8*)(&g_cdCmdTable[arg0].respCount)))));
+                        } while (j < ((s32)(*((volatile u8*)(&(&g_cdCmdTable->respCount)[idx])))));
                     }
                     *g_cdStatusRegister = 1;
                     *g_cdDataRegister = 0x1F;
