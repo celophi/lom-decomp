@@ -137,7 +137,7 @@ extern u8 D_801ED600;
 extern s32 g_checkPSState;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
-extern s8* D_8005CFC8;
+extern s8* g_cdStatusRegister;
 extern s8* D_8005CFD4;
 extern u8* D_8005CFD0;
 extern u8 D_8005CF91[];

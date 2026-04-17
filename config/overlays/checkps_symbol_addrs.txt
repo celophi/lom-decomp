@@ -602,6 +602,7 @@ g_inputRepeatTimer = 0x800610A8;
 g_fadeTarget = 0x8005D068;
 g_fadeCurrent = 0x8005D078;
 g_frameTimer = 0x800610A0;
+g_cdStatusRegister = 0x8005CFC8;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;

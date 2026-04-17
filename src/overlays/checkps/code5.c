@@ -15,7 +15,7 @@ s32 func_8005144C(s32 arg0)
     s32 idx;
     s32 j;
     t2 = D_8005CF93[arg0 * 4];
-    *D_8005CFC8 = 1;
+    *g_cdStatusRegister = 1;
     val1 = *((volatile u8*)D_8005CFD4);
     val2 = *((volatile u8*)D_8005CFD4);
     if ((new_var = val1 & 7) == (val2 & 7))
@@ -25,7 +25,7 @@ s32 func_8005144C(s32 arg0)
         if (temp_a2 != 0)
         {
             D_8005CFEC = D_8005CFEC + temp_a2;
-            *D_8005CFC8 = 1;
+            *g_cdStatusRegister = 1;
             *D_8005CFD4 = 7;
             i = 0;
             do
@@ -44,7 +44,7 @@ s32 func_8005144C(s32 arg0)
                         g_statusFlag.unk0 = *D_8005CFCC;
                     } while (0);
                     g_statusFlag.unk1 = *D_8005CFCC;
-                    *D_8005CFC8 = 1;
+                    *g_cdStatusRegister = 1;
                     *D_8005CFD0 = 0x1F;
                     if (!(g_statusFlag.unk0 & 0x10))
                     {
@@ -66,7 +66,7 @@ s32 func_8005144C(s32 arg0)
                             j++;
                         } while (j < ((s32)(*((volatile u8*)(&D_8005CF92[idx])))));
                     }
-                    *D_8005CFC8 = 1;
+                    *g_cdStatusRegister = 1;
                     *D_8005CFD0 = 0x1F;
                     if (arg0 != 0xA)
                     {
@@ -97,15 +97,15 @@ void func_80051620(int arg0)
     s32 j;
     unsigned int idx;
 
-    *D_8005CFC8 = 1;
+    *g_cdStatusRegister = 1;
     *D_8005CFD4 = 7;
 
     for (i = 0; i < 4; i++)
         *ptr = i;
 
-    *D_8005CFC8 = 1;
+    *g_cdStatusRegister = 1;
     *D_8005CFD0 = 0x18;
-    *D_8005CFC8 = 0;
+    *g_cdStatusRegister = 0;
 
     idx = arg0 * 4;
 
@@ -119,7 +119,7 @@ void func_80051620(int arg0)
         } while (j < D_8005CF91[idx]);
     }
 
-    *D_8005CFC8 = 0;
+    *g_cdStatusRegister = 0;
     *D_8005CFCC = D_8005CF90[arg0 * 4];
 }
 
