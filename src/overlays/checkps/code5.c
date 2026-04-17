@@ -73,7 +73,8 @@ s32 PollCdResponse(s32 arg0)
                         j = g_statusFlag.unk0;
                         if (j & 0x10)
                         {
-                            return -2;
+                            idx = 2;
+                            return -idx;
                         }
                     }
                     return 1;
