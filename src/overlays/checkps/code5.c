@@ -16,8 +16,8 @@ s32 func_8005144C(s32 arg0)
     s32 j;
     t2 = D_8005CF93[arg0 * 4];
     *g_cdStatusRegister = 1;
-    val1 = *((volatile u8*)D_8005CFD4);
-    val2 = *((volatile u8*)D_8005CFD4);
+    val1 = *((volatile u8*)g_cdIrqRegister);
+    val2 = *((volatile u8*)g_cdIrqRegister);
     if ((new_var = val1 & 7) == (val2 & 7))
     {
         temp_v1 = new_var;
@@ -26,7 +26,7 @@ s32 func_8005144C(s32 arg0)
         {
             D_8005CFEC = D_8005CFEC + temp_a2;
             *g_cdStatusRegister = 1;
-            *D_8005CFD4 = 7;
+            *g_cdIrqRegister = 7;
             i = 0;
             do
             {
@@ -41,11 +41,11 @@ s32 func_8005144C(s32 arg0)
                 {
                     do
                     {
-                        g_statusFlag.unk0 = *D_8005CFCC;
+                        g_statusFlag.unk0 = *g_cdResponseRegister;
                     } while (0);
-                    g_statusFlag.unk1 = *D_8005CFCC;
+                    g_statusFlag.unk1 = *g_cdResponseRegister;
                     *g_cdStatusRegister = 1;
-                    *D_8005CFD0 = 0x1F;
+                    *g_cdDataRegister = 0x1F;
                     if (!(g_statusFlag.unk0 & 0x10))
                     {
                         return -1;
@@ -62,12 +62,12 @@ s32 func_8005144C(s32 arg0)
                     {
                         do
                         {
-                            ((u8*)(&g_statusFlag))[j] = *D_8005CFCC;
+                            ((u8*)(&g_statusFlag))[j] = *g_cdResponseRegister;
                             j++;
                         } while (j < ((s32)(*((volatile u8*)(&D_8005CF92[idx])))));
                     }
                     *g_cdStatusRegister = 1;
-                    *D_8005CFD0 = 0x1F;
+                    *g_cdDataRegister = 0x1F;
                     if (arg0 != 0xA)
                     {
                         j = g_statusFlag.unk0;
@@ -98,13 +98,13 @@ void func_80051620(int arg0)
     unsigned int idx;
 
     *g_cdStatusRegister = 1;
-    *D_8005CFD4 = 7;
+    *g_cdIrqRegister = 7;
 
     for (i = 0; i < 4; i++)
         *ptr = i;
 
     *g_cdStatusRegister = 1;
-    *D_8005CFD0 = 0x18;
+    *g_cdDataRegister = 0x18;
     *g_cdStatusRegister = 0;
 
     idx = arg0 * 4;
@@ -114,13 +114,13 @@ void func_80051620(int arg0)
     {
         do
         {
-            *D_8005CFD0 = g_CmdBuf[j];
+            *g_cdDataRegister = g_CmdBuf[j];
             j++;
         } while (j < D_8005CF91[idx]);
     }
 
     *g_cdStatusRegister = 0;
-    *D_8005CFCC = D_8005CF90[arg0 * 4];
+    *g_cdResponseRegister = D_8005CF90[arg0 * 4];
 }
 
 /**

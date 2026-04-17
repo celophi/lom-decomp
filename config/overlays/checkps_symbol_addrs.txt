@@ -603,6 +603,9 @@ g_fadeTarget = 0x8005D068;
 g_fadeCurrent = 0x8005D078;
 g_frameTimer = 0x800610A0;
 g_cdStatusRegister = 0x8005CFC8;
+g_cdResponseRegister = 0x8005CFCC;
+g_cdDataRegister = 0x8005CFD0;
+g_cdIrqRegister = 0x8005CFD4;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
