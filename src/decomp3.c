@@ -113,3 +113,26 @@ void func_8002216C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     D_8004D430[3] = temp_a3;
     func_80028E84(0x20);
 };
+
+/**
+ * decomp.me link (96.97%) https://decomp.me/scratch/4tVNg
+ */
+s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    long long new_var2;
+    s32 var_v0;
+    unsigned char new_var;
+    var_v0 = func_800235F8();
+    if (var_v0 == 0)
+    {
+        D_8004D430[0] = arg0;
+        new_var = arg2;
+        D_8004D430[1] = (s32)(arg1 & 0xFFFFFF);
+        D_8004D430[2] = (s32)(new_var & 0xFF);
+        D_8004D430[3] = (s32)(arg3 & 0x7F);
+        func_80028E84(0x24);
+        new_var2 = arg0;
+        var_v0 = new_var2;
+    }
+    return var_v0;
+}
