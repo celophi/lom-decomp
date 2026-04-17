@@ -164,12 +164,27 @@ extern s8* g_cdIrqRegister = (s8*)0x1F801803;
 
 
 
-extern u8 D_8005CF91[];
+/**
+ * Descriptor for a single CD-ROM command: opcode, parameter count, response byte count,
+ * and the IRQ accumulation threshold that must be reached before reading the response FIFO.
+ */
+typedef struct
+{
+    u8 opcode;
+    u8 paramCount;
+    u8 respCount;
+    u8 irqThresh;
+} CdCmdEntry;
+
+extern CdCmdEntry g_cdCmdTable[];
 extern u8 g_CmdBuf[3];
-extern u8 D_8005CF90[];
-extern u8 D_8005CF92[];
-extern s32 D_8005CFEC;
-extern u8 D_8005CF93[];
+
+/**
+ * Running accumulator of CD-ROM INT codes received since the last command was dispatched.
+ * Incremented by the INT code value on each stable poll; reset to zero once the irqThresh
+ * for the current command is reached and the response FIFO is consumed.
+ */
+extern s32 g_cdIrqAccum;
 extern u8 g_clockMode;
 extern u8 g_RTCTimeBCD[2];
 
@@ -252,6 +267,9 @@ void InitCheckPSDisplay(CheckPSState* state);
 void func_8004FD68(int param_1);
 void func_80051908(void* arg0, u8* arg1, s32 arg2);
 void DrawSymmetricTestPattern(void);
+s32 PollCdResponse(s32 arg0);
+void SendCdCommand(int arg0);
+void ExitCheckPS(void);
 
 /**
  * @brief Creates a new glyph instance and links it into the active text stream.
