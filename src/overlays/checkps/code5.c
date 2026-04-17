@@ -92,6 +92,7 @@ void SendCdCommand(int arg0)
     s32 i = 0;
     s32* ptr = 0;
     s32 j;
+    unsigned int idx;
 
     *g_cdStatusRegister = 1;
     *g_cdIrqRegister = 7;
@@ -103,18 +104,20 @@ void SendCdCommand(int arg0)
     *g_cdDataRegister = 0x18;
     *g_cdStatusRegister = 0;
 
+    idx = arg0 * 4;
+
     j = 0;
-    if (g_cdCmdTable[arg0].paramCount)
+    if ((&g_cdCmdTable->paramCount)[idx])
     {
         do
         {
             *g_cdDataRegister = g_CmdBuf[j];
             j++;
-        } while (j < g_cdCmdTable[arg0].paramCount);
+        } while (j < (&g_cdCmdTable->paramCount)[idx]);
     }
 
     *g_cdStatusRegister = 0;
-    *g_cdResponseRegister = g_cdCmdTable[arg0].opcode;
+    *g_cdResponseRegister = (&g_cdCmdTable->opcode)[idx];
 }
 
 /**
