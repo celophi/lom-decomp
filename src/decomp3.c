@@ -69,3 +69,18 @@ void func_800220B0(s32 arg0, s32 arg1)
     D_8004D430[2] = 0;
     func_80028E84(0x14);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/d6xXt
+ */
+s32 func_800220E4(s32 arg0, s32 arg1)
+{
+    s32 temp_v0;
+
+    D_8004D430[0] = arg0;
+    temp_v0 = func_80028E84(0x19);
+    D_8004D430[0] = (s32)(arg1 & 0x7F);
+    D_8004D430[3] = 0;
+    func_80028E84(0xC0);
+    return temp_v0;
+}

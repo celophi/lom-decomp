@@ -11,5 +11,7 @@ s32 func_80021FFC(s32 arg0);
 void func_80022040(s32 arg0);
 void func_80022068(s32 arg0);
 void func_80022090(void);
+void func_800220B0(s32 arg0, s32 arg1);
+s32 func_800220E4(s32 arg0, s32 arg1);
 
 #endif
