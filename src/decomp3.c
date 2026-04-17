@@ -41,3 +41,12 @@ void func_80022040(s32 arg0)
     D_8004D430 = arg0;
     func_80028E84(0x10);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/9M4hF
+ */
+void func_80022068(s32 arg0)
+{
+    D_8004D430 = arg0;
+    func_80028E84(0x11);
+};
