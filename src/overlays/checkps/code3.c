@@ -4,16 +4,16 @@
  * decomp.me link (100%) https://decomp.me/scratch/cjji6
  * PsyQ 4.3 / gcc 2.8.0
  */
-void DrawString(u32 str, GlyphDrawState* drawState, s32 color)
+void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
 {
     u32 end; /* string end on entry; reused for new x by compiler register allocation */
     s32 savedX;
     u32 newX;
     u32 strEnd;
     s32 localColor = color;
-    end = str + strlen((char*)str);
+    end = (u32)(str + strlen(str));
     savedX = drawState->pos.coord.x;
-    if (str < end)
+    if ((u32)str < end)
     {
         u8 nl = 10;
         (void)nl;
@@ -37,7 +37,7 @@ void DrawString(u32 str, GlyphDrawState* drawState, s32 color)
                 drawState->pos.coord.x = (end = (newX = (s16)(drawState->pos.coord.x + 17)));
             }
             str++;
-        } while (str < strEnd);
+        } while ((u32)str < strEnd);
     }
 }
 

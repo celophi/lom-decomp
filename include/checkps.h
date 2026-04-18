@@ -269,7 +269,7 @@ typedef struct
 void func_80050080(void);
 void InitCheckPSDisplay(CheckPSState* state);
 void func_8004FD68(int param_1);
-void DrawString(u32 str, GlyphDrawState* drawState, s32 color);
+void DrawString(const char* str, GlyphDrawState* drawState, s32 color);
 void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color);
 void DrawSymmetricTestPattern(void);
 s32 PollCdResponse(s32 arg0);
