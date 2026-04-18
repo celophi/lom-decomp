@@ -15,7 +15,7 @@ void DrawString(u32 str, GlyphDrawState* drawState, s32 color)
     savedX = drawState->pos.coord.x;
     if (str < end)
     {
-        u8 nl = 0x0A;
+        u8 nl = 10;
         (void)nl;
 
         strEnd = end;
@@ -25,17 +25,16 @@ void DrawString(u32 str, GlyphDrawState* drawState, s32 color)
             {
                 /* Newline: reset x to start of line, advance y by one line (0x12 = 18px) */
                 drawState->pos.coord.x = savedX;
-                drawState->pos.coord.y += 0x12;
+                drawState->pos.coord.y += 18;
             }
             else
             {
                 /* Combine two bytes into a Shift-JIS code and look up the glyph bitmap */
                 int highByte = *((u8*)str);
                 str++;
-                DrawGlyph(drawState, (u8*)Krom2RawAdd((*((u8*)str)) | (highByte << 8)), localColor);
+                DrawGlyph(drawState, Krom2RawAdd((*((u8*)str)) | (highByte << 8)), localColor);
                 /* Advance x by 0x11 (17px) per character */
-                drawState->pos.coord.x =
-                    (end = (newX = (s16)(drawState->pos.coord.x + 17)));
+                drawState->pos.coord.x = (end = (newX = (s16)(drawState->pos.coord.x + 17)));
             }
             str++;
         } while (str < strEnd);
