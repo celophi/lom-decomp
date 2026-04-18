@@ -203,10 +203,14 @@ typedef struct
     s16 d;
 } FourShorts;
 
-typedef struct
-{
-    s16 xy;
-    s16 unk2;
+typedef struct {
+    union {
+        struct {
+            s16 x;
+            s16 y;
+        } coord;
+        s32 packed;
+    } pos;
     u32 wh;
 } GlyphDrawState;
 

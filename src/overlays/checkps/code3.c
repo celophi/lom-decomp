@@ -45,12 +45,6 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
  */
 void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
 {
-    /* No intermediate pointer — reference drawState directly so it gets s1 first */
-    u8* var_s2 = bitmap;     /* s2 */
-    s16 local_arg2 = color; /* s4 */
-
-    /* Force exact stack offsets: tag=0x10(sp), code=0x14(sp),
-       xy=0x18(sp), wh=0x1C(sp), pixels=0x20(sp) */
     struct
     {
         s32 tag;
@@ -60,58 +54,58 @@ void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
         s16 pixels[16];
     } packet;
 
-    s32 temp_s5; /* sign-extended, kept in s5 */
-    s32 temp_s6; /* sign-extended, kept in s6 */
-    s32 var_s3;  /* kept in s3, zeroed after loading arg->wh */
-    s32 var_s0;
+    s32 originalX;
+    s32 originalY;
+    s32 row;
+    s32 half;
     s16* writePtr;
     s16* pixelPtr;
-    int bit;
+    s32 bit;
     s16 pixelValue;
+    u8* bitmapPtr = bitmap;
+    s16 local_arg2 = color;
 
-    /* Exact instruction order from target */
-    temp_s5 = drawState->xy; /* first use of arg0 → allocates s1 */
-    temp_s6 = drawState->unk2;
+    originalX = drawState->pos.coord.x;
+    originalY = drawState->pos.coord.y;
 
-    packet.tag = 0x0B000000; // packet is 11 words long
+    packet.tag = 0x0B000000;
     packet.code = 0xA0000000;
     packet.wh = drawState->wh;
 
-    /* The two nested loops – identical to target */
-    for (var_s3 = 0; var_s3 < 15; var_s3++)
+    for (row = 0; row < 15; row++)
     {
-        writePtr = packet.pixels; /* addiu a2,sp,0x20 */
+        writePtr = packet.pixels;
 
-        for (var_s0 = 0; var_s0 < 2; var_s0++)
+        for (half = 0; half < 2; half++)
         {
             for (bit = 7; bit >= 0; bit--)
             {
-                pixelPtr = writePtr;     /* move a1,a2 */
-                writePtr = pixelPtr + 1; /* addiu a2,a1,2 */
+                pixelPtr = writePtr;
+                writePtr = pixelPtr + 1;
                 pixelValue = 0;
 
-                if (((s32)(*var_s2) >> bit) & 1)
+                if ((*bitmapPtr >> bit) & 1)
                 {
                     pixelValue = local_arg2;
                 }
 
-                *pixelPtr = pixelValue; /* sh a0,0(a1) */
+                *pixelPtr = pixelValue;
             }
 
-            var_s2++;
+            bitmapPtr++;
         }
 
-        for (var_s0 = 0; var_s0 < 2; var_s0++)
+        for (half = 0; half < 2; half++)
         {
-            packet.xy = *(s32*)&drawState->xy; /* lw v0,0(s1); sw v0,0x18(sp) */
+            packet.xy = drawState->pos.packed;
             DrawPrim(&packet);
 
-            drawState->xy = (s16)((u16)drawState->xy + 1);
+            drawState->pos.coord.x = drawState->pos.coord.x + 1;
         }
 
-        drawState->xy = (s16)temp_s5;
-        drawState->unk2 = (s16)((u16)drawState->unk2 + 1);
+        drawState->pos.coord.x = originalX;
+        drawState->pos.coord.y = drawState->pos.coord.y + 1;
     }
 
-    drawState->unk2 = (s16)temp_s6;
+    drawState->pos.coord.y = originalY;
 }
