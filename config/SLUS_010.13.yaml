@@ -164,7 +164,7 @@ segments:
       - [0x11C4C, c, psyq/libspu/SPU]
       - [0x1278C, c, psyq/libspu/S_DCB]
       - [0x127BC, c, decomp3]
-      - [0x12BB0, c, unk7]
+      - [0x12BD8, c, unk7]
       - [0x13BC8, c, psyq/libspu/S_SI]
       - [0x13D08, c, psyq/libspu/S_SIA]
       - [0x13D48, c, psyq/libspu/S_STSA]

@@ -23,5 +23,6 @@ void func_8002227C(s32 arg0);
 s32 func_800222A8(void);
 s32 func_80022310(s32 arg0);
 void func_8002237C(s32 arg0);
+void func_800223B0(s32 arg0);
 
 #endif

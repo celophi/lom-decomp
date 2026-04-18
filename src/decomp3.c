@@ -237,3 +237,12 @@ void func_8002237C(s32 arg0)
     new_var2 = &new_var;
     func_80028E84(new_var);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/x94md
+ */
+void func_800223B0(s32 arg0)
+{
+    D_8004D430[0] = arg0;
+    func_80028E84(0x90);
+}
