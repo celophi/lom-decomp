@@ -203,12 +203,16 @@ typedef struct
     s16 d;
 } FourShorts;
 
-typedef struct
-{
-    s16 xy;
-    s16 unk2;
+typedef struct {
+    union {
+        struct {
+            s16 x;
+            s16 y;
+        } coord;
+        s32 packed;
+    } pos;
     u32 wh;
-} Arg0Struct;
+} GlyphDrawState;
 
 typedef struct
 {
@@ -265,7 +269,7 @@ typedef struct
 void func_80050080(void);
 void InitCheckPSDisplay(CheckPSState* state);
 void func_8004FD68(int param_1);
-void func_80051908(void* arg0, u8* arg1, s32 arg2);
+void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color);
 void DrawSymmetricTestPattern(void);
 s32 PollCdResponse(s32 arg0);
 void SendCdCommand(int arg0);
