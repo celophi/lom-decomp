@@ -25,5 +25,6 @@ s32 func_80022310(s32 arg0);
 void func_8002237C(s32 arg0);
 void func_800223B0(s32 arg0);
 void func_800223D8(s32 arg0);
+void FUN_80022400(u32 param_1);
 
 #endif

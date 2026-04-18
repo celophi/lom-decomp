@@ -255,3 +255,29 @@ void func_800223D8(s32 arg0)
     D_8004D430[0] = arg0;
     func_80028E84(0x92);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/qqSuG
+ */
+void FUN_80022400(u32 param_1)
+{
+    s32 var_a0;
+
+    switch (param_1)
+    {
+    case 1:
+        var_a0 = 0x9B;
+        break;
+    case 2:
+        var_a0 = 0x9D;
+        break;
+    case 3:
+        var_a0 = 0x9F;
+        break;
+    default:
+        var_a0 = 0x99;
+        break;
+    }
+
+    func_80028E84(var_a0);
+}
