@@ -45,8 +45,8 @@ void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
             isNewline = (*((u8*)str)) == newline;
 
             // This is done for matching purposes.
-            drawState->pos.coord = drawState->pos.coord;
-            
+            //drawState->pos.coord = drawState->pos.coord;
+
             if (isNewline)
             {
                 drawState->pos.coord.x = savedX;
