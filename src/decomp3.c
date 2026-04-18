@@ -136,3 +136,16 @@ s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     }
     return var_v0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/lu9nS
+ */
+void func_80022240(s32 arg0, s32 arg1)
+{
+    s32 temp_a1;
+
+    D_8004D430[0] = arg0;
+    temp_a1 = arg1 & 0xFFFFFF;
+    D_8004D430[1] = temp_a1;
+    func_80028E84(0x21);
+}
