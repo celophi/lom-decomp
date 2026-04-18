@@ -283,7 +283,9 @@ OVERLAYS += movie
 #  Top-Level Targets
 # ============================================================================
 
-.PHONY: all bin clean recopy
+SPLAT_CONFIGS := config/$(GAME).yaml $(wildcard config/overlays/*.yaml)
+
+.PHONY: all bin clean recopy splat
 .PHONY: target-objects base-objects objdiff-objects objdiff-config
 .PHONY: overlays everything
 
@@ -303,6 +305,9 @@ clean:
 recopy:
 	rm -f $(COPY_SENTINEL)
 	$(MAKE) $(COPY_SENTINEL)
+
+splat:
+	@for cfg in $(SPLAT_CONFIGS); do splat split $$cfg || exit 1; done
 
 
 # ============================================================================
