@@ -1,21 +1,40 @@
 #include "checkps.h"
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/cjji6
- * PsyQ 4.3 / gcc 2.8.0
+ * @brief Renders a Shift-JIS encoded string to VRAM by uploading each glyph via DrawGlyph.
+ *
+ * @details Walks @p str two bytes at a time, combining each pair into a 16-bit Shift-JIS
+ * character code and passing the result to Krom2RawAdd() to retrieve the glyph bitmap from
+ * the PS1 Kanji ROM. Each glyph is drawn at the current drawState position and the x cursor
+ * is advanced by 17px. Newline bytes (0x0A) reset x to its original value and advance y by
+ * 18px instead of drawing a glyph.
+ *
+ * drawState->x and drawState->y are not restored on exit; the caller's draw cursor is left
+ * at the end of the last line rendered.
+ *
+ * @param str       Null-terminated Shift-JIS string to render. Each character is 2 bytes.
+ * @param drawState VRAM destination position and glyph size. x and y are updated in place
+ *                  as each character is drawn.
+ * @param color     Foreground pixel value passed to DrawGlyph for each glyph.
+ *
+ * @return void No return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/cjji6
  */
 void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
 {
     const char* end;
-    s32 savedX;
     const char* strEnd;
-    s32 new_var2;
-    int new_var;
-    u8 nl = 10;
+    s32 isNewline;
+    s32 savedX;
+    s32 highByte;
+    s32 localColor;
+    u16 charCode;
+    s32 newline;
 
-    new_var2 = color;
-    new_var = strlen(str);
-    end = str + new_var;
+    localColor = color;
+    end = str + strlen(str);
+    newline = 10;
     savedX = drawState->pos.coord.x;
 
     if (str < end)
@@ -23,18 +42,19 @@ void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
         strEnd = end;
         do
         {
-            new_var = 17;
-            if ((*((u8*)str)) == nl)
+            isNewline = (*((u8*)str)) == newline;
+            if (isNewline)
             {
                 drawState->pos.coord.x = savedX;
                 drawState->pos.coord.y += 18;
             }
             else
             {
-                s32 highByte = *((u8*)str);
+                highByte = *((u8*)str);
                 str++;
-                DrawGlyph(drawState, Krom2RawAdd((*((u8*)str)) | (highByte << 8)), new_var2);
-                drawState->pos.coord.x += new_var;
+                charCode = (highByte << 8) | (*((u8*)str));
+                DrawGlyph(drawState, Krom2RawAdd(charCode), localColor);
+                drawState->pos.coord.x += 17;
             }
             str++;
         } while (str < strEnd);
