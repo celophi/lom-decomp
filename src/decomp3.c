@@ -158,3 +158,35 @@ void func_8002227C(s32 arg0)
     D_8004D430[0] = arg0 & 0x3FF;
     func_80028E84(0x30);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/yZloM
+ */
+s32 func_800222A8(void)
+{
+    s32 bits;
+    unsigned char* ptr;
+    s32 new_var;
+    s32 acc;
+    unsigned int mask;
+    new_var = D_8004D400;
+    bits = new_var;
+    acc = bits == 0;
+    if (acc)
+    {
+        return 0;
+    }
+    ptr = D_8004B430;
+    acc = 0;
+    mask = 0x1000;
+    do
+    {
+        if (bits & mask)
+        {
+            acc |= *((s32*)(ptr + 0x28));
+        }
+        mask <<= 1;
+        ptr += 0x118;
+    } while (mask & 0xFFFFFF);
+    return acc & 0xFFFFFF;
+}
