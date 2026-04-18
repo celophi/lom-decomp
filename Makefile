@@ -274,8 +274,8 @@ STAGE_DIRS := src asm include linker tools assets
 
 OVERLAYS += checkps
 overlay_checkps_asset      := assets/checkps.bin
-overlay_checkps_gcc_srcs   := src/overlays/checkps/code3.c
-overlay_checkps_gnu_srcs   := src/overlays/checkps/code4.c src/overlays/checkps/code5.c src/overlays/checkps/code6.c src/overlays/checkps/code7.c
+overlay_checkps_gcc_srcs   := 
+overlay_checkps_gnu_srcs   := src/overlays/checkps/code4.c src/overlays/checkps/code5.c src/overlays/checkps/draw.c src/overlays/checkps/code7.c
 
 OVERLAYS += movie
 
