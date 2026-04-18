@@ -10,14 +10,15 @@ void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
     s32 savedX;
     u32 newX;
     u32 strEnd;
+    s32 new_x;
+    u8 nl = 10;
     s32 localColor = color;
+
     end = (u32)(str + strlen(str));
     savedX = drawState->pos.coord.x;
+
     if ((u32)str < end)
     {
-        u8 nl = 10;
-        (void)nl;
-
         strEnd = end;
         do
         {
@@ -34,7 +35,12 @@ void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
                 str++;
                 DrawGlyph(drawState, Krom2RawAdd((*((u8*)str)) | (highByte << 8)), localColor);
                 /* Advance x by 0x11 (17px) per character */
-                drawState->pos.coord.x = (end = (newX = (s16)(drawState->pos.coord.x + 17)));
+                new_x = (s16)(drawState->pos.coord.x + 17);
+                // Update the (now‑reused) temporary variables exactly as the original did
+                newX = new_x;
+                end = new_x;
+                // Finally update the draw state's X coordinate
+                drawState->pos.coord.x = new_x;
             }
             str++;
         } while ((u32)str < strEnd);
