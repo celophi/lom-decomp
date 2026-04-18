@@ -40,8 +40,26 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/PIDIi
- * matches under Psy-Q 4.3 / gcc 2.8.0
+ * @brief Uploads a single 1bpp glyph row-by-row to VRAM using GPU LoadImage packets.
+ *
+ * @details For each of the 15 scanlines in the glyph, reads 2 bytes (16 bits) from
+ * the raw bitmap and expands each bit into a 16-bit pixel: set bits become color,
+ * clear bits become 0. The decoded row is then sent to VRAM twice via DrawPrim,
+ * advancing drawState->x by 1 between calls to write into both VRAM atlas slots.
+ * After each row, x is reset to its original value and y is incremented by 1.
+ *
+ * drawState->x and drawState->y are restored on exit, so the caller's draw cursor
+ * is not modified.
+ *
+ * @param drawState VRAM destination and size for the upload. x and y are used as the
+ *                  target coordinates; wh is passed directly to the GPU packet.
+ * @param bitmap    Pointer to the raw 1bpp glyph data (2 bytes per row, 15 rows).
+ *                  Typically obtained from Krom2RawAdd() for kanji/kana characters.
+ * @param color     Foreground pixel value written for set bits. Clear bits write 0.
+ *
+ * @return void No return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/PIDIi
  */
 void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
 {
@@ -63,11 +81,13 @@ void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
     s32 bit;
     s16 pixelValue;
     u8* bitmapPtr = bitmap;
-    s16 local_arg2 = color;
+    s16 fgColor = color;
 
+    // Save position so DrawGlyph leaves drawState unchanged after upload
     originalX = drawState->pos.coord.x;
     originalY = drawState->pos.coord.y;
 
+    // GPU CPU→VRAM (LoadImage) packet: tag=11 following words, code=0xA0
     packet.tag = 0x0B000000;
     packet.code = 0xA0000000;
     packet.wh = drawState->wh;
@@ -76,6 +96,7 @@ void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
     {
         writePtr = packet.pixels;
 
+        // Expand 2 bytes (16 bits) of 1bpp bitmap into 16 pixel values
         for (half = 0; half < 2; half++)
         {
             for (bit = 7; bit >= 0; bit--)
@@ -86,7 +107,7 @@ void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
 
                 if ((*bitmapPtr >> bit) & 1)
                 {
-                    pixelValue = local_arg2;
+                    pixelValue = fgColor;
                 }
 
                 *pixelPtr = pixelValue;
@@ -95,6 +116,7 @@ void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
             bitmapPtr++;
         }
 
+        // Upload the decoded row twice, advancing x by 1, to write into both VRAM atlas slots
         for (half = 0; half < 2; half++)
         {
             packet.xy = drawState->pos.packed;
