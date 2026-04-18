@@ -4,38 +4,41 @@
  * decomp.me link (100%) https://decomp.me/scratch/cjji6
  * PsyQ 4.3 / gcc 2.8.0
  */
-void func_80051830(u32 arg0, void* arg1, s32 arg2)
+void DrawString(u32 str, GlyphDrawState* drawState, s32 color)
 {
-    u32 end;
-    int unk0;
-    unsigned int new_var2;
-    u32 new_var;
-    s32 local_arg2 = arg2;
-    end = arg0 + strlen((char*)arg0);
-    unk0 = ((arg1struct*)arg1)->unk0;
-    if (arg0 < end)
+    u32 end; /* string end on entry; reused for new x by compiler register allocation */
+    s32 savedX;
+    u32 newX;
+    u32 strEnd;
+    s32 localColor = color;
+    end = str + strlen((char*)str);
+    savedX = drawState->pos.coord.x;
+    if (str < end)
     {
         u8 nl = 0x0A;
         (void)nl;
 
-        new_var = end;
+        strEnd = end;
         do
         {
-            if ((*((u8*)arg0)) == nl)
+            if ((*((u8*)str)) == nl)
             {
-                ((arg1struct*)arg1)->unk0 = unk0;
-                ((arg1struct*)arg1)->unk2 += 0x12;
+                /* Newline: reset x to start of line, advance y by one line (0x12 = 18px) */
+                drawState->pos.coord.x = savedX;
+                drawState->pos.coord.y += 0x12;
             }
             else
             {
-                int temp_a0 = *((u8*)arg0);
-                arg0++;
-                DrawGlyph(arg1, (u8*)Krom2RawAdd((*((u8*)arg0)) | (temp_a0 << 8)), local_arg2);
-                ((arg1struct*)arg1)->unk0 =
-                    (end = (new_var2 = (s16)(((0x11 * 0, (u16)((arg1struct*)arg1)->unk0)) + 0x11)));
+                /* Combine two bytes into a Shift-JIS code and look up the glyph bitmap */
+                int highByte = *((u8*)str);
+                str++;
+                DrawGlyph(drawState, (u8*)Krom2RawAdd((*((u8*)str)) | (highByte << 8)), localColor);
+                /* Advance x by 0x11 (17px) per character */
+                drawState->pos.coord.x =
+                    (end = (newX = (s16)(drawState->pos.coord.x + 17)));
             }
-            arg0++;
-        } while (arg0 < new_var);
+            str++;
+        } while (str < strEnd);
     }
 }
 

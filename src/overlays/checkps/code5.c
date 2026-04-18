@@ -160,7 +160,7 @@ void ExitCheckPS(void)
     {
         spE.a = var_s0 + 0x50;
         spE.b = var_s0 + 0x5C;
-        func_80051830((u32)(&D_8004FCC4), &spE, var_a2);
+        DrawString((u32)(&D_8004FCC4), &spE, var_a2);
         var_a2 = 0x8000;
     }
 
