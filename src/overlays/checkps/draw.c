@@ -21,7 +21,7 @@
  *
  * @see decomp.me (100%) https://decomp.me/scratch/cjji6
  */
-void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
+/*void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
 {
     const char* end;
     const char* strEnd;
@@ -63,7 +63,7 @@ void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
             str++;
         } while (str < strEnd);
     }
-}
+}*/
 
 /**
  * @brief Uploads a single 1bpp glyph row-by-row to VRAM using GPU LoadImage packets.
