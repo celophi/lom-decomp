@@ -625,3 +625,4 @@ PollCdResponse = 0x8005144C;
 SendCdCommand = 0x80051620;
 ExitCheckPS = 0x80051710;
 DrawGlyph = 0x80051908;
+DrawString = 0x80051830;
