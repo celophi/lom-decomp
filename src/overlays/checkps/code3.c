@@ -6,44 +6,38 @@
  */
 void DrawString(const char* str, GlyphDrawState* drawState, s32 color)
 {
-    u32 end; /* string end on entry; reused for new x by compiler register allocation */
+    const char* end;
     s32 savedX;
-    u32 newX;
-    u32 strEnd;
-    s32 new_x;
+    const char* strEnd;
+    s32 new_var2;
+    int new_var;
     u8 nl = 10;
-    s32 localColor = color;
 
-    end = (u32)(str + strlen(str));
+    new_var2 = color;
+    new_var = strlen(str);
+    end = str + new_var;
     savedX = drawState->pos.coord.x;
 
-    if ((u32)str < end)
+    if (str < end)
     {
         strEnd = end;
         do
         {
+            new_var = 17;
             if ((*((u8*)str)) == nl)
             {
-                /* Newline: reset x to start of line, advance y by one line (0x12 = 18px) */
                 drawState->pos.coord.x = savedX;
                 drawState->pos.coord.y += 18;
             }
             else
             {
-                /* Combine two bytes into a Shift-JIS code and look up the glyph bitmap */
-                int highByte = *((u8*)str);
+                s32 highByte = *((u8*)str);
                 str++;
-                DrawGlyph(drawState, Krom2RawAdd((*((u8*)str)) | (highByte << 8)), localColor);
-                /* Advance x by 0x11 (17px) per character */
-                new_x = (s16)(drawState->pos.coord.x + 17);
-                // Update the (now‑reused) temporary variables exactly as the original did
-                newX = new_x;
-                end = new_x;
-                // Finally update the draw state's X coordinate
-                drawState->pos.coord.x = new_x;
+                DrawGlyph(drawState, Krom2RawAdd((*((u8*)str)) | (highByte << 8)), new_var2);
+                drawState->pos.coord.x += new_var;
             }
             str++;
-        } while ((u32)str < strEnd);
+        } while (str < strEnd);
     }
 }
 
