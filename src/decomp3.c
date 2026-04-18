@@ -225,3 +225,15 @@ s32 func_80022310(s32 arg0)
     } while (mask & 0xFFFFFF);
     return 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/9qTjH
+ */
+void func_8002237C(s32 arg0)
+{
+    int* new_var2;
+    int new_var;
+    new_var = (arg0 == 1) ? (0x81) : (0x80);
+    new_var2 = &new_var;
+    func_80028E84(new_var);
+}
