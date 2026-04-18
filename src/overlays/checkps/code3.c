@@ -30,7 +30,7 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
             {
                 int temp_a0 = *((u8*)arg0);
                 arg0++;
-                func_80051908(arg1, (u8*)Krom2RawAdd((*((u8*)arg0)) | (temp_a0 << 8)), local_arg2);
+                DrawGlyph(arg1, (u8*)Krom2RawAdd((*((u8*)arg0)) | (temp_a0 << 8)), local_arg2);
                 ((arg1struct*)arg1)->unk0 =
                     (end = (new_var2 = (s16)(((0x11 * 0, (u16)((arg1struct*)arg1)->unk0)) + 0x11)));
             }
@@ -40,17 +40,29 @@ void func_80051830(u32 arg0, void* arg1, s32 arg2)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/PIDIi
- * matches under Psy-Q 4.3 / gcc 2.8.0
+ * @brief Uploads a single 1bpp glyph row-by-row to VRAM using GPU LoadImage packets.
+ *
+ * @details For each of the 15 scanlines in the glyph, reads 2 bytes (16 bits) from
+ * the raw bitmap and expands each bit into a 16-bit pixel: set bits become color,
+ * clear bits become 0. The decoded row is then sent to VRAM twice via DrawPrim,
+ * advancing drawState->x by 1 between calls to write into both VRAM atlas slots.
+ * After each row, x is reset to its original value and y is incremented by 1.
+ *
+ * drawState->x and drawState->y are restored on exit, so the caller's draw cursor
+ * is not modified.
+ *
+ * @param drawState VRAM destination and size for the upload. x and y are used as the
+ *                  target coordinates; wh is passed directly to the GPU packet.
+ * @param bitmap    Pointer to the raw 1bpp glyph data (2 bytes per row, 15 rows).
+ *                  Typically obtained from Krom2RawAdd() for kanji/kana characters.
+ * @param color     Foreground pixel value written for set bits. Clear bits write 0.
+ *
+ * @return void No return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/PIDIi
  */
-void func_80051908(void* arg0, u8* arg1, s32 arg2)
+void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
 {
-    /* No intermediate pointer — reference arg0 directly so it gets s1 first */
-    u8* var_s2 = arg1;     /* s2 */
-    s16 local_arg2 = arg2; /* s4 */
-
-    /* Force exact stack offsets: tag=0x10(sp), code=0x14(sp),
-       xy=0x18(sp), wh=0x1C(sp), pixels=0x20(sp) */
     struct
     {
         s32 tag;
@@ -60,58 +72,62 @@ void func_80051908(void* arg0, u8* arg1, s32 arg2)
         s16 pixels[16];
     } packet;
 
-    s32 temp_s5; /* sign-extended, kept in s5 */
-    s32 temp_s6; /* sign-extended, kept in s6 */
-    s32 var_s3;  /* kept in s3, zeroed after loading arg->wh */
-    s32 var_s0;
+    s32 originalX;
+    s32 originalY;
+    s32 row;
+    s32 half;
     s16* writePtr;
     s16* pixelPtr;
-    int bit;
+    s32 bit;
     s16 pixelValue;
+    u8* bitmapPtr = bitmap;
+    s16 fgColor = color;
 
-    /* Exact instruction order from target */
-    temp_s5 = ((Arg0Struct*)arg0)->xy; /* first use of arg0 → allocates s1 */
-    temp_s6 = ((Arg0Struct*)arg0)->unk2;
+    // Save position so DrawGlyph leaves drawState unchanged after upload
+    originalX = drawState->pos.coord.x;
+    originalY = drawState->pos.coord.y;
 
-    packet.tag = 0x0B000000;  // packet is 11 words long
+    // GPU CPU→VRAM (LoadImage) packet: tag=11 following words, code=0xA0
+    packet.tag = 0x0B000000;
     packet.code = 0xA0000000;
-    packet.wh = ((Arg0Struct*)arg0)->wh;
+    packet.wh = drawState->wh;
 
-    /* The two nested loops – identical to target */
-    for (var_s3 = 0; var_s3 < 15; var_s3++)
+    for (row = 0; row < 15; row++)
     {
-        writePtr = packet.pixels; /* addiu a2,sp,0x20 */
+        writePtr = packet.pixels;
 
-        for (var_s0 = 0; var_s0 < 2; var_s0++)
+        // Expand 2 bytes (16 bits) of 1bpp bitmap into 16 pixel values
+        for (half = 0; half < 2; half++)
         {
             for (bit = 7; bit >= 0; bit--)
             {
-                pixelPtr = writePtr;     /* move a1,a2 */
-                writePtr = pixelPtr + 1; /* addiu a2,a1,2 */
+                pixelPtr = writePtr;
+                writePtr = pixelPtr + 1;
                 pixelValue = 0;
-                
-                if (((s32)(*var_s2) >> bit) & 1) {
-                    pixelValue = local_arg2;
+
+                if ((*bitmapPtr >> bit) & 1)
+                {
+                    pixelValue = fgColor;
                 }
-                    
-                *pixelPtr = pixelValue; /* sh a0,0(a1) */
+
+                *pixelPtr = pixelValue;
             }
 
-            var_s2++;
+            bitmapPtr++;
         }
 
-        for (var_s0 = 0; var_s0 < 2; var_s0++)
+        // Upload the decoded row twice, advancing x by 1, to write into both VRAM atlas slots
+        for (half = 0; half < 2; half++)
         {
-            packet.xy = *(s32*)&((Arg0Struct*)arg0)->xy; /* lw v0,0(s1); sw v0,0x18(sp) */
+            packet.xy = drawState->pos.packed;
             DrawPrim(&packet);
 
-            ((Arg0Struct*)arg0)->xy = (s16)((u16)((Arg0Struct*)arg0)->xy + 1);
+            drawState->pos.coord.x++;
         }
 
-        
-        ((Arg0Struct*)arg0)->xy = (s16)temp_s5;
-        ((Arg0Struct*)arg0)->unk2 = (s16)((u16)((Arg0Struct*)arg0)->unk2 + 1);
+        drawState->pos.coord.x = originalX;
+        drawState->pos.coord.y++;
     }
 
-    ((Arg0Struct*)arg0)->unk2 = (s16)temp_s6;
+    drawState->pos.coord.y = originalY;
 }
