@@ -606,6 +606,8 @@ g_cdStatusRegister = 0x8005CFC8;
 g_cdResponseRegister = 0x8005CFCC;
 g_cdDataRegister = 0x8005CFD0;
 g_cdIrqRegister = 0x8005CFD4;
+g_cdCmdTable = 0x8005CF90;
+g_cdIrqAccum = 0x8005CFEC;
 
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
@@ -622,5 +624,4 @@ InitCheckPSDisplay = 0x8004FEE8;
 PollCdResponse = 0x8005144C;
 SendCdCommand = 0x80051620;
 ExitCheckPS = 0x80051710;
-g_cdCmdTable = 0x8005CF90;
-g_cdIrqAccum = 0x8005CFEC;
+DrawGlyph = 0x80051908;
