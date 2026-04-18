@@ -122,11 +122,11 @@ void DrawGlyph(GlyphDrawState* drawState, u8* bitmap, s32 color)
             packet.xy = drawState->pos.packed;
             DrawPrim(&packet);
 
-            drawState->pos.coord.x = drawState->pos.coord.x + 1;
+            drawState->pos.coord.x++;
         }
 
         drawState->pos.coord.x = originalX;
-        drawState->pos.coord.y = drawState->pos.coord.y + 1;
+        drawState->pos.coord.y++;
     }
 
     drawState->pos.coord.y = originalY;
