@@ -190,3 +190,38 @@ s32 func_800222A8(void)
     } while (mask & 0xFFFFFF);
     return acc & 0xFFFFFF;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/OvqYq
+ */
+s32 func_80022310(s32 arg0)
+{
+    s32 new_var;
+    s32 bits;
+    unsigned char* ptr;
+    unsigned int mask;
+    if (arg0 == 0)
+    {
+        return 0;
+    }
+    bits = D_8004D400;
+    if (bits == 0)
+    {
+        return 0;
+    }
+    ptr = D_8004B430;
+    mask = 0x1000;
+    do
+    {
+        if ((new_var = bits) & mask)
+        {
+            if (arg0 == (*((s32*)(ptr + 0x28))))
+            {
+                return 1;
+            }
+        }
+        mask <<= 1;
+        ptr += 0x118;
+    } while (mask & 0xFFFFFF);
+    return 0;
+}
