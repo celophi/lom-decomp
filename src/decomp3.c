@@ -281,3 +281,29 @@ void FUN_80022400(u32 param_1)
 
     func_80028E84(var_a0);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/iREFc
+ */
+void func_8002246C(u32 arg0)
+{
+    s32 var_a0;
+
+    switch (arg0)
+    {
+    case 1:
+        var_a0 = 0x9A;
+        break;
+    case 2:
+        var_a0 = 0x9C;
+        break;
+    case 3:
+        var_a0 = 0x9E;
+        break;
+    default:
+        var_a0 = 0x98;
+        break;
+    }
+
+    func_80028E84(var_a0);
+}
