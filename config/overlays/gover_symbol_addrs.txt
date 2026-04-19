@@ -1,0 +1,15 @@
+// psyq/libgpu/SYS
+DrawSync    = 0x80019788;
+ClearImage  = 0x8001990C;
+
+// psyq/libgpu/EXT
+SetDefDrawEnv               = 0x8001C56C;
+SetDefDispEnv               = 0x8001C62C;
+
+// psyq/libetc/VSYNC
+VSync                       = 0x8002054C;
+
+// uncategorized
+FUN_8002279c = 0x8002279c;
+FUN_80022aa8 = 0x80022aa8;
+FUN_80022ac8 = 0x80022ac8;
