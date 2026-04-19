@@ -21,7 +21,7 @@ options:
   undefined_syms_auto_path: linker/overlays/gname/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbol_addrs.txt
+    - config/overlays/gname_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
@@ -40,5 +40,6 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, c, unk1]
+      - [0x1, rodata, rodata]
+      - [0x3E1, c, unk1]
   - [0x9E4F]

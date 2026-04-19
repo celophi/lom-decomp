@@ -292,9 +292,6 @@ overlay_movie_gcc_srcs   := src/overlays/movie/unk1.c
 OVERLAYS += title
 overlay_title_gcc_srcs   := src/overlays/title/unk1.c
 
-OVERLAYS += wmap
-overlay_wmap_gcc_srcs    := src/overlays/wmap/unk1.c
-
 OVERLAYS += wsel
 overlay_wsel_gcc_srcs    := src/overlays/wsel/unk1.c
 

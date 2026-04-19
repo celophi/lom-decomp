@@ -21,7 +21,7 @@ options:
   undefined_syms_auto_path: linker/overlays/title/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/symbol_addrs.txt
+    - config/overlays/title_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
