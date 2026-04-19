@@ -38,8 +38,9 @@ segments:
   - name: gover
     type: decompress_overlay
     start: 0x1
-    vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
+    vram: 0x80140000
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x5, c, unk1]
+      - [0x5, c, code1]
+      - [0x1F1, c, unk1]
   - [0x5F2]
