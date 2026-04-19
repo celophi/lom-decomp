@@ -1,24 +1,24 @@
-name: MOVIE.BIN
-sha1: 4ede2a498e06efdf712414b052bb21fe0d198298
+name: GNAME.BIN
+sha1: e428114bd699f557d3508a4f26a8e3c2c495db29
 options:
   base_path: ../../
-  basename: MOVIE.BIN
+  basename: GNAME.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/MOVIE.BIN
+  target_path: disc/BIN/GNAME.BIN
   extensions_path: tools/splat_ext
   asset_path: assets
-  elf_path: build/overlays/movie.elf
+  elf_path: build/overlays/gname.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/movie
-  src_path: src/overlays/movie
-  build_path: build/overlays/movie
+  asm_path: asm/overlays/gname
+  src_path: src/overlays/gname
+  build_path: build/overlays/gname
 
-  ld_script_path: linker/overlays/movie/movie.ld
+  ld_script_path: linker/overlays/gname/gname.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/movie/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/movie/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/overlays/gname/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/gname/undefined_syms_auto.txt
 
   symbol_addrs_path:
     - config/symbol_addrs.txt
@@ -35,11 +35,10 @@ options:
   data_string_encoding: ASCII
 
 segments:
-  - name: movie
+  - name: gname
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, rodata, rodata]
-      - [0x19, c, unk1]
-  - [0x1053]
+      - [0x1, c, unk1]
+  - [0x9E4F]

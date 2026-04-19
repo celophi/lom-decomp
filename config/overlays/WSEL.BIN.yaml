@@ -1,24 +1,24 @@
-name: MOVIE.BIN
-sha1: 4ede2a498e06efdf712414b052bb21fe0d198298
+name: WSEL.BIN
+sha1: 3f5b45b81cfd83dbad6c2853e4befd769d9a0468
 options:
   base_path: ../../
-  basename: MOVIE.BIN
+  basename: WSEL.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/MOVIE.BIN
+  target_path: disc/BIN/WSEL.BIN
   extensions_path: tools/splat_ext
   asset_path: assets
-  elf_path: build/overlays/movie.elf
+  elf_path: build/overlays/wsel.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/movie
-  src_path: src/overlays/movie
-  build_path: build/overlays/movie
+  asm_path: asm/overlays/wsel
+  src_path: src/overlays/wsel
+  build_path: build/overlays/wsel
 
-  ld_script_path: linker/overlays/movie/movie.ld
+  ld_script_path: linker/overlays/wsel/wsel.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/movie/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/movie/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/overlays/wsel/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/wsel/undefined_syms_auto.txt
 
   symbol_addrs_path:
     - config/symbol_addrs.txt
@@ -35,11 +35,10 @@ options:
   data_string_encoding: ASCII
 
 segments:
-  - name: movie
+  - name: wsel
     type: decompress_overlay
     start: 0x1
-    vram: 0x80140000
+    vram: 0x8004FC70
     subsegments:
-      - [0x1, rodata, rodata]
-      - [0x19, c, unk1]
-  - [0x1053]
+      - [0x1, c, unk1]
+  - [0x459E1]

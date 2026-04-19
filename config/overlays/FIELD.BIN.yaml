@@ -40,5 +40,5 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x0, bin, field]
-  - [0xD4368]
+      - [0x1, c, unk1]
+  - [0x60E9E]
