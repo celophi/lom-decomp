@@ -1,27 +1,27 @@
-name: GOLEM.BIN
-sha1: daf8ab21241b9613ed0ada1fa540dd254fe27306
+name: GOSUB.BIN
+sha1: 1361a14f2d461fd99c2e9d5d4f5e70b7704bb098
 options:
   base_path: ../../
-  basename: GOLEM.BIN
+  basename: GOSUB.BIN
   platform: psx
   compiler: PSYQ
-  target_path: disc/BIN/GOLEM.BIN
+  target_path: disc/BIN/GOSUB.BIN
   extensions_path: tools/splat_ext
   asset_path: assets
-  elf_path: build/overlays/golem.elf
+  elf_path: build/overlays/gosub.elf
 
   # Overlay-specific output paths (separate from SLUS)
-  asm_path: asm/overlays/golem
-  src_path: src/overlays/golem
-  build_path: build/overlays/golem
+  asm_path: asm/overlays/gosub
+  src_path: src/overlays/gosub
+  build_path: build/overlays/gosub
 
-  ld_script_path: linker/overlays/golem/golem.ld
+  ld_script_path: linker/overlays/gosub/gosub.ld
   ld_dependencies: True
-  undefined_funcs_auto_path: linker/overlays/golem/undefined_funcs_auto.txt
-  undefined_syms_auto_path: linker/overlays/golem/undefined_syms_auto.txt
+  undefined_funcs_auto_path: linker/overlays/gosub/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/gosub/undefined_syms_auto.txt
 
   symbol_addrs_path:
-    - config/overlays/golem_symbol_addrs.txt
+    - config/overlays/gosub_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
@@ -35,12 +35,12 @@ options:
   data_string_encoding: ASCII
 
 segments:
-  - name: golem
+  - name: gosub
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x25, c, unk1]
-      - [0x287D, data, data]
-  - [0x8512]
+      - [0x81, c, unk1]
+      - [0x28D9, data, data]
+  - [0x1E3E4]

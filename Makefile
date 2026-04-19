@@ -292,6 +292,12 @@ overlay_field_gcc_srcs   := src/overlays/field/unk1.c
 OVERLAYS += gname
 overlay_gname_gcc_srcs   := src/overlays/gname/unk1.c
 
+OVERLAYS += golem
+overlay_golem_gcc_srcs   := src/overlays/golem/unk1.c
+
+OVERLAYS += gosub
+overlay_gosub_gcc_srcs   := src/overlays/gosub/unk1.c
+
 OVERLAYS += movie
 overlay_movie_gcc_srcs   := src/overlays/movie/unk1.c
 
