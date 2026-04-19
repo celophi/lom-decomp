@@ -1,0 +1,46 @@
+name: MENU.BIN
+sha1: efa8cccdd0549e76c59ceef24e642256836fa828
+options:
+  base_path: ../../
+  basename: MENU.BIN
+  platform: psx
+  compiler: PSYQ
+  target_path: disc/BIN/MENU.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets
+  elf_path: build/overlays/menu.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/overlays/menu
+  src_path: src/overlays/menu
+  build_path: build/overlays/menu
+
+  ld_script_path: linker/overlays/menu/menu.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/overlays/menu/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/menu/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/overlays/menu_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: menu
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
+    subsegments:
+      - [0x1, rodata, rodata]
+      - [0x909, c, unk1]
+      - [0xFBF5, data, data]
+  - [0x17A5C]
