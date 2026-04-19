@@ -38,7 +38,7 @@
 STAGING      := /staging
 MOUNT        := /lom
 
-GAME         := slus_010.13
+GAME         := SLUS_010.13
 TARGET       := $(STAGING)/build/$(GAME).elf
 BIN          := build/$(GAME).bin
 
