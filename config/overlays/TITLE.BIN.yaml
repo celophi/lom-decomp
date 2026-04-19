@@ -41,5 +41,5 @@ segments:
     vram: 0x8004FC70
     subsegments:
       - [0x1, c, unk1]
-      - [0x2679, bin, title]
+      - [0x2679, data, data]
   - [0x449D5]

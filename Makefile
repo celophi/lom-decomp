@@ -275,6 +275,9 @@ STAGE_DIRS := src asm include linker tools assets
 OVERLAYS += addhero
 overlay_addhero_gcc_srcs   := src/overlays/addhero/unk1.c
 
+OVERLAYS += carda
+overlay_carda_gcc_srcs   := src/overlays/carda/unk1.c
+
 OVERLAYS += checkps
 overlay_checkps_asset      := assets/checkps.bin
 overlay_checkps_gcc_srcs   := src/overlays/checkps/code3.c
