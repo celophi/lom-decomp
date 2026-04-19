@@ -283,7 +283,9 @@ OVERLAYS += movie
 #  Top-Level Targets
 # ============================================================================
 
-.PHONY: all bin clean recopy
+SPLAT_CONFIGS := config/$(GAME).yaml $(wildcard config/overlays/*.yaml)
+
+.PHONY: all bin clean recopy splat
 .PHONY: target-objects base-objects objdiff-objects objdiff-config
 .PHONY: overlays everything
 
@@ -304,6 +306,9 @@ recopy:
 	rm -f $(COPY_SENTINEL)
 	$(MAKE) $(COPY_SENTINEL)
 
+splat:
+	@for cfg in $(SPLAT_CONFIGS); do splat split $$cfg || exit 1; done
+
 
 # ============================================================================
 #  Staging (copy sources into /staging)
@@ -321,10 +326,8 @@ $(COPY_SENTINEL):
 			cp -r $(dir)/* $(STAGING)/$(dir)/ 2>/dev/null || true; \
 		fi; \
 	)
-	@# ASPSX requires CRLF line endings for .s files it processes.
-	@# In CI, git checks out with LF — convert overlay .s files so ASPSX can parse them.
-	@# Only .s files need this; the C preprocessor/compiler handles LF fine.
-	@find $(STAGING)/asm/overlays -name '*.s' -exec unix2dos {} + 2>/dev/null || true
+	@# Normalize all overlay .s files to LF.
+	@find $(STAGING)/asm/overlays -name '*.s' -exec dos2unix {} + 2>/dev/null || true
 	@touch $@
 	@echo "Staging complete."
 
