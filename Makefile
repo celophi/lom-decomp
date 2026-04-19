@@ -310,6 +310,9 @@ overlay_movie_gcc_srcs   := src/overlays/movie/unk1.c
 OVERLAYS += niki
 overlay_niki_gcc_srcs   := src/overlays/niki/unk1.c
 
+OVERLAYS += shop
+overlay_shop_gcc_srcs   := src/overlays/shop/unk1.c
+
 OVERLAYS += title
 overlay_title_gcc_srcs   := src/overlays/title/unk1.c
 
