@@ -109,6 +109,7 @@ void Main(void)
 
             case 1:
                 FUN_80015c38();
+                // BIN/WMAP.BIN
                 CD_StreamData(3, *(new_var3 + 171));
                 GFX_Transition(0);
                 rect.x = 0;
@@ -138,6 +139,7 @@ void Main(void)
             {
                 func_80015C48();
                 cd_stop_ret = CD_Stop();
+                // BIN/TITLE.BIN
                 CD_StreamData(4, *(new_var3 + 171));
                 GFX_Transition(0);
                 CD_WaitForQueueEmpty();
@@ -150,7 +152,9 @@ void Main(void)
 
             case 3:
                 FUN_80015c28();
+                // BIN/FIELD.BIN
                 CD_StreamData(2, *(new_var3 + 171));
+                // BIN/GNAME.BIN
                 CD_StreamData(5, 0x80140000);
                 GFX_Transition(0);
                 CD_WaitForQueueEmpty();
@@ -166,7 +170,8 @@ void Main(void)
 
             case 5:
                 FUN_80015c28();
-                CD_StreamData(0xE, *(new_var3 + 171));
+                // BIN/WSEL.BIN
+                CD_StreamData(14, *(new_var3 + 171));
                 GFX_Transition(0);
                 CD_WaitForQueueEmpty();
                 *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = func_8004FC8C(0x80170000);
@@ -177,8 +182,10 @@ void Main(void)
 
             case 7:
                 FUN_80015c28();
+                // BIN/FIELD.BIN
                 CD_StreamData(2, *(new_var3 + 171));
-                CD_StreamData(0x10, 0x80140000);
+                // BIN/CLOAD.BIN
+                CD_StreamData(16, 0x80140000);
                 GFX_Transition(0);
                 CD_WaitForQueueEmpty();
                 func_80051FBC(0);

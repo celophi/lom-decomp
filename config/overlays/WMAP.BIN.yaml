@@ -1,0 +1,44 @@
+name: WMAP.BIN
+sha1: 7be4443eb8b28643d161f56c68d9ece0583945b5
+options:
+  base_path: ../../
+  basename: WMAP.BIN
+  platform: psx
+  compiler: PSYQ
+  target_path: disc/BIN/WMAP.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets
+  elf_path: build/overlays/wmap.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/overlays/wmap
+  src_path: src/overlays/wmap
+  build_path: build/overlays/wmap
+
+  ld_script_path: linker/overlays/wmap/wmap.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/overlays/wmap/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/wmap/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/overlays/wmap_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: wmap
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x8004FC70
+    subsegments:
+      - [0x1, bin, wmap]
+  - [0x433AA]

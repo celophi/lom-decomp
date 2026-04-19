@@ -38,7 +38,7 @@
 STAGING      := /staging
 MOUNT        := /lom
 
-GAME         := slus_010.13
+GAME         := SLUS_010.13
 TARGET       := $(STAGING)/build/$(GAME).elf
 BIN          := build/$(GAME).bin
 
@@ -277,7 +277,23 @@ overlay_checkps_asset      := assets/checkps.bin
 overlay_checkps_gcc_srcs   := src/overlays/checkps/code3.c
 overlay_checkps_gnu_srcs   := src/overlays/checkps/code4.c src/overlays/checkps/code5.c src/overlays/checkps/code6.c src/overlays/checkps/code7.c
 
+OVERLAYS += cload
+overlay_cload_gcc_srcs   := src/overlays/cload/unk1.c
+
+OVERLAYS += field
+overlay_field_gcc_srcs   := src/overlays/field/unk1.c
+
+OVERLAYS += gname
+overlay_gname_gcc_srcs   := src/overlays/gname/unk1.c
+
 OVERLAYS += movie
+overlay_movie_gcc_srcs   := src/overlays/movie/unk1.c
+
+OVERLAYS += title
+overlay_title_gcc_srcs   := src/overlays/title/unk1.c
+
+OVERLAYS += wsel
+overlay_wsel_gcc_srcs    := src/overlays/wsel/unk1.c
 
 # ============================================================================
 #  Top-Level Targets
