@@ -62,3 +62,72 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     D_80140708 = 4;
     func_801401F0();
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/LOxbx
+ */
+void func_801401F0(void)
+{
+    u_char* var_s0;
+    u_char* var_s1;
+    int new_var;
+    u_char* var_v0;
+    u8 dummy[8];
+    u_long* p_d40708;
+    func_800AA02C();
+    var_s0 = (u_char*)D_80140710;
+    ClearOTagR((u_long*)var_s0, 8);
+    ClearOTagR((u_long*)(var_s0 - (-0x49C)), 8);
+    VSync(0);
+    PutDispEnv((DISPENV*)(var_s0 + 0x20));
+    func_800157DC();
+    SetDispMask(1);
+    {
+        var_s1 = var_s0;
+        while (1)
+        {
+            var_s1 = var_s0;
+            ClearOTagR((u_long*)var_s1, 8);
+            *((void**)(var_s1 + 0x498)) = (void*)(var_s1 + 0x98);
+            func_800A9E78();
+            func_80140380((s32*)var_s1);
+            DrawSync(0);
+            func_800157B0(2);
+            if (!D_80141048)
+            {
+            }
+            VSync(2);
+            p_d40708 = &D_80140708;
+            if ((D_80141048 == 0x80) && (D_80122988 & 0x260))
+            {
+                func_800227D0(0, 0x20, 0);
+                *p_d40708 = -4;
+            }
+            if (D_80141048 == (0 & 0xFF))
+            {
+                break;
+            }
+            var_v0 = (u_char*)D_80140710;
+            if (var_s0 == ((u_char*)D_80140710))
+            {
+                var_v0 = var_s0 + 0x49C;
+            }
+            var_s0 = var_v0;
+            PutDispEnv((DISPENV*)(var_s0 + 0x20));
+            new_var = 0x1C;
+            PutDrawEnv((DRAWENV*)(var_s0 + 0x34));
+            DrawOTag((u_long*)(var_s1 + new_var));
+            func_800157DC();
+            CD_UpdateAndProcessQueue();
+        }
+    }
+    DrawSync(0);
+    VSync(0);
+    func_800158E0();
+    FUN_80022aa8();
+    FUN_80022ac8();
+    SetDispMask(0);
+    D_8003EC90 = 0;
+    func_800AA02C();
+    D_8010D018 = 1;
+}
