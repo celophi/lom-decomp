@@ -80,8 +80,4 @@ ENV SN_PATH=/opt/psyq4.1
 WORKDIR /rom
 
 # Copy your PSX game files into the container
-RUN mkdir -p BIN
-COPY extracted/SLUS_010.13 ./
-COPY extracted/BIN/CHECKPS.BIN ./BIN/
-COPY extracted/BIN/FIELD.BIN ./BIN/
-COPY extracted/BIN/MOVIE.BIN ./BIN/
+COPY extracted/ ./
