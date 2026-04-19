@@ -20,5 +20,9 @@ extern s32 D_8011588C;
 extern s32 D_80140708;
 extern s32 D_80141048;
 extern u8 D_801407A0[];
+extern s32 D_80140710[];
+extern s32 D_80122988;
+extern u32 D_8003EC90;
+extern s32 D_8010D018;
 
 #endif
