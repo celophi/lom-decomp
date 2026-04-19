@@ -272,6 +272,12 @@ STAGE_DIRS := src asm include linker tools assets
 #   overlay_<name>_gcc_srcs  — files to compile with GCC+maspsx instead of CDK gcc
 #                              (use for non-matching stubs that use INCLUDE_ASM)
 
+OVERLAYS += addhero
+overlay_addhero_gcc_srcs   := src/overlays/addhero/unk1.c
+
+OVERLAYS += carda
+overlay_carda_gcc_srcs   := src/overlays/carda/unk1.c
+
 OVERLAYS += checkps
 overlay_checkps_asset      := assets/checkps.bin
 overlay_checkps_gcc_srcs   := src/overlays/checkps/code3.c
@@ -286,14 +292,35 @@ overlay_field_gcc_srcs   := src/overlays/field/unk1.c
 OVERLAYS += gname
 overlay_gname_gcc_srcs   := src/overlays/gname/unk1.c
 
+OVERLAYS += golem
+overlay_golem_gcc_srcs   := src/overlays/golem/unk1.c
+
+OVERLAYS += gosub
+overlay_gosub_gcc_srcs   := src/overlays/gosub/unk1.c
+
+OVERLAYS += gover
+overlay_gover_gcc_srcs   := src/overlays/gover/unk1.c
+
+OVERLAYS += menu
+overlay_menu_gcc_srcs   := src/overlays/menu/unk1.c
+
 OVERLAYS += movie
 overlay_movie_gcc_srcs   := src/overlays/movie/unk1.c
+
+OVERLAYS += niki
+overlay_niki_gcc_srcs   := src/overlays/niki/unk1.c
+
+OVERLAYS += shop
+overlay_shop_gcc_srcs   := src/overlays/shop/unk1.c
 
 OVERLAYS += title
 overlay_title_gcc_srcs   := src/overlays/title/unk1.c
 
 OVERLAYS += wsel
 overlay_wsel_gcc_srcs    := src/overlays/wsel/unk1.c
+
+OVERLAYS += zukan
+overlay_zukan_gcc_srcs    := src/overlays/zukan/unk1.c
 
 # ============================================================================
 #  Top-Level Targets

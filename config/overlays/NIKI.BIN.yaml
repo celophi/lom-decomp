@@ -1,0 +1,46 @@
+name: NIKI.BIN
+sha1: 3b9b790808857196f157e258dafa63177bcefcb6
+options:
+  base_path: ../../
+  basename: NIKI.BIN
+  platform: psx
+  compiler: PSYQ
+  target_path: disc/BIN/NIKI.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets
+  elf_path: build/overlays/niki.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/overlays/niki
+  src_path: src/overlays/niki
+  build_path: build/overlays/niki
+
+  ld_script_path: linker/overlays/niki/niki.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/overlays/niki/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/niki/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/overlays/niki_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: niki
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
+    subsegments:
+      - [0x1, rodata, rodata]
+      - [0x11D, c, unk1]
+      - [0x70F9, data, data]
+  - [0x18E58]

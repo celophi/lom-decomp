@@ -1,0 +1,46 @@
+name: ZUKAN.BIN
+sha1: ccb3e4f650a62146e703c033ab869fa4a42ce600
+options:
+  base_path: ../../
+  basename: ZUKAN.BIN
+  platform: psx
+  compiler: PSYQ
+  target_path: disc/BIN/ZUKAN.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets
+  elf_path: build/overlays/zukan.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/overlays/zukan
+  src_path: src/overlays/zukan
+  build_path: build/overlays/zukan
+
+  ld_script_path: linker/overlays/zukan/zukan.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/overlays/zukan/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/zukan/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/overlays/zukan_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: zukan
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
+    subsegments:
+      - [0x1, rodata, rodata]
+      - [0x1095, c, unk1]
+      - [0x471D, data, data]
+  - [0xAB51]
