@@ -272,6 +272,9 @@ STAGE_DIRS := src asm include linker tools assets
 #   overlay_<name>_gcc_srcs  — files to compile with GCC+maspsx instead of CDK gcc
 #                              (use for non-matching stubs that use INCLUDE_ASM)
 
+OVERLAYS += addhero
+overlay_addhero_gcc_srcs   := src/overlays/addhero/unk1.c
+
 OVERLAYS += checkps
 overlay_checkps_asset      := assets/checkps.bin
 overlay_checkps_gcc_srcs   := src/overlays/checkps/code3.c
