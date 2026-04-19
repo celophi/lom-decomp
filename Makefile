@@ -319,6 +319,9 @@ overlay_title_gcc_srcs   := src/overlays/title/unk1.c
 OVERLAYS += wsel
 overlay_wsel_gcc_srcs    := src/overlays/wsel/unk1.c
 
+OVERLAYS += zukan
+overlay_zukan_gcc_srcs    := src/overlays/zukan/unk1.c
+
 # ============================================================================
 #  Top-Level Targets
 # ============================================================================
