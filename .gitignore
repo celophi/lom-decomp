@@ -19,6 +19,7 @@ output/
 
 # Ignore generated C files
 src/unk*.c
+src/overlays/*/unk*.c
 
 tools/splat_ext/__pycache__/
 
