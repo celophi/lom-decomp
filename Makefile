@@ -298,6 +298,9 @@ overlay_golem_gcc_srcs   := src/overlays/golem/unk1.c
 OVERLAYS += gosub
 overlay_gosub_gcc_srcs   := src/overlays/gosub/unk1.c
 
+OVERLAYS += gover
+overlay_gover_gcc_srcs   := src/overlays/gover/unk1.c
+
 OVERLAYS += movie
 overlay_movie_gcc_srcs   := src/overlays/movie/unk1.c
 

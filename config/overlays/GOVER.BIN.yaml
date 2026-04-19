@@ -1,0 +1,45 @@
+name: GOVER.BIN
+sha1: ac4127a6294b6bc04ef848dad355fc9866d268cb
+options:
+  base_path: ../../
+  basename: GOVER.BIN
+  platform: psx
+  compiler: PSYQ
+  target_path: disc/BIN/GOVER.BIN
+  extensions_path: tools/splat_ext
+  asset_path: assets
+  elf_path: build/overlays/gover.elf
+
+  # Overlay-specific output paths (separate from SLUS)
+  asm_path: asm/overlays/gover
+  src_path: src/overlays/gover
+  build_path: build/overlays/gover
+
+  ld_script_path: linker/overlays/gover/gover.ld
+  ld_dependencies: True
+  undefined_funcs_auto_path: linker/overlays/gover/undefined_funcs_auto.txt
+  undefined_syms_auto_path: linker/overlays/gover/undefined_syms_auto.txt
+
+  symbol_addrs_path:
+    - config/overlays/gover_symbol_addrs.txt
+
+  find_file_boundaries: False
+  make_full_disasm_for_code: True
+  use_legacy_include_asm: False
+  o_as_suffix: True
+  subalign: 2
+
+  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+
+  string_encoding: ASCII
+  data_string_encoding: ASCII
+
+segments:
+  - name: gover
+    type: decompress_overlay
+    start: 0x1
+    vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
+    subsegments:
+      - [0x1, rodata, rodata]
+      - [0x5, c, unk1]
+  - [0x5F2]
