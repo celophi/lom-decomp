@@ -833,7 +833,7 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/izXP3
  */
-s32 CD_QueueCommand(u8 command, u16 resourceIndex, CdResourceEntry* dstBuffer, CdCommandCallback callback) 
+s32 CD_QueueCommand(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCallback callback) 
 {
     s32 timestamp;
     s32 writeIndex;
@@ -2754,7 +2754,7 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes) {
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/OxunQ
  */
-void CD_QueueRead(s32 resourceIndex, u32 dstBuffer) 
+void CD_QueueRead(s32 resourceIndex, void* dstBuffer) 
 {
     CD_QueueCommand(CdlReadN, resourceIndex, dstBuffer, 0);
 }

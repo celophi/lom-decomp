@@ -42,7 +42,7 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     rect.w = 0;
     rect.h = 0x1E0;
     base = base - 0x90;
-    func_80140538(arg1 + 0xFFC, (s16*)(&rect), arg0);
+    LoadImageFromCd(arg1 + 0xFFC, (s16*)(&rect), arg0);
     FUN_80022aa8();
     FUN_80022ac8();
     func_800224D8(0x7F);
@@ -206,41 +206,37 @@ void func_80140380(void* arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/OafFK
  */
-void func_80140538(s32 arg0, s16* arg1, s32 arg2)
+void LoadImageFromCd(s32 arg0, VramDstCoords* coordinates, u32 address)
 {
     volatile u8 dummy[8];
-    CD_QueueRead(arg0 & 0xFFFF, arg2);
+    CD_QueueRead(arg0 & 0xFFFF, address);
     CD_WaitForQueueEmpty();
-    func_80140588(arg2, arg1);
+    UploadImageDataToVram((ClutSectionHeader*)address, coordinates);
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/BEM7D
- */
-s32 func_80140588(void* arg0, void* arg1)
+u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 {
     RECT rect;
-    Header* hdr = (Header*)arg0;
-    Arg1* ap = (Arg1*)arg1;
-    u32 offset = hdr->offset; // force early load into s2
+    PixelDataHeader* pdh;
+    u32 clutSectionSize = header->size;
 
-    // First LoadImage call (3 arguments)
-    rect.x = ap->x1;
-    rect.y = ap->y1;
-    rect.w = hdr->width * hdr->height;
+    rect.x = coordinates->clutX;
+    rect.y = coordinates->clutY;
+    rect.w = header->width * header->height;
     rect.h = 1;
-    LoadImage(&rect, &hdr->image_data); // pass address of data pointer
+    LoadImage(&rect, &header->clutData);
 
-    // Second LoadImage call (2 arguments)
-    // Reuse hdr pointer to point to the sub-header (overwrites original)
-    hdr = (Header*)((u8*)hdr + 8 + offset);
-    rect.x = ap->x0;
-    rect.y = ap->y0;
-    rect.w = ((SubHeader*)hdr)->w;
-    rect.h = ((SubHeader*)hdr)->h;
-    LoadImage(&rect, &((SubHeader*)hdr)->data); // pass address of data pointer
+    // The pixel data header is located at a variable offset from the start of the CLUT section header,
+    // so we have to calculate its address using the size field in the CLUT header.
+    pdh = (PixelDataHeader*)((u8*)header + 8 + clutSectionSize);
 
-    return (((SubHeader*)hdr)->w + 0x3F) & 0xFFC0;
+    rect.x = coordinates->pixelX;
+    rect.y = coordinates->pixelY;
+    rect.w = pdh->w;
+    rect.h = pdh->h;
+    LoadImage(&rect, &pdh->data);
+
+    return ALIGN64(pdh->w);
 }
 
 /**
