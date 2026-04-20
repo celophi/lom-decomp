@@ -138,31 +138,6 @@ extern s32 g_checkPSState;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
 
-/**
- * Pointer to CD-ROM status register and related I/O ports for communicating with the PS1's CD drive.
- * CD Index/Status Register (Bit0-1 R/W, Bit2-7 Read Only)
- */
-extern s8* g_cdStatusRegister = (s8*)0x1F801800;
-
-/**
- * Pointer to CD-ROM response register, used for reading data returned by the CD drive after issuing commands.
- * CD Response Fifo (R) (usually with Index1)
- */
-extern u8* g_cdResponseRegister = (s8*)0x1F801801;
-
-/**
- * Pointer to CD-ROM data register, used for sending command parameters to the CD drive after writing a command to the status register.
- * CD Data Fifo - 8bit/16bit (R) (usually with Index0..1)
- */
-extern u8* g_cdDataRegister = (u8*)0x1F801802;
-
-/**
- * Pointer to CD-ROM IRQ register, used for handling CD drive interrupts.
- * CD IRQ Register (R/W)
- */
-extern s8* g_cdIrqRegister = (s8*)0x1F801803;
-
-
 
 /**
  * Descriptor for a single CD-ROM command: opcode, parameter count, response byte count,

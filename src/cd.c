@@ -2762,7 +2762,7 @@ void CD_QueueRead(s32 resourceIndex, void* dstBuffer)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/5M5cV
  */
-void CD_QueueReadWithCallback(s32 resourceIndex, s32 callback) 
+void CD_QueueReadWithCallback(s32 resourceIndex, CdCommandCallback callback)
 {
     CD_QueueCommand(CdlReadN, resourceIndex & 0xFFFF, 0, callback);
 }
@@ -3392,10 +3392,10 @@ s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/JFLMN
  */
-void CD_DecompressBuffer(u32 srcStart, u32 dstStart) 
+void CD_DecompressBuffer(u8* srcStart, u8* dstStart)
 {
     srcStart++;
-    while (CD_DecompressData(&srcStart, &dstStart, -4U, -4U) != 0);
+    while (CD_DecompressData(&srcStart, &dstStart, (u8*)-4U, (u8*)-4U) != 0);
 }
 
 /**
