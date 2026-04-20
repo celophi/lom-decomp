@@ -220,10 +220,10 @@ void LoadImageFromCd(s32 arg0, s16* arg1, s32 arg2)
 s32 UploadImageDataToVram(ImageFileHeader* header, VramDstCoords* coordinates)
 {
     RECT rect;
-    PixelDataHeader* pdh;
     ImageFileHeader* hdr = header;
     VramDstCoords* coords = coordinates;
-    u32 offset = hdr->offset; // force early load into s2
+    u32 offset = hdr->offset;
+    PixelDataHeader* pdh;
 
     // First LoadImage call (3 arguments)
     rect.x = coords->clutX;
@@ -236,11 +236,11 @@ s32 UploadImageDataToVram(ImageFileHeader* header, VramDstCoords* coordinates)
     PixelDataHeader* pdh = (PixelDataHeader*)((u8*)&hdr->offset + offset);
     rect.x = coords->pixelX;
     rect.y = coords->pixelY;
-    rect.w = pdh->w;
-    rect.h = pdh->h;
-    LoadImage(&rect, &pdh->data); // pass address of data pointer
+    rect.w = ((PixelDataHeader*)pdh)->w;
+    rect.h = ((PixelDataHeader*)pdh)->h;
+    LoadImage(&rect, &((PixelDataHeader*)pdh)->data); // pass address of data pointer
 
-    return (pdh->w + 0x3F) & 0xFFC0;
+    return (((PixelDataHeader*)pdh)->w + 0x3F) & 0xFFC0;
 }
 
 /**
