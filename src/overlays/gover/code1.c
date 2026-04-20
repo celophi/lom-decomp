@@ -158,12 +158,13 @@ void BuildOTag(void* pOtBuf)
 
     // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=320)
     setSprt(node1);
-    
+
     node1++;
     node1--;
     v0 = (unsigned char)g_fadeLevel;
-    *((unsigned short*)(node1 + 8)) = 0;           // x = 0
-    *((unsigned short*)(node1 + 10)) = 0;          // y = 0
+    
+    setXY0((SPRT*)node1, 0, 0);
+
     *((unsigned short*)(node1 + 16)) = 256;        // w = 256
     *((unsigned short*)(node1 + 18)) = 224;        // h = 224
     *((unsigned short*)(node1 + 16)) = 256;        // w = 256 (redundant)
