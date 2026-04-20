@@ -6,6 +6,7 @@ ClearOTagR                  = 0x80019C74;
 DrawOTag                    = 0x80019D7C;
 PutDrawEnv                  = 0x80019DEC;
 PutDispEnv                  = 0x80019FB8;
+LoadImage                   = 0x80019A34;
 
 // psyq/libgpu/EXT
 SetDefDrawEnv               = 0x8001C56C;

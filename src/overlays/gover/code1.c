@@ -213,3 +213,32 @@ void func_80140538(s32 arg0, s16* arg1, s32 arg2)
     CD_WaitForQueueEmpty();
     func_80140588(arg2, arg1);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/BEM7D
+ */
+s32 func_80140588(void* arg0, void* arg1)
+{
+    RECT rect;
+    Header* hdr = (Header*)arg0;
+    Arg1* ap = (Arg1*)arg1;
+    u32 offset = hdr->offset; // force early load into s2
+
+    // First LoadImage call (3 arguments)
+    rect.x = ap->x1;
+    rect.y = ap->y1;
+    rect.w = hdr->width * hdr->height;
+    rect.h = 1;
+    LoadImage(&rect, &hdr->image_data); // pass address of data pointer
+
+    // Second LoadImage call (2 arguments)
+    // Reuse hdr pointer to point to the sub-header (overwrites original)
+    hdr = (Header*)((u8*)hdr + 8 + offset);
+    rect.x = ap->x0;
+    rect.y = ap->y0;
+    rect.w = ((SubHeader*)hdr)->w;
+    rect.h = ((SubHeader*)hdr)->h;
+    LoadImage(&rect, &((SubHeader*)hdr)->data); // pass address of data pointer
+
+    return (((SubHeader*)hdr)->w + 0x3F) & 0xFFC0;
+}
