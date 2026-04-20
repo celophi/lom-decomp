@@ -31,3 +31,4 @@ LoadImageFromCd = 0x80140538;
 UploadImageDataToVram = 0x80140588;
 
 g_fadeLevel = 0x80141048;
+g_fadeStep = 0x80140708;

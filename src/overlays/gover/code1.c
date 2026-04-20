@@ -59,7 +59,7 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         FUN_8002279c(0, 0x7F);
     }
     g_fadeLevel = 4;
-    D_80140708 = 4;
+    g_fadeStep = 4;
     func_801401F0();
 }
 
@@ -97,7 +97,7 @@ void func_801401F0(void)
             {
             }
             VSync(2);
-            p_d40708 = &D_80140708;
+            p_d40708 = &g_fadeStep;
             if ((g_fadeLevel == 128) && (D_80122988 & 0x260))
             {
                 func_800227D0(0, 0x20, 0);
@@ -143,13 +143,13 @@ void func_80140380(void* arg0)
     unsigned char* new_var;
     unsigned char v0;
     base = (unsigned char*)arg0;
-    if (D_80140708 != 0)
+    if (g_fadeStep != 0)
     {
-        g_fadeLevel += D_80140708;
+        g_fadeLevel += g_fadeStep;
     }
     if (g_fadeLevel == 128)
     {
-        D_80140708 = 0;
+        g_fadeStep = 0;
     }
     node1 = *((unsigned char**)(base + 0x498));
     node1[3] = 4;
