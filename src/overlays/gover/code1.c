@@ -217,11 +217,11 @@ void LoadImageFromCd(s32 arg0, s16* arg1, s32 arg2)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/BEM7D
  */
-s32 UploadImageDataToVram(ImageFileHeader* arg0, void* arg1)
+s32 UploadImageDataToVram(ImageFileHeader* header, VramDestCoords* arg1)
 {
     RECT rect;
-    ImageFileHeader* hdr = arg0;
-    Arg1* ap = (Arg1*)arg1;
+    ImageFileHeader* hdr = header;
+    VramDestCoords* ap = arg1;
     u32 offset = hdr->offset; // force early load into s2
 
     // First LoadImage call (3 arguments)
