@@ -58,7 +58,7 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         func_800A380C();
         FUN_8002279c(0, 0x7F);
     }
-    D_80141048 = 4;
+    g_fadeLevel = 4;
     D_80140708 = 4;
     func_801401F0();
 }
@@ -93,17 +93,17 @@ void func_801401F0(void)
             func_80140380((s32*)var_s1);
             DrawSync(0);
             func_800157B0(2);
-            if (!D_80141048)
+            if (!g_fadeLevel)
             {
             }
             VSync(2);
             p_d40708 = &D_80140708;
-            if ((D_80141048 == 0x80) && (D_80122988 & 0x260))
+            if ((g_fadeLevel == 128) && (D_80122988 & 0x260))
             {
                 func_800227D0(0, 0x20, 0);
                 *p_d40708 = -4;
             }
-            if (D_80141048 == (0 & 0xFF))
+            if (g_fadeLevel == (0 & 0xFF))
             {
                 break;
             }
@@ -145,50 +145,50 @@ void func_80140380(void* arg0)
     base = (unsigned char*)arg0;
     if (D_80140708 != 0)
     {
-        D_80141048 += D_80140708;
+        g_fadeLevel += D_80140708;
     }
-    if (D_80141048 == 0x80)
+    if (g_fadeLevel == 128)
     {
         D_80140708 = 0;
     }
     node1 = *((unsigned char**)(base + 0x498));
     node1[3] = 4;
-    node1[7] = 0x64;
+    node1[7] = 100;
     node1++;
     node1--;
-    v0 = (unsigned char)D_80141048;
+    v0 = (unsigned char)g_fadeLevel;
     *((unsigned short*)(node1 + 8)) = 0;
     *((unsigned short*)(node1 + 10)) = 0;
-    *((unsigned short*)(node1 + 16)) = 0x100;
-    *((unsigned short*)(node1 + 18)) = 0xE0;
-    *((unsigned short*)(node1 + 16)) = 0x100;
+    *((unsigned short*)(node1 + 16)) = 256;
+    *((unsigned short*)(node1 + 18)) = 224;
+    *((unsigned short*)(node1 + 16)) = 256;
     node1[12] = 0;
     node1[13] = 0;
     *((unsigned short*)(node1 + 14)) = 0x7800;
     node1[6] = v0;
     node1[5] = v0;
     node1[4] = v0;
-    node1[7] = 0x64;
+    node1[7] = 100;
     *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
     *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
-    node1 += 0x14;
+    node1 += 20;
     *((unsigned long*)(new_var = node1 + 4)) = 0xE10000A5UL;
     node3 = node1 + 8;
     node1[3] = 1;
     *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
     *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
     node3[3] = 4;
-    node3[7] = 0x64;
-    v0 = (unsigned char)D_80141048;
+    node3[7] = 100;
+    v0 = (unsigned char)g_fadeLevel;
     node1 = node3;
-    node1 = node1 + 0x14;
+    node1 = node1 + 20;
     *((unsigned short*)(node3 + 8)) = 0x100;
     node3[6] = v0;
     node3[5] = v0;
     node3[4] = v0;
     *((unsigned short*)(node3 + 10)) = 0;
-    *((unsigned short*)(node3 + 16)) = 0x40;
-    *((unsigned short*)(node3 + 18)) = 0xE0;
+    *((unsigned short*)(node3 + 16)) = 64;
+    *((unsigned short*)(node3 + 18)) = 224;
     node3[12] = 0;
     node3[13] = 0;
     *((unsigned short*)(node3 + 14)) = 0x7800;
