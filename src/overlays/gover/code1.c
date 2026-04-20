@@ -131,3 +131,74 @@ void func_801401F0(void)
     func_800AA02C();
     D_8010D018 = 1;
 }
+
+/**
+ * decomp.me link (97.86%%) https://decomp.me/scratch/q3LKi
+ */
+void func_80140380(void* arg0)
+{
+    unsigned char* base;
+    unsigned char* node1;
+    unsigned char* node3;
+    unsigned char* new_var;
+    unsigned char v0;
+    base = (unsigned char*)arg0;
+    if (D_80140708 != 0)
+    {
+        D_80141048 += D_80140708;
+    }
+    if (D_80141048 == 0x80)
+    {
+        D_80140708 = 0;
+    }
+    node1 = *((unsigned char**)(base + 0x498));
+    node1[3] = 4;
+    node1[7] = 0x64;
+    node1++;
+    node1--;
+    v0 = (unsigned char)D_80141048;
+    *((unsigned short*)(node1 + 8)) = 0;
+    *((unsigned short*)(node1 + 10)) = 0;
+    *((unsigned short*)(node1 + 16)) = 0x100;
+    *((unsigned short*)(node1 + 18)) = 0xE0;
+    *((unsigned short*)(node1 + 16)) = 0x100;
+    node1[12] = 0;
+    node1[13] = 0;
+    *((unsigned short*)(node1 + 14)) = 0x7800;
+    node1[6] = v0;
+    node1[5] = v0;
+    node1[4] = v0;
+    node1[7] = 0x64;
+    *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
+    *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
+    node1 += 0x14;
+    *((unsigned long*)(new_var = node1 + 4)) = 0xE10000A5UL;
+    node3 = node1 + 8;
+    node1[3] = 1;
+    *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
+    *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
+    node3[3] = 4;
+    node3[7] = 0x64;
+    v0 = (unsigned char)D_80141048;
+    node1 = node3;
+    node1 = node1 + 0x14;
+    *((unsigned short*)(node3 + 8)) = 0x100;
+    node3[6] = v0;
+    node3[5] = v0;
+    node3[4] = v0;
+    *((unsigned short*)(node3 + 10)) = 0;
+    *((unsigned short*)(node3 + 16)) = 0x40;
+    *((unsigned short*)(node3 + 18)) = 0xE0;
+    node3[12] = 0;
+    node3[13] = 0;
+    *((unsigned short*)(node3 + 14)) = 0x7800;
+    *((unsigned long*)node3) = ((*((unsigned long*)node3)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
+    *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node3) & 0x00FFFFFFUL);
+    node1[3] = 1;
+    node3 = node1 + 8;
+    *((unsigned long*)(node1 + 4)) = 0xE10000A7UL;
+    *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
+    *((unsigned char**)(base + 0x498)) = node3;
+    *((unsigned long*)((unsigned char*)arg0)) =
+        ((*((unsigned long*)((unsigned char*)arg0))) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
+}
