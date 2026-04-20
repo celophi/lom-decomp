@@ -33,6 +33,15 @@ typedef struct {
     u16 y1;   // offset 0x06
 } Arg1;
 
+typedef struct
+{
+  u32 unk0;
+  u32 unk4;
+  u32 unk8;
+  u8 unk12[1];
+} D_80119F00_t;
+
+
 extern void FUN_8002279c(undefined4 param_1, u_int param_2);
 extern void FUN_80022aa8(void);
 extern void FUN_80022ac8(void);
@@ -51,5 +60,8 @@ extern s32 D_80140710[];
 extern s32 D_80122988;
 extern u32 D_8003EC90;
 extern s32 D_8010D018;
+extern D_80119F00_t D_80119F00;
+extern s32 D_80180004;
+extern u8 D_80180000[];
 
 #endif
