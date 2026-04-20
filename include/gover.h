@@ -82,7 +82,7 @@ extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
 extern s32 func_801401F0(void);
-extern s32 LoadImageFromCd(s32, s16*, s32);
+extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 address);
 
 /**
  * @brief Uploads a CLUT palette and pixel data from a CD image buffer into VRAM.

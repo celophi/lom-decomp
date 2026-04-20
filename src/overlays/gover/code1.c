@@ -206,12 +206,12 @@ void func_80140380(void* arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/OafFK
  */
-void LoadImageFromCd(s32 arg0, s16* arg1, s32 arg2)
+void LoadImageFromCd(s32 arg0, VramDstCoords* coordinates, u32 address)
 {
     volatile u8 dummy[8];
-    CD_QueueRead(arg0 & 0xFFFF, arg2);
+    CD_QueueRead(arg0 & 0xFFFF, address);
     CD_WaitForQueueEmpty();
-    UploadImageDataToVram(arg2, arg1);
+    UploadImageDataToVram((ClutSectionHeader*)address, coordinates);
 }
 
 u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
