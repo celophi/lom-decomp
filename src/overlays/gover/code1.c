@@ -233,7 +233,7 @@ s32 UploadImageDataToVram(ImageFileHeader* header, VramDstCoords* coordinates)
     LoadImage(&rect, &hdr->clutData); // pass address of data pointer
 
     // Second LoadImage call (2 arguments)
-    PixelDataHeader* pdh = (PixelDataHeader*)((u8*)hdr->offset + offset);
+    pdh = (PixelDataHeader*)((u8*)hdr + 8 + offset);
     rect.x = coords->pixelX;
     rect.y = coords->pixelY;
     rect.w = pdh->w;
