@@ -40,5 +40,5 @@ segments:
     start: 0x1
     vram: 0x8004FC70
     subsegments:
-      - [0x1, bin, wmap]
-  - [0x433AA]
+      - [0x1, data, data]
+  - [0x163669]

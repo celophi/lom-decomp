@@ -43,4 +43,4 @@ segments:
       - [0x1, rodata, rodata]
       - [0x371, c, unk1]
       - [0xB039, data, data]
-  - [0x1C134]
+  - [0x2F001]
