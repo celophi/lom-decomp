@@ -137,10 +137,10 @@ void RunGameOver(void)
  */
 void BuildOTag(unsigned char* pOtBuf)
 {
-    unsigned char* node1;
-    unsigned char* node3;
-    unsigned char* new_var;
-    unsigned char fadeLevel;
+    unsigned char* pPrimA;
+    unsigned char* pPrimB;
+    unsigned char leftFadeLevel;
+    unsigned char rightFadeLevel;
     
     if (g_fadeStep != 0)
     {
@@ -152,62 +152,55 @@ void BuildOTag(unsigned char* pOtBuf)
         g_fadeStep = 0;
     }
     
-    // base+0x498 holds the primitive allocation cursor, reset to base+0x98 each
+    // pOtBuf+0x498 holds the primitive allocation cursor, reset to pOtBuf+0x98 each
     // frame by the caller. The first 0x98 bytes of the buffer are occupied by the
     // OTag entries, DISPENV, DRAWENV, and display rect data.
-    node1 = *((unsigned char**)(pOtBuf + 0x498));
+    pPrimA = *((unsigned char**)(pOtBuf + 0x498));
 
     // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=320)
-    setSprt(node1);
+    setSprt(pPrimA);
 
-    // not necessary
-    node1++;
-    node1--;
-    
-    fadeLevel = (unsigned char)g_fadeLevel;
-    
-    setXY0((SPRT*)node1, 0, 0);
-    setWH((SPRT*)node1, 256, 224);
-    setUV0((SPRT*)node1, 0, 0);
-    setClut((SPRT*)node1, 0, 480);
-    setBGR0((SPRT*)node1, fadeLevel, fadeLevel, fadeLevel);
-    addPrim(pOtBuf, node1);
-    
-    node1 += 20;
+    leftFadeLevel = (unsigned char)g_fadeLevel;
+
+    setXY0((SPRT*)pPrimA, 0, 0);
+    setWH((SPRT*)pPrimA, 256, 224);
+    setUV0((SPRT*)pPrimA, 0, 0);
+    setClut((SPRT*)pPrimA, 0, 480);
+    setBGR0((SPRT*)pPrimA, leftFadeLevel, leftFadeLevel, leftFadeLevel);
+    addPrim(pOtBuf, pPrimA);
+
+    pPrimA += 20;
 
     // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=320, ABR=add)
-    // GPU draw mode cmd, tpage=0xA5
-    setDrawTPage((DR_TPAGE*)node1, 0, 0, getTPage(1, 1, 320, 0));
-    addPrim(pOtBuf, node1);
-    
-    node3 = node1 + 8;
-    node1 = node3;
-    
-    // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=448)
-    setSprt(node3);
-    
-    fadeLevel = (unsigned char)g_fadeLevel;
-    
-    setBGR0((SPRT*)node3, fadeLevel, fadeLevel, fadeLevel);
-    setXY0((SPRT*)node3, 256, 0);
-    setWH((SPRT*)node3, 64, 224);
-    setUV0((SPRT*)node3, 0, 0); 
-    setClut((SPRT*)node3, 0, 480);
-    
-    addPrim(pOtBuf, node3);
-    
-    node1 += 20;
-    
-    node3++;
-    node3--;
-    
-    // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=448, ABR=add)
-    setDrawTPage((DR_TPAGE*)node1, 0, 0, getTPage(1, 1, 448, 0));
-    node3 = node1 + 8;
+    setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, 320, 0));
+    addPrim(pOtBuf, pPrimA);
 
-    addPrim(pOtBuf, node1);
-    
-    *((unsigned char**)(pOtBuf + 0x498)) = node3;    // advance allocation cursor
+    pPrimB = pPrimA + 8;
+    pPrimA = pPrimB;
+
+    // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=448)
+    setSprt(pPrimB);
+
+    rightFadeLevel = (unsigned char)g_fadeLevel;
+
+    setBGR0((SPRT*)pPrimB, rightFadeLevel, rightFadeLevel, rightFadeLevel);
+    setXY0((SPRT*)pPrimB, 256, 0);
+    setWH((SPRT*)pPrimB, 64, 224);
+    setUV0((SPRT*)pPrimB, 0, 0);
+    setClut((SPRT*)pPrimB, 0, 480);
+
+    addPrim(pOtBuf, pPrimB);
+
+    pPrimA += 20;
+
+    // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=448, ABR=add)
+    setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, 448, 0));
+    pPrimB = pPrimA;
+    pPrimB = pPrimB + 8;
+
+    addPrim(pOtBuf, pPrimA);
+
+    *((unsigned char**)(pOtBuf + 0x498)) = pPrimB;    // advance allocation cursor
 }
 
 /**
