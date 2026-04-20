@@ -229,7 +229,7 @@ s32 UploadImageDataToVram(ImageFileHeader* header, VramDstCoords* coordinates)
     rect.y = coords->clutY;
     rect.w = hdr->width * hdr->height;
     rect.h = 1;
-    LoadImage(&rect, &hdr->image_data); // pass address of data pointer
+    LoadImage(&rect, &hdr->clutData); // pass address of data pointer
 
     // Second LoadImage call (2 arguments)
     // Reuse hdr pointer to point to the sub-header (overwrites original)

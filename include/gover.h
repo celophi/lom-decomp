@@ -14,7 +14,7 @@ typedef struct {
     u8  _pad1[4];       // offsets 0x0C-0x0F
     u16 width;          // offset 0x10
     u16 height;         // offset 0x12
-    u_long *image_data; // offset 0x14
+    u_long *clutData; // offset 0x14
 } ImageFileHeader;
 
 // Structure for the sub‑header (at arg0 + offset + 8)
