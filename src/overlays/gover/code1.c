@@ -132,9 +132,6 @@ void RunGameOver(void)
     D_8010D018 = 1;
 }
 
-/**
- * decomp.me link (97.86%%) https://decomp.me/scratch/q3LKi
- */
 void BuildOTag(unsigned char* pOtBuf)
 {
     unsigned char* pPrimA;
@@ -196,7 +193,7 @@ void BuildOTag(unsigned char* pOtBuf)
     // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=448, ABR=add)
     setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, 448, 0));
     pPrimB = pPrimA;
-    pPrimB = pPrimB + 8;
+    pPrimB += 8;
 
     addPrim(pOtBuf, pPrimA);
 
