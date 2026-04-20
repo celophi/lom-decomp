@@ -16,6 +16,8 @@ VSync                       = 0x8002054C;
 
 // cd
 CD_UpdateAndProcessQueue    = 0x800122C0;
+CD_WaitForQueueEmpty        = 0x80013F2C;
+CD_QueueRead = 0x800141EC;
 
 // uncategorized
 FUN_8002279c = 0x8002279c;
