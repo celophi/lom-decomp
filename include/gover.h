@@ -15,7 +15,7 @@ typedef struct {
     u16 width;          // offset 0x10
     u16 height;         // offset 0x12
     u_long *image_data; // offset 0x14
-} Header;
+} ImageFileHeader;
 
 // Structure for the sub‑header (at arg0 + offset + 8)
 typedef struct {
