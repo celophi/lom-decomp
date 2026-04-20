@@ -42,7 +42,7 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     rect.w = 0;
     rect.h = 0x1E0;
     base = base - 0x90;
-    LoadImageFromCd(arg1 + 0xFFC, (s16*)(&rect), arg0);
+    LoadImageFromCd(arg1 + 0xFFC, (VramDstCoords*)(&rect), arg0);
     FUN_80022aa8();
     FUN_80022ac8();
     func_800224D8(0x7F);
@@ -73,7 +73,7 @@ void func_801401F0(void)
     int new_var;
     u_char* var_v0;
     u8 dummy[8];
-    u_long* p_d40708;
+    s32* p_d40708;
     func_800AA02C();
     var_s0 = (u_char*)D_80140710;
     ClearOTagR((u_long*)var_s0, 8);
