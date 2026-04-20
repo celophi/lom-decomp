@@ -211,13 +211,13 @@ void func_80140538(s32 arg0, s16* arg1, s32 arg2)
     volatile u8 dummy[8];
     CD_QueueRead(arg0 & 0xFFFF, arg2);
     CD_WaitForQueueEmpty();
-    func_80140588(arg2, arg1);
+    UploadImageDataToVram(arg2, arg1);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/BEM7D
  */
-s32 func_80140588(void* arg0, void* arg1)
+s32 UploadImageDataToVram(void* arg0, void* arg1)
 {
     RECT rect;
     Header* hdr = (Header*)arg0;

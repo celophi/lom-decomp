@@ -24,3 +24,7 @@ CD_QueueRead = 0x800141EC;
 FUN_8002279c = 0x8002279c;
 FUN_80022aa8 = 0x80022aa8;
 FUN_80022ac8 = 0x80022ac8;
+
+
+// GOVER
+UploadImageDataToVram = 0x80140588;
