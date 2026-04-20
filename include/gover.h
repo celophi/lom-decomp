@@ -81,7 +81,8 @@ extern void func_800224D8(s32);
 extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
-extern s32 func_801401F0(void);
+extern void func_80140380(void* arg0);
+extern void func_801401F0(void);
 extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 address);
 
 /**
@@ -106,7 +107,7 @@ extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 addres
  */
 u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates);
 
-extern s32 func_80140648(s32);
+extern void func_80140648(s32);
 extern s32 D_8011588C;
 extern s32 D_80140708;
 extern s32 D_80141048;
