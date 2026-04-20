@@ -228,6 +228,8 @@ u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
     rect.h = 1;
     LoadImage(&rect, &hdr->clutData);
 
+    // The pixel data header is located at a variable offset from the start of the CLUT section header,
+    // so we have to calculate its address using the size field in the CLUT header.
     pdh = (PixelDataHeader*)((u8*)hdr + 8 + clutSectionSize);
 
     rect.x = coords->pixelX;
