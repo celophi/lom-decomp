@@ -157,8 +157,8 @@ void BuildOTag(void* pOtBuf)
     node1 = *((unsigned char**)(base + 0x498));
 
     // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=320)
-    node1[3] = 4;                                  // TAG: len = 4 words
-    node1[7] = 0x64;                               // TAG: code = SPRT
+    setSprt(node1);
+    
     node1++;
     node1--;
     v0 = (unsigned char)g_fadeLevel;
