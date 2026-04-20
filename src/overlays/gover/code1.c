@@ -217,16 +217,16 @@ void LoadImageFromCd(s32 arg0, s16* arg1, s32 arg2)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/BEM7D
  */
-s32 UploadImageDataToVram(ImageFileHeader* header, VramDestCoords* arg1)
+s32 UploadImageDataToVram(ImageFileHeader* header, VramDstCoords* arg1)
 {
     RECT rect;
     ImageFileHeader* hdr = header;
-    VramDestCoords* ap = arg1;
+    VramDstCoords* ap = arg1;
     u32 offset = hdr->offset; // force early load into s2
 
     // First LoadImage call (3 arguments)
-    rect.x = ap->x1;
-    rect.y = ap->y1;
+    rect.x = ap->clutX;
+    rect.y = ap->clutY;
     rect.w = hdr->width * hdr->height;
     rect.h = 1;
     LoadImage(&rect, &hdr->image_data); // pass address of data pointer
@@ -234,8 +234,8 @@ s32 UploadImageDataToVram(ImageFileHeader* header, VramDestCoords* arg1)
     // Second LoadImage call (2 arguments)
     // Reuse hdr pointer to point to the sub-header (overwrites original)
     hdr = (ImageFileHeader*)((u8*)hdr + 8 + offset);
-    rect.x = ap->x0;
-    rect.y = ap->y0;
+    rect.x = ap->pixelX;
+    rect.y = ap->pixelY;
     rect.w = ((PixelDataHeader*)hdr)->w;
     rect.h = ((PixelDataHeader*)hdr)->h;
     LoadImage(&rect, &((PixelDataHeader*)hdr)->data); // pass address of data pointer

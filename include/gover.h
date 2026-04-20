@@ -27,11 +27,11 @@ typedef struct {
 
 // Structure for arg1 (the rectangle coordinates)
 typedef struct {
-    u16 x0;   // offset 0x00
-    u16 y0;   // offset 0x02
-    u16 x1;   // offset 0x04
-    u16 y1;   // offset 0x06
-} VramDestCoords;
+    u16 pixelX;
+    u16 pixelY;
+    u16 clutX;
+    u16 clutY;
+} VramDstCoords;
 
 typedef struct
 {
@@ -51,7 +51,7 @@ extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
 extern s32 func_801401F0(void);
 extern s32 LoadImageFromCd(s32, s16*, s32);
-extern s32 UploadImageDataToVram(ImageFileHeader*, VramDestCoords*);
+extern s32 UploadImageDataToVram(ImageFileHeader*, VramDstCoords*);
 extern s32 func_80140648(s32);
 extern s32 D_8011588C;
 extern s32 D_80140708;
