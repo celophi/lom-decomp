@@ -242,3 +242,44 @@ s32 func_80140588(void* arg0, void* arg1)
 
     return (((SubHeader*)hdr)->w + 0x3F) & 0xFFC0;
 }
+
+/**
+ * decomp.me link (97.02%) https://decomp.me/scratch/KjjKf
+ */
+void func_80140648(s32 arg0)
+{
+    s32 offset;
+    u8* var_v1;
+    u8* temp_a0;
+    u8* dest;
+    u8* src;
+    s32* ptr;
+    offset = -2;
+    if (arg0 != offset)
+    {
+        D_80119F00.unk8 = 0;
+        D_80119F00.unk4 = 0;
+        D_80119F00.unk0 = 0;
+        if (arg0 != (-1))
+        {
+            CD_QueueRead((arg0 + 0x51) & 0xFFFF, 0x80180000UL);
+            CD_WaitForQueueEmpty();
+            D_80119F00.unk0 = 0xC;
+            offset = D_80180004;
+
+            var_v1 = ((u8*)D_80180000) + offset;
+            ptr = (s32*)var_v1;
+            temp_a0 = var_v1 + ((u32)ptr[*ptr]);
+            dest = ((u8*)(&D_80119F00)) + 12;
+            if (var_v1 != temp_a0)
+            {
+                src = var_v1;
+                do
+                {
+                    *(dest++) = *(src++);
+                } while (src != temp_a0);
+            }
+            func_80022AE8((void*)temp_a0, 1);
+        }
+    }
+}
