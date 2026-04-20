@@ -135,14 +135,14 @@ void RunGameOver(void)
 /**
  * decomp.me link (97.86%%) https://decomp.me/scratch/q3LKi
  */
-void BuildOTag(void* arg0)
+void BuildOTag(void* pOtBuf)
 {
     unsigned char* base;
     unsigned char* node1;
     unsigned char* node3;
     unsigned char* new_var;
     unsigned char v0;
-    base = (unsigned char*)arg0;
+    base = (unsigned char*)pOtBuf;
     if (g_fadeStep != 0)
     {
         g_fadeLevel += g_fadeStep;
@@ -151,56 +151,67 @@ void BuildOTag(void* arg0)
     {
         g_fadeStep = 0;
     }
+    // base+0x498 holds the primitive allocation cursor, reset to base+0x98 each
+    // frame by the caller. The first 0x98 bytes of the buffer are occupied by the
+    // OTag entries, DISPENV, DRAWENV, and display rect data.
     node1 = *((unsigned char**)(base + 0x498));
-    node1[3] = 4;
-    node1[7] = 100;
+
+    // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=320)
+    node1[3] = 4;                                  // TAG: len = 4 words
+    node1[7] = 0x64;                               // TAG: code = SPRT
     node1++;
     node1--;
     v0 = (unsigned char)g_fadeLevel;
-    *((unsigned short*)(node1 + 8)) = 0;
-    *((unsigned short*)(node1 + 10)) = 0;
-    *((unsigned short*)(node1 + 16)) = 256;
-    *((unsigned short*)(node1 + 18)) = 224;
-    *((unsigned short*)(node1 + 16)) = 256;
-    node1[12] = 0;
-    node1[13] = 0;
-    *((unsigned short*)(node1 + 14)) = 0x7800;
-    node1[6] = v0;
-    node1[5] = v0;
-    node1[4] = v0;
-    node1[7] = 100;
+    *((unsigned short*)(node1 + 8)) = 0;           // x = 0
+    *((unsigned short*)(node1 + 10)) = 0;          // y = 0
+    *((unsigned short*)(node1 + 16)) = 256;        // w = 256
+    *((unsigned short*)(node1 + 18)) = 224;        // h = 224
+    *((unsigned short*)(node1 + 16)) = 256;        // w = 256 (redundant)
+    node1[12] = 0;                                 // u = 0
+    node1[13] = 0;                                 // v = 0
+    *((unsigned short*)(node1 + 14)) = 0x7800;     // clut = VRAM (0, 480)
+    node1[6] = v0;                                 // b = fade level
+    node1[5] = v0;                                 // g = fade level
+    node1[4] = v0;                                 // r = fade level
+    node1[7] = 0x64;                               // code = SPRT (redundant)
     *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
     *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
     node1 += 20;
-    *((unsigned long*)(new_var = node1 + 4)) = 0xE10000A5UL;
+
+    // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=320, ABR=add)
+    *((unsigned long*)(new_var = node1 + 4)) = 0xE10000A5UL; // GPU draw mode cmd, tpage=0xA5
     node3 = node1 + 8;
-    node1[3] = 1;
+    node1[3] = 1;                                  // TAG: len = 1 word
     *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
     *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
-    node3[3] = 4;
-    node3[7] = 100;
+
+    // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=448)
+    node3[3] = 4;                                  // TAG: len = 4 words
+    node3[7] = 0x64;                               // TAG: code = SPRT
     v0 = (unsigned char)g_fadeLevel;
     node1 = node3;
     node1 = node1 + 20;
-    *((unsigned short*)(node3 + 8)) = 0x100;
-    node3[6] = v0;
-    node3[5] = v0;
-    node3[4] = v0;
-    *((unsigned short*)(node3 + 10)) = 0;
-    *((unsigned short*)(node3 + 16)) = 64;
-    *((unsigned short*)(node3 + 18)) = 224;
-    node3[12] = 0;
-    node3[13] = 0;
-    *((unsigned short*)(node3 + 14)) = 0x7800;
+    *((unsigned short*)(node3 + 8)) = 0x100;       // x = 256
+    node3[6] = v0;                                 // b = fade level
+    node3[5] = v0;                                 // g = fade level
+    node3[4] = v0;                                 // r = fade level
+    *((unsigned short*)(node3 + 10)) = 0;          // y = 0
+    *((unsigned short*)(node3 + 16)) = 64;         // w = 64
+    *((unsigned short*)(node3 + 18)) = 224;        // h = 224
+    node3[12] = 0;                                 // u = 0
+    node3[13] = 0;                                 // v = 0
+    *((unsigned short*)(node3 + 14)) = 0x7800;     // clut = VRAM (0, 480)
     *((unsigned long*)node3) = ((*((unsigned long*)node3)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
     *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node3) & 0x00FFFFFFUL);
-    node1[3] = 1;
+
+    // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=448, ABR=add)
+    node1[3] = 1;                                  // TAG: len = 1 word
     node3 = node1 + 8;
-    *((unsigned long*)(node1 + 4)) = 0xE10000A7UL;
+    *((unsigned long*)(node1 + 4)) = 0xE10000A7UL; // GPU draw mode cmd, tpage=0xA7
     *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
-    *((unsigned char**)(base + 0x498)) = node3;
-    *((unsigned long*)((unsigned char*)arg0)) =
-        ((*((unsigned long*)((unsigned char*)arg0))) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
+    *((unsigned char**)(base + 0x498)) = node3;    // advance allocation cursor
+    *((unsigned long*)((unsigned char*)pOtBuf)) =
+        ((*((unsigned long*)((unsigned char*)pOtBuf))) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
 }
 
 /**

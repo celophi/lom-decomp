@@ -81,7 +81,7 @@ extern void func_800224D8(s32);
 extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
-extern void BuildOTag(void* arg0);
+extern void BuildOTag(void* pOtBuf);
 extern void func_801401F0(void);
 extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 address);
 
