@@ -23,7 +23,7 @@ typedef struct {
     u16 w;              // offset 0x08
     u16 h;              // offset 0x0A
     u_long *data;       // offset 0x0C
-} SubHeader;
+} PixelDataHeader;
 
 // Structure for arg1 (the rectangle coordinates)
 typedef struct {
