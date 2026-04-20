@@ -214,33 +214,29 @@ void LoadImageFromCd(s32 arg0, s16* arg1, s32 arg2)
     UploadImageDataToVram(arg2, arg1);
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/BEM7D
- */
-s32 UploadImageDataToVram(ImageFileHeader* header, VramDstCoords* coordinates)
+u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 {
     RECT rect;
-    ImageFileHeader* hdr = header;
+    ClutSectionHeader* hdr = header;
     VramDstCoords* coords = coordinates;
-    u32 offset = hdr->offset;
+    u32 clutSectionSize = hdr->size;
     PixelDataHeader* pdh;
 
-    // First LoadImage call (3 arguments)
     rect.x = coords->clutX;
     rect.y = coords->clutY;
     rect.w = hdr->width * hdr->height;
     rect.h = 1;
-    LoadImage(&rect, &hdr->clutData); // pass address of data pointer
+    LoadImage(&rect, &hdr->clutData);
 
-    // Second LoadImage call (2 arguments)
-    pdh = (PixelDataHeader*)((u8*)hdr + 8 + offset);
+    pdh = (PixelDataHeader*)((u8*)hdr + 8 + clutSectionSize);
+
     rect.x = coords->pixelX;
     rect.y = coords->pixelY;
     rect.w = pdh->w;
     rect.h = pdh->h;
-    LoadImage(&rect, &(pdh->data)); // pass address of data pointer
+    LoadImage(&rect, &pdh->data);
 
-    return (pdh->w + 0x3F) & 0xFFC0;
+    return ALIGN64(pdh->w);
 }
 
 /**
