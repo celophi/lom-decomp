@@ -29,6 +29,8 @@ FUN_80022ac8 = 0x80022ac8;
 // GOVER
 LoadImageFromCd = 0x80140538;
 UploadImageDataToVram = 0x80140588;
+BuildOTag = 0x80140380;
+RunGameOver = 0x801401F0;
 
 g_fadeLevel = 0x80141048;
 g_fadeStep = 0x80140708;

@@ -60,13 +60,13 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     }
     g_fadeLevel = 4;
     g_fadeStep = 4;
-    func_801401F0();
+    RunGameOver();
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/LOxbx
  */
-void func_801401F0(void)
+void RunGameOver(void)
 {
     u_char* var_s0;
     u_char* var_s1;
@@ -90,7 +90,7 @@ void func_801401F0(void)
             ClearOTagR((u_long*)var_s1, 8);
             *((void**)(var_s1 + 0x498)) = (void*)(var_s1 + 0x98);
             func_800A9E78();
-            func_80140380((s32*)var_s1);
+            BuildOTag((s32*)var_s1);
             DrawSync(0);
             func_800157B0(2);
             if (!g_fadeLevel)
@@ -135,7 +135,7 @@ void func_801401F0(void)
 /**
  * decomp.me link (97.86%%) https://decomp.me/scratch/q3LKi
  */
-void func_80140380(void* arg0)
+void BuildOTag(void* arg0)
 {
     unsigned char* base;
     unsigned char* node1;
