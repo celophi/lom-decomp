@@ -81,7 +81,32 @@ extern void func_800224D8(s32);
 extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
-extern void func_80140380(void* arg0);
+
+/**
+ * @brief Builds the per-frame GPU primitive list for the Game Over screen.
+ *
+ * @details Called every frame from RunGameOver. Advances @p g_fadeLevel by
+ * @p g_fadeStep and inserts four primitives into the ordering table at
+ * @p pOtBuf in back-to-front order:
+ *
+ *   1. DR_TPAGE  — selects texture page 0xA7 (8bpp, VRAM X=448)
+ *   2. SPRT      — right half of the image (64x224) at screen X=256
+ *   3. DR_TPAGE  — selects texture page 0xA5 (8bpp, VRAM X=320)
+ *   4. SPRT      — left half of the image (256x224) at screen X=0
+ *
+ * Both sprites share the CLUT at VRAM (0, 480) and are color-modulated by
+ * @p g_fadeLevel (0 = black, 0x80 = full brightness), producing the fade-in
+ * and fade-out effect. Primitives are allocated from the buffer region starting
+ * at @p pOtBuf+0x98, with the allocation cursor stored at @p pOtBuf+0x498.
+ *
+ * @param pOtBuf  Pointer to the double-buffered OTag buffer. Serves as both
+ *                the OTag[0] linked-list head and the container for the
+ *                primitive allocation cursor at offset 0x498.
+ *
+ * @see decomp.me (97.86%) https://decomp.me/scratch/q3LKi
+ */
+void BuildOTag(void* pOtBuf);
+
 extern void func_801401F0(void);
 extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 address);
 
@@ -109,8 +134,8 @@ u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 
 extern void func_80140648(s32);
 extern s32 D_8011588C;
-extern s32 D_80140708;
-extern s32 D_80141048;
+extern s32 g_fadeStep;
+extern s32 g_fadeLevel;
 extern u8 D_801407A0[];
 extern s32 D_80140710[];
 extern s32 D_80122988;
@@ -119,5 +144,7 @@ extern s32 D_8010D018;
 extern D_80119F00_t D_80119F00;
 extern s32 D_80180004;
 extern u8 D_80180000[];
+
+extern void CD_QueueRead(s32 resourceIndex, void* dstBuffer);
 
 #endif
