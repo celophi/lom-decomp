@@ -31,4 +31,8 @@ typedef signed short    s16;
 // Round x up to the nearest multiple of 64 (PSX texture page width alignment)
 #define ALIGN64(x) (((x) + 0x3F) & 0xFFC0)
 
+// GPU packet macros
+#define setBGR0(p,_b0,_g0,_r0)	\
+    (p)->b0 = _b0,(p)->g0 = _g0,(p)->r0 = _r0
+
 #endif

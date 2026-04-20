@@ -167,11 +167,8 @@ void BuildOTag(void* pOtBuf)
     setWH((SPRT*)node1, 256, 224);
     setUV0((SPRT*)node1, 0, 0);
     setClut((SPRT*)node1, 0, 480);
-    
-    node1[6] = v0;                                 // b = fade level
-    node1[5] = v0;                                 // g = fade level
-    node1[4] = v0;                                 // r = fade level
-    node1[7] = 0x64;                               // code = SPRT (redundant)
+    setBGR0((SPRT*)node1, v0, v0, v0);
+
     *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
     *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
     node1 += 20;
