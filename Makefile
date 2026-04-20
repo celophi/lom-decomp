@@ -281,7 +281,7 @@ overlay_carda_gcc_srcs   := src/overlays/carda/unk1.c
 OVERLAYS += checkps
 overlay_checkps_asset      := assets/checkps.bin
 overlay_checkps_gcc_srcs   := src/overlays/checkps/code3.c
-overlay_checkps_gnu_srcs   := src/overlays/checkps/code4.c src/overlays/checkps/code5.c src/overlays/checkps/code6.c src/overlays/checkps/code7.c
+overlay_checkps_gnu_srcs   := src/overlays/checkps/code4.c src/overlays/checkps/code6.c src/overlays/checkps/code7.c
 
 OVERLAYS += cload
 overlay_cload_gcc_srcs   := src/overlays/cload/unk1.c
