@@ -202,3 +202,14 @@ void func_80140380(void* arg0)
     *((unsigned long*)((unsigned char*)arg0)) =
         ((*((unsigned long*)((unsigned char*)arg0))) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/OafFK
+ */
+void func_80140538(s32 arg0, s16* arg1, s32 arg2)
+{
+    volatile u8 dummy[8];
+    CD_QueueRead(arg0 & 0xFFFF, arg2);
+    CD_WaitForQueueEmpty();
+    func_80140588(arg2, arg1);
+}
