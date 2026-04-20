@@ -217,23 +217,21 @@ void LoadImageFromCd(s32 arg0, s16* arg1, s32 arg2)
 u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 {
     RECT rect;
-    ClutSectionHeader* hdr = header;
-    VramDstCoords* coords = coordinates;
-    u32 clutSectionSize = hdr->size;
     PixelDataHeader* pdh;
+    u32 clutSectionSize = header->size;
 
-    rect.x = coords->clutX;
-    rect.y = coords->clutY;
-    rect.w = hdr->width * hdr->height;
+    rect.x = coordinates->clutX;
+    rect.y = coordinates->clutY;
+    rect.w = header->width * header->height;
     rect.h = 1;
-    LoadImage(&rect, &hdr->clutData);
+    LoadImage(&rect, &header->clutData);
 
     // The pixel data header is located at a variable offset from the start of the CLUT section header,
     // so we have to calculate its address using the size field in the CLUT header.
-    pdh = (PixelDataHeader*)((u8*)hdr + 8 + clutSectionSize);
+    pdh = (PixelDataHeader*)((u8*)header + 8 + clutSectionSize);
 
-    rect.x = coords->pixelX;
-    rect.y = coords->pixelY;
+    rect.x = coordinates->pixelX;
+    rect.y = coordinates->pixelY;
     rect.w = pdh->w;
     rect.h = pdh->h;
     LoadImage(&rect, &pdh->data);
