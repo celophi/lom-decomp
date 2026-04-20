@@ -27,4 +27,5 @@ FUN_80022ac8 = 0x80022ac8;
 
 
 // GOVER
+LoadImageFromCd = 0x80140538;
 UploadImageDataToVram = 0x80140588;

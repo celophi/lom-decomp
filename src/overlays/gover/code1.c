@@ -42,7 +42,7 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     rect.w = 0;
     rect.h = 0x1E0;
     base = base - 0x90;
-    func_80140538(arg1 + 0xFFC, (s16*)(&rect), arg0);
+    LoadImageFromCd(arg1 + 0xFFC, (s16*)(&rect), arg0);
     FUN_80022aa8();
     FUN_80022ac8();
     func_800224D8(0x7F);
@@ -206,7 +206,7 @@ void func_80140380(void* arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/OafFK
  */
-void func_80140538(s32 arg0, s16* arg1, s32 arg2)
+void LoadImageFromCd(s32 arg0, s16* arg1, s32 arg2)
 {
     volatile u8 dummy[8];
     CD_QueueRead(arg0 & 0xFFFF, arg2);

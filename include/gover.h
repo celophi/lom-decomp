@@ -50,7 +50,7 @@ extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
 extern s32 func_801401F0(void);
-extern s32 func_80140538(s32, s16*, s32);
+extern s32 LoadImageFromCd(s32, s16*, s32);
 extern s32 func_80140648(s32);
 extern s32 D_8011588C;
 extern s32 D_80140708;
