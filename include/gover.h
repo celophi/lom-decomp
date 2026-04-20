@@ -6,32 +6,64 @@
 #include "psyq/libgpu.h"
 #include "psyq/libetc.h"
 
-
-// Structure for arg0 (the header)
+/**
+ * @brief Header for the CLUT (palette) section of a CD image file.
+ *
+ * @details First structure in the custom binary image format read from CD.
+ * Contains the CLUT dimensions and inline palette data, followed at a
+ * variable offset by a PixelDataHeader. The @p size field is self-relative:
+ * adding its value to its own address yields the start of the PixelDataHeader.
+ *
+ * Binary layout:
+ *   0x00  _pad0[8]   - unknown
+ *   0x08  size       - byte distance from &size to the PixelDataHeader
+ *   0x0C  _pad1[4]   - unknown
+ *   0x10  width      - CLUT entries per row
+ *   0x12  height     - CLUT rows (width * height = total palette entries)
+ *   0x14  clutData   - inline CLUT pixel data begins here
+ */
 typedef struct {
-    u8  _pad0[8];       // offsets 0x00-0x07
-    u32 offset;         // offset 0x08
-    u8  _pad1[4];       // offsets 0x0C-0x0F
-    u16 width;          // offset 0x10
-    u16 height;         // offset 0x12
-    u_long *image_data; // offset 0x14
-} Header;
+    u8     _pad0[8];
+    u32    size;
+    u8     _pad1[4];
+    u16    width;
+    u16    height;
+    u_long clutData;
+} ClutSectionHeader;
 
-// Structure for the sub‑header (at arg0 + offset + 8)
+/**
+ * @brief Header for the pixel data section of a CD image file.
+ *
+ * @details Located immediately after the inline CLUT data in the binary
+ * image buffer. Found at runtime via ClutSectionHeader::size. Contains
+ * the pixel data dimensions and inline pixel data.
+ *
+ * Binary layout:
+ *   0x00  _pad0[8]   - unknown
+ *   0x08  w          - image width in 16bpp VRAM texels
+ *   0x0A  h          - image height in pixels
+ *   0x0C  data       - inline pixel data begins here
+ */
 typedef struct {
-    u8  _pad0[8];       // offsets 0x00-0x07
-    u16 w;              // offset 0x08
-    u16 h;              // offset 0x0A
-    u_long *data;       // offset 0x0C
-} SubHeader;
+    u8     _pad0[8];
+    u16    w;
+    u16    h;
+    u_long data;
+} PixelDataHeader;
 
-// Structure for arg1 (the rectangle coordinates)
+/**
+ * @brief VRAM destination coordinates for a two-section CD image upload.
+ *
+ * @details Passed to UploadImageDataToVram to specify where in VRAM to place
+ * the CLUT palette strip and the pixel data independently. Overlaid on a PSX
+ * RECT at the call site (x/y map to pixelX/Y; w/h map to clutX/Y).
+ */
 typedef struct {
-    u16 x0;   // offset 0x00
-    u16 y0;   // offset 0x02
-    u16 x1;   // offset 0x04
-    u16 y1;   // offset 0x06
-} Arg1;
+    u16 pixelX;
+    u16 pixelY;
+    u16 clutX;
+    u16 clutY;
+} VramDstCoords;
 
 typedef struct
 {
@@ -50,7 +82,30 @@ extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
 extern s32 func_801401F0(void);
-extern s32 func_80140538(s32, s16*, s32);
+extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 address);
+
+/**
+ * @brief Uploads a CLUT palette and pixel data from a CD image buffer into VRAM.
+ *
+ * @details Performs two LoadImage calls against a custom binary image format
+ * read from CD. The first uploads the CLUT palette as a single-row strip at
+ * the coordinates given by @p coordinates->clutX/Y. The second uploads the
+ * pixel data at @p coordinates->pixelX/Y using dimensions from the
+ * PixelDataHeader, which is located at a variable byte offset inside the
+ * ClutSectionHeader (stored in ClutSectionHeader::size, measured from the
+ * address of that field itself).
+ *
+ * @param header      Pointer to the ClutSectionHeader at the start of the
+ *                    CD image buffer.
+ * @param coordinates VRAM destination coordinates for both the CLUT and pixel
+ *                    data sections.
+ * @return            Pixel data width rounded up to the nearest 64-texel
+ *                    texture page boundary (see ALIGN64).
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/BEM7D
+ */
+u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates);
+
 extern s32 func_80140648(s32);
 extern s32 D_8011588C;
 extern s32 D_80140708;

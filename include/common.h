@@ -28,4 +28,7 @@ typedef signed short    s16;
 // Common sizes
 #define MAX_SHORT_VALUE 32767
 
+// Round x up to the nearest multiple of 64 (PSX texture page width alignment)
+#define ALIGN64(x) (((x) + 0x3F) & 0xFFC0)
+
 #endif
