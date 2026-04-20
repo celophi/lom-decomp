@@ -164,13 +164,10 @@ void BuildOTag(void* pOtBuf)
     v0 = (unsigned char)g_fadeLevel;
     
     setXY0((SPRT*)node1, 0, 0);
-
-    *((unsigned short*)(node1 + 16)) = 256;        // w = 256
-    *((unsigned short*)(node1 + 18)) = 224;        // h = 224
-    *((unsigned short*)(node1 + 16)) = 256;        // w = 256 (redundant)
-    node1[12] = 0;                                 // u = 0
-    node1[13] = 0;                                 // v = 0
-    *((unsigned short*)(node1 + 14)) = 0x7800;     // clut = VRAM (0, 480)
+    setWH((SPRT*)node1, 256, 224);
+    setUV0((SPRT*)node1, 0, 0);
+    setClut((SPRT*)node1, 0, 480);
+    
     node1[6] = v0;                                 // b = fade level
     node1[5] = v0;                                 // g = fade level
     node1[4] = v0;                                 // r = fade level
