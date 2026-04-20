@@ -141,16 +141,19 @@ void BuildOTag(void* pOtBuf)
     unsigned char* node1;
     unsigned char* node3;
     unsigned char* new_var;
-    unsigned char v0;
+    unsigned char fadeLevel;
     base = (unsigned char*)pOtBuf;
+    
     if (g_fadeStep != 0)
     {
         g_fadeLevel += g_fadeStep;
     }
+    
     if (g_fadeLevel == 128)
     {
         g_fadeStep = 0;
     }
+    
     // base+0x498 holds the primitive allocation cursor, reset to base+0x98 each
     // frame by the caller. The first 0x98 bytes of the buffer are occupied by the
     // OTag entries, DISPENV, DRAWENV, and display rect data.
@@ -158,19 +161,18 @@ void BuildOTag(void* pOtBuf)
 
     // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=320)
     setSprt(node1);
-
+    
     node1++;
     node1--;
-    v0 = (unsigned char)g_fadeLevel;
+    fadeLevel = (unsigned char)g_fadeLevel;
     
     setXY0((SPRT*)node1, 0, 0);
     setWH((SPRT*)node1, 256, 224);
     setUV0((SPRT*)node1, 0, 0);
     setClut((SPRT*)node1, 0, 480);
-    setBGR0((SPRT*)node1, v0, v0, v0);
-
-    *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
-    *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
+    setBGR0((SPRT*)node1, fadeLevel, fadeLevel, fadeLevel);
+    addPrim(base, node1);
+    
     node1 += 20;
 
     // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=320, ABR=add)
@@ -183,13 +185,13 @@ void BuildOTag(void* pOtBuf)
     // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=448)
     node3[3] = 4;                                  // TAG: len = 4 words
     node3[7] = 0x64;                               // TAG: code = SPRT
-    v0 = (unsigned char)g_fadeLevel;
+    fadeLevel = (unsigned char)g_fadeLevel;
     node1 = node3;
     node1 = node1 + 20;
     *((unsigned short*)(node3 + 8)) = 0x100;       // x = 256
-    node3[6] = v0;                                 // b = fade level
-    node3[5] = v0;                                 // g = fade level
-    node3[4] = v0;                                 // r = fade level
+    node3[6] = fadeLevel;                                 // b = fade level
+    node3[5] = fadeLevel;                                 // g = fade level
+    node3[4] = fadeLevel;                                 // r = fade level
     *((unsigned short*)(node3 + 10)) = 0;          // y = 0
     *((unsigned short*)(node3 + 16)) = 64;         // w = 64
     *((unsigned short*)(node3 + 18)) = 224;        // h = 224
