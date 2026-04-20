@@ -172,13 +172,15 @@ void BuildOTag(void* pOtBuf)
     setClut((SPRT*)node1, 0, 480);
     setBGR0((SPRT*)node1, fadeLevel, fadeLevel, fadeLevel);
     addPrim(base, node1);
-    
+
     node1 += 20;
 
     // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=320, ABR=add)
-    *((unsigned long*)(new_var = node1 + 4)) = 0xE10000A5UL; // GPU draw mode cmd, tpage=0xA5
+    // GPU draw mode cmd, tpage=0xA5
+    setDrawTPage((DR_TPAGE*)node1, 0, 0, getTPage(1, 1, 320, 0));
+    
     node3 = node1 + 8;
-    node1[3] = 1;                                  // TAG: len = 1 word
+    
     *((unsigned long*)node1) = ((*((unsigned long*)node1)) & 0xFF000000UL) | ((*((unsigned long*)base)) & 0x00FFFFFFUL);
     *((unsigned long*)base) = ((*((unsigned long*)base)) & 0xFF000000UL) | (((unsigned long)node1) & 0x00FFFFFFUL);
 
