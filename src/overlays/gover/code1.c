@@ -250,20 +250,20 @@ void LoadAudioClip(s32 arg0)
     offset = -2;
     if (arg0 != offset)
     {
-        D_80119F00.unk8 = 0;
-        D_80119F00.unk4 = 0;
-        D_80119F00.unk0 = 0;
+        g_audioData.unk8 = 0;
+        g_audioData.unk4 = 0;
+        g_audioData.unk0 = 0;
         if (arg0 != (-1))
         {
             CD_QueueRead((arg0 + 0x51) & 0xFFFF, 0x80180000UL);
             CD_WaitForQueueEmpty();
-            D_80119F00.unk0 = 0xC;
+            g_audioData.unk0 = 0xC;
             offset = g_audioDataOffset;
 
             var_v1 = ((u8*)D_80180000) + offset;
             ptr = (s32*)var_v1;
             temp_a0 = var_v1 + ((u32)ptr[*ptr]);
-            dest = ((u8*)(&D_80119F00)) + 12;
+            dest = ((u8*)(&g_audioData)) + 12;
             if (var_v1 != temp_a0)
             {
                 src = var_v1;
