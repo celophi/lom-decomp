@@ -62,3 +62,12 @@ void func_80023660(s32 arg0, s32 arg1)
     func_80024230(&func_8002360C);
     func_800241A0(arg0, arg1);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/lLOqn
+ */
+void func_800236B0(s32 arg0, s32 arg1)
+{
+    func_80023630();
+    func_80024140(arg0, arg1);
+}
