@@ -48,6 +48,8 @@ extern u8 D_8004C260[];
 
 extern s32 func_80024230(s32);
 extern s32 func_800235F8(void);
+extern void func_80028E34(int, volatile short, void *, int);
+extern void func_80023EF0(int);
 
 inline static u8* off(u8* p, int o)
 {
