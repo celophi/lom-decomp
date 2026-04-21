@@ -48,7 +48,7 @@ void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     func_800224D8(0x7F);
     if (arg3 != (-1))
     {
-        func_80140648(arg3);
+        LoadAudioClip(arg3);
         func_800A39A8(0, 0x80, 0, 0);
     }
     if (arg2 != (-1))
@@ -239,7 +239,7 @@ u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 /**
  * decomp.me link (97.02%) https://decomp.me/scratch/KjjKf
  */
-void func_80140648(s32 arg0)
+void LoadAudioClip(s32 arg0)
 {
     s32 offset;
     u8* var_v1;
@@ -250,20 +250,20 @@ void func_80140648(s32 arg0)
     offset = -2;
     if (arg0 != offset)
     {
-        D_80119F00.unk8 = 0;
-        D_80119F00.unk4 = 0;
-        D_80119F00.unk0 = 0;
+        g_audioData.unk8 = 0;
+        g_audioData.unk4 = 0;
+        g_audioData.unk0 = 0;
         if (arg0 != (-1))
         {
             CD_QueueRead((arg0 + 0x51) & 0xFFFF, 0x80180000UL);
             CD_WaitForQueueEmpty();
-            D_80119F00.unk0 = 0xC;
-            offset = D_80180004;
+            g_audioData.unk0 = 0xC;
+            offset = g_audioDataOffset;
 
             var_v1 = ((u8*)D_80180000) + offset;
             ptr = (s32*)var_v1;
             temp_a0 = var_v1 + ((u32)ptr[*ptr]);
-            dest = ((u8*)(&D_80119F00)) + 12;
+            dest = ((u8*)(&g_audioData)) + 12;
             if (var_v1 != temp_a0)
             {
                 src = var_v1;
