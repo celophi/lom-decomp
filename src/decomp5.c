@@ -131,3 +131,149 @@ s32 func_8002376C(void* arg0, s32 arg1, s32 arg2, s32 arg3)
     new_var = ret_val;
     return new_var;
 }
+
+inline static u8* off(u8* p, int o)
+{
+    return p + o;
+}
+
+/**
+ * decomp.me link (96.93%) https://decomp.me/scratch/9R0Vj
+ */
+void func_80023830(void)
+{
+    u16* hw = (u16*)0x1F801DAA;
+    u32 t0 = 0x18;
+    u8** new_var4;
+    u32* new_var3;
+    u32* new_var2;
+    u32* new_var;
+    int new_var7;
+    u16 new_var8;
+    int new_var5;
+    u8* a0 = D_8004C260;
+    u8* a2 = D_80049130;
+    int new_var6;
+    u8* new_var9;
+    u32 a3;
+    new_var3 = (u32*)off(D_8003EC30, 4);
+    *new_var3 = 0;
+    *((u32*)off(D_8003EC30, 0)) = 0;
+    *((u32*)off(D_8004D388, 0x14)) = 0;
+    *((u32*)off(D_8004D388, 0x10)) = 0;
+    *((u32*)off(D_8004D388, 0x0C)) = 0;
+    *((u32*)off(D_8004D388, 0x08)) = 0;
+    *((u32*)off(D_8004D388, 0x04)) = 0;
+    *((u32*)off(D_8004D388, 0x00)) = 0;
+    *((u32*)off(D_8004F750, 0x00)) = 0;
+    *((u32*)off(D_8004F750, 0x04)) = 1;
+    new_var = (u32*)off(D_8004F830, 0x00);
+    *((u32*)off(D_8004D400, 0x00)) = 0;
+    *((u32*)off(a0, 0x04)) = 0;
+    *((u32*)off(a0, 0x08)) = 0;
+    *((u16*)off(a0, 0x5E)) = 0;
+    *((u32*)off(D_8004D400, 0x10)) = 0;
+    *((u32*)off(a0, 0x1C)) = 0;
+    *((u16*)off(D_8004C2D0, 0x5E)) = 0;
+    *((u32*)off(D_8004C2D0, 0x04)) = 0;
+    *((u32*)off(a0, 0x50)) = 0x7F0000;
+    D_8003EC58 = a2;
+    a2 += 0x58;
+    D_8003EC5C = a0;
+    D_8003EC28 = 0;
+    D_8003EC24 = 0;
+    D_8003EC70 = 0;
+    *((u16*)off(a0, 0x58)) = 0;
+    D_8003EC68 = 0x7FFF0000;
+    D_8003EC40 = 0;
+    D_8003EC74 = 0;
+    D_8003EC42 = 0;
+    D_8003EC78 = 0;
+    D_8003EC64 = 0;
+    *((u32*)off(D_8004D400, 0x1C)) = 0;
+    *((u32*)off(a0, 0x3C)) = 0;
+    *((u32*)off(D_8004D400, 0x20)) = 0;
+    a3 = (new_var8 = *hw);
+    *((s16*)0x1F801D80) = 0x3FFF;
+    *((s16*)0x1F801D82) = 0x3FFF;
+    *((s16*)0x1F801DB0) = 0x7FFF;
+    *((s16*)0x1F801DB2) = 0x7FFF;
+    *((u32*)off(a0, 0x40)) = 0;
+    a3 = 0;
+    *((u32*)off(D_8004D400, 0x24)) = a3;
+    *((u32*)off(a0, 0x44)) = 0;
+    *((u16*)off(a0, 0x68)) = 0;
+    *((u16*)off(a0, 0x66)) = 0;
+    *((u16*)off(a0, 0x64)) = a3;
+    *((u16*)off(a0, 0x6C)) = a3;
+    *((u32*)off(D_8004F760, 0x40)) = 0x7F00;
+    *((u32*)off(D_8004F760, 0x48)) = a3;
+    D_8003EC44 = a3;
+    D_8003EC6C = a3;
+    D_8003EC7C = a3;
+    *((u32*)off(D_8004F830, 0x08)) = a3;
+    *((u32*)off(D_8004F830, 0x04)) = a3;
+    a3 = *hw;
+    *new_var = 0;
+    *hw = a3;
+    *hw = (*hw) & 0xFFFA;
+    *hw = (*hw) | 1;
+    a3 = 0;
+    hw = a2 - 0x24;
+    do
+    {
+        a3++;
+        *((u32*)hw) = 0;
+        *((u32*)(a2 + 0xA4)) = t0;
+        *((u16*)(a2 + 0x0C)) = a3;
+        *((u32*)(a0 = a2 + 0x00)) = a3;
+        a2 += 0x118;
+    } while ((a3 & 0xFFFF) < 0x20);
+    new_var7 = 0x7F00;
+    a3 = 0xC;
+    new_var5 = 0x8C;
+    new_var6 = 1;
+
+    {
+        u8* v1 = D_8004B430 + new_var5;
+        do
+        {
+            u32 tmp = a3 & 0xFFFF;
+            a3++;
+            *((u32*)(v1 - 0x58)) = 0;
+            *((u32*)(v1 + 0x70)) = tmp;
+            *((u16*)(v1 - 0x28)) = new_var6;
+            *((u32*)(v1 - 0x34)) = 0;
+            *((u16*)(v1 + 0x58)) = new_var7;
+            *((u16*)(v1 + 0x02)) = 0;
+            *((u16*)(v1 - 0x04)) = a3;
+            *((u32*)((*(new_var4 = &v1)) - 0x4C)) = 0;
+            *((u16*)v1) = 0;
+            v1 += 0x118;
+        } while ((a3 & 0xFFFF) < 0x18);
+    }
+    {
+        u8* a0_ptr = D_8003EC5C;
+        u8* v0_ptr = D_8004D400;
+        u8* v1_ptr = D_8004F750;
+        a0 = a0_ptr;
+        *((u32*)off(a0, 0x18)) = 0;
+        *((u32*)off(a0, 0x14)) = 0;
+        new_var2 = (u32*)off(v0_ptr, 0x18);
+        *((u32*)off(a0, 0x10)) = a3;
+
+        *new_var2 = 1;
+        *((u32*)off(v0_ptr, 0x14)) = 0x66A80000;
+        *((u32*)off(v0_ptr, 0x0C)) = a3;
+        *((u32*)off(v0_ptr, 0x08)) = a3;
+        *((u32*)off(v0_ptr, 0x04)) = a3;
+        new_var6 = 0x03FFF000;
+        *((u32*)off(a0, 0x48)) = new_var6;
+        *((u32*)off(a0, 0x4C)) = a3;
+        *((u16*)off(a0, 0x5A)) = a3;
+        new_var9 = v1_ptr;
+        *((u32*)off(new_var9, 0x08)) = (*((u32*)off(new_var9, 0x08))) | 0x80;
+    }
+    func_80028E34(4, 0x03FFF000, a2, a3);
+    func_80023EF0(1);
+}
