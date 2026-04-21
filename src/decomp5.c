@@ -71,3 +71,11 @@ void func_800236B0(s32 arg0, s32 arg1)
     func_80023630();
     func_80024140(arg0, arg1);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/fqPPO
+ */
+void func_800236EC(void)
+{
+    while ((*((volatile s32*)(&D_8003EC4C))) == 1);
+}
