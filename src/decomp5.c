@@ -52,3 +52,13 @@ void func_80023630(void)
     D_8003EC4C = 1;
     func_80024230(&func_8002360C);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/D2YiT
+ */
+void func_80023660(s32 arg0, s32 arg1)
+{
+    D_8003EC4C = 1;
+    func_80024230(&func_8002360C);
+    func_800241A0(arg0, arg1);
+}
