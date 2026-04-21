@@ -26,3 +26,11 @@ void func_800235A8(s32* arg0, s32* arg1, s32 arg2, s32 arg3)
         t0 += 4;
     } while (arg3 != 0);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/scY8u
+ */
+s32 func_800235F8(s32* arg0)
+{
+    return *arg0 + 0xB0BEB4BF;
+}
