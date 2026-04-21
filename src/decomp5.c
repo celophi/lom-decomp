@@ -79,3 +79,16 @@ void func_800236EC(void)
 {
     while ((*((volatile s32*)(&D_8003EC4C))) == 1);
 }
+
+s32 func_8002371C(void* arg0, s32 arg1)
+{
+    s32 ret = -1;
+    UnknownStruct* ptr = (UnknownStruct*)arg0;
+    if (func_800235F8() == 0)
+    {
+        func_8002376C(arg0, arg1, ptr->unk18, ptr->unk10);
+        ret = 0;
+        return ret;
+    }
+    return ret;
+}
