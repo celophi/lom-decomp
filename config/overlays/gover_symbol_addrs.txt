@@ -31,6 +31,9 @@ LoadImageFromCd = 0x80140538;
 UploadImageDataToVram = 0x80140588;
 BuildOTag = 0x80140380;
 RunGameOver = 0x801401F0;
+LoadAudioClip = 0x80140648;
 
 g_fadeLevel = 0x80141048;
 g_fadeStep = 0x80140708;
+g_audioDataOffset = 0x80180004;
+g_audioData = 0x80119F00;
