@@ -132,7 +132,7 @@ extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 addres
  */
 u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates);
 
-extern void func_80140648(s32);
+extern void LoadAudioClip(s32);
 extern s32 D_8011588C;
 extern s32 g_fadeStep;
 extern s32 g_fadeLevel;
@@ -141,8 +141,8 @@ extern s32 D_80140710[];
 extern s32 D_80122988;
 extern u32 D_8003EC90;
 extern s32 D_8010D018;
-extern D_80119F00_t D_80119F00;
-extern s32 D_80180004;
+extern D_80119F00_t g_audioData;
+extern s32 g_audioDataOffset;
 extern u8 D_80180000[];
 
 extern void CD_QueueRead(s32 resourceIndex, void* dstBuffer);
