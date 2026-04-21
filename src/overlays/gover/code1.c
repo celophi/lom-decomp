@@ -242,8 +242,8 @@ u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 void LoadAudioClip(s32 arg0)
 {
     s32 offset;
-    u8* var_v1;
-    u8* temp_a0;
+    u8* header;
+    u8* end;
     u8* dest;
     u8* src;
     s32* ptr;
@@ -260,19 +260,19 @@ void LoadAudioClip(s32 arg0)
             g_audioData.unk0 = 0xC;
             offset = g_audioDataOffset;
 
-            var_v1 = ((u8*)D_80180000) + offset;
-            ptr = (s32*)var_v1;
-            temp_a0 = var_v1 + ((u32)ptr[*ptr]);
+            header = (u8*)D_80180000 + offset;
+            ptr = (s32*)header;
+            end = header + ((u32)ptr[*ptr]);
             dest = ((u8*)(&g_audioData)) + 12;
-            if (var_v1 != temp_a0)
+            if (header != end)
             {
-                src = var_v1;
+                src = header;
                 do
                 {
                     *(dest++) = *(src++);
-                } while (src != temp_a0);
+                } while (src != end);
             }
-            func_80022AE8((void*)temp_a0, 1);
+            func_80022AE8(end, 1);
         }
     }
 }
