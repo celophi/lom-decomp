@@ -1,4 +1,4 @@
-#include "common.h"
+#include "decomp5.h"
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/CJTY6
@@ -33,4 +33,13 @@ void func_800235A8(s32* arg0, s32* arg1, s32 arg2, s32 arg3)
 s32 func_800235F8(s32* arg0)
 {
     return *arg0 + 0xB0BEB4BF;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/qI6jZ
+ */
+void func_8002360C(void)
+{
+    func_80024230(0);
+    D_8003EC4C = 0;
 }
