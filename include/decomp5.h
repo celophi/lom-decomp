@@ -49,4 +49,9 @@ extern u8 D_8004C260[];
 extern s32 func_80024230(s32);
 extern s32 func_800235F8(void);
 
+inline static u8* off(u8* p, int o)
+{
+    return p + o;
+}
+
 #endif

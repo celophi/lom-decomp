@@ -132,11 +132,6 @@ s32 func_8002376C(void* arg0, s32 arg1, s32 arg2, s32 arg3)
     return new_var;
 }
 
-inline static u8* off(u8* p, int o)
-{
-    return p + o;
-}
-
 /**
  * decomp.me link (96.93%) https://decomp.me/scratch/9R0Vj
  */
