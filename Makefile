@@ -212,6 +212,7 @@ SRCS_G0 := \
 	src/psyq/libapi/A32.c \
 	src/psyq/libapi/COUNTER.c \
 	src/psyq/libspu/S_Q.c \
+	src/psyq/libspu/S_M_INIT.c \
 	src/unk1.c \
 	src/unk2.c \
 	src/unk3.c \
