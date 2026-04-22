@@ -162,3 +162,26 @@ void func_80015F88(void* arg0)
     D_800473E8 = 0;
     func_80051FBC(arg0);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/v32hU
+ */
+void func_800160C8(void* arg0)
+{
+    s16 params[4]; // replaces sp10, sp12, sp14, sp16
+    ArgStruct2* arg = (ArgStruct2*)arg0;
+
+    D_80047408 = 0;
+    D_80047404 = 0;
+    params[0] = 0x120;
+    params[1] = 0x1E0;
+    params[2] = 0x100;
+    params[3] = 0x1FF;
+    func_80086310(0x5DC, params); // passes pointer to the array
+    CD_WaitForQueueEmpty();
+    D_80047400 = 0x7FD0;
+    arg->unk7CBF = 1;
+    arg->unk7CC0 = 0xE1000234;
+    arg->unkF983 = 1;
+    arg->unkF984 = 0xE1000234;
+}
