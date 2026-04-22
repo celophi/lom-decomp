@@ -2,6 +2,7 @@
 #define _DECOMP6_H
 
 #include "common.h"
+#include "psyq/libetc.h"
 
 extern s32 D_801ED7A4;
 
@@ -61,6 +62,7 @@ extern void func_8002ED5C(u8, s32, u8);
 extern void func_8002EDA4(u8, void *, int);
 extern void func_80015708(void *);
 extern s32 func_8002E938();
+extern void func_8002E978(void);
 
 void func_80014C54(arg0_struct* arg0, s32* arg1);
 

@@ -684,3 +684,15 @@ void func_80015708(void* arg0)
     p16[5] = 0; // sh zero,0xa(a0)
     p16[4] = 0; // sh zero,8(a0)
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/NkZqx
+ */
+void func_8001572C(void)
+{
+    u8* base = (u8*)0x801ED600;
+    VSync(0);
+    func_8002E978();
+    VSyncCallback(*(void (**)(void))(base + 0x1A4));
+    base[0x1AA] = 0;
+}
