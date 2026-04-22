@@ -54,8 +54,8 @@ segments:
     vram: 0x80010000
     align: 4
     subsegments:
-      - [0x800, c, unk1]
-      - [0xAAC, c, unk2]
+      - [0x800, rodata, rodata1]
+      - [0xAAC, rodata, rodata2]
       - [0x1558, c, main]
       - [0x1B58, c, decomp1]
       - [0x1F10, c, cd]
