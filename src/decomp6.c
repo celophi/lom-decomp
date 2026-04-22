@@ -775,3 +775,16 @@ void func_800157DC(void)
     base[0x1A2] = 1;
     base[0x1A3] = 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/RJyNE
+ */
+void func_800158E0(void)
+{
+    u8 *base = (u8 *)0x801ED600;
+
+    base[0x1A2] = 0;
+    base[0x1A0] = 0;
+    base[0x1A1] = 0;
+    base[0x1AA] = 0;
+}
