@@ -925,3 +925,11 @@ void func_80015B58(void* arg0, void* arg1)
     *(u16*)(dst + 4) = *(u16*)(src + 4);
     *(u16*)(dst + 6) = *(u16*)(src + 6);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/wUn6G
+ */
+s32* FUN_80015c18(void)
+{
+    return &D_8004FC70;
+}

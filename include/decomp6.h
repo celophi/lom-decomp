@@ -7,6 +7,7 @@
 extern s32 D_801ED7A4;
 extern u8 D_801ED7A1;
 extern u8 D_801ED7A2;
+extern s32 D_8004FC70;
 
 typedef struct arg0_struct
 {
