@@ -45,11 +45,15 @@ extern u8 D_8004D388[];
 extern u8 D_8003EC30[];
 extern u8 D_80049130[];
 extern u8 D_8004C260[];
+extern char D_8004D360[];
+extern char D_8003D170[];  
+extern s32 D_8003EC14;
 
 extern s32 func_80024230(s32);
 extern s32 func_800235F8(void);
 extern void func_80028E34(int, volatile short, void *, int);
 extern void func_80023EF0(int);
+extern void func_8002A134(void);
 
 inline static u8* off(u8* p, int o)
 {

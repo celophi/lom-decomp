@@ -272,3 +272,42 @@ void func_80023830(void)
     func_80028E34(4, 0x03FFF000, a2, a3);
     func_80023EF0(1);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/0YmTg
+ */
+void func_80023AD0(void)
+{
+    s32 temp_v0;
+
+    SpuStart();
+    func_80023E90(4, &D_8004D360);
+    func_80024200(0);
+    SpuSetTransferStartAddr(0x1010);
+    func_80023660(&D_8003D170, 0x40);
+    func_800236EC();
+    func_80023830();
+    SpuSetIRQ(0);
+    func_800240D0(0);
+
+    do
+    {
+        /* wait for condition */
+    } while (func_80023CA0(0xF2000002, 0x44E8, 0x1000) == 0);
+
+    do
+    {
+        /* wait for condition */
+    } while (func_80023D74(0xF2000002) == 0);
+
+    do
+    {
+        temp_v0 = func_800167AC(0xF2000002, 2, 0x1000, func_8002A134);
+        D_8003EC14 = temp_v0;
+    } while (temp_v0 == -1);
+
+    do
+    {
+        /* wait for completion */
+    } while (func_800167DC(D_8003EC14) == 0);
+}
