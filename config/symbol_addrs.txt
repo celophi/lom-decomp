@@ -369,6 +369,13 @@ DisableEvent                = 0x80023C80;
 // psyq/libapi/A32
 UnDeliverEvent              = 0x80023C90;
 
+// psyq/libapi/COUNTER
+SetRCnt                     = 0x80023CA0;
+GetRCnt                     = 0x80023D3C;
+StartRCnt                   = 0x80023D74;
+StopRCnt                    = 0x80023DA4;
+ResetRCnt                   = 0x80023DD8;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;

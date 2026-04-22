@@ -173,7 +173,8 @@ segments:
       - [0x13DA8, c, decomp5]
       - [0x14480, c, psyq/libapi/A13]
       - [0x14490, c, psyq/libapi/A32]
-      - [0x144A0, c, unk8]
+      - [0x144A0, c, psyq/libapi/COUNTER]
+      - [0x14610, c, unk8]
       - [0x25990, data, initialized]
 
   - name: sdata
