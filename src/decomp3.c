@@ -307,3 +307,12 @@ void func_8002246C(u32 arg0)
 
     func_80028E84(var_a0);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/VTGCB
+ */
+void func_800224D8(s32 arg0)
+{
+    D_8004D430[0] = arg0 & 0x7F;
+    func_80028E84(0xA8);
+}

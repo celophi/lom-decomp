@@ -28,4 +28,6 @@ void func_800223D8(s32 arg0);
 void FUN_80022400(u32 param_1);
 void func_8002246C(u32 arg0);
 
+extern void func_80028E84(s32 arg);
+
 #endif
