@@ -376,6 +376,9 @@ StartRCnt                   = 0x80023D74;
 StopRCnt                    = 0x80023DA4;
 ResetRCnt                   = 0x80023DD8;
 
+// src/psyq/libspu/S_Q
+SpuQuit                     = 0x80023E10;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;

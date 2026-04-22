@@ -174,7 +174,8 @@ segments:
       - [0x14480, c, psyq/libapi/A13]
       - [0x14490, c, psyq/libapi/A32]
       - [0x144A0, c, psyq/libapi/COUNTER]
-      - [0x14610, c, unk8]
+      - [0x14610, c, psyq/libspu/S_Q]
+      - [0x14690, c, unk8]
       - [0x25990, data, initialized]
 
   - name: sdata
