@@ -323,3 +323,30 @@ void func_80023BB8(s32 arg0)
     arg0 += 0x300;
     D_8003EC54 = arg0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/VenON
+ */
+void func_80023BE0(void)
+{
+    if (D_8003EC4C == 1)
+    {
+        func_80023660(&D_8003D170, 0x40);
+        func_800236EC();
+    }
+    do
+    {
+
+    } while (func_80023DA4(0xF2000002) == 0);
+    func_80023C90(0xF2000002, 2);
+    do
+    {
+
+    } while (func_80023C80(D_8003EC14) == 0);
+    do
+    {
+
+    } while (func_800167BC(D_8003EC14) == 0);
+    func_8002427C(0xFFFFFF);
+    func_80023E10();
+}
