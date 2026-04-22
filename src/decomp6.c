@@ -889,3 +889,39 @@ void func_80015AA4(void* arg0)
     *(u16*)((u8*)arg0 + 4) = *(u16*)((u8*)arg0 + 0x14) | *(u16*)((u8*)arg0 + 0x24);
     *(u16*)((u8*)arg0 + 6) = *(u16*)((u8*)arg0 + 0x16) | *(u16*)((u8*)arg0 + 0x26);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/Hkz5t
+ */
+void func_80015B58(void* arg0, void* arg1)
+{
+    u8* src = (u8*)arg0;
+    u8* dst = (u8*)arg1;
+    s32 t;
+
+    func_80015708(dst);
+    dst[0] = src[0];
+    t = (s32)src[0]; /* second load for comparison */
+
+    if (t == 0)
+    {
+        /* empty – forces nop in delay slot of beqz */
+    }
+    else
+    {
+        if (t < 0)
+            return; /* bltz */
+        if (t >= 3)
+            return; /* slti + beqz with nop */
+        *(u16*)(dst + 8) = *(u16*)(src + 8);
+        *(u16*)(dst + 10) = *(u16*)(src + 10);
+        *(u16*)(dst + 12) = *(u16*)(src + 12);
+        *(u16*)(dst + 14) = *(u16*)(src + 14);
+        dst[1] = src[1];
+    }
+
+    /* OR block – executed for t == 0, 1, or 2 */
+    *(u16*)(dst + 2) = *(u16*)(src + 2);
+    *(u16*)(dst + 4) = *(u16*)(src + 4);
+    *(u16*)(dst + 6) = *(u16*)(src + 6);
+}

@@ -68,6 +68,7 @@ extern void func_800158FC(void);
 extern void func_80015AA4(void *);
 extern void func_80015B58(void *, void *);
 
+
 void func_80014C54(arg0_struct* arg0, s32* arg1);
 
 #endif
