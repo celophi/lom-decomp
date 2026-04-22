@@ -316,3 +316,16 @@ void func_800224D8(s32 arg0)
     D_8004D430[0] = arg0 & 0x7F;
     func_80028E84(0xA8);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/03hNO
+ */
+void func_80022504(s32 arg0, s32 arg1)
+{
+    s32 temp_a1;
+
+    D_8004D430[0] = arg0;
+    temp_a1 = arg1 & 0x7F;
+    D_8004D430[1] = temp_a1;
+    func_80028E84(0xA9);
+}
