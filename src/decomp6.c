@@ -722,3 +722,56 @@ void func_800157B0(unsigned long arg0)
     }
     base[0x1A3] = arg0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/GawXK
+ */
+void func_800157DC(void)
+{
+    u8* new_var;
+    u8* base;
+    s32 var_s0;
+    s32 var_s1;
+    s32 var_s3;
+    s32 var_s4;
+    s32 var_s5;
+    u8 temp_s0;
+    s32 mul;
+    s32 neg;
+    func_80015674();
+    base = (u8*)0x801ED600;
+    if (D_801ED7A1 == 0)
+    {
+        func_80015708((void*)(base + 0x10));
+        func_80015708((void*)(base + 0xBE));
+    }
+    func_80015AA4((void*)base);
+    func_80015AA4((void*)(base + 0xAE));
+    var_s0 = base[0x1A1];
+    temp_s0 = var_s0;
+    base[0x1A0] = temp_s0;
+    var_s0 = temp_s0 - 1;
+    if (var_s0 != (-1))
+    {
+        neg = -1;
+        mul = var_s0 * 0x10;
+        var_s5 = mul + 0x10E;
+        var_s4 = mul + 0x60;
+        var_s3 = 0xDE;
+        var_s1 = 0x30;
+        do
+        {
+            new_var = base + var_s5;
+            func_80015B58((void*)(base + var_s4), (void*)(base + var_s1));
+            func_80015B58((void*)new_var, (void*)(base + var_s3));
+            var_s3 += 0x10;
+            var_s1 += 0x10;
+            var_s5 -= 0x10;
+            var_s0 -= 1;
+            var_s4 -= 0x10;
+        } while (var_s0 != neg);
+    }
+    base[0x1A1] = 0;
+    base[0x1A2] = 1;
+    base[0x1A3] = 0;
+}
