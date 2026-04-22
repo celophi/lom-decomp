@@ -708,3 +708,17 @@ void InitVSyncController(void)
     base[0x1A2] = 0;
     base[0x1A1] = 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/zw8m7
+ */
+void func_800157B0(unsigned long arg0)
+{
+    u8* base = (u8*)0x801ED600;
+    if (base[0x1A2] >= arg0)
+    {
+        base[0x1A2] = 0;
+        return;
+    }
+    base[0x1A3] = arg0;
+}
