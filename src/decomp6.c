@@ -788,3 +788,44 @@ void func_800158E0(void)
     base[0x1A1] = 0;
     base[0x1AA] = 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/srP3p
+ */
+void func_800158FC(void)
+{
+    u8 *base = (u8 *)0x801ED600;
+
+    if (D_801ED7A2 != 0)
+    {
+        func_80015674();
+
+        if (base[0x1A1] < 3)
+        {
+            func_80015B58((void *)(base + 0x20),
+                          (void *)(base + ((base[0x1A1] << 4) + 0x60)));
+            func_80015B58((void *)(base + 0xCE),
+                          (void *)(base + ((base[0x1A1] << 4) + 0x10E)));
+            base[0x1A1] = base[0x1A1] + 1;
+        }
+
+        if (base[0x1A2] == 1)
+        {
+            func_80015708((void *)(base + 0x10));
+            func_80015708((void *)(base + 0xBE));
+        }
+
+        func_800159F8((void *)base);
+        func_800159F8((void *)(base + 0xAE));
+
+        {
+            u8 new_val = base[0x1A2] + 1;
+            u8 limit = base[0x1A3];
+            base[0x1A2] = new_val;
+            if (limit != 0 && new_val >= limit)
+            {
+                base[0x1A2] = 0;
+            }
+        }
+    }
+}
