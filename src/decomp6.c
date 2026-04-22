@@ -696,3 +696,15 @@ void func_8001572C(void)
     VSyncCallback(*(void (**)(void))(base + 0x1A4));
     base[0x1AA] = 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/BwqlO
+ */
+void InitVSyncController(void)
+{
+    u8* base = (u8*)0x801ED600;
+    VSync(0);
+    VSyncCallback(func_800158FC);
+    base[0x1A2] = 0;
+    base[0x1A1] = 0;
+}
