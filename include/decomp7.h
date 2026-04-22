@@ -32,11 +32,9 @@ typedef struct {
 typedef struct {
     u8   _pad0[0x7CBF];                /* padding up to offset 0x7CBF */
     u8   unk7CBF;                      /* offset 0x7CBF */
-    u8   _pad1[0x7CC0 - 0x7CC0];       /* no padding, next is at 0x7CC0 */
     u32  unk7CC0;                      /* offset 0x7CC0 */
     u8   _pad2[0xF983 - 0x7CC4];       /* padding to offset 0xF983 */
     u8   unkF983;                      /* offset 0xF983 */
-    u8   _pad3[0xF984 - 0xF984];       /* no padding */
     u32  unkF984;                      /* offset 0xF984 */
 } ArgStruct2;
 
