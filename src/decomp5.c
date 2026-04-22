@@ -311,3 +311,15 @@ void func_80023AD0(void)
         /* wait for completion */
     } while (func_800167DC(D_8003EC14) == 0);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/z36q3
+ */
+void func_80023BB8(s32 arg0)
+{
+    D_8003EC48 = arg0;
+    arg0 += 0x600;
+    D_8003EC50 = arg0;
+    arg0 += 0x300;
+    D_8003EC54 = arg0;
+}

@@ -48,6 +48,9 @@ extern u8 D_8004C260[];
 extern char D_8004D360[];
 extern char D_8003D170[];  
 extern s32 D_8003EC14;
+extern s32 D_8003EC48;
+extern s32 D_8003EC50;
+extern s32 D_8003EC54;
 
 extern s32 func_80024230(s32);
 extern s32 func_800235F8(void);
