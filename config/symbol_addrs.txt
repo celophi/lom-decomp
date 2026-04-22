@@ -363,6 +363,12 @@ EVENT_OBJ_11C               = 0x8001E2E8;
 // psyq/libapi/A07
 DeliverEvent                = 0x8001E31C;
 
+// psyq/libapi/A13
+DisableEvent                = 0x80023C80;
+
+// psyq/libapi/A32
+UnDeliverEvent              = 0x80023C90;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
