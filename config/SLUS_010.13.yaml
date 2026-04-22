@@ -176,7 +176,8 @@ segments:
       - [0x144A0, c, psyq/libapi/COUNTER]
       - [0x14610, c, psyq/libspu/S_Q]
       - [0x14690, c, psyq/libspu/S_M_INIT]
-      - [0x146F0, c, unk8]
+      - [0x146F0, c, psyq/libspu/S_SR]
+      - [0x147C0, c, unk8]
       - [0x25990, data, initialized]
 
   - name: sdata

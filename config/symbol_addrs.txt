@@ -382,6 +382,9 @@ SpuQuit                     = 0x80023E10;
 // src/psyq/libspu/S_M_INIT
 SpuInitMalloc               = 0x80023E90;
 
+// src/psyq/libspu/S_SR
+SpuSetReverb                = 0x80023EF0;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
