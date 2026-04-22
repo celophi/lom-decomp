@@ -1,5 +1,8 @@
 #include "decomp6.h"
 
+/**
+ * decomp.me link (99.63%) https://decomp.me/scratch/b48Yj
+ */
 void InitializeControllers(s8 arg0)
 {
     u8* base;
