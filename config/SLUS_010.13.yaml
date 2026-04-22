@@ -178,7 +178,8 @@ segments:
       - [0x14690, c, psyq/libspu/S_M_INIT]
       - [0x146F0, c, psyq/libspu/S_SR]
       - [0x147C0, c, psyq/libspu/S_M_UTIL]
-      - [0x148D0, c, unk8]
+      - [0x148D0, c, psyq/libspu/S_SIC]
+      - [0x14910, c, unk8]
       - [0x25990, data, initialized]
 
   - name: sdata
