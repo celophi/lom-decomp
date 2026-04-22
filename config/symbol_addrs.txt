@@ -363,6 +363,50 @@ EVENT_OBJ_11C               = 0x8001E2E8;
 // psyq/libapi/A07
 DeliverEvent                = 0x8001E31C;
 
+// psyq/libapi/A13
+DisableEvent                = 0x80023C80;
+
+// psyq/libapi/A32
+UnDeliverEvent              = 0x80023C90;
+
+// psyq/libapi/COUNTER
+SetRCnt                     = 0x80023CA0;
+GetRCnt                     = 0x80023D3C;
+StartRCnt                   = 0x80023D74;
+StopRCnt                    = 0x80023DA4;
+ResetRCnt                   = 0x80023DD8;
+
+// src/psyq/libspu/S_Q
+SpuQuit                     = 0x80023E10;
+
+// src/psyq/libspu/S_M_INIT
+SpuInitMalloc               = 0x80023E90;
+
+// src/psyq/libspu/S_SR
+SpuSetReverb                = 0x80023EF0;
+
+// src/psyq/libspu/S_M_UTIL
+_SpuIsInAllocateArea        = 0x80023FC0;
+_SpuIsInAllocateArea_       = 0x80024040;
+
+// src/psyq/libspu/S_SIC
+SpuSetIRQCallback           = 0x800240D0;
+
+// src/psyq/libspu/S_CB
+_SpuCallback                = 0x80024110;
+
+// src/psyq/libspu/S_R
+SpuRead                     = 0x80024140;
+
+// src/psyq/libspu/S_W
+SpuWrite                    = 0x800241A0;
+
+// src/psyq/libspu/S_STM
+SpuSetTransferMode          = 0x80024200;
+
+// src/psyq/libspu/S_STC
+SpuSetTransferCallback      = 0x80024230;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;

@@ -208,6 +208,19 @@ SRCS_G0 := \
 	src/psyq/libspu/S_SI.c \
 	src/psyq/libspu/S_SIA.c \
 	src/psyq/libspu/S_STSA.c \
+	src/psyq/libapi/A13.c \
+	src/psyq/libapi/A32.c \
+	src/psyq/libapi/COUNTER.c \
+	src/psyq/libspu/S_Q.c \
+	src/psyq/libspu/S_M_INIT.c \
+	src/psyq/libspu/S_SR.c \
+	src/psyq/libspu/S_M_UTIL.c \
+	src/psyq/libspu/S_SIC.c \
+	src/psyq/libspu/S_CB.c \
+	src/psyq/libspu/S_R.c \
+	src/psyq/libspu/S_W.c \
+	src/psyq/libspu/S_STM.c \
+	src/psyq/libspu/S_STC.c \
 	src/unk1.c \
 	src/unk2.c \
 	src/unk3.c \
