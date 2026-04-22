@@ -222,7 +222,6 @@ SRCS_G0 := \
 	src/psyq/libspu/S_STM.c \
 	src/psyq/libspu/S_STC.c \
 	src/unk3.c \
-	src/unk4.c \
 	src/unk5.c \
 	src/unk6.c \
 	src/unk7.c \
@@ -231,13 +230,14 @@ SRCS_G0 := \
 	src/decomp1.c \
 	src/decomp3.c \
 	src/decomp4.c \
-	src/decomp6.c \
+	src/decomp7.c \
 	src/main.c
 
 SRCS_G4 := \
 	src/cd.c \
 	src/decomp2.c \
-	src/decomp5.c 
+	src/decomp5.c \
+	src/decomp6.c 
 
 SRCS_CDK_G0 := \
 	src/overlays/checkps/code.c \

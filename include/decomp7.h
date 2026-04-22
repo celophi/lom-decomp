@@ -1,0 +1,65 @@
+#ifndef _DECOMP7_H
+#define _DECOMP7_H
+
+#include "common.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+
+typedef struct obj_struct
+{
+  u8 pad0[0x40B8];
+  u32 unk40B8;
+  u8 pad1[0x7CC4 - 0x40BC];
+} ObjStruct;
+
+typedef struct {
+    u8   _pad0[0x406A];                 /* padding up to offset 0x406A */
+    u8   unk406A;                       /* offset 0x406A */
+    u8   _pad1[0x40B0 - 0x406B];        /* padding to offset 0x40B0 */
+    s16  unk40B0;                       /* offset 0x40B0 */
+    s16  unk40B2;                       /* offset 0x40B2 */
+    s16  unk40B4;                       /* offset 0x40B4 */
+    s16  unk40B6;                       /* offset 0x40B6 */
+    u8   _pad2[0xBD2E - 0x40B8];        /* padding to offset 0xBD2E */
+    u8   unkBD2E;                       /* offset 0xBD2E */
+    u8   _pad3[0xBD74 - 0xBD2F];        /* padding to offset 0xBD74 */
+    s16  unkBD74;                       /* offset 0xBD74 */
+    s16  unkBD76;                       /* offset 0xBD76 */
+    s16  unkBD78;                       /* offset 0xBD78 */
+    s16  unkBD7A;                       /* offset 0xBD7A */
+} ArgStruct;
+
+typedef struct {
+    u8   _pad0[0x7CBF];                /* padding up to offset 0x7CBF */
+    u8   unk7CBF;                      /* offset 0x7CBF */
+    u32  unk7CC0;                      /* offset 0x7CC0 */
+    u8   _pad2[0xF983 - 0x7CC4];       /* padding to offset 0xF983 */
+    u8   unkF983;                      /* offset 0xF983 */
+    u32  unkF984;                      /* offset 0xF984 */
+} ArgStruct2;
+
+extern u32 *FUN_80015c28(void);
+extern void FUN_80022aa8(void);
+extern void FUN_80022ac8(void);
+extern void func_80015D6C(s32);
+extern void func_80015F88(s32);
+extern void func_80067EB4(s32, s32, s32, s32);
+extern void func_8009AFE0(s32, s32, u32, s32, s32, s32);
+extern void func_800A379C(void);
+extern s32 D_8003EC90;
+extern s32 D_80042FCC;
+extern u32 D_8003EC88;
+extern s32 D_80042FC4;
+extern s32 D_8003EC94;
+extern s32 D_80046FD8;
+extern s32 D_8010D018;
+extern s32 D_801158A4;
+extern void *D_800473F4;
+extern void *D_800473EC;
+extern s32 D_80035248;
+extern s32 D_800473E8;
+extern s32 D_80047400;
+extern s32 D_80047404;
+extern s32 D_80047408;
+
+#endif
