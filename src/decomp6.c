@@ -781,7 +781,7 @@ void func_800157DC(void)
  */
 void func_800158E0(void)
 {
-    u8 *base = (u8 *)0x801ED600;
+    u8* base = (u8*)0x801ED600;
 
     base[0x1A2] = 0;
     base[0x1A0] = 0;
@@ -794,7 +794,7 @@ void func_800158E0(void)
  */
 void func_800158FC(void)
 {
-    u8 *base = (u8 *)0x801ED600;
+    u8* base = (u8*)0x801ED600;
 
     if (D_801ED7A2 != 0)
     {
@@ -802,21 +802,19 @@ void func_800158FC(void)
 
         if (base[0x1A1] < 3)
         {
-            func_80015B58((void *)(base + 0x20),
-                          (void *)(base + ((base[0x1A1] << 4) + 0x60)));
-            func_80015B58((void *)(base + 0xCE),
-                          (void *)(base + ((base[0x1A1] << 4) + 0x10E)));
+            func_80015B58((void*)(base + 0x20), (void*)(base + ((base[0x1A1] << 4) + 0x60)));
+            func_80015B58((void*)(base + 0xCE), (void*)(base + ((base[0x1A1] << 4) + 0x10E)));
             base[0x1A1] = base[0x1A1] + 1;
         }
 
         if (base[0x1A2] == 1)
         {
-            func_80015708((void *)(base + 0x10));
-            func_80015708((void *)(base + 0xBE));
+            func_80015708((void*)(base + 0x10));
+            func_80015708((void*)(base + 0xBE));
         }
 
-        func_800159F8((void *)base);
-        func_800159F8((void *)(base + 0xAE));
+        func_800159F8((void*)base);
+        func_800159F8((void*)(base + 0xAE));
 
         {
             u8 new_val = base[0x1A2] + 1;
@@ -828,4 +826,35 @@ void func_800158FC(void)
             }
         }
     }
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/aj1vL
+ */
+void func_800159F8(void* arg0)
+{
+    u8* base = (u8*)arg0;
+    s32 t = (s32)base[0x20];
+    if (t == 0)
+    {
+    }
+    else if (t < 0)
+    {
+        return;
+    }
+    else if (t >= 3)
+    {
+        return;
+    }
+    else
+    {
+        *((u16*)(base + 0x18)) += *((u16*)(base + 0x28));
+        *((u16*)(base + 0x1A)) += *((u16*)(((u8*)arg0) + 0x2A));
+        *((u16*)(((u8*)arg0) + 0x1C)) += *((u16*)(((u8*)arg0) + 0x2C));
+        *((u16*)(((u8*)arg0) + 0x1E)) += *((u16*)(((u8*)arg0) + 0x2E));
+        ((u8*)arg0)[0x11] |= ((u8*)arg0)[0x21];
+    }
+    *((u16*)(((u8*)arg0) + 0x12)) |= *((u16*)(((u8*)arg0) + 0x22));
+    *((u16*)(((u8*)arg0) + 0x14)) |= *((u16*)(((u8*)arg0) + 0x24));
+    *((u16*)(((u8*)arg0) + 0x16)) |= *((u16*)(((u8*)arg0) + 0x26));
 }
