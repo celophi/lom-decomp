@@ -395,6 +395,9 @@ SpuSetIRQCallback           = 0x800240D0;
 // src/psyq/libspu/S_CB
 _SpuCallback                = 0x80024110;
 
+// src/psyq/libspu/S_R
+SpuRead                     = 0x80024140;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
