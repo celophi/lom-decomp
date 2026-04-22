@@ -648,11 +648,13 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/FnYh0
  */
-void func_80015674(void) {
+void func_80015674(void)
+{
     s32 sp10;
-    u8 *base = (u8*)0x801ED600;
+    u8* base = (u8*)0x801ED600;
 
-    if (func_8002E938() != 0) {
+    if (func_8002E938() != 0)
+    {
         sp10 = 0;
         base[0x1A9] = (base[0x1A9] + 1) & 0xF;
         func_80014C54((arg0_struct*)base, &sp10);
@@ -663,4 +665,22 @@ void func_80015674(void) {
     func_80015708((void*)(base + 0x20));
     func_80015708((void*)(base + 0xCE));
     base[0x1AA] = 1;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/TSmff
+ */
+void func_80015708(void* arg0)
+{
+    unsigned char* p8 = (unsigned char*)arg0;
+    unsigned short* p16 = (unsigned short*)arg0;
+
+    p16[3] = 0; // sh zero,6(a0)
+    p16[2] = 0; // sh zero,4(a0)
+    p16[1] = 0; // sh zero,2(a0)
+    p8[1] = 0;  // sb zero,1(a0)
+    p16[7] = 0; // sh zero,0xe(a0)
+    p16[6] = 0; // sh zero,0xc(a0)
+    p16[5] = 0; // sh zero,0xa(a0)
+    p16[4] = 0; // sh zero,8(a0)
 }
