@@ -12,6 +12,23 @@ typedef struct obj_struct
   u8 pad1[0x7CC4 - 0x40BC];
 } ObjStruct;
 
+typedef struct {
+    u8   _pad0[0x406A];                 /* padding up to offset 0x406A */
+    u8   unk406A;                       /* offset 0x406A */
+    u8   _pad1[0x40B0 - 0x406B];        /* padding to offset 0x40B0 */
+    s16  unk40B0;                       /* offset 0x40B0 */
+    s16  unk40B2;                       /* offset 0x40B2 */
+    s16  unk40B4;                       /* offset 0x40B4 */
+    s16  unk40B6;                       /* offset 0x40B6 */
+    u8   _pad2[0xBD2E - 0x40B8];        /* padding to offset 0xBD2E */
+    u8   unkBD2E;                       /* offset 0xBD2E */
+    u8   _pad3[0xBD74 - 0xBD2F];        /* padding to offset 0xBD74 */
+    s16  unkBD74;                       /* offset 0xBD74 */
+    s16  unkBD76;                       /* offset 0xBD76 */
+    s16  unkBD78;                       /* offset 0xBD78 */
+    s16  unkBD7A;                       /* offset 0xBD7A */
+} ArgStruct;
+
 extern u32 *FUN_80015c28(void);
 extern void FUN_80022aa8(void);
 extern void FUN_80022ac8(void);

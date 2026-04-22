@@ -119,3 +119,46 @@ void func_80015D6C(void* arg0)
     VSync(0);
     SetDispMask(0);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/JAUtV
+ */
+void func_80015F88(void* arg0)
+{
+    u_char* base = (u_char*)arg0;      /* for pointer arithmetic */
+    ArgStruct* arg = (ArgStruct*)base; /* for field access */
+    RECT rect;                         /* replaced separate s16 variables */
+
+    SetGeomScreen(0x5DC);
+    SetGeomOffset(0xA0, 0x78);
+
+    arg->unk40B0 = 0;
+    arg->unk40B2 = 0;
+    arg->unk40B4 = 0x140;
+    arg->unk40B6 = 0xF0;
+    arg->unkBD76 = 0xE8;
+    arg->unkBD74 = 0;
+    arg->unkBD78 = 0x140;
+    arg->unkBD7A = 0xF0;
+
+    /* setup RECT for ClearImage */
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = 0x400;
+    rect.h = 0x200;
+    ClearImage(&rect, 0, 0, 0);
+
+    SetDefDispEnv((DISPENV*)(base + 0x4040), 0, 0, 0x140, 0xF0);
+    SetDefDispEnv((DISPENV*)(base + 0xBD04), 0, 0xE8, 0x140, 0xF0);
+    SetDefDrawEnv((DRAWENV*)(base + 0x4054), 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv((DRAWENV*)(base + 0xBD18), 0, 8, 0x140, 0xE0);
+
+    arg->unkBD2E = 0;
+    arg->unk406A = 0;
+
+    func_800A3534();
+    D_8010D018 = 0;
+    func_800678D4(arg0);
+    D_800473E8 = 0;
+    func_80051FBC(arg0);
+}
