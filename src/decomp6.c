@@ -644,3 +644,23 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
         return;
     }
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/FnYh0
+ */
+void func_80015674(void) {
+    s32 sp10;
+    u8 *base = (u8*)0x801ED600;
+
+    if (func_8002E938() != 0) {
+        sp10 = 0;
+        base[0x1A9] = (base[0x1A9] + 1) & 0xF;
+        func_80014C54((arg0_struct*)base, &sp10);
+        func_80014C54((arg0_struct*)(base + 0xAE), &sp10);
+        base[0x1AA] = 0;
+        return;
+    }
+    func_80015708((void*)(base + 0x20));
+    func_80015708((void*)(base + 0xCE));
+    base[0x1AA] = 1;
+}
