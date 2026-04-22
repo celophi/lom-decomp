@@ -404,6 +404,9 @@ SpuWrite                    = 0x800241A0;
 // src/psyq/libspu/S_STM
 SpuSetTransferMode          = 0x80024200;
 
+// src/psyq/libspu/S_STC
+SpuSetTransferCallback      = 0x80024230;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
