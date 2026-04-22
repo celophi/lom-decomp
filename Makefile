@@ -230,6 +230,7 @@ SRCS_G0 := \
 	src/decomp1.c \
 	src/decomp3.c \
 	src/decomp4.c \
+	src/decomp7.c \
 	src/main.c
 
 SRCS_G4 := \
