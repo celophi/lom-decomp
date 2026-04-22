@@ -858,3 +858,34 @@ void func_800159F8(void* arg0)
     *((u16*)(((u8*)arg0) + 0x14)) |= *((u16*)(((u8*)arg0) + 0x24));
     *((u16*)(((u8*)arg0) + 0x16)) |= *((u16*)(((u8*)arg0) + 0x26));
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/ORRFA
+ */
+void func_80015AA4(void* arg0)
+{
+    s32 t = ((u8*)arg0)[0x20];
+    ((u8*)arg0)[0] = t;
+    t &= 0xFF;
+
+    if (t == 0)
+    {
+        /* empty – forces nop in delay slot */
+    }
+    else
+    {
+        if (t < 0)
+            return;
+        if (t >= 3)
+            return;
+        *(u16*)((u8*)arg0 + 8) = *(u16*)((u8*)arg0 + 0x18) + *(u16*)((u8*)arg0 + 0x28);
+        *(u16*)((u8*)arg0 + 0xA) = *(u16*)((u8*)arg0 + 0x1A) + *(u16*)((u8*)arg0 + 0x2A);
+        *(u16*)((u8*)arg0 + 0xC) = *(u16*)((u8*)arg0 + 0x1C) + *(u16*)((u8*)arg0 + 0x2C);
+        *(u16*)((u8*)arg0 + 0xE) = *(u16*)((u8*)arg0 + 0x1E) + *(u16*)((u8*)arg0 + 0x2E);
+        ((u8*)arg0)[1] = ((u8*)arg0)[0x11] | ((u8*)arg0)[0x21];
+    }
+
+    *(u16*)((u8*)arg0 + 2) = *(u16*)((u8*)arg0 + 0x12) | *(u16*)((u8*)arg0 + 0x22);
+    *(u16*)((u8*)arg0 + 4) = *(u16*)((u8*)arg0 + 0x14) | *(u16*)((u8*)arg0 + 0x24);
+    *(u16*)((u8*)arg0 + 6) = *(u16*)((u8*)arg0 + 0x16) | *(u16*)((u8*)arg0 + 0x26);
+}
