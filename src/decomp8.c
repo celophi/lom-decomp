@@ -31,15 +31,15 @@ void func_8001615C(u8* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
  */
 void func_800161DC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 {
-  s32 q;
-  int new_var;
-  D_80047404 = arg1;
-  D_80047408 = arg2;
-  q = arg0 / 10;
-  new_var = q * 10;
-  func_800165CC(q + 0x30, arg3, arg4);
-  q = arg0 - new_var;
-  func_800165CC(q + 0x30, arg3, arg4);
+    s32 q;
+    int new_var;
+    D_80047404 = arg1;
+    D_80047408 = arg2;
+    q = arg0 / 10;
+    new_var = q * 10;
+    func_800165CC(q + 0x30, arg3, arg4);
+    q = arg0 - new_var;
+    func_800165CC(q + 0x30, arg3, arg4);
 }
 
 /**
@@ -76,7 +76,7 @@ void func_8001627C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     quot = (digit = orig / 10);
     prod = quot * 10;
     digit = quot + 0x30;
-    
+
     if (flag == 0)
     {
         func_800165CC(digit, arg3, arg4);
