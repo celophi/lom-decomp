@@ -43,8 +43,8 @@ The project uses old PlayStation compilers that run in Docker. Build them with:
 
 ```bash
 docker build -t old-gcc/gcc-2.8.0-psx -f tools/old-gcc/gcc-2.8.0-psx.Dockerfile tools/old-gcc
-docker build -t old-gcc/gcc-2.7.2-psx -f tools/old-gcc/gcc-2.7.2-psx.Dockerfile tools/old-gcc
 docker build -t old-gcc/gcc-2.7.2-cdk -f tools/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/old-gcc
+docker build -t old-gcc/gcc-2.6.0-psx -f tools/old-gcc/gcc-2.6.0-psx.Dockerfile tools/old-gcc
 ```
 
 This step may take several minutes.
