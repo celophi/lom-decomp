@@ -2,6 +2,7 @@
 
 # Stage 1: grab compiler artifacts
 FROM old-gcc/gcc-2.8.0-psx AS toolchain-psx
+FROM old-gcc/gcc-2.7.2-psx AS toolchain-2.7.2-psx
 FROM old-gcc/gcc-2.7.2-cdk AS toolchain-cdk
 FROM ghcr.io/celophi/gcc-2.7.2-psx-gnu:v1.1 AS toolchain-gnu
 
@@ -39,7 +40,14 @@ COPY --from=toolchain-psx /gcc     /opt/psx-gcc/gcc
 COPY --from=toolchain-psx /cc1plus /opt/psx-gcc/cc1plus
 COPY --from=toolchain-psx /g++     /opt/psx-gcc/g++
 
-## Cygnus CDK gcc 2.7.2
+# PSX gcc 2.7.2
+COPY --from=toolchain-2.7.2-psx /cpp     /opt/gcc-2.7.2-psx/cpp
+COPY --from=toolchain-2.7.2-psx /cc1     /opt/gcc-2.7.2-psx/cc1
+COPY --from=toolchain-2.7.2-psx /gcc     /opt/gcc-2.7.2-psx/gcc
+COPY --from=toolchain-2.7.2-psx /cc1plus /opt/gcc-2.7.2-psx/cc1plus
+COPY --from=toolchain-2.7.2-psx /g++     /opt/gcc-2.7.2-psx/g++
+
+# Cygnus CDK gcc 2.7.2
 COPY --from=toolchain-cdk /cpp     /opt/cdk-gcc/cpp
 COPY --from=toolchain-cdk /cc1     /opt/cdk-gcc/cc1
 COPY --from=toolchain-cdk /gcc     /opt/cdk-gcc/gcc
