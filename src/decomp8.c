@@ -92,3 +92,28 @@ void func_8001627C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 
     func_800165CC((orig - prod) + 0x30, arg3, arg4);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/S8Wds
+ */
+void func_800163B4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+{
+    u8 table[17];
+    s32 var_s1;
+    u32 index;
+    u32 new_var;
+    u32 high;
+    var_s1 = arg0;
+    memcpy(table, D_800102B0, 17);
+    D_80047404 = arg1;
+    D_80047408 = arg2;
+    if (((u32)(var_s1 & 0xFFFF)) >= 0x100)
+    {
+        var_s1 = 0xFF;
+    }
+    index = (u32)(var_s1 & 0xFFFF);
+    high = index >> 4;
+    new_var = high << 4;
+    func_800165CC(table[high], arg3, arg4);
+    func_800165CC(table[(unsigned short)((u32)((var_s1 - ((s32)new_var)) & 0xFFFF))], arg3, arg4);
+}
