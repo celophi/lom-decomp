@@ -7,4 +7,6 @@
 extern s32 D_80047404;
 extern long D_80047408;
 
+extern void func_800165CC(u8, int, s32);
+
 #endif
