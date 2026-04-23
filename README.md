@@ -43,8 +43,8 @@ The project uses old PlayStation compilers that run in Docker. Build them with:
 
 ```bash
 docker build -t old-gcc/gcc-2.8.0-psx -f tools/old-gcc/gcc-2.8.0-psx.Dockerfile tools/old-gcc
-docker build -t old-gcc/gcc-2.7.2-psx -f tools/old-gcc/gcc-2.7.2-psx.Dockerfile tools/old-gcc
 docker build -t old-gcc/gcc-2.7.2-cdk -f tools/old-gcc/gcc-2.7.2-cdk.Dockerfile tools/old-gcc
+docker build -t old-gcc/gcc-2.6.0-psx -f tools/old-gcc/gcc-2.6.0-psx.Dockerfile tools/old-gcc
 ```
 
 This step may take several minutes.
@@ -129,7 +129,7 @@ You can also use [decomp.me](https://decomp.me) for collaborative matching. The 
 |---|---|---|---|
 | `gcc 2.8.0-psx` | `maspsx` | `-O2 -G0 -g -fsigned-char -fno-builtin` | `--aspsx-version=2.77 -no-pad-sections` |
 | `gcc 2.8.0-psx` | `maspsx` | `-O2 -G4 -g -fsigned-char` | `--aspsx-version=2.77 -no-pad-sections` |
-| `gcc 2.7.2-psx` | `maspsx` | `-O2 -G0 -g -fsigned-char -fno-builtin` | `--aspsx-version=2.77 -no-pad-sections` |
+| `gcc 2.6.0-psx` | `maspsx` | `-O2 -G0 -gcoff -msoft-float` | `--aspsx-version=2.34 --expand-div -no-pad-sections` |
 | `gcc 2.7.2-cdk` | `maspsx` | `-O2 -G0 -msoft-float -gcoff` | `--aspsx-version=2.67 --expand-div -no-pad-sections` |
 | `gcc 2.7.2-psx` (GNU) | `GNU as` | `-O2 -G0` | `-O -EL` |
 
@@ -222,7 +222,7 @@ When you compile a `.c` file, four things happen in order:
 3. **The system assembler** turns that into a `.o` object file
 4. **mipsel-linux-gnu-ld** links all `.o` files into an ELF executable
 
-Overlays follow the same pipeline but may use a different compiler. For example, matched functions in the CHECKPS overlay use **gcc 2.7.2-cdk** (Cygnus CDK) with slightly different maspsx settings (`--aspsx-version=2.67 --expand-div`). Non-matching stubs fall back to gcc 2.8.0-psx or gcc 2.7.2-psx (GNU).
+Overlays follow the same pipeline but may use a different compiler. For example, matched functions in the CHECKPS overlay use **gcc 2.7.2-cdk** (Cygnus CDK) with slightly different maspsx settings (`--aspsx-version=2.67 --expand-div`). Non-matching stubs fall back to gcc 2.8.0-psx or gcc 2.6.0-psx (GNU).
 
 Source files are compiled from a `/staging` directory (a native Linux path inside the container) rather than directly from the `/lom` mount, because GCC 2.8.0 cannot write to mounted Windows filesystems.
 

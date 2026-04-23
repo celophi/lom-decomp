@@ -1,6 +1,6 @@
 # ── Stage 1: PSX gcc 2.8.0 ──────────────────────────────────────────────────
 FROM old-gcc/gcc-2.8.0-psx AS toolchain-psx
-FROM old-gcc/gcc-2.7.2-psx AS toolchain-2.7.2-psx
+FROM old-gcc/gcc-2.6.0-psx AS toolchain-2.6.0-psx
 
 # ── Stage 2: Cygnus CDK gcc 2.7.2 ───────────────────────────────────────────
 FROM old-gcc/gcc-2.7.2-cdk AS toolchain-cdk
@@ -31,12 +31,12 @@ COPY --from=toolchain-psx /gcc     /opt/psx-gcc/gcc
 COPY --from=toolchain-psx /cc1plus /opt/psx-gcc/cc1plus
 COPY --from=toolchain-psx /g++     /opt/psx-gcc/g++
 
-# PSX gcc 2.7.2
-COPY --from=toolchain-2.7.2-psx /cpp     /opt/gcc-2.7.2-psx/cpp
-COPY --from=toolchain-2.7.2-psx /cc1     /opt/gcc-2.7.2-psx/cc1
-COPY --from=toolchain-2.7.2-psx /gcc     /opt/gcc-2.7.2-psx/gcc
-COPY --from=toolchain-2.7.2-psx /cc1plus /opt/gcc-2.7.2-psx/cc1plus
-COPY --from=toolchain-2.7.2-psx /g++     /opt/gcc-2.7.2-psx/g++
+# PSX gcc 2.6.0
+COPY --from=toolchain-2.6.0-psx /cpp     /opt/gcc-2.6.0-psx/cpp
+COPY --from=toolchain-2.6.0-psx /cc1     /opt/gcc-2.6.0-psx/cc1
+COPY --from=toolchain-2.6.0-psx /gcc     /opt/gcc-2.6.0-psx/gcc
+COPY --from=toolchain-2.6.0-psx /cc1plus /opt/gcc-2.6.0-psx/cc1plus
+COPY --from=toolchain-2.6.0-psx /g++     /opt/gcc-2.6.0-psx/g++
 
 # Cygnus CDK gcc 2.7.2
 COPY --from=toolchain-cdk /cpp     /opt/cdk-gcc/cpp
