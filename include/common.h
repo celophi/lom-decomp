@@ -20,18 +20,18 @@ typedef signed char     s8;
 typedef unsigned short  u16;
 typedef signed short    s16;
 
-// Boolean / null macros
+/* Boolean / null macros */
 #define TRUE    1
 #define FALSE   0
 #define NULL    ((void*)0)
 
-// Common sizes
+/* Common sizes */
 #define MAX_SHORT_VALUE 32767
 
-// Round x up to the nearest multiple of 64 (PSX texture page width alignment)
+/* Round x up to the nearest multiple of 64 (PSX texture page width alignment) */
 #define ALIGN64(x) (((x) + 0x3F) & 0xFFC0)
 
-// GPU packet macros
+/* GPU packet macros */
 #define setBGR0(p,_b0,_g0,_r0)	\
     (p)->b0 = _b0,(p)->g0 = _g0,(p)->r0 = _r0
 

@@ -117,3 +117,27 @@ void func_800163B4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     func_800165CC(table[high], arg3, arg4);
     func_800165CC(table[(unsigned short)((u32)((var_s1 - ((s32)new_var)) & 0xFFFF))], arg3, arg4);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/4kW8K
+ */
+void func_800164B0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+{
+    /* local copy (stack area sp+0x10 to sp+0x20) */
+    u8 table[17]; 
+    u32 temp;
+
+    /* Copy the unaligned data using memcpy (compiles to efficient byte loop) */
+    memcpy(table, D_800102B0, 17);
+
+    /* match assembly order */
+    D_80047404 = arg1; 
+    temp = (u32)(arg0 & 0xFFFF);
+    D_80047408 = arg2;
+
+    /* Four calls using the four nibbles of the 16-bit value */
+    func_800165CC(table[(temp >> 12) & 0xF], arg3, arg4);
+    func_800165CC(table[(temp >> 8) & 0xF], arg3, arg4);
+    func_800165CC(table[(temp >> 4) & 0xF], arg3, arg4);
+    func_800165CC(table[temp & 0xF], arg3, arg4);
+}
