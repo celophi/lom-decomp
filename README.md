@@ -122,11 +122,15 @@ python3 tools/objdiff/generate_objdiff_config.py
 
 Then open [objdiff](https://github.com/encounter/objdiff) and point it at the project root.
 
-You can also use [decomp.me](https://decomp.me) for collaborative matching:
+You can also use [decomp.me](https://decomp.me) for collaborative matching. The following toolchains have been identified or are suspected in the original build:
 
-- **Platform:** PlayStation 1
-- **Compiler:** `gcc 2.8.0-psx + maspsx`
-- **Flags:** `-Wall -Wa,--aspsx-version=2.77,-no-pad-sections -g -O2 -G0 -fsigned-char -fno-builtin`
+| Compiler | Assembler | Compiler Flags | Assembler Flags |
+|---|---|---|---|
+| `gcc 2.8.0-psx` | `maspsx` | `-O2 -G0 -g -fsigned-char -fno-builtin` | `--aspsx-version=2.77 -no-pad-sections` |
+| `gcc 2.8.0-psx` | `maspsx` | `-O2 -G4 -g -fsigned-char` | `--aspsx-version=2.77 -no-pad-sections` |
+| `gcc 2.7.2-psx` | `maspsx` | `-O2 -G0 -g -fsigned-char -fno-builtin` | `--aspsx-version=2.77 -no-pad-sections` |
+| `gcc 2.7.2-cdk` | `maspsx` | `-O2 -G0 -msoft-float -gcoff` | `--aspsx-version=2.67 --expand-div -no-pad-sections` |
+| `gcc 2.7.2-psx` (GNU) | `GNU as` | `-O2 -G0` | `-O -EL` |
 
 ## Project Structure
 
