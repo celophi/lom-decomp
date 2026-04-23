@@ -67,11 +67,10 @@ You should now be inside the container at a Linux terminal prompt.
 
 ### 6. Split the Game Binary
 
-Inside the container, run splat to extract the game binary into assembly files:
+Inside the container, run splat to extract the game binary and all overlays into assembly files:
 
 ```bash
-splat split config/SLUS_010.13.yaml
-splat split config/overlays/CHECKPS.BIN.yaml
+make splat
 ```
 
 ### 7. Build the Project
@@ -127,7 +126,7 @@ You can also use [decomp.me](https://decomp.me) for collaborative matching:
 
 - **Platform:** PlayStation 1
 - **Compiler:** `gcc 2.8.0-psx + maspsx`
-- **Flags:** `-Wall -Wa,--aspsx-version=2.79,--expand-div -g3 -O2 -G0`
+- **Flags:** `-Wall -Wa,--aspsx-version=2.77,-no-pad-sections -g -O2 -G0 -fsigned-char -fno-builtin`
 
 ## Project Structure
 
@@ -140,9 +139,11 @@ lom-decomp/
 │   ├── data/                       # Initialized data and sdata sections
 │   ├── nonmatchings/               # Functions not yet matched to C
 │   │   ├── psyq/                   # Unmatched PSY-Q SDK functions
-│   │   └── unk1/ ... unk6/         # Unmatched functions in each translation unit
+│   │   ├── decomp1/ ... decomp8/   # Unmatched functions in identified translation units
+│   │   └── unk3/ ... unk9/         # Unmatched functions in unidentified translation units
 │   ├── overlays/
-│   │   └── checkps/                # CHECKPS overlay assembly
+│   │   ├── checkps/                # CHECKPS overlay assembly
+│   │   └── .../                    # Other overlay assemblies (field, menu, title, etc.)
 │   └── psyq/                       # PSY-Q SDK library assembly
 ├── assets/
 │   └── checkps.bin                 # CHECKPS overlay binary data segment
@@ -152,10 +153,10 @@ lom-decomp/
 │   ├── asm/                        # Assembled target objects (for objdiff)
 │   ├── src/                        # Compiled base objects (for objdiff)
 │   └── overlays/
-│       └── checkps/                # CHECKPS overlay build artifacts
+│       └── .../                    # Per-overlay build artifacts
 ├── config/                         # splat configuration files
 │   ├── overlays/
-│   │   └── CHECKPS.BIN.yaml        # splat config for the CHECKPS overlay
+│   │   └── *.yaml                  # splat config per overlay (17 total)
 │   ├── SLUS_010.13.yaml            # Main splat config for the game binary
 │   └── symbol_addrs.txt            # Known symbol addresses
 ├── disc/                           # ROM files go here (gitignored)
@@ -173,15 +174,25 @@ lom-decomp/
 │   ├── undefined_funcs_auto.txt    # Auto-generated undefined function references
 │   └── undefined_syms_auto.txt     # Auto-generated undefined symbol references
 ├── src/                            # Decompiled C source files
-│   ├── overlays/
-│   │   └── checkps/                # CHECKPS overlay source (code.c, unk.c)
+│   ├── overlays/                   # 17 game overlays
+│   │   ├── checkps/                # CHECKPS overlay source
+│   │   └── .../                    # addhero, carda, cload, field, gname, golem,
+│   │                               #   gosub, gover, menu, movie, niki, shop,
+│   │                               #   title, wmap, wsel, zukan
 │   ├── psyq/                       # Decompiled PSY-Q SDK library source
-│   │   ├── libcd/SYS.c
-│   │   └── libetc/INTR.c
+│   │   ├── libapi/                 # Controller and patch routines
+│   │   ├── libc2/                  # C library (memory, strings, math)
+│   │   ├── libcard/                # Memory card operations
+│   │   ├── libcd/                  # CD-ROM operations
+│   │   ├── libetc/                 # Interrupt handling and utilities
+│   │   ├── libgpu/                 # GPU primitives
+│   │   ├── libgte/                 # Geometry Transform Engine
+│   │   ├── libpress/               # Data compression
+│   │   └── libspu/                 # Sound Processing Unit
 │   ├── cd.c                        # CD-ROM subsystem
-│   ├── decompression.c             # Data decompression routines
+│   ├── decomp1.c ... decomp8.c     # Identified translation units
 │   ├── main.c                      # Entry point
-│   └── unk1.c ... unk6.c           # Translation units pending identification
+│   └── unk3.c ... unk9.c           # Translation units pending identification
 ├── tools/
 │   ├── decomp-permuter/            # Automated C permutation for function matching
 │   ├── maspsx/                     # GCC → ASPSX assembly preprocessor (submodule)
