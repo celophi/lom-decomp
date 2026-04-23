@@ -57,6 +57,7 @@ CROSS        	:= mipsel-linux-gnu-
 CC           	:= /opt/psx-gcc/gcc -B/opt/psx-gcc/
 CC_CDK       	:= /opt/cdk-gcc/gcc -B/opt/cdk-gcc/
 CC_GNU       	:= /opt/psx-gnu-gcc/gcc -B/opt/psx-gnu-gcc/
+CC_272_PSX		:= /opt/gcc-2.7.2-psx/gcc -B/opt/gcc-2.7.2-psx/
 AS_GNU       	:= /opt/psx-gnu-gcc/as
 LD           	:= $(CROSS)ld
 OBJCOPY      	:= $(CROSS)objcopy
@@ -243,6 +244,9 @@ SRCS_CDK_G0 := \
 	src/overlays/checkps/code.c \
 	src/overlays/checkps/code2.c 
 
+SRCS_GCC_272_G0 := \
+	src/decomp8.c
+
 # Hand-written assembly (header + initialized data sections).
 # Rodata is NOT here — it's inlined into C files via asm directives.
 ASM_SRCS := \
@@ -256,12 +260,13 @@ ASM_SRCS := \
 # patsubst turns  src/foo/bar.c  →  /staging/build/src/foo/bar.o
 # This mirrors the source tree under the staging build directory.
 
-OBJS_G0  		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
-OBJS_G4  		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
-OBJS_CDK_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_CDK_G0))
-OBJS_ASM 		:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
+OBJS_G0  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
+OBJS_G4  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
+OBJS_CDK_G0 		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_CDK_G0))
+OBJS_GCC_272_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_GCC_272_G0))	
+OBJS_ASM 			:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
 
-OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_ASM)
+OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_GCC_272_G0) $(OBJS_ASM)
 
 
 # ─── Staging Sentinel ──────────────────────────────────────────────────────────
@@ -420,6 +425,17 @@ $(OBJS_CDK_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	cd $(STAGING) && $(CC_CDK) $(CFLAGS_CDK_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o build/$(SRC_DIR)/$*.o
 
+# ── C files compiled with GCC 2.7.2 + maspsx -G0 (new overlay) ──
+$(OBJS_GNU_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+	@mkdir -p $(@D)
+	cd $(STAGING) && $(CC_GNU) $(CFLAGS_GNU_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(AS_GNU) $(AS_GNU_FLAGS) -o build/$(SRC_DIR)/$*.o
+
+$(OBJS_GCC_272_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
+	@mkdir -p $(@D)
+	cd $(STAGING) && $(CC_272_PSX) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+
 # ── Hand-written assembly (header, data sections) ──
 # These use --macro-inc because they contain ASPSX directives (dlabel, etc.)
 # The pipeline: cat .s | maspsx (preprocess) | maspsx --run-assembler (assemble)
@@ -473,7 +489,7 @@ target-objects: $(COPY_SENTINEL) $(TARGET_OBJ)
 	@cp -r $(STAGING)/build/$(ASM_DIR)/* build/asm/ 2>/dev/null || true
 	@echo "Target objects built."
 
-base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0)
+base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_GCC_272_G0)
 	@mkdir -p build/src
 	@cp -r $(STAGING)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
 	@echo "Base objects built."
