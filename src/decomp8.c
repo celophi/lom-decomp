@@ -129,7 +129,8 @@ void func_800164B0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     // Copy the unaligned data using memcpy (compiles to efficient byte loop)
     memcpy(table, D_800102B0, 17);
 
-    D_80047404 = arg1; // match assembly order
+    // match assembly order
+    D_80047404 = arg1; 
     temp = (u32)(arg0 & 0xFFFF);
     D_80047408 = arg2;
 
