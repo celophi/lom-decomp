@@ -226,9 +226,9 @@ SRCS_G0 := \
 	src/psyq/libspu/S_W.c \
 	src/psyq/libspu/S_STM.c \
 	src/psyq/libspu/S_STC.c \
+	src/psyq/libcard/C112.c \
 	src/unk3.c \
 	src/unk5.c \
-	src/unk6.c \
 	src/unk7.c \
 	src/unk8.c \
 	src/unk9.c \

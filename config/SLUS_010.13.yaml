@@ -63,7 +63,7 @@ segments:
       - [0x6428, c, decomp2]
       - [0x6458, c, decomp7]
       - [0x695C, c, decomp8]
-      - [0x6DCC, c, unk6]
+      - [0x6F64, c, psyq/libcard/C112]
       - [0x6F84, c, psyq/libapi/C114]
       - [0x6F9C, c, unk5]
       - [0x707C, c, psyq/libapi/A81]

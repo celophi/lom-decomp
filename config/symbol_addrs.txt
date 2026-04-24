@@ -407,6 +407,9 @@ SpuSetTransferMode          = 0x80024200;
 // src/psyq/libspu/S_STC
 SpuSetTransferCallback      = 0x80024230;
 
+// src/psyq/libcard/C112
+_bu_init                    = 0x8001676C;
+
 // psyq/libcd/SYS.c
 CdStatus                    = 0x8001e32c;
 CdMode                      = 0x8001e33c;
@@ -583,7 +586,6 @@ __main = 0x8002e850;
 SetMem = 0x8001679c;
 SetConf = 0x8001689c;
 FUN_80015c18 = 0x80015c18;
-_bu_init = 0x8001676c;
 McxStartCom = 0x800319d8;
 ChangeClearPAD = 0x8001688c;
 InitializeControllers = 0x80014adc;
