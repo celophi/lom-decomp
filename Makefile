@@ -242,7 +242,8 @@ SRCS_G4 := \
 	src/cd.c \
 	src/decomp2.c \
 	src/decomp5.c \
-	src/decomp6.c 
+	src/decomp6.c \
+	src/overlays/movie1.c 
 
 SRCS_CDK_G0 := \
 	src/overlays/checkps/code.c \
