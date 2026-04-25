@@ -263,6 +263,7 @@ void func_800166C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/LO4aD
+ * This function seems to be present in the JP release. Perhaps this is リングりんぐランド related.
  */
 void func_80016764(void)
 {
