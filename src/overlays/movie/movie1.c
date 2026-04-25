@@ -2,6 +2,7 @@
 
 /**
  * decomp.me link (97.51%) https://decomp.me/scratch/XvMvo
+ * this one is a WIP without gotos (https://decomp.me/scratch/Gq1vj)
  */
 void FUN_80140018(s32 arg0)
 {
