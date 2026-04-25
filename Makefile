@@ -242,8 +242,7 @@ SRCS_G4 := \
 	src/cd.c \
 	src/decomp2.c \
 	src/decomp5.c \
-	src/decomp6.c \
-	src/overlays/movie1.c 
+	src/decomp6.c 
 
 SRCS_CDK_G0 := \
 	src/overlays/checkps/code.c \
@@ -330,7 +329,8 @@ OVERLAYS += menu
 overlay_menu_gcc_srcs   := src/overlays/menu/unk1.c
 
 OVERLAYS += movie
-overlay_movie_gcc_srcs   := src/overlays/movie/unk1.c
+overlay_movie_gcc_srcs      := src/overlays/movie/unk1.c
+overlay_movie_gcc_g4_srcs   := src/overlays/movie/movie1.c
 
 OVERLAYS += niki
 overlay_niki_gcc_srcs   := src/overlays/niki/unk1.c
@@ -561,11 +561,13 @@ $(1)_TARGET    := $(STAGING)/$$($(1)_BUILD_DIR)/$(1).elf
 $(1)_C_SRCS      := $$(wildcard $$($(1)_SRC_DIR)/*.c)
 $(1)_GCC_SRCS    := $$(overlay_$(1)_gcc_srcs)
 $(1)_GNU_SRCS    := $$(overlay_$(1)_gnu_srcs)
-$(1)_CDK_SRCS    := $$(filter-out $$($(1)_GCC_SRCS) $$($(1)_GNU_SRCS),$$($(1)_C_SRCS))
+$(1)_GCC_G4_SRCS := $$(overlay_$(1)_gcc_g4_srcs)
+$(1)_CDK_SRCS    := $$(filter-out $$($(1)_GCC_SRCS) $$($(1)_GNU_SRCS) $$($(1)_GCC_G4_SRCS),$$($(1)_C_SRCS))
 $(1)_GCC_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_SRCS))
 $(1)_GNU_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GNU_SRCS))
+$(1)_GCC_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_G4_SRCS))
 $(1)_CDK_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CDK_SRCS))
-$(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS) $$($(1)_GNU_OBJS)
+$(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS) $$($(1)_GNU_OBJS) $$($(1)_GCC_G4_OBJS)
 
 # ── Binary asset (only if overlay_<name>_asset is defined) ──
 $(1)_ASSET_SRC := $$(overlay_$(1)_asset)
@@ -581,6 +583,12 @@ $$($(1)_CDK_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_S
 $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+
+# Rule: compile C files with GCC 2.8.0 + maspsx -G4 (e.g. movie1.c)
+$$($(1)_GCC_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+	@mkdir -p $$(@D)
+	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with PSX GNU GCC 2.7.2 + its own assembler (no maspsx)
