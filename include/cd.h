@@ -363,7 +363,7 @@ void cdrom_stream_chunked(undefined2 param_1, codeA param_2, codeB param_3);
  * Once enqueued, if no command is currently active and no low-nibble status
  * flags (bits 0-3) are set, the function bootstraps execution:
  * - Sets currentCommand to 1, marks the "busy" flag (bit 4)
- * - Installs CD_OnCommandComplete and sends CdlNop to begin processing
+ * - Installs cdrom_complete_command and sends CdlNop to begin processing
  *
  * @param command        CD-ROM command byte (e.g., CdlReadN, CdlSeekL)
  * @param resourceIndex  Index into CD_RESOURCE_ENTRIES, or 0xFFFF for the default resource
@@ -421,7 +421,7 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
  * **Branch 3 — Idle with queued commands (queue non-empty, no active command):**
  * Bootstraps execution of the next queued command:
  *   - Sets currentCommand to 1, marks busy flag (bit 4)
- *   - Installs CD_OnCommandComplete and sends CdlNop to start processing
+ *   - Installs cdrom_complete_command and sends CdlNop to start processing
  *   - If the queue is empty, performs periodic 30-frame status polls via CdlNop
  *     and triggers CD_HandleSyncError if the drive reports an error (bit 4)
  *
@@ -556,6 +556,59 @@ int cdrom_recover(void);
  */
 void cdrom_verify_recovery(void);
 
+/**
+ * @brief Sync callback invoked when a CD-ROM command completes or fails
+ *
+ * Installed as the CdSyncCallback during normal command queue processing.
+ * Handles command completion by advancing the circular queue, dispatching
+ * the next queued command, or cleaning up when the queue is drained.
+ *
+ * @details
+ * On entry, sets syncComplete to 1 so the main-loop poller knows progress
+ * was made. Then branches based on the interrupt status:
+ *
+ * **Error path (status byte bit 4 set during CdlNop):**
+ * If currentCommand is 1 (CdlNop probe) and the drive reports an error,
+ * calls CD_HandleSyncError() and returns immediately.
+ *
+ * **Incomplete path (status != CdlComplete):**
+ * If the command did not finish successfully:
+ *   - If currentCommand != 1, resets to CdlNop and retries
+ *   - Otherwise falls through to re-read the queue head and execute it
+ *
+ * **Complete path (status == CdlComplete):**
+ * Switches on currentCommand:
+ *   - **Case 21 (CdlPause):** Resets playback state and loop counter,
+ *     advances the queue read index. If the queue is now empty, clears
+ *     all execution state and returns. Otherwise dispatches the next command.
+ *   - **All other cases (default):** Reads the command at the queue head.
+ *     If it is CdlNop (1), skips forward through consecutive CdlNop entries
+ *     until a different command is found or the queue is exhausted.
+ *     Then dispatches the resolved command via CD_ExecuteCommand.
+ *
+ * Special handling: if the resolved command is 0x1B (audio start), enables
+ * CD_SYSTEM.audioEnabled and remaps the command to CdlSeekL (6) for execution.
+ *
+ * @param status    CD-ROM interrupt status byte (CdlComplete on success)
+ * @param resultPtr Pointer to the CD-ROM result byte array from the hardware
+ *
+ * @return void
+ *
+ * @note
+ * - This function runs in interrupt context as a CdSyncCallback
+ * - The volatile vsyncArg variable and separate statusFlags assignment
+ *   match the original assembly's register usage and must not be optimized
+ * - The large switch with explicit case labels for 1-27 (excluding 6, 21)
+ *   matches the original jump table layout in the binary
+ *
+ * @warning
+ * - Executes in interrupt context; must not call blocking functions
+ * - Modifies CD_SYSTEM state directly; not safe to call from main thread
+ *
+ * @see decomp.me: (91.68%) https://decomp.me/scratch/F0oiy
+ */
+void cdrom_complete_command(u_char intr, u_char *result);
+
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
@@ -564,7 +617,8 @@ void CD_InitResources(int lba, int dataSizeBytes);
 
 
 void CD_SyncCallback_Handler(u_char intr, u_char* result);
-void CD_OnCommandComplete(u_char intr, u_char *result);
+
+
 s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 void ClearPointer(s8* arg0);
 s32* CD_StreamDataCallback(s32 param_1, u32 param_2);

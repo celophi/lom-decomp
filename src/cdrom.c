@@ -745,7 +745,7 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
             CD_SYSTEM.currentDataSize = dataSize;
 
             // Install sync callback and send CdlNop to kick off the state machine
-            CdSyncCallback(&CD_OnCommandComplete);
+            CdSyncCallback(&cdrom_complete_command);
             CdSync(0, NULL);
             CdControlF(CdlNop, NULL);
         }
@@ -1128,7 +1128,7 @@ u32 cdrom_process_state(void)
                             CD_SYSTEM.playbackState = 0;
                         }
 
-                        CdSyncCallback((void (*)(u8, u8*))CD_OnCommandComplete);
+                        CdSyncCallback((void (*)(u8, u8*))cdrom_complete_command);
                         CdReadyCallback(0);
                         do
                         {
@@ -1166,7 +1166,7 @@ u32 cdrom_process_state(void)
                 CD_SYSTEM.playbackState = 0;
             }
 
-            CdSyncCallback((void (*)(u8, u8*))CD_OnCommandComplete);
+            CdSyncCallback((void (*)(u8, u8*))cdrom_complete_command);
             CdReadyCallback(0);
             CdSync(0, 0);
             CdControlF(CdlNop, 0);
@@ -1367,58 +1367,7 @@ void cdrom_verify_recovery(void)
     g_cdStatusByte3 = 0;
 }
 
-/**
- * @brief Sync callback invoked when a CD-ROM command completes or fails
- *
- * Installed as the CdSyncCallback during normal command queue processing.
- * Handles command completion by advancing the circular queue, dispatching
- * the next queued command, or cleaning up when the queue is drained.
- *
- * @details
- * On entry, sets syncComplete to 1 so the main-loop poller knows progress
- * was made. Then branches based on the interrupt status:
- *
- * **Error path (status byte bit 4 set during CdlNop):**
- * If currentCommand is 1 (CdlNop probe) and the drive reports an error,
- * calls CD_HandleSyncError() and returns immediately.
- *
- * **Incomplete path (status != CdlComplete):**
- * If the command did not finish successfully:
- *   - If currentCommand != 1, resets to CdlNop and retries
- *   - Otherwise falls through to re-read the queue head and execute it
- *
- * **Complete path (status == CdlComplete):**
- * Switches on currentCommand:
- *   - **Case 21 (CdlPause):** Resets playback state and loop counter,
- *     advances the queue read index. If the queue is now empty, clears
- *     all execution state and returns. Otherwise dispatches the next command.
- *   - **All other cases (default):** Reads the command at the queue head.
- *     If it is CdlNop (1), skips forward through consecutive CdlNop entries
- *     until a different command is found or the queue is exhausted.
- *     Then dispatches the resolved command via CD_ExecuteCommand.
- *
- * Special handling: if the resolved command is 0x1B (audio start), enables
- * CD_SYSTEM.audioEnabled and remaps the command to CdlSeekL (6) for execution.
- *
- * @param status    CD-ROM interrupt status byte (CdlComplete on success)
- * @param resultPtr Pointer to the CD-ROM result byte array from the hardware
- *
- * @return void
- *
- * @note
- * - This function runs in interrupt context as a CdSyncCallback
- * - The volatile vsyncArg variable and separate statusFlags assignment
- *   match the original assembly's register usage and must not be optimized
- * - The large switch with explicit case labels for 1-27 (excluding 6, 21)
- *   matches the original jump table layout in the binary
- *
- * @warning
- * - Executes in interrupt context; must not call blocking functions
- * - Modifies CD_SYSTEM state directly; not safe to call from main thread
- *
- * @see decomp.me: (91.68%) https://decomp.me/scratch/F0oiy
- */
-void CD_OnCommandComplete(u_char intr, u_char* result)
+void cdrom_complete_command(u_char intr, u_char* result)
 {
     u8 nextCommand;
     u32 readIndex;
@@ -1637,7 +1586,7 @@ block_6:
             CD_SYSTEM.initCommand = 0U;
             if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex)
             {
-                CdSyncCallback(CD_OnCommandComplete);
+                CdSyncCallback(cdrom_complete_command);
                 temp_a0 = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
                 if ((temp_a0 == 0x1B) && (CD_SYSTEM.audioEnabled == 0))
                 {
@@ -1702,7 +1651,7 @@ block_6:
             {
                 CD_SYSTEM.currentCommand = 1;
                 CD_SYSTEM.statusFlags.word = (s32)(temp_v1_2 | 0x10);
-                CdSyncCallback(CD_OnCommandComplete);
+                CdSyncCallback(cdrom_complete_command);
                 CdSync(0, NULL);
                 CdControlF(1U, NULL);
             }
