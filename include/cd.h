@@ -12,35 +12,41 @@
 typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
 typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
-typedef u8* (*codeA)(int, int *);
+typedef u8* (*codeA)(int, int*);
 typedef void (*codeB)(int);
 
-typedef union {
+typedef union
+{
     CdlLOC pos;
     u32 raw;
 } CdlLOCRaw;
 
-typedef struct CdResourceEntry {
+typedef struct CdResourceEntry
+{
     CdlLOCRaw location;
     int dataSize;
 } CdResourceEntry;
 
-typedef struct CdCommandQueueItem {
+typedef struct CdCommandQueueItem
+{
     u_char command;
     u_char padding;
     unsigned short resourceIndex;
-    CdResourceEntry *entry;
-    CdResourceEntry *dstBuffer;
+    CdResourceEntry* entry;
+    CdResourceEntry* dstBuffer;
     CdCommandCallback callback;
 } CdCommandQueueItem;
 
-typedef struct CdCommandQueue {
+typedef struct CdCommandQueue
+{
     CdCommandQueueItem items[CD_COMMAND_QUEUE_SIZE];
 } CdCommandQueue;
 
-typedef union {
+typedef union
+{
     u_int word;
-    struct {
+    struct
+    {
         u_char b0;
         u_char b1;
         u_char b2;
@@ -48,7 +54,8 @@ typedef union {
     } bytes;
 } CdStatusFlags;
 
-typedef struct CdSystem {
+typedef struct CdSystem
+{
     CdStatusFlags statusFlags;
     undefined1 audioEnabled;
     undefined1 playbackState;
@@ -68,7 +75,7 @@ typedef struct CdSystem {
     u8 padding_0x1B;
     undefined2 resourceIndex;
     u16 padding_0x1E;
-    CdResourceEntry * dstBuffer;
+    CdResourceEntry* dstBuffer;
     CdCommandCallback callback;
     u32 readRemainingBytes;
     u32 totalDataSize;
@@ -94,7 +101,8 @@ typedef struct CdSystem {
     CdResourceEntry defaultCdResource;
 } CdSystem;
 
-typedef struct {
+typedef struct
+{
     u8 dataReady;
     u8 bufferWrapped;
     u8 pad[2];
@@ -106,7 +114,8 @@ typedef struct {
     s32 reserved;
 } CdStreamState;
 
-typedef struct {
+typedef struct
+{
     u8 u_0[0x38];
     DecDCToutCallbackHandler decDCToutCallbackHandler;
     DrawSyncCallbackHandler drawSyncCallbackHandler;
@@ -115,7 +124,8 @@ typedef struct {
     u8 u2[3];
 } AudioSystem;
 
-typedef struct SKCDPOSE_DAT {
+typedef struct SKCDPOSE_DAT
+{
     CdResourceEntry resources[178];
     char unknown[45065];
 } SKCDPOSE_DAT;
@@ -143,26 +153,28 @@ extern s8 D_801ED801;
 /**
  * This is a flag that indicates the number of pending commands in the CD command queue.
  * It is used to track how many commands are waiting to be processed.
- * It can be used to manage the flow of commands and ensure that the system does not become overwhelmed with too many pending commands.
+ * It can be used to manage the flow of commands and ensure that the system does not become overwhelmed with too many
+ * pending commands.
  */
 extern u8 g_cdPendingQueueCount;
 extern CdSystem g_cdSystem;
 
 /**
- * This is the disc validation ID that is read from the disc during the disc validation process. 
- * It is used to verify that the correct disc is inserted and can be used to prevent unauthorized copies of the game from being played.
+ * This is the disc validation ID that is read from the disc during the disc validation process.
+ * It is used to verify that the correct disc is inserted and can be used to prevent unauthorized copies of the game
+ * from being played.
  */
 extern const u_char g_DiscValidationId[21];
 extern u8 D_801ED590;
 
 #define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
-#define CD_SYSTEM_V (*(volatile CdSystem*) 0x801ED800)
+#define CD_SYSTEM_V (*(volatile CdSystem*)0x801ED800)
 #define AUDIO_SYSTEM (*(AudioSystem*)0x801ED500)
 #define CD_SECTOR_HEADER_BUFFER (*(u32*)0x801ED940)
-#define CD_COMMAND_PARAM_BUFFER ((u_char*) 0x801ED958)
-#define g_defaultCdResource (*(CdResourceEntry*) 0x801ED990)
+#define CD_COMMAND_PARAM_BUFFER ((u_char*)0x801ED958)
+#define g_defaultCdResource (*(CdResourceEntry*)0x801ED990)
 #define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
-#define g_commandQueueOffset (*(CdCommandQueueItem*) 0x801ED8F0)
+#define g_commandQueueOffset (*(CdCommandQueueItem*)0x801ED8F0)
 #define SCRATCHPAD ((void*)0x1F800000)
 #define CD_STREAM_STATE (*(CdStreamState*)0x1F800000)
 
@@ -171,9 +183,9 @@ extern u8 D_801ED590;
 
 // Raw queue item access macros (required for asm matching)
 // Equivalent to accessing CD_SYSTEM.commandQueue.items[idx] but generates matching code
-#define QUEUE_ITEM_BASE(idx)        ((void*)(((idx) * 0x10) + (u8*)&CD_SYSTEM))
-#define QUEUE_ITEM_DST_BUFFER(ptr)  (*((u32*)(ptr) + 0x12))
-#define QUEUE_ITEM_CALLBACK(ptr)    (*((CdCommandCallback*)(ptr) + 0x13))
+#define QUEUE_ITEM_BASE(idx) ((void*)(((idx) * 0x10) + (u8*)&CD_SYSTEM))
+#define QUEUE_ITEM_DST_BUFFER(ptr) (*((u32*)(ptr) + 0x12))
+#define QUEUE_ITEM_CALLBACK(ptr) (*((CdCommandCallback*)(ptr) + 0x13))
 
 #define CD_INIT_STATE_ERROR_PAUSE 0x20
 
@@ -217,7 +229,6 @@ extern u8 D_801ED590;
  * @see decomp.me: (100%) https://decomp.me/scratch/DBYkw
  */
 void cdrom_init(void);
-
 
 /**
  * @brief Stops all CD-ROM operations and resets the subsystem state
@@ -294,7 +305,6 @@ void cdrom_stop(void);
  * @see decomp.me: (100%) https://decomp.me/scratch/SvWOg
  */
 s32 cdrom_stream(s32 command, u32 destination);
-
 
 /**
  * @brief Streams and decompresses CD-ROM data into caller-supplied chunks via callbacks.
@@ -391,7 +401,6 @@ void cdrom_stream_chunked(undefined2 param_1, codeA param_2, codeB param_3);
  */
 s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCallback callback);
 
-
 /**
  * @brief Drains the CD command queue and drives the disc-recovery state machine
  *
@@ -451,8 +460,6 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
  */
 u_int cdrom_process_state(void);
 
-
-
 /**
  * @brief Processes the CD-ROM recovery/init state machine across multiple VSync frames
  *
@@ -507,8 +514,7 @@ u_int cdrom_process_state(void);
  */
 int cdrom_recover(void);
 
-
- /**
+/**
  * @brief Verifies the next CD sector header during error recovery.
  *
  * This function is invoked when the CD-ROM drive signals readiness while the
@@ -607,32 +613,32 @@ void cdrom_verify_recovery(void);
  *
  * @see decomp.me: (91.68%) https://decomp.me/scratch/F0oiy
  */
-void cdrom_complete_command(u_char intr, u_char *result);
+void cdrom_complete_command(u_char intr, u_char* result);
 
 void CD_SyncCallback_Handler(u_char intr, u_char* result);
 
- /**
+/**
  * @brief Low-level ready callback invoked when the CD-ROM drive signals a sector is ready.
  *
- * This function is installed as the CdReadyCallback. It handles the transition from 
- * the hardware signaling "ready" to the software processing the sector data. 
+ * This function is installed as the CdReadyCallback. It handles the transition from
+ * the hardware signaling "ready" to the software processing the sector data.
  * It distinguishes between standard data reads and audio (XA) streaming.
  *
  * @details
  * The handler operates in two primary modes:
- * 
+ *
  * **Data Mode (audioEnabled != 1):**
  * 1. Checks if the interrupt status matches the expected state.
- * 2. If a mismatch or error occurs, it attempts to read the sector header to verify 
+ * 2. If a mismatch or error occurs, it attempts to read the sector header to verify
  *    the current disc position.
  * 3. If the position is correct, it hands off to `cdrom_process_sector`.
- * 4. If the read fails, it implements a retry mechanism (up to 17 attempts). 
- *    On failure, it marks the system as `retryExhausted` and issues a `CdlNop` 
+ * 4. If the read fails, it implements a retry mechanism (up to 17 attempts).
+ *    On failure, it marks the system as `retryExhausted` and issues a `CdlNop`
  *    to reset the drive state.
  *
  * **Audio Mode (audioEnabled == 1):**
  * 1. Verifies if the interrupt status matches the audio state.
- * 2. Checks a specific hardware flag (at 0x801ED59C) to determine if the 
+ * 2. Checks a specific hardware flag (at 0x801ED59C) to determine if the
  *    sector should be processed immediately or if the status should be recorded.
  * 3. On success, invokes `cdrom_process_sector`.
  * 4. Implements a similar retry mechanism to Data Mode if the audio read fails.
@@ -643,8 +649,7 @@ void CD_SyncCallback_Handler(u_char intr, u_char* result);
  * @note This function runs in interrupt context and should not call blocking functions.
  * @see decomp.me: (100%) https://decomp.me/scratch/kgBY4
  */
-void cdrom_handle_ready_intr(u_char intr, u_char *result);
-
+void cdrom_handle_ready_intr(u_char intr, u_char* result);
 
 /**
  * @brief Handles completion of a CD-ROM sector read operation
@@ -711,81 +716,105 @@ void cdrom_handle_ready_intr(u_char intr, u_char *result);
  */
 void cdrom_process_sector(s32 arg0);
 
-
 /**
  * @brief Dispatches CD-ROM commands and configures hardware for sector reads.
  *
- * This function takes a command byte and an execution mode, then translates them 
- * into the appropriate low-level PsyQ CD library calls. It handles the complex 
+ * This function takes a command byte and an execution mode, then translates them
+ * into the appropriate low-level PsyQ CD library calls. It handles the complex
  * transition between seeking, reading, and managing the read-ready callbacks.
  *
  * @details
  * The function operates in several distinct phases:
  *
- * 1. **Seek Skipping:** If the current command is `CdlSeekL`, it treats it as a 
- *    no-op and skips forward in the circular queue until it finds a non-seek 
+ * 1. **Seek Skipping:** If the current command is `CdlSeekL`, it treats it as a
+ *    no-op and skips forward in the circular queue until it finds a non-seek
  *    command or the queue is exhausted.
  *
  * 2. **Read Command Processing (`CdlReadN`, `CdlReadS`, etc.):**
  *    For commands that involve reading data:
- *    - It configures the `CD_SYSTEM` state with the resource's total data size, 
+ *    - It configures the `CD_SYSTEM` state with the resource's total data size,
  *      remaining bytes, destination buffer, and transfer callback.
- *    - Depending on the `executionMode`, it may perform a blocking read via 
+ *    - Depending on the `executionMode`, it may perform a blocking read via
  *      `CdGetSector` and `CdSync`.
- *    - If in standard asynchronous mode (`executionMode == 0`), it installs 
- *      `cdrom_handle_ready_interrupt` as the `CdReadyCallback` to handle 
+ *    - If in standard asynchronous mode (`executionMode == 0`), it installs
+ *      `cdrom_handle_ready_interrupt` as the `CdReadyCallback` to handle
  *      incremental sector delivery.
  *
  * 3. **Generic Command Processing:**
- *    For non-read commands (like `CdlPause` or `CdlSetmode`), it dispatches the 
+ *    For non-read commands (like `CdlPause` or `CdlSetmode`), it dispatches the
  *    command based on the `executionMode`:
  *    - **Mode 0:** Standard asynchronous dispatch via `CdControlF`.
  *    - **Mode 1:** Synchronous dispatch; blocks until the sector is read.
  *    - **Mode 2:** Post-read dispatch; reads the sector first, then issues the command.
  *
  * @param cmd            The CD-ROM command byte to execute.
- * @param sectorBuffer   Pointer to the buffer where sector data should be read 
+ * @param sectorBuffer   Pointer to the buffer where sector data should be read
  *                       (used in synchronous/blocking modes).
  * @param executionMode  Determines the synchronicity of the command:
  *                       0 = Asynchronous (installs callbacks).
  *                       1 = Synchronous (blocks on CdGetSector before/during).
  *                       2 = Synchronous (blocks on CdGetSector before dispatch).
  *
- * @note Special handling is provided for command 0xE (`CdlSetmode`), which 
+ * @note Special handling is provided for command 0xE (`CdlSetmode`), which
  *       requires a specific parameter buffer at 0x801ED950.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/KM6id
  */
 void cdrom_run_command(u8 command, void* sectorBuffer, s32 executionMode);
 
+/**
+ * @brief Verifies the disc's authenticity by checking a hardcoded validation ID.
+ *
+ * This callback is used during the system's initialization phase to ensure the
+ * inserted disc is a valid, authorized copy of the game. It reads a specific
+ * sector from the disc and compares its contents against a known-good ID string.
+ *
+ * @details
+ * The validation process follows these steps:
+ * 1. **Position Verification:** Reads the sector header (3 words) and compares the
+ *    lower 24 bits against `recoveryReadPosition` to ensure the drive is
+ *    reading the correct physical location on the disc.
+ * 2. **ID Extraction:** Reads the validation ID block (8 words) into
+ *    `CD_SYSTEM.discValidationId`.
+ * 3. **String Comparison:** Compares the read ID against `g_DiscValidationId`
+ *    byte-by-byte.
+ *    - **Shift-JIS Handling:** The comparison logic explicitly handles
+ *      two-byte characters (lead bytes in ranges [0x80, 0x9F] or [0xE0, 0xEF]),
+ *      ensuring both the lead and trail bytes match before proceeding.
+ * 4. **Outcome:**
+ *    - **Success:** Sets the initialization state to continue, installs the
+ *      `CD_SyncCallback_Handler`, and issues a `CdlSetmode` command to
+ *      prepare the drive for normal operation.
+ *    - **Failure:** If the ID is incorrect or the sector position is wrong,
+ *      the system enters `CD_INIT_STATE_ERROR_PAUSE`, clears the shell-open
+ *      flag, and issues a `CdlPause` to halt the drive.
+ *
+ * @param intr   Completion code from the CD-ROM drive.
+ * @param result Pointer to the drive's status byte.
+ *
+ * @note This function is called in an interrupt context.
+ * @see decomp.me: (100%) https://decomp.me/scratch/XrcPe
+ */
+void cdrom_verify_disc(u_char intr, u_char* result);
 
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
-
-
-
-
-
-
 
 s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 void ClearPointer(s8* arg0);
 s32* CD_StreamDataCallback(s32 param_1, u32 param_2);
 
 void CD_ResetSystem(void);
-void CD_DiskValidationCallback(u_char intr, u_char *result);
+
 void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 
 void FUN_80023010(void);
 
-
-
-
-void func_80022AE8(undefined4 param_1,undefined4 param_2);
-s32 func_80022040(u8 *param_1);
-void FUN_8002279c(undefined4 param_1,u_int param_2);
+void func_80022AE8(undefined4 param_1, undefined4 param_2);
+s32 func_80022040(u8* param_1);
+void FUN_8002279c(undefined4 param_1, u_int param_2);
 void CD_WaitForQueueEmpty(void);
 void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
 void CD_QueueRead(s32 arg0, void* arg1);

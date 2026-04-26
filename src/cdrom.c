@@ -971,7 +971,7 @@ u32 cdrom_process_state(void)
                         CD_SYSTEM.recoveryReadPosition.raw = (s32)g_cdResource176;
                         CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word | 0x10);
                         CdSyncCallback(CD_SyncCallback_Handler);
-                        CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
+                        CdReadyCallback((void (*)(u8, u8*))cdrom_verify_disc);
                         CD_SYSTEM.initCommand = 0x21U;
                         CD_SYSTEM.initState = 8U;
                         CdControlF(CdlReadN, (u8*)0x801ED95C);
@@ -1008,7 +1008,7 @@ u32 cdrom_process_state(void)
 
                         RetryRead: // Retry read command
                             CdSyncCallback(CD_SyncCallback_Handler);
-                            CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
+                            CdReadyCallback((void (*)(u8, u8*))cdrom_verify_disc);
 
                             CD_SYSTEM.initCommand = 0x21;
                             cdCommand = CdlReadN;
@@ -2143,11 +2143,7 @@ void cdrom_run_command(u8 cmd, void* sectorBuffer, s32 executionMode)
     CdControlF(controlParam, paramBufferSpecialCmd);
 }
 
-/**
- * decomp.me link: https://decomp.me/scratch/XrcPe
- * decomp.me (%): 100%
- */
-void CD_DiskValidationCallback(u_char intr, u_char* result)
+void cdrom_verify_disc(u_char intr, u_char* result)
 {
     s32 statusWord;
     u_char expectedChar;
