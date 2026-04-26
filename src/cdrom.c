@@ -2223,24 +2223,7 @@ void cdrom_verify_disc(u_char intr, u_char* result)
     CdControlF(CdlPause, NULL);
 }
 
-/**
- * Blocks execution until CD command queue is completely empty
- *
- * Params:
- *  None
- *
- * Returns:
- *  void
- *
- * Notes: Polls cdrom_process_state in a tight loop with VSync sync.
- *  Each iteration waits one frame via VSync(0) to avoid busy-waiting.
- *  Returns only when queue size reaches zero.
- *  Used to ensure all pending CD commands complete before proceeding.
- *
- * decomp.me link: https://decomp.me/scratch/rE8hd
- * decomp.me (%): 100%
- */
-void CD_WaitForQueueEmpty(void)
+void cdrom_wait_on_empty_queue(void)
 {
     int remaining;
 
@@ -2458,7 +2441,7 @@ s32 CD_IsQueueAvailable(s32 resourceIndex)
  * 4. Enqueues command 0x06 (CdlReadN) with resource index 0xFFFF
  *    (CD_RESOURCE_INDEX_DEFAULT) and CD_RESOURCE_ENTRIES as the destination
  *    buffer.
- * 5. Blocks via CD_WaitForQueueEmpty() until the read command completes.
+ * 5. Blocks via cdrom_wait_on_empty_queue() until the read command completes.
  * 6. Calls CD_SetAudioVolume(128, 1) to apply a default mid-level CD audio
  *    volume (0x80).
  *
@@ -2508,7 +2491,7 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes)
 
     CdIntToPos(lba, &location->pos);
     cdrom_queue_command(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
-    CD_WaitForQueueEmpty();
+    cdrom_wait_on_empty_queue();
     CD_SetAudioVolume(128, 1);
 }
 

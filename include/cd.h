@@ -797,6 +797,34 @@ void cdrom_run_command(u8 command, void* sectorBuffer, s32 executionMode);
  */
 void cdrom_verify_disc(u_char intr, u_char* result);
 
+/**
+ * @brief Blocks execution until all pending CD-ROM commands have been processed.
+ *
+ * This function provides a synchronous synchronization point. It ensures that all 
+ * previously enqueued commands (such as seeks or reads) have fully completed 
+ * their execution on the hardware before the program continues.
+ *
+ * @details
+ * The function implements a polling loop:
+ * 1. It calls `cdrom_process_state()` to drive the CD state machine and 
+ *    retrieve the number of remaining items in the circular queue.
+ * 2. If the queue is not yet empty, it calls `VSync(0)`. This yields execution 
+ *    to the system for one frame, preventing the CPU from "busy-waiting" in 
+ *    a tight loop and allowing the CD hardware/interrupts time to progress.
+ * 3. Once `cdrom_process_state()` returns 0, the loop terminates.
+ *
+ * @warning This function is blocking. Depending on the number of pending 
+ *          commands and the speed of the CD-ROM drive, it may stall the 
+ *          game for several frames. It should be used sparingly and only 
+ *          when absolute synchronization is required (e.g., before 
+ *          re-initializing the system or changing major game states).
+ *
+ * @return void
+ * 
+ * @see decomp.me: (100%) https://decomp.me/scratch/rE8hd
+ */
+void cdrom_wait_on_empty_queue(void);
+
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
@@ -815,7 +843,8 @@ void FUN_80023010(void);
 void func_80022AE8(undefined4 param_1, undefined4 param_2);
 s32 func_80022040(u8* param_1);
 void FUN_8002279c(undefined4 param_1, u_int param_2);
-void CD_WaitForQueueEmpty(void);
+
+
 void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
 void CD_QueueRead(s32 arg0, void* arg1);
 

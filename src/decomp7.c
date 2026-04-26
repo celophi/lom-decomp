@@ -178,7 +178,7 @@ void func_800160C8(void* arg0)
     params[2] = 0x100;
     params[3] = 0x1FF;
     func_80086310(0x5DC, params); // passes pointer to the array
-    CD_WaitForQueueEmpty();
+    cdrom_wait_on_empty_queue();
     D_80047400 = 0x7FD0;
     arg->unk7CBF = 1;
     arg->unk7CC0 = 0xE1000234;
