@@ -6,7 +6,7 @@ FUN_800116d8                = 0x800116D8;
 
 // cdrom.c
 cdrom_init                  = 0x80011710;
-CD_Stop                     = 0x800118DC;
+cdrom_stop                  = 0x800118DC;
 CD_StreamDataChunked        = 0x80011BF4;
 CD_QueueCommand             = 0x800120A0;
 CD_UpdateAndProcessQueue    = 0x800122C0;

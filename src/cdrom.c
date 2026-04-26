@@ -110,46 +110,7 @@ void cdrom_init()
     g_cdVSyncTimestamp = VSync(-1);
 }
 
-/**
- * @brief Stops all CD-ROM operations and resets the subsystem state
- *
- * Gracefully halts CD-ROM playback and prepares the system for either
- * shutdown or new operations. Pauses the drive and clears all internal state.
- *
- * @details
- * Performs a complete stop of the CD-ROM subsystem with the following steps:
- *
- * 1. If audio is enabled, performs a full system reset
- * 2. Clears the "playing" status flag (bit 6)
- * 3. Removes all sync and ready callbacks
- * 4. Repeatedly sends pause commands until successful
- * 5. Resets all CdSystem state variables to their default values
- * 6. Updates timestamp and clears status flags
- * 7. Flushes the CD command queue
- *
- * The function ensures the CD drive is properly paused before clearing
- * internal state to prevent any unexpected behavior.
- *
- * @note
- * - The status flag clearing (0xFFFFFFBF) specifically targets bit 6 (playing flag)
- *   while preserving all other bits
- * - The while(TRUE) loop with CdControlB ensures the pause command is
- *   successfully received by the CD hardware
- * - All state variables are explicitly zeroed to ensure clean state
- * - VSync timestamp is recorded at the end of the operation for timeout tracking
- *
- * @warning
- * - This function blocks until the CD drive acknowledges the pause command
- * - Any pending CD operations will be aborted
- * - Callbacks are cleared, so any pending operations relying on them will be lost
- * - Should not be called from within a CD callback to avoid deadlock
- *
- * @param None
- * @return void
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/M39vT
- */
-void CD_Stop(void)
+void cdrom_stop(void)
 {
     int cdResult;
     CdSystem* cdSystem;

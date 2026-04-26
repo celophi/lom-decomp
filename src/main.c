@@ -138,7 +138,7 @@ void Main(void)
             case 2:
             {
                 func_80015C48();
-                cd_stop_ret = CD_Stop();
+                cd_stop_ret = cdrom_stop();
                 // BIN/TITLE.BIN
                 CD_StreamData(4, *(new_var3 + 171));
                 GFX_Transition(0);
