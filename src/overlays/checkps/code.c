@@ -101,7 +101,7 @@ void func_8004FD68(int baseAddress)
         DrawOTag(temp_s1);
 
         func_800157DC();
-        CD_UpdateAndProcessQueue();
+        cdrom_process_state();
     } while (D_8005D060 == 0);
 
     func_800158E0();

@@ -391,10 +391,71 @@ void cdrom_stream_chunked(undefined2 param_1, codeA param_2, codeB param_3);
  */
 s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCallback callback);
 
+
+/**
+ * @brief Drains the CD command queue and drives the disc-recovery state machine
+ *
+ * Called once per frame to advance all pending CD-ROM operations. Handles
+ * three mutually exclusive execution paths depending on the current state
+ * of the CD subsystem, and updates the audio system when enabled.
+ *
+ * @details
+ * The function inspects statusFlags to choose one of three branches:
+ *
+ * **Branch 1 — Error/init recovery (statusFlags bits 0-2 set):**
+ * Runs a multi-state recovery state machine (states 1-8, 32) that attempts
+ * to re-initialize the disc drive after an error or shell-open event:
+ *   1. Sends CdlNop to poll drive status every 30 VSync frames
+ *   2. Progresses through GetStat, DiskReady, DiskType detection
+ *   3. Re-applies CdlSetmode (0xA0) and installs sync/ready callbacks
+ *   4. Issues CdlReadN to resume reading, with 270-frame timeout retries
+ *   5. On persistent errors, pauses the drive and resets to state 1
+ *
+ * **Branch 2 — Active command execution (currentCommand or initCommand != 0):**
+ * Monitors the currently executing command for completion:
+ *   - Polls syncComplete flag set by the sync callback
+ *   - Updates currentResourceIndex and currentDataSize from the queue head
+ *   - On 240-frame timeout, re-installs callbacks and retries via CdlNop
+ *   - Records VSync timestamp and remaining queue depth each frame
+ *
+ * **Branch 3 — Idle with queued commands (queue non-empty, no active command):**
+ * Bootstraps execution of the next queued command:
+ *   - Sets currentCommand to 1, marks busy flag (bit 4)
+ *   - Installs CD_OnCommandComplete and sends CdlNop to start processing
+ *   - If the queue is empty, performs periodic 30-frame status polls via CdlNop
+ *     and triggers CD_HandleSyncError if the drive reports an error (bit 4)
+ *
+ * After all branches, calls FUN_80140d48() to update the audio subsystem
+ * when g_cdAudioEnabled is set.
+ *
+ * @param None
+ *
+ * @return The number of commands remaining in the queue (0 when idle or
+ *         when the system is in the recovery state machine with bit 3 set)
+ *
+ * @note
+ * - Returns 0 immediately if statusFlags bit 3 is set (processing deferred
+ *   to CD_RecoveryStateMachine)
+ * - Raw pointer arithmetic for queue item access is preserved from the
+ *   original decompilation to maintain register-level matching
+ * - The recovery state machine shares state numbers (initState) and command
+ *   codes (initCommand 0x20-0x23) with CD_RecoveryStateMachine but
+ *   operates on a different set of transitions
+ *
+ * @warning
+ * - Must be called every frame for correct timeout and retry behavior
+ * - Not interrupt-safe; must not be called from within a CD callback
+ * - The 30/240/270-frame timeout constants assume NTSC (60 Hz) VSync rate
+ *
+ * @see decomp.me: (96.81%) https://decomp.me/scratch/Jfb6t
+ */
+u_int cdrom_process_state(void);
+
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
-u_int CD_UpdateAndProcessQueue(void);
+
+
 
 
 void CD_SyncCallback_Handler(u_char intr, u_char* result);

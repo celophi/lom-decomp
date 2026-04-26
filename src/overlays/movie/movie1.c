@@ -20,7 +20,7 @@ void FUN_80140018(s32 arg0)
     func_800157B0(1);
     VSync(0);
     func_800157DC();
-    CD_UpdateAndProcessQueue();
+    cdrom_process_state();
 
     if ((arg0 & 0xFFFF) == 0)
     {
@@ -90,7 +90,7 @@ error_loop_retry:
     new_var3--;
     VSync(0);
     func_800157DC();
-    CD_UpdateAndProcessQueue();
+    cdrom_process_state();
 
 error_loop:
     error_status = CD_GetErrorStatus();
@@ -129,7 +129,7 @@ after_wait:
         goto recheck_unk9d;
     }
 
-    CD_UpdateAndProcessQueue();
+    cdrom_process_state();
 
 recheck_unk9d:
     timeout = 0x2000;
@@ -151,7 +151,7 @@ recheck_unk9d:
     PutDispEnv(new_var5);
     SetDispMask(1);
     func_800157DC();
-    CD_UpdateAndProcessQueue();
+    cdrom_process_state();
 
     {
         u32 a0 = (u32)(arg0 & 0xFFFF);

@@ -174,7 +174,7 @@ s32 cdrom_stream(s32 command, u32 destination)
     s32 sentinel;
 
     /* Block until any in-progress CD commands finish */
-    while (CD_UpdateAndProcessQueue() != 0)
+    while (cdrom_process_state() != 0)
     {
         VSync(0);
     }
@@ -309,7 +309,7 @@ s32 cdrom_stream(s32 command, u32 destination)
         }
 
         /* Timeout elapsed without data — pump the CD command queue */
-        CD_UpdateAndProcessQueue();
+        cdrom_process_state();
         timestamp = VSync(-1);
     }
 }
@@ -638,7 +638,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
         }
 
         // Timeout — pump the CD command queue and reset the timer.
-        CD_UpdateAndProcessQueue();
+        cdrom_process_state();
         timestamp = VSync(-1);
     }
 }
@@ -754,64 +754,7 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
     return resourceEntry->dataSize;
 }
 
-/**
- * @brief Drains the CD command queue and drives the disc-recovery state machine
- *
- * Called once per frame to advance all pending CD-ROM operations. Handles
- * three mutually exclusive execution paths depending on the current state
- * of the CD subsystem, and updates the audio system when enabled.
- *
- * @details
- * The function inspects statusFlags to choose one of three branches:
- *
- * **Branch 1 — Error/init recovery (statusFlags bits 0-2 set):**
- * Runs a multi-state recovery state machine (states 1-8, 32) that attempts
- * to re-initialize the disc drive after an error or shell-open event:
- *   1. Sends CdlNop to poll drive status every 30 VSync frames
- *   2. Progresses through GetStat, DiskReady, DiskType detection
- *   3. Re-applies CdlSetmode (0xA0) and installs sync/ready callbacks
- *   4. Issues CdlReadN to resume reading, with 270-frame timeout retries
- *   5. On persistent errors, pauses the drive and resets to state 1
- *
- * **Branch 2 — Active command execution (currentCommand or initCommand != 0):**
- * Monitors the currently executing command for completion:
- *   - Polls syncComplete flag set by the sync callback
- *   - Updates currentResourceIndex and currentDataSize from the queue head
- *   - On 240-frame timeout, re-installs callbacks and retries via CdlNop
- *   - Records VSync timestamp and remaining queue depth each frame
- *
- * **Branch 3 — Idle with queued commands (queue non-empty, no active command):**
- * Bootstraps execution of the next queued command:
- *   - Sets currentCommand to 1, marks busy flag (bit 4)
- *   - Installs CD_OnCommandComplete and sends CdlNop to start processing
- *   - If the queue is empty, performs periodic 30-frame status polls via CdlNop
- *     and triggers CD_HandleSyncError if the drive reports an error (bit 4)
- *
- * After all branches, calls FUN_80140d48() to update the audio subsystem
- * when g_cdAudioEnabled is set.
- *
- * @param None
- *
- * @return The number of commands remaining in the queue (0 when idle or
- *         when the system is in the recovery state machine with bit 3 set)
- *
- * @note
- * - Returns 0 immediately if statusFlags bit 3 is set (processing deferred
- *   to CD_RecoveryStateMachine)
- * - Raw pointer arithmetic for queue item access is preserved from the
- *   original decompilation to maintain register-level matching
- * - The recovery state machine shares state numbers (initState) and command
- *   codes (initCommand 0x20-0x23) with CD_RecoveryStateMachine but
- *   operates on a different set of transitions
- *
- * @warning
- * - Must be called every frame for correct timeout and retry behavior
- * - Not interrupt-safe; must not be called from within a CD callback
- * - The 30/240/270-frame timeout constants assume NTSC (60 Hz) VSync rate
- *
- * @see decomp.me: (96.81%) https://decomp.me/scratch/Jfb6t
- */
-u32 CD_UpdateAndProcessQueue(void)
+u32 cdrom_process_state(void)
 {
     // Status and control variables
     s32 statusFlags;
@@ -2438,7 +2381,7 @@ void CD_DiskValidationCallback(u_char intr, u_char* result)
  * Returns:
  *  void
  *
- * Notes: Polls CD_UpdateAndProcessQueue in a tight loop with VSync sync.
+ * Notes: Polls cdrom_process_state in a tight loop with VSync sync.
  *  Each iteration waits one frame via VSync(0) to avoid busy-waiting.
  *  Returns only when queue size reaches zero.
  *  Used to ensure all pending CD commands complete before proceeding.
@@ -2450,7 +2393,7 @@ void CD_WaitForQueueEmpty(void)
 {
     int remaining;
 
-    while (remaining = CD_UpdateAndProcessQueue(), remaining != 0)
+    while (remaining = cdrom_process_state(), remaining != 0)
     {
         VSync(0);
     }

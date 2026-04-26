@@ -106,7 +106,7 @@ void GFX_Transition(s32 skipScreenClear)
         PutDrawEnv(&currentFb->fb.buf.drawenv);
         DrawOTag(&currentFb->fb.buf.ot[3]);
         func_800157DC();
-        CD_UpdateAndProcessQueue();
+        cdrom_process_state();
     }
 
     func_800158E0();

@@ -118,7 +118,7 @@ void RunGameOver(void)
             PutDrawEnv((DRAWENV*)(var_s0 + 0x34));
             DrawOTag((u_long*)(var_s1 + new_var));
             func_800157DC();
-            CD_UpdateAndProcessQueue();
+            cdrom_process_state();
         }
     }
     DrawSync(0);

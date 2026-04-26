@@ -107,7 +107,7 @@ void func_80015D6C(void* arg0)
             func_80056998();
             DrawOTag((u_long*)(((char*)D_800473F4) + 0x403C));
             func_800157DC();
-            CD_UpdateAndProcessQueue();
+            cdrom_process_state();
         }
     } while (D_8010D018 == 0);
     ((u8*)new_var2)[0x13E] = 0;             // FIX 3: sb [0x13e] standalone
