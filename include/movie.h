@@ -143,7 +143,7 @@ extern void func_801416C4(void);
 extern u32* func_80140F04(s32 param_1, u32 param_2);
 
 extern void cdrom_process_state(void);
-extern void CD_RecoveryReadyHandler(void);
+extern void cdrom_verify_recovery(void);
 extern s32 CD_GetErrorStatus(void);
 extern void CD_ResetSystem(void);
 extern void func_800157DC(void);

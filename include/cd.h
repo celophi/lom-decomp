@@ -507,6 +507,55 @@ u_int cdrom_process_state(void);
  */
 int cdrom_recover(void);
 
+
+ /**
+ * @brief Verifies the next CD sector header during error recovery.
+ *
+ * This function is invoked when the CD-ROM drive signals readiness while the
+ * system is in a recovery state (e.g., after a timeout or command failure).
+ * It checks the current audio mode, reads the next sector's header, and either
+ * completes the sector read, retries the current command, or falls back to a
+ * safe NOP command after exhausting retries.
+ *
+ * @details
+ * The function relies on the global flag `g_cdStatusByte3` being set to 1
+ * before it is called; otherwise it returns immediately.
+ *
+ * The logic branches based on whether audio output is enabled:
+ *
+ * - **Audio disabled (`audioEnabled != 1`):**
+ *   1. Waits for the sector header (3 words / 12 bytes) to be read into
+ *      `sectorHeaderBuffer`.
+ *   2. Compares the lower 24 bits of the header against the expected
+ *      `currentLocation.raw` disc position.
+ *   3. If they match → calls `CD_HandleSectorReadComplete(1)` to finish the
+ *      transfer.
+ *   4. If they mismatch → increments `retryCount` and re‑issues the current
+ *      command (up to 16 retries).
+ *   5. After 16 failures → marks `retryExhausted`, resets the retry counter,
+ *      sets `playbackState` based on `transferCallback`, issues a CdlNop
+ *      (command 1), and clears the recovery flag.
+ *
+ * - **Audio enabled (`audioEnabled == 1`):**
+ *   Assumes the sector is correct and immediately calls
+ *   `CD_HandleSectorReadComplete(1)`.
+ *
+ * Finally, the function clears `g_cdStatusByte3` to 0 to indicate that recovery
+ * verification has been handled.
+ *
+ * @return void
+ *
+ * @note This function is intended to be installed as a callback during recovery,
+ *       typically after `cdrom_recover()` enters a waiting state and the drive
+ *       responds with a "ready" interrupt.
+ *
+ * @warning The function spins on `CdGetSector()` until the sector header is
+ *          available; this may block execution in certain contexts.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/iWEyM
+ */
+void cdrom_verify_recovery(void);
+
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
@@ -528,7 +577,8 @@ undefined FUN_80140d48(void);
 
 void FUN_80023010(void);
 void CD_HandleSectorReadComplete(s32 arg0);
-void CD_RecoveryReadyHandler(void);
+
+
 void func_80022AE8(undefined4 param_1,undefined4 param_2);
 s32 func_80022040(u8 *param_1);
 void FUN_8002279c(undefined4 param_1,u_int param_2);

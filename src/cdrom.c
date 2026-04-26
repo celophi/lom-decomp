@@ -1316,10 +1316,7 @@ s32 cdrom_recover(void)
     return 0;
 }
 
-/**
- * decomp.me (100%) https://decomp.me/scratch/iWEyM
- */
-void CD_RecoveryReadyHandler(void)
+void cdrom_verify_recovery(void)
 {
     volatile CdSystem* cdSystem;
     volatile CdSystem** new_var;

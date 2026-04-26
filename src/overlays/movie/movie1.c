@@ -550,7 +550,7 @@ void func_80140AC0(void)
     {
         if (((u8)g_cdStatusByte3) == 1)
         {
-            CD_RecoveryReadyHandler();
+            cdrom_verify_recovery();
         }
         temp = DrawSync(1);
         if (temp < 2)
