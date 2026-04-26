@@ -384,3 +384,155 @@ void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
         DrawSync(0);
     }
 }
+
+/**
+ * decomp.me link (98.86%) https://decomp.me/scratch/bjwdC
+ */
+void func_801406E4(void)
+{
+    long new_var5;
+    D_801ED500_t* new_var6;
+    int new_var;
+    void* sp10;
+    void* sp14;
+    D_801ED500_t* new_var2;
+    s32 var_s2 = 0;
+    D_801ED500_t* s0 = (D_801ED500_t*)0x801ED500;
+    int new_var3;
+    volatile int new_var4;
+    if (D_801ED595 != 0)
+    {
+        new_var2 = s0;
+        if ((new_var2->field9C == 0) && (s0->field9D == 0))
+        {
+            s0->field9C = 1;
+            DecDCTin((u_long*)s0->ptr10[s0->field93], (s0->field90 & 0xFFFFu) == 0);
+            {
+                s32 temp = ((s16)s0->field34) * ((s16)s0->field36);
+                new_var3 = temp + (((unsigned)temp) >> 31);
+                DecDCTout((u_long*)s0->ptr18[s0->field99], new_var3 >> 1);
+            }
+            s0->field95 = 0;
+        }
+    }
+    if ((D_801ED595 == 0) & 0xFFFFu)
+    {
+        ;
+        {
+            u8 v0 = ((D_801ED500_t*)0x801ED500)->field94;
+            if (v0 != 0)
+            {
+                v0--;
+                ((D_801ED500_t*)0x801ED500)->field94 = v0;
+                if ((v0 & 0xFF) == 0)
+                {
+                    DecDCTvlcSize2(0);
+                }
+                if (DecDCTvlc2(0, 0, (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
+                {
+                    var_s2 = 1;
+                    ((D_801ED500_t*)0x801ED500)->field94 = 0;
+                }
+            }
+            else if (func_80141788(&sp10, &sp14) != 0)
+            {
+                ((D_801ED500_t*)0x801ED500)->field48 = ((u32*)sp14)[2];
+                new_var6 = (D_801ED500_t*)0x801ED500;
+                if ((((u32*)sp14)[2] >= ((D_801ED500_t*)0x801ED500)->field4C) && (new_var6->field9F == 0))
+                {
+                    ((D_801ED500_t*)0x801ED500)->field9F = 1;
+                }
+                {
+                    int one;
+                    ((D_801ED500_t*)0x801ED500)->field93 = 1 - ((D_801ED500_t*)0x801ED500)->field93;
+                }
+                if (((D_801ED500_t*)0x801ED500)->field90 == 0)
+                {
+                    DecDCTvlcSize2(0x1000);
+                    ((D_801ED500_t*)0x801ED500)->field94 = 3;
+                }
+                else
+                {
+                    DecDCTvlcSize2(0x16AA);
+                    ((D_801ED500_t*)0x801ED500)->field94 = 1;
+                }
+                if (DecDCTvlc2((u_long*)sp10,
+                               (u_long*)((D_801ED500_t*)0x801ED500)->ptr10[((D_801ED500_t*)0x801ED500)->field93],
+                               (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
+                {
+                    var_s2 = 1;
+                    ((D_801ED500_t*)0x801ED500)->field94 = 0;
+                }
+            }
+            else
+            {
+                if (((!sp14) && (!sp14)) && (!sp14))
+                {
+                }
+                if ((((D_801ED500_t*)0x801ED500)->field9E != 0) && (((D_801ED500_t*)0x801ED500)->field9C == 0))
+                {
+                    ((D_801ED500_t*)0x801ED500)->field9F = 2;
+                }
+            }
+        }
+    }
+    new_var3 = 0;
+    if (var_s2 != new_var3)
+    {
+        func_80141858();
+        s0 = (D_801ED500_t*)0x801ED500;
+        if ((s0->field9C == new_var3) && (new_var = s0->field9D == new_var3))
+        {
+            s0->field9C = 1;
+            DecDCTin((u_long*)s0->ptr10[s0->field93], s0->field90 == 0);
+            {
+                s32 temp = ((s16)s0->field34) * ((s16)s0->field36);
+                new_var = ((unsigned)temp) >> 31;
+                DecDCTout((u_long*)s0->ptr18[s0->field99], (temp + new_var) >> 1);
+            }
+        }
+        else
+        {
+            D_801ED595 = 1;
+        }
+    }
+    s0 = (D_801ED500_t*)0x801ED500;
+    if (g_cdAudioReady != 0)
+    {
+        if (func_8014159C(&sp10) != 0)
+        {
+            new_var4 = (s0->field48 = ((u32*)sp10)[2]);
+            if ((new_var4 > s0->field4C) && (s0->field9F < 2))
+            {
+                s0->field9F = 2;
+            }
+            func_80023334(new_var4);
+        }
+        s0 = (D_801ED500_t*)0x801ED500;
+        if (D_801ED592 == 2)
+        {
+            s0 = (D_801ED500_t*)0x801ED500;
+            new_var5 = s0->field54;
+            var_s2 = s0->field70;
+            if (var_s2 >= ((s32)(new_var5 >> 1)))
+            {
+                func_8002246C(3);
+                s0->field92 = 0;
+            }
+        }
+        s0 = (D_801ED500_t*)0x801ED500;
+        if ((s0->field64 != ((D_801ED500_t*)0x801ED500)->field68) ||
+            (((D_801ED500_t*)0x801ED500)->field88 != ((D_801ED500_t*)0x801ED500)->field8C))
+        {
+            s32 tmp = func_800233B8();
+            if (((tmp != (-1)) && (((D_801ED500_t*)0x801ED500)->field70 != 0)) &&
+                (((D_801ED500_t*)0x801ED500)->field68 != ((u32)(tmp * 2))))
+            {
+                func_801418B0(tmp);
+            }
+            do
+            {
+            } while (0);
+        }
+    }
+}
