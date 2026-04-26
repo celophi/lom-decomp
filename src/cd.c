@@ -52,13 +52,7 @@ void CD_Initialize()
     int cdResult;
 
     // Wait for CD-ROM system to initialize
-    while (TRUE)
-    {
-        if (CdInit() != 0)
-        {
-            break;
-        }
-    }
+    while (CdInit() == 0);
 
     CdSetDebug(0);
 
@@ -133,15 +127,7 @@ void CD_Initialize()
     CD_SYSTEM.setModeParamBlocking[3] = 0;
 
     // CdlNop (1) — read current drive status into statusByte
-    while (TRUE)
-    {
-        cdResult = CdControlB(CdlNop, NULL, &CD_SYSTEM.statusByte);
-
-        if (cdResult != 0)
-        {
-            break;
-        }
-    }
+    while (CdControlB(CdlNop, NULL, &CD_SYSTEM.statusByte) == 0);
 
     // If shell-open flag (0x10) is set, block until disc becomes ready
     if ((g_cdStatusByte & CdlStatShellOpen) != 0)
@@ -155,15 +141,7 @@ void CD_Initialize()
     }
 
     // CdlSetmode (14) — apply mode byte (0xA0) to the drive
-    while (TRUE)
-    {
-        cdResult = CdControlB(CdlSetmode, CD_SYSTEM.setModeParamBlocking, NULL);
-
-        if (cdResult != 0)
-        {
-            break;
-        }
-    }
+    while (CdControlB(CdlSetmode, CD_SYSTEM.setModeParamBlocking, NULL) == 0);
 
     // Record current frame counter for timeout tracking
     g_cdVSyncTimestamp = VSync(-1);
