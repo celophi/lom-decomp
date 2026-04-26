@@ -314,49 +314,7 @@ s32 cdrom_stream(s32 command, u32 destination)
     }
 }
 
-/**
- * @brief Streams and decompresses CD-ROM data into caller-supplied chunks via callbacks.
- *
- * A variant of cdrom_stream that delivers decompressed output through a
- * callback-based chunked buffer interface instead of a single fixed destination.
- * Supports two output modes:
- *
- *   DIRECT MODE  — When pfnGetBuffer sets *outChunkSize = -1, the decompressor
- *                  writes straight into the caller's buffer (same as cdrom_stream).
- *
- *   CHUNKED MODE — When pfnGetBuffer sets *outChunkSize to a positive value,
- *                  data is first decompressed into an intermediate staging buffer
- *                  at 0x801DA000, then copied out into caller-supplied chunks.
- *                  Each time a chunk is fully filled, pfnChunkDone is called and
- *                  pfnGetBuffer is called again for the next chunk.
- *
- * STAGING BUFFER (chunked mode only):
- *   0x801DA000 — stagingWritePtr starts here; decompressor writes fresh output
- *   0x801DBBE8 — stagingEnd; decompressor stops when it reaches this address
- *
- *   When the staging buffer fills before the stream ends, the last 4096 bytes
- *   of output (the LZ sliding-window dictionary) are copied back to 0x801DA000
- *   and decompression resumes at 0x801DB000. This preserves back-reference
- *   validity across staging-buffer resets.
- *
- * @param resourceIndex   CD resource index (lower 16 bits) passed to CD_QueueCommand.
- * @param pfnGetBuffer    Callback: u8* fn(int totalBytesDelivered, int* outChunkSize)
- *                          Returns a pointer to the next destination buffer.
- *                          Sets *outChunkSize to that buffer's capacity, or -1 for unlimited.
- *                          Called at startup (totalBytesDelivered=0) and after each completed chunk.
- * @param pfnChunkDone    Callback: void fn(int chunkIndex)
- *                          Called when each destination chunk is completely filled, and
- *                          once more at end-of-stream for the final (possibly partial) chunk.
- *
- * TODO: Confirm why dstEnd is set 0x418 (1048) bytes before chunk end in chunked mode —
- *       is this a safety guard to prevent overrun during a partial sector flush?
- * TODO: Determine whether pfnGetBuffer's totalBytesDelivered argument is used as a byte
- *       offset into an asset/resource table by any caller.
- * TODO: Verify whether pfnChunkDone's chunkIndex is ever used by callers or always ignored.
- *
- * @see decomp.me: (93.03%) https://decomp.me/scratch/4WZBs
- */
-void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pfnChunkDone)
+void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pfnChunkDone)
 {
     int timestamp;
 
