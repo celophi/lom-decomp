@@ -68,7 +68,7 @@ OBJCOPY      	:= $(CROSS)objcopy
 # -O2            Optimization level that matches the original compiler output.
 # -G0 / -G4     Controls the "small data" threshold. -G0 means nothing goes in
 #                the $gp-relative section; -G4 allows data ≤4 bytes to use $gp.
-#                Most files use -G0, but cd.c needs -G4 to match the original.
+#                Most files use -G0, but cdrom.c needs -G4 to match the original.
 # -g             Emit debug info (doesn't affect code generation on this GCC).
 # -fsigned-char  Treat bare 'char' as signed (PSX SDK convention).
 #
@@ -104,7 +104,7 @@ MASPSX_PP_FLAGS 	:= --macro-inc
 
 # ─── Source Files ───────────────────────────────────────────────────────────────
 #
-# C files are split by compiler flags. Most use CFLAGS_G0; only cd.c uses G4.
+# C files are split by compiler flags. Most use CFLAGS_G0; only cdrom.c uses G4.
 # If a future file needs different flags, add it to the appropriate list.
 #
 # "Non-matching" .s files (asm/nonmatchings/) are NOT listed here — they get
@@ -239,7 +239,7 @@ SRCS_G0 := \
 	src/main.c
 
 SRCS_G4 := \
-	src/cd.c \
+	src/cdrom.c \
 	src/decomp2.c \
 	src/decomp5.c \
 	src/decomp6.c 
@@ -418,7 +418,7 @@ $(OBJS_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
 
-# ── C files compiled with -G4 (cd.c) ──
+# ── C files compiled with -G4 (cdrom.c) ──
 $(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \

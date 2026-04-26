@@ -194,7 +194,7 @@ lom-decomp/
 │   │   ├── libgte/                 # Geometry Transform Engine
 │   │   ├── libpress/               # Data compression
 │   │   └── libspu/                 # Sound Processing Unit
-│   ├── cd.c                        # CD-ROM subsystem
+│   ├── cdrom.c                     # CD-ROM subsystem
 │   ├── decomp1.c ... decomp8.c     # Identified translation units
 │   ├── main.c                      # Entry point
 │   └── unk3.c ... unk9.c           # Translation units pending identification

@@ -27,7 +27,7 @@ void Main(void)
     SetVideoMode(0);
     SpuInit();
     FUN_80015c18();
-    CD_Initialize();
+    cdrom_init();
     InitGeom();
     InitCARD(0);
     StartCARD();

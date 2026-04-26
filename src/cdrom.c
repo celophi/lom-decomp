@@ -5,7 +5,7 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
-void CD_Initialize()
+void cdrom_init()
 {
     int queueEndMarker;
     int queueCount;

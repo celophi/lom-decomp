@@ -216,7 +216,7 @@ extern u8 D_801ED590;
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/DBYkw
  */
-void CD_Initialize(void);
+void cdrom_init(void);
 void CD_Stop(void);
 s32 CD_StreamData(s32 command, u32 destination);
 void CD_HandleSyncError(void);
