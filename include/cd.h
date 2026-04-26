@@ -178,6 +178,44 @@ extern u8 D_801ED590;
 #define CD_INIT_STATE_ERROR_PAUSE 0x20
 
 // Prototypes
+
+/**
+ * @brief Cold-start initialization of the CD-ROM subsystem
+ *
+ * Performs complete hardware and software initialization of the PlayStation's
+ * CD-ROM drive. This function must be called before any other CD operations.
+ *
+ * @details
+ * Spin-waits on CdInit() until the hardware is ready, then performs the
+ * following initialization steps:
+ *
+ * 1. Saves and clears previous sync/ready callbacks
+ * 2. Resets all CdSystem state (flags, counters, queue indices, command state)
+ * 3. Clears statusFlags bits 0-6 individually (preserves only bit 7)
+ * 4. Zeros all 16 command queue entries, defaulting buffers to scratchpad RAM
+ * 5. Sets CD mode to CdlModeSpeed | CdlModeSize1 (double speed + 2340-byte sectors)
+ * 6. Polls CdlNop to read current drive status
+ * 7. If shell is open, blocks until disc becomes ready
+ * 8. Applies mode via CdlSetmode and records VSync timestamp
+ *
+ * @note
+ * - The per-bit status flag clearing (0x01 through 0x40, out of order) matches
+ *   the original assembly's individual AND instructions exactly for 100% matching
+ * - g_commandQueueOffset points to items[11]; the loop uses queueItem[4] to walk
+ *   through all 16 entries via negative indexing
+ * - Scratchpad RAM at 0x1F800000 is used as default buffer for queue entries
+ * - Spin-waits on CdInit() and CdControlB() ensure hardware is ready before proceeding
+ *
+ * @warning
+ * - This function blocks until the CD hardware is initialized
+ * - If the disc tray is open, it will block until a disc is inserted and ready
+ * - Should only be called once during system startup
+ *
+ * @param None
+ * @return void
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/DBYkw
+ */
 void CD_Initialize(void);
 void CD_Stop(void);
 s32 CD_StreamData(s32 command, u32 destination);
