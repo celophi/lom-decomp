@@ -116,7 +116,24 @@ typedef struct
     u8 field9F;
 } D_801ED500_t;
 
+typedef struct
+{
+    u8 pad0[0x97];
+    u8 unk97;
+    u8 pad98[1];
+    u8 unk99;
+    u8 unk9A;
+    u8 pad9B[1];
+    u8 unk9C;
+} BaseObj;
+typedef struct
+{
+    u8 pad[0x18];
+    u_long* unk18;
+} SubObj;
+
 extern u_char g_cdAudioReady;
+extern u8 g_cdStatusByte3;
 extern void* D_80180014;
 extern u8 D_801ED590;
 extern u8 D_801ED595;
@@ -126,6 +143,7 @@ extern void func_801416C4(void);
 extern u32* func_80140F04(s32 param_1, u32 param_2);
 
 extern void CD_UpdateAndProcessQueue(void);
+extern void CD_RecoveryReadyHandler(void);
 extern s32 CD_GetErrorStatus(void);
 extern void CD_ResetSystem(void);
 extern void func_800157DC(void);
@@ -135,5 +153,6 @@ extern void func_80140358(s32 a0, s32 a1, s32 a2, s32 a3);
 extern void func_801406E4(void);
 extern void FUN_80140d48(void);
 extern void func_80023030(s32 arg0);
+extern void func_80140C00(void);
 
 #endif

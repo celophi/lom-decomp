@@ -536,3 +536,67 @@ void func_801406E4(void)
         }
     }
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/HVkZ6
+ */
+void func_80140AC0(void)
+{
+    volatile BaseObj* base = (volatile BaseObj*)0x801ED500;
+    s32 temp;
+    BaseObj* bp_high;
+    int new_var;
+    if (D_801ED590 == 0)
+    {
+        if (((u8)g_cdStatusByte3) == 1)
+        {
+            CD_RecoveryReadyHandler();
+        }
+        temp = DrawSync(1);
+        if (temp < 2)
+        {
+            LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
+            base->unk97 = (s8)(temp + 1);
+            bp_high = (BaseObj*)0x801e0000;
+            goto check;
+        }
+        else
+        {
+            base->unk9A = 1U;
+            bp_high = (BaseObj*)0x801e0000;
+            goto check;
+        }
+    }
+    else
+    {
+        temp = (s32)BreakDraw();
+        new_var = 0;
+        if (temp != (-1))
+        {
+            LoadImage2((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
+            if (temp == new_var)
+            {
+                bp_high = (BaseObj*)0x801e0000;
+                goto check;
+            }
+            DrawOTag((u_long*)temp);
+            bp_high = (BaseObj*)0x801e0000;
+            goto check;
+        }
+        else
+        {
+            LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
+            ;
+        }
+    }
+check:
+{
+    BaseObj* bp = (BaseObj*)(((u_int)((BaseObj*)0x801e0000)) | 0xd500);
+    if (bp->unk9A == new_var)
+    {
+        func_80140C00();
+        return;
+    }
+    bp->unk9C = 1;
+}
+}
