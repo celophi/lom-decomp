@@ -259,7 +259,41 @@ void cdrom_init(void);
  * @see decomp.me: (100%) https://decomp.me/scratch/M39vT
  */
 void cdrom_stop(void);
-s32 CD_StreamData(s32 command, u32 destination);
+
+/**
+ * @brief Streams and decompresses CD-ROM sector data into a destination buffer
+ *
+ * Reads sectors from disc via DMA into a ring buffer (managed through
+ * scratchpad RAM), then incrementally decompresses the buffered data
+ * into the caller's destination address.
+ *
+ * @details
+ * Scratchpad RAM (0x1F800000) is used as a shared communication struct
+ * between this function and the CD read callback (CD_StreamDataCallback):
+ *
+ *   Offset  Type  Description
+ *   ------  ----  -----------
+ *   +0x00   u8    dataReady      — Set to 1 by callback when new sectors arrive
+ *   +0x01   u8    bufferWrapped  — Set to 1 when the ring buffer has wrapped
+ *   +0x04   s32   readPtr        — Current read position in ring buffer
+ *   +0x08   s32   writePtr       — Current write position in ring buffer
+ *   +0x0C   s32   bytesBuffered  — Number of valid bytes available to read
+ *   +0x10   s32   wrapOverflow   — Bytes that overflowed past ring buffer end
+ *   +0x14   s32   bytesConsumed  — Bytes consumed by decompressor this pass
+ *   +0x18   s32   (reserved)     — Initialized to 0
+ *
+ * The ring buffer ends at 0x801DC118. When it wraps, leftover unprocessed
+ * bytes are relocated to just before that address with word alignment,
+ * and the wrapOverflow count is merged into bytesBuffered.
+ *
+ * @param command      Resource index (lower 16 bits) identifying the disc data to read
+ * @param destination  RAM address where decompressed output is written
+ *
+ * @return Total number of decompressed bytes written to destination
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/SvWOg
+ */
+s32 cdrom_stream(s32 command, u32 destination);
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);

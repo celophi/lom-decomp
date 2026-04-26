@@ -127,14 +127,7 @@ void cdrom_stop(void)
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
 
-    while (TRUE)
-    {
-        cdResult = CdControlB(CdlPause, NULL, NULL);
-        if (cdResult != 0)
-        {
-            break;
-        }
-    }
+    while (CdControlB(CdlPause, NULL, NULL) == 0);
 
     CD_SYSTEM.resourceIndex = CD_RESOURCE_INDEX_INVALID;
     CD_SYSTEM.pendingQueueCount = 0;
@@ -160,40 +153,7 @@ void cdrom_stop(void)
     CdFlush();
 }
 
-/**
- * @brief Streams and decompresses CD-ROM sector data into a destination buffer
- *
- * Reads sectors from disc via DMA into a ring buffer (managed through
- * scratchpad RAM), then incrementally decompresses the buffered data
- * into the caller's destination address.
- *
- * @details
- * Scratchpad RAM (0x1F800000) is used as a shared communication struct
- * between this function and the CD read callback (CD_StreamDataCallback):
- *
- *   Offset  Type  Description
- *   ------  ----  -----------
- *   +0x00   u8    dataReady      — Set to 1 by callback when new sectors arrive
- *   +0x01   u8    bufferWrapped  — Set to 1 when the ring buffer has wrapped
- *   +0x04   s32   readPtr        — Current read position in ring buffer
- *   +0x08   s32   writePtr       — Current write position in ring buffer
- *   +0x0C   s32   bytesBuffered  — Number of valid bytes available to read
- *   +0x10   s32   wrapOverflow   — Bytes that overflowed past ring buffer end
- *   +0x14   s32   bytesConsumed  — Bytes consumed by decompressor this pass
- *   +0x18   s32   (reserved)     — Initialized to 0
- *
- * The ring buffer ends at 0x801DC118. When it wraps, leftover unprocessed
- * bytes are relocated to just before that address with word alignment,
- * and the wrapOverflow count is merged into bytesBuffered.
- *
- * @param command      Resource index (lower 16 bits) identifying the disc data to read
- * @param destination  RAM address where decompressed output is written
- *
- * @return Total number of decompressed bytes written to destination
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/SvWOg
- */
-s32 CD_StreamData(s32 command, u32 destination)
+s32 cdrom_stream(s32 command, u32 destination)
 {
     s32 unprocessedBytes;
     s32 relocDstAddr;
@@ -357,12 +317,12 @@ s32 CD_StreamData(s32 command, u32 destination)
 /**
  * @brief Streams and decompresses CD-ROM data into caller-supplied chunks via callbacks.
  *
- * A variant of CD_StreamData that delivers decompressed output through a
+ * A variant of cdrom_stream that delivers decompressed output through a
  * callback-based chunked buffer interface instead of a single fixed destination.
  * Supports two output modes:
  *
  *   DIRECT MODE  — When pfnGetBuffer sets *outChunkSize = -1, the decompressor
- *                  writes straight into the caller's buffer (same as CD_StreamData).
+ *                  writes straight into the caller's buffer (same as cdrom_stream).
  *
  *   CHUNKED MODE — When pfnGetBuffer sets *outChunkSize to a positive value,
  *                  data is first decompressed into an intermediate staging buffer
@@ -672,7 +632,7 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
             }
 
             // --- Handle ring buffer wrap-around ---
-            // (Identical logic to CD_StreamData; see that function for detailed comments)
+            // (Identical logic to cdrom_stream; see that function for detailed comments)
             wrapOverflow = streamState->wrapOverflow;
 
             if (wrapOverflow != 0)
