@@ -190,7 +190,7 @@ s32 cdrom_stream(s32 command, u32 destination)
 
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &CD_StreamDataCallback) - 1;
+    remainingDataSize = cdrom_queue_command(CdlReadN, command, NULL, &CD_StreamDataCallback) - 1;
     timestamp = VSync(-1);
 
     streamState2 = &CD_STREAM_STATE;
@@ -317,7 +317,6 @@ s32 cdrom_stream(s32 command, u32 destination)
 void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pfnChunkDone)
 {
     int timestamp;
-
     u8 srcByte;
     int decompressResult; // Return from CD_DecompressData: 0 = end-of-stream, 1 = output full
     u32 srcWord;
@@ -358,7 +357,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     scratchpad->bufferWrapped = 0;
 
     // Enqueue CdlReadN for this resource; subtract 1 to get the last valid compressed-byte offset.
-    remainingDataSize = CD_QueueCommand(CdlReadN, resourceIndex, NULL, CD_StreamDataCallback) - 1;
+    remainingDataSize = cdrom_queue_command(CdlReadN, resourceIndex, NULL, CD_StreamDataCallback) - 1;
 
     totalBytesDelivered = 0;
     chunkIndex = 0;
@@ -644,56 +643,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     }
 }
 
-/**
- * @brief Enqueues a CD-ROM command into the circular command queue
- *
- * Validates and inserts a command into the 16-entry circular command queue.
- * If the system is idle and no error/init flags are active, immediately
- * starts command execution by issuing CdlNop to kick off the state machine.
- *
- * @details
- * The function performs several layers of validation before enqueueing:
- *
- * 1. Rejects the command immediately if the "playing" status flag (bit 6) is set
- * 2. Resolves the resource index to a CdResourceEntry pointer:
- *    - 0xFFFF (CD_RESOURCE_INDEX_DEFAULT) maps to g_defaultCdResource
- *    - All other indices index into CD_RESOURCE_ENTRIES
- * 3. Deduplicates: if the system is already processing a command and the
- *    new command matches the last-enqueued (command, resourceIndex, dstBuffer,
- *    callback), the enqueue is skipped and the existing dataSize is returned
- * 4. Validates the resource entry has a non-zero disc location and data size
- * 5. Checks the circular queue is not full ((writeIndex + 1) & 0xF != readIndex)
- *
- * Once enqueued, if no command is currently active and no low-nibble status
- * flags (bits 0-3) are set, the function bootstraps execution:
- * - Sets currentCommand to 1, marks the "busy" flag (bit 4)
- * - Installs CD_OnCommandComplete and sends CdlNop to begin processing
- *
- * @param command        CD-ROM command byte (e.g., CdlReadN, CdlSeekL)
- * @param resourceIndex  Index into CD_RESOURCE_ENTRIES, or 0xFFFF for the default resource
- * @param dstBuffer      Destination buffer for read data (may be NULL for non-read commands)
- * @param callback       Callback function pointer invoked on command completion
- *
- * @return The resource's dataSize on success, or a negative error code:
- *         -3 if the system is in "playing" state (bit 6 set)
- *         -2 if the resource entry has no valid location or zero data size
- *         -1 if the command queue is full
- *
- * @note
- * - The separate re-reads of queueWriteIndex for each field store match the
- *   original assembly's volatile access pattern and must not be optimized
- * - The "last command" cache (lastCommand, resourceIndex, dstBuffer, callback)
- *   enables the deduplication check on subsequent calls
- * - When the system is already busy (currentCommand or initCommand != 0),
- *   the command is silently queued without starting execution
- *
- * @warning
- * - Not interrupt-safe; must not be called from within a CD callback
- * - The caller must ensure resourceIndex is valid or 0xFFFF
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/izXP3
- */
-s32 CD_QueueCommand(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCallback callback)
+s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCallback callback)
 {
     s32 timestamp;
     s32 writeIndex;
@@ -2654,7 +2604,7 @@ void CD_ResetSystem(void)
  * @warning
  * - Not interrupt-safe; the queue indices and entries may change between reads if
  *   called while a CD callback is active
- * - Does not prevent a race between this check and a subsequent CD_QueueCommand call;
+ * - Does not prevent a race between this check and a subsequent cdrom_queue_command call;
  *   the caller must not assume the result remains valid across VSync frames
  *
  * @param resourceIndex  Resource index to search for in the queue (lower 16 bits used)
@@ -2763,7 +2713,7 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes)
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
 
     CdIntToPos(lba, &location->pos);
-    CD_QueueCommand(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
+    cdrom_queue_command(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
     CD_WaitForQueueEmpty();
     CD_SetAudioVolume(128, 1);
 }
@@ -2773,7 +2723,7 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes)
  */
 void CD_QueueRead(s32 resourceIndex, void* dstBuffer)
 {
-    CD_QueueCommand(CdlReadN, resourceIndex, dstBuffer, 0);
+    cdrom_queue_command(CdlReadN, resourceIndex, dstBuffer, 0);
 }
 
 /**
@@ -2781,7 +2731,7 @@ void CD_QueueRead(s32 resourceIndex, void* dstBuffer)
  */
 void CD_QueueReadWithCallback(s32 resourceIndex, CdCommandCallback callback)
 {
-    CD_QueueCommand(CdlReadN, resourceIndex & 0xFFFF, 0, callback);
+    cdrom_queue_command(CdlReadN, resourceIndex & 0xFFFF, 0, callback);
 }
 
 /**
@@ -2789,7 +2739,7 @@ void CD_QueueReadWithCallback(s32 resourceIndex, CdCommandCallback callback)
  */
 void func_80014244(s32 arg0)
 {
-    CD_QueueCommand(CdlSeekL, arg0, 0, 0);
+    cdrom_queue_command(CdlSeekL, arg0, 0, 0);
 }
 
 /**
