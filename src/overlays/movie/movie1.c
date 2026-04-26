@@ -211,3 +211,176 @@ cleanup:
     VSync(0);
     SetDispMask(0);
 }
+
+/**
+ * decomp.me link (91.61%) https://decomp.me/scratch/tw6Km
+ * incorrect but better match https://decomp.me/scratch/ICOiP
+ */
+void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
+{
+    u32 p1;
+    u8* new_var6;
+    UnkState* new_var3;
+    UnkState* new_var2;
+    u32 p2;
+    UnkState* new_var4;
+    u32 p3;
+    UnkState* new_var7;
+    u8* new_var9;
+    u8** new_var8;
+    int new_var;
+    u8** new_var5;
+    AllocInfo* allocInfo = D_80180014;
+
+    ((UnkState*)0x801ED500)->unk90 = (s8)(arg1 & 0x7F);
+    if (arg1 & 0x80)
+    {
+        ((UnkState*)0x801ED500)->unk91 = 1;
+    }
+    else
+    {
+        ((UnkState*)0x801ED500)->unk91 = 0;
+    }
+
+    new_var5 = &((UnkState*)0x801ED500)->unk0;
+
+    if (D_801ED590 == 0)
+    {
+        p3 = 0x80168000;
+        p2 = 0x80179000;
+        new_var6 = (u8*)0x80147000;
+        p1 = 0x8018D000;
+
+        ((UnkState*)0x801ED500)->unk0 = new_var6;
+        p2++;
+        p2--;
+        ((UnkState*)0x801ED500)->unk1C = (u8*)0x801A3D00;
+        ((UnkState*)0x801ED500)->unk8 = (u8*)0x80160000;
+        ((UnkState*)0x801ED500)->unk84 = (u32)(-1);
+        ((UnkState*)0x801ED500)->rects[1].w = 0x1E0;
+        (new_var4 = (UnkState*)0x801ED500)->rects[0].w = 0x1E0;
+        ((UnkState*)0x801ED500)->rects[2].w = 0x18;
+        ((UnkState*)0x801ED500)->unk50 = 0x32;
+        new_var = 0x801ED500;
+        ((UnkState*)0x801ED500)->unk10 = (u8*)p2;
+        ((UnkState*)0x801ED500)->unk14 = (u8*)p1;
+        ((UnkState*)0x801ED500)->unk18 = (u8*)0x801A1000;
+        ((UnkState*)0x801ED500)->rects[0].x = p3 * 0;
+        ((UnkState*)0x801ED500)->rects[1].x = 0;
+        ((UnkState*)0x801ED500)->rects[0].y = 0;
+        ((UnkState*)0x801ED500)->rects[1].y = 0xF0;
+        ((UnkState*)0x801ED500)->rects[2].h = 0xF0;
+        ((UnkState*)0x801ED500)->rects[1].h = 0xF0;
+        ((UnkState*)0x801ED500)->rects[0].h = 0xF0;
+        ((UnkState*)0x801ED500)->rects[2].x = 0;
+        ((UnkState*)0x801ED500)->rects[2].y = 0;
+        ((UnkState*)0x801ED500)->unk54 = 0x10;
+        ((UnkState*)0x801ED500)->unk4 = (u8*)0x80147640;
+        ((UnkState*)0x801ED500)->unk98 = 0;
+        ((UnkState*)new_var)->unkC = (u8*)p3;
+    }
+    else
+    {
+        p2 = 0x11000;
+        p3 = arg3;
+        ((UnkState*)0x801ED500)->unk0 = (u8*)0x80147000;
+        ((UnkState*)0x801ED500)->unk8 = (u8*)0x80156000;
+        new_var6 = (u8*)allocInfo->unk38;
+        ((UnkState*)0x801ED500)->unk10 = (u8*)0x8015E000;
+        ((UnkState*)0x801ED500)->unk14 = (u8*)0x8016F000;
+        new_var8 = &(*new_var5);
+        new_var9 = new_var6;
+        ((UnkState*)0x801ED500)->unkC = new_var9;
+        ((UnkState*)0x801ED500)->unk18 = (u8*)(allocInfo->unk38 + p2);
+        ((UnkState*)0x801ED500)->unk1C = (u8*)(allocInfo->unk38 + 0x12E00);
+
+        if (((s16)((UnkState*)0x801ED500)->rects[0].x) >= 0x300)
+        {
+            ((UnkState*)0x801ED500)->rects[1].x = 0x200;
+            ((UnkState*)0x801ED500)->rects[1].y = 0;
+        }
+        else
+        {
+            ((UnkState*)0x801ED500)->rects[1].x =
+                (u16)(((UnkState*)0x801ED500)->rects[0].x + ((UnkState*)0x801ED500)->rects[0].w);
+            ((UnkState*)0x801ED500)->rects[1].y = ((UnkState*)0x801ED500)->rects[0].y;
+        }
+
+        new_var7 = (UnkState*)0x801ED500;
+        new_var7->rects[1].w = new_var7->rects[0].w;
+        {
+            new_var7->rects[1].h = new_var7->rects[0].h;
+            new_var7->rects[2].h = new_var7->rects[0].h;
+            new_var7->rects[2].x = (&new_var7->rects[arg3])->x;
+            // FIX: cast to unsigned short to force zero-extension (lhu) instead of sign-extension (lh)
+            p1 = (unsigned short)new_var7->rects[arg3].y;
+        }
+        new_var7->rects[2].w = 0x10;
+        new_var7->unk50 = 0x1E;
+        ((UnkState*)0x801ED500)->unk54 = 0x10;
+        ((UnkState*)0x801ED500)->unk98 = (s8)arg3;
+        ((UnkState*)0x801ED500)->unk4 = (u8*)(((u32)(*new_var8)) + 0x3C0);
+        ((UnkState*)0x801ED500)->rects[2].y = p1;
+    }
+
+    ((UnkState*)0x801ED500)->unk44 = arg0;
+    ((UnkState*)0x801ED500)->unk48 = 0;
+    ((UnkState*)0x801ED500)->unk4C = arg2;
+    ((UnkState*)0x801ED500)->unk93 = 0;
+    ((UnkState*)0x801ED500)->unk94 = 0;
+    ((UnkState*)0x801ED500)->unk95 = 0;
+    ((UnkState*)0x801ED500)->unk96 = 0;
+    ((UnkState*)0x801ED500)->unk97 = 0;
+    ((UnkState*)0x801ED500)->unk99 = 0;
+    ((UnkState*)0x801ED500)->unk9A = 0;
+    ((UnkState*)0x801ED500)->unk9B = 0;
+    ((UnkState*)0x801ED500)->unk9C = 0;
+    ((UnkState*)0x801ED500)->unk9D = 0;
+    ((UnkState*)0x801ED500)->unk9E = 0;
+    ((UnkState*)0x801ED500)->unk9F = 0;
+    ((UnkState*)0x801ED500)->unk92 = 0;
+
+    ((UnkState*)0x801ED500)->unk58[0] = 0;
+    ((UnkState*)0x801ED500)->unk58[1] = 0;
+    ((UnkState*)0x801ED500)->unk58[2] = 0;
+    ((UnkState*)0x801ED500)->unk58[3] = 0;
+    ((UnkState*)0x801ED500)->unk58[4] = 0;
+    ((UnkState*)0x801ED500)->unk58[5] = 0;
+    ((UnkState*)0x801ED500)->unk58[6] = 0;
+    ((UnkState*)0x801ED500)->unk58[7] = 0;
+    ((UnkState*)0x801ED500)->unk58[8] = 0;
+
+    ((UnkState*)0x801ED500)->unk7E = 0;
+    ((UnkState*)0x801ED500)->unk80 = (u32)(-1);
+    ((UnkState*)0x801ED500)->unk84 = (u32)(-1);
+    ((UnkState*)0x801ED500)->unk88 = (u32)(-1);
+    ((UnkState*)0x801ED500)->unk8C = (u32)(-1);
+
+    ((UnkState*)0x801ED500)->unk38 = (u32)DecDCToutCallback(&func_80140AC0, p1, p2, p3);
+    ((UnkState*)0x801ED500)->unk3C = DrawSyncCallback(&func_801416C4);
+
+    if (((UnkState*)0x801ED500)->unk91 != 0)
+    {
+        func_800232A8((u32)((UnkState*)0x801ED500)->unk8, (u32)(((UnkState*)0x801ED500)->unk54 << 0xB));
+        func_80023030(0x7F);
+    }
+    else
+    {
+        func_80022848(0x7FFF);
+        func_80022F18(0xA0);
+    }
+
+    CD_WaitForQueueEmpty();
+    new_var3 = (UnkState*)0x801ED500;
+    CD_QueueCommand(0x1B, (s16)arg0, (void*)0, &func_80140F04);
+
+    if (D_801ED590 == 0)
+    {
+        VSync(p2 = 0);
+        SetDispMask(p2);
+        ClearImage(&(new_var2 = new_var3)->rects[p2], 0, p2, 0);
+        ClearImage(&((UnkState*)0x801ED500)->rects[1], p2, 0, p2);
+        DecDCTvlcBuild((u_short*)new_var3->unkC);
+        DrawSync(0);
+    }
+}
