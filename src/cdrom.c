@@ -1219,59 +1219,7 @@ u32 cdrom_process_state(void)
     return indexDiff;
 }
 
-/**
- * @brief Processes the CD-ROM recovery/init state machine across multiple VSync frames
- *
- * Drives a 4-state asynchronous state machine that reconfigures the CD-ROM
- * subsystem after an error or shell-open event. Each call advances at most
- * one state transition, allowing the caller to poll once per frame.
- *
- * @details
- * The state machine (stored in CD_SYSTEM.initState) progresses as follows:
- *
- * - **State 0 — Flush:** Calls CdFlush() to discard pending commands, then
- *   advances to state 1 with a 1-frame delay.
- *
- * - **State 1 — Set mode:** Waits for the delay to expire, then configures
- *   CD mode to 0xA0 (CdlModeSpeed | CdlModeSize1), installs
- *   CD_SyncCallback_Handler, sends CdlSetmode, and waits 4 frames.
- *   Returns 0 (still waiting) if the delay has not yet elapsed.
- *
- * - **State 2 — Set filter:** Installs sync callback, sends CdlSetfilter
- *   with file=1 channel=1, sets initCommand to 0x11 (pending demute),
- *   and advances to state 3 immediately.
- *
- * - **State 3 — Wait for sync / dispatch:** Waits for either the
- *   syncComplete flag or a 30-frame timeout, then dispatches based on
- *   initCommand:
- *     - 0x10: Re-sends CdlSetfilter (retry/default)
- *     - 0x11: Sends CdlDemute to unmute CD audio
- *     - 0x12: Sends CdlPause (command 0x09) to halt the drive
- *   After CdlSetfilter, resets initCommand to 0x10.
- *   Subtracts 30 from vsyncTimestamp to allow immediate re-entry on the
- *   next timeout cycle rather than resetting the timer.
- *
- * @param None
- *
- * @return 1 if the CD subsystem is not in recovery mode (statusFlags bit 3 clear),
- *         0 while the state machine is still processing
- *
- * @note
- * - initCommand acts as a sub-state within state 3 to sequence multiple
- *   CD commands (setfilter -> demute -> pause) across successive timeouts
- * - The filterParams buffer is written byte-by-byte to match the original
- *   assembly's sb instructions for register-level matching
- * - State 1 returns 0 early (not via the common exit) when the timestamp
- *   delay has not yet expired, matching a distinct return instruction in
- *   the original binary
- *
- * @warning
- * - Must be called every frame for correct timeout behavior
- * - The 1/4/30-frame delay constants assume NTSC (60 Hz) VSync rate
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/IvxZG
- */
-s32 CD_RecoveryStateMachine(void)
+s32 cdrom_recover(void)
 {
     u_char filterParams[2];
     s32 timestamp;
