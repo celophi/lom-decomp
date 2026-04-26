@@ -538,7 +538,7 @@ void func_801406E4(void)
 }
 
 /**
- * 
+ * decomp.me link (100%) https://decomp.me/scratch/HVkZ6
  */
 void func_80140AC0(void)
 {
