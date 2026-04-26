@@ -584,7 +584,7 @@ void cdrom_verify_recovery(void);
  *   - **All other cases (default):** Reads the command at the queue head.
  *     If it is CdlNop (1), skips forward through consecutive CdlNop entries
  *     until a different command is found or the queue is exhausted.
- *     Then dispatches the resolved command via CD_ExecuteCommand.
+ *     Then dispatches the resolved command via cdrom_run_command.
  *
  * Special handling: if the resolved command is 0x1B (audio start), enables
  * CD_SYSTEM.audioEnabled and remaps the command to CdlSeekL (6) for execution.
@@ -669,7 +669,7 @@ void cdrom_handle_ready_intr(u_char intr, u_char *result);
  * 3. If this is the final sector (size < 0x801):
  *    - Resets playbackState and transferCallback
  *    - Advances queueReadIndex; if more commands are queued, dispatches
- *      the next one via CD_ExecuteCommand and returns
+ *      the next one via cdrom_run_command and returns
  *    - Otherwise, transitions to idle: installs sync callback, removes
  *      ready callback, reads the final partial sector, clears busy flag
  *      (bit 4), and issues CdlPause
@@ -690,7 +690,7 @@ void cdrom_handle_ready_intr(u_char intr, u_char *result);
  *
  * @param arg0  Execution mode passed from the caller:
  *              0 = initial call from the ready callback (pause before final read)
- *              non-zero = chained call from CD_ExecuteCommand (pause after final read)
+ *              non-zero = chained call from cdrom_run_command (pause after final read)
  *
  * @return void
  *
@@ -711,6 +711,54 @@ void cdrom_handle_ready_intr(u_char intr, u_char *result);
  */
 void cdrom_process_sector(s32 arg0);
 
+
+/**
+ * @brief Dispatches CD-ROM commands and configures hardware for sector reads.
+ *
+ * This function takes a command byte and an execution mode, then translates them 
+ * into the appropriate low-level PsyQ CD library calls. It handles the complex 
+ * transition between seeking, reading, and managing the read-ready callbacks.
+ *
+ * @details
+ * The function operates in several distinct phases:
+ *
+ * 1. **Seek Skipping:** If the current command is `CdlSeekL`, it treats it as a 
+ *    no-op and skips forward in the circular queue until it finds a non-seek 
+ *    command or the queue is exhausted.
+ *
+ * 2. **Read Command Processing (`CdlReadN`, `CdlReadS`, etc.):**
+ *    For commands that involve reading data:
+ *    - It configures the `CD_SYSTEM` state with the resource's total data size, 
+ *      remaining bytes, destination buffer, and transfer callback.
+ *    - Depending on the `executionMode`, it may perform a blocking read via 
+ *      `CdGetSector` and `CdSync`.
+ *    - If in standard asynchronous mode (`executionMode == 0`), it installs 
+ *      `cdrom_handle_ready_interrupt` as the `CdReadyCallback` to handle 
+ *      incremental sector delivery.
+ *
+ * 3. **Generic Command Processing:**
+ *    For non-read commands (like `CdlPause` or `CdlSetmode`), it dispatches the 
+ *    command based on the `executionMode`:
+ *    - **Mode 0:** Standard asynchronous dispatch via `CdControlF`.
+ *    - **Mode 1:** Synchronous dispatch; blocks until the sector is read.
+ *    - **Mode 2:** Post-read dispatch; reads the sector first, then issues the command.
+ *
+ * @param cmd            The CD-ROM command byte to execute.
+ * @param sectorBuffer   Pointer to the buffer where sector data should be read 
+ *                       (used in synchronous/blocking modes).
+ * @param executionMode  Determines the synchronicity of the command:
+ *                       0 = Asynchronous (installs callbacks).
+ *                       1 = Synchronous (blocks on CdGetSector before/during).
+ *                       2 = Synchronous (blocks on CdGetSector before dispatch).
+ *
+ * @note Special handling is provided for command 0xE (`CdlSetmode`), which 
+ *       requires a specific parameter buffer at 0x801ED950.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/KM6id
+ */
+void cdrom_run_command(u8 command, void* sectorBuffer, s32 executionMode);
+
+
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
@@ -725,7 +773,6 @@ s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 void ClearPointer(s8* arg0);
 s32* CD_StreamDataCallback(s32 param_1, u32 param_2);
 
-void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
 void CD_DiskValidationCallback(u_char intr, u_char *result);
 void FUN_80022400(u_int param_1);

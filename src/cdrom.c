@@ -1520,7 +1520,7 @@ ReadQueueHead:
     nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
 
 ExecuteNext:
-    CD_ExecuteCommand(nextCommand, 0, 0);
+    cdrom_run_command(nextCommand, 0, 0);
 }
 
  /**
@@ -1625,7 +1625,7 @@ block_6:
                 }
                 CD_SYSTEM.playbackState = 0;
                 CD_SYSTEM.transferCallback = NULL;
-                CD_ExecuteCommand(temp_a0 & 0xFF, 0, 0);
+                cdrom_run_command(temp_a0 & 0xFF, 0, 0);
             }
             else
             {
@@ -1921,7 +1921,7 @@ void cdrom_process_sector(s32 arg0)
             // If more commands are queued, dispatch the next one immediately
             if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex)
             {
-                CD_ExecuteCommand(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command, buffer, arg0 + 1);
+                cdrom_run_command(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command, buffer, arg0 + 1);
                 return;
             }
 
@@ -2008,11 +2008,7 @@ void cdrom_process_sector(s32 arg0)
     CdControlF(cdSystem->currentCommand, (u8*)0x801ED958);
 }
 
-/**
- * decomp.me link: https://decomp.me/scratch/KM6id
- * decomp.me (%): 100%
- */
-void CD_ExecuteCommand(u8 cmd, void* sectorBuffer, s32 executionMode)
+void cdrom_run_command(u8 cmd, void* sectorBuffer, s32 executionMode)
 {
     u8* paramBufferSpecialCmd;
     s32 nextReadIndex;
