@@ -528,7 +528,7 @@ int cdrom_recover(void);
  *      `sectorHeaderBuffer`.
  *   2. Compares the lower 24 bits of the header against the expected
  *      `currentLocation.raw` disc position.
- *   3. If they match → calls `CD_HandleSectorReadComplete(1)` to finish the
+ *   3. If they match → calls `cdrom_process_sector(1)` to finish the
  *      transfer.
  *   4. If they mismatch → increments `retryCount` and re‑issues the current
  *      command (up to 16 retries).
@@ -538,7 +538,7 @@ int cdrom_recover(void);
  *
  * - **Audio enabled (`audioEnabled == 1`):**
  *   Assumes the sector is correct and immediately calls
- *   `CD_HandleSectorReadComplete(1)`.
+ *   `cdrom_process_sector(1)`.
  *
  * Finally, the function clears `g_cdStatusByte3` to 0 to indicate that recovery
  * verification has been handled.
@@ -609,6 +609,108 @@ void cdrom_verify_recovery(void);
  */
 void cdrom_complete_command(u_char intr, u_char *result);
 
+void CD_SyncCallback_Handler(u_char intr, u_char* result);
+
+ /**
+ * @brief Low-level ready callback invoked when the CD-ROM drive signals a sector is ready.
+ *
+ * This function is installed as the CdReadyCallback. It handles the transition from 
+ * the hardware signaling "ready" to the software processing the sector data. 
+ * It distinguishes between standard data reads and audio (XA) streaming.
+ *
+ * @details
+ * The handler operates in two primary modes:
+ * 
+ * **Data Mode (audioEnabled != 1):**
+ * 1. Checks if the interrupt status matches the expected state.
+ * 2. If a mismatch or error occurs, it attempts to read the sector header to verify 
+ *    the current disc position.
+ * 3. If the position is correct, it hands off to `cdrom_process_sector`.
+ * 4. If the read fails, it implements a retry mechanism (up to 17 attempts). 
+ *    On failure, it marks the system as `retryExhausted` and issues a `CdlNop` 
+ *    to reset the drive state.
+ *
+ * **Audio Mode (audioEnabled == 1):**
+ * 1. Verifies if the interrupt status matches the audio state.
+ * 2. Checks a specific hardware flag (at 0x801ED59C) to determine if the 
+ *    sector should be processed immediately or if the status should be recorded.
+ * 3. On success, invokes `cdrom_process_sector`.
+ * 4. Implements a similar retry mechanism to Data Mode if the audio read fails.
+ *
+ * @param intr   Completion code from the CD-ROM drive.
+ * @param result Pointer to the drive's status byte/result.
+ *
+ * @note This function runs in interrupt context and should not call blocking functions.
+ * @see decomp.me: (100%) https://decomp.me/scratch/kgBY4
+ */
+void cdrom_handle_ready_intr(u_char intr, u_char *result);
+
+
+/**
+ * @brief Handles completion of a CD-ROM sector read operation
+ *
+ * Called when the CD drive signals that a sector has been read into memory.
+ * Processes the received data differently depending on whether the system
+ * is in data mode or audio (XA) mode, and manages multi-sector transfers
+ * by re-issuing read commands until all data has been received.
+ *
+ * @details
+ * The function operates in two distinct modes based on audioEnabled:
+ *
+ * **Data mode (audioEnabled != 1):**
+ * 1. Invokes the transferCallback callback (if set) to obtain the destination
+ *    buffer; if the callback returns NULL, re-issues the current read
+ *    command to retry. Falls back to currentWritePtr when no callback is set.
+ * 2. If more than one sector remains (size >= 0x801):
+ *    - Reads one full sector (0x800 bytes / 0x200 words) via CdGetSector
+ *    - Advances the disc position by one sector in the command param buffer
+ *    - Decrements remaining size by 0x800
+ *    - Advances currentWritePtr by 0x800 if no transferCallback callback is set
+ * 3. If this is the final sector (size < 0x801):
+ *    - Resets playbackState and transferCallback
+ *    - Advances queueReadIndex; if more commands are queued, dispatches
+ *      the next one via CD_ExecuteCommand and returns
+ *    - Otherwise, transitions to idle: installs sync callback, removes
+ *      ready callback, reads the final partial sector, clears busy flag
+ *      (bit 4), and issues CdlPause
+ *    - The pause command timing depends on arg0: issued before the final
+ *      read when arg0 == 0, or after when arg0 != 0
+ *
+ * **Audio mode (audioEnabled == 1):**
+ * 1. Reads 3 words (12 bytes) from the sector into sectorHeaderBuffer
+ * 2. Compares the lower 24 bits of sectorHeaderBuffer[0] against currentLocation
+ *    to verify the correct disc position; if mismatched, re-issues the
+ *    current command with the expected position parameters
+ * 3. If positions match, invokes the transferCallback:
+ *    - If callback returns NULL (end of audio track): advances the queue,
+ *      resets mode to 0xA0, disables audio, pauses the drive, and records
+ *      the VSync timestamp
+ *    - If callback returns non-NULL: advances disc position by one sector
+ *      and returns to continue streaming
+ *
+ * @param arg0  Execution mode passed from the caller:
+ *              0 = initial call from the ready callback (pause before final read)
+ *              non-zero = chained call from CD_ExecuteCommand (pause after final read)
+ *
+ * @return void
+ *
+ * @note
+ * - 0x801ED958 is used as the command parameter buffer holding the current
+ *   CdlLOC disc position for read commands
+ * - The 0xFFFFFF mask in audio mode extracts the minute/second/sector BCD
+ *   position, ignoring the mode byte
+ * - g_cdReadRemainingBytes is used for the final partial sector read, converted from bytes
+ *   to words via (g_cdReadRemainingBytes + 3) >> 2
+ *
+ * @warning
+ * - Spin-waits on CdGetSector until the sector data is available
+ * - Must only be called from the CD ready callback context
+ * - The transferCallback must be valid (non-NULL) in audio mode
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/43gwj
+ */
+void cdrom_process_sector(s32 arg0);
+
 void CD_HandleSyncError(void);
 void CD_SetAudioVolume(u_char volume, int stereoChannel);
 void CD_InitResources(int lba, int dataSizeBytes);
@@ -616,13 +718,13 @@ void CD_InitResources(int lba, int dataSizeBytes);
 
 
 
-void CD_SyncCallback_Handler(u_char intr, u_char* result);
+
 
 
 s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 void ClearPointer(s8* arg0);
 s32* CD_StreamDataCallback(s32 param_1, u32 param_2);
-void CD_ReadyHandler(u_char intr, u_char *result);
+
 void CD_ExecuteCommand(u8 command, void* sectorBuffer, s32 executionMode);
 void CD_ResetSystem(void);
 void CD_DiskValidationCallback(u_char intr, u_char *result);
@@ -630,7 +732,8 @@ void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
 
 void FUN_80023010(void);
-void CD_HandleSectorReadComplete(s32 arg0);
+
+
 
 
 void func_80022AE8(undefined4 param_1,undefined4 param_2);
