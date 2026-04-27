@@ -93,7 +93,7 @@ error_loop_retry:
     cdrom_process_state();
 
 error_loop:
-    error_status = CD_GetErrorStatus();
+    error_status = cdrom_get_error_status();
 
     if (error_status != 0)
     {
@@ -206,7 +206,7 @@ check_audio_call:
 cleanup:
     func_800158E0();
 
-    CD_ResetSystem();
+    cdrom_reset();
     DrawSync(0);
     VSync(0);
     SetDispMask(0);

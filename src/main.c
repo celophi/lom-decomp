@@ -35,7 +35,7 @@ void Main(void)
     McxStartCom();
     ChangeClearPAD(0);
     InitializeControllers(0);
-    CD_InitResources(0x18, 0xB598);
+    cdrom_load_resource_table(0x18, 0xB598);
     FUN_80021fbc();
 
     // MAP/FDATA/FONT.PRS

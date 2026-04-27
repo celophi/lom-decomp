@@ -145,6 +145,6 @@ extern D_80119F00_t g_audioData;
 extern s32 g_audioDataOffset;
 extern u8 D_80180000[];
 
-extern void CD_QueueRead(s32 resourceIndex, void* dstBuffer);
+extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 
 #endif

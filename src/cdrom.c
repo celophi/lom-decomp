@@ -119,7 +119,7 @@ void cdrom_stop(void)
 
     if (g_cdAudioEnabled != 0)
     {
-        CD_ResetSystem();
+        cdrom_reset();
     }
 
     cdSystem->statusFlags.word &= 0xFFFFFFBF;
@@ -190,7 +190,7 @@ s32 cdrom_stream(s32 command, u32 destination)
 
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = cdrom_queue_command(CdlReadN, command, NULL, &CD_StreamDataCallback) - 1;
+    remainingDataSize = cdrom_queue_command(CdlReadN, command, NULL, &cdrom_handle_stream_data) - 1;
     timestamp = VSync(-1);
 
     streamState2 = &CD_STREAM_STATE;
@@ -225,7 +225,7 @@ s32 cdrom_stream(s32 command, u32 destination)
                 }
 
                 /* Decompress a chunk; returns 0 when all output is complete */
-                if (CD_DecompressData(&CD_STREAM_STATE.writePtr, &destination, decompressEnd, -4U) == 0)
+                if (cdrom_decompress_data(&CD_STREAM_STATE.writePtr, &destination, decompressEnd, -4U) == 0)
                 {
                     return destination - destStart;
                 }
@@ -318,11 +318,11 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
 {
     int timestamp;
     u8 srcByte;
-    int decompressResult; // Return from CD_DecompressData: 0 = end-of-stream, 1 = output full
+    int decompressResult; // Return from cdrom_decompress_data: 0 = end-of-stream, 1 = output full
     u32 srcWord;
     int loopCount;
     u32 alignCheck;
-    u32 decompressEnd;        // Source-side guard address passed to CD_DecompressData
+    u32 decompressEnd;        // Source-side guard address passed to cdrom_decompress_data
     u8* srcPtr;               // Read cursor into the staging buffer during the copy-out phase
     int totalBytesDelivered;  // Total decompressed bytes given to caller so far (passed to pfnGetBuffer)
     int chunkIndex;           // How many chunks delivered so far (passed to pfnChunkDone)
@@ -334,7 +334,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     s32 remainingDataSize;    // Bytes of compressed input still to consume (counts down to 0)
     int isDirectMode;         // Non-zero (0x1000) = direct mode; 0 = chunked/staging mode
     s32 bytesBuffered;        // s3
-    s32 stagingBytesProduced; // Bytes written into staging buffer by last CD_DecompressData call
+    s32 stagingBytesProduced; // Bytes written into staging buffer by last cdrom_decompress_data call
     s32 bytesConsumed;
     s32 unprocessedBytes;
     s32 alignRemainder;
@@ -357,7 +357,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     scratchpad->bufferWrapped = 0;
 
     // Enqueue CdlReadN for this resource; subtract 1 to get the last valid compressed-byte offset.
-    remainingDataSize = cdrom_queue_command(CdlReadN, resourceIndex, NULL, CD_StreamDataCallback) - 1;
+    remainingDataSize = cdrom_queue_command(CdlReadN, resourceIndex, NULL, cdrom_handle_stream_data) - 1;
 
     totalBytesDelivered = 0;
     chunkIndex = 0;
@@ -407,7 +407,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
             {
                 bytesBuffered = streamState->bytesBuffered;
 
-                // Calculate the compressed-source end-guard for CD_DecompressData.
+                // Calculate the compressed-source end-guard for cdrom_decompress_data.
                 // Hold back 280 bytes when the full stream hasn't arrived yet,
                 // to avoid consuming an incomplete sector boundary.
                 if (bytesBuffered < remainingDataSize)
@@ -422,13 +422,13 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                 // --- Direct mode: decompress straight into the caller's destination ---
                 if (isDirectMode != 0 && destination < dstEnd)
                 {
-                    CD_DecompressData(&CD_STREAM_STATE.writePtr, (u32*)&destination, decompressEnd, (u32)dstEnd);
+                    cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&destination, decompressEnd, (u32)dstEnd);
                     continue; // Loop back; decompressResult check happens below on exit
                 }
 
                 // --- Chunked mode: decompress into staging buffer, then copy to caller ---
                 srcPtr = stagingWritePtr; // Remember staging write position before this call
-                decompressResult = CD_DecompressData(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr, decompressEnd,
+                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr, decompressEnd,
                                                      (u32)stagingEnd);
 
                 // How many bytes did the decompressor write to the staging buffer this pass?
@@ -960,7 +960,7 @@ u32 cdrom_process_state(void)
                         cdSystem->setModeParamAsync[1] = 0;
                         cdSystem->setModeParamAsync[2] = 0;
                         CD_SYSTEM.setModeParamAsync[3] = 0;
-                        CdSyncCallback(CD_SyncCallback_Handler);
+                        CdSyncCallback(cdrom_handle_recovery_sync);
                         CdReadyCallback(0);
                         cdSystem->initCommand = 0x20U;
                         CdControlF(CdlSetmode, (u8*)0x801ED954);
@@ -970,7 +970,7 @@ u32 cdrom_process_state(void)
                     case 7: // Start reading
                         CD_SYSTEM.recoveryReadPosition.raw = (s32)g_cdResource176;
                         CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word | 0x10);
-                        CdSyncCallback(CD_SyncCallback_Handler);
+                        CdSyncCallback(cdrom_handle_recovery_sync);
                         CdReadyCallback((void (*)(u8, u8*))cdrom_verify_disc);
                         CD_SYSTEM.initCommand = 0x21U;
                         CD_SYSTEM.initState = 8U;
@@ -1007,7 +1007,7 @@ u32 cdrom_process_state(void)
                             }
 
                         RetryRead: // Retry read command
-                            CdSyncCallback(CD_SyncCallback_Handler);
+                            CdSyncCallback(cdrom_handle_recovery_sync);
                             CdReadyCallback((void (*)(u8, u8*))cdrom_verify_disc);
 
                             CD_SYSTEM.initCommand = 0x21;
@@ -1016,13 +1016,13 @@ u32 cdrom_process_state(void)
                             goto ExecuteCommand;
 
                         RetryPause: // Retry pause command
-                            CdSyncCallback(CD_SyncCallback_Handler);
+                            CdSyncCallback(cdrom_handle_recovery_sync);
                             cdCommand = CdlPause;
                             cdCommandParams = 0;
                             goto ExecuteCommand;
 
                         RetrySetmode: // Retry setmode command
-                            CdSyncCallback(CD_SyncCallback_Handler);
+                            CdSyncCallback(cdrom_handle_recovery_sync);
                             cdCommand = CdlSetmode;
                             cdCommandParams = (u8*)0x801ED950;
 
@@ -1137,7 +1137,7 @@ u32 cdrom_process_state(void)
                     }
                     else
                     {
-                        CdSyncCallback(CD_SyncCallback_Handler);
+                        CdSyncCallback(cdrom_handle_recovery_sync);
                         CdReadyCallback(0);
                         do
                         {
@@ -1187,7 +1187,7 @@ u32 cdrom_process_state(void)
                     {
                         if (CD_SYSTEM.statusByte & 0x10)
                         {
-                            CD_HandleSyncError();
+                            cdrom_handle_sync_error();
                         }
                         CD_SYSTEM.syncComplete = 0U;
                         CD_SYSTEM.retryCounter = 0U;
@@ -1200,7 +1200,7 @@ u32 cdrom_process_state(void)
                         CD_SYSTEM.retryCounter = (u8)(currentCommand + 1);
                         if ((u32)(currentCommand & 0xFF) >= 0xBU)
                         {
-                            CD_HandleSyncError();
+                            cdrom_handle_sync_error();
                         }
                     }
                 }
@@ -1250,7 +1250,7 @@ s32 cdrom_recover(void)
             CD_SYSTEM.setModeParamAsync[2] = 0;
             CD_SYSTEM.setModeParamAsync[3] = 0;
 
-            CdSyncCallback(CD_SyncCallback_Handler);
+            CdSyncCallback(cdrom_handle_recovery_sync);
 
             CdReadyCallback(NULL);
             // initCommand 0x10 = pending setfilter; must be stored before CdControlF (not in delay slot)
@@ -1262,7 +1262,7 @@ s32 cdrom_recover(void)
         break;
     case 2:
         // State 2: Send CdlSetfilter with file=1, channel=1, advance to state 3
-        CdSyncCallback(CD_SyncCallback_Handler);
+        CdSyncCallback(cdrom_handle_recovery_sync);
         CD_SYSTEM.initCommand = 0x11;
 
         filterParams[0] = 1;
@@ -1287,7 +1287,7 @@ s32 cdrom_recover(void)
         }
 
         // Timeout expired — dispatch follow-up command based on initCommand
-        CdSyncCallback(CD_SyncCallback_Handler);
+        CdSyncCallback(cdrom_handle_recovery_sync);
 
         initCommandByte = CD_SYSTEM.initCommand;
 
@@ -1385,7 +1385,7 @@ void cdrom_complete_command(u_char intr, u_char* result)
     {
         if (*result & 0x10)
         {
-            CD_HandleSyncError();
+            cdrom_handle_sync_error();
             return;
         }
     }
@@ -1557,7 +1557,7 @@ ExecuteNext:
  *
  * @see decomp.me: (73.39%) https://decomp.me/scratch/0Dz2i
  */
-void CD_SyncCallback_Handler(u_char intr, u_char* result)
+void cdrom_handle_recovery_sync(u_char intr, u_char* result)
 {
     u8 sp10;
     s8 sp11;
@@ -1583,7 +1583,7 @@ void CD_SyncCallback_Handler(u_char intr, u_char* result)
             cdSystem = &CD_SYSTEM;
             if (*result & 0x10)
             {
-                CD_HandleSyncError();
+                cdrom_handle_sync_error();
                 return;
             }
             goto block_6;
@@ -1927,7 +1927,7 @@ void cdrom_process_sector(s32 arg0)
 
             // No more queued commands — transition to idle state
             CD_SYSTEM.initCommand = 1;
-            CdSyncCallback(CD_SyncCallback_Handler);
+            CdSyncCallback(cdrom_handle_recovery_sync);
             CdReadyCallback(NULL);
 
             // If initial call (arg0 == 0), pause drive before reading final sector
@@ -1978,7 +1978,7 @@ void cdrom_process_sector(s32 arg0)
 
             // Audio track complete — shut down audio playback
             CD_SYSTEM.queueReadIndex = ((CD_SYSTEM.queueReadIndex + 1) & 0xF);
-            CdSyncCallback(CD_SyncCallback_Handler);
+            CdSyncCallback(cdrom_handle_recovery_sync);
             CdReadyCallback(NULL);
 
             // Restore default CD mode (double speed + 2340-byte sectors)
@@ -2210,7 +2210,7 @@ void cdrom_verify_disc(u_char intr, u_char* result)
             // Validation passed: set disc mode and begin CD reads
             CdReadyCallback(NULL);
             CD_SYSTEM_V.initCommand = 0x23; // TODO: name this constant
-            CdSyncCallback(CD_SyncCallback_Handler);
+            CdSyncCallback(cdrom_handle_recovery_sync);
             CdControlF(CdlSetmode, (u_char*)0x801ED950);
             return;
         }
@@ -2219,7 +2219,7 @@ void cdrom_verify_disc(u_char intr, u_char* result)
     // Sector position mismatch or wrong interrupt type: pause and signal error
     CdReadyCallback(NULL);
     CD_SYSTEM_V.initCommand = 0x22; // TODO: name this constant
-    CdSyncCallback(CD_SyncCallback_Handler);
+    CdSyncCallback(cdrom_handle_recovery_sync);
     CdControlF(CdlPause, NULL);
 }
 
@@ -2253,7 +2253,7 @@ void cdrom_wait_on_empty_queue(void)
  * decomp.me link: https://decomp.me/scratch/lU7lO
  * decomp.me (%): 100%
  */
-void CD_HandleSyncError(void)
+void cdrom_handle_sync_error(void)
 {
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
@@ -2283,7 +2283,7 @@ void CD_HandleSyncError(void)
  * decomp.me (%): 100%
  */
 
-void CD_SetAudioVolume(u_char volume, s32 mixMode)
+void cdrom_set_audio_volume(u_char volume, s32 mixMode)
 {
     CdlATV audioConfig[2];
 
@@ -2321,7 +2321,7 @@ void CD_SetAudioVolume(u_char volume, s32 mixMode)
  * decomp.me link: https://decomp.me/scratch/fnucZ
  * decomp.me (%): 100%
  */
-void CD_ResetSystem(void)
+void cdrom_reset(void)
 {
     AudioSystem* audioSystem = &AUDIO_SYSTEM;
 
@@ -2390,7 +2390,7 @@ void CD_ResetSystem(void)
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/l4HlL
  */
-s32 CD_IsQueueAvailable(s32 resourceIndex)
+s32 cdrom_can_queue_resource(s32 resourceIndex)
 {
     s32 queuedResourceIndex;
     s32 scanIndex;
@@ -2442,7 +2442,7 @@ s32 CD_IsQueueAvailable(s32 resourceIndex)
  *    (CD_RESOURCE_INDEX_DEFAULT) and CD_RESOURCE_ENTRIES as the destination
  *    buffer.
  * 5. Blocks via cdrom_wait_on_empty_queue() until the read command completes.
- * 6. Calls CD_SetAudioVolume(128, 1) to apply a default mid-level CD audio
+ * 6. Calls cdrom_set_audio_volume(128, 1) to apply a default mid-level CD audio
  *    volume (0x80).
  *
  * @param lba           Logical Block Address of the target sector on disc.
@@ -2464,7 +2464,7 @@ s32 CD_IsQueueAvailable(s32 resourceIndex)
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
  */
-void CD_InitResources(s32 lba, s32 dataSizeBytes)
+void cdrom_load_resource_table(s32 lba, s32 dataSizeBytes)
 {
     CdlLOCRaw* location;
     int vsyncOffset;
@@ -2492,13 +2492,13 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes)
     CdIntToPos(lba, &location->pos);
     cdrom_queue_command(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
     cdrom_wait_on_empty_queue();
-    CD_SetAudioVolume(128, 1);
+    cdrom_set_audio_volume(128, 1);
 }
 
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/OxunQ
  */
-void CD_QueueRead(s32 resourceIndex, void* dstBuffer)
+void cdrom_queue_read(s32 resourceIndex, void* dstBuffer)
 {
     cdrom_queue_command(CdlReadN, resourceIndex, dstBuffer, 0);
 }
@@ -2506,7 +2506,7 @@ void CD_QueueRead(s32 resourceIndex, void* dstBuffer)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/5M5cV
  */
-void CD_QueueReadWithCallback(s32 resourceIndex, CdCommandCallback callback)
+void cdrom_queue_read_with_callback(s32 resourceIndex, CdCommandCallback callback)
 {
     cdrom_queue_command(CdlReadN, resourceIndex & 0xFFFF, 0, callback);
 }
@@ -2522,7 +2522,7 @@ void func_80014244(s32 arg0)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/SGZF5
  */
-s32 CD_GetResourceDataSize(s32 resourceIndex)
+s32 cdrom_get_resource_size(s32 resourceIndex)
 {
     return CD_RESOURCE_ENTRIES[resourceIndex & 0xffff].dataSize;
 }
@@ -2530,7 +2530,7 @@ s32 CD_GetResourceDataSize(s32 resourceIndex)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/vfLUw
  */
-s32 CD_GetErrorStatus(void)
+s32 cdrom_get_error_status(void)
 {
     CdStatusFlags flags;
 
@@ -2567,7 +2567,7 @@ s32 CD_GetErrorStatus(void)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/HSXMR
  */
-void CD_PauseAndRestoreCallbacks(void)
+void cdrom_restore_callbacks(void)
 {
     CdSyncCallback(CD_SYSTEM.previousSyncCallback);
     CdReadyCallback(CD_SYSTEM.previousReadyCallback);
@@ -2601,7 +2601,7 @@ void CD_PauseAndRestoreCallbacks(void)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/gsUc3
  */
-s32 CD_EnterRecoveryMode(void)
+s32 cdrom_enter_recovery_mode(void)
 {
     s32 flags;
     s32 result;
@@ -2695,7 +2695,7 @@ void func_80014434(void)
  *
  * @see decomp.me: (99.83%) https://decomp.me/scratch/MlH6P
  */
-s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
+s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
 {
     u8* srcPtr;
     u8* dstPtr;
@@ -3013,7 +3013,7 @@ s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
 /**
  * decomp.me link (92.05%) https://decomp.me/scratch/34OBK
  */
-s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
+s32* cdrom_handle_stream_data(s32 arg0, u32 arg1)
 {
     s32 remaining;
     s32 temp_t1;
@@ -3171,10 +3171,10 @@ s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/JFLMN
  */
-void CD_DecompressBuffer(u8* srcStart, u8* dstStart)
+void cdrom_decompress_buffer(u8* srcStart, u8* dstStart)
 {
     srcStart++;
-    while (CD_DecompressData(&srcStart, &dstStart, (u8*)-4U, (u8*)-4U) != 0);
+    while (cdrom_decompress_data(&srcStart, &dstStart, (u8*)-4U, (u8*)-4U) != 0);
 }
 
 /**

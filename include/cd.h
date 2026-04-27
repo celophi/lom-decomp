@@ -280,7 +280,7 @@ void cdrom_stop(void);
  *
  * @details
  * Scratchpad RAM (0x1F800000) is used as a shared communication struct
- * between this function and the CD read callback (CD_StreamDataCallback):
+ * between this function and the CD read callback (cdrom_handle_stream_data):
  *
  *   Offset  Type  Description
  *   ------  ----  -----------
@@ -432,7 +432,7 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
  *   - Sets currentCommand to 1, marks busy flag (bit 4)
  *   - Installs cdrom_complete_command and sends CdlNop to start processing
  *   - If the queue is empty, performs periodic 30-frame status polls via CdlNop
- *     and triggers CD_HandleSyncError if the drive reports an error (bit 4)
+ *     and triggers cdrom_handle_sync_error if the drive reports an error (bit 4)
  *
  * After all branches, calls FUN_80140d48() to update the audio subsystem
  * when g_cdAudioEnabled is set.
@@ -475,7 +475,7 @@ u_int cdrom_process_state(void);
  *
  * - **State 1 — Set mode:** Waits for the delay to expire, then configures
  *   CD mode to 0xA0 (CdlModeSpeed | CdlModeSize1), installs
- *   CD_SyncCallback_Handler, sends CdlSetmode, and waits 4 frames.
+ *   cdrom_handle_recovery_sync, sends CdlSetmode, and waits 4 frames.
  *   Returns 0 (still waiting) if the delay has not yet elapsed.
  *
  * - **State 2 — Set filter:** Installs sync callback, sends CdlSetfilter
@@ -575,7 +575,7 @@ void cdrom_verify_recovery(void);
  *
  * **Error path (status byte bit 4 set during CdlNop):**
  * If currentCommand is 1 (CdlNop probe) and the drive reports an error,
- * calls CD_HandleSyncError() and returns immediately.
+ * calls cdrom_handle_sync_error() and returns immediately.
  *
  * **Incomplete path (status != CdlComplete):**
  * If the command did not finish successfully:
@@ -615,7 +615,7 @@ void cdrom_verify_recovery(void);
  */
 void cdrom_complete_command(u_char intr, u_char* result);
 
-void CD_SyncCallback_Handler(u_char intr, u_char* result);
+void cdrom_handle_recovery_sync(u_char intr, u_char* result);
 
 /**
  * @brief Low-level ready callback invoked when the CD-ROM drive signals a sector is ready.
@@ -783,7 +783,7 @@ void cdrom_run_command(u8 command, void* sectorBuffer, s32 executionMode);
  *      ensuring both the lead and trail bytes match before proceeding.
  * 4. **Outcome:**
  *    - **Success:** Sets the initialization state to continue, installs the
- *      `CD_SyncCallback_Handler`, and issues a `CdlSetmode` command to
+ *      `cdrom_handle_recovery_sync`, and issues a `CdlSetmode` command to
  *      prepare the drive for normal operation.
  *    - **Failure:** If the ID is incorrect or the sector position is wrong,
  *      the system enters `CD_INIT_STATE_ERROR_PAUSE`, clears the shell-open
@@ -825,15 +825,15 @@ void cdrom_verify_disc(u_char intr, u_char* result);
  */
 void cdrom_wait_on_empty_queue(void);
 
-void CD_HandleSyncError(void);
-void CD_SetAudioVolume(u_char volume, int stereoChannel);
-void CD_InitResources(int lba, int dataSizeBytes);
+void cdrom_handle_sync_error(void);
+void cdrom_set_audio_volume(u_char volume, int stereoChannel);
+void cdrom_load_resource_table(int lba, int dataSizeBytes);
 
-s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
+s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 void ClearPointer(s8* arg0);
-s32* CD_StreamDataCallback(s32 param_1, u32 param_2);
+s32* cdrom_handle_stream_data(s32 param_1, u32 param_2);
 
-void CD_ResetSystem(void);
+void cdrom_reset(void);
 
 void FUN_80022400(u_int param_1);
 undefined FUN_80140d48(void);
@@ -846,6 +846,6 @@ void FUN_8002279c(undefined4 param_1, u_int param_2);
 
 
 void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
-void CD_QueueRead(s32 arg0, void* arg1);
+void cdrom_queue_read(s32 arg0, void* arg1);
 
 #endif
