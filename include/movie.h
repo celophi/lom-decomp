@@ -159,10 +159,28 @@ typedef struct
     u8 unk9F;
 } Struct_801ED500;
 
+typedef struct
+{
+    u8 _pad0[0x18];
+    u32* ptrArray[7];
+    s16 unk34;
+    s16 unk36;
+    u8 _pad1[0x90 - 0x38];
+    u8 unk90;
+    u8 _pad2[0x96 - 0x91];
+    u8 unk96;
+    u8 unk97;
+    u8 _pad3[0x99 - 0x98];
+    u8 unk99;
+    u8 unk9A;
+    u8 unk9B;
+} GlobalStruct;
+
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
 extern void* D_80180014;
 extern u8 D_801ED590;
+extern s8 D_801ED596;
 extern u8 D_801ED595;
 extern u8 D_801ED592;
 extern void func_80140AC0(void);
