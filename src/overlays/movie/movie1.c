@@ -600,3 +600,59 @@ check:
     bp->unk9C = 1;
 }
 }
+
+/**
+ * decomp.me: (98.72%) https://decomp.me/scratch/E7XCZ
+ */
+void func_80140C00(void)
+{
+    Struct_801ED500* ptr = (Struct_801ED500*)0x801ED500;
+    unsigned short new_unk99;
+    u16 temp_a0;
+    u16 temp_a1;
+    u16 sum_temp;
+    u16* new_var;
+    s32 temp_signed;
+    s32 sum;
+    s16 a;
+    s16 c;
+    u32 product;
+    int size;
+    new_unk99 = 1 - (*((volatile u8*)(&ptr->unk99)));
+    temp_a0 = *((volatile u16*)(&ptr->unk30));
+    temp_a1 = *((volatile u16*)(&ptr->unk34));
+    sum_temp = temp_a0 + temp_a1;
+    *((volatile u16*)(&ptr->unk30)) = sum_temp;
+    temp_signed = (s16)sum_temp;
+    *((volatile u8*)(&ptr->unk99)) = new_unk99;
+    a = ptr->ch[*((volatile u8*)(&ptr->unk98))].a;
+    c = ptr->ch[*((volatile u8*)(&ptr->unk98))].c;
+    sum = a + c;
+    if (temp_signed < sum)
+    {
+        if ((*((volatile u8*)(&ptr->unk97))) < 2U)
+        {
+            product = ((s16)temp_a1) * ((s16)(*((volatile u16*)(&ptr->unk36))));
+            size = ((int)(product + (product >> 31))) >> 1;
+            DecDCTout((u32*)ptr->unk18[*((volatile u8*)(&ptr->unk99))], size);
+            *((volatile u8*)(&ptr->unk9C)) = 2;
+        }
+        else
+        {
+            *((volatile u8*)(&ptr->unk9C)) = 1;
+            *((volatile u8*)(&ptr->unk9B)) = 1;
+        }
+    }
+    else
+    {
+        *((volatile u8*)(&ptr->unk98)) = 1 - (*((volatile u8*)(&ptr->unk98)));
+        ptr->unk30 = ptr->ch[*((volatile u8*)(&ptr->unk98))].a;
+        ptr->unk32 = *(new_var = &ptr->ch[*((volatile u8*)(&ptr->unk98))].b);
+        *((volatile u8*)(&ptr->unk9D)) = 1;
+        *((volatile u8*)(&ptr->unk9C)) = 0;
+        if ((*((volatile u8*)(&ptr->unk9F))) == 1)
+        {
+            *((volatile u8*)(&ptr->unk9F)) = 2;
+        }
+    }
+}
