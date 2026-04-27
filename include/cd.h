@@ -9,24 +9,60 @@
 #define CD_COMMAND_QUEUE_SIZE 16
 
 // Structures
+
+/**
+ * Invoked per sector during a read. Receives bytes-delivered and bytes-remaining;
+ * returns the destination buffer address for the incoming sector.
+ */
 typedef u32* (*CdCommandCallback)(s32 param_1, u32 param_2);
+
+/**
+ * Saved DecDCT output callback stored in AudioSystem and restored by cdrom_reset
+ * via DecDCToutCallback().
+ */
 typedef void (*DecDCToutCallbackHandler)();
+
+/**
+ * Saved DrawSync callback stored in AudioSystem and restored by cdrom_reset
+ * via DrawSyncCallback().
+ */
 typedef void (*DrawSyncCallbackHandler)();
+
+/**
+ * cdrom_stream_chunked get-buffer callback.
+ * Returns the next destination chunk and sets its byte capacity via the out-param
+ * (−1 = unlimited / direct mode).
+ */
 typedef u8* (*codeA)(int, int*);
+
+/**
+ * cdrom_stream_chunked chunk-done callback.
+ * Invoked with the chunk index each time a chunk is fully filled and once at end-of-stream.
+ */
 typedef void (*codeB)(int);
 
+/**
+ * Disc position that can be accessed as a structured CdlLOC (minute/second/frame)
+ * or as a raw 32-bit word for fast comparison.
+ */
 typedef union
 {
     CdlLOC pos;
     u32 raw;
 } CdlLOCRaw;
 
+/**
+ * Identifies one disc resource: where it starts on disc and how many bytes it contains.
+ */
 typedef struct CdResourceEntry
 {
     CdlLOCRaw location;
     int dataSize;
 } CdResourceEntry;
 
+/**
+ * One entry in the 16-slot circular CD command queue.
+ */
 typedef struct CdCommandQueueItem
 {
     u_char command;
@@ -37,11 +73,18 @@ typedef struct CdCommandQueueItem
     CdCommandCallback callback;
 } CdCommandQueueItem;
 
+/**
+ * Circular buffer holding up to CD_COMMAND_QUEUE_SIZE pending CD commands.
+ */
 typedef struct CdCommandQueue
 {
     CdCommandQueueItem items[CD_COMMAND_QUEUE_SIZE];
 } CdCommandQueue;
 
+/**
+ * CD subsystem status word. b0 bits 0-2 are error flags; bit 4 is the busy flag;
+ * retryExhausted is set when the sector-read retry limit is exhausted.
+ */
 typedef union
 {
     u_int word;
@@ -54,6 +97,9 @@ typedef union
     } bytes;
 } CdStatusFlags;
 
+/**
+ * Central state block for the CD subsystem, mapped to 0x801ED800.
+ */
 typedef struct CdSystem
 {
     CdStatusFlags statusFlags;
@@ -101,6 +147,10 @@ typedef struct CdSystem
     CdResourceEntry defaultCdResource;
 } CdSystem;
 
+/**
+ * Ring buffer control block for streaming CD data, resident in scratchpad RAM (0x1F800000).
+ * Shared between cdrom_stream / cdrom_stream_chunked and cdrom_handle_stream_data.
+ */
 typedef struct
 {
     u8 dataReady;
@@ -114,6 +164,11 @@ typedef struct
     s32 reserved;
 } CdStreamState;
 
+/**
+ * Audio subsystem state block, mapped to 0x801ED500.
+ * Stores the DecDCT and DrawSync callbacks that were active before XA audio playback
+ * began, so cdrom_reset can restore them.
+ */
 typedef struct
 {
     u8 u_0[0x38];
