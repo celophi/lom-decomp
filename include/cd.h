@@ -723,12 +723,35 @@ void cdrom_load_resource_table(int lba, int dataSizeBytes);
  */
 s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 
+
+
 /**
- * @brief Writes 0 to a volatile byte, preventing the compiler from eliding the write.
+ * @brief Resets the CD subsystem and stops any ongoing XA audio playback.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/Y4pUH
+ * Restores DecDCT and DrawSync callbacks, clears CD sync/ready callbacks,
+ * pauses the drive, stops CD audio if active, and resets all internal state.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/fnucZ
  */
-void cdrom_clear_data_ready(s8* arg0);
+void cdrom_reset(void);
+
+/**
+ * @brief Enqueues a CdlReadN command for the given resource and destination buffer.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/OxunQ
+ */
+void cdrom_queue_read(s32 arg0, void* arg1);
+
+/**
+ * @brief Sets byte 1 of CD_SYSTEM.statusFlags to 1.
+ *
+ * Writes 1 to D_801ED801 (CdStatusFlags.bytes.b1), signalling a status
+ * condition in the CD subsystem. No callers exist in the main binary;
+ * this function is invoked from overlay code.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/9bgSH
+ */
+void func_80014434(void);
 
 /**
  * @brief Transfer callback that manages the ring buffer during sector streaming.
@@ -748,34 +771,6 @@ void cdrom_clear_data_ready(s8* arg0);
 s32* cdrom_handle_stream_data(s32 param_1, u32 param_2);
 
 /**
- * @brief Resets the CD subsystem and stops any ongoing XA audio playback.
- *
- * Restores DecDCT and DrawSync callbacks, clears CD sync/ready callbacks,
- * pauses the drive, stops CD audio if active, and resets all internal state.
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/fnucZ
- */
-void cdrom_reset(void);
-
-void FUN_80022400(u_int param_1);
-undefined FUN_80140d48(void);
-
-void FUN_80023010(void);
-
-void func_80022AE8(undefined4 param_1, undefined4 param_2);
-s32 func_80022040(u8* param_1);
-void FUN_8002279c(undefined4 param_1, u_int param_2);
-
-void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
-
-/**
- * @brief Enqueues a CdlReadN command for the given resource and destination buffer.
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/OxunQ
- */
-void cdrom_queue_read(s32 arg0, void* arg1);
-
-/**
  * @brief Decompresses a run-length encoded block from srcStart into dstStart.
  *
  * Skips the first source byte (header), then repeatedly calls cdrom_decompress_data
@@ -790,14 +785,18 @@ void cdrom_queue_read(s32 arg0, void* arg1);
 void cdrom_decompress_buffer(u8* srcStart, u8* dstStart);
 
 /**
- * @brief Sets byte 1 of CD_SYSTEM.statusFlags to 1.
+ * @brief Writes 0 to a volatile byte, preventing the compiler from eliding the write.
  *
- * Writes 1 to D_801ED801 (CdStatusFlags.bytes.b1), signalling a status
- * condition in the CD subsystem. No callers exist in the main binary;
- * this function is invoked from overlay code.
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/9bgSH
+ * @see decomp.me: (100%) https://decomp.me/scratch/Y4pUH
  */
-void func_80014434(void);
+void cdrom_clear_data_ready(s8* arg0);
+
+extern void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
+extern void FUN_80022400(u_int param_1);
+extern undefined FUN_80140d48(void);
+extern void FUN_80023010(void);
+extern void func_80022AE8(undefined4 param_1, undefined4 param_2);
+extern s32 func_80022040(u8* param_1);
+extern void FUN_8002279c(undefined4 param_1, u_int param_2);
 
 #endif
