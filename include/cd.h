@@ -775,4 +775,29 @@ void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
  */
 void cdrom_queue_read(s32 arg0, void* arg1);
 
+/**
+ * @brief Decompresses a run-length encoded block from srcStart into dstStart.
+ *
+ * Skips the first source byte (header), then repeatedly calls cdrom_decompress_data
+ * until the stream is exhausted. Bounds are set to the maximum address so no
+ * output clamping occurs.
+ *
+ * @param srcStart  Pointer to the start of the compressed source data.
+ * @param dstStart  Pointer to the destination buffer for decompressed output.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/JFLMN
+ */
+void cdrom_decompress_buffer(u8* srcStart, u8* dstStart);
+
+/**
+ * @brief Sets byte 1 of CD_SYSTEM.statusFlags to 1.
+ *
+ * Writes 1 to D_801ED801 (CdStatusFlags.bytes.b1), signalling a status
+ * condition in the CD subsystem. No callers exist in the main binary;
+ * this function is invoked from overlay code.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/9bgSH
+ */
+void func_80014434(void);
+
 #endif

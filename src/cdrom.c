@@ -2503,9 +2503,6 @@ s32 cdrom_enter_recovery_mode(void)
     return result;
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/9bgSH
- */
 void func_80014434(void)
 {
     D_801ED801 = 1;
@@ -2826,9 +2823,6 @@ s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
     return 1;
 }
 
-/**
- * decomp.me link (92.05%) https://decomp.me/scratch/34OBK
- */
 s32* cdrom_handle_stream_data(s32 arg0, u32 arg1)
 {
     s32 remaining;
@@ -2984,18 +2978,12 @@ s32* cdrom_handle_stream_data(s32 arg0, u32 arg1)
     return (s32*)result;
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/JFLMN
- */
 void cdrom_decompress_buffer(u8* srcStart, u8* dstStart)
 {
     srcStart++;
     while (cdrom_decompress_data(&srcStart, &dstStart, (u8*)-4U, (u8*)-4U) != 0);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/Y4pUH
- */
 void cdrom_clear_data_ready(s8* arg0)
 {
     volatile s8* ref = arg0;
