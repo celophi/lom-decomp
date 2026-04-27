@@ -656,3 +656,81 @@ void func_80140C00(void)
         }
     }
 }
+
+/**
+ * decomp.me (93.87%) https://decomp.me/scratch/JTTFr
+ */
+void FUN_80140d48(void)
+{
+    volatile GlobalStruct* G = (volatile GlobalStruct*)0x801ED500;
+    int new_var2;
+    u_long* new_var;
+    if (!G->unk9A)
+    {
+        if (!G->unk9B)
+        {
+            return;
+        }
+    }
+    if (G->unk90 == 0)
+    {
+        if (DrawSync(1) >= 2)
+        {
+            return;
+        }
+        if (G->unk9A)
+        {
+            u8 t = G->unk9A;
+            if (t)
+            {
+                G->unk96 = 1;
+                t = G->unk99;
+                LoadImage((RECT*)0x801ED530, (u_long*)G->ptrArray[t]);
+                G->unk97 = DrawSync(1) + 1;
+                G->unk9A = 0;
+                func_80140C00();
+            }
+            G->unk96 = 0;
+        }
+        G = (volatile GlobalStruct*)0x801ED500;
+        if (G->unk9B)
+        {
+            u8 t = G->unk9B;
+            if (t)
+            {
+                s32 temp;
+                G->unk96 = 1;
+                temp = ((s32)G->unk34) * ((s32)G->unk36);
+                new_var2 = temp + (((u32)temp) >> 31);
+                DecDCTout((u_long*)G->ptrArray[G->unk99], new_var2 >> 1);
+                G->unk9B = 0;
+            }
+            G->unk96 = 0;
+        }
+    }
+    else // <-- changed block starts here
+    {
+        if (G->unk9A)
+        {
+            u8 t = G->unk9A;
+            if (t)
+            {
+                s32 bd;
+                G->unk96 = 1;
+                new_var = BreakDraw();
+                bd = (s32)new_var;
+                if (bd != (-1))
+                {
+                    LoadImage2((RECT*)0x801ED530, (u_long*)G->ptrArray[G->unk99]);
+                    if (bd != 0)
+                    {
+                        DrawOTag((u_long*)bd);
+                    }
+                    func_80140C00();
+                    G->unk9A = 0;
+                }
+            }
+        }
+        D_801ED596 = 0; // <-- moved outside the inner if
+    }
+}
