@@ -210,7 +210,7 @@ void func_80050138(s32 arg0)
     u8* ref;
 
     cdrom_queue_read((arg0 + 0x17) & 0xFFFF, 0x80180000);
-    cdrom_wait_on_empty_queue();
+    cdrom_wait_queue_empty();
 
     offs = (u32*)0x80180004;
     ref = (u8*)0x80180000;

@@ -370,7 +370,7 @@ void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
         func_80022F18(0xA0);
     }
 
-    cdrom_wait_on_empty_queue();
+    cdrom_wait_queue_empty();
     new_var3 = (UnkState*)0x801ED500;
     cdrom_queue_command(0x1B, (s16)arg0, (void*)0, &func_80140F04);
 

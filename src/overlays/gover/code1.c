@@ -207,7 +207,7 @@ void LoadImageFromCd(s32 arg0, VramDstCoords* coordinates, u32 address)
 {
     volatile u8 dummy[8];
     cdrom_queue_read(arg0 & 0xFFFF, address);
-    cdrom_wait_on_empty_queue();
+    cdrom_wait_queue_empty();
     UploadImageDataToVram((ClutSectionHeader*)address, coordinates);
 }
 
@@ -256,7 +256,7 @@ void LoadAudioClip(s32 arg0)
         if (arg0 != (-1))
         {
             cdrom_queue_read((arg0 + 0x51) & 0xFFFF, 0x80180000UL);
-            cdrom_wait_on_empty_queue();
+            cdrom_wait_queue_empty();
             g_audioData.unk0 = 0xC;
             offset = g_audioDataOffset;
 

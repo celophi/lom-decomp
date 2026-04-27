@@ -631,7 +631,7 @@ void cdrom_verify_disc(u_char intr, u_char* result);
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/rE8hd
  */
-void cdrom_wait_on_empty_queue(void);
+void cdrom_wait_queue_empty(void);
 
 /**
  * @brief Resets CD state and enters error recovery after a sync failure.
@@ -728,7 +728,7 @@ s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Y4pUH
  */
-void ClearPointer(s8* arg0);
+void cdrom_clear_data_ready(s8* arg0);
 
 /**
  * @brief Transfer callback that manages the ring buffer during sector streaming.

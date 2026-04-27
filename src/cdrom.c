@@ -234,7 +234,7 @@ s32 cdrom_stream(s32 command, u32 destination)
             /* All currently buffered data has been fed to the decompressor */
             bytesConsumed = streamState2->writePtr - streamState2->readPtr;
             streamState2->bytesConsumed = bytesConsumed;
-            ClearPointer(&CD_STREAM_STATE.dataReady);
+            cdrom_clear_data_ready(&CD_STREAM_STATE.dataReady);
             remainingDataSize -= bytesConsumed;
 
             /* If the ring buffer hasn't wrapped, yield to let more data arrive */
@@ -2189,7 +2189,7 @@ void cdrom_verify_disc(u_char intr, u_char* result)
     CdControlF(CdlPause, NULL);
 }
 
-void cdrom_wait_on_empty_queue(void)
+void cdrom_wait_queue_empty(void)
 {
     int remaining;
 
@@ -2367,7 +2367,7 @@ void cdrom_load_resource_table(s32 lba, s32 dataSizeBytes)
 
     CdIntToPos(lba, &location->pos);
     cdrom_queue_command(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
-    cdrom_wait_on_empty_queue();
+    cdrom_wait_queue_empty();
     cdrom_set_audio_volume(128, 1);
 }
 
@@ -2996,7 +2996,7 @@ void cdrom_decompress_buffer(u8* srcStart, u8* dstStart)
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/Y4pUH
  */
-void ClearPointer(s8* arg0)
+void cdrom_clear_data_ready(s8* arg0)
 {
     volatile s8* ref = arg0;
     *ref = 0;

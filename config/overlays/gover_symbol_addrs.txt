@@ -17,7 +17,7 @@ VSync                       = 0x8002054C;
 
 // cdrom.c
 cdrom_process_state         = 0x800122C0;
-cdrom_wait_on_empty_queue   = 0x80013F2C;
+cdrom_wait_queue_empty   = 0x80013F2C;
 cdrom_queue_read = 0x800141EC;
 
 // uncategorized

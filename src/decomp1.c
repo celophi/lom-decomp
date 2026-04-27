@@ -144,7 +144,7 @@ void FUN_80011638(s32 arg0)
 
     base = (arg0 + 0x93) & 0xFFFF;
     cdrom_queue_read(base, 0x80180000);
-    cdrom_wait_on_empty_queue();
+    cdrom_wait_queue_empty();
 
     info = (s32*)0x80180004;
     ptr = &D_80046FE0;
