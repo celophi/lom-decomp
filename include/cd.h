@@ -789,6 +789,128 @@ void cdrom_decompress_buffer(u8* srcStart, u8* dstStart);
  */
 void cdrom_clear_data_ready(s8* arg0);
 
+/**
+ * @brief Checks whether a resource index is absent from the pending command queue.
+ *
+ * Scans every pending entry in the circular command queue and returns whether
+ * the given resource index is not already present, indicating it is safe to
+ * enqueue a new command for that resource without creating a duplicate.
+ *
+ * @details
+ * The scan performs the following steps:
+ *
+ * 1. Reads queueReadIndex as the starting scan position
+ * 2. Computes the number of pending entries as (queueWriteIndex - queueReadIndex) & 0xF
+ * 3. Decrements that count by 1 and compares against a sentinel of -1 to detect an
+ *    empty queue (no iterations performed)
+ * 4. For each pending slot, compares the stored resourceIndex against the lower 16
+ *    bits of the argument; returns 0 immediately on a match (duplicate found)
+ * 5. Advances scanIndex by masking with 0xF before incrementing to maintain circular
+ *    wrap semantics within the 16-entry buffer
+ * 6. Returns 1 if the full queue was scanned with no match
+ *
+ * @note
+ * - Only the lower 16 bits of resourceIndex are compared, matching the u16 storage
+ *   in CdCommandQueueItem
+ * - The decrement-before-loop pattern and sentinel value of -1 match the original
+ *   assembly's register usage exactly and must not be restructured
+ * - The mask-then-increment sequence (scanIndex = (scanIndex & 0xF) + 1) matches
+ *   the original assembly's andi + addiu pair for register-level equivalence
+ *
+ * @warning
+ * - Not interrupt-safe; the queue indices and entries may change between reads if
+ *   called while a CD callback is active
+ * - Does not prevent a race between this check and a subsequent cdrom_queue_command call;
+ *   the caller must not assume the result remains valid across VSync frames
+ *
+ * @param resourceIndex  Resource index to search for in the queue (lower 16 bits used)
+ * @return 1 if the resource index is not already queued (safe to enqueue),
+ *         0 if a matching entry was found (duplicate present)
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/l4HlL
+ */
+s32 cdrom_can_queue_resource(s32 resourceIndex);
+
+/**
+ * @brief Enqueues a CdlReadN command for the given resource with a completion callback.
+ *
+ * Like cdrom_queue_read, but delivers sector data through a callback instead of
+ * writing directly to a destination buffer. Passes only the lower 16 bits of
+ * resourceIndex to cdrom_queue_command.
+ *
+ * @param resourceIndex  Index into CD_RESOURCE_ENTRIES (lower 16 bits used).
+ * @param callback       Invoked on command completion with sector data.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/5M5cV
+ */
+void cdrom_queue_read_with_callback(s32 resourceIndex, CdCommandCallback callback);
+
+/**
+ * @brief Enqueues a CdlSeekL command to pre-position the disc head.
+ *
+ * @param resourceIndex  Index into CD_RESOURCE_ENTRIES identifying the target position.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/iUUQh
+ */
+void cdrom_queue_seek(s32 resourceIndex);
+
+/**
+ * @brief Returns the data size of a CD resource entry.
+ *
+ * @param resourceIndex  Index into CD_RESOURCE_ENTRIES (lower 16 bits used).
+ *
+ * @return The dataSize field of the resource entry in bytes.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/SGZF5
+ */
+s32 cdrom_get_resource_size(s32 resourceIndex);
+
+/**
+ * @brief Returns a numeric code describing the current CD subsystem error state.
+ *
+ * Reads CD_SYSTEM.statusFlags and maps the active error bits to a code:
+ *
+ *   Code  Condition
+ *   ----  ---------
+ *   0     No error (all flags clear, retryExhausted == 0)
+ *   1     statusFlags bit 0 set
+ *   2     statusFlags bits 1 and 2 both set
+ *   3     statusFlags bit 1 set, bit 2 clear
+ *   4     statusFlags bit 2 set, bit 1 clear
+ *   5     retryExhausted == 1
+ *
+ * @return Error code (0 = OK, 1–5 = error condition).
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/vfLUw
+ */
+s32 cdrom_get_error_status(void);
+
+/**
+ * @brief Restores previously saved CD callbacks and resets all subsystem state.
+ *
+ * Reinstalls the sync and ready callbacks that were saved before the last
+ * cdrom_init or cdrom_stop call, issues a blocking CdControlB(9) to pause
+ * the drive, then clears all queue indices, command state, and status flags.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/HSXMR
+ */
+void cdrom_restore_callbacks(void);
+
+/**
+ * @brief Requests entry into CD recovery mode if the subsystem is idle.
+ *
+ * Sets statusFlags bit 3 (the recovery flag) and resets initState to 0 only
+ * when all of the following are true: no command is active (currentCommand == 0),
+ * no init command is pending (initCommand == 0), no error flags are set (bits 0-2
+ * clear), and the queue is empty (queueReadIndex == queueWriteIndex).
+ *
+ * @return 1 if recovery mode is active (either already set, or just entered),
+ *         0 if the subsystem was busy and the request was not applied.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/gsUc3
+ */
+s32 cdrom_enter_recovery_mode(void);
+
 extern void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
 extern void FUN_80022400(u_int param_1);
 extern undefined FUN_80140d48(void);

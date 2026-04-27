@@ -2269,46 +2269,6 @@ void cdrom_reset(void)
     CD_SYSTEM.vsyncTimestamp = VSync(-1);
 }
 
-/**
- * @brief Checks whether a resource index is absent from the pending command queue
- *
- * Scans every pending entry in the circular command queue and returns whether
- * the given resource index is not already present, indicating it is safe to
- * enqueue a new command for that resource without creating a duplicate.
- *
- * @details
- * The scan performs the following steps:
- *
- * 1. Reads queueReadIndex as the starting scan position
- * 2. Computes the number of pending entries as (queueWriteIndex - queueReadIndex) & 0xF
- * 3. Decrements that count by 1 and compares against a sentinel of -1 to detect an
- *    empty queue (no iterations performed)
- * 4. For each pending slot, compares the stored resourceIndex against the lower 16
- *    bits of the argument; returns 0 immediately on a match (duplicate found)
- * 5. Advances scanIndex by masking with 0xF before incrementing to maintain circular
- *    wrap semantics within the 16-entry buffer
- * 6. Returns 1 if the full queue was scanned with no match
- *
- * @note
- * - Only the lower 16 bits of resourceIndex are compared, matching the u16 storage
- *   in CdCommandQueueItem
- * - The decrement-before-loop pattern and sentinel value of -1 match the original
- *   assembly's register usage exactly and must not be restructured
- * - The mask-then-increment sequence (scanIndex = (scanIndex & 0xF) + 1) matches
- *   the original assembly's andi + addiu pair for register-level equivalence
- *
- * @warning
- * - Not interrupt-safe; the queue indices and entries may change between reads if
- *   called while a CD callback is active
- * - Does not prevent a race between this check and a subsequent cdrom_queue_command call;
- *   the caller must not assume the result remains valid across VSync frames
- *
- * @param resourceIndex  Resource index to search for in the queue (lower 16 bits used)
- * @return 1 if the resource index is not already queued (safe to enqueue),
- *         0 if a matching entry was found (duplicate present)
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/l4HlL
- */
 s32 cdrom_can_queue_resource(s32 resourceIndex)
 {
     s32 queuedResourceIndex;
@@ -2371,41 +2331,26 @@ void cdrom_load_resource_table(s32 lba, s32 dataSizeBytes)
     cdrom_set_audio_volume(128, 1);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/OxunQ
- */
 void cdrom_queue_read(s32 resourceIndex, void* dstBuffer)
 {
     cdrom_queue_command(CdlReadN, resourceIndex, dstBuffer, 0);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/5M5cV
- */
 void cdrom_queue_read_with_callback(s32 resourceIndex, CdCommandCallback callback)
 {
     cdrom_queue_command(CdlReadN, resourceIndex & 0xFFFF, 0, callback);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/iUUQh
- */
 void cdrom_queue_seek(s32 resourceIndex)
 {
     cdrom_queue_command(CdlSeekL, resourceIndex, 0, 0);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/SGZF5
- */
 s32 cdrom_get_resource_size(s32 resourceIndex)
 {
     return CD_RESOURCE_ENTRIES[resourceIndex & 0xffff].dataSize;
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/vfLUw
- */
 s32 cdrom_get_error_status(void)
 {
     CdStatusFlags flags;
@@ -2440,9 +2385,6 @@ s32 cdrom_get_error_status(void)
     return 0;
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/HSXMR
- */
 void cdrom_restore_callbacks(void)
 {
     CdSyncCallback(CD_SYSTEM.previousSyncCallback);
@@ -2474,9 +2416,6 @@ void cdrom_restore_callbacks(void)
     CdFlush();
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/gsUc3
- */
 s32 cdrom_enter_recovery_mode(void)
 {
     s32 flags;
