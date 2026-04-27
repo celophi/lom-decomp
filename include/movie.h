@@ -132,6 +132,33 @@ typedef struct
     u_long* unk18;
 } SubObj;
 
+typedef struct
+{
+    u8 _pad0[0x18];
+    u32 unk18[2];
+    struct
+    {
+        s16 a;
+        u16 b;
+        s16 c;
+        u16 _pad;
+    } ch[2];
+    u16 unk30;
+    u16 unk32;
+    u16 unk34;
+    u16 unk36;
+    u8 _pad1[0x97 - 0x38];
+    u8 unk97;
+    u8 unk98;
+    u8 unk99;
+    u8 _pad_9a;
+    u8 unk9B;
+    u8 unk9C;
+    u8 unk9D;
+    u8 _pad_9e;
+    u8 unk9F;
+} Struct_801ED500;
+
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
 extern void* D_80180014;
