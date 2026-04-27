@@ -723,8 +723,6 @@ void cdrom_load_resource_table(int lba, int dataSizeBytes);
  */
 s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 
-
-
 /**
  * @brief Resets the CD subsystem and stops any ongoing XA audio playback.
  *

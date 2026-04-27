@@ -428,8 +428,8 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
 
                 // --- Chunked mode: decompress into staging buffer, then copy to caller ---
                 srcPtr = stagingWritePtr; // Remember staging write position before this call
-                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr, decompressEnd,
-                                                     (u32)stagingEnd);
+                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr,
+                                                         decompressEnd, (u32)stagingEnd);
 
                 // How many bytes did the decompressor write to the staging buffer this pass?
                 stagingBytesProduced = (int)stagingWritePtr - (int)srcPtr;
