@@ -314,14 +314,14 @@ void cdrom_stop(void);
  * are relocated just before that address (word-aligned) and wrapOverflow is
  * merged into bytesBuffered.
  *
- * @param command      Resource index (lower 16 bits) identifying the disc data to read
- * @param destination  RAM address where decompressed output is written
+ * @param resourceIndex Resource index (lower 16 bits) identifying the disc data to read
+ * @param destination   RAM address where decompressed output is written
  *
  * @return Total number of decompressed bytes written to destination.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/SvWOg
  */
-s32 cdrom_stream(s32 command, u32 destination);
+s32 cdrom_stream(s32 resourceIndex, u32 destination);
 
 /**
  * @brief Streams and decompresses CD-ROM data into caller-supplied chunks via callbacks.
@@ -356,7 +356,7 @@ s32 cdrom_stream(s32 command, u32 destination);
  *
  * @see decomp.me: (93.03%) https://decomp.me/scratch/4WZBs
  */
-void cdrom_stream_chunked(undefined2 param_1, codeA param_2, codeB param_3);
+void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pfnChunkDone);
 
 /**
  * @brief Enqueues a CD-ROM command into the circular command queue.
@@ -791,9 +791,12 @@ void cdrom_reset(void);
 /**
  * @brief Enqueues a CdlReadN command for the given resource and destination buffer.
  *
+ * @param resourceIndex  Index into CD_RESOURCE_ENTRIES identifying the data to read.
+ * @param dstBuffer      Destination buffer for the sector data.
+ *
  * @see decomp.me: (100%) https://decomp.me/scratch/OxunQ
  */
-void cdrom_queue_read(s32 arg0, void* arg1);
+void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 
 /**
  * @brief Sets byte 1 of CD_SYSTEM.statusFlags to 1.
@@ -814,14 +817,16 @@ void func_80014434(void);
  * returns the ring buffer base address. On subsequent calls, compacts unconsumed
  * bytes and advances the write pointer for the next incoming sector.
  *
- * @param arg0  0 on initialization; non-zero on each subsequent sector arrival.
- * @param arg1  Bytes available in the incoming sector (clamped to 0x800).
+ * @param bytesTransferred  Bytes delivered so far; 0 on the first call (initialization), non-zero on each subsequent
+ * sector arrival.
+ * @param bytesRemaining    Bytes still to read in the stream, passed as readRemainingBytes; clamped to 0x800 per
+ * sector.
  *
  * @return Destination address for the next sector DMA write.
  *
  * @see decomp.me: (92.05%) https://decomp.me/scratch/34OBK
  */
-s32* cdrom_handle_stream_data(s32 param_1, u32 param_2);
+s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining);
 
 /**
  * @brief Decompresses a run-length encoded block from srcStart into dstStart.
@@ -840,9 +845,11 @@ void cdrom_decompress_buffer(u8* srcStart, u8* dstStart);
 /**
  * @brief Writes 0 to a volatile byte, preventing the compiler from eliding the write.
  *
+ * @param dataReady  Pointer to the flag to clear (always &CdStreamState.dataReady).
+ *
  * @see decomp.me: (100%) https://decomp.me/scratch/Y4pUH
  */
-void cdrom_clear_data_ready(s8* arg0);
+void cdrom_clear_data_ready(s8* dataReady);
 
 /**
  * @brief Checks whether a resource index is absent from the pending command queue.
@@ -879,6 +886,7 @@ void cdrom_clear_data_ready(s8* arg0);
  *   the caller must not assume the result remains valid across VSync frames
  *
  * @param resourceIndex  Resource index to search for in the queue (lower 16 bits used)
+ *
  * @return 1 if the resource index is not already queued (safe to enqueue),
  *         0 if a matching entry was found (duplicate present)
  *

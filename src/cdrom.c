@@ -153,7 +153,7 @@ void cdrom_stop(void)
     CdFlush();
 }
 
-s32 cdrom_stream(s32 command, u32 destination)
+s32 cdrom_stream(s32 resourceIndex, u32 destination)
 {
     s32 unprocessedBytes;
     s32 relocDstAddr;
@@ -190,7 +190,7 @@ s32 cdrom_stream(s32 command, u32 destination)
 
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = cdrom_queue_command(CdlReadN, command, NULL, &cdrom_handle_stream_data) - 1;
+    remainingDataSize = cdrom_queue_command(CdlReadN, resourceIndex, NULL, &cdrom_handle_stream_data) - 1;
     timestamp = VSync(-1);
 
     streamState2 = &CD_STREAM_STATE;
@@ -2762,7 +2762,7 @@ s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
     return 1;
 }
 
-s32* cdrom_handle_stream_data(s32 arg0, u32 arg1)
+s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining)
 {
     s32 remaining;
     s32 temp_t1;
@@ -2788,14 +2788,14 @@ s32* cdrom_handle_stream_data(s32 arg0, u32 arg1)
     u32 temp_v1_3;
     u32 var_t0;
 
-    var_t0 = arg1;
+    var_t0 = bytesRemaining;
 
-    if (arg1 >= 0x801U)
+    if (bytesRemaining >= 0x801U)
     {
         var_t0 = 0x800;
     }
 
-    if (arg0 == 0)
+    if (bytesTransferred == 0)
     {
         CD_STREAM_STATE.dataReady = 1;
         CD_STREAM_STATE.writePtr = 0x801DC001U;
@@ -2910,7 +2910,7 @@ s32* cdrom_handle_stream_data(s32 arg0, u32 arg1)
         CD_STREAM_STATE.bytesBuffered = bytesBuffered + var_t0;
     }
 
-    if (arg1 == var_t0)
+    if (bytesRemaining == var_t0)
     {
         CD_STREAM_STATE.bufferWrapped = 1;
     }
@@ -2923,8 +2923,8 @@ void cdrom_decompress_buffer(u8* srcStart, u8* dstStart)
     while (cdrom_decompress_data(&srcStart, &dstStart, (u8*)-4U, (u8*)-4U) != 0);
 }
 
-void cdrom_clear_data_ready(s8* arg0)
+void cdrom_clear_data_ready(s8* dataReady)
 {
-    volatile s8* ref = arg0;
+    volatile s8* ref = dataReady;
     *ref = 0;
 }
