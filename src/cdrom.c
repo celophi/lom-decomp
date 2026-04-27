@@ -5,44 +5,7 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
-/**
- * @brief Cold-start initialization of the CD-ROM subsystem
- *
- * Performs complete hardware and software initialization of the PlayStation's
- * CD-ROM drive. This function must be called before any other CD operations.
- *
- * @details
- * Spin-waits on CdInit() until the hardware is ready, then performs the
- * following initialization steps:
- *
- * 1. Saves and clears previous sync/ready callbacks
- * 2. Resets all CdSystem state (flags, counters, queue indices, command state)
- * 3. Clears statusFlags bits 0-6 individually (preserves only bit 7)
- * 4. Zeros all 16 command queue entries, defaulting buffers to scratchpad RAM
- * 5. Sets CD mode to CdlModeSpeed | CdlModeSize1 (double speed + 2340-byte sectors)
- * 6. Polls CdlNop to read current drive status
- * 7. If shell is open, blocks until disc becomes ready
- * 8. Applies mode via CdlSetmode and records VSync timestamp
- *
- * @note
- * - The per-bit status flag clearing (0x01 through 0x40, out of order) matches
- *   the original assembly's individual AND instructions exactly for 100% matching
- * - g_commandQueueOffset points to items[11]; the loop uses queueItem[4] to walk
- *   through all 16 entries via negative indexing
- * - Scratchpad RAM at 0x1F800000 is used as default buffer for queue entries
- * - Spin-waits on CdInit() and CdControlB() ensure hardware is ready before proceeding
- *
- * @warning
- * - This function blocks until the CD hardware is initialized
- * - If the disc tray is open, it will block until a disc is inserted and ready
- * - Should only be called once during system startup
- *
- * @param None
- * @return void
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/DBYkw
- */
-void CD_Initialize()
+void cdrom_init()
 {
     int queueEndMarker;
     int queueCount;
@@ -52,13 +15,7 @@ void CD_Initialize()
     int cdResult;
 
     // Wait for CD-ROM system to initialize
-    while (TRUE)
-    {
-        if (CdInit() != 0)
-        {
-            break;
-        }
-    }
+    while (CdInit() == 0);
 
     CdSetDebug(0);
 
@@ -133,15 +90,7 @@ void CD_Initialize()
     CD_SYSTEM.setModeParamBlocking[3] = 0;
 
     // CdlNop (1) — read current drive status into statusByte
-    while (TRUE)
-    {
-        cdResult = CdControlB(CdlNop, NULL, &CD_SYSTEM.statusByte);
-
-        if (cdResult != 0)
-        {
-            break;
-        }
-    }
+    while (CdControlB(CdlNop, NULL, &CD_SYSTEM.statusByte) == 0);
 
     // If shell-open flag (0x10) is set, block until disc becomes ready
     if ((g_cdStatusByte & CdlStatShellOpen) != 0)
@@ -155,60 +104,13 @@ void CD_Initialize()
     }
 
     // CdlSetmode (14) — apply mode byte (0xA0) to the drive
-    while (TRUE)
-    {
-        cdResult = CdControlB(CdlSetmode, CD_SYSTEM.setModeParamBlocking, NULL);
-
-        if (cdResult != 0)
-        {
-            break;
-        }
-    }
+    while (CdControlB(CdlSetmode, CD_SYSTEM.setModeParamBlocking, NULL) == 0);
 
     // Record current frame counter for timeout tracking
     g_cdVSyncTimestamp = VSync(-1);
 }
 
-/**
- * @brief Stops all CD-ROM operations and resets the subsystem state
- *
- * Gracefully halts CD-ROM playback and prepares the system for either
- * shutdown or new operations. Pauses the drive and clears all internal state.
- *
- * @details
- * Performs a complete stop of the CD-ROM subsystem with the following steps:
- *
- * 1. If audio is enabled, performs a full system reset
- * 2. Clears the "playing" status flag (bit 6)
- * 3. Removes all sync and ready callbacks
- * 4. Repeatedly sends pause commands until successful
- * 5. Resets all CdSystem state variables to their default values
- * 6. Updates timestamp and clears status flags
- * 7. Flushes the CD command queue
- *
- * The function ensures the CD drive is properly paused before clearing
- * internal state to prevent any unexpected behavior.
- *
- * @note
- * - The status flag clearing (0xFFFFFFBF) specifically targets bit 6 (playing flag)
- *   while preserving all other bits
- * - The while(TRUE) loop with CdControlB ensures the pause command is
- *   successfully received by the CD hardware
- * - All state variables are explicitly zeroed to ensure clean state
- * - VSync timestamp is recorded at the end of the operation for timeout tracking
- *
- * @warning
- * - This function blocks until the CD drive acknowledges the pause command
- * - Any pending CD operations will be aborted
- * - Callbacks are cleared, so any pending operations relying on them will be lost
- * - Should not be called from within a CD callback to avoid deadlock
- *
- * @param None
- * @return void
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/M39vT
- */
-void CD_Stop(void)
+void cdrom_stop(void)
 {
     int cdResult;
     CdSystem* cdSystem;
@@ -217,7 +119,7 @@ void CD_Stop(void)
 
     if (g_cdAudioEnabled != 0)
     {
-        CD_ResetSystem();
+        cdrom_reset();
     }
 
     cdSystem->statusFlags.word &= 0xFFFFFFBF;
@@ -225,14 +127,7 @@ void CD_Stop(void)
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
 
-    while (TRUE)
-    {
-        cdResult = CdControlB(CdlPause, NULL, NULL);
-        if (cdResult != 0)
-        {
-            break;
-        }
-    }
+    while (CdControlB(CdlPause, NULL, NULL) == 0);
 
     CD_SYSTEM.resourceIndex = CD_RESOURCE_INDEX_INVALID;
     CD_SYSTEM.pendingQueueCount = 0;
@@ -258,40 +153,7 @@ void CD_Stop(void)
     CdFlush();
 }
 
-/**
- * @brief Streams and decompresses CD-ROM sector data into a destination buffer
- *
- * Reads sectors from disc via DMA into a ring buffer (managed through
- * scratchpad RAM), then incrementally decompresses the buffered data
- * into the caller's destination address.
- *
- * @details
- * Scratchpad RAM (0x1F800000) is used as a shared communication struct
- * between this function and the CD read callback (CD_StreamDataCallback):
- *
- *   Offset  Type  Description
- *   ------  ----  -----------
- *   +0x00   u8    dataReady      — Set to 1 by callback when new sectors arrive
- *   +0x01   u8    bufferWrapped  — Set to 1 when the ring buffer has wrapped
- *   +0x04   s32   readPtr        — Current read position in ring buffer
- *   +0x08   s32   writePtr       — Current write position in ring buffer
- *   +0x0C   s32   bytesBuffered  — Number of valid bytes available to read
- *   +0x10   s32   wrapOverflow   — Bytes that overflowed past ring buffer end
- *   +0x14   s32   bytesConsumed  — Bytes consumed by decompressor this pass
- *   +0x18   s32   (reserved)     — Initialized to 0
- *
- * The ring buffer ends at 0x801DC118. When it wraps, leftover unprocessed
- * bytes are relocated to just before that address with word alignment,
- * and the wrapOverflow count is merged into bytesBuffered.
- *
- * @param command      Resource index (lower 16 bits) identifying the disc data to read
- * @param destination  RAM address where decompressed output is written
- *
- * @return Total number of decompressed bytes written to destination
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/SvWOg
- */
-s32 CD_StreamData(s32 command, u32 destination)
+s32 cdrom_stream(s32 resourceIndex, u32 destination)
 {
     s32 unprocessedBytes;
     s32 relocDstAddr;
@@ -312,7 +174,7 @@ s32 CD_StreamData(s32 command, u32 destination)
     s32 sentinel;
 
     /* Block until any in-progress CD commands finish */
-    while (CD_UpdateAndProcessQueue() != 0)
+    while (cdrom_process_state() != 0)
     {
         VSync(0);
     }
@@ -328,7 +190,7 @@ s32 CD_StreamData(s32 command, u32 destination)
 
     /* Enqueue a CdlReadN command; return value is the resource's total data size.
      * Subtract 1 to get the last valid byte offset for streaming. */
-    remainingDataSize = CD_QueueCommand(CdlReadN, command, NULL, &CD_StreamDataCallback) - 1;
+    remainingDataSize = cdrom_queue_command(CdlReadN, resourceIndex, NULL, &cdrom_handle_stream_data) - 1;
     timestamp = VSync(-1);
 
     streamState2 = &CD_STREAM_STATE;
@@ -363,7 +225,7 @@ s32 CD_StreamData(s32 command, u32 destination)
                 }
 
                 /* Decompress a chunk; returns 0 when all output is complete */
-                if (CD_DecompressData(&CD_STREAM_STATE.writePtr, &destination, decompressEnd, -4U) == 0)
+                if (cdrom_decompress_data(&CD_STREAM_STATE.writePtr, &destination, decompressEnd, -4U) == 0)
                 {
                     return destination - destStart;
                 }
@@ -372,7 +234,7 @@ s32 CD_StreamData(s32 command, u32 destination)
             /* All currently buffered data has been fed to the decompressor */
             bytesConsumed = streamState2->writePtr - streamState2->readPtr;
             streamState2->bytesConsumed = bytesConsumed;
-            ClearPointer(&CD_STREAM_STATE.dataReady);
+            cdrom_clear_data_ready(&CD_STREAM_STATE.dataReady);
             remainingDataSize -= bytesConsumed;
 
             /* If the ring buffer hasn't wrapped, yield to let more data arrive */
@@ -447,63 +309,20 @@ s32 CD_StreamData(s32 command, u32 destination)
         }
 
         /* Timeout elapsed without data — pump the CD command queue */
-        CD_UpdateAndProcessQueue();
+        cdrom_process_state();
         timestamp = VSync(-1);
     }
 }
 
-/**
- * @brief Streams and decompresses CD-ROM data into caller-supplied chunks via callbacks.
- *
- * A variant of CD_StreamData that delivers decompressed output through a
- * callback-based chunked buffer interface instead of a single fixed destination.
- * Supports two output modes:
- *
- *   DIRECT MODE  — When pfnGetBuffer sets *outChunkSize = -1, the decompressor
- *                  writes straight into the caller's buffer (same as CD_StreamData).
- *
- *   CHUNKED MODE — When pfnGetBuffer sets *outChunkSize to a positive value,
- *                  data is first decompressed into an intermediate staging buffer
- *                  at 0x801DA000, then copied out into caller-supplied chunks.
- *                  Each time a chunk is fully filled, pfnChunkDone is called and
- *                  pfnGetBuffer is called again for the next chunk.
- *
- * STAGING BUFFER (chunked mode only):
- *   0x801DA000 — stagingWritePtr starts here; decompressor writes fresh output
- *   0x801DBBE8 — stagingEnd; decompressor stops when it reaches this address
- *
- *   When the staging buffer fills before the stream ends, the last 4096 bytes
- *   of output (the LZ sliding-window dictionary) are copied back to 0x801DA000
- *   and decompression resumes at 0x801DB000. This preserves back-reference
- *   validity across staging-buffer resets.
- *
- * @param resourceIndex   CD resource index (lower 16 bits) passed to CD_QueueCommand.
- * @param pfnGetBuffer    Callback: u8* fn(int totalBytesDelivered, int* outChunkSize)
- *                          Returns a pointer to the next destination buffer.
- *                          Sets *outChunkSize to that buffer's capacity, or -1 for unlimited.
- *                          Called at startup (totalBytesDelivered=0) and after each completed chunk.
- * @param pfnChunkDone    Callback: void fn(int chunkIndex)
- *                          Called when each destination chunk is completely filled, and
- *                          once more at end-of-stream for the final (possibly partial) chunk.
- *
- * TODO: Confirm why dstEnd is set 0x418 (1048) bytes before chunk end in chunked mode —
- *       is this a safety guard to prevent overrun during a partial sector flush?
- * TODO: Determine whether pfnGetBuffer's totalBytesDelivered argument is used as a byte
- *       offset into an asset/resource table by any caller.
- * TODO: Verify whether pfnChunkDone's chunkIndex is ever used by callers or always ignored.
- *
- * @see decomp.me: (93.03%) https://decomp.me/scratch/4WZBs
- */
-void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pfnChunkDone)
+void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pfnChunkDone)
 {
     int timestamp;
-
     u8 srcByte;
-    int decompressResult; // Return from CD_DecompressData: 0 = end-of-stream, 1 = output full
+    int decompressResult; // Return from cdrom_decompress_data: 0 = end-of-stream, 1 = output full
     u32 srcWord;
     int loopCount;
     u32 alignCheck;
-    u32 decompressEnd;        // Source-side guard address passed to CD_DecompressData
+    u32 decompressEnd;        // Source-side guard address passed to cdrom_decompress_data
     u8* srcPtr;               // Read cursor into the staging buffer during the copy-out phase
     int totalBytesDelivered;  // Total decompressed bytes given to caller so far (passed to pfnGetBuffer)
     int chunkIndex;           // How many chunks delivered so far (passed to pfnChunkDone)
@@ -515,7 +334,7 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     s32 remainingDataSize;    // Bytes of compressed input still to consume (counts down to 0)
     int isDirectMode;         // Non-zero (0x1000) = direct mode; 0 = chunked/staging mode
     s32 bytesBuffered;        // s3
-    s32 stagingBytesProduced; // Bytes written into staging buffer by last CD_DecompressData call
+    s32 stagingBytesProduced; // Bytes written into staging buffer by last cdrom_decompress_data call
     s32 bytesConsumed;
     s32 unprocessedBytes;
     s32 alignRemainder;
@@ -538,7 +357,7 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     scratchpad->bufferWrapped = 0;
 
     // Enqueue CdlReadN for this resource; subtract 1 to get the last valid compressed-byte offset.
-    remainingDataSize = CD_QueueCommand(CdlReadN, resourceIndex, NULL, CD_StreamDataCallback) - 1;
+    remainingDataSize = cdrom_queue_command(CdlReadN, resourceIndex, NULL, cdrom_handle_stream_data) - 1;
 
     totalBytesDelivered = 0;
     chunkIndex = 0;
@@ -588,7 +407,7 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
             {
                 bytesBuffered = streamState->bytesBuffered;
 
-                // Calculate the compressed-source end-guard for CD_DecompressData.
+                // Calculate the compressed-source end-guard for cdrom_decompress_data.
                 // Hold back 280 bytes when the full stream hasn't arrived yet,
                 // to avoid consuming an incomplete sector boundary.
                 if (bytesBuffered < remainingDataSize)
@@ -603,14 +422,14 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                 // --- Direct mode: decompress straight into the caller's destination ---
                 if (isDirectMode != 0 && destination < dstEnd)
                 {
-                    CD_DecompressData(&CD_STREAM_STATE.writePtr, (u32*)&destination, decompressEnd, (u32)dstEnd);
+                    cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&destination, decompressEnd, (u32)dstEnd);
                     continue; // Loop back; decompressResult check happens below on exit
                 }
 
                 // --- Chunked mode: decompress into staging buffer, then copy to caller ---
                 srcPtr = stagingWritePtr; // Remember staging write position before this call
-                decompressResult = CD_DecompressData(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr, decompressEnd,
-                                                     (u32)stagingEnd);
+                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr,
+                                                         decompressEnd, (u32)stagingEnd);
 
                 // How many bytes did the decompressor write to the staging buffer this pass?
                 stagingBytesProduced = (int)stagingWritePtr - (int)srcPtr;
@@ -770,7 +589,7 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
             }
 
             // --- Handle ring buffer wrap-around ---
-            // (Identical logic to CD_StreamData; see that function for detailed comments)
+            // (Identical logic to cdrom_stream; see that function for detailed comments)
             wrapOverflow = streamState->wrapOverflow;
 
             if (wrapOverflow != 0)
@@ -819,61 +638,12 @@ void CD_StreamDataChunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
         }
 
         // Timeout — pump the CD command queue and reset the timer.
-        CD_UpdateAndProcessQueue();
+        cdrom_process_state();
         timestamp = VSync(-1);
     }
 }
 
-/**
- * @brief Enqueues a CD-ROM command into the circular command queue
- *
- * Validates and inserts a command into the 16-entry circular command queue.
- * If the system is idle and no error/init flags are active, immediately
- * starts command execution by issuing CdlNop to kick off the state machine.
- *
- * @details
- * The function performs several layers of validation before enqueueing:
- *
- * 1. Rejects the command immediately if the "playing" status flag (bit 6) is set
- * 2. Resolves the resource index to a CdResourceEntry pointer:
- *    - 0xFFFF (CD_RESOURCE_INDEX_DEFAULT) maps to g_defaultCdResource
- *    - All other indices index into CD_RESOURCE_ENTRIES
- * 3. Deduplicates: if the system is already processing a command and the
- *    new command matches the last-enqueued (command, resourceIndex, dstBuffer,
- *    callback), the enqueue is skipped and the existing dataSize is returned
- * 4. Validates the resource entry has a non-zero disc location and data size
- * 5. Checks the circular queue is not full ((writeIndex + 1) & 0xF != readIndex)
- *
- * Once enqueued, if no command is currently active and no low-nibble status
- * flags (bits 0-3) are set, the function bootstraps execution:
- * - Sets currentCommand to 1, marks the "busy" flag (bit 4)
- * - Installs CD_OnCommandComplete and sends CdlNop to begin processing
- *
- * @param command        CD-ROM command byte (e.g., CdlReadN, CdlSeekL)
- * @param resourceIndex  Index into CD_RESOURCE_ENTRIES, or 0xFFFF for the default resource
- * @param dstBuffer      Destination buffer for read data (may be NULL for non-read commands)
- * @param callback       Callback function pointer invoked on command completion
- *
- * @return The resource's dataSize on success, or a negative error code:
- *         -3 if the system is in "playing" state (bit 6 set)
- *         -2 if the resource entry has no valid location or zero data size
- *         -1 if the command queue is full
- *
- * @note
- * - The separate re-reads of queueWriteIndex for each field store match the
- *   original assembly's volatile access pattern and must not be optimized
- * - The "last command" cache (lastCommand, resourceIndex, dstBuffer, callback)
- *   enables the deduplication check on subsequent calls
- * - When the system is already busy (currentCommand or initCommand != 0),
- *   the command is silently queued without starting execution
- *
- * @warning
- * - Not interrupt-safe; must not be called from within a CD callback
- * - The caller must ensure resourceIndex is valid or 0xFFFF
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/izXP3
- */
-s32 CD_QueueCommand(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCallback callback)
+s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCallback callback)
 {
     s32 timestamp;
     s32 writeIndex;
@@ -975,7 +745,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCal
             CD_SYSTEM.currentDataSize = dataSize;
 
             // Install sync callback and send CdlNop to kick off the state machine
-            CdSyncCallback(&CD_OnCommandComplete);
+            CdSyncCallback(&cdrom_complete_command);
             CdSync(0, NULL);
             CdControlF(CdlNop, NULL);
         }
@@ -984,64 +754,7 @@ s32 CD_QueueCommand(u8 command, u16 resourceIndex, void* dstBuffer, CdCommandCal
     return resourceEntry->dataSize;
 }
 
-/**
- * @brief Drains the CD command queue and drives the disc-recovery state machine
- *
- * Called once per frame to advance all pending CD-ROM operations. Handles
- * three mutually exclusive execution paths depending on the current state
- * of the CD subsystem, and updates the audio system when enabled.
- *
- * @details
- * The function inspects statusFlags to choose one of three branches:
- *
- * **Branch 1 — Error/init recovery (statusFlags bits 0-2 set):**
- * Runs a multi-state recovery state machine (states 1-8, 32) that attempts
- * to re-initialize the disc drive after an error or shell-open event:
- *   1. Sends CdlNop to poll drive status every 30 VSync frames
- *   2. Progresses through GetStat, DiskReady, DiskType detection
- *   3. Re-applies CdlSetmode (0xA0) and installs sync/ready callbacks
- *   4. Issues CdlReadN to resume reading, with 270-frame timeout retries
- *   5. On persistent errors, pauses the drive and resets to state 1
- *
- * **Branch 2 — Active command execution (currentCommand or initCommand != 0):**
- * Monitors the currently executing command for completion:
- *   - Polls syncComplete flag set by the sync callback
- *   - Updates currentResourceIndex and currentDataSize from the queue head
- *   - On 240-frame timeout, re-installs callbacks and retries via CdlNop
- *   - Records VSync timestamp and remaining queue depth each frame
- *
- * **Branch 3 — Idle with queued commands (queue non-empty, no active command):**
- * Bootstraps execution of the next queued command:
- *   - Sets currentCommand to 1, marks busy flag (bit 4)
- *   - Installs CD_OnCommandComplete and sends CdlNop to start processing
- *   - If the queue is empty, performs periodic 30-frame status polls via CdlNop
- *     and triggers CD_HandleSyncError if the drive reports an error (bit 4)
- *
- * After all branches, calls FUN_80140d48() to update the audio subsystem
- * when g_cdAudioEnabled is set.
- *
- * @param None
- *
- * @return The number of commands remaining in the queue (0 when idle or
- *         when the system is in the recovery state machine with bit 3 set)
- *
- * @note
- * - Returns 0 immediately if statusFlags bit 3 is set (processing deferred
- *   to CD_RecoveryStateMachine)
- * - Raw pointer arithmetic for queue item access is preserved from the
- *   original decompilation to maintain register-level matching
- * - The recovery state machine shares state numbers (initState) and command
- *   codes (initCommand 0x20-0x23) with CD_RecoveryStateMachine but
- *   operates on a different set of transitions
- *
- * @warning
- * - Must be called every frame for correct timeout and retry behavior
- * - Not interrupt-safe; must not be called from within a CD callback
- * - The 30/240/270-frame timeout constants assume NTSC (60 Hz) VSync rate
- *
- * @see decomp.me: (96.81%) https://decomp.me/scratch/Jfb6t
- */
-u32 CD_UpdateAndProcessQueue(void)
+u32 cdrom_process_state(void)
 {
     // Status and control variables
     s32 statusFlags;
@@ -1247,7 +960,7 @@ u32 CD_UpdateAndProcessQueue(void)
                         cdSystem->setModeParamAsync[1] = 0;
                         cdSystem->setModeParamAsync[2] = 0;
                         CD_SYSTEM.setModeParamAsync[3] = 0;
-                        CdSyncCallback(CD_SyncCallback_Handler);
+                        CdSyncCallback(cdrom_handle_recovery_sync);
                         CdReadyCallback(0);
                         cdSystem->initCommand = 0x20U;
                         CdControlF(CdlSetmode, (u8*)0x801ED954);
@@ -1257,8 +970,8 @@ u32 CD_UpdateAndProcessQueue(void)
                     case 7: // Start reading
                         CD_SYSTEM.recoveryReadPosition.raw = (s32)g_cdResource176;
                         CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word | 0x10);
-                        CdSyncCallback(CD_SyncCallback_Handler);
-                        CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
+                        CdSyncCallback(cdrom_handle_recovery_sync);
+                        CdReadyCallback((void (*)(u8, u8*))cdrom_verify_disc);
                         CD_SYSTEM.initCommand = 0x21U;
                         CD_SYSTEM.initState = 8U;
                         CdControlF(CdlReadN, (u8*)0x801ED95C);
@@ -1294,8 +1007,8 @@ u32 CD_UpdateAndProcessQueue(void)
                             }
 
                         RetryRead: // Retry read command
-                            CdSyncCallback(CD_SyncCallback_Handler);
-                            CdReadyCallback((void (*)(u8, u8*))CD_DiskValidationCallback);
+                            CdSyncCallback(cdrom_handle_recovery_sync);
+                            CdReadyCallback((void (*)(u8, u8*))cdrom_verify_disc);
 
                             CD_SYSTEM.initCommand = 0x21;
                             cdCommand = CdlReadN;
@@ -1303,13 +1016,13 @@ u32 CD_UpdateAndProcessQueue(void)
                             goto ExecuteCommand;
 
                         RetryPause: // Retry pause command
-                            CdSyncCallback(CD_SyncCallback_Handler);
+                            CdSyncCallback(cdrom_handle_recovery_sync);
                             cdCommand = CdlPause;
                             cdCommandParams = 0;
                             goto ExecuteCommand;
 
                         RetrySetmode: // Retry setmode command
-                            CdSyncCallback(CD_SyncCallback_Handler);
+                            CdSyncCallback(cdrom_handle_recovery_sync);
                             cdCommand = CdlSetmode;
                             cdCommandParams = (u8*)0x801ED950;
 
@@ -1415,7 +1128,7 @@ u32 CD_UpdateAndProcessQueue(void)
                             CD_SYSTEM.playbackState = 0;
                         }
 
-                        CdSyncCallback((void (*)(u8, u8*))CD_OnCommandComplete);
+                        CdSyncCallback((void (*)(u8, u8*))cdrom_complete_command);
                         CdReadyCallback(0);
                         do
                         {
@@ -1424,7 +1137,7 @@ u32 CD_UpdateAndProcessQueue(void)
                     }
                     else
                     {
-                        CdSyncCallback(CD_SyncCallback_Handler);
+                        CdSyncCallback(cdrom_handle_recovery_sync);
                         CdReadyCallback(0);
                         do
                         {
@@ -1453,7 +1166,7 @@ u32 CD_UpdateAndProcessQueue(void)
                 CD_SYSTEM.playbackState = 0;
             }
 
-            CdSyncCallback((void (*)(u8, u8*))CD_OnCommandComplete);
+            CdSyncCallback((void (*)(u8, u8*))cdrom_complete_command);
             CdReadyCallback(0);
             CdSync(0, 0);
             CdControlF(CdlNop, 0);
@@ -1474,7 +1187,7 @@ u32 CD_UpdateAndProcessQueue(void)
                     {
                         if (CD_SYSTEM.statusByte & 0x10)
                         {
-                            CD_HandleSyncError();
+                            cdrom_handle_sync_error();
                         }
                         CD_SYSTEM.syncComplete = 0U;
                         CD_SYSTEM.retryCounter = 0U;
@@ -1487,7 +1200,7 @@ u32 CD_UpdateAndProcessQueue(void)
                         CD_SYSTEM.retryCounter = (u8)(currentCommand + 1);
                         if ((u32)(currentCommand & 0xFF) >= 0xBU)
                         {
-                            CD_HandleSyncError();
+                            cdrom_handle_sync_error();
                         }
                     }
                 }
@@ -1506,59 +1219,7 @@ u32 CD_UpdateAndProcessQueue(void)
     return indexDiff;
 }
 
-/**
- * @brief Processes the CD-ROM recovery/init state machine across multiple VSync frames
- *
- * Drives a 4-state asynchronous state machine that reconfigures the CD-ROM
- * subsystem after an error or shell-open event. Each call advances at most
- * one state transition, allowing the caller to poll once per frame.
- *
- * @details
- * The state machine (stored in CD_SYSTEM.initState) progresses as follows:
- *
- * - **State 0 — Flush:** Calls CdFlush() to discard pending commands, then
- *   advances to state 1 with a 1-frame delay.
- *
- * - **State 1 — Set mode:** Waits for the delay to expire, then configures
- *   CD mode to 0xA0 (CdlModeSpeed | CdlModeSize1), installs
- *   CD_SyncCallback_Handler, sends CdlSetmode, and waits 4 frames.
- *   Returns 0 (still waiting) if the delay has not yet elapsed.
- *
- * - **State 2 — Set filter:** Installs sync callback, sends CdlSetfilter
- *   with file=1 channel=1, sets initCommand to 0x11 (pending demute),
- *   and advances to state 3 immediately.
- *
- * - **State 3 — Wait for sync / dispatch:** Waits for either the
- *   syncComplete flag or a 30-frame timeout, then dispatches based on
- *   initCommand:
- *     - 0x10: Re-sends CdlSetfilter (retry/default)
- *     - 0x11: Sends CdlDemute to unmute CD audio
- *     - 0x12: Sends CdlPause (command 0x09) to halt the drive
- *   After CdlSetfilter, resets initCommand to 0x10.
- *   Subtracts 30 from vsyncTimestamp to allow immediate re-entry on the
- *   next timeout cycle rather than resetting the timer.
- *
- * @param None
- *
- * @return 1 if the CD subsystem is not in recovery mode (statusFlags bit 3 clear),
- *         0 while the state machine is still processing
- *
- * @note
- * - initCommand acts as a sub-state within state 3 to sequence multiple
- *   CD commands (setfilter -> demute -> pause) across successive timeouts
- * - The filterParams buffer is written byte-by-byte to match the original
- *   assembly's sb instructions for register-level matching
- * - State 1 returns 0 early (not via the common exit) when the timestamp
- *   delay has not yet expired, matching a distinct return instruction in
- *   the original binary
- *
- * @warning
- * - Must be called every frame for correct timeout behavior
- * - The 1/4/30-frame delay constants assume NTSC (60 Hz) VSync rate
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/IvxZG
- */
-s32 CD_RecoveryStateMachine(void)
+s32 cdrom_recover(void)
 {
     u_char filterParams[2];
     s32 timestamp;
@@ -1589,7 +1250,7 @@ s32 CD_RecoveryStateMachine(void)
             CD_SYSTEM.setModeParamAsync[2] = 0;
             CD_SYSTEM.setModeParamAsync[3] = 0;
 
-            CdSyncCallback(CD_SyncCallback_Handler);
+            CdSyncCallback(cdrom_handle_recovery_sync);
 
             CdReadyCallback(NULL);
             // initCommand 0x10 = pending setfilter; must be stored before CdControlF (not in delay slot)
@@ -1601,7 +1262,7 @@ s32 CD_RecoveryStateMachine(void)
         break;
     case 2:
         // State 2: Send CdlSetfilter with file=1, channel=1, advance to state 3
-        CdSyncCallback(CD_SyncCallback_Handler);
+        CdSyncCallback(cdrom_handle_recovery_sync);
         CD_SYSTEM.initCommand = 0x11;
 
         filterParams[0] = 1;
@@ -1626,7 +1287,7 @@ s32 CD_RecoveryStateMachine(void)
         }
 
         // Timeout expired — dispatch follow-up command based on initCommand
-        CdSyncCallback(CD_SyncCallback_Handler);
+        CdSyncCallback(cdrom_handle_recovery_sync);
 
         initCommandByte = CD_SYSTEM.initCommand;
 
@@ -1655,10 +1316,7 @@ s32 CD_RecoveryStateMachine(void)
     return 0;
 }
 
-/**
- * decomp.me (100%) https://decomp.me/scratch/iWEyM
- */
-void CD_RecoveryReadyHandler(void)
+void cdrom_verify_recovery(void)
 {
     volatile CdSystem* cdSystem;
     volatile CdSystem** new_var;
@@ -1676,7 +1334,7 @@ void CD_RecoveryReadyHandler(void)
 
         if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.currentLocation.raw & 0xFFFFFF))
         {
-            CD_HandleSectorReadComplete(1);
+            cdrom_process_sector(1);
             return;
         }
 
@@ -1703,64 +1361,13 @@ void CD_RecoveryReadyHandler(void)
     }
     else
     {
-        CD_HandleSectorReadComplete(1);
+        cdrom_process_sector(1);
     }
 
     g_cdStatusByte3 = 0;
 }
 
-/**
- * @brief Sync callback invoked when a CD-ROM command completes or fails
- *
- * Installed as the CdSyncCallback during normal command queue processing.
- * Handles command completion by advancing the circular queue, dispatching
- * the next queued command, or cleaning up when the queue is drained.
- *
- * @details
- * On entry, sets syncComplete to 1 so the main-loop poller knows progress
- * was made. Then branches based on the interrupt status:
- *
- * **Error path (status byte bit 4 set during CdlNop):**
- * If currentCommand is 1 (CdlNop probe) and the drive reports an error,
- * calls CD_HandleSyncError() and returns immediately.
- *
- * **Incomplete path (status != CdlComplete):**
- * If the command did not finish successfully:
- *   - If currentCommand != 1, resets to CdlNop and retries
- *   - Otherwise falls through to re-read the queue head and execute it
- *
- * **Complete path (status == CdlComplete):**
- * Switches on currentCommand:
- *   - **Case 21 (CdlPause):** Resets playback state and loop counter,
- *     advances the queue read index. If the queue is now empty, clears
- *     all execution state and returns. Otherwise dispatches the next command.
- *   - **All other cases (default):** Reads the command at the queue head.
- *     If it is CdlNop (1), skips forward through consecutive CdlNop entries
- *     until a different command is found or the queue is exhausted.
- *     Then dispatches the resolved command via CD_ExecuteCommand.
- *
- * Special handling: if the resolved command is 0x1B (audio start), enables
- * CD_SYSTEM.audioEnabled and remaps the command to CdlSeekL (6) for execution.
- *
- * @param status    CD-ROM interrupt status byte (CdlComplete on success)
- * @param resultPtr Pointer to the CD-ROM result byte array from the hardware
- *
- * @return void
- *
- * @note
- * - This function runs in interrupt context as a CdSyncCallback
- * - The volatile vsyncArg variable and separate statusFlags assignment
- *   match the original assembly's register usage and must not be optimized
- * - The large switch with explicit case labels for 1-27 (excluding 6, 21)
- *   matches the original jump table layout in the binary
- *
- * @warning
- * - Executes in interrupt context; must not call blocking functions
- * - Modifies CD_SYSTEM state directly; not safe to call from main thread
- *
- * @see decomp.me: (91.68%) https://decomp.me/scratch/F0oiy
- */
-void CD_OnCommandComplete(u_char intr, u_char* result)
+void cdrom_complete_command(u_char intr, u_char* result)
 {
     u8 nextCommand;
     u32 readIndex;
@@ -1778,7 +1385,7 @@ void CD_OnCommandComplete(u_char intr, u_char* result)
     {
         if (*result & 0x10)
         {
-            CD_HandleSyncError();
+            cdrom_handle_sync_error();
             return;
         }
     }
@@ -1913,13 +1520,10 @@ ReadQueueHead:
     nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
 
 ExecuteNext:
-    CD_ExecuteCommand(nextCommand, 0, 0);
+    cdrom_run_command(nextCommand, 0, 0);
 }
 
-/**
- * decomp.me: (73.39%) https://decomp.me/scratch/0Dz2i
- */
-void CD_SyncCallback_Handler(u_char intr, u_char* result)
+void cdrom_handle_recovery_sync(u_char intr, u_char* result)
 {
     u8 sp10;
     s8 sp11;
@@ -1945,7 +1549,7 @@ void CD_SyncCallback_Handler(u_char intr, u_char* result)
             cdSystem = &CD_SYSTEM;
             if (*result & 0x10)
             {
-                CD_HandleSyncError();
+                cdrom_handle_sync_error();
                 return;
             }
             goto block_6;
@@ -1979,7 +1583,7 @@ block_6:
             CD_SYSTEM.initCommand = 0U;
             if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex)
             {
-                CdSyncCallback(CD_OnCommandComplete);
+                CdSyncCallback(cdrom_complete_command);
                 temp_a0 = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
                 if ((temp_a0 == 0x1B) && (CD_SYSTEM.audioEnabled == 0))
                 {
@@ -1987,7 +1591,7 @@ block_6:
                 }
                 CD_SYSTEM.playbackState = 0;
                 CD_SYSTEM.transferCallback = NULL;
-                CD_ExecuteCommand(temp_a0 & 0xFF, 0, 0);
+                cdrom_run_command(temp_a0 & 0xFF, 0, 0);
             }
             else
             {
@@ -2044,7 +1648,7 @@ block_6:
             {
                 CD_SYSTEM.currentCommand = 1;
                 CD_SYSTEM.statusFlags.word = (s32)(temp_v1_2 | 0x10);
-                CdSyncCallback(CD_OnCommandComplete);
+                CdSyncCallback(cdrom_complete_command);
                 CdSync(0, NULL);
                 CdControlF(1U, NULL);
             }
@@ -2113,10 +1717,7 @@ block_6:
     }
 }
 
-/**
- * decomp.me: (100%) https://decomp.me/scratch/kgBY4
- */
-void CD_ReadyHandler(u_char intr, u_char* result)
+void cdrom_handle_ready_intr(u_char intr, u_char* result)
 {
     s32 temp_a0;
     u8 temp_s1;
@@ -2155,7 +1756,7 @@ void CD_ReadyHandler(u_char intr, u_char* result)
 
             if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.currentLocation.raw & 0xFFFFFF))
             {
-                CD_HandleSectorReadComplete(0);
+                cdrom_process_sector(0);
                 return;
             }
         }
@@ -2202,7 +1803,7 @@ void CD_ReadyHandler(u_char intr, u_char* result)
             (*((CdSystem*)0x801ED800)).statusFlags.bytes.b2 = temp2;
             return;
         }
-        CD_HandleSectorReadComplete(0);
+        cdrom_process_sector(0);
         return;
     }
 
@@ -2222,70 +1823,7 @@ void CD_ReadyHandler(u_char intr, u_char* result)
     return;
 }
 
-/**
- * @brief Handles completion of a CD-ROM sector read operation
- *
- * Called when the CD drive signals that a sector has been read into memory.
- * Processes the received data differently depending on whether the system
- * is in data mode or audio (XA) mode, and manages multi-sector transfers
- * by re-issuing read commands until all data has been received.
- *
- * @details
- * The function operates in two distinct modes based on audioEnabled:
- *
- * **Data mode (audioEnabled != 1):**
- * 1. Invokes the transferCallback callback (if set) to obtain the destination
- *    buffer; if the callback returns NULL, re-issues the current read
- *    command to retry. Falls back to currentWritePtr when no callback is set.
- * 2. If more than one sector remains (size >= 0x801):
- *    - Reads one full sector (0x800 bytes / 0x200 words) via CdGetSector
- *    - Advances the disc position by one sector in the command param buffer
- *    - Decrements remaining size by 0x800
- *    - Advances currentWritePtr by 0x800 if no transferCallback callback is set
- * 3. If this is the final sector (size < 0x801):
- *    - Resets playbackState and transferCallback
- *    - Advances queueReadIndex; if more commands are queued, dispatches
- *      the next one via CD_ExecuteCommand and returns
- *    - Otherwise, transitions to idle: installs sync callback, removes
- *      ready callback, reads the final partial sector, clears busy flag
- *      (bit 4), and issues CdlPause
- *    - The pause command timing depends on arg0: issued before the final
- *      read when arg0 == 0, or after when arg0 != 0
- *
- * **Audio mode (audioEnabled == 1):**
- * 1. Reads 3 words (12 bytes) from the sector into sectorHeaderBuffer
- * 2. Compares the lower 24 bits of sectorHeaderBuffer[0] against currentLocation
- *    to verify the correct disc position; if mismatched, re-issues the
- *    current command with the expected position parameters
- * 3. If positions match, invokes the transferCallback:
- *    - If callback returns NULL (end of audio track): advances the queue,
- *      resets mode to 0xA0, disables audio, pauses the drive, and records
- *      the VSync timestamp
- *    - If callback returns non-NULL: advances disc position by one sector
- *      and returns to continue streaming
- *
- * @param arg0  Execution mode passed from the caller:
- *              0 = initial call from the ready callback (pause before final read)
- *              non-zero = chained call from CD_ExecuteCommand (pause after final read)
- *
- * @return void
- *
- * @note
- * - 0x801ED958 is used as the command parameter buffer holding the current
- *   CdlLOC disc position for read commands
- * - The 0xFFFFFF mask in audio mode extracts the minute/second/sector BCD
- *   position, ignoring the mode byte
- * - g_cdReadRemainingBytes is used for the final partial sector read, converted from bytes
- *   to words via (g_cdReadRemainingBytes + 3) >> 2
- *
- * @warning
- * - Spin-waits on CdGetSector until the sector data is available
- * - Must only be called from the CD ready callback context
- * - The transferCallback must be valid (non-NULL) in audio mode
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/43gwj
- */
-void CD_HandleSectorReadComplete(s32 arg0)
+void cdrom_process_sector(s32 arg0)
 {
     void* buffer;
     volatile CdSystem* cdSystem;
@@ -2349,13 +1887,13 @@ void CD_HandleSectorReadComplete(s32 arg0)
             // If more commands are queued, dispatch the next one immediately
             if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex)
             {
-                CD_ExecuteCommand(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command, buffer, arg0 + 1);
+                cdrom_run_command(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command, buffer, arg0 + 1);
                 return;
             }
 
             // No more queued commands — transition to idle state
             CD_SYSTEM.initCommand = 1;
-            CdSyncCallback(CD_SyncCallback_Handler);
+            CdSyncCallback(cdrom_handle_recovery_sync);
             CdReadyCallback(NULL);
 
             // If initial call (arg0 == 0), pause drive before reading final sector
@@ -2406,7 +1944,7 @@ void CD_HandleSectorReadComplete(s32 arg0)
 
             // Audio track complete — shut down audio playback
             CD_SYSTEM.queueReadIndex = ((CD_SYSTEM.queueReadIndex + 1) & 0xF);
-            CdSyncCallback(CD_SyncCallback_Handler);
+            CdSyncCallback(cdrom_handle_recovery_sync);
             CdReadyCallback(NULL);
 
             // Restore default CD mode (double speed + 2340-byte sectors)
@@ -2436,11 +1974,7 @@ void CD_HandleSectorReadComplete(s32 arg0)
     CdControlF(cdSystem->currentCommand, (u8*)0x801ED958);
 }
 
-/**
- * decomp.me link: https://decomp.me/scratch/KM6id
- * decomp.me (%): 100%
- */
-void CD_ExecuteCommand(u8 cmd, void* sectorBuffer, s32 executionMode)
+void cdrom_run_command(u8 cmd, void* sectorBuffer, s32 executionMode)
 {
     u8* paramBufferSpecialCmd;
     s32 nextReadIndex;
@@ -2517,7 +2051,7 @@ void CD_ExecuteCommand(u8 cmd, void* sectorBuffer, s32 executionMode)
             if (executionMode == 0)
             {
                 CD_SYSTEM_V.statusFlags.bytes.b2 = 0;
-                CdReadyCallback(CD_ReadyHandler);
+                CdReadyCallback(cdrom_handle_ready_intr);
             }
         }
         else if (executionMode == 1)
@@ -2575,11 +2109,7 @@ void CD_ExecuteCommand(u8 cmd, void* sectorBuffer, s32 executionMode)
     CdControlF(controlParam, paramBufferSpecialCmd);
 }
 
-/**
- * decomp.me link: https://decomp.me/scratch/XrcPe
- * decomp.me (%): 100%
- */
-void CD_DiskValidationCallback(u_char intr, u_char* result)
+void cdrom_verify_disc(u_char intr, u_char* result)
 {
     s32 statusWord;
     u_char expectedChar;
@@ -2646,7 +2176,7 @@ void CD_DiskValidationCallback(u_char intr, u_char* result)
             // Validation passed: set disc mode and begin CD reads
             CdReadyCallback(NULL);
             CD_SYSTEM_V.initCommand = 0x23; // TODO: name this constant
-            CdSyncCallback(CD_SyncCallback_Handler);
+            CdSyncCallback(cdrom_handle_recovery_sync);
             CdControlF(CdlSetmode, (u_char*)0x801ED950);
             return;
         }
@@ -2655,58 +2185,21 @@ void CD_DiskValidationCallback(u_char intr, u_char* result)
     // Sector position mismatch or wrong interrupt type: pause and signal error
     CdReadyCallback(NULL);
     CD_SYSTEM_V.initCommand = 0x22; // TODO: name this constant
-    CdSyncCallback(CD_SyncCallback_Handler);
+    CdSyncCallback(cdrom_handle_recovery_sync);
     CdControlF(CdlPause, NULL);
 }
 
-/**
- * Blocks execution until CD command queue is completely empty
- *
- * Params:
- *  None
- *
- * Returns:
- *  void
- *
- * Notes: Polls CD_UpdateAndProcessQueue in a tight loop with VSync sync.
- *  Each iteration waits one frame via VSync(0) to avoid busy-waiting.
- *  Returns only when queue size reaches zero.
- *  Used to ensure all pending CD commands complete before proceeding.
- *
- * decomp.me link: https://decomp.me/scratch/rE8hd
- * decomp.me (%): 100%
- */
-void CD_WaitForQueueEmpty(void)
+void cdrom_wait_queue_empty(void)
 {
     int remaining;
 
-    while (remaining = CD_UpdateAndProcessQueue(), remaining != 0)
+    while (remaining = cdrom_process_state(), remaining != 0)
     {
         VSync(0);
     }
 }
 
-/*
- * Handle CD synchronization error and reset CD subsystem state.
- *
- * Clears active CD callbacks, resets command and retry state,
- * updates status flags to signal an error condition, and records
- * the current VSync timestamp for recovery timing.
- *
- * Params:
- *  None
- *
- * Returns:
- *  void
- *
- * TODO: Verify the discrepency between makefile produced binary and decomp.me
- * This indicates some kind of toolchain problem.
- * Consider looking at decomp.me compilers repository to see if there are any differences in the image.
- *
- * decomp.me link: https://decomp.me/scratch/lU7lO
- * decomp.me (%): 100%
- */
-void CD_HandleSyncError(void)
+void cdrom_handle_sync_error(void)
 {
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
@@ -2721,22 +2214,7 @@ void CD_HandleSyncError(void)
     CD_SYSTEM.vsyncTimestamp = VSync(-1);
 }
 
-/*
- * Set audio volume for a specific stereo channel
- *
- * Params:
- *   volume - Volume level to set (0-255)
- *   mixMode -
- *     0: route both CD channels to SPU left only
- *     1: route CD left to both SPU speakers (mono)
- *
- * Returns: void
- *
- * decomp.me link: https://decomp.me/scratch/lwzx1
- * decomp.me (%): 100%
- */
-
-void CD_SetAudioVolume(u_char volume, s32 mixMode)
+void cdrom_set_audio_volume(u_char volume, s32 mixMode)
 {
     CdlATV audioConfig[2];
 
@@ -2762,19 +2240,7 @@ void CD_SetAudioVolume(u_char volume, s32 mixMode)
     CdMix(audioConfig);
 }
 
-/**
- * Resets CD subsystem to idle state and stops any ongoing audio playback
- *
- * Params:
- *  None
- *
- * Returns:
- *  void
- *
- * decomp.me link: https://decomp.me/scratch/fnucZ
- * decomp.me (%): 100%
- */
-void CD_ResetSystem(void)
+void cdrom_reset(void)
 {
     AudioSystem* audioSystem = &AUDIO_SYSTEM;
 
@@ -2803,47 +2269,7 @@ void CD_ResetSystem(void)
     CD_SYSTEM.vsyncTimestamp = VSync(-1);
 }
 
-/**
- * @brief Checks whether a resource index is absent from the pending command queue
- *
- * Scans every pending entry in the circular command queue and returns whether
- * the given resource index is not already present, indicating it is safe to
- * enqueue a new command for that resource without creating a duplicate.
- *
- * @details
- * The scan performs the following steps:
- *
- * 1. Reads queueReadIndex as the starting scan position
- * 2. Computes the number of pending entries as (queueWriteIndex - queueReadIndex) & 0xF
- * 3. Decrements that count by 1 and compares against a sentinel of -1 to detect an
- *    empty queue (no iterations performed)
- * 4. For each pending slot, compares the stored resourceIndex against the lower 16
- *    bits of the argument; returns 0 immediately on a match (duplicate found)
- * 5. Advances scanIndex by masking with 0xF before incrementing to maintain circular
- *    wrap semantics within the 16-entry buffer
- * 6. Returns 1 if the full queue was scanned with no match
- *
- * @note
- * - Only the lower 16 bits of resourceIndex are compared, matching the u16 storage
- *   in CdCommandQueueItem
- * - The decrement-before-loop pattern and sentinel value of -1 match the original
- *   assembly's register usage exactly and must not be restructured
- * - The mask-then-increment sequence (scanIndex = (scanIndex & 0xF) + 1) matches
- *   the original assembly's andi + addiu pair for register-level equivalence
- *
- * @warning
- * - Not interrupt-safe; the queue indices and entries may change between reads if
- *   called while a CD callback is active
- * - Does not prevent a race between this check and a subsequent CD_QueueCommand call;
- *   the caller must not assume the result remains valid across VSync frames
- *
- * @param resourceIndex  Resource index to search for in the queue (lower 16 bits used)
- * @return 1 if the resource index is not already queued (safe to enqueue),
- *         0 if a matching entry was found (duplicate present)
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/l4HlL
- */
-s32 CD_IsQueueAvailable(s32 resourceIndex)
+s32 cdrom_can_queue_resource(s32 resourceIndex)
 {
     s32 queuedResourceIndex;
     s32 scanIndex;
@@ -2874,50 +2300,7 @@ s32 CD_IsQueueAvailable(s32 resourceIndex)
     return 1;
 }
 
-/**
- * @brief Initializes the default CD resource entry and seeks to a disc location
- *
- * Converts a raw LBA sector address into MSF format, stores it as the default
- * CD resource, then enqueues a seek command and applies a default audio volume.
- *
- * @details
- * Performs the following steps in order:
- *
- * 1. Synchronizes with the VSync timestamp recorded in g_cdVSyncTimestamp:
- *    computes the delta between now and (g_cdVSyncTimestamp - 3) and calls
- *    VSync(delta) to stall the required number of frames, preventing command
- *    conflicts with any in-flight CD operation.
- * 2. Clears the default CD resource's location field (4 bytes zeroed via
- *    a single u32 write) and sets its dataSize to dataSizeBytes.
- * 3. Converts lba to CD-ROM MSF format via CdIntToPos() and writes the result
- *    into CD_SYSTEM.defaultCdResource.location.
- * 4. Enqueues command 0x06 (CdlReadN) with resource index 0xFFFF
- *    (CD_RESOURCE_INDEX_DEFAULT) and CD_RESOURCE_ENTRIES as the destination
- *    buffer.
- * 5. Blocks via CD_WaitForQueueEmpty() until the read command completes.
- * 6. Calls CD_SetAudioVolume(128, 1) to apply a default mid-level CD audio
- *    volume (0x80).
- *
- * @param lba           Logical Block Address of the target sector on disc.
- * @param dataSizeBytes Size in bytes of the data associated with this location;
- *                      stored as the default resource's dataSize.
- *
- * @return void
- *
- * @note
- * - The VSync stall uses an offset of -3 frames to match the original
- *   assembly's addiu exactly; the off-by-one branch (delta == 1 → 0) also
- *   matches the original to avoid a 1-frame over-wait.
- * - CD_RESOURCE_ENTRIES is a table of CdlLOC seek-position
- *   entries passed as the dstBuffer;
- *
- * @warning
- * - Blocks the caller until the CD command queue is fully drained.
- * - Must not be called from within a CD callback.
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
- */
-void CD_InitResources(s32 lba, s32 dataSizeBytes)
+void cdrom_load_resource_table(s32 lba, s32 dataSizeBytes)
 {
     CdlLOCRaw* location;
     int vsyncOffset;
@@ -2943,47 +2326,32 @@ void CD_InitResources(s32 lba, s32 dataSizeBytes)
     cdStruct->defaultCdResource.dataSize = dataSizeBytes;
 
     CdIntToPos(lba, &location->pos);
-    CD_QueueCommand(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
-    CD_WaitForQueueEmpty();
-    CD_SetAudioVolume(128, 1);
+    cdrom_queue_command(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
+    cdrom_wait_queue_empty();
+    cdrom_set_audio_volume(128, 1);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/OxunQ
- */
-void CD_QueueRead(s32 resourceIndex, void* dstBuffer)
+void cdrom_queue_read(s32 resourceIndex, void* dstBuffer)
 {
-    CD_QueueCommand(CdlReadN, resourceIndex, dstBuffer, 0);
+    cdrom_queue_command(CdlReadN, resourceIndex, dstBuffer, 0);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/5M5cV
- */
-void CD_QueueReadWithCallback(s32 resourceIndex, CdCommandCallback callback)
+void cdrom_queue_read_with_callback(s32 resourceIndex, CdCommandCallback callback)
 {
-    CD_QueueCommand(CdlReadN, resourceIndex & 0xFFFF, 0, callback);
+    cdrom_queue_command(CdlReadN, resourceIndex & 0xFFFF, 0, callback);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/iUUQh
- */
-void func_80014244(s32 arg0)
+void cdrom_queue_seek(s32 resourceIndex)
 {
-    CD_QueueCommand(CdlSeekL, arg0, 0, 0);
+    cdrom_queue_command(CdlSeekL, resourceIndex, 0, 0);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/SGZF5
- */
-s32 CD_GetResourceDataSize(s32 resourceIndex)
+s32 cdrom_get_resource_size(s32 resourceIndex)
 {
     return CD_RESOURCE_ENTRIES[resourceIndex & 0xffff].dataSize;
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/vfLUw
- */
-s32 CD_GetErrorStatus(void)
+s32 cdrom_get_error_status(void)
 {
     CdStatusFlags flags;
 
@@ -3017,10 +2385,7 @@ s32 CD_GetErrorStatus(void)
     return 0;
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/HSXMR
- */
-void CD_PauseAndRestoreCallbacks(void)
+void cdrom_restore_callbacks(void)
 {
     CdSyncCallback(CD_SYSTEM.previousSyncCallback);
     CdReadyCallback(CD_SYSTEM.previousReadyCallback);
@@ -3051,10 +2416,7 @@ void CD_PauseAndRestoreCallbacks(void)
     CdFlush();
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/gsUc3
- */
-s32 CD_EnterRecoveryMode(void)
+s32 cdrom_enter_recovery_mode(void)
 {
     s32 flags;
     s32 result;
@@ -3080,75 +2442,12 @@ s32 CD_EnterRecoveryMode(void)
     return result;
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/9bgSH
- */
 void func_80014434(void)
 {
     D_801ED801 = 1;
 }
 
-/**
- * @brief Decompresses a custom bytecode-encoded data stream
- *
- * Processes a sequence of opcodes from a source buffer and emits uncompressed
- * bytes into a destination buffer. Both the source and destination pointers
- * are updated in-place on every iteration so the caller can resume across
- * multiple calls.
- *
- * @details
- * Each iteration reads a single opcode byte from `*srcStart` and dispatches
- * on its value. Opcodes 0xF0–0xFF are control opcodes; any other value is a
- * raw-copy opcode. The encoding is summarised below:
- *
- *   Opcode  Encoding (bytes after opcode)  Operation
- *   ------  -----------------------------  ---------
- *   0xF0    [packed]                       Repeat upper nibble (count = lower nibble + 3)
- *   0xF1    [count] [value]                Repeat value (count + 4) times
- *   0xF2    [count] [packed]               Alternate lo/hi nibbles as 2-byte pairs (count + 2)
- *   0xF3    [count] [b0] [b1]              Repeat 2-byte pattern {b0, b1} (count + 2) times
- *   0xF4    [count] [b0] [b1] [b2]         Repeat 3-byte pattern {b0, b1, b2} (count + 2) times
- *   0xF5    [count] [fixed] + stream        Write {fixed, next_src_byte} pairs (count + 4) times
- *   0xF6    [count] [b0] [b1] + stream      Write {b0, b1, next_src_byte} triplets (count + 3) times
- *   0xF7    [count] [b0] [b1] [b2] + stream Write {b0, b1, b2, next_src_byte} quads (count + 2) times
- *   0xF8    [count] [start]                Ascending arithmetic run from start (count + 4 bytes)
- *   0xF9    [count] [start]                Descending arithmetic run from start (count + 4 bytes)
- *   0xFA    [count] [start] [step]         Arithmetic run: start, start+step, ... (count + 5 bytes)
- *   0xFB    [count] [b0] [b1] [delta]      Arithmetic 16-bit pair run; b0/b1 form a 16-bit
- *                                          accumulator incremented by signed delta each step
- *   0xFC    [offLo] [offHi_cnt]            Back-reference: 12-bit offset, count = upper nibble + 4
- *   0xFD    [offset] [count]               Back-reference: 8-bit offset, count + 0x14 bytes
- *   0xFE    [packed]                       Back-reference: offset = (upper nibble << 3) + 8,
- *                                          count = lower nibble + 3
- *   0xFF    (none)                         End-of-stream; updates pointers and returns 0
- *   default (opcode value)                 Raw copy: opcode + 1 bytes follow in the stream
- *
- * The loop terminates early (returning 1) if the source pointer reaches
- * `srcEnd` or the destination pointer reaches `dstEnd` before a 0xFF is seen.
- *
- * @param srcStart  Pointer to the current source read position; updated on return
- * @param dstStart  Pointer to the current destination write position; updated on return
- * @param srcEnd    Exclusive upper bound of the source buffer (loop guard)
- * @param dstEnd    Exclusive upper bound of the destination buffer (loop guard)
- *
- * @return 0 if a 0xFF end-of-stream opcode was encountered,
- *         1 if the source or destination buffer was exhausted first
- *
- * @note
- * - `valueHigh` is initialised from `srcEnd` and persists across loop iterations;
- *   it forms the high byte of the 16-bit running accumulator used by opcode 0xFB
- * - `*srcStart` is written inside the loop (not just on exit) to keep the
- *   caller's pointer current even if the outer while-condition terminates early
- *
- * @warning
- * - No bounds checking is performed on back-reference offsets (0xFC–0xFE);
- *   a malformed stream can read before the start of the destination buffer
- * - The destination buffer must be large enough to hold the fully decompressed
- *   output; no overflow check is performed beyond the `dstEnd` guard
- *
- * @see decomp.me: (99.83%) https://decomp.me/scratch/MlH6P
- */
-s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
+s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
 {
     u8* srcPtr;
     u8* dstPtr;
@@ -3463,10 +2762,7 @@ s32 CD_DecompressData(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
     return 1;
 }
 
-/**
- * decomp.me link (92.05%) https://decomp.me/scratch/34OBK
- */
-s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
+s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining)
 {
     s32 remaining;
     s32 temp_t1;
@@ -3492,14 +2788,14 @@ s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
     u32 temp_v1_3;
     u32 var_t0;
 
-    var_t0 = arg1;
+    var_t0 = bytesRemaining;
 
-    if (arg1 >= 0x801U)
+    if (bytesRemaining >= 0x801U)
     {
         var_t0 = 0x800;
     }
 
-    if (arg0 == 0)
+    if (bytesTransferred == 0)
     {
         CD_STREAM_STATE.dataReady = 1;
         CD_STREAM_STATE.writePtr = 0x801DC001U;
@@ -3614,27 +2910,21 @@ s32* CD_StreamDataCallback(s32 arg0, u32 arg1)
         CD_STREAM_STATE.bytesBuffered = bytesBuffered + var_t0;
     }
 
-    if (arg1 == var_t0)
+    if (bytesRemaining == var_t0)
     {
         CD_STREAM_STATE.bufferWrapped = 1;
     }
     return (s32*)result;
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/JFLMN
- */
-void CD_DecompressBuffer(u8* srcStart, u8* dstStart)
+void cdrom_decompress_buffer(u8* srcStart, u8* dstStart)
 {
     srcStart++;
-    while (CD_DecompressData(&srcStart, &dstStart, (u8*)-4U, (u8*)-4U) != 0);
+    while (cdrom_decompress_data(&srcStart, &dstStart, (u8*)-4U, (u8*)-4U) != 0);
 }
 
-/**
- * decomp.me link: (100%) https://decomp.me/scratch/Y4pUH
- */
-void ClearPointer(s8* arg0)
+void cdrom_clear_data_ready(s8* dataReady)
 {
-    volatile s8* ref = arg0;
+    volatile s8* ref = dataReady;
     *ref = 0;
 }

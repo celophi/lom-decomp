@@ -106,7 +106,7 @@ void GFX_Transition(s32 skipScreenClear)
         PutDrawEnv(&currentFb->fb.buf.drawenv);
         DrawOTag(&currentFb->fb.buf.ot[3]);
         func_800157DC();
-        CD_UpdateAndProcessQueue();
+        cdrom_process_state();
     }
 
     func_800158E0();
@@ -143,8 +143,8 @@ void FUN_80011638(s32 arg0)
     }
 
     base = (arg0 + 0x93) & 0xFFFF;
-    CD_QueueRead(base, 0x80180000);
-    CD_WaitForQueueEmpty();
+    cdrom_queue_read(base, 0x80180000);
+    cdrom_wait_queue_empty();
 
     info = (s32*)0x80180004;
     ptr = &D_80046FE0;

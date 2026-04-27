@@ -101,7 +101,7 @@ void func_8004FD68(int baseAddress)
         DrawOTag(temp_s1);
 
         func_800157DC();
-        CD_UpdateAndProcessQueue();
+        cdrom_process_state();
     } while (D_8005D060 == 0);
 
     func_800158E0();
@@ -209,8 +209,8 @@ void func_80050138(s32 arg0)
     u32* offs;
     u8* ref;
 
-    CD_QueueRead((arg0 + 0x17) & 0xFFFF, 0x80180000);
-    CD_WaitForQueueEmpty();
+    cdrom_queue_read((arg0 + 0x17) & 0xFFFF, 0x80180000);
+    cdrom_wait_queue_empty();
 
     offs = (u32*)0x80180004;
     ref = (u8*)0x80180000;

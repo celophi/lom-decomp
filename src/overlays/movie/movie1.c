@@ -20,7 +20,7 @@ void FUN_80140018(s32 arg0)
     func_800157B0(1);
     VSync(0);
     func_800157DC();
-    CD_UpdateAndProcessQueue();
+    cdrom_process_state();
 
     if ((arg0 & 0xFFFF) == 0)
     {
@@ -90,10 +90,10 @@ error_loop_retry:
     new_var3--;
     VSync(0);
     func_800157DC();
-    CD_UpdateAndProcessQueue();
+    cdrom_process_state();
 
 error_loop:
-    error_status = CD_GetErrorStatus();
+    error_status = cdrom_get_error_status();
 
     if (error_status != 0)
     {
@@ -129,7 +129,7 @@ after_wait:
         goto recheck_unk9d;
     }
 
-    CD_UpdateAndProcessQueue();
+    cdrom_process_state();
 
 recheck_unk9d:
     timeout = 0x2000;
@@ -151,7 +151,7 @@ recheck_unk9d:
     PutDispEnv(new_var5);
     SetDispMask(1);
     func_800157DC();
-    CD_UpdateAndProcessQueue();
+    cdrom_process_state();
 
     {
         u32 a0 = (u32)(arg0 & 0xFFFF);
@@ -206,7 +206,7 @@ check_audio_call:
 cleanup:
     func_800158E0();
 
-    CD_ResetSystem();
+    cdrom_reset();
     DrawSync(0);
     VSync(0);
     SetDispMask(0);
@@ -370,9 +370,9 @@ void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
         func_80022F18(0xA0);
     }
 
-    CD_WaitForQueueEmpty();
+    cdrom_wait_queue_empty();
     new_var3 = (UnkState*)0x801ED500;
-    CD_QueueCommand(0x1B, (s16)arg0, (void*)0, &func_80140F04);
+    cdrom_queue_command(0x1B, (s16)arg0, (void*)0, &func_80140F04);
 
     if (D_801ED590 == 0)
     {
@@ -550,7 +550,7 @@ void func_80140AC0(void)
     {
         if (((u8)g_cdStatusByte3) == 1)
         {
-            CD_RecoveryReadyHandler();
+            cdrom_verify_recovery();
         }
         temp = DrawSync(1);
         if (temp < 2)

@@ -107,7 +107,7 @@ void func_80015D6C(void* arg0)
             func_80056998();
             DrawOTag((u_long*)(((char*)D_800473F4) + 0x403C));
             func_800157DC();
-            CD_UpdateAndProcessQueue();
+            cdrom_process_state();
         }
     } while (D_8010D018 == 0);
     ((u8*)new_var2)[0x13E] = 0;             // FIX 3: sb [0x13e] standalone
@@ -178,7 +178,7 @@ void func_800160C8(void* arg0)
     params[2] = 0x100;
     params[3] = 0x1FF;
     func_80086310(0x5DC, params); // passes pointer to the array
-    CD_WaitForQueueEmpty();
+    cdrom_wait_queue_empty();
     D_80047400 = 0x7FD0;
     arg->unk7CBF = 1;
     arg->unk7CC0 = 0xE1000234;
