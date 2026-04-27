@@ -1523,40 +1523,6 @@ ExecuteNext:
     cdrom_run_command(nextCommand, 0, 0);
 }
 
- /**
- * @brief Low‑level sync callback for CD‑ROM init, validation, and recovery.
- *
- * This function is installed via CdSyncCallback() during startup and error
- * recovery. It drives a state machine (CD_SYSTEM.initState / initCommand)
- * that configures the drive, validates the disc, and eventually transitions
- * to normal command processing (cdrom_complete_command).
- *
- * @details
- * The handler manages four distinct phases:
- * 1. **Initialisation** – steps through states 1→6 (status check, set mode,
- *    set filter, read validation sector).
- * 2. **Disc validation** – states 7/8: verifies the disc ID string.
- * 3. **Error recovery** – on timeout or hardware error, it retries commands
- *    (CdlNop, CdlSetmode, CdlPause) or enters recovery states (0x20…0x23).
- * 4. **Normal hand‑off** – when initialisation succeeds and commands are
- *    queued, it replaces itself with cdrom_complete_command and dispatches
- *    the first command.
- *
- * The high bit of initCommand (0x80) acts as a retry flag: if a command fails,
- * the handler sets that bit and re‑issues CdlNop; the next callback sees the
- * pending retry and proceeds to error handling.
- *
- * @param intr   Completion code from the CD‑ROM drive (0 = busy, 1 = error,
- *               2 = CdlComplete, etc.). The code only acts on intr == 2.
- * @param result Pointer to the drive’s status byte (same as CD_SYSTEM.statusByte).
- *               Bit 4 (0x10) indicates a shell‑open or error condition.
- *
- * @note This callback runs from the CD‑ROM library’s interrupt handler.
- *       It must not call blocking functions (e.g., VSync(0)) and must be
- *       re‑entrant with respect to other callbacks.
- *
- * @see decomp.me: (73.39%) https://decomp.me/scratch/0Dz2i
- */
 void cdrom_handle_recovery_sync(u_char intr, u_char* result)
 {
     u8 sp10;
@@ -2233,26 +2199,6 @@ void cdrom_wait_on_empty_queue(void)
     }
 }
 
-/*
- * Handle CD synchronization error and reset CD subsystem state.
- *
- * Clears active CD callbacks, resets command and retry state,
- * updates status flags to signal an error condition, and records
- * the current VSync timestamp for recovery timing.
- *
- * Params:
- *  None
- *
- * Returns:
- *  void
- *
- * TODO: Verify the discrepency between makefile produced binary and decomp.me
- * This indicates some kind of toolchain problem.
- * Consider looking at decomp.me compilers repository to see if there are any differences in the image.
- *
- * decomp.me link: https://decomp.me/scratch/lU7lO
- * decomp.me (%): 100%
- */
 void cdrom_handle_sync_error(void)
 {
     CdSyncCallback(NULL);
@@ -2267,21 +2213,6 @@ void cdrom_handle_sync_error(void)
     CD_SYSTEM.statusFlags.word &= ~0x10;
     CD_SYSTEM.vsyncTimestamp = VSync(-1);
 }
-
-/*
- * Set audio volume for a specific stereo channel
- *
- * Params:
- *   volume - Volume level to set (0-255)
- *   mixMode -
- *     0: route both CD channels to SPU left only
- *     1: route CD left to both SPU speakers (mono)
- *
- * Returns: void
- *
- * decomp.me link: https://decomp.me/scratch/lwzx1
- * decomp.me (%): 100%
- */
 
 void cdrom_set_audio_volume(u_char volume, s32 mixMode)
 {
@@ -2309,18 +2240,6 @@ void cdrom_set_audio_volume(u_char volume, s32 mixMode)
     CdMix(audioConfig);
 }
 
-/**
- * Resets CD subsystem to idle state and stops any ongoing audio playback
- *
- * Params:
- *  None
- *
- * Returns:
- *  void
- *
- * decomp.me link: https://decomp.me/scratch/fnucZ
- * decomp.me (%): 100%
- */
 void cdrom_reset(void)
 {
     AudioSystem* audioSystem = &AUDIO_SYSTEM;
@@ -2421,49 +2340,6 @@ s32 cdrom_can_queue_resource(s32 resourceIndex)
     return 1;
 }
 
-/**
- * @brief Initializes the default CD resource entry and seeks to a disc location
- *
- * Converts a raw LBA sector address into MSF format, stores it as the default
- * CD resource, then enqueues a seek command and applies a default audio volume.
- *
- * @details
- * Performs the following steps in order:
- *
- * 1. Synchronizes with the VSync timestamp recorded in g_cdVSyncTimestamp:
- *    computes the delta between now and (g_cdVSyncTimestamp - 3) and calls
- *    VSync(delta) to stall the required number of frames, preventing command
- *    conflicts with any in-flight CD operation.
- * 2. Clears the default CD resource's location field (4 bytes zeroed via
- *    a single u32 write) and sets its dataSize to dataSizeBytes.
- * 3. Converts lba to CD-ROM MSF format via CdIntToPos() and writes the result
- *    into CD_SYSTEM.defaultCdResource.location.
- * 4. Enqueues command 0x06 (CdlReadN) with resource index 0xFFFF
- *    (CD_RESOURCE_INDEX_DEFAULT) and CD_RESOURCE_ENTRIES as the destination
- *    buffer.
- * 5. Blocks via cdrom_wait_on_empty_queue() until the read command completes.
- * 6. Calls cdrom_set_audio_volume(128, 1) to apply a default mid-level CD audio
- *    volume (0x80).
- *
- * @param lba           Logical Block Address of the target sector on disc.
- * @param dataSizeBytes Size in bytes of the data associated with this location;
- *                      stored as the default resource's dataSize.
- *
- * @return void
- *
- * @note
- * - The VSync stall uses an offset of -3 frames to match the original
- *   assembly's addiu exactly; the off-by-one branch (delta == 1 → 0) also
- *   matches the original to avoid a 1-frame over-wait.
- * - CD_RESOURCE_ENTRIES is a table of CdlLOC seek-position
- *   entries passed as the dstBuffer;
- *
- * @warning
- * - Blocks the caller until the CD command queue is fully drained.
- * - Must not be called from within a CD callback.
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
- */
 void cdrom_load_resource_table(s32 lba, s32 dataSizeBytes)
 {
     CdlLOCRaw* location;
@@ -2635,66 +2511,6 @@ void func_80014434(void)
     D_801ED801 = 1;
 }
 
-/**
- * @brief Decompresses a custom bytecode-encoded data stream
- *
- * Processes a sequence of opcodes from a source buffer and emits uncompressed
- * bytes into a destination buffer. Both the source and destination pointers
- * are updated in-place on every iteration so the caller can resume across
- * multiple calls.
- *
- * @details
- * Each iteration reads a single opcode byte from `*srcStart` and dispatches
- * on its value. Opcodes 0xF0–0xFF are control opcodes; any other value is a
- * raw-copy opcode. The encoding is summarised below:
- *
- *   Opcode  Encoding (bytes after opcode)  Operation
- *   ------  -----------------------------  ---------
- *   0xF0    [packed]                       Repeat upper nibble (count = lower nibble + 3)
- *   0xF1    [count] [value]                Repeat value (count + 4) times
- *   0xF2    [count] [packed]               Alternate lo/hi nibbles as 2-byte pairs (count + 2)
- *   0xF3    [count] [b0] [b1]              Repeat 2-byte pattern {b0, b1} (count + 2) times
- *   0xF4    [count] [b0] [b1] [b2]         Repeat 3-byte pattern {b0, b1, b2} (count + 2) times
- *   0xF5    [count] [fixed] + stream        Write {fixed, next_src_byte} pairs (count + 4) times
- *   0xF6    [count] [b0] [b1] + stream      Write {b0, b1, next_src_byte} triplets (count + 3) times
- *   0xF7    [count] [b0] [b1] [b2] + stream Write {b0, b1, b2, next_src_byte} quads (count + 2) times
- *   0xF8    [count] [start]                Ascending arithmetic run from start (count + 4 bytes)
- *   0xF9    [count] [start]                Descending arithmetic run from start (count + 4 bytes)
- *   0xFA    [count] [start] [step]         Arithmetic run: start, start+step, ... (count + 5 bytes)
- *   0xFB    [count] [b0] [b1] [delta]      Arithmetic 16-bit pair run; b0/b1 form a 16-bit
- *                                          accumulator incremented by signed delta each step
- *   0xFC    [offLo] [offHi_cnt]            Back-reference: 12-bit offset, count = upper nibble + 4
- *   0xFD    [offset] [count]               Back-reference: 8-bit offset, count + 0x14 bytes
- *   0xFE    [packed]                       Back-reference: offset = (upper nibble << 3) + 8,
- *                                          count = lower nibble + 3
- *   0xFF    (none)                         End-of-stream; updates pointers and returns 0
- *   default (opcode value)                 Raw copy: opcode + 1 bytes follow in the stream
- *
- * The loop terminates early (returning 1) if the source pointer reaches
- * `srcEnd` or the destination pointer reaches `dstEnd` before a 0xFF is seen.
- *
- * @param srcStart  Pointer to the current source read position; updated on return
- * @param dstStart  Pointer to the current destination write position; updated on return
- * @param srcEnd    Exclusive upper bound of the source buffer (loop guard)
- * @param dstEnd    Exclusive upper bound of the destination buffer (loop guard)
- *
- * @return 0 if a 0xFF end-of-stream opcode was encountered,
- *         1 if the source or destination buffer was exhausted first
- *
- * @note
- * - `valueHigh` is initialised from `srcEnd` and persists across loop iterations;
- *   it forms the high byte of the 16-bit running accumulator used by opcode 0xFB
- * - `*srcStart` is written inside the loop (not just on exit) to keep the
- *   caller's pointer current even if the outer while-condition terminates early
- *
- * @warning
- * - No bounds checking is performed on back-reference offsets (0xFC–0xFE);
- *   a malformed stream can read before the start of the destination buffer
- * - The destination buffer must be large enough to hold the fully decompressed
- *   output; no overflow check is performed beyond the `dstEnd` guard
- *
- * @see decomp.me: (99.83%) https://decomp.me/scratch/MlH6P
- */
 s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
 {
     u8* srcPtr;
