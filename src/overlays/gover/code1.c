@@ -118,7 +118,7 @@ void RunGameOver(void)
             PutDrawEnv((DRAWENV*)(var_s0 + 0x34));
             DrawOTag((u_long*)(var_s1 + new_var));
             func_800157DC();
-            CD_UpdateAndProcessQueue();
+            cdrom_process_state();
         }
     }
     DrawSync(0);
@@ -206,8 +206,8 @@ void BuildOTag(unsigned char* pOtBuf)
 void LoadImageFromCd(s32 arg0, VramDstCoords* coordinates, u32 address)
 {
     volatile u8 dummy[8];
-    CD_QueueRead(arg0 & 0xFFFF, address);
-    CD_WaitForQueueEmpty();
+    cdrom_queue_read(arg0 & 0xFFFF, address);
+    cdrom_wait_queue_empty();
     UploadImageDataToVram((ClutSectionHeader*)address, coordinates);
 }
 
@@ -255,8 +255,8 @@ void LoadAudioClip(s32 arg0)
         g_audioData.unk0 = 0;
         if (arg0 != (-1))
         {
-            CD_QueueRead((arg0 + 0x51) & 0xFFFF, 0x80180000UL);
-            CD_WaitForQueueEmpty();
+            cdrom_queue_read((arg0 + 0x51) & 0xFFFF, 0x80180000UL);
+            cdrom_wait_queue_empty();
             g_audioData.unk0 = 0xC;
             offset = g_audioDataOffset;
 

@@ -58,7 +58,7 @@ segments:
       - [0xAAC, rodata, rodata2]
       - [0x1558, c, main]
       - [0x1B58, c, decomp1]
-      - [0x1F10, c, cd]
+      - [0x1F10, c, cdrom]
       - [0x52DC, c, decomp6]
       - [0x6428, c, decomp2]
       - [0x6458, c, decomp7]

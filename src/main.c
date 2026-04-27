@@ -27,7 +27,7 @@ void Main(void)
     SetVideoMode(0);
     SpuInit();
     FUN_80015c18();
-    CD_Initialize();
+    cdrom_init();
     InitGeom();
     InitCARD(0);
     StartCARD();
@@ -35,11 +35,11 @@ void Main(void)
     McxStartCom();
     ChangeClearPAD(0);
     InitializeControllers(0);
-    CD_InitResources(0x18, 0xB598);
+    cdrom_load_resource_table(0x18, 0xB598);
     FUN_80021fbc();
 
     // MAP/FDATA/FONT.PRS
-    CD_StreamData(0xB2, 0x801E1200);
+    cdrom_stream(0xB2, 0x801E1200);
     InitVSyncController();
     srand(1);
     D_80042FC4 = 0;
@@ -53,8 +53,8 @@ void Main(void)
     g_gameState = 8U;
     FUN_80015c28();
     // BIN/CHECKPS.BIN
-    CD_StreamData(15, *streamDst);
-    CD_WaitForQueueEmpty();
+    cdrom_stream(15, *streamDst);
+    cdrom_wait_queue_empty();
     RunCheckPS(0x80100000);
     DrawSync(0);
     VSync(0);
@@ -77,12 +77,12 @@ void Main(void)
                 DrawSync(0);
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                CD_StreamData(2, *new_var3);
+                cdrom_stream(2, *new_var3);
                 if (g_gameState != 0)
                 {
                     // BIN/MOVIE.BIN
-                    CD_StreamData(11, 0x80140000);
-                    CD_WaitForQueueEmpty();
+                    cdrom_stream(11, 0x80140000);
+                    cdrom_wait_queue_empty();
                     if (g_gameState == 9)
                     {
                         FUN_80140018(1);
@@ -96,7 +96,7 @@ void Main(void)
                 }
                 else
                 {
-                    CD_WaitForQueueEmpty();
+                    cdrom_wait_queue_empty();
                 }
                 D_80042FCC = 0;
                 g_gameState = FUN_80015c58();
@@ -110,7 +110,7 @@ void Main(void)
             case 1:
                 FUN_80015c38();
                 // BIN/WMAP.BIN
-                CD_StreamData(3, *(new_var3 + 171));
+                cdrom_stream(3, *(new_var3 + 171));
                 GFX_Transition(0);
                 rect.x = 0;
                 rect.y = 0;
@@ -121,7 +121,7 @@ void Main(void)
                 VSync(0);
                 FUN_80022aa8();
                 FUN_80022ac8();
-                CD_WaitForQueueEmpty();
+                cdrom_wait_queue_empty();
                 *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = FUN_80060814();
                 FUN_80022aa8();
                 FUN_80022ac8();
@@ -138,11 +138,11 @@ void Main(void)
             case 2:
             {
                 func_80015C48();
-                cd_stop_ret = CD_Stop();
+                cd_stop_ret = cdrom_stop();
                 // BIN/TITLE.BIN
-                CD_StreamData(4, *(new_var3 + 171));
+                cdrom_stream(4, *(new_var3 + 171));
                 GFX_Transition(0);
-                CD_WaitForQueueEmpty();
+                cdrom_wait_queue_empty();
                 *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = func_8004FC74(cd_stop_ret);
                 DrawSync(0);
                 VSync(0);
@@ -153,11 +153,11 @@ void Main(void)
             case 3:
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                CD_StreamData(2, *(new_var3 + 171));
+                cdrom_stream(2, *(new_var3 + 171));
                 // BIN/GNAME.BIN
-                CD_StreamData(5, 0x80140000);
+                cdrom_stream(5, 0x80140000);
                 GFX_Transition(0);
-                CD_WaitForQueueEmpty();
+                cdrom_wait_queue_empty();
                 func_800A3534();
                 func_80051FBC(0);
                 D_8003EC98 = 0;
@@ -171,9 +171,9 @@ void Main(void)
             case 5:
                 FUN_80015c28();
                 // BIN/WSEL.BIN
-                CD_StreamData(14, *(new_var3 + 171));
+                cdrom_stream(14, *(new_var3 + 171));
                 GFX_Transition(0);
-                CD_WaitForQueueEmpty();
+                cdrom_wait_queue_empty();
                 *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = func_8004FC8C(0x80170000);
                 DrawSync(0);
                 VSync(0);
@@ -183,11 +183,11 @@ void Main(void)
             case 7:
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                CD_StreamData(2, *(new_var3 + 171));
+                cdrom_stream(2, *(new_var3 + 171));
                 // BIN/CLOAD.BIN
-                CD_StreamData(16, 0x80140000);
+                cdrom_stream(16, 0x80140000);
                 GFX_Transition(0);
-                CD_WaitForQueueEmpty();
+                cdrom_wait_queue_empty();
                 func_80051FBC(0);
                 D_8003EC9C = 7;
                 if (func_801400C4() != 0)
@@ -223,9 +223,9 @@ void Main(void)
                 func_80015C48();
                 
                 // BIN/MOVIE.BIN
-                CD_StreamData(11, 0x80140000);
+                cdrom_stream(11, 0x80140000);
                 GFX_Transition(0);
-                CD_WaitForQueueEmpty();
+                cdrom_wait_queue_empty();
                 FUN_80140018(0);
                 *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = 2;
                 DrawSync(0);
