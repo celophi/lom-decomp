@@ -25,31 +25,23 @@ cdrom_verify_disc                   = 0x80013D74;
 cdrom_wait_queue_empty              = 0x80013F2C;
 cdrom_handle_sync_error             = 0x80013F64;
 cdrom_set_audio_volume              = 0x80013FD0;
-
-// Uncategorized
 cdrom_reset                         = 0x80014014;
-
-// cdrom.c
 cdrom_can_queue_resource            = 0x800140D4;
 cdrom_load_resource_table           = 0x80014140;
-
-// Uncategorized
 cdrom_queue_read                    = 0x800141EC;
 cdrom_queue_read_with_callback      = 0x80014218;
-func_80014244                       = 0x80014244;
+cdrom_queue_seek                    = 0x80014244;
 cdrom_get_resource_size             = 0x80014270;
 cdrom_get_error_status              = 0x80014290;
 cdrom_restore_callbacks             = 0x800142F8;
 cdrom_enter_recovery_mode           = 0x800143C0;
 func_80014434                       = 0x80014434;
-
-// cdrom.c
 cdrom_decompress_data               = 0x80014448;
 cdrom_handle_stream_data            = 0x80014888;
-
-// Uncategorized
 cdrom_decompress_buffer             = 0x80014A8C;
 cdrom_clear_data_ready              = 0x80014AD0;
+
+// Uncategorized
 InitializeControllers               = 0x80014ADC;
 InitVSyncController                 = 0x80015770;
 func_800157DC                       = 0x800157DC;

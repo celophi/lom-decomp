@@ -2390,9 +2390,9 @@ void cdrom_queue_read_with_callback(s32 resourceIndex, CdCommandCallback callbac
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/iUUQh
  */
-void func_80014244(s32 arg0)
+void cdrom_queue_seek(s32 resourceIndex)
 {
-    cdrom_queue_command(CdlSeekL, arg0, 0, 0);
+    cdrom_queue_command(CdlSeekL, resourceIndex, 0, 0);
 }
 
 /**
