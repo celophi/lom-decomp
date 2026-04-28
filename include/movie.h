@@ -232,7 +232,7 @@ extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
 extern void* D_80180014;
 extern u8 D_801ED590;
-extern s8 D_801ED596;
+extern u8 D_801ED596;
 extern u8 D_801ED595;
 extern u8 D_801ED592;
 extern u16 D_801ED57E;
