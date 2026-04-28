@@ -228,6 +228,19 @@ typedef struct Global
     s32 unk8C;
 } Global;
 
+typedef struct
+{
+    s32 unk0;              /* 0x00 */
+    s32 unk4;              /* 0x04 */
+    u8 _pad0[0x58 - 8];    /* 0x08 … 0x57 */
+    s32 unk58;             /* 0x58 */
+    s32 unk5C;             /* 0x5C */
+    s32 unk60;             /* 0x60 */
+    u8 _pad1[0x80 - 0x64]; /* 0x64 … 0x7F */
+    s32 unk80;             /* 0x80 */
+    s32 unk84;             /* 0x84 */
+} BaseStruct_80141788;
+
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
 extern void* D_80180014;
