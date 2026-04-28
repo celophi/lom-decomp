@@ -1089,20 +1089,23 @@ block_10:
 /**
  * decomp.me: (100%) https://decomp.me/scratch/TApbR
  */
-void func_801416C4(void) {
-    volatile u8 *base = (volatile u8 *)0x801ED500;
+void func_801416C4(void)
+{
+    volatile u8* base = (volatile u8*)0x801ED500;
     unsigned int temp_lo;
     int new_var;
 
-    if (D_801ED596 == 0) {
+    if (D_801ED596 == 0)
+    {
         base[0x97] = 0;
 
         {
             u8 tmp = base[0x9a];
-            if (tmp != 0) {
+            if (tmp != 0)
+            {
                 u8 idx = base[0x99];
-                u32 *ptr = (u32 *)(base + (idx << 2));
-                LoadImage((RECT *)(base + 0x30), (u_long *)ptr[6]);
+                u32* ptr = (u32*)(base + (idx << 2));
+                LoadImage((RECT*)(base + 0x30), (u_long*)ptr[6]);
                 func_80140C00();
                 base[0x9a] = 0;
             }
@@ -1110,16 +1113,62 @@ void func_801416C4(void) {
 
         {
             u8 tmp = base[0x9b];
-            if (tmp != 0) {
-                s16 v1 = *((s16 *)(base + 0x34));
-                s16 v2 = *((s16 *)(base + 0x36));
+            if (tmp != 0)
+            {
+                s16 v1 = *((s16*)(base + 0x34));
+                s16 v2 = *((s16*)(base + 0x36));
                 u8 idx = base[0x99];
-                u32 *ptr = (u32 *)(base + (idx << 2));
+                u32* ptr = (u32*)(base + (idx << 2));
                 temp_lo = v1 * v2;
                 new_var = temp_lo + (temp_lo >> 31);
-                DecDCTout((u_long *)ptr[6], (s32)(new_var >> 1));
+                DecDCTout((u_long*)ptr[6], (s32)(new_var >> 1));
                 base[0x9b] = 0;
             }
         }
     }
+}
+
+/**
+ * decomp.me: (98.08%) https://decomp.me/scratch/OJvsJ
+ */
+s32 func_80141788(s32* arg0, s32* arg1)
+{
+    volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
+    volatile BaseStruct_80141788* base2;
+    s32 new_var;
+    s32 new_var2;
+    s32* out0 = arg0;
+    s32* out1 = arg1;
+
+    if (base->unk58 != base->unk5C)
+    {
+        /* fall through to reload base */
+    }
+    else if (base->unk80 != base->unk84)
+    {
+        base = (volatile BaseStruct_80141788*)0x801ED500;
+    }
+    else
+    {
+        return 0;
+    }
+
+    base = (volatile BaseStruct_80141788*)0x801ED500;
+
+    new_var = base->unk58;
+    new_var2 = base->unk5C;
+
+    if ((new_var2 >= new_var) && (new_var2 == base->unk60) && (base->unk58 == 0))
+    {
+        base->unk5C = 0;
+        if (base->unk80 == base->unk84)
+        {
+            return 0;
+        }
+    }
+
+    base2 = (volatile BaseStruct_80141788*)0x801ED500;
+    *out1 = base2->unk0 + (base2->unk5C << 5);
+    *arg0 = base2->unk4 + (base2->unk5C * 0x7E0);
+    return 1;
 }
