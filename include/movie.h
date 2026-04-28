@@ -271,7 +271,7 @@ typedef struct
 typedef struct
 {
     u8 pad[6];
-    u16 unk6;
+    u16 sectorCount;
     s32 unk8;
 } InnerStruct_801418B0;
 
