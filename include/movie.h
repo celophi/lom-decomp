@@ -178,7 +178,8 @@ typedef struct
 
 typedef u32 SectorBuffer[8];
 
-typedef struct GlobalData {
+typedef struct GlobalData
+{
     u32 unk0;
     u32 unk4;
     u32 unk8;
@@ -206,6 +207,26 @@ typedef struct GlobalData {
     u8 _pad93[11];
     u8 unk9E;
 } GlobalData;
+
+typedef struct Entry
+{
+    u8 _pad0[6];
+    u16 unk6;
+    u8 _pad1[2048 - 8];
+} Entry;
+typedef struct Global
+{
+    u8 _pad0[8];
+    u8* unk8;
+    u8 _pad1[0x64 - 0xC];
+    s32 unk64;
+    s32 unk68;
+    s32 unk6C;
+    s32 unk70;
+    u8 _pad2[0x88 - 0x74];
+    s32 unk88;
+    s32 unk8C;
+} Global;
 
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
