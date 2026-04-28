@@ -42,33 +42,33 @@ void FUN_80140018(s32 movieIndex)
     env[0].isrgb24 = (env[1].isrgb24 = 1);
 
     {
-        u32 a2;
+        u32 frameCount;
         switch ((u16)(movieIndex & 0xFFFF))
         {
         case 0:
-            a2 = 0x832;
+            frameCount = 2098;
             break;
 
         case 1:
-            a2 = 0x9a9;
+            frameCount = 2473;
             break;
 
         case 2:
-            a2 = 0x526;
+            frameCount = 1318;
             break;
 
         case 3:
-            a2 = 0x14f8;
+            frameCount = 5368;
             break;
 
         case 4:
 
         default:
-            a2 = 0x382;
+            frameCount = 898;
             break;
         }
 
-        func_80140358((movieIndex & 0xFFFF) + 0x16A0, 0x80, a2, 0);
+        func_80140358((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
     }
 
     VSync(0);
