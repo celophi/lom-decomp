@@ -745,6 +745,7 @@ s32 func_80140F04(void)
     volatile GlobalData* const gp = (GlobalData*)0x801ED500;
     u16* sp16;
     u32 count;
+    u16 rem;
     void* dest;
     void* entry;
 
@@ -763,7 +764,6 @@ s32 func_80140F04(void)
             return 0;
         }
 
-        do_load = 1;
         gp->unk74 = sp10[2];
 
         /* check low word of sp10[1] (offset 0x14) */
@@ -776,20 +776,12 @@ s32 func_80140F04(void)
             /* 0x8001 sector type */
             if (gp->unk58 == gp->unk5C)
             {
-                if (gp->unk80 != gp->unk84)
-                {
-                    do_load = 0;
-                }
-                else
+                if (gp->unk80 == gp->unk84)
                 {
                     count = ((u16*)sp10)[3];
                     if (gp->unk50 < gp->unk58 + (s32)count)
                     {
-                        if (gp->unk5C < (s32)count)
-                        {
-                            do_load = 0;
-                        }
-                        else
+                        if (gp->unk5C >= (s32)count)
                         {
                             do_load = 1;
                             gp->unk60 = gp->unk58;
@@ -807,11 +799,7 @@ s32 func_80140F04(void)
                 count = ((u16*)sp10)[3];
                 if (gp->unk50 < gp->unk58 + (s32)count)
                 {
-                    if (gp->unk5C < (s32)count)
-                    {
-                        do_load = 0;
-                    }
-                    else
+                    if (gp->unk5C >= (s32)count)
                     {
                         do_load = 1;
                         gp->unk60 = gp->unk58;
@@ -826,11 +814,7 @@ s32 func_80140F04(void)
             else
             {
                 count = ((u16*)sp10)[3];
-                if (gp->unk5C < gp->unk58 + (s32)count)
-                {
-                    do_load = 0;
-                }
-                else
+                if (gp->unk5C >= gp->unk58 + (s32)count)
                 {
                     do_load = 1;
                 }
@@ -853,9 +837,9 @@ s32 func_80140F04(void)
                 ((u32*)entry)[6] = sp10[6];
                 ((u32*)entry)[7] = sp10[7];
 
-                count = ((u16*)sp10)[3] - 1;
-                gp->unk7E = (u16)count;
-                if (count == 0)
+                rem = (u16)(((u16*)sp10)[3] - 1);
+                gp->unk7E = rem;
+                if (rem == 0)
                 {
                     gp->unk58 += 1;
                     gp->unk80 = gp->unk74;
@@ -864,7 +848,7 @@ s32 func_80140F04(void)
                 else
                 {
                     gp->unk78 = 0;
-                    gp->unk7C = (u16)count;
+                    gp->unk7C = rem;
                     return 1;
                 }
             }
@@ -878,20 +862,12 @@ s32 func_80140F04(void)
             /* other sector type */
             if (gp->unk64 == gp->unk68)
             {
-                if (gp->unk88 != gp->unk8C)
-                {
-                    do_load = 0;
-                }
-                else
+                if (gp->unk88 == gp->unk8C)
                 {
                     count = ((u16*)sp10)[3];
                     if (gp->unk54 < gp->unk64 + (s32)count)
                     {
-                        if (gp->unk68 < (s32)count)
-                        {
-                            do_load = 0;
-                        }
-                        else
+                        if (gp->unk68 >= (s32)count)
                         {
                             do_load = 1;
                             gp->unk6C = gp->unk64;
@@ -909,11 +885,7 @@ s32 func_80140F04(void)
                 count = ((u16*)sp10)[3];
                 if (gp->unk54 < gp->unk64 + (s32)count)
                 {
-                    if (gp->unk68 < (s32)count)
-                    {
-                        do_load = 0;
-                    }
-                    else
+                    if (gp->unk68 >= (s32)count)
                     {
                         do_load = 1;
                         gp->unk6C = gp->unk64;
@@ -928,11 +900,7 @@ s32 func_80140F04(void)
             else
             {
                 count = ((u16*)sp10)[3];
-                if (gp->unk68 < gp->unk64 + (s32)count)
-                {
-                    do_load = 0;
-                }
-                else
+                if (gp->unk68 >= gp->unk64 + (s32)count)
                 {
                     do_load = 1;
                 }
@@ -955,9 +923,9 @@ s32 func_80140F04(void)
                 ((u32*)entry)[6] = sp10[6];
                 ((u32*)entry)[7] = sp10[7];
 
-                count = ((u16*)sp10)[3] - 1;
-                gp->unk7E = (u16)count;
-                if (count == 0)
+                rem = (u16)(((u16*)sp10)[3] - 1);
+                gp->unk7E = rem;
+                if (rem == 0)
                 {
                     gp->unk64 += 1;
                     gp->unk88 = gp->unk74;
@@ -966,8 +934,8 @@ s32 func_80140F04(void)
                 }
                 else
                 {
-                    gp->unk78 = count;
-                    gp->unk7C = (u16)count;
+                    gp->unk78 = rem;
+                    gp->unk7C = rem;
                 }
             }
 
@@ -998,25 +966,23 @@ s32 func_80140F04(void)
                     {
                     }
 
-                    gp->unk7E -= 1;
-                    if (gp->unk7E != 0)
+                    rem = gp->unk7E - 1;
+                    gp->unk7E = rem;
+                    if (rem != 0)
                     {
                         gp->unk7C += 1;
                         return 1;
                     }
                     gp->unk58 = gp->unk58 + 1 + gp->unk7C;
                     gp->unk80 = gp->unk74;
-                    return (gp->unk74 < gp->unk4C) ? 1 : 0;
+                    return (((u32*)entry)[2] < gp->unk4C) ? 1 : 0;
                 }
                 gp->unk7E = 0;
                 gp->unk74 = ((u32*)entry)[2];
                 if (((u32*)entry)[2] < gp->unk4C)
                     break;
-                else
-                {
-                    gp->unk9E = 1;
-                    return 0;
-                }
+                gp->unk9E = 1;
+                return 0;
             }
             return 1;
         }
@@ -1037,8 +1003,9 @@ s32 func_80140F04(void)
                     {
                     }
 
-                    gp->unk7E -= 1;
-                    if (gp->unk7E != 0)
+                    rem = gp->unk7E - 1;
+                    gp->unk7E = rem;
+                    if (rem != 0)
                     {
                         gp->unk7C += 1;
                         return 1;
@@ -1051,12 +1018,10 @@ s32 func_80140F04(void)
                 }
                 gp->unk7E = 0;
                 gp->unk74 = ((u32*)entry)[2];
-                if (gp->unk4C < ((u32*)entry)[2])
-                {
-                    gp->unk9E = 1;
-                    return 0;
-                }
-                break;
+                if (!(gp->unk4C < ((u32*)entry)[2]))
+                    break;
+                gp->unk9E = 1;
+                return 0;
             }
             return 1;
         }
