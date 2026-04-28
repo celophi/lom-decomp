@@ -4,7 +4,7 @@
  * decomp.me link (97.51%) https://decomp.me/scratch/XvMvo
  * this one is a WIP without gotos (https://decomp.me/scratch/Gq1vj)
  */
-void FUN_80140018(s32 arg0)
+void FUN_80140018(s32 movieIndex)
 {
     DISPENV env[2];
     DISPENV* new_var5;
@@ -22,7 +22,7 @@ void FUN_80140018(s32 arg0)
     func_800157DC();
     cdrom_process_state();
 
-    if ((arg0 & 0xFFFF) == 0)
+    if ((movieIndex & 0xFFFF) == 0)
     {
         if (((SRC_801ED600*)0x801ED600)->unk0 < 3)
         {
@@ -43,7 +43,7 @@ void FUN_80140018(s32 arg0)
 
     {
         u32 a2;
-        switch ((u16)(arg0 & 0xFFFF))
+        switch ((u16)(movieIndex & 0xFFFF))
         {
         case 0:
             a2 = 0x832;
@@ -68,7 +68,7 @@ void FUN_80140018(s32 arg0)
             break;
         }
 
-        func_80140358((arg0 & 0xFFFF) + 0x16A0, 0x80, a2, 0);
+        func_80140358((movieIndex & 0xFFFF) + 0x16A0, 0x80, a2, 0);
     }
 
     VSync(0);
@@ -154,7 +154,7 @@ recheck_unk9d:
     cdrom_process_state();
 
     {
-        u32 a0 = (u32)(arg0 & 0xFFFF);
+        u32 a0 = (u32)(movieIndex & 0xFFFF);
         if ((a0 < 2) && (((SRC_801ED600*)0x801ED600)->unk0 < 3))
         {
             u16 val = ((SRC_801ED600*)0x801ED600)->unk4;
@@ -645,6 +645,7 @@ void func_80140C00(void)
     }
     else
     {
+        // determining which of the GFX buffer to use from the double buffer?
         *((volatile u8*)(&ptr->unk98)) = 1 - (*((volatile u8*)(&ptr->unk98)));
         ptr->unk30 = ptr->ch[*((volatile u8*)(&ptr->unk98))].a;
         ptr->unk32 = *(new_var = &ptr->ch[*((volatile u8*)(&ptr->unk98))].b);
