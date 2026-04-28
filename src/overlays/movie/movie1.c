@@ -105,7 +105,7 @@ wait_loop:
     func_801406E4();
 
     {
-        u8 unk9d_val = p500->unk9d;
+        u8 unk9d_val = p500->frameReady;
         if (unk9d_val != 0)
         {
             goto after_wait;
@@ -133,12 +133,12 @@ after_wait:
 
 recheck_unk9d:
     timeout = 0x2000;
-    if (p500->unk9d == 0)
+    if (p500->frameReady == 0)
     {
         goto wait_loop;
     }
 
-    p500->unk9d = 0;
+    p500->frameReady = 0;
     func_800157B0(4);
     VSync(0);
 

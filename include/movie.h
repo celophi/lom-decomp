@@ -22,7 +22,7 @@ typedef struct
     u_char _pad9a;
     u_char _pad9b;
     u_char _pad9c;
-    u_char unk9d;
+    u_char frameReady;
     u_char _pad9e;
     u_char unk9f;
 } SRC_801ED500;
