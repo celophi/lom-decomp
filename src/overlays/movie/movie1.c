@@ -1172,3 +1172,62 @@ s32 func_80141788(s32* arg0, s32* arg1)
     *arg0 = base2->unk4 + (base2->unk5C * 0x7E0);
     return 1;
 }
+
+/**
+ * decomp.me: (100%) https://decomp.me/scratch/SUBK5
+ */
+void func_80141858(void)
+{
+    volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
+    s32 temp_v1;
+    InnerStruct* inner;
+    s32 var_a2;
+    s32 unk8_val;
+    temp_v1 = base->unk5C;
+    inner = (InnerStruct*)(base->unk0 + (temp_v1 << 5));
+    var_a2 = temp_v1 + inner->unk6;
+    unk8_val = inner->unk8;
+    if ((temp_v1 >= base->unk58) && (var_a2 == base->unk60))
+    {
+        var_a2 = 0;
+    }
+    unk8_val = inner->unk8;
+    ((BaseStruct_80141788*)0x801ED500)->unk5C = var_a2;
+    ((BaseStruct_80141788*)0x801ED500)->unk84 = unk8_val;
+}
+
+/**
+ * decomp.me: (100%) https://decomp.me/scratch/6Xjsu
+ */
+void func_801418B0(void)
+{
+    BaseStruct_801418B0* base;
+    InnerStruct_801418B0* inner;
+    u16* new_var;
+    s32 temp_v1;
+    s32 unk64_val;
+    unsigned int temp_a0;
+    s32 var_a3;
+    s32 unk8_val;
+    s32 new_unk70;
+    base = (BaseStruct_801418B0*)0x801ED500;
+    temp_v1 = base->unk68;
+    inner = (InnerStruct_801418B0*)(base->unk8 + (temp_v1 << 11));
+    unk64_val = base->unk64;
+    new_var = &inner->unk6;
+    temp_a0 = *new_var;
+    var_a3 = temp_v1 + temp_a0;
+    new_unk70 = base->unk70 - temp_a0;
+    base += 0;
+    base->unk70 = new_unk70;
+    if (temp_v1 >= unk64_val)
+    {
+        if (var_a3 == base->unk60)
+        {
+            var_a3 = 0;
+        }
+    }
+    unk8_val = inner->unk8;
+    ((BaseStruct_801418B0*)0x801ED500)->unk68 = var_a3;
+    ((BaseStruct_801418B0*)0x801ED500)->unk8C = unk8_val;
+}

@@ -329,7 +329,6 @@ OVERLAYS += menu
 overlay_menu_gcc_srcs   := src/overlays/menu/unk1.c
 
 OVERLAYS += movie
-overlay_movie_gcc_srcs      := src/overlays/movie/unk1.c
 overlay_movie_gcc_g4_srcs   := src/overlays/movie/movie1.c
 
 OVERLAYS += niki
