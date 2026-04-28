@@ -734,3 +734,336 @@ void FUN_80140d48(void)
         D_801ED596 = 0; // <-- moved outside the inner if
     }
 }
+
+/**
+ * decomp.me (76.45%) https://decomp.me/scratch/HptYe
+ */
+s32 func_80140F04(void)
+{
+    SectorBuffer sp10;
+    s32 do_load; /* s0 in assembly */
+    volatile GlobalData* const gp = (GlobalData*)0x801ED500;
+    u16* sp16;
+    u32 count;
+    void* dest;
+    void* entry;
+
+    do_load = 0;
+
+    if (D_801ED57E == 0)
+    {
+        /* read first header sector */
+        while (CdGetSector(sp10, 8) == 0)
+        {
+        }
+
+        if (gp->unk4C < sp10[2])
+        {
+            gp->unk9E = 1;
+            return 0;
+        }
+
+        do_load = 1;
+        gp->unk74 = sp10[2];
+
+        /* check low word of sp10[1] (offset 0x14) */
+        if (((u16*)sp10)[2] != 0)
+            return 1;
+
+        /* check high word of sp10[0] (offset 0x12) */
+        if (((u16*)sp10)[1] == 0x8001)
+        {
+            /* 0x8001 sector type */
+            if (gp->unk58 == gp->unk5C)
+            {
+                if (gp->unk80 != gp->unk84)
+                {
+                    do_load = 0;
+                }
+                else
+                {
+                    count = ((u16*)sp10)[3];
+                    if (gp->unk50 < gp->unk58 + (s32)count)
+                    {
+                        if (gp->unk5C < (s32)count)
+                        {
+                            do_load = 0;
+                        }
+                        else
+                        {
+                            do_load = 1;
+                            gp->unk60 = gp->unk58;
+                            gp->unk58 = 0;
+                        }
+                    }
+                    else
+                    {
+                        do_load = 1;
+                    }
+                }
+            }
+            else if (gp->unk5C < gp->unk58)
+            {
+                count = ((u16*)sp10)[3];
+                if (gp->unk50 < gp->unk58 + (s32)count)
+                {
+                    if (gp->unk5C < (s32)count)
+                    {
+                        do_load = 0;
+                    }
+                    else
+                    {
+                        do_load = 1;
+                        gp->unk60 = gp->unk58;
+                        gp->unk58 = 0;
+                    }
+                }
+                else
+                {
+                    do_load = 1;
+                }
+            }
+            else
+            {
+                count = ((u16*)sp10)[3];
+                if (gp->unk5C < gp->unk58 + (s32)count)
+                {
+                    do_load = 0;
+                }
+                else
+                {
+                    do_load = 1;
+                }
+            }
+
+            if (do_load != 0)
+            {
+                dest = (void*)(gp->unk4 + (gp->unk58 * 2016));
+                while (CdGetSector(dest, 0x1F8) == 0)
+                {
+                }
+
+                entry = (void*)(gp->unk0 + (gp->unk58 << 5));
+                ((u32*)entry)[0] = sp10[0];
+                ((u32*)entry)[1] = sp10[1];
+                ((u32*)entry)[2] = sp10[2];
+                ((u32*)entry)[3] = sp10[3];
+                ((u32*)entry)[4] = sp10[4];
+                ((u32*)entry)[5] = sp10[5];
+                ((u32*)entry)[6] = sp10[6];
+                ((u32*)entry)[7] = sp10[7];
+
+                count = ((u16*)sp10)[3] - 1;
+                gp->unk7E = (u16)count;
+                if (count == 0)
+                {
+                    gp->unk58 += 1;
+                    gp->unk80 = gp->unk74;
+                    return (gp->unk74 < gp->unk4C) ? 1 : 0;
+                }
+                else
+                {
+                    gp->unk78 = 0;
+                    gp->unk7C = (u16)count;
+                    return 1;
+                }
+            }
+            else
+            {
+                return 1;
+            }
+        }
+        else
+        {
+            /* other sector type */
+            if (gp->unk64 == gp->unk68)
+            {
+                if (gp->unk88 != gp->unk8C)
+                {
+                    do_load = 0;
+                }
+                else
+                {
+                    count = ((u16*)sp10)[3];
+                    if (gp->unk54 < gp->unk64 + (s32)count)
+                    {
+                        if (gp->unk68 < (s32)count)
+                        {
+                            do_load = 0;
+                        }
+                        else
+                        {
+                            do_load = 1;
+                            gp->unk6C = gp->unk64;
+                            gp->unk64 = 0;
+                        }
+                    }
+                    else
+                    {
+                        do_load = 1;
+                    }
+                }
+            }
+            else if (gp->unk68 < gp->unk64)
+            {
+                count = ((u16*)sp10)[3];
+                if (gp->unk54 < gp->unk64 + (s32)count)
+                {
+                    if (gp->unk68 < (s32)count)
+                    {
+                        do_load = 0;
+                    }
+                    else
+                    {
+                        do_load = 1;
+                        gp->unk6C = gp->unk64;
+                        gp->unk64 = 0;
+                    }
+                }
+                else
+                {
+                    do_load = 1;
+                }
+            }
+            else
+            {
+                count = ((u16*)sp10)[3];
+                if (gp->unk68 < gp->unk64 + (s32)count)
+                {
+                    do_load = 0;
+                }
+                else
+                {
+                    do_load = 1;
+                }
+            }
+
+            if (do_load != 0)
+            {
+                dest = (void*)(gp->unk8 + (gp->unk64 << 11) + 0x20);
+                while (CdGetSector(dest, 0x1F8) == 0)
+                {
+                }
+
+                entry = (void*)(gp->unk8 + (gp->unk64 << 11));
+                ((u32*)entry)[0] = sp10[0];
+                ((u32*)entry)[1] = sp10[1];
+                ((u32*)entry)[2] = sp10[2];
+                ((u32*)entry)[3] = sp10[3];
+                ((u32*)entry)[4] = sp10[4];
+                ((u32*)entry)[5] = sp10[5];
+                ((u32*)entry)[6] = sp10[6];
+                ((u32*)entry)[7] = sp10[7];
+
+                count = ((u16*)sp10)[3] - 1;
+                gp->unk7E = (u16)count;
+                if (count == 0)
+                {
+                    gp->unk64 += 1;
+                    gp->unk88 = gp->unk74;
+                    if (gp->unk4C < gp->unk74)
+                        return 0;
+                }
+                else
+                {
+                    gp->unk78 = count;
+                    gp->unk7C = (u16)count;
+                }
+            }
+
+            if (D_801ED592 == 1)
+            {
+                gp->unk92 = 2;
+            }
+            return 1;
+        }
+    }
+    else
+    {
+        /* D_801ED57E != 0 */
+        if (gp->unk78 == 0)
+        {
+            for (;;)
+            {
+                entry = (void*)(gp->unk0 + ((gp->unk58 + gp->unk7C) << 5));
+                while (CdGetSector(entry, 8) == 0)
+                {
+                }
+
+                sp16 = (u16*)entry;
+                if (sp16[1] == 0x8001 && ((u32*)entry)[2] == gp->unk74 && sp16[2] == gp->unk7C)
+                {
+                    dest = (void*)(gp->unk4 + ((gp->unk58 + gp->unk7C) * 2016));
+                    while (CdGetSector(dest, 0x1F8) == 0)
+                    {
+                    }
+
+                    gp->unk7E -= 1;
+                    if (gp->unk7E == 0)
+                    {
+                        gp->unk58 = gp->unk58 + 1 + gp->unk7C;
+                        gp->unk80 = gp->unk74;
+                        return (gp->unk74 < gp->unk4C) ? 1 : 0;
+                    }
+                    else
+                    {
+                        gp->unk7C += 1;
+                        return 1;
+                    }
+                }
+                gp->unk7E = 0;
+                gp->unk74 = ((u32*)entry)[2];
+                if (((u32*)entry)[2] < gp->unk4C)
+                    break;
+                else
+                {
+                    gp->unk9E = 1;
+                    return 0;
+                }
+            }
+            return 1;
+        }
+        else
+        {
+            for (;;)
+            {
+                entry = (void*)(gp->unk8 + ((gp->unk64 + gp->unk7C) << 11));
+                while (CdGetSector(entry, 8) == 0)
+                {
+                }
+
+                sp16 = (u16*)entry;
+                if (sp16[1] == 1 && ((u32*)entry)[2] == gp->unk74 && sp16[2] == gp->unk7C)
+                {
+                    dest = (void*)((u8*)entry + 0x20);
+                    while (CdGetSector(dest, 0x1F8) == 0)
+                    {
+                    }
+
+                    gp->unk7E -= 1;
+                    if (gp->unk7E == 0)
+                    {
+                        gp->unk64 = gp->unk64 + 1 + gp->unk7C;
+                        gp->unk88 = gp->unk74;
+                        if (gp->unk4C < ((u32*)entry)[2])
+                            return 0;
+                    }
+                    else
+                    {
+                        gp->unk7C += 1;
+                        return 1;
+                    }
+                }
+                gp->unk7E = 0;
+                gp->unk74 = ((u32*)entry)[2];
+                if (gp->unk4C < ((u32*)entry)[2])
+                {
+                    gp->unk9E = 1;
+                    return 0;
+                }
+                break;
+            }
+            return 1;
+        }
+    }
+}
