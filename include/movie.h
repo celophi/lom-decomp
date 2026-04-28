@@ -176,6 +176,37 @@ typedef struct
     u8 unk9B;
 } GlobalStruct;
 
+typedef u32 SectorBuffer[8];
+
+typedef struct GlobalData {
+    u32 unk0;
+    u32 unk4;
+    u32 unk8;
+    u8 _pad0C[0x40];
+    u32 unk4C;
+    s32 unk50;
+    s32 unk54;
+    s32 unk58;
+    s32 unk5C;
+    s32 unk60;
+    s32 unk64;
+    s32 unk68;
+    s32 unk6C;
+    u8 _pad70[4];
+    u32 unk74;
+    u32 unk78;
+    u16 unk7C;
+    u16 unk7E;
+    u32 unk80;
+    u32 unk84;
+    u32 unk88;
+    u32 unk8C;
+    u8 _pad90[2];
+    u8 unk92;
+    u8 _pad93[11];
+    u8 unk9E;
+} GlobalData;
+
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
 extern void* D_80180014;
@@ -183,6 +214,7 @@ extern u8 D_801ED590;
 extern s8 D_801ED596;
 extern u8 D_801ED595;
 extern u8 D_801ED592;
+extern u16 D_801ED57E;
 extern void func_80140AC0(void);
 extern void func_801416C4(void);
 extern u32* func_80140F04(s32 param_1, u32 param_2);
