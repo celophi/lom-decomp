@@ -17,7 +17,7 @@ typedef struct
 typedef struct
 {
     u_char _pad0[0x98];
-    u_char unk98;
+    u_char activeDisplayBuffer;
     u_char _pad99;
     u_char _pad9a;
     u_char _pad9b;

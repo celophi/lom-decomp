@@ -143,7 +143,7 @@ recheck_unk9d:
     VSync(0);
 
     new_var5 = &env[0];
-    if (p500->unk98 == 0)
+    if (p500->activeDisplayBuffer == 0)
     {
         new_var5 = &env[1];
     }
