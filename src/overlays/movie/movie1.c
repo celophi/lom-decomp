@@ -999,17 +999,14 @@ s32 func_80140F04(void)
                     }
 
                     gp->unk7E -= 1;
-                    if (gp->unk7E == 0)
-                    {
-                        gp->unk58 = gp->unk58 + 1 + gp->unk7C;
-                        gp->unk80 = gp->unk74;
-                        return (gp->unk74 < gp->unk4C) ? 1 : 0;
-                    }
-                    else
+                    if (gp->unk7E != 0)
                     {
                         gp->unk7C += 1;
                         return 1;
                     }
+                    gp->unk58 = gp->unk58 + 1 + gp->unk7C;
+                    gp->unk80 = gp->unk74;
+                    return (gp->unk74 < gp->unk4C) ? 1 : 0;
                 }
                 gp->unk7E = 0;
                 gp->unk74 = ((u32*)entry)[2];
@@ -1035,24 +1032,22 @@ s32 func_80140F04(void)
                 sp16 = (u16*)entry;
                 if (sp16[1] == 1 && ((u32*)entry)[2] == gp->unk74 && sp16[2] == gp->unk7C)
                 {
-                    dest = (void*)((u8*)entry + 0x20);
+                    dest = (void*)(gp->unk8 + ((gp->unk64 + gp->unk7C) << 11) + 0x20);
                     while (CdGetSector(dest, 0x1F8) == 0)
                     {
                     }
 
                     gp->unk7E -= 1;
-                    if (gp->unk7E == 0)
-                    {
-                        gp->unk64 = gp->unk64 + 1 + gp->unk7C;
-                        gp->unk88 = gp->unk74;
-                        if (gp->unk4C < ((u32*)entry)[2])
-                            return 0;
-                    }
-                    else
+                    if (gp->unk7E != 0)
                     {
                         gp->unk7C += 1;
                         return 1;
                     }
+                    gp->unk64 = gp->unk64 + 1 + gp->unk7C;
+                    gp->unk88 = gp->unk74;
+                    if (gp->unk4C < ((u32*)entry)[2])
+                        return 0;
+                    return 1;
                 }
                 gp->unk7E = 0;
                 gp->unk74 = ((u32*)entry)[2];
