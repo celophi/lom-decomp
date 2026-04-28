@@ -216,7 +216,7 @@ cleanup:
  * decomp.me link (91.61%) https://decomp.me/scratch/tw6Km
  * incorrect but better match https://decomp.me/scratch/ICOiP
  */
-void func_80140358(s32 resourceIndex, s32 arg1, s32 arg2, int arg3)
+void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
 {
     u32 p1;
     u8* new_var6;
@@ -325,7 +325,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 arg2, int arg3)
 
     ((UnkState*)0x801ED500)->unk44 = resourceIndex;
     ((UnkState*)0x801ED500)->unk48 = 0;
-    ((UnkState*)0x801ED500)->unk4C = arg2;
+    ((UnkState*)0x801ED500)->unk4C = totalFrames;
     ((UnkState*)0x801ED500)->unk93 = 0;
     ((UnkState*)0x801ED500)->unk94 = 0;
     ((UnkState*)0x801ED500)->unk95 = 0;
