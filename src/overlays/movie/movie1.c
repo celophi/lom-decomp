@@ -1085,3 +1085,41 @@ block_10:
     *arg0 = entry_ptr;
     return 1;
 }
+
+/**
+ * decomp.me: (100%) https://decomp.me/scratch/TApbR
+ */
+void func_801416C4(void) {
+    volatile u8 *base = (volatile u8 *)0x801ED500;
+    unsigned int temp_lo;
+    int new_var;
+
+    if (D_801ED596 == 0) {
+        base[0x97] = 0;
+
+        {
+            u8 tmp = base[0x9a];
+            if (tmp != 0) {
+                u8 idx = base[0x99];
+                u32 *ptr = (u32 *)(base + (idx << 2));
+                LoadImage((RECT *)(base + 0x30), (u_long *)ptr[6]);
+                func_80140C00();
+                base[0x9a] = 0;
+            }
+        }
+
+        {
+            u8 tmp = base[0x9b];
+            if (tmp != 0) {
+                s16 v1 = *((s16 *)(base + 0x34));
+                s16 v2 = *((s16 *)(base + 0x36));
+                u8 idx = base[0x99];
+                u32 *ptr = (u32 *)(base + (idx << 2));
+                temp_lo = v1 * v2;
+                new_var = temp_lo + (temp_lo >> 31);
+                DecDCTout((u_long *)ptr[6], (s32)(new_var >> 1));
+                base[0x9b] = 0;
+            }
+        }
+    }
+}
