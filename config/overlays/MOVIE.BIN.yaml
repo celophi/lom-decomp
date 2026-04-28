@@ -42,5 +42,5 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x19, c, movie1]
-      - [0x159D, c, unk1]
+      - [0x16C5, c, unk1]
   - [0x1914]
