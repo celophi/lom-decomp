@@ -479,7 +479,7 @@ void func_801406E4(void)
     new_var3 = 0;
     if (var_s2 != new_var3)
     {
-        func_80141858();
+        movie_advance_video_read();
         s0 = (D_801ED500_t*)0x801ED500;
         if ((s0->field9C == new_var3) && (new_var = s0->field9D == new_var3))
         {
@@ -528,7 +528,7 @@ void func_801406E4(void)
             if (((tmp != (-1)) && (((D_801ED500_t*)0x801ED500)->field70 != 0)) &&
                 (((D_801ED500_t*)0x801ED500)->field68 != ((u32)(tmp * 2))))
             {
-                func_801418B0(tmp);
+                movie_advance_audio_read(tmp);
             }
             do
             {
@@ -1136,16 +1136,16 @@ s32 func_80141788(s32* arg0, s32* arg1)
 {
     volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
     volatile BaseStruct_80141788* base2;
-    s32 new_var;
-    s32 new_var2;
+    s32 writeIdx;
+    s32 readIdx;
     s32* out0 = arg0;
     s32* out1 = arg1;
 
-    if (base->unk58 != base->unk5C)
+    if (base->videoWriteIdx != base->videoReadIdx)
     {
         /* fall through to reload base */
     }
-    else if (base->unk80 != base->unk84)
+    else if (base->unk80 != base->lastConsumedVideoFrame)
     {
         base = (volatile BaseStruct_80141788*)0x801ED500;
     }
@@ -1156,79 +1156,79 @@ s32 func_80141788(s32* arg0, s32* arg1)
 
     base = (volatile BaseStruct_80141788*)0x801ED500;
 
-    new_var = base->unk58;
-    new_var2 = base->unk5C;
+    writeIdx = base->videoWriteIdx;
+    readIdx = base->videoReadIdx;
 
-    if ((new_var2 >= new_var) && (new_var2 == base->unk60) && (base->unk58 == 0))
+    if ((readIdx >= writeIdx) && (readIdx == base->ringCapacity) && (base->videoWriteIdx == 0))
     {
-        base->unk5C = 0;
-        if (base->unk80 == base->unk84)
+        base->videoReadIdx = 0;
+        if (base->unk80 == base->lastConsumedVideoFrame)
         {
             return 0;
         }
     }
 
     base2 = (volatile BaseStruct_80141788*)0x801ED500;
-    *out1 = base2->unk0 + (base2->unk5C << 5);
-    *arg0 = base2->unk4 + (base2->unk5C * 0x7E0);
+    *out1 = base2->videoTableBase + (base2->videoReadIdx << 5);
+    *arg0 = base2->videoDataBase + (base2->videoReadIdx * 0x7E0);
     return 1;
 }
 
 /**
  * decomp.me: (100%) https://decomp.me/scratch/SUBK5
  */
-void func_80141858(void)
+void movie_advance_video_read(void)
 {
     volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
-    s32 temp_v1;
+    s32 readIdx;
     InnerStruct* inner;
-    s32 var_a2;
-    s32 unk8_val;
-    temp_v1 = base->unk5C;
-    inner = (InnerStruct*)(base->unk0 + (temp_v1 << 5));
-    var_a2 = temp_v1 + inner->unk6;
-    unk8_val = inner->unk8;
-    if ((temp_v1 >= base->unk58) && (var_a2 == base->unk60))
+    s32 newReadIdx;
+    s32 frameNum;
+    readIdx = base->videoReadIdx;
+    inner = (InnerStruct*)(base->videoTableBase + (readIdx << 5));
+    newReadIdx = readIdx + inner->sectorCount;
+    frameNum = inner->frameNumber;
+    if ((readIdx >= base->videoWriteIdx) && (newReadIdx == base->ringCapacity))
     {
-        var_a2 = 0;
+        newReadIdx = 0;
     }
-    unk8_val = inner->unk8;
-    ((BaseStruct_80141788*)0x801ED500)->unk5C = var_a2;
-    ((BaseStruct_80141788*)0x801ED500)->unk84 = unk8_val;
+    frameNum = inner->frameNumber;
+    ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = newReadIdx;
+    ((BaseStruct_80141788*)0x801ED500)->lastConsumedVideoFrame = frameNum;
 }
 
 /**
  * decomp.me: (100%) https://decomp.me/scratch/6Xjsu
  */
-void func_801418B0(void)
+void movie_advance_audio_read(void)
 {
     BaseStruct_801418B0* base;
     InnerStruct_801418B0* inner;
     u16* p_sectorCount;
-    s32 temp_v1;
-    s32 unk64_val;
+    s32 readIdx;
+    s32 writeIdx;
     unsigned int sectorCount;
-    s32 var_a3;
-    s32 frameNumber;
-    s32 new_unk70;
+    s32 newReadIdx;
+    s32 frameNum;
+    s32 newBufferedCount;
     base = (BaseStruct_801418B0*)0x801ED500;
-    temp_v1 = base->unk68;
-    inner = (InnerStruct_801418B0*)(base->unk8 + (temp_v1 << 11));
-    unk64_val = base->unk64;
+    readIdx = base->audioReadIdx;
+    inner = (InnerStruct_801418B0*)(base->audioDataBase + (readIdx << 11));
+    writeIdx = base->audioWriteIdx;
     p_sectorCount = &inner->sectorCount;
     sectorCount = *p_sectorCount;
-    var_a3 = temp_v1 + sectorCount;
-    new_unk70 = base->unk70 - sectorCount;
+    newReadIdx = readIdx + sectorCount;
+    newBufferedCount = base->audioBufferedCount - sectorCount;
     base += 0;
-    base->unk70 = new_unk70;
-    if (temp_v1 >= unk64_val)
+    base->audioBufferedCount = newBufferedCount;
+    if (readIdx >= writeIdx)
     {
-        if (var_a3 == base->unk60)
+        if (newReadIdx == base->ringCapacity)
         {
-            var_a3 = 0;
+            newReadIdx = 0;
         }
     }
-    frameNumber = inner->frameNumber;
-    ((BaseStruct_801418B0*)0x801ED500)->unk68 = var_a3;
-    ((BaseStruct_801418B0*)0x801ED500)->frameNumber = frameNumber;
+    frameNum = inner->frameNumber;
+    ((BaseStruct_801418B0*)0x801ED500)->audioReadIdx = newReadIdx;
+    ((BaseStruct_801418B0*)0x801ED500)->frameNumber = frameNum;
 }
