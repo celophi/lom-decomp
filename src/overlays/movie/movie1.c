@@ -759,7 +759,7 @@ s32 func_80140F04(void)
         {
         }
 
-        if (gp->unk4C < sp10[2])
+        if (gp->totalFrames < sp10[2])
         {
             gp->unk9E = 1;
             return 0;
@@ -844,7 +844,7 @@ s32 func_80140F04(void)
                 {
                     gp->unk58 += 1;
                     gp->unk80 = gp->unk74;
-                    return (gp->unk74 < gp->unk4C) ? 1 : 0;
+                    return (gp->unk74 < gp->totalFrames) ? 1 : 0;
                 }
                 else
                 {
@@ -930,7 +930,7 @@ s32 func_80140F04(void)
                 {
                     gp->unk64 += 1;
                     gp->unk88 = gp->unk74;
-                    if (gp->unk4C < gp->unk74)
+                    if (gp->totalFrames < gp->unk74)
                         return 0;
                 }
                 else
@@ -976,11 +976,11 @@ s32 func_80140F04(void)
                     }
                     gp->unk58 = gp->unk58 + 1 + gp->unk7C;
                     gp->unk80 = gp->unk74;
-                    return (((u32*)entry)[2] < gp->unk4C) ? 1 : 0;
+                    return (((u32*)entry)[2] < gp->totalFrames) ? 1 : 0;
                 }
                 gp->unk7E = 0;
                 gp->unk74 = ((u32*)entry)[2];
-                if (((u32*)entry)[2] < gp->unk4C)
+                if (((u32*)entry)[2] < gp->totalFrames)
                     break;
                 gp->unk9E = 1;
                 return 0;
@@ -1013,13 +1013,13 @@ s32 func_80140F04(void)
                     }
                     gp->unk64 = gp->unk64 + 1 + gp->unk7C;
                     gp->unk88 = gp->unk74;
-                    if (gp->unk4C < ((u32*)entry)[2])
+                    if (gp->totalFrames < ((u32*)entry)[2])
                         return 0;
                     return 1;
                 }
                 gp->unk7E = 0;
                 gp->unk74 = ((u32*)entry)[2];
-                if (!(gp->unk4C < ((u32*)entry)[2]))
+                if (!(gp->totalFrames < ((u32*)entry)[2]))
                     break;
                 gp->unk9E = 1;
                 return 0;
