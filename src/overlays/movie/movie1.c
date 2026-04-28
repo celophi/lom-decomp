@@ -1081,7 +1081,7 @@ block_10:
         return 0;
     }
     entry_ptr = ((volatile Global*)0x801ED500)->unk8 + (var << 11);
-    temp = ((Entry*)entry_ptr)->unk6;
+    temp = ((Entry*)entry_ptr)->sectorCount;
     ((volatile Global*)0x801ED500)->unk70 += temp;
     *arg0 = entry_ptr;
     return 1;

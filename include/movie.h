@@ -212,7 +212,7 @@ typedef struct GlobalData
 typedef struct Entry
 {
     u8 _pad0[6];
-    u16 unk6;
+    u16 sectorCount;
     u8 _pad1[2048 - 8];
 } Entry;
 typedef struct Global
