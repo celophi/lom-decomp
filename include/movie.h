@@ -195,7 +195,7 @@ typedef struct GlobalData
     s32 unk68;
     s32 unk6C;
     u8 _pad70[4];
-    u32 unk74;
+    u32 frameNumber;
     u32 unk78;
     u16 unk7C;
     u16 unk7E;

@@ -765,7 +765,7 @@ s32 func_80140F04(void)
             return 0;
         }
 
-        gp->unk74 = sp10[2];
+        gp->frameNumber = sp10[2];
 
         /* check low word of sp10[1] (offset 0x14) */
         if (((u16*)sp10)[2] != 0)
@@ -843,8 +843,8 @@ s32 func_80140F04(void)
                 if (rem == 0)
                 {
                     gp->unk58 += 1;
-                    gp->unk80 = gp->unk74;
-                    return (gp->unk74 < gp->totalFrames) ? 1 : 0;
+                    gp->unk80 = gp->frameNumber;
+                    return (gp->frameNumber < gp->totalFrames) ? 1 : 0;
                 }
                 else
                 {
@@ -929,8 +929,8 @@ s32 func_80140F04(void)
                 if (rem == 0)
                 {
                     gp->unk64 += 1;
-                    gp->unk88 = gp->unk74;
-                    if (gp->totalFrames < gp->unk74)
+                    gp->unk88 = gp->frameNumber;
+                    if (gp->totalFrames < gp->frameNumber)
                         return 0;
                 }
                 else
@@ -960,7 +960,7 @@ s32 func_80140F04(void)
                 }
 
                 sp16 = (u16*)entry;
-                if (sp16[1] == 0x8001 && ((u32*)entry)[2] == gp->unk74 && sp16[2] == gp->unk7C)
+                if (sp16[1] == 0x8001 && ((u32*)entry)[2] == gp->frameNumber && sp16[2] == gp->unk7C)
                 {
                     dest = (void*)(gp->unk4 + ((gp->unk58 + gp->unk7C) * 2016));
                     while (CdGetSector(dest, 0x1F8) == 0)
@@ -975,11 +975,11 @@ s32 func_80140F04(void)
                         return 1;
                     }
                     gp->unk58 = gp->unk58 + 1 + gp->unk7C;
-                    gp->unk80 = gp->unk74;
+                    gp->unk80 = gp->frameNumber;
                     return (((u32*)entry)[2] < gp->totalFrames) ? 1 : 0;
                 }
                 gp->unk7E = 0;
-                gp->unk74 = ((u32*)entry)[2];
+                gp->frameNumber = ((u32*)entry)[2];
                 if (((u32*)entry)[2] < gp->totalFrames)
                     break;
                 gp->unk9E = 1;
@@ -997,7 +997,7 @@ s32 func_80140F04(void)
                 }
 
                 sp16 = (u16*)entry;
-                if (sp16[1] == 1 && ((u32*)entry)[2] == gp->unk74 && sp16[2] == gp->unk7C)
+                if (sp16[1] == 1 && ((u32*)entry)[2] == gp->frameNumber && sp16[2] == gp->unk7C)
                 {
                     dest = (void*)(gp->unk8 + ((gp->unk64 + gp->unk7C) << 11) + 0x20);
                     while (CdGetSector(dest, 0x1F8) == 0)
@@ -1012,13 +1012,13 @@ s32 func_80140F04(void)
                         return 1;
                     }
                     gp->unk64 = gp->unk64 + 1 + gp->unk7C;
-                    gp->unk88 = gp->unk74;
+                    gp->unk88 = gp->frameNumber;
                     if (gp->totalFrames < ((u32*)entry)[2])
                         return 0;
                     return 1;
                 }
                 gp->unk7E = 0;
-                gp->unk74 = ((u32*)entry)[2];
+                gp->frameNumber = ((u32*)entry)[2];
                 if (!(gp->totalFrames < ((u32*)entry)[2]))
                     break;
                 gp->unk9E = 1;
