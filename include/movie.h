@@ -266,13 +266,13 @@ typedef struct
     s32 unk80;
     s32 unk84;
     s32 unk88;
-    s32 unk8C;
+    s32 frameNumber;
 } BaseStruct_801418B0;
 typedef struct
 {
     u8 pad[6];
     u16 sectorCount;
-    s32 unk8;
+    s32 frameNumber;
 } InnerStruct_801418B0;
 
 extern u_char g_cdAudioReady;

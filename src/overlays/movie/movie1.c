@@ -1209,7 +1209,7 @@ void func_801418B0(void)
     s32 unk64_val;
     unsigned int sectorCount;
     s32 var_a3;
-    s32 unk8_val;
+    s32 frameNumber;
     s32 new_unk70;
     base = (BaseStruct_801418B0*)0x801ED500;
     temp_v1 = base->unk68;
@@ -1228,7 +1228,7 @@ void func_801418B0(void)
             var_a3 = 0;
         }
     }
-    unk8_val = inner->unk8;
+    frameNumber = inner->frameNumber;
     ((BaseStruct_801418B0*)0x801ED500)->unk68 = var_a3;
-    ((BaseStruct_801418B0*)0x801ED500)->unk8C = unk8_val;
+    ((BaseStruct_801418B0*)0x801ED500)->frameNumber = frameNumber;
 }
