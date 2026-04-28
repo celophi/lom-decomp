@@ -5,6 +5,7 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libpress.h"
+#include "psyq/libcd.h"
 
 typedef struct
 {

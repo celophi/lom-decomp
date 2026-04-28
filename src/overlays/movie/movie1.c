@@ -216,7 +216,7 @@ cleanup:
  * decomp.me link (91.61%) https://decomp.me/scratch/tw6Km
  * incorrect but better match https://decomp.me/scratch/ICOiP
  */
-void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
+void func_80140358(s32 resourceIndex, s32 arg1, s32 arg2, int arg3)
 {
     u32 p1;
     u8* new_var6;
@@ -323,7 +323,7 @@ void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
         ((UnkState*)0x801ED500)->rects[2].y = p1;
     }
 
-    ((UnkState*)0x801ED500)->unk44 = arg0;
+    ((UnkState*)0x801ED500)->unk44 = resourceIndex;
     ((UnkState*)0x801ED500)->unk48 = 0;
     ((UnkState*)0x801ED500)->unk4C = arg2;
     ((UnkState*)0x801ED500)->unk93 = 0;
@@ -372,7 +372,7 @@ void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
 
     cdrom_wait_queue_empty();
     new_var3 = (UnkState*)0x801ED500;
-    cdrom_queue_command(0x1B, (s16)arg0, (void*)0, &func_80140F04);
+    cdrom_queue_command(CdlReadS, (s16)resourceIndex, NULL, &func_80140F04);
 
     if (D_801ED590 == 0)
     {
