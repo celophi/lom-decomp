@@ -241,6 +241,13 @@ typedef struct
     s32 unk84;             /* 0x84 */
 } BaseStruct_80141788;
 
+typedef struct
+{
+    u8 pad[6];
+    u16 unk6;
+    s32 unk8;
+} InnerStruct;
+
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
 extern void* D_80180014;
