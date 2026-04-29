@@ -117,7 +117,7 @@ wait_loop:
         goto cleanup;
     }
 
-    FUN_80140d48();
+    movie_service_video_ops();
     if ((--timeout) != 0)
     {
         goto wait_loop;
@@ -372,7 +372,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
 
     cdrom_wait_queue_empty();
     new_var3 = (UnkState*)0x801ED500;
-    cdrom_queue_command(CdlReadS, (s16)resourceIndex, NULL, &func_80140F04);
+    cdrom_queue_command(CdlReadS, (s16)resourceIndex, NULL, &movie_cd_sector_callback);
 
     if (D_801ED590 == 0)
     {
@@ -393,7 +393,7 @@ void func_801406E4(void)
     long pDispEnv;
     D_801ED500_t* new_var6;
     int new_var;
-    void* sp10;
+    void* hdr;
     void* sp14;
     D_801ED500_t* new_var2;
     s32 audioFadeVol = 0;
@@ -434,7 +434,7 @@ void func_801406E4(void)
                     ((D_801ED500_t*)0x801ED500)->field94 = 0;
                 }
             }
-            else if (movie_get_next_video_entry(&sp10, &sp14) != 0)
+            else if (movie_get_next_video_entry(&hdr, &sp14) != 0)
             {
                 ((D_801ED500_t*)0x801ED500)->field48 = ((u32*)sp14)[2];
                 new_var6 = (D_801ED500_t*)0x801ED500;
@@ -456,7 +456,7 @@ void func_801406E4(void)
                     DecDCTvlcSize2(0x16AA);
                     ((D_801ED500_t*)0x801ED500)->field94 = 1;
                 }
-                if (DecDCTvlc2((u_long*)sp10,
+                if (DecDCTvlc2((u_long*)hdr,
                                (u_long*)((D_801ED500_t*)0x801ED500)->ptr10[((D_801ED500_t*)0x801ED500)->field93],
                                (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
                 {
@@ -499,9 +499,9 @@ void func_801406E4(void)
     s0 = (D_801ED500_t*)0x801ED500;
     if (g_cdAudioReady != 0)
     {
-        if (movie_get_next_audio_entry(&sp10) != 0)
+        if (movie_get_next_audio_entry(&hdr) != 0)
         {
-            new_var4 = (s0->field48 = ((u32*)sp10)[2]);
+            new_var4 = (s0->field48 = ((u32*)hdr)[2]);
             if ((new_var4 > s0->field4C) && (s0->field9F < 2))
             {
                 s0->field9F = 2;
@@ -653,74 +653,90 @@ void func_80140C00(void)
 /**
  * decomp.me (93.87%) https://decomp.me/scratch/JTTFr
  */
-void FUN_80140d48(void)
+/*
+ * Service pending video output operations.
+ *
+ * Two flags gate the two halves:
+ *   pendingVramUpload — a decoded frame is ready; DMA it into VRAM (LoadImage) and
+ *                       kick off the MDEC decode of the next frame (func_80140C00).
+ *   pendingMdecDecode — new BS bitstream data is staged; feed it to the MDEC (DecDCTout).
+ *
+ * gpuMode selects the transfer path:
+ *   0         — wait for DrawSync then use LoadImage (standard DMA)
+ *   non-zero  — interrupt the current draw via BreakDraw then use LoadImage2
+ */
+void movie_service_video_ops(void)
 {
     volatile GlobalStruct* G = (volatile GlobalStruct*)0x801ED500;
-    int new_var2;
-    u_long* new_var;
-    if (!G->unk9A)
+    int wordCount;
+    u_long* breakDrawResult;
+    if (!G->pendingVramUpload)
     {
-        if (!G->unk9B)
+        if (!G->pendingMdecDecode)
         {
             return;
         }
     }
-    if (G->unk90 == 0)
+    if (G->gpuMode == 0)
     {
+        /* Standard path: wait until the GPU has drained before uploading */
         if (DrawSync(1) >= 2)
         {
             return;
         }
-        if (G->unk9A)
+        if (G->pendingVramUpload)
         {
-            u8 t = G->unk9A;
+            u8 t = G->pendingVramUpload;
             if (t)
             {
-                G->unk96 = 1;
-                t = G->unk99;
+                G->busy = 1;
+                t = G->activeBufferIdx;
                 LoadImage((RECT*)0x801ED530, (u_long*)G->ptrArray[t]);
-                G->unk97 = DrawSync(1) + 1;
-                G->unk9A = 0;
+                G->drawSyncTarget = DrawSync(1) + 1;
+                G->pendingVramUpload = 0;
                 func_80140C00();
             }
-            G->unk96 = 0;
+            G->busy = 0;
         }
         G = (volatile GlobalStruct*)0x801ED500;
-        if (G->unk9B)
+        if (G->pendingMdecDecode)
         {
-            u8 t = G->unk9B;
+            u8 t = G->pendingMdecDecode;
             if (t)
             {
                 s32 temp;
-                G->unk96 = 1;
+                G->busy = 1;
+                /* word count = (width * height) / 2, rounded toward zero for signed values */
                 temp = ((s32)G->unk34) * ((s32)G->unk36);
-                new_var2 = temp + (((u32)temp) >> 31);
-                DecDCTout((u_long*)G->ptrArray[G->unk99], new_var2 >> 1);
-                G->unk9B = 0;
+                wordCount = temp + (((u32)temp) >> 31);
+                DecDCTout((u_long*)G->ptrArray[G->activeBufferIdx], wordCount >> 1);
+                G->pendingMdecDecode = 0;
             }
-            G->unk96 = 0;
+            G->busy = 0;
         }
     }
     else // <-- changed block starts here
     {
-        if (G->unk9A)
+        /* BreakDraw path: interrupt the current draw primitive list to upload immediately */
+        if (G->pendingVramUpload)
         {
-            u8 t = G->unk9A;
+            u8 t = G->pendingVramUpload;
             if (t)
             {
                 s32 bd;
-                G->unk96 = 1;
-                new_var = BreakDraw();
-                bd = (s32)new_var;
+                G->busy = 1;
+                breakDrawResult = BreakDraw();
+                bd = (s32)breakDrawResult;
                 if (bd != (-1))
                 {
-                    LoadImage2((RECT*)0x801ED530, (u_long*)G->ptrArray[G->unk99]);
+                    LoadImage2((RECT*)0x801ED530, (u_long*)G->ptrArray[G->activeBufferIdx]);
                     if (bd != 0)
                     {
+                        /* Resume the interrupted OTag list */
                         DrawOTag((u_long*)bd);
                     }
                     func_80140C00();
-                    G->unk9A = 0;
+                    G->pendingVramUpload = 0;
                 }
             }
         }
@@ -730,13 +746,24 @@ void FUN_80140d48(void)
 
 /**
  * decomp.me (76.45%) https://decomp.me/scratch/HptYe
+ *
+ * CD sector-arrival callback, called by the CD-ROM interrupt once per sector read.
+ *
+ * Reads the 8-word (32-byte) sector header, determines if the sector is video
+ * (type 0x8001) or audio, checks whether the corresponding ring buffer has room,
+ * then copies the 504-word (2016-byte) payload into the buffer and updates the
+ * write index.  Multi-sector frames are handled via D_801ED57E: when 0 this is
+ * the first (header) sector; when non-zero we are reading continuation sectors
+ * for the same frame and skip the ring-capacity check.
+ *
+ * Returns 1 to keep streaming, 0 when the stream has ended or should pause.
  */
-s32 func_80140F04(void)
+s32 movie_cd_sector_callback(void)
 {
-    SectorBuffer sp10;
+    SectorBuffer hdr;       /* 32-byte sector header (8 u32 words) read from CD */
     s32 do_load; /* s0 in assembly */
     volatile GlobalData* const gp = (GlobalData*)0x801ED500;
-    u16* sp16;
+    u16* hdr16;  /* u16 view of hdr for field access by word index */
     u32 count;
     u16 rem;
     void* dest;
@@ -747,38 +774,38 @@ s32 func_80140F04(void)
     if (D_801ED57E == 0)
     {
         /* read first header sector */
-        while (CdGetSector(sp10, 8) == 0)
+        while (CdGetSector(hdr, 8) == 0)
         {
         }
 
-        if (gp->totalFrames < sp10[2])
+        if (gp->totalFrames < hdr[2])
         {
-            gp->unk9E = 1;
+            gp->endOfStream = 1;
             return 0;
         }
 
-        gp->frameNumber = sp10[2];
+        gp->frameNumber = hdr[2];
 
-        /* check low word of sp10[1] (offset 0x14) */
-        if (((u16*)sp10)[2] != 0)
+        /* check low word of hdr[1] (offset 0x14) */
+        if (((u16*)hdr)[2] != 0)
             return 1;
 
-        /* check high word of sp10[0] (offset 0x12) */
-        if (((u16*)sp10)[1] == 0x8001)
+        /* check high word of hdr[0] (offset 0x12) */
+        if (((u16*)hdr)[1] == 0x8001)
         {
             /* 0x8001 sector type */
-            if (gp->unk58 == gp->unk5C)
+            if (gp->videoWriteIdx == gp->videoReadIdx)
             {
-                if (gp->unk80 == gp->unk84)
+                if (gp->lastVideoFrame == gp->audioDataBase4)
                 {
-                    count = ((u16*)sp10)[3];
-                    if (gp->unk50 < gp->unk58 + (s32)count)
+                    count = ((u16*)hdr)[3];
+                    if (gp->videoRingCapacity < gp->videoWriteIdx + (s32)count)
                     {
-                        if (gp->unk5C >= (s32)count)
+                        if (gp->videoReadIdx >= (s32)count)
                         {
                             do_load = 1;
-                            gp->unk60 = gp->unk58;
-                            gp->unk58 = 0;
+                            gp->videoWrapSavedIdx = gp->videoWriteIdx;
+                            gp->videoWriteIdx = 0;
                         }
                     }
                     else
@@ -787,16 +814,16 @@ s32 func_80140F04(void)
                     }
                 }
             }
-            else if (gp->unk5C < gp->unk58)
+            else if (gp->videoReadIdx < gp->videoWriteIdx)
             {
-                count = ((u16*)sp10)[3];
-                if (gp->unk50 < gp->unk58 + (s32)count)
+                count = ((u16*)hdr)[3];
+                if (gp->videoRingCapacity < gp->videoWriteIdx + (s32)count)
                 {
-                    if (gp->unk5C >= (s32)count)
+                    if (gp->videoReadIdx >= (s32)count)
                     {
                         do_load = 1;
-                        gp->unk60 = gp->unk58;
-                        gp->unk58 = 0;
+                        gp->videoWrapSavedIdx = gp->videoWriteIdx;
+                        gp->videoWriteIdx = 0;
                     }
                 }
                 else
@@ -806,8 +833,8 @@ s32 func_80140F04(void)
             }
             else
             {
-                count = ((u16*)sp10)[3];
-                if (gp->unk5C >= gp->unk58 + (s32)count)
+                count = ((u16*)hdr)[3];
+                if (gp->videoReadIdx >= gp->videoWriteIdx + (s32)count)
                 {
                     do_load = 1;
                 }
@@ -815,33 +842,33 @@ s32 func_80140F04(void)
 
             if (do_load != 0)
             {
-                dest = (void*)(gp->unk4 + (gp->unk58 * 2016));
+                dest = (void*)(gp->videoDataBase + (gp->videoWriteIdx * 2016));
                 while (CdGetSector(dest, 0x1F8) == 0)
                 {
                 }
 
-                entry = (void*)(gp->unk0 + (gp->unk58 << 5));
-                ((u32*)entry)[0] = sp10[0];
-                ((u32*)entry)[1] = sp10[1];
-                ((u32*)entry)[2] = sp10[2];
-                ((u32*)entry)[3] = sp10[3];
-                ((u32*)entry)[4] = sp10[4];
-                ((u32*)entry)[5] = sp10[5];
-                ((u32*)entry)[6] = sp10[6];
-                ((u32*)entry)[7] = sp10[7];
+                entry = (void*)(gp->videoTableBase + (gp->videoWriteIdx << 5));
+                ((u32*)entry)[0] = hdr[0];
+                ((u32*)entry)[1] = hdr[1];
+                ((u32*)entry)[2] = hdr[2];
+                ((u32*)entry)[3] = hdr[3];
+                ((u32*)entry)[4] = hdr[4];
+                ((u32*)entry)[5] = hdr[5];
+                ((u32*)entry)[6] = hdr[6];
+                ((u32*)entry)[7] = hdr[7];
 
-                rem = (u16)(((u16*)sp10)[3] - 1);
-                gp->unk7E = rem;
+                rem = (u16)(((u16*)hdr)[3] - 1);
+                gp->sectorsRemaining = rem;
                 if (rem == 0)
                 {
-                    gp->unk58 += 1;
-                    gp->unk80 = gp->frameNumber;
+                    gp->videoWriteIdx += 1;
+                    gp->lastVideoFrame = gp->frameNumber;
                     return (gp->frameNumber < gp->totalFrames) ? 1 : 0;
                 }
                 else
                 {
-                    gp->unk78 = 0;
-                    gp->unk7C = rem;
+                    gp->continuationType = 0;
+                    gp->chunkSectorIdx = rem;
                     return 1;
                 }
             }
@@ -853,18 +880,18 @@ s32 func_80140F04(void)
         else
         {
             /* other sector type */
-            if (gp->unk64 == gp->unk68)
+            if (gp->audioWriteIdx == gp->audioReadIdx)
             {
-                if (gp->unk88 == gp->unk8C)
+                if (gp->lastAudioFrame == gp->audioDataBaseC)
                 {
-                    count = ((u16*)sp10)[3];
-                    if (gp->unk54 < gp->unk64 + (s32)count)
+                    count = ((u16*)hdr)[3];
+                    if (gp->audioRingCapacity < gp->audioWriteIdx + (s32)count)
                     {
-                        if (gp->unk68 >= (s32)count)
+                        if (gp->audioReadIdx >= (s32)count)
                         {
                             do_load = 1;
-                            gp->unk6C = gp->unk64;
-                            gp->unk64 = 0;
+                            gp->audioWrapSavedIdx = gp->audioWriteIdx;
+                            gp->audioWriteIdx = 0;
                         }
                     }
                     else
@@ -873,16 +900,16 @@ s32 func_80140F04(void)
                     }
                 }
             }
-            else if (gp->unk68 < gp->unk64)
+            else if (gp->audioReadIdx < gp->audioWriteIdx)
             {
-                count = ((u16*)sp10)[3];
-                if (gp->unk54 < gp->unk64 + (s32)count)
+                count = ((u16*)hdr)[3];
+                if (gp->audioRingCapacity < gp->audioWriteIdx + (s32)count)
                 {
-                    if (gp->unk68 >= (s32)count)
+                    if (gp->audioReadIdx >= (s32)count)
                     {
                         do_load = 1;
-                        gp->unk6C = gp->unk64;
-                        gp->unk64 = 0;
+                        gp->audioWrapSavedIdx = gp->audioWriteIdx;
+                        gp->audioWriteIdx = 0;
                     }
                 }
                 else
@@ -892,8 +919,8 @@ s32 func_80140F04(void)
             }
             else
             {
-                count = ((u16*)sp10)[3];
-                if (gp->unk68 >= gp->unk64 + (s32)count)
+                count = ((u16*)hdr)[3];
+                if (gp->audioReadIdx >= gp->audioWriteIdx + (s32)count)
                 {
                     do_load = 1;
                 }
@@ -901,34 +928,34 @@ s32 func_80140F04(void)
 
             if (do_load != 0)
             {
-                dest = (void*)(gp->unk8 + (gp->unk64 << 11) + 0x20);
+                dest = (void*)(gp->audioDataBase + (gp->audioWriteIdx << 11) + 0x20);
                 while (CdGetSector(dest, 0x1F8) == 0)
                 {
                 }
 
-                entry = (void*)(gp->unk8 + (gp->unk64 << 11));
-                ((u32*)entry)[0] = sp10[0];
-                ((u32*)entry)[1] = sp10[1];
-                ((u32*)entry)[2] = sp10[2];
-                ((u32*)entry)[3] = sp10[3];
-                ((u32*)entry)[4] = sp10[4];
-                ((u32*)entry)[5] = sp10[5];
-                ((u32*)entry)[6] = sp10[6];
-                ((u32*)entry)[7] = sp10[7];
+                entry = (void*)(gp->audioDataBase + (gp->audioWriteIdx << 11));
+                ((u32*)entry)[0] = hdr[0];
+                ((u32*)entry)[1] = hdr[1];
+                ((u32*)entry)[2] = hdr[2];
+                ((u32*)entry)[3] = hdr[3];
+                ((u32*)entry)[4] = hdr[4];
+                ((u32*)entry)[5] = hdr[5];
+                ((u32*)entry)[6] = hdr[6];
+                ((u32*)entry)[7] = hdr[7];
 
-                rem = (u16)(((u16*)sp10)[3] - 1);
-                gp->unk7E = rem;
+                rem = (u16)(((u16*)hdr)[3] - 1);
+                gp->sectorsRemaining = rem;
                 if (rem == 0)
                 {
-                    gp->unk64 += 1;
-                    gp->unk88 = gp->frameNumber;
+                    gp->audioWriteIdx += 1;
+                    gp->lastAudioFrame = gp->frameNumber;
                     if (gp->totalFrames < gp->frameNumber)
                         return 0;
                 }
                 else
                 {
-                    gp->unk78 = rem;
-                    gp->unk7C = rem;
+                    gp->continuationType = rem;
+                    gp->chunkSectorIdx = rem;
                 }
             }
 
@@ -942,39 +969,39 @@ s32 func_80140F04(void)
     else
     {
         /* D_801ED57E != 0 */
-        if (gp->unk78 == 0)
+        if (gp->continuationType == 0)
         {
             for (;;)
             {
-                entry = (void*)(gp->unk0 + ((gp->unk58 + gp->unk7C) << 5));
+                entry = (void*)(gp->videoTableBase + ((gp->videoWriteIdx + gp->chunkSectorIdx) << 5));
                 while (CdGetSector(entry, 8) == 0)
                 {
                 }
 
-                sp16 = (u16*)entry;
-                if (sp16[1] == 0x8001 && ((u32*)entry)[2] == gp->frameNumber && sp16[2] == gp->unk7C)
+                hdr16 = (u16*)entry;
+                if (hdr16[1] == 0x8001 && ((u32*)entry)[2] == gp->frameNumber && hdr16[2] == gp->chunkSectorIdx)
                 {
-                    dest = (void*)(gp->unk4 + ((gp->unk58 + gp->unk7C) * 2016));
+                    dest = (void*)(gp->videoDataBase + ((gp->videoWriteIdx + gp->chunkSectorIdx) * 2016));
                     while (CdGetSector(dest, 0x1F8) == 0)
                     {
                     }
 
-                    rem = gp->unk7E - 1;
-                    gp->unk7E = rem;
+                    rem = gp->sectorsRemaining - 1;
+                    gp->sectorsRemaining = rem;
                     if (rem != 0)
                     {
-                        gp->unk7C += 1;
+                        gp->chunkSectorIdx += 1;
                         return 1;
                     }
-                    gp->unk58 = gp->unk58 + 1 + gp->unk7C;
-                    gp->unk80 = gp->frameNumber;
+                    gp->videoWriteIdx = gp->videoWriteIdx + 1 + gp->chunkSectorIdx;
+                    gp->lastVideoFrame = gp->frameNumber;
                     return (((u32*)entry)[2] < gp->totalFrames) ? 1 : 0;
                 }
-                gp->unk7E = 0;
+                gp->sectorsRemaining = 0;
                 gp->frameNumber = ((u32*)entry)[2];
                 if (((u32*)entry)[2] < gp->totalFrames)
                     break;
-                gp->unk9E = 1;
+                gp->endOfStream = 1;
                 return 0;
             }
             return 1;
@@ -983,37 +1010,37 @@ s32 func_80140F04(void)
         {
             for (;;)
             {
-                entry = (void*)(gp->unk8 + ((gp->unk64 + gp->unk7C) << 11));
+                entry = (void*)(gp->audioDataBase + ((gp->audioWriteIdx + gp->chunkSectorIdx) << 11));
                 while (CdGetSector(entry, 8) == 0)
                 {
                 }
 
-                sp16 = (u16*)entry;
-                if (sp16[1] == 1 && ((u32*)entry)[2] == gp->frameNumber && sp16[2] == gp->unk7C)
+                hdr16 = (u16*)entry;
+                if (hdr16[1] == 1 && ((u32*)entry)[2] == gp->frameNumber && hdr16[2] == gp->chunkSectorIdx)
                 {
-                    dest = (void*)(gp->unk8 + ((gp->unk64 + gp->unk7C) << 11) + 0x20);
+                    dest = (void*)(gp->audioDataBase + ((gp->audioWriteIdx + gp->chunkSectorIdx) << 11) + 0x20);
                     while (CdGetSector(dest, 0x1F8) == 0)
                     {
                     }
 
-                    rem = gp->unk7E - 1;
-                    gp->unk7E = rem;
+                    rem = gp->sectorsRemaining - 1;
+                    gp->sectorsRemaining = rem;
                     if (rem != 0)
                     {
-                        gp->unk7C += 1;
+                        gp->chunkSectorIdx += 1;
                         return 1;
                     }
-                    gp->unk64 = gp->unk64 + 1 + gp->unk7C;
-                    gp->unk88 = gp->frameNumber;
+                    gp->audioWriteIdx = gp->audioWriteIdx + 1 + gp->chunkSectorIdx;
+                    gp->lastAudioFrame = gp->frameNumber;
                     if (gp->totalFrames < ((u32*)entry)[2])
                         return 0;
                     return 1;
                 }
-                gp->unk7E = 0;
+                gp->sectorsRemaining = 0;
                 gp->frameNumber = ((u32*)entry)[2];
                 if (!(gp->totalFrames < ((u32*)entry)[2]))
                     break;
-                gp->unk9E = 1;
+                gp->endOfStream = 1;
                 return 0;
             }
             return 1;

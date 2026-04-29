@@ -163,50 +163,50 @@ typedef struct
 typedef struct
 {
     u8 _pad0[0x18];
-    u32* ptrArray[7];
-    s16 unk34;
-    s16 unk36;
+    u32* ptrArray[7];  /* frame buffer pointers, indexed by activeBufferIdx */
+    s16 unk34;         /* frame width  (used to compute DCT word count) */
+    s16 unk36;         /* frame height (used to compute DCT word count) */
     u8 _pad1[0x90 - 0x38];
-    u8 unk90;
+    u8 gpuMode;        /* 0 = DrawSync/LoadImage path; non-zero = BreakDraw/LoadImage2 path */
     u8 _pad2[0x96 - 0x91];
-    u8 unk96;
-    u8 unk97;
+    u8 busy;           /* 1 while a GPU/MDEC operation is in flight */
+    u8 drawSyncTarget; /* DrawSync(1) count that must be reached before re-uploading */
     u8 _pad3[0x99 - 0x98];
-    u8 unk99;
-    u8 unk9A;
-    u8 unk9B;
+    u8 activeBufferIdx;   /* which ptrArray slot holds the current decoded frame */
+    u8 pendingVramUpload; /* set when a decoded frame is ready to be DMAed into VRAM */
+    u8 pendingMdecDecode; /* set when new bitstream data is ready to feed to the MDEC */
 } GlobalStruct;
 
 typedef u32 SectorBuffer[8];
 
 typedef struct GlobalData
 {
-    u32 unk0;
-    u32 unk4;
-    u32 unk8;
+    u32 videoTableBase;     /* 0x00 — base of 32-byte video sector-header table */
+    u32 videoDataBase;      /* 0x04 — base of video payload buffer (2016-byte stride) */
+    u32 audioDataBase;      /* 0x08 — base of audio payload buffer (2048-byte stride) */
     u8 _pad0C[0x40];
     u32 totalFrames;
-    s32 unk50;
-    s32 unk54;
-    s32 unk58;
-    s32 unk5C;
-    s32 unk60;
-    s32 unk64;
-    s32 unk68;
-    s32 unk6C;
+    s32 videoRingCapacity;  /* 0x50 — max slots in video ring buffer */
+    s32 audioRingCapacity;  /* 0x54 — max slots in audio ring buffer */
+    s32 videoWriteIdx;      /* 0x58 — next slot to write into video ring */
+    s32 videoReadIdx;       /* 0x5C — next slot to read from video ring */
+    s32 videoWrapSavedIdx;  /* 0x60 — saved videoWriteIdx before wrapping to 0 */
+    s32 audioWriteIdx;      /* 0x64 — next slot to write into audio ring */
+    s32 audioReadIdx;       /* 0x68 — next slot to read from audio ring */
+    s32 audioWrapSavedIdx;  /* 0x6C — saved audioWriteIdx before wrapping to 0 */
     u8 _pad70[4];
-    u32 frameNumber;
-    u32 unk78;
-    u16 unk7C;
-    u16 unk7E;
-    u32 unk80;
+    u32 frameNumber;        /* 0x74 — frame number of sector currently being read */
+    u32 continuationType;   /* 0x78 — 0=video continuation, non-zero=audio continuation */
+    u16 chunkSectorIdx;     /* 0x7C — sector index within current multi-sector frame */
+    u16 sectorsRemaining;   /* 0x7E — sectors left to read for the current frame chunk */
+    u32 lastVideoFrame;     /* 0x80 — frame number of last video sector written */
     u32 unk84;
-    u32 unk88;
+    u32 lastAudioFrame;     /* 0x88 — frame number of last audio sector written */
     u32 unk8C;
     u8 _pad90[2];
     u8 unk92;
     u8 _pad93[11];
-    u8 unk9E;
+    u8 endOfStream;         /* 0x9E — set when frameNumber >= totalFrames */
 } GlobalData;
 
 typedef struct Entry
@@ -285,7 +285,7 @@ extern u8 D_801ED592;
 extern u16 D_801ED57E;
 extern void movie_mdec_out_callback(void);
 extern void movie_draw_sync_callback(void);
-extern u32* func_80140F04(s32 param_1, u32 param_2);
+extern s32 movie_cd_sector_callback(void);
 
 extern void cdrom_process_state(void);
 extern void cdrom_verify_recovery(void);
@@ -296,7 +296,7 @@ extern void func_800157B0(u_long arg0);
 extern void func_800158E0(void);
 extern void func_80140358(s32 a0, s32 a1, s32 a2, s32 a3);
 extern void func_801406E4(void);
-extern void FUN_80140d48(void);
+extern void movie_service_video_ops(void);
 extern void func_80023030(s32 arg0);
 extern void func_80140C00(void);
 
