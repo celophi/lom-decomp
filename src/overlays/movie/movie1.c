@@ -1032,47 +1032,37 @@ s32 func_8014159C(void** arg0)
     Global* new_var2;
     u16 temp;
 
-    if (((Global*)0x801ED500)->unk64 != ((Global*)0x801ED500)->unk68)
-    {
-    }
-    else if (((Global*)0x801ED500)->unk88 != ((Global*)0x801ED500)->unk8C)
-    {
-    }
-    else
+    if ((((Global*)0x801ED500)->unk64 == ((Global*)0x801ED500)->unk68) &&
+        (((Global*)0x801ED500)->unk88 == ((Global*)0x801ED500)->unk8C))
     {
         return 0;
     }
 
-    if (((volatile Global*)0x801ED500)->unk64 <= ((Global*)0x801ED500)->unk68)
+    if ((((volatile Global*)0x801ED500)->unk64 <= ((Global*)0x801ED500)->unk68) &&
+        (((Global*)0x801ED500)->unk68 == ((Global*)0x801ED500)->unk6C))
     {
-        if (((Global*)0x801ED500)->unk68 == ((Global*)0x801ED500)->unk6C)
+        temp = ((Global*)0x801ED500)->unk64 != 0;
+        ((Global*)0x801ED500)->unk68 = 0;
+        if (!temp && (((Global*)0x801ED500)->unk88 == ((Global*)0x801ED500)->unk8C))
         {
-            temp = ((Global*)0x801ED500)->unk64 != 0;
-            ((Global*)0x801ED500)->unk68 = 0;
-            if (temp || (((Global*)0x801ED500)->unk88 != ((Global*)0x801ED500)->unk8C))
-            {
-            }
-            else
-            {
-                return 0;
-            }
+            return 0;
         }
     }
 
     var = ((Global*)0x801ED500)->unk68 + ((Global*)0x801ED500)->unk70;
 
-    if (((Global*)0x801ED500)->unk68 >= ((Global*)0x801ED500)->unk64)
+    if ((((Global*)0x801ED500)->unk68 >= ((Global*)0x801ED500)->unk64) &&
+        (var >= ((volatile Global*)0x801ED500)->unk6C))
     {
-        if (var >= ((volatile Global*)0x801ED500)->unk6C)
-        {
-            var -= ((Global*)0x801ED500)->unk6C;
-        }
+        var -= ((Global*)0x801ED500)->unk6C;
     }
+
     new_var2 = (Global*)0x801ED500;
     if ((var == ((Global*)0x801ED500)->unk64) && (new_var2->unk70 != 0))
     {
         return 0;
     }
+    
     entry_ptr = ((Global*)0x801ED500)->unk8 + (var << 11);
     temp = ((Entry*)entry_ptr)->sectorCount;
     ((Global*)0x801ED500)->unk70 += temp;
