@@ -643,7 +643,7 @@ g_glyphAtlasX                       = 0x800894D0;
 g_glyphAtlasY                       = 0x800894D4;
 
 // Uncategorized
-FUN_80140018                        = 0x80140018;
+movie_play                          = 0x80140018;
 FUN_80140d48                        = 0x80140D48;
 
 // Globals

@@ -4,12 +4,12 @@
  * decomp.me link (97.51%) https://decomp.me/scratch/XvMvo
  * this one is a WIP without gotos (https://decomp.me/scratch/Gq1vj)
  */
-void FUN_80140018(s32 movieIndex)
+void movie_play(s32 movieIndex)
 {
     DISPENV env[2];
-    DISPENV* new_var5;
+    DISPENV* pDispEnv;
     volatile SRC_801ED500* p500;
-    s32 var_s2;
+    s32 audioFadeVol;
     s32 new_var;
     s32 new_var3;
     s32 error_status;
@@ -73,7 +73,7 @@ void FUN_80140018(s32 movieIndex)
 
     VSync(0);
     func_800157DC();
-    var_s2 = -1;
+    audioFadeVol = -1;
     new_var3 = 5;
     p500 = (SRC_801ED500*)0x801ED500;
     new_var = 2;
@@ -142,13 +142,13 @@ recheck_unk9d:
     func_800157B0(4);
     VSync(0);
 
-    new_var5 = &env[0];
+    pDispEnv = &env[0];
     if (p500->activeDisplayBuffer == 0)
     {
-        new_var5 = &env[1];
+        pDispEnv = &env[1];
     }
 
-    PutDispEnv(new_var5);
+    PutDispEnv(pDispEnv);
     SetDispMask(1);
     func_800157DC();
     cdrom_process_state();
@@ -162,40 +162,40 @@ recheck_unk9d:
             {
                 if ((val & 0x400A) != 0)
                 {
-                    goto set_var_s2;
+                    goto set_audioFadeVol;
                 }
                 goto check_audio_call;
             }
             if ((val & 0xFF0F) != 0)
             {
-                goto set_var_s2;
+                goto set_audioFadeVol;
             }
             goto check_audio_call;
 
             timeout = 0xF0;
 
-        set_var_s2:
+        set_audioFadeVol:
             if (g_cdAudioReady == 0)
             {
                 goto cleanup;
             }
 
-            if (var_s2 == (-1))
+            if (audioFadeVol == (-1))
             {
-                var_s2 = 0x70;
+                audioFadeVol = 0x70;
             }
         }
     }
 
 check_audio_call:
-    if ((g_cdAudioReady != 0) && (var_s2 != (-1)))
+    if ((g_cdAudioReady != 0) && (audioFadeVol != (-1)))
     {
-        func_80023030(var_s2);
-        if (var_s2 == 0)
+        func_80023030(audioFadeVol);
+        if (audioFadeVol == 0)
         {
             goto cleanup;
         }
-        var_s2 -= 0x10;
+        audioFadeVol -= 0x10;
     }
 
     if (p500->unk9f != new_var)
@@ -229,7 +229,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
     u8* new_var9;
     u8** new_var8;
     int new_var;
-    u8** new_var5;
+    u8** pDispEnv;
     AllocInfo* allocInfo = D_80180014;
 
     ((UnkState*)0x801ED500)->unk90 = (s8)(arg1 & 0x7F);
@@ -242,7 +242,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
         ((UnkState*)0x801ED500)->unk91 = 0;
     }
 
-    new_var5 = &((UnkState*)0x801ED500)->unk0;
+    pDispEnv = &((UnkState*)0x801ED500)->unk0;
 
     if (D_801ED590 == 0)
     {
@@ -288,7 +288,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
         new_var6 = (u8*)allocInfo->unk38;
         ((UnkState*)0x801ED500)->unk10 = (u8*)0x8015E000;
         ((UnkState*)0x801ED500)->unk14 = (u8*)0x8016F000;
-        new_var8 = &(*new_var5);
+        new_var8 = &(*pDispEnv);
         new_var9 = new_var6;
         ((UnkState*)0x801ED500)->unkC = new_var9;
         ((UnkState*)0x801ED500)->unk18 = (u8*)(allocInfo->unk38 + p2);
@@ -390,13 +390,13 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
  */
 void func_801406E4(void)
 {
-    long new_var5;
+    long pDispEnv;
     D_801ED500_t* new_var6;
     int new_var;
     void* sp10;
     void* sp14;
     D_801ED500_t* new_var2;
-    s32 var_s2 = 0;
+    s32 audioFadeVol = 0;
     D_801ED500_t* s0 = (D_801ED500_t*)0x801ED500;
     int new_var3;
     volatile int new_var4;
@@ -430,7 +430,7 @@ void func_801406E4(void)
                 }
                 if (DecDCTvlc2(0, 0, (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
                 {
-                    var_s2 = 1;
+                    audioFadeVol = 1;
                     ((D_801ED500_t*)0x801ED500)->field94 = 0;
                 }
             }
@@ -460,7 +460,7 @@ void func_801406E4(void)
                                (u_long*)((D_801ED500_t*)0x801ED500)->ptr10[((D_801ED500_t*)0x801ED500)->field93],
                                (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
                 {
-                    var_s2 = 1;
+                    audioFadeVol = 1;
                     ((D_801ED500_t*)0x801ED500)->field94 = 0;
                 }
             }
@@ -477,7 +477,7 @@ void func_801406E4(void)
         }
     }
     new_var3 = 0;
-    if (var_s2 != new_var3)
+    if (audioFadeVol != new_var3)
     {
         movie_advance_video_read();
         s0 = (D_801ED500_t*)0x801ED500;
@@ -512,9 +512,9 @@ void func_801406E4(void)
         if (D_801ED592 == 2)
         {
             s0 = (D_801ED500_t*)0x801ED500;
-            new_var5 = s0->field54;
-            var_s2 = s0->field70;
-            if (var_s2 >= ((s32)(new_var5 >> 1)))
+            pDispEnv = s0->field54;
+            audioFadeVol = s0->field70;
+            if (audioFadeVol >= ((s32)(pDispEnv >> 1)))
             {
                 func_8002246C(3);
                 s0->field92 = 0;
