@@ -1022,59 +1022,50 @@ s32 func_80140F04(void)
 }
 
 /**
- * decomp.me (82.91%) https://decomp.me/scratch/I2Ddr
+ * decomp.me (100%) https://decomp.me/scratch/I2Ddr
  */
 s32 func_8014159C(void** arg0)
 {
     void** saved_arg;
     s32 var;
     u8* entry_ptr;
-    volatile Global* new_var2;
+    Global* new_var2;
     u16 temp;
-    ;
-    if (((volatile Global*)0x801ED500)->unk64 != ((volatile Global*)0x801ED500)->unk68)
-    {
-        goto block_4;
-    }
-    if (((volatile Global*)0x801ED500)->unk88 != ((volatile Global*)0x801ED500)->unk8C)
-    {
-        goto block_4;
-    }
-    return 0;
-block_4:
-    if (((volatile Global*)0x801ED500)->unk64 <= ((volatile Global*)0x801ED500)->unk68)
-    {
-        if (((volatile Global*)0x801ED500)->unk68 == ((volatile Global*)0x801ED500)->unk6C)
-        {
-            temp = ((volatile Global*)0x801ED500)->unk64 != 0;
-            ((volatile Global*)0x801ED500)->unk68 = 0;
-            if (temp || (((volatile Global*)0x801ED500)->unk88 != ((volatile Global*)0x801ED500)->unk8C))
-            {
-                goto block_10;
-            }
-            return 0;
-        }
-        goto block_10;
-    }
 
-block_10:
-    var = ((volatile Global*)0x801ED500)->unk68 + ((volatile Global*)0x801ED500)->unk70;
-
-    if (((volatile Global*)0x801ED500)->unk68 >= ((volatile Global*)0x801ED500)->unk64)
-    {
-        if (var >= ((volatile Global*)0x801ED500)->unk6C)
-        {
-            var -= ((volatile Global*)0x801ED500)->unk6C;
-        }
-    }
-    new_var2 = (volatile Global*)0x801ED500;
-    if ((var == ((volatile Global*)0x801ED500)->unk64) && (new_var2->unk70 != 0))
+    if ((((Global*)0x801ED500)->unk64 == ((Global*)0x801ED500)->unk68) &&
+        (((Global*)0x801ED500)->unk88 == ((Global*)0x801ED500)->unk8C))
     {
         return 0;
     }
-    entry_ptr = ((volatile Global*)0x801ED500)->unk8 + (var << 11);
+
+    if ((((volatile Global*)0x801ED500)->unk64 <= ((Global*)0x801ED500)->unk68) &&
+        (((Global*)0x801ED500)->unk68 == ((Global*)0x801ED500)->unk6C))
+    {
+        temp = ((Global*)0x801ED500)->unk64 != 0;
+        ((Global*)0x801ED500)->unk68 = 0;
+        if (!temp && (((Global*)0x801ED500)->unk88 == ((Global*)0x801ED500)->unk8C))
+        {
+            return 0;
+        }
+    }
+
+    var = ((Global*)0x801ED500)->unk68 + ((Global*)0x801ED500)->unk70;
+
+    if ((((Global*)0x801ED500)->unk68 >= ((Global*)0x801ED500)->unk64) &&
+        (var >= ((volatile Global*)0x801ED500)->unk6C))
+    {
+        var -= ((Global*)0x801ED500)->unk6C;
+    }
+
+    new_var2 = (Global*)0x801ED500;
+    if ((var == ((Global*)0x801ED500)->unk64) && (new_var2->unk70 != 0))
+    {
+        return 0;
+    }
+    
+    entry_ptr = ((Global*)0x801ED500)->unk8 + (var << 11);
     temp = ((Entry*)entry_ptr)->sectorCount;
-    ((volatile Global*)0x801ED500)->unk70 += temp;
+    ((Global*)0x801ED500)->unk70 += temp;
     *arg0 = entry_ptr;
     return 1;
 }
