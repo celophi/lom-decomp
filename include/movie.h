@@ -52,7 +52,7 @@ typedef struct
     u16 unk7E;
     u32 unk80;
     u32 lastConsumedVideoFrame; /* frame number of last video sector consumed by decoder */
-    u32 unk88;
+    u32 lastAudioFrame;
     u32 lastConsumedAudioFrame; /* frame number of last audio sector consumed by SPU */
     s8 gpuMode;      /* 0=DrawSync/LoadImage path; non-zero=BreakDraw/LoadImage2 path */
     s8 interlaceMode; /* 1 if interlaced audio mode (bit 7 of init flags) */
