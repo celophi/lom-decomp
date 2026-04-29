@@ -284,7 +284,7 @@ extern u8 D_801ED595;
 extern u8 D_801ED592;
 extern u16 D_801ED57E;
 extern void func_80140AC0(void);
-extern void func_801416C4(void);
+extern void movie_draw_sync_callback(void);
 extern u32* func_80140F04(s32 param_1, u32 param_2);
 
 extern void cdrom_process_state(void);

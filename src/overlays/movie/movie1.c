@@ -357,7 +357,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
     ((UnkState*)0x801ED500)->unk8C = (u32)(-1);
 
     ((UnkState*)0x801ED500)->unk38 = (u32)DecDCToutCallback(&func_80140AC0, p1, p2, p3);
-    ((UnkState*)0x801ED500)->unk3C = DrawSyncCallback(&func_801416C4);
+    ((UnkState*)0x801ED500)->unk3C = DrawSyncCallback(&movie_draw_sync_callback);
 
     if (((UnkState*)0x801ED500)->unk91 != 0)
     {
@@ -434,7 +434,7 @@ void func_801406E4(void)
                     ((D_801ED500_t*)0x801ED500)->field94 = 0;
                 }
             }
-            else if (func_80141788(&sp10, &sp14) != 0)
+            else if (movie_get_next_video_entry(&sp10, &sp14) != 0)
             {
                 ((D_801ED500_t*)0x801ED500)->field48 = ((u32*)sp14)[2];
                 new_var6 = (D_801ED500_t*)0x801ED500;
@@ -607,34 +607,34 @@ check:
 void func_80140C00(void)
 {
     Struct_801ED500* ptr = (Struct_801ED500*)0x801ED500;
-    unsigned short new_unk99;
-    u16 temp_a0;
-    u16 temp_a1;
-    u16 sum_temp;
+    unsigned short nextOutBufIdx;
+    u16 curFramePos;
+    u16 frameStep;
+    u16 newFramePos;
     u16* new_var;
-    s32 temp_signed;
-    s32 sum;
+    s32 newFramePosSigned;
+    s32 chunkEnd;
     s16 a;
     s16 c;
-    u32 product;
-    int size;
-    new_unk99 = 1 - (*((volatile u8*)(&ptr->unk99)));
-    temp_a0 = *((volatile u16*)(&ptr->unk30));
-    temp_a1 = *((volatile u16*)(&ptr->unk34));
-    sum_temp = temp_a0 + temp_a1;
-    *((volatile u16*)(&ptr->unk30)) = sum_temp;
-    temp_signed = (s16)sum_temp;
-    *((volatile u8*)(&ptr->unk99)) = new_unk99;
+    u32 decodeSize;
+    int decodeWordCount;
+    nextOutBufIdx = 1 - (*((volatile u8*)(&ptr->unk99)));
+    curFramePos = *((volatile u16*)(&ptr->unk30));
+    frameStep = *((volatile u16*)(&ptr->unk34));
+    newFramePos = curFramePos + frameStep;
+    *((volatile u16*)(&ptr->unk30)) = newFramePos;
+    newFramePosSigned = (s16)newFramePos;
+    *((volatile u8*)(&ptr->unk99)) = nextOutBufIdx;
     a = ptr->ch[*((volatile u8*)(&ptr->unk98))].a;
     c = ptr->ch[*((volatile u8*)(&ptr->unk98))].c;
-    sum = a + c;
-    if (temp_signed < sum)
+    chunkEnd = a + c;
+    if (newFramePosSigned < chunkEnd)
     {
         if ((*((volatile u8*)(&ptr->unk97))) < 2U)
         {
-            product = ((s16)temp_a1) * ((s16)(*((volatile u16*)(&ptr->unk36))));
-            size = ((int)(product + (product >> 31))) >> 1;
-            DecDCTout((u32*)ptr->unk18[*((volatile u8*)(&ptr->unk99))], size);
+            decodeSize = ((s16)frameStep) * ((s16)(*((volatile u16*)(&ptr->unk36))));
+            decodeWordCount = ((int)(decodeSize + (decodeSize >> 31))) >> 1;
+            DecDCTout((u32*)ptr->unk18[*((volatile u8*)(&ptr->unk99))], decodeWordCount);
             *((volatile u8*)(&ptr->unk9C)) = 2;
         }
         else
@@ -1090,7 +1090,7 @@ block_10:
 /**
  * decomp.me: (100%) https://decomp.me/scratch/TApbR
  */
-void func_801416C4(void)
+void movie_draw_sync_callback(void)
 {
     volatile u8* base = (volatile u8*)0x801ED500;
     unsigned int temp_lo;
@@ -1132,7 +1132,7 @@ void func_801416C4(void)
 /**
  * decomp.me: (100%) https://decomp.me/scratch/OJvsJ
  */
-s32 func_80141788(s32* arg0, s32* arg1)
+s32 movie_get_next_video_entry(s32* arg0, s32* arg1)
 {
     volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
     BaseStruct_80141788* base2;
