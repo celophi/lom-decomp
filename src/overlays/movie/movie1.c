@@ -1132,14 +1132,14 @@ void movie_draw_sync_callback(void)
 /**
  * decomp.me: (100%) https://decomp.me/scratch/OJvsJ
  */
-s32 movie_get_next_video_entry(s32* arg0, s32* arg1)
+s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
 {
     volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
     BaseStruct_80141788* base2;
     s32 writeIdx;
     s32 readIdx;
-    s32* out0 = arg0;
-    s32* out1 = arg1;
+    s32* out0 = outVlcData;
+    s32* out1 = outEntryHeader;
 
     if (base->videoWriteIdx == base->videoReadIdx)
     {
@@ -1169,7 +1169,7 @@ s32 movie_get_next_video_entry(s32* arg0, s32* arg1)
 
     base2 = (BaseStruct_80141788*)0x801ED500;
     *out1 = base2->videoTableBase + (base2->videoReadIdx << 5);
-    *arg0 = base2->videoDataBase + (base2->videoReadIdx * 2016);
+    *outVlcData = base2->videoDataBase + (base2->videoReadIdx * 2016);
     return 1;
 }
 
