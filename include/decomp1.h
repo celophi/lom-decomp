@@ -64,7 +64,7 @@ void FUN_80022aa8(void);
 void FUN_80022ac8(void);
 s32 RunCheckPS(s32 baseAddress);
 u32 FUN_80060814();
-u32 FUN_80140018(u32 param_1);
+u32 movie_play(u32 param_1);
 void GFX_Transition(s32 skipScreenClear);
 void InitVSyncController(void);
 void InitializeControllers(undefined1 controllerMode);

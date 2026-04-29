@@ -85,13 +85,13 @@ void Main(void)
                     cdrom_wait_queue_empty();
                     if (g_gameState == 9)
                     {
-                        FUN_80140018(1);
+                        movie_play(1);
                     }
                     else
                     {
-                        FUN_80140018(2);
-                        FUN_80140018(3);
-                        FUN_80140018(4);
+                        movie_play(2);
+                        movie_play(3);
+                        movie_play(4);
                     }
                 }
                 else
@@ -226,7 +226,7 @@ void Main(void)
                 cdrom_stream(11, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                FUN_80140018(0);
+                movie_play(0);
                 *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = 2;
                 DrawSync(0);
                 VSync(0);

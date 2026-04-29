@@ -4,12 +4,12 @@
  * decomp.me link (97.51%) https://decomp.me/scratch/XvMvo
  * this one is a WIP without gotos (https://decomp.me/scratch/Gq1vj)
  */
-void FUN_80140018(s32 movieIndex)
+void movie_play(s32 movieIndex)
 {
     DISPENV env[2];
-    DISPENV* new_var5;
+    DISPENV* pDispEnv;
     volatile SRC_801ED500* p500;
-    s32 var_s2;
+    s32 audioFadeVol;
     s32 new_var;
     s32 new_var3;
     s32 error_status;
@@ -73,7 +73,7 @@ void FUN_80140018(s32 movieIndex)
 
     VSync(0);
     func_800157DC();
-    var_s2 = -1;
+    audioFadeVol = -1;
     new_var3 = 5;
     p500 = (SRC_801ED500*)0x801ED500;
     new_var = 2;
@@ -142,13 +142,13 @@ recheck_unk9d:
     func_800157B0(4);
     VSync(0);
 
-    new_var5 = &env[0];
+    pDispEnv = &env[0];
     if (p500->activeDisplayBuffer == 0)
     {
-        new_var5 = &env[1];
+        pDispEnv = &env[1];
     }
 
-    PutDispEnv(new_var5);
+    PutDispEnv(pDispEnv);
     SetDispMask(1);
     func_800157DC();
     cdrom_process_state();
@@ -162,40 +162,40 @@ recheck_unk9d:
             {
                 if ((val & 0x400A) != 0)
                 {
-                    goto set_var_s2;
+                    goto set_audioFadeVol;
                 }
                 goto check_audio_call;
             }
             if ((val & 0xFF0F) != 0)
             {
-                goto set_var_s2;
+                goto set_audioFadeVol;
             }
             goto check_audio_call;
 
             timeout = 0xF0;
 
-        set_var_s2:
+        set_audioFadeVol:
             if (g_cdAudioReady == 0)
             {
                 goto cleanup;
             }
 
-            if (var_s2 == (-1))
+            if (audioFadeVol == (-1))
             {
-                var_s2 = 0x70;
+                audioFadeVol = 0x70;
             }
         }
     }
 
 check_audio_call:
-    if ((g_cdAudioReady != 0) && (var_s2 != (-1)))
+    if ((g_cdAudioReady != 0) && (audioFadeVol != (-1)))
     {
-        func_80023030(var_s2);
-        if (var_s2 == 0)
+        func_80023030(audioFadeVol);
+        if (audioFadeVol == 0)
         {
             goto cleanup;
         }
-        var_s2 -= 0x10;
+        audioFadeVol -= 0x10;
     }
 
     if (p500->unk9f != new_var)
@@ -229,7 +229,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
     u8* new_var9;
     u8** new_var8;
     int new_var;
-    u8** new_var5;
+    u8** pDispEnv;
     AllocInfo* allocInfo = D_80180014;
 
     ((UnkState*)0x801ED500)->unk90 = (s8)(arg1 & 0x7F);
@@ -242,7 +242,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
         ((UnkState*)0x801ED500)->unk91 = 0;
     }
 
-    new_var5 = &((UnkState*)0x801ED500)->unk0;
+    pDispEnv = &((UnkState*)0x801ED500)->unk0;
 
     if (D_801ED590 == 0)
     {
@@ -288,7 +288,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
         new_var6 = (u8*)allocInfo->unk38;
         ((UnkState*)0x801ED500)->unk10 = (u8*)0x8015E000;
         ((UnkState*)0x801ED500)->unk14 = (u8*)0x8016F000;
-        new_var8 = &(*new_var5);
+        new_var8 = &(*pDispEnv);
         new_var9 = new_var6;
         ((UnkState*)0x801ED500)->unkC = new_var9;
         ((UnkState*)0x801ED500)->unk18 = (u8*)(allocInfo->unk38 + p2);
@@ -356,8 +356,8 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
     ((UnkState*)0x801ED500)->unk88 = (u32)(-1);
     ((UnkState*)0x801ED500)->unk8C = (u32)(-1);
 
-    ((UnkState*)0x801ED500)->unk38 = (u32)DecDCToutCallback(&func_80140AC0, p1, p2, p3);
-    ((UnkState*)0x801ED500)->unk3C = DrawSyncCallback(&func_801416C4);
+    ((UnkState*)0x801ED500)->unk38 = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
+    ((UnkState*)0x801ED500)->unk3C = DrawSyncCallback(&movie_draw_sync_callback);
 
     if (((UnkState*)0x801ED500)->unk91 != 0)
     {
@@ -390,13 +390,13 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
  */
 void func_801406E4(void)
 {
-    long new_var5;
+    long pDispEnv;
     D_801ED500_t* new_var6;
     int new_var;
     void* sp10;
     void* sp14;
     D_801ED500_t* new_var2;
-    s32 var_s2 = 0;
+    s32 audioFadeVol = 0;
     D_801ED500_t* s0 = (D_801ED500_t*)0x801ED500;
     int new_var3;
     volatile int new_var4;
@@ -430,11 +430,11 @@ void func_801406E4(void)
                 }
                 if (DecDCTvlc2(0, 0, (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
                 {
-                    var_s2 = 1;
+                    audioFadeVol = 1;
                     ((D_801ED500_t*)0x801ED500)->field94 = 0;
                 }
             }
-            else if (func_80141788(&sp10, &sp14) != 0)
+            else if (movie_get_next_video_entry(&sp10, &sp14) != 0)
             {
                 ((D_801ED500_t*)0x801ED500)->field48 = ((u32*)sp14)[2];
                 new_var6 = (D_801ED500_t*)0x801ED500;
@@ -460,7 +460,7 @@ void func_801406E4(void)
                                (u_long*)((D_801ED500_t*)0x801ED500)->ptr10[((D_801ED500_t*)0x801ED500)->field93],
                                (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
                 {
-                    var_s2 = 1;
+                    audioFadeVol = 1;
                     ((D_801ED500_t*)0x801ED500)->field94 = 0;
                 }
             }
@@ -477,7 +477,7 @@ void func_801406E4(void)
         }
     }
     new_var3 = 0;
-    if (var_s2 != new_var3)
+    if (audioFadeVol != new_var3)
     {
         movie_advance_video_read();
         s0 = (D_801ED500_t*)0x801ED500;
@@ -512,9 +512,9 @@ void func_801406E4(void)
         if (D_801ED592 == 2)
         {
             s0 = (D_801ED500_t*)0x801ED500;
-            new_var5 = s0->field54;
-            var_s2 = s0->field70;
-            if (var_s2 >= ((s32)(new_var5 >> 1)))
+            pDispEnv = s0->field54;
+            audioFadeVol = s0->field70;
+            if (audioFadeVol >= ((s32)(pDispEnv >> 1)))
             {
                 func_8002246C(3);
                 s0->field92 = 0;
@@ -540,11 +540,12 @@ void func_801406E4(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/HVkZ6
  */
-void func_80140AC0(void)
+void movie_mdec_out_callback(void)
 {
     volatile BaseObj* base = (volatile BaseObj*)0x801ED500;
     s32 temp;
     BaseObj* bp_high;
+    BaseObj* bp;
     int new_var;
     if (D_801ED590 == 0)
     {
@@ -557,15 +558,12 @@ void func_80140AC0(void)
         {
             LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
             base->unk97 = (s8)(temp + 1);
-            bp_high = (BaseObj*)0x801e0000;
-            goto check;
         }
         else
         {
             base->unk9A = 1U;
-            bp_high = (BaseObj*)0x801e0000;
-            goto check;
         }
+        bp_high = (BaseObj*)0x801e0000;
     }
     else
     {
@@ -574,31 +572,25 @@ void func_80140AC0(void)
         if (temp != (-1))
         {
             LoadImage2((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
-            if (temp == new_var)
+            if (temp != new_var)
             {
-                bp_high = (BaseObj*)0x801e0000;
-                goto check;
+                DrawOTag((u_long*)temp);
             }
-            DrawOTag((u_long*)temp);
             bp_high = (BaseObj*)0x801e0000;
-            goto check;
         }
         else
         {
             LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
-            ;
         }
     }
-check:
-{
-    BaseObj* bp = (BaseObj*)(((u_int)((BaseObj*)0x801e0000)) | 0xd500);
+
+    bp = (BaseObj*)(((u_int)((BaseObj*)0x801e0000)) | 0xd500);
     if (bp->unk9A == new_var)
     {
         func_80140C00();
         return;
     }
     bp->unk9C = 1;
-}
 }
 
 /**
@@ -607,34 +599,34 @@ check:
 void func_80140C00(void)
 {
     Struct_801ED500* ptr = (Struct_801ED500*)0x801ED500;
-    unsigned short new_unk99;
-    u16 temp_a0;
-    u16 temp_a1;
-    u16 sum_temp;
+    unsigned short nextOutBufIdx;
+    u16 curFramePos;
+    u16 frameStep;
+    u16 newFramePos;
     u16* new_var;
-    s32 temp_signed;
-    s32 sum;
+    s32 newFramePosSigned;
+    s32 chunkEnd;
     s16 a;
     s16 c;
-    u32 product;
-    int size;
-    new_unk99 = 1 - (*((volatile u8*)(&ptr->unk99)));
-    temp_a0 = *((volatile u16*)(&ptr->unk30));
-    temp_a1 = *((volatile u16*)(&ptr->unk34));
-    sum_temp = temp_a0 + temp_a1;
-    *((volatile u16*)(&ptr->unk30)) = sum_temp;
-    temp_signed = (s16)sum_temp;
-    *((volatile u8*)(&ptr->unk99)) = new_unk99;
+    u32 decodeSize;
+    int decodeWordCount;
+    nextOutBufIdx = 1 - (*((volatile u8*)(&ptr->unk99)));
+    curFramePos = *((volatile u16*)(&ptr->unk30));
+    frameStep = *((volatile u16*)(&ptr->unk34));
+    newFramePos = curFramePos + frameStep;
+    *((volatile u16*)(&ptr->unk30)) = newFramePos;
+    newFramePosSigned = (s16)newFramePos;
+    *((volatile u8*)(&ptr->unk99)) = nextOutBufIdx;
     a = ptr->ch[*((volatile u8*)(&ptr->unk98))].a;
     c = ptr->ch[*((volatile u8*)(&ptr->unk98))].c;
-    sum = a + c;
-    if (temp_signed < sum)
+    chunkEnd = a + c;
+    if (newFramePosSigned < chunkEnd)
     {
         if ((*((volatile u8*)(&ptr->unk97))) < 2U)
         {
-            product = ((s16)temp_a1) * ((s16)(*((volatile u16*)(&ptr->unk36))));
-            size = ((int)(product + (product >> 31))) >> 1;
-            DecDCTout((u32*)ptr->unk18[*((volatile u8*)(&ptr->unk99))], size);
+            decodeSize = ((s16)frameStep) * ((s16)(*((volatile u16*)(&ptr->unk36))));
+            decodeWordCount = ((int)(decodeSize + (decodeSize >> 31))) >> 1;
+            DecDCTout((u32*)ptr->unk18[*((volatile u8*)(&ptr->unk99))], decodeWordCount);
             *((volatile u8*)(&ptr->unk9C)) = 2;
         }
         else
@@ -1090,7 +1082,7 @@ block_10:
 /**
  * decomp.me: (100%) https://decomp.me/scratch/TApbR
  */
-void func_801416C4(void)
+void movie_draw_sync_callback(void)
 {
     volatile u8* base = (volatile u8*)0x801ED500;
     unsigned int temp_lo;
@@ -1130,47 +1122,46 @@ void func_801416C4(void)
 }
 
 /**
- * decomp.me: (98.08%) https://decomp.me/scratch/OJvsJ
+ * decomp.me: (100%) https://decomp.me/scratch/OJvsJ
  */
-s32 func_80141788(s32* arg0, s32* arg1)
+s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
 {
     volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
-    volatile BaseStruct_80141788* base2;
+    BaseStruct_80141788* base2;
     s32 writeIdx;
     s32 readIdx;
-    s32* out0 = arg0;
-    s32* out1 = arg1;
+    s32* out0 = outVlcData;
+    s32* out1 = outEntryHeader;
 
-    if (base->videoWriteIdx != base->videoReadIdx)
+    if (base->videoWriteIdx == base->videoReadIdx)
     {
-        /* fall through to reload base */
-    }
-    else if (base->unk80 != base->lastConsumedVideoFrame)
-    {
-        base = (volatile BaseStruct_80141788*)0x801ED500;
-    }
-    else
-    {
-        return 0;
-    }
-
-    base = (volatile BaseStruct_80141788*)0x801ED500;
-
-    writeIdx = base->videoWriteIdx;
-    readIdx = base->videoReadIdx;
-
-    if ((readIdx >= writeIdx) && (readIdx == base->ringCapacity) && (base->videoWriteIdx == 0))
-    {
-        base->videoReadIdx = 0;
-        if (base->unk80 == base->lastConsumedVideoFrame)
+        if (base->unk80 != base->lastConsumedVideoFrame)
+        {
+            base = (BaseStruct_80141788*)0x801ED500;
+        }
+        else
         {
             return 0;
         }
     }
 
-    base2 = (volatile BaseStruct_80141788*)0x801ED500;
+    base = (BaseStruct_80141788*)0x801ED500;
+
+    writeIdx = base->videoWriteIdx;
+    readIdx = base->videoReadIdx;
+
+    if ((readIdx >= writeIdx) && (readIdx == base->ringCapacity))
+    {
+        ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = 0;
+        if ((base->videoWriteIdx == 0) && (base->unk80 == base->lastConsumedVideoFrame))
+        {
+            return 0;
+        }
+    }
+
+    base2 = (BaseStruct_80141788*)0x801ED500;
     *out1 = base2->videoTableBase + (base2->videoReadIdx << 5);
-    *arg0 = base2->videoDataBase + (base2->videoReadIdx * 0x7E0);
+    *outVlcData = base2->videoDataBase + (base2->videoReadIdx * 2016);
     return 1;
 }
 
@@ -1179,22 +1170,20 @@ s32 func_80141788(s32* arg0, s32* arg1)
  */
 void movie_advance_video_read(void)
 {
-    volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
-    s32 readIdx;
+    s32 nextIndex;
     InnerStruct* inner;
-    s32 newReadIdx;
-    s32 frameNum;
-    readIdx = base->videoReadIdx;
-    inner = (InnerStruct*)(base->videoTableBase + (readIdx << 5));
-    newReadIdx = readIdx + inner->sectorCount;
-    frameNum = inner->frameNumber;
-    if ((readIdx >= base->videoWriteIdx) && (newReadIdx == base->ringCapacity))
+    BaseStruct_80141788* base = (BaseStruct_80141788*)0x801ED500;
+
+    inner = (InnerStruct*)(base->videoTableBase + (base->videoReadIdx << 5));
+    nextIndex = base->videoReadIdx + inner->sectorCount;
+
+    if ((base->videoReadIdx >= base->videoWriteIdx) && (nextIndex == base->ringCapacity))
     {
-        newReadIdx = 0;
+        nextIndex = 0;
     }
-    frameNum = inner->frameNumber;
-    ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = newReadIdx;
-    ((BaseStruct_80141788*)0x801ED500)->lastConsumedVideoFrame = frameNum;
+
+    ((BaseStruct_80141788*)0x801ED500)->lastConsumedVideoFrame = inner->frameNumber;
+    ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = nextIndex;
 }
 
 /**

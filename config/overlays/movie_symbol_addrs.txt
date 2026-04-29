@@ -643,7 +643,7 @@ g_glyphAtlasX                       = 0x800894D0;
 g_glyphAtlasY                       = 0x800894D4;
 
 // Uncategorized
-FUN_80140018                        = 0x80140018;
+movie_play                          = 0x80140018;
 FUN_80140d48                        = 0x80140D48;
 
 // Globals
@@ -665,5 +665,8 @@ g_SKCDPOSE_DAT                      = 0x801ED998;
 g_cdResource176                     = 0x801EDF18;
 
 // MOVIE.BIN
+movie_mdec_out_callback             = 0x80140AC0;
+movie_draw_sync_callback            = 0x801416C4;
+movie_get_next_video_entry          = 0x80141788;
 movie_advance_video_read            = 0x80141858;
 movie_advance_audio_read            = 0x801418B0;
