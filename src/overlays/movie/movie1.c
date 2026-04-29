@@ -68,7 +68,7 @@ void movie_play(s32 movieIndex)
             break;
         }
 
-        func_80140358((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
+        movie_init((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
     }
 
     VSync(0);
@@ -102,7 +102,7 @@ error_loop:
     goto recheck_unk9d;
 
 wait_loop:
-    func_801406E4();
+    movie_update();
 
     {
         u8 unk9d_val = p500->frameReady;
@@ -216,7 +216,7 @@ cleanup:
  * decomp.me link (91.61%) https://decomp.me/scratch/tw6Km
  * incorrect but better match https://decomp.me/scratch/ICOiP
  */
-void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
+void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx)
 {
     u32 p1;
     u8* new_var6;
@@ -232,14 +232,14 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
     u8** pDispEnv;
     AllocInfo* allocInfo = D_80180014;
 
-    ((UnkState*)0x801ED500)->unk90 = (s8)(arg1 & 0x7F);
-    if (arg1 & 0x80)
+    ((UnkState*)0x801ED500)->gpuMode = (s8)(flags & 0x7F);
+    if (flags & 0x80)
     {
-        ((UnkState*)0x801ED500)->unk91 = 1;
+        ((UnkState*)0x801ED500)->interlaceMode = 1;
     }
     else
     {
-        ((UnkState*)0x801ED500)->unk91 = 0;
+        ((UnkState*)0x801ED500)->interlaceMode = 0;
     }
 
     pDispEnv = &((UnkState*)0x801ED500)->unk0;
@@ -260,7 +260,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
         ((UnkState*)0x801ED500)->rects[1].w = 0x1E0;
         (new_var4 = (UnkState*)0x801ED500)->rects[0].w = 0x1E0;
         ((UnkState*)0x801ED500)->rects[2].w = 0x18;
-        ((UnkState*)0x801ED500)->unk50 = 0x32;
+        ((UnkState*)0x801ED500)->videoRingCapacity = 0x32;
         new_var = 0x801ED500;
         ((UnkState*)0x801ED500)->unk10 = (u8*)p2;
         ((UnkState*)0x801ED500)->unk14 = (u8*)p1;
@@ -274,15 +274,15 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
         ((UnkState*)0x801ED500)->rects[0].h = 0xF0;
         ((UnkState*)0x801ED500)->rects[2].x = 0;
         ((UnkState*)0x801ED500)->rects[2].y = 0;
-        ((UnkState*)0x801ED500)->unk54 = 0x10;
+        ((UnkState*)0x801ED500)->audioRingCapacity = 0x10;
         ((UnkState*)0x801ED500)->unk4 = (u8*)0x80147640;
-        ((UnkState*)0x801ED500)->unk98 = 0;
+        ((UnkState*)0x801ED500)->chunkIdx = 0;
         ((UnkState*)new_var)->unkC = (u8*)p3;
     }
     else
     {
         p2 = 0x11000;
-        p3 = arg3;
+        p3 = initBufferIdx;
         ((UnkState*)0x801ED500)->unk0 = (u8*)0x80147000;
         ((UnkState*)0x801ED500)->unk8 = (u8*)0x80156000;
         new_var6 = (u8*)allocInfo->unk38;
@@ -311,21 +311,21 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
         {
             new_var7->rects[1].h = new_var7->rects[0].h;
             new_var7->rects[2].h = new_var7->rects[0].h;
-            new_var7->rects[2].x = (&new_var7->rects[arg3])->x;
+            new_var7->rects[2].x = (&new_var7->rects[initBufferIdx])->x;
             // FIX: cast to unsigned short to force zero-extension (lhu) instead of sign-extension (lh)
-            p1 = (unsigned short)new_var7->rects[arg3].y;
+            p1 = (unsigned short)new_var7->rects[initBufferIdx].y;
         }
         new_var7->rects[2].w = 0x10;
-        new_var7->unk50 = 0x1E;
-        ((UnkState*)0x801ED500)->unk54 = 0x10;
-        ((UnkState*)0x801ED500)->unk98 = (s8)arg3;
+        new_var7->videoRingCapacity = 0x1E;
+        ((UnkState*)0x801ED500)->audioRingCapacity = 0x10;
+        ((UnkState*)0x801ED500)->chunkIdx = (s8)initBufferIdx;
         ((UnkState*)0x801ED500)->unk4 = (u8*)(((u32)(*new_var8)) + 0x3C0);
         ((UnkState*)0x801ED500)->rects[2].y = p1;
     }
 
-    ((UnkState*)0x801ED500)->unk44 = resourceIndex;
-    ((UnkState*)0x801ED500)->unk48 = 0;
-    ((UnkState*)0x801ED500)->unk4C = totalFrames;
+    ((UnkState*)0x801ED500)->resourceIndex = resourceIndex;
+    ((UnkState*)0x801ED500)->currentFrame = 0;
+    ((UnkState*)0x801ED500)->totalFrames = totalFrames;
     ((UnkState*)0x801ED500)->unk93 = 0;
     ((UnkState*)0x801ED500)->unk94 = 0;
     ((UnkState*)0x801ED500)->unk95 = 0;
@@ -359,9 +359,9 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
     ((UnkState*)0x801ED500)->unk38 = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
     ((UnkState*)0x801ED500)->unk3C = DrawSyncCallback(&movie_draw_sync_callback);
 
-    if (((UnkState*)0x801ED500)->unk91 != 0)
+    if (((UnkState*)0x801ED500)->interlaceMode != 0)
     {
-        func_800232A8((u32)((UnkState*)0x801ED500)->unk8, (u32)(((UnkState*)0x801ED500)->unk54 << 0xB));
+        func_800232A8((u32)((UnkState*)0x801ED500)->unk8, (u32)(((UnkState*)0x801ED500)->audioRingCapacity << 0xB));
         func_80023030(0x7F);
     }
     else
@@ -388,7 +388,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
 /**
  * decomp.me link (98.86%) https://decomp.me/scratch/bjwdC
  */
-void func_801406E4(void)
+void movie_update(void)
 {
     long pDispEnv;
     D_801ED500_t* new_var6;
@@ -403,14 +403,14 @@ void func_801406E4(void)
     if (D_801ED595 != 0)
     {
         new_var2 = s0;
-        if ((new_var2->field9C == 0) && (s0->field9D == 0))
+        if ((new_var2->mdecBusy == 0) && (s0->field9D == 0))
         {
-            s0->field9C = 1;
-            DecDCTin((u_long*)s0->ptr10[s0->field93], (s0->field90 & 0xFFFFu) == 0);
+            s0->mdecBusy = 1;
+            DecDCTin((u_long*)s0->ptr10[s0->inputBufIdx], (s0->gpuMode & 0xFFFFu) == 0);
             {
                 s32 temp = ((s16)s0->field34) * ((s16)s0->field36);
                 new_var3 = temp + (((unsigned)temp) >> 31);
-                DecDCTout((u_long*)s0->ptr18[s0->field99], new_var3 >> 1);
+                DecDCTout((u_long*)s0->ptr18[s0->outBufIdx], new_var3 >> 1);
             }
             s0->field95 = 0;
         }
@@ -419,11 +419,11 @@ void func_801406E4(void)
     {
         ;
         {
-            u8 v0 = ((D_801ED500_t*)0x801ED500)->field94;
+            u8 v0 = ((D_801ED500_t*)0x801ED500)->vlcRetryCount;
             if (v0 != 0)
             {
                 v0--;
-                ((D_801ED500_t*)0x801ED500)->field94 = v0;
+                ((D_801ED500_t*)0x801ED500)->vlcRetryCount = v0;
                 if ((v0 & 0xFF) == 0)
                 {
                     DecDCTvlcSize2(0);
@@ -431,37 +431,37 @@ void func_801406E4(void)
                 if (DecDCTvlc2(0, 0, (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
                 {
                     audioFadeVol = 1;
-                    ((D_801ED500_t*)0x801ED500)->field94 = 0;
+                    ((D_801ED500_t*)0x801ED500)->vlcRetryCount = 0;
                 }
             }
             else if (movie_get_next_video_entry(&hdr, &sp14) != 0)
             {
-                ((D_801ED500_t*)0x801ED500)->field48 = ((u32*)sp14)[2];
+                ((D_801ED500_t*)0x801ED500)->currentFrame = ((u32*)sp14)[2];
                 new_var6 = (D_801ED500_t*)0x801ED500;
-                if ((((u32*)sp14)[2] >= ((D_801ED500_t*)0x801ED500)->field4C) && (new_var6->field9F == 0))
+                if ((((u32*)sp14)[2] >= ((D_801ED500_t*)0x801ED500)->totalFrames) && (new_var6->endState == 0))
                 {
-                    ((D_801ED500_t*)0x801ED500)->field9F = 1;
+                    ((D_801ED500_t*)0x801ED500)->endState = 1;
                 }
                 {
                     int one;
-                    ((D_801ED500_t*)0x801ED500)->field93 = 1 - ((D_801ED500_t*)0x801ED500)->field93;
+                    ((D_801ED500_t*)0x801ED500)->inputBufIdx = 1 - ((D_801ED500_t*)0x801ED500)->inputBufIdx;
                 }
-                if (((D_801ED500_t*)0x801ED500)->field90 == 0)
+                if (((D_801ED500_t*)0x801ED500)->gpuMode == 0)
                 {
                     DecDCTvlcSize2(0x1000);
-                    ((D_801ED500_t*)0x801ED500)->field94 = 3;
+                    ((D_801ED500_t*)0x801ED500)->vlcRetryCount = 3;
                 }
                 else
                 {
                     DecDCTvlcSize2(0x16AA);
-                    ((D_801ED500_t*)0x801ED500)->field94 = 1;
+                    ((D_801ED500_t*)0x801ED500)->vlcRetryCount = 1;
                 }
                 if (DecDCTvlc2((u_long*)hdr,
-                               (u_long*)((D_801ED500_t*)0x801ED500)->ptr10[((D_801ED500_t*)0x801ED500)->field93],
+                               (u_long*)((D_801ED500_t*)0x801ED500)->ptr10[((D_801ED500_t*)0x801ED500)->inputBufIdx],
                                (DECDCTTAB*)((D_801ED500_t*)0x801ED500)->table) == 0)
                 {
                     audioFadeVol = 1;
-                    ((D_801ED500_t*)0x801ED500)->field94 = 0;
+                    ((D_801ED500_t*)0x801ED500)->vlcRetryCount = 0;
                 }
             }
             else
@@ -469,9 +469,9 @@ void func_801406E4(void)
                 if (((!sp14) && (!sp14)) && (!sp14))
                 {
                 }
-                if ((((D_801ED500_t*)0x801ED500)->field9E != 0) && (((D_801ED500_t*)0x801ED500)->field9C == 0))
+                if ((((D_801ED500_t*)0x801ED500)->endOfStream != 0) && (((D_801ED500_t*)0x801ED500)->mdecBusy == 0))
                 {
-                    ((D_801ED500_t*)0x801ED500)->field9F = 2;
+                    ((D_801ED500_t*)0x801ED500)->endState = 2;
                 }
             }
         }
@@ -481,14 +481,14 @@ void func_801406E4(void)
     {
         movie_advance_video_read();
         s0 = (D_801ED500_t*)0x801ED500;
-        if ((s0->field9C == new_var3) && (new_var = s0->field9D == new_var3))
+        if ((s0->mdecBusy == new_var3) && (new_var = s0->field9D == new_var3))
         {
-            s0->field9C = 1;
-            DecDCTin((u_long*)s0->ptr10[s0->field93], s0->field90 == 0);
+            s0->mdecBusy = 1;
+            DecDCTin((u_long*)s0->ptr10[s0->inputBufIdx], s0->gpuMode == 0);
             {
                 s32 temp = ((s16)s0->field34) * ((s16)s0->field36);
                 new_var = ((unsigned)temp) >> 31;
-                DecDCTout((u_long*)s0->ptr18[s0->field99], (temp + new_var) >> 1);
+                DecDCTout((u_long*)s0->ptr18[s0->outBufIdx], (temp + new_var) >> 1);
             }
         }
         else
@@ -501,10 +501,10 @@ void func_801406E4(void)
     {
         if (movie_get_next_audio_entry(&hdr) != 0)
         {
-            new_var4 = (s0->field48 = ((u32*)hdr)[2]);
-            if ((new_var4 > s0->field4C) && (s0->field9F < 2))
+            new_var4 = (s0->currentFrame = ((u32*)hdr)[2]);
+            if ((new_var4 > s0->totalFrames) && (s0->endState < 2))
             {
-                s0->field9F = 2;
+                s0->endState = 2;
             }
             func_80023334(new_var4);
         }
@@ -512,8 +512,8 @@ void func_801406E4(void)
         if (D_801ED592 == 2)
         {
             s0 = (D_801ED500_t*)0x801ED500;
-            pDispEnv = s0->field54;
-            audioFadeVol = s0->field70;
+            pDispEnv = s0->audioRingCapacity;
+            audioFadeVol = s0->audioBufferedCount;
             if (audioFadeVol >= ((s32)(pDispEnv >> 1)))
             {
                 func_8002246C(3);
@@ -521,12 +521,12 @@ void func_801406E4(void)
             }
         }
         s0 = (D_801ED500_t*)0x801ED500;
-        if ((s0->field64 != ((D_801ED500_t*)0x801ED500)->field68) ||
-            (((D_801ED500_t*)0x801ED500)->field88 != ((D_801ED500_t*)0x801ED500)->field8C))
+        if ((s0->audioWriteIdx != ((D_801ED500_t*)0x801ED500)->audioReadIdx) ||
+            (((D_801ED500_t*)0x801ED500)->lastAudioFrame != ((D_801ED500_t*)0x801ED500)->unk8C))
         {
             s32 tmp = func_800233B8();
-            if (((tmp != (-1)) && (((D_801ED500_t*)0x801ED500)->field70 != 0)) &&
-                (((D_801ED500_t*)0x801ED500)->field68 != ((u32)(tmp * 2))))
+            if (((tmp != (-1)) && (((D_801ED500_t*)0x801ED500)->audioBufferedCount != 0)) &&
+                (((D_801ED500_t*)0x801ED500)->audioReadIdx != ((u32)(tmp * 2))))
             {
                 movie_advance_audio_read(tmp);
             }
@@ -587,7 +587,7 @@ void movie_mdec_out_callback(void)
     bp = (BaseObj*)(((u_int)((BaseObj*)0x801e0000)) | 0xd500);
     if (bp->unk9A == new_var)
     {
-        func_80140C00();
+        movie_schedule_next_decode();
         return;
     }
     bp->unk9C = 1;
@@ -596,7 +596,7 @@ void movie_mdec_out_callback(void)
 /**
  * decomp.me: (98.72%) https://decomp.me/scratch/E7XCZ
  */
-void func_80140C00(void)
+void movie_schedule_next_decode(void)
 {
     Struct_801ED500* ptr = (Struct_801ED500*)0x801ED500;
     unsigned short nextOutBufIdx;
@@ -610,15 +610,15 @@ void func_80140C00(void)
     s16 c;
     u32 decodeSize;
     int decodeWordCount;
-    nextOutBufIdx = 1 - (*((volatile u8*)(&ptr->unk99)));
-    curFramePos = *((volatile u16*)(&ptr->unk30));
+    nextOutBufIdx = 1 - (*((volatile u8*)(&ptr->outBufIdx)));
+    curFramePos = *((volatile u16*)(&ptr->framePos));
     frameStep = *((volatile u16*)(&ptr->unk34));
     newFramePos = curFramePos + frameStep;
-    *((volatile u16*)(&ptr->unk30)) = newFramePos;
+    *((volatile u16*)(&ptr->framePos)) = newFramePos;
     newFramePosSigned = (s16)newFramePos;
-    *((volatile u8*)(&ptr->unk99)) = nextOutBufIdx;
-    a = ptr->ch[*((volatile u8*)(&ptr->unk98))].a;
-    c = ptr->ch[*((volatile u8*)(&ptr->unk98))].c;
+    *((volatile u8*)(&ptr->outBufIdx)) = nextOutBufIdx;
+    a = ptr->ch[*((volatile u8*)(&ptr->chunkIdx))].start;
+    c = ptr->ch[*((volatile u8*)(&ptr->chunkIdx))].length;
     chunkEnd = a + c;
     if (newFramePosSigned < chunkEnd)
     {
@@ -626,26 +626,26 @@ void func_80140C00(void)
         {
             decodeSize = ((s16)frameStep) * ((s16)(*((volatile u16*)(&ptr->unk36))));
             decodeWordCount = ((int)(decodeSize + (decodeSize >> 31))) >> 1;
-            DecDCTout((u32*)ptr->unk18[*((volatile u8*)(&ptr->unk99))], decodeWordCount);
-            *((volatile u8*)(&ptr->unk9C)) = 2;
+            DecDCTout((u32*)ptr->unk18[*((volatile u8*)(&ptr->outBufIdx))], decodeWordCount);
+            *((volatile u8*)(&ptr->decodeState)) = 2;
         }
         else
         {
-            *((volatile u8*)(&ptr->unk9C)) = 1;
-            *((volatile u8*)(&ptr->unk9B)) = 1;
+            *((volatile u8*)(&ptr->decodeState)) = 1;
+            *((volatile u8*)(&ptr->pendingMdecDecode)) = 1;
         }
     }
     else
     {
-        // determining which of the GFX buffer to use from the double buffer?
-        *((volatile u8*)(&ptr->unk98)) = 1 - (*((volatile u8*)(&ptr->unk98)));
-        ptr->unk30 = ptr->ch[*((volatile u8*)(&ptr->unk98))].a;
-        ptr->unk32 = *(new_var = &ptr->ch[*((volatile u8*)(&ptr->unk98))].b);
-        *((volatile u8*)(&ptr->unk9D)) = 1;
-        *((volatile u8*)(&ptr->unk9C)) = 0;
-        if ((*((volatile u8*)(&ptr->unk9F))) == 1)
+        /* advance to the next chunk and reset the frame position */
+        *((volatile u8*)(&ptr->chunkIdx)) = 1 - (*((volatile u8*)(&ptr->chunkIdx)));
+        ptr->framePos = ptr->ch[*((volatile u8*)(&ptr->chunkIdx))].start;
+        ptr->unk32 = *(new_var = &ptr->ch[*((volatile u8*)(&ptr->chunkIdx))].b);
+        *((volatile u8*)(&ptr->frameReady)) = 1;
+        *((volatile u8*)(&ptr->decodeState)) = 0;
+        if ((*((volatile u8*)(&ptr->endState))) == 1)
         {
-            *((volatile u8*)(&ptr->unk9F)) = 2;
+            *((volatile u8*)(&ptr->endState)) = 2;
         }
     }
 }
@@ -658,7 +658,7 @@ void func_80140C00(void)
  *
  * Two flags gate the two halves:
  *   pendingVramUpload — a decoded frame is ready; DMA it into VRAM (LoadImage) and
- *                       kick off the MDEC decode of the next frame (func_80140C00).
+ *                       kick off the MDEC decode of the next frame (movie_schedule_next_decode).
  *   pendingMdecDecode — new BS bitstream data is staged; feed it to the MDEC (DecDCTout).
  *
  * gpuMode selects the transfer path:
@@ -694,7 +694,7 @@ void movie_service_video_ops(void)
                 LoadImage((RECT*)0x801ED530, (u_long*)G->ptrArray[t]);
                 G->drawSyncTarget = DrawSync(1) + 1;
                 G->pendingVramUpload = 0;
-                func_80140C00();
+                movie_schedule_next_decode();
             }
             G->busy = 0;
         }
@@ -735,7 +735,7 @@ void movie_service_video_ops(void)
                         /* Resume the interrupted OTag list */
                         DrawOTag((u_long*)bd);
                     }
-                    func_80140C00();
+                    movie_schedule_next_decode();
                     G->pendingVramUpload = 0;
                 }
             }
@@ -1121,7 +1121,7 @@ void movie_draw_sync_callback(void)
                 u8 idx = base[0x99];
                 u32* ptr = (u32*)(base + (idx << 2));
                 LoadImage((RECT*)(base + 0x30), (u_long*)ptr[6]);
-                func_80140C00();
+                movie_schedule_next_decode();
                 base[0x9a] = 0;
             }
         }
