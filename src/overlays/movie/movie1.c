@@ -764,7 +764,7 @@ s32 movie_cd_sector_callback(void)
     s32 do_load; /* s0 in assembly */
     volatile GlobalData* const gp = (GlobalData*)0x801ED500;
     u16* hdr16;  /* u16 view of hdr for field access by word index */
-    u32 sectorCount;
+    u32 count;
     u16 rem;
     void* dest;
     void* entry;
@@ -780,7 +780,7 @@ s32 movie_cd_sector_callback(void)
 
         if (gp->totalFrames < hdr[2])
         {
-            gp->unk9E = 1;
+            gp->endOfStream = 1;
             return 0;
         }
 
@@ -794,18 +794,18 @@ s32 movie_cd_sector_callback(void)
         if (((u16*)hdr)[1] == 0x8001)
         {
             /* 0x8001 sector type */
-            if (gp->unk58 == gp->unk5C)
+            if (gp->videoWriteIdx == gp->videoReadIdx)
             {
-                if (gp->unk80 == gp->unk84)
+                if (gp->lastVideoFrame == gp->audioDataBase4)
                 {
                     count = ((u16*)hdr)[3];
-                    if (gp->unk50 < gp->unk58 + (s32)count)
+                    if (gp->videoRingCapacity < gp->videoWriteIdx + (s32)count)
                     {
-                        if (gp->unk5C >= (s32)count)
+                        if (gp->videoReadIdx >= (s32)count)
                         {
                             do_load = 1;
-                            gp->unk60 = gp->unk58;
-                            gp->unk58 = 0;
+                            gp->videoWrapSavedIdx = gp->videoWriteIdx;
+                            gp->videoWriteIdx = 0;
                         }
                     }
                     else
@@ -814,16 +814,16 @@ s32 movie_cd_sector_callback(void)
                     }
                 }
             }
-            else if (gp->unk5C < gp->unk58)
+            else if (gp->videoReadIdx < gp->videoWriteIdx)
             {
                 count = ((u16*)hdr)[3];
-                if (gp->unk50 < gp->unk58 + (s32)count)
+                if (gp->videoRingCapacity < gp->videoWriteIdx + (s32)count)
                 {
-                    if (gp->unk5C >= (s32)count)
+                    if (gp->videoReadIdx >= (s32)count)
                     {
                         do_load = 1;
-                        gp->unk60 = gp->unk58;
-                        gp->unk58 = 0;
+                        gp->videoWrapSavedIdx = gp->videoWriteIdx;
+                        gp->videoWriteIdx = 0;
                     }
                 }
                 else
@@ -834,7 +834,7 @@ s32 movie_cd_sector_callback(void)
             else
             {
                 count = ((u16*)hdr)[3];
-                if (gp->unk5C >= gp->unk58 + (s32)count)
+                if (gp->videoReadIdx >= gp->videoWriteIdx + (s32)count)
                 {
                     do_load = 1;
                 }
@@ -842,12 +842,12 @@ s32 movie_cd_sector_callback(void)
 
             if (do_load != 0)
             {
-                dest = (void*)(gp->unk4 + (gp->unk58 * 2016));
+                dest = (void*)(gp->videoDataBase + (gp->videoWriteIdx * 2016));
                 while (CdGetSector(dest, 0x1F8) == 0)
                 {
                 }
 
-                entry = (void*)(gp->unk0 + (gp->unk58 << 5));
+                entry = (void*)(gp->videoTableBase + (gp->videoWriteIdx << 5));
                 ((u32*)entry)[0] = hdr[0];
                 ((u32*)entry)[1] = hdr[1];
                 ((u32*)entry)[2] = hdr[2];
@@ -858,16 +858,16 @@ s32 movie_cd_sector_callback(void)
                 ((u32*)entry)[7] = hdr[7];
 
                 rem = (u16)(((u16*)hdr)[3] - 1);
-                gp->unk7E = rem;
+                gp->sectorsRemaining = rem;
                 if (rem == 0)
                 {
-                    gp->unk58 += 1;
-                    gp->unk80 = gp->frameNumber;
+                    gp->videoWriteIdx += 1;
+                    gp->lastVideoFrame = gp->frameNumber;
                     return (gp->frameNumber < gp->totalFrames) ? 1 : 0;
                 }
                 else
                 {
-                    gp->unk78 = 0;
+                    gp->continuationType = 0;
                     gp->chunkSectorIdx = rem;
                     return 1;
                 }
@@ -880,18 +880,18 @@ s32 movie_cd_sector_callback(void)
         else
         {
             /* other sector type */
-            if (gp->unk64 == gp->unk68)
+            if (gp->audioWriteIdx == gp->audioReadIdx)
             {
-                if (gp->unk88 == gp->unk8C)
+                if (gp->lastAudioFrame == gp->audioDataBaseC)
                 {
                     count = ((u16*)hdr)[3];
-                    if (gp->unk54 < gp->unk64 + (s32)count)
+                    if (gp->audioRingCapacity < gp->audioWriteIdx + (s32)count)
                     {
-                        if (gp->unk68 >= (s32)count)
+                        if (gp->audioReadIdx >= (s32)count)
                         {
                             do_load = 1;
-                            gp->unk6C = gp->unk64;
-                            gp->unk64 = 0;
+                            gp->audioWrapSavedIdx = gp->audioWriteIdx;
+                            gp->audioWriteIdx = 0;
                         }
                     }
                     else
@@ -900,16 +900,16 @@ s32 movie_cd_sector_callback(void)
                     }
                 }
             }
-            else if (gp->unk68 < gp->unk64)
+            else if (gp->audioReadIdx < gp->audioWriteIdx)
             {
                 count = ((u16*)hdr)[3];
-                if (gp->unk54 < gp->unk64 + (s32)count)
+                if (gp->audioRingCapacity < gp->audioWriteIdx + (s32)count)
                 {
-                    if (gp->unk68 >= (s32)count)
+                    if (gp->audioReadIdx >= (s32)count)
                     {
                         do_load = 1;
-                        gp->unk6C = gp->unk64;
-                        gp->unk64 = 0;
+                        gp->audioWrapSavedIdx = gp->audioWriteIdx;
+                        gp->audioWriteIdx = 0;
                     }
                 }
                 else
@@ -920,7 +920,7 @@ s32 movie_cd_sector_callback(void)
             else
             {
                 count = ((u16*)hdr)[3];
-                if (gp->unk68 >= gp->unk64 + (s32)count)
+                if (gp->audioReadIdx >= gp->audioWriteIdx + (s32)count)
                 {
                     do_load = 1;
                 }
@@ -928,12 +928,12 @@ s32 movie_cd_sector_callback(void)
 
             if (do_load != 0)
             {
-                dest = (void*)(gp->unk8 + (gp->unk64 << 11) + 0x20);
+                dest = (void*)(gp->audioDataBase + (gp->audioWriteIdx << 11) + 0x20);
                 while (CdGetSector(dest, 0x1F8) == 0)
                 {
                 }
 
-                entry = (void*)(gp->unk8 + (gp->unk64 << 11));
+                entry = (void*)(gp->audioDataBase + (gp->audioWriteIdx << 11));
                 ((u32*)entry)[0] = hdr[0];
                 ((u32*)entry)[1] = hdr[1];
                 ((u32*)entry)[2] = hdr[2];
@@ -944,17 +944,17 @@ s32 movie_cd_sector_callback(void)
                 ((u32*)entry)[7] = hdr[7];
 
                 rem = (u16)(((u16*)hdr)[3] - 1);
-                gp->unk7E = rem;
+                gp->sectorsRemaining = rem;
                 if (rem == 0)
                 {
-                    gp->unk64 += 1;
-                    gp->unk88 = gp->frameNumber;
+                    gp->audioWriteIdx += 1;
+                    gp->lastAudioFrame = gp->frameNumber;
                     if (gp->totalFrames < gp->frameNumber)
                         return 0;
                 }
                 else
                 {
-                    gp->unk78 = rem;
+                    gp->continuationType = rem;
                     gp->chunkSectorIdx = rem;
                 }
             }
@@ -969,11 +969,11 @@ s32 movie_cd_sector_callback(void)
     else
     {
         /* D_801ED57E != 0 */
-        if (gp->unk78 == 0)
+        if (gp->continuationType == 0)
         {
             for (;;)
             {
-                entry = (void*)(gp->unk0 + ((gp->unk58 + gp->chunkSectorIdx) << 5));
+                entry = (void*)(gp->videoTableBase + ((gp->videoWriteIdx + gp->chunkSectorIdx) << 5));
                 while (CdGetSector(entry, 8) == 0)
                 {
                 }
@@ -981,27 +981,27 @@ s32 movie_cd_sector_callback(void)
                 hdr16 = (u16*)entry;
                 if (hdr16[1] == 0x8001 && ((u32*)entry)[2] == gp->frameNumber && hdr16[2] == gp->chunkSectorIdx)
                 {
-                    dest = (void*)(gp->unk4 + ((gp->unk58 + gp->chunkSectorIdx) * 2016));
+                    dest = (void*)(gp->videoDataBase + ((gp->videoWriteIdx + gp->chunkSectorIdx) * 2016));
                     while (CdGetSector(dest, 0x1F8) == 0)
                     {
                     }
 
-                    rem = gp->unk7E - 1;
-                    gp->unk7E = rem;
+                    rem = gp->sectorsRemaining - 1;
+                    gp->sectorsRemaining = rem;
                     if (rem != 0)
                     {
                         gp->chunkSectorIdx += 1;
                         return 1;
                     }
-                    gp->unk58 = gp->unk58 + 1 + gp->chunkSectorIdx;
-                    gp->unk80 = gp->frameNumber;
+                    gp->videoWriteIdx = gp->videoWriteIdx + 1 + gp->chunkSectorIdx;
+                    gp->lastVideoFrame = gp->frameNumber;
                     return (((u32*)entry)[2] < gp->totalFrames) ? 1 : 0;
                 }
-                gp->unk7E = 0;
+                gp->sectorsRemaining = 0;
                 gp->frameNumber = ((u32*)entry)[2];
                 if (((u32*)entry)[2] < gp->totalFrames)
                     break;
-                gp->unk9E = 1;
+                gp->endOfStream = 1;
                 return 0;
             }
             return 1;
@@ -1010,7 +1010,7 @@ s32 movie_cd_sector_callback(void)
         {
             for (;;)
             {
-                entry = (void*)(gp->unk8 + ((gp->unk64 + gp->chunkSectorIdx) << 11));
+                entry = (void*)(gp->audioDataBase + ((gp->audioWriteIdx + gp->chunkSectorIdx) << 11));
                 while (CdGetSector(entry, 8) == 0)
                 {
                 }
@@ -1018,29 +1018,29 @@ s32 movie_cd_sector_callback(void)
                 hdr16 = (u16*)entry;
                 if (hdr16[1] == 1 && ((u32*)entry)[2] == gp->frameNumber && hdr16[2] == gp->chunkSectorIdx)
                 {
-                    dest = (void*)(gp->unk8 + ((gp->unk64 + gp->chunkSectorIdx) << 11) + 0x20);
+                    dest = (void*)(gp->audioDataBase + ((gp->audioWriteIdx + gp->chunkSectorIdx) << 11) + 0x20);
                     while (CdGetSector(dest, 0x1F8) == 0)
                     {
                     }
 
-                    rem = gp->unk7E - 1;
-                    gp->unk7E = rem;
+                    rem = gp->sectorsRemaining - 1;
+                    gp->sectorsRemaining = rem;
                     if (rem != 0)
                     {
                         gp->chunkSectorIdx += 1;
                         return 1;
                     }
-                    gp->unk64 = gp->unk64 + 1 + gp->chunkSectorIdx;
-                    gp->unk88 = gp->frameNumber;
+                    gp->audioWriteIdx = gp->audioWriteIdx + 1 + gp->chunkSectorIdx;
+                    gp->lastAudioFrame = gp->frameNumber;
                     if (gp->totalFrames < ((u32*)entry)[2])
                         return 0;
                     return 1;
                 }
-                gp->unk7E = 0;
+                gp->sectorsRemaining = 0;
                 gp->frameNumber = ((u32*)entry)[2];
                 if (!(gp->totalFrames < ((u32*)entry)[2]))
                     break;
-                gp->unk9E = 1;
+                gp->endOfStream = 1;
                 return 0;
             }
             return 1;
