@@ -1031,17 +1031,18 @@ s32 func_8014159C(void** arg0)
     u8* entry_ptr;
     volatile Global* new_var2;
     u16 temp;
-    ;
+
     if (((volatile Global*)0x801ED500)->unk64 != ((volatile Global*)0x801ED500)->unk68)
     {
-        goto block_4;
     }
-    if (((volatile Global*)0x801ED500)->unk88 != ((volatile Global*)0x801ED500)->unk8C)
+    else if (((volatile Global*)0x801ED500)->unk88 != ((volatile Global*)0x801ED500)->unk8C)
     {
-        goto block_4;
     }
-    return 0;
-block_4:
+    else
+    {
+        return 0;
+    }
+
     if (((volatile Global*)0x801ED500)->unk64 <= ((volatile Global*)0x801ED500)->unk68)
     {
         if (((volatile Global*)0x801ED500)->unk68 == ((volatile Global*)0x801ED500)->unk6C)
@@ -1050,14 +1051,14 @@ block_4:
             ((volatile Global*)0x801ED500)->unk68 = 0;
             if (temp || (((volatile Global*)0x801ED500)->unk88 != ((volatile Global*)0x801ED500)->unk8C))
             {
-                goto block_10;
             }
-            return 0;
+            else
+            {
+                return 0;
+            }
         }
-        goto block_10;
     }
 
-block_10:
     var = ((volatile Global*)0x801ED500)->unk68 + ((volatile Global*)0x801ED500)->unk70;
 
     if (((volatile Global*)0x801ED500)->unk68 >= ((volatile Global*)0x801ED500)->unk64)
