@@ -1179,22 +1179,20 @@ s32 func_80141788(s32* arg0, s32* arg1)
  */
 void movie_advance_video_read(void)
 {
-    volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
-    s32 readIdx;
+    s32 nextIndex;
     InnerStruct* inner;
-    s32 newReadIdx;
-    s32 frameNum;
-    readIdx = base->videoReadIdx;
-    inner = (InnerStruct*)(base->videoTableBase + (readIdx << 5));
-    newReadIdx = readIdx + inner->sectorCount;
-    frameNum = inner->frameNumber;
-    if ((readIdx >= base->videoWriteIdx) && (newReadIdx == base->ringCapacity))
+    BaseStruct_80141788* base = ( BaseStruct_80141788*)0x801ED500;
+    
+    inner = (InnerStruct*)(base->videoTableBase + (base->videoReadIdx << 5));
+    nextIndex = base->videoReadIdx + inner->sectorCount;
+    
+    if ((base->videoReadIdx >= base->videoWriteIdx) && (nextIndex == base->ringCapacity))
     {
-        newReadIdx = 0;
+        nextIndex = 0;
     }
-    frameNum = inner->frameNumber;
-    ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = newReadIdx;
-    ((BaseStruct_80141788*)0x801ED500)->lastConsumedVideoFrame = frameNum;
+    
+    ((BaseStruct_80141788*)0x801ED500)->lastConsumedVideoFrame = inner->frameNumber;
+    ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = nextIndex;
 }
 
 /**
