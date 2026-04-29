@@ -218,12 +218,12 @@ typedef struct Entry
 typedef struct Global
 {
     u8 _pad0[8];
-    u8* unk8;
+    u8* audioDataBase;      /* base ptr into audio sector table; entries are 2048 bytes each */
     u8 _pad1[0x64 - 0xC];
-    s32 unk64;
-    s32 unk68;
-    s32 unk6C;
-    s32 unk70;
+    s32 audioWriteIdx;      /* ring buffer write head (sectors loaded from CD) */
+    s32 audioReadIdx;       /* ring buffer read head (wraps at audioRingSize) */
+    s32 audioRingSize;      /* ring buffer capacity / wrap point for read/next indices */
+    s32 audioBufferedCount; /* cumulative sector count of entries queued but not yet consumed */
     u8 _pad2[0x88 - 0x74];
     s32 unk88;
     s32 unk8C;

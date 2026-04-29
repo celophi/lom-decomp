@@ -499,7 +499,7 @@ void func_801406E4(void)
     s0 = (D_801ED500_t*)0x801ED500;
     if (g_cdAudioReady != 0)
     {
-        if (func_8014159C(&sp10) != 0)
+        if (movie_get_next_audio_entry(&sp10) != 0)
         {
             new_var4 = (s0->field48 = ((u32*)sp10)[2]);
             if ((new_var4 > s0->field4C) && (s0->field9F < 2))
@@ -1024,49 +1024,53 @@ s32 func_80140F04(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/I2Ddr
  */
-s32 func_8014159C(void** arg0)
+s32 movie_get_next_audio_entry(void** outEntry)
 {
     void** saved_arg;
-    s32 var;
-    u8* entry_ptr;
-    Global* new_var2;
+    s32 nextIdx;
+    u8* entry;
     u16 temp;
 
-    if ((((Global*)0x801ED500)->unk64 == ((Global*)0x801ED500)->unk68) &&
+    /* Return immediately if nothing is available: ring empty and no secondary data pending */
+    if ((((Global*)0x801ED500)->audioWriteIdx == ((Global*)0x801ED500)->audioReadIdx) &&
         (((Global*)0x801ED500)->unk88 == ((Global*)0x801ED500)->unk8C))
     {
         return 0;
     }
 
-    if ((((volatile Global*)0x801ED500)->unk64 <= ((Global*)0x801ED500)->unk68) &&
-        (((Global*)0x801ED500)->unk68 == ((Global*)0x801ED500)->unk6C))
+    /* Wrap readIdx back to 0 when it reaches the end of the ring */
+    if ((((volatile Global*)0x801ED500)->audioWriteIdx <= ((Global*)0x801ED500)->audioReadIdx) &&
+        (((Global*)0x801ED500)->audioReadIdx == ((Global*)0x801ED500)->audioRingSize))
     {
-        temp = ((Global*)0x801ED500)->unk64 != 0;
-        ((Global*)0x801ED500)->unk68 = 0;
+        temp = ((Global*)0x801ED500)->audioWriteIdx != 0;
+        ((Global*)0x801ED500)->audioReadIdx = 0;
         if (!temp && (((Global*)0x801ED500)->unk88 == ((Global*)0x801ED500)->unk8C))
         {
             return 0;
         }
     }
 
-    var = ((Global*)0x801ED500)->unk68 + ((Global*)0x801ED500)->unk70;
+    /* Look past already-buffered entries to find the next one to queue */
+    nextIdx = ((Global*)0x801ED500)->audioReadIdx + ((Global*)0x801ED500)->audioBufferedCount;
 
-    if ((((Global*)0x801ED500)->unk68 >= ((Global*)0x801ED500)->unk64) &&
-        (var >= ((volatile Global*)0x801ED500)->unk6C))
+    /* Wrap nextIdx if it overflows the ring */
+    if ((((Global*)0x801ED500)->audioReadIdx >= ((Global*)0x801ED500)->audioWriteIdx) &&
+        (nextIdx >= ((volatile Global*)0x801ED500)->audioRingSize))
     {
-        var -= ((Global*)0x801ED500)->unk6C;
+        nextIdx -= ((Global*)0x801ED500)->audioRingSize;
     }
 
-    new_var2 = (Global*)0x801ED500;
-    if ((var == ((Global*)0x801ED500)->unk64) && (new_var2->unk70 != 0))
+    /* All loaded entries are already queued; nothing new to dispatch */
+    if ((nextIdx == ((Global*)0x801ED500)->audioWriteIdx) && (((Global*)0x801ED500)->audioBufferedCount != 0))
     {
         return 0;
     }
-    
-    entry_ptr = ((Global*)0x801ED500)->unk8 + (var << 11);
-    temp = ((Entry*)entry_ptr)->sectorCount;
-    ((Global*)0x801ED500)->unk70 += temp;
-    *arg0 = entry_ptr;
+
+    /* Resolve entry: each entry occupies one 2048-byte CD sector in the audio data buffer */
+    entry = ((Global*)0x801ED500)->audioDataBase + (nextIdx << 11);
+    temp = ((Entry*)entry)->sectorCount;
+    ((Global*)0x801ED500)->audioBufferedCount += temp;
+    *outEntry = entry;
     return 1;
 }
 
