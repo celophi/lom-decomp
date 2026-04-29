@@ -5,6 +5,7 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libpress.h"
+#include "psyq/libcd.h"
 
 typedef struct
 {
@@ -17,12 +18,12 @@ typedef struct
 typedef struct
 {
     u_char _pad0[0x98];
-    u_char unk98;
+    u_char activeDisplayBuffer;
     u_char _pad99;
     u_char _pad9a;
     u_char _pad9b;
     u_char _pad9c;
-    u_char unk9d;
+    u_char frameReady;
     u_char _pad9e;
     u_char unk9f;
 } SRC_801ED500;
@@ -184,7 +185,7 @@ typedef struct GlobalData
     u32 unk4;
     u32 unk8;
     u8 _pad0C[0x40];
-    u32 unk4C;
+    u32 totalFrames;
     s32 unk50;
     s32 unk54;
     s32 unk58;
@@ -194,7 +195,7 @@ typedef struct GlobalData
     s32 unk68;
     s32 unk6C;
     u8 _pad70[4];
-    u32 unk74;
+    u32 frameNumber;
     u32 unk78;
     u16 unk7C;
     u16 unk7E;
@@ -211,7 +212,7 @@ typedef struct GlobalData
 typedef struct Entry
 {
     u8 _pad0[6];
-    u16 unk6;
+    u16 sectorCount;
     u8 _pad1[2048 - 8];
 } Entry;
 typedef struct Global
@@ -230,48 +231,48 @@ typedef struct Global
 
 typedef struct
 {
-    s32 unk0;              /* 0x00 */
-    s32 unk4;              /* 0x04 */
-    u8 _pad0[0x58 - 8];    /* 0x08 … 0x57 */
-    s32 unk58;             /* 0x58 */
-    s32 unk5C;             /* 0x5C */
-    s32 unk60;             /* 0x60 */
+    s32 videoTableBase;    /* 0x00 */
+    s32 videoDataBase;     /* 0x04 */
+    u8 _pad0[0x58 - 8];   /* 0x08 … 0x57 */
+    s32 videoWriteIdx;     /* 0x58 */
+    s32 videoReadIdx;      /* 0x5C */
+    s32 ringCapacity;      /* 0x60 */
     u8 _pad1[0x80 - 0x64]; /* 0x64 … 0x7F */
     s32 unk80;             /* 0x80 */
-    s32 unk84;             /* 0x84 */
+    s32 lastConsumedVideoFrame; /* 0x84 */
 } BaseStruct_80141788;
 
 typedef struct
 {
     u8 pad[6];
-    u16 unk6;
-    s32 unk8;
+    u16 sectorCount;
+    s32 frameNumber;
 } InnerStruct;
 
 typedef struct
 {
     s32 unk0;
     s32 unk4;
-    s32 unk8;
+    s32 audioDataBase;    /* 0x08 */
     u8 _pad0[0x58 - 0xC];
     s32 unk58;
     s32 unk5C;
-    s32 unk60;
-    s32 unk64;
-    s32 unk68;
+    s32 ringCapacity;     /* 0x60 */
+    s32 audioWriteIdx;    /* 0x64 */
+    s32 audioReadIdx;     /* 0x68 */
     s32 unk6C;
-    s32 unk70;
+    s32 audioBufferedCount; /* 0x70 */
     u8 _pad1[0x80 - 0x74];
     s32 unk80;
     s32 unk84;
     s32 unk88;
-    s32 unk8C;
+    s32 frameNumber;
 } BaseStruct_801418B0;
 typedef struct
 {
     u8 pad[6];
-    u16 unk6;
-    s32 unk8;
+    u16 sectorCount;
+    s32 frameNumber;
 } InnerStruct_801418B0;
 
 extern u_char g_cdAudioReady;

@@ -4,7 +4,7 @@
  * decomp.me link (97.51%) https://decomp.me/scratch/XvMvo
  * this one is a WIP without gotos (https://decomp.me/scratch/Gq1vj)
  */
-void FUN_80140018(s32 arg0)
+void FUN_80140018(s32 movieIndex)
 {
     DISPENV env[2];
     DISPENV* new_var5;
@@ -22,7 +22,7 @@ void FUN_80140018(s32 arg0)
     func_800157DC();
     cdrom_process_state();
 
-    if ((arg0 & 0xFFFF) == 0)
+    if ((movieIndex & 0xFFFF) == 0)
     {
         if (((SRC_801ED600*)0x801ED600)->unk0 < 3)
         {
@@ -42,33 +42,33 @@ void FUN_80140018(s32 arg0)
     env[0].isrgb24 = (env[1].isrgb24 = 1);
 
     {
-        u32 a2;
-        switch ((u16)(arg0 & 0xFFFF))
+        u32 frameCount;
+        switch ((u16)(movieIndex & 0xFFFF))
         {
         case 0:
-            a2 = 0x832;
+            frameCount = 2098;
             break;
 
         case 1:
-            a2 = 0x9a9;
+            frameCount = 2473;
             break;
 
         case 2:
-            a2 = 0x526;
+            frameCount = 1318;
             break;
 
         case 3:
-            a2 = 0x14f8;
+            frameCount = 5368;
             break;
 
         case 4:
 
         default:
-            a2 = 0x382;
+            frameCount = 898;
             break;
         }
 
-        func_80140358((arg0 & 0xFFFF) + 0x16A0, 0x80, a2, 0);
+        func_80140358((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
     }
 
     VSync(0);
@@ -105,7 +105,7 @@ wait_loop:
     func_801406E4();
 
     {
-        u8 unk9d_val = p500->unk9d;
+        u8 unk9d_val = p500->frameReady;
         if (unk9d_val != 0)
         {
             goto after_wait;
@@ -133,17 +133,17 @@ after_wait:
 
 recheck_unk9d:
     timeout = 0x2000;
-    if (p500->unk9d == 0)
+    if (p500->frameReady == 0)
     {
         goto wait_loop;
     }
 
-    p500->unk9d = 0;
+    p500->frameReady = 0;
     func_800157B0(4);
     VSync(0);
 
     new_var5 = &env[0];
-    if (p500->unk98 == 0)
+    if (p500->activeDisplayBuffer == 0)
     {
         new_var5 = &env[1];
     }
@@ -154,7 +154,7 @@ recheck_unk9d:
     cdrom_process_state();
 
     {
-        u32 a0 = (u32)(arg0 & 0xFFFF);
+        u32 a0 = (u32)(movieIndex & 0xFFFF);
         if ((a0 < 2) && (((SRC_801ED600*)0x801ED600)->unk0 < 3))
         {
             u16 val = ((SRC_801ED600*)0x801ED600)->unk4;
@@ -216,7 +216,7 @@ cleanup:
  * decomp.me link (91.61%) https://decomp.me/scratch/tw6Km
  * incorrect but better match https://decomp.me/scratch/ICOiP
  */
-void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
+void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
 {
     u32 p1;
     u8* new_var6;
@@ -323,9 +323,9 @@ void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
         ((UnkState*)0x801ED500)->rects[2].y = p1;
     }
 
-    ((UnkState*)0x801ED500)->unk44 = arg0;
+    ((UnkState*)0x801ED500)->unk44 = resourceIndex;
     ((UnkState*)0x801ED500)->unk48 = 0;
-    ((UnkState*)0x801ED500)->unk4C = arg2;
+    ((UnkState*)0x801ED500)->unk4C = totalFrames;
     ((UnkState*)0x801ED500)->unk93 = 0;
     ((UnkState*)0x801ED500)->unk94 = 0;
     ((UnkState*)0x801ED500)->unk95 = 0;
@@ -372,7 +372,7 @@ void func_80140358(s32 arg0, s32 arg1, s32 arg2, int arg3)
 
     cdrom_wait_queue_empty();
     new_var3 = (UnkState*)0x801ED500;
-    cdrom_queue_command(0x1B, (s16)arg0, (void*)0, &func_80140F04);
+    cdrom_queue_command(CdlReadS, (s16)resourceIndex, NULL, &func_80140F04);
 
     if (D_801ED590 == 0)
     {
@@ -479,7 +479,7 @@ void func_801406E4(void)
     new_var3 = 0;
     if (var_s2 != new_var3)
     {
-        func_80141858();
+        movie_advance_video_read();
         s0 = (D_801ED500_t*)0x801ED500;
         if ((s0->field9C == new_var3) && (new_var = s0->field9D == new_var3))
         {
@@ -528,7 +528,7 @@ void func_801406E4(void)
             if (((tmp != (-1)) && (((D_801ED500_t*)0x801ED500)->field70 != 0)) &&
                 (((D_801ED500_t*)0x801ED500)->field68 != ((u32)(tmp * 2))))
             {
-                func_801418B0(tmp);
+                movie_advance_audio_read(tmp);
             }
             do
             {
@@ -645,6 +645,7 @@ void func_80140C00(void)
     }
     else
     {
+        // determining which of the GFX buffer to use from the double buffer?
         *((volatile u8*)(&ptr->unk98)) = 1 - (*((volatile u8*)(&ptr->unk98)));
         ptr->unk30 = ptr->ch[*((volatile u8*)(&ptr->unk98))].a;
         ptr->unk32 = *(new_var = &ptr->ch[*((volatile u8*)(&ptr->unk98))].b);
@@ -758,13 +759,13 @@ s32 func_80140F04(void)
         {
         }
 
-        if (gp->unk4C < sp10[2])
+        if (gp->totalFrames < sp10[2])
         {
             gp->unk9E = 1;
             return 0;
         }
 
-        gp->unk74 = sp10[2];
+        gp->frameNumber = sp10[2];
 
         /* check low word of sp10[1] (offset 0x14) */
         if (((u16*)sp10)[2] != 0)
@@ -842,8 +843,8 @@ s32 func_80140F04(void)
                 if (rem == 0)
                 {
                     gp->unk58 += 1;
-                    gp->unk80 = gp->unk74;
-                    return (gp->unk74 < gp->unk4C) ? 1 : 0;
+                    gp->unk80 = gp->frameNumber;
+                    return (gp->frameNumber < gp->totalFrames) ? 1 : 0;
                 }
                 else
                 {
@@ -928,8 +929,8 @@ s32 func_80140F04(void)
                 if (rem == 0)
                 {
                     gp->unk64 += 1;
-                    gp->unk88 = gp->unk74;
-                    if (gp->unk4C < gp->unk74)
+                    gp->unk88 = gp->frameNumber;
+                    if (gp->totalFrames < gp->frameNumber)
                         return 0;
                 }
                 else
@@ -959,7 +960,7 @@ s32 func_80140F04(void)
                 }
 
                 sp16 = (u16*)entry;
-                if (sp16[1] == 0x8001 && ((u32*)entry)[2] == gp->unk74 && sp16[2] == gp->unk7C)
+                if (sp16[1] == 0x8001 && ((u32*)entry)[2] == gp->frameNumber && sp16[2] == gp->unk7C)
                 {
                     dest = (void*)(gp->unk4 + ((gp->unk58 + gp->unk7C) * 2016));
                     while (CdGetSector(dest, 0x1F8) == 0)
@@ -974,12 +975,12 @@ s32 func_80140F04(void)
                         return 1;
                     }
                     gp->unk58 = gp->unk58 + 1 + gp->unk7C;
-                    gp->unk80 = gp->unk74;
-                    return (((u32*)entry)[2] < gp->unk4C) ? 1 : 0;
+                    gp->unk80 = gp->frameNumber;
+                    return (((u32*)entry)[2] < gp->totalFrames) ? 1 : 0;
                 }
                 gp->unk7E = 0;
-                gp->unk74 = ((u32*)entry)[2];
-                if (((u32*)entry)[2] < gp->unk4C)
+                gp->frameNumber = ((u32*)entry)[2];
+                if (((u32*)entry)[2] < gp->totalFrames)
                     break;
                 gp->unk9E = 1;
                 return 0;
@@ -996,7 +997,7 @@ s32 func_80140F04(void)
                 }
 
                 sp16 = (u16*)entry;
-                if (sp16[1] == 1 && ((u32*)entry)[2] == gp->unk74 && sp16[2] == gp->unk7C)
+                if (sp16[1] == 1 && ((u32*)entry)[2] == gp->frameNumber && sp16[2] == gp->unk7C)
                 {
                     dest = (void*)(gp->unk8 + ((gp->unk64 + gp->unk7C) << 11) + 0x20);
                     while (CdGetSector(dest, 0x1F8) == 0)
@@ -1011,14 +1012,14 @@ s32 func_80140F04(void)
                         return 1;
                     }
                     gp->unk64 = gp->unk64 + 1 + gp->unk7C;
-                    gp->unk88 = gp->unk74;
-                    if (gp->unk4C < ((u32*)entry)[2])
+                    gp->unk88 = gp->frameNumber;
+                    if (gp->totalFrames < ((u32*)entry)[2])
                         return 0;
                     return 1;
                 }
                 gp->unk7E = 0;
-                gp->unk74 = ((u32*)entry)[2];
-                if (!(gp->unk4C < ((u32*)entry)[2]))
+                gp->frameNumber = ((u32*)entry)[2];
+                if (!(gp->totalFrames < ((u32*)entry)[2]))
                     break;
                 gp->unk9E = 1;
                 return 0;
@@ -1080,7 +1081,7 @@ block_10:
         return 0;
     }
     entry_ptr = ((volatile Global*)0x801ED500)->unk8 + (var << 11);
-    temp = ((Entry*)entry_ptr)->unk6;
+    temp = ((Entry*)entry_ptr)->sectorCount;
     ((volatile Global*)0x801ED500)->unk70 += temp;
     *arg0 = entry_ptr;
     return 1;
@@ -1135,16 +1136,16 @@ s32 func_80141788(s32* arg0, s32* arg1)
 {
     volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
     volatile BaseStruct_80141788* base2;
-    s32 new_var;
-    s32 new_var2;
+    s32 writeIdx;
+    s32 readIdx;
     s32* out0 = arg0;
     s32* out1 = arg1;
 
-    if (base->unk58 != base->unk5C)
+    if (base->videoWriteIdx != base->videoReadIdx)
     {
         /* fall through to reload base */
     }
-    else if (base->unk80 != base->unk84)
+    else if (base->unk80 != base->lastConsumedVideoFrame)
     {
         base = (volatile BaseStruct_80141788*)0x801ED500;
     }
@@ -1155,79 +1156,75 @@ s32 func_80141788(s32* arg0, s32* arg1)
 
     base = (volatile BaseStruct_80141788*)0x801ED500;
 
-    new_var = base->unk58;
-    new_var2 = base->unk5C;
+    writeIdx = base->videoWriteIdx;
+    readIdx = base->videoReadIdx;
 
-    if ((new_var2 >= new_var) && (new_var2 == base->unk60) && (base->unk58 == 0))
+    if ((readIdx >= writeIdx) && (readIdx == base->ringCapacity) && (base->videoWriteIdx == 0))
     {
-        base->unk5C = 0;
-        if (base->unk80 == base->unk84)
+        base->videoReadIdx = 0;
+        if (base->unk80 == base->lastConsumedVideoFrame)
         {
             return 0;
         }
     }
 
     base2 = (volatile BaseStruct_80141788*)0x801ED500;
-    *out1 = base2->unk0 + (base2->unk5C << 5);
-    *arg0 = base2->unk4 + (base2->unk5C * 0x7E0);
+    *out1 = base2->videoTableBase + (base2->videoReadIdx << 5);
+    *arg0 = base2->videoDataBase + (base2->videoReadIdx * 0x7E0);
     return 1;
 }
 
 /**
  * decomp.me: (100%) https://decomp.me/scratch/SUBK5
  */
-void func_80141858(void)
+void movie_advance_video_read(void)
 {
     volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
-    s32 temp_v1;
+    s32 readIdx;
     InnerStruct* inner;
-    s32 var_a2;
-    s32 unk8_val;
-    temp_v1 = base->unk5C;
-    inner = (InnerStruct*)(base->unk0 + (temp_v1 << 5));
-    var_a2 = temp_v1 + inner->unk6;
-    unk8_val = inner->unk8;
-    if ((temp_v1 >= base->unk58) && (var_a2 == base->unk60))
+    s32 newReadIdx;
+    s32 frameNum;
+    readIdx = base->videoReadIdx;
+    inner = (InnerStruct*)(base->videoTableBase + (readIdx << 5));
+    newReadIdx = readIdx + inner->sectorCount;
+    frameNum = inner->frameNumber;
+    if ((readIdx >= base->videoWriteIdx) && (newReadIdx == base->ringCapacity))
     {
-        var_a2 = 0;
+        newReadIdx = 0;
     }
-    unk8_val = inner->unk8;
-    ((BaseStruct_80141788*)0x801ED500)->unk5C = var_a2;
-    ((BaseStruct_80141788*)0x801ED500)->unk84 = unk8_val;
+    frameNum = inner->frameNumber;
+    ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = newReadIdx;
+    ((BaseStruct_80141788*)0x801ED500)->lastConsumedVideoFrame = frameNum;
 }
 
 /**
  * decomp.me: (100%) https://decomp.me/scratch/6Xjsu
  */
-void func_801418B0(void)
+void movie_advance_audio_read(void)
 {
     BaseStruct_801418B0* base;
     InnerStruct_801418B0* inner;
-    u16* new_var;
-    s32 temp_v1;
-    s32 unk64_val;
-    unsigned int temp_a0;
-    s32 var_a3;
-    s32 unk8_val;
-    s32 new_unk70;
+    s32 nextIndex;
+
+    /* Base movie playback control block located at fixed RAM address (0x801ED500). */
     base = (BaseStruct_801418B0*)0x801ED500;
-    temp_v1 = base->unk68;
-    inner = (InnerStruct_801418B0*)(base->unk8 + (temp_v1 << 11));
-    unk64_val = base->unk64;
-    new_var = &inner->unk6;
-    temp_a0 = *new_var;
-    var_a3 = temp_v1 + temp_a0;
-    new_unk70 = base->unk70 - temp_a0;
-    base += 0;
-    base->unk70 = new_unk70;
-    if (temp_v1 >= unk64_val)
+
+    /* Resolve pointer to current audio sector header using read index (2048 bytes per sector). */
+    inner = (InnerStruct_801418B0*)(base->audioDataBase + (base->audioReadIdx << 11));
+
+    /* Advance read index by number of sectors described in this header. */
+    nextIndex = base->audioReadIdx + inner->sectorCount;
+
+    /* Decrease buffered sector count to reflect consumed audio data. */
+    base->audioBufferedCount = base->audioBufferedCount - inner->sectorCount;
+
+    /* Wrap to start of ring buffer only if advancing from a "full" state hits capacity exactly. */
+    if ((base->audioReadIdx >= base->audioWriteIdx) && (nextIndex == base->ringCapacity))
     {
-        if (var_a3 == base->unk60)
-        {
-            var_a3 = 0;
-        }
+        nextIndex = 0;
     }
-    unk8_val = inner->unk8;
-    ((BaseStruct_801418B0*)0x801ED500)->unk68 = var_a3;
-    ((BaseStruct_801418B0*)0x801ED500)->unk8C = unk8_val;
+
+    /* Update playback state: sync frame number and commit new read index. */
+    ((BaseStruct_801418B0*)0x801ED500)->frameNumber = inner->frameNumber;
+    ((BaseStruct_801418B0*)0x801ED500)->audioReadIdx = nextIndex;
 }
