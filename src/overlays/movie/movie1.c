@@ -412,7 +412,7 @@ void movie_update(void)
                 new_var3 = temp + (((unsigned)temp) >> 31);
                 DecDCTout((u_long*)s0->ptr18[s0->outBufIdx], new_var3 >> 1);
             }
-            s0->field95 = 0;
+            s0->mdecRetryPending = 0;
         }
     }
     if ((g_mdecRetryPending == 0) & 0xFFFFu)

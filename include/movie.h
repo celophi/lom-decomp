@@ -231,7 +231,7 @@ typedef struct
     u8 _pad0[0x58 - 0xC];
     s32 unk58;
     s32 unk5C;
-    s32 ringCapacity;     /* 0x60 */
+    s32 videoRingSize;    /* 0x60 — ring wrap point (shared with video ring; wraps audio reader too) */
     s32 audioWriteIdx;    /* 0x64 */
     s32 audioReadIdx;     /* 0x68 */
     s32 unk6C;
