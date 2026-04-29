@@ -642,10 +642,6 @@ g_textOriginX                       = 0x800894CC;
 g_glyphAtlasX                       = 0x800894D0;
 g_glyphAtlasY                       = 0x800894D4;
 
-// Uncategorized
-movie_play                          = 0x80140018;
-FUN_80140d48                        = 0x80140D48;
-
 // Globals
 g_cdAudioReady                      = 0x801ED591;
 g_cdSystem                          = 0x801ED800;
@@ -665,7 +661,10 @@ g_SKCDPOSE_DAT                      = 0x801ED998;
 g_cdResource176                     = 0x801EDF18;
 
 // MOVIE.BIN
+movie_play                          = 0x80140018;
 movie_mdec_out_callback             = 0x80140AC0;
+movie_service_video_ops             = 0x80140D48;
+movie_cd_sector_callback            = 0x80140F04;
 movie_get_next_audio_entry          = 0x8014159C;
 movie_draw_sync_callback            = 0x801416C4;
 movie_get_next_video_entry          = 0x80141788;
