@@ -1130,12 +1130,12 @@ void func_801416C4(void)
 }
 
 /**
- * decomp.me: (98.08%) https://decomp.me/scratch/OJvsJ
+ * decomp.me: (100%) https://decomp.me/scratch/OJvsJ
  */
 s32 func_80141788(s32* arg0, s32* arg1)
 {
     volatile BaseStruct_80141788* base = (volatile BaseStruct_80141788*)0x801ED500;
-    volatile BaseStruct_80141788* base2;
+    BaseStruct_80141788* base2;
     s32 writeIdx;
     s32 readIdx;
     s32* out0 = arg0;
@@ -1147,30 +1147,34 @@ s32 func_80141788(s32* arg0, s32* arg1)
     }
     else if (base->unk80 != base->lastConsumedVideoFrame)
     {
-        base = (volatile BaseStruct_80141788*)0x801ED500;
+        base = (BaseStruct_80141788*)0x801ED500;
     }
     else
     {
         return 0;
     }
 
-    base = (volatile BaseStruct_80141788*)0x801ED500;
+    base = (BaseStruct_80141788*)0x801ED500;
 
     writeIdx = base->videoWriteIdx;
     readIdx = base->videoReadIdx;
 
-    if ((readIdx >= writeIdx) && (readIdx == base->ringCapacity) && (base->videoWriteIdx == 0))
+    if ((readIdx >= writeIdx) && (readIdx == base->ringCapacity))
     {
-        base->videoReadIdx = 0;
-        if (base->unk80 == base->lastConsumedVideoFrame)
+        ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = 0;
+        if ((base->videoWriteIdx == 0))
         {
-            return 0;
+
+            if (base->unk80 == base->lastConsumedVideoFrame)
+            {
+                return 0;
+            }
         }
     }
 
-    base2 = (volatile BaseStruct_80141788*)0x801ED500;
+    base2 = (BaseStruct_80141788*)0x801ED500;
     *out1 = base2->videoTableBase + (base2->videoReadIdx << 5);
-    *arg0 = base2->videoDataBase + (base2->videoReadIdx * 0x7E0);
+    *arg0 = base2->videoDataBase + (base2->videoReadIdx * 2016);
     return 1;
 }
 
@@ -1181,16 +1185,16 @@ void movie_advance_video_read(void)
 {
     s32 nextIndex;
     InnerStruct* inner;
-    BaseStruct_80141788* base = ( BaseStruct_80141788*)0x801ED500;
-    
+    BaseStruct_80141788* base = (BaseStruct_80141788*)0x801ED500;
+
     inner = (InnerStruct*)(base->videoTableBase + (base->videoReadIdx << 5));
     nextIndex = base->videoReadIdx + inner->sectorCount;
-    
+
     if ((base->videoReadIdx >= base->videoWriteIdx) && (nextIndex == base->ringCapacity))
     {
         nextIndex = 0;
     }
-    
+
     ((BaseStruct_80141788*)0x801ED500)->lastConsumedVideoFrame = inner->frameNumber;
     ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = nextIndex;
 }
