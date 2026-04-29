@@ -1204,31 +1204,27 @@ void movie_advance_audio_read(void)
 {
     BaseStruct_801418B0* base;
     InnerStruct_801418B0* inner;
-    u16* p_sectorCount;
-    s32 readIdx;
-    s32 writeIdx;
-    unsigned int sectorCount;
-    s32 newReadIdx;
-    s32 frameNum;
-    s32 newBufferedCount;
+    s32 nextIndex;
+
+    /* Base movie playback control block located at fixed RAM address (0x801ED500). */
     base = (BaseStruct_801418B0*)0x801ED500;
-    readIdx = base->audioReadIdx;
-    inner = (InnerStruct_801418B0*)(base->audioDataBase + (readIdx << 11));
-    writeIdx = base->audioWriteIdx;
-    p_sectorCount = &inner->sectorCount;
-    sectorCount = *p_sectorCount;
-    newReadIdx = readIdx + sectorCount;
-    newBufferedCount = base->audioBufferedCount - sectorCount;
-    base += 0;
-    base->audioBufferedCount = newBufferedCount;
-    if (readIdx >= writeIdx)
+
+    /* Resolve pointer to current audio sector header using read index (2048 bytes per sector). */
+    inner = (InnerStruct_801418B0*)(base->audioDataBase + (base->audioReadIdx << 11));
+
+    /* Advance read index by number of sectors described in this header. */
+    nextIndex = base->audioReadIdx + inner->sectorCount;
+
+    /* Decrease buffered sector count to reflect consumed audio data. */
+    base->audioBufferedCount = base->audioBufferedCount - inner->sectorCount;
+
+    /* Wrap to start of ring buffer only if advancing from a "full" state hits capacity exactly. */
+    if ((base->audioReadIdx >= base->audioWriteIdx) && (nextIndex == base->ringCapacity))
     {
-        if (newReadIdx == base->ringCapacity)
-        {
-            newReadIdx = 0;
-        }
+        nextIndex = 0;
     }
-    frameNum = inner->frameNumber;
-    ((BaseStruct_801418B0*)0x801ED500)->audioReadIdx = newReadIdx;
-    ((BaseStruct_801418B0*)0x801ED500)->frameNumber = frameNum;
+
+    /* Update playback state: sync frame number and commit new read index. */
+    ((BaseStruct_801418B0*)0x801ED500)->frameNumber = inner->frameNumber;
+    ((BaseStruct_801418B0*)0x801ED500)->audioReadIdx = nextIndex;
 }
