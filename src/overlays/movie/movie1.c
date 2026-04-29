@@ -356,7 +356,7 @@ void func_80140358(s32 resourceIndex, s32 arg1, s32 totalFrames, int arg3)
     ((UnkState*)0x801ED500)->unk88 = (u32)(-1);
     ((UnkState*)0x801ED500)->unk8C = (u32)(-1);
 
-    ((UnkState*)0x801ED500)->unk38 = (u32)DecDCToutCallback(&func_80140AC0, p1, p2, p3);
+    ((UnkState*)0x801ED500)->unk38 = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
     ((UnkState*)0x801ED500)->unk3C = DrawSyncCallback(&movie_draw_sync_callback);
 
     if (((UnkState*)0x801ED500)->unk91 != 0)
@@ -540,7 +540,7 @@ void func_801406E4(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/HVkZ6
  */
-void func_80140AC0(void)
+void movie_mdec_out_callback(void)
 {
     volatile BaseObj* base = (volatile BaseObj*)0x801ED500;
     s32 temp;
