@@ -1141,17 +1141,16 @@ s32 func_80141788(s32* arg0, s32* arg1)
     s32* out0 = arg0;
     s32* out1 = arg1;
 
-    if (base->videoWriteIdx != base->videoReadIdx)
+    if (base->videoWriteIdx == base->videoReadIdx)
     {
-        /* fall through to reload base */
-    }
-    else if (base->unk80 != base->lastConsumedVideoFrame)
-    {
-        base = (BaseStruct_80141788*)0x801ED500;
-    }
-    else
-    {
-        return 0;
+        if (base->unk80 != base->lastConsumedVideoFrame)
+        {
+            base = (BaseStruct_80141788*)0x801ED500;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     base = (BaseStruct_80141788*)0x801ED500;
@@ -1162,13 +1161,9 @@ s32 func_80141788(s32* arg0, s32* arg1)
     if ((readIdx >= writeIdx) && (readIdx == base->ringCapacity))
     {
         ((BaseStruct_80141788*)0x801ED500)->videoReadIdx = 0;
-        if ((base->videoWriteIdx == 0))
+        if ((base->videoWriteIdx == 0) && (base->unk80 == base->lastConsumedVideoFrame))
         {
-
-            if (base->unk80 == base->lastConsumedVideoFrame)
-            {
-                return 0;
-            }
+            return 0;
         }
     }
 
