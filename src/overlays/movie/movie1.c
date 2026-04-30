@@ -213,36 +213,36 @@ cleanup:
 }
 
 /**
- * decomp.me link (91.61%) https://decomp.me/scratch/tw6Km
+ * decomp.me link (91.61%) https://decomp.me/scratch/hR71L
  * incorrect but better match https://decomp.me/scratch/ICOiP
  */
 void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx)
 {
     u32 p1;
     u8* new_var6;
-    UnkState* new_var3;
-    UnkState* new_var2;
+    CombinedState* new_var3;
+    CombinedState* new_var2;
     u32 p2;
-    UnkState* new_var4;
+    CombinedState* new_var4;
     u32 p3;
-    UnkState* new_var7;
+    CombinedState* new_var7;
     u8* new_var9;
     u8** new_var8;
     int new_var;
     u8** pDispEnv;
     AllocInfo* allocInfo = g_allocInfo;
 
-    ((UnkState*)0x801ED500)->gpuMode = (s8)(flags & 0x7F);
+    ((CombinedState*)0x801ED500)->gpuMode = (s8)(flags & 0x7F);
     if (flags & 0x80)
     {
-        ((UnkState*)0x801ED500)->interlaceMode = 1;
+        ((CombinedState*)0x801ED500)->interlaceMode = 1;
     }
     else
     {
-        ((UnkState*)0x801ED500)->interlaceMode = 0;
+        ((CombinedState*)0x801ED500)->interlaceMode = 0;
     }
 
-    pDispEnv = &((UnkState*)0x801ED500)->unk0;
+    pDispEnv = &((CombinedState*)0x801ED500)->videoTableBase;
 
     if (g_gpuMode == 0)
     {
@@ -251,62 +251,62 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         new_var6 = (u8*)0x80147000;
         p1 = 0x8018D000;
 
-        ((UnkState*)0x801ED500)->unk0 = new_var6;
+        ((CombinedState*)0x801ED500)->videoTableBase = new_var6;
         p2++;
         p2--;
-        ((UnkState*)0x801ED500)->unk1C = (u8*)0x801A3D00;
-        ((UnkState*)0x801ED500)->unk8 = (u8*)0x80160000;
-        ((UnkState*)0x801ED500)->lastConsumedVideoFrame = (u32)(-1);
-        ((UnkState*)0x801ED500)->rects[1].w = 0x1E0;
-        (new_var4 = (UnkState*)0x801ED500)->rects[0].w = 0x1E0;
-        ((UnkState*)0x801ED500)->rects[2].w = 0x18;
-        ((UnkState*)0x801ED500)->videoRingCapacity = 0x32;
+        ((CombinedState*)0x801ED500)->mdecOutputBufB = (u8*)0x801A3D00;
+        ((CombinedState*)0x801ED500)->audioDataBase = (u8*)0x80160000;
+        ((CombinedState*)0x801ED500)->lastConsumedVideoFrame = (u32)(-1);
+        ((CombinedState*)0x801ED500)->rects[1].w = 0x1E0;
+        (new_var4 = (CombinedState*)0x801ED500)->rects[0].w = 0x1E0;
+        ((CombinedState*)0x801ED500)->rects[2].w = 0x18;
+        ((CombinedState*)0x801ED500)->videoRingCapacity = 0x32;
         new_var = 0x801ED500;
-        ((UnkState*)0x801ED500)->unk10 = (u8*)p2;
-        ((UnkState*)0x801ED500)->unk14 = (u8*)p1;
-        ((UnkState*)0x801ED500)->unk18 = (u8*)0x801A1000;
-        ((UnkState*)0x801ED500)->rects[0].x = p3 * 0;
-        ((UnkState*)0x801ED500)->rects[1].x = 0;
-        ((UnkState*)0x801ED500)->rects[0].y = 0;
-        ((UnkState*)0x801ED500)->rects[1].y = 0xF0;
-        ((UnkState*)0x801ED500)->rects[2].h = 0xF0;
-        ((UnkState*)0x801ED500)->rects[1].h = 0xF0;
-        ((UnkState*)0x801ED500)->rects[0].h = 0xF0;
-        ((UnkState*)0x801ED500)->rects[2].x = 0;
-        ((UnkState*)0x801ED500)->rects[2].y = 0;
-        ((UnkState*)0x801ED500)->audioRingCapacity = 0x10;
-        ((UnkState*)0x801ED500)->unk4 = (u8*)0x80147640;
-        ((UnkState*)0x801ED500)->chunkIdx = 0;
-        ((UnkState*)new_var)->unkC = (u8*)p3;
+        ((CombinedState*)0x801ED500)->vlcInputBufA = (u8*)p2;
+        ((CombinedState*)0x801ED500)->vlcInputBufB = (u8*)p1;
+        ((CombinedState*)0x801ED500)->mdecOutputBufA = (u8*)0x801A1000;
+        ((CombinedState*)0x801ED500)->rects[0].x = p3 * 0;
+        ((CombinedState*)0x801ED500)->rects[1].x = 0;
+        ((CombinedState*)0x801ED500)->rects[0].y = 0;
+        ((CombinedState*)0x801ED500)->rects[1].y = 0xF0;
+        ((CombinedState*)0x801ED500)->rects[2].h = 0xF0;
+        ((CombinedState*)0x801ED500)->rects[1].h = 0xF0;
+        ((CombinedState*)0x801ED500)->rects[0].h = 0xF0;
+        ((CombinedState*)0x801ED500)->rects[2].x = 0;
+        ((CombinedState*)0x801ED500)->rects[2].y = 0;
+        ((CombinedState*)0x801ED500)->audioRingCapacity = 0x10;
+        ((CombinedState*)0x801ED500)->videoDataBase = (u8*)0x80147640;
+        ((CombinedState*)0x801ED500)->chunkIdx = 0;
+        ((CombinedState*)new_var)->vlcTable = p3;
     }
     else
     {
         p2 = 0x11000;
         p3 = initBufferIdx;
-        ((UnkState*)0x801ED500)->unk0 = (u8*)0x80147000;
-        ((UnkState*)0x801ED500)->unk8 = (u8*)0x80156000;
+        ((CombinedState*)0x801ED500)->videoTableBase = (u8*)0x80147000;
+        ((CombinedState*)0x801ED500)->audioDataBase = (u8*)0x80156000;
         new_var6 = (u8*)allocInfo->allocBase;
-        ((UnkState*)0x801ED500)->unk10 = (u8*)0x8015E000;
-        ((UnkState*)0x801ED500)->unk14 = (u8*)0x8016F000;
+        ((CombinedState*)0x801ED500)->vlcInputBufA = (u8*)0x8015E000;
+        ((CombinedState*)0x801ED500)->vlcInputBufB = (u8*)0x8016F000;
         new_var8 = &(*pDispEnv);
         new_var9 = new_var6;
-        ((UnkState*)0x801ED500)->unkC = new_var9;
-        ((UnkState*)0x801ED500)->unk18 = (u8*)(allocInfo->allocBase + p2);
-        ((UnkState*)0x801ED500)->unk1C = (u8*)(allocInfo->allocBase + 0x12E00);
+        ((CombinedState*)0x801ED500)->vlcTable = new_var9;
+        ((CombinedState*)0x801ED500)->mdecOutputBufA = (u8*)(allocInfo->allocBase + p2);
+        ((CombinedState*)0x801ED500)->mdecOutputBufB = (u8*)(allocInfo->allocBase + 0x12E00);
 
-        if (((s16)((UnkState*)0x801ED500)->rects[0].x) >= 0x300)
+        if (((s16)((CombinedState*)0x801ED500)->rects[0].x) >= 0x300)
         {
-            ((UnkState*)0x801ED500)->rects[1].x = 0x200;
-            ((UnkState*)0x801ED500)->rects[1].y = 0;
+            ((CombinedState*)0x801ED500)->rects[1].x = 0x200;
+            ((CombinedState*)0x801ED500)->rects[1].y = 0;
         }
         else
         {
-            ((UnkState*)0x801ED500)->rects[1].x =
-                (u16)(((UnkState*)0x801ED500)->rects[0].x + ((UnkState*)0x801ED500)->rects[0].w);
-            ((UnkState*)0x801ED500)->rects[1].y = ((UnkState*)0x801ED500)->rects[0].y;
+            ((CombinedState*)0x801ED500)->rects[1].x =
+                (u16)(((CombinedState*)0x801ED500)->rects[0].x + ((CombinedState*)0x801ED500)->rects[0].w);
+            ((CombinedState*)0x801ED500)->rects[1].y = ((CombinedState*)0x801ED500)->rects[0].y;
         }
 
-        new_var7 = (UnkState*)0x801ED500;
+        new_var7 = (CombinedState*)0x801ED500;
         new_var7->rects[1].w = new_var7->rects[0].w;
         {
             new_var7->rects[1].h = new_var7->rects[0].h;
@@ -317,51 +317,52 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         }
         new_var7->rects[2].w = 0x10;
         new_var7->videoRingCapacity = 0x1E;
-        ((UnkState*)0x801ED500)->audioRingCapacity = 0x10;
-        ((UnkState*)0x801ED500)->chunkIdx = (s8)initBufferIdx;
-        ((UnkState*)0x801ED500)->unk4 = (u8*)(((u32)(*new_var8)) + 0x3C0);
-        ((UnkState*)0x801ED500)->rects[2].y = p1;
+        ((CombinedState*)0x801ED500)->audioRingCapacity = 0x10;
+        ((CombinedState*)0x801ED500)->chunkIdx = (s8)initBufferIdx;
+        ((CombinedState*)0x801ED500)->videoDataBase = (u8*)(((u32)(*new_var8)) + 0x3C0);
+        ((CombinedState*)0x801ED500)->rects[2].y = p1;
     }
 
-    ((UnkState*)0x801ED500)->resourceIndex = resourceIndex;
-    ((UnkState*)0x801ED500)->currentFrame = 0;
-    ((UnkState*)0x801ED500)->totalFrames = totalFrames;
-    ((UnkState*)0x801ED500)->unk93 = 0;
-    ((UnkState*)0x801ED500)->unk94 = 0;
-    ((UnkState*)0x801ED500)->unk95 = 0;
-    ((UnkState*)0x801ED500)->unk96 = 0;
-    ((UnkState*)0x801ED500)->unk97 = 0;
-    ((UnkState*)0x801ED500)->unk99 = 0;
-    ((UnkState*)0x801ED500)->unk9A = 0;
-    ((UnkState*)0x801ED500)->unk9B = 0;
-    ((UnkState*)0x801ED500)->unk9C = 0;
-    ((UnkState*)0x801ED500)->unk9D = 0;
-    ((UnkState*)0x801ED500)->unk9E = 0;
-    ((UnkState*)0x801ED500)->unk9F = 0;
-    ((UnkState*)0x801ED500)->unk92 = 0;
+    ((CombinedState*)0x801ED500)->resourceIndex = resourceIndex;
+    ((CombinedState*)0x801ED500)->currentFrame = 0;
+    ((CombinedState*)0x801ED500)->totalFrames = totalFrames;
+    ((CombinedState*)0x801ED500)->inputBufIdx = 0;
+    ((CombinedState*)0x801ED500)->vlcRetryCount = 0;
+    ((CombinedState*)0x801ED500)->mdecRetryPending = 0;
+    ((CombinedState*)0x801ED500)->busy = 0;
+    ((CombinedState*)0x801ED500)->unk97 = 0;
+    ((CombinedState*)0x801ED500)->outBufIdx = 0;
+    ((CombinedState*)0x801ED500)->unk9A = 0;
+    ((CombinedState*)0x801ED500)->unk9B = 0;
+    ((CombinedState*)0x801ED500)->mdecBusy = 0;
+    ((CombinedState*)0x801ED500)->field9D = 0;
+    ((CombinedState*)0x801ED500)->endOfStream = 0;
+    ((CombinedState*)0x801ED500)->endState = 0;
+    ((CombinedState*)0x801ED500)->field92 = 0;
 
-    ((UnkState*)0x801ED500)->unk58[0] = 0;
-    ((UnkState*)0x801ED500)->unk58[1] = 0;
-    ((UnkState*)0x801ED500)->unk58[2] = 0;
-    ((UnkState*)0x801ED500)->unk58[3] = 0;
-    ((UnkState*)0x801ED500)->unk58[4] = 0;
-    ((UnkState*)0x801ED500)->unk58[5] = 0;
-    ((UnkState*)0x801ED500)->unk58[6] = 0;
-    ((UnkState*)0x801ED500)->unk58[7] = 0;
-    ((UnkState*)0x801ED500)->unk58[8] = 0;
+    ((CombinedState*)0x801ED500)->ringPadding0[0] = 0;
+    ((CombinedState*)0x801ED500)->ringPadding0[1] = 0;
+    ((CombinedState*)0x801ED500)->ringPadding0[2] = 0;
+    ((CombinedState*)0x801ED500)->audioWriteIdx = 0;
+    ((CombinedState*)0x801ED500)->audioReadIdx = 0;
+    ((CombinedState*)0x801ED500)->ringPadding1 = 0;
+    ((CombinedState*)0x801ED500)->audioBufferedCount = 0;
+    ((CombinedState*)0x801ED500)->ringPadding2[0] = 0;
+    ((CombinedState*)0x801ED500)->ringPadding2[1] = 0;
 
-    ((UnkState*)0x801ED500)->unk7E = 0;
-    ((UnkState*)0x801ED500)->unk80 = (u32)(-1);
-    ((UnkState*)0x801ED500)->lastConsumedVideoFrame = (u32)(-1);
-    ((UnkState*)0x801ED500)->lastAudioFrame = (u32)(-1);
-    ((UnkState*)0x801ED500)->lastConsumedAudioFrame = (u32)(-1);
+    ((CombinedState*)0x801ED500)->unk7E = 0;
+    ((CombinedState*)0x801ED500)->unk80 = (u32)(-1);
+    ((CombinedState*)0x801ED500)->lastConsumedVideoFrame = (u32)(-1);
+    ((CombinedState*)0x801ED500)->lastAudioFrame = (u32)(-1);
+    ((CombinedState*)0x801ED500)->lastConsumedAudioFrame = (u32)(-1);
 
-    ((UnkState*)0x801ED500)->unk38 = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
-    ((UnkState*)0x801ED500)->unk3C = DrawSyncCallback(&movie_draw_sync_callback);
+    ((CombinedState*)0x801ED500)->decDCToutCallback = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
+    ((CombinedState*)0x801ED500)->drawSyncCallback = DrawSyncCallback(&movie_draw_sync_callback);
 
-    if (((UnkState*)0x801ED500)->interlaceMode != 0)
+    if (((CombinedState*)0x801ED500)->interlaceMode != 0)
     {
-        func_800232A8((u32)((UnkState*)0x801ED500)->unk8, (u32)(((UnkState*)0x801ED500)->audioRingCapacity << 0xB));
+        func_800232A8((u32)((CombinedState*)0x801ED500)->audioDataBase,
+                      (u32)(((CombinedState*)0x801ED500)->audioRingCapacity << 0xB));
         func_80023030(0x7F);
     }
     else
@@ -371,7 +372,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     }
 
     cdrom_wait_queue_empty();
-    new_var3 = (UnkState*)0x801ED500;
+    new_var3 = (CombinedState*)0x801ED500;
     cdrom_queue_command(CdlReadS, (s16)resourceIndex, NULL, &movie_cd_sector_callback);
 
     if (g_gpuMode == 0)
@@ -379,8 +380,8 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         VSync(p2 = 0);
         SetDispMask(p2);
         ClearImage(&(new_var2 = new_var3)->rects[p2], 0, p2, 0);
-        ClearImage(&((UnkState*)0x801ED500)->rects[1], p2, 0, p2);
-        DecDCTvlcBuild((u_short*)new_var3->unkC);
+        ClearImage(&((CombinedState*)0x801ED500)->rects[1], p2, 0, p2);
+        DecDCTvlcBuild((u_short*)new_var3->vlcTable);
         DrawSync(0);
     }
 }
@@ -760,10 +761,10 @@ void movie_service_video_ops(void)
  */
 s32 movie_cd_sector_callback(void)
 {
-    SectorBuffer hdr;       /* 32-byte sector header (8 u32 words) read from CD */
-    s32 do_load; /* s0 in assembly */
+    SectorBuffer hdr; /* 32-byte sector header (8 u32 words) read from CD */
+    s32 do_load;      /* s0 in assembly */
     volatile GlobalData* const gp = (GlobalData*)0x801ED500;
-    u16* hdr16;  /* u16 view of hdr for field access by word index */
+    u16* hdr16; /* u16 view of hdr for field access by word index */
     u32 count;
     u16 rem;
     void* dest;
