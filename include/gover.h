@@ -134,8 +134,6 @@ u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 
 extern void LoadAudioClip(s32);
 extern s32 D_8011588C;
-extern s32 g_fadeStep;
-extern s32 g_fadeLevel;
 extern u8 D_801407A0[];
 extern s32 D_80140710[];
 extern s32 D_80122988;

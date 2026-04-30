@@ -323,7 +323,6 @@ OVERLAYS += gosub
 overlay_gosub_gcc_srcs   := src/overlays/gosub/unk1.c
 
 OVERLAYS += gover
-overlay_gover_gcc_srcs   := src/overlays/gover/unk1.c
 
 OVERLAYS += menu
 overlay_menu_gcc_srcs   := src/overlays/menu/unk1.c

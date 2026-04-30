@@ -1,6 +1,11 @@
 
 #include "gover.h"
 
+static s32 g_goverOverlayId = 0xA;
+static s32 g_fadeStep;
+static u8 dummy[2364];
+static s32 g_fadeLevel;
+
 /**
  * decomp.me link (100%) https://decomp.me/scratch/1qYnn
  */
