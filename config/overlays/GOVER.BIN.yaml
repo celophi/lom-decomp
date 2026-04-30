@@ -40,7 +40,7 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, .rodata, code1]
       - [0x5, c, code1]
-      - [0x705, c, unk1]
-  - [0x104C]
+      - [0x705, .bss, code1]
+  - [0x104D]
