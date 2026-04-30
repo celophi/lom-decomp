@@ -31,14 +31,12 @@ typedef struct
 typedef struct
 {
     // ---- first 32 bytes: 8 pointers (from first struct) ----
-    u8* videoTableBase;  // unk0
-    u8* videoDataBase;   // unk4
-    u8* audioDataBase;   // unk8
-    u32 vlcTable;        // unkC / table
-    u32* vlcInputBufA;   // unk10 / ptr10[0]
-    u32* vlcInputBufB;   // unk14 / ptr10[1]
-    u32* mdecOutputBufA; // unk18 / ptr18[0]
-    u32* mdecOutputBufB; // unk1C / ptr18[1]
+    u8* videoTableBase; // unk0
+    u8* videoDataBase;  // unk4
+    u8* audioDataBase;  // unk8
+    u32 vlcTable;       // unkC / table
+    u32* vlcInputBuf[2];
+    u32* mdecOutputBuf[2]; // unk18 / ptr18[0]
 
     // ---- VRAM destination rectangles ----
     // rects[0] : frame A, rects[1] : frame B, rects[2] : decode rect
@@ -79,22 +77,22 @@ typedef struct
     u32 lastConsumedAudioFrame; // offset 140..143
 
     // ---- status bytes (offsets 144..159) ----
-    s8 gpuMode;          // 0 = DrawSync/LoadImage, non‑zero = BreakDraw/LoadImage2 path
+    u8 gpuMode;          // 0 = DrawSync/LoadImage, non‑zero = BreakDraw/LoadImage2 path
     s8 interlaceMode;    // 1 if interlaced mode (from first struct; second struct calls this _unk91)
     s8 field92;          // second struct: field92 ; first struct: unk92
-    s8 inputBufIdx;      // which vlcInputBuf[] holds current VLC-decoded input (toggled each frame)
+    u8 inputBufIdx;      // which vlcInputBuf[] holds current VLC-decoded input (toggled each frame)
     s8 vlcRetryCount;    // countdown: retry DecDCTvlc2 this many vsync ticks
     s8 mdecRetryPending; // MDEC decode ready but busy; retry on next tick
     s8 busy;             // non‑zero while DMA/GPU operation is in flight
     s8 unk97;            // first struct: unk97 ; second struct: _unk97
     s8 chunkIdx;         // initial active chunk index (0 or 1) from first struct; second struct calls this _unk98
-    s8 outBufIdx;        // which mdecOutputBuf[] receives the next DecDCTout output (0 or 1)
+    u8 outBufIdx;        // which mdecOutputBuf[] receives the next DecDCTout output (0 or 1)
     s8 unk9A;            // first struct: unk9A ; second struct: _unk9A
     s8 unk9B;            // first struct: unk9B ; second struct: _unk9B
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
     s8 field9D;          // second struct: field9D ; first struct: unk9D
     s8 endOfStream;      // set when currentFrame >= totalFrames
-    s8 endState;         // 1 = near end, 2 = stream fully ended
+    u8 endState;         // 1 = near end, 2 = stream fully ended
 } CombinedState;
 
 typedef struct
@@ -102,46 +100,6 @@ typedef struct
     u8 pad[0x38];
     u32 allocBase; /* base address for movie buffer allocations */
 } AllocInfo;
-
-typedef struct
-{
-    u8 _pad0[0x0C];
-    u32 table;
-    u32* ptr10[2]; /* video input double-buffer: VLC-decoded bitstream ready for MDEC */
-    u32* ptr18[2]; /* video output double-buffer: MDEC-decoded frame ready for VRAM */
-    u8 _pad20[0x34 - 0x20];
-    s16 field34; /* frame width  (pixels) */
-    s16 field36; /* frame height (pixels) */
-    u8 _pad38[0x48 - 0x38];
-    u32 currentFrame; /* frame number currently being decoded/displayed */
-    u32 totalFrames;  /* total frame count of the movie stream */
-    u8 _pad50[0x54 - 0x50];
-    u32 audioRingCapacity; /* audio ring buffer capacity (used for fade-out threshold) */
-    u8 _pad58[0x64 - 0x58];
-    u32 audioWriteIdx; /* audio ring buffer write index */
-    u32 audioReadIdx;  /* audio ring buffer read index */
-    u8 _pad6C[0x70 - 0x6C];
-    u32 audioBufferedCount; /* cumulative count of audio sectors queued but not yet consumed */
-    u8 _pad74[0x88 - 0x74];
-    u32 lastAudioFrame;         /* frame number of the last audio sector written to the ring */
-    u32 lastConsumedAudioFrame; /* frame number of the last audio sector consumed by SPU */
-    u8 gpuMode;                 /* 0=standard DrawSync/LoadImage path; non-zero=BreakDraw path */
-    u8 _unk91;
-    u8 field92;
-    u8 inputBufIdx;      /* which ptr10[] slot holds the current VLC-decoded input (toggled each frame) */
-    u8 vlcRetryCount;    /* countdown: retry DecDCTvlc2 this many vsync ticks before giving up */
-    u8 mdecRetryPending; /* MDEC decode ready but MDEC was busy; set to retry on next tick */
-    u8 busy;             /* non-zero while a DMA/GPU operation is in flight */
-    u8 _unk97;
-    u8 _unk98;
-    u8 outBufIdx; /* which ptr18[] slot receives the next DecDCTout output (0 or 1) */
-    u8 _unk9A;
-    u8 _unk9B;
-    u8 mdecBusy; /* non-zero while an MDEC/DMA operation is in flight */
-    u8 field9D;
-    u8 endOfStream; /* set when frameNumber >= totalFrames */
-    u8 endState;    /* 1=near end, 2=stream fully ended */
-} D_801ED500_t;
 
 typedef struct
 {
