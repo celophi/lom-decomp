@@ -138,17 +138,17 @@ void BuildOTag(unsigned char* pOtBuf)
     unsigned char* pPrimB;
     unsigned char leftFadeLevel;
     unsigned char rightFadeLevel;
-    
+
     if (g_fadeStep != 0)
     {
         g_fadeLevel += g_fadeStep;
     }
-    
+
     if (g_fadeLevel == 128)
     {
         g_fadeStep = 0;
     }
-    
+
     // pOtBuf+0x498 holds the primitive allocation cursor, reset to pOtBuf+0x98 each
     // frame by the caller. The first 0x98 bytes of the buffer are occupied by the
     // OTag entries, DISPENV, DRAWENV, and display rect data.
@@ -197,7 +197,7 @@ void BuildOTag(unsigned char* pOtBuf)
 
     addPrim(pOtBuf, pPrimA);
 
-    *((unsigned char**)(pOtBuf + 0x498)) = pPrimB;    // advance allocation cursor
+    *((unsigned char**)(pOtBuf + 0x498)) = pPrimB; // advance allocation cursor
 }
 
 /**
@@ -237,7 +237,7 @@ u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 }
 
 /**
- * decomp.me link (97.02%) https://decomp.me/scratch/KjjKf
+ * decomp.me link (100%) https://decomp.me/scratch/At0Tp
  */
 void LoadAudioClip(s32 arg0)
 {
@@ -255,12 +255,11 @@ void LoadAudioClip(s32 arg0)
         g_audioData.unk0 = 0;
         if (arg0 != (-1))
         {
-            cdrom_queue_read((arg0 + 0x51) & 0xFFFF, 0x80180000UL);
+            cdrom_queue_read((arg0 + 0x51) & 0xFFFF, (void*)0x80180000);
             cdrom_wait_queue_empty();
             g_audioData.unk0 = 0xC;
-            offset = g_audioDataOffset;
 
-            header = (u8*)D_80180000 + offset;
+            header = (0x80180000 + *(u32*)0x80180004);
             ptr = (s32*)header;
             end = header + ((u32)ptr[*ptr]);
             dest = ((u8*)(&g_audioData)) + 12;
