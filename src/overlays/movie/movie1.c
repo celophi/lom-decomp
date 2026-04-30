@@ -387,7 +387,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
 }
 
 /**
- * decomp.me link (98.86%) https://decomp.me/scratch/bjwdC
+ * decomp.me link (98.86%) https://decomp.me/scratch/xXKIt
  */
 void movie_update(void)
 {
