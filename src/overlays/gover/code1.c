@@ -1,7 +1,7 @@
 
 #include "gover.h"
 
-s32 g_goverOverlayId = 0xA;
+const s32 g_goverOverlayId = 10;
 s32 D_80140704;
 s32 g_fadeStep;
 s32 D_8014070C;
