@@ -4,7 +4,7 @@
 s32 g_goverOverlayId = 0xA;
 s32 D_80140704;
 s32 g_fadeStep;
-s32 D_80140708;
+s32 D_8014070C;
 u8 D_80140710[144];
 u8 D_801407A0[2216];
 s32 g_fadeLevel;
