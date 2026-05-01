@@ -17,6 +17,14 @@
 /** RAM staging address used to load audio clip data from CD. */
 #define GOVER_AUDIO_LOAD_ADDR      0x80180000
 
+/**
+ * Self-referential offset stored at GOVER_AUDIO_LOAD_ADDR + 4 by the loaded
+ * audio resource. Kept as a literal-address dereference (not a global symbol)
+ * so the lui/lw pair encodes against the address directly, matching the
+ * original asm.
+ */
+#define GOVER_AUDIO_DATA_OFFSET    (*(u32*)(GOVER_AUDIO_LOAD_ADDR + 4))
+
 const s32 g_goverOverlayId = 10;
 s32 D_80140704;
 s32 g_fadeStep;
@@ -399,12 +407,11 @@ void gover_load_audio_clip(s32 audioClipIndex)
         g_audioData.unk0 = 0;
         if (audioClipIndex != (-1))
         {
-            cdrom_queue_read((audioClipIndex + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF,
-                             (void*)GOVER_AUDIO_LOAD_ADDR);
+            cdrom_queue_read((audioClipIndex + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
             cdrom_wait_queue_empty();
             g_audioData.unk0 = 0xC;
 
-            header = (GOVER_AUDIO_LOAD_ADDR + g_audioDataOffset);
+            header = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
             ptr = (s32*)header;
             end = header + ((u32)ptr[*ptr]);
             dest = ((u8*)(&g_audioData)) + 12;
