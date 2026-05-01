@@ -393,14 +393,12 @@ u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordin
  */
 void gover_load_audio_clip(s32 audioClipIndex)
 {
-    s32 skipSentinel;
-    u8* header;
     u8* end;
     u8* dest;
     u8* src;
     s32* ptr;
-    skipSentinel = -2;
-    if (audioClipIndex == skipSentinel)
+    
+    if (audioClipIndex == -2)
     {
         return;
     }
@@ -422,7 +420,7 @@ void gover_load_audio_clip(s32 audioClipIndex)
     ptr = (s32*)src;
     end = src + ((u32)ptr[*ptr]);
     dest = ((u8*)(&g_audioData)) + 12;
-    
+
     while (src != end)
     {
         *(dest++) = *(src++);
