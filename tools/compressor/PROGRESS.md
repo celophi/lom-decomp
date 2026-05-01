@@ -213,7 +213,34 @@ PROGRESS.md           — This file
 
 ## Recommended Next Steps
 
-### 1. Investigate ZUKAN first diff (byte 142) — quick win candidate
+### 1. Test the "default-to-cnt=4" hypothesis (NEW, top priority)
+
+Per-file F5 categorization (`f5_perfile.py`) shows: across most files, **~50% of all F5 instances have `ref_cnt = 4`** (the absolute minimum). No file gets 100% on any simple rule, but the cnt=4 cluster is huge and consistent.
+
+**Hypothesis**: The original compressor does NOT compute a maximum F5 run at all. It emits `cnt = 4` by default, and only extends past 4 when extending is *strictly better* than re-evaluating at position+8 (the next F5-eligible position). This would naturally produce the observed pattern: lots of cnt=4, occasional long runs only when the data is uniform enough that re-evaluation can't find anything better.
+
+**Per-file fitness data ruled out the alternative hypothesis** that prioritization rules differ per file. The dominant pattern (`ref_cnt == cnt_q`) is the same everywhere — what changes is data complexity, not the rule. Files like ZUKAN/MENU/SHOP have many short fragmented F5s; CHECKPS/TITLE/CLOAD have cleaner data where max-extending happens to work.
+
+**Implementation sketch**:
+```
+At F5 start position i with fixed=src[i], cnt_q computed:
+  if cnt_q < threshold for qualifying: skip F5
+  cnt = 4
+  while cnt < cnt_max:
+    extend_savings = 1  # adding 1 pair adds 2 advance, 1 enc byte
+    next_pos = i + (cnt+1) * 2
+    next_best = find_best_savings(src, next_pos)  # full evaluation
+    # If extending wins strictly, extend; else stop
+    if extend_savings > next_best_marginal_contribution:
+      cnt += 1
+    else:
+      break
+  emit F5(cnt)
+```
+
+The exact threshold and tie-breaking need empirical tuning against the categorizer.
+
+### 2. Investigate ZUKAN first diff (byte 142) — quick win candidate
 ZUKAN is small (~43k diffs) with a very early first diff. Decode the reference and our output around byte 142 to identify the root cause. If it's a different bug from F5 count mismatch, fixing it may unlock many files.
 
 ### 2. Investigate MENU first diff (byte 527) — another early diff
