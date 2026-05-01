@@ -2,6 +2,7 @@
 #define _GOVER_H
 
 #include "common.h"
+#include "display.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libetc.h"
@@ -72,6 +73,38 @@ typedef struct
   u32 unk8;
   u8 unk12[1];
 } D_80119F00_t;
+
+/**
+ * @brief One half of the Game Over screen's double-buffered frame.
+ *
+ * @details The Game Over overlay maintains two of these halves back-to-back as
+ * one contiguous buffer (total 0x938 bytes). The two halves are flipped each
+ * frame in @p RunGameOver — one is presented while the other is drawn into.
+ *
+ * The buffer is split across two C symbols for historical layout reasons:
+ *
+ *   g_goverFrameHeader — anchors @p halves[0] (struct start)
+ *   g_goverFrameTail   — equals @c &halves[0].vramRect (i.e. g_goverFrameHeader + 0x90)
+ *
+ * Field offsets within each half:
+ *
+ *   0x000  otag         — ordering-table linked-list head (8 entries x 4 bytes)
+ *   0x020  disp         — DISPENV configured by SetDefDispEnv
+ *   0x034  draw         — DRAWENV configured by SetDefDrawEnv
+ *   0x090  vramRect     — VRAM display rect (x, y, w, h)
+ *   0x098  primBuf      — scratch space for per-frame GPU primitives
+ *   0x498  allocCursor  — next-primitive write pointer (reset to &primBuf each
+ *                         frame by RunGameOver, advanced by BuildOTag)
+ *   0x49C  (size)
+ */
+typedef struct GoverFrameHalf {
+    u8       otag[0x20];
+    DISPENV  disp;
+    DRAWENV  draw;
+    RECT     vramRect;
+    u8       primBuf[0x400];
+    u8*      allocCursor;
+} GoverFrameHalf;
 
 
 extern void FUN_8002279c(undefined4 param_1, u_int param_2);

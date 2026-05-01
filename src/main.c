@@ -162,7 +162,7 @@ void Main(void)
                 func_80051FBC(0);
                 D_8003EC98 = 0;
                 *((u32*)(((u8*)(&g_gameState)) + 0x522C)) =
-                    func_80140004(0x80160000, (u32)ptrA, (u32)ptrA, (temp_s2->u_608 & 0x7F) + 4, 0, (u32)ptrA, 1);
+                    gover_show_screen(0x80160000, (u32)ptrA, (u32)ptrA, (temp_s2->u_608 & 0x7F) + 4, 0, (u32)ptrA, 1);
                 DrawSync(0);
                 VSync(0);
                 *((u32*)(((u8*)(&g_previousGameState)) + 0x2FB0)) = 3;

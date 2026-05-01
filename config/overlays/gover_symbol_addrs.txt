@@ -27,6 +27,7 @@ FUN_80022ac8 = 0x80022ac8;
 
 
 // GOVER
+gover_show_screen = 0x80140004;
 LoadImageFromCd = 0x80140538;
 UploadImageDataToVram = 0x80140588;
 BuildOTag = 0x80140380;
@@ -34,6 +35,8 @@ RunGameOver = 0x801401F0;
 LoadAudioClip = 0x80140648;
 
 g_goverOverlayId = 0x80140000;
+g_goverFrameHeader = 0x80140710;
+g_goverFrameTail = 0x801407A0;
 g_fadeLevel = 0x80141048;
 g_fadeStep = 0x80140708;
 D_8014070C = 0x8014070C;
