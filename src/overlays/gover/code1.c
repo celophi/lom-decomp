@@ -1,10 +1,6 @@
 
 #include "gover.h"
 
-// Macro-local sugar: FRAME_HALF(i) names the i-th GoverFrameHalf relative to
-    // the tail anchor. (frameTail - 0x90) == &halves[0]; this expression
-    // constant-folds back to frameTail-relative offsets in the emitted code.
-
 /**
  * FRAME_HALF(i) names the i-th GoverFrameHalf relative to the tail anchor. 
  * (frameTail - 0x90) == &halves[0]; 
