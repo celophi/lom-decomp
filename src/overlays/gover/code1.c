@@ -128,29 +128,29 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  */
 void RunGameOver(void)
 {
-    u_char* var_s0;
-    u_char* var_s1;
+    GoverFrameHalf* current;
+    GoverFrameHalf* drawing;
     int new_var;
-    u_char* var_v0;
+    GoverFrameHalf* next;
     u8 dummy[8];
     s32* p_d40708;
     func_800AA02C();
-    var_s0 = (u_char*)D_80140710;
-    ClearOTagR((u_long*)var_s0, 8);
-    ClearOTagR((u_long*)(var_s0 - (-0x49C)), 8);
+    current = (GoverFrameHalf*)D_80140710;
+    ClearOTagR((u_long*)current, 8);
+    ClearOTagR((u_long*)&current[1], 8);
     VSync(0);
-    PutDispEnv((DISPENV*)(var_s0 + 0x20));
+    PutDispEnv(&current->disp);
     func_800157DC();
     SetDispMask(1);
     {
-        var_s1 = var_s0;
+        drawing = current;
         while (1)
         {
-            var_s1 = var_s0;
-            ClearOTagR((u_long*)var_s1, 8);
-            *((void**)(var_s1 + 0x498)) = (void*)(var_s1 + 0x98);
+            drawing = current;
+            ClearOTagR((u_long*)drawing, 8);
+            drawing->allocCursor = drawing->primBuf;
             func_800A9E78();
-            BuildOTag((s32*)var_s1);
+            BuildOTag((s32*)drawing);
             DrawSync(0);
             func_800157B0(2);
             if (!g_fadeLevel)
@@ -167,16 +167,18 @@ void RunGameOver(void)
             {
                 break;
             }
-            var_v0 = (u_char*)D_80140710;
-            if (var_s0 == ((u_char*)D_80140710))
+            next = (GoverFrameHalf*)D_80140710;
+            if (current == (GoverFrameHalf*)D_80140710)
             {
-                var_v0 = var_s0 + 0x49C;
+                next = current + 1;
             }
-            var_s0 = var_v0;
-            PutDispEnv((DISPENV*)(var_s0 + 0x20));
+            current = next;
+            PutDispEnv(&current->disp);
             new_var = 0x1C;
-            PutDrawEnv((DRAWENV*)(var_s0 + 0x34));
-            DrawOTag((u_long*)(var_s1 + new_var));
+            PutDrawEnv(&current->draw);
+            // The OT linked list is built backward, so DrawOTag is invoked starting
+            // at the last entry (otag[7] at offset 0x1C).
+            DrawOTag((u_long*)((u_char*)drawing + new_var));
             func_800157DC();
             cdrom_process_state();
         }
