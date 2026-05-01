@@ -5,8 +5,26 @@ const s32 g_goverOverlayId = 10;
 s32 D_80140704;
 s32 g_fadeStep;
 s32 D_8014070C;
-u8 D_80140710[144];
-u8 D_801407A0[2216];
+/*
+ * The Game Over screen's double-buffered frame (2x GoverFrameHalf, 0x938 bytes
+ * total) is split across two adjacent globals. They alias the same buffer:
+ *
+ *   g_goverFrameHeader  — &halves[0]              (struct start, 0x90 bytes)
+ *   g_goverFrameTail    — &halves[0].vramRect     (= g_goverFrameHeader + 0x90)
+ *
+ * The asymmetric split is a fossil of incremental development: in the
+ * single-buffered version, the first 0x90 bytes were the per-frame render
+ * header (otag + DISPENV + DRAWENV) and the remaining bytes were a transient
+ * frame-data buffer. When double-buffering was added, the second half was
+ * appended onto the data buffer rather than refactoring into a struct array.
+ *
+ * As a result, gover_show_screen anchors most of its accesses on the tail
+ * symbol (where the cluster of writes sits) and RunGameOver anchors on the
+ * header symbol (where its loop starts). Merging them into one symbol breaks
+ * the relocation entries in the original object file — keep them separate.
+ */
+u8 g_goverFrameHeader[0x90];
+u8 g_goverFrameTail[0x8A8];
 s32 g_fadeLevel;
 
 /**
@@ -18,13 +36,10 @@ s32 g_fadeLevel;
  * per-frame loop in RunGameOver().
  *
  * The display structures live in one contiguous double-buffered frame; see
- * @p GoverFrameHalf for the field layout. The two halves are anchored by:
- *
- *   D_80140710 — &halves[0]              (struct start)
- *   D_801407A0 — &halves[0].vramRect     (i.e. D_80140710 + 0x90)
- *
- * Both symbols alias the same underlying buffer; this function uses the
- * @p D_801407A0 anchor while RunGameOver uses @p D_80140710.
+ * @p GoverFrameHalf for the field layout, and the comment block above
+ * @p g_goverFrameHeader for the symbol-split rationale. This function anchors
+ * its accesses on @p g_goverFrameTail (mid-buffer) while RunGameOver anchors
+ * on @p g_goverFrameHeader (buffer start).
  *
  * The two halves are stacked vertically in VRAM (Y=0 and Y=232) for double
  * buffering; the CLUT lands at VRAM (0, 480) and the pixel data at VRAM (320, 0),
@@ -46,56 +61,62 @@ s32 g_fadeLevel;
  */
 void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex)
 {
+    // Macro-local sugar: FRAME_HALF(i) names the i-th GoverFrameHalf relative to
+    // the tail anchor. (frameTail - 0x90) == &halves[0]; this expression
+    // constant-folds back to frameTail-relative offsets in the emitted code.
+#define FRAME_HALF(i) (((GoverFrameHalf*)(frameTail - 0x90))[i])
+
     RECT rect;
-    u8* buf;
-    u16* buf2Header;
+    u8* frameTail;
+    u16* half1VramRect;
     GoverFrameHalf* halves;
-    u8(*bufBasePtr)[];
-    bufBasePtr = &D_801407A0;
+    u8(*frameTailPtr)[];
+    frameTailPtr = &g_goverFrameTail; // matching: original used a pointer-to-array indirection
     VSync(0);
     DrawSync(0);
-    buf = *bufBasePtr;
+    frameTail = *frameTailPtr;
 
     // halves[0].vramRect: VRAM (0, 0), 320x240
-    ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[0] = 0;
-    ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[1] = 0;
-    ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[2] = 0x140;
-    ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[3] = 0xF0;
+    FRAME_HALF(0).vramRect[0] = 0;
+    FRAME_HALF(0).vramRect[1] = 0;
+    FRAME_HALF(0).vramRect[2] = 320;
+    FRAME_HALF(0).vramRect[3] = 240;
 
-    // halves[1].vramRect: VRAM (0, 232), 320x240
-    buf2Header = (u16*)(buf + 0x49C);
-    buf2Header[0] = 0;
-    buf2Header[1] = 0xE8;
-    buf2Header[2] = 0x140;
-    buf2Header[3] = 0xF0;
+    // halves[1].vramRect: VRAM (0, 232), 320x240. (Kept as a typed alias to
+    // preserve the addiu+stores pattern in the original asm; switching to
+    // FRAME_HALF(1).vramRect[i] reorders the instruction stream.)
+    half1VramRect = (u16*)(frameTail + 0x49C);
+    half1VramRect[0] = 0;
+    half1VramRect[1] = 232;
+    half1VramRect[2] = 320;
+    half1VramRect[3] = 240;
 
     // Clear the entire VRAM frame area before uploading the new image.
     rect.x = 0;
     rect.y = 0;
-    rect.w = 0x400;
-    rect.h = 0x200;
+    rect.w = 1024;
+    rect.h = 512;
     ClearImage(&rect, 0, 0, 0);
 
     // Configure halves[0]/halves[1] disp/draw for vertical double-buffering at Y=0 / Y=232.
-    // (buf - 0x90) is &halves[0]; constant-folds back to buf-relative offsets.
-    SetDefDispEnv(&((GoverFrameHalf*)(buf - 0x90))[0].disp, 0, 0, 0x140, 0xF0);
-    SetDefDispEnv(&((GoverFrameHalf*)(buf - 0x90))[1].disp, 0, 0xE8, 0x140, 0xF0);
-    SetDefDrawEnv(&((GoverFrameHalf*)(buf - 0x90))[0].draw, 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv(&((GoverFrameHalf*)(buf - 0x90))[1].draw, 0, 8, 0x140, 0xE0);
+    SetDefDispEnv(&FRAME_HALF(0).disp, 0, 0, 320, 240);
+    SetDefDispEnv(&FRAME_HALF(1).disp, 0, 232, 320, 240);
+    SetDefDrawEnv(&FRAME_HALF(0).draw, 0, 240, 320, 224);
+    SetDefDrawEnv(&FRAME_HALF(1).draw, 0, 8, 320, 224);
 
     // Clear the dtd (dither) flag on both DRAWENVs.
-    buf = buf - 0x90; // buf is now &halves[0] (i.e. D_80140710)
-    halves = (GoverFrameHalf*)buf;
+    frameTail = frameTail - 0x90; // frameTail now points at &halves[0]
+    halves = (GoverFrameHalf*)frameTail;
     halves[1].draw.dtd = 0;
     halves[0].draw.dtd = 0;
 
     // VRAM destination coordinates for the Game Over image (overlaid on RECT):
-    // pixelX/Y = (0x140, 0), clutX/Y = (0, 0x1E0).
-    rect.x = 0x140;
+    // pixelX/Y = (320, 0), clutX/Y = (0, 480).
+    rect.x = 320;
     rect.y = 0;
     rect.w = 0;
-    rect.h = 0x1E0;
-    buf = buf - 0x90;
+    rect.h = 480;
+    frameTail = frameTail - 0x90; // matching: original emits an unused addiu here
     LoadImageFromCd(imageResourceIndex + 0xFFC, (VramDstCoords*)(&rect), cdLoadAddr);
 
     FUN_80022aa8();
@@ -119,6 +140,8 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     g_fadeLevel = 4;
     g_fadeStep = 4;
     RunGameOver();
+
+#undef FRAME_HALF
 }
 
 /**
@@ -156,7 +179,7 @@ void RunGameOver(void)
     u8 dummy[8];
     s32* p_d40708;
     func_800AA02C();
-    current = (GoverFrameHalf*)D_80140710;
+    current = (GoverFrameHalf*)g_goverFrameHeader;
     ClearOTagR((u_long*)current, 8);
     ClearOTagR((u_long*)&current[1], 8);
     VSync(0);
@@ -188,8 +211,8 @@ void RunGameOver(void)
             {
                 break;
             }
-            next = (GoverFrameHalf*)D_80140710;
-            if (current == (GoverFrameHalf*)D_80140710)
+            next = (GoverFrameHalf*)g_goverFrameHeader;
+            if (current == (GoverFrameHalf*)g_goverFrameHeader)
             {
                 next = current + 1;
             }

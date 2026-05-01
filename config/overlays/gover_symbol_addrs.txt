@@ -35,6 +35,8 @@ RunGameOver = 0x801401F0;
 LoadAudioClip = 0x80140648;
 
 g_goverOverlayId = 0x80140000;
+g_goverFrameHeader = 0x80140710;
+g_goverFrameTail = 0x801407A0;
 g_fadeLevel = 0x80141048;
 g_fadeStep = 0x80140708;
 D_8014070C = 0x8014070C;

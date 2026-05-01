@@ -82,8 +82,8 @@ typedef struct
  *
  * The buffer is split across two C symbols for historical layout reasons:
  *
- *   D_80140710 — anchors @p halves[0] (struct start)
- *   D_801407A0 — equals @c &halves[0].vramRect (i.e. D_80140710 + 0x90)
+ *   g_goverFrameHeader — anchors @p halves[0] (struct start)
+ *   g_goverFrameTail   — equals @c &halves[0].vramRect (i.e. g_goverFrameHeader + 0x90)
  *
  * Field offsets within each half:
  *
