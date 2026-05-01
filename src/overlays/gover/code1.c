@@ -17,16 +17,14 @@ s32 g_fadeLevel;
  * one-shot audio cue, primes the fade-in state, and hands control to the
  * per-frame loop in RunGameOver().
  *
- * The display structures live in one contiguous buffer that is also used by
- * RunGameOver() through the @p D_80140710 alias:
+ * The display structures live in one contiguous double-buffered frame; see
+ * @p GoverFrameHalf for the field layout. The two halves are anchored by:
  *
- *   D_80140710 + 0x20  -> DISPENV[0]   (paired with DRAWENV[0] for one field)
- *   D_80140710 + 0x34  -> DRAWENV[0]
- *   D_801407A0 + 0x000 -> 4x u16 framebuffer rect for half 0
- *   D_801407A0 + 0x42C -> DISPENV[1]   (paired with DRAWENV[1] for the other field)
- *   D_801407A0 + 0x440 -> DRAWENV[1]
- *   D_801407A0 + 0x49C -> 4x u16 framebuffer rect for half 1
- *   D_801407A0 + 0x498 -> primitive allocation cursor used by BuildOTag
+ *   D_80140710 — &halves[0]              (struct start)
+ *   D_801407A0 — &halves[0].vramRect     (i.e. D_80140710 + 0x90)
+ *
+ * Both symbols alias the same underlying buffer; this function uses the
+ * @p D_801407A0 anchor while RunGameOver uses @p D_80140710.
  *
  * The two halves are stacked vertically in VRAM (Y=0 and Y=232) for double
  * buffering; the CLUT lands at VRAM (0, 480) and the pixel data at VRAM (320, 0),
@@ -59,13 +57,13 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     buf = *bufBasePtr;
     buf2 = buf + 0x49C;
 
-    // Framebuffer rect for half 0: VRAM (0, 0), 320x240
+    // halves[0].vramRect (GoverFrameHalf+0x90): VRAM (0, 0), 320x240
     *((u16*)(buf + 0)) = 0;
     *((u16*)(buf + 2)) = 0;
     *((u16*)(buf + 4)) = 0x140;
     *((u16*)(buf + 6)) = 0xF0;
 
-    // Framebuffer rect for half 1: VRAM (0, 232), 320x240
+    // halves[1].vramRect (offset 0x49C from halves[0]): VRAM (0, 232), 320x240
     buf2Header = (u16*)buf2;
     buf2Header[0] = 0;
     buf2Header[1] = 0xE8;
@@ -79,13 +77,16 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     rect.h = 0x200;
     ClearImage(&rect, 0, 0, 0);
 
-    // Configure two DISPENV/DRAWENV pairs for vertical double-buffering at Y=0 / Y=232.
-    SetDefDispEnv((DISPENV*)(buf - 0x70), 0, 0, 0x140, 0xF0);
-    SetDefDispEnv((DISPENV*)(buf + 0x42C), 0, 0xE8, 0x140, 0xF0);
-    SetDefDrawEnv((DRAWENV*)(buf - 0x5C), 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv((DRAWENV*)(buf + 0x440), 0, 8, 0x140, 0xE0);
+    // Configure halves[0].disp/draw and halves[1].disp/draw (struct offsets 0x20/0x34)
+    // for vertical double-buffering at Y=0 / Y=232.
+    SetDefDispEnv((DISPENV*)(buf - 0x70), 0, 0, 0x140, 0xF0);     // halves[0].disp
+    SetDefDispEnv((DISPENV*)(buf + 0x42C), 0, 0xE8, 0x140, 0xF0); // halves[1].disp
+    SetDefDrawEnv((DRAWENV*)(buf - 0x5C), 0, 0xF0, 0x140, 0xE0);  // halves[0].draw
+    SetDefDrawEnv((DRAWENV*)(buf + 0x440), 0, 8, 0x140, 0xE0);    // halves[1].draw
 
-    // Clear the isbg flag on both DRAWENVs so the buffer is not auto-filled each frame.
+    // Clear the dtd (dither) flag on both DRAWENVs (DRAWENV+0x16).
+    // buf is now &halves[0] (i.e. D_80140710); 0x4A = halves[0].draw.dtd,
+    // 0x4E6 = halves[1].draw.dtd (0x49C + 0x34 + 0x16).
     buf = buf - 0x90;
     *((u8*)(buf + 0x4E6)) = 0;
     *((u8*)(buf + 0x4A)) = 0;
@@ -193,6 +194,7 @@ void RunGameOver(void)
 
 void BuildOTag(unsigned char* pOtBuf)
 {
+    GoverFrameHalf* half;
     unsigned char* pPrimA;
     unsigned char* pPrimB;
     unsigned char leftFadeLevel;
@@ -208,10 +210,10 @@ void BuildOTag(unsigned char* pOtBuf)
         g_fadeStep = 0;
     }
 
-    // pOtBuf+0x498 holds the primitive allocation cursor, reset to pOtBuf+0x98 each
-    // frame by the caller. The first 0x98 bytes of the buffer are occupied by the
-    // OTag entries, DISPENV, DRAWENV, and display rect data.
-    pPrimA = *((unsigned char**)(pOtBuf + 0x498));
+    // The primitive allocation cursor (allocCursor, struct offset 0x498) is reset to
+    // &primBuf (offset 0x98) each frame by RunGameOver and advanced by this function.
+    half = (GoverFrameHalf*)pOtBuf;
+    pPrimA = half->allocCursor;
 
     // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=320)
     setSprt(pPrimA);
@@ -256,7 +258,7 @@ void BuildOTag(unsigned char* pOtBuf)
 
     addPrim(pOtBuf, pPrimA);
 
-    *((unsigned char**)(pOtBuf + 0x498)) = pPrimB; // advance allocation cursor
+    half->allocCursor = pPrimB; // advance allocation cursor
 }
 
 /**
