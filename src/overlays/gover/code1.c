@@ -50,6 +50,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     u8* buf;
     u8* buf2;
     u16* buf2Header;
+    GoverFrameHalf* halves;
     u8(*bufBasePtr)[];
     bufBasePtr = &D_801407A0;
     VSync(0);
@@ -84,12 +85,11 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     SetDefDrawEnv((DRAWENV*)(buf - 0x5C), 0, 0xF0, 0x140, 0xE0);  // halves[0].draw
     SetDefDrawEnv((DRAWENV*)(buf + 0x440), 0, 8, 0x140, 0xE0);    // halves[1].draw
 
-    // Clear the dtd (dither) flag on both DRAWENVs (DRAWENV+0x16).
-    // buf is now &halves[0] (i.e. D_80140710); 0x4A = halves[0].draw.dtd,
-    // 0x4E6 = halves[1].draw.dtd (0x49C + 0x34 + 0x16).
-    buf = buf - 0x90;
-    *((u8*)(buf + 0x4E6)) = 0;
-    *((u8*)(buf + 0x4A)) = 0;
+    // Clear the dtd (dither) flag on both DRAWENVs.
+    buf = buf - 0x90; // buf is now &halves[0] (i.e. D_80140710)
+    halves = (GoverFrameHalf*)buf;
+    halves[1].draw.dtd = 0;
+    halves[0].draw.dtd = 0;
 
     // VRAM destination coordinates for the Game Over image (overlaid on RECT):
     // pixelX/Y = (0x140, 0), clutX/Y = (0, 0x1E0).
