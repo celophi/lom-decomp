@@ -117,6 +117,44 @@ The difficulty is that **many encodings are valid** for any given input. The dec
 
 ## Open Issues
 
+### Section-Boundary Hypothesis: TESTED, REJECTED (2026-04-30)
+
+The decompressed `.BIN.decompressed` files are MIPS little-endian ELF binaries dumped via `mipsel-linux-gnu-objcopy -O binary`. Their layout is structured (prefix + .rodata + .text + .bss).
+
+**Test 1 (GOVER) — looked promising**: No opcode in GOVER's reference spans the rodata→text, text→bss, or bss→END boundaries. Initially this looked like strong evidence that the original compressor processes each section independently.
+
+**Test 2 (MOVIE) — disproves the hypothesis**: MOVIE has a 24-byte .rodata section (a 4-byte word + a 5-entry jump table at file offsets 5..24), with .text starting at byte 25.
+
+The reference compresses bytes 6..25 with a single F7: pattern `(01, 14, 80, varying)` × 5, where the *5th varying byte is `0xA0` — the first byte of `addiu $sp, $sp, -0x60`*, the opening instruction of .text. The F7 deliberately reaches one byte past the rodata boundary into .text because the pattern happens to fit.
+
+**Conclusion**: The compressor runs as a single stream and is purely opportunistic. It does NOT respect section boundaries. GOVER's apparent alignment was a coincidence of data character changes:
+- byte 5: F0 emits exactly 3 zeros, happens to end where the zero padding ends.
+- byte 1797: FC's back-reference match naturally stops where the corresponding source bytes diverge — the .bss zeros don't match whatever was at the matching offset in the back-reference.
+- byte 4173: trivial (last byte of decompressed data).
+
+**Implication**: The F5 truncation puzzle is NOT explained by section boundaries. Back to looking for the actual rule.
+
+
+
+The decompressed `.BIN.decompressed` files are not arbitrary streams — they are MIPS little-endian ELF binaries dumped via `mipsel-linux-gnu-objcopy -O binary`. Their layout is structured: a tiny prefix byte, then `.rodata`, `.text`, `.bss`.
+
+**GOVER section layout** (4173 bytes total):
+- byte 0: 0x00 prefix
+- bytes 1..4: .rodata (4 bytes)
+- bytes 5..1796: .text (1792 bytes)
+- bytes 1797..4172: .bss (2376 bytes, all zeros)
+
+**Test result** (`test_gover_sections.py`): No opcode in the GOVER reference spans the boundaries at byte 5, 1797, or 4173. The only "spanning" case is at byte 1 (prefix → .rodata) where a RAW opcode covers both — meaning the compressor treats the prefix byte and .rodata as a *single* compression unit.
+
+**Conclusion**: The original compressor processes each section as a separate input stream and concatenates the outputs. No opcode (including F5, F7, FC, FD, FE) ever crosses a section boundary. Each section starts with a fresh hash table.
+
+This explains:
+- Why F5 truncations have inexplicable patterns: they hit section boundaries.
+- Why FC back-references are sometimes off in offset distribution: matches in earlier sections are unreachable.
+- Why GOVER and MOVIE match perfectly with our naive single-stream compressor: their section structure happens to result in opcodes that don't get chopped (GOVER's .bss is just zeros — F4 dominates; .text is short).
+
+**Implication for the reverse-engineering effort**: If we know the section sizes for each file, splitting the input and compressing each section independently should bring us very close to byte-exact matches.
+
 ### F5 Categorization Study (2026-04-30)
 
 Analyzed all 1,131 F5 instances across 15 reference files (`f5_categorize.py`):
