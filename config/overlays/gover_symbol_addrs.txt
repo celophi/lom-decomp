@@ -27,6 +27,7 @@ FUN_80022ac8 = 0x80022ac8;
 
 
 // GOVER
+gover_show_screen = 0x80140004;
 LoadImageFromCd = 0x80140538;
 UploadImageDataToVram = 0x80140588;
 BuildOTag = 0x80140380;
