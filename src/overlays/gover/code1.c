@@ -2,11 +2,20 @@
 #include "gover.h"
 
 /**
- * FRAME_HALF(i) names the i-th GoverFrameHalf relative to the tail anchor. 
- * (frameTail - 0x90) == &halves[0]; 
+ * FRAME_HALF(i) names the i-th GoverFrameHalf relative to the tail anchor.
+ * (frameTail - 0x90) == &halves[0];
  * this expression constant-folds back to frameTail-relative offsets in the emitted code.
  */
 #define FRAME_HALF(i) (((GoverFrameHalf*)(frameTail - 0x90))[i])
+
+/** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
+#define GOVER_CLUT_Y               480
+
+/** Constant added to an audioClipIndex to produce its CD resource index. */
+#define GOVER_AUDIO_RESOURCE_BASE  0x51
+
+/** RAM staging address used to load audio clip data from CD. */
+#define GOVER_AUDIO_LOAD_ADDR      0x80180000
 
 const s32 g_goverOverlayId = 10;
 s32 D_80140704;
@@ -27,7 +36,7 @@ s32 D_8014070C;
  * appended onto the data buffer rather than refactoring into a struct array.
  *
  * As a result, gover_show_screen anchors most of its accesses on the tail
- * symbol (where the cluster of writes sits) and RunGameOver anchors on the
+ * symbol (where the cluster of writes sits) and gover_run anchors on the
  * header symbol (where its loop starts). Merging them into one symbol breaks
  * the relocation entries in the original object file — keep them separate.
  */
@@ -41,17 +50,18 @@ s32 g_fadeLevel;
  * @details Initializes a double-buffered 320x240 display, uploads the Game Over
  * image and palette from CD into VRAM, optionally starts background music and a
  * one-shot audio cue, primes the fade-in state, and hands control to the
- * per-frame loop in RunGameOver().
+ * per-frame loop in gover_run().
  *
  * The display structures live in one contiguous double-buffered frame; see
  * @p GoverFrameHalf for the field layout, and the comment block above
  * @p g_goverFrameHeader for the symbol-split rationale. This function anchors
- * its accesses on @p g_goverFrameTail (mid-buffer) while RunGameOver anchors
+ * its accesses on @p g_goverFrameTail (mid-buffer) while gover_run anchors
  * on @p g_goverFrameHeader (buffer start).
  *
- * The two halves are stacked vertically in VRAM (Y=0 and Y=232) for double
- * buffering; the CLUT lands at VRAM (0, 480) and the pixel data at VRAM (320, 0),
- * matching the SPRT/DR_TPAGE primitives produced by BuildOTag.
+ * The two halves are stacked vertically in VRAM (Y=0 and Y=VRAM_BACK_DISP_Y) for
+ * double buffering; the CLUT lands at VRAM (0, GOVER_CLUT_Y) and the pixel data
+ * at VRAM (SCREEN_WIDTH, 0), matching the SPRT/DR_TPAGE primitives produced by
+ * gover_build_otag.
  *
  * @param cdLoadAddr           RAM staging address that receives the raw CD image
  *                             data before VRAM upload (e.g. 0x80160000).
@@ -117,24 +127,25 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
 
     // VRAM destination coordinates for the Game Over image (overlaid on RECT):
     // pixelX/Y = (SCREEN_WIDTH, 0)  — texture area, just past the framebuffers.
-    // clutX/Y  = (0, 480)           — gover-specific CLUT slot in the bottom of VRAM.
+    // clutX/Y  = (0, GOVER_CLUT_Y)  — CLUT slot in the bottom of VRAM.
     rect.x = SCREEN_WIDTH;
     rect.y = 0;
     rect.w = 0;
-    rect.h = 480;
+    rect.h = GOVER_CLUT_Y;
     
-    LoadImageFromCd(imageResourceIndex + 0xFFC, (VramDstCoords*)(&rect), cdLoadAddr);
+    gover_load_image_from_cd(imageResourceIndex + 0xFFC, (VramDstCoords*)(&rect), cdLoadAddr);
 
     FUN_80022aa8();
     FUN_80022ac8();
     func_800224D8(0x7F);
 
-    if (audioClipIndex != (-1))
+    if (audioClipIndex != -1)
     {
-        LoadAudioClip(audioClipIndex);
+        gover_load_audio_clip(audioClipIndex);
         func_800A39A8(0, 0x80, 0, 0);
     }
-    if (musicResourceIndex != (-1))
+
+    if (musicResourceIndex != -1)
     {
         func_800A368C(musicResourceIndex, 0);
         D_8011588C = 0x7F;
@@ -142,10 +153,10 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
         FUN_8002279c(0, 0x7F);
     }
 
-    // Begin a 4-per-frame fade-in (0 -> 0x80); RunGameOver flips the sign on input.
+    // Begin a 4-per-frame fade-in (0 -> 0x80); gover_run flips the sign on input.
     g_fadeLevel = 4;
     g_fadeStep = 4;
-    RunGameOver();
+    gover_run();
 }
 
 /**
@@ -158,7 +169,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  * Each iteration:
  *   1. Resets the drawing half's allocation cursor (@p allocCursor = @p primBuf)
  *      and clears its ordering table.
- *   2. Calls @p BuildOTag to emit the per-frame SPRT/DR_TPAGE primitives,
+ *   2. Calls @p gover_build_otag to emit the per-frame SPRT/DR_TPAGE primitives,
  *      which also advances @p g_fadeLevel by @p g_fadeStep.
  *   3. Waits for VSync, then checks user input (@p D_80122988 & 0x260) — once
  *      the fade has held at full brightness (0x80) and a button is pressed,
@@ -174,7 +185,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/LOxbx
  */
-void RunGameOver(void)
+void gover_run(void)
 {
     GoverFrameHalf* current;
     GoverFrameHalf* drawing;
@@ -198,7 +209,7 @@ void RunGameOver(void)
             ClearOTagR((u_long*)drawing, 8);
             drawing->allocCursor = drawing->primBuf;
             func_800A9E78();
-            BuildOTag((s32*)drawing);
+            gover_build_otag((s32*)drawing);
             DrawSync(0);
             func_800157B0(2);
             if (!g_fadeLevel)
@@ -242,7 +253,7 @@ void RunGameOver(void)
     D_8010D018 = 1;
 }
 
-void BuildOTag(unsigned char* pOtBuf)
+void gover_build_otag(unsigned char* pOtBuf)
 {
     GoverFrameHalf* half;
     unsigned char* pPrimA;
@@ -261,11 +272,11 @@ void BuildOTag(unsigned char* pOtBuf)
     }
 
     // The primitive allocation cursor (allocCursor, struct offset 0x498) is reset to
-    // &primBuf (offset 0x98) each frame by RunGameOver and advanced by this function.
+    // &primBuf (offset 0x98) each frame by gover_run and advanced by this function.
     half = (GoverFrameHalf*)pOtBuf;
     pPrimA = half->allocCursor;
 
-    // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=320)
+    // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=SCREEN_WIDTH)
     setSprt(pPrimA);
 
     leftFadeLevel = (unsigned char)g_fadeLevel;
@@ -273,20 +284,20 @@ void BuildOTag(unsigned char* pOtBuf)
     setXY0((SPRT*)pPrimA, 0, 0);
     setWH((SPRT*)pPrimA, 256, 224);
     setUV0((SPRT*)pPrimA, 0, 0);
-    setClut((SPRT*)pPrimA, 0, 480);
+    setClut((SPRT*)pPrimA, 0, GOVER_CLUT_Y);
     setBGR0((SPRT*)pPrimA, leftFadeLevel, leftFadeLevel, leftFadeLevel);
     addPrim(pOtBuf, pPrimA);
 
     pPrimA += 20;
 
-    // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=320, ABR=add)
-    setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, 320, 0));
+    // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=SCREEN_WIDTH, ABR=add)
+    setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
     addPrim(pOtBuf, pPrimA);
 
     pPrimB = pPrimA + 8;
     pPrimA = pPrimB;
 
-    // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=448)
+    // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=SCREEN_WIDTH+128)
     setSprt(pPrimB);
 
     rightFadeLevel = (unsigned char)g_fadeLevel;
@@ -295,14 +306,14 @@ void BuildOTag(unsigned char* pOtBuf)
     setXY0((SPRT*)pPrimB, 256, 0);
     setWH((SPRT*)pPrimB, 64, 224);
     setUV0((SPRT*)pPrimB, 0, 0);
-    setClut((SPRT*)pPrimB, 0, 480);
+    setClut((SPRT*)pPrimB, 0, GOVER_CLUT_Y);
 
     addPrim(pOtBuf, pPrimB);
 
     pPrimA += 20;
 
-    // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=448, ABR=add)
-    setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, 448, 0));
+    // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=SCREEN_WIDTH+128, ABR=add)
+    setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH + 128, 0));
     pPrimB = pPrimA;
     pPrimB += 8;
 
@@ -312,17 +323,27 @@ void BuildOTag(unsigned char* pOtBuf)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/OafFK
+ * @brief Reads a CD image resource into RAM, then uploads it to VRAM.
+ *
+ * @details Queues a CD read for the given resource into the supplied RAM buffer,
+ * blocks until the read completes, then defers to gover_upload_image_to_vram to
+ * split the buffer into its CLUT and pixel-data sections and DMA each to VRAM.
+ *
+ * @param cdResourceIndex   CD resource index (lower 16 bits used).
+ * @param coordinates       VRAM destination for the CLUT and pixel sections.
+ * @param ramBuffer         RAM staging address that receives the raw CD bytes.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/OafFK
  */
-void LoadImageFromCd(s32 arg0, VramDstCoords* coordinates, u32 address)
+void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer)
 {
     volatile u8 dummy[8];
-    cdrom_queue_read(arg0 & 0xFFFF, address);
+    cdrom_queue_read(cdResourceIndex & 0xFFFF, ramBuffer);
     cdrom_wait_queue_empty();
-    UploadImageDataToVram((ClutSectionHeader*)address, coordinates);
+    gover_upload_image_to_vram((ClutSectionHeader*)ramBuffer, coordinates);
 }
 
-u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
+u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordinates)
 {
     RECT rect;
     PixelDataHeader* pdh;
@@ -348,29 +369,42 @@ u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/At0Tp
+ * @brief Loads an audio clip from CD, primes the audio-data block, and posts it.
+ *
+ * @details For non-sentinel @p audioClipIndex, clears the audio-data block,
+ * reads the clip resource into the audio scratch buffer, then locates a
+ * variable-size payload via a self-referential offset table at the start of
+ * the loaded data, copies the payload into @p g_audioData, and hands the tail
+ * of the table off to func_80022AE8.
+ *
+ * @param audioClipIndex   Clip index (resource = audioClipIndex + 0x51), or -1
+ *                         to clear @p g_audioData without loading, or -2 to
+ *                         skip entirely.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/At0Tp
  */
-void LoadAudioClip(s32 arg0)
+void gover_load_audio_clip(s32 audioClipIndex)
 {
-    s32 offset;
+    s32 skipSentinel;
     u8* header;
     u8* end;
     u8* dest;
     u8* src;
     s32* ptr;
-    offset = -2;
-    if (arg0 != offset)
+    skipSentinel = -2;
+    if (audioClipIndex != skipSentinel)
     {
         g_audioData.unk8 = 0;
         g_audioData.unk4 = 0;
         g_audioData.unk0 = 0;
-        if (arg0 != (-1))
+        if (audioClipIndex != (-1))
         {
-            cdrom_queue_read((arg0 + 0x51) & 0xFFFF, (void*)0x80180000);
+            cdrom_queue_read((audioClipIndex + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF,
+                             (void*)GOVER_AUDIO_LOAD_ADDR);
             cdrom_wait_queue_empty();
             g_audioData.unk0 = 0xC;
 
-            header = (0x80180000 + *(u32*)0x80180004);
+            header = (GOVER_AUDIO_LOAD_ADDR + g_audioDataOffset);
             ptr = (s32*)header;
             end = header + ((u32)ptr[*ptr]);
             dest = ((u8*)(&g_audioData)) + 12;
