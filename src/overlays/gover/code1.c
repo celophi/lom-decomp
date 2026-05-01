@@ -1,6 +1,17 @@
 
 #include "gover.h"
 
+// Macro-local sugar: FRAME_HALF(i) names the i-th GoverFrameHalf relative to
+    // the tail anchor. (frameTail - 0x90) == &halves[0]; this expression
+    // constant-folds back to frameTail-relative offsets in the emitted code.
+
+/**
+ * FRAME_HALF(i) names the i-th GoverFrameHalf relative to the tail anchor. 
+ * (frameTail - 0x90) == &halves[0]; 
+ * this expression constant-folds back to frameTail-relative offsets in the emitted code.
+ */
+#define FRAME_HALF(i) (((GoverFrameHalf*)(frameTail - 0x90))[i])
+
 const s32 g_goverOverlayId = 10;
 s32 D_80140704;
 s32 g_fadeStep;
@@ -61,11 +72,6 @@ s32 g_fadeLevel;
  */
 void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex)
 {
-    // Macro-local sugar: FRAME_HALF(i) names the i-th GoverFrameHalf relative to
-    // the tail anchor. (frameTail - 0x90) == &halves[0]; this expression
-    // constant-folds back to frameTail-relative offsets in the emitted code.
-#define FRAME_HALF(i) (((GoverFrameHalf*)(frameTail - 0x90))[i])
-
     RECT rect;
     u8* frameTail;
     u16* half1VramRect;
@@ -105,8 +111,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     SetDefDrawEnv(&FRAME_HALF(1).draw, 0, 8, 320, 224);
 
     // Clear the dtd (dither) flag on both DRAWENVs.
-    frameTail = frameTail - 0x90; // frameTail now points at &halves[0]
-    halves = (GoverFrameHalf*)frameTail;
+    halves = &FRAME_HALF(0);
     halves[1].draw.dtd = 0;
     halves[0].draw.dtd = 0;
 
@@ -116,7 +121,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     rect.y = 0;
     rect.w = 0;
     rect.h = 480;
-    frameTail = frameTail - 0x90; // matching: original emits an unused addiu here
+    
     LoadImageFromCd(imageResourceIndex + 0xFFC, (VramDstCoords*)(&rect), cdLoadAddr);
 
     FUN_80022aa8();
@@ -140,8 +145,6 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     g_fadeLevel = 4;
     g_fadeStep = 4;
     RunGameOver();
-
-#undef FRAME_HALF
 }
 
 /**
