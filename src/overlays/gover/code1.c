@@ -48,7 +48,6 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
 {
     RECT rect;
     u8* buf;
-    u8* buf2;
     u16* buf2Header;
     GoverFrameHalf* halves;
     u8(*bufBasePtr)[];
@@ -56,7 +55,6 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     VSync(0);
     DrawSync(0);
     buf = *bufBasePtr;
-    buf2 = buf + 0x49C;
 
     // halves[0].vramRect: VRAM (0, 0), 320x240
     ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[0] = 0;
@@ -65,7 +63,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[3] = 0xF0;
 
     // halves[1].vramRect: VRAM (0, 232), 320x240
-    buf2Header = (u16*)buf2;
+    buf2Header = (u16*)(buf + 0x49C);
     buf2Header[0] = 0;
     buf2Header[1] = 0xE8;
     buf2Header[2] = 0x140;
