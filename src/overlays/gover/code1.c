@@ -58,13 +58,13 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     buf = *bufBasePtr;
     buf2 = buf + 0x49C;
 
-    // halves[0].vramRect (GoverFrameHalf+0x90): VRAM (0, 0), 320x240
-    *((u16*)(buf + 0)) = 0;
-    *((u16*)(buf + 2)) = 0;
-    *((u16*)(buf + 4)) = 0x140;
-    *((u16*)(buf + 6)) = 0xF0;
+    // halves[0].vramRect: VRAM (0, 0), 320x240
+    ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[0] = 0;
+    ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[1] = 0;
+    ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[2] = 0x140;
+    ((GoverFrameHalf*)(buf - 0x90))[0].vramRect[3] = 0xF0;
 
-    // halves[1].vramRect (offset 0x49C from halves[0]): VRAM (0, 232), 320x240
+    // halves[1].vramRect: VRAM (0, 232), 320x240
     buf2Header = (u16*)buf2;
     buf2Header[0] = 0;
     buf2Header[1] = 0xE8;
