@@ -9,13 +9,13 @@
 #define FRAME_HALF(i) (((GoverFrameHalf*)(frameTail - 0x90))[i])
 
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
-#define GOVER_CLUT_Y               480
+#define GOVER_CLUT_Y 480
 
 /** Constant added to an audioClipIndex to produce its CD resource index. */
-#define GOVER_AUDIO_RESOURCE_BASE  0x51
+#define GOVER_AUDIO_RESOURCE_BASE 0x51
 
 /** RAM staging address used to load audio clip data from CD. */
-#define GOVER_AUDIO_LOAD_ADDR      0x80180000
+#define GOVER_AUDIO_LOAD_ADDR 0x80180000
 
 /**
  * Self-referential offset stored at GOVER_AUDIO_LOAD_ADDR + 4 by the loaded
@@ -23,7 +23,7 @@
  * so the lui/lw pair encodes against the address directly, matching the
  * original asm.
  */
-#define GOVER_AUDIO_DATA_OFFSET    (*(u32*)(GOVER_AUDIO_LOAD_ADDR + 4))
+#define GOVER_AUDIO_DATA_OFFSET (*(u32*)(GOVER_AUDIO_LOAD_ADDR + 4))
 
 const s32 g_goverOverlayId = 10;
 s32 D_80140704;
@@ -123,9 +123,9 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     // Configure halves[0]/halves[1] disp/draw for vertical double-buffering.
     // Front buffer draws at Y=SCREEN_HEIGHT (just below its display region);
     // back buffer draws at Y=VRAM_BACK_DRAW_Y (above its display region).
-    SetDefDispEnv(&FRAME_HALF(0).disp, 0, 0,                SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&FRAME_HALF(0).disp, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&FRAME_HALF(1).disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&FRAME_HALF(0).draw, 0, SCREEN_HEIGHT,    SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&FRAME_HALF(0).draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDefDrawEnv(&FRAME_HALF(1).draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     // Clear the dtd (dither) flag on both DRAWENVs.
@@ -140,7 +140,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     rect.y = 0;
     rect.w = 0;
     rect.h = GOVER_CLUT_Y;
-    
+
     gover_load_image_from_cd(imageResourceIndex + 0xFFC, (VramDstCoords*)(&rect), cdLoadAddr);
 
     FUN_80022aa8();
@@ -400,30 +400,33 @@ void gover_load_audio_clip(s32 audioClipIndex)
     u8* src;
     s32* ptr;
     skipSentinel = -2;
-    if (audioClipIndex != skipSentinel)
+    if (audioClipIndex == skipSentinel)
     {
-        g_audioData.unk8 = 0;
-        g_audioData.unk4 = 0;
-        g_audioData.unk0 = 0;
-        if (audioClipIndex != (-1))
-        {
-            cdrom_queue_read((audioClipIndex + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
-            cdrom_wait_queue_empty();
-            g_audioData.unk0 = 0xC;
-
-            header = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
-            ptr = (s32*)header;
-            end = header + ((u32)ptr[*ptr]);
-            dest = ((u8*)(&g_audioData)) + 12;
-            if (header != end)
-            {
-                src = header;
-                do
-                {
-                    *(dest++) = *(src++);
-                } while (src != end);
-            }
-            func_80022AE8(end, 1);
-        }
+        return;
     }
+
+    g_audioData.unk8 = 0;
+    g_audioData.unk4 = 0;
+    g_audioData.unk0 = 0;
+
+    if (audioClipIndex == -1)
+    {
+        return;
+    }
+
+    cdrom_queue_read((audioClipIndex + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
+    cdrom_wait_queue_empty();
+    g_audioData.unk0 = 0xC;
+
+    src = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
+    ptr = (s32*)src;
+    end = src + ((u32)ptr[*ptr]);
+    dest = ((u8*)(&g_audioData)) + 12;
+    
+    while (src != end)
+    {
+        *(dest++) = *(src++);
+    }
+
+    func_80022AE8(end, 1);
 }
