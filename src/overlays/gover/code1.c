@@ -124,7 +124,30 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/LOxbx
+ * @brief Per-frame loop for the Game Over screen.
+ *
+ * @details Drives the fade-in / hold / fade-out cycle on the double-buffered
+ * frame configured by @p gover_show_screen. The loop exits when @p g_fadeLevel
+ * has been ramped back to 0 (fully black).
+ *
+ * Each iteration:
+ *   1. Resets the drawing half's allocation cursor (@p allocCursor = @p primBuf)
+ *      and clears its ordering table.
+ *   2. Calls @p BuildOTag to emit the per-frame SPRT/DR_TPAGE primitives,
+ *      which also advances @p g_fadeLevel by @p g_fadeStep.
+ *   3. Waits for VSync, then checks user input (@p D_80122988 & 0x260) — once
+ *      the fade has held at full brightness (0x80) and a button is pressed,
+ *      flips @p g_fadeStep to -4 to begin the fade-out.
+ *   4. Swaps display halves and queues @p PutDispEnv / @p PutDrawEnv /
+ *      @p DrawOTag for the previously built half. The OT chain is drawn from
+ *      its tail entry (@p otag[7], byte offset 0x1C).
+ *   5. Pumps @p cdrom_process_state to keep CD-streaming alive during the loop.
+ *
+ * The fade-out break condition is @p g_fadeLevel == 0; on exit, audio is
+ * stopped, the display is masked off, and @p D_8010D018 is set to signal the
+ * caller that the Game Over sequence has completed.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/LOxbx
  */
 void RunGameOver(void)
 {
