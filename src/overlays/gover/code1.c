@@ -78,12 +78,12 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     rect.h = 0x200;
     ClearImage(&rect, 0, 0, 0);
 
-    // Configure halves[0].disp/draw and halves[1].disp/draw (struct offsets 0x20/0x34)
-    // for vertical double-buffering at Y=0 / Y=232.
-    SetDefDispEnv((DISPENV*)(buf - 0x70), 0, 0, 0x140, 0xF0);     // halves[0].disp
-    SetDefDispEnv((DISPENV*)(buf + 0x42C), 0, 0xE8, 0x140, 0xF0); // halves[1].disp
-    SetDefDrawEnv((DRAWENV*)(buf - 0x5C), 0, 0xF0, 0x140, 0xE0);  // halves[0].draw
-    SetDefDrawEnv((DRAWENV*)(buf + 0x440), 0, 8, 0x140, 0xE0);    // halves[1].draw
+    // Configure halves[0]/halves[1] disp/draw for vertical double-buffering at Y=0 / Y=232.
+    // (buf - 0x90) is &halves[0]; constant-folds back to buf-relative offsets.
+    SetDefDispEnv(&((GoverFrameHalf*)(buf - 0x90))[0].disp, 0, 0, 0x140, 0xF0);
+    SetDefDispEnv(&((GoverFrameHalf*)(buf - 0x90))[1].disp, 0, 0xE8, 0x140, 0xF0);
+    SetDefDrawEnv(&((GoverFrameHalf*)(buf - 0x90))[0].draw, 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv(&((GoverFrameHalf*)(buf - 0x90))[1].draw, 0, 8, 0x140, 0xE0);
 
     // Clear the dtd (dither) flag on both DRAWENVs.
     buf = buf - 0x90; // buf is now &halves[0] (i.e. D_80140710)
