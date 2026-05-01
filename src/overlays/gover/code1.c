@@ -12,6 +12,7 @@ const s32 g_goverOverlayId = 10;
 s32 D_80140704;
 s32 g_fadeStep;
 s32 D_8014070C;
+
 /*
  * The Game Over screen's double-buffered frame (2x GoverFrameHalf, 0x938 bytes
  * total) is split across two adjacent globals. They alias the same buffer:
@@ -78,33 +79,35 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     DrawSync(0);
     frameTail = *frameTailPtr;
 
-    // halves[0].vramRect: VRAM (0, 0), 320x240
+    // halves[0].vramRect: front buffer at VRAM (0, 0)
     FRAME_HALF(0).vramRect[0] = 0;
     FRAME_HALF(0).vramRect[1] = 0;
-    FRAME_HALF(0).vramRect[2] = 320;
-    FRAME_HALF(0).vramRect[3] = 240;
+    FRAME_HALF(0).vramRect[2] = SCREEN_WIDTH;
+    FRAME_HALF(0).vramRect[3] = SCREEN_HEIGHT;
 
-    // halves[1].vramRect: VRAM (0, 232), 320x240. (Kept as a typed alias to
-    // preserve the addiu+stores pattern in the original asm; switching to
-    // FRAME_HALF(1).vramRect[i] reorders the instruction stream.)
+    // halves[1].vramRect: back buffer at VRAM (0, VRAM_BACK_DISP_Y). Kept as a
+    // typed alias to preserve the addiu+stores pattern in the original asm;
+    // switching to FRAME_HALF(1).vramRect[i] reorders the instruction stream.
     half1VramRect = (u16*)(frameTail + 0x49C);
     half1VramRect[0] = 0;
-    half1VramRect[1] = 232;
-    half1VramRect[2] = 320;
-    half1VramRect[3] = 240;
+    half1VramRect[1] = VRAM_BACK_DISP_Y;
+    half1VramRect[2] = SCREEN_WIDTH;
+    half1VramRect[3] = SCREEN_HEIGHT;
 
     // Clear the entire VRAM frame area before uploading the new image.
     rect.x = 0;
     rect.y = 0;
-    rect.w = 1024;
-    rect.h = 512;
+    rect.w = VRAM_WIDTH;
+    rect.h = VRAM_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
 
-    // Configure halves[0]/halves[1] disp/draw for vertical double-buffering at Y=0 / Y=232.
-    SetDefDispEnv(&FRAME_HALF(0).disp, 0, 0, 320, 240);
-    SetDefDispEnv(&FRAME_HALF(1).disp, 0, 232, 320, 240);
-    SetDefDrawEnv(&FRAME_HALF(0).draw, 0, 240, 320, 224);
-    SetDefDrawEnv(&FRAME_HALF(1).draw, 0, 8, 320, 224);
+    // Configure halves[0]/halves[1] disp/draw for vertical double-buffering.
+    // Front buffer draws at Y=SCREEN_HEIGHT (just below its display region);
+    // back buffer draws at Y=VRAM_BACK_DRAW_Y (above its display region).
+    SetDefDispEnv(&FRAME_HALF(0).disp, 0, 0,                SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&FRAME_HALF(1).disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&FRAME_HALF(0).draw, 0, SCREEN_HEIGHT,    SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&FRAME_HALF(1).draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     // Clear the dtd (dither) flag on both DRAWENVs.
     halves = &FRAME_HALF(0);
@@ -112,8 +115,9 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     halves[0].draw.dtd = 0;
 
     // VRAM destination coordinates for the Game Over image (overlaid on RECT):
-    // pixelX/Y = (320, 0), clutX/Y = (0, 480).
-    rect.x = 320;
+    // pixelX/Y = (SCREEN_WIDTH, 0)  — texture area, just past the framebuffers.
+    // clutX/Y  = (0, 480)           — gover-specific CLUT slot in the bottom of VRAM.
+    rect.x = SCREEN_WIDTH;
     rect.y = 0;
     rect.w = 0;
     rect.h = 480;

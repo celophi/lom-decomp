@@ -2,38 +2,12 @@
 #define _CHECKPS_H
 
 #include "common.h"
+#include "display.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libapi.h"
 #include "psyq/memory.h"
 #include "psyq/strings.h"
-
-/**
- * The width of the visible screen area, excluding overscan. 
- * This is used for setting up display environments and calculating text layout.
- */
-#define SCREEN_WIDTH  320
-
-/**
- * The visible height of the screen, excluding the overscan area. 
- * This is used for setting up display environments and calculating text layout.
- */
-#define SCREEN_HEIGHT 240
-
-/**
- * Vertical start of the back buffer's draw region.
- */
-#define VRAM_BACK_DRAW_Y   8
-
-/**
- * Vertical start of the back buffer's display region. 
- */
-#define VRAM_BACK_DISP_Y   232
-
-/**
- * Height of the draw region for each buffer.
- */
-#define VRAM_DRAW_HEIGHT   224
 
 /**
  * The maximum number of glyph entries in the character cache
