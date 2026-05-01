@@ -10,62 +10,113 @@ u8 D_801407A0[2216];
 s32 g_fadeLevel;
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/1qYnn
+ * @brief Entry point for the Game Over screen overlay.
+ *
+ * @details Initializes a double-buffered 320x240 display, uploads the Game Over
+ * image and palette from CD into VRAM, optionally starts background music and a
+ * one-shot audio cue, primes the fade-in state, and hands control to the
+ * per-frame loop in RunGameOver().
+ *
+ * The display structures live in one contiguous buffer that is also used by
+ * RunGameOver() through the @p D_80140710 alias:
+ *
+ *   D_80140710 + 0x20  -> DISPENV[0]   (paired with DRAWENV[0] for one field)
+ *   D_80140710 + 0x34  -> DRAWENV[0]
+ *   D_801407A0 + 0x000 -> 4x u16 framebuffer rect for half 0
+ *   D_801407A0 + 0x42C -> DISPENV[1]   (paired with DRAWENV[1] for the other field)
+ *   D_801407A0 + 0x440 -> DRAWENV[1]
+ *   D_801407A0 + 0x49C -> 4x u16 framebuffer rect for half 1
+ *   D_801407A0 + 0x498 -> primitive allocation cursor used by BuildOTag
+ *
+ * The two halves are stacked vertically in VRAM (Y=0 and Y=232) for double
+ * buffering; the CLUT lands at VRAM (0, 480) and the pixel data at VRAM (320, 0),
+ * matching the SPRT/DR_TPAGE primitives produced by BuildOTag.
+ *
+ * @param cdLoadAddr           RAM staging address that receives the raw CD image
+ *                             data before VRAM upload (e.g. 0x80160000).
+ * @param imageResourceIndex   Logical resource index for the Game Over image; the
+ *                             actual CD resource is @p imageResourceIndex + 0xFFC
+ *                             after truncation to 16 bits.
+ * @param musicResourceIndex   Background music resource to start, or -1 to skip.
+ * @param audioClipIndex       One-shot audio clip (voice/SFX) to play, or -1 to skip.
+ *
+ * @note The implementation takes 4 arguments; the prototype in main.h exposes 7
+ *       to preserve the call-site codegen in main.c. Only the first four are
+ *       meaningful.
+ *
+ * @see decomp.me link (100%) https://decomp.me/scratch/1qYnn
  */
-void func_80140004(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex)
 {
     RECT rect;
-    u8* base;
-    u8* new_var;
-    u16* second;
-    u8(*new_var2)[];
-    new_var2 = &D_801407A0;
+    u8* buf;
+    u8* buf2;
+    u16* buf2Header;
+    u8(*bufBasePtr)[];
+    bufBasePtr = &D_801407A0;
     VSync(0);
     DrawSync(0);
-    base = *new_var2;
-    new_var = base + 0x49C;
-    *((u16*)(base + 0)) = 0;
-    *((u16*)(base + 2)) = 0;
-    *((u16*)(base + 4)) = 0x140;
-    *((u16*)(base + 6)) = 0xF0;
-    second = (u16*)new_var;
-    second[0] = 0;
-    second[1] = 0xE8;
-    second[2] = 0x140;
-    second[3] = 0xF0;
+    buf = *bufBasePtr;
+    buf2 = buf + 0x49C;
+
+    // Framebuffer rect for half 0: VRAM (0, 0), 320x240
+    *((u16*)(buf + 0)) = 0;
+    *((u16*)(buf + 2)) = 0;
+    *((u16*)(buf + 4)) = 0x140;
+    *((u16*)(buf + 6)) = 0xF0;
+
+    // Framebuffer rect for half 1: VRAM (0, 232), 320x240
+    buf2Header = (u16*)buf2;
+    buf2Header[0] = 0;
+    buf2Header[1] = 0xE8;
+    buf2Header[2] = 0x140;
+    buf2Header[3] = 0xF0;
+
+    // Clear the entire VRAM frame area before uploading the new image.
     rect.x = 0;
     rect.y = 0;
     rect.w = 0x400;
     rect.h = 0x200;
     ClearImage(&rect, 0, 0, 0);
-    SetDefDispEnv((DISPENV*)(base - 0x70), 0, 0, 0x140, 0xF0);
-    SetDefDispEnv((DISPENV*)(base + 0x42C), 0, 0xE8, 0x140, 0xF0);
-    SetDefDrawEnv((DRAWENV*)(base - 0x5C), 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv((DRAWENV*)(base + 0x440), 0, 8, 0x140, 0xE0);
-    base = base - 0x90;
-    *((u8*)(base + 0x4E6)) = 0;
-    *((u8*)(base + 0x4A)) = 0;
+
+    // Configure two DISPENV/DRAWENV pairs for vertical double-buffering at Y=0 / Y=232.
+    SetDefDispEnv((DISPENV*)(buf - 0x70), 0, 0, 0x140, 0xF0);
+    SetDefDispEnv((DISPENV*)(buf + 0x42C), 0, 0xE8, 0x140, 0xF0);
+    SetDefDrawEnv((DRAWENV*)(buf - 0x5C), 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv((DRAWENV*)(buf + 0x440), 0, 8, 0x140, 0xE0);
+
+    // Clear the isbg flag on both DRAWENVs so the buffer is not auto-filled each frame.
+    buf = buf - 0x90;
+    *((u8*)(buf + 0x4E6)) = 0;
+    *((u8*)(buf + 0x4A)) = 0;
+
+    // VRAM destination coordinates for the Game Over image (overlaid on RECT):
+    // pixelX/Y = (0x140, 0), clutX/Y = (0, 0x1E0).
     rect.x = 0x140;
     rect.y = 0;
     rect.w = 0;
     rect.h = 0x1E0;
-    base = base - 0x90;
-    LoadImageFromCd(arg1 + 0xFFC, (VramDstCoords*)(&rect), arg0);
+    buf = buf - 0x90;
+    LoadImageFromCd(imageResourceIndex + 0xFFC, (VramDstCoords*)(&rect), cdLoadAddr);
+
     FUN_80022aa8();
     FUN_80022ac8();
     func_800224D8(0x7F);
-    if (arg3 != (-1))
+
+    if (audioClipIndex != (-1))
     {
-        LoadAudioClip(arg3);
+        LoadAudioClip(audioClipIndex);
         func_800A39A8(0, 0x80, 0, 0);
     }
-    if (arg2 != (-1))
+    if (musicResourceIndex != (-1))
     {
-        func_800A368C(arg2, 0);
+        func_800A368C(musicResourceIndex, 0);
         D_8011588C = 0x7F;
         func_800A380C();
         FUN_8002279c(0, 0x7F);
     }
+
+    // Begin a 4-per-frame fade-in (0 -> 0x80); RunGameOver flips the sign on input.
     g_fadeLevel = 4;
     g_fadeStep = 4;
     RunGameOver();
