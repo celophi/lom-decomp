@@ -71,28 +71,29 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
 {
     RECT rect;
     u8* frameTail;
-    u16* half1VramRect;
+    RECT* half1VramRect;
     GoverFrameHalf* halves;
     u8(*frameTailPtr)[];
+
     frameTailPtr = &g_goverFrameTail; // matching: original used a pointer-to-array indirection
     VSync(0);
     DrawSync(0);
     frameTail = *frameTailPtr;
 
     // halves[0].vramRect: front buffer at VRAM (0, 0)
-    FRAME_HALF(0).vramRect[0] = 0;
-    FRAME_HALF(0).vramRect[1] = 0;
-    FRAME_HALF(0).vramRect[2] = SCREEN_WIDTH;
-    FRAME_HALF(0).vramRect[3] = SCREEN_HEIGHT;
+    FRAME_HALF(0).vramRect.x = 0;
+    FRAME_HALF(0).vramRect.y = 0;
+    FRAME_HALF(0).vramRect.w = SCREEN_WIDTH;
+    FRAME_HALF(0).vramRect.h = SCREEN_HEIGHT;
 
     // halves[1].vramRect: back buffer at VRAM (0, VRAM_BACK_DISP_Y). Kept as a
     // typed alias to preserve the addiu+stores pattern in the original asm;
-    // switching to FRAME_HALF(1).vramRect[i] reorders the instruction stream.
-    half1VramRect = (u16*)(frameTail + 0x49C);
-    half1VramRect[0] = 0;
-    half1VramRect[1] = VRAM_BACK_DISP_Y;
-    half1VramRect[2] = SCREEN_WIDTH;
-    half1VramRect[3] = SCREEN_HEIGHT;
+    // switching to FRAME_HALF(1).vramRect.x reorders the instruction stream.
+    half1VramRect = (RECT*)(frameTail + 0x49C);
+    half1VramRect->x = 0;
+    half1VramRect->y = VRAM_BACK_DISP_Y;
+    half1VramRect->w = SCREEN_WIDTH;
+    half1VramRect->h = SCREEN_HEIGHT;
 
     // Clear the entire VRAM frame area before uploading the new image.
     rect.x = 0;

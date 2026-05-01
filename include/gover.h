@@ -91,7 +91,7 @@ typedef struct
  *   0x000  otag         — ordering-table linked-list head (8 entries x 4 bytes)
  *   0x020  disp         — DISPENV configured by SetDefDispEnv
  *   0x034  draw         — DRAWENV configured by SetDefDrawEnv
- *   0x090  vramRect     — VRAM upload rect (x, y, w, h) packed as 4x u16
+ *   0x090  vramRect     — VRAM display rect (x, y, w, h)
  *   0x098  primBuf      — scratch space for per-frame GPU primitives
  *   0x498  allocCursor  — next-primitive write pointer (reset to &primBuf each
  *                         frame by RunGameOver, advanced by BuildOTag)
@@ -101,7 +101,7 @@ typedef struct GoverFrameHalf {
     u8       otag[0x20];
     DISPENV  disp;
     DRAWENV  draw;
-    u16      vramRect[4];
+    RECT     vramRect;
     u8       primBuf[0x400];
     u8*      allocCursor;
 } GoverFrameHalf;
