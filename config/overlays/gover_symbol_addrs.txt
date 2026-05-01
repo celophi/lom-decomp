@@ -28,11 +28,11 @@ FUN_80022ac8 = 0x80022ac8;
 
 // GOVER
 gover_show_screen = 0x80140004;
-LoadImageFromCd = 0x80140538;
-UploadImageDataToVram = 0x80140588;
-BuildOTag = 0x80140380;
-RunGameOver = 0x801401F0;
-LoadAudioClip = 0x80140648;
+gover_run = 0x801401F0;
+gover_build_otag = 0x80140380;
+gover_load_image_from_cd = 0x80140538;
+gover_upload_image_to_vram = 0x80140588;
+gover_load_audio_clip = 0x80140648;
 
 g_goverOverlayId = 0x80140000;
 g_goverFrameHeader = 0x80140710;

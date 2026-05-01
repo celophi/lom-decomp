@@ -55,7 +55,7 @@ typedef struct {
 /**
  * @brief VRAM destination coordinates for a two-section CD image upload.
  *
- * @details Passed to UploadImageDataToVram to specify where in VRAM to place
+ * @details Passed to gover_upload_image_to_vram to specify where in VRAM to place
  * the CLUT palette strip and the pixel data independently. Overlaid on a PSX
  * RECT at the call site (x/y map to pixelX/Y; w/h map to clutX/Y).
  */
@@ -79,7 +79,7 @@ typedef struct
  *
  * @details The Game Over overlay maintains two of these halves back-to-back as
  * one contiguous buffer (total 0x938 bytes). The two halves are flipped each
- * frame in @p RunGameOver — one is presented while the other is drawn into.
+ * frame in @p gover_run — one is presented while the other is drawn into.
  *
  * The buffer is split across two C symbols for historical layout reasons:
  *
@@ -94,7 +94,7 @@ typedef struct
  *   0x090  vramRect     — VRAM display rect (x, y, w, h)
  *   0x098  primBuf      — scratch space for per-frame GPU primitives
  *   0x498  allocCursor  — next-primitive write pointer (reset to &primBuf each
- *                         frame by RunGameOver, advanced by BuildOTag)
+ *                         frame by gover_run, advanced by gover_build_otag)
  *   0x49C  (size)
  */
 typedef struct GoverFrameHalf {
@@ -118,7 +118,7 @@ extern s32 func_800A39A8(s32, s32, s32, s32);
 /**
  * @brief Builds the per-frame GPU primitive list for the Game Over screen.
  *
- * @details Called every frame from RunGameOver. Advances @p g_fadeLevel by
+ * @details Called every frame from gover_run. Advances @p g_fadeLevel by
  * @p g_fadeStep and inserts four primitives into the ordering table at
  * @p pOtBuf in back-to-front order:
  *
@@ -127,7 +127,7 @@ extern s32 func_800A39A8(s32, s32, s32, s32);
  *   3. DR_TPAGE  — selects texture page 0xA5 (8bpp, VRAM X=320)
  *   4. SPRT      — left half of the image (256x224) at screen X=0
  *
- * Both sprites share the CLUT at VRAM (0, 480) and are color-modulated by
+ * Both sprites share the CLUT at VRAM (0, GOVER_CLUT_Y) and are color-modulated by
  * @p g_fadeLevel (0 = black, 0x80 = full brightness), producing the fade-in
  * and fade-out effect. Primitives are allocated from the buffer region starting
  * at @p pOtBuf+0x98, with the allocation cursor stored at @p pOtBuf+0x498.
@@ -138,10 +138,9 @@ extern s32 func_800A39A8(s32, s32, s32, s32);
  *
  * @see decomp.me (97.86%) https://decomp.me/scratch/q3LKi
  */
-void BuildOTag(void* pOtBuf);
+void gover_build_otag(void* pOtBuf);
 
-extern void func_801401F0(void);
-extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 address);
+extern void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer);
 
 /**
  * @brief Uploads a CLUT palette and pixel data from a CD image buffer into VRAM.
@@ -163,9 +162,9 @@ extern void LoadImageFromCd(s32 cdSector, VramDstCoords* coordinates, u32 addres
  *
  * @see decomp.me (100%) https://decomp.me/scratch/BEM7D
  */
-u32 UploadImageDataToVram(ClutSectionHeader* header, VramDstCoords* coordinates);
+u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordinates);
 
-extern void LoadAudioClip(s32);
+extern void gover_load_audio_clip(s32 audioClipIndex);
 extern s32 D_8011588C;
 extern s32 D_80122988;
 extern u32 D_8003EC90;
