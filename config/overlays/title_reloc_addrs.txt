@@ -1,2 +1,3 @@
 rom:0x3D reloc:MIPS_NONE symbol:D_80102640
 rom:0x71 reloc:MIPS_NONE symbol:D_80102640
+rom:0xA5 reloc:MIPS_NONE symbol:D_80102640
