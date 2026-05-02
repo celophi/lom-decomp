@@ -1,6 +1,5 @@
 #include "title.h"
 
-
 /**
  * decomp.me (100%) https://decomp.me/scratch/mEAXF
  */
@@ -68,4 +67,78 @@ s32 title_func_8004FC74(s32 arg0)
             return 0;
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/rgoAG
+ */
+void func_8004FDBC(void* arg0)
+{
+    RECT rect;
+    u_char* base = (u_char*)arg0;
+    u_char* s0;
+    u_char* s1;
+    volatile int* flag_base;
+
+    DrawSync(0);
+    VSync(0);
+
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = 0x140;
+    rect.h = 0x1D8;
+    ClearImage(&rect, 0, 0, 0);
+
+    s0 = base;
+    ClearOTagR((u_long*)(s0 + 0x40), 0x1000);
+    ClearOTagR((u_long*)(s0 + 0xBD0C), 0x1000);
+    PutDispEnv((DISPENV*)(s0 + 0x4040));
+    func_800157DC();
+
+    flag_base = (volatile int*)0x80100000;
+
+    SetDispMask(1);
+
+    for (;;)
+    {
+        s1 = s0 + 0x40;
+        ClearOTagR((u_long*)s1, 0x1000);
+        *(u_long**)(s0 + 0x80B8) = (u_long*)(s0 + 0x40B8);
+        rand();
+        VSync(1);
+        func_8005041C(s0);
+        func_80050734(s0);
+        func_80050A50(s0);
+        func_80050864();
+
+        if (flag_base[0x990] == 0)
+        {
+            DrawSync(0);
+            func_800157B0(2);
+            VSync(2);
+
+            {
+                void* tmp = base;
+                if (s0 == base)
+                {
+                    tmp = s0 + 0xBCCC;
+                }
+                s0 = tmp;
+            }
+
+            PutDispEnv((DISPENV*)(s0 + 0x4040));
+            PutDrawEnv((DRAWENV*)(s0 + 0x4054));
+            DrawOTag((u_long*)(s1 + 0x3FFC));
+            func_800157DC();
+            cdrom_process_state();
+
+            if (flag_base[0x990] == 0)
+                continue;
+        }
+        break;
+    }
+
+    func_800158E0();
+    VSync(0);
+    DrawSync(0);
 }
