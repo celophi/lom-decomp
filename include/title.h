@@ -2,6 +2,8 @@
 #define _TITLE_H
 
 #include "common.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 
 typedef struct
 {
