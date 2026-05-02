@@ -428,3 +428,14 @@ void func_8005041C(void* arg0)
     }
     arg->unk80B8 = var_t4;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/zxqdP
+ */
+void func_80050718(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    D_80102648.unk0 = arg0;
+    D_80102648.unk4 = arg1;
+    D_80102648.unk8 = arg2;
+    D_80102648.unkC = arg3;
+}
