@@ -14,22 +14,32 @@ typedef struct
     u32 unkC;
 } S_801ED480;
 
-typedef struct {
+typedef struct
+{
     u32 unk0;
     u32 unk4;
     u32 unk8;
 } D_80102658_t;
 
-typedef struct {
+typedef struct
+{
     u32 unk0;
     u32 unk4;
     u32 unk8;
     u32 unkC;
 } D_80102648_t;
 
+typedef struct
+{
+    char pad0[0x40];
+    u32 unk40;
+    char pad1[0x80B8 - 0x44];
+    void* unk80B8;
+} ArgStruct;
+
 extern u8 D_80042FD8[];
 extern s32 D_80042FB4;
-extern u8  D_80102692;
+extern u8 D_80102692;
 extern s32 D_8003EC9C;
 extern s32 D_80102640;
 extern u32 g_previousGameState;
