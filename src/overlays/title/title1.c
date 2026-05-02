@@ -261,14 +261,14 @@ void func_800500CC(void* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/6zUZp
  */
-void func_80050244(void) {
-    u8 *base;
-    u32 *off;
+void func_80050244(void)
+{
+    u8* base;
+    u32* off;
 
-    if (((u32)(g_previousGameState - 2) >= 2U) &&
-        (g_previousGameState != 6) &&
-        (g_previousGameState != 7) &&
-        (g_previousGameState != 5)) {
+    if (((u32)(g_previousGameState - 2) >= 2U) && (g_previousGameState != 6) && (g_previousGameState != 7) &&
+        (g_previousGameState != 5))
+    {
 
         D_80102668 = 0x8013C000;
         cdrom_queue_read(0x15, (void*)0x80180000);
@@ -282,4 +282,22 @@ void func_80050244(void) {
         func_80021FFC(D_80102668);
         func_80022AE8(base + off[1], 1);
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/mBQ6i
+ */
+void func_80050300(s32 arg0)
+{
+    u32* off;
+    u8* base;
+
+    cdrom_queue_read((arg0 + 0x17) & 0xFFFF, (void*)0x80180000);
+    cdrom_wait_queue_empty();
+
+    off = (u32*)0x80180004;
+    base = (u8*)0x80180000;
+
+    bcopy(base + off[0], (unsigned char*)&D_8003ECA0, (int)(off[1] - off[0]));
+    func_80022AE8((s32)(base + off[1]), 1);
 }
