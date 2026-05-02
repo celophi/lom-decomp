@@ -301,3 +301,11 @@ void func_80050300(s32 arg0)
     bcopy(base + off[0], (unsigned char*)&D_8003ECA0, (int)(off[1] - off[0]));
     func_80022AE8((s32)(base + off[1]), 1);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/1cta3
+ */
+void func_80050374(void)
+{
+    func_80022068(0);
+}
