@@ -635,4 +635,4 @@ g_cdResource176                     = 0x801EDF18;
 
 // Title
 title_func_8004FC74 = 0x8004FC74;
-D_80102640 = 0x80102640; // ignore:true
+D_80102640 = 0x80102640;
