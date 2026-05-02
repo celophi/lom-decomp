@@ -326,3 +326,18 @@ void func_800503C4(s32 arg0, s32 arg1)
 {
     func_8002216C(arg0, 0, arg1, 0x7F);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/m80gj
+ */
+void func_800503EC(void)
+{
+    D_80102658.unk0 = 0;
+    D_80102658.unk4 = 0;
+    D_80102658.unk8 = 0;
+
+    D_80102648.unk0 = 0;
+    D_80102648.unk4 = 0;
+    D_80102648.unk8 = 0;
+    D_80102648.unkC = 0;
+}
