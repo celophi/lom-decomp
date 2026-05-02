@@ -23,4 +23,7 @@ extern u32 g_previousGameState;
 extern s32 D_80102668;
 extern unsigned char D_8003ECA0;
 
+extern void FUN_8002279c(undefined4 param_1, u_int param_2);
+extern void func_80022040(s32 arg0);
+
 #endif

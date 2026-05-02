@@ -309,3 +309,12 @@ void func_80050374(void)
 {
     func_80022068(0);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/xYPkq
+ */
+void func_80050394(void)
+{
+    func_80022040(&D_8003ECA0);
+    FUN_8002279c(0, 0x7F);
+}
