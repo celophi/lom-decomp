@@ -428,3 +428,113 @@ void func_8005041C(void* arg0)
     }
     arg->unk80B8 = var_t4;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/zxqdP
+ */
+void func_80050718(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    D_80102648.unk0 = arg0;
+    D_80102648.unk4 = arg1;
+    D_80102648.unk8 = arg2;
+    D_80102648.unkC = arg3;
+}
+
+/**
+ * decomp.me (94.41%) https://decomp.me/scratch/Lluk6
+ */
+void func_80050734(void* arg0)
+{
+    u8* base = (u8*)arg0;
+    unsigned int new_var;
+    u8* t3;
+    u32* a2;
+    s32 t0;
+    s32 t1;
+    s32 a3;
+    u8* a1;
+    s32 temp_v0;
+    s32 temp_v1;
+
+    a2 = *((u32**)(base + 0x80B8));
+
+    t3 = base + 0x40;
+
+    t0 = 0;
+
+    t1 = 0x140;
+
+    a3 = 0x40;
+
+    while (t0 < 5)
+    {
+        temp_v1 = t1 & 0x3FF;
+
+        t1 += 0x40;
+
+        *((short*)((((u8*)a2) + 0x0E) + 0x12)) = (short)a3;
+        *((short*)((((u8*)a2) + 0x0E) + 2)) = (short)a3;
+        a3 += 0x40;
+        temp_v0 = t0 << 6;
+        t0++;
+        *((short*)((((u8*)a2) + 0x0E) + 0x0A)) = (short)temp_v0;
+        *((short*)((((u8*)a2) + 0x0E) - 6)) = (short)temp_v0;
+        (((u8*)a2) + 0x0E)[-0x0B] = 9;
+        (((u8*)a2) + 0x0E)[-7] = 0x2C;
+        (((u8*)a2) + 0x0E)[-8] = 0x80;
+        (((u8*)a2) + 0x0E)[-9] = 0x80;
+        (((u8*)a2) + 0x0E)[-0x0A] = 0x80;
+        *((short*)((((u8*)a2) + 0x0E) + 4)) = 0;
+        *((short*)((((u8*)a2) + 0x0E) - 4)) = 0;
+        *((short*)((((u8*)a2) + 0x0E) + 0x14)) = 0xE0;
+        *((short*)((((u8*)a2) + 0x0E) + 0x0C)) = 0xE0;
+        (((u8*)a2) + 0x0E)[0x0E] = 0;
+        (((u8*)a2) + 0x0E)[-2] = 0;
+        (((u8*)a2) + 0x0E)[0x16] = 0x40;
+        (((u8*)a2) + 0x0E)[6] = 0x40;
+        (((u8*)a2) + 0x0E)[7] = 8;
+        (((u8*)a2) + 0x0E)[-1] = 8;
+        (((u8*)a2) + 0x0E)[0x17] = 0xE8;
+        (((u8*)a2) + 0x0E)[0x0F] = 0xE8;
+        *((short*)((((u8*)a2) + 0x0E) + 8)) = (short)((temp_v1 >> 6) | 0x110);
+        *((short*)((((u8*)a2) + 0x0E) + 0)) = 0x7840;
+        new_var = ((u32)a2) & 0xFFFFFF;
+        a1 += 0x28;
+        *a2 = ((*a2) & 0xFF000000) | ((*((u32*)(t3 + 0x3FFC))) & 0xFFFFFF);
+        *((u32*)(t3 + 0x3FFC)) = ((*((u32*)(t3 + 0x3FFC))) & 0xFF000000) | new_var;
+        a2 = (u32*)(((u8*)a2) + 0x28);
+    }
+    *((u32**)(base + 0x80B8)) = a2;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/vmcmD
+ */
+void func_80050864(void)
+{
+    s32 op = 0x7C;
+    func_80050FBC();
+    if (D_801026A0 == 0)
+    {
+        D_80102640 = 1;
+        D_80102692 = 0xFF;
+        return;
+    }
+    D_801026A0 -= 1;
+    if (D_8010269C & 0xA20)
+    {
+        func_800503C4(op, 0x80);
+        D_80102640 = 1;
+        return;
+    }
+    if (D_8010269C & 0x9000)
+    {
+        func_8005099C();
+        func_800503C4(0x7D, 0x80);
+    }
+    else if (D_8010269C & 0x6100)
+    {
+        func_8005091C();
+        func_800503C4(0x7D, 0x80);
+    }
+}
