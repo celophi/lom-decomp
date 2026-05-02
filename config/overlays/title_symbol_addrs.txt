@@ -1,0 +1,638 @@
+// Globals
+g_overlayLoadAddress                = 0x800102AC;
+
+Main                                = 0x80010D58;
+GFX_Transition                      = 0x80011358;
+FUN_8001160c                        = 0x8001160C;
+FUN_80011638                        = 0x80011638;
+FUN_800116d8                        = 0x800116D8;
+
+// cdrom.c
+cdrom_init                          = 0x80011710;
+cdrom_stop                          = 0x800118DC;
+cdrom_stream                        = 0x800119C0;
+cdrom_stream_chunked                = 0x80011BF4;
+cdrom_queue_command                 = 0x800120A0;
+cdrom_process_state                 = 0x800122C0;
+cdrom_recover                       = 0x80012B48;
+cdrom_verify_recovery               = 0x80012D74;
+cdrom_complete_command              = 0x80012E88;
+cdrom_handle_recovery_sync          = 0x800130A8;
+cdrom_handle_ready_intr             = 0x80013584;
+cdrom_process_sector                = 0x80013744;
+cdrom_run_command                   = 0x80013A00;
+cdrom_verify_disc                   = 0x80013D74;
+cdrom_wait_queue_empty              = 0x80013F2C;
+cdrom_handle_sync_error             = 0x80013F64;
+cdrom_set_audio_volume              = 0x80013FD0;
+cdrom_reset                         = 0x80014014;
+cdrom_can_queue_resource            = 0x800140D4;
+cdrom_load_resource_table           = 0x80014140;
+cdrom_queue_read                    = 0x800141EC;
+cdrom_queue_read_with_callback      = 0x80014218;
+cdrom_queue_seek                    = 0x80014244;
+cdrom_get_resource_size             = 0x80014270;
+cdrom_get_error_status              = 0x80014290;
+cdrom_restore_callbacks             = 0x800142F8;
+cdrom_enter_recovery_mode           = 0x800143C0;
+func_80014434                       = 0x80014434;
+cdrom_decompress_data               = 0x80014448;
+cdrom_handle_stream_data            = 0x80014888;
+cdrom_decompress_buffer             = 0x80014A8C;
+cdrom_clear_data_ready              = 0x80014AD0;
+
+// Uncategorized
+InitializeControllers               = 0x80014ADC;
+InitVSyncController                 = 0x80015770;
+func_800157DC                       = 0x800157DC;
+func_800158E0                       = 0x800158E0;
+FUN_80015c18                        = 0x80015C18;
+FUN_80015c28                        = 0x80015C28;
+FUN_80015c38                        = 0x80015C38;
+FUN_80015c58                        = 0x80015C58;
+
+// src/psyq/libcard/C112
+_bu_init                            = 0x8001676C;
+
+// psyq/libapi/C114
+_96_remove                          = 0x80016784;
+
+// Uncategorized
+SetMem                              = 0x8001679C;
+
+// psyq/libapi/A81
+Krom2RawAdd                         = 0x8001687C;
+
+// Uncategorized
+ChangeClearPAD                      = 0x8001688C;
+SetConf                             = 0x8001689C;
+
+// Other PSY-Q
+bcopy                               = 0x80016E7C;
+bzero                               = 0x80016EBC;
+memcpy                              = 0x80016EEC;
+memset                              = 0x80016F2C;
+
+// psyq/libc2/rand
+rand                                = 0x80016F5C;
+srand                               = 0x80016F8C;
+
+// psyq/libc2/strcat
+strcat                              = 0x80016F9C;
+
+// psyq/libc2/strcmp
+strcmp                              = 0x8001704C;
+
+// psyq/libc2/strcpy
+strcpy                              = 0x800170BC;
+
+// psyq/libc2/strlen
+strlen                              = 0x8001710C;
+
+// psyq/libc2/strncmp
+strncmp                             = 0x8001714C;
+
+// psyq/libc2/strncpy
+strncpy                             = 0x800171CC;
+
+// psyq/libc2/exit
+exit                                = 0x8001723C;
+
+// psyq/libcard/C171
+_card_info                          = 0x8001724C;
+
+// psyq/libcard/C172
+_card_load                          = 0x8001725C;
+
+// psyq/libcard/A78
+_card_write                         = 0x8001726C;
+
+// psyq/libcard/A79
+_card_read                          = 0x8001727C;
+
+// psyq/libcard/A80
+_new_card                           = 0x8001728C;
+
+// psyq/libcard/A93
+_card_wait                          = 0x8001729C;
+
+// psyq/libcard/CARD
+_card_clear                         = 0x800172AC;
+
+// psyq/libcard/INIT
+InitCARD                            = 0x800172EC;
+StartCARD                           = 0x8001737C;
+StopCARD                            = 0x800173C4;
+
+// psyq/libapi/PAD
+SetInitPadFlag                      = 0x800173EC;
+ReadInitPadFlag                     = 0x800173F8;
+PAD_init                            = 0x80017408;
+InitPAD                             = 0x80017498;
+StartPAD                            = 0x80017528;
+StopPAD                             = 0x80017558;
+PAD_OBJ_1A4                         = 0x80017590;
+PAD_OBJ_21C                         = 0x80017608;
+PAD_OBJ_254                         = 0x80017640;
+PAD_OBJ_2BC                         = 0x800176A8;
+
+// psyq/libapi/A18
+InitPAD2                            = 0x800176EC;
+
+// psyq/libapi/A19
+StartPAD2                           = 0x800176FC;
+
+// psyq/libapi/A20
+StopPAD2                            = 0x8001770C;
+
+// psyq/libapi/A21
+PAD_init2                           = 0x8001771C;
+
+// psyq/libapi/L02
+SysEnqIntRP                         = 0x8001772C;
+
+// psyq/libapi/L03
+SysDeqIntRP                         = 0x8001773C;
+
+// psyq/libapi/PATCH
+EnablePAD                           = 0x8001774C;
+DisablePAD                          = 0x80017760;
+_patch_pad                          = 0x80017774;
+
+// psyq/libapi/C68
+FlushCache                          = 0x800177EC;
+
+// psyq/libapi/CHCLRPAD
+_remove_ChgclrPAD                   = 0x800177FC;
+
+// psyq/libcard/A74
+InitCARD2                           = 0x8001786C;
+
+// psyq/libcard/A75
+StartCARD2                          = 0x8001787C;
+
+// psyq/libcard/A76
+StopCARD2                           = 0x8001788C;
+
+// psyq/libcard/PATCH
+_patch_card_info                    = 0x8001789C;
+PATCH_OBJ_44                        = 0x800178E0;
+PATCH_OBJ_84                        = 0x8001790C;
+PATCH_OBJ_B4                        = 0x80017950;
+_patch_card                         = 0x80017978;
+_patch_card2                        = 0x80017A0C;
+_copy_memcard_patch                 = 0x80017A7C;
+
+// psyq/libcard/END
+_ExitCard                           = 0x80017ABC;
+
+// psyq/libcard/FORMAT
+_card_format                        = 0x80017B3C;
+
+// psyq/libcard/A92
+_card_status                        = 0x80017EFC;
+
+// psyq/libpress/PRESS
+DecDCTReset                         = 0x80017F0C;
+DecDCTGetEnv                        = 0x80017F40;
+DecDCTPutEnv                        = 0x80017FCC;
+DecDCTin                            = 0x80018064;
+DecDCTout                           = 0x800180E0;
+DecDCTinSync                        = 0x80018100;
+DecDCToutSync                       = 0x8001813C;
+DecDCTinCallback                    = 0x80018184;
+DecDCToutCallback                   = 0x800181A8;
+MDEC_reset                          = 0x800181CC;
+MDEC_in                             = 0x800182BC;
+MDEC_out                            = 0x8001834C;
+MDEC_in_sync                        = 0x800183D8;
+MDEC_out_sync                       = 0x8001846C;
+MDEC_register                       = 0x80018500;
+MDEC_timeout                        = 0x80018518;
+
+// psyq/libc2/PRINTF
+printf                              = 0x8001859C;
+
+// psyq/libc2/PRNT
+prnt                                = 0x800185DC;
+
+// psyq/libc2/CTYPE
+toupper                             = 0x80018C7C;
+tolower                             = 0x80018CB0;
+
+// psyq/libc2/MEMCHR
+memchr                              = 0x80018CEC;
+
+// psyq/libc2/PUTCHAR
+_putchar                            = 0x80018D3C;
+_putchar_flash                      = 0x80018E38;
+putchar                             = 0x80018E74;
+
+// psyq/libpress/VLC_C
+DecDCTvlcSize2                      = 0x80018F9C;
+DecDCTvlc2                          = 0x80018FCC;
+
+// psyq/libpress/BUILD
+DecDCTvlcBuild                      = 0x8001931C;
+
+// psyq/libgpu/SYS
+ResetGraph                          = 0x8001940C;
+SetGraphDebug                       = 0x80019580;
+SetGraphQueue                       = 0x800195DC;
+GetGraphDebug                       = 0x80019680;
+DrawSyncCallback                    = 0x80019690;
+SetDispMask                         = 0x800196F0;
+DrawSync                            = 0x80019788;
+SYS_OBJ_3E4                         = 0x800197F0;
+ClearImage                          = 0x8001990C;
+ClearImage2                         = 0x8001999C;
+LoadImage                           = 0x80019A34;
+StoreImage                          = 0x80019A94;
+MoveImage                           = 0x80019AF4;
+ClearOTag                           = 0x80019BAC;
+ClearOTagR                          = 0x80019C74;
+DrawPrim                            = 0x80019D20;
+DrawOTag                            = 0x80019D7C;
+PutDrawEnv                          = 0x80019DEC;
+DrawOTagEnv                         = 0x80019EAC;
+GetDrawEnv                          = 0x80019F84;
+PutDispEnv                          = 0x80019FB8;
+GetDispEnv                          = 0x8001A4B0;
+GetODE                              = 0x8001A4E4;
+SetDrawArea                         = 0x8001A514;
+SetDrawOffset                       = 0x8001A594;
+SetDrawEnv                          = 0x8001A5D4;
+SYS_OBJ_13C0                        = 0x8001A7CC;
+SYS_OBJ_1630                        = 0x8001AA3C;
+SYS_OBJ_1650                        = 0x8001AA5C;
+SYS_OBJ_16E8                        = 0x8001AAF4;
+SYS_OBJ_1780                        = 0x8001AB8C;
+SYS_OBJ_179C                        = 0x8001ABA8;
+SYS_OBJ_181C                        = 0x8001AC28;
+SYS_OBJ_1834                        = 0x8001AC40;
+SYS_OBJ_1914                        = 0x8001AD20;
+SYS_OBJ_1B44                        = 0x8001AF50;
+SYS_OBJ_1D80                        = 0x8001B18C;
+SYS_OBJ_2000                        = 0x8001B40C;
+SYS_OBJ_2024                        = 0x8001B430;
+SYS_OBJ_2038                        = 0x8001B444;
+SYS_OBJ_2078                        = 0x8001B484;
+SYS_OBJ_20C0                        = 0x8001B4CC;
+SYS_OBJ_20F0                        = 0x8001B4FC;
+SYS_OBJ_2114                        = 0x8001B520;
+SYS_OBJ_23C4                        = 0x8001B7D0;
+SYS_OBJ_2624                        = 0x8001BA30;
+SYS_OBJ_2774                        = 0x8001BB80;
+SYS_OBJ_28B0                        = 0x8001BCBC;
+SYS_OBJ_28E4                        = 0x8001BCF0;
+SYS_OBJ_2A28                        = 0x8001BE34;
+LoadImage2                          = 0x8001BED4;
+StoreImage2                         = 0x8001BFC0;
+MoveImage2                          = 0x8001C0AC;
+DrawOTag2                           = 0x8001C1F0;
+_GPU_ResetCallback                  = 0x8001C2EC;
+SYS_OBJ_2F08                        = 0x8001C314;
+
+// psyq/libapi/C73
+GPU_cw                              = 0x8001C33C;
+
+// psyq/libgpu/BREAK
+BreakDraw                           = 0x8001C34C;
+IsIdleGPU                           = 0x8001C3E0;
+ContinueDraw                        = 0x8001C440;
+
+// psyq/libgpu/EXT
+SetDefDrawEnv                       = 0x8001C56C;
+SetDefDispEnv                       = 0x8001C62C;
+
+// psyq/libgpu/P17
+SetPolyFT4                          = 0x8001C66C;
+
+// psyq/libgpu/P18
+SetPolyG4                           = 0x8001C68C;
+
+// psyq/libgte/GEO_00
+rsin                                = 0x8001C6AC;
+sin_1                               = 0x8001C6E8;
+
+// psyq/libgte/GEO_01
+rcos                                = 0x8001C77C;
+
+// psyq/libgte/COR_02
+ccos                                = 0x8001C81C;
+
+// psyq/libgte/COR_01
+csincos                             = 0x8001C8EC;
+
+// psyq/libgte/COR_03
+csin_1                              = 0x8001CA0C;
+csin                                = 0x8001CAAC;
+MSC00_OBJ_0                         = 0x8001CBEC;
+
+// psyq/libgte/MSC00
+InitGeom                            = 0x8001CBF4;
+
+// psyq/libgte/MSC01
+SquareRoot0                         = 0x8001CC7C;
+
+// psyq/libgte/MSC02
+InvSquareRoot                       = 0x8001CD0C;
+VectorNormalS                       = 0x8001CD98;
+MSC02_OBJ_100                       = 0x8001CE0C;
+MatrixNormal                        = 0x8001CECC;
+
+// psyq/libgte/MTX_003
+CompMatrix                          = 0x8001CFBC;
+
+// psyq/libgte/MTX_004
+ApplyMatrixLV                       = 0x8001D11C;
+
+// psyq/libgte/MTX_006
+PushMatrix                          = 0x8001D27C;
+PopMatrix                           = 0x8001D320;
+
+// psyq/libgte/MTX_07
+TransMatrix                         = 0x8001D3CC;
+
+// psyq/libgte/MTX_08
+ScaleMatrix                         = 0x8001D3FC;
+
+// psyq/libgte/MTX_09
+SetRotMatrix                        = 0x8001D53C;
+
+// psyq/libgte/MTX_12
+SetTransMatrix                      = 0x8001D56C;
+
+// psyq/libgte/REG12
+SetGeomOffset                       = 0x8001D58C;
+
+// psyq/libgte/REG13
+SetGeomScreen                       = 0x8001D5AC;
+
+// psyq/libgte/SMP_05
+NormalClip                          = 0x8001D5BC;
+
+// psyq/libgte/FGO_01
+RotMatrix                           = 0x8001D5EC;
+
+// psyq/libgte/FGO_04
+RotMatrixX                          = 0x8001D87C;
+
+// psyq/libgte/FGO_05
+RotMatrixY                          = 0x8001DA1C;
+
+// psyq/libgte/FGO_06
+RotMatrixZ                          = 0x8001DBBC;
+
+// psyq/libgte/RMAT_01
+RotMatrix_gte                       = 0x8001DD5C;
+
+// psyq/libgte/RATAN
+ratan2                              = 0x8001DF6C;
+
+// psyq/libgte/PATCHGTE
+_patch_gte                          = 0x8001E0EC;
+PATCHGTE_OBJ_AC                     = 0x8001E198;
+
+// psyq/libcd/EVENT
+CdInit                              = 0x8001E1CC;
+EVENT_OBJ_90                        = 0x8001E25C;
+EVENT_OBJ_CC                        = 0x8001E298;
+EVENT_OBJ_F4                        = 0x8001E2C0;
+EVENT_OBJ_11C                       = 0x8001E2E8;
+
+// psyq/libapi/A07
+DeliverEvent                        = 0x8001E31C;
+
+// psyq/libcd/SYS.c
+CdStatus                            = 0x8001E32C;
+CdMode                              = 0x8001E33C;
+CdLastCom                           = 0x8001E34C;
+CdLastPos                           = 0x8001E35C;
+CdReset                             = 0x8001E368;
+CdFlush                             = 0x8001E3D4;
+CdSetDebug                          = 0x8001E3F4;
+CdComstr                            = 0x8001E408;
+CdIntstr                            = 0x8001E43C;
+CdSync                              = 0x8001E470;
+CdReady                             = 0x8001E490;
+CdSyncCallback                      = 0x8001E4B0;
+CdReadyCallback                     = 0x8001E4C4;
+CdControl                           = 0x8001E4D8;
+CdControlF                          = 0x8001E614;
+CdControlB                          = 0x8001E748;
+CdMix                               = 0x8001E894;
+CdGetSector                         = 0x8001E8B4;
+CdGetSector2                        = 0x8001E8D4;
+CdDataCallback                      = 0x8001E8F4;
+CdDataSync                          = 0x8001E918;
+
+// psyq/libcd/BIOS
+BIOS_OBJ_0                          = 0x8001E93C;
+CD_sync                             = 0x8001EEA0;
+CD_ready                            = 0x8001F120;
+CD_cw                               = 0x8001F3E8;
+CD_vol                              = 0x8001F7F4;
+CD_flush                            = 0x8001F87C;
+CD_initvol                          = 0x8001F950;
+CD_initintr                         = 0x8001FA40;
+CD_init                             = 0x8001FA8C;
+CD_datasync                         = 0x8001FC6C;
+CD_getsector                        = 0x8001FDD4;
+CD_getsector2                       = 0x8001FED4;
+CD_set_test_parmnum                 = 0x8001FFC0;
+BIOS_OBJ_1690                       = 0x8001FFCC;
+
+// psyq/libc2/PUTS
+puts                                = 0x800200AC;
+
+// psyq/libcd/TYPE
+CdDiskReady                         = 0x8002010C;
+CdGetDiskType                       = 0x80020248;
+
+// psyq/libc/S_002
+CdIntToPos                          = 0x800203BC;
+CdPosToInt                          = 0x800204C0;
+
+// psyq/libetc/VSYNC
+VSync                               = 0x8002054C;
+VSYNC_OBJ_178                       = 0x800206C4;
+
+// psyq/libapi/L10
+ChangeClearRCnt                     = 0x8002075C;
+
+// psyq/libetc/INTR.c
+ResetCallback                       = 0x8002076C;
+InterruptCallback                   = 0x8002079C;
+DMACallback                         = 0x800207CC;
+VSyncCallback                       = 0x800207FC;
+VSyncCallbacks                      = 0x80020830;
+StopCallback                        = 0x80020860;
+RestartCallback                     = 0x80020890;
+CheckCallback                       = 0x800208C0;
+GetIntrMask                         = 0x800208D0;
+SetIntrMask                         = 0x800208E8;
+INTR_OBJ_194                        = 0x80020900;
+INTR_OBJ_26C                        = 0x800209D8;
+INTR_OBJ_43C                        = 0x80020BA8;
+INTR_OBJ_584                        = 0x80020CF0;
+INTR_OBJ_624                        = 0x80020D90;
+INTR_OBJ_69C                        = 0x80020E08;
+
+// psyq/libapi/A23
+ReturnFromException                 = 0x80020E2C;
+
+// psyq/libapi/A24
+ResetEntryInt                       = 0x80020E3C;
+
+// psyq/libapi/A25
+HookEntryInt                        = 0x80020E4C;
+
+// psyq/libc2/SETJMP
+setjmp                              = 0x80020E5C;
+longjmp                             = 0x80020E98;
+
+// psyq/libetc/INTR_VB
+startIntrVSync                      = 0x80020EDC;
+INTR_VB_OBJ_58                      = 0x80020F34;
+INTR_VB_OBJ_C4                      = 0x80020FA0;
+INTR_VB_OBJ_F0                      = 0x80020FCC;
+
+// psyq/libetc/INTR_DMA
+startIntrDMA                        = 0x80020FFC;
+INTR_DMA_OBJ_4C                     = 0x80021048;
+INTR_DMA_OBJ_1CC                    = 0x800211C8;
+INTR_DMA_OBJ_278                    = 0x80021274;
+
+// psyq/libetc/VMODE
+SetVideoMode                        = 0x8002129C;
+GetVideoMode                        = 0x800212B0;
+
+// psyq/libspu/S_I
+SpuInit                             = 0x800212CC;
+
+// psyq/libspu/S_INI
+_SpuInit                            = 0x800212EC;
+SpuStart                            = 0x800213D4;
+
+// psyq/libspu/SPU
+_spu_init                           = 0x8002144C;
+SPU_OBJ_280                         = 0x800216CC;
+_spu_FiDMA                          = 0x8002188C;
+_spu_Fr_                            = 0x80021948;
+_spu_t                              = 0x800219F0;
+_spu_Fw                             = 0x80021C70;
+_spu_Fr                             = 0x80021CF4;
+_spu_FsetRXX                        = 0x80021D58;
+_spu_FsetRXXa                       = 0x80021D9C;
+_spu_FgetRXXa                       = 0x80021E40;
+_spu_FsetPCR                        = 0x80021E7C;
+SPU_OBJ_A88                         = 0x80021ED4;
+SPU_OBJ_AB0                         = 0x80021EFC;
+_spu_Fw1ts                          = 0x80021F24;
+
+// psyq/libspu/S_DCB
+_SpuDataCallback                    = 0x80021F8C;
+
+// Uncategorized
+FUN_80021fbc                        = 0x80021FBC;
+FUN_80022400                        = 0x80022400;
+FUN_8002279c                        = 0x8002279C;
+FUN_80022aa8                        = 0x80022AA8;
+FUN_80022ac8                        = 0x80022AC8;
+FUN_80023010                        = 0x80023010;
+
+// psyq/libspu/S_SI
+SpuSetIRQ                           = 0x800233C8;
+
+// psyq/libspu/S_SIA
+SpuSetIRQAddr                       = 0x80023508;
+
+// psyq/libspu/S_STSA
+SpuSetTransferStartAddr             = 0x80023548;
+
+// psyq/libapi/A13
+DisableEvent                        = 0x80023C80;
+
+// psyq/libapi/A32
+UnDeliverEvent                      = 0x80023C90;
+
+// psyq/libapi/COUNTER
+SetRCnt                             = 0x80023CA0;
+GetRCnt                             = 0x80023D3C;
+StartRCnt                           = 0x80023D74;
+StopRCnt                            = 0x80023DA4;
+ResetRCnt                           = 0x80023DD8;
+
+// src/psyq/libspu/S_Q
+SpuQuit                             = 0x80023E10;
+
+// src/psyq/libspu/S_M_INIT
+SpuInitMalloc                       = 0x80023E90;
+
+// src/psyq/libspu/S_SR
+SpuSetReverb                        = 0x80023EF0;
+
+// src/psyq/libspu/S_M_UTIL
+_SpuIsInAllocateArea                = 0x80023FC0;
+_SpuIsInAllocateArea_               = 0x80024040;
+
+// src/psyq/libspu/S_SIC
+SpuSetIRQCallback                   = 0x800240D0;
+
+// src/psyq/libspu/S_CB
+_SpuCallback                        = 0x80024110;
+
+// src/psyq/libspu/S_R
+SpuRead                             = 0x80024140;
+
+// src/psyq/libspu/S_W
+SpuWrite                            = 0x800241A0;
+
+// src/psyq/libspu/S_STM
+SpuSetTransferMode                  = 0x80024200;
+
+// src/psyq/libspu/S_STC
+SpuSetTransferCallback              = 0x80024230;
+
+// Uncategorized
+__main                              = 0x8002E850;
+McxStartCom                         = 0x800319D8;
+
+// Globals
+g_gameState                         = 0x8003522C;
+g_DiscValidationId                  = 0x80035230;
+g_GfxDoubleBuffer                   = 0x80042CA0;
+g_GfxPrimaryFrame                   = 0x80042E20;
+g_previousGameState                 = 0x80042FB0;
+g_gameDataBasePtr                   = 0x800435C8;
+
+// Uncategorized
+FUN_80060814                        = 0x80060814;
+
+// Uncategorized
+gover_show_screen                   = 0x80140004;
+movie_play                          = 0x80140018;
+FUN_80140d48                        = 0x80140D48;
+
+// Globals
+g_cdAudioReady                      = 0x801ED591;
+g_cdSystem                          = 0x801ED800;
+g_cdStatusByte3                     = 0x801ED802;
+g_cdAudioEnabled                    = 0x801ED804;
+g_playbackState                     = 0x801ED805;
+g_cdPendingQueueCount               = 0x801ED806;
+g_initState                         = 0x801ED815;
+g_cdReadRemainingBytes              = 0x801ED828;
+g_cdVSyncTimestamp                  = 0x801ED94C;
+g_cdSetModeArg                      = 0x801ED950;
+g_cdStatusByte                      = 0x801ED960;
+g_cdSyncCallbackResult              = 0x801ED968;
+g_cdReadyCallbackResult             = 0x801ED96C;
+g_defaultCdResource                 = 0x801ED990;
+g_SKCDPOSE_DAT                      = 0x801ED998;
+g_cdResource176                     = 0x801EDF18;
+
+// Title
+title_func_8004FC74 = 0x8004FC74;
+D_80102640 = 0x80102640; // ignore:true
