@@ -195,3 +195,65 @@ s32 func_8004FF48(void* arg0)
     VSync(0);
     return D_80102640;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/evJur
+ */
+void func_800500CC(void* arg0)
+{
+    RECT rect;
+    unsigned char* base = (unsigned char*)arg0;
+    unsigned char* hw = (unsigned char*)0x801ED600; /* hardware registers */
+    unsigned char* base2;                           /* base + 0x8000 */
+
+    /* Clear hardware register bytes */
+    hw[0x13F] = 0;
+    hw[0x91] = 0;
+    hw[0x140] = 0;
+    hw[0x92] = 0;
+
+    func_8002237C(0);
+    SetGeomScreen(0x5DC);
+    SetGeomOffset(0xA0, 0x78);
+
+    /* Write shorts at offsets 0x40B0..0x40B6 */
+    *(short*)(base + 0x40B0) = 0;
+    *(short*)(base + 0x40B2) = 0;
+    *(short*)(base + 0x40B4) = 0x140;
+    *(short*)(base + 0x40B6) = 0xF0;
+
+    /* Secondary base (s0 = arg0 + 0x8000) */
+    base2 = base + 0x8000;
+    *(short*)(base2 + 0x7D7C) = 0;
+    *(short*)(base2 + 0x7D7E) = 0xE8;
+    *(short*)(base2 + 0x7D80) = 0x140;
+    *(short*)(base2 + 0x7D82) = 0xF0;
+
+    DrawSync(0);
+    VSync(0);
+
+    /* Clear a 0x400×0x200 rectangle */
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = 0x400;
+    rect.h = 0x200;
+    ClearImage(&rect, 0, 0, 0);
+
+    /* Set display environments */
+    SetDefDispEnv((DISPENV*)(base + 0x4040), 0, 0, 0x140, 0xF0);
+    SetDefDispEnv((DISPENV*)(base + 0xFD0C), 0, 0xE8, 0x140, 0xF0);
+
+    /* Set drawing environments */
+    SetDefDrawEnv((DRAWENV*)(base + 0x4054), 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv((DRAWENV*)(base + 0xFD20), 0, 8, 0x140, 0xE0);
+
+    /* Clear two more bytes */
+    *(base + 0xFD36) = 0; /* was ctx->unkFD36 */
+    *(base + 0x406A) = 0; /* was ctx->unk406A */
+
+    func_800503EC();
+    func_80050718(0x100, 0x100, 0x100, 0x14);
+    func_80050CAC();
+
+    D_80102640 = 0;
+}
