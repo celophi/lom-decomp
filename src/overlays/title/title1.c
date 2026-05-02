@@ -4,7 +4,7 @@
 /**
  * decomp.me (100%) https://decomp.me/scratch/mEAXF
  */
-s32 func_8004FC70(s32 arg0)
+s32 title_func_8004FC74(s32 arg0)
 {
     s32 pad;
     S_801ED480* ptr = (S_801ED480*)0x801ED480;

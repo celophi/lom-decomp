@@ -634,4 +634,5 @@ g_SKCDPOSE_DAT                      = 0x801ED998;
 g_cdResource176                     = 0x801EDF18;
 
 // Title
+title_func_8004FC74 = 0x8004FC74;
 D_80102640 = 0x80102640; // ignore:true
