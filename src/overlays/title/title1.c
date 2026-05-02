@@ -318,3 +318,11 @@ void func_80050394(void)
     func_80022040(&D_8003ECA0);
     FUN_8002279c(0, 0x7F);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ZuKeL
+ */
+void func_800503C4(s32 arg0, s32 arg1)
+{
+    func_8002216C(arg0, 0, arg1, 0x7F);
+}

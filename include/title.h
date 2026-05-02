@@ -25,5 +25,6 @@ extern unsigned char D_8003ECA0;
 
 extern void FUN_8002279c(undefined4 param_1, u_int param_2);
 extern void func_80022040(s32 arg0);
+extern void func_8002216C(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 
 #endif
