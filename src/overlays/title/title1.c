@@ -78,7 +78,6 @@ void func_8004FDBC(void* arg0)
     u_char* base = (u_char*)arg0;
     u_char* s0;
     u_char* s1;
-    volatile int* flag_base;
 
     DrawSync(0);
     VSync(0);
@@ -95,8 +94,6 @@ void func_8004FDBC(void* arg0)
     PutDispEnv((DISPENV*)(s0 + 0x4040));
     func_800157DC();
 
-    flag_base = (volatile int*)0x80100000;
-
     SetDispMask(1);
 
     for (;;)
@@ -111,7 +108,7 @@ void func_8004FDBC(void* arg0)
         func_80050A50(s0);
         func_80050864();
 
-        if (flag_base[0x990] == 0)
+        if (D_80102640 == 0)
         {
             DrawSync(0);
             func_800157B0(2);
@@ -132,7 +129,7 @@ void func_8004FDBC(void* arg0)
             func_800157DC();
             cdrom_process_state();
 
-            if (flag_base[0x990] == 0)
+            if (D_80102640 == 0)
                 continue;
         }
         break;
