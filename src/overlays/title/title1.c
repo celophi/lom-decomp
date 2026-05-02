@@ -257,3 +257,87 @@ void func_800500CC(void* arg0)
 
     D_80102640 = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/6zUZp
+ */
+void func_80050244(void)
+{
+    u8* base;
+    u32* off;
+
+    if (((u32)(g_previousGameState - 2) >= 2U) && (g_previousGameState != 6) && (g_previousGameState != 7) &&
+        (g_previousGameState != 5))
+    {
+
+        D_80102668 = 0x8013C000;
+        cdrom_queue_read(0x15, (void*)0x80180000);
+        cdrom_wait_queue_empty();
+
+        base = (u8*)0x80180000;
+        off = (u32*)0x80180004;
+
+        bcopy(base + off[0], (u8*)D_80102668, (int)(off[1] - off[0]));
+
+        func_80021FFC(D_80102668);
+        func_80022AE8(base + off[1], 1);
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/mBQ6i
+ */
+void func_80050300(s32 arg0)
+{
+    u32* off;
+    u8* base;
+
+    cdrom_queue_read((arg0 + 0x17) & 0xFFFF, (void*)0x80180000);
+    cdrom_wait_queue_empty();
+
+    off = (u32*)0x80180004;
+    base = (u8*)0x80180000;
+
+    bcopy(base + off[0], (unsigned char*)&D_8003ECA0, (int)(off[1] - off[0]));
+    func_80022AE8((s32)(base + off[1]), 1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/1cta3
+ */
+void func_80050374(void)
+{
+    func_80022068(0);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/xYPkq
+ */
+void func_80050394(void)
+{
+    func_80022040(&D_8003ECA0);
+    FUN_8002279c(0, 0x7F);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ZuKeL
+ */
+void func_800503C4(s32 arg0, s32 arg1)
+{
+    func_8002216C(arg0, 0, arg1, 0x7F);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/m80gj
+ */
+void func_800503EC(void)
+{
+    D_80102658.unk0 = 0;
+    D_80102658.unk4 = 0;
+    D_80102658.unk8 = 0;
+
+    D_80102648.unk0 = 0;
+    D_80102648.unk4 = 0;
+    D_80102648.unk8 = 0;
+    D_80102648.unkC = 0;
+}
