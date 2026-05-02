@@ -607,18 +607,6 @@ g_GfxPrimaryFrame                   = 0x80042E20;
 g_previousGameState                 = 0x80042FB0;
 g_gameDataBasePtr                   = 0x800435C8;
 
-// CHECKPS.BIN
-PollInputDevice                     = 0x800507B4;
-ProcessControllerInput              = 0x8005088C;
-UpdateControllerInput               = 0x80050A0C;
-DrawSymmetricTestPattern            = 0x80051A24;
-RenderGlyph                         = 0x80052004;
-CreateGlyphInstance                 = 0x80052218;
-InvalidateGlyphCache                = 0x80052320;
-ClearInvalidGlyphs                  = 0x8005235C;
-ResetTextRenderer                   = 0x8005239C;
-g_testPatternSizeTable              = 0x8005CFF0;
-
 // Uncategorized
 FUN_80060814                        = 0x80060814;
 
