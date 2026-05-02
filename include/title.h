@@ -19,5 +19,7 @@ extern s32 D_80042FB4;
 extern u8  D_80102692;
 extern s32 D_8003EC9C;
 extern s32 D_80102640;
+extern u32 g_previousGameState;
+extern s32 D_80102668;
 
 #endif

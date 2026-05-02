@@ -257,3 +257,29 @@ void func_800500CC(void* arg0)
 
     D_80102640 = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/6zUZp
+ */
+void func_80050244(void) {
+    u8 *base;
+    u32 *off;
+
+    if (((u32)(g_previousGameState - 2) >= 2U) &&
+        (g_previousGameState != 6) &&
+        (g_previousGameState != 7) &&
+        (g_previousGameState != 5)) {
+
+        D_80102668 = 0x8013C000;
+        cdrom_queue_read(0x15, (void*)0x80180000);
+        cdrom_wait_queue_empty();
+
+        base = (u8*)0x80180000;
+        off = (u32*)0x80180004;
+
+        bcopy(base + off[0], (u8*)D_80102668, (int)(off[1] - off[0]));
+
+        func_80021FFC(D_80102668);
+        func_80022AE8(base + off[1], 1);
+    }
+}
