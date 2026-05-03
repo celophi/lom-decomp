@@ -808,3 +808,42 @@ void func_80050CAC(void)
         }
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/fzh5x
+ */
+void func_80050E20(void* arg0, s16 arg1, s16 arg2, s16 arg3, s32 arg4)
+{
+    u8* p = (u8*)arg0;
+    int new_var;
+    RECT rect;
+    s32 temp_s1;
+    u16 mul_h;
+    int new_var2;
+    int new_var3;
+    u16 mul_l;
+    new_var = 8;
+    new_var2 = 1;
+    if (p[4] & new_var)
+    {
+        mul_h = *((u16*)(p + 0x10));
+        mul_l = *((u16*)(p + 0x12));
+        temp_s1 = *((s32*)(p + new_var));
+        new_var3 = 8;
+        rect.x = arg3;
+        rect.y = (s16)arg4;
+        rect.w = mul_h * mul_l;
+        rect.h = new_var2;
+        LoadImage(&rect, (u_long*)(p + 0x14));
+        p = (p + new_var3) + temp_s1;
+    }
+    else
+    {
+        p = p + 8;
+    }
+    rect.x = arg1;
+    rect.y = arg2;
+    rect.w = *((u16*)(p + 8));
+    rect.h = *((u16*)(p + 0xA));
+    LoadImage(&rect, (u_long*)(p + 0xC));
+}
