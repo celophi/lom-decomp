@@ -635,3 +635,176 @@ void func_8005099C(s32 arg2)
     D_80102690 = temp - 1;
     return;
 }
+
+/**
+ * decomp.me (65.89%) https://decomp.me/scratch/K627m
+ */
+void func_80050A50(void* arg0)
+{
+    s32 temp_s4;
+    s32 var_a1;
+    s32 var_s0;
+    s32 var_s2;
+    s32 var_s3;
+    s32 var_s6;
+    u8* var_s1;
+    s32 unk80B8;
+    s32 var_v0;
+    s32 result;
+    temp_s4 = (s32)(((u8*)arg0) + 0x40);
+    var_s6 = 0x88;
+    var_s3 = 0xA0;
+    var_s2 = 0;
+    var_s0 = 0;
+    unk80B8 = *((s32*)(((u8*)arg0) + 0x80B8));
+    var_a1 = func_80050BD4(temp_s4, unk80B8, 0, 0x64, 0xC8, 0, 0x80, 1);
+    var_s1 = &D_80102670;
+    do
+    {
+        if ((*var_s1) != 0)
+        {
+            if (D_80102690 == var_s2)
+            {
+                var_v0 = 1;
+            }
+            else
+            {
+                var_v0 = 2;
+            }
+            var_a1 = func_80050BD4(temp_s4, var_a1, var_s0 + 1, var_s6, var_s3, 0, 0x80, var_v0) + 0x28;
+            var_s2++;
+            var_s3 += 0xC;
+        }
+        var_s0++;
+        var_s1 += 2;
+    } while (var_s0 < 0x10);
+    result = func_80050BD4(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)D_80102690))) + 0x9D,
+                           (s32)D_8007FD2C[(D_80102691 >> 2) & 3], 0x10, 0);
+    *((s32*)(((u8*)arg0) + 0x80B8)) = result;
+    D_80102691++;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FcuOZ
+ */
+void* func_80050BD4(s32* arg0, void* arg1, s32 arg2, s16 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+{
+    u8* ptr;
+    u8 tmp1;
+    u8 tmp2;
+    u16 sum1;
+    u16 sum2;
+    u8 bsum;
+    u8* new_var;
+    u16 t1_val;
+    u32 old_word;
+    u32 new_word;
+    u32 mask_lo;
+    u32 mask_hi;
+    ptr = (u8*)arg1;
+    mask_lo = 0x00FFFFFF;
+    ptr[0x03] = 9;
+    ptr[0x07] = 0x2C;
+    tmp1 = (u8)(arg2 << 4);
+    ptr[0x06] = 0x80;
+    ptr[0x15] = tmp1;
+    ptr[0x0D] = tmp1;
+    tmp2 = (u8)((arg2 << 4) + 0x10);
+    ptr[0x05] = 0x80;
+    ptr[0x04] = 0x80;
+    ptr[0x25] = tmp2;
+    ptr[0x1D] = tmp2;
+    *((u16*)(ptr + 0x18)) = (u16)arg3;
+    *((u16*)(ptr + 0x08)) = (u16)arg3;
+    *((u16*)(ptr + 0x16)) = 5;
+    mask_hi = 0xFF000000;
+    sum1 = (u16)(arg3 + arg6);
+    new_var = ptr + 0x12;
+    *((u16*)new_var) = (u16)arg4;
+    *((u16*)(ptr + 0x0A)) = (u16)arg4;
+    sum2 = (u16)(arg4 + 0x10);
+    do
+    {
+    } while (0);
+    ptr[0x1C] = (u8)arg5;
+    ptr[0x0C] = (u8)arg5;
+    bsum = (u8)(arg5 + arg6);
+    t1_val = (u16)((arg7 & 0x3F) | 0x7800);
+    *((u16*)(ptr + 0x22)) = sum2;
+    *((u16*)(ptr + 0x1A)) = sum2;
+    old_word = *((u32*)ptr);
+    *((u16*)(ptr + 0x20)) = sum1;
+    *((u16*)(ptr + 0x10)) = sum1;
+    ptr[0x24] = bsum;
+    ptr[0x14] = bsum;
+    *((u16*)(ptr + 0x0E)) = t1_val;
+    new_word = (old_word & mask_hi) | (((u32)(*arg0)) & mask_lo);
+    *((u32*)ptr) = new_word;
+    *arg0 = (s32)((((u32)(*arg0)) & mask_hi) | (((u32)ptr) & mask_lo));
+    return (void*)(ptr + 0x28);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/HW23j
+ */
+void func_80050CAC(void)
+{
+    u8* ptr;
+    s32 i;
+    s32 idx;
+    u8* q;
+    i = 0;
+    ptr = D_80102670;
+    for (i = 0; i < 16; i++)
+    {
+        ptr[0] = 0;
+        ptr[1] = 0;
+        ptr += 2;
+    }
+
+    D_80102670[0] = 1;
+    D_80102670[1] = 1;
+    D_80102670[2] = 1;
+    D_80102670[3] = 1;
+
+    D_80102690 = 0;
+
+    D_80102692 = 0;
+    D_80102691 = 0;
+    D_80102698 = 0;
+    D_80102694 = 0;
+    D_8010269C = 0;
+    D_801026A0 = 0xE10;
+    func_80050E20((void*)(((u8*)&D_800522E8) + D_800522E8[1]), 0x140, 0, 0, 0x1E0);
+    func_80050E20((void*)(((u8*)&D_800522E8) + D_800522E8[2]), 0x140, 0x100, 0, 0x1E1);
+    if (g_previousGameState == 0)
+    {
+        idx = D_80102692 + 1;
+        if (idx < 16)
+        {
+            q = D_80102670 + (idx << 1);
+            do
+            {
+                if ((D_800522E8 && D_800522E8) && D_800522E8)
+                {
+                }
+                if ((*q) != 0)
+                {
+                    break;
+                }
+                idx++;
+                q += 2;
+            } while (idx < 16);
+        }
+        if (idx == 16)
+        {
+            D_80102690 = 0;
+            D_80102692 = 0;
+        }
+        else
+        {
+            D_80102692 = (u8)idx;
+            D_80102690++;
+        }
+    }
+}
