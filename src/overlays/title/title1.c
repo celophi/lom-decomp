@@ -683,3 +683,63 @@ void func_80050A50(void* arg0)
     *((s32*)(((u8*)arg0) + 0x80B8)) = result;
     D_80102691++;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FcuOZ
+ */
+void* func_80050BD4(s32* arg0, void* arg1, s32 arg2, s16 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+{
+    u8* ptr;
+    u8 tmp1;
+    u8 tmp2;
+    u16 sum1;
+    u16 sum2;
+    u8 bsum;
+    u8* new_var;
+    u16 t1_val;
+    u32 old_word;
+    u32 new_word;
+    u32 mask_lo;
+    u32 mask_hi;
+    ptr = (u8*)arg1;
+    mask_lo = 0x00FFFFFF;
+    ptr[0x03] = 9;
+    ptr[0x07] = 0x2C;
+    tmp1 = (u8)(arg2 << 4);
+    ptr[0x06] = 0x80;
+    ptr[0x15] = tmp1;
+    ptr[0x0D] = tmp1;
+    tmp2 = (u8)((arg2 << 4) + 0x10);
+    ptr[0x05] = 0x80;
+    ptr[0x04] = 0x80;
+    ptr[0x25] = tmp2;
+    ptr[0x1D] = tmp2;
+    *((u16*)(ptr + 0x18)) = (u16)arg3;
+    *((u16*)(ptr + 0x08)) = (u16)arg3;
+    *((u16*)(ptr + 0x16)) = 5;
+    mask_hi = 0xFF000000;
+    sum1 = (u16)(arg3 + arg6);
+    new_var = ptr + 0x12;
+    *((u16*)new_var) = (u16)arg4;
+    *((u16*)(ptr + 0x0A)) = (u16)arg4;
+    sum2 = (u16)(arg4 + 0x10);
+    do
+    {
+    } while (0);
+    ptr[0x1C] = (u8)arg5;
+    ptr[0x0C] = (u8)arg5;
+    bsum = (u8)(arg5 + arg6);
+    t1_val = (u16)((arg7 & 0x3F) | 0x7800);
+    *((u16*)(ptr + 0x22)) = sum2;
+    *((u16*)(ptr + 0x1A)) = sum2;
+    old_word = *((u32*)ptr);
+    *((u16*)(ptr + 0x20)) = sum1;
+    *((u16*)(ptr + 0x10)) = sum1;
+    ptr[0x24] = bsum;
+    ptr[0x14] = bsum;
+    *((u16*)(ptr + 0x0E)) = t1_val;
+    new_word = (old_word & mask_hi) | (((u32)(*arg0)) & mask_lo);
+    *((u32*)ptr) = new_word;
+    *arg0 = (s32)((((u32)(*arg0)) & mask_hi) | (((u32)ptr) & mask_lo));
+    return (void*)(ptr + 0x28);
+}
