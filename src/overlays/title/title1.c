@@ -538,3 +538,43 @@ void func_80050864(void)
         func_800503C4(0x7D, 0x80);
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/6k8uV
+ */
+void func_8005091C(void)
+{
+    s32 a1;
+    u8* var_v1;
+    const s32 LIMIT = 16;
+    a1 = D_80102692 + 1;
+    if (a1 < LIMIT)
+    {
+        u8* base = D_80102670;  // forces lui/addiu first
+        var_v1 = base + a1 * 2; // sll comes after
+        while (1)
+        {
+            if (*var_v1 != 0)
+            {
+                break;
+            }
+            a1++;
+            if (a1 < LIMIT)
+            {
+                var_v1 += 2;
+                continue;
+            }
+            break;
+        }
+    }
+    if (a1 == LIMIT)
+    {
+        D_80102690 = 0;
+        D_80102692 = 0;
+    }
+    else
+    {
+        D_80102692 = (u8)a1;
+        D_80102690++;
+    }
+}
