@@ -635,3 +635,51 @@ void func_8005099C(s32 arg2)
     D_80102690 = temp - 1;
     return;
 }
+
+/**
+ * decomp.me (65.89%) https://decomp.me/scratch/K627m
+ */
+void func_80050A50(void* arg0)
+{
+    s32 temp_s4;
+    s32 var_a1;
+    s32 var_s0;
+    s32 var_s2;
+    s32 var_s3;
+    s32 var_s6;
+    u8* var_s1;
+    s32 unk80B8;
+    s32 var_v0;
+    s32 result;
+    temp_s4 = (s32)(((u8*)arg0) + 0x40);
+    var_s6 = 0x88;
+    var_s3 = 0xA0;
+    var_s2 = 0;
+    var_s0 = 0;
+    unk80B8 = *((s32*)(((u8*)arg0) + 0x80B8));
+    var_a1 = func_80050BD4(temp_s4, unk80B8, 0, 0x64, 0xC8, 0, 0x80, 1);
+    var_s1 = &D_80102670;
+    do
+    {
+        if ((*var_s1) != 0)
+        {
+            if (D_80102690 == var_s2)
+            {
+                var_v0 = 1;
+            }
+            else
+            {
+                var_v0 = 2;
+            }
+            var_a1 = func_80050BD4(temp_s4, var_a1, var_s0 + 1, var_s6, var_s3, 0, 0x80, var_v0) + 0x28;
+            var_s2++;
+            var_s3 += 0xC;
+        }
+        var_s0++;
+        var_s1 += 2;
+    } while (var_s0 < 0x10);
+    result = func_80050BD4(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)D_80102690))) + 0x9D,
+                           (s32)D_8007FD2C[(D_80102691 >> 2) & 3], 0x10, 0);
+    *((s32*)(((u8*)arg0) + 0x80B8)) = result;
+    D_80102691++;
+}
