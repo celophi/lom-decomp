@@ -51,6 +51,9 @@ extern u8 D_80102670[];
 extern u8 D_80102690;
 extern u8 D_80102691;
 extern u8 D_8007FD2C[];
+extern s32 D_80102698;
+extern s32 D_80102694;
+extern u32 D_800522E8[3];
 
 extern D_80102658_t D_80102658;
 extern D_80102648_t D_80102648;
