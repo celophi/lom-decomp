@@ -47,6 +47,8 @@ extern s32 D_80102668;
 extern unsigned char D_8003ECA0;
 extern s32 D_801026A0;
 extern s32 D_8010269C;
+extern u8 D_80102670[];
+extern u8 D_80102690;
 
 extern D_80102658_t D_80102658;
 extern D_80102648_t D_80102648;
