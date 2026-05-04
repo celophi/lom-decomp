@@ -1232,3 +1232,100 @@ void func_800512E0(void)
         func_8005169C();
     }
 }
+
+/**
+ * decomp.me (99.09%) https://decomp.me/scratch/yKwnh
+ */
+void func_8005169C(void)
+{
+    s16 temp_v0_2;
+    s16 temp_v1;
+    u8* new_var;
+    s32 temp_a1;
+    s32 temp_v0;
+    s32 var_a0;
+    s32 var_a1;
+    s32 var_v0;
+    u8* base;
+    s32 var_v0_2;
+    if (D_801026C8 != 0)
+    {
+        temp_v0 = (D_801026BC - D_801026B8) / D_801026C8;
+        D_801026C8 -= 1;
+        D_801026B8 += temp_v0;
+    }
+    else
+    {
+        D_801026B8 = D_801026BC;
+    }
+    var_a1 = D_801026BC;
+    if (D_801026BC < 0)
+    {
+        var_a1 = 0xF;
+        var_a1 = D_801026BC + var_a1;
+    }
+    temp_a1 = var_a1 >> 4;
+    if (D_801026B0 < (var_a1 >> 4))
+    {
+        var_v0 = D_801026B0 * 0x10;
+        D_801026BC = var_v0;
+        D_801026C8 = 4;
+    }
+    else if ((temp_a1 + 6) < D_801026B0)
+    {
+        var_a0 = 0x10;
+        var_v0 = (D_801026B0 - 6) * var_a0;
+        D_801026BC = var_v0;
+        D_801026C8 = 4;
+    }
+    base = D_800F993C;
+    temp_a1 = ((u16)D_801026B8) + 0x20;
+    temp_v1 = temp_a1;
+    *((u16*)(D_800F993C + 0x3E)) = (u16)D_801026B8;
+    *((u16*)(D_800F993C + 0x56)) = temp_v1;
+    *((u16*)(D_800F993C + 0xE6)) = (u16)D_801026B8;
+    *((u16*)(D_800F993C - (-0xFE))) = temp_v1;
+    if (D_801026B8 != 0)
+    {
+        D_800F993C[0xA9] = 1;
+        D_800F993C[0xC1] = 1;
+        D_800F993C[0x151] = 1;
+        D_800F993C[0x169] = 1;
+    }
+    else
+    {
+        D_800F993C[0xA9] = 0;
+        D_800F993C[0xC1] = 0;
+        D_800F993C[0x151] = 0;
+        D_800F993C[0x169] = 0;
+    }
+    if (D_801026B8 != 0x40)
+    {
+        D_800F993C[0x61] = 1;
+        D_800F993C[0x79] = 1;
+        D_800F993C[0x109] = 1;
+        D_800F993C[0x121] = 1;
+    }
+    else
+    {
+        base[0x61] = 0;
+        base[0x79] = 0;
+        D_800F993C[0x109] = 0;
+        D_800F993C[0x121] = 0;
+    }
+    var_a0 = (D_801026B0 * 0x10) - D_801026B8;
+    if (var_a0 < 0)
+    {
+        var_a0 = 0;
+    }
+    if (var_a0 > 0x60)
+    {
+        var_a0 = 0x60;
+    }
+    new_var = D_800F993C;
+    temp_v0_2 = var_a0 + 0x40;
+    *((u16*)(new_var + 0x96)) = temp_v0_2;
+    *((u16*)(new_var + 0x9A)) = temp_v0_2;
+    *((u16*)(new_var + 0x13E)) = temp_v0_2;
+    *((u16*)(new_var + 0x142)) = temp_v0_2;
+}
