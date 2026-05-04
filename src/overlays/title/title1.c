@@ -847,3 +847,58 @@ void func_80050E20(void* arg0, s16 arg1, s16 arg2, s16 arg3, s32 arg4)
     rect.h = *((u16*)(p + 0xA));
     LoadImage(&rect, (u_long*)(p + 0xC));
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Z5swg
+ */
+s32 func_80050EE4(void)
+{
+    signed short new_var;
+    unsigned char* ptr;
+    unsigned char a2;
+    unsigned short v1;
+    unsigned short v0;
+    unsigned long a0_val;
+    unsigned int new_var2;
+    signed short t;
+    ptr = (unsigned char*)0x801ED600;
+    a2 = ptr[0];
+    if (a2 >= 0xFE)
+    {
+        return 0;
+    }
+    v1 = *((unsigned short*)(ptr + 2));
+    new_var2 = *((unsigned short*)(ptr + 2));
+    v0 = new_var2;
+    a0_val = (v1 >> 8) | (v0 << 8);
+    a0_val =
+        (((((((((a0_val & 0x40) >> 1) | ((a0_val & 0x20) << 1)) | ((a0_val & 0x80) >> 3)) | ((a0_val & 0x10) << 3)) &
+            0xFFFF) &
+           0xFFFF) &
+          0xFFFF) &
+         0xFFFF) |
+        (a0_val & (~0xF0));
+    if (a2)
+    {
+        t = *((signed short*)(ptr + 0x2C));
+        new_var = t;
+        if (t < (-1))
+        {
+            a0_val |= 0x8000;
+        }
+        else if (new_var >= 2)
+        {
+            a0_val |= 0x2000;
+        }
+        t = *((signed short*)(ptr + 0x2E));
+        if (t < (-1))
+        {
+            a0_val |= 0x1000;
+        }
+        else if (t >= 2)
+        {
+            a0_val |= 0x4000;
+        }
+    }
+    return a0_val;
+}
