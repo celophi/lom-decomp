@@ -37,6 +37,12 @@ typedef struct
     void* unk80B8;
 } ArgStruct;
 
+typedef struct
+{
+    unsigned char pad[0xB8]; // padding to offset 0xB8
+    s32 unk80B8;             // desired field at offset 0xB8
+} InnerStruct;
+
 extern u8 D_80042FD8[];
 extern s32 D_80042FB4;
 extern u8 D_80102692;
@@ -54,7 +60,7 @@ extern u8 D_8007FD2C[];
 extern s32 D_80102698;
 extern s32 D_80102694;
 extern u32 D_800522E8[3];
-extern  u8 D_801ED600[];
+extern u8 D_801ED600[];
 extern s32 D_801026A8;
 extern s32 D_801026AC;
 extern s32 D_801026B0;
