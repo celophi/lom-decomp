@@ -909,7 +909,7 @@ s32 func_80050EE4(void)
 void func_80050FBC(void)
 {
     u8* ptr = (u8*)0x801ED600;
-    u8 a2 = D_801ED600;
+    u8 a2 = D_801ED600[0];
     u16 v1;
     u16 v0;
     u32 a1_val;
