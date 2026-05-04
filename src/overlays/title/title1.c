@@ -902,3 +902,95 @@ s32 func_80050EE4(void)
     }
     return a0_val;
 }
+
+/**
+ * decomp.me (99.90%) https://decomp.me/scratch/yZqQJ
+ */
+void func_80050FBC(void)
+{
+    u8* ptr = (u8*)0x801ED600;
+    u8 a2 = D_801ED600;
+    u16 v1;
+    u16 v0;
+    u32 a1_val;
+    s16 t;
+    s32 var_v1;
+    if (a2 >= 0xFE)
+    {
+        var_v1 = 0;
+    }
+    else
+    {
+        v1 = *((u16*)(ptr + 2));
+
+        a1_val = (v1 >> 8) | (*((u16*)(2 + ptr)) << 8);
+        a1_val = (((((((((a1_val & 0x40) >> 1) | ((a1_val & 0x20) << 1)) | ((a1_val & 0x80) >> 3)) |
+                      ((a1_val & 0x10) << 3)) &
+                     0xFFFF) &
+                    0xFFFF) &
+                   0xFFFF) &
+                  0xFFFF) |
+                 (a1_val & (~0xF0));
+        if ((*ptr) != 0)
+        {
+            t = *((s16*)(ptr + 0x2C));
+            if (t < (-1))
+            {
+                a1_val |= 0x8000;
+            }
+            else if (t >= 2)
+            {
+                a1_val |= 0x2000;
+            }
+            t = *((volatile s16*)(ptr + 0x2E));
+            if (t < (-1))
+            {
+                a1_val |= 0x1000;
+            }
+            else if (t >= 2)
+            {
+                a1_val |= 0x4000;
+            }
+        }
+        var_v1 = a1_val;
+    }
+    D_8010269C = 0;
+    if ((var_v1 == D_80102694) || ((D_80102694 != 0) && (var_v1 & (D_80102694 | 0xB6F))))
+    {
+        if (var_v1 != 0)
+        {
+            u32 tmp = var_v1 & 0xF000;
+            if (tmp != 0)
+            {
+                var_v1 = tmp;
+            }
+            if (D_80102698 == 0)
+            {
+                D_8010269C = var_v1;
+                D_80102698 = 2;
+            }
+            else
+            {
+                D_80102698--;
+                D_8010269C = 0;
+            }
+        }
+        else
+        {
+            *((s32*)(&D_80102698)) = 0;
+        }
+        *((s32*)(&D_80102694)) = 0;
+    }
+    else if (var_v1 == 0)
+    {
+        (void)(&D_8010269C);
+        *((s32*)(&D_80102698)) = 0;
+        *((s32*)(&D_80102694)) = 0;
+    }
+    else
+    {
+        D_8010269C = var_v1;
+        D_80102694 = var_v1;
+        D_80102698 = 0xF;
+    }
+}
