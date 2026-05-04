@@ -70,6 +70,10 @@ extern s32 D_801026BC;
 extern s32 D_801026C0;
 extern s32 D_801026C4;
 extern s32 D_801026C8;
+extern u8 D_80043618[0x40];
+extern u8 D_800F9BC4[];
+extern u8 D_800F9AED;
+extern u8 D_800F993C[0x200];
 
 extern D_80102658_t D_80102658;
 extern D_80102648_t D_80102648;
