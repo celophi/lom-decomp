@@ -904,7 +904,7 @@ s32 func_80050EE4(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/yZqQJ
+ * decomp.me (99.90%) https://decomp.me/scratch/yZqQJ
  */
 void func_80050FBC(void)
 {
