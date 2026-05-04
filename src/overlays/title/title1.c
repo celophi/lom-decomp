@@ -994,3 +994,52 @@ void func_80050FBC(void)
         D_80102698 = 0xF;
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/1dQbp
+ */
+void func_8005113C(void)
+{
+    u8* base = (u8*)0x801ED600;
+    s32 var_v1;
+    u32 a1;
+    u16 first;
+    u16 second;
+    s16 sval;
+    D_8010269C = 0;
+    if (D_801ED600[0] >= 0xFEU)
+    {
+        var_v1 = 0;
+    }
+    else
+    {
+        first = *((volatile u16*)(base + 2));
+        second = *((volatile u16*)(base + 2));
+        a1 = ((first >> 8) & 0xFF) | (second << 8);
+        a1 = (((((a1 & 0x40) >> 1) | ((a1 & 0x20) << 1)) | ((a1 & 0x80) >> 3)) | ((a1 & 0x10) << 3)) | (a1 & (~0xF0));
+        if (base[0] != 0)
+        {
+            sval = *((s16*)(base + 0x2C));
+            if (sval < (-1))
+            {
+                a1 |= 0x8000;
+            }
+            else if (sval >= 2)
+            {
+                a1 |= 0x2000;
+            }
+            sval = *((s16*)(base + 0x2E));
+            if (sval < (-1))
+            {
+                a1 |= 0x1000;
+            }
+            else if (sval >= 2)
+            {
+                a1 |= 0x4000;
+            }
+        }
+        var_v1 = a1;
+    }
+    D_80102694 = var_v1;
+    D_80102698 = 0xF;
+}
