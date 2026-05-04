@@ -1386,3 +1386,15 @@ void func_80051904(void)
         D_801026B4 = 8;
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/W1iA5
+ */
+void func_80051938(void)
+{
+    if (D_801026C0 != -0xA0)
+    {
+        D_801026A8 -= 0xA0;
+        D_801026B4 = 8;
+    }
+}
