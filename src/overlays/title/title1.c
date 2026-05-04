@@ -1398,3 +1398,319 @@ void func_80051938(void)
         D_801026B4 = 8;
     }
 }
+
+inline u16 inline_fn(unsigned char* arg0)
+{
+    return *((u16*)arg0);
+}
+
+/**
+ * decomp.me (87.28%) https://decomp.me/scratch/UVLSm
+ * NOTE THAT THIS MAY NOT BE FUNCTIONALLY EQUIVALENT YET!
+ */
+void* func_8005196C(void* arg0, s32* arg1)
+{
+    unsigned char* t0;
+    unsigned char* new_var;
+    unsigned int new_var8;
+    s32* t6;
+    s32 s2;
+    s32 s5;
+    s32 new_var6;
+    unsigned char* new_var4;
+    s32 s4;
+    s32 s3;
+    unsigned char* s0;
+    u32 t4;
+    u32 t8;
+    s32 s1;
+    unsigned char* t2;
+    int new_var3;
+    unsigned char* a3;
+    u32* new_var10;
+    unsigned char* a1;
+    unsigned char* a2;
+    unsigned char* new_var7;
+    s32 t1;
+    s32 t3;
+    u16 t5;
+    unsigned char new_var2;
+    u16 a3_16;
+    s32 a1_16;
+    s32 t9_16;
+    int new_var5;
+    u8 v0_8;
+    int new_var9;
+    u16 a2_16;
+    unsigned long temp_ul;
+    s32 v0;
+    s32 v1;
+    t0 = arg0;
+    t6 = arg1;
+    t2 = D_800F993C + 2;
+    s2 = 0;
+    s5 = 3;
+    s4 = &D_801026C0;
+    s3 = (s32)(&D_801026C4);
+    s0 = D_800F97FC;
+    t4 = 0x00FFFFFF;
+    t8 = 0xFF000000;
+    do
+    {
+        if (1)
+        {
+            s1 = 0x64;
+        }
+        v0 = t2[-1];
+        if (v0 == s5)
+        {
+            if (D_801026A8 > 0)
+            {
+                a3 = (unsigned char*)(D_801026B0 + 1);
+            }
+            else
+            {
+                a3 = 0;
+            }
+            a1 = (unsigned char*)(((unsigned long)D_800F98AC) + (((unsigned long)a3) * 6));
+            *((u32*)(t0 + 4)) = 0x808080;
+            new_var9 = 0;
+            t0[3] = 9;
+            a3 = t0;
+            if (((new_var9, *((u32*)(t2 - 2)))) & 2)
+            {
+                a3[7] = 0x2E;
+            }
+            else
+            {
+                a3[7] = 0x2C;
+            }
+            v0 = 0x20;
+            v0 = (*((u16*)(a3 + 8)) = (inline_fn(t2 + 2) + D_801026C0) - ((a1[4] * 8) - v0));
+            *((u16*)(a3 + 0x18)) = v0;
+            v0 = (*((u16*)(a3 + 10)) = (inline_fn(t2 + 4) + D_801026C4) - ((a1[5] * 8) - 0x28));
+            *((u16*)(a3 + 0x12)) = v0;
+            new_var5 = (inline_fn(a3 + 8) + (a1[2] * 8)) - 1;
+            *((u16*)(a3 + 0x20)) = new_var5;
+            *((u16*)(a3 + 0x10)) = new_var5;
+            *((u16*)(a3 + 0x22)) = (v0 = (inline_fn(a3 + 10) + (a1[3] * 8)) - 1);
+            *((u16*)(a3 + 0x1A)) = v0;
+            v0_8 = a1[0] * 8;
+            a3[0x14] = v0_8;
+            a3[0x24] = v0_8;
+            v0_8 = (new_var2 = a1[1]) * 8;
+            a3[0x0D] = v0_8;
+            a3[0x15] = v0_8;
+            t3 = a3[0x14];
+            v0 = (a3[0x1C] = (t3 + (a1[2] * 8)) - 1);
+            a3[0x0C] = v0;
+            v0 = (a3[0x25] = (a3[0x0D] + (a1[3] * 8)) - 1);
+            a3[0x1D] = v0;
+            t0 = a3 + 0x28;
+            a3 = (unsigned char*)((t2[0] * 0x10) + ((unsigned long)s0));
+            v0 = (inline_fn(a3 + 6) << 6) | ((inline_fn(a3 + 4) >> 4) & 0x3F);
+            a2 = t2;
+            new_var3 = 6;
+            *((u16*)((t0 - 0x28) + 0x0E)) = v0;
+            a1 = (unsigned char*)((a2[0] * 0x10) + ((unsigned long)s0));
+            a2_16 = inline_fn(a1 + 2);
+            v0 = ((((((*((u32*)(t2 - 2))) << 3) & 0x60) | ((a1[0x0C] & 3) << 7)) | ((a2_16 & 0x100) >> 4)) |
+                  ((inline_fn(a1) & 0x3FF) >> new_var3)) |
+                 ((a2_16 & 0x200) * 4);
+            *((u16*)((t0 - 0x28) + 0x16)) = v0;
+            ;
+            ;
+            *((u32*)((t0 + (-0x28)) + 0)) = ((*((u32*)((t0 - 0x28) + 0))) & t8) | ((*t6) & t4);
+            v1 = (*t6) & t8;
+            v0 = ((unsigned long)(t0 - 0x28)) & t4;
+            *t6 = v1 | v0;
+        }
+        else if (v0 == 4)
+        {
+            if (D_801026A8 < 0)
+            {
+                a3 = (unsigned char*)(D_801026B0 + 1);
+            }
+            else
+            {
+                a3 = 0;
+            }
+            *((u32*)(t0 + 4)) = 0x808080;
+            t0[3] = 4;
+            t0[7] = s1;
+            a1 = (unsigned char*)(((unsigned long)D_800F98F4) + (((unsigned long)a3) * 6));
+            if ((*((u32*)(t2 - 2))) & 2)
+            {
+                t0[7] = 0x66;
+            }
+            v1 = ((unsigned long)t0) & t4;
+            *((u16*)(t0 + 8)) = (inline_fn(t2 - (-2)) + D_801026C0) - ((a1[4] * 8) - 0x20);
+            *((u16*)(t0 + 10)) = (inline_fn(t2 + 4) + D_801026C4) - ((a1[5] * 8) - 0x28);
+            t0[12] = a1[0] * 8;
+            t0[13] = a1[1] * 8;
+            *((u16*)(t0 + 0x10)) = a1[2] * 8;
+            *((u16*)(t0 + 0x12)) = a1[3] * 8;
+            a3 = s0 + ((t2[0] * 8) * 2);
+            v0 = (inline_fn(a3 + 6) << 6) | ((inline_fn(a3 - (-4)) >> 4) & 0x3F);
+            *((u16*)(t0 + 0x0E)) = v0;
+            v1 = (*((u32*)t0)) & t8;
+            ;
+            *((u32*)t0) = v1 | ((*t6) & t4);
+            v1 = ((unsigned long)t0) & t4;
+            t0 += 0x14;
+            v0 = (*t6) & t8;
+            *t6 = v0 | v1;
+            t0[3] = 1;
+            a1 = s0 + (t2[0] * 0x10);
+            a2_16 = inline_fn(a1 + 2);
+            new_var6 = (*((u32*)(t2 - 2))) << 3;
+            ;
+            *((u32*)(t0 + 4)) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | (new_var6 & 0x60)) | ((a2_16 & 0x100) >> 4)) |
+                                  ((inline_fn(a1) & 0x3FF) >> 6)) |
+                                 ((a2_16 & 0x200) * 4)) |
+                                0xE1000000;
+            v1 = (*((u32*)t0)) & t8;
+            ;
+            new_var8 = v1 | ((*t6) & t4);
+            *((u32*)t0) = new_var8;
+            t0 += 8;
+            v0 = (*t6) & t8;
+            // FIX: use the old address of t0 (before the +8) instead of the old value
+            *t6 = v0 | ((unsigned long)(t0 - 8) & t4);
+        }
+        else if (v0 == 2)
+        {
+            new_var10 = (u32*)t0;
+            *((u32*)(t0 + 4)) = 0x40;
+            v1 = ((unsigned long)t0) & t4;
+            t0[3] = s5;
+            t0[7] = 0x62;
+            *((u16*)(t0 + 8)) = inline_fn(t2 + 6) + D_801026C0;
+            do
+            {
+                *((u16*)(t0 + 10)) = inline_fn(t2 + 8) + D_801026C4;
+                *((u16*)(t0 + 12)) = inline_fn(t2 + 14);
+                *((u16*)(t0 + 14)) = inline_fn(t2 + 16);
+                v1 = t8;
+                v1 = (*((u32*)t0)) & v1;
+                v0 = (*t6) & t4;
+                *new_var10 = v1 | v0;
+                v1 = (*t6) & t8;
+                v0 = ((unsigned long)t0) & t4;
+                *t6 = v1 | v0;
+                a2 = t0 + 0x10;
+                a2[3] = 1;
+                *((u32*)(a2 + 4)) = 0xE1000025;
+                v1 = (*((u32*)(t0 + 0x10))) & t8;
+                v0 = (*t6) & t4;
+                *((u32*)(t0 + 0x10)) = v1 | v0;
+                // FIX: Use the address of the second sprite, not the lower bits of *t6
+                *t6 = ((*t6) & t8) | ((unsigned long)a2 & t4);
+                t0 += 0x18;
+            } while (0);
+        }
+        else
+        {
+            new_var = t0;
+            if (v0 != 0)
+            {
+                t3 = inline_fn(t2 + 14);
+                t5 = inline_fn(t2 + 10);
+                a1 = s0 + (t2[0] * 0x10);
+                a3_16 = inline_fn(a1);
+                s2 = (*((u32*)(t2 - 2))) & 1;
+                if (s2)
+                {
+                    do
+                    {
+                        a1_16 = (*((s16*)(t2 + 2))) + D_801026C0;
+                        t9_16 = (*((s16*)(t2 + 4))) + D_801026C4;
+                    } while (0);
+                }
+                else
+                {
+                    a1_16 = *((s16*)(t2 + 2));
+                    t9_16 = *((s16*)(t2 + 4));
+                }
+                t1 = 0x80;
+                if (((t3 + 1) - 1) < 0x81)
+                {
+                    t1 = t3;
+                }
+                a2 = new_var + 4;
+                while (1)
+                {
+                    *((u32*)(a2 + 0)) = 0x808080;
+                    a2[-1] = 4;
+                    a2[3] = 0x64;
+                    if ((*((u32*)(t2 - 2))) & 2)
+                    {
+                        a2[3] = 0x66;
+                    }
+                    *((s16*)(a2 + 4)) = a1_16;
+                    *((s16*)(a2 + 6)) = t9_16;
+                    a2[8] = t5;
+                    new_var7 = a2 + 14;
+                    *((u16*)(a2 + 12)) = t1;
+                    a2[9] = t2[12];
+                    *((u16*)new_var7) = inline_fn(t2 + 16);
+                    t3 -= t1;
+                    a1 = s0 + (t2[0] * 0x10);
+                    v0 = (inline_fn(a1 + 6) << 6) | ((inline_fn(a1 + 4) >> 4) & 0x3F);
+                    *((u16*)(a2 + 10)) = v0;
+
+                    a2 += 0x14;
+
+                    v1 = (*((u32*)t0)) & t8;
+                    v0 = (*t6) & t4;
+                    *((u32*)t0) = v1 | v0;
+                    v1 = ((unsigned long)t0) & t4;
+                    t0 += 0x14;
+                    v0 = (*t6) & t8;
+                    *t6 = v0 | v1;
+                    a2[-1] = 1;
+                    a1 = s0 + (t2[0] * 0x10);
+                    a2_16 = inline_fn(a1 + 2);
+                    t9_16 = ((*((u32*)(t2 - 2))) << 3) & 0x60;
+                    *((u32*)a2) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | t9_16) | ((a2_16 & 0x100) >> 4)) |
+                                    (((s32)(a3_16 & 0x3FF)) >> 6)) |
+                                   ((0, (a2_16 & 0x200) * 4))) |
+                                  0xE1000000;
+                    a2 += 8;
+                    v1 = (*((u32*)t0)) & t8;
+                    v0 = ((0, *t6)) & t4;
+                    *((u32*)t0) = v1 | v0;
+                    v1 = ((unsigned long)t0) & t4;
+                    t0 += 8;
+                    t9_16 = (*t6) & t8;
+                    v0 = t9_16;
+                    *t6 = v0 | v1;
+                    if (t3 == 0)
+                    {
+                        break;
+                    }
+                    t5 ^= 0x80;
+                    a1 = (new_var4 = s0 + (t2[0] * 0x10));
+                    if (!((*((u32*)(a1 + 0x0C))) & 7))
+                    {
+                        a3_16 += 0x20;
+                    }
+                    else
+                    {
+                        a3_16 += 0x40;
+                        t5 = 0;
+                    }
+                    t1 = 0x80;
+                    if (t3 < 0x81)
+                    {
+                        t1 = t3;
+                    }
+                    a1_16 += 0x80;
+                }
+            }
+        }
+        s2++;
+        t2 += 0x18;
+    } while (s2 < 0x1B);
+    return t0;
+}
