@@ -53,14 +53,21 @@ jobs:
       - name: Split ROM with splat
         run: make splat
 
-      - name: Generate objdiff configuration
-        run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }}
-
       - name: Build objects for comparison
         run: |
           make clean
           make objdiff-objects
-        
+
+      - name: Verify compressed overlay BINs against ROM
+        # Builds each verifiable overlay's compressed .BIN and SHA1-compares it
+        # against the original ROM file. On match, the overlay name is appended
+        # to build/complete_overlays.txt, which the objdiff config generator
+        # reads to stamp metadata.complete = true on those units.
+        run: make verify-bins
+
+      - name: Generate objdiff configuration
+        run: python3 ${{ env.OBJDIFF_CONFIG_GENERATOR }}
+
       - name: Generate progress report
         run: |
           chmod +x ${{ env.OBJDIFF_CLI }}

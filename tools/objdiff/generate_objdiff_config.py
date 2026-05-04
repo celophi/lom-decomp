@@ -21,6 +21,11 @@ MAIN_CONFIG = PROJECT_ROOT / "config" / "SLUS_010.13.yaml"
 OVERLAY_CONFIG_DIR = PROJECT_ROOT / "config" / "overlays"
 OUTPUT_PATH = PROJECT_ROOT / "objdiff.json"
 
+# Manifest of overlays whose rebuilt+compressed BIN matches the original ROM.
+# Written by the Makefile's verify-* targets. Units of overlays listed here are
+# stamped with metadata.complete = true so objdiff reports them as linked.
+COMPLETE_MANIFEST = PROJECT_ROOT / "build" / "complete_overlays.txt"
+
 # SDK files are not our code — skip them in progress tracking
 SKIP_PATHS = {"psyq"}
 
@@ -69,6 +74,17 @@ def should_skip(file_name: str) -> bool:
     return any(part in SKIP_PATHS for part in file_name.split("/"))
 
 
+def load_complete_overlays() -> set[str]:
+    """Overlays whose rebuilt compressed BIN matched the original ROM SHA1."""
+    if not COMPLETE_MANIFEST.exists():
+        return set()
+    return {
+        line.strip()
+        for line in COMPLETE_MANIFEST.read_text().splitlines()
+        if line.strip()
+    }
+
+
 def build_main_units(config: dict) -> list[dict]:
     """Create units for the main SLUS executable."""
     units = []
@@ -86,14 +102,24 @@ def build_main_units(config: dict) -> list[dict]:
     return units
 
 
-def build_overlay_units(config: dict, overlay_name: str) -> list[dict]:
-    """Create units for one overlay from its splat config."""
+def build_overlay_units(config: dict, overlay_name: str, complete: bool = False) -> list[dict]:
+    """Create units for one overlay from its splat config.
+
+    If `complete` is True, every unit is stamped with metadata.complete = true,
+    which tells objdiff to treat the object as fully linked/matching.
+    """
     options = config.get("options", {})
     asm_path = options.get("asm_path", f"asm/overlays/{overlay_name}")
     build_path = options.get("build_path", f"build/overlays/{overlay_name}")
     src_path = options.get("src_path", f"src/overlays/{overlay_name}")
 
     nolink = OVERLAY_NOLINK_SRCS.get(overlay_name, set())
+
+    def _metadata() -> dict:
+        meta = {"progress_categories": [overlay_name]}
+        if complete:
+            meta["complete"] = True
+        return meta
 
     units = []
     for name in extract_c_subsegments(config):
@@ -103,9 +129,7 @@ def build_overlay_units(config: dict, overlay_name: str) -> list[dict]:
             "name": f"{overlay_name}/{name}",
             "target_path": f"{build_path}/target/{name}.o",
             "base_path": f"{build_path}/{src_path}/{name}.o",
-            "metadata": {
-                "progress_categories": [overlay_name],
-            },
+            "metadata": _metadata(),
         })
 
     # Also emit units for rodata segments that have a compiled C counterpart
@@ -117,9 +141,7 @@ def build_overlay_units(config: dict, overlay_name: str) -> list[dict]:
             "name": f"{overlay_name}/{name}",
             "target_path": f"{build_path}/target/{name}.o",
             "base_path": f"{build_path}/{src_path}/{name}.o",
-            "metadata": {
-                "progress_categories": [overlay_name],
-            },
+            "metadata": _metadata(),
         })
 
     return units
@@ -156,13 +178,19 @@ def main():
         print(f"Main executable: {len(units)} units")
 
     # ── Overlays ──
+    complete_overlays = load_complete_overlays()
+    if complete_overlays:
+        print(f"Complete overlays (BIN sha matches ROM): {sorted(complete_overlays)}")
+
     for cfg_path in discover_overlay_configs():
         cfg = load_yaml(cfg_path)
         name = overlay_name_from_config(cfg)
-        overlay_units = build_overlay_units(cfg, name)
+        is_complete = name in complete_overlays
+        overlay_units = build_overlay_units(cfg, name, complete=is_complete)
         units.extend(overlay_units)
         categories.append({"id": name, "name": name.upper()})
-        print(f"Overlay {name}: {len(overlay_units)} units")
+        suffix = " [complete]" if is_complete else ""
+        print(f"Overlay {name}: {len(overlay_units)} units{suffix}")
 
     # ── Write objdiff.json ──
     objdiff_config = {

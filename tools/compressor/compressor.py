@@ -413,6 +413,13 @@ def find_best(src, i, n, hash_table):
                     off_hi = (offset >> 8) & 0xF
                     bref([0xFC, off_lo, ((fc_cnt - 4) << 4) | off_hi], fc_cnt, match_start)
 
+    # When F5 is viable, the reference compressor prefers it over F7 even
+    # when F7 yields more raw savings (confirmed at MENU dec=1115). Drop F7
+    # candidates whenever F5 is available.
+    has_f5 = any(c[0][0] == 0xF5 for c in candidates)
+    if has_f5:
+        candidates = [c for c in candidates if c[0][0] != 0xF7]
+
     # Pick best pattern using 1-level lookahead.
     for enc, adv, sav in candidates:
         total = sav + best_pattern_savings(src, i + adv, n)
