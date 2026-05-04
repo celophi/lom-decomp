@@ -686,16 +686,18 @@ everything: all overlays
 # on every unit of a matched overlay.
 
 # --- gover -------------------------------------------------------------------
+# The original decompressed GOVER starts with a 0x00 byte before the actual
+# overlay code (objcopy strips it because it's not in any output section), so
+# we prepend it to the raw .bin before compressing.
 build/overlays/gover/gover.raw: gover
 	@mkdir -p build/overlays/gover
-	$(OBJCOPY) -O binary $(STAGING)/build/overlays/gover/gover.elf $@
+	$(OBJCOPY) -O binary $(STAGING)/build/overlays/gover/gover.elf $@.tmp
+	printf '\0' > $@
+	cat $@.tmp >> $@
+	rm -f $@.tmp
 
-build/overlays/gover/gover.cmp: build/overlays/gover/gover.raw
+build/overlays/gover/GOVER.BIN: build/overlays/gover/gover.raw
 	python3 tools/compressor/compressor.py $< $@
-
-build/overlays/gover/GOVER.BIN: build/overlays/gover/gover.cmp
-	printf '\x01' > $@
-	cat $< >> $@
 
 verify-gover: build/overlays/gover/GOVER.BIN
 	@mkdir -p build
