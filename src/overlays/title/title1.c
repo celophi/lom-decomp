@@ -1061,3 +1061,13 @@ void func_80051234(void)
     D_801026C8 = 0;
     func_800520D4();
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/so5cY
+ */
+void func_800512A0(void* arg0)
+{
+    InnerStruct* inner = (InnerStruct*)((char*)arg0 + 0x8000);
+    inner->unk80B8 = func_8005196C(inner->unk80B8, (char*)arg0 + 0x40);
+    func_800512E0();
+}
