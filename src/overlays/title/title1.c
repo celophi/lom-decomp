@@ -1374,3 +1374,15 @@ void func_80051854(void)
         *((u16*)(ptr + 0xE)) = 0;
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/SRP9z
+ */
+void func_80051904(void)
+{
+    if (D_801026C0 != 0xA0)
+    {
+        D_801026A8 += 0xA0;
+        D_801026B4 = 8;
+    }
+}
