@@ -1329,3 +1329,48 @@ void func_8005169C(void)
     *((u16*)(new_var + 0x13E)) = temp_v0_2;
     *((u16*)(new_var + 0x142)) = temp_v0_2;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/0YgmZ
+ */
+void func_80051854(void)
+{
+    s16 temp_v1;
+    if (D_801026A8 != 0)
+    {
+        u32 base = (u32)(&D_800F993C);
+        *((u16*)(base + 0xE)) = 0x10;
+        D_801026B0 = 0;
+        D_801026B8 = 0;
+        D_801026BC = 0;
+        D_801026C8 = 0;
+        *((u8*)(base + 0xA9)) = 0;
+        base++;
+        base--;
+        *((u8*)(base + 0xC1)) = 0;
+        *((u8*)(base + 0x151)) = 0;
+        *((u8*)(base + 0x169)) = 0;
+        temp_v1 = ((u16)D_801026B8) + 0x20;
+        *((u16*)(base + 0x96)) = 0x40;
+        *((u16*)(base + 0x9A)) = 0x40;
+        *((u16*)(base + 0x13E)) = 0x40;
+        *((u16*)(base + 0x142)) = 0x40;
+        *((u16*)(base + 0xC)) = 0;
+        *((u8*)(base + 0x61)) = 1;
+        *((u8*)(base + 0x79)) = 1;
+        *((u8*)(base + 0x109)) = 1;
+        *((u8*)(base + 0x121)) = 1;
+
+        *((u16*)(base + 0x3E)) = (u16)D_801026B8;
+        *((u16*)(base + 0x56)) = temp_v1;
+        *((u16*)(base + 0xE6)) = (u16)D_801026B8;
+        *((u16*)(base + 0xFE)) = temp_v1;
+        return;
+    }
+    {
+        u32 low_addr = (u32)(&D_800F993C);
+        u32 ptr = D_801026A8 + low_addr;
+        *((u16*)(ptr + 0xC)) = 0x10;
+        *((u16*)(ptr + 0xE)) = 0;
+    }
+}
