@@ -1071,3 +1071,164 @@ void func_800512A0(void* arg0)
     inner->unk80B8 = func_8005196C(inner->unk80B8, (char*)arg0 + 0x40);
     func_800512E0();
 }
+
+/**
+ * decomp.me (99.41%) https://decomp.me/scratch/A1OF6
+ */
+void func_800512E0(void)
+{
+    s32 temp_a1;
+    s32 temp_s0;
+    u8* new_var;
+    s32* new_var4;
+    s32 temp_v0_2;
+    int new_var2;
+    s32 temp_v0_3;
+    s32 new_var3;
+    s32 temp_v1;
+    s32 var_a0_2;
+    s32 var_v0;
+    u32 var_a0;
+    u8 temp_v0;
+    u8* var_a1;
+    u8* var_v1;
+    u8* dest_ptr;
+    s32 flag;
+    if (D_801026B4 != 0)
+    {
+        new_var4 = &D_801026C0;
+        temp_a1 = ((s32)(D_801026A8 - (*new_var4))) / ((s32)D_801026B4);
+        temp_v1 = ((s32)(D_801026AC - D_801026C4)) / ((s32)D_801026B4);
+        D_801026B4 -= 1;
+        D_801026C0 += temp_a1;
+        D_801026C4 += temp_v1;
+        return;
+    }
+    D_801026C0 = D_801026A8;
+    D_801026C4 = D_801026AC;
+    func_80050FBC();
+    if (D_801026A8 == 0)
+    {
+        if (D_8010269C & 0xA000)
+        {
+            func_800503C4(0x7D, 0x80);
+            if (D_800F993C[0x1B1] != 0)
+            {
+                D_800F993C[0x1B1] = 0;
+                D_800F993C[0x1C9] = 1;
+                return;
+            }
+            D_800F993C[0x1B1] = 1;
+            D_800F993C[0x1C9] = D_801026C4 * 0;
+            return;
+        }
+        if (D_8010269C & 0xA20)
+        {
+            func_800503C4(0x7E, 0x80);
+            if (D_800F9AED != 0)
+            {
+                func_80051904();
+                func_80051854();
+                return;
+            }
+            func_80051938();
+            func_80051854();
+            return;
+        }
+        if (D_8010269C & 0x40)
+        {
+            func_800503C4(0x7F, 0x80);
+            D_80102640 = 2;
+        }
+    }
+    else
+    {
+        if (D_8010269C & 0xA20)
+        {
+            if (D_801026A8 > 0)
+            {
+                func_8005228C(0);
+                flag = ~0x7F;
+                var_a1 = D_80042FD8;
+                var_v0 = (*((s32*)(var_a1 + 0x608))) & flag;
+            }
+            else
+            {
+                func_8005228C(1);
+                flag = ~0x7F;
+                var_a1 = D_80042FD8;
+                var_v0 = ((*((s32*)(var_a1 + 0x608))) & flag) | 1;
+            }
+            *((s32*)(var_a1 + 0x608)) = var_v0;
+            temp_s0 = rand();
+            new_var2 = rand();
+            temp_s0 |= new_var2 << 0xF;
+            *((s16*)(var_a1 + 0xD4)) = (s16)temp_s0;
+            dest_ptr = D_80043618;
+            var_v1 = D_800F9BC4 + (D_801026B0 << 6);
+            var_a0 = 0;
+            while (var_a0 < 0x40U)
+            {
+                var_a0 += 1;
+                temp_v0 = *var_v1;
+                var_v1 += 1;
+                *dest_ptr = temp_v0;
+                dest_ptr += 1;
+            }
+
+            var_a0_2 = 0;
+            new_var3 = D_801026B0;
+            var_v1 = D_80042FD8;
+            var_a0_2 = 0;
+            do
+            {
+                if (new_var3 != var_a0_2)
+                {
+                    *((s32*)(var_v1 + 0x34)) = 0;
+                }
+                var_a0_2 += 1;
+                var_v1 += 4;
+            } while (var_a0_2 < 0xB);
+            func_800503C4(0x7E, 0x80);
+            D_80102640 = 1;
+        }
+        else if (D_8010269C & 0x40)
+        {
+            func_800503C4(0x7F, 0x80);
+            if (D_801026A8 > 0)
+            {
+                func_80051938();
+                func_80051854();
+            }
+            else
+            {
+                func_80051904();
+                func_80051854();
+            }
+        }
+        else if (D_801026C8 == 0)
+        {
+            if ((D_8010269C & 0x1000) != 0U)
+            {
+                func_800503C4(0x7D, 0x80);
+                temp_v0_2 = D_801026B0 - 1;
+                D_801026B0 = temp_v0_2;
+                if (temp_v0_2 < 0)
+                {
+                    D_801026B0 = 0xA;
+                }
+            }
+            if (D_8010269C & 0x4000)
+            {
+                func_800503C4(0x7D, 0x80);
+                temp_v0_3 = D_801026B0 + 1;
+                D_801026B0 = temp_v0_3;
+                if (temp_v0_3 >= 0xB)
+                {
+                    D_801026B0 = 0;
+                }
+            }
+        }
+        func_8005169C();
+    }
+}
