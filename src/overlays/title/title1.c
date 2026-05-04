@@ -922,8 +922,8 @@ void func_80050FBC(void)
     else
     {
         v1 = *((u16*)(ptr + 2));
-        v0 = *((volatile u16*)(2 + ptr));
-        a1_val = (v1 >> 8) | (v0 << 8);
+
+        a1_val = (v1 >> 8) | (*((u16*)(2 + ptr)) << 8);
         a1_val = (((((((((a1_val & 0x40) >> 1) | ((a1_val & 0x20) << 1)) | ((a1_val & 0x80) >> 3)) |
                       ((a1_val & 0x10) << 3)) &
                      0xFFFF) &
