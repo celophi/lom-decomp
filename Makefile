@@ -337,7 +337,6 @@ OVERLAYS += shop
 overlay_shop_gcc_srcs   := src/overlays/shop/unk1.c
 
 OVERLAYS += title
-overlay_title_gcc_srcs   := src/overlays/title/unk1.c
 
 OVERLAYS += wsel
 overlay_wsel_gcc_srcs    := src/overlays/wsel/unk1.c

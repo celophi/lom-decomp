@@ -82,6 +82,9 @@ extern s16 D_8003EC90;
 extern s32 D_800FEF40;
 extern s16 D_80046FDE;
 extern s32 D_80042FC4;
+extern s32 D_801023F0;
+extern s32 D_801021A0;
+extern s32 g_gameDataBasePtr;
 
 extern D_80102658_t D_80102658;
 extern D_80102648_t D_80102648;

@@ -1810,3 +1810,35 @@ void func_80052220(s32 arg0)
         var_v1++;
     } while (var_a0 < 0xC9AU);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/CU7Ml
+ */
+void func_8005228C(s32 arg0)
+{
+    s32 temp_v0;
+    s32* var_a0;
+    int new_var;
+    s32* var_v1;
+    u32 var_a1;
+    if (arg0 != 0)
+    {
+        var_a0 = &D_801023F0;
+        new_var = sizeof(s32);
+        ((s32*)D_80042FD8)[0x2E0 / new_var] |= 1;
+    }
+    else
+    {
+        var_a0 = &D_801021A0;
+    }
+    var_a1 = 0;
+    var_v1 = &g_gameDataBasePtr;
+    do
+    {
+        temp_v0 = *var_a0;
+        var_a0++;
+        var_a1++;
+        *var_v1 = temp_v0;
+        var_v1++;
+    } while (var_a1 < 0x94U);
+}
