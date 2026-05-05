@@ -1001,43 +1001,46 @@ void func_80050FBC(void)
 static void read_pad_input(void)
 {
     SCDRegs* base = (SCDRegs*)0x801ED600;
-    s32 var_v1;
-    u32 a1;
-    s16 sval;
+    s32 state;
+    u32 buttons;
+    s16 axis;
 
     D_8010269C = 0;
     if (D_801ED600[0] >= 254)
     {
-        var_v1 = 0;
+        state = 0;
     }
     else
     {
-        a1 = ((base->buttonData >> 8) & 0xFF) | (base->buttonData << 8);
-        a1 = (((((a1 & 0x40) >> 1) | ((a1 & 0x20) << 1)) | ((a1 & 0x80) >> 3)) | ((a1 & 0x10) << 3)) | (a1 & (~0xF0));
+        buttons = ((base->buttonData >> 8) & 0xFF) | (base->buttonData << 8);
+        buttons = (((((buttons & PAD_BTN_CIRCLE) >> 1) | ((buttons & PAD_BTN_CROSS) << 1)) |
+                             ((buttons & PAD_BTN_TRIANGLE) >> 3)) |
+                            ((buttons & PAD_BTN_SQUARE) << 3)) |
+                           (buttons & ~0xF0);
         if (base->deviceState != 0)
         {
-            sval = base->axisX;
-            if (sval < (-1))
+            axis = base->axisX;
+            if (axis < (-1))
             {
-                a1 |= PAD_BTN_LEFT;
+                buttons |= PAD_BTN_LEFT;
             }
-            else if (sval >= 2)
+            else if (axis >= 2)
             {
-                a1 |= PAD_BTN_RIGHT;
+                buttons |= PAD_BTN_RIGHT;
             }
-            sval = base->axisY;
-            if (sval < (-1))
+            axis = base->axisY;
+            if (axis < (-1))
             {
-                a1 |= PAD_BTN_UP;
+                buttons |= PAD_BTN_UP;
             }
-            else if (sval >= 2)
+            else if (axis >= 2)
             {
-                a1 |= PAD_BTN_DOWN;
+                buttons |= PAD_BTN_DOWN;
             }
         }
-        var_v1 = a1;
+        state = buttons;
     }
-    D_80102694 = var_v1;
+    D_80102694 = state;
     g_inputRepeatTimer = 15;
 }
 
