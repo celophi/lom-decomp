@@ -24,7 +24,6 @@ options:
     - config/symbols/shared_symbol_addrs.txt
     - config/symbols/title_symbol_addrs.txt
     
-
   reloc_addrs_path:
     - config/relocations/title_reloc_addrs.txt
 
