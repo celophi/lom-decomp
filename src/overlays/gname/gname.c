@@ -131,3 +131,48 @@ void func_8014075C(void)
     arr[3] = 0x1F2;
     func_80140794(arr);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/P3W9C
+ */
+void func_80140794(void* arg0)
+{
+    void* s0 = arg0;
+    u16 new_var;
+    u16* s1 = (u16*)D_80147494;
+    s32 s2 = *((s32*)(((u8*)s1) + 8));
+    u16 new_var2;
+    u16* ptr = (u16*)(((u8*)s1) + 0x14);
+    u16 arr[4];
+    int counter;
+    u16 tmp0 = *((u16*)(((u8*)s0) + 4));
+    counter = 0;
+    arr[0] = tmp0;
+    new_var = *((u16*)(((u8*)s0) + 6));
+    arr[2] = 0x100;
+    arr[3] = 1;
+    arr[1] = new_var;
+    do
+    {
+        if ((*ptr) != 0)
+        {
+            *ptr |= 0x8000;
+        }
+        ptr++;
+        counter++;
+    } while (counter < 0x100);
+    func_80019A34((u16*)arr, ((u8*)s1) + 0x14);
+    arr[0] = *((u16*)(((u8*)s0) + 0));
+    arr[1] = *((u16*)(((u8*)s0) + 2));
+    {
+        u16* p = (u16*)(((u8*)s1) + (s2 + 8));
+        arr[2] = p[4];
+        arr[3] = p[5];
+        func_80019A34((u16*)arr, p + 6);
+    }
+    arr[0] = *((u16*)(((u8*)s0) + 4));
+    new_var2 = *((u16*)(((u8*)s0) + 6));
+    arr[2] = 0x100;
+    arr[3] = 1;
+    arr[1] = new_var2 + 1;
+}
