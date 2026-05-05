@@ -1406,6 +1406,7 @@ inline u16 inline_fn(unsigned char* arg0)
 
 /**
  * decomp.me (87.28%) https://decomp.me/scratch/UVLSm
+ * (bad definitely not functional scratch 91.76% https://decomp.me/scratch/P2gt5)
  * NOTE THAT THIS MAY NOT BE FUNCTIONALLY EQUIVALENT YET!
  */
 void* func_8005196C(void* arg0, s32* arg1)
@@ -1713,4 +1714,63 @@ void* func_8005196C(void* arg0, s32* arg1)
         t2 += 0x18;
     } while (s2 < 0x1B);
     return t0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/lzJHa
+ */
+unsigned short func_800520D4(void)
+{
+    unsigned char* entry_base;
+    u32 new_var3;
+    unsigned char* control_ptr;
+    unsigned char* db;
+    u32 offset8;
+    unsigned char* secondary;
+    int product;
+    int new_var2;
+    u32 new_var4;
+    u32 control;
+    RECT rect;
+    int counter;
+    unsigned char* new_var;
+    entry_base = D_800F97FC;
+    ;
+    for (counter = 0; counter < 11; counter++)
+    {
+        control_ptr = entry_base;
+        secondary = *((unsigned char**)(control_ptr + 8));
+        new_var3 = *((u32*)(control_ptr + 0xc));
+        control = new_var3;
+        db = secondary;
+        new_var = db + 0x12;
+        control = (control & ((u32)(-8))) | (db[4] & 7);
+        *((u32*)(control_ptr + 0xc)) = control;
+        product = (*((u16*)(db + 0x10))) * (*((u16*)new_var));
+        offset8 = *((u32*)(db + 8));
+        db += 8;
+        rect.x = *((s16*)((entry_base + 0xc) - 8));
+        product++;
+        product--;
+        rect.y = *((s16*)((entry_base + 0xc) - 6));
+        rect.h = 1;
+        rect.w = product;
+
+        LoadImage(&rect, (u_long*)(db + 0xc), product);
+        secondary = db + offset8;
+        new_var2 = 3;
+        control = (new_var4 = *((u32*)(control_ptr + 0xc)));
+        control = (control & ((u32)(-0x1ff9))) | (((*((u16*)(secondary + 8))) & 0x3ff) << new_var2);
+        *((u32*)(entry_base + 0xc)) = control;
+        control = control & 0xFF801FFF;
+        control = control | (((*((u16*)(secondary + 0xa))) & 0x3ff) << 13);
+        *((u32*)(entry_base + 0xc)) = control;
+        rect.x = *((s16*)entry_base);
+        rect.y = *((s16*)((entry_base + 0xc) - 0xa));
+        rect.w = ((*((u32*)(entry_base + 0xc))) >> 3) & 0x3ff;
+        rect.h = ((*((u32*)(entry_base + 0xc))) >> 13) & 0x3ff;
+        LoadImage(&rect, (u_long*)(secondary + 0xc));
+        entry_base += 0x10;
+        control_ptr += 0x10;
+    }
 }
