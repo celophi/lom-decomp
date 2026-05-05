@@ -187,3 +187,42 @@ void func_80140888(s32 arg0)
     D_800F22AC += 1;
     func_801408D0();
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/g5Rx3
+ */
+void func_801408D0(void)
+{
+    s32 tmpA;
+
+    if (D_8014F880 == 0)
+    {
+        func_8014139C();
+    }
+    else
+    {
+        D_8014F880--;
+    }
+
+    tmpA = D_8014F8A4;
+    if (tmpA != 0)
+    {
+        D_8014F8A4--;
+        D_8014F8A8 += (D_8014F8BC - D_8014F8A8) / tmpA;
+    }
+    else
+    {
+        D_8014F8A8 = D_8014F8BC;
+    }
+
+    if (D_80122988 == 0x800)
+    {
+        if ((func_80142720(D_8014F844) != 0) && (func_80142C50(D_8014F844) == 0))
+        {
+            func_800A3938(0x7E, 0x80);
+            D_8014F7E4 = 5;
+            return;
+        }
+        func_800A3938(0x78, 0x80);
+    }
+}
