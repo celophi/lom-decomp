@@ -1,5 +1,6 @@
 // Title
 title_func_8004FC74 = 0x8004FC74;
+render_menu = 0x8004FDBC;
 read_pad_input = 0x8005113C;
 
 D_80102640 = 0x80102640;
