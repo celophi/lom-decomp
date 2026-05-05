@@ -77,6 +77,11 @@ extern u8 D_800F993C[0x200];
 extern u8 D_800F97FC[];
 extern u8 D_800F98AC[];
 extern u8 D_800F98F4[];
+extern s32 D_800F9E84;
+extern s16 D_8003EC90;
+extern s32 D_800FEF40;
+extern s16 D_80046FDE;
+extern s32 D_80042FC4;
 
 extern D_80102658_t D_80102658;
 extern D_80102648_t D_80102648;
