@@ -118,3 +118,111 @@ void func_80140714(void)
     func_801409EC();
     func_80063194();
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/EWwJI
+ */
+void func_8014075C(void)
+{
+    s16 arr[4]; // RECT
+    arr[0] = 0x140;
+    arr[1] = 0;
+    arr[2] = 0;
+    arr[3] = 0x1F2;
+    func_80140794(arr);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/P3W9C
+ */
+void func_80140794(void* arg0)
+{
+    void* s0 = arg0;
+    u16 new_var;
+    u16* s1 = (u16*)D_80147494;
+    s32 s2 = *((s32*)(((u8*)s1) + 8));
+    u16 new_var2;
+    u16* ptr = (u16*)(((u8*)s1) + 0x14);
+    u16 arr[4];
+    int counter;
+    u16 tmp0 = *((u16*)(((u8*)s0) + 4));
+    counter = 0;
+    arr[0] = tmp0;
+    new_var = *((u16*)(((u8*)s0) + 6));
+    arr[2] = 0x100;
+    arr[3] = 1;
+    arr[1] = new_var;
+    do
+    {
+        if ((*ptr) != 0)
+        {
+            *ptr |= 0x8000;
+        }
+        ptr++;
+        counter++;
+    } while (counter < 0x100);
+    func_80019A34((u16*)arr, ((u8*)s1) + 0x14);
+    arr[0] = *((u16*)(((u8*)s0) + 0));
+    arr[1] = *((u16*)(((u8*)s0) + 2));
+    {
+        u16* p = (u16*)(((u8*)s1) + (s2 + 8));
+        arr[2] = p[4];
+        arr[3] = p[5];
+        func_80019A34((u16*)arr, p + 6);
+    }
+    arr[0] = *((u16*)(((u8*)s0) + 4));
+    new_var2 = *((u16*)(((u8*)s0) + 6));
+    arr[2] = 0x100;
+    arr[3] = 1;
+    arr[1] = new_var2 + 1;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/yYkTM
+ */
+void func_80140888(s32 arg0)
+{
+    func_80142410();
+    func_80141928(arg0);
+    D_800F22AC += 1;
+    func_801408D0();
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/g5Rx3
+ */
+void func_801408D0(void)
+{
+    s32 tmpA;
+
+    if (D_8014F880 == 0)
+    {
+        func_8014139C();
+    }
+    else
+    {
+        D_8014F880--;
+    }
+
+    tmpA = D_8014F8A4;
+    if (tmpA != 0)
+    {
+        D_8014F8A4--;
+        D_8014F8A8 += (D_8014F8BC - D_8014F8A8) / tmpA;
+    }
+    else
+    {
+        D_8014F8A8 = D_8014F8BC;
+    }
+
+    if (D_80122988 == 0x800)
+    {
+        if ((func_80142720(D_8014F844) != 0) && (func_80142C50(D_8014F844) == 0))
+        {
+            func_800A3938(0x7E, 0x80);
+            D_8014F7E4 = 5;
+            return;
+        }
+        func_800A3938(0x78, 0x80);
+    }
+}
