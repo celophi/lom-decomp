@@ -998,16 +998,15 @@ void func_80050FBC(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/1dQbp
  */
-void func_8005113C(void)
+void _read_pad_input(void)
 {
     SCDRegs* base = (SCDRegs*)0x801ED600;
     s32 var_v1;
     u32 a1;
-    u16 first;
-    u16 second;
     s16 sval;
+
     D_8010269C = 0;
-    if (D_801ED600[0] >= 0xFEU)
+    if (D_801ED600[0] >= 254)
     {
         var_v1 = 0;
     }
@@ -1047,7 +1046,7 @@ void func_8005113C(void)
  */
 void func_80051234(void)
 {
-    func_8005113C();
+    _read_pad_input();
     D_801026B4 = 0;
     D_801026C4 = 0;
     D_801026AC = 0;
