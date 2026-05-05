@@ -1,0 +1,20 @@
+// MOVIE.BIN
+movie_play                          = 0x80140018;
+movie_init                          = 0x80140358;
+movie_update                        = 0x801406E4;
+movie_mdec_out_callback             = 0x80140AC0;
+movie_schedule_next_decode          = 0x80140C00;
+movie_service_video_ops             = 0x80140D48;
+movie_cd_sector_callback            = 0x80140F04;
+movie_get_next_audio_entry          = 0x8014159C;
+movie_draw_sync_callback            = 0x801416C4;
+movie_get_next_video_entry          = 0x80141788;
+movie_advance_video_read            = 0x80141858;
+movie_advance_audio_read            = 0x801418B0;
+
+g_allocInfo = 0x80180014;
+g_gpuMode = 0x801ED590;
+g_busy = 0x801ED596;
+g_mdecRetryPending = 0x801ED595;
+g_audioStreamState = 0x801ED592;
+g_sectorsRemaining = 0x801ED57E;

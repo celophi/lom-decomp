@@ -1,0 +1,19 @@
+// GOVER
+gover_show_screen = 0x80140004;
+gover_run = 0x801401F0;
+gover_build_otag = 0x80140380;
+gover_load_image_from_cd = 0x80140538;
+gover_upload_image_to_vram = 0x80140588;
+gover_load_audio_clip = 0x80140648;
+
+g_goverOverlayId = 0x80140000;
+g_goverFrameHeader = 0x80140710;
+g_goverFrameTail = 0x801407A0;
+g_fadeLevel = 0x80141048;
+g_fadeStep = 0x80140708;
+D_8014070C = 0x8014070C;
+g_audioDataOffset = 0x80180004;
+g_audioData = 0x80119F00;
+D_80180000 = 0x80180000; // ignore:true
+D_80180001 = 0x80180001; // ignore:true
+D_80180004 = 0x80180004; // ignore:true
