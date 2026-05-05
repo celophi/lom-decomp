@@ -44,6 +44,22 @@ typedef struct
     s32 unk80B8;             // desired field at offset 0xB8
 } InnerStruct;
 
+typedef struct
+{
+    char _pad[0x40];
+    u_long otag_buffer[0x1000]; /* 0x0040 */
+    DISPENV disp_env;           /* 0x4040 */
+    DRAWENV draw_env;           /* 0x4054 */
+    char _pad2[8];              /* 0x40B0 */
+    u_long prim_buffer[0x1000]; /* 0x40B8 */
+    u_long* next_prim_ptr;      /* 0x80B8 */
+    char _pad3[0x3C10];         /* 0x80BC */
+
+    char _pad4[0x40];
+    u_long otag_buffer2[0x1000];
+
+} MenuContext; /* 0xBCCC total */
+
 extern u8 D_80042FD8[];
 extern s32 D_80042FB4;
 extern u8 D_80102692;
