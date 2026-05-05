@@ -93,3 +93,17 @@ void func_80140410(ArgStruct* arg0)
 
     arg0->unk4040 = var_t4;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/pnzC1
+ */
+void func_80140714(void)
+{
+    volatile int dummy[2]; // forces 0x20 stack frame, ra at 0x18(sp)
+    func_8014075C();
+    func_800AA02C();
+    D_8014F880 = 0x28;
+    func_8006441C();
+    func_801409EC();
+    func_80063194();
+}
