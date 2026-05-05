@@ -633,9 +633,9 @@ void ProcessControllerInput(void)
         // Reorder face button bits 4-7 from hardware order (Triangle, Circle, Cross, Square)
         // to game order (Square, Cross, Circle, Triangle) by swapping Triangle<->Square and Circle<->Cross.
         // Keep D-pad and shoulder button bits (0-3, 8-15) unchanged.
-        processedButtons = (((((processedButtons & CIRCLE) >> 1) | ((processedButtons & CROSS) << 1)) |
-                             ((processedButtons & TRIANGLE) >> 3)) |
-                            ((processedButtons & SQUARE) << 3)) |
+        processedButtons = (((((processedButtons & PAD_BTN_CIRCLE) >> 1) | ((processedButtons & PAD_BTN_CROSS) << 1)) |
+                             ((processedButtons & PAD_BTN_TRIANGLE) >> 3)) |
+                            ((processedButtons & PAD_BTN_SQUARE) << 3)) |
                            (processedButtons & ~0xF0);
 
         if (controllerRegs->deviceState != 0)
@@ -644,22 +644,22 @@ void ProcessControllerInput(void)
 
             if (axisX < -1)
             {
-                processedButtons |= LEFT;
+                processedButtons |= PAD_BTN_LEFT;
             }
             else if (axisX >= 2)
             {
-                processedButtons |= RIGHT;
+                processedButtons |= PAD_BTN_RIGHT;
             }
 
             axisY = (s16)controllerRegs->axisY;
 
             if (axisY < -1)
             {
-                processedButtons |= UP;
+                processedButtons |= PAD_BTN_UP;
             }
             else if (axisY >= 2)
             {
-                processedButtons |= DOWN;
+                processedButtons |= PAD_BTN_DOWN;
             }
         }
         finalButtonState = processedButtons;
@@ -751,9 +751,9 @@ void UpdateControllerInput(void)
         // Reorder face button bits 4-7 from hardware order (Triangle, Circle, Cross, Square)
         // to game order (Square, Cross, Circle, Triangle) by swapping Triangle<->Square and Circle<->Cross.
         // Keep D-pad and shoulder button bits (0-3, 8-15) unchanged.
-        processedButtons = (((((processedButtons & CIRCLE) >> 1) | ((processedButtons & CROSS) << 1)) |
-                             ((processedButtons & TRIANGLE) >> 3)) |
-                            ((processedButtons & SQUARE) << 3)) |
+        processedButtons = (((((processedButtons & PAD_BTN_CIRCLE) >> 1) | ((processedButtons & PAD_BTN_CROSS) << 1)) |
+                             ((processedButtons & PAD_BTN_TRIANGLE) >> 3)) |
+                            ((processedButtons & PAD_BTN_SQUARE) << 3)) |
                            (processedButtons & ~0xF0);
 
         if (regs->deviceState != 0)
@@ -762,22 +762,22 @@ void UpdateControllerInput(void)
 
             if (axisX < -1)
             {
-                processedButtons |= LEFT;
+                processedButtons |= PAD_BTN_LEFT;
             }
             else if (axisX >= 2)
             {
-                processedButtons |= RIGHT;
+                processedButtons |= PAD_BTN_RIGHT;
             }
 
             axisY = regs->axisY;
 
             if (axisY < -1)
             {
-                processedButtons |= UP;
+                processedButtons |= PAD_BTN_UP;
             }
             else if (axisY >= 2)
             {
-                processedButtons |= DOWN;
+                processedButtons |= PAD_BTN_DOWN;
             }
         }
         finalButtonState = processedButtons;

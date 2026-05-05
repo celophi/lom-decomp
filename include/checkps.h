@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "display.h"
+#include "pad.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libapi.h"
@@ -18,39 +19,6 @@
  * Flag indicating that a glyph is currently cached and valid in the character cache.
  */
 #define GLYPH_CACHED_FLAG 0x10000
-
-/**
- * Button bit masks for the game's internal controller state (g_lastInputState / g_debouncedInput).
- *
- * These differ from the raw PSX hardware bit positions. The SCD driver stores
- * the two controller bytes in reversed order, so UpdateControllerInput byte-swaps
- * buttonData first. The face button bits (4-7) are then remapped so the hardware
- * order (Triangle, Circle, Cross, Square) becomes (Square, Cross, Circle, Triangle).
- *
- * Set bit = button pressed.
- */
-typedef enum {
-    SQUARE   = 0x0010,
-    CROSS    = 0x0020,
-    CIRCLE   = 0x0040,
-    TRIANGLE = 0x0080,
-    UP       = 0x1000,
-    RIGHT    = 0x2000,
-    DOWN     = 0x4000,
-    LEFT     = 0x8000
-} PadButton;
-
-typedef struct
-{
-    u8 deviceState; // 0x00 - status / mode flag
-    u8 _pad1;
-    u16 buttonData; // 0x02 - raw 16-bit input (pre-remap)
-
-    u8 _pad2[0x28]; // 0x04–0x2B - unused here
-
-    s16 axisX; // 0x2C - signed axis (negative/positive thresholded)
-    s16 axisY; // 0x2E - signed axis (negative/positive thresholded)
-} SCDRegs;
 
 /**
  * Represents a target or current RGB colour state used by the screen fade system.
