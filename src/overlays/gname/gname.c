@@ -118,3 +118,16 @@ void func_80140714(void)
     func_801409EC();
     func_80063194();
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/EWwJI
+ */
+void func_8014075C(void)
+{
+    s16 arr[4]; // RECT
+    arr[0] = 0x140;
+    arr[1] = 0;
+    arr[2] = 0;
+    arr[3] = 0x1F2;
+    func_80140794(arr);
+}
