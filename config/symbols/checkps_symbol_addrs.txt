@@ -36,6 +36,7 @@ g_cdIrqRegister = 0x8005CFD4;
 g_cdCmdTable = 0x8005CF90;
 g_cdIrqAccum = 0x8005CFEC;
 
+RunCheckPS = 0x8004fd14;
 PollInputDevice = 0x800507B4;
 ProcessControllerInput = 0x8005088C;
 UpdateControllerInput = 0x80050A0C;
