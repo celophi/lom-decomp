@@ -30,7 +30,7 @@ s32 title_func_8004FC74(s32 arg0)
         ptr->unkC = 0;
         do
         {
-            func_8004FDBC(pad);
+            render_menu(pad);
         } while (base[0x990] == 0); /* 0x80102640 offset = 0x2640, 0x2640/4 = 0x990 */
 
         D_80042FB4 = VSync(-1);
@@ -72,35 +72,34 @@ s32 title_func_8004FC74(s32 arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/bMLDn
  */
-void func_8004FDBC(void* arg0)
+void render_menu(MenuContext* context)
 {
     RECT rect;
-    u_char* base = (u_char*)arg0;
-    u_char* s0;
-    u_char* s1;
+    MenuContext* base = context;
+    MenuContext* s0;
+    u_long* s1;
+    void* tmp;
 
     DrawSync(0);
     VSync(0);
-
     rect.x = 0;
     rect.y = 0;
-    rect.w = 0x140;
-    rect.h = 0x1D8;
+    rect.w = 320;
+    rect.h = 472;
     ClearImage(&rect, 0, 0, 0);
 
     s0 = base;
-    ClearOTagR((u_long*)(s0 + 0x40), 0x1000);
-    ClearOTagR((u_long*)(s0 + 0xBD0C), 0x1000);
-    PutDispEnv((DISPENV*)(s0 + 0x4040));
+    ClearOTagR(s0->otag_buffer, 0x1000);
+    ClearOTagR(s0->otag_buffer2, 0x1000);
+    PutDispEnv(&s0->disp_env);
     func_800157DC();
-
     SetDispMask(1);
 
-    for (;;)
+    while (1)
     {
-        s1 = s0 + 0x40;
-        ClearOTagR((u_long*)s1, 0x1000);
-        *(u_long**)(s0 + 0x80B8) = (u_long*)(s0 + 0x40B8);
+        s1 = s0->otag_buffer;
+        ClearOTagR(s1, 0x1000);
+        s0->next_prim_ptr = s0->prim_buffer;
         rand();
         VSync(1);
         func_8005041C(s0);
@@ -114,23 +113,21 @@ void func_8004FDBC(void* arg0)
             func_800157B0(2);
             VSync(2);
 
+            tmp = base;
+            if (s0 == base)
             {
-                void* tmp = base;
-                if (s0 == base)
-                {
-                    tmp = s0 + 0xBCCC;
-                }
-                s0 = tmp;
+                tmp = s0->_pad4;
             }
-
-            PutDispEnv((DISPENV*)(s0 + 0x4040));
-            PutDrawEnv((DRAWENV*)(s0 + 0x4054));
-            DrawOTag((u_long*)(s1 + 0x3FFC));
+            s0 = tmp;
+            PutDispEnv(&s0->disp_env);
+            PutDrawEnv(&s0->draw_env);
+            DrawOTag((u_long*)(s1 + 4095));
             func_800157DC();
             cdrom_process_state();
-
             if (D_80102640 == 0)
+            {
                 continue;
+            }
         }
         break;
     }
@@ -1015,9 +1012,9 @@ static void read_pad_input(void)
     {
         buttons = ((base->buttonData >> 8) & 0xFF) | (base->buttonData << 8);
         buttons = (((((buttons & PAD_BTN_CIRCLE) >> 1) | ((buttons & PAD_BTN_CROSS) << 1)) |
-                             ((buttons & PAD_BTN_TRIANGLE) >> 3)) |
-                            ((buttons & PAD_BTN_SQUARE) << 3)) |
-                           (buttons & ~0xF0);
+                    ((buttons & PAD_BTN_TRIANGLE) >> 3)) |
+                   ((buttons & PAD_BTN_SQUARE) << 3)) |
+                  (buttons & ~0xF0);
         if (base->deviceState != 0)
         {
             axis = base->axisX;
