@@ -20,5 +20,6 @@ typedef struct {
 
 extern DataStruct D_8014F818;
 extern DataStruct D_8014F828;
+extern s32 D_8014F880;
 
 #endif
