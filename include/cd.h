@@ -824,7 +824,7 @@ void func_80014434(void);
  *
  * @return Destination address for the next sector DMA write.
  *
- * @see decomp.me: (92.05%) https://decomp.me/scratch/34OBK
+ * @see decomp.me: (95.08%) https://decomp.me/scratch/UDwSD
  */
 s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining);
 
