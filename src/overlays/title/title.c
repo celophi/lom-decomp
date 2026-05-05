@@ -771,7 +771,7 @@ void func_80050CAC(void)
 
     D_80102692 = 0;
     D_80102691 = 0;
-    D_80102698 = 0;
+    g_inputRepeatTimer = 0;
     D_80102694 = 0;
     D_8010269C = 0;
     D_801026A0 = 0xE10;
@@ -964,84 +964,85 @@ void func_80050FBC(void)
             {
                 var_v1 = tmp;
             }
-            if (D_80102698 == 0)
+            if (g_inputRepeatTimer == 0)
             {
                 D_8010269C = var_v1;
-                D_80102698 = 2;
+                g_inputRepeatTimer = 2;
             }
             else
             {
-                D_80102698--;
+                g_inputRepeatTimer--;
                 D_8010269C = 0;
             }
         }
         else
         {
-            *((s32*)(&D_80102698)) = 0;
+            *((s32*)(&g_inputRepeatTimer)) = 0;
         }
         *((s32*)(&D_80102694)) = 0;
     }
     else if (var_v1 == 0)
     {
         (void)(&D_8010269C);
-        *((s32*)(&D_80102698)) = 0;
+        *((s32*)(&g_inputRepeatTimer)) = 0;
         *((s32*)(&D_80102694)) = 0;
     }
     else
     {
         D_8010269C = var_v1;
         D_80102694 = var_v1;
-        D_80102698 = 0xF;
+        g_inputRepeatTimer = 15;
     }
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/1dQbp
+ * Same code as UpdateControllerInput
  */
-void func_8005113C(void)
+static void read_pad_input(void)
 {
-    u8* base = (u8*)0x801ED600;
-    s32 var_v1;
-    u32 a1;
-    u16 first;
-    u16 second;
-    s16 sval;
+    SCDRegs* base = (SCDRegs*)0x801ED600;
+    s32 state;
+    u32 buttons;
+    s16 axis;
+
     D_8010269C = 0;
-    if (D_801ED600[0] >= 0xFEU)
+    if (D_801ED600[0] >= 254)
     {
-        var_v1 = 0;
+        state = 0;
     }
     else
     {
-        first = *((volatile u16*)(base + 2));
-        second = *((volatile u16*)(base + 2));
-        a1 = ((first >> 8) & 0xFF) | (second << 8);
-        a1 = (((((a1 & 0x40) >> 1) | ((a1 & 0x20) << 1)) | ((a1 & 0x80) >> 3)) | ((a1 & 0x10) << 3)) | (a1 & (~0xF0));
-        if (base[0] != 0)
+        buttons = ((base->buttonData >> 8) & 0xFF) | (base->buttonData << 8);
+        buttons = (((((buttons & PAD_BTN_CIRCLE) >> 1) | ((buttons & PAD_BTN_CROSS) << 1)) |
+                             ((buttons & PAD_BTN_TRIANGLE) >> 3)) |
+                            ((buttons & PAD_BTN_SQUARE) << 3)) |
+                           (buttons & ~0xF0);
+        if (base->deviceState != 0)
         {
-            sval = *((s16*)(base + 0x2C));
-            if (sval < (-1))
+            axis = base->axisX;
+            if (axis < (-1))
             {
-                a1 |= 0x8000;
+                buttons |= PAD_BTN_LEFT;
             }
-            else if (sval >= 2)
+            else if (axis >= 2)
             {
-                a1 |= 0x2000;
+                buttons |= PAD_BTN_RIGHT;
             }
-            sval = *((s16*)(base + 0x2E));
-            if (sval < (-1))
+            axis = base->axisY;
+            if (axis < (-1))
             {
-                a1 |= 0x1000;
+                buttons |= PAD_BTN_UP;
             }
-            else if (sval >= 2)
+            else if (axis >= 2)
             {
-                a1 |= 0x4000;
+                buttons |= PAD_BTN_DOWN;
             }
         }
-        var_v1 = a1;
+        state = buttons;
     }
-    D_80102694 = var_v1;
-    D_80102698 = 0xF;
+    D_80102694 = state;
+    g_inputRepeatTimer = 15;
 }
 
 /**
@@ -1049,7 +1050,7 @@ void func_8005113C(void)
  */
 void func_80051234(void)
 {
-    func_8005113C();
+    read_pad_input();
     D_801026B4 = 0;
     D_801026C4 = 0;
     D_801026AC = 0;
