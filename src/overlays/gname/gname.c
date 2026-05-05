@@ -176,3 +176,14 @@ void func_80140794(void* arg0)
     arr[3] = 1;
     arr[1] = new_var2 + 1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/yYkTM
+ */
+void func_80140888(s32 arg0)
+{
+    func_80142410();
+    func_80141928(arg0);
+    D_800F22AC += 1;
+    func_801408D0();
+}

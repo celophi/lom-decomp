@@ -22,5 +22,6 @@ extern DataStruct D_8014F818;
 extern DataStruct D_8014F828;
 extern s32 D_8014F880;
 extern u8 D_80147494[];
+extern s32 D_800F22AC;
 
 #endif
