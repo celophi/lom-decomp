@@ -1774,3 +1774,39 @@ unsigned short func_800520D4(void)
         control_ptr += 0x10;
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/aPcbW
+ */
+void func_80052220(s32 arg0)
+{
+    s32 temp_v0;
+    s32* var_a1;
+    s32* var_v1;
+    u32 var_a0;
+    if (arg0 == 0)
+    {
+        var_a1 = &D_800F9E84;
+        D_8003EC90 = 0xD;
+    }
+    else
+    {
+        var_a1 = &D_800FEF40;
+        D_8003EC90 = 0;
+    }
+    D_80046FDE = 0;
+    D_80042FC4 = 0;
+    do
+    {
+    } while (0);
+    var_a0 = 0;
+    var_v1 = &D_80042FD8;
+    do
+    {
+        temp_v0 = *var_a1;
+        var_a1++;
+        var_a0++;
+        *var_v1 = temp_v0;
+        var_v1++;
+    } while (var_a0 < 0xC9AU);
+}
