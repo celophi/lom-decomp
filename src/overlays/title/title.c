@@ -1000,7 +1000,7 @@ void func_80050FBC(void)
  */
 void func_8005113C(void)
 {
-    u8* base = (u8*)0x801ED600;
+    SCDRegs* base = (SCDRegs*)0x801ED600;
     s32 var_v1;
     u32 a1;
     u16 first;
@@ -1013,13 +1013,11 @@ void func_8005113C(void)
     }
     else
     {
-        first = *((volatile u16*)(base + 2));
-        second = *((volatile u16*)(base + 2));
-        a1 = ((first >> 8) & 0xFF) | (second << 8);
+        a1 = ((base->buttonData >> 8) & 0xFF) | (base->buttonData << 8);
         a1 = (((((a1 & 0x40) >> 1) | ((a1 & 0x20) << 1)) | ((a1 & 0x80) >> 3)) | ((a1 & 0x10) << 3)) | (a1 & (~0xF0));
-        if (base[0] != 0)
+        if (base->deviceState != 0)
         {
-            sval = *((s16*)(base + 0x2C));
+            sval = base->axisX;
             if (sval < (-1))
             {
                 a1 |= 0x8000;
@@ -1028,7 +1026,7 @@ void func_8005113C(void)
             {
                 a1 |= 0x2000;
             }
-            sval = *((s16*)(base + 0x2E));
+            sval = base->axisY;
             if (sval < (-1))
             {
                 a1 |= 0x1000;
