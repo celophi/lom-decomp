@@ -104,3 +104,17 @@ void func_801406F8(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     D_8014F818.unk8 = arg2;
     D_8014F818.unkC = arg3;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/pnzC1
+ */
+void func_80140714(void)
+{
+    volatile int dummy[2]; // forces 0x20 stack frame, ra at 0x18(sp)
+    func_8014075C();
+    func_800AA02C();
+    D_8014F880 = 0x28;
+    func_8006441C();
+    func_801409EC();
+    func_80063194();
+}
