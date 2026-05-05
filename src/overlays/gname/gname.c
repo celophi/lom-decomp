@@ -93,3 +93,14 @@ void func_80140410(ArgStruct* arg0)
 
     arg0->unk4040 = var_t4;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/jq3uD
+ */
+void func_801406F8(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    D_8014F818.unk0 = arg0;
+    D_8014F818.unk4 = arg1;
+    D_8014F818.unk8 = arg2;
+    D_8014F818.unkC = arg3;
+}
