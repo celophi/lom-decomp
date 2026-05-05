@@ -608,39 +608,39 @@ g_previousGameState                 = 0x80042FB0;
 g_gameDataBasePtr                   = 0x800435C8;
 
 // CHECKPS.BIN
-g_testPatternVertexTable            = 0x8004FD00;
-g_testPatternVertexTablePadding     = 0x8004FD08;
+g_testPatternVertexTable            = 0x8004FD00; //segment:checkps
+g_testPatternVertexTablePadding     = 0x8004FD08; //segment:checkps
 
 // Uncategorized
-RunCheckPS                          = 0x8004FD14;
+RunCheckPS                          = 0x8004FD14; //segment:checkps
 
 // CHECKPS.BIN
-PollInputDevice                     = 0x800507B4;
-ProcessControllerInput              = 0x8005088C;
-UpdateControllerInput               = 0x80050A0C;
-DrawSymmetricTestPattern            = 0x80051A24;
-RenderGlyph                         = 0x80052004;
-CreateGlyphInstance                 = 0x80052218;
-InvalidateGlyphCache                = 0x80052320;
-ClearInvalidGlyphs                  = 0x8005235C;
-ResetTextRenderer                   = 0x8005239C;
-g_testPatternSizeTable              = 0x8005CFF0;
+PollInputDevice                     = 0x800507B4; //segment:checkps
+ProcessControllerInput              = 0x8005088C; //segment:checkps
+UpdateControllerInput               = 0x80050A0C; //segment:checkps
+DrawSymmetricTestPattern            = 0x80051A24; //segment:checkps
+RenderGlyph                         = 0x80052004; //segment:checkps
+CreateGlyphInstance                 = 0x80052218; //segment:checkps
+InvalidateGlyphCache                = 0x80052320; //segment:checkps
+ClearInvalidGlyphs                  = 0x8005235C; //segment:checkps
+ResetTextRenderer                   = 0x8005239C; //segment:checkps
+g_testPatternSizeTable              = 0x8005CFF0; //segment:checkps
 
 // Uncategorized
-FUN_80060814                        = 0x80060814;
+FUN_80060814                        = 0x80060814; //segment:checkps
 
 // CHECKPS.BIN
-D_8006108C                          = 0x8006108C;
-D_8006109C                          = 0x8006109C;
-g_D_800610AC                        = 0x800610AC;
-g_TextBuffer                        = 0x800810C0;
-g_characterCache                    = 0x800890C0;
-g_textCursorX                       = 0x800894C0;
-g_textCursorY                       = 0x800894C4;
-g_glyphBufferCursor                 = 0x800894C8;
-g_textOriginX                       = 0x800894CC;
-g_glyphAtlasX                       = 0x800894D0;
-g_glyphAtlasY                       = 0x800894D4;
+D_8006108C                          = 0x8006108C; //segment:checkps
+D_8006109C                          = 0x8006109C; //segment:checkps
+g_D_800610AC                        = 0x800610AC; //segment:checkps
+g_TextBuffer                        = 0x800810C0; //segment:checkps
+g_characterCache                    = 0x800890C0; //segment:checkps
+g_textCursorX                       = 0x800894C0; //segment:checkps
+g_textCursorY                       = 0x800894C4; //segment:checkps
+g_glyphBufferCursor                 = 0x800894C8; //segment:checkps
+g_textOriginX                       = 0x800894CC; //segment:checkps
+g_glyphAtlasX                       = 0x800894D0; //segment:checkps
+g_glyphAtlasY                       = 0x800894D4; //segment:checkps
 
 // Uncategorized
 gover_show_screen                   = 0x80140004;
