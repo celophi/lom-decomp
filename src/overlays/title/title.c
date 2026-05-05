@@ -998,7 +998,7 @@ void func_80050FBC(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/1dQbp
  */
-void _read_pad_input(void)
+static void _read_pad_input(void)
 {
     SCDRegs* base = (SCDRegs*)0x801ED600;
     s32 var_v1;
