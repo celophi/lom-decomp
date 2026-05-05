@@ -771,7 +771,7 @@ void func_80050CAC(void)
 
     D_80102692 = 0;
     D_80102691 = 0;
-    D_80102698 = 0;
+    g_inputRepeatTimer = 0;
     D_80102694 = 0;
     D_8010269C = 0;
     D_801026A0 = 0xE10;
@@ -964,34 +964,34 @@ void func_80050FBC(void)
             {
                 var_v1 = tmp;
             }
-            if (D_80102698 == 0)
+            if (g_inputRepeatTimer == 0)
             {
                 D_8010269C = var_v1;
-                D_80102698 = 2;
+                g_inputRepeatTimer = 2;
             }
             else
             {
-                D_80102698--;
+                g_inputRepeatTimer--;
                 D_8010269C = 0;
             }
         }
         else
         {
-            *((s32*)(&D_80102698)) = 0;
+            *((s32*)(&g_inputRepeatTimer)) = 0;
         }
         *((s32*)(&D_80102694)) = 0;
     }
     else if (var_v1 == 0)
     {
         (void)(&D_8010269C);
-        *((s32*)(&D_80102698)) = 0;
+        *((s32*)(&g_inputRepeatTimer)) = 0;
         *((s32*)(&D_80102694)) = 0;
     }
     else
     {
         D_8010269C = var_v1;
         D_80102694 = var_v1;
-        D_80102698 = 0xF;
+        g_inputRepeatTimer = 15;
     }
 }
 
@@ -1020,26 +1020,26 @@ void func_8005113C(void)
             sval = base->axisX;
             if (sval < (-1))
             {
-                a1 |= 0x8000;
+                a1 |= PAD_BTN_LEFT;
             }
             else if (sval >= 2)
             {
-                a1 |= 0x2000;
+                a1 |= PAD_BTN_RIGHT;
             }
             sval = base->axisY;
             if (sval < (-1))
             {
-                a1 |= 0x1000;
+                a1 |= PAD_BTN_UP;
             }
             else if (sval >= 2)
             {
-                a1 |= 0x4000;
+                a1 |= PAD_BTN_DOWN;
             }
         }
         var_v1 = a1;
     }
     D_80102694 = var_v1;
-    D_80102698 = 0xF;
+    g_inputRepeatTimer = 15;
 }
 
 /**

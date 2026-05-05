@@ -21,28 +21,6 @@
 #define GLYPH_CACHED_FLAG 0x10000
 
 /**
- * Button bit masks for the game's internal controller state (g_lastInputState / g_debouncedInput).
- *
- * These differ from the raw PSX hardware bit positions. The SCD driver stores
- * the two controller bytes in reversed order, so UpdateControllerInput byte-swaps
- * buttonData first. The face button bits (4-7) are then remapped so the hardware
- * order (Triangle, Circle, Cross, Square) becomes (Square, Cross, Circle, Triangle).
- *
- * Set bit = button pressed.
- */
-typedef enum {
-    SQUARE   = 0x0010,
-    CROSS    = 0x0020,
-    CIRCLE   = 0x0040,
-    TRIANGLE = 0x0080,
-    UP       = 0x1000,
-    RIGHT    = 0x2000,
-    DOWN     = 0x4000,
-    LEFT     = 0x8000
-} PadButton;
-
-
-/**
  * Represents a target or current RGB colour state used by the screen fade system.
  * The "steps" field is used to track the number of frames remaining in a fade transition,
  */

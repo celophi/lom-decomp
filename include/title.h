@@ -58,7 +58,12 @@ extern u8 D_80102670[];
 extern u8 D_80102690;
 extern u8 D_80102691;
 extern u8 D_8007FD2C[];
-extern s32 D_80102698;
+
+/**
+ * Timer used to implement input repeating (auto-repeat).
+ * Controls the delay before a held button begins triggering actions rapidly.
+ */
+extern s32 g_inputRepeatTimer;
 extern s32 D_80102694;
 extern u32 D_800522E8[3];
 extern u8 D_801ED600[];

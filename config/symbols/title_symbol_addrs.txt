@@ -1,3 +1,4 @@
 // Title
 title_func_8004FC74 = 0x8004FC74;
 D_80102640 = 0x80102640;
+ g_inputRepeatTimer = 0x80102698;
