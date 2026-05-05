@@ -997,6 +997,7 @@ void func_80050FBC(void)
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/1dQbp
+ * Same code as UpdateControllerInput
  */
 static void read_pad_input(void)
 {
