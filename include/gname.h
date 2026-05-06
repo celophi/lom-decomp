@@ -34,5 +34,7 @@ extern void func_800A3938(int, int);
 extern void func_8014139C(void);
 extern s32 func_80142720(s32);
 extern s32 func_80142C50(s32);
+extern s32 func_80140AB8(s32, s32);  
+extern void func_801428A4(s32, void*); 
 
 #endif
