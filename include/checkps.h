@@ -2,6 +2,7 @@
 #define _CHECKPS_H
 
 #include "common.h"
+#include "akao.h"
 #include "display.h"
 #include "pad.h"
 #include "psyq/libgte.h"

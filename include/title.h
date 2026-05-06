@@ -2,6 +2,7 @@
 #define _TITLE_H
 
 #include "common.h"
+#include "akao.h"
 #include "pad.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"

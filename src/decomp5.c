@@ -1,4 +1,5 @@
 #include "decomp5.h"
+#include "akao.h"
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/CJTY6
@@ -112,7 +113,7 @@ void func_800236EC(void)
  * @return 0 if the magic matched and the buffer was submitted; -1 if the
  *         AKAO magic check failed.
  */
-s32 akao_submit(void* sequenceData, s32 waitForCompletion)
+s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
     s32 ret = -1;
     UnknownStruct* ptr = (UnknownStruct*)sequenceData;

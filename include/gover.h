@@ -2,6 +2,7 @@
 #define _GOVER_H
 
 #include "common.h"
+#include "akao.h"
 #include "display.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
