@@ -28,11 +28,26 @@ void func_800235A8(s32* arg0, s32* arg1, s32 arg2, s32 arg3)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/scY8u
+ * @brief Validates the 'AKAO' magic word at the head of an audio resource.
+ *
+ * The Square AKAO sound driver tags every bank/sequence with the four-byte
+ * little-endian magic 0x4F414B41 ("AKAO"). This function returns 0 only when
+ * @p data points at a buffer beginning with that exact magic, by adding the
+ * two's-complement of the magic and letting the result be zero on a match.
+ *
+ * @param data  Candidate AKAO-tagged buffer (first word is the magic).
+ *
+ * @return 0 if the magic matches; otherwise *data + 0xB0BEB4BF (non-zero delta).
+ *
+ * @note Several call sites invoke this with no arguments, relying on the
+ *       caller's first argument already sitting in $a0 — a register-allocation
+ *       artifact required for asm matching.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/scY8u
  */
-s32 func_800235F8(s32* arg0)
+s32 akao_check_magic(s32* data)
 {
-    return *arg0 + 0xB0BEB4BF;
+    return *data + 0xB0BEB4BF;
 }
 
 /**
@@ -80,13 +95,30 @@ void func_800236EC(void)
     while ((*((volatile s32*)(&D_8003EC4C))) == 1);
 }
 
-s32 func_8002371C(void* arg0, s32 arg1)
+/**
+ * @brief Validates an AKAO buffer's magic and forwards it to the driver.
+ *
+ * Checks that @p sequenceData starts with the 'AKAO' magic via akao_check_magic.
+ * On success, reads the bank index (unk18) and SPU upload address (unk10) from
+ * the AKAO header and dispatches the buffer through func_8002376C, which
+ * primes SpuSetTransferStartAddr and posts the sequence to the audio driver.
+ *
+ * Called in a tight loop by akao_play_sequence_blocking.
+ *
+ * @param sequenceData       Pointer to an AKAO-tagged sequence buffer.
+ * @param waitForCompletion  When non-zero, the inner submit blocks until the
+ *                           SPU transfer completes.
+ *
+ * @return 0 if the magic matched and the buffer was submitted; -1 if the
+ *         AKAO magic check failed.
+ */
+s32 akao_submit(void* sequenceData, s32 waitForCompletion)
 {
     s32 ret = -1;
-    UnknownStruct* ptr = (UnknownStruct*)arg0;
-    if (func_800235F8() == 0)
+    UnknownStruct* ptr = (UnknownStruct*)sequenceData;
+    if (akao_check_magic() == 0)
     {
-        func_8002376C(arg0, arg1, ptr->unk18, ptr->unk10);
+        func_8002376C(sequenceData, waitForCompletion, ptr->unk18, ptr->unk10);
         ret = 0;
         return ret;
     }
@@ -106,7 +138,7 @@ s32 func_8002376C(void* arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 ret_val;
     func_800236EC();
     var_v0 = -1;
-    if (func_800235F8(arg0) == 0)
+    if (akao_check_magic(arg0) == 0)
     {
         new_var = arg0;
         s = (SomeStruct*)arg0;

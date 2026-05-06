@@ -978,7 +978,7 @@ extern void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
 extern void FUN_80022400(u_int param_1);
 extern undefined FUN_80140d48(void);
 extern void FUN_80023010(void);
-extern void func_80022AE8(undefined4 param_1, undefined4 param_2);
+extern void akao_play_sequence_blocking(s32 sequenceData, s32 waitForCompletion);
 extern s32 func_80022040(u8* param_1);
 extern void FUN_8002279c(undefined4 param_1, u_int param_2);
 

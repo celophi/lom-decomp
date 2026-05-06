@@ -9,7 +9,7 @@ extern u8 D_8004B430[];
 
 s32 FUN_80021fbc(void);
 s32 func_80021FDC(void);
-s32 func_80021FFC(s32 arg0);
+s32 akao_register_bank(s32 bankBase);
 void func_80022040(s32 arg0);
 void func_80022068(s32 arg0);
 void func_80022090(void);

@@ -19,16 +19,29 @@ s32 func_80021FDC(void)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/0q180
+ * @brief Registers an AKAO instrument/sample bank with the audio driver.
+ *
+ * Validates the 'AKAO' magic at the start of @p bankBase via akao_check_magic;
+ * on success, hands the payload (after the 16-byte AKAO header) to the driver
+ * entry point func_80023BB8, which records the bank as the active sample source.
+ *
+ * @param bankBase  Address of an AKAO-tagged instrument bank in main RAM.
+ *                  The first 4 bytes must be "AKAO" (0x4F414B41 little-endian).
+ *                  In TITLE this points to 0x8013C000 after EFFECT.SET is split.
+ *
+ * @return 0 if the magic matched and the bank was registered; otherwise the
+ *         non-zero delta (*bankBase + 0xB0BEB4BF) that akao_check_magic returned.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/0q180
  */
-s32 func_80021FFC(s32 arg0)
+s32 akao_register_bank(s32 bankBase)
 {
     s32 temp_v0;
 
-    temp_v0 = func_800235F8();
+    temp_v0 = akao_check_magic();
     if (temp_v0 == 0)
     {
-        func_80023BB8(arg0 + 0x10);
+        func_80023BB8(bankBase + 0x10);
     }
     return temp_v0;
 }
@@ -122,7 +135,7 @@ s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     long long new_var2;
     s32 var_v0;
     unsigned char new_var;
-    var_v0 = func_800235F8();
+    var_v0 = akao_check_magic();
     if (var_v0 == 0)
     {
         D_8004D430[0] = arg0;
