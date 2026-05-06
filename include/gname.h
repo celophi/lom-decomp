@@ -23,16 +23,34 @@ extern DataStruct D_8014F828;
 extern s32 D_8014F880;
 extern u8 D_80147494[];
 extern s32 D_800F22AC;
-extern s32 D_8014F8A4;
 extern s32 D_8014F8BC;
 extern s32 D_8014F8A8;
 extern s32 D_80122988;
 extern s32 D_8014F844;
 extern s32 D_8014F7E4;
+extern s8  D_8014F8B8;
+extern s8  D_8014F8B0;
+extern s8  D_8014F850;
+extern char D_8014F7E8;  
+extern s32 D_8014F848;
+extern s32 D_8014F884;
+extern s32 D_8014F888;
+extern s32 D_8014F88C;
+extern s32 D_8014F890;
+extern s32 D_8014F894;
+extern s32 D_8014F89C;
+extern s32 D_8014F8A4;
+extern s32 D_8014F8AC;
+extern s32 D_8014F8B4;
+extern s32 D_8014F8C0;
+extern s32 D_8014F8C4;
+extern s32 D_8014F8D0;
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
 extern s32 func_80142720(s32);
 extern s32 func_80142C50(s32);
+extern s32 func_80140AB8(s32, s32);  
+extern void func_801428A4(s32, void*); 
 
 #endif
