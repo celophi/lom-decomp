@@ -2,6 +2,7 @@
 #define _DECOMP1_H
 
 #include "common.h"
+#include "akao.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 

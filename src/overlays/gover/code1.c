@@ -377,13 +377,15 @@ u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordin
 }
 
 /**
- * @brief Loads an audio clip from CD, primes the audio-data block, and posts it.
+ * @brief Loads an audio clip from CD, primes the audio-data block, and posts
+ *        the clip's AKAO sequence to the audio driver.
  *
- * @details For non-sentinel @p audioClipIndex, clears the audio-data block,
- * reads the clip resource into the audio scratch buffer, then locates a
- * variable-size payload via a self-referential offset table at the start of
- * the loaded data, copies the payload into @p g_audioData, and hands the tail
- * of the table off to akao_play_sequence_blocking.
+ * @details The loaded blob begins with an indexed offset table: word 0 is an
+ * index N into the same table, and word N gives the byte offset (relative to
+ * the table) at which the AKAO sequence starts. Bytes from the start of the
+ * table up to that offset are copied into @p g_audioData (after its 12-byte
+ * status header), and the AKAO sequence is then handed to
+ * akao_play_sequence_blocking.
  *
  * @param audioClipIndex   Clip index (resource = audioClipIndex + 0x51), or -1
  *                         to clear @p g_audioData without loading, or -2 to
@@ -393,11 +395,11 @@ u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordin
  */
 void gover_load_audio_clip(s32 audioClipIndex)
 {
-    u8* end;
-    u8* dest;
+    AkaoSeqHeader* akaoSeq;
+    u8* dst;
     u8* src;
-    s32* ptr;
-    
+    s32* offsets;
+
     if (audioClipIndex == -2)
     {
         return;
@@ -417,14 +419,14 @@ void gover_load_audio_clip(s32 audioClipIndex)
     g_audioData.unk0 = 0xC;
 
     src = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
-    ptr = (s32*)src;
-    end = src + ((u32)ptr[*ptr]);
-    dest = ((u8*)(&g_audioData)) + 12;
+    offsets = (s32*)src;
+    akaoSeq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
+    dst = ((u8*)(&g_audioData)) + 12;
 
-    while (src != end)
+    while (src != (u8*)akaoSeq)
     {
-        *(dest++) = *(src++);
+        *(dst++) = *(src++);
     }
 
-    akao_play_sequence_blocking(end, 1);
+    akao_play_sequence_blocking(akaoSeq, 1);
 }

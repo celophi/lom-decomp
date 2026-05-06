@@ -304,8 +304,8 @@ void LoadTitleAudioBank(void)
 
         bcopy(base + off[0], (u8*)g_titleAudioBankBase, (int)(off[1] - off[0]));
 
-        akao_register_bank(g_titleAudioBankBase);
-        akao_play_sequence_blocking(base + off[1], 1);
+        akao_register_bank((AkaoSeqHeader*)g_titleAudioBankBase);
+        akao_play_sequence_blocking((AkaoSeqHeader*)(base + off[1]), 1);
     }
 }
 
@@ -327,7 +327,7 @@ void LoadTitleSeq(s32 seqVariant)
     base = (u8*)0x80180000;
 
     bcopy(base + off[0], (unsigned char*)&D_8003ECA0, (int)(off[1] - off[0]));
-    akao_play_sequence_blocking((s32)(base + off[1]), 1);
+    akao_play_sequence_blocking((AkaoSeqHeader*)(base + off[1]), 1);
 }
 
 /**
