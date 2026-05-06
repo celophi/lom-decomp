@@ -46,10 +46,11 @@ typedef struct
  * Equivalent to writing the four-line nested-OR remap inline; expands to the
  * exact same expression tree so existing matched functions stay matched.
  */
-#define PAD_REMAP_FACE_BITS(b) \
-    (((((((b) & PAD_BTN_CIRCLE) >> 1) | (((b) & PAD_BTN_CROSS) << 1)) | \
-        (((b) & PAD_BTN_TRIANGLE) >> 3)) | \
-       (((b) & PAD_BTN_SQUARE) << 3)) | \
-      ((b) & ~0xF0))
+#define PAD_REMAP_FACE_BITS(b)              \
+    ((((b) & PAD_BTN_CIRCLE)   >> 1)   |    \
+     (((b) & PAD_BTN_CROSS)    << 1)   |    \
+     (((b) & PAD_BTN_TRIANGLE) >> 3)   |    \
+     (((b) & PAD_BTN_SQUARE)   << 3)   |    \
+     ((b) & ~0xF0))
 
 #endif
