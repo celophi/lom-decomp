@@ -16,7 +16,7 @@ void func_801403E0(void)
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hVLdu
- * This function is just like TITLE.BIN func_8005041C
+ * This function is just like TITLE.BIN RenderFadeOverlay
  */
 void func_80140410(ArgStruct* arg0)
 {
