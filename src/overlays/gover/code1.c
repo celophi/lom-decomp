@@ -426,5 +426,5 @@ void gover_load_audio_clip(s32 audioClipIndex)
         *(dest++) = *(src++);
     }
 
-    akao_play_sequence_blocking(end, 1);
+    akao_play_sequence_blocking((AkaoSeqHeader*)end, 1);
 }

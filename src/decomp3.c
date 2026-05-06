@@ -34,14 +34,14 @@ s32 func_80021FDC(void)
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/0q180
  */
-s32 akao_register_bank(s32 bankBase)
+s32 akao_register_bank(AkaoSeqHeader* bank)
 {
     s32 temp_v0;
 
     temp_v0 = akao_check_magic();
     if (temp_v0 == 0)
     {
-        func_80023BB8(bankBase + 0x10);
+        func_80023BB8((s32)bank + sizeof(AkaoSeqHeader));
     }
     return temp_v0;
 }

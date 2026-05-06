@@ -2,6 +2,7 @@
 #define _DECOMP3_H
 
 #include "common.h"
+#include "akao.h"
 
 extern s32 D_8004D430[];
 extern s32 D_8004D400;
@@ -9,7 +10,7 @@ extern u8 D_8004B430[];
 
 s32 FUN_80021fbc(void);
 s32 func_80021FDC(void);
-s32 akao_register_bank(s32 bankBase);
+s32 akao_register_bank(AkaoSeqHeader* bank);
 void func_80022040(s32 arg0);
 void func_80022068(s32 arg0);
 void func_80022090(void);

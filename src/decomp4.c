@@ -14,7 +14,7 @@
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Mz7yX
  */
-void akao_play_sequence_blocking(s32 sequenceData, s32 waitForCompletion)
+void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
     D_8004F750 &= ~1;
     while (akao_submit(sequenceData, waitForCompletion) == 1);
