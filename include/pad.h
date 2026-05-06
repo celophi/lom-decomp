@@ -37,4 +37,20 @@ typedef struct
     s16 axisY; // 0x2E - signed axis (negative/positive thresholded)
 } SCDRegs;
 
+/**
+ * Remaps the four face-button bits in a byte-swapped controller word from the
+ * PSX hardware layout (Triangle/Circle/Cross/Square at bits 7/6/5/4) to the
+ * game's logical layout (Square/Cross/Circle/Triangle at the same bits) by
+ * swapping Triangle↔Square and Circle↔Cross. All other bits are preserved.
+ *
+ * Equivalent to writing the four-line nested-OR remap inline; expands to the
+ * exact same expression tree so existing matched functions stay matched.
+ */
+#define PAD_REMAP_FACE_BITS(b)              \
+    ((((b) & PAD_BTN_CIRCLE)   >> 1)   |    \
+     (((b) & PAD_BTN_CROSS)    << 1)   |    \
+     (((b) & PAD_BTN_TRIANGLE) >> 3)   |    \
+     (((b) & PAD_BTN_SQUARE)   << 3)   |    \
+     ((b) & ~0xF0))
+
 #endif

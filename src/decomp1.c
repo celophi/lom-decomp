@@ -153,7 +153,7 @@ void FUN_80011638(s32 arg0)
     bcopy((u_char*)((*info) + base), ptr, info[1] - (*info));
     akao_play_sequence_blocking((AkaoSeqHeader*)(info[1] + base), 1);
 
-    temp = func_80022040(ptr);
+    temp = akao_play_song(ptr);
     D_80042FB8 = temp;
     FUN_8002279c(temp, 0x7f);
 }
