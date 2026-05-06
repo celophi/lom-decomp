@@ -957,13 +957,7 @@ s32 read_pad_state(void)
     new_var2 = *((unsigned short*)(ptr + 2));
     v0 = new_var2;
     a0_val = (v1 >> 8) | (v0 << 8);
-    a0_val =
-        (((((((((a0_val & 0x40) >> 1) | ((a0_val & 0x20) << 1)) | ((a0_val & 0x80) >> 3)) | ((a0_val & 0x10) << 3)) &
-            0xFFFF) &
-           0xFFFF) &
-          0xFFFF) &
-         0xFFFF) |
-        (a0_val & (~0xF0));
+    a0_val = PAD_REMAP_FACE_BITS(a0_val);
     if (a2)
     {
         t = *((signed short*)(ptr + 0x2C));
@@ -1015,13 +1009,7 @@ void UpdateMenuInput(void)
         v1 = *((u16*)(ptr + 2));
 
         a1_val = (v1 >> 8) | (*((u16*)(2 + ptr)) << 8);
-        a1_val = (((((((((a1_val & 0x40) >> 1) | ((a1_val & 0x20) << 1)) | ((a1_val & 0x80) >> 3)) |
-                      ((a1_val & 0x10) << 3)) &
-                     0xFFFF) &
-                    0xFFFF) &
-                   0xFFFF) &
-                  0xFFFF) |
-                 (a1_val & (~0xF0));
+        a1_val = PAD_REMAP_FACE_BITS(a1_val);
         if ((*ptr) != 0)
         {
             t = *((s16*)(ptr + 0x2C));
@@ -1106,10 +1094,7 @@ static void read_pad_input(void)
     else
     {
         buttons = ((base->buttonData >> 8) & 0xFF) | (base->buttonData << 8);
-        buttons = (((((buttons & PAD_BTN_CIRCLE) >> 1) | ((buttons & PAD_BTN_CROSS) << 1)) |
-                    ((buttons & PAD_BTN_TRIANGLE) >> 3)) |
-                   ((buttons & PAD_BTN_SQUARE) << 3)) |
-                  (buttons & ~0xF0);
+        buttons = PAD_REMAP_FACE_BITS(buttons);
         if (base->deviceState != 0)
         {
             axis = base->axisX;
