@@ -1,4 +1,5 @@
 #include "title.h"
+#include "cd_resources.h"
 
 /* Width in pixels of a single save-slot panel; one horizontal slide moves the
  * stage by exactly this much. */
@@ -292,7 +293,7 @@ void LoadTitleAudioBank(void)
     {
 
         D_80102668 = 0x8013C000;
-        cdrom_queue_read(0x15, (void*)0x80180000);
+        cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void*)0x80180000);
         cdrom_wait_queue_empty();
 
         base = (u8*)0x80180000;
