@@ -1,5 +1,15 @@
 #include "title.h"
 
+/* Width in pixels of a single save-slot panel; one horizontal slide moves the
+ * stage by exactly this much. */
+#define SLOT_PANEL_WIDTH  160
+
+/* Number of frames the slide-lerper takes to animate a full panel scroll. */
+#define SLOT_SLIDE_FRAMES 8
+
+static void scroll_slots_right(void);
+static void scroll_slots_left(void);
+
 /**
  * Top-level entry point of the TITLE.BIN overlay. Mirror of RunCheckPS in the
  * CHECKPS overlay: drives the title menu loop, dispatches on the user's
@@ -373,10 +383,10 @@ void ResetFadeState(void)
  *
  * decomp.me (100%) https://decomp.me/scratch/fBro2
  */
-void RenderFadeOverlay(void* arg0)
+void RenderFadeOverlay(MenuContext* arg0)
 {
-    ArgStruct* arg = (ArgStruct*)arg0;
-    u32* var_t4 = (u32*)arg->unk80B8;
+    MenuContext* arg = arg0;
+    u32* var_t4 = (u32*)arg->next_prim_ptr;
     u32* unk40_ptr = (u32*)(((u8*)arg) + 0x40);
     s32 temp_a2;
     s32 temp_a0;
@@ -454,7 +464,7 @@ void RenderFadeOverlay(void* arg0)
         *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
         var_t4 = (u32*)(((u8*)var_t4) + 8);
     }
-    arg->unk80B8 = var_t4;
+    arg->next_prim_ptr = (u_long*)var_t4;
 }
 
 /**
@@ -1130,10 +1140,9 @@ void InitSaveSlotMenu(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/so5cY
  */
-void RenderSaveSlotMenu(void* arg0)
+void RenderSaveSlotMenu(MenuContext* arg0)
 {
-    InnerStruct* inner = (InnerStruct*)((char*)arg0 + 0x8000);
-    inner->unk80B8 = RenderSaveLayoutPrims(inner->unk80B8, (char*)arg0 + 0x40);
+    arg0->next_prim_ptr = (u_long*)RenderSaveLayoutPrims(arg0->next_prim_ptr, (s32*)((char*)arg0 + 0x40));
     HandleSaveSlotInput();
 }
 
@@ -1195,11 +1204,11 @@ void HandleSaveSlotInput(void)
             PlayTitleSfx(0x7E, 0x80);
             if (D_800F9AED != 0)
             {
-                ScrollSlotsRight();
+                scroll_slots_right();
                 ResetSaveSlotPanel();
                 return;
             }
-            ScrollSlotsLeft();
+            scroll_slots_left();
             ResetSaveSlotPanel();
             return;
         }
@@ -1265,12 +1274,12 @@ void HandleSaveSlotInput(void)
             PlayTitleSfx(0x7F, 0x80);
             if (g_slotSlideX > 0)
             {
-                ScrollSlotsLeft();
+                scroll_slots_left();
                 ResetSaveSlotPanel();
             }
             else
             {
-                ScrollSlotsRight();
+                scroll_slots_right();
                 ResetSaveSlotPanel();
             }
         }
@@ -1451,31 +1460,46 @@ void ResetSaveSlotPanel(void)
 }
 
 /**
- * Begins an 8-frame slide of the slot panel by +0xA0 (one panel right),
- * unless we're already at the right edge.
+ * @brief Begins a slide of the save-slot stage one panel to the right.
  *
- * decomp.me (100%) https://decomp.me/scratch/SRP9z
+ * @details Sets the slide target to +SLOT_PANEL_WIDTH and seeds the lerper
+ * with SLOT_SLIDE_FRAMES frames of remaining travel. If the lerper is
+ * already showing the right-hand panel (g_slotSlideXLerped == SLOT_PANEL_WIDTH),
+ * the call is a no-op so we don't accumulate further offset off the edge.
+ *
+ * @param void No parameters.
+ * @return void No return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/SRP9z
  */
-void ScrollSlotsRight(void)
+static void scroll_slots_right(void)
 {
-    if (g_slotSlideXLerped != 0xA0)
+    if (g_slotSlideXLerped != SLOT_PANEL_WIDTH)
     {
-        g_slotSlideX += 0xA0;
-        g_slotSlideFrames = 8;
+        g_slotSlideX += SLOT_PANEL_WIDTH;
+        g_slotSlideFrames = SLOT_SLIDE_FRAMES;
     }
 }
 
 /**
- * Mirror of ScrollSlotsRight going left.
+ * @brief Begins a slide of the save-slot stage one panel to the left.
  *
- * decomp.me (100%) https://decomp.me/scratch/W1iA5
+ * @details Mirror of scroll_slots_right: nudges the slide target by
+ * -SLOT_PANEL_WIDTH and re-arms the lerper with SLOT_SLIDE_FRAMES of
+ * travel. No-ops when the lerper is already at the left-hand limit so
+ * the offset cannot run away off-stage.
+ *
+ * @param void No parameters.
+ * @return void No return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/W1iA5
  */
-void ScrollSlotsLeft(void)
+static void scroll_slots_left(void)
 {
-    if (g_slotSlideXLerped != -0xA0)
+    if (g_slotSlideXLerped != -SLOT_PANEL_WIDTH)
     {
-        g_slotSlideX -= 0xA0;
-        g_slotSlideFrames = 8;
+        g_slotSlideX -= SLOT_PANEL_WIDTH;
+        g_slotSlideFrames = SLOT_SLIDE_FRAMES;
     }
 }
 
@@ -1824,7 +1848,7 @@ unsigned short UploadSaveLayoutTextures(void)
     int counter;
     unsigned char* new_var;
     entry_base = D_800F97FC;
-    ;
+    
     for (counter = 0; counter < 11; counter++)
     {
         control_ptr = entry_base;
