@@ -534,24 +534,7 @@ s32 PollInputDevice(void)
     loRead = *((volatile u16*)(((u8*)regs) + 2));
     inputMask = (((u32)hiRead) >> 8) | (((u32)loRead) << 8);
 
-    rawButtons = inputMask;
-
-    // Remap upper nibble bits (hardware → logical layout)
-    remappedUpper = (rawButtons & 0x40) >> 1;
-    workingBits = (rawButtons & 0x20) << 1;
-    remappedUpper |= workingBits;
-
-    workingBits = (rawButtons & 0x80) >> 3;
-    remappedUpper |= workingBits;
-
-    workingBits = (rawButtons & 0x10) << 3;
-    remappedUpper |= workingBits;
-
-    do
-    {
-        workingBits = rawButtons & (~0xF0U);
-        inputMask = remappedUpper | workingBits;
-    } while (0);
+    inputMask = PAD_REMAP_FACE_BITS(inputMask);
 
     if (regs->deviceState != 0)
     {
@@ -630,13 +613,8 @@ void ProcessControllerInput(void)
         // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
         processedButtons = (controllerRegs->buttonData >> 8) | (controllerRegs->buttonData << 8);
 
-        // Reorder face button bits 4-7 from hardware order (Triangle, Circle, Cross, Square)
-        // to game order (Square, Cross, Circle, Triangle) by swapping Triangle<->Square and Circle<->Cross.
-        // Keep D-pad and shoulder button bits (0-3, 8-15) unchanged.
-        processedButtons = (((((processedButtons & PAD_BTN_CIRCLE) >> 1) | ((processedButtons & PAD_BTN_CROSS) << 1)) |
-                             ((processedButtons & PAD_BTN_TRIANGLE) >> 3)) |
-                            ((processedButtons & PAD_BTN_SQUARE) << 3)) |
-                           (processedButtons & ~0xF0);
+        // Remap face buttons from hardware order to game order.
+        processedButtons = PAD_REMAP_FACE_BITS(processedButtons);
 
         if (controllerRegs->deviceState != 0)
         {
