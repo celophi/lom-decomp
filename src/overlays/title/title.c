@@ -8,6 +8,10 @@
 /* Number of frames the slide-lerper takes to animate a full panel scroll. */
 #define SLOT_SLIDE_FRAMES 8
 
+/* CD resource index of the first title SEQ. LoadTitleSeq adds the variant
+ * index to this base to obtain the actual resource passed to cdrom_queue_read. */
+#define TITLE_SEQ_RESOURCE_BASE 0x17
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
@@ -320,7 +324,7 @@ void LoadTitleSeq(s32 seqVariant)
     u32* off;
     u8* base;
 
-    cdrom_queue_read((seqVariant + 0x17) & 0xFFFF, (void*)0x80180000);
+    cdrom_queue_read((seqVariant + TITLE_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)0x80180000);
     cdrom_wait_queue_empty();
 
     off = (u32*)0x80180004;
@@ -916,12 +920,24 @@ void UploadTim(void* tim, s16 x, s16 y, s16 clutX, s32 clutY)
 }
 
 /**
- * Apparent dead/unused early variant of the pad-read routine — same shape
- * as read_pad_input but returns the bitmap rather than writing globals.
+ * @brief Reads the SCD pad state and returns the remapped button bitmap.
  *
- * decomp.me (100%) https://decomp.me/scratch/Z5swg
+ * Same byte-swap and button-remap as @p read_pad_input, but returns the
+ * computed bitmap directly instead of writing it into @p g_lastInputState
+ * and resetting @p g_inputRepeatTimer. The body type style (loose unsigned
+ * locals, no SCDRegs alias) suggests this is a pre-refactor fossil that
+ * @p read_pad_input later superseded.
+ *
+ * @note No callers exist in the linked binary — dead code preserved by
+ *       the original build. Kept here so the address-stable layout of
+ *       the TITLE overlay is reproduced byte-for-byte.
+ *
+ * @return Remapped button bitmap, or 0 if the pad is not present
+ *         (raw status byte at @p 0x801ED600 ≥ 0xFE).
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/Z5swg
  */
-s32 func_80050EE4(void)
+s32 read_pad_state(void)
 {
     signed short new_var;
     unsigned char* ptr;
