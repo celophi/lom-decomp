@@ -29,6 +29,10 @@ extern s32 D_8014F8A8;
 extern s32 D_80122988;
 extern s32 D_8014F844;
 extern s32 D_8014F7E4;
+extern s8  D_8014F8B8;
+extern s8  D_8014F8B0;
+extern s8  D_8014F850;
+extern char D_8014F7E8;  
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
