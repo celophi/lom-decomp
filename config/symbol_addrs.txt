@@ -536,10 +536,12 @@ _SpuDataCallback                    = 0x80021F8C;
 
 // Uncategorized
 FUN_80021fbc                        = 0x80021FBC;
+akao_register_bank                  = 0x80021FFC;
 FUN_80022400                        = 0x80022400;
 FUN_8002279c                        = 0x8002279C;
 FUN_80022aa8                        = 0x80022AA8;
 FUN_80022ac8                        = 0x80022AC8;
+akao_play_sequence_blocking         = 0x80022AE8;
 FUN_80023010                        = 0x80023010;
 
 // psyq/libspu/S_SI
@@ -550,6 +552,10 @@ SpuSetIRQAddr                       = 0x80023508;
 
 // psyq/libspu/S_STSA
 SpuSetTransferStartAddr             = 0x80023548;
+
+// Uncategorized
+akao_check_magic                    = 0x800235F8;
+akao_submit                         = 0x8002371C;
 
 // psyq/libapi/A13
 DisableEvent                        = 0x80023C80;

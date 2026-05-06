@@ -62,7 +62,12 @@ extern u8 g_titleSelectedItem;
 extern s32 D_8003EC9C;
 extern s32 g_titleMenuExitState;
 extern u32 g_previousGameState;
-extern s32 D_80102668;
+/**
+ * Base address of the AKAO instrument/sample bank loaded by LoadTitleAudioBank
+ * (always 0x8013C000). Passed to akao_register_bank to register it with the
+ * audio driver.
+ */
+extern s32 g_titleAudioBankBase;
 extern unsigned char D_8003ECA0;
 extern s32 g_titleIdleCountdown;
 extern s32 g_debouncedInput;

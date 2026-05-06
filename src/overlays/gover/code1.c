@@ -383,7 +383,7 @@ u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordin
  * reads the clip resource into the audio scratch buffer, then locates a
  * variable-size payload via a self-referential offset table at the start of
  * the loaded data, copies the payload into @p g_audioData, and hands the tail
- * of the table off to func_80022AE8.
+ * of the table off to akao_play_sequence_blocking.
  *
  * @param audioClipIndex   Clip index (resource = audioClipIndex + 0x51), or -1
  *                         to clear @p g_audioData without loading, or -2 to
@@ -426,5 +426,5 @@ void gover_load_audio_clip(s32 audioClipIndex)
         *(dest++) = *(src++);
     }
 
-    func_80022AE8(end, 1);
+    akao_play_sequence_blocking(end, 1);
 }

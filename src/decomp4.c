@@ -1,10 +1,21 @@
 #include "decomp4.h"
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/Mz7yX
+ * @brief Submits an AKAO sequence to the audio driver and spins until accepted.
+ *
+ * Clears bit 0 of the driver status word, then repeatedly calls akao_submit
+ * until it stops returning the "busy" sentinel. Used to hand a freshly-loaded
+ * AKAO sequence (BGM or SFX program) to the driver and block until the SPU
+ * transfer window opens and the data is consumed.
+ *
+ * @param sequenceData       Pointer to an AKAO-tagged sequence buffer in main RAM.
+ * @param waitForCompletion  When non-zero, akao_submit further blocks inside the
+ *                           driver until the SPU DMA completes.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/Mz7yX
  */
-void func_80022AE8(s32 arg0, s32 arg1)
+void akao_play_sequence_blocking(s32 sequenceData, s32 waitForCompletion)
 {
     D_8004F750 &= ~1;
-    while (func_8002371C(arg0, arg1) == 1);
+    while (akao_submit(sequenceData, waitForCompletion) == 1);
 }
