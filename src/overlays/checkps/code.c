@@ -534,7 +534,23 @@ s32 PollInputDevice(void)
     loRead = *((volatile u16*)(((u8*)regs) + 2));
     inputMask = (((u32)hiRead) >> 8) | (((u32)loRead) << 8);
 
-    inputMask = PAD_REMAP_FACE_BITS(inputMask);
+    rawButtons = inputMask;
+    
+    // Remap upper nibble bits (hardware → logical layout)
+    remappedUpper = (rawButtons & 0x40) >> 1;
+    workingBits   = (rawButtons & 0x20) << 1;
+    remappedUpper |= workingBits;
+    
+    workingBits   = (rawButtons & 0x80) >> 3;
+    remappedUpper |= workingBits;
+    
+    workingBits   = (rawButtons & 0x10) << 3;
+    remappedUpper |= workingBits;
+    
+    do {
+        workingBits = rawButtons & (~0xF0U);
+        inputMask = remappedUpper | workingBits;
+    } while (0);
 
     if (regs->deviceState != 0)
     {
