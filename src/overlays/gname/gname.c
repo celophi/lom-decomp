@@ -226,3 +226,27 @@ void func_801408D0(void)
         func_800A3938(0x78, 0x80);
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FboaU
+ */
+void func_801409EC(void)
+{
+    D_8014F888 = 0xFF;
+    D_8014F8AC = func_80140AB8(0, 0);
+    D_8014F884 = 0;
+    D_8014F8B4 = 0;
+    D_8014F8C0 = 0;
+    D_8014F8C4 = 0;
+    D_8014F8D0 = 0;
+    D_8014F850 = 0;
+    D_8014F88C = D_8014F894;
+    D_8014F890 = D_8014F89C;
+    func_801428A4(D_8014F844, &D_8014F7E8); /* matches 'la a1, D_8014F7E8' */
+    D_8014F8A8 = 0;
+    func_80142928();
+    D_8014F8A4 = 5;
+    D_8014F8B0 = 0;
+    D_8014F8B8 = 2;
+    D_8014F848 = 0;
+}
