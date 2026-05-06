@@ -1,4 +1,5 @@
 #include "decomp5.h"
+#include "akao.h"
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/CJTY6

@@ -395,7 +395,7 @@ u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordin
  */
 void gover_load_audio_clip(s32 audioClipIndex)
 {
-    u8* akaoSeq;
+    AkaoSeqHeader* akaoSeq;
     u8* dst;
     u8* src;
     s32* offsets;
@@ -420,13 +420,13 @@ void gover_load_audio_clip(s32 audioClipIndex)
 
     src = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
     offsets = (s32*)src;
-    akaoSeq = src + ((u32)offsets[*offsets]);
+    akaoSeq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
     dst = ((u8*)(&g_audioData)) + 12;
 
-    while (src != akaoSeq)
+    while (src != (u8*)akaoSeq)
     {
         *(dst++) = *(src++);
     }
 
-    akao_play_sequence_blocking((AkaoSeqHeader*)akaoSeq, 1);
+    akao_play_sequence_blocking(akaoSeq, 1);
 }
