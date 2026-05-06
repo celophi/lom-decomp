@@ -47,21 +47,38 @@ s32 akao_register_bank(AkaoSeqHeader* bank)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/iVOOb
+ * @brief AKAO command 0x10 — start playback of a sequence (song).
+ *
+ * Loads @p seqData into the AKAO command parameter buffer and dispatches the
+ * "play song" command to the audio driver. The driver picks up the buffer
+ * pointer from g_akaoCmdParams[0] when it processes the command.
+ *
+ * @param seqData  Pointer to a loaded AKAO-tagged sequence buffer (e.g.
+ *                 @c &D_8003ECA0 in TITLE, @c &D_8005D088 in CHECKPS).
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/iVOOb
  */
-void func_80022040(s32 arg0)
+void akao_play_song(s32 seqData)
 {
-    D_8004D430[0] = arg0;
-    func_80028E84(0x10);
+    g_akaoCmdParams[0] = seqData;
+    akao_send_command(0x10);
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/9M4hF
+ * @brief AKAO command 0x11 — stop the currently-playing sequence.
+ *
+ * Pushes @p arg0 into the AKAO command parameter buffer and dispatches the
+ * "stop song" command. Callers in TITLE/CHECKPS pass 0; the precise meaning
+ * of non-zero values (likely a fade-out duration or flag) is not yet known.
+ *
+ * @param arg0  Stop-modifier parameter; observed value is 0 in all callers.
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/9M4hF
  */
-void func_80022068(s32 arg0)
+void akao_stop_song(s32 arg0)
 {
-    D_8004D430[0] = arg0;
-    func_80028E84(0x11);
+    g_akaoCmdParams[0] = arg0;
+    akao_send_command(0x11);
 }
 
 /**
@@ -69,7 +86,7 @@ void func_80022068(s32 arg0)
  */
 void func_80022090(void)
 {
-    func_80028E84(0x40);
+    akao_send_command(0x40);
 }
 
 /**
@@ -77,10 +94,10 @@ void func_80022090(void)
  */
 void func_800220B0(s32 arg0, s32 arg1)
 {
-    D_8004D430[0] = arg0;
-    D_8004D430[1] = arg1;
-    D_8004D430[2] = 0;
-    func_80028E84(0x14);
+    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[2] = 0;
+    akao_send_command(0x14);
 }
 
 /**
@@ -90,11 +107,11 @@ s32 func_800220E4(s32 arg0, s32 arg1)
 {
     s32 temp_v0;
 
-    D_8004D430[0] = arg0;
-    temp_v0 = func_80028E84(0x19);
-    D_8004D430[0] = (s32)(arg1 & 0x7F);
-    D_8004D430[3] = 0;
-    func_80028E84(0xC0);
+    g_akaoCmdParams[0] = arg0;
+    temp_v0 = akao_send_command(0x19);
+    g_akaoCmdParams[0] = (s32)(arg1 & 0x7F);
+    g_akaoCmdParams[3] = 0;
+    akao_send_command(0xC0);
     return temp_v0;
 }
 
@@ -103,28 +120,44 @@ s32 func_800220E4(s32 arg0, s32 arg1)
  */
 void func_8002213C(s32 arg0, s32 arg1)
 {
-    D_8004D430[0] = arg0;
-    D_8004D430[1] = arg1;
-    func_80028E84(0x12);
+    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[1] = arg1;
+    akao_send_command(0x12);
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/9AZZL
+ * @brief AKAO command 0x20 — play a sound effect.
+ *
+ * Packs four caller-supplied values into the AKAO command parameter buffer,
+ * each masked to the bit-width the driver expects, then dispatches the
+ * "play SFX" command. The mask widths suggest:
+ *   arg0 (10 bits) — sound id / SFX index
+ *   arg1 (24 bits) — wider opaque parameter (possibly pitch/frequency)
+ *   arg2 ( 8 bits) — byte-sized parameter (possibly pan)
+ *   arg3 ( 7 bits) — volume (0–127)
+ * Caller in TITLE: PlayTitleSfx(soundId, _, arg1, 0x7F).
+ *
+ * @param arg0  Sound id (lower 10 bits used).
+ * @param arg1  24-bit packed parameter.
+ * @param arg2  8-bit parameter.
+ * @param arg3  Volume (0–127).
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/9AZZL
  */
-void func_8002216C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 temp_a1;
     s32 temp_a2;
     s32 temp_a3;
 
-    D_8004D430[0] = (s32)(arg0 & 0x3FF);
+    g_akaoCmdParams[0] = (s32)(arg0 & 0x3FF);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0xFF;
     temp_a3 = arg3 & 0x7F;
-    D_8004D430[1] = temp_a1;
-    D_8004D430[2] = temp_a2;
-    D_8004D430[3] = temp_a3;
-    func_80028E84(0x20);
+    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[3] = temp_a3;
+    akao_send_command(0x20);
 };
 
 /**
@@ -138,12 +171,12 @@ s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     var_v0 = akao_check_magic();
     if (var_v0 == 0)
     {
-        D_8004D430[0] = arg0;
+        g_akaoCmdParams[0] = arg0;
         new_var = arg2;
-        D_8004D430[1] = (s32)(arg1 & 0xFFFFFF);
-        D_8004D430[2] = (s32)(new_var & 0xFF);
-        D_8004D430[3] = (s32)(arg3 & 0x7F);
-        func_80028E84(0x24);
+        g_akaoCmdParams[1] = (s32)(arg1 & 0xFFFFFF);
+        g_akaoCmdParams[2] = (s32)(new_var & 0xFF);
+        g_akaoCmdParams[3] = (s32)(arg3 & 0x7F);
+        akao_send_command(0x24);
         new_var2 = arg0;
         var_v0 = new_var2;
     }
@@ -157,10 +190,10 @@ void func_80022240(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    D_8004D430[0] = arg0;
+    g_akaoCmdParams[0] = arg0;
     temp_a1 = arg1 & 0xFFFFFF;
-    D_8004D430[1] = temp_a1;
-    func_80028E84(0x21);
+    g_akaoCmdParams[1] = temp_a1;
+    akao_send_command(0x21);
 }
 
 /**
@@ -168,8 +201,8 @@ void func_80022240(s32 arg0, s32 arg1)
  */
 void func_8002227C(s32 arg0)
 {
-    D_8004D430[0] = arg0 & 0x3FF;
-    func_80028E84(0x30);
+    g_akaoCmdParams[0] = arg0 & 0x3FF;
+    akao_send_command(0x30);
 }
 
 /**
@@ -248,7 +281,7 @@ void func_8002237C(s32 arg0)
     int new_var;
     new_var = (arg0 == 1) ? (0x81) : (0x80);
     new_var2 = &new_var;
-    func_80028E84(new_var);
+    akao_send_command(new_var);
 }
 
 /**
@@ -256,8 +289,8 @@ void func_8002237C(s32 arg0)
  */
 void func_800223B0(s32 arg0)
 {
-    D_8004D430[0] = arg0;
-    func_80028E84(0x90);
+    g_akaoCmdParams[0] = arg0;
+    akao_send_command(0x90);
 }
 
 /**
@@ -265,8 +298,8 @@ void func_800223B0(s32 arg0)
  */
 void func_800223D8(s32 arg0)
 {
-    D_8004D430[0] = arg0;
-    func_80028E84(0x92);
+    g_akaoCmdParams[0] = arg0;
+    akao_send_command(0x92);
 }
 
 /**
@@ -292,7 +325,7 @@ void FUN_80022400(u32 param_1)
         break;
     }
 
-    func_80028E84(var_a0);
+    akao_send_command(var_a0);
 }
 
 /**
@@ -318,7 +351,7 @@ void func_8002246C(u32 arg0)
         break;
     }
 
-    func_80028E84(var_a0);
+    akao_send_command(var_a0);
 }
 
 /**
@@ -326,8 +359,8 @@ void func_8002246C(u32 arg0)
  */
 void func_800224D8(s32 arg0)
 {
-    D_8004D430[0] = arg0 & 0x7F;
-    func_80028E84(0xA8);
+    g_akaoCmdParams[0] = arg0 & 0x7F;
+    akao_send_command(0xA8);
 }
 
 /**
@@ -337,10 +370,10 @@ void func_80022504(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    D_8004D430[0] = arg0;
+    g_akaoCmdParams[0] = arg0;
     temp_a1 = arg1 & 0x7F;
-    D_8004D430[1] = temp_a1;
-    func_80028E84(0xA9);
+    g_akaoCmdParams[1] = temp_a1;
+    akao_send_command(0xA9);
 }
 
 /**
@@ -351,12 +384,12 @@ void func_80022538(s32 arg0, s32 arg1, s32 arg2)
     s32 temp_a1;
     s32 temp_a2;
 
-    D_8004D430[0] = arg0;
+    g_akaoCmdParams[0] = arg0;
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0x7F;
-    D_8004D430[1] = temp_a1;
-    D_8004D430[2] = temp_a2;
-    func_80028E84(0xA0);
+    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[2] = temp_a2;
+    akao_send_command(0xA0);
 }
 
 /**
@@ -367,11 +400,11 @@ void func_8002257C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 temp_a1;
     s32 temp_a3;
 
-    D_8004D430[0] = arg0;
+    g_akaoCmdParams[0] = arg0;
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a3 = arg3 & 0x7F;
-    D_8004D430[1] = temp_a1;
-    D_8004D430[2] = arg2;
-    D_8004D430[3] = temp_a3;
-    func_80028E84(0xA1);
+    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[2] = arg2;
+    g_akaoCmdParams[3] = temp_a3;
+    akao_send_command(0xA1);
 }

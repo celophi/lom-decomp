@@ -224,7 +224,7 @@ void func_80050138(s32 arg0)
  */
 void func_800501AC(void)
 {
-    func_80022068(0);
+    akao_stop_song(0);
 }
 
 /**
@@ -232,7 +232,7 @@ void func_800501AC(void)
  */
 void func_800501CC(void)
 {
-    func_80022040(&D_8005D088);
+    akao_play_song(&D_8005D088);
     FUN_8002279c(0, 0x7F);
 }
 
@@ -241,7 +241,7 @@ void func_800501CC(void)
  */
 void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
 {
-    func_8002216C(arg1, 0, arg2, arg3);
+    akao_play_sfx(arg1, 0, arg2, arg3);
 }
 
 /**
@@ -535,20 +535,19 @@ s32 PollInputDevice(void)
     inputMask = (((u32)hiRead) >> 8) | (((u32)loRead) << 8);
 
     rawButtons = inputMask;
-
+    
     // Remap upper nibble bits (hardware → logical layout)
     remappedUpper = (rawButtons & 0x40) >> 1;
-    workingBits = (rawButtons & 0x20) << 1;
+    workingBits   = (rawButtons & 0x20) << 1;
     remappedUpper |= workingBits;
-
-    workingBits = (rawButtons & 0x80) >> 3;
+    
+    workingBits   = (rawButtons & 0x80) >> 3;
     remappedUpper |= workingBits;
-
-    workingBits = (rawButtons & 0x10) << 3;
+    
+    workingBits   = (rawButtons & 0x10) << 3;
     remappedUpper |= workingBits;
-
-    do
-    {
+    
+    do {
         workingBits = rawButtons & (~0xF0U);
         inputMask = remappedUpper | workingBits;
     } while (0);
@@ -630,13 +629,8 @@ void ProcessControllerInput(void)
         // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
         processedButtons = (controllerRegs->buttonData >> 8) | (controllerRegs->buttonData << 8);
 
-        // Reorder face button bits 4-7 from hardware order (Triangle, Circle, Cross, Square)
-        // to game order (Square, Cross, Circle, Triangle) by swapping Triangle<->Square and Circle<->Cross.
-        // Keep D-pad and shoulder button bits (0-3, 8-15) unchanged.
-        processedButtons = (((((processedButtons & PAD_BTN_CIRCLE) >> 1) | ((processedButtons & PAD_BTN_CROSS) << 1)) |
-                             ((processedButtons & PAD_BTN_TRIANGLE) >> 3)) |
-                            ((processedButtons & PAD_BTN_SQUARE) << 3)) |
-                           (processedButtons & ~0xF0);
+        // Remap face buttons from hardware order to game order.
+        processedButtons = PAD_REMAP_FACE_BITS(processedButtons);
 
         if (controllerRegs->deviceState != 0)
         {

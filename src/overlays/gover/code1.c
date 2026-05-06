@@ -12,7 +12,7 @@
 #define GOVER_CLUT_Y 480
 
 /** Constant added to an audioClipIndex to produce its CD resource index. */
-#define GOVER_AUDIO_RESOURCE_BASE 0x51
+#define GOVER_AUDIO_RESOURCE_BASE 81
 
 /** RAM staging address used to load audio clip data from CD. */
 #define GOVER_AUDIO_LOAD_ADDR 0x80180000

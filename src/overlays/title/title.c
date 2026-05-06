@@ -8,6 +8,10 @@
 /* Number of frames the slide-lerper takes to animate a full panel scroll. */
 #define SLOT_SLIDE_FRAMES 8
 
+/* CD resource index of the first title SEQ. LoadTitleSeq adds the variant
+ * index to this base to obtain the actual resource passed to cdrom_queue_read. */
+#define TITLE_SEQ_RESOURCE_BASE 0x17
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
@@ -320,7 +324,7 @@ void LoadTitleSeq(s32 seqVariant)
     u32* off;
     u8* base;
 
-    cdrom_queue_read((seqVariant + 0x17) & 0xFFFF, (void*)0x80180000);
+    cdrom_queue_read((seqVariant + TITLE_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)0x80180000);
     cdrom_wait_queue_empty();
 
     off = (u32*)0x80180004;
@@ -337,7 +341,7 @@ void LoadTitleSeq(s32 seqVariant)
  */
 void StopTitleMusic(void)
 {
-    func_80022068(0);
+    akao_stop_song(0);
 }
 
 /**
@@ -347,7 +351,7 @@ void StopTitleMusic(void)
  */
 void StartTitleMusic(void)
 {
-    func_80022040(&D_8003ECA0);
+    akao_play_song(&D_8003ECA0);
     FUN_8002279c(0, 0x7F);
 }
 
@@ -360,7 +364,7 @@ void StartTitleMusic(void)
  */
 void PlayTitleSfx(s32 soundId, s32 arg1)
 {
-    func_8002216C(soundId, 0, arg1, 0x7F);
+    akao_play_sfx(soundId, 0, arg1, 0x7F);
 }
 
 /**
@@ -916,12 +920,24 @@ void UploadTim(void* tim, s16 x, s16 y, s16 clutX, s32 clutY)
 }
 
 /**
- * Apparent dead/unused early variant of the pad-read routine — same shape
- * as read_pad_input but returns the bitmap rather than writing globals.
+ * @brief Reads the SCD pad state and returns the remapped button bitmap.
  *
- * decomp.me (100%) https://decomp.me/scratch/Z5swg
+ * Same byte-swap and button-remap as @p read_pad_input, but returns the
+ * computed bitmap directly instead of writing it into @p g_lastInputState
+ * and resetting @p g_inputRepeatTimer. The body type style (loose unsigned
+ * locals, no SCDRegs alias) suggests this is a pre-refactor fossil that
+ * @p read_pad_input later superseded.
+ *
+ * @note No callers exist in the linked binary — dead code preserved by
+ *       the original build. Kept here so the address-stable layout of
+ *       the TITLE overlay is reproduced byte-for-byte.
+ *
+ * @return Remapped button bitmap, or 0 if the pad is not present
+ *         (raw status byte at @p 0x801ED600 ≥ 0xFE).
+ *
+ * @see decomp.me: (100%) https://decomp.me/scratch/Z5swg
  */
-s32 func_80050EE4(void)
+s32 read_pad_state(void)
 {
     signed short new_var;
     unsigned char* ptr;
@@ -941,13 +957,7 @@ s32 func_80050EE4(void)
     new_var2 = *((unsigned short*)(ptr + 2));
     v0 = new_var2;
     a0_val = (v1 >> 8) | (v0 << 8);
-    a0_val =
-        (((((((((a0_val & 0x40) >> 1) | ((a0_val & 0x20) << 1)) | ((a0_val & 0x80) >> 3)) | ((a0_val & 0x10) << 3)) &
-            0xFFFF) &
-           0xFFFF) &
-          0xFFFF) &
-         0xFFFF) |
-        (a0_val & (~0xF0));
+    a0_val = PAD_REMAP_FACE_BITS(a0_val);
     if (a2)
     {
         t = *((signed short*)(ptr + 0x2C));
@@ -999,13 +1009,7 @@ void UpdateMenuInput(void)
         v1 = *((u16*)(ptr + 2));
 
         a1_val = (v1 >> 8) | (*((u16*)(2 + ptr)) << 8);
-        a1_val = (((((((((a1_val & 0x40) >> 1) | ((a1_val & 0x20) << 1)) | ((a1_val & 0x80) >> 3)) |
-                      ((a1_val & 0x10) << 3)) &
-                     0xFFFF) &
-                    0xFFFF) &
-                   0xFFFF) &
-                  0xFFFF) |
-                 (a1_val & (~0xF0));
+        a1_val = PAD_REMAP_FACE_BITS(a1_val);
         if ((*ptr) != 0)
         {
             t = *((s16*)(ptr + 0x2C));
@@ -1090,10 +1094,7 @@ static void read_pad_input(void)
     else
     {
         buttons = ((base->buttonData >> 8) & 0xFF) | (base->buttonData << 8);
-        buttons = (((((buttons & PAD_BTN_CIRCLE) >> 1) | ((buttons & PAD_BTN_CROSS) << 1)) |
-                    ((buttons & PAD_BTN_TRIANGLE) >> 3)) |
-                   ((buttons & PAD_BTN_SQUARE) << 3)) |
-                  (buttons & ~0xF0);
+        buttons = PAD_REMAP_FACE_BITS(buttons);
         if (base->deviceState != 0)
         {
             axis = base->axisX;
