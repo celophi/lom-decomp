@@ -373,10 +373,10 @@ void ResetFadeState(void)
  *
  * decomp.me (100%) https://decomp.me/scratch/fBro2
  */
-void RenderFadeOverlay(void* arg0)
+void RenderFadeOverlay(MenuContext* arg0)
 {
-    ArgStruct* arg = (ArgStruct*)arg0;
-    u32* var_t4 = (u32*)arg->unk80B8;
+    MenuContext* arg = arg0;
+    u32* var_t4 = (u32*)arg->next_prim_ptr;
     u32* unk40_ptr = (u32*)(((u8*)arg) + 0x40);
     s32 temp_a2;
     s32 temp_a0;
@@ -454,7 +454,7 @@ void RenderFadeOverlay(void* arg0)
         *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
         var_t4 = (u32*)(((u8*)var_t4) + 8);
     }
-    arg->unk80B8 = var_t4;
+    arg->next_prim_ptr = (u_long*)var_t4;
 }
 
 /**
@@ -1130,10 +1130,9 @@ void InitSaveSlotMenu(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/so5cY
  */
-void RenderSaveSlotMenu(void* arg0)
+void RenderSaveSlotMenu(MenuContext* arg0)
 {
-    InnerStruct* inner = (InnerStruct*)((char*)arg0 + 0x8000);
-    inner->unk80B8 = RenderSaveLayoutPrims(inner->unk80B8, (char*)arg0 + 0x40);
+    arg0->next_prim_ptr = (u_long*)RenderSaveLayoutPrims(arg0->next_prim_ptr, (s32*)((char*)arg0 + 0x40));
     HandleSaveSlotInput();
 }
 

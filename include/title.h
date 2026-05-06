@@ -42,20 +42,6 @@ typedef struct
 
 typedef struct
 {
-    char pad0[0x40];
-    u32 unk40;
-    char pad1[0x80B8 - 0x44];
-    void* unk80B8;
-} ArgStruct;
-
-typedef struct
-{
-    unsigned char pad[0xB8]; // padding to offset 0xB8
-    s32 unk80B8;             // desired field at offset 0xB8
-} InnerStruct;
-
-typedef struct
-{
     char _pad[0x40];
     u_long otag_buffer[0x1000]; /* 0x0040 */
     DISPENV disp_env;           /* 0x4040 */
