@@ -151,7 +151,7 @@ void FUN_80011638(s32 arg0)
     base = 0x80180000;
 
     bcopy((u_char*)((*info) + base), ptr, info[1] - (*info));
-    func_80022AE8(info[1] + base, 1);
+    akao_play_sequence_blocking(info[1] + base, 1);
 
     temp = func_80022040(ptr);
     D_80042FB8 = temp;

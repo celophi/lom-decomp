@@ -197,8 +197,8 @@ void func_80050080(void)
     count = offs[1] - offs[0];
 
     bcopy(src, dst, count);
-    func_80021FFC(*ref);
-    func_80022AE8((u32)&D_80052428 + offs[1], 1);
+    akao_register_bank(*ref);
+    akao_play_sequence_blocking((u32)&D_80052428 + offs[1], 1);
 }
 
 /**
@@ -216,7 +216,7 @@ void func_80050138(s32 arg0)
     ref = (u8*)0x80180000;
 
     bcopy(ref + offs[0], &D_8005D088, offs[1] - offs[0]);
-    func_80022AE8(offs[1] + (u32)ref, 1);
+    akao_play_sequence_blocking(offs[1] + (u32)ref, 1);
 }
 
 /**

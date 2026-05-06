@@ -278,8 +278,11 @@ void InitTitleDisplay(void* arg0)
 }
 
 /**
- * Counterpart of CHECKPS func_800500FC: loads the title's audio bank from
- * CD-ROM into 0x8013C000 and registers it via func_80021FFC.
+ * Counterpart of CHECKPS func_800500FC: loads the title's AKAO audio bank
+ * from CD-ROM (SOUND/EFFECT.SET) into 0x80180000, splits the loaded blob via
+ * its self-referential offset table, copies the instrument/sample sub-block
+ * to 0x8013C000 and registers it as the active AKAO bank, then submits the
+ * trailing AKAO sequence sub-block for playback.
  *
  * decomp.me (100%) https://decomp.me/scratch/6zUZp
  */
@@ -292,17 +295,17 @@ void LoadTitleAudioBank(void)
         (g_previousGameState != 5))
     {
 
-        D_80102668 = 0x8013C000;
+        g_titleAudioBankBase = 0x8013C000;
         cdrom_queue_read(CD_RES_SOUND_EFFECT_SET, (void*)0x80180000);
         cdrom_wait_queue_empty();
 
         base = (u8*)0x80180000;
         off = (u32*)0x80180004;
 
-        bcopy(base + off[0], (u8*)D_80102668, (int)(off[1] - off[0]));
+        bcopy(base + off[0], (u8*)g_titleAudioBankBase, (int)(off[1] - off[0]));
 
-        func_80021FFC(D_80102668);
-        func_80022AE8(base + off[1], 1);
+        akao_register_bank(g_titleAudioBankBase);
+        akao_play_sequence_blocking(base + off[1], 1);
     }
 }
 
@@ -324,7 +327,7 @@ void LoadTitleSeq(s32 seqVariant)
     base = (u8*)0x80180000;
 
     bcopy(base + off[0], (unsigned char*)&D_8003ECA0, (int)(off[1] - off[0]));
-    func_80022AE8((s32)(base + off[1]), 1);
+    akao_play_sequence_blocking((s32)(base + off[1]), 1);
 }
 
 /**

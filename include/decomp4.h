@@ -4,6 +4,6 @@
 #include "common.h"
 
 extern s32 D_8004F750;
-extern s32 func_8002371C(s32, s32); 
+extern s32 akao_submit(void* sequenceData, s32 waitForCompletion);
 
 #endif
