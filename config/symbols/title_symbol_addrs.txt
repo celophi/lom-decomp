@@ -1,7 +1,58 @@
 // Title
-title_func_8004FC74 = 0x8004FC74;
-render_menu = 0x8004FDBC;
-read_pad_input = 0x8005113C;
 
-D_80102640 = 0x80102640;
- g_inputRepeatTimer = 0x80102698;
+// Functions
+RunTitle = 0x8004FC74;
+render_menu = 0x8004FDBC;
+RunSaveSlotMenu = 0x8004FF48;
+InitTitleDisplay = 0x800500CC;
+LoadTitleAudioBank = 0x80050244;
+LoadTitleSeq = 0x80050300;
+StopTitleMusic = 0x80050374;
+StartTitleMusic = 0x80050394;
+PlayTitleSfx = 0x800503C4;
+ResetFadeState = 0x800503EC;
+RenderFadeOverlay = 0x8005041C;
+SetFadeTarget = 0x80050718;
+RenderTitleBackdrop = 0x80050734;
+HandleTitleMenuInput = 0x80050864;
+MenuCursorDown = 0x8005091C;
+MenuCursorUp = 0x8005099C;
+RenderTitleMenuItems = 0x80050A50;
+EmitMenuItemQuad = 0x80050BD4;
+InitTitleMenuState = 0x80050CAC;
+UploadTim = 0x80050E20;
+UpdateMenuInput = 0x80050FBC;
+read_pad_input = 0x8005113C;
+InitSaveSlotMenu = 0x80051234;
+RenderSaveSlotMenu = 0x800512A0;
+HandleSaveSlotInput = 0x800512E0;
+AnimateSaveSlotPanel = 0x8005169C;
+ResetSaveSlotPanel = 0x80051854;
+ScrollSlotsRight = 0x80051904;
+ScrollSlotsLeft = 0x80051938;
+RenderSaveLayoutPrims = 0x8005196C;
+UploadSaveLayoutTextures = 0x800520D4;
+LoadMenuLayout = 0x80052220;
+LoadSubMenuLayout = 0x8005228C;
+
+// Globals
+g_titleMenuExitState = 0x80102640;
+g_fadeTarget = 0x80102648;
+g_fadeCurrent = 0x80102658;
+g_titleMenuItemFlags = 0x80102670;
+g_titleVisibleItemRank = 0x80102690;
+g_titleAnimFrame = 0x80102691;
+g_titleSelectedItem = 0x80102692;
+g_lastInputState = 0x80102694;
+g_debouncedInput = 0x8010269C;
+g_titleIdleCountdown = 0x801026A0;
+g_slotSlideX = 0x801026A8;
+g_slotSlideY = 0x801026AC;
+g_slotSelectedIndex = 0x801026B0;
+g_slotSlideFrames = 0x801026B4;
+g_slotHighlightX = 0x801026B8;
+g_slotHighlightTargetX = 0x801026BC;
+g_slotSlideXLerped = 0x801026C0;
+g_slotSlideYLerped = 0x801026C4;
+g_slotHighlightFrames = 0x801026C8;
+g_inputRepeatTimer = 0x80102698;

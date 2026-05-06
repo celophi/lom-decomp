@@ -1,9 +1,14 @@
 #include "title.h"
 
 /**
+ * Top-level entry point of the TITLE.BIN overlay. Mirror of RunCheckPS in the
+ * CHECKPS overlay: drives the title menu loop, dispatches on the user's
+ * selection, and returns a state code consumed by the outer game-state
+ * machine. The previously-decompiled symbol was title_func_8004FC74.
+ *
  * decomp.me (100%) https://decomp.me/scratch/mEAXF
  */
-s32 title_func_8004FC74(s32 arg0)
+s32 RunTitle(s32 arg0)
 {
     s32 pad;
     S_801ED480* ptr = (S_801ED480*)0x801ED480;
@@ -14,15 +19,15 @@ s32 title_func_8004FC74(s32 arg0)
     u8 d92;
     pad = arg0;
 
-    func_80050244();
-    func_80050300(0);
-    func_80050394();
+    LoadTitleAudioBank();
+    LoadTitleSeq(0);
+    StartTitleMusic();
     base = (s32*)0x80100000; /* base address for D_80102640 */
     const_ff = 0xFF;
     d8_base = D_80042FD8;
     while (1)
     {
-        func_800500CC(pad);
+        InitTitleDisplay(pad);
         ptr->unk0 = 0;
         ptr->unk2 = 0;
         ptr->unk4 = 0;
@@ -31,16 +36,16 @@ s32 title_func_8004FC74(s32 arg0)
         do
         {
             render_menu(pad);
-        } while (base[0x990] == 0); /* 0x80102640 offset = 0x2640, 0x2640/4 = 0x990 */
+        } while (base[0x990] == 0); /* g_titleMenuExitState (0x80102640): offset 0x2640/4 = 0x990 */
 
         D_80042FB4 = VSync(-1);
-        d92 = D_80102692;
+        d92 = g_titleSelectedItem;
 
         if (d92 == 0)
         {
-            func_80052220(0);
-            base[0x990] = 0; /* D_80102640 = 0 */
-            if (func_8004FF48(pad) == 2)
+            LoadMenuLayout(0);
+            base[0x990] = 0; /* g_titleMenuExitState = 0 */
+            if (RunSaveSlotMenu(pad) == 2)
             {
                 GFX_Transition(0);
                 continue;
@@ -53,13 +58,13 @@ s32 title_func_8004FC74(s32 arg0)
         }
         else if (d92 == const_ff)
         {
-            func_80050374();
+            StopTitleMusic();
             return 8;
         }
         else
         {
             func_800227D0(0, 0x3C, 0);
-            func_80052220(-1);
+            LoadMenuLayout(-1);
             D_8003EC9C = const_ff;
             temp1 = rand();
             temp2 = rand();
@@ -102,12 +107,12 @@ void render_menu(MenuContext* context)
         s0->next_prim_ptr = s0->prim_buffer;
         rand();
         VSync(1);
-        func_8005041C(s0);
-        func_80050734(s0);
-        func_80050A50(s0);
-        func_80050864();
+        RenderFadeOverlay(s0);
+        RenderTitleBackdrop(s0);
+        RenderTitleMenuItems(s0);
+        HandleTitleMenuInput();
 
-        if (D_80102640 == 0)
+        if (g_titleMenuExitState == 0)
         {
             DrawSync(0);
             func_800157B0(2);
@@ -124,7 +129,7 @@ void render_menu(MenuContext* context)
             DrawOTag((u_long*)(s1 + 4095));
             func_800157DC();
             cdrom_process_state();
-            if (D_80102640 == 0)
+            if (g_titleMenuExitState == 0)
             {
                 continue;
             }
@@ -138,9 +143,13 @@ void render_menu(MenuContext* context)
 }
 
 /**
+ * Save-slot picker: same loop shape as render_menu but drives the
+ * sub-screen reached after the player selects "New Game" from the title.
+ * Returns the menu exit state once the player confirms or cancels.
+ *
  * decomp.me (100%) https://decomp.me/scratch/AKk7x
  */
-s32 func_8004FF48(void* arg0)
+s32 RunSaveSlotMenu(void* arg0)
 {
     short rect[4];
     void* base;
@@ -150,9 +159,9 @@ s32 func_8004FF48(void* arg0)
 
     base = arg0;
 
-    func_80051234();
+    InitSaveSlotMenu();
     GFX_Transition(0);
-    func_80050718(0x100, 0x100, 0x100, 0x14);
+    SetFadeTarget(0x100, 0x100, 0x100, 0x14);
     DrawSync(0);
     VSync(0);
     rect[0] = 0;
@@ -173,8 +182,8 @@ s32 func_8004FF48(void* arg0)
         ClearOTagR(ot, 0x1000);
         *(void**)((char*)current + 0x80B8) = (void*)((char*)current + 0x40B8);
         VSync(1);
-        func_8005041C(current);
-        func_800512A0(current);
+        RenderFadeOverlay(current);
+        RenderSaveSlotMenu(current);
         DrawSync(0);
         func_800157B0(2);
         VSync(2);
@@ -187,16 +196,18 @@ s32 func_8004FF48(void* arg0)
         DrawOTag((u_long*)((char*)ot + 0x3FFC));
         func_800157DC();
         cdrom_process_state();
-    } while (D_80102640 == 0);
+    } while (g_titleMenuExitState == 0);
     func_800158E0();
     VSync(0);
-    return D_80102640;
+    return g_titleMenuExitState;
 }
 
 /**
+ * Counterpart of InitCheckPSDisplay in the CHECKPS overlay.
+ *
  * decomp.me (100%) https://decomp.me/scratch/evJur
  */
-void func_800500CC(void* arg0)
+void InitTitleDisplay(void* arg0)
 {
     RECT rect;
     unsigned char* base = (unsigned char*)arg0;
@@ -248,17 +259,20 @@ void func_800500CC(void* arg0)
     *(base + 0xFD36) = 0; /* was ctx->unkFD36 */
     *(base + 0x406A) = 0; /* was ctx->unk406A */
 
-    func_800503EC();
-    func_80050718(0x100, 0x100, 0x100, 0x14);
-    func_80050CAC();
+    ResetFadeState();
+    SetFadeTarget(0x100, 0x100, 0x100, 0x14);
+    InitTitleMenuState();
 
-    D_80102640 = 0;
+    g_titleMenuExitState = 0;
 }
 
 /**
+ * Counterpart of CHECKPS func_800500FC: loads the title's audio bank from
+ * CD-ROM into 0x8013C000 and registers it via func_80021FFC.
+ *
  * decomp.me (100%) https://decomp.me/scratch/6zUZp
  */
-void func_80050244(void)
+void LoadTitleAudioBank(void)
 {
     u8* base;
     u32* off;
@@ -282,14 +296,17 @@ void func_80050244(void)
 }
 
 /**
+ * Counterpart of CHECKPS func_80050138: loads a SEQ resource from CD-ROM
+ * into D_8003ECA0.
+ *
  * decomp.me (100%) https://decomp.me/scratch/mBQ6i
  */
-void func_80050300(s32 arg0)
+void LoadTitleSeq(s32 seqVariant)
 {
     u32* off;
     u8* base;
 
-    cdrom_queue_read((arg0 + 0x17) & 0xFFFF, (void*)0x80180000);
+    cdrom_queue_read((seqVariant + 0x17) & 0xFFFF, (void*)0x80180000);
     cdrom_wait_queue_empty();
 
     off = (u32*)0x80180004;
@@ -300,49 +317,63 @@ void func_80050300(s32 arg0)
 }
 
 /**
+ * Counterpart of CHECKPS func_800501AC.
+ *
  * decomp.me (100%) https://decomp.me/scratch/1cta3
  */
-void func_80050374(void)
+void StopTitleMusic(void)
 {
     func_80022068(0);
 }
 
 /**
+ * Counterpart of CHECKPS func_800501CC.
+ *
  * decomp.me (100%) https://decomp.me/scratch/xYPkq
  */
-void func_80050394(void)
+void StartTitleMusic(void)
 {
     func_80022040(&D_8003ECA0);
     FUN_8002279c(0, 0x7F);
 }
 
 /**
+ * Counterpart of CHECKPS func_800501FC (with the first parameter folded
+ * away to a constant 0). soundId values observed: 0x3C (selection chime),
+ * 0x7C..0x7F (cursor / cancel / confirm beeps).
+ *
  * decomp.me (100%) https://decomp.me/scratch/ZuKeL
  */
-void func_800503C4(s32 arg0, s32 arg1)
+void PlayTitleSfx(s32 soundId, s32 arg1)
 {
-    func_8002216C(arg0, 0, arg1, 0x7F);
+    func_8002216C(soundId, 0, arg1, 0x7F);
 }
 
 /**
+ * Counterpart of CHECKPS ResetFadeState.
+ *
  * decomp.me (100%) https://decomp.me/scratch/m80gj
  */
-void func_800503EC(void)
+void ResetFadeState(void)
 {
-    D_80102658.unk0 = 0;
-    D_80102658.unk4 = 0;
-    D_80102658.unk8 = 0;
+    g_fadeCurrent.red = 0;
+    g_fadeCurrent.green = 0;
+    g_fadeCurrent.blue = 0;
 
-    D_80102648.unk0 = 0;
-    D_80102648.unk4 = 0;
-    D_80102648.unk8 = 0;
-    D_80102648.unkC = 0;
+    g_fadeTarget.red = 0;
+    g_fadeTarget.green = 0;
+    g_fadeTarget.blue = 0;
+    g_fadeTarget.steps = 0;
 }
 
 /**
+ * Counterpart of CHECKPS func_80050258: interpolates g_fadeCurrent toward
+ * g_fadeTarget and emits the fade-overlay primitive into the active prim
+ * buffer.
+ *
  * decomp.me (100%) https://decomp.me/scratch/fBro2
  */
-void func_8005041C(void* arg0)
+void RenderFadeOverlay(void* arg0)
 {
     ArgStruct* arg = (ArgStruct*)arg0;
     u32* var_t4 = (u32*)arg->unk80B8;
@@ -351,55 +382,55 @@ void func_8005041C(void* arg0)
     s32 temp_a0;
     s32 temp_v1;
     s32 var_a1;
-    if (D_80102648.unkC != 0)
+    if (g_fadeTarget.steps != 0)
     {
-        temp_a2 = ((s32)(D_80102648.unk0 - D_80102658.unk0)) / ((s32)D_80102648.unkC);
-        temp_a0 = ((s32)(D_80102648.unk4 - D_80102658.unk4)) / ((s32)D_80102648.unkC);
-        temp_v1 = ((s32)(D_80102648.unk8 - D_80102658.unk8)) / ((s32)D_80102648.unkC);
-        D_80102648.unkC = D_80102648.unkC - 1;
-        D_80102658.unk0 = D_80102658.unk0 + temp_a2;
-        D_80102658.unk4 = D_80102658.unk4 + temp_a0;
-        D_80102658.unk8 = D_80102658.unk8 + temp_v1;
+        temp_a2 = ((s32)(g_fadeTarget.red - g_fadeCurrent.red)) / ((s32)g_fadeTarget.steps);
+        temp_a0 = ((s32)(g_fadeTarget.green - g_fadeCurrent.green)) / ((s32)g_fadeTarget.steps);
+        temp_v1 = ((s32)(g_fadeTarget.blue - g_fadeCurrent.blue)) / ((s32)g_fadeTarget.steps);
+        g_fadeTarget.steps = g_fadeTarget.steps - 1;
+        g_fadeCurrent.red = g_fadeCurrent.red + temp_a2;
+        g_fadeCurrent.green = g_fadeCurrent.green + temp_a0;
+        g_fadeCurrent.blue = g_fadeCurrent.blue + temp_v1;
     }
     else
     {
-        D_80102658.unk0 = D_80102648.unk0;
-        D_80102658.unk4 = D_80102648.unk4;
-        D_80102658.unk8 = D_80102648.unk8;
+        g_fadeCurrent.red = g_fadeTarget.red;
+        g_fadeCurrent.green = g_fadeTarget.green;
+        g_fadeCurrent.blue = g_fadeTarget.blue;
     }
-    if (!(((D_80102658.unk0 == 0x100) && (D_80102658.unk4 == 0x100)) && (D_80102658.unk8 == 0x100)))
+    if (!(((g_fadeCurrent.red == 0x100) && (g_fadeCurrent.green == 0x100)) && (g_fadeCurrent.blue == 0x100)))
     {
-        if (((s32)D_80102658.unk0) >= 0x101)
+        if (((s32)g_fadeCurrent.red) >= 0x101)
         {
-            ((u8*)var_t4)[4] = ((u8)D_80102658.unk0) - 1;
-            ((u8*)var_t4)[5] = ((u8)D_80102658.unk4) - 1;
-            ((u8*)var_t4)[6] = ((u8)D_80102658.unk8) - 1;
+            ((u8*)var_t4)[4] = ((u8)g_fadeCurrent.red) - 1;
+            ((u8*)var_t4)[5] = ((u8)g_fadeCurrent.green) - 1;
+            ((u8*)var_t4)[6] = ((u8)g_fadeCurrent.blue) - 1;
         }
         else
         {
-            if (D_80102658.unk0 == 0x100)
+            if (g_fadeCurrent.red == 0x100)
             {
                 ((u8*)var_t4)[4] = 0;
             }
             else
             {
-                ((u8*)var_t4)[4] = ~((u8)D_80102658.unk0);
+                ((u8*)var_t4)[4] = ~((u8)g_fadeCurrent.red);
             }
-            if (D_80102658.unk4 == 0x100)
+            if (g_fadeCurrent.green == 0x100)
             {
                 ((u8*)var_t4)[5] = 0;
             }
             else
             {
-                ((u8*)var_t4)[5] = ~((u8)D_80102658.unk4);
+                ((u8*)var_t4)[5] = ~((u8)g_fadeCurrent.green);
             }
-            if (D_80102658.unk8 == 0x100)
+            if (g_fadeCurrent.blue == 0x100)
             {
                 ((u8*)var_t4)[6] = 0;
             }
             else
             {
-                ((u8*)var_t4)[6] = ~((u8)D_80102658.unk8);
+                ((u8*)var_t4)[6] = ~((u8)g_fadeCurrent.blue);
             }
         }
         ((u8*)var_t4)[3] = 3;
@@ -413,7 +444,7 @@ void func_8005041C(void* arg0)
         ;
         var_a1 = 0x25;
         var_t4 = (u32*)(((u8*)var_t4) + 0x10);
-        if (((s32)D_80102658.unk0) < 0x101)
+        if (((s32)g_fadeCurrent.red) < 0x101)
         {
             var_a1 = 0x45;
         }
@@ -427,20 +458,24 @@ void func_8005041C(void* arg0)
 }
 
 /**
+ * Counterpart of CHECKPS SetFadeTarget.
+ *
  * decomp.me (100%) https://decomp.me/scratch/zxqdP
  */
-void func_80050718(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
 {
-    D_80102648.unk0 = arg0;
-    D_80102648.unk4 = arg1;
-    D_80102648.unk8 = arg2;
-    D_80102648.unkC = arg3;
+    g_fadeTarget.red = red;
+    g_fadeTarget.green = green;
+    g_fadeTarget.blue = blue;
+    g_fadeTarget.steps = steps;
 }
 
 /**
+ * Emits the title screen's tiled backdrop strip (5 quads stepping 0x40 px).
+ *
  * decomp.me (94.41%) https://decomp.me/scratch/Lluk6
  */
-void func_80050734(void* arg0)
+void RenderTitleBackdrop(void* arg0)
 {
     u8* base = (u8*)arg0;
     unsigned int new_var;
@@ -505,50 +540,55 @@ void func_80050734(void* arg0)
 }
 
 /**
+ * Per-frame input dispatcher for the main title menu.
+ *
  * decomp.me (100%) https://decomp.me/scratch/vmcmD
  */
-void func_80050864(void)
+void HandleTitleMenuInput(void)
 {
     s32 op = 0x7C;
-    func_80050FBC();
-    if (D_801026A0 == 0)
+    UpdateMenuInput();
+    if (g_titleIdleCountdown == 0)
     {
-        D_80102640 = 1;
-        D_80102692 = 0xFF;
+        g_titleMenuExitState = 1;
+        g_titleSelectedItem = 0xFF;
         return;
     }
-    D_801026A0 -= 1;
-    if (D_8010269C & 0xA20)
+    g_titleIdleCountdown -= 1;
+    if (g_debouncedInput & 0xA20)
     {
-        func_800503C4(op, 0x80);
-        D_80102640 = 1;
+        PlayTitleSfx(op, 0x80);
+        g_titleMenuExitState = 1;
         return;
     }
-    if (D_8010269C & 0x9000)
+    if (g_debouncedInput & 0x9000)
     {
-        func_8005099C();
-        func_800503C4(0x7D, 0x80);
+        MenuCursorUp();
+        PlayTitleSfx(0x7D, 0x80);
     }
-    else if (D_8010269C & 0x6100)
+    else if (g_debouncedInput & 0x6100)
     {
-        func_8005091C();
-        func_800503C4(0x7D, 0x80);
+        MenuCursorDown();
+        PlayTitleSfx(0x7D, 0x80);
     }
 }
 
 /**
+ * Linear-search D_80102670 forward for the next enabled menu slot. If none
+ * remain, the cursor is reset to slot 0 with rank 0.
+ *
  * decomp.me (100%) https://decomp.me/scratch/6k8uV
  */
-void func_8005091C(void)
+void MenuCursorDown(void)
 {
     s32 a1;
     u8* var_v1;
     const s32 LIMIT = 16;
-    a1 = D_80102692 + 1;
+    a1 = g_titleSelectedItem + 1;
     if (a1 < LIMIT)
     {
-        u8* base = D_80102670;  // forces lui/addiu first
-        var_v1 = base + a1 * 2; // sll comes after
+        u8* base = g_titleMenuItemFlags; // forces lui/addiu first
+        var_v1 = base + a1 * 2;          // sll comes after
         while (1)
         {
             if (*var_v1 != 0)
@@ -566,20 +606,22 @@ void func_8005091C(void)
     }
     if (a1 == LIMIT)
     {
-        D_80102690 = 0;
-        D_80102692 = 0;
+        g_titleVisibleItemRank = 0;
+        g_titleSelectedItem = 0;
     }
     else
     {
-        D_80102692 = (u8)a1;
-        D_80102690++;
+        g_titleSelectedItem = (u8)a1;
+        g_titleVisibleItemRank++;
     }
 }
 
 /**
+ * Mirror of MenuCursorDown searching backward.
+ *
  * decomp.me (100%) https://decomp.me/scratch/mmzjI
  */
-void func_8005099C(s32 arg2)
+void MenuCursorUp(void)
 {
     s32 var_a1;
     s32 var_a1_2;
@@ -589,10 +631,10 @@ void func_8005099C(s32 arg2)
     u8* var_v1;
     u8* base;
     u8 temp;
-    var_a1 = D_80102692 - 1;
+    var_a1 = g_titleSelectedItem - 1;
     if (var_a1 >= 0)
     {
-        base = &D_80102670;
+        base = &g_titleMenuItemFlags[0];
         var_v1 = base + (var_a1 * 2);
         while (var_a1 >= 0)
         {
@@ -610,7 +652,7 @@ void func_8005099C(s32 arg2)
         var_a1_2 = 0;
         do
         {
-            var_a0 = &D_80102670;
+            var_a0 = &g_titleMenuItemFlags[0];
             while (var_a1_2 < 0x10)
             {
                 if ((*var_a0) != 0)
@@ -623,20 +665,24 @@ void func_8005099C(s32 arg2)
             };
         } while (0);
 
-        D_80102690 = var_v1_2 - 1;
-        D_80102692 = (u8)var_a2;
+        g_titleVisibleItemRank = var_v1_2 - 1;
+        g_titleSelectedItem = (u8)var_a2;
         return;
     }
-    temp = D_80102690;
-    D_80102692 = (u8)var_a1;
-    D_80102690 = temp - 1;
+    temp = g_titleVisibleItemRank;
+    g_titleSelectedItem = (u8)var_a1;
+    g_titleVisibleItemRank = temp - 1;
     return;
 }
 
 /**
+ * Walks D_80102670 and emits the cursor + each enabled menu item's quad.
+ * The cursor uses D_8007FD2C[(g_titleAnimFrame >> 2) & 3] as a 4-frame
+ * blink palette index.
+ *
  * decomp.me (65.89%) https://decomp.me/scratch/K627m
  */
-void func_80050A50(void* arg0)
+void RenderTitleMenuItems(void* arg0)
 {
     s32 temp_s4;
     s32 var_a1;
@@ -654,13 +700,13 @@ void func_80050A50(void* arg0)
     var_s2 = 0;
     var_s0 = 0;
     unk80B8 = *((s32*)(((u8*)arg0) + 0x80B8));
-    var_a1 = func_80050BD4(temp_s4, unk80B8, 0, 0x64, 0xC8, 0, 0x80, 1);
-    var_s1 = &D_80102670;
+    var_a1 = EmitMenuItemQuad(temp_s4, unk80B8, 0, 0x64, 0xC8, 0, 0x80, 1);
+    var_s1 = &g_titleMenuItemFlags[0];
     do
     {
         if ((*var_s1) != 0)
         {
-            if (D_80102690 == var_s2)
+            if (g_titleVisibleItemRank == var_s2)
             {
                 var_v0 = 1;
             }
@@ -668,23 +714,26 @@ void func_80050A50(void* arg0)
             {
                 var_v0 = 2;
             }
-            var_a1 = func_80050BD4(temp_s4, var_a1, var_s0 + 1, var_s6, var_s3, 0, 0x80, var_v0) + 0x28;
+            var_a1 = EmitMenuItemQuad(temp_s4, var_a1, var_s0 + 1, var_s6, var_s3, 0, 0x80, var_v0) + 0x28;
             var_s2++;
             var_s3 += 0xC;
         }
         var_s0++;
         var_s1 += 2;
     } while (var_s0 < 0x10);
-    result = func_80050BD4(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)D_80102690))) + 0x9D,
-                           (s32)D_8007FD2C[(D_80102691 >> 2) & 3], 0x10, 0);
+    result = EmitMenuItemQuad(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
+                              (s32)D_8007FD2C[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
     *((s32*)(((u8*)arg0) + 0x80B8)) = result;
-    D_80102691++;
+    g_titleAnimFrame++;
 }
 
 /**
+ * Builds a single menu-item sprite primitive (text quad + tex-page word)
+ * at (x, y) and links it into the OT.
+ *
  * decomp.me (100%) https://decomp.me/scratch/FcuOZ
  */
-void* func_80050BD4(s32* arg0, void* arg1, s32 arg2, s16 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+void* EmitMenuItemQuad(s32* otHead, void* prim, s32 slot, s16 x, s32 y, s32 colorY, s32 step, s32 paletteIdx)
 {
     u8* ptr;
     u8 tmp1;
@@ -698,35 +747,35 @@ void* func_80050BD4(s32* arg0, void* arg1, s32 arg2, s16 arg3, s32 arg4, s32 arg
     u32 new_word;
     u32 mask_lo;
     u32 mask_hi;
-    ptr = (u8*)arg1;
+    ptr = (u8*)prim;
     mask_lo = 0x00FFFFFF;
     ptr[0x03] = 9;
     ptr[0x07] = 0x2C;
-    tmp1 = (u8)(arg2 << 4);
+    tmp1 = (u8)(slot << 4);
     ptr[0x06] = 0x80;
     ptr[0x15] = tmp1;
     ptr[0x0D] = tmp1;
-    tmp2 = (u8)((arg2 << 4) + 0x10);
+    tmp2 = (u8)((slot << 4) + 0x10);
     ptr[0x05] = 0x80;
     ptr[0x04] = 0x80;
     ptr[0x25] = tmp2;
     ptr[0x1D] = tmp2;
-    *((u16*)(ptr + 0x18)) = (u16)arg3;
-    *((u16*)(ptr + 0x08)) = (u16)arg3;
+    *((u16*)(ptr + 0x18)) = (u16)x;
+    *((u16*)(ptr + 0x08)) = (u16)x;
     *((u16*)(ptr + 0x16)) = 5;
     mask_hi = 0xFF000000;
-    sum1 = (u16)(arg3 + arg6);
+    sum1 = (u16)(x + step);
     new_var = ptr + 0x12;
-    *((u16*)new_var) = (u16)arg4;
-    *((u16*)(ptr + 0x0A)) = (u16)arg4;
-    sum2 = (u16)(arg4 + 0x10);
+    *((u16*)new_var) = (u16)y;
+    *((u16*)(ptr + 0x0A)) = (u16)y;
+    sum2 = (u16)(y + 0x10);
     do
     {
     } while (0);
-    ptr[0x1C] = (u8)arg5;
-    ptr[0x0C] = (u8)arg5;
-    bsum = (u8)(arg5 + arg6);
-    t1_val = (u16)((arg7 & 0x3F) | 0x7800);
+    ptr[0x1C] = (u8)colorY;
+    ptr[0x0C] = (u8)colorY;
+    bsum = (u8)(colorY + step);
+    t1_val = (u16)((paletteIdx & 0x3F) | 0x7800);
     *((u16*)(ptr + 0x22)) = sum2;
     *((u16*)(ptr + 0x1A)) = sum2;
     old_word = *((u32*)ptr);
@@ -735,23 +784,27 @@ void* func_80050BD4(s32* arg0, void* arg1, s32 arg2, s16 arg3, s32 arg4, s32 arg
     ptr[0x24] = bsum;
     ptr[0x14] = bsum;
     *((u16*)(ptr + 0x0E)) = t1_val;
-    new_word = (old_word & mask_hi) | (((u32)(*arg0)) & mask_lo);
+    new_word = (old_word & mask_hi) | (((u32)(*otHead)) & mask_lo);
     *((u32*)ptr) = new_word;
-    *arg0 = (s32)((((u32)(*arg0)) & mask_hi) | (((u32)ptr) & mask_lo));
+    *otHead = (s32)((((u32)(*otHead)) & mask_hi) | (((u32)ptr) & mask_lo));
     return (void*)(ptr + 0x28);
 }
 
 /**
+ * Initialises menu-state globals: zeros the per-slot flag table, enables
+ * the first 4 slots, sets the idle countdown to 0xE10 frames (≈60 s @ 60Hz),
+ * and uploads the two menu TIMs from D_800522E8[1..2] to VRAM.
+ *
  * decomp.me (100%) https://decomp.me/scratch/HW23j
  */
-void func_80050CAC(void)
+void InitTitleMenuState(void)
 {
     u8* ptr;
     s32 i;
     s32 idx;
     u8* q;
     i = 0;
-    ptr = D_80102670;
+    ptr = g_titleMenuItemFlags;
     for (i = 0; i < 16; i++)
     {
         ptr[0] = 0;
@@ -759,27 +812,27 @@ void func_80050CAC(void)
         ptr += 2;
     }
 
-    D_80102670[0] = 1;
-    D_80102670[1] = 1;
-    D_80102670[2] = 1;
-    D_80102670[3] = 1;
+    g_titleMenuItemFlags[0] = 1;
+    g_titleMenuItemFlags[1] = 1;
+    g_titleMenuItemFlags[2] = 1;
+    g_titleMenuItemFlags[3] = 1;
 
-    D_80102690 = 0;
+    g_titleVisibleItemRank = 0;
 
-    D_80102692 = 0;
-    D_80102691 = 0;
+    g_titleSelectedItem = 0;
+    g_titleAnimFrame = 0;
     g_inputRepeatTimer = 0;
-    D_80102694 = 0;
-    D_8010269C = 0;
-    D_801026A0 = 0xE10;
-    func_80050E20((void*)(((u8*)&D_800522E8) + D_800522E8[1]), 0x140, 0, 0, 0x1E0);
-    func_80050E20((void*)(((u8*)&D_800522E8) + D_800522E8[2]), 0x140, 0x100, 0, 0x1E1);
+    g_lastInputState = 0;
+    g_debouncedInput = 0;
+    g_titleIdleCountdown = 0xE10;
+    UploadTim((void*)(((u8*)&D_800522E8) + D_800522E8[1]), 0x140, 0, 0, 0x1E0);
+    UploadTim((void*)(((u8*)&D_800522E8) + D_800522E8[2]), 0x140, 0x100, 0, 0x1E1);
     if (g_previousGameState == 0)
     {
-        idx = D_80102692 + 1;
+        idx = g_titleSelectedItem + 1;
         if (idx < 16)
         {
-            q = D_80102670 + (idx << 1);
+            q = g_titleMenuItemFlags + (idx << 1);
             do
             {
                 if ((D_800522E8 && D_800522E8) && D_800522E8)
@@ -795,23 +848,26 @@ void func_80050CAC(void)
         }
         if (idx == 16)
         {
-            D_80102690 = 0;
-            D_80102692 = 0;
+            g_titleVisibleItemRank = 0;
+            g_titleSelectedItem = 0;
         }
         else
         {
-            D_80102692 = (u8)idx;
-            D_80102690++;
+            g_titleSelectedItem = (u8)idx;
+            g_titleVisibleItemRank++;
         }
     }
 }
 
 /**
+ * Standard TIM-style image uploader: reads the header flags at +4, then
+ * conditionally LoadImages the CLUT followed by the pixel block.
+ *
  * decomp.me (100%) https://decomp.me/scratch/fzh5x
  */
-void func_80050E20(void* arg0, s16 arg1, s16 arg2, s16 arg3, s32 arg4)
+void UploadTim(void* tim, s16 x, s16 y, s16 clutX, s32 clutY)
 {
-    u8* p = (u8*)arg0;
+    u8* p = (u8*)tim;
     int new_var;
     RECT rect;
     s32 temp_s1;
@@ -827,8 +883,8 @@ void func_80050E20(void* arg0, s16 arg1, s16 arg2, s16 arg3, s32 arg4)
         mul_l = *((u16*)(p + 0x12));
         temp_s1 = *((s32*)(p + new_var));
         new_var3 = 8;
-        rect.x = arg3;
-        rect.y = (s16)arg4;
+        rect.x = clutX;
+        rect.y = (s16)clutY;
         rect.w = mul_h * mul_l;
         rect.h = new_var2;
         LoadImage(&rect, (u_long*)(p + 0x14));
@@ -838,14 +894,17 @@ void func_80050E20(void* arg0, s16 arg1, s16 arg2, s16 arg3, s32 arg4)
     {
         p = p + 8;
     }
-    rect.x = arg1;
-    rect.y = arg2;
+    rect.x = x;
+    rect.y = y;
     rect.w = *((u16*)(p + 8));
     rect.h = *((u16*)(p + 0xA));
     LoadImage(&rect, (u_long*)(p + 0xC));
 }
 
 /**
+ * Apparent dead/unused early variant of the pad-read routine — same shape
+ * as read_pad_input but returns the bitmap rather than writing globals.
+ *
  * decomp.me (100%) https://decomp.me/scratch/Z5swg
  */
 s32 func_80050EE4(void)
@@ -901,9 +960,14 @@ s32 func_80050EE4(void)
 }
 
 /**
+ * Counterpart of CHECKPS UpdateInputDebounced: reads SCD pad state, builds
+ * the remapped button bitmap, applies debounce + auto-repeat using
+ * g_lastInputState / g_inputRepeatTimer, and stores the result in
+ * g_debouncedInput.
+ *
  * decomp.me (99.90%) https://decomp.me/scratch/yZqQJ
  */
-void func_80050FBC(void)
+void UpdateMenuInput(void)
 {
     u8* ptr = (u8*)0x801ED600;
     u8 a2 = D_801ED600[0];
@@ -951,8 +1015,8 @@ void func_80050FBC(void)
         }
         var_v1 = a1_val;
     }
-    D_8010269C = 0;
-    if ((var_v1 == D_80102694) || ((D_80102694 != 0) && (var_v1 & (D_80102694 | 0xB6F))))
+    g_debouncedInput = 0;
+    if ((var_v1 == g_lastInputState) || ((g_lastInputState != 0) && (var_v1 & (g_lastInputState | 0xB6F))))
     {
         if (var_v1 != 0)
         {
@@ -963,38 +1027,39 @@ void func_80050FBC(void)
             }
             if (g_inputRepeatTimer == 0)
             {
-                D_8010269C = var_v1;
+                g_debouncedInput = var_v1;
                 g_inputRepeatTimer = 2;
             }
             else
             {
                 g_inputRepeatTimer--;
-                D_8010269C = 0;
+                g_debouncedInput = 0;
             }
         }
         else
         {
             *((s32*)(&g_inputRepeatTimer)) = 0;
         }
-        *((s32*)(&D_80102694)) = 0;
+        *((s32*)(&g_lastInputState)) = 0;
     }
     else if (var_v1 == 0)
     {
-        (void)(&D_8010269C);
+        (void)(&g_debouncedInput);
         *((s32*)(&g_inputRepeatTimer)) = 0;
-        *((s32*)(&D_80102694)) = 0;
+        *((s32*)(&g_lastInputState)) = 0;
     }
     else
     {
-        D_8010269C = var_v1;
-        D_80102694 = var_v1;
+        g_debouncedInput = var_v1;
+        g_lastInputState = var_v1;
         g_inputRepeatTimer = 15;
     }
 }
 
 /**
+ * Counterpart of CHECKPS UpdateControllerInput.
+ *
  * decomp.me (100%) https://decomp.me/scratch/1dQbp
- * Same code as UpdateControllerInput
  */
 static void read_pad_input(void)
 {
@@ -1003,7 +1068,7 @@ static void read_pad_input(void)
     u32 buttons;
     s16 axis;
 
-    D_8010269C = 0;
+    g_debouncedInput = 0;
     if (D_801ED600[0] >= 254)
     {
         state = 0;
@@ -1038,42 +1103,47 @@ static void read_pad_input(void)
         }
         state = buttons;
     }
-    D_80102694 = state;
+    g_lastInputState = state;
     g_inputRepeatTimer = 15;
 }
 
 /**
+ * Initialises the save-slot sub-menu state and uploads its sprite atlases.
+ *
  * decomp.me (100%) https://decomp.me/scratch/t2lHt
  */
-void func_80051234(void)
+void InitSaveSlotMenu(void)
 {
     read_pad_input();
-    D_801026B4 = 0;
-    D_801026C4 = 0;
-    D_801026AC = 0;
-    D_801026C0 = 0;
-    D_801026A8 = 0;
-    D_801026B0 = 0;
-    D_801026B8 = 0;
-    D_801026BC = 0;
-    D_801026C8 = 0;
-    func_800520D4();
+    g_slotSlideFrames = 0;
+    g_slotSlideYLerped = 0;
+    g_slotSlideY = 0;
+    g_slotSlideXLerped = 0;
+    g_slotSlideX = 0;
+    g_slotSelectedIndex = 0;
+    g_slotHighlightX = 0;
+    g_slotHighlightTargetX = 0;
+    g_slotHighlightFrames = 0;
+    UploadSaveLayoutTextures();
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/so5cY
  */
-void func_800512A0(void* arg0)
+void RenderSaveSlotMenu(void* arg0)
 {
     InnerStruct* inner = (InnerStruct*)((char*)arg0 + 0x8000);
-    inner->unk80B8 = func_8005196C(inner->unk80B8, (char*)arg0 + 0x40);
-    func_800512E0();
+    inner->unk80B8 = RenderSaveLayoutPrims(inner->unk80B8, (char*)arg0 + 0x40);
+    HandleSaveSlotInput();
 }
 
 /**
+ * Per-frame input dispatcher for the save-slot sub-menu: drives the slide
+ * lerper, decodes confirm/cancel/select, and reacts to L/R panel scrolls.
+ *
  * decomp.me (99.41%) https://decomp.me/scratch/A1OF6
  */
-void func_800512E0(void)
+void HandleSaveSlotInput(void)
 {
     s32 temp_a1;
     s32 temp_s0;
@@ -1092,24 +1162,24 @@ void func_800512E0(void)
     u8* var_v1;
     u8* dest_ptr;
     s32 flag;
-    if (D_801026B4 != 0)
+    if (g_slotSlideFrames != 0)
     {
-        new_var4 = &D_801026C0;
-        temp_a1 = ((s32)(D_801026A8 - (*new_var4))) / ((s32)D_801026B4);
-        temp_v1 = ((s32)(D_801026AC - D_801026C4)) / ((s32)D_801026B4);
-        D_801026B4 -= 1;
-        D_801026C0 += temp_a1;
-        D_801026C4 += temp_v1;
+        new_var4 = &g_slotSlideXLerped;
+        temp_a1 = ((s32)(g_slotSlideX - (*new_var4))) / ((s32)g_slotSlideFrames);
+        temp_v1 = ((s32)(g_slotSlideY - g_slotSlideYLerped)) / ((s32)g_slotSlideFrames);
+        g_slotSlideFrames -= 1;
+        g_slotSlideXLerped += temp_a1;
+        g_slotSlideYLerped += temp_v1;
         return;
     }
-    D_801026C0 = D_801026A8;
-    D_801026C4 = D_801026AC;
-    func_80050FBC();
-    if (D_801026A8 == 0)
+    g_slotSlideXLerped = g_slotSlideX;
+    g_slotSlideYLerped = g_slotSlideY;
+    UpdateMenuInput();
+    if (g_slotSlideX == 0)
     {
-        if (D_8010269C & 0xA000)
+        if (g_debouncedInput & 0xA000)
         {
-            func_800503C4(0x7D, 0x80);
+            PlayTitleSfx(0x7D, 0x80);
             if (D_800F993C[0x1B1] != 0)
             {
                 D_800F993C[0x1B1] = 0;
@@ -1117,42 +1187,42 @@ void func_800512E0(void)
                 return;
             }
             D_800F993C[0x1B1] = 1;
-            D_800F993C[0x1C9] = D_801026C4 * 0;
+            D_800F993C[0x1C9] = g_slotSlideYLerped * 0;
             return;
         }
-        if (D_8010269C & 0xA20)
+        if (g_debouncedInput & 0xA20)
         {
-            func_800503C4(0x7E, 0x80);
+            PlayTitleSfx(0x7E, 0x80);
             if (D_800F9AED != 0)
             {
-                func_80051904();
-                func_80051854();
+                ScrollSlotsRight();
+                ResetSaveSlotPanel();
                 return;
             }
-            func_80051938();
-            func_80051854();
+            ScrollSlotsLeft();
+            ResetSaveSlotPanel();
             return;
         }
-        if (D_8010269C & 0x40)
+        if (g_debouncedInput & 0x40)
         {
-            func_800503C4(0x7F, 0x80);
-            D_80102640 = 2;
+            PlayTitleSfx(0x7F, 0x80);
+            g_titleMenuExitState = 2;
         }
     }
     else
     {
-        if (D_8010269C & 0xA20)
+        if (g_debouncedInput & 0xA20)
         {
-            if (D_801026A8 > 0)
+            if (g_slotSlideX > 0)
             {
-                func_8005228C(0);
+                LoadSubMenuLayout(0);
                 flag = ~0x7F;
                 var_a1 = D_80042FD8;
                 var_v0 = (*((s32*)(var_a1 + 0x608))) & flag;
             }
             else
             {
-                func_8005228C(1);
+                LoadSubMenuLayout(1);
                 flag = ~0x7F;
                 var_a1 = D_80042FD8;
                 var_v0 = ((*((s32*)(var_a1 + 0x608))) & flag) | 1;
@@ -1163,7 +1233,7 @@ void func_800512E0(void)
             temp_s0 |= new_var2 << 0xF;
             *((s16*)(var_a1 + 0xD4)) = (s16)temp_s0;
             dest_ptr = D_80043618;
-            var_v1 = D_800F9BC4 + (D_801026B0 << 6);
+            var_v1 = D_800F9BC4 + (g_slotSelectedIndex << 6);
             var_a0 = 0;
             while (var_a0 < 0x40U)
             {
@@ -1175,7 +1245,7 @@ void func_800512E0(void)
             }
 
             var_a0_2 = 0;
-            new_var3 = D_801026B0;
+            new_var3 = g_slotSelectedIndex;
             var_v1 = D_80042FD8;
             var_a0_2 = 0;
             do
@@ -1187,54 +1257,58 @@ void func_800512E0(void)
                 var_a0_2 += 1;
                 var_v1 += 4;
             } while (var_a0_2 < 0xB);
-            func_800503C4(0x7E, 0x80);
-            D_80102640 = 1;
+            PlayTitleSfx(0x7E, 0x80);
+            g_titleMenuExitState = 1;
         }
-        else if (D_8010269C & 0x40)
+        else if (g_debouncedInput & 0x40)
         {
-            func_800503C4(0x7F, 0x80);
-            if (D_801026A8 > 0)
+            PlayTitleSfx(0x7F, 0x80);
+            if (g_slotSlideX > 0)
             {
-                func_80051938();
-                func_80051854();
+                ScrollSlotsLeft();
+                ResetSaveSlotPanel();
             }
             else
             {
-                func_80051904();
-                func_80051854();
+                ScrollSlotsRight();
+                ResetSaveSlotPanel();
             }
         }
-        else if (D_801026C8 == 0)
+        else if (g_slotHighlightFrames == 0)
         {
-            if ((D_8010269C & 0x1000) != 0U)
+            if ((g_debouncedInput & 0x1000) != 0U)
             {
-                func_800503C4(0x7D, 0x80);
-                temp_v0_2 = D_801026B0 - 1;
-                D_801026B0 = temp_v0_2;
+                PlayTitleSfx(0x7D, 0x80);
+                temp_v0_2 = g_slotSelectedIndex - 1;
+                g_slotSelectedIndex = temp_v0_2;
                 if (temp_v0_2 < 0)
                 {
-                    D_801026B0 = 0xA;
+                    g_slotSelectedIndex = 0xA;
                 }
             }
-            if (D_8010269C & 0x4000)
+            if (g_debouncedInput & 0x4000)
             {
-                func_800503C4(0x7D, 0x80);
-                temp_v0_3 = D_801026B0 + 1;
-                D_801026B0 = temp_v0_3;
+                PlayTitleSfx(0x7D, 0x80);
+                temp_v0_3 = g_slotSelectedIndex + 1;
+                g_slotSelectedIndex = temp_v0_3;
                 if (temp_v0_3 >= 0xB)
                 {
-                    D_801026B0 = 0;
+                    g_slotSelectedIndex = 0;
                 }
             }
         }
-        func_8005169C();
+        AnimateSaveSlotPanel();
     }
 }
 
 /**
+ * Lerps g_slotHighlightX toward g_slotHighlightTargetX over
+ * g_slotHighlightFrames frames and updates the panel-relative UI element
+ * coordinates and visibility flags inside D_800F993C.
+ *
  * decomp.me (99.09%) https://decomp.me/scratch/yKwnh
  */
-void func_8005169C(void)
+void AnimateSaveSlotPanel(void)
 {
     s16 temp_v0_2;
     s16 temp_v1;
@@ -1246,44 +1320,44 @@ void func_8005169C(void)
     s32 var_v0;
     u8* base;
     s32 var_v0_2;
-    if (D_801026C8 != 0)
+    if (g_slotHighlightFrames != 0)
     {
-        temp_v0 = (D_801026BC - D_801026B8) / D_801026C8;
-        D_801026C8 -= 1;
-        D_801026B8 += temp_v0;
+        temp_v0 = (g_slotHighlightTargetX - g_slotHighlightX) / g_slotHighlightFrames;
+        g_slotHighlightFrames -= 1;
+        g_slotHighlightX += temp_v0;
     }
     else
     {
-        D_801026B8 = D_801026BC;
+        g_slotHighlightX = g_slotHighlightTargetX;
     }
-    var_a1 = D_801026BC;
-    if (D_801026BC < 0)
+    var_a1 = g_slotHighlightTargetX;
+    if (g_slotHighlightTargetX < 0)
     {
         var_a1 = 0xF;
-        var_a1 = D_801026BC + var_a1;
+        var_a1 = g_slotHighlightTargetX + var_a1;
     }
     temp_a1 = var_a1 >> 4;
-    if (D_801026B0 < (var_a1 >> 4))
+    if (g_slotSelectedIndex < (var_a1 >> 4))
     {
-        var_v0 = D_801026B0 * 0x10;
-        D_801026BC = var_v0;
-        D_801026C8 = 4;
+        var_v0 = g_slotSelectedIndex * 0x10;
+        g_slotHighlightTargetX = var_v0;
+        g_slotHighlightFrames = 4;
     }
-    else if ((temp_a1 + 6) < D_801026B0)
+    else if ((temp_a1 + 6) < g_slotSelectedIndex)
     {
         var_a0 = 0x10;
-        var_v0 = (D_801026B0 - 6) * var_a0;
-        D_801026BC = var_v0;
-        D_801026C8 = 4;
+        var_v0 = (g_slotSelectedIndex - 6) * var_a0;
+        g_slotHighlightTargetX = var_v0;
+        g_slotHighlightFrames = 4;
     }
     base = D_800F993C;
-    temp_a1 = ((u16)D_801026B8) + 0x20;
+    temp_a1 = ((u16)g_slotHighlightX) + 0x20;
     temp_v1 = temp_a1;
-    *((u16*)(D_800F993C + 0x3E)) = (u16)D_801026B8;
+    *((u16*)(D_800F993C + 0x3E)) = (u16)g_slotHighlightX;
     *((u16*)(D_800F993C + 0x56)) = temp_v1;
-    *((u16*)(D_800F993C + 0xE6)) = (u16)D_801026B8;
+    *((u16*)(D_800F993C + 0xE6)) = (u16)g_slotHighlightX;
     *((u16*)(D_800F993C - (-0xFE))) = temp_v1;
-    if (D_801026B8 != 0)
+    if (g_slotHighlightX != 0)
     {
         D_800F993C[0xA9] = 1;
         D_800F993C[0xC1] = 1;
@@ -1297,7 +1371,7 @@ void func_8005169C(void)
         D_800F993C[0x151] = 0;
         D_800F993C[0x169] = 0;
     }
-    if (D_801026B8 != 0x40)
+    if (g_slotHighlightX != 0x40)
     {
         D_800F993C[0x61] = 1;
         D_800F993C[0x79] = 1;
@@ -1311,7 +1385,7 @@ void func_8005169C(void)
         D_800F993C[0x109] = 0;
         D_800F993C[0x121] = 0;
     }
-    var_a0 = (D_801026B0 * 0x10) - D_801026B8;
+    var_a0 = (g_slotSelectedIndex * 0x10) - g_slotHighlightX;
     if (var_a0 < 0)
     {
         var_a0 = 0;
@@ -1329,26 +1403,29 @@ void func_8005169C(void)
 }
 
 /**
+ * Snaps the save-slot panel back to its home position and clears its
+ * highlight/selection state.
+ *
  * decomp.me (100%) https://decomp.me/scratch/0YgmZ
  */
-void func_80051854(void)
+void ResetSaveSlotPanel(void)
 {
     s16 temp_v1;
-    if (D_801026A8 != 0)
+    if (g_slotSlideX != 0)
     {
         u32 base = (u32)(&D_800F993C);
         *((u16*)(base + 0xE)) = 0x10;
-        D_801026B0 = 0;
-        D_801026B8 = 0;
-        D_801026BC = 0;
-        D_801026C8 = 0;
+        g_slotSelectedIndex = 0;
+        g_slotHighlightX = 0;
+        g_slotHighlightTargetX = 0;
+        g_slotHighlightFrames = 0;
         *((u8*)(base + 0xA9)) = 0;
         base++;
         base--;
         *((u8*)(base + 0xC1)) = 0;
         *((u8*)(base + 0x151)) = 0;
         *((u8*)(base + 0x169)) = 0;
-        temp_v1 = ((u16)D_801026B8) + 0x20;
+        temp_v1 = ((u16)g_slotHighlightX) + 0x20;
         *((u16*)(base + 0x96)) = 0x40;
         *((u16*)(base + 0x9A)) = 0x40;
         *((u16*)(base + 0x13E)) = 0x40;
@@ -1359,41 +1436,46 @@ void func_80051854(void)
         *((u8*)(base + 0x109)) = 1;
         *((u8*)(base + 0x121)) = 1;
 
-        *((u16*)(base + 0x3E)) = (u16)D_801026B8;
+        *((u16*)(base + 0x3E)) = (u16)g_slotHighlightX;
         *((u16*)(base + 0x56)) = temp_v1;
-        *((u16*)(base + 0xE6)) = (u16)D_801026B8;
+        *((u16*)(base + 0xE6)) = (u16)g_slotHighlightX;
         *((u16*)(base + 0xFE)) = temp_v1;
         return;
     }
     {
         u32 low_addr = (u32)(&D_800F993C);
-        u32 ptr = D_801026A8 + low_addr;
+        u32 ptr = g_slotSlideX + low_addr;
         *((u16*)(ptr + 0xC)) = 0x10;
         *((u16*)(ptr + 0xE)) = 0;
     }
 }
 
 /**
+ * Begins an 8-frame slide of the slot panel by +0xA0 (one panel right),
+ * unless we're already at the right edge.
+ *
  * decomp.me (100%) https://decomp.me/scratch/SRP9z
  */
-void func_80051904(void)
+void ScrollSlotsRight(void)
 {
-    if (D_801026C0 != 0xA0)
+    if (g_slotSlideXLerped != 0xA0)
     {
-        D_801026A8 += 0xA0;
-        D_801026B4 = 8;
+        g_slotSlideX += 0xA0;
+        g_slotSlideFrames = 8;
     }
 }
 
 /**
+ * Mirror of ScrollSlotsRight going left.
+ *
  * decomp.me (100%) https://decomp.me/scratch/W1iA5
  */
-void func_80051938(void)
+void ScrollSlotsLeft(void)
 {
-    if (D_801026C0 != -0xA0)
+    if (g_slotSlideXLerped != -0xA0)
     {
-        D_801026A8 -= 0xA0;
-        D_801026B4 = 8;
+        g_slotSlideX -= 0xA0;
+        g_slotSlideFrames = 8;
     }
 }
 
@@ -1403,11 +1485,16 @@ inline u16 inline_fn(unsigned char* arg0)
 }
 
 /**
+ * Walks the 0x1B-entry × 0x18-byte layout table at D_800F993C+2 and emits
+ * one of four primitive shapes per entry (text quad, simple sprite,
+ * solid-coloured POLY_F4, or chunked glyph strip). Returns the new prim
+ * head.
+ *
  * decomp.me (87.28%) https://decomp.me/scratch/UVLSm
  * (bad definitely not functional scratch 91.76% https://decomp.me/scratch/P2gt5)
  * NOTE THAT THIS MAY NOT BE FUNCTIONALLY EQUIVALENT YET!
  */
-void* func_8005196C(void* arg0, s32* arg1)
+void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
 {
     unsigned char* t0;
     unsigned char* new_var;
@@ -1449,8 +1536,8 @@ void* func_8005196C(void* arg0, s32* arg1)
     t2 = D_800F993C + 2;
     s2 = 0;
     s5 = 3;
-    s4 = &D_801026C0;
-    s3 = (s32)(&D_801026C4);
+    s4 = &g_slotSlideXLerped;
+    s3 = (s32)(&g_slotSlideYLerped);
     s0 = D_800F97FC;
     t4 = 0x00FFFFFF;
     t8 = 0xFF000000;
@@ -1463,9 +1550,9 @@ void* func_8005196C(void* arg0, s32* arg1)
         v0 = t2[-1];
         if (v0 == s5)
         {
-            if (D_801026A8 > 0)
+            if (g_slotSlideX > 0)
             {
-                a3 = (unsigned char*)(D_801026B0 + 1);
+                a3 = (unsigned char*)(g_slotSelectedIndex + 1);
             }
             else
             {
@@ -1485,9 +1572,9 @@ void* func_8005196C(void* arg0, s32* arg1)
                 a3[7] = 0x2C;
             }
             v0 = 0x20;
-            v0 = (*((u16*)(a3 + 8)) = (inline_fn(t2 + 2) + D_801026C0) - ((a1[4] * 8) - v0));
+            v0 = (*((u16*)(a3 + 8)) = (inline_fn(t2 + 2) + g_slotSlideXLerped) - ((a1[4] * 8) - v0));
             *((u16*)(a3 + 0x18)) = v0;
-            v0 = (*((u16*)(a3 + 10)) = (inline_fn(t2 + 4) + D_801026C4) - ((a1[5] * 8) - 0x28));
+            v0 = (*((u16*)(a3 + 10)) = (inline_fn(t2 + 4) + g_slotSlideYLerped) - ((a1[5] * 8) - 0x28));
             *((u16*)(a3 + 0x12)) = v0;
             new_var5 = (inline_fn(a3 + 8) + (a1[2] * 8)) - 1;
             *((u16*)(a3 + 0x20)) = new_var5;
@@ -1526,9 +1613,9 @@ void* func_8005196C(void* arg0, s32* arg1)
         }
         else if (v0 == 4)
         {
-            if (D_801026A8 < 0)
+            if (g_slotSlideX < 0)
             {
-                a3 = (unsigned char*)(D_801026B0 + 1);
+                a3 = (unsigned char*)(g_slotSelectedIndex + 1);
             }
             else
             {
@@ -1543,8 +1630,8 @@ void* func_8005196C(void* arg0, s32* arg1)
                 t0[7] = 0x66;
             }
             v1 = ((unsigned long)t0) & t4;
-            *((u16*)(t0 + 8)) = (inline_fn(t2 - (-2)) + D_801026C0) - ((a1[4] * 8) - 0x20);
-            *((u16*)(t0 + 10)) = (inline_fn(t2 + 4) + D_801026C4) - ((a1[5] * 8) - 0x28);
+            *((u16*)(t0 + 8)) = (inline_fn(t2 - (-2)) + g_slotSlideXLerped) - ((a1[4] * 8) - 0x20);
+            *((u16*)(t0 + 10)) = (inline_fn(t2 + 4) + g_slotSlideYLerped) - ((a1[5] * 8) - 0x28);
             t0[12] = a1[0] * 8;
             t0[13] = a1[1] * 8;
             *((u16*)(t0 + 0x10)) = a1[2] * 8;
@@ -1584,10 +1671,10 @@ void* func_8005196C(void* arg0, s32* arg1)
             v1 = ((unsigned long)t0) & t4;
             t0[3] = s5;
             t0[7] = 0x62;
-            *((u16*)(t0 + 8)) = inline_fn(t2 + 6) + D_801026C0;
+            *((u16*)(t0 + 8)) = inline_fn(t2 + 6) + g_slotSlideXLerped;
             do
             {
-                *((u16*)(t0 + 10)) = inline_fn(t2 + 8) + D_801026C4;
+                *((u16*)(t0 + 10)) = inline_fn(t2 + 8) + g_slotSlideYLerped;
                 *((u16*)(t0 + 12)) = inline_fn(t2 + 14);
                 *((u16*)(t0 + 14)) = inline_fn(t2 + 16);
                 v1 = t8;
@@ -1622,8 +1709,8 @@ void* func_8005196C(void* arg0, s32* arg1)
                 {
                     do
                     {
-                        a1_16 = (*((s16*)(t2 + 2))) + D_801026C0;
-                        t9_16 = (*((s16*)(t2 + 4))) + D_801026C4;
+                        a1_16 = (*((s16*)(t2 + 2))) + g_slotSlideXLerped;
+                        t9_16 = (*((s16*)(t2 + 4))) + g_slotSlideYLerped;
                     } while (0);
                 }
                 else
@@ -1715,9 +1802,13 @@ void* func_8005196C(void* arg0, s32* arg1)
 }
 
 /**
+ * For each of the 11 entries in D_800F97FC (stride 0x10), uploads the
+ * CLUT and image data to VRAM and bit-packs the resulting tex-page info
+ * back into the entry's control word.
+ *
  * decomp.me (100%) https://decomp.me/scratch/lzJHa
  */
-unsigned short func_800520D4(void)
+unsigned short UploadSaveLayoutTextures(void)
 {
     unsigned char* entry_base;
     u32 new_var3;
@@ -1774,15 +1865,21 @@ unsigned short func_800520D4(void)
 }
 
 /**
+ * Copies a ~13 KB menu-layout table (0xC9A s32s) from one of two source
+ * tables into the working layout buffer at D_80042FD8, and updates the
+ * companion mode field D_8003EC90.
+ *   variant ==  0  -> "default" layout (D_800F9E84), D_8003EC90 = 0xD
+ *   variant != 0   -> "alt"     layout (D_800FEF40), D_8003EC90 = 0
+ *
  * decomp.me (100%) https://decomp.me/scratch/aPcbW
  */
-void func_80052220(s32 arg0)
+void LoadMenuLayout(s32 variant)
 {
     s32 temp_v0;
     s32* var_a1;
     s32* var_v1;
     u32 var_a0;
-    if (arg0 == 0)
+    if (variant == 0)
     {
         var_a1 = &D_800F9E84;
         D_8003EC90 = 0xD;
@@ -1810,16 +1907,20 @@ void func_80052220(s32 arg0)
 }
 
 /**
+ * Copies a smaller (0x94 s32s) sub-menu layout table into the game-data
+ * base at g_gameDataBasePtr. When variant != 0, also OR's bit 0 into
+ * (s32*)D_80042FD8[0xB8], marking this slot as "continue mode".
+ *
  * decomp.me (100%) https://decomp.me/scratch/CU7Ml
  */
-void func_8005228C(s32 arg0)
+void LoadSubMenuLayout(s32 variant)
 {
     s32 temp_v0;
     s32* var_a0;
     int new_var;
     s32* var_v1;
     u32 var_a1;
-    if (arg0 != 0)
+    if (variant != 0)
     {
         var_a0 = &D_801023F0;
         new_var = sizeof(s32);
