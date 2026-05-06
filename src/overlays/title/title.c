@@ -337,7 +337,7 @@ void LoadTitleSeq(s32 seqVariant)
  */
 void StopTitleMusic(void)
 {
-    func_80022068(0);
+    akao_stop_song(0);
 }
 
 /**
@@ -347,7 +347,7 @@ void StopTitleMusic(void)
  */
 void StartTitleMusic(void)
 {
-    func_80022040(&D_8003ECA0);
+    akao_play_song(&D_8003ECA0);
     FUN_8002279c(0, 0x7F);
 }
 
@@ -360,7 +360,7 @@ void StartTitleMusic(void)
  */
 void PlayTitleSfx(s32 soundId, s32 arg1)
 {
-    func_8002216C(soundId, 0, arg1, 0x7F);
+    akao_play_sfx(soundId, 0, arg1, 0x7F);
 }
 
 /**

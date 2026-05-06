@@ -537,6 +537,9 @@ _SpuDataCallback                    = 0x80021F8C;
 // Uncategorized
 FUN_80021fbc                        = 0x80021FBC;
 akao_register_bank                  = 0x80021FFC;
+akao_play_song                      = 0x80022040;
+akao_stop_song                      = 0x80022068;
+akao_play_sfx                       = 0x8002216C;
 FUN_80022400                        = 0x80022400;
 FUN_8002279c                        = 0x8002279C;
 FUN_80022aa8                        = 0x80022AA8;
@@ -602,6 +605,7 @@ SpuSetTransferMode                  = 0x80024200;
 SpuSetTransferCallback              = 0x80024230;
 
 // Uncategorized
+akao_send_command                   = 0x80028E84;
 __main                              = 0x8002E850;
 McxStartCom                         = 0x800319D8;
 
@@ -612,6 +616,7 @@ g_GfxDoubleBuffer                   = 0x80042CA0;
 g_GfxPrimaryFrame                   = 0x80042E20;
 g_previousGameState                 = 0x80042FB0;
 g_gameDataBasePtr                   = 0x800435C8;
+g_akaoCmdParams                     = 0x8004D430;
 
 // Globals
 g_cdAudioReady                      = 0x801ED591;
