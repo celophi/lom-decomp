@@ -542,10 +542,16 @@ akao_stop_song                      = 0x80022068;
 akao_play_sfx                       = 0x8002216C;
 FUN_80022400                        = 0x80022400;
 FUN_8002279c                        = 0x8002279C;
+akao_cmd_c8                         = 0x80022848;
 FUN_80022aa8                        = 0x80022AA8;
 FUN_80022ac8                        = 0x80022AC8;
 akao_play_sequence_blocking         = 0x80022AE8;
+akao_xa_setup_panning               = 0x80022F18;
 FUN_80023010                        = 0x80023010;
+akao_cmd_e4_set_cd_volume           = 0x80023030;
+akao_cmd_e8_start_xa_stream         = 0x800232A8;
+akao_xa_advance_frame               = 0x80023334;
+akao_xa_get_position                = 0x800233B8;
 
 // psyq/libspu/S_SI
 SpuSetIRQ                           = 0x800233C8;
