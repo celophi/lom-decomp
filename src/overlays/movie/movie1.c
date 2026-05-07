@@ -1170,19 +1170,19 @@ void movie_draw_sync_callback(void)
  * Wraps videoReadIdx if it has reached videoRingSize. On success returns
  * pointers to the entry's VLC data buffer and 32-byte header.
  *
- * @param outVlcData     Receives the 2016-byte VLC data buffer pointer.
- * @param outEntryHeader Receives the 32-byte entry header pointer.
+ * @param out_vlc_data     Receives the 2016-byte VLC data buffer pointer.
+ * @param out_entry_header Receives the 32-byte entry header pointer.
  *
  * @return 1 if an entry is available, 0 otherwise (ring empty and last frame consumed).
  *
  * @see https://decomp.me/scratch/OJvsJ (100%)
  */
-s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
+s32 movie_get_next_video_entry(void** out_vlc_data, void** out_entry_header)
 {
-    s32 writeIdx;
-    s32 readIdx;
-    s32* out0 = outVlcData;
-    s32* out1 = outEntryHeader;
+    s32 write_idx;
+    s32 read_idx;
+    void** vlc_data_alias = out_vlc_data;
+    void** entry_header_alias = out_entry_header;
 
     if ((MOVIE_STATE->videoWriteIdx == MOVIE_STATE->videoReadIdx) &&
         (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame))
@@ -1190,10 +1190,10 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
         return 0;
     }
 
-    writeIdx = VOL_MOVIE_STATE->videoWriteIdx;
-    readIdx = VOL_MOVIE_STATE->videoReadIdx;
+    write_idx = VOL_MOVIE_STATE->videoWriteIdx;
+    read_idx = VOL_MOVIE_STATE->videoReadIdx;
 
-    if ((readIdx >= writeIdx) && (readIdx == MOVIE_STATE->videoRingSize))
+    if ((read_idx >= write_idx) && (read_idx == MOVIE_STATE->videoRingSize))
     {
         MOVIE_STATE->videoReadIdx = 0;
 
@@ -1203,8 +1203,8 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
         }
     }
 
-    *out1 = (s32)&MOVIE_STATE->videoTableBase[MOVIE_STATE->videoReadIdx];
-    *outVlcData = (s32)(MOVIE_STATE->videoDataBase + (MOVIE_STATE->videoReadIdx * 2016));
+    *entry_header_alias = &MOVIE_STATE->videoTableBase[MOVIE_STATE->videoReadIdx];
+    *out_vlc_data = MOVIE_STATE->videoDataBase + (MOVIE_STATE->videoReadIdx * 2016);
     return 1;
 }
 
