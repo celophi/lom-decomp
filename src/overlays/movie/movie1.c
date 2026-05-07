@@ -19,10 +19,11 @@ void movie_play(s32 movieIndex)
     DISPENV* pDispEnv;
     volatile CombinedState* state;
     s32 audioFadeVol;
-    s32 endStateMatch;     /* state->endState comparison constant (always 2) */
-    s32 retryLimit;        /* cdrom error-loop retry threshold (always 5) */
+    s32 endStateMatch;
+    s32 retryLimit;
     s32 error_status;
     s32 timeout;
+    u32 frameCount;
 
     VSync(0);
     func_800157DC();
@@ -31,15 +32,9 @@ void movie_play(s32 movieIndex)
     func_800157DC();
     cdrom_process_state();
 
-    if ((movieIndex & 0xFFFF) == 0)
+    if (((movieIndex & 0xFFFF) == 0) && (((SRC_801ED600*)0x801ED600)->unk0 < 3) && ((((SRC_801ED600*)0x801ED600)->unk2 & 0xFF0F) != 0))
     {
-        if (((SRC_801ED600*)0x801ED600)->unk0 < 3)
-        {
-            if ((((SRC_801ED600*)0x801ED600)->unk2 & 0xFF0F) != 0)
-            {
-                return;
-            }
-        }
+        return;
     }
 
     func_800158E0();
@@ -50,171 +45,103 @@ void movie_play(s32 movieIndex)
     SetDefDispEnv(&env[1], 0, timeout, 320, timeout);
     env[0].isrgb24 = (env[1].isrgb24 = 1);
 
+    switch ((u16)(movieIndex & 0xFFFF))
     {
-        u32 frameCount;
-        switch ((u16)(movieIndex & 0xFFFF))
-        {
-        case 0:
-            frameCount = 2098;
-            break;
-
-        case 1:
-            frameCount = 2473;
-            break;
-
-        case 2:
-            frameCount = 1318;
-            break;
-
-        case 3:
-            frameCount = 5368;
-            break;
-
-        case 4:
-
-        default:
-            frameCount = 898;
-            break;
-        }
-
-        movie_init((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
+    case 0:
+        frameCount = 2098;
+        break;
+    case 1:
+        frameCount = 2473;
+        break;
+    case 2:
+        frameCount = 1318;
+        break;
+    case 3:
+        frameCount = 5368;
+        break;
+    case 4:
+    default:
+        frameCount = 898;
+        break;
     }
+
+    movie_init((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
 
     VSync(0);
     func_800157DC();
-    audioFadeVol = -1;
-    retryLimit = 5;
     state = (CombinedState*)0x801ED500;
+    audioFadeVol = -1;
     endStateMatch = 2;
-    goto error_loop;
+    retryLimit = 5;
 
-error_loop_retry:
-    if (error_status == retryLimit)
-    {
-        goto recheck_unk9d;
-    }
-
-    func_800157B0(1);
-    retryLimit++;
-    retryLimit--;
-    VSync(0);
-    func_800157DC();
-    cdrom_process_state();
-
-error_loop:
-    error_status = cdrom_get_error_status();
-
-    if (error_status != 0)
-    {
-        goto error_loop_retry;
-    }
-    goto recheck_unk9d;
-
-wait_loop:
-    movie_update();
-
-    {
-        u8 unk9d_val = state->field9D;
-        if (unk9d_val != 0)
+    do {
+        error_status = cdrom_get_error_status();
+        while (error_status != 0 && error_status != retryLimit)
         {
-            goto after_wait;
+            func_800157B0(1);
+            VSync(0);
+            func_800157DC();
+            cdrom_process_state();
+            error_status = cdrom_get_error_status();
         }
-    }
 
-    if (state->endState == endStateMatch)
-    {
-        goto cleanup;
-    }
-
-    movie_service_video_ops();
-    if ((--timeout) != 0)
-    {
-        goto wait_loop;
-    }
-
-after_wait:
-    if (timeout != 0)
-    {
-        goto recheck_unk9d;
-    }
-
-    cdrom_process_state();
-
-recheck_unk9d:
-    timeout = 0x2000;
-    if (state->field9D == 0)
-    {
-        goto wait_loop;
-    }
-
-    state->field9D = 0;
-    func_800157B0(4);
-    VSync(0);
-
-    pDispEnv = &env[0];
-    if (state->chunkIdx == 0)
-    {
-        pDispEnv = &env[1];
-    }
-
-    PutDispEnv(pDispEnv);
-    SetDispMask(1);
-    func_800157DC();
-    cdrom_process_state();
-
-    {
-        u32 a0 = (u32)(movieIndex & 0xFFFF);
-        if ((a0 < 2) && (((SRC_801ED600*)0x801ED600)->unk0 < 3))
+        timeout = 0x2000;
+        while (state->field9D == 0)
         {
-            u16 val = ((SRC_801ED600*)0x801ED600)->unk4;
-            if (a0 != 0)
+            do {
+                movie_update();
+                if (state->field9D != 0)
+                    break;
+                if (state->endState == endStateMatch)
+                    break;
+                movie_service_video_ops();
+            } while (--timeout != 0);
+
+            if (timeout == 0)
+                cdrom_process_state();
+            timeout = 0x2000;
+        }
+
+        state->field9D = 0;
+        func_800157B0(4);
+        VSync(0);
+
+        pDispEnv = &env[0];
+        if (state->chunkIdx == 0)
+            pDispEnv = &env[1];
+
+        PutDispEnv(pDispEnv);
+        SetDispMask(1);
+        func_800157DC();
+        cdrom_process_state();
+
+        {
+            u32 a0 = (u32)(movieIndex & 0xFFFF);
+            if ((a0 < 2) && (((SRC_801ED600*)0x801ED600)->unk0 < 3))
             {
-                if ((val & 0x400A) != 0)
+                u16 val = ((SRC_801ED600*)0x801ED600)->unk4;
+                if ((a0 != 0) ? ((val & 0x400A) != 0) : ((val & 0xFF0F) != 0))
                 {
-                    goto set_audioFadeVol;
+                    if (g_cdAudioReady == 0)
+                        break;
+
+                    if (audioFadeVol == (-1))
+                        audioFadeVol = 0x70;
                 }
-                goto check_audio_call;
-            }
-            if ((val & 0xFF0F) != 0)
-            {
-                goto set_audioFadeVol;
-            }
-            goto check_audio_call;
-
-            timeout = 0xF0;
-
-        set_audioFadeVol:
-            if (g_cdAudioReady == 0)
-            {
-                goto cleanup;
-            }
-
-            if (audioFadeVol == (-1))
-            {
-                audioFadeVol = 0x70;
             }
         }
-    }
 
-check_audio_call:
-    if ((g_cdAudioReady != 0) && (audioFadeVol != (-1)))
-    {
-        func_80023030(audioFadeVol);
-        if (audioFadeVol == 0)
+        if ((g_cdAudioReady != 0) && (audioFadeVol != (-1)))
         {
-            goto cleanup;
+            func_80023030(audioFadeVol);
+            if (audioFadeVol == 0)
+                break;
+            audioFadeVol -= 0x10;
         }
-        audioFadeVol -= 0x10;
-    }
 
-    if (state->endState != endStateMatch)
-    {
-        goto error_loop;
-    }
+    } while (state->endState != endStateMatch);
 
-cleanup:
     func_800158E0();
-
     cdrom_reset();
     DrawSync(0);
     VSync(0);
