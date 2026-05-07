@@ -472,8 +472,7 @@ void movie_update(void)
             {
                 s32 temp = ((s16)((MovieState*)combined)->rects[2].w) * ((s16)((MovieState*)combined)->rects[2].h);
                 field9DZeroFlag = ((unsigned)temp) >> 31;
-                DecDCTout((((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]),
-                          (temp + field9DZeroFlag) >> 1);
+                DecDCTout((((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]), (temp + field9DZeroFlag) >> 1);
             }
         }
         else
@@ -1067,12 +1066,10 @@ s32 movie_cd_sector_callback(void)
  *
  * @see https://decomp.me/scratch/I2Ddr (100%)
  */
-s32 movie_get_next_audio_entry(AudioSector** outEntry)
+s32 movie_get_next_audio_entry(AudioSector** out_entry)
 {
-    AudioSector** saved_arg;
-    s32 nextIdx;
+    s32 next_idx;
     AudioSector* entry;
-    u16 temp;
 
     /* Return immediately if nothing is available: ring empty and no secondary data pending */
     if ((MOVIE_STATE->audioWriteIdx == MOVIE_STATE->audioReadIdx) &&
@@ -1082,38 +1079,36 @@ s32 movie_get_next_audio_entry(AudioSector** outEntry)
     }
 
     /* Wrap readIdx back to 0 when it reaches the end of the ring */
-    if ((((volatile MovieState*)0x801ED500)->audioWriteIdx <= MOVIE_STATE->audioReadIdx) &&
+    if ((VOL_MOVIE_STATE->audioWriteIdx <= MOVIE_STATE->audioReadIdx) &&
         (MOVIE_STATE->audioReadIdx == MOVIE_STATE->audioRingSize))
     {
-        temp = MOVIE_STATE->audioWriteIdx != 0;
         MOVIE_STATE->audioReadIdx = 0;
-        if (!temp && (MOVIE_STATE->lastAudioFrame == MOVIE_STATE->lastConsumedAudioFrame))
+
+        if (MOVIE_STATE->audioWriteIdx == 0 && (MOVIE_STATE->lastAudioFrame == MOVIE_STATE->lastConsumedAudioFrame))
         {
             return 0;
         }
     }
 
     /* Look past already-buffered entries to find the next one to queue */
-    nextIdx = MOVIE_STATE->audioReadIdx + MOVIE_STATE->audioBufferedCount;
+    next_idx = MOVIE_STATE->audioReadIdx + MOVIE_STATE->audioBufferedCount;
 
-    /* Wrap nextIdx if it overflows the ring */
-    if ((MOVIE_STATE->audioReadIdx >= MOVIE_STATE->audioWriteIdx) &&
-        (nextIdx >= ((volatile MovieState*)0x801ED500)->audioRingSize))
+    /* Wrap next_idx if it overflows the ring */
+    if ((MOVIE_STATE->audioReadIdx >= MOVIE_STATE->audioWriteIdx) && (next_idx >= VOL_MOVIE_STATE->audioRingSize))
     {
-        nextIdx -= MOVIE_STATE->audioRingSize;
+        next_idx -= MOVIE_STATE->audioRingSize;
     }
 
     /* All loaded entries are already queued; nothing new to dispatch */
-    if ((nextIdx == MOVIE_STATE->audioWriteIdx) && (MOVIE_STATE->audioBufferedCount != 0))
+    if ((next_idx == MOVIE_STATE->audioWriteIdx) && (MOVIE_STATE->audioBufferedCount != 0))
     {
         return 0;
     }
 
     /* Resolve entry: each entry occupies one 2048-byte CD sector in the audio data buffer */
-    entry = &MOVIE_STATE->audioDataBase[nextIdx];
-    temp = entry->header.sectorCount;
-    MOVIE_STATE->audioBufferedCount += temp;
-    *outEntry = entry;
+    entry = &MOVIE_STATE->audioDataBase[next_idx];
+    MOVIE_STATE->audioBufferedCount += entry->header.sectorCount;
+    *out_entry = entry;
     return 1;
 }
 
