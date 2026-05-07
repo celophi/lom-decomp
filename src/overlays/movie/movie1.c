@@ -1180,11 +1180,9 @@ void movie_draw_sync_callback(void)
  */
 s32 movie_get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header)
 {
-    s32 write_idx;
     s32 read_idx;
-    VideoVlcPayload** vlc_data_alias = out_vlc_data;
-    VideoSectorEntry** entry_header_alias = out_entry_header;
-
+    s32 write_idx;
+    
     if ((MOVIE_STATE->videoWriteIdx == MOVIE_STATE->videoReadIdx) &&
         (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame))
     {
@@ -1204,7 +1202,7 @@ s32 movie_get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry*
         }
     }
 
-    *entry_header_alias = &MOVIE_STATE->videoTableBase[MOVIE_STATE->videoReadIdx];
+    *out_entry_header = &MOVIE_STATE->videoTableBase[MOVIE_STATE->videoReadIdx];
     *out_vlc_data = &MOVIE_STATE->videoDataBase[MOVIE_STATE->videoReadIdx];
     return 1;
 }
