@@ -196,11 +196,11 @@ void movie_play(s32 movieIndex)
 void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx)
 {
     u32 p1;
-    u8* vlcTablePtr;                      /* base of VLC code table */
-    MovieState* stateRef2;                /* used after VSync; alias of 0x801ED500 */
-    MovieState* stateRef3;                /* used as ClearImage arg base */
+    u8* vlcTablePtr;       /* base of VLC code table */
+    MovieState* stateRef2; /* used after VSync; alias of 0x801ED500 */
+    MovieState* stateRef3; /* used as ClearImage arg base */
     u32 p2;
-    MovieState* stateRef4;                /* sequencing alias from rect setup */
+    MovieState* stateRef4; /* sequencing alias from rect setup */
     u32 p3;
     MovieState* stateRef5;                /* sequencing alias from rect copies */
     u8* vlcTablePtr2;                     /* duplicate of vlcTablePtr (forces an extra move) */
@@ -378,8 +378,8 @@ void movie_update(void)
     int field9DZeroFlag;    /* (frame_ready == 0) flag / sign-shift temp */
     void* hdr;
     void* sp14;
-    MovieState* mdecAlias;      /* sequencing alias used in MDEC retry block */
-    s32 tmp = 0;                /* vlc-complete flag, then audioBufferedCount compare */
+    MovieState* mdecAlias; /* sequencing alias used in MDEC retry block */
+    s32 tmp = 0;           /* vlc-complete flag, then audioBufferedCount compare */
     MovieState* combined = MOVIE_STATE;
     int wordCount;              /* DCT word count temp / zero literal */
     volatile int audioFrameNum; /* frame number from latest audio entry */
@@ -401,7 +401,7 @@ void movie_update(void)
     }
     if ((g_mdecRetryPending == 0) & 0xFFFFu)
     {
-        
+
         {
             u8 v0 = MOVIE_STATE->vlcRetryCount;
             if (v0 != 0)
@@ -536,7 +536,7 @@ void movie_mdec_out_callback(void)
     s32 temp;
     MovieState* bp_high;
     int new_var;
-    
+
     if (g_gpuMode == 0)
     {
         if (((u8)g_cdStatusByte3) == 1)
@@ -1184,12 +1184,10 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
     s32* out0 = outVlcData;
     s32* out1 = outEntryHeader;
 
-    if (MOVIE_STATE->videoWriteIdx == MOVIE_STATE->videoReadIdx)
+    if ((MOVIE_STATE->videoWriteIdx == MOVIE_STATE->videoReadIdx) &&
+        (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame))
     {
-        if (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame)
-        {
-            return 0;
-        }
+        return 0;
     }
 
     writeIdx = VOL_MOVIE_STATE->videoWriteIdx;
@@ -1198,7 +1196,7 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
     if ((readIdx >= writeIdx) && (readIdx == MOVIE_STATE->videoRingSize))
     {
         MOVIE_STATE->videoReadIdx = 0;
-        
+
         if ((MOVIE_STATE->videoWriteIdx == 0) && (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame))
         {
             return 0;
