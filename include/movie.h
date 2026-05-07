@@ -120,13 +120,6 @@ typedef struct
 
 typedef u32 SectorBuffer[8];
 
-typedef struct Entry
-{
-    u8 _pad0[6];
-    u16 sectorCount;
-    u8 _pad1[2048 - 8];
-} Entry;
-
 /* Header layout for a sector-table entry: 6 bytes preamble, then sector count
  * and the source frame number. Used for both video (videoTableBase, 32-byte
  * stride) and audio (audioDataBase, 2048-byte stride) ring entries. */

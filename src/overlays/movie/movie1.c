@@ -1070,7 +1070,7 @@ s32 movie_get_next_audio_entry(void** outEntry)
 {
     void** saved_arg;
     s32 nextIdx;
-    u8* entry;
+    AudioSector* entry;
     u16 temp;
 
     /* Return immediately if nothing is available: ring empty and no secondary data pending */
@@ -1109,8 +1109,8 @@ s32 movie_get_next_audio_entry(void** outEntry)
     }
 
     /* Resolve entry: each entry occupies one 2048-byte CD sector in the audio data buffer */
-    entry = (u8*)MOVIE_STATE->audioDataBase + (nextIdx << 11);
-    temp = ((Entry*)entry)->sectorCount;
+    entry = &MOVIE_STATE->audioDataBase[nextIdx];
+    temp = entry->header.sectorCount;
     MOVIE_STATE->audioBufferedCount += temp;
     *outEntry = entry;
     return 1;
