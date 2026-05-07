@@ -317,40 +317,48 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             goto s1_lt4_block;
         if (reg_s1 >= 8)
             goto block_62;
-        goto s14to8_block;
+        else
+            goto s14to8_block;
     s1_lt4_block:
         if (reg_s2 & 0x220)
         {
             D_8014F888 = reg_s1;
-            if (reg_s1 == 1)
+            if (reg_s1 != 1)
             {
-                goto s1_eq1_block;
-            }
-            if (reg_s1 < 2)
-            {
-                if (reg_s1 == 0)
-                    goto s1_eq0_code;
+                if (reg_s1 < 2)
+                {
+                    if (reg_s1 != 0)
+                    {
+                        reg_s0 = 0;
+                        continue;
+                    }
+                }
+                else if (reg_s1 == 2)
+                {
+                    goto s1_eq2_code;
+                }
+                else if (reg_s1 == 3)
+                {
+                    goto s1_eq3_code;
+                }
+                else
+                {
+                    reg_s0 = 0;
+                    continue;
+                }
+
+                if ((func_80142720(D_8014F844) != 0) && (func_80142C50(D_8014F844) == 0))
+                {
+                    func_800A3938(0x7E, 0x80);
+                    D_8014F7E4 = five;
+                    reg_s0 = 0;
+                    continue;
+                }
+                func_800A3938(0x78, 0x80);
                 reg_s0 = 0;
                 continue;
             }
-            if (reg_s1 == 2)
-                goto s1_eq2_code;
-            if (reg_s1 == 3)
-                goto s1_eq3_code;
-            reg_s0 = 0;
-            continue;
-        s1_eq0_code:
-            if ((func_80142720(D_8014F844) != 0) && (func_80142C50(D_8014F844) == 0))
-            {
-                func_800A3938(0x7E, 0x80);
-                D_8014F7E4 = five;
-                reg_s0 = 0;
-                continue;
-            }
-            func_800A3938(0x78, 0x80);
-            reg_s0 = 0;
-            continue;
-        s1_eq1_block:
+
             func_800A3938(0x7E, 0x80);
             func_80142844(D_8014F844);
             goto block_38;
@@ -554,9 +562,6 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 {
                     goto block_73;
                 }
-                func_800A3938(var_a0, 0x80);
-                reg_s0 = 0;
-                continue;
             }
             else if (D_8014F848 == 3)
             {
