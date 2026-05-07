@@ -231,7 +231,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         MOVIE_STATE->videoTableBase = (VideoSectorEntry*)vlcTablePtr;
         p2++;
         p2--;
-        MOVIE_STATE->mdecOutputBuf[1] = (u8*)0x801A3D00;
+        MOVIE_STATE->mdecOutputBuf[1] = (u_long*)0x801A3D00;
         MOVIE_STATE->audioDataBase = (AudioSector*)0x80160000;
         MOVIE_STATE->lastConsumedVideoFrame = (u32)(-1);
         MOVIE_STATE->rects[1].w = 0x1E0;
@@ -241,7 +241,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         stateAddrInt = 0x801ED500;
         MOVIE_STATE->vlcInputBuf[0] = (u8*)p2;
         MOVIE_STATE->vlcInputBuf[1] = (u8*)p1;
-        MOVIE_STATE->mdecOutputBuf[0] = (u8*)0x801A1000;
+        MOVIE_STATE->mdecOutputBuf[0] = (u_long*)0x801A1000;
         MOVIE_STATE->rects[0].x = p3 * 0;
         MOVIE_STATE->rects[1].x = 0;
         MOVIE_STATE->rects[0].y = 0;
@@ -268,8 +268,8 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         videoTableBasePtr = &(*videoTableBaseRef);
         vlcTablePtr2 = vlcTablePtr;
         MOVIE_STATE->vlcTable = vlcTablePtr2;
-        MOVIE_STATE->mdecOutputBuf[0] = (u8*)(allocInfo->allocBase + p2);
-        MOVIE_STATE->mdecOutputBuf[1] = (u8*)(allocInfo->allocBase + 0x12E00);
+        MOVIE_STATE->mdecOutputBuf[0] = (u_long*)(allocInfo->allocBase + p2);
+        MOVIE_STATE->mdecOutputBuf[1] = (u_long*)(allocInfo->allocBase + 0x12E00);
 
         if (((s16)MOVIE_STATE->rects[0].x) >= 0x300)
         {
@@ -395,7 +395,7 @@ void movie_update(void)
             {
                 s32 temp = ((s16)((MovieState*)combined)->rects[2].w) * ((s16)((MovieState*)combined)->rects[2].h);
                 wordCount = temp + (((unsigned)temp) >> 31);
-                DecDCTout((u_long*)(((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]), wordCount >> 1);
+                DecDCTout((((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]), wordCount >> 1);
             }
             combined->mdecRetryPending = 0;
         }
@@ -472,7 +472,7 @@ void movie_update(void)
             {
                 s32 temp = ((s16)((MovieState*)combined)->rects[2].w) * ((s16)((MovieState*)combined)->rects[2].h);
                 field9DZeroFlag = ((unsigned)temp) >> 31;
-                DecDCTout((u_long*)(((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]),
+                DecDCTout((((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]),
                           (temp + field9DZeroFlag) >> 1);
             }
         }
@@ -547,7 +547,7 @@ void movie_mdec_out_callback(void)
         temp = DrawSync(1);
         if (temp < 2)
         {
-            LoadImage((RECT*)0x801ED530, (u_long*)base->mdecOutputBuf[base->outBufIdx]);
+            LoadImage((RECT*)0x801ED530, base->mdecOutputBuf[base->outBufIdx]);
             base->draw_sync_target = (s8)(temp + 1);
         }
         else
@@ -562,7 +562,7 @@ void movie_mdec_out_callback(void)
         new_var = 0;
         if (temp != (-1))
         {
-            LoadImage2((RECT*)0x801ED530, (u_long*)base->mdecOutputBuf[base->outBufIdx]);
+            LoadImage2((RECT*)0x801ED530, base->mdecOutputBuf[base->outBufIdx]);
             if (temp != new_var)
             {
                 DrawOTag((u_long*)temp);
@@ -571,7 +571,7 @@ void movie_mdec_out_callback(void)
         }
         else
         {
-            LoadImage((RECT*)0x801ED530, (u_long*)base->mdecOutputBuf[base->outBufIdx]);
+            LoadImage((RECT*)0x801ED530, base->mdecOutputBuf[base->outBufIdx]);
         }
     }
 
@@ -625,7 +625,7 @@ void movie_schedule_next_decode(void)
         {
             decodeSize = ((s16)frameStep) * ((s16)(*((volatile u16*)(&ptr->rects[2].h))));
             decodeWordCount = ((int)(decodeSize + (decodeSize >> 31))) >> 1;
-            DecDCTout((u32*)ptr->mdecOutputBuf[*((volatile u8*)(&ptr->outBufIdx))], decodeWordCount);
+            DecDCTout(ptr->mdecOutputBuf[*((volatile u8*)(&ptr->outBufIdx))], decodeWordCount);
             *((volatile u8*)(&ptr->mdecBusy)) = 2;
         }
         else
@@ -694,7 +694,7 @@ void movie_service_video_ops(void)
             {
                 G->busy = 1;
                 t = G->outBufIdx;
-                LoadImage((RECT*)0x801ED530, (u_long*)G->mdecOutputBuf[t]);
+                LoadImage((RECT*)0x801ED530, G->mdecOutputBuf[t]);
                 G->draw_sync_target = DrawSync(1) + 1;
                 G->pending_vram_upload = 0;
                 movie_schedule_next_decode();
@@ -712,7 +712,7 @@ void movie_service_video_ops(void)
                 /* word count = (width * height) / 2, rounded toward zero for signed values */
                 temp = ((s32)G->rects[2].w) * ((s32)G->rects[2].h);
                 wordCount = temp + (((u32)temp) >> 31);
-                DecDCTout((u_long*)G->mdecOutputBuf[G->outBufIdx], wordCount >> 1);
+                DecDCTout(G->mdecOutputBuf[G->outBufIdx], wordCount >> 1);
                 G->pending_mdec_decode = 0;
             }
             G->busy = 0;
@@ -732,7 +732,7 @@ void movie_service_video_ops(void)
                 bd = (s32)breakDrawResult;
                 if (bd != (-1))
                 {
-                    LoadImage2((RECT*)0x801ED530, (u_long*)G->mdecOutputBuf[G->outBufIdx]);
+                    LoadImage2((RECT*)0x801ED530, G->mdecOutputBuf[G->outBufIdx]);
                     if (bd != 0)
                     {
                         /* Resume the interrupted OTag list */
@@ -1128,23 +1128,21 @@ s32 movie_get_next_audio_entry(AudioSector** outEntry)
  */
 void movie_draw_sync_callback(void)
 {
-    volatile MovieState* movie_state = VOL_MOVIE_STATE;
-    unsigned int area;
-    int new_var;
     s16 width;
     s16 height;
+    volatile MovieState* movie_state = VOL_MOVIE_STATE;
 
     if (g_busy != 0)
     {
         return;
     }
 
-    VOL_MOVIE_STATE->draw_sync_target = 0;
+    movie_state->draw_sync_target = 0;
 
     if (movie_state->pending_vram_upload != 0)
     {
 
-        LoadImage(&MOVIE_STATE->rects[2], (u_long*)MOVIE_STATE->mdecOutputBuf[movie_state->outBufIdx]);
+        LoadImage(&MOVIE_STATE->rects[2], MOVIE_STATE->mdecOutputBuf[movie_state->outBufIdx]);
         movie_schedule_next_decode();
         movie_state->pending_vram_upload = 0;
     }
@@ -1154,9 +1152,7 @@ void movie_draw_sync_callback(void)
         width = movie_state->rects[2].w;
         height = movie_state->rects[2].h;
 
-        area = width * height;
-        new_var = area + (area >> 31);
-        DecDCTout((u_long*)MOVIE_STATE->mdecOutputBuf[movie_state->outBufIdx], (s32)(new_var >> 1));
+        DecDCTout(MOVIE_STATE->mdecOutputBuf[movie_state->outBufIdx], (width * height) / 2);
         movie_state->pending_mdec_decode = 0;
     }
 }

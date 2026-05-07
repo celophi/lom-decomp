@@ -42,7 +42,7 @@ typedef struct
     struct AudioSector* audioDataBase;       // unk8 — array of 2048-byte CD sectors (header + payload)
     u32 vlcTable;       // unkC / table
     u32* vlcInputBuf[2];
-    u32* mdecOutputBuf[2]; // unk18 / ptr18[0]
+    u_long* mdecOutputBuf[2]; // unk18 — MDEC output buffers (consumed by LoadImage/DecDCTout)
 
     // ---- VRAM destination rectangles ----
     // rects[0] : frame A, rects[1] : frame B, rects[2] : decode rect
