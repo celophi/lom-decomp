@@ -63,6 +63,7 @@ extern s32 D_80142CA4;
 extern void *D_8014F84C;
 extern s32 D_8014F838;
 extern u8 D_80142EF4[];
+extern unsigned char D_80142CD4[];
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
