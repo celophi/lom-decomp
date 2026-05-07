@@ -1263,12 +1263,19 @@ void movie_advance_video_read(void)
  */
 void movie_advance_audio_read(void)
 {
-    BaseStruct_801418B0* base;
+    /*
+     * Field map (BaseStruct_801418B0 → CombinedState, same offsets):
+     *   audioDataBase / audioReadIdx / audioWriteIdx / audioBufferedCount /
+     *   videoRingSize / lastConsumedAudioFrame — all match by name.
+     * Note: comparing audio nextIndex against videoRingSize (not audioRingSize)
+     * looks like an original-game bug; preserved for matching.
+     */
+    CombinedState* base;
     InnerStruct_801418B0* inner;
     s32 nextIndex;
 
     /* Base movie playback control block located at fixed RAM address (0x801ED500). */
-    base = (BaseStruct_801418B0*)0x801ED500;
+    base = (CombinedState*)0x801ED500;
 
     /* Resolve pointer to current audio sector header using read index (2048 bytes per sector). */
     inner = (InnerStruct_801418B0*)(base->audioDataBase + (base->audioReadIdx << 11));
@@ -1286,6 +1293,6 @@ void movie_advance_audio_read(void)
     }
 
     /* Update playback state: sync frame number and commit new read index. */
-    ((BaseStruct_801418B0*)0x801ED500)->lastConsumedAudioFrame = inner->frameNumber;
-    ((BaseStruct_801418B0*)0x801ED500)->audioReadIdx = nextIndex;
+    ((CombinedState*)0x801ED500)->lastConsumedAudioFrame = inner->frameNumber;
+    ((CombinedState*)0x801ED500)->audioReadIdx = nextIndex;
 }

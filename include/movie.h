@@ -125,25 +125,6 @@ typedef struct
 
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
-    s32 audioDataBase; /* 0x08 */
-    u8 _pad0[0x58 - 0xC];
-    s32 unk58;
-    s32 unk5C;
-    s32 videoRingSize; /* 0x60 — ring wrap point (shared with video ring; wraps audio reader too) */
-    s32 audioWriteIdx; /* 0x64 */
-    s32 audioReadIdx;  /* 0x68 */
-    s32 unk6C;
-    s32 audioBufferedCount; /* 0x70 */
-    u8 _pad1[0x80 - 0x74];
-    s32 lastVideoFrame;         /* 0x80 */
-    s32 lastConsumedVideoFrame; /* 0x84 */
-    s32 lastAudioFrame;         /* 0x88 */
-    s32 lastConsumedAudioFrame; /* 0x8C — updated by movie_advance_audio_read */
-} BaseStruct_801418B0;
-typedef struct
-{
     u8 pad[6];
     u16 sectorCount;
     s32 frameNumber;
