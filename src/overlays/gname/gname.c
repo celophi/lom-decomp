@@ -713,12 +713,14 @@ void func_8014139C(void)
     s8 sp12;
     s32 var_a0;
     s32 temp_a0;
+    u8(*new_var2)[];
     s32 temp_a0_2;
     s32 temp_a1;
+    s32 temp_v1;
     s32 temp_a1_2;
     s32 temp_s1;
     s32 temp_v0_3;
-    s32 temp_v1;
+    s32* new_var;
     s32 temp_v1_2;
     s32 temp_v1_3;
     s32 var_v0;
@@ -730,6 +732,7 @@ void func_8014139C(void)
     u16 tmp;
     s32 original;
     s32 temp_c98;
+    int new_var3;
     u8* ptr;
     u16 val;
     temp_a1 = D_80122988 & 0xF220;
@@ -750,13 +753,15 @@ void func_8014139C(void)
         func_80142928();
         D_8014F8A4 = 5;
         var_a0 = 0x7D;
-        func_800A3938(var_a0, 0x80);
+        new_var3 = 0x80;
+        func_800A3938(var_a0, new_var3);
     }
     else if (D_80122988 & 2)
     {
         if (func_80142720(D_8014F844) < 0xA)
         {
-            temp_v0 = func_80142A54(&D_8014F850);
+            new_var2 = &D_8014F850;
+            temp_v0 = func_80142A54(new_var2);
             temp_v0_2 = (u16)temp_v0;
             if (temp_v0_2 != 0)
             {
@@ -784,6 +789,9 @@ void func_8014139C(void)
                 D_8014F7E4 = 2;
                 func_800A3938(0x7F, 0x80);
                 return;
+                if (!D_8014F894)
+                {
+                }
             }
         }
         func_800A3938(0x7F, 0x80);
@@ -826,9 +834,10 @@ void func_8014139C(void)
                         D_8014F8C8 = original - 0x29;
                     }
                 }
-                if (D_80142CAC[D_8014F8C8] != 0xFF)
+                offset = D_8014F8C8;
+                if (D_80142CAC[offset] != 0xFF)
                 {
-                    D_8014F8C0 = 0;
+                    D_8014F8C0 = (long)0;
                     D_8014F8B4 = 0;
                     var_v0 = D_80142C98[3];
                     D_8014F8C4 = 0;
@@ -862,7 +871,8 @@ void func_8014139C(void)
     }
     if (D_8014F8C4 != 0)
     {
-        temp_v0_3 = ((s32)(D_8014F8C0 - D_8014F8B4)) / ((s32)D_8014F8C4);
+        new_var = &D_8014F8B4;
+        temp_v0_3 = ((s32)(D_8014F8C0 - (*new_var))) / ((s32)D_8014F8C4);
         D_8014F8C4 -= 1;
         D_8014F8B4 += temp_v0_3;
         return;
