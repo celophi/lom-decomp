@@ -110,6 +110,7 @@ typedef struct
  * access is required — wrapping that in this macro would silently drop the
  * volatile qualifier. */
 #define MOVIE_STATE ((MovieState*)0x801ED500)
+#define MOVIE_STATE_V ((volatile MovieState*)0x801ED500)
 
 
 typedef struct

@@ -1179,42 +1179,34 @@ void movie_draw_sync_callback(void)
  */
 s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
 {
-    volatile MovieState* base = (volatile MovieState*)0x801ED500;
-    MovieState* base2;
     s32 writeIdx;
     s32 readIdx;
     s32* out0 = outVlcData;
     s32* out1 = outEntryHeader;
 
-    if (base->videoWriteIdx == base->videoReadIdx)
+    if (MOVIE_STATE->videoWriteIdx == MOVIE_STATE->videoReadIdx)
     {
-        if (base->lastVideoFrame != base->lastConsumedVideoFrame)
-        {
-            base = MOVIE_STATE;
-        }
-        else
+        if (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame)
         {
             return 0;
         }
     }
 
-    base = MOVIE_STATE;
+    writeIdx = VOL_MOVIE_STATE->videoWriteIdx;
+    readIdx = VOL_MOVIE_STATE->videoReadIdx;
 
-    writeIdx = base->videoWriteIdx;
-    readIdx = base->videoReadIdx;
-
-    if ((readIdx >= writeIdx) && (readIdx == base->videoRingSize))
+    if ((readIdx >= writeIdx) && (readIdx == MOVIE_STATE->videoRingSize))
     {
         MOVIE_STATE->videoReadIdx = 0;
-        if ((base->videoWriteIdx == 0) && (base->lastVideoFrame == base->lastConsumedVideoFrame))
+        
+        if ((MOVIE_STATE->videoWriteIdx == 0) && (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame))
         {
             return 0;
         }
     }
 
-    base2 = MOVIE_STATE;
-    *out1 = (u8*)base2->videoTableBase + (base2->videoReadIdx << 5);
-    *outVlcData = base2->videoDataBase + (base2->videoReadIdx * 2016);
+    *out1 = (s32)&MOVIE_STATE->videoTableBase[MOVIE_STATE->videoReadIdx];
+    *outVlcData = (s32)(MOVIE_STATE->videoDataBase + (MOVIE_STATE->videoReadIdx * 2016));
     return 1;
 }
 
