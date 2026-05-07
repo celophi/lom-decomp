@@ -182,17 +182,17 @@ void movie_play(s32 movieIndex)
 void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx)
 {
     u32 p1;
-    u8* vlcTablePtr;       /* (was new_var6) base of VLC code table */
-    MovieState* stateRef2; /* (was new_var3) used after VSync; alias of 0x801ED500 */
-    MovieState* stateRef3; /* (was new_var2) used as ClearImage arg base */
+    u8* vlcTablePtr;        /* base of VLC code table */
+    MovieState* stateRef2;  /* used after VSync; alias of 0x801ED500 */
+    MovieState* stateRef3;  /* used as ClearImage arg base */
     u32 p2;
-    MovieState* stateRef4; /* (was new_var4) sequencing alias from rect setup */
+    MovieState* stateRef4;  /* sequencing alias from rect setup */
     u32 p3;
-    MovieState* stateRef5;  /* (was stateRef5) sequencing alias from rect copies */
-    u8* vlcTablePtr2;       /* (was new_var9) duplicate of vlcTablePtr (forces an extra move) */
-    u8** videoTableBasePtr; /* (was new_var8) &state->videoTableBase reload */
-    int stateAddrInt;       /* (was new_var) literal 0x801ED500 used for vlcTable store */
-    u8** videoTableBaseRef; /* (was pDispEnv) NOT a DISPENV; it's &state->videoTableBase */
+    MovieState* stateRef5;  /* sequencing alias from rect copies */
+    u8* vlcTablePtr2;       /* duplicate of vlcTablePtr (forces an extra move) */
+    u8** videoTableBasePtr; /* &state->videoTableBase reload */
+    int stateAddrInt;       /* literal 0x801ED500 used for vlcTable store */
+    u8** videoTableBaseRef; /* &state->videoTableBase (NOT a DISPENV) */
     AllocInfo* allocInfo = g_allocInfo;
 
     MOVIE_STATE->gpuMode = (s8)(flags & 0x7F);
@@ -292,10 +292,10 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     MOVIE_STATE->vlcRetryCount = 0;
     MOVIE_STATE->mdecRetryPending = 0;
     MOVIE_STATE->busy = 0;
-    MOVIE_STATE->unk97 = 0;
+    MOVIE_STATE->draw_sync_target = 0;
     MOVIE_STATE->outBufIdx = 0;
-    MOVIE_STATE->unk9A = 0;
-    MOVIE_STATE->unk9B = 0;
+    MOVIE_STATE->pending_vram_upload = 0;
+    MOVIE_STATE->pending_mdec_decode = 0;
     MOVIE_STATE->mdecBusy = 0;
     MOVIE_STATE->field9D = 0;
     MOVIE_STATE->endOfStream = 0;
@@ -352,16 +352,16 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
  */
 void movie_update(void)
 {
-    long audioCapacity;     /* (was pDispEnv) audioRingCapacity reload */
-    MovieState* stateAlias; /* (was new_var6) sequencing alias used after totalFrames check */
-    int field9DZeroFlag;    /* (was new_var) (field9D == 0) flag / sign-shift temp */
+    long audioCapacity;     /* audioRingCapacity reload */
+    MovieState* stateAlias; /* sequencing alias used after totalFrames check */
+    int field9DZeroFlag;    /* (field9D == 0) flag / sign-shift temp */
     void* hdr;
     void* sp14;
-    MovieState* mdecAlias; /* (was new_var2) sequencing alias used in MDEC retry block */
-    s32 tmp = 0;           /* (was audioFadeVol) reused: vlc-complete flag, then audioBufferedCount compare */
+    MovieState* mdecAlias;      /* sequencing alias used in MDEC retry block */
+    s32 tmp = 0;                /* vlc-complete flag, then audioBufferedCount compare */
     MovieState* combined = MOVIE_STATE;
-    int wordCount;              /* (was new_var3) DCT word count temp / zero literal */
-    volatile int audioFrameNum; /* (was new_var4) frame number from latest audio entry */
+    int wordCount;              /* DCT word count temp / zero literal */
+    volatile int audioFrameNum; /* frame number from latest audio entry */
     if (g_mdecRetryPending != 0)
     {
         mdecAlias = combined;
@@ -520,11 +520,11 @@ void movie_mdec_out_callback(void)
         if (temp < 2)
         {
             LoadImage((RECT*)0x801ED530, (u_long*)base->mdecOutputBuf[base->outBufIdx]);
-            base->unk97 = (s8)(temp + 1);
+            base->draw_sync_target = (s8)(temp + 1);
         }
         else
         {
-            base->unk9A = 1U;
+            base->pending_vram_upload = 1U;
         }
         bp_high = (MovieState*)0x801e0000;
     }
@@ -547,7 +547,7 @@ void movie_mdec_out_callback(void)
         }
     }
 
-    if (MOVIE_STATE->unk9A == new_var)
+    if (MOVIE_STATE->pending_vram_upload == new_var)
     {
         movie_schedule_next_decode();
         return;
@@ -560,20 +560,8 @@ void movie_mdec_out_callback(void)
  */
 void movie_schedule_next_decode(void)
 {
-    /*
-     * Field map (Struct_801ED500 → MovieState, same offsets):
-     *   unk18[i]          → mdecOutputBuf[i]              (0x18)
-     *   ch[i].start       → rects[i].x                    (0x20+i*8)
-     *   ch[i].b           → rects[i].y                    (0x22+i*8)
-     *   ch[i].length      → rects[i].w                    (0x24+i*8)
-     *   framePos          → rects[2].x                    (0x30)
-     *   unk32/34/36       → rects[2].y/w/h                (0x32/0x34/0x36)
-     *   pendingMdecDecode → unk9B                         (0x9B)
-     *   decodeState       → mdecBusy                      (0x9C)
-     *   frameReady        → field9D                       (0x9D)
-     * The volatile u8/u16 casts on every access force the load instruction
-     * (lbu/lhu) so the underlying field signedness is irrelevant.
-     */
+    /* NOTE: the volatile u8/u16 casts on every access force lbu/lhu, so the
+     * underlying field signedness is irrelevant. */
     MovieState* ptr = MOVIE_STATE;
     unsigned short nextOutBufIdx;
     u16 curFramePos;
@@ -598,7 +586,7 @@ void movie_schedule_next_decode(void)
     chunkEnd = a + c;
     if (newFramePosSigned < chunkEnd)
     {
-        if ((*((volatile u8*)(&ptr->unk97))) < 2U)
+        if ((*((volatile u8*)(&ptr->draw_sync_target))) < 2U)
         {
             decodeSize = ((s16)frameStep) * ((s16)(*((volatile u16*)(&ptr->rects[2].h))));
             decodeWordCount = ((int)(decodeSize + (decodeSize >> 31))) >> 1;
@@ -608,7 +596,7 @@ void movie_schedule_next_decode(void)
         else
         {
             *((volatile u8*)(&ptr->mdecBusy)) = 1;
-            *((volatile u8*)(&ptr->unk9B)) = 1;
+            *((volatile u8*)(&ptr->pending_mdec_decode)) = 1;
         }
     }
     else
@@ -627,43 +615,32 @@ void movie_schedule_next_decode(void)
 }
 
 /**
- * decomp.me (93.87%) https://decomp.me/scratch/JTTFr
- */
-/*
- * Service pending video output operations.
+ * @brief Service pending video output operations.
  *
  * Two flags gate the two halves:
- *   pendingVramUpload — a decoded frame is ready; DMA it into VRAM (LoadImage) and
- *                       kick off the MDEC decode of the next frame (movie_schedule_next_decode).
- *   pendingMdecDecode — new BS bitstream data is staged; feed it to the MDEC (DecDCTout).
+ *   - pending_vram_upload: a decoded frame is ready; DMA it into VRAM
+ *     (LoadImage) and kick off the MDEC decode of the next frame.
+ *   - pending_mdec_decode: new BS bitstream data is staged; feed it to the
+ *     MDEC (DecDCTout).
  *
  * gpuMode selects the transfer path:
- *   0         — wait for DrawSync then use LoadImage (standard DMA)
- *   non-zero  — interrupt the current draw via BreakDraw then use LoadImage2
+ *   - 0: wait for DrawSync then use LoadImage (standard DMA).
+ *   - non-zero: interrupt the current draw via BreakDraw then use LoadImage2.
+ *
+ * @note The s8 status-byte fields (busy/draw_sync_target) emit `lb` where the
+ *       original asm used `lbu`. Currently 93.87% non-matching; revisit the
+ *       field types (s8 → u8) if the percentage regresses further.
+ *
+ * @see https://decomp.me/scratch/JTTFr (93.87%)
  */
 void movie_service_video_ops(void)
 {
-    /*
-     * Field map (GlobalStruct → MovieState, same offsets):
-     *   ptrArray[i]       → mdecOutputBuf[i]   (0x18; only i=0,1 used in practice)
-     *   unk34/unk36       → rects[2].w/.h      (0x34/0x36, both s16)
-     *   gpuMode           → gpuMode            (0x90)
-     *   busy              → busy               (0x96)  [type was u8, now s8]
-     *   drawSyncTarget    → unk97              (0x97)  [type was u8, now s8]
-     *   activeBufferIdx   → outBufIdx          (0x99)
-     *   pendingVramUpload → unk9A              (0x9A)  [type was u8, now s8]
-     *   pendingMdecDecode → unk9B              (0x9B)  [type was u8, now s8]
-     *
-     * The s8 fields will produce `lb` where this function used to emit `lbu`.
-     * Function is currently 93.87% non-matching anyway; revisit field types
-     * (flip s8 → u8 in MovieState) if the % regresses.
-     */
     volatile MovieState* G = (volatile MovieState*)0x801ED500;
     int wordCount;
     u_long* breakDrawResult;
-    if (!G->unk9A)
+    if (!G->pending_vram_upload)
     {
-        if (!G->unk9B)
+        if (!G->pending_mdec_decode)
         {
             return;
         }
@@ -675,24 +652,24 @@ void movie_service_video_ops(void)
         {
             return;
         }
-        if (G->unk9A)
+        if (G->pending_vram_upload)
         {
-            u8 t = G->unk9A;
+            u8 t = G->pending_vram_upload;
             if (t)
             {
                 G->busy = 1;
                 t = G->outBufIdx;
                 LoadImage((RECT*)0x801ED530, (u_long*)G->mdecOutputBuf[t]);
-                G->unk97 = DrawSync(1) + 1;
-                G->unk9A = 0;
+                G->draw_sync_target = DrawSync(1) + 1;
+                G->pending_vram_upload = 0;
                 movie_schedule_next_decode();
             }
             G->busy = 0;
         }
         G = (volatile MovieState*)0x801ED500;
-        if (G->unk9B)
+        if (G->pending_mdec_decode)
         {
-            u8 t = G->unk9B;
+            u8 t = G->pending_mdec_decode;
             if (t)
             {
                 s32 temp;
@@ -701,7 +678,7 @@ void movie_service_video_ops(void)
                 temp = ((s32)G->rects[2].w) * ((s32)G->rects[2].h);
                 wordCount = temp + (((u32)temp) >> 31);
                 DecDCTout((u_long*)G->mdecOutputBuf[G->outBufIdx], wordCount >> 1);
-                G->unk9B = 0;
+                G->pending_mdec_decode = 0;
             }
             G->busy = 0;
         }
@@ -709,9 +686,9 @@ void movie_service_video_ops(void)
     else // <-- changed block starts here
     {
         /* BreakDraw path: interrupt the current draw primitive list to upload immediately */
-        if (G->unk9A)
+        if (G->pending_vram_upload)
         {
-            u8 t = G->unk9A;
+            u8 t = G->pending_vram_upload;
             if (t)
             {
                 s32 bd;
@@ -727,7 +704,7 @@ void movie_service_video_ops(void)
                         DrawOTag((u_long*)bd);
                     }
                     movie_schedule_next_decode();
-                    G->unk9A = 0;
+                    G->pending_vram_upload = 0;
                 }
             }
         }

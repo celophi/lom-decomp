@@ -93,11 +93,11 @@ typedef struct
     s8 vlcRetryCount;    // countdown: retry DecDCTvlc2 this many vsync ticks
     s8 mdecRetryPending; // MDEC decode ready but busy; retry on next tick
     s8 busy;             // non‑zero while DMA/GPU operation is in flight
-    s8 unk97;            // first struct: unk97 ; second struct: _unk97
-    s8 chunkIdx;         // initial active chunk index (0 or 1) from first struct; second struct calls this _unk98
+    s8 draw_sync_target; // 0x97 — DrawSync target value (set by mdec_out_callback / service_video_ops)
+    s8 chunkIdx;         // initial active chunk index (0 or 1)
     u8 outBufIdx;        // which mdecOutputBuf[] receives the next DecDCTout output (0 or 1)
-    u8 unk9A;            // 0x9A — pendingVramUpload (read directly by mdec_out_callback / service_video_ops; needs lbu)
-    u8 unk9B;            // 0x9B — pendingMdecDecode (read directly by service_video_ops; needs lbu)
+    u8 pending_vram_upload; // 0x9A — decoded frame is ready, needs LoadImage to VRAM
+    u8 pending_mdec_decode; // 0x9B — bitstream staged, needs DecDCTout kicked
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
     s8 field9D;          // second struct: field9D ; first struct: unk9D
     u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
