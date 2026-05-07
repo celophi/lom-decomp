@@ -931,3 +931,97 @@ void* func_80141848(void* arg0, s32* arg1, s16 arg2, s16 arg3)
     *((unsigned int*)arg1) = w0 | w1;
     return (void*)(bp + 8);
 }
+
+/**
+ * decomp.me (82.68%) https://decomp.me/scratch/rQBi6
+ */
+void func_80141928(void* arg0)
+{
+    s32 new_var;
+    s32 var_s0;
+    s32 var_v1;
+    s32* var_s2;
+    void* var_t0;
+    char* new_var2;
+    void* temp_v0;
+    void* var_t0_2;
+    void* new_var4;
+    unsigned char* var_s1;
+    char* new_var3;
+    var_s2 = &D_80142E14;
+    var_s0 = 2;
+    var_s1 = ((unsigned char*)(&D_80142E14)) + 2;
+    var_t0 = *((void**)(((char*)arg0) + 0x4040));
+    do
+    {
+        if (var_s0 != 9)
+        {
+            var_t0 = func_80142274(var_t0, ((char*)arg0) + 0x2C, var_s1[1], (*var_s2) & 0x1FF, ((s32)var_s1[0]) - 8, 1,
+                                   (var_s0 - 2) == D_8014F888, 0);
+        }
+        var_s0 += 1;
+        var_s1 += 4;
+        var_s2++;
+    } while (var_s0 < 0xD);
+    new_var = D_8014F88C;
+    new_var4 = arg0;
+    temp_v0 = func_80141C34(func_80142220(func_80142B18(func_80142274(func_80142220(var_t0, ((char*)new_var4) + 0x2C),
+                                                                      ((char*)new_var4) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
+                                                        arg0),
+                                          ((char*)new_var4) + 0x34),
+                            arg0);
+    new_var3 = ((char*)temp_v0) + 0x14;
+    *((s32*)(((char*)temp_v0) + 4)) = 0x808080;
+    *((u8*)(((char*)temp_v0) + 7)) = 0x64;
+    var_t0_2 = ((char*)temp_v0) + 0x1C;
+    *((u8*)(((char*)temp_v0) + 3)) = 4;
+    *((s16*)(((char*)temp_v0) + 8)) = new_var;
+    {
+        s32 tmp = D_8014F890;
+        *((s16*)(((char*)temp_v0) + 10)) = tmp;
+    }
+    *((u8*)(((char*)temp_v0) + 12)) = D_80142CD4[0xA0];
+    *((u8*)(((char*)temp_v0) + 13)) = D_80142CD4[0xA1];
+    *((s16*)(((char*)temp_v0) + 16)) = (s16)D_80142CD4[0xA2];
+    *((s16*)(((char*)temp_v0) + 18)) = (s16)D_80142CD4[0xA3];
+    {
+        u32 tmp = *((u32*)(D_80142CD4 + 0xA4));
+        *((s16*)(((char*)temp_v0) + 14)) = (s16)((tmp & 0x3F) | 0x7C80);
+    }
+    new_var2 = (char*)new_var4;
+    {
+        s32 old = *((s32*)temp_v0);
+        *((s32*)temp_v0) = (old & 0xFF000000) | ((*((s32*)(new_var2 + 0x20))) & 0xFFFFFF);
+    }
+    *((s32*)(new_var2 + 0x20)) = ((*((s32*)(new_var2 + 0x20))) & 0xFF000000) | (((s32)temp_v0) & 0xFFFFFF);
+    {
+        void* temp_a0 = ((char*)temp_v0) + 0x14;
+        *((u8*)(((char*)temp_a0) + 3)) = 1;
+        *((u32*)(((char*)temp_a0) + 4)) = 0xE1000005;
+        *((s32*)new_var3) = ((*((s32*)new_var3)) & 0xFF000000) | ((*((s32*)(new_var2 + 0x20))) & 0xFFFFFF);
+        var_v1 = D_8014F8B4;
+        *((s32*)(new_var2 + 0x20)) = ((*((s32*)(new_var2 + 0x20))) & 0xFF000000) | (((s32)temp_a0) & 0xFFFFFF);
+    }
+    new_var3 = new_var2 + 0x4040;
+    if (D_8014F8B4 != 0)
+    {
+        var_t0_2 = func_80142274(var_t0_2, arg0, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2],
+                                 0, 0, 0);
+    }
+    if (D_8014F8A0 >= 5)
+    {
+        var_v1 = D_8014F8B4;
+        if (var_v1 < 0)
+        {
+            var_v1 += 0xF;
+        }
+        if ((((var_v1 >> 1) >> 1) >> 2) != (D_8014F8A0 - 4))
+        {
+            var_t0_2 = func_80142274(var_t0_2, arg0, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF,
+                                     (s32)D_80142E0C[6], 0, 0, 0);
+        }
+    }
+    *((void**)new_var3) = func_80141D64(func_80142220(var_t0_2, arg0), new_var2 + 0x24);
+    func_80141F9C(arg0, D_8014F848);
+    func_80141E04(new_var4, D_8014F844, D_8014F8A8);
+}
