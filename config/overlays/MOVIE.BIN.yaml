@@ -24,6 +24,9 @@ options:
     - config/symbols/shared_symbol_addrs.txt
     - config/symbols/movie_symbol_addrs.txt
 
+  reloc_addrs_path:
+    - config/relocations/movie_reloc_addrs.txt
+
   find_file_boundaries: False
   make_full_disasm_for_code: True
   use_legacy_include_asm: False

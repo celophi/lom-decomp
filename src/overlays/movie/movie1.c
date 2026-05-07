@@ -764,7 +764,6 @@ void movie_service_video_ops(void)
 s32 movie_cd_sector_callback(void)
 {
     SectorBuffer hdr; /* 32-byte sector header (8 u32 words) read from CD */
-    volatile MovieState* const state = VOL_MOVIE_STATE;
     s32 should_load;
     u32 count;
     u16 remaining;
@@ -774,79 +773,66 @@ s32 movie_cd_sector_callback(void)
 
     should_load = 0;
 
-    if (g_sectorsRemaining == 0)
+    if (MOVIE_STATE->sectorsRemaining == 0) /* same as VOL_MOVIE_STATE->sectorsRemaining, but accessed directly */
     {
-        /* read first header sector */
-        while (CdGetSector(hdr, 8) == 0)
-        {
-        }
+        while (CdGetSector(hdr, 8) == 0);
 
-        if (state->totalFrames < hdr[2])
+        if (hdr[2] > VOL_MOVIE_STATE->totalFrames)
         {
-            state->endOfStream = 1;
+            VOL_MOVIE_STATE->endOfStream = 1;
             return 0;
         }
 
-        state->frameNumber = hdr[2];
+        VOL_MOVIE_STATE->frameNumber = hdr[2];
 
         /* sub-sector index (offset 4) must be 0 for a header sector */
         if (((u16*)hdr)[2] != 0)
+        {
             return 1;
+        }
 
         /* sector type (offset 2): 0x8001 = video, otherwise audio */
         if (((u16*)hdr)[1] == 0x8001)
         {
-            count = ((u16*)hdr)[3];
-
-            if (state->videoWriteIdx == state->videoReadIdx)
+            if (VOL_MOVIE_STATE->videoWriteIdx == VOL_MOVIE_STATE->videoReadIdx)
             {
-                if (state->lastVideoFrame == state->lastConsumedVideoFrame)
-                {
-                    if (state->videoRingCapacity < state->videoWriteIdx + (s32)count)
-                    {
-                        if (state->videoReadIdx >= (s32)count)
-                        {
-                            should_load = 1;
-                            state->videoRingSize = state->videoWriteIdx;
-                            state->videoWriteIdx = 0;
-                        }
-                    }
-                    else
-                    {
-                        should_load = 1;
-                    }
-                }
+                if (VOL_MOVIE_STATE->lastVideoFrame == VOL_MOVIE_STATE->lastConsumedVideoFrame)
+                    goto video_cap;
+                goto video_done;
             }
-            else if (state->videoReadIdx < state->videoWriteIdx)
+            if (VOL_MOVIE_STATE->videoReadIdx >= VOL_MOVIE_STATE->videoWriteIdx)
+                goto video_else;
+        video_cap:
+            count = ((u16*)hdr)[3];
+            if (VOL_MOVIE_STATE->videoRingCapacity < VOL_MOVIE_STATE->videoWriteIdx + (s32)count)
             {
-                if (state->videoRingCapacity < state->videoWriteIdx + (s32)count)
-                {
-                    if (state->videoReadIdx >= (s32)count)
-                    {
-                        should_load = 1;
-                        state->videoRingSize = state->videoWriteIdx;
-                        state->videoWriteIdx = 0;
-                    }
-                }
-                else
+                if (VOL_MOVIE_STATE->videoReadIdx >= (s32)count)
                 {
                     should_load = 1;
+                    VOL_MOVIE_STATE->videoRingSize = VOL_MOVIE_STATE->videoWriteIdx;
+                    VOL_MOVIE_STATE->videoWriteIdx = 0;
                 }
             }
-            else if (state->videoReadIdx >= state->videoWriteIdx + (s32)count)
+            else
             {
                 should_load = 1;
             }
+            goto video_done;
+        video_else:
+            count = ((u16*)hdr)[3];
+            if (VOL_MOVIE_STATE->videoReadIdx >= VOL_MOVIE_STATE->videoWriteIdx + (s32)count)
+                should_load = 1;
+        video_done:;
 
             if (should_load != 0)
             {
-                dest = &state->videoDataBase[state->videoWriteIdx];
+                dest = &VOL_MOVIE_STATE->videoDataBase[VOL_MOVIE_STATE->videoWriteIdx];
                 while (CdGetSector(dest, 0x1F8) == 0)
                 {
                 }
 
                 /* Copy the full 32-byte CD header verbatim into the table entry. */
-                entry = (u32*)&state->videoTableBase[state->videoWriteIdx];
+                entry = (u32*)&VOL_MOVIE_STATE->videoTableBase[VOL_MOVIE_STATE->videoWriteIdx];
                 entry[0] = hdr[0];
                 entry[1] = hdr[1];
                 entry[2] = hdr[2];
@@ -856,72 +842,60 @@ s32 movie_cd_sector_callback(void)
                 entry[6] = hdr[6];
                 entry[7] = hdr[7];
 
-                remaining = (u16)(count - 1);
-                state->sectorsRemaining = remaining;
+                remaining = (u16)(((u16*)hdr)[3] - 1);
+                VOL_MOVIE_STATE->sectorsRemaining = remaining;
                 if (remaining == 0)
                 {
-                    state->videoWriteIdx += 1;
-                    state->lastVideoFrame = state->frameNumber;
-                    return (state->frameNumber < state->totalFrames) ? 1 : 0;
+                    VOL_MOVIE_STATE->videoWriteIdx += 1;
+                    VOL_MOVIE_STATE->lastVideoFrame = VOL_MOVIE_STATE->frameNumber;
+                    return (VOL_MOVIE_STATE->frameNumber < VOL_MOVIE_STATE->totalFrames) ? 1 : 0;
                 }
-                state->continuationType = 0;
-                state->chunkSectorIdx = remaining;
+                VOL_MOVIE_STATE->continuationType = 0;
+                VOL_MOVIE_STATE->chunkSectorIdx = 1;
                 return 1;
             }
             return 1;
         }
 
         /* audio sector */
-        count = ((u16*)hdr)[3];
-
-        if (state->audioWriteIdx == state->audioReadIdx)
+        if (VOL_MOVIE_STATE->audioWriteIdx == VOL_MOVIE_STATE->audioReadIdx)
         {
-            if (state->lastAudioFrame == state->lastConsumedAudioFrame)
-            {
-                if (state->audioRingCapacity < state->audioWriteIdx + (s32)count)
-                {
-                    if (state->audioReadIdx >= (s32)count)
-                    {
-                        should_load = 1;
-                        state->audioRingSize = state->audioWriteIdx;
-                        state->audioWriteIdx = 0;
-                    }
-                }
-                else
-                {
-                    should_load = 1;
-                }
-            }
+            if (VOL_MOVIE_STATE->lastAudioFrame == VOL_MOVIE_STATE->lastConsumedAudioFrame)
+                goto audio_cap;
+            goto audio_done;
         }
-        else if (state->audioReadIdx < state->audioWriteIdx)
+        if (VOL_MOVIE_STATE->audioReadIdx >= VOL_MOVIE_STATE->audioWriteIdx)
+            goto audio_else;
+    audio_cap:
+        count = ((u16*)hdr)[3];
+        if (VOL_MOVIE_STATE->audioRingCapacity < VOL_MOVIE_STATE->audioWriteIdx + (s32)count)
         {
-            if (state->audioRingCapacity < state->audioWriteIdx + (s32)count)
-            {
-                if (state->audioReadIdx >= (s32)count)
-                {
-                    should_load = 1;
-                    state->audioRingSize = state->audioWriteIdx;
-                    state->audioWriteIdx = 0;
-                }
-            }
-            else
+            if (VOL_MOVIE_STATE->audioReadIdx >= (s32)count)
             {
                 should_load = 1;
+                VOL_MOVIE_STATE->audioRingSize = VOL_MOVIE_STATE->audioWriteIdx;
+                VOL_MOVIE_STATE->audioWriteIdx = 0;
             }
         }
-        else if (state->audioReadIdx >= state->audioWriteIdx + (s32)count)
+        else
         {
             should_load = 1;
         }
+        goto audio_done;
+    audio_else:
+        count = ((u16*)hdr)[3];
+        if (VOL_MOVIE_STATE->audioReadIdx >= VOL_MOVIE_STATE->audioWriteIdx + (s32)count)
+            should_load = 1;
+    audio_done:;
 
         if (should_load != 0)
         {
-            dest = state->audioDataBase[state->audioWriteIdx].payload;
+            dest = VOL_MOVIE_STATE->audioDataBase[VOL_MOVIE_STATE->audioWriteIdx].payload;
             while (CdGetSector(dest, 0x1F8) == 0)
             {
             }
 
-            entry = (u32*)&state->audioDataBase[state->audioWriteIdx];
+            entry = (u32*)&VOL_MOVIE_STATE->audioDataBase[VOL_MOVIE_STATE->audioWriteIdx];
             entry[0] = hdr[0];
             entry[1] = hdr[1];
             entry[2] = hdr[2];
@@ -931,65 +905,65 @@ s32 movie_cd_sector_callback(void)
             entry[6] = hdr[6];
             entry[7] = hdr[7];
 
-            remaining = (u16)(count - 1);
-            state->sectorsRemaining = remaining;
+            remaining = (u16)(((u16*)hdr)[3] - 1);
+            VOL_MOVIE_STATE->sectorsRemaining = remaining;
             if (remaining == 0)
             {
-                state->audioWriteIdx += 1;
-                state->lastAudioFrame = state->frameNumber;
-                if (state->totalFrames < state->frameNumber)
+                VOL_MOVIE_STATE->audioWriteIdx += 1;
+                VOL_MOVIE_STATE->lastAudioFrame = VOL_MOVIE_STATE->frameNumber;
+                if (VOL_MOVIE_STATE->totalFrames < VOL_MOVIE_STATE->frameNumber)
                     return 0;
             }
             else
             {
-                state->continuationType = remaining;
-                state->chunkSectorIdx = remaining;
+                VOL_MOVIE_STATE->continuationType = 1;
+                VOL_MOVIE_STATE->chunkSectorIdx = 1;
             }
         }
 
-        if (g_audioStreamState == 1)
+        if (g_audioStreamState == 1) /* reads MovieState.unk92 directly */
         {
-            state->unk92 = 2;
+            VOL_MOVIE_STATE->unk92 = 2;
         }
         return 1;
     }
 
-    /* g_sectorsRemaining != 0 — reading a continuation sector for the same frame */
-    if (state->continuationType == 0)
+    /* D_801ED57E != 0 — reading a continuation sector for the same frame */
+    if (VOL_MOVIE_STATE->continuationType == 0)
     {
         /* video continuation */
         for (;;)
         {
-            next_idx = state->videoWriteIdx + state->chunkSectorIdx;
-            entry = (u32*)&state->videoTableBase[next_idx];
+            next_idx = VOL_MOVIE_STATE->videoWriteIdx + VOL_MOVIE_STATE->chunkSectorIdx;
+            entry = (u32*)&VOL_MOVIE_STATE->videoTableBase[next_idx];
             while (CdGetSector(entry, 8) == 0)
             {
             }
 
-            if (((u16*)entry)[1] == 0x8001 && entry[2] == state->frameNumber &&
-                ((u16*)entry)[2] == state->chunkSectorIdx)
+            if (((u16*)entry)[1] == 0x8001 && entry[2] == VOL_MOVIE_STATE->frameNumber &&
+                ((u16*)entry)[2] == VOL_MOVIE_STATE->chunkSectorIdx)
             {
-                dest = &state->videoDataBase[next_idx];
+                dest = &VOL_MOVIE_STATE->videoDataBase[next_idx];
                 while (CdGetSector(dest, 0x1F8) == 0)
                 {
                 }
 
-                remaining = state->sectorsRemaining - 1;
-                state->sectorsRemaining = remaining;
+                remaining = VOL_MOVIE_STATE->sectorsRemaining - 1;
+                VOL_MOVIE_STATE->sectorsRemaining = remaining;
                 if (remaining != 0)
                 {
-                    state->chunkSectorIdx += 1;
+                    VOL_MOVIE_STATE->chunkSectorIdx += 1;
                     return 1;
                 }
-                state->videoWriteIdx = state->videoWriteIdx + 1 + state->chunkSectorIdx;
-                state->lastVideoFrame = state->frameNumber;
-                return (entry[2] < state->totalFrames) ? 1 : 0;
+                VOL_MOVIE_STATE->videoWriteIdx = VOL_MOVIE_STATE->videoWriteIdx + 1 + VOL_MOVIE_STATE->chunkSectorIdx;
+                VOL_MOVIE_STATE->lastVideoFrame = VOL_MOVIE_STATE->frameNumber;
+                return (entry[2] < VOL_MOVIE_STATE->totalFrames) ? 1 : 0;
             }
-            state->sectorsRemaining = 0;
-            state->frameNumber = entry[2];
-            if (entry[2] < state->totalFrames)
+            VOL_MOVIE_STATE->sectorsRemaining = 0;
+            VOL_MOVIE_STATE->frameNumber = entry[2];
+            if (entry[2] < VOL_MOVIE_STATE->totalFrames)
                 break;
-            state->endOfStream = 1;
+            VOL_MOVIE_STATE->endOfStream = 1;
             return 0;
         }
         return 1;
@@ -998,38 +972,38 @@ s32 movie_cd_sector_callback(void)
     /* audio continuation */
     for (;;)
     {
-        next_idx = state->audioWriteIdx + state->chunkSectorIdx;
-        entry = (u32*)&state->audioDataBase[next_idx];
+        next_idx = VOL_MOVIE_STATE->audioWriteIdx + VOL_MOVIE_STATE->chunkSectorIdx;
+        entry = (u32*)&VOL_MOVIE_STATE->audioDataBase[next_idx];
         while (CdGetSector(entry, 8) == 0)
         {
         }
 
-        if (((u16*)entry)[1] == 1 && entry[2] == state->frameNumber &&
-            ((u16*)entry)[2] == state->chunkSectorIdx)
+        if (((u16*)entry)[1] == 1 && entry[2] == VOL_MOVIE_STATE->frameNumber &&
+            ((u16*)entry)[2] == VOL_MOVIE_STATE->chunkSectorIdx)
         {
-            dest = state->audioDataBase[next_idx].payload;
+            dest = VOL_MOVIE_STATE->audioDataBase[next_idx].payload;
             while (CdGetSector(dest, 0x1F8) == 0)
             {
             }
 
-            remaining = state->sectorsRemaining - 1;
-            state->sectorsRemaining = remaining;
+            remaining = VOL_MOVIE_STATE->sectorsRemaining - 1;
+            VOL_MOVIE_STATE->sectorsRemaining = remaining;
             if (remaining != 0)
             {
-                state->chunkSectorIdx += 1;
+                VOL_MOVIE_STATE->chunkSectorIdx += 1;
                 return 1;
             }
-            state->audioWriteIdx = state->audioWriteIdx + 1 + state->chunkSectorIdx;
-            state->lastAudioFrame = state->frameNumber;
-            if (state->totalFrames < entry[2])
+            VOL_MOVIE_STATE->audioWriteIdx = VOL_MOVIE_STATE->audioWriteIdx + 1 + VOL_MOVIE_STATE->chunkSectorIdx;
+            VOL_MOVIE_STATE->lastAudioFrame = VOL_MOVIE_STATE->frameNumber;
+            if (VOL_MOVIE_STATE->totalFrames < entry[2])
                 return 0;
             return 1;
         }
-        state->sectorsRemaining = 0;
-        state->frameNumber = entry[2];
-        if (!(state->totalFrames < entry[2]))
+        VOL_MOVIE_STATE->sectorsRemaining = 0;
+        VOL_MOVIE_STATE->frameNumber = entry[2];
+        if (!(VOL_MOVIE_STATE->totalFrames < entry[2]))
             break;
-        state->endOfStream = 1;
+        VOL_MOVIE_STATE->endOfStream = 1;
         return 0;
     }
     return 1;
