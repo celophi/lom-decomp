@@ -37,12 +37,12 @@ typedef struct
 typedef struct
 {
     // ---- first 32 bytes: 8 pointers (from first struct) ----
-    u8* videoTableBase; // unk0
-    u8* videoDataBase;  // unk4
-    u8* audioDataBase;  // unk8
+    struct VideoSectorEntry* videoTableBase; // unk0 — array of 32-byte video sector headers
+    struct VideoVlcPayload* videoDataBase;   // unk4 — parallel array of 2016-byte VLC payloads
+    struct AudioSector* audioDataBase;       // unk8 — array of 2048-byte CD sectors (header + payload)
     u32 vlcTable;       // unkC / table
     u32* vlcInputBuf[2];
-    u32* mdecOutputBuf[2]; // unk18 / ptr18[0]
+    u_long* mdecOutputBuf[2]; // unk18 — MDEC output buffers (consumed by LoadImage/DecDCTout)
 
     // ---- VRAM destination rectangles ----
     // rects[0] : frame A, rects[1] : frame B, rects[2] : decode rect
@@ -93,13 +93,13 @@ typedef struct
     s8 vlcRetryCount;    // countdown: retry DecDCTvlc2 this many vsync ticks
     s8 mdecRetryPending; // MDEC decode ready but busy; retry on next tick
     s8 busy;             // non‑zero while DMA/GPU operation is in flight
-    s8 unk97;            // first struct: unk97 ; second struct: _unk97
-    s8 chunkIdx;         // initial active chunk index (0 or 1) from first struct; second struct calls this _unk98
+    s8 draw_sync_target; // 0x97 — DrawSync target value (set by mdec_out_callback / service_video_ops)
+    s8 chunkIdx;         // initial active chunk index (0 or 1)
     u8 outBufIdx;        // which mdecOutputBuf[] receives the next DecDCTout output (0 or 1)
-    u8 unk9A;            // 0x9A — pendingVramUpload (read directly by mdec_out_callback / service_video_ops; needs lbu)
-    u8 unk9B;            // 0x9B — pendingMdecDecode (read directly by service_video_ops; needs lbu)
+    u8 pending_vram_upload; // 0x9A — decoded frame is ready, needs LoadImage to VRAM
+    u8 pending_mdec_decode; // 0x9B — bitstream staged, needs DecDCTout kicked
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
-    s8 field9D;          // second struct: field9D ; first struct: unk9D
+    s8 frame_ready;      // 0x9D — set by movie_schedule_next_decode when a chunk boundary is reached; consumed by movie_play
     u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
     u8 endState;         // 1 = near end, 2 = stream fully ended
 } MovieState;
@@ -110,6 +110,7 @@ typedef struct
  * access is required — wrapping that in this macro would silently drop the
  * volatile qualifier. */
 #define MOVIE_STATE ((MovieState*)0x801ED500)
+#define VOL_MOVIE_STATE ((volatile MovieState*)0x801ED500)
 
 
 typedef struct
@@ -118,34 +119,48 @@ typedef struct
     u32 allocBase; /* base address for movie buffer allocations */
 } AllocInfo;
 
-typedef struct
-{
-    u8 pad[0x18];
-    u_long* unk18;
-} SubObj;
-
 typedef u32 SectorBuffer[8];
 
-typedef struct Entry
-{
-    u8 _pad0[6];
-    u16 sectorCount;
-    u8 _pad1[2048 - 8];
-} Entry;
-
+/* Header layout for a sector-table entry: 6 bytes preamble, then sector count
+ * and the source frame number. Used for both video (videoTableBase, 32-byte
+ * stride) and audio (audioDataBase, 2048-byte stride) ring entries. */
 typedef struct
 {
     u8 pad[6];
     u16 sectorCount;
     s32 frameNumber;
-} InnerStruct;
+} SectorEntry;
 
-typedef struct
+/* One PSX CD sector (2048 bytes) of audio ring data:
+ *   - bytes 0x00..0x0B: SectorEntry header (sectorCount, frameNumber).
+ *   - bytes 0x0C..0x1F: remaining 20 bytes of the CD-XA sector header
+ *     (copied verbatim from the CD by movie_cd_sector_callback).
+ *   - bytes 0x20..0x7FF: XA audio payload (2016 bytes). */
+typedef struct AudioSector
 {
-    u8 pad[6];
-    u16 sectorCount;
-    s32 frameNumber;
-} InnerStruct_801418B0;
+    SectorEntry header;             /* 12 bytes */
+    u8 _hdr_remainder[0x20 - 12];   /* 20 bytes — rest of the 32-byte CD header */
+    u8 payload[2048 - 0x20];        /* 2016 bytes XA */
+} AudioSector;
+
+/* One video-ring table entry: 32 bytes (the full sector header copied as
+ * 8 u32 words by movie_cd_sector_callback). The first 12 bytes are the
+ * SectorEntry header; the remaining 20 bytes hold sector metadata. The
+ * actual VLC payload lives in a parallel buffer (videoDataBase, 2016-byte
+ * stride). */
+typedef struct VideoSectorEntry
+{
+    SectorEntry header;
+    u8 _rest[32 - 12];
+} VideoSectorEntry;
+
+/* One slot of the video VLC payload buffer: 2016 bytes of raw bitstream
+ * data. videoDataBase is a parallel array of these, indexed by the same
+ * read/write indices as videoTableBase. */
+typedef struct VideoVlcPayload
+{
+    u8 data[2016];
+} VideoVlcPayload;
 
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
