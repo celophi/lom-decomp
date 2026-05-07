@@ -696,12 +696,27 @@ void movie_schedule_next_decode(void)
  */
 void movie_service_video_ops(void)
 {
-    volatile GlobalStruct* G = (volatile GlobalStruct*)0x801ED500;
+    /*
+     * Field map (GlobalStruct → CombinedState, same offsets):
+     *   ptrArray[i]       → mdecOutputBuf[i]   (0x18; only i=0,1 used in practice)
+     *   unk34/unk36       → rects[2].w/.h      (0x34/0x36, both s16)
+     *   gpuMode           → gpuMode            (0x90)
+     *   busy              → busy               (0x96)  [type was u8, now s8]
+     *   drawSyncTarget    → unk97              (0x97)  [type was u8, now s8]
+     *   activeBufferIdx   → outBufIdx          (0x99)
+     *   pendingVramUpload → unk9A              (0x9A)  [type was u8, now s8]
+     *   pendingMdecDecode → unk9B              (0x9B)  [type was u8, now s8]
+     *
+     * The s8 fields will produce `lb` where this function used to emit `lbu`.
+     * Function is currently 93.87% non-matching anyway; revisit field types
+     * (flip s8 → u8 in CombinedState) if the % regresses.
+     */
+    volatile CombinedState* G = (volatile CombinedState*)0x801ED500;
     int wordCount;
     u_long* breakDrawResult;
-    if (!G->pendingVramUpload)
+    if (!G->unk9A)
     {
-        if (!G->pendingMdecDecode)
+        if (!G->unk9B)
         {
             return;
         }
@@ -713,33 +728,33 @@ void movie_service_video_ops(void)
         {
             return;
         }
-        if (G->pendingVramUpload)
+        if (G->unk9A)
         {
-            u8 t = G->pendingVramUpload;
+            u8 t = G->unk9A;
             if (t)
             {
                 G->busy = 1;
-                t = G->activeBufferIdx;
-                LoadImage((RECT*)0x801ED530, (u_long*)G->ptrArray[t]);
-                G->drawSyncTarget = DrawSync(1) + 1;
-                G->pendingVramUpload = 0;
+                t = G->outBufIdx;
+                LoadImage((RECT*)0x801ED530, (u_long*)G->mdecOutputBuf[t]);
+                G->unk97 = DrawSync(1) + 1;
+                G->unk9A = 0;
                 movie_schedule_next_decode();
             }
             G->busy = 0;
         }
-        G = (volatile GlobalStruct*)0x801ED500;
-        if (G->pendingMdecDecode)
+        G = (volatile CombinedState*)0x801ED500;
+        if (G->unk9B)
         {
-            u8 t = G->pendingMdecDecode;
+            u8 t = G->unk9B;
             if (t)
             {
                 s32 temp;
                 G->busy = 1;
                 /* word count = (width * height) / 2, rounded toward zero for signed values */
-                temp = ((s32)G->unk34) * ((s32)G->unk36);
+                temp = ((s32)G->rects[2].w) * ((s32)G->rects[2].h);
                 wordCount = temp + (((u32)temp) >> 31);
-                DecDCTout((u_long*)G->ptrArray[G->activeBufferIdx], wordCount >> 1);
-                G->pendingMdecDecode = 0;
+                DecDCTout((u_long*)G->mdecOutputBuf[G->outBufIdx], wordCount >> 1);
+                G->unk9B = 0;
             }
             G->busy = 0;
         }
@@ -747,9 +762,9 @@ void movie_service_video_ops(void)
     else // <-- changed block starts here
     {
         /* BreakDraw path: interrupt the current draw primitive list to upload immediately */
-        if (G->pendingVramUpload)
+        if (G->unk9A)
         {
-            u8 t = G->pendingVramUpload;
+            u8 t = G->unk9A;
             if (t)
             {
                 s32 bd;
@@ -758,14 +773,14 @@ void movie_service_video_ops(void)
                 bd = (s32)breakDrawResult;
                 if (bd != (-1))
                 {
-                    LoadImage2((RECT*)0x801ED530, (u_long*)G->ptrArray[G->activeBufferIdx]);
+                    LoadImage2((RECT*)0x801ED530, (u_long*)G->mdecOutputBuf[G->outBufIdx]);
                     if (bd != 0)
                     {
                         /* Resume the interrupted OTag list */
                         DrawOTag((u_long*)bd);
                     }
                     movie_schedule_next_decode();
-                    G->pendingVramUpload = 0;
+                    G->unk9A = 0;
                 }
             }
         }

@@ -104,23 +104,6 @@ typedef struct
     u_long* unk18;
 } SubObj;
 
-typedef struct
-{
-    u8 _pad0[0x18];
-    u32* ptrArray[7]; /* frame buffer pointers, indexed by activeBufferIdx */
-    s16 unk34;        /* frame width  (used to compute DCT word count) */
-    s16 unk36;        /* frame height (used to compute DCT word count) */
-    u8 _pad1[0x90 - 0x38];
-    u8 gpuMode; /* 0 = DrawSync/LoadImage path; non-zero = BreakDraw/LoadImage2 path */
-    u8 _pad2[0x96 - 0x91];
-    u8 busy;           /* 1 while a GPU/MDEC operation is in flight */
-    u8 drawSyncTarget; /* DrawSync(1) count that must be reached before re-uploading */
-    u8 _pad3[0x99 - 0x98];
-    u8 activeBufferIdx;   /* which ptrArray slot holds the current decoded frame */
-    u8 pendingVramUpload; /* set when a decoded frame is ready to be DMAed into VRAM */
-    u8 pendingMdecDecode; /* set when new bitstream data is ready to feed to the MDEC */
-} GlobalStruct;
-
 typedef u32 SectorBuffer[8];
 
 typedef struct GlobalData
