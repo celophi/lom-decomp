@@ -232,7 +232,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         p2++;
         p2--;
         MOVIE_STATE->mdecOutputBuf[1] = (u8*)0x801A3D00;
-        MOVIE_STATE->audioDataBase = (u8*)0x80160000;
+        MOVIE_STATE->audioDataBase = (AudioSector*)0x80160000;
         MOVIE_STATE->lastConsumedVideoFrame = (u32)(-1);
         MOVIE_STATE->rects[1].w = 0x1E0;
         (stateRef4 = MOVIE_STATE)->rects[0].w = 0x1E0;
@@ -261,7 +261,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         p2 = 0x11000;
         p3 = initBufferIdx;
         MOVIE_STATE->videoTableBase = (u8*)0x80147000;
-        MOVIE_STATE->audioDataBase = (u8*)0x80156000;
+        MOVIE_STATE->audioDataBase = (AudioSector*)0x80156000;
         vlcTablePtr = (u8*)allocInfo->allocBase;
         MOVIE_STATE->vlcInputBuf[0] = (u8*)0x8015E000;
         MOVIE_STATE->vlcInputBuf[1] = (u8*)0x8016F000;
@@ -931,12 +931,12 @@ s32 movie_cd_sector_callback(void)
 
             if (do_load != 0)
             {
-                dest = (void*)(gp->audioDataBase + (gp->audioWriteIdx << 11) + 0x20);
+                dest = (void*)((u8*)gp->audioDataBase + (gp->audioWriteIdx << 11) + 0x20);
                 while (CdGetSector(dest, 0x1F8) == 0)
                 {
                 }
 
-                entry = (void*)(gp->audioDataBase + (gp->audioWriteIdx << 11));
+                entry = (void*)((u8*)gp->audioDataBase + (gp->audioWriteIdx << 11));
                 ((u32*)entry)[0] = hdr[0];
                 ((u32*)entry)[1] = hdr[1];
                 ((u32*)entry)[2] = hdr[2];
@@ -1013,7 +1013,7 @@ s32 movie_cd_sector_callback(void)
         {
             for (;;)
             {
-                entry = (void*)(gp->audioDataBase + ((gp->audioWriteIdx + gp->chunkSectorIdx) << 11));
+                entry = (void*)((u8*)gp->audioDataBase + ((gp->audioWriteIdx + gp->chunkSectorIdx) << 11));
                 while (CdGetSector(entry, 8) == 0)
                 {
                 }
@@ -1021,7 +1021,7 @@ s32 movie_cd_sector_callback(void)
                 hdr16 = (u16*)entry;
                 if (hdr16[1] == 1 && ((u32*)entry)[2] == gp->frameNumber && hdr16[2] == gp->chunkSectorIdx)
                 {
-                    dest = (void*)(gp->audioDataBase + ((gp->audioWriteIdx + gp->chunkSectorIdx) << 11) + 0x20);
+                    dest = (void*)((u8*)gp->audioDataBase + ((gp->audioWriteIdx + gp->chunkSectorIdx) << 11) + 0x20);
                     while (CdGetSector(dest, 0x1F8) == 0)
                     {
                     }
@@ -1109,7 +1109,7 @@ s32 movie_get_next_audio_entry(void** outEntry)
     }
 
     /* Resolve entry: each entry occupies one 2048-byte CD sector in the audio data buffer */
-    entry = MOVIE_STATE->audioDataBase + (nextIdx << 11);
+    entry = (u8*)MOVIE_STATE->audioDataBase + (nextIdx << 11);
     temp = ((Entry*)entry)->sectorCount;
     MOVIE_STATE->audioBufferedCount += temp;
     *outEntry = entry;
@@ -1261,25 +1261,25 @@ void movie_advance_video_read(void)
  */
 void movie_advance_audio_read(void)
 {
-    SectorEntry* inner;
-    s32 nextIndex;
+    SectorEntry* entry;
+    s32 next_index;
 
     /* Resolve pointer to current audio sector header using read index (2048 bytes per sector). */
-    inner = (SectorEntry*)(MOVIE_STATE->audioDataBase + (MOVIE_STATE->audioReadIdx << 11));
+    entry = &MOVIE_STATE->audioDataBase[MOVIE_STATE->audioReadIdx].header;
 
     /* Advance read index by number of sectors described in this header. */
-    nextIndex = MOVIE_STATE->audioReadIdx + inner->sectorCount;
+    next_index = MOVIE_STATE->audioReadIdx + entry->sectorCount;
 
     /* Decrease buffered sector count to reflect consumed audio data. */
-    MOVIE_STATE->audioBufferedCount = MOVIE_STATE->audioBufferedCount - inner->sectorCount;
+    MOVIE_STATE->audioBufferedCount = MOVIE_STATE->audioBufferedCount - entry->sectorCount;
 
     /* Wrap to start of ring buffer only if advancing from a "full" state hits capacity exactly. */
-    if ((MOVIE_STATE->audioReadIdx >= MOVIE_STATE->audioWriteIdx) && (nextIndex == MOVIE_STATE->videoRingSize))
+    if ((MOVIE_STATE->audioReadIdx >= MOVIE_STATE->audioWriteIdx) && (next_index == MOVIE_STATE->videoRingSize))
     {
-        nextIndex = 0;
+        next_index = 0;
     }
 
     /* Update playback state: sync frame number and commit new read index. */
-    MOVIE_STATE->lastConsumedAudioFrame = inner->frameNumber;
-    MOVIE_STATE->audioReadIdx = nextIndex;
+    MOVIE_STATE->lastConsumedAudioFrame = entry->frameNumber;
+    MOVIE_STATE->audioReadIdx = next_index;
 }

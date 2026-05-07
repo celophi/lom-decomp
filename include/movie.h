@@ -37,9 +37,9 @@ typedef struct
 typedef struct
 {
     // ---- first 32 bytes: 8 pointers (from first struct) ----
-    u8* videoTableBase; // unk0
-    u8* videoDataBase;  // unk4
-    u8* audioDataBase;  // unk8
+    u8* videoTableBase;            // unk0
+    u8* videoDataBase;             // unk4
+    struct AudioSector* audioDataBase; // unk8 — array of 2048-byte CD sectors (header + payload)
     u32 vlcTable;       // unkC / table
     u32* vlcInputBuf[2];
     u32* mdecOutputBuf[2]; // unk18 / ptr18[0]
@@ -136,6 +136,15 @@ typedef struct
     u16 sectorCount;
     s32 frameNumber;
 } SectorEntry;
+
+/* One PSX CD sector (2048 bytes) of audio ring data: a SectorEntry header
+ * followed by filler bytes. The actual XA payload is written by
+ * movie_cd_sector_callback at offset 0x20 within the sector. */
+typedef struct AudioSector
+{
+    SectorEntry header;
+    u8 _rest[2048 - 12]; /* 12 == sizeof(SectorEntry) */
+} AudioSector;
 
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
