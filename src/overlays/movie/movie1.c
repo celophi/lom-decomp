@@ -773,7 +773,7 @@ s32 movie_cd_sector_callback(void)
 
     should_load = 0;
 
-    if (g_sectorsRemaining == 0) /* same as VOL_MOVIE_STATE->sectorsRemaining, but accessed directly */
+    if (MOVIE_STATE->sectorsRemaining == 0) /* same as VOL_MOVIE_STATE->sectorsRemaining, but accessed directly */
     {
         while (CdGetSector(hdr, 8) == 0);
 
