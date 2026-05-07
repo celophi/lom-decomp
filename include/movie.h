@@ -77,8 +77,8 @@ typedef struct
     s8 unk97;            // first struct: unk97 ; second struct: _unk97
     s8 chunkIdx;         // initial active chunk index (0 or 1) from first struct; second struct calls this _unk98
     u8 outBufIdx;        // which mdecOutputBuf[] receives the next DecDCTout output (0 or 1)
-    s8 unk9A;            // first struct: unk9A ; second struct: _unk9A
-    s8 unk9B;            // first struct: unk9B ; second struct: _unk9B
+    u8 unk9A;            // 0x9A — pendingVramUpload (read directly by mdec_out_callback / service_video_ops; needs lbu)
+    u8 unk9B;            // 0x9B — pendingMdecDecode (read directly by service_video_ops; needs lbu)
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
     s8 field9D;          // second struct: field9D ; first struct: unk9D
     u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
@@ -91,16 +91,6 @@ typedef struct
     u32 allocBase; /* base address for movie buffer allocations */
 } AllocInfo;
 
-typedef struct
-{
-    u8 pad0[0x97];
-    u8 unk97;
-    u8 pad98[1];
-    u8 unk99;
-    u8 unk9A;
-    u8 pad9B[1];
-    u8 unk9C;
-} BaseObj;
 typedef struct
 {
     u8 pad[0x18];

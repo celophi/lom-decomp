@@ -557,10 +557,19 @@ void movie_update(void)
  */
 void movie_mdec_out_callback(void)
 {
-    volatile BaseObj* base = (volatile BaseObj*)0x801ED500;
+    /*
+     * Field map (BaseObj → CombinedState, same offsets):
+     *   unk97 → unk97   (0x97, store-only here)
+     *   unk99 → outBufIdx (0x99)
+     *   unk9A → unk9A   (0x9A; flipped to u8 in CombinedState to keep lbu)
+     *   unk9C → mdecBusy (0x9C, store-only here)
+     * SubObj wrapper kept verbatim — it's the load-bearing idiom for the 100% match
+     * (compiles to the same lbu/sll/addu/lw sequence as `mdecOutputBuf[outBufIdx]`).
+     */
+    volatile CombinedState* base = (volatile CombinedState*)0x801ED500;
     s32 temp;
-    BaseObj* bp_high;
-    BaseObj* bp;
+    CombinedState* bp_high;
+    CombinedState* bp;
     int new_var;
     if (g_gpuMode == 0)
     {
@@ -571,14 +580,14 @@ void movie_mdec_out_callback(void)
         temp = DrawSync(1);
         if (temp < 2)
         {
-            LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
+            LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->outBufIdx)) * 4)))->unk18);
             base->unk97 = (s8)(temp + 1);
         }
         else
         {
             base->unk9A = 1U;
         }
-        bp_high = (BaseObj*)0x801e0000;
+        bp_high = (CombinedState*)0x801e0000;
     }
     else
     {
@@ -586,26 +595,26 @@ void movie_mdec_out_callback(void)
         new_var = 0;
         if (temp != (-1))
         {
-            LoadImage2((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
+            LoadImage2((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->outBufIdx)) * 4)))->unk18);
             if (temp != new_var)
             {
                 DrawOTag((u_long*)temp);
             }
-            bp_high = (BaseObj*)0x801e0000;
+            bp_high = (CombinedState*)0x801e0000;
         }
         else
         {
-            LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->unk99)) * 4)))->unk18);
+            LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->outBufIdx)) * 4)))->unk18);
         }
     }
 
-    bp = (BaseObj*)(((u_int)((BaseObj*)0x801e0000)) | 0xd500);
+    bp = (CombinedState*)(((u_int)((CombinedState*)0x801e0000)) | 0xd500);
     if (bp->unk9A == new_var)
     {
         movie_schedule_next_decode();
         return;
     }
-    bp->unk9C = 1;
+    bp->mdecBusy = 1;
 }
 
 /**
