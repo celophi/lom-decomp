@@ -1263,22 +1263,16 @@ void movie_advance_audio_read(void)
     SectorEntry* entry;
     s32 next_index;
 
-    /* Resolve pointer to current audio sector header using read index (2048 bytes per sector). */
     entry = &MOVIE_STATE->audioDataBase[MOVIE_STATE->audioReadIdx].header;
-
-    /* Advance read index by number of sectors described in this header. */
     next_index = MOVIE_STATE->audioReadIdx + entry->sectorCount;
 
-    /* Decrease buffered sector count to reflect consumed audio data. */
     MOVIE_STATE->audioBufferedCount = MOVIE_STATE->audioBufferedCount - entry->sectorCount;
 
-    /* Wrap to start of ring buffer only if advancing from a "full" state hits capacity exactly. */
     if ((MOVIE_STATE->audioReadIdx >= MOVIE_STATE->audioWriteIdx) && (next_index == MOVIE_STATE->videoRingSize))
     {
         next_index = 0;
     }
 
-    /* Update playback state: sync frame number and commit new read index. */
     MOVIE_STATE->lastConsumedAudioFrame = entry->frameNumber;
     MOVIE_STATE->audioReadIdx = next_index;
 }
