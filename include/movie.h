@@ -99,7 +99,7 @@ typedef struct
     u8 pending_vram_upload; // 0x9A — decoded frame is ready, needs LoadImage to VRAM
     u8 pending_mdec_decode; // 0x9B — bitstream staged, needs DecDCTout kicked
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
-    s8 field9D;          // second struct: field9D ; first struct: unk9D
+    s8 frame_ready;      // 0x9D — set by movie_schedule_next_decode when a chunk boundary is reached; consumed by movie_play
     u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
     u8 endState;         // 1 = near end, 2 = stream fully ended
 } MovieState;

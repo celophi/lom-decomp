@@ -1,17 +1,19 @@
 #include "movie.h"
 
-/*
- * NOTE: every "struct" in movie.h that begins at offset 0 is a different
- * named view of the SAME runtime block at 0x801ED500. The split exists
- * because each function was decompiled in isolation on decomp.me and tuned
- * against its own field layout. Do NOT try to unify these types without
- * re-verifying every offset — the matching builds depend on those exact
- * offsets being preserved per-function.
- */
-
 /**
- * decomp.me link (97.51%) https://decomp.me/scratch/gkEWm
- * this one is a WIP without gotos (https://decomp.me/scratch/Gq1vj)
+ * @brief Play one of five MDEC cinematics, selected by index.
+ *
+ * Drives the full playback loop: configures the dual-buffered DISPENV pair,
+ * resolves the per-movie frame count, calls @ref movie_init to stage the
+ * stream, then services @ref movie_update / @ref movie_service_video_ops
+ * until the stream end-state is reached. Includes a CD error-recovery
+ * inner loop and an optional audio fade-out.
+ *
+ * @param movieIndex Cinematic to play (0..4). Indices outside this range
+ *                   fall through to the case-4 default (898 frames).
+ *
+ * @see https://decomp.me/scratch/gkEWm (97.51%)
+ * @see https://decomp.me/scratch/Gq1vj (WIP, gotos removed)
  */
 void movie_play(s32 movieIndex)
 {
@@ -105,12 +107,12 @@ void movie_play(s32 movieIndex)
         }
 
         timeout = 0x2000;
-        while (state->field9D == 0)
+        while (state->frame_ready == 0)
         {
             do
             {
                 movie_update();
-                if (state->field9D != 0)
+                if (state->frame_ready != 0)
                 {
                     break;
                 }
@@ -127,7 +129,7 @@ void movie_play(s32 movieIndex)
             timeout = 0x2000;
         }
 
-        state->field9D = 0;
+        state->frame_ready = 0;
         func_800157B0(4);
         new_var = (u32)(movieIndex & 0xFFFF);
         VSync(0);
@@ -176,8 +178,20 @@ void movie_play(s32 movieIndex)
 }
 
 /**
- * decomp.me link (91.61%) https://decomp.me/scratch/hR71L
- * incorrect but better match https://decomp.me/scratch/ICOiP
+ * @brief Stage a movie stream for playback into the global @ref MovieState.
+ *
+ * Allocates VRAM rectangles, sets up the VLC table / MDEC output buffers /
+ * audio data buffer, registers the DecDCT-out and DrawSync callbacks, then
+ * issues the initial CD read. Two layout paths exist depending on
+ * @ref g_gpuMode (standard vs interlaced/BreakDraw).
+ *
+ * @param resourceIndex CD resource id of the BS stream (e.g. 0x16A0..0x16A4).
+ * @param flags         Bit 0..6: gpuMode. Bit 7: interlaced flag.
+ * @param totalFrames   Frame-count stop condition; set into MovieState.totalFrames.
+ * @param initBufferIdx Initial active chunk index (0 or 1).
+ *
+ * @see https://decomp.me/scratch/hR71L (91.61%)
+ * @see https://decomp.me/scratch/ICOiP (incorrect but better match)
  */
 void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx)
 {
@@ -297,7 +311,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     MOVIE_STATE->pending_vram_upload = 0;
     MOVIE_STATE->pending_mdec_decode = 0;
     MOVIE_STATE->mdecBusy = 0;
-    MOVIE_STATE->field9D = 0;
+    MOVIE_STATE->frame_ready = 0;
     MOVIE_STATE->endOfStream = 0;
     MOVIE_STATE->endState = 0;
     MOVIE_STATE->unk92 = 0;
@@ -348,13 +362,20 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
 }
 
 /**
- * decomp.me link (98.86%) https://decomp.me/scratch/xXKIt
+ * @brief Per-tick movie pump: feeds the MDEC and advances the audio queue.
+ *
+ * Three responsibilities:
+ *   1. If a previous MDEC submit was deferred, retry it now that the MDEC is idle.
+ *   2. Pull the next BS frame from the video ring, decode VLC, and submit to MDEC.
+ *   3. Drain the audio ring into the AKAO XA stream and update playback position.
+ *
+ * @see https://decomp.me/scratch/xXKIt (98.86%)
  */
 void movie_update(void)
 {
     long audioCapacity;     /* audioRingCapacity reload */
     MovieState* stateAlias; /* sequencing alias used after totalFrames check */
-    int field9DZeroFlag;    /* (field9D == 0) flag / sign-shift temp */
+    int field9DZeroFlag;    /* (frame_ready == 0) flag / sign-shift temp */
     void* hdr;
     void* sp14;
     MovieState* mdecAlias;      /* sequencing alias used in MDEC retry block */
@@ -365,7 +386,7 @@ void movie_update(void)
     if (g_mdecRetryPending != 0)
     {
         mdecAlias = combined;
-        if ((mdecAlias->mdecBusy == 0) && (combined->field9D == 0))
+        if ((mdecAlias->mdecBusy == 0) && (combined->frame_ready == 0))
         {
             combined->mdecBusy = 1;
             DecDCTin((u_long*)((MovieState*)combined)->vlcInputBuf[combined->inputBufIdx],
@@ -380,7 +401,7 @@ void movie_update(void)
     }
     if ((g_mdecRetryPending == 0) & 0xFFFFu)
     {
-        ;
+        
         {
             u8 v0 = MOVIE_STATE->vlcRetryCount;
             if (v0 != 0)
@@ -443,7 +464,7 @@ void movie_update(void)
     {
         movie_advance_video_read();
         combined = MOVIE_STATE;
-        if ((combined->mdecBusy == wordCount) && (field9DZeroFlag = combined->field9D == wordCount))
+        if ((combined->mdecBusy == wordCount) && (field9DZeroFlag = combined->frame_ready == wordCount))
         {
             combined->mdecBusy = 1;
             DecDCTin((u_long*)((MovieState*)combined)->vlcInputBuf[combined->inputBufIdx], combined->gpuMode == 0);
@@ -501,7 +522,13 @@ void movie_update(void)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/HVkZ6
+ * @brief MDEC-output completion callback.
+ *
+ * Invoked when the MDEC finishes writing a decoded macroblock buffer.
+ * Either uploads the result to VRAM immediately (LoadImage / LoadImage2)
+ * or defers the upload by setting @ref MovieState::pending_vram_upload.
+ *
+ * @see https://decomp.me/scratch/HVkZ6 (100%)
  */
 void movie_mdec_out_callback(void)
 {
@@ -556,7 +583,14 @@ void movie_mdec_out_callback(void)
 }
 
 /**
- * decomp.me: (98.72%) https://decomp.me/scratch/E7XCZ
+ * @brief Advance the decode position and schedule the next MDEC decode.
+ *
+ * Steps the rect[2] frame position by its width. If still inside the current
+ * chunk, kicks off DecDCTout immediately (or sets @ref MovieState::pending_mdec_decode
+ * if the GPU is busy). Otherwise toggles to the other chunk, resets the frame
+ * position, and signals @ref MovieState::frame_ready.
+ *
+ * @see https://decomp.me/scratch/E7XCZ (98.72%)
  */
 void movie_schedule_next_decode(void)
 {
@@ -605,7 +639,7 @@ void movie_schedule_next_decode(void)
         *((volatile u8*)(&ptr->chunkIdx)) = 1 - (*((volatile u8*)(&ptr->chunkIdx)));
         ptr->rects[2].x = ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].x;
         ptr->rects[2].y = *(new_var = (u16*)&ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].y);
-        *((volatile u8*)(&ptr->field9D)) = 1;
+        *((volatile u8*)(&ptr->frame_ready)) = 1;
         *((volatile u8*)(&ptr->mdecBusy)) = 0;
         if ((*((volatile u8*)(&ptr->endState))) == 1)
         {
@@ -713,24 +747,19 @@ void movie_service_video_ops(void)
 }
 
 /**
- * decomp.me (76.45%) https://decomp.me/scratch/HptYe
+ * @brief CD sector-arrival callback; invoked from the CD-ROM ISR per sector.
  *
- * NOTE: previously contained references to bogus field names `audioDataBase4`
- * and `audioDataBaseC`; both fixed to `lastConsumedVideoFrame` /
- * `lastConsumedAudioFrame` (offsets 0x84 / 0x8C) as part of the MovieState
- * merge — the surrounding ring-empty logic is "writeIdx == readIdx AND last
- * produced == last consumed".
+ * Reads the 8-word (32-byte) sector header, classifies the sector as video
+ * (type 0x8001) or audio, checks whether the corresponding ring buffer has
+ * room, then copies the 504-word (2016-byte) payload into the buffer and
+ * advances the write index. Multi-sector frames are handled via
+ * @ref g_sectorsRemaining: when 0 the sector is the first (header) sector;
+ * when non-zero we are reading continuation sectors for the same frame and
+ * skip the ring-capacity check.
  *
- * CD sector-arrival callback, called by the CD-ROM interrupt once per sector read.
+ * @return 1 to keep streaming, 0 when the stream has ended or should pause.
  *
- * Reads the 8-word (32-byte) sector header, determines if the sector is video
- * (type 0x8001) or audio, checks whether the corresponding ring buffer has room,
- * then copies the 504-word (2016-byte) payload into the buffer and updates the
- * write index.  Multi-sector frames are handled via g_sectorsRemaining: when 0 this is
- * the first (header) sector; when non-zero we are reading continuation sectors
- * for the same frame and skip the ring-capacity check.
- *
- * Returns 1 to keep streaming, 0 when the stream has ended or should pause.
+ * @see https://decomp.me/scratch/HptYe (76.45%)
  */
 s32 movie_cd_sector_callback(void)
 {
@@ -1023,7 +1052,19 @@ s32 movie_cd_sector_callback(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/I2Ddr
+ * @brief Find the next unqueued audio ring entry and return its address.
+ *
+ * Walks the audio ring forward from audioReadIdx skipping the
+ * already-buffered entries, wrapping at the ring size. Charges the entry's
+ * sector count to @ref MovieState::audioBufferedCount.
+ *
+ * @param outEntry Receives a pointer to the entry's 2048-byte CD sector
+ *                 in @ref MovieState::audioDataBase. Untouched if no entry
+ *                 is available.
+ *
+ * @return 1 if an entry was produced, 0 if the ring is empty or fully queued.
+ *
+ * @see https://decomp.me/scratch/I2Ddr (100%)
  */
 s32 movie_get_next_audio_entry(void** outEntry)
 {
@@ -1076,7 +1117,13 @@ s32 movie_get_next_audio_entry(void** outEntry)
 }
 
 /**
- * decomp.me: (100%) https://decomp.me/scratch/TApbR
+ * @brief DrawSync completion callback; flushes deferred VRAM upload / MDEC submit.
+ *
+ * If the GPU is idle (g_busy == 0), services @ref MovieState::pending_vram_upload
+ * (LoadImage + schedule next decode) and @ref MovieState::pending_mdec_decode
+ * (DecDCTout for the staged buffer).
+ *
+ * @see https://decomp.me/scratch/TApbR (100%)
  */
 void movie_draw_sync_callback(void)
 {
@@ -1118,7 +1165,17 @@ void movie_draw_sync_callback(void)
 }
 
 /**
- * decomp.me: (100%) https://decomp.me/scratch/OJvsJ
+ * @brief Resolve pointers to the next available video ring entry.
+ *
+ * Wraps videoReadIdx if it has reached videoRingSize. On success returns
+ * pointers to the entry's VLC data buffer and 32-byte header.
+ *
+ * @param outVlcData     Receives the 2016-byte VLC data buffer pointer.
+ * @param outEntryHeader Receives the 32-byte entry header pointer.
+ *
+ * @return 1 if an entry is available, 0 otherwise (ring empty and last frame consumed).
+ *
+ * @see https://decomp.me/scratch/OJvsJ (100%)
  */
 s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
 {
@@ -1162,7 +1219,13 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
 }
 
 /**
- * decomp.me: (100%) https://decomp.me/scratch/SUBK5
+ * @brief Advance videoReadIdx past the entry currently being consumed.
+ *
+ * Reads sectorCount from the entry header to step the index, wraps to 0
+ * when the new index hits videoRingSize, and records the consumed frame
+ * number in @ref MovieState::lastConsumedVideoFrame.
+ *
+ * @see https://decomp.me/scratch/SUBK5 (100%)
  */
 void movie_advance_video_read(void)
 {
@@ -1183,13 +1246,21 @@ void movie_advance_video_read(void)
 }
 
 /**
- * decomp.me: (100%) https://decomp.me/scratch/6Xjsu
+ * @brief Advance audioReadIdx past the entry currently being consumed.
+ *
+ * Reads sectorCount from the entry header to step the index, decrements
+ * @ref MovieState::audioBufferedCount, wraps to 0 when the new index hits
+ * videoRingSize (note: not audioRingSize — see note below), and records
+ * the consumed frame number in @ref MovieState::lastConsumedAudioFrame.
+ *
+ * @note Comparing the audio nextIndex against videoRingSize (not
+ *       audioRingSize) appears to be an original-game bug; preserved
+ *       verbatim to keep the asm matching.
+ *
+ * @see https://decomp.me/scratch/6Xjsu (100%)
  */
 void movie_advance_audio_read(void)
 {
-    /* NOTE: comparing the audio nextIndex against videoRingSize (not
-     * audioRingSize) below looks like an original-game bug; preserved
-     * verbatim to keep the asm matching. */
     MovieState* base;
     SectorEntry* inner;
     s32 nextIndex;
