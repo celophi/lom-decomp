@@ -376,8 +376,9 @@ void movie_update(void)
     long audioCapacity;     /* audioRingCapacity reload */
     MovieState* stateAlias; /* sequencing alias used after totalFrames check */
     int field9DZeroFlag;    /* (frame_ready == 0) flag / sign-shift temp */
-    void* hdr;
-    void* sp14;
+    VideoVlcPayload* vlc_payload;     /* raw bitstream for the next video frame */
+    VideoSectorEntry* entry_header;   /* 32-byte sector header for the same frame */
+    AudioSector* audio_entry;         /* next audio ring entry (header + payload) */
     MovieState* mdecAlias; /* sequencing alias used in MDEC retry block */
     s32 tmp = 0;           /* vlc-complete flag, then audioBufferedCount compare */
     MovieState* combined = MOVIE_STATE;
@@ -418,11 +419,11 @@ void movie_update(void)
                     MOVIE_STATE->vlcRetryCount = 0;
                 }
             }
-            else if (movie_get_next_video_entry(&hdr, &sp14) != 0)
+            else if (movie_get_next_video_entry(&vlc_payload, &entry_header) != 0)
             {
-                MOVIE_STATE->currentFrame = ((u32*)sp14)[2];
+                MOVIE_STATE->currentFrame = entry_header->header.frameNumber;
                 stateAlias = MOVIE_STATE;
-                if ((((u32*)sp14)[2] >= MOVIE_STATE->totalFrames) && (stateAlias->endState == 0))
+                if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) && (stateAlias->endState == 0))
                 {
                     MOVIE_STATE->endState = 1;
                 }
@@ -440,7 +441,7 @@ void movie_update(void)
                     DecDCTvlcSize2(0x16AA);
                     MOVIE_STATE->vlcRetryCount = 1;
                 }
-                if (DecDCTvlc2((u_long*)hdr, (u_long*)MOVIE_STATE->vlcInputBuf[MOVIE_STATE->inputBufIdx],
+                if (DecDCTvlc2((u_long*)vlc_payload, (u_long*)MOVIE_STATE->vlcInputBuf[MOVIE_STATE->inputBufIdx],
                                (DECDCTTAB*)MOVIE_STATE->vlcTable) == 0)
                 {
                     tmp = 1;
@@ -449,7 +450,7 @@ void movie_update(void)
             }
             else
             {
-                if (((!sp14) && (!sp14)) && (!sp14))
+                if (((!entry_header) && (!entry_header)) && (!entry_header))
                 {
                 }
                 if ((MOVIE_STATE->endOfStream != 0) && (MOVIE_STATE->mdecBusy == 0))
@@ -483,9 +484,9 @@ void movie_update(void)
     combined = MOVIE_STATE;
     if (g_cdAudioReady != 0)
     {
-        if (movie_get_next_audio_entry(&hdr) != 0)
+        if (movie_get_next_audio_entry(&audio_entry) != 0)
         {
-            audioFrameNum = (combined->currentFrame = ((u32*)hdr)[2]);
+            audioFrameNum = (combined->currentFrame = audio_entry->header.frameNumber);
             if ((audioFrameNum > combined->totalFrames) && (combined->endState < 2))
             {
                 combined->endState = 2;
@@ -1066,9 +1067,9 @@ s32 movie_cd_sector_callback(void)
  *
  * @see https://decomp.me/scratch/I2Ddr (100%)
  */
-s32 movie_get_next_audio_entry(void** outEntry)
+s32 movie_get_next_audio_entry(AudioSector** outEntry)
 {
-    void** saved_arg;
+    AudioSector** saved_arg;
     s32 nextIdx;
     AudioSector* entry;
     u16 temp;
@@ -1177,12 +1178,12 @@ void movie_draw_sync_callback(void)
  *
  * @see https://decomp.me/scratch/OJvsJ (100%)
  */
-s32 movie_get_next_video_entry(void** out_vlc_data, void** out_entry_header)
+s32 movie_get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header)
 {
     s32 write_idx;
     s32 read_idx;
-    void** vlc_data_alias = out_vlc_data;
-    void** entry_header_alias = out_entry_header;
+    VideoVlcPayload** vlc_data_alias = out_vlc_data;
+    VideoSectorEntry** entry_header_alias = out_entry_header;
 
     if ((MOVIE_STATE->videoWriteIdx == MOVIE_STATE->videoReadIdx) &&
         (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame))
