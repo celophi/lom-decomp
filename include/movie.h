@@ -107,33 +107,6 @@ typedef struct
 typedef struct
 {
     u8 _pad0[0x18];
-    u32 unk18[2];
-    struct
-    {
-        s16 start; /* first frame position of this chunk */
-        u16 b;
-        s16 length; /* frame count of this chunk */
-        u16 _pad;
-    } ch[2];
-    u16 framePos; /* current frame position within the active chunk */
-    u16 unk32;
-    u16 unk34;
-    u16 unk36;
-    u8 _pad1[0x97 - 0x38];
-    u8 unk97;
-    u8 chunkIdx;  /* which ch[] entry is the active chunk (0 or 1) */
-    u8 outBufIdx; /* which unk18[] slot receives the next DecDCTout output (0 or 1) */
-    u8 _pad_9a;
-    u8 pendingMdecDecode; /* set when DrawSync is too busy to submit DecDCTout immediately */
-    u8 decodeState;       /* 0=idle, 1=queued/pending, 2=in-progress */
-    u8 frameReady;        /* set when advancing past the end of a chunk (new frame ready for display) */
-    u8 _pad_9e;
-    u8 endState; /* 1=near end of stream, 2=stream ended */
-} Struct_801ED500;
-
-typedef struct
-{
-    u8 _pad0[0x18];
     u32* ptrArray[7]; /* frame buffer pointers, indexed by activeBufferIdx */
     s16 unk34;        /* frame width  (used to compute DCT word count) */
     s16 unk36;        /* frame height (used to compute DCT word count) */

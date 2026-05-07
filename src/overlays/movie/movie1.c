@@ -613,7 +613,21 @@ void movie_mdec_out_callback(void)
  */
 void movie_schedule_next_decode(void)
 {
-    Struct_801ED500* ptr = (Struct_801ED500*)0x801ED500;
+    /*
+     * Field map (Struct_801ED500 → CombinedState, same offsets):
+     *   unk18[i]          → mdecOutputBuf[i]              (0x18)
+     *   ch[i].start       → rects[i].x                    (0x20+i*8)
+     *   ch[i].b           → rects[i].y                    (0x22+i*8)
+     *   ch[i].length      → rects[i].w                    (0x24+i*8)
+     *   framePos          → rects[2].x                    (0x30)
+     *   unk32/34/36       → rects[2].y/w/h                (0x32/0x34/0x36)
+     *   pendingMdecDecode → unk9B                         (0x9B)
+     *   decodeState       → mdecBusy                      (0x9C)
+     *   frameReady        → field9D                       (0x9D)
+     * The volatile u8/u16 casts on every access force the load instruction
+     * (lbu/lhu) so the underlying field signedness is irrelevant.
+     */
+    CombinedState* ptr = (CombinedState*)0x801ED500;
     unsigned short nextOutBufIdx;
     u16 curFramePos;
     u16 frameStep;
@@ -626,38 +640,38 @@ void movie_schedule_next_decode(void)
     u32 decodeSize;
     int decodeWordCount;
     nextOutBufIdx = 1 - (*((volatile u8*)(&ptr->outBufIdx)));
-    curFramePos = *((volatile u16*)(&ptr->framePos));
-    frameStep = *((volatile u16*)(&ptr->unk34));
+    curFramePos = *((volatile u16*)(&ptr->rects[2].x));
+    frameStep = *((volatile u16*)(&ptr->rects[2].w));
     newFramePos = curFramePos + frameStep;
-    *((volatile u16*)(&ptr->framePos)) = newFramePos;
+    *((volatile u16*)(&ptr->rects[2].x)) = newFramePos;
     newFramePosSigned = (s16)newFramePos;
     *((volatile u8*)(&ptr->outBufIdx)) = nextOutBufIdx;
-    a = ptr->ch[*((volatile u8*)(&ptr->chunkIdx))].start;
-    c = ptr->ch[*((volatile u8*)(&ptr->chunkIdx))].length;
+    a = ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].x;
+    c = ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].w;
     chunkEnd = a + c;
     if (newFramePosSigned < chunkEnd)
     {
         if ((*((volatile u8*)(&ptr->unk97))) < 2U)
         {
-            decodeSize = ((s16)frameStep) * ((s16)(*((volatile u16*)(&ptr->unk36))));
+            decodeSize = ((s16)frameStep) * ((s16)(*((volatile u16*)(&ptr->rects[2].h))));
             decodeWordCount = ((int)(decodeSize + (decodeSize >> 31))) >> 1;
-            DecDCTout((u32*)ptr->unk18[*((volatile u8*)(&ptr->outBufIdx))], decodeWordCount);
-            *((volatile u8*)(&ptr->decodeState)) = 2;
+            DecDCTout((u32*)ptr->mdecOutputBuf[*((volatile u8*)(&ptr->outBufIdx))], decodeWordCount);
+            *((volatile u8*)(&ptr->mdecBusy)) = 2;
         }
         else
         {
-            *((volatile u8*)(&ptr->decodeState)) = 1;
-            *((volatile u8*)(&ptr->pendingMdecDecode)) = 1;
+            *((volatile u8*)(&ptr->mdecBusy)) = 1;
+            *((volatile u8*)(&ptr->unk9B)) = 1;
         }
     }
     else
     {
         /* advance to the next chunk and reset the frame position */
         *((volatile u8*)(&ptr->chunkIdx)) = 1 - (*((volatile u8*)(&ptr->chunkIdx)));
-        ptr->framePos = ptr->ch[*((volatile u8*)(&ptr->chunkIdx))].start;
-        ptr->unk32 = *(new_var = &ptr->ch[*((volatile u8*)(&ptr->chunkIdx))].b);
-        *((volatile u8*)(&ptr->frameReady)) = 1;
-        *((volatile u8*)(&ptr->decodeState)) = 0;
+        ptr->rects[2].x = ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].x;
+        ptr->rects[2].y = *(new_var = (u16*)&ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].y);
+        *((volatile u8*)(&ptr->field9D)) = 1;
+        *((volatile u8*)(&ptr->mdecBusy)) = 0;
         if ((*((volatile u8*)(&ptr->endState))) == 1)
         {
             *((volatile u8*)(&ptr->endState)) = 2;
