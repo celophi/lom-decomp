@@ -1261,24 +1261,20 @@ void movie_advance_video_read(void)
  */
 void movie_advance_audio_read(void)
 {
-    MovieState* base;
     SectorEntry* inner;
     s32 nextIndex;
 
-    /* Base movie playback control block located at fixed RAM address (0x801ED500). */
-    base = MOVIE_STATE;
-
     /* Resolve pointer to current audio sector header using read index (2048 bytes per sector). */
-    inner = (SectorEntry*)(base->audioDataBase + (base->audioReadIdx << 11));
+    inner = (SectorEntry*)(MOVIE_STATE->audioDataBase + (MOVIE_STATE->audioReadIdx << 11));
 
     /* Advance read index by number of sectors described in this header. */
-    nextIndex = base->audioReadIdx + inner->sectorCount;
+    nextIndex = MOVIE_STATE->audioReadIdx + inner->sectorCount;
 
     /* Decrease buffered sector count to reflect consumed audio data. */
-    base->audioBufferedCount = base->audioBufferedCount - inner->sectorCount;
+    MOVIE_STATE->audioBufferedCount = MOVIE_STATE->audioBufferedCount - inner->sectorCount;
 
     /* Wrap to start of ring buffer only if advancing from a "full" state hits capacity exactly. */
-    if ((base->audioReadIdx >= base->audioWriteIdx) && (nextIndex == base->videoRingSize))
+    if ((MOVIE_STATE->audioReadIdx >= MOVIE_STATE->audioWriteIdx) && (nextIndex == MOVIE_STATE->videoRingSize))
     {
         nextIndex = 0;
     }
