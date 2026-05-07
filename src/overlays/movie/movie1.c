@@ -45,6 +45,23 @@ void movie_play(s32 movieIndex)
     SetDefDispEnv(&env[1], 0, timeout, 320, timeout);
     env[0].isrgb24 = (env[1].isrgb24 = 1);
 
+    /*
+     * Five MDEC cinematics; movieIndex selects one (0..4). The frame count
+     * matches each movie's BS stream length and is used by movie_init to set
+     * the totalFrames stop condition. The CD resource index is the per-movie
+     * BS file at base 0x16A0 (so resources 0x16A0..0x16A4).
+     *
+     *   index | resource | frames | known role
+     *   ------+----------+--------+----------------------
+     *     0   | 0x16A0   |  2098  | (TODO: identify)
+     *     1   | 0x16A1   |  2473  | (TODO: identify)
+     *     2   | 0x16A2   |  1318  | (TODO: identify)
+     *     3   | 0x16A3   |  5368  | (TODO: identify; longest — likely ending)
+     *     4   | 0x16A4   |   898  | (TODO: identify; shortest — also default)
+     *
+     * To label these semantically, grep callers of `movie_play` to see which
+     * index is invoked from where (intro screen, ending, etc.).
+     */
     switch ((u16)(movieIndex & 0xFFFF))
     {
     case 0:
@@ -133,7 +150,7 @@ void movie_play(s32 movieIndex)
 
         if ((g_cdAudioReady != 0) && (audioFadeVol != (-1)))
         {
-            func_80023030(audioFadeVol);
+            akao_cmd_e4_set_cd_volume(audioFadeVol);
             if (audioFadeVol == 0)
                 break;
             audioFadeVol -= 0x10;
@@ -297,14 +314,14 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
 
     if (MOVIE_STATE->interlaceMode != 0)
     {
-        func_800232A8((u32)MOVIE_STATE->audioDataBase,
+        akao_cmd_e8_start_xa_stream((u32)MOVIE_STATE->audioDataBase,
                       (u32)(MOVIE_STATE->audioRingCapacity << 0xB));
-        func_80023030(0x7F);
+        akao_cmd_e4_set_cd_volume(0x7F);
     }
     else
     {
-        func_80022848(0x7FFF);
-        func_80022F18(0xA0);
+        akao_cmd_c8(0x7FFF);
+        akao_xa_setup_panning(0xA0);
     }
 
     cdrom_wait_queue_empty();
@@ -448,7 +465,7 @@ void movie_update(void)
             {
                 combined->endState = 2;
             }
-            func_80023334(audioFrameNum);
+            akao_xa_advance_frame(audioFrameNum);
         }
         combined = MOVIE_STATE;
         if (g_audioStreamState == 2)
@@ -466,7 +483,7 @@ void movie_update(void)
         if ((combined->audioWriteIdx != MOVIE_STATE->audioReadIdx) ||
             (MOVIE_STATE->lastAudioFrame != MOVIE_STATE->lastConsumedAudioFrame))
         {
-            s32 tmp = func_800233B8();
+            s32 tmp = akao_xa_get_position();
             if (((tmp != (-1)) && (MOVIE_STATE->audioBufferedCount != 0)) &&
                 (MOVIE_STATE->audioReadIdx != ((u32)(tmp * 2))))
             {

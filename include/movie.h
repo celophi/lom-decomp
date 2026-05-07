@@ -7,6 +7,14 @@
 #include "psyq/libpress.h"
 #include "psyq/libcd.h"
 
+/*
+ * TODO(investigate): SRC_801ED600 — system-wide flag block at 0x801ED600.
+ * Used by movie_play to gate playback (`unk0 < 3 && (unk2 & 0xFF0F)`),
+ * also referenced as `D_801ED600` in checkps.h and title.h. Likely save-data
+ * flags or region/mode bits. The bitmasks 0x400A and 0xFF0F applied to unk4
+ * suggest packed event/cinema-flag groups. Decompile its writers to learn
+ * the field semantics.
+ */
 typedef struct
 {
     u_char unk0;
@@ -15,6 +23,17 @@ typedef struct
     u_short unk4;
 } SRC_801ED600;
 
+/*
+ * TODO(investigate): MovieState aliases the AudioSystem block defined in cd.h
+ * (both at 0x801ED500). The CD subsystem uses this block to save the DecDCT
+ * and DrawSync callbacks that were active before XA audio playback began so
+ * `cdrom_reset` can restore them. Movie playback temporarily re-uses the same
+ * memory as scratch, which is why `decDCToutCallback` / `drawSyncCallback`
+ * (offsets 0x38 / 0x3C) here hold the *previous* handlers — `movie_init`
+ * captures them via `DecDCToutCallback(&movie_mdec_out_callback, ...)` etc.
+ * Reconcile these two views (union, or pick one canonical struct) once the
+ * full audio-system layout is understood.
+ */
 typedef struct
 {
     // ---- first 32 bytes: 8 pointers (from first struct) ----
@@ -150,7 +169,13 @@ extern void func_800158E0(void);
 extern void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx);
 extern void movie_update(void);
 extern void movie_service_video_ops(void);
-extern void func_80023030(s32 arg0);
+/* AKAO XA-streaming helpers (see config/symbols/shared_symbol_addrs.txt). */
+extern void akao_cmd_c8(u32 arg0);                       /* AKAO cmd 0xC8 (raw param) */
+extern void akao_xa_setup_panning(u32 sampleRate);       /* writes panning/sample-rate table */
+extern void akao_cmd_e8_start_xa_stream(u32 addr, u32 lenBytes); /* AKAO cmd 0xE8 */
+extern void akao_cmd_e4_set_cd_volume(s32 vol);          /* AKAO cmd 0xE4 (vol & 0x7F << 8) */
+extern void akao_xa_advance_frame(u32 frameNum);         /* increments audio frame counters */
+extern s32 akao_xa_get_position(void);                   /* returns SPU/XA position */
 extern void movie_schedule_next_decode(void);
 
 #endif
