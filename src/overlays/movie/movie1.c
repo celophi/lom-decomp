@@ -10,7 +10,7 @@
  */
 
 /**
- * decomp.me link (97.51%) https://decomp.me/scratch/XvMvo
+ * decomp.me link (97.51%) https://decomp.me/scratch/gkEWm
  * this one is a WIP without gotos (https://decomp.me/scratch/Gq1vj)
  */
 void movie_play(s32 movieIndex)
