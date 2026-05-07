@@ -17,19 +17,6 @@ typedef struct
 
 typedef struct
 {
-    u_char _pad0[0x98];
-    u_char activeDisplayBuffer;
-    u_char _pad99;
-    u_char _pad9a;
-    u_char _pad9b;
-    u_char _pad9c;
-    u_char frameReady;
-    u_char _pad9e;
-    u_char unk9f;
-} SRC_801ED500;
-
-typedef struct
-{
     // ---- first 32 bytes: 8 pointers (from first struct) ----
     u8* videoTableBase; // unk0
     u8* videoDataBase;  // unk4

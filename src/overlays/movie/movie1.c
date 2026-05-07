@@ -17,9 +17,9 @@ void movie_play(s32 movieIndex)
 {
     DISPENV env[2];
     DISPENV* pDispEnv;
-    volatile SRC_801ED500* state;
+    volatile CombinedState* state;
     s32 audioFadeVol;
-    s32 endStateMatch;     /* state->unk9f comparison constant (always 2) */
+    s32 endStateMatch;     /* state->endState comparison constant (always 2) */
     s32 retryLimit;        /* cdrom error-loop retry threshold (always 5) */
     s32 error_status;
     s32 timeout;
@@ -114,14 +114,14 @@ wait_loop:
     movie_update();
 
     {
-        u8 unk9d_val = state->frameReady;
+        u8 unk9d_val = state->field9D;
         if (unk9d_val != 0)
         {
             goto after_wait;
         }
     }
 
-    if (state->unk9f == endStateMatch)
+    if (state->endState == endStateMatch)
     {
         goto cleanup;
     }
@@ -142,17 +142,17 @@ after_wait:
 
 recheck_unk9d:
     timeout = 0x2000;
-    if (state->frameReady == 0)
+    if (state->field9D == 0)
     {
         goto wait_loop;
     }
 
-    state->frameReady = 0;
+    state->field9D = 0;
     func_800157B0(4);
     VSync(0);
 
     pDispEnv = &env[0];
-    if (state->activeDisplayBuffer == 0)
+    if (state->chunkIdx == 0)
     {
         pDispEnv = &env[1];
     }
@@ -207,7 +207,7 @@ check_audio_call:
         audioFadeVol -= 0x10;
     }
 
-    if (state->unk9f != endStateMatch)
+    if (state->endState != endStateMatch)
     {
         goto error_loop;
     }
