@@ -17,7 +17,7 @@ void movie_play(s32 movieIndex)
 {
     DISPENV env[2];
     DISPENV* pDispEnv;
-    volatile CombinedState* state;
+    volatile MovieState* state;
     s32 audioFadeVol;
     s32 endStateMatch;
     s32 retryLimit;
@@ -69,7 +69,7 @@ void movie_play(s32 movieIndex)
 
     VSync(0);
     func_800157DC();
-    state = (CombinedState*)0x801ED500;
+    state = MOVIE_STATE;
     audioFadeVol = -1;
     endStateMatch = 2;
     retryLimit = 5;
@@ -156,29 +156,29 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
 {
     u32 p1;
     u8* vlcTablePtr;             /* (was new_var6) base of VLC code table */
-    CombinedState* stateRef2;    /* (was new_var3) used after VSync; alias of 0x801ED500 */
-    CombinedState* stateRef3;    /* (was new_var2) used as ClearImage arg base */
+    MovieState* stateRef2;    /* (was new_var3) used after VSync; alias of 0x801ED500 */
+    MovieState* stateRef3;    /* (was new_var2) used as ClearImage arg base */
     u32 p2;
-    CombinedState* stateRef4;    /* (was new_var4) sequencing alias from rect setup */
+    MovieState* stateRef4;    /* (was new_var4) sequencing alias from rect setup */
     u32 p3;
-    CombinedState* stateRef5;    /* (was stateRef5) sequencing alias from rect copies */
+    MovieState* stateRef5;    /* (was stateRef5) sequencing alias from rect copies */
     u8* vlcTablePtr2;            /* (was new_var9) duplicate of vlcTablePtr (forces an extra move) */
     u8** videoTableBasePtr;      /* (was new_var8) &state->videoTableBase reload */
     int stateAddrInt;            /* (was new_var) literal 0x801ED500 used for vlcTable store */
     u8** videoTableBaseRef;      /* (was pDispEnv) NOT a DISPENV; it's &state->videoTableBase */
     AllocInfo* allocInfo = g_allocInfo;
 
-    ((CombinedState*)0x801ED500)->gpuMode = (s8)(flags & 0x7F);
+    MOVIE_STATE->gpuMode = (s8)(flags & 0x7F);
     if (flags & 0x80)
     {
-        ((CombinedState*)0x801ED500)->interlaceMode = 1;
+        MOVIE_STATE->interlaceMode = 1;
     }
     else
     {
-        ((CombinedState*)0x801ED500)->interlaceMode = 0;
+        MOVIE_STATE->interlaceMode = 0;
     }
 
-    videoTableBaseRef = &((CombinedState*)0x801ED500)->videoTableBase;
+    videoTableBaseRef = &MOVIE_STATE->videoTableBase;
 
     if (g_gpuMode == 0)
     {
@@ -187,62 +187,62 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         vlcTablePtr = (u8*)0x80147000;
         p1 = 0x8018D000;
 
-        ((CombinedState*)0x801ED500)->videoTableBase = vlcTablePtr;
+        MOVIE_STATE->videoTableBase = vlcTablePtr;
         p2++;
         p2--;
-        ((CombinedState*)0x801ED500)->mdecOutputBuf[1] = (u8*)0x801A3D00;
-        ((CombinedState*)0x801ED500)->audioDataBase = (u8*)0x80160000;
-        ((CombinedState*)0x801ED500)->lastConsumedVideoFrame = (u32)(-1);
-        ((CombinedState*)0x801ED500)->rects[1].w = 0x1E0;
-        (stateRef4 = (CombinedState*)0x801ED500)->rects[0].w = 0x1E0;
-        ((CombinedState*)0x801ED500)->rects[2].w = 0x18;
-        ((CombinedState*)0x801ED500)->videoRingCapacity = 0x32;
+        MOVIE_STATE->mdecOutputBuf[1] = (u8*)0x801A3D00;
+        MOVIE_STATE->audioDataBase = (u8*)0x80160000;
+        MOVIE_STATE->lastConsumedVideoFrame = (u32)(-1);
+        MOVIE_STATE->rects[1].w = 0x1E0;
+        (stateRef4 = MOVIE_STATE)->rects[0].w = 0x1E0;
+        MOVIE_STATE->rects[2].w = 0x18;
+        MOVIE_STATE->videoRingCapacity = 0x32;
         stateAddrInt = 0x801ED500;
-        ((CombinedState*)0x801ED500)->vlcInputBuf[0] = (u8*)p2;
-        ((CombinedState*)0x801ED500)->vlcInputBuf[1] = (u8*)p1;
-        ((CombinedState*)0x801ED500)->mdecOutputBuf[0] = (u8*)0x801A1000;
-        ((CombinedState*)0x801ED500)->rects[0].x = p3 * 0;
-        ((CombinedState*)0x801ED500)->rects[1].x = 0;
-        ((CombinedState*)0x801ED500)->rects[0].y = 0;
-        ((CombinedState*)0x801ED500)->rects[1].y = 0xF0;
-        ((CombinedState*)0x801ED500)->rects[2].h = 0xF0;
-        ((CombinedState*)0x801ED500)->rects[1].h = 0xF0;
-        ((CombinedState*)0x801ED500)->rects[0].h = 0xF0;
-        ((CombinedState*)0x801ED500)->rects[2].x = 0;
-        ((CombinedState*)0x801ED500)->rects[2].y = 0;
-        ((CombinedState*)0x801ED500)->audioRingCapacity = 0x10;
-        ((CombinedState*)0x801ED500)->videoDataBase = (u8*)0x80147640;
-        ((CombinedState*)0x801ED500)->chunkIdx = 0;
-        ((CombinedState*)stateAddrInt)->vlcTable = p3;
+        MOVIE_STATE->vlcInputBuf[0] = (u8*)p2;
+        MOVIE_STATE->vlcInputBuf[1] = (u8*)p1;
+        MOVIE_STATE->mdecOutputBuf[0] = (u8*)0x801A1000;
+        MOVIE_STATE->rects[0].x = p3 * 0;
+        MOVIE_STATE->rects[1].x = 0;
+        MOVIE_STATE->rects[0].y = 0;
+        MOVIE_STATE->rects[1].y = 0xF0;
+        MOVIE_STATE->rects[2].h = 0xF0;
+        MOVIE_STATE->rects[1].h = 0xF0;
+        MOVIE_STATE->rects[0].h = 0xF0;
+        MOVIE_STATE->rects[2].x = 0;
+        MOVIE_STATE->rects[2].y = 0;
+        MOVIE_STATE->audioRingCapacity = 0x10;
+        MOVIE_STATE->videoDataBase = (u8*)0x80147640;
+        MOVIE_STATE->chunkIdx = 0;
+        ((MovieState*)stateAddrInt)->vlcTable = p3;
     }
     else
     {
         p2 = 0x11000;
         p3 = initBufferIdx;
-        ((CombinedState*)0x801ED500)->videoTableBase = (u8*)0x80147000;
-        ((CombinedState*)0x801ED500)->audioDataBase = (u8*)0x80156000;
+        MOVIE_STATE->videoTableBase = (u8*)0x80147000;
+        MOVIE_STATE->audioDataBase = (u8*)0x80156000;
         vlcTablePtr = (u8*)allocInfo->allocBase;
-        ((CombinedState*)0x801ED500)->vlcInputBuf[0] = (u8*)0x8015E000;
-        ((CombinedState*)0x801ED500)->vlcInputBuf[1] = (u8*)0x8016F000;
+        MOVIE_STATE->vlcInputBuf[0] = (u8*)0x8015E000;
+        MOVIE_STATE->vlcInputBuf[1] = (u8*)0x8016F000;
         videoTableBasePtr = &(*videoTableBaseRef);
         vlcTablePtr2 = vlcTablePtr;
-        ((CombinedState*)0x801ED500)->vlcTable = vlcTablePtr2;
-        ((CombinedState*)0x801ED500)->mdecOutputBuf[0] = (u8*)(allocInfo->allocBase + p2);
-        ((CombinedState*)0x801ED500)->mdecOutputBuf[1] = (u8*)(allocInfo->allocBase + 0x12E00);
+        MOVIE_STATE->vlcTable = vlcTablePtr2;
+        MOVIE_STATE->mdecOutputBuf[0] = (u8*)(allocInfo->allocBase + p2);
+        MOVIE_STATE->mdecOutputBuf[1] = (u8*)(allocInfo->allocBase + 0x12E00);
 
-        if (((s16)((CombinedState*)0x801ED500)->rects[0].x) >= 0x300)
+        if (((s16)MOVIE_STATE->rects[0].x) >= 0x300)
         {
-            ((CombinedState*)0x801ED500)->rects[1].x = 0x200;
-            ((CombinedState*)0x801ED500)->rects[1].y = 0;
+            MOVIE_STATE->rects[1].x = 0x200;
+            MOVIE_STATE->rects[1].y = 0;
         }
         else
         {
-            ((CombinedState*)0x801ED500)->rects[1].x =
-                (u16)(((CombinedState*)0x801ED500)->rects[0].x + ((CombinedState*)0x801ED500)->rects[0].w);
-            ((CombinedState*)0x801ED500)->rects[1].y = ((CombinedState*)0x801ED500)->rects[0].y;
+            MOVIE_STATE->rects[1].x =
+                (u16)(MOVIE_STATE->rects[0].x + MOVIE_STATE->rects[0].w);
+            MOVIE_STATE->rects[1].y = MOVIE_STATE->rects[0].y;
         }
 
-        stateRef5 = (CombinedState*)0x801ED500;
+        stateRef5 = MOVIE_STATE;
         stateRef5->rects[1].w = stateRef5->rects[0].w;
         {
             stateRef5->rects[1].h = stateRef5->rects[0].h;
@@ -253,52 +253,52 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         }
         stateRef5->rects[2].w = 0x10;
         stateRef5->videoRingCapacity = 0x1E;
-        ((CombinedState*)0x801ED500)->audioRingCapacity = 0x10;
-        ((CombinedState*)0x801ED500)->chunkIdx = (s8)initBufferIdx;
-        ((CombinedState*)0x801ED500)->videoDataBase = (u8*)(((u32)(*videoTableBasePtr)) + 0x3C0);
-        ((CombinedState*)0x801ED500)->rects[2].y = p1;
+        MOVIE_STATE->audioRingCapacity = 0x10;
+        MOVIE_STATE->chunkIdx = (s8)initBufferIdx;
+        MOVIE_STATE->videoDataBase = (u8*)(((u32)(*videoTableBasePtr)) + 0x3C0);
+        MOVIE_STATE->rects[2].y = p1;
     }
 
-    ((CombinedState*)0x801ED500)->resourceIndex = resourceIndex;
-    ((CombinedState*)0x801ED500)->currentFrame = 0;
-    ((CombinedState*)0x801ED500)->totalFrames = totalFrames;
-    ((CombinedState*)0x801ED500)->inputBufIdx = 0;
-    ((CombinedState*)0x801ED500)->vlcRetryCount = 0;
-    ((CombinedState*)0x801ED500)->mdecRetryPending = 0;
-    ((CombinedState*)0x801ED500)->busy = 0;
-    ((CombinedState*)0x801ED500)->unk97 = 0;
-    ((CombinedState*)0x801ED500)->outBufIdx = 0;
-    ((CombinedState*)0x801ED500)->unk9A = 0;
-    ((CombinedState*)0x801ED500)->unk9B = 0;
-    ((CombinedState*)0x801ED500)->mdecBusy = 0;
-    ((CombinedState*)0x801ED500)->field9D = 0;
-    ((CombinedState*)0x801ED500)->endOfStream = 0;
-    ((CombinedState*)0x801ED500)->endState = 0;
-    ((CombinedState*)0x801ED500)->unk92 = 0;
+    MOVIE_STATE->resourceIndex = resourceIndex;
+    MOVIE_STATE->currentFrame = 0;
+    MOVIE_STATE->totalFrames = totalFrames;
+    MOVIE_STATE->inputBufIdx = 0;
+    MOVIE_STATE->vlcRetryCount = 0;
+    MOVIE_STATE->mdecRetryPending = 0;
+    MOVIE_STATE->busy = 0;
+    MOVIE_STATE->unk97 = 0;
+    MOVIE_STATE->outBufIdx = 0;
+    MOVIE_STATE->unk9A = 0;
+    MOVIE_STATE->unk9B = 0;
+    MOVIE_STATE->mdecBusy = 0;
+    MOVIE_STATE->field9D = 0;
+    MOVIE_STATE->endOfStream = 0;
+    MOVIE_STATE->endState = 0;
+    MOVIE_STATE->unk92 = 0;
 
-    ((CombinedState*)0x801ED500)->videoWriteIdx = 0;
-    ((CombinedState*)0x801ED500)->videoReadIdx = 0;
-    ((CombinedState*)0x801ED500)->videoRingSize = 0;
-    ((CombinedState*)0x801ED500)->audioWriteIdx = 0;
-    ((CombinedState*)0x801ED500)->audioReadIdx = 0;
-    ((CombinedState*)0x801ED500)->audioRingSize = 0;
-    ((CombinedState*)0x801ED500)->audioBufferedCount = 0;
-    ((CombinedState*)0x801ED500)->frameNumber = 0;
-    ((CombinedState*)0x801ED500)->continuationType = 0;
+    MOVIE_STATE->videoWriteIdx = 0;
+    MOVIE_STATE->videoReadIdx = 0;
+    MOVIE_STATE->videoRingSize = 0;
+    MOVIE_STATE->audioWriteIdx = 0;
+    MOVIE_STATE->audioReadIdx = 0;
+    MOVIE_STATE->audioRingSize = 0;
+    MOVIE_STATE->audioBufferedCount = 0;
+    MOVIE_STATE->frameNumber = 0;
+    MOVIE_STATE->continuationType = 0;
 
-    ((CombinedState*)0x801ED500)->sectorsRemaining = 0;
-    ((CombinedState*)0x801ED500)->lastVideoFrame = (u32)(-1);
-    ((CombinedState*)0x801ED500)->lastConsumedVideoFrame = (u32)(-1);
-    ((CombinedState*)0x801ED500)->lastAudioFrame = (u32)(-1);
-    ((CombinedState*)0x801ED500)->lastConsumedAudioFrame = (u32)(-1);
+    MOVIE_STATE->sectorsRemaining = 0;
+    MOVIE_STATE->lastVideoFrame = (u32)(-1);
+    MOVIE_STATE->lastConsumedVideoFrame = (u32)(-1);
+    MOVIE_STATE->lastAudioFrame = (u32)(-1);
+    MOVIE_STATE->lastConsumedAudioFrame = (u32)(-1);
 
-    ((CombinedState*)0x801ED500)->decDCToutCallback = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
-    ((CombinedState*)0x801ED500)->drawSyncCallback = DrawSyncCallback(&movie_draw_sync_callback);
+    MOVIE_STATE->decDCToutCallback = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
+    MOVIE_STATE->drawSyncCallback = DrawSyncCallback(&movie_draw_sync_callback);
 
-    if (((CombinedState*)0x801ED500)->interlaceMode != 0)
+    if (MOVIE_STATE->interlaceMode != 0)
     {
-        func_800232A8((u32)((CombinedState*)0x801ED500)->audioDataBase,
-                      (u32)(((CombinedState*)0x801ED500)->audioRingCapacity << 0xB));
+        func_800232A8((u32)MOVIE_STATE->audioDataBase,
+                      (u32)(MOVIE_STATE->audioRingCapacity << 0xB));
         func_80023030(0x7F);
     }
     else
@@ -308,7 +308,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     }
 
     cdrom_wait_queue_empty();
-    stateRef2 = (CombinedState*)0x801ED500;
+    stateRef2 = MOVIE_STATE;
     cdrom_queue_command(CdlReadS, (s16)resourceIndex, NULL, &movie_cd_sector_callback);
 
     if (g_gpuMode == 0)
@@ -316,7 +316,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         VSync(p2 = 0);
         SetDispMask(p2);
         ClearImage(&(stateRef3 = stateRef2)->rects[p2], 0, p2, 0);
-        ClearImage(&((CombinedState*)0x801ED500)->rects[1], p2, 0, p2);
+        ClearImage(&MOVIE_STATE->rects[1], p2, 0, p2);
         DecDCTvlcBuild((u_short*)stateRef2->vlcTable);
         DrawSync(0);
     }
@@ -328,13 +328,13 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
 void movie_update(void)
 {
     long audioCapacity;             /* (was pDispEnv) audioRingCapacity reload */
-    CombinedState* stateAlias;      /* (was new_var6) sequencing alias used after totalFrames check */
+    MovieState* stateAlias;      /* (was new_var6) sequencing alias used after totalFrames check */
     int field9DZeroFlag;            /* (was new_var) (field9D == 0) flag / sign-shift temp */
     void* hdr;
     void* sp14;
-    CombinedState* mdecAlias;       /* (was new_var2) sequencing alias used in MDEC retry block */
+    MovieState* mdecAlias;       /* (was new_var2) sequencing alias used in MDEC retry block */
     s32 tmp = 0;                    /* (was audioFadeVol) reused: vlc-complete flag, then audioBufferedCount compare */
-    CombinedState* combined = (CombinedState*)0x801ED500;
+    MovieState* combined = MOVIE_STATE;
     int wordCount;                  /* (was new_var3) DCT word count temp / zero literal */
     volatile int audioFrameNum;     /* (was new_var4) frame number from latest audio entry */
     if (g_mdecRetryPending != 0)
@@ -343,13 +343,13 @@ void movie_update(void)
         if ((mdecAlias->mdecBusy == 0) && (combined->field9D == 0))
         {
             combined->mdecBusy = 1;
-            DecDCTin((u_long*)((CombinedState*)combined)->vlcInputBuf[combined->inputBufIdx],
+            DecDCTin((u_long*)((MovieState*)combined)->vlcInputBuf[combined->inputBufIdx],
                      (combined->gpuMode & 0xFFFFu) == 0);
             {
                 s32 temp =
-                    ((s16)((CombinedState*)combined)->rects[2].w) * ((s16)((CombinedState*)combined)->rects[2].h);
+                    ((s16)((MovieState*)combined)->rects[2].w) * ((s16)((MovieState*)combined)->rects[2].h);
                 wordCount = temp + (((unsigned)temp) >> 31);
-                DecDCTout((u_long*)(((CombinedState*)combined)->mdecOutputBuf[combined->outBufIdx]), wordCount >> 1);
+                DecDCTout((u_long*)(((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]), wordCount >> 1);
             }
             combined->mdecRetryPending = 0;
         }
@@ -358,50 +358,50 @@ void movie_update(void)
     {
         ;
         {
-            u8 v0 = ((CombinedState*)0x801ED500)->vlcRetryCount;
+            u8 v0 = MOVIE_STATE->vlcRetryCount;
             if (v0 != 0)
             {
                 v0--;
-                ((CombinedState*)0x801ED500)->vlcRetryCount = v0;
+                MOVIE_STATE->vlcRetryCount = v0;
                 if ((v0 & 0xFF) == 0)
                 {
                     DecDCTvlcSize2(0);
                 }
-                if (DecDCTvlc2(0, 0, (DECDCTTAB*)((CombinedState*)0x801ED500)->vlcTable) == 0)
+                if (DecDCTvlc2(0, 0, (DECDCTTAB*)MOVIE_STATE->vlcTable) == 0)
                 {
                     tmp = 1;
-                    ((CombinedState*)0x801ED500)->vlcRetryCount = 0;
+                    MOVIE_STATE->vlcRetryCount = 0;
                 }
             }
             else if (movie_get_next_video_entry(&hdr, &sp14) != 0)
             {
-                ((CombinedState*)0x801ED500)->currentFrame = ((u32*)sp14)[2];
-                stateAlias = (CombinedState*)0x801ED500;
-                if ((((u32*)sp14)[2] >= ((CombinedState*)0x801ED500)->totalFrames) && (stateAlias->endState == 0))
+                MOVIE_STATE->currentFrame = ((u32*)sp14)[2];
+                stateAlias = MOVIE_STATE;
+                if ((((u32*)sp14)[2] >= MOVIE_STATE->totalFrames) && (stateAlias->endState == 0))
                 {
-                    ((CombinedState*)0x801ED500)->endState = 1;
+                    MOVIE_STATE->endState = 1;
                 }
                 {
                     int one;
-                    ((CombinedState*)0x801ED500)->inputBufIdx = 1 - ((CombinedState*)0x801ED500)->inputBufIdx;
+                    MOVIE_STATE->inputBufIdx = 1 - MOVIE_STATE->inputBufIdx;
                 }
-                if (((CombinedState*)0x801ED500)->gpuMode == 0)
+                if (MOVIE_STATE->gpuMode == 0)
                 {
                     DecDCTvlcSize2(0x1000);
-                    ((CombinedState*)0x801ED500)->vlcRetryCount = 3;
+                    MOVIE_STATE->vlcRetryCount = 3;
                 }
                 else
                 {
                     DecDCTvlcSize2(0x16AA);
-                    ((CombinedState*)0x801ED500)->vlcRetryCount = 1;
+                    MOVIE_STATE->vlcRetryCount = 1;
                 }
                 if (DecDCTvlc2(
                         (u_long*)hdr,
-                        (u_long*)((CombinedState*)0x801ED500)->vlcInputBuf[((CombinedState*)0x801ED500)->inputBufIdx],
-                        (DECDCTTAB*)((CombinedState*)0x801ED500)->vlcTable) == 0)
+                        (u_long*)MOVIE_STATE->vlcInputBuf[MOVIE_STATE->inputBufIdx],
+                        (DECDCTTAB*)MOVIE_STATE->vlcTable) == 0)
                 {
                     tmp = 1;
-                    ((CombinedState*)0x801ED500)->vlcRetryCount = 0;
+                    MOVIE_STATE->vlcRetryCount = 0;
                 }
             }
             else
@@ -409,9 +409,9 @@ void movie_update(void)
                 if (((!sp14) && (!sp14)) && (!sp14))
                 {
                 }
-                if ((((CombinedState*)0x801ED500)->endOfStream != 0) && (((CombinedState*)0x801ED500)->mdecBusy == 0))
+                if ((MOVIE_STATE->endOfStream != 0) && (MOVIE_STATE->mdecBusy == 0))
                 {
-                    ((CombinedState*)0x801ED500)->endState = 2;
+                    MOVIE_STATE->endState = 2;
                 }
             }
         }
@@ -420,16 +420,16 @@ void movie_update(void)
     if (tmp != wordCount)
     {
         movie_advance_video_read();
-        combined = (CombinedState*)0x801ED500;
+        combined = MOVIE_STATE;
         if ((combined->mdecBusy == wordCount) && (field9DZeroFlag = combined->field9D == wordCount))
         {
             combined->mdecBusy = 1;
-            DecDCTin((u_long*)((CombinedState*)combined)->vlcInputBuf[combined->inputBufIdx], combined->gpuMode == 0);
+            DecDCTin((u_long*)((MovieState*)combined)->vlcInputBuf[combined->inputBufIdx], combined->gpuMode == 0);
             {
                 s32 temp =
-                    ((s16)((CombinedState*)combined)->rects[2].w) * ((s16)((CombinedState*)combined)->rects[2].h);
+                    ((s16)((MovieState*)combined)->rects[2].w) * ((s16)((MovieState*)combined)->rects[2].h);
                 field9DZeroFlag = ((unsigned)temp) >> 31;
-                DecDCTout((u_long*)(((CombinedState*)combined)->mdecOutputBuf[combined->outBufIdx]),
+                DecDCTout((u_long*)(((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]),
                           (temp + field9DZeroFlag) >> 1);
             }
         }
@@ -438,7 +438,7 @@ void movie_update(void)
             g_mdecRetryPending = 1;
         }
     }
-    combined = (CombinedState*)0x801ED500;
+    combined = MOVIE_STATE;
     if (g_cdAudioReady != 0)
     {
         if (movie_get_next_audio_entry(&hdr) != 0)
@@ -450,10 +450,10 @@ void movie_update(void)
             }
             func_80023334(audioFrameNum);
         }
-        combined = (CombinedState*)0x801ED500;
+        combined = MOVIE_STATE;
         if (g_audioStreamState == 2)
         {
-            combined = (CombinedState*)0x801ED500;
+            combined = MOVIE_STATE;
             audioCapacity = combined->audioRingCapacity;
             tmp = combined->audioBufferedCount;
             if (tmp >= ((s32)(audioCapacity >> 1)))
@@ -462,13 +462,13 @@ void movie_update(void)
                 combined->unk92 = 0;
             }
         }
-        combined = (CombinedState*)0x801ED500;
-        if ((combined->audioWriteIdx != ((CombinedState*)0x801ED500)->audioReadIdx) ||
-            (((CombinedState*)0x801ED500)->lastAudioFrame != ((CombinedState*)0x801ED500)->lastConsumedAudioFrame))
+        combined = MOVIE_STATE;
+        if ((combined->audioWriteIdx != MOVIE_STATE->audioReadIdx) ||
+            (MOVIE_STATE->lastAudioFrame != MOVIE_STATE->lastConsumedAudioFrame))
         {
             s32 tmp = func_800233B8();
-            if (((tmp != (-1)) && (((CombinedState*)0x801ED500)->audioBufferedCount != 0)) &&
-                (((CombinedState*)0x801ED500)->audioReadIdx != ((u32)(tmp * 2))))
+            if (((tmp != (-1)) && (MOVIE_STATE->audioBufferedCount != 0)) &&
+                (MOVIE_STATE->audioReadIdx != ((u32)(tmp * 2))))
             {
                 movie_advance_audio_read(tmp);
             }
@@ -485,18 +485,18 @@ void movie_update(void)
 void movie_mdec_out_callback(void)
 {
     /*
-     * Field map (BaseObj → CombinedState, same offsets):
+     * Field map (BaseObj → MovieState, same offsets):
      *   unk97 → unk97   (0x97, store-only here)
      *   unk99 → outBufIdx (0x99)
-     *   unk9A → unk9A   (0x9A; flipped to u8 in CombinedState to keep lbu)
+     *   unk9A → unk9A   (0x9A; flipped to u8 in MovieState to keep lbu)
      *   unk9C → mdecBusy (0x9C, store-only here)
      * SubObj wrapper kept verbatim — it's the load-bearing idiom for the 100% match
      * (compiles to the same lbu/sll/addu/lw sequence as `mdecOutputBuf[outBufIdx]`).
      */
-    volatile CombinedState* base = (volatile CombinedState*)0x801ED500;
+    volatile MovieState* base = (volatile MovieState*)0x801ED500;
     s32 temp;
-    CombinedState* bp_high;
-    CombinedState* bp;
+    MovieState* bp_high;
+    MovieState* bp;
     int new_var;
     if (g_gpuMode == 0)
     {
@@ -514,7 +514,7 @@ void movie_mdec_out_callback(void)
         {
             base->unk9A = 1U;
         }
-        bp_high = (CombinedState*)0x801e0000;
+        bp_high = (MovieState*)0x801e0000;
     }
     else
     {
@@ -527,7 +527,7 @@ void movie_mdec_out_callback(void)
             {
                 DrawOTag((u_long*)temp);
             }
-            bp_high = (CombinedState*)0x801e0000;
+            bp_high = (MovieState*)0x801e0000;
         }
         else
         {
@@ -535,7 +535,7 @@ void movie_mdec_out_callback(void)
         }
     }
 
-    bp = (CombinedState*)(((u_int)((CombinedState*)0x801e0000)) | 0xd500);
+    bp = (MovieState*)(((u_int)((MovieState*)0x801e0000)) | 0xd500);
     if (bp->unk9A == new_var)
     {
         movie_schedule_next_decode();
@@ -550,7 +550,7 @@ void movie_mdec_out_callback(void)
 void movie_schedule_next_decode(void)
 {
     /*
-     * Field map (Struct_801ED500 → CombinedState, same offsets):
+     * Field map (Struct_801ED500 → MovieState, same offsets):
      *   unk18[i]          → mdecOutputBuf[i]              (0x18)
      *   ch[i].start       → rects[i].x                    (0x20+i*8)
      *   ch[i].b           → rects[i].y                    (0x22+i*8)
@@ -563,7 +563,7 @@ void movie_schedule_next_decode(void)
      * The volatile u8/u16 casts on every access force the load instruction
      * (lbu/lhu) so the underlying field signedness is irrelevant.
      */
-    CombinedState* ptr = (CombinedState*)0x801ED500;
+    MovieState* ptr = MOVIE_STATE;
     unsigned short nextOutBufIdx;
     u16 curFramePos;
     u16 frameStep;
@@ -633,7 +633,7 @@ void movie_schedule_next_decode(void)
 void movie_service_video_ops(void)
 {
     /*
-     * Field map (GlobalStruct → CombinedState, same offsets):
+     * Field map (GlobalStruct → MovieState, same offsets):
      *   ptrArray[i]       → mdecOutputBuf[i]   (0x18; only i=0,1 used in practice)
      *   unk34/unk36       → rects[2].w/.h      (0x34/0x36, both s16)
      *   gpuMode           → gpuMode            (0x90)
@@ -645,9 +645,9 @@ void movie_service_video_ops(void)
      *
      * The s8 fields will produce `lb` where this function used to emit `lbu`.
      * Function is currently 93.87% non-matching anyway; revisit field types
-     * (flip s8 → u8 in CombinedState) if the % regresses.
+     * (flip s8 → u8 in MovieState) if the % regresses.
      */
-    volatile CombinedState* G = (volatile CombinedState*)0x801ED500;
+    volatile MovieState* G = (volatile MovieState*)0x801ED500;
     int wordCount;
     u_long* breakDrawResult;
     if (!G->unk9A)
@@ -678,7 +678,7 @@ void movie_service_video_ops(void)
             }
             G->busy = 0;
         }
-        G = (volatile CombinedState*)0x801ED500;
+        G = (volatile MovieState*)0x801ED500;
         if (G->unk9B)
         {
             u8 t = G->unk9B;
@@ -729,7 +729,7 @@ void movie_service_video_ops(void)
  *
  * NOTE: previously contained references to bogus field names `audioDataBase4`
  * and `audioDataBaseC`; both fixed to `lastConsumedVideoFrame` /
- * `lastConsumedAudioFrame` (offsets 0x84 / 0x8C) as part of the CombinedState
+ * `lastConsumedAudioFrame` (offsets 0x84 / 0x8C) as part of the MovieState
  * merge — the surrounding ring-empty logic is "writeIdx == readIdx AND last
  * produced == last consumed".
  *
@@ -748,7 +748,7 @@ s32 movie_cd_sector_callback(void)
 {
     SectorBuffer hdr; /* 32-byte sector header (8 u32 words) read from CD */
     s32 do_load;      /* s0 in assembly */
-    volatile CombinedState* const gp = (CombinedState*)0x801ED500;
+    volatile MovieState* const gp = MOVIE_STATE;
     u16* hdr16; /* u16 view of hdr for field access by word index */
     u32 count;
     u16 rem;
@@ -1045,44 +1045,44 @@ s32 movie_get_next_audio_entry(void** outEntry)
     u16 temp;
 
     /* Return immediately if nothing is available: ring empty and no secondary data pending */
-    if ((((CombinedState*)0x801ED500)->audioWriteIdx == ((CombinedState*)0x801ED500)->audioReadIdx) &&
-        (((CombinedState*)0x801ED500)->lastAudioFrame == ((CombinedState*)0x801ED500)->lastConsumedAudioFrame))
+    if ((MOVIE_STATE->audioWriteIdx == MOVIE_STATE->audioReadIdx) &&
+        (MOVIE_STATE->lastAudioFrame == MOVIE_STATE->lastConsumedAudioFrame))
     {
         return 0;
     }
 
     /* Wrap readIdx back to 0 when it reaches the end of the ring */
-    if ((((volatile CombinedState*)0x801ED500)->audioWriteIdx <= ((CombinedState*)0x801ED500)->audioReadIdx) &&
-        (((CombinedState*)0x801ED500)->audioReadIdx == ((CombinedState*)0x801ED500)->audioRingSize))
+    if ((((volatile MovieState*)0x801ED500)->audioWriteIdx <= MOVIE_STATE->audioReadIdx) &&
+        (MOVIE_STATE->audioReadIdx == MOVIE_STATE->audioRingSize))
     {
-        temp = ((CombinedState*)0x801ED500)->audioWriteIdx != 0;
-        ((CombinedState*)0x801ED500)->audioReadIdx = 0;
-        if (!temp && (((CombinedState*)0x801ED500)->lastAudioFrame == ((CombinedState*)0x801ED500)->lastConsumedAudioFrame))
+        temp = MOVIE_STATE->audioWriteIdx != 0;
+        MOVIE_STATE->audioReadIdx = 0;
+        if (!temp && (MOVIE_STATE->lastAudioFrame == MOVIE_STATE->lastConsumedAudioFrame))
         {
             return 0;
         }
     }
 
     /* Look past already-buffered entries to find the next one to queue */
-    nextIdx = ((CombinedState*)0x801ED500)->audioReadIdx + ((CombinedState*)0x801ED500)->audioBufferedCount;
+    nextIdx = MOVIE_STATE->audioReadIdx + MOVIE_STATE->audioBufferedCount;
 
     /* Wrap nextIdx if it overflows the ring */
-    if ((((CombinedState*)0x801ED500)->audioReadIdx >= ((CombinedState*)0x801ED500)->audioWriteIdx) &&
-        (nextIdx >= ((volatile CombinedState*)0x801ED500)->audioRingSize))
+    if ((MOVIE_STATE->audioReadIdx >= MOVIE_STATE->audioWriteIdx) &&
+        (nextIdx >= ((volatile MovieState*)0x801ED500)->audioRingSize))
     {
-        nextIdx -= ((CombinedState*)0x801ED500)->audioRingSize;
+        nextIdx -= MOVIE_STATE->audioRingSize;
     }
 
     /* All loaded entries are already queued; nothing new to dispatch */
-    if ((nextIdx == ((CombinedState*)0x801ED500)->audioWriteIdx) && (((CombinedState*)0x801ED500)->audioBufferedCount != 0))
+    if ((nextIdx == MOVIE_STATE->audioWriteIdx) && (MOVIE_STATE->audioBufferedCount != 0))
     {
         return 0;
     }
 
     /* Resolve entry: each entry occupies one 2048-byte CD sector in the audio data buffer */
-    entry = ((CombinedState*)0x801ED500)->audioDataBase + (nextIdx << 11);
+    entry = MOVIE_STATE->audioDataBase + (nextIdx << 11);
     temp = ((Entry*)entry)->sectorCount;
-    ((CombinedState*)0x801ED500)->audioBufferedCount += temp;
+    MOVIE_STATE->audioBufferedCount += temp;
     *outEntry = entry;
     return 1;
 }
@@ -1134,8 +1134,8 @@ void movie_draw_sync_callback(void)
  */
 s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
 {
-    volatile CombinedState* base = (volatile CombinedState*)0x801ED500;
-    CombinedState* base2;
+    volatile MovieState* base = (volatile MovieState*)0x801ED500;
+    MovieState* base2;
     s32 writeIdx;
     s32 readIdx;
     s32* out0 = outVlcData;
@@ -1145,7 +1145,7 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
     {
         if (base->lastVideoFrame != base->lastConsumedVideoFrame)
         {
-            base = (CombinedState*)0x801ED500;
+            base = MOVIE_STATE;
         }
         else
         {
@@ -1153,21 +1153,21 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
         }
     }
 
-    base = (CombinedState*)0x801ED500;
+    base = MOVIE_STATE;
 
     writeIdx = base->videoWriteIdx;
     readIdx = base->videoReadIdx;
 
     if ((readIdx >= writeIdx) && (readIdx == base->videoRingSize))
     {
-        ((CombinedState*)0x801ED500)->videoReadIdx = 0;
+        MOVIE_STATE->videoReadIdx = 0;
         if ((base->videoWriteIdx == 0) && (base->lastVideoFrame == base->lastConsumedVideoFrame))
         {
             return 0;
         }
     }
 
-    base2 = (CombinedState*)0x801ED500;
+    base2 = MOVIE_STATE;
     *out1 = base2->videoTableBase + (base2->videoReadIdx << 5);
     *outVlcData = base2->videoDataBase + (base2->videoReadIdx * 2016);
     return 1;
@@ -1180,7 +1180,7 @@ void movie_advance_video_read(void)
 {
     s32 nextIndex;
     InnerStruct* inner;
-    CombinedState* base = (CombinedState*)0x801ED500;
+    MovieState* base = MOVIE_STATE;
 
     inner = (InnerStruct*)(base->videoTableBase + (base->videoReadIdx << 5));
     nextIndex = base->videoReadIdx + inner->sectorCount;
@@ -1190,8 +1190,8 @@ void movie_advance_video_read(void)
         nextIndex = 0;
     }
 
-    ((CombinedState*)0x801ED500)->lastConsumedVideoFrame = inner->frameNumber;
-    ((CombinedState*)0x801ED500)->videoReadIdx = nextIndex;
+    MOVIE_STATE->lastConsumedVideoFrame = inner->frameNumber;
+    MOVIE_STATE->videoReadIdx = nextIndex;
 }
 
 /**
@@ -1200,18 +1200,18 @@ void movie_advance_video_read(void)
 void movie_advance_audio_read(void)
 {
     /*
-     * Field map (BaseStruct_801418B0 → CombinedState, same offsets):
+     * Field map (BaseStruct_801418B0 → MovieState, same offsets):
      *   audioDataBase / audioReadIdx / audioWriteIdx / audioBufferedCount /
      *   videoRingSize / lastConsumedAudioFrame — all match by name.
      * Note: comparing audio nextIndex against videoRingSize (not audioRingSize)
      * looks like an original-game bug; preserved for matching.
      */
-    CombinedState* base;
+    MovieState* base;
     InnerStruct_801418B0* inner;
     s32 nextIndex;
 
     /* Base movie playback control block located at fixed RAM address (0x801ED500). */
-    base = (CombinedState*)0x801ED500;
+    base = MOVIE_STATE;
 
     /* Resolve pointer to current audio sector header using read index (2048 bytes per sector). */
     inner = (InnerStruct_801418B0*)(base->audioDataBase + (base->audioReadIdx << 11));
@@ -1229,6 +1229,6 @@ void movie_advance_audio_read(void)
     }
 
     /* Update playback state: sync frame number and commit new read index. */
-    ((CombinedState*)0x801ED500)->lastConsumedAudioFrame = inner->frameNumber;
-    ((CombinedState*)0x801ED500)->audioReadIdx = nextIndex;
+    MOVIE_STATE->lastConsumedAudioFrame = inner->frameNumber;
+    MOVIE_STATE->audioReadIdx = nextIndex;
 }

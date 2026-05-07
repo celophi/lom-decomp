@@ -83,7 +83,15 @@ typedef struct
     s8 field9D;          // second struct: field9D ; first struct: unk9D
     u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
     u8 endState;         // 1 = near end, 2 = stream fully ended
-} CombinedState;
+} MovieState;
+
+/* Movie playback control block lives at a fixed RAM address.
+ * Macro is token-equivalent to the cast so codegen is unchanged.
+ * Use the (volatile MovieState*) cast directly when a one-shot volatile
+ * access is required — wrapping that in this macro would silently drop the
+ * volatile qualifier. */
+#define MOVIE_STATE ((MovieState*)0x801ED500)
+
 
 typedef struct
 {
