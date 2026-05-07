@@ -196,17 +196,17 @@ void movie_play(s32 movieIndex)
 void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx)
 {
     u32 p1;
-    u8* vlcTablePtr;        /* base of VLC code table */
-    MovieState* stateRef2;  /* used after VSync; alias of 0x801ED500 */
-    MovieState* stateRef3;  /* used as ClearImage arg base */
+    u8* vlcTablePtr;                      /* base of VLC code table */
+    MovieState* stateRef2;                /* used after VSync; alias of 0x801ED500 */
+    MovieState* stateRef3;                /* used as ClearImage arg base */
     u32 p2;
-    MovieState* stateRef4;  /* sequencing alias from rect setup */
+    MovieState* stateRef4;                /* sequencing alias from rect setup */
     u32 p3;
-    MovieState* stateRef5;  /* sequencing alias from rect copies */
-    u8* vlcTablePtr2;       /* duplicate of vlcTablePtr (forces an extra move) */
-    u8** videoTableBasePtr; /* &state->videoTableBase reload */
-    int stateAddrInt;       /* literal 0x801ED500 used for vlcTable store */
-    u8** videoTableBaseRef; /* &state->videoTableBase (NOT a DISPENV) */
+    MovieState* stateRef5;                /* sequencing alias from rect copies */
+    u8* vlcTablePtr2;                     /* duplicate of vlcTablePtr (forces an extra move) */
+    VideoSectorEntry** videoTableBasePtr; /* &state->videoTableBase reload */
+    int stateAddrInt;                     /* literal 0x801ED500 used for vlcTable store */
+    VideoSectorEntry** videoTableBaseRef; /* &state->videoTableBase (NOT a DISPENV) */
     AllocInfo* allocInfo = g_allocInfo;
 
     MOVIE_STATE->gpuMode = (s8)(flags & 0x7F);
@@ -228,7 +228,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         vlcTablePtr = (u8*)0x80147000;
         p1 = 0x8018D000;
 
-        MOVIE_STATE->videoTableBase = vlcTablePtr;
+        MOVIE_STATE->videoTableBase = (VideoSectorEntry*)vlcTablePtr;
         p2++;
         p2--;
         MOVIE_STATE->mdecOutputBuf[1] = (u8*)0x801A3D00;
@@ -260,7 +260,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     {
         p2 = 0x11000;
         p3 = initBufferIdx;
-        MOVIE_STATE->videoTableBase = (u8*)0x80147000;
+        MOVIE_STATE->videoTableBase = (VideoSectorEntry*)0x80147000;
         MOVIE_STATE->audioDataBase = (AudioSector*)0x80156000;
         vlcTablePtr = (u8*)allocInfo->allocBase;
         MOVIE_STATE->vlcInputBuf[0] = (u8*)0x8015E000;
@@ -850,7 +850,7 @@ s32 movie_cd_sector_callback(void)
                 {
                 }
 
-                entry = (void*)(gp->videoTableBase + (gp->videoWriteIdx << 5));
+                entry = (void*)((u8*)gp->videoTableBase + (gp->videoWriteIdx << 5));
                 ((u32*)entry)[0] = hdr[0];
                 ((u32*)entry)[1] = hdr[1];
                 ((u32*)entry)[2] = hdr[2];
@@ -976,7 +976,7 @@ s32 movie_cd_sector_callback(void)
         {
             for (;;)
             {
-                entry = (void*)(gp->videoTableBase + ((gp->videoWriteIdx + gp->chunkSectorIdx) << 5));
+                entry = (void*)((u8*)gp->videoTableBase + ((gp->videoWriteIdx + gp->chunkSectorIdx) << 5));
                 while (CdGetSector(entry, 8) == 0)
                 {
                 }
@@ -1213,7 +1213,7 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
     }
 
     base2 = MOVIE_STATE;
-    *out1 = base2->videoTableBase + (base2->videoReadIdx << 5);
+    *out1 = (u8*)base2->videoTableBase + (base2->videoReadIdx << 5);
     *outVlcData = base2->videoDataBase + (base2->videoReadIdx * 2016);
     return 1;
 }
@@ -1229,20 +1229,19 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
  */
 void movie_advance_video_read(void)
 {
-    s32 nextIndex;
-    SectorEntry* inner;
-    MovieState* base = MOVIE_STATE;
+    SectorEntry* entry;
+    s32 next_index;
 
-    inner = (SectorEntry*)(base->videoTableBase + (base->videoReadIdx << 5));
-    nextIndex = base->videoReadIdx + inner->sectorCount;
+    entry = &MOVIE_STATE->videoTableBase[MOVIE_STATE->videoReadIdx].header;
+    next_index = MOVIE_STATE->videoReadIdx + entry->sectorCount;
 
-    if ((base->videoReadIdx >= base->videoWriteIdx) && (nextIndex == base->videoRingSize))
+    if ((MOVIE_STATE->videoReadIdx >= MOVIE_STATE->videoWriteIdx) && (next_index == MOVIE_STATE->videoRingSize))
     {
-        nextIndex = 0;
+        next_index = 0;
     }
 
-    MOVIE_STATE->lastConsumedVideoFrame = inner->frameNumber;
-    MOVIE_STATE->videoReadIdx = nextIndex;
+    MOVIE_STATE->lastConsumedVideoFrame = entry->frameNumber;
+    MOVIE_STATE->videoReadIdx = next_index;
 }
 
 /**
