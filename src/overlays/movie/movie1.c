@@ -252,7 +252,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         MOVIE_STATE->rects[2].x = 0;
         MOVIE_STATE->rects[2].y = 0;
         MOVIE_STATE->audioRingCapacity = 0x10;
-        MOVIE_STATE->videoDataBase = (u8*)0x80147640;
+        MOVIE_STATE->videoDataBase = (VideoVlcPayload*)0x80147640;
         MOVIE_STATE->chunkIdx = 0;
         ((MovieState*)stateAddrInt)->vlcTable = p3;
     }
@@ -295,7 +295,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         stateRef5->videoRingCapacity = 0x1E;
         MOVIE_STATE->audioRingCapacity = 0x10;
         MOVIE_STATE->chunkIdx = (s8)initBufferIdx;
-        MOVIE_STATE->videoDataBase = (u8*)(((u32)(*videoTableBasePtr)) + 0x3C0);
+        MOVIE_STATE->videoDataBase = (VideoVlcPayload*)(((u32)(*videoTableBasePtr)) + 0x3C0);
         MOVIE_STATE->rects[2].y = p1;
     }
 
@@ -845,7 +845,7 @@ s32 movie_cd_sector_callback(void)
 
             if (do_load != 0)
             {
-                dest = (void*)(gp->videoDataBase + (gp->videoWriteIdx * 2016));
+                dest = (void*)((u8*)gp->videoDataBase + (gp->videoWriteIdx * 2016));
                 while (CdGetSector(dest, 0x1F8) == 0)
                 {
                 }
@@ -984,7 +984,7 @@ s32 movie_cd_sector_callback(void)
                 hdr16 = (u16*)entry;
                 if (hdr16[1] == 0x8001 && ((u32*)entry)[2] == gp->frameNumber && hdr16[2] == gp->chunkSectorIdx)
                 {
-                    dest = (void*)(gp->videoDataBase + ((gp->videoWriteIdx + gp->chunkSectorIdx) * 2016));
+                    dest = (void*)((u8*)gp->videoDataBase + ((gp->videoWriteIdx + gp->chunkSectorIdx) * 2016));
                     while (CdGetSector(dest, 0x1F8) == 0)
                     {
                     }
@@ -1204,7 +1204,7 @@ s32 movie_get_next_video_entry(void** out_vlc_data, void** out_entry_header)
     }
 
     *entry_header_alias = &MOVIE_STATE->videoTableBase[MOVIE_STATE->videoReadIdx];
-    *out_vlc_data = MOVIE_STATE->videoDataBase + (MOVIE_STATE->videoReadIdx * 2016);
+    *out_vlc_data = &MOVIE_STATE->videoDataBase[MOVIE_STATE->videoReadIdx];
     return 1;
 }
 

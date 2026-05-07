@@ -38,7 +38,7 @@ typedef struct
 {
     // ---- first 32 bytes: 8 pointers (from first struct) ----
     struct VideoSectorEntry* videoTableBase; // unk0 — array of 32-byte video sector headers
-    u8* videoDataBase;                       // unk4 — parallel 2016-byte VLC payload buffer
+    struct VideoVlcPayload* videoDataBase;   // unk4 — parallel array of 2016-byte VLC payloads
     struct AudioSector* audioDataBase;       // unk8 — array of 2048-byte CD sectors (header + payload)
     u32 vlcTable;       // unkC / table
     u32* vlcInputBuf[2];
@@ -150,6 +150,14 @@ typedef struct VideoSectorEntry
     SectorEntry header;
     u8 _rest[32 - 12];
 } VideoSectorEntry;
+
+/* One slot of the video VLC payload buffer: 2016 bytes of raw bitstream
+ * data. videoDataBase is a parallel array of these, indexed by the same
+ * read/write indices as videoTableBase. */
+typedef struct VideoVlcPayload
+{
+    u8 data[2016];
+} VideoVlcPayload;
 
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;
