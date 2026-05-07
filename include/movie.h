@@ -17,19 +17,6 @@ typedef struct
 
 typedef struct
 {
-    u_char _pad0[0x98];
-    u_char activeDisplayBuffer;
-    u_char _pad99;
-    u_char _pad9a;
-    u_char _pad9b;
-    u_char _pad9c;
-    u_char frameReady;
-    u_char _pad9e;
-    u_char unk9f;
-} SRC_801ED500;
-
-typedef struct
-{
     // ---- first 32 bytes: 8 pointers (from first struct) ----
     u8* videoTableBase; // unk0
     u8* videoDataBase;  // unk4
@@ -55,22 +42,25 @@ typedef struct
     u32 resourceIndex;     // CD resource index
     u32 currentFrame;      // current frame counter (starts at 0)
     u32 totalFrames;       // total frames in movie stream
-    u32 videoRingCapacity; // video ring buffer capacity (first struct only)
-    u32 audioRingCapacity; // audio ring buffer capacity
+    s32 videoRingCapacity; // 0x50 — video ring buffer capacity
+    s32 audioRingCapacity; // 0x54 — audio ring buffer capacity
 
-    // ---- ring buffer indices and audio state (from second struct, with extra fields from first) ----
-    u32 ringPadding0[3];    // formerly _pad58[12] (offsets 88..99)
-    u32 audioWriteIdx;      // offset 100
-    u32 audioReadIdx;       // offset 104
-    u32 ringPadding1;       // _pad6C[4] (offsets 108..111)
-    u32 audioBufferedCount; // offset 112
-    u32 ringPadding2[2];    // first 8 bytes of _pad74[20] (offsets 116..123)
+    // ---- ring buffer indices ----
+    s32 videoWriteIdx;      // 0x58 — next slot to write into video ring
+    s32 videoReadIdx;       // 0x5C — next slot to read from video ring
+    s32 videoRingSize;      // 0x60 — video ring wrap point (set to old writeIdx on ring wrap)
+    s32 audioWriteIdx;      // 0x64
+    s32 audioReadIdx;       // 0x68
+    s32 audioRingSize;      // 0x6C — audio ring wrap point
+    u32 audioBufferedCount; // 0x70 — cumulative sector count queued but not yet consumed
+    u32 frameNumber;        // 0x74 — frame number of sector currently being read
+    u32 continuationType;   // 0x78 — 0=video continuation, non-zero=audio continuation
 
-    // ---- fields only in first struct (offsets 124..135) ----
-    u8 pad_7C[2];               // offset 124..125
-    u16 unk7E;                  // offset 126..127
-    u32 unk80;                  // offset 128..131
-    u32 lastConsumedVideoFrame; // offset 132..135
+    // ---- chunk-sector tracking (offsets 0x7C..0x7F) ----
+    u16 chunkSectorIdx;         // 0x7C — sector index within current multi-sector frame
+    u16 sectorsRemaining;       // 0x7E — sectors left to read for the current frame chunk
+    u32 lastVideoFrame;         // 0x80 — frame number of last video sector written
+    u32 lastConsumedVideoFrame; // 0x84
 
     // ---- audio frame tracking (both structs) ----
     u32 lastAudioFrame;         // offset 136..139
@@ -79,7 +69,7 @@ typedef struct
     // ---- status bytes (offsets 144..159) ----
     u8 gpuMode;          // 0 = DrawSync/LoadImage, non‑zero = BreakDraw/LoadImage2 path
     s8 interlaceMode;    // 1 if interlaced mode (from first struct; second struct calls this _unk91)
-    s8 field92;          // second struct: field92 ; first struct: unk92
+    u8 unk92;            // 0x92 (was field92 — flipped s8→u8; only ever stored)
     u8 inputBufIdx;      // which vlcInputBuf[] holds current VLC-decoded input (toggled each frame)
     s8 vlcRetryCount;    // countdown: retry DecDCTvlc2 this many vsync ticks
     s8 mdecRetryPending; // MDEC decode ready but busy; retry on next tick
@@ -87,11 +77,11 @@ typedef struct
     s8 unk97;            // first struct: unk97 ; second struct: _unk97
     s8 chunkIdx;         // initial active chunk index (0 or 1) from first struct; second struct calls this _unk98
     u8 outBufIdx;        // which mdecOutputBuf[] receives the next DecDCTout output (0 or 1)
-    s8 unk9A;            // first struct: unk9A ; second struct: _unk9A
-    s8 unk9B;            // first struct: unk9B ; second struct: _unk9B
+    u8 unk9A;            // 0x9A — pendingVramUpload (read directly by mdec_out_callback / service_video_ops; needs lbu)
+    u8 unk9B;            // 0x9B — pendingMdecDecode (read directly by service_video_ops; needs lbu)
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
     s8 field9D;          // second struct: field9D ; first struct: unk9D
-    s8 endOfStream;      // set when currentFrame >= totalFrames
+    u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
     u8 endState;         // 1 = near end, 2 = stream fully ended
 } CombinedState;
 
@@ -103,95 +93,11 @@ typedef struct
 
 typedef struct
 {
-    u8 pad0[0x97];
-    u8 unk97;
-    u8 pad98[1];
-    u8 unk99;
-    u8 unk9A;
-    u8 pad9B[1];
-    u8 unk9C;
-} BaseObj;
-typedef struct
-{
     u8 pad[0x18];
     u_long* unk18;
 } SubObj;
 
-typedef struct
-{
-    u8 _pad0[0x18];
-    u32 unk18[2];
-    struct
-    {
-        s16 start; /* first frame position of this chunk */
-        u16 b;
-        s16 length; /* frame count of this chunk */
-        u16 _pad;
-    } ch[2];
-    u16 framePos; /* current frame position within the active chunk */
-    u16 unk32;
-    u16 unk34;
-    u16 unk36;
-    u8 _pad1[0x97 - 0x38];
-    u8 unk97;
-    u8 chunkIdx;  /* which ch[] entry is the active chunk (0 or 1) */
-    u8 outBufIdx; /* which unk18[] slot receives the next DecDCTout output (0 or 1) */
-    u8 _pad_9a;
-    u8 pendingMdecDecode; /* set when DrawSync is too busy to submit DecDCTout immediately */
-    u8 decodeState;       /* 0=idle, 1=queued/pending, 2=in-progress */
-    u8 frameReady;        /* set when advancing past the end of a chunk (new frame ready for display) */
-    u8 _pad_9e;
-    u8 endState; /* 1=near end of stream, 2=stream ended */
-} Struct_801ED500;
-
-typedef struct
-{
-    u8 _pad0[0x18];
-    u32* ptrArray[7]; /* frame buffer pointers, indexed by activeBufferIdx */
-    s16 unk34;        /* frame width  (used to compute DCT word count) */
-    s16 unk36;        /* frame height (used to compute DCT word count) */
-    u8 _pad1[0x90 - 0x38];
-    u8 gpuMode; /* 0 = DrawSync/LoadImage path; non-zero = BreakDraw/LoadImage2 path */
-    u8 _pad2[0x96 - 0x91];
-    u8 busy;           /* 1 while a GPU/MDEC operation is in flight */
-    u8 drawSyncTarget; /* DrawSync(1) count that must be reached before re-uploading */
-    u8 _pad3[0x99 - 0x98];
-    u8 activeBufferIdx;   /* which ptrArray slot holds the current decoded frame */
-    u8 pendingVramUpload; /* set when a decoded frame is ready to be DMAed into VRAM */
-    u8 pendingMdecDecode; /* set when new bitstream data is ready to feed to the MDEC */
-} GlobalStruct;
-
 typedef u32 SectorBuffer[8];
-
-typedef struct GlobalData
-{
-    u32 videoTableBase; /* 0x00 — base of 32-byte video sector-header table */
-    u32 videoDataBase;  /* 0x04 — base of video payload buffer (2016-byte stride) */
-    u32 audioDataBase;  /* 0x08 — base of audio payload buffer (2048-byte stride) */
-    u8 _pad0C[0x40];
-    u32 totalFrames;
-    s32 videoRingCapacity;      /* 0x50 — max slots in video ring buffer */
-    s32 audioRingCapacity;      /* 0x54 — max slots in audio ring buffer */
-    s32 videoWriteIdx;          /* 0x58 — next slot to write into video ring */
-    s32 videoReadIdx;           /* 0x5C — next slot to read from video ring */
-    s32 videoRingSize;          /* 0x60 — video ring wrap point (set to old writeIdx on ring wrap) */
-    s32 audioWriteIdx;          /* 0x64 — next slot to write into audio ring */
-    s32 audioReadIdx;           /* 0x68 — next slot to read from audio ring */
-    s32 audioRingSize;          /* 0x6C — audio ring wrap point (set to old writeIdx on ring wrap) */
-    u32 audioBufferedCount;     /* 0x70 — cumulative sector count queued but not yet consumed */
-    u32 frameNumber;            /* 0x74 — frame number of sector currently being read */
-    u32 continuationType;       /* 0x78 — 0=video continuation, non-zero=audio continuation */
-    u16 chunkSectorIdx;         /* 0x7C — sector index within current multi-sector frame */
-    u16 sectorsRemaining;       /* 0x7E — sectors left to read for the current frame chunk */
-    u32 lastVideoFrame;         /* 0x80 — frame number of last video sector written */
-    u32 lastConsumedVideoFrame; /* 0x84 — frame number of last video sector consumed by decoder */
-    u32 lastAudioFrame;         /* 0x88 — frame number of last audio sector written */
-    u32 lastConsumedAudioFrame; /* 0x8C — frame number of last audio sector consumed by SPU */
-    u8 _pad90[2];
-    u8 unk92;
-    u8 _pad93[11];
-    u8 endOfStream; /* 0x9E — set when frameNumber >= totalFrames */
-} GlobalData;
 
 typedef struct Entry
 {
@@ -207,25 +113,6 @@ typedef struct
     s32 frameNumber;
 } InnerStruct;
 
-typedef struct
-{
-    s32 unk0;
-    s32 unk4;
-    s32 audioDataBase; /* 0x08 */
-    u8 _pad0[0x58 - 0xC];
-    s32 unk58;
-    s32 unk5C;
-    s32 videoRingSize; /* 0x60 — ring wrap point (shared with video ring; wraps audio reader too) */
-    s32 audioWriteIdx; /* 0x64 */
-    s32 audioReadIdx;  /* 0x68 */
-    s32 unk6C;
-    s32 audioBufferedCount; /* 0x70 */
-    u8 _pad1[0x80 - 0x74];
-    s32 lastVideoFrame;         /* 0x80 */
-    s32 lastConsumedVideoFrame; /* 0x84 */
-    s32 lastAudioFrame;         /* 0x88 */
-    s32 lastConsumedAudioFrame; /* 0x8C — updated by movie_advance_audio_read */
-} BaseStruct_801418B0;
 typedef struct
 {
     u8 pad[6];
