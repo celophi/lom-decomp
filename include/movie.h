@@ -118,12 +118,6 @@ typedef struct
     u32 allocBase; /* base address for movie buffer allocations */
 } AllocInfo;
 
-typedef struct
-{
-    u8 pad[0x18];
-    u_long* unk18;
-} SubObj;
-
 typedef u32 SectorBuffer[8];
 
 typedef struct Entry
@@ -133,19 +127,15 @@ typedef struct Entry
     u8 _pad1[2048 - 8];
 } Entry;
 
+/* Header layout for a sector-table entry: 6 bytes preamble, then sector count
+ * and the source frame number. Used for both video (videoTableBase, 32-byte
+ * stride) and audio (audioDataBase, 2048-byte stride) ring entries. */
 typedef struct
 {
     u8 pad[6];
     u16 sectorCount;
     s32 frameNumber;
-} InnerStruct;
-
-typedef struct
-{
-    u8 pad[6];
-    u16 sectorCount;
-    s32 frameNumber;
-} InnerStruct_801418B0;
+} SectorEntry;
 
 extern u_char g_cdAudioReady;
 extern u8 g_cdStatusByte3;

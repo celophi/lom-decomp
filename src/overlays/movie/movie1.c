@@ -505,20 +505,11 @@ void movie_update(void)
  */
 void movie_mdec_out_callback(void)
 {
-    /*
-     * Field map (BaseObj → MovieState, same offsets):
-     *   unk97 → unk97   (0x97, store-only here)
-     *   unk99 → outBufIdx (0x99)
-     *   unk9A → unk9A   (0x9A; flipped to u8 in MovieState to keep lbu)
-     *   unk9C → mdecBusy (0x9C, store-only here)
-     * SubObj wrapper kept verbatim — it's the load-bearing idiom for the 100% match
-     * (compiles to the same lbu/sll/addu/lw sequence as `mdecOutputBuf[outBufIdx]`).
-     */
     volatile MovieState* base = (volatile MovieState*)0x801ED500;
     s32 temp;
     MovieState* bp_high;
-    MovieState* bp;
     int new_var;
+    
     if (g_gpuMode == 0)
     {
         if (((u8)g_cdStatusByte3) == 1)
@@ -528,7 +519,7 @@ void movie_mdec_out_callback(void)
         temp = DrawSync(1);
         if (temp < 2)
         {
-            LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->outBufIdx)) * 4)))->unk18);
+            LoadImage((RECT*)0x801ED530, (u_long*)base->mdecOutputBuf[base->outBufIdx]);
             base->unk97 = (s8)(temp + 1);
         }
         else
@@ -543,7 +534,7 @@ void movie_mdec_out_callback(void)
         new_var = 0;
         if (temp != (-1))
         {
-            LoadImage2((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->outBufIdx)) * 4)))->unk18);
+            LoadImage2((RECT*)0x801ED530, (u_long*)base->mdecOutputBuf[base->outBufIdx]);
             if (temp != new_var)
             {
                 DrawOTag((u_long*)temp);
@@ -552,17 +543,16 @@ void movie_mdec_out_callback(void)
         }
         else
         {
-            LoadImage((RECT*)0x801ED530, ((SubObj*)(((u_char*)base) + (((u_long)((u8)base->outBufIdx)) * 4)))->unk18);
+            LoadImage((RECT*)0x801ED530, (u_long*)base->mdecOutputBuf[base->outBufIdx]);
         }
     }
 
-    bp = (MovieState*)(((u_int)((MovieState*)0x801e0000)) | 0xd500);
-    if (bp->unk9A == new_var)
+    if (MOVIE_STATE->unk9A == new_var)
     {
         movie_schedule_next_decode();
         return;
     }
-    bp->mdecBusy = 1;
+    MOVIE_STATE->mdecBusy = 1;
 }
 
 /**
@@ -1200,10 +1190,10 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
 void movie_advance_video_read(void)
 {
     s32 nextIndex;
-    InnerStruct* inner;
+    SectorEntry* inner;
     MovieState* base = MOVIE_STATE;
 
-    inner = (InnerStruct*)(base->videoTableBase + (base->videoReadIdx << 5));
+    inner = (SectorEntry*)(base->videoTableBase + (base->videoReadIdx << 5));
     nextIndex = base->videoReadIdx + inner->sectorCount;
 
     if ((base->videoReadIdx >= base->videoWriteIdx) && (nextIndex == base->videoRingSize))
@@ -1220,22 +1210,18 @@ void movie_advance_video_read(void)
  */
 void movie_advance_audio_read(void)
 {
-    /*
-     * Field map (BaseStruct_801418B0 → MovieState, same offsets):
-     *   audioDataBase / audioReadIdx / audioWriteIdx / audioBufferedCount /
-     *   videoRingSize / lastConsumedAudioFrame — all match by name.
-     * Note: comparing audio nextIndex against videoRingSize (not audioRingSize)
-     * looks like an original-game bug; preserved for matching.
-     */
+    /* NOTE: comparing the audio nextIndex against videoRingSize (not
+     * audioRingSize) below looks like an original-game bug; preserved
+     * verbatim to keep the asm matching. */
     MovieState* base;
-    InnerStruct_801418B0* inner;
+    SectorEntry* inner;
     s32 nextIndex;
 
     /* Base movie playback control block located at fixed RAM address (0x801ED500). */
     base = MOVIE_STATE;
 
     /* Resolve pointer to current audio sector header using read index (2048 bytes per sector). */
-    inner = (InnerStruct_801418B0*)(base->audioDataBase + (base->audioReadIdx << 11));
+    inner = (SectorEntry*)(base->audioDataBase + (base->audioReadIdx << 11));
 
     /* Advance read index by number of sectors described in this header. */
     nextIndex = base->audioReadIdx + inner->sectorCount;
