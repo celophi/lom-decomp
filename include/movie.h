@@ -42,22 +42,25 @@ typedef struct
     u32 resourceIndex;     // CD resource index
     u32 currentFrame;      // current frame counter (starts at 0)
     u32 totalFrames;       // total frames in movie stream
-    u32 videoRingCapacity; // video ring buffer capacity (first struct only)
-    u32 audioRingCapacity; // audio ring buffer capacity
+    s32 videoRingCapacity; // 0x50 — video ring buffer capacity
+    s32 audioRingCapacity; // 0x54 — audio ring buffer capacity
 
-    // ---- ring buffer indices and audio state (from second struct, with extra fields from first) ----
-    u32 ringPadding0[3];    // formerly _pad58[12] (offsets 88..99)
-    u32 audioWriteIdx;      // offset 100
-    u32 audioReadIdx;       // offset 104
-    u32 ringPadding1;       // _pad6C[4] (offsets 108..111)
-    u32 audioBufferedCount; // offset 112
-    u32 ringPadding2[2];    // first 8 bytes of _pad74[20] (offsets 116..123)
+    // ---- ring buffer indices ----
+    s32 videoWriteIdx;      // 0x58 — next slot to write into video ring
+    s32 videoReadIdx;       // 0x5C — next slot to read from video ring
+    s32 videoRingSize;      // 0x60 — video ring wrap point (set to old writeIdx on ring wrap)
+    s32 audioWriteIdx;      // 0x64
+    s32 audioReadIdx;       // 0x68
+    s32 audioRingSize;      // 0x6C — audio ring wrap point
+    u32 audioBufferedCount; // 0x70 — cumulative sector count queued but not yet consumed
+    u32 frameNumber;        // 0x74 — frame number of sector currently being read
+    u32 continuationType;   // 0x78 — 0=video continuation, non-zero=audio continuation
 
-    // ---- fields only in first struct (offsets 124..135) ----
-    u8 pad_7C[2];               // offset 124..125
-    u16 unk7E;                  // offset 126..127
-    u32 unk80;                  // offset 128..131
-    u32 lastConsumedVideoFrame; // offset 132..135
+    // ---- chunk-sector tracking (offsets 0x7C..0x7F) ----
+    u16 chunkSectorIdx;         // 0x7C — sector index within current multi-sector frame
+    u16 sectorsRemaining;       // 0x7E — sectors left to read for the current frame chunk
+    u32 lastVideoFrame;         // 0x80 — frame number of last video sector written
+    u32 lastConsumedVideoFrame; // 0x84
 
     // ---- audio frame tracking (both structs) ----
     u32 lastAudioFrame;         // offset 136..139
@@ -66,7 +69,7 @@ typedef struct
     // ---- status bytes (offsets 144..159) ----
     u8 gpuMode;          // 0 = DrawSync/LoadImage, non‑zero = BreakDraw/LoadImage2 path
     s8 interlaceMode;    // 1 if interlaced mode (from first struct; second struct calls this _unk91)
-    s8 field92;          // second struct: field92 ; first struct: unk92
+    u8 unk92;            // 0x92 (was field92 — flipped s8→u8; only ever stored)
     u8 inputBufIdx;      // which vlcInputBuf[] holds current VLC-decoded input (toggled each frame)
     s8 vlcRetryCount;    // countdown: retry DecDCTvlc2 this many vsync ticks
     s8 mdecRetryPending; // MDEC decode ready but busy; retry on next tick
@@ -78,7 +81,7 @@ typedef struct
     s8 unk9B;            // first struct: unk9B ; second struct: _unk9B
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
     s8 field9D;          // second struct: field9D ; first struct: unk9D
-    s8 endOfStream;      // set when currentFrame >= totalFrames
+    u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
     u8 endState;         // 1 = near end, 2 = stream fully ended
 } CombinedState;
 
@@ -105,36 +108,6 @@ typedef struct
 } SubObj;
 
 typedef u32 SectorBuffer[8];
-
-typedef struct GlobalData
-{
-    u32 videoTableBase; /* 0x00 — base of 32-byte video sector-header table */
-    u32 videoDataBase;  /* 0x04 — base of video payload buffer (2016-byte stride) */
-    u32 audioDataBase;  /* 0x08 — base of audio payload buffer (2048-byte stride) */
-    u8 _pad0C[0x40];
-    u32 totalFrames;
-    s32 videoRingCapacity;      /* 0x50 — max slots in video ring buffer */
-    s32 audioRingCapacity;      /* 0x54 — max slots in audio ring buffer */
-    s32 videoWriteIdx;          /* 0x58 — next slot to write into video ring */
-    s32 videoReadIdx;           /* 0x5C — next slot to read from video ring */
-    s32 videoRingSize;          /* 0x60 — video ring wrap point (set to old writeIdx on ring wrap) */
-    s32 audioWriteIdx;          /* 0x64 — next slot to write into audio ring */
-    s32 audioReadIdx;           /* 0x68 — next slot to read from audio ring */
-    s32 audioRingSize;          /* 0x6C — audio ring wrap point (set to old writeIdx on ring wrap) */
-    u32 audioBufferedCount;     /* 0x70 — cumulative sector count queued but not yet consumed */
-    u32 frameNumber;            /* 0x74 — frame number of sector currently being read */
-    u32 continuationType;       /* 0x78 — 0=video continuation, non-zero=audio continuation */
-    u16 chunkSectorIdx;         /* 0x7C — sector index within current multi-sector frame */
-    u16 sectorsRemaining;       /* 0x7E — sectors left to read for the current frame chunk */
-    u32 lastVideoFrame;         /* 0x80 — frame number of last video sector written */
-    u32 lastConsumedVideoFrame; /* 0x84 — frame number of last video sector consumed by decoder */
-    u32 lastAudioFrame;         /* 0x88 — frame number of last audio sector written */
-    u32 lastConsumedAudioFrame; /* 0x8C — frame number of last audio sector consumed by SPU */
-    u8 _pad90[2];
-    u8 unk92;
-    u8 _pad93[11];
-    u8 endOfStream; /* 0x9E — set when frameNumber >= totalFrames */
-} GlobalData;
 
 typedef struct Entry
 {

@@ -347,20 +347,20 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     ((CombinedState*)0x801ED500)->field9D = 0;
     ((CombinedState*)0x801ED500)->endOfStream = 0;
     ((CombinedState*)0x801ED500)->endState = 0;
-    ((CombinedState*)0x801ED500)->field92 = 0;
+    ((CombinedState*)0x801ED500)->unk92 = 0;
 
-    ((CombinedState*)0x801ED500)->ringPadding0[0] = 0;
-    ((CombinedState*)0x801ED500)->ringPadding0[1] = 0;
-    ((CombinedState*)0x801ED500)->ringPadding0[2] = 0;
+    ((CombinedState*)0x801ED500)->videoWriteIdx = 0;
+    ((CombinedState*)0x801ED500)->videoReadIdx = 0;
+    ((CombinedState*)0x801ED500)->videoRingSize = 0;
     ((CombinedState*)0x801ED500)->audioWriteIdx = 0;
     ((CombinedState*)0x801ED500)->audioReadIdx = 0;
-    ((CombinedState*)0x801ED500)->ringPadding1 = 0;
+    ((CombinedState*)0x801ED500)->audioRingSize = 0;
     ((CombinedState*)0x801ED500)->audioBufferedCount = 0;
-    ((CombinedState*)0x801ED500)->ringPadding2[0] = 0;
-    ((CombinedState*)0x801ED500)->ringPadding2[1] = 0;
+    ((CombinedState*)0x801ED500)->frameNumber = 0;
+    ((CombinedState*)0x801ED500)->continuationType = 0;
 
-    ((CombinedState*)0x801ED500)->unk7E = 0;
-    ((CombinedState*)0x801ED500)->unk80 = (u32)(-1);
+    ((CombinedState*)0x801ED500)->sectorsRemaining = 0;
+    ((CombinedState*)0x801ED500)->lastVideoFrame = (u32)(-1);
     ((CombinedState*)0x801ED500)->lastConsumedVideoFrame = (u32)(-1);
     ((CombinedState*)0x801ED500)->lastAudioFrame = (u32)(-1);
     ((CombinedState*)0x801ED500)->lastConsumedAudioFrame = (u32)(-1);
@@ -532,7 +532,7 @@ void movie_update(void)
             if (tmp >= ((s32)(audioCapacity >> 1)))
             {
                 func_8002246C(3);
-                combined->field92 = 0;
+                combined->unk92 = 0;
             }
         }
         combined = (CombinedState*)0x801ED500;
@@ -791,12 +791,11 @@ void movie_service_video_ops(void)
 /**
  * decomp.me (76.45%) https://decomp.me/scratch/HptYe
  *
- * BUG NOTE: `gp->audioDataBase4` and `gp->audioDataBaseC` (below) are not
- * fields of GlobalData. From the surrounding ring-empty checks they are
- * almost certainly meant to be `lastConsumedVideoFrame` and
- * `lastConsumedAudioFrame` respectively. Fixing them changes the load
- * offset (0x0C vs 0x84/0x8C) which alters the asm, so leave as-is until
- * the canonical struct layout is confirmed.
+ * NOTE: previously contained references to bogus field names `audioDataBase4`
+ * and `audioDataBaseC`; both fixed to `lastConsumedVideoFrame` /
+ * `lastConsumedAudioFrame` (offsets 0x84 / 0x8C) as part of the CombinedState
+ * merge — the surrounding ring-empty logic is "writeIdx == readIdx AND last
+ * produced == last consumed".
  *
  * CD sector-arrival callback, called by the CD-ROM interrupt once per sector read.
  *
@@ -813,7 +812,7 @@ s32 movie_cd_sector_callback(void)
 {
     SectorBuffer hdr; /* 32-byte sector header (8 u32 words) read from CD */
     s32 do_load;      /* s0 in assembly */
-    volatile GlobalData* const gp = (GlobalData*)0x801ED500;
+    volatile CombinedState* const gp = (CombinedState*)0x801ED500;
     u16* hdr16; /* u16 view of hdr for field access by word index */
     u32 count;
     u16 rem;
@@ -847,7 +846,7 @@ s32 movie_cd_sector_callback(void)
             /* 0x8001 sector type */
             if (gp->videoWriteIdx == gp->videoReadIdx)
             {
-                if (gp->lastVideoFrame == gp->audioDataBase4)
+                if (gp->lastVideoFrame == gp->lastConsumedVideoFrame)
                 {
                     count = ((u16*)hdr)[3];
                     if (gp->videoRingCapacity < gp->videoWriteIdx + (s32)count)
@@ -933,7 +932,7 @@ s32 movie_cd_sector_callback(void)
             /* other sector type */
             if (gp->audioWriteIdx == gp->audioReadIdx)
             {
-                if (gp->lastAudioFrame == gp->audioDataBaseC)
+                if (gp->lastAudioFrame == gp->lastConsumedAudioFrame)
                 {
                     count = ((u16*)hdr)[3];
                     if (gp->audioRingCapacity < gp->audioWriteIdx + (s32)count)
@@ -1110,44 +1109,44 @@ s32 movie_get_next_audio_entry(void** outEntry)
     u16 temp;
 
     /* Return immediately if nothing is available: ring empty and no secondary data pending */
-    if ((((GlobalData*)0x801ED500)->audioWriteIdx == ((GlobalData*)0x801ED500)->audioReadIdx) &&
-        (((GlobalData*)0x801ED500)->lastAudioFrame == ((GlobalData*)0x801ED500)->lastConsumedAudioFrame))
+    if ((((CombinedState*)0x801ED500)->audioWriteIdx == ((CombinedState*)0x801ED500)->audioReadIdx) &&
+        (((CombinedState*)0x801ED500)->lastAudioFrame == ((CombinedState*)0x801ED500)->lastConsumedAudioFrame))
     {
         return 0;
     }
 
     /* Wrap readIdx back to 0 when it reaches the end of the ring */
-    if ((((volatile GlobalData*)0x801ED500)->audioWriteIdx <= ((GlobalData*)0x801ED500)->audioReadIdx) &&
-        (((GlobalData*)0x801ED500)->audioReadIdx == ((GlobalData*)0x801ED500)->audioRingSize))
+    if ((((volatile CombinedState*)0x801ED500)->audioWriteIdx <= ((CombinedState*)0x801ED500)->audioReadIdx) &&
+        (((CombinedState*)0x801ED500)->audioReadIdx == ((CombinedState*)0x801ED500)->audioRingSize))
     {
-        temp = ((GlobalData*)0x801ED500)->audioWriteIdx != 0;
-        ((GlobalData*)0x801ED500)->audioReadIdx = 0;
-        if (!temp && (((GlobalData*)0x801ED500)->lastAudioFrame == ((GlobalData*)0x801ED500)->lastConsumedAudioFrame))
+        temp = ((CombinedState*)0x801ED500)->audioWriteIdx != 0;
+        ((CombinedState*)0x801ED500)->audioReadIdx = 0;
+        if (!temp && (((CombinedState*)0x801ED500)->lastAudioFrame == ((CombinedState*)0x801ED500)->lastConsumedAudioFrame))
         {
             return 0;
         }
     }
 
     /* Look past already-buffered entries to find the next one to queue */
-    nextIdx = ((GlobalData*)0x801ED500)->audioReadIdx + ((GlobalData*)0x801ED500)->audioBufferedCount;
+    nextIdx = ((CombinedState*)0x801ED500)->audioReadIdx + ((CombinedState*)0x801ED500)->audioBufferedCount;
 
     /* Wrap nextIdx if it overflows the ring */
-    if ((((GlobalData*)0x801ED500)->audioReadIdx >= ((GlobalData*)0x801ED500)->audioWriteIdx) &&
-        (nextIdx >= ((volatile GlobalData*)0x801ED500)->audioRingSize))
+    if ((((CombinedState*)0x801ED500)->audioReadIdx >= ((CombinedState*)0x801ED500)->audioWriteIdx) &&
+        (nextIdx >= ((volatile CombinedState*)0x801ED500)->audioRingSize))
     {
-        nextIdx -= ((GlobalData*)0x801ED500)->audioRingSize;
+        nextIdx -= ((CombinedState*)0x801ED500)->audioRingSize;
     }
 
     /* All loaded entries are already queued; nothing new to dispatch */
-    if ((nextIdx == ((GlobalData*)0x801ED500)->audioWriteIdx) && (((GlobalData*)0x801ED500)->audioBufferedCount != 0))
+    if ((nextIdx == ((CombinedState*)0x801ED500)->audioWriteIdx) && (((CombinedState*)0x801ED500)->audioBufferedCount != 0))
     {
         return 0;
     }
 
     /* Resolve entry: each entry occupies one 2048-byte CD sector in the audio data buffer */
-    entry = ((GlobalData*)0x801ED500)->audioDataBase + (nextIdx << 11);
+    entry = ((CombinedState*)0x801ED500)->audioDataBase + (nextIdx << 11);
     temp = ((Entry*)entry)->sectorCount;
-    ((GlobalData*)0x801ED500)->audioBufferedCount += temp;
+    ((CombinedState*)0x801ED500)->audioBufferedCount += temp;
     *outEntry = entry;
     return 1;
 }
@@ -1199,8 +1198,8 @@ void movie_draw_sync_callback(void)
  */
 s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
 {
-    volatile GlobalData* base = (volatile GlobalData*)0x801ED500;
-    GlobalData* base2;
+    volatile CombinedState* base = (volatile CombinedState*)0x801ED500;
+    CombinedState* base2;
     s32 writeIdx;
     s32 readIdx;
     s32* out0 = outVlcData;
@@ -1210,7 +1209,7 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
     {
         if (base->lastVideoFrame != base->lastConsumedVideoFrame)
         {
-            base = (GlobalData*)0x801ED500;
+            base = (CombinedState*)0x801ED500;
         }
         else
         {
@@ -1218,21 +1217,21 @@ s32 movie_get_next_video_entry(s32* outVlcData, s32* outEntryHeader)
         }
     }
 
-    base = (GlobalData*)0x801ED500;
+    base = (CombinedState*)0x801ED500;
 
     writeIdx = base->videoWriteIdx;
     readIdx = base->videoReadIdx;
 
     if ((readIdx >= writeIdx) && (readIdx == base->videoRingSize))
     {
-        ((GlobalData*)0x801ED500)->videoReadIdx = 0;
+        ((CombinedState*)0x801ED500)->videoReadIdx = 0;
         if ((base->videoWriteIdx == 0) && (base->lastVideoFrame == base->lastConsumedVideoFrame))
         {
             return 0;
         }
     }
 
-    base2 = (GlobalData*)0x801ED500;
+    base2 = (CombinedState*)0x801ED500;
     *out1 = base2->videoTableBase + (base2->videoReadIdx << 5);
     *outVlcData = base2->videoDataBase + (base2->videoReadIdx * 2016);
     return 1;
@@ -1245,7 +1244,7 @@ void movie_advance_video_read(void)
 {
     s32 nextIndex;
     InnerStruct* inner;
-    GlobalData* base = (GlobalData*)0x801ED500;
+    CombinedState* base = (CombinedState*)0x801ED500;
 
     inner = (InnerStruct*)(base->videoTableBase + (base->videoReadIdx << 5));
     nextIndex = base->videoReadIdx + inner->sectorCount;
@@ -1255,8 +1254,8 @@ void movie_advance_video_read(void)
         nextIndex = 0;
     }
 
-    ((GlobalData*)0x801ED500)->lastConsumedVideoFrame = inner->frameNumber;
-    ((GlobalData*)0x801ED500)->videoReadIdx = nextIndex;
+    ((CombinedState*)0x801ED500)->lastConsumedVideoFrame = inner->frameNumber;
+    ((CombinedState*)0x801ED500)->videoReadIdx = nextIndex;
 }
 
 /**
