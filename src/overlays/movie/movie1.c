@@ -373,14 +373,14 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
  */
 void movie_update(void)
 {
-    long audioCapacity;     /* audioRingCapacity reload */
-    MovieState* stateAlias; /* sequencing alias used after totalFrames check */
-    int field9DZeroFlag;    /* (frame_ready == 0) flag / sign-shift temp */
-    VideoVlcPayload* vlc_payload;     /* raw bitstream for the next video frame */
-    VideoSectorEntry* entry_header;   /* 32-byte sector header for the same frame */
-    AudioSector* audio_entry;         /* next audio ring entry (header + payload) */
-    MovieState* mdecAlias; /* sequencing alias used in MDEC retry block */
-    s32 tmp = 0;           /* vlc-complete flag, then audioBufferedCount compare */
+    long audioCapacity;             /* audioRingCapacity reload */
+    MovieState* stateAlias;         /* sequencing alias used after totalFrames check */
+    int field9DZeroFlag;            /* (frame_ready == 0) flag / sign-shift temp */
+    VideoVlcPayload* vlc_payload;   /* raw bitstream for the next video frame */
+    VideoSectorEntry* entry_header; /* 32-byte sector header for the same frame */
+    AudioSector* audio_entry;       /* next audio ring entry (header + payload) */
+    MovieState* mdecAlias;          /* sequencing alias used in MDEC retry block */
+    s32 tmp = 0;                    /* vlc-complete flag, then audioBufferedCount compare */
     MovieState* combined = MOVIE_STATE;
     int wordCount;              /* DCT word count temp / zero literal */
     volatile int audioFrameNum; /* frame number from latest audio entry */
@@ -1128,40 +1128,36 @@ s32 movie_get_next_audio_entry(AudioSector** outEntry)
  */
 void movie_draw_sync_callback(void)
 {
-    volatile u8* base = (volatile u8*)0x801ED500;
-    unsigned int temp_lo;
+    volatile MovieState* movie_state = VOL_MOVIE_STATE;
+    unsigned int area;
     int new_var;
+    s16 width;
+    s16 height;
 
-    if (g_busy == 0)
+    if (g_busy != 0)
     {
-        base[0x97] = 0;
+        return;
+    }
 
-        {
-            u8 tmp = base[0x9a];
-            if (tmp != 0)
-            {
-                u8 idx = base[0x99];
-                u32* ptr = (u32*)(base + (idx << 2));
-                LoadImage((RECT*)(base + 0x30), (u_long*)ptr[6]);
-                movie_schedule_next_decode();
-                base[0x9a] = 0;
-            }
-        }
+    VOL_MOVIE_STATE->draw_sync_target = 0;
 
-        {
-            u8 tmp = base[0x9b];
-            if (tmp != 0)
-            {
-                s16 v1 = *((s16*)(base + 0x34));
-                s16 v2 = *((s16*)(base + 0x36));
-                u8 idx = base[0x99];
-                u32* ptr = (u32*)(base + (idx << 2));
-                temp_lo = v1 * v2;
-                new_var = temp_lo + (temp_lo >> 31);
-                DecDCTout((u_long*)ptr[6], (s32)(new_var >> 1));
-                base[0x9b] = 0;
-            }
-        }
+    if (movie_state->pending_vram_upload != 0)
+    {
+
+        LoadImage(&MOVIE_STATE->rects[2], (u_long*)MOVIE_STATE->mdecOutputBuf[movie_state->outBufIdx]);
+        movie_schedule_next_decode();
+        movie_state->pending_vram_upload = 0;
+    }
+
+    if (movie_state->pending_mdec_decode != 0)
+    {
+        width = movie_state->rects[2].w;
+        height = movie_state->rects[2].h;
+
+        area = width * height;
+        new_var = area + (area >> 31);
+        DecDCTout((u_long*)MOVIE_STATE->mdecOutputBuf[movie_state->outBufIdx], (s32)(new_var >> 1));
+        movie_state->pending_mdec_decode = 0;
     }
 }
 
@@ -1182,7 +1178,7 @@ s32 movie_get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry*
 {
     s32 read_idx;
     s32 write_idx;
-    
+
     if ((MOVIE_STATE->videoWriteIdx == MOVIE_STATE->videoReadIdx) &&
         (MOVIE_STATE->lastVideoFrame == MOVIE_STATE->lastConsumedVideoFrame))
     {
