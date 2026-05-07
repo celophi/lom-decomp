@@ -84,7 +84,7 @@ void movie_play(s32 movieIndex)
     func_800157DC();
     audioFadeVol = -1;
     retryLimit = 5;
-    state = (SRC_801ED500*)0x801ED500;
+    state = (CombinedState*)0x801ED500;
     endStateMatch = 2;
     goto error_loop;
 
