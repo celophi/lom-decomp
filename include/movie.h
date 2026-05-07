@@ -131,13 +131,16 @@ typedef struct
     s32 frameNumber;
 } SectorEntry;
 
-/* One PSX CD sector (2048 bytes) of audio ring data: a SectorEntry header
- * followed by filler bytes. The actual XA payload is written by
- * movie_cd_sector_callback at offset 0x20 within the sector. */
+/* One PSX CD sector (2048 bytes) of audio ring data:
+ *   - bytes 0x00..0x0B: SectorEntry header (sectorCount, frameNumber).
+ *   - bytes 0x0C..0x1F: remaining 20 bytes of the CD-XA sector header
+ *     (copied verbatim from the CD by movie_cd_sector_callback).
+ *   - bytes 0x20..0x7FF: XA audio payload (2016 bytes). */
 typedef struct AudioSector
 {
-    SectorEntry header;
-    u8 _rest[2048 - 12]; /* 12 == sizeof(SectorEntry) */
+    SectorEntry header;             /* 12 bytes */
+    u8 _hdr_remainder[0x20 - 12];   /* 20 bytes — rest of the 32-byte CD header */
+    u8 payload[2048 - 0x20];        /* 2016 bytes XA */
 } AudioSector;
 
 /* One video-ring table entry: 32 bytes (the full sector header copied as
