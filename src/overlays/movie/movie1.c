@@ -39,8 +39,12 @@ void movie_play(s32 movieIndex)
     VSync(0);
     func_800157DC();
     cdrom_process_state();
-    if ((((movieIndex & 0xFFFF) == 0) && (((SRC_801ED600*)0x801ED600)->unk0 < 3)) &&
-        ((((SRC_801ED600*)0x801ED600)->unk2 & 0xFF0F) != 0))
+    /* Skip-movie gate: only movie 0 (intro/logo) is skippable here, and only
+     * when controller is active (deviceState < 3) AND any non-shoulder button
+     * is held on the merged pad (mask 0xFF0F = SELECT+START+L3/R3+face+dpad,
+     * excludes L1/R1/L2/R2). */
+    if ((((movieIndex & 0xFFFF) == 0) && (((SCDRegs*)0x801ED600)->deviceState < 3)) &&
+        ((((SCDRegs*)0x801ED600)->buttonData & 0xFF0F) != 0))
     {
         return;
     }
@@ -99,7 +103,7 @@ void movie_play(s32 movieIndex)
     audioFadeVol = -1;
     retryLimit = 5;
     state = (MovieState*)0x801ED500;
-    endStateMatch = 2;
+    endStateMatch = END_STATE_DONE;
     do
     {
         error_status = cdrom_get_error_status();
@@ -150,9 +154,14 @@ void movie_play(s32 movieIndex)
         cdrom_process_state();
         {
             u32 a0 = new_var;
-            if ((a0 < 2) && (((SRC_801ED600*)0x801ED600)->unk0 < 3))
+            /* Per-frame skip check (movies 0 and 1):
+             *   movie 0: any non-shoulder button — mask 0xFF0F
+             *   movie 1: only START + CROSS + DOWN — mask 0x400A
+             * Both branches read the *derived* button word at +4 (not the
+             * raw buttonData at +2). When tripped, audio fade arms. */
+            if ((a0 < 2) && (((SCDRegs*)0x801ED600)->deviceState < 3))
             {
-                u16 val = ((SRC_801ED600*)0x801ED600)->unk4;
+                u16 val = *(u16*)((u8*)0x801ED600 + 4); /* TODO: name +4 field */
                 if (((a0 != 0) ? ((val & ((0, 0x400A))) != 0) : ((val & 0xFF0F) != 0)) != 0)
                 {
                     if (g_cdAudioReady == 0)
@@ -429,9 +438,10 @@ void movie_update(void)
             {
                 MOVIE_STATE->currentFrame = entry_header->header.frameNumber;
                 stateAlias = MOVIE_STATE;
-                if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) && (stateAlias->endState == 0))
+                if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) &&
+                    (stateAlias->endState == END_STATE_RUNNING))
                 {
-                    MOVIE_STATE->endState = 1;
+                    MOVIE_STATE->endState = END_STATE_NEAR_END;
                 }
                 {
                     int one;
@@ -461,7 +471,7 @@ void movie_update(void)
                 }
                 if ((MOVIE_STATE->endOfStream != 0) && (MOVIE_STATE->mdecBusy == 0))
                 {
-                    MOVIE_STATE->endState = 2;
+                    MOVIE_STATE->endState = END_STATE_DONE;
                 }
             }
         }
@@ -492,9 +502,9 @@ void movie_update(void)
         if (get_next_audio_entry(&audio_entry) != 0)
         {
             audioFrameNum = (combined->currentFrame = audio_entry->header.frameNumber);
-            if ((audioFrameNum > combined->totalFrames) && (combined->endState < 2))
+            if ((audioFrameNum > combined->totalFrames) && (combined->endState < END_STATE_DONE))
             {
-                combined->endState = 2;
+                combined->endState = END_STATE_DONE;
             }
             akao_xa_advance_frame(audioFrameNum);
         }
@@ -647,9 +657,9 @@ void movie_schedule_next_decode(void)
         ptr->rects[2].y = *(new_var = (u16*)&ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].y);
         *((volatile u8*)(&ptr->frame_ready)) = 1;
         *((volatile u8*)(&ptr->mdecBusy)) = 0;
-        if ((*((volatile u8*)(&ptr->endState))) == 1)
+        if ((*((volatile u8*)(&ptr->endState))) == END_STATE_NEAR_END)
         {
-            *((volatile u8*)(&ptr->endState)) = 2;
+            *((volatile u8*)(&ptr->endState)) = END_STATE_DONE;
         }
     }
 }

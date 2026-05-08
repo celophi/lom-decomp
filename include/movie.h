@@ -2,26 +2,18 @@
 #define _MOVIE_H
 
 #include "common.h"
+#include "pad.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libpress.h"
 #include "psyq/libcd.h"
 
-/*
- * TODO(investigate): SRC_801ED600 — system-wide flag block at 0x801ED600.
- * Used by movie_play to gate playback (`unk0 < 3 && (unk2 & 0xFF0F)`),
- * also referenced as `D_801ED600` in checkps.h and title.h. Likely save-data
- * flags or region/mode bits. The bitmasks 0x400A and 0xFF0F applied to unk4
- * suggest packed event/cinema-flag groups. Decompile its writers to learn
- * the field semantics.
- */
-typedef struct
-{
-    u_char unk0;
-    u_char _pad1;
-    u_short unk2;
-    u_short unk4;
-} SRC_801ED600;
+/* The block at 0x801ED600 is the merged-controller SCDRegs (see pad.h).
+ * Skip-cinematic checks read SCDRegs.deviceState (port active) and
+ * SCDRegs.buttonData (raw merged buttons). A u16 at byte offset +4 is also
+ * read; func_80015B?? in decomp6.c builds it as `(port1+0x14) | (port2+0x24)`
+ * — a derived/edge button word, not port-2 buttonData. Accessed raw until
+ * its semantics are nailed down. */
 
 /*
  * TODO(investigate): MovieState aliases the AudioSystem block defined in cd.h
@@ -101,8 +93,14 @@ typedef struct
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
     s8 frame_ready;      // 0x9D — set by movie_schedule_next_decode when a chunk boundary is reached; consumed by movie_play
     u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
-    u8 endState;         // 1 = near end, 2 = stream fully ended
+    u8 endState;         // 1 = near end, 2 = stream fully ended (END_STATE_*)
 } MovieState;
+
+/* MovieState::endState sentinel values. Token-equivalent to the literals
+ * they replace, so codegen is unchanged. */
+#define END_STATE_RUNNING  0
+#define END_STATE_NEAR_END 1
+#define END_STATE_DONE     2
 
 /* Movie playback control block lives at a fixed RAM address.
  * Macro is token-equivalent to the cast so codegen is unchanged.
