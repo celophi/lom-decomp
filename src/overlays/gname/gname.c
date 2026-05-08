@@ -1922,3 +1922,66 @@ void func_801429A0(u8* buffer, u16 header)
         buffer[1] = (u8)(h >> 8);
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ArXXq
+ */
+s32 func_80142A54(u8* arg0)
+{
+    u8 first;
+    u32 header_size;
+    u32 header_value;
+    u8* ptr;
+    s32 len;
+    u8 c;
+    s32 move_count;
+    s32 i;
+    u32 flags;
+
+    first = arg0[0];
+    if (first == 0)
+    {
+        return 0;
+    }
+
+    if ((first - 0x19U) < 7U)
+    {
+        header_size = 2;
+        header_value = (u16)((arg0[1] << 8) | arg0[0]);
+    }
+    else
+    {
+        header_value = arg0[0];
+        header_size = 1;
+    }
+
+    ptr = arg0 + header_size;
+    len = 0;
+    c = *ptr;
+    if (c != 0)
+    {
+        do
+        {
+            if ((c - 0x19U) < 7U)
+            {
+                ptr += 2;
+                len += 2;
+            }
+            else
+            {
+                ptr += 1;
+                len += 1;
+            }
+            c = *ptr;
+        } while (c != 0);
+    }
+
+    move_count = len + 1;
+    flags = 0xFFFFU;
+    for (i = 0; i < move_count; i++)
+    {
+        arg0[i] = arg0[i + header_size];
+    }
+
+    return (s32)(header_value & flags);
+}
