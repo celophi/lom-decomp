@@ -3,29 +3,29 @@
 /**
  * @brief Reset the RGB fade state.
  *
- * Zeros the current color (@c D_8014F828) and the target color +
- * step count (@c D_8014F818). After this call the next
- * @ref func_80140410 tick will write a black tint (0,0,0) to the
+ * Zeros the current color (@c g_fade_current) and the target color +
+ * step count (@c g_fade_target). After this call the next
+ * @ref render_fade_overlay tick will write a black tint (0,0,0) to the
  * primitive at @c arg0->unk4040.
  *
  * @see https://decomp.me/scratch/ld2aW (100%)
  */
-void func_801403E0(void)
+void reset_fade_state(void)
 {
-    D_8014F828.r = 0;
-    D_8014F828.g = 0;
-    D_8014F828.b = 0;
-    D_8014F818.r = 0;
-    D_8014F818.g = 0;
-    D_8014F818.b = 0;
-    D_8014F818.steps = 0;
+    g_fade_current.r = 0;
+    g_fade_current.g = 0;
+    g_fade_current.b = 0;
+    g_fade_target.r = 0;
+    g_fade_target.g = 0;
+    g_fade_target.b = 0;
+    g_fade_target.steps = 0;
 }
 
 /**
  * @brief Per-frame RGB fade tick: lerp current toward target and emit a
  *        full-screen tint quad + draw-mode pair into the OT.
  *
- * If `D_8014F818.steps` is non-zero, advances `D_8014F828` by one step of
+ * If `g_fade_target.steps` is non-zero, advances `g_fade_current` by one step of
  * `(target - current) / steps` per channel and decrements `steps`.
  * Otherwise snaps current to target (RGB only — `steps` is left alone).
  *
@@ -49,7 +49,7 @@ void func_801403E0(void)
  * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
  * @see https://decomp.me/scratch/hVLdu (100%)
  */
-void func_80140410(ArgStruct* ctx)
+void render_fade_overlay(ArgStruct* ctx)
 {
     u32* prim = (u32*)ctx->unk4040; /* t4 — current primitive write pos */
     ArgStruct* arg = ctx;           /* t6 = t7 — preserves load order */
@@ -57,51 +57,51 @@ void func_80140410(ArgStruct* ctx)
     s32 abr_cmd; /* low byte of GP0 0xE1 (abr select) */
 
     /* Lerp current toward target, or snap if no steps remain. */
-    if (D_8014F818.steps != 0)
+    if (g_fade_target.steps != 0)
     {
-        step_r = (D_8014F818.r - D_8014F828.r) / D_8014F818.steps;
-        step_g = (D_8014F818.g - D_8014F828.g) / D_8014F818.steps;
-        step_b = (D_8014F818.b - D_8014F828.b) / D_8014F818.steps;
-        D_8014F818.steps--;
-        D_8014F828.r += step_r;
-        D_8014F828.g += step_g;
-        D_8014F828.b += step_b;
+        step_r = (g_fade_target.r - g_fade_current.r) / g_fade_target.steps;
+        step_g = (g_fade_target.g - g_fade_current.g) / g_fade_target.steps;
+        step_b = (g_fade_target.b - g_fade_current.b) / g_fade_target.steps;
+        g_fade_target.steps--;
+        g_fade_current.r += step_r;
+        g_fade_current.g += step_g;
+        g_fade_current.b += step_b;
     }
     else
     {
-        D_8014F828.r = D_8014F818.r;
-        D_8014F828.g = D_8014F818.g;
-        D_8014F828.b = D_8014F818.b;
+        g_fade_current.r = g_fade_target.r;
+        g_fade_current.g = g_fade_target.g;
+        g_fade_current.b = g_fade_target.b;
     }
 
     /* Skip emit when fully transparent / identity tint. */
-    if (!((D_8014F828.r == 0x100) && (D_8014F828.g == 0x100) && (D_8014F828.b == 0x100)))
+    if (!((g_fade_current.r == 0x100) && (g_fade_current.g == 0x100) && (g_fade_current.b == 0x100)))
     {
         /* Flat-quad RGB bytes at prim[4..6]. */
-        if (D_8014F828.r >= 0x101)
+        if (g_fade_current.r >= 0x101)
         {
             /* Additive bias: subtract 1 so 0x101 → 0x00..0xFF. */
-            ((u8*)prim)[4] = (u8)D_8014F828.r - 1;
-            ((u8*)prim)[5] = (u8)D_8014F828.g - 1;
-            ((u8*)prim)[6] = (u8)D_8014F828.b - 1;
+            ((u8*)prim)[4] = (u8)g_fade_current.r - 1;
+            ((u8*)prim)[5] = (u8)g_fade_current.g - 1;
+            ((u8*)prim)[6] = (u8)g_fade_current.b - 1;
         }
         else
         {
             /* Subtractive bias: bitwise NOT so 0xFF → 0x00, 0x00 → 0xFF. */
-            if (D_8014F828.r == 0x100)
+            if (g_fade_current.r == 0x100)
                 ((u8*)prim)[4] = 0;
             else
-                ((u8*)prim)[4] = ~(u8)D_8014F828.r;
+                ((u8*)prim)[4] = ~(u8)g_fade_current.r;
 
-            if (D_8014F828.g == 0x100)
+            if (g_fade_current.g == 0x100)
                 ((u8*)prim)[5] = 0;
             else
-                ((u8*)prim)[5] = ~(u8)D_8014F828.g;
+                ((u8*)prim)[5] = ~(u8)g_fade_current.g;
 
-            if (D_8014F828.b == 0x100)
+            if (g_fade_current.b == 0x100)
                 ((u8*)prim)[6] = 0;
             else
-                ((u8*)prim)[6] = ~(u8)D_8014F828.b;
+                ((u8*)prim)[6] = ~(u8)g_fade_current.b;
         }
 
         /* Flat-shaded full-screen quad header: 3-word tag 0x62. */
@@ -121,7 +121,7 @@ void func_80140410(ArgStruct* ctx)
         /* Choose blend mode by direction of tint. */
         abr_cmd = 0x25;
         prim = (u32*)((u8*)prim + 0x10);
-        if (D_8014F828.r < 0x101)
+        if (g_fade_current.r < 0x101)
             abr_cmd = 0x45;
 
         /* Draw-Mode packet (GP0 0xE1 | abr_cmd). */
@@ -141,7 +141,7 @@ void func_80140410(ArgStruct* ctx)
  * @brief Set the RGB fade target and step count.
  *
  * Writes the four-field target struct in one call. The next
- * `steps` ticks of @ref func_80140410 will lerp the current color toward
+ * `steps` ticks of @ref render_fade_overlay will lerp the current color toward
  * `(r, g, b)` and then snap on the final tick.
  *
  * @param r     Target red   (0..0x100 normal, >0x100 = additive).
@@ -151,12 +151,12 @@ void func_80140410(ArgStruct* ctx)
  *
  * @see https://decomp.me/scratch/jq3uD (100%)
  */
-void func_801406F8(s32 r, s32 g, s32 b, s32 steps)
+void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
 {
-    D_8014F818.r = r;
-    D_8014F818.g = g;
-    D_8014F818.b = b;
-    D_8014F818.steps = steps;
+    g_fade_target.r = r;
+    g_fade_target.g = g;
+    g_fade_target.b = b;
+    g_fade_target.steps = steps;
 }
 
 /**

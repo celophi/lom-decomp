@@ -1,0 +1,10 @@
+// GNAME.BIN
+
+// Functions
+reset_fade_state    = 0x801403E0;
+render_fade_overlay = 0x80140410;
+set_fade_target     = 0x801406F8;
+
+// Data
+g_fade_target  = 0x8014F818;
+g_fade_current = 0x8014F828;
