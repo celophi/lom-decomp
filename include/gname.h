@@ -3,13 +3,22 @@
 
 #include "common.h"
 
-// Structure for the global data blocks D_8014F818 and D_8014F828
+/**
+ * @brief RGB lerp state.
+ *
+ * Used as a pair: `D_8014F818` is the *target* (final color + remaining
+ * step count), `D_8014F828` is the *current* interpolated value (its
+ * `steps` field is unused). Each tick @ref func_80140410 advances the
+ * current toward the target by `(target - current) / steps` and decrements
+ * `steps`. Channels are 0..0x100 with 0x100 meaning "no tint"; values
+ * above 0x100 trigger an additive draw mode (GP0 0xE1 abr=2).
+ */
 typedef struct
 {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
+    s32 r;     /* 0x0 — red channel,   0..0x100 normal, >0x100 = additive */
+    s32 g;     /* 0x4 — green channel, 0..0x100 normal, >0x100 = additive */
+    s32 b;     /* 0x8 — blue channel,  0..0x100 normal, >0x100 = additive */
+    s32 steps; /* 0xC — frames remaining in the lerp (target struct only) */
 } DataStruct;
 
 // Structure for the argument object
