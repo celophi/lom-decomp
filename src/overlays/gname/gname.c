@@ -1985,3 +1985,78 @@ s32 func_80142A54(u8* arg0)
 
     return (s32)(header_value & flags);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/3TQG6
+ */
+s32 func_80142B18(s32 arg0, s32 arg1)
+{
+    u8 idx = D_8014F8B0;
+    s32 result = arg0;
+    u8* new_var2;
+    s32 s3 = arg1;
+    s32 i;
+    u8* s1 = &D_8014F758[idx * 12];
+    u8* s0 = s1 + 1;
+    short new_var;
+    for (i = 0; i < 3; i++, s0 += 4, s1 += 4)
+    {
+        s32 byte = s0[1];
+        new_var = byte;
+        if (new_var != 0)
+        {
+            result = func_80142274(result, s3 + 0x30, new_var, s1[0] + 0xE8, s0[0] + 4, 0, 0, 0);
+        }
+    }
+
+    if (D_8014F8B8 != 0)
+    {
+        D_8014F8B8--;
+        if (D_8014F8B8 == 0)
+        {
+            D_8014F8B0++;
+            if (D_8014F8B0 == 7)
+            {
+                D_8014F8B0 = 0;
+                D_8014F8B8 = 0;
+                return result;
+            }
+            else
+            {
+                new_var2 = D_8014F758;
+                D_8014F8B8 = new_var2[(D_8014F8B0 * 12) + 3];
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/rdbBA
+ */
+s32 func_80142C50(u8* arg0)
+{
+    u32 temp_v0;
+
+    temp_v0 = *arg0;
+    if (temp_v0 == 0)
+    {
+        return 1;
+    }
+
+    do
+    {
+        temp_v0 = temp_v0 & 0xFF;
+        if (temp_v0 == 0x20 || temp_v0 == 0x80)
+        {
+            arg0++;
+            temp_v0 = *arg0;
+        }
+        else
+        {
+            return 0;
+        }
+    } while (temp_v0 != 0);
+
+    return 1;
+}
