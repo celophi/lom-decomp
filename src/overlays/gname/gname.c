@@ -107,8 +107,10 @@ void func_80140410(ArgStruct* ctx)
         /* Flat-shaded full-screen quad header: 3-word tag 0x62. */
         ((u8*)prim)[3] = 3;
         ((u8*)prim)[7] = 0x62;
-        *((u16*)((u8*)prim +  8)) = 0;       /* x = 0   */
+        
         *((u16*)((u8*)prim + 10)) = 0;       /* y = 0   */
+        *((u16*)((u8*)prim +  8)) = 0;       /* x = 0   */
+        
         *((u16*)((u8*)prim + 12)) = 0x140;   /* w = 320 */
         *((u16*)((u8*)prim + 14)) = 0xF0;    /* h = 240 */
 
