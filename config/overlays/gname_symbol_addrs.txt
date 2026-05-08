@@ -19,7 +19,12 @@ name_pop_first_char = 0x80142A54;
 name_is_blank       = 0x80142C50;
 
 // Data
-g_fade_target   = 0x8014F818;
-g_fade_current  = 0x8014F828;
-g_active_name   = 0x8014F844;
-g_startup_delay = 0x8014F880;
+g_fade_target        = 0x8014F818;
+g_fade_current       = 0x8014F828;
+g_active_name        = 0x8014F844;
+g_startup_delay      = 0x8014F880;
+g_strip_width_steps  = 0x8014F8A4;
+g_strip_width        = 0x8014F8A8;
+g_strip_width_target = 0x8014F8BC;
+g_name_pixel_width   = 0x8014F8CC;
+g_glyph_table        = 0x80142CD4;

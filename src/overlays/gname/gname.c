@@ -273,8 +273,8 @@ void gname_tick(s32 ctx)
  *
  *  - When the startup countdown @c g_startup_delay hits zero, hands off to
  *    @ref func_8014139C (the next stage); otherwise decrements it.
- *  - Lerps the scalar @c D_8014F8A8 toward @c D_8014F8BC over
- *    @c D_8014F8A4 frames using the same `(target - current)/steps` shape
+ *  - Lerps the scalar @c g_strip_width toward @c g_strip_width_target over
+ *    @c g_strip_width_steps frames using the same `(target - current)/steps` shape
  *    as the RGB fade.
  *  - When input mask @c D_80122988 == 0x800 (a specific button bit), plays
  *    one of two SFX via @ref func_800A3938 (bank 0x80, sound 0x7E or 0x78)
@@ -298,16 +298,16 @@ void gname_update_state(void)
         g_startup_delay--;
     }
 
-    /* Lerp D_8014F8A8 toward D_8014F8BC, snap when no steps remain. */
-    steps = D_8014F8A4;
+    /* Lerp g_strip_width toward g_strip_width_target, snap when no steps remain. */
+    steps = g_strip_width_steps;
     if (steps != 0)
     {
-        D_8014F8A4--;
-        D_8014F8A8 += (D_8014F8BC - D_8014F8A8) / steps;
+        g_strip_width_steps--;
+        g_strip_width += (g_strip_width_target - g_strip_width) / steps;
     }
     else
     {
-        D_8014F8A8 = D_8014F8BC;
+        g_strip_width = g_strip_width_target;
     }
 
     /* Confirm-button: play accept SFX on valid entry, reject SFX otherwise. */
@@ -327,7 +327,7 @@ void gname_update_state(void)
  * @brief Reset the overlay's run-state globals to their per-session defaults.
  *
  * Called from the boot path @ref gname_init. Zeros most counters/indices,
- * primes the lerp scalar (@c D_8014F8A4 = 5), seeds the cursor state
+ * primes the lerp scalar (@c g_strip_width_steps = 5), seeds the cursor state
  * (@c D_8014F88C / @c D_8014F890 from frozen defaults @c D_8014F894 /
  * @c D_8014F89C), kicks @ref func_80140AB8 to compute initial @c D_8014F8AC,
  * and registers the overlay's per-character buffer with
@@ -348,9 +348,9 @@ void reset_run_state(void)
     D_8014F88C = D_8014F894;
     D_8014F890 = D_8014F89C;
     name_copy(g_active_name, &D_8014F7E8); /* matches 'la a1, D_8014F7E8' */
-    D_8014F8A8 = 0;
+    g_strip_width = 0;
     func_80142928();
-    D_8014F8A4 = 5;
+    g_strip_width_steps = 5;
     D_8014F8B0 = 0;
     D_8014F8B8 = 2;
     D_8014F848 = 0;
@@ -563,7 +563,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         block_38:
             func_80142928();
             repeat = 0;
-            D_8014F8A4 = five;
+            g_strip_width_steps = five;
             repeat = 0;
             continue;
         }
@@ -663,7 +663,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                         name_append(g_active_name, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
                     }
                     func_80142928();
-                    D_8014F8A4 = five;
+                    g_strip_width_steps = five;
                     func_800A3938(0x7D, 0x80);
                     repeat = 0;
                     continue;
@@ -723,7 +723,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                         name_append(g_active_name, (void*)((efc + hw) + reg_s6), (s32)efc);
                     }
                     func_80142928();
-                    D_8014F8A4 = five;
+                    g_strip_width_steps = five;
                     var_a0 = 0x7D;
                 }
                 else
@@ -856,7 +856,7 @@ void func_8014139C(void)
 
         name_prepend_char(&D_8014F850, temp_s1 & 0xFFFF);
         func_80142928();
-        D_8014F8A4 = 5;
+        g_strip_width_steps = 5;
         var_a0 = 0x7D;
         new_var3 = 0x80;
         func_800A3938(var_a0, new_var3);
@@ -875,7 +875,7 @@ void func_8014139C(void)
                 (&sp10)[2] = 0;
                 name_append(g_active_name, &sp10);
                 func_80142928();
-                D_8014F8A4 = 5;
+                g_strip_width_steps = 5;
             }
             var_a0 = 0x7D;
             func_800A3938(var_a0, 0x80);
@@ -902,7 +902,7 @@ void func_8014139C(void)
         func_800A3938(0x7F, 0x80);
         name_pop_last_char(g_active_name);
         func_80142928();
-        D_8014F8A4 = 5;
+        g_strip_width_steps = 5;
     }
     if (((D_8014F8AC == 0x10) && (D_8014F848 == 4)) && (D_80122988 & 0xC))
     {
@@ -993,7 +993,7 @@ void* func_80141848(void* arg0, s32* arg1, s16 arg2, s16 arg3)
     unsigned char* bp = (unsigned char*)arg0;
     unsigned int mask_lo;
     unsigned int mask_hi;
-    unsigned char* D = D_80142CD4;
+    unsigned char* D = g_glyph_table;
     unsigned int t0;
     unsigned int w0;
     unsigned int w1;
@@ -1085,12 +1085,12 @@ void func_80141928(void* arg0)
         s32 tmp = D_8014F890;
         *((s16*)(((char*)temp_v0) + 10)) = tmp;
     }
-    *((u8*)(((char*)temp_v0) + 12)) = D_80142CD4[0xA0];
-    *((u8*)(((char*)temp_v0) + 13)) = D_80142CD4[0xA1];
-    *((s16*)(((char*)temp_v0) + 16)) = (s16)D_80142CD4[0xA2];
-    *((s16*)(((char*)temp_v0) + 18)) = (s16)D_80142CD4[0xA3];
+    *((u8*)(((char*)temp_v0) + 12)) = g_glyph_table[0xA0];
+    *((u8*)(((char*)temp_v0) + 13)) = g_glyph_table[0xA1];
+    *((s16*)(((char*)temp_v0) + 16)) = (s16)g_glyph_table[0xA2];
+    *((s16*)(((char*)temp_v0) + 18)) = (s16)g_glyph_table[0xA3];
     {
-        u32 tmp = *((u32*)(D_80142CD4 + 0xA4));
+        u32 tmp = *((u32*)(g_glyph_table + 0xA4));
         *((s16*)(((char*)temp_v0) + 14)) = (s16)((tmp & 0x3F) | 0x7C80);
     }
     new_var2 = (char*)new_var4;
@@ -1128,7 +1128,7 @@ void func_80141928(void* arg0)
     }
     *((void**)new_var3) = func_80141D64(emit_draw_mode_prim(var_t0_2, arg0), new_var2 + 0x24);
     func_80141F9C(arg0, D_8014F848);
-    func_80141E04(new_var4, g_active_name, D_8014F8A8);
+    func_80141E04(new_var4, g_active_name, g_strip_width);
 }
 
 /**
@@ -1404,7 +1404,7 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 {
     unsigned char* base = (unsigned char*)arg0;
     unsigned char* ptr = base;
-    TableEntry* entry = &D_80142CD4[arg2];
+    GlyphInfo* entry = &g_glyph_table[arg2];
     u32 temp;
     s32 tmp2;
 
@@ -1414,11 +1414,11 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
     *(ptr + 7) = 0x64;
     *(u16*)(ptr + 8) = (u16)(arg3 - arg5 + arg6);
     *(u16*)(ptr + 10) = (u16)(arg4 - arg5 + arg6);
-    *(ptr + 12) = entry->field0;
-    *(ptr + 13) = entry->field1;
-    *(u16*)(ptr + 16) = (u16)entry->field2;
-    *(u16*)(ptr + 18) = (u16)entry->field3;
-    *(u16*)(ptr + 14) = (u16)((entry->field4 & 0x3F) | 0x7C80);
+    *(ptr + 12) = entry->u;
+    *(ptr + 13) = entry->v;
+    *(u16*)(ptr + 16) = (u16)entry->w;
+    *(u16*)(ptr + 18) = (u16)entry->h;
+    *(u16*)(ptr + 14) = (u16)((entry->clut & 0x3F) | 0x7C80);
 
     /* Update word at offset 0 and *arg1 */
     temp = *(u32*)ptr;
@@ -1436,11 +1436,11 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
         tmp2 = (arg5 - arg6) * 2;
         *(u16*)(ptr + 10) = (u16)(arg4 + tmp2);
         *(u16*)(ptr + 8) = (u16)(arg3 + tmp2);
-        *(ptr + 12) = entry->field0;
-        *(ptr + 13) = entry->field1;
-        *(u16*)(ptr + 16) = (u16)entry->field2;
-        *(u16*)(ptr + 18) = (u16)entry->field3;
-        *(u16*)(ptr + 14) = (u16)((entry->field4 & 0x3F) | 0x7C80);
+        *(ptr + 12) = entry->u;
+        *(ptr + 13) = entry->v;
+        *(u16*)(ptr + 16) = (u16)entry->w;
+        *(u16*)(ptr + 18) = (u16)entry->h;
+        *(u16*)(ptr + 14) = (u16)((entry->clut & 0x3F) | 0x7C80);
 
         /* Update second structure's word at offset 0 and *arg1 */
         temp = *(u32*)ptr;
@@ -1471,7 +1471,7 @@ void func_80142410(void* arg0)
     u32 mask_all = 0x00FFFFFF;
     u32* var_t0 = (u32*)D_8014F6B8;
     s32 var_t4 = 0;
-    u32* var_s0 = (u32*)D_80142CD4;
+    u32* var_s0 = (u32*)g_glyph_table;
     u32 const_8080 = 0x80808080;
     u32 const_4 = 4;
     u32 const_64 = 0x64;
@@ -1849,7 +1849,7 @@ void func_80142928(void)
     i = 0;
     new_var3 = new_var2->unk10;
     new_var = count;
-    D_8014F8CC = i;
+    g_name_pixel_width = i;
     if (i < new_var)
     {
         if (!new_var)
@@ -1858,7 +1858,7 @@ void func_80142928(void)
         ptr = sp10;
         while (i < ((0, new_var)))
         {
-            pSum = &D_8014F8CC;
+            pSum = &g_name_pixel_width;
             new_var2 = ptr;
             new_var3 = new_var2->unk10;
             *pSum += new_var3;
@@ -1866,7 +1866,7 @@ void func_80142928(void)
             i++;
         }
     }
-    D_8014F8BC = D_8014F8CC + 0x18;
+    g_strip_width_target = g_name_pixel_width + 0x18;
 }
 
 /**

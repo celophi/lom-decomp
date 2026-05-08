@@ -52,14 +52,22 @@ typedef struct
     u32 unk404C; /* offset 0x404C */
 } Obj;
 
+/**
+ * @brief Glyph metrics entry: how to draw one glyph from VRAM.
+ *
+ * Used as @c g_glyph_table, indexed by character ID. The
+ * fields are written directly into a sprite (tag 0x64) primitive by
+ * @ref func_80142274: `u`/`v` at byte offsets 12/13, the CLUT ID at u16
+ * offset 14, and `w`/`h` at u16 offsets 16/18.
+ */
 typedef struct
 {
-    u8 field0;
-    u8 field1;
-    u8 field2;
-    u8 field3;
-    u32 field4;
-} TableEntry;
+    u8 u;     /* 0x0 — texture U in VRAM */
+    u8 v;     /* 0x1 — texture V in VRAM */
+    u8 w;     /* 0x2 — sprite width */
+    u8 h;     /* 0x3 — sprite height */
+    u32 clut; /* 0x4 — CLUT id (low 6 bits used; combined with 0x7C80) */
+} GlyphInfo;
 
 typedef struct
 {
@@ -71,15 +79,15 @@ typedef struct
 extern void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7);
 
 extern s32 D_8014F840;
-extern s32 D_8014F8CC;
+extern s32 g_name_pixel_width;
 extern u8 D_8014F758[];
 extern FadeState g_fade_target;
 extern FadeState g_fade_current;
 extern s32 g_startup_delay;
 extern u8 D_80147494[];
 extern s32 D_800F22AC;
-extern s32 D_8014F8BC;
-extern s32 D_8014F8A8;
+extern s32 g_strip_width_target;
+extern s32 g_strip_width;
 extern s32 D_80122988;
 extern u8* g_active_name;
 extern s32 D_8014F7E4;
@@ -94,7 +102,7 @@ extern s32 D_8014F88C;
 extern s32 D_8014F890;
 extern s32 D_8014F894;
 extern s32 D_8014F89C;
-extern s32 D_8014F8A4;
+extern s32 g_strip_width_steps;
 extern s32 D_8014F8AC;
 extern s32 D_8014F8B4;
 extern s32 D_8014F8C0;
@@ -118,7 +126,7 @@ extern s32 D_80142CA4;
 extern void* D_8014F84C;
 extern s32 D_8014F838;
 extern u8 D_80142EF4[];
-extern unsigned char D_80142CD4[];
+extern u8 g_glyph_table[]; /* GlyphInfo[]; declared as u8[] for byte-level accesses elsewhere */
 extern s32 D_80142E14;
 extern u32 D_8014F6B8[];
 
