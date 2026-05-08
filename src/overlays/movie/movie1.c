@@ -107,7 +107,7 @@ void movie_play(s32 movieIndex)
     do
     {
         error_status = cdrom_get_error_status();
-        while ((error_status != 0) && (((((error_status & 0xFFu) & 0xFFu) & 0xFFu) & 0xFFu) != retryLimit))
+        while ((error_status != 0) && (error_status != retryLimit))
         {
             func_800157B0(1);
             VSync(0);
@@ -128,7 +128,7 @@ void movie_play(s32 movieIndex)
                 }
                 if (state->endState == endStateMatch)
                 {
-                    break;
+                    goto end;
                 }
                 movie_service_video_ops();
             } while ((--timeout) != 0);
@@ -181,6 +181,7 @@ void movie_play(s32 movieIndex)
             audioFadeVol -= AUDIO_FADE_STEP;
         }
     } while (state->endState != endStateMatch);
+end:
     func_800158E0();
     cdrom_reset();
     DrawSync(0);
