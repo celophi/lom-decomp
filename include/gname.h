@@ -68,6 +68,8 @@ typedef struct
     u8 pad1[2];
 } UnkStruct2;
 
+extern s32 func_80142274(s32, s32, u8, s32, s32, s32, s32, s32);
+
 extern s32 D_8014F840;
 extern s32 D_8014F8CC;
 extern u8 D_8014F758[];
@@ -81,8 +83,8 @@ extern s32 D_8014F8A8;
 extern s32 D_80122988;
 extern s32 D_8014F844;
 extern s32 D_8014F7E4;
-extern s8 D_8014F8B8;
-extern s8 D_8014F8B0;
+extern u8 D_8014F8B8;
+extern u8 D_8014F8B0;
 extern s8 D_8014F850;
 extern char D_8014F7E8;
 extern s32 D_8014F848;
