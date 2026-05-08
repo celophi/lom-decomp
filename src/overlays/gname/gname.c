@@ -88,9 +88,20 @@ void func_80140410(ArgStruct* ctx)
         else
         {
             /* Subtractive bias: bitwise NOT so 0xFF → 0x00, 0x00 → 0xFF. */
-            ((u8*)prim)[4] = (D_8014F828.r == 0x100) ? 0 : ~(u8)D_8014F828.r;
-            ((u8*)prim)[5] = (D_8014F828.g == 0x100) ? 0 : ~(u8)D_8014F828.g;
-            ((u8*)prim)[6] = (D_8014F828.b == 0x100) ? 0 : ~(u8)D_8014F828.b;
+            if (D_8014F828.r == 0x100)
+                ((u8*)prim)[4] = 0;
+            else
+                ((u8*)prim)[4] = ~(u8)D_8014F828.r;
+
+            if (D_8014F828.g == 0x100)
+                ((u8*)prim)[5] = 0;
+            else
+                ((u8*)prim)[5] = ~(u8)D_8014F828.g;
+
+            if (D_8014F828.b == 0x100)
+                ((u8*)prim)[6] = 0;
+            else
+                ((u8*)prim)[6] = ~(u8)D_8014F828.b;
         }
 
         /* Flat-shaded full-screen quad header: 3-word tag 0x62. */
@@ -106,8 +117,10 @@ void func_80140410(ArgStruct* ctx)
         arg->unk0 = (arg->unk0 & 0xFF000000) | ((u32)prim & 0xFFFFFF);
 
         /* Choose blend mode by direction of tint. */
+        abr_cmd = 0x25;
         prim = (u32*)((u8*)prim + 0x10);
-        abr_cmd = (D_8014F828.r >= 0x101) ? 0x25 : 0x45;
+        if (D_8014F828.r < 0x101)
+            abr_cmd = 0x45;
 
         /* Draw-Mode packet (GP0 0xE1 | abr_cmd). */
         ((u8*)prim)[3] = 1;
