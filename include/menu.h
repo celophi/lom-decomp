@@ -14,5 +14,6 @@ extern s32 D_801690AC;
 extern s32 D_801690E8;
 extern s32 D_801690F4;
 extern s32 D_80169120;
+extern u8 D_800FE778[];
 
 #endif
