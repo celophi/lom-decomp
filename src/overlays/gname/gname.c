@@ -1665,3 +1665,34 @@ s32 func_801426D4(u8* arg0)
     }
     return var_v1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/c8fPe
+ */
+s32 func_80142720(u8* arg0)
+{
+    s32 var_v1;
+    u8 var_v0;
+    u8* var_a0;
+
+    var_a0 = arg0;
+    var_v0 = *var_a0;
+    var_v1 = 0;
+    if (var_v0 != 0)
+    {
+        do
+        {
+            if ((u32)(var_v0 - 0x19) < 7U)
+            {
+                var_a0 += 2;
+            }
+            else
+            {
+                var_a0 += 1;
+            }
+            var_v0 = *var_a0;
+            var_v1 += 1;
+        } while (var_v0 != 0);
+    }
+    return var_v1;
+}
