@@ -8,9 +8,9 @@
 /**
  * @brief RGB lerp state.
  *
- * Used as a pair: `D_8014F818` is the *target* (final color + remaining
- * step count), `D_8014F828` is the *current* interpolated value (its
- * `steps` field is unused). Each tick @ref func_80140410 advances the
+ * Used as a pair: `g_fade_target` is the *target* (final color + remaining
+ * step count), `g_fade_current` is the *current* interpolated value (its
+ * `steps` field is unused). Each tick @ref render_fade_overlay advances the
  * current toward the target by `(target - current) / steps` and decrements
  * `steps`. Channels are 0..0x100 with 0x100 meaning "no tint"; values
  * above 0x100 trigger an additive draw mode (GP0 0xE1 abr=2).
@@ -21,7 +21,7 @@ typedef struct
     s32 g;     /* 0x4 — green channel, 0..0x100 normal, >0x100 = additive */
     s32 b;     /* 0x8 — blue channel,  0..0x100 normal, >0x100 = additive */
     s32 steps; /* 0xC — frames remaining in the lerp (target struct only) */
-} DataStruct;
+} FadeState;
 
 // Structure for the argument object
 typedef struct
@@ -68,10 +68,13 @@ typedef struct
     u8 pad1[2];
 } UnkStruct2;
 
+extern void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7);
+
 extern s32 D_8014F840;
 extern s32 D_8014F8CC;
-extern DataStruct D_8014F818;
-extern DataStruct D_8014F828;
+extern u8 D_8014F758[];
+extern FadeState g_fade_target;
+extern FadeState g_fade_current;
 extern s32 D_8014F880;
 extern u8 D_80147494[];
 extern s32 D_800F22AC;
@@ -80,8 +83,8 @@ extern s32 D_8014F8A8;
 extern s32 D_80122988;
 extern s32 D_8014F844;
 extern s32 D_8014F7E4;
-extern s8 D_8014F8B8;
-extern s8 D_8014F8B0;
+extern u8 D_8014F8B8;
+extern u8 D_8014F8B0;
 extern s8 D_8014F850;
 extern char D_8014F7E8;
 extern s32 D_8014F848;
