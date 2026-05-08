@@ -1868,3 +1868,57 @@ void func_80142928(void)
     }
     D_8014F8BC = D_8014F8CC + 0x18;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/VOLcD
+ */
+void func_801429A0(u8* buffer, u16 header)
+{
+    u8* ptr;
+    u32 len;
+    u32 header_size;
+    u8 c;
+    u32 move_count;
+    u32 i;
+    u16 h = header; // save header to match register usage
+
+    if ((h & 0xFF) == 0)
+        return;
+
+    if (((h & 0xFF) - 0x19) < 7U)
+        header_size = 2;
+    else
+        header_size = 1;
+
+    ptr = buffer;
+    len = 0;
+    if (*ptr != 0)
+    {
+        do
+        {
+            c = *ptr;
+            if ((unsigned char)(c - 0x19) < 7U)
+            {
+                ptr += 2;
+                len += 2;
+            }
+            else
+            {
+                ptr += 1;
+                len += 1;
+            }
+        } while (*ptr != 0);
+    }
+
+    move_count = len + 1;
+    for (i = move_count; i > 0; i--)
+    {
+        buffer[(header_size + i) - 1] = buffer[i - 1];
+    }
+
+    buffer[0] = (u8)(h & 0xFF);
+    if (header_size == 2)
+    {
+        buffer[1] = (u8)(h >> 8);
+    }
+}
