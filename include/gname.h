@@ -29,6 +29,26 @@ typedef struct
     u32 unk404C;                             /* at offset 0x404C */
 } UnkStruct;
 
+/* Object structure (offsets from target assembly) */
+typedef struct
+{
+    u8 _pad0[0x28];
+    u32 unk28; /* offset 0x28 */
+    u8 _pad1[0x4040 - 0x28 - 4];
+    u32* unk4040; /* offset 0x4040 */
+    u8 _pad2[0x404C - 0x4040 - 4];
+    u32 unk404C; /* offset 0x404C */
+} Obj;
+
+typedef struct
+{
+    u8 field0;
+    u8 field1;
+    u8 field2;
+    u8 field3;
+    u32 field4;
+} TableEntry;
+
 extern s32 D_8014F840;
 extern DataStruct D_8014F818;
 extern DataStruct D_8014F828;

@@ -1154,3 +1154,163 @@ void func_80141E04(UnkStruct* arg0, s32 arg1, s32 arg2)
     /* Store pointer address low 24 bits into arg0->unk38 again */
     arg0->unk38 = (arg0->unk38 & 0xFF000000) | ((u32)temp_s2_2 & 0xFFFFFF);
 }
+
+/**
+ * decomp.me (77.64%) https://decomp.me/scratch/Glw7t
+ */
+void func_80141F9C(void* arg0, s32 arg1)
+{
+    u8 sp28[0x80];
+    Obj* obj = (Obj*)arg0;
+    u32* temp_s1 = obj->unk4040;
+    u32* var_a2;
+    u8* var_s4;
+    u16* var_s3;
+    s32 var_s0, var_s1, var_s2, var_s5;
+    s32 temp_v1;
+
+    /* First call and pointer setup */
+    func_8001A5D4(temp_s1, (void*)(D_8014F840 + ((obj->unk404C ^ 1) * 0x40C0) + 0x4064));
+
+    *temp_s1 = (*temp_s1 & 0xFF000000) | (obj->unk28 & 0x00FFFFFF);
+    obj->unk28 = (obj->unk28 & 0xFF000000) | ((u32)temp_s1 & 0x00FFFFFF);
+
+    /* var_a2 = temp_s1 + 0x40 (byte addition) */
+    var_a2 = (u32*)((u8*)temp_s1 + 0x40);
+
+    /* Determine var_s4, var_s1, var_s5, var_s2 based on D_8014F848 */
+    if (D_8014F848 == 4)
+    {
+        var_s4 = (u8*)(D_80142EFC + ((u32)&D_80142EFC - 8));
+        var_s1 = D_80142E40[D_80142CAC[D_8014F8C8]];
+        var_s5 = D_80142E40[D_80142CAC[D_8014F8C8] + 1];
+        var_s2 = 0;
+    }
+    else
+    {
+        var_s1 = D_80142C98[arg1][0];
+        var_s5 = D_80142C98[arg1][1];
+        var_s4 = (u8*)(D_80142EF8 + ((u32)&D_80142EF8 - 4));
+        var_s2 = 0;
+    }
+
+    var_s0 = var_s2;
+    var_s3 = (u16*)(var_s4 + (var_s1 * 2));
+
+    /* Main loop */
+    for (;;)
+    {
+        temp_v1 = (var_s2 * 0x10) - D_8014F8B4;
+        if ((u32)(temp_v1 + 0x0B) < 0x5B)
+        {
+            var_a2 = func_800A88A0(var_a2, (void*)&obj->unk28, (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
+        }
+        var_s1++;
+        var_s3++;
+        if (var_s5 == var_s1)
+            break;
+
+        var_s0++;
+        if (var_s0 == 10)
+        {
+            var_s0 = 0;
+            var_s2++;
+        }
+    }
+
+    /* After loop – final setup and second call */
+    {
+        u32 param_a2 = 0x68;
+        D_8014F8A0 = var_s2;
+        D_8014F898 = var_s0;
+        if (obj->unk404C != 0)
+        {
+            param_a2 = 0x150;
+        }
+
+        func_8001C56C(sp28, 0x60, param_a2, 0xA0, 0x50);
+        func_8001A5D4(var_a2, sp28);
+
+        *var_a2 = (*var_a2 & 0xFF000000) | (obj->unk28 & 0x00FFFFFF);
+        obj->unk28 = (obj->unk28 & 0xFF000000) | ((u32)var_a2 & 0x00FFFFFF);
+        /* Byte addition of 0x40, not element addition */
+        obj->unk4040 = (u32*)((u8*)var_a2 + 0x40);
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/EyVeo
+ */
+void* func_80142220(void* arg0, s32* arg1)
+{
+    unsigned char* bytes = (unsigned char*)arg0;
+    u32* words = (u32*)arg0;
+    u32 temp1, temp2;
+
+    bytes[3] = 1;
+    *(u32*)(bytes + 4) = 0xE1000005;
+
+    temp1 = words[0];
+    words[0] = (temp1 & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
+
+    temp2 = (u32)(*arg1);
+    *arg1 = (temp2 & 0xFF000000) | ((u32)((unsigned long)arg0) & 0x00FFFFFF);
+
+    return (void*)(bytes + 8);
+}
+
+/**
+ * decomp.me (88.88%) https://decomp.me/scratch/UHlWz
+ */
+void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+{
+    unsigned char* base = (unsigned char*)arg0;
+    unsigned char* ptr = base;
+    TableEntry* entry = &D_80142CD4[arg2];
+    u32 temp;
+    s32 tmp2;
+
+    /* First structure at base */
+    *(u32*)(ptr + 4) = 0x808080;
+    *(ptr + 3) = 4;
+    *(ptr + 7) = 0x64;
+    *(u16*)(ptr + 8) = (u16)(arg3 - arg5 + arg6);
+    *(u16*)(ptr + 10) = (u16)(arg4 - arg5 + arg6);
+    *(ptr + 12) = entry->field0;
+    *(ptr + 13) = entry->field1;
+    *(u16*)(ptr + 16) = (u16)entry->field2;
+    *(u16*)(ptr + 18) = (u16)entry->field3;
+    *(u16*)(ptr + 14) = (u16)((entry->field4 & 0x3F) | 0x7C80);
+
+    /* Update word at offset 0 and *arg1 */
+    temp = *(u32*)ptr;
+    *(u32*)ptr = (temp & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
+    *arg1 = (*arg1 & 0xFF000000) | ((u32)((unsigned long)arg0) & 0x00FFFFFF);
+
+    ptr += 0x14;
+
+    if (arg5 != 0)
+    {
+        /* Second structure at ptr */
+        *(u32*)(ptr + 4) = (arg7 != 0) ? 0xA00000 : 0;
+        *(ptr + 3) = 4;
+        *(ptr + 7) = (arg7 == 0) ? 0x66 : 0x64;
+        tmp2 = (arg5 - arg6) * 2;
+        *(u16*)(ptr + 10) = (u16)(arg4 + tmp2);
+        *(u16*)(ptr + 8) = (u16)(arg3 + tmp2);
+        *(ptr + 12) = entry->field0;
+        *(ptr + 13) = entry->field1;
+        *(u16*)(ptr + 16) = (u16)entry->field2;
+        *(u16*)(ptr + 18) = (u16)entry->field3;
+        *(u16*)(ptr + 14) = (u16)((entry->field4 & 0x3F) | 0x7C80);
+
+        /* Update second structure's word at offset 0 and *arg1 */
+        temp = *(u32*)ptr;
+        *(u32*)ptr = (temp & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
+        *arg1 = (*arg1 & 0xFF000000) | ((u32)((unsigned long)ptr) & 0x00FFFFFF);
+
+        ptr += 0x14;
+    }
+
+    return (void*)ptr;
+}
