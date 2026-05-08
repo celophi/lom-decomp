@@ -1665,3 +1665,323 @@ s32 func_801426D4(u8* arg0)
     }
     return var_v1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/c8fPe
+ */
+s32 func_80142720(u8* arg0)
+{
+    s32 var_v1;
+    u8 var_v0;
+    u8* var_a0;
+
+    var_a0 = arg0;
+    var_v0 = *var_a0;
+    var_v1 = 0;
+    if (var_v0 != 0)
+    {
+        do
+        {
+            if ((u32)(var_v0 - 0x19) < 7U)
+            {
+                var_a0 += 2;
+            }
+            else
+            {
+                var_a0 += 1;
+            }
+            var_v0 = *var_a0;
+            var_v1 += 1;
+        } while (var_v0 != 0);
+    }
+    return var_v1;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/1lsbD
+ */
+void func_80142764(u8* arg0, u8* arg1)
+{
+    u8* p;
+    s32 len;
+    s32 len1;
+    s32 saved_len;
+    u8 c;
+    p = arg0;
+    len = 0;
+    if ((*arg0) != 0)
+    {
+        do
+        {
+            c = *p;
+            if (((u32)((unsigned char)(c - 0x19))) < 7U)
+            {
+                p += 2;
+                len += 2;
+            }
+            else
+            {
+                p += 1;
+                len += 1;
+            }
+        } while ((*p) != 0);
+    }
+    p = arg1;
+    len1 = 0;
+    saved_len = len;
+    if ((*p) != 0)
+    {
+        do
+        {
+            c = *p;
+            if (((u32)((unsigned char)(c - 0x19))) < 7U)
+            {
+                p += 2;
+                len1 += 2;
+            }
+            else
+            {
+                p += 1;
+                len1 += 1;
+            }
+        } while ((*p) != 0);
+    }
+    len = 0;
+    if (len1 > 0)
+    {
+        do
+        {
+            arg0[saved_len + len] = arg1[len];
+            len++;
+        } while (len < len1);
+    }
+    arg0[saved_len + len] = 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/agZ8y
+ */
+s32 func_80142844(u8* arg0)
+{
+    u8* a0;
+    u8* a1;
+    s32 result;
+
+    a0 = arg0;
+    a1 = a0;
+    if (*a0 != 0)
+    {
+        do
+        {
+            a0 = a1;
+            if ((u32)(*a1 - 0x19) < 7U)
+            {
+                a1 = a0 + 2;
+            }
+            else
+            {
+                a1 = a0 + 1;
+            }
+        } while (*a1 != 0);
+    }
+    result = a0[0] | (a0[1] << 8);
+    if (a0 != a1)
+    {
+        *a0 = 0;
+    }
+    return result;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/UeYRe
+ */
+void func_801428A4(u8* arg0, u8* arg1)
+{
+    u8* p;
+    s32 i;
+    s32 len1;
+    p = arg1;
+    len1 = 0;
+    if ((*arg1) != 0)
+    {
+        do
+        {
+            if (((u32)((unsigned char)((*p) - 0x19))) < 7U)
+            {
+                p += 2;
+                len1 += 2;
+            }
+            else
+            {
+                p += 1;
+                len1 += 1;
+            }
+        } while ((*p) != 0);
+    }
+    i = 0;
+    if (len1 > 0)
+    {
+        u8* dest;
+        do
+        {
+            *(&arg0[i]) = arg1[i];
+            i++;
+            dest = &arg0[i];
+        } while (i < len1);
+    }
+    arg0[i] = 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/y0CgJ
+ */
+void func_80142928(void)
+{
+    UnkStruct2 sp10[16];
+    UnkStruct2* new_var2;
+    s16 new_var3;
+    s32 count;
+    s32 i;
+    UnkStruct2* ptr;
+    s32 new_var;
+    s32* pSum;
+    count = func_800644FC(sp10, D_8014F844, 0);
+    i = 0;
+    new_var3 = new_var2->unk10;
+    new_var = count;
+    D_8014F8CC = i;
+    if (i < new_var)
+    {
+        if (!new_var)
+        {
+        }
+        ptr = sp10;
+        while (i < ((0, new_var)))
+        {
+            pSum = &D_8014F8CC;
+            new_var2 = ptr;
+            new_var3 = new_var2->unk10;
+            *pSum += new_var3;
+            ptr++;
+            i++;
+        }
+    }
+    D_8014F8BC = D_8014F8CC + 0x18;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/VOLcD
+ */
+void func_801429A0(u8* buffer, u16 header)
+{
+    u8* ptr;
+    u32 len;
+    u32 header_size;
+    u8 c;
+    u32 move_count;
+    u32 i;
+    u16 h = header; // save header to match register usage
+
+    if ((h & 0xFF) == 0)
+        return;
+
+    if (((h & 0xFF) - 0x19) < 7U)
+        header_size = 2;
+    else
+        header_size = 1;
+
+    ptr = buffer;
+    len = 0;
+    if (*ptr != 0)
+    {
+        do
+        {
+            c = *ptr;
+            if ((unsigned char)(c - 0x19) < 7U)
+            {
+                ptr += 2;
+                len += 2;
+            }
+            else
+            {
+                ptr += 1;
+                len += 1;
+            }
+        } while (*ptr != 0);
+    }
+
+    move_count = len + 1;
+    for (i = move_count; i > 0; i--)
+    {
+        buffer[(header_size + i) - 1] = buffer[i - 1];
+    }
+
+    buffer[0] = (u8)(h & 0xFF);
+    if (header_size == 2)
+    {
+        buffer[1] = (u8)(h >> 8);
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ArXXq
+ */
+s32 func_80142A54(u8* arg0)
+{
+    u8 first;
+    u32 header_size;
+    u32 header_value;
+    u8* ptr;
+    s32 len;
+    u8 c;
+    s32 move_count;
+    s32 i;
+    u32 flags;
+
+    first = arg0[0];
+    if (first == 0)
+    {
+        return 0;
+    }
+
+    if ((first - 0x19U) < 7U)
+    {
+        header_size = 2;
+        header_value = (u16)((arg0[1] << 8) | arg0[0]);
+    }
+    else
+    {
+        header_value = arg0[0];
+        header_size = 1;
+    }
+
+    ptr = arg0 + header_size;
+    len = 0;
+    c = *ptr;
+    if (c != 0)
+    {
+        do
+        {
+            if ((c - 0x19U) < 7U)
+            {
+                ptr += 2;
+                len += 2;
+            }
+            else
+            {
+                ptr += 1;
+                len += 1;
+            }
+            c = *ptr;
+        } while (c != 0);
+    }
+
+    move_count = len + 1;
+    flags = 0xFFFFU;
+    for (i = 0; i < move_count; i++)
+    {
+        arg0[i] = arg0[i + header_size];
+    }
+
+    return (s32)(header_value & flags);
+}

@@ -61,7 +61,15 @@ typedef struct
     u32 field4;
 } TableEntry;
 
+typedef struct
+{
+    u8 pad0[0x10];
+    s16 unk10;
+    u8 pad1[2];
+} UnkStruct2;
+
 extern s32 D_8014F840;
+extern s32 D_8014F8CC;
 extern DataStruct D_8014F818;
 extern DataStruct D_8014F828;
 extern s32 D_8014F880;
