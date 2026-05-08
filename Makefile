@@ -315,7 +315,6 @@ overlay_field_gcc_srcs   := src/overlays/field/unk1.c
 
 OVERLAYS += gname
 
-
 OVERLAYS += golem
 overlay_golem_gcc_srcs   := src/overlays/golem/unk1.c
 

@@ -41,6 +41,7 @@ segments:
     vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x909, c, unk1]
+      - [0x909, c, menu]
+      - [0x969, c, unk1]
       - [0xFBF5, data, data]
   - [0x2B9DD]
