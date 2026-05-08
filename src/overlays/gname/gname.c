@@ -1452,3 +1452,184 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
 
     return (void*)ptr;
 }
+
+/**
+ * decomp.me (82.98%) https://decomp.me/scratch/Q6WL2
+ */
+void func_80142410(void* arg0)
+{
+    struct
+    {
+        u16 sp0;
+        u16 sp2;
+        u16 sp4;
+        u16 sp6;
+    } stk;
+
+    u8* obj_t6 = (u8*)arg0;
+    u8* obj_t2 = obj_t6;
+    u32 mask_all = 0x00FFFFFF;
+    u32* var_t0 = (u32*)D_8014F6B8;
+    s32 var_t4 = 0;
+    u32* var_s0 = (u32*)D_80142CD4;
+    u32 const_8080 = 0x80808080;
+    u32 const_4 = 4;
+    u32 const_64 = 0x64;
+    u32 mask_loop = 0x00FFFFFF;
+
+    u8* ptr_t1;
+    u32 a2, a0, a1, v0, v1;
+    u32* list_ptr;
+    u8* dst;
+    u8* entry;
+    u32 mask_ff00;
+
+    /* Stack and first header */
+    ptr_t1 = *(u8**)(obj_t6 + 0x4040);
+
+    stk.sp6 = 0xFF;
+    stk.sp4 = 0xFF;
+    mask_ff00 = 0xFF000000;
+    stk.sp2 = 0;
+    stk.sp0 = 0;
+    ptr_t1[3] = 2;
+
+    a2 = (u16)stk.sp2;
+    v0 = (u8)stk.sp0;
+    a0 = (u16)stk.sp6;
+    a1 = (u16)stk.sp4;
+    *(u32*)(ptr_t1 + 8) = 0;
+
+    a2 = ((a2 & 0xFF) >> 3) << 15;
+    v1 = 0xE2000000;
+    v0 = (v0 >> 3) << 10;
+    v0 |= v1;
+    a2 |= v0;
+
+    a0 = (s32)(a0 << 16) >> 14;
+    a0 = -a0;
+    a2 |= (a0 & 0x3E0);
+
+    a1 = (s16)a1;
+    a1 = -a1;
+    a2 |= ((a1 & 0xFF) >> 3);
+
+    v1 = *(u32*)ptr_t1;
+    a0 = mask_ff00;
+    *(u32*)(ptr_t1 + 4) = a2;
+    v0 = *(u32*)(obj_t6 + 0x3C);
+    v1 = (v1 & a0) | (v0 & mask_all);
+    mask_all = (u32)ptr_t1 & mask_all;
+    *(u32*)ptr_t1 = v1;
+
+    ptr_t1 += 0xC;
+    list_ptr = (u32*)ptr_t1;
+    v0 = *(u32*)(obj_t6 + 0x3C);
+    dst = (u8*)list_ptr + 0xE;
+    v0 = (v0 & a0) | mask_all;
+    *(u32*)(obj_t6 + 0x3C) = v0;
+
+    /* Main loop */
+    do
+    {
+        u32 idx = var_t0[0];
+
+        *(u32*)(dst - 0xA) = const_8080;
+        *(u8*)(dst - 0xB) = (u8)const_4;
+        *(u8*)(dst - 7) = (u8)const_64;
+
+        v0 = var_t0[1];
+        entry = (u8*)var_s0 + (idx << 3);
+        *(u32*)(dst - 6) = v0;
+
+        {
+            u8 b0 = entry[0];
+            *(u8*)(dst - 2) = b0;
+        }
+        {
+            u8 b1 = entry[1];
+            *(u8*)(dst - 1) = b1;
+        }
+        {
+            u8 b2 = entry[2];
+            *(u16*)(dst + 2) = b2;
+        }
+        {
+            u8 b3 = entry[3];
+            var_t4++;
+            *(u16*)(dst + 4) = b3;
+        }
+        {
+            u32 val = *(u32*)(entry + 4);
+            var_t0 += 2;
+            *(u16*)dst = (u16)((val & 0x3F) | 0x7C80);
+        }
+
+        dst += 0x14;
+
+        /* Inner linked list update */
+        v1 = *list_ptr;
+        v0 = *(u32*)(obj_t2 + 0x3C);
+        *list_ptr = (v1 & mask_ff00) | (v0 & mask_loop);
+
+        v1 = (u32)list_ptr & mask_loop;
+        v0 = *(u32*)(obj_t2 + 0x3C);
+        *(u32*)(obj_t2 + 0x3C) = (v0 & mask_ff00) | v1;
+
+        list_ptr = (u32*)((u8*)list_ptr + 0x14);
+    } while (var_t4 < 20);
+
+    /* After loop */
+    ptr_t1 = (u8*)list_ptr;
+    mask_all = 0x00FFFFFF;
+    v1 = 0xE1000005;
+
+    stk.sp4 = 0xFF;
+    stk.sp6 = 0xFF;
+    stk.sp0 = 0;
+    stk.sp2 = 0;
+
+    /* Header 2 */
+    ptr_t1[3] = 2;
+    a2 = (u16)stk.sp2;
+    v0 = (u8)stk.sp0;
+    a0 = (u16)stk.sp6;
+    a1 = (u16)stk.sp4;
+    *(u32*)(ptr_t1 + 8) = 0;
+
+    a2 = ((a2 & 0xFF) >> 3) << 15;
+    v0 = (v0 >> 3) << 10;
+    a2 |= (v0 | 0xE2000000);
+
+    a0 = (s32)(a0 << 16) >> 14;
+    a0 = -a0;
+    a2 |= (a0 & 0x3E0);
+
+    a1 = (s16)a1;
+    a1 = -a1;
+    a2 |= ((a1 & 0xFF) >> 3);
+
+    v0 = *(u32*)ptr_t1;
+    a0 = 0xFF000000;
+    *(u32*)(ptr_t1 + 4) = a2;
+    v0 = (v0 & a0) | (*(u32*)(obj_t2 + 0x3C) & mask_all);
+    *(u32*)ptr_t1 = v0;
+
+    v0 = (u32)ptr_t1 & mask_all;
+    a2 = *(u32*)(obj_t2 + 0x3C);
+    ptr_t1 += 0xC;
+    *(u32*)(obj_t2 + 0x3C) = (a2 & a0) | v0;
+
+    /* Sync block */
+    ptr_t1[3] = 1;
+    v0 = *(u32*)ptr_t1;
+    *(u32*)(ptr_t1 + 4) = v1 | 0x5;
+    v0 = (v0 & a0) | (*(u32*)(obj_t2 + 0x3C) & mask_all);
+    *(u32*)ptr_t1 = v0;
+
+    v0 = *(u32*)(obj_t2 + 0x3C);
+    mask_all = (u32)ptr_t1 & mask_all;
+    *(u32*)(obj_t2 + 0x3C) = (v0 & a0) | mask_all;
+
+    *(u8**)(obj_t6 + 0x4040) = ptr_t1 + 8;
+}

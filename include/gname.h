@@ -109,6 +109,7 @@ extern s32 D_8014F838;
 extern u8 D_80142EF4[];
 extern unsigned char D_80142CD4[];
 extern s32 D_80142E14;
+extern u32 D_8014F6B8[];
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
