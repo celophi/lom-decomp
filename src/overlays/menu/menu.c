@@ -131,3 +131,83 @@ void func_80140A48(void* arg0)
     *((s32*)(((u8*)arg0) + 0x4040)) = s3;
     func_8014134C(arg0);
 }
+
+/**
+ * decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
+ */
+s32* func_80140C14(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+{
+    u8 sp10[0x90]; /* buffer – size matches target frame */
+    s32 tmp, count, i;
+    s32 *ptr0, *ptr1;
+    s32 acc; /* accumulator for halfwords */
+    u8 *base, *col;
+
+    /* first call: fill buffer */
+    func_800171CC(sp10, arg2, arg6);
+    sp10[arg6] = 0;
+
+    /* second call: get number of elements */
+    count = func_800644FC(arg0, sp10, arg3);
+
+    /* subtract halfword values according to arg7 */
+    if (arg7 == 1)
+    {
+        /* signed halfword (lh) */
+        ptr0 = arg0;
+        for (i = 0; i < count; i++)
+        {
+            arg4 -= *(s16*)((char*)ptr0 + 0x10);
+            ptr0 = (s32*)((char*)ptr0 + 0x14);
+        }
+    }
+    else if (arg7 == 2)
+    {
+        /* unsigned halfword → (val << 16) >> 17 */
+        ptr0 = arg0;
+        for (i = 0; i < count; i++)
+        {
+            u16 val = *(u16*)((char*)ptr0 + 0x10);
+            arg4 -= ((s16)val) >> 1; /* arithmetic right shift, matches sra */
+            ptr0 = (s32*)((char*)ptr0 + 0x14);
+        }
+    }
+
+    acc = 0;
+
+    /* main loop – process each structure */
+    if (count > 0)
+    {
+        base = (u8*)arg0;
+        col = (u8*)arg1;
+        tmp = arg4 + (arg5 << 16); /* constant used inside loop */
+
+        do
+        {
+            /* write fields using negative offsets from base+0x10 */
+            *(s32*)(base + 0x8) = tmp + acc;
+            *(u32*)(base + 0x4) = 0x808080U;
+            *(u8*)(base + 0x3) = 4;
+            *(u8*)(base + 0x7) = 100;
+
+            acc += *(s16*)(base + 0x10); /* accumulate halfword */
+
+            /* blend colour words */
+            *(s32*)base = (*(s32*)base & 0xFF000000U) | (*(s32*)col & 0x00FFFFFFU);
+            *(s32*)col = (*(s32*)col & 0xFF000000U) | ((u32)base & 0x00FFFFFFU);
+
+            /* advance to next structure (20 bytes) */
+            base += 0x14;
+            col += 0x14;
+        } while (--count);
+    }
+
+    /* final writes – base and col now point to the next structure */
+    ((u8*)base)[3] = 1;
+    *(u32*)(base + 4) = 0xE100001FU;
+    *(s32*)base = (*(s32*)base & 0xFF000000U) | (*(s32*)col & 0x00FFFFFFU);
+    *(s32*)col = (*(s32*)col & 0xFF000000U) | ((u32)base & 0x00FFFFFFU);
+
+    /* return pointer to offset 0x8 of the current structure */
+    return (s32*)(base + 8);
+}
