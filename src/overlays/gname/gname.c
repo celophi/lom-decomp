@@ -1633,3 +1633,35 @@ void func_80142410(void* arg0)
 
     *(u8**)(obj_t6 + 0x4040) = ptr_t1 + 8;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/2QgjW
+ */
+s32 func_801426D4(u8* arg0)
+{
+    s32 var_v1;
+    u8 var_v0;
+    u8* var_a0;
+
+    var_a0 = arg0;
+    var_v0 = *var_a0;
+    var_v1 = 0;
+    if (var_v0 != 0)
+    {
+        do
+        {
+            if ((u32)(var_v0 - 0x19) < 7U)
+            {
+                var_a0 += 2;
+                var_v1 += 2;
+            }
+            else
+            {
+                var_a0 += 1;
+                var_v1 += 1;
+            }
+            var_v0 = *var_a0;
+        } while (var_v0 != 0);
+    }
+    return var_v1;
+}
