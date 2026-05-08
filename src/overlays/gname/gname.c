@@ -1108,50 +1108,78 @@ s32 func_80141D64(void)
 }
 
 /**
- * decomp.me (99.26%) https://decomp.me/scratch/LxujJ
+ * @brief Append three GPU primitives to the render context's OT and reserve a
+ *        right-edge VRAM strip for upload on the back page.
+ *
+ * Builds, in order:
+ *   1. A 0x40-byte template packet copied from the inactive frame's reserve
+ *      slot at `D_8014F840 + (alt_buf * 0x40C0) + 0x4064`.
+ *   2. A textured sprite (tag 0x64) emitted via @ref func_800A88A0 using
+ *      `tex_src` as its source data, then a Draw-Mode (GP0 0xE1) packet
+ *      emitted via @ref func_80142220 / @ref func_80142274.
+ *   3. A 0x60-byte image-load packet built on the stack by
+ *      @ref func_8001C56C describing a `strip_width x 32` rectangle at VRAM
+ *      `(240 - strip_width, 24 | 256)` — i.e. right-aligned on whichever
+ *      VRAM page is currently the back buffer (Y=0x18 vs 0x100).
+ *
+ * Each packet is spliced into the 24-bit OT at @c ctx->unk38 with the
+ * standard `(top_byte | next_addr & 0xFFFFFF)` link idiom, and the heap
+ * cursor @c ctx->unk4040 is advanced by 0x40 bytes past the last packet.
+ *
+ * @param ctx         Render context: OT head at unk38, primitive heap cursor
+ *                    at unk4040, double-buffer parity at unk404C.
+ * @param tex_src     Source data pointer for the sprite primitive (passed
+ *                    through to func_800A88A0).
+ * @param strip_width Width in pixels of the back-page VRAM upload strip; also
+ *                    sets the strip's X position as `240 - strip_width`.
+ *
+ * @see https://decomp.me/scratch/LxujJ (99.26%)
  */
-void func_80141E04(UnkStruct* arg0, s32 arg1, s32 arg2)
+void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
 {
-    s32* temp_s0;
-    s32* temp_s2;
-    s32* temp_s2_2;
-    s32 var_a2;
-    u32 sp28[0x19];
-    s32* bufferPtr = sp28;
-    s32 calculated;
-    u32 result;
+    s32* ot_head;       /* &ctx->unk38 — passed as the OT head pointer */
+    s32* prim;          /* current primitive being emitted */
+    s32* next_prim;     /* heap cursor after the sprite/draw-mode pair */
+    s32 vram_y;         /* VRAM Y of the back page (0x18 or 0x100) */
+    u32 load_packet[0x19];
+    s32 vram_x;         /* VRAM X of the right-aligned strip */
 
-    temp_s0 = (s32*)&arg0->unk38;
-    temp_s2 = arg0->unk4040;
-    temp_s2_2 = temp_s2;
+    ot_head = (s32*)&ctx->unk38;
+    prim = ctx->unk4040;
+    next_prim = prim;
 
-    func_8001A5D4(temp_s2, (void*)(D_8014F840 + ((arg0->unk404C ^ 1) * 0x40C0) + 0x4064));
+    /* 1. Copy template packet from the *other* frame's reserve slot, then
+     *    splice it into the OT. */
+    func_8001A5D4(prim, (void*)(D_8014F840 + ((ctx->unk404C ^ 1) * 0x40C0) + 0x4064));
 
-    *temp_s2 = (*temp_s2 & 0xFF000000) | (arg0->unk38 & 0xFFFFFF);
-    arg0->unk38 = (arg0->unk38 & 0xFF000000) | ((u32)temp_s2 & 0xFFFFFF);
+    *prim = (*prim & 0xFF000000) | (ctx->unk38 & 0xFFFFFF);
+    ctx->unk38 = (ctx->unk38 & 0xFF000000) | ((u32)prim & 0xFFFFFF);
 
-    temp_s2_2 = func_80142220(
+    /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
+     *    Returns the heap cursor just past both packets. */
+    next_prim = func_80142220(
         func_80142274(
-            func_800A88A0(temp_s2 + 0x10, temp_s0, arg1, 1, 0x10, 8, 0),
-            temp_s0, 2, 0, 0, 0, 0, 0),
-        temp_s0);
+            func_800A88A0(prim + 0x10, ot_head, tex_src, 1, 0x10, 8, 0),
+            ot_head, 2, 0, 0, 0, 0, 0),
+        ot_head);
 
-    calculated = 0xF0 - arg2;
-
-    var_a2 = 0x18;
-    if (arg0->unk404C != 0) {
-        var_a2 = 0x100;
+    /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
+     *    right edge of whichever page is currently the back buffer. */
+    vram_x = 0xF0 - strip_width;
+    vram_y = 0x18;
+    if (ctx->unk404C != 0) {
+        vram_y = 0x100;
     }
 
-    func_8001C56C(bufferPtr, calculated, var_a2, arg2, 0x20);
-    func_8001A5D4(temp_s2_2, sp28);
+    func_8001C56C(load_packet, vram_x, vram_y, strip_width, 0x20);
+    func_8001A5D4(next_prim, load_packet);
 
-    
-    *temp_s2_2 = (*temp_s2_2 & 0xFF000000) | (arg0->unk38 & 0xFFFFFF);
+    *next_prim = (*next_prim & 0xFF000000) | (ctx->unk38 & 0xFFFFFF);
 
-    arg0->unk4040 = temp_s2_2 + 0x10;
+    /* Advance heap cursor 0x40 bytes past the load packet. */
+    ctx->unk4040 = next_prim + 0x10;
 
-    arg0->unk38 = (arg0->unk38 & 0xFF000000) | ((u32)temp_s2_2 & 0xFFFFFF);
+    ctx->unk38 = (ctx->unk38 & 0xFF000000) | ((u32)next_prim & 0xFFFFFF);
 }
 
 /**
