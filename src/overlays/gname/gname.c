@@ -1757,3 +1757,37 @@ void func_80142764(u8* arg0, u8* arg1)
     }
     arg0[saved_len + len] = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/agZ8y
+ */
+s32 func_80142844(u8* arg0)
+{
+    u8* a0;
+    u8* a1;
+    s32 result;
+
+    a0 = arg0;
+    a1 = a0;
+    if (*a0 != 0)
+    {
+        do
+        {
+            a0 = a1;
+            if ((u32)(*a1 - 0x19) < 7U)
+            {
+                a1 = a0 + 2;
+            }
+            else
+            {
+                a1 = a0 + 1;
+            }
+        } while (*a1 != 0);
+    }
+    result = a0[0] | (a0[1] << 8);
+    if (a0 != a1)
+    {
+        *a0 = 0;
+    }
+    return result;
+}
