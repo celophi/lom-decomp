@@ -9,11 +9,9 @@
 #include "psyq/libcd.h"
 
 /* The block at 0x801ED600 is the merged-controller SCDRegs (see pad.h).
- * Skip-cinematic checks read SCDRegs.deviceState (port active) and
- * SCDRegs.buttonData (raw merged buttons). A u16 at byte offset +4 is also
- * read; func_80015B?? in decomp6.c builds it as `(port1+0x14) | (port2+0x24)`
- * — a derived/edge button word, not port-2 buttonData. Accessed raw until
- * its semantics are nailed down. */
+ * Skip-cinematic checks read SCDRegs.deviceState (port active),
+ * SCDRegs.buttonData (raw merged buttons), and SCDRegs.unk4 (a derived button
+ * word; see SCDRegs comment in pad.h). */
 
 /*
  * TODO(investigate): MovieState aliases the AudioSystem block defined in cd.h
@@ -103,6 +101,20 @@ typedef struct
 #define END_STATE_RUNNING  0
 #define END_STATE_NEAR_END 1
 #define END_STATE_DONE     2
+
+/* Skip-cinematic gating used by movie_play. */
+#define MOVIE_SKIPPABLE_MAX  2       /* only movies with idx < this are skippable */
+#define MOVIE0_SKIP_MASK     0xFF0F  /* movie 0 (intro/logo): broad — any non-bit-4..7 button */
+#define MOVIE1_SKIP_MASK     0x400A  /* movie 1: narrow specific combination */
+#define SCD_DEVICE_STATE_OK  3       /* deviceState < this means controller is usable */
+
+/* Audio fade-out ramp during a skip-triggered exit.
+ *   armed by setting audioFadeVol = AUDIO_FADE_INITIAL,
+ *   stepped down by AUDIO_FADE_STEP each outer-loop iteration,
+ *   exits the loop when it reaches 0. */
+#define AUDIO_FADE_DISARMED  (-1)
+#define AUDIO_FADE_INITIAL   0x70
+#define AUDIO_FADE_STEP      0x10
 
 /* Movie playback control block lives at a fixed RAM address.
  * Macro is token-equivalent to the cast so codegen is unchanged.

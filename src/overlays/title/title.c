@@ -1081,7 +1081,7 @@ void UpdateMenuInput(void)
  */
 static void read_pad_input(void)
 {
-    SCDRegs* base = (SCDRegs*)0x801ED600;
+    SCDRegs* base = SCD_REGS;
     s32 state;
     u32 buttons;
     s16 axis;

@@ -39,12 +39,10 @@ void movie_play(s32 movieIndex)
     VSync(0);
     func_800157DC();
     cdrom_process_state();
-    /* Skip-movie gate: only movie 0 (intro/logo) is skippable here, and only
-     * when controller is active (deviceState < 3) AND any non-shoulder button
-     * is held on the merged pad (mask 0xFF0F = SELECT+START+L3/R3+face+dpad,
-     * excludes L1/R1/L2/R2). */
-    if ((((movieIndex & 0xFFFF) == 0) && (((SCDRegs*)0x801ED600)->deviceState < 3)) &&
-        ((((SCDRegs*)0x801ED600)->buttonData & 0xFF0F) != 0))
+    /* Pre-playback skip gate: if user is already holding a skip button on
+     * movie 0 when we get here, bail before staging the stream. */
+    if ((((movieIndex & 0xFFFF) == 0) && ((SCD_REGS)->deviceState < SCD_DEVICE_STATE_OK)) &&
+        (((SCD_REGS)->buttonData & MOVIE0_SKIP_MASK) != 0))
     {
         return;
     }
@@ -100,7 +98,7 @@ void movie_play(s32 movieIndex)
     movie_init((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
     VSync(0);
     func_800157DC();
-    audioFadeVol = -1;
+    audioFadeVol = AUDIO_FADE_DISARMED;
     retryLimit = 5;
     state = (MovieState*)0x801ED500;
     endStateMatch = END_STATE_DONE;
@@ -153,36 +151,32 @@ void movie_play(s32 movieIndex)
         func_800157DC();
         cdrom_process_state();
         {
-            u32 a0 = new_var;
-            /* Per-frame skip check (movies 0 and 1):
-             *   movie 0: any non-shoulder button — mask 0xFF0F
-             *   movie 1: only START + CROSS + DOWN — mask 0x400A
-             * Both branches read the *derived* button word at +4 (not the
-             * raw buttonData at +2). When tripped, audio fade arms. */
-            if ((a0 < 2) && (((SCDRegs*)0x801ED600)->deviceState < 3))
+            u32 idx = new_var;
+            if ((idx < MOVIE_SKIPPABLE_MAX) && ((SCD_REGS)->deviceState < SCD_DEVICE_STATE_OK))
             {
-                u16 val = *(u16*)((u8*)0x801ED600 + 4); /* TODO: name +4 field */
-                if (((a0 != 0) ? ((val & ((0, 0x400A))) != 0) : ((val & 0xFF0F) != 0)) != 0)
+                u16 buttons = (SCD_REGS)->unk4;
+                if (((idx != 0) ? ((buttons & ((0, MOVIE1_SKIP_MASK))) != 0)
+                                : ((buttons & MOVIE0_SKIP_MASK) != 0)) != 0)
                 {
                     if (g_cdAudioReady == 0)
                     {
                         break;
                     }
-                    if (audioFadeVol == (-1))
+                    if (audioFadeVol == AUDIO_FADE_DISARMED)
                     {
-                        audioFadeVol = 0x70;
+                        audioFadeVol = AUDIO_FADE_INITIAL;
                     }
                 }
             }
         }
-        if (((g_cdAudioReady != 0) && (audioFadeVol != (-1))) != 0)
+        if (((g_cdAudioReady != 0) && (audioFadeVol != AUDIO_FADE_DISARMED)) != 0)
         {
             func_80023030(audioFadeVol);
             if (audioFadeVol == 0)
             {
                 break;
             }
-            audioFadeVol -= 0x10;
+            audioFadeVol -= AUDIO_FADE_STEP;
         }
     } while (state->endState != endStateMatch);
     func_800158E0();
