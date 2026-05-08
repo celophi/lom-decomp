@@ -1025,3 +1025,56 @@ void func_80141928(void* arg0)
     func_80141F9C(arg0, D_8014F848);
     func_80141E04(new_var4, D_8014F844, D_8014F8A8);
 }
+
+/**
+ * decomp.me (62.11%) https://decomp.me/scratch/Yf7Ha
+ */
+s32 func_80141C34(s32 arg0, s32 arg1)
+{
+    s32 f8ac;
+    s32 var_a0;
+    u16 val16;
+    u32* entry;
+    u32 temp;
+    u8* base;
+    s32 var;
+    s32 f848;
+    void* ptr;
+
+    f8ac = D_8014F8AC;
+    var_a0 = arg0;
+
+    if (f8ac < 8)
+    {
+        entry = (u32*)((u32)&D_80142EF8 + ((f8ac + 2) * 4));
+        temp = *entry;
+        base = ((u8*)&D_80142EF8) - 4;
+        var = D_80142EF8; /* value, not address */
+        val16 = *(u16*)(base + ((temp >> 8) & 0xFE) + var);
+        ptr = base + val16 + var;
+        var_a0 = func_800A88A0(var_a0, arg1, ptr, 1, 0xb0, 0xc8, 2);
+    }
+    else if (f8ac == 0x10)
+    {
+        f848 = D_8014F848;
+        if (((u32)(f848 - 3)) < 2U)
+        {
+            base = ((u8*)&D_80142EF8) - 4;
+            var = D_80142EF8;
+            /* val16 from &D_80142EF8 + (f848*4) + 0x10 */
+            val16 = *(u16*)((u8*)&D_80142EF8 + (f848 * 4) + 0x10);
+            ptr = base + val16 + var;
+            var_a0 = func_800A88A0(var_a0, arg1, ptr, 1, 0xb0, 0xc8, 2);
+        }
+        else
+        {
+            base = ((u8*)&D_80142EF8) - 4;
+            /* val16 from &D_80142EF8 + (arg0*4) + 0x50 */
+            val16 = *(u16*)((u8*)&D_80142EF8 + (arg0 * 4) + 0x50);
+            ptr = base + val16 + (arg0 * 4);
+            var_a0 = func_800A88A0(var_a0, arg1, ptr, 1, 0xb0, 0xc8, 2);
+        }
+    }
+
+    return var_a0;
+}
