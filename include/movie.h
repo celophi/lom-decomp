@@ -2,26 +2,16 @@
 #define _MOVIE_H
 
 #include "common.h"
+#include "pad.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libpress.h"
 #include "psyq/libcd.h"
 
-/*
- * TODO(investigate): SRC_801ED600 — system-wide flag block at 0x801ED600.
- * Used by movie_play to gate playback (`unk0 < 3 && (unk2 & 0xFF0F)`),
- * also referenced as `D_801ED600` in checkps.h and title.h. Likely save-data
- * flags or region/mode bits. The bitmasks 0x400A and 0xFF0F applied to unk4
- * suggest packed event/cinema-flag groups. Decompile its writers to learn
- * the field semantics.
- */
-typedef struct
-{
-    u_char unk0;
-    u_char _pad1;
-    u_short unk2;
-    u_short unk4;
-} SRC_801ED600;
+/* The block at 0x801ED600 is the merged-controller SCDRegs (see pad.h).
+ * Skip-cinematic checks read SCDRegs.deviceState (port active),
+ * SCDRegs.buttonData (raw merged buttons), and SCDRegs.unk4 (a derived button
+ * word; see SCDRegs comment in pad.h). */
 
 /*
  * TODO(investigate): MovieState aliases the AudioSystem block defined in cd.h
@@ -87,7 +77,9 @@ typedef struct
 
     // ---- status bytes (offsets 144..159) ----
     u8 gpuMode;          // 0 = DrawSync/LoadImage, non‑zero = BreakDraw/LoadImage2 path
-    s8 interlaceMode;    // 1 if interlaced mode (from first struct; second struct calls this _unk91)
+    s8 interlaceMode;    // misnomer: actually selects audio source. 1 = AKAO XA streaming
+                         // (akao_cmd_e8 + cd_volume); 0 = SPU/synth path (akao_cmd_c8 + panning).
+                         // Set from bit 7 of movie_init's `flags` arg.
     u8 unk92;            // 0x92 (was field92 — flipped s8→u8; only ever stored)
     u8 inputBufIdx;      // which vlcInputBuf[] holds current VLC-decoded input (toggled each frame)
     s8 vlcRetryCount;    // countdown: retry DecDCTvlc2 this many vsync ticks
@@ -101,8 +93,28 @@ typedef struct
     s8 mdecBusy;         // non‑zero while MDEC/DMA operation is in flight
     s8 frame_ready;      // 0x9D — set by movie_schedule_next_decode when a chunk boundary is reached; consumed by movie_play
     u8 endOfStream;      // 0x9E — set when frameNumber >= totalFrames
-    u8 endState;         // 1 = near end, 2 = stream fully ended
+    u8 endState;         // 1 = near end, 2 = stream fully ended (END_STATE_*)
 } MovieState;
+
+/* MovieState::endState sentinel values. Token-equivalent to the literals
+ * they replace, so codegen is unchanged. */
+#define END_STATE_RUNNING  0
+#define END_STATE_NEAR_END 1
+#define END_STATE_DONE     2
+
+/* Skip-cinematic gating used by movie_play. */
+#define MOVIE_SKIPPABLE_MAX  2       /* only movies with idx < this are skippable */
+#define MOVIE0_SKIP_MASK     0xFF0F  /* movie 0 (intro/logo): broad — any non-bit-4..7 button */
+#define MOVIE1_SKIP_MASK     0x400A  /* movie 1: narrow specific combination */
+#define SCD_DEVICE_STATE_OK  3       /* deviceState < this means controller is usable */
+
+/* Audio fade-out ramp during a skip-triggered exit.
+ *   armed by setting audioFadeVol = AUDIO_FADE_INITIAL,
+ *   stepped down by AUDIO_FADE_STEP each outer-loop iteration,
+ *   exits the loop when it reaches 0. */
+#define AUDIO_FADE_DISARMED  (-1)
+#define AUDIO_FADE_INITIAL   0x70
+#define AUDIO_FADE_STEP      0x10
 
 /* Movie playback control block lives at a fixed RAM address.
  * Macro is token-equivalent to the cast so codegen is unchanged.
@@ -171,7 +183,6 @@ extern u8 g_mdecRetryPending;  /* MDEC decode ready but MDEC was busy; retry on 
 extern u8 g_audioStreamState;  /* CD audio state: 0=idle, 1=sector arrived, 2=pipeline primed (at 0x801ED592) */
 extern u16 g_sectorsRemaining; /* sectors left to read for the current multi-sector frame (at 0x801ED57E) */
 extern void movie_mdec_out_callback(void);
-extern void movie_draw_sync_callback(void);
 extern s32 movie_cd_sector_callback(void);
 
 extern void cdrom_process_state(void);

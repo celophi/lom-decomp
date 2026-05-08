@@ -31,11 +31,23 @@ typedef struct
     u8 _pad1;
     u16 buttonData; // 0x02 - raw 16-bit input (pre-remap)
 
-    u8 _pad2[0x28]; // 0x04–0x2B - unused here
+    /* 0x04 - second u16 of the merged-controller block. decomp6.c builds it as
+     * (port1+0x14) | (port2+0x24), i.e. the OR-merge of a per-port word that
+     * is *not* raw buttonData. Likely the post-remap / edge-detected button
+     * word (matches the PadButton enum bit layout). Used by movie_play's
+     * skip-cinematic check with masks 0x400A and 0xFF0F. TODO: confirm
+     * semantics by decompiling its writers and rename. */
+    u16 unk4;
+
+    u8 _pad2[0x28 - 2]; // 0x06–0x2B - unused here
 
     s16 axisX; // 0x2C - signed axis (negative/positive thresholded)
     s16 axisY; // 0x2E - signed axis (negative/positive thresholded)
 } SCDRegs;
+
+/* Merged-controller register block lives at a fixed RAM address.
+ * Token-equivalent to the cast so codegen is unchanged. */
+#define SCD_REGS ((SCDRegs*)0x801ED600)
 
 /**
  * Remaps the four face-button bits in a byte-swapped controller word from the

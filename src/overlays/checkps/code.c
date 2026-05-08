@@ -508,7 +508,7 @@ void func_800506D0(void)
  */
 s32 PollInputDevice(void)
 {
-    SCDRegs* regs = (SCDRegs*)0x801ED600;
+    SCDRegs* regs = SCD_REGS;
 
     u32 inputMask;
     u32 rawButtons;
@@ -615,7 +615,7 @@ void ProcessControllerInput(void)
     s16 axisY;
     s32 finalButtonState;
 
-    controllerRegs = (SCDRegs*)0x801ED600;
+    controllerRegs = SCD_REGS;
 
     // 0xFF = no controller (High-Z, pins floating);
     // 0xFE = probably a defensive boundary just to be safe?
@@ -726,7 +726,7 @@ void UpdateControllerInput(void)
     short axisY;
     unsigned int finalButtonState;
 
-    regs = (SCDRegs*)0x801ED600;
+    regs = SCD_REGS;
 
     g_debouncedInput = 0;
 
