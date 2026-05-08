@@ -75,13 +75,13 @@ extern s32 D_8014F8CC;
 extern u8 D_8014F758[];
 extern FadeState g_fade_target;
 extern FadeState g_fade_current;
-extern s32 D_8014F880;
+extern s32 g_startup_delay;
 extern u8 D_80147494[];
 extern s32 D_800F22AC;
 extern s32 D_8014F8BC;
 extern s32 D_8014F8A8;
 extern s32 D_80122988;
-extern s32 D_8014F844;
+extern u8* g_active_name;
 extern s32 D_8014F7E4;
 extern u8 D_8014F8B8;
 extern u8 D_8014F8B0;
@@ -124,9 +124,9 @@ extern u32 D_8014F6B8[];
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
-extern s32 name_char_count(s32);
-extern s32 name_is_blank(s32);
+extern s32 name_char_count(u8*);
+extern s32 name_is_blank(u8*);
 extern s32 func_80140AB8(s32, s32);
-extern void name_copy(s32, void*);
+extern void name_copy(u8*, u8*);
 
 #endif

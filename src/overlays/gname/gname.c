@@ -165,7 +165,7 @@ void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
  * Calls (in order):
  *  - @ref func_8014075C  — RECT build + handoff (likely VRAM clear or CLUT load).
  *  - @ref func_800AA02C  — engine helper (audio/SFX init).
- *  - sets @c D_8014F880 = 0x28 (40 — likely a startup delay countdown).
+ *  - sets @c g_startup_delay = 0x28 (40 — likely a startup delay countdown).
  *  - @ref func_8006441C  — engine helper.
  *  - @ref reset_run_state  — zero/seed all of the overlay's run-state globals.
  *  - @ref func_80063194  — engine helper.
@@ -177,7 +177,7 @@ void gname_init(void)
     volatile int dummy[2]; /* forces 0x20 stack frame, ra at 0x18(sp) */
     func_8014075C();
     func_800AA02C();
-    D_8014F880 = 0x28;
+    g_startup_delay = 0x28;
     func_8006441C();
     reset_run_state();
     func_80063194();
@@ -271,7 +271,7 @@ void gname_tick(s32 ctx)
 /**
  * @brief Per-frame state-machine update: countdown, scalar lerp, input SFX.
  *
- *  - When the startup countdown @c D_8014F880 hits zero, hands off to
+ *  - When the startup countdown @c g_startup_delay hits zero, hands off to
  *    @ref func_8014139C (the next stage); otherwise decrements it.
  *  - Lerps the scalar @c D_8014F8A8 toward @c D_8014F8BC over
  *    @c D_8014F8A4 frames using the same `(target - current)/steps` shape
@@ -289,13 +289,13 @@ void gname_update_state(void)
     s32 steps;
 
     /* Startup delay countdown. */
-    if (D_8014F880 == 0)
+    if (g_startup_delay == 0)
     {
         func_8014139C();
     }
     else
     {
-        D_8014F880--;
+        g_startup_delay--;
     }
 
     /* Lerp D_8014F8A8 toward D_8014F8BC, snap when no steps remain. */
@@ -313,7 +313,7 @@ void gname_update_state(void)
     /* Confirm-button: play accept SFX on valid entry, reject SFX otherwise. */
     if (D_80122988 == 0x800)
     {
-        if ((name_char_count(D_8014F844) != 0) && (name_is_blank(D_8014F844) == 0))
+        if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
         {
             func_800A3938(0x7E, 0x80); /* accept */
             D_8014F7E4 = 5;
@@ -331,7 +331,7 @@ void gname_update_state(void)
  * (@c D_8014F88C / @c D_8014F890 from frozen defaults @c D_8014F894 /
  * @c D_8014F89C), kicks @ref func_80140AB8 to compute initial @c D_8014F8AC,
  * and registers the overlay's per-character buffer with
- * @ref name_copy (`D_8014F844`, `&D_8014F7E8`).
+ * @ref name_copy (`g_active_name`, `&D_8014F7E8`).
  *
  * @see https://decomp.me/scratch/FboaU (100%)
  */
@@ -347,7 +347,7 @@ void reset_run_state(void)
     D_8014F850 = 0;
     D_8014F88C = D_8014F894;
     D_8014F890 = D_8014F89C;
-    name_copy(D_8014F844, &D_8014F7E8); /* matches 'la a1, D_8014F7E8' */
+    name_copy(g_active_name, &D_8014F7E8); /* matches 'la a1, D_8014F7E8' */
     D_8014F8A8 = 0;
     func_80142928();
     D_8014F8A4 = 5;
@@ -452,7 +452,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     continue;
                 }
 
-                if ((name_char_count(D_8014F844) != 0) && (name_is_blank(D_8014F844) == 0))
+                if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
                 {
                     func_800A3938(0x7E, 0x80);
                     D_8014F7E4 = five;
@@ -468,7 +468,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             else
             {
                 func_800A3938(0x7E, 0x80);
-                name_pop_last_char(D_8014F844);
+                name_pop_last_char(g_active_name);
                 goto block_38;
             }
 
@@ -529,7 +529,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 f00 = D_80142F00;
                 f00_addr = (u32)(&D_80142F00);
                 half3a = *((u16*)((f00 + new_var3) + reg_s6));
-                name_copy(D_8014F844, (void*)((f00 + half3a) + reg_s6));
+                name_copy(g_active_name, (void*)((f00 + half3a) + reg_s6));
                 temp_v0 = func_80016F5C();
                 var_v0_5 = temp_v0 >> 7;
                 f00_addr = (u32)(&D_80142F00);
@@ -545,7 +545,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 var_v0_3 = rem3;
                 f00 = D_80142F00;
                 half3b = *((u16*)(((f00_addr + (var_v0_3 * 2)) + ((u32)f00)) + 0xF4));
-                name_append(D_8014F844, (void*)((f00 + half3b) + reg_s6), (s32)(new_var13 = f00));
+                name_append(g_active_name, (void*)((f00 + half3b) + reg_s6), (s32)(new_var13 = f00));
                 goto block_38;
             }
             else if (D_8014F7E0 == 1)
@@ -559,7 +559,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         block_36:
             D_8014F850 = 0;
         block_37:
-            name_copy(D_8014F844, var_a1);
+            name_copy(g_active_name, var_a1);
         block_38:
             func_80142928();
             repeat = 0;
@@ -649,7 +649,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         {
             if (D_8014F848 < 3)
             {
-                if (name_char_count(D_8014F844) < 0xA)
+                if (name_char_count(g_active_name) < 0xA)
                 {
                     u32 t1;
                     u16 hw;
@@ -660,7 +660,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                         t1 = *((u32*)((D_8014F848 * 4) + ((u32)(&D_80142C98))));
                         hw = *((u16*)(((ef8 + (t1 * 2)) + (idx_lt3 * 2)) + reg_s6));
                         D_8014F8B0 = 0;
-                        name_append(D_8014F844, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
+                        name_append(g_active_name, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
                     }
                     func_80142928();
                     D_8014F8A4 = five;
@@ -705,7 +705,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             }
             else if (D_8014F848 == 4)
             {
-                if (name_char_count(D_8014F844) < 0xA)
+                if (name_char_count(g_active_name) < 0xA)
                 {
                     u32 t1;
                     u32 t2;
@@ -720,7 +720,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                         t1 = *((u32*)((idx4 * 4) + ((u32)(&D_80142CAC))));
                         t2 = *((u32*)((t1 * 4) + ((u32)(&D_80142E40))));
                         hw = *((u16*)(((efc + (t2 * 2)) + (D_8014F8D0 * 2)) + reg_s6));
-                        name_append(D_8014F844, (void*)((efc + hw) + reg_s6), (s32)efc);
+                        name_append(g_active_name, (void*)((efc + hw) + reg_s6), (s32)efc);
                     }
                     func_80142928();
                     D_8014F8A4 = five;
@@ -848,7 +848,7 @@ void func_8014139C(void)
     }
     else if (D_80122988 & 1)
     {
-        temp_s1 = name_pop_last_char(D_8014F844);
+        temp_s1 = name_pop_last_char(g_active_name);
         while (name_char_count(&D_8014F850) >= 0xB)
         {
             name_pop_last_char(&D_8014F850);
@@ -863,7 +863,7 @@ void func_8014139C(void)
     }
     else if (D_80122988 & 2)
     {
-        if (name_char_count(D_8014F844) < 0xA)
+        if (name_char_count(g_active_name) < 0xA)
         {
             new_var2 = &D_8014F850;
             temp_v0 = name_pop_first_char(new_var2);
@@ -873,7 +873,7 @@ void func_8014139C(void)
                 sp10 = temp_v0;
                 (&sp10)[1] = (s8)(temp_v0_2 >> 8);
                 (&sp10)[2] = 0;
-                name_append(D_8014F844, &sp10);
+                name_append(g_active_name, &sp10);
                 func_80142928();
                 D_8014F8A4 = 5;
             }
@@ -889,7 +889,7 @@ void func_8014139C(void)
     {
         if (D_8014F838 != 0)
         {
-            if (name_char_count(D_8014F844) == 0)
+            if (name_char_count(g_active_name) == 0)
             {
                 D_8014F7E4 = 2;
                 func_800A3938(0x7F, 0x80);
@@ -900,7 +900,7 @@ void func_8014139C(void)
             }
         }
         func_800A3938(0x7F, 0x80);
-        name_pop_last_char(D_8014F844);
+        name_pop_last_char(g_active_name);
         func_80142928();
         D_8014F8A4 = 5;
     }
@@ -1128,7 +1128,7 @@ void func_80141928(void* arg0)
     }
     *((void**)new_var3) = func_80141D64(emit_draw_mode_prim(var_t0_2, arg0), new_var2 + 0x24);
     func_80141F9C(arg0, D_8014F848);
-    func_80141E04(new_var4, D_8014F844, D_8014F8A8);
+    func_80141E04(new_var4, g_active_name, D_8014F8A8);
 }
 
 /**
@@ -1637,13 +1637,13 @@ void func_80142410(void* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/2QgjW
  */
-s32 name_byte_length(u8* arg0)
+s32 name_byte_length(u8* name)
 {
     s32 var_v1;
     u8 var_v0;
     u8* var_a0;
 
-    var_a0 = arg0;
+    var_a0 = name;
     var_v0 = *var_a0;
     var_v1 = 0;
     if (var_v0 != 0)
@@ -1669,13 +1669,13 @@ s32 name_byte_length(u8* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/c8fPe
  */
-s32 name_char_count(u8* arg0)
+s32 name_char_count(u8* name)
 {
     s32 var_v1;
     u8 var_v0;
     u8* var_a0;
 
-    var_a0 = arg0;
+    var_a0 = name;
     var_v0 = *var_a0;
     var_v1 = 0;
     if (var_v0 != 0)
@@ -1700,16 +1700,16 @@ s32 name_char_count(u8* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/1lsbD
  */
-void name_append(u8* arg0, u8* arg1)
+void name_append(u8* dst, u8* src)
 {
     u8* p;
     s32 len;
     s32 len1;
     s32 saved_len;
     u8 c;
-    p = arg0;
+    p = dst;
     len = 0;
-    if ((*arg0) != 0)
+    if ((*dst) != 0)
     {
         do
         {
@@ -1726,7 +1726,7 @@ void name_append(u8* arg0, u8* arg1)
             }
         } while ((*p) != 0);
     }
-    p = arg1;
+    p = src;
     len1 = 0;
     saved_len = len;
     if ((*p) != 0)
@@ -1751,23 +1751,23 @@ void name_append(u8* arg0, u8* arg1)
     {
         do
         {
-            arg0[saved_len + len] = arg1[len];
+            dst[saved_len + len] = src[len];
             len++;
         } while (len < len1);
     }
-    arg0[saved_len + len] = 0;
+    dst[saved_len + len] = 0;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/agZ8y
  */
-s32 name_pop_last_char(u8* arg0)
+s32 name_pop_last_char(u8* name)
 {
     u8* a0;
     u8* a1;
     s32 result;
 
-    a0 = arg0;
+    a0 = name;
     a1 = a0;
     if (*a0 != 0)
     {
@@ -1795,14 +1795,14 @@ s32 name_pop_last_char(u8* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/UeYRe
  */
-void name_copy(u8* arg0, u8* arg1)
+void name_copy(u8* dst, u8* src)
 {
     u8* p;
     s32 i;
     s32 len1;
-    p = arg1;
+    p = src;
     len1 = 0;
-    if ((*arg1) != 0)
+    if ((*src) != 0)
     {
         do
         {
@@ -1824,12 +1824,12 @@ void name_copy(u8* arg0, u8* arg1)
         u8* dest;
         do
         {
-            *(&arg0[i]) = arg1[i];
+            *(&dst[i]) = src[i];
             i++;
-            dest = &arg0[i];
+            dest = &dst[i];
         } while (i < len1);
     }
-    arg0[i] = 0;
+    dst[i] = 0;
 }
 
 /**
@@ -1845,7 +1845,7 @@ void func_80142928(void)
     UnkStruct2* ptr;
     s32 new_var;
     s32* pSum;
-    count = func_800644FC(sp10, D_8014F844, 0);
+    count = func_800644FC(sp10, g_active_name, 0);
     i = 0;
     new_var3 = new_var2->unk10;
     new_var = count;
@@ -1926,7 +1926,7 @@ void name_prepend_char(u8* buffer, u16 header)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ArXXq
  */
-s32 name_pop_first_char(u8* arg0)
+s32 name_pop_first_char(u8* name)
 {
     u8 first;
     u32 header_size;
@@ -1938,7 +1938,7 @@ s32 name_pop_first_char(u8* arg0)
     s32 i;
     u32 flags;
 
-    first = arg0[0];
+    first = name[0];
     if (first == 0)
     {
         return 0;
@@ -1947,15 +1947,15 @@ s32 name_pop_first_char(u8* arg0)
     if ((first - 0x19U) < 7U)
     {
         header_size = 2;
-        header_value = (u16)((arg0[1] << 8) | arg0[0]);
+        header_value = (u16)((name[1] << 8) | name[0]);
     }
     else
     {
-        header_value = arg0[0];
+        header_value = name[0];
         header_size = 1;
     }
 
-    ptr = arg0 + header_size;
+    ptr = name + header_size;
     len = 0;
     c = *ptr;
     if (c != 0)
@@ -1980,7 +1980,7 @@ s32 name_pop_first_char(u8* arg0)
     flags = 0xFFFFU;
     for (i = 0; i < move_count; i++)
     {
-        arg0[i] = arg0[i + header_size];
+        name[i] = name[i + header_size];
     }
 
     return (s32)(header_value & flags);
@@ -2034,11 +2034,11 @@ s32 func_80142B18(s32 arg0, s32 arg1)
 /**
  * decomp.me (100%) https://decomp.me/scratch/rdbBA
  */
-s32 name_is_blank(u8* arg0)
+s32 name_is_blank(u8* name)
 {
     u32 temp_v0;
 
-    temp_v0 = *arg0;
+    temp_v0 = *name;
     if (temp_v0 == 0)
     {
         return 1;
@@ -2049,8 +2049,8 @@ s32 name_is_blank(u8* arg0)
         temp_v0 = temp_v0 & 0xFF;
         if (temp_v0 == 0x20 || temp_v0 == 0x80)
         {
-            arg0++;
-            temp_v0 = *arg0;
+            name++;
+            temp_v0 = *name;
         }
         else
         {
