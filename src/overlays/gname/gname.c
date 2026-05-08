@@ -167,19 +167,19 @@ void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
  *  - @ref func_800AA02C  — engine helper (audio/SFX init).
  *  - sets @c D_8014F880 = 0x28 (40 — likely a startup delay countdown).
  *  - @ref func_8006441C  — engine helper.
- *  - @ref func_801409EC  — zero/seed all of the overlay's run-state globals.
+ *  - @ref reset_run_state  — zero/seed all of the overlay's run-state globals.
  *  - @ref func_80063194  — engine helper.
  *
  * @see https://decomp.me/scratch/pnzC1 (100%)
  */
-void func_80140714(void)
+void gname_init(void)
 {
     volatile int dummy[2]; /* forces 0x20 stack frame, ra at 0x18(sp) */
     func_8014075C();
     func_800AA02C();
     D_8014F880 = 0x28;
     func_8006441C();
-    func_801409EC();
+    reset_run_state();
     func_80063194();
 }
 
@@ -254,18 +254,18 @@ void func_80140794(void* arg0)
  *  - @ref func_80142410  — frame prologue (likely OT reset / heap rewind).
  *  - @ref func_80141928  — main render pass for this overlay.
  *  - increments the global frame counter @c D_800F22AC.
- *  - @ref func_801408D0  — countdown / lerp / SFX trigger update.
+ *  - @ref gname_update_state  — countdown / lerp / SFX trigger update.
  *
  * @param ctx Render context passed through to @ref func_80141928.
  *
  * @see https://decomp.me/scratch/yYkTM (100%)
  */
-void func_80140888(s32 ctx)
+void gname_tick(s32 ctx)
 {
     func_80142410();
     func_80141928(ctx);
     D_800F22AC += 1;
-    func_801408D0();
+    gname_update_state();
 }
 
 /**
@@ -279,12 +279,12 @@ void func_80140888(s32 ctx)
  *  - When input mask @c D_80122988 == 0x800 (a specific button bit), plays
  *    one of two SFX via @ref func_800A3938 (bank 0x80, sound 0x7E or 0x78)
  *    based on whether the cursor's current entry passes the
- *    @ref func_80142720 / @ref func_80142C50 validation pair, and on the
+ *    @ref name_char_count / @ref name_is_blank validation pair, and on the
  *    "valid" path also kicks @c D_8014F7E4 = 5 to advance overlay state.
  *
  * @see https://decomp.me/scratch/g5Rx3 (100%)
  */
-void func_801408D0(void)
+void gname_update_state(void)
 {
     s32 steps;
 
@@ -313,7 +313,7 @@ void func_801408D0(void)
     /* Confirm-button: play accept SFX on valid entry, reject SFX otherwise. */
     if (D_80122988 == 0x800)
     {
-        if ((func_80142720(D_8014F844) != 0) && (func_80142C50(D_8014F844) == 0))
+        if ((name_char_count(D_8014F844) != 0) && (name_is_blank(D_8014F844) == 0))
         {
             func_800A3938(0x7E, 0x80); /* accept */
             D_8014F7E4 = 5;
@@ -326,16 +326,16 @@ void func_801408D0(void)
 /**
  * @brief Reset the overlay's run-state globals to their per-session defaults.
  *
- * Called from the boot path @ref func_80140714. Zeros most counters/indices,
+ * Called from the boot path @ref gname_init. Zeros most counters/indices,
  * primes the lerp scalar (@c D_8014F8A4 = 5), seeds the cursor state
  * (@c D_8014F88C / @c D_8014F890 from frozen defaults @c D_8014F894 /
  * @c D_8014F89C), kicks @ref func_80140AB8 to compute initial @c D_8014F8AC,
  * and registers the overlay's per-character buffer with
- * @ref func_801428A4 (`D_8014F844`, `&D_8014F7E8`).
+ * @ref name_copy (`D_8014F844`, `&D_8014F7E8`).
  *
  * @see https://decomp.me/scratch/FboaU (100%)
  */
-void func_801409EC(void)
+void reset_run_state(void)
 {
     D_8014F888 = 0xFF;
     D_8014F8AC = func_80140AB8(0, 0);
@@ -347,7 +347,7 @@ void func_801409EC(void)
     D_8014F850 = 0;
     D_8014F88C = D_8014F894;
     D_8014F890 = D_8014F89C;
-    func_801428A4(D_8014F844, &D_8014F7E8); /* matches 'la a1, D_8014F7E8' */
+    name_copy(D_8014F844, &D_8014F7E8); /* matches 'la a1, D_8014F7E8' */
     D_8014F8A8 = 0;
     func_80142928();
     D_8014F8A4 = 5;
@@ -452,7 +452,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     continue;
                 }
 
-                if ((func_80142720(D_8014F844) != 0) && (func_80142C50(D_8014F844) == 0))
+                if ((name_char_count(D_8014F844) != 0) && (name_is_blank(D_8014F844) == 0))
                 {
                     func_800A3938(0x7E, 0x80);
                     D_8014F7E4 = five;
@@ -468,7 +468,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             else
             {
                 func_800A3938(0x7E, 0x80);
-                func_80142844(D_8014F844);
+                name_pop_last_char(D_8014F844);
                 goto block_38;
             }
 
@@ -529,7 +529,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 f00 = D_80142F00;
                 f00_addr = (u32)(&D_80142F00);
                 half3a = *((u16*)((f00 + new_var3) + reg_s6));
-                func_801428A4(D_8014F844, (void*)((f00 + half3a) + reg_s6));
+                name_copy(D_8014F844, (void*)((f00 + half3a) + reg_s6));
                 temp_v0 = func_80016F5C();
                 var_v0_5 = temp_v0 >> 7;
                 f00_addr = (u32)(&D_80142F00);
@@ -545,7 +545,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 var_v0_3 = rem3;
                 f00 = D_80142F00;
                 half3b = *((u16*)(((f00_addr + (var_v0_3 * 2)) + ((u32)f00)) + 0xF4));
-                func_80142764(D_8014F844, (void*)((f00 + half3b) + reg_s6), (s32)(new_var13 = f00));
+                name_append(D_8014F844, (void*)((f00 + half3b) + reg_s6), (s32)(new_var13 = f00));
                 goto block_38;
             }
             else if (D_8014F7E0 == 1)
@@ -559,7 +559,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         block_36:
             D_8014F850 = 0;
         block_37:
-            func_801428A4(D_8014F844, var_a1);
+            name_copy(D_8014F844, var_a1);
         block_38:
             func_80142928();
             repeat = 0;
@@ -649,7 +649,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         {
             if (D_8014F848 < 3)
             {
-                if (func_80142720(D_8014F844) < 0xA)
+                if (name_char_count(D_8014F844) < 0xA)
                 {
                     u32 t1;
                     u16 hw;
@@ -660,7 +660,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                         t1 = *((u32*)((D_8014F848 * 4) + ((u32)(&D_80142C98))));
                         hw = *((u16*)(((ef8 + (t1 * 2)) + (idx_lt3 * 2)) + reg_s6));
                         D_8014F8B0 = 0;
-                        func_80142764(D_8014F844, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
+                        name_append(D_8014F844, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
                     }
                     func_80142928();
                     D_8014F8A4 = five;
@@ -705,7 +705,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             }
             else if (D_8014F848 == 4)
             {
-                if (func_80142720(D_8014F844) < 0xA)
+                if (name_char_count(D_8014F844) < 0xA)
                 {
                     u32 t1;
                     u32 t2;
@@ -720,7 +720,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                         t1 = *((u32*)((idx4 * 4) + ((u32)(&D_80142CAC))));
                         t2 = *((u32*)((t1 * 4) + ((u32)(&D_80142E40))));
                         hw = *((u16*)(((efc + (t2 * 2)) + (D_8014F8D0 * 2)) + reg_s6));
-                        func_80142764(D_8014F844, (void*)((efc + hw) + reg_s6), (s32)efc);
+                        name_append(D_8014F844, (void*)((efc + hw) + reg_s6), (s32)efc);
                     }
                     func_80142928();
                     D_8014F8A4 = five;
@@ -848,13 +848,13 @@ void func_8014139C(void)
     }
     else if (D_80122988 & 1)
     {
-        temp_s1 = func_80142844(D_8014F844);
-        while (func_80142720(&D_8014F850) >= 0xB)
+        temp_s1 = name_pop_last_char(D_8014F844);
+        while (name_char_count(&D_8014F850) >= 0xB)
         {
-            func_80142844(&D_8014F850);
+            name_pop_last_char(&D_8014F850);
         }
 
-        func_801429A0(&D_8014F850, temp_s1 & 0xFFFF);
+        name_prepend_char(&D_8014F850, temp_s1 & 0xFFFF);
         func_80142928();
         D_8014F8A4 = 5;
         var_a0 = 0x7D;
@@ -863,17 +863,17 @@ void func_8014139C(void)
     }
     else if (D_80122988 & 2)
     {
-        if (func_80142720(D_8014F844) < 0xA)
+        if (name_char_count(D_8014F844) < 0xA)
         {
             new_var2 = &D_8014F850;
-            temp_v0 = func_80142A54(new_var2);
+            temp_v0 = name_pop_first_char(new_var2);
             temp_v0_2 = (u16)temp_v0;
             if (temp_v0_2 != 0)
             {
                 sp10 = temp_v0;
                 (&sp10)[1] = (s8)(temp_v0_2 >> 8);
                 (&sp10)[2] = 0;
-                func_80142764(D_8014F844, &sp10);
+                name_append(D_8014F844, &sp10);
                 func_80142928();
                 D_8014F8A4 = 5;
             }
@@ -889,7 +889,7 @@ void func_8014139C(void)
     {
         if (D_8014F838 != 0)
         {
-            if (func_80142720(D_8014F844) == 0)
+            if (name_char_count(D_8014F844) == 0)
             {
                 D_8014F7E4 = 2;
                 func_800A3938(0x7F, 0x80);
@@ -900,7 +900,7 @@ void func_8014139C(void)
             }
         }
         func_800A3938(0x7F, 0x80);
-        func_80142844(D_8014F844);
+        name_pop_last_char(D_8014F844);
         func_80142928();
         D_8014F8A4 = 5;
     }
@@ -1070,7 +1070,7 @@ void func_80141928(void* arg0)
     } while (var_s0 < 0xD);
     new_var = D_8014F88C;
     new_var4 = arg0;
-    temp_v0 = func_80141C34(func_80142220(func_80142B18(func_80142274(func_80142220(var_t0, ((char*)new_var4) + 0x2C),
+    temp_v0 = func_80141C34(emit_draw_mode_prim(func_80142B18(func_80142274(emit_draw_mode_prim(var_t0, ((char*)new_var4) + 0x2C),
                                                                       ((char*)new_var4) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
                                                         arg0),
                                           ((char*)new_var4) + 0x34),
@@ -1126,7 +1126,7 @@ void func_80141928(void* arg0)
                                      (s32)D_80142E0C[6], 0, 0, 0);
         }
     }
-    *((void**)new_var3) = func_80141D64(func_80142220(var_t0_2, arg0), new_var2 + 0x24);
+    *((void**)new_var3) = func_80141D64(emit_draw_mode_prim(var_t0_2, arg0), new_var2 + 0x24);
     func_80141F9C(arg0, D_8014F848);
     func_80141E04(new_var4, D_8014F844, D_8014F8A8);
 }
@@ -1221,7 +1221,7 @@ s32 func_80141D64(void)
  *      slot at `D_8014F840 + (alt_buf * 0x40C0) + 0x4064`.
  *   2. A textured sprite (tag 0x64) emitted via @ref func_800A88A0 using
  *      `tex_src` as its source data, then a Draw-Mode (GP0 0xE1) packet
- *      emitted via @ref func_80142220 / @ref func_80142274.
+ *      emitted via @ref emit_draw_mode_prim / @ref func_80142274.
  *   3. A 0x60-byte image-load packet built on the stack by
  *      @ref func_8001C56C describing a `strip_width x 32` rectangle at VRAM
  *      `(240 - strip_width, 24 | 256)` — i.e. right-aligned on whichever
@@ -1262,7 +1262,7 @@ void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
 
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      *    Returns the heap cursor just past both packets. */
-    next_prim = func_80142220(
+    next_prim = emit_draw_mode_prim(
         func_80142274(func_800A88A0(prim + 0x10, ot_head, tex_src, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
 
     /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
@@ -1385,7 +1385,7 @@ void func_80141F9C(void* arg0, s32 arg1)
  *
  * @see https://decomp.me/scratch/EyVeo (100%)
  */
-void* func_80142220(void* arg0, s32* arg1)
+void* emit_draw_mode_prim(void* arg0, s32* arg1)
 {
     unsigned char* bytes = (unsigned char*)arg0;
     u32* words = (u32*)arg0;
@@ -1637,7 +1637,7 @@ void func_80142410(void* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/2QgjW
  */
-s32 func_801426D4(u8* arg0)
+s32 name_byte_length(u8* arg0)
 {
     s32 var_v1;
     u8 var_v0;
@@ -1669,7 +1669,7 @@ s32 func_801426D4(u8* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/c8fPe
  */
-s32 func_80142720(u8* arg0)
+s32 name_char_count(u8* arg0)
 {
     s32 var_v1;
     u8 var_v0;
@@ -1700,7 +1700,7 @@ s32 func_80142720(u8* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/1lsbD
  */
-void func_80142764(u8* arg0, u8* arg1)
+void name_append(u8* arg0, u8* arg1)
 {
     u8* p;
     s32 len;
@@ -1761,7 +1761,7 @@ void func_80142764(u8* arg0, u8* arg1)
 /**
  * decomp.me (100%) https://decomp.me/scratch/agZ8y
  */
-s32 func_80142844(u8* arg0)
+s32 name_pop_last_char(u8* arg0)
 {
     u8* a0;
     u8* a1;
@@ -1795,7 +1795,7 @@ s32 func_80142844(u8* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/UeYRe
  */
-void func_801428A4(u8* arg0, u8* arg1)
+void name_copy(u8* arg0, u8* arg1)
 {
     u8* p;
     s32 i;
@@ -1872,7 +1872,7 @@ void func_80142928(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/VOLcD
  */
-void func_801429A0(u8* buffer, u16 header)
+void name_prepend_char(u8* buffer, u16 header)
 {
     u8* ptr;
     u32 len;
@@ -1926,7 +1926,7 @@ void func_801429A0(u8* buffer, u16 header)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ArXXq
  */
-s32 func_80142A54(u8* arg0)
+s32 name_pop_first_char(u8* arg0)
 {
     u8 first;
     u32 header_size;
@@ -2034,7 +2034,7 @@ s32 func_80142B18(s32 arg0, s32 arg1)
 /**
  * decomp.me (100%) https://decomp.me/scratch/rdbBA
  */
-s32 func_80142C50(u8* arg0)
+s32 name_is_blank(u8* arg0)
 {
     u32 temp_v0;
 

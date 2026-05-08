@@ -124,9 +124,9 @@ extern u32 D_8014F6B8[];
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
-extern s32 func_80142720(s32);
-extern s32 func_80142C50(s32);
+extern s32 name_char_count(s32);
+extern s32 name_is_blank(s32);
 extern s32 func_80140AB8(s32, s32);
-extern void func_801428A4(s32, void*);
+extern void name_copy(s32, void*);
 
 #endif
