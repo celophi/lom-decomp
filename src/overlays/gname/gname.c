@@ -1696,3 +1696,64 @@ s32 func_80142720(u8* arg0)
     }
     return var_v1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/1lsbD
+ */
+void func_80142764(u8* arg0, u8* arg1)
+{
+    u8* p;
+    s32 len;
+    s32 len1;
+    s32 saved_len;
+    u8 c;
+    p = arg0;
+    len = 0;
+    if ((*arg0) != 0)
+    {
+        do
+        {
+            c = *p;
+            if (((u32)((unsigned char)(c - 0x19))) < 7U)
+            {
+                p += 2;
+                len += 2;
+            }
+            else
+            {
+                p += 1;
+                len += 1;
+            }
+        } while ((*p) != 0);
+    }
+    p = arg1;
+    len1 = 0;
+    saved_len = len;
+    if ((*p) != 0)
+    {
+        do
+        {
+            c = *p;
+            if (((u32)((unsigned char)(c - 0x19))) < 7U)
+            {
+                p += 2;
+                len1 += 2;
+            }
+            else
+            {
+                p += 1;
+                len1 += 1;
+            }
+        } while ((*p) != 0);
+    }
+    len = 0;
+    if (len1 > 0)
+    {
+        do
+        {
+            arg0[saved_len + len] = arg1[len];
+            len++;
+        } while (len < len1);
+    }
+    arg0[saved_len + len] = 0;
+}
