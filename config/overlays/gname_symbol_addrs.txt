@@ -4,7 +4,27 @@
 reset_fade_state    = 0x801403E0;
 render_fade_overlay = 0x80140410;
 set_fade_target     = 0x801406F8;
+gname_init          = 0x80140714;
+gname_tick          = 0x80140888;
+gname_update_state  = 0x801408D0;
+reset_run_state     = 0x801409EC;
+emit_draw_mode_prim = 0x80142220;
+name_byte_length    = 0x801426D4;
+name_char_count     = 0x80142720;
+name_append         = 0x80142764;
+name_pop_last_char  = 0x80142844;
+name_copy           = 0x801428A4;
+name_prepend_char   = 0x801429A0;
+name_pop_first_char = 0x80142A54;
+name_is_blank       = 0x80142C50;
 
 // Data
-g_fade_target  = 0x8014F818;
-g_fade_current = 0x8014F828;
+g_fade_target        = 0x8014F818;
+g_fade_current       = 0x8014F828;
+g_active_name        = 0x8014F844;
+g_startup_delay      = 0x8014F880;
+g_strip_width_steps  = 0x8014F8A4;
+g_strip_width        = 0x8014F8A8;
+g_strip_width_target = 0x8014F8BC;
+g_name_pixel_width   = 0x8014F8CC;
+g_glyph_table        = 0x80142CD4;
