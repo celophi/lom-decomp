@@ -1,116 +1,180 @@
 #include "gname.h"
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/ld2aW
+ * @brief Reset the RGB fade state.
+ *
+ * Zeros the current color (@c D_8014F828) and the target color +
+ * step count (@c D_8014F818). After this call the next
+ * @ref func_80140410 tick will write a black tint (0,0,0) to the
+ * primitive at @c arg0->unk4040.
+ *
+ * @see https://decomp.me/scratch/ld2aW (100%)
  */
 void func_801403E0(void)
 {
-    D_8014F828.unk0 = 0;
-    D_8014F828.unk4 = 0;
-    D_8014F828.unk8 = 0;
-    D_8014F818.unk0 = 0;
-    D_8014F818.unk4 = 0;
-    D_8014F818.unk8 = 0;
-    D_8014F818.unkC = 0;
+    D_8014F828.r = 0;
+    D_8014F828.g = 0;
+    D_8014F828.b = 0;
+    D_8014F818.r = 0;
+    D_8014F818.g = 0;
+    D_8014F818.b = 0;
+    D_8014F818.steps = 0;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/hVLdu
- * This function is just like TITLE.BIN RenderFadeOverlay
+ * @brief Per-frame RGB fade tick: lerp current toward target and emit a
+ *        full-screen tint quad + draw-mode pair into the OT.
+ *
+ * If `D_8014F818.steps` is non-zero, advances `D_8014F828` by one step of
+ * `(target - current) / steps` per channel and decrements `steps`.
+ * Otherwise snaps current to target (RGB only — `steps` is left alone).
+ *
+ * If the current color is anything other than (0x100, 0x100, 0x100) — i.e.
+ * not the no-tint identity — emits two primitives at @c ctx->unk4040:
+ *   1. A 16-byte flat-shaded full-screen quad (tag 0x62) covering the
+ *      320x240 viewport with the tinted RGB. When any channel is >0x100,
+ *      colors are written as `value - 1` (additive bias); when <0x100,
+ *      colors are written as `~value` (subtractive bias).
+ *   2. An 8-byte Draw-Mode (GP0 0xE1) packet selecting abr=2 (additive,
+ *      command bits 0x25) for >0x100 brightening or abr=1 (subtractive,
+ *      0x45) for <=0x100 darkening.
+ *
+ * Both packets are spliced into the 24-bit OT at @c ctx->unk0 and
+ * `ctx->unk4040` is advanced past them. When the color is identity, no
+ * primitives are emitted and the heap cursor is unchanged.
+ *
+ * @param ctx Render context whose `unk0` is the OT head and `unk4040` is
+ *            the primitive heap cursor.
+ *
+ * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
+ * @see https://decomp.me/scratch/hVLdu (100%)
  */
-void func_80140410(ArgStruct* arg0)
+void func_80140410(ArgStruct* ctx)
 {
-    u32* var_t4 = (u32*)arg0->unk4040; // t4
-    ArgStruct* arg = arg0;             // t6 = t7 (copied after loads)
-    s32 temp_a2, temp_a0, temp_v1;
-    s32 var_a1;
+    u32* prim = (u32*)ctx->unk4040; /* t4 — current primitive write pos */
+    ArgStruct* arg = ctx;           /* t6 = t7 — preserves load order */
+    s32 step_r, step_g, step_b;
+    s32 abr_cmd; /* low byte of GP0 0xE1 (abr select) */
 
-    if (D_8014F818.unkC != 0)
+    /* Lerp current toward target, or snap if no steps remain. */
+    if (D_8014F818.steps != 0)
     {
-        temp_a2 = (D_8014F818.unk0 - D_8014F828.unk0) / D_8014F818.unkC;
-        temp_a0 = (D_8014F818.unk4 - D_8014F828.unk4) / D_8014F818.unkC;
-        temp_v1 = (D_8014F818.unk8 - D_8014F828.unk8) / D_8014F818.unkC;
-        D_8014F818.unkC--;
-        D_8014F828.unk0 += temp_a2;
-        D_8014F828.unk4 += temp_a0;
-        D_8014F828.unk8 += temp_v1;
+        step_r = (D_8014F818.r - D_8014F828.r) / D_8014F818.steps;
+        step_g = (D_8014F818.g - D_8014F828.g) / D_8014F818.steps;
+        step_b = (D_8014F818.b - D_8014F828.b) / D_8014F818.steps;
+        D_8014F818.steps--;
+        D_8014F828.r += step_r;
+        D_8014F828.g += step_g;
+        D_8014F828.b += step_b;
     }
     else
     {
-        D_8014F828.unk0 = D_8014F818.unk0;
-        D_8014F828.unk4 = D_8014F818.unk4;
-        D_8014F828.unk8 = D_8014F818.unk8;
+        D_8014F828.r = D_8014F818.r;
+        D_8014F828.g = D_8014F818.g;
+        D_8014F828.b = D_8014F818.b;
     }
 
-    if (!((D_8014F828.unk0 == 0x100) && (D_8014F828.unk4 == 0x100) && (D_8014F828.unk8 == 0x100)))
+    /* Skip emit when fully transparent / identity tint. */
+    if (!((D_8014F828.r == 0x100) && (D_8014F828.g == 0x100) && (D_8014F828.b == 0x100)))
     {
-        if (D_8014F828.unk0 >= 0x101)
+        /* Flat-quad RGB bytes at prim[4..6]. */
+        if (D_8014F828.r >= 0x101)
         {
-            ((u8*)var_t4)[4] = (u8)D_8014F828.unk0 - 1;
-            ((u8*)var_t4)[5] = (u8)D_8014F828.unk4 - 1;
-            ((u8*)var_t4)[6] = (u8)D_8014F828.unk8 - 1;
+            /* Additive bias: subtract 1 so 0x101 → 0x00..0xFF. */
+            ((u8*)prim)[4] = (u8)D_8014F828.r - 1;
+            ((u8*)prim)[5] = (u8)D_8014F828.g - 1;
+            ((u8*)prim)[6] = (u8)D_8014F828.b - 1;
         }
         else
         {
-            if (D_8014F828.unk0 == 0x100)
-                ((u8*)var_t4)[4] = 0;
+            /* Subtractive bias: bitwise NOT so 0xFF → 0x00, 0x00 → 0xFF. */
+            if (D_8014F828.r == 0x100)
+                ((u8*)prim)[4] = 0;
             else
-                ((u8*)var_t4)[4] = ~(u8)D_8014F828.unk0;
+                ((u8*)prim)[4] = ~(u8)D_8014F828.r;
 
-            if (D_8014F828.unk4 == 0x100)
-                ((u8*)var_t4)[5] = 0;
+            if (D_8014F828.g == 0x100)
+                ((u8*)prim)[5] = 0;
             else
-                ((u8*)var_t4)[5] = ~(u8)D_8014F828.unk4;
+                ((u8*)prim)[5] = ~(u8)D_8014F828.g;
 
-            if (D_8014F828.unk8 == 0x100)
-                ((u8*)var_t4)[6] = 0;
+            if (D_8014F828.b == 0x100)
+                ((u8*)prim)[6] = 0;
             else
-                ((u8*)var_t4)[6] = ~(u8)D_8014F828.unk8;
+                ((u8*)prim)[6] = ~(u8)D_8014F828.b;
         }
 
-        ((u8*)var_t4)[3] = 3;
-        ((u8*)var_t4)[7] = 0x62;
-        *((u16*)((u8*)var_t4 + 12)) = 0x140;
-        *((u16*)((u8*)var_t4 + 10)) = 0;
-        *((u16*)((u8*)var_t4 + 8)) = 0;
-        *((u16*)((u8*)var_t4 + 14)) = 0xF0;
+        /* Flat-shaded full-screen quad header: 3-word tag 0x62. */
+        ((u8*)prim)[3] = 3;
+        ((u8*)prim)[7] = 0x62;
 
-        *var_t4 = (*var_t4 & 0xFF000000) | (arg->unk0 & 0xFFFFFF);
-        arg->unk0 = (arg->unk0 & 0xFF000000) | ((u32)var_t4 & 0xFFFFFF);
+        *((u16*)((u8*)prim + 10)) = 0; /* y = 0   */
+        *((u16*)((u8*)prim + 8)) = 0;  /* x = 0   */
 
-        var_a1 = 0x25;
-        var_t4 = (u32*)((u8*)var_t4 + 0x10);
-        if (D_8014F828.unk0 < 0x101)
-            var_a1 = 0x45;
+        *((u16*)((u8*)prim + 12)) = 0x140; /* w = 320 */
+        *((u16*)((u8*)prim + 14)) = 0xF0;  /* h = 240 */
 
-        ((u8*)var_t4)[3] = 1;
-        *((u32*)((u8*)var_t4 + 4)) = var_a1 | 0xE1000000;
+        /* Splice quad into OT. */
+        *prim = (*prim & 0xFF000000) | (arg->unk0 & 0xFFFFFF);
+        arg->unk0 = (arg->unk0 & 0xFF000000) | ((u32)prim & 0xFFFFFF);
 
-        *var_t4 = (*var_t4 & 0xFF000000) | (arg->unk0 & 0xFFFFFF);
-        arg->unk0 = (arg->unk0 & 0xFF000000) | ((u32)var_t4 & 0xFFFFFF);
-        var_t4 = (u32*)((u8*)var_t4 + 8);
+        /* Choose blend mode by direction of tint. */
+        abr_cmd = 0x25;
+        prim = (u32*)((u8*)prim + 0x10);
+        if (D_8014F828.r < 0x101)
+            abr_cmd = 0x45;
+
+        /* Draw-Mode packet (GP0 0xE1 | abr_cmd). */
+        ((u8*)prim)[3] = 1;
+        *((u32*)((u8*)prim + 4)) = abr_cmd | 0xE1000000;
+
+        /* Splice draw-mode packet into OT. */
+        *prim = (*prim & 0xFF000000) | (arg->unk0 & 0xFFFFFF);
+        arg->unk0 = (arg->unk0 & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+        prim = (u32*)((u8*)prim + 8);
     }
 
-    arg0->unk4040 = var_t4;
+    ctx->unk4040 = prim;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/jq3uD
+ * @brief Set the RGB fade target and step count.
+ *
+ * Writes the four-field target struct in one call. The next
+ * `steps` ticks of @ref func_80140410 will lerp the current color toward
+ * `(r, g, b)` and then snap on the final tick.
+ *
+ * @param r     Target red   (0..0x100 normal, >0x100 = additive).
+ * @param g     Target green (0..0x100 normal, >0x100 = additive).
+ * @param b     Target blue  (0..0x100 normal, >0x100 = additive).
+ * @param steps Frames over which to interpolate. 0 means "snap immediately".
+ *
+ * @see https://decomp.me/scratch/jq3uD (100%)
  */
-void func_801406F8(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void func_801406F8(s32 r, s32 g, s32 b, s32 steps)
 {
-    D_8014F818.unk0 = arg0;
-    D_8014F818.unk4 = arg1;
-    D_8014F818.unk8 = arg2;
-    D_8014F818.unkC = arg3;
+    D_8014F818.r = r;
+    D_8014F818.g = g;
+    D_8014F818.b = b;
+    D_8014F818.steps = steps;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/pnzC1
+ * @brief Overlay boot/reset entry: prep VRAM, load CLUT, init run state.
+ *
+ * Calls (in order):
+ *  - @ref func_8014075C  — RECT build + handoff (likely VRAM clear or CLUT load).
+ *  - @ref func_800AA02C  — engine helper (audio/SFX init).
+ *  - sets @c D_8014F880 = 0x28 (40 — likely a startup delay countdown).
+ *  - @ref func_8006441C  — engine helper.
+ *  - @ref func_801409EC  — zero/seed all of the overlay's run-state globals.
+ *  - @ref func_80063194  — engine helper.
+ *
+ * @see https://decomp.me/scratch/pnzC1 (100%)
  */
 void func_80140714(void)
 {
-    volatile int dummy[2]; // forces 0x20 stack frame, ra at 0x18(sp)
+    volatile int dummy[2]; /* forces 0x20 stack frame, ra at 0x18(sp) */
     func_8014075C();
     func_800AA02C();
     D_8014F880 = 0x28;
@@ -120,16 +184,22 @@ void func_80140714(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/EWwJI
+ * @brief Build a hard-coded VRAM RECT and hand it to @ref func_80140794.
+ *
+ * Constructs a `RECT { x=0x140 (320), y=0, w=0, h=0x1F2 (498) }` on the
+ * stack — note the field order matches the data passed to the consumer,
+ * which reads `arr[0..3]` directly (not the standard PSY-Q `RECT` order).
+ *
+ * @see https://decomp.me/scratch/EWwJI (100%)
  */
 void func_8014075C(void)
 {
-    s16 arr[4]; // RECT
-    arr[0] = 0x140;
-    arr[1] = 0;
-    arr[2] = 0;
-    arr[3] = 0x1F2;
-    func_80140794(arr);
+    s16 rect[4];
+    rect[0] = 0x140; /* 320 */
+    rect[1] = 0;
+    rect[2] = 0;
+    rect[3] = 0x1F2; /* 498 */
+    func_80140794(rect);
 }
 
 /**
@@ -178,23 +248,47 @@ void func_80140794(void* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/yYkTM
+ * @brief Per-frame tick: reset/prep, render frame contents, advance frame
+ *        counter, advance overlay state machine.
+ *
+ *  - @ref func_80142410  — frame prologue (likely OT reset / heap rewind).
+ *  - @ref func_80141928  — main render pass for this overlay.
+ *  - increments the global frame counter @c D_800F22AC.
+ *  - @ref func_801408D0  — countdown / lerp / SFX trigger update.
+ *
+ * @param ctx Render context passed through to @ref func_80141928.
+ *
+ * @see https://decomp.me/scratch/yYkTM (100%)
  */
-void func_80140888(s32 arg0)
+void func_80140888(s32 ctx)
 {
     func_80142410();
-    func_80141928(arg0);
+    func_80141928(ctx);
     D_800F22AC += 1;
     func_801408D0();
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/g5Rx3
+ * @brief Per-frame state-machine update: countdown, scalar lerp, input SFX.
+ *
+ *  - When the startup countdown @c D_8014F880 hits zero, hands off to
+ *    @ref func_8014139C (the next stage); otherwise decrements it.
+ *  - Lerps the scalar @c D_8014F8A8 toward @c D_8014F8BC over
+ *    @c D_8014F8A4 frames using the same `(target - current)/steps` shape
+ *    as the RGB fade.
+ *  - When input mask @c D_80122988 == 0x800 (a specific button bit), plays
+ *    one of two SFX via @ref func_800A3938 (bank 0x80, sound 0x7E or 0x78)
+ *    based on whether the cursor's current entry passes the
+ *    @ref func_80142720 / @ref func_80142C50 validation pair, and on the
+ *    "valid" path also kicks @c D_8014F7E4 = 5 to advance overlay state.
+ *
+ * @see https://decomp.me/scratch/g5Rx3 (100%)
  */
 void func_801408D0(void)
 {
-    s32 tmpA;
+    s32 steps;
 
+    /* Startup delay countdown. */
     if (D_8014F880 == 0)
     {
         func_8014139C();
@@ -204,31 +298,42 @@ void func_801408D0(void)
         D_8014F880--;
     }
 
-    tmpA = D_8014F8A4;
-    if (tmpA != 0)
+    /* Lerp D_8014F8A8 toward D_8014F8BC, snap when no steps remain. */
+    steps = D_8014F8A4;
+    if (steps != 0)
     {
         D_8014F8A4--;
-        D_8014F8A8 += (D_8014F8BC - D_8014F8A8) / tmpA;
+        D_8014F8A8 += (D_8014F8BC - D_8014F8A8) / steps;
     }
     else
     {
         D_8014F8A8 = D_8014F8BC;
     }
 
+    /* Confirm-button: play accept SFX on valid entry, reject SFX otherwise. */
     if (D_80122988 == 0x800)
     {
         if ((func_80142720(D_8014F844) != 0) && (func_80142C50(D_8014F844) == 0))
         {
-            func_800A3938(0x7E, 0x80);
+            func_800A3938(0x7E, 0x80); /* accept */
             D_8014F7E4 = 5;
             return;
         }
-        func_800A3938(0x78, 0x80);
+        func_800A3938(0x78, 0x80); /* reject */
     }
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/FboaU
+ * @brief Reset the overlay's run-state globals to their per-session defaults.
+ *
+ * Called from the boot path @ref func_80140714. Zeros most counters/indices,
+ * primes the lerp scalar (@c D_8014F8A4 = 5), seeds the cursor state
+ * (@c D_8014F88C / @c D_8014F890 from frozen defaults @c D_8014F894 /
+ * @c D_8014F89C), kicks @ref func_80140AB8 to compute initial @c D_8014F8AC,
+ * and registers the overlay's per-character buffer with
+ * @ref func_801428A4 (`D_8014F844`, `&D_8014F7E8`).
+ *
+ * @see https://decomp.me/scratch/FboaU (100%)
  */
 void func_801409EC(void)
 {
@@ -1108,50 +1213,76 @@ s32 func_80141D64(void)
 }
 
 /**
- * decomp.me (99.26%) https://decomp.me/scratch/LxujJ
+ * @brief Append three GPU primitives to the render context's OT and reserve a
+ *        right-edge VRAM strip for upload on the back page.
+ *
+ * Builds, in order:
+ *   1. A 0x40-byte template packet copied from the inactive frame's reserve
+ *      slot at `D_8014F840 + (alt_buf * 0x40C0) + 0x4064`.
+ *   2. A textured sprite (tag 0x64) emitted via @ref func_800A88A0 using
+ *      `tex_src` as its source data, then a Draw-Mode (GP0 0xE1) packet
+ *      emitted via @ref func_80142220 / @ref func_80142274.
+ *   3. A 0x60-byte image-load packet built on the stack by
+ *      @ref func_8001C56C describing a `strip_width x 32` rectangle at VRAM
+ *      `(240 - strip_width, 24 | 256)` — i.e. right-aligned on whichever
+ *      VRAM page is currently the back buffer (Y=0x18 vs 0x100).
+ *
+ * Each packet is spliced into the 24-bit OT at @c ctx->unk38 with the
+ * standard `(top_byte | next_addr & 0xFFFFFF)` link idiom, and the heap
+ * cursor @c ctx->unk4040 is advanced by 0x40 bytes past the last packet.
+ *
+ * @param ctx         Render context: OT head at unk38, primitive heap cursor
+ *                    at unk4040, double-buffer parity at unk404C.
+ * @param tex_src     Source data pointer for the sprite primitive (passed
+ *                    through to func_800A88A0).
+ * @param strip_width Width in pixels of the back-page VRAM upload strip; also
+ *                    sets the strip's X position as `240 - strip_width`.
+ *
+ * @see https://decomp.me/scratch/LxujJ (99.26%)
  */
-void func_80141E04(UnkStruct* arg0, s32 arg1, s32 arg2)
+void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
 {
-    s32* temp_s0;
-    s32* temp_s2;
-    s32* temp_s2_2;
-    s32 var_a2;
-    u32 sp28[0x19];
-    s32* bufferPtr = sp28;
-    s32 calculated;
-    u32 result;
+    s32* ot_head;   /* &ctx->unk38 — passed as the OT head pointer */
+    s32* prim;      /* current primitive being emitted */
+    s32* next_prim; /* heap cursor after the sprite/draw-mode pair */
+    s32 vram_y;     /* VRAM Y of the back page (0x18 or 0x100) */
+    u32 load_packet[0x19];
+    s32 vram_x; /* VRAM X of the right-aligned strip */
 
-    temp_s0 = (s32*)&arg0->unk38;
-    temp_s2 = arg0->unk4040;
-    temp_s2_2 = temp_s2;
+    ot_head = (s32*)&ctx->unk38;
+    prim = ctx->unk4040;
+    next_prim = prim;
 
-    func_8001A5D4(temp_s2, (void*)(D_8014F840 + ((arg0->unk404C ^ 1) * 0x40C0) + 0x4064));
+    /* 1. Copy template packet from the *other* frame's reserve slot, then
+     *    splice it into the OT. */
+    func_8001A5D4(prim, (void*)(D_8014F840 + ((ctx->unk404C ^ 1) * 0x40C0) + 0x4064));
 
-    *temp_s2 = (*temp_s2 & 0xFF000000) | (arg0->unk38 & 0xFFFFFF);
-    arg0->unk38 = (arg0->unk38 & 0xFF000000) | ((u32)temp_s2 & 0xFFFFFF);
+    *prim = (*prim & 0xFF000000) | (ctx->unk38 & 0xFFFFFF);
+    ctx->unk38 = (ctx->unk38 & 0xFF000000) | ((u32)prim & 0xFFFFFF);
 
-    temp_s2_2 = func_80142220(
-        func_80142274(
-            func_800A88A0(temp_s2 + 0x10, temp_s0, arg1, 1, 0x10, 8, 0),
-            temp_s0, 2, 0, 0, 0, 0, 0),
-        temp_s0);
+    /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
+     *    Returns the heap cursor just past both packets. */
+    next_prim = func_80142220(
+        func_80142274(func_800A88A0(prim + 0x10, ot_head, tex_src, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
 
-    calculated = 0xF0 - arg2;
-
-    var_a2 = 0x18;
-    if (arg0->unk404C != 0) {
-        var_a2 = 0x100;
+    /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
+     *    right edge of whichever page is currently the back buffer. */
+    vram_x = 0xF0 - strip_width;
+    vram_y = 0x18;
+    if (ctx->unk404C != 0)
+    {
+        vram_y = 0x100;
     }
 
-    func_8001C56C(bufferPtr, calculated, var_a2, arg2, 0x20);
-    func_8001A5D4(temp_s2_2, sp28);
+    func_8001C56C(load_packet, vram_x, vram_y, strip_width, 0x20);
+    func_8001A5D4(next_prim, load_packet);
 
-    
-    *temp_s2_2 = (*temp_s2_2 & 0xFF000000) | (arg0->unk38 & 0xFFFFFF);
+    *next_prim = (*next_prim & 0xFF000000) | (ctx->unk38 & 0xFFFFFF);
 
-    arg0->unk4040 = temp_s2_2 + 0x10;
+    /* Advance heap cursor 0x40 bytes past the load packet. */
+    ctx->unk4040 = next_prim + 0x10;
 
-    arg0->unk38 = (arg0->unk38 & 0xFF000000) | ((u32)temp_s2_2 & 0xFFFFFF);
+    ctx->unk38 = (ctx->unk38 & 0xFF000000) | ((u32)next_prim & 0xFFFFFF);
 }
 
 /**
@@ -1238,7 +1369,21 @@ void func_80141F9C(void* arg0, s32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/EyVeo
+ * @brief Emit a Draw-Mode (GP0 0xE1) primitive and link it to the OT.
+ *
+ * Writes an 8-byte packet at @p prim:
+ *  - byte 3 = 1 (one-word payload).
+ *  - bytes 4..7 = `0xE1000005` (GP0 Draw Mode: texpage default, abr=1,
+ *    dither off, drawing-to-display-area enabled).
+ * Then splices the packet into the 24-bit OT whose head is at @p ot_head
+ * using the standard `(top_byte | next_addr & 0xFFFFFF)` chain idiom and
+ * returns the heap cursor advanced by 8 bytes.
+ *
+ * @param prim    Destination address for the 8-byte packet (heap cursor).
+ * @param ot_head Pointer to the 24-bit OT head pointer.
+ * @return Heap cursor advanced past the packet (`prim + 8`).
+ *
+ * @see https://decomp.me/scratch/EyVeo (100%)
  */
 void* func_80142220(void* arg0, s32* arg1)
 {
@@ -1246,14 +1391,8 @@ void* func_80142220(void* arg0, s32* arg1)
     u32* words = (u32*)arg0;
     u32 temp1, temp2;
 
-    bytes[3] = 1;
-    *(u32*)(bytes + 4) = 0xE1000005;
-
-    temp1 = words[0];
-    words[0] = (temp1 & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
-
-    temp2 = (u32)(*arg1);
-    *arg1 = (temp2 & 0xFF000000) | ((u32)((unsigned long)arg0) & 0x00FFFFFF);
+    setDrawTPage(bytes, 0, 0, 0x05);
+    addPrim(arg1, arg0);
 
     return (void*)(bytes + 8);
 }
