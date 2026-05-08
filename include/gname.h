@@ -40,6 +40,15 @@ typedef struct
     u32 unk404C; /* offset 0x404C */
 } Obj;
 
+typedef struct
+{
+    u8 field0;
+    u8 field1;
+    u8 field2;
+    u8 field3;
+    u32 field4;
+} TableEntry;
+
 extern s32 D_8014F840;
 extern DataStruct D_8014F818;
 extern DataStruct D_8014F828;

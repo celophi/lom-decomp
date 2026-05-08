@@ -1258,3 +1258,59 @@ void* func_80142220(void* arg0, s32* arg1)
 
     return (void*)(bytes + 8);
 }
+
+/**
+ * decomp.me (88.88%) https://decomp.me/scratch/UHlWz
+ */
+void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+{
+    unsigned char* base = (unsigned char*)arg0;
+    unsigned char* ptr = base;
+    TableEntry* entry = &D_80142CD4[arg2];
+    u32 temp;
+    s32 tmp2;
+
+    /* First structure at base */
+    *(u32*)(ptr + 4) = 0x808080;
+    *(ptr + 3) = 4;
+    *(ptr + 7) = 0x64;
+    *(u16*)(ptr + 8) = (u16)(arg3 - arg5 + arg6);
+    *(u16*)(ptr + 10) = (u16)(arg4 - arg5 + arg6);
+    *(ptr + 12) = entry->field0;
+    *(ptr + 13) = entry->field1;
+    *(u16*)(ptr + 16) = (u16)entry->field2;
+    *(u16*)(ptr + 18) = (u16)entry->field3;
+    *(u16*)(ptr + 14) = (u16)((entry->field4 & 0x3F) | 0x7C80);
+
+    /* Update word at offset 0 and *arg1 */
+    temp = *(u32*)ptr;
+    *(u32*)ptr = (temp & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
+    *arg1 = (*arg1 & 0xFF000000) | ((u32)((unsigned long)arg0) & 0x00FFFFFF);
+
+    ptr += 0x14;
+
+    if (arg5 != 0)
+    {
+        /* Second structure at ptr */
+        *(u32*)(ptr + 4) = (arg7 != 0) ? 0xA00000 : 0;
+        *(ptr + 3) = 4;
+        *(ptr + 7) = (arg7 == 0) ? 0x66 : 0x64;
+        tmp2 = (arg5 - arg6) * 2;
+        *(u16*)(ptr + 10) = (u16)(arg4 + tmp2);
+        *(u16*)(ptr + 8) = (u16)(arg3 + tmp2);
+        *(ptr + 12) = entry->field0;
+        *(ptr + 13) = entry->field1;
+        *(u16*)(ptr + 16) = (u16)entry->field2;
+        *(u16*)(ptr + 18) = (u16)entry->field3;
+        *(u16*)(ptr + 14) = (u16)((entry->field4 & 0x3F) | 0x7C80);
+
+        /* Update second structure's word at offset 0 and *arg1 */
+        temp = *(u32*)ptr;
+        *(u32*)ptr = (temp & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
+        *arg1 = (*arg1 & 0xFF000000) | ((u32)((unsigned long)ptr) & 0x00FFFFFF);
+
+        ptr += 0x14;
+    }
+
+    return (void*)ptr;
+}
