@@ -22,11 +22,12 @@ typedef struct
 
 typedef struct
 {
-    u8 _pad0[0x38];                          /* padding up to offset 0x38 */
-    u32 unk38;                               /* at offset 0x38 */
-    u8 _pad1[0x4040 - (0x38 + sizeof(u32))]; /* padding to 0x4040 */
-    s32* unk4040;                            /* at offset 0x4040 */
-    u32 unk404C;                             /* at offset 0x404C */
+    u8 _pad0[0x38];
+    u32 unk38;
+    u8 _pad1[0x4040 - (0x38 + sizeof(u32))];
+    s32* unk4040;
+    u8 _pad2[0x8];
+    u32 unk404C;
 } UnkStruct;
 
 /* Object structure (offsets from target assembly) */

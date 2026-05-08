@@ -1112,46 +1112,45 @@ s32 func_80141D64(void)
  */
 void func_80141E04(UnkStruct* arg0, s32 arg1, s32 arg2)
 {
-    s32* temp_s0; /* pointer to arg0->unk38 */
+    s32* temp_s0;
     s32* temp_s2;
     s32* temp_s2_2;
     s32 var_a2;
-    u32 sp28[0x20]; /* local buffer of 0x80 bytes at sp+0x28 */
+    u32 sp28[0x19];
+    s32* bufferPtr = sp28;
+    s32 calculated;
+    u32 result;
 
     temp_s0 = (s32*)&arg0->unk38;
     temp_s2 = arg0->unk4040;
+    temp_s2_2 = temp_s2;
 
-    /* Write to temp_s2 buffer */
     func_8001A5D4(temp_s2, (void*)(D_8014F840 + ((arg0->unk404C ^ 1) * 0x40C0) + 0x4064));
 
-    /* Update low 24 bits of *temp_s2 from arg0->unk38 */
     *temp_s2 = (*temp_s2 & 0xFF000000) | (arg0->unk38 & 0xFFFFFF);
-
-    /* Store pointer address low 24 bits into arg0->unk38 */
     arg0->unk38 = (arg0->unk38 & 0xFF000000) | ((u32)temp_s2 & 0xFFFFFF);
 
-    /* Chain function calls to obtain a new pointer */
     temp_s2_2 = func_80142220(
-        func_80142274(func_800A88A0(temp_s2 + 0x40, temp_s0, arg1, 1, 0x10, 8, 0), temp_s0, 2, 0, 0, 0, 0, 0), temp_s0);
+        func_80142274(
+            func_800A88A0(temp_s2 + 0x10, temp_s0, arg1, 1, 0x10, 8, 0),
+            temp_s0, 2, 0, 0, 0, 0, 0),
+        temp_s0);
 
-    /* Determine third argument for func_8001C56C */
+    calculated = 0xF0 - arg2;
+
     var_a2 = 0x18;
-    if (arg0->unk404C != 0)
-    {
+    if (arg0->unk404C != 0) {
         var_a2 = 0x100;
     }
 
-    /* Copy a pattern into sp28 and then into the new pointer */
-    func_8001C56C(sp28, 0xF0 - arg2, var_a2, arg2, 0x20);
+    func_8001C56C(bufferPtr, calculated, var_a2, arg2, 0x20);
     func_8001A5D4(temp_s2_2, sp28);
 
-    /* Update low 24 bits of *temp_s2_2 from arg0->unk38 */
+    
     *temp_s2_2 = (*temp_s2_2 & 0xFF000000) | (arg0->unk38 & 0xFFFFFF);
 
-    /* Store new pointer + 0x40 back into the structure */
-    arg0->unk4040 = temp_s2_2 + 0x40;
+    arg0->unk4040 = temp_s2_2 + 0x10;
 
-    /* Store pointer address low 24 bits into arg0->unk38 again */
     arg0->unk38 = (arg0->unk38 & 0xFF000000) | ((u32)temp_s2_2 & 0xFFFFFF);
 }
 
