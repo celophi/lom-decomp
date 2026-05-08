@@ -1154,3 +1154,86 @@ void func_80141E04(UnkStruct* arg0, s32 arg1, s32 arg2)
     /* Store pointer address low 24 bits into arg0->unk38 again */
     arg0->unk38 = (arg0->unk38 & 0xFF000000) | ((u32)temp_s2_2 & 0xFFFFFF);
 }
+
+/**
+ * decomp.me (77.64%) https://decomp.me/scratch/Glw7t
+ */
+void func_80141F9C(void* arg0, s32 arg1)
+{
+    u8 sp28[0x80];
+    Obj* obj = (Obj*)arg0;
+    u32* temp_s1 = obj->unk4040;
+    u32* var_a2;
+    u8* var_s4;
+    u16* var_s3;
+    s32 var_s0, var_s1, var_s2, var_s5;
+    s32 temp_v1;
+
+    /* First call and pointer setup */
+    func_8001A5D4(temp_s1, (void*)(D_8014F840 + ((obj->unk404C ^ 1) * 0x40C0) + 0x4064));
+
+    *temp_s1 = (*temp_s1 & 0xFF000000) | (obj->unk28 & 0x00FFFFFF);
+    obj->unk28 = (obj->unk28 & 0xFF000000) | ((u32)temp_s1 & 0x00FFFFFF);
+
+    /* var_a2 = temp_s1 + 0x40 (byte addition) */
+    var_a2 = (u32*)((u8*)temp_s1 + 0x40);
+
+    /* Determine var_s4, var_s1, var_s5, var_s2 based on D_8014F848 */
+    if (D_8014F848 == 4)
+    {
+        var_s4 = (u8*)(D_80142EFC + ((u32)&D_80142EFC - 8));
+        var_s1 = D_80142E40[D_80142CAC[D_8014F8C8]];
+        var_s5 = D_80142E40[D_80142CAC[D_8014F8C8] + 1];
+        var_s2 = 0;
+    }
+    else
+    {
+        var_s1 = D_80142C98[arg1][0];
+        var_s5 = D_80142C98[arg1][1];
+        var_s4 = (u8*)(D_80142EF8 + ((u32)&D_80142EF8 - 4));
+        var_s2 = 0;
+    }
+
+    var_s0 = var_s2;
+    var_s3 = (u16*)(var_s4 + (var_s1 * 2));
+
+    /* Main loop */
+    for (;;)
+    {
+        temp_v1 = (var_s2 * 0x10) - D_8014F8B4;
+        if ((u32)(temp_v1 + 0x0B) < 0x5B)
+        {
+            var_a2 = func_800A88A0(var_a2, (void*)&obj->unk28, (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
+        }
+        var_s1++;
+        var_s3++;
+        if (var_s5 == var_s1)
+            break;
+
+        var_s0++;
+        if (var_s0 == 10)
+        {
+            var_s0 = 0;
+            var_s2++;
+        }
+    }
+
+    /* After loop – final setup and second call */
+    {
+        u32 param_a2 = 0x68;
+        D_8014F8A0 = var_s2;
+        D_8014F898 = var_s0;
+        if (obj->unk404C != 0)
+        {
+            param_a2 = 0x150;
+        }
+
+        func_8001C56C(sp28, 0x60, param_a2, 0xA0, 0x50);
+        func_8001A5D4(var_a2, sp28);
+
+        *var_a2 = (*var_a2 & 0xFF000000) | (obj->unk28 & 0x00FFFFFF);
+        obj->unk28 = (obj->unk28 & 0xFF000000) | ((u32)var_a2 & 0x00FFFFFF);
+        /* Byte addition of 0x40, not element addition */
+        obj->unk4040 = (u32*)((u8*)var_a2 + 0x40);
+    }
+}
