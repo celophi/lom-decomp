@@ -323,3 +323,259 @@ without allocating a persistent pseudoreg for it.
    call. GCC fills delay slots with the last argument computation. If a `subu` or `addu`
    appears after a `jal` in the target, it is the last argument to that call, not
    something that runs after it returns.
+
+---
+
+## 6. Constant Folding into `%lo` Relocations
+
+### 6.1 What is it?
+
+"Constant folding into a relocation" means GCC has taken a compile-time constant offset
+and baked it into the symbol's `%lo()` relocation instead of emitting a separate `addiu`
+at runtime. You see it in the assembler output as:
+
+```mips
+addiu v0, v0, %lo(D_80142E0C+0x8)   ; constant 8 folded in — WRONG
+addiu v0, v1, %lo(D_80142EF8-0x4)   ; constant -4 folded in — WRONG
+```
+
+The target instead wants two separate instructions — one to materialise the symbol
+address and one to apply the offset at runtime:
+
+```mips
+addiu v0, v0, %lo(D_80142E0C)       ; materialise symbol address
+addiu v0, t0, 2                      ; add 2 to index (separately)
+sll   v0, v0, 2                      ; scale by element size
+addu  v0, v0, base                   ; add into base
+```
+
+or:
+
+```mips
+addiu v1, a2, %lo(D_80142EF8)       ; materialise symbol address into v1
+addiu v1, v1, -4                     ; subtract 4 at runtime
+```
+
+This matters because `%lo(D_80142EF8-0x4)` is a different linker relocation encoding
+than `%lo(D_80142EF8)`. Splat and the overlay relocation system treat them differently,
+and a folded relocation will not assemble identically to the original binary.
+
+---
+
+### 6.2 Why does GCC fold?
+
+GCC's internal representation (RTL) describes a pointer to `&sym + N` as:
+
+```
+(const (plus (symbol_ref "sym") (const_int N)))
+```
+
+This is a single CONST node — a fully resolved compile-time constant. The MIPS backend
+sees it when printing the `%lo()` operand and emits it as `%lo(sym+N)` in one shot.
+GCC never had a chance to emit a runtime `addiu` because from its point of view,
+the address was always a single constant.
+
+This happens whenever you write **pointer arithmetic on an extern symbol** where the
+offset is a compile-time constant:
+
+```c
+extern u32 D_80142E0C[];
+u32 val = D_80142E0C[f8ac + 2];    // GCC: &D_80142E0C + (f8ac+2)*4
+                                    //       = &D_80142E0C + f8ac*4 + 8
+                                    // Emits: %lo(D_80142E0C+0x8) + runtime f8ac*4
+```
+
+```c
+extern s32 D_80142EF8;
+u8 *base = (u8 *)&D_80142EF8 - 4; // GCC: CONST(D_80142EF8 + -4)
+                                    // Emits: %lo(D_80142EF8-0x4) immediately
+```
+
+The key insight: **GCC distributes a mixed constant+variable expression into
+`constant_part + variable_part`, folds `constant_part` into the relocation, and emits
+only the `variable_part` as a runtime operation.** The target compiler (ASPSX/CCPSX) did
+not do this — it computed the full address as a sequence of runtime additions.
+
+---
+
+### 6.3 Fix 1: Array indexing — `%lo(SYM+0x8)` fold
+
+**Problem:** `D_80142E0C[f8ac + 2]` causes GCC to fold the `+2 * sizeof(u32) = +8`
+byte offset into the relocation.
+
+**Target wants:**
+```mips
+1c:    lui     a2, %hi(D_80142EF8)
+20:    lui     v1, %hi(D_80142E0C)
+24:    addiu   v1, v1, %lo(D_80142E0C)   ; base address of array, no offset folded
+28:    addiu   v0, t0, 2                  ; add 2 to index at runtime
+2c:    sll     v0, v0, 2                  ; scale by 4
+30:    addu    v0, v0, v1                 ; add into array base
+34:    lw      v0, 0(v0)                  ; load
+```
+
+**Fix:** Cast the array's address to `u32` before doing arithmetic. This turns it from
+pointer arithmetic (which GCC understands as CONST+variable) into plain integer
+arithmetic (which GCC cannot fold into a relocation):
+
+```c
+// BAD — GCC distributes the +2 into %lo(D_80142E0C+0x8):
+u32 temp = D_80142E0C[f8ac + 2];
+
+// GOOD — GCC keeps (f8ac+2)*4 as a fully runtime computation:
+u32 temp = *(u32 *)((u32)D_80142E0C + (u32)(f8ac + 2) * 4);
+```
+
+The `(u32)D_80142E0C` cast tells GCC "this is just a number, not a pointer with
+semantic structure". It can no longer separate the constant `+2` from the variable
+`f8ac` because they are now both inside a plain integer multiplication.
+
+This pattern is already used in the project. See `gname.c`:
+```c
+temp_v1_4 = (void*)(((reg_s1 + 2) * 4) + ((u32)(&D_80142E0C)));
+```
+
+---
+
+### 6.4 Fix 2: Pointer minus constant — `%lo(SYM-0x4)` fold
+
+**Problem:** `(u8 *)&D_80142EF8 - 4` causes GCC to fold the `-4` into the symbol
+relocation immediately, because the entire expression is a compile-time CONST.
+
+**Target wants:**
+```mips
+1c:    lui     a2, %hi(D_80142EF8)
+...
+34:    addiu   v1, a2, %lo(D_80142EF8)   ; materialise full address into v1
+38:    addiu   v1, v1, -4                ; subtract 4 at runtime (separate addiu!)
+```
+
+**Why casting to `u32` doesn't help:**
+```c
+u8 *base = (u8 *)((u32)&D_80142EF8 - 4);  // Still folds! u32 is same width as pointer.
+```
+On 32-bit MIPS, `u32` and a pointer are both 32 bits. GCC's RTL sees the cast as a
+no-op and the expression is still CONST(SYMBOL_REF + -4) internally.
+
+**Fix:** Force the address into a live register by loading through it first. GCC cannot
+fold a value that is already in a pseudoregister:
+
+```c
+// GOOD — the lw keeps ef8_ptr live as a register; the -4 becomes a runtime addiu:
+s32 *ef8_ptr = &D_80142EF8;
+s32  ef8_val = *ef8_ptr;           // lw t0, %lo(D_80142EF8)(a2)  — keeps ef8_ptr in a reg
+u8  *base    = (u8 *)ef8_ptr - 4;  // addiu v1, v1, -4            — runtime subtraction
+```
+
+The load `*ef8_ptr` is what forces GCC to materialise the full address into a register.
+Once the address is in a pseudoregister (RTL `(reg)`), the subsequent `- 4` becomes
+`(plus (reg) (const_int -4))` rather than `(const (plus (symbol_ref) (const_int -4)))`,
+and the MIPS backend emits it as a separate `addiu`.
+
+This is exactly the sequence the target disassembly reveals:
+- `lui a2, %hi(D_80142EF8)` — hoisted early (a2 holds the %hi bits)
+- `addiu v1, a2, %lo(D_80142EF8)` — materialise full address into v1
+- `lw t0, %lo(D_80142EF8)(a2)` — load the value (this is `ef8_val = *ef8_ptr`)
+- `addiu v1, v1, -4` — runtime subtract (this is the `base = ef8_ptr - 4`)
+
+---
+
+### 6.5 Fix 3: Mixed pointer arithmetic — wrong byte scaling
+
+**Problem:** When you add an integer to a non-`char` pointer in C, the compiler
+silently **scales the integer by `sizeof(*ptr)`**. If `D_80142EF8` is `extern s32`,
+then `&D_80142EF8` has type `s32 *`, and:
+
+```c
+val16 = *((u16 *)((&D_80142EF8 + ef8_val) + (f848 << 1) + 0x10));
+//                 ^s32*        ^s32       ^s32            ^int
+// Each addition is scaled by sizeof(s32) = 4 !
+// Actual byte offset = ef8_val*4 + (f848<<1)*4 + 0x10*4
+```
+
+The target assembly for a typical case (from `func_80141C34`):
+
+```mips
+a0:    lui   v0, %hi(D_80142EF8)
+a4:    addiu v1, v0, %lo(D_80142EF8)  ; v1 = address of D_80142EF8
+a8:    lw    t0, %lo(D_80142EF8)(v0)  ; t0 = *D_80142EF8 (the value)
+ac:    sll   v0, a2, 0x1              ; v0 = f848 << 1  (byte distance, not element distance)
+b0:    addu  v0, v0, t0               ; v0 = (f848<<1) + value
+b4:    addu  v0, v1, v0               ; v0 = addr + (f848<<1) + value
+b8:    lhu   a2, 0x10(v0)             ; val16 = *(v0 + 0x10)
+```
+
+**Fix:** Cast to `u8 *` to force byte-level arithmetic, and use the live-pointer
+pattern from Fix 2 to keep the address in a register:
+
+```c
+// BAD — s32* arithmetic, each addend is multiplied by 4:
+val16 = *((u16 *)((&D_80142EF8 + ef8_val) + (f848 << 1) + 0x10));
+
+// GOOD — u8* arithmetic, byte-for-byte:
+s32 *ef8_ptr = &D_80142EF8;
+s32  ef8_val = *ef8_ptr;                        // lw t0 — keeps ef8_ptr in a register
+val16 = *(u16 *)((u8 *)ef8_ptr + (f848 << 1) + ef8_val + 0x10);
+```
+
+The `0x10` at the end is the last constant in the addition chain. GCC will fold it
+into the load instruction's offset field as `lhu a2, 0x10(v0)`. This is **good
+folding** — it is how the target is encoded and exactly what you want. See the
+distinction in §6.7 below.
+
+---
+
+### 6.6 Good folding vs bad folding
+
+Not all constant folding is wrong. There are two completely different places a constant
+can be folded, with opposite consequences:
+
+| Kind | Where it appears | Example | Correct? |
+|------|-----------------|---------|----------|
+| **Bad** | Inside `%lo()` relocation | `addiu v0, v0, %lo(sym-0x4)` | No — different linker encoding |
+| **Good** | Inside load/store displacement | `lhu a2, 0x10(v0)` | Yes — expected and desired |
+
+**Bad folding** happens at *address computation* time: the constant is absorbed into the
+symbol reference, changing the relocation type in the object file. This will never
+match the original binary encoding.
+
+**Good folding** happens at *load/store* time: after the address is fully computed in a
+register, a small trailing constant becomes the load instruction's immediate offset. MIPS
+load/store instructions have a 16-bit signed displacement field; GCC always uses it to
+absorb the last constant in an address computation. The target binary uses this too.
+
+**The rule of thumb:** a constant that appears *before* the final `(u16 *)` cast must end
+up in the load displacement, not in a `%lo()`. Write your additions so the small fixed
+offset is the last thing added before casting:
+
+```c
+// constant 0x10 is last — goes into lhu displacement (good):
+val16 = *(u16 *)((u8 *)ef8_ptr + (f848 << 1) + ef8_val + 0x10);
+
+// constant 0x10 folded early — may end up in %lo relocation (bad):
+u8 *addr = (u8 *)&D_80142EF8 + 0x10;   // &D_80142EF8+0x10 is a CONST — folded!
+val16 = *(u16 *)(addr + (f848 << 1) + ef8_val);
+```
+
+---
+
+### 6.7 Diagnostic: how to tell you have a folding problem
+
+Look for `%lo(SYMBOL±N)` in your compiled output (N ≠ 0). One quick way:
+
+```
+grep '%lo.*[+-][0-9]' build/your_file.s
+```
+
+Any hit means a constant was folded. Then compare against the target `.s` to see whether
+the target also has the fold or has two separate instructions.
+
+---
+
+### 6.8 Summary table
+
+| C expression | What GCC emits | What target wants | Fix |
+|---|---|---|---|
+| `sym[var + 2]` | `%lo(sym+0x8)` + runtime `var*4` | `%lo(sym)` + runtime `(var+2)*4` | `*(T*)((u32)sym + (u32)(var+2) * sizeof(T))` |
+| `(u8*)&sym - 4` | `%lo(sym-0x4)` | `%lo(sym)` then `addiu reg,-4` | Load through a pointer first; subtract from the live reg |
+| `&sym + 1` (typed ptr) | `%lo(sym+0x4)` | `%lo(sym)` then `addiu reg,+4` | Use `ptr = &sym; ptr++;` (runtime increment) |
