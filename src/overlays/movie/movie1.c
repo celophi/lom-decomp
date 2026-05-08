@@ -1,5 +1,11 @@
 #include "movie.h"
 
+static s32 get_next_audio_entry(AudioSector** out_entry);
+static void draw_sync_callback(void);
+static s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header);
+static void advance_audio_read(void);
+static void advance_video_read(void);
+
 /**
  * @brief Play one of five MDEC cinematics, selected by index.
  *
@@ -333,7 +339,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     MOVIE_STATE->lastConsumedAudioFrame = (u32)(-1);
 
     MOVIE_STATE->decDCToutCallback = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
-    MOVIE_STATE->drawSyncCallback = DrawSyncCallback(&movie_draw_sync_callback);
+    MOVIE_STATE->drawSyncCallback = DrawSyncCallback(&draw_sync_callback);
 
     if (MOVIE_STATE->interlaceMode != 0)
     {
@@ -419,7 +425,7 @@ void movie_update(void)
                     MOVIE_STATE->vlcRetryCount = 0;
                 }
             }
-            else if (movie_get_next_video_entry(&vlc_payload, &entry_header) != 0)
+            else if (get_next_video_entry(&vlc_payload, &entry_header) != 0)
             {
                 MOVIE_STATE->currentFrame = entry_header->header.frameNumber;
                 stateAlias = MOVIE_STATE;
@@ -463,7 +469,7 @@ void movie_update(void)
     wordCount = 0;
     if (tmp != wordCount)
     {
-        movie_advance_video_read();
+        advance_video_read();
         combined = MOVIE_STATE;
         if ((combined->mdecBusy == wordCount) && (field9DZeroFlag = combined->frame_ready == wordCount))
         {
@@ -483,7 +489,7 @@ void movie_update(void)
     combined = MOVIE_STATE;
     if (g_cdAudioReady != 0)
     {
-        if (movie_get_next_audio_entry(&audio_entry) != 0)
+        if (get_next_audio_entry(&audio_entry) != 0)
         {
             audioFrameNum = (combined->currentFrame = audio_entry->header.frameNumber);
             if ((audioFrameNum > combined->totalFrames) && (combined->endState < 2))
@@ -512,7 +518,7 @@ void movie_update(void)
             if (((tmp != (-1)) && (MOVIE_STATE->audioBufferedCount != 0)) &&
                 (MOVIE_STATE->audioReadIdx != ((u32)(tmp * 2))))
             {
-                movie_advance_audio_read(tmp);
+                advance_audio_read();
             }
             do
             {
@@ -1024,7 +1030,7 @@ s32 movie_cd_sector_callback(void)
  *
  * @see https://decomp.me/scratch/I2Ddr (100%)
  */
-s32 movie_get_next_audio_entry(AudioSector** out_entry)
+static s32 get_next_audio_entry(AudioSector** out_entry)
 {
     s32 next_idx;
     AudioSector* entry;
@@ -1079,7 +1085,7 @@ s32 movie_get_next_audio_entry(AudioSector** out_entry)
  *
  * @see https://decomp.me/scratch/TApbR (100%)
  */
-void movie_draw_sync_callback(void)
+static void draw_sync_callback(void)
 {
     s16 width;
     s16 height;
@@ -1123,7 +1129,7 @@ void movie_draw_sync_callback(void)
  *
  * @see https://decomp.me/scratch/OJvsJ (100%)
  */
-s32 movie_get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header)
+static s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header)
 {
     s32 read_idx;
     s32 write_idx;
@@ -1161,7 +1167,7 @@ s32 movie_get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry*
  *
  * @see https://decomp.me/scratch/SUBK5 (100%)
  */
-void movie_advance_video_read(void)
+static void advance_video_read(void)
 {
     SectorEntry* entry;
     s32 next_index;
@@ -1192,7 +1198,7 @@ void movie_advance_video_read(void)
  *
  * @see https://decomp.me/scratch/6Xjsu (100%)
  */
-void movie_advance_audio_read(void)
+static void advance_audio_read(void)
 {
     SectorEntry* entry;
     s32 next_index;

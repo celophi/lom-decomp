@@ -171,7 +171,6 @@ extern u8 g_mdecRetryPending;  /* MDEC decode ready but MDEC was busy; retry on 
 extern u8 g_audioStreamState;  /* CD audio state: 0=idle, 1=sector arrived, 2=pipeline primed (at 0x801ED592) */
 extern u16 g_sectorsRemaining; /* sectors left to read for the current multi-sector frame (at 0x801ED57E) */
 extern void movie_mdec_out_callback(void);
-extern void movie_draw_sync_callback(void);
 extern s32 movie_cd_sector_callback(void);
 
 extern void cdrom_process_state(void);
