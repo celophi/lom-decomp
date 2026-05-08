@@ -1,5 +1,11 @@
 #include "movie.h"
 
+static s32 get_next_audio_entry(AudioSector** out_entry);
+static void draw_sync_callback(void);
+static s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header);
+static void advance_audio_read(void);
+static void advance_video_read(void);
+
 /**
  * @brief Play one of five MDEC cinematics, selected by index.
  *
@@ -26,15 +32,19 @@ void movie_play(s32 movieIndex)
     s32 error_status;
     s32 timeout;
     unsigned short new_var;
+    u16 buttons;
     u32 frameCount;
+    u32 idx;
     VSync(0);
     func_800157DC();
     func_800157B0(1);
     VSync(0);
     func_800157DC();
     cdrom_process_state();
-    if ((((movieIndex & 0xFFFF) == 0) && (((SRC_801ED600*)0x801ED600)->unk0 < 3)) &&
-        ((((SRC_801ED600*)0x801ED600)->unk2 & 0xFF0F) != 0))
+    /* Pre-playback skip gate: if user is already holding a skip button on
+     * movie 0 when we get here, bail before staging the stream. */
+    if ((((movieIndex & 0xFFFF) == 0) && ((SCD_REGS)->deviceState < SCD_DEVICE_STATE_OK)) &&
+        (((SCD_REGS)->buttonData & MOVIE0_SKIP_MASK) != 0))
     {
         return;
     }
@@ -90,14 +100,14 @@ void movie_play(s32 movieIndex)
     movie_init((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
     VSync(0);
     func_800157DC();
-    audioFadeVol = -1;
+    audioFadeVol = AUDIO_FADE_DISARMED;
     retryLimit = 5;
     state = (MovieState*)0x801ED500;
-    endStateMatch = 2;
+    endStateMatch = END_STATE_DONE;
     do
     {
         error_status = cdrom_get_error_status();
-        while ((error_status != 0) && (((((error_status & 0xFFu) & 0xFFu) & 0xFFu) & 0xFFu) != retryLimit))
+        while ((error_status != 0) && (error_status != retryLimit))
         {
             func_800157B0(1);
             VSync(0);
@@ -118,7 +128,7 @@ void movie_play(s32 movieIndex)
                 }
                 if (state->endState == endStateMatch)
                 {
-                    break;
+                    goto end;
                 }
                 movie_service_video_ops();
             } while ((--timeout) != 0);
@@ -142,34 +152,36 @@ void movie_play(s32 movieIndex)
         SetDispMask(1);
         func_800157DC();
         cdrom_process_state();
+
+        idx = new_var;
+        if ((idx < MOVIE_SKIPPABLE_MAX) && ((SCD_REGS)->deviceState < SCD_DEVICE_STATE_OK))
         {
-            u32 a0 = new_var;
-            if ((a0 < 2) && (((SRC_801ED600*)0x801ED600)->unk0 < 3))
+            buttons = (SCD_REGS)->unk4;
+            if (((idx != 0) ? ((buttons & MOVIE1_SKIP_MASK) != 0) : ((buttons & MOVIE0_SKIP_MASK) != 0)) != 0)
             {
-                u16 val = ((SRC_801ED600*)0x801ED600)->unk4;
-                if (((a0 != 0) ? ((val & ((0, 0x400A))) != 0) : ((val & 0xFF0F) != 0)) != 0)
+                if (g_cdAudioReady == 0)
                 {
-                    if (g_cdAudioReady == 0)
-                    {
-                        break;
-                    }
-                    if (audioFadeVol == (-1))
-                    {
-                        audioFadeVol = 0x70;
-                    }
+                    break;
+                }
+
+                if (audioFadeVol == AUDIO_FADE_DISARMED)
+                {
+                    audioFadeVol = AUDIO_FADE_INITIAL;
                 }
             }
         }
-        if (((g_cdAudioReady != 0) && (audioFadeVol != (-1))) != 0)
+
+        if (((g_cdAudioReady != 0) && (audioFadeVol != AUDIO_FADE_DISARMED)) != 0)
         {
             func_80023030(audioFadeVol);
             if (audioFadeVol == 0)
             {
                 break;
             }
-            audioFadeVol -= 0x10;
+            audioFadeVol -= AUDIO_FADE_STEP;
         }
     } while (state->endState != endStateMatch);
+end:
     func_800158E0();
     cdrom_reset();
     DrawSync(0);
@@ -183,12 +195,50 @@ void movie_play(s32 movieIndex)
  * Allocates VRAM rectangles, sets up the VLC table / MDEC output buffers /
  * audio data buffer, registers the DecDCT-out and DrawSync callbacks, then
  * issues the initial CD read. Two layout paths exist depending on
- * @ref g_gpuMode (standard vs interlaced/BreakDraw).
+ * @ref g_gpuMode (standard vs BreakDraw/dynamic-allocBase).
  *
  * @param resourceIndex CD resource id of the BS stream (e.g. 0x16A0..0x16A4).
- * @param flags         Bit 0..6: gpuMode. Bit 7: interlaced flag.
+ * @param flags         Bit 0..6 → MovieState.gpuMode. Bit 7 → MovieState.interlaceMode
+ *                      (despite the name, this selects the *audio source*, not
+ *                      GPU interlacing — see @note below).
  * @param totalFrames   Frame-count stop condition; set into MovieState.totalFrames.
- * @param initBufferIdx Initial active chunk index (0 or 1).
+ * @param initBufferIdx Initial active chunk index (0 or 1). Path B uses it to
+ *                      seed rects[2] from rects[initBufferIdx].
+ *
+ * @note `MovieState.gpuMode` and the `g_gpuMode` global are *the same byte* at
+ *       0x801ED590 (offset 0x90 in MovieState). The write at the top of this
+ *       function and the `if (g_gpuMode == 0)` branch read the same storage.
+ *
+ * @note In shipped play, `movie_play` always passes flags = 0x80, so
+ *       gpuMode = 0 (path A taken every time) and interlaceMode = 1 (XA audio).
+ *       Path B is dead in production; preserved for matching, which is also why
+ *       its read of an uninitialised rects[0].x (`>= 0x300` guard) is inert.
+ *
+ * @note `interlaceMode` controls audio source, not display interlacing:
+ *         1 → akao_cmd_e8_start_xa_stream + cd_volume   (real CD-XA streaming)
+ *         0 → akao_cmd_c8(0x7FFF) + xa_setup_panning    (SPU/synth path)
+ *
+ * @note Path-A memory map (RAM addresses are literals in this function):
+ *           0x80147000  videoTableBase    (50 × 32   = 0x640)
+ *           0x80147640  videoDataBase     (50 × 2016)
+ *           0x80160000  audioDataBase     (16 × 2048 = 0x8000)
+ *           0x80168000  vlcTable          (0x11000)
+ *           0x80179000  vlcInputBuf[0]    (0x14000)
+ *           0x8018D000  vlcInputBuf[1]    (0x14000)
+ *           0x801A1000  mdecOutputBuf[0]  (0x2D00 = 24 × 240 × 2)
+ *           0x801A3D00  mdecOutputBuf[1]  (0x2D00)
+ *       Sizes match rects[2] = 24-wide × 240-tall macroblock decode column.
+ *
+ * @note Path-B memory map (relative to AllocInfo::allocBase):
+ *           0x80147000           videoTableBase   (30 × 32 = 0x3C0)
+ *           videoTableBase+0x3C0  videoDataBase
+ *           0x80156000           audioDataBase
+ *           0x8015E000           vlcInputBuf[0]   (0x11000)
+ *           0x8016F000           vlcInputBuf[1]
+ *           allocBase            vlcTable
+ *           allocBase+0x11000    mdecOutputBuf[0] (0x1E00 = 16 × 240 × 2)
+ *           allocBase+0x12E00    mdecOutputBuf[1]
+ *       rects[2] is 16 wide here.
  *
  * @see https://decomp.me/scratch/hR71L (91.61%)
  * @see https://decomp.me/scratch/ICOiP (incorrect but better match)
@@ -313,7 +363,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     MOVIE_STATE->mdecBusy = 0;
     MOVIE_STATE->frame_ready = 0;
     MOVIE_STATE->endOfStream = 0;
-    MOVIE_STATE->endState = 0;
+    MOVIE_STATE->endState = END_STATE_RUNNING;
     MOVIE_STATE->unk92 = 0;
 
     MOVIE_STATE->videoWriteIdx = 0;
@@ -332,8 +382,13 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     MOVIE_STATE->lastAudioFrame = (u32)(-1);
     MOVIE_STATE->lastConsumedAudioFrame = (u32)(-1);
 
+    /* Psy-Q's DecDCToutCallback takes a single function pointer; the trailing
+     * p1/p2/p3 are codegen scratch — they pin specific values into $a1/$a2/$a3
+     * at the call site to reproduce the original register state, and are
+     * ignored by the callee. Path A: (vlcInputBuf[1], vlcInputBuf[0], vlcTable).
+     * Path B: ((u16)rects[initBufferIdx].y, 0x11000, initBufferIdx). */
     MOVIE_STATE->decDCToutCallback = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
-    MOVIE_STATE->drawSyncCallback = DrawSyncCallback(&movie_draw_sync_callback);
+    MOVIE_STATE->drawSyncCallback = DrawSyncCallback(&draw_sync_callback);
 
     if (MOVIE_STATE->interlaceMode != 0)
     {
@@ -419,13 +474,14 @@ void movie_update(void)
                     MOVIE_STATE->vlcRetryCount = 0;
                 }
             }
-            else if (movie_get_next_video_entry(&vlc_payload, &entry_header) != 0)
+            else if (get_next_video_entry(&vlc_payload, &entry_header) != 0)
             {
                 MOVIE_STATE->currentFrame = entry_header->header.frameNumber;
                 stateAlias = MOVIE_STATE;
-                if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) && (stateAlias->endState == 0))
+                if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) &&
+                    (stateAlias->endState == END_STATE_RUNNING))
                 {
-                    MOVIE_STATE->endState = 1;
+                    MOVIE_STATE->endState = END_STATE_NEAR_END;
                 }
                 {
                     int one;
@@ -455,7 +511,7 @@ void movie_update(void)
                 }
                 if ((MOVIE_STATE->endOfStream != 0) && (MOVIE_STATE->mdecBusy == 0))
                 {
-                    MOVIE_STATE->endState = 2;
+                    MOVIE_STATE->endState = END_STATE_DONE;
                 }
             }
         }
@@ -463,7 +519,7 @@ void movie_update(void)
     wordCount = 0;
     if (tmp != wordCount)
     {
-        movie_advance_video_read();
+        advance_video_read();
         combined = MOVIE_STATE;
         if ((combined->mdecBusy == wordCount) && (field9DZeroFlag = combined->frame_ready == wordCount))
         {
@@ -483,12 +539,12 @@ void movie_update(void)
     combined = MOVIE_STATE;
     if (g_cdAudioReady != 0)
     {
-        if (movie_get_next_audio_entry(&audio_entry) != 0)
+        if (get_next_audio_entry(&audio_entry) != 0)
         {
             audioFrameNum = (combined->currentFrame = audio_entry->header.frameNumber);
-            if ((audioFrameNum > combined->totalFrames) && (combined->endState < 2))
+            if ((audioFrameNum > combined->totalFrames) && (combined->endState < END_STATE_DONE))
             {
-                combined->endState = 2;
+                combined->endState = END_STATE_DONE;
             }
             akao_xa_advance_frame(audioFrameNum);
         }
@@ -512,7 +568,7 @@ void movie_update(void)
             if (((tmp != (-1)) && (MOVIE_STATE->audioBufferedCount != 0)) &&
                 (MOVIE_STATE->audioReadIdx != ((u32)(tmp * 2))))
             {
-                movie_advance_audio_read(tmp);
+                advance_audio_read();
             }
             do
             {
@@ -641,9 +697,9 @@ void movie_schedule_next_decode(void)
         ptr->rects[2].y = *(new_var = (u16*)&ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].y);
         *((volatile u8*)(&ptr->frame_ready)) = 1;
         *((volatile u8*)(&ptr->mdecBusy)) = 0;
-        if ((*((volatile u8*)(&ptr->endState))) == 1)
+        if ((*((volatile u8*)(&ptr->endState))) == END_STATE_NEAR_END)
         {
-            *((volatile u8*)(&ptr->endState)) = 2;
+            *((volatile u8*)(&ptr->endState)) = END_STATE_DONE;
         }
     }
 }
@@ -1024,7 +1080,7 @@ s32 movie_cd_sector_callback(void)
  *
  * @see https://decomp.me/scratch/I2Ddr (100%)
  */
-s32 movie_get_next_audio_entry(AudioSector** out_entry)
+static s32 get_next_audio_entry(AudioSector** out_entry)
 {
     s32 next_idx;
     AudioSector* entry;
@@ -1079,7 +1135,7 @@ s32 movie_get_next_audio_entry(AudioSector** out_entry)
  *
  * @see https://decomp.me/scratch/TApbR (100%)
  */
-void movie_draw_sync_callback(void)
+static void draw_sync_callback(void)
 {
     s16 width;
     s16 height;
@@ -1123,7 +1179,7 @@ void movie_draw_sync_callback(void)
  *
  * @see https://decomp.me/scratch/OJvsJ (100%)
  */
-s32 movie_get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header)
+static s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header)
 {
     s32 read_idx;
     s32 write_idx;
@@ -1161,7 +1217,7 @@ s32 movie_get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry*
  *
  * @see https://decomp.me/scratch/SUBK5 (100%)
  */
-void movie_advance_video_read(void)
+static void advance_video_read(void)
 {
     SectorEntry* entry;
     s32 next_index;
@@ -1192,7 +1248,7 @@ void movie_advance_video_read(void)
  *
  * @see https://decomp.me/scratch/6Xjsu (100%)
  */
-void movie_advance_audio_read(void)
+static void advance_audio_read(void)
 {
     SectorEntry* entry;
     s32 next_index;
