@@ -79,7 +79,9 @@ typedef struct
 
     // ---- status bytes (offsets 144..159) ----
     u8 gpuMode;          // 0 = DrawSync/LoadImage, non‑zero = BreakDraw/LoadImage2 path
-    s8 interlaceMode;    // 1 if interlaced mode (from first struct; second struct calls this _unk91)
+    s8 interlaceMode;    // misnomer: actually selects audio source. 1 = AKAO XA streaming
+                         // (akao_cmd_e8 + cd_volume); 0 = SPU/synth path (akao_cmd_c8 + panning).
+                         // Set from bit 7 of movie_init's `flags` arg.
     u8 unk92;            // 0x92 (was field92 — flipped s8→u8; only ever stored)
     u8 inputBufIdx;      // which vlcInputBuf[] holds current VLC-decoded input (toggled each frame)
     s8 vlcRetryCount;    // countdown: retry DecDCTvlc2 this many vsync ticks

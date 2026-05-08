@@ -198,12 +198,50 @@ void movie_play(s32 movieIndex)
  * Allocates VRAM rectangles, sets up the VLC table / MDEC output buffers /
  * audio data buffer, registers the DecDCT-out and DrawSync callbacks, then
  * issues the initial CD read. Two layout paths exist depending on
- * @ref g_gpuMode (standard vs interlaced/BreakDraw).
+ * @ref g_gpuMode (standard vs BreakDraw/dynamic-allocBase).
  *
  * @param resourceIndex CD resource id of the BS stream (e.g. 0x16A0..0x16A4).
- * @param flags         Bit 0..6: gpuMode. Bit 7: interlaced flag.
+ * @param flags         Bit 0..6 → MovieState.gpuMode. Bit 7 → MovieState.interlaceMode
+ *                      (despite the name, this selects the *audio source*, not
+ *                      GPU interlacing — see @note below).
  * @param totalFrames   Frame-count stop condition; set into MovieState.totalFrames.
- * @param initBufferIdx Initial active chunk index (0 or 1).
+ * @param initBufferIdx Initial active chunk index (0 or 1). Path B uses it to
+ *                      seed rects[2] from rects[initBufferIdx].
+ *
+ * @note `MovieState.gpuMode` and the `g_gpuMode` global are *the same byte* at
+ *       0x801ED590 (offset 0x90 in MovieState). The write at the top of this
+ *       function and the `if (g_gpuMode == 0)` branch read the same storage.
+ *
+ * @note In shipped play, `movie_play` always passes flags = 0x80, so
+ *       gpuMode = 0 (path A taken every time) and interlaceMode = 1 (XA audio).
+ *       Path B is dead in production; preserved for matching, which is also why
+ *       its read of an uninitialised rects[0].x (`>= 0x300` guard) is inert.
+ *
+ * @note `interlaceMode` controls audio source, not display interlacing:
+ *         1 → akao_cmd_e8_start_xa_stream + cd_volume   (real CD-XA streaming)
+ *         0 → akao_cmd_c8(0x7FFF) + xa_setup_panning    (SPU/synth path)
+ *
+ * @note Path-A memory map (RAM addresses are literals in this function):
+ *           0x80147000  videoTableBase    (50 × 32   = 0x640)
+ *           0x80147640  videoDataBase     (50 × 2016)
+ *           0x80160000  audioDataBase     (16 × 2048 = 0x8000)
+ *           0x80168000  vlcTable          (0x11000)
+ *           0x80179000  vlcInputBuf[0]    (0x14000)
+ *           0x8018D000  vlcInputBuf[1]    (0x14000)
+ *           0x801A1000  mdecOutputBuf[0]  (0x2D00 = 24 × 240 × 2)
+ *           0x801A3D00  mdecOutputBuf[1]  (0x2D00)
+ *       Sizes match rects[2] = 24-wide × 240-tall macroblock decode column.
+ *
+ * @note Path-B memory map (relative to AllocInfo::allocBase):
+ *           0x80147000           videoTableBase   (30 × 32 = 0x3C0)
+ *           videoTableBase+0x3C0  videoDataBase
+ *           0x80156000           audioDataBase
+ *           0x8015E000           vlcInputBuf[0]   (0x11000)
+ *           0x8016F000           vlcInputBuf[1]
+ *           allocBase            vlcTable
+ *           allocBase+0x11000    mdecOutputBuf[0] (0x1E00 = 16 × 240 × 2)
+ *           allocBase+0x12E00    mdecOutputBuf[1]
+ *       rects[2] is 16 wide here.
  *
  * @see https://decomp.me/scratch/hR71L (91.61%)
  * @see https://decomp.me/scratch/ICOiP (incorrect but better match)
@@ -328,7 +366,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     MOVIE_STATE->mdecBusy = 0;
     MOVIE_STATE->frame_ready = 0;
     MOVIE_STATE->endOfStream = 0;
-    MOVIE_STATE->endState = 0;
+    MOVIE_STATE->endState = END_STATE_RUNNING;
     MOVIE_STATE->unk92 = 0;
 
     MOVIE_STATE->videoWriteIdx = 0;
@@ -347,6 +385,11 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     MOVIE_STATE->lastAudioFrame = (u32)(-1);
     MOVIE_STATE->lastConsumedAudioFrame = (u32)(-1);
 
+    /* Psy-Q's DecDCToutCallback takes a single function pointer; the trailing
+     * p1/p2/p3 are codegen scratch — they pin specific values into $a1/$a2/$a3
+     * at the call site to reproduce the original register state, and are
+     * ignored by the callee. Path A: (vlcInputBuf[1], vlcInputBuf[0], vlcTable).
+     * Path B: ((u16)rects[initBufferIdx].y, 0x11000, initBufferIdx). */
     MOVIE_STATE->decDCToutCallback = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
     MOVIE_STATE->drawSyncCallback = DrawSyncCallback(&draw_sync_callback);
 
