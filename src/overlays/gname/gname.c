@@ -1791,3 +1791,43 @@ s32 func_80142844(u8* arg0)
     }
     return result;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/UeYRe
+ */
+void func_801428A4(u8* arg0, u8* arg1)
+{
+    u8* p;
+    s32 i;
+    s32 len1;
+    p = arg1;
+    len1 = 0;
+    if ((*arg1) != 0)
+    {
+        do
+        {
+            if (((u32)((unsigned char)((*p) - 0x19))) < 7U)
+            {
+                p += 2;
+                len1 += 2;
+            }
+            else
+            {
+                p += 1;
+                len1 += 1;
+            }
+        } while ((*p) != 0);
+    }
+    i = 0;
+    if (len1 > 0)
+    {
+        u8* dest;
+        do
+        {
+            *(&arg0[i]) = arg1[i];
+            i++;
+            dest = &arg0[i];
+        } while (i < len1);
+    }
+    arg0[i] = 0;
+}
