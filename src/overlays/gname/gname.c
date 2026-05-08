@@ -1108,7 +1108,7 @@ s32 func_80141D64(void)
 }
 
 /**
- * decomp.me (82.25%) https://decomp.me/scratch/LxujJ
+ * decomp.me (99.26%) https://decomp.me/scratch/LxujJ
  */
 void func_80141E04(UnkStruct* arg0, s32 arg1, s32 arg2)
 {
