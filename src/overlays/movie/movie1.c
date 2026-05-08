@@ -18,8 +18,7 @@ static void advance_video_read(void);
  * @param movieIndex Cinematic to play (0..4). Indices outside this range
  *                   fall through to the case-4 default (898 frames).
  *
- * @see https://decomp.me/scratch/gkEWm (97.51%)
- * @see https://decomp.me/scratch/Gq1vj (WIP, gotos removed)
+ * @see https://decomp.me/scratch/gkEWm (100%)
  */
 void movie_play(s32 movieIndex)
 {
@@ -33,8 +32,11 @@ void movie_play(s32 movieIndex)
     s32 timeout;
     unsigned short new_var;
     u16 buttons;
-    u32 frameCount;
+    s32 frameCount;
     u32 idx;
+    s32 resourceIdx;
+    s32 initFlags;
+
     VSync(0);
     func_800157DC();
     func_800157B0(1);
@@ -58,7 +60,7 @@ void movie_play(s32 movieIndex)
     /*
      * Five MDEC cinematics; movieIndex selects one (0..4). The frame count
      * matches each movie's BS stream length and is used by movie_init to set
-     * the totalFrames stop condition. The CD resource index is the per-movie
+     * the movieInitFlags stop condition. The CD resource index is the per-movie
      * BS file at base 0x16A0 (so resources 0x16A0..0x16A4).
      *
      *   index | resource | frames | known role
@@ -72,32 +74,39 @@ void movie_play(s32 movieIndex)
      * To label these semantically, grep callers of `movie_play` to see which
      * index is invoked from where (intro screen, ending, etc.).
      */
+
     switch ((u16)(movieIndex & 0xFFFF))
     {
     case 0:
         frameCount = 2098;
+        initFlags = 0x80;
         break;
 
     case 1:
         frameCount = 2473;
+        initFlags = 0x80;
         break;
 
     case 2:
         frameCount = 1318;
+        initFlags = 0x80;
         break;
 
     case 3:
         frameCount = 5368;
+        initFlags = 0x80;
         break;
 
     case 4:
 
     default:
         frameCount = 898;
+        initFlags = 0x80;
         break;
     }
 
-    movie_init((movieIndex & 0xFFFF) + 0x16A0, 0x80, frameCount, 0);
+    resourceIdx = (movieIndex & 0xFFFF) + 0x16A0;
+    movie_init(resourceIdx, initFlags, frameCount, 0);
     VSync(0);
     func_800157DC();
     audioFadeVol = AUDIO_FADE_DISARMED;
@@ -135,6 +144,9 @@ void movie_play(s32 movieIndex)
             if (timeout == 0)
             {
                 cdrom_process_state();
+                do
+                {
+                } while (0);
             }
             timeout = 0x2000;
         }
