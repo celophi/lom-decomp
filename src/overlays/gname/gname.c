@@ -1831,3 +1831,40 @@ void func_801428A4(u8* arg0, u8* arg1)
     }
     arg0[i] = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/y0CgJ
+ */
+void func_80142928(void)
+{
+    UnkStruct2 sp10[16];
+    UnkStruct2* new_var2;
+    s16 new_var3;
+    s32 count;
+    s32 i;
+    UnkStruct2* ptr;
+    s32 new_var;
+    s32* pSum;
+    count = func_800644FC(sp10, D_8014F844, 0);
+    i = 0;
+    new_var3 = new_var2->unk10;
+    new_var = count;
+    D_8014F8CC = i;
+    if (i < new_var)
+    {
+        if (!new_var)
+        {
+        }
+        ptr = sp10;
+        while (i < ((0, new_var)))
+        {
+            pSum = &D_8014F8CC;
+            new_var2 = ptr;
+            new_var3 = new_var2->unk10;
+            *pSum += new_var3;
+            ptr++;
+            i++;
+        }
+    }
+    D_8014F8BC = D_8014F8CC + 0x18;
+}
