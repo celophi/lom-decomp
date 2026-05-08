@@ -51,10 +51,10 @@ void func_801403E0(void)
  */
 void func_80140410(ArgStruct* ctx)
 {
-    u32* prim = (u32*)ctx->unk4040;     /* t4 — current primitive write pos */
-    ArgStruct* arg = ctx;               /* t6 = t7 — preserves load order */
+    u32* prim = (u32*)ctx->unk4040; /* t4 — current primitive write pos */
+    ArgStruct* arg = ctx;           /* t6 = t7 — preserves load order */
     s32 step_r, step_g, step_b;
-    s32 abr_cmd;                        /* low byte of GP0 0xE1 (abr select) */
+    s32 abr_cmd; /* low byte of GP0 0xE1 (abr select) */
 
     /* Lerp current toward target, or snap if no steps remain. */
     if (D_8014F818.steps != 0)
@@ -107,12 +107,12 @@ void func_80140410(ArgStruct* ctx)
         /* Flat-shaded full-screen quad header: 3-word tag 0x62. */
         ((u8*)prim)[3] = 3;
         ((u8*)prim)[7] = 0x62;
-        
-        *((u16*)((u8*)prim + 10)) = 0;       /* y = 0   */
-        *((u16*)((u8*)prim +  8)) = 0;       /* x = 0   */
-        
-        *((u16*)((u8*)prim + 12)) = 0x140;   /* w = 320 */
-        *((u16*)((u8*)prim + 14)) = 0xF0;    /* h = 240 */
+
+        *((u16*)((u8*)prim + 10)) = 0; /* y = 0   */
+        *((u16*)((u8*)prim + 8)) = 0;  /* x = 0   */
+
+        *((u16*)((u8*)prim + 12)) = 0x140; /* w = 320 */
+        *((u16*)((u8*)prim + 14)) = 0xF0;  /* h = 240 */
 
         /* Splice quad into OT. */
         *prim = (*prim & 0xFF000000) | (arg->unk0 & 0xFFFFFF);
@@ -1242,12 +1242,12 @@ s32 func_80141D64(void)
  */
 void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
 {
-    s32* ot_head;       /* &ctx->unk38 — passed as the OT head pointer */
-    s32* prim;          /* current primitive being emitted */
-    s32* next_prim;     /* heap cursor after the sprite/draw-mode pair */
-    s32 vram_y;         /* VRAM Y of the back page (0x18 or 0x100) */
+    s32* ot_head;   /* &ctx->unk38 — passed as the OT head pointer */
+    s32* prim;      /* current primitive being emitted */
+    s32* next_prim; /* heap cursor after the sprite/draw-mode pair */
+    s32 vram_y;     /* VRAM Y of the back page (0x18 or 0x100) */
     u32 load_packet[0x19];
-    s32 vram_x;         /* VRAM X of the right-aligned strip */
+    s32 vram_x; /* VRAM X of the right-aligned strip */
 
     ot_head = (s32*)&ctx->unk38;
     prim = ctx->unk4040;
@@ -1263,16 +1263,14 @@ void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      *    Returns the heap cursor just past both packets. */
     next_prim = func_80142220(
-        func_80142274(
-            func_800A88A0(prim + 0x10, ot_head, tex_src, 1, 0x10, 8, 0),
-            ot_head, 2, 0, 0, 0, 0, 0),
-        ot_head);
+        func_80142274(func_800A88A0(prim + 0x10, ot_head, tex_src, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
 
     /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
      *    right edge of whichever page is currently the back buffer. */
     vram_x = 0xF0 - strip_width;
     vram_y = 0x18;
-    if (ctx->unk404C != 0) {
+    if (ctx->unk404C != 0)
+    {
         vram_y = 0x100;
     }
 
@@ -1387,22 +1385,14 @@ void func_80141F9C(void* arg0, s32 arg1)
  *
  * @see https://decomp.me/scratch/EyVeo (100%)
  */
-void* func_80142220(void* prim, s32* ot_head)
+void* func_80142220(void* arg0, s32* arg1)
 {
-    unsigned char* bytes = (unsigned char*)prim;
-    u32* words = (u32*)prim;
-    u32 old_head, this_addr;
+    unsigned char* bytes = (unsigned char*)arg0;
+    u32* words = (u32*)arg0;
+    u32 temp1, temp2;
 
-    bytes[3] = 1;
-    *(u32*)(bytes + 4) = 0xE1000005;
-
-    /* prim->next = old OT head (24-bit). */
-    old_head = words[0];
-    words[0] = (old_head & 0xFF000000) | ((u32)(*ot_head) & 0x00FFFFFF);
-
-    /* OT head = prim (24-bit). */
-    this_addr = (u32)(*ot_head);
-    *ot_head = (this_addr & 0xFF000000) | ((u32)((unsigned long)prim) & 0x00FFFFFF);
+    setDrawTPage(bytes, 0, 0, 0x05);
+    addPrim(arg1, arg0);
 
     return (void*)(bytes + 8);
 }
