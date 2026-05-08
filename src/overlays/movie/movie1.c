@@ -32,7 +32,9 @@ void movie_play(s32 movieIndex)
     s32 error_status;
     s32 timeout;
     unsigned short new_var;
+    u16 buttons;
     u32 frameCount;
+    u32 idx;
     VSync(0);
     func_800157DC();
     func_800157B0(1);
@@ -150,25 +152,25 @@ void movie_play(s32 movieIndex)
         SetDispMask(1);
         func_800157DC();
         cdrom_process_state();
+
+        idx = new_var;
+        if ((idx < MOVIE_SKIPPABLE_MAX) && ((SCD_REGS)->deviceState < SCD_DEVICE_STATE_OK))
         {
-            u32 idx = new_var;
-            if ((idx < MOVIE_SKIPPABLE_MAX) && ((SCD_REGS)->deviceState < SCD_DEVICE_STATE_OK))
+            buttons = (SCD_REGS)->unk4;
+            if (((idx != 0) ? ((buttons & MOVIE1_SKIP_MASK) != 0) : ((buttons & MOVIE0_SKIP_MASK) != 0)) != 0)
             {
-                u16 buttons = (SCD_REGS)->unk4;
-                if (((idx != 0) ? ((buttons & ((0, MOVIE1_SKIP_MASK))) != 0)
-                                : ((buttons & MOVIE0_SKIP_MASK) != 0)) != 0)
+                if (g_cdAudioReady == 0)
                 {
-                    if (g_cdAudioReady == 0)
-                    {
-                        break;
-                    }
-                    if (audioFadeVol == AUDIO_FADE_DISARMED)
-                    {
-                        audioFadeVol = AUDIO_FADE_INITIAL;
-                    }
+                    break;
+                }
+
+                if (audioFadeVol == AUDIO_FADE_DISARMED)
+                {
+                    audioFadeVol = AUDIO_FADE_INITIAL;
                 }
             }
         }
+
         if (((g_cdAudioReady != 0) && (audioFadeVol != AUDIO_FADE_DISARMED)) != 0)
         {
             func_80023030(audioFadeVol);
