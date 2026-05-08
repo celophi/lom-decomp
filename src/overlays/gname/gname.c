@@ -1237,3 +1237,24 @@ void func_80141F9C(void* arg0, s32 arg1)
         obj->unk4040 = (u32*)((u8*)var_a2 + 0x40);
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/EyVeo
+ */
+void* func_80142220(void* arg0, s32* arg1)
+{
+    unsigned char* bytes = (unsigned char*)arg0;
+    u32* words = (u32*)arg0;
+    u32 temp1, temp2;
+
+    bytes[3] = 1;
+    *(u32*)(bytes + 4) = 0xE1000005;
+
+    temp1 = words[0];
+    words[0] = (temp1 & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
+
+    temp2 = (u32)(*arg1);
+    *arg1 = (temp2 & 0xFF000000) | ((u32)((unsigned long)arg0) & 0x00FFFFFF);
+
+    return (void*)(bytes + 8);
+}
