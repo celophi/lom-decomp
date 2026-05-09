@@ -215,7 +215,7 @@ s32* func_80140C14(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5,
 /**
  * decomp.me (100%) https://decomp.me/scratch/tG03R
  */
-void func_801410FC(ArgStruct* arg0)
+void menu_func_801410FC(ArgStruct* arg0)
 {
     u8* base = D_80160260;
     u8* s0 = base + 0xC;
