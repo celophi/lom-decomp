@@ -2,6 +2,8 @@
 #define _MENU_H
 
 #include "common.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 
 extern void func_800AA02C(void);
 extern void func_80140968(void);
@@ -27,6 +29,8 @@ extern u8 D_800FE778[];
 extern u8 D_80160260[];
 extern s32 D_8016910C;
 extern u16 D_80168AA8[];
+extern u8* D_80169108;
+extern u8 D_80151EBC;
 
 typedef struct
 {
