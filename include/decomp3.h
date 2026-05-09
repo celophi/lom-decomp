@@ -14,6 +14,9 @@ extern s32 D_8004D400;
 extern u8 D_8004B430[];
 
 extern s32 D_8004F750;
+extern s32 D_8003EC4C;
+extern s32 D_8004F824;
+
 extern s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion);
 
 s32 FUN_80021fbc(void);

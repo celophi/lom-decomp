@@ -721,7 +721,6 @@ s32 FUN_80022ac8(void)
     return akao_send_command(0xF1);
 }
 
-
 /**
  * @brief Submits an AKAO sequence to the audio driver and spins until accepted.
  *
@@ -740,4 +739,22 @@ void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForComplet
 {
     D_8004F750 &= ~1;
     while (akao_submit(sequenceData, waitForCompletion) == 1);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/ecQHb
+ */
+s32 func_80022B48(void)
+{
+    return D_8003EC4C;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/qBE70
+ */
+s32 func_80022B58(void)
+{
+    D_8004F824 = 0;
+    D_8004F750 |= 1;
+    return 0;
 }
