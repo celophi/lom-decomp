@@ -463,3 +463,12 @@ void func_80022668(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     g_akaoCmdParams[3] = temp_a3;
     akao_send_command(0xA3);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/e4D90
+ */
+void func_800226B0(s32 arg0)
+{
+    g_akaoCmdParams[0] = arg0 & 0xFF;
+    akao_send_command(0xAC);
+}
