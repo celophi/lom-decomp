@@ -6,6 +6,31 @@
 #include "psyq/libgpu.h"
 
 /**
+ * @brief Name-buffer character encoding.
+ *
+ * A "name" is a null-terminated byte buffer (`u8*`) used by the name-entry
+ * UI. It uses a small DBCS-style variable-width encoding:
+ *
+ *  - Most bytes are single-byte glyphs (1 byte each).
+ *  - A byte in the range [0x19, 0x20) is the *lead* byte of a 2-byte glyph;
+ *    the following byte is its trail byte. There are 7 lead-byte values
+ *    (0x19..0x1F), giving up to 7 "pages" of wide glyphs.
+ *  - 0x00 terminates the string.
+ *
+ * The `name_*` helpers in gname.c walk the buffer respecting this encoding:
+ * `name_byte_length` returns raw bytes, `name_char_count` returns logical
+ * glyphs, `name_pop_first_char` / `name_pop_last_char` strip and return one
+ * glyph (packing a 2-byte glyph as `lead | (trail << 8)`), and
+ * `name_prepend_char` inserts one glyph at the front.
+ *
+ * `name_is_blank` is a special case: it walks byte-by-byte (not
+ * glyph-by-glyph) and treats both ASCII space (0x20) and wide-space
+ * sentinel (0x80) as blank.
+ */
+#define CHAR_SPACE      0x20 /**< ASCII space; blank glyph in name buffers. */
+#define CHAR_WIDE_SPACE 0x80 /**< Wide-space sentinel byte; also blank. */
+
+/**
  * @brief RGB lerp state.
  *
  * Used as a pair: `g_fade_target` is the *target* (final color + remaining
