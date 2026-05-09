@@ -233,7 +233,6 @@ SRCS_G0 := \
 	src/unk9.c \
 	src/decomp1.c \
 	src/decomp3.c \
-	src/decomp4.c \
 	src/decomp7.c \
 	src/main.c
 
