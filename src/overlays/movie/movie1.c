@@ -55,7 +55,8 @@ void movie_play(s32 movieIndex)
     timeout = 0xF0;
     SetDefDispEnv(&env[0], 0, 0, 320, timeout);
     SetDefDispEnv(&env[1], 0, timeout, 320, timeout);
-    env[0].isrgb24 = (env[1].isrgb24 = 1);
+    (env[1].isrgb24 = 1);
+    env[0].isrgb24 = 1;
 
     /*
      * Five MDEC cinematics; movieIndex selects one (0..4). The frame count
@@ -113,9 +114,11 @@ void movie_play(s32 movieIndex)
     retryLimit = 5;
     state = (MovieState*)0x801ED500;
     endStateMatch = END_STATE_DONE;
-    do
+
+    while (TRUE)
     {
         error_status = cdrom_get_error_status();
+
         while ((error_status != 0) && (error_status != retryLimit))
         {
             func_800157B0(1);
@@ -125,35 +128,46 @@ void movie_play(s32 movieIndex)
             error_status = cdrom_get_error_status();
         }
 
-        timeout = 0x2000;
         while (state->frame_ready == 0)
         {
-            do
+            timeout = 0x2000;
+
+            while (TRUE)
             {
                 movie_update();
+
                 if (state->frame_ready != 0)
                 {
                     break;
                 }
+
                 if (state->endState == endStateMatch)
                 {
-                    goto end;
+                    func_800158E0();
+                    cdrom_reset();
+                    DrawSync(0);
+                    VSync(0);
+                    SetDispMask(0);
+                    return;
                 }
+
                 movie_service_video_ops();
-            } while ((--timeout) != 0);
+
+                if (--timeout == 0)
+                {
+                    break;
+                }
+            };
+
             if (timeout == 0)
             {
                 cdrom_process_state();
-                do
-                {
-                } while (0);
             }
-            timeout = 0x2000;
         }
 
         state->frame_ready = 0;
         func_800157B0(4);
-        new_var = (u32)(movieIndex & 0xFFFF);
+        new_var = (u16)(movieIndex & 0xFFFF);
         VSync(0);
         pDispEnv = &env[0];
         if (state->chunkIdx == 0)
@@ -183,17 +197,24 @@ void movie_play(s32 movieIndex)
             }
         }
 
-        if (((g_cdAudioReady != 0) && (audioFadeVol != AUDIO_FADE_DISARMED)) != 0)
+        if ((g_cdAudioReady != 0) && (audioFadeVol != AUDIO_FADE_DISARMED))
         {
             func_80023030(audioFadeVol);
+
             if (audioFadeVol == 0)
             {
                 break;
             }
+
             audioFadeVol -= AUDIO_FADE_STEP;
         }
-    } while (state->endState != endStateMatch);
-end:
+
+        if (state->endState == endStateMatch)
+        {
+            break;
+        }
+    }
+
     func_800158E0();
     cdrom_reset();
     DrawSync(0);
