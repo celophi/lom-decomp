@@ -211,3 +211,187 @@ s32* func_80140C14(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5,
     /* return pointer to offset 0x8 of the current structure */
     return (s32*)(base + 8);
 }
+
+/**
+ * decomp.me (87.64%) https://decomp.me/scratch/ZtHxG
+ */
+void func_80140DE8(Arg* arg0)
+{
+    volatile u8 sp0;
+    volatile u16 sp2;
+    volatile u16 sp4;
+    volatile u16 sp6;
+    s32 var_t2;
+    u8* var_a2;
+    u8* var_a1;
+    u8* var_t0;
+    u8* var_t3;
+    u8* temp_t1;
+    Arg* t7 = arg0;
+    Arg* t4 = t7;
+
+    var_t3 = (u8*)D_80168AA8;
+    var_t2 = 0;
+    temp_t1 = t7->unk4040;
+    sp6 = 0xFF;
+    sp4 = 0xFF;
+    var_t0 = var_t3 + 8;
+    sp2 = 0;
+    sp0 = 0;
+
+    temp_t1[3] = 2;
+    {
+        u32 a2 = ((sp2 & 0xFF) >> 3) << 0xF;
+        u32 v0 = ((sp0 & 0xFF) >> 3) << 0xA;
+        u32 a0 = (sp6 << 0x10) >> 0xE;
+        u32 a1 = (s16)sp4;
+        u32 val = a2 | v0 | 0xE2000000;
+        val |= (-(s32)a0) & 0x3E0;
+        val |= ((-(s32)a1) & 0xFF) >> 3;
+        *(u32*)(temp_t1 + 8) = 0;
+        *(u32*)(temp_t1 + 4) = val;
+    }
+    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->unk3C & 0xFFFFFF);
+    t4->unk3C = (t4->unk3C & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+
+    temp_t1 += 0xC;
+    var_a2 = temp_t1;
+    var_a1 = var_a2 + 0xE;
+
+    do
+    {
+        *(u32*)(var_a1 - 0xA) = 0x808080;
+        *(var_a1 - 0xB) = 4;
+        *(var_a1 - 7) = 0x64;
+        *(u16*)(var_a1 - 2) = *(u16*)var_t3;
+        *(u32*)(var_a1 - 6) = *(u32*)(var_t0 - 4);
+        *(u32*)(var_a1 + 2) = *(u32*)var_t0;
+
+        if (var_t2 >= 0x11)
+        {
+            *(u16*)var_a1 = 0x7C81;
+        }
+        else
+        {
+            *(u16*)var_a1 = 0x7C80;
+        }
+
+        var_t2++;
+        var_a1 += 0x14;
+        var_t0 += 0xC;
+        var_t3 += 0xC;
+
+        *(u32*)var_a2 = (*(u32*)var_a2 & 0xFF000000) | (t4->unk3C & 0xFFFFFF);
+        t4->unk3C = (t4->unk3C & 0xFF000000) | ((u32)var_a2 & 0xFFFFFF);
+        var_a2 += 0x14;
+    } while (var_t2 < 0x1D);
+
+    temp_t1 = var_a2;
+
+    sp4 = 0xFF;
+    sp6 = 0xFF;
+    sp0 = 0;
+    sp2 = 0;
+
+    temp_t1[3] = 2;
+    {
+        u32 a2 = ((sp2 & 0xFF) >> 3) << 0xF;
+        u32 v0 = ((sp0 & 0xFF) >> 3) << 0xA;
+        u32 a0 = (sp6 << 0x10) >> 0xE;
+        u32 a1 = (s16)sp4;
+        u32 val = a2 | v0 | 0xE2000000;
+        val |= (-(s32)a0) & 0x3E0;
+        val |= ((-(s32)a1) & 0xFF) >> 3;
+        *(u32*)(temp_t1 + 8) = 0;
+        *(u32*)(temp_t1 + 4) = val;
+    }
+    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->unk3C & 0xFFFFFF);
+    t4->unk3C = (t4->unk3C & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+
+    temp_t1 += 0xC;
+    temp_t1[3] = 1;
+    *(u32*)(temp_t1 + 4) = 0xE1000005;
+    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->unk3C & 0xFFFFFF);
+    t4->unk3C = (t4->unk3C & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+
+    t7->unk4040 = temp_t1 + 8;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/CKNIH
+ */
+void func_801410B0(void)
+{
+    RECT rect;
+
+    rect.x = 0x140;
+    rect.y = 0;
+    rect.w = 0;
+    rect.h = 0x1F2;
+    menu_func_801410FC(&rect);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/A1YTp
+ */
+void func_801410E8(void)
+{
+    D_80169108 = &D_80151EBC;
+}
+
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/tG03R
+ */
+void menu_func_801410FC(ArgStruct* arg0)
+{
+    u8* base = D_80160260;
+    u8* s0 = base + 0xC;
+    s32 s3 = *(s32*)(s0 + 8);
+    ArgStruct sp10;
+    u16* p;
+    int i;
+
+    D_8016910C = *(s32*)(s0 + 0x14);
+
+    /* First loop */
+    sp10.unk0 = arg0->unk4;
+    sp10.unk2 = arg0->unk6;
+    sp10.unk4 = 0x100;
+    sp10.unk6 = 1;
+
+    p = (u16*)(base + 0x20);
+    for (i = 0; i < 0x100; i++)
+    {
+        if (*p != 0)
+            *p |= 0x8000;
+        p++;
+    }
+    func_80019A34(&sp10, s0 + 0x14);
+
+    /* Second call */
+    sp10.unk0 = arg0->unk0;
+    sp10.unk2 = arg0->unk2;
+    {
+        // Enforce specific instruction ordering: addiu a1, s3, 8 then addu a1, s0, a1
+        u8* temp = s0 + (s3 + 8);
+        sp10.unk4 = *(u16*)(temp + 8);
+        sp10.unk6 = *(u16*)(temp + 10);
+        func_80019A34(&sp10, temp + 0xC);
+    }
+
+    /* Third loop */
+    sp10.unk0 = arg0->unk4;
+    sp10.unk2 = arg0->unk6 + 1;
+    sp10.unk4 = 0x100;
+    sp10.unk6 = 1;
+
+    p = (u16*)(base + 0x822C);
+    for (i = 0; i < 0x100; i++)
+    {
+        if (*p != 0)
+            *p |= 0x8000;
+        p++;
+    }
+    func_80019A34(&sp10, base + 0x822C);
+}
