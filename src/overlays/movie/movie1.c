@@ -273,24 +273,17 @@ void movie_play(s32 movieIndex)
  *           allocBase+0x12E00    mdecOutputBuf[1]
  *       rects[2] is 16 wide here.
  *
- * @see https://decomp.me/scratch/hR71L (91.61%)
+ * @see https://decomp.me/scratch/g5PtA (91.61%)
  * @see https://decomp.me/scratch/ICOiP (incorrect but better match)
  */
 void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx)
 {
-    u32 p1;
-    u8* vlcTablePtr;       /* base of VLC code table */
-    MovieState* stateRef2; /* used after VSync; alias of 0x801ED500 */
-    MovieState* stateRef3; /* used as ClearImage arg base */
-    u32 p2;
-    MovieState* stateRef4; /* sequencing alias from rect setup */
-    u32 p3;
-    MovieState* stateRef5;                /* sequencing alias from rect copies */
-    u8* vlcTablePtr2;                     /* duplicate of vlcTablePtr (forces an extra move) */
-    VideoSectorEntry** videoTableBasePtr; /* &state->videoTableBase reload */
-    int stateAddrInt;                     /* literal 0x801ED500 used for vlcTable store */
-    VideoSectorEntry** videoTableBaseRef; /* &state->videoTableBase (NOT a DISPENV) */
+    MovieState* movie_state;
     AllocInfo* allocInfo = g_allocInfo;
+    short value;
+    short value2;
+    void* addr;
+    unsigned short new_var;
 
     MOVIE_STATE->gpuMode = (s8)(flags & 0x7F);
     if (flags & 0x80)
@@ -302,56 +295,48 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
         MOVIE_STATE->interlaceMode = 0;
     }
 
-    videoTableBaseRef = &MOVIE_STATE->videoTableBase;
-
-    if (g_gpuMode == 0)
+    if (MOVIE_STATE->gpuMode == 0)
     {
-        p3 = 0x80168000;
-        p2 = 0x80179000;
-        vlcTablePtr = (u8*)0x80147000;
-        p1 = 0x8018D000;
 
-        MOVIE_STATE->videoTableBase = (VideoSectorEntry*)vlcTablePtr;
-        p2++;
-        p2--;
-        MOVIE_STATE->mdecOutputBuf[1] = (u_long*)0x801A3D00;
+        MOVIE_STATE->videoTableBase = (u32*)0x80147000;
         MOVIE_STATE->audioDataBase = (AudioSector*)0x80160000;
-        MOVIE_STATE->lastConsumedVideoFrame = (u32)(-1);
-        MOVIE_STATE->rects[1].w = 0x1E0;
-        (stateRef4 = MOVIE_STATE)->rects[0].w = 0x1E0;
-        MOVIE_STATE->rects[2].w = 0x18;
-        MOVIE_STATE->videoRingCapacity = 0x32;
-        stateAddrInt = 0x801ED500;
-        MOVIE_STATE->vlcInputBuf[0] = (u8*)p2;
-        MOVIE_STATE->vlcInputBuf[1] = (u8*)p1;
+        MOVIE_STATE->vlcTable = (u32*)0x80168000;
+        MOVIE_STATE->vlcInputBuf[0] = (u32*)0x80179000;
+        MOVIE_STATE->vlcInputBuf[1] = (u_long*)0x8018D000;
         MOVIE_STATE->mdecOutputBuf[0] = (u_long*)0x801A1000;
-        MOVIE_STATE->rects[0].x = p3 * 0;
-        MOVIE_STATE->rects[1].x = 0;
-        MOVIE_STATE->rects[0].y = 0;
+        MOVIE_STATE->mdecOutputBuf[1] = (VideoVlcPayload*)0x801A3D00;
+
         MOVIE_STATE->rects[1].y = 0xF0;
         MOVIE_STATE->rects[2].h = 0xF0;
         MOVIE_STATE->rects[1].h = 0xF0;
+
+        MOVIE_STATE->videoRingCapacity = 0x32;
+
         MOVIE_STATE->rects[0].h = 0xF0;
+
+        MOVIE_STATE->rects[1].x = 0;
+        MOVIE_STATE->rects[0].x = 0;
+        MOVIE_STATE->rects[0].w = 0x1E0;
+        MOVIE_STATE->rects[1].w = 0x1E0;
+        MOVIE_STATE->rects[0].w = 0x1E0;
+        MOVIE_STATE->rects[2].w = 0x18;
+        MOVIE_STATE->rects[0].y = 0;
+
         MOVIE_STATE->rects[2].x = 0;
         MOVIE_STATE->rects[2].y = 0;
+
         MOVIE_STATE->audioRingCapacity = 0x10;
-        MOVIE_STATE->videoDataBase = (VideoVlcPayload*)0x80147640;
+        MOVIE_STATE->videoDataBase = (void*)0x80147640;
         MOVIE_STATE->chunkIdx = 0;
-        ((MovieState*)stateAddrInt)->vlcTable = p3;
     }
     else
     {
-        p2 = 0x11000;
-        p3 = initBufferIdx;
         MOVIE_STATE->videoTableBase = (VideoSectorEntry*)0x80147000;
         MOVIE_STATE->audioDataBase = (AudioSector*)0x80156000;
-        vlcTablePtr = (u8*)allocInfo->allocBase;
         MOVIE_STATE->vlcInputBuf[0] = (u8*)0x8015E000;
         MOVIE_STATE->vlcInputBuf[1] = (u8*)0x8016F000;
-        videoTableBasePtr = &(*videoTableBaseRef);
-        vlcTablePtr2 = vlcTablePtr;
-        MOVIE_STATE->vlcTable = vlcTablePtr2;
-        MOVIE_STATE->mdecOutputBuf[0] = (u_long*)(allocInfo->allocBase + p2);
+        MOVIE_STATE->vlcTable = (u32)allocInfo->allocBase;
+        MOVIE_STATE->mdecOutputBuf[0] = (u_long*)(allocInfo->allocBase + 0x11000);
         MOVIE_STATE->mdecOutputBuf[1] = (u_long*)(allocInfo->allocBase + 0x12E00);
 
         if (((s16)MOVIE_STATE->rects[0].x) >= 0x300)
@@ -365,21 +350,19 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
             MOVIE_STATE->rects[1].y = MOVIE_STATE->rects[0].y;
         }
 
-        stateRef5 = MOVIE_STATE;
-        stateRef5->rects[1].w = stateRef5->rects[0].w;
-        {
-            stateRef5->rects[1].h = stateRef5->rects[0].h;
-            stateRef5->rects[2].h = stateRef5->rects[0].h;
-            stateRef5->rects[2].x = (&stateRef5->rects[initBufferIdx])->x;
-            // FIX: cast to unsigned short to force zero-extension (lhu) instead of sign-extension (lh)
-            p1 = (unsigned short)stateRef5->rects[initBufferIdx].y;
-        }
-        stateRef5->rects[2].w = 0x10;
-        stateRef5->videoRingCapacity = 0x1E;
+        MOVIE_STATE->rects[1].w = MOVIE_STATE->rects[0].w;
+        MOVIE_STATE->rects[1].h = MOVIE_STATE->rects[0].h;
+        MOVIE_STATE->rects[2].h = MOVIE_STATE->rects[0].h;
+        MOVIE_STATE->rects[2].x = MOVIE_STATE->rects[initBufferIdx].x;
+        new_var = (unsigned short)((MovieState*)0x801ED500)->rects[initBufferIdx].y;
+        MOVIE_STATE->rects[2].w = 0x10;
+        MOVIE_STATE->videoRingCapacity = 0x1E;
+
         MOVIE_STATE->audioRingCapacity = 0x10;
+
+        MOVIE_STATE->videoDataBase = (VideoVlcPayload*)((u32)MOVIE_STATE->videoTableBase + 0x3C0);
         MOVIE_STATE->chunkIdx = (s8)initBufferIdx;
-        MOVIE_STATE->videoDataBase = (VideoVlcPayload*)(((u32)(*videoTableBasePtr)) + 0x3C0);
-        MOVIE_STATE->rects[2].y = p1;
+        ((MovieState*)0x801ED500)->rects[2].y = new_var;
     }
 
     MOVIE_STATE->resourceIndex = resourceIndex;
@@ -420,7 +403,7 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
      * at the call site to reproduce the original register state, and are
      * ignored by the callee. Path A: (vlcInputBuf[1], vlcInputBuf[0], vlcTable).
      * Path B: ((u16)rects[initBufferIdx].y, 0x11000, initBufferIdx). */
-    MOVIE_STATE->decDCToutCallback = (u32)DecDCToutCallback(&movie_mdec_out_callback, p1, p2, p3);
+    MOVIE_STATE->decDCToutCallback = (u32)DecDCToutCallback(&movie_mdec_out_callback);
     MOVIE_STATE->drawSyncCallback = DrawSyncCallback(&draw_sync_callback);
 
     if (MOVIE_STATE->interlaceMode != 0)
@@ -435,16 +418,18 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
     }
 
     cdrom_wait_queue_empty();
-    stateRef2 = MOVIE_STATE;
+    if (!((MovieState*)0x801ED500)->audioDataBase)
+    {
+    }
     cdrom_queue_command(CdlReadS, (s16)resourceIndex, NULL, &movie_cd_sector_callback);
 
     if (g_gpuMode == 0)
     {
-        VSync(p2 = 0);
-        SetDispMask(p2);
-        ClearImage(&(stateRef3 = stateRef2)->rects[p2], 0, p2, 0);
-        ClearImage(&MOVIE_STATE->rects[1], p2, 0, p2);
-        DecDCTvlcBuild((u_short*)stateRef2->vlcTable);
+        VSync(0);
+        SetDispMask(0);
+        ClearImage(&MOVIE_STATE->rects[0], 0, 0, 0);
+        ClearImage(&MOVIE_STATE->rects[1], 0, 0, 0);
+        DecDCTvlcBuild((u_short*)MOVIE_STATE->vlcTable);
         DrawSync(0);
     }
 }
