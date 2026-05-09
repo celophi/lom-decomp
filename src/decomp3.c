@@ -161,26 +161,24 @@ void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 };
 
 /**
- * decomp.me link (96.97%) https://decomp.me/scratch/4tVNg
+ * decomp.me link (100%) https://decomp.me/scratch/FFGei
  */
 s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
-    long long new_var2;
-    s32 var_v0;
-    unsigned char new_var;
-    var_v0 = akao_check_magic();
-    if (var_v0 == 0)
+    s32 result = akao_check_magic(arg0);
+
+    if (result != 0)
     {
-        g_akaoCmdParams[0] = arg0;
-        new_var = arg2;
-        g_akaoCmdParams[1] = (s32)(arg1 & 0xFFFFFF);
-        g_akaoCmdParams[2] = (s32)(new_var & 0xFF);
-        g_akaoCmdParams[3] = (s32)(arg3 & 0x7F);
-        akao_send_command(0x24);
-        new_var2 = arg0;
-        var_v0 = new_var2;
+        return result;
     }
-    return var_v0;
+
+    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[1] = arg1 & 0xFFFFFF;
+    g_akaoCmdParams[2] = arg2 & 0xFF;
+    g_akaoCmdParams[3] = arg3 & 0x7F;
+    akao_send_command(0x24);
+
+    return arg0;
 }
 
 /**

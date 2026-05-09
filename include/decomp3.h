@@ -46,6 +46,6 @@ void func_8002246C(u32 arg0);
  * the original GCC 2.7.2 build tolerates the mixed declaration (callers rely
  * on the $v0 register convention).
  */
-extern void akao_send_command(s32 opcode);
+extern s32 akao_send_command(s32 opcode);
 
 #endif
