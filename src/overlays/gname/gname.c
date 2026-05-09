@@ -1925,52 +1925,53 @@ void func_80142928(void)
  * @param new_char Glyph to prepend, packed `lead | (trail << 8)`.
  * @see https://decomp.me/scratch/VOLcD (100%)
  */
-void name_prepend_char(u8* buffer, u16 new_char)
+void name_prepend_char(u8* buffer, u16 header)
 {
-    u8* p;
-    u32 buf_len;
-    u32 char_size;
-    u8 c;
+    u8* ptr;
+    u32 len;
+    u32 header_size;
     u32 move_count;
     u32 i;
-    u16 h = new_char; /* local copy to match register usage */
+    u16 h = header; // save header to match register usage
 
     if ((h & 0xFF) == 0)
         return;
 
-    if (((h & 0xFF) - 0x19) < 7U) /* DBCS lead byte: 2-byte glyph */
-        char_size = 2;
-    else
-        char_size = 1;
-
-    p = buffer;
-    buf_len = 0;
-    if (*p != 0)
+    if (IS_DBSC_LEAD_BYTE(h & 0xFF))
     {
-        do
-        {
-            c = *p;
-            if ((unsigned char)(c - 0x19) < 7U)
-            {
-                p += 2;
-                buf_len += 2;
-            }
-            else
-            {
-                p += 1;
-                buf_len += 1;
-            }
-        } while (*p != 0);
+        header_size = 2;
+    }
+    else
+    {
+        header_size = 1;
     }
 
-    move_count = buf_len + 1; /* +1 to also shift the null terminator */
+    ptr = buffer;
+    len = 0;
+
+    while (*ptr != 0)
+    {
+
+        if (IS_DBSC_LEAD_BYTE(*ptr))
+        {
+            ptr += 2;
+            len += 2;
+        }
+        else
+        {
+            ptr += 1;
+            len += 1;
+        }
+    }
+
+    move_count = len + 1;
     for (i = move_count; i > 0; i--)
     {
-        buffer[(char_size + i) - 1] = buffer[i - 1];
+        buffer[(header_size + i) - 1] = buffer[i - 1];
     }
 
     buffer[0] = (u8)(h & 0xFF);
-    if (char_size == 2)
+    if (header_size == 2)
     {
         buffer[1] = (u8)(h >> 8);
     }
@@ -2000,7 +2001,7 @@ s32 name_pop_first_char(u8* name)
     u32 mask_u16;
 
     first = name[0];
-    
+
     if (first == 0)
     {
         return 0;
@@ -2020,7 +2021,7 @@ s32 name_pop_first_char(u8* name)
     /* Measure tail (everything after the first glyph) in bytes. */
     tail_len = 0;
     p = name + width;
-    
+
     while (*p != 0)
     {
         if (IS_DBSC_LEAD_BYTE(*p))
