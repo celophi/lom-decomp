@@ -324,7 +324,7 @@ overlay_gosub_gcc_srcs   := src/overlays/gosub/unk1.c
 OVERLAYS += gover
 
 OVERLAYS += menu
-overlay_menu_gcc_srcs   := src/overlays/menu/unk1.c src/overlays/menu/unk2.c
+overlay_menu_gcc_srcs   := src/overlays/menu/unk1.c
 
 OVERLAYS += movie
 overlay_movie_gcc_g4_srcs   := src/overlays/movie/movie1.c
