@@ -499,3 +499,224 @@ s32 func_80022710(s32 arg0, s32 arg1, s32 arg2)
     g_akaoCmdParams[2] = temp_a2;
     return akao_send_command(0xA4);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/exTVG
+ */
+s32 func_80022754(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    s32 temp_a1;
+    s32 temp_a3;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0xFFFFFF;
+    temp_a3 = arg3 & 0xFF;
+    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[2] = arg2;
+    g_akaoCmdParams[3] = temp_a3;
+    return akao_send_command(0xA5);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/QPqUd
+ */
+s32 FUN_8002279c(s32 arg0, s32 arg1)
+{
+    s32 temp_a1;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0x7F;
+    g_akaoCmdParams[1] = temp_a1;
+    return akao_send_command(0xC0);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/cSIwP
+ */
+s32 func_800227D0(s32 arg0, s32 arg1, s32 arg2)
+{
+    s32 temp_a2;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a2 = arg2 & 0x7F;
+    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[2] = temp_a2;
+    return akao_send_command(0xC1);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/PbMJC
+ */
+s32 func_80022808(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    s32 temp_a2;
+    s32 temp_a3;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a2 = arg2 & 0x7F;
+    temp_a3 = arg3 & 0x7F;
+    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[3] = temp_a3;
+    return akao_send_command(0xC2);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/BeJR1
+ */
+s32 func_80022848(s32 arg0)
+{
+    g_akaoCmdParams[0] = arg0;
+    return akao_send_command(0xC8);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/yo40G
+ */
+s32 func_80022870(s32 arg0, s32 arg1)
+{
+    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[1] = arg1;
+    return akao_send_command(0xC9);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/pLMBi
+ */
+s32 func_800228A0(s32 arg0, s32 arg1, s32 arg2)
+{
+    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[2] = arg2;
+    return akao_send_command(0xCA);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/klUxi
+ */
+s32 func_800228D4(s32 arg0)
+{
+    g_akaoCmdParams[0] = arg0 & 0xFF;
+    return akao_send_command(0xD0);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/XXHwt
+ */
+s32 func_80022900(s32 arg0, s32 arg1)
+{
+    s32 temp_a1;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0xFF;
+    g_akaoCmdParams[1] = temp_a1;
+    return akao_send_command(0xD1);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/074UT
+ */
+s32 func_80022934(s32 arg0, s32 arg1, s32 arg2)
+{
+    s32 temp_a1;
+    s32 temp_a2;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0xFF;
+    temp_a2 = arg2 & 0xFF;
+    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[2] = temp_a2;
+    return akao_send_command(0xD2);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/yJdLv
+ */
+s32 func_80022970(s32 arg0)
+{
+    g_akaoCmdParams[0] = arg0 & 0xFF;
+    return akao_send_command(0xD4);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/u6Eys
+ */
+s32 func_8002299C(s32 arg0, s32 arg1)
+{
+    s32 temp_a1;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0xFF;
+    g_akaoCmdParams[1] = temp_a1;
+    return akao_send_command(0xD5);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/ITNFU
+ */
+void func_800229D0(s32 arg0, s32 arg1, s32 arg2)
+{
+    s32 temp_a1;
+    s32 temp_a2;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0xFF;
+    temp_a2 = arg2 & 0xFF;
+    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[2] = temp_a2;
+    akao_send_command(0xD6);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/JS2nD
+ */
+s32 func_80022A0C(s32 arg0)
+{
+    g_akaoCmdParams[0] = arg0 & 0xFF;
+    return akao_send_command(0xD8);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/YD6rZ
+ */
+s32 func_80022A38(s32 arg0, s32 arg1)
+{
+    s32 temp_a1;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0xFF;
+    g_akaoCmdParams[1] = temp_a1;
+    return akao_send_command(0xD9);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/jzW0l
+ */
+s32 func_80022A6C(s32 arg0, s32 arg1, s32 arg2)
+{
+    s32 temp_a1;
+    s32 temp_a2;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0xFF;
+    temp_a2 = arg2 & 0xFF;
+    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[2] = temp_a2;
+    return akao_send_command(0xDA);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/dgbnE
+ */
+s32 FUN_80022aa8(void)
+{
+    return akao_send_command(0xF0);
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/IMYAL
+ */
+s32 FUN_80022ac8(void)
+{
+    return akao_send_command(0xF1);
+}
