@@ -472,3 +472,16 @@ void func_800226B0(s32 arg0)
     g_akaoCmdParams[0] = arg0 & 0xFF;
     akao_send_command(0xAC);
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/Fw2d9
+ */
+void func_800226DC(s32 arg0, s32 arg1)
+{
+    s32 temp_a1;
+
+    g_akaoCmdParams[0] = arg0;
+    temp_a1 = arg1 & 0xFF;
+    g_akaoCmdParams[1] = temp_a1;
+    akao_send_command(0xAD);
+}
