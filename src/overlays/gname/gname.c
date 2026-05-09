@@ -1070,11 +1070,12 @@ void func_80141928(void* arg0)
     } while (var_s0 < 0xD);
     new_var = D_8014F88C;
     new_var4 = arg0;
-    temp_v0 = func_80141C34(emit_draw_mode_prim(func_80142B18(func_80142274(emit_draw_mode_prim(var_t0, ((char*)new_var4) + 0x2C),
-                                                                      ((char*)new_var4) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
-                                                        arg0),
-                                          ((char*)new_var4) + 0x34),
-                            arg0);
+    temp_v0 = func_80141C34(
+        emit_draw_mode_prim(func_80142B18(func_80142274(emit_draw_mode_prim(var_t0, ((char*)new_var4) + 0x2C),
+                                                        ((char*)new_var4) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
+                                          arg0),
+                            ((char*)new_var4) + 0x34),
+        arg0);
     new_var3 = ((char*)temp_v0) + 0x14;
     *((s32*)(((char*)temp_v0) + 4)) = 0x808080;
     *((u8*)(((char*)temp_v0) + 7)) = 0x64;
@@ -1635,80 +1636,102 @@ void func_80142410(void* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/2QgjW
+ * @brief Number of bytes in a name buffer, excluding the null terminator.
+ *
+ * Walks the variable-width encoding: each byte in [0x19, 0x20) consumes
+ * two buffer bytes (DBCS lead + trail), every other byte consumes one.
+ *
+ * @param name Null-terminated name buffer.
+ * @return Byte length excluding the terminator.
+ * @see https://decomp.me/scratch/2QgjW (100%)
  */
 s32 name_byte_length(u8* name)
 {
-    s32 var_v1;
-    u8 var_v0;
-    u8* var_a0;
+    s32 byte_len;
+    u8 c;
+    u8* p;
 
-    var_a0 = name;
-    var_v0 = *var_a0;
-    var_v1 = 0;
-    if (var_v0 != 0)
+    p = name;
+    c = *p;
+    byte_len = 0;
+    if (c != 0)
     {
         do
         {
-            if ((u32)(var_v0 - 0x19) < 7U)
+            if ((u32)(c - 0x19) < 7U) /* DBCS lead byte: 2-byte glyph */
             {
-                var_a0 += 2;
-                var_v1 += 2;
+                p += 2;
+                byte_len += 2;
             }
             else
             {
-                var_a0 += 1;
-                var_v1 += 1;
+                p += 1;
+                byte_len += 1;
             }
-            var_v0 = *var_a0;
-        } while (var_v0 != 0);
+            c = *p;
+        } while (c != 0);
     }
-    return var_v1;
+    return byte_len;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/c8fPe
+ * @brief Number of logical glyphs in a name buffer.
+ *
+ * Like @ref name_byte_length but counts each DBCS pair as one glyph.
+ *
+ * @param name Null-terminated name buffer.
+ * @return Glyph (character) count.
+ * @see https://decomp.me/scratch/c8fPe (100%)
  */
 s32 name_char_count(u8* name)
 {
-    s32 var_v1;
-    u8 var_v0;
-    u8* var_a0;
+    s32 char_count;
+    u8 c;
+    u8* p;
 
-    var_a0 = name;
-    var_v0 = *var_a0;
-    var_v1 = 0;
-    if (var_v0 != 0)
+    p = name;
+    c = *p;
+    char_count = 0;
+    if (c != 0)
     {
         do
         {
-            if ((u32)(var_v0 - 0x19) < 7U)
+            if ((u32)(c - 0x19) < 7U) /* DBCS lead byte: 2-byte glyph */
             {
-                var_a0 += 2;
+                p += 2;
             }
             else
             {
-                var_a0 += 1;
+                p += 1;
             }
-            var_v0 = *var_a0;
-            var_v1 += 1;
-        } while (var_v0 != 0);
+            c = *p;
+            char_count += 1;
+        } while (c != 0);
     }
-    return var_v1;
+    return char_count;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/1lsbD
+ * @brief Append @p src to the end of @p dst (in-place concatenation).
+ *
+ * Computes the byte lengths of both buffers (respecting the DBCS-style
+ * encoding) and copies @p src's payload after @p dst's existing payload,
+ * writing a fresh null terminator. Caller is responsible for ensuring
+ * @p dst has room for both.
+ *
+ * @param dst Null-terminated name buffer; appended to in-place.
+ * @param src Null-terminated source name to append.
+ * @see https://decomp.me/scratch/1lsbD (100%)
  */
 void name_append(u8* dst, u8* src)
 {
     u8* p;
-    s32 len;
-    s32 len1;
-    s32 saved_len;
+    s32 dst_len;
+    s32 src_len;
+    s32 saved_dst_len;
     u8 c;
     p = dst;
-    len = 0;
+    dst_len = 0;
     if ((*dst) != 0)
     {
         do
@@ -1717,18 +1740,18 @@ void name_append(u8* dst, u8* src)
             if (((u32)((unsigned char)(c - 0x19))) < 7U)
             {
                 p += 2;
-                len += 2;
+                dst_len += 2;
             }
             else
             {
                 p += 1;
-                len += 1;
+                dst_len += 1;
             }
         } while ((*p) != 0);
     }
     p = src;
-    len1 = 0;
-    saved_len = len;
+    src_len = 0;
+    saved_dst_len = dst_len;
     if ((*p) != 0)
     {
         do
@@ -1737,71 +1760,89 @@ void name_append(u8* dst, u8* src)
             if (((u32)((unsigned char)(c - 0x19))) < 7U)
             {
                 p += 2;
-                len1 += 2;
+                src_len += 2;
             }
             else
             {
                 p += 1;
-                len1 += 1;
+                src_len += 1;
             }
         } while ((*p) != 0);
     }
-    len = 0;
-    if (len1 > 0)
+    dst_len = 0;
+    if (src_len > 0)
     {
         do
         {
-            dst[saved_len + len] = src[len];
-            len++;
-        } while (len < len1);
+            dst[saved_dst_len + dst_len] = src[dst_len];
+            dst_len++;
+        } while (dst_len < src_len);
     }
-    dst[saved_len + len] = 0;
+    dst[saved_dst_len + dst_len] = 0;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/agZ8y
+ * @brief Remove the last glyph from @p name and return it.
+ *
+ * Walks the buffer keeping a one-glyph-behind pointer; on exit @c prev_pos
+ * points at the last glyph and @c scan_pos at the null. The returned
+ * @c s32 packs the glyph as `lead | (trail << 8)` for a DBCS pair, or just
+ * the byte value for a 1-byte glyph. The buffer is truncated by writing
+ * 0 at @c prev_pos. Empty names return 0 unchanged.
+ *
+ * @param name Null-terminated name buffer (truncated in-place).
+ * @return Removed glyph packed as `lead | (trail << 8)`, or 0 if empty.
+ * @see https://decomp.me/scratch/agZ8y (100%)
  */
 s32 name_pop_last_char(u8* name)
 {
-    u8* a0;
-    u8* a1;
-    s32 result;
+    u8* prev_pos;
+    u8* scan_pos;
+    s32 last_char;
 
-    a0 = name;
-    a1 = a0;
-    if (*a0 != 0)
+    prev_pos = name;
+    scan_pos = prev_pos;
+    if (*prev_pos != 0)
     {
         do
         {
-            a0 = a1;
-            if ((u32)(*a1 - 0x19) < 7U)
+            prev_pos = scan_pos;
+            if ((u32)(*scan_pos - 0x19) < 7U)
             {
-                a1 = a0 + 2;
+                scan_pos = prev_pos + 2;
             }
             else
             {
-                a1 = a0 + 1;
+                scan_pos = prev_pos + 1;
             }
-        } while (*a1 != 0);
+        } while (*scan_pos != 0);
     }
-    result = a0[0] | (a0[1] << 8);
-    if (a0 != a1)
+    last_char = prev_pos[0] | (prev_pos[1] << 8);
+    if (prev_pos != scan_pos)
     {
-        *a0 = 0;
+        *prev_pos = 0;
     }
-    return result;
+    return last_char;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/UeYRe
+ * @brief Copy @p src into @p dst, including the null terminator.
+ *
+ * Computes the byte length of @p src walking the DBCS-style encoding, then
+ * copies that many bytes and writes a terminator. Caller must ensure
+ * @p dst has room.
+ *
+ * @param dst Destination name buffer.
+ * @param src Null-terminated source name.
+ * @see https://decomp.me/scratch/UeYRe (100%)
  */
 void name_copy(u8* dst, u8* src)
 {
     u8* p;
     s32 i;
-    s32 len1;
+    s32 src_len;
     p = src;
-    len1 = 0;
+    src_len = 0;
     if ((*src) != 0)
     {
         do
@@ -1809,25 +1850,25 @@ void name_copy(u8* dst, u8* src)
             if (((u32)((unsigned char)((*p) - 0x19))) < 7U)
             {
                 p += 2;
-                len1 += 2;
+                src_len += 2;
             }
             else
             {
                 p += 1;
-                len1 += 1;
+                src_len += 1;
             }
         } while ((*p) != 0);
     }
     i = 0;
-    if (len1 > 0)
+    if (src_len > 0)
     {
-        u8* dest;
+        u8* dest; /* unused; preserved to match original codegen */
         do
         {
             *(&dst[i]) = src[i];
             i++;
             dest = &dst[i];
-        } while (i < len1);
+        } while (i < src_len);
     }
     dst[i] = 0;
 }
@@ -1870,14 +1911,25 @@ void func_80142928(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/VOLcD
+ * @brief Insert a glyph at the front of @p buffer (in-place).
+ *
+ * @p new_char packs the glyph as `lead | (trail << 8)`; the lead byte
+ * decides whether it is a 1- or 2-byte glyph. The existing buffer
+ * contents (including the null terminator) are shifted right by that
+ * amount and the new glyph is written at offset 0. Caller must ensure
+ * @p buffer has room.
+ *
+ * No-op if the lead byte is 0.
+ *
+ * @param buffer   Null-terminated name buffer.
+ * @param new_char Glyph to prepend, packed `lead | (trail << 8)`.
+ * @see https://decomp.me/scratch/VOLcD (100%)
  */
 void name_prepend_char(u8* buffer, u16 header)
 {
     u8* ptr;
     u32 len;
     u32 header_size;
-    u8 c;
     u32 move_count;
     u32 i;
     u16 h = header; // save header to match register usage
@@ -1885,29 +1937,31 @@ void name_prepend_char(u8* buffer, u16 header)
     if ((h & 0xFF) == 0)
         return;
 
-    if (((h & 0xFF) - 0x19) < 7U)
+    if (IS_DBSC_LEAD_BYTE(h & 0xFF))
+    {
         header_size = 2;
+    }
     else
+    {
         header_size = 1;
+    }
 
     ptr = buffer;
     len = 0;
-    if (*ptr != 0)
+
+    while (*ptr != 0)
     {
-        do
+
+        if (IS_DBSC_LEAD_BYTE(*ptr))
         {
-            c = *ptr;
-            if ((unsigned char)(c - 0x19) < 7U)
-            {
-                ptr += 2;
-                len += 2;
-            }
-            else
-            {
-                ptr += 1;
-                len += 1;
-            }
-        } while (*ptr != 0);
+            ptr += 2;
+            len += 2;
+        }
+        else
+        {
+            ptr += 1;
+            len += 1;
+        }
     }
 
     move_count = len + 1;
@@ -1924,66 +1978,72 @@ void name_prepend_char(u8* buffer, u16 header)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/ArXXq
+ * @brief Remove the first glyph from @p name and return it.
+ *
+ * Reads one glyph at the head of the buffer (1 or 2 bytes per the
+ * DBCS-style encoding), measures the rest of the buffer's byte length,
+ * shifts the remaining bytes (plus null terminator) left by the glyph
+ * size, and returns the removed glyph packed as `lead | (trail << 8)`.
+ *
+ * @param name Null-terminated name buffer (mutated in-place).
+ * @return Removed glyph packed in low 16 bits, or 0 if @p name was empty.
+ * @see https://decomp.me/scratch/ArXXq (100%)
  */
 s32 name_pop_first_char(u8* name)
 {
     u8 first;
-    u32 header_size;
-    u32 header_value;
-    u8* ptr;
-    s32 len;
-    u8 c;
+    u32 width;
+    u16 first_char;
+    u8* p;
+    s32 tail_len;
     s32 move_count;
     s32 i;
-    u32 flags;
+    u32 mask_u16;
 
     first = name[0];
+
     if (first == 0)
     {
         return 0;
     }
 
-    if ((first - 0x19U) < 7U)
+    if (IS_DBSC_LEAD_BYTE(first))
     {
-        header_size = 2;
-        header_value = (u16)((name[1] << 8) | name[0]);
+        first_char = MAKE_DBCS_GLYPH(name[0], name[1]);
+        width = 2;
     }
     else
     {
-        header_value = name[0];
-        header_size = 1;
+        first_char = name[0];
+        width = 1;
     }
 
-    ptr = name + header_size;
-    len = 0;
-    c = *ptr;
-    if (c != 0)
+    /* Measure tail (everything after the first glyph) in bytes. */
+    tail_len = 0;
+    p = name + width;
+
+    while (*p != 0)
     {
-        do
+        if (IS_DBSC_LEAD_BYTE(*p))
         {
-            if ((c - 0x19U) < 7U)
-            {
-                ptr += 2;
-                len += 2;
-            }
-            else
-            {
-                ptr += 1;
-                len += 1;
-            }
-            c = *ptr;
-        } while (c != 0);
+            p += 2;
+            tail_len += 2;
+        }
+        else
+        {
+            p += 1;
+            tail_len += 1;
+        }
     }
 
-    move_count = len + 1;
-    flags = 0xFFFFU;
+    move_count = tail_len + 1; /* +1 to also shift the null terminator */
+    mask_u16 = 0xFFFFU;
     for (i = 0; i < move_count; i++)
     {
-        name[i] = name[i + header_size];
+        name[i] = name[i + width];
     }
 
-    return (s32)(header_value & flags);
+    return (s32)(first_char & mask_u16);
 }
 
 /**
@@ -2032,31 +2092,28 @@ s32 func_80142B18(s32 arg0, s32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/rdbBA
+ * @brief Test whether a name buffer is empty or contains only blanks.
+ *
+ * Walks @p name byte-by-byte (note: not glyph-by-glyph). The buffer is
+ * blank if every byte is either ASCII space (@ref CHAR_SPACE) or the
+ * wide-space sentinel (@ref CHAR_WIDE_SPACE). An empty (immediate-null)
+ * buffer also counts as blank.
+ *
+ * @param name Null-terminated name buffer.
+ * @return 1 if blank, 0 otherwise.
+ * @see https://decomp.me/scratch/rdbBA (100%)
  */
 s32 name_is_blank(u8* name)
 {
-    u32 temp_v0;
-
-    temp_v0 = *name;
-    if (temp_v0 == 0)
+    while (*name != 0)
     {
-        return 1;
+        if (*name != CHAR_SPACE && *name != CHAR_WIDE_SPACE)
+        {
+            return FALSE;
+        }
+
+        name++;
     }
 
-    do
-    {
-        temp_v0 = temp_v0 & 0xFF;
-        if (temp_v0 == 0x20 || temp_v0 == 0x80)
-        {
-            name++;
-            temp_v0 = *name;
-        }
-        else
-        {
-            return 0;
-        }
-    } while (temp_v0 != 0);
-
-    return 1;
+    return TRUE;
 }
