@@ -30,6 +30,12 @@
 #define CHAR_SPACE      0x20 /**< ASCII space; blank glyph in name buffers. */
 #define CHAR_WIDE_SPACE 0x80 /**< Wide-space sentinel byte; also blank. */
 
+/* True if byte is a custom 2-byte DBCS-style lead byte */
+#define IS_DBSC_LEAD_BYTE(c) ((c) >= 0x19 && (c) <= 0x1F)
+
+/* Pack two bytes into a single 16-bit DBCS-style glyph */
+#define MAKE_DBCS_GLYPH(lo, hi) (u16)(((u16)(hi) << 8) | (u16)(lo))
+
 /**
  * @brief RGB lerp state.
  *

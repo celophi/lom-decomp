@@ -1070,11 +1070,12 @@ void func_80141928(void* arg0)
     } while (var_s0 < 0xD);
     new_var = D_8014F88C;
     new_var4 = arg0;
-    temp_v0 = func_80141C34(emit_draw_mode_prim(func_80142B18(func_80142274(emit_draw_mode_prim(var_t0, ((char*)new_var4) + 0x2C),
-                                                                      ((char*)new_var4) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
-                                                        arg0),
-                                          ((char*)new_var4) + 0x34),
-                            arg0);
+    temp_v0 = func_80141C34(
+        emit_draw_mode_prim(func_80142B18(func_80142274(emit_draw_mode_prim(var_t0, ((char*)new_var4) + 0x2C),
+                                                        ((char*)new_var4) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
+                                          arg0),
+                            ((char*)new_var4) + 0x34),
+        arg0);
     new_var3 = ((char*)temp_v0) + 0x14;
     *((s32*)(((char*)temp_v0) + 4)) = 0x808080;
     *((u8*)(((char*)temp_v0) + 7)) = 0x64;
@@ -1990,59 +1991,55 @@ void name_prepend_char(u8* buffer, u16 new_char)
 s32 name_pop_first_char(u8* name)
 {
     u8 first;
-    u32 first_char_size;
-    u32 first_char;
+    u32 width;
+    u16 first_char;
     u8* p;
     s32 tail_len;
-    u8 c;
     s32 move_count;
     s32 i;
     u32 mask_u16;
 
     first = name[0];
+    
     if (first == 0)
     {
         return 0;
     }
 
-    if ((first - 0x19U) < 7U) /* DBCS lead byte: 2-byte glyph */
+    if (IS_DBSC_LEAD_BYTE(first))
     {
-        first_char_size = 2;
-        first_char = (u16)((name[1] << 8) | name[0]);
+        first_char = MAKE_DBCS_GLYPH(name[0], name[1]);
+        width = 2;
     }
     else
     {
         first_char = name[0];
-        first_char_size = 1;
+        width = 1;
     }
 
     /* Measure tail (everything after the first glyph) in bytes. */
-    p = name + first_char_size;
     tail_len = 0;
-    c = *p;
-    if (c != 0)
+    p = name + width;
+    
+    while (*p != 0)
     {
-        do
+        if (IS_DBSC_LEAD_BYTE(*p))
         {
-            if ((c - 0x19U) < 7U)
-            {
-                p += 2;
-                tail_len += 2;
-            }
-            else
-            {
-                p += 1;
-                tail_len += 1;
-            }
-            c = *p;
-        } while (c != 0);
+            p += 2;
+            tail_len += 2;
+        }
+        else
+        {
+            p += 1;
+            tail_len += 1;
+        }
     }
 
     move_count = tail_len + 1; /* +1 to also shift the null terminator */
     mask_u16 = 0xFFFFU;
     for (i = 0; i < move_count; i++)
     {
-        name[i] = name[i + first_char_size];
+        name[i] = name[i + width];
     }
 
     return (s32)(first_char & mask_u16);
