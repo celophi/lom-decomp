@@ -20,8 +20,9 @@ options:
   undefined_funcs_auto_path: linker/overlays/menu/undefined_funcs_auto.txt
   undefined_syms_auto_path: linker/overlays/menu/undefined_syms_auto.txt
 
-  symbol_addrs_path:
-    - config/overlays/menu_symbol_addrs.txt
+  symbol_addrs_path:    
+    - config/symbols/shared_symbol_addrs.txt
+    - config/symbols/menu_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
@@ -43,5 +44,7 @@ segments:
       - [0x1, rodata, rodata]
       - [0x909, c, menu]
       - [0xDE9, c, unk1]
+      - [0x10FD, c, menu2]
+      - [0x1245, c, unk2]
       - [0xFBF5, data, data]
   - [0x2B9DD]

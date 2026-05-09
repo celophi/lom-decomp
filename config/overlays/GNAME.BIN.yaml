@@ -20,8 +20,9 @@ options:
   undefined_funcs_auto_path: linker/overlays/gname/undefined_funcs_auto.txt
   undefined_syms_auto_path: linker/overlays/gname/undefined_syms_auto.txt
 
-  symbol_addrs_path:
-    - config/overlays/gname_symbol_addrs.txt
+  symbol_addrs_path:    
+    - config/symbols/shared_symbol_addrs.txt
+    - config/symbols/gname_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
