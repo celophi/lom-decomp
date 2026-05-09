@@ -2107,27 +2107,15 @@ s32 func_80142B18(s32 arg0, s32 arg1)
  */
 s32 name_is_blank(u8* name)
 {
-    u32 c;
-
-    c = *name;
-    if (c == 0)
+    while (*name != 0)
     {
-        return 1;
+        if (*name != CHAR_SPACE && *name != CHAR_WIDE_SPACE)
+        {
+            return FALSE;
+        }
+
+        name++;
     }
 
-    do
-    {
-        c = c & 0xFF;
-        if (c == CHAR_SPACE || c == CHAR_WIDE_SPACE)
-        {
-            name++;
-            c = *name;
-        }
-        else
-        {
-            return 0;
-        }
-    } while (c != 0);
-
-    return 1;
+    return TRUE;
 }
