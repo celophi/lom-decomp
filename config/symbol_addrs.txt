@@ -81,6 +81,9 @@ ExitCriticalSection                 = 0x800167FC;
 // psyq/libapi/A50
 open                                = 0x8001680C;
 
+// psyq/libapi/A52
+read                                = 0x8001681C;
+
 // psyq/libapi/A81
 Krom2RawAdd                         = 0x8001687C;
 
