@@ -931,3 +931,12 @@ s32 func_80022ED8(void* arg0, s32 arg1, s32 arg2)
     func_80022DAC(arg0, arg1, arg2);
     return 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/PnDWc
+ */
+s32 func_80022EF8(void* arg0, s32 arg1, s32 arg2)
+{
+    func_80022DAC(arg0, arg1 + 3, arg2);
+    return 0;
+}
