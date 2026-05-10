@@ -48,4 +48,27 @@ typedef struct
     u8* unk4040; /* offset 0x4040 */
 } Arg;
 
+typedef struct
+{
+    u8 unk0;
+    u8 unk1;
+    u8 unk2;
+    u8 unk3;
+    u32 unk4;
+    u16 unk8;
+    u16 unkA;
+    u16 unkC;
+    u16 unkE;
+    u16 unk10;
+    u16 unk12;
+    u16 unk14;
+    u16 unk16;
+    u8 unk18;
+    u8 _pad[3];
+    u32 unk1C;
+    u32 unk20;
+} Entry;
+
+extern u8 D_80169420;
+
 #endif
