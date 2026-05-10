@@ -226,7 +226,7 @@ void akao_stop_sfx_by_id(s32 arg0)
 /**
  * @brief Scans active SFX channels and ORs together their offset-0x28 fields.
  *
- * Iterates over the 12 SFX-channel slots in @c D_8004B430 (each 0x118 bytes),
+ * Iterates over the 12 SFX-channel slots in @c g_sfx_channels (each 0x118 bytes),
  * gated by the bitmap in @c D_8004D400 (one bit per channel starting at
  * 0x1000); returns the bitwise-OR of the 32-bit value at offset 0x28 of every
  * active slot, masked to 24 bits.
@@ -247,7 +247,7 @@ s32 func_800222A8(void)
     {
         return 0;
     }
-    ptr = D_8004B430;
+    ptr = g_sfx_channels;
     acc = 0;
     mask = 0x1000;
     do
@@ -265,7 +265,7 @@ s32 func_800222A8(void)
 /**
  * @brief Returns 1 if any active SFX channel's offset-0x28 field equals @p arg0.
  *
- * Same iteration shape as @c func_800222A8 over @c D_8004B430 / @c D_8004D400,
+ * Same iteration shape as @c func_800222A8 over @c g_sfx_channels / @c D_8004D400,
  * but compares each active channel's offset-0x28 value to @p arg0; returns
  * 1 on first match, 0 otherwise.
  *
@@ -289,7 +289,7 @@ s32 func_80022310(s32 arg0)
     {
         return 0;
     }
-    ptr = D_8004B430;
+    ptr = g_sfx_channels;
     mask = 0x1000;
     do
     {
@@ -852,18 +852,18 @@ s32 akao_cmd_f1(void)
  */
 void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
-    D_8004F750 &= ~1;
+    g_akao_driver_flags &= ~1;
     while (akao_submit(sequenceData, waitForCompletion) == 1);
 }
 
 /**
- * @brief Returns the current SPU/AKAO transfer state latch (D_8003EC4C).
+ * @brief Returns the current SPU/AKAO transfer state latch (g_akao_spu_xfer_pending).
  *
  * @see https://decomp.me/scratch/ecQHb (100%)
  */
 s32 akao_get_xfer_state(void)
 {
-    return D_8003EC4C;
+    return g_akao_spu_xfer_pending;
 }
 
 /**
@@ -874,20 +874,20 @@ s32 akao_get_xfer_state(void)
 s32 akao_reset_xfer_state(void)
 {
     D_8004F824 = 0;
-    D_8004F750 |= 1;
+    g_akao_driver_flags |= 1;
     return 0;
 }
 
 /**
  * @brief Advances one tick of the AKAO bank-streaming upload state machine.
  *
- * On the first call (@c D_8004F820.unk4 == 0), magic-checks @p arg0, copies
- * the 0x40-byte AkaoBankHeader into the staging buffer @c D_8004D3C0, and
- * primes @c D_8004F820 with the SPU upload base, sample size, articulation
+ * On the first call (@c g_akao_streaming_state.unk4 == 0), magic-checks @p arg0, copies
+ * the 0x40-byte AkaoBankHeader into the staging buffer @c g_akao_bank_staging, and
+ * primes @c g_akao_streaming_state with the SPU upload base, sample size, articulation
  * destination, and articulation byte count. Subsequent calls feed the next
  * @p arg1 bytes from @p arg0 into either the articulation slot or the SPU
  * (via @c SpuSetTransferStartAddr + akao_spu_write), shrinking the residuals
- * in @c D_8004F820. When everything is consumed the streaming-pending flag
+ * in @c g_akao_streaming_state. When everything is consumed the streaming-pending flag
  * is cleared.
  *
  * @param arg0  Source byte pointer in main RAM (starts at the AKAO header,
@@ -906,65 +906,65 @@ s32 akao_streaming_upload_tick(s32 arg0, u32 arg1, s32 arg2)
     u32 var_v1;
     s32* new_var;
     void* temp_a0_2;
-    if ((D_8004F750 & 1) == 0)
+    if ((g_akao_driver_flags & 1) == 0)
     {
         return D_8004F828;
     }
-    if (D_8004F820.unk4 == 0)
+    if (g_akao_streaming_state.unk4 == 0)
     {
         if (akao_check_magic(arg0) == 0)
         {
-            func_80029A0C(*(new_var = &arg0), &D_8004D3C0, 0x40U);
+            func_80029A0C(*(new_var = &arg0), &g_akao_bank_staging, 0x40U);
             arg0 += 0x40;
             arg1 -= 0x40;
-            D_8004F820.unk4 = (s32)D_8004D3C0.spu_dest_addr;
-            D_8004F820.unk8 = (u32)D_8004D3C0.sample_size;
-            D_8004F820.unk0 = (void*)((D_8004D3C0.bank_id * 0x10) + ((u32)(&D_8004C340)));
-            D_8004F820.unkC = (u32)(D_8004D3C0.articulation_count * 0x10);
+            g_akao_streaming_state.unk4 = (s32)g_akao_bank_staging.spu_dest_addr;
+            g_akao_streaming_state.unk8 = (u32)g_akao_bank_staging.sample_size;
+            g_akao_streaming_state.unk0 = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
+            g_akao_streaming_state.unkC = (u32)(g_akao_bank_staging.articulation_count * 0x10);
         }
         else
         {
             arg1 = 0;
-            D_8004F820.unk8 = 0U;
-            D_8004F820.unkC = 0U;
+            g_akao_streaming_state.unk8 = 0U;
+            g_akao_streaming_state.unkC = 0U;
         }
     }
-    if (D_8004F820.unkC != 0)
+    if (g_akao_streaming_state.unkC != 0)
     {
-        var_s0 = D_8004F820.unkC;
+        var_s0 = g_akao_streaming_state.unkC;
         if (arg1 != 0)
         {
             if (var_s0 >= arg1)
             {
                 var_s0 = arg1;
             }
-            func_80029A0C(arg0, D_8004F820.unk0, var_s0);
+            func_80029A0C(arg0, g_akao_streaming_state.unk0, var_s0);
             temp_v0 = (var_s0 >> 2) * 4;
             arg0 += temp_v0;
             arg1 -= var_s0;
-            D_8004F820.unk0 = (void*)(((u32)D_8004F820.unk0) + temp_v0);
-            D_8004F820.unkC -= var_s0;
-            if (D_8004F820.unkC == 0)
+            g_akao_streaming_state.unk0 = (void*)(((u32)g_akao_streaming_state.unk0) + temp_v0);
+            g_akao_streaming_state.unkC -= var_s0;
+            if (g_akao_streaming_state.unkC == 0)
             {
-                temp_a0_2 = (void*)((D_8004D3C0.bank_id * 0x10) + ((u32)(&D_8004C340)));
-                akao_relocate_articulations(temp_a0_2, temp_a0_2, D_8004D3C0.spu_dest_addr, D_8004D3C0.articulation_count);
+                temp_a0_2 = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
+                akao_relocate_articulations(temp_a0_2, temp_a0_2, g_akao_bank_staging.spu_dest_addr, g_akao_bank_staging.articulation_count);
             }
         }
     }
     if (arg1 != 0)
     {
-        if (D_8004F820.unk8 != 0)
+        if (g_akao_streaming_state.unk8 != 0)
         {
-            var_v1 = D_8004F820.unk8;
-            if (D_8004F820.unk8 >= arg1)
+            var_v1 = g_akao_streaming_state.unk8;
+            if (g_akao_streaming_state.unk8 >= arg1)
             {
                 var_v1 = arg1;
             }
             var_s0 = var_v1;
-            SpuSetTransferStartAddr(D_8004F820.unk4);
+            SpuSetTransferStartAddr(g_akao_streaming_state.unk4);
             akao_spu_write(arg0, arg1);
-            D_8004F820.unk4 += var_v1;
-            D_8004F820.unk8 -= var_s0;
+            g_akao_streaming_state.unk4 += var_v1;
+            g_akao_streaming_state.unk8 -= var_s0;
             if (arg2 != 0)
             {
                 akao_spu_wait();
@@ -978,7 +978,7 @@ s32 akao_streaming_upload_tick(s32 arg0, u32 arg1, s32 arg2)
     if (D_8004F828 == 0)
     {
     block_18:
-        D_8004F750 &= ~1;
+        g_akao_driver_flags &= ~1;
     }
     return D_8004F828;
 }
@@ -1087,7 +1087,7 @@ s32 func_80022EF8(void* arg0, s32 arg1, s32 arg2)
 }
 
 /**
- * @brief Programs the CD/XA mix volume registers (@c CdMix on @c D_8003EC20).
+ * @brief Programs the CD/XA mix volume registers (@c CdMix on @c g_akao_cdmix).
  *
  * If bit 1 of @c D_8004F754 is set, all four CdlATV slots get
  * @c (arg0 * 0xB570) >> 0x11 — a 16-bit-fixed-point scale of @p arg0 across
@@ -1109,19 +1109,19 @@ s32 akao_xa_setup_panning(s32 arg0, void* arg1)
     if (D_8004F754 & 2)
     {
 
-        D_8003EC20.val3 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
-        D_8003EC20.val1 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
-        D_8003EC20.val2 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
-        D_8003EC20.val0 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        g_akao_cdmix.val3 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        g_akao_cdmix.val1 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        g_akao_cdmix.val2 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        g_akao_cdmix.val0 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
     }
     else
     {
-        D_8003EC20.val2 = (u_char)new_var;
-        D_8003EC20.val0 = (u_char)new_var;
-        D_8003EC20.val3 = 0;
-        D_8003EC20.val1 = 0;
+        g_akao_cdmix.val2 = (u_char)new_var;
+        g_akao_cdmix.val0 = (u_char)new_var;
+        g_akao_cdmix.val3 = 0;
+        g_akao_cdmix.val1 = 0;
     }
-    CdMix(&D_8003EC20);
+    CdMix(&g_akao_cdmix);
     return 0;
 }
 
@@ -1300,7 +1300,7 @@ void akao_cmd_ec(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
  * @brief AKAO command 0xE8 — begin XA-streamed AKAO playback.
  *
  * Validates @p arg1 != 0, disables SPU IRQ, primes the XA tracker
- * (@c D_8004F760) for a stream of @c arg1 / 0x1000 frames, and dispatches.
+ * (@c g_akao_xa_tracker) for a stream of @c arg1 / 0x1000 frames, and dispatches.
  *
  * @param arg0  Stream identifier / control word in slot 0.
  * @param arg1  Total stream byte length (frame count = arg1 >> 12).
@@ -1319,12 +1319,12 @@ s32 akao_cmd_e8_start_xa_stream(s32 arg0, u32 arg1)
     SpuSetIRQAddr(0);
     g_akaoCmdParams[0] = (void*)(arg0);
     g_akaoCmdParams[1] = (void*)(arg1);
-    D_8004F760.unk34 = -1;
-    D_8004F760.unk20 = 0;
-    D_8004F760.unk24 = 0;
-    D_8004F760.unk28 = 0;
-    D_8004F760.unk38 = 0;
-    D_8004F760.unk3C = (s32)(arg1 >> 12);
+    g_akao_xa_tracker.unk34 = -1;
+    g_akao_xa_tracker.unk20 = 0;
+    g_akao_xa_tracker.unk24 = 0;
+    g_akao_xa_tracker.unk28 = 0;
+    g_akao_xa_tracker.unk38 = 0;
+    g_akao_xa_tracker.unk3C = (s32)(arg1 >> 12);
     akao_send_command(0xE8);
     return 0;
 }
@@ -1332,7 +1332,7 @@ s32 akao_cmd_e8_start_xa_stream(s32 arg0, u32 arg1)
 /**
  * @brief Advances one frame of an in-flight XA-streamed AKAO sequence.
  *
- * Increments @c D_8004F760.unk24 (frame count) and the per-frame index
+ * Increments @c g_akao_xa_tracker.unk24 (frame count) and the per-frame index
  * @c .unk38, wrapping at @c .unk3C - 1; once two frames have streamed and
  * bit 0x01000000 of @c .unk8 is set, calls @c func_8002E2E8 to refill the
  * SPU ring buffer.
@@ -1345,16 +1345,16 @@ s32 akao_xa_advance_frame(void)
 {
     u32 temp_v1;
 
-    D_8004F760.unk24 = D_8004F760.unk24 + 1;
-    temp_v1 = D_8004F760.unk38 + 1;
-    D_8004F760.unk38 = temp_v1;
-    if ((u32)(D_8004F760.unk3C - 1) < temp_v1)
+    g_akao_xa_tracker.unk24 = g_akao_xa_tracker.unk24 + 1;
+    temp_v1 = g_akao_xa_tracker.unk38 + 1;
+    g_akao_xa_tracker.unk38 = temp_v1;
+    if ((u32)(g_akao_xa_tracker.unk3C - 1) < temp_v1)
     {
-        D_8004F760.unk38 = 0;
+        g_akao_xa_tracker.unk38 = 0;
     }
-    if ((D_8004F760.unk8 & 0x01000000) && ((u32)D_8004F760.unk38 >= 2U))
+    if ((g_akao_xa_tracker.unk8 & 0x01000000) && ((u32)g_akao_xa_tracker.unk38 >= 2U))
     {
-        func_8002E2E8(&D_8004F760);
+        func_8002E2E8(&g_akao_xa_tracker);
     }
     return D_8004F794;
 }

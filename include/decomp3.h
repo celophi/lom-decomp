@@ -19,7 +19,7 @@
  */
 extern void *g_akaoCmdParams[];
 extern s32 D_8004D400;
-extern u8 D_8004B430[];
+extern u8 g_sfx_channels[];
 
 typedef struct
 {
@@ -27,7 +27,7 @@ typedef struct
     u32 unk4;
     u32 unk8;
     u32 unkC;
-} F820_t;
+} AkaoStreamingState;
 
 typedef struct {
     u8   pad0[0x08];           /* 0x00 - 0x07 */
@@ -40,13 +40,13 @@ typedef struct {
     s32  unk34;                /* 0x34 - from func_800232A8 */
     s32  unk38;                /* 0x38 - used in both functions */
     s32  unk3C;                /* 0x3C - from func_800232A8 */
-} AkakoStruct;  /* Total size: 0x40 (64 bytes) */
+} AkaoXaTracker;  /* Total size: 0x40 (64 bytes) */
 
 extern s32 D_8004F794;
 extern s32 D_8004C170;
 extern u32 D_8004C150;
 extern AkaoChannelState* D_8003EC5C;
-extern CdlATV D_8003EC20;
+extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
 extern u8 D_8004C340[];
 extern s32 D_8004D388;
@@ -55,14 +55,14 @@ extern s32 D_8004D390;
 extern s32 D_8004D394;
 extern s32 D_8004D398;
 extern s32 D_8004D39C;
-extern s32 D_8004F750;
-extern s32 D_8003EC4C;
+extern s32 g_akao_driver_flags;
+extern s32 g_akao_spu_xfer_pending;
 extern s32 D_8004F824;
 extern s32 D_8004F828;
-extern F820_t D_8004F820;
-extern AkaoBankHeader D_8004D3C0;
+extern AkaoStreamingState g_akao_streaming_state;
+extern AkaoBankHeader g_akao_bank_staging;
 
-extern AkakoStruct D_8004F760;
+extern AkaoXaTracker g_akao_xa_tracker;
 
 extern s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion);
 

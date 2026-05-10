@@ -74,13 +74,13 @@ s32 akao_check_magic(s32* data)
 void akao_spu_xfer_done_cb(void)
 {
     func_80024230(0);
-    D_8003EC4C = 0;
+    g_akao_spu_xfer_pending = 0;
 }
 
 /**
  * @brief Arms the SPU for an asynchronous transfer.
  *
- * Sets the in-flight flag (@c D_8003EC4C = 1) and registers
+ * Sets the in-flight flag (@c g_akao_spu_xfer_pending = 1) and registers
  * akao_spu_xfer_done_cb as the libspu transfer-callback. Used as the prelude
  * to either akao_spu_write or akao_spu_read.
  *
@@ -88,7 +88,7 @@ void akao_spu_xfer_done_cb(void)
  */
 void akao_spu_arm_xfer(void)
 {
-    D_8003EC4C = 1;
+    g_akao_spu_xfer_pending = 1;
     func_80024230(&akao_spu_xfer_done_cb);
 }
 
@@ -106,7 +106,7 @@ void akao_spu_arm_xfer(void)
  */
 void akao_spu_write(s32 arg0, s32 arg1)
 {
-    D_8003EC4C = 1;
+    g_akao_spu_xfer_pending = 1;
     func_80024230(&akao_spu_xfer_done_cb);
     func_800241A0(arg0, arg1);
 }
@@ -132,7 +132,7 @@ void akao_spu_read(s32 arg0, s32 arg1)
 /**
  * @brief Spin-waits for an in-flight SPU transfer to complete.
  *
- * Polls the volatile in-flight flag @c D_8003EC4C until akao_spu_xfer_done_cb
+ * Polls the volatile in-flight flag @c g_akao_spu_xfer_pending until akao_spu_xfer_done_cb
  * clears it. Used wherever the AKAO upload paths need to synchronize before
  * issuing the next SPU operation.
  *
@@ -140,7 +140,7 @@ void akao_spu_read(s32 arg0, s32 arg1)
  */
 void akao_spu_wait(void)
 {
-    while ((*((volatile s32*)(&D_8003EC4C))) == 1);
+    while ((*((volatile s32*)(&g_akao_spu_xfer_pending))) == 1);
 }
 
 /**
@@ -186,7 +186,7 @@ s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
  *   3. akao_relocate_articulations to copy the articulation table into the
  *      driver's instrument slot @c D_8004C340[arg2*0x10] with each entry's
  *      first word biased by the SPU base.
- * On magic-mismatch, latches @c D_8003EC4C = -1 and returns -1.
+ * On magic-mismatch, latches @c g_akao_spu_xfer_pending = -1 and returns -1.
  *
  * @param arg0  Pointer to an AkaoBankHeader buffer in main RAM.
  * @param arg1  When non-zero, akao_spu_wait blocks until the SPU DMA finishes.
@@ -226,7 +226,7 @@ s32 akao_upload_bank(void* arg0, s32 arg1, s32 arg2, s32 arg3)
     }
     else
     {
-        D_8003EC4C = -1;
+        g_akao_spu_xfer_pending = -1;
         ret_val = -1;
     }
     new_var = ret_val;
@@ -239,7 +239,7 @@ s32 akao_upload_bank(void* arg0, s32 arg1, s32 arg2, s32 arg3)
  * Touched in akao_driver_init after the SPU is brought up. Clears the music
  * channel state for 0x20 sequence channels (each 0x118 bytes wide, indexed
  * via @c D_80049130) and 0x18 SFX channels (also 0x118-byte stride, in
- * @c D_8004B430). Pokes the SPU master/reverb registers
+ * @c g_sfx_channels). Pokes the SPU master/reverb registers
  * (@c 0x1F801D80..1F801DB2, @c 0x1F801DAA control). Calls back into the
  * higher-level @c func_80028E34 / @c func_80023EF0 to install the channel
  * state pointer and reverb mode.
@@ -271,8 +271,8 @@ void akao_driver_init_state(void)
     *((u32*)off(D_8004D388, 0x08)) = 0;
     *((u32*)off(D_8004D388, 0x04)) = 0;
     *((u32*)off(D_8004D388, 0x00)) = 0;
-    *((u32*)off(D_8004F750, 0x00)) = 0;
-    *((u32*)off(D_8004F750, 0x04)) = 1;
+    *((u32*)off(g_akao_driver_flags, 0x00)) = 0;
+    *((u32*)off(g_akao_driver_flags, 0x04)) = 1;
     new_var = (u32*)off(D_8004F830, 0x00);
     *((u32*)off(D_8004D400, 0x00)) = 0;
     *((u32*)off(a0, 0x04)) = 0;
@@ -312,8 +312,8 @@ void akao_driver_init_state(void)
     *((u16*)off(a0, 0x66)) = 0;
     *((u16*)off(a0, 0x64)) = a3;
     *((u16*)off(a0, 0x6C)) = a3;
-    *((u32*)off(D_8004F760, 0x40)) = 0x7F00;
-    *((u32*)off(D_8004F760, 0x48)) = a3;
+    *((u32*)off(g_akao_xa_tracker, 0x40)) = 0x7F00;
+    *((u32*)off(g_akao_xa_tracker, 0x48)) = a3;
     D_8003EC44 = a3;
     D_8003EC6C = a3;
     D_8003EC7C = a3;
@@ -341,7 +341,7 @@ void akao_driver_init_state(void)
     new_var6 = 1;
 
     {
-        u8* v1 = D_8004B430 + new_var5;
+        u8* v1 = g_sfx_channels + new_var5;
         do
         {
             u32 tmp = a3 & 0xFFFF;
@@ -361,7 +361,7 @@ void akao_driver_init_state(void)
     {
         u8* a0_ptr = (u8*)D_8003EC5C;
         u8* v0_ptr = D_8004D400;
-        u8* v1_ptr = D_8004F750;
+        u8* v1_ptr = g_akao_driver_flags;
         a0 = a0_ptr;
         *((u32*)off(a0, 0x18)) = 0;
         *((u32*)off(a0, 0x14)) = 0;
@@ -457,7 +457,7 @@ void func_80023BB8(s32 arg0)
  */
 void akao_driver_shutdown(void)
 {
-    if (D_8003EC4C == 1)
+    if (g_akao_spu_xfer_pending == 1)
     {
         akao_spu_write(&D_8003D170, 0x40);
         akao_spu_wait();
