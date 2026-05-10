@@ -72,6 +72,12 @@ TestEvent                           = 0x800167CC;
 // psyq/libapi/A12
 EnableEvent                         = 0x800167DC;
 
+// psyq/libapi/A36
+EnterCriticalSection                = 0x800167EC;
+
+// psyq/libapi/A37
+ExitCriticalSection                 = 0x800167FC;
+
 // psyq/libapi/A81
 Krom2RawAdd                         = 0x8001687C;
 
