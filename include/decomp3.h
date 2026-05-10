@@ -9,8 +9,15 @@
  * AKAO command parameter buffer. Each command opcode reads its inputs from
  * the first N slots; the layout is opcode-specific and the driver consumes
  * it during akao_send_command.
+ *
+ * Slot 0 is dual-purpose: most opcodes treat it as a scalar (channel index,
+ * sound id, volume), but several wrappers (akao_play_song, akao_register_bank,
+ * func_80022FAC opcode 0xE0, func_800231E4 opcode 0xEC) store an
+ * AkaoSeqHeader-compatible **buffer pointer** there. Typed @c void* to
+ * acknowledge that dual use; scalar stores rely on GCC 2.7.2's permissive
+ * implicit int→pointer conversion.
  */
-extern s32 g_akaoCmdParams[];
+extern void *g_akaoCmdParams[];
 extern s32 D_8004D400;
 extern u8 D_8004B430[];
 

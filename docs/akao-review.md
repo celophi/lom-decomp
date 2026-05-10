@@ -106,18 +106,29 @@ The decomp5.h prototype now matches the definition
 (`extern s32 akao_check_magic(s32 *data);`) and the stale `@note` describing
 the no-arg hack was removed from the function's docblock.
 
-## 4. `g_akaoCmdParams[]` element type
+## 4. `g_akaoCmdParams[]` element type (DONE)
 
-Currently typed `s32[]`. Several wrappers store **pointers** in slot 0:
+The buffer was previously typed `s32[]`, but several wrappers store
+**pointers** in slot 0:
 
 - `akao_play_song` (a sequence buffer pointer)
-- `akao_register_bank` (a bank pointer)
+- `akao_register_bank` indirectly (via opcode 0xE0)
 - `func_80022FAC` (opcode 0xE0, an AKAO buffer)
 - `func_800231E4` (opcode 0xEC, an AKAO buffer)
 
-**Proposal:** retype as `void* g_akaoCmdParams[]` or use a union. Pure prototype
-change, asm-safe in principle but worth checking against the call sites that
-do `arg & 0x7F` style masks.
+Retyped to `void *g_akaoCmdParams[]` in
+[include/decomp3.h](../include/decomp3.h) with an updated docstring. All 101
+assignment sites in [src/decomp3.c](../src/decomp3.c) were wrapped with an
+explicit `(void*)(...)` cast on the right-hand side, e.g.
+
+```c
+g_akaoCmdParams[0] = (void*)(arg0);
+g_akaoCmdParams[1] = (void*)(arg1 & 0xFFFFFF);
+```
+
+The casts are codegen-neutral on PSX (a 32-bit `sw` either way) but keep
+modern parsers/lints quiet about implicit int→pointer conversions. GCC 2.7.2
+would have accepted the unconverted form too.
 
 ## 5. Pending mechanical opcode renames in decomp3.c
 

@@ -60,7 +60,7 @@ s32 akao_register_bank(AkaoSeqHeader* bank)
  */
 void akao_play_song(s32 seqData)
 {
-    g_akaoCmdParams[0] = seqData;
+    g_akaoCmdParams[0] = (void*)(seqData);
     akao_send_command(0x10);
 }
 
@@ -77,7 +77,7 @@ void akao_play_song(s32 seqData)
  */
 void akao_stop_song(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     akao_send_command(0x11);
 }
 
@@ -100,9 +100,9 @@ void akao_cmd_40(void)
  */
 void func_800220B0(s32 arg0, s32 arg1)
 {
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
-    g_akaoCmdParams[2] = 0;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
+    g_akaoCmdParams[2] = (void*)(0);
     akao_send_command(0x14);
 }
 
@@ -113,10 +113,10 @@ s32 func_800220E4(s32 arg0, s32 arg1)
 {
     s32 temp_v0;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_v0 = akao_send_command(0x19);
-    g_akaoCmdParams[0] = (s32)(arg1 & 0x7F);
-    g_akaoCmdParams[3] = 0;
+    g_akaoCmdParams[0] = (void*)((s32)(arg1 & 0x7F));
+    g_akaoCmdParams[3] = (void*)(0);
     akao_send_command(0xC0);
     return temp_v0;
 }
@@ -126,8 +126,8 @@ s32 func_800220E4(s32 arg0, s32 arg1)
  */
 void func_8002213C(s32 arg0, s32 arg1)
 {
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
     akao_send_command(0x12);
 }
 
@@ -156,13 +156,13 @@ void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 temp_a2;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = (s32)(arg0 & 0x3FF);
+    g_akaoCmdParams[0] = (void*)((s32)(arg0 & 0x3FF));
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0xFF;
     temp_a3 = arg3 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     akao_send_command(0x20);
 };
 
@@ -178,10 +178,10 @@ s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         return result;
     }
 
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1 & 0xFFFFFF;
-    g_akaoCmdParams[2] = arg2 & 0xFF;
-    g_akaoCmdParams[3] = arg3 & 0x7F;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1 & 0xFFFFFF);
+    g_akaoCmdParams[2] = (void*)(arg2 & 0xFF);
+    g_akaoCmdParams[3] = (void*)(arg3 & 0x7F);
     akao_send_command(0x24);
 
     return arg0;
@@ -194,9 +194,9 @@ void func_80022240(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     akao_send_command(0x21);
 }
 
@@ -205,7 +205,7 @@ void func_80022240(s32 arg0, s32 arg1)
  */
 void func_8002227C(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0x3FF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0x3FF);
     akao_send_command(0x30);
 }
 
@@ -306,7 +306,7 @@ void akao_set_paused(s32 arg0)
  */
 void func_800223B0(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     akao_send_command(0x90);
 }
 
@@ -315,7 +315,7 @@ void func_800223B0(s32 arg0)
  */
 void func_800223D8(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     akao_send_command(0x92);
 }
 
@@ -376,7 +376,7 @@ void func_8002246C(u32 arg0)
  */
 void func_800224D8(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0x7F;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0x7F);
     akao_send_command(0xA8);
 }
 
@@ -387,9 +387,9 @@ void func_80022504(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     akao_send_command(0xA9);
 }
 
@@ -401,11 +401,11 @@ void func_80022538(s32 arg0, s32 arg1, s32 arg2)
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     akao_send_command(0xA0);
 }
 
@@ -417,12 +417,12 @@ void func_8002257C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 temp_a1;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a3 = arg3 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = arg2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(arg2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     akao_send_command(0xA1);
 }
 
@@ -431,7 +431,7 @@ void func_8002257C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
  */
 void func_800225C4(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     akao_send_command(0xAA);
 }
 
@@ -442,9 +442,9 @@ void func_800225F0(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     akao_send_command(0xAB);
 }
 
@@ -456,11 +456,11 @@ void func_80022624(s32 arg0, s32 arg1, s32 arg2)
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     akao_send_command(0xA2);
 }
 
@@ -472,12 +472,12 @@ void func_80022668(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 temp_a1;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a3 = arg3 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = arg2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(arg2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     akao_send_command(0xA3);
 }
 
@@ -486,7 +486,7 @@ void func_80022668(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
  */
 void func_800226B0(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     akao_send_command(0xAC);
 }
 
@@ -497,9 +497,9 @@ void func_800226DC(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     akao_send_command(0xAD);
 }
 
@@ -511,11 +511,11 @@ s32 func_80022710(s32 arg0, s32 arg1, s32 arg2)
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     return akao_send_command(0xA4);
 }
 
@@ -527,12 +527,12 @@ s32 func_80022754(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 temp_a1;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a3 = arg3 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = arg2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(arg2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     return akao_send_command(0xA5);
 }
 
@@ -543,9 +543,9 @@ s32 FUN_8002279c(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xC0);
 }
 
@@ -556,10 +556,10 @@ s32 func_800227D0(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a2 = arg2 & 0x7F;
-    g_akaoCmdParams[1] = arg1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(arg1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     return akao_send_command(0xC1);
 }
 
@@ -571,12 +571,12 @@ s32 func_80022808(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 temp_a2;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a2 = arg2 & 0x7F;
     temp_a3 = arg3 & 0x7F;
-    g_akaoCmdParams[1] = arg1;
-    g_akaoCmdParams[2] = temp_a2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(arg1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     return akao_send_command(0xC2);
 }
 
@@ -585,7 +585,7 @@ s32 func_80022808(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
  */
 s32 func_80022848(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     return akao_send_command(0xC8);
 }
 
@@ -594,8 +594,8 @@ s32 func_80022848(s32 arg0)
  */
 s32 func_80022870(s32 arg0, s32 arg1)
 {
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
     return akao_send_command(0xC9);
 }
 
@@ -604,9 +604,9 @@ s32 func_80022870(s32 arg0, s32 arg1)
  */
 s32 func_800228A0(s32 arg0, s32 arg1, s32 arg2)
 {
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
-    g_akaoCmdParams[2] = arg2;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
+    g_akaoCmdParams[2] = (void*)(arg2);
     return akao_send_command(0xCA);
 }
 
@@ -615,7 +615,7 @@ s32 func_800228A0(s32 arg0, s32 arg1, s32 arg2)
  */
 s32 func_800228D4(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     return akao_send_command(0xD0);
 }
 
@@ -626,9 +626,9 @@ s32 func_80022900(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xD1);
 }
 
@@ -640,11 +640,11 @@ s32 func_80022934(s32 arg0, s32 arg1, s32 arg2)
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     return akao_send_command(0xD2);
 }
 
@@ -653,7 +653,7 @@ s32 func_80022934(s32 arg0, s32 arg1, s32 arg2)
  */
 s32 func_80022970(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     return akao_send_command(0xD4);
 }
 
@@ -664,9 +664,9 @@ s32 func_8002299C(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xD5);
 }
 
@@ -678,11 +678,11 @@ void func_800229D0(s32 arg0, s32 arg1, s32 arg2)
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     akao_send_command(0xD6);
 }
 
@@ -691,7 +691,7 @@ void func_800229D0(s32 arg0, s32 arg1, s32 arg2)
  */
 s32 func_80022A0C(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     return akao_send_command(0xD8);
 }
 
@@ -702,9 +702,9 @@ s32 func_80022A38(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xD9);
 }
 
@@ -716,11 +716,11 @@ s32 func_80022A6C(s32 arg0, s32 arg1, s32 arg2)
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     return akao_send_command(0xDA);
 }
 
@@ -995,9 +995,9 @@ void func_80022FAC(s32 arg0, s32 arg1, s32 arg2)
 {
     if (akao_check_magic(arg0) == 0)
     {
-        g_akaoCmdParams[0] = arg0;
-        g_akaoCmdParams[1] = (s32)((arg1 & 0xFF) << 8);
-        g_akaoCmdParams[2] = arg2;
+        g_akaoCmdParams[0] = (void*)(arg0);
+        g_akaoCmdParams[1] = (void*)((s32)((arg1 & 0xFF) << 8));
+        g_akaoCmdParams[2] = (void*)(arg2);
         akao_send_command(0xE0);
     }
 }
@@ -1015,7 +1015,7 @@ s32 FUN_80023010(void)
  */
 s32 func_80023030(s32 arg0)
 {
-    g_akaoCmdParams[0] = (arg0 & 0x7F) << 8;
+    g_akaoCmdParams[0] = (void*)((arg0 & 0x7F) << 8);
     return akao_send_command(0xE4);
 }
 
@@ -1026,9 +1026,9 @@ s32 func_80023060(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = (arg1 & 0x7F) << 8;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xE5);
 }
 
@@ -1037,7 +1037,7 @@ s32 func_80023060(s32 arg0, s32 arg1)
  */
 s32 func_80023098(s32 arg0)
 {
-    g_akaoCmdParams[0] = (arg0 & 0xFF) << 8;
+    g_akaoCmdParams[0] = (void*)((arg0 & 0xFF) << 8);
     return akao_send_command(0xE6);
 }
 
@@ -1088,8 +1088,8 @@ s32 func_800230C8(void* arg0, s32 arg1)
  */
 s32 func_800231AC(s32 arg0, s32 arg1)
 {
-    g_akaoCmdParams[0] = (s32)((arg0 & 0xFF) << 8);
-    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[0] = (void*)((s32)((arg0 & 0xFF) << 8));
+    g_akaoCmdParams[1] = (void*)(arg1);
     return akao_send_command(0xED);
 }
 
@@ -1111,10 +1111,10 @@ void func_800231E4(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         {
             var_a1 += 0xFFFD0000;
         }
-        g_akaoCmdParams[0] = arg0;
-        g_akaoCmdParams[1] = (s32)((arg1 & 0xFF) << 8);
-        g_akaoCmdParams[2] = var_a1;
-        g_akaoCmdParams[3] = arg3;
+        g_akaoCmdParams[0] = (void*)(arg0);
+        g_akaoCmdParams[1] = (void*)((s32)((arg1 & 0xFF) << 8));
+        g_akaoCmdParams[2] = (void*)(var_a1);
+        g_akaoCmdParams[3] = (void*)(arg3);
         akao_send_command(0xEC);
     }
 }
@@ -1130,8 +1130,8 @@ s32 func_800232A8(s32 arg0, u32 arg1)
     }
     SpuSetIRQ(0);
     SpuSetIRQAddr(0);
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
     D_8004F760.unk34 = -1;
     D_8004F760.unk20 = 0;
     D_8004F760.unk24 = 0;
