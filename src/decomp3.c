@@ -882,92 +882,123 @@ s32 akao_reset_xfer_state(void)
 /**
  * @brief Advances one tick of the AKAO bank-streaming upload state machine.
  *
- * On the first call (@c g_akao_streaming_state.unk4 == 0), magic-checks @p arg0, copies
- * the 0x40-byte AkaoBankHeader into the staging buffer @c g_akao_bank_staging, and
- * primes @c g_akao_streaming_state with the SPU upload base, sample size, articulation
- * destination, and articulation byte count. Subsequent calls feed the next
- * @p arg1 bytes from @p arg0 into either the articulation slot or the SPU
- * (via @c SpuSetTransferStartAddr + akao_spu_write), shrinking the residuals
- * in @c g_akao_streaming_state. When everything is consumed the streaming-pending flag
- * is cleared.
+ * Each tick is a single bounded copy step. The driver loads an instrument
+ * bank in three stages — header, articulation table, sample blob — and the
+ * caller drives this function repeatedly with whatever fresh bytes it has
+ * read from disk so far.
  *
- * @param arg0  Source byte pointer in main RAM (starts at the AKAO header,
- *              advances through articulation and sample regions on each tick).
- * @param arg1  Number of bytes available to consume this tick.
- * @param arg2  Non-zero ⇒ block on akao_spu_wait after the SPU write.
+ * Stage 1 (first tick — @c g_akao_streaming_state.spu_addr == 0):
+ *   - Magic-check @p src. On failure, zero the residual counters so the
+ *     subsequent stages all short-circuit and the streaming-pending bit
+ *     gets cleared at the bottom.
+ *   - Copy the 0x40-byte AkaoBankHeader into @c g_akao_bank_staging and
+ *     advance @p src/@p avail past it.
+ *   - Seed @c g_akao_streaming_state from the staged header:
+ *       @c spu_addr               ← spu_dest_addr
+ *       @c sample_remaining       ← sample_size
+ *       @c articulation_dst       ← &D_8004C340[bank_id * 0x10]
+ *       @c articulation_remaining ← articulation_count * 0x10
  *
- * @return @c D_8004F828 (the streaming completion latch).
+ * Stage 2 (articulation copy):
+ *   - memcpy up to @c articulation_remaining bytes of the source into the
+ *     driver's articulation slot, advancing both pointers and shrinking
+ *     the residual.
+ *   - When the residual hits zero, rebase the articulation entries onto
+ *     the SPU base via @c akao_relocate_articulations.
  *
- * @see https://decomp.me/scratch/BEUjs (98.59%)
+ * Stage 3 (sample upload):
+ *   - SpuSetTransferStartAddr(@c spu_addr), then akao_spu_write the source.
+ *   - Advance @c spu_addr by the chunk size and shrink @c sample_remaining.
+ *   - If @p wait_for_spu is non-zero, block on akao_spu_wait.
+ *
+ * Once everything is consumed (and the @c D_8004F828 latch is also clear),
+ * the streaming-pending bit in @c g_akao_driver_flags is cleared.
+ *
+ * @param src          Source byte pointer in main RAM. Starts at the AKAO
+ *                     header on the first tick and advances through the
+ *                     articulation and sample regions across subsequent
+ *                     ticks.
+ * @param avail        Number of fresh bytes available to consume this tick.
+ * @param wait_for_spu Non-zero ⇒ block on @c akao_spu_wait after the SPU
+ *                     write completes.
+ *
+ * @return @c D_8004F828 (the streaming-status latch read by callers).
+ *
+ * @note The @c akao_spu_write call passes @p avail as the byte count rather
+ *       than the clamped @c sample_chunk; this mirrors the original asm
+ *       literally and is the suspected reason this scratch sits at 98.59%.
+ *
+ * @see decomp.me (98.59%) https://decomp.me/scratch/0IPqT
  */
-s32 akao_streaming_upload_tick(s32 arg0, u32 arg1, s32 arg2)
+s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
 {
-    s32 temp_v0;
-    u32 var_s0;
-    u32 var_v1;
-    s32* new_var;
-    void* temp_a0_2;
+    s32 advance;          /* word-aligned bytes consumed from articulation */
+    u32 chunk;            /* clamped articulation chunk size               */
+    u32 sample_chunk;     /* clamped sample chunk size                     */
+    s32* new_var;         /* load-bearing temp for codegen                 */
+    void* arti_slot;      /* base of this bank's articulation slot         */
+
     if ((g_akao_driver_flags & 1) == 0)
     {
         return D_8004F828;
     }
-    if (g_akao_streaming_state.unk4 == 0)
+    if (g_akao_streaming_state.spu_addr == 0)
     {
-        if (akao_check_magic(arg0) == 0)
+        if (akao_check_magic(src) == 0)
         {
-            func_80029A0C(*(new_var = &arg0), &g_akao_bank_staging, 0x40U);
-            arg0 += 0x40;
-            arg1 -= 0x40;
-            g_akao_streaming_state.unk4 = (s32)g_akao_bank_staging.spu_dest_addr;
-            g_akao_streaming_state.unk8 = (u32)g_akao_bank_staging.sample_size;
-            g_akao_streaming_state.unk0 = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
-            g_akao_streaming_state.unkC = (u32)(g_akao_bank_staging.articulation_count * 0x10);
+            func_80029A0C(*(new_var = &src), &g_akao_bank_staging, 0x40U);
+            src += 0x40;
+            avail -= 0x40;
+            g_akao_streaming_state.spu_addr = (s32)g_akao_bank_staging.spu_dest_addr;
+            g_akao_streaming_state.sample_remaining = (u32)g_akao_bank_staging.sample_size;
+            g_akao_streaming_state.articulation_dst = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
+            g_akao_streaming_state.articulation_remaining = (u32)(g_akao_bank_staging.articulation_count * 0x10);
         }
         else
         {
-            arg1 = 0;
-            g_akao_streaming_state.unk8 = 0U;
-            g_akao_streaming_state.unkC = 0U;
+            avail = 0;
+            g_akao_streaming_state.sample_remaining = 0U;
+            g_akao_streaming_state.articulation_remaining = 0U;
         }
     }
-    if (g_akao_streaming_state.unkC != 0)
+    if (g_akao_streaming_state.articulation_remaining != 0)
     {
-        var_s0 = g_akao_streaming_state.unkC;
-        if (arg1 != 0)
+        chunk = g_akao_streaming_state.articulation_remaining;
+        if (avail != 0)
         {
-            if (var_s0 >= arg1)
+            if (chunk >= avail)
             {
-                var_s0 = arg1;
+                chunk = avail;
             }
-            func_80029A0C(arg0, g_akao_streaming_state.unk0, var_s0);
-            temp_v0 = (var_s0 >> 2) * 4;
-            arg0 += temp_v0;
-            arg1 -= var_s0;
-            g_akao_streaming_state.unk0 = (void*)(((u32)g_akao_streaming_state.unk0) + temp_v0);
-            g_akao_streaming_state.unkC -= var_s0;
-            if (g_akao_streaming_state.unkC == 0)
+            func_80029A0C(src, g_akao_streaming_state.articulation_dst, chunk);
+            advance = (chunk >> 2) * 4;
+            src += advance;
+            avail -= chunk;
+            g_akao_streaming_state.articulation_dst = (void*)(((u32)g_akao_streaming_state.articulation_dst) + advance);
+            g_akao_streaming_state.articulation_remaining -= chunk;
+            if (g_akao_streaming_state.articulation_remaining == 0)
             {
-                temp_a0_2 = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
-                akao_relocate_articulations(temp_a0_2, temp_a0_2, g_akao_bank_staging.spu_dest_addr,
+                arti_slot = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
+                akao_relocate_articulations(arti_slot, arti_slot, g_akao_bank_staging.spu_dest_addr,
                                             g_akao_bank_staging.articulation_count);
             }
         }
     }
-    if (arg1 != 0)
+    if (avail != 0)
     {
-        if (g_akao_streaming_state.unk8 != 0)
+        if (g_akao_streaming_state.sample_remaining != 0)
         {
-            var_v1 = g_akao_streaming_state.unk8;
-            if (g_akao_streaming_state.unk8 >= arg1)
+            sample_chunk = g_akao_streaming_state.sample_remaining;
+            if (g_akao_streaming_state.sample_remaining >= avail)
             {
-                var_v1 = arg1;
+                sample_chunk = avail;
             }
-            var_s0 = var_v1;
-            SpuSetTransferStartAddr(g_akao_streaming_state.unk4);
-            akao_spu_write(arg0, arg1);
-            g_akao_streaming_state.unk4 += var_v1;
-            g_akao_streaming_state.unk8 -= var_s0;
-            if (arg2 != 0)
+            chunk = sample_chunk;
+            SpuSetTransferStartAddr(g_akao_streaming_state.spu_addr);
+            akao_spu_write(src, avail);
+            g_akao_streaming_state.spu_addr += sample_chunk;
+            g_akao_streaming_state.sample_remaining -= chunk;
+            if (wait_for_spu != 0)
             {
                 akao_spu_wait();
             }

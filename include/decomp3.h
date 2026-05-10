@@ -21,12 +21,30 @@ extern void *g_akaoCmdParams[];
 extern s32 D_8004D400;
 extern u8 g_sfx_channels[];
 
+/**
+ * Per-tick scratch state for the AKAO bank-streaming uploader.
+ *
+ * Primed on the first tick of a streaming upload from the AkaoBankHeader at
+ * the head of the source buffer; each subsequent call to
+ * akao_streaming_upload_tick consumes some bytes from the source and shrinks
+ * the two `*_remaining` counters. When both reach zero (and the external
+ * latch @c D_8004F828 is also clear), the streaming-pending bit in
+ * @c g_akao_driver_flags is cleared.
+ */
 typedef struct
 {
-    void* unk0;
-    u32 unk4;
-    u32 unk8;
-    u32 unkC;
+    void* articulation_dst;     /* 0x00: current dst into the driver's
+                                          articulation slot table
+                                          (D_8004C340 + bank_id * 0x10),
+                                          advances as bytes are copied      */
+    u32 spu_addr;               /* 0x04: current SPU upload address — seeded
+                                          from AkaoBankHeader.spu_dest_addr,
+                                          advances as samples are written;
+                                          a value of 0 marks "first tick"   */
+    u32 sample_remaining;       /* 0x08: bytes of sample data still to send
+                                          to the SPU                        */
+    u32 articulation_remaining; /* 0x0C: bytes of articulation data still to
+                                          copy into the driver's slot table */
 } AkaoStreamingState;
 
 typedef struct {
