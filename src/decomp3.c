@@ -1281,7 +1281,7 @@ s32 akao_cmd_ed(s32 arg0, s32 arg1)
  * @param arg3       Passed through verbatim into slot 3. TODO: meaning
  *                   unknown.
  *
- * @see https://decomp.me/scratch/g4cPG (99.90%)
+ * @see decomp.me (100%) https://decomp.me/scratch/SgcFo
  */
 void akao_cmd_ec(void* buf, s32 arg1, s32 upper_slot, s32 arg3)
 {
