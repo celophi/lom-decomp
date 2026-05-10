@@ -1,0 +1,175 @@
+# AKAO sound driver — review notes
+
+LOM uses Square's AKAO sound driver. The CPU-side dispatch goes through one
+central call, [akao_send_command](../src/decomp3.c) (0x80028E84), which reads
+arguments out of `g_akaoCmdParams[]` and indexes a 256-entry handler table.
+The wrappers in [decomp3.c](../src/decomp3.c) each pack arguments and dispatch
+a specific opcode; the lower-level SPU plumbing lives in
+[decomp5.c](../src/decomp5.c).
+
+This doc lists the risky cleanups that were deferred for review and the
+mechanical opcode-name renames that are still pending.
+
+## 1. Five aliased struct typedefs that all describe the same AKAO bank header
+
+`akao_upload_bank` (formerly `func_8002376C`) and the streaming-upload state
+machine `func_80022B78` consume the same four fields at offsets 0x10–0x1F
+of an AKAO instrument-bank file:
+
+| offset | meaning                                                                 |
+|--------|-------------------------------------------------------------------------|
+| 0x10   | SPU upload base address (passed to `SpuSetTransferStartAddr`)           |
+| 0x14   | SPU upload byte count (passed to `akao_spu_write`)                      |
+| 0x18   | Instrument-table index (multiplied by 0x10 to index `D_8004C340`)       |
+| 0x1C   | Articulation entry count (each entry is 16 bytes; relocated by SPU base)|
+
+The same shape is currently expressed in **five** parallel typedefs:
+
+- `UnknownStruct` and `SomeStruct` in [include/decomp5.h](../include/decomp5.h)
+- `D_8003EC5C_t` in [include/decomp3.h](../include/decomp3.h)
+- `D3C0_t` in [include/decomp3.h](../include/decomp3.h)
+- `ArgStruct2` in [include/decomp3.h](../include/decomp3.h)
+
+**Proposal:** consolidate into a single `AkaoBankHeader` (or extend
+`AkaoSeqHeader` in [include/akao.h](../include/akao.h)) and migrate all five
+aliases.
+
+**Risk:** changes the field-access shape on `akao_upload_bank` (99.90%),
+`func_80022B78` (98.59%), `func_800230C8` (99.80%), `func_800231E4` (99.90%) —
+all currently sub-100. A consolidation could push them over the line *or*
+break matching entirely. Needs an asm-diff per scratch before committing.
+
+## 2. `D_8003EC5C` is not actually a bank header
+
+`D_8003EC5C_t` is currently typedef'd with `unk0` as the magic-word slot —
+but `func_800230C8` reads `D_8003EC5C->unk0 & 0x40`, which is a flag-byte
+test, not a magic check. `D_8003EC5C` points at the **active driver/channel
+state**, not at an in-memory AKAO file.
+
+**Proposal:** introduce a separate `AkaoChannelState` typedef and use it
+specifically for `D_8003EC5C`. This pairs with item (1) — without splitting
+`D_8003EC5C_t` from `D3C0_t`/`ArgStruct2`, the consolidation in (1) cannot
+land cleanly.
+
+**Risk:** same as (1) — touches two non-100% scratches.
+
+## 3. `akao_check_magic` prototype mismatch
+
+The definition is `s32 akao_check_magic(s32* data)`
+([src/decomp5.c](../src/decomp5.c#L49)) but the declaration in
+[include/decomp5.h](../include/decomp5.h#L56) is `s32 akao_check_magic(void)`.
+About half the call sites in [src/decomp3.c](../src/decomp3.c) invoke it with
+no argument, relying on the previous instruction having left the operand in
+`$a0`. This is a documented register-allocation hack required for matching;
+the IDE flags it as a diagnostic but the build accepts it under GCC 2.7.2.
+
+**Options:**
+
+- (a) Leave both signatures lying as-is and add a `@note` in the header.
+- (b) Unify the prototype to `s32 akao_check_magic(s32* data)` and let the
+      no-arg callers continue compiling under GCC's lax pre-C89 rules. Risk
+      of altering codegen at one or more call sites.
+
+## 4. `g_akaoCmdParams[]` element type
+
+Currently typed `s32[]`. Several wrappers store **pointers** in slot 0:
+
+- `akao_play_song` (a sequence buffer pointer)
+- `akao_register_bank` (a bank pointer)
+- `func_80022FAC` (opcode 0xE0, an AKAO buffer)
+- `func_800231E4` (opcode 0xEC, an AKAO buffer)
+
+**Proposal:** retype as `void* g_akaoCmdParams[]` or use a union. Pure prototype
+change, asm-safe in principle but worth checking against the call sites that
+do `arg & 0x7F` style masks.
+
+## 5. Pending mechanical opcode renames in decomp3.c
+
+Existing convention in [config/symbols/shared_symbol_addrs.txt](../config/symbols/shared_symbol_addrs.txt)
+is `akao_cmd_<hex>[_optional_description]` (see `akao_cmd_c8`,
+`akao_cmd_e4_set_cd_volume`, `akao_cmd_e8_start_xa_stream`). The following
+file-local wrappers in [src/decomp3.c](../src/decomp3.c) are still
+`func_*` / `FUN_*` and could be renamed by opcode number. Each is a plain
+"pack args into `g_akaoCmdParams`, dispatch one opcode" wrapper.
+
+| current name      | address     | opcode  | proposed                |
+|-------------------|-------------|---------|-------------------------|
+| `func_800220B0`   | 0x800220B0  | 0x14    | `akao_cmd_14`           |
+| `func_800220E4`   | 0x800220E4  | 0x19+0xC0 | `akao_cmd_19_c0`      |
+| `func_8002213C`   | 0x8002213C  | 0x12    | `akao_cmd_12`           |
+| `func_800221BC`   | 0x800221BC  | 0x24    | `akao_cmd_24`           |
+| `func_80022240`   | 0x80022240  | 0x21    | `akao_cmd_21`           |
+| `func_8002227C`   | 0x8002227C  | 0x30    | `akao_cmd_30_stop_sfx`  |
+| `func_800223B0`   | 0x800223B0  | 0x90    | `akao_cmd_90`           |
+| `func_800223D8`   | 0x800223D8  | 0x92    | `akao_cmd_92`           |
+| `FUN_80022400`    | 0x80022400  | 0x99/9B/9D/9F | `akao_cmd_99_9b_9d_9f` |
+| `func_8002246C`   | 0x8002246C  | 0x98/9A/9C/9E | `akao_cmd_98_9a_9c_9e` |
+| `func_800224D8`   | 0x800224D8  | 0xA8    | `akao_cmd_a8`           |
+| `func_80022504`   | 0x80022504  | 0xA9    | `akao_cmd_a9`           |
+| `func_80022538`   | 0x80022538  | 0xA0    | `akao_cmd_a0`           |
+| `func_8002257C`   | 0x8002257C  | 0xA1    | `akao_cmd_a1`           |
+| `func_800225C4`   | 0x800225C4  | 0xAA    | `akao_cmd_aa`           |
+| `func_800225F0`   | 0x800225F0  | 0xAB    | `akao_cmd_ab`           |
+| `func_80022624`   | 0x80022624  | 0xA2    | `akao_cmd_a2`           |
+| `func_80022668`   | 0x80022668  | 0xA3    | `akao_cmd_a3`           |
+| `func_800226B0`   | 0x800226B0  | 0xAC    | `akao_cmd_ac`           |
+| `func_800226DC`   | 0x800226DC  | 0xAD    | `akao_cmd_ad`           |
+| `func_80022710`   | 0x80022710  | 0xA4    | `akao_cmd_a4`           |
+| `func_80022754`   | 0x80022754  | 0xA5    | `akao_cmd_a5`           |
+| `FUN_8002279c`    | 0x8002279C  | 0xC0    | `akao_cmd_c0`           |
+| `func_800227D0`   | 0x800227D0  | 0xC1    | `akao_cmd_c1`           |
+| `func_80022808`   | 0x80022808  | 0xC2    | `akao_cmd_c2`           |
+| `func_80022870`   | 0x80022870  | 0xC9    | `akao_cmd_c9`           |
+| `func_800228A0`   | 0x800228A0  | 0xCA    | `akao_cmd_ca`           |
+| `func_800228D4`   | 0x800228D4  | 0xD0    | `akao_cmd_d0`           |
+| `func_80022900`   | 0x80022900  | 0xD1    | `akao_cmd_d1`           |
+| `func_80022934`   | 0x80022934  | 0xD2    | `akao_cmd_d2`           |
+| `func_80022970`   | 0x80022970  | 0xD4    | `akao_cmd_d4`           |
+| `func_8002299C`   | 0x8002299C  | 0xD5    | `akao_cmd_d5`           |
+| `func_800229D0`   | 0x800229D0  | 0xD6    | `akao_cmd_d6`           |
+| `func_80022A0C`   | 0x80022A0C  | 0xD8    | `akao_cmd_d8`           |
+| `func_80022A38`   | 0x80022A38  | 0xD9    | `akao_cmd_d9`           |
+| `func_80022A6C`   | 0x80022A6C  | 0xDA    | `akao_cmd_da`           |
+| `FUN_80022aa8`    | 0x80022AA8  | 0xF0    | `akao_cmd_f0`           |
+| `FUN_80022ac8`    | 0x80022AC8  | 0xF1    | `akao_cmd_f1`           |
+| `func_80022B48`   | 0x80022B48  | (none)  | `akao_get_state`        |
+| `func_80022B58`   | 0x80022B58  | (none)  | `akao_reset_pending`    |
+| `func_80022B78`   | 0x80022B78  | (none)  | `akao_streaming_upload` |
+| `func_80022D8C`   | 0x80022D8C  | (none)  | `akao_play_sequence_blocking_v` |
+| `func_80022DAC`   | 0x80022DAC  | (none)  | `akao_upload_indexed_bank` |
+| `func_80022FAC`   | 0x80022FAC  | 0xE0    | `akao_cmd_e0`           |
+| `FUN_80023010`    | 0x80023010  | 0xE2    | `akao_cmd_e2`           |
+| `func_80023060`   | 0x80023060  | 0xE5    | `akao_cmd_e5`           |
+| `func_80023098`   | 0x80023098  | 0xE6    | `akao_cmd_e6`           |
+| `func_800230C8`   | 0x800230C8  | (none)  | `akao_setup_xa_buffer`  |
+| `func_800231AC`   | 0x800231AC  | 0xED    | `akao_cmd_ed`           |
+| `func_800231E4`   | 0x800231E4  | 0xEC    | `akao_cmd_ec`           |
+
+**Why deferred:** several of these (`FUN_80022400`, `FUN_8002279c`,
+`FUN_80022aa8`, `FUN_80022ac8`, `FUN_80023010`, `func_800227D0`,
+`func_8002246C`, `func_800224D8`) are referenced from many overlay translation
+units (`cdrom.c`, `main.c`, `decomp7.c`, `title.c`, `movie1.c`, `gover/code1.c`,
+`checkps/code.c`, `decomp1.c`) and from the duplicated extern declarations in
+the per-overlay headers (`cd.h`, `decomp1.h`, `decomp7.h`, `gover.h`,
+`title.h`). Each rename is mechanically simple but the cross-overlay churn is
+large; do them as one focused PR.
+
+## 6. Param-bit-width hints (for naming the opcode wrappers)
+
+Field widths surfaced by the masks the wrappers apply tell us how the AKAO
+driver decodes each opcode payload. Useful when fleshing out the descriptions
+on the renames in §5:
+
+- 7-bit slot ⇒ "volume / pan" (0–127)
+- 8-bit slot ⇒ "byte parameter" (often duration in ticks, or a count)
+- 10-bit slot ⇒ "sound / sequence id"
+- 24-bit slot ⇒ "frequency / pitch / wide param"
+- left-shift-by-8 (`<<8`) ⇒ "big-endian 16-bit parameter packed into the high
+  byte of a word" (seen in 0xE4/0xE5/0xE6/0xED)
+
+## 7. References
+
+- [AKAO_sequence — ff7-flat-wiki](https://ff7-mods.github.io/ff7-flat-wiki/FF7/PSX/Sound/AKAO_sequence.html)
+- [PSX Sound Code Map — ff7-flat-wiki](https://ff7-mods.github.io/ff7-flat-wiki/FF7/PSX/Sound/Code_Map.html)
+  (confirms the 256-entry `MESSAGE_HANDLERS` dispatch table at 0x80049548 in FF7,
+  i.e. exactly the `akao_send_command(opcode)` dispatch we have here)

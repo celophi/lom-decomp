@@ -539,7 +539,9 @@ FUN_80021fbc                        = 0x80021FBC;
 akao_register_bank                  = 0x80021FFC;
 akao_play_song                      = 0x80022040;
 akao_stop_song                      = 0x80022068;
+akao_cmd_40                         = 0x80022090;
 akao_play_sfx                       = 0x8002216C;
+akao_set_paused                     = 0x8002237C;
 FUN_80022400                        = 0x80022400;
 FUN_8002279c                        = 0x8002279C;
 akao_cmd_c8                         = 0x80022848;
@@ -563,8 +565,18 @@ SpuSetIRQAddr                       = 0x80023508;
 SpuSetTransferStartAddr             = 0x80023548;
 
 // Uncategorized
+akao_relocate_articulations         = 0x800235A8;
 akao_check_magic                    = 0x800235F8;
+akao_spu_xfer_done_cb               = 0x8002360C;
+akao_spu_arm_xfer                   = 0x80023630;
+akao_spu_write                      = 0x80023660;
+akao_spu_read                       = 0x800236B0;
+akao_spu_wait                       = 0x800236EC;
 akao_submit                         = 0x8002371C;
+akao_upload_bank                    = 0x8002376C;
+akao_driver_init_state              = 0x80023830;
+akao_driver_init                    = 0x80023AD0;
+akao_driver_shutdown                = 0x80023BE0;
 
 // psyq/libapi/A13
 DisableEvent                        = 0x80023C80;
