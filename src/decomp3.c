@@ -940,3 +940,31 @@ s32 func_80022EF8(void* arg0, s32 arg1, s32 arg2)
     func_80022DAC(arg0, arg1 + 3, arg2);
     return 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/hcfmi
+ */
+s32 func_80022F18(s32 arg0, void* arg1)
+{
+    s32 new_var;
+    u32 temp_v0;
+    s32 val = arg0;
+    new_var = val;
+    if (D_8004F754 & 2)
+    {
+
+        D_8003EC20.val3 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        D_8003EC20.val1 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        D_8003EC20.val2 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        D_8003EC20.val0 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+    }
+    else
+    {
+        D_8003EC20.val2 = (u_char)new_var;
+        D_8003EC20.val0 = (u_char)new_var;
+        D_8003EC20.val3 = 0;
+        D_8003EC20.val1 = 0;
+    }
+    CdMix(&D_8003EC20);
+    return 0;
+}
