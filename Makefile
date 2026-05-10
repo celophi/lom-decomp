@@ -246,6 +246,7 @@ SRCS_G0 := \
 	src/psyq/libapi/FIRST.c \
 	src/psyq/libapi/A66.c \
 	src/unk8.c \
+	src/unk9.c \
 	src/decomp1.c \
 	src/decomp3.c \
 	src/decomp7.c \
