@@ -96,6 +96,9 @@ nextfile                            = 0x8001684C;
 // psyq/libapi/A68
 rename                              = 0x8001685C;
 
+// psyq/libapi/A69
+erase                               = 0x8001686C;
+
 // psyq/libapi/A81
 Krom2RawAdd                         = 0x8001687C;
 
