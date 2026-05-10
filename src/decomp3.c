@@ -845,3 +845,148 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
     }
     return D_8004F828;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/0f3IK
+ */
+s32 func_80022D8C(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
+{
+    akao_play_sequence_blocking(sequenceData, waitForCompletion);
+    return 0;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/FWcdy
+ */
+s32 func_80022DAC(void* arg0, s32 arg1, s32 arg2)
+{
+    s32 var_a2;
+    s32 var_a3_2;
+    s32* var_t0;
+    u32 var_a3;
+    void* tmp = arg0;
+    var_a3 = 0;
+    var_t0 = &D_8004D388;
+    do
+    {
+        if ((*var_t0) == ((s32*)tmp)[1])
+        {
+            var_a3++;
+            var_a3--;
+            *var_t0 = 0;
+        }
+        var_a3 += 1;
+        var_t0 += 1;
+    }
+
+    while (var_a3 < 6U);
+    switch (arg1)
+    {
+    case 1:
+        var_a3_2 = 0x47900;
+        var_a2 = 0x90;
+        D_8004D38C = ((s32*)tmp)[1];
+        break;
+
+    case 2:
+        var_a3_2 = 0x4C100;
+        var_a2 = 0xA0;
+        D_8004D390 = ((s32*)tmp)[1];
+        break;
+
+    case 3:
+        var_a3_2 = 0x50900;
+        var_a2 = 0xB0;
+        D_8004D394 = ((s32*)tmp)[1];
+        break;
+
+    case 4:
+        var_a3_2 = 0x55100;
+        var_a2 = 0xC0;
+        D_8004D398 = ((s32*)tmp)[1];
+        break;
+
+    case 5:
+        var_a3_2 = 0x59900;
+        var_a2 = 0xD0;
+        D_8004D39C = ((s32*)tmp)[1];
+        break;
+
+    default:
+        var_a3_2 = 0x43100;
+        var_a2 = 0x80;
+        D_8004D388 = ((s32*)tmp)[1];
+        break;
+    }
+
+    func_8002376C(arg0, arg2, var_a2, var_a3_2);
+    return 0;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/sa1fh
+ */
+s32 func_80022ED8(void* arg0, s32 arg1, s32 arg2)
+{
+    func_80022DAC(arg0, arg1, arg2);
+    return 0;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/PnDWc
+ */
+s32 func_80022EF8(void* arg0, s32 arg1, s32 arg2)
+{
+    func_80022DAC(arg0, arg1 + 3, arg2);
+    return 0;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/hcfmi
+ */
+s32 func_80022F18(s32 arg0, void* arg1)
+{
+    s32 new_var;
+    u32 temp_v0;
+    s32 val = arg0;
+    new_var = val;
+    if (D_8004F754 & 2)
+    {
+
+        D_8003EC20.val3 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        D_8003EC20.val1 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        D_8003EC20.val2 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+        D_8003EC20.val0 = (u_char)((unsigned long long)(((u32)(arg0 * 0xB570)) >> 0x11));
+    }
+    else
+    {
+        D_8003EC20.val2 = (u_char)new_var;
+        D_8003EC20.val0 = (u_char)new_var;
+        D_8003EC20.val3 = 0;
+        D_8003EC20.val1 = 0;
+    }
+    CdMix(&D_8003EC20);
+    return 0;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/vw9QX
+ */
+void func_80022FAC(s32 arg0, s32 arg1, s32 arg2)
+{
+    if (akao_check_magic(arg0) == 0)
+    {
+        g_akaoCmdParams[0] = arg0;
+        g_akaoCmdParams[1] = (s32)((arg1 & 0xFF) << 8);
+        g_akaoCmdParams[2] = arg2;
+        akao_send_command(0xE0);
+    }
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/kd4bK
+ */
+s32 FUN_80023010(void)
+{
+    return akao_send_command(0xE2);
+}

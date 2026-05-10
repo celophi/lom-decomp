@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "akao.h"
+#include "psyq/libcd.h"
 
 /**
  * AKAO command parameter buffer. Each command opcode reads its inputs from
@@ -30,7 +31,15 @@ typedef struct
     u32 unk1C;
 } D3C0_t;
 
+extern CdlATV D_8003EC20;
+extern s32 D_8004F754;
 extern u8 D_8004C340[];
+extern s32 D_8004D388;
+extern s32 D_8004D38C;
+extern s32 D_8004D390;
+extern s32 D_8004D394;
+extern s32 D_8004D398;
+extern s32 D_8004D39C;
 extern s32 D_8004F750;
 extern s32 D_8003EC4C;
 extern s32 D_8004F824;
