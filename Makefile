@@ -227,8 +227,21 @@ SRCS_G0 := \
 	src/psyq/libspu/S_STM.c \
 	src/psyq/libspu/S_STC.c \
 	src/psyq/libcard/C112.c \
+	src/psyq/libapi/C159.c \
+	src/psyq/libapi/A08.c \
+	src/psyq/libapi/A09.c \
+	src/psyq/libapi/A11.c \
+	src/psyq/libapi/A12.c \
+	src/psyq/libapi/A36.c \
+	src/psyq/libapi/A37.c \
+	src/psyq/libapi/A50.c \
+	src/psyq/libapi/A52.c \
+	src/psyq/libapi/A53.c \
+	src/psyq/libapi/A54.c \
+	src/psyq/libapi/A67.c \
+	src/psyq/libapi/A68.c \
+	src/psyq/libapi/A69.c \
 	src/unk3.c \
-	src/unk5.c \
 	src/unk8.c \
 	src/decomp1.c \
 	src/decomp3.c \
