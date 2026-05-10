@@ -395,6 +395,9 @@ void menu_func_801410FC(ArgStruct* arg0)
     func_80019A34(&sp10, base + 0x822C);
 }
 
+/**
+ * decomp.me (99.82%) https://decomp.me/scratch/Xng7v
+ */
 void* func_80141244(s32 arg0, void* arg1)
 {
     s32 var_a2;
