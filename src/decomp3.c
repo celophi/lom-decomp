@@ -1023,7 +1023,7 @@ s32 func_80023098(s32 arg0)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/C06sg
+ * decomp.me link (99.80%) https://decomp.me/scratch/C06sg
  */
 s32 func_800230C8(void* arg0, s32 arg1)
 {
@@ -1056,4 +1056,92 @@ s32 func_800230C8(void* arg0, s32 arg1)
     }
     D_8004C170 = 0;
     return temp_v0;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/ULEGL
+ */
+s32 func_800231AC(s32 arg0, s32 arg1)
+{
+    g_akaoCmdParams[0] = (s32)((arg0 & 0xFF) << 8);
+    g_akaoCmdParams[1] = arg1;
+    return akao_send_command(0xED);
+}
+
+/**
+ * decomp.me link (99.90%) https://decomp.me/scratch/g4cPG
+ */
+void func_800231E4(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+{
+    s32 var_a1;
+
+    if (akao_check_magic(arg0) == 0)
+    {
+        var_a1 = 0x50900;
+        if (arg2 == 0)
+        {
+            var_a1 = 0x43100;
+        }
+        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->unk0 & 0x40))
+        {
+            var_a1 += 0xFFFD0000;
+        }
+        g_akaoCmdParams[0] = arg0;
+        g_akaoCmdParams[1] = (s32)((arg1 & 0xFF) << 8);
+        g_akaoCmdParams[2] = var_a1;
+        g_akaoCmdParams[3] = arg3;
+        akao_send_command(0xEC);
+    }
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/bRIJX
+ */
+s32 func_800232A8(s32 arg0, u32 arg1)
+{
+    if (arg1 == 0)
+    {
+        return -1;
+    }
+    SpuSetIRQ(0);
+    SpuSetIRQAddr(0);
+    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[1] = arg1;
+    D_8004F760.unk34 = -1;
+    D_8004F760.unk20 = 0;
+    D_8004F760.unk24 = 0;
+    D_8004F760.unk28 = 0;
+    D_8004F760.unk38 = 0;
+    D_8004F760.unk3C = (s32)(arg1 >> 12);
+    akao_send_command(0xE8);
+    return 0;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/gKZ5G
+ */
+s32 func_80023334(void)
+{
+    u32 temp_v1;
+
+    D_8004F760.unk24 = D_8004F760.unk24 + 1;
+    temp_v1 = D_8004F760.unk38 + 1;
+    D_8004F760.unk38 = temp_v1;
+    if ((u32)(D_8004F760.unk3C - 1) < temp_v1)
+    {
+        D_8004F760.unk38 = 0;
+    }
+    if ((D_8004F760.unk8 & 0x01000000) && ((u32)D_8004F760.unk38 >= 2U))
+    {
+        func_8002E2E8(&D_8004F760);
+    }
+    return D_8004F794;
+}
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/2DiS3
+ */
+s32 func_800233B8(void)
+{
+    return D_8004F794;
 }

@@ -39,13 +39,28 @@ typedef struct
     u32 unk1C;
 } D3C0_t;
 
-typedef struct {
-    u8 pad0[0x10];       /* offsets 0x00 - 0x0F */
-    u32 unk10;           /* offset 0x10 */
-    u8 pad1[0xC];        /* offsets 0x14 - 0x1F */
-    u32 unk20;           /* offset 0x20 */
+typedef struct
+{
+    u8 pad0[0x10]; /* offsets 0x00 - 0x0F */
+    u32 unk10;     /* offset 0x10 */
+    u8 pad1[0xC];  /* offsets 0x14 - 0x1F */
+    u32 unk20;     /* offset 0x20 */
 } ArgStruct2;
 
+typedef struct {
+    u8   pad0[0x08];           /* 0x00 - 0x07 */
+    u32  unk8;                 /* 0x08 - from func_80023334 */
+    u8   pad1[0x14];           /* 0x0C - 0x1F (20 bytes) */
+    s32  unk20;                /* 0x20 - from func_800232A8 */
+    s32  unk24;                /* 0x24 - used in both functions */
+    s32  unk28;                /* 0x28 - from func_800232A8 */
+    u8   pad2[0x08];           /* 0x2C - 0x33 (8 bytes) */
+    s32  unk34;                /* 0x34 - from func_800232A8 */
+    s32  unk38;                /* 0x38 - used in both functions */
+    s32  unk3C;                /* 0x3C - from func_800232A8 */
+} AkakoStruct;  /* Total size: 0x40 (64 bytes) */
+
+extern s32 D_8004F794;
 extern s32 D_8004C170;
 extern u32 D_8004C150;
 extern D_8003EC5C_t* D_8003EC5C;
@@ -64,6 +79,8 @@ extern s32 D_8004F824;
 extern s32 D_8004F828;
 extern F820_t D_8004F820;
 extern D3C0_t D_8004D3C0;
+
+extern AkakoStruct D_8004F760;
 
 extern s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion);
 
