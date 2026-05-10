@@ -758,3 +758,90 @@ s32 func_80022B58(void)
     D_8004F750 |= 1;
     return 0;
 }
+
+/**
+ * decomp.me link (98.59%) https://decomp.me/scratch/BEUjs
+ */
+s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
+{
+    s32 temp_v0;
+    u32 var_s0;
+    u32 var_v1;
+    s32* new_var;
+    void* temp_a0_2;
+    if ((D_8004F750 & 1) == 0)
+    {
+        return D_8004F828;
+    }
+    if (D_8004F820.unk4 == 0)
+    {
+        if (akao_check_magic(arg0) == 0)
+        {
+            func_80029A0C(*(new_var = &arg0), &D_8004D3C0, 0x40U);
+            arg0 += 0x40;
+            arg1 -= 0x40;
+            D_8004F820.unk4 = (s32)D_8004D3C0.unk10;
+            D_8004F820.unk8 = (u32)D_8004D3C0.unk14;
+            D_8004F820.unk0 = (void*)((D_8004D3C0.unk18 * 0x10) + ((u32)(&D_8004C340)));
+            D_8004F820.unkC = (u32)(D_8004D3C0.unk1C * 0x10);
+        }
+        else
+        {
+            arg1 = 0;
+            D_8004F820.unk8 = 0U;
+            D_8004F820.unkC = 0U;
+        }
+    }
+    if (D_8004F820.unkC != 0)
+    {
+        var_s0 = D_8004F820.unkC;
+        if (arg1 != 0)
+        {
+            if (var_s0 >= arg1)
+            {
+                var_s0 = arg1;
+            }
+            func_80029A0C(arg0, D_8004F820.unk0, var_s0);
+            temp_v0 = (var_s0 >> 2) * 4;
+            arg0 += temp_v0;
+            arg1 -= var_s0;
+            D_8004F820.unk0 = (void*)(((u32)D_8004F820.unk0) + temp_v0);
+            D_8004F820.unkC -= var_s0;
+            if (D_8004F820.unkC == 0)
+            {
+                temp_a0_2 = (void*)((D_8004D3C0.unk18 * 0x10) + ((u32)(&D_8004C340)));
+                func_800235A8(temp_a0_2, temp_a0_2, D_8004D3C0.unk10, D_8004D3C0.unk1C);
+            }
+        }
+    }
+    if (arg1 != 0)
+    {
+        if (D_8004F820.unk8 != 0)
+        {
+            var_v1 = D_8004F820.unk8;
+            if (D_8004F820.unk8 >= arg1)
+            {
+                var_v1 = arg1;
+            }
+            var_s0 = var_v1;
+            SpuSetTransferStartAddr(D_8004F820.unk4);
+            func_80023660(arg0, arg1);
+            D_8004F820.unk4 += var_v1;
+            D_8004F820.unk8 -= var_s0;
+            if (arg2 != 0)
+            {
+                func_800236EC();
+            }
+        }
+        else
+        {
+            goto block_18;
+        }
+    }
+    if (D_8004F828 == 0)
+    {
+    block_18:
+        D_8004F750 &= ~1;
+    }
+    return D_8004F828;
+}
