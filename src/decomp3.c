@@ -963,7 +963,7 @@ s32 func_80022EF8(void* arg0, s32 arg1, s32 arg2)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/hcfmi
  */
-s32 func_80022F18(s32 arg0, void* arg1)
+s32 akao_xa_setup_panning(s32 arg0, void* arg1)
 {
     s32 new_var;
     u32 temp_v0;
@@ -1013,7 +1013,7 @@ s32 akao_cmd_e2(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/3oPkP
  */
-s32 func_80023030(s32 arg0)
+s32 akao_cmd_e4_set_cd_volume(s32 arg0)
 {
     g_akaoCmdParams[0] = (void*)((arg0 & 0x7F) << 8);
     return akao_send_command(0xE4);
@@ -1122,7 +1122,7 @@ void akao_cmd_ec(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/bRIJX
  */
-s32 func_800232A8(s32 arg0, u32 arg1)
+s32 akao_cmd_e8_start_xa_stream(s32 arg0, u32 arg1)
 {
     if (arg1 == 0)
     {
@@ -1145,7 +1145,7 @@ s32 func_800232A8(s32 arg0, u32 arg1)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/gKZ5G
  */
-s32 func_80023334(void)
+s32 akao_xa_advance_frame(void)
 {
     u32 temp_v1;
 
@@ -1166,7 +1166,7 @@ s32 func_80023334(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/2DiS3
  */
-s32 func_800233B8(void)
+s32 akao_xa_get_position(void)
 {
     return D_8004F794;
 }

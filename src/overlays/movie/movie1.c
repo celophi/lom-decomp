@@ -199,7 +199,7 @@ void movie_play(s32 movieIndex)
 
         if ((g_cdAudioReady != 0) && (audioFadeVol != AUDIO_FADE_DISARMED))
         {
-            func_80023030(audioFadeVol);
+            akao_cmd_e4_set_cd_volume(audioFadeVol);
 
             if (audioFadeVol == 0)
             {
