@@ -982,3 +982,11 @@ void func_80022FAC(s32 arg0, s32 arg1, s32 arg2)
         akao_send_command(0xE0);
     }
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/kd4bK
+ */
+s32 FUN_80023010(void)
+{
+    return akao_send_command(0xE2);
+}
