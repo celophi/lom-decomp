@@ -5,7 +5,7 @@
  */
 s32 FUN_80021fbc(void)
 {
-    func_80023AD0();
+    akao_driver_init();
     return 0;
 }
 
@@ -14,7 +14,7 @@ s32 FUN_80021fbc(void)
  */
 s32 func_80021FDC(void)
 {
-    func_80023BE0();
+    akao_driver_shutdown();
     return 0;
 }
 
@@ -82,9 +82,15 @@ void akao_stop_song(s32 arg0)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/4GVez
+ * @brief AKAO command 0x40 — global stop / driver halt.
+ *
+ * Zero-argument command. Observed callers in cdrom.c and others use this to
+ * silence everything (sequences and active SFX) when entering loading screens
+ * or other audio-quiescent states.
+ *
+ * @see https://decomp.me/scratch/4GVez (100%)
  */
-void func_80022090(void)
+void akao_cmd_40(void)
 {
     akao_send_command(0x40);
 }
@@ -271,9 +277,22 @@ s32 func_80022310(s32 arg0)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/9qTjH
+ * @brief AKAO command 0x80 / 0x81 — pause or resume the active sequence.
+ *
+ * Picks opcode 0x81 when @p arg0 == 1 (resume) and 0x80 otherwise (pause),
+ * then dispatches with no parameter buffer payload. Used by TITLE.OVL to
+ * pause music while the title screen is dismissed.
+ *
+ * @param arg0  1 = resume (0x81); any other value = pause (0x80).
+ *
+ * @note The local pointer @c new_var2 = &new_var is a register-allocation
+ *       artifact required for asm matching; do not remove it. Likewise the
+ *       ternary form is load-bearing — see project memory
+ *       feedback_no_ternary_rewrites.
+ *
+ * @see https://decomp.me/scratch/9qTjH (100%)
  */
-void func_8002237C(s32 arg0)
+void akao_set_paused(s32 arg0)
 {
     int* new_var2;
     int new_var;
@@ -810,7 +829,7 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
             if (D_8004F820.unkC == 0)
             {
                 temp_a0_2 = (void*)((D_8004D3C0.unk18 * 0x10) + ((u32)(&D_8004C340)));
-                func_800235A8(temp_a0_2, temp_a0_2, D_8004D3C0.unk10, D_8004D3C0.unk1C);
+                akao_relocate_articulations(temp_a0_2, temp_a0_2, D_8004D3C0.unk10, D_8004D3C0.unk1C);
             }
         }
     }
@@ -825,12 +844,12 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
             }
             var_s0 = var_v1;
             SpuSetTransferStartAddr(D_8004F820.unk4);
-            func_80023660(arg0, arg1);
+            akao_spu_write(arg0, arg1);
             D_8004F820.unk4 += var_v1;
             D_8004F820.unk8 -= var_s0;
             if (arg2 != 0)
             {
-                func_800236EC();
+                akao_spu_wait();
             }
         }
         else
@@ -919,7 +938,7 @@ s32 func_80022DAC(void* arg0, s32 arg1, s32 arg2)
         break;
     }
 
-    func_8002376C(arg0, arg2, var_a2, var_a3_2);
+    akao_upload_bank(arg0, arg2, var_a2, var_a3_2);
     return 0;
 }
 
@@ -1034,7 +1053,7 @@ s32 func_800230C8(void* arg0, s32 arg1)
     temp_v0 = akao_check_magic(arg0);
     if (temp_v0 == 0)
     {
-        func_800236EC();
+        akao_spu_wait();
         var_s2 = 0x50900;
         if (arg1 == 0)
         {
@@ -1049,7 +1068,7 @@ s32 func_800230C8(void* arg0, s32 arg1)
         arg0 = (u8*)arg0 + 0x40;
         SpuSetTransferStartAddr(var_s2);
         /* Cast arg0 to byte pointer for arithmetic, then to ArgStruct for member access */
-        func_80023660(arg0, ((ArgStruct2*)var1)->unk10);
+        akao_spu_write(arg0, ((ArgStruct2*)var1)->unk10);
         ((ArgStruct2*)var1)->unk20 = var_s2;
         func_80029A0C(var1, &D_8004C150, 0x50);
         return temp_v0;
