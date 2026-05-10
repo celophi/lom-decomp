@@ -845,3 +845,12 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
     }
     return D_8004F828;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/0f3IK
+ */
+s32 func_80022D8C(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
+{
+    akao_play_sequence_blocking(sequenceData, waitForCompletion);
+    return 0;
+}
