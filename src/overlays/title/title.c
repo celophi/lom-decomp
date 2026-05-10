@@ -235,7 +235,7 @@ void InitTitleDisplay(void* arg0)
     hw[0x140] = 0;
     hw[0x92] = 0;
 
-    func_8002237C(0);
+    akao_set_paused(0);
     SetGeomScreen(0x5DC);
     SetGeomOffset(0xA0, 0x78);
 
