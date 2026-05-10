@@ -16,6 +16,14 @@ extern u8 D_8004B430[];
 
 typedef struct
 {
+    u32 unk0;
+    u32 unk4;
+    u32 pad[5]; /* padding up to offset 0x1C */
+    u32 unk1C;
+} D_8003EC5C_t;
+
+typedef struct
+{
     void* unk0;
     u32 unk4;
     u32 unk8;
@@ -31,6 +39,16 @@ typedef struct
     u32 unk1C;
 } D3C0_t;
 
+typedef struct {
+    u8 pad0[0x10];       /* offsets 0x00 - 0x0F */
+    u32 unk10;           /* offset 0x10 */
+    u8 pad1[0xC];        /* offsets 0x14 - 0x1F */
+    u32 unk20;           /* offset 0x20 */
+} ArgStruct2;
+
+extern s32 D_8004C170;
+extern u32 D_8004C150;
+extern D_8003EC5C_t* D_8003EC5C;
 extern CdlATV D_8003EC20;
 extern s32 D_8004F754;
 extern u8 D_8004C340[];
