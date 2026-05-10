@@ -57,8 +57,11 @@ _bu_init                            = 0x8001676C;
 // psyq/libapi/C114
 _96_remove                          = 0x80016784;
 
-// Uncategorized
+// psyq/libapi/C159
 SetMem                              = 0x8001679C;
+
+// psyq/libapi/A08
+OpenEvent                           = 0x800167AC;
 
 // psyq/libapi/A81
 Krom2RawAdd                         = 0x8001687C;
