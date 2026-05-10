@@ -66,6 +66,9 @@ OpenEvent                           = 0x800167AC;
 // psyq/libapi/A09
 CloseEvent                          = 0x800167BC;
 
+// psyq/libapi/A11
+TestEvent                           = 0x800167CC;
+
 // psyq/libapi/A81
 Krom2RawAdd                         = 0x8001687C;
 
