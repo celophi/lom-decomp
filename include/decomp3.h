@@ -9,18 +9,17 @@
  * AKAO command parameter buffer. Each command opcode reads its inputs from
  * the first N slots; the layout is opcode-specific and the driver consumes
  * it during akao_send_command.
+ *
+ * Slot 0 is dual-purpose: most opcodes treat it as a scalar (channel index,
+ * sound id, volume), but several wrappers (akao_play_song, akao_register_bank,
+ * akao_cmd_e0 opcode 0xE0, akao_cmd_ec opcode 0xEC) store an
+ * AkaoSeqHeader-compatible **buffer pointer** there. Typed @c void* to
+ * acknowledge that dual use; scalar stores rely on GCC 2.7.2's permissive
+ * implicit int→pointer conversion.
  */
-extern s32 g_akaoCmdParams[];
+extern void *g_akaoCmdParams[];
 extern s32 D_8004D400;
 extern u8 D_8004B430[];
-
-typedef struct
-{
-    u32 unk0;
-    u32 unk4;
-    u32 pad[5]; /* padding up to offset 0x1C */
-    u32 unk1C;
-} D_8003EC5C_t;
 
 typedef struct
 {
@@ -29,23 +28,6 @@ typedef struct
     u32 unk8;
     u32 unkC;
 } F820_t;
-
-typedef struct
-{
-    u8 _pad[0x10];
-    u32 unk10;
-    u32 unk14;
-    u32 unk18;
-    u32 unk1C;
-} D3C0_t;
-
-typedef struct
-{
-    u8 pad0[0x10]; /* offsets 0x00 - 0x0F */
-    u32 unk10;     /* offset 0x10 */
-    u8 pad1[0xC];  /* offsets 0x14 - 0x1F */
-    u32 unk20;     /* offset 0x20 */
-} ArgStruct2;
 
 typedef struct {
     u8   pad0[0x08];           /* 0x00 - 0x07 */
@@ -63,7 +45,7 @@ typedef struct {
 extern s32 D_8004F794;
 extern s32 D_8004C170;
 extern u32 D_8004C150;
-extern D_8003EC5C_t* D_8003EC5C;
+extern AkaoChannelState* D_8003EC5C;
 extern CdlATV D_8003EC20;
 extern s32 D_8004F754;
 extern u8 D_8004C340[];
@@ -78,7 +60,7 @@ extern s32 D_8003EC4C;
 extern s32 D_8004F824;
 extern s32 D_8004F828;
 extern F820_t D_8004F820;
-extern D3C0_t D_8004D3C0;
+extern AkaoBankHeader D_8004D3C0;
 
 extern AkakoStruct D_8004F760;
 
@@ -90,20 +72,20 @@ s32 akao_register_bank(AkaoSeqHeader* bank);
 void akao_play_song(s32 seqData);
 void akao_stop_song(s32 arg0);
 void akao_cmd_40(void);
-void func_800220B0(s32 arg0, s32 arg1);
-s32 func_800220E4(s32 arg0, s32 arg1);
-void func_8002213C(s32 arg0, s32 arg1);
+void akao_cmd_14(s32 arg0, s32 arg1);
+s32 akao_cmd_19_c0(s32 arg0, s32 arg1);
+void akao_cmd_12(s32 arg0, s32 arg1);
 void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void func_80022240(s32 arg0, s32 arg1);
-void func_8002227C(s32 arg0);
+s32 akao_play_sfx_from_buffer(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+void akao_cmd_21(s32 arg0, s32 arg1);
+void akao_stop_sfx_by_id(s32 arg0);
 s32 func_800222A8(void);
 s32 func_80022310(s32 arg0);
 void akao_set_paused(s32 arg0);
-void func_800223B0(s32 arg0);
-void func_800223D8(s32 arg0);
-void FUN_80022400(u32 param_1);
-void func_8002246C(u32 arg0);
+void akao_cmd_90(s32 arg0);
+void akao_cmd_92(s32 arg0);
+void akao_cmd_99_9b_9d_9f(u32 param_1);
+void akao_cmd_98_9a_9c_9e(u32 arg0);
 
 /**
  * Central dispatcher for the AKAO sound driver. Each high-level wrapper

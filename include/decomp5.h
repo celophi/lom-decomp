@@ -2,22 +2,7 @@
 #define _DECOMP5_H
 
 #include "common.h"
-
-typedef struct
-{
-    char pad0[0x10];
-    s32 unk10;
-    char pad1[0x4];
-    s32 unk18;
-} UnknownStruct;
-
-typedef struct
-{
-    char _pad0[0x14];
-    u32 unk14;
-    char _pad1[0x4];
-    u32 unk1C;
-} SomeStruct;
+#include "akao.h"
 
 extern s32 D_8003EC4C;
 extern u8 D_8004C340[];
@@ -35,7 +20,7 @@ extern s32 D_8003EC70;
 extern s32 D_8003EC68;
 extern s32 D_8003EC24;
 extern s32 D_8003EC28;
-extern void *D_8003EC5C;
+extern AkaoChannelState *D_8003EC5C;
 extern void *D_8003EC58;
 extern u8 D_8004C2D0[];
 extern u8 D_8004D400[];
@@ -53,7 +38,7 @@ extern s32 D_8003EC50;
 extern s32 D_8003EC54;
 
 extern s32 func_80024230(s32);
-extern s32 akao_check_magic(void);
+extern s32 akao_check_magic(s32 *data);
 extern void func_80028E34(int, volatile short, void *, int);
 extern void func_80023EF0(int);
 extern void func_8002A134(void);

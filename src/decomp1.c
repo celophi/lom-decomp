@@ -124,7 +124,7 @@ void GFX_Transition(s32 skipScreenClear)
  */
 void FUN_8001160c(void)
 {
-    func_800227D0(D_80042FB8, 0x12C, 0);
+    akao_cmd_c1(D_80042FB8, 0x12C, 0);
 }
 
 /**
@@ -155,7 +155,7 @@ void FUN_80011638(s32 arg0)
 
     temp = akao_play_song(ptr);
     D_80042FB8 = temp;
-    FUN_8002279c(temp, 0x7f);
+    akao_cmd_c0(temp, 0x7f);
 }
 
 /**

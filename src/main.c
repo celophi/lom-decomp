@@ -101,9 +101,9 @@ void Main(void)
                 D_80042FCC = 0;
                 g_gameState = FUN_80015c58();
                 D_8003EC88 = 0;
-                FUN_80022aa8();
-                FUN_80022ac8();
-                FUN_8002279c(0, 0x7F);
+                akao_cmd_f0();
+                akao_cmd_f1();
+                akao_cmd_c0(0, 0x7F);
                 g_previousGameState = 0;
                 break;
 
@@ -119,12 +119,12 @@ void Main(void)
                 ClearImage(&rect, 0, 0, 0);
                 DrawSync(0);
                 VSync(0);
-                FUN_80022aa8();
-                FUN_80022ac8();
+                akao_cmd_f0();
+                akao_cmd_f1();
                 cdrom_wait_queue_empty();
                 *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = FUN_80060814();
-                FUN_80022aa8();
-                FUN_80022ac8();
+                akao_cmd_f0();
+                akao_cmd_f1();
                 if ((((*((u32*)(((u8*)(&g_gameState)) + 0x522C))) != 2) &&
                      ((*((u32*)(((u8*)(&g_gameState)) + 0x522C))) != 9)) &&
                     ((*((u32*)(((u8*)(&g_gameState)) + 0x522C))) != 10))
