@@ -104,7 +104,15 @@ Krom2RawAdd                         = 0x8001687C;
 
 // psyq/libapi/A91
 ChangeClearPAD                      = 0x8001688C;
+
+// psyq/libapi/SC2B
 SetConf                             = 0x8001689C;
+
+// psyq/libapi/FIRST
+firstfile                           = 0x80016BCC;
+
+// psyq/libapi/A66
+firstfile2                          = 0x80016E6C;
 
 // Other PSY-Q
 bcopy                               = 0x80016E7C;
