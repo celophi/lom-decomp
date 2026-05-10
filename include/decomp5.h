@@ -20,7 +20,7 @@ extern s32 D_8003EC70;
 extern s32 D_8003EC68;
 extern s32 D_8003EC24;
 extern s32 D_8003EC28;
-extern AkaoChannelState *D_8003EC5C;
+extern AkaoChannelState *g_akao_seq_channel0;
 extern void *D_8003EC58;
 extern u8 D_8004C2D0[];
 extern u8 D_8004D400[];
