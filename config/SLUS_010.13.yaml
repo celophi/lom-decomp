@@ -26,8 +26,10 @@ options:
 
   section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
 
-  symbol_addrs_path:
-    - config/symbol_addrs.txt
+  symbol_addrs_path:    
+    - config/symbols/shared_symbol_addrs.txt
+    - config/symbols/slus_01013_symbol_addrs.txt
+
   reloc_addrs_path:
     - config/relocations/slus_reloc_addrs.txt
 
