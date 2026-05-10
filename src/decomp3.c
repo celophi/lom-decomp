@@ -1059,8 +1059,8 @@ s32 func_800230C8(void* arg0, s32 arg1)
         {
             var_s2 = 0x43100;
         }
-        /* D_8003EC5C is a pointer to a struct with unk4 and unk1C */
-        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->unk0 & 0x40))
+        /* Channel 0 has any in-flight activity AND its "active" flag bit is set. */
+        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->flags & 0x40))
         {
             var_s2 += 0xFFFD0000;
         }
@@ -1107,7 +1107,7 @@ void func_800231E4(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         {
             var_a1 = 0x43100;
         }
-        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->unk0 & 0x40))
+        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->flags & 0x40))
         {
             var_a1 += 0xFFFD0000;
         }

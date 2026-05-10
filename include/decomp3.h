@@ -16,14 +16,6 @@ extern u8 D_8004B430[];
 
 typedef struct
 {
-    u32 unk0;
-    u32 unk4;
-    u32 pad[5]; /* padding up to offset 0x1C */
-    u32 unk1C;
-} D_8003EC5C_t;
-
-typedef struct
-{
     void* unk0;
     u32 unk4;
     u32 unk8;
@@ -46,7 +38,7 @@ typedef struct {
 extern s32 D_8004F794;
 extern s32 D_8004C170;
 extern u32 D_8004C150;
-extern D_8003EC5C_t* D_8003EC5C;
+extern AkaoChannelState* D_8003EC5C;
 extern CdlATV D_8003EC20;
 extern s32 D_8004F754;
 extern u8 D_8004C340[];

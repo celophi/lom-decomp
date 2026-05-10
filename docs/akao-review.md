@@ -55,20 +55,35 @@ would explain why this scratch is at 99.80% rather than 100%. A fix from
 `spu_dest_addr` to `sample_size` should be tested against the original asm
 before being committed; left as-is for now.
 
-## 2. `D_8003EC5C` is not actually a bank header
+## 2. `D_8003EC5C` is a channel-state pointer, not a bank header (DONE)
 
-`D_8003EC5C_t` is currently typedef'd with `unk0` as the magic-word slot —
-but `func_800230C8` reads `D_8003EC5C->unk0 & 0x40`, which is a flag-byte
-test, not a magic check. `D_8003EC5C` is set in `akao_driver_init_state` to
-point at `D_8004C260`, a 0x118-byte channel-state buffer.
+The previous `D_8003EC5C_t` typedef in [include/decomp3.h](../include/decomp3.h)
+modeled `unk0` as if it were the AKAO magic-word slot, but
+`func_800230C8` and `func_800231E4` actually read `D_8003EC5C->unk0 & 0x40`
+as a **flag-byte test**, not a magic check. `D_8003EC5C` is assigned in
+`akao_driver_init_state` to point at the first slot of `D_8004C260`, the
+0x118-byte sequence-channel-state buffer.
 
-**Proposal:** introduce a separate `AkaoChannelState` typedef and use it
-specifically for `D_8003EC5C`. This was deliberately *not* folded into the
-`AkaoBankHeader` consolidation in §1, since the two structs describe
-different things.
+Replaced with a new `AkaoChannelState` typedef in
+[include/akao.h](../include/akao.h):
 
-**Risk:** touches the two non-100% scratches `func_800230C8` and
-`func_800231E4`.
+| offset | field      | meaning                                          |
+|--------|------------|--------------------------------------------------|
+| 0x00   | `flags`    | channel flags (bit 0x40 = active/playing)        |
+| 0x04   | `unk4`     | tested non-zero alongside `unk1C` for in-flight  |
+| 0x1C   | `unk1C`    | tested non-zero alongside `unk4` for in-flight   |
+| 0x20.. | (padded)   | rest of the 0x118 channel slot, fields TBD       |
+
+Both [include/decomp3.h](../include/decomp3.h) and
+[include/decomp5.h](../include/decomp5.h) now declare
+`extern AkaoChannelState* D_8003EC5C;` (previously a `D_8003EC5C_t*` and a
+`void*` respectively — they were inconsistent across translation units).
+The two assignments in [src/decomp5.c](../src/decomp5.c)
+(akao_driver_init_state) cast through `u8*` since the surrounding code does
+raw byte-pointer arithmetic on the channel slot.
+
+Touches the same two non-100% scratches (`func_800230C8` 99.80%,
+`func_800231E4` 99.90%) as §1; needs an asm-diff re-measurement.
 
 ## 3. `akao_check_magic` prototype mismatch
 

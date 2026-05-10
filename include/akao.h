@@ -77,4 +77,27 @@ typedef struct AkaoBankHeader
     u8  reserved[0x1C];
 } AkaoBankHeader;
 
+/**
+ * Per-channel runtime state for the AKAO driver.
+ *
+ * The driver allocates 0x20 sequence-channel slots back-to-back starting at
+ * @c D_8004C260 and another 0x18 SFX-channel slots starting at @c D_8004B430.
+ * Each slot is 0x118 bytes wide. @c D_8003EC5C is a pointer set in
+ * akao_driver_init_state to alias the first sequence-channel slot; the
+ * streaming/XA-setup code-paths read this slot's flag byte to decide whether
+ * to relocate the SPU upload window.
+ *
+ * Only the fields that are actually inspected through @c D_8003EC5C are typed
+ * here; the remainder of the slot is padded out so @c sizeof reflects the
+ * real channel stride.
+ */
+typedef struct AkaoChannelState
+{
+    u32 flags;        /* 0x00: bit 0x40 set ⇒ channel is active/playing */
+    u32 unk4;         /* 0x04: tested non-zero alongside unk1C            */
+    u8  _pad08[0x14]; /* 0x08 - 0x1B                                       */
+    u32 unk1C;        /* 0x1C: tested non-zero alongside unk4              */
+    u8  _pad20[0xF8]; /* 0x20 - 0x117                                      */
+} AkaoChannelState;  /* total: 0x118                                       */
+
 #endif

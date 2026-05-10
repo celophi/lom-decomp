@@ -289,7 +289,7 @@ void akao_driver_init_state(void)
     *((u32*)off(a0, 0x50)) = 0x7F0000;
     D_8003EC58 = a2;
     a2 += 0x58;
-    D_8003EC5C = a0;
+    D_8003EC5C = (AkaoChannelState *)a0;
     D_8003EC28 = 0;
     D_8003EC24 = 0;
     D_8003EC70 = 0;
@@ -363,7 +363,7 @@ void akao_driver_init_state(void)
         } while ((a3 & 0xFFFF) < 0x18);
     }
     {
-        u8* a0_ptr = D_8003EC5C;
+        u8* a0_ptr = (u8*)D_8003EC5C;
         u8* v0_ptr = D_8004D400;
         u8* v1_ptr = D_8004F750;
         a0 = a0_ptr;
