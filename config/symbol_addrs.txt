@@ -90,6 +90,9 @@ write                               = 0x8001682C;
 // psyq/libapi/A54
 close                               = 0x8001683C;
 
+// psyq/libapi/A67
+nextfile                            = 0x8001684C;
+
 // psyq/libapi/A81
 Krom2RawAdd                         = 0x8001687C;
 
