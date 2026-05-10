@@ -229,6 +229,7 @@ SRCS_G0 := \
 	src/psyq/libcard/C112.c \
 	src/psyq/libapi/C159.c \
 	src/psyq/libapi/A08.c \
+	src/psyq/libapi/A09.c \
 	src/unk3.c \
 	src/unk5.c \
 	src/unk8.c \
