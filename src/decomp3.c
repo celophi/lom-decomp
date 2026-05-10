@@ -175,7 +175,8 @@ void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 };
 
 /**
- * @brief AKAO command 0x24 — play SFX from a caller-supplied AKAO buffer (magic-checked); same arg shape as akao_play_sfx (24/8/7-bit).
+ * @brief AKAO command 0x24 — play SFX from a caller-supplied AKAO buffer (magic-checked); same arg shape as
+ * akao_play_sfx (24/8/7-bit).
  *
  * @see https://decomp.me/scratch/FFGei (100%)
  */
@@ -947,7 +948,8 @@ s32 akao_streaming_upload_tick(s32 arg0, u32 arg1, s32 arg2)
             if (g_akao_streaming_state.unkC == 0)
             {
                 temp_a0_2 = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
-                akao_relocate_articulations(temp_a0_2, temp_a0_2, g_akao_bank_staging.spu_dest_addr, g_akao_bank_staging.articulation_count);
+                akao_relocate_articulations(temp_a0_2, temp_a0_2, g_akao_bank_staging.spu_dest_addr,
+                                            g_akao_bank_staging.articulation_count);
             }
         }
     }
@@ -1229,7 +1231,7 @@ s32 akao_upload_xa_program(void* arg0, s32 arg1)
             var_s2 = 0x43100;
         }
         /* Channel 0 has any in-flight activity AND its "active" flag bit is set. */
-        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->flags & 0x40))
+        if (((g_akao_seq_channel0->unk4 | g_akao_seq_channel0->unk1C) != 0) && (g_akao_seq_channel0->flags & 0x40))
         {
             var_s2 += 0xFFFD0000;
         }
@@ -1267,33 +1269,41 @@ s32 akao_cmd_ed(s32 arg0, s32 arg1)
 /**
  * @brief AKAO command 0xEC — magic-checked AKAO buffer with mode flags.
  *
- * Picks a hardcoded SPU base (@c 0x50900 if @p arg2 != 0, else @c 0x43100),
- * biases by @c 0xFFFD0000 when channel 0's flags are active and busy, then
- * dispatches with (buf*, 8-bit packed into <<8, spu_base, arg3).
+ * Picks a hardcoded SPU base (@c 0x50900 if @p upper_slot != 0, else
+ * @c 0x43100), biases by @c 0xFFFD0000 when channel 0 is active and busy,
+ * then dispatches with (buf, 8-bit packed into <<8, spu_base, arg3).
+ *
+ * @param buf        Pointer to an AKAO buffer in main RAM (validated via
+ *                   akao_check_magic).
+ * @param arg1       8-bit value packed into bits 8..15 of slot 1. TODO:
+ *                   meaning unknown.
+ * @param upper_slot Selects the upper SPU slot (non-zero) vs the lower slot.
+ * @param arg3       Passed through verbatim into slot 3. TODO: meaning
+ *                   unknown.
  *
  * @see https://decomp.me/scratch/g4cPG (99.90%)
  */
-void akao_cmd_ec(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void akao_cmd_ec(void* buf, s32 arg1, s32 upper_slot, s32 arg3)
 {
-    s32 var_a1;
+    s32 spu_base;
 
-    if (akao_check_magic(arg0) == 0)
+    if (akao_check_magic(buf) != 0)
     {
-        var_a1 = 0x50900;
-        if (arg2 == 0)
-        {
-            var_a1 = 0x43100;
-        }
-        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->flags & 0x40))
-        {
-            var_a1 += 0xFFFD0000;
-        }
-        g_akaoCmdParams[0] = (void*)(arg0);
-        g_akaoCmdParams[1] = (void*)((s32)((arg1 & 0xFF) << 8));
-        g_akaoCmdParams[2] = (void*)(var_a1);
-        g_akaoCmdParams[3] = (void*)(arg3);
-        akao_send_command(0xEC);
+        return;
     }
+
+    spu_base = upper_slot == 0 ? 0x43100 : 0x50900;
+
+    if (((AKAO_CHANNEL_STATE->unk4 | AKAO_CHANNEL_STATE->unk1C) != 0) && (AKAO_CHANNEL_STATE->flags & 0x40))
+    {
+        spu_base += 0xFFFD0000;
+    }
+
+    g_akaoCmdParams[0] = (void*)(buf);
+    g_akaoCmdParams[1] = (void*)((s32)((arg1 & 0xFF) << 8));
+    g_akaoCmdParams[2] = (void*)(spu_base);
+    g_akaoCmdParams[3] = (void*)(arg3);
+    akao_send_command(0xEC);
 }
 
 /**

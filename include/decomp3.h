@@ -45,7 +45,7 @@ typedef struct {
 extern s32 D_8004F794;
 extern s32 D_8004C170;
 extern u32 D_8004C150;
-extern AkaoChannelState* D_8003EC5C;
+extern AkaoChannelState* g_akao_seq_channel0;
 extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
 extern u8 D_8004C340[];
@@ -63,6 +63,8 @@ extern AkaoStreamingState g_akao_streaming_state;
 extern AkaoBankHeader g_akao_bank_staging;
 
 extern AkaoXaTracker g_akao_xa_tracker;
+
+#define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
 
 extern s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion);
 
