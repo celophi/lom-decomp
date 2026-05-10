@@ -838,7 +838,7 @@ u32 cdrom_process_state(void)
                 cdSystemPtr = &CD_SYSTEM;
                 if (g_cdAudioReady != 0)
                 {
-                    FUN_80022400(3); // Audio function
+                    akao_cmd_99_9b_9d_9f(3); // Audio function
                 }
             }
 
@@ -2254,7 +2254,7 @@ void cdrom_reset(void)
 
     if (g_cdAudioReady != 0)
     {
-        FUN_80023010();
+        akao_cmd_e2();
     }
 
     CD_SYSTEM.audioEnabled = 0;

@@ -24,8 +24,8 @@ s32 FUN_80015c58(void)
         func_80015D6C(temp_v0);
     } while (D_8010D018 == 0);
     func_800A379C();
-    FUN_80022aa8();
-    FUN_80022ac8();
+    akao_cmd_f0();
+    akao_cmd_f1();
     result = D_8010D018;
     if (result < 5)
     {
@@ -113,8 +113,8 @@ void func_80015D6C(void* arg0)
     ((u8*)new_var2)[0x13E] = 0;             // FIX 3: sb [0x13e] standalone
     ((u8*)new_var2)[0x90] = 0 & 0xFFFFFFFF; // FIX 3: moved before func_800158E0
     func_800158E0();                        // FIX 3: [0x90] becomes delay slot
-    FUN_80022aa8();
-    FUN_80022ac8();
+    akao_cmd_f0();
+    akao_cmd_f1();
     DrawSync(0);
     VSync(0);
     SetDispMask(0);

@@ -38,7 +38,7 @@ s32 akao_register_bank(AkaoSeqHeader* bank)
 {
     s32 temp_v0;
 
-    temp_v0 = akao_check_magic();
+    temp_v0 = akao_check_magic((s32*)bank);
     if (temp_v0 == 0)
     {
         func_80023BB8((s32)bank + sizeof(AkaoSeqHeader));
@@ -60,7 +60,7 @@ s32 akao_register_bank(AkaoSeqHeader* bank)
  */
 void akao_play_song(s32 seqData)
 {
-    g_akaoCmdParams[0] = seqData;
+    g_akaoCmdParams[0] = (void*)(seqData);
     akao_send_command(0x10);
 }
 
@@ -77,7 +77,7 @@ void akao_play_song(s32 seqData)
  */
 void akao_stop_song(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     akao_send_command(0x11);
 }
 
@@ -98,25 +98,25 @@ void akao_cmd_40(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/c2C3m
  */
-void func_800220B0(s32 arg0, s32 arg1)
+void akao_cmd_14(s32 arg0, s32 arg1)
 {
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
-    g_akaoCmdParams[2] = 0;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
+    g_akaoCmdParams[2] = (void*)(0);
     akao_send_command(0x14);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/d6xXt
  */
-s32 func_800220E4(s32 arg0, s32 arg1)
+s32 akao_cmd_19_c0(s32 arg0, s32 arg1)
 {
     s32 temp_v0;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_v0 = akao_send_command(0x19);
-    g_akaoCmdParams[0] = (s32)(arg1 & 0x7F);
-    g_akaoCmdParams[3] = 0;
+    g_akaoCmdParams[0] = (void*)((s32)(arg1 & 0x7F));
+    g_akaoCmdParams[3] = (void*)(0);
     akao_send_command(0xC0);
     return temp_v0;
 }
@@ -124,10 +124,10 @@ s32 func_800220E4(s32 arg0, s32 arg1)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/jigab
  */
-void func_8002213C(s32 arg0, s32 arg1)
+void akao_cmd_12(s32 arg0, s32 arg1)
 {
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
     akao_send_command(0x12);
 }
 
@@ -156,20 +156,20 @@ void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
     s32 temp_a2;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = (s32)(arg0 & 0x3FF);
+    g_akaoCmdParams[0] = (void*)((s32)(arg0 & 0x3FF));
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0xFF;
     temp_a3 = arg3 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     akao_send_command(0x20);
 };
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/FFGei
  */
-s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 akao_play_sfx_from_buffer(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 result = akao_check_magic(arg0);
 
@@ -178,10 +178,10 @@ s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         return result;
     }
 
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1 & 0xFFFFFF;
-    g_akaoCmdParams[2] = arg2 & 0xFF;
-    g_akaoCmdParams[3] = arg3 & 0x7F;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1 & 0xFFFFFF);
+    g_akaoCmdParams[2] = (void*)(arg2 & 0xFF);
+    g_akaoCmdParams[3] = (void*)(arg3 & 0x7F);
     akao_send_command(0x24);
 
     return arg0;
@@ -190,22 +190,22 @@ s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/lu9nS
  */
-void func_80022240(s32 arg0, s32 arg1)
+void akao_cmd_21(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     akao_send_command(0x21);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/0mLzI
  */
-void func_8002227C(s32 arg0)
+void akao_stop_sfx_by_id(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0x3FF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0x3FF);
     akao_send_command(0x30);
 }
 
@@ -304,25 +304,25 @@ void akao_set_paused(s32 arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/x94md
  */
-void func_800223B0(s32 arg0)
+void akao_cmd_90(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     akao_send_command(0x90);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/y9TAf
  */
-void func_800223D8(s32 arg0)
+void akao_cmd_92(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     akao_send_command(0x92);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/qqSuG
  */
-void FUN_80022400(u32 param_1)
+void akao_cmd_99_9b_9d_9f(u32 param_1)
 {
     s32 var_a0;
 
@@ -348,7 +348,7 @@ void FUN_80022400(u32 param_1)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/iREFc
  */
-void func_8002246C(u32 arg0)
+void akao_cmd_98_9a_9c_9e(u32 arg0)
 {
     s32 var_a0;
 
@@ -374,360 +374,360 @@ void func_8002246C(u32 arg0)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/VTGCB
  */
-void func_800224D8(s32 arg0)
+void akao_cmd_a8(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0x7F;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0x7F);
     akao_send_command(0xA8);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/03hNO
  */
-void func_80022504(s32 arg0, s32 arg1)
+void akao_cmd_a9(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     akao_send_command(0xA9);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/C8UTP
  */
-void func_80022538(s32 arg0, s32 arg1, s32 arg2)
+void akao_cmd_a0(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     akao_send_command(0xA0);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/xMNn0
  */
-void func_8002257C(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void akao_cmd_a1(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 temp_a1;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a3 = arg3 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = arg2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(arg2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     akao_send_command(0xA1);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/AuyLX
  */
-void func_800225C4(s32 arg0)
+void akao_cmd_aa(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     akao_send_command(0xAA);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/IaBX9
  */
-void func_800225F0(s32 arg0, s32 arg1)
+void akao_cmd_ab(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     akao_send_command(0xAB);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/LhoLV
  */
-void func_80022624(s32 arg0, s32 arg1, s32 arg2)
+void akao_cmd_a2(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     akao_send_command(0xA2);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/Al5YT
  */
-void func_80022668(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void akao_cmd_a3(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 temp_a1;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a3 = arg3 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = arg2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(arg2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     akao_send_command(0xA3);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/e4D90
  */
-void func_800226B0(s32 arg0)
+void akao_cmd_ac(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     akao_send_command(0xAC);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/Fw2d9
  */
-void func_800226DC(s32 arg0, s32 arg1)
+void akao_cmd_ad(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     akao_send_command(0xAD);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/vHMVZ
  */
-s32 func_80022710(s32 arg0, s32 arg1, s32 arg2)
+s32 akao_cmd_a4(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     return akao_send_command(0xA4);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/exTVG
  */
-s32 func_80022754(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 akao_cmd_a5(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 temp_a1;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFFFFFF;
     temp_a3 = arg3 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = arg2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(arg2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     return akao_send_command(0xA5);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/QPqUd
  */
-s32 FUN_8002279c(s32 arg0, s32 arg1)
+s32 akao_cmd_c0(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0x7F;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xC0);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/cSIwP
  */
-s32 func_800227D0(s32 arg0, s32 arg1, s32 arg2)
+s32 akao_cmd_c1(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a2 = arg2 & 0x7F;
-    g_akaoCmdParams[1] = arg1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(arg1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     return akao_send_command(0xC1);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/PbMJC
  */
-s32 func_80022808(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 akao_cmd_c2(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 temp_a2;
     s32 temp_a3;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a2 = arg2 & 0x7F;
     temp_a3 = arg3 & 0x7F;
-    g_akaoCmdParams[1] = arg1;
-    g_akaoCmdParams[2] = temp_a2;
-    g_akaoCmdParams[3] = temp_a3;
+    g_akaoCmdParams[1] = (void*)(arg1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
+    g_akaoCmdParams[3] = (void*)(temp_a3);
     return akao_send_command(0xC2);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/BeJR1
  */
-s32 func_80022848(s32 arg0)
+s32 akao_cmd_c8(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     return akao_send_command(0xC8);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/yo40G
  */
-s32 func_80022870(s32 arg0, s32 arg1)
+s32 akao_cmd_c9(s32 arg0, s32 arg1)
 {
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
     return akao_send_command(0xC9);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/pLMBi
  */
-s32 func_800228A0(s32 arg0, s32 arg1, s32 arg2)
+s32 akao_cmd_ca(s32 arg0, s32 arg1, s32 arg2)
 {
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
-    g_akaoCmdParams[2] = arg2;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
+    g_akaoCmdParams[2] = (void*)(arg2);
     return akao_send_command(0xCA);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/klUxi
  */
-s32 func_800228D4(s32 arg0)
+s32 akao_cmd_d0(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     return akao_send_command(0xD0);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/XXHwt
  */
-s32 func_80022900(s32 arg0, s32 arg1)
+s32 akao_cmd_d1(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xD1);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/074UT
  */
-s32 func_80022934(s32 arg0, s32 arg1, s32 arg2)
+s32 akao_cmd_d2(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     return akao_send_command(0xD2);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/yJdLv
  */
-s32 func_80022970(s32 arg0)
+s32 akao_cmd_d4(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     return akao_send_command(0xD4);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/u6Eys
  */
-s32 func_8002299C(s32 arg0, s32 arg1)
+s32 akao_cmd_d5(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xD5);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/ITNFU
  */
-void func_800229D0(s32 arg0, s32 arg1, s32 arg2)
+void akao_cmd_d6(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     akao_send_command(0xD6);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/JS2nD
  */
-s32 func_80022A0C(s32 arg0)
+s32 akao_cmd_d8(s32 arg0)
 {
-    g_akaoCmdParams[0] = arg0 & 0xFF;
+    g_akaoCmdParams[0] = (void*)(arg0 & 0xFF);
     return akao_send_command(0xD8);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/YD6rZ
  */
-s32 func_80022A38(s32 arg0, s32 arg1)
+s32 akao_cmd_d9(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xD9);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/jzW0l
  */
-s32 func_80022A6C(s32 arg0, s32 arg1, s32 arg2)
+s32 akao_cmd_da(s32 arg0, s32 arg1, s32 arg2)
 {
     s32 temp_a1;
     s32 temp_a2;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = arg1 & 0xFF;
     temp_a2 = arg2 & 0xFF;
-    g_akaoCmdParams[1] = temp_a1;
-    g_akaoCmdParams[2] = temp_a2;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
+    g_akaoCmdParams[2] = (void*)(temp_a2);
     return akao_send_command(0xDA);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/dgbnE
  */
-s32 FUN_80022aa8(void)
+s32 akao_cmd_f0(void)
 {
     return akao_send_command(0xF0);
 }
@@ -735,7 +735,7 @@ s32 FUN_80022aa8(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/IMYAL
  */
-s32 FUN_80022ac8(void)
+s32 akao_cmd_f1(void)
 {
     return akao_send_command(0xF1);
 }
@@ -763,7 +763,7 @@ void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForComplet
 /**
  * decomp.me link (100%) https://decomp.me/scratch/ecQHb
  */
-s32 func_80022B48(void)
+s32 akao_get_xfer_state(void)
 {
     return D_8003EC4C;
 }
@@ -771,7 +771,7 @@ s32 func_80022B48(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/qBE70
  */
-s32 func_80022B58(void)
+s32 akao_reset_xfer_state(void)
 {
     D_8004F824 = 0;
     D_8004F750 |= 1;
@@ -781,7 +781,7 @@ s32 func_80022B58(void)
 /**
  * decomp.me link (98.59%) https://decomp.me/scratch/BEUjs
  */
-s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
+s32 akao_streaming_upload_tick(s32 arg0, u32 arg1, s32 arg2)
 {
     s32 temp_v0;
     u32 var_s0;
@@ -799,10 +799,10 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
             func_80029A0C(*(new_var = &arg0), &D_8004D3C0, 0x40U);
             arg0 += 0x40;
             arg1 -= 0x40;
-            D_8004F820.unk4 = (s32)D_8004D3C0.unk10;
-            D_8004F820.unk8 = (u32)D_8004D3C0.unk14;
-            D_8004F820.unk0 = (void*)((D_8004D3C0.unk18 * 0x10) + ((u32)(&D_8004C340)));
-            D_8004F820.unkC = (u32)(D_8004D3C0.unk1C * 0x10);
+            D_8004F820.unk4 = (s32)D_8004D3C0.spu_dest_addr;
+            D_8004F820.unk8 = (u32)D_8004D3C0.sample_size;
+            D_8004F820.unk0 = (void*)((D_8004D3C0.bank_id * 0x10) + ((u32)(&D_8004C340)));
+            D_8004F820.unkC = (u32)(D_8004D3C0.articulation_count * 0x10);
         }
         else
         {
@@ -828,8 +828,8 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
             D_8004F820.unkC -= var_s0;
             if (D_8004F820.unkC == 0)
             {
-                temp_a0_2 = (void*)((D_8004D3C0.unk18 * 0x10) + ((u32)(&D_8004C340)));
-                akao_relocate_articulations(temp_a0_2, temp_a0_2, D_8004D3C0.unk10, D_8004D3C0.unk1C);
+                temp_a0_2 = (void*)((D_8004D3C0.bank_id * 0x10) + ((u32)(&D_8004C340)));
+                akao_relocate_articulations(temp_a0_2, temp_a0_2, D_8004D3C0.spu_dest_addr, D_8004D3C0.articulation_count);
             }
         }
     }
@@ -868,7 +868,7 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/0f3IK
  */
-s32 func_80022D8C(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
+s32 akao_load_sequence(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
     akao_play_sequence_blocking(sequenceData, waitForCompletion);
     return 0;
@@ -877,7 +877,7 @@ s32 func_80022D8C(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/FWcdy
  */
-s32 func_80022DAC(void* arg0, s32 arg1, s32 arg2)
+s32 akao_upload_bank_slot(void* arg0, s32 arg1, s32 arg2)
 {
     s32 var_a2;
     s32 var_a3_2;
@@ -947,7 +947,7 @@ s32 func_80022DAC(void* arg0, s32 arg1, s32 arg2)
  */
 s32 func_80022ED8(void* arg0, s32 arg1, s32 arg2)
 {
-    func_80022DAC(arg0, arg1, arg2);
+    akao_upload_bank_slot(arg0, arg1, arg2);
     return 0;
 }
 
@@ -956,14 +956,14 @@ s32 func_80022ED8(void* arg0, s32 arg1, s32 arg2)
  */
 s32 func_80022EF8(void* arg0, s32 arg1, s32 arg2)
 {
-    func_80022DAC(arg0, arg1 + 3, arg2);
+    akao_upload_bank_slot(arg0, arg1 + 3, arg2);
     return 0;
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/hcfmi
  */
-s32 func_80022F18(s32 arg0, void* arg1)
+s32 akao_xa_setup_panning(s32 arg0, void* arg1)
 {
     s32 new_var;
     u32 temp_v0;
@@ -991,13 +991,13 @@ s32 func_80022F18(s32 arg0, void* arg1)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/vw9QX
  */
-void func_80022FAC(s32 arg0, s32 arg1, s32 arg2)
+void akao_cmd_e0(s32 arg0, s32 arg1, s32 arg2)
 {
     if (akao_check_magic(arg0) == 0)
     {
-        g_akaoCmdParams[0] = arg0;
-        g_akaoCmdParams[1] = (s32)((arg1 & 0xFF) << 8);
-        g_akaoCmdParams[2] = arg2;
+        g_akaoCmdParams[0] = (void*)(arg0);
+        g_akaoCmdParams[1] = (void*)((s32)((arg1 & 0xFF) << 8));
+        g_akaoCmdParams[2] = (void*)(arg2);
         akao_send_command(0xE0);
     }
 }
@@ -1005,7 +1005,7 @@ void func_80022FAC(s32 arg0, s32 arg1, s32 arg2)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/kd4bK
  */
-s32 FUN_80023010(void)
+s32 akao_cmd_e2(void)
 {
     return akao_send_command(0xE2);
 }
@@ -1013,38 +1013,38 @@ s32 FUN_80023010(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/3oPkP
  */
-s32 func_80023030(s32 arg0)
+s32 akao_cmd_e4_set_cd_volume(s32 arg0)
 {
-    g_akaoCmdParams[0] = (arg0 & 0x7F) << 8;
+    g_akaoCmdParams[0] = (void*)((arg0 & 0x7F) << 8);
     return akao_send_command(0xE4);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/7PxF8
  */
-s32 func_80023060(s32 arg0, s32 arg1)
+s32 akao_cmd_e5(s32 arg0, s32 arg1)
 {
     s32 temp_a1;
 
-    g_akaoCmdParams[0] = arg0;
+    g_akaoCmdParams[0] = (void*)(arg0);
     temp_a1 = (arg1 & 0x7F) << 8;
-    g_akaoCmdParams[1] = temp_a1;
+    g_akaoCmdParams[1] = (void*)(temp_a1);
     return akao_send_command(0xE5);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/XeUon
  */
-s32 func_80023098(s32 arg0)
+s32 akao_cmd_e6(s32 arg0)
 {
-    g_akaoCmdParams[0] = (arg0 & 0xFF) << 8;
+    g_akaoCmdParams[0] = (void*)((arg0 & 0xFF) << 8);
     return akao_send_command(0xE6);
 }
 
 /**
  * decomp.me link (99.80%) https://decomp.me/scratch/C06sg
  */
-s32 func_800230C8(void* arg0, s32 arg1)
+s32 akao_upload_xa_program(void* arg0, s32 arg1)
 {
     s32 temp_v0;
     s32 var_s2;
@@ -1059,17 +1059,23 @@ s32 func_800230C8(void* arg0, s32 arg1)
         {
             var_s2 = 0x43100;
         }
-        /* D_8003EC5C is a pointer to a struct with unk4 and unk1C */
-        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->unk0 & 0x40))
+        /* Channel 0 has any in-flight activity AND its "active" flag bit is set. */
+        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->flags & 0x40))
         {
             var_s2 += 0xFFFD0000;
         }
         var1 = arg0;
         arg0 = (u8*)arg0 + 0x40;
         SpuSetTransferStartAddr(var_s2);
-        /* Cast arg0 to byte pointer for arithmetic, then to ArgStruct for member access */
-        akao_spu_write(arg0, ((ArgStruct2*)var1)->unk10);
-        ((ArgStruct2*)var1)->unk20 = var_s2;
+        /*
+         * Note: this passes spu_dest_addr (offset 0x10) as the byte-count
+         * argument to akao_spu_write, which is suspicious — the analogous
+         * site in akao_upload_bank uses sample_size (offset 0x14) here. This
+         * mirrors the original ASM literally; it may explain why this scratch
+         * is at 99.80% rather than 100%. See docs/akao-review.md.
+         */
+        akao_spu_write(arg0, ((AkaoBankHeader*)var1)->spu_dest_addr);
+        ((AkaoBankHeader*)var1)->cached_spu_addr = var_s2;
         func_80029A0C(var1, &D_8004C150, 0x50);
         return temp_v0;
     }
@@ -1080,17 +1086,17 @@ s32 func_800230C8(void* arg0, s32 arg1)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/ULEGL
  */
-s32 func_800231AC(s32 arg0, s32 arg1)
+s32 akao_cmd_ed(s32 arg0, s32 arg1)
 {
-    g_akaoCmdParams[0] = (s32)((arg0 & 0xFF) << 8);
-    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[0] = (void*)((s32)((arg0 & 0xFF) << 8));
+    g_akaoCmdParams[1] = (void*)(arg1);
     return akao_send_command(0xED);
 }
 
 /**
  * decomp.me link (99.90%) https://decomp.me/scratch/g4cPG
  */
-void func_800231E4(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void akao_cmd_ec(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 var_a1;
 
@@ -1101,14 +1107,14 @@ void func_800231E4(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
         {
             var_a1 = 0x43100;
         }
-        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->unk0 & 0x40))
+        if (((D_8003EC5C->unk4 | D_8003EC5C->unk1C) != 0) && (D_8003EC5C->flags & 0x40))
         {
             var_a1 += 0xFFFD0000;
         }
-        g_akaoCmdParams[0] = arg0;
-        g_akaoCmdParams[1] = (s32)((arg1 & 0xFF) << 8);
-        g_akaoCmdParams[2] = var_a1;
-        g_akaoCmdParams[3] = arg3;
+        g_akaoCmdParams[0] = (void*)(arg0);
+        g_akaoCmdParams[1] = (void*)((s32)((arg1 & 0xFF) << 8));
+        g_akaoCmdParams[2] = (void*)(var_a1);
+        g_akaoCmdParams[3] = (void*)(arg3);
         akao_send_command(0xEC);
     }
 }
@@ -1116,7 +1122,7 @@ void func_800231E4(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/bRIJX
  */
-s32 func_800232A8(s32 arg0, u32 arg1)
+s32 akao_cmd_e8_start_xa_stream(s32 arg0, u32 arg1)
 {
     if (arg1 == 0)
     {
@@ -1124,8 +1130,8 @@ s32 func_800232A8(s32 arg0, u32 arg1)
     }
     SpuSetIRQ(0);
     SpuSetIRQAddr(0);
-    g_akaoCmdParams[0] = arg0;
-    g_akaoCmdParams[1] = arg1;
+    g_akaoCmdParams[0] = (void*)(arg0);
+    g_akaoCmdParams[1] = (void*)(arg1);
     D_8004F760.unk34 = -1;
     D_8004F760.unk20 = 0;
     D_8004F760.unk24 = 0;
@@ -1139,7 +1145,7 @@ s32 func_800232A8(s32 arg0, u32 arg1)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/gKZ5G
  */
-s32 func_80023334(void)
+s32 akao_xa_advance_frame(void)
 {
     u32 temp_v1;
 
@@ -1160,7 +1166,7 @@ s32 func_80023334(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/2DiS3
  */
-s32 func_800233B8(void)
+s32 akao_xa_get_position(void)
 {
     return D_8004F794;
 }

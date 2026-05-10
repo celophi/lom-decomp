@@ -108,10 +108,10 @@ typedef struct GoverFrameHalf {
 } GoverFrameHalf;
 
 
-extern void FUN_8002279c(undefined4 param_1, u_int param_2);
-extern void FUN_80022aa8(void);
-extern void FUN_80022ac8(void);
-extern void func_800224D8(s32);
+extern void akao_cmd_c0(undefined4 param_1, u_int param_2);
+extern void akao_cmd_f0(void);
+extern void akao_cmd_f1(void);
+extern void akao_cmd_a8(s32);
 extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);

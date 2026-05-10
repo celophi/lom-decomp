@@ -233,7 +233,7 @@ void func_800501AC(void)
 void func_800501CC(void)
 {
     akao_play_song(&D_8005D088);
-    FUN_8002279c(0, 0x7F);
+    akao_cmd_c0(0, 0x7F);
 }
 
 /**
