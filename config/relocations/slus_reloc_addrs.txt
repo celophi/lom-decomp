@@ -1,3 +1,7 @@
+// Prevent assigning a symbol in akao_upload_xa_program
+rom:0x13910 reloc:MIPS_NONE symbol:g_akao_seq_channel0
+rom:0x13914 reloc:MIPS_NONE symbol:g_akao_seq_channel0
+
 // Prevent assigning a symbol in akao_cmd_ec
 rom:0x13A28 reloc:MIPS_NONE symbol:g_akao_seq_channel0
 rom:0x13A2C reloc:MIPS_NONE symbol:g_akao_seq_channel0

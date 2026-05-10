@@ -1231,7 +1231,7 @@ s32 akao_upload_xa_program(void* arg0, s32 arg1)
             var_s2 = 0x43100;
         }
         /* Channel 0 has any in-flight activity AND its "active" flag bit is set. */
-        if (((g_akao_seq_channel0->unk4 | g_akao_seq_channel0->unk1C) != 0) && (g_akao_seq_channel0->flags & 0x40))
+        if (((AKAO_CHANNEL_STATE->unk4 | AKAO_CHANNEL_STATE->unk1C) != 0) && (AKAO_CHANNEL_STATE->flags & 0x40))
         {
             var_s2 += 0xFFFD0000;
         }
