@@ -675,11 +675,18 @@ McxStartCom                         = 0x800319D8;
 // Globals
 g_gameState                         = 0x8003522C;
 g_DiscValidationId                  = 0x80035230;
+g_akao_cdmix                        = 0x8003EC20;
+g_akao_spu_xfer_pending             = 0x8003EC4C;
 g_GfxDoubleBuffer                   = 0x80042CA0;
 g_GfxPrimaryFrame                   = 0x80042E20;
 g_previousGameState                 = 0x80042FB0;
 g_gameDataBasePtr                   = 0x800435C8;
+g_sfx_channels                      = 0x8004B430;
+g_akao_bank_staging                 = 0x8004D3C0;
 g_akaoCmdParams                     = 0x8004D430;
+g_akao_driver_flags                 = 0x8004F750;
+g_akao_xa_tracker                   = 0x8004F760;
+g_akao_streaming_state              = 0x8004F820;
 
 // Globals
 g_cdAudioReady                      = 0x801ED591;

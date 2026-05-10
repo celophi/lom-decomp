@@ -18,68 +18,81 @@
  * Names follow the convention @c AKAO_CMD_<HEX> with a descriptive suffix
  * only where the LOM call shape makes the meaning unambiguous; otherwise
  * the hex byte stands on its own and the precise semantics are TBD.
+ *
+ * Where a wrapper masks a parameter to a specific bit width, the inferred
+ * meaning of that slot follows AKAO conventions:
+ *  - 7-bit  ⇒ volume / pan envelope value (0–127)
+ *  - 8-bit  ⇒ byte parameter (often a duration in ticks, or a count)
+ *  - 10-bit ⇒ sound or sequence id (0–1023)
+ *  - 24-bit ⇒ wide param (frequency / pitch / fade duration)
+ *  - <<8    ⇒ 16-bit value packed into the high byte of a word
+ *
+ * The 0xA0..0xAD block follows a clean per-channel / master-global pairing:
+ * 0xA0..0xA5 take a leading channel index, 0xA8..0xAD apply the same effect
+ * globally. Within that block, the byte/7-bit/8-bit width pattern hints at
+ * the effect category (volume vs pan vs pitch).
  */
 typedef enum AkaoCmd
 {
-    AKAO_CMD_PLAY_SONG          = 0x10, /**< play sequence; slot 0 = AKAO buffer pointer */
-    AKAO_CMD_STOP_SONG          = 0x11, /**< stop active sequence (callers pass 0)        */
-    AKAO_CMD_12                 = 0x12, /**< 2 args: (?, ?) — TBD                         */
-    AKAO_CMD_14                 = 0x14, /**< 3 args: (?, ?, 0) — TBD                      */
-    AKAO_CMD_19                 = 0x19, /**< 1 arg; paired with 0xC0                      */
-    AKAO_CMD_PLAY_SFX           = 0x20, /**< play SFX: (id10, p24, p8, vol7)              */
-    AKAO_CMD_21                 = 0x21, /**< 2 args: (id, p24) — TBD                      */
-    AKAO_CMD_PLAY_SFX_FROM_BUF  = 0x24, /**< play SFX from caller-supplied AKAO buffer    */
-    AKAO_CMD_STOP_SFX_BY_ID     = 0x30, /**< stop active SFX matching 10-bit sound id     */
-    AKAO_CMD_GLOBAL_STOP        = 0x40, /**< zero-arg "silence everything"                */
-    AKAO_CMD_PAUSE              = 0x80, /**< pause active sequence                        */
-    AKAO_CMD_RESUME             = 0x81, /**< resume paused sequence                       */
-    AKAO_CMD_90                 = 0x90, /**< 1 arg — TBD                                  */
-    AKAO_CMD_92                 = 0x92, /**< 1 arg — TBD                                  */
-    AKAO_CMD_98                 = 0x98, /**< zero-arg; selected by 99/9b/9d/9f wrapper    */
-    AKAO_CMD_99                 = 0x99,
-    AKAO_CMD_9A                 = 0x9A,
-    AKAO_CMD_9B                 = 0x9B,
-    AKAO_CMD_9C                 = 0x9C,
-    AKAO_CMD_9D                 = 0x9D,
-    AKAO_CMD_9E                 = 0x9E,
-    AKAO_CMD_9F                 = 0x9F,
-    AKAO_CMD_A0                 = 0xA0, /**< per-channel: (ch, p24, val7)                 */
-    AKAO_CMD_A1                 = 0xA1, /**< per-channel: (ch, p24, p, val7)              */
-    AKAO_CMD_A2                 = 0xA2, /**< per-channel: (ch, p24, val8)                 */
-    AKAO_CMD_A3                 = 0xA3, /**< per-channel: (ch, p24, p, val8)              */
-    AKAO_CMD_A4                 = 0xA4, /**< per-channel: (ch, p24, val8)                 */
-    AKAO_CMD_A5                 = 0xA5, /**< per-channel: (ch, p24, p, val8)              */
-    AKAO_CMD_A8                 = 0xA8, /**< master/global: (val7)                        */
-    AKAO_CMD_A9                 = 0xA9, /**< master/global: (p, val7)                     */
-    AKAO_CMD_AA                 = 0xAA, /**< master/global: (val8)                        */
-    AKAO_CMD_AB                 = 0xAB, /**< master/global: (p, val8)                     */
-    AKAO_CMD_AC                 = 0xAC, /**< master/global: (val8)                        */
-    AKAO_CMD_AD                 = 0xAD, /**< master/global: (p, val8)                     */
-    AKAO_CMD_C0                 = 0xC0, /**< 2 args ending in 7-bit value                 */
-    AKAO_CMD_C1                 = 0xC1, /**< 3 args ending in 7-bit value                 */
-    AKAO_CMD_C2                 = 0xC2, /**< 4 args; two 7-bit values                     */
-    AKAO_CMD_C8                 = 0xC8, /**< 1 arg                                        */
-    AKAO_CMD_C9                 = 0xC9, /**< 2 args                                       */
-    AKAO_CMD_CA                 = 0xCA, /**< 3 args                                       */
-    AKAO_CMD_D0                 = 0xD0, /**< 1 arg (8-bit)                                */
-    AKAO_CMD_D1                 = 0xD1, /**< 2 args (?, 8-bit)                            */
-    AKAO_CMD_D2                 = 0xD2, /**< 3 args (?, 8-bit, 8-bit)                     */
-    AKAO_CMD_D4                 = 0xD4, /**< 1 arg (8-bit)                                */
-    AKAO_CMD_D5                 = 0xD5, /**< 2 args (?, 8-bit)                            */
-    AKAO_CMD_D6                 = 0xD6, /**< 3 args (?, 8-bit, 8-bit)                     */
-    AKAO_CMD_D8                 = 0xD8, /**< 1 arg (8-bit)                                */
-    AKAO_CMD_D9                 = 0xD9, /**< 2 args (?, 8-bit)                            */
-    AKAO_CMD_DA                 = 0xDA, /**< 3 args (?, 8-bit, 8-bit)                     */
-    AKAO_CMD_E0                 = 0xE0, /**< takes a magic-checked AKAO buffer pointer    */
-    AKAO_CMD_E2                 = 0xE2, /**< zero-arg                                     */
-    AKAO_CMD_E4_SET_CD_VOLUME   = 0xE4, /**< CD/XA channel mix volume                     */
-    AKAO_CMD_E5                 = 0xE5, /**< 2 args                                       */
-    AKAO_CMD_E6                 = 0xE6, /**< 1 arg                                        */
-    AKAO_CMD_E8_START_XA_STREAM = 0xE8, /**< begin XA-streamed AKAO playback              */
-    AKAO_CMD_EC                 = 0xEC, /**< takes a magic-checked AKAO buffer pointer    */
-    AKAO_CMD_ED                 = 0xED, /**< 2 args                                       */
-    AKAO_CMD_F0                 = 0xF0, /**< zero-arg query, return value used            */
-    AKAO_CMD_F1                 = 0xF1  /**< zero-arg query, return value used            */
+    AKAO_CMD_PLAY_SONG          = 0x10, /**< play sequence; slot 0 = AKAO buffer pointer    */
+    AKAO_CMD_STOP_SONG          = 0x11, /**< stop active sequence (callers pass 0)          */
+    AKAO_CMD_12                 = 0x12, /**< (a, b) — both unmasked; semantics TBD          */
+    AKAO_CMD_14                 = 0x14, /**< (a, b, 0) — third slot forced 0; semantics TBD */
+    AKAO_CMD_19                 = 0x19, /**< (a) — issued just before 0xC0 in akao_cmd_19_c0 */
+    AKAO_CMD_PLAY_SFX           = 0x20, /**< (id10, p24, p8, vol7) — sound id + 24-bit param + byte param + volume */
+    AKAO_CMD_21                 = 0x21, /**< (id, p24) — sound id + 24-bit param            */
+    AKAO_CMD_PLAY_SFX_FROM_BUF  = 0x24, /**< (buf*, p24, p8, vol7) — magic-checked AKAO buffer + same shape as 0x20 */
+    AKAO_CMD_STOP_SFX_BY_ID     = 0x30, /**< (id10) — stop SFX matching the 10-bit sound id */
+    AKAO_CMD_GLOBAL_STOP        = 0x40, /**< zero-arg "silence everything"                  */
+    AKAO_CMD_PAUSE              = 0x80, /**< zero-arg — pause active sequence               */
+    AKAO_CMD_RESUME             = 0x81, /**< zero-arg — resume paused sequence              */
+    AKAO_CMD_90                 = 0x90, /**< (a) — semantics TBD                            */
+    AKAO_CMD_92                 = 0x92, /**< (a) — semantics TBD                            */
+    AKAO_CMD_98                 = 0x98, /**< zero-arg; selected by akao_cmd_98_9a_9c_9e (default branch) */
+    AKAO_CMD_99                 = 0x99, /**< zero-arg; selected by akao_cmd_99_9b_9d_9f (default branch) */
+    AKAO_CMD_9A                 = 0x9A, /**< zero-arg; akao_cmd_98_9a_9c_9e branch 1        */
+    AKAO_CMD_9B                 = 0x9B, /**< zero-arg; akao_cmd_99_9b_9d_9f branch 1        */
+    AKAO_CMD_9C                 = 0x9C, /**< zero-arg; akao_cmd_98_9a_9c_9e branch 2        */
+    AKAO_CMD_9D                 = 0x9D, /**< zero-arg; akao_cmd_99_9b_9d_9f branch 2        */
+    AKAO_CMD_9E                 = 0x9E, /**< zero-arg; akao_cmd_98_9a_9c_9e branch 3        */
+    AKAO_CMD_9F                 = 0x9F, /**< zero-arg; akao_cmd_99_9b_9d_9f branch 3        */
+    AKAO_CMD_A0                 = 0xA0, /**< per-channel: (ch, fade24, target_vol7)         */
+    AKAO_CMD_A1                 = 0xA1, /**< per-channel: (ch, fade24, p, target_vol7)      */
+    AKAO_CMD_A2                 = 0xA2, /**< per-channel: (ch, fade24, target_pan8)         */
+    AKAO_CMD_A3                 = 0xA3, /**< per-channel: (ch, fade24, p, target_pan8)      */
+    AKAO_CMD_A4                 = 0xA4, /**< per-channel: (ch, fade24, target_byte8)        */
+    AKAO_CMD_A5                 = 0xA5, /**< per-channel: (ch, fade24, p, target_byte8)     */
+    AKAO_CMD_A8                 = 0xA8, /**< master/global: (vol7) — global vol counterpart of 0xA0 */
+    AKAO_CMD_A9                 = 0xA9, /**< master/global: (a, vol7) — counterpart of 0xA1 */
+    AKAO_CMD_AA                 = 0xAA, /**< master/global: (pan8) — global pan counterpart of 0xA2 */
+    AKAO_CMD_AB                 = 0xAB, /**< master/global: (a, pan8) — counterpart of 0xA3 */
+    AKAO_CMD_AC                 = 0xAC, /**< master/global: (byte8) — counterpart of 0xA4   */
+    AKAO_CMD_AD                 = 0xAD, /**< master/global: (a, byte8) — counterpart of 0xA5 */
+    AKAO_CMD_C0                 = 0xC0, /**< (a, vol7) — possibly per-channel transpose / pitch-bend */
+    AKAO_CMD_C1                 = 0xC1, /**< (a, b, vol7) — 0xC0 with extra parameter        */
+    AKAO_CMD_C2                 = 0xC2, /**< (a, b, vol7, vol7) — 0xC0 with two trailing 7-bit values */
+    AKAO_CMD_C8                 = 0xC8, /**< (a) — unmasked single arg; semantics TBD       */
+    AKAO_CMD_C9                 = 0xC9, /**< (a, b) — unmasked args; semantics TBD          */
+    AKAO_CMD_CA                 = 0xCA, /**< (a, b, c) — unmasked args; semantics TBD       */
+    AKAO_CMD_D0                 = 0xD0, /**< (byte8)                                        */
+    AKAO_CMD_D1                 = 0xD1, /**< (a, byte8)                                     */
+    AKAO_CMD_D2                 = 0xD2, /**< (a, byte8, byte8)                              */
+    AKAO_CMD_D4                 = 0xD4, /**< (byte8)                                        */
+    AKAO_CMD_D5                 = 0xD5, /**< (a, byte8)                                     */
+    AKAO_CMD_D6                 = 0xD6, /**< (a, byte8, byte8)                              */
+    AKAO_CMD_D8                 = 0xD8, /**< (byte8)                                        */
+    AKAO_CMD_D9                 = 0xD9, /**< (a, byte8)                                     */
+    AKAO_CMD_DA                 = 0xDA, /**< (a, byte8, byte8)                              */
+    AKAO_CMD_E0                 = 0xE0, /**< (buf*, packed16, c) — magic-checked AKAO buffer + 16-bit packed param */
+    AKAO_CMD_E2                 = 0xE2, /**< zero-arg                                       */
+    AKAO_CMD_E4_SET_CD_VOLUME   = 0xE4, /**< (vol_packed16) — CD/XA channel mix volume      */
+    AKAO_CMD_E5                 = 0xE5, /**< (a, vol_packed16) — 7-bit value packed into <<8 */
+    AKAO_CMD_E6                 = 0xE6, /**< (val_packed16) — 8-bit value packed into <<8   */
+    AKAO_CMD_E8_START_XA_STREAM = 0xE8, /**< begin XA-streamed AKAO playback                */
+    AKAO_CMD_EC                 = 0xEC, /**< (buf*, packed16, var, d) — magic-checked AKAO buffer with mode flags */
+    AKAO_CMD_ED                 = 0xED, /**< (val_packed16, b) — 8-bit value packed into <<8 + extra arg */
+    AKAO_CMD_F0                 = 0xF0, /**< zero-arg query; return value consumed by caller */
+    AKAO_CMD_F1                 = 0xF1  /**< zero-arg query; return value consumed by caller */
 } AkaoCmd;
 
 /**
@@ -160,7 +173,7 @@ typedef struct AkaoBankHeader
  * Per-channel runtime state for the AKAO driver.
  *
  * The driver allocates 0x20 sequence-channel slots back-to-back starting at
- * @c D_8004C260 and another 0x18 SFX-channel slots starting at @c D_8004B430.
+ * @c D_8004C260 and another 0x18 SFX-channel slots starting at @c g_sfx_channels.
  * Each slot is 0x118 bytes wide. @c D_8003EC5C is a pointer set in
  * akao_driver_init_state to alias the first sequence-channel slot; the
  * streaming/XA-setup code-paths read this slot's flag byte to decide whether
