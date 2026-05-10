@@ -143,9 +143,9 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
 
     gover_load_image_from_cd(imageResourceIndex + 0xFFC, (VramDstCoords*)(&rect), cdLoadAddr);
 
-    FUN_80022aa8();
-    FUN_80022ac8();
-    func_800224D8(0x7F);
+    akao_cmd_f0();
+    akao_cmd_f1();
+    akao_cmd_a8(0x7F);
 
     if (audioClipIndex != -1)
     {
@@ -158,7 +158,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
         func_800A368C(musicResourceIndex, 0);
         D_8011588C = 0x7F;
         func_800A380C();
-        FUN_8002279c(0, 0x7F);
+        akao_cmd_c0(0, 0x7F);
     }
 
     // Begin a 4-per-frame fade-in (0 -> 0x80); gover_run flips the sign on input.
@@ -227,7 +227,7 @@ void gover_run(void)
             p_d40708 = &g_fadeStep;
             if ((g_fadeLevel == 128) && (D_80122988 & 0x260))
             {
-                func_800227D0(0, 0x20, 0);
+                akao_cmd_c1(0, 0x20, 0);
                 *p_d40708 = -4;
             }
             if (g_fadeLevel == (0 & 0xFF))
@@ -253,8 +253,8 @@ void gover_run(void)
     DrawSync(0);
     VSync(0);
     func_800158E0();
-    FUN_80022aa8();
-    FUN_80022ac8();
+    akao_cmd_f0();
+    akao_cmd_f1();
     SetDispMask(0);
     D_8003EC90 = 0;
     func_800AA02C();

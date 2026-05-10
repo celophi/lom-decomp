@@ -12,7 +12,7 @@
  *
  * Slot 0 is dual-purpose: most opcodes treat it as a scalar (channel index,
  * sound id, volume), but several wrappers (akao_play_song, akao_register_bank,
- * func_80022FAC opcode 0xE0, func_800231E4 opcode 0xEC) store an
+ * akao_cmd_e0 opcode 0xE0, akao_cmd_ec opcode 0xEC) store an
  * AkaoSeqHeader-compatible **buffer pointer** there. Typed @c void* to
  * acknowledge that dual use; scalar stores rely on GCC 2.7.2's permissive
  * implicit int→pointer conversion.
@@ -72,20 +72,20 @@ s32 akao_register_bank(AkaoSeqHeader* bank);
 void akao_play_song(s32 seqData);
 void akao_stop_song(s32 arg0);
 void akao_cmd_40(void);
-void func_800220B0(s32 arg0, s32 arg1);
-s32 func_800220E4(s32 arg0, s32 arg1);
-void func_8002213C(s32 arg0, s32 arg1);
+void akao_cmd_14(s32 arg0, s32 arg1);
+s32 akao_cmd_19_c0(s32 arg0, s32 arg1);
+void akao_cmd_12(s32 arg0, s32 arg1);
 void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-s32 func_800221BC(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-void func_80022240(s32 arg0, s32 arg1);
-void func_8002227C(s32 arg0);
+s32 akao_play_sfx_from_buffer(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
+void akao_cmd_21(s32 arg0, s32 arg1);
+void akao_stop_sfx_by_id(s32 arg0);
 s32 func_800222A8(void);
 s32 func_80022310(s32 arg0);
 void akao_set_paused(s32 arg0);
-void func_800223B0(s32 arg0);
-void func_800223D8(s32 arg0);
-void FUN_80022400(u32 param_1);
-void func_8002246C(u32 arg0);
+void akao_cmd_90(s32 arg0);
+void akao_cmd_92(s32 arg0);
+void akao_cmd_99_9b_9d_9f(u32 param_1);
+void akao_cmd_98_9a_9c_9e(u32 arg0);
 
 /**
  * Central dispatcher for the AKAO sound driver. Each high-level wrapper

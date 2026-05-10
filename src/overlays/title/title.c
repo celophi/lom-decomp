@@ -78,7 +78,7 @@ s32 RunTitle(s32 arg0)
         }
         else
         {
-            func_800227D0(0, 0x3C, 0);
+            akao_cmd_c1(0, 0x3C, 0);
             LoadMenuLayout(-1);
             D_8003EC9C = const_ff;
             temp1 = rand();
@@ -352,7 +352,7 @@ void StopTitleMusic(void)
 void StartTitleMusic(void)
 {
     akao_play_song(&D_8003ECA0);
-    FUN_8002279c(0, 0x7F);
+    akao_cmd_c0(0, 0x7F);
 }
 
 /**

@@ -975,12 +975,12 @@ void cdrom_restore_callbacks(void);
  */
 s32 cdrom_enter_recovery_mode(void);
 
-extern void func_800227D0(u32 param_1, u32 param_2, u32 param_3);
-extern void FUN_80022400(u_int param_1);
+extern void akao_cmd_c1(u32 param_1, u32 param_2, u32 param_3);
+extern void akao_cmd_99_9b_9d_9f(u_int param_1);
 extern undefined FUN_80140d48(void);
-extern void FUN_80023010(void);
+extern void akao_cmd_e2(void);
 extern void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForCompletion);
 extern s32 akao_play_song(u8* param_1);
-extern void FUN_8002279c(undefined4 param_1, u_int param_2);
+extern void akao_cmd_c0(undefined4 param_1, u_int param_2);
 
 #endif

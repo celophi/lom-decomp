@@ -574,7 +574,7 @@ void movie_update(void)
             tmp = combined->audioBufferedCount;
             if (tmp >= ((s32)(audioCapacity >> 1)))
             {
-                func_8002246C(3);
+                akao_cmd_98_9a_9c_9e(3);
                 combined->unk92 = 0;
             }
         }

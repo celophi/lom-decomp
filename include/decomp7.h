@@ -39,8 +39,8 @@ typedef struct {
 } ArgStruct2;
 
 extern u32 *FUN_80015c28(void);
-extern void FUN_80022aa8(void);
-extern void FUN_80022ac8(void);
+extern void akao_cmd_f0(void);
+extern void akao_cmd_f1(void);
 extern void func_80015D6C(s32);
 extern void func_80015F88(s32);
 extern void func_80067EB4(s32, s32, s32, s32);
