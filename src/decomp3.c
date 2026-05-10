@@ -968,3 +968,17 @@ s32 func_80022F18(s32 arg0, void* arg1)
     CdMix(&D_8003EC20);
     return 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/vw9QX
+ */
+void func_80022FAC(s32 arg0, s32 arg1, s32 arg2)
+{
+    if (akao_check_magic(arg0) == 0)
+    {
+        g_akaoCmdParams[0] = arg0;
+        g_akaoCmdParams[1] = (s32)((arg1 & 0xFF) << 8);
+        g_akaoCmdParams[2] = arg2;
+        akao_send_command(0xE0);
+    }
+}
