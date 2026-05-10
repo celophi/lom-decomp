@@ -854,3 +854,71 @@ s32 func_80022D8C(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
     akao_play_sequence_blocking(sequenceData, waitForCompletion);
     return 0;
 }
+
+/**
+ * decomp.me link (100%) https://decomp.me/scratch/FWcdy
+ */
+s32 func_80022DAC(void* arg0, s32 arg1, s32 arg2)
+{
+    s32 var_a2;
+    s32 var_a3_2;
+    s32* var_t0;
+    u32 var_a3;
+    void* tmp = arg0;
+    var_a3 = 0;
+    var_t0 = &D_8004D388;
+    do
+    {
+        if ((*var_t0) == ((s32*)tmp)[1])
+        {
+            var_a3++;
+            var_a3--;
+            *var_t0 = 0;
+        }
+        var_a3 += 1;
+        var_t0 += 1;
+    }
+
+    while (var_a3 < 6U);
+    switch (arg1)
+    {
+    case 1:
+        var_a3_2 = 0x47900;
+        var_a2 = 0x90;
+        D_8004D38C = ((s32*)tmp)[1];
+        break;
+
+    case 2:
+        var_a3_2 = 0x4C100;
+        var_a2 = 0xA0;
+        D_8004D390 = ((s32*)tmp)[1];
+        break;
+
+    case 3:
+        var_a3_2 = 0x50900;
+        var_a2 = 0xB0;
+        D_8004D394 = ((s32*)tmp)[1];
+        break;
+
+    case 4:
+        var_a3_2 = 0x55100;
+        var_a2 = 0xC0;
+        D_8004D398 = ((s32*)tmp)[1];
+        break;
+
+    case 5:
+        var_a3_2 = 0x59900;
+        var_a2 = 0xD0;
+        D_8004D39C = ((s32*)tmp)[1];
+        break;
+
+    default:
+        var_a3_2 = 0x43100;
+        var_a2 = 0x80;
+        D_8004D388 = ((s32*)tmp)[1];
+        break;
+    }
+
+    func_8002376C(arg0, arg2, var_a2, var_a3_2);
+    return 0;
+}

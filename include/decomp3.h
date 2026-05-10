@@ -31,6 +31,12 @@ typedef struct
 } D3C0_t;
 
 extern u8 D_8004C340[];
+extern s32 D_8004D388;
+extern s32 D_8004D38C;
+extern s32 D_8004D390;
+extern s32 D_8004D394;
+extern s32 D_8004D398;
+extern s32 D_8004D39C;
 extern s32 D_8004F750;
 extern s32 D_8003EC4C;
 extern s32 D_8004F824;
