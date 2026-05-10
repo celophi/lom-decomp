@@ -236,6 +236,7 @@ SRCS_G0 := \
 	src/psyq/libapi/A37.c \
 	src/psyq/libapi/A50.c \
 	src/psyq/libapi/A52.c \
+	src/psyq/libapi/A53.c \
 	src/unk3.c \
 	src/unk5.c \
 	src/unk8.c \
