@@ -38,7 +38,7 @@ s32 akao_register_bank(AkaoSeqHeader* bank)
 {
     s32 temp_v0;
 
-    temp_v0 = akao_check_magic();
+    temp_v0 = akao_check_magic((s32*)bank);
     if (temp_v0 == 0)
     {
         func_80023BB8((s32)bank + sizeof(AkaoSeqHeader));

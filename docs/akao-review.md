@@ -85,22 +85,26 @@ raw byte-pointer arithmetic on the channel slot.
 Touches the same two non-100% scratches (`func_800230C8` 99.80%,
 `func_800231E4` 99.90%) as §1; needs an asm-diff re-measurement.
 
-## 3. `akao_check_magic` prototype mismatch
+## 3. `akao_check_magic` prototype mismatch (DONE)
 
-The definition is `s32 akao_check_magic(s32* data)`
-([src/decomp5.c](../src/decomp5.c#L49)) but the declaration in
-[include/decomp5.h](../include/decomp5.h#L56) is `s32 akao_check_magic(void)`.
-About half the call sites in [src/decomp3.c](../src/decomp3.c) invoke it with
-no argument, relying on the previous instruction having left the operand in
-`$a0`. This is a documented register-allocation hack required for matching;
-the IDE flags it as a diagnostic but the build accepts it under GCC 2.7.2.
+The definition has always been `s32 akao_check_magic(s32* data)`
+([src/decomp5.c](../src/decomp5.c)) but the declaration in
+[include/decomp5.h](../include/decomp5.h) was `s32 akao_check_magic(void)`,
+and two call sites (`akao_register_bank` in [src/decomp3.c](../src/decomp3.c)
+and `akao_submit` in [src/decomp5.c](../src/decomp5.c)) were invoking it
+with no argument — relying on the previous instruction having left the
+operand in `$a0`.
 
-**Options:**
+User reports that **the matching ASM requires the argument to be passed
+explicitly** — the no-argument register-allocation hack does not actually
+match for those call sites. Both call sites updated:
 
-- (a) Leave both signatures lying as-is and add a `@note` in the header.
-- (b) Unify the prototype to `s32 akao_check_magic(s32* data)` and let the
-      no-arg callers continue compiling under GCC's lax pre-C89 rules. Risk
-      of altering codegen at one or more call sites.
+- `akao_register_bank`: now calls `akao_check_magic((s32*)bank)`.
+- `akao_submit`: now calls `akao_check_magic((s32*)sequenceData)`.
+
+The decomp5.h prototype now matches the definition
+(`extern s32 akao_check_magic(s32 *data);`) and the stale `@note` describing
+the no-arg hack was removed from the function's docblock.
 
 ## 4. `g_akaoCmdParams[]` element type
 

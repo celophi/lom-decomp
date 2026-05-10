@@ -54,10 +54,6 @@ void akao_relocate_articulations(s32* arg0, s32* arg1, s32 arg2, s32 arg3)
  *
  * @return 0 if the magic matches; otherwise *data + 0xB0BEB4BF (non-zero delta).
  *
- * @note Several call sites invoke this with no arguments, relying on the
- *       caller's first argument already sitting in $a0 — a register-allocation
- *       artifact required for asm matching.
- *
  * @see decomp.me: (100%) https://decomp.me/scratch/scY8u
  */
 s32 akao_check_magic(s32* data)
@@ -169,7 +165,7 @@ s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
     s32 ret = -1;
     AkaoBankHeader* ptr = (AkaoBankHeader*)sequenceData;
-    if (akao_check_magic() == 0)
+    if (akao_check_magic((s32*)sequenceData) == 0)
     {
         akao_upload_bank(sequenceData, waitForCompletion, ptr->bank_id, ptr->spu_dest_addr);
         ret = 0;
