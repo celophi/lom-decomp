@@ -10,48 +10,65 @@ a specific opcode; the lower-level SPU plumbing lives in
 This doc lists the risky cleanups that were deferred for review and the
 mechanical opcode-name renames that are still pending.
 
-## 1. Five aliased struct typedefs that all describe the same AKAO bank header
+## 1. Five aliased struct typedefs that all described the same AKAO bank header (DONE)
 
 `akao_upload_bank` (formerly `func_8002376C`) and the streaming-upload state
 machine `func_80022B78` consume the same four fields at offsets 0x10–0x1F
-of an AKAO instrument-bank file:
+of an AKAO instrument-bank file. Plus `func_800230C8` writes a fifth field
+at offset 0x20:
 
-| offset | meaning                                                                 |
-|--------|-------------------------------------------------------------------------|
-| 0x10   | SPU upload base address (passed to `SpuSetTransferStartAddr`)           |
-| 0x14   | SPU upload byte count (passed to `akao_spu_write`)                      |
-| 0x18   | Instrument-table index (multiplied by 0x10 to index `D_8004C340`)       |
-| 0x1C   | Articulation entry count (each entry is 16 bytes; relocated by SPU base)|
+| offset | field name           | meaning                                                                     |
+|--------|----------------------|-----------------------------------------------------------------------------|
+| 0x00   | (AkaoSeqHeader)      | 16-byte common AKAO header (magic + id + length + reverb + timestamp)       |
+| 0x10   | `spu_dest_addr`      | SPU upload base address (passed to `SpuSetTransferStartAddr`)               |
+| 0x14   | `sample_size`        | SPU upload byte count (passed to `akao_spu_write`)                          |
+| 0x18   | `bank_id`            | Instrument-table index (multiplied by 0x10 to index `D_8004C340`)           |
+| 0x1C   | `articulation_count` | Articulation entry count (each entry is 16 bytes; relocated by SPU base)    |
+| 0x20   | `cached_spu_addr`    | SPU base address cached by `func_800230C8` after a streaming setup         |
+| 0x24   | reserved             | unused / unknown (header is 0x40 bytes total)                              |
 
-The same shape is currently expressed in **five** parallel typedefs:
+Consolidated into a single `AkaoBankHeader` in
+[include/akao.h](../include/akao.h) that embeds `AkaoSeqHeader` as its first
+member. `UnknownStruct`, `SomeStruct`, `D3C0_t`, `ArgStruct2` were removed
+from [include/decomp5.h](../include/decomp5.h) and
+[include/decomp3.h](../include/decomp3.h). All call sites in
+[src/decomp5.c](../src/decomp5.c) and [src/decomp3.c](../src/decomp3.c) were
+updated to use the named fields.
 
-- `UnknownStruct` and `SomeStruct` in [include/decomp5.h](../include/decomp5.h)
-- `D_8003EC5C_t` in [include/decomp3.h](../include/decomp3.h)
-- `D3C0_t` in [include/decomp3.h](../include/decomp3.h)
-- `ArgStruct2` in [include/decomp3.h](../include/decomp3.h)
+The four affected scratches were all already non-matching
+(`akao_upload_bank` 99.90%, `func_80022B78` 98.59%, `func_800230C8` 99.80%,
+`func_800231E4` 99.90%); a follow-up asm-diff pass should re-measure each.
 
-**Proposal:** consolidate into a single `AkaoBankHeader` (or extend
-`AkaoSeqHeader` in [include/akao.h](../include/akao.h)) and migrate all five
-aliases.
+### Note: `func_800230C8` looks like it has an off-by-one decompilation bug
 
-**Risk:** changes the field-access shape on `akao_upload_bank` (99.90%),
-`func_80022B78` (98.59%), `func_800230C8` (99.80%), `func_800231E4` (99.90%) —
-all currently sub-100. A consolidation could push them over the line *or*
-break matching entirely. Needs an asm-diff per scratch before committing.
+After consolidation, this stuck out: `func_800230C8` calls
+
+```c
+akao_spu_write(arg0, ((AkaoBankHeader*)var1)->spu_dest_addr);  /* offset 0x10 */
+```
+
+but `akao_spu_write(addr, size)`'s second argument is a byte count. The
+analogous site in `akao_upload_bank` passes `sample_size` (offset 0x14) for
+the same role. Passing the SPU base as a byte count appears semantically
+wrong — possibly the original C had a typo of `unk10` for `unk14`, which
+would explain why this scratch is at 99.80% rather than 100%. A fix from
+`spu_dest_addr` to `sample_size` should be tested against the original asm
+before being committed; left as-is for now.
 
 ## 2. `D_8003EC5C` is not actually a bank header
 
 `D_8003EC5C_t` is currently typedef'd with `unk0` as the magic-word slot —
 but `func_800230C8` reads `D_8003EC5C->unk0 & 0x40`, which is a flag-byte
-test, not a magic check. `D_8003EC5C` points at the **active driver/channel
-state**, not at an in-memory AKAO file.
+test, not a magic check. `D_8003EC5C` is set in `akao_driver_init_state` to
+point at `D_8004C260`, a 0x118-byte channel-state buffer.
 
 **Proposal:** introduce a separate `AkaoChannelState` typedef and use it
-specifically for `D_8003EC5C`. This pairs with item (1) — without splitting
-`D_8003EC5C_t` from `D3C0_t`/`ArgStruct2`, the consolidation in (1) cannot
-land cleanly.
+specifically for `D_8003EC5C`. This was deliberately *not* folded into the
+`AkaoBankHeader` consolidation in §1, since the two structs describe
+different things.
 
-**Risk:** same as (1) — touches two non-100% scratches.
+**Risk:** touches the two non-100% scratches `func_800230C8` and
+`func_800231E4`.
 
 ## 3. `akao_check_magic` prototype mismatch
 

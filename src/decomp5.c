@@ -151,9 +151,10 @@ void akao_spu_wait(void)
  * @brief Validates an AKAO buffer's magic and forwards it to the driver.
  *
  * Checks that @p sequenceData starts with the 'AKAO' magic via akao_check_magic.
- * On success, reads the bank index (unk18) and SPU upload address (unk10) from
- * the AKAO header and dispatches the buffer through akao_upload_bank, which
- * primes SpuSetTransferStartAddr and posts the sequence to the audio driver.
+ * On success, reads the bank id (offset 0x18) and SPU upload address
+ * (offset 0x10) from the AkaoBankHeader and dispatches the buffer through
+ * akao_upload_bank, which primes SpuSetTransferStartAddr and posts the
+ * sequence to the audio driver.
  *
  * Called in a tight loop by akao_play_sequence_blocking.
  *
@@ -167,10 +168,10 @@ void akao_spu_wait(void)
 s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
     s32 ret = -1;
-    UnknownStruct* ptr = (UnknownStruct*)sequenceData;
+    AkaoBankHeader* ptr = (AkaoBankHeader*)sequenceData;
     if (akao_check_magic() == 0)
     {
-        akao_upload_bank(sequenceData, waitForCompletion, ptr->unk18, ptr->unk10);
+        akao_upload_bank(sequenceData, waitForCompletion, ptr->bank_id, ptr->spu_dest_addr);
         ret = 0;
         return ret;
     }
@@ -184,16 +185,17 @@ s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
  * Validates the AKAO magic, then:
  *   1. @c SpuSetTransferStartAddr(arg3)  — set the SPU upload base.
  *   2. akao_spu_write of the sample blob (located after the bank's
- *      articulation table at offset 0x40 + unk1C*0x10, size unk14).
+ *      articulation table at offset 0x40 + articulation_count*0x10, size
+ *      sample_size).
  *   3. akao_relocate_articulations to copy the articulation table into the
  *      driver's instrument slot @c D_8004C340[arg2*0x10] with each entry's
  *      first word biased by the SPU base.
  * On magic-mismatch, latches @c D_8003EC4C = -1 and returns -1.
  *
- * @param arg0  Pointer to an AKAO bank buffer in main RAM.
+ * @param arg0  Pointer to an AkaoBankHeader buffer in main RAM.
  * @param arg1  When non-zero, akao_spu_wait blocks until the SPU DMA finishes.
- * @param arg2  Instrument-table slot index (= @c bank->unk18).
- * @param arg3  SPU upload base address in bytes (= @c bank->unk10).
+ * @param arg2  Instrument-table slot index (= @c bank->bank_id).
+ * @param arg3  SPU upload base address in bytes (= @c bank->spu_dest_addr).
  *
  * @return 0 on success, -1 on AKAO magic mismatch.
  *
@@ -203,7 +205,7 @@ s32 akao_upload_bank(void* arg0, s32 arg1, s32 arg2, s32 arg3)
 {
     s32 new_var;
     s32 var_v0;
-    SomeStruct* s;
+    AkaoBankHeader* s;
     u8* base;
 
     s32 ret_val;
@@ -212,13 +214,13 @@ s32 akao_upload_bank(void* arg0, s32 arg1, s32 arg2, s32 arg3)
     if (akao_check_magic(arg0) == 0)
     {
         new_var = arg0;
-        s = (SomeStruct*)arg0;
+        s = (AkaoBankHeader*)arg0;
 
         SpuSetTransferStartAddr(arg3);
         base = (u8*)arg0;
         base = base + 0x40;
-        akao_spu_write((s32)(base + (s->unk1C * 0x10)), s->unk14);
-        akao_relocate_articulations((s32*)base, (s32*)(D_8004C340 + (arg2 * 0x10)), arg3, s->unk1C);
+        akao_spu_write((s32)(base + (s->articulation_count * 0x10)), s->sample_size);
+        akao_relocate_articulations((s32*)base, (s32*)(D_8004C340 + (arg2 * 0x10)), arg3, s->articulation_count);
         var_v0 = 0;
         if (arg1 != 0)
         {

@@ -30,23 +30,6 @@ typedef struct
     u32 unkC;
 } F820_t;
 
-typedef struct
-{
-    u8 _pad[0x10];
-    u32 unk10;
-    u32 unk14;
-    u32 unk18;
-    u32 unk1C;
-} D3C0_t;
-
-typedef struct
-{
-    u8 pad0[0x10]; /* offsets 0x00 - 0x0F */
-    u32 unk10;     /* offset 0x10 */
-    u8 pad1[0xC];  /* offsets 0x14 - 0x1F */
-    u32 unk20;     /* offset 0x20 */
-} ArgStruct2;
-
 typedef struct {
     u8   pad0[0x08];           /* 0x00 - 0x07 */
     u32  unk8;                 /* 0x08 - from func_80023334 */
@@ -78,7 +61,7 @@ extern s32 D_8003EC4C;
 extern s32 D_8004F824;
 extern s32 D_8004F828;
 extern F820_t D_8004F820;
-extern D3C0_t D_8004D3C0;
+extern AkaoBankHeader D_8004D3C0;
 
 extern AkakoStruct D_8004F760;
 

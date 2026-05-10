@@ -799,10 +799,10 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
             func_80029A0C(*(new_var = &arg0), &D_8004D3C0, 0x40U);
             arg0 += 0x40;
             arg1 -= 0x40;
-            D_8004F820.unk4 = (s32)D_8004D3C0.unk10;
-            D_8004F820.unk8 = (u32)D_8004D3C0.unk14;
-            D_8004F820.unk0 = (void*)((D_8004D3C0.unk18 * 0x10) + ((u32)(&D_8004C340)));
-            D_8004F820.unkC = (u32)(D_8004D3C0.unk1C * 0x10);
+            D_8004F820.unk4 = (s32)D_8004D3C0.spu_dest_addr;
+            D_8004F820.unk8 = (u32)D_8004D3C0.sample_size;
+            D_8004F820.unk0 = (void*)((D_8004D3C0.bank_id * 0x10) + ((u32)(&D_8004C340)));
+            D_8004F820.unkC = (u32)(D_8004D3C0.articulation_count * 0x10);
         }
         else
         {
@@ -828,8 +828,8 @@ s32 func_80022B78(s32 arg0, u32 arg1, s32 arg2)
             D_8004F820.unkC -= var_s0;
             if (D_8004F820.unkC == 0)
             {
-                temp_a0_2 = (void*)((D_8004D3C0.unk18 * 0x10) + ((u32)(&D_8004C340)));
-                akao_relocate_articulations(temp_a0_2, temp_a0_2, D_8004D3C0.unk10, D_8004D3C0.unk1C);
+                temp_a0_2 = (void*)((D_8004D3C0.bank_id * 0x10) + ((u32)(&D_8004C340)));
+                akao_relocate_articulations(temp_a0_2, temp_a0_2, D_8004D3C0.spu_dest_addr, D_8004D3C0.articulation_count);
             }
         }
     }
@@ -1067,9 +1067,15 @@ s32 func_800230C8(void* arg0, s32 arg1)
         var1 = arg0;
         arg0 = (u8*)arg0 + 0x40;
         SpuSetTransferStartAddr(var_s2);
-        /* Cast arg0 to byte pointer for arithmetic, then to ArgStruct for member access */
-        akao_spu_write(arg0, ((ArgStruct2*)var1)->unk10);
-        ((ArgStruct2*)var1)->unk20 = var_s2;
+        /*
+         * Note: this passes spu_dest_addr (offset 0x10) as the byte-count
+         * argument to akao_spu_write, which is suspicious — the analogous
+         * site in akao_upload_bank uses sample_size (offset 0x14) here. This
+         * mirrors the original ASM literally; it may explain why this scratch
+         * is at 99.80% rather than 100%. See docs/akao-review.md.
+         */
+        akao_spu_write(arg0, ((AkaoBankHeader*)var1)->spu_dest_addr);
+        ((AkaoBankHeader*)var1)->cached_spu_addr = var_s2;
         func_80029A0C(var1, &D_8004C150, 0x50);
         return temp_v0;
     }
