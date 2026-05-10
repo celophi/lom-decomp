@@ -723,6 +723,9 @@ SpuSetReverbModeType                = 0x8002918C;
 // psyq/libspu/S_SRA
 _spu_setReverbAttr                  = 0x8002935C;
 
+// psyq/libspu/S_CRWA
+SpuClearReverbWorkArea              = 0x8002982C;
+
 __main                              = 0x8002E850;
 McxStartCom                         = 0x800319D8;
 
