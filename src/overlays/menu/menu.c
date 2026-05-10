@@ -339,7 +339,6 @@ void func_801410E8(void)
     D_80169108 = &D_80151EBC;
 }
 
-
 /**
  * decomp.me (100%) https://decomp.me/scratch/tG03R
  */
@@ -394,4 +393,56 @@ void menu_func_801410FC(ArgStruct* arg0)
         p++;
     }
     func_80019A34(&sp10, base + 0x822C);
+}
+
+void* func_80141244(s32 arg0, void* arg1)
+{
+    s32 var_a2;
+    Entry* entry;
+    u8* cur;
+    u8* ptr;
+    u32 temp;
+    u32 mask;
+    u16* src = (u16*)arg1;
+    var_a2 = 0;
+    ptr = &D_80169420;
+    cur = &D_80169420;
+    while (var_a2 < 4)
+    {
+        if ((*cur) == 0)
+        {
+            break;
+        }
+        var_a2++;
+        cur += 0x24;
+    }
+
+    if (var_a2 < 0)
+    {
+        return (void*)(-1);
+    }
+    entry = (Entry*)(ptr + (var_a2 * 0x24));
+    *((u16*)(((u8*)entry) + 4)) = 0;
+    temp = entry->unk4;
+    entry->unk0 = 1;
+    entry->unk1C = 0;
+    entry->unk1 = (u8)var_a2;
+    entry->unk20 = 0;
+    entry->unk2 = 0;
+    mask = 0x1FFFFFF;
+    temp = temp & mask;
+    temp = temp | (((u32)arg0) << 25);
+    entry->unk4 = temp;
+    entry->unk8 = src[0];
+    entry->unkA = src[1];
+    entry->unkC = src[2];
+    entry->unkE = src[3];
+    entry->unk10 = 0;
+    entry->unk12 = 0;
+    entry->unk14 = 0;
+    entry->unk16 = 0;
+    entry->unk18 = 0;
+    entry->unk3 = 0;
+    D_801690F4 = var_a2;
+    return (void*)entry;
 }
