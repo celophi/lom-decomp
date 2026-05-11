@@ -733,7 +733,7 @@ void movie_schedule_next_decode(void)
  *       original asm used `lbu`. Currently 93.87% non-matching; revisit the
  *       field types (s8 → u8) if the percentage regresses further.
  *
- * @see https://decomp.me/scratch/JTTFr (93.87%)
+ * @see https://decomp.me/scratch/JTTFr (100%)
  */
 void movie_service_video_ops(void)
 {
