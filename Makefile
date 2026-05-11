@@ -252,7 +252,7 @@ SRCS_G0 := \
 	src/unk8.c \
 	src/unk9.c \
 	src/decomp1.c \
-	src/decomp3.c \
+	src/akao_driver.c \
 	src/decomp4.c \
 	src/decomp7.c \
 	src/main.c
@@ -260,7 +260,7 @@ SRCS_G0 := \
 SRCS_G4 := \
 	src/cdrom.c \
 	src/decomp2.c \
-	src/decomp5.c \
+	src/akao_spu.c \
 	src/decomp6.c 
 
 SRCS_CDK_G0 := \
@@ -346,7 +346,7 @@ OVERLAYS += menu
 overlay_menu_gcc_srcs   := src/overlays/menu/unk1.c
 
 OVERLAYS += movie
-overlay_movie_gcc_g4_srcs   := src/overlays/movie/movie1.c
+overlay_movie_gcc_g4_srcs   := src/overlays/movie/movie.c
 
 OVERLAYS += niki
 overlay_niki_gcc_srcs   := src/overlays/niki/unk1.c
@@ -608,7 +608,7 @@ $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_S
 	cd $(STAGING) && $(CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile C files with GCC 2.8.0 + maspsx -G4 (e.g. movie1.c)
+# Rule: compile C files with GCC 2.8.0 + maspsx -G4 (e.g. movie.c)
 $$($(1)_GCC_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \

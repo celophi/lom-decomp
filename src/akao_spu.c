@@ -1,4 +1,4 @@
-#include "decomp5.h"
+#include "akao_spu.h"
 #include "akao.h"
 
 /**
@@ -115,7 +115,7 @@ void akao_spu_write(s32 arg0, s32 arg1)
  * @brief Begins an asynchronous SPU read (SpuRead + done-callback hookup).
  *
  * Mirror of akao_spu_write but invokes @c SpuRead. Currently unused inside
- * decomp5.c; kept here because it is part of the AKAO SPU helper set and is
+ * akao_spu.c; kept here because it is part of the AKAO SPU helper set and is
  * referenced via the .ld linker script.
  *
  * @param arg0  Destination address in main RAM.
