@@ -442,111 +442,103 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
  *   2. Pull the next BS frame from the video ring, decode VLC, and submit to MDEC.
  *   3. Drain the audio ring into the AKAO XA stream and update playback position.
  *
- * @see https://decomp.me/scratch/xXKIt (98.86%)
+ * @see https://decomp.me/scratch/NpM84 (100%)
  */
 void movie_update(void)
 {
-    long audioCapacity;             /* audioRingCapacity reload */
-    MovieState* stateAlias;         /* sequencing alias used after totalFrames check */
-    int field9DZeroFlag;            /* (frame_ready == 0) flag / sign-shift temp */
+    s32 audioCapacity;             /* audioRingCapacity reload */
+    
+    
     VideoVlcPayload* vlc_payload;   /* raw bitstream for the next video frame */
     VideoSectorEntry* entry_header; /* 32-byte sector header for the same frame */
     AudioSector* audio_entry;       /* next audio ring entry (header + payload) */
-    MovieState* mdecAlias;          /* sequencing alias used in MDEC retry block */
+    
     s32 tmp = 0;                    /* vlc-complete flag, then audioBufferedCount compare */
     MovieState* combined = MOVIE_STATE;
-    int wordCount;              /* DCT word count temp / zero literal */
-    volatile int audioFrameNum; /* frame number from latest audio entry */
+    
+    
+
     if (g_mdecRetryPending != 0)
     {
-        mdecAlias = combined;
-        if ((mdecAlias->mdecBusy == 0) && (combined->frame_ready == 0))
+        if ((MOVIE_STATE->mdecBusy == 0) && (combined->frame_ready == 0))
         {
-            combined->mdecBusy = 1;
-            DecDCTin((u_long*)((MovieState*)combined)->vlcInputBuf[combined->inputBufIdx],
-                     (combined->gpuMode & 0xFFFFu) == 0);
+            MOVIE_STATE->mdecBusy = 1;
+            DecDCTin((u_long*)((MovieState*)MOVIE_STATE)->vlcInputBuf[MOVIE_STATE->inputBufIdx],
+                     (MOVIE_STATE->gpuMode & 0xFFFFu) == 0);
             {
-                s32 temp = ((s16)((MovieState*)combined)->rects[2].w) * ((s16)((MovieState*)combined)->rects[2].h);
-                wordCount = temp + (((unsigned)temp) >> 31);
-                DecDCTout((((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]), wordCount >> 1);
+                s32 temp = ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
+                s32 wordCount = temp + (((unsigned)temp) >> 31);
+                DecDCTout((((MovieState*)MOVIE_STATE)->mdecOutputBuf[MOVIE_STATE->outBufIdx]), wordCount >> 1);
             }
-            combined->mdecRetryPending = 0;
+            MOVIE_STATE->mdecRetryPending = 0;
         }
     }
+    
     if ((g_mdecRetryPending == 0) & 0xFFFFu)
     {
-
+        u8 retryCount = MOVIE_STATE->vlcRetryCount;
+        if (retryCount != 0)
         {
-            u8 v0 = MOVIE_STATE->vlcRetryCount;
-            if (v0 != 0)
+            retryCount--;
+            MOVIE_STATE->vlcRetryCount = retryCount;
+            if ((retryCount & 0xFF) == 0)
             {
-                v0--;
-                MOVIE_STATE->vlcRetryCount = v0;
-                if ((v0 & 0xFF) == 0)
-                {
-                    DecDCTvlcSize2(0);
-                }
-                if (DecDCTvlc2(0, 0, (DECDCTTAB*)MOVIE_STATE->vlcTable) == 0)
-                {
-                    tmp = 1;
-                    MOVIE_STATE->vlcRetryCount = 0;
-                }
+                DecDCTvlcSize2(0);
             }
-            else if (get_next_video_entry(&vlc_payload, &entry_header) != 0)
+            if (DecDCTvlc2(0, 0, (DECDCTTAB*)MOVIE_STATE->vlcTable) == 0)
             {
-                MOVIE_STATE->currentFrame = entry_header->header.frameNumber;
-                stateAlias = MOVIE_STATE;
-                if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) &&
-                    (stateAlias->endState == END_STATE_RUNNING))
-                {
-                    MOVIE_STATE->endState = END_STATE_NEAR_END;
-                }
-                {
-                    int one;
-                    MOVIE_STATE->inputBufIdx = 1 - MOVIE_STATE->inputBufIdx;
-                }
-                if (MOVIE_STATE->gpuMode == 0)
-                {
-                    DecDCTvlcSize2(0x1000);
-                    MOVIE_STATE->vlcRetryCount = 3;
-                }
-                else
-                {
-                    DecDCTvlcSize2(0x16AA);
-                    MOVIE_STATE->vlcRetryCount = 1;
-                }
-                if (DecDCTvlc2((u_long*)vlc_payload, (u_long*)MOVIE_STATE->vlcInputBuf[MOVIE_STATE->inputBufIdx],
-                               (DECDCTTAB*)MOVIE_STATE->vlcTable) == 0)
-                {
-                    tmp = 1;
-                    MOVIE_STATE->vlcRetryCount = 0;
-                }
+                tmp = 1;
+                MOVIE_STATE->vlcRetryCount = 0;
+            }
+        }
+        else if (get_next_video_entry(&vlc_payload, &entry_header) != 0)
+        {
+            MOVIE_STATE->currentFrame = entry_header->header.frameNumber;
+            
+            if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) &&
+                (MOVIE_STATE->endState == END_STATE_RUNNING))
+            {
+                MOVIE_STATE->endState = END_STATE_NEAR_END;
+            }
+            
+            MOVIE_STATE->inputBufIdx = 1 - MOVIE_STATE->inputBufIdx;
+            
+            if (MOVIE_STATE->gpuMode == 0)
+            {
+                DecDCTvlcSize2(0x1000);
+                MOVIE_STATE->vlcRetryCount = 3;
             }
             else
             {
-                if (((!entry_header) && (!entry_header)) && (!entry_header))
-                {
-                }
-                if ((MOVIE_STATE->endOfStream != 0) && (MOVIE_STATE->mdecBusy == 0))
-                {
-                    MOVIE_STATE->endState = END_STATE_DONE;
-                }
+                DecDCTvlcSize2(0x16AA);
+                MOVIE_STATE->vlcRetryCount = 1;
+            }
+            if (DecDCTvlc2((u_long*)vlc_payload, (u_long*)MOVIE_STATE->vlcInputBuf[MOVIE_STATE->inputBufIdx],
+                           (DECDCTTAB*)MOVIE_STATE->vlcTable) == 0)
+            {
+                tmp = 1;
+                MOVIE_STATE->vlcRetryCount = 0;
             }
         }
-    }
-    wordCount = 0;
-    if (tmp != wordCount)
-    {
-        advance_video_read();
-        combined = MOVIE_STATE;
-        if ((combined->mdecBusy == wordCount) && (field9DZeroFlag = combined->frame_ready == wordCount))
+        else if ((MOVIE_STATE->endOfStream != 0) && (MOVIE_STATE->mdecBusy == 0))
         {
-            combined->mdecBusy = 1;
-            DecDCTin((u_long*)((MovieState*)combined)->vlcInputBuf[combined->inputBufIdx], combined->gpuMode == 0);
+            MOVIE_STATE->endState = END_STATE_DONE;
+        }
+    }
+    
+    if (tmp != 0)
+    {
+        s32 field9DZeroFlag;
+        advance_video_read();
+       
+        if ((MOVIE_STATE->mdecBusy == 0) && (field9DZeroFlag = MOVIE_STATE->frame_ready == 0))
+        {
+            MOVIE_STATE->mdecBusy = 1;
+            DecDCTin((u_long*)(MOVIE_STATE)->vlcInputBuf[MOVIE_STATE->inputBufIdx], MOVIE_STATE->gpuMode == 0);
             {
-                s32 temp = ((s16)((MovieState*)combined)->rects[2].w) * ((s16)((MovieState*)combined)->rects[2].h);
+                s32 temp = ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
                 field9DZeroFlag = ((unsigned)temp) >> 31;
-                DecDCTout((((MovieState*)combined)->mdecOutputBuf[combined->outBufIdx]), (temp + field9DZeroFlag) >> 1);
+                DecDCTout(MOVIE_STATE->mdecOutputBuf[MOVIE_STATE->outBufIdx], (temp + field9DZeroFlag) >> 1);
             }
         }
         else
@@ -554,43 +546,43 @@ void movie_update(void)
             g_mdecRetryPending = 1;
         }
     }
+    
     combined = MOVIE_STATE;
     if (g_cdAudioReady != 0)
     {
-        if (get_next_audio_entry(&audio_entry) != 0)
+        if (get_next_audio_entry((void*)&vlc_payload) != 0)
         {
-            audioFrameNum = (combined->currentFrame = audio_entry->header.frameNumber);
-            if ((audioFrameNum > combined->totalFrames) && (combined->endState < END_STATE_DONE))
+            entry_header = (VideoSectorEntry*)vlc_payload;
+            MOVIE_STATE->currentFrame = ((AudioSector*)vlc_payload)->header.frameNumber;
+            
+            if ((((AudioSector*)vlc_payload)->header.frameNumber > MOVIE_STATE->totalFrames) && (MOVIE_STATE->endState < END_STATE_DONE))
             {
-                combined->endState = END_STATE_DONE;
+                MOVIE_STATE->endState = END_STATE_DONE;
             }
-            akao_xa_advance_frame(audioFrameNum);
+            akao_xa_advance_frame();
         }
         combined = MOVIE_STATE;
         if (g_audioStreamState == 2)
         {
-            combined = MOVIE_STATE;
-            audioCapacity = combined->audioRingCapacity;
-            tmp = combined->audioBufferedCount;
-            if (tmp >= ((s32)(audioCapacity >> 1)))
+            
+            audioCapacity = MOVIE_STATE->audioRingCapacity;
+            
+            if ((s32)MOVIE_STATE->audioBufferedCount >= ((s32)(audioCapacity >> 1)))
             {
                 akao_cmd_98_9a_9c_9e(3);
-                combined->unk92 = 0;
+                MOVIE_STATE->unk92 = 0;
             }
         }
-        combined = MOVIE_STATE;
-        if ((combined->audioWriteIdx != MOVIE_STATE->audioReadIdx) ||
+        
+        if ((MOVIE_STATE->audioWriteIdx != MOVIE_STATE->audioReadIdx) ||
             (MOVIE_STATE->lastAudioFrame != MOVIE_STATE->lastConsumedAudioFrame))
         {
-            s32 tmp = akao_xa_get_position();
-            if (((tmp != (-1)) && (MOVIE_STATE->audioBufferedCount != 0)) &&
-                (MOVIE_STATE->audioReadIdx != ((u32)(tmp * 2))))
+            s32 position = akao_xa_get_position();
+            if (((position != -1) && (MOVIE_STATE->audioBufferedCount != 0)) &&
+                (MOVIE_STATE->audioReadIdx != (position * 2)))
             {
                 advance_audio_read();
             }
-            do
-            {
-            } while (0);
         }
     }
 }
