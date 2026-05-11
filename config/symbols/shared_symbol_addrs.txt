@@ -720,6 +720,18 @@ akao_send_command                   = 0x80028E84;
 // psyq/libspu/S_SRMT
 SpuSetReverbModeType                = 0x8002918C;
 
+// psyq/libspu/S_SRA
+_spu_setReverbAttr                  = 0x8002935C;
+
+// psyq/libspu/S_CRWA
+SpuClearReverbWorkArea              = 0x8002982C;
+
+// psyq/libapi/A10
+WaitEvent                           = 0x800299CC;
+
+// psyq/libspu/S_GRMT
+SpuGetReverbModeType                = 0x800299DC;
+
 __main                              = 0x8002E850;
 McxStartCom                         = 0x800319D8;
 
