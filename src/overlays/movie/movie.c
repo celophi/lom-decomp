@@ -442,18 +442,21 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
  *   2. Pull the next BS frame from the video ring, decode VLC, and submit to MDEC.
  *   3. Drain the audio ring into the AKAO XA stream and update playback position.
  *
- * @see https://decomp.me/scratch/xXKIt (98.86%)
+ * @see https://decomp.me/scratch/NpM84 (100%)
  */
 void movie_update(void)
 {
-    s32 audioCapacity; /* audioRingCapacity reload */
-
+    s32 audioCapacity;             /* audioRingCapacity reload */
+    
+    
     VideoVlcPayload* vlc_payload;   /* raw bitstream for the next video frame */
     VideoSectorEntry* entry_header; /* 32-byte sector header for the same frame */
     AudioSector* audio_entry;       /* next audio ring entry (header + payload) */
-
-    s32 tmp = 0; /* vlc-complete flag, then audioBufferedCount compare */
+    
+    s32 tmp = 0;                    /* vlc-complete flag, then audioBufferedCount compare */
     MovieState* combined = MOVIE_STATE;
+    
+    
 
     if (g_mdecRetryPending != 0)
     {
@@ -463,15 +466,14 @@ void movie_update(void)
             DecDCTin((u_long*)((MovieState*)MOVIE_STATE)->vlcInputBuf[MOVIE_STATE->inputBufIdx],
                      (MOVIE_STATE->gpuMode & 0xFFFFu) == 0);
             {
-                s32 temp =
-                    ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
+                s32 temp = ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
                 s32 wordCount = temp + (((unsigned)temp) >> 31);
                 DecDCTout((((MovieState*)MOVIE_STATE)->mdecOutputBuf[MOVIE_STATE->outBufIdx]), wordCount >> 1);
             }
             MOVIE_STATE->mdecRetryPending = 0;
         }
     }
-
+    
     if ((g_mdecRetryPending == 0) & 0xFFFFu)
     {
         u8 retryCount = MOVIE_STATE->vlcRetryCount;
@@ -492,15 +494,15 @@ void movie_update(void)
         else if (get_next_video_entry(&vlc_payload, &entry_header) != 0)
         {
             MOVIE_STATE->currentFrame = entry_header->header.frameNumber;
-
+            
             if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) &&
                 (MOVIE_STATE->endState == END_STATE_RUNNING))
             {
                 MOVIE_STATE->endState = END_STATE_NEAR_END;
             }
-
+            
             MOVIE_STATE->inputBufIdx = 1 - MOVIE_STATE->inputBufIdx;
-
+            
             if (MOVIE_STATE->gpuMode == 0)
             {
                 DecDCTvlcSize2(0x1000);
@@ -523,19 +525,18 @@ void movie_update(void)
             MOVIE_STATE->endState = END_STATE_DONE;
         }
     }
-
+    
     if (tmp != 0)
     {
         s32 field9DZeroFlag;
         advance_video_read();
-
+       
         if ((MOVIE_STATE->mdecBusy == 0) && (field9DZeroFlag = MOVIE_STATE->frame_ready == 0))
         {
             MOVIE_STATE->mdecBusy = 1;
             DecDCTin((u_long*)(MOVIE_STATE)->vlcInputBuf[MOVIE_STATE->inputBufIdx], MOVIE_STATE->gpuMode == 0);
             {
-                s32 temp =
-                    ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
+                s32 temp = ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
                 field9DZeroFlag = ((unsigned)temp) >> 31;
                 DecDCTout(MOVIE_STATE->mdecOutputBuf[MOVIE_STATE->outBufIdx], (temp + field9DZeroFlag) >> 1);
             }
@@ -545,18 +546,16 @@ void movie_update(void)
             g_mdecRetryPending = 1;
         }
     }
-
+    
     combined = MOVIE_STATE;
     if (g_cdAudioReady != 0)
     {
         if (get_next_audio_entry((void*)&vlc_payload) != 0)
         {
-            vlc_payload++;
-            vlc_payload--;
+            entry_header = (VideoSectorEntry*)vlc_payload;
             MOVIE_STATE->currentFrame = ((AudioSector*)vlc_payload)->header.frameNumber;
-
-            if ((((AudioSector*)vlc_payload)->header.frameNumber > MOVIE_STATE->totalFrames) &&
-                (MOVIE_STATE->endState < END_STATE_DONE))
+            
+            if ((((AudioSector*)vlc_payload)->header.frameNumber > MOVIE_STATE->totalFrames) && (MOVIE_STATE->endState < END_STATE_DONE))
             {
                 MOVIE_STATE->endState = END_STATE_DONE;
             }
@@ -565,16 +564,16 @@ void movie_update(void)
         combined = MOVIE_STATE;
         if (g_audioStreamState == 2)
         {
-
+            
             audioCapacity = MOVIE_STATE->audioRingCapacity;
-
+            
             if ((s32)MOVIE_STATE->audioBufferedCount >= ((s32)(audioCapacity >> 1)))
             {
                 akao_cmd_98_9a_9c_9e(3);
                 MOVIE_STATE->unk92 = 0;
             }
         }
-
+        
         if ((MOVIE_STATE->audioWriteIdx != MOVIE_STATE->audioReadIdx) ||
             (MOVIE_STATE->lastAudioFrame != MOVIE_STATE->lastConsumedAudioFrame))
         {
