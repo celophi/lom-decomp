@@ -213,3 +213,105 @@ void func_80029A8C(void)
         } while (new_var3 != 0);
     }
 }
+
+/**
+ * decomp.me (84.65%) https://decomp.me/scratch/XMCUh
+ */
+s32 func_80029E88(s32 arg0, s32 arg1)
+{
+    u32 var_a0;
+    
+    s32 var_s1;
+    s32 var_s2;
+    s32 var_s3;
+    
+    AkaoDriverFlags* driver_flags;
+
+    var_a0 = g_akao_seq_channel0->unk20 >> 16;
+    var_s2 = D_8003EC7A;
+    
+    if (var_s2 != 0) {
+        u32 product = (u32)var_a0 * (u32)var_s2;
+        if (var_s2 < 0x80U) {
+            var_a0 = var_a0 + (product >> 7);
+        } else {
+            var_a0 = product >> 8;
+        }
+    }
+
+    
+    g_akao_seq_channel0->unk28 = g_akao_seq_channel0->unk28 + var_a0;
+
+    if ((g_akao_seq_channel0->unk28 & 0xFFFF0000U) || (D_8003EC7C & 4)) {
+        g_akao_seq_channel0->unk28 = (s32)(g_akao_seq_channel0->unk28 & 0xFFFFU);
+
+        var_s2 = arg0;
+         driver_flags = &g_akao_driver_flags;
+
+        do {
+            var_s1 = 1;
+            var_s3 = g_akao_seq_channel0->unk4;
+
+            do {
+                if (var_s3 & var_s1) {
+                    AkaoChannelState* s = (AkaoChannelState*)var_s2;
+                    s->unk66 = (u16)(s->unk66 - 1);
+                    s->unk68 = (u16)(s->unk68 - 1);
+
+                    if (s->unk66 == 0) {
+                        func_8002AD28(var_s2, var_s1);
+                    } else if (s->unk68 == 0) {
+                        g_akao_seq_channel0->unk18 = (s32)(g_akao_seq_channel0->unk18 | var_s1);
+                    }
+
+                    func_80024660(var_s2, var_s1, 0);
+                    var_s3 &= ~var_s1;
+                }
+
+                var_s2 += 0x118;
+                var_s1 <<= 1;
+            } while (var_s3 != 0);
+
+            if (g_akao_seq_channel0->unk5C != 0) {
+                g_akao_seq_channel0->unk5C = (u16)(g_akao_seq_channel0->unk5C - 1);
+                g_akao_seq_channel0->unk20 = g_akao_seq_channel0->unk20 + g_akao_seq_channel0->unk24;
+            }
+
+            if (g_akao_seq_channel0->unk5A != 0) {
+                g_akao_seq_channel0->unk5A = (s16)(g_akao_seq_channel0->unk5A - 1);
+                g_akao_seq_channel0->unk48 = g_akao_seq_channel0->unk48 + g_akao_seq_channel0->unk4C;
+                if (arg1 == 0) {
+                    driver_flags->unk8 |= 0x80;
+                }
+            }
+
+            if (g_akao_seq_channel0->unk68 != 0) {
+                
+                g_akao_seq_channel0->unk6A = (u16)(g_akao_seq_channel0->unk6A + 1);
+                if (g_akao_seq_channel0->unk6A == g_akao_seq_channel0->unk68) {
+                    g_akao_seq_channel0->unk6A = 0;
+                    g_akao_seq_channel0->unk66 = (u16)(g_akao_seq_channel0->unk66 + 1);
+                    if (g_akao_seq_channel0->unk66  == g_akao_seq_channel0->unk64) {
+                        g_akao_seq_channel0->unk66 = 0;
+                        g_akao_seq_channel0->unk6C = (u16)(g_akao_seq_channel0->unk6C + 1);
+                        if (arg1 == 0) {
+                            if (D_8003EC44 != 0) {
+                                D_8003EC44 -= 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (arg1 == 0) {
+                var_s2 = arg0;
+                if (D_8003EC44 != 0) {
+                    continue;
+                }
+            }
+            break;
+        } while (1);
+    }
+
+    return g_akao_seq_channel0->unk4;
+}
