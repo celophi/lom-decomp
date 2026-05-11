@@ -1,6 +1,20 @@
 
 #include "gover.h"
 
+extern void akao_cmd_c0(undefined4 param_1, u_int param_2);
+extern void akao_cmd_f0(void);
+extern void akao_cmd_f1(void);
+extern void akao_cmd_a8(s32);
+extern s32 func_800A368C(s32, s32);
+extern s32 func_800A380C(void);
+extern s32 func_800A39A8(s32, s32, s32, s32);
+extern s32 D_8011588C;
+extern s32 D_80122988;
+extern u32 D_8003EC90;
+extern s32 D_8010D018;
+extern D_80119F00_t g_audioData;
+extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
+
 /**
  * FRAME_HALF(i) names the i-th GoverFrameHalf relative to the tail anchor.
  * (frameTail - 0x90) == &halves[0];
