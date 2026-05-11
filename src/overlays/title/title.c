@@ -1317,60 +1317,73 @@ void HandleSaveSlotInput(void)
 
 /**
  * Lerps g_slotHighlightX toward g_slotHighlightTargetX over
- * g_slotHighlightFrames frames and updates the panel-relative UI element
- * coordinates and visibility flags inside D_800F993C.
+ * g_slotHighlightFrames frames, pans the scroll window so the selected
+ * slot is always visible, then writes the updated V-coordinate and
+ * visibility flags for the highlight-bar layout entries in D_800F993C.
  *
  * decomp.me (99.09%) https://decomp.me/scratch/yKwnh
  */
 void AnimateSaveSlotPanel(void)
 {
-    s16 temp_v0_2;
-    s16 temp_v1;
-    u8* new_var;
-    s32 temp_a1;
-    s32 temp_v0;
-    s32 var_a0;
-    s32 var_a1;
-    s32 var_v0;
-    u8* base;
-    s32 var_v0_2;
+    /* $v1 / delay-slot $v1 — layout table base pointer for final stores */
+    u8* layout;
+    /* $v0,$v1 temporaries */
+    s16 highlight_v_offset; /* (u16)g_slotHighlightX + 0x20, written to .v0 of entries [3],[10] */
+    s16 scroll_width;       /* clamped scroll offset + 0x40, written to .v0 of entries [5],[6],[13],[14] */
+    /* $a1 — adjusted targetX for window arithmetic (biased by +0xF when negative) */
+    s32 target_adjusted;
+    /* $v0 — lerp step or new targetX */
+    s32 lerp_step;
+    /* $a0 — scroll offset = selectedIndex*16 - highlightX, clamped [0,0x60] */
+    s32 scroll_offset;
+    /* $a1 — window low bound (= target_adjusted >> 4), reused register */
+    s32 window_low;
+    /* $v0 — new g_slotHighlightTargetX when window must pan */
+    s32 new_target;
+
     if (g_slotHighlightFrames != 0)
     {
-        temp_v0 = (g_slotHighlightTargetX - g_slotHighlightX) / g_slotHighlightFrames;
+        lerp_step = (g_slotHighlightTargetX - g_slotHighlightX) / g_slotHighlightFrames;
         g_slotHighlightFrames -= 1;
-        g_slotHighlightX += temp_v0;
+        g_slotHighlightX += lerp_step;
     }
     else
     {
         g_slotHighlightX = g_slotHighlightTargetX;
     }
-    var_a1 = g_slotHighlightTargetX;
+
+    /* Bias targetX for arithmetic right-shift rounding toward zero */
+    target_adjusted = g_slotHighlightTargetX;
     if (g_slotHighlightTargetX < 0)
     {
-        var_a1 = 0xF;
-        var_a1 = g_slotHighlightTargetX + var_a1;
+        target_adjusted = 0xF;
+        target_adjusted = g_slotHighlightTargetX + target_adjusted;
     }
-    temp_a1 = var_a1 >> 4;
-    if (g_slotSelectedIndex < (var_a1 >> 4))
+    window_low = target_adjusted >> 4;
+
+    /* Pan the scroll window to keep g_slotSelectedIndex in the 7-slot viewport */
+    if (g_slotSelectedIndex < (target_adjusted >> 4))
     {
-        var_v0 = g_slotSelectedIndex * 0x10;
-        g_slotHighlightTargetX = var_v0;
+        new_target = g_slotSelectedIndex * 0x10;
+        g_slotHighlightTargetX = new_target;
         g_slotHighlightFrames = 4;
     }
-    else if ((temp_a1 + 6) < g_slotSelectedIndex)
+    else if ((window_low + 6) < g_slotSelectedIndex)
     {
-        var_a0 = 0x10;
-        var_v0 = (g_slotSelectedIndex - 6) * var_a0;
-        g_slotHighlightTargetX = var_v0;
+        scroll_offset = 0x10;
+        new_target = (g_slotSelectedIndex - 6) * scroll_offset;
+        g_slotHighlightTargetX = new_target;
         g_slotHighlightFrames = 4;
     }
-    base = D_800F993C;
-    temp_a1 = ((u16)g_slotHighlightX) + 0x20;
-    temp_v1 = temp_a1;
+
+    /* Write V-coordinates for the highlight-bar sprite pairs */
+    highlight_v_offset = ((u16)g_slotHighlightX) + 0x20;
     ((SaveLayoutEntry*)D_800F993C)[2].v0  = (u16)g_slotHighlightX;
-    ((SaveLayoutEntry*)D_800F993C)[3].v0  = temp_v1;
+    ((SaveLayoutEntry*)D_800F993C)[3].v0  = highlight_v_offset;
     ((SaveLayoutEntry*)D_800F993C)[9].v0  = (u16)g_slotHighlightX;
-    ((SaveLayoutEntry*)D_800F993C)[10].v0 = temp_v1;
+    ((SaveLayoutEntry*)D_800F993C)[10].v0 = highlight_v_offset;
+
+    /* Show/hide the left-arrow indicator entries */
     if (g_slotHighlightX != 0)
     {
         ((SaveLayoutEntry*)D_800F993C)[7].type  = 1;
@@ -1385,6 +1398,10 @@ void AnimateSaveSlotPanel(void)
         ((SaveLayoutEntry*)D_800F993C)[14].type = 0;
         ((SaveLayoutEntry*)D_800F993C)[15].type = 0;
     }
+
+    /* Show/hide the right-arrow indicator entries.
+     * Both branches reload D_800F993C independently (confirmed by asm at
+     * 0x800517D0 / 0x800517EC), so struct-cast is safe in both arms. */
     if (g_slotHighlightX != 0x40)
     {
         ((SaveLayoutEntry*)D_800F993C)[4].type  = 1;
@@ -1394,26 +1411,28 @@ void AnimateSaveSlotPanel(void)
     }
     else
     {
-        base[0x61] = 0; /* entry[4].type — uses local u8* base for codegen parity */
-        base[0x79] = 0; /* entry[5].type */
+        ((SaveLayoutEntry*)D_800F993C)[4].type  = 0;
+        ((SaveLayoutEntry*)D_800F993C)[5].type  = 0;
         ((SaveLayoutEntry*)D_800F993C)[11].type = 0;
         ((SaveLayoutEntry*)D_800F993C)[12].type = 0;
     }
-    var_a0 = (g_slotSelectedIndex * 0x10) - g_slotHighlightX;
-    if (var_a0 < 0)
+
+    /* Compute clamped scroll-bar width and write to the 4 width entries */
+    scroll_offset = (g_slotSelectedIndex * 0x10) - g_slotHighlightX;
+    if (scroll_offset < 0)
     {
-        var_a0 = 0;
+        scroll_offset = 0;
     }
-    if (var_a0 > 0x60)
+    if (scroll_offset > 0x60)
     {
-        var_a0 = 0x60;
+        scroll_offset = 0x60;
     }
-    new_var = D_800F993C;
-    temp_v0_2 = var_a0 + 0x40;
-    *((u16*)(new_var + 0x96)) = temp_v0_2;
-    *((u16*)(new_var + 0x9A)) = temp_v0_2;
-    *((u16*)(new_var + 0x13E)) = temp_v0_2;
-    *((u16*)(new_var + 0x142)) = temp_v0_2;
+    layout = D_800F993C;
+    scroll_width = scroll_offset + 0x40;
+    *((u16*)(layout + 0x96))  = scroll_width;
+    *((u16*)(layout + 0x9A))  = scroll_width;
+    *((u16*)(layout + 0x13E)) = scroll_width;
+    *((u16*)(layout + 0x142)) = scroll_width;
 }
 
 /**
