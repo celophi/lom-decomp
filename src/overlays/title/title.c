@@ -1367,37 +1367,37 @@ void AnimateSaveSlotPanel(void)
     base = D_800F993C;
     temp_a1 = ((u16)g_slotHighlightX) + 0x20;
     temp_v1 = temp_a1;
-    *((u16*)(D_800F993C + 0x3E)) = (u16)g_slotHighlightX;
-    *((u16*)(D_800F993C + 0x56)) = temp_v1;
-    *((u16*)(D_800F993C + 0xE6)) = (u16)g_slotHighlightX;
-    *((u16*)(D_800F993C - (-0xFE))) = temp_v1;
+    ((SaveLayoutEntry*)D_800F993C)[2].v0  = (u16)g_slotHighlightX;
+    ((SaveLayoutEntry*)D_800F993C)[3].v0  = temp_v1;
+    ((SaveLayoutEntry*)D_800F993C)[9].v0  = (u16)g_slotHighlightX;
+    ((SaveLayoutEntry*)D_800F993C)[10].v0 = temp_v1;
     if (g_slotHighlightX != 0)
     {
-        D_800F993C[0xA9] = 1;
-        D_800F993C[0xC1] = 1;
-        D_800F993C[0x151] = 1;
-        D_800F993C[0x169] = 1;
+        ((SaveLayoutEntry*)D_800F993C)[7].type  = 1;
+        ((SaveLayoutEntry*)D_800F993C)[8].type  = 1;
+        ((SaveLayoutEntry*)D_800F993C)[14].type = 1;
+        ((SaveLayoutEntry*)D_800F993C)[15].type = 1;
     }
     else
     {
-        D_800F993C[0xA9] = 0;
-        D_800F993C[0xC1] = 0;
-        D_800F993C[0x151] = 0;
-        D_800F993C[0x169] = 0;
+        ((SaveLayoutEntry*)D_800F993C)[7].type  = 0;
+        ((SaveLayoutEntry*)D_800F993C)[8].type  = 0;
+        ((SaveLayoutEntry*)D_800F993C)[14].type = 0;
+        ((SaveLayoutEntry*)D_800F993C)[15].type = 0;
     }
     if (g_slotHighlightX != 0x40)
     {
-        D_800F993C[0x61] = 1;
-        D_800F993C[0x79] = 1;
-        D_800F993C[0x109] = 1;
-        D_800F993C[0x121] = 1;
+        ((SaveLayoutEntry*)D_800F993C)[4].type  = 1;
+        ((SaveLayoutEntry*)D_800F993C)[5].type  = 1;
+        ((SaveLayoutEntry*)D_800F993C)[11].type = 1;
+        ((SaveLayoutEntry*)D_800F993C)[12].type = 1;
     }
     else
     {
-        base[0x61] = 0;
-        base[0x79] = 0;
-        D_800F993C[0x109] = 0;
-        D_800F993C[0x121] = 0;
+        base[0x61] = 0; /* entry[4].type — uses local u8* base for codegen parity */
+        base[0x79] = 0; /* entry[5].type */
+        ((SaveLayoutEntry*)D_800F993C)[11].type = 0;
+        ((SaveLayoutEntry*)D_800F993C)[12].type = 0;
     }
     var_a0 = (g_slotSelectedIndex * 0x10) - g_slotHighlightX;
     if (var_a0 < 0)
