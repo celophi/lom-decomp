@@ -1,5 +1,5 @@
-#ifndef _DECOMP3_H
-#define _DECOMP3_H
+#ifndef _AKAO_DRIVER_H
+#define _AKAO_DRIVER_H
 
 #include "common.h"
 #include "akao.h"
