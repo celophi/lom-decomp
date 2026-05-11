@@ -252,7 +252,7 @@ SRCS_G0 := \
 	src/unk8.c \
 	src/unk9.c \
 	src/decomp1.c \
-	src/decomp3.c \
+	src/akao_driver.c \
 	src/decomp4.c \
 	src/decomp7.c \
 	src/main.c
@@ -260,7 +260,7 @@ SRCS_G0 := \
 SRCS_G4 := \
 	src/cdrom.c \
 	src/decomp2.c \
-	src/decomp5.c \
+	src/akao_spu.c \
 	src/decomp6.c 
 
 SRCS_CDK_G0 := \

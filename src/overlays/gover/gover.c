@@ -22,12 +22,13 @@
  *   0x12  height     - CLUT rows (width * height = total palette entries)
  *   0x14  clutData   - inline CLUT pixel data begins here
  */
-typedef struct {
-    u8     _pad0[8];
-    u32    size;
-    u8     _pad1[4];
-    u16    width;
-    u16    height;
+typedef struct
+{
+    u8 _pad0[8];
+    u32 size;
+    u8 _pad1[4];
+    u16 width;
+    u16 height;
     u_long clutData;
 } ClutSectionHeader;
 
@@ -44,10 +45,11 @@ typedef struct {
  *   0x0A  h          - image height in pixels
  *   0x0C  data       - inline pixel data begins here
  */
-typedef struct {
-    u8     _pad0[8];
-    u16    w;
-    u16    h;
+typedef struct
+{
+    u8 _pad0[8];
+    u16 w;
+    u16 h;
     u_long data;
 } PixelDataHeader;
 
@@ -58,7 +60,8 @@ typedef struct {
  * the CLUT palette strip and the pixel data independently. Overlaid on a PSX
  * RECT at the call site (x/y map to pixelX/Y; w/h map to clutX/Y).
  */
-typedef struct {
+typedef struct
+{
     u16 pixelX;
     u16 pixelY;
     u16 clutX;
@@ -67,10 +70,10 @@ typedef struct {
 
 typedef struct
 {
-  u32 unk0;
-  u32 unk4;
-  u32 unk8;
-  u8 unk12[1];
+    u32 unk0;
+    u32 unk4;
+    u32 unk8;
+    u8 unk12[1];
 } D_80119F00_t;
 
 /**
@@ -96,13 +99,14 @@ typedef struct
  *                         frame by gover_run, advanced by gover_build_otag)
  *   0x49C  (size)
  */
-typedef struct GoverFrameHalf {
-    u8       otag[0x20];
-    DISPENV  disp;
-    DRAWENV  draw;
-    RECT     vramRect;
-    u8       primBuf[0x400];
-    u8*      allocCursor;
+typedef struct GoverFrameHalf
+{
+    u8 otag[0x20];
+    DISPENV disp;
+    DRAWENV draw;
+    RECT vramRect;
+    u8 primBuf[0x400];
+    u8* allocCursor;
 } GoverFrameHalf;
 
 extern void akao_cmd_c0(undefined4 param_1, u_int param_2);

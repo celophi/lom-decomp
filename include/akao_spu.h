@@ -1,5 +1,5 @@
-#ifndef _DECOMP5_H
-#define _DECOMP5_H
+#ifndef _AKAO_SPU_H
+#define _AKAO_SPU_H
 
 #include "common.h"
 #include "akao.h"
