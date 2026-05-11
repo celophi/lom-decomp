@@ -1,6 +1,10 @@
 
 #include "gover.h"
-
+#include "akao.h"
+#include "display.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+#include "psyq/libetc.h"
 
 /**
  * @brief Header for the CLUT (palette) section of a CD image file.
