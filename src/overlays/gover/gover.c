@@ -1,6 +1,6 @@
-
 #include "gover.h"
 #include "akao.h"
+#include "akao_cmd.h"
 #include "display.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
@@ -109,10 +109,6 @@ typedef struct GoverFrameHalf
     u8* allocCursor;
 } GoverFrameHalf;
 
-extern void akao_cmd_c0(undefined4 param_1, u_int param_2);
-extern void akao_cmd_f0(void);
-extern void akao_cmd_f1(void);
-extern void akao_cmd_a8(s32);
 extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
