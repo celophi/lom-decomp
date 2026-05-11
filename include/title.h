@@ -99,7 +99,34 @@ extern s32 g_slotHighlightFrames;
 extern u8 D_80043618[0x40];
 extern u8 D_800F9BC4[];
 extern u8 D_800F9AED;
-extern u8 D_800F993C[0x200];
+/**
+ * @brief One entry in the 27-element save-slot UI layout table (D_800F993C).
+ *
+ * The layout has 0x1B entries × 0x18 bytes = 0x288 bytes total.
+ *
+ * @note D_800F993C is kept as @c u8[] so that all existing raw byte-offset
+ *       accesses in the function bodies compile to unchanged codegen.
+ *       Cast to @c SaveLayoutEntry* at call sites that benefit from named
+ *       field access.
+ */
+typedef struct {
+    u8  flags;    /**< +0x00: bit0=apply_slide, bit1=semi_transparent, bits2-3=abr */
+    u8  type;     /**< +0x01: prim type: 0=skip, 2=TILE, 3=POLY_FT4, 4=SPRT, other=glyph */
+    u8  tex_slot; /**< +0x02: index into D_800F97FC[] tex table (stride 0x10) */
+    u8  pad;      /**< +0x03 */
+    s16 x;        /**< +0x04: screen base X (POLY_FT4, SPRT, glyph) */
+    s16 y;        /**< +0x06: screen base Y */
+    s16 tile_x;   /**< +0x08: screen X for TILE (slideX always added) */
+    s16 tile_y;   /**< +0x0A: screen Y for TILE */
+    u16 u0;       /**< +0x0C: initial U texture coordinate (glyph strip) */
+    u16 v0;       /**< +0x0E: initial V; animated by AnimateSaveSlotPanel for highlight entries */
+    u16 width;    /**< +0x10: TILE.w / glyph total pixel width (chunked at 128 px) */
+    u16 height;   /**< +0x12: TILE.h / glyph per-chunk sprite height */
+    u8  unk14[4]; /**< +0x14: TODO */
+} SaveLayoutEntry;             /* sizeof == 0x18 */
+
+/* 0x1B (27) entries; kept as u8[] to preserve byte-granular pointer arithmetic */
+extern u8 D_800F993C[0x288];
 extern u8 D_800F97FC[];
 extern u8 D_800F98AC[];
 extern u8 D_800F98F4[];
