@@ -1194,14 +1194,14 @@ void HandleSaveSlotInput(void)
         if (g_debouncedInput & 0xA000)
         {
             PlayTitleSfx(0x7D, 0x80);
-            if (D_800F993C[0x1B1] != 0)
+            if (((SaveLayoutEntry*)D_800F993C)[18].type != 0)
             {
-                D_800F993C[0x1B1] = 0;
-                D_800F993C[0x1C9] = 1;
+                ((SaveLayoutEntry*)D_800F993C)[18].type = 0;
+                ((SaveLayoutEntry*)D_800F993C)[19].type = 1;
                 return;
             }
-            D_800F993C[0x1B1] = 1;
-            D_800F993C[0x1C9] = g_slotSlideYLerped * 0;
+            ((SaveLayoutEntry*)D_800F993C)[18].type = 1;
+            ((SaveLayoutEntry*)D_800F993C)[19].type = g_slotSlideYLerped * 0;
             return;
         }
         if (g_debouncedInput & 0xA20)
