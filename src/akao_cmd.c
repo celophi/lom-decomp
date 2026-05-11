@@ -536,10 +536,10 @@ void akao_cmd_98_9a_9c_9e(u32 arg0)
  *
  * @see https://decomp.me/scratch/VTGCB (100%)
  */
-void akao_cmd_a8(s32 arg0)
+s32 akao_cmd_a8(s32 arg0)
 {
     g_akaoCmdParams[0] = (void*)(arg0 & 0x7F);
-    akao_send_command(0xA8);
+    return akao_send_command(0xA8);
 }
 
 /**
