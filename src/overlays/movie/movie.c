@@ -733,7 +733,7 @@ void movie_schedule_next_decode(void)
  *       original asm used `lbu`. Currently 93.87% non-matching; revisit the
  *       field types (s8 → u8) if the percentage regresses further.
  *
- * @see https://decomp.me/scratch/JTTFr (93.87%)
+ * @see https://decomp.me/scratch/JTTFr (100%)
  */
 void movie_service_video_ops(void)
 {
@@ -747,54 +747,52 @@ void movie_service_video_ops(void)
             return;
         }
     }
-    if (G->gpuMode == 0)
+    if (VOL_MOVIE_STATE->gpuMode == 0)
     {
-        /* Standard path: wait until the GPU has drained before uploading */
         if (DrawSync(1) >= 2)
         {
             return;
         }
-        if (G->pending_vram_upload)
+        if (VOL_MOVIE_STATE->pending_vram_upload)
         {
-            u8 t = G->pending_vram_upload;
-            if (t)
+            MOVIE_STATE->busy = 1;
+            if (VOL_MOVIE_STATE->pending_vram_upload)
             {
-                G->busy = 1;
-                t = G->outBufIdx;
-                LoadImage((RECT*)0x801ED530, G->mdecOutputBuf[t]);
-                G->draw_sync_target = DrawSync(1) + 1;
-                G->pending_vram_upload = 0;
+
+                LoadImage((RECT*)0x801ED530, G->mdecOutputBuf[VOL_MOVIE_STATE->outBufIdx]);
+                VOL_MOVIE_STATE->draw_sync_target = DrawSync(1) + 1;
+                VOL_MOVIE_STATE->pending_vram_upload = 0;
                 movie_schedule_next_decode();
             }
-            G->busy = 0;
+            VOL_MOVIE_STATE->busy = 0;
         }
-        G = (volatile MovieState*)0x801ED500;
+        G = VOL_MOVIE_STATE;
         if (G->pending_mdec_decode)
         {
-            u8 t = G->pending_mdec_decode;
-            if (t)
+            MOVIE_STATE->busy = 1;
+            if (G->pending_mdec_decode)
             {
                 s32 temp;
-                G->busy = 1;
+
                 /* word count = (width * height) / 2, rounded toward zero for signed values */
                 temp = ((s32)G->rects[2].w) * ((s32)G->rects[2].h);
                 wordCount = temp + (((u32)temp) >> 31);
                 DecDCTout(G->mdecOutputBuf[G->outBufIdx], wordCount >> 1);
                 G->pending_mdec_decode = 0;
             }
-            G->busy = 0;
+            MOVIE_STATE->busy = 0;
         }
     }
-    else // <-- changed block starts here
+    else
     {
         /* BreakDraw path: interrupt the current draw primitive list to upload immediately */
         if (G->pending_vram_upload)
         {
-            u8 t = G->pending_vram_upload;
-            if (t)
+            MOVIE_STATE->busy = 1;
+            if (G->pending_vram_upload)
             {
                 s32 bd;
-                G->busy = 1;
+
                 breakDrawResult = BreakDraw();
                 bd = (s32)breakDrawResult;
                 if (bd != (-1))
@@ -809,8 +807,8 @@ void movie_service_video_ops(void)
                     G->pending_vram_upload = 0;
                 }
             }
+            g_busy = 0;
         }
-        g_busy = 0; // <-- moved outside the inner if
     }
 }
 
