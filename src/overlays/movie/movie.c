@@ -446,17 +446,14 @@ void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx
  */
 void movie_update(void)
 {
-    s32 audioCapacity;             /* audioRingCapacity reload */
-    
-    
+    s32 audioCapacity; /* audioRingCapacity reload */
+
     VideoVlcPayload* vlc_payload;   /* raw bitstream for the next video frame */
     VideoSectorEntry* entry_header; /* 32-byte sector header for the same frame */
     AudioSector* audio_entry;       /* next audio ring entry (header + payload) */
-    
-    s32 tmp = 0;                    /* vlc-complete flag, then audioBufferedCount compare */
+
+    s32 tmp = 0; /* vlc-complete flag, then audioBufferedCount compare */
     MovieState* combined = MOVIE_STATE;
-    
-    
 
     if (g_mdecRetryPending != 0)
     {
@@ -466,14 +463,15 @@ void movie_update(void)
             DecDCTin((u_long*)((MovieState*)MOVIE_STATE)->vlcInputBuf[MOVIE_STATE->inputBufIdx],
                      (MOVIE_STATE->gpuMode & 0xFFFFu) == 0);
             {
-                s32 temp = ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
+                s32 temp =
+                    ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
                 s32 wordCount = temp + (((unsigned)temp) >> 31);
                 DecDCTout((((MovieState*)MOVIE_STATE)->mdecOutputBuf[MOVIE_STATE->outBufIdx]), wordCount >> 1);
             }
             MOVIE_STATE->mdecRetryPending = 0;
         }
     }
-    
+
     if ((g_mdecRetryPending == 0) & 0xFFFFu)
     {
         u8 retryCount = MOVIE_STATE->vlcRetryCount;
@@ -494,15 +492,15 @@ void movie_update(void)
         else if (get_next_video_entry(&vlc_payload, &entry_header) != 0)
         {
             MOVIE_STATE->currentFrame = entry_header->header.frameNumber;
-            
+
             if ((entry_header->header.frameNumber >= MOVIE_STATE->totalFrames) &&
                 (MOVIE_STATE->endState == END_STATE_RUNNING))
             {
                 MOVIE_STATE->endState = END_STATE_NEAR_END;
             }
-            
+
             MOVIE_STATE->inputBufIdx = 1 - MOVIE_STATE->inputBufIdx;
-            
+
             if (MOVIE_STATE->gpuMode == 0)
             {
                 DecDCTvlcSize2(0x1000);
@@ -525,18 +523,19 @@ void movie_update(void)
             MOVIE_STATE->endState = END_STATE_DONE;
         }
     }
-    
+
     if (tmp != 0)
     {
         s32 field9DZeroFlag;
         advance_video_read();
-       
+
         if ((MOVIE_STATE->mdecBusy == 0) && (field9DZeroFlag = MOVIE_STATE->frame_ready == 0))
         {
             MOVIE_STATE->mdecBusy = 1;
             DecDCTin((u_long*)(MOVIE_STATE)->vlcInputBuf[MOVIE_STATE->inputBufIdx], MOVIE_STATE->gpuMode == 0);
             {
-                s32 temp = ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
+                s32 temp =
+                    ((s16)((MovieState*)MOVIE_STATE)->rects[2].w) * ((s16)((MovieState*)MOVIE_STATE)->rects[2].h);
                 field9DZeroFlag = ((unsigned)temp) >> 31;
                 DecDCTout(MOVIE_STATE->mdecOutputBuf[MOVIE_STATE->outBufIdx], (temp + field9DZeroFlag) >> 1);
             }
@@ -546,7 +545,7 @@ void movie_update(void)
             g_mdecRetryPending = 1;
         }
     }
-    
+
     combined = MOVIE_STATE;
     if (g_cdAudioReady != 0)
     {
@@ -554,8 +553,9 @@ void movie_update(void)
         {
             entry_header = (VideoSectorEntry*)vlc_payload;
             MOVIE_STATE->currentFrame = ((AudioSector*)vlc_payload)->header.frameNumber;
-            
-            if ((((AudioSector*)vlc_payload)->header.frameNumber > MOVIE_STATE->totalFrames) && (MOVIE_STATE->endState < END_STATE_DONE))
+
+            if ((((AudioSector*)vlc_payload)->header.frameNumber > MOVIE_STATE->totalFrames) &&
+                (MOVIE_STATE->endState < END_STATE_DONE))
             {
                 MOVIE_STATE->endState = END_STATE_DONE;
             }
@@ -564,16 +564,16 @@ void movie_update(void)
         combined = MOVIE_STATE;
         if (g_audioStreamState == 2)
         {
-            
+
             audioCapacity = MOVIE_STATE->audioRingCapacity;
-            
+
             if ((s32)MOVIE_STATE->audioBufferedCount >= ((s32)(audioCapacity >> 1)))
             {
                 akao_cmd_98_9a_9c_9e(3);
                 MOVIE_STATE->unk92 = 0;
             }
         }
-        
+
         if ((MOVIE_STATE->audioWriteIdx != MOVIE_STATE->audioReadIdx) ||
             (MOVIE_STATE->lastAudioFrame != MOVIE_STATE->lastConsumedAudioFrame))
         {
@@ -656,13 +656,10 @@ void movie_mdec_out_callback(void)
  * if the GPU is busy). Otherwise toggles to the other chunk, resets the frame
  * position, and signals @ref MovieState::frame_ready.
  *
- * @see https://decomp.me/scratch/E7XCZ (98.72%)
+ * @see https://decomp.me/scratch/E7XCZ (100%)
  */
 void movie_schedule_next_decode(void)
 {
-    /* NOTE: the volatile u8/u16 casts on every access force lbu/lhu, so the
-     * underlying field signedness is irrelevant. */
-    MovieState* ptr = MOVIE_STATE;
     unsigned short nextOutBufIdx;
     u16 curFramePos;
     u16 frameStep;
@@ -670,46 +667,51 @@ void movie_schedule_next_decode(void)
     u16* new_var;
     s32 newFramePosSigned;
     s32 chunkEnd;
-    s16 a;
-    s16 c;
     u32 decodeSize;
     int decodeWordCount;
-    nextOutBufIdx = 1 - (*((volatile u8*)(&ptr->outBufIdx)));
-    curFramePos = *((volatile u16*)(&ptr->rects[2].x));
-    frameStep = *((volatile u16*)(&ptr->rects[2].w));
+
+    nextOutBufIdx = 1 - MOVIE_STATE->outBufIdx;
+
+    curFramePos = MOVIE_STATE->rects[2].x;
+    frameStep = MOVIE_STATE->rects[2].w;
+
     newFramePos = curFramePos + frameStep;
-    *((volatile u16*)(&ptr->rects[2].x)) = newFramePos;
+
+    MOVIE_STATE->rects[2].x = newFramePos;
+
     newFramePosSigned = (s16)newFramePos;
-    *((volatile u8*)(&ptr->outBufIdx)) = nextOutBufIdx;
-    a = ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].x;
-    c = ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].w;
-    chunkEnd = a + c;
+
+    VOL_MOVIE_STATE->outBufIdx = nextOutBufIdx;
+
+    chunkEnd =
+        MOVIE_STATE->rects[(u8)VOL_MOVIE_STATE->chunkIdx].x + MOVIE_STATE->rects[(u8)VOL_MOVIE_STATE->chunkIdx].w;
+
     if (newFramePosSigned < chunkEnd)
     {
-        if ((*((volatile u8*)(&ptr->draw_sync_target))) < 2U)
+        if (MOVIE_STATE->draw_sync_target < 2U)
         {
-            decodeSize = ((s16)frameStep) * ((s16)(*((volatile u16*)(&ptr->rects[2].h))));
+            decodeSize = ((s16)frameStep) * MOVIE_STATE->rects[2].h;
             decodeWordCount = ((int)(decodeSize + (decodeSize >> 31))) >> 1;
-            DecDCTout(ptr->mdecOutputBuf[*((volatile u8*)(&ptr->outBufIdx))], decodeWordCount);
-            *((volatile u8*)(&ptr->mdecBusy)) = 2;
+            DecDCTout(MOVIE_STATE->mdecOutputBuf[MOVIE_STATE->outBufIdx], decodeWordCount);
+            VOL_MOVIE_STATE->mdecBusy = 2;
         }
         else
         {
-            *((volatile u8*)(&ptr->mdecBusy)) = 1;
-            *((volatile u8*)(&ptr->pending_mdec_decode)) = 1;
+            MOVIE_STATE->mdecBusy = 1;
+            VOL_MOVIE_STATE->pending_mdec_decode = 1;
         }
     }
     else
     {
         /* advance to the next chunk and reset the frame position */
-        *((volatile u8*)(&ptr->chunkIdx)) = 1 - (*((volatile u8*)(&ptr->chunkIdx)));
-        ptr->rects[2].x = ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].x;
-        ptr->rects[2].y = *(new_var = (u16*)&ptr->rects[*((volatile u8*)(&ptr->chunkIdx))].y);
-        *((volatile u8*)(&ptr->frame_ready)) = 1;
-        *((volatile u8*)(&ptr->mdecBusy)) = 0;
-        if ((*((volatile u8*)(&ptr->endState))) == END_STATE_NEAR_END)
+        MOVIE_STATE->chunkIdx = 1 - MOVIE_STATE->chunkIdx;
+        MOVIE_STATE->rects[2].x = MOVIE_STATE->rects[(u8)VOL_MOVIE_STATE->chunkIdx].x;
+        MOVIE_STATE->rects[2].y = MOVIE_STATE->rects[(u8)VOL_MOVIE_STATE->chunkIdx].y;
+        VOL_MOVIE_STATE->frame_ready = 1;
+        VOL_MOVIE_STATE->mdecBusy = 0;
+        if (VOL_MOVIE_STATE->endState == END_STATE_NEAR_END)
         {
-            *((volatile u8*)(&ptr->endState)) = END_STATE_DONE;
+            MOVIE_STATE->endState = END_STATE_DONE;
         }
     }
 }
