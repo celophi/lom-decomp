@@ -1475,66 +1475,87 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 void func_80142410(void* arg0)
 {
     RECT tw_rect;
-    u8* obj = (u8*)arg0;
-    u_long* ot = (u_long*)(obj + 0x3C);
-    u8* p = *(u8**)(obj + 0x4040);
+    u8* obj_t6 = (u8*)arg0;
+    u8* obj_t2 = obj_t6;
     u32* pair = D_8014F6B8;
-    GlyphInfo* table = (GlyphInfo*)g_glyph_table;
+    s32 i = 0;
+    u8* table = g_glyph_table;
+    u8* p;
     DR_TWIN* twin;
     SPRT* sprt;
     u8* drawmode;
-    s32 i;
 
-    tw_rect.x = 0;
-    tw_rect.y = 0;
-    tw_rect.w = 0xFF;
+    p = *(u8**)(obj_t6 + 0x4040);
+
+    /* First TexWindow init: source order is h, w, y, x. */
     tw_rect.h = 0xFF;
+    tw_rect.w = 0xFF;
+    tw_rect.y = 0;
+    tw_rect.x = 0;
 
-    /* Opening texture window. */
+    /* Opening texture window — first addPrim uses obj_t6. */
     twin = (DR_TWIN*)p;
     setTexWindow(twin, &tw_rect);
-    addPrim(ot, twin);
+    addPrim((u_long*)(obj_t6 + 0x3C), twin);
     p += sizeof(DR_TWIN);
 
-    /* 20 glyph sprites. */
-    for (i = 0; i < 20; i++)
+    /* 20 glyph sprites. All subsequent addPrims use the obj_t2 alias. */
+    do
     {
-        GlyphInfo* g = &table[pair[0]];
-        u32 xy = pair[1];
+        u32 idx = pair[0];
+        u32 xy;
+        u8* entry;
 
         sprt = (SPRT*)p;
-        *(u32*)&sprt->r0 = 0x80808080;
+        /* RGB only (high byte is overwritten by setcode below). */
+        *(u32*)&sprt->r0 = 0x808080;
         setlen(sprt, 4);
         setcode(sprt, 0x64);
+
+        xy = pair[1];
+        /* Note operand order: (offset) + (base) so gcc emits `addu v1,v1,s0`. */
+        entry = (u8*)((idx << 3) + (u32)table);
         *(u32*)&sprt->x0 = xy;
-        sprt->u0 = g->u;
-        sprt->v0 = g->v;
-        sprt->w = g->w;
-        sprt->h = g->h;
-        sprt->clut = (u16)((g->clut & 0x3F) | 0x7C80);
 
-        addPrim(ot, sprt);
-        pair += 2;
+        sprt->u0 = entry[0];
+        sprt->v0 = entry[1];
+        sprt->w = entry[2];
+        {
+            /* `i++` sits between read and store of h to match scheduling. */
+            u8 hh = entry[3];
+            i++;
+            sprt->h = hh;
+        }
+        {
+            /* Read clut as a full word (`lw`), and pair advance is between
+               read and store to match scheduling. */
+            u32 clut_word = *(u32*)(entry + 4);
+            pair += 2;
+            sprt->clut = (u16)((clut_word & 0x3F) | 0x7C80);
+        }
+
+        addPrim((u_long*)(obj_t2 + 0x3C), sprt);
         p += sizeof(SPRT);
-    }
+    } while (i < 20);
 
-    /* Closing texture window (same rect). */
-    tw_rect.x = 0;
-    tw_rect.y = 0;
+    /* Closing texture window — source order is w, h, x, y (different from
+       the opening call; the original code matches this exact ordering). */
     tw_rect.w = 0xFF;
     tw_rect.h = 0xFF;
+    tw_rect.x = 0;
+    tw_rect.y = 0;
     twin = (DR_TWIN*)p;
     setTexWindow(twin, &tw_rect);
-    addPrim(ot, twin);
+    addPrim((u_long*)(obj_t2 + 0x3C), twin);
     p += sizeof(DR_TWIN);
 
     /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word. */
     drawmode = p;
     setDrawTPage(drawmode, 0, 0, 5);
-    addPrim(ot, drawmode);
+    addPrim((u_long*)(obj_t2 + 0x3C), drawmode);
     p += 8;
 
-    *(u8**)(obj + 0x4040) = p;
+    *(u8**)(obj_t6 + 0x4040) = p;
 }
 
 /**
