@@ -1455,184 +1455,86 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 }
 
 /**
- * decomp.me (82.98%) https://decomp.me/scratch/Q6WL2
+ * @brief Build the name-entry cursor's per-frame sprite packet: a TexWindow
+ *        bracket around 20 textured glyph sprites, terminated by a DrawMode.
+ *
+ * Reads 20 packed {u32 glyph_id, u32 packed_xy} pairs from @c D_8014F6B8,
+ * looks each glyph up in @c g_glyph_table, and appends a white (RGB=0x80)
+ * SPRT primitive (code 0x64, free-size textured sprite) to the chain at
+ * @c arg0+0x3C. The chain is wrapped with @c setTexWindow at both ends
+ * (rect @c {0,0,0xFF,0xFF} — a no-op full-page window) and closed with a
+ * @c setDrawTPage(0,0,5) terminator. Advances the buffer cursor at
+ * @c arg0+0x4040 past the final primitive.
+ *
+ * @param arg0 Render context. Reads/writes:
+ *             - +0x3C:   u_long prim_tail — addPrim "ot" head
+ *             - +0x4040: u8*    prim_buf  — next free byte in primitive pool
+ *
+ * @see decomp.me (91.42%) https://decomp.me/scratch/Q6WL2
  */
 void func_80142410(void* arg0)
 {
-    struct
+    RECT tw_rect;
+    u8* obj = (u8*)arg0;
+    u_long* ot = (u_long*)(obj + 0x3C);
+    u8* p = *(u8**)(obj + 0x4040);
+    u32* pair = D_8014F6B8;
+    GlyphInfo* table = (GlyphInfo*)g_glyph_table;
+    DR_TWIN* twin;
+    SPRT* sprt;
+    u8* drawmode;
+    s32 i;
+
+    tw_rect.x = 0;
+    tw_rect.y = 0;
+    tw_rect.w = 0xFF;
+    tw_rect.h = 0xFF;
+
+    /* Opening texture window. */
+    twin = (DR_TWIN*)p;
+    setTexWindow(twin, &tw_rect);
+    addPrim(ot, twin);
+    p += sizeof(DR_TWIN);
+
+    /* 20 glyph sprites. */
+    for (i = 0; i < 20; i++)
     {
-        u16 sp0;
-        u16 sp2;
-        u16 sp4;
-        u16 sp6;
-    } stk;
+        GlyphInfo* g = &table[pair[0]];
+        u32 xy = pair[1];
 
-    u8* obj_t6 = (u8*)arg0;
-    u8* obj_t2 = obj_t6;
-    u32 mask_all = 0x00FFFFFF;
-    u32* var_t0 = (u32*)D_8014F6B8;
-    s32 var_t4 = 0;
-    u32* var_s0 = (u32*)g_glyph_table;
-    u32 const_8080 = 0x80808080;
-    u32 const_4 = 4;
-    u32 const_64 = 0x64;
-    u32 mask_loop = 0x00FFFFFF;
+        sprt = (SPRT*)p;
+        *(u32*)&sprt->r0 = 0x80808080;
+        setlen(sprt, 4);
+        setcode(sprt, 0x64);
+        *(u32*)&sprt->x0 = xy;
+        sprt->u0 = g->u;
+        sprt->v0 = g->v;
+        sprt->w = g->w;
+        sprt->h = g->h;
+        sprt->clut = (u16)((g->clut & 0x3F) | 0x7C80);
 
-    u8* ptr_t1;
-    u32 a2, a0, a1, v0, v1;
-    u32* list_ptr;
-    u8* dst;
-    u8* entry;
-    u32 mask_ff00;
+        addPrim(ot, sprt);
+        pair += 2;
+        p += sizeof(SPRT);
+    }
 
-    /* Stack and first header */
-    ptr_t1 = *(u8**)(obj_t6 + 0x4040);
+    /* Closing texture window (same rect). */
+    tw_rect.x = 0;
+    tw_rect.y = 0;
+    tw_rect.w = 0xFF;
+    tw_rect.h = 0xFF;
+    twin = (DR_TWIN*)p;
+    setTexWindow(twin, &tw_rect);
+    addPrim(ot, twin);
+    p += sizeof(DR_TWIN);
 
-    stk.sp6 = 0xFF;
-    stk.sp4 = 0xFF;
-    mask_ff00 = 0xFF000000;
-    stk.sp2 = 0;
-    stk.sp0 = 0;
-    ptr_t1[3] = 2;
+    /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word. */
+    drawmode = p;
+    setDrawTPage(drawmode, 0, 0, 5);
+    addPrim(ot, drawmode);
+    p += 8;
 
-    a2 = (u16)stk.sp2;
-    v0 = (u8)stk.sp0;
-    a0 = (u16)stk.sp6;
-    a1 = (u16)stk.sp4;
-    *(u32*)(ptr_t1 + 8) = 0;
-
-    a2 = ((a2 & 0xFF) >> 3) << 15;
-    v1 = 0xE2000000;
-    v0 = (v0 >> 3) << 10;
-    v0 |= v1;
-    a2 |= v0;
-
-    a0 = (s32)(a0 << 16) >> 14;
-    a0 = -a0;
-    a2 |= (a0 & 0x3E0);
-
-    a1 = (s16)a1;
-    a1 = -a1;
-    a2 |= ((a1 & 0xFF) >> 3);
-
-    v1 = *(u32*)ptr_t1;
-    a0 = mask_ff00;
-    *(u32*)(ptr_t1 + 4) = a2;
-    v0 = *(u32*)(obj_t6 + 0x3C);
-    v1 = (v1 & a0) | (v0 & mask_all);
-    mask_all = (u32)ptr_t1 & mask_all;
-    *(u32*)ptr_t1 = v1;
-
-    ptr_t1 += 0xC;
-    list_ptr = (u32*)ptr_t1;
-    v0 = *(u32*)(obj_t6 + 0x3C);
-    dst = (u8*)list_ptr + 0xE;
-    v0 = (v0 & a0) | mask_all;
-    *(u32*)(obj_t6 + 0x3C) = v0;
-
-    /* Main loop */
-    do
-    {
-        u32 idx = var_t0[0];
-
-        *(u32*)(dst - 0xA) = const_8080;
-        *(u8*)(dst - 0xB) = (u8)const_4;
-        *(u8*)(dst - 7) = (u8)const_64;
-
-        v0 = var_t0[1];
-        entry = (u8*)var_s0 + (idx << 3);
-        *(u32*)(dst - 6) = v0;
-
-        {
-            u8 b0 = entry[0];
-            *(u8*)(dst - 2) = b0;
-        }
-        {
-            u8 b1 = entry[1];
-            *(u8*)(dst - 1) = b1;
-        }
-        {
-            u8 b2 = entry[2];
-            *(u16*)(dst + 2) = b2;
-        }
-        {
-            u8 b3 = entry[3];
-            var_t4++;
-            *(u16*)(dst + 4) = b3;
-        }
-        {
-            u32 val = *(u32*)(entry + 4);
-            var_t0 += 2;
-            *(u16*)dst = (u16)((val & 0x3F) | 0x7C80);
-        }
-
-        dst += 0x14;
-
-        /* Inner linked list update */
-        v1 = *list_ptr;
-        v0 = *(u32*)(obj_t2 + 0x3C);
-        *list_ptr = (v1 & mask_ff00) | (v0 & mask_loop);
-
-        v1 = (u32)list_ptr & mask_loop;
-        v0 = *(u32*)(obj_t2 + 0x3C);
-        *(u32*)(obj_t2 + 0x3C) = (v0 & mask_ff00) | v1;
-
-        list_ptr = (u32*)((u8*)list_ptr + 0x14);
-    } while (var_t4 < 20);
-
-    /* After loop */
-    ptr_t1 = (u8*)list_ptr;
-    mask_all = 0x00FFFFFF;
-    v1 = 0xE1000005;
-
-    stk.sp4 = 0xFF;
-    stk.sp6 = 0xFF;
-    stk.sp0 = 0;
-    stk.sp2 = 0;
-
-    /* Header 2 */
-    ptr_t1[3] = 2;
-    a2 = (u16)stk.sp2;
-    v0 = (u8)stk.sp0;
-    a0 = (u16)stk.sp6;
-    a1 = (u16)stk.sp4;
-    *(u32*)(ptr_t1 + 8) = 0;
-
-    a2 = ((a2 & 0xFF) >> 3) << 15;
-    v0 = (v0 >> 3) << 10;
-    a2 |= (v0 | 0xE2000000);
-
-    a0 = (s32)(a0 << 16) >> 14;
-    a0 = -a0;
-    a2 |= (a0 & 0x3E0);
-
-    a1 = (s16)a1;
-    a1 = -a1;
-    a2 |= ((a1 & 0xFF) >> 3);
-
-    v0 = *(u32*)ptr_t1;
-    a0 = 0xFF000000;
-    *(u32*)(ptr_t1 + 4) = a2;
-    v0 = (v0 & a0) | (*(u32*)(obj_t2 + 0x3C) & mask_all);
-    *(u32*)ptr_t1 = v0;
-
-    v0 = (u32)ptr_t1 & mask_all;
-    a2 = *(u32*)(obj_t2 + 0x3C);
-    ptr_t1 += 0xC;
-    *(u32*)(obj_t2 + 0x3C) = (a2 & a0) | v0;
-
-    /* Sync block */
-    ptr_t1[3] = 1;
-    v0 = *(u32*)ptr_t1;
-    *(u32*)(ptr_t1 + 4) = v1 | 0x5;
-    v0 = (v0 & a0) | (*(u32*)(obj_t2 + 0x3C) & mask_all);
-    *(u32*)ptr_t1 = v0;
-
-    v0 = *(u32*)(obj_t2 + 0x3C);
-    mask_all = (u32)ptr_t1 & mask_all;
-    *(u32*)(obj_t2 + 0x3C) = (v0 & a0) | mask_all;
-
-    *(u8**)(obj_t6 + 0x4040) = ptr_t1 + 8;
+    *(u8**)(obj + 0x4040) = p;
 }
 
 /**
