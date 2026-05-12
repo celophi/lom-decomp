@@ -1455,184 +1455,124 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 }
 
 /**
- * decomp.me (82.98%) https://decomp.me/scratch/Q6WL2
+ * @brief Build the name-entry cursor's per-frame sprite packet: a TexWindow
+ *        bracket around 20 textured glyph sprites, terminated by a DrawMode.
+ *
+ * Reads 20 packed {u32 glyph_id, u32 packed_xy} pairs from @c D_8014F6B8,
+ * looks each glyph up in @c g_glyph_table, and appends a white (RGB=0x80)
+ * SPRT primitive (code 0x64, free-size textured sprite) to the chain at
+ * @c arg0+0x3C. The chain is wrapped with @c setTexWindow at both ends
+ * (rect @c {0,0,0xFF,0xFF} — a no-op full-page window) and closed with a
+ * @c setDrawTPage(0,0,5) terminator. Advances the buffer cursor at
+ * @c arg0+0x4040 past the final primitive.
+ *
+ * @param arg0 Render context. Reads/writes:
+ *             - +0x3C:   u_long prim_tail — addPrim "ot" head
+ *             - +0x4040: u8*    prim_buf  — next free byte in primitive pool
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
 void func_80142410(void* arg0)
 {
-    struct
-    {
-        u16 sp0;
-        u16 sp2;
-        u16 sp4;
-        u16 sp6;
-    } stk;
+    RECT tw_rect;
 
-    u8* obj_t6 = (u8*)arg0;
-    u8* obj_t2 = obj_t6;
-    u32 mask_all = 0x00FFFFFF;
-    u32* var_t0 = (u32*)D_8014F6B8;
-    s32 var_t4 = 0;
-    u32* var_s0 = (u32*)g_glyph_table;
-    u32 const_8080 = 0x80808080;
-    u32 const_4 = 4;
-    u32 const_64 = 0x64;
-    u32 mask_loop = 0x00FFFFFF;
+    s32 i;
 
     u8* ptr_t1;
-    u32 a2, a0, a1, v0, v1;
-    u32* list_ptr;
-    u8* dst;
-    u8* entry;
-    u32 mask_ff00;
+    u8* list_ptr;
+    DR_TWIN* twin;
+    SPRT* sprt;
+    u8* drawmode;
+    u_long* ptr;
+    u32* pair;
 
-    /* Stack and first header */
+    u8* obj_t6 = (u8*)arg0;
+    u8* obj_t2;
+    u8* table;
+    obj_t2 = obj_t6;
+
     ptr_t1 = *(u8**)(obj_t6 + 0x4040);
 
-    stk.sp6 = 0xFF;
-    stk.sp4 = 0xFF;
-    mask_ff00 = 0xFF000000;
-    stk.sp2 = 0;
-    stk.sp0 = 0;
-    ptr_t1[3] = 2;
+    /* First TexWindow init: source order is h, w, y, x. */
+    tw_rect.h = 0xFF;
+    tw_rect.w = 0xFF;
+    tw_rect.y = 0;
+    tw_rect.x = 0;
 
-    a2 = (u16)stk.sp2;
-    v0 = (u8)stk.sp0;
-    a0 = (u16)stk.sp6;
-    a1 = (u16)stk.sp4;
-    *(u32*)(ptr_t1 + 8) = 0;
+    /* Opening texture window — first addPrim uses obj_t6. */
+    twin = (DR_TWIN*)ptr_t1;
+    setTexWindow(twin, &tw_rect);
 
-    a2 = ((a2 & 0xFF) >> 3) << 15;
-    v1 = 0xE2000000;
-    v0 = (v0 >> 3) << 10;
-    v0 |= v1;
-    a2 |= v0;
+    addPrim((u_long*)(obj_t6 + 0x3C), twin);
 
-    a0 = (s32)(a0 << 16) >> 14;
-    a0 = -a0;
-    a2 |= (a0 & 0x3E0);
+    pair = D_8014F6B8;
+    i = 0;
+    table = g_glyph_table;
 
-    a1 = (s16)a1;
-    a1 = -a1;
-    a2 |= ((a1 & 0xFF) >> 3);
+    ptr_t1 += sizeof(DR_TWIN);
 
-    v1 = *(u32*)ptr_t1;
-    a0 = mask_ff00;
-    *(u32*)(ptr_t1 + 4) = a2;
-    v0 = *(u32*)(obj_t6 + 0x3C);
-    v1 = (v1 & a0) | (v0 & mask_all);
-    mask_all = (u32)ptr_t1 & mask_all;
-    *(u32*)ptr_t1 = v1;
-
-    ptr_t1 += 0xC;
-    list_ptr = (u32*)ptr_t1;
-    v0 = *(u32*)(obj_t6 + 0x3C);
-    dst = (u8*)list_ptr + 0xE;
-    v0 = (v0 & a0) | mask_all;
-    *(u32*)(obj_t6 + 0x3C) = v0;
-
-    /* Main loop */
+    /* 20 glyph sprites. The loop walks `list_ptr` (alias of ptr_t1) so the
+       compiler keeps both pointers live — matches target codegen which uses
+       t1 + a2 in parallel. */
+    list_ptr = ptr_t1;
     do
     {
-        u32 idx = var_t0[0];
+        u32 idx = pair[0];
+        u32 xy;
+        u8* entry;
 
-        *(u32*)(dst - 0xA) = const_8080;
-        *(u8*)(dst - 0xB) = (u8)const_4;
-        *(u8*)(dst - 7) = (u8)const_64;
+        sprt = (SPRT*)list_ptr;
+        /* RGB only (high byte is overwritten by setcode below). */
+        *(u32*)&sprt->r0 = 0x808080;
+        setlen(sprt, 4);
+        setcode(sprt, 0x64);
 
-        v0 = var_t0[1];
-        entry = (u8*)var_s0 + (idx << 3);
-        *(u32*)(dst - 6) = v0;
+        xy = pair[1];
+        /* Note operand order: (offset) + (base) so gcc emits `addu v1,v1,s0`. */
+        entry = (u8*)((idx << 3) + (u32)table);
+        *(u32*)&sprt->x0 = xy;
 
+        sprt->u0 = entry[0];
+        sprt->v0 = entry[1];
+        sprt->w = entry[2];
         {
-            u8 b0 = entry[0];
-            *(u8*)(dst - 2) = b0;
+            /* `i++` sits between read and store of h to match scheduling. */
+            u8 hh = entry[3];
+            i++;
+            sprt->h = hh;
         }
         {
-            u8 b1 = entry[1];
-            *(u8*)(dst - 1) = b1;
-        }
-        {
-            u8 b2 = entry[2];
-            *(u16*)(dst + 2) = b2;
-        }
-        {
-            u8 b3 = entry[3];
-            var_t4++;
-            *(u16*)(dst + 4) = b3;
-        }
-        {
-            u32 val = *(u32*)(entry + 4);
-            var_t0 += 2;
-            *(u16*)dst = (u16)((val & 0x3F) | 0x7C80);
+            /* Read clut as a full word (`lw`), and pair advance is between
+               read and store to match scheduling. */
+            u32 clut_word = *(u32*)(entry + 4);
+            pair += 2;
+            sprt->clut = (u16)((clut_word & 0x3F) | 0x7C80);
         }
 
-        dst += 0x14;
+        addPrim((u_long*)(obj_t2 + 0x3C), sprt);
+        list_ptr += sizeof(SPRT);
+    } while (i < 20);
+    ptr_t1 = list_ptr;
 
-        /* Inner linked list update */
-        v1 = *list_ptr;
-        v0 = *(u32*)(obj_t2 + 0x3C);
-        *list_ptr = (v1 & mask_ff00) | (v0 & mask_loop);
+    /* Closing texture window — source order is w, h, x, y (different from
+       the opening call; the original code matches this exact ordering). */
+    tw_rect.w = 0xFF;
+    tw_rect.h = 0xFF;
+    tw_rect.x = 0;
+    tw_rect.y = 0;
+    twin = (DR_TWIN*)ptr_t1;
+    setTexWindow(twin, &tw_rect);
+    addPrim((u_long*)(obj_t2 + 0x3C), twin);
+    ptr_t1 += sizeof(DR_TWIN);
 
-        v1 = (u32)list_ptr & mask_loop;
-        v0 = *(u32*)(obj_t2 + 0x3C);
-        *(u32*)(obj_t2 + 0x3C) = (v0 & mask_ff00) | v1;
+    /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word.
+       Note: the buffer cursor is written as `drawmode + 8` rather than
+       advancing ptr_t1 first, so gcc emits `addiu v0,t1,8; sw v0,0x4040`. */
+    drawmode = ptr_t1;
+    setDrawTPage(drawmode, 0, 0, 5);
+    addPrim((u_long*)(obj_t2 + 0x3C), drawmode);
 
-        list_ptr = (u32*)((u8*)list_ptr + 0x14);
-    } while (var_t4 < 20);
-
-    /* After loop */
-    ptr_t1 = (u8*)list_ptr;
-    mask_all = 0x00FFFFFF;
-    v1 = 0xE1000005;
-
-    stk.sp4 = 0xFF;
-    stk.sp6 = 0xFF;
-    stk.sp0 = 0;
-    stk.sp2 = 0;
-
-    /* Header 2 */
-    ptr_t1[3] = 2;
-    a2 = (u16)stk.sp2;
-    v0 = (u8)stk.sp0;
-    a0 = (u16)stk.sp6;
-    a1 = (u16)stk.sp4;
-    *(u32*)(ptr_t1 + 8) = 0;
-
-    a2 = ((a2 & 0xFF) >> 3) << 15;
-    v0 = (v0 >> 3) << 10;
-    a2 |= (v0 | 0xE2000000);
-
-    a0 = (s32)(a0 << 16) >> 14;
-    a0 = -a0;
-    a2 |= (a0 & 0x3E0);
-
-    a1 = (s16)a1;
-    a1 = -a1;
-    a2 |= ((a1 & 0xFF) >> 3);
-
-    v0 = *(u32*)ptr_t1;
-    a0 = 0xFF000000;
-    *(u32*)(ptr_t1 + 4) = a2;
-    v0 = (v0 & a0) | (*(u32*)(obj_t2 + 0x3C) & mask_all);
-    *(u32*)ptr_t1 = v0;
-
-    v0 = (u32)ptr_t1 & mask_all;
-    a2 = *(u32*)(obj_t2 + 0x3C);
-    ptr_t1 += 0xC;
-    *(u32*)(obj_t2 + 0x3C) = (a2 & a0) | v0;
-
-    /* Sync block */
-    ptr_t1[3] = 1;
-    v0 = *(u32*)ptr_t1;
-    *(u32*)(ptr_t1 + 4) = v1 | 0x5;
-    v0 = (v0 & a0) | (*(u32*)(obj_t2 + 0x3C) & mask_all);
-    *(u32*)ptr_t1 = v0;
-
-    v0 = *(u32*)(obj_t2 + 0x3C);
-    mask_all = (u32)ptr_t1 & mask_all;
-    *(u32*)(obj_t2 + 0x3C) = (v0 & a0) | mask_all;
-
-    *(u8**)(obj_t6 + 0x4040) = ptr_t1 + 8;
+    *((u8**)(((u8*)arg0) + 0x4040)) = drawmode + 8;
 }
 
 /**
