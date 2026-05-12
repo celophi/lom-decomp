@@ -1475,17 +1475,24 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 void func_80142410(void* arg0)
 {
     RECT tw_rect;
-    u8* obj_t6 = (u8*)arg0;
-    u8* obj_t2 = obj_t6;
-    u32* pair = D_8014F6B8;
+    
+    
+    
     s32 i = 0;
-    u8* table = g_glyph_table;
+    
     u8* ptr_t1;
     u8* list_ptr;
     DR_TWIN* twin;
     SPRT* sprt;
     u8* drawmode;
-
+    u_long* ptr;
+    u32* pair = D_8014F6B8;
+    
+    u8* obj_t6 = (u8*)arg0;
+    u8* obj_t2 = obj_t6;
+    u8* table = g_glyph_table;
+    
+    
     ptr_t1 = *(u8**)(obj_t6 + 0x4040);
 
     /* First TexWindow init: source order is h, w, y, x. */
@@ -1561,7 +1568,7 @@ void func_80142410(void* arg0)
     setDrawTPage(drawmode, 0, 0, 5);
     addPrim((u_long*)(obj_t2 + 0x3C), drawmode);
 
-    *(u8**)(obj_t6 + 0x4040) = drawmode + 8;
+    *((u8 **) (((u8 *) arg0) + 0x4040)) = drawmode + 8;
 }
 
 /**
