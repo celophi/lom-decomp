@@ -1480,12 +1480,13 @@ void func_80142410(void* arg0)
     u32* pair = D_8014F6B8;
     s32 i = 0;
     u8* table = g_glyph_table;
-    u8* p;
+    u8* ptr_t1;
+    u8* list_ptr;
     DR_TWIN* twin;
     SPRT* sprt;
     u8* drawmode;
 
-    p = *(u8**)(obj_t6 + 0x4040);
+    ptr_t1 = *(u8**)(obj_t6 + 0x4040);
 
     /* First TexWindow init: source order is h, w, y, x. */
     tw_rect.h = 0xFF;
@@ -1494,19 +1495,22 @@ void func_80142410(void* arg0)
     tw_rect.x = 0;
 
     /* Opening texture window — first addPrim uses obj_t6. */
-    twin = (DR_TWIN*)p;
+    twin = (DR_TWIN*)ptr_t1;
     setTexWindow(twin, &tw_rect);
     addPrim((u_long*)(obj_t6 + 0x3C), twin);
-    p += sizeof(DR_TWIN);
+    ptr_t1 += sizeof(DR_TWIN);
 
-    /* 20 glyph sprites. All subsequent addPrims use the obj_t2 alias. */
+    /* 20 glyph sprites. The loop walks `list_ptr` (alias of ptr_t1) so the
+       compiler keeps both pointers live — matches target codegen which uses
+       t1 + a2 in parallel. */
+    list_ptr = ptr_t1;
     do
     {
         u32 idx = pair[0];
         u32 xy;
         u8* entry;
 
-        sprt = (SPRT*)p;
+        sprt = (SPRT*)list_ptr;
         /* RGB only (high byte is overwritten by setcode below). */
         *(u32*)&sprt->r0 = 0x808080;
         setlen(sprt, 4);
@@ -1535,8 +1539,9 @@ void func_80142410(void* arg0)
         }
 
         addPrim((u_long*)(obj_t2 + 0x3C), sprt);
-        p += sizeof(SPRT);
+        list_ptr += sizeof(SPRT);
     } while (i < 20);
+    ptr_t1 = list_ptr;
 
     /* Closing texture window — source order is w, h, x, y (different from
        the opening call; the original code matches this exact ordering). */
@@ -1544,18 +1549,19 @@ void func_80142410(void* arg0)
     tw_rect.h = 0xFF;
     tw_rect.x = 0;
     tw_rect.y = 0;
-    twin = (DR_TWIN*)p;
+    twin = (DR_TWIN*)ptr_t1;
     setTexWindow(twin, &tw_rect);
     addPrim((u_long*)(obj_t2 + 0x3C), twin);
-    p += sizeof(DR_TWIN);
+    ptr_t1 += sizeof(DR_TWIN);
 
-    /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word. */
-    drawmode = p;
+    /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word.
+       Note: the buffer cursor is written as `drawmode + 8` rather than
+       advancing ptr_t1 first, so gcc emits `addiu v0,t1,8; sw v0,0x4040`. */
+    drawmode = ptr_t1;
     setDrawTPage(drawmode, 0, 0, 5);
     addPrim((u_long*)(obj_t2 + 0x3C), drawmode);
-    p += 8;
 
-    *(u8**)(obj_t6 + 0x4040) = p;
+    *(u8**)(obj_t6 + 0x4040) = drawmode + 8;
 }
 
 /**
