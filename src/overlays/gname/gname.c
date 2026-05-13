@@ -1455,20 +1455,24 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 }
 
 /**
- * @brief Build the name-entry cursor's per-frame sprite packet: a TexWindow
- *        bracket around 20 textured glyph sprites, terminated by a DrawMode.
+ * @brief Build the name-entry cursor's per-frame sprite packet:
+ *        a TexWindow bracket around @ref NAME_CURSOR_GLYPH_COUNT textured
+ *        glyph sprites, terminated by a DrawMode.
  *
- * Reads 20 packed {u32 glyph_id, u32 packed_xy} pairs from @c D_8014F6B8,
- * looks each glyph up in @c g_glyph_table, and appends a white (RGB=0x80)
- * SPRT primitive (code 0x64, free-size textured sprite) to the chain at
- * @c arg0+0x3C. The chain is wrapped with @c setTexWindow at both ends
- * (rect @c {0,0,0xFF,0xFF} — a no-op full-page window) and closed with a
- * @c setDrawTPage(0,0,5) terminator. Advances the buffer cursor at
- * @c arg0+0x4040 past the final primitive.
+ * Walks @c D_8014F6B8 (a @ref GlyphSeqEntry array) one entry per glyph
+ * cell, looks each glyph up in @c g_glyph_table, and emits a white
+ * (RGB=0x80) free-size textured SPRT primitive (code 0x64). The chain is
+ * wrapped with @c setTexWindow at both ends (rect @c {0,0,0xFF,0xFF} —
+ * a no-op full-page window) and closed with @c setDrawTPage(0,0,5).
+ * The buffer cursor at @c obj->unk4040 is advanced past the final primitive.
  *
- * @param arg0 Render context. Reads/writes:
- *             - +0x3C:   u_long prim_tail — addPrim "ot" head
- *             - +0x4040: u8*    prim_buf  — next free byte in primitive pool
+ * @param arg0 Render context (@ref Obj). Reads/writes:
+ *             - @c prim_ot at offset 0x3C — addPrim "ot" head.
+ *             - @c unk4040 at offset 0x4040 — primitive scratch-pool cursor.
+ *
+ * @note Called by @ref gname_tick via the implicit-@c $a0 convention
+ *       (the call site passes no args; the function reads whatever the
+ *       caller left in @c $a0).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
@@ -1484,14 +1488,17 @@ void func_80142410(void* arg0)
     SPRT* sprt;
     u8* drawmode;
     u_long* ptr;
-    u32* pair;
+    GlyphSeqEntry* seq;
 
-    u8* obj_t6 = (u8*)arg0;
-    u8* obj_t2;
-    u8* table;
-    obj_t2 = obj_t6;
+    /* Two aliases of the same context pointer: gcc allocates them to t6/t2
+       and uses t6 for the very first addPrim/buf access and t2 for every
+       subsequent addPrim. This split is load-bearing for the asm match. */
+    Obj* obj = (Obj*)arg0;
+    Obj* obj2;
+    u8* glyph_table_base;
+    obj2 = obj;
 
-    ptr_t1 = *(u8**)(obj_t6 + 0x4040);
+    ptr_t1 = (u8*)obj->unk4040;
 
     /* First TexWindow init: source order is h, w, y, x. */
     tw_rect.h = 0xFF;
@@ -1499,80 +1506,86 @@ void func_80142410(void* arg0)
     tw_rect.y = 0;
     tw_rect.x = 0;
 
-    /* Opening texture window — first addPrim uses obj_t6. */
+    /* Opening texture window. The first addPrim runs *before* seq/i/glyph_table_base
+       are assigned so gcc materializes the 0x00FFFFFF mask at the very top
+       of the prologue (the mask is the first non-arg constant used). */
     twin = (DR_TWIN*)ptr_t1;
     setTexWindow(twin, &tw_rect);
+    addPrim(&obj->prim_ot, twin);
 
-    addPrim((u_long*)(obj_t6 + 0x3C), twin);
-
-    pair = D_8014F6B8;
+    seq = D_8014F6B8;
     i = 0;
-    table = g_glyph_table;
+    glyph_table_base = g_glyph_table;
 
     ptr_t1 += sizeof(DR_TWIN);
 
-    /* 20 glyph sprites. The loop walks `list_ptr` (alias of ptr_t1) so the
-       compiler keeps both pointers live — matches target codegen which uses
-       t1 + a2 in parallel. */
+    /* Glyph sprites. list_ptr is a separate variable aliased to ptr_t1 so
+       gcc keeps both pointers live across the loop (target uses t1 + a2 in
+       parallel). */
     list_ptr = ptr_t1;
     do
     {
-        u32 idx = pair[0];
+        u32 idx = seq->id;
         u32 xy;
-        u8* entry;
+        u8* glyph;
 
         sprt = (SPRT*)list_ptr;
-        /* RGB only (high byte is overwritten by setcode below). */
+        /* RGB only (high byte lands in `code`, immediately overwritten). */
         *(u32*)&sprt->r0 = 0x808080;
         setlen(sprt, 4);
         setcode(sprt, 0x64);
 
-        xy = pair[1];
-        /* Note operand order: (offset) + (base) so gcc emits `addu v1,v1,s0`. */
-        entry = (u8*)((idx << 3) + (u32)table);
+        xy = seq->xy;
+        /* (offset) + (base) order forces gcc to emit `addu v1,v1,s0` (vs.
+           the reverse order `s0,v1` you'd get from `&glyph_table[idx]`). */
+        glyph = (u8*)((idx << 3) + (u32)glyph_table_base);
         *(u32*)&sprt->x0 = xy;
 
-        sprt->u0 = entry[0];
-        sprt->v0 = entry[1];
-        sprt->w = entry[2];
+        sprt->u0 = glyph[0];
+        sprt->v0 = glyph[1];
+        sprt->w = glyph[2];
         {
-            /* `i++` sits between read and store of h to match scheduling. */
-            u8 hh = entry[3];
+            /* `i++` between the load and store of `h` so gcc schedules the
+               counter increment into the slot the target asm uses. */
+            u8 hh = glyph[3];
             i++;
             sprt->h = hh;
         }
         {
-            /* Read clut as a full word (`lw`), and pair advance is between
-               read and store to match scheduling. */
-            u32 clut_word = *(u32*)(entry + 4);
-            pair += 2;
-            sprt->clut = (u16)((clut_word & 0x3F) | 0x7C80);
+            /* Read clut as a full word (gcc would otherwise optimize this
+               to `lhu` since only the low 16 bits affect the result). The
+               `seq++` advance sits between read and store to match the
+               target's instruction scheduling. */
+            u32 clut_word = *(u32*)(glyph + 4);
+            seq++;
+            sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
         }
 
-        addPrim((u_long*)(obj_t2 + 0x3C), sprt);
+        addPrim(&obj2->prim_ot, sprt);
         list_ptr += sizeof(SPRT);
-    } while (i < 20);
+    } while (i < NAME_CURSOR_GLYPH_COUNT);
     ptr_t1 = list_ptr;
 
-    /* Closing texture window — source order is w, h, x, y (different from
-       the opening call; the original code matches this exact ordering). */
+    /* Closing texture window. Field-assignment order differs from the
+       opening call (w,h,x,y vs. h,w,y,x) — the original C wrote them in
+       this exact order and gcc preserves it. */
     tw_rect.w = 0xFF;
     tw_rect.h = 0xFF;
     tw_rect.x = 0;
     tw_rect.y = 0;
     twin = (DR_TWIN*)ptr_t1;
     setTexWindow(twin, &tw_rect);
-    addPrim((u_long*)(obj_t2 + 0x3C), twin);
+    addPrim(&obj2->prim_ot, twin);
     ptr_t1 += sizeof(DR_TWIN);
 
     /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word.
-       Note: the buffer cursor is written as `drawmode + 8` rather than
-       advancing ptr_t1 first, so gcc emits `addiu v0,t1,8; sw v0,0x4040`. */
+       The buffer cursor is computed as `drawmode + 8` (not by mutating
+       ptr_t1 first), which yields `addiu v0,t1,8; sw v0,0x4040(...)`. */
     drawmode = ptr_t1;
     setDrawTPage(drawmode, 0, 0, 5);
-    addPrim((u_long*)(obj_t2 + 0x3C), drawmode);
+    addPrim(&obj2->prim_ot, drawmode);
 
-    *((u8**)(((u8*)arg0) + 0x4040)) = drawmode + 8;
+    obj->unk4040 = (u32*)(drawmode + 8);
 }
 
 /**
