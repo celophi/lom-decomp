@@ -825,252 +825,289 @@ void movie_service_video_ops(void)
  *
  * @return 1 to keep streaming, 0 when the stream has ended or should pause.
  *
- * @see https://decomp.me/scratch/HptYe (76.45%)
+ * @see https://decomp.me/scratch/5flHR (95.34%)
  */
 s32 movie_cd_sector_callback(void)
 {
-    SectorBuffer hdr; /* 32-byte sector header (8 u32 words) read from CD */
-    s32 should_load;
-    u32 count;
-    u16 remaining;
-    void* dest;
-    u32* entry;
-    s32 next_idx;
+    u32 hdr[8];
+    int new_var2;
+    s32 temp_a1_2;
+    s32 flag;
+    s32 hasMoreFrames;
 
-    should_load = 0;
+    u32* temp_s0_2;
+    void* temp_s0_3;
+    u32* temp_s0_4;
 
-    if (MOVIE_STATE->sectorsRemaining == 0) /* same as VOL_MOVIE_STATE->sectorsRemaining, but accessed directly */
+    void* madr;
+
+    u32* temp_s1;
+
+    int new_var4;
+    u32* temp_s1_2;
+    s32 writeIdx;
+    s32 readIdx;
+
+    flag = 0;
+
+    if (MOVIE_STATE->sectorsRemaining == 0)
     {
-        while (CdGetSector(hdr, 8) == 0);
+        volatile MovieState* vms;
+        u32* ptrA;
+        while (CdGetSector(&hdr, 8) == 0);
 
-        if (hdr[2] > VOL_MOVIE_STATE->totalFrames)
+        vms = VOL_MOVIE_STATE;
+        if (hdr[2] > ((u32)MOVIE_STATE->totalFrames))
         {
-            VOL_MOVIE_STATE->endOfStream = 1;
-            return 0;
+            goto block_67;
         }
 
-        VOL_MOVIE_STATE->frameNumber = hdr[2];
+        vms->frameNumber = hdr[2];
 
-        /* sub-sector index (offset 4) must be 0 for a header sector */
         if (((u16*)hdr)[2] != 0)
         {
             return 1;
         }
 
-        /* sector type (offset 2): 0x8001 = video, otherwise audio */
         if (((u16*)hdr)[1] == 0x8001)
         {
-            if (VOL_MOVIE_STATE->videoWriteIdx == VOL_MOVIE_STATE->videoReadIdx)
+
+            writeIdx = vms->videoWriteIdx;
+            readIdx = vms->videoReadIdx;
+
+            if (((writeIdx == readIdx) && (vms->lastVideoFrame == vms->lastConsumedVideoFrame)) ||
+                ((writeIdx != readIdx) && (readIdx < vms->videoWriteIdx)))
             {
-                if (VOL_MOVIE_STATE->lastVideoFrame == VOL_MOVIE_STATE->lastConsumedVideoFrame)
-                    goto video_cap;
-                goto video_done;
-            }
-            if (VOL_MOVIE_STATE->videoReadIdx >= VOL_MOVIE_STATE->videoWriteIdx)
-                goto video_else;
-        video_cap:
-            count = ((u16*)hdr)[3];
-            if (VOL_MOVIE_STATE->videoRingCapacity < VOL_MOVIE_STATE->videoWriteIdx + (s32)count)
-            {
-                if (VOL_MOVIE_STATE->videoReadIdx >= (s32)count)
+
+                if (vms->videoRingCapacity < (vms->videoWriteIdx + ((u16*)hdr)[3]))
                 {
-                    should_load = 1;
-                    VOL_MOVIE_STATE->videoRingSize = VOL_MOVIE_STATE->videoWriteIdx;
-                    VOL_MOVIE_STATE->videoWriteIdx = 0;
+                    if (readIdx >= ((s32)((u16*)hdr)[3]))
+                    {
+                        flag = 1;
+                        vms->videoRingSize = (s32)vms->videoWriteIdx;
+                        vms->videoWriteIdx = 0;
+                    }
+                }
+                else
+                {
+                    flag = 1;
                 }
             }
-            else
+            else if (writeIdx != readIdx)
             {
-                should_load = 1;
-            }
-            goto video_done;
-        video_else:
-            count = ((u16*)hdr)[3];
-            if (VOL_MOVIE_STATE->videoReadIdx >= VOL_MOVIE_STATE->videoWriteIdx + (s32)count)
-                should_load = 1;
-        video_done:;
-
-            if (should_load != 0)
-            {
-                dest = &VOL_MOVIE_STATE->videoDataBase[VOL_MOVIE_STATE->videoWriteIdx];
-                while (CdGetSector(dest, 0x1F8) == 0)
+                if (readIdx >= (vms->videoWriteIdx + ((u16*)hdr)[3]))
                 {
+                    flag = 1;
                 }
+            }
 
-                /* Copy the full 32-byte CD header verbatim into the table entry. */
-                entry = (u32*)&VOL_MOVIE_STATE->videoTableBase[VOL_MOVIE_STATE->videoWriteIdx];
-                entry[0] = hdr[0];
-                entry[1] = hdr[1];
-                entry[2] = hdr[2];
-                entry[3] = hdr[3];
-                entry[4] = hdr[4];
-                entry[5] = hdr[5];
-                entry[6] = hdr[6];
-                entry[7] = hdr[7];
+            if (flag != 0)
+            {
 
-                remaining = (u16)(((u16*)hdr)[3] - 1);
-                VOL_MOVIE_STATE->sectorsRemaining = remaining;
-                if (remaining == 0)
+                s32 writeIndex;
+                u8* sectorPtr;
+
+                sectorPtr = MOVIE_STATE->videoDataBase + ((8 * MOVIE_STATE->videoWriteIdx) * 252);
+                while (CdGetSector(sectorPtr, 0x1F8) == 0);
+
+                ptrA = hdr;
+
+                writeIndex = MOVIE_STATE->videoWriteIdx;
+                sectorPtr = MOVIE_STATE->videoTableBase + (writeIndex << 5);
+
+                /* now sectorPtr is in s0 */
+                ((u32*)sectorPtr)[0] = ptrA[0];
+                ((u32*)sectorPtr)[1] = ptrA[1];
+                ((u32*)sectorPtr)[2] = ptrA[2];
+                ((u32*)sectorPtr)[3] = ptrA[3];
+                ((u32*)sectorPtr)[4] = ptrA[4];
+                ((u32*)sectorPtr)[5] = ptrA[5];
+                ((u32*)sectorPtr)[6] = ptrA[6];
+                ((u32*)sectorPtr)[7] = ptrA[7];
+
+                MOVIE_STATE->sectorsRemaining = (((u16*)hdr)[3]) - 1;
+                if (!(MOVIE_STATE->sectorsRemaining & 0xFFFF))
                 {
-                    VOL_MOVIE_STATE->videoWriteIdx += 1;
+                    u32 totalFrames;
+
+                    totalFrames = (u32)MOVIE_STATE->totalFrames;
+                    VOL_MOVIE_STATE->videoWriteIdx = (s32)(VOL_MOVIE_STATE->videoWriteIdx + 1);
+
                     VOL_MOVIE_STATE->lastVideoFrame = VOL_MOVIE_STATE->frameNumber;
-                    return (VOL_MOVIE_STATE->frameNumber < VOL_MOVIE_STATE->totalFrames) ? 1 : 0;
-                }
-                VOL_MOVIE_STATE->continuationType = 0;
-                VOL_MOVIE_STATE->chunkSectorIdx = 1;
-                return 1;
-            }
-            return 1;
-        }
 
-        /* audio sector */
-        if (VOL_MOVIE_STATE->audioWriteIdx == VOL_MOVIE_STATE->audioReadIdx)
-        {
-            if (VOL_MOVIE_STATE->lastAudioFrame == VOL_MOVIE_STATE->lastConsumedAudioFrame)
-                goto audio_cap;
-            goto audio_done;
-        }
-        if (VOL_MOVIE_STATE->audioReadIdx >= VOL_MOVIE_STATE->audioWriteIdx)
-            goto audio_else;
-    audio_cap:
-        count = ((u16*)hdr)[3];
-        if (VOL_MOVIE_STATE->audioRingCapacity < VOL_MOVIE_STATE->audioWriteIdx + (s32)count)
-        {
-            if (VOL_MOVIE_STATE->audioReadIdx >= (s32)count)
-            {
-                should_load = 1;
-                VOL_MOVIE_STATE->audioRingSize = VOL_MOVIE_STATE->audioWriteIdx;
-                VOL_MOVIE_STATE->audioWriteIdx = 0;
+                    hasMoreFrames = VOL_MOVIE_STATE->frameNumber < totalFrames;
+                    goto block_49;
+                }
+                else
+                {
+                    MOVIE_STATE->continuationType = 0;
+                    MOVIE_STATE->chunkSectorIdx = 1U;
+                }
             }
         }
         else
         {
-            should_load = 1;
-        }
-        goto audio_done;
-    audio_else:
-        count = ((u16*)hdr)[3];
-        if (VOL_MOVIE_STATE->audioReadIdx >= VOL_MOVIE_STATE->audioWriteIdx + (s32)count)
-            should_load = 1;
-    audio_done:;
+            MovieState* ms;
+            s32 audioWriteIdx;
+            audioWriteIdx = vms->audioWriteIdx;
+            temp_a1_2 = vms->audioReadIdx;
 
-        if (should_load != 0)
-        {
-            dest = VOL_MOVIE_STATE->audioDataBase[VOL_MOVIE_STATE->audioWriteIdx].payload;
-            while (CdGetSector(dest, 0x1F8) == 0)
+            if (((audioWriteIdx == temp_a1_2) && (vms->lastAudioFrame == vms->lastConsumedAudioFrame)) ||
+                ((audioWriteIdx != temp_a1_2) && (temp_a1_2 < vms->audioWriteIdx)))
             {
+                if (vms->audioRingCapacity < (vms->audioWriteIdx + ((u16*)hdr)[3]))
+                {
+                    if (temp_a1_2 >= ((s32)((u16*)hdr)[3]))
+                    {
+                        flag = 1;
+                        vms->audioRingSize = (s32)vms->audioWriteIdx;
+                    }
+                    vms->audioWriteIdx = 0;
+                }
+                else
+                {
+                    flag = 1;
+                }
+            }
+            else if (temp_a1_2 >= (vms->audioWriteIdx + ((u16*)hdr)[3]))
+            {
+                flag = 1;
             }
 
-            entry = (u32*)&VOL_MOVIE_STATE->audioDataBase[VOL_MOVIE_STATE->audioWriteIdx];
-            entry[0] = hdr[0];
-            entry[1] = hdr[1];
-            entry[2] = hdr[2];
-            entry[3] = hdr[3];
-            entry[4] = hdr[4];
-            entry[5] = hdr[5];
-            entry[6] = hdr[6];
-            entry[7] = hdr[7];
-
-            remaining = (u16)(((u16*)hdr)[3] - 1);
-            VOL_MOVIE_STATE->sectorsRemaining = remaining;
-            if (remaining == 0)
+            if (flag != 0)
             {
-                VOL_MOVIE_STATE->audioWriteIdx += 1;
-                VOL_MOVIE_STATE->lastAudioFrame = VOL_MOVIE_STATE->frameNumber;
-                if (VOL_MOVIE_STATE->totalFrames < VOL_MOVIE_STATE->frameNumber)
+                u8* sectorPtr;
+
+                sectorPtr = (MOVIE_STATE->audioDataBase + (VOL_MOVIE_STATE->audioWriteIdx << 0xB)) + 0x20;
+                while (CdGetSector(sectorPtr, 0x1F8) == 0);
+
+                ptrA = &hdr[0];
+                temp_s0_2 = (u32*)(*MOVIE_STATE).audioDataBase;
+                sectorPtr = (u32*)(MOVIE_STATE->audioDataBase + (VOL_MOVIE_STATE->audioWriteIdx << 0xB));
+                ((u32*)sectorPtr)[0] = ptrA[0];
+                ((u32*)sectorPtr)[1] = ptrA[1];
+                ((u32*)sectorPtr)[2] = ptrA[2];
+                ((u32*)sectorPtr)[3] = ptrA[3];
+                ((u32*)sectorPtr)[4] = ptrA[4];
+                ((u32*)sectorPtr)[5] = ptrA[5];
+                ((u32*)sectorPtr)[6] = ptrA[6];
+                ((u32*)sectorPtr)[7] = ptrA[7];
+                MOVIE_STATE->sectorsRemaining = ((u16*)hdr)[3] - 1;
+                if (!(MOVIE_STATE->sectorsRemaining & 0xFFFF))
+                {
+                    VOL_MOVIE_STATE->audioWriteIdx = (s32)(VOL_MOVIE_STATE->audioWriteIdx + 1);
+                    VOL_MOVIE_STATE->lastAudioFrame = (u32)VOL_MOVIE_STATE->frameNumber;
+
+                    if (VOL_MOVIE_STATE->frameNumber > ((u32)MOVIE_STATE->totalFrames))
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    MOVIE_STATE->continuationType = 1;
+                    MOVIE_STATE->chunkSectorIdx = 1U;
+                }
+            }
+            ms = MOVIE_STATE;
+            if (g_audioStreamState == 1)
+            {
+                ms->unk92 = 2;
+            }
+            return 1;
+        }
+    }
+    else if (MOVIE_STATE->continuationType == 0)
+    {
+
+        temp_s1 = MOVIE_STATE->videoTableBase + ((VOL_MOVIE_STATE->videoWriteIdx + MOVIE_STATE->chunkSectorIdx) << 5);
+        while (CdGetSector(temp_s1, 8) == 0);
+
+        if (((((u16*)temp_s1)[1] == 0x8001) && (temp_s1[2] == MOVIE_STATE->frameNumber)) &&
+            (((u16*)temp_s1)[2] == MOVIE_STATE->chunkSectorIdx))
+        {
+            madr = MOVIE_STATE->videoDataBase +
+                   ((2 * (VOL_MOVIE_STATE->videoWriteIdx + (MOVIE_STATE->chunkSectorIdx & 0xFFFF))) * 1008);
+            while (CdGetSector(madr, 0x1F8) == 0);
+
+            MOVIE_STATE->sectorsRemaining = MOVIE_STATE->sectorsRemaining - 1;
+            if (!(MOVIE_STATE->sectorsRemaining))
+            {
+                new_var4 = 1;
+                VOL_MOVIE_STATE->videoWriteIdx =
+                    (s32)((VOL_MOVIE_STATE->videoWriteIdx + new_var4) + MOVIE_STATE->chunkSectorIdx);
+
+                MOVIE_STATE->lastVideoFrame = (u32)MOVIE_STATE->frameNumber;
+                hasMoreFrames = (u32)temp_s1[2];
+                hasMoreFrames = hasMoreFrames < (u32)MOVIE_STATE->totalFrames;
+            block_49:
+                if (hasMoreFrames == 0)
+                {
+
                     return 0;
+                }
+                hasMoreFrames = (u32)temp_s1[2];
+                return 1;
+            }
+            goto block_64;
+        }
+        else
+        {
+            MOVIE_STATE->frameNumber = (u32)temp_s1[2];
+            MOVIE_STATE->sectorsRemaining = 0U;
+
+            if (((u32)MOVIE_STATE->totalFrames) <= ((u32)temp_s1[2]))
+            {
+                MOVIE_STATE->chunkSectorIdx = 1U;
+                goto block_67;
+            }
+        }
+        return 1;
+    }
+    else
+    {
+        madr = MOVIE_STATE->audioDataBase + ((VOL_MOVIE_STATE->audioWriteIdx + MOVIE_STATE->chunkSectorIdx) << 0xB);
+        while (CdGetSector(madr, 8) == 0);
+
+        if (((((u16*)temp_s1_2)[1] == 1) && (temp_s1_2[2] == MOVIE_STATE->frameNumber)) &&
+            ((temp_s1_2[1] & 0xFFFFu) == MOVIE_STATE->chunkSectorIdx))
+        {
+            madr = (MOVIE_STATE->audioDataBase +
+                    ((VOL_MOVIE_STATE->audioWriteIdx + (MOVIE_STATE->chunkSectorIdx & 0xFFFF)) << 0xB)) +
+                   0x20;
+            while (CdGetSector(madr, 0x1F8) == 0);
+
+            MOVIE_STATE->sectorsRemaining = MOVIE_STATE->sectorsRemaining - 1;
+            if (!(MOVIE_STATE->sectorsRemaining & 0xFFFF))
+            {
+                new_var4 = VOL_MOVIE_STATE->audioWriteIdx + 1;
+                VOL_MOVIE_STATE->audioWriteIdx = (s32)(new_var4 + MOVIE_STATE->chunkSectorIdx);
+
+                MOVIE_STATE->lastAudioFrame = VOL_MOVIE_STATE->frameNumber;
+                if (((u32)MOVIE_STATE->totalFrames) < ((u32)temp_s1_2[2]))
+                {
+                    return 0;
+                }
             }
             else
             {
-                VOL_MOVIE_STATE->continuationType = 1;
-                VOL_MOVIE_STATE->chunkSectorIdx = 1;
+            block_64:
+                MOVIE_STATE->chunkSectorIdx = (u16)(MOVIE_STATE->chunkSectorIdx + 1);
             }
         }
-
-        if (g_audioStreamState == 1) /* reads MovieState.unk92 directly */
+        else
         {
-            VOL_MOVIE_STATE->unk92 = 2;
-        }
-        return 1;
-    }
 
-    /* D_801ED57E != 0 — reading a continuation sector for the same frame */
-    if (VOL_MOVIE_STATE->continuationType == 0)
-    {
-        /* video continuation */
-        for (;;)
-        {
-            next_idx = VOL_MOVIE_STATE->videoWriteIdx + VOL_MOVIE_STATE->chunkSectorIdx;
-            entry = (u32*)&VOL_MOVIE_STATE->videoTableBase[next_idx];
-            while (CdGetSector(entry, 8) == 0)
+            MOVIE_STATE->frameNumber = (u32)temp_s1_2[2];
+            MOVIE_STATE->sectorsRemaining = 0U;
+            if (((u32)MOVIE_STATE->totalFrames) < ((u32)temp_s1_2[2]))
             {
-            }
+            block_67:
+                MOVIE_STATE->endOfStream = 1;
 
-            if (((u16*)entry)[1] == 0x8001 && entry[2] == VOL_MOVIE_STATE->frameNumber &&
-                ((u16*)entry)[2] == VOL_MOVIE_STATE->chunkSectorIdx)
-            {
-                dest = &VOL_MOVIE_STATE->videoDataBase[next_idx];
-                while (CdGetSector(dest, 0x1F8) == 0)
-                {
-                }
-
-                remaining = VOL_MOVIE_STATE->sectorsRemaining - 1;
-                VOL_MOVIE_STATE->sectorsRemaining = remaining;
-                if (remaining != 0)
-                {
-                    VOL_MOVIE_STATE->chunkSectorIdx += 1;
-                    return 1;
-                }
-                VOL_MOVIE_STATE->videoWriteIdx = VOL_MOVIE_STATE->videoWriteIdx + 1 + VOL_MOVIE_STATE->chunkSectorIdx;
-                VOL_MOVIE_STATE->lastVideoFrame = VOL_MOVIE_STATE->frameNumber;
-                return (entry[2] < VOL_MOVIE_STATE->totalFrames) ? 1 : 0;
-            }
-            VOL_MOVIE_STATE->sectorsRemaining = 0;
-            VOL_MOVIE_STATE->frameNumber = entry[2];
-            if (entry[2] < VOL_MOVIE_STATE->totalFrames)
-                break;
-            VOL_MOVIE_STATE->endOfStream = 1;
-            return 0;
-        }
-        return 1;
-    }
-
-    /* audio continuation */
-    for (;;)
-    {
-        next_idx = VOL_MOVIE_STATE->audioWriteIdx + VOL_MOVIE_STATE->chunkSectorIdx;
-        entry = (u32*)&VOL_MOVIE_STATE->audioDataBase[next_idx];
-        while (CdGetSector(entry, 8) == 0)
-        {
-        }
-
-        if (((u16*)entry)[1] == 1 && entry[2] == VOL_MOVIE_STATE->frameNumber &&
-            ((u16*)entry)[2] == VOL_MOVIE_STATE->chunkSectorIdx)
-        {
-            dest = VOL_MOVIE_STATE->audioDataBase[next_idx].payload;
-            while (CdGetSector(dest, 0x1F8) == 0)
-            {
-            }
-
-            remaining = VOL_MOVIE_STATE->sectorsRemaining - 1;
-            VOL_MOVIE_STATE->sectorsRemaining = remaining;
-            if (remaining != 0)
-            {
-                VOL_MOVIE_STATE->chunkSectorIdx += 1;
-                return 1;
-            }
-            VOL_MOVIE_STATE->audioWriteIdx = VOL_MOVIE_STATE->audioWriteIdx + 1 + VOL_MOVIE_STATE->chunkSectorIdx;
-            VOL_MOVIE_STATE->lastAudioFrame = VOL_MOVIE_STATE->frameNumber;
-            if (VOL_MOVIE_STATE->totalFrames < entry[2])
                 return 0;
-            return 1;
+            }
         }
-        VOL_MOVIE_STATE->sectorsRemaining = 0;
-        VOL_MOVIE_STATE->frameNumber = entry[2];
-        if (!(VOL_MOVIE_STATE->totalFrames < entry[2]))
-            break;
-        VOL_MOVIE_STATE->endOfStream = 1;
-        return 0;
     }
     return 1;
 }
