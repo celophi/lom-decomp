@@ -96,8 +96,9 @@ void Main(void)
                     cdrom_wait_queue_empty();
                 }
                 D_80042FCC = 0;
-                g_gameState = FUN_80015c58();
                 D_8003EC88 = 0;
+                g_gameState = FUN_80015c58();
+
                 akao_cmd_f0();
                 akao_cmd_f1();
                 akao_cmd_c0(0, 0x7F);
@@ -193,7 +194,8 @@ void Main(void)
                 {
                     D_8003EC88 = 0;
                     D_8003EC90 = temp_s2->u_0x24;
-                    temp_s2->u_0x18 = (temp_s2->u_0x18 & 0xFE000000) | 6;
+                    cd_stop_ret = temp_s2->u_0x18 & 0xFE000000;
+                    temp_s2->u_0x18 = cd_stop_ret | 6;
                     D_80042FCC = temp_s2->u_0x26;
                     D_80042FC4 = temp_s2->u_0x27;
                     D_8003EC94 = temp_s2->u_0x1C;
@@ -202,7 +204,16 @@ void Main(void)
                         u32 tmp_u20 = temp_s2->u_0x20;
                         D_80046FDE = (u16)tmp_u20;
                     }
-                    g_gameState = ((temp_s2->u_0x28 & 0xC) != 0xC) ? (GFX_Transition(0), FUN_80015c58()) : 5;
+
+                    if ((temp_s2->u_0x28 & 0xC) == 0xC)
+                    {
+                        g_gameState = 5;
+                    }
+                    else
+                    {
+                        GFX_Transition(0);
+                        g_gameState = FUN_80015c58();
+                    }
                 }
                 DrawSync(0);
                 VSync(0);
