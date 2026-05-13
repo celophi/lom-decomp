@@ -1427,7 +1427,7 @@ void* emit_draw_mode_prim(void* arg0, s32* arg1)
  *
  * @see decomp.me (88.88%) https://decomp.me/scratch/UHlWz
  */
-void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
 {
     u8* base = (u8*)arg0;
     u8* ptr = base;
