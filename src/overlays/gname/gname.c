@@ -1476,7 +1476,7 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
-void func_80142410(void* arg0)
+void func_80142410(Obj* arg0)
 {
     RECT tw_rect;
 
@@ -1493,7 +1493,7 @@ void func_80142410(void* arg0)
     /* Two aliases of the same context pointer: gcc allocates them to t6/t2
        and uses t6 for the very first addPrim/buf access and t2 for every
        subsequent addPrim. This split is load-bearing for the asm match. */
-    Obj* obj = (Obj*)arg0;
+    Obj* obj = arg0;
     Obj* obj2;
     u8* glyph_table_base;
     obj2 = obj;
@@ -1585,7 +1585,7 @@ void func_80142410(void* arg0)
     setDrawTPage(drawmode, 0, 0, 5);
     addPrim(&obj2->prim_ot, drawmode);
 
-    obj->unk4040 = (u32*)(drawmode + 8);
+    arg0->unk4040 = (u32*)(drawmode + 8);
 }
 
 /**
