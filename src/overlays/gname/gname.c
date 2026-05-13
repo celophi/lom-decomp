@@ -1399,29 +1399,63 @@ void* emit_draw_mode_prim(void* arg0, s32* arg1)
 }
 
 /**
- * decomp.me (88.88%) https://decomp.me/scratch/UHlWz
+ * @brief Emit 1 or 2 glyph SPRT primitives and chain them onto an OT tag.
+ *
+ * Always writes a primary white-tinted (RGB=0x80) SPRT for glyph @p arg2
+ * at @c (arg3 - arg5 + arg6, arg4 - arg5 + arg6). When @p arg5 != 0,
+ * writes a second SPRT at @c (arg3 + tmp, arg4 + tmp) with
+ * @c tmp = (arg5 - arg6) * 2. The second sprite's tint and code byte
+ * depend on @p arg7:
+ *   - @p arg7 != 0: opaque blue (RGB=(0,0,0xA0), code 0x64) — highlight.
+ *   - @p arg7 == 0: semi-transparent black (RGB=0, code 0x66) — drop shadow.
+ *
+ * Both sprites pull u/v/w/h/clut from @c g_glyph_table[arg2] and are
+ * appended to the linked list at @p arg1 via the standard addPrim sequence.
+ *
+ * @param arg0 Pointer to the next free byte in the primitive buffer.
+ * @param arg1 Pointer to the OT head tag (addPrim "ot" arg).
+ * @param arg2 Glyph ID (index into @c g_glyph_table).
+ * @param arg3 Base X coordinate.
+ * @param arg4 Base Y coordinate.
+ * @param arg5 Shadow/highlight offset distance. When 0, only the primary
+ *             sprite is emitted (the second SPRT block is skipped).
+ * @param arg6 Origin compensation (subtracted from base for the primary
+ *             sprite; combined into @c tmp for the secondary).
+ * @param arg7 Secondary-sprite mode: non-zero = opaque blue highlight,
+ *             zero = semi-transparent black drop shadow.
+ * @return Pointer to the byte after the last emitted primitive.
+ *
+ * @see decomp.me (88.88%) https://decomp.me/scratch/UHlWz
  */
 void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
 {
-    unsigned char* base = (unsigned char*)arg0;
-    unsigned char* ptr = base;
-    GlyphInfo* entry = &g_glyph_table[arg2];
+    u8* base = (u8*)arg0;
+    u8* ptr = base;
+    /* (offset) + (base) form so gcc emits `addu v1,v1,v0` (vs the reverse
+       order from `&g_glyph_table[arg2]`). Also keeps arg2 live for the
+       second SPRT's re-derivation below. */
+    u8* entry = (u8*)((arg2 << 3) + (u32)g_glyph_table);
     u32 temp;
+    u32 clut_word;
     s32 tmp2;
 
-    /* First structure at base */
-    *(u32*)(ptr + 4) = 0x808080;
-    *(ptr + 3) = 4;
-    *(ptr + 7) = 0x64;
+    /* Primary glyph SPRT — white tint, fully opaque. */
+    *(u32*)(ptr + 4) = 0x808080;            /* r=g=b=0x80, code byte = 0 */
+    *(ptr + 3) = 4;                          /* setlen */
+    *(ptr + 7) = 0x64;                       /* setcode: free-size textured sprite */
     *(u16*)(ptr + 8) = (u16)(arg3 - arg5 + arg6);
     *(u16*)(ptr + 10) = (u16)(arg4 - arg5 + arg6);
-    *(ptr + 12) = entry->u;
-    *(ptr + 13) = entry->v;
-    *(u16*)(ptr + 16) = (u16)entry->w;
-    *(u16*)(ptr + 18) = (u16)entry->h;
-    *(u16*)(ptr + 14) = (u16)((entry->clut & 0x3F) | 0x7C80);
+    *(ptr + 12) = entry[0];                  /* u */
+    *(ptr + 13) = entry[1];                  /* v */
+    *(u16*)(ptr + 16) = (u16)entry[2];       /* w */
+    *(u16*)(ptr + 18) = (u16)entry[3];       /* h */
+    /* Force a `lw` load on the clut word — accessing as u32 keeps the
+       full word live so gcc doesn't shrink to `lhu`. */
+    clut_word = *(u32*)(entry + 4);
+    *(u16*)(ptr + 14) = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
 
-    /* Update word at offset 0 and *arg1 */
+    /* addPrim(arg1, ptr) — link the new prim into the OT chain. The
+       address half of the ot store uses arg0 (== ptr at this point). */
     temp = *(u32*)ptr;
     *(u32*)ptr = (temp & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
     *arg1 = (*arg1 & 0xFF000000) | ((u32)((unsigned long)arg0) & 0x00FFFFFF);
@@ -1430,20 +1464,34 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 
     if (arg5 != 0)
     {
-        /* Second structure at ptr */
+        /* Secondary SPRT — drop shadow (arg7==0) or highlight (arg7!=0).
+           entry is re-derived (rather than reused) so gcc preserves arg2
+           in $a2 across both SPRT blocks, matching the target codegen. */
+        u8* entry2 = (u8*)((arg2 << 3) + (u32)g_glyph_table);
+        u32 clut_word2;
+
         *(u32*)(ptr + 4) = (arg7 != 0) ? 0xA00000 : 0;
         *(ptr + 3) = 4;
-        *(ptr + 7) = (arg7 == 0) ? 0x66 : 0x64;
+        /* Default code byte, then conditionally overlay 0x66 for the
+           semi-trans shadow. This "store-default-then-override" form
+           matches the target's branch-and-delay-slot peephole; a single
+           ternary `(arg7 == 0) ? 0x66 : 0x64` would compile differently. */
+        *(ptr + 7) = 0x64;
+        if (arg7 == 0)
+        {
+            *(ptr + 7) = 0x66;
+        }
+
         tmp2 = (arg5 - arg6) * 2;
         *(u16*)(ptr + 10) = (u16)(arg4 + tmp2);
         *(u16*)(ptr + 8) = (u16)(arg3 + tmp2);
-        *(ptr + 12) = entry->u;
-        *(ptr + 13) = entry->v;
-        *(u16*)(ptr + 16) = (u16)entry->w;
-        *(u16*)(ptr + 18) = (u16)entry->h;
-        *(u16*)(ptr + 14) = (u16)((entry->clut & 0x3F) | 0x7C80);
+        *(ptr + 12) = entry2[0];
+        *(ptr + 13) = entry2[1];
+        *(u16*)(ptr + 16) = (u16)entry2[2];
+        *(u16*)(ptr + 18) = (u16)entry2[3];
+        clut_word2 = *(u32*)(entry2 + 4);
+        *(u16*)(ptr + 14) = (u16)((clut_word2 & 0x3F) | GLYPH_CLUT_PAGE_BITS);
 
-        /* Update second structure's word at offset 0 and *arg1 */
         temp = *(u32*)ptr;
         *(u32*)ptr = (temp & 0xFF000000) | ((u32)(*arg1) & 0x00FFFFFF);
         *arg1 = (*arg1 & 0xFF000000) | ((u32)((unsigned long)ptr) & 0x00FFFFFF);
