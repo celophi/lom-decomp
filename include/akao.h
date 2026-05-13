@@ -183,13 +183,30 @@ typedef struct AkaoBankHeader
  * here; the remainder of the slot is padded out so @c sizeof reflects the
  * real channel stride.
  */
+
 typedef struct AkaoChannelState
 {
-    u32 flags;        /* 0x00: bit 0x40 set ⇒ channel is active/playing */
-    u32 unk4;         /* 0x04: tested non-zero alongside unk1C            */
-    u8  _pad08[0x14]; /* 0x08 - 0x1B                                       */
-    u32 unk1C;        /* 0x1C: tested non-zero alongside unk4              */
-    u8  _pad20[0xF8]; /* 0x20 - 0x117                                      */
-} AkaoChannelState;  /* total: 0x118                                       */
+    u32 flags;       /* 0x00 */
+    u32 unk4;        /* 0x04 */
+    u8 _pad08[0x10]; /* 0x08 – 0x17 */
+    u32 unk18;       /* 0x18 */
+    u32 unk1C; /* 0x1C – 0x1F */
+    u32 unk20;       /* 0x20 (low 16 bits + high 16 bits = unk22) */
+    u32 unk24;       /* 0x24 */
+    u32 unk28;       /* 0x28 */
+    u8 _pad2C[0x1C]; /* 0x2C – 0x47 */
+    u32 unk48;       /* 0x48 */
+    u32 unk4C;       /* 0x4C */
+    u8 _pad50[0x0A]; /* 0x50 – 0x59 */
+    s16 unk5A;       /* 0x5A */
+    u16 unk5C;       /* 0x5C */
+    u8 _pad5E[0x06]; /* 0x5E – 0x63 */
+    u16 unk64;       /* 0x64 */
+    u16 unk66;       /* 0x66 */
+    u16 unk68;       /* 0x68 */
+    u16 unk6A;       /* 0x6A */
+    u16 unk6C;       /* 0x6C */
+    u8 _pad6E[0xAA]; /* 0x6E – 0x117 */
+} AkaoChannelState;  /* total = 0x118 */
 
 #endif
