@@ -7,10 +7,8 @@ u32 g_overlayLoadAddress;
  */
 void Main(void)
 {
-    u32* new_var3;
     RECT rect;
 
-    u32* streamDst = &g_overlayLoadAddress;
     tempU* temp_s2;
     u32* ptrA;
     long cd_stop_ret;
@@ -52,7 +50,7 @@ void Main(void)
     g_gameState = 8U;
     FUN_80015c28();
     // BIN/CHECKPS.BIN
-    cdrom_stream(15, *streamDst);
+    cdrom_stream(15, g_overlayLoadAddress);
     cdrom_wait_queue_empty();
     func_8004FD14(0x80100000);
     DrawSync(0);
@@ -62,7 +60,6 @@ void Main(void)
     g_previousGameState = 0xFF;
     while (1)
     {
-        new_var3 = streamDst;
         do
         {
             switch (g_gameState)
@@ -77,7 +74,7 @@ void Main(void)
                 DrawSync(0);
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                cdrom_stream(2, *new_var3);
+                cdrom_stream(2, g_overlayLoadAddress);
                 if (g_gameState != 0)
                 {
                     // BIN/MOVIE.BIN
@@ -110,7 +107,7 @@ void Main(void)
             case 1:
                 FUN_80015c38();
                 // BIN/WMAP.BIN
-                cdrom_stream(3, *(new_var3 + 171));
+                cdrom_stream(3, g_overlayLoadAddress);
                 GFX_Transition(0);
                 rect.x = 0;
                 rect.y = 0;
@@ -138,7 +135,7 @@ void Main(void)
                 func_80015C48();
                 cd_stop_ret = cdrom_stop();
                 // BIN/TITLE.BIN
-                cdrom_stream(4, *(new_var3 + 171));
+                cdrom_stream(4, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 g_gameState = func_8004FC74(cd_stop_ret);
@@ -151,7 +148,7 @@ void Main(void)
             case 3:
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                cdrom_stream(2, *(new_var3 + 171));
+                cdrom_stream(2, g_overlayLoadAddress);
                 // BIN/GNAME.BIN
                 cdrom_stream(5, 0x80140000);
                 GFX_Transition(0);
@@ -169,7 +166,7 @@ void Main(void)
             case 5:
                 FUN_80015c28();
                 // BIN/WSEL.BIN
-                cdrom_stream(14, *(new_var3 + 171));
+                cdrom_stream(14, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 g_gameState = func_8004FC8C(0x80170000);
@@ -181,7 +178,7 @@ void Main(void)
             case 7:
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                cdrom_stream(2, *(new_var3 + 171));
+                cdrom_stream(2, g_overlayLoadAddress);
                 // BIN/CLOAD.BIN
                 cdrom_stream(16, 0x80140000);
                 GFX_Transition(0);
@@ -194,7 +191,7 @@ void Main(void)
                 }
                 else
                 {
-                    D_8003EC88 = 6;
+                    D_8003EC88 = 0;
                     D_8003EC90 = temp_s2->u_0x24;
                     temp_s2->u_0x18 = (temp_s2->u_0x18 & 0xFE000000) | 6;
                     D_80042FCC = temp_s2->u_0x26;
