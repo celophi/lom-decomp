@@ -5,3 +5,23 @@ rom:0x13914 reloc:MIPS_NONE symbol:g_akao_seq_channel0
 // Prevent assigning a symbol in akao_cmd_ec
 rom:0x13A28 reloc:MIPS_NONE symbol:g_akao_seq_channel0
 rom:0x13A2C reloc:MIPS_NONE symbol:g_akao_seq_channel0
+
+// Force %lo(g_gameState) form for in-switch accesses in Main. Splat's
+// disassembler loses track of the `s1 = %hi(g_gameState)` invariant across
+// the rodata-interleaving markers (.rodata+0x4, .rodata+0x10,0x18) it inserts
+// into the function body, so it falls back to printing the raw 0x522c offset.
+// The compiler naturally emits R_MIPS_LO16 relocs here, so forcing the
+// symbolic form on the target side restores the match.
+rom:0x1874 reloc:MIPS_LO16 symbol:g_gameState
+rom:0x1880 reloc:MIPS_LO16 symbol:g_gameState
+rom:0x1914 reloc:MIPS_LO16 symbol:g_gameState
+rom:0x19A4 reloc:MIPS_LO16 symbol:g_gameState
+rom:0x19EC reloc:MIPS_LO16 symbol:g_gameState
+rom:0x1A54 reloc:MIPS_LO16 symbol:g_gameState
+rom:0x1ADC reloc:MIPS_LO16 symbol:g_gameState
+rom:0x1B2C reloc:MIPS_LO16 symbol:g_gameState
+
+// Same splat tracking loss for g_previousGameState (s3 holds %hi) in Main.
+rom:0x1924 reloc:MIPS_LO16 symbol:g_previousGameState
+rom:0x1AF4 reloc:MIPS_LO16 symbol:g_previousGameState
+rom:0x1B3C reloc:MIPS_LO16 symbol:g_previousGameState

@@ -3,7 +3,7 @@
 u32 g_overlayLoadAddress;
 
 /**
- * decomp.me link (91.90%) https://decomp.me/scratch/No2jL
+ * decomp.me link (93.53%) https://decomp.me/scratch/siWCf
  */
 void Main(void)
 {
@@ -125,9 +125,7 @@ void Main(void)
                 g_gameState = func_80060814();
                 akao_cmd_f0();
                 akao_cmd_f1();
-                if (((g_gameState != 2) &&
-                     (g_gameState != 9)) &&
-                    (g_gameState != 10))
+                if (((g_gameState != 2) && (g_gameState != 9)) && (g_gameState != 10))
                 {
                     FUN_80011638(*((u8*)(D_80046FDE + ((u32)(&D_800351A0)))));
                 }
@@ -216,7 +214,7 @@ void Main(void)
 
             case 8:
                 func_80015C48();
-                
+
                 // BIN/MOVIE.BIN
                 cdrom_stream(11, 0x80140000);
                 GFX_Transition(0);
