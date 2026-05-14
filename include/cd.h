@@ -162,7 +162,7 @@ typedef struct
     s32 bytesBuffered;
     s32 wrapOverflow;
     s32 bytesConsumed;
-    s32 reserved;
+    s32 dropped_sectors;
 } CdStreamState;
 
 /**
