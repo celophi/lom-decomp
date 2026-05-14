@@ -3,16 +3,16 @@
 u32 g_overlayLoadAddress;
 
 /**
- * decomp.me link (93.53%) https://decomp.me/scratch/siWCf
+ * decomp.me link (98.23%) https://decomp.me/scratch/iAIgl
  */
-void Main(void)
+volatile void Main(void)
 {
     RECT rect;
-
+    int new_var2;
     tempU* temp_s2;
     u32* ptrA;
+    int new_var;
     long cd_stop_ret;
-
     __main();
     SetMem(2);
     SetConf(0x10, 4, 0x801FFF00);
@@ -34,8 +34,6 @@ void Main(void)
     InitializeControllers(0);
     cdrom_load_resource_table(0x18, 0xB598);
     FUN_80021fbc();
-
-    // MAP/FDATA/FONT.PRS
     cdrom_stream(0xB2, 0x801E1200);
     InitVSyncController();
     srand(1);
@@ -49,17 +47,17 @@ void Main(void)
     D_80042FD0 = 0x13;
     g_gameState = 8U;
     FUN_80015c28();
-    // BIN/CHECKPS.BIN
     cdrom_stream(15, g_overlayLoadAddress);
     cdrom_wait_queue_empty();
     func_8004FD14(0x80100000);
     DrawSync(0);
     VSync(0);
-    ptrA = &g_gameDataBasePtr;
-    temp_s2 = (tempU*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0);
     g_previousGameState = 0xFF;
+    ptrA = &g_gameDataBasePtr;
+    temp_s2 = (tempU*)(((u8*)ptrA) - 0x5F0);
     while (1)
     {
+        new_var2 = 0;
         do
         {
             switch (g_gameState)
@@ -73,14 +71,12 @@ void Main(void)
                 VSync(0);
                 DrawSync(0);
                 FUN_80015c28();
-                // BIN/FIELD.BIN
                 cdrom_stream(2, g_overlayLoadAddress);
                 if (g_gameState != 0)
                 {
-                    // BIN/MOVIE.BIN
                     cdrom_stream(11, 0x80140000);
                     cdrom_wait_queue_empty();
-                    if (g_gameState == 9)
+                    if ((unsigned long)(g_gameState == 9))
                     {
                         func_80140018(1);
                     }
@@ -98,7 +94,6 @@ void Main(void)
                 D_80042FCC = 0;
                 D_8003EC88 = 0;
                 g_gameState = FUN_80015c58();
-
                 akao_cmd_f0();
                 akao_cmd_f1();
                 akao_cmd_c0(0, 0x7F);
@@ -107,7 +102,6 @@ void Main(void)
 
             case 1:
                 FUN_80015c38();
-                // BIN/WMAP.BIN
                 cdrom_stream(3, g_overlayLoadAddress);
                 GFX_Transition(0);
                 rect.x = 0;
@@ -125,7 +119,7 @@ void Main(void)
                 akao_cmd_f1();
                 if (((g_gameState != 2) && (g_gameState != 9)) && (g_gameState != 10))
                 {
-                    FUN_80011638(*((u8*)(D_80046FDE + ((u32)(&D_800351A0)))));
+                    FUN_80011638(D_800351A0[D_80046FDE]);
                 }
                 D_80046FD8 = -1;
                 g_previousGameState = 1;
@@ -133,9 +127,11 @@ void Main(void)
 
             case 2:
             {
-                func_80015C48();
-                cd_stop_ret = cdrom_stop();
-                // BIN/TITLE.BIN
+                cd_stop_ret = (long)func_80015C48();
+                if (1)
+                {
+                    cdrom_stop();
+                }
                 cdrom_stream(4, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
@@ -148,9 +144,7 @@ void Main(void)
 
             case 3:
                 FUN_80015c28();
-                // BIN/FIELD.BIN
                 cdrom_stream(2, g_overlayLoadAddress);
-                // BIN/GNAME.BIN
                 cdrom_stream(5, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
@@ -166,7 +160,6 @@ void Main(void)
 
             case 5:
                 FUN_80015c28();
-                // BIN/WSEL.BIN
                 cdrom_stream(14, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
@@ -178,13 +171,11 @@ void Main(void)
 
             case 7:
                 FUN_80015c28();
-                // BIN/FIELD.BIN
-                cdrom_stream(2, g_overlayLoadAddress);
-                // BIN/CLOAD.BIN
+                cdrom_stream((float)2, g_overlayLoadAddress);
                 cdrom_stream(16, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                func_80051FBC(0);
+                func_80051FBC(new_var2);
                 D_8003EC9C = 7;
                 if (func_801400C4() != 0)
                 {
@@ -192,19 +183,21 @@ void Main(void)
                 }
                 else
                 {
-                    D_8003EC88 = 0;
+                    new_var = (u32)temp_s2->u_0x18;
+                    new_var = new_var & 0xFE000000U;
+                    new_var = new_var | 6;
+                    D_8003EC88 = 6;
+                    temp_s2->u_0x18 = new_var;
                     D_8003EC90 = temp_s2->u_0x24;
-                    cd_stop_ret = temp_s2->u_0x18 & 0xFE000000;
-                    temp_s2->u_0x18 = cd_stop_ret | 6;
                     D_80042FCC = temp_s2->u_0x26;
                     D_80042FC4 = temp_s2->u_0x27;
                     D_8003EC94 = temp_s2->u_0x1C;
                     D_80046FD8 = temp_s2->u_0x1E;
+                    temp_s2->u_0x18 = new_var;
                     {
                         u32 tmp_u20 = temp_s2->u_0x20;
                         D_80046FDE = (u16)tmp_u20;
                     }
-
                     if ((temp_s2->u_0x28 & 0xC) == 0xC)
                     {
                         g_gameState = 5;
@@ -222,8 +215,6 @@ void Main(void)
 
             case 8:
                 func_80015C48();
-
-                // BIN/MOVIE.BIN
                 cdrom_stream(11, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
