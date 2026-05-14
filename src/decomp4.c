@@ -1,5 +1,10 @@
 #include "decomp4.h"
 
+u16 D_8003EC1C;
+s32 D_8004D40C;
+u32 D_8004F758;
+s32 D_8003EC18;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -163,7 +168,7 @@ void func_80029A8C(void)
             *((s32*)(((u8*)D_8003EC28) + 0x50)) = temp;
         }
     }
-    mask = D_8004D400;
+    mask = D_8004D400.unk0;
     if (mask != 0)
     {
         new_var3 = mask;
@@ -220,47 +225,57 @@ void func_80029A8C(void)
 s32 func_80029E88(s32 arg0, s32 arg1)
 {
     u32 var_a0;
-    
+
     s32 var_s1;
     s32 var_s2;
     s32 var_s3;
-    
+
     AkaoDriverFlags* driver_flags;
 
     var_a0 = g_akao_seq_channel0->unk20 >> 16;
     var_s2 = D_8003EC7A;
-    
-    if (var_s2 != 0) {
+
+    if (var_s2 != 0)
+    {
         u32 product = (u32)var_a0 * (u32)var_s2;
-        if (var_s2 < 0x80U) {
+        if (var_s2 < 0x80U)
+        {
             var_a0 = var_a0 + (product >> 7);
-        } else {
+        }
+        else
+        {
             var_a0 = product >> 8;
         }
     }
 
-    
     g_akao_seq_channel0->unk28 = g_akao_seq_channel0->unk28 + var_a0;
 
-    if ((g_akao_seq_channel0->unk28 & 0xFFFF0000U) || (D_8003EC7C & 4)) {
+    if ((g_akao_seq_channel0->unk28 & 0xFFFF0000U) || (D_8003EC7C & 4))
+    {
         g_akao_seq_channel0->unk28 = (s32)(g_akao_seq_channel0->unk28 & 0xFFFFU);
 
         var_s2 = arg0;
-         driver_flags = &g_akao_driver_flags;
+        driver_flags = &g_akao_driver_flags;
 
-        do {
+        do
+        {
             var_s1 = 1;
             var_s3 = g_akao_seq_channel0->unk4;
 
-            do {
-                if (var_s3 & var_s1) {
+            do
+            {
+                if (var_s3 & var_s1)
+                {
                     AkaoChannelState* s = (AkaoChannelState*)var_s2;
                     s->unk66 = (u16)(s->unk66 - 1);
                     s->unk68 = (u16)(s->unk68 - 1);
 
-                    if (s->unk66 == 0) {
+                    if (s->unk66 == 0)
+                    {
                         func_8002AD28(var_s2, var_s1);
-                    } else if (s->unk68 == 0) {
+                    }
+                    else if (s->unk68 == 0)
+                    {
                         g_akao_seq_channel0->unk18 = (s32)(g_akao_seq_channel0->unk18 | var_s1);
                     }
 
@@ -272,30 +287,38 @@ s32 func_80029E88(s32 arg0, s32 arg1)
                 var_s1 <<= 1;
             } while (var_s3 != 0);
 
-            if (g_akao_seq_channel0->unk5C != 0) {
+            if (g_akao_seq_channel0->unk5C != 0)
+            {
                 g_akao_seq_channel0->unk5C = (u16)(g_akao_seq_channel0->unk5C - 1);
                 g_akao_seq_channel0->unk20 = g_akao_seq_channel0->unk20 + g_akao_seq_channel0->unk24;
             }
 
-            if (g_akao_seq_channel0->unk5A != 0) {
+            if (g_akao_seq_channel0->unk5A != 0)
+            {
                 g_akao_seq_channel0->unk5A = (s16)(g_akao_seq_channel0->unk5A - 1);
                 g_akao_seq_channel0->unk48 = g_akao_seq_channel0->unk48 + g_akao_seq_channel0->unk4C;
-                if (arg1 == 0) {
+                if (arg1 == 0)
+                {
                     driver_flags->unk8 |= 0x80;
                 }
             }
 
-            if (g_akao_seq_channel0->unk68 != 0) {
-                
+            if (g_akao_seq_channel0->unk68 != 0)
+            {
+
                 g_akao_seq_channel0->unk6A = (u16)(g_akao_seq_channel0->unk6A + 1);
-                if (g_akao_seq_channel0->unk6A == g_akao_seq_channel0->unk68) {
+                if (g_akao_seq_channel0->unk6A == g_akao_seq_channel0->unk68)
+                {
                     g_akao_seq_channel0->unk6A = 0;
                     g_akao_seq_channel0->unk66 = (u16)(g_akao_seq_channel0->unk66 + 1);
-                    if (g_akao_seq_channel0->unk66  == g_akao_seq_channel0->unk64) {
+                    if (g_akao_seq_channel0->unk66 == g_akao_seq_channel0->unk64)
+                    {
                         g_akao_seq_channel0->unk66 = 0;
                         g_akao_seq_channel0->unk6C = (u16)(g_akao_seq_channel0->unk6C + 1);
-                        if (arg1 == 0) {
-                            if (D_8003EC44 != 0) {
+                        if (arg1 == 0)
+                        {
+                            if (D_8003EC44 != 0)
+                            {
                                 D_8003EC44 -= 1;
                             }
                         }
@@ -303,9 +326,11 @@ s32 func_80029E88(s32 arg0, s32 arg1)
                 }
             }
 
-            if (arg1 == 0) {
+            if (arg1 == 0)
+            {
                 var_s2 = arg0;
-                if (D_8003EC44 != 0) {
+                if (D_8003EC44 != 0)
+                {
                     continue;
                 }
             }
@@ -314,4 +339,165 @@ s32 func_80029E88(s32 arg0, s32 arg1)
     }
 
     return g_akao_seq_channel0->unk4;
+}
+
+/**
+ * decomp.me (84.56%) https://decomp.me/scratch/ICO2k
+ */
+void func_8002A134(void)
+{
+    s32 temp_s5;
+    s32 var_s3;
+    s32 temp_a3;
+    s32 temp_v1_3;
+    u16 temp_v0_2;
+    u16 temp_v1_2;
+    SfxChannel* channel;
+    u32 bitMask;
+
+    temp_s5 = GetRCnt(0xF2000002);
+
+    /* First conditional block */
+    {
+        AkaoChannelState* seq0;
+        u16 ec1c;
+        u32 unk18_val;
+
+        seq0 = g_akao_seq_channel0;
+        ec1c = D_8003EC1C;
+        unk18_val = seq0->unk18;
+        ec1c += 1;
+        D_8003EC1C = ec1c;
+
+        if ((unk18_val == 0) && (D_8004D40C == 0))
+        {
+            if (D_8003EC28 != 0)
+            {
+                if (D_8003EC28->unk18 != 0)
+                {
+                    func_80025D98();
+                }
+            }
+        }
+        else
+        {
+            func_80025D98();
+        }
+    }
+
+    /* Second block */
+    {
+        AkaoChannelState* ch28 = D_8003EC28;
+        if (ch28 != 0)
+        {
+            if (ch28->unk4 == 0)
+            {
+                D_8003EC28 = 0;
+            }
+            else if ((g_akao_seq_channel0->unk4 | g_akao_seq_channel0->unk1C) == 0)
+            {
+                func_80029A0C((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
+                func_80029A0C((s32*)D_8003EC24, &D_80049130, 0x2300);
+                {
+                    AkaoChannelState* tmp = D_8003EC28;
+                    D_8003EC28 = 0;
+                    tmp->unk5E = 0;
+                    tmp->unk4 = 0;
+                }
+            }
+        }
+    }
+
+    /* Third conditional */
+    if (((D_8004F758 | g_akao_seq_channel0->unk14 | D_8004D408) != 0) ||
+        ((D_8003EC28 != 0) && (D_8003EC28->unk14 != 0)))
+    {
+        func_800258B8(D_8004D408);
+    }
+
+    /* Fourth conditional */
+    if (g_akao_seq_channel0->unk4 != 0)
+    {
+        func_80029E88(&D_80049130, 0);
+    }
+
+    /* Fifth conditional */
+    if ((D_8003EC28 != 0) && (D_8003EC28->unk4 != 0))
+    {
+        g_akao_seq_channel0 = D_8003EC28;
+        func_80029E88(D_8003EC24, 1);
+        g_akao_seq_channel0 = &D_8004C260;
+    }
+
+    /* SFX channel processing loop */
+    if (D_8004D400.unk0 != 0)
+    {
+        var_s3 = D_8004D400.unk0;
+        {
+            u32 sum = D_8004D400.unk18 + D_8004D400.unk16;
+            D_8004D400.unk18 = sum;
+            if (((sum & 0xFFFF0000) != 0) || (D_8003EC7C & 4))
+            {
+                D_8004D400.unk18 = sum & 0xFFFF;
+
+                bitMask = 0x1000;
+                channel = &g_sfx_channels[0];
+
+                do
+                {
+                    if (var_s3 & bitMask)
+                    {
+                        if (!(D_8003EC7C & 2) || (channel->field_28 & 0x02000000))
+                        {
+                            channel->field_58++;
+
+                            temp_v1_2 = channel->field_66 - 1;
+                            channel->field_66 = temp_v1_2;
+                            temp_v0_2 = channel->field_68 - 1;
+                            channel->field_68 = temp_v0_2;
+
+                            if (temp_v1_2 == 0)
+                            {
+                                func_8002AD28(channel, bitMask);
+                            }
+                            else if (temp_v0_2 == 0)
+                            {
+                                D_8004D400.unkC |= bitMask;
+                                D_8004D400.unk8 &= ~bitMask;
+                            }
+                            func_80024660(channel, bitMask, 1);
+                        }
+                        var_s3 ^= bitMask;
+                    }
+                    channel++;
+                    bitMask <<= 1;
+                } while (var_s3 != 0);
+            }
+        }
+    }
+
+    /* Periodic call */
+    if (!(D_8003EC1C & 3))
+    {
+        func_80029A8C();
+    }
+
+    /* Timing / profiling update for D_8003D160 */
+    temp_s5 = GetRCnt(0xF2000002) - temp_s5;
+    if (temp_s5 <= 0)
+    {
+        temp_s5 += 0x44E8;
+    }
+
+    {
+        s32 d4 = D_8003D160.unk4;
+        s32 d8 = D_8003D160.unk8;
+        temp_a3 = D_8003D160.unkC;
+        D_8003D160.unkC = temp_s5;
+        D_8003D160.unk0 = d4;
+        temp_v1_3 = d4 + d8 + temp_a3;
+        D_8003D160.unk4 = d8;
+        D_8003D160.unk8 = temp_a3;
+        D_8003EC18 = temp_v1_3 + temp_s5;
+    }
 }
