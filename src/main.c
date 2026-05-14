@@ -3,17 +3,14 @@
 u32 g_overlayLoadAddress;
 
 /**
- * decomp.me link (91.90%) https://decomp.me/scratch/No2jL
+ * decomp.me link (93.53%) https://decomp.me/scratch/siWCf
  */
 void Main(void)
 {
-    u32* new_var3;
     RECT rect;
 
-    u32* streamDst = &g_overlayLoadAddress;
-    tempU* temp_s2 = (tempU*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0);
-    u32 gameState;
-    u32* ptrA = &g_gameDataBasePtr;
+    tempU* temp_s2;
+    u32* ptrA;
     long cd_stop_ret;
 
     __main();
@@ -53,19 +50,19 @@ void Main(void)
     g_gameState = 8U;
     FUN_80015c28();
     // BIN/CHECKPS.BIN
-    cdrom_stream(15, *streamDst);
+    cdrom_stream(15, g_overlayLoadAddress);
     cdrom_wait_queue_empty();
-    RunCheckPS(0x80100000);
+    func_8004FD14(0x80100000);
     DrawSync(0);
     VSync(0);
+    ptrA = &g_gameDataBasePtr;
+    temp_s2 = (tempU*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0);
     g_previousGameState = 0xFF;
     while (1)
     {
-        gameState = g_gameState;
-        new_var3 = streamDst;
         do
         {
-            switch (gameState)
+            switch (g_gameState)
             {
             case 0:
 
@@ -77,7 +74,7 @@ void Main(void)
                 DrawSync(0);
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                cdrom_stream(2, *new_var3);
+                cdrom_stream(2, g_overlayLoadAddress);
                 if (g_gameState != 0)
                 {
                     // BIN/MOVIE.BIN
@@ -85,13 +82,13 @@ void Main(void)
                     cdrom_wait_queue_empty();
                     if (g_gameState == 9)
                     {
-                        movie_play(1);
+                        func_80140018(1);
                     }
                     else
                     {
-                        movie_play(2);
-                        movie_play(3);
-                        movie_play(4);
+                        func_80140018(2);
+                        func_80140018(3);
+                        func_80140018(4);
                     }
                 }
                 else
@@ -99,8 +96,9 @@ void Main(void)
                     cdrom_wait_queue_empty();
                 }
                 D_80042FCC = 0;
-                g_gameState = FUN_80015c58();
                 D_8003EC88 = 0;
+                g_gameState = FUN_80015c58();
+
                 akao_cmd_f0();
                 akao_cmd_f1();
                 akao_cmd_c0(0, 0x7F);
@@ -110,7 +108,7 @@ void Main(void)
             case 1:
                 FUN_80015c38();
                 // BIN/WMAP.BIN
-                cdrom_stream(3, *(new_var3 + 171));
+                cdrom_stream(3, g_overlayLoadAddress);
                 GFX_Transition(0);
                 rect.x = 0;
                 rect.y = 0;
@@ -122,17 +120,15 @@ void Main(void)
                 akao_cmd_f0();
                 akao_cmd_f1();
                 cdrom_wait_queue_empty();
-                *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = FUN_80060814();
+                g_gameState = func_80060814();
                 akao_cmd_f0();
                 akao_cmd_f1();
-                if ((((*((u32*)(((u8*)(&g_gameState)) + 0x522C))) != 2) &&
-                     ((*((u32*)(((u8*)(&g_gameState)) + 0x522C))) != 9)) &&
-                    ((*((u32*)(((u8*)(&g_gameState)) + 0x522C))) != 10))
+                if (((g_gameState != 2) && (g_gameState != 9)) && (g_gameState != 10))
                 {
                     FUN_80011638(*((u8*)(D_80046FDE + ((u32)(&D_800351A0)))));
                 }
                 D_80046FD8 = -1;
-                *((u32*)(((u8*)(&g_previousGameState)) + 0x2FB0)) = 1;
+                g_previousGameState = 1;
                 break;
 
             case 2:
@@ -140,20 +136,20 @@ void Main(void)
                 func_80015C48();
                 cd_stop_ret = cdrom_stop();
                 // BIN/TITLE.BIN
-                cdrom_stream(4, *(new_var3 + 171));
+                cdrom_stream(4, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = func_8004FC74(cd_stop_ret);
+                g_gameState = func_8004FC74(cd_stop_ret);
                 DrawSync(0);
                 VSync(0);
-                *((u32*)(((u8*)(&g_previousGameState)) + 0x2FB0)) = 2;
+                g_previousGameState = 2;
                 break;
             }
 
             case 3:
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                cdrom_stream(2, *(new_var3 + 171));
+                cdrom_stream(2, g_overlayLoadAddress);
                 // BIN/GNAME.BIN
                 cdrom_stream(5, 0x80140000);
                 GFX_Transition(0);
@@ -161,29 +157,29 @@ void Main(void)
                 func_800A3534();
                 func_80051FBC(0);
                 D_8003EC98 = 0;
-                *((u32*)(((u8*)(&g_gameState)) + 0x522C)) =
-                    run_overlay(0x80160000, (u32)ptrA, (u32)ptrA, (temp_s2->u_608 & 0x7F) + 4, 0, (u32)ptrA, 1);
+                g_gameState =
+                    func_80140004(0x80160000, (u32)ptrA, (u32)ptrA, (temp_s2->u_608 & 0x7F) + 4, 0, (u32)ptrA, 1);
                 DrawSync(0);
                 VSync(0);
-                *((u32*)(((u8*)(&g_previousGameState)) + 0x2FB0)) = 3;
+                g_previousGameState = 3;
                 break;
 
             case 5:
                 FUN_80015c28();
                 // BIN/WSEL.BIN
-                cdrom_stream(14, *(new_var3 + 171));
+                cdrom_stream(14, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = func_8004FC8C(0x80170000);
+                g_gameState = func_8004FC8C(0x80170000);
                 DrawSync(0);
                 VSync(0);
-                *((u32*)(((u8*)(&g_previousGameState)) + 0x2FB0)) = 5;
+                g_previousGameState = 5;
                 break;
 
             case 7:
                 FUN_80015c28();
                 // BIN/FIELD.BIN
-                cdrom_stream(2, *(new_var3 + 171));
+                cdrom_stream(2, g_overlayLoadAddress);
                 // BIN/CLOAD.BIN
                 cdrom_stream(16, 0x80140000);
                 GFX_Transition(0);
@@ -192,45 +188,50 @@ void Main(void)
                 D_8003EC9C = 7;
                 if (func_801400C4() != 0)
                 {
-                    *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = 2;
+                    g_gameState = 2;
                 }
                 else
                 {
-                    D_8003EC88 = 6;
+                    D_8003EC88 = 0;
                     D_8003EC90 = temp_s2->u_0x24;
-                    temp_s2->u_0x18 = (temp_s2->u_0x18 & 0xFE000000) | 6;
+                    cd_stop_ret = temp_s2->u_0x18 & 0xFE000000;
+                    temp_s2->u_0x18 = cd_stop_ret | 6;
                     D_80042FCC = temp_s2->u_0x26;
                     D_80042FC4 = temp_s2->u_0x27;
                     D_8003EC94 = temp_s2->u_0x1C;
                     D_80046FD8 = temp_s2->u_0x1E;
-                    D_80046FDE = temp_s2->u_0x20;
                     {
-                        s32 result = 5;
-                        if ((temp_s2->u_0x28 & 0xC) != 0xC)
-                        {
-                            GFX_Transition(0);
-                            result = FUN_80015c58();
-                        }
-                        *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = result;
+                        u32 tmp_u20 = temp_s2->u_0x20;
+                        D_80046FDE = (u16)tmp_u20;
+                    }
+
+                    if ((temp_s2->u_0x28 & 0xC) == 0xC)
+                    {
+                        g_gameState = 5;
+                    }
+                    else
+                    {
+                        GFX_Transition(0);
+                        g_gameState = FUN_80015c58();
                     }
                 }
                 DrawSync(0);
                 VSync(0);
-                *((u32*)(((u8*)(&g_previousGameState)) + 0x2FB0)) = 0;
+                g_previousGameState = 0;
                 break;
 
             case 8:
                 func_80015C48();
-                
+
                 // BIN/MOVIE.BIN
                 cdrom_stream(11, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                movie_play(0);
-                *((u32*)(((u8*)(&g_gameState)) + 0x522C)) = 2;
+                func_80140018(0);
+                g_gameState = 2;
                 DrawSync(0);
                 VSync(0);
-                *((u32*)(((u8*)(&g_previousGameState)) + 0x2FB0)) = 8;
+                g_previousGameState = 8;
                 break;
             }
 
