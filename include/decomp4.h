@@ -54,7 +54,7 @@ typedef struct AkaoChannelState
     s16 unk5A;       /* 0x5A */
     u16 unk5C;       /* 0x5C */
     u16 unk5E;       /* 0x5E */
-    u8 _pad60[0x04]; /* 0x60 – 0x63 */
+    u32 unk60; /* 0x60 – 0x63 */
     u16 unk64;       /* 0x64 */
     u16 unk66;       /* 0x66 */
     u16 unk68;       /* 0x68 */
