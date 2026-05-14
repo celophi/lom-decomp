@@ -183,7 +183,7 @@ s32 cdrom_stream(s32 resourceIndex, u32 destination)
     streamState = &CD_STREAM_STATE;
 
     /* Zero out the streaming state */
-    streamState->reserved = 0;
+    streamState->dropped_sectors = 0;
     streamState->dataReady = 0U;
     streamState->bufferWrapped = 0U;
     streamState->bytesConsumed = 0;
@@ -352,7 +352,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
 
     // --- Initialise streaming state in scratchpad RAM ---
     scratchpad = &CD_STREAM_STATE;
-    scratchpad->reserved = 0;
+    scratchpad->dropped_sectors = 0;
     scratchpad->dataReady = 0;
     scratchpad->bufferWrapped = 0;
 
@@ -2764,148 +2764,141 @@ s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
 
 s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining)
 {
-    s32 remaining;
-    s32 temp_t1;
-    s32 temp_v0;
-    s32 temp_v0_3;
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 var_a1;
-    s32 var_a1_2;
-    u8* result;
-    s32* new_var2;
-    u8* var_a2_2;
-    u8* var_a2_3;
-    u8* var_v1;
-    u8* var_v1_2;
-    u32 temp_a0_2;
-    u32 temp_a2;
+    s32 unconsumed;
+    s32 align_pad;
+    s32 word_count;
+    s32 word_count_b;
+    s32 aligned_bytes;
+    s32 aligned_bytes_b;
+    u8* dest;
+    s32* read_ptr_slot; /* dummy load of &readPtr, load-bearing for asm match */
+    u8* dst;
+    u8* dst_b;
+    u8* src;
+    u8* src_b;
+    u32 wrap_overflow_cur;
     u32 bytesBuffered;
     u32 bytesConsumed;
-    u32 new_var;
     u32 wrapOverflow;
-    u8* new_var3;
-    u32 temp_v0_2;
-    u32 readPtr;
-    u32 temp_v1_2;
-    u32 temp_v1_3;
-    u32 var_t0;
-    var_t0 = bytesRemaining;
+    u8* result_dst; /* dummy temp returned via assignment, load-bearing */
+    u32 read_ptr;
+    u32 read_ptr_b;
+    u32 old_wrap_overflow;
+    u32 aligned_write_base;
+    u32 chunk_size;
+    chunk_size = bytesRemaining;
     if (bytesRemaining >= 0x801U)
     {
-        var_t0 = 0x800;
+        chunk_size = 0x800;
     }
     if (bytesTransferred == 0)
     {
         CD_STREAM_STATE.dataReady = 1;
         CD_STREAM_STATE.writePtr = 0x801DC001U;
         CD_STREAM_STATE.readPtr = 0x801DC001U;
-        CD_STREAM_STATE.bytesBuffered = (s32)(var_t0 - 1);
+        CD_STREAM_STATE.bytesBuffered = (s32)(chunk_size - 1);
         CD_STREAM_STATE.wrapOverflow = 0;
         return (s32*)0x801DC000;
     }
     if (!CD_STREAM_STATE.dataReady)
     {
-        remaining = CD_STREAM_STATE.bytesBuffered - CD_STREAM_STATE.bytesConsumed;
+        unconsumed = CD_STREAM_STATE.bytesBuffered - CD_STREAM_STATE.bytesConsumed;
         bytesConsumed = CD_STREAM_STATE.bytesConsumed;
         wrapOverflow = CD_STREAM_STATE.wrapOverflow;
-        temp_t1 = (4 - (remaining & 3)) & 3;
+        align_pad = (4 - (unconsumed & 3)) & 3;
         if (wrapOverflow != 0)
         {
-            new_var2 = &CD_STREAM_STATE.readPtr;
-            readPtr = *new_var2;
-            var_a2_3 = (u8*)(0x801DC118 - remaining);
-            CD_STREAM_STATE.writePtr = (s32)var_a2_3;
-            CD_STREAM_STATE.readPtr = (s32)var_a2_3;
-            var_a2_3 -= temp_t1;
-            var_a1 = remaining + 3;
-            CD_STREAM_STATE.bytesBuffered = (wrapOverflow + remaining) + var_t0;
-            var_v1 = (u8*)((readPtr + bytesConsumed) - temp_t1);
-            if (var_a1 < 0)
+            read_ptr_slot = &CD_STREAM_STATE.readPtr;
+            read_ptr = *read_ptr_slot;
+            dst = (u8*)(0x801DC118 - unconsumed);
+            CD_STREAM_STATE.writePtr = (s32)dst;
+            CD_STREAM_STATE.readPtr = (s32)dst;
+            dst -= align_pad;
+            aligned_bytes = unconsumed + 3;
+            CD_STREAM_STATE.bytesBuffered = (wrapOverflow + unconsumed) + chunk_size;
+            src = (u8*)((read_ptr + bytesConsumed) - align_pad);
+            if (aligned_bytes < 0)
             {
-                var_a1 = remaining + 6;
+                aligned_bytes = unconsumed + 6;
             }
-            temp_v1_2 = var_a1 >> 2;
-            temp_v1_2 = temp_v1_2 - 1;
-            var_a0 = temp_v1_2;
-            temp_v0 = -1;
-            if (var_a0 != temp_v0)
+            word_count = aligned_bytes >> 2;
+            word_count = word_count - 1;
+            if (word_count != -1)
             {
                 do
                 {
-                    *((s32*)var_a2_3) = *((s32*)var_v1);
-                    var_v1 += 4;
-                    var_a0 -= 1;
-                    var_a2_3 += 4;
-                } while (var_a0 != temp_v0);
+                    *((s32*)dst) = *((s32*)src);
+                    src += 4;
+                    word_count -= 1;
+                    dst += 4;
+                } while (word_count != -1);
             }
-            temp_v1_2 = CD_STREAM_STATE.wrapOverflow;
+            old_wrap_overflow = CD_STREAM_STATE.wrapOverflow;
             CD_STREAM_STATE.wrapOverflow = 0U;
-            var_a2_2 = var_a2_3 + temp_v1_2;
+            dst_b = dst + old_wrap_overflow;
         }
         else
         {
             if (CD_STREAM_STATE.readPtr)
             {
+                /* dummy load, load-bearing for asm match */
             }
-            var_a2_2 = (u8*)0x801DC000;
+            dst_b = (u8*)0x801DC000;
 
-            var_a1_2 = remaining + 3;
-            CD_STREAM_STATE.bytesBuffered = remaining + var_t0;
-            temp_v0_2 = CD_STREAM_STATE.readPtr;
-            temp_v1_3 = temp_t1 + 0x801DC000;
-            CD_STREAM_STATE.writePtr = temp_v1_3;
-            CD_STREAM_STATE.readPtr = temp_v1_3;
-            var_v1_2 = (u8*)((temp_v0_2 + bytesConsumed) - temp_t1);
-            if (var_a1_2 < 0)
+            aligned_bytes_b = unconsumed + 3;
+            CD_STREAM_STATE.bytesBuffered = unconsumed + chunk_size;
+            read_ptr_b = CD_STREAM_STATE.readPtr;
+            aligned_write_base = align_pad + 0x801DC000;
+            CD_STREAM_STATE.writePtr = aligned_write_base;
+            CD_STREAM_STATE.readPtr = aligned_write_base;
+            src_b = (u8*)((read_ptr_b + bytesConsumed) - align_pad);
+            if (aligned_bytes_b < 0)
             {
-                var_a1_2 = remaining + 6;
+                aligned_bytes_b = unconsumed + 6;
             }
-            var_a0_2 = var_a1_2 >> 2;
-            var_a0_2 = var_a0_2 - 1;
-            temp_v0_3 = -1;
-            if (var_a0_2 != temp_v0_3)
+            word_count_b = aligned_bytes_b >> 2;
+            word_count_b = word_count_b - 1;
+            if (word_count_b != -1)
             {
                 do
                 {
-                    *((s32*)var_a2_2) = *((s32*)var_v1_2);
-                    var_v1_2 += 4;
-                    var_a0_2 -= 1;
-                    var_a2_2 += 4;
-                } while (var_a0_2 != (-1));
+                    *((s32*)dst_b) = *((s32*)src_b);
+                    src_b += 4;
+                    word_count_b -= 1;
+                    dst_b += 4;
+                } while (word_count_b != (-1));
             }
         }
         (*((CdStreamState*)(0x1F800000))).dataReady = 1U;
-        return (s32*)(new_var3 = var_a2_2);
+        return (s32*)(result_dst = dst_b);
     }
-    temp_v0_2 = CD_STREAM_STATE.readPtr;
+    read_ptr_b = CD_STREAM_STATE.readPtr;
     bytesBuffered = CD_STREAM_STATE.bytesBuffered;
-    temp_a0_2 = CD_STREAM_STATE.wrapOverflow;
-    result = (u8*)(temp_v0_2 + bytesBuffered);
-    if ((temp_a0_2 != 0) || (((u32)(result + var_t0)) > 0x801DE000U))
+    wrap_overflow_cur = CD_STREAM_STATE.wrapOverflow;
+    dest = (u8*)(read_ptr_b + bytesBuffered);
+    if ((wrap_overflow_cur != 0) || (((u32)(dest + chunk_size)) > 0x801DE000U))
     {
-        result = (u8*)(temp_a0_2 + 0x801DC118);
-        if (((u32)CD_STREAM_STATE.writePtr) >= ((u32)(result + var_t0)))
+        dest = (u8*)(wrap_overflow_cur + 0x801DC118);
+        if (((u32)CD_STREAM_STATE.writePtr) >= ((u32)(dest + chunk_size)))
         {
-            CD_STREAM_STATE.wrapOverflow = temp_a0_2 + var_t0;
+            CD_STREAM_STATE.wrapOverflow = wrap_overflow_cur + chunk_size;
         }
         else
         {
-            CD_STREAM_STATE.reserved += 1;
+            CD_STREAM_STATE.dropped_sectors += 1;
             return (void*)0;
         }
     }
     else
     {
-        remaining = bytesBuffered;
-        CD_STREAM_STATE.bytesBuffered = remaining + var_t0;
+        unconsumed = bytesBuffered;
+        CD_STREAM_STATE.bytesBuffered = unconsumed + chunk_size;
     }
-    if (bytesRemaining == var_t0)
+    if (bytesRemaining == chunk_size)
     {
-        new_var = 0x1F800000;
-        (*((CdStreamState*)new_var)).bufferWrapped = 1;
+        (*((CdStreamState*)0x1F800000)).bufferWrapped = 1;
     }
-    return (s32*)result;
+    return (s32*)dest;
 }
 
 void cdrom_decompress_buffer(u8* srcStart, u8* dstStart)
