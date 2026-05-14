@@ -3,7 +3,7 @@
 u32 g_overlayLoadAddress;
 
 /**
- * decomp.me link (93.53%) https://decomp.me/scratch/siWCf
+ * decomp.me link (96.85%) https://decomp.me/scratch/iAIgl
  */
 void Main(void)
 {
@@ -67,7 +67,7 @@ void Main(void)
             case 0:
 
             case 9:
-
+                
             case 10:
                 SetDispMask(0);
                 VSync(0);
@@ -98,7 +98,7 @@ void Main(void)
                 D_80042FCC = 0;
                 D_8003EC88 = 0;
                 g_gameState = FUN_80015c58();
-
+                
                 akao_cmd_f0();
                 akao_cmd_f1();
                 akao_cmd_c0(0, 0x7F);
@@ -204,13 +204,10 @@ void Main(void)
                         u32 tmp_u20 = temp_s2->u_0x20;
                         D_80046FDE = (u16)tmp_u20;
                     }
-
-                    if ((temp_s2->u_0x28 & 0xC) == 0xC)
-                    {
+                    
+                    if ((temp_s2->u_0x28 & 0xC) == 0xC) {
                         g_gameState = 5;
-                    }
-                    else
-                    {
+                    } else {
                         GFX_Transition(0);
                         g_gameState = FUN_80015c58();
                     }
