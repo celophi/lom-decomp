@@ -5,6 +5,19 @@ s32 D_8004D40C;
 u32 D_8004F758;
 s32 D_8003EC18;
 
+typedef struct  {
+    u8*   unk0;       // 0x00
+    u8*   unk4[4];    // 0x04
+    u8*   unk14;      // 0x14
+    u8    pad18[28];  // 0x18
+    u32   unk34;      // 0x34
+    u8    pad38[60];  // 0x38
+    u16   unk74[21];  // 0x74
+    u16   unk9E;      // 0x9E
+    u8    padA0[56];  // 0xA0
+    u16   unkD8;      // 0xD8
+} Context;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -499,5 +512,154 @@ void func_8002A134(void)
         D_8003D160.unk4 = d8;
         D_8003D160.unk8 = temp_a3;
         D_8003EC18 = temp_v1_3 + temp_s5;
+    }
+}
+
+/**
+ * decomp.me (78.79%) https://decomp.me/scratch/9GIhP
+ */
+u8 func_8002A4E8(Context* arg0) {
+    u8* var_a1 = arg0->unk0;
+    u32 var_a2 = arg0->unkD8;
+
+    while (1) {
+        u8 temp_v1 = *var_a1;
+
+        if (temp_v1 < 0x9A) {
+            if (temp_v1 >= 0x8F) {
+                arg0->unk9E &= 0xFFFA;
+            }
+            return *var_a1;
+        }
+
+        if (temp_v1 < 0xA0) {
+            return 0xA0;
+        }
+
+        /* Force reload – matches delay‑slot behaviour */
+        temp_v1 = *var_a1;
+
+        {
+            u8 lookup = D_8003D1B0[temp_v1 - 0xA0];
+            if (lookup != 0) {
+                var_a1 += lookup;
+                continue;
+            }
+
+            /* Unified outer switch: 0xC9 .. 0xFE */
+            switch (temp_v1) {
+                case 0xC9:
+                    goto L_C9_common;
+
+                case 0xCA:
+                    goto L_CA_common;
+
+                case 0xCB:
+                case 0xCD:
+                case 0xD1:
+                case 0xDB:
+                    goto L_CB_common;
+
+                case 0xF0: case 0xF1: case 0xF2: case 0xF3: case 0xF4:
+                case 0xF5: case 0xF6: case 0xF7: case 0xF8: case 0xF9:
+                case 0xFA: case 0xFB:
+                    return 0x83;
+
+                case 0xFC:
+                    return 0x84;
+
+                case 0xFD:
+                    return 0x8F;
+
+                case 0xFE: {
+                    var_a1++;
+                    temp_v1 = *var_a1;
+                    lookup = D_8003D210[temp_v1];
+                    if (lookup != 0) {
+                        var_a1 += lookup;
+                        continue;
+                    }
+
+                    /* Inner switch for 0xFE sub‑opcodes */
+                    switch (temp_v1 - 6) {
+                        case 0:
+                            var_a1++;
+                            if (*var_a1 == arg0->unk74[var_a2] + 1) {
+                                var_a1++;
+                                var_a2 = (var_a2 - 1) & 3;
+                                var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
+                            } else {
+                                var_a1 += 3;
+                            }
+                            continue;
+
+                        case 1:
+                            var_a1++;
+                            var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
+                            continue;
+
+                        case 2:
+                            var_a1++;
+                            if ( g_akao_seq_channel0->unk60 < *var_a1) {
+                                var_a1++;
+                                var_a1 += 2;
+                            } else {
+                                var_a1++;
+                                var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
+                            }
+                            continue;
+
+                        case 3:
+                            var_a1 = arg0->unk14;
+                            continue;
+
+                        case 4:
+                            goto L_C9_common;
+
+                        case 5:
+                            goto L_CB_common;
+
+                        case 6:
+                            goto L_CA_common;
+
+                        case 7:
+                        case 8:
+                        case 9:
+                            goto labelA;
+                    }
+                    continue;
+                }
+
+                default:
+                    goto labelA;
+            }
+
+            /* Shared code blocks – each is reached by two different control paths */
+
+L_C9_common:
+            var_a1++;
+            if (*var_a1 == arg0->unk74[var_a2] + 1) {
+                var_a1++;
+                var_a2 = (var_a2 - 1) & 3;
+            } else {
+                var_a1 = arg0->unk4[var_a2];
+            }
+            continue;
+
+L_CB_common:
+            arg0->unk9E &= 0xFFFA;
+            var_a1++;
+            continue;
+
+L_CA_common:
+            if (!(arg0->unk34 & 0x200000)) {
+                var_a1 = arg0->unk4[var_a2];
+                continue;
+            }
+
+labelA:
+            arg0->unk9E &= 0xFFFA;
+            return 0xA0;
+        }
     }
 }

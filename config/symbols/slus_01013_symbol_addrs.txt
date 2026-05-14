@@ -33,6 +33,9 @@ g_textOriginX                       = 0x800894CC;
 g_glyphAtlasX                       = 0x800894D0;
 g_glyphAtlasY                       = 0x800894D4;
 
+// jumptable
+jtbl_80010C30                       = 0x80010C30; // type:jtbl rom:0x1430
+
 // Uncategorized
 run_overlay                         = 0x80140004;
 movie_play                          = 0x80140018;
