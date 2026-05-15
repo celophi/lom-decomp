@@ -230,7 +230,7 @@ void menu_build_grid(GpuWork* arg0)
     GpuWork* t7 = arg0;
     GpuWork* t4 = t7;
 
-    var_t3 = (u8*)D_80168AA8;
+    var_t3 = (u8*)g_menu_glyph_src;
     var_t2 = 0;
     temp_t1 = t7->prim_tail;
     sp6 = 0xFF;
