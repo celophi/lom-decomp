@@ -28,7 +28,7 @@ void menu_init_prim_rects(void)
     s32 s0 = 0;
 
     /* Force base address into s3 early */
-    u8* base = D_800FE778;
+    u8* base = g_prim_rect_buf;
 
     s32 s2 = 0x20;
     s32 s1 = 0;
@@ -69,67 +69,67 @@ void menu_tick(void* arg0)
     s32 padding[2];
     menu_build_grid();
     v0 = g_menu_frame;
-    v1 = D_800F22AC;
+    v1 = g_frame_counter;
     s3 = *((s32*)(((u8*)arg0) + 0x4040));
     g_menu_frame = v0 + 1;
-    D_800F22AC = v1 + 1;
-    func_800A9E78(&g_menu_frame, &D_800F22AC);
-    if (((*((u32*)(((u8*)D_8012271C) + 0x858))) & 0x80) && ((*((u8*)(((u8*)D_8012271C) + 0x840))) != 0))
+    g_frame_counter = v1 + 1;
+    func_800A9E78(&g_menu_frame, &g_frame_counter);
+    if (((*((u32*)(((u8*)g_pad_ctx) + 0x858))) & 0x80) && ((*((u8*)(((u8*)g_pad_ctx) + 0x840))) != 0))
     {
-        D_80122988 |= D_801229FC;
+        g_pad_input |= g_pad_input_inject;
     }
-    v0 = D_80122988 & 0x5000;
+    v0 = g_pad_input & 0x5000;
     if (v0)
     {
-        D_80122988 = v0;
+        g_pad_input = v0;
     }
-    v0 = D_80122988 & 0xF000;
+    v0 = g_pad_input & 0xF000;
     if (v0)
     {
-        D_80122988 = v0;
+        g_pad_input = v0;
     }
-    v0 = D_80122988 & 0xF;
+    v0 = g_pad_input & 0xF;
     if (v0)
     {
-        D_80122988 = v0;
+        g_pad_input = v0;
     }
     if (g_pad_input_latched != 0)
     {
-        D_80122988 = 0;
+        g_pad_input = 0;
     }
-    g_pad_input_latched = D_80122988;
-    if (D_801228C8 != 0)
+    g_pad_input_latched = g_pad_input;
+    if (g_active_script != 0)
     {
         s32 idx;
         u8* base = g_script_table;
-        s32 off = D_801228C8;
+        s32 off = g_active_script;
         off = (off << 1) + off;
         off <<= 4;
         base += off;
         idx = g_script_cursor;
         base += idx * 2;
-        D_80122988 = 0;
+        g_pad_input = 0;
         temp_v1 = *((u16*)base);
         if (temp_v1 == (v0 = 0xFFFF))
         {
-            if (D_801228C8 < 4)
+            if (g_active_script < 4)
             {
                 var_s0 = 0;
-                if (D_80122730 > 0)
+                if (g_script_repeat_count > 0)
                 {
                     do
                     {
                         func_8014B69C(1);
                         var_s0++;
-                    } while (var_s0 < D_80122730);
+                    } while (var_s0 < g_script_repeat_count);
                 }
-                g_script_repeat_last = D_80122730;
+                g_script_repeat_last = g_script_repeat_count;
             }
-            D_801228C8 = 0;
+            g_active_script = 0;
         }
         else
         {
-            D_80122988 = (s32)temp_v1;
+            g_pad_input = (s32)temp_v1;
             g_script_cursor = idx + 1;
         }
     }

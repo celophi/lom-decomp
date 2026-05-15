@@ -113,7 +113,6 @@ extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
 extern s32 D_8011588C;
-extern s32 D_80122988;
 extern u32 D_8003EC90;
 extern s32 D_8010D018;
 extern D_80119F00_t g_audioData;
@@ -303,7 +302,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  *      and clears its ordering table.
  *   2. Calls @p gover_build_otag to emit the per-frame SPRT/DR_TPAGE primitives,
  *      which also advances @p g_fadeLevel by @p g_fadeStep.
- *   3. Waits for VSync, then checks user input (@p D_80122988 & 0x260) — once
+ *   3. Waits for VSync, then checks user input (@p g_pad_input & 0x260) — once
  *      the fade has held at full brightness (0x80) and a button is pressed,
  *      flips @p g_fadeStep to -4 to begin the fade-out.
  *   4. Swaps display halves and queues @p PutDispEnv / @p PutDrawEnv /
@@ -349,7 +348,7 @@ static void gover_run(void)
             }
             VSync(2);
             p_d40708 = &g_fadeStep;
-            if ((g_fadeLevel == 128) && (D_80122988 & 0x260))
+            if ((g_fadeLevel == 128) && (g_pad_input & 0x260))
             {
                 akao_cmd_c1(0, 0x20, 0);
                 *p_d40708 = -4;

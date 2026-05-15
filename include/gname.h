@@ -2,6 +2,7 @@
 #define _GNAME_H
 
 #include "common.h"
+#include "main.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
@@ -142,10 +143,8 @@ extern FadeState g_fade_target;
 extern FadeState g_fade_current;
 extern s32 g_startup_delay;
 extern u8 D_80147494[];
-extern s32 D_800F22AC;
 extern s32 g_strip_width_target;
 extern s32 g_strip_width;
-extern s32 D_80122988;
 extern u8* g_active_name;
 extern s32 D_8014F7E4;
 extern u8 D_8014F8B8;

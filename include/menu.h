@@ -2,6 +2,7 @@
 #define _MENU_H
 
 #include "common.h"
+#include "main.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
@@ -16,16 +17,9 @@ extern s32 g_menu_frame;
 extern s32 g_menu_unk_e8;
 extern s32 g_active_slot;
 extern s32 g_script_cursor;
-extern s32 D_800F22AC;
-extern s32 D_80122988;
 extern s32 g_pad_input_latched;
-extern s32 D_801228C8;
 extern u8  g_script_table[];
-extern s32 D_80122730;
 extern s32 g_script_repeat_last;
-extern void* D_8012271C;
-extern s32 D_801229FC;
-extern u8  D_800FE778[];
 extern u8  g_menu_tim[];
 extern s32 g_menu_tim_dy;
 extern u16 g_menu_glyph_src[];

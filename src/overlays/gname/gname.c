@@ -253,7 +253,7 @@ void func_80140794(void* arg0)
  *
  *  - @ref func_80142410  — frame prologue (likely OT reset / heap rewind).
  *  - @ref func_80141928  — main render pass for this overlay.
- *  - increments the global frame counter @c D_800F22AC.
+ *  - increments the global frame counter @c g_frame_counter.
  *  - @ref gname_update_state  — countdown / lerp / SFX trigger update.
  *
  * @param ctx Render context passed through to @ref func_80141928.
@@ -264,7 +264,7 @@ void gname_tick(s32 ctx)
 {
     func_80142410();
     func_80141928(ctx);
-    D_800F22AC += 1;
+    g_frame_counter += 1;
     gname_update_state();
 }
 
@@ -276,7 +276,7 @@ void gname_tick(s32 ctx)
  *  - Lerps the scalar @c g_strip_width toward @c g_strip_width_target over
  *    @c g_strip_width_steps frames using the same `(target - current)/steps` shape
  *    as the RGB fade.
- *  - When input mask @c D_80122988 == 0x800 (a specific button bit), plays
+ *  - When input mask @c g_pad_input == 0x800 (a specific button bit), plays
  *    one of two SFX via @ref func_800A3938 (bank 0x80, sound 0x7E or 0x78)
  *    based on whether the cursor's current entry passes the
  *    @ref name_char_count / @ref name_is_blank validation pair, and on the
@@ -311,7 +311,7 @@ void gname_update_state(void)
     }
 
     /* Confirm-button: play accept SFX on valid entry, reject SFX otherwise. */
-    if (D_80122988 == 0x800)
+    if (g_pad_input == 0x800)
     {
         if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
         {
@@ -840,13 +840,13 @@ void func_8014139C(void)
     int new_var3;
     u8* ptr;
     u16 val;
-    temp_a1 = D_80122988 & 0xF220;
+    temp_a1 = g_pad_input & 0xF220;
     D_8014F888 = 0xFF;
     if (temp_a1 != 0)
     {
         D_8014F8AC = func_80140AB8(D_8014F8AC, temp_a1);
     }
-    else if (D_80122988 & 1)
+    else if (g_pad_input & 1)
     {
         temp_s1 = name_pop_last_char(g_active_name);
         while (name_char_count(&D_8014F850) >= 0xB)
@@ -861,7 +861,7 @@ void func_8014139C(void)
         new_var3 = 0x80;
         func_800A3938(var_a0, new_var3);
     }
-    else if (D_80122988 & 2)
+    else if (g_pad_input & 2)
     {
         if (name_char_count(g_active_name) < 0xA)
         {
@@ -885,7 +885,7 @@ void func_8014139C(void)
             func_800A3938(0x78, 0x80);
         }
     }
-    else if (D_80122988 & 0x40)
+    else if (g_pad_input & 0x40)
     {
         if (D_8014F838 != 0)
         {
@@ -904,14 +904,14 @@ void func_8014139C(void)
         func_80142928();
         g_strip_width_steps = 5;
     }
-    if (((D_8014F8AC == 0x10) && (D_8014F848 == 4)) && (D_80122988 & 0xC))
+    if (((D_8014F8AC == 0x10) && (D_8014F848 == 4)) && (g_pad_input & 0xC))
     {
         func_800A3938(0x7D, 0x80);
-        if (D_80122988 & 0xC)
+        if (g_pad_input & 0xC)
         {
             do
             {
-                if (D_80122988 & 4)
+                if (g_pad_input & 4)
                 {
                     temp_a0 = D_8014F8C8;
                     temp_v1 = temp_a0 - 0xA;
@@ -955,10 +955,10 @@ void func_8014139C(void)
                     idx = D_8014F8C8;
                     offset = (idx * 2) + ((temp_c98 * 2) + D_80142EF8);
                     tmp = *((u16*)(base + offset));
-                    D_80122988 &= ~0xC;
+                    g_pad_input &= ~0xC;
                     D_8014F84C = (void*)((D_80142EF8 + tmp) + ((unsigned long)base));
                 }
-            } while (D_80122988 & 0xC);
+            } while (g_pad_input & 0xC);
         }
     }
     if (D_8014F884 != 0)
