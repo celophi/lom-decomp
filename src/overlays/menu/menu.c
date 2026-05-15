@@ -189,17 +189,15 @@ s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32
 
         do
         {
-            /* write fields using negative offsets from base+0x10 */
+            /* SPRT primitive: pos, white tint, len=4, code=0x64 */
             *(s32*)(base + 0x8) = tmp + acc;
             *(u32*)(base + 0x4) = 0x808080U;
-            *(u8*)(base + 0x3) = 4;
-            *(u8*)(base + 0x7) = 100;
+            setSprt(base);
 
             acc += *(s16*)(base + 0x10); /* accumulate halfword */
 
-            /* blend colour words */
-            *(s32*)base = (*(s32*)base & 0xFF000000U) | (*(s32*)col & 0x00FFFFFFU);
-            *(s32*)col = (*(s32*)col & 0xFF000000U) | ((u32)base & 0x00FFFFFFU);
+            /* link this SPRT into the OT chain headed at @c col */
+            addPrim(col, base);
 
             /* advance to next structure (20 bytes) */
             base += 0x14;
@@ -207,11 +205,9 @@ s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32
         } while (--count);
     }
 
-    /* final writes – base and col now point to the next structure */
-    ((u8*)base)[3] = 1;
-    *(u32*)(base + 4) = 0xE100001FU;
-    *(s32*)base = (*(s32*)base & 0xFF000000U) | (*(s32*)col & 0x00FFFFFFU);
-    *(s32*)col = (*(s32*)col & 0xFF000000U) | ((u32)base & 0x00FFFFFFU);
+    /* terminating DR_TPAGE primitive (tpage=0x1F) */
+    setDrawTPage((DR_TPAGE*)base, 0, 0, 0x1F);
+    addPrim(col, base);
 
     /* return pointer to offset 0x8 of the current structure */
     return (s32*)(base + 8);
