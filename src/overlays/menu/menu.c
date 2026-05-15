@@ -189,17 +189,15 @@ s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32
 
         do
         {
-            /* write fields using negative offsets from base+0x10 */
+            /* SPRT primitive: pos, white tint, len=4, code=0x64 */
             *(s32*)(base + 0x8) = tmp + acc;
             *(u32*)(base + 0x4) = 0x808080U;
-            *(u8*)(base + 0x3) = 4;
-            *(u8*)(base + 0x7) = 100;
+            setSprt(base);
 
             acc += *(s16*)(base + 0x10); /* accumulate halfword */
 
-            /* blend colour words */
-            *(s32*)base = (*(s32*)base & 0xFF000000U) | (*(s32*)col & 0x00FFFFFFU);
-            *(s32*)col = (*(s32*)col & 0xFF000000U) | ((u32)base & 0x00FFFFFFU);
+            /* link this SPRT into the OT chain headed at @c col */
+            addPrim(col, base);
 
             /* advance to next structure (20 bytes) */
             base += 0x14;
@@ -207,18 +205,16 @@ s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32
         } while (--count);
     }
 
-    /* final writes – base and col now point to the next structure */
-    ((u8*)base)[3] = 1;
-    *(u32*)(base + 4) = 0xE100001FU;
-    *(s32*)base = (*(s32*)base & 0xFF000000U) | (*(s32*)col & 0x00FFFFFFU);
-    *(s32*)col = (*(s32*)col & 0xFF000000U) | ((u32)base & 0x00FFFFFFU);
+    /* terminating DR_TPAGE primitive (tpage=0x1F) */
+    setDrawTPage((DR_TPAGE*)base, 0, 0, 0x1F);
+    addPrim(col, base);
 
     /* return pointer to offset 0x8 of the current structure */
     return (s32*)(base + 8);
 }
 
 /**
- * decomp.me (87.64%) https://decomp.me/scratch/ZtHxG
+ * decomp.me (94.19%) https://decomp.me/scratch/ZtHxG
  */
 void menu_build_grid(GpuWork* arg0)
 {
@@ -228,66 +224,52 @@ void menu_build_grid(GpuWork* arg0)
     volatile u16 sp6;
     s32 var_t2;
     u8* var_a2;
-    u8* var_a1;
     u8* var_t0;
     u8* var_t3;
     u8* temp_t1;
     GpuWork* t7 = arg0;
     GpuWork* t4 = t7;
 
-    var_t3 = (u8*)g_menu_glyph_src;
+    var_t3 = (u8*)D_80168AA8;
     var_t2 = 0;
     temp_t1 = t7->prim_tail;
     sp6 = 0xFF;
     sp4 = 0xFF;
     var_t0 = var_t3 + 8;
     sp2 = 0;
-    sp0 = 0;
+    *(u16*)&sp0 = 0;
 
-    temp_t1[3] = 2;
-    {
-        u32 a2 = ((sp2 & 0xFF) >> 3) << 0xF;
-        u32 v0 = ((sp0 & 0xFF) >> 3) << 0xA;
-        u32 a0 = (sp6 << 0x10) >> 0xE;
-        u32 a1 = (s16)sp4;
-        u32 val = a2 | v0 | 0xE2000000;
-        val |= (-(s32)a0) & 0x3E0;
-        val |= ((-(s32)a1) & 0xFF) >> 3;
-        *(u32*)(temp_t1 + 8) = 0;
-        *(u32*)(temp_t1 + 4) = val;
-    }
-    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->ot_head & 0xFFFFFF);
-    t4->ot_head = (t4->ot_head & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+    /* DR_AREA / texture-window primitive (GP0 0xE2) — leading delimiter */
+    setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
+    addPrim(&t4->ot_head, temp_t1);
 
     temp_t1 += 0xC;
     var_a2 = temp_t1;
-    var_a1 = var_a2 + 0xE;
 
     do
     {
-        *(u32*)(var_a1 - 0xA) = 0x808080;
-        *(var_a1 - 0xB) = 4;
-        *(var_a1 - 7) = 0x64;
-        *(u16*)(var_a1 - 2) = *(u16*)var_t3;
-        *(u32*)(var_a1 - 6) = *(u32*)(var_t0 - 4);
-        *(u32*)(var_a1 + 2) = *(u32*)var_t0;
+        /* SPRT primitive: white tint, len=4, code=0x64 */
+        *(u32*)(var_a2 + 4) = 0x808080;
+        *(u8*)(var_a2 + 3) = 4;
+        *(u8*)(var_a2 + 7) = 0x64;
+        *(u16*)(var_a2 + 0xC) = *(u16*)var_t3;
+        *(u32*)(var_a2 + 8) = *(u32*)(var_t0 - 4);
+        *(u32*)(var_a2 + 0x10) = *(u32*)var_t0;
 
         if (var_t2 >= 0x11)
         {
-            *(u16*)var_a1 = 0x7C81;
+            *(u16*)(var_a2 + 0xE) = 0x7C81;
         }
         else
         {
-            *(u16*)var_a1 = 0x7C80;
+            *(u16*)(var_a2 + 0xE) = 0x7C80;
         }
 
         var_t2++;
-        var_a1 += 0x14;
         var_t0 += 0xC;
         var_t3 += 0xC;
 
-        *(u32*)var_a2 = (*(u32*)var_a2 & 0xFF000000) | (t4->ot_head & 0xFFFFFF);
-        t4->ot_head = (t4->ot_head & 0xFF000000) | ((u32)var_a2 & 0xFFFFFF);
+        addPrim(&t4->ot_head, var_a2);
         var_a2 += 0x14;
     } while (var_t2 < 0x1D);
 
@@ -295,29 +277,17 @@ void menu_build_grid(GpuWork* arg0)
 
     sp4 = 0xFF;
     sp6 = 0xFF;
-    sp0 = 0;
+    *(u16*)&sp0 = 0;
     sp2 = 0;
 
-    temp_t1[3] = 2;
-    {
-        u32 a2 = ((sp2 & 0xFF) >> 3) << 0xF;
-        u32 v0 = ((sp0 & 0xFF) >> 3) << 0xA;
-        u32 a0 = (sp6 << 0x10) >> 0xE;
-        u32 a1 = (s16)sp4;
-        u32 val = a2 | v0 | 0xE2000000;
-        val |= (-(s32)a0) & 0x3E0;
-        val |= ((-(s32)a1) & 0xFF) >> 3;
-        *(u32*)(temp_t1 + 8) = 0;
-        *(u32*)(temp_t1 + 4) = val;
-    }
-    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->ot_head & 0xFFFFFF);
-    t4->ot_head = (t4->ot_head & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+    /* DR_AREA / texture-window primitive (GP0 0xE2) — trailing delimiter */
+    setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
+    addPrim(&t4->ot_head, temp_t1);
 
     temp_t1 += 0xC;
-    temp_t1[3] = 1;
-    *(u32*)(temp_t1 + 4) = 0xE1000005;
-    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->ot_head & 0xFFFFFF);
-    t4->ot_head = (t4->ot_head & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+    /* DR_TPAGE primitive (tpage=5) */
+    setDrawTPage((DR_TPAGE*)temp_t1, 0, 0, 5);
+    addPrim(&t4->ot_head, temp_t1);
 
     t7->prim_tail = temp_t1 + 8;
 }
