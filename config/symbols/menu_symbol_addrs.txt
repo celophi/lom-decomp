@@ -1,1 +1,26 @@
-menu_func_801410FC = 0x801410FC;
+// MENU.BIN
+
+// Functions
+menu_init              = 0x80140908;
+menu_init_prim_rects   = 0x80140968;
+menu_tick              = 0x80140A48;
+menu_build_text_run    = 0x80140C14;
+menu_build_grid        = 0x80140DE8;
+menu_clear_vram        = 0x801410B0;
+menu_state_init        = 0x801410E8;
+menu_upload_tim        = 0x801410FC;
+menu_slot_alloc        = 0x80141244;
+
+// Data
+g_menu_frame           = 0x801690AC;
+g_menu_unk_e8          = 0x801690E8;
+g_active_slot          = 0x801690F4;
+g_menu_state_ptr       = 0x80169108;
+g_menu_tim_dy          = 0x8016910C;
+g_script_repeat_last   = 0x80169100;
+g_script_cursor        = 0x80169120;
+g_pad_input_latched    = 0x8016955C;
+g_script_table         = 0x80168778;
+g_menu_glyph_src       = 0x80168AA8;
+g_menu_tim             = 0x80160260;
+g_menu_slots           = 0x80169420;

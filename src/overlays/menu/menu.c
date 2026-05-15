@@ -1,24 +1,29 @@
 #include "menu.h"
 
-void func_80140908(void)
+/* K&R-style declaration: original call site in menu_tick passes no explicit
+ * argument and relies on register a0 (the caller's first parameter) being
+ * live. Keep the empty parameter list to preserve that codegen exactly. */
+void menu_build_grid();
+
+void menu_init(void)
 {
     volatile u8 padding;
-    func_801410B0();
-    func_801410E8();
+    menu_clear_vram();
+    menu_state_init();
     func_80141324();
-    D_801690F4 = -1;
+    g_active_slot = -1;
     func_800AA02C();
-    D_801690E8 = 0;
-    func_80140968();
-    D_801690AC = 0;
-    D_80169120 = 0;
+    g_menu_unk_e8 = 0;
+    menu_init_prim_rects();
+    g_menu_frame = 0;
+    g_script_cursor = 0;
     func_801423D8();
 }
 
 /**
  * decomp.me (99.64%) https://decomp.me/scratch/AGd9K
  */
-void func_80140968(void)
+void menu_init_prim_rects(void)
 {
     s32 s0 = 0;
 
@@ -54,7 +59,7 @@ void func_80140968(void)
 /**
  * decomp.me (97.74%) https://decomp.me/scratch/vmp4D
  */
-void func_80140A48(void* arg0)
+void menu_tick(void* arg0)
 {
     s32 v0;
     s32 v1;
@@ -62,13 +67,13 @@ void func_80140A48(void* arg0)
     s32 var_s0;
     u16 temp_v1;
     s32 padding[2];
-    func_80140DE8();
-    v0 = D_801690AC;
+    menu_build_grid();
+    v0 = g_menu_frame;
     v1 = D_800F22AC;
     s3 = *((s32*)(((u8*)arg0) + 0x4040));
-    D_801690AC = v0 + 1;
+    g_menu_frame = v0 + 1;
     D_800F22AC = v1 + 1;
-    func_800A9E78(&D_801690AC, &D_800F22AC);
+    func_800A9E78(&g_menu_frame, &D_800F22AC);
     if (((*((u32*)(((u8*)D_8012271C) + 0x858))) & 0x80) && ((*((u8*)(((u8*)D_8012271C) + 0x840))) != 0))
     {
         D_80122988 |= D_801229FC;
@@ -88,20 +93,20 @@ void func_80140A48(void* arg0)
     {
         D_80122988 = v0;
     }
-    if (D_8016955C != 0)
+    if (g_pad_input_latched != 0)
     {
         D_80122988 = 0;
     }
-    D_8016955C = D_80122988;
+    g_pad_input_latched = D_80122988;
     if (D_801228C8 != 0)
     {
         s32 idx;
-        u8* base = D_80168778;
+        u8* base = g_script_table;
         s32 off = D_801228C8;
         off = (off << 1) + off;
         off <<= 4;
         base += off;
-        idx = D_80169120;
+        idx = g_script_cursor;
         base += idx * 2;
         D_80122988 = 0;
         temp_v1 = *((u16*)base);
@@ -118,14 +123,14 @@ void func_80140A48(void* arg0)
                         var_s0++;
                     } while (var_s0 < D_80122730);
                 }
-                D_80169100 = D_80122730;
+                g_script_repeat_last = D_80122730;
             }
             D_801228C8 = 0;
         }
         else
         {
             D_80122988 = (s32)temp_v1;
-            D_80169120 = idx + 1;
+            g_script_cursor = idx + 1;
         }
     }
     *((s32*)(((u8*)arg0) + 0x4040)) = s3;
@@ -135,7 +140,7 @@ void func_80140A48(void* arg0)
 /**
  * decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
  */
-s32* func_80140C14(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
 {
     u8 sp10[0x90]; /* buffer – size matches target frame */
     s32 tmp, count, i;
@@ -215,7 +220,7 @@ s32* func_80140C14(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5,
 /**
  * decomp.me (87.64%) https://decomp.me/scratch/ZtHxG
  */
-void func_80140DE8(Arg* arg0)
+void menu_build_grid(GpuWork* arg0)
 {
     volatile u8 sp0;
     volatile u16 sp2;
@@ -227,12 +232,12 @@ void func_80140DE8(Arg* arg0)
     u8* var_t0;
     u8* var_t3;
     u8* temp_t1;
-    Arg* t7 = arg0;
-    Arg* t4 = t7;
+    GpuWork* t7 = arg0;
+    GpuWork* t4 = t7;
 
-    var_t3 = (u8*)D_80168AA8;
+    var_t3 = (u8*)g_menu_glyph_src;
     var_t2 = 0;
-    temp_t1 = t7->unk4040;
+    temp_t1 = t7->prim_tail;
     sp6 = 0xFF;
     sp4 = 0xFF;
     var_t0 = var_t3 + 8;
@@ -251,8 +256,8 @@ void func_80140DE8(Arg* arg0)
         *(u32*)(temp_t1 + 8) = 0;
         *(u32*)(temp_t1 + 4) = val;
     }
-    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->unk3C & 0xFFFFFF);
-    t4->unk3C = (t4->unk3C & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->ot_head & 0xFFFFFF);
+    t4->ot_head = (t4->ot_head & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
 
     temp_t1 += 0xC;
     var_a2 = temp_t1;
@@ -281,8 +286,8 @@ void func_80140DE8(Arg* arg0)
         var_t0 += 0xC;
         var_t3 += 0xC;
 
-        *(u32*)var_a2 = (*(u32*)var_a2 & 0xFF000000) | (t4->unk3C & 0xFFFFFF);
-        t4->unk3C = (t4->unk3C & 0xFF000000) | ((u32)var_a2 & 0xFFFFFF);
+        *(u32*)var_a2 = (*(u32*)var_a2 & 0xFF000000) | (t4->ot_head & 0xFFFFFF);
+        t4->ot_head = (t4->ot_head & 0xFF000000) | ((u32)var_a2 & 0xFFFFFF);
         var_a2 += 0x14;
     } while (var_t2 < 0x1D);
 
@@ -305,22 +310,22 @@ void func_80140DE8(Arg* arg0)
         *(u32*)(temp_t1 + 8) = 0;
         *(u32*)(temp_t1 + 4) = val;
     }
-    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->unk3C & 0xFFFFFF);
-    t4->unk3C = (t4->unk3C & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->ot_head & 0xFFFFFF);
+    t4->ot_head = (t4->ot_head & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
 
     temp_t1 += 0xC;
     temp_t1[3] = 1;
     *(u32*)(temp_t1 + 4) = 0xE1000005;
-    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->unk3C & 0xFFFFFF);
-    t4->unk3C = (t4->unk3C & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
+    *(u32*)temp_t1 = (*(u32*)temp_t1 & 0xFF000000) | (t4->ot_head & 0xFFFFFF);
+    t4->ot_head = (t4->ot_head & 0xFF000000) | ((u32)temp_t1 & 0xFFFFFF);
 
-    t7->unk4040 = temp_t1 + 8;
+    t7->prim_tail = temp_t1 + 8;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/CKNIH
  */
-void func_801410B0(void)
+void menu_clear_vram(void)
 {
     RECT rect;
 
@@ -328,36 +333,36 @@ void func_801410B0(void)
     rect.y = 0;
     rect.w = 0;
     rect.h = 0x1F2;
-    menu_func_801410FC(&rect);
+    menu_upload_tim(&rect);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/A1YTp
  */
-void func_801410E8(void)
+void menu_state_init(void)
 {
-    D_80169108 = &D_80151EBC;
+    g_menu_state_ptr = &D_80151EBC;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/tG03R
  */
-void menu_func_801410FC(ArgStruct* arg0)
+void menu_upload_tim(Rect16* arg0)
 {
-    u8* base = D_80160260;
+    u8* base = g_menu_tim;
     u8* s0 = base + 0xC;
     s32 s3 = *(s32*)(s0 + 8);
-    ArgStruct sp10;
+    Rect16 sp10;
     u16* p;
     int i;
 
-    D_8016910C = *(s32*)(s0 + 0x14);
+    g_menu_tim_dy = *(s32*)(s0 + 0x14);
 
     /* First loop */
-    sp10.unk0 = arg0->unk4;
-    sp10.unk2 = arg0->unk6;
-    sp10.unk4 = 0x100;
-    sp10.unk6 = 1;
+    sp10.x = arg0->w;
+    sp10.y = arg0->h;
+    sp10.w = 0x100;
+    sp10.h = 1;
 
     p = (u16*)(base + 0x20);
     for (i = 0; i < 0x100; i++)
@@ -369,21 +374,21 @@ void menu_func_801410FC(ArgStruct* arg0)
     func_80019A34(&sp10, s0 + 0x14);
 
     /* Second call */
-    sp10.unk0 = arg0->unk0;
-    sp10.unk2 = arg0->unk2;
+    sp10.x = arg0->x;
+    sp10.y = arg0->y;
     {
         // Enforce specific instruction ordering: addiu a1, s3, 8 then addu a1, s0, a1
         u8* temp = s0 + (s3 + 8);
-        sp10.unk4 = *(u16*)(temp + 8);
-        sp10.unk6 = *(u16*)(temp + 10);
+        sp10.w = *(u16*)(temp + 8);
+        sp10.h = *(u16*)(temp + 10);
         func_80019A34(&sp10, temp + 0xC);
     }
 
     /* Third loop */
-    sp10.unk0 = arg0->unk4;
-    sp10.unk2 = arg0->unk6 + 1;
-    sp10.unk4 = 0x100;
-    sp10.unk6 = 1;
+    sp10.x = arg0->w;
+    sp10.y = arg0->h + 1;
+    sp10.w = 0x100;
+    sp10.h = 1;
 
     p = (u16*)(base + 0x822C);
     for (i = 0; i < 0x100; i++)
@@ -398,18 +403,18 @@ void menu_func_801410FC(ArgStruct* arg0)
 /**
  * decomp.me (99.82%) https://decomp.me/scratch/Xng7v
  */
-void* func_80141244(s32 arg0, void* arg1)
+void* menu_slot_alloc(s32 arg0, void* arg1)
 {
     s32 var_a2;
-    Entry* entry;
+    MenuSlot* entry;
     u8* cur;
     u8* ptr;
     u32 temp;
     u32 mask;
     u16* src = (u16*)arg1;
     var_a2 = 0;
-    ptr = &D_80169420;
-    cur = &D_80169420;
+    ptr = (u8*)&g_menu_slots[0];
+    cur = (u8*)&g_menu_slots[0];
     while (var_a2 < 4)
     {
         if ((*cur) == 0)
@@ -424,28 +429,28 @@ void* func_80141244(s32 arg0, void* arg1)
     {
         return (void*)(-1);
     }
-    entry = (Entry*)(ptr + (var_a2 * 0x24));
+    entry = (MenuSlot*)(ptr + (var_a2 * 0x24));
     *((u16*)(((u8*)entry) + 4)) = 0;
-    temp = entry->unk4;
-    entry->unk0 = 1;
+    temp = entry->flags;
+    entry->active = 1;
     entry->unk1C = 0;
-    entry->unk1 = (u8)var_a2;
+    entry->index = (u8)var_a2;
     entry->unk20 = 0;
     entry->unk2 = 0;
     mask = 0x1FFFFFF;
     temp = temp & mask;
     temp = temp | (((u32)arg0) << 25);
-    entry->unk4 = temp;
-    entry->unk8 = src[0];
-    entry->unkA = src[1];
-    entry->unkC = src[2];
-    entry->unkE = src[3];
+    entry->flags = temp;
+    entry->x = src[0];
+    entry->y = src[1];
+    entry->w = src[2];
+    entry->h = src[3];
     entry->unk10 = 0;
     entry->unk12 = 0;
     entry->unk14 = 0;
     entry->unk16 = 0;
     entry->unk18 = 0;
     entry->unk3 = 0;
-    D_801690F4 = var_a2;
+    g_active_slot = var_a2;
     return (void*)entry;
 }
