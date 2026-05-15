@@ -21,171 +21,197 @@ void menu_init(void)
 }
 
 /**
- * decomp.me (99.64%) https://decomp.me/scratch/AGd9K
+ * decomp.me (100%) https://decomp.me/scratch/AGd9K
  */
 void menu_init_prim_rects(void)
 {
+    s32 thing;
     s32 s0 = 0;
 
     /* Force base address into s3 early */
-    u8* base = D_800FE778;
+    u8* base = g_prim_rect_buf;
 
     s32 s2 = 0x20;
     s32 s1 = 0;
     s16 params[4];
 
-    do
+    while (s0 < 3)
     {
         /* First call */
         params[0] = 0x110;
         params[1] = s0 + 0x1D8;
         params[2] = 0x10;
         params[3] = 1;
-        func_80019A34(params, base + ((s1 >> 2) * 4));
+        func_80019A34(params, (u8*)((u32)((s1 >> 2) << 2) + (u32)base));
 
         /* Second call */
         params[0] = (s0 == 2) ? 0x3E8 : 0x3F4;
         params[1] = (s0 == 0) ? 0x120 : 0x150;
         params[2] = 0xC;
         params[3] = 0x30;
-        func_80019A34(params, base + ((s2 >> 2) * 4));
+        func_80019A34(params, (u8*)((u32)((s2 >> 2) << 2) + (u32)base));
 
         s2 += 0x4A0;
-        s0++;
         s1 += 0x4A0;
-    } while (s0 < 3);
+        s0++;
+    };
 }
 
 /**
- * decomp.me (97.74%) https://decomp.me/scratch/vmp4D
+ * @brief Per-frame menu update: emit the grid, advance counters, and run
+ *        the scripted-input player.
+ *
+ * @param gpu_work Per-frame render context; its @c prim_cursor is saved on
+ *                 entry and restored before @ref func_8014134C runs.
+ * @see decomp.me (97.74%) https://decomp.me/scratch/vmp4D
  */
-void menu_tick(void* arg0)
+void menu_tick(RenderContext* gpu_work)
 {
     s32 v0;
     s32 v1;
-    s32 s3;
+    s32 saved_prim_cursor;
     s32 var_s0;
     u16 temp_v1;
     s32 padding[2];
     menu_build_grid();
     v0 = g_menu_frame;
-    v1 = D_800F22AC;
-    s3 = *((s32*)(((u8*)arg0) + 0x4040));
+    v1 = g_frame_counter;
+    /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen */
+    saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
     g_menu_frame = v0 + 1;
-    D_800F22AC = v1 + 1;
-    func_800A9E78(&g_menu_frame, &D_800F22AC);
-    if (((*((u32*)(((u8*)D_8012271C) + 0x858))) & 0x80) && ((*((u8*)(((u8*)D_8012271C) + 0x840))) != 0))
+    g_frame_counter = v1 + 1;
+    func_800A9E78(&g_menu_frame, &g_frame_counter);
+    if (((*((u32*)(((u8*)g_pad_ctx) + 0x858))) & 0x80) && ((*((u8*)(((u8*)g_pad_ctx) + 0x840))) != 0))
     {
-        D_80122988 |= D_801229FC;
+        g_pad_input |= g_pad_input_inject;
     }
-    v0 = D_80122988 & 0x5000;
+    v0 = g_pad_input & 0x5000;
     if (v0)
     {
-        D_80122988 = v0;
+        g_pad_input = v0;
     }
-    v0 = D_80122988 & 0xF000;
+    v0 = g_pad_input & 0xF000;
     if (v0)
     {
-        D_80122988 = v0;
+        g_pad_input = v0;
     }
-    v0 = D_80122988 & 0xF;
+    v0 = g_pad_input & 0xF;
     if (v0)
     {
-        D_80122988 = v0;
+        g_pad_input = v0;
     }
     if (g_pad_input_latched != 0)
     {
-        D_80122988 = 0;
+        g_pad_input = 0;
     }
-    g_pad_input_latched = D_80122988;
-    if (D_801228C8 != 0)
+    g_pad_input_latched = g_pad_input;
+    if (g_active_script != 0)
     {
         s32 idx;
-        u8* base = g_script_table;
-        s32 off = D_801228C8;
+        u8* base = (u8*)g_script_table;
+        s32 off = g_active_script;
         off = (off << 1) + off;
         off <<= 4;
         base += off;
         idx = g_script_cursor;
         base += idx * 2;
-        D_80122988 = 0;
+        g_pad_input = 0;
         temp_v1 = *((u16*)base);
         if (temp_v1 == (v0 = 0xFFFF))
         {
-            if (D_801228C8 < 4)
+            if (g_active_script < 4)
             {
                 var_s0 = 0;
-                if (D_80122730 > 0)
+                if (g_script_repeat_count > 0)
                 {
                     do
                     {
                         func_8014B69C(1);
                         var_s0++;
-                    } while (var_s0 < D_80122730);
+                    } while (var_s0 < g_script_repeat_count);
                 }
-                g_script_repeat_last = D_80122730;
+                g_script_repeat_last = g_script_repeat_count;
             }
-            D_801228C8 = 0;
+            g_active_script = 0;
         }
         else
         {
-            D_80122988 = (s32)temp_v1;
+            g_pad_input = (s32)temp_v1;
             g_script_cursor = idx + 1;
         }
     }
-    *((s32*)(((u8*)arg0) + 0x4040)) = s3;
-    func_8014134C(arg0);
+    *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
+    func_8014134C(gpu_work);
 }
 
 /**
- * decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
+ * @brief Lay out a run of glyph sprites and link them into an OT chain.
+ *
+ * @param sprites Array of libgpu @c SPRT primitives (stride 0x14) - both the
+ *                working buffer and the function's output.
+ * @param ot      OT chain column the sprites are linked into via @c addPrim.
+ * @param src     Source text/data copied into the local glyph buffer.
+ * @param arg3    TODO: unknown - passed to @ref func_800644FC.
+ * @param x       Starting X of the run; pre-shifted left by the total glyph
+ *                width when @p mode is 1 or 2 (centering).
+ * @param y       Y coordinate of the run.
+ * @param len     Source length: element count for the buffer fill and the
+ *                index at which the buffer is null-terminated.
+ * @param mode    Glyph-width interpretation: 1 = signed halfword,
+ *                2 = unsigned halfword (>> 1); other = no width adjustment.
+ * @return Pointer just past the run (offset 0x8 of the trailing primitive).
+ *
+ * @note A @c SPRT (offset 0x4 @c rgbc, 0x8 packed @c (x0,y0), 0x10 signed
+ *       @c w) is 0x14 bytes. Retyping @p sprites to @c SPRT* is desirable but
+ *       must be verified against the asm - this scratch is not yet matched.
+ * @see decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
  */
-s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
 {
-    u8 sp10[0x90]; /* buffer – size matches target frame */
+    u8 sp10[0x90]; /* buffer - size matches target frame */
     s32 tmp, count, i;
     s32 *ptr0, *ptr1;
     s32 acc; /* accumulator for halfwords */
     u8 *base, *col;
 
     /* first call: fill buffer */
-    func_800171CC(sp10, arg2, arg6);
-    sp10[arg6] = 0;
+    func_800171CC(sp10, src, len);
+    sp10[len] = 0;
 
     /* second call: get number of elements */
-    count = func_800644FC(arg0, sp10, arg3);
+    count = func_800644FC(sprites, sp10, arg3);
 
-    /* subtract halfword values according to arg7 */
-    if (arg7 == 1)
+    /* subtract halfword values according to mode */
+    if (mode == 1)
     {
         /* signed halfword (lh) */
-        ptr0 = arg0;
+        ptr0 = sprites;
         for (i = 0; i < count; i++)
         {
-            arg4 -= *(s16*)((char*)ptr0 + 0x10);
+            x -= *(s16*)((char*)ptr0 + 0x10);
             ptr0 = (s32*)((char*)ptr0 + 0x14);
         }
     }
-    else if (arg7 == 2)
+    else if (mode == 2)
     {
-        /* unsigned halfword → (val << 16) >> 17 */
-        ptr0 = arg0;
+        /* unsigned halfword -> (val << 16) >> 17 */
+        ptr0 = sprites;
         for (i = 0; i < count; i++)
         {
             u16 val = *(u16*)((char*)ptr0 + 0x10);
-            arg4 -= ((s16)val) >> 1; /* arithmetic right shift, matches sra */
+            x -= ((s16)val) >> 1; /* arithmetic right shift, matches sra */
             ptr0 = (s32*)((char*)ptr0 + 0x14);
         }
     }
 
     acc = 0;
 
-    /* main loop – process each structure */
+    /* main loop - process each structure */
     if (count > 0)
     {
-        base = (u8*)arg0;
-        col = (u8*)arg1;
-        tmp = arg4 + (arg5 << 16); /* constant used inside loop */
+        base = (u8*)sprites;
+        col = (u8*)ot;
+        tmp = x + (y << 16); /* constant used inside loop */
 
         do
         {
@@ -214,9 +240,18 @@ s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32
 }
 
 /**
- * decomp.me (94.19%) https://decomp.me/scratch/ZtHxG
+ * @brief Emit the menu grid: a texture-window delimiter, 0x1D glyph sprites,
+ *        and a trailing texture-window + draw-tpage primitive.
+ *
+ * @param gpu_work Per-frame render context; primitives are appended to its
+ *                 OT chain and @c prim_cursor is advanced past the emitted block.
+ * @note The 0x14-byte records written in the loop are libgpu @c SPRT
+ *       primitives (offset 0x4 @c rgbc, 0x8 @c (x0,y0), 0xC @c (u0,v0),
+ *       0xE @c clut, 0x10 @c (w,h)). They are written via raw offsets to
+ *       preserve the matched codegen.
+ * @see decomp.me (94.19%) https://decomp.me/scratch/ZtHxG
  */
-void menu_build_grid(GpuWork* arg0)
+void menu_build_grid(RenderContext* gpu_work)
 {
     volatile u8 sp0;
     volatile u16 sp2;
@@ -227,21 +262,21 @@ void menu_build_grid(GpuWork* arg0)
     u8* var_t0;
     u8* var_t3;
     u8* temp_t1;
-    GpuWork* t7 = arg0;
-    GpuWork* t4 = t7;
+    RenderContext* t7 = gpu_work;
+    RenderContext* t4 = t7;
 
-    var_t3 = (u8*)D_80168AA8;
+    var_t3 = (u8*)g_menu_glyph_src;
     var_t2 = 0;
-    temp_t1 = t7->prim_tail;
+    temp_t1 = t7->prim_cursor;
     sp6 = 0xFF;
     sp4 = 0xFF;
     var_t0 = var_t3 + 8;
     sp2 = 0;
     *(u16*)&sp0 = 0;
 
-    /* DR_AREA / texture-window primitive (GP0 0xE2) — leading delimiter */
+    /* DR_AREA / texture-window primitive (GP0 0xE2) - leading delimiter */
     setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
-    addPrim(&t4->ot_head, temp_t1);
+    addPrim(&t4->ot[0x0F], temp_t1);
 
     temp_t1 += 0xC;
     var_a2 = temp_t1;
@@ -269,7 +304,7 @@ void menu_build_grid(GpuWork* arg0)
         var_t0 += 0xC;
         var_t3 += 0xC;
 
-        addPrim(&t4->ot_head, var_a2);
+        addPrim(&t4->ot[0x0F], var_a2);
         var_a2 += 0x14;
     } while (var_t2 < 0x1D);
 
@@ -280,16 +315,16 @@ void menu_build_grid(GpuWork* arg0)
     *(u16*)&sp0 = 0;
     sp2 = 0;
 
-    /* DR_AREA / texture-window primitive (GP0 0xE2) — trailing delimiter */
+    /* DR_AREA / texture-window primitive (GP0 0xE2) - trailing delimiter */
     setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
-    addPrim(&t4->ot_head, temp_t1);
+    addPrim(&t4->ot[0x0F], temp_t1);
 
     temp_t1 += 0xC;
     /* DR_TPAGE primitive (tpage=5) */
     setDrawTPage((DR_TPAGE*)temp_t1, 0, 0, 5);
-    addPrim(&t4->ot_head, temp_t1);
+    addPrim(&t4->ot[0x0F], temp_t1);
 
-    t7->prim_tail = temp_t1 + 8;
+    t7->prim_cursor = temp_t1 + 8;
 }
 
 /**
@@ -315,65 +350,101 @@ void menu_state_init(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/tG03R
+ * @brief Upload the packed menu texture asset (@c g_menu_tim) to VRAM.
+ *
+ * The asset is a TIM-style blob holding two 256-entry CLUTs and one texture
+ * image. It is committed to VRAM as three transfers via @ref func_80019A34:
+ *   1. CLUT 0 (256x1) to @c (rect->w, rect->h).
+ *   2. The texture image to @c (rect->x, rect->y); its width/height are read
+ *      from the image block, whose position is a self-relative offset stored
+ *      inside the asset.
+ *   3. CLUT 1 (256x1) to @c (rect->w, rect->h + 1).
+ * Before each CLUT upload, the semi-transparency flag (STP, bit 0x8000) is
+ * set on every non-zero palette entry.
+ *
+ * @param rect Destination coordinates: @c (w,h) position the CLUT bands,
+ *             @c (x,y) position the texture image.
+ * @note The image block is typed as a @ref TimBlock. The two CLUT regions are
+ *       left as raw offsets because the matched code reaches them through two
+ *       different base pointers (@c tim for the STP-bit loops, @c tim_body for
+ *       the upload calls) - a deliberate register-allocation detail.
+ * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
-void menu_upload_tim(Rect16* arg0)
+void menu_upload_tim(Rect16* rect)
 {
-    u8* base = g_menu_tim;
-    u8* s0 = base + 0xC;
-    s32 s3 = *(s32*)(s0 + 8);
-    Rect16 sp10;
-    u16* p;
+    u8* tim = g_menu_tim;
+    u8* tim_body = tim + 0xC;
+    s32 clut_block_len = *(s32*)(tim_body + 8); /* TIM CLUT block length (bnum) */
+    Rect16 vram_rect;
+    u16* clut_color;
     int i;
 
-    g_menu_tim_dy = *(s32*)(s0 + 0x14);
+    g_menu_tim_dy = *(s32*)(tim_body + 0x14);
 
-    /* First loop */
-    sp10.x = arg0->w;
-    sp10.y = arg0->h;
-    sp10.w = 0x100;
-    sp10.h = 1;
+    /* Upload CLUT 0. */
+    vram_rect.x = rect->w;
+    vram_rect.y = rect->h;
+    vram_rect.w = 0x100;
+    vram_rect.h = 1;
 
-    p = (u16*)(base + 0x20);
+    clut_color = (u16*)(tim + 0x20);
     for (i = 0; i < 0x100; i++)
     {
-        if (*p != 0)
-            *p |= 0x8000;
-        p++;
-    }
-    func_80019A34(&sp10, s0 + 0x14);
+        if (*clut_color != 0)
+        {
+            *clut_color |= 0x8000;
+        }
 
-    /* Second call */
-    sp10.x = arg0->x;
-    sp10.y = arg0->y;
+        clut_color++;
+    }
+    func_80019A34(&vram_rect, tim_body + 0x14);
+
+    /* Upload the texture image. */
+    vram_rect.x = rect->x;
+    vram_rect.y = rect->y;
     {
-        // Enforce specific instruction ordering: addiu a1, s3, 8 then addu a1, s0, a1
-        u8* temp = s0 + (s3 + 8);
-        sp10.w = *(u16*)(temp + 8);
-        sp10.h = *(u16*)(temp + 10);
-        func_80019A34(&sp10, temp + 0xC);
+        /* The CLUT block starts at tim_body+8, so the image block that
+           follows it is at tim_body + 8 + clut_block_len. The parenthesization
+           `(clut_block_len + 8)` is load-bearing: it must compile to an addiu
+           (len + 8) then an addu (+ base). Do not fold it to `... + 8`. */
+        TimBlock* image_block = (TimBlock*)(tim_body + (clut_block_len + 8));
+        vram_rect.w = image_block->w;
+        vram_rect.h = image_block->h;
+        func_80019A34(&vram_rect, image_block + 1); /* payload follows header */
     }
 
-    /* Third loop */
-    sp10.x = arg0->w;
-    sp10.y = arg0->h + 1;
-    sp10.w = 0x100;
-    sp10.h = 1;
+    /* Upload CLUT 1. */
+    vram_rect.x = rect->w;
+    vram_rect.y = rect->h + 1;
+    vram_rect.w = 0x100;
+    vram_rect.h = 1;
 
-    p = (u16*)(base + 0x822C);
+    clut_color = (u16*)(tim + 0x822C);
     for (i = 0; i < 0x100; i++)
     {
-        if (*p != 0)
-            *p |= 0x8000;
-        p++;
+        if (*clut_color != 0)
+        {
+            *clut_color |= 0x8000;
+        }
+
+        clut_color++;
     }
-    func_80019A34(&sp10, base + 0x822C);
+    func_80019A34(&vram_rect, tim + 0x822C);
 }
 
 /**
- * decomp.me (99.82%) https://decomp.me/scratch/Xng7v
+ * @brief Allocate a HUD/menu slot from the @c g_menu_slots pool.
+ *
+ * Scans for the first free slot (@c active == 0), initialises it, and stores
+ * the slot's rectangle from @p rect.
+ *
+ * @param arg0 Value packed into @c MenuSlot.flags bits 31..25 (@c arg0 << 25).
+ *             TODO: meaning unknown.
+ * @param rect Pointer to four @c u16 values - the slot's x, y, w, h.
+ * @return Pointer to the newly allocated @c MenuSlot.
+ * @see decomp.me (99.82%) https://decomp.me/scratch/Xng7v
  */
-void* menu_slot_alloc(s32 arg0, void* arg1)
+void* menu_slot_alloc(s32 arg0, void* rect)
 {
     s32 var_a2;
     MenuSlot* entry;
@@ -381,7 +452,7 @@ void* menu_slot_alloc(s32 arg0, void* arg1)
     u8* ptr;
     u32 temp;
     u32 mask;
-    u16* src = (u16*)arg1;
+    u16* src = (u16*)rect;
     var_a2 = 0;
     ptr = (u8*)&g_menu_slots[0];
     cur = (u8*)&g_menu_slots[0];

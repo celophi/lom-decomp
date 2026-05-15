@@ -752,6 +752,15 @@ g_akao_driver_flags                 = 0x8004F750;
 g_akao_xa_tracker                   = 0x8004F760;
 g_akao_streaming_state              = 0x8004F820;
 
+// Shared input / frame / script state (main executable .bss)
+g_frame_counter                     = 0x800F22AC;
+g_prim_rect_buf                     = 0x800FE778;
+g_pad_ctx                           = 0x8012271C;
+g_script_repeat_count               = 0x80122730;
+g_active_script                     = 0x801228C8;
+g_pad_input                         = 0x80122988;
+g_pad_input_inject                  = 0x801229FC;
+
 // Globals
 g_cdAudioReady                      = 0x801ED591;
 g_cdSystem                          = 0x801ED800;

@@ -26,6 +26,40 @@ extern s32 D_80046FD8;
 extern u16 D_80046FDE;
 extern s32 D_800473E0;
 
+/*
+ * Shared input / frame / script state.
+ *
+ * These globals live in the main executable's .bss (below the 0x80140000
+ * overlay slot) and are read/written by multiple overlays (menu, gname,
+ * gover, ...). They are declared here rather than per-overlay so the
+ * overlays share a single definition.
+ */
+
+/** @brief Global frame counter, advanced once per rendered frame. */
+extern s32 g_frame_counter;
+
+/** @brief Base of the primitive-rect scratch buffer (stride 0x4A0 per record). */
+extern u8 g_prim_rect_buf[];
+
+/**
+ * @brief Pointer to the controller/pad context object.
+ * @note Only fields at +0x840 (u8) and +0x858 (u32, bit 0x80) are referenced
+ *       so far; full layout TODO.
+ */
+extern void* g_pad_ctx;
+
+/** @brief Number of times the active script repeats on reaching its terminator. */
+extern s32 g_script_repeat_count;
+
+/** @brief Active script id; selects a row of @c g_script_table (0 = none). */
+extern s32 g_active_script;
+
+/** @brief Current frame's debounced pad button bitmask. */
+extern s32 g_pad_input;
+
+/** @brief Extra button bits OR'd into @c g_pad_input when the pad context requests it. */
+extern s32 g_pad_input_inject;
+
 typedef struct {
     u8 u_0x0[24];
     s32 u_0x18;

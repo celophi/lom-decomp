@@ -81,21 +81,21 @@ typedef struct
  *
  * @details The Game Over overlay maintains two of these halves back-to-back as
  * one contiguous buffer (total 0x938 bytes). The two halves are flipped each
- * frame in @p gover_run — one is presented while the other is drawn into.
+ * frame in @p gover_run - one is presented while the other is drawn into.
  *
  * The buffer is split across two C symbols for historical layout reasons:
  *
- *   g_goverFrameHeader — anchors @p halves[0] (struct start)
- *   g_goverFrameTail   — equals @c &halves[0].vramRect (i.e. g_goverFrameHeader + 0x90)
+ *   g_goverFrameHeader - anchors @p halves[0] (struct start)
+ *   g_goverFrameTail   - equals @c &halves[0].vramRect (i.e. g_goverFrameHeader + 0x90)
  *
  * Field offsets within each half:
  *
- *   0x000  otag         — ordering-table linked-list head (8 entries x 4 bytes)
- *   0x020  disp         — DISPENV configured by SetDefDispEnv
- *   0x034  draw         — DRAWENV configured by SetDefDrawEnv
- *   0x090  vramRect     — VRAM display rect (x, y, w, h)
- *   0x098  primBuf      — scratch space for per-frame GPU primitives
- *   0x498  allocCursor  — next-primitive write pointer (reset to &primBuf each
+ *   0x000  otag         - ordering-table linked-list head (8 entries x 4 bytes)
+ *   0x020  disp         - DISPENV configured by SetDefDispEnv
+ *   0x034  draw         - DRAWENV configured by SetDefDrawEnv
+ *   0x090  vramRect     - VRAM display rect (x, y, w, h)
+ *   0x098  primBuf      - scratch space for per-frame GPU primitives
+ *   0x498  allocCursor  - next-primitive write pointer (reset to &primBuf each
  *                         frame by gover_run, advanced by gover_build_otag)
  *   0x49C  (size)
  */
@@ -113,7 +113,6 @@ extern s32 func_800A368C(s32, s32);
 extern s32 func_800A380C(void);
 extern s32 func_800A39A8(s32, s32, s32, s32);
 extern s32 D_8011588C;
-extern s32 D_80122988;
 extern u32 D_8003EC90;
 extern s32 D_8010D018;
 extern D_80119F00_t g_audioData;
@@ -152,8 +151,8 @@ s32 D_8014070C;
  * The Game Over screen's double-buffered frame (2x GoverFrameHalf, 0x938 bytes
  * total) is split across two adjacent globals. They alias the same buffer:
  *
- *   g_goverFrameHeader  — &halves[0]              (struct start, 0x90 bytes)
- *   g_goverFrameTail    — &halves[0].vramRect     (= g_goverFrameHeader + 0x90)
+ *   g_goverFrameHeader  - &halves[0]              (struct start, 0x90 bytes)
+ *   g_goverFrameTail    - &halves[0].vramRect     (= g_goverFrameHeader + 0x90)
  *
  * The asymmetric split is a fossil of incremental development: in the
  * single-buffered version, the first 0x90 bytes were the per-frame render
@@ -164,7 +163,7 @@ s32 D_8014070C;
  * As a result, gover_show_screen anchors most of its accesses on the tail
  * symbol (where the cluster of writes sits) and gover_run anchors on the
  * header symbol (where its loop starts). Merging them into one symbol breaks
- * the relocation entries in the original object file — keep them separate.
+ * the relocation entries in the original object file - keep them separate.
  */
 u8 g_goverFrameHeader[0x90];
 u8 g_goverFrameTail[0x8A8];
@@ -258,8 +257,8 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     halves[0].draw.dtd = 0;
 
     // VRAM destination coordinates for the Game Over image (overlaid on RECT):
-    // pixelX/Y = (SCREEN_WIDTH, 0)  — texture area, just past the framebuffers.
-    // clutX/Y  = (0, GOVER_CLUT_Y)  — CLUT slot in the bottom of VRAM.
+    // pixelX/Y = (SCREEN_WIDTH, 0)  - texture area, just past the framebuffers.
+    // clutX/Y  = (0, GOVER_CLUT_Y)  - CLUT slot in the bottom of VRAM.
     rect.x = SCREEN_WIDTH;
     rect.y = 0;
     rect.w = 0;
@@ -303,7 +302,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  *      and clears its ordering table.
  *   2. Calls @p gover_build_otag to emit the per-frame SPRT/DR_TPAGE primitives,
  *      which also advances @p g_fadeLevel by @p g_fadeStep.
- *   3. Waits for VSync, then checks user input (@p D_80122988 & 0x260) — once
+ *   3. Waits for VSync, then checks user input (@p g_pad_input & 0x260) - once
  *      the fade has held at full brightness (0x80) and a button is pressed,
  *      flips @p g_fadeStep to -4 to begin the fade-out.
  *   4. Swaps display halves and queues @p PutDispEnv / @p PutDrawEnv /
@@ -349,7 +348,7 @@ static void gover_run(void)
             }
             VSync(2);
             p_d40708 = &g_fadeStep;
-            if ((g_fadeLevel == 128) && (D_80122988 & 0x260))
+            if ((g_fadeLevel == 128) && (g_pad_input & 0x260))
             {
                 akao_cmd_c1(0, 0x20, 0);
                 *p_d40708 = -4;
@@ -392,10 +391,10 @@ static void gover_run(void)
  * @p g_fadeStep and inserts four primitives into the ordering table at
  * @p pOtBuf in back-to-front order:
  *
- *   1. DR_TPAGE  — selects texture page 0xA7 (8bpp, VRAM X=448)
- *   2. SPRT      — right half of the image (64x224) at screen X=256
- *   3. DR_TPAGE  — selects texture page 0xA5 (8bpp, VRAM X=320)
- *   4. SPRT      — left half of the image (256x224) at screen X=0
+ *   1. DR_TPAGE  - selects texture page 0xA7 (8bpp, VRAM X=448)
+ *   2. SPRT      - right half of the image (64x224) at screen X=256
+ *   3. DR_TPAGE  - selects texture page 0xA5 (8bpp, VRAM X=320)
+ *   4. SPRT      - left half of the image (256x224) at screen X=0
  *
  * Both sprites share the CLUT at VRAM (0, GOVER_CLUT_Y) and are color-modulated by
  * @p g_fadeLevel (0 = black, 0x80 = full brightness), producing the fade-in

@@ -2,6 +2,8 @@
 #define _GNAME_H
 
 #include "common.h"
+#include "main.h"
+#include "render_context.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
@@ -48,45 +50,11 @@
  */
 typedef struct
 {
-    s32 r;     /* 0x0 — red channel,   0..0x100 normal, >0x100 = additive */
-    s32 g;     /* 0x4 — green channel, 0..0x100 normal, >0x100 = additive */
-    s32 b;     /* 0x8 — blue channel,  0..0x100 normal, >0x100 = additive */
-    s32 steps; /* 0xC — frames remaining in the lerp (target struct only) */
+    s32 r;     /* 0x0 - red channel,   0..0x100 normal, >0x100 = additive */
+    s32 g;     /* 0x4 - green channel, 0..0x100 normal, >0x100 = additive */
+    s32 b;     /* 0x8 - blue channel,  0..0x100 normal, >0x100 = additive */
+    s32 steps; /* 0xC - frames remaining in the lerp (target struct only) */
 } FadeState;
-
-// Structure for the argument object
-typedef struct
-{
-    s32 unk0;             // offset 0x00
-    char pad[0x4040 - 4]; // padding up to offset 0x4040
-    void* unk4040;        // offset 0x4040
-} ArgStruct;
-
-typedef struct
-{
-    u8 _pad0[0x38];
-    u32 unk38;
-    u8 _pad1[0x4040 - (0x38 + sizeof(u32))];
-    s32* unk4040;
-    u8 _pad2[0x8];
-    u32 unk404C;
-} UnkStruct;
-
-/* Object structure (offsets from target assembly) */
-typedef struct
-{
-    u8 _pad0[0x28];
-    u32 unk28; /* offset 0x28 */
-    u8 _pad1[0x3C - 0x28 - 4];
-    u_long prim_ot; /* offset 0x3C — addPrim() ot head: P_TAG holding the
-                       linked-list head for primitives appended this frame. */
-    u8 _pad1b[0x4040 - 0x3C - 4];
-    u32* unk4040; /* offset 0x4040 — primitive scratch-pool write cursor:
-                     points to the next free byte. Advanced past each
-                     appended primitive. */
-    u8 _pad2[0x404C - 0x4040 - 4];
-    u32 unk404C; /* offset 0x404C */
-} Obj;
 
 /**
  * @brief Glyph metrics entry: how to draw one glyph from VRAM.
@@ -98,11 +66,11 @@ typedef struct
  */
 typedef struct
 {
-    u8 u;     /* 0x0 — texture U in VRAM */
-    u8 v;     /* 0x1 — texture V in VRAM */
-    u8 w;     /* 0x2 — sprite width */
-    u8 h;     /* 0x3 — sprite height */
-    u32 clut; /* 0x4 — CLUT id (low 6 bits used; combined with 0x7C80) */
+    u8 u;     /* 0x0 - texture U in VRAM */
+    u8 v;     /* 0x1 - texture V in VRAM */
+    u8 w;     /* 0x2 - sprite width */
+    u8 h;     /* 0x3 - sprite height */
+    u32 clut; /* 0x4 - CLUT id (low 6 bits used; combined with 0x7C80) */
 } GlyphInfo;
 
 /**
@@ -113,8 +81,8 @@ typedef struct
  */
 typedef struct
 {
-    u32 id; /* 0x0 — index into g_glyph_table (selects which glyph to draw) */
-    u32 xy; /* 0x4 — packed s16 x,y screen position (low half = x, high = y) */
+    u32 id; /* 0x0 - index into g_glyph_table (selects which glyph to draw) */
+    u32 xy; /* 0x4 - packed s16 x,y screen position (low half = x, high = y) */
 } GlyphSeqEntry;
 
 /** Number of glyph cells in the name-entry cursor row drawn by
@@ -142,10 +110,8 @@ extern FadeState g_fade_target;
 extern FadeState g_fade_current;
 extern s32 g_startup_delay;
 extern u8 D_80147494[];
-extern s32 D_800F22AC;
 extern s32 g_strip_width_target;
 extern s32 g_strip_width;
-extern s32 D_80122988;
 extern u8* g_active_name;
 extern s32 D_8014F7E4;
 extern u8 D_8014F8B8;
