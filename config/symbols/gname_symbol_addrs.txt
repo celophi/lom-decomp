@@ -8,6 +8,7 @@ gname_init          = 0x80140714;
 gname_tick          = 0x80140888;
 gname_update_state  = 0x801408D0;
 reset_run_state     = 0x801409EC;
+emit_cursor_glyph   = 0x80141848;
 emit_draw_mode_prim = 0x80142220;
 name_byte_length    = 0x801426D4;
 name_char_count     = 0x80142720;
