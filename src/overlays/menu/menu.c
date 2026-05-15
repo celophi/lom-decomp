@@ -364,16 +364,17 @@ void menu_state_init(void)
  *
  * @param rect Destination coordinates: @c (w,h) position the CLUT bands,
  *             @c (x,y) position the texture image.
- * @note @c g_menu_tim is not modelled as a struct: the image block sits at a
- *       runtime-computed offset past a variable-size CLUT region, so the
- *       layout is parsed with offset arithmetic (normal for TIM data).
+ * @note The image block is typed as a @ref TimBlock. The two CLUT regions are
+ *       left as raw offsets because the matched code reaches them through two
+ *       different base pointers (@c tim for the STP-bit loops, @c tim_body for
+ *       the upload calls) — a deliberate register-allocation detail.
  * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
 void menu_upload_tim(Rect16* rect)
 {
     u8* tim = g_menu_tim;
     u8* tim_body = tim + 0xC;
-    s32 image_block_offset = *(s32*)(tim_body + 8);
+    s32 clut_block_len = *(s32*)(tim_body + 8); /* TIM CLUT block length (bnum) */
     Rect16 vram_rect;
     u16* clut_color;
     int i;
@@ -399,13 +400,14 @@ void menu_upload_tim(Rect16* rect)
     vram_rect.x = rect->x;
     vram_rect.y = rect->y;
     {
-        /* The parenthesization `tim_body + (image_block_offset + 8)` is
-           load-bearing: it must compile to an addiu (offset + 8) followed by
-           an addu (+ base). Do not fold it to `tim_body + ... + 8`. */
-        u8* image_block = tim_body + (image_block_offset + 8);
-        vram_rect.w = *(u16*)(image_block + 8);
-        vram_rect.h = *(u16*)(image_block + 10);
-        func_80019A34(&vram_rect, image_block + 0xC);
+        /* The CLUT block starts at tim_body+8, so the image block that
+           follows it is at tim_body + 8 + clut_block_len. The parenthesization
+           `(clut_block_len + 8)` is load-bearing: it must compile to an addiu
+           (len + 8) then an addu (+ base). Do not fold it to `... + 8`. */
+        TimBlock* image_block = (TimBlock*)(tim_body + (clut_block_len + 8));
+        vram_rect.w = image_block->w;
+        vram_rect.h = image_block->h;
+        func_80019A34(&vram_rect, image_block + 1); /* payload follows header */
     }
 
     /* Upload CLUT 1. */

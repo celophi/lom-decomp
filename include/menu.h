@@ -41,6 +41,23 @@ typedef struct
 } Rect16;
 
 /**
+ * @brief Header of a PSX TIM pixel/CLUT block.
+ *
+ * Every TIM block — the CLUT block and the image block alike — starts with
+ * this 0xC-byte header: a total byte length followed by the destination VRAM
+ * rectangle. The block payload (palette entries or pixels) follows at
+ * offset 0xC, i.e. immediately after the header.
+ */
+typedef struct
+{
+    u32 bnum;   /* 0x00 — block length in bytes, including this header */
+    u16 dx;     /* 0x04 — VRAM destination X */
+    u16 dy;     /* 0x06 — VRAM destination Y */
+    u16 w;      /* 0x08 — region width */
+    u16 h;      /* 0x0A — region height */
+} TimBlock;
+
+/**
  * @brief HUD/menu entry slot allocated from the @c g_menu_slots pool.
  *
  * @note Stride is 0x24 bytes; @c active == 0 marks a free slot.
