@@ -350,63 +350,78 @@ void menu_state_init(void)
 }
 
 /**
- * @brief Upload the menu TIM (texture + CLUT) into VRAM.
+ * @brief Upload the packed menu texture asset (@c g_menu_tim) to VRAM.
  *
- * @param rect Destination block: @c (x,y) and @c (w,h) are two separate VRAM
- *             coordinate pairs (texture position and CLUT-band position).
+ * The asset is a TIM-style blob holding two 256-entry CLUTs and one texture
+ * image. It is committed to VRAM as three transfers via @ref func_80019A34:
+ *   1. CLUT 0 (256x1) to @c (rect->w, rect->h).
+ *   2. The texture image to @c (rect->x, rect->y); its width/height are read
+ *      from the image block, whose position is a self-relative offset stored
+ *      inside the asset.
+ *   3. CLUT 1 (256x1) to @c (rect->w, rect->h + 1).
+ * Before each CLUT upload, the semi-transparency flag (STP, bit 0x8000) is
+ * set on every non-zero palette entry.
+ *
+ * @param rect Destination coordinates: @c (w,h) position the CLUT bands,
+ *             @c (x,y) position the texture image.
+ * @note @c g_menu_tim is not modelled as a struct: the image block sits at a
+ *       runtime-computed offset past a variable-size CLUT region, so the
+ *       layout is parsed with offset arithmetic (normal for TIM data).
  * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
 void menu_upload_tim(Rect16* rect)
 {
-    u8* base = g_menu_tim;
-    u8* s0 = base + 0xC;
-    s32 s3 = *(s32*)(s0 + 8);
-    Rect16 sp10;
-    u16* p;
+    u8* tim = g_menu_tim;
+    u8* tim_body = tim + 0xC;
+    s32 image_block_offset = *(s32*)(tim_body + 8);
+    Rect16 vram_rect;
+    u16* clut_color;
     int i;
 
-    g_menu_tim_dy = *(s32*)(s0 + 0x14);
+    g_menu_tim_dy = *(s32*)(tim_body + 0x14);
 
-    /* First loop */
-    sp10.x = rect->w;
-    sp10.y = rect->h;
-    sp10.w = 0x100;
-    sp10.h = 1;
+    /* Upload CLUT 0. */
+    vram_rect.x = rect->w;
+    vram_rect.y = rect->h;
+    vram_rect.w = 0x100;
+    vram_rect.h = 1;
 
-    p = (u16*)(base + 0x20);
+    clut_color = (u16*)(tim + 0x20);
     for (i = 0; i < 0x100; i++)
     {
-        if (*p != 0)
-            *p |= 0x8000;
-        p++;
+        if (*clut_color != 0)
+            *clut_color |= 0x8000;
+        clut_color++;
     }
-    func_80019A34(&sp10, s0 + 0x14);
+    func_80019A34(&vram_rect, tim_body + 0x14);
 
-    /* Second call */
-    sp10.x = rect->x;
-    sp10.y = rect->y;
+    /* Upload the texture image. */
+    vram_rect.x = rect->x;
+    vram_rect.y = rect->y;
     {
-        // Enforce specific instruction ordering: addiu a1, s3, 8 then addu a1, s0, a1
-        u8* temp = s0 + (s3 + 8);
-        sp10.w = *(u16*)(temp + 8);
-        sp10.h = *(u16*)(temp + 10);
-        func_80019A34(&sp10, temp + 0xC);
+        /* The parenthesization `tim_body + (image_block_offset + 8)` is
+           load-bearing: it must compile to an addiu (offset + 8) followed by
+           an addu (+ base). Do not fold it to `tim_body + ... + 8`. */
+        u8* image_block = tim_body + (image_block_offset + 8);
+        vram_rect.w = *(u16*)(image_block + 8);
+        vram_rect.h = *(u16*)(image_block + 10);
+        func_80019A34(&vram_rect, image_block + 0xC);
     }
 
-    /* Third loop */
-    sp10.x = rect->w;
-    sp10.y = rect->h + 1;
-    sp10.w = 0x100;
-    sp10.h = 1;
+    /* Upload CLUT 1. */
+    vram_rect.x = rect->w;
+    vram_rect.y = rect->h + 1;
+    vram_rect.w = 0x100;
+    vram_rect.h = 1;
 
-    p = (u16*)(base + 0x822C);
+    clut_color = (u16*)(tim + 0x822C);
     for (i = 0; i < 0x100; i++)
     {
-        if (*p != 0)
-            *p |= 0x8000;
-        p++;
+        if (*clut_color != 0)
+            *clut_color |= 0x8000;
+        clut_color++;
     }
-    func_80019A34(&sp10, base + 0x822C);
+    func_80019A34(&vram_rect, tim + 0x822C);
 }
 
 /**
