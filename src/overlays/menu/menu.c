@@ -495,3 +495,22 @@ void* menu_slot_alloc(s32 arg0, void* rect)
     g_active_slot = var_a2;
     return (void*)entry;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/D9BI9
+ */
+void func_80141324(void)
+{
+    s32 var_v1;
+    s8* var_v0;
+
+    var_v1 = 3;
+    var_v0 = (s8*)g_menu_slots;
+    var_v0 += 0x6C;
+    while (var_v1 >= 0)
+    {
+        *var_v0 = 0;
+        var_v1--;
+        var_v0 -= 0x24;
+    }
+}
