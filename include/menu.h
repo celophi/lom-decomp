@@ -18,7 +18,6 @@ extern s32 g_menu_unk_e8;
 extern s32 g_active_slot;
 extern s32 g_script_cursor;
 extern s32 g_pad_input_latched;
-extern u8  g_script_table[];
 extern s32 g_script_repeat_last;
 extern u8  g_menu_tim[];
 extern s32 g_menu_tim_dy;
@@ -82,5 +81,25 @@ typedef struct
 } MenuSlot;
 
 extern MenuSlot g_menu_slots[];
+
+/**
+ * @brief One row of @c g_script_table — a canned sequence of pad-input masks.
+ *
+ * The script subsystem (see @ref menu_tick) replays scripted controller input:
+ * @c g_active_script selects a row, @c g_script_cursor walks @c inputs, and
+ * each value is fed into @c g_pad_input for that frame. A value of @c 0xFFFF
+ * terminates the row; on termination the row may repeat @c g_script_repeat_count
+ * times. Row stride is 0x30 bytes (24 halfwords).
+ *
+ * @note @c menu_tick indexes this table with hand-written shift arithmetic
+ *       (@c off*3 then @c <<4) to reproduce the original codegen, so it casts
+ *       @c g_script_table back to @c u8* rather than using @c inputs directly.
+ */
+typedef struct
+{
+    u16 inputs[24];   /* 0x00 — pad-input masks; 0xFFFF terminates */
+} MenuScript;
+
+extern MenuScript g_script_table[];
 
 #endif

@@ -57,20 +57,26 @@ void menu_init_prim_rects(void)
 }
 
 /**
- * decomp.me (97.74%) https://decomp.me/scratch/vmp4D
+ * @brief Per-frame menu update: emit the grid, advance counters, and run
+ *        the scripted-input player.
+ *
+ * @param gpu_work Per-frame GPU work context; its @c prim_tail is saved on
+ *                 entry and restored before @ref func_8014134C runs.
+ * @see decomp.me (97.74%) https://decomp.me/scratch/vmp4D
  */
-void menu_tick(void* arg0)
+void menu_tick(GpuWork* gpu_work)
 {
     s32 v0;
     s32 v1;
-    s32 s3;
+    s32 saved_prim_tail;
     s32 var_s0;
     u16 temp_v1;
     s32 padding[2];
     menu_build_grid();
     v0 = g_menu_frame;
     v1 = g_frame_counter;
-    s3 = *((s32*)(((u8*)arg0) + 0x4040));
+    /* GpuWork.prim_tail — kept as a raw offset load to preserve codegen */
+    saved_prim_tail = *((s32*)(((u8*)gpu_work) + 0x4040));
     g_menu_frame = v0 + 1;
     g_frame_counter = v1 + 1;
     func_800A9E78(&g_menu_frame, &g_frame_counter);
@@ -101,7 +107,7 @@ void menu_tick(void* arg0)
     if (g_active_script != 0)
     {
         s32 idx;
-        u8* base = g_script_table;
+        u8* base = (u8*)g_script_table;
         s32 off = g_active_script;
         off = (off << 1) + off;
         off <<= 4;
@@ -133,14 +139,33 @@ void menu_tick(void* arg0)
             g_script_cursor = idx + 1;
         }
     }
-    *((s32*)(((u8*)arg0) + 0x4040)) = s3;
-    func_8014134C(arg0);
+    *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_tail;
+    func_8014134C(gpu_work);
 }
 
 /**
- * decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
+ * @brief Lay out a run of glyph sprites and link them into an OT chain.
+ *
+ * @param sprites Array of libgpu @c SPRT primitives (stride 0x14) — both the
+ *                working buffer and the function's output.
+ * @param ot      OT chain column the sprites are linked into via @c addPrim.
+ * @param src     Source text/data copied into the local glyph buffer.
+ * @param arg3    TODO: unknown — passed to @ref func_800644FC.
+ * @param x       Starting X of the run; pre-shifted left by the total glyph
+ *                width when @p mode is 1 or 2 (centering).
+ * @param y       Y coordinate of the run.
+ * @param len     Source length: element count for the buffer fill and the
+ *                index at which the buffer is null-terminated.
+ * @param mode    Glyph-width interpretation: 1 = signed halfword,
+ *                2 = unsigned halfword (>> 1); other = no width adjustment.
+ * @return Pointer just past the run (offset 0x8 of the trailing primitive).
+ *
+ * @note A @c SPRT (offset 0x4 @c rgbc, 0x8 packed @c (x0,y0), 0x10 signed
+ *       @c w) is 0x14 bytes. Retyping @p sprites to @c SPRT* is desirable but
+ *       must be verified against the asm — this scratch is not yet matched.
+ * @see decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
  */
-s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
 {
     u8 sp10[0x90]; /* buffer – size matches target frame */
     s32 tmp, count, i;
@@ -149,31 +174,31 @@ s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32
     u8 *base, *col;
 
     /* first call: fill buffer */
-    func_800171CC(sp10, arg2, arg6);
-    sp10[arg6] = 0;
+    func_800171CC(sp10, src, len);
+    sp10[len] = 0;
 
     /* second call: get number of elements */
-    count = func_800644FC(arg0, sp10, arg3);
+    count = func_800644FC(sprites, sp10, arg3);
 
-    /* subtract halfword values according to arg7 */
-    if (arg7 == 1)
+    /* subtract halfword values according to mode */
+    if (mode == 1)
     {
         /* signed halfword (lh) */
-        ptr0 = arg0;
+        ptr0 = sprites;
         for (i = 0; i < count; i++)
         {
-            arg4 -= *(s16*)((char*)ptr0 + 0x10);
+            x -= *(s16*)((char*)ptr0 + 0x10);
             ptr0 = (s32*)((char*)ptr0 + 0x14);
         }
     }
-    else if (arg7 == 2)
+    else if (mode == 2)
     {
         /* unsigned halfword → (val << 16) >> 17 */
-        ptr0 = arg0;
+        ptr0 = sprites;
         for (i = 0; i < count; i++)
         {
             u16 val = *(u16*)((char*)ptr0 + 0x10);
-            arg4 -= ((s16)val) >> 1; /* arithmetic right shift, matches sra */
+            x -= ((s16)val) >> 1; /* arithmetic right shift, matches sra */
             ptr0 = (s32*)((char*)ptr0 + 0x14);
         }
     }
@@ -183,9 +208,9 @@ s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32
     /* main loop – process each structure */
     if (count > 0)
     {
-        base = (u8*)arg0;
-        col = (u8*)arg1;
-        tmp = arg4 + (arg5 << 16); /* constant used inside loop */
+        base = (u8*)sprites;
+        col = (u8*)ot;
+        tmp = x + (y << 16); /* constant used inside loop */
 
         do
         {
@@ -214,9 +239,18 @@ s32* menu_build_text_run(s32* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32
 }
 
 /**
- * decomp.me (94.19%) https://decomp.me/scratch/ZtHxG
+ * @brief Emit the menu grid: a texture-window delimiter, 0x1D glyph sprites,
+ *        and a trailing texture-window + draw-tpage primitive.
+ *
+ * @param gpu_work Per-frame GPU work context; primitives are appended to its
+ *                 OT chain and @c prim_tail is advanced past the emitted block.
+ * @note The 0x14-byte records written in the loop are libgpu @c SPRT
+ *       primitives (offset 0x4 @c rgbc, 0x8 @c (x0,y0), 0xC @c (u0,v0),
+ *       0xE @c clut, 0x10 @c (w,h)). They are written via raw offsets to
+ *       preserve the matched codegen.
+ * @see decomp.me (94.19%) https://decomp.me/scratch/ZtHxG
  */
-void menu_build_grid(GpuWork* arg0)
+void menu_build_grid(GpuWork* gpu_work)
 {
     volatile u8 sp0;
     volatile u16 sp2;
@@ -227,7 +261,7 @@ void menu_build_grid(GpuWork* arg0)
     u8* var_t0;
     u8* var_t3;
     u8* temp_t1;
-    GpuWork* t7 = arg0;
+    GpuWork* t7 = gpu_work;
     GpuWork* t4 = t7;
 
     var_t3 = (u8*)g_menu_glyph_src;
@@ -315,9 +349,13 @@ void menu_state_init(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/tG03R
+ * @brief Upload the menu TIM (texture + CLUT) into VRAM.
+ *
+ * @param rect Destination block: @c (x,y) and @c (w,h) are two separate VRAM
+ *             coordinate pairs (texture position and CLUT-band position).
+ * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
-void menu_upload_tim(Rect16* arg0)
+void menu_upload_tim(Rect16* rect)
 {
     u8* base = g_menu_tim;
     u8* s0 = base + 0xC;
@@ -329,8 +367,8 @@ void menu_upload_tim(Rect16* arg0)
     g_menu_tim_dy = *(s32*)(s0 + 0x14);
 
     /* First loop */
-    sp10.x = arg0->w;
-    sp10.y = arg0->h;
+    sp10.x = rect->w;
+    sp10.y = rect->h;
     sp10.w = 0x100;
     sp10.h = 1;
 
@@ -344,8 +382,8 @@ void menu_upload_tim(Rect16* arg0)
     func_80019A34(&sp10, s0 + 0x14);
 
     /* Second call */
-    sp10.x = arg0->x;
-    sp10.y = arg0->y;
+    sp10.x = rect->x;
+    sp10.y = rect->y;
     {
         // Enforce specific instruction ordering: addiu a1, s3, 8 then addu a1, s0, a1
         u8* temp = s0 + (s3 + 8);
@@ -355,8 +393,8 @@ void menu_upload_tim(Rect16* arg0)
     }
 
     /* Third loop */
-    sp10.x = arg0->w;
-    sp10.y = arg0->h + 1;
+    sp10.x = rect->w;
+    sp10.y = rect->h + 1;
     sp10.w = 0x100;
     sp10.h = 1;
 
@@ -371,9 +409,18 @@ void menu_upload_tim(Rect16* arg0)
 }
 
 /**
- * decomp.me (99.82%) https://decomp.me/scratch/Xng7v
+ * @brief Allocate a HUD/menu slot from the @c g_menu_slots pool.
+ *
+ * Scans for the first free slot (@c active == 0), initialises it, and stores
+ * the slot's rectangle from @p rect.
+ *
+ * @param arg0 Value packed into @c MenuSlot.flags bits 31..25 (@c arg0 << 25).
+ *             TODO: meaning unknown.
+ * @param rect Pointer to four @c u16 values — the slot's x, y, w, h.
+ * @return Pointer to the newly allocated @c MenuSlot.
+ * @see decomp.me (99.82%) https://decomp.me/scratch/Xng7v
  */
-void* menu_slot_alloc(s32 arg0, void* arg1)
+void* menu_slot_alloc(s32 arg0, void* rect)
 {
     s32 var_a2;
     MenuSlot* entry;
@@ -381,7 +428,7 @@ void* menu_slot_alloc(s32 arg0, void* arg1)
     u8* ptr;
     u32 temp;
     u32 mask;
-    u16* src = (u16*)arg1;
+    u16* src = (u16*)rect;
     var_a2 = 0;
     ptr = (u8*)&g_menu_slots[0];
     cur = (u8*)&g_menu_slots[0];
