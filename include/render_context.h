@@ -20,15 +20,15 @@
  *       at offset 0x4040 (verified: CHECKPS passes @c base+0x4040 to
  *       @c PutDispEnv) because they own their display environment. The
  *       in-game overlays only append primitives and leave the DISPENV/DRAWENV
- *       to the resident engine — so 0x4040 is a heap cursor here, not a
+ *       to the resident engine - so 0x4040 is a heap cursor here, not a
  *       DISPENV. The two layouts are different structs, not a decomp error.
  */
 typedef struct
 {
-    u_long ot[0x1010];   /* 0x0000 — ordering table (24-bit tag-link array) */
-    void*  prim_cursor;  /* 0x4040 — next free byte in the primitive heap */
-    u8     _pad4044[8];  /* 0x4044 — unknown */
-    u32    frame_parity; /* 0x404C — active double-buffer index (0 or 1) */
+    u_long ot[0x1010];   /* 0x0000 - ordering table (24-bit tag-link array) */
+    void*  prim_cursor;  /* 0x4040 - next free byte in the primitive heap */
+    u8     _pad4044[8];  /* 0x4044 - unknown */
+    u32    frame_parity; /* 0x404C - active double-buffer index (0 or 1) */
     /* The buffer continues past 0x4050 (packet heap etc.); not yet mapped. */
 } RenderContext;
 

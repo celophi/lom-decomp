@@ -27,10 +27,10 @@ void reset_fade_state(void)
  *
  * If `g_fade_target.steps` is non-zero, advances `g_fade_current` by one step of
  * `(target - current) / steps` per channel and decrements `steps`.
- * Otherwise snaps current to target (RGB only — `steps` is left alone).
+ * Otherwise snaps current to target (RGB only - `steps` is left alone).
  *
- * If the current color is anything other than (0x100, 0x100, 0x100) — i.e.
- * not the no-tint identity — emits two primitives at @c ctx->prim_cursor:
+ * If the current color is anything other than (0x100, 0x100, 0x100) - i.e.
+ * not the no-tint identity - emits two primitives at @c ctx->prim_cursor:
  *   1. A 16-byte flat-shaded full-screen quad (tag 0x62) covering the
  *      320x240 viewport with the tinted RGB. When any channel is >0x100,
  *      colors are written as `value - 1` (additive bias); when <0x100,
@@ -51,8 +51,8 @@ void reset_fade_state(void)
  */
 void render_fade_overlay(RenderContext* ctx)
 {
-    u32* prim = (u32*)ctx->prim_cursor; /* t4 — current primitive write pos */
-    RenderContext* arg = ctx;       /* t6 = t7 — preserves load order */
+    u32* prim = (u32*)ctx->prim_cursor; /* t4 - current primitive write pos */
+    RenderContext* arg = ctx;       /* t6 = t7 - preserves load order */
     s32 step_r, step_g, step_b;
     s32 abr_cmd; /* low byte of GP0 0xE1 (abr select) */
 
@@ -80,14 +80,14 @@ void render_fade_overlay(RenderContext* ctx)
         /* Flat-quad RGB bytes at prim[4..6]. */
         if (g_fade_current.r >= 0x101)
         {
-            /* Additive bias: subtract 1 so 0x101 → 0x00..0xFF. */
+            /* Additive bias: subtract 1 so 0x101 -> 0x00..0xFF. */
             ((u8*)prim)[4] = (u8)g_fade_current.r - 1;
             ((u8*)prim)[5] = (u8)g_fade_current.g - 1;
             ((u8*)prim)[6] = (u8)g_fade_current.b - 1;
         }
         else
         {
-            /* Subtractive bias: bitwise NOT so 0xFF → 0x00, 0x00 → 0xFF. */
+            /* Subtractive bias: bitwise NOT so 0xFF -> 0x00, 0x00 -> 0xFF. */
             if (g_fade_current.r == 0x100)
                 ((u8*)prim)[4] = 0;
             else
@@ -163,12 +163,12 @@ void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
  * @brief Overlay boot/reset entry: prep VRAM, load CLUT, init run state.
  *
  * Calls (in order):
- *  - @ref func_8014075C  — RECT build + handoff (likely VRAM clear or CLUT load).
- *  - @ref func_800AA02C  — engine helper (audio/SFX init).
- *  - sets @c g_startup_delay = 0x28 (40 — likely a startup delay countdown).
- *  - @ref func_8006441C  — engine helper.
- *  - @ref reset_run_state  — zero/seed all of the overlay's run-state globals.
- *  - @ref func_80063194  — engine helper.
+ *  - @ref func_8014075C  - RECT build + handoff (likely VRAM clear or CLUT load).
+ *  - @ref func_800AA02C  - engine helper (audio/SFX init).
+ *  - sets @c g_startup_delay = 0x28 (40 - likely a startup delay countdown).
+ *  - @ref func_8006441C  - engine helper.
+ *  - @ref reset_run_state  - zero/seed all of the overlay's run-state globals.
+ *  - @ref func_80063194  - engine helper.
  *
  * @see https://decomp.me/scratch/pnzC1 (100%)
  */
@@ -187,7 +187,7 @@ void gname_init(void)
  * @brief Build a hard-coded VRAM RECT and hand it to @ref func_80140794.
  *
  * Constructs a `RECT { x=0x140 (320), y=0, w=0, h=0x1F2 (498) }` on the
- * stack — note the field order matches the data passed to the consumer,
+ * stack - note the field order matches the data passed to the consumer,
  * which reads `arr[0..3]` directly (not the standard PSY-Q `RECT` order).
  *
  * @see https://decomp.me/scratch/EWwJI (100%)
@@ -251,10 +251,10 @@ void func_80140794(void* arg0)
  * @brief Per-frame tick: reset/prep, render frame contents, advance frame
  *        counter, advance overlay state machine.
  *
- *  - @ref func_80142410  — frame prologue (likely OT reset / heap rewind).
- *  - @ref func_80141928  — main render pass for this overlay.
+ *  - @ref func_80142410  - frame prologue (likely OT reset / heap rewind).
+ *  - @ref func_80141928  - main render pass for this overlay.
  *  - increments the global frame counter @c g_frame_counter.
- *  - @ref gname_update_state  — countdown / lerp / SFX trigger update.
+ *  - @ref gname_update_state  - countdown / lerp / SFX trigger update.
  *
  * @param ctx Render context passed through to @ref func_80141928.
  *
@@ -1225,7 +1225,7 @@ s32 func_80141D64(void)
  *      emitted via @ref emit_draw_mode_prim / @ref func_80142274.
  *   3. A 0x60-byte image-load packet built on the stack by
  *      @ref func_8001C56C describing a `strip_width x 32` rectangle at VRAM
- *      `(240 - strip_width, 24 | 256)` — i.e. right-aligned on whichever
+ *      `(240 - strip_width, 24 | 256)` - i.e. right-aligned on whichever
  *      VRAM page is currently the back buffer (Y=0x18 vs 0x100).
  *
  * Each packet is spliced into the 24-bit OT at @c ctx->ot[0x0E] with the
@@ -1243,7 +1243,7 @@ s32 func_80141D64(void)
  */
 void func_80141E04(RenderContext* ctx, s32 tex_src, s32 strip_width)
 {
-    s32* ot_head;   /* &ctx->ot[0x0E] — passed as the OT head pointer */
+    s32* ot_head;   /* &ctx->ot[0x0E] - passed as the OT head pointer */
     s32* prim;      /* current primitive being emitted */
     s32* next_prim; /* heap cursor after the sprite/draw-mode pair */
     s32 vram_y;     /* VRAM Y of the back page (0x18 or 0x100) */
@@ -1349,7 +1349,7 @@ void func_80141F9C(void* arg0, s32 arg1)
         }
     }
 
-    /* After loop – final setup and second call */
+    /* After loop - final setup and second call */
     {
         u32 param_a2 = 0x68;
         D_8014F8A0 = var_s2;
@@ -1406,8 +1406,8 @@ void* emit_draw_mode_prim(void* arg0, s32* arg1)
  * writes a second SPRT at @c (arg3 + tmp, arg4 + tmp) with
  * @c tmp = (arg5 - arg6) * 2. The second sprite's tint and code byte
  * depend on @p arg7:
- *   - @p arg7 != 0: opaque blue (RGB=(0,0,0xA0), code 0x64) — highlight.
- *   - @p arg7 == 0: semi-transparent black (RGB=0, code 0x66) — drop shadow.
+ *   - @p arg7 != 0: opaque blue (RGB=(0,0,0xA0), code 0x64) - highlight.
+ *   - @p arg7 == 0: semi-transparent black (RGB=0, code 0x66) - drop shadow.
  *
  * Both sprites pull u/v/w/h/clut from @c g_glyph_table[arg2] and are
  * appended to the linked list at @p arg1 via the standard addPrim sequence.
@@ -1439,7 +1439,7 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
     u32 clut_word;
     s32 tmp2;
 
-    /* Primary glyph SPRT — white tint, fully opaque. */
+    /* Primary glyph SPRT - white tint, fully opaque. */
     *(u32*)&sprt->r0 = 0x808080;             /* r=g=b=0x80, code byte = 0 */
     setSprt(sprt);                           /* len=4, code=0x64 (free-size textured sprite) */
     sprt->x0 = (s16)(arg3 - arg5 + arg6);
@@ -1448,7 +1448,7 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
     sprt->v0 = entry[1];
     sprt->w = (s16)entry[2];
     sprt->h = (s16)entry[3];
-    /* Force a `lw` load on the clut word — accessing as u32 keeps the
+    /* Force a `lw` load on the clut word - accessing as u32 keeps the
        full word live so gcc doesn't shrink to `lhu`. */
     clut_word = *(u32*)(entry + 4);
     sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
@@ -1460,7 +1460,7 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 
     if (arg5 != 0)
     {
-        /* Secondary SPRT — drop shadow (arg7==0) or highlight (arg7!=0).
+        /* Secondary SPRT - drop shadow (arg7==0) or highlight (arg7!=0).
            entry2 is re-derived (rather than reused) so gcc preserves arg2
            in $a2 across both SPRT blocks, matching the target codegen. */
         SPRT* sprt2 = (SPRT*)ptr;
@@ -1506,13 +1506,13 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
  * Walks @c D_8014F6B8 (a @ref GlyphSeqEntry array) one entry per glyph
  * cell, looks each glyph up in @c g_glyph_table, and emits a white
  * (RGB=0x80) free-size textured SPRT primitive (code 0x64). The chain is
- * wrapped with @c setTexWindow at both ends (rect @c {0,0,0xFF,0xFF} —
+ * wrapped with @c setTexWindow at both ends (rect @c {0,0,0xFF,0xFF} -
  * a no-op full-page window) and closed with @c setDrawTPage(0,0,5).
  * The buffer cursor at @c obj->prim_cursor is advanced past the final primitive.
  *
  * @param arg0 Render context (@ref RenderContext). Reads/writes:
- *             - @c ot[0x0F] at offset 0x3C — addPrim OT entry.
- *             - @c prim_cursor at offset 0x4040 — primitive scratch-pool cursor.
+ *             - @c ot[0x0F] at offset 0x3C - addPrim OT entry.
+ *             - @c prim_cursor at offset 0x4040 - primitive scratch-pool cursor.
  *
  * @note Called by @ref gname_tick via the implicit-@c $a0 convention
  *       (the call site passes no args; the function reads whatever the
@@ -1611,7 +1611,7 @@ void func_80142410(RenderContext* arg0)
     ptr_t1 = list_ptr;
 
     /* Closing texture window. Field-assignment order differs from the
-       opening call (w,h,x,y vs. h,w,y,x) — the original C wrote them in
+       opening call (w,h,x,y vs. h,w,y,x) - the original C wrote them in
        this exact order and gcc preserves it. */
     tw_rect.w = 0xFF;
     tw_rect.h = 0xFF;

@@ -76,7 +76,7 @@ void menu_tick(RenderContext* gpu_work)
     menu_build_grid();
     v0 = g_menu_frame;
     v1 = g_frame_counter;
-    /* RenderContext.prim_cursor — kept as a raw offset load to preserve codegen */
+    /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen */
     saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
     g_menu_frame = v0 + 1;
     g_frame_counter = v1 + 1;
@@ -147,11 +147,11 @@ void menu_tick(RenderContext* gpu_work)
 /**
  * @brief Lay out a run of glyph sprites and link them into an OT chain.
  *
- * @param sprites Array of libgpu @c SPRT primitives (stride 0x14) — both the
+ * @param sprites Array of libgpu @c SPRT primitives (stride 0x14) - both the
  *                working buffer and the function's output.
  * @param ot      OT chain column the sprites are linked into via @c addPrim.
  * @param src     Source text/data copied into the local glyph buffer.
- * @param arg3    TODO: unknown — passed to @ref func_800644FC.
+ * @param arg3    TODO: unknown - passed to @ref func_800644FC.
  * @param x       Starting X of the run; pre-shifted left by the total glyph
  *                width when @p mode is 1 or 2 (centering).
  * @param y       Y coordinate of the run.
@@ -163,12 +163,12 @@ void menu_tick(RenderContext* gpu_work)
  *
  * @note A @c SPRT (offset 0x4 @c rgbc, 0x8 packed @c (x0,y0), 0x10 signed
  *       @c w) is 0x14 bytes. Retyping @p sprites to @c SPRT* is desirable but
- *       must be verified against the asm — this scratch is not yet matched.
+ *       must be verified against the asm - this scratch is not yet matched.
  * @see decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
  */
 s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
 {
-    u8 sp10[0x90]; /* buffer – size matches target frame */
+    u8 sp10[0x90]; /* buffer - size matches target frame */
     s32 tmp, count, i;
     s32 *ptr0, *ptr1;
     s32 acc; /* accumulator for halfwords */
@@ -194,7 +194,7 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
     }
     else if (mode == 2)
     {
-        /* unsigned halfword → (val << 16) >> 17 */
+        /* unsigned halfword -> (val << 16) >> 17 */
         ptr0 = sprites;
         for (i = 0; i < count; i++)
         {
@@ -206,7 +206,7 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
 
     acc = 0;
 
-    /* main loop – process each structure */
+    /* main loop - process each structure */
     if (count > 0)
     {
         base = (u8*)sprites;
@@ -274,7 +274,7 @@ void menu_build_grid(RenderContext* gpu_work)
     sp2 = 0;
     *(u16*)&sp0 = 0;
 
-    /* DR_AREA / texture-window primitive (GP0 0xE2) — leading delimiter */
+    /* DR_AREA / texture-window primitive (GP0 0xE2) - leading delimiter */
     setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
     addPrim(&t4->ot[0x0F], temp_t1);
 
@@ -315,7 +315,7 @@ void menu_build_grid(RenderContext* gpu_work)
     *(u16*)&sp0 = 0;
     sp2 = 0;
 
-    /* DR_AREA / texture-window primitive (GP0 0xE2) — trailing delimiter */
+    /* DR_AREA / texture-window primitive (GP0 0xE2) - trailing delimiter */
     setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
     addPrim(&t4->ot[0x0F], temp_t1);
 
@@ -367,7 +367,7 @@ void menu_state_init(void)
  * @note The image block is typed as a @ref TimBlock. The two CLUT regions are
  *       left as raw offsets because the matched code reaches them through two
  *       different base pointers (@c tim for the STP-bit loops, @c tim_body for
- *       the upload calls) — a deliberate register-allocation detail.
+ *       the upload calls) - a deliberate register-allocation detail.
  * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
 void menu_upload_tim(Rect16* rect)
@@ -440,7 +440,7 @@ void menu_upload_tim(Rect16* rect)
  *
  * @param arg0 Value packed into @c MenuSlot.flags bits 31..25 (@c arg0 << 25).
  *             TODO: meaning unknown.
- * @param rect Pointer to four @c u16 values — the slot's x, y, w, h.
+ * @param rect Pointer to four @c u16 values - the slot's x, y, w, h.
  * @return Pointer to the newly allocated @c MenuSlot.
  * @see decomp.me (99.82%) https://decomp.me/scratch/Xng7v
  */

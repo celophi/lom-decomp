@@ -50,10 +50,10 @@
  */
 typedef struct
 {
-    s32 r;     /* 0x0 — red channel,   0..0x100 normal, >0x100 = additive */
-    s32 g;     /* 0x4 — green channel, 0..0x100 normal, >0x100 = additive */
-    s32 b;     /* 0x8 — blue channel,  0..0x100 normal, >0x100 = additive */
-    s32 steps; /* 0xC — frames remaining in the lerp (target struct only) */
+    s32 r;     /* 0x0 - red channel,   0..0x100 normal, >0x100 = additive */
+    s32 g;     /* 0x4 - green channel, 0..0x100 normal, >0x100 = additive */
+    s32 b;     /* 0x8 - blue channel,  0..0x100 normal, >0x100 = additive */
+    s32 steps; /* 0xC - frames remaining in the lerp (target struct only) */
 } FadeState;
 
 /**
@@ -66,11 +66,11 @@ typedef struct
  */
 typedef struct
 {
-    u8 u;     /* 0x0 — texture U in VRAM */
-    u8 v;     /* 0x1 — texture V in VRAM */
-    u8 w;     /* 0x2 — sprite width */
-    u8 h;     /* 0x3 — sprite height */
-    u32 clut; /* 0x4 — CLUT id (low 6 bits used; combined with 0x7C80) */
+    u8 u;     /* 0x0 - texture U in VRAM */
+    u8 v;     /* 0x1 - texture V in VRAM */
+    u8 w;     /* 0x2 - sprite width */
+    u8 h;     /* 0x3 - sprite height */
+    u32 clut; /* 0x4 - CLUT id (low 6 bits used; combined with 0x7C80) */
 } GlyphInfo;
 
 /**
@@ -81,8 +81,8 @@ typedef struct
  */
 typedef struct
 {
-    u32 id; /* 0x0 — index into g_glyph_table (selects which glyph to draw) */
-    u32 xy; /* 0x4 — packed s16 x,y screen position (low half = x, high = y) */
+    u32 id; /* 0x0 - index into g_glyph_table (selects which glyph to draw) */
+    u32 xy; /* 0x4 - packed s16 x,y screen position (low half = x, high = y) */
 } GlyphSeqEntry;
 
 /** Number of glyph cells in the name-entry cursor row drawn by
