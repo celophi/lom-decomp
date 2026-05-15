@@ -391,7 +391,10 @@ void menu_upload_tim(Rect16* rect)
     for (i = 0; i < 0x100; i++)
     {
         if (*clut_color != 0)
+        {
             *clut_color |= 0x8000;
+        }
+
         clut_color++;
     }
     func_80019A34(&vram_rect, tim_body + 0x14);
@@ -420,7 +423,10 @@ void menu_upload_tim(Rect16* rect)
     for (i = 0; i < 0x100; i++)
     {
         if (*clut_color != 0)
+        {
             *clut_color |= 0x8000;
+        }
+
         clut_color++;
     }
     func_80019A34(&vram_rect, tim + 0x822C);
