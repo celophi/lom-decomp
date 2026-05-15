@@ -31,6 +31,7 @@ extern s32 g_menu_tim_dy;
 extern u16 g_menu_glyph_src[];
 extern u8* g_menu_state_ptr;
 extern u8  D_80151EBC;
+extern u16 D_80168AA8[];
 
 /**
  * @brief Rectangle parameter block passed to the VRAM upload primitive.
