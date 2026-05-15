@@ -986,55 +986,50 @@ void func_8014139C(void)
 }
 
 /**
- * decomp.me (83.21%) https://decomp.me/scratch/oXGkF
+ * @brief Emit the name-entry cursor glyph plus a draw-mode reset into an OT.
+ *
+ * Writes a free-size textured SPRT (tag 0x64) for the fixed cursor glyph
+ * (@c g_glyph_table entry @ref CURSOR_GLYPH_ID) at screen position
+ * (@p x, @p y), white-tinted and fully opaque, immediately followed by an
+ * 8-byte Draw-Mode (GP0 0xE1) packet selecting texture page 5. Both packets
+ * are chained onto the OT tag at @p ot via the standard @c addPrim sequence,
+ * and the heap cursor is returned advanced past both.
+ *
+ * @param prim Pointer to the next free byte in the primitive buffer.
+ * @param ot   Pointer to the OT head tag the packets are chained onto.
+ * @param x    Cursor sprite screen X.
+ * @param y    Cursor sprite screen Y.
+ * @return Heap cursor advanced past the sprite + draw-mode packets.
+ *
+ * @see decomp.me (83.21%) https://decomp.me/scratch/oXGkF
  */
-void* func_80141848(void* arg0, s32* arg1, s16 arg2, s16 arg3)
+void* emit_cursor_glyph(void* prim, s32* ot, s16 x, s16 y)
 {
-    unsigned char* bp = (unsigned char*)arg0;
-    unsigned int mask_lo;
-    unsigned int mask_hi;
-    unsigned char* D = g_glyph_table;
-    unsigned int t0;
-    unsigned int w0;
-    unsigned int w1;
-    *((unsigned int*)(bp + 4)) = 0x00808080U;
-    bp[3] = 4;
-    bp[7] = 0x64;
-    *((s16*)(bp + 8)) = arg2;
-    *((s16*)(bp + 10)) = arg3;
-    bp[12] = D[0xa0];
-    mask_lo = 0x00ffffff;
-    bp[13] = D[0xa1];
-    *((s16*)(bp + 16)) = (s16)D[0xa2];
-    t0 = 0xe1000000;
-    *((s16*)(bp + 18)) = (s16)D[0xa3];
-    mask_hi = 0xff000000;
-    w0 = *((unsigned int*)(&D[0xa4]));
-    w1 = *((unsigned int*)bp);
-    w0 = (w0 & 0x3f) | 0x7c80;
-    *((s16*)(bp + 14)) = (s16)w0;
-    w0 = *((unsigned int*)arg1);
-    w1 = w1 & mask_hi;
-    w0 = w0 & mask_lo;
-    *((unsigned int*)bp) = w1 | w0;
-    w1 = ((unsigned int)bp) & mask_lo;
-    w0 = *((unsigned int*)arg1);
-    bp += 0x14;
-    w0 = w0 & mask_hi;
-    *((unsigned int*)arg1) = w0 | w1;
-    bp[3] = 1;
-    w1 = *((unsigned int*)bp);
-    t0 |= 5;
-    *((unsigned int*)(bp + 4)) = t0;
-    w0 = *((unsigned int*)arg1);
-    w1 = w1 & mask_hi;
-    w0 = w0 & mask_lo;
-    *((unsigned int*)bp) = w1 | w0;
-    w0 = *((unsigned int*)arg1);
-    w1 = ((unsigned int)bp) & mask_lo;
-    w0 = w0 & mask_hi;
-    *((unsigned int*)arg1) = w0 | w1;
-    return (void*)(bp + 8);
+    SPRT* sprt = (SPRT*)prim;
+    u8* glyphs = g_glyph_table;
+    DR_MODE* mode;
+    u32 clut_word;
+
+    /* Cursor glyph SPRT - white tint, fully opaque. */
+    *(u32*)&sprt->r0 = 0x808080; /* r=g=b=0x80, code byte = 0 */
+    setSprt(sprt);               /* len=4, code=0x64 (free-size textured sprite) */
+    sprt->x0 = x;
+    sprt->y0 = y;
+    sprt->u0 = glyphs[CURSOR_GLYPH_OFF + 0];
+    sprt->v0 = glyphs[CURSOR_GLYPH_OFF + 1];
+    sprt->w = (s16)glyphs[CURSOR_GLYPH_OFF + 2];
+    sprt->h = (s16)glyphs[CURSOR_GLYPH_OFF + 3];
+    /* Read the clut entry as a full word so gcc emits `lw`, not `lhu`. */
+    clut_word = *(u32*)&glyphs[CURSOR_GLYPH_OFF + 4];
+    sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
+    addPrim(ot, sprt);
+
+    /* Draw-mode reset packet (GP0 0xE1, texture page 5). */
+    mode = (DR_MODE*)((u8*)sprt + 0x14);
+    setDrawTPage(mode, 0, 0, 5);
+    addPrim(ot, mode);
+
+    return (u8*)mode + 8;
 }
 
 /**

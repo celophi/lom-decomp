@@ -94,6 +94,15 @@ typedef struct
  *  @ref func_80142274). */
 #define GLYPH_CLUT_PAGE_BITS 0x7C80
 
+/** @c g_glyph_table entry index of the glyph drawn as the moving name-entry
+ *  cursor (see @ref emit_cursor_glyph). */
+#define CURSOR_GLYPH_ID 20
+
+/** Byte offset of @ref CURSOR_GLYPH_ID within @c g_glyph_table (0xA0). Used
+ *  as a literal base offset so the compiler keeps @c g_glyph_table as the
+ *  load base (matching the original `lbu 0xA0(base)` codegen). */
+#define CURSOR_GLYPH_OFF (CURSOR_GLYPH_ID * sizeof(GlyphInfo))
+
 typedef struct
 {
     u8 pad0[0x10];
