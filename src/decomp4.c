@@ -5,6 +5,8 @@ s32 D_8004D40C;
 u32 D_8004F758;
 s32 D_8003EC18;
 
+extern u32 D_8003D24C[];
+
 typedef struct
 {
     u8* unk0;      // 0x00
@@ -18,6 +20,14 @@ typedef struct
     u8 padA0[56];  // 0xA0
     u16 unkD8;     // 0xD8
 } Context;
+
+typedef struct
+{
+    s16 unk8;
+    u8 padA[6];
+    s16 unkB;
+    s16 unkA;
+} UnkStruct;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
@@ -799,4 +809,97 @@ void func_8002A6FC(u8* arg0, u32 arg1)
 
     *(u16*)(arg0 + 0x110) |= (*(u16*)(a1 + 14) & 0x20);
     *(s16*)(arg0 + 0x112) = (s16)a2[7];
+}
+
+/**
+ * decomp.me (99.70%) https://decomp.me/scratch/GBbit
+ */
+s32 func_8002A924(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
+{
+    unsigned int new_var;
+    s32 tmp3;
+    s32 temp_a0;
+    s32 temp_a0_3;
+    s32 temp_v0;
+    s32 var_a0;
+    s32 var_a0_2;
+    unsigned long new_var2;
+    u32 temp_a2;
+    u32 temp_lo;
+    u32 var_t0;
+    u32 var_v0;
+    s32 result;
+    var_a0 = arg1 - arg0->unkA;
+    if (var_a0 < 0)
+    {
+        s32 tmp;
+        tmp = var_a0 + 0xC;
+        while (1)
+        {
+            new_var = tmp >= 0;
+            if (new_var)
+            {
+                break;
+            }
+            tmp += 0xC;
+        }
+
+        var_a0 -= 12;
+    }
+    new_var2 = var_a0 % 12;
+    temp_a0 = new_var2;
+    if (arg0->unkB == 0)
+    {
+        s32 tmp2 = D_8003D24C[temp_a0];
+        var_t0 = tmp2 << 8;
+    }
+    else if (arg0->unkB < 0)
+    {
+        var_t0 = ((u32)(D_8003D24C[temp_a0] * ((u16)arg0->unkB))) >> 8;
+    }
+    else
+    {
+        temp_v0 = D_8003D24C[temp_a0];
+        var_t0 = ((u32)(temp_v0 * arg0->unkB)) >> 7;
+        var_t0 = var_t0 + (temp_v0 << 8);
+    }
+    temp_a2 = arg2 & 0xFF;
+    if (temp_a2 != 0)
+    {
+        if (temp_a2 < 0x80U)
+        {
+            u32 temp_lo2 = var_t0 * temp_a2;
+            var_v0 = temp_lo2 >> 7;
+        }
+        else
+        {
+            u32 temp_lo2 = var_t0 * temp_a2;
+            var_v0 = (temp_lo2 >> 8) - var_t0;
+        }
+        *arg3 = var_v0;
+    }
+    if (arg1 < arg0->unkA)
+    {
+        do
+        {
+            *arg3 = (u32)(((s32)(*arg3)) >> 1);
+            var_t0 = (u32)(((s32)var_t0) >> 1);
+            arg1 += 0xC;
+        } while (arg1 < arg0->unkA);
+    }
+    else
+    {
+        temp_a0_3 = (arg1 - arg0->unkA) / 12;
+        temp_a0 = temp_a0_3;
+        if (temp_a0_3 != 0)
+        {
+            temp_lo = temp_a0;
+            var_t0 <<= temp_lo;
+            *arg3 <<= temp_a0_3;
+        }
+    }
+    temp_a0 = ((s32)var_t0) >> 8;
+    result = temp_a0 & 0xFFFF;
+    *arg3 = (u32)(((s32)(*arg3)) >> 8);
+    return result;
 }
