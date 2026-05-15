@@ -1007,7 +1007,6 @@ void* emit_cursor_glyph(void* prim, s32* ot, s16 x, s16 y)
 {
     SPRT* sprt = (SPRT*)prim;
     u8* glyphs = g_glyph_table;
-    DR_MODE* mode;
     u32 clut_word;
 
     /* Cursor glyph SPRT - white tint, fully opaque. */
@@ -1019,17 +1018,19 @@ void* emit_cursor_glyph(void* prim, s32* ot, s16 x, s16 y)
     sprt->v0 = glyphs[CURSOR_GLYPH_OFF + 1];
     sprt->w = (s16)glyphs[CURSOR_GLYPH_OFF + 2];
     sprt->h = (s16)glyphs[CURSOR_GLYPH_OFF + 3];
-    /* Read the clut entry as a full word so gcc emits `lw`, not `lhu`. */
+
+    /* This section generates 0x5c (lw), 0x64 (andi), and 0x68 (ori) */
     clut_word = *(u32*)&glyphs[CURSOR_GLYPH_OFF + 4];
     sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
+    
     addPrim(ot, sprt);
 
     /* Draw-mode reset packet (GP0 0xE1, texture page 5). */
-    mode = (DR_MODE*)((u8*)sprt + 0x14);
-    setDrawTPage(mode, 0, 0, 5);
-    addPrim(ot, mode);
+    prim = (u8*)prim + 0x14;
+    setDrawTPage(prim, 0, 0, 5);
+    addPrim(ot, prim);
 
-    return (u8*)mode + 8;
+    return (u8*)prim + 8;
 }
 
 /**
