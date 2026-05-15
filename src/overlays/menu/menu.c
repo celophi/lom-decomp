@@ -21,10 +21,11 @@ void menu_init(void)
 }
 
 /**
- * decomp.me (99.64%) https://decomp.me/scratch/AGd9K
+ * decomp.me (100%) https://decomp.me/scratch/AGd9K
  */
 void menu_init_prim_rects(void)
 {
+    s32 thing;
     s32 s0 = 0;
 
     /* Force base address into s3 early */
@@ -34,49 +35,49 @@ void menu_init_prim_rects(void)
     s32 s1 = 0;
     s16 params[4];
 
-    do
+    while (s0 < 3)
     {
         /* First call */
         params[0] = 0x110;
         params[1] = s0 + 0x1D8;
         params[2] = 0x10;
         params[3] = 1;
-        func_80019A34(params, base + ((s1 >> 2) * 4));
+        func_80019A34(params, (u8*)((u32)((s1 >> 2) << 2) + (u32)base));
 
         /* Second call */
         params[0] = (s0 == 2) ? 0x3E8 : 0x3F4;
         params[1] = (s0 == 0) ? 0x120 : 0x150;
         params[2] = 0xC;
         params[3] = 0x30;
-        func_80019A34(params, base + ((s2 >> 2) * 4));
+        func_80019A34(params, (u8*)((u32)((s2 >> 2) << 2) + (u32)base));
 
         s2 += 0x4A0;
-        s0++;
         s1 += 0x4A0;
-    } while (s0 < 3);
+        s0++;
+    };
 }
 
 /**
  * @brief Per-frame menu update: emit the grid, advance counters, and run
  *        the scripted-input player.
  *
- * @param gpu_work Per-frame GPU work context; its @c prim_tail is saved on
+ * @param gpu_work Per-frame render context; its @c prim_cursor is saved on
  *                 entry and restored before @ref func_8014134C runs.
  * @see decomp.me (97.74%) https://decomp.me/scratch/vmp4D
  */
-void menu_tick(GpuWork* gpu_work)
+void menu_tick(RenderContext* gpu_work)
 {
     s32 v0;
     s32 v1;
-    s32 saved_prim_tail;
+    s32 saved_prim_cursor;
     s32 var_s0;
     u16 temp_v1;
     s32 padding[2];
     menu_build_grid();
     v0 = g_menu_frame;
     v1 = g_frame_counter;
-    /* GpuWork.prim_tail — kept as a raw offset load to preserve codegen */
-    saved_prim_tail = *((s32*)(((u8*)gpu_work) + 0x4040));
+    /* RenderContext.prim_cursor — kept as a raw offset load to preserve codegen */
+    saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
     g_menu_frame = v0 + 1;
     g_frame_counter = v1 + 1;
     func_800A9E78(&g_menu_frame, &g_frame_counter);
@@ -139,7 +140,7 @@ void menu_tick(GpuWork* gpu_work)
             g_script_cursor = idx + 1;
         }
     }
-    *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_tail;
+    *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
     func_8014134C(gpu_work);
 }
 
@@ -242,15 +243,15 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
  * @brief Emit the menu grid: a texture-window delimiter, 0x1D glyph sprites,
  *        and a trailing texture-window + draw-tpage primitive.
  *
- * @param gpu_work Per-frame GPU work context; primitives are appended to its
- *                 OT chain and @c prim_tail is advanced past the emitted block.
+ * @param gpu_work Per-frame render context; primitives are appended to its
+ *                 OT chain and @c prim_cursor is advanced past the emitted block.
  * @note The 0x14-byte records written in the loop are libgpu @c SPRT
  *       primitives (offset 0x4 @c rgbc, 0x8 @c (x0,y0), 0xC @c (u0,v0),
  *       0xE @c clut, 0x10 @c (w,h)). They are written via raw offsets to
  *       preserve the matched codegen.
  * @see decomp.me (94.19%) https://decomp.me/scratch/ZtHxG
  */
-void menu_build_grid(GpuWork* gpu_work)
+void menu_build_grid(RenderContext* gpu_work)
 {
     volatile u8 sp0;
     volatile u16 sp2;
@@ -261,12 +262,12 @@ void menu_build_grid(GpuWork* gpu_work)
     u8* var_t0;
     u8* var_t3;
     u8* temp_t1;
-    GpuWork* t7 = gpu_work;
-    GpuWork* t4 = t7;
+    RenderContext* t7 = gpu_work;
+    RenderContext* t4 = t7;
 
     var_t3 = (u8*)g_menu_glyph_src;
     var_t2 = 0;
-    temp_t1 = t7->prim_tail;
+    temp_t1 = t7->prim_cursor;
     sp6 = 0xFF;
     sp4 = 0xFF;
     var_t0 = var_t3 + 8;
@@ -275,7 +276,7 @@ void menu_build_grid(GpuWork* gpu_work)
 
     /* DR_AREA / texture-window primitive (GP0 0xE2) — leading delimiter */
     setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
-    addPrim(&t4->ot_head, temp_t1);
+    addPrim(&t4->ot[0x0F], temp_t1);
 
     temp_t1 += 0xC;
     var_a2 = temp_t1;
@@ -303,7 +304,7 @@ void menu_build_grid(GpuWork* gpu_work)
         var_t0 += 0xC;
         var_t3 += 0xC;
 
-        addPrim(&t4->ot_head, var_a2);
+        addPrim(&t4->ot[0x0F], var_a2);
         var_a2 += 0x14;
     } while (var_t2 < 0x1D);
 
@@ -316,14 +317,14 @@ void menu_build_grid(GpuWork* gpu_work)
 
     /* DR_AREA / texture-window primitive (GP0 0xE2) — trailing delimiter */
     setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
-    addPrim(&t4->ot_head, temp_t1);
+    addPrim(&t4->ot[0x0F], temp_t1);
 
     temp_t1 += 0xC;
     /* DR_TPAGE primitive (tpage=5) */
     setDrawTPage((DR_TPAGE*)temp_t1, 0, 0, 5);
-    addPrim(&t4->ot_head, temp_t1);
+    addPrim(&t4->ot[0x0F], temp_t1);
 
-    t7->prim_tail = temp_t1 + 8;
+    t7->prim_cursor = temp_t1 + 8;
 }
 
 /**

@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "main.h"
+#include "render_context.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
@@ -54,40 +55,6 @@ typedef struct
     s32 b;     /* 0x8 — blue channel,  0..0x100 normal, >0x100 = additive */
     s32 steps; /* 0xC — frames remaining in the lerp (target struct only) */
 } FadeState;
-
-// Structure for the argument object
-typedef struct
-{
-    s32 unk0;             // offset 0x00
-    char pad[0x4040 - 4]; // padding up to offset 0x4040
-    void* unk4040;        // offset 0x4040
-} ArgStruct;
-
-typedef struct
-{
-    u8 _pad0[0x38];
-    u32 unk38;
-    u8 _pad1[0x4040 - (0x38 + sizeof(u32))];
-    s32* unk4040;
-    u8 _pad2[0x8];
-    u32 unk404C;
-} UnkStruct;
-
-/* Object structure (offsets from target assembly) */
-typedef struct
-{
-    u8 _pad0[0x28];
-    u32 unk28; /* offset 0x28 */
-    u8 _pad1[0x3C - 0x28 - 4];
-    u_long prim_ot; /* offset 0x3C — addPrim() ot head: P_TAG holding the
-                       linked-list head for primitives appended this frame. */
-    u8 _pad1b[0x4040 - 0x3C - 4];
-    u32* unk4040; /* offset 0x4040 — primitive scratch-pool write cursor:
-                     points to the next free byte. Advanced past each
-                     appended primitive. */
-    u8 _pad2[0x404C - 0x4040 - 4];
-    u32 unk404C; /* offset 0x404C */
-} Obj;
 
 /**
  * @brief Glyph metrics entry: how to draw one glyph from VRAM.

@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "main.h"
+#include "render_context.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
@@ -38,21 +39,6 @@ typedef struct
     u16 w;
     u16 h;
 } Rect16;
-
-/**
- * @brief Per-frame GPU work context shared across the menu module.
- *
- * @note Field @c ot_head is the 24-bit OT tag-link updated by every primitive
- *       commit (classic libgpu addPrim pattern). Field @c prim_tail is the
- *       running cursor into the primitive scratch buffer.
- */
-typedef struct
-{
-    char  _pad00[0x3C];
-    u32   ot_head;        /* 0x3C  — OT tag-link head */
-    char  _pad40[0x4040 - 0x3C - 4];
-    u8*   prim_tail;      /* 0x4040 — next free byte in primitive buffer */
-} GpuWork;
 
 /**
  * @brief HUD/menu entry slot allocated from the @c g_menu_slots pool.

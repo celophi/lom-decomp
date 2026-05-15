@@ -6,7 +6,7 @@
  * Zeros the current color (@c g_fade_current) and the target color +
  * step count (@c g_fade_target). After this call the next
  * @ref render_fade_overlay tick will write a black tint (0,0,0) to the
- * primitive at @c arg0->unk4040.
+ * primitive at @c arg0->prim_cursor.
  *
  * @see https://decomp.me/scratch/ld2aW (100%)
  */
@@ -30,7 +30,7 @@ void reset_fade_state(void)
  * Otherwise snaps current to target (RGB only — `steps` is left alone).
  *
  * If the current color is anything other than (0x100, 0x100, 0x100) — i.e.
- * not the no-tint identity — emits two primitives at @c ctx->unk4040:
+ * not the no-tint identity — emits two primitives at @c ctx->prim_cursor:
  *   1. A 16-byte flat-shaded full-screen quad (tag 0x62) covering the
  *      320x240 viewport with the tinted RGB. When any channel is >0x100,
  *      colors are written as `value - 1` (additive bias); when <0x100,
@@ -39,20 +39,20 @@ void reset_fade_state(void)
  *      command bits 0x25) for >0x100 brightening or abr=1 (subtractive,
  *      0x45) for <=0x100 darkening.
  *
- * Both packets are spliced into the 24-bit OT at @c ctx->unk0 and
- * `ctx->unk4040` is advanced past them. When the color is identity, no
+ * Both packets are spliced into the 24-bit OT at @c ctx->ot[0] and
+ * `ctx->prim_cursor` is advanced past them. When the color is identity, no
  * primitives are emitted and the heap cursor is unchanged.
  *
- * @param ctx Render context whose `unk0` is the OT head and `unk4040` is
- *            the primitive heap cursor.
+ * @param ctx Render context whose `ot[0]` is the OT entry written and
+ *            `prim_cursor` is the primitive heap cursor.
  *
  * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
  * @see https://decomp.me/scratch/hVLdu (100%)
  */
-void render_fade_overlay(ArgStruct* ctx)
+void render_fade_overlay(RenderContext* ctx)
 {
-    u32* prim = (u32*)ctx->unk4040; /* t4 — current primitive write pos */
-    ArgStruct* arg = ctx;           /* t6 = t7 — preserves load order */
+    u32* prim = (u32*)ctx->prim_cursor; /* t4 — current primitive write pos */
+    RenderContext* arg = ctx;       /* t6 = t7 — preserves load order */
     s32 step_r, step_g, step_b;
     s32 abr_cmd; /* low byte of GP0 0xE1 (abr select) */
 
@@ -115,8 +115,8 @@ void render_fade_overlay(ArgStruct* ctx)
         *((u16*)((u8*)prim + 14)) = 0xF0;  /* h = 240 */
 
         /* Splice quad into OT. */
-        *prim = (*prim & 0xFF000000) | (arg->unk0 & 0xFFFFFF);
-        arg->unk0 = (arg->unk0 & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+        *prim = (*prim & 0xFF000000) | (arg->ot[0] & 0xFFFFFF);
+        arg->ot[0] = (arg->ot[0] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
 
         /* Choose blend mode by direction of tint. */
         abr_cmd = 0x25;
@@ -129,12 +129,12 @@ void render_fade_overlay(ArgStruct* ctx)
         *((u32*)((u8*)prim + 4)) = abr_cmd | 0xE1000000;
 
         /* Splice draw-mode packet into OT. */
-        *prim = (*prim & 0xFF000000) | (arg->unk0 & 0xFFFFFF);
-        arg->unk0 = (arg->unk0 & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+        *prim = (*prim & 0xFF000000) | (arg->ot[0] & 0xFFFFFF);
+        arg->ot[0] = (arg->ot[0] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
         prim = (u32*)((u8*)prim + 8);
     }
 
-    ctx->unk4040 = prim;
+    ctx->prim_cursor = prim;
 }
 
 /**
@@ -1228,12 +1228,12 @@ s32 func_80141D64(void)
  *      `(240 - strip_width, 24 | 256)` — i.e. right-aligned on whichever
  *      VRAM page is currently the back buffer (Y=0x18 vs 0x100).
  *
- * Each packet is spliced into the 24-bit OT at @c ctx->unk38 with the
+ * Each packet is spliced into the 24-bit OT at @c ctx->ot[0x0E] with the
  * standard `(top_byte | next_addr & 0xFFFFFF)` link idiom, and the heap
- * cursor @c ctx->unk4040 is advanced by 0x40 bytes past the last packet.
+ * cursor @c ctx->prim_cursor is advanced by 0x40 bytes past the last packet.
  *
- * @param ctx         Render context: OT head at unk38, primitive heap cursor
- *                    at unk4040, double-buffer parity at unk404C.
+ * @param ctx         Render context: OT head at ot[0x0E], primitive heap cursor
+ *                    at prim_cursor, double-buffer parity at frame_parity.
  * @param tex_src     Source data pointer for the sprite primitive (passed
  *                    through to func_800A88A0).
  * @param strip_width Width in pixels of the back-page VRAM upload strip; also
@@ -1241,25 +1241,25 @@ s32 func_80141D64(void)
  *
  * @see https://decomp.me/scratch/LxujJ (99.26%)
  */
-void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
+void func_80141E04(RenderContext* ctx, s32 tex_src, s32 strip_width)
 {
-    s32* ot_head;   /* &ctx->unk38 — passed as the OT head pointer */
+    s32* ot_head;   /* &ctx->ot[0x0E] — passed as the OT head pointer */
     s32* prim;      /* current primitive being emitted */
     s32* next_prim; /* heap cursor after the sprite/draw-mode pair */
     s32 vram_y;     /* VRAM Y of the back page (0x18 or 0x100) */
     u32 load_packet[0x19];
     s32 vram_x; /* VRAM X of the right-aligned strip */
 
-    ot_head = (s32*)&ctx->unk38;
-    prim = ctx->unk4040;
+    ot_head = (s32*)&ctx->ot[0x0E];
+    prim = ctx->prim_cursor;
     next_prim = prim;
 
     /* 1. Copy template packet from the *other* frame's reserve slot, then
      *    splice it into the OT. */
-    func_8001A5D4(prim, (void*)(D_8014F840 + ((ctx->unk404C ^ 1) * 0x40C0) + 0x4064));
+    func_8001A5D4(prim, (void*)(D_8014F840 + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
-    *prim = (*prim & 0xFF000000) | (ctx->unk38 & 0xFFFFFF);
-    ctx->unk38 = (ctx->unk38 & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+    *prim = (*prim & 0xFF000000) | (ctx->ot[0x0E] & 0xFFFFFF);
+    ctx->ot[0x0E] = (ctx->ot[0x0E] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
 
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      *    Returns the heap cursor just past both packets. */
@@ -1270,7 +1270,7 @@ void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
      *    right edge of whichever page is currently the back buffer. */
     vram_x = 0xF0 - strip_width;
     vram_y = 0x18;
-    if (ctx->unk404C != 0)
+    if (ctx->frame_parity != 0)
     {
         vram_y = 0x100;
     }
@@ -1278,12 +1278,12 @@ void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
     func_8001C56C(load_packet, vram_x, vram_y, strip_width, 0x20);
     func_8001A5D4(next_prim, load_packet);
 
-    *next_prim = (*next_prim & 0xFF000000) | (ctx->unk38 & 0xFFFFFF);
+    *next_prim = (*next_prim & 0xFF000000) | (ctx->ot[0x0E] & 0xFFFFFF);
 
     /* Advance heap cursor 0x40 bytes past the load packet. */
-    ctx->unk4040 = next_prim + 0x10;
+    ctx->prim_cursor = next_prim + 0x10;
 
-    ctx->unk38 = (ctx->unk38 & 0xFF000000) | ((u32)next_prim & 0xFFFFFF);
+    ctx->ot[0x0E] = (ctx->ot[0x0E] & 0xFF000000) | ((u32)next_prim & 0xFFFFFF);
 }
 
 /**
@@ -1292,8 +1292,8 @@ void func_80141E04(UnkStruct* ctx, s32 tex_src, s32 strip_width)
 void func_80141F9C(void* arg0, s32 arg1)
 {
     u8 sp28[0x80];
-    Obj* obj = (Obj*)arg0;
-    u32* temp_s1 = obj->unk4040;
+    RenderContext* obj = (RenderContext*)arg0;
+    u32* temp_s1 = obj->prim_cursor;
     u32* var_a2;
     u8* var_s4;
     u16* var_s3;
@@ -1301,10 +1301,10 @@ void func_80141F9C(void* arg0, s32 arg1)
     s32 temp_v1;
 
     /* First call and pointer setup */
-    func_8001A5D4(temp_s1, (void*)(D_8014F840 + ((obj->unk404C ^ 1) * 0x40C0) + 0x4064));
+    func_8001A5D4(temp_s1, (void*)(D_8014F840 + ((obj->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
-    *temp_s1 = (*temp_s1 & 0xFF000000) | (obj->unk28 & 0x00FFFFFF);
-    obj->unk28 = (obj->unk28 & 0xFF000000) | ((u32)temp_s1 & 0x00FFFFFF);
+    *temp_s1 = (*temp_s1 & 0xFF000000) | (obj->ot[0x0A] & 0x00FFFFFF);
+    obj->ot[0x0A] = (obj->ot[0x0A] & 0xFF000000) | ((u32)temp_s1 & 0x00FFFFFF);
 
     /* var_a2 = temp_s1 + 0x40 (byte addition) */
     var_a2 = (u32*)((u8*)temp_s1 + 0x40);
@@ -1334,7 +1334,7 @@ void func_80141F9C(void* arg0, s32 arg1)
         temp_v1 = (var_s2 * 0x10) - D_8014F8B4;
         if ((u32)(temp_v1 + 0x0B) < 0x5B)
         {
-            var_a2 = func_800A88A0(var_a2, (void*)&obj->unk28, (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
+            var_a2 = func_800A88A0(var_a2, (void*)&obj->ot[0x0A], (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
         }
         var_s1++;
         var_s3++;
@@ -1354,7 +1354,7 @@ void func_80141F9C(void* arg0, s32 arg1)
         u32 param_a2 = 0x68;
         D_8014F8A0 = var_s2;
         D_8014F898 = var_s0;
-        if (obj->unk404C != 0)
+        if (obj->frame_parity != 0)
         {
             param_a2 = 0x150;
         }
@@ -1362,10 +1362,10 @@ void func_80141F9C(void* arg0, s32 arg1)
         func_8001C56C(sp28, 0x60, param_a2, 0xA0, 0x50);
         func_8001A5D4(var_a2, sp28);
 
-        *var_a2 = (*var_a2 & 0xFF000000) | (obj->unk28 & 0x00FFFFFF);
-        obj->unk28 = (obj->unk28 & 0xFF000000) | ((u32)var_a2 & 0x00FFFFFF);
+        *var_a2 = (*var_a2 & 0xFF000000) | (obj->ot[0x0A] & 0x00FFFFFF);
+        obj->ot[0x0A] = (obj->ot[0x0A] & 0xFF000000) | ((u32)var_a2 & 0x00FFFFFF);
         /* Byte addition of 0x40, not element addition */
-        obj->unk4040 = (u32*)((u8*)var_a2 + 0x40);
+        obj->prim_cursor = (u32*)((u8*)var_a2 + 0x40);
     }
 }
 
@@ -1508,11 +1508,11 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
  * (RGB=0x80) free-size textured SPRT primitive (code 0x64). The chain is
  * wrapped with @c setTexWindow at both ends (rect @c {0,0,0xFF,0xFF} —
  * a no-op full-page window) and closed with @c setDrawTPage(0,0,5).
- * The buffer cursor at @c obj->unk4040 is advanced past the final primitive.
+ * The buffer cursor at @c obj->prim_cursor is advanced past the final primitive.
  *
- * @param arg0 Render context (@ref Obj). Reads/writes:
- *             - @c prim_ot at offset 0x3C — addPrim "ot" head.
- *             - @c unk4040 at offset 0x4040 — primitive scratch-pool cursor.
+ * @param arg0 Render context (@ref RenderContext). Reads/writes:
+ *             - @c ot[0x0F] at offset 0x3C — addPrim OT entry.
+ *             - @c prim_cursor at offset 0x4040 — primitive scratch-pool cursor.
  *
  * @note Called by @ref gname_tick via the implicit-@c $a0 convention
  *       (the call site passes no args; the function reads whatever the
@@ -1520,7 +1520,7 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
-void func_80142410(Obj* arg0)
+void func_80142410(RenderContext* arg0)
 {
     RECT tw_rect;
 
@@ -1537,12 +1537,12 @@ void func_80142410(Obj* arg0)
     /* Two aliases of the same context pointer: gcc allocates them to t6/t2
        and uses t6 for the very first addPrim/buf access and t2 for every
        subsequent addPrim. This split is load-bearing for the asm match. */
-    Obj* obj = arg0;
-    Obj* obj2;
+    RenderContext* obj = arg0;
+    RenderContext* obj2;
     u8* glyph_table_base;
     obj2 = obj;
 
-    ptr_t1 = (u8*)obj->unk4040;
+    ptr_t1 = (u8*)obj->prim_cursor;
 
     /* First TexWindow init: source order is h, w, y, x. */
     tw_rect.h = 0xFF;
@@ -1555,7 +1555,7 @@ void func_80142410(Obj* arg0)
        of the prologue (the mask is the first non-arg constant used). */
     twin = (DR_TWIN*)ptr_t1;
     setTexWindow(twin, &tw_rect);
-    addPrim(&obj->prim_ot, twin);
+    addPrim(&obj->ot[0x0F], twin);
 
     seq = D_8014F6B8;
     i = 0;
@@ -1605,7 +1605,7 @@ void func_80142410(Obj* arg0)
             sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
         }
 
-        addPrim(&obj2->prim_ot, sprt);
+        addPrim(&obj2->ot[0x0F], sprt);
         list_ptr += sizeof(SPRT);
     } while (i < NAME_CURSOR_GLYPH_COUNT);
     ptr_t1 = list_ptr;
@@ -1619,7 +1619,7 @@ void func_80142410(Obj* arg0)
     tw_rect.y = 0;
     twin = (DR_TWIN*)ptr_t1;
     setTexWindow(twin, &tw_rect);
-    addPrim(&obj2->prim_ot, twin);
+    addPrim(&obj2->ot[0x0F], twin);
     ptr_t1 += sizeof(DR_TWIN);
 
     /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word.
@@ -1627,9 +1627,9 @@ void func_80142410(Obj* arg0)
        ptr_t1 first), which yields `addiu v0,t1,8; sw v0,0x4040(...)`. */
     drawmode = ptr_t1;
     setDrawTPage(drawmode, 0, 0, 5);
-    addPrim(&obj2->prim_ot, drawmode);
+    addPrim(&obj2->ot[0x0F], drawmode);
 
-    arg0->unk4040 = (u32*)(drawmode + 8);
+    arg0->prim_cursor = (u32*)(drawmode + 8);
 }
 
 /**
