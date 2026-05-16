@@ -163,7 +163,7 @@ void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
  * @brief Overlay boot/reset entry: prep VRAM, load CLUT, init run state.
  *
  * Calls (in order):
- *  - @ref func_8014075C  - RECT build + handoff (likely VRAM clear or CLUT load).
+ *  - @ref load_name_entry_tim  - uploads the overlay's glyph TIM to VRAM.
  *  - @ref func_800AA02C  - engine helper (audio/SFX init).
  *  - sets @c g_startup_delay = 0x28 (40 - likely a startup delay countdown).
  *  - @ref func_8006441C  - engine helper.
@@ -175,7 +175,7 @@ void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
 void gname_init(void)
 {
     volatile int dummy[2]; /* forces 0x20 stack frame, ra at 0x18(sp) */
-    func_8014075C();
+    load_name_entry_tim();
     func_800AA02C();
     g_startup_delay = 0x28;
     func_8006441C();
@@ -184,74 +184,91 @@ void gname_init(void)
 }
 
 /**
- * @brief Build a hard-coded VRAM RECT and hand it to @ref func_80140794.
+ * @brief Upload the name-entry overlay's glyph TIM to its fixed VRAM slots.
  *
- * Constructs a `RECT { x=0x140 (320), y=0, w=0, h=0x1F2 (498) }` on the
- * stack - note the field order matches the data passed to the consumer,
- * which reads `arr[0..3]` directly (not the standard PSY-Q `RECT` order).
+ * Builds the destination-coordinate block consumed by @ref load_tim_to_vram
+ * and loads @c g_name_entry_tim. The four packed s16 coordinates are:
+ *   - [0],[1] = pixel-data destination, VRAM (320, 0).
+ *   - [2],[3] = CLUT destination, VRAM (0, 498).
  *
  * @see https://decomp.me/scratch/EWwJI (100%)
  */
-void func_8014075C(void)
+void load_name_entry_tim(void)
 {
-    s16 rect[4];
-    rect[0] = 0x140; /* 320 */
-    rect[1] = 0;
-    rect[2] = 0;
-    rect[3] = 0x1F2; /* 498 */
-    func_80140794(rect);
+    s16 dst_coords[4];
+    dst_coords[0] = 0x140; /* pixel x = 320 */
+    dst_coords[1] = 0;     /* pixel y = 0   */
+    dst_coords[2] = 0;     /* clut x  = 0   */
+    dst_coords[3] = 0x1F2; /* clut y  = 498 */
+    load_tim_to_vram(dst_coords);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/P3W9C
+ * @brief Upload a TIM image's pixel data and CLUT to VRAM.
+ *
+ * Parses the TIM-format blob @c g_name_entry_tim: the CLUT block starts at
+ * byte 8 (its length word at offset 8, its 256-entry palette at offset
+ * 0x14), and the pixel block immediately follows the CLUT block. Before
+ * the CLUT is uploaded, the semi-transparency bit (0x8000) is OR'd into
+ * every non-zero palette entry. The TIM's own embedded destination
+ * coordinates are ignored; @p dst_coords supplies them instead.
+ *
+ * @param dst_coords Four packed s16s: [0],[1] = pixel-data VRAM x,y;
+ *                    [2],[3] = CLUT VRAM x,y.
+ *
+ * @note @c func_80019A34 is the engine's LoadImage-style VRAM upload
+ *       (RECT, source data).
+ * @see https://decomp.me/scratch/P3W9C (100%)
  */
-void func_80140794(void* arg0)
+void load_tim_to_vram(void* dst_coords)
 {
-    void* s0 = arg0;
-    u16 new_var;
-    u16* s1 = (u16*)D_80147494;
-    s32 s2 = *((s32*)(((u8*)s1) + 8));
-    u16 new_var2;
-    u16* ptr = (u16*)(((u8*)s1) + 0x14);
-    u16 arr[4];
-    int counter;
-    u16 tmp0 = *((u16*)(((u8*)s0) + 4));
-    counter = 0;
-    arr[0] = tmp0;
-    new_var = *((u16*)(((u8*)s0) + 6));
-    arr[2] = 0x100;
-    arr[3] = 1;
-    arr[1] = new_var;
+    void* coords = dst_coords;
+    u16 clut_y;
+    u16* tim = (u16*)g_name_entry_tim;
+    s32 clut_len = *((s32*)(((u8*)tim) + 8));
+    u16 clut_y2;
+    u16* clut = (u16*)(((u8*)tim) + 0x14);
+    u16 rect[4];
+    int i;
+    u16 clut_x = *((u16*)(((u8*)coords) + 4));
+    i = 0;
+    rect[0] = clut_x;
+    clut_y = *((u16*)(((u8*)coords) + 6));
+    rect[2] = 0x100;
+    rect[3] = 1;
+    rect[1] = clut_y;
+    /* Mark every non-zero CLUT entry semi-transparent. */
     do
     {
-        if ((*ptr) != 0)
+        if ((*clut) != 0)
         {
-            *ptr |= 0x8000;
+            *clut |= 0x8000;
         }
-        ptr++;
-        counter++;
-    } while (counter < 0x100);
-    func_80019A34((u16*)arr, ((u8*)s1) + 0x14);
-    arr[0] = *((u16*)(((u8*)s0) + 0));
-    arr[1] = *((u16*)(((u8*)s0) + 2));
+        clut++;
+        i++;
+    } while (i < 0x100);
+    func_80019A34((u16*)rect, ((u8*)tim) + 0x14);
+    rect[0] = *((u16*)(((u8*)coords) + 0));
+    rect[1] = *((u16*)(((u8*)coords) + 2));
     {
-        u16* p = (u16*)(((u8*)s1) + (s2 + 8));
-        arr[2] = p[4];
-        arr[3] = p[5];
-        func_80019A34((u16*)arr, p + 6);
+        u16* pixel_block = (u16*)(((u8*)tim) + (clut_len + 8));
+        rect[2] = pixel_block[4];
+        rect[3] = pixel_block[5];
+        func_80019A34((u16*)rect, pixel_block + 6);
     }
-    arr[0] = *((u16*)(((u8*)s0) + 4));
-    new_var2 = *((u16*)(((u8*)s0) + 6));
-    arr[2] = 0x100;
-    arr[3] = 1;
-    arr[1] = new_var2 + 1;
+    /* Trailing rect writes are dead but load-bearing for the match. */
+    rect[0] = *((u16*)(((u8*)coords) + 4));
+    clut_y2 = *((u16*)(((u8*)coords) + 6));
+    rect[2] = 0x100;
+    rect[3] = 1;
+    rect[1] = clut_y2 + 1;
 }
 
 /**
  * @brief Per-frame tick: reset/prep, render frame contents, advance frame
  *        counter, advance overlay state machine.
  *
- *  - @ref func_80142410  - frame prologue (likely OT reset / heap rewind).
+ *  - @ref draw_name_cursor_row  - emits the name-entry cursor glyph row.
  *  - @ref func_80141928  - main render pass for this overlay.
  *  - increments the global frame counter @c g_frame_counter.
  *  - @ref gname_update_state  - countdown / lerp / SFX trigger update.
@@ -262,7 +279,7 @@ void func_80140794(void* arg0)
  */
 void gname_tick(s32 ctx)
 {
-    func_80142410();
+    draw_name_cursor_row();
     func_80141928(ctx);
     g_frame_counter += 1;
     gname_update_state();
@@ -349,7 +366,7 @@ void reset_run_state(void)
     D_8014F890 = D_8014F89C;
     name_copy(g_active_name, &D_8014F7E8); /* matches 'la a1, D_8014F7E8' */
     g_strip_width = 0;
-    func_80142928();
+    recalc_name_width();
     g_strip_width_steps = 5;
     g_append_anim_frame = 0;
     g_append_anim_timer = 2;
@@ -561,7 +578,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         block_37:
             name_copy(g_active_name, var_a1);
         block_38:
-            func_80142928();
+            recalc_name_width();
             repeat = 0;
             g_strip_width_steps = five;
             repeat = 0;
@@ -662,7 +679,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                         g_append_anim_frame = 0;
                         name_append(g_active_name, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
                     }
-                    func_80142928();
+                    recalc_name_width();
                     g_strip_width_steps = five;
                     func_800A3938(0x7D, 0x80);
                     repeat = 0;
@@ -722,7 +739,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                         hw = *((u16*)(((efc + (t2 * 2)) + (D_8014F8D0 * 2)) + reg_s6));
                         name_append(g_active_name, (void*)((efc + hw) + reg_s6), (s32)efc);
                     }
-                    func_80142928();
+                    recalc_name_width();
                     g_strip_width_steps = five;
                     var_a0 = 0x7D;
                 }
@@ -855,7 +872,7 @@ void func_8014139C(void)
         }
 
         name_prepend_char(&D_8014F850, temp_s1 & 0xFFFF);
-        func_80142928();
+        recalc_name_width();
         g_strip_width_steps = 5;
         var_a0 = 0x7D;
         new_var3 = 0x80;
@@ -874,7 +891,7 @@ void func_8014139C(void)
                 (&sp10)[1] = (s8)(temp_v0_2 >> 8);
                 (&sp10)[2] = 0;
                 name_append(g_active_name, &sp10);
-                func_80142928();
+                recalc_name_width();
                 g_strip_width_steps = 5;
             }
             var_a0 = 0x7D;
@@ -901,7 +918,7 @@ void func_8014139C(void)
         }
         func_800A3938(0x7F, 0x80);
         name_pop_last_char(g_active_name);
-        func_80142928();
+        recalc_name_width();
         g_strip_width_steps = 5;
     }
     if (((D_8014F8AC == 0x10) && (D_8014F848 == 4)) && (g_pad_input & 0xC))
@@ -1503,14 +1520,14 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
  *        a TexWindow bracket around @ref NAME_CURSOR_GLYPH_COUNT textured
  *        glyph sprites, terminated by a DrawMode.
  *
- * Walks @c D_8014F6B8 (a @ref GlyphSeqEntry array) one entry per glyph
+ * Walks @c g_name_cursor_glyphs (a @ref GlyphSeqEntry array) one entry per glyph
  * cell, looks each glyph up in @c g_glyph_table, and emits a white
  * (RGB=0x80) free-size textured SPRT primitive (code 0x64). The chain is
  * wrapped with @c setTexWindow at both ends (rect @c {0,0,0xFF,0xFF} -
  * a no-op full-page window) and closed with @c setDrawTPage(0,0,5).
  * The buffer cursor at @c obj->prim_cursor is advanced past the final primitive.
  *
- * @param arg0 Render context (@ref RenderContext). Reads/writes:
+ * @param ctx Render context (@ref RenderContext). Reads/writes:
  *             - @c ot[0x0F] at offset 0x3C - addPrim OT entry.
  *             - @c prim_cursor at offset 0x4040 - primitive scratch-pool cursor.
  *
@@ -1520,7 +1537,7 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
-void func_80142410(RenderContext* arg0)
+void draw_name_cursor_row(RenderContext* ctx)
 {
     RECT tw_rect;
 
@@ -1537,7 +1554,7 @@ void func_80142410(RenderContext* arg0)
     /* Two aliases of the same context pointer: gcc allocates them to t6/t2
        and uses t6 for the very first addPrim/buf access and t2 for every
        subsequent addPrim. This split is load-bearing for the asm match. */
-    RenderContext* obj = arg0;
+    RenderContext* obj = ctx;
     RenderContext* obj2;
     u8* glyph_table_base;
     obj2 = obj;
@@ -1557,7 +1574,7 @@ void func_80142410(RenderContext* arg0)
     setTexWindow(twin, &tw_rect);
     addPrim(&obj->ot[0x0F], twin);
 
-    seq = D_8014F6B8;
+    seq = g_name_cursor_glyphs;
     i = 0;
     glyph_table_base = g_glyph_table;
 
@@ -1629,7 +1646,7 @@ void func_80142410(RenderContext* arg0)
     setDrawTPage(drawmode, 0, 0, 5);
     addPrim(&obj2->ot[0x0F], drawmode);
 
-    arg0->prim_cursor = (u32*)(drawmode + 8);
+    ctx->prim_cursor = (u32*)(drawmode + 8);
 }
 
 /**
@@ -1871,36 +1888,44 @@ void name_copy(u8* dst, u8* src)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/y0CgJ
+ * @brief Recompute the active name's rendered pixel width and strip target.
+ *
+ * Measures every glyph of @c g_active_name via @c func_800644FC (which
+ * fills one @ref GlyphMeasure per glyph and returns the glyph count), sums
+ * the per-glyph widths into @c g_name_pixel_width, then sets
+ * @c g_strip_width_target to that width plus a fixed 0x18 margin. Called
+ * whenever the name buffer changes (append, delete, reset).
+ *
+ * @see https://decomp.me/scratch/y0CgJ (100%)
  */
-void func_80142928(void)
+void recalc_name_width(void)
 {
-    UnkStruct2 sp10[16];
-    UnkStruct2* new_var2;
-    s16 new_var3;
-    s32 count;
+    GlyphMeasure glyphs[16];
+    GlyphMeasure* entry;
+    s16 width;
+    s32 glyph_count;
     s32 i;
-    UnkStruct2* ptr;
-    s32 new_var;
-    s32* pSum;
-    count = func_800644FC(sp10, g_active_name, 0);
+    GlyphMeasure* cursor;
+    s32 count;
+    s32* psum;
+    glyph_count = func_800644FC(glyphs, g_active_name, 0);
     i = 0;
-    new_var3 = new_var2->unk10;
-    new_var = count;
+    width = entry->width; /* uninitialized read - load-bearing for the match */
+    count = glyph_count;
     g_name_pixel_width = i;
-    if (i < new_var)
+    if (i < count)
     {
-        if (!new_var)
+        if (!count)
         {
         }
-        ptr = sp10;
-        while (i < ((0, new_var)))
+        cursor = glyphs;
+        while (i < ((0, count)))
         {
-            pSum = &g_name_pixel_width;
-            new_var2 = ptr;
-            new_var3 = new_var2->unk10;
-            *pSum += new_var3;
-            ptr++;
+            psum = &g_name_pixel_width;
+            entry = cursor;
+            width = entry->width;
+            *psum += width;
+            cursor++;
             i++;
         }
     }

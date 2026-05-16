@@ -74,10 +74,11 @@ typedef struct
 } GlyphInfo;
 
 /**
- * @brief One entry of the name-entry cursor glyph table at @c D_8014F6B8.
+ * @brief One entry of the name-entry cursor glyph table at
+ *        @c g_name_cursor_glyphs.
  *
- * 20 of these are walked by @ref func_80142410 each frame to emit the
- * cursor's textured-sprite row.
+ * 20 of these are walked by @ref draw_name_cursor_row each frame to emit
+ * the cursor's textured-sprite row.
  */
 typedef struct
 {
@@ -86,11 +87,11 @@ typedef struct
 } GlyphSeqEntry;
 
 /** Number of glyph cells in the name-entry cursor row drawn by
- *  @ref func_80142410. */
+ *  @ref draw_name_cursor_row. */
 #define NAME_CURSOR_GLYPH_COUNT 20
 
 /** CLUT-page bit pattern OR'd over the low 6 bits of @c GlyphInfo::clut
- *  before writing it into a sprite primitive (see @ref func_80142410,
+ *  before writing it into a sprite primitive (see @ref draw_name_cursor_row,
  *  @ref func_80142274). */
 #define GLYPH_CLUT_PAGE_BITS 0x7C80
 
@@ -132,12 +133,20 @@ typedef struct
 /** Byte stride of one @ref AppendAnimFrame record in @c g_char_append_anim. */
 #define APPEND_ANIM_FRAME_STRIDE 12
 
+/**
+ * @brief Per-glyph measurement record produced by @c func_800644FC.
+ *
+ * @ref recalc_name_width passes an array of these to @c func_800644FC,
+ * which fills one entry per glyph of a name buffer. @c width is then
+ * summed to obtain the name's rendered pixel width. Only @c width is
+ * currently understood; the surrounding bytes are unknown.
+ */
 typedef struct
 {
     u8 pad0[0x10];
-    s16 unk10;
+    s16 width; /* 0x10 - glyph advance / pixel width */
     u8 pad1[2];
-} UnkStruct2;
+} GlyphMeasure;
 
 extern void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7);
 
@@ -147,7 +156,7 @@ extern u8 g_char_append_anim[]; /* AppendAnimFrame[APPEND_ANIM_FRAME_COUNT]; dec
 extern FadeState g_fade_target;
 extern FadeState g_fade_current;
 extern s32 g_startup_delay;
-extern u8 D_80147494[];
+extern u8 g_name_entry_tim[]; /* TIM-format glyph image uploaded by load_tim_to_vram */
 extern s32 g_strip_width_target;
 extern s32 g_strip_width;
 extern u8* g_active_name;
@@ -189,7 +198,7 @@ extern s32 D_8014F838;
 extern u8 D_80142EF4[];
 extern u8 g_glyph_table[]; /* GlyphInfo[]; declared as u8[] for byte-level accesses elsewhere */
 extern s32 D_80142E14;
-extern GlyphSeqEntry D_8014F6B8[];
+extern GlyphSeqEntry g_name_cursor_glyphs[];
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
