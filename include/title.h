@@ -2,6 +2,7 @@
 #define _TITLE_H
 
 #include "common.h"
+#include "main.h"
 #include "akao.h"
 #include "pad.h"
 #include "psyq/libgte.h"
@@ -57,46 +58,10 @@ typedef struct
 
 } MenuContext; /* 0xBCCC total */
 
-/**
- * @brief Active menu/save layout record stored in g_menuLayoutBuffer.
- *
- * Bulk-initialised by load_menu_layout, which copies a full 0xC9A-word layout
- * table over it. Only a few fields are mapped so far; the unmapped spans are
- * kept as padding arrays. Extend this struct as fields are identified rather
- * than widening raw casts at call sites.
- *
- * @note Partial layout. g_menuLayoutBuffer is still declared @c u8[]; cast to
- *       @c MenuLayout* only at call sites that have been converted and
- *       asm-verified (currently load_sub_menu_layout).
- */
-typedef struct
-{
-    u8  _unk000[0xD4];          /**< 0x000: layout data, not yet mapped. */
-    s16 rng_seed;               /**< 0x0D4: composed random value (rand() based). */
-    u8  _unk0D6[0x2E0 - 0xD6];  /**< 0x0D6: not yet mapped. */
-    s32 mode_flags;             /**< 0x2E0: state bitfield; bit 0 = "continue mode". */
-} MenuLayout;
-
-/**
- * @brief Working buffer for the active menu/save layout (main executable .bss).
- *
- * Storage for a MenuLayout record. load_menu_layout copies a full 0xC9A-word
- * layout table into this buffer; load_sub_menu_layout overwrites a 0x94-word
- * sub-region whose base is the separately-named g_gameDataBasePtr (offset
- * 0x5F0 within this same buffer). Fields accessed so far by the title overlay:
- *   +0x0D4  s16  composed random value (seed) written from rand()
- *   +0x2E0  s32  mode flags; bit 0 = "continue mode"
- *   +0x608  s32  slot flags (low 7 bits cleared, bit 0 set for continue)
- *
- * @note Kept as @c u8[] so existing byte-granular pointer arithmetic compiles
- *       to unchanged codegen; cast to @c MenuLayout* per converted call site.
- */
-extern u8 g_menuLayoutBuffer[];
+/* MenuLayout and g_menuLayoutBuffer are declared in main.h (shared). */
 extern s32 D_80042FB4;
 extern u8 g_titleSelectedItem;
-extern s32 D_8003EC9C;
 extern s32 g_titleMenuExitState;
-extern u32 g_previousGameState;
 /**
  * Base address of the AKAO instrument/sample bank loaded by LoadTitleAudioBank
  * (always 0x8013C000). Passed to akao_register_bank to register it with the
@@ -166,16 +131,13 @@ extern u8 D_800F98AC[];
 extern u8 D_800F98F4[];
 /** Menu-layout template copied into g_menuLayoutBuffer for the default menu. */
 extern MenuLayout g_menuLayoutTemplateDefault;
-extern s16 D_8003EC90;
 /** Menu-layout template copied into g_menuLayoutBuffer for the alternate menu. */
 extern MenuLayout g_menuLayoutTemplateAlt;
-extern s16 D_80046FDE;
-extern s32 D_80042FC4;
 /** Sub-menu layout table copied by load_sub_menu_layout for a new game. */
 extern s32 g_subMenuLayoutDefault[0x94];
 /** Sub-menu layout table copied by load_sub_menu_layout when resuming a save. */
 extern s32 g_subMenuLayoutContinue[0x94];
-extern s32 g_gameDataBasePtr;
+/* D_8003EC90, D_80046FDE, D_80042FC4, g_gameDataBasePtr are declared in main.h. */
 
 extern FadeCurrent g_fadeCurrent;
 extern FadeTarget g_fadeTarget;

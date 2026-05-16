@@ -22,7 +22,20 @@ extern s32 D_8003EC9C;
 extern s32 D_80042FC4;
 extern s32 D_80042FCC;
 extern s32 D_80042FD0;
-/** @brief Working buffer for the active menu/save layout; see title.h. */
+/**
+ * @brief Working buffer for the active menu/save layout (main executable .bss).
+ *
+ * Storage for a MenuLayout record. load_menu_layout copies a full 0xC9A-word
+ * layout table into this buffer; load_sub_menu_layout overwrites a 0x94-word
+ * sub-region whose base is the separately-named g_gameDataBasePtr (offset
+ * 0x5F0 within this same buffer). Fields accessed so far by the title overlay:
+ *   +0x0D4  s16  composed random value (seed) written from rand()
+ *   +0x2E0  s32  mode flags; bit 0 = "continue mode"
+ *   +0x608  s32  slot flags (low 7 bits cleared, bit 0 set for continue)
+ *
+ * @note Kept as @c u8[] so existing byte-granular pointer arithmetic compiles
+ *       to unchanged codegen; cast to @c MenuLayout* per converted call site.
+ */
 extern u8 g_menuLayoutBuffer[];
 extern s32 D_80046FD8;
 extern u16 D_80046FDE;
@@ -62,20 +75,40 @@ extern s32 g_pad_input;
 /** @brief Extra button bits OR'd into @c g_pad_input when the pad context requests it. */
 extern s32 g_pad_input_inject;
 
-typedef struct {
-    u8 u_0x0[24];
-    s32 u_0x18;
-    s16 u_0x1C;
-    s8 u_0x1E;
-    u8 u_0x1F;
-    u32 u_0x20;
-    u16 u_0x24;
-    u8 u_0x26;
-    u8 u_0x27;
-    u32 u_0x28;
-    u8 u_0x2A[1504];
-    u8 u_608;
-} tempU;
+/**
+ * @brief Active menu/save layout record stored in g_menuLayoutBuffer.
+ *
+ * Bulk-initialised by load_menu_layout (title overlay), which copies a full
+ * 0xC9A-word layout template over it. The main executable also accesses this
+ * record directly as @c (MenuLayout*)g_menuLayoutBuffer (which equals
+ * @c &g_gameDataBasePtr - 0x5F0); see main.c game state 7, where several
+ * header fields are copied verbatim into companion globals.
+ *
+ * Only mapped fields are named; unmapped spans are kept as padding arrays.
+ *
+ * @note Partial layout (covers 0x000..0x60C; the buffer itself is larger).
+ */
+typedef struct
+{
+    u8  _unk000[0x18];          /**< 0x000: not yet mapped. */
+    s32 unk018;                 /**< 0x018: main.c masks 0xFE000000 and ORs in 6. */
+    s16 unk01C;                 /**< 0x01C: copied to companion global D_8003EC94. */
+    s8  unk01E;                 /**< 0x01E: copied to companion global D_80046FD8. */
+    u8  unk01F;                 /**< 0x01F: not yet mapped. */
+    u32 unk020;                 /**< 0x020: -> D_80046FDE; index into D_800351A0[]. */
+    u16 unk024;                 /**< 0x024: -> D_8003EC90; mode/scene id. */
+    u8  unk026;                 /**< 0x026: copied to companion global D_80042FCC. */
+    u8  unk027;                 /**< 0x027: copied to companion global D_80042FC4. */
+    u32 unk028;                 /**< 0x028: flag word; bits 0xC tested together. */
+    u8  _unk02C[0x34 - 0x2C];   /**< 0x02C: not yet mapped. */
+    s32 unk034[0xB];            /**< 0x034: 11 s32 slots; cleared per non-selected save slot. */
+    u8  _unk060[0xD4 - 0x60];   /**< 0x060: not yet mapped. */
+    s16 rng_seed;               /**< 0x0D4: composed random value (rand() based). */
+    u8  _unk0D6[0x2E0 - 0xD6];  /**< 0x0D6: not yet mapped. */
+    s32 mode_flags;             /**< 0x2E0: state bitfield; bit 0 = "continue mode". */
+    u8  _unk2E4[0x608 - 0x2E4]; /**< 0x2E4: not yet mapped. */
+    s32 slot_flags;             /**< 0x608: low 7 bits + bit 0 (continue). */
+} MenuLayout;                   /* partial; sizeof so far == 0x60C */
 
 void __main(void);
 void _bu_init(void);
