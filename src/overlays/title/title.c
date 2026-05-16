@@ -1975,7 +1975,7 @@ void load_sub_menu_layout(s32 is_continue)
     s32* src;
     s32* dst;
     u32 i;
-
+    
     if (is_continue != 0)
     {
         src = g_subMenuLayoutContinue;
@@ -1985,12 +1985,11 @@ void load_sub_menu_layout(s32 is_continue)
     {
         src = g_subMenuLayoutDefault;
     }
-
-    i = 0;
+    
     dst = &g_gameDataBasePtr;
-
+    
     for (i = 0; i < SUB_MENU_LAYOUT_WORDS; i++)
     {
-        *dst++ = *src++;
+        dst[i] = src[i];
     }
 }
