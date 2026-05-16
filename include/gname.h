@@ -94,6 +94,44 @@ typedef struct
  *  @ref func_80142274). */
 #define GLYPH_CLUT_PAGE_BITS 0x7C80
 
+/**
+ * @brief One glyph slot inside an @ref AppendAnimFrame.
+ *
+ * @ref draw_char_append_anim emits a textured-glyph SPRT for every slot
+ * whose @c glyph id is non-zero, at screen position (@c x + 0xE8,
+ * @c y + 4).
+ */
+typedef struct
+{
+    u8 x;     /* 0x0 - X position (biased by 0xE8 when drawn) */
+    u8 y;     /* 0x1 - Y position (biased by 4 when drawn) */
+    u8 glyph; /* 0x2 - glyph id (index into g_glyph_table); 0 = empty slot */
+    u8 pad;   /* 0x3 - unused; slot 0 only: frame duration in render ticks */
+} AppendAnimSlot;
+
+/** Number of glyph slots per @ref AppendAnimFrame. */
+#define APPEND_ANIM_SLOT_COUNT 3
+
+/**
+ * @brief One frame of the character-append animation played by
+ *        @ref draw_char_append_anim.
+ *
+ * @c g_char_append_anim holds @ref APPEND_ANIM_FRAME_COUNT of these. Frame 0
+ * is the idle (empty) frame; frames 1.. are the animation. The frame is
+ * shown for @c slots[0].pad render ticks before advancing.
+ */
+typedef struct
+{
+    AppendAnimSlot slots[APPEND_ANIM_SLOT_COUNT];
+} AppendAnimFrame; /* 0xC bytes */
+
+/** Number of frames in @c g_char_append_anim; reaching this index wraps the
+ *  animation back to the idle frame and stops it. */
+#define APPEND_ANIM_FRAME_COUNT 7
+
+/** Byte stride of one @ref AppendAnimFrame record in @c g_char_append_anim. */
+#define APPEND_ANIM_FRAME_STRIDE 12
+
 typedef struct
 {
     u8 pad0[0x10];
@@ -105,7 +143,7 @@ extern void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s
 
 extern s32 D_8014F840;
 extern s32 g_name_pixel_width;
-extern u8 D_8014F758[];
+extern u8 g_char_append_anim[]; /* AppendAnimFrame[APPEND_ANIM_FRAME_COUNT]; declared as u8[] for byte-level accesses */
 extern FadeState g_fade_target;
 extern FadeState g_fade_current;
 extern s32 g_startup_delay;
@@ -114,8 +152,8 @@ extern s32 g_strip_width_target;
 extern s32 g_strip_width;
 extern u8* g_active_name;
 extern s32 D_8014F7E4;
-extern u8 D_8014F8B8;
-extern u8 D_8014F8B0;
+extern u8 g_append_anim_timer; /* render ticks until the next animation frame */
+extern u8 g_append_anim_frame; /* current frame index into g_char_append_anim */
 extern s8 D_8014F850;
 extern char D_8014F7E8;
 extern s32 D_8014F848;

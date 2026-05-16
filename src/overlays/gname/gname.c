@@ -351,8 +351,8 @@ void reset_run_state(void)
     g_strip_width = 0;
     func_80142928();
     g_strip_width_steps = 5;
-    D_8014F8B0 = 0;
-    D_8014F8B8 = 2;
+    g_append_anim_frame = 0;
+    g_append_anim_timer = 2;
     D_8014F848 = 0;
 }
 
@@ -653,13 +653,13 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 {
                     u32 t1;
                     u16 hw;
-                    D_8014F8B8 = 2;
+                    g_append_anim_timer = 2;
                     {
                         u32 idx_lt3 = D_8014F8D0;
                         ef8 = D_80142EF8;
                         t1 = *((u32*)((D_8014F848 * 4) + ((u32)(&D_80142C98))));
                         hw = *((u16*)(((ef8 + (t1 * 2)) + (idx_lt3 * 2)) + reg_s6));
-                        D_8014F8B0 = 0;
+                        g_append_anim_frame = 0;
                         name_append(g_active_name, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
                     }
                     func_80142928();
@@ -712,8 +712,8 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     u16 hw;
                     u8* efc;
                     new_var9 = D_80142EFC;
-                    D_8014F8B8 = 2;
-                    D_8014F8B0 = 0;
+                    g_append_anim_timer = 2;
+                    g_append_anim_frame = 0;
                     {
                         u32 idx4 = D_8014F8C8;
                         efc = new_var9;
@@ -1071,7 +1071,7 @@ void func_80141928(void* arg0)
     new_var = D_8014F88C;
     new_var4 = arg0;
     temp_v0 = func_80141C34(
-        emit_draw_mode_prim(func_80142B18(func_80142274(emit_draw_mode_prim(var_t0, ((char*)new_var4) + 0x2C),
+        emit_draw_mode_prim(draw_char_append_anim(func_80142274(emit_draw_mode_prim(var_t0, ((char*)new_var4) + 0x2C),
                                                         ((char*)new_var4) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
                                           arg0),
                             ((char*)new_var4) + 0x34),
@@ -2044,44 +2044,69 @@ s32 name_pop_first_char(u8* name)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/3TQG6
+ * @brief Draw the current frame of the character-append animation and
+ *        advance its frame timer.
+ *
+ * When the player commits a glyph into the name being entered, the input
+ * handler seeds @c g_append_anim_frame to 0 and @c g_append_anim_timer to 2
+ * (see the @ref name_append call sites). This routine then runs once per
+ * render tick from @ref func_80141928:
+ *
+ *  1. Draw: emit up to @ref APPEND_ANIM_SLOT_COUNT textured-glyph SPRTs for
+ *     the current frame. The frame index @c g_append_anim_frame selects a
+ *     record in @c g_char_append_anim (logically an @ref AppendAnimFrame).
+ *     Each glyph slot gives an (x, y, glyph) triple; a slot whose glyph id
+ *     is 0 is skipped. X is biased by 0xE8, Y by 4.
+ *  2. Advance: decrement @c g_append_anim_timer; when it reaches 0, step to
+ *     the next frame. Frame @ref APPEND_ANIM_FRAME_COUNT wraps back to 0 and
+ *     stops the animation (timer left at 0); otherwise the new frame's
+ *     duration is loaded from byte 3 of its record (@c slots[0].pad).
+ *
+ * @param prim Primitive-buffer cursor (next free byte).
+ * @param ctx  Render-context base; the OT head tag for this layer is at
+ *             offset 0x30.
+ * @return Primitive-buffer cursor advanced past the emitted SPRTs.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
  */
-s32 func_80142B18(s32 arg0, s32 arg1)
+s32 draw_char_append_anim(s32 prim, s32 ctx)
 {
-    u8 idx = D_8014F8B0;
-    s32 result = arg0;
-    u8* new_var2;
-    s32 s3 = arg1;
+    u8 frame = g_append_anim_frame;
+    s32 result = prim;
+    u8* table;
+    s32 ot_base = ctx;
     s32 i;
-    u8* s1 = &D_8014F758[idx * 12];
-    u8* s0 = s1 + 1;
-    short new_var;
-    for (i = 0; i < 3; i++, s0 += 4, s1 += 4)
+    /* px points at a slot's x byte; py = px + 1 reads y at [0] and glyph at
+       [1]. The two incrementing pointers are load-bearing for the match. */
+    u8* px = &g_char_append_anim[frame * APPEND_ANIM_FRAME_STRIDE];
+    u8* py = px + 1;
+    short glyph;
+    for (i = 0; i < APPEND_ANIM_SLOT_COUNT; i++, py += 4, px += 4)
     {
-        s32 byte = s0[1];
-        new_var = byte;
-        if (new_var != 0)
+        s32 glyph_byte = py[1];
+        glyph = glyph_byte;
+        if (glyph != 0)
         {
-            result = func_80142274(result, s3 + 0x30, new_var, s1[0] + 0xE8, s0[0] + 4, 0, 0, 0);
+            result = func_80142274(result, ot_base + 0x30, glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
         }
     }
 
-    if (D_8014F8B8 != 0)
+    if (g_append_anim_timer != 0)
     {
-        D_8014F8B8--;
-        if (D_8014F8B8 == 0)
+        g_append_anim_timer--;
+        if (g_append_anim_timer == 0)
         {
-            D_8014F8B0++;
-            if (D_8014F8B0 == 7)
+            g_append_anim_frame++;
+            if (g_append_anim_frame == APPEND_ANIM_FRAME_COUNT)
             {
-                D_8014F8B0 = 0;
-                D_8014F8B8 = 0;
+                g_append_anim_frame = 0;
+                g_append_anim_timer = 0;
                 return result;
             }
             else
             {
-                new_var2 = D_8014F758;
-                D_8014F8B8 = new_var2[(D_8014F8B0 * 12) + 3];
+                table = g_char_append_anim;
+                g_append_anim_timer = table[(g_append_anim_frame * APPEND_ANIM_FRAME_STRIDE) + 3];
             }
         }
     }
