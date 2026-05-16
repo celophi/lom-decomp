@@ -10,6 +10,17 @@ typedef struct UnkArg0
     s32 unk404C;      /* Offset 0x404C */
 } UnkArg0;
 
+typedef struct
+{
+    u8 _pad0[2]; // offsets 0x00-0x01
+    u8 unk2;     // offset 0x02
+    u8 _pad1[5]; // offsets 0x03-0x07
+    u16 unk8;    // offset 0x08
+    u16 unkA;    // offset 0x0A
+    s16 unkC;    // offset 0x0C
+    s16 unkE;    // offset 0x0E
+} UnknownStruct;
+
 extern s32 D_80169124;
 extern s32 D_80169130;
 
@@ -664,5 +675,56 @@ void func_8014134C(UnkArg0* arg0)
     if (D_80169124 != 0)
     {
         arg0->unk4040 = func_800A88A0(arg0->unk4040, &arg0->unk34, D_80169124, 1, 0xA0, 0xCA, 2);
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/luaLZ
+ */
+void func_80141570(s32 arg0, UnknownStruct* arg1, s32 arg2)
+{
+    s16 sp[8];
+    s32 temp_a3;
+    s32 temp_a1;
+    s32 clampC;
+    s32 clampE;
+
+    /* First computation */
+    temp_a3 = ((s32)((u16)arg1->unkC << 0x10) >> 0x11) - ((s16)(arg1->unkC / 12) * arg1->unk2);
+    sp[4] = (s16)temp_a3;
+
+    /* Second computation */
+    temp_a1 = ((s32)((u16)arg1->unkE << 0x10) >> 0x11) - ((s16)(arg1->unkE / 12) * arg1->unk2);
+
+    /* First branch logic block */
+
+    sp[5] = (s16)temp_a1;
+
+    /* Second branch logic block */
+    if (temp_a3 > 0)
+    {
+
+        if (temp_a1 > 0)
+        {
+
+            clampC = arg1->unkC - (temp_a3 * 2);
+            if (clampC < 0x20)
+            {
+                clampC = 0x20;
+            }
+
+            clampE = arg1->unkE - (temp_a1 * 2);
+            if (clampE < 0x10)
+            {
+                clampE = 0x10;
+            }
+
+            sp[0] = arg1->unk8 + temp_a3;
+            sp[1] = arg1->unkA + temp_a1;
+            sp[2] = clampC;
+            sp[3] = clampE;
+
+            func_8014169C(arg1, arg0, &sp[0], &sp[4], arg2);
+        }
     }
 }
