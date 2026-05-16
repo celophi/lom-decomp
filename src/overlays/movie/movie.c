@@ -825,7 +825,7 @@ void movie_service_video_ops(void)
  *
  * @return 1 to keep streaming, 0 when the stream has ended or should pause.
  *
- * @see https://decomp.me/scratch/5flHR (95.34%)
+ * @see https://decomp.me/scratch/5flHR (97.44%)
  */
 s32 movie_cd_sector_callback(void)
 {
@@ -844,7 +844,7 @@ s32 movie_cd_sector_callback(void)
     u32* temp_s1;
 
     int new_var4;
-    u32* temp_s1_2;
+
     s32 writeIdx;
     s32 readIdx;
 
@@ -859,7 +859,8 @@ s32 movie_cd_sector_callback(void)
         vms = VOL_MOVIE_STATE;
         if (hdr[2] > ((u32)MOVIE_STATE->totalFrames))
         {
-            goto block_67;
+            MOVIE_STATE->endOfStream = 1;
+            return 0;
         }
 
         vms->frameNumber = hdr[2];
@@ -936,6 +937,7 @@ s32 movie_cd_sector_callback(void)
                     VOL_MOVIE_STATE->lastVideoFrame = VOL_MOVIE_STATE->frameNumber;
 
                     hasMoreFrames = VOL_MOVIE_STATE->frameNumber < totalFrames;
+
                     goto block_49;
                 }
                 else
@@ -1033,13 +1035,15 @@ s32 movie_cd_sector_callback(void)
             MOVIE_STATE->sectorsRemaining = MOVIE_STATE->sectorsRemaining - 1;
             if (!(MOVIE_STATE->sectorsRemaining))
             {
-                new_var4 = 1;
-                VOL_MOVIE_STATE->videoWriteIdx =
-                    (s32)((VOL_MOVIE_STATE->videoWriteIdx + new_var4) + MOVIE_STATE->chunkSectorIdx);
+                u32 totalFrames;
+                totalFrames = (u32)MOVIE_STATE->totalFrames;
 
-                MOVIE_STATE->lastVideoFrame = (u32)MOVIE_STATE->frameNumber;
-                hasMoreFrames = (u32)temp_s1[2];
-                hasMoreFrames = hasMoreFrames < (u32)MOVIE_STATE->totalFrames;
+                VOL_MOVIE_STATE->videoWriteIdx =
+                    (s32)(MOVIE_STATE->chunkSectorIdx + (VOL_MOVIE_STATE->videoWriteIdx + 1));
+
+                VOL_MOVIE_STATE->lastVideoFrame = VOL_MOVIE_STATE->frameNumber;
+                hasMoreFrames = ((u32*)temp_s1)[2] < totalFrames;
+
             block_49:
                 if (hasMoreFrames == 0)
                 {
@@ -1051,31 +1055,34 @@ s32 movie_cd_sector_callback(void)
             }
             goto block_64;
         }
-        else
-        {
-            MOVIE_STATE->frameNumber = (u32)temp_s1[2];
-            MOVIE_STATE->sectorsRemaining = 0U;
 
-            if (((u32)MOVIE_STATE->totalFrames) <= ((u32)temp_s1[2]))
-            {
-                MOVIE_STATE->chunkSectorIdx = 1U;
-                goto block_67;
-            }
+        MOVIE_STATE->frameNumber = (u32)temp_s1[2];
+        MOVIE_STATE->sectorsRemaining = 0U;
+
+        if (((u32)MOVIE_STATE->totalFrames) > ((u32)temp_s1[2]))
+        {
+            return 1;
         }
-        return 1;
+
+        MOVIE_STATE->endOfStream = 1;
+        return 0;
     }
     else
     {
+
         madr = MOVIE_STATE->audioDataBase + ((VOL_MOVIE_STATE->audioWriteIdx + MOVIE_STATE->chunkSectorIdx) << 0xB);
         while (CdGetSector(madr, 8) == 0);
 
-        if (((((u16*)temp_s1_2)[1] == 1) && (temp_s1_2[2] == MOVIE_STATE->frameNumber)) &&
-            ((temp_s1_2[1] & 0xFFFFu) == MOVIE_STATE->chunkSectorIdx))
+        if (((((u16*)temp_s1)[1] == 1) && (temp_s1[2] == MOVIE_STATE->frameNumber)) &&
+            (MOVIE_STATE->chunkSectorIdx == (temp_s1[1] & 0xFFFFu)))
         {
             madr = (MOVIE_STATE->audioDataBase +
                     ((VOL_MOVIE_STATE->audioWriteIdx + (MOVIE_STATE->chunkSectorIdx & 0xFFFF)) << 0xB)) +
                    0x20;
             while (CdGetSector(madr, 0x1F8) == 0);
+
+            // I think I need to use a variable for MOVIE_STATE in order to remove the reload in the else block
+            // however, doing this puts it in a saved register possibly due to the goto reference?
 
             MOVIE_STATE->sectorsRemaining = MOVIE_STATE->sectorsRemaining - 1;
             if (!(MOVIE_STATE->sectorsRemaining & 0xFFFF))
@@ -1084,31 +1091,31 @@ s32 movie_cd_sector_callback(void)
                 VOL_MOVIE_STATE->audioWriteIdx = (s32)(new_var4 + MOVIE_STATE->chunkSectorIdx);
 
                 MOVIE_STATE->lastAudioFrame = VOL_MOVIE_STATE->frameNumber;
-                if (((u32)MOVIE_STATE->totalFrames) < ((u32)temp_s1_2[2]))
+                if (((u32)temp_s1[2]) > ((u32)MOVIE_STATE->totalFrames))
                 {
                     return 0;
                 }
+                // return 1 // why does this cause problems?
             }
             else
             {
             block_64:
                 MOVIE_STATE->chunkSectorIdx = (u16)(MOVIE_STATE->chunkSectorIdx + 1);
             }
+            return 1;
         }
-        else
+
+        MOVIE_STATE->frameNumber = (u32)temp_s1[2];
+        MOVIE_STATE->sectorsRemaining = 0U;
+        if (((u32)temp_s1[2]) <= ((u32)MOVIE_STATE->totalFrames))
         {
-
-            MOVIE_STATE->frameNumber = (u32)temp_s1_2[2];
-            MOVIE_STATE->sectorsRemaining = 0U;
-            if (((u32)MOVIE_STATE->totalFrames) < ((u32)temp_s1_2[2]))
-            {
-            block_67:
-                MOVIE_STATE->endOfStream = 1;
-
-                return 0;
-            }
+            return 1;
         }
+
+        MOVIE_STATE->endOfStream = 1;
+        return 0;
     }
+
     return 1;
 }
 
