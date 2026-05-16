@@ -565,21 +565,29 @@ void func_8014134C(UnkArg0* arg0)
 
             // tmpCmp this is done to force slti
             s32 tmpCmp = temp_v1;
+
             if (tmpCmp < 3)
             {
                 if (temp_v1 != 1)
                 {
+                    /* merges */
                     var_s0--;
-                    goto branch_158;
+                    var_s1 -= 1;
+                    var_s2 = (void*)((u32)var_s2 - sizeof(MenuSlot));
+                    continue;
                 }
-            }
-            else if (temp_v1 != 3)
-            {
-                var_s0--;
-                goto branch_158;
             }
             else
             {
+                if (temp_v1 != 3)
+                {
+                    /* merges */
+                    var_s0--;
+                    var_s1 -= 1;
+                    var_s2 = (void*)((u32)var_s2 - sizeof(MenuSlot));
+                    continue;
+                }
+
                 goto branch_11C;
             }
 
@@ -626,17 +634,14 @@ void func_8014134C(UnkArg0* arg0)
         var_a0 = 1;
         if (!(temp_v0 & 0xFF))
         {
-            var_s0->active = 0;
             func_8014DEB0(1);
+            var_s0->active = 0;
             var_a0 = 1;
         }
 
+        /* merges */
         var_s0--;
-
-    branch_158:
         var_s1 -= 1;
-
-        /* Manually decrementing the void pointer by the size of the struct (0x24) */
         var_s2 = (void*)((u32)var_s2 - sizeof(MenuSlot));
     }
 
