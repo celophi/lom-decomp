@@ -1924,7 +1924,6 @@ unsigned short UploadSaveLayoutTextures(void)
  */
 void load_menu_layout(s32 use_alt)
 {
-    s32 word;
     s32* src;
     s32* dst;
     u32 i;
@@ -1940,19 +1939,19 @@ void load_menu_layout(s32 use_alt)
     }
     D_80046FDE = 0;
     D_80042FC4 = 0;
+
     do
     {
     } while (0);
+
     i = 0;
     dst = (s32*)g_menuLayoutBuffer;
-    do
+
+    while (i < MENU_LAYOUT_WORDS)
     {
-        word = *src;
-        src++;
+        *dst++ = *src++;
         i++;
-        *dst = word;
-        dst++;
-    } while (i < MENU_LAYOUT_WORDS);
+    }
 }
 
 /**
@@ -1975,7 +1974,7 @@ void load_sub_menu_layout(s32 is_continue)
     s32* src;
     s32* dst;
     u32 i;
-    
+
     if (is_continue != 0)
     {
         src = g_subMenuLayoutContinue;
@@ -1985,9 +1984,9 @@ void load_sub_menu_layout(s32 is_continue)
     {
         src = g_subMenuLayoutDefault;
     }
-    
+
     dst = &g_gameDataBasePtr;
-    
+
     for (i = 0; i < SUB_MENU_LAYOUT_WORDS; i++)
     {
         dst[i] = src[i];
