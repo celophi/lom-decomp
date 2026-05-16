@@ -36,7 +36,7 @@ s32 RunTitle(s32 arg0)
     s32 pad;
     S_801ED480* ptr = (S_801ED480*)0x801ED480;
     s32* base;
-    u8* d8_base;
+    MenuLayout* layout;
     u32 const_ff;
     s32 temp1, temp2;
     u8 d92;
@@ -47,7 +47,7 @@ s32 RunTitle(s32 arg0)
     StartTitleMusic();
     base = (s32*)0x80100000; /* base address for D_80102640 */
     const_ff = 0xFF;
-    d8_base = g_menuLayoutBuffer;
+    layout = (MenuLayout*)g_menuLayoutBuffer;
     while (1)
     {
         InitTitleDisplay(pad);
@@ -91,7 +91,7 @@ s32 RunTitle(s32 arg0)
             D_8003EC9C = const_ff;
             temp1 = rand();
             temp2 = rand();
-            *(s16*)(d8_base + 0xD4) = (s16)(temp1 | (temp2 << 0xF));
+            layout->rng_seed = (s16)(temp1 | (temp2 << 0xF));
             return 0;
         }
     }
@@ -1180,7 +1180,7 @@ void HandleSaveSlotInput(void)
     s32 var_v0;
     u32 var_a0;
     u8 temp_v0;
-    u8* var_a1;
+    MenuLayout* var_a1;
     u8* var_v1;
     u8* dest_ptr;
     s32 flag;
@@ -1239,21 +1239,21 @@ void HandleSaveSlotInput(void)
             {
                 load_sub_menu_layout(0);
                 flag = ~0x7F;
-                var_a1 = g_menuLayoutBuffer;
-                var_v0 = (*((s32*)(var_a1 + 0x608))) & flag;
+                var_a1 = (MenuLayout*)g_menuLayoutBuffer;
+                var_v0 = (var_a1->slot_flags) & flag;
             }
             else
             {
                 load_sub_menu_layout(1);
                 flag = ~0x7F;
-                var_a1 = g_menuLayoutBuffer;
-                var_v0 = ((*((s32*)(var_a1 + 0x608))) & flag) | 1;
+                var_a1 = (MenuLayout*)g_menuLayoutBuffer;
+                var_v0 = ((var_a1->slot_flags) & flag) | 1;
             }
-            *((s32*)(var_a1 + 0x608)) = var_v0;
+            var_a1->slot_flags = var_v0;
             temp_s0 = rand();
             new_var2 = rand();
             temp_s0 |= new_var2 << 0xF;
-            *((s16*)(var_a1 + 0xD4)) = (s16)temp_s0;
+            var_a1->rng_seed = (s16)temp_s0;
             dest_ptr = D_80043618;
             var_v1 = D_800F9BC4 + (g_slotSelectedIndex << 6);
             var_a0 = 0;
