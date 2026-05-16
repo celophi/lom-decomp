@@ -269,18 +269,18 @@ void load_tim_to_vram(void* dst_coords)
  *        counter, advance overlay state machine.
  *
  *  - @ref draw_name_cursor_row  - emits the name-entry cursor glyph row.
- *  - @ref func_80141928  - main render pass for this overlay.
+ *  - @ref gname_render  - main render pass for this overlay.
  *  - increments the global frame counter @c g_frame_counter.
  *  - @ref gname_update_state  - countdown / lerp / SFX trigger update.
  *
- * @param ctx Render context passed through to @ref func_80141928.
+ * @param ctx Render context passed through to @ref gname_render.
  *
  * @see https://decomp.me/scratch/yYkTM (100%)
  */
 void gname_tick(s32 ctx)
 {
     draw_name_cursor_row();
-    func_80141928(ctx);
+    gname_render(ctx);
     g_frame_counter += 1;
     gname_update_state();
 }
@@ -1055,98 +1055,130 @@ void* func_80141848(void* arg0, s32* arg1, s16 arg2, s16 arg3)
 }
 
 /**
- * decomp.me (82.68%) https://decomp.me/scratch/rQBi6
+ * @brief Main per-frame render pass for the name-entry overlay.
+ *
+ * Builds this frame's primitives into @p ctx and splices them onto the
+ * render context's ordering table. Runs each tick from @ref gname_tick,
+ * after @ref draw_name_cursor_row. The work, in order:
+ *
+ *  1. Character grid: walk grid-table entries 2..12 (skipping 9) and emit a
+ *     drop-shadowed glyph SPRT for each via @ref func_80142274 into OT entry
+ *     @c ot[0x0B] (offset 0x2C). The entry whose index equals @c D_8014F888
+ *     is drawn highlighted (the @p arg6 flag of @ref func_80142274), marking
+ *     the current selection.
+ *  2. Append decoration: emit a static glyph plus the character-append
+ *     animation (@ref draw_char_append_anim) into @c ot[0x0D] (offset 0x34),
+ *     then run @ref func_80141C34.
+ *  3. Text cursor: build a white textured SPRT (glyph @c g_glyph_table[0xA0])
+ *     at the cursor position (@c D_8014F88C, @c D_8014F890), followed by an
+ *     additive DrawMode, and chain both into @c ot[0x08] (offset 0x20).
+ *  4. Conditional glyphs: when @c D_8014F8B4 is set, and again when
+ *     @c D_8014F8A0 >= 5 passes a phase check, emit extra glyphs from the
+ *     @c D_80142E0C table.
+ *  5. Hand off to the remaining sub-passes @ref func_80141D64,
+ *     @ref func_80141F9C and @ref func_80141E04.
+ *
+ * @param ctx Render context (@ref RenderContext). Uses OT entries at byte
+ *            offsets 0x20/0x24/0x2C/0x34 and the heap cursor at 0x4040.
+ *
+ * @note Still WIP; locals/params renamed but control flow is left verbatim.
+ * @see decomp.me (82.68%) https://decomp.me/scratch/rQBi6
  */
-void func_80141928(void* arg0)
+void gname_render(void* ctx)
 {
-    s32 new_var;
-    s32 var_s0;
-    s32 var_v1;
-    s32* var_s2;
-    void* var_t0;
-    char* new_var2;
-    void* temp_v0;
-    void* var_t0_2;
-    void* new_var4;
-    unsigned char* var_s1;
-    char* new_var3;
-    var_s2 = &D_80142E14;
-    var_s0 = 2;
-    var_s1 = ((unsigned char*)(&D_80142E14)) + 2;
-    var_t0 = *((void**)(((char*)arg0) + 0x4040));
+    s32 cursor_x;
+    s32 i;
+    s32 f8b4;
+    s32* entry;
+    void* prim;
+    char* ctx_bytes;
+    void* cursor_sprite;
+    void* prim2;
+    void* ctx2;
+    unsigned char* glyph_ptr;
+    char* tmp_ptr;
+    entry = &D_80142E14;
+    i = 2;
+    glyph_ptr = ((unsigned char*)(&D_80142E14)) + 2;
+    prim = *((void**)(((char*)ctx) + 0x4040));
+    /* 1. Character grid: entries 2..12, skip 9; highlight the selection. */
     do
     {
-        if (var_s0 != 9)
+        if (i != 9)
         {
-            var_t0 = func_80142274(var_t0, ((char*)arg0) + 0x2C, var_s1[1], (*var_s2) & 0x1FF, ((s32)var_s1[0]) - 8, 1,
-                                   (var_s0 - 2) == D_8014F888, 0);
+            prim = func_80142274(prim, ((char*)ctx) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1,
+                                 (i - 2) == D_8014F888, 0);
         }
-        var_s0 += 1;
-        var_s1 += 4;
-        var_s2++;
-    } while (var_s0 < 0xD);
-    new_var = D_8014F88C;
-    new_var4 = arg0;
-    temp_v0 = func_80141C34(
-        emit_draw_mode_prim(draw_char_append_anim(func_80142274(emit_draw_mode_prim(var_t0, ((char*)new_var4) + 0x2C),
-                                                        ((char*)new_var4) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
-                                          arg0),
-                            ((char*)new_var4) + 0x34),
-        arg0);
-    new_var3 = ((char*)temp_v0) + 0x14;
-    *((s32*)(((char*)temp_v0) + 4)) = 0x808080;
-    *((u8*)(((char*)temp_v0) + 7)) = 0x64;
-    var_t0_2 = ((char*)temp_v0) + 0x1C;
-    *((u8*)(((char*)temp_v0) + 3)) = 4;
-    *((s16*)(((char*)temp_v0) + 8)) = new_var;
+        i += 1;
+        glyph_ptr += 4;
+        entry++;
+    } while (i < 0xD);
+    cursor_x = D_8014F88C;
+    ctx2 = ctx;
+    /* 2. Static glyph + append animation, then func_80141C34. */
+    cursor_sprite = func_80141C34(
+        emit_draw_mode_prim(draw_char_append_anim(func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C),
+                                                        ((char*)ctx2) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
+                                          ctx),
+                            ((char*)ctx2) + 0x34),
+        ctx);
+    /* 3. Text cursor SPRT at (D_8014F88C, D_8014F890) + additive DrawMode. */
+    tmp_ptr = ((char*)cursor_sprite) + 0x14;
+    *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
+    *((u8*)(((char*)cursor_sprite) + 7)) = 0x64;
+    prim2 = ((char*)cursor_sprite) + 0x1C;
+    *((u8*)(((char*)cursor_sprite) + 3)) = 4;
+    *((s16*)(((char*)cursor_sprite) + 8)) = cursor_x;
     {
         s32 tmp = D_8014F890;
-        *((s16*)(((char*)temp_v0) + 10)) = tmp;
+        *((s16*)(((char*)cursor_sprite) + 10)) = tmp;
     }
-    *((u8*)(((char*)temp_v0) + 12)) = g_glyph_table[0xA0];
-    *((u8*)(((char*)temp_v0) + 13)) = g_glyph_table[0xA1];
-    *((s16*)(((char*)temp_v0) + 16)) = (s16)g_glyph_table[0xA2];
-    *((s16*)(((char*)temp_v0) + 18)) = (s16)g_glyph_table[0xA3];
+    *((u8*)(((char*)cursor_sprite) + 12)) = g_glyph_table[0xA0];
+    *((u8*)(((char*)cursor_sprite) + 13)) = g_glyph_table[0xA1];
+    *((s16*)(((char*)cursor_sprite) + 16)) = (s16)g_glyph_table[0xA2];
+    *((s16*)(((char*)cursor_sprite) + 18)) = (s16)g_glyph_table[0xA3];
     {
         u32 tmp = *((u32*)(g_glyph_table + 0xA4));
-        *((s16*)(((char*)temp_v0) + 14)) = (s16)((tmp & 0x3F) | 0x7C80);
+        *((s16*)(((char*)cursor_sprite) + 14)) = (s16)((tmp & 0x3F) | 0x7C80);
     }
-    new_var2 = (char*)new_var4;
+    ctx_bytes = (char*)ctx2;
     {
-        s32 old = *((s32*)temp_v0);
-        *((s32*)temp_v0) = (old & 0xFF000000) | ((*((s32*)(new_var2 + 0x20))) & 0xFFFFFF);
+        s32 old = *((s32*)cursor_sprite);
+        *((s32*)cursor_sprite) = (old & 0xFF000000) | ((*((s32*)(ctx_bytes + 0x20))) & 0xFFFFFF);
     }
-    *((s32*)(new_var2 + 0x20)) = ((*((s32*)(new_var2 + 0x20))) & 0xFF000000) | (((s32)temp_v0) & 0xFFFFFF);
+    *((s32*)(ctx_bytes + 0x20)) = ((*((s32*)(ctx_bytes + 0x20))) & 0xFF000000) | (((s32)cursor_sprite) & 0xFFFFFF);
     {
-        void* temp_a0 = ((char*)temp_v0) + 0x14;
-        *((u8*)(((char*)temp_a0) + 3)) = 1;
-        *((u32*)(((char*)temp_a0) + 4)) = 0xE1000005;
-        *((s32*)new_var3) = ((*((s32*)new_var3)) & 0xFF000000) | ((*((s32*)(new_var2 + 0x20))) & 0xFFFFFF);
-        var_v1 = D_8014F8B4;
-        *((s32*)(new_var2 + 0x20)) = ((*((s32*)(new_var2 + 0x20))) & 0xFF000000) | (((s32)temp_a0) & 0xFFFFFF);
+        void* drawmode = ((char*)cursor_sprite) + 0x14;
+        *((u8*)(((char*)drawmode) + 3)) = 1;
+        *((u32*)(((char*)drawmode) + 4)) = 0xE1000005;
+        *((s32*)tmp_ptr) = ((*((s32*)tmp_ptr)) & 0xFF000000) | ((*((s32*)(ctx_bytes + 0x20))) & 0xFFFFFF);
+        f8b4 = D_8014F8B4;
+        *((s32*)(ctx_bytes + 0x20)) = ((*((s32*)(ctx_bytes + 0x20))) & 0xFF000000) | (((s32)drawmode) & 0xFFFFFF);
     }
-    new_var3 = new_var2 + 0x4040;
+    tmp_ptr = ctx_bytes + 0x4040;
+    /* 4. Conditional extra glyphs from the D_80142E0C table. */
     if (D_8014F8B4 != 0)
     {
-        var_t0_2 = func_80142274(var_t0_2, arg0, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2],
-                                 0, 0, 0);
+        prim2 = func_80142274(prim2, ctx, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2],
+                              0, 0, 0);
     }
     if (D_8014F8A0 >= 5)
     {
-        var_v1 = D_8014F8B4;
-        if (var_v1 < 0)
+        f8b4 = D_8014F8B4;
+        if (f8b4 < 0)
         {
-            var_v1 += 0xF;
+            f8b4 += 0xF;
         }
-        if ((((var_v1 >> 1) >> 1) >> 2) != (D_8014F8A0 - 4))
+        if ((((f8b4 >> 1) >> 1) >> 2) != (D_8014F8A0 - 4))
         {
-            var_t0_2 = func_80142274(var_t0_2, arg0, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF,
-                                     (s32)D_80142E0C[6], 0, 0, 0);
+            prim2 = func_80142274(prim2, ctx, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF,
+                                  (s32)D_80142E0C[6], 0, 0, 0);
         }
     }
-    *((void**)new_var3) = func_80141D64(emit_draw_mode_prim(var_t0_2, arg0), new_var2 + 0x24);
-    func_80141F9C(arg0, D_8014F848);
-    func_80141E04(new_var4, g_active_name, g_strip_width);
+    /* 5. Remaining sub-passes. */
+    *((void**)tmp_ptr) = func_80141D64(emit_draw_mode_prim(prim2, ctx), ctx_bytes + 0x24);
+    func_80141F9C(ctx, D_8014F848);
+    func_80141E04(ctx2, g_active_name, g_strip_width);
 }
 
 /**
@@ -2075,7 +2107,7 @@ s32 name_pop_first_char(u8* name)
  * When the player commits a glyph into the name being entered, the input
  * handler seeds @c g_append_anim_frame to 0 and @c g_append_anim_timer to 2
  * (see the @ref name_append call sites). This routine then runs once per
- * render tick from @ref func_80141928:
+ * render tick from @ref gname_render:
  *
  *  1. Draw: emit up to @ref APPEND_ANIM_SLOT_COUNT textured-glyph SPRTs for
  *     the current frame. The frame index @c g_append_anim_frame selects a
