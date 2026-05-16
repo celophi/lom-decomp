@@ -135,8 +135,10 @@ extern s16 D_8003EC90;
 extern s32 D_800FEF40;
 extern s16 D_80046FDE;
 extern s32 D_80042FC4;
-extern s32 D_801023F0;
-extern s32 D_801021A0;
+/** Sub-menu layout table copied by load_sub_menu_layout for a new game. */
+extern s32 g_subMenuLayoutDefault[0x94];
+/** Sub-menu layout table copied by load_sub_menu_layout when resuming a save. */
+extern s32 g_subMenuLayoutContinue[0x94];
 extern s32 g_gameDataBasePtr;
 
 extern FadeCurrent g_fadeCurrent;

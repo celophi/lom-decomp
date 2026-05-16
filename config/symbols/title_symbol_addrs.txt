@@ -34,10 +34,12 @@ scroll_slots_left = 0x80051938;
 RenderSaveLayoutPrims = 0x8005196C;
 UploadSaveLayoutTextures = 0x800520D4;
 LoadMenuLayout = 0x80052220;
-LoadSubMenuLayout = 0x8005228C;
+load_sub_menu_layout = 0x8005228C;
 
 
 // Globals
+g_subMenuLayoutDefault = 0x801021A0;
+g_subMenuLayoutContinue = 0x801023F0;
 g_titleMenuExitState = 0x80102640;
 g_fadeTarget = 0x80102648;
 g_fadeCurrent = 0x80102658;

@@ -12,6 +12,10 @@
  * index to this base to obtain the actual resource passed to cdrom_queue_read. */
 #define TITLE_SEQ_RESOURCE_BASE 0x17
 
+/* Length, in 32-bit words, of each sub-menu layout table copied by
+ * load_sub_menu_layout (0x94 words == 0x250 bytes). */
+#define SUB_MENU_LAYOUT_WORDS 0x94U
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
@@ -1229,14 +1233,14 @@ void HandleSaveSlotInput(void)
         {
             if (g_slotSlideX > 0)
             {
-                LoadSubMenuLayout(0);
+                load_sub_menu_layout(0);
                 flag = ~0x7F;
                 var_a1 = D_80042FD8;
                 var_v0 = (*((s32*)(var_a1 + 0x608))) & flag;
             }
             else
             {
-                LoadSubMenuLayout(1);
+                load_sub_menu_layout(1);
                 flag = ~0x7F;
                 var_a1 = D_80042FD8;
                 var_v0 = ((*((s32*)(var_a1 + 0x608))) & flag) | 1;
@@ -1942,37 +1946,49 @@ void LoadMenuLayout(s32 variant)
 }
 
 /**
- * Copies a smaller (0x94 s32s) sub-menu layout table into the game-data
- * base at g_gameDataBasePtr. When variant != 0, also OR's bit 0 into
- * (s32*)D_80042FD8[0xB8], marking this slot as "continue mode".
+ * @brief Load one of the two sub-menu layout tables for the save-slot screen.
  *
- * decomp.me (100%) https://decomp.me/scratch/CU7Ml
+ * Copies a SUB_MENU_LAYOUT_WORDS-word (0x250-byte) layout table into the
+ * game-data buffer at g_gameDataBasePtr. The default table is used when
+ * starting a new game; the continue table is used when resuming a saved game,
+ * in which case bit 0 is also OR'd into word 0xB8 of the working menu-layout
+ * buffer D_80042FD8 to flag the slot as "continue mode".
+ *
+ * @param is_continue Zero selects the default layout (g_subMenuLayoutDefault);
+ *                     non-zero selects the continue layout
+ *                     (g_subMenuLayoutContinue) and sets the continue-mode bit.
+ *
+ * @note The index 0x2E0 / sizeof(s32) (== 0xB8) is computed through the
+ *       word_size temporary to reproduce the original codegen; do not fold it
+ *       to a literal constant.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/CU7Ml
  */
-void LoadSubMenuLayout(s32 variant)
+void load_sub_menu_layout(s32 is_continue)
 {
-    s32 temp_v0;
-    s32* var_a0;
-    int new_var;
-    s32* var_v1;
-    u32 var_a1;
-    if (variant != 0)
+    s32 word;
+    s32* src;
+    int word_size;
+    s32* dst;
+    u32 i;
+    if (is_continue != 0)
     {
-        var_a0 = &D_801023F0;
-        new_var = sizeof(s32);
-        ((s32*)D_80042FD8)[0x2E0 / new_var] |= 1;
+        src = g_subMenuLayoutContinue;
+        word_size = sizeof(s32);
+        ((s32*)D_80042FD8)[0x2E0 / word_size] |= 1;
     }
     else
     {
-        var_a0 = &D_801021A0;
+        src = g_subMenuLayoutDefault;
     }
-    var_a1 = 0;
-    var_v1 = &g_gameDataBasePtr;
+    i = 0;
+    dst = &g_gameDataBasePtr;
     do
     {
-        temp_v0 = *var_a0;
-        var_a0++;
-        var_a1++;
-        *var_v1 = temp_v0;
-        var_v1++;
-    } while (var_a1 < 0x94U);
+        word = *src;
+        src++;
+        i++;
+        *dst = word;
+        dst++;
+    } while (i < SUB_MENU_LAYOUT_WORDS);
 }
