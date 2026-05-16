@@ -43,7 +43,7 @@ s32 RunTitle(s32 arg0)
     StartTitleMusic();
     base = (s32*)0x80100000; /* base address for D_80102640 */
     const_ff = 0xFF;
-    d8_base = D_80042FD8;
+    d8_base = g_menuLayoutBuffer;
     while (1)
     {
         InitTitleDisplay(pad);
@@ -1235,14 +1235,14 @@ void HandleSaveSlotInput(void)
             {
                 load_sub_menu_layout(0);
                 flag = ~0x7F;
-                var_a1 = D_80042FD8;
+                var_a1 = g_menuLayoutBuffer;
                 var_v0 = (*((s32*)(var_a1 + 0x608))) & flag;
             }
             else
             {
                 load_sub_menu_layout(1);
                 flag = ~0x7F;
-                var_a1 = D_80042FD8;
+                var_a1 = g_menuLayoutBuffer;
                 var_v0 = ((*((s32*)(var_a1 + 0x608))) & flag) | 1;
             }
             *((s32*)(var_a1 + 0x608)) = var_v0;
@@ -1264,7 +1264,7 @@ void HandleSaveSlotInput(void)
 
             var_a0_2 = 0;
             new_var3 = g_slotSelectedIndex;
-            var_v1 = D_80042FD8;
+            var_v1 = g_menuLayoutBuffer;
             var_a0_2 = 0;
             do
             {
@@ -1905,7 +1905,7 @@ unsigned short UploadSaveLayoutTextures(void)
 
 /**
  * Copies a ~13 KB menu-layout table (0xC9A s32s) from one of two source
- * tables into the working layout buffer at D_80042FD8, and updates the
+ * tables into the working layout buffer at g_menuLayoutBuffer, and updates the
  * companion mode field D_8003EC90.
  *   variant ==  0  -> "default" layout (D_800F9E84), D_8003EC90 = 0xD
  *   variant != 0   -> "alt"     layout (D_800FEF40), D_8003EC90 = 0
@@ -1934,7 +1934,7 @@ void LoadMenuLayout(s32 variant)
     {
     } while (0);
     var_a0 = 0;
-    var_v1 = &D_80042FD8;
+    var_v1 = &g_menuLayoutBuffer;
     do
     {
         temp_v0 = *var_a1;
@@ -1952,7 +1952,7 @@ void LoadMenuLayout(s32 variant)
  * game-data buffer at g_gameDataBasePtr. The default table is used when
  * starting a new game; the continue table is used when resuming a saved game,
  * in which case bit 0 is also OR'd into word 0xB8 of the working menu-layout
- * buffer D_80042FD8 to flag the slot as "continue mode".
+ * buffer g_menuLayoutBuffer to flag the slot as "continue mode".
  *
  * @param is_continue Zero selects the default layout (g_subMenuLayoutDefault);
  *                     non-zero selects the continue layout
@@ -1975,7 +1975,7 @@ void load_sub_menu_layout(s32 is_continue)
     {
         src = g_subMenuLayoutContinue;
         word_size = sizeof(s32);
-        ((s32*)D_80042FD8)[0x2E0 / word_size] |= 1;
+        ((s32*)g_menuLayoutBuffer)[0x2E0 / word_size] |= 1;
     }
     else
     {

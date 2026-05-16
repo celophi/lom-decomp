@@ -57,7 +57,21 @@ typedef struct
 
 } MenuContext; /* 0xBCCC total */
 
-extern u8 D_80042FD8[];
+/**
+ * @brief Working buffer for the active menu/save layout (main executable .bss).
+ *
+ * LoadMenuLayout copies a full 0xC9A-word layout table into this buffer;
+ * load_sub_menu_layout overwrites a 0x94-word sub-region whose base is the
+ * separately-named g_gameDataBasePtr (offset 0x5F0 within this same buffer).
+ * Fields accessed so far by the title overlay:
+ *   +0x0D4  s16  composed random value (seed) written from rand()
+ *   +0x2E0  s32  mode flags; bit 0 = "continue mode"
+ *   +0x608  s32  slot flags (low 7 bits cleared, bit 0 set for continue)
+ *
+ * @note Kept as @c u8[] so existing byte-granular pointer arithmetic compiles
+ *       to unchanged codegen.
+ */
+extern u8 g_menuLayoutBuffer[];
 extern s32 D_80042FB4;
 extern u8 g_titleSelectedItem;
 extern s32 D_8003EC9C;

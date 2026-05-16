@@ -22,6 +22,8 @@ extern s32 D_8003EC9C;
 extern s32 D_80042FC4;
 extern s32 D_80042FCC;
 extern s32 D_80042FD0;
+/** @brief Working buffer for the active menu/save layout; see title.h. */
+extern u8 g_menuLayoutBuffer[];
 extern s32 D_80046FD8;
 extern u16 D_80046FDE;
 extern s32 D_800473E0;
