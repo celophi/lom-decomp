@@ -21,8 +21,81 @@ typedef struct
     s16 unkE;    // offset 0x0E
 } UnknownStruct;
 
+typedef struct
+{
+    u8 unk0;
+    u8 unk1;
+    u8 pad2;
+    u8 unk3;
+    union
+    {
+        s32 unk4;
+        struct
+        {
+            u16 _unk4lo;
+            u16 unk6;
+        } _s;
+    } _u;
+    u16 unk8;
+    u16 unkA;
+    u16 unkC;
+    u16 unkE;
+    u16 unk10;
+    u16 unk12;
+    u16 unk14;
+    u16 unk16;
+    u8 unk18;
+    u8 pad19;
+    u8 pad1A;
+    u8 pad1B;
+    s32* (*unk1C)();
+} struct_arg0;
+
+typedef struct
+{
+    u8 pad[0x4040];
+    s32* unk4040;
+    u8 pad4044[8];
+    s32 unk404C;
+} struct_arg1;
+
+typedef struct
+{
+    s16 unk0;
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+} struct_temp_s3;
+
+typedef struct
+{
+    union
+    {
+        s32 unk0;
+        struct
+        {
+            u8 _pad0[3];
+            u8 unk3;
+        } _s;
+    } _u;
+    s32 unk4;
+    s32 unk8;
+} struct_var_s1;
+
+typedef struct
+{
+    u16 unk0;
+    u16 unk2;
+    s16 unk4;
+    s16 unk6;
+} struct_sp;
+
 extern s32 D_80169124;
 extern s32 D_80169130;
+extern s32 D_80168C18;
+extern s32 D_80168C0C;
+extern s32 D_80168C28;
+extern s32 D_80169548;
 
 /* K&R-style declaration: original call site in menu_tick passes no explicit
  * argument and relies on register a0 (the caller's first parameter) being
@@ -727,4 +800,195 @@ void func_80141570(s32 arg0, UnknownStruct* arg1, s32 arg2)
             func_8014169C(arg1, arg0, &sp[0], &sp[4], arg2);
         }
     }
+}
+
+/**
+ * decomp.me (91.20%) https://decomp.me/scratch/5k4SF
+ */
+void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s32 arg3, s32 arg4)
+{
+    struct_sp sp18;
+    DRAWENV sp20;
+    u16 sp80[2];
+    s16 temp_a0;
+    s32 temp_v1;
+    s32 var_a2_2;
+    s32 var_a3;
+    s32* temp_a1_2;
+    s32* temp_s1;
+    s32* temp_s1_2;
+    s32* temp_s2;
+    s32* var_a2_4;
+    s32* var_s1;
+    u16 temp_a1;
+    u16 temp_a2;
+    struct_temp_s3* temp_s3;
+    u16 var_v0;
+    void* temp_v0_2;
+
+    temp_s3 = arg2;
+    var_s1 = arg1->unk4040;
+    temp_s2 = (s32*)arg1 + (((u32)arg0->_u.unk4 >> 0x19));
+    if (arg0->unk18 != 0)
+    {
+        temp_a2 = arg0->unk10;
+        temp_v1 = (s32)(arg0->unk14 - temp_a2) / (s32)arg0->unk18;
+        temp_a1 = arg0->unk12;
+        temp_a1 = temp_a1 + ((s32)(arg0->unk16 - temp_a1) / (s32) * (volatile u8*)&arg0->unk18);
+        arg0->unk18 = (u8)(*(volatile u8*)&arg0->unk18 - 1);
+        arg0->unk10 = (u16)(temp_a2 + temp_v1);
+        arg0->unk12 = (u16)temp_a1;
+    }
+    else
+    {
+        arg0->unk10 = (u16)arg0->unk14;
+        arg0->unk12 = (u16)arg0->unk16;
+    }
+    if (arg0->unk1C != NULL)
+    {
+        if ((temp_s3->unk4 - 0x20) > 0)
+        {
+            if ((temp_s3->unk6 - 0x10) > 0)
+            {
+                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(D_80168C0C + ((arg1->unk404C ^ 1) * 0x40C0) + 0x4064));
+                var_a3 = 0;
+                *var_s1 = (*var_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
+                D_80168C18 = 0;
+                *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
+                var_s1 += 0x10;
+                if ((arg0->unk1 == g_active_slot) && (arg4 != 0))
+                {
+                    if (D_80168C28 == 0)
+                    {
+                        var_a3 = arg0->unk0 == 2;
+                    }
+                }
+                temp_s1 = arg0->unk1C(temp_s2, arg0, var_s1, arg3, var_a3);
+                if (D_80168C18 != 0)
+                {
+                    arg1->unk4040 = temp_s1;
+                    return;
+                }
+                temp_a0 = temp_s3->unk2;
+                var_a2_2 = temp_a0 + 0x10;
+                if (arg1->unk404C != 0)
+                {
+                    var_a2_2 = temp_a0 + 0xF8;
+                }
+                SetDefDrawEnv(&sp20, temp_s3->unk0 + 8, var_a2_2, temp_s3->unk4 - 0x10, temp_s3->unk6 - 0x10);
+                SetDrawEnv((DR_ENV*)temp_s1, &sp20);
+                *temp_s1 = (*temp_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
+                *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
+                var_s1 = temp_s1 + 0x10;
+                if (arg0->unk3 != 0)
+                {
+                    switch (D_80169548)
+                    {        /* switch 1 */
+                    case 1:  /* switch 1 */
+                    case 4:  /* switch 1 */
+                    case 19: /* switch 1 */
+                    case 22: /* switch 1 */
+                    case 25: /* switch 1 */
+                        var_v0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 0x68;
+                        break;
+                    default: /* switch 1 */
+                        var_v0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 0x48;
+                        break;
+                    }
+                    sp80[0] = var_v0;
+                    sp80[1] = (u16)temp_s3->unk2;
+                    if (arg0->_u.unk4 & 0x01FF0000)
+                    {
+                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)arg0->_u.unk4 + 1, 3, sp80, 0);
+                    }
+                    else
+                    {
+                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, 0, 3, sp80, 0);
+                    }
+                    temp_a1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
+                    sp80[0] += 8;
+                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, arg0->_u._s.unk6 & 0x1FF, 3, sp80, 0);
+                    switch (D_80169548)
+                    {        /* switch 2 */
+                    case 1:  /* switch 2 */
+                    case 4:  /* switch 2 */
+                    case 19: /* switch 2 */
+                    case 22: /* switch 2 */
+                    case 25: /* switch 2 */
+                        temp_s1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
+                        sp80[0] += 8;
+                        var_s1 = (s32*)func_800AD208(temp_s2, temp_s1_2, func_8014F23C(), 3, sp80, 0);
+                        break;
+                    }
+                    var_s1 = func_80148578((s32)var_s1, temp_s2, arg0);
+                }
+            }
+        }
+    }
+    sp18.unk4 = 0xFF;
+    sp18.unk6 = 0xFF;
+    sp18.unk0 = 0;
+    sp18.unk2 = 0;
+    ((struct_var_s1*)var_s1)->_u._s.unk3 = 2;
+    {
+        u8 t_unk2 = (u8)sp18.unk2;
+        u8 t_unk0 = (u8)sp18.unk0;
+
+        s16 t_unk4 = sp18.unk4;
+        s16 t_unk6 = sp18.unk6;
+        ((struct_var_s1*)var_s1)->unk8 = 0;
+        ((struct_var_s1*)var_s1)->unk4 = (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) |
+                                               ((-t_unk6 << 2) & 0x3E0) | ((s32)(-t_unk4 & 0xFF) >> 3));
+    }
+    ((struct_var_s1*)var_s1)->_u.unk0 = (((struct_var_s1*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
+    *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
+    var_a2_4 = var_s1 + 3;
+    if (temp_s3->unk6 >= 0x10)
+    {
+        sp18.unk0 = (u16)temp_s3->unk0 + 8;
+        sp18.unk2 = (u16)temp_s3->unk2;
+        sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
+        sp18.unk6 = 8;
+        var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.unk0, 0x80D0);
+        if (temp_s3->unk6 >= 0x10)
+        {
+            sp18.unk0 = (u16)temp_s3->unk0 + 8;
+            sp18.unk2 = ((u16)temp_s3->unk2 + (u16)temp_s3->unk6) - 8;
+            sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
+            sp18.unk6 = 8;
+            var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.unk0, 0x88D0);
+        }
+    }
+    if (temp_s3->unk4 >= 0x20)
+    {
+        sp18.unk0 = (u16)temp_s3->unk0;
+        sp18.unk2 = (u16)temp_s3->unk2 + 8;
+        sp18.unk4 = 8;
+        sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
+        var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.unk0, 0x90D0);
+        if (temp_s3->unk4 >= 0x20)
+        {
+            sp18.unk0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 8;
+            sp18.unk2 = (u16)temp_s3->unk2 + 8;
+            sp18.unk4 = 8;
+            sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
+            var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.unk0, 0x90D8);
+        }
+    }
+    sp18.unk0 = (u16)temp_s3->unk0 + 8;
+    sp18.unk2 = (u16)temp_s3->unk2 + 8;
+    sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
+    sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
+    temp_v0_2 =
+        func_80141E64(func_80141E64(func_80141E64(func_80141E64(func_80141EE4(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0),
+                                                                temp_s2, temp_s3->unk0, temp_s3->unk2, 0x70D0),
+                                                  temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2, 0x70D8),
+                                    temp_s2, temp_s3->unk0, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D0),
+                      temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D8);
+    ((struct_var_s1*)temp_v0_2)->_u._s.unk3 = 1;
+    ((struct_var_s1*)temp_v0_2)->unk4 = 0xE1000005;
+    ((struct_var_s1*)temp_v0_2)->_u.unk0 =
+        (s32)((((struct_var_s1*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
+    *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
+    arg1->unk4040 = (s32*)((char*)temp_v0_2 + 8);
 }
