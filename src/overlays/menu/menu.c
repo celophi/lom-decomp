@@ -1,5 +1,18 @@
 #include "menu.h"
 
+typedef struct UnkArg0
+{
+    u8 pad0[0x34];
+    u8 unk34;         /* Start of buffer at offset 0x34 */
+    u8 pad35[0x400B]; /* Padding to 0x4040 */
+    s32 unk4040;      /* Offset 0x4040 */
+    u8 pad4044[8];    /* Padding to 0x404C */
+    s32 unk404C;      /* Offset 0x404C */
+} UnkArg0;
+
+extern s32 D_80169124;
+extern s32 D_80169130;
+
 /* K&R-style declaration: original call site in menu_tick passes no explicit
  * argument and relies on register a0 (the caller's first parameter) being
  * live. Keep the empty parameter list to preserve that codegen exactly. */
@@ -512,5 +525,144 @@ void func_80141324(void)
         *var_v0 = 0;
         var_v1--;
         var_v0 -= 0x24;
+    }
+}
+
+/**
+ * decomp.me (77.68%) https://decomp.me/scratch/BlGK5
+ */
+void func_8014134C(UnkArg0* arg0)
+{
+    s16 sp_pair[2];
+    void (*temp_v0_2)(MenuSlot*);
+    s32 var_a3;
+    s32 var_a0;
+    s32 var_s1;
+    u8 temp_a0;
+    u8 temp_v0;
+    u8 temp_v1;
+    u8 temp_v1_2;
+    u8 tmp_s5;
+    MenuSlot* base = g_menu_slots;
+    MenuSlot* var_s0;
+    void* var_s2;
+
+    D_80169124 = 0;
+    var_s1 = 3;
+    tmp_s5 = 2;
+    var_a0 = 0;
+
+    /* 0x6C is exactly the start of the 4th slot (index 3) */
+    var_s0 = base + 3;
+    /* 0x74 is offset 0x8 into the 4th slot, which is the 'x' field */
+    var_s2 = (void*)((u8*)base + 0x74);
+
+    while (var_s1 >= 0)
+    {
+        temp_v1 = var_s0->active;
+        if (temp_v1 != tmp_s5)
+        {
+
+            // tmpCmp this is done to force slti
+            s32 tmpCmp = temp_v1;
+
+            if (tmpCmp < 3)
+            {
+                if (temp_v1 != 1)
+                {
+                    /* merges */
+                    var_s0--;
+                    var_s1 -= 1;
+                    var_s2 = (void*)((u32)var_s2 - sizeof(MenuSlot));
+                    continue;
+                }
+            }
+            else
+            {
+                if (temp_v1 != 3)
+                {
+                    /* merges */
+                    var_s0--;
+                    var_s1 -= 1;
+                    var_s2 = (void*)((u32)var_s2 - sizeof(MenuSlot));
+                    continue;
+                }
+
+                goto branch_11C;
+            }
+
+            func_80141570(arg0, var_s0, D_80169130 != 0);
+            temp_a0 = var_s0->unk2;
+            temp_v0 = temp_a0 + 1;
+            var_s0->unk2 = temp_v0;
+            if ((temp_v0 & 0xff) == 6)
+            {
+                var_s0->unk2 = temp_a0;
+                var_s0->active = tmp_s5;
+            }
+        }
+        else
+        {
+
+            sp_pair[1] = 0;
+            sp_pair[0] = 0;
+            func_8014169C(var_s0, arg0, var_s2, sp_pair, D_80169130 != 0);
+        }
+
+        var_a0 = 1;
+        if (var_s1 == g_active_slot)
+        {
+            /* Casting u32 to function pointer */
+            temp_v0_2 = (void (*)(MenuSlot*))var_s0->unk20;
+            if (temp_v0_2 != 0)
+            {
+                temp_v0_2(var_s0);
+                var_a0 = 1;
+            }
+        }
+        var_s0--;
+        var_s1 -= 1;
+
+        /* Manually decrementing the void pointer by the size of the struct (0x24) */
+        var_s2 = (void*)((u32)var_s2 - sizeof(MenuSlot));
+        continue;
+
+    branch_11C:
+        func_80141570(arg0, var_s0, D_80169130 != 0);
+        temp_v0 = var_s0->unk2 - 1;
+        var_s0->unk2 = temp_v0;
+        var_a0 = 1;
+        if (!(temp_v0 & 0xFF))
+        {
+            func_8014DEB0(1);
+            var_s0->active = 0;
+            var_a0 = 1;
+        }
+
+        /* merges */
+        var_s0--;
+        var_s1 -= 1;
+        var_s2 = (void*)((u32)var_s2 - sizeof(MenuSlot));
+    }
+
+    var_a3 = 0;
+    if (var_a0 == 0)
+    {
+        g_active_slot = -1;
+    }
+
+    sp_pair[1] = 0;
+    sp_pair[0] = 0;
+
+    if ((g_active_slot == -1) || (D_80169130 == 0))
+    {
+        var_a3 = 1;
+    }
+
+    arg0->unk4040 = func_80142F10(arg0->unk4040, &arg0->unk34, arg0->unk404C, var_a3);
+
+    if (D_80169124 != 0)
+    {
+        arg0->unk4040 = func_800A88A0(arg0->unk4040, &arg0->unk34, D_80169124, 1, 0xA0, 0xCA, 2);
     }
 }
