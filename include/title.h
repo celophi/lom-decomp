@@ -58,18 +58,38 @@ typedef struct
 } MenuContext; /* 0xBCCC total */
 
 /**
+ * @brief Active menu/save layout record stored in g_menuLayoutBuffer.
+ *
+ * Bulk-initialised by LoadMenuLayout, which copies a full 0xC9A-word layout
+ * table over it. Only a few fields are mapped so far; the unmapped spans are
+ * kept as padding arrays. Extend this struct as fields are identified rather
+ * than widening raw casts at call sites.
+ *
+ * @note Partial layout. g_menuLayoutBuffer is still declared @c u8[]; cast to
+ *       @c MenuLayout* only at call sites that have been converted and
+ *       asm-verified (currently load_sub_menu_layout).
+ */
+typedef struct
+{
+    u8  _unk000[0xD4];          /**< 0x000: layout data, not yet mapped. */
+    s16 rng_seed;               /**< 0x0D4: composed random value (rand() based). */
+    u8  _unk0D6[0x2E0 - 0xD6];  /**< 0x0D6: not yet mapped. */
+    s32 mode_flags;             /**< 0x2E0: state bitfield; bit 0 = "continue mode". */
+} MenuLayout;
+
+/**
  * @brief Working buffer for the active menu/save layout (main executable .bss).
  *
- * LoadMenuLayout copies a full 0xC9A-word layout table into this buffer;
- * load_sub_menu_layout overwrites a 0x94-word sub-region whose base is the
- * separately-named g_gameDataBasePtr (offset 0x5F0 within this same buffer).
- * Fields accessed so far by the title overlay:
+ * Storage for a MenuLayout record. LoadMenuLayout copies a full 0xC9A-word
+ * layout table into this buffer; load_sub_menu_layout overwrites a 0x94-word
+ * sub-region whose base is the separately-named g_gameDataBasePtr (offset
+ * 0x5F0 within this same buffer). Fields accessed so far by the title overlay:
  *   +0x0D4  s16  composed random value (seed) written from rand()
  *   +0x2E0  s32  mode flags; bit 0 = "continue mode"
  *   +0x608  s32  slot flags (low 7 bits cleared, bit 0 set for continue)
  *
  * @note Kept as @c u8[] so existing byte-granular pointer arithmetic compiles
- *       to unchanged codegen.
+ *       to unchanged codegen; cast to @c MenuLayout* per converted call site.
  */
 extern u8 g_menuLayoutBuffer[];
 extern s32 D_80042FB4;

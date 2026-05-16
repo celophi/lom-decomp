@@ -1951,16 +1951,12 @@ void LoadMenuLayout(s32 variant)
  * Copies a SUB_MENU_LAYOUT_WORDS-word (0x250-byte) layout table into the
  * game-data buffer at g_gameDataBasePtr. The default table is used when
  * starting a new game; the continue table is used when resuming a saved game,
- * in which case bit 0 is also OR'd into word 0xB8 of the working menu-layout
- * buffer g_menuLayoutBuffer to flag the slot as "continue mode".
+ * in which case bit 0 of MenuLayout::mode_flags is also set to flag the slot
+ * as "continue mode".
  *
  * @param is_continue Zero selects the default layout (g_subMenuLayoutDefault);
  *                     non-zero selects the continue layout
  *                     (g_subMenuLayoutContinue) and sets the continue-mode bit.
- *
- * @note The index 0x2E0 / sizeof(s32) (== 0xB8) is computed through the
- *       word_size temporary to reproduce the original codegen; do not fold it
- *       to a literal constant.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/CU7Ml
  */
@@ -1968,14 +1964,12 @@ void load_sub_menu_layout(s32 is_continue)
 {
     s32 word;
     s32* src;
-    int word_size;
     s32* dst;
     u32 i;
     if (is_continue != 0)
     {
         src = g_subMenuLayoutContinue;
-        word_size = sizeof(s32);
-        ((s32*)g_menuLayoutBuffer)[0x2E0 / word_size] |= 1;
+        ((MenuLayout*)g_menuLayoutBuffer)->mode_flags |= 1;
     }
     else
     {
