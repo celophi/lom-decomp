@@ -33,11 +33,13 @@ scroll_slots_right = 0x80051904;
 scroll_slots_left = 0x80051938;
 RenderSaveLayoutPrims = 0x8005196C;
 UploadSaveLayoutTextures = 0x800520D4;
-LoadMenuLayout = 0x80052220;
+load_menu_layout = 0x80052220;
 load_sub_menu_layout = 0x8005228C;
 
 
 // Globals
+g_menuLayoutTemplateDefault = 0x800F9E84;
+g_menuLayoutTemplateAlt = 0x800FEF40;
 g_subMenuLayoutDefault = 0x801021A0;
 g_subMenuLayoutContinue = 0x801023F0;
 g_titleMenuExitState = 0x80102640;

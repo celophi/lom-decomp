@@ -16,6 +16,10 @@
  * load_sub_menu_layout (0x94 words == 0x250 bytes). */
 #define SUB_MENU_LAYOUT_WORDS 0x94U
 
+/* Length, in 32-bit words, of a full menu-layout template copied by
+ * load_menu_layout (0xC9A words). */
+#define MENU_LAYOUT_WORDS 0xC9AU
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
@@ -62,7 +66,7 @@ s32 RunTitle(s32 arg0)
 
         if (d92 == 0)
         {
-            LoadMenuLayout(0);
+            load_menu_layout(0);
             base[0x990] = 0; /* g_titleMenuExitState = 0 */
             if (RunSaveSlotMenu(pad) == 2)
             {
@@ -83,7 +87,7 @@ s32 RunTitle(s32 arg0)
         else
         {
             akao_cmd_c1(0, 0x3C, 0);
-            LoadMenuLayout(-1);
+            load_menu_layout(-1);
             D_8003EC9C = const_ff;
             temp1 = rand();
             temp2 = rand();
@@ -1904,28 +1908,34 @@ unsigned short UploadSaveLayoutTextures(void)
 }
 
 /**
- * Copies a ~13 KB menu-layout table (0xC9A s32s) from one of two source
- * tables into the working layout buffer at g_menuLayoutBuffer, and updates the
- * companion mode field D_8003EC90.
- *   variant ==  0  -> "default" layout (D_800F9E84), D_8003EC90 = 0xD
- *   variant != 0   -> "alt"     layout (D_800FEF40), D_8003EC90 = 0
+ * @brief Load one of the two full menu-layout templates into g_menuLayoutBuffer.
  *
- * decomp.me (100%) https://decomp.me/scratch/aPcbW
+ * Copies a MENU_LAYOUT_WORDS-word (~13 KB) MenuLayout template over the working
+ * g_menuLayoutBuffer and sets the companion mode field D_8003EC90.
+ *
+ * @param use_alt Zero selects the default template (g_menuLayoutTemplateDefault,
+ *                D_8003EC90 = 0xD); non-zero selects the alternate template
+ *                (g_menuLayoutTemplateAlt, D_8003EC90 = 0).
+ *
+ * @note The copy is an explicit word loop, not a struct assignment, so it
+ *       reproduces the original codegen; MenuLayout is only partially mapped.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/aPcbW
  */
-void LoadMenuLayout(s32 variant)
+void load_menu_layout(s32 use_alt)
 {
-    s32 temp_v0;
-    s32* var_a1;
-    s32* var_v1;
-    u32 var_a0;
-    if (variant == 0)
+    s32 word;
+    s32* src;
+    s32* dst;
+    u32 i;
+    if (use_alt == 0)
     {
-        var_a1 = &D_800F9E84;
+        src = (s32*)&g_menuLayoutTemplateDefault;
         D_8003EC90 = 0xD;
     }
     else
     {
-        var_a1 = &D_800FEF40;
+        src = (s32*)&g_menuLayoutTemplateAlt;
         D_8003EC90 = 0;
     }
     D_80046FDE = 0;
@@ -1933,16 +1943,16 @@ void LoadMenuLayout(s32 variant)
     do
     {
     } while (0);
-    var_a0 = 0;
-    var_v1 = &g_menuLayoutBuffer;
+    i = 0;
+    dst = (s32*)g_menuLayoutBuffer;
     do
     {
-        temp_v0 = *var_a1;
-        var_a1++;
-        var_a0++;
-        *var_v1 = temp_v0;
-        var_v1++;
-    } while (var_a0 < 0xC9AU);
+        word = *src;
+        src++;
+        i++;
+        *dst = word;
+        dst++;
+    } while (i < MENU_LAYOUT_WORDS);
 }
 
 /**
@@ -1962,10 +1972,10 @@ void LoadMenuLayout(s32 variant)
  */
 void load_sub_menu_layout(s32 is_continue)
 {
-    s32 word;
     s32* src;
     s32* dst;
     u32 i;
+
     if (is_continue != 0)
     {
         src = g_subMenuLayoutContinue;
@@ -1975,14 +1985,12 @@ void load_sub_menu_layout(s32 is_continue)
     {
         src = g_subMenuLayoutDefault;
     }
+
     i = 0;
     dst = &g_gameDataBasePtr;
-    do
+
+    for (i = 0; i < SUB_MENU_LAYOUT_WORDS; i++)
     {
-        word = *src;
-        src++;
-        i++;
-        *dst = word;
-        dst++;
-    } while (i < SUB_MENU_LAYOUT_WORDS);
+        *dst++ = *src++;
+    }
 }

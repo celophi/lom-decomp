@@ -60,7 +60,7 @@ typedef struct
 /**
  * @brief Active menu/save layout record stored in g_menuLayoutBuffer.
  *
- * Bulk-initialised by LoadMenuLayout, which copies a full 0xC9A-word layout
+ * Bulk-initialised by load_menu_layout, which copies a full 0xC9A-word layout
  * table over it. Only a few fields are mapped so far; the unmapped spans are
  * kept as padding arrays. Extend this struct as fields are identified rather
  * than widening raw casts at call sites.
@@ -80,7 +80,7 @@ typedef struct
 /**
  * @brief Working buffer for the active menu/save layout (main executable .bss).
  *
- * Storage for a MenuLayout record. LoadMenuLayout copies a full 0xC9A-word
+ * Storage for a MenuLayout record. load_menu_layout copies a full 0xC9A-word
  * layout table into this buffer; load_sub_menu_layout overwrites a 0x94-word
  * sub-region whose base is the separately-named g_gameDataBasePtr (offset
  * 0x5F0 within this same buffer). Fields accessed so far by the title overlay:
@@ -164,9 +164,11 @@ extern u8 D_800F993C[0x288];
 extern u8 D_800F97FC[];
 extern u8 D_800F98AC[];
 extern u8 D_800F98F4[];
-extern s32 D_800F9E84;
+/** Menu-layout template copied into g_menuLayoutBuffer for the default menu. */
+extern MenuLayout g_menuLayoutTemplateDefault;
 extern s16 D_8003EC90;
-extern s32 D_800FEF40;
+/** Menu-layout template copied into g_menuLayoutBuffer for the alternate menu. */
+extern MenuLayout g_menuLayoutTemplateAlt;
 extern s16 D_80046FDE;
 extern s32 D_80042FC4;
 /** Sub-menu layout table copied by load_sub_menu_layout for a new game. */
