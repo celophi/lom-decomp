@@ -21,6 +21,7 @@ options:
   undefined_syms_auto_path: linker/overlays/field/undefined_syms_auto.txt
 
   symbol_addrs_path:
+    - config/symbols/shared_symbol_addrs.txt
     - config/overlays/field_symbol_addrs.txt
 
   find_file_boundaries: False

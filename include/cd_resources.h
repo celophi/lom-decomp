@@ -18,6 +18,33 @@ typedef enum CdResourceId
     /* BIN/FIELD.BIN */
     CD_RES_FIELD_BIN = 2,
 
+    /* BIN/WMAP.BIN */
+    CD_RES_WMAP_BIN = 3,
+
+    /* BIN/TITLE.BIN */
+    CD_RES_TITLE_BIN = 4,
+
+    /* BIN/GNAME.BIN */
+    CD_RES_GNAME_BIN = 5,
+
+    /* BIN/MENU.BIN */
+    CD_RES_MENU_BIN = 6,
+
+    /* BIN/SHOP.BIN */
+    CD_RES_SHOP_BIN = 7,
+
+    /* BIN/ZUKAN.BIN */
+    CD_RES_ZUKAN_BIN = 8,
+
+    /* BIN/GOLEM.BIN */
+    CD_RES_GOLEM_BIN = 9,
+
+    /* BIN/GOLEM.BIN */
+    CD_RES_GOLEM_BIN_2 = 10,
+
+    /* BIN/MOVIE.BIN */
+    CD_RES_MOVIE_BIN = 11,
+
     /* SOUND/EFFECT.SET */
     CD_RES_SOUND_EFFECT_SET = 21,
 } CdResourceId;
