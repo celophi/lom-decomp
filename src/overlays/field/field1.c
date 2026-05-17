@@ -11,6 +11,8 @@ extern s32 D_801ED000;
 extern s32 D_801ED004;
 extern s32 D_801ED010;
 extern s32 D_801ED00C;
+extern u16 D_801ED480;
+extern u16 D_801ED482;
 
 typedef struct
 {
@@ -158,6 +160,37 @@ void func_80052108(void* unused, void* arg1)
     // Write to offsets 0x40B8 and 0xBD7C of the structure pointed by arg1
     *(s32*)((char*)arg1 + 0x40B8) = D_801ED00C;
     *(s32*)((char*)arg1 + 0xBD7C) = D_801ED010;
+
+    func_800643E0();
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/KMYoZ
+ */
+void func_800521DC(void)
+{
+    u16 temp_s1;
+    void* temp_s0;
+    char* ptr;
+
+    temp_s0 = func_80015C28();
+    func_80019788(0);
+    func_800119C0(0xB, (void*)0x80140000);
+    func_80140018(0);
+    func_800522B4(D_801ED480);
+    temp_s1 = D_801ED482;
+    func_80019788(0);
+    func_80019C74(temp_s0, 0x1010);
+    func_80019C74((void*)((char*)temp_s0 + 0x7CC4), 0x1010);
+    func_80052458(temp_s1 & 0xFFFF, temp_s0);
+    D_801ED004 = D_801ED000;
+    D_801ED000 += 0x60;
+    func_80054B1C();
+
+    ptr = (char*)temp_s0;
+    *(s32*)(ptr + 0x40B8) = D_801ED00C;
+    ptr += 0x8000;
+    *(s32*)(ptr + 0x3D7C) = D_801ED010;
 
     func_800643E0();
 }
