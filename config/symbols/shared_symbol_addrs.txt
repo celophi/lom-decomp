@@ -744,6 +744,7 @@ g_akao_seq_channel0                 = 0x8003EC5C;
 g_GfxDoubleBuffer                   = 0x80042CA0;
 g_GfxPrimaryFrame                   = 0x80042E20;
 g_previousGameState                 = 0x80042FB0;
+g_menuLayoutBuffer                  = 0x80042FD8;
 g_gameDataBasePtr                   = 0x800435C8;
 g_sfx_channels                      = 0x8004B430;
 g_akao_bank_staging                 = 0x8004D3C0;

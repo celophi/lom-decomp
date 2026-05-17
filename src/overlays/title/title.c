@@ -12,6 +12,14 @@
  * index to this base to obtain the actual resource passed to cdrom_queue_read. */
 #define TITLE_SEQ_RESOURCE_BASE 0x17
 
+/* Length, in 32-bit words, of each sub-menu layout table copied by
+ * load_sub_menu_layout (0x94 words == 0x250 bytes). */
+#define SUB_MENU_LAYOUT_WORDS 0x94U
+
+/* Length, in 32-bit words, of a full menu-layout template copied by
+ * load_menu_layout (0xC9A words). */
+#define MENU_LAYOUT_WORDS 0xC9AU
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
@@ -28,7 +36,7 @@ s32 RunTitle(s32 arg0)
     s32 pad;
     S_801ED480* ptr = (S_801ED480*)0x801ED480;
     s32* base;
-    u8* d8_base;
+    MenuLayout* layout;
     u32 const_ff;
     s32 temp1, temp2;
     u8 d92;
@@ -39,7 +47,7 @@ s32 RunTitle(s32 arg0)
     StartTitleMusic();
     base = (s32*)0x80100000; /* base address for D_80102640 */
     const_ff = 0xFF;
-    d8_base = D_80042FD8;
+    layout = (MenuLayout*)g_menuLayoutBuffer;
     while (1)
     {
         InitTitleDisplay(pad);
@@ -58,7 +66,7 @@ s32 RunTitle(s32 arg0)
 
         if (d92 == 0)
         {
-            LoadMenuLayout(0);
+            load_menu_layout(0);
             base[0x990] = 0; /* g_titleMenuExitState = 0 */
             if (RunSaveSlotMenu(pad) == 2)
             {
@@ -79,11 +87,11 @@ s32 RunTitle(s32 arg0)
         else
         {
             akao_cmd_c1(0, 0x3C, 0);
-            LoadMenuLayout(-1);
+            load_menu_layout(-1);
             D_8003EC9C = const_ff;
             temp1 = rand();
             temp2 = rand();
-            *(s16*)(d8_base + 0xD4) = (s16)(temp1 | (temp2 << 0xF));
+            layout->rng_seed = (s16)(temp1 | (temp2 << 0xF));
             return 0;
         }
     }
@@ -1155,7 +1163,7 @@ void RenderSaveSlotMenu(MenuContext* arg0)
  * Per-frame input dispatcher for the save-slot sub-menu: drives the slide
  * lerper, decodes confirm/cancel/select, and reacts to L/R panel scrolls.
  *
- * decomp.me (99.41%) https://decomp.me/scratch/A1OF6
+ * decomp.me (99.41%) https://decomp.me/scratch/Xl8gF
  */
 void HandleSaveSlotInput(void)
 {
@@ -1172,7 +1180,7 @@ void HandleSaveSlotInput(void)
     s32 var_v0;
     u32 var_a0;
     u8 temp_v0;
-    u8* var_a1;
+    MenuLayout* var_a1;
     u8* var_v1;
     u8* dest_ptr;
     s32 flag;
@@ -1193,15 +1201,17 @@ void HandleSaveSlotInput(void)
     {
         if (g_debouncedInput & 0xA000)
         {
+            SaveLayoutEntry* entry;
             PlayTitleSfx(0x7D, 0x80);
-            if (((SaveLayoutEntry*)D_800F993C)[18].type != 0)
+            entry = ((SaveLayoutEntry*)D_800F993C);
+            if (entry[18].type != 0)
             {
-                ((SaveLayoutEntry*)D_800F993C)[18].type = 0;
-                ((SaveLayoutEntry*)D_800F993C)[19].type = 1;
+                entry[18].type = 0;
+                entry[19].type = 1;
                 return;
             }
-            ((SaveLayoutEntry*)D_800F993C)[18].type = 1;
-            ((SaveLayoutEntry*)D_800F993C)[19].type = g_slotSlideYLerped * 0;
+            entry[18].type = 1;
+            entry[19].type = g_slotSlideYLerped * 0;
             return;
         }
         if (g_debouncedInput & 0xA20)
@@ -1229,23 +1239,23 @@ void HandleSaveSlotInput(void)
         {
             if (g_slotSlideX > 0)
             {
-                LoadSubMenuLayout(0);
+                load_sub_menu_layout(0);
                 flag = ~0x7F;
-                var_a1 = D_80042FD8;
-                var_v0 = (*((s32*)(var_a1 + 0x608))) & flag;
+                var_a1 = (MenuLayout*)g_menuLayoutBuffer;
+                var_v0 = (var_a1->slot_flags) & flag;
             }
             else
             {
-                LoadSubMenuLayout(1);
+                load_sub_menu_layout(1);
                 flag = ~0x7F;
-                var_a1 = D_80042FD8;
-                var_v0 = ((*((s32*)(var_a1 + 0x608))) & flag) | 1;
+                var_a1 = (MenuLayout*)g_menuLayoutBuffer;
+                var_v0 = ((var_a1->slot_flags) & flag) | 1;
             }
-            *((s32*)(var_a1 + 0x608)) = var_v0;
+            var_a1->slot_flags = var_v0;
             temp_s0 = rand();
             new_var2 = rand();
             temp_s0 |= new_var2 << 0xF;
-            *((s16*)(var_a1 + 0xD4)) = (s16)temp_s0;
+            var_a1->rng_seed = (s16)temp_s0;
             dest_ptr = D_80043618;
             var_v1 = D_800F9BC4 + (g_slotSelectedIndex << 6);
             var_a0 = 0;
@@ -1260,7 +1270,7 @@ void HandleSaveSlotInput(void)
 
             var_a0_2 = 0;
             new_var3 = g_slotSelectedIndex;
-            var_v1 = D_80042FD8;
+            var_v1 = g_menuLayoutBuffer;
             var_a0_2 = 0;
             do
             {
@@ -1900,79 +1910,87 @@ unsigned short UploadSaveLayoutTextures(void)
 }
 
 /**
- * Copies a ~13 KB menu-layout table (0xC9A s32s) from one of two source
- * tables into the working layout buffer at D_80042FD8, and updates the
- * companion mode field D_8003EC90.
- *   variant ==  0  -> "default" layout (D_800F9E84), D_8003EC90 = 0xD
- *   variant != 0   -> "alt"     layout (D_800FEF40), D_8003EC90 = 0
+ * @brief Load one of the two full menu-layout templates into g_menuLayoutBuffer.
  *
- * decomp.me (100%) https://decomp.me/scratch/aPcbW
+ * Copies a MENU_LAYOUT_WORDS-word (~13 KB) MenuLayout template over the working
+ * g_menuLayoutBuffer and sets the companion mode field D_8003EC90.
+ *
+ * @param use_alt Zero selects the default template (g_menuLayoutTemplateDefault,
+ *                D_8003EC90 = 0xD); non-zero selects the alternate template
+ *                (g_menuLayoutTemplateAlt, D_8003EC90 = 0).
+ *
+ * @note The copy is an explicit word loop, not a struct assignment, so it
+ *       reproduces the original codegen; MenuLayout is only partially mapped.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/aPcbW
  */
-void LoadMenuLayout(s32 variant)
+void load_menu_layout(s32 use_alt)
 {
-    s32 temp_v0;
-    s32* var_a1;
-    s32* var_v1;
-    u32 var_a0;
-    if (variant == 0)
+    s32* src;
+    s32* dst;
+    u32 i;
+    if (use_alt == 0)
     {
-        var_a1 = &D_800F9E84;
+        src = (s32*)&g_menuLayoutTemplateDefault;
         D_8003EC90 = 0xD;
     }
     else
     {
-        var_a1 = &D_800FEF40;
+        src = (s32*)&g_menuLayoutTemplateAlt;
         D_8003EC90 = 0;
     }
     D_80046FDE = 0;
     D_80042FC4 = 0;
+
     do
     {
     } while (0);
-    var_a0 = 0;
-    var_v1 = &D_80042FD8;
-    do
+
+    i = 0;
+    dst = (s32*)g_menuLayoutBuffer;
+
+    while (i < MENU_LAYOUT_WORDS)
     {
-        temp_v0 = *var_a1;
-        var_a1++;
-        var_a0++;
-        *var_v1 = temp_v0;
-        var_v1++;
-    } while (var_a0 < 0xC9AU);
+        *dst++ = *src++;
+        i++;
+    }
 }
 
 /**
- * Copies a smaller (0x94 s32s) sub-menu layout table into the game-data
- * base at g_gameDataBasePtr. When variant != 0, also OR's bit 0 into
- * (s32*)D_80042FD8[0xB8], marking this slot as "continue mode".
+ * @brief Load one of the two sub-menu layout tables for the save-slot screen.
  *
- * decomp.me (100%) https://decomp.me/scratch/CU7Ml
+ * Copies a SUB_MENU_LAYOUT_WORDS-word (0x250-byte) layout table into the
+ * game-data buffer at g_gameDataBasePtr. The default table is used when
+ * starting a new game; the continue table is used when resuming a saved game,
+ * in which case bit 0 of MenuLayout::mode_flags is also set to flag the slot
+ * as "continue mode".
+ *
+ * @param is_continue Zero selects the default layout (g_subMenuLayoutDefault);
+ *                     non-zero selects the continue layout
+ *                     (g_subMenuLayoutContinue) and sets the continue-mode bit.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/CU7Ml
  */
-void LoadSubMenuLayout(s32 variant)
+void load_sub_menu_layout(s32 is_continue)
 {
-    s32 temp_v0;
-    s32* var_a0;
-    int new_var;
-    s32* var_v1;
-    u32 var_a1;
-    if (variant != 0)
+    s32* src;
+    s32* dst;
+    u32 i;
+
+    if (is_continue != 0)
     {
-        var_a0 = &D_801023F0;
-        new_var = sizeof(s32);
-        ((s32*)D_80042FD8)[0x2E0 / new_var] |= 1;
+        src = g_subMenuLayoutContinue;
+        ((MenuLayout*)g_menuLayoutBuffer)->mode_flags |= 1;
     }
     else
     {
-        var_a0 = &D_801021A0;
+        src = g_subMenuLayoutDefault;
     }
-    var_a1 = 0;
-    var_v1 = &g_gameDataBasePtr;
-    do
+
+    dst = (s32*)&g_gameDataBasePtr;
+
+    for (i = 0; i < SUB_MENU_LAYOUT_WORDS; i++)
     {
-        temp_v0 = *var_a0;
-        var_a0++;
-        var_a1++;
-        *var_v1 = temp_v0;
-        var_v1++;
-    } while (var_a1 < 0x94U);
+        dst[i] = src[i];
+    }
 }
