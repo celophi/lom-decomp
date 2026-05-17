@@ -5,6 +5,9 @@ extern void func_80019C74(void*, s32);
 extern void func_80052458(s32, void*);
 extern void func_80054B1C(void);
 
+/**
+ * decomp.me (100%) https://decomp.me/scratch/m1WWc
+ */
 void func_80051F28(void* arg0, unsigned short arg1)
 {
     u32* mem;
