@@ -5,6 +5,7 @@ extern void func_80019C74(void*, s32);
 extern void func_80052458(s32, void*);
 extern void func_80054B1C(void);
 
+extern u8 D_801ED804;
 extern unsigned int D_801ED02C;
 
 typedef struct
@@ -45,4 +46,33 @@ void func_80051FBC(void)
     ptr->unk10 = 0;
     D_801ED02C = 0;
     func_800642D4();
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/lg9gw
+ */
+void func_80051FF8(s32 unused, s32 base, s32 arg2, s32 arg3)
+{
+
+    u8* struct_ptr;
+    if (arg3 != 0)
+    {
+        func_80054CA8(base + 0x40B8, base + 0x40, 2);
+    }
+    else
+    {
+        func_80054CA8(base + 0x40B8, base + 0x40, arg2);
+    }
+    struct_ptr = (u8*)0x801ED800;
+    func_80059C44();
+    if (D_801ED804 != 0)
+    {
+
+        func_80140D48();
+    }
+    func_80064C28(base + 0x40B8, base, arg2);
+    if (struct_ptr[4] != 0)
+    {
+        func_80140D48();
+    }
 }
