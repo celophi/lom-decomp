@@ -9,6 +9,15 @@
  */
 typedef enum CdResourceId
 {
+    /* SYSTEM.CNF */
+    CD_RES_SYSTEM_CNF = 0,
+
+    /* SLUS_010.13 */
+    CD_RES_SLUS_010_13 = 1,
+
+    /* BIN/FIELD.BIN */
+    CD_RES_FIELD_BIN = 2,
+
     /* SOUND/EFFECT.SET */
     CD_RES_SOUND_EFFECT_SET = 21,
 } CdResourceId;
