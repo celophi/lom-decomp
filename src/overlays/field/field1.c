@@ -12,7 +12,10 @@ extern s32 D_801ED004;
 extern s32 D_801ED010;
 extern s32 D_801ED00C;
 extern u16 D_801ED480;
+extern void **D_80180020;
 extern u16 D_801ED482;
+extern u32 D_8018000C;
+extern s32 D_801ED490;
 
 typedef struct
 {
@@ -193,4 +196,112 @@ void func_800521DC(void)
     *(s32*)(ptr + 0x3D7C) = D_801ED010;
 
     func_800643E0();
+}
+
+/**
+ * decomp.me (97.33%) https://decomp.me/scratch/V1GlO
+ */
+void func_800522B4(s32 arg0)
+{
+    u16 sp[24];
+    s32 var_s1_2;
+    s32 var_v1_2;
+    s32* var_a1;
+    s32 var_s0;
+    u32 var_s1;
+    void* temp_a3;
+    void* var_v0;
+    s32 temp_a0_2;
+    void** var_s0_2;
+
+    func_80019788(0);
+
+    // Use arg0 (s0) directly — no copy to s1 yet
+    if (((u32)(arg0 & 0xFFFF)) < 0xFU)
+    {
+        func_800141EC((arg0 + 0xB4) & 0xFFFF, 0x80180000);
+        func_80013F2C();
+    }
+    else
+    {
+        func_800119C0((arg0 + 0xB4) & 0xFFFF, 0x80180000);
+    }
+
+    // Load D_80180014 into v1; store 0x140 using v0 so v1 survives for D_8018000C reuse
+    var_s1 = D_80180014;
+    sp[0] = 0x140; // was: sp[0] = (var_v1_2 = 0x140) — that put 0x140 in v1, clobbering the lui
+    sp[1] = 0x100;
+    var_s0 = D_8018000C >> 9; // compiler reuses v1 (%hi shared with D_80180014)
+    sp[3] = 0x100;
+    // Removed dead: if ((temp_a0_2 && temp_a0_2) && temp_a0_2) {}
+
+    while (var_s0 != 0)
+    {
+        sp[2] = (s16)((var_s0 < 0x11) ? (var_s0) : (0x10));
+        func_80019A34(sp, var_s1);
+        var_s1 += 0x2000;
+        var_s0 -= (s16)sp[2];
+        sp[0] += 0x10;
+    }
+
+    func_80019788(0);
+
+    // Single pointer var — walks s0 in-place; value in v0
+    // Collapsed var_s0_2 and var_s0_3 into one variable
+    var_s0_2 = D_80180020;
+    var_v0 = *var_s0_2;
+    if (var_v0 != 0)
+    {
+        var_s0_2++;
+        do
+        {
+            *((u16*)(((char*)var_v0) + 0x26)) = 0;
+            var_v0 = *var_s0_2;
+            var_s0_2++;
+        } while (var_v0 != 0);
+    }
+
+    if (D_801ED490 != 0)
+    {
+        var_s0_2 = D_80180020; // reload (was var_s0_3, now same variable)
+        var_s1_2 = 0;
+        if ((*var_s0_2) != 0)
+        {
+            var_a1 = &sp[4];
+            do
+            {
+                temp_a3 = *var_s0_2;
+                temp_a0_2 = *((u32*)(((char*)temp_a3) + 4));
+                var_v1_2 = var_s1_2;
+                if (var_s1_2 != 0)
+                {
+                loop_13:
+                    if ((*var_a1) != temp_a0_2)
+                    {
+                        var_v1_2 -= 1;
+                        var_a1 += 1;
+                        if (var_v1_2 != 0)
+                        {
+                            goto loop_13;
+                        }
+                    }
+
+                    if (var_v1_2 == 0)
+                    {
+                        goto block_16;
+                    }
+                }
+                else
+                {
+                block_16:
+                    var_s1_2 += 1;
+
+                    *var_a1 = temp_a0_2;
+                    func_8005B298(temp_a0_2, *((u16*)(((char*)temp_a3) + 0x2A)), D_801ED490 - 1, temp_a3);
+                }
+                var_s0_2 += 1;
+                var_a1 = &sp[4];
+            } while ((*var_s0_2) != 0);
+        }
+    }
 }
