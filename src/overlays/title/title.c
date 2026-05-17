@@ -1163,7 +1163,7 @@ void RenderSaveSlotMenu(MenuContext* arg0)
  * Per-frame input dispatcher for the save-slot sub-menu: drives the slide
  * lerper, decodes confirm/cancel/select, and reacts to L/R panel scrolls.
  *
- * decomp.me (99.41%) https://decomp.me/scratch/A1OF6
+ * decomp.me (99.41%) https://decomp.me/scratch/Xl8gF
  */
 void HandleSaveSlotInput(void)
 {
@@ -1201,15 +1201,17 @@ void HandleSaveSlotInput(void)
     {
         if (g_debouncedInput & 0xA000)
         {
+            SaveLayoutEntry* entry;
             PlayTitleSfx(0x7D, 0x80);
-            if (((SaveLayoutEntry*)D_800F993C)[18].type != 0)
+            entry = ((SaveLayoutEntry*)D_800F993C);
+            if (entry[18].type != 0)
             {
-                ((SaveLayoutEntry*)D_800F993C)[18].type = 0;
-                ((SaveLayoutEntry*)D_800F993C)[19].type = 1;
+                entry[18].type = 0;
+                entry[19].type = 1;
                 return;
             }
-            ((SaveLayoutEntry*)D_800F993C)[18].type = 1;
-            ((SaveLayoutEntry*)D_800F993C)[19].type = g_slotSlideYLerped * 0;
+            entry[18].type = 1;
+            entry[19].type = g_slotSlideYLerped * 0;
             return;
         }
         if (g_debouncedInput & 0xA20)
