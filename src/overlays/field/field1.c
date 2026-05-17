@@ -1,4 +1,5 @@
 #include "common.h"
+#include "cd_resources.h"
 
 extern void DrawSync(s32);
 extern void ClearOTagR(void*, s32);
@@ -142,8 +143,8 @@ void func_80052108(void* unused, void* arg1)
     u8* addr = (u8*)0x801ED480;
 
     DrawSync(0);
-    cdrom_stream(0xB, (void*)0x80140000);
-    func_80140018(0);
+    cdrom_stream(CD_RES_MOVIE_BIN, (void*)0x80140000);
+    func_80140018(0); /* MOVIE.BIN entry point (offset 0x18) */
 
     // Read two 16-bit values from fixed address 0x801ED480
     first_val = *(u16*)addr;
@@ -178,8 +179,8 @@ void func_800521DC(void)
 
     temp_s0 = FUN_80015c28();
     DrawSync(0);
-    cdrom_stream(0xB, (void*)0x80140000);
-    func_80140018(0);
+    cdrom_stream(CD_RES_MOVIE_BIN, (void*)0x80140000);
+    func_80140018(0); /* MOVIE.BIN entry point (offset 0x18) */
     func_800522B4(D_801ED480);
     temp_s1 = D_801ED482;
     DrawSync(0);
