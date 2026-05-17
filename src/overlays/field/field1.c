@@ -1,11 +1,11 @@
 #include "common.h"
 
-extern void func_80019788(s32);
-extern void func_80019C74(void*, s32);
+extern void DrawSync(s32);
+extern void ClearOTagR(void*, s32);
 extern void func_80052458(s32, void*);
 extern void func_80054B1C(void);
 
-extern u8 D_801ED804;
+extern u8 g_cdAudioEnabled;
 extern unsigned int D_801ED02C;
 extern s32 D_801ED000;
 extern s32 D_801ED004;
@@ -53,9 +53,9 @@ void func_80051F28(void* arg0, unsigned short arg1)
 {
     u32* mem;
     s32 zero = 0;
-    func_80019788(zero);
-    func_80019C74(arg0, 0x1010);
-    func_80019C74(((char*)arg0) + 0x7CC4, 0x1010);
+    DrawSync(zero);
+    ClearOTagR(arg0, 0x1010);
+    ClearOTagR(((char*)arg0) + 0x7CC4, 0x1010);
     func_80052458(arg1 & 0xFFFF, arg0);
     mem = (u32*)0x801ED000;
     mem[1] = mem[0];
@@ -95,7 +95,7 @@ void func_80051FF8(s32 unused, s32 base, s32 arg2, s32 arg3)
     }
     struct_ptr = (u8*)0x801ED800;
     func_80059C44();
-    if (D_801ED804 != 0)
+    if (g_cdAudioEnabled != 0)
     {
 
         func_80140D48();
@@ -141,8 +141,8 @@ void func_80052108(void* unused, void* arg1)
     u16 first_val;
     u8* addr = (u8*)0x801ED480;
 
-    func_80019788(0);
-    func_800119C0(0xB, (void*)0x80140000);
+    DrawSync(0);
+    cdrom_stream(0xB, (void*)0x80140000);
     func_80140018(0);
 
     // Read two 16-bit values from fixed address 0x801ED480
@@ -150,9 +150,9 @@ void func_80052108(void* unused, void* arg1)
     func_800522B4(first_val);
     temp_s1 = *(u16*)(addr + 2);
 
-    func_80019788(0);
-    func_80019C74(arg1, 0x1010);
-    func_80019C74((void*)((char*)arg1 + 0x7CC4), 0x1010);
+    DrawSync(0);
+    ClearOTagR(arg1, 0x1010);
+    ClearOTagR((void*)((char*)arg1 + 0x7CC4), 0x1010);
     func_80052458(temp_s1 & 0xFFFF, arg1);
 
     D_801ED004 = D_801ED000;
@@ -176,15 +176,15 @@ void func_800521DC(void)
     void* temp_s0;
     char* ptr;
 
-    temp_s0 = func_80015C28();
-    func_80019788(0);
-    func_800119C0(0xB, (void*)0x80140000);
+    temp_s0 = FUN_80015c28();
+    DrawSync(0);
+    cdrom_stream(0xB, (void*)0x80140000);
     func_80140018(0);
     func_800522B4(D_801ED480);
     temp_s1 = D_801ED482;
-    func_80019788(0);
-    func_80019C74(temp_s0, 0x1010);
-    func_80019C74((void*)((char*)temp_s0 + 0x7CC4), 0x1010);
+    DrawSync(0);
+    ClearOTagR(temp_s0, 0x1010);
+    ClearOTagR((void*)((char*)temp_s0 + 0x7CC4), 0x1010);
     func_80052458(temp_s1 & 0xFFFF, temp_s0);
     D_801ED004 = D_801ED000;
     D_801ED000 += 0x60;
@@ -214,17 +214,17 @@ void func_800522B4(s32 arg0)
     s32 temp_a0_2;
     void** var_s0_2;
 
-    func_80019788(0);
+    DrawSync(0);
 
     // Use arg0 (s0) directly — no copy to s1 yet
     if (((u32)(arg0 & 0xFFFF)) < 0xFU)
     {
-        func_800141EC((arg0 + 0xB4) & 0xFFFF, 0x80180000);
-        func_80013F2C();
+        cdrom_queue_read((arg0 + 0xB4) & 0xFFFF, 0x80180000);
+        cdrom_wait_queue_empty();
     }
     else
     {
-        func_800119C0((arg0 + 0xB4) & 0xFFFF, 0x80180000);
+        cdrom_stream((arg0 + 0xB4) & 0xFFFF, 0x80180000);
     }
 
     // Load D_80180014 into v1; store 0x140 using v0 so v1 survives for D_8018000C reuse
@@ -238,13 +238,13 @@ void func_800522B4(s32 arg0)
     while (var_s0 != 0)
     {
         sp[2] = (s16)((var_s0 < 0x11) ? (var_s0) : (0x10));
-        func_80019A34(sp, var_s1);
+        LoadImage(sp, var_s1);
         var_s1 += 0x2000;
         var_s0 -= (s16)sp[2];
         sp[0] += 0x10;
     }
 
-    func_80019788(0);
+    DrawSync(0);
 
     // Single pointer var — walks s0 in-place; value in v0
     // Collapsed var_s0_2 and var_s0_3 into one variable
