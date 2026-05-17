@@ -9,7 +9,7 @@ volatile void Main(void)
 {
     RECT rect;
     int new_var2;
-    tempU* temp_s2;
+    MenuLayout* temp_s2;
     u32* ptrA;
     int new_var;
     long cd_stop_ret;
@@ -54,7 +54,7 @@ volatile void Main(void)
     VSync(0);
     g_previousGameState = 0xFF;
     ptrA = &g_gameDataBasePtr;
-    temp_s2 = (tempU*)(((u8*)ptrA) - 0x5F0);
+    temp_s2 = (MenuLayout*)(((u8*)ptrA) - 0x5F0);
     while (1)
     {
         new_var2 = 0;
@@ -152,7 +152,7 @@ volatile void Main(void)
                 func_80051FBC(0);
                 D_8003EC98 = 0;
                 g_gameState =
-                    func_80140004(0x80160000, (u32)ptrA, (u32)ptrA, (temp_s2->u_608 & 0x7F) + 4, 0, (u32)ptrA, 1);
+                    func_80140004(0x80160000, (u32)ptrA, (u32)ptrA, (*(u8*)&temp_s2->slot_flags & 0x7F) + 4, 0, (u32)ptrA, 1);
                 DrawSync(0);
                 VSync(0);
                 g_previousGameState = 3;
@@ -183,22 +183,22 @@ volatile void Main(void)
                 }
                 else
                 {
-                    new_var = (u32)temp_s2->u_0x18;
+                    new_var = (u32)temp_s2->unk018;
                     new_var = new_var & 0xFE000000U;
                     new_var = new_var | 6;
                     D_8003EC88 = 6;
-                    temp_s2->u_0x18 = new_var;
-                    D_8003EC90 = temp_s2->u_0x24;
-                    D_80042FCC = temp_s2->u_0x26;
-                    D_80042FC4 = temp_s2->u_0x27;
-                    D_8003EC94 = temp_s2->u_0x1C;
-                    D_80046FD8 = temp_s2->u_0x1E;
-                    temp_s2->u_0x18 = new_var;
+                    temp_s2->unk018 = new_var;
+                    D_8003EC90 = temp_s2->unk024;
+                    D_80042FCC = temp_s2->unk026;
+                    D_80042FC4 = temp_s2->unk027;
+                    D_8003EC94 = temp_s2->unk01C;
+                    D_80046FD8 = temp_s2->unk01E;
+                    temp_s2->unk018 = new_var;
                     {
-                        u32 tmp_u20 = temp_s2->u_0x20;
+                        u32 tmp_u20 = temp_s2->unk020;
                         D_80046FDE = (u16)tmp_u20;
                     }
-                    if ((temp_s2->u_0x28 & 0xC) == 0xC)
+                    if ((temp_s2->unk028 & 0xC) == 0xC)
                     {
                         g_gameState = 5;
                     }

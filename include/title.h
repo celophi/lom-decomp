@@ -2,6 +2,7 @@
 #define _TITLE_H
 
 #include "common.h"
+#include "main.h"
 #include "akao.h"
 #include "pad.h"
 #include "psyq/libgte.h"
@@ -57,12 +58,10 @@ typedef struct
 
 } MenuContext; /* 0xBCCC total */
 
-extern u8 D_80042FD8[];
+/* MenuLayout and g_menuLayoutBuffer are declared in main.h (shared). */
 extern s32 D_80042FB4;
 extern u8 g_titleSelectedItem;
-extern s32 D_8003EC9C;
 extern s32 g_titleMenuExitState;
-extern u32 g_previousGameState;
 /**
  * Base address of the AKAO instrument/sample bank loaded by LoadTitleAudioBank
  * (always 0x8013C000). Passed to akao_register_bank to register it with the
@@ -130,14 +129,15 @@ extern u8 D_800F993C[0x288];
 extern u8 D_800F97FC[];
 extern u8 D_800F98AC[];
 extern u8 D_800F98F4[];
-extern s32 D_800F9E84;
-extern s16 D_8003EC90;
-extern s32 D_800FEF40;
-extern s16 D_80046FDE;
-extern s32 D_80042FC4;
-extern s32 D_801023F0;
-extern s32 D_801021A0;
-extern s32 g_gameDataBasePtr;
+/** Menu-layout template copied into g_menuLayoutBuffer for the default menu. */
+extern MenuLayout g_menuLayoutTemplateDefault;
+/** Menu-layout template copied into g_menuLayoutBuffer for the alternate menu. */
+extern MenuLayout g_menuLayoutTemplateAlt;
+/** Sub-menu layout table copied by load_sub_menu_layout for a new game. */
+extern s32 g_subMenuLayoutDefault[0x94];
+/** Sub-menu layout table copied by load_sub_menu_layout when resuming a save. */
+extern s32 g_subMenuLayoutContinue[0x94];
+/* D_8003EC90, D_80046FDE, D_80042FC4, g_gameDataBasePtr are declared in main.h. */
 
 extern FadeCurrent g_fadeCurrent;
 extern FadeTarget g_fadeTarget;
