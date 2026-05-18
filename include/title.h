@@ -7,15 +7,7 @@
 #include "pad.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
-
-typedef struct
-{
-    u16 unk0;
-    u16 unk2;
-    u32 unk4;
-    u32 unk8;
-    u32 unkC;
-} S_801ED480;
+#include "scene_state.h"
 
 /**
  * Current screen-fade colour. RGB only; the fade-target struct carries the

@@ -1,5 +1,6 @@
 #include "common.h"
 #include "cd_resources.h"
+#include "scene_state.h"
 
 extern void DrawSync(s32);
 extern void ClearOTagR(void*, s32);
@@ -57,14 +58,6 @@ typedef struct
     s16 d;
 } Args4;
 
-typedef struct
-{
-    u16 unk0;
-    u16 unk2;
-    u8 pad[12];
-    u32 unk10;
-} SomeStruct;
-
 /* Node structure used in the linked list */
 typedef struct Node
 {
@@ -119,7 +112,7 @@ void func_80051F28(void* arg0, unsigned short arg1)
  */
 void func_80051FBC(void)
 {
-    SomeStruct* ptr = (SomeStruct*)0x801ED480;
+    S_801ED480* ptr = (S_801ED480*)0x801ED480;
     ptr->unk0 = 0;
     ptr->unk2 = 0;
     ptr->unk10 = 0;
