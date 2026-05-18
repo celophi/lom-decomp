@@ -13,10 +13,38 @@ extern s32 D_801ED004;
 extern s32 D_801ED010;
 extern s32 D_801ED00C;
 extern u16 D_801ED480;
-extern void **D_80180020;
+extern void** D_80180020;
 extern u16 D_801ED482;
 extern u32 D_8018000C;
 extern s32 D_801ED490;
+
+typedef struct
+{
+    u16 unk0;
+    u16 unk2;
+    u8 unk4;
+} RegStruct;
+typedef struct
+{
+    u8 _pad0[4];
+    s32 unk4;
+    u8 _pad1[0x28 - 8];
+    u16 unk28;
+    u8 _pad2[2];
+    u8 unk2C;
+    u8 unk2D;
+    u8 unk2E;
+    u8 unk2F;
+    u16 unk30;
+    u16 unk32;
+} S0Struct;
+typedef struct
+{
+    s16 a;
+    s16 b;
+    s16 c;
+    s16 d;
+} Args4;
 
 typedef struct
 {
@@ -305,4 +333,82 @@ void func_800522B4(s32 arg0)
             } while ((*var_s0_2) != 0);
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/vjiqR
+ */
+void func_80052458(unsigned short arg0, void* arg1)
+{
+    u8* ptr = (u8*)D_80180020;
+    RegStruct* hw = (RegStruct*)0x801ED400;
+    short counter = arg0 - 1;
+    S0Struct* temp_s0;
+    s32 var_s2;
+    u16 temp_s1;
+    u8 temp_v0_3;
+    Args4 args;
+    while ((counter & 0xFFFF) != 0xFFFF)
+    {
+        if ((*((u32*)(ptr + 4))) == 0)
+        {
+            break;
+        }
+        counter--;
+        ptr += 4;
+    }
+
+    temp_s0 = *((S0Struct**)ptr);
+    hw->unk0 = temp_s0->unk30;
+    hw->unk2 = temp_s0->unk32;
+    hw->unk4 = ((*((u32*)(&temp_s0->unk2C))) >> 1) & 1;
+    if (arg1 != 0)
+    {
+        u32 packed;
+        u8* base = (u8*)arg1;
+        u8* base2 = base + 0x7CC4;
+        base2[0x406C] = 1;
+        base[0x406C] = 1;
+        packed = *((u32*)(&temp_s0->unk2C));
+        if (packed & 1)
+        {
+            base[0x406D] = temp_s0->unk2D;
+            base[0x406E] = temp_s0->unk2E;
+            base[0x406F] = temp_s0->unk2F;
+            base[0xBD31] = temp_s0->unk2D;
+            base[0xBD32] = temp_s0->unk2E;
+            base[0xBD33] = temp_s0->unk2F;
+        }
+        else
+        {
+            base[0x406D] = 0;
+            base[0x406E] = 0;
+            base[0x406F] = 0;
+            base[0xBD31] = 0;
+            base[0xBD32] = 0;
+            base[0xBD33] = 0;
+        }
+    }
+    var_s2 = temp_s0->unk4;
+    args.a = 0;
+    args.b = 0x1D8;
+    temp_s1 = temp_s0->unk28 >> 8;
+    if (temp_s1 != 0)
+    {
+        s32 s3 = temp_s1;
+        args.c = 0x100;
+        args.d = (s16)temp_s1;
+        func_80019A34(&args, var_s2);
+        var_s2 += s3 << 9;
+        args.b += temp_s1;
+    }
+    temp_v0_3 = (u8)temp_s0->unk28;
+    if (temp_v0_3 != 0)
+    {
+        args.c = (s16)temp_v0_3;
+        args.d = 1;
+        func_80019A34(&args, var_s2);
+    }
+    func_80052628(temp_s0, arg0 & 0xFFFF);
+    func_8006312C();
 }
