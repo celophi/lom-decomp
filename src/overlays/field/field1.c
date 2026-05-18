@@ -13,7 +13,6 @@ extern s32 D_801ED004;
 extern s32 D_801ED010;
 extern s32 D_801ED00C;
 extern u16 D_801ED480;
-extern void** D_80180020;
 extern u16 D_801ED482;
 extern u32 D_8018000C;
 extern s32 D_801ED490;
@@ -24,20 +23,32 @@ typedef struct
     u16 unk2;
     u8 unk4;
 } RegStruct;
+/**
+ * @brief A field scene object: a texture/CLUT image plus its color and
+ *        placement data.
+ *
+ * @note @c D_80180020 is a null-terminated array of pointers to these.
+ *       @c func_80052458 selects one by index and uploads its image;
+ *       @c func_800522B4 clears @c flag26 on every object and registers
+ *       each distinct one.
+ */
 typedef struct
 {
-    u8 _pad0[4];
-    s32 unk4;
-    u8 _pad1[0x28 - 8];
-    u16 unk28;
-    u8 _pad2[2];
-    u8 unk2C;
-    u8 unk2D;
-    u8 unk2E;
-    u8 unk2F;
-    u16 unk30;
-    u16 unk32;
-} S0Struct;
+    u8  _pad0[4];
+    s32 unk4;     /**< 0x04 VRAM address: LoadImage source; also the dedup key in func_800522B4 */
+    u8  _pad1[0x26 - 8];
+    u16 flag26;   /**< 0x26 cleared at the start of each map load (func_800522B4) */
+    u16 unk28;    /**< 0x28 hi byte = texture height, lo byte = CLUT width */
+    u16 unk2A;    /**< 0x2A passed to func_8005B298 */
+    u8  unk2C;    /**< 0x2C bit0 = has explicit color, bit1 -> RegStruct.unk4 */
+    u8  unk2D;    /**< 0x2D background red   */
+    u8  unk2E;    /**< 0x2E background green */
+    u8  unk2F;    /**< 0x2F background blue  */
+    u16 unk30;    /**< 0x30 -> RegStruct.unk0 */
+    u16 unk32;    /**< 0x32 -> RegStruct.unk2 */
+} FieldObject;
+
+extern FieldObject** D_80180020;
 typedef struct
 {
     s16 a;
@@ -238,10 +249,10 @@ void func_800522B4(s32 arg0)
     s32* var_a1;
     s32 var_s0;
     u32 var_s1;
-    void* temp_a3;
-    void* var_v0;
+    FieldObject* temp_a3;
+    FieldObject* var_v0;
     s32 temp_a0_2;
-    void** var_s0_2;
+    FieldObject** var_s0_2;
 
     DrawSync(0);
 
@@ -284,7 +295,7 @@ void func_800522B4(s32 arg0)
         var_s0_2++;
         do
         {
-            *((u16*)(((char*)var_v0) + 0x26)) = 0;
+            var_v0->flag26 = 0;
             var_v0 = *var_s0_2;
             var_s0_2++;
         } while (var_v0 != 0);
@@ -300,7 +311,7 @@ void func_800522B4(s32 arg0)
             do
             {
                 temp_a3 = *var_s0_2;
-                temp_a0_2 = *((u32*)(((char*)temp_a3) + 4));
+                temp_a0_2 = temp_a3->unk4;
                 var_v1_2 = var_s1_2;
                 if (var_s1_2 != 0)
                 {
@@ -326,7 +337,7 @@ void func_800522B4(s32 arg0)
                     var_s1_2 += 1;
 
                     *var_a1 = temp_a0_2;
-                    func_8005B298(temp_a0_2, *((u16*)(((char*)temp_a3) + 0x2A)), D_801ED490 - 1, temp_a3);
+                    func_8005B298(temp_a0_2, temp_a3->unk2A, D_801ED490 - 1, temp_a3);
                 }
                 var_s0_2 += 1;
                 var_a1 = &sp[4];
@@ -343,7 +354,7 @@ void func_80052458(unsigned short arg0, void* arg1)
     u8* ptr = (u8*)D_80180020;
     RegStruct* hw = (RegStruct*)0x801ED400;
     short counter = arg0 - 1;
-    S0Struct* temp_s0;
+    FieldObject* temp_s0;
     s32 var_s2;
     u16 temp_s1;
     u8 temp_v0_3;
@@ -358,7 +369,7 @@ void func_80052458(unsigned short arg0, void* arg1)
         ptr += 4;
     }
 
-    temp_s0 = *((S0Struct**)ptr);
+    temp_s0 = *((FieldObject**)ptr);
     hw->unk0 = temp_s0->unk30;
     hw->unk2 = temp_s0->unk32;
     hw->unk4 = ((*((u32*)(&temp_s0->unk2C))) >> 1) & 1;
@@ -398,7 +409,7 @@ void func_80052458(unsigned short arg0, void* arg1)
         s32 s3 = temp_s1;
         args.c = 0x100;
         args.d = (s16)temp_s1;
-        func_80019A34(&args, var_s2);
+        LoadImage(&args, var_s2);
         var_s2 += s3 << 9;
         args.b += temp_s1;
     }
@@ -407,7 +418,7 @@ void func_80052458(unsigned short arg0, void* arg1)
     {
         args.c = (s16)temp_v0_3;
         args.d = 1;
-        func_80019A34(&args, var_s2);
+        LoadImage(&args, var_s2);
     }
     func_80052628(temp_s0, arg0 & 0xFFFF);
     func_8006312C();
