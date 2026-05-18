@@ -43,6 +43,7 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x22B9, c, field1]
+      - [0x29B9, c, field2]
       - [0x3C11, c, unk1]
       - [0x7C2D5, data, data]
   - [0xD4368]
