@@ -87,7 +87,15 @@ extern D_80180014_t* D_80180014;
 extern void func_80056A04(void); /* extern */
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/m1WWc
+ * @brief Initialize a field render context for a scene (no-FMV variant).
+ *
+ * Clears both ordering tables of the double-buffered render context, selects
+ * field object @p arg1, advances the global scene cursor (D_801ED000) by 0x60,
+ * and seeds the two primitive-buffer cursors.
+ *
+ * @param arg0 Field render context (two 0x7CC4-byte frame buffers).
+ * @param arg1 Field object index, passed to func_80052458.
+ * @see decomp.me (100%) https://decomp.me/scratch/m1WWc
  */
 void func_80051F28(void* arg0, unsigned short arg1)
 {
@@ -106,7 +114,8 @@ void func_80051F28(void* arg0, unsigned short arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/S4vVP
+ * @brief Reset the field scene-state block at 0x801ED480 and counter D_801ED02C.
+ * @see decomp.me (100%) https://decomp.me/scratch/S4vVP
  */
 void func_80051FBC(void)
 {
@@ -119,7 +128,16 @@ void func_80051FBC(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/lg9gw
+ * @brief Build and draw one field frame, servicing streamed video when active.
+ *
+ * Runs the field draw helpers against the render context and pumps
+ * movie_service_video_ops (func_80140D48) whenever CD audio is playing.
+ *
+ * @param unused Unused first parameter.
+ * @param base   Field render context base address.
+ * @param arg2   Primitive/draw count; forced to 2 when @p arg3 is non-zero.
+ * @param arg3   Non-zero selects the fixed 2-primitive path.
+ * @see decomp.me (100%) https://decomp.me/scratch/lg9gw
  */
 void func_80051FF8(s32 unused, s32 base, s32 arg2, s32 arg3)
 {
@@ -148,7 +166,14 @@ void func_80051FF8(s32 unused, s32 base, s32 arg2, s32 arg3)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/KyLZb
+ * @brief Zero the four per-node accumulators across the g_allocInfo list.
+ *
+ * Walks the linked list from g_allocInfo->unk8, clearing unk24/unk28/unk2C/unk30
+ * on every node. When both arguments are zero, also calls func_80056A04.
+ *
+ * @param arg0 TODO: meaning unknown; both args zero triggers func_80056A04.
+ * @param arg1 TODO: meaning unknown.
+ * @see decomp.me (100%) https://decomp.me/scratch/KyLZb
  */
 void func_800520A0(s32 arg0, s32 arg1)
 {
@@ -173,7 +198,15 @@ void func_800520A0(s32 arg0, s32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/EXpXm
+ * @brief Initialize a field scene and its FMV using a caller-supplied context.
+ *
+ * Streams MOVIE.BIN into 0x80140000 and starts playback, loads the map
+ * graphics for map id D_801ED480, then initializes render context @p arg1 for
+ * field object D_801ED482.
+ *
+ * @param unused Unused first parameter.
+ * @param arg1   Field render context to initialize.
+ * @see decomp.me (100%) https://decomp.me/scratch/EXpXm
  */
 void func_80052108(void* unused, void* arg1)
 {
@@ -208,7 +241,11 @@ void func_80052108(void* unused, void* arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/KMYoZ
+ * @brief Initialize a field scene and its FMV, allocating the render context.
+ *
+ * Same flow as func_80052108, but obtains the render context from
+ * FUN_80015c28 instead of receiving it as a parameter.
+ * @see decomp.me (100%) https://decomp.me/scratch/KMYoZ
  */
 void func_800521DC(void)
 {
@@ -239,7 +276,15 @@ void func_800521DC(void)
 }
 
 /**
- * decomp.me (97.33%) https://decomp.me/scratch/V1GlO
+ * @brief Load a field map's graphics and register its scene objects.
+ *
+ * Reads map resource (0xB4 + @p arg0) into 0x80180000, uploads its texture
+ * pages to VRAM via LoadImage, clears flag26 on every object in D_80180020,
+ * and (when D_801ED490 is set) registers each distinct object through
+ * func_8005B298.
+ *
+ * @param arg0 Map id; values below 15 use a blocking CD read, others stream.
+ * @see decomp.me (97.33%) https://decomp.me/scratch/V1GlO
  */
 void func_800522B4(s32 arg0)
 {
@@ -347,7 +392,15 @@ void func_800522B4(s32 arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/vjiqR
+ * @brief Select a field object and apply its image and background color.
+ *
+ * Walks D_80180020 to object @p arg0, copies its unk30/unk32 into the register
+ * block at 0x801ED400, sets the DRAWENV background color in both frame buffers
+ * of @p arg1, and uploads the object's texture and CLUT to VRAM.
+ *
+ * @param arg0 Field object index into D_80180020.
+ * @param arg1 Field render context; when NULL the DRAWENV update is skipped.
+ * @see decomp.me (100%) https://decomp.me/scratch/vjiqR
  */
 void func_80052458(unsigned short arg0, void* arg1)
 {
