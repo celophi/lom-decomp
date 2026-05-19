@@ -84,14 +84,14 @@ void func_80015D6C(void* arg0)
             temp_v0 = new_var[0x10 / 4];
         }
         var_s0->unk40B8 = temp_v0;
-        func_800520A0(D_800473E8, D_80035248);
+        field_clear_node_accumulators(D_800473E8, D_80035248);
         s1 = (var_s0 != ((ObjStruct*)arg0)) ? (1) : (0);
         func_800676B4(var_s0, s1);
         new_var3 = (ObjStruct*)arg0;
         if (D_8010D018 == 0)
         {
             VSync(1);
-            func_80051FF8(s1, var_s0, D_800473E8, D_80035248);
+            field_draw_frame(s1, var_s0, D_800473E8, D_80035248);
             VSync(new_var4);
             DrawSync(0 * 0);
             func_800157B0(2);
@@ -160,7 +160,7 @@ void func_80015F88(void* arg0)
     D_8010D018 = 0;
     func_800678D4(arg0);
     D_800473E8 = 0;
-    func_80051FBC(arg0);
+    field_scene_reset(arg0);
 }
 
 /**

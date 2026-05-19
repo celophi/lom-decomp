@@ -150,7 +150,7 @@ volatile void Main(void)
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 func_800A3534();
-                func_80051FBC(0);
+                field_scene_reset(0);
                 D_8003EC98 = 0;
                 g_gameState =
                     func_80140004(0x80160000, (u32)ptrA, (u32)ptrA, (*(u8*)&temp_s2->slot_flags & 0x7F) + 4, 0, (u32)ptrA, 1);
@@ -176,7 +176,7 @@ volatile void Main(void)
                 cdrom_stream(16, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                func_80051FBC(new_var2);
+                field_scene_reset(new_var2);
                 D_8003EC9C = 7;
                 if (func_801400C4() != 0)
                 {
