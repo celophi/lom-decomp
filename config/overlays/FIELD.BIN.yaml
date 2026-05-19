@@ -22,7 +22,7 @@ options:
 
   symbol_addrs_path:
     - config/symbols/shared_symbol_addrs.txt
-    - config/overlays/field_symbol_addrs.txt
+    - config/symbols/field_symbol_addrs.txt
 
   find_file_boundaries: False
   make_full_disasm_for_code: True
