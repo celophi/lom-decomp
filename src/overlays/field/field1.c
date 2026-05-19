@@ -35,18 +35,18 @@ typedef struct
  */
 typedef struct
 {
-    u8  _pad0[4];
-    s32 unk4;     /**< 0x04 VRAM address: LoadImage source; also the dedup key in func_800522B4 */
-    u8  _pad1[0x26 - 8];
-    u16 flag26;   /**< 0x26 cleared at the start of each map load (func_800522B4) */
-    u16 unk28;    /**< 0x28 hi byte = texture height, lo byte = CLUT width */
-    u16 unk2A;    /**< 0x2A passed to func_8005B298 */
-    u8  unk2C;    /**< 0x2C bit0 = has explicit color, bit1 -> RegStruct.unk4 */
-    u8  unk2D;    /**< 0x2D background red   */
-    u8  unk2E;    /**< 0x2E background green */
-    u8  unk2F;    /**< 0x2F background blue  */
-    u16 unk30;    /**< 0x30 -> RegStruct.unk0 */
-    u16 unk32;    /**< 0x32 -> RegStruct.unk2 */
+    u8 _pad0[4];
+    s32 unk4; /**< 0x04 VRAM address: LoadImage source; also the dedup key in func_800522B4 */
+    u8 _pad1[0x26 - 8];
+    u16 flag26; /**< 0x26 cleared at the start of each map load (func_800522B4) */
+    u16 unk28;  /**< 0x28 hi byte = texture height, lo byte = CLUT width */
+    u16 unk2A;  /**< 0x2A passed to func_8005B298 */
+    u8 unk2C;   /**< 0x2C bit0 = has explicit color, bit1 -> RegStruct.unk4 */
+    u8 unk2D;   /**< 0x2D background red   */
+    u8 unk2E;   /**< 0x2E background green */
+    u8 unk2F;   /**< 0x2F background blue  */
+    u16 unk30;  /**< 0x30 -> RegStruct.unk0 */
+    u16 unk32;  /**< 0x32 -> RegStruct.unk2 */
 } FieldObject;
 
 extern FieldObject** D_80180020;
@@ -466,6 +466,6 @@ void func_80052458(unsigned short arg0, void* arg1)
         args.d = 1;
         LoadImage(&args, var_s2);
     }
-    func_80052628(temp_s0, arg0 & 0xFFFF);
+    field_func_80052628(temp_s0, arg0 & 0xFFFF);
     func_8006312C();
 }
