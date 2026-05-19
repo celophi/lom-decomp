@@ -128,10 +128,11 @@ void FUN_8001160c(void)
 }
 
 /**
- * decomp.me link (98.25%) https://decomp.me/scratch/Oy5Dh
+ * decomp.me link (100%) https://decomp.me/scratch/Oy5Dh
  */
 void FUN_80011638(s32 arg0)
 {
+    u32 addr;
     u32 base;
     s32* info;
     u8* ptr;
@@ -143,12 +144,12 @@ void FUN_80011638(s32 arg0)
     }
 
     base = (arg0 + 0x93) & 0xFFFF;
-    cdrom_queue_read(base, 0x80180000);
+    addr = 0x80180000;
+    cdrom_queue_read(base, addr);
     cdrom_wait_queue_empty();
-
+    base = 0x80180000;
     info = (s32*)0x80180004;
     ptr = &D_80046FE0;
-    base = 0x80180000;
 
     bcopy((u_char*)((*info) + base), ptr, info[1] - (*info));
     akao_play_sequence_blocking((AkaoSeqHeader*)(info[1] + base), 1);
