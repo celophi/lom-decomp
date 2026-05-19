@@ -466,6 +466,6 @@ void func_80052458(unsigned short arg0, void* arg1)
         args.d = 1;
         LoadImage(&args, var_s2);
     }
-    func_80052628(temp_s0, arg0 & 0xFFFF);
+    field_func_80052628(temp_s0, arg0 & 0xFFFF);
     func_8006312C();
 }

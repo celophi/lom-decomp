@@ -222,7 +222,7 @@ extern s32 D_80180010;
  * decomp.me (88.34%) https://decomp.me/scratch/i4GmA
  * THIS FUNCTION MAY NOT BE FUNCTIONALLY EQUIVALENT. BE CAUTIOUS TO MAKE ASSUMPTIONS.
  */
-void func_80052628(ObjArg *arg0, u16 arg1)
+void field_func_80052628(ObjArg *arg0, u16 arg1)
 {
   s8 sp20;
   Unk *sp24;
