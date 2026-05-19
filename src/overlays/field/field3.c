@@ -60,7 +60,7 @@ extern T* func_8005ABD8(void* arg0, int arg1);
 /**
  * decomp.me (95.80%) https://decomp.me/scratch/Kkiiv
  */
-void func_80053880(void* arg0, s32 arg1)
+void field_validate_and_rasterize_quads(void* arg0, s32 arg1)
 {
     S1* s1 = (S1*)arg0;
     u32 var_t6 = 0;

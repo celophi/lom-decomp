@@ -202,11 +202,11 @@ typedef struct
 {
   u8 padding[8];
   Node *unk8;
-} D_80180014_t;
-extern Unk *D_80180014;
+} FieldScene;
+extern Unk *g_field_scene;
 extern void DecDCTReset(int mode);
 extern void DecDCTvlcBuild(u_short *table);
-void func_80053880(s32, s32);
+void field_validate_and_rasterize_quads(s32, s32);
 void func_80053C7C(s32, Unk **, void *);
 void func_8005477C(s32, Unk *, s32, s32);
 void func_80054904(s32, Unk *, s32, s32);
@@ -216,13 +216,13 @@ void *func_8005AB4C(u8);
 void *func_8005AB80(u8, u8);
 void func_8005AC50(void *, u16, s32 *);
 void func_8005AD20(u8, u16, s8 *);
-extern s32 D_80180010;
+extern s32 g_field_dyn_count;
 
 /**
  * decomp.me (88.34%) https://decomp.me/scratch/i4GmA
  * THIS FUNCTION MAY NOT BE FUNCTIONALLY EQUIVALENT. BE CAUTIOUS TO MAKE ASSUMPTIONS.
  */
-void field_func_80052628(ObjArg *arg0, u16 arg1)
+void field_build_render_records(ObjArg *arg0, u16 arg1)
 {
   s8 sp20;
   Unk *sp24;
@@ -406,14 +406,14 @@ void field_func_80052628(ObjArg *arg0, u16 arg1)
   while (0);
   sp3C = 0;
   sp24 = 0;
-  sp34 = D_80180014;
-  D_80180014->unk0 = arg0;
-  *((s32 *) (((u8 *) D_80180014) + 0xC)) = 0;
+  sp34 = g_field_scene;
+  g_field_scene->unk0 = arg0;
+  *((s32 *) (((u8 *) g_field_scene) + 0xC)) = 0;
   var_a3 = arg0->unk8;
-  sp24 = (Unk *) (((u8 *) D_80180014) + 0x74);
+  sp24 = (Unk *) (((u8 *) g_field_scene) + 0x74);
   sp28 = arg1;
-  var_t1 = (Node44 *) (((u8 *) D_80180014) + 8);
-  var_t5_2 = *((s16 **) (((u8 *) (&D_80180014)) + 8));
+  var_t1 = (Node44 *) (((u8 *) g_field_scene) + 8);
+  var_t5_2 = *((s16 **) (((u8 *) (&g_field_scene)) + 8));
   if (arg0->unk8 != (0 * 0))
   {
     do
@@ -988,10 +988,10 @@ void field_func_80052628(ObjArg *arg0, u16 arg1)
     }
     while (var_s1_2 != 0);
   }
-  func_80053880((0, arg0->unk14), 0);
-  func_80053880(arg0->unk18, 1);
-  func_80053880(arg0->unk1C, 2);
-  func_80053880(arg0->unk20, 3);
+  field_validate_and_rasterize_quads((0, arg0->unk14), 0);
+  field_validate_and_rasterize_quads(arg0->unk18, 1);
+  field_validate_and_rasterize_quads(arg0->unk1C, 2);
+  field_validate_and_rasterize_quads(arg0->unk20, 3);
   var_t0_3 = *((Node30 **) (((u8 *) sp34) + 4));
   if (var_t0_3 != 0)
   {
@@ -1253,8 +1253,8 @@ void field_func_80052628(ObjArg *arg0, u16 arg1)
   func_80053C7C(arg0->unk18, &sp24, ((u8 *) sp34) + 0x1C);
   func_80053C7C(arg0->unk1C, &sp24, ((u8 *) sp34) + 0x20);
   func_80053C7C(arg0->unk20, &sp24, ((u8 *) sp34) + 0x24);
-  var_v1_8 = *((s32 *) (((u8 *) (&D_80180010)) + 8));
-  var_s0_7 = D_80180010 - 1;
+  var_v1_8 = *((s32 *) (((u8 *) (&g_field_dyn_count)) + 8));
+  var_s0_7 = g_field_dyn_count - 1;
   new_var3 = new_var;
   var_t1_5 = (Unk *) (((u8 *) sp34) + 0x14);
   if (var_s0_7 != new_var3)
