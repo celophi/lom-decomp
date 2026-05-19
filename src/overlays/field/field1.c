@@ -4,7 +4,8 @@
 
 extern void DrawSync(s32);
 extern void ClearOTagR(void*, s32);
-extern void func_80052458(s32, void*);
+extern void field_select_object(s32, void*);
+extern void field_build_render_records(void*, unsigned short);
 extern void func_80054B1C(void);
 
 extern u8 g_cdAudioEnabled;
@@ -15,7 +16,7 @@ extern s32 D_801ED010;
 extern s32 D_801ED00C;
 extern u16 D_801ED480;
 extern u16 D_801ED482;
-extern u32 D_8018000C;
+extern u32 g_field_vram_byte_count;
 extern s32 D_801ED490;
 
 typedef struct
@@ -28,17 +29,17 @@ typedef struct
  * @brief A field scene object: a texture/CLUT image plus its color and
  *        placement data.
  *
- * @note @c D_80180020 is a null-terminated array of pointers to these.
- *       @c func_80052458 selects one by index and uploads its image;
- *       @c func_800522B4 clears @c flag26 on every object and registers
+ * @note @c g_field_objects is a null-terminated array of pointers to these.
+ *       @c field_select_object selects one by index and uploads its image;
+ *       @c field_load_map clears @c flag26 on every object and registers
  *       each distinct one.
  */
 typedef struct
 {
     u8 _pad0[4];
-    s32 unk4; /**< 0x04 VRAM address: LoadImage source; also the dedup key in func_800522B4 */
+    s32 unk4; /**< 0x04 VRAM address: LoadImage source; also the dedup key in field_load_map */
     u8 _pad1[0x26 - 8];
-    u16 flag26; /**< 0x26 cleared at the start of each map load (func_800522B4) */
+    u16 flag26; /**< 0x26 cleared at the start of each map load (field_load_map) */
     u16 unk28;  /**< 0x28 hi byte = texture height, lo byte = CLUT width */
     u16 unk2A;  /**< 0x2A passed to func_8005B298 */
     u8 unk2C;   /**< 0x2C bit0 = has explicit color, bit1 -> RegStruct.unk4 */
@@ -49,7 +50,7 @@ typedef struct
     u16 unk32;  /**< 0x32 -> RegStruct.unk2 */
 } FieldObject;
 
-extern FieldObject** D_80180020;
+extern FieldObject** g_field_objects;
 typedef struct
 {
     s16 a;
@@ -69,14 +70,15 @@ typedef struct Node
     u32 unk30;
 } Node;
 
-/* Structure for the global pointer D_80180014 */
+/* Field scratch arena at 0x80180014. Built by field_build_render_records;
+   walked by field_clear_node_accumulators. */
 typedef struct
 {
     u8 padding[8]; // offsets 0x00-0x07 (unknown/unused)
     Node* unk8;    // offset 0x08 (pointer to head of list)
-} D_80180014_t;
+} FieldScene;
 
-extern D_80180014_t* D_80180014;
+extern FieldScene* g_field_scene;
 extern void func_80056A04(void); /* extern */
 
 /**
@@ -87,17 +89,17 @@ extern void func_80056A04(void); /* extern */
  * and seeds the two primitive-buffer cursors.
  *
  * @param arg0 Field render context (two 0x7CC4-byte frame buffers).
- * @param arg1 Field object index, passed to func_80052458.
+ * @param arg1 Field object index, passed to field_select_object.
  * @see decomp.me (100%) https://decomp.me/scratch/m1WWc
  */
-void func_80051F28(void* arg0, unsigned short arg1)
+void field_init_ctx(void* arg0, unsigned short arg1)
 {
     u32* mem;
     s32 zero = 0;
     DrawSync(zero);
     ClearOTagR(arg0, 0x1010);
     ClearOTagR(((char*)arg0) + 0x7CC4, 0x1010);
-    func_80052458(arg1 & 0xFFFF, arg0);
+    field_select_object(arg1 & 0xFFFF, arg0);
     mem = (u32*)0x801ED000;
     mem[1] = mem[0];
     mem[0] = mem[0] + 0x60;
@@ -110,7 +112,7 @@ void func_80051F28(void* arg0, unsigned short arg1)
  * @brief Reset the field scene-state block at 0x801ED480 and counter D_801ED02C.
  * @see decomp.me (100%) https://decomp.me/scratch/S4vVP
  */
-void func_80051FBC(void)
+void field_scene_reset(void)
 {
     S_801ED480* ptr = (S_801ED480*)0x801ED480;
     ptr->unk0 = 0;
@@ -132,7 +134,7 @@ void func_80051FBC(void)
  * @param arg3   Non-zero selects the fixed 2-primitive path.
  * @see decomp.me (100%) https://decomp.me/scratch/lg9gw
  */
-void func_80051FF8(s32 unused, s32 base, s32 arg2, s32 arg3)
+void field_draw_frame(s32 unused, s32 base, s32 arg2, s32 arg3)
 {
 
     u8* struct_ptr;
@@ -168,11 +170,11 @@ void func_80051FF8(s32 unused, s32 base, s32 arg2, s32 arg3)
  * @param arg1 TODO: meaning unknown.
  * @see decomp.me (100%) https://decomp.me/scratch/KyLZb
  */
-void func_800520A0(s32 arg0, s32 arg1)
+void field_clear_node_accumulators(s32 arg0, s32 arg1)
 {
     Node* var_v0;
 
-    var_v0 = D_80180014->unk8;
+    var_v0 = g_field_scene->unk8;
     if (var_v0 != 0)
     {
         do
@@ -201,7 +203,7 @@ void func_800520A0(s32 arg0, s32 arg1)
  * @param arg1   Field render context to initialize.
  * @see decomp.me (100%) https://decomp.me/scratch/EXpXm
  */
-void func_80052108(void* unused, void* arg1)
+void field_init_with_fmv(void* unused, void* arg1)
 {
     u16 temp_s1;
     u16 first_val;
@@ -213,13 +215,13 @@ void func_80052108(void* unused, void* arg1)
 
     // Read two 16-bit values from fixed address 0x801ED480
     first_val = *(u16*)addr;
-    func_800522B4(first_val);
+    field_load_map(first_val);
     temp_s1 = *(u16*)(addr + 2);
 
     DrawSync(0);
     ClearOTagR(arg1, 0x1010);
     ClearOTagR((void*)((char*)arg1 + 0x7CC4), 0x1010);
-    func_80052458(temp_s1 & 0xFFFF, arg1);
+    field_select_object(temp_s1 & 0xFFFF, arg1);
 
     D_801ED004 = D_801ED000;
     D_801ED000 += 0x60;
@@ -236,11 +238,11 @@ void func_80052108(void* unused, void* arg1)
 /**
  * @brief Initialize a field scene and its FMV, allocating the render context.
  *
- * Same flow as func_80052108, but obtains the render context from
+ * Same flow as field_init_with_fmv, but obtains the render context from
  * FUN_80015c28 instead of receiving it as a parameter.
  * @see decomp.me (100%) https://decomp.me/scratch/KMYoZ
  */
-void func_800521DC(void)
+void field_init_with_fmv_alloc(void)
 {
     u16 temp_s1;
     void* temp_s0;
@@ -250,12 +252,12 @@ void func_800521DC(void)
     DrawSync(0);
     cdrom_stream(CD_RES_MOVIE_BIN, (void*)0x80140000);
     func_80140018(0); /* MOVIE.BIN entry point (offset 0x18) */
-    func_800522B4(D_801ED480);
+    field_load_map(D_801ED480);
     temp_s1 = D_801ED482;
     DrawSync(0);
     ClearOTagR(temp_s0, 0x1010);
     ClearOTagR((void*)((char*)temp_s0 + 0x7CC4), 0x1010);
-    func_80052458(temp_s1 & 0xFFFF, temp_s0);
+    field_select_object(temp_s1 & 0xFFFF, temp_s0);
     D_801ED004 = D_801ED000;
     D_801ED000 += 0x60;
     func_80054B1C();
@@ -272,14 +274,14 @@ void func_800521DC(void)
  * @brief Load a field map's graphics and register its scene objects.
  *
  * Reads map resource (0xB4 + @p arg0) into 0x80180000, uploads its texture
- * pages to VRAM via LoadImage, clears flag26 on every object in D_80180020,
+ * pages to VRAM via LoadImage, clears flag26 on every object in g_field_objects,
  * and (when D_801ED490 is set) registers each distinct object through
  * func_8005B298.
  *
  * @param arg0 Map id; values below 15 use a blocking CD read, others stream.
  * @see decomp.me (97.33%) https://decomp.me/scratch/V1GlO
  */
-void func_800522B4(s32 arg0)
+void field_load_map(s32 arg0)
 {
     u16 sp[24];
     s32 var_s1_2;
@@ -305,11 +307,11 @@ void func_800522B4(s32 arg0)
         cdrom_stream((arg0 + 0xB4) & 0xFFFF, 0x80180000);
     }
 
-    // Load D_80180014 into v1; store 0x140 using v0 so v1 survives for D_8018000C reuse
-    var_s1 = D_80180014;
+    // Load g_field_scene into v1; store 0x140 using v0 so v1 survives for g_field_vram_byte_count reuse
+    var_s1 = g_field_scene;
     sp[0] = 0x140; // was: sp[0] = (var_v1_2 = 0x140) — that put 0x140 in v1, clobbering the lui
     sp[1] = 0x100;
-    var_s0 = D_8018000C >> 9; // compiler reuses v1 (%hi shared with D_80180014)
+    var_s0 = g_field_vram_byte_count >> 9; // compiler reuses v1 (%hi shared with g_field_scene)
     sp[3] = 0x100;
     // Removed dead: if ((temp_a0_2 && temp_a0_2) && temp_a0_2) {}
 
@@ -326,7 +328,7 @@ void func_800522B4(s32 arg0)
 
     // Single pointer var — walks s0 in-place; value in v0
     // Collapsed var_s0_2 and var_s0_3 into one variable
-    var_s0_2 = D_80180020;
+    var_s0_2 = g_field_objects;
     var_v0 = *var_s0_2;
     if (var_v0 != 0)
     {
@@ -341,7 +343,7 @@ void func_800522B4(s32 arg0)
 
     if (D_801ED490 != 0)
     {
-        var_s0_2 = D_80180020; // reload (was var_s0_3, now same variable)
+        var_s0_2 = g_field_objects; // reload (was var_s0_3, now same variable)
         var_s1_2 = 0;
         if ((*var_s0_2) != 0)
         {
@@ -387,17 +389,17 @@ void func_800522B4(s32 arg0)
 /**
  * @brief Select a field object and apply its image and background color.
  *
- * Walks D_80180020 to object @p arg0, copies its unk30/unk32 into the register
+ * Walks g_field_objects to object @p arg0, copies its unk30/unk32 into the register
  * block at 0x801ED400, sets the DRAWENV background color in both frame buffers
  * of @p arg1, and uploads the object's texture and CLUT to VRAM.
  *
- * @param arg0 Field object index into D_80180020.
+ * @param arg0 Field object index into g_field_objects.
  * @param arg1 Field render context; when NULL the DRAWENV update is skipped.
  * @see decomp.me (100%) https://decomp.me/scratch/vjiqR
  */
-void func_80052458(unsigned short arg0, void* arg1)
+void field_select_object(unsigned short arg0, void* arg1)
 {
-    u8* ptr = (u8*)D_80180020;
+    u8* ptr = (u8*)g_field_objects;
     RegStruct* hw = (RegStruct*)0x801ED400;
     short counter = arg0 - 1;
     FieldObject* temp_s0;
@@ -466,6 +468,6 @@ void func_80052458(unsigned short arg0, void* arg1)
         args.d = 1;
         LoadImage(&args, var_s2);
     }
-    field_func_80052628(temp_s0, arg0 & 0xFFFF);
+    field_build_render_records(temp_s0, arg0 & 0xFFFF);
     func_8006312C();
 }
