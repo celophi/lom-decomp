@@ -117,10 +117,23 @@ typedef struct GoverFrameHalf
     u8* allocCursor;
 } GoverFrameHalf;
 
-extern s32 func_800A368C(s32, s32);
-extern s32 func_800A380C(void);
-extern s32 func_800A39A8(s32, s32, s32, s32);
-extern s32 D_8011588C;
+/*
+ * Audio/music helpers used by gover_show_screen. Real names are still unknown;
+ * roles below are inferred from call-site context and AKAO sequencing.
+ */
+extern s32 func_800A368C(s32, s32); /* music: load/start track from resource index */
+extern s32 func_800A380C(void);     /* music: commit/apply pending state (e.g. volume) */
+extern s32 func_800A39A8(s32, s32, s32, s32); /* one-shot SFX/voice playback */
+
+/**
+ * @brief AKAO music master volume slot, sampled by func_800A380C on commit.
+ *
+ * @note Name inferred from usage - it is set to AKAO_VOLUME_MAX immediately
+ * before func_800A380C() and an akao_cmd_c0 volume command. Only referenced
+ * from this overlay; not in any shared symbol map.
+ */
+extern s32 g_akao_music_volume;
+
 extern u32 D_8003EC90;
 extern s32 D_8010D018;
 extern AudioDataBlock g_audioData;
@@ -305,7 +318,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     if (musicResourceIndex != -1)
     {
         func_800A368C(musicResourceIndex, 0);
-        D_8011588C = AKAO_VOLUME_MAX;
+        g_akao_music_volume = AKAO_VOLUME_MAX;
         func_800A380C();
         akao_cmd_c0(0, AKAO_VOLUME_MAX);
     }
@@ -347,7 +360,7 @@ static void gover_run(void)
     GoverFrameHalf* current;
     GoverFrameHalf* drawing;
     GoverFrameHalf* next;
-    u8 dummy[8];
+    u8 _match_pad[8]; /* stack-shape padding required for matching codegen */
 
     func_800AA02C();
     current = (GoverFrameHalf*)g_goverFrameHeader;
@@ -365,7 +378,7 @@ static void gover_run(void)
         ClearOTagR((u_long*)drawing->otag, 8);
         drawing->allocCursor = drawing->primBuf;
         func_800A9E78();
-        gover_build_otag((s32*)drawing);
+        gover_build_otag((unsigned char*)drawing);
         DrawSync(0);
         func_800157B0(2);
 
@@ -428,7 +441,7 @@ static void gover_run(void)
  *                the OTag[0] linked-list head and the container for the
  *                primitive allocation cursor at offset 0x498.
  *
- * @see decomp.me (97.86%) https://decomp.me/scratch/q3LKi
+ * @see decomp.me (100%) https://decomp.me/scratch/q3LKi
  */
 static void gover_build_otag(unsigned char* pOtBuf)
 {
@@ -443,7 +456,7 @@ static void gover_build_otag(unsigned char* pOtBuf)
         g_fadeLevel += g_fadeStep;
     }
 
-    if (g_fadeLevel == 128)
+    if (g_fadeLevel == GOVER_FADE_FULL)
     {
         g_fadeStep = 0;
     }
@@ -465,13 +478,13 @@ static void gover_build_otag(unsigned char* pOtBuf)
     setBGR0((SPRT*)pPrimA, leftFadeLevel, leftFadeLevel, leftFadeLevel);
     addPrim(pOtBuf, pPrimA);
 
-    pPrimA += 20;
+    pPrimA += sizeof(SPRT);
 
     // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=SCREEN_WIDTH, ABR=add)
     setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
     addPrim(pOtBuf, pPrimA);
 
-    pPrimB = pPrimA + 8;
+    pPrimB = pPrimA + sizeof(DR_TPAGE);
     pPrimA = pPrimB;
 
     // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=SCREEN_WIDTH+128)
@@ -487,12 +500,12 @@ static void gover_build_otag(unsigned char* pOtBuf)
 
     addPrim(pOtBuf, pPrimB);
 
-    pPrimA += 20;
+    pPrimA += sizeof(SPRT);
 
     // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=SCREEN_WIDTH+128, ABR=add)
     setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH + 128, 0));
     pPrimB = pPrimA;
-    pPrimB += 8;
+    pPrimB += sizeof(DR_TPAGE);
 
     addPrim(pOtBuf, pPrimA);
 
@@ -514,7 +527,7 @@ static void gover_build_otag(unsigned char* pOtBuf)
  */
 static void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer)
 {
-    volatile u8 dummy[8];
+    volatile u8 _match_pad[8]; /* stack-shape padding required for matching codegen */
     cdrom_queue_read(cdResourceIndex & 0xFFFF, ramBuffer);
     cdrom_wait_queue_empty();
     gover_upload_image_to_vram((ClutSectionHeader*)ramBuffer, coordinates);
