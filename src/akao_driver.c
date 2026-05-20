@@ -136,32 +136,30 @@ void akao_spu_wait(void)
 }
 
 /**
- * @brief Validates an AKAO buffer's magic and forwards it to the driver.
+ * @brief Validates an AKAO bank's magic and forwards it to the driver.
  *
- * Checks that @p sequenceData starts with the 'AKAO' magic via akao_check_magic.
- * On success, reads the bank id (offset 0x18) and SPU upload address
- * (offset 0x10) from the AkaoBankHeader and dispatches the buffer through
- * akao_upload_bank, which primes SpuSetTransferStartAddr and posts the
- * sequence to the audio driver.
+ * Checks that @p bank starts with the 'AKAO' magic via akao_check_magic.
+ * On success, reads @c bank_id and @c spu_dest_addr from the bank header and
+ * dispatches the buffer through akao_upload_bank, which primes
+ * SpuSetTransferStartAddr and posts the sample/articulation upload to the
+ * audio driver.
  *
  * Called in a tight loop by akao_play_sequence_blocking.
  *
- * @param seq_data            Pointer to an AKAO-tagged sequence buffer.
+ * @param bank                Pointer to an AKAO-tagged bank buffer.
  * @param wait_for_completion When non-zero, the inner submit blocks until the
  *                            SPU transfer completes.
  *
  * @return 0 if the magic matched and the buffer was submitted; -1 if the
  *         AKAO magic check failed.
- * 
+ *
  * @see decomp.me (100%) https://decomp.me/scratch/B0eQd
  */
-s32 akao_submit(AkaoSeqHeader* seq_data, s32 wait_for_completion)
+s32 akao_submit(AkaoBankHeader* bank, s32 wait_for_completion)
 {
-    AkaoBankHeader* bank_hdr = (AkaoBankHeader*)seq_data;
-    if (akao_check_magic((s32*)seq_data) == 0)
+    if (akao_check_magic((s32*)bank) == 0)
     {
-        akao_upload_bank(seq_data, wait_for_completion, bank_hdr->bank_id, bank_hdr->spu_dest_addr);
-        
+        akao_upload_bank(bank, wait_for_completion, bank->bank_id, bank->spu_dest_addr);
         return 0;
     }
     return -1;

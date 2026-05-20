@@ -82,7 +82,7 @@ extern AkaoXaTracker g_akao_xa_tracker;
 
 #define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
 
-extern s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion);
+extern s32 akao_submit(AkaoBankHeader* bank, s32 wait_for_completion);
 
 s32 FUN_80021fbc(void);
 s32 func_80021FDC(void);
@@ -975,7 +975,7 @@ s32 akao_cmd_f1(void)
 void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
     g_akao_driver_flags &= ~1;
-    while (akao_submit(sequenceData, waitForCompletion) == 1);
+    while (akao_submit((AkaoBankHeader*)sequenceData, waitForCompletion) == 1);
 }
 
 /**
