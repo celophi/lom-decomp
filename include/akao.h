@@ -127,7 +127,7 @@ typedef struct AkaoTimeStamp
  */
 typedef struct AkaoSeqHeader
 {
-    u8 magic[4];
+    u32 magic;       /* "AKAO" in little-endian = 0x4F414B41 */
     u16 id;
     u16 length;
     u16 reverb_type;
@@ -170,14 +170,41 @@ typedef struct AkaoBankHeader
 } AkaoBankHeader;
 
 /**
+ * @brief One entry in an AKAO instrument-bank articulation table.
+ *
+ * Each AkaoBankHeader is followed (starting at file offset 0x40) by
+ * @c articulation_count of these 16-byte entries, one per SPU voice setup
+ * the bank exposes. They are copied into the driver's articulation slot
+ * table @c g_akao_articulation_slots by akao_relocate_articulations, which
+ * biases @c sample_addr and @c loop_addr by the SPU upload base so the
+ * in-RAM table holds absolute SPU offsets. The trailing two words are
+ * pre-baked SPU voice parameters and are copied verbatim.
+ *
+ * Field semantics for words 0x08 and 0x0C are inferred from the PSX SPU
+ * voice-register layout and the matched relocation code; they likely
+ * encode ADSR envelope and pitch/voice flags but exact bit-packings are
+ * not yet confirmed against the AKAO source. Treat @c adsr and @c pitch_misc
+ * as opaque u32 blobs until verified.
+ */
+typedef struct AkaoArticulation
+{
+    u32 sample_addr; /* 0x00: SPU sample start - biased by spu_base on upload */
+    u32 loop_addr;   /* 0x04: SPU loop point   - biased by spu_base on upload */
+    u32 adsr;        /* 0x08: ADSR envelope (TODO: bit layout)                */
+    u32 pitch_misc;  /* 0x0C: pitch / voice flags (TODO: bit layout)          */
+} AkaoArticulation; /* sizeof = 0x10 */
+
+/**
  * Per-channel runtime state for the AKAO driver.
  *
  * The driver allocates 0x20 sequence-channel slots back-to-back starting at
- * @c D_8004C260 and another 0x18 SFX-channel slots starting at @c g_sfx_channels.
- * Each slot is 0x118 bytes wide. @c g_akao_seq_channel0 is a pointer set in
- * akao_driver_init_state to alias the first sequence-channel slot; the
- * streaming/XA-setup code-paths read this slot's flag byte to decide whether
- * to relocate the SPU upload window.
+ * @c g_akao_seq_channels and another 0x18 SFX-channel slots starting at @c g_sfx_channels.
+ * Each slot is 0x118 bytes wide. A separate single-slot context lives at
+ * @c g_akao_seq_master_state. @c g_akao_seq_channel0 is a pointer set in
+ * akao_driver_init_state to alias the master-state slot and is swapped to
+ * @c g_akao_seq_channel1 during per-frame seq processing; the streaming/XA-setup
+ * code-paths read this slot's flag byte to decide whether to relocate the SPU
+ * upload window.
  *
  * Only the fields that are actually inspected through @c g_akao_seq_channel0 are typed
  * here; the remainder of the slot is padded out so @c sizeof reflects the
