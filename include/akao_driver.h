@@ -37,7 +37,7 @@ extern s32 D_8003EC48;
 extern s32 D_8003EC50;
 extern s32 D_8003EC54;
 
-extern s32 akao_check_magic(s32 *data);
+extern s32 akao_check_magic(AkaoSeqHeader *hdr);
 extern void func_80028E34(int, volatile short, void *, int);
 extern void func_8002A134(void);
 

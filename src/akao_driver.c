@@ -38,19 +38,18 @@ void akao_relocate_articulations(AkaoArticulation* src, AkaoArticulation* dst, s
  * @brief Validates the 'AKAO' magic word at the head of an audio resource.
  *
  * The Square AKAO sound driver tags every bank/sequence with the four-byte
- * little-endian magic 0x4F414B41 ("AKAO"). This function returns 0 only when
- * @p data points at a buffer beginning with that exact magic, by subtracting the
- * magic and letting the result be zero on a match.
+ * little-endian magic 0x4F414B41 ("AKAO"). Returns 0 iff @p hdr begins with
+ * that magic, by subtracting and letting the result be zero on a match.
  *
- * @param data  Candidate AKAO-tagged buffer (first word is the magic).
+ * @param hdr  Candidate AKAO-tagged buffer.
  *
- * @return 0 if the magic matches; otherwise *data - AKAO_MAGIC (non-zero delta).
+ * @return 0 if the magic matches; otherwise (hdr->magic - AKAO_MAGIC).
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/scY8u
  */
-s32 akao_check_magic(s32* data)
+s32 akao_check_magic(AkaoSeqHeader* hdr)
 {
-    return *data - AKAO_MAGIC;
+    return hdr->magic - AKAO_MAGIC;
 }
 
 /**
@@ -157,7 +156,7 @@ void akao_spu_wait(void)
  */
 s32 akao_submit(AkaoBankHeader* bank, s32 wait_for_completion)
 {
-    if (akao_check_magic((s32*)bank) == 0)
+    if (akao_check_magic(&bank->header) == 0)
     {
         akao_upload_bank(bank, wait_for_completion, bank->bank_id, bank->spu_dest_addr);
         return 0;
@@ -202,7 +201,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
     s32 ret_val;
     akao_spu_wait();
     var_v0 = -1;
-    if (akao_check_magic(bank) == 0)
+    if (akao_check_magic((AkaoSeqHeader*)bank) == 0)
     {
         new_var = bank;
         bank_hdr = (AkaoBankHeader*)bank;

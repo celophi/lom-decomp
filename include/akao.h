@@ -127,7 +127,7 @@ typedef struct AkaoTimeStamp
  */
 typedef struct AkaoSeqHeader
 {
-    u8 magic[4];
+    u32 magic;       /* "AKAO" in little-endian = 0x4F414B41 */
     u16 id;
     u16 length;
     u16 reverb_type;
