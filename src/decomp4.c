@@ -147,7 +147,7 @@ void func_80029A8C(void)
         if ((D_8003EC74 & 0xFF0000) != (temp_s1 & 0xFF0000))
         {
             new_var3 = 0x100;
-            ptr = (u32*)(D_80049130 + new_var3);
+            ptr = (u32*)(g_akao_seq_channels + new_var3);
             i = 32;
             do
             {
@@ -170,7 +170,7 @@ void func_80029A8C(void)
             temp = (*((s32*)(((u8*)seq_ptr) + new_var5))) + (*((s32*)(((u8*)seq_ptr) + 0x54)));
             if ((((unsigned long)temp) & 0x7F0000) != ((*((s32*)(((u8*)seq_ptr) + 0x50))) & 0x7F0000))
             {
-                func_80026E8C(seq_ptr, D_80049130, new_var);
+                func_80026E8C(seq_ptr, g_akao_seq_channels, new_var);
             }
             *((s32*)(((u8*)g_akao_seq_channel0) + 0x50)) = temp;
         }
@@ -192,7 +192,7 @@ void func_80029A8C(void)
             *((s32*)(((u8*)g_akao_seq_channel1) + 0x50)) = temp;
         }
     }
-    mask = D_8004D400.unk0;
+    mask = g_akao_sfx_control.unk0;
     if (mask != 0)
     {
         new_var3 = mask;
@@ -421,7 +421,7 @@ void func_8002A134(void)
             else if ((g_akao_seq_channel0->unk4 | g_akao_seq_channel0->unk1C) == 0)
             {
                 func_80029A0C((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
-                func_80029A0C((s32*)D_8003EC24, &D_80049130, 0x2300);
+                func_80029A0C((s32*)D_8003EC24, &g_akao_seq_channels, 0x2300);
                 {
                     AkaoChannelState* tmp = g_akao_seq_channel1;
                     g_akao_seq_channel1 = 0;
@@ -442,7 +442,7 @@ void func_8002A134(void)
     /* Fourth conditional */
     if (g_akao_seq_channel0->unk4 != 0)
     {
-        func_80029E88(&D_80049130, 0);
+        func_80029E88(&g_akao_seq_channels, 0);
     }
 
     /* Fifth conditional */
@@ -450,19 +450,19 @@ void func_8002A134(void)
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
         func_80029E88(D_8003EC24, 1);
-        g_akao_seq_channel0 = &g_akao_seq_channels;
+        g_akao_seq_channel0 = &g_akao_seq_master_state;
     }
 
     /* SFX channel processing loop */
-    if (D_8004D400.unk0 != 0)
+    if (g_akao_sfx_control.unk0 != 0)
     {
-        var_s3 = D_8004D400.unk0;
+        var_s3 = g_akao_sfx_control.unk0;
         {
-            u32 sum = D_8004D400.unk18 + D_8004D400.unk16;
-            D_8004D400.unk18 = sum;
+            u32 sum = g_akao_sfx_control.unk18 + g_akao_sfx_control.unk16;
+            g_akao_sfx_control.unk18 = sum;
             if (((sum & 0xFFFF0000) != 0) || (D_8003EC7C & 4))
             {
-                D_8004D400.unk18 = sum & 0xFFFF;
+                g_akao_sfx_control.unk18 = sum & 0xFFFF;
 
                 bitMask = 0x1000;
                 channel = &g_sfx_channels[0];
@@ -486,8 +486,8 @@ void func_8002A134(void)
                             }
                             else if (temp_v0_2 == 0)
                             {
-                                D_8004D400.unkC |= bitMask;
-                                D_8004D400.unk8 &= ~bitMask;
+                                g_akao_sfx_control.unkC |= bitMask;
+                                g_akao_sfx_control.unk8 &= ~bitMask;
                             }
                             func_80024660(channel, bitMask, 1);
                         }

@@ -16,7 +16,7 @@
  * implicit int→pointer conversion.
  */
 extern void *g_akaoCmdParams[];
-extern s32 D_8004D400;
+extern s32 g_akao_sfx_control;
 extern u8 g_sfx_channels[];
 
 /**
@@ -349,7 +349,7 @@ void akao_stop_sfx_by_id(s32 arg0)
  * @brief Scans active SFX channels and ORs together their offset-0x28 fields.
  *
  * Iterates over the 12 SFX-channel slots in @c g_sfx_channels (each 0x118 bytes),
- * gated by the bitmap in @c D_8004D400 (one bit per channel starting at
+ * gated by the bitmap in @c g_akao_sfx_control (one bit per channel starting at
  * 0x1000); returns the bitwise-OR of the 32-bit value at offset 0x28 of every
  * active slot, masked to 24 bits.
  *
@@ -362,7 +362,7 @@ s32 func_800222A8(void)
     s32 new_var;
     s32 acc;
     unsigned int mask;
-    new_var = D_8004D400;
+    new_var = g_akao_sfx_control;
     bits = new_var;
     acc = bits == 0;
     if (acc)
@@ -387,7 +387,7 @@ s32 func_800222A8(void)
 /**
  * @brief Returns 1 if any active SFX channel's offset-0x28 field equals @p arg0.
  *
- * Same iteration shape as @c func_800222A8 over @c g_sfx_channels / @c D_8004D400,
+ * Same iteration shape as @c func_800222A8 over @c g_sfx_channels / @c g_akao_sfx_control,
  * but compares each active channel's offset-0x28 value to @p arg0; returns
  * 1 on first match, 0 otherwise.
  *
@@ -406,7 +406,7 @@ s32 func_80022310(s32 arg0)
     {
         return 0;
     }
-    bits = D_8004D400;
+    bits = g_akao_sfx_control;
     if (bits == 0)
     {
         return 0;

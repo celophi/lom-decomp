@@ -174,10 +174,12 @@ typedef struct AkaoBankHeader
  *
  * The driver allocates 0x20 sequence-channel slots back-to-back starting at
  * @c g_akao_seq_channels and another 0x18 SFX-channel slots starting at @c g_sfx_channels.
- * Each slot is 0x118 bytes wide. @c g_akao_seq_channel0 is a pointer set in
- * akao_driver_init_state to alias the first sequence-channel slot; the
- * streaming/XA-setup code-paths read this slot's flag byte to decide whether
- * to relocate the SPU upload window.
+ * Each slot is 0x118 bytes wide. A separate single-slot context lives at
+ * @c g_akao_seq_master_state. @c g_akao_seq_channel0 is a pointer set in
+ * akao_driver_init_state to alias the master-state slot and is swapped to
+ * @c g_akao_seq_channel1 during per-frame seq processing; the streaming/XA-setup
+ * code-paths read this slot's flag byte to decide whether to relocate the SPU
+ * upload window.
  *
  * Only the fields that are actually inspected through @c g_akao_seq_channel0 are typed
  * here; the remainder of the slot is padded out so @c sizeof reflects the

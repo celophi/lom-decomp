@@ -19,7 +19,7 @@ extern s32 D_8003EC78;
 extern s16 D_8003EC40;
 extern s32 D_8003EC38;
 extern s32 D_8003EC74;
-extern u8 D_80049130[];
+extern u8 g_akao_seq_channels[];
 
 extern u8 g_akao_xa_tracker[];
 extern u8 g_sfx_channels[];
@@ -33,7 +33,8 @@ typedef struct
 /**
  * @brief AKAO sequencer / SFX channel state block. Used for the song channel
  *        at @c g_akao_seq_channel0, the secondary slot at @c g_akao_seq_channel1, the
- *        backing storage at @c g_akao_seq_channels, and each entry of
+ *        backing storage at @c g_akao_seq_master_state, each entry of the
+ *        per-channel array @c g_akao_seq_channels, and each entry of
  *        @c g_sfx_channels (size 0x118 bytes).
  */
 typedef struct AkaoChannelState
@@ -103,9 +104,9 @@ typedef struct
 
 extern AkaoChannelState* g_akao_seq_channel1;
 extern s32 D_8003EC24;
-extern SfxControl D_8004D400;
+extern SfxControl g_akao_sfx_control;
 extern s32 D_8004D408;
-extern AkaoChannelState g_akao_seq_channels;
+extern AkaoChannelState g_akao_seq_master_state;
 extern TimingRing D_8003D160;
 
 extern s32 D_8003EC44;

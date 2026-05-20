@@ -242,7 +242,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
  *
  * Touched in akao_driver_init after the SPU is brought up. Clears the music
  * channel state for 0x20 sequence channels (each 0x118 bytes wide, indexed
- * via @c D_80049130) and 0x18 SFX channels (also 0x118-byte stride, in
+ * via @c g_akao_seq_channels) and 0x18 SFX channels (also 0x118-byte stride, in
  * @c g_sfx_channels). Pokes the SPU master/reverb registers
  * (@c 0x1F801D80..1F801DB2, @c 0x1F801DAA control). Calls back into the
  * higher-level @c func_80028E34 / @c SpuSetReverb to install the channel
@@ -261,8 +261,8 @@ void akao_driver_init_state(void)
     int new_var7;
     u16 new_var8;
     int new_var5;
-    u8* a0 = g_akao_seq_channels;
-    u8* a2 = D_80049130;
+    u8* a0 = g_akao_seq_master_state;
+    u8* a2 = g_akao_seq_channels;
     int new_var6;
     u8* new_var9;
     u32 a3;
@@ -278,11 +278,11 @@ void akao_driver_init_state(void)
     *((u32*)off(g_akao_driver_flags, 0x00)) = 0;
     *((u32*)off(g_akao_driver_flags, 0x04)) = 1;
     new_var = (u32*)off(D_8004F830, 0x00);
-    *((u32*)off(D_8004D400, 0x00)) = 0;
+    *((u32*)off(g_akao_sfx_control, 0x00)) = 0;
     *((u32*)off(a0, 0x04)) = 0;
     *((u32*)off(a0, 0x08)) = 0;
     *((u16*)off(a0, 0x5E)) = 0;
-    *((u32*)off(D_8004D400, 0x10)) = 0;
+    *((u32*)off(g_akao_sfx_control, 0x10)) = 0;
     *((u32*)off(a0, 0x1C)) = 0;
     *((u16*)off(D_8004C2D0, 0x5E)) = 0;
     *((u32*)off(D_8004C2D0, 0x04)) = 0;
@@ -300,9 +300,9 @@ void akao_driver_init_state(void)
     D_8003EC42 = 0;
     D_8003EC78 = 0;
     D_8003EC64 = 0;
-    *((u32*)off(D_8004D400, 0x1C)) = 0;
+    *((u32*)off(g_akao_sfx_control, 0x1C)) = 0;
     *((u32*)off(a0, 0x3C)) = 0;
-    *((u32*)off(D_8004D400, 0x20)) = 0;
+    *((u32*)off(g_akao_sfx_control, 0x20)) = 0;
     a3 = (new_var8 = *hw);
     *((s16*)0x1F801D80) = 0x3FFF;
     *((s16*)0x1F801D82) = 0x3FFF;
@@ -310,7 +310,7 @@ void akao_driver_init_state(void)
     *((s16*)0x1F801DB2) = 0x7FFF;
     *((u32*)off(a0, 0x40)) = 0;
     a3 = 0;
-    *((u32*)off(D_8004D400, 0x24)) = a3;
+    *((u32*)off(g_akao_sfx_control, 0x24)) = a3;
     *((u32*)off(a0, 0x44)) = 0;
     *((u16*)off(a0, 0x68)) = 0;
     *((u16*)off(a0, 0x66)) = 0;
@@ -364,7 +364,7 @@ void akao_driver_init_state(void)
     }
     {
         u8* a0_ptr = (u8*)g_akao_seq_channel0;
-        u8* v0_ptr = D_8004D400;
+        u8* v0_ptr = g_akao_sfx_control;
         u8* v1_ptr = g_akao_driver_flags;
         a0 = a0_ptr;
         *((u32*)off(a0, 0x18)) = 0;
