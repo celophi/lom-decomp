@@ -1,6 +1,6 @@
 #include "decomp4.h"
 
-u16 D_8003EC1C;
+u16 g_akao_irq_frame_counter;
 s32 D_8004D40C;
 u32 D_8004F758;
 s32 D_8003EC18;
@@ -32,9 +32,9 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
-void func_800299EC(void)
+void akao_apply_cdvol_to_spu(void)
 {
-    s32 val = (s32)D_8003EC6A;
+    s32 val = (s32)g_akao_cdvol_current;
     *(s16*)0x1F801DB0 = (s16)val;
     *(s16*)0x1F801DB2 = (s16)val;
 }
@@ -102,13 +102,13 @@ void func_80029A8C(void)
     void* ptr28;
     s32 new_var4;
     u32* ptr;
-    new_var4 = D_8003EC60;
-    D_8003EC70 = (D_8003EC70 + 1) & 0xFF;
-    if (D_8003EC64 != 0)
+    new_var4 = g_akao_cdvol_step;
+    g_akao_cdvol_tick = (g_akao_cdvol_tick + 1) & 0xFF;
+    if (g_akao_cdvol_fade_ticks != 0)
     {
-        D_8003EC64--;
-        D_8003EC68 += D_8003EC60;
-        func_800299EC(new_var4);
+        g_akao_cdvol_fade_ticks--;
+        g_akao_cdvol_acc += g_akao_cdvol_step;
+        akao_apply_cdvol_to_spu(new_var4);
     }
     xa = g_akao_xa_tracker;
     if (((*((s32*)(xa + 0x0C))) != 0) && ((*((s32*)(xa + 0x48))) != 0))
@@ -139,15 +139,15 @@ void func_80029A8C(void)
         D_8003EC42--;
         D_8003EC78 += D_8003EC3C;
     }
-    if (D_8003EC40 != 0)
+    if (g_akao_mastervol_fade_ticks != 0)
     {
-        new_var8 = &D_8003EC38;
-        D_8003EC40--;
-        temp_s1 = D_8003EC74 + (*new_var8);
-        if ((D_8003EC74 & 0xFF0000) != (temp_s1 & 0xFF0000))
+        new_var8 = &g_akao_mastervol_step;
+        g_akao_mastervol_fade_ticks--;
+        temp_s1 = g_akao_mastervol_acc + (*new_var8);
+        if ((g_akao_mastervol_acc & 0xFF0000) != (temp_s1 & 0xFF0000))
         {
             new_var3 = 0x100;
-            ptr = (u32*)(D_80049130 + new_var3);
+            ptr = (u32*)(g_akao_seq_channels + new_var3);
             i = 32;
             do
             {
@@ -156,7 +156,7 @@ void func_80029A8C(void)
                 i--;
             } while (i != 0);
         }
-        D_8003EC74 = temp_s1;
+        g_akao_mastervol_acc = temp_s1;
     }
     seq_ptr = g_akao_seq_channel0;
     if ((*((s32*)(((u8*)seq_ptr) + 4))) != 0)
@@ -170,29 +170,29 @@ void func_80029A8C(void)
             temp = (*((s32*)(((u8*)seq_ptr) + new_var5))) + (*((s32*)(((u8*)seq_ptr) + 0x54)));
             if ((((unsigned long)temp) & 0x7F0000) != ((*((s32*)(((u8*)seq_ptr) + 0x50))) & 0x7F0000))
             {
-                func_80026E8C(seq_ptr, D_80049130, new_var);
+                func_80026E8C(seq_ptr, g_akao_seq_channels, new_var);
             }
             *((s32*)(((u8*)g_akao_seq_channel0) + 0x50)) = temp;
         }
     }
-    ptr28 = D_8003EC28;
-    new_var6 = D_8003EC28;
-    if ((D_8003EC28 != 0) && ((*((s32*)(((u8*)ptr28) + 4))) != 0))
+    ptr28 = g_akao_seq_channel1;
+    new_var6 = g_akao_seq_channel1;
+    if ((g_akao_seq_channel1 != 0) && ((*((s32*)(((u8*)ptr28) + 4))) != 0))
     {
         t0 = *((s16*)(((u8*)new_var6) + 0x58));
         if (t0 != 0)
         {
             u16_tmp = *((u16*)(((u8*)ptr28) + 0x58));
-            *((s16*)(((u8*)D_8003EC28) + 0x58)) = u16_tmp - 1;
+            *((s16*)(((u8*)g_akao_seq_channel1) + 0x58)) = u16_tmp - 1;
             temp = (*((s32*)(((u8*)ptr28) + 0x50))) + (*((s32*)(((u8*)ptr28) + 0x54)));
-            if ((temp & 0x7F0000) != ((*((s32*)(((u8*)D_8003EC28) + 0x50))) & 0x7F0000))
+            if ((temp & 0x7F0000) != ((*((s32*)(((u8*)g_akao_seq_channel1) + 0x50))) & 0x7F0000))
             {
-                func_80026E8C(D_8003EC28, (void*)((u32)D_8003EC24), (u32)D_8003EC28);
+                func_80026E8C(g_akao_seq_channel1, (void*)((u32)D_8003EC24), (u32)g_akao_seq_channel1);
             }
-            *((s32*)(((u8*)D_8003EC28) + 0x50)) = temp;
+            *((s32*)(((u8*)g_akao_seq_channel1) + 0x50)) = temp;
         }
     }
-    mask = D_8004D400.unk0;
+    mask = g_akao_sfx_control.unk0;
     if (mask != 0)
     {
         new_var3 = mask;
@@ -257,7 +257,7 @@ s32 func_80029E88(s32 arg0, s32 arg1)
     AkaoDriverFlags* driver_flags;
 
     var_a0 = g_akao_seq_channel0->unk20 >> 16;
-    var_s2 = D_8003EC7A;
+    var_s2 = g_akao_master_vol_scalar;
 
     if (var_s2 != 0)
     {
@@ -274,7 +274,7 @@ s32 func_80029E88(s32 arg0, s32 arg1)
 
     g_akao_seq_channel0->unk28 = g_akao_seq_channel0->unk28 + var_a0;
 
-    if ((g_akao_seq_channel0->unk28 & 0xFFFF0000U) || (D_8003EC7C & 4))
+    if ((g_akao_seq_channel0->unk28 & 0xFFFF0000U) || (g_akao_driver_mode_flags & 4))
     {
         g_akao_seq_channel0->unk28 = (s32)(g_akao_seq_channel0->unk28 & 0xFFFFU);
 
@@ -388,16 +388,16 @@ void func_8002A134(void)
         u32 unk18_val;
 
         seq0 = g_akao_seq_channel0;
-        ec1c = D_8003EC1C;
+        ec1c = g_akao_irq_frame_counter;
         unk18_val = seq0->unk18;
         ec1c += 1;
-        D_8003EC1C = ec1c;
+        g_akao_irq_frame_counter = ec1c;
 
         if ((unk18_val == 0) && (D_8004D40C == 0))
         {
-            if (D_8003EC28 != 0)
+            if (g_akao_seq_channel1 != 0)
             {
-                if (D_8003EC28->unk18 != 0)
+                if (g_akao_seq_channel1->unk18 != 0)
                 {
                     func_80025D98();
                 }
@@ -411,20 +411,20 @@ void func_8002A134(void)
 
     /* Second block */
     {
-        AkaoChannelState* ch28 = D_8003EC28;
+        AkaoChannelState* ch28 = g_akao_seq_channel1;
         if (ch28 != 0)
         {
             if (ch28->unk4 == 0)
             {
-                D_8003EC28 = 0;
+                g_akao_seq_channel1 = 0;
             }
             else if ((g_akao_seq_channel0->unk4 | g_akao_seq_channel0->unk1C) == 0)
             {
                 func_80029A0C((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
-                func_80029A0C((s32*)D_8003EC24, &D_80049130, 0x2300);
+                func_80029A0C((s32*)D_8003EC24, &g_akao_seq_channels, 0x2300);
                 {
-                    AkaoChannelState* tmp = D_8003EC28;
-                    D_8003EC28 = 0;
+                    AkaoChannelState* tmp = g_akao_seq_channel1;
+                    g_akao_seq_channel1 = 0;
                     tmp->unk5E = 0;
                     tmp->unk4 = 0;
                 }
@@ -434,7 +434,7 @@ void func_8002A134(void)
 
     /* Third conditional */
     if (((D_8004F758 | g_akao_seq_channel0->unk14 | D_8004D408) != 0) ||
-        ((D_8003EC28 != 0) && (D_8003EC28->unk14 != 0)))
+        ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk14 != 0)))
     {
         func_800258B8(D_8004D408);
     }
@@ -442,27 +442,27 @@ void func_8002A134(void)
     /* Fourth conditional */
     if (g_akao_seq_channel0->unk4 != 0)
     {
-        func_80029E88(&D_80049130, 0);
+        func_80029E88(&g_akao_seq_channels, 0);
     }
 
     /* Fifth conditional */
-    if ((D_8003EC28 != 0) && (D_8003EC28->unk4 != 0))
+    if ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk4 != 0))
     {
-        g_akao_seq_channel0 = D_8003EC28;
+        g_akao_seq_channel0 = g_akao_seq_channel1;
         func_80029E88(D_8003EC24, 1);
-        g_akao_seq_channel0 = &D_8004C260;
+        g_akao_seq_channel0 = &g_akao_seq_master_state;
     }
 
     /* SFX channel processing loop */
-    if (D_8004D400.unk0 != 0)
+    if (g_akao_sfx_control.unk0 != 0)
     {
-        var_s3 = D_8004D400.unk0;
+        var_s3 = g_akao_sfx_control.unk0;
         {
-            u32 sum = D_8004D400.unk18 + D_8004D400.unk16;
-            D_8004D400.unk18 = sum;
-            if (((sum & 0xFFFF0000) != 0) || (D_8003EC7C & 4))
+            u32 sum = g_akao_sfx_control.unk18 + g_akao_sfx_control.unk16;
+            g_akao_sfx_control.unk18 = sum;
+            if (((sum & 0xFFFF0000) != 0) || (g_akao_driver_mode_flags & 4))
             {
-                D_8004D400.unk18 = sum & 0xFFFF;
+                g_akao_sfx_control.unk18 = sum & 0xFFFF;
 
                 bitMask = 0x1000;
                 channel = &g_sfx_channels[0];
@@ -471,7 +471,7 @@ void func_8002A134(void)
                 {
                     if (var_s3 & bitMask)
                     {
-                        if (!(D_8003EC7C & 2) || (channel->field_28 & 0x02000000))
+                        if (!(g_akao_driver_mode_flags & 2) || (channel->field_28 & 0x02000000))
                         {
                             channel->field_58++;
 
@@ -486,8 +486,8 @@ void func_8002A134(void)
                             }
                             else if (temp_v0_2 == 0)
                             {
-                                D_8004D400.unkC |= bitMask;
-                                D_8004D400.unk8 &= ~bitMask;
+                                g_akao_sfx_control.unkC |= bitMask;
+                                g_akao_sfx_control.unk8 &= ~bitMask;
                             }
                             func_80024660(channel, bitMask, 1);
                         }
@@ -501,7 +501,7 @@ void func_8002A134(void)
     }
 
     /* Periodic call */
-    if (!(D_8003EC1C & 3))
+    if (!(g_akao_irq_frame_counter & 3))
     {
         func_80029A8C();
     }
@@ -761,7 +761,7 @@ void func_8002A6FC(u8* arg0, u32 arg1)
 
     temp_a3 = *((u32*)(arg0 + 0x34));
     new_var2 = a2[0];
-    a1 = D_8004C340 + (new_var2 * 0x10);
+    a1 = g_akao_articulation_slots + (new_var2 * 0x10);
     *((s16*)(arg0 + 0x6A)) = new_var2;
 
     *(u32*)(arg0 + 0x104) = *(u32*)(a1 + 0);

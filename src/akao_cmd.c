@@ -16,7 +16,7 @@
  * implicit int→pointer conversion.
  */
 extern void *g_akaoCmdParams[];
-extern s32 D_8004D400;
+extern s32 g_akao_sfx_control;
 extern u8 g_sfx_channels[];
 
 /**
@@ -33,7 +33,7 @@ typedef struct
 {
     void* articulation_dst;     /* 0x00: current dst into the driver's
                                           articulation slot table
-                                          (D_8004C340 + bank_id * 0x10),
+                                          (g_akao_articulation_slots + bank_id * 0x10),
                                           advances as bytes are copied      */
     u32 spu_addr;               /* 0x04: current SPU upload address — seeded
                                           from AkaoBankHeader.spu_dest_addr,
@@ -64,7 +64,7 @@ extern u32 D_8004C150;
 extern AkaoChannelState* g_akao_seq_channel0;
 extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
-extern u8 D_8004C340[];
+extern u8 g_akao_articulation_slots[];
 extern s32 D_8004D388;
 extern s32 D_8004D38C;
 extern s32 D_8004D390;
@@ -82,7 +82,7 @@ extern AkaoXaTracker g_akao_xa_tracker;
 
 #define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
 
-extern s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion);
+extern s32 akao_submit(AkaoBankHeader* bank, s32 wait_for_completion);
 
 s32 FUN_80021fbc(void);
 s32 func_80021FDC(void);
@@ -349,7 +349,7 @@ void akao_stop_sfx_by_id(s32 arg0)
  * @brief Scans active SFX channels and ORs together their offset-0x28 fields.
  *
  * Iterates over the 12 SFX-channel slots in @c g_sfx_channels (each 0x118 bytes),
- * gated by the bitmap in @c D_8004D400 (one bit per channel starting at
+ * gated by the bitmap in @c g_akao_sfx_control (one bit per channel starting at
  * 0x1000); returns the bitwise-OR of the 32-bit value at offset 0x28 of every
  * active slot, masked to 24 bits.
  *
@@ -362,7 +362,7 @@ s32 func_800222A8(void)
     s32 new_var;
     s32 acc;
     unsigned int mask;
-    new_var = D_8004D400;
+    new_var = g_akao_sfx_control;
     bits = new_var;
     acc = bits == 0;
     if (acc)
@@ -387,7 +387,7 @@ s32 func_800222A8(void)
 /**
  * @brief Returns 1 if any active SFX channel's offset-0x28 field equals @p arg0.
  *
- * Same iteration shape as @c func_800222A8 over @c g_sfx_channels / @c D_8004D400,
+ * Same iteration shape as @c func_800222A8 over @c g_sfx_channels / @c g_akao_sfx_control,
  * but compares each active channel's offset-0x28 value to @p arg0; returns
  * 1 on first match, 0 otherwise.
  *
@@ -406,7 +406,7 @@ s32 func_80022310(s32 arg0)
     {
         return 0;
     }
-    bits = D_8004D400;
+    bits = g_akao_sfx_control;
     if (bits == 0)
     {
         return 0;
@@ -975,7 +975,7 @@ s32 akao_cmd_f1(void)
 void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
     g_akao_driver_flags &= ~1;
-    while (akao_submit(sequenceData, waitForCompletion) == 1);
+    while (akao_submit((AkaoBankHeader*)sequenceData, waitForCompletion) == 1);
 }
 
 /**
@@ -1017,7 +1017,7 @@ s32 akao_reset_xfer_state(void)
  *   - Seed @c g_akao_streaming_state from the staged header:
  *       @c spu_addr               ← spu_dest_addr
  *       @c sample_remaining       ← sample_size
- *       @c articulation_dst       ← &D_8004C340[bank_id * 0x10]
+ *       @c articulation_dst       ← &g_akao_articulation_slots[bank_id * 0x10]
  *       @c articulation_remaining ← articulation_count * 0x10
  *
  * Stage 2 (articulation copy):
@@ -1072,7 +1072,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             avail -= 0x40;
             g_akao_streaming_state.spu_addr = (s32)g_akao_bank_staging.spu_dest_addr;
             g_akao_streaming_state.sample_remaining = (u32)g_akao_bank_staging.sample_size;
-            g_akao_streaming_state.articulation_dst = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
+            g_akao_streaming_state.articulation_dst = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&g_akao_articulation_slots)));
             g_akao_streaming_state.articulation_remaining = (u32)(g_akao_bank_staging.articulation_count * 0x10);
         }
         else
@@ -1099,8 +1099,10 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             g_akao_streaming_state.articulation_remaining -= chunk;
             if (g_akao_streaming_state.articulation_remaining == 0)
             {
-                arti_slot = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
-                akao_relocate_articulations(arti_slot, arti_slot, g_akao_bank_staging.spu_dest_addr,
+                arti_slot = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&g_akao_articulation_slots)));
+                akao_relocate_articulations((AkaoArticulation*)arti_slot,
+                                            (AkaoArticulation*)arti_slot,
+                                            g_akao_bank_staging.spu_dest_addr,
                                             g_akao_bank_staging.articulation_count);
             }
         }
