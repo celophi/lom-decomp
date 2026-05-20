@@ -417,15 +417,9 @@ void akao_driver_init(void)
     SpuSetIRQ(0);
     SpuSetIRQCallback(0);
 
-    do
-    {
-        /* wait for condition */
-    } while (SetRCnt(0xF2000002, 0x44E8, 0x1000) == 0);
+    while (SetRCnt(0xF2000002, 0x44E8, 0x1000) == 0);
 
-    do
-    {
-        /* wait for condition */
-    } while (StartRCnt(0xF2000002) == 0);
+    while (StartRCnt(0xF2000002) == 0);
 
     do
     {
@@ -433,10 +427,7 @@ void akao_driver_init(void)
         g_akao_rcnt2_event = temp_v0;
     } while (temp_v0 == -1);
 
-    do
-    {
-        /* wait for completion */
-    } while (EnableEvent(g_akao_rcnt2_event) == 0);
+    while (EnableEvent(g_akao_rcnt2_event) == 0);
 }
 
 /**
