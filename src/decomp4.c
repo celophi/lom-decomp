@@ -175,21 +175,21 @@ void func_80029A8C(void)
             *((s32*)(((u8*)g_akao_seq_channel0) + 0x50)) = temp;
         }
     }
-    ptr28 = D_8003EC28;
-    new_var6 = D_8003EC28;
-    if ((D_8003EC28 != 0) && ((*((s32*)(((u8*)ptr28) + 4))) != 0))
+    ptr28 = g_akao_seq_channel1;
+    new_var6 = g_akao_seq_channel1;
+    if ((g_akao_seq_channel1 != 0) && ((*((s32*)(((u8*)ptr28) + 4))) != 0))
     {
         t0 = *((s16*)(((u8*)new_var6) + 0x58));
         if (t0 != 0)
         {
             u16_tmp = *((u16*)(((u8*)ptr28) + 0x58));
-            *((s16*)(((u8*)D_8003EC28) + 0x58)) = u16_tmp - 1;
+            *((s16*)(((u8*)g_akao_seq_channel1) + 0x58)) = u16_tmp - 1;
             temp = (*((s32*)(((u8*)ptr28) + 0x50))) + (*((s32*)(((u8*)ptr28) + 0x54)));
-            if ((temp & 0x7F0000) != ((*((s32*)(((u8*)D_8003EC28) + 0x50))) & 0x7F0000))
+            if ((temp & 0x7F0000) != ((*((s32*)(((u8*)g_akao_seq_channel1) + 0x50))) & 0x7F0000))
             {
-                func_80026E8C(D_8003EC28, (void*)((u32)D_8003EC24), (u32)D_8003EC28);
+                func_80026E8C(g_akao_seq_channel1, (void*)((u32)D_8003EC24), (u32)g_akao_seq_channel1);
             }
-            *((s32*)(((u8*)D_8003EC28) + 0x50)) = temp;
+            *((s32*)(((u8*)g_akao_seq_channel1) + 0x50)) = temp;
         }
     }
     mask = D_8004D400.unk0;
@@ -395,9 +395,9 @@ void func_8002A134(void)
 
         if ((unk18_val == 0) && (D_8004D40C == 0))
         {
-            if (D_8003EC28 != 0)
+            if (g_akao_seq_channel1 != 0)
             {
-                if (D_8003EC28->unk18 != 0)
+                if (g_akao_seq_channel1->unk18 != 0)
                 {
                     func_80025D98();
                 }
@@ -411,20 +411,20 @@ void func_8002A134(void)
 
     /* Second block */
     {
-        AkaoChannelState* ch28 = D_8003EC28;
+        AkaoChannelState* ch28 = g_akao_seq_channel1;
         if (ch28 != 0)
         {
             if (ch28->unk4 == 0)
             {
-                D_8003EC28 = 0;
+                g_akao_seq_channel1 = 0;
             }
             else if ((g_akao_seq_channel0->unk4 | g_akao_seq_channel0->unk1C) == 0)
             {
                 func_80029A0C((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
                 func_80029A0C((s32*)D_8003EC24, &D_80049130, 0x2300);
                 {
-                    AkaoChannelState* tmp = D_8003EC28;
-                    D_8003EC28 = 0;
+                    AkaoChannelState* tmp = g_akao_seq_channel1;
+                    g_akao_seq_channel1 = 0;
                     tmp->unk5E = 0;
                     tmp->unk4 = 0;
                 }
@@ -434,7 +434,7 @@ void func_8002A134(void)
 
     /* Third conditional */
     if (((D_8004F758 | g_akao_seq_channel0->unk14 | D_8004D408) != 0) ||
-        ((D_8003EC28 != 0) && (D_8003EC28->unk14 != 0)))
+        ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk14 != 0)))
     {
         func_800258B8(D_8004D408);
     }
@@ -446,9 +446,9 @@ void func_8002A134(void)
     }
 
     /* Fifth conditional */
-    if ((D_8003EC28 != 0) && (D_8003EC28->unk4 != 0))
+    if ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk4 != 0))
     {
-        g_akao_seq_channel0 = D_8003EC28;
+        g_akao_seq_channel0 = g_akao_seq_channel1;
         func_80029E88(D_8003EC24, 1);
         g_akao_seq_channel0 = &g_akao_seq_channels;
     }

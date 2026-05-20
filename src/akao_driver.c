@@ -290,7 +290,7 @@ void akao_driver_init_state(void)
     D_8003EC58 = a2;
     a2 += 0x58;
     g_akao_seq_channel0 = (AkaoChannelState *)a0;
-    D_8003EC28 = 0;
+    g_akao_seq_channel1 = 0;
     D_8003EC24 = 0;
     D_8003EC70 = 0;
     *((u16*)off(a0, 0x58)) = 0;
@@ -419,23 +419,23 @@ void akao_driver_init(void)
     do
     {
         /* wait for condition */
-    } while (func_80023CA0(0xF2000002, 0x44E8, 0x1000) == 0);
+    } while (SetRCnt(0xF2000002, 0x44E8, 0x1000) == 0);
 
     do
     {
         /* wait for condition */
-    } while (func_80023D74(0xF2000002) == 0);
+    } while (StartRCnt(0xF2000002) == 0);
 
     do
     {
-        temp_v0 = func_800167AC(0xF2000002, 2, 0x1000, func_8002A134);
-        D_8003EC14 = temp_v0;
+        temp_v0 = OpenEvent(0xF2000002, 2, 0x1000, func_8002A134);
+        g_akao_rcnt2_event = temp_v0;
     } while (temp_v0 == -1);
 
     do
     {
         /* wait for completion */
-    } while (func_800167DC(D_8003EC14) == 0);
+    } while (EnableEvent(g_akao_rcnt2_event) == 0);
 }
 
 /**
@@ -469,16 +469,16 @@ void akao_driver_shutdown(void)
     do
     {
 
-    } while (func_80023DA4(0xF2000002) == 0);
-    func_80023C90(0xF2000002, 2);
+    } while (StopRCnt(0xF2000002) == 0);
+    UnDeliverEvent(0xF2000002, 2);
     do
     {
 
-    } while (func_80023C80(D_8003EC14) == 0);
+    } while (DisableEvent(g_akao_rcnt2_event) == 0);
     do
     {
 
-    } while (func_800167BC(D_8003EC14) == 0);
+    } while (CloseEvent(g_akao_rcnt2_event) == 0);
     func_8002427C(0xFFFFFF);
     SpuQuit();
 }
