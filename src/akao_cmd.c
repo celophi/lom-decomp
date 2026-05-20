@@ -33,7 +33,7 @@ typedef struct
 {
     void* articulation_dst;     /* 0x00: current dst into the driver's
                                           articulation slot table
-                                          (D_8004C340 + bank_id * 0x10),
+                                          (g_akao_articulation_slots + bank_id * 0x10),
                                           advances as bytes are copied      */
     u32 spu_addr;               /* 0x04: current SPU upload address — seeded
                                           from AkaoBankHeader.spu_dest_addr,
@@ -64,7 +64,7 @@ extern u32 D_8004C150;
 extern AkaoChannelState* g_akao_seq_channel0;
 extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
-extern u8 D_8004C340[];
+extern u8 g_akao_articulation_slots[];
 extern s32 D_8004D388;
 extern s32 D_8004D38C;
 extern s32 D_8004D390;
@@ -1017,7 +1017,7 @@ s32 akao_reset_xfer_state(void)
  *   - Seed @c g_akao_streaming_state from the staged header:
  *       @c spu_addr               ← spu_dest_addr
  *       @c sample_remaining       ← sample_size
- *       @c articulation_dst       ← &D_8004C340[bank_id * 0x10]
+ *       @c articulation_dst       ← &g_akao_articulation_slots[bank_id * 0x10]
  *       @c articulation_remaining ← articulation_count * 0x10
  *
  * Stage 2 (articulation copy):
@@ -1072,7 +1072,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             avail -= 0x40;
             g_akao_streaming_state.spu_addr = (s32)g_akao_bank_staging.spu_dest_addr;
             g_akao_streaming_state.sample_remaining = (u32)g_akao_bank_staging.sample_size;
-            g_akao_streaming_state.articulation_dst = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
+            g_akao_streaming_state.articulation_dst = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&g_akao_articulation_slots)));
             g_akao_streaming_state.articulation_remaining = (u32)(g_akao_bank_staging.articulation_count * 0x10);
         }
         else
@@ -1099,7 +1099,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             g_akao_streaming_state.articulation_remaining -= chunk;
             if (g_akao_streaming_state.articulation_remaining == 0)
             {
-                arti_slot = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&D_8004C340)));
+                arti_slot = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&g_akao_articulation_slots)));
                 akao_relocate_articulations(arti_slot, arti_slot, g_akao_bank_staging.spu_dest_addr,
                                             g_akao_bank_staging.articulation_count);
             }

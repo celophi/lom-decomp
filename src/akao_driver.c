@@ -1,45 +1,47 @@
 #include "akao_driver.h"
 #include "akao.h"
 
+/* "AKAO" in little-endian */
+#define AKAO_MAGIC 0x4F414B41 
+
 /**
  * @brief Relocates an AKAO articulation table by adding the SPU upload base
  *        address into each entry as it is copied.
  *
- * Each articulation entry is 16 bytes wide; the routine streams @p arg3
- * entries from @p arg0 to @p arg1, biasing the first word of every entry by
- * the SPU base @p arg2 so the in-RAM table can be patched to absolute
- * SPU addresses. The trailing three words of each entry are copied
- * unchanged.
+ * Each articulation entry is 16 bytes wide; the routine streams @p count
+ * entries from @p src to @p dst, biasing the first word of every entry by
+ * @p spu_base so the in-RAM table can be patched to absolute SPU addresses.
+ * The trailing three words of each entry are copied unchanged.
  *
- * @param arg0  Source articulation table (4 words/entry).
- * @param arg1  Destination articulation table (same stride).
- * @param arg2  SPU base address to add into the first word of each entry.
- * @param arg3  Number of entries to relocate.
+ * @param src       Source articulation table (4 words/entry).
+ * @param dst       Destination articulation table (same stride).
+ * @param spu_base  SPU base address to add into the first word of each entry.
+ * @param count     Number of entries to relocate.
  *
  * @see https://decomp.me/scratch/CJTY6 (100%)
  */
-void akao_relocate_articulations(s32* arg0, s32* arg1, s32 arg2, s32 arg3)
+void akao_relocate_articulations(s32* src, s32* dst, s32 spu_base, s32 count)
 {
-    s32* t0 = arg1 + 3;
+    s32* t0 = dst + 3;
     int new_var;
-    s32* v1 = arg0 + 3;
+    s32* v1 = src + 3;
     s32 new_var2;
     char new_var3;
     do
     {
-        *arg1 = (*arg0) + arg2;
+        *dst = (*src) + spu_base;
         new_var2 = v1[-2];
-        arg0 += 4;
-        arg3 -= 1;
-        t0[-2] = new_var2 + arg2;
+        src += 4;
+        count -= 1;
+        t0[-2] = new_var2 + spu_base;
         (new_var2 = 4);
-        arg1 += new_var2;
+        dst += new_var2;
         new_var = -1;
         t0[new_var] = v1[new_var];
         *t0 = *v1;
         v1 += 4;
         t0 += 4;
-    } while (arg3 != 0);
+    } while (count != 0);
 }
 
 /**
@@ -47,18 +49,18 @@ void akao_relocate_articulations(s32* arg0, s32* arg1, s32 arg2, s32 arg3)
  *
  * The Square AKAO sound driver tags every bank/sequence with the four-byte
  * little-endian magic 0x4F414B41 ("AKAO"). This function returns 0 only when
- * @p data points at a buffer beginning with that exact magic, by adding the
- * two's-complement of the magic and letting the result be zero on a match.
+ * @p data points at a buffer beginning with that exact magic, by subtracting the
+ * magic and letting the result be zero on a match.
  *
  * @param data  Candidate AKAO-tagged buffer (first word is the magic).
  *
- * @return 0 if the magic matches; otherwise *data + 0xB0BEB4BF (non-zero delta).
+ * @return 0 if the magic matches; otherwise *data - AKAO_MAGIC (non-zero delta).
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/scY8u
  */
 s32 akao_check_magic(s32* data)
 {
-    return *data + 0xB0BEB4BF;
+    return *data - AKAO_MAGIC;
 }
 
 /**
@@ -99,16 +101,16 @@ void akao_spu_arm_xfer(void)
  * @c SpuWrite(arg0, arg1). Caller pairs this with akao_spu_wait when it
  * needs synchronous completion.
  *
- * @param arg0  Source address in main RAM.
- * @param arg1  Number of bytes to upload.
+ * @param src_addr   Source address in main RAM.
+ * @param byte_count Number of bytes to upload.
  *
  * @see https://decomp.me/scratch/D2YiT (100%)
  */
-void akao_spu_write(s32 arg0, s32 arg1)
+void akao_spu_write(s32 src_addr, s32 byte_count)
 {
     g_akao_spu_xfer_pending = 1;
     func_80024230(&akao_spu_xfer_done_cb);
-    func_800241A0(arg0, arg1);
+    func_800241A0(src_addr, byte_count);
 }
 
 /**
@@ -118,15 +120,15 @@ void akao_spu_write(s32 arg0, s32 arg1)
  * akao_spu.c; kept here because it is part of the AKAO SPU helper set and is
  * referenced via the .ld linker script.
  *
- * @param arg0  Destination address in main RAM.
- * @param arg1  Number of bytes to read back from the SPU.
+ * @param dst_addr   Destination address in main RAM.
+ * @param byte_count Number of bytes to read back from the SPU.
  *
  * @see https://decomp.me/scratch/lLOqn (100%)
  */
-void akao_spu_read(s32 arg0, s32 arg1)
+void akao_spu_read(s32 dst_addr, s32 byte_count)
 {
     akao_spu_arm_xfer();
-    func_80024140(arg0, arg1);
+    func_80024140(dst_addr, byte_count);
 }
 
 /**
@@ -154,20 +156,20 @@ void akao_spu_wait(void)
  *
  * Called in a tight loop by akao_play_sequence_blocking.
  *
- * @param sequenceData       Pointer to an AKAO-tagged sequence buffer.
- * @param waitForCompletion  When non-zero, the inner submit blocks until the
- *                           SPU transfer completes.
+ * @param seq_data            Pointer to an AKAO-tagged sequence buffer.
+ * @param wait_for_completion When non-zero, the inner submit blocks until the
+ *                            SPU transfer completes.
  *
  * @return 0 if the magic matched and the buffer was submitted; -1 if the
  *         AKAO magic check failed.
  */
-s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
+s32 akao_submit(AkaoSeqHeader* seq_data, s32 wait_for_completion)
 {
     s32 ret = -1;
-    AkaoBankHeader* ptr = (AkaoBankHeader*)sequenceData;
-    if (akao_check_magic((s32*)sequenceData) == 0)
+    AkaoBankHeader* bank_hdr = (AkaoBankHeader*)seq_data;
+    if (akao_check_magic((s32*)seq_data) == 0)
     {
-        akao_upload_bank(sequenceData, waitForCompletion, ptr->bank_id, ptr->spu_dest_addr);
+        akao_upload_bank(seq_data, wait_for_completion, bank_hdr->bank_id, bank_hdr->spu_dest_addr);
         ret = 0;
         return ret;
     }
@@ -184,41 +186,43 @@ s32 akao_submit(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
  *      articulation table at offset 0x40 + articulation_count*0x10, size
  *      sample_size).
  *   3. akao_relocate_articulations to copy the articulation table into the
- *      driver's instrument slot @c D_8004C340[arg2*0x10] with each entry's
+ *      driver's instrument slot @c g_akao_articulation_slots[arg2*0x10] with each entry's
  *      first word biased by the SPU base.
  * On magic-mismatch, latches @c g_akao_spu_xfer_pending = -1 and returns -1.
  *
- * @param arg0  Pointer to an AkaoBankHeader buffer in main RAM.
- * @param arg1  When non-zero, akao_spu_wait blocks until the SPU DMA finishes.
- * @param arg2  Instrument-table slot index (= @c bank->bank_id).
- * @param arg3  SPU upload base address in bytes (= @c bank->spu_dest_addr).
+ * @param bank                Pointer to an AkaoBankHeader buffer in main RAM.
+ * @param wait_for_completion When non-zero, akao_spu_wait blocks until the
+ *                            SPU DMA finishes.
+ * @param bank_id             Instrument-table slot index (= @c bank->bank_id).
+ * @param spu_base            SPU upload base address in bytes
+ *                            (= @c bank->spu_dest_addr).
  *
  * @return 0 on success, -1 on AKAO magic mismatch.
  *
  * @see https://decomp.me/scratch/Awfhy (99.90%)
  */
-s32 akao_upload_bank(void* arg0, s32 arg1, s32 arg2, s32 arg3)
+s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_base)
 {
     s32 new_var;
     s32 var_v0;
-    AkaoBankHeader* s;
+    AkaoBankHeader* bank_hdr;
     u8* base;
 
     s32 ret_val;
     akao_spu_wait();
     var_v0 = -1;
-    if (akao_check_magic(arg0) == 0)
+    if (akao_check_magic(bank) == 0)
     {
-        new_var = arg0;
-        s = (AkaoBankHeader*)arg0;
+        new_var = bank;
+        bank_hdr = (AkaoBankHeader*)bank;
 
-        SpuSetTransferStartAddr(arg3);
-        base = (u8*)arg0;
+        SpuSetTransferStartAddr(spu_base);
+        base = (u8*)bank;
         base = base + 0x40;
-        akao_spu_write((s32)(base + (s->articulation_count * 0x10)), s->sample_size);
-        akao_relocate_articulations((s32*)base, (s32*)(D_8004C340 + (arg2 * 0x10)), arg3, s->articulation_count);
+        akao_spu_write((s32)(base + (bank_hdr->articulation_count * 0x10)), bank_hdr->sample_size);
+        akao_relocate_articulations((s32*)base, (s32*)(g_akao_articulation_slots + (bank_id * 0x10)), spu_base, bank_hdr->articulation_count);
         var_v0 = 0;
-        if (arg1 != 0)
+        if (wait_for_completion != 0)
         {
             akao_spu_wait();
         }
@@ -257,7 +261,7 @@ void akao_driver_init_state(void)
     int new_var7;
     u16 new_var8;
     int new_var5;
-    u8* a0 = D_8004C260;
+    u8* a0 = g_akao_seq_channels;
     u8* a2 = D_80049130;
     int new_var6;
     u8* new_var9;
@@ -389,7 +393,7 @@ void akao_driver_init_state(void)
  *
  * Boot sequence:
  *   1. @c SpuStart, allocate SPU RAM (@c SpuInitMalloc), set transfer mode.
- *   2. Upload a 64-byte zero-payload primer to SPU (@c &D_8003D170, size 0x40)
+ *   2. Upload a 64-byte zero-payload primer to SPU (@c &g_akao_spu_zero_primer, size 0x40)
  *      and wait for completion.
  *   3. Run akao_driver_init_state.
  *   4. Disable SPU IRQ; install the AKAO IRQ callback (@c func_8002A134).
@@ -403,10 +407,10 @@ void akao_driver_init(void)
     s32 temp_v0;
 
     SpuStart();
-    func_80023E90(4, &D_8004D360);
+    func_80023E90(4, &g_akao_spu_malloc_table);
     func_80024200(0);
     SpuSetTransferStartAddr(0x1010);
-    akao_spu_write(&D_8003D170, 0x40);
+    akao_spu_write(&g_akao_spu_zero_primer, 0x40);
     akao_spu_wait();
     akao_driver_init_state();
     SpuSetIRQ(0);
@@ -437,13 +441,13 @@ void akao_driver_init(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/z36q3
  */
-void func_80023BB8(s32 arg0)
+void func_80023BB8(s32 base)
 {
-    D_8003EC48 = arg0;
-    arg0 += 0x600;
-    D_8003EC50 = arg0;
-    arg0 += 0x300;
-    D_8003EC54 = arg0;
+    D_8003EC48 = base;
+    base += 0x600;
+    D_8003EC50 = base;
+    base += 0x300;
+    D_8003EC54 = base;
 }
 
 /**
@@ -459,7 +463,7 @@ void akao_driver_shutdown(void)
 {
     if (g_akao_spu_xfer_pending == 1)
     {
-        akao_spu_write(&D_8003D170, 0x40);
+        akao_spu_write(&g_akao_spu_zero_primer, 0x40);
         akao_spu_wait();
     }
     do

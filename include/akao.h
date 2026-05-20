@@ -173,7 +173,7 @@ typedef struct AkaoBankHeader
  * Per-channel runtime state for the AKAO driver.
  *
  * The driver allocates 0x20 sequence-channel slots back-to-back starting at
- * @c D_8004C260 and another 0x18 SFX-channel slots starting at @c g_sfx_channels.
+ * @c g_akao_seq_channels and another 0x18 SFX-channel slots starting at @c g_sfx_channels.
  * Each slot is 0x118 bytes wide. @c g_akao_seq_channel0 is a pointer set in
  * akao_driver_init_state to alias the first sequence-channel slot; the
  * streaming/XA-setup code-paths read this slot's flag byte to decide whether

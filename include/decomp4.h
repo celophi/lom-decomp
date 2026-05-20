@@ -33,7 +33,7 @@ typedef struct
 /**
  * @brief AKAO sequencer / SFX channel state block. Used for the song channel
  *        at @c g_akao_seq_channel0, the secondary slot at @c D_8003EC28, the
- *        backing storage at @c D_8004C260, and each entry of
+ *        backing storage at @c g_akao_seq_channels, and each entry of
  *        @c g_sfx_channels (size 0x118 bytes).
  */
 typedef struct AkaoChannelState
@@ -105,7 +105,7 @@ extern AkaoChannelState* D_8003EC28;
 extern s32 D_8003EC24;
 extern SfxControl D_8004D400;
 extern s32 D_8004D408;
-extern AkaoChannelState D_8004C260;
+extern AkaoChannelState g_akao_seq_channels;
 extern TimingRing D_8003D160;
 
 extern s32 D_8003EC44;

@@ -450,7 +450,7 @@ void func_8002A134(void)
     {
         g_akao_seq_channel0 = D_8003EC28;
         func_80029E88(D_8003EC24, 1);
-        g_akao_seq_channel0 = &D_8004C260;
+        g_akao_seq_channel0 = &g_akao_seq_channels;
     }
 
     /* SFX channel processing loop */
@@ -761,7 +761,7 @@ void func_8002A6FC(u8* arg0, u32 arg1)
 
     temp_a3 = *((u32*)(arg0 + 0x34));
     new_var2 = a2[0];
-    a1 = D_8004C340 + (new_var2 * 0x10);
+    a1 = g_akao_articulation_slots + (new_var2 * 0x10);
     *((s16*)(arg0 + 0x6A)) = new_var2;
 
     *(u32*)(arg0 + 0x104) = *(u32*)(a1 + 0);

@@ -5,7 +5,7 @@
 #include "akao.h"
 
 extern s32 g_akao_spu_xfer_pending;
-extern u8 D_8004C340[];
+extern u8 g_akao_articulation_slots[];
 extern u8 g_sfx_channels[];
 extern s32 D_8003EC7C;
 extern s32 D_8003EC6C;
@@ -29,9 +29,9 @@ extern u8 g_akao_driver_flags[];
 extern u8 D_8004D388[];
 extern u8 D_8003EC30[];
 extern u8 D_80049130[];
-extern u8 D_8004C260[];
-extern char D_8004D360[];
-extern char D_8003D170[];  
+extern u8 g_akao_seq_channels[];
+extern char g_akao_spu_malloc_table[];
+extern char g_akao_spu_zero_primer[];
 extern s32 D_8003EC14;
 extern s32 D_8003EC48;
 extern s32 D_8003EC50;
