@@ -1100,7 +1100,9 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             if (g_akao_streaming_state.articulation_remaining == 0)
             {
                 arti_slot = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&g_akao_articulation_slots)));
-                akao_relocate_articulations(arti_slot, arti_slot, g_akao_bank_staging.spu_dest_addr,
+                akao_relocate_articulations((AkaoArticulation*)arti_slot,
+                                            (AkaoArticulation*)arti_slot,
+                                            g_akao_bank_staging.spu_dest_addr,
                                             g_akao_bank_staging.articulation_count);
             }
         }

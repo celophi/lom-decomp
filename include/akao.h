@@ -170,6 +170,31 @@ typedef struct AkaoBankHeader
 } AkaoBankHeader;
 
 /**
+ * @brief One entry in an AKAO instrument-bank articulation table.
+ *
+ * Each AkaoBankHeader is followed (starting at file offset 0x40) by
+ * @c articulation_count of these 16-byte entries, one per SPU voice setup
+ * the bank exposes. They are copied into the driver's articulation slot
+ * table @c g_akao_articulation_slots by akao_relocate_articulations, which
+ * biases @c sample_addr and @c loop_addr by the SPU upload base so the
+ * in-RAM table holds absolute SPU offsets. The trailing two words are
+ * pre-baked SPU voice parameters and are copied verbatim.
+ *
+ * Field semantics for words 0x08 and 0x0C are inferred from the PSX SPU
+ * voice-register layout and the matched relocation code; they likely
+ * encode ADSR envelope and pitch/voice flags but exact bit-packings are
+ * not yet confirmed against the AKAO source. Treat @c adsr and @c pitch_misc
+ * as opaque u32 blobs until verified.
+ */
+typedef struct AkaoArticulation
+{
+    u32 sample_addr; /* 0x00: SPU sample start - biased by spu_base on upload */
+    u32 loop_addr;   /* 0x04: SPU loop point   - biased by spu_base on upload */
+    u32 adsr;        /* 0x08: ADSR envelope (TODO: bit layout)                */
+    u32 pitch_misc;  /* 0x0C: pitch / voice flags (TODO: bit layout)          */
+} AkaoArticulation; /* sizeof = 0x10 */
+
+/**
  * Per-channel runtime state for the AKAO driver.
  *
  * The driver allocates 0x20 sequence-channel slots back-to-back starting at

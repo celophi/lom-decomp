@@ -8,40 +8,30 @@
  * @brief Relocates an AKAO articulation table by adding the SPU upload base
  *        address into each entry as it is copied.
  *
- * Each articulation entry is 16 bytes wide; the routine streams @p count
- * entries from @p src to @p dst, biasing the first word of every entry by
- * @p spu_base so the in-RAM table can be patched to absolute SPU addresses.
- * The trailing three words of each entry are copied unchanged.
+ * Streams @p count @ref AkaoArticulation entries from @p src to @p dst,
+ * biasing @c sample_addr and @c loop_addr by @p spu_base so the in-RAM
+ * table holds absolute SPU addresses. The @c adsr and @c pitch_misc fields
+ * are copied verbatim.
  *
- * @param src       Source articulation table (4 words/entry).
- * @param dst       Destination articulation table (same stride).
- * @param spu_base  SPU base address to add into the first word of each entry.
- * @param count     Number of entries to relocate.
+ * @param src       Source articulation table.
+ * @param dst       Destination articulation table.
+ * @param spu_base  SPU base address added to @c sample_addr and @c loop_addr.
+ * @param count     Number of entries to relocate (must be > 0; do-while shape).
  *
+ * @see AkaoArticulation
  * @see https://decomp.me/scratch/CJTY6 (100%)
  */
-void akao_relocate_articulations(s32* src, s32* dst, s32 spu_base, s32 count)
+void akao_relocate_articulations(AkaoArticulation* src, AkaoArticulation* dst, s32 spu_base, s32 count)
 {
-    s32* t0 = dst + 3;
-    int new_var;
-    s32* v1 = src + 3;
-    s32 new_var2;
-    char new_var3;
     do
     {
-        *dst = (*src) + spu_base;
-        new_var2 = v1[-2];
-        src += 4;
-        count -= 1;
-        t0[-2] = new_var2 + spu_base;
-        (new_var2 = 4);
-        dst += new_var2;
-        new_var = -1;
-        t0[new_var] = v1[new_var];
-        *t0 = *v1;
-        v1 += 4;
-        t0 += 4;
-    } while (count != 0);
+        dst->sample_addr = src->sample_addr + spu_base;
+        dst->loop_addr = src->loop_addr + spu_base;
+        dst->adsr = src->adsr;
+        dst->pitch_misc = src->pitch_misc;
+        src++;
+        dst++;
+    } while (--count != 0);
 }
 
 /**
@@ -181,13 +171,15 @@ s32 akao_submit(AkaoSeqHeader* seq_data, s32 wait_for_completion)
  *        articulation table.
  *
  * Validates the AKAO magic, then:
- *   1. @c SpuSetTransferStartAddr(arg3)  — set the SPU upload base.
+ *   1. @c SpuSetTransferStartAddr(spu_base) - set the SPU upload base.
  *   2. akao_spu_write of the sample blob (located after the bank's
- *      articulation table at offset 0x40 + articulation_count*0x10, size
- *      sample_size).
- *   3. akao_relocate_articulations to copy the articulation table into the
- *      driver's instrument slot @c g_akao_articulation_slots[arg2*0x10] with each entry's
- *      first word biased by the SPU base.
+ *      articulation table at offset 0x40 + articulation_count * sizeof(AkaoArticulation),
+ *      size sample_size).
+ *   3. akao_relocate_articulations copies @c articulation_count AkaoArticulation
+ *      entries into the driver's instrument slot at byte offset
+ *      @c bank_id*0x10 within @c g_akao_articulation_slots (i.e. conceptually
+ *      @c ((AkaoArticulation*)g_akao_articulation_slots)[bank_id]), biasing
+ *      @c sample_addr and @c loop_addr by @p spu_base on the way in.
  * On magic-mismatch, latches @c g_akao_spu_xfer_pending = -1 and returns -1.
  *
  * @param bank                Pointer to an AkaoBankHeader buffer in main RAM.
@@ -220,8 +212,9 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
         base = (u8*)bank;
         base = base + 0x40;
         akao_spu_write((s32)(base + (bank_hdr->articulation_count * 0x10)), bank_hdr->sample_size);
-        akao_relocate_articulations((s32*)base, (s32*)(g_akao_articulation_slots + (bank_id * 0x10)), spu_base,
-                                    bank_hdr->articulation_count);
+        akao_relocate_articulations((AkaoArticulation*)base,
+                                    (AkaoArticulation*)(g_akao_articulation_slots + (bank_id * 0x10)),
+                                    spu_base, bank_hdr->articulation_count);
         var_v0 = 0;
         if (wait_for_completion != 0)
         {
