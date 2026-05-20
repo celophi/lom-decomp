@@ -340,65 +340,62 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  * stopped, the display is masked off, and @p D_8010D018 is set to signal the
  * caller that the Game Over sequence has completed.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/LOxbx
+ * @see decomp.me: (100%) https://decomp.me/scratch/IfwJm
  */
 static void gover_run(void)
 {
     GoverFrameHalf* current;
     GoverFrameHalf* drawing;
-    int otTailOffset;
     GoverFrameHalf* next;
     u8 dummy[8];
-    s32* pFadeStep;
+
     func_800AA02C();
     current = (GoverFrameHalf*)g_goverFrameHeader;
-    ClearOTagR((u_long*)current, 8);
-    ClearOTagR((u_long*)&current[1], 8);
+    ClearOTagR((u_long*)current->otag, 8);
+    ClearOTagR((u_long*)current[1].otag, 8);
     VSync(0);
     PutDispEnv(&current->disp);
     func_800157DC();
     SetDispMask(1);
+
+    drawing = current;
+    while (1)
     {
         drawing = current;
-        while (1)
+        ClearOTagR((u_long*)drawing->otag, 8);
+        drawing->allocCursor = drawing->primBuf;
+        func_800A9E78();
+        gover_build_otag((s32*)drawing);
+        DrawSync(0);
+        func_800157B0(2);
+
+        VSync(2);
+
+        if ((g_fadeLevel == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
         {
-            drawing = current;
-            ClearOTagR((u_long*)drawing, 8);
-            drawing->allocCursor = drawing->primBuf;
-            func_800A9E78();
-            gover_build_otag((s32*)drawing);
-            DrawSync(0);
-            func_800157B0(2);
-            if (!g_fadeLevel)
-            {
-            }
-            VSync(2);
-            pFadeStep = &g_fadeStep;
-            if ((g_fadeLevel == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
-            {
-                akao_cmd_c1(0, 0x20, 0);
-                *pFadeStep = -GOVER_FADE_STEP;
-            }
-            if (g_fadeLevel == (0 & 0xFF))
-            {
-                break;
-            }
-            next = (GoverFrameHalf*)g_goverFrameHeader;
-            if (current == (GoverFrameHalf*)g_goverFrameHeader)
-            {
-                next = current + 1;
-            }
-            current = next;
-            PutDispEnv(&current->disp);
-            otTailOffset = 0x1C;
-            PutDrawEnv(&current->draw);
-            // The OT linked list is built backward, so DrawOTag is invoked starting
-            // at the last entry (otag[7] at offset 0x1C).
-            DrawOTag((u_long*)((u_char*)drawing + otTailOffset));
-            func_800157DC();
-            cdrom_process_state();
+            akao_cmd_c1(0, 0x20, 0);
+            g_fadeStep = -GOVER_FADE_STEP;
         }
+        if (g_fadeLevel == (0 & 0xFF))
+        {
+            break;
+        }
+        next = (GoverFrameHalf*)g_goverFrameHeader;
+        if (current == (GoverFrameHalf*)g_goverFrameHeader)
+        {
+            next = current + 1;
+        }
+        current = next;
+        PutDispEnv(&current->disp);
+
+        PutDrawEnv(&current->draw);
+        // The OT linked list is built backward, so DrawOTag is invoked starting
+        // at the last entry (otag[7] at offset 0x1C).
+        DrawOTag((u_long*)((u_char*)drawing + 0x1C));
+        func_800157DC();
+        cdrom_process_state();
     }
+
     DrawSync(0);
     VSync(0);
     func_800158E0();
