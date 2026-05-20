@@ -41,14 +41,19 @@ typedef struct AkaoChannelState
 {
     u32 flags;       /* 0x00 */
     u32 unk4;        /* 0x04 */
-    u8 _pad08[0x0C]; /* 0x08 – 0x13 */
+    u8 _pad08[8];    /* 0x08 - 0x0F */
+    u32 unk10;       /* 0x10 */
     u32 unk14;       /* 0x14 */
     u32 unk18;       /* 0x18 */
     u32 unk1C;       /* 0x1C */
     u32 unk20;       /* 0x20 (low 16 bits + high 16 bits = unk22) */
     u32 unk24;       /* 0x24 */
     u32 unk28;       /* 0x28 */
-    u8 _pad2C[0x1C]; /* 0x2C – 0x47 */
+    u8 _pad2C[8];    /* 0x2C - 0x33 */
+    u8* unk34;       /* 0x34 */
+    u8 _pad38[8];    /* 0x38 - 0x3F */
+    u32 unk40;       /* 0x40 */
+    u8 _pad44[4];    /* 0x44 - 0x47 */
     u32 unk48;       /* 0x48 */
     u32 unk4C;       /* 0x4C */
     u8 _pad50[0x0A]; /* 0x50 – 0x59 */
@@ -114,5 +119,6 @@ extern u8 g_akao_master_vol_scalar;
 extern s32 g_akao_driver_mode_flags;
 extern AkaoChannelState* g_akao_seq_channel0;
 extern AkaoDriverFlags g_akao_driver_flags;
+extern u8 g_akao_articulation_slots[];
 
 #endif

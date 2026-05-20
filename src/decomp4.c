@@ -29,6 +29,27 @@ typedef struct
     s16 unkA;
 } UnkStruct;
 
+typedef struct
+{
+    u8 unk0;
+    u8 unk1;
+    u8 unk2;
+    u8 unk3;
+    u8 unk4;
+    u8 unk5;
+    u8 unk6;
+    u8 unk7;
+} SmallSlot;
+
+typedef struct
+{
+    u32 unk0;  /* 0x00 */
+    u32 unk4;  /* 0x04 */
+    u32 _pad8; /* 0x08 */
+    u16 unkC;  /* 0x0C */
+    u16 unkE;  /* 0x0E */
+} ArticSlot; /* sizeof = 0x10 */
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -902,4 +923,97 @@ s32 func_8002A924(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
     result = temp_a0 & 0xFFFF;
     *arg3 = (u32)(((s32)(*arg3)) >> 8);
     return result;
+}
+
+/**
+ * @brief Initialize an AKAO channel voice slot: bind articulation data,
+ *        configure SPU envelope / pitch fields, and fire off the pitch
+ *        calculation for the note.
+ * @param arg0 Pointer to the channel state block (void* to match codegen).
+ * @param arg1 Channel bit-mask used to update the active-channel bitmask.
+ * @param arg2 Slot index into the small-slot table (base pointer from
+ *             @c g_akao_seq_channel0->unk34).
+ * @return Pitch result from @c func_8002A924.
+ * @see decomp.me (98.76%) https://decomp.me/scratch/9dRLX
+ */
+s32 func_8002AAB4(void* arg0, s32 arg1, s32 arg2)
+{
+    SmallSlot* slot;
+    ArticSlot* art;
+    u32 temp_a1;
+    u16 tmp;
+    u32 v1_idx;
+    s32 ret;
+
+    u8* base_ptr = g_akao_seq_channel0->unk34;
+    u32 chan_unk10 = g_akao_seq_channel0->unk10;
+    slot = (SmallSlot*)(base_ptr + (arg2 << 3));
+    base_ptr = (u8*)arg0;
+    ret = chan_unk10 | arg1;
+    v1_idx = g_akao_seq_channel0->unk14 & arg1;
+    g_akao_seq_channel0->unk10 = ret;
+    if (v1_idx)
+    {
+        g_akao_seq_channel0->unk18 |= arg1;
+    }
+    v1_idx = slot->unk0;
+    temp_a1 = *((u32*)(((u8*)arg0) + 0x34));
+    *((s16*)(((u8*)arg0) + 0x6A)) = (s16)v1_idx;
+    art = (ArticSlot*)(g_akao_articulation_slots + v1_idx * 0x10);
+    *((u32*)(((u8*)arg0) + 0x104)) = art->unk0;
+    *((u32*)(((u8*)arg0) + 0x108)) = art->unk4;
+    if (!(temp_a1 & 0x01000000))
+    {
+        tmp = (u16)(slot->unk2 << 8);
+    }
+    else
+    {
+        tmp = (*((u16*)(((u8*)arg0) + 0x10E))) & 0x7F00;
+    }
+    *((u16*)(((u8*)arg0) + 0x10E)) = tmp;
+    tmp = (u16)(slot->unk2 << 8);
+    *((u16*)(base_ptr + 0x10E)) |= art->unkC & 0x80FF;
+    if (!(temp_a1 & 0x08000000))
+    {
+        tmp = (*((u16*)(((u8*)arg0) + 0x110))) & 0x201F;
+        *((u16*)(((u8*)arg0) + 0x110)) = tmp;
+        *((u16*)(((u8*)arg0) + 0x110)) |= slot->unk3 << 6;
+    }
+    else
+    {
+        *((u16*)(((u8*)arg0) + 0x110)) &= 0x3FDF;
+    }
+    switch (slot->unk4)
+    {
+    case 3:
+        *((u16*)(((u8*)arg0) + 0x110)) |= 0x4000;
+        break;
+    case 5:
+        *((u16*)(((u8*)arg0) + 0x110)) |= 0x8000;
+        break;
+    case 7:
+        *((u16*)(((u8*)arg0) + 0x110)) |= 0xC000;
+        break;
+    }
+    if (!(temp_a1 & 0x10000000))
+    {
+        tmp = (*((u16*)(((u8*)arg0) + 0x110))) & 0xFFE0;
+        *((u16*)(((u8*)arg0) + 0x110)) = tmp;
+        *((u16*)(((u8*)arg0) + 0x110)) |= slot->unk5;
+    }
+    *((u16*)(((u8*)arg0) + 0x110)) |= art->unkE & 0x20;
+    ret = func_8002A924((UnkStruct*)art, slot->unk1, *((s16*)(((u8*)arg0) + 0xEC)), (s32*)(((u8*)arg0) + 0x54));
+    *((s16*)(((u8*)arg0) + 0x112)) = (s16)slot->unk6;
+    *((s16*)(((u8*)arg0) + 0x90)) = (s16)(((slot->unk7 & 0x7F) + 0x40) << 8);
+    if (slot->unk7 & 0x80)
+    {
+        g_akao_seq_channel0->unk40 |= arg1;
+    }
+    else
+    {
+        u32 target_val = g_akao_seq_channel0->unk40;
+        g_akao_seq_channel0->unk40 = target_val & (~arg1);
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+    return ret;
 }
