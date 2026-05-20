@@ -32,46 +32,48 @@ typedef struct
     u16 unk6A;     // 0x6A
     u8 pad6C[6];   // 0x6C
     u16 unk72;     // 0x72
-    u8 pad74[22];  // 0x74
-    u16 unk8A;     // 0x8A
-    u16 unk8C;     // 0x8C
-    u8 pad8E[6];   // 0x8E
-    u16 unk94;     // 0x94
-    u16 unk96;     // 0x96
-    u16 unk98;     // 0x98
-    u16 unk9A;     // 0x9A
-    u16 unk9C;     // 0x9C
-    u16 unk9E;     // 0x9E
-    u8 padA0[2];   // 0xA0
-    u16 unkA2;     // 0xA2
-    u16 unkA4;     // 0xA4
-    u8 padA6[2];   // 0xA6
-    u16 unkA8;     // 0xA8
-    u16 unkAA;     // 0xAA
-    s16 unkAC;     // 0xAC
-    u16 unkAE;     // 0xAE
-    u8 padB0[6];   // 0xB0
-    u16 unkB6;     // 0xB6
-    u16 unkB8;     // 0xB8
-    u8 padBA[2];   // 0xBA
-    u16 unkBC;     // 0xBC
-    u16 unkBE;     // 0xBE
-    u8 padC0[26];  // 0xC0
-    u16 unkDA;     // 0xDA
-    u16 unkDC;     // 0xDC
-    u16 unkDE;     // 0xDE
-    u8 padE0[10];  // 0xE0
-    u16 unkEA;     // 0xEA
-    s16 unkEC;     // 0xEC
-    u16 unkEE;     // 0xEE
-    u16 unkF0;     // 0xF0
-    s16 unkF2;     // 0xF2
-    u16 unkF4;     // 0xF4
-    u16 unkF6;     // 0xF6
-    u8 padF8[4];   // 0xF8
-    u16 unkFC;     // 0xFC
-    u8 padFE[2];   // 0xFE
-    s32 unk100;    // 0x100
+    u16 unk74[11]; // 0x74
+
+    u16 unk8A;    // 0x8A
+    u16 unk8C;    // 0x8C
+    u8 pad8E[6];  // 0x8E
+    u16 unk94;    // 0x94
+    u16 unk96;    // 0x96
+    u16 unk98;    // 0x98
+    u16 unk9A;    // 0x9A
+    u16 unk9C;    // 0x9C
+    u16 unk9E;    // 0x9E
+    u8 padA0[2];  // 0xA0
+    u16 unkA2;    // 0xA2
+    u16 unkA4;    // 0xA4
+    u8 padA6[2];  // 0xA6
+    u16 unkA8;    // 0xA8
+    u16 unkAA;    // 0xAA
+    s16 unkAC;    // 0xAC
+    u16 unkAE;    // 0xAE
+    u8 padB0[6];  // 0xB0
+    u16 unkB6;    // 0xB6
+    u16 unkB8;    // 0xB8
+    u8 padBA[2];  // 0xBA
+    u16 unkBC;    // 0xBC
+    u16 unkBE;    // 0xBE
+    u8 padC0[24]; // 0xC0
+    u16 unkD8;    // 0xD8
+    u16 unkDA;    // 0xDA
+    u16 unkDC;    // 0xDC
+    u16 unkDE;    // 0xDE
+    u8 padE0[10]; // 0xE0
+    u16 unkEA;    // 0xEA
+    s16 unkEC;    // 0xEC
+    u16 unkEE;    // 0xEE
+    u16 unkF0;    // 0xF0
+    s16 unkF2;    // 0xF2
+    u16 unkF4;    // 0xF4
+    u16 unkF6;    // 0xF6
+    u8 padF8[4];  // 0xF8
+    u16 unkFC;    // 0xFC
+    u8 padFE[2];  // 0xFE
+    s32 unk100;   // 0x100
 } Context;
 
 typedef struct
@@ -600,44 +602,41 @@ void func_8002A134(void)
     }
 }
 
+extern u8 D_8003D210[];
+extern u8 D_8003D1B0[];
+
 /**
  * decomp.me (78.79%) https://decomp.me/scratch/9GIhP
  */
 u8 func_8002A4E8(Context* arg0)
 {
     u8* var_a1 = arg0->unk0;
+    u8* new_var;
     u32 var_a2 = arg0->unkD8;
-
     while (1)
     {
         u8 temp_v1 = *var_a1;
-
         if (temp_v1 < 0x9A)
         {
             if (temp_v1 >= 0x8F)
             {
                 arg0->unk9E &= 0xFFFA;
             }
-            return *var_a1;
+            new_var = var_a1;
+            return *new_var;
         }
-
         if (temp_v1 < 0xA0)
         {
             return 0xA0;
         }
-
-        /* Force reload – matches delay‑slot behaviour */
-        temp_v1 = *var_a1;
-
+        temp_v1 = *new_var;
         {
             u8 lookup = D_8003D1B0[temp_v1 - 0xA0];
-            if (lookup != 0)
+            if (0 != lookup)
             {
                 var_a1 += lookup;
                 continue;
             }
-
-            /* Unified outer switch: 0xC9 .. 0xFE */
             switch (temp_v1)
             {
             case 0xC9:
@@ -647,22 +646,36 @@ u8 func_8002A4E8(Context* arg0)
                 goto L_CA_common;
 
             case 0xCB:
+
             case 0xCD:
+
             case 0xD1:
+
             case 0xDB:
                 goto L_CB_common;
 
             case 0xF0:
+
             case 0xF1:
+
             case 0xF2:
+
             case 0xF3:
+
             case 0xF4:
+
             case 0xF5:
+
             case 0xF6:
+
             case 0xF7:
+
             case 0xF8:
+
             case 0xF9:
+
             case 0xFA:
+
             case 0xFB:
                 return 0x83;
 
@@ -677,18 +690,16 @@ u8 func_8002A4E8(Context* arg0)
                 var_a1++;
                 temp_v1 = *var_a1;
                 lookup = D_8003D210[temp_v1];
-                if (lookup != 0)
+                if (lookup != (0 & 0xFFFFu))
                 {
                     var_a1 += lookup;
                     continue;
                 }
-
-                /* Inner switch for 0xFE sub‑opcodes */
                 switch (temp_v1 - 6)
                 {
                 case 0:
                     var_a1++;
-                    if (*var_a1 == arg0->unk74[var_a2] + 1)
+                    if ((*var_a1) == (arg0->unk74[var_a2] + 1))
                     {
                         var_a1++;
                         var_a2 = (var_a2 - 1) & 3;
@@ -702,21 +713,24 @@ u8 func_8002A4E8(Context* arg0)
 
                 case 1:
                     var_a1++;
-                    var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
                     continue;
+                    var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
 
                 case 2:
                     var_a1++;
-                    if (g_akao_seq_channel0->unk60 < *var_a1)
+                    do
                     {
-                        var_a1++;
-                        var_a1 += 2;
-                    }
-                    else
-                    {
-                        var_a1++;
-                        var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
-                    }
+                        if (g_akao_seq_channel0->unk60 < (*var_a1))
+                        {
+                            var_a1++;
+                            var_a1 += 2;
+                        }
+                        else
+                        {
+                            var_a1++;
+                            var_a1 += (s16)((var_a1[1] << (8 ^ 0)) + var_a1[0]);
+                        }
+                    } while (0);
                     continue;
 
                 case 3:
@@ -733,10 +747,13 @@ u8 func_8002A4E8(Context* arg0)
                     goto L_CA_common;
 
                 case 7:
+
                 case 8:
+
                 case 9:
                     goto labelA;
                 }
+
                 continue;
             }
 
@@ -744,11 +761,10 @@ u8 func_8002A4E8(Context* arg0)
                 goto labelA;
             }
 
-            /* Shared code blocks – each is reached by two different control paths */
-
         L_C9_common:
             var_a1++;
-            if (*var_a1 == arg0->unk74[var_a2] + 1)
+
+            if ((*var_a1) == (arg0->unk74[var_a2] + 1))
             {
                 var_a1++;
                 var_a2 = (var_a2 - 1) & 3;
@@ -758,12 +774,11 @@ u8 func_8002A4E8(Context* arg0)
                 var_a1 = arg0->unk4[var_a2];
             }
             continue;
-
         L_CB_common:
             arg0->unk9E &= 0xFFFA;
+
             var_a1++;
             continue;
-
         L_CA_common:
             if (!(arg0->unk34 & 0x200000))
             {
@@ -773,6 +788,7 @@ u8 func_8002A4E8(Context* arg0)
 
         labelA:
             arg0->unk9E &= 0xFFFA;
+
             return 0xA0;
         }
     }
@@ -1076,7 +1092,6 @@ extern void (*D_8003EA10[])(Context*, s32);
 extern u16 D_8003D230[];
 extern u8 D_8003D27C[];
 extern s32 D_8003DD80[];
-
 
 /**
  * decomp.me (79.65%) https://decomp.me/scratch/P4H6n
