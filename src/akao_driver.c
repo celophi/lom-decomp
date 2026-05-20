@@ -75,7 +75,7 @@ s32 akao_check_magic(s32* data)
  */
 void akao_spu_xfer_done_cb(void)
 {
-    func_80024230(0);
+    SpuSetTransferCallback(0);
     g_akao_spu_xfer_pending = 0;
 }
 
@@ -91,7 +91,7 @@ void akao_spu_xfer_done_cb(void)
 void akao_spu_arm_xfer(void)
 {
     g_akao_spu_xfer_pending = 1;
-    func_80024230(&akao_spu_xfer_done_cb);
+    SpuSetTransferCallback(&akao_spu_xfer_done_cb);
 }
 
 /**
@@ -109,8 +109,8 @@ void akao_spu_arm_xfer(void)
 void akao_spu_write(s32 src_addr, s32 byte_count)
 {
     g_akao_spu_xfer_pending = 1;
-    func_80024230(&akao_spu_xfer_done_cb);
-    func_800241A0(src_addr, byte_count);
+    SpuSetTransferCallback(&akao_spu_xfer_done_cb);
+    SpuWrite(src_addr, byte_count);
 }
 
 /**
@@ -128,7 +128,7 @@ void akao_spu_write(s32 src_addr, s32 byte_count)
 void akao_spu_read(s32 dst_addr, s32 byte_count)
 {
     akao_spu_arm_xfer();
-    func_80024140(dst_addr, byte_count);
+    SpuRead(dst_addr, byte_count);
 }
 
 /**
@@ -245,7 +245,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
  * via @c D_80049130) and 0x18 SFX channels (also 0x118-byte stride, in
  * @c g_sfx_channels). Pokes the SPU master/reverb registers
  * (@c 0x1F801D80..1F801DB2, @c 0x1F801DAA control). Calls back into the
- * higher-level @c func_80028E34 / @c func_80023EF0 to install the channel
+ * higher-level @c func_80028E34 / @c SpuSetReverb to install the channel
  * state pointer and reverb mode.
  *
  * @see https://decomp.me/scratch/9R0Vj (96.93%)
@@ -385,7 +385,7 @@ void akao_driver_init_state(void)
         *((u32*)off(new_var9, 0x08)) = (*((u32*)off(new_var9, 0x08))) | 0x80;
     }
     func_80028E34(4, 0x03FFF000, a2, a3);
-    func_80023EF0(1);
+    SpuSetReverb(1);
 }
 
 /**
@@ -407,14 +407,14 @@ void akao_driver_init(void)
     s32 temp_v0;
 
     SpuStart();
-    func_80023E90(4, &g_akao_spu_malloc_table);
-    func_80024200(0);
+    SpuInitMalloc(4, &g_akao_spu_malloc_table);
+    SpuSetTransferMode(0);
     SpuSetTransferStartAddr(0x1010);
     akao_spu_write(&g_akao_spu_zero_primer, 0x40);
     akao_spu_wait();
     akao_driver_init_state();
     SpuSetIRQ(0);
-    func_800240D0(0);
+    SpuSetIRQCallback(0);
 
     do
     {
@@ -480,5 +480,5 @@ void akao_driver_shutdown(void)
 
     } while (func_800167BC(D_8003EC14) == 0);
     func_8002427C(0xFFFFFF);
-    func_80023E10();
+    SpuQuit();
 }
