@@ -726,6 +726,8 @@ _spu_setReverbAttr                  = 0x8002935C;
 // psyq/libspu/S_CRWA
 SpuClearReverbWorkArea              = 0x8002982C;
 
+akao_apply_cdvol_to_spu             = 0x800299EC;
+
 // psyq/libapi/A10
 WaitEvent                           = 0x800299CC;
 
@@ -740,10 +742,21 @@ g_gameState                         = 0x8003522C;
 g_DiscValidationId                  = 0x80035230;
 g_akao_spu_zero_primer              = 0x8003D170;
 g_akao_rcnt2_event                  = 0x8003EC14;
+g_akao_irq_frame_counter            = 0x8003EC1C;
 g_akao_cdmix                        = 0x8003EC20;
 g_akao_seq_channel1                 = 0x8003EC28;
+g_akao_mastervol_step               = 0x8003EC38;
+g_akao_mastervol_fade_ticks         = 0x8003EC40;
 g_akao_spu_xfer_pending             = 0x8003EC4C;
 g_akao_seq_channel0                 = 0x8003EC5C;
+g_akao_cdvol_step                   = 0x8003EC60;
+g_akao_cdvol_fade_ticks             = 0x8003EC64;
+g_akao_cdvol_acc                    = 0x8003EC68;
+g_akao_cdvol_current                = 0x8003EC6A;
+g_akao_cdvol_tick                   = 0x8003EC70;
+g_akao_mastervol_acc                = 0x8003EC74;
+g_akao_master_vol_scalar            = 0x8003EC7A;
+g_akao_driver_mode_flags            = 0x8003EC7C;
 g_GfxDoubleBuffer                   = 0x80042CA0;
 g_GfxPrimaryFrame                   = 0x80042E20;
 g_previousGameState                 = 0x80042FB0;

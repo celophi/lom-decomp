@@ -5,20 +5,20 @@
 
 extern long GetRCnt(unsigned long spec);
 
-extern s16 D_8003EC6A;
-extern s32 D_8003EC60;
-extern s32 D_8003EC70;
-extern short D_8003EC64;
-extern s32 D_8003EC68;
+extern s16 g_akao_cdvol_current;
+extern s32 g_akao_cdvol_step;
+extern s32 g_akao_cdvol_tick;
+extern short g_akao_cdvol_fade_ticks;
+extern s32 g_akao_cdvol_acc;
 extern s32 D_8004F754;
 extern s16 D_8003D47C;
 extern s32 D_8004F7A0;
 extern s16 D_8003EC42;
 extern s32 D_8003EC3C;
 extern s32 D_8003EC78;
-extern s16 D_8003EC40;
-extern s32 D_8003EC38;
-extern s32 D_8003EC74;
+extern s16 g_akao_mastervol_fade_ticks;
+extern s32 g_akao_mastervol_step;
+extern s32 g_akao_mastervol_acc;
 extern u8 g_akao_seq_channels[];
 
 extern u8 g_akao_xa_tracker[];
@@ -110,8 +110,8 @@ extern AkaoChannelState g_akao_seq_master_state;
 extern TimingRing D_8003D160;
 
 extern s32 D_8003EC44;
-extern u8 D_8003EC7A;
-extern s32 D_8003EC7C;
+extern u8 g_akao_master_vol_scalar;
+extern s32 g_akao_driver_mode_flags;
 extern AkaoChannelState* g_akao_seq_channel0;
 extern AkaoDriverFlags g_akao_driver_flags;
 

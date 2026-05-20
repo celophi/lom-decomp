@@ -1,6 +1,6 @@
 #include "decomp4.h"
 
-u16 D_8003EC1C;
+u16 g_akao_irq_frame_counter;
 s32 D_8004D40C;
 u32 D_8004F758;
 s32 D_8003EC18;
@@ -32,9 +32,9 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
-void func_800299EC(void)
+void akao_apply_cdvol_to_spu(void)
 {
-    s32 val = (s32)D_8003EC6A;
+    s32 val = (s32)g_akao_cdvol_current;
     *(s16*)0x1F801DB0 = (s16)val;
     *(s16*)0x1F801DB2 = (s16)val;
 }
@@ -102,13 +102,13 @@ void func_80029A8C(void)
     void* ptr28;
     s32 new_var4;
     u32* ptr;
-    new_var4 = D_8003EC60;
-    D_8003EC70 = (D_8003EC70 + 1) & 0xFF;
-    if (D_8003EC64 != 0)
+    new_var4 = g_akao_cdvol_step;
+    g_akao_cdvol_tick = (g_akao_cdvol_tick + 1) & 0xFF;
+    if (g_akao_cdvol_fade_ticks != 0)
     {
-        D_8003EC64--;
-        D_8003EC68 += D_8003EC60;
-        func_800299EC(new_var4);
+        g_akao_cdvol_fade_ticks--;
+        g_akao_cdvol_acc += g_akao_cdvol_step;
+        akao_apply_cdvol_to_spu(new_var4);
     }
     xa = g_akao_xa_tracker;
     if (((*((s32*)(xa + 0x0C))) != 0) && ((*((s32*)(xa + 0x48))) != 0))
@@ -139,12 +139,12 @@ void func_80029A8C(void)
         D_8003EC42--;
         D_8003EC78 += D_8003EC3C;
     }
-    if (D_8003EC40 != 0)
+    if (g_akao_mastervol_fade_ticks != 0)
     {
-        new_var8 = &D_8003EC38;
-        D_8003EC40--;
-        temp_s1 = D_8003EC74 + (*new_var8);
-        if ((D_8003EC74 & 0xFF0000) != (temp_s1 & 0xFF0000))
+        new_var8 = &g_akao_mastervol_step;
+        g_akao_mastervol_fade_ticks--;
+        temp_s1 = g_akao_mastervol_acc + (*new_var8);
+        if ((g_akao_mastervol_acc & 0xFF0000) != (temp_s1 & 0xFF0000))
         {
             new_var3 = 0x100;
             ptr = (u32*)(g_akao_seq_channels + new_var3);
@@ -156,7 +156,7 @@ void func_80029A8C(void)
                 i--;
             } while (i != 0);
         }
-        D_8003EC74 = temp_s1;
+        g_akao_mastervol_acc = temp_s1;
     }
     seq_ptr = g_akao_seq_channel0;
     if ((*((s32*)(((u8*)seq_ptr) + 4))) != 0)
@@ -257,7 +257,7 @@ s32 func_80029E88(s32 arg0, s32 arg1)
     AkaoDriverFlags* driver_flags;
 
     var_a0 = g_akao_seq_channel0->unk20 >> 16;
-    var_s2 = D_8003EC7A;
+    var_s2 = g_akao_master_vol_scalar;
 
     if (var_s2 != 0)
     {
@@ -274,7 +274,7 @@ s32 func_80029E88(s32 arg0, s32 arg1)
 
     g_akao_seq_channel0->unk28 = g_akao_seq_channel0->unk28 + var_a0;
 
-    if ((g_akao_seq_channel0->unk28 & 0xFFFF0000U) || (D_8003EC7C & 4))
+    if ((g_akao_seq_channel0->unk28 & 0xFFFF0000U) || (g_akao_driver_mode_flags & 4))
     {
         g_akao_seq_channel0->unk28 = (s32)(g_akao_seq_channel0->unk28 & 0xFFFFU);
 
@@ -388,10 +388,10 @@ void func_8002A134(void)
         u32 unk18_val;
 
         seq0 = g_akao_seq_channel0;
-        ec1c = D_8003EC1C;
+        ec1c = g_akao_irq_frame_counter;
         unk18_val = seq0->unk18;
         ec1c += 1;
-        D_8003EC1C = ec1c;
+        g_akao_irq_frame_counter = ec1c;
 
         if ((unk18_val == 0) && (D_8004D40C == 0))
         {
@@ -460,7 +460,7 @@ void func_8002A134(void)
         {
             u32 sum = g_akao_sfx_control.unk18 + g_akao_sfx_control.unk16;
             g_akao_sfx_control.unk18 = sum;
-            if (((sum & 0xFFFF0000) != 0) || (D_8003EC7C & 4))
+            if (((sum & 0xFFFF0000) != 0) || (g_akao_driver_mode_flags & 4))
             {
                 g_akao_sfx_control.unk18 = sum & 0xFFFF;
 
@@ -471,7 +471,7 @@ void func_8002A134(void)
                 {
                     if (var_s3 & bitMask)
                     {
-                        if (!(D_8003EC7C & 2) || (channel->field_28 & 0x02000000))
+                        if (!(g_akao_driver_mode_flags & 2) || (channel->field_28 & 0x02000000))
                         {
                             channel->field_58++;
 
@@ -501,7 +501,7 @@ void func_8002A134(void)
     }
 
     /* Periodic call */
-    if (!(D_8003EC1C & 3))
+    if (!(g_akao_irq_frame_counter & 3))
     {
         func_80029A8C();
     }
