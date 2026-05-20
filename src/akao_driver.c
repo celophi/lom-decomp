@@ -2,7 +2,7 @@
 #include "akao.h"
 
 /* "AKAO" in little-endian */
-#define AKAO_MAGIC 0x4F414B41 
+#define AKAO_MAGIC 0x4F414B41
 
 /**
  * @brief Relocates an AKAO articulation table by adding the SPU upload base
@@ -220,7 +220,8 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
         base = (u8*)bank;
         base = base + 0x40;
         akao_spu_write((s32)(base + (bank_hdr->articulation_count * 0x10)), bank_hdr->sample_size);
-        akao_relocate_articulations((s32*)base, (s32*)(g_akao_articulation_slots + (bank_id * 0x10)), spu_base, bank_hdr->articulation_count);
+        akao_relocate_articulations((s32*)base, (s32*)(g_akao_articulation_slots + (bank_id * 0x10)), spu_base,
+                                    bank_hdr->articulation_count);
         var_v0 = 0;
         if (wait_for_completion != 0)
         {
@@ -289,7 +290,7 @@ void akao_driver_init_state(void)
     *((u32*)off(a0, 0x50)) = 0x7F0000;
     D_8003EC58 = a2;
     a2 += 0x58;
-    g_akao_seq_channel0 = (AkaoChannelState *)a0;
+    g_akao_seq_channel0 = (AkaoChannelState*)a0;
     g_akao_seq_channel1 = 0;
     D_8003EC24 = 0;
     g_akao_cdvol_tick = 0;
@@ -457,7 +458,7 @@ void func_80023BB8(s32 base)
  * the per-frame counter, disables and undelivers its event, then clears any
  * lingering SPU IRQs and calls @c SpuQuit.
  *
- * @see https://decomp.me/scratch/VenON (100%)
+ * @see https://decomp.me/scratch/1FglZ (100%)
  */
 void akao_driver_shutdown(void)
 {
@@ -466,19 +467,14 @@ void akao_driver_shutdown(void)
         akao_spu_write(&g_akao_spu_zero_primer, 0x40);
         akao_spu_wait();
     }
-    do
-    {
 
-    } while (StopRCnt(0xF2000002) == 0);
+    while (StopRCnt(0xF2000002) == 0);
+
     UnDeliverEvent(0xF2000002, 2);
-    do
-    {
 
-    } while (DisableEvent(g_akao_rcnt2_event) == 0);
-    do
-    {
+    while (DisableEvent(g_akao_rcnt2_event) == 0);
+    while (CloseEvent(g_akao_rcnt2_event) == 0);
 
-    } while (CloseEvent(g_akao_rcnt2_event) == 0);
     func_8002427C(0xFFFFFF);
     SpuQuit();
 }
