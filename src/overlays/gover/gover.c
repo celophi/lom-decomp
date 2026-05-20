@@ -68,13 +68,21 @@ typedef struct
     u16 clutY;
 } VramDstCoords;
 
+/**
+ * @brief Audio data block consumed by the AKAO driver.
+ *
+ * @details Begins with a 12-byte status header (@p status_size = 12 when
+ * populated), followed by the AKAO sequence payload copied in from a CD load.
+ * @p gover_load_audio_clip stages bytes into @p &block + 12 (i.e. into
+ * @p payload onwards). Field names beyond @p status_size are still unknown.
+ */
 typedef struct
 {
-    u32 unk0;
+    u32 status_size;
     u32 unk4;
     u32 unk8;
-    u8 unk12[1];
-} D_80119F00_t;
+    u8 payload[1];
+} AudioDataBlock;
 
 /**
  * @brief One half of the Game Over screen's double-buffered frame.
@@ -109,13 +117,26 @@ typedef struct GoverFrameHalf
     u8* allocCursor;
 } GoverFrameHalf;
 
-extern s32 func_800A368C(s32, s32);
-extern s32 func_800A380C(void);
-extern s32 func_800A39A8(s32, s32, s32, s32);
-extern s32 D_8011588C;
+/*
+ * Audio/music helpers used by gover_show_screen. Real names are still unknown;
+ * roles below are inferred from call-site context and AKAO sequencing.
+ */
+extern s32 func_800A368C(s32, s32); /* music: load/start track from resource index */
+extern s32 func_800A380C(void);     /* music: commit/apply pending state (e.g. volume) */
+extern s32 func_800A39A8(s32, s32, s32, s32); /* one-shot SFX/voice playback */
+
+/**
+ * @brief AKAO music master volume slot, sampled by func_800A380C on commit.
+ *
+ * @note Name inferred from usage - it is set to AKAO_VOLUME_MAX immediately
+ * before func_800A380C() and an akao_cmd_c0 volume command. Only referenced
+ * from this overlay; not in any shared symbol map.
+ */
+extern s32 g_akao_music_volume;
+
 extern u32 D_8003EC90;
 extern s32 D_8010D018;
-extern D_80119F00_t g_audioData;
+extern AudioDataBlock g_audioData;
 extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 
 /**
@@ -133,6 +154,24 @@ extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 
 /** RAM staging address used to load audio clip data from CD. */
 #define GOVER_AUDIO_LOAD_ADDR 0x80180000
+
+/** Constant added to an imageResourceIndex to produce its CD resource index. */
+#define GOVER_IMAGE_RESOURCE_BASE 0xFFC
+
+/** Maximum AKAO volume level (7-bit MIDI-style volume). */
+#define AKAO_VOLUME_MAX 0x7F
+
+/** g_fadeLevel value representing full brightness (end of fade-in / start of hold). */
+#define GOVER_FADE_FULL 0x80
+
+/** Per-frame increment applied to g_fadeLevel during fade-in (negated for fade-out). */
+#define GOVER_FADE_STEP 4
+
+/**
+ * Bitmask of g_pad_input bits that dismiss the Game Over screen once the
+ * fade-in has held at @p GOVER_FADE_FULL. Exact button mapping unknown.
+ */
+#define GOVER_DISMISS_BUTTON_MASK 0x260
 
 /**
  * Self-referential offset stored at GOVER_AUDIO_LOAD_ADDR + 4 by the loaded
@@ -264,11 +303,11 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     rect.w = 0;
     rect.h = GOVER_CLUT_Y;
 
-    gover_load_image_from_cd(imageResourceIndex + 0xFFC, (VramDstCoords*)(&rect), cdLoadAddr);
+    gover_load_image_from_cd(imageResourceIndex + GOVER_IMAGE_RESOURCE_BASE, (VramDstCoords*)(&rect), cdLoadAddr);
 
     akao_cmd_f0();
     akao_cmd_f1();
-    akao_cmd_a8(0x7F);
+    akao_cmd_a8(AKAO_VOLUME_MAX);
 
     if (audioClipIndex != -1)
     {
@@ -279,14 +318,14 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     if (musicResourceIndex != -1)
     {
         func_800A368C(musicResourceIndex, 0);
-        D_8011588C = 0x7F;
+        g_akao_music_volume = AKAO_VOLUME_MAX;
         func_800A380C();
-        akao_cmd_c0(0, 0x7F);
+        akao_cmd_c0(0, AKAO_VOLUME_MAX);
     }
 
-    // Begin a 4-per-frame fade-in (0 -> 0x80); gover_run flips the sign on input.
-    g_fadeLevel = 4;
-    g_fadeStep = 4;
+    // Begin a GOVER_FADE_STEP-per-frame fade-in (0 -> GOVER_FADE_FULL); gover_run flips the sign on input.
+    g_fadeLevel = GOVER_FADE_STEP;
+    g_fadeStep = GOVER_FADE_STEP;
     gover_run();
 }
 
@@ -314,65 +353,62 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  * stopped, the display is masked off, and @p D_8010D018 is set to signal the
  * caller that the Game Over sequence has completed.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/LOxbx
+ * @see decomp.me: (100%) https://decomp.me/scratch/IfwJm
  */
 static void gover_run(void)
 {
     GoverFrameHalf* current;
     GoverFrameHalf* drawing;
-    int new_var;
     GoverFrameHalf* next;
-    u8 dummy[8];
-    s32* p_d40708;
+    u8 _match_pad[8]; /* stack-shape padding required for matching codegen */
+
     func_800AA02C();
     current = (GoverFrameHalf*)g_goverFrameHeader;
-    ClearOTagR((u_long*)current, 8);
-    ClearOTagR((u_long*)&current[1], 8);
+    ClearOTagR((u_long*)current->otag, 8);
+    ClearOTagR((u_long*)current[1].otag, 8);
     VSync(0);
     PutDispEnv(&current->disp);
     func_800157DC();
     SetDispMask(1);
+
+    drawing = current;
+    while (1)
     {
         drawing = current;
-        while (1)
+        ClearOTagR((u_long*)drawing->otag, 8);
+        drawing->allocCursor = drawing->primBuf;
+        func_800A9E78();
+        gover_build_otag((unsigned char*)drawing);
+        DrawSync(0);
+        func_800157B0(2);
+
+        VSync(2);
+
+        if ((g_fadeLevel == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
         {
-            drawing = current;
-            ClearOTagR((u_long*)drawing, 8);
-            drawing->allocCursor = drawing->primBuf;
-            func_800A9E78();
-            gover_build_otag((s32*)drawing);
-            DrawSync(0);
-            func_800157B0(2);
-            if (!g_fadeLevel)
-            {
-            }
-            VSync(2);
-            p_d40708 = &g_fadeStep;
-            if ((g_fadeLevel == 128) && (g_pad_input & 0x260))
-            {
-                akao_cmd_c1(0, 0x20, 0);
-                *p_d40708 = -4;
-            }
-            if (g_fadeLevel == (0 & 0xFF))
-            {
-                break;
-            }
-            next = (GoverFrameHalf*)g_goverFrameHeader;
-            if (current == (GoverFrameHalf*)g_goverFrameHeader)
-            {
-                next = current + 1;
-            }
-            current = next;
-            PutDispEnv(&current->disp);
-            new_var = 0x1C;
-            PutDrawEnv(&current->draw);
-            // The OT linked list is built backward, so DrawOTag is invoked starting
-            // at the last entry (otag[7] at offset 0x1C).
-            DrawOTag((u_long*)((u_char*)drawing + new_var));
-            func_800157DC();
-            cdrom_process_state();
+            akao_cmd_c1(0, 0x20, 0);
+            g_fadeStep = -GOVER_FADE_STEP;
         }
+        if (g_fadeLevel == (0 & 0xFF))
+        {
+            break;
+        }
+        next = (GoverFrameHalf*)g_goverFrameHeader;
+        if (current == (GoverFrameHalf*)g_goverFrameHeader)
+        {
+            next = current + 1;
+        }
+        current = next;
+        PutDispEnv(&current->disp);
+
+        PutDrawEnv(&current->draw);
+        // The OT linked list is built backward, so DrawOTag is invoked starting
+        // at the last entry (otag[7] at offset 0x1C).
+        DrawOTag((u_long*)((u_char*)drawing + 0x1C));
+        func_800157DC();
+        cdrom_process_state();
     }
+
     DrawSync(0);
     VSync(0);
     func_800158E0();
@@ -405,7 +441,7 @@ static void gover_run(void)
  *                the OTag[0] linked-list head and the container for the
  *                primitive allocation cursor at offset 0x498.
  *
- * @see decomp.me (97.86%) https://decomp.me/scratch/q3LKi
+ * @see decomp.me (100%) https://decomp.me/scratch/q3LKi
  */
 static void gover_build_otag(unsigned char* pOtBuf)
 {
@@ -420,7 +456,7 @@ static void gover_build_otag(unsigned char* pOtBuf)
         g_fadeLevel += g_fadeStep;
     }
 
-    if (g_fadeLevel == 128)
+    if (g_fadeLevel == GOVER_FADE_FULL)
     {
         g_fadeStep = 0;
     }
@@ -442,13 +478,13 @@ static void gover_build_otag(unsigned char* pOtBuf)
     setBGR0((SPRT*)pPrimA, leftFadeLevel, leftFadeLevel, leftFadeLevel);
     addPrim(pOtBuf, pPrimA);
 
-    pPrimA += 20;
+    pPrimA += sizeof(SPRT);
 
     // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=SCREEN_WIDTH, ABR=add)
     setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
     addPrim(pOtBuf, pPrimA);
 
-    pPrimB = pPrimA + 8;
+    pPrimB = pPrimA + sizeof(DR_TPAGE);
     pPrimA = pPrimB;
 
     // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=SCREEN_WIDTH+128)
@@ -464,12 +500,12 @@ static void gover_build_otag(unsigned char* pOtBuf)
 
     addPrim(pOtBuf, pPrimB);
 
-    pPrimA += 20;
+    pPrimA += sizeof(SPRT);
 
     // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=SCREEN_WIDTH+128, ABR=add)
     setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH + 128, 0));
     pPrimB = pPrimA;
-    pPrimB += 8;
+    pPrimB += sizeof(DR_TPAGE);
 
     addPrim(pOtBuf, pPrimA);
 
@@ -491,7 +527,7 @@ static void gover_build_otag(unsigned char* pOtBuf)
  */
 static void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer)
 {
-    volatile u8 dummy[8];
+    volatile u8 _match_pad[8]; /* stack-shape padding required for matching codegen */
     cdrom_queue_read(cdResourceIndex & 0xFFFF, ramBuffer);
     cdrom_wait_queue_empty();
     gover_upload_image_to_vram((ClutSectionHeader*)ramBuffer, coordinates);
@@ -573,7 +609,7 @@ static void gover_load_audio_clip(s32 audioClipIndex)
 
     g_audioData.unk8 = 0;
     g_audioData.unk4 = 0;
-    g_audioData.unk0 = 0;
+    g_audioData.status_size = 0;
 
     if (audioClipIndex == -1)
     {
@@ -582,7 +618,7 @@ static void gover_load_audio_clip(s32 audioClipIndex)
 
     cdrom_queue_read((audioClipIndex + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
     cdrom_wait_queue_empty();
-    g_audioData.unk0 = 0xC;
+    g_audioData.status_size = 0xC;
 
     src = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
     offsets = (s32*)src;
