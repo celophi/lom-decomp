@@ -152,18 +152,19 @@ void akao_spu_wait(void)
  *
  * @return 0 if the magic matched and the buffer was submitted; -1 if the
  *         AKAO magic check failed.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/B0eQd
  */
 s32 akao_submit(AkaoSeqHeader* seq_data, s32 wait_for_completion)
 {
-    s32 ret = -1;
     AkaoBankHeader* bank_hdr = (AkaoBankHeader*)seq_data;
     if (akao_check_magic((s32*)seq_data) == 0)
     {
         akao_upload_bank(seq_data, wait_for_completion, bank_hdr->bank_id, bank_hdr->spu_dest_addr);
-        ret = 0;
-        return ret;
+        
+        return 0;
     }
-    return ret;
+    return -1;
 }
 
 /**
