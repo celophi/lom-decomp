@@ -66,7 +66,14 @@ typedef struct AkaoChannelState
     u16 unk68;       /* 0x68 */
     u16 unk6A;       /* 0x6A */
     u16 unk6C;       /* 0x6C */
-    u8 _pad6E[0xAA]; /* 0x6E – 0x117 */
+    u8 _pad6E[0x92]; /* 0x6E – 0xFF */
+    s32 unk100;      /* 0x100 */
+    s32 unk104;      /* 0x104 */
+    s32 unk108;      /* 0x108 */
+    u8 _pad10C[2];   /* 0x10C – 0x10D */
+    u16 unk10E;      /* 0x10E */
+    u16 unk110;      /* 0x110 */
+    u8 _pad112[6];   /* 0x112 – 0x117 */
 } AkaoChannelState;  /* total = 0x118 */
 
 /**
