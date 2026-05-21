@@ -1356,3 +1356,47 @@ void func_8002AD28(Context* arg0, s32 arg1)
         arg0->unkF2 = arg0->unkEA;
     }
 }
+
+typedef struct
+{
+    u8 pad0[0x100]; // padding to reach offset 0x100
+    s32 unk100;     // offset 0x100
+    s32 unk104;     // offset 0x104
+    s32 unk108;     // offset 0x108
+    u8 pad1[0x2];   // padding from 0x10C to 0x10D
+    u16 unk10E;     // offset 0x10E
+    u16 unk110;     // offset 0x110
+} Arg0;
+
+// Structure for arg1 with correct offsets (packed to avoid padding)
+typedef struct
+{
+    u8 pad0[0x4]; // padding to reach offset 0x4
+    s32 unk4;     // offset 0x4
+    u8 pad1[0x4]; // padding from 0x8 to 0xB
+    u16 unkC;     // offset 0xC
+    u16 unkE;     // offset 0xE
+} Arg1;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Fr8N0
+ */
+void func_8002B468(Arg0* arg0, Arg1* arg1, s32 arg2)
+{
+    u16 tmp_c, tmp_e;
+    s32 tmp_4;
+    s32 old_val;
+
+    arg0->unk104 = arg2;
+    tmp_4 = arg1->unk4;
+    arg0->unk108 = tmp_4;
+
+    tmp_c = arg1->unkC;
+    arg0->unk10E = tmp_c; /* store unk10E early */
+
+    old_val = arg0->unk100; /* load unk100 after that store */
+    tmp_e = arg1->unkE;
+
+    arg0->unk100 = old_val | 0x1FF80; /* OR and write back */
+    arg0->unk110 = tmp_e;
+}
