@@ -1068,7 +1068,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
     {
         if (akao_check_magic(src) == 0)
         {
-            func_80029A0C(*(new_var = &src), &g_akao_bank_staging, 0x40U);
+            akao_copy_bytes(*(new_var = &src), &g_akao_bank_staging, 0x40U);
             src += 0x40;
             avail -= 0x40;
             g_akao_streaming_state.spu_addr = (s32)g_akao_bank_staging.spu_dest_addr;
@@ -1092,7 +1092,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             {
                 chunk = avail;
             }
-            func_80029A0C(src, g_akao_streaming_state.articulation_dst, chunk);
+            akao_copy_bytes(src, g_akao_streaming_state.articulation_dst, chunk);
             advance = (chunk >> 2) * 4;
             src += advance;
             avail -= chunk;
@@ -1402,7 +1402,7 @@ s32 akao_upload_xa_program(void* arg0, s32 arg1)
          */
         akao_spu_write(arg0, ((AkaoBankHeader*)var1)->spu_dest_addr);
         ((AkaoBankHeader*)var1)->cached_spu_addr = var_s2;
-        func_80029A0C(var1, &D_8004C150, 0x50);
+        akao_copy_bytes(var1, &D_8004C150, 0x50);
         return temp_v0;
     }
     D_8004C170 = 0;

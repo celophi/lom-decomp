@@ -400,7 +400,7 @@ void akao_driver_init_state(void)
  *   2. Upload a 64-byte zero-payload primer to SPU (@c &g_akao_spu_zero_primer, size 0x40)
  *      and wait for completion.
  *   3. Run akao_driver_init_state.
- *   4. Disable SPU IRQ; install the AKAO IRQ callback (@c func_8002A134).
+ *   4. Disable SPU IRQ; install the AKAO IRQ callback (@c akao_irq_handler).
  *   5. Configure the per-frame counter (@c F2000002 / SetRCnt + StartRCnt)
  *      and open/enable its event so akao_xa_advance_frame ticks.
  *
@@ -426,7 +426,7 @@ void akao_driver_init(void)
 
     do
     {
-        temp_v0 = OpenEvent(0xF2000002, 2, 0x1000, func_8002A134);
+        temp_v0 = OpenEvent(0xF2000002, 2, 0x1000, akao_irq_handler);
         g_akao_rcnt2_event = temp_v0;
     } while (temp_v0 == -1);
 

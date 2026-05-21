@@ -117,7 +117,7 @@ void akao_apply_cdvol_to_spu(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/TxNq3
  */
-void func_80029A0C(s32* arg0, s32* arg1, u32 arg2)
+void akao_copy_bytes(s32* arg0, s32* arg1, u32 arg2)
 {
 
     arg2 >>= 2;
@@ -152,7 +152,7 @@ void func_80029A0C(s32* arg0, s32* arg1, u32 arg2)
 /**
  * decomp.me (86.49%) https://decomp.me/scratch/07M97
  */
-void func_80029A8C(void)
+void akao_tick_fades(void)
 {
     u8* xa;
     u8* new_var7;
@@ -321,7 +321,7 @@ void func_80029A8C(void)
 /**
  * decomp.me (84.65%) https://decomp.me/scratch/XMCUh
  */
-s32 func_80029E88(s32 arg0, s32 arg1)
+s32 akao_seq_tick_channels(s32 arg0, s32 arg1)
 {
     u32 var_a0;
 
@@ -371,7 +371,7 @@ s32 func_80029E88(s32 arg0, s32 arg1)
 
                     if (s->unk66 == 0)
                     {
-                        func_8002AD28(var_s2, var_s1);
+                        akao_seq_step_opcode(var_s2, var_s1);
                     }
                     else if (s->unk68 == 0)
                     {
@@ -443,7 +443,7 @@ s32 func_80029E88(s32 arg0, s32 arg1)
 /**
  * decomp.me (84.56%) https://decomp.me/scratch/ICO2k
  */
-void func_8002A134(void)
+void akao_irq_handler(void)
 {
     s32 temp_s5;
     s32 var_s3;
@@ -495,8 +495,8 @@ void func_8002A134(void)
             }
             else if ((g_akao_seq_channel0->unk4 | g_akao_seq_channel0->unk1C) == 0)
             {
-                func_80029A0C((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
-                func_80029A0C((s32*)D_8003EC24, &g_akao_seq_channels, 0x2300);
+                akao_copy_bytes((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
+                akao_copy_bytes((s32*)D_8003EC24, &g_akao_seq_channels, 0x2300);
                 {
                     AkaoChannelState* tmp = g_akao_seq_channel1;
                     g_akao_seq_channel1 = 0;
@@ -517,14 +517,14 @@ void func_8002A134(void)
     /* Fourth conditional */
     if (g_akao_seq_channel0->unk4 != 0)
     {
-        func_80029E88(&g_akao_seq_channels, 0);
+        akao_seq_tick_channels(&g_akao_seq_channels, 0);
     }
 
     /* Fifth conditional */
     if ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk4 != 0))
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
-        func_80029E88(D_8003EC24, 1);
+        akao_seq_tick_channels(D_8003EC24, 1);
         g_akao_seq_channel0 = &g_akao_seq_master_state;
     }
 
@@ -557,7 +557,7 @@ void func_8002A134(void)
 
                             if (temp_v1_2 == 0)
                             {
-                                func_8002AD28(channel, bitMask);
+                                akao_seq_step_opcode(channel, bitMask);
                             }
                             else if (temp_v0_2 == 0)
                             {
@@ -578,7 +578,7 @@ void func_8002A134(void)
     /* Periodic call */
     if (!(g_akao_irq_frame_counter & 3))
     {
-        func_80029A8C();
+        akao_tick_fades();
     }
 
     /* Timing / profiling update for D_8003D160 */
@@ -607,7 +607,7 @@ extern u8 D_8003D1B0[];
 /**
  * decomp.me (78.79%) https://decomp.me/scratch/9GIhP
  */
-u8 func_8002A4E8(Context* arg0)
+u8 akao_seq_skip_to_next_note(Context* arg0)
 {
     u8* var_a1 = arg0->unk0;
     u8* new_var;
@@ -796,7 +796,7 @@ u8 func_8002A4E8(Context* arg0)
 /**
  * decomp.me (93.41%) https://decomp.me/scratch/0tdrk
  */
-void func_8002A6FC(u8* arg0, u32 arg1)
+void akao_bind_articulation_for_key(u8* arg0, u32 arg1)
 {
     u8* a0 = (u8*)arg0;
     s16 temp_v1;
@@ -903,7 +903,7 @@ void func_8002A6FC(u8* arg0, u32 arg1)
 /**
  * decomp.me (99.70%) https://decomp.me/scratch/GBbit
  */
-s32 func_8002A924(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
+s32 akao_compute_pitch(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
 {
     unsigned int new_var;
     s32 tmp3;
@@ -1001,10 +1001,10 @@ s32 func_8002A924(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
  * @param arg1 Channel bit-mask used to update the active-channel bitmask.
  * @param arg2 Slot index into the small-slot table (base pointer from
  *             @c g_akao_seq_channel0->unk34).
- * @return Pitch result from @c func_8002A924.
+ * @return Pitch result from @c akao_compute_pitch.
  * @see decomp.me (98.76%) https://decomp.me/scratch/9dRLX
  */
-s32 func_8002AAB4(void* arg0, s32 arg1, s32 arg2)
+s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
 {
     SmallSlot* slot;
     ArticSlot* art;
@@ -1070,7 +1070,7 @@ s32 func_8002AAB4(void* arg0, s32 arg1, s32 arg2)
         *((u16*)(((u8*)arg0) + 0x110)) |= slot->unk5;
     }
     *((u16*)(((u8*)arg0) + 0x110)) |= art->unkE & 0x20;
-    ret = func_8002A924((UnkStruct*)art, slot->unk1, *((s16*)(((u8*)arg0) + 0xEC)), (s32*)(((u8*)arg0) + 0x54));
+    ret = akao_compute_pitch((UnkStruct*)art, slot->unk1, *((s16*)(((u8*)arg0) + 0xEC)), (s32*)(((u8*)arg0) + 0x54));
     *((s16*)(((u8*)arg0) + 0x112)) = (s16)slot->unk6;
     *((s16*)(((u8*)arg0) + 0x90)) = (s16)(((slot->unk7 & 0x7F) + 0x40) << 8);
     if (slot->unk7 & 0x80)
@@ -1095,7 +1095,7 @@ extern s32 D_8003DD80[];
 /**
  * decomp.me (89.58%) https://decomp.me/scratch/P4H6n
  */
-void func_8002AD28(Context* arg0, s32 arg1)
+void akao_seq_step_opcode(Context* arg0, s32 arg1)
 {
     s32 sp10;
     void (**var_v0)(Context*, s32);
@@ -1173,7 +1173,7 @@ void func_8002AD28(Context* arg0, s32 arg1)
     }
     else
     {
-        temp_a2 = func_8002A4E8(arg0) & 0xFF;
+        temp_a2 = akao_seq_skip_to_next_note(arg0) & 0xFF;
         temp_v1_2 = arg0->unkDE;
         if ((s16)arg0->unkDE != 0)
         {
@@ -1225,7 +1225,7 @@ void func_8002AD28(Context* arg0, s32 arg1)
             temp_s1 = (var_s1 / 11) + (arg0->unk96 * 0xC);
             if (temp_v1_3 & 8)
             {
-                var_a2 = func_8002AAB4(arg0, arg1, temp_s1);
+                var_a2 = akao_channel_start_note(arg0, arg1, temp_s1);
             }
             else
             {
@@ -1235,7 +1235,7 @@ void func_8002AD28(Context* arg0, s32 arg1)
                     {
                         if (temp_v1_3 & 0x1000)
                         {
-                            func_8002A6FC(arg0, temp_s1, temp_a2);
+                            akao_bind_articulation_for_key(arg0, temp_s1, temp_a2);
                         }
                         g_akao_seq_channel0->unk10 |= arg1;
                         if ((g_akao_seq_channel0->unk14 & arg1) && (*(volatile u32*)&arg0->unkFC < 0x18U))
@@ -1270,8 +1270,8 @@ void func_8002AD28(Context* arg0, s32 arg1)
                     arg0->unkEE = temp_s1;
                     var_s1_2 = temp_s1 + (s16)arg0->unkEA;
                 }
-                var_a2 = func_8002A924((arg0->unk6A * 0x10) + g_akao_articulation_slots, var_s1_2, arg0->unkEC,
-                                       (s32*)(arg0->pad54));
+                var_a2 = akao_compute_pitch((arg0->unk6A * 0x10) + g_akao_articulation_slots, var_s1_2, arg0->unkEC,
+                                            (s32*)(arg0->pad54));
                 temp_v1_5 = arg0->unkDA;
                 if (temp_v1_5 != 0)
                 {
@@ -1345,8 +1345,8 @@ void func_8002AD28(Context* arg0, s32 arg1)
         {
             temp_v0_5 = arg0->unkEE + arg0->unkF0;
             arg0->unkEE = temp_v0_5;
-            temp_a2_2 = func_8002A924((arg0->unk6A * 0x10) + g_akao_articulation_slots, temp_v0_5 + (s16)arg0->unkEA,
-                                      arg0->unkEC, &sp10)
+            temp_a2_2 = akao_compute_pitch((arg0->unk6A * 0x10) + g_akao_articulation_slots, temp_v0_5 + (s16)arg0->unkEA,
+                                           arg0->unkEC, &sp10)
                         << 0x10;
             arg0->unk94 = arg0->unk98;
             arg0->unkF0 = 0U;
@@ -1383,7 +1383,7 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/Fr8N0
  */
-void func_8002B468(Arg0* arg0, Arg1* arg1, s32 arg2)
+void akao_channel_load_articulation_fields(Arg0* arg0, Arg1* arg1, s32 arg2)
 {
     u16 tmp_c, tmp_e;
     s32 tmp_4;
@@ -1406,19 +1406,19 @@ void func_8002B468(Arg0* arg0, Arg1* arg1, s32 arg2)
 /**
  * decomp.me (100%) https://decomp.me/scratch/1RRHh
  */
-void func_8002B49C(Arg0* arg0, s32 arg1)
+void akao_channel_set_articulation(Arg0* arg0, s32 arg1)
 {
     Arg1* temp_a1;
 
     arg0->unk6A = arg1;
     temp_a1 = (Arg1*)(g_akao_articulation_slots + (arg1 << 4));
-    func_8002B468(arg0, temp_a1, *(s32*)temp_a1);
+    akao_channel_load_articulation_fields(arg0, temp_a1, *(s32*)temp_a1);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/67vx9
  */
-void func_8002B4D4(void* arg0, u32 arg1)
+void akao_sfx_release_channels(void* arg0, u32 arg1)
 {
     u32 mask = ~arg1;
 
