@@ -12,7 +12,7 @@ extern s32 g_akao_cdvol_step;
 extern s32 D_8004F754;
 extern s16 D_8003D47C;
 extern s32 D_8004F7A0;
-extern s32 D_8003EC3C;
+extern s32 g_akao_masterpan_step;
 extern s32 g_akao_mastervol_step;
 
 /**

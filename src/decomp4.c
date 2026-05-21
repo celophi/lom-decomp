@@ -131,10 +131,10 @@ void akao_tick_fades(void)
         }
         D_8004F7A0 = temp & 0xFFFF;
     }
-    if (D_8003EC42 != 0)
+    if (g_akao_masterpan_fade_ticks != 0)
     {
-        D_8003EC42--;
-        D_8003EC78 += D_8003EC3C;
+        g_akao_masterpan_fade_ticks--;
+        g_akao_masterpan_acc += g_akao_masterpan_step;
     }
     if (g_akao_mastervol_fade_ticks != 0)
     {
@@ -184,7 +184,7 @@ void akao_tick_fades(void)
             temp = (*((s32*)(((u8*)ptr28) + 0x50))) + (*((s32*)(((u8*)ptr28) + 0x54)));
             if ((temp & 0x7F0000) != ((*((s32*)(((u8*)g_akao_seq_channel1) + 0x50))) & 0x7F0000))
             {
-                func_80026E8C(g_akao_seq_channel1, (void*)((u32)D_8003EC24), (u32)g_akao_seq_channel1);
+                func_80026E8C(g_akao_seq_channel1, (void*)((u32)g_akao_pending_channels), (u32)g_akao_seq_channel1);
             }
             *((s32*)(((u8*)g_akao_seq_channel1) + 0x50)) = temp;
         }
@@ -338,9 +338,9 @@ s32 akao_seq_tick_channels(s32 arg0, s32 arg1)
                         g_akao_seq_channel0->unk6C = (u16)(g_akao_seq_channel0->unk6C + 1);
                         if (arg1 == 0)
                         {
-                            if (D_8003EC44 != 0)
+                            if (g_akao_seq_pending_ticks != 0)
                             {
-                                D_8003EC44 -= 1;
+                                g_akao_seq_pending_ticks -= 1;
                             }
                         }
                     }
@@ -350,7 +350,7 @@ s32 akao_seq_tick_channels(s32 arg0, s32 arg1)
             if (arg1 == 0)
             {
                 var_s2 = arg0;
-                if (D_8003EC44 != 0)
+                if (g_akao_seq_pending_ticks != 0)
                 {
                     continue;
                 }
@@ -418,7 +418,7 @@ void akao_irq_handler(void)
             else if ((g_akao_seq_channel0->unk4 | g_akao_seq_channel0->unk1C) == 0)
             {
                 akao_copy_bytes((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
-                akao_copy_bytes((s32*)D_8003EC24, &g_akao_seq_channels, 0x2300);
+                akao_copy_bytes((s32*)g_akao_pending_channels, &g_akao_seq_channels, 0x2300);
                 {
                     AkaoChannelState* tmp = g_akao_seq_channel1;
                     g_akao_seq_channel1 = 0;
@@ -446,7 +446,7 @@ void akao_irq_handler(void)
     if ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk4 != 0))
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
-        akao_seq_tick_channels(D_8003EC24, 1);
+        akao_seq_tick_channels(g_akao_pending_channels, 1);
         g_akao_seq_channel0 = &g_akao_seq_master_state;
     }
 
@@ -1358,7 +1358,7 @@ s32 func_8002B540(s32 arg0, s32 arg1)
  * @brief Release sequencer or SFX channels depending on mode.
  *        When arg0->unk64 is zero, clears arg1 bits from the seq-channel
  *        bitmasks in g_akao_seq_channel0.  If all active bits are cleared,
- *        also zeros D_8003EC44, unk5E, and flags.  When arg0->unk64 is
+ *        also zeros g_akao_seq_pending_ticks, unk5E, and flags.  When arg0->unk64 is
  *        non-zero, delegates to akao_sfx_release_channels.  In both paths,
  *        arg0->unk34 is cleared and the driver dirty flag (unk8) is OR'd
  *        with 0x110.
@@ -1379,7 +1379,7 @@ void func_8002B580(AkaoSFXState* arg0, u32 arg1)
 
         if (temp_v0 == 0)
         {
-            D_8003EC44 = 0;
+            g_akao_seq_pending_ticks = 0;
             g_akao_seq_channel0->unk5E = 0;
             g_akao_seq_channel0->flags = 0;
         }

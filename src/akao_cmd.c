@@ -146,7 +146,7 @@ s32 func_80021FDC(void)
  *
  * Validates the 'AKAO' magic at the start of @p bankBase via akao_check_magic;
  * on success, hands the payload (after the 16-byte AKAO header) to the driver
- * entry point func_80023BB8, which records the bank as the active sample source.
+ * entry point akao_set_bank_data_ptrs, which records the bank as the active sample source.
  *
  * @param bankBase  Address of an AKAO-tagged instrument bank in main RAM.
  *                  The first 4 bytes must be "AKAO" (0x4F414B41 little-endian).
@@ -164,7 +164,7 @@ s32 akao_register_bank(AkaoSeqHeader* bank)
     temp_v0 = akao_check_magic((s32*)bank);
     if (temp_v0 == 0)
     {
-        func_80023BB8((s32)bank + sizeof(AkaoSeqHeader));
+        akao_set_bank_data_ptrs((s32)bank + sizeof(AkaoSeqHeader));
     }
     return temp_v0;
 }

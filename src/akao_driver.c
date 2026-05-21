@@ -288,14 +288,14 @@ void akao_driver_init_state(void)
     a2 += 0x58;
     g_akao_seq_channel0 = (AkaoChannelState*)a0;
     g_akao_seq_channel1 = 0;
-    D_8003EC24 = 0;
+    g_akao_pending_channels = 0;
     g_akao_cdvol_tick = 0;
     *((u16*)off(a0, 0x58)) = 0;
     g_akao_cdvol_acc = 0x7FFF0000;
     g_akao_mastervol_fade_ticks = 0;
     g_akao_mastervol_acc = 0;
-    D_8003EC42 = 0;
-    D_8003EC78 = 0;
+    g_akao_masterpan_fade_ticks = 0;
+    g_akao_masterpan_acc = 0;
     g_akao_cdvol_fade_ticks = 0;
     *((u32*)off(&g_akao_sfx_control, 0x1C)) = 0;
     *((u32*)off(a0, 0x3C)) = 0;
@@ -316,7 +316,7 @@ void akao_driver_init_state(void)
     *((u16*)off(a0, 0x6C)) = a3;
     *((u32*)off(g_akao_xa_tracker, 0x40)) = 0x7F00;
     *((u32*)off(g_akao_xa_tracker, 0x48)) = a3;
-    D_8003EC44 = a3;
+    g_akao_seq_pending_ticks = a3;
     D_8003EC6C = a3;
     g_akao_driver_mode_flags = a3;
     *((u32*)off(D_8004F830, 0x08)) = a3;
@@ -436,13 +436,13 @@ void akao_driver_init(void)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/z36q3
  */
-void func_80023BB8(s32 base)
+void akao_set_bank_data_ptrs(s32 base)
 {
-    D_8003EC48 = base;
+    g_akao_bank_prog_base = base;
     base += 0x600;
-    D_8003EC50 = base;
+    g_akao_bank_region_b = base;
     base += 0x300;
-    D_8003EC54 = base;
+    g_akao_bank_region_c = base;
 }
 
 /**
