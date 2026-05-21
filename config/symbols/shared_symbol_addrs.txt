@@ -727,6 +727,18 @@ _spu_setReverbAttr                  = 0x8002935C;
 SpuClearReverbWorkArea              = 0x8002982C;
 
 akao_apply_cdvol_to_spu             = 0x800299EC;
+akao_copy_bytes                     = 0x80029A0C;
+akao_tick_fades                     = 0x80029A8C;
+akao_seq_tick_channels              = 0x80029E88;
+akao_irq_handler                    = 0x8002A134;
+akao_seq_skip_to_next_note          = 0x8002A4E8;
+akao_bind_articulation_for_key      = 0x8002A6FC;
+akao_compute_pitch                  = 0x8002A924;
+akao_channel_start_note             = 0x8002AAB4;
+akao_seq_step_opcode                = 0x8002AD28;
+akao_channel_load_articulation_fields = 0x8002B468;
+akao_channel_set_articulation       = 0x8002B49C;
+akao_sfx_release_channels           = 0x8002B4D4;
 
 // psyq/libapi/A10
 WaitEvent                           = 0x800299CC;
