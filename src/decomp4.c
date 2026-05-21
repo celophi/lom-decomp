@@ -7,82 +7,13 @@ s32 D_8003EC18;
 
 extern u32 D_8003D24C[];
 
-typedef struct
-{
-    u8* unk0;      // 0x00
-    u8* unk4[4];   // 0x04
-    u8* unk14;     // 0x14
-    u8 pad18[4];   // 0x18
-    s32 unk1C;     // 0x1C
-    s32 unk20;     // 0x20
-    u8 pad24[8];   // 0x24
-    s32 unk2C;     // 0x2C
-    s32 unk30;     // 0x30
-    u32 unk34;     // 0x34
-    u8 pad38[16];  // 0x38
-    s32 unk48;     // 0x48
-    s32 unk4C;     // 0x4C
-    s32 unk50;     // 0x50
-    u8 pad54[8];   // 0x54
-    s32 unk5C;     // 0x5C
-    s32 unk60;     // 0x60
-    u16 unk64;     // 0x64
-    u16 unk66;     // 0x66
-    u16 unk68;     // 0x68
-    u16 unk6A;     // 0x6A
-    u8 pad6C[6];   // 0x6C
-    u16 unk72;     // 0x72
-    u16 unk74[11]; // 0x74
-
-    u16 unk8A;    // 0x8A
-    u16 unk8C;    // 0x8C
-    u8 pad8E[6];  // 0x8E
-    u16 unk94;    // 0x94
-    u16 unk96;    // 0x96
-    u16 unk98;    // 0x98
-    u16 unk9A;    // 0x9A
-    u16 unk9C;    // 0x9C
-    u16 unk9E;    // 0x9E
-    u8 padA0[2];  // 0xA0
-    u16 unkA2;    // 0xA2
-    u16 unkA4;    // 0xA4
-    u8 padA6[2];  // 0xA6
-    u16 unkA8;    // 0xA8
-    u16 unkAA;    // 0xAA
-    s16 unkAC;    // 0xAC
-    u16 unkAE;    // 0xAE
-    u8 padB0[6];  // 0xB0
-    u16 unkB6;    // 0xB6
-    u16 unkB8;    // 0xB8
-    u8 padBA[2];  // 0xBA
-    u16 unkBC;    // 0xBC
-    u16 unkBE;    // 0xBE
-    u8 padC0[24]; // 0xC0
-    u16 unkD8;    // 0xD8
-    u16 unkDA;    // 0xDA
-    u16 unkDC;    // 0xDC
-    u16 unkDE;    // 0xDE
-    u8 padE0[10]; // 0xE0
-    u16 unkEA;    // 0xEA
-    s16 unkEC;    // 0xEC
-    u16 unkEE;    // 0xEE
-    u16 unkF0;    // 0xF0
-    s16 unkF2;    // 0xF2
-    u16 unkF4;    // 0xF4
-    u16 unkF6;    // 0xF6
-    u8 padF8[4];  // 0xF8
-    u32 unkFC;    // 0xFC
-    s32 unk100;   // 0x100
-} Context;
-
-typedef struct
-{
-    s16 unk8;
-    u8 padA[6];
-    s16 unkB;
-    s16 unkA;
-} UnkStruct;
-
+/**
+ * @brief One 8-byte note slot in the per-channel note table at
+ *        @c channel->unk34. Each entry encodes the articulation index plus
+ *        a packed set of per-note SPU voice parameters used by
+ *        @c akao_channel_start_note. Local to this file because it is the
+ *        only consumer.
+ */
 typedef struct
 {
     u8 unk0;
@@ -94,15 +25,6 @@ typedef struct
     u8 unk6;
     u8 unk7;
 } SmallSlot;
-
-typedef struct
-{
-    u32 unk0;  /* 0x00 */
-    u32 unk4;  /* 0x04 */
-    u32 _pad8; /* 0x08 */
-    u16 unkC;  /* 0x0C */
-    u16 unkE;  /* 0x0E */
-} ArticSlot;   /* sizeof = 0x10 */
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
@@ -607,9 +529,9 @@ extern u8 D_8003D1B0[];
 /**
  * decomp.me (78.79%) https://decomp.me/scratch/9GIhP
  */
-u8 akao_seq_skip_to_next_note(Context* arg0)
+u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
 {
-    u8* var_a1 = arg0->unk0;
+    u8* var_a1 = (u8*)arg0->flags;
     u8* new_var;
     u32 var_a2 = arg0->unkD8;
     while (1)
@@ -733,7 +655,7 @@ u8 akao_seq_skip_to_next_note(Context* arg0)
                     continue;
 
                 case 3:
-                    var_a1 = arg0->unk14;
+                    var_a1 = (u8*)arg0->unk14;
                     continue;
 
                 case 4:
@@ -770,7 +692,7 @@ u8 akao_seq_skip_to_next_note(Context* arg0)
             }
             else
             {
-                var_a1 = arg0->unk4[var_a2];
+                var_a1 = ((u8**)&arg0->unk4)[var_a2];
             }
             continue;
         L_CB_common:
@@ -779,9 +701,9 @@ u8 akao_seq_skip_to_next_note(Context* arg0)
             var_a1++;
             continue;
         L_CA_common:
-            if (!(arg0->unk34 & 0x200000))
+            if (!((u32)arg0->unk34 & 0x200000))
             {
-                var_a1 = arg0->unk4[var_a2];
+                var_a1 = ((u8**)&arg0->unk4)[var_a2];
                 continue;
             }
 
@@ -903,7 +825,7 @@ void akao_bind_articulation_for_key(u8* arg0, u32 arg1)
 /**
  * decomp.me (99.70%) https://decomp.me/scratch/GBbit
  */
-s32 akao_compute_pitch(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
+s32 akao_compute_pitch(AkaoArticulation* arg0, s32 arg1, s32 arg2, s32* arg3)
 {
     unsigned int new_var;
     s32 tmp3;
@@ -918,7 +840,7 @@ s32 akao_compute_pitch(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
     u32 var_t0;
     u32 var_v0;
     s32 result;
-    var_a0 = arg1 - arg0->unkA;
+    var_a0 = arg1 - arg0->adsr.half.hi;
     if (var_a0 < 0)
     {
         s32 tmp;
@@ -937,19 +859,19 @@ s32 akao_compute_pitch(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
     }
     new_var2 = var_a0 % 12;
     temp_a0 = new_var2;
-    if (arg0->unkB == 0)
+    if (arg0->adsr.half.lo == 0)
     {
         s32 tmp2 = D_8003D24C[temp_a0];
         var_t0 = tmp2 << 8;
     }
-    else if (arg0->unkB < 0)
+    else if (arg0->adsr.half.lo < 0)
     {
-        var_t0 = ((u32)(D_8003D24C[temp_a0] * ((u16)arg0->unkB))) >> 8;
+        var_t0 = ((u32)(D_8003D24C[temp_a0] * ((u16)arg0->adsr.half.lo))) >> 8;
     }
     else
     {
         temp_v0 = D_8003D24C[temp_a0];
-        var_t0 = ((u32)(temp_v0 * arg0->unkB)) >> 7;
+        var_t0 = ((u32)(temp_v0 * arg0->adsr.half.lo)) >> 7;
         var_t0 = var_t0 + (temp_v0 << 8);
     }
     temp_a2 = arg2 & 0xFF;
@@ -967,18 +889,18 @@ s32 akao_compute_pitch(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
         }
         *arg3 = var_v0;
     }
-    if (arg1 < arg0->unkA)
+    if (arg1 < arg0->adsr.half.hi)
     {
         do
         {
             *arg3 = (u32)(((s32)(*arg3)) >> 1);
             var_t0 = (u32)(((s32)var_t0) >> 1);
             arg1 += 0xC;
-        } while (arg1 < arg0->unkA);
+        } while (arg1 < arg0->adsr.half.hi);
     }
     else
     {
-        temp_a0_3 = (arg1 - arg0->unkA) / 12;
+        temp_a0_3 = (arg1 - arg0->adsr.half.hi) / 12;
         temp_a0 = temp_a0_3;
         if (temp_a0_3 != 0)
         {
@@ -1007,7 +929,7 @@ s32 akao_compute_pitch(UnkStruct* arg0, s32 arg1, s32 arg2, s32* arg3)
 s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
 {
     SmallSlot* slot;
-    ArticSlot* art;
+    AkaoArticulation* art;
     u32 temp_a1;
     u16 tmp;
     u32 v1_idx;
@@ -1027,9 +949,9 @@ s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
     v1_idx = slot->unk0;
     temp_a1 = *((u32*)(((u8*)arg0) + 0x34));
     *((s16*)(((u8*)arg0) + 0x6A)) = (s16)v1_idx;
-    art = (ArticSlot*)(g_akao_articulation_slots + v1_idx * 0x10);
-    *((u32*)(((u8*)arg0) + 0x104)) = art->unk0;
-    *((u32*)(((u8*)arg0) + 0x108)) = art->unk4;
+    art = (AkaoArticulation*)(g_akao_articulation_slots + v1_idx * 0x10);
+    *((u32*)(((u8*)arg0) + 0x104)) = art->sample_addr;
+    *((u32*)(((u8*)arg0) + 0x108)) = art->loop_addr;
     if (!(temp_a1 & 0x01000000))
     {
         tmp = (u16)(slot->unk2 << 8);
@@ -1040,7 +962,7 @@ s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
     }
     *((u16*)(((u8*)arg0) + 0x10E)) = tmp;
     tmp = (u16)(slot->unk2 << 8);
-    *((u16*)(base_ptr + 0x10E)) |= art->unkC & 0x80FF;
+    *((u16*)(base_ptr + 0x10E)) |= art->pitch_misc.half.lo & 0x80FF;
     if (!(temp_a1 & 0x08000000))
     {
         tmp = (*((u16*)(((u8*)arg0) + 0x110))) & 0x201F;
@@ -1069,8 +991,8 @@ s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
         *((u16*)(((u8*)arg0) + 0x110)) = tmp;
         *((u16*)(((u8*)arg0) + 0x110)) |= slot->unk5;
     }
-    *((u16*)(((u8*)arg0) + 0x110)) |= art->unkE & 0x20;
-    ret = akao_compute_pitch((UnkStruct*)art, slot->unk1, *((s16*)(((u8*)arg0) + 0xEC)), (s32*)(((u8*)arg0) + 0x54));
+    *((u16*)(((u8*)arg0) + 0x110)) |= art->pitch_misc.half.hi & 0x20;
+    ret = akao_compute_pitch(art, slot->unk1, *((s16*)(((u8*)arg0) + 0xEC)), (s32*)(((u8*)arg0) + 0x54));
     *((s16*)(((u8*)arg0) + 0x112)) = (s16)slot->unk6;
     *((s16*)(((u8*)arg0) + 0x90)) = (s16)(((slot->unk7 & 0x7F) + 0x40) << 8);
     if (slot->unk7 & 0x80)
@@ -1086,8 +1008,8 @@ s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
     return ret;
 }
 
-extern void (*D_8003E890[])(Context*, s32);
-extern void (*D_8003EA10[])(Context*, s32);
+extern void (*D_8003E890[])(AkaoChannelState*, s32);
+extern void (*D_8003EA10[])(AkaoChannelState*, s32);
 extern u16 D_8003D230[];
 extern u8 D_8003D27C[];
 extern s32 D_8003DD80[];
@@ -1095,10 +1017,10 @@ extern s32 D_8003DD80[];
 /**
  * decomp.me (89.58%) https://decomp.me/scratch/P4H6n
  */
-void akao_seq_step_opcode(Context* arg0, s32 arg1)
+void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
 {
     s32 sp10;
-    void (**var_v0)(Context*, s32);
+    void (**var_v0)(AkaoChannelState*, s32);
     s16 temp_v0_5;
     s32 temp_a2_2;
     s32 temp_s1_2;
@@ -1127,19 +1049,19 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
 
     do
     {
-        var_s1 = *arg0->unk0++;
+        var_s1 = *(*(u8**)&arg0->flags)++;
 
         if (var_s1 >= 0xA0U)
         {
             temp_v1 = var_s1 - 0xF0;
             if (var_s1 == 0xFE)
             {
-                var_v0 = &D_8003EA10[*arg0->unk0++];
+                var_v0 = &D_8003EA10[*(*(u8**)&arg0->flags)++];
             }
             else if (temp_v1 < 0xEU)
             {
                 var_s1 = temp_v1 * 0xB;
-                arg0->unk66 = *arg0->unk0++;
+                arg0->unk66 = *(*(u8**)&arg0->flags)++;
                 goto skip_call;
             }
             else
@@ -1150,7 +1072,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
                 }
                 else if (var_s1 == 0xCA)
                 {
-                    if (arg0->unk34 & 0x200000)
+                    if ((u32)arg0->unk34 & 0x200000)
                     {
                         var_s1 = 0xA0;
                         g_akao_sfx_control.unkC |= arg1;
@@ -1197,7 +1119,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
             }
             arg0->unk68 = var_v1;
         }
-        if ((arg0->unk64 == 0) && (arg0->unk34 & 0x40))
+        if ((arg0->unk64 == 0) && ((u32)arg0->unk34 & 0x40))
         {
             arg0->unk68 = arg0->unk66;
         }
@@ -1221,7 +1143,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
         }
         if (var_s1 < 0x84U)
         {
-            temp_v1_3 = arg0->unk34;
+            temp_v1_3 = (s32)arg0->unk34;
             temp_s1 = (var_s1 / 11) + (arg0->unk96 * 0xC);
             if (temp_v1_3 & 8)
             {
@@ -1246,7 +1168,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
                         if (temp_a0 != 0)
                         {
                             arg0->unk8A = temp_a0;
-                            arg0->unk48 = arg0->unk5C;
+                            arg0->unk48 = *(s32*)&arg0->unk5C;
                             arg0->unk4C = arg0->unk60;
                         }
                     }
@@ -1270,8 +1192,8 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
                     arg0->unkEE = temp_s1;
                     var_s1_2 = temp_s1 + (s16)arg0->unkEA;
                 }
-                var_a2 = akao_compute_pitch((arg0->unk6A * 0x10) + g_akao_articulation_slots, var_s1_2, arg0->unkEC,
-                                            (s32*)(arg0->pad54));
+                var_a2 = akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots),
+                                            var_s1_2, arg0->unkEC, (s32*)arg0->_pad54);
                 temp_v1_5 = arg0->unkDA;
                 if (temp_v1_5 != 0)
                 {
@@ -1304,7 +1226,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
                 g_akao_sfx_control.unk8 |= arg1;
             }
             arg0->unk100 |= 0x13;
-            temp_s1_2 = arg0->unk34;
+            temp_s1_2 = (s32)arg0->unk34;
             var_v0_3 = temp_s1_2 & 2;
             if (temp_s1_2 & 1)
             {
@@ -1345,8 +1267,8 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
         {
             temp_v0_5 = arg0->unkEE + arg0->unkF0;
             arg0->unkEE = temp_v0_5;
-            temp_a2_2 = akao_compute_pitch((arg0->unk6A * 0x10) + g_akao_articulation_slots, temp_v0_5 + (s16)arg0->unkEA,
-                                           arg0->unkEC, &sp10)
+            temp_a2_2 = akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots),
+                                           temp_v0_5 + (s16)arg0->unkEA, arg0->unkEC, &sp10)
                         << 0x10;
             arg0->unk94 = arg0->unk98;
             arg0->unkF0 = 0U;
@@ -1357,47 +1279,24 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
     }
 }
 
-typedef struct
-{
-    u8 pad0[0x6A];      /* padding to offset 0x6A */
-    s16 unk6A;          /* offset 0x6A */
-    u8 pad1[0x94];      /* padding from 0x6C to 0xFF (0x94 = 148 bytes) */
-    s32 unk100;         /* offset 0x100 */
-    s32 unk104;         /* offset 0x104 */
-    s32 unk108;         /* offset 0x108 */
-    u8 pad2[0x2];       /* padding from 0x10C to 0x10D */
-    u16 unk10E;         /* offset 0x10E */
-    u16 unk110;         /* offset 0x110 */
-} Arg0;
-
-/* Structure for arg1 with correct offsets (packed to avoid padding) */
-typedef struct
-{
-    u8 pad0[0x4];       /* padding to reach offset 0x4 */
-    s32 unk4;           /* offset 0x4 */
-    u8 pad1[0x4];       /* padding from 0x8 to 0xB */
-    u16 unkC;           /* offset 0xC */
-    u16 unkE;           /* offset 0xE */
-} Arg1;
-
 /**
  * decomp.me (100%) https://decomp.me/scratch/Fr8N0
  */
-void akao_channel_load_articulation_fields(Arg0* arg0, Arg1* arg1, s32 arg2)
+void akao_channel_load_articulation_fields(AkaoChannelState* arg0, AkaoArticulation* arg1, s32 arg2)
 {
     u16 tmp_c, tmp_e;
     s32 tmp_4;
     s32 old_val;
 
     arg0->unk104 = arg2;
-    tmp_4 = arg1->unk4;
+    tmp_4 = arg1->loop_addr;
     arg0->unk108 = tmp_4;
 
-    tmp_c = arg1->unkC;
+    tmp_c = arg1->pitch_misc.half.lo;
     arg0->unk10E = tmp_c; /* store unk10E early */
 
     old_val = arg0->unk100; /* load unk100 after that store */
-    tmp_e = arg1->unkE;
+    tmp_e = arg1->pitch_misc.half.hi;
 
     arg0->unk100 = old_val | 0x1FF80; /* OR and write back */
     arg0->unk110 = tmp_e;
@@ -1406,12 +1305,12 @@ void akao_channel_load_articulation_fields(Arg0* arg0, Arg1* arg1, s32 arg2)
 /**
  * decomp.me (100%) https://decomp.me/scratch/1RRHh
  */
-void akao_channel_set_articulation(Arg0* arg0, s32 arg1)
+void akao_channel_set_articulation(AkaoChannelState* arg0, s32 arg1)
 {
-    Arg1* temp_a1;
+    AkaoArticulation* temp_a1;
 
     arg0->unk6A = arg1;
-    temp_a1 = (Arg1*)(g_akao_articulation_slots + (arg1 << 4));
+    temp_a1 = (AkaoArticulation*)(g_akao_articulation_slots + (arg1 << 4));
     akao_channel_load_articulation_fields(arg0, temp_a1, *(s32*)temp_a1);
 }
 

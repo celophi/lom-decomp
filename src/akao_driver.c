@@ -28,8 +28,8 @@ void akao_relocate_articulations(AkaoArticulation* src, AkaoArticulation* dst, s
     {
         dst->sample_addr = src->sample_addr + spu_base;
         dst->loop_addr = src->loop_addr + spu_base;
-        dst->adsr = src->adsr;
-        dst->pitch_misc = src->pitch_misc;
+        dst->adsr.word = src->adsr.word;
+        dst->pitch_misc.word = src->pitch_misc.word;
         src++;
         dst++;
     } while (--count != 0);

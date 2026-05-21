@@ -190,8 +190,20 @@ typedef struct AkaoArticulation
 {
     u32 sample_addr; /* 0x00: SPU sample start - biased by spu_base on upload */
     u32 loop_addr;   /* 0x04: SPU loop point   - biased by spu_base on upload */
-    u32 adsr;        /* 0x08: ADSR envelope (TODO: bit layout)                */
-    u32 pitch_misc;  /* 0x0C: pitch / voice flags (TODO: bit layout)          */
+    union {
+        u32 word;     /* 0x08: full 32-bit ADSR envelope (TODO: bit layout)   */
+        struct {
+            s16 lo;   /* 0x08: signed low half  (fine-tune cents in pitch calc) */
+            s16 hi;   /* 0x0A: signed high half (transpose semitones in pitch calc) */
+        } half;
+    } adsr;
+    union {
+        u32 word;     /* 0x0C: pitch / voice flags (TODO: bit layout)         */
+        struct {
+            u16 lo;   /* 0x0C: low halfword  - masked against 0x80FF on note bind */
+            u16 hi;   /* 0x0E: high halfword - masked against 0x0020 on note bind */
+        } half;
+    } pitch_misc;
 } AkaoArticulation; /* sizeof = 0x10 */
 
 /**
