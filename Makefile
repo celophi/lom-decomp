@@ -79,8 +79,8 @@ OBJCOPY      	:= $(CROSS)objcopy
 #   --macro-inc         Enable ASPSX directive macros (nonmatching, dlabel, etc.)
 #                       Only used for hand-written .s files, NOT for GCC output.
 
-CFLAGS_G0       := -O2 -G0 -g -fsigned-char -fno-builtin
-CFLAGS_G4       := -O2 -G4 -g -fsigned-char
+CFLAGS_G0       := -O2 -G0 -gcoff -fsigned-char -fno-builtin
+CFLAGS_G4       := -O2 -G4 -gcoff -fsigned-char
 
 # CDK (GCC 2.7.2-970404) flags: no -g/-fsigned-char; uses -msoft-float and COFF debug.
 CFLAGS_CDK_G0   := -O2 -G0 -msoft-float -gcoff
