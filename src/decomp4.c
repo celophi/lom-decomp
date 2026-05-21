@@ -1414,3 +1414,30 @@ void func_8002B65C(u8** arg0)
     *arg0 += 2;
     ch->unk5C = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/SFJAU
+ */
+void func_8002B6AC(u8** arg0)
+{
+    u32 combined;
+    u32 masked;
+    u8** new_var;
+    s32 quotient;
+    AkaoChannelState* ch = g_akao_seq_channel0;
+    u8* ptr = *arg0;
+    u32 temp = *(ptr++);
+    ch->unk5C = temp;
+    *arg0 = ptr;
+    if (temp == 0)
+    {
+        ch->unk5C = 0x100;
+    }
+    ptr = *arg0;
+    combined = (ptr[0] << 16) | ((*(new_var = &ptr))[1] << 24);
+    *arg0 = ptr + 2;
+    masked = g_akao_seq_channel0->unk20 & 0xFFFF0000;
+    quotient = ((s32)(combined - masked)) / ((s32)g_akao_seq_channel0->unk5C);
+    g_akao_seq_channel0->unk20 = masked;
+    g_akao_seq_channel0->unk24 = quotient;
+}
