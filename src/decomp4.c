@@ -7,87 +7,6 @@ s32 D_8003EC18;
 
 extern u32 D_8003D24C[];
 
-/*
- * @brief Bytecode-interpreter view of an @ref AkaoChannelState slot.
- *
- * This is the same 0x118-byte channel memory as @ref AkaoChannelState in
- * decomp4.h, but typed for the seq opcode interpreter: offset 0 is the
- * current bytecode pointer (not the @c flags word), offsets 0x04-0x13 are
- * a 4-entry call/loop stack of bytecode pointers (overlapping AkaoChannelState's
- * @c unk4 + @c unk10), and many trailing fields after 0x6C are exposed that
- * AkaoChannelState currently treats as padding. Kept as a local typedef
- * because the field-type conflicts at offsets 0x00/0x04/0x14/0x34/0x5C
- * would require union members in the shared header and codegen-safe
- * unification across the whole AKAO driver.
- */
-typedef struct
-{
-    u8* unk0;      // 0x00
-    u8* unk4[4];   // 0x04
-    u8* unk14;     // 0x14
-    u8 pad18[4];   // 0x18
-    s32 unk1C;     // 0x1C
-    s32 unk20;     // 0x20
-    u8 pad24[8];   // 0x24
-    s32 unk2C;     // 0x2C
-    s32 unk30;     // 0x30
-    u32 unk34;     // 0x34
-    u8 pad38[16];  // 0x38
-    s32 unk48;     // 0x48
-    s32 unk4C;     // 0x4C
-    s32 unk50;     // 0x50
-    u8 pad54[8];   // 0x54
-    s32 unk5C;     // 0x5C
-    s32 unk60;     // 0x60
-    u16 unk64;     // 0x64
-    u16 unk66;     // 0x66
-    u16 unk68;     // 0x68
-    u16 unk6A;     // 0x6A
-    u8 pad6C[6];   // 0x6C
-    u16 unk72;     // 0x72
-    u16 unk74[11]; // 0x74
-
-    u16 unk8A;    // 0x8A
-    u16 unk8C;    // 0x8C
-    u8 pad8E[6];  // 0x8E
-    u16 unk94;    // 0x94
-    u16 unk96;    // 0x96
-    u16 unk98;    // 0x98
-    u16 unk9A;    // 0x9A
-    u16 unk9C;    // 0x9C
-    u16 unk9E;    // 0x9E
-    u8 padA0[2];  // 0xA0
-    u16 unkA2;    // 0xA2
-    u16 unkA4;    // 0xA4
-    u8 padA6[2];  // 0xA6
-    u16 unkA8;    // 0xA8
-    u16 unkAA;    // 0xAA
-    s16 unkAC;    // 0xAC
-    u16 unkAE;    // 0xAE
-    u8 padB0[6];  // 0xB0
-    u16 unkB6;    // 0xB6
-    u16 unkB8;    // 0xB8
-    u8 padBA[2];  // 0xBA
-    u16 unkBC;    // 0xBC
-    u16 unkBE;    // 0xBE
-    u8 padC0[24]; // 0xC0
-    u16 unkD8;    // 0xD8
-    u16 unkDA;    // 0xDA
-    u16 unkDC;    // 0xDC
-    u16 unkDE;    // 0xDE
-    u8 padE0[10]; // 0xE0
-    u16 unkEA;    // 0xEA
-    s16 unkEC;    // 0xEC
-    u16 unkEE;    // 0xEE
-    u16 unkF0;    // 0xF0
-    s16 unkF2;    // 0xF2
-    u16 unkF4;    // 0xF4
-    u16 unkF6;    // 0xF6
-    u8 padF8[4];  // 0xF8
-    u32 unkFC;    // 0xFC
-    s32 unk100;   // 0x100
-} Context;
-
 /**
  * @brief One 8-byte note slot in the per-channel note table at
  *        @c channel->unk34. Each entry encodes the articulation index plus
@@ -610,9 +529,9 @@ extern u8 D_8003D1B0[];
 /**
  * decomp.me (78.79%) https://decomp.me/scratch/9GIhP
  */
-u8 akao_seq_skip_to_next_note(Context* arg0)
+u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
 {
-    u8* var_a1 = arg0->unk0;
+    u8* var_a1 = (u8*)arg0->flags;
     u8* new_var;
     u32 var_a2 = arg0->unkD8;
     while (1)
@@ -736,7 +655,7 @@ u8 akao_seq_skip_to_next_note(Context* arg0)
                     continue;
 
                 case 3:
-                    var_a1 = arg0->unk14;
+                    var_a1 = (u8*)arg0->unk14;
                     continue;
 
                 case 4:
@@ -773,7 +692,7 @@ u8 akao_seq_skip_to_next_note(Context* arg0)
             }
             else
             {
-                var_a1 = arg0->unk4[var_a2];
+                var_a1 = ((u8**)&arg0->unk4)[var_a2];
             }
             continue;
         L_CB_common:
@@ -782,9 +701,9 @@ u8 akao_seq_skip_to_next_note(Context* arg0)
             var_a1++;
             continue;
         L_CA_common:
-            if (!(arg0->unk34 & 0x200000))
+            if (!((u32)arg0->unk34 & 0x200000))
             {
-                var_a1 = arg0->unk4[var_a2];
+                var_a1 = ((u8**)&arg0->unk4)[var_a2];
                 continue;
             }
 
@@ -1089,8 +1008,8 @@ s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
     return ret;
 }
 
-extern void (*D_8003E890[])(Context*, s32);
-extern void (*D_8003EA10[])(Context*, s32);
+extern void (*D_8003E890[])(AkaoChannelState*, s32);
+extern void (*D_8003EA10[])(AkaoChannelState*, s32);
 extern u16 D_8003D230[];
 extern u8 D_8003D27C[];
 extern s32 D_8003DD80[];
@@ -1098,10 +1017,10 @@ extern s32 D_8003DD80[];
 /**
  * decomp.me (89.58%) https://decomp.me/scratch/P4H6n
  */
-void akao_seq_step_opcode(Context* arg0, s32 arg1)
+void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
 {
     s32 sp10;
-    void (**var_v0)(Context*, s32);
+    void (**var_v0)(AkaoChannelState*, s32);
     s16 temp_v0_5;
     s32 temp_a2_2;
     s32 temp_s1_2;
@@ -1130,19 +1049,19 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
 
     do
     {
-        var_s1 = *arg0->unk0++;
+        var_s1 = *(*(u8**)&arg0->flags)++;
 
         if (var_s1 >= 0xA0U)
         {
             temp_v1 = var_s1 - 0xF0;
             if (var_s1 == 0xFE)
             {
-                var_v0 = &D_8003EA10[*arg0->unk0++];
+                var_v0 = &D_8003EA10[*(*(u8**)&arg0->flags)++];
             }
             else if (temp_v1 < 0xEU)
             {
                 var_s1 = temp_v1 * 0xB;
-                arg0->unk66 = *arg0->unk0++;
+                arg0->unk66 = *(*(u8**)&arg0->flags)++;
                 goto skip_call;
             }
             else
@@ -1153,7 +1072,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
                 }
                 else if (var_s1 == 0xCA)
                 {
-                    if (arg0->unk34 & 0x200000)
+                    if ((u32)arg0->unk34 & 0x200000)
                     {
                         var_s1 = 0xA0;
                         g_akao_sfx_control.unkC |= arg1;
@@ -1200,7 +1119,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
             }
             arg0->unk68 = var_v1;
         }
-        if ((arg0->unk64 == 0) && (arg0->unk34 & 0x40))
+        if ((arg0->unk64 == 0) && ((u32)arg0->unk34 & 0x40))
         {
             arg0->unk68 = arg0->unk66;
         }
@@ -1224,7 +1143,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
         }
         if (var_s1 < 0x84U)
         {
-            temp_v1_3 = arg0->unk34;
+            temp_v1_3 = (s32)arg0->unk34;
             temp_s1 = (var_s1 / 11) + (arg0->unk96 * 0xC);
             if (temp_v1_3 & 8)
             {
@@ -1249,7 +1168,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
                         if (temp_a0 != 0)
                         {
                             arg0->unk8A = temp_a0;
-                            arg0->unk48 = arg0->unk5C;
+                            arg0->unk48 = *(s32*)&arg0->unk5C;
                             arg0->unk4C = arg0->unk60;
                         }
                     }
@@ -1274,7 +1193,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
                     var_s1_2 = temp_s1 + (s16)arg0->unkEA;
                 }
                 var_a2 = akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots),
-                                            var_s1_2, arg0->unkEC, (s32*)(arg0->pad54));
+                                            var_s1_2, arg0->unkEC, (s32*)arg0->_pad54);
                 temp_v1_5 = arg0->unkDA;
                 if (temp_v1_5 != 0)
                 {
@@ -1307,7 +1226,7 @@ void akao_seq_step_opcode(Context* arg0, s32 arg1)
                 g_akao_sfx_control.unk8 |= arg1;
             }
             arg0->unk100 |= 0x13;
-            temp_s1_2 = arg0->unk34;
+            temp_s1_2 = (s32)arg0->unk34;
             var_v0_3 = temp_s1_2 & 2;
             if (temp_s1_2 & 1)
             {
