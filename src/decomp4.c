@@ -1385,8 +1385,8 @@ void func_8002B580(AkaoSFXState* arg0, u32 arg1)
         }
 
         g_akao_seq_channel0->unk14 &= tmp;
-        g_akao_seq_channel0->unk8  &= tmp;
-        g_akao_seq_channel0->unkC  &= tmp;
+        g_akao_seq_channel0->unk8 &= tmp;
+        g_akao_seq_channel0->unkC &= tmp;
         g_akao_seq_channel0->unk3C &= tmp;
         g_akao_seq_channel0->unk40 &= tmp;
         g_akao_seq_channel0->unk44 &= tmp;
@@ -1398,4 +1398,19 @@ void func_8002B580(AkaoSFXState* arg0, u32 arg1)
 
     arg0->unk34 = 0;
     g_akao_driver_flags.unk8 |= 0x110;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/GHtCl
+ */
+void func_8002B65C(u8** arg0)
+{
+    AkaoChannelState* ch = g_akao_seq_channel0;
+    u32 temp_v1;
+
+    temp_v1 = (*arg0)[0] << 0x10;
+    ch->unk20 = temp_v1;
+    ch->unk20 = temp_v1 | ((*arg0)[1] << 0x18);
+    *arg0 += 2;
+    ch->unk5C = 0;
 }
