@@ -1414,3 +1414,24 @@ void func_8002B49C(Arg0* arg0, s32 arg1)
     temp_a1 = (Arg1*)(g_akao_articulation_slots + (arg1 << 4));
     func_8002B468(arg0, temp_a1, *(s32*)temp_a1);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/67vx9
+ */
+void func_8002B4D4(void* arg0, u32 arg1)
+{
+    u32 mask = ~arg1;
+
+    /* Clear bits in the specified fields of g_akao_sfx_control */
+    g_akao_sfx_control.unk0 &= mask;
+    g_akao_sfx_control.unk10 &= mask;
+    g_akao_sfx_control.unk1C &= mask;
+    g_akao_sfx_control.unk20 &= mask;
+    g_akao_sfx_control.unk24 &= mask;
+    g_akao_sfx_control.unk4 &= mask;
+    g_akao_sfx_control.unk8 &= mask;
+
+    /* Zero out two fields in the object pointed to by arg0 */
+    *(u32*)((u8*)arg0 + 0x28) = 0;
+    *(u32*)((u8*)arg0 + 0x3C) = 0;
+}

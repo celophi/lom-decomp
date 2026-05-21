@@ -86,17 +86,7 @@ typedef struct
     u8 _pad6A[0x118 - 0x6A];
 } SfxChannel;
 
-/** @brief SFX channel control bitfields (size 0x20). */
-typedef struct
-{
-    u32 unk0;         /* 0x00 — active-channel bitmask */
-    s32 unk4;  /* 0x04 – 0x07 */
-    u32 unk8;         /* 0x08 */
-    u32 unkC;         /* 0x0C */
-    u8 _pad10[0x06];  /* 0x10 – 0x15 */
-    u16 unk16;        /* 0x16 — tick step */
-    u32 unk18;        /* 0x18 — tick accumulator */
-} SfxControl;
+#include "akao_driver.h"
 
 /** @brief 4-sample ring buffer of timer deltas used for profiling. */
 typedef struct
