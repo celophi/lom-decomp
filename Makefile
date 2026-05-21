@@ -96,7 +96,7 @@ AS_GNU_FLAGS    := -O -EL
 INCLUDE_FLAGS   := -Iinclude -Iinclude/psyq
 
 MASPSX_AS       	:= python3 tools/maspsx/maspsx.py --run-assembler
-MASPSX_AS_FLAGS 	:= -no-pad-sections --aspsx-version=2.77
+MASPSX_AS_FLAGS 	:= -no-pad-sections --aspsx-version=2.77 --expand-div
 MASPSX_AS_FLAGS_CDK := -no-pad-sections --aspsx-version=2.67 --expand-div
 MASPSX_PP       	:= python3 tools/maspsx/maspsx.py
 MASPSX_PP_FLAGS 	:= --macro-inc

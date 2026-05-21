@@ -90,7 +90,7 @@ typedef struct
 typedef struct
 {
     u32 unk0;         /* 0x00 — active-channel bitmask */
-    u8 _pad04[0x04];  /* 0x04 – 0x07 */
+    s32 unk4;  /* 0x04 – 0x07 */
     u32 unk8;         /* 0x08 */
     u32 unkC;         /* 0x0C */
     u8 _pad10[0x06];  /* 0x10 – 0x15 */
