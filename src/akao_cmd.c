@@ -1,5 +1,6 @@
 #include "akao_cmd.h"
 #include "akao.h"
+#include "akao_driver.h"
 #include "psyq/libcd.h"
 
 
@@ -16,7 +17,7 @@
  * implicit int→pointer conversion.
  */
 extern void *g_akaoCmdParams[];
-extern s32 g_akao_sfx_control;
+extern SfxControl g_akao_sfx_control;
 extern u8 g_sfx_channels[];
 
 /**
@@ -362,7 +363,7 @@ s32 func_800222A8(void)
     s32 new_var;
     s32 acc;
     unsigned int mask;
-    new_var = g_akao_sfx_control;
+    new_var = g_akao_sfx_control.unk0;
     bits = new_var;
     acc = bits == 0;
     if (acc)
@@ -406,7 +407,7 @@ s32 func_80022310(s32 arg0)
     {
         return 0;
     }
-    bits = g_akao_sfx_control;
+    bits = g_akao_sfx_control.unk0;
     if (bits == 0)
     {
         return 0;

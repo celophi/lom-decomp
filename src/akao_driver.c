@@ -356,7 +356,7 @@ void akao_driver_init_state(void)
     }
     {
         u8* a0_ptr = (u8*)g_akao_seq_channel0;
-        u8* v0_ptr = g_akao_sfx_control;
+        u8* v0_ptr = (u8*)&g_akao_sfx_control;
         u8* v1_ptr = g_akao_driver_flags;
         a0 = a0_ptr;
         *((u32*)off(a0, 0x18)) = 0;
