@@ -26,8 +26,9 @@ extern u8 g_sfx_channels[];
 
 typedef struct
 {
-    u8 _pad0[8];
-    s32 unk8;
+    u32 unk0; /* 0x00 */
+    u32 unk4; /* 0x04 */
+    u32 unk8; /* 0x08 */
 } AkaoDriverFlags;
 
 /**
@@ -41,7 +42,8 @@ typedef struct AkaoChannelState
 {
     u32 flags;       /* 0x00 */
     u32 unk4;        /* 0x04 */
-    u8 _pad08[8];    /* 0x08 - 0x0F */
+    u32 unk8;        /* 0x08 */
+    u32 unkC;        /* 0x0C */
     u32 unk10;       /* 0x10 */
     u32 unk14;       /* 0x14 */
     u32 unk18;       /* 0x18 */
@@ -52,9 +54,10 @@ typedef struct AkaoChannelState
     s32 unk2C;       /* 0x2C */
     s32 unk30;       /* 0x30 */
     u8* unk34;       /* 0x34 */
-    u8 _pad38[8];    /* 0x38 - 0x3F */
+    u8 _pad38[4];    /* 0x38 - 0x3B */
+    u32 unk3C;       /* 0x3C */
     u32 unk40;       /* 0x40 */
-    u8 _pad44[4];    /* 0x44 - 0x47 */
+    u32 unk44;       /* 0x44 */
     u32 unk48;       /* 0x48 */
     u32 unk4C;       /* 0x4C */
     s32 unk50;       /* 0x50 */
@@ -134,6 +137,19 @@ typedef struct
     u16 field_68;            /* 0x68 — countdown */
     u8 _pad6A[0x118 - 0x6A];
 } SfxChannel;
+
+/**
+ * @brief Shared channel header accessed by func_8002B580.
+ *        Offset 0x64 selects seq-channel mode (0) vs SFX-channel mode (non-0).
+ *        Offset 0x34 is cleared unconditionally at the end of that function.
+ */
+typedef struct AkaoSFXState
+{
+    u8  _pad00[0x34]; /* 0x00 - 0x33 */
+    u32 unk34;        /* 0x34 */
+    u8  _pad38[0x2C]; /* 0x38 - 0x63 */
+    u16 unk64;        /* 0x64 */
+} AkaoSFXState;
 
 #include "akao_driver.h"
 
