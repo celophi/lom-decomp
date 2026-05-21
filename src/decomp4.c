@@ -71,8 +71,7 @@ typedef struct
     u16 unkF4;    // 0xF4
     u16 unkF6;    // 0xF6
     u8 padF8[4];  // 0xF8
-    u16 unkFC;    // 0xFC
-    u8 padFE[2];  // 0xFE
+    u32 unkFC;    // 0xFC
     s32 unk100;   // 0x100
 } Context;
 
@@ -1094,7 +1093,7 @@ extern u8 D_8003D27C[];
 extern s32 D_8003DD80[];
 
 /**
- * decomp.me (79.65%) https://decomp.me/scratch/P4H6n
+ * decomp.me (89.58%) https://decomp.me/scratch/P4H6n
  */
 void func_8002AD28(Context* arg0, s32 arg1)
 {
@@ -1109,12 +1108,12 @@ void func_8002AD28(Context* arg0, s32 arg1)
     s32 var_v0_3;
     u16 temp_a0;
     u16 temp_a0_2;
-    u16 temp_s1;
+    s32 temp_s1;
     u16 temp_v0_3;
     u16 temp_v0_4;
     u16 temp_v1_2;
     u16 temp_v1_4;
-    u16 temp_v1_5;
+    u32 temp_v1_5;
     u16 var_v1;
     u32 temp_a0_3;
     u32 temp_a2;
@@ -1123,7 +1122,6 @@ void func_8002AD28(Context* arg0, s32 arg1)
     u32 temp_v0_2;
     u32 temp_v1;
     u32 temp_v1_7;
-    u32 var_lo;
     u32 var_s1;
     u8* temp_v1_6;
 
@@ -1177,7 +1175,7 @@ void func_8002AD28(Context* arg0, s32 arg1)
     {
         temp_a2 = func_8002A4E8(arg0) & 0xFF;
         temp_v1_2 = arg0->unkDE;
-        if (arg0->unkDE != 0)
+        if ((s16)arg0->unkDE != 0)
         {
             arg0->unk68 = temp_v1_2;
             arg0->unk66 = temp_v1_2;
@@ -1193,7 +1191,7 @@ void func_8002AD28(Context* arg0, s32 arg1)
         {
             var_v1 = D_8003D230[var_s1 % 11];
             arg0->unk66 = var_v1;
-            if (((temp_a2 - 0x84) < 0xBU) && !(arg0->unk9E & 5))
+            if (((temp_a2 - 0x84) >= 0xBU) && !(arg0->unk9E & 5))
             {
                 var_v1 -= 2;
             }
@@ -1210,7 +1208,7 @@ void func_8002AD28(Context* arg0, s32 arg1)
             if (arg0->unk64 == 0)
             {
                 g_akao_seq_channel0->unk14 &= ~arg1;
-                if (arg0->unkFC < 0x18U)
+                if (*(volatile u32*)&arg0->unkFC < 0x18U)
                 {
                     g_akao_seq_channel0->unk18 |= arg1;
                 }
@@ -1240,7 +1238,7 @@ void func_8002AD28(Context* arg0, s32 arg1)
                             func_8002A6FC(arg0, temp_s1, temp_a2);
                         }
                         g_akao_seq_channel0->unk10 |= arg1;
-                        if ((g_akao_seq_channel0->unk14 & arg1) && (arg0->unkFC < 0x18U))
+                        if ((g_akao_seq_channel0->unk14 & arg1) && (*(volatile u32*)&arg0->unkFC < 0x18U))
                         {
                             g_akao_seq_channel0->unk18 |= arg1;
                         }
@@ -1270,16 +1268,16 @@ void func_8002AD28(Context* arg0, s32 arg1)
                 else
                 {
                     arg0->unkEE = temp_s1;
-                    var_s1_2 = temp_s1 + arg0->unkEA;
+                    var_s1_2 = temp_s1 + (s16)arg0->unkEA;
                 }
-                temp_v1_5 = arg0->unkDA;
                 var_a2 = func_8002A924((arg0->unk6A * 0x10) + g_akao_articulation_slots, var_s1_2, arg0->unkEC,
                                        (s32*)(arg0->pad54));
+                temp_v1_5 = arg0->unkDA;
                 if (temp_v1_5 != 0)
                 {
                     temp_a0_3 = (u32)(var_a2 * temp_v1_5) >> 8;
                     sp10 = temp_a0_3;
-                    temp_v1_6 = g_akao_cdvol_tick + (u32)D_8003D27C;
+                    temp_v1_6 = D_8003D27C + g_akao_cdvol_tick;
                     temp_lo = temp_a0_3 * temp_v1_6[0];
                     sp10 = temp_lo;
                     temp_v0 = temp_lo >> 9;
@@ -1305,8 +1303,8 @@ void func_8002AD28(Context* arg0, s32 arg1)
             {
                 g_akao_sfx_control.unk8 |= arg1;
             }
-            temp_s1_2 = arg0->unk34;
             arg0->unk100 |= 0x13;
+            temp_s1_2 = arg0->unk34;
             var_v0_3 = temp_s1_2 & 2;
             if (temp_s1_2 & 1)
             {
@@ -1314,26 +1312,28 @@ void func_8002AD28(Context* arg0, s32 arg1)
                 temp_v1_7 = (u32)(temp_v0_3 & 0x7F00) >> 8;
                 if (!(temp_v0_3 & 0x8000))
                 {
-                    var_lo = temp_v1_7 * ((u32)(var_a2 * 0xF) >> 8);
+                    temp_lo = temp_v1_7 * ((u32)(var_a2 * 0xF) >> 8);
                 }
                 else
                 {
-                    var_lo = temp_v1_7 * var_a2;
+                    temp_lo = temp_v1_7 * var_a2;
                 }
-                arg0->unkAC = (s16)(var_lo >> 7);
+                arg0->unkAC = (s16)(temp_lo >> 7);
                 if (!(arg0->unk9E & 2))
                 {
-                    arg0->unkA8 = 1;
-                    arg0->unkA4 = arg0->unkA2;
+                    temp_v0_3 = arg0->unkA2;
                     arg0->unk1C = D_8003DD80[arg0->unkAA];
+                    arg0->unkA8 = 1;
+                    arg0->unkA4 = temp_v0_3;
                 }
                 var_v0_3 = temp_s1_2 & 2;
             }
             if ((var_v0_3 != 0) && !(arg0->unk9E & 2))
             {
-                arg0->unkBC = 1;
-                arg0->unkB8 = arg0->unkB6;
+                temp_v0_3 = arg0->unkB6;
                 arg0->unk20 = D_8003DD80[arg0->unkBE];
+                arg0->unkBC = 1;
+                arg0->unkB8 = temp_v0_3;
             }
             arg0->unkF4 = 0;
             arg0->unkF6 = 0;
@@ -1345,7 +1345,7 @@ void func_8002AD28(Context* arg0, s32 arg1)
         {
             temp_v0_5 = arg0->unkEE + arg0->unkF0;
             arg0->unkEE = temp_v0_5;
-            temp_a2_2 = func_8002A924((arg0->unk6A * 0x10) + g_akao_articulation_slots, temp_v0_5 + arg0->unkEA,
+            temp_a2_2 = func_8002A924((arg0->unk6A * 0x10) + g_akao_articulation_slots, temp_v0_5 + (s16)arg0->unkEA,
                                       arg0->unkEC, &sp10)
                         << 0x10;
             arg0->unk94 = arg0->unk98;
