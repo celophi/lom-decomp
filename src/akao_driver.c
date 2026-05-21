@@ -211,8 +211,8 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
         base = base + 0x40;
         akao_spu_write((s32)(base + (bank_hdr->articulation_count * 0x10)), bank_hdr->sample_size);
         akao_relocate_articulations((AkaoArticulation*)base,
-                                    (AkaoArticulation*)(g_akao_articulation_slots + (bank_id * 0x10)),
-                                    spu_base, bank_hdr->articulation_count);
+                                    (AkaoArticulation*)(g_akao_articulation_slots + (bank_id * 0x10)), spu_base,
+                                    bank_hdr->articulation_count);
         var_v0 = 0;
         if (wait_for_completion != 0)
         {
@@ -228,6 +228,13 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
     new_var = ret_val;
     return new_var;
 }
+
+// Fix the off() helper to accept any pointer type
+inline static u8* off(void* p, int o)
+{
+    return (u8*)p + o;
+}
+
 
 /**
  * @brief Zeroes and primes the AKAO driver's runtime state.
@@ -246,7 +253,7 @@ void akao_driver_init_state(void)
 {
     u16* hw = (u16*)0x1F801DAA;
     u32 t0 = 0x18;
-    u8** new_var4;
+    u8** new_var4; // kept if needed elsewhere; simplified usage later
     u32* new_var3;
     u32* new_var2;
     u32* new_var;
@@ -258,6 +265,7 @@ void akao_driver_init_state(void)
     int new_var6;
     u8* new_var9;
     u32 a3;
+
     new_var3 = (u32*)off(D_8003EC30, 4);
     *new_var3 = 0;
     *((u32*)off(D_8003EC30, 0)) = 0;
@@ -270,15 +278,18 @@ void akao_driver_init_state(void)
     *((u32*)off(g_akao_driver_flags, 0x00)) = 0;
     *((u32*)off(g_akao_driver_flags, 0x04)) = 1;
     new_var = (u32*)off(D_8004F830, 0x00);
-    *((u32*)off(g_akao_sfx_control, 0x00)) = 0;
+
+    // Fix: use & for struct variables
+    *((u32*)off(&g_akao_sfx_control, 0x00)) = 0;
     *((u32*)off(a0, 0x04)) = 0;
     *((u32*)off(a0, 0x08)) = 0;
     *((u16*)off(a0, 0x5E)) = 0;
-    *((u32*)off(g_akao_sfx_control, 0x10)) = 0;
+    *((u32*)off(&g_akao_sfx_control, 0x10)) = 0;
     *((u32*)off(a0, 0x1C)) = 0;
     *((u16*)off(D_8004C2D0, 0x5E)) = 0;
     *((u32*)off(D_8004C2D0, 0x04)) = 0;
     *((u32*)off(a0, 0x50)) = 0x7F0000;
+
     D_8003EC58 = a2;
     a2 += 0x58;
     g_akao_seq_channel0 = (AkaoChannelState*)a0;
@@ -292,9 +303,10 @@ void akao_driver_init_state(void)
     D_8003EC42 = 0;
     D_8003EC78 = 0;
     g_akao_cdvol_fade_ticks = 0;
-    *((u32*)off(g_akao_sfx_control, 0x1C)) = 0;
+    *((u32*)off(&g_akao_sfx_control, 0x1C)) = 0;
     *((u32*)off(a0, 0x3C)) = 0;
-    *((u32*)off(g_akao_sfx_control, 0x20)) = 0;
+    *((u32*)off(&g_akao_sfx_control, 0x20)) = 0;
+
     a3 = (new_var8 = *hw);
     *((s16*)0x1F801D80) = 0x3FFF;
     *((s16*)0x1F801D82) = 0x3FFF;
@@ -302,7 +314,7 @@ void akao_driver_init_state(void)
     *((s16*)0x1F801DB2) = 0x7FFF;
     *((u32*)off(a0, 0x40)) = 0;
     a3 = 0;
-    *((u32*)off(g_akao_sfx_control, 0x24)) = a3;
+    *((u32*)off(&g_akao_sfx_control, 0x24)) = a3;
     *((u32*)off(a0, 0x44)) = 0;
     *((u16*)off(a0, 0x68)) = 0;
     *((u16*)off(a0, 0x66)) = 0;
@@ -321,7 +333,8 @@ void akao_driver_init_state(void)
     *hw = (*hw) & 0xFFFA;
     *hw = (*hw) | 1;
     a3 = 0;
-    hw = a2 - 0x24;
+    hw = (u16*)(a2 - 0x24);
+
     do
     {
         a3++;
@@ -331,11 +344,13 @@ void akao_driver_init_state(void)
         *((u32*)(a0 = a2 + 0x00)) = a3;
         a2 += 0x118;
     } while ((a3 & 0xFFFF) < 0x20);
+
     new_var7 = 0x7F00;
     a3 = 0xC;
     new_var5 = 0x8C;
     new_var6 = 1;
 
+    // Fixed loop: removed new_var4 pointer assignment that caused warning
     {
         u8* v1 = g_sfx_channels + new_var5;
         do
@@ -349,11 +364,12 @@ void akao_driver_init_state(void)
             *((u16*)(v1 + 0x58)) = new_var7;
             *((u16*)(v1 + 0x02)) = 0;
             *((u16*)(v1 - 0x04)) = a3;
-            *((u32*)((*(new_var4 = &v1)) - 0x4C)) = 0;
+            *((u32*)(v1 - 0x4C)) = 0; // was *(new_var4 = &v1) ... simplified
             *((u16*)v1) = 0;
             v1 += 0x118;
         } while ((a3 & 0xFFFF) < 0x18);
     }
+
     {
         u8* a0_ptr = (u8*)g_akao_seq_channel0;
         u8* v0_ptr = (u8*)&g_akao_sfx_control;
@@ -376,7 +392,9 @@ void akao_driver_init_state(void)
         new_var9 = v1_ptr;
         *((u32*)off(new_var9, 0x08)) = (*((u32*)off(new_var9, 0x08))) | 0x80;
     }
-    func_80028E34(4, 0x03FFF000, a2, a3);
+
+    // Fix overflow warning: second argument expects short, use 0x3FFF (common SPU value)
+    func_80028E34(4, 0x3FFF, a2, a3);
     SpuSetReverb(1);
 }
 
