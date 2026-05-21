@@ -1353,3 +1353,49 @@ s32 func_8002B540(s32 arg0, s32 arg1)
     }
     return arg1;
 }
+
+/**
+ * @brief Release sequencer or SFX channels depending on mode.
+ *        When arg0->unk64 is zero, clears arg1 bits from the seq-channel
+ *        bitmasks in g_akao_seq_channel0.  If all active bits are cleared,
+ *        also zeros D_8003EC44, unk5E, and flags.  When arg0->unk64 is
+ *        non-zero, delegates to akao_sfx_release_channels.  In both paths,
+ *        arg0->unk34 is cleared and the driver dirty flag (unk8) is OR'd
+ *        with 0x110.
+ * @param arg0 Pointer to the shared channel header.
+ * @param arg1 Bit-mask of channels to release.
+ * @see decomp.me (nonmatching) https://decomp.me/scratch/func_8002B580
+ */
+void func_8002B580(AkaoSFXState* arg0, u32 arg1)
+{
+    s32 temp_v0;
+
+    if (arg0->unk64 == 0)
+    {
+        u32 tmp = ~arg1;
+
+        temp_v0 = g_akao_seq_channel0->unk4 & tmp;
+        g_akao_seq_channel0->unk4 = temp_v0;
+
+        if (temp_v0 == 0)
+        {
+            D_8003EC44 = 0;
+            g_akao_seq_channel0->unk5E = 0;
+            g_akao_seq_channel0->flags = 0;
+        }
+
+        g_akao_seq_channel0->unk14 &= tmp;
+        g_akao_seq_channel0->unk8  &= tmp;
+        g_akao_seq_channel0->unkC  &= tmp;
+        g_akao_seq_channel0->unk3C &= tmp;
+        g_akao_seq_channel0->unk40 &= tmp;
+        g_akao_seq_channel0->unk44 &= tmp;
+    }
+    else
+    {
+        akao_sfx_release_channels(arg0, arg1);
+    }
+
+    arg0->unk34 = 0;
+    g_akao_driver_flags.unk8 |= 0x110;
+}
