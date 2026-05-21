@@ -1364,7 +1364,7 @@ s32 func_8002B540(s32 arg0, s32 arg1)
  *        with 0x110.
  * @param arg0 Pointer to the shared channel header.
  * @param arg1 Bit-mask of channels to release.
- * @see decomp.me (nonmatching) https://decomp.me/scratch/func_8002B580
+ * @see decomp.me (100%) https://decomp.me/scratch/vxrwL
  */
 void func_8002B580(AkaoSFXState* arg0, u32 arg1)
 {
