@@ -72,7 +72,6 @@ extern s32 D_8004D390;
 extern s32 D_8004D394;
 extern s32 D_8004D398;
 extern s32 D_8004D39C;
-extern s32 g_akao_driver_flags;
 extern s32 g_akao_spu_xfer_pending;
 extern s32 D_8004F824;
 extern s32 D_8004F828;
@@ -975,7 +974,7 @@ s32 akao_cmd_f1(void)
  */
 void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 {
-    g_akao_driver_flags &= ~1;
+    g_akao_driver_flags.unk0 &= ~1;
     while (akao_submit((AkaoBankHeader*)sequenceData, waitForCompletion) == 1);
 }
 
@@ -997,7 +996,7 @@ s32 akao_get_xfer_state(void)
 s32 akao_reset_xfer_state(void)
 {
     D_8004F824 = 0;
-    g_akao_driver_flags |= 1;
+    g_akao_driver_flags.unk0 |= 1;
     return 0;
 }
 
@@ -1060,7 +1059,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
     s32* new_var;         /* load-bearing temp for codegen                 */
     void* arti_slot;      /* base of this bank's articulation slot         */
 
-    if ((g_akao_driver_flags & 1) == 0)
+    if ((g_akao_driver_flags.unk0 & 1) == 0)
     {
         return D_8004F828;
     }
@@ -1135,7 +1134,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
     if (D_8004F828 == 0)
     {
     block_18:
-        g_akao_driver_flags &= ~1;
+        g_akao_driver_flags.unk0 &= ~1;
     }
     return D_8004F828;
 }

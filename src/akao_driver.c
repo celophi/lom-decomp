@@ -254,7 +254,7 @@ void akao_driver_init_state(void)
     int new_var7;
     u16 new_var8;
     int new_var5;
-    u8* a0 = g_akao_seq_master_state;
+    u8* a0 = (u8*)&g_akao_seq_master_state;
     u8* a2 = g_akao_seq_channels;
     int new_var6;
     u8* new_var9;
@@ -269,8 +269,8 @@ void akao_driver_init_state(void)
     *((u32*)off(D_8004D388, 0x08)) = 0;
     *((u32*)off(D_8004D388, 0x04)) = 0;
     *((u32*)off(D_8004D388, 0x00)) = 0;
-    *((u32*)off(g_akao_driver_flags, 0x00)) = 0;
-    *((u32*)off(g_akao_driver_flags, 0x04)) = 1;
+    *((u32*)off(&g_akao_driver_flags, 0x00)) = 0;
+    *((u32*)off(&g_akao_driver_flags, 0x04)) = 1;
     new_var = (u32*)off(D_8004F830, 0x00);
 
     // Fix: use & for struct variables
@@ -367,7 +367,7 @@ void akao_driver_init_state(void)
     {
         u8* a0_ptr = (u8*)g_akao_seq_channel0;
         u8* v0_ptr = (u8*)&g_akao_sfx_control;
-        u8* v1_ptr = g_akao_driver_flags;
+        u8* v1_ptr = (u8*)&g_akao_driver_flags;
         a0 = a0_ptr;
         *((u32*)off(a0, 0x18)) = 0;
         *((u32*)off(a0, 0x14)) = 0;
