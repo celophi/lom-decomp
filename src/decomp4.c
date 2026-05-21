@@ -1334,3 +1334,22 @@ void akao_sfx_release_channels(void* arg0, u32 arg1)
     *(u32*)((u8*)arg0 + 0x28) = 0;
     *(u32*)((u8*)arg0 + 0x3C) = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/oTcsG
+ */
+s32 func_8002B540(s32 arg0, s32 arg1)
+{
+    if (arg0 != 0)
+    {
+        if ((u32)(arg1 - 0x80) < 0x30U)
+        {
+            return arg1 + (arg0 * 0x10);
+        }
+        if ((u32)(arg1 - 0xB0) < 0x30U)
+        {
+            return arg1 + ((arg0 - 3) * 0x10);
+        }
+    }
+    return arg1;
+}
