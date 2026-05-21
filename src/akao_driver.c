@@ -229,13 +229,6 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
     return new_var;
 }
 
-// Fix the off() helper to accept any pointer type
-inline static u8* off(void* p, int o)
-{
-    return (u8*)p + o;
-}
-
-
 /**
  * @brief Zeroes and primes the AKAO driver's runtime state.
  *

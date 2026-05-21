@@ -57,4 +57,11 @@ extern s32 akao_check_magic(AkaoSeqHeader *hdr);
 extern void func_80028E34(int, volatile short, void *, int);
 extern void func_8002A134(void);
 
+// Fix the off() helper to accept any pointer type
+inline static u8* off(void* p, int o)
+{
+    return (u8*)p + o;
+}
+
+
 #endif
