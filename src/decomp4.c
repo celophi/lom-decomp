@@ -527,7 +527,7 @@ extern u8 D_8003D210[];
 extern u8 D_8003D1B0[];
 
 /**
- * decomp.me (78.79%) https://decomp.me/scratch/9GIhP
+ * decomp.me (78.79%) https://decomp.me/scratch/52mKD
  */
 u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
 {
