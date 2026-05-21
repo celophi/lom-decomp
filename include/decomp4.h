@@ -26,8 +26,9 @@ extern u8 g_sfx_channels[];
 
 typedef struct
 {
-    u8 _pad0[8];
-    s32 unk8;
+    u32 unk0; /* 0x00 */
+    u32 unk4; /* 0x04 */
+    u32 unk8; /* 0x08 */
 } AkaoDriverFlags;
 
 /**
