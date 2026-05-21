@@ -1359,23 +1359,25 @@ void func_8002AD28(Context* arg0, s32 arg1)
 
 typedef struct
 {
-    u8 pad0[0x100]; // padding to reach offset 0x100
-    s32 unk100;     // offset 0x100
-    s32 unk104;     // offset 0x104
-    s32 unk108;     // offset 0x108
-    u8 pad1[0x2];   // padding from 0x10C to 0x10D
-    u16 unk10E;     // offset 0x10E
-    u16 unk110;     // offset 0x110
+    u8 pad0[0x6A];      /* padding to offset 0x6A */
+    s16 unk6A;          /* offset 0x6A */
+    u8 pad1[0x94];      /* padding from 0x6C to 0xFF (0x94 = 148 bytes) */
+    s32 unk100;         /* offset 0x100 */
+    s32 unk104;         /* offset 0x104 */
+    s32 unk108;         /* offset 0x108 */
+    u8 pad2[0x2];       /* padding from 0x10C to 0x10D */
+    u16 unk10E;         /* offset 0x10E */
+    u16 unk110;         /* offset 0x110 */
 } Arg0;
 
-// Structure for arg1 with correct offsets (packed to avoid padding)
+/* Structure for arg1 with correct offsets (packed to avoid padding) */
 typedef struct
 {
-    u8 pad0[0x4]; // padding to reach offset 0x4
-    s32 unk4;     // offset 0x4
-    u8 pad1[0x4]; // padding from 0x8 to 0xB
-    u16 unkC;     // offset 0xC
-    u16 unkE;     // offset 0xE
+    u8 pad0[0x4];       /* padding to reach offset 0x4 */
+    s32 unk4;           /* offset 0x4 */
+    u8 pad1[0x4];       /* padding from 0x8 to 0xB */
+    u16 unkC;           /* offset 0xC */
+    u16 unkE;           /* offset 0xE */
 } Arg1;
 
 /**
@@ -1399,6 +1401,18 @@ void func_8002B468(Arg0* arg0, Arg1* arg1, s32 arg2)
 
     arg0->unk100 = old_val | 0x1FF80; /* OR and write back */
     arg0->unk110 = tmp_e;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/1RRHh
+ */
+void func_8002B49C(Arg0* arg0, s32 arg1)
+{
+    Arg1* temp_a1;
+
+    arg0->unk6A = arg1;
+    temp_a1 = (Arg1*)(g_akao_articulation_slots + (arg1 << 4));
+    func_8002B468(arg0, temp_a1, *(s32*)temp_a1);
 }
 
 /**
