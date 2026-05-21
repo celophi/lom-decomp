@@ -245,7 +245,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
  */
 void akao_driver_init_state(void)
 {
-    u16* hw = (u16*)0x1F801DAA;
+    volatile u16* hw = (u16*)0x1F801DAA;
     u32 t0 = 0x18;
     u8** new_var4; // kept if needed elsewhere; simplified usage later
     u32* new_var3;
