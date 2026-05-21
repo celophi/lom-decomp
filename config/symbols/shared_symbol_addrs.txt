@@ -668,6 +668,7 @@ akao_submit                         = 0x8002371C;
 akao_upload_bank                    = 0x8002376C;
 akao_driver_init_state              = 0x80023830;
 akao_driver_init                    = 0x80023AD0;
+akao_set_bank_data_ptrs             = 0x80023BB8;
 akao_driver_shutdown                = 0x80023BE0;
 
 // psyq/libapi/A13
