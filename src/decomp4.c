@@ -995,7 +995,7 @@ s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
         *((u16*)(((u8*)arg0) + 0x110)) |= slot->unk5;
     }
     *((u16*)(((u8*)arg0) + 0x110)) |= art->pitch_misc.half.hi & 0x20;
-    ret = akao_compute_pitch(art, slot->unk1, *((s16*)(((u8*)arg0) + 0xEC)), (s32*)(((u8*)arg0) + 0x54));
+    ret = akao_compute_pitch(art, slot->unk1, *((s16*)(((u8*)arg0) + 0xEC)), &((AkaoChannelState*)arg0)->unk54);
     *((s16*)(((u8*)arg0) + 0x112)) = (s16)slot->unk6;
     *((s16*)(((u8*)arg0) + 0x90)) = (s16)(((slot->unk7 & 0x7F) + 0x40) << 8);
     if (slot->unk7 & 0x80)
@@ -1199,7 +1199,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
                     var_s1_2 = temp_s1 + (s16)arg0->unkEA;
                 }
                 var_a2 = akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots),
-                                            var_s1_2, arg0->unkEC, (s32*)arg0->_pad54);
+                                            var_s1_2, arg0->unkEC, &arg0->unk54);
                 temp_v1_5 = arg0->unkDA;
                 if (temp_v1_5 != 0)
                 {

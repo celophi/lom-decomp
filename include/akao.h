@@ -239,7 +239,8 @@ typedef struct AkaoChannelState
     u32 unk48;       /* 0x48 */
     u32 unk4C;       /* 0x4C */
     s32 unk50;       /* 0x50 */
-    u8 _pad54[6];    /* 0x54 - 0x59 */
+    s32 unk54;       /* 0x54 - pan-envelope step; also reused as a scratch pitch-delta pointer target */
+    u16 unk58;       /* 0x58 - pan-envelope fade-tick countdown */
     s16 unk5A;       /* 0x5A */
     u16 unk5C;       /* 0x5C */
     u16 unk5E;       /* 0x5E */
