@@ -1036,50 +1036,44 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
 /**
  * @brief Emit one 8x8 textured corner sprite and splice it into a prim chain.
  *
- * Writes a @c SPRT primitive (code 0x64, white tint 0x808080, fixed 8x8 size
- * via the packed 0x00080008, CLUT/tpage 0x7CCA) at @p x / @p y, links it
+ * Writes a libgpu @c SPRT (code 0x64, white tint 0x808080, fixed 8x8 size,
+ * fixed CLUT 0x7CCA) at screen @p x / @p y with texture origin @p uv, links it
  * into the chain headed at @p ot, and returns the next primitive slot.
  * Called four times by @ref menu_draw_window, once per window corner.
  *
- * @param prim  Primitive write cursor (the SPRT is built here).
- * @param ot    Ordering-table head the sprite is linked into.
- * @param x     Sprite X position (u0/x0).
- * @param y     Sprite Y position (v0/y0).
- * @param tpage Texture page / clut selector written at offset 0xC.
+ * @param prim Primitive write cursor (the @c SPRT is built here).
+ * @param ot   Ordering-table head the sprite is linked into.
+ * @param x    Sprite screen X (@c x0).
+ * @param y    Sprite screen Y (@c y0).
+ * @param uv   Packed texture origin written to @c u0 / @c v0 (offset 0xC).
  * @return Pointer to the next primitive slot (@p prim + 0x14).
+ * @note Tint uses @c setBGR0 (word-packed b0/g0/r0); the 8x8 size is still a
+ *       raw word store because @c setWH emits two short stores. Tag/link use
+ *       @c setlen / @c setcode / @c setXY0 / @c addPrim.
  * @see decomp.me (100%) https://decomp.me/scratch/GcWsA
  */
-void* menu_emit_corner(void* prim, s32* ot, s16 x, s16 y, s32 tpage)
+void* menu_emit_corner(void* prim, s32* ot, s16 x, s16 y, s32 uv)
 {
     unsigned char* base = (unsigned char*)prim;
-    u32 old_unk0;
 
-    /* Write word at offset 4: 0x00808080 */
-    *(u32*)(base + 4) = 0x00808080;
+    /* White tint (b0/g0/r0 all 0x80) packed into one word store. */
+    setBGR0((SPRT*)base, 0x80, 0x80, 0x80);
 
-    /* Write byte at offset 3 */
-    base[3] = 4;
+    /* SPRT: len = 4. */
+    setlen(base, 4);
 
-    /* Write word at offset 16 */
+    /* Fixed 8x8 size (w,h written as one word). */
     *(u32*)(base + 16) = 0x00080008;
 
-    /* Load offset 0 early to match instruction 2c */
-    old_unk0 = *(u32*)base;
+    /* SPRT: code = 0x64. */
+    setcode(base, 0x64);
 
-    /* Write byte at offset 7 */
-    base[7] = 0x64;
+    setXY0((SPRT*)base, x, y);
+    *(u16*)(base + 14) = 0x7CCA; /* clut */
+    *(u16*)(base + 12) = (u16)uv; /* u0,v0 */
 
-    /* Write half-words */
-    *(u16*)(base + 8) = (u16)x;
-    *(u16*)(base + 10) = (u16)y;
-    *(u16*)(base + 14) = 0x7CCA;
-    *(u16*)(base + 12) = (u16)tpage;
-
-    /* Update word at offset 0: load *ot instead of using cached value */
-    *(u32*)base = (old_unk0 & 0xFF000000) | (*(u32*)ot & 0xFFFFFF);
-
-    /* Update *ot: load *ot again */
-    *ot = (*(u32*)ot & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+    /* Link this primitive into the OT chain headed at @c ot. */
+    addPrim(ot, base);
 
     /* Return prim + 0x14 */
     return (void*)(base + 0x14);
@@ -1096,11 +1090,11 @@ void* menu_emit_corner(void* prim, s32* ot, s16 x, s16 y, s32 tpage)
  * @param prim  Primitive write cursor (advanced past every emitted tile).
  * @param ot    Ordering-table head the tiles are linked into.
  * @param rect  Region descriptor: x (+0), y (+2), width (+4), height (+6).
- * @param tpage Texture page / clut selector written into each tile.
+ * @param uv    Packed texture origin written to each tile's @c u0 / @c v0.
  * @return Primitive write cursor just past the last tile emitted.
  * @see decomp.me (90.20%) https://decomp.me/scratch/R9mdk
  */
-s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 tpage)
+s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
 {
     u16 new_var3;
     int new_var2;
@@ -1122,7 +1116,7 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 tpage)
                     *((u32*)((((u8*)prim) + 0x0E) - 0x0A)) = 0x80008080U;
                     (((u8*)prim) + 0x0E)[-0x0B] = 4;
                     (((u8*)prim) + 0x0E)[-7] = 0x64;
-                    *((u16*)((((u8*)prim) + 0x0E) - 2)) = tpage;
+                    *((u16*)((((u8*)prim) + 0x0E) - 2)) = uv;
                     if ((*((s16*)(ap + 4))) < (x + 0x60))
                     {
                         *((u16*)((((u8*)prim) + 0x0E) + 2)) = (u16)((*((u16*)(ap + 4))) - ((u16)x));
