@@ -46,39 +46,18 @@ typedef struct
                                           copy into the driver's slot table */
 } AkaoStreamingState;
 
-typedef struct {
-    u8   pad0[0x08];           /* 0x00 - 0x07 */
-    u32  unk8;                 /* 0x08 - from func_80023334 */
-    u8   pad1[0x14];           /* 0x0C - 0x1F (20 bytes) */
-    s32  unk20;                /* 0x20 - from func_800232A8 */
-    s32  unk24;                /* 0x24 - used in both functions */
-    s32  unk28;                /* 0x28 - from func_800232A8 */
-    u8   pad2[0x08];           /* 0x2C - 0x33 (8 bytes) */
-    s32  unk34;                /* 0x34 - from func_800232A8 */
-    s32  unk38;                /* 0x38 - used in both functions */
-    s32  unk3C;                /* 0x3C - from func_800232A8 */
-} AkaoXaTracker;  /* Total size: 0x40 (64 bytes) */
-
 extern s32 D_8004F794;
-extern s32 D_8004C170;
-extern u32 D_8004C150;
+/* 0x50-byte staging copy of an XA program's AkaoBankHeader (akao_upload_xa_program). */
+extern AkaoBankHeader g_akao_xa_program_staging;
 extern AkaoChannelState* g_akao_seq_channel0;
 extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
 extern u8 g_akao_articulation_slots[];
-extern s32 D_8004D388;
-extern s32 D_8004D38C;
-extern s32 D_8004D390;
-extern s32 D_8004D394;
-extern s32 D_8004D398;
-extern s32 D_8004D39C;
 extern s32 g_akao_spu_xfer_pending;
 extern s32 D_8004F824;
 extern s32 D_8004F828;
 extern AkaoStreamingState g_akao_streaming_state;
 extern AkaoBankHeader g_akao_bank_staging;
-
-extern AkaoXaTracker g_akao_xa_tracker;
 
 #define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
 
@@ -97,8 +76,8 @@ void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 s32 akao_play_sfx_from_buffer(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void akao_cmd_21(s32 arg0, s32 arg1);
 void akao_stop_sfx_by_id(s32 arg0);
-s32 func_800222A8(void);
-s32 func_80022310(s32 arg0);
+s32 akao_get_active_sfx_ids(void);
+s32 akao_is_sfx_playing(s32 arg0);
 void akao_set_paused(s32 arg0);
 void akao_cmd_90(s32 arg0);
 void akao_cmd_92(s32 arg0);
@@ -355,7 +334,7 @@ void akao_stop_sfx_by_id(s32 arg0)
  *
  * @see https://decomp.me/scratch/yZloM (100%)
  */
-s32 func_800222A8(void)
+s32 akao_get_active_sfx_ids(void)
 {
     s32 bits;
     unsigned char* ptr;
@@ -387,7 +366,7 @@ s32 func_800222A8(void)
 /**
  * @brief Returns 1 if any active SFX channel's offset-0x28 field equals @p arg0.
  *
- * Same iteration shape as @c func_800222A8 over @c g_sfx_channels / @c g_akao_sfx_control,
+ * Same iteration shape as @c akao_get_active_sfx_ids over @c g_sfx_channels / @c g_akao_sfx_control,
  * but compares each active channel's offset-0x28 value to @p arg0; returns
  * 1 on first match, 0 otherwise.
  *
@@ -396,7 +375,7 @@ s32 func_800222A8(void)
  *
  * @see https://decomp.me/scratch/OvqYq (100%)
  */
-s32 func_80022310(s32 arg0)
+s32 akao_is_sfx_playing(s32 arg0)
 {
     s32 new_var;
     s32 bits;
@@ -1163,7 +1142,7 @@ s32 akao_upload_bank_slot(void* arg0, s32 arg1, s32 arg2)
     u32 var_a3;
     void* tmp = arg0;
     var_a3 = 0;
-    var_t0 = &D_8004D388;
+    var_t0 = g_akao_bank_slot_keys;
     do
     {
         if ((*var_t0) == ((s32*)tmp)[1])
@@ -1182,37 +1161,37 @@ s32 akao_upload_bank_slot(void* arg0, s32 arg1, s32 arg2)
     case 1:
         var_a3_2 = 0x47900;
         var_a2 = 0x90;
-        D_8004D38C = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[1] = ((s32*)tmp)[1];
         break;
 
     case 2:
         var_a3_2 = 0x4C100;
         var_a2 = 0xA0;
-        D_8004D390 = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[2] = ((s32*)tmp)[1];
         break;
 
     case 3:
         var_a3_2 = 0x50900;
         var_a2 = 0xB0;
-        D_8004D394 = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[3] = ((s32*)tmp)[1];
         break;
 
     case 4:
         var_a3_2 = 0x55100;
         var_a2 = 0xC0;
-        D_8004D398 = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[4] = ((s32*)tmp)[1];
         break;
 
     case 5:
         var_a3_2 = 0x59900;
         var_a2 = 0xD0;
-        D_8004D39C = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[5] = ((s32*)tmp)[1];
         break;
 
     default:
         var_a3_2 = 0x43100;
         var_a2 = 0x80;
-        D_8004D388 = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[0] = ((s32*)tmp)[1];
         break;
     }
 
@@ -1359,13 +1338,13 @@ s32 akao_cmd_e6(s32 arg0)
  * activity. Programs @c SpuSetTransferStartAddr, kicks off the sample upload
  * (akao_spu_write), caches the SPU base back into the buffer's
  * @c cached_spu_addr field, then memcpys the 0x50-byte header to the staging
- * area @c D_8004C150.
+ * area @c g_akao_xa_program_staging.
  *
  * @param arg0  Pointer to an AKAO buffer in main RAM.
  * @param arg1  Selects the upper SPU slot (non-zero) vs the lower slot.
  *
  * @return 0 on success; the akao_check_magic delta on failure (also clears
- *         @c D_8004C170).
+ *         @c g_akao_xa_program_staging.cached_spu_addr).
  *
  * @see https://decomp.me/scratch/C06sg (99.80%)
  */
@@ -1401,10 +1380,10 @@ s32 akao_upload_xa_program(void* arg0, s32 arg1)
          */
         akao_spu_write(arg0, ((AkaoBankHeader*)var1)->spu_dest_addr);
         ((AkaoBankHeader*)var1)->cached_spu_addr = var_s2;
-        akao_copy_bytes(var1, &D_8004C150, 0x50);
+        akao_copy_bytes(var1, &g_akao_xa_program_staging, 0x50);
         return temp_v0;
     }
-    D_8004C170 = 0;
+    g_akao_xa_program_staging.cached_spu_addr = 0;
     return temp_v0;
 }
 

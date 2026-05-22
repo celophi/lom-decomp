@@ -11,7 +11,7 @@ extern s16 g_akao_cdvol_current;
 extern s32 g_akao_cdvol_step;
 extern s32 D_8004F754;
 extern s16 D_8003D47C;
-extern s32 D_8004F7A0;
+extern s32 g_akao_xa_pan_current;
 extern s32 g_akao_masterpan_step;
 extern s32 g_akao_mastervol_step;
 
@@ -33,7 +33,7 @@ typedef struct
 } SfxChannel;
 
 /**
- * @brief Shared channel header accessed by func_8002B580.
+ * @brief Shared channel header accessed by akao_release_channels.
  *        Offset 0x64 selects seq-channel mode (0) vs SFX-channel mode (non-0).
  *        Offset 0x34 is cleared unconditionally at the end of that function.
  */

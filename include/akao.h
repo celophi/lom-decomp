@@ -229,7 +229,7 @@ typedef struct AkaoChannelState
     u32 unk20;       /* 0x20 */
     u32 unk24;       /* 0x24 */
     u32 unk28;       /* 0x28 */
-    s32 unk2C;       /* 0x2C */
+    s32 pitch;       /* 0x2C - current SPU pitch (akao_compute_pitch result) */
     s32 unk30;       /* 0x30 */
     u8* unk34;       /* 0x34 */
     u8 _pad38[4];    /* 0x38 - 0x3B */
@@ -239,7 +239,8 @@ typedef struct AkaoChannelState
     u32 unk48;       /* 0x48 */
     u32 unk4C;       /* 0x4C */
     s32 unk50;       /* 0x50 */
-    u8 _pad54[6];    /* 0x54 - 0x59 */
+    s32 unk54;       /* 0x54 - pan-envelope step; also reused as a scratch pitch-delta pointer target */
+    u16 unk58;       /* 0x58 - pan-envelope fade-tick countdown */
     s16 unk5A;       /* 0x5A */
     u16 unk5C;       /* 0x5C */
     u16 unk5E;       /* 0x5E */
@@ -291,8 +292,8 @@ typedef struct AkaoChannelState
     u8 _padF8[4];    /* 0xF8 - 0xFB */
     u32 unkFC;       /* 0xFC */
     s32 unk100;      /* 0x100 */
-    s32 unk104;      /* 0x104 */
-    s32 unk108;      /* 0x108 */
+    s32 spu_sample_addr; /* 0x104 - SPU sample start (from AkaoArticulation.sample_addr) */
+    s32 spu_loop_addr;   /* 0x108 - SPU loop point (from AkaoArticulation.loop_addr) */
     u8 _pad10C[2];   /* 0x10C - 0x10D */
     u16 unk10E;      /* 0x10E */
     u16 unk110;      /* 0x110 */
