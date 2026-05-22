@@ -20,66 +20,94 @@
  * load_menu_layout (0xC9A words). */
 #define MENU_LAYOUT_WORDS 0xC9AU
 
+/* Value g_titleSelectedItem holds when the idle countdown expires with no
+ * input (set by HandleTitleMenuInput); dispatching it quits the title back to
+ * the attract loop. The same 0xFF is also written into D_8003EC9C ("no save
+ * slot selected") on the load-a-saved-game path. */
+#define TITLE_ITEM_IDLE_QUIT 0xFF
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
 /**
- * Top-level entry point of the TITLE.BIN overlay. Mirror of RunCheckPS in the
- * CHECKPS overlay: drives the title menu loop, dispatches on the user's
- * selection, and returns a state code consumed by the outer game-state
- * machine. The previously-decompiled symbol was title_func_8004FC74.
+ * @brief Top-level entry point and main loop of the TITLE.BIN overlay.
  *
- * decomp.me (100%) https://decomp.me/scratch/mEAXF
+ * @details Boots the title audio (instrument bank, SEQ, then music), then
+ * repeatedly initialises the title display, runs the menu render/input loop
+ * until the player makes a selection, and dispatches on @c g_titleSelectedItem
+ * to choose which outer game state to return into. Mirror of @ref RunCheckPS
+ * in the CHECKPS overlay. Invoked from the main state machine (g_gameState
+ * case 2) as @c g_gameState = run_title(...). The previously-decompiled symbol
+ * was @c title_func_8004FC74.
+ *
+ * @param base_address Base address of the double-buffered MenuContext render
+ *        buffer (returned by func_80015C48 in main.c); forwarded as-is to
+ *        InitTitleDisplay, render_menu and RunSaveSlotMenu.
+ * @return Next game-state code consumed by the main state machine:
+ *         - 3: "New Game" confirmed in the save-slot menu (start a new field).
+ *         - 7: menu item 1 selected (continue / load a saved game).
+ *         - 8: idle timeout (@ref TITLE_ITEM_IDLE_QUIT); music is stopped and
+ *              control returns to the attract loop.
+ *         - 0: any other item; arms the load path (D_8003EC9C, layout template,
+ *              RNG seed) and drops into the field/demo state.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/mEAXF
  */
-s32 RunTitle(s32 arg0)
+s32 run_title(s32 base_address)
 {
-    s32 pad;
-    S_801ED480* ptr = (S_801ED480*)0x801ED480;
-    s32* base;
+    s32 ctx_base;
+    S_801ED480* scene_state = (S_801ED480*)0x801ED480;
+    s32* exit_state_base;
     MenuLayout* layout;
-    u32 const_ff;
-    s32 temp1, temp2;
-    u8 d92;
-    pad = arg0;
+    u32 idle_quit;
+    s32 rand_lo, rand_hi;
+    u8 selected_item;
+    ctx_base = base_address;
 
     LoadTitleAudioBank();
     LoadTitleSeq(0);
     StartTitleMusic();
-    base = (s32*)0x80100000; /* base address for D_80102640 */
-    const_ff = 0xFF;
+    /* 0x80100000 is the global-RAM base; g_titleMenuExitState lives at
+     * 0x80102640 (word index 0x990). The exit-state flag is read/written
+     * through this base pointer rather than via the symbol directly so the
+     * build suppresses its relocations (see config/relocations/
+     * title_reloc_addrs.txt). This indirection is load-bearing for the
+     * byte-for-byte match - do not collapse it to g_titleMenuExitState. */
+    exit_state_base = (s32*)0x80100000;
+    idle_quit = TITLE_ITEM_IDLE_QUIT;
     layout = (MenuLayout*)g_menuLayoutBuffer;
     while (1)
     {
-        InitTitleDisplay(pad);
-        ptr->unk0 = 0;
-        ptr->unk2 = 0;
-        ptr->unk4 = 0;
-        ptr->unk8 = 0;
-        ptr->unkC = 0;
+        InitTitleDisplay(ctx_base);
+        scene_state->unk0 = 0;
+        scene_state->unk2 = 0;
+        scene_state->unk4 = 0;
+        scene_state->unk8 = 0;
+        scene_state->unkC = 0;
         do
         {
-            render_menu(pad);
-        } while (base[0x990] == 0); /* g_titleMenuExitState (0x80102640): offset 0x2640/4 = 0x990 */
+            render_menu(ctx_base);
+        } while (exit_state_base[0x990] == 0); /* wait until g_titleMenuExitState != 0 */
 
         D_80042FB4 = VSync(-1);
-        d92 = g_titleSelectedItem;
+        selected_item = g_titleSelectedItem;
 
-        if (d92 == 0)
+        if (selected_item == 0)
         {
             load_menu_layout(0);
-            base[0x990] = 0; /* g_titleMenuExitState = 0 */
-            if (RunSaveSlotMenu(pad) == 2)
+            exit_state_base[0x990] = 0; /* g_titleMenuExitState = 0 */
+            if (RunSaveSlotMenu(ctx_base) == 2)
             {
                 GFX_Transition(0);
                 continue;
             }
             return 3;
         }
-        else if (d92 == 1)
+        else if (selected_item == 1)
         {
             return 7;
         }
-        else if (d92 == const_ff)
+        else if (selected_item == idle_quit)
         {
             StopTitleMusic();
             return 8;
@@ -88,10 +116,10 @@ s32 RunTitle(s32 arg0)
         {
             akao_cmd_c1(0, 0x3C, 0);
             load_menu_layout(-1);
-            D_8003EC9C = const_ff;
-            temp1 = rand();
-            temp2 = rand();
-            layout->rng_seed = (s16)(temp1 | (temp2 << 0xF));
+            D_8003EC9C = idle_quit;
+            rand_lo = rand();
+            rand_hi = rand();
+            layout->rng_seed = (s16)(rand_lo | (rand_hi << 0xF));
             return 0;
         }
     }
