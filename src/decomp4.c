@@ -1543,3 +1543,11 @@ void func_8002B8C8(void* arg0)
     ptr2 = arg[0];          // reload the original pointer
     arg[0] = ptr2 + offset; // add signed offset and store back
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/os90Z
+ */
+void func_8002B900(s32* arg0)
+{
+    arg0[0] = (s32)arg0[5];
+}
