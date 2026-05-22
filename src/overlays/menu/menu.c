@@ -1061,14 +1061,10 @@ void* menu_emit_corner(void* prim, s32* ot, s16 x, s16 y, s32 uv)
     /* White tint (b0/g0/r0 all 0x80) packed into one word store. */
     SET_BGR0_PACKED(base, 0x80, 0x80, 0x80);
 
-    /* SPRT: len = 4. */
-    setlen(base, 4);
+    setSprt(base);
 
     /* Fixed 8x8 size (w,h written as one word). */
     SET_SPRT_WH_PACKED(base, 8, 8);
-
-    /* SPRT: code = 0x64. */
-    setcode(base, 0x64);
 
     setXY0((SPRT*)base, x, y);
     SET_SPRT_CLUT(base, 0x7CCA);
