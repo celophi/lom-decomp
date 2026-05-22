@@ -140,7 +140,7 @@ s32 akao_register_bank(AkaoSeqHeader* bank)
 {
     s32 temp_v0;
 
-    temp_v0 = akao_check_magic((s32*)bank);
+    temp_v0 = akao_check_magic(bank);
     if (temp_v0 == 0)
     {
         akao_set_bank_data_ptrs((s32)bank + sizeof(AkaoSeqHeader));

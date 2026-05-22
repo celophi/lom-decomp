@@ -735,9 +735,12 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
  * @param channel Pointer to the channel state block (raw u8* for offset math).
  * @param key Note/key being bound; chooses the entry within the channel's
  *        articulation map (pointer at offset 0x18).
+ * @param next_opcode Next-note opcode from akao_seq_skip_to_next_note; passed
+ *        by the caller but not consumed by the current body. TODO: the
+ *        original likely uses this; reconstructing it may close the 93% gap.
  * @see decomp.me (93.41%) https://decomp.me/scratch/0tdrk
  */
-void akao_bind_articulation_for_key(u8* channel, u32 key)
+void akao_bind_articulation_for_key(u8* channel, u32 key, s32 next_opcode)
 {
     u8* a0 = (u8*)channel;
     s16 temp_v1;
