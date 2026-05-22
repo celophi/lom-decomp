@@ -1496,3 +1496,12 @@ void func_8002B798(u8** arg0)
     ch->unk48 = temp_a0;
     new_var2->unk4C = (val_combined - temp_a0) / new_var2->unk5A;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/KW15z
+ */
+void func_8002B844(void** arg0)
+{
+    unsigned char* ptr = (unsigned char*)*arg0;
+    *arg0 = ptr + (s16)(ptr[0] | (ptr[1] << 8));
+}
