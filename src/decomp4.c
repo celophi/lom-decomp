@@ -1245,7 +1245,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
                     }
                 }
             }
-            arg0->unk2C = var_a2;
+            arg0->pitch = var_a2;
             if (arg0->unk64 == 0)
             {
                 g_akao_seq_channel0->unk14 |= arg1;
@@ -1301,7 +1301,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
                         << 0x10;
             arg0->unk94 = arg0->unk98;
             arg0->unkF0 = 0U;
-            arg0->unk50 = (s32)((s32)(temp_a2_2 - ((arg0->unk2C << 0x10) + arg0->unk30)) / (s32)arg0->unk94);
+            arg0->unk50 = (s32)((s32)(temp_a2_2 - ((arg0->pitch << 0x10) + arg0->unk30)) / (s32)arg0->unk94);
         }
         arg0->unk9A = arg0->unkEE;
         arg0->unkF2 = arg0->unkEA;
@@ -1317,9 +1317,9 @@ void akao_channel_load_articulation_fields(AkaoChannelState* arg0, AkaoArticulat
     s32 tmp_4;
     s32 old_val;
 
-    arg0->unk104 = arg2;
+    arg0->spu_sample_addr = arg2;
     tmp_4 = arg1->loop_addr;
-    arg0->unk108 = tmp_4;
+    arg0->spu_loop_addr = tmp_4;
 
     tmp_c = arg1->pitch_misc.half.lo;
     arg0->unk10E = tmp_c; /* store unk10E early */
