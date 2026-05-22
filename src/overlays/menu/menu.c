@@ -97,6 +97,20 @@ extern s32 D_80168C0C;
 extern s32 D_80168C28;
 extern s32 D_80169548;
 
+/*
+ * CLUT ids for the menu's chrome glyphs/sprites. These are libgpu @c getClut
+ * results; see @ref menu_upload_tim for where the two CLUT rows are placed in
+ * VRAM. Each row is 256 entries wide and breaks into 16 sub-palettes of 16
+ * colors (CLUT slots are 16-pixel aligned in x).
+ *
+ *   MENU_CLUT_GRID_BASE -> CLUT 0, slot 0  (VRAM x=0,   y=498)
+ *   MENU_CLUT_GRID_ALT  -> CLUT 0, slot 1  (VRAM x=16,  y=498)
+ *   MENU_CLUT_CORNER    -> CLUT 1, slot 10 (VRAM x=160, y=499)
+ */
+#define MENU_CLUT_GRID_BASE 0x7C80
+#define MENU_CLUT_GRID_ALT  0x7C81
+#define MENU_CLUT_CORNER    0x7CCA
+
 /* K&R-style declaration: original call site in menu_tick passes no explicit
  * argument and relies on register a0 (the caller's first parameter) being
  * live. Keep the empty parameter list to preserve that codegen exactly. */
@@ -390,11 +404,11 @@ void menu_build_grid(RenderContext* gpu_work)
 
         if (var_t2 >= 0x11)
         {
-            *(u16*)(var_a2 + 0xE) = 0x7C81;
+            *(u16*)(var_a2 + 0xE) = MENU_CLUT_GRID_ALT;
         }
         else
         {
-            *(u16*)(var_a2 + 0xE) = 0x7C80;
+            *(u16*)(var_a2 + 0xE) = MENU_CLUT_GRID_BASE;
         }
 
         var_t2++;
@@ -1037,7 +1051,7 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
  * @brief Emit one 8x8 textured corner sprite and splice it into a prim chain.
  *
  * Writes a libgpu @c SPRT (code 0x64, white tint 0x808080, fixed 8x8 size,
- * fixed CLUT 0x7CCA) at screen @p x / @p y with texture origin @p uv, links it
+ * fixed CLUT @c MENU_CLUT_CORNER) at screen @p x / @p y with texture origin @p uv, links it
  * into the chain headed at @p ot, and returns the next primitive slot.
  * Called four times by @ref menu_draw_window, once per window corner.
  *
@@ -1059,7 +1073,7 @@ void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
 
     setXY0(prim, x, y);
 
-    SET_SPRT_CLUT(prim, 0x7CCA);
+    SET_SPRT_CLUT(prim, MENU_CLUT_CORNER);
     SET_SPRT_UV0_PACKED(prim, uv);
 
     addPrim(ot, prim);
@@ -1072,7 +1086,7 @@ void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
  *
  * Walks the region described by @p rect (width at +4, height at +6, origin at
  * +0/+2) in 0x60-pixel steps on both axes, emitting one @c SPRT per tile
- * (code 0x64, tint 0x80008080, CLUT/tpage 0x7C81) clamped to the region edges,
+ * (code 0x64, tint 0x80008080, CLUT @c MENU_CLUT_GRID_ALT) clamped to the region edges,
  * and links each into the chain headed at @p ot.
  *
  * @param prim  Primitive write cursor (advanced past every emitted tile).
@@ -1128,7 +1142,7 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
                     new_var2 = 0x00FFFFFFU & ((u32)prim);
                     *((u16*)((((u8*)prim) + 0x0E) - 4)) = (u16)(new_var + ((u16)y));
                     wp += 0x14;
-                    *((u16*)((((u8*)prim) + 0x0E) + 0)) = 0x7C81U;
+                    *((u16*)((((u8*)prim) + 0x0E) + 0)) = MENU_CLUT_GRID_ALT;
                     *((u32*)prim) = ((*((u32*)prim)) & 0xFF000000U) | ((*((u32*)ot)) & 0x00FFFFFFU);
                     *ot = ((*((u32*)ot)) & 0xFF000000U) | new_var2;
                     prim = (s32*)(((u8*)prim) + 0x14);
