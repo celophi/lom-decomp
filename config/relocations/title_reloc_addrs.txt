@@ -1,4 +1,4 @@
-// Prevent assigning a symbol in RunTitle
+// Prevent assigning a symbol in run_title
 rom:0x3D reloc:MIPS_NONE symbol:g_titleMenuExitState
 rom:0x71 reloc:MIPS_NONE symbol:g_titleMenuExitState
 rom:0xA5 reloc:MIPS_NONE symbol:g_titleMenuExitState
