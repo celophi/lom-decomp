@@ -1031,3 +1031,64 @@ void* func_80141E64(void* arg0, s32* arg1, s16 arg2, s16 arg3, s32 arg4)
     /* Return arg0 + 0x14 */
     return (void*)(base + 0x14);
 }
+
+/**
+ * decomp.me (90.20%) https://decomp.me/scratch/R9mdk
+ */
+s32* func_80141EE4(s32* arg0, s32* arg1, u8* arg2, s16 arg3)
+{
+    u16 new_var3;
+    int new_var2;
+    u8* ap = arg2;
+    volatile short pad;
+    u16 new_var;
+    s32 y = 0;
+    if ((*((s16*)(ap + 6))) > 0)
+    {
+        do
+        {
+            s32 x = 0;
+            if ((*((s16*)(ap + 4))) > 0)
+            {
+                s32 y_plus_60 = y + 0x60;
+                u8* wp;
+                do
+                {
+                    *((u32*)((((u8*)arg0) + 0x0E) - 0x0A)) = 0x80008080U;
+                    (((u8*)arg0) + 0x0E)[-0x0B] = 4;
+                    (((u8*)arg0) + 0x0E)[-7] = 0x64;
+                    *((u16*)((((u8*)arg0) + 0x0E) - 2)) = arg3;
+                    if ((*((s16*)(ap + 4))) < (x + 0x60))
+                    {
+                        *((u16*)((((u8*)arg0) + 0x0E) + 2)) = (u16)((*((u16*)(ap + 4))) - ((u16)x));
+                    }
+                    else
+                    {
+                        *((u16*)((((u8*)arg0) + 0x0E) + 2)) = 0x60;
+                    }
+                    if (((*((s16*)(ap + 6))) < y_plus_60) != 0)
+                    {
+                        *((u16*)((((u8*)arg0) + 0x0E) + 4)) = (u16)((*((u16*)(ap + 6))) - ((u16)y));
+                    }
+                    else
+                    {
+                        *((u16*)((((u8*)arg0) + 0x0E) + 4)) = 0x60;
+                    }
+                    new_var3 = (u16)((*((u16*)(ap + 0))) + ((u16)x));
+                    *((u16*)((((u8*)arg0) + 0x0E) - 6)) = new_var3;
+                    new_var = *((u16*)(ap + 2));
+                    x += 0x60;
+                    new_var2 = 0x00FFFFFFU & ((u32)arg0);
+                    *((u16*)((((u8*)arg0) + 0x0E) - 4)) = (u16)(new_var + ((u16)y));
+                    wp += 0x14;
+                    *((u16*)((((u8*)arg0) + 0x0E) + 0)) = 0x7C81U;
+                    *((u32*)arg0) = ((*((u32*)arg0)) & 0xFF000000U) | ((*((u32*)arg1)) & 0x00FFFFFFU);
+                    *arg1 = ((*((u32*)arg1)) & 0xFF000000U) | new_var2;
+                    arg0 = (s32*)(((u8*)arg0) + 0x14);
+                } while (x < (*((s16*)(ap + 4))));
+            }
+            y += 0x60;
+        } while (y < (*((s16*)(ap + 6))));
+    }
+    return arg0;
+}
