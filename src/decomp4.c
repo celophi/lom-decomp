@@ -1528,3 +1528,18 @@ unsigned short func_8002B870(void** arg0)
         *arg0 = ptr + 2;
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/uIP0t
+ */
+void func_8002B8C8(void* arg0)
+{
+    unsigned char* ptr2;
+    unsigned char** arg = (unsigned char**)arg0; // pointer to array of pointers
+    unsigned char* ptr = arg[0];                 // original pointer
+    s16 offset = (s16)(ptr[0] | (ptr[1] << 8));  // bytes → signed offset
+
+    arg[5] = ptr + 2;       // store ptr+2 at offset 0x14
+    ptr2 = arg[0];          // reload the original pointer
+    arg[0] = ptr2 + offset; // add signed offset and store back
+}
