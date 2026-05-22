@@ -30,13 +30,30 @@
     (p)->b0 = _b0, (p)->g0 = _g0, (p)->r0 = _r0
 
 /*
- * Pack r0/g0/b0 (code byte = 0) into the color word and store it with a
- * single 32-bit write, matching `*(u32*)(p + 4) = 0x00bbggrr;`. Use this
- * (not SET_BGR0) when the original emits one word store rather than three
- * byte stores.
+ * Store a pre-packed color word at offset 4 with one 32-bit write, matching
+ * the hand-written `*(u32*)(p + 4) = 0x00bbggrr;` idiom. Use this (not
+ * SET_BGR0) when the original emits one word store rather than three byte
+ * stores. The argument is the full 32-bit value in P_TAG layout:
+ *   byte 0 (LSB) = r0, byte 1 = g0, byte 2 = b0, byte 3 (MSB) = code.
+ * Pack with @c GPU_COLOR_WORD or use a named constant like @c GPU_TINT_NEUTRAL.
  */
-#define SET_BGR0_PACKED(p, _b0, _g0, _r0) \
-    (*(u32*)((u8*)(p) + 4) = ((u32)(_b0) << 16) | ((u32)(_g0) << 8) | (u32)(_r0))
+#define SET_BGR0_PACKED(p, _word) \
+    (*(u32*)((u8*)(p) + 4) = (u32)(_word))
+
+/*
+ * Build a packed P_TAG color word (code byte = 0) from r/g/b components.
+ * Matches the byte layout `0x00bbggrr` so it can be passed directly to
+ * @ref SET_BGR0_PACKED. Constant-folded for literal arguments.
+ */
+#define GPU_COLOR_WORD(_r, _g, _b) \
+    (((u32)(_b) << 16) | ((u32)(_g) << 8) | (u32)(_r))
+
+/*
+ * Neutral tint for a textured primitive: each channel = 0x80, the PSX GPU's
+ * 1.0x modulation factor (texel rendered as-is, no brightness change). The
+ * code byte is 0; the caller fills it in via @c setcode / @c setSprt / etc.
+ */
+#define GPU_TINT_NEUTRAL GPU_COLOR_WORD(0x80, 0x80, 0x80)
 
 /* --- SPRT-specific packed setters (single store) --- */
 

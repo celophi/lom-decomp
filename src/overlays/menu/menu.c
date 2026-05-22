@@ -1047,34 +1047,24 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
  * @param y    Sprite screen Y (@c y0).
  * @param uv   Packed texture origin written to @c u0 / @c v0 (offset 0xC).
  * @return Pointer to the next primitive slot (@p prim + 0x14).
- * @note Built with the custom single-store packing macros from gpu_packet.h
- *       (@c SET_BGR0_PACKED, @c SET_SPRT_WH_PACKED, @c SET_SPRT_UV0_PACKED,
- *       @c SET_SPRT_CLUT) plus @c setlen / @c setcode / @c setXY0 / @c addPrim,
- *       because the libgpu per-field setters emit wider store sequences that
- *       do not match the original codegen.
  * @see decomp.me (100%) https://decomp.me/scratch/GcWsA
  */
-void* menu_emit_corner(void* prim, s32* ot, s16 x, s16 y, s32 uv)
+void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
 {
-    unsigned char* base = (unsigned char*)prim;
+    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
 
-    /* White tint (b0/g0/r0 all 0x80) packed into one word store. */
-    SET_BGR0_PACKED(base, 0x80, 0x80, 0x80);
+    setSprt(prim);
 
-    setSprt(base);
+    SET_SPRT_WH_PACKED(prim, 8, 8);
 
-    /* Fixed 8x8 size (w,h written as one word). */
-    SET_SPRT_WH_PACKED(base, 8, 8);
+    setXY0(prim, x, y);
 
-    setXY0((SPRT*)base, x, y);
-    SET_SPRT_CLUT(base, 0x7CCA);
-    SET_SPRT_UV0_PACKED(base, uv);
+    SET_SPRT_CLUT(prim, 0x7CCA);
+    SET_SPRT_UV0_PACKED(prim, uv);
 
-    /* Link this primitive into the OT chain headed at @c ot. */
-    addPrim(ot, base);
+    addPrim(ot, prim);
 
-    /* Return prim + 0x14 */
-    return (void*)(base + 0x14);
+    return prim + 1;
 }
 
 /**
