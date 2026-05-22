@@ -475,7 +475,7 @@ static void gover_build_otag(unsigned char* pOtBuf)
     setWH((SPRT*)pPrimA, 256, 224);
     setUV0((SPRT*)pPrimA, 0, 0);
     setClut((SPRT*)pPrimA, 0, GOVER_CLUT_Y);
-    setBGR0((SPRT*)pPrimA, leftFadeLevel, leftFadeLevel, leftFadeLevel);
+    SET_BGR0((SPRT*)pPrimA, leftFadeLevel, leftFadeLevel, leftFadeLevel);
     addPrim(pOtBuf, pPrimA);
 
     pPrimA += sizeof(SPRT);
@@ -492,7 +492,7 @@ static void gover_build_otag(unsigned char* pOtBuf)
 
     rightFadeLevel = (unsigned char)g_fadeLevel;
 
-    setBGR0((SPRT*)pPrimB, rightFadeLevel, rightFadeLevel, rightFadeLevel);
+    SET_BGR0((SPRT*)pPrimB, rightFadeLevel, rightFadeLevel, rightFadeLevel);
     setXY0((SPRT*)pPrimB, 256, 0);
     setWH((SPRT*)pPrimB, 64, 224);
     setUV0((SPRT*)pPrimB, 0, 0);

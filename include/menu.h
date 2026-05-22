@@ -2,6 +2,7 @@
 #define _MENU_H
 
 #include "common.h"
+#include "gpu_packet.h"
 #include "main.h"
 #include "render_context.h"
 #include "psyq/libgte.h"
@@ -11,7 +12,7 @@ extern void func_800AA02C(void);
 extern void menu_init_prim_rects(void);
 extern void menu_clear_vram(void);
 extern void menu_state_init(void);
-extern void func_80141324(void);
+extern void menu_reset_slots(void);
 extern void func_801423D8(void);
 
 extern s32 g_menu_frame;
