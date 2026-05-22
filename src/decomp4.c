@@ -1505,3 +1505,26 @@ void func_8002B844(void** arg0)
     unsigned char* ptr = (unsigned char*)*arg0;
     *arg0 = ptr + (s16)(ptr[0] | (ptr[1] << 8));
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/l153y
+ */
+unsigned short func_8002B870(void** arg0)
+{
+    unsigned char* ptr = (unsigned char*)(*arg0);
+    unsigned char* new_var;
+    AkaoChannelState* ch = g_akao_seq_channel0;
+    int byte0 = *ptr;
+    ptr++;
+    new_var = &ptr[0];
+    *arg0 = ptr;
+    if ((*((unsigned short*)(&ch->unk60))) >= byte0)
+    {
+        s16 offset = (s16)((*new_var) | (ptr[1] << 8));
+        *arg0 = ptr + offset;
+    }
+    else
+    {
+        *arg0 = ptr + 2;
+    }
+}
