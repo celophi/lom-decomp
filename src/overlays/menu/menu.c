@@ -107,7 +107,7 @@ void menu_init(void)
     volatile u8 padding;
     menu_clear_vram();
     menu_state_init();
-    func_80141324();
+    menu_reset_slots();
     g_active_slot = -1;
     func_800AA02C();
     g_menu_unk_e8 = 0;
@@ -159,7 +159,7 @@ void menu_init_prim_rects(void)
  *        the scripted-input player.
  *
  * @param gpu_work Per-frame render context; its @c prim_cursor is saved on
- *                 entry and restored before @ref func_8014134C runs.
+ *                 entry and restored before @ref menu_update_slots runs.
  * @see decomp.me (97.74%) https://decomp.me/scratch/vmp4D
  */
 void menu_tick(RenderContext* gpu_work)
@@ -238,7 +238,7 @@ void menu_tick(RenderContext* gpu_work)
         }
     }
     *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
-    func_8014134C(gpu_work);
+    menu_update_slots(gpu_work);
 }
 
 /**
@@ -594,9 +594,14 @@ void* menu_slot_alloc(s32 arg0, void* rect)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/D9BI9
+ * @brief Free all menu slots by clearing each slot's @c active byte.
+ *
+ * Walks @c g_menu_slots from index 3 down to 0 (stride 0x24) and zeroes the
+ * leading @c active field, marking every slot as free. Called from
+ * @ref menu_init.
+ * @see decomp.me (100%) https://decomp.me/scratch/D9BI9
  */
-void func_80141324(void)
+void menu_reset_slots(void)
 {
     s32 var_v1;
     s8* var_v0;
@@ -613,9 +618,20 @@ void func_80141324(void)
 }
 
 /**
- * decomp.me (77.68%) https://decomp.me/scratch/BlGK5
+ * @brief Per-frame update/draw pump for the four menu slots.
+ *
+ * Iterates @c g_menu_slots from index 3 down to 0 and dispatches on each
+ * slot's @c active state: 1 = opening (advance the open animation via
+ * @ref menu_draw_window_transition for 6 frames, then settle to state 2),
+ * 2 = open/steady (draw via @ref menu_draw_window), 3 = closing (run the close
+ * animation, free the slot when it finishes). The active slot's @c unk20
+ * callback runs after its draw. Finally composites the frame and, when
+ * @c D_80169124 is set, emits an overlay element via @ref func_800A88A0.
+ *
+ * @param arg0 Per-frame render context (layout matches @ref RenderContext).
+ * @see decomp.me (77.68%) https://decomp.me/scratch/BlGK5
  */
-void func_8014134C(UnkArg0* arg0)
+void menu_update_slots(UnkArg0* arg0)
 {
     s16 sp_pair[2];
     void (*temp_v0_2)(MenuSlot*);
@@ -675,7 +691,7 @@ void func_8014134C(UnkArg0* arg0)
                 goto branch_11C;
             }
 
-            func_80141570(arg0, var_s0, D_80169130 != 0);
+            menu_draw_window_transition(arg0, var_s0, D_80169130 != 0);
             temp_a0 = var_s0->unk2;
             temp_v0 = temp_a0 + 1;
             var_s0->unk2 = temp_v0;
@@ -690,7 +706,7 @@ void func_8014134C(UnkArg0* arg0)
 
             sp_pair[1] = 0;
             sp_pair[0] = 0;
-            func_8014169C(var_s0, arg0, var_s2, sp_pair, D_80169130 != 0);
+            menu_draw_window(var_s0, arg0, var_s2, sp_pair, D_80169130 != 0);
         }
 
         var_a0 = 1;
@@ -712,7 +728,7 @@ void func_8014134C(UnkArg0* arg0)
         continue;
 
     branch_11C:
-        func_80141570(arg0, var_s0, D_80169130 != 0);
+        menu_draw_window_transition(arg0, var_s0, D_80169130 != 0);
         temp_v0 = var_s0->unk2 - 1;
         var_s0->unk2 = temp_v0;
         var_a0 = 1;
@@ -752,9 +768,20 @@ void func_8014134C(UnkArg0* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/luaLZ
+ * @brief Draw a menu window mid-open/close animation at an interpolated inset.
+ *
+ * Computes a per-frame shrink amount from the slot's target size
+ * (@c unkC / @c unkE divided by 12, scaled by the frame counter @c unk2) and,
+ * while both axes are still positive, draws the window via @ref menu_draw_window
+ * at the inset rectangle. Used for slot @c active states 1 (opening) and 3
+ * (closing) by @ref menu_update_slots.
+ *
+ * @param arg0 Per-frame render context (passed through to @ref menu_draw_window).
+ * @param arg1 Slot whose animated rectangle is drawn.
+ * @param arg2 Cursor-highlight enable (forwarded as the draw's @c arg4).
+ * @see decomp.me (100%) https://decomp.me/scratch/luaLZ
  */
-void func_80141570(s32 arg0, UnknownStruct* arg1, s32 arg2)
+void menu_draw_window_transition(s32 arg0, UnknownStruct* arg1, s32 arg2)
 {
     s16 sp[8];
     s32 temp_a3;
@@ -797,15 +824,28 @@ void func_80141570(s32 arg0, UnknownStruct* arg1, s32 arg2)
             sp[2] = clampC;
             sp[3] = clampE;
 
-            func_8014169C(arg1, arg0, &sp[0], &sp[4], arg2);
+            menu_draw_window(arg1, arg0, &sp[0], &sp[4], arg2);
         }
     }
 }
 
 /**
- * decomp.me (91.20%) https://decomp.me/scratch/5k4SF
+ * @brief Build all GPU primitives for one menu window at a given rectangle.
+ *
+ * Sets up the window's draw environment, then emits the background fill
+ * (@ref menu_fill_window_interior), the four edges (@ref func_80142014 horizontal,
+ * @ref func_8014218C vertical), and the four corners (@ref menu_emit_corner),
+ * splicing each into the slot's primitive chain. May also run the slot's
+ * @c unk1C content callback and optional title/decoration passes.
+ *
+ * @param arg0 Slot descriptor (geometry, flags, content callback).
+ * @param arg1 Per-frame render context (layout matches @ref RenderContext).
+ * @param arg2 Window rectangle: x, y, w, h halfwords.
+ * @param arg3 TODO: forwarded to the content callback and edge builders.
+ * @param arg4 Cursor-highlight enable for the active slot.
+ * @see decomp.me (91.20%) https://decomp.me/scratch/5k4SF
  */
-void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s32 arg3, s32 arg4)
+void menu_draw_window(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s32 arg3, s32 arg4)
 {
     struct_sp sp18;
     DRAWENV sp20;
@@ -980,7 +1020,7 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
     sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
     sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
     temp_v0_2 =
-        func_80141E64(func_80141E64(func_80141E64(func_80141E64(func_80141EE4(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0),
+        menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0),
                                                                 temp_s2, temp_s3->unk0, temp_s3->unk2, 0x70D0),
                                                   temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2, 0x70D8),
                                     temp_s2, temp_s3->unk0, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D0),
@@ -994,9 +1034,22 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/GcWsA
+ * @brief Emit one 8x8 textured corner sprite and splice it into a prim chain.
+ *
+ * Writes a @c SPRT primitive (code 0x64, white tint 0x808080, fixed 8x8 size
+ * via the packed 0x00080008, CLUT/tpage 0x7CCA) at @p arg2 / @p arg3, links it
+ * into the chain headed at @p arg1, and returns the next primitive slot.
+ * Called four times by @ref menu_draw_window, once per window corner.
+ *
+ * @param arg0 Primitive write cursor (the SPRT is built here).
+ * @param arg1 Ordering-table head the sprite is linked into.
+ * @param arg2 Sprite X position (u0/x0).
+ * @param arg3 Sprite Y position (v0/y0).
+ * @param arg4 Texture page / clut selector written at offset 0xC.
+ * @return Pointer to the next primitive slot (@p arg0 + 0x14).
+ * @see decomp.me (100%) https://decomp.me/scratch/GcWsA
  */
-void* func_80141E64(void* arg0, s32* arg1, s16 arg2, s16 arg3, s32 arg4)
+void* menu_emit_corner(void* arg0, s32* arg1, s16 arg2, s16 arg3, s32 arg4)
 {
     unsigned char* base = (unsigned char*)arg0;
     u32 old_unk0;
@@ -1033,9 +1086,21 @@ void* func_80141E64(void* arg0, s32* arg1, s16 arg2, s16 arg3, s32 arg4)
 }
 
 /**
- * decomp.me (90.20%) https://decomp.me/scratch/R9mdk
+ * @brief Tile the interior of a window with 0x60x0x60 textured sprites.
+ *
+ * Walks the region described by @p arg2 (width at +4, height at +6, origin at
+ * +0/+2) in 0x60-pixel steps on both axes, emitting one @c SPRT per tile
+ * (code 0x64, tint 0x80008080, CLUT/tpage 0x7C81) clamped to the region edges,
+ * and links each into the chain headed at @p arg1.
+ *
+ * @param arg0 Primitive write cursor (advanced past every emitted tile).
+ * @param arg1 Ordering-table head the tiles are linked into.
+ * @param arg2 Region descriptor: x (+0), y (+2), width (+4), height (+6).
+ * @param arg3 Texture page / clut selector written into each tile.
+ * @return Primitive write cursor just past the last tile emitted.
+ * @see decomp.me (90.20%) https://decomp.me/scratch/R9mdk
  */
-s32* func_80141EE4(s32* arg0, s32* arg1, u8* arg2, s16 arg3)
+s32* menu_fill_window_interior(s32* arg0, s32* arg1, u8* arg2, s16 arg3)
 {
     u16 new_var3;
     int new_var2;
