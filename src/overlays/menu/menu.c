@@ -97,6 +97,20 @@ extern s32 D_80168C0C;
 extern s32 D_80168C28;
 extern s32 D_80169548;
 
+/*
+ * CLUT ids for the menu's chrome glyphs/sprites. These are libgpu @c getClut
+ * results; see @ref menu_upload_tim for where the two CLUT rows are placed in
+ * VRAM. Each row is 256 entries wide and breaks into 16 sub-palettes of 16
+ * colors (CLUT slots are 16-pixel aligned in x).
+ *
+ *   MENU_CLUT_GRID_BASE -> CLUT 0, slot 0  (VRAM x=0,   y=498)
+ *   MENU_CLUT_GRID_ALT  -> CLUT 0, slot 1  (VRAM x=16,  y=498)
+ *   MENU_CLUT_CORNER    -> CLUT 1, slot 10 (VRAM x=160, y=499)
+ */
+#define MENU_CLUT_GRID_BASE 0x7C80
+#define MENU_CLUT_GRID_ALT  0x7C81
+#define MENU_CLUT_CORNER    0x7CCA
+
 /* K&R-style declaration: original call site in menu_tick passes no explicit
  * argument and relies on register a0 (the caller's first parameter) being
  * live. Keep the empty parameter list to preserve that codegen exactly. */
@@ -107,7 +121,7 @@ void menu_init(void)
     volatile u8 padding;
     menu_clear_vram();
     menu_state_init();
-    func_80141324();
+    menu_reset_slots();
     g_active_slot = -1;
     func_800AA02C();
     g_menu_unk_e8 = 0;
@@ -159,7 +173,7 @@ void menu_init_prim_rects(void)
  *        the scripted-input player.
  *
  * @param gpu_work Per-frame render context; its @c prim_cursor is saved on
- *                 entry and restored before @ref func_8014134C runs.
+ *                 entry and restored before @ref menu_update_slots runs.
  * @see decomp.me (97.74%) https://decomp.me/scratch/vmp4D
  */
 void menu_tick(RenderContext* gpu_work)
@@ -238,7 +252,7 @@ void menu_tick(RenderContext* gpu_work)
         }
     }
     *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
-    func_8014134C(gpu_work);
+    menu_update_slots(gpu_work);
 }
 
 /**
@@ -390,11 +404,11 @@ void menu_build_grid(RenderContext* gpu_work)
 
         if (var_t2 >= 0x11)
         {
-            *(u16*)(var_a2 + 0xE) = 0x7C81;
+            *(u16*)(var_a2 + 0xE) = MENU_CLUT_GRID_ALT;
         }
         else
         {
-            *(u16*)(var_a2 + 0xE) = 0x7C80;
+            *(u16*)(var_a2 + 0xE) = MENU_CLUT_GRID_BASE;
         }
 
         var_t2++;
@@ -594,9 +608,14 @@ void* menu_slot_alloc(s32 arg0, void* rect)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/D9BI9
+ * @brief Free all menu slots by clearing each slot's @c active byte.
+ *
+ * Walks @c g_menu_slots from index 3 down to 0 (stride 0x24) and zeroes the
+ * leading @c active field, marking every slot as free. Called from
+ * @ref menu_init.
+ * @see decomp.me (100%) https://decomp.me/scratch/D9BI9
  */
-void func_80141324(void)
+void menu_reset_slots(void)
 {
     s32 var_v1;
     s8* var_v0;
@@ -613,9 +632,20 @@ void func_80141324(void)
 }
 
 /**
- * decomp.me (77.68%) https://decomp.me/scratch/BlGK5
+ * @brief Per-frame update/draw pump for the four menu slots.
+ *
+ * Iterates @c g_menu_slots from index 3 down to 0 and dispatches on each
+ * slot's @c active state: 1 = opening (advance the open animation via
+ * @ref menu_draw_window_transition for 6 frames, then settle to state 2),
+ * 2 = open/steady (draw via @ref menu_draw_window), 3 = closing (run the close
+ * animation, free the slot when it finishes). The active slot's @c unk20
+ * callback runs after its draw. Finally composites the frame and, when
+ * @c D_80169124 is set, emits an overlay element via @ref func_800A88A0.
+ *
+ * @param gpu_work Per-frame render context (layout matches @ref RenderContext).
+ * @see decomp.me (77.68%) https://decomp.me/scratch/BlGK5
  */
-void func_8014134C(UnkArg0* arg0)
+void menu_update_slots(UnkArg0* gpu_work)
 {
     s16 sp_pair[2];
     void (*temp_v0_2)(MenuSlot*);
@@ -675,7 +705,7 @@ void func_8014134C(UnkArg0* arg0)
                 goto branch_11C;
             }
 
-            func_80141570(arg0, var_s0, D_80169130 != 0);
+            menu_draw_window_transition(gpu_work, var_s0, D_80169130 != 0);
             temp_a0 = var_s0->unk2;
             temp_v0 = temp_a0 + 1;
             var_s0->unk2 = temp_v0;
@@ -690,7 +720,7 @@ void func_8014134C(UnkArg0* arg0)
 
             sp_pair[1] = 0;
             sp_pair[0] = 0;
-            func_8014169C(var_s0, arg0, var_s2, sp_pair, D_80169130 != 0);
+            menu_draw_window(var_s0, gpu_work, var_s2, sp_pair, D_80169130 != 0);
         }
 
         var_a0 = 1;
@@ -712,7 +742,7 @@ void func_8014134C(UnkArg0* arg0)
         continue;
 
     branch_11C:
-        func_80141570(arg0, var_s0, D_80169130 != 0);
+        menu_draw_window_transition(gpu_work, var_s0, D_80169130 != 0);
         temp_v0 = var_s0->unk2 - 1;
         var_s0->unk2 = temp_v0;
         var_a0 = 1;
@@ -743,18 +773,29 @@ void func_8014134C(UnkArg0* arg0)
         var_a3 = 1;
     }
 
-    arg0->unk4040 = func_80142F10(arg0->unk4040, &arg0->unk34, arg0->unk404C, var_a3);
+    gpu_work->unk4040 = func_80142F10(gpu_work->unk4040, &gpu_work->unk34, gpu_work->unk404C, var_a3);
 
     if (D_80169124 != 0)
     {
-        arg0->unk4040 = func_800A88A0(arg0->unk4040, &arg0->unk34, D_80169124, 1, 0xA0, 0xCA, 2);
+        gpu_work->unk4040 = func_800A88A0(gpu_work->unk4040, &gpu_work->unk34, D_80169124, 1, 0xA0, 0xCA, 2);
     }
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/luaLZ
+ * @brief Draw a menu window mid-open/close animation at an interpolated inset.
+ *
+ * Computes a per-frame shrink amount from the slot's target size
+ * (@c unkC / @c unkE divided by 12, scaled by the frame counter @c unk2) and,
+ * while both axes are still positive, draws the window via @ref menu_draw_window
+ * at the inset rectangle. Used for slot @c active states 1 (opening) and 3
+ * (closing) by @ref menu_update_slots.
+ *
+ * @param gpu_work     Per-frame render context (passed through to @ref menu_draw_window).
+ * @param slot         Slot whose animated rectangle is drawn.
+ * @param cursor_enable Cursor-highlight enable (forwarded as the draw's @p cursor_enable).
+ * @see decomp.me (100%) https://decomp.me/scratch/luaLZ
  */
-void func_80141570(s32 arg0, UnknownStruct* arg1, s32 arg2)
+void menu_draw_window_transition(s32 gpu_work, UnknownStruct* slot, s32 cursor_enable)
 {
     s16 sp[8];
     s32 temp_a3;
@@ -763,11 +804,11 @@ void func_80141570(s32 arg0, UnknownStruct* arg1, s32 arg2)
     s32 clampE;
 
     /* First computation */
-    temp_a3 = ((s32)((u16)arg1->unkC << 0x10) >> 0x11) - ((s16)(arg1->unkC / 12) * arg1->unk2);
+    temp_a3 = ((s32)((u16)slot->unkC << 0x10) >> 0x11) - ((s16)(slot->unkC / 12) * slot->unk2);
     sp[4] = (s16)temp_a3;
 
     /* Second computation */
-    temp_a1 = ((s32)((u16)arg1->unkE << 0x10) >> 0x11) - ((s16)(arg1->unkE / 12) * arg1->unk2);
+    temp_a1 = ((s32)((u16)slot->unkE << 0x10) >> 0x11) - ((s16)(slot->unkE / 12) * slot->unk2);
 
     /* First branch logic block */
 
@@ -780,32 +821,45 @@ void func_80141570(s32 arg0, UnknownStruct* arg1, s32 arg2)
         if (temp_a1 > 0)
         {
 
-            clampC = arg1->unkC - (temp_a3 * 2);
+            clampC = slot->unkC - (temp_a3 * 2);
             if (clampC < 0x20)
             {
                 clampC = 0x20;
             }
 
-            clampE = arg1->unkE - (temp_a1 * 2);
+            clampE = slot->unkE - (temp_a1 * 2);
             if (clampE < 0x10)
             {
                 clampE = 0x10;
             }
 
-            sp[0] = arg1->unk8 + temp_a3;
-            sp[1] = arg1->unkA + temp_a1;
+            sp[0] = slot->unk8 + temp_a3;
+            sp[1] = slot->unkA + temp_a1;
             sp[2] = clampC;
             sp[3] = clampE;
 
-            func_8014169C(arg1, arg0, &sp[0], &sp[4], arg2);
+            menu_draw_window(slot, gpu_work, &sp[0], &sp[4], cursor_enable);
         }
     }
 }
 
 /**
- * decomp.me (91.20%) https://decomp.me/scratch/5k4SF
+ * @brief Build all GPU primitives for one menu window at a given rectangle.
+ *
+ * Sets up the window's draw environment, then emits the background fill
+ * (@ref menu_fill_window_interior), the four edges (@ref func_80142014 horizontal,
+ * @ref func_8014218C vertical), and the four corners (@ref menu_emit_corner),
+ * splicing each into the slot's primitive chain. May also run the slot's
+ * @c unk1C content callback and optional title/decoration passes.
+ *
+ * @param slot          Slot descriptor (geometry, flags, content callback).
+ * @param gpu_work      Per-frame render context (layout matches @ref RenderContext).
+ * @param rect          Window rectangle: x, y, w, h halfwords.
+ * @param arg3          TODO: forwarded to the content callback and edge builders.
+ * @param cursor_enable Cursor-highlight enable for the active slot.
+ * @see decomp.me (91.20%) https://decomp.me/scratch/5k4SF
  */
-void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s32 arg3, s32 arg4)
+void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* rect, s32 arg3, s32 cursor_enable)
 {
     struct_sp sp18;
     DRAWENV sp20;
@@ -826,52 +880,52 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
     u16 var_v0;
     void* temp_v0_2;
 
-    temp_s3 = arg2;
-    var_s1 = arg1->unk4040;
-    temp_s2 = (s32*)arg1 + (((u32)arg0->_u.unk4 >> 0x19));
-    if (arg0->unk18 != 0)
+    temp_s3 = rect;
+    var_s1 = gpu_work->unk4040;
+    temp_s2 = (s32*)gpu_work + (((u32)slot->_u.unk4 >> 0x19));
+    if (slot->unk18 != 0)
     {
-        temp_a2 = arg0->unk10;
-        temp_v1 = (s32)(arg0->unk14 - temp_a2) / (s32)arg0->unk18;
-        temp_a1 = arg0->unk12;
-        temp_a1 = temp_a1 + ((s32)(arg0->unk16 - temp_a1) / (s32) * (volatile u8*)&arg0->unk18);
-        arg0->unk18 = (u8)(*(volatile u8*)&arg0->unk18 - 1);
-        arg0->unk10 = (u16)(temp_a2 + temp_v1);
-        arg0->unk12 = (u16)temp_a1;
+        temp_a2 = slot->unk10;
+        temp_v1 = (s32)(slot->unk14 - temp_a2) / (s32)slot->unk18;
+        temp_a1 = slot->unk12;
+        temp_a1 = temp_a1 + ((s32)(slot->unk16 - temp_a1) / (s32) * (volatile u8*)&slot->unk18);
+        slot->unk18 = (u8)(*(volatile u8*)&slot->unk18 - 1);
+        slot->unk10 = (u16)(temp_a2 + temp_v1);
+        slot->unk12 = (u16)temp_a1;
     }
     else
     {
-        arg0->unk10 = (u16)arg0->unk14;
-        arg0->unk12 = (u16)arg0->unk16;
+        slot->unk10 = (u16)slot->unk14;
+        slot->unk12 = (u16)slot->unk16;
     }
-    if (arg0->unk1C != NULL)
+    if (slot->unk1C != NULL)
     {
         if ((temp_s3->unk4 - 0x20) > 0)
         {
             if ((temp_s3->unk6 - 0x10) > 0)
             {
-                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(D_80168C0C + ((arg1->unk404C ^ 1) * 0x40C0) + 0x4064));
+                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(D_80168C0C + ((gpu_work->unk404C ^ 1) * 0x40C0) + 0x4064));
                 var_a3 = 0;
                 *var_s1 = (*var_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 D_80168C18 = 0;
                 *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
                 var_s1 += 0x10;
-                if ((arg0->unk1 == g_active_slot) && (arg4 != 0))
+                if ((slot->unk1 == g_active_slot) && (cursor_enable != 0))
                 {
                     if (D_80168C28 == 0)
                     {
-                        var_a3 = arg0->unk0 == 2;
+                        var_a3 = slot->unk0 == 2;
                     }
                 }
-                temp_s1 = arg0->unk1C(temp_s2, arg0, var_s1, arg3, var_a3);
+                temp_s1 = slot->unk1C(temp_s2, slot, var_s1, arg3, var_a3);
                 if (D_80168C18 != 0)
                 {
-                    arg1->unk4040 = temp_s1;
+                    gpu_work->unk4040 = temp_s1;
                     return;
                 }
                 temp_a0 = temp_s3->unk2;
                 var_a2_2 = temp_a0 + 0x10;
-                if (arg1->unk404C != 0)
+                if (gpu_work->unk404C != 0)
                 {
                     var_a2_2 = temp_a0 + 0xF8;
                 }
@@ -880,7 +934,7 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
                 *temp_s1 = (*temp_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
                 var_s1 = temp_s1 + 0x10;
-                if (arg0->unk3 != 0)
+                if (slot->unk3 != 0)
                 {
                     switch (D_80169548)
                     {        /* switch 1 */
@@ -897,9 +951,9 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
                     }
                     sp80[0] = var_v0;
                     sp80[1] = (u16)temp_s3->unk2;
-                    if (arg0->_u.unk4 & 0x01FF0000)
+                    if (slot->_u.unk4 & 0x01FF0000)
                     {
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)arg0->_u.unk4 + 1, 3, sp80, 0);
+                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.unk4 + 1, 3, sp80, 0);
                     }
                     else
                     {
@@ -907,7 +961,7 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
                     }
                     temp_a1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
                     sp80[0] += 8;
-                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, arg0->_u._s.unk6 & 0x1FF, 3, sp80, 0);
+                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, slot->_u._s.unk6 & 0x1FF, 3, sp80, 0);
                     switch (D_80169548)
                     {        /* switch 2 */
                     case 1:  /* switch 2 */
@@ -920,7 +974,7 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
                         var_s1 = (s32*)func_800AD208(temp_s2, temp_s1_2, func_8014F23C(), 3, sp80, 0);
                         break;
                     }
-                    var_s1 = func_80148578((s32)var_s1, temp_s2, arg0);
+                    var_s1 = func_80148578((s32)var_s1, temp_s2, slot);
                 }
             }
         }
@@ -980,7 +1034,7 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
     sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
     sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
     temp_v0_2 =
-        func_80141E64(func_80141E64(func_80141E64(func_80141E64(func_80141EE4(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0),
+        menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0),
                                                                 temp_s2, temp_s3->unk0, temp_s3->unk2, 0x70D0),
                                                   temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2, 0x70D8),
                                     temp_s2, temp_s3->unk0, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D0),
@@ -990,56 +1044,63 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
     ((struct_var_s1*)temp_v0_2)->_u.unk0 =
         (s32)((((struct_var_s1*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
-    arg1->unk4040 = (s32*)((char*)temp_v0_2 + 8);
+    gpu_work->unk4040 = (s32*)((char*)temp_v0_2 + 8);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/GcWsA
+ * @brief Emit one 8x8 textured corner sprite and splice it into a prim chain.
+ *
+ * Writes a libgpu @c SPRT (code 0x64, white tint 0x808080, fixed 8x8 size,
+ * fixed CLUT @c MENU_CLUT_CORNER) at screen @p x / @p y with texture origin @p uv, links it
+ * into the chain headed at @p ot, and returns the next primitive slot.
+ * Called four times by @ref menu_draw_window, once per window corner.
+ *
+ * @param prim Primitive write cursor (the @c SPRT is built here).
+ * @param ot   Ordering-table head the sprite is linked into.
+ * @param x    Sprite screen X (@c x0).
+ * @param y    Sprite screen Y (@c y0).
+ * @param uv   Packed texture origin written to @c u0 / @c v0 (offset 0xC).
+ * @return Pointer to the next primitive slot (@p prim + 0x14).
+ * @see decomp.me (100%) https://decomp.me/scratch/GcWsA
  */
-void* func_80141E64(void* arg0, s32* arg1, s16 arg2, s16 arg3, s32 arg4)
+void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
 {
-    unsigned char* base = (unsigned char*)arg0;
-    u32 old_unk0;
+    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
 
-    /* Write word at offset 4: 0x00808080 */
-    *(u32*)(base + 4) = 0x00808080;
+    setSprt(prim);
 
-    /* Write byte at offset 3 */
-    base[3] = 4;
+    SET_SPRT_WH_PACKED(prim, 8, 8);
 
-    /* Write word at offset 16 */
-    *(u32*)(base + 16) = 0x00080008;
+    setXY0(prim, x, y);
 
-    /* Load offset 0 early to match instruction 2c */
-    old_unk0 = *(u32*)base;
+    SET_SPRT_CLUT(prim, MENU_CLUT_CORNER);
+    SET_SPRT_UV0_PACKED(prim, uv);
 
-    /* Write byte at offset 7 */
-    base[7] = 0x64;
+    addPrim(ot, prim);
 
-    /* Write half-words */
-    *(u16*)(base + 8) = (u16)arg2;
-    *(u16*)(base + 10) = (u16)arg3;
-    *(u16*)(base + 14) = 0x7CCA;
-    *(u16*)(base + 12) = (u16)arg4;
-
-    /* Update word at offset 0: load *arg1 instead of using cached value */
-    *(u32*)base = (old_unk0 & 0xFF000000) | (*(u32*)arg1 & 0xFFFFFF);
-
-    /* Update *arg1: load *arg1 again */
-    *arg1 = (*(u32*)arg1 & 0xFF000000) | ((u32)arg0 & 0xFFFFFF);
-
-    /* Return arg0 + 0x14 */
-    return (void*)(base + 0x14);
+    return prim + 1;
 }
 
 /**
- * decomp.me (90.20%) https://decomp.me/scratch/R9mdk
+ * @brief Tile the interior of a window with 0x60x0x60 textured sprites.
+ *
+ * Walks the region described by @p rect (width at +4, height at +6, origin at
+ * +0/+2) in 0x60-pixel steps on both axes, emitting one @c SPRT per tile
+ * (code 0x64, tint 0x80008080, CLUT @c MENU_CLUT_GRID_ALT) clamped to the region edges,
+ * and links each into the chain headed at @p ot.
+ *
+ * @param prim  Primitive write cursor (advanced past every emitted tile).
+ * @param ot    Ordering-table head the tiles are linked into.
+ * @param rect  Region descriptor: x (+0), y (+2), width (+4), height (+6).
+ * @param uv    Packed texture origin written to each tile's @c u0 / @c v0.
+ * @return Primitive write cursor just past the last tile emitted.
+ * @see decomp.me (90.20%) https://decomp.me/scratch/R9mdk
  */
-s32* func_80141EE4(s32* arg0, s32* arg1, u8* arg2, s16 arg3)
+s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
 {
     u16 new_var3;
     int new_var2;
-    u8* ap = arg2;
+    u8* ap = rect;
      short pad;
     u16 new_var;
     s32 y = 0;
@@ -1054,41 +1115,41 @@ s32* func_80141EE4(s32* arg0, s32* arg1, u8* arg2, s16 arg3)
                 u8* wp;
                 do
                 {
-                    *((u32*)((((u8*)arg0) + 0x0E) - 0x0A)) = 0x80008080U;
-                    (((u8*)arg0) + 0x0E)[-0x0B] = 4;
-                    (((u8*)arg0) + 0x0E)[-7] = 0x64;
-                    *((u16*)((((u8*)arg0) + 0x0E) - 2)) = arg3;
+                    *((u32*)((((u8*)prim) + 0x0E) - 0x0A)) = 0x80008080U;
+                    (((u8*)prim) + 0x0E)[-0x0B] = 4;
+                    (((u8*)prim) + 0x0E)[-7] = 0x64;
+                    *((u16*)((((u8*)prim) + 0x0E) - 2)) = uv;
                     if ((*((s16*)(ap + 4))) < (x + 0x60))
                     {
-                        *((u16*)((((u8*)arg0) + 0x0E) + 2)) = (u16)((*((u16*)(ap + 4))) - ((u16)x));
+                        *((u16*)((((u8*)prim) + 0x0E) + 2)) = (u16)((*((u16*)(ap + 4))) - ((u16)x));
                     }
                     else
                     {
-                        *((u16*)((((u8*)arg0) + 0x0E) + 2)) = 0x60;
+                        *((u16*)((((u8*)prim) + 0x0E) + 2)) = 0x60;
                     }
                     if (((*((s16*)(ap + 6))) < y_plus_60) != 0)
                     {
-                        *((u16*)((((u8*)arg0) + 0x0E) + 4)) = (u16)((*((u16*)(ap + 6))) - ((u16)y));
+                        *((u16*)((((u8*)prim) + 0x0E) + 4)) = (u16)((*((u16*)(ap + 6))) - ((u16)y));
                     }
                     else
                     {
-                        *((u16*)((((u8*)arg0) + 0x0E) + 4)) = 0x60;
+                        *((u16*)((((u8*)prim) + 0x0E) + 4)) = 0x60;
                     }
                     new_var3 = (u16)((*((u16*)(ap + 0))) + ((u16)x));
-                    *((u16*)((((u8*)arg0) + 0x0E) - 6)) = new_var3;
+                    *((u16*)((((u8*)prim) + 0x0E) - 6)) = new_var3;
                     new_var = *((u16*)(ap + 2));
                     x += 0x60;
-                    new_var2 = 0x00FFFFFFU & ((u32)arg0);
-                    *((u16*)((((u8*)arg0) + 0x0E) - 4)) = (u16)(new_var + ((u16)y));
+                    new_var2 = 0x00FFFFFFU & ((u32)prim);
+                    *((u16*)((((u8*)prim) + 0x0E) - 4)) = (u16)(new_var + ((u16)y));
                     wp += 0x14;
-                    *((u16*)((((u8*)arg0) + 0x0E) + 0)) = 0x7C81U;
-                    *((u32*)arg0) = ((*((u32*)arg0)) & 0xFF000000U) | ((*((u32*)arg1)) & 0x00FFFFFFU);
-                    *arg1 = ((*((u32*)arg1)) & 0xFF000000U) | new_var2;
-                    arg0 = (s32*)(((u8*)arg0) + 0x14);
+                    *((u16*)((((u8*)prim) + 0x0E) + 0)) = MENU_CLUT_GRID_ALT;
+                    *((u32*)prim) = ((*((u32*)prim)) & 0xFF000000U) | ((*((u32*)ot)) & 0x00FFFFFFU);
+                    *ot = ((*((u32*)ot)) & 0xFF000000U) | new_var2;
+                    prim = (s32*)(((u8*)prim) + 0x14);
                 } while (x < (*((s16*)(ap + 4))));
             }
             y += 0x60;
         } while (y < (*((s16*)(ap + 6))));
     }
-    return arg0;
+    return prim;
 }
