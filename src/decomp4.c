@@ -5,7 +5,8 @@ s32 D_8004D40C;
 u32 D_8004F758;
 s32 D_8003EC18;
 
-extern u32 D_8003D24C[];
+/** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
+extern u32 g_akao_pitch_table[];
 
 /**
  * @brief One 8-byte note slot in the per-channel note table at
@@ -523,8 +524,10 @@ void akao_irq_handler(void)
     }
 }
 
-extern u8 D_8003D210[];
-extern u8 D_8003D1B0[];
+/** @brief Operand-length table for extended (0xFE-prefixed) opcodes; 0 = needs special handling. */
+extern u8 g_akao_opcode_len_table_ext[];
+/** @brief Operand-length table for primary opcodes 0xA0..0xFF; 0 = needs special handling. */
+extern u8 g_akao_opcode_len_table[];
 
 /**
  * decomp.me (78.79%) https://decomp.me/scratch/52mKD
@@ -552,7 +555,7 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
         }
         temp_v1 = *new_var;
         {
-            u8 lookup = D_8003D1B0[temp_v1 - 0xA0];
+            u8 lookup = g_akao_opcode_len_table[temp_v1 - 0xA0];
             if (0 != lookup)
             {
                 var_a1 += lookup;
@@ -610,7 +613,7 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
             {
                 var_a1++;
                 temp_v1 = *var_a1;
-                lookup = D_8003D210[temp_v1];
+                lookup = g_akao_opcode_len_table_ext[temp_v1];
                 if (lookup != (0 & 0xFFFFu))
                 {
                     var_a1 += lookup;
@@ -861,16 +864,16 @@ s32 akao_compute_pitch(AkaoArticulation* arg0, s32 arg1, s32 arg2, s32* arg3)
     temp_a0 = new_var2;
     if (arg0->adsr.half.lo == 0)
     {
-        s32 tmp2 = D_8003D24C[temp_a0];
+        s32 tmp2 = g_akao_pitch_table[temp_a0];
         var_t0 = tmp2 << 8;
     }
     else if (arg0->adsr.half.lo < 0)
     {
-        var_t0 = ((u32)(D_8003D24C[temp_a0] * ((u16)arg0->adsr.half.lo))) >> 8;
+        var_t0 = ((u32)(g_akao_pitch_table[temp_a0] * ((u16)arg0->adsr.half.lo))) >> 8;
     }
     else
     {
-        temp_v0 = D_8003D24C[temp_a0];
+        temp_v0 = g_akao_pitch_table[temp_a0];
         var_t0 = ((u32)(temp_v0 * arg0->adsr.half.lo)) >> 7;
         var_t0 = var_t0 + (temp_v0 << 8);
     }
@@ -1008,9 +1011,12 @@ s32 akao_channel_start_note(void* arg0, s32 arg1, s32 arg2)
     return ret;
 }
 
-extern void (*D_8003E890[])(AkaoChannelState*, s32);
-extern void (*D_8003EA10[])(AkaoChannelState*, s32);
-extern u16 D_8003D230[];
+/** @brief Primary opcode dispatch table indexed by (opcode - 0xA0). */
+extern void (*g_akao_opcode_handlers[])(AkaoChannelState*, s32);
+/** @brief Extended (0xFE-prefixed) opcode dispatch table indexed by the following byte. */
+extern void (*g_akao_opcode_handlers_ext[])(AkaoChannelState*, s32);
+/** @brief Default note-duration (gate-time) table indexed by opcode % 11. */
+extern u16 g_akao_note_duration_table[];
 extern u8 D_8003D27C[];
 extern s32 D_8003DD80[];
 
@@ -1056,7 +1062,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
             temp_v1 = var_s1 - 0xF0;
             if (var_s1 == 0xFE)
             {
-                var_v0 = &D_8003EA10[*(*(u8**)&arg0->flags)++];
+                var_v0 = &g_akao_opcode_handlers_ext[*(*(u8**)&arg0->flags)++];
             }
             else if (temp_v1 < 0xEU)
             {
@@ -1078,7 +1084,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
                         g_akao_sfx_control.unkC |= arg1;
                     }
                 }
-                var_v0 = &D_8003E890[var_s1 - 0xA0];
+                var_v0 = &g_akao_opcode_handlers[var_s1 - 0xA0];
             }
             (*var_v0)(arg0, arg1);
         skip_call:;
@@ -1111,7 +1117,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
         }
         else
         {
-            var_v1 = D_8003D230[var_s1 % 11];
+            var_v1 = g_akao_note_duration_table[var_s1 % 11];
             arg0->unk66 = var_v1;
             if (((temp_a2 - 0x84) >= 0xBU) && !(arg0->unk9E & 5))
             {
@@ -1401,9 +1407,17 @@ void func_8002B580(AkaoSFXState* arg0, u32 arg1)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/GHtCl
+ * @brief Opcode handler: set the master tempo directly.
+ *
+ * Reads a 16-bit value from the sequence stream into the high half of
+ * @c g_akao_seq_channel0->unk20 (the per-tick rate added to the unk28
+ * accumulator in akao_seq_tick_channels) and clears the tempo-slide
+ * countdown @c unk5C.
+ *
+ * @param arg0 Pointer to the channel's stream cursor; advanced by 2.
+ * @see decomp.me (100%) https://decomp.me/scratch/GHtCl
  */
-void func_8002B65C(u8** arg0)
+void akao_seq_op_set_tempo(u8** arg0)
 {
     AkaoChannelState* ch = g_akao_seq_channel0;
     u32 temp_v1;
@@ -1416,9 +1430,18 @@ void func_8002B65C(u8** arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/SFJAU
+ * @brief Opcode handler: slide (ramp) the master tempo to a target.
+ *
+ * Reads a tick count into @c unk5C (defaulting to 0x100 when zero) and a
+ * 16-bit target tempo, then computes the per-tick step @c unk24 =
+ * (target - current) / count so akao_seq_tick_channels ramps @c unk20 to
+ * the target over @c unk5C ticks.
+ *
+ * @param arg0 Pointer to the channel's stream cursor; advanced past the
+ *             count byte and the 2 target bytes.
+ * @see decomp.me (100%) https://decomp.me/scratch/SFJAU
  */
-void func_8002B6AC(u8** arg0)
+void akao_seq_op_slide_tempo(u8** arg0)
 {
     u32 combined;
     u32 masked;
@@ -1498,18 +1521,31 @@ void func_8002B798(u8** arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/KW15z
+ * @brief Opcode handler: unconditional relative jump.
+ *
+ * Reads a signed 16-bit offset from the stream and adds it to the cursor.
+ *
+ * @param arg0 Pointer to the channel's stream cursor; repositioned by the offset.
+ * @see decomp.me (100%) https://decomp.me/scratch/KW15z
  */
-void func_8002B844(void** arg0)
+void akao_seq_op_jump(void** arg0)
 {
     unsigned char* ptr = (unsigned char*)*arg0;
     *arg0 = ptr + (s16)(ptr[0] | (ptr[1] << 8));
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/l153y
+ * @brief Opcode handler: conditional relative jump.
+ *
+ * Reads a comparison byte from the stream; if the channel counter
+ * @c g_akao_seq_channel0->unk60 is >= that byte, applies a signed 16-bit
+ * relative jump, otherwise falls through past the 2 offset bytes.
+ *
+ * @param arg0 Pointer to the channel's stream cursor; repositioned accordingly.
+ * @return TODO: declared u16 but no value is returned; return is unused by callers.
+ * @see decomp.me (100%) https://decomp.me/scratch/l153y
  */
-unsigned short func_8002B870(void** arg0)
+unsigned short akao_seq_op_cond_jump(void** arg0)
 {
     unsigned char* ptr = (unsigned char*)(*arg0);
     unsigned char* new_var;
@@ -1530,9 +1566,16 @@ unsigned short func_8002B870(void** arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/uIP0t
+ * @brief Opcode handler: call subroutine (jump and save return cursor).
+ *
+ * Saves the post-operand cursor (ptr + 2) into slot [5] (offset 0x14) as the
+ * return address, then applies a signed 16-bit relative jump to the cursor.
+ * Paired with akao_seq_op_return.
+ *
+ * @param arg0 Pointer to the channel's stream-cursor array.
+ * @see decomp.me (100%) https://decomp.me/scratch/uIP0t
  */
-void func_8002B8C8(void* arg0)
+void akao_seq_op_call(void* arg0)
 {
     unsigned char* ptr2;
     unsigned char** arg = (unsigned char**)arg0; // pointer to array of pointers
@@ -1545,9 +1588,15 @@ void func_8002B8C8(void* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/os90Z
+ * @brief Opcode handler: return from subroutine.
+ *
+ * Restores the stream cursor (slot [0]) from the saved return address in
+ * slot [5] (offset 0x14). Paired with akao_seq_op_call.
+ *
+ * @param arg0 Pointer to the channel's stream-cursor array.
+ * @see decomp.me (100%) https://decomp.me/scratch/os90Z
  */
-void func_8002B900(s32* arg0)
+void akao_seq_op_return(s32* arg0)
 {
     arg0[0] = (s32)arg0[5];
 }

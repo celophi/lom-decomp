@@ -740,6 +740,12 @@ akao_seq_step_opcode                = 0x8002AD28;
 akao_channel_load_articulation_fields = 0x8002B468;
 akao_channel_set_articulation       = 0x8002B49C;
 akao_sfx_release_channels           = 0x8002B4D4;
+akao_seq_op_set_tempo               = 0x8002B65C;
+akao_seq_op_slide_tempo             = 0x8002B6AC;
+akao_seq_op_jump                    = 0x8002B844;
+akao_seq_op_cond_jump               = 0x8002B870;
+akao_seq_op_call                    = 0x8002B8C8;
+akao_seq_op_return                  = 0x8002B900;
 
 // psyq/libapi/A10
 WaitEvent                           = 0x800299CC;
@@ -754,6 +760,12 @@ McxStartCom                         = 0x800319D8;
 g_gameState                         = 0x8003522C;
 g_DiscValidationId                  = 0x80035230;
 g_akao_spu_zero_primer              = 0x8003D170;
+g_akao_opcode_len_table             = 0x8003D1B0;
+g_akao_opcode_len_table_ext         = 0x8003D210;
+g_akao_note_duration_table          = 0x8003D230;
+g_akao_pitch_table                  = 0x8003D24C;
+g_akao_opcode_handlers              = 0x8003E890;
+g_akao_opcode_handlers_ext          = 0x8003EA10;
 g_akao_rcnt2_event                  = 0x8003EC14;
 g_akao_irq_frame_counter            = 0x8003EC1C;
 g_akao_cdmix                        = 0x8003EC20;
