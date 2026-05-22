@@ -1047,9 +1047,11 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
  * @param y    Sprite screen Y (@c y0).
  * @param uv   Packed texture origin written to @c u0 / @c v0 (offset 0xC).
  * @return Pointer to the next primitive slot (@p prim + 0x14).
- * @note Tint uses @c setBGR0 (word-packed b0/g0/r0); the 8x8 size is still a
- *       raw word store because @c setWH emits two short stores. Tag/link use
- *       @c setlen / @c setcode / @c setXY0 / @c addPrim.
+ * @note Built with the custom single-store packing macros from gpu_packet.h
+ *       (@c SET_BGR0_PACKED, @c SET_SPRT_WH_PACKED, @c SET_SPRT_UV0_PACKED,
+ *       @c SET_SPRT_CLUT) plus @c setlen / @c setcode / @c setXY0 / @c addPrim,
+ *       because the libgpu per-field setters emit wider store sequences that
+ *       do not match the original codegen.
  * @see decomp.me (100%) https://decomp.me/scratch/GcWsA
  */
 void* menu_emit_corner(void* prim, s32* ot, s16 x, s16 y, s32 uv)
@@ -1057,20 +1059,20 @@ void* menu_emit_corner(void* prim, s32* ot, s16 x, s16 y, s32 uv)
     unsigned char* base = (unsigned char*)prim;
 
     /* White tint (b0/g0/r0 all 0x80) packed into one word store. */
-    setBGR0((SPRT*)base, 0x80, 0x80, 0x80);
+    SET_BGR0_PACKED(base, 0x80, 0x80, 0x80);
 
     /* SPRT: len = 4. */
     setlen(base, 4);
 
     /* Fixed 8x8 size (w,h written as one word). */
-    *(u32*)(base + 16) = 0x00080008;
+    SET_SPRT_WH_PACKED(base, 8, 8);
 
     /* SPRT: code = 0x64. */
     setcode(base, 0x64);
 
     setXY0((SPRT*)base, x, y);
-    *(u16*)(base + 14) = 0x7CCA; /* clut */
-    *(u16*)(base + 12) = (u16)uv; /* u0,v0 */
+    SET_SPRT_CLUT(base, 0x7CCA);
+    SET_SPRT_UV0_PACKED(base, uv);
 
     /* Link this primitive into the OT chain headed at @c ot. */
     addPrim(ot, base);

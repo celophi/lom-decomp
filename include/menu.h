@@ -2,6 +2,7 @@
 #define _MENU_H
 
 #include "common.h"
+#include "gpu_packet.h"
 #include "main.h"
 #include "render_context.h"
 #include "psyq/libgte.h"
