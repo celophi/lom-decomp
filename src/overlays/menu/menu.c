@@ -992,3 +992,42 @@ void func_8014169C(struct_arg0* arg0, struct_arg1* arg1, struct_temp_s3* arg2, s
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
     arg1->unk4040 = (s32*)((char*)temp_v0_2 + 8);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/GcWsA
+ */
+void* func_80141E64(void* arg0, s32* arg1, s16 arg2, s16 arg3, s32 arg4)
+{
+    unsigned char* base = (unsigned char*)arg0;
+    u32 old_unk0;
+
+    /* Write word at offset 4: 0x00808080 */
+    *(u32*)(base + 4) = 0x00808080;
+
+    /* Write byte at offset 3 */
+    base[3] = 4;
+
+    /* Write word at offset 16 */
+    *(u32*)(base + 16) = 0x00080008;
+
+    /* Load offset 0 early to match instruction 2c */
+    old_unk0 = *(u32*)base;
+
+    /* Write byte at offset 7 */
+    base[7] = 0x64;
+
+    /* Write half-words */
+    *(u16*)(base + 8) = (u16)arg2;
+    *(u16*)(base + 10) = (u16)arg3;
+    *(u16*)(base + 14) = 0x7CCA;
+    *(u16*)(base + 12) = (u16)arg4;
+
+    /* Update word at offset 0: load *arg1 instead of using cached value */
+    *(u32*)base = (old_unk0 & 0xFF000000) | (*(u32*)arg1 & 0xFFFFFF);
+
+    /* Update *arg1: load *arg1 again */
+    *arg1 = (*(u32*)arg1 & 0xFF000000) | ((u32)arg0 & 0xFFFFFF);
+
+    /* Return arg0 + 0x14 */
+    return (void*)(base + 0x14);
+}
