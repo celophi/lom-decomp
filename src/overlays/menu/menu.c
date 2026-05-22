@@ -1040,7 +1040,7 @@ s32* func_80141EE4(s32* arg0, s32* arg1, u8* arg2, s16 arg3)
     u16 new_var3;
     int new_var2;
     u8* ap = arg2;
-    volatile short pad;
+     short pad;
     u16 new_var;
     s32 y = 0;
     if ((*((s16*)(ap + 6))) > 0)
