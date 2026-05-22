@@ -1462,3 +1462,37 @@ void func_8002B750(u8** arg0)
     flags->unk8 |= 0x80;
     ch->unk48 = temp;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/w18Xw
+ */
+void func_8002B798(u8** arg0)
+{
+    AkaoChannelState* new_var2;
+    AkaoChannelState* ch;
+    s32 val1;
+    u8* ptr;
+    s8 new_var3;
+    s32 val0;
+    s32 temp_a0;
+    u8** new_var;
+    s32 val_combined;
+    ptr = *arg0;
+    ch = g_akao_seq_channel0;
+    ch->unk5A = ptr[0];
+    *arg0 = (*(new_var = &ptr)) + 1;
+    if (ch->unk5A == 0)
+    {
+        ch->unk5A = 0x100;
+    }
+    ptr = *arg0;
+    new_var3 = (s8)ptr[1];
+    val1 = new_var3;
+    val0 = ptr[temp_a0 * 0];
+    *arg0 = ptr + (2 & 0xFFu);
+    ch = (new_var2 = g_akao_seq_channel0);
+    val_combined = (val1 << 20) | (val0 << 12);
+    temp_a0 = ch->unk48 & (~0xFFF);
+    ch->unk48 = temp_a0;
+    new_var2->unk4C = (val_combined - temp_a0) / new_var2->unk5A;
+}
