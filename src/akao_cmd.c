@@ -82,8 +82,8 @@ void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 s32 akao_play_sfx_from_buffer(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 void akao_cmd_21(s32 arg0, s32 arg1);
 void akao_stop_sfx_by_id(s32 arg0);
-s32 func_800222A8(void);
-s32 func_80022310(s32 arg0);
+s32 akao_get_active_sfx_ids(void);
+s32 akao_is_sfx_playing(s32 arg0);
 void akao_set_paused(s32 arg0);
 void akao_cmd_90(s32 arg0);
 void akao_cmd_92(s32 arg0);
@@ -340,7 +340,7 @@ void akao_stop_sfx_by_id(s32 arg0)
  *
  * @see https://decomp.me/scratch/yZloM (100%)
  */
-s32 func_800222A8(void)
+s32 akao_get_active_sfx_ids(void)
 {
     s32 bits;
     unsigned char* ptr;
@@ -372,7 +372,7 @@ s32 func_800222A8(void)
 /**
  * @brief Returns 1 if any active SFX channel's offset-0x28 field equals @p arg0.
  *
- * Same iteration shape as @c func_800222A8 over @c g_sfx_channels / @c g_akao_sfx_control,
+ * Same iteration shape as @c akao_get_active_sfx_ids over @c g_sfx_channels / @c g_akao_sfx_control,
  * but compares each active channel's offset-0x28 value to @p arg0; returns
  * 1 on first match, 0 otherwise.
  *
@@ -381,7 +381,7 @@ s32 func_800222A8(void)
  *
  * @see https://decomp.me/scratch/OvqYq (100%)
  */
-s32 func_80022310(s32 arg0)
+s32 akao_is_sfx_playing(s32 arg0)
 {
     s32 new_var;
     s32 bits;
