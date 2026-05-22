@@ -8,7 +8,7 @@
  *
  * Lives in the global RAM region (outside every overlay's address range), so it
  * survives overlay swaps. Reset on mode entry by both the TITLE overlay
- * (RunTitle) and the FIELD overlay (field_scene_reset). FIELD reads @c unk0 and
+ * (run_title) and the FIELD overlay (field_scene_reset). FIELD reads @c unk0 and
  * @c unk2 back as the map id and object index when initializing a scene.
  *
  * @note The first two fields are also reached field-by-field through the
