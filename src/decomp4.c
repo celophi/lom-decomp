@@ -1441,3 +1441,24 @@ void func_8002B6AC(u8** arg0)
     g_akao_seq_channel0->unk20 = masked;
     g_akao_seq_channel0->unk24 = quotient;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Og38F
+ */
+void func_8002B750(u8** arg0)
+{
+    s32 val1;
+    s32 val0;
+    u32 temp;
+    AkaoDriverFlags* flags = &g_akao_driver_flags;
+    u8* ptr = *arg0;
+    AkaoChannelState* ch = g_akao_seq_channel0;
+    val1 = (s8)ptr[1];
+    val0 = ptr[0];
+    *arg0 = ptr + 2;
+    ch->unk5A = 0;
+    temp = val1 << 20;
+    temp = temp | (val0 << 12);
+    flags->unk8 |= 0x80;
+    ch->unk48 = temp;
+}
