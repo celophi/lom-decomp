@@ -77,7 +77,7 @@ void akao_copy_bytes(s32* arg0, s32* arg1, u32 arg2)
  */
 void akao_tick_fades(void)
 {
-    u8* xa;
+    AkaoXaTracker* xa;
     u8* new_var7;
     s32 temp;
     unsigned long new_var;
@@ -108,27 +108,27 @@ void akao_tick_fades(void)
         g_akao_cdvol_acc += g_akao_cdvol_step;
         akao_apply_cdvol_to_spu(new_var4);
     }
-    xa = g_akao_xa_tracker;
-    if (((*((s32*)(xa + 0x0C))) != 0) && ((*((s32*)(xa + 0x48))) != 0))
+    xa = &g_akao_xa_tracker;
+    if ((xa->unkC != 0) && (xa->unk48 != 0))
     {
-        (*((s32*)(xa + 0x48)))--;
-        temp = (*((s32*)(xa + 0x40))) + (*((s32*)(xa + 0x44)));
-        if ((temp & 0xFF00) != ((*((s32*)(xa + 0x40))) & 0xFF00))
+        xa->unk48--;
+        temp = xa->unk40 + xa->unk44;
+        if ((temp & 0xFF00) != (xa->unk40 & 0xFF00))
         {
             if (D_8004F754 & 2)
             {
-                temp_s0 = ((*((s32*)(xa + 0x40))) * D_8003D47C) >> 16;
-                func_800242EC(*((s32*)(xa + 0x10)), temp_s0, temp_s0, 0);
+                temp_s0 = (xa->unk40 * D_8003D47C) >> 16;
+                func_800242EC(xa->unk10, temp_s0, temp_s0, 0);
                 t0 = temp_s0;
                 t1 = temp_s0;
             }
             else
             {
                 t1 = (temp_s0 = (temp << 15) >> 16);
-                func_800242EC(*((s32*)(xa + 0x10)), temp_s0, 0, 0);
+                func_800242EC(xa->unk10, temp_s0, 0, 0);
                 t0 = 0;
             }
-            func_800242EC((*((s32*)(xa + 0x10))) + 1, t0, t1, 0);
+            func_800242EC(xa->unk10 + 1, t0, t1, 0);
         }
         D_8004F7A0 = temp & 0xFFFF;
     }

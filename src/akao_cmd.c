@@ -46,19 +46,6 @@ typedef struct
                                           copy into the driver's slot table */
 } AkaoStreamingState;
 
-typedef struct {
-    u8   pad0[0x08];           /* 0x00 - 0x07 */
-    u32  unk8;                 /* 0x08 - from func_80023334 */
-    u8   pad1[0x14];           /* 0x0C - 0x1F (20 bytes) */
-    s32  unk20;                /* 0x20 - from func_800232A8 */
-    s32  unk24;                /* 0x24 - used in both functions */
-    s32  unk28;                /* 0x28 - from func_800232A8 */
-    u8   pad2[0x08];           /* 0x2C - 0x33 (8 bytes) */
-    s32  unk34;                /* 0x34 - from func_800232A8 */
-    s32  unk38;                /* 0x38 - used in both functions */
-    s32  unk3C;                /* 0x3C - from func_800232A8 */
-} AkaoXaTracker;  /* Total size: 0x40 (64 bytes) */
-
 extern s32 D_8004F794;
 extern s32 D_8004C170;
 extern u32 D_8004C150;
@@ -77,8 +64,6 @@ extern s32 D_8004F824;
 extern s32 D_8004F828;
 extern AkaoStreamingState g_akao_streaming_state;
 extern AkaoBankHeader g_akao_bank_staging;
-
-extern AkaoXaTracker g_akao_xa_tracker;
 
 #define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
 

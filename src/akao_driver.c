@@ -314,8 +314,8 @@ void akao_driver_init_state(void)
     *((u16*)off(a0, 0x66)) = 0;
     *((u16*)off(a0, 0x64)) = a3;
     *((u16*)off(a0, 0x6C)) = a3;
-    *((u32*)off(g_akao_xa_tracker, 0x40)) = 0x7F00;
-    *((u32*)off(g_akao_xa_tracker, 0x48)) = a3;
+    *((u32*)off(&g_akao_xa_tracker, 0x40)) = 0x7F00;
+    *((u32*)off(&g_akao_xa_tracker, 0x48)) = a3;
     g_akao_seq_pending_ticks = a3;
     D_8003EC6C = a3;
     g_akao_driver_mode_flags = a3;
