@@ -803,6 +803,7 @@ g_sfx_channels                      = 0x8004B430;
 g_akao_seq_master_state             = 0x8004C260;
 g_akao_articulation_slots           = 0x8004C340;
 g_akao_spu_malloc_table             = 0x8004D360;
+g_akao_bank_slot_keys               = 0x8004D388;
 g_akao_bank_staging                 = 0x8004D3C0;
 g_akao_sfx_control                  = 0x8004D400;
 g_akaoCmdParams                     = 0x8004D430;

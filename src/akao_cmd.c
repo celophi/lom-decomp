@@ -53,12 +53,6 @@ extern AkaoChannelState* g_akao_seq_channel0;
 extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
 extern u8 g_akao_articulation_slots[];
-extern s32 D_8004D388;
-extern s32 D_8004D38C;
-extern s32 D_8004D390;
-extern s32 D_8004D394;
-extern s32 D_8004D398;
-extern s32 D_8004D39C;
 extern s32 g_akao_spu_xfer_pending;
 extern s32 D_8004F824;
 extern s32 D_8004F828;
@@ -1148,7 +1142,7 @@ s32 akao_upload_bank_slot(void* arg0, s32 arg1, s32 arg2)
     u32 var_a3;
     void* tmp = arg0;
     var_a3 = 0;
-    var_t0 = &D_8004D388;
+    var_t0 = g_akao_bank_slot_keys;
     do
     {
         if ((*var_t0) == ((s32*)tmp)[1])
@@ -1167,37 +1161,37 @@ s32 akao_upload_bank_slot(void* arg0, s32 arg1, s32 arg2)
     case 1:
         var_a3_2 = 0x47900;
         var_a2 = 0x90;
-        D_8004D38C = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[1] = ((s32*)tmp)[1];
         break;
 
     case 2:
         var_a3_2 = 0x4C100;
         var_a2 = 0xA0;
-        D_8004D390 = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[2] = ((s32*)tmp)[1];
         break;
 
     case 3:
         var_a3_2 = 0x50900;
         var_a2 = 0xB0;
-        D_8004D394 = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[3] = ((s32*)tmp)[1];
         break;
 
     case 4:
         var_a3_2 = 0x55100;
         var_a2 = 0xC0;
-        D_8004D398 = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[4] = ((s32*)tmp)[1];
         break;
 
     case 5:
         var_a3_2 = 0x59900;
         var_a2 = 0xD0;
-        D_8004D39C = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[5] = ((s32*)tmp)[1];
         break;
 
     default:
         var_a3_2 = 0x43100;
         var_a2 = 0x80;
-        D_8004D388 = ((s32*)tmp)[1];
+        g_akao_bank_slot_keys[0] = ((s32*)tmp)[1];
         break;
     }
 

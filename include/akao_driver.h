@@ -77,7 +77,15 @@ extern u8 D_8004C2D0[];
 extern SfxControl g_akao_sfx_control;
 extern u8 D_8004F830[];
 extern AkaoDriverFlags g_akao_driver_flags;
-extern u8 D_8004D388[];
+/**
+ * @brief Keys of the banks loaded into the 6 SPU bank slots.
+ *
+ * Each entry holds the loaded bank's id/length word (@c ((s32*)bank)[1], the
+ * second word of its AkaoSeqHeader) and is used by akao_upload_bank_slot to
+ * detect and evict a previously-loaded copy. Zeroed for all 6 slots in
+ * akao_driver_init_state.
+ */
+extern s32 g_akao_bank_slot_keys[6];
 extern u8 D_8003EC30[];
 extern u8 g_akao_seq_channels[];
 extern AkaoChannelState g_akao_seq_master_state;
