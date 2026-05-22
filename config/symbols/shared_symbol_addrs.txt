@@ -740,6 +740,7 @@ akao_seq_step_opcode                = 0x8002AD28;
 akao_channel_load_articulation_fields = 0x8002B468;
 akao_channel_set_articulation       = 0x8002B49C;
 akao_sfx_release_channels           = 0x8002B4D4;
+akao_release_channels               = 0x8002B580;
 akao_seq_op_set_tempo               = 0x8002B65C;
 akao_seq_op_slide_tempo             = 0x8002B6AC;
 akao_seq_op_jump                    = 0x8002B844;
@@ -805,6 +806,7 @@ g_akao_sfx_control                  = 0x8004D400;
 g_akaoCmdParams                     = 0x8004D430;
 g_akao_driver_flags                 = 0x8004F750;
 g_akao_xa_tracker                   = 0x8004F760;
+g_akao_xa_pan_current               = 0x8004F7A0;
 g_akao_streaming_state              = 0x8004F820;
 
 // Shared input / frame / script state (main executable .bss)
