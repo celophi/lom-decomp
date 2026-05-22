@@ -47,8 +47,8 @@ typedef struct
 } AkaoStreamingState;
 
 extern s32 D_8004F794;
-extern s32 D_8004C170;
-extern u32 D_8004C150;
+/* 0x50-byte staging copy of an XA program's AkaoBankHeader (akao_upload_xa_program). */
+extern AkaoBankHeader g_akao_xa_program_staging;
 extern AkaoChannelState* g_akao_seq_channel0;
 extern CdlATV g_akao_cdmix;
 extern s32 D_8004F754;
@@ -1338,13 +1338,13 @@ s32 akao_cmd_e6(s32 arg0)
  * activity. Programs @c SpuSetTransferStartAddr, kicks off the sample upload
  * (akao_spu_write), caches the SPU base back into the buffer's
  * @c cached_spu_addr field, then memcpys the 0x50-byte header to the staging
- * area @c D_8004C150.
+ * area @c g_akao_xa_program_staging.
  *
  * @param arg0  Pointer to an AKAO buffer in main RAM.
  * @param arg1  Selects the upper SPU slot (non-zero) vs the lower slot.
  *
  * @return 0 on success; the akao_check_magic delta on failure (also clears
- *         @c D_8004C170).
+ *         @c g_akao_xa_program_staging.cached_spu_addr).
  *
  * @see https://decomp.me/scratch/C06sg (99.80%)
  */
@@ -1380,10 +1380,10 @@ s32 akao_upload_xa_program(void* arg0, s32 arg1)
          */
         akao_spu_write(arg0, ((AkaoBankHeader*)var1)->spu_dest_addr);
         ((AkaoBankHeader*)var1)->cached_spu_addr = var_s2;
-        akao_copy_bytes(var1, &D_8004C150, 0x50);
+        akao_copy_bytes(var1, &g_akao_xa_program_staging, 0x50);
         return temp_v0;
     }
-    D_8004C170 = 0;
+    g_akao_xa_program_staging.cached_spu_addr = 0;
     return temp_v0;
 }
 
