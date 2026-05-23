@@ -825,7 +825,7 @@ void movie_service_video_ops(void)
  *
  * @return 1 to keep streaming, 0 when the stream has ended or should pause.
  *
- * @see https://decomp.me/scratch/5flHR (97.44%)
+ * @see https://decomp.me/scratch/5flHR (97.45%)
  */
 s32 movie_cd_sector_callback(void)
 {
@@ -963,8 +963,8 @@ s32 movie_cd_sector_callback(void)
                     {
                         flag = 1;
                         vms->audio_ring_size = (s32)vms->audio_write_idx;
+                        vms->audio_write_idx = 0;
                     }
-                    vms->audio_write_idx = 0;
                 }
                 else
                 {
