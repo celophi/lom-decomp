@@ -1222,9 +1222,8 @@ s32 movie_cd_sector_callback(void)
                 block_64:
                     MOVIE_STATE->chunk_sector_idx = (u16)(MOVIE_STATE->chunk_sector_idx + 1);
                 }
+                return 1;
             }
-
-            return 1;
         }
 
         MOVIE_STATE->frame_number = (u32)temp_s1[2];
