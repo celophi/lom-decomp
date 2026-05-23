@@ -30,8 +30,8 @@ typedef struct
     struct VideoSectorEntry* video_table_base; // unk0 - array of 32-byte video sector headers
     struct VideoVlcPayload* video_data_base;   // unk4 - parallel array of 2016-byte VLC payloads
     struct AudioSector* audio_data_base;       // unk8 - array of 2048-byte CD sectors (header + payload)
-    u32 vlc_table;       // unkC / table
-    u32* vlc_input_buf[2];
+    void* vlc_table;     // unkC / VLC decode table; opaque to MovieState consumers
+    void* vlc_input_buf[2];
     u_long* mdec_output_buf[2]; // unk18 - MDEC output buffers (consumed by LoadImage/DecDCTout)
 
     // ---- VRAM destination rectangles ----
@@ -201,7 +201,7 @@ extern void akao_cmd_c8(u32 arg0);                       /* AKAO cmd 0xC8 (raw p
 extern void akao_xa_setup_panning(u32 sample_rate);      /* writes panning/sample-rate table */
 extern void akao_cmd_e8_start_xa_stream(u32 addr, u32 len_bytes); /* AKAO cmd 0xE8 */
 extern void akao_cmd_e4_set_cd_volume(s32 vol);          /* AKAO cmd 0xE4 (vol & 0x7F << 8) */
-extern void akao_xa_advance_frame(u32 frame_num);        /* increments audio frame counters */
+extern void akao_xa_advance_frame(void);                 /* increments audio frame counters */
 extern s32 akao_xa_get_position(void);                   /* returns SPU/XA position */
 extern void movie_schedule_next_decode(void);
 
