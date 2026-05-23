@@ -825,7 +825,7 @@ void movie_service_video_ops(void)
  *
  * @return 1 to keep streaming, 0 when the stream has ended or should pause.
  *
- * @see https://decomp.me/scratch/5flHR (97.45%)
+ * @see https://decomp.me/scratch/5flHR (99.38%)
  */
 s32 movie_cd_sector_callback(void)
 {
@@ -842,7 +842,7 @@ s32 movie_cd_sector_callback(void)
     void* madr;
 
     u32* temp_s1;
-
+    u16 new_var;
     int new_var4;
 
     s32 write_idx;
@@ -1078,7 +1078,7 @@ s32 movie_cd_sector_callback(void)
         while (CdGetSector(madr, 8) == 0);
 
         if (((((u16*)temp_s1)[1] == 1) && (temp_s1[2] == MOVIE_STATE->frame_number)) &&
-            (MOVIE_STATE->chunk_sector_idx == (temp_s1[1] & 0xFFFFu)))
+            ((new_var = (MOVIE_STATE->chunk_sector_idx)) == (temp_s1[1] & 0xFFFFu)))
         {
             madr = ((u8*)MOVIE_STATE->audio_data_base +
                     ((VOL_MOVIE_STATE->audio_write_idx + (MOVIE_STATE->chunk_sector_idx & 0xFFFF)) << 0xB)) +
