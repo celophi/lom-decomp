@@ -193,15 +193,15 @@ extern void cdrom_reset(void);
 extern void func_800157DC(void);
 extern void func_800157B0(u_long arg0);
 extern void func_800158E0(void);
-extern void movie_init(s32 resourceIndex, s32 flags, s32 totalFrames, s32 initBufferIdx);
+extern void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx);
 extern void movie_update(void);
 extern void movie_service_video_ops(void);
 /* AKAO XA-streaming helpers (see config/symbols/shared_symbol_addrs.txt). */
 extern void akao_cmd_c8(u32 arg0);                       /* AKAO cmd 0xC8 (raw param) */
-extern void akao_xa_setup_panning(u32 sampleRate);       /* writes panning/sample-rate table */
-extern void akao_cmd_e8_start_xa_stream(u32 addr, u32 lenBytes); /* AKAO cmd 0xE8 */
+extern void akao_xa_setup_panning(u32 sample_rate);      /* writes panning/sample-rate table */
+extern void akao_cmd_e8_start_xa_stream(u32 addr, u32 len_bytes); /* AKAO cmd 0xE8 */
 extern void akao_cmd_e4_set_cd_volume(s32 vol);          /* AKAO cmd 0xE4 (vol & 0x7F << 8) */
-extern void akao_xa_advance_frame(u32 frameNum);         /* increments audio frame counters */
+extern void akao_xa_advance_frame(u32 frame_num);        /* increments audio frame counters */
 extern s32 akao_xa_get_position(void);                   /* returns SPU/XA position */
 extern void movie_schedule_next_decode(void);
 
