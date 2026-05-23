@@ -50,6 +50,7 @@ void movie_play(s32 movie_index)
     {
         return;
     }
+    
     func_800158E0();
     DecDCTReset(0);
     timeout = 0xF0;
