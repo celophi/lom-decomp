@@ -30,8 +30,8 @@ typedef struct
     struct VideoSectorEntry* video_table_base; // unk0 - array of 32-byte video sector headers
     struct VideoVlcPayload* video_data_base;   // unk4 - parallel array of 2016-byte VLC payloads
     struct AudioSector* audio_data_base;       // unk8 - array of 2048-byte CD sectors (header + payload)
-    u32 vlc_table;       // unkC / table
-    u32* vlc_input_buf[2];
+    void* vlc_table;     // unkC / VLC decode table; opaque to MovieState consumers
+    void* vlc_input_buf[2];
     u_long* mdec_output_buf[2]; // unk18 - MDEC output buffers (consumed by LoadImage/DecDCTout)
 
     // ---- VRAM destination rectangles ----

@@ -298,13 +298,13 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     if (MOVIE_STATE->gpu_mode == 0)
     {
 
-        MOVIE_STATE->video_table_base = (u32*)0x80147000;
+        MOVIE_STATE->video_table_base = (VideoSectorEntry*)0x80147000;
         MOVIE_STATE->audio_data_base = (AudioSector*)0x80160000;
-        MOVIE_STATE->vlc_table = (u32*)0x80168000;
-        MOVIE_STATE->vlc_input_buf[0] = (u32*)0x80179000;
-        MOVIE_STATE->vlc_input_buf[1] = (u_long*)0x8018D000;
+        MOVIE_STATE->vlc_table = (void*)0x80168000;
+        MOVIE_STATE->vlc_input_buf[0] = (void*)0x80179000;
+        MOVIE_STATE->vlc_input_buf[1] = (void*)0x8018D000;
         MOVIE_STATE->mdec_output_buf[0] = (u_long*)0x801A1000;
-        MOVIE_STATE->mdec_output_buf[1] = (VideoVlcPayload*)0x801A3D00;
+        MOVIE_STATE->mdec_output_buf[1] = (u_long*)0x801A3D00;
 
         MOVIE_STATE->rects[1].y = 0xF0;
         MOVIE_STATE->rects[2].h = 0xF0;
@@ -333,9 +333,9 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     {
         MOVIE_STATE->video_table_base = (VideoSectorEntry*)0x80147000;
         MOVIE_STATE->audio_data_base = (AudioSector*)0x80156000;
-        MOVIE_STATE->vlc_input_buf[0] = (u8*)0x8015E000;
-        MOVIE_STATE->vlc_input_buf[1] = (u8*)0x8016F000;
-        MOVIE_STATE->vlc_table = (u32)alloc_info->alloc_base;
+        MOVIE_STATE->vlc_input_buf[0] = (void*)0x8015E000;
+        MOVIE_STATE->vlc_input_buf[1] = (void*)0x8016F000;
+        MOVIE_STATE->vlc_table = (void*)alloc_info->alloc_base;
         MOVIE_STATE->mdec_output_buf[0] = (u_long*)(alloc_info->alloc_base + 0x11000);
         MOVIE_STATE->mdec_output_buf[1] = (u_long*)(alloc_info->alloc_base + 0x12E00);
 
@@ -431,7 +431,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         SetDispMask(0);
         ClearImage(&MOVIE_STATE->rects[0], 0, 0, 0);
         ClearImage(&MOVIE_STATE->rects[1], 0, 0, 0);
-        DecDCTvlcBuild((u_short*)MOVIE_STATE->vlc_table);
+        DecDCTvlcBuild(MOVIE_STATE->vlc_table);
         DrawSync(0);
     }
 }
@@ -462,7 +462,7 @@ void movie_update(void)
         if ((MOVIE_STATE->mdec_busy == 0) && (combined->frame_ready == 0))
         {
             MOVIE_STATE->mdec_busy = 1;
-            DecDCTin((u_long*)MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
+            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
                      (MOVIE_STATE->gpu_mode & 0xFFFFu) == 0);
             {
                 s32 temp =
@@ -485,7 +485,7 @@ void movie_update(void)
             {
                 DecDCTvlcSize2(0);
             }
-            if (DecDCTvlc2(0, 0, (DECDCTTAB*)MOVIE_STATE->vlc_table) == 0)
+            if (DecDCTvlc2(0, 0, MOVIE_STATE->vlc_table) == 0)
             {
                 tmp = 1;
                 MOVIE_STATE->vlc_retry_count = 0;
@@ -513,8 +513,8 @@ void movie_update(void)
                 DecDCTvlcSize2(0x16AA);
                 MOVIE_STATE->vlc_retry_count = 1;
             }
-            if (DecDCTvlc2((u_long*)vlc_payload, (u_long*)MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
-                           (DECDCTTAB*)MOVIE_STATE->vlc_table) == 0)
+            if (DecDCTvlc2((u_long*)vlc_payload, MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
+                           MOVIE_STATE->vlc_table) == 0)
             {
                 tmp = 1;
                 MOVIE_STATE->vlc_retry_count = 0;
@@ -534,7 +534,7 @@ void movie_update(void)
         if ((MOVIE_STATE->mdec_busy == 0) && (field_9d_zero_flag = MOVIE_STATE->frame_ready == 0))
         {
             MOVIE_STATE->mdec_busy = 1;
-            DecDCTin((u_long*)(MOVIE_STATE)->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == 0);
+            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == 0);
             {
                 s32 temp =
                     ((s16)MOVIE_STATE->rects[2].w) * ((s16)MOVIE_STATE->rects[2].h);
