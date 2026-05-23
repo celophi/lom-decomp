@@ -1022,7 +1022,8 @@ s32 movie_cd_sector_callback(void)
     else if (MOVIE_STATE->continuation_type == 0)
     {
 
-        temp_s1 = (u32*)((u8*)MOVIE_STATE->video_table_base + ((VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx) << 5));
+        temp_s1 = (u32*)((u8*)MOVIE_STATE->video_table_base +
+                         ((VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx) << 5));
         while (CdGetSector(temp_s1, 8) == 0);
 
         if (((((u16*)temp_s1)[1] == 0x8001) && (temp_s1[2] == MOVIE_STATE->frame_number)) &&
@@ -1035,11 +1036,13 @@ s32 movie_cd_sector_callback(void)
             MOVIE_STATE->sectors_remaining = MOVIE_STATE->sectors_remaining - 1;
             if (!(MOVIE_STATE->sectors_remaining))
             {
+                u32 offset;
                 u32 total_frames;
                 total_frames = (u32)MOVIE_STATE->total_frames;
 
+                offset = 1;
                 VOL_MOVIE_STATE->video_write_idx =
-                    (s32)(MOVIE_STATE->chunk_sector_idx + (VOL_MOVIE_STATE->video_write_idx + 1));
+                    (s32)(MOVIE_STATE->chunk_sector_idx + (VOL_MOVIE_STATE->video_write_idx + offset));
 
                 VOL_MOVIE_STATE->last_video_frame = VOL_MOVIE_STATE->frame_number;
                 has_more_frames = ((u32*)temp_s1)[2] < total_frames;
@@ -1070,7 +1073,8 @@ s32 movie_cd_sector_callback(void)
     else
     {
 
-        madr = (u8*)MOVIE_STATE->audio_data_base + ((VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx) << 0xB);
+        madr = (u8*)MOVIE_STATE->audio_data_base +
+               ((VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx) << 0xB);
         while (CdGetSector(madr, 8) == 0);
 
         if (((((u16*)temp_s1)[1] == 1) && (temp_s1[2] == MOVIE_STATE->frame_number)) &&
@@ -1152,7 +1156,8 @@ static s32 get_next_audio_entry(AudioSector** out_entry)
     {
         MOVIE_STATE->audio_read_idx = 0;
 
-        if (MOVIE_STATE->audio_write_idx == 0 && (MOVIE_STATE->last_audio_frame == MOVIE_STATE->last_consumed_audio_frame))
+        if (MOVIE_STATE->audio_write_idx == 0 &&
+            (MOVIE_STATE->last_audio_frame == MOVIE_STATE->last_consumed_audio_frame))
         {
             return 0;
         }
@@ -1251,7 +1256,8 @@ static s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry
     {
         MOVIE_STATE->video_read_idx = 0;
 
-        if ((MOVIE_STATE->video_write_idx == 0) && (MOVIE_STATE->last_video_frame == MOVIE_STATE->last_consumed_video_frame))
+        if ((MOVIE_STATE->video_write_idx == 0) &&
+            (MOVIE_STATE->last_video_frame == MOVIE_STATE->last_consumed_video_frame))
         {
             return 0;
         }
