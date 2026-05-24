@@ -61,10 +61,10 @@ typedef struct
 
 typedef struct
 {
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
-    s16 unk6;
+    s16 x;
+    s16 y;
+    s16 w;
+    s16 h;
 } MenuRect;
 
 typedef struct
@@ -84,10 +84,10 @@ typedef struct
 
 typedef struct
 {
-    u16 unk0;
-    u16 unk2;
-    s16 unk4;
-    s16 unk6;
+    u16 x;
+    u16 y;
+    s16 w;
+    s16 h;
 } MenuRectU16;
 
 extern s32 D_80169124;
@@ -911,9 +911,9 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     }
     if (slot->unk1C != NULL)
     {
-        if ((temp_s3->unk4 - 0x20) > 0)
+        if ((temp_s3->w - 0x20) > 0)
         {
-            if ((temp_s3->unk6 - 0x10) > 0)
+            if ((temp_s3->h - 0x10) > 0)
             {
                 SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(D_80168C0C + ((gpu_work->unk404C ^ 1) * 0x40C0) + 0x4064));
                 var_a3 = 0;
@@ -934,13 +934,13 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     gpu_work->unk4040 = temp_s1;
                     return;
                 }
-                temp_a0 = temp_s3->unk2;
+                temp_a0 = temp_s3->y;
                 var_a2_2 = temp_a0 + 0x10;
                 if (gpu_work->unk404C != 0)
                 {
                     var_a2_2 = temp_a0 + 0xF8;
                 }
-                SetDefDrawEnv(&sp20, temp_s3->unk0 + 8, var_a2_2, temp_s3->unk4 - 0x10, temp_s3->unk6 - 0x10);
+                SetDefDrawEnv(&sp20, temp_s3->x + 8, var_a2_2, temp_s3->w - 0x10, temp_s3->h - 0x10);
                 SetDrawEnv((DR_ENV*)temp_s1, &sp20);
                 *temp_s1 = (*temp_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
@@ -954,14 +954,14 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     case 19: /* switch 1 */
                     case 22: /* switch 1 */
                     case 25: /* switch 1 */
-                        var_v0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 0x68;
+                        var_v0 = ((u16)temp_s3->x + (u16)temp_s3->w) - 0x68;
                         break;
                     default: /* switch 1 */
-                        var_v0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 0x48;
+                        var_v0 = ((u16)temp_s3->x + (u16)temp_s3->w) - 0x48;
                         break;
                     }
                     sp80[0] = var_v0;
-                    sp80[1] = (u16)temp_s3->unk2;
+                    sp80[1] = (u16)temp_s3->y;
                     if (slot->_u.unk4 & 0x01FF0000)
                     {
                         var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.unk4 + 1, 3, sp80, 0);
@@ -990,17 +990,17 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
             }
         }
     }
-    sp18.unk4 = 0xFF;
-    sp18.unk6 = 0xFF;
-    sp18.unk0 = 0;
-    sp18.unk2 = 0;
+    sp18.w = 0xFF;
+    sp18.h = 0xFF;
+    sp18.x = 0;
+    sp18.y = 0;
     ((MenuPrimHead*)var_s1)->_u._s.unk3 = 2;
     {
-        u8 t_unk2 = (u8)sp18.unk2;
-        u8 t_unk0 = (u8)sp18.unk0;
+        u8 t_unk2 = (u8)sp18.y;
+        u8 t_unk0 = (u8)sp18.x;
 
-        s16 t_unk4 = sp18.unk4;
-        s16 t_unk6 = sp18.unk6;
+        s16 t_unk4 = sp18.w;
+        s16 t_unk6 = sp18.h;
         ((MenuPrimHead*)var_s1)->unk8 = 0;
         ((MenuPrimHead*)var_s1)->unk4 = (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) |
                                                ((-t_unk6 << 2) & 0x3E0) | ((s32)(-t_unk4 & 0xFF) >> 3));
@@ -1008,49 +1008,49 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     ((MenuPrimHead*)var_s1)->_u.unk0 = (((MenuPrimHead*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
     var_a2_4 = var_s1 + 3;
-    if (temp_s3->unk6 >= 0x10)
+    if (temp_s3->h >= 0x10)
     {
-        sp18.unk0 = (u16)temp_s3->unk0 + 8;
-        sp18.unk2 = (u16)temp_s3->unk2;
-        sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
-        sp18.unk6 = 8;
-        var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.unk0, 0x80D0);
-        if (temp_s3->unk6 >= 0x10)
+        sp18.x = (u16)temp_s3->x + 8;
+        sp18.y = (u16)temp_s3->y;
+        sp18.w = (u16)temp_s3->w - 0x10;
+        sp18.h = 8;
+        var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.x, 0x80D0);
+        if (temp_s3->h >= 0x10)
         {
-            sp18.unk0 = (u16)temp_s3->unk0 + 8;
-            sp18.unk2 = ((u16)temp_s3->unk2 + (u16)temp_s3->unk6) - 8;
-            sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
-            sp18.unk6 = 8;
-            var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.unk0, 0x88D0);
+            sp18.x = (u16)temp_s3->x + 8;
+            sp18.y = ((u16)temp_s3->y + (u16)temp_s3->h) - 8;
+            sp18.w = (u16)temp_s3->w - 0x10;
+            sp18.h = 8;
+            var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.x, 0x88D0);
         }
     }
-    if (temp_s3->unk4 >= 0x20)
+    if (temp_s3->w >= 0x20)
     {
-        sp18.unk0 = (u16)temp_s3->unk0;
-        sp18.unk2 = (u16)temp_s3->unk2 + 8;
-        sp18.unk4 = 8;
-        sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
-        var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.unk0, 0x90D0);
-        if (temp_s3->unk4 >= 0x20)
+        sp18.x = (u16)temp_s3->x;
+        sp18.y = (u16)temp_s3->y + 8;
+        sp18.w = 8;
+        sp18.h = (u16)temp_s3->h - 0x10;
+        var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.x, 0x90D0);
+        if (temp_s3->w >= 0x20)
         {
-            sp18.unk0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 8;
-            sp18.unk2 = (u16)temp_s3->unk2 + 8;
-            sp18.unk4 = 8;
-            sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
-            var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.unk0, 0x90D8);
+            sp18.x = ((u16)temp_s3->x + (u16)temp_s3->w) - 8;
+            sp18.y = (u16)temp_s3->y + 8;
+            sp18.w = 8;
+            sp18.h = (u16)temp_s3->h - 0x10;
+            var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.x, 0x90D8);
         }
     }
-    sp18.unk0 = (u16)temp_s3->unk0 + 8;
-    sp18.unk2 = (u16)temp_s3->unk2 + 8;
-    sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
-    sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
+    sp18.x = (u16)temp_s3->x + 8;
+    sp18.y = (u16)temp_s3->y + 8;
+    sp18.w = (u16)temp_s3->w - 0x10;
+    sp18.h = (u16)temp_s3->h - 0x10;
     temp_v0_2 = menu_emit_corner(
         menu_emit_corner(
-            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0), temp_s2,
-                                              temp_s3->unk0, temp_s3->unk2, 0x70D0),
-                             temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2, 0x70D8),
-            temp_s2, temp_s3->unk0, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D0),
-        temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D8);
+            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.x, 0xA0A0), temp_s2,
+                                              temp_s3->x, temp_s3->y, 0x70D0),
+                             temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y, 0x70D8),
+            temp_s2, temp_s3->x, temp_s3->y + temp_s3->h - 8, 0x78D0),
+        temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y + temp_s3->h - 8, 0x78D8);
     ((MenuPrimHead*)temp_v0_2)->_u._s.unk3 = 1;
     ((MenuPrimHead*)temp_v0_2)->unk4 = 0xE1000005;
     ((MenuPrimHead*)temp_v0_2)->_u.unk0 =
