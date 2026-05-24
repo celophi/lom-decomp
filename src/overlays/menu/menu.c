@@ -406,7 +406,7 @@ void menu_build_grid(RenderContext* gpu_work)
     do
     {
         /* SPRT primitive: white tint, len=4, code=0x64 */
-        *(u32*)(var_a2 + 4) = 0x808080;
+        SET_BGR0_PACKED(var_a2, GPU_TINT_NEUTRAL);
         *(u8*)(var_a2 + 3) = 4;
         *(u8*)(var_a2 + 7) = 0x64;
         *(u16*)(var_a2 + 0xC) = *(u16*)var_t3;
