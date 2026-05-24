@@ -21,6 +21,11 @@ typedef struct
     s16 unkE;    // offset 0x0E
 } MenuSlotAnim;
 
+typedef struct {
+    u16 x, y;
+    s16 w, h;
+} InputStruct;
+
 typedef struct
 {
     u8 unk0;
@@ -564,7 +569,7 @@ void menu_upload_tim(Rect16* rect)
  *             TODO: meaning unknown.
  * @param rect Pointer to four @c u16 values - the slot's x, y, w, h.
  * @return Pointer to the newly allocated @c MenuSlot.
- * @see decomp.me (99.82%) https://decomp.me/scratch/Xng7v
+ * @see decomp.me (100%) https://decomp.me/scratch/Xng7v
  */
 void* menu_slot_alloc(s32 arg0, void* rect)
 {
@@ -592,7 +597,7 @@ void* menu_slot_alloc(s32 arg0, void* rect)
     {
         return (void*)(-1);
     }
-    entry = (MenuSlot*)(ptr + (var_a2 * 0x24));
+    entry = (MenuSlot*)((var_a2 * 0x24) + (u32)ptr);
     *((u16*)(((u8*)entry) + 4)) = 0;
     temp = entry->flags;
     entry->active = 1;
@@ -1003,7 +1008,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
         s16 t_unk6 = sp18.h;
         ((MenuPrimHead*)var_s1)->unk8 = 0;
         ((MenuPrimHead*)var_s1)->unk4 = (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) |
-                                               ((-t_unk6 << 2) & 0x3E0) | ((s32)(-t_unk4 & 0xFF) >> 3));
+                                              ((-t_unk6 << 2) & 0x3E0) | ((s32)(-t_unk4 & 0xFF) >> 3));
     }
     ((MenuPrimHead*)var_s1)->_u.unk0 = (((MenuPrimHead*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
@@ -1164,4 +1169,61 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
         } while (y < (*((s16*)(ap + 6))));
     }
     return prim;
+}
+
+/**
+ * decomp.me (78.62%) https://decomp.me/scratch/u17Fi
+ */
+void* func_80142014(void* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
+{
+    u8* pkt;      /* maps to t1 */
+    u_long* otp;  /* maps to t2 */
+    s32 texParam; /* maps to a0 */
+    SPRT* sprt;
+    DR_TWIN* twin;
+    RECT tw;
+
+    pkt = (u8*)ot;
+    otp = ot_ptr;
+
+    if (input->w <= 0)
+        return ot;
+
+    texParam = arg3; /* placed in delay slot of first blez */
+
+    if (input->h <= 0)
+        return ot; /* lui v0,0x80 in delay slot */
+
+    sprt = (SPRT*)pkt;
+
+    /* Single 32‑bit store to r0,g0,b0,code (offsets 4..7) */
+    *(u32*)(pkt + 4) = 0x00808080;
+
+    setlen(sprt, 4);     /* sb v0,3(t1) */
+    setcode(sprt, 0x64); /* sb v0,7(t1) */
+
+    /* Combined 16‑bit store for u0,v0 (offset 0xC) */
+    *(u16*)(pkt + 0xc) = 0; /* sh zero,0xc(t1) */
+
+    sprt->w = input->w;  /* lhu w,  sh w  */
+    sprt->h = input->h;  /* lhu h,  sh h  */
+    sprt->x0 = input->x; /* lhu x,  sh x0 */
+    sprt->clut = 0x7CCA; /* li clut,sh clut */
+    sprt->y0 = input->y; /* lhu y,  sh y0 */
+
+    addPrim(otp, sprt);
+
+    pkt += 0x14; /* addiu t1,t1,0x14  -> pkt = &twin */
+    twin = (DR_TWIN*)pkt;
+
+    tw.x = texParam & 0xFF;
+    tw.y = (texParam >> 8) & 0xFF;
+    tw.w = 16;
+    tw.h = 8;
+
+    setTexWindow(twin, &tw); /* macro expands to len=2, code, zero */
+    addPrim(otp, twin);
+
+    pkt += 0xC; /* addiu t1,t1,0xC  -> after twin */
+    return pkt; /* move v0,t1 */
 }
