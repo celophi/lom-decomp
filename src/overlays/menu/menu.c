@@ -188,28 +188,31 @@ void menu_tick(RenderContext* gpu_work)
     menu_build_grid(gpu_work);
     v0 = g_menu_frame;
     v1 = g_frame_counter;
-    /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen */
+    /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen.
+     * Tried gpu_work->prim_cursor (both with and without changing saved_prim_cursor
+     * to void*); both broke the match by shifting v0/v1 allocation for the
+     * surrounding g_menu_frame/g_frame_counter loads. */
     saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
     g_menu_frame = v0 + 1;
     g_frame_counter = v1 + 1;
     func_800A9E78();
 
-    if (((*((u32*)(((u8*)g_pad_ctx) + 0x858))) & 0x80) && ((*((u8*)(((u8*)g_pad_ctx) + 0x840))) != 0))
+    if ((g_pad_ctx->inject_flags & 0x80) && (g_pad_ctx->inject_enable != 0))
     {
         g_pad_input |= g_pad_input_inject;
     }
 
-    v0 = g_pad_input & 0x5000;
+    v0 = g_pad_input & MENU_PAD_CONFIRM_CANCEL;
     if (v0)
     {
         g_pad_input = v0;
     }
-    v0 = g_pad_input & 0xF000;
+    v0 = g_pad_input & MENU_PAD_FACE_BUTTONS;
     if (v0)
     {
         g_pad_input = v0;
     }
-    v0 = g_pad_input & 0xF;
+    v0 = g_pad_input & MENU_PAD_SHOULDERS;
     if (v0)
     {
         g_pad_input = v0;
@@ -235,7 +238,7 @@ void menu_tick(RenderContext* gpu_work)
         // Ensure idx is the LHS of addition, emitting 'sll v0' then 'addu v0, v0, v1'
         temp_v1 = *(u16*)(idx * 2 + off);
 
-        if (temp_v1 == (v0 = 0xFFFF))
+        if (temp_v1 == (v0 = MENU_SCRIPT_END))
         {
             if (g_active_script < 4)
             {
