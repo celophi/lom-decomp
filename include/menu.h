@@ -102,6 +102,22 @@ extern MenuSlot g_menu_slots[];
 /** @brief Terminator value in a @ref MenuScript @c inputs row. */
 #define MENU_SCRIPT_END 0xFFFF
 
+/**
+ * @name Menu pad-input priority masks
+ * @brief Button-group masks used by @ref menu_tick's three-step input filter.
+ *
+ * Applied in order: if any confirm/cancel bit is set this frame, all other
+ * bits are dropped; otherwise if any other face button is set, drop the rest;
+ * otherwise if any shoulder is set, drop the rest. The first mask is a subset
+ * of the second by design - it gives Triangle/Cross priority over Circle/Square
+ * when several face buttons fire on the same frame.
+ * @{
+ */
+#define MENU_PAD_CONFIRM_CANCEL (PADLup | PADLdown)                  /* 0x5000: Triangle | Cross */
+#define MENU_PAD_FACE_BUTTONS   (PADLup | PADLright | PADLdown | PADLleft) /* 0xF000: all four face buttons */
+#define MENU_PAD_SHOULDERS      (PADL1  | PADL2    | PADR1  | PADR2)      /* 0x000F: L1 | L2 | R1 | R2 */
+/** @} */
+
 typedef struct
 {
     u16 inputs[24]; /* 0x00 - pad-input masks; MENU_SCRIPT_END terminates */

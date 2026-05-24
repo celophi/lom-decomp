@@ -188,7 +188,11 @@ void menu_tick(RenderContext* gpu_work)
     menu_build_grid(gpu_work);
     v0 = g_menu_frame;
     v1 = g_frame_counter;
-    saved_prim_cursor = (s32)gpu_work->prim_cursor;
+    /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen.
+     * Tried gpu_work->prim_cursor (both with and without changing saved_prim_cursor
+     * to void*); both broke the match by shifting v0/v1 allocation for the
+     * surrounding g_menu_frame/g_frame_counter loads. */
+    saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
     g_menu_frame = v0 + 1;
     g_frame_counter = v1 + 1;
     func_800A9E78();
@@ -198,17 +202,17 @@ void menu_tick(RenderContext* gpu_work)
         g_pad_input |= g_pad_input_inject;
     }
 
-    v0 = g_pad_input & 0x5000;
+    v0 = g_pad_input & MENU_PAD_CONFIRM_CANCEL;
     if (v0)
     {
         g_pad_input = v0;
     }
-    v0 = g_pad_input & 0xF000;
+    v0 = g_pad_input & MENU_PAD_FACE_BUTTONS;
     if (v0)
     {
         g_pad_input = v0;
     }
-    v0 = g_pad_input & 0xF;
+    v0 = g_pad_input & MENU_PAD_SHOULDERS;
     if (v0)
     {
         g_pad_input = v0;
@@ -258,7 +262,7 @@ void menu_tick(RenderContext* gpu_work)
         }
     }
 
-    gpu_work->prim_cursor = (void*)saved_prim_cursor;
+    *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
     menu_update_slots((UnkArg0*)gpu_work);
 }
 
