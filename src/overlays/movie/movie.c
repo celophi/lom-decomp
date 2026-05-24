@@ -50,7 +50,7 @@ void movie_play(s32 movie_index)
     {
         return;
     }
-    
+
     func_800158E0();
     DecDCTReset(0);
     timeout = 0xF0;
@@ -274,17 +274,12 @@ void movie_play(s32 movie_index)
  *           alloc_base+0x12E00     mdec_output_buf[1]
  *       rects[2] is 16 wide here.
  *
- * @see https://decomp.me/scratch/g5PtA (91.61%)
- * @see https://decomp.me/scratch/ICOiP (incorrect but better match)
+ * @see https://decomp.me/scratch/g5PtA (100%)
  */
 void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx)
 {
-    MovieState* movie_state;
     AllocInfo* alloc_info = g_allocInfo;
-    short value;
-    short value2;
-    void* addr;
-    unsigned short init_rect_y;
+    MovieState* ms;
 
     MOVIE_STATE->gpu_mode = (s8)(flags & 0x7F);
     if (flags & 0x80)
@@ -295,7 +290,6 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     {
         MOVIE_STATE->interlace_mode = 0;
     }
-
     if (MOVIE_STATE->gpu_mode == 0)
     {
 
@@ -306,40 +300,32 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->vlc_input_buf[1] = (void*)0x8018D000;
         MOVIE_STATE->mdec_output_buf[0] = (u_long*)0x801A1000;
         MOVIE_STATE->mdec_output_buf[1] = (u_long*)0x801A3D00;
-
-        MOVIE_STATE->rects[1].y = 0xF0;
-        MOVIE_STATE->rects[2].h = 0xF0;
-        MOVIE_STATE->rects[1].h = 0xF0;
-
-        MOVIE_STATE->video_ring_capacity = 0x32;
-
-        MOVIE_STATE->rects[0].h = 0xF0;
-
         MOVIE_STATE->rects[1].x = 0;
         MOVIE_STATE->rects[0].x = 0;
-        MOVIE_STATE->rects[0].w = 0x1E0;
+        MOVIE_STATE->rects[0].y = 0;
+        MOVIE_STATE->rects[1].y = 0xF0;
+        MOVIE_STATE->rects[2].h = 0xF0;
         MOVIE_STATE->rects[1].w = 0x1E0;
         MOVIE_STATE->rects[0].w = 0x1E0;
         MOVIE_STATE->rects[2].w = 0x18;
-        MOVIE_STATE->rects[0].y = 0;
-
+        MOVIE_STATE->video_ring_capacity = 0x32;
+        MOVIE_STATE->rects[1].h = 0xF0;
+        MOVIE_STATE->rects[0].h = 0xF0;
         MOVIE_STATE->rects[2].x = 0;
         MOVIE_STATE->rects[2].y = 0;
-
         MOVIE_STATE->audio_ring_capacity = 0x10;
         MOVIE_STATE->video_data_base = (void*)0x80147640;
-        MOVIE_STATE->chunk_idx = 0;
+        VOL_MOVIE_STATE->chunk_idx = 0;
     }
     else
     {
         MOVIE_STATE->video_table_base = (VideoSectorEntry*)0x80147000;
         MOVIE_STATE->audio_data_base = (AudioSector*)0x80156000;
+        MOVIE_STATE->vlc_table = (void*)alloc_info->alloc_base;
         MOVIE_STATE->vlc_input_buf[0] = (void*)0x8015E000;
         MOVIE_STATE->vlc_input_buf[1] = (void*)0x8016F000;
-        MOVIE_STATE->vlc_table = (void*)alloc_info->alloc_base;
         MOVIE_STATE->mdec_output_buf[0] = (u_long*)(alloc_info->alloc_base + 0x11000);
         MOVIE_STATE->mdec_output_buf[1] = (u_long*)(alloc_info->alloc_base + 0x12E00);
-
         if (((s16)MOVIE_STATE->rects[0].x) >= 0x300)
         {
             MOVIE_STATE->rects[1].x = 0x200;
@@ -350,66 +336,55 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
             MOVIE_STATE->rects[1].x = (u16)(MOVIE_STATE->rects[0].x + MOVIE_STATE->rects[0].w);
             MOVIE_STATE->rects[1].y = MOVIE_STATE->rects[0].y;
         }
-
         MOVIE_STATE->rects[1].w = MOVIE_STATE->rects[0].w;
         MOVIE_STATE->rects[1].h = MOVIE_STATE->rects[0].h;
         MOVIE_STATE->rects[2].h = MOVIE_STATE->rects[0].h;
         MOVIE_STATE->rects[2].x = MOVIE_STATE->rects[init_buffer_idx].x;
-        init_rect_y = (unsigned short)MOVIE_STATE->rects[init_buffer_idx].y;
+        MOVIE_STATE->rects[2].y = (unsigned short)MOVIE_STATE->rects[init_buffer_idx].y;
         MOVIE_STATE->rects[2].w = 0x10;
         MOVIE_STATE->video_ring_capacity = 0x1E;
-
         MOVIE_STATE->audio_ring_capacity = 0x10;
-
-        MOVIE_STATE->video_data_base = (VideoVlcPayload*)((u32)MOVIE_STATE->video_table_base + 0x3C0);
-        MOVIE_STATE->chunk_idx = (s8)init_buffer_idx;
-        MOVIE_STATE->rects[2].y = init_rect_y;
+        MOVIE_STATE->video_data_base = (VideoVlcPayload*)(0x3C0 + ((u32)MOVIE_STATE->video_table_base));
+        VOL_MOVIE_STATE->chunk_idx = (s8)init_buffer_idx;
     }
 
-    MOVIE_STATE->resource_index = resource_index;
-    MOVIE_STATE->current_frame = 0;
-    MOVIE_STATE->total_frames = total_frames;
-    MOVIE_STATE->input_buf_idx = 0;
-    MOVIE_STATE->vlc_retry_count = 0;
-    MOVIE_STATE->mdec_retry_pending = 0;
-    MOVIE_STATE->busy = 0;
-    MOVIE_STATE->draw_sync_target = 0;
-    MOVIE_STATE->out_buf_idx = 0;
-    MOVIE_STATE->pending_vram_upload = 0;
-    MOVIE_STATE->pending_mdec_decode = 0;
-    MOVIE_STATE->mdec_busy = 0;
-    MOVIE_STATE->frame_ready = 0;
-    MOVIE_STATE->end_of_stream = 0;
-    MOVIE_STATE->end_state = END_STATE_RUNNING;
-    MOVIE_STATE->unk92 = 0;
+    ms = MOVIE_STATE;
 
-    MOVIE_STATE->video_write_idx = 0;
-    MOVIE_STATE->video_read_idx = 0;
-    MOVIE_STATE->video_ring_size = 0;
-    MOVIE_STATE->audio_write_idx = 0;
-    MOVIE_STATE->audio_read_idx = 0;
-    MOVIE_STATE->audio_ring_size = 0;
-    MOVIE_STATE->audio_buffered_count = 0;
-    MOVIE_STATE->frame_number = 0;
-    MOVIE_STATE->continuation_type = 0;
-
-    MOVIE_STATE->sectors_remaining = 0;
-    MOVIE_STATE->last_video_frame = (u32)(-1);
-    MOVIE_STATE->last_consumed_video_frame = (u32)(-1);
-    MOVIE_STATE->last_audio_frame = (u32)(-1);
-    MOVIE_STATE->last_consumed_audio_frame = (u32)(-1);
-
-    /* Psy-Q's DecDCToutCallback takes a single function pointer; the trailing
-     * p1/p2/p3 are codegen scratch — they pin specific values into $a1/$a2/$a3
-     * at the call site to reproduce the original register state, and are
-     * ignored by the callee. Path A: (vlc_input_buf[1], vlc_input_buf[0], vlc_table).
-     * Path B: ((u16)rects[init_buffer_idx].y, 0x11000, init_buffer_idx). */
-    MOVIE_STATE->dec_dct_out_callback = (u32)DecDCToutCallback(&movie_mdec_out_callback);
-    MOVIE_STATE->draw_sync_callback = DrawSyncCallback(&draw_sync_callback);
-
-    if (MOVIE_STATE->interlace_mode != 0)
+    ms->resource_index = resource_index;
+    ms->current_frame = 0;
+    ms->total_frames = total_frames;
+    ms->input_buf_idx = 0;
+    ms->vlc_retry_count = 0;
+    ms->mdec_retry_pending = 0;
+    ms->busy = 0;
+    ms->draw_sync_target = 0;
+    ms->out_buf_idx = 0;
+    ms->pending_vram_upload = 0;
+    ms->pending_mdec_decode = 0;
+    ms->mdec_busy = 0;
+    ms->frame_ready = 0;
+    ms->end_of_stream = 0;
+    ms->end_state = 0;
+    ms->unk92 = 0;
+    ms->video_write_idx = 0;
+    ms->video_read_idx = 0;
+    ms->video_ring_size = 0;
+    ms->audio_write_idx = 0;
+    ms->audio_read_idx = 0;
+    ms->audio_ring_size = 0;
+    ms->audio_buffered_count = 0;
+    ms->frame_number = 0;
+    ms->continuation_type = 0;
+    ms->sectors_remaining = 0;
+    ms->last_video_frame = (u32)(-1);
+    ms->last_consumed_video_frame = (u32)(-1);
+    ms->last_audio_frame = (u32)(-1);
+    ms->last_consumed_audio_frame = (u32)(-1);
+    ms->dec_dct_out_callback = (u32)DecDCToutCallback(&movie_mdec_out_callback);
+    ms->draw_sync_callback = DrawSyncCallback(&draw_sync_callback);
+    if (ms->interlace_mode != 0)
     {
-        akao_cmd_e8_start_xa_stream((u32)MOVIE_STATE->audio_data_base, (u32)(MOVIE_STATE->audio_ring_capacity << 0xB));
+        akao_cmd_e8_start_xa_stream((u32)ms->audio_data_base, (u32)(ms->audio_ring_capacity << 0xB));
         akao_cmd_e4_set_cd_volume(0x7F);
     }
     else
@@ -417,22 +392,19 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         akao_cmd_c8(0x7FFF);
         akao_xa_setup_panning(0xA0);
     }
-
     cdrom_wait_queue_empty();
-    /* Load-bearing volatile re-read: pins audio_data_base into a register before
-     * the cdrom_queue_command call below so the original codegen is preserved. */
-    if (!MOVIE_STATE->audio_data_base)
-    {
-    }
-    cdrom_queue_command(CdlReadS, (s16)resource_index, NULL, &movie_cd_sector_callback);
+    cdrom_queue_command(0x1B, (s16)resource_index, (void*)0, &movie_cd_sector_callback);
+
+    // reload?
+    ms = MOVIE_STATE;
 
     if (g_gpuMode == 0)
     {
         VSync(0);
         SetDispMask(0);
-        ClearImage(&MOVIE_STATE->rects[0], 0, 0, 0);
-        ClearImage(&MOVIE_STATE->rects[1], 0, 0, 0);
-        DecDCTvlcBuild(MOVIE_STATE->vlc_table);
+        ClearImage(&ms->rects[0], 0, 0, 0);
+        ClearImage(&ms->rects[1], 0, 0, 0);
+        DecDCTvlcBuild(ms->vlc_table);
         DrawSync(0);
     }
 }
@@ -463,11 +435,9 @@ void movie_update(void)
         if ((MOVIE_STATE->mdec_busy == 0) && (combined->frame_ready == 0))
         {
             MOVIE_STATE->mdec_busy = 1;
-            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
-                     (MOVIE_STATE->gpu_mode & 0xFFFFu) == 0);
+            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], (MOVIE_STATE->gpu_mode & 0xFFFFu) == 0);
             {
-                s32 temp =
-                    ((s16)MOVIE_STATE->rects[2].w) * ((s16)MOVIE_STATE->rects[2].h);
+                s32 temp = ((s16)MOVIE_STATE->rects[2].w) * ((s16)MOVIE_STATE->rects[2].h);
                 s32 word_count = temp + (((unsigned)temp) >> 31);
                 DecDCTout((MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx]), word_count >> 1);
             }
@@ -537,8 +507,7 @@ void movie_update(void)
             MOVIE_STATE->mdec_busy = 1;
             DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == 0);
             {
-                s32 temp =
-                    ((s16)MOVIE_STATE->rects[2].w) * ((s16)MOVIE_STATE->rects[2].h);
+                s32 temp = ((s16)MOVIE_STATE->rects[2].w) * ((s16)MOVIE_STATE->rects[2].h);
                 field_9d_zero_flag = ((unsigned)temp) >> 31;
                 DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], (temp + field_9d_zero_flag) >> 1);
             }
