@@ -274,7 +274,7 @@ void movie_play(s32 movie_index)
  *           alloc_base+0x12E00     mdec_output_buf[1]
  *       rects[2] is 16 wide here.
  *
- * @see https://decomp.me/scratch/g5PtA (99.27%)
+ * @see https://decomp.me/scratch/g5PtA (100%)
  */
 void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx)
 {
@@ -315,7 +315,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->rects[2].y = 0;
         MOVIE_STATE->audio_ring_capacity = 0x10;
         MOVIE_STATE->video_data_base = (void*)0x80147640;
-        MOVIE_STATE->chunk_idx = 0;
+        VOL_MOVIE_STATE->chunk_idx = 0;
     }
     else
     {
@@ -345,7 +345,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->video_ring_capacity = 0x1E;
         MOVIE_STATE->audio_ring_capacity = 0x10;
         MOVIE_STATE->video_data_base = (VideoVlcPayload*)(0x3C0 + ((u32)MOVIE_STATE->video_table_base));
-        MOVIE_STATE->chunk_idx = (s8)init_buffer_idx;
+        VOL_MOVIE_STATE->chunk_idx = (s8)init_buffer_idx;
     }
 
     ms = MOVIE_STATE;
