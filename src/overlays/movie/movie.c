@@ -814,8 +814,8 @@ s32 movie_cd_sector_callback(void)
     void* madr;
 
     u32* temp_s1;
-    u16 chunk_sector_match;
-    int audio_write_next;
+    u16 new_var;
+    int new_var4;
 
     s32 write_idx;
     s32 read_idx;
@@ -1050,7 +1050,7 @@ s32 movie_cd_sector_callback(void)
         while (CdGetSector(madr, 8) == 0);
 
         if (((((u16*)temp_s1)[1] == 1) && (temp_s1[2] == MOVIE_STATE->frame_number)) &&
-            ((chunk_sector_match = (MOVIE_STATE->chunk_sector_idx)) == (temp_s1[1] & 0xFFFFu)))
+            ((new_var = (MOVIE_STATE->chunk_sector_idx)) == (temp_s1[1] & 0xFFFFu)))
         {
             madr = ((u8*)MOVIE_STATE->audio_data_base +
                     ((VOL_MOVIE_STATE->audio_write_idx + (MOVIE_STATE->chunk_sector_idx & 0xFFFF)) << 0xB)) +
@@ -1063,8 +1063,8 @@ s32 movie_cd_sector_callback(void)
             MOVIE_STATE->sectors_remaining = MOVIE_STATE->sectors_remaining - 1;
             if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
             {
-                audio_write_next = VOL_MOVIE_STATE->audio_write_idx + 1;
-                VOL_MOVIE_STATE->audio_write_idx = (s32)(audio_write_next + MOVIE_STATE->chunk_sector_idx);
+                new_var4 = VOL_MOVIE_STATE->audio_write_idx + 1;
+                VOL_MOVIE_STATE->audio_write_idx = (s32)(new_var4 + MOVIE_STATE->chunk_sector_idx);
 
                 MOVIE_STATE->last_audio_frame = VOL_MOVIE_STATE->frame_number;
                 if (((u32)temp_s1[2]) > ((u32)MOVIE_STATE->total_frames))
