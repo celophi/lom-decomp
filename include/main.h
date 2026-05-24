@@ -57,11 +57,23 @@ extern s32 g_frame_counter;
 extern u8 g_prim_rect_buf[];
 
 /**
- * @brief Pointer to the controller/pad context object.
- * @note Only fields at +0x840 (u8) and +0x858 (u32, bit 0x80) are referenced
- *       so far; full layout TODO.
+ * @brief Controller/pad context object (partial layout).
+ *
+ * Only the two fields touched by the scripted-input injection path in
+ * @ref menu_tick are mapped so far; the rest of the structure is opaque.
+ * Both fields together gate whether @c g_pad_input_inject is OR'd into
+ * @c g_pad_input on a given frame.
  */
-extern void* g_pad_ctx;
+typedef struct
+{
+    u8  _pad000[0x840];     /**< 0x000: not yet mapped. */
+    u8  inject_enable;      /**< 0x840: non-zero allows input injection. */
+    u8  _pad841[0x858 - 0x841]; /**< 0x841: not yet mapped. */
+    u32 inject_flags;       /**< 0x858: bit 0x80 enables input injection. */
+} PadContext;
+
+/** @brief Pointer to the controller/pad context object. */
+extern PadContext* g_pad_ctx;
 
 /** @brief Number of times the active script repeats on reaching its terminator. */
 extern s32 g_script_repeat_count;
