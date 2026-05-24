@@ -797,7 +797,7 @@ void movie_service_video_ops(void)
  *
  * @return 1 to keep streaming, 0 when the stream has ended or should pause.
  *
- * @see https://decomp.me/scratch/5flHR (99.38%)
+ * @see https://decomp.me/scratch/5flHR (100%)
  */
 s32 movie_cd_sector_callback(void)
 {
@@ -814,8 +814,8 @@ s32 movie_cd_sector_callback(void)
     void* madr;
 
     u32* temp_s1;
-    u16 new_var;
-    int new_var4;
+    u16 chunk_sector_match;
+    int audio_write_next;
 
     s32 write_idx;
     s32 read_idx;
@@ -831,7 +831,7 @@ s32 movie_cd_sector_callback(void)
         vms = VOL_MOVIE_STATE;
         if (hdr[2] > ((u32)MOVIE_STATE->total_frames))
         {
-            MOVIE_STATE->end_of_stream = 1;
+            VOL_MOVIE_STATE->end_of_stream = 1;
             return 0;
         }
 
@@ -943,7 +943,8 @@ s32 movie_cd_sector_callback(void)
                     flag = 1;
                 }
             }
-            else if (temp_a1_2 >= (vms->audio_write_idx + ((u16*)hdr)[3]))
+            else if ((audio_write_idx_l != temp_a1_2) &&
+                 (temp_a1_2 >= (vms->audio_write_idx + ((u16*)hdr)[3])))
             {
                 flag = 1;
             }
@@ -1014,7 +1015,7 @@ s32 movie_cd_sector_callback(void)
 
                 offset = 1;
                 VOL_MOVIE_STATE->video_write_idx =
-                    (s32)(MOVIE_STATE->chunk_sector_idx + (VOL_MOVIE_STATE->video_write_idx + offset));
+                    (s32)((VOL_MOVIE_STATE->video_write_idx + offset) + MOVIE_STATE->chunk_sector_idx);
 
                 VOL_MOVIE_STATE->last_video_frame = VOL_MOVIE_STATE->frame_number;
                 has_more_frames = ((u32*)temp_s1)[2] < total_frames;
@@ -1028,7 +1029,11 @@ s32 movie_cd_sector_callback(void)
                 has_more_frames = (u32)temp_s1[2];
                 return 1;
             }
-            goto block_64;
+            else {
+                 MOVIE_STATE->chunk_sector_idx = (u16)(MOVIE_STATE->chunk_sector_idx + 1);
+                
+                goto return_1;
+            }
         }
 
         MOVIE_STATE->frame_number = (u32)temp_s1[2];
@@ -1039,42 +1044,41 @@ s32 movie_cd_sector_callback(void)
             return 1;
         }
 
-        MOVIE_STATE->end_of_stream = 1;
+        VOL_MOVIE_STATE->end_of_stream = 1;
         return 0;
     }
     else
     {
 
-        madr = (u8*)MOVIE_STATE->audio_data_base +
+        temp_s1  = (u8*)MOVIE_STATE->audio_data_base +
                ((VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx) << 0xB);
-        while (CdGetSector(madr, 8) == 0);
+        while (CdGetSector(temp_s1 , 8) == 0);
 
         if (((((u16*)temp_s1)[1] == 1) && (temp_s1[2] == MOVIE_STATE->frame_number)) &&
-            ((new_var = (MOVIE_STATE->chunk_sector_idx)) == (temp_s1[1] & 0xFFFFu)))
+            (((u16*)temp_s1)[2] == MOVIE_STATE->chunk_sector_idx))
         {
             madr = ((u8*)MOVIE_STATE->audio_data_base +
                     ((VOL_MOVIE_STATE->audio_write_idx + (MOVIE_STATE->chunk_sector_idx & 0xFFFF)) << 0xB)) +
                    0x20;
             while (CdGetSector(madr, 0x1F8) == 0);
 
-            // I think I need to use a variable for MOVIE_STATE in order to remove the reload in the else block
-            // however, doing this puts it in a saved register possibly due to the goto reference?
 
             MOVIE_STATE->sectors_remaining = MOVIE_STATE->sectors_remaining - 1;
             if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
             {
-                new_var4 = VOL_MOVIE_STATE->audio_write_idx + 1;
-                VOL_MOVIE_STATE->audio_write_idx = (s32)(new_var4 + MOVIE_STATE->chunk_sector_idx);
+                audio_write_next = VOL_MOVIE_STATE->audio_write_idx + 1;
+                VOL_MOVIE_STATE->audio_write_idx = (s32)(audio_write_next + MOVIE_STATE->chunk_sector_idx);
 
                 MOVIE_STATE->last_audio_frame = VOL_MOVIE_STATE->frame_number;
                 if (((u32)temp_s1[2]) > ((u32)MOVIE_STATE->total_frames))
                 {
                     return 0;
-
-                block_64:
-                    MOVIE_STATE->chunk_sector_idx = (u16)(MOVIE_STATE->chunk_sector_idx + 1);
                 }
-                return 1;
+                goto return_1;
+            }
+            else {
+                MOVIE_STATE->chunk_sector_idx = (u16)(MOVIE_STATE->chunk_sector_idx + 1);
+                goto return_1; 
             }
         }
 
@@ -1085,10 +1089,10 @@ s32 movie_cd_sector_callback(void)
             return 1;
         }
 
-        MOVIE_STATE->end_of_stream = 1;
+        VOL_MOVIE_STATE->end_of_stream = 1;
         return 0;
     }
-
+return_1:
     return 1;
 }
 
