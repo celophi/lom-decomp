@@ -108,8 +108,8 @@ extern s32 D_80169548;
  *   MENU_CLUT_CORNER    -> CLUT 1, slot 10 (VRAM x=160, y=499)
  */
 #define MENU_CLUT_GRID_BASE 0x7C80
-#define MENU_CLUT_GRID_ALT  0x7C81
-#define MENU_CLUT_CORNER    0x7CCA
+#define MENU_CLUT_GRID_ALT 0x7C81
+#define MENU_CLUT_CORNER 0x7CCA
 
 /* K&R-style declaration: original call site in menu_tick passes no explicit
  * argument and relies on register a0 (the caller's first parameter) being
@@ -174,7 +174,7 @@ void menu_init_prim_rects(void)
  *
  * @param gpu_work Per-frame render context; its @c prim_cursor is saved on
  *                 entry and restored before @ref menu_update_slots runs.
- * @see decomp.me (97.74%) https://decomp.me/scratch/vmp4D
+ * @see decomp.me (100%) https://decomp.me/scratch/kgN9O
  */
 void menu_tick(RenderContext* gpu_work)
 {
@@ -184,18 +184,21 @@ void menu_tick(RenderContext* gpu_work)
     s32 var_s0;
     u16 temp_v1;
     s32 padding[2];
-    menu_build_grid();
+
+    menu_build_grid(gpu_work);
     v0 = g_menu_frame;
     v1 = g_frame_counter;
     /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen */
     saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
     g_menu_frame = v0 + 1;
     g_frame_counter = v1 + 1;
-    func_800A9E78(&g_menu_frame, &g_frame_counter);
+    func_800A9E78();
+
     if (((*((u32*)(((u8*)g_pad_ctx) + 0x858))) & 0x80) && ((*((u8*)(((u8*)g_pad_ctx) + 0x840))) != 0))
     {
         g_pad_input |= g_pad_input_inject;
     }
+
     v0 = g_pad_input & 0x5000;
     if (v0)
     {
@@ -211,23 +214,27 @@ void menu_tick(RenderContext* gpu_work)
     {
         g_pad_input = v0;
     }
+
     if (g_pad_input_latched != 0)
     {
         g_pad_input = 0;
     }
     g_pad_input_latched = g_pad_input;
+
     if (g_active_script != 0)
     {
+        u32 base = (u32)g_script_table;
+        u32 off = g_active_script * 48; // Or sizeof(MenuScript), forces 'sll, addu, sll' internally
         s32 idx;
-        u8* base = (u8*)g_script_table;
-        s32 off = g_active_script;
-        off = (off << 1) + off;
-        off <<= 4;
-        base += off;
-        idx = g_script_cursor;
-        base += idx * 2;
+
+        off += base;           // Accumulates to v1 matching Target 120
+        idx = g_script_cursor; // Scheduled perfectly between pointer math
+
         g_pad_input = 0;
-        temp_v1 = *((u16*)base);
+
+        // Ensure idx is the LHS of addition, emitting 'sll v0' then 'addu v0, v0, v1'
+        temp_v1 = *(u16*)(idx * 2 + off);
+
         if (temp_v1 == (v0 = 0xFFFF))
         {
             if (g_active_script < 4)
@@ -251,8 +258,9 @@ void menu_tick(RenderContext* gpu_work)
             g_script_cursor = idx + 1;
         }
     }
+
     *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
-    menu_update_slots(gpu_work);
+    menu_update_slots((UnkArg0*)gpu_work);
 }
 
 /**
@@ -1033,12 +1041,13 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
     sp18.unk2 = (u16)temp_s3->unk2 + 8;
     sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
     sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
-    temp_v0_2 =
-        menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0),
-                                                                temp_s2, temp_s3->unk0, temp_s3->unk2, 0x70D0),
-                                                  temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2, 0x70D8),
-                                    temp_s2, temp_s3->unk0, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D0),
-                      temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D8);
+    temp_v0_2 = menu_emit_corner(
+        menu_emit_corner(
+            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0), temp_s2,
+                                              temp_s3->unk0, temp_s3->unk2, 0x70D0),
+                             temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2, 0x70D8),
+            temp_s2, temp_s3->unk0, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D0),
+        temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D8);
     ((struct_var_s1*)temp_v0_2)->_u._s.unk3 = 1;
     ((struct_var_s1*)temp_v0_2)->unk4 = 0xE1000005;
     ((struct_var_s1*)temp_v0_2)->_u.unk0 =
@@ -1101,7 +1110,7 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
     u16 new_var3;
     int new_var2;
     u8* ap = rect;
-     short pad;
+    short pad;
     u16 new_var;
     s32 y = 0;
     if ((*((s16*)(ap + 6))) > 0)
