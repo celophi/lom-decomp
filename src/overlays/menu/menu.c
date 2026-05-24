@@ -1,6 +1,6 @@
 #include "menu.h"
 
-typedef struct UnkArg0
+typedef struct MenuFrameCtx
 {
     u8 pad0[0x34];
     u8 unk34;         /* Start of buffer at offset 0x34 */
@@ -8,7 +8,7 @@ typedef struct UnkArg0
     s32 unk4040;      /* Offset 0x4040 */
     u8 pad4044[8];    /* Padding to 0x404C */
     s32 unk404C;      /* Offset 0x404C */
-} UnkArg0;
+} MenuFrameCtx;
 
 typedef struct
 {
@@ -19,7 +19,7 @@ typedef struct
     u16 unkA;    // offset 0x0A
     s16 unkC;    // offset 0x0C
     s16 unkE;    // offset 0x0E
-} UnknownStruct;
+} MenuSlotAnim;
 
 typedef struct
 {
@@ -49,7 +49,7 @@ typedef struct
     u8 pad1A;
     u8 pad1B;
     s32* (*unk1C)();
-} struct_arg0;
+} MenuSlotView;
 
 typedef struct
 {
@@ -57,7 +57,7 @@ typedef struct
     s32* unk4040;
     u8 pad4044[8];
     s32 unk404C;
-} struct_arg1;
+} MenuRenderCtx;
 
 typedef struct
 {
@@ -65,7 +65,7 @@ typedef struct
     s16 unk2;
     s16 unk4;
     s16 unk6;
-} struct_temp_s3;
+} MenuRect;
 
 typedef struct
 {
@@ -80,7 +80,7 @@ typedef struct
     } _u;
     s32 unk4;
     s32 unk8;
-} struct_var_s1;
+} MenuPrimHead;
 
 typedef struct
 {
@@ -88,7 +88,7 @@ typedef struct
     u16 unk2;
     s16 unk4;
     s16 unk6;
-} struct_sp;
+} MenuRectU16;
 
 extern s32 D_80169124;
 extern s32 D_80169130;
@@ -263,7 +263,7 @@ void menu_tick(RenderContext* gpu_work)
     }
 
     *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
-    menu_update_slots((UnkArg0*)gpu_work);
+    menu_update_slots((MenuFrameCtx*)gpu_work);
 }
 
 /**
@@ -339,7 +339,7 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
         {
             /* SPRT primitive: pos, white tint, len=4, code=0x64 */
             *(s32*)(base + 0x8) = tmp + acc;
-            *(u32*)(base + 0x4) = 0x808080U;
+            SET_BGR0_PACKED(base, GPU_TINT_NEUTRAL);
             setSprt(base);
 
             acc += *(s16*)(base + 0x10); /* accumulate halfword */
@@ -656,7 +656,7 @@ void menu_reset_slots(void)
  * @param gpu_work Per-frame render context (layout matches @ref RenderContext).
  * @see decomp.me (77.68%) https://decomp.me/scratch/BlGK5
  */
-void menu_update_slots(UnkArg0* gpu_work)
+void menu_update_slots(MenuFrameCtx* gpu_work)
 {
     s16 sp_pair[2];
     void (*temp_v0_2)(MenuSlot*);
@@ -806,7 +806,7 @@ void menu_update_slots(UnkArg0* gpu_work)
  * @param cursor_enable Cursor-highlight enable (forwarded as the draw's @p cursor_enable).
  * @see decomp.me (100%) https://decomp.me/scratch/luaLZ
  */
-void menu_draw_window_transition(s32 gpu_work, UnknownStruct* slot, s32 cursor_enable)
+void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_enable)
 {
     s16 sp[8];
     s32 temp_a3;
@@ -870,9 +870,9 @@ void menu_draw_window_transition(s32 gpu_work, UnknownStruct* slot, s32 cursor_e
  * @param cursor_enable Cursor-highlight enable for the active slot.
  * @see decomp.me (91.20%) https://decomp.me/scratch/5k4SF
  */
-void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* rect, s32 arg3, s32 cursor_enable)
+void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, s32 arg3, s32 cursor_enable)
 {
-    struct_sp sp18;
+    MenuRectU16 sp18;
     DRAWENV sp20;
     u16 sp80[2];
     s16 temp_a0;
@@ -887,7 +887,7 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
     s32* var_s1;
     u16 temp_a1;
     u16 temp_a2;
-    struct_temp_s3* temp_s3;
+    MenuRect* temp_s3;
     u16 var_v0;
     void* temp_v0_2;
 
@@ -994,18 +994,18 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
     sp18.unk6 = 0xFF;
     sp18.unk0 = 0;
     sp18.unk2 = 0;
-    ((struct_var_s1*)var_s1)->_u._s.unk3 = 2;
+    ((MenuPrimHead*)var_s1)->_u._s.unk3 = 2;
     {
         u8 t_unk2 = (u8)sp18.unk2;
         u8 t_unk0 = (u8)sp18.unk0;
 
         s16 t_unk4 = sp18.unk4;
         s16 t_unk6 = sp18.unk6;
-        ((struct_var_s1*)var_s1)->unk8 = 0;
-        ((struct_var_s1*)var_s1)->unk4 = (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) |
+        ((MenuPrimHead*)var_s1)->unk8 = 0;
+        ((MenuPrimHead*)var_s1)->unk4 = (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) |
                                                ((-t_unk6 << 2) & 0x3E0) | ((s32)(-t_unk4 & 0xFF) >> 3));
     }
-    ((struct_var_s1*)var_s1)->_u.unk0 = (((struct_var_s1*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
+    ((MenuPrimHead*)var_s1)->_u.unk0 = (((MenuPrimHead*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
     var_a2_4 = var_s1 + 3;
     if (temp_s3->unk6 >= 0x10)
@@ -1051,10 +1051,10 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
                              temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2, 0x70D8),
             temp_s2, temp_s3->unk0, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D0),
         temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D8);
-    ((struct_var_s1*)temp_v0_2)->_u._s.unk3 = 1;
-    ((struct_var_s1*)temp_v0_2)->unk4 = 0xE1000005;
-    ((struct_var_s1*)temp_v0_2)->_u.unk0 =
-        (s32)((((struct_var_s1*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
+    ((MenuPrimHead*)temp_v0_2)->_u._s.unk3 = 1;
+    ((MenuPrimHead*)temp_v0_2)->unk4 = 0xE1000005;
+    ((MenuPrimHead*)temp_v0_2)->_u.unk0 =
+        (s32)((((MenuPrimHead*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
     gpu_work->unk4040 = (s32*)((char*)temp_v0_2 + 8);
 }
