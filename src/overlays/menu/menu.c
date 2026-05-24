@@ -188,8 +188,7 @@ void menu_tick(RenderContext* gpu_work)
     menu_build_grid(gpu_work);
     v0 = g_menu_frame;
     v1 = g_frame_counter;
-    /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen */
-    saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
+    saved_prim_cursor = (s32)gpu_work->prim_cursor;
     g_menu_frame = v0 + 1;
     g_frame_counter = v1 + 1;
     func_800A9E78();
@@ -235,7 +234,7 @@ void menu_tick(RenderContext* gpu_work)
         // Ensure idx is the LHS of addition, emitting 'sll v0' then 'addu v0, v0, v1'
         temp_v1 = *(u16*)(idx * 2 + off);
 
-        if (temp_v1 == (v0 = 0xFFFF))
+        if (temp_v1 == (v0 = MENU_SCRIPT_END))
         {
             if (g_active_script < 4)
             {
@@ -259,7 +258,7 @@ void menu_tick(RenderContext* gpu_work)
         }
     }
 
-    *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
+    gpu_work->prim_cursor = (void*)saved_prim_cursor;
     menu_update_slots((UnkArg0*)gpu_work);
 }
 

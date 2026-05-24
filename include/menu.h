@@ -99,9 +99,12 @@ extern MenuSlot g_menu_slots[];
  *       (@c off*3 then @c <<4) to reproduce the original codegen, so it casts
  *       @c g_script_table back to @c u8* rather than using @c inputs directly.
  */
+/** @brief Terminator value in a @ref MenuScript @c inputs row. */
+#define MENU_SCRIPT_END 0xFFFF
+
 typedef struct
 {
-    u16 inputs[24]; /* 0x00 - pad-input masks; 0xFFFF terminates */
+    u16 inputs[24]; /* 0x00 - pad-input masks; MENU_SCRIPT_END terminates */
 } MenuScript;
 
 extern MenuScript g_script_table[];
