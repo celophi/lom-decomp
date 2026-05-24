@@ -592,7 +592,7 @@ void* menu_slot_alloc(s32 arg0, void* rect)
     {
         return (void*)(-1);
     }
-    entry = (MenuSlot*)(ptr + (var_a2 * 0x24));
+    entry = (MenuSlot *) ((var_a2 * 0x24) + (u32)ptr);
     *((u16*)(((u8*)entry) + 4)) = 0;
     temp = entry->flags;
     entry->active = 1;
