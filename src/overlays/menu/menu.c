@@ -180,7 +180,7 @@ void menu_tick(RenderContext* gpu_work)
 {
     s32 v0;
     s32 v1;
-    s32 saved_prim_cursor;
+    void* saved_prim_cursor;
     s32 var_s0;
     u16 temp_v1;
     s32 padding[2];
@@ -188,8 +188,7 @@ void menu_tick(RenderContext* gpu_work)
     menu_build_grid(gpu_work);
     v0 = g_menu_frame;
     v1 = g_frame_counter;
-    /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen */
-    saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
+    saved_prim_cursor = gpu_work->prim_cursor;
     g_menu_frame = v0 + 1;
     g_frame_counter = v1 + 1;
     func_800A9E78();
@@ -259,7 +258,7 @@ void menu_tick(RenderContext* gpu_work)
         }
     }
 
-    *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
+    gpu_work->prim_cursor = saved_prim_cursor;
     menu_update_slots((UnkArg0*)gpu_work);
 }
 
