@@ -279,6 +279,7 @@ void movie_play(s32 movie_index)
 void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx)
 {
     AllocInfo* alloc_info = g_allocInfo;
+    MovieState* ms;
 
     MOVIE_STATE->gpu_mode = (s8)(flags & 0x7F);
     if (flags & 0x80)
@@ -291,6 +292,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     }
     if (MOVIE_STATE->gpu_mode == 0)
     {
+
         MOVIE_STATE->video_table_base = (VideoSectorEntry*)0x80147000;
         MOVIE_STATE->audio_data_base = (AudioSector*)0x80160000;
         MOVIE_STATE->vlc_table = (void*)0x80168000;
@@ -345,41 +347,44 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->video_data_base = (VideoVlcPayload*)(0x3C0 + ((u32)MOVIE_STATE->video_table_base));
         MOVIE_STATE->chunk_idx = (s8)init_buffer_idx;
     }
-    MOVIE_STATE->resource_index = resource_index;
-    MOVIE_STATE->current_frame = 0;
-    MOVIE_STATE->total_frames = total_frames;
-    MOVIE_STATE->input_buf_idx = 0;
-    MOVIE_STATE->vlc_retry_count = 0;
-    MOVIE_STATE->mdec_retry_pending = 0;
-    MOVIE_STATE->busy = 0;
-    MOVIE_STATE->draw_sync_target = 0;
-    MOVIE_STATE->out_buf_idx = 0;
-    MOVIE_STATE->pending_vram_upload = 0;
-    MOVIE_STATE->pending_mdec_decode = 0;
-    MOVIE_STATE->mdec_busy = 0;
-    MOVIE_STATE->frame_ready = 0;
-    MOVIE_STATE->end_of_stream = 0;
-    MOVIE_STATE->end_state = 0;
-    MOVIE_STATE->unk92 = 0;
-    MOVIE_STATE->video_write_idx = 0;
-    MOVIE_STATE->video_read_idx = 0;
-    MOVIE_STATE->video_ring_size = 0;
-    MOVIE_STATE->audio_write_idx = 0;
-    MOVIE_STATE->audio_read_idx = 0;
-    MOVIE_STATE->audio_ring_size = 0;
-    MOVIE_STATE->audio_buffered_count = 0;
-    MOVIE_STATE->frame_number = 0;
-    MOVIE_STATE->continuation_type = 0;
-    MOVIE_STATE->sectors_remaining = 0;
-    MOVIE_STATE->last_video_frame = (u32)(-1);
-    MOVIE_STATE->last_consumed_video_frame = (u32)(-1);
-    MOVIE_STATE->last_audio_frame = (u32)(-1);
-    MOVIE_STATE->last_consumed_audio_frame = (u32)(-1);
-    MOVIE_STATE->dec_dct_out_callback = (u32)DecDCToutCallback(&movie_mdec_out_callback);
-    MOVIE_STATE->draw_sync_callback = DrawSyncCallback(&draw_sync_callback);
-    if (MOVIE_STATE->interlace_mode != 0)
+
+    ms = MOVIE_STATE;
+
+    ms->resource_index = resource_index;
+    ms->current_frame = 0;
+    ms->total_frames = total_frames;
+    ms->input_buf_idx = 0;
+    ms->vlc_retry_count = 0;
+    ms->mdec_retry_pending = 0;
+    ms->busy = 0;
+    ms->draw_sync_target = 0;
+    ms->out_buf_idx = 0;
+    ms->pending_vram_upload = 0;
+    ms->pending_mdec_decode = 0;
+    ms->mdec_busy = 0;
+    ms->frame_ready = 0;
+    ms->end_of_stream = 0;
+    ms->end_state = 0;
+    ms->unk92 = 0;
+    ms->video_write_idx = 0;
+    ms->video_read_idx = 0;
+    ms->video_ring_size = 0;
+    ms->audio_write_idx = 0;
+    ms->audio_read_idx = 0;
+    ms->audio_ring_size = 0;
+    ms->audio_buffered_count = 0;
+    ms->frame_number = 0;
+    ms->continuation_type = 0;
+    ms->sectors_remaining = 0;
+    ms->last_video_frame = (u32)(-1);
+    ms->last_consumed_video_frame = (u32)(-1);
+    ms->last_audio_frame = (u32)(-1);
+    ms->last_consumed_audio_frame = (u32)(-1);
+    ms->dec_dct_out_callback = (u32)DecDCToutCallback(&movie_mdec_out_callback);
+    ms->draw_sync_callback = DrawSyncCallback(&draw_sync_callback);
+    if (ms->interlace_mode != 0)
     {
-        akao_cmd_e8_start_xa_stream((u32)MOVIE_STATE->audio_data_base, (u32)(MOVIE_STATE->audio_ring_capacity << 0xB));
+        akao_cmd_e8_start_xa_stream((u32)ms->audio_data_base, (u32)(ms->audio_ring_capacity << 0xB));
         akao_cmd_e4_set_cd_volume(0x7F);
     }
     else
@@ -390,18 +395,16 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     cdrom_wait_queue_empty();
     cdrom_queue_command(0x1B, (s16)resource_index, (void*)0, &movie_cd_sector_callback);
 
-    // hack
-    if (!MOVIE_STATE->audio_data_base)
-    {
-    }
+    // reload?
+    ms = MOVIE_STATE;
 
     if (g_gpuMode == 0)
     {
         VSync(0);
         SetDispMask(0);
-        ClearImage(&MOVIE_STATE->rects[0], 0, 0, 0);
-        ClearImage(&MOVIE_STATE->rects[1], 0, 0, 0);
-        DecDCTvlcBuild(MOVIE_STATE->vlc_table);
+        ClearImage(&ms->rects[0], 0, 0, 0);
+        ClearImage(&ms->rects[1], 0, 0, 0);
+        DecDCTvlcBuild(ms->vlc_table);
         DrawSync(0);
     }
 }
