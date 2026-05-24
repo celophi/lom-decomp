@@ -63,7 +63,7 @@ typedef struct
  *
  * @note Stride is 0x24 bytes; @c active == 0 marks a free slot.
  */
-typedef struct
+typedef struct MenuSlot_s
 {
     u8 active; /* 0x00 - non-zero when in use */
     u8 index;  /* 0x01 - slot index within the pool */
@@ -80,8 +80,16 @@ typedef struct
     u16 unk16; /* 0x16 */
     u8 unk18;  /* 0x18 */
     u8 _pad[3];
-    u32 unk1C;
-    u32 unk20;
+    /**
+     * @brief Content callback - draws the window's interior primitives.
+     *
+     * Invoked from @c menu_draw_window; receives the slot's OT-link slot,
+     * the slot itself, the current primitive write cursor, a forwarded arg,
+     * and an active-highlight flag. Returns the new primitive cursor.
+     * Empty parameter list (K&R) is intentional to preserve callsite codegen.
+     */
+    s32* (*unk1C)();        /* 0x1C - content callback */
+    void (*unk20)(struct MenuSlot_s* /* self */); /* 0x20 - per-frame active-slot callback */
 } MenuSlot;
 
 extern MenuSlot g_menu_slots[];

@@ -1,6 +1,6 @@
 #include "menu.h"
 
-typedef struct UnkArg0
+typedef struct MenuFrameCtx
 {
     u8 pad0[0x34];
     u8 unk34;         /* Start of buffer at offset 0x34 */
@@ -8,7 +8,7 @@ typedef struct UnkArg0
     s32 unk4040;      /* Offset 0x4040 */
     u8 pad4044[8];    /* Padding to 0x404C */
     s32 unk404C;      /* Offset 0x404C */
-} UnkArg0;
+} MenuFrameCtx;
 
 typedef struct
 {
@@ -19,7 +19,7 @@ typedef struct
     u16 unkA;    // offset 0x0A
     s16 unkC;    // offset 0x0C
     s16 unkE;    // offset 0x0E
-} UnknownStruct;
+} MenuSlotAnim;
 
 typedef struct
 {
@@ -49,7 +49,7 @@ typedef struct
     u8 pad1A;
     u8 pad1B;
     s32* (*unk1C)();
-} struct_arg0;
+} MenuSlotView;
 
 typedef struct
 {
@@ -57,15 +57,15 @@ typedef struct
     s32* unk4040;
     u8 pad4044[8];
     s32 unk404C;
-} struct_arg1;
+} MenuRenderCtx;
 
 typedef struct
 {
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
-    s16 unk6;
-} struct_temp_s3;
+    s16 x;
+    s16 y;
+    s16 w;
+    s16 h;
+} MenuRect;
 
 typedef struct
 {
@@ -80,15 +80,15 @@ typedef struct
     } _u;
     s32 unk4;
     s32 unk8;
-} struct_var_s1;
+} MenuPrimHead;
 
 typedef struct
 {
-    u16 unk0;
-    u16 unk2;
-    s16 unk4;
-    s16 unk6;
-} struct_sp;
+    u16 x;
+    u16 y;
+    s16 w;
+    s16 h;
+} MenuRectU16;
 
 extern s32 D_80169124;
 extern s32 D_80169130;
@@ -263,7 +263,7 @@ void menu_tick(RenderContext* gpu_work)
     }
 
     *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
-    menu_update_slots((UnkArg0*)gpu_work);
+    menu_update_slots((MenuFrameCtx*)gpu_work);
 }
 
 /**
@@ -339,7 +339,7 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
         {
             /* SPRT primitive: pos, white tint, len=4, code=0x64 */
             *(s32*)(base + 0x8) = tmp + acc;
-            *(u32*)(base + 0x4) = 0x808080U;
+            SET_BGR0_PACKED(base, GPU_TINT_NEUTRAL);
             setSprt(base);
 
             acc += *(s16*)(base + 0x10); /* accumulate halfword */
@@ -406,7 +406,7 @@ void menu_build_grid(RenderContext* gpu_work)
     do
     {
         /* SPRT primitive: white tint, len=4, code=0x64 */
-        *(u32*)(var_a2 + 4) = 0x808080;
+        SET_BGR0_PACKED(var_a2, GPU_TINT_NEUTRAL);
         *(u8*)(var_a2 + 3) = 4;
         *(u8*)(var_a2 + 7) = 0x64;
         *(u16*)(var_a2 + 0xC) = *(u16*)var_t3;
@@ -656,7 +656,7 @@ void menu_reset_slots(void)
  * @param gpu_work Per-frame render context (layout matches @ref RenderContext).
  * @see decomp.me (77.68%) https://decomp.me/scratch/BlGK5
  */
-void menu_update_slots(UnkArg0* gpu_work)
+void menu_update_slots(MenuFrameCtx* gpu_work)
 {
     s16 sp_pair[2];
     void (*temp_v0_2)(MenuSlot*);
@@ -806,7 +806,7 @@ void menu_update_slots(UnkArg0* gpu_work)
  * @param cursor_enable Cursor-highlight enable (forwarded as the draw's @p cursor_enable).
  * @see decomp.me (100%) https://decomp.me/scratch/luaLZ
  */
-void menu_draw_window_transition(s32 gpu_work, UnknownStruct* slot, s32 cursor_enable)
+void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_enable)
 {
     s16 sp[8];
     s32 temp_a3;
@@ -870,9 +870,9 @@ void menu_draw_window_transition(s32 gpu_work, UnknownStruct* slot, s32 cursor_e
  * @param cursor_enable Cursor-highlight enable for the active slot.
  * @see decomp.me (91.20%) https://decomp.me/scratch/5k4SF
  */
-void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* rect, s32 arg3, s32 cursor_enable)
+void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, s32 arg3, s32 cursor_enable)
 {
-    struct_sp sp18;
+    MenuRectU16 sp18;
     DRAWENV sp20;
     u16 sp80[2];
     s16 temp_a0;
@@ -887,7 +887,7 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
     s32* var_s1;
     u16 temp_a1;
     u16 temp_a2;
-    struct_temp_s3* temp_s3;
+    MenuRect* temp_s3;
     u16 var_v0;
     void* temp_v0_2;
 
@@ -911,9 +911,9 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
     }
     if (slot->unk1C != NULL)
     {
-        if ((temp_s3->unk4 - 0x20) > 0)
+        if ((temp_s3->w - 0x20) > 0)
         {
-            if ((temp_s3->unk6 - 0x10) > 0)
+            if ((temp_s3->h - 0x10) > 0)
             {
                 SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(D_80168C0C + ((gpu_work->unk404C ^ 1) * 0x40C0) + 0x4064));
                 var_a3 = 0;
@@ -934,13 +934,13 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
                     gpu_work->unk4040 = temp_s1;
                     return;
                 }
-                temp_a0 = temp_s3->unk2;
+                temp_a0 = temp_s3->y;
                 var_a2_2 = temp_a0 + 0x10;
                 if (gpu_work->unk404C != 0)
                 {
                     var_a2_2 = temp_a0 + 0xF8;
                 }
-                SetDefDrawEnv(&sp20, temp_s3->unk0 + 8, var_a2_2, temp_s3->unk4 - 0x10, temp_s3->unk6 - 0x10);
+                SetDefDrawEnv(&sp20, temp_s3->x + 8, var_a2_2, temp_s3->w - 0x10, temp_s3->h - 0x10);
                 SetDrawEnv((DR_ENV*)temp_s1, &sp20);
                 *temp_s1 = (*temp_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
@@ -954,14 +954,14 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
                     case 19: /* switch 1 */
                     case 22: /* switch 1 */
                     case 25: /* switch 1 */
-                        var_v0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 0x68;
+                        var_v0 = ((u16)temp_s3->x + (u16)temp_s3->w) - 0x68;
                         break;
                     default: /* switch 1 */
-                        var_v0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 0x48;
+                        var_v0 = ((u16)temp_s3->x + (u16)temp_s3->w) - 0x48;
                         break;
                     }
                     sp80[0] = var_v0;
-                    sp80[1] = (u16)temp_s3->unk2;
+                    sp80[1] = (u16)temp_s3->y;
                     if (slot->_u.unk4 & 0x01FF0000)
                     {
                         var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.unk4 + 1, 3, sp80, 0);
@@ -990,71 +990,71 @@ void menu_draw_window(struct_arg0* slot, struct_arg1* gpu_work, struct_temp_s3* 
             }
         }
     }
-    sp18.unk4 = 0xFF;
-    sp18.unk6 = 0xFF;
-    sp18.unk0 = 0;
-    sp18.unk2 = 0;
-    ((struct_var_s1*)var_s1)->_u._s.unk3 = 2;
+    sp18.w = 0xFF;
+    sp18.h = 0xFF;
+    sp18.x = 0;
+    sp18.y = 0;
+    ((MenuPrimHead*)var_s1)->_u._s.unk3 = 2;
     {
-        u8 t_unk2 = (u8)sp18.unk2;
-        u8 t_unk0 = (u8)sp18.unk0;
+        u8 t_unk2 = (u8)sp18.y;
+        u8 t_unk0 = (u8)sp18.x;
 
-        s16 t_unk4 = sp18.unk4;
-        s16 t_unk6 = sp18.unk6;
-        ((struct_var_s1*)var_s1)->unk8 = 0;
-        ((struct_var_s1*)var_s1)->unk4 = (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) |
+        s16 t_unk4 = sp18.w;
+        s16 t_unk6 = sp18.h;
+        ((MenuPrimHead*)var_s1)->unk8 = 0;
+        ((MenuPrimHead*)var_s1)->unk4 = (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) |
                                                ((-t_unk6 << 2) & 0x3E0) | ((s32)(-t_unk4 & 0xFF) >> 3));
     }
-    ((struct_var_s1*)var_s1)->_u.unk0 = (((struct_var_s1*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
+    ((MenuPrimHead*)var_s1)->_u.unk0 = (((MenuPrimHead*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
     var_a2_4 = var_s1 + 3;
-    if (temp_s3->unk6 >= 0x10)
+    if (temp_s3->h >= 0x10)
     {
-        sp18.unk0 = (u16)temp_s3->unk0 + 8;
-        sp18.unk2 = (u16)temp_s3->unk2;
-        sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
-        sp18.unk6 = 8;
-        var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.unk0, 0x80D0);
-        if (temp_s3->unk6 >= 0x10)
+        sp18.x = (u16)temp_s3->x + 8;
+        sp18.y = (u16)temp_s3->y;
+        sp18.w = (u16)temp_s3->w - 0x10;
+        sp18.h = 8;
+        var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.x, 0x80D0);
+        if (temp_s3->h >= 0x10)
         {
-            sp18.unk0 = (u16)temp_s3->unk0 + 8;
-            sp18.unk2 = ((u16)temp_s3->unk2 + (u16)temp_s3->unk6) - 8;
-            sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
-            sp18.unk6 = 8;
-            var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.unk0, 0x88D0);
+            sp18.x = (u16)temp_s3->x + 8;
+            sp18.y = ((u16)temp_s3->y + (u16)temp_s3->h) - 8;
+            sp18.w = (u16)temp_s3->w - 0x10;
+            sp18.h = 8;
+            var_a2_4 = func_80142014(var_a2_4, temp_s2, &sp18.x, 0x88D0);
         }
     }
-    if (temp_s3->unk4 >= 0x20)
+    if (temp_s3->w >= 0x20)
     {
-        sp18.unk0 = (u16)temp_s3->unk0;
-        sp18.unk2 = (u16)temp_s3->unk2 + 8;
-        sp18.unk4 = 8;
-        sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
-        var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.unk0, 0x90D0);
-        if (temp_s3->unk4 >= 0x20)
+        sp18.x = (u16)temp_s3->x;
+        sp18.y = (u16)temp_s3->y + 8;
+        sp18.w = 8;
+        sp18.h = (u16)temp_s3->h - 0x10;
+        var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.x, 0x90D0);
+        if (temp_s3->w >= 0x20)
         {
-            sp18.unk0 = ((u16)temp_s3->unk0 + (u16)temp_s3->unk4) - 8;
-            sp18.unk2 = (u16)temp_s3->unk2 + 8;
-            sp18.unk4 = 8;
-            sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
-            var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.unk0, 0x90D8);
+            sp18.x = ((u16)temp_s3->x + (u16)temp_s3->w) - 8;
+            sp18.y = (u16)temp_s3->y + 8;
+            sp18.w = 8;
+            sp18.h = (u16)temp_s3->h - 0x10;
+            var_a2_4 = func_8014218C(var_a2_4, temp_s2, &sp18.x, 0x90D8);
         }
     }
-    sp18.unk0 = (u16)temp_s3->unk0 + 8;
-    sp18.unk2 = (u16)temp_s3->unk2 + 8;
-    sp18.unk4 = (u16)temp_s3->unk4 - 0x10;
-    sp18.unk6 = (u16)temp_s3->unk6 - 0x10;
+    sp18.x = (u16)temp_s3->x + 8;
+    sp18.y = (u16)temp_s3->y + 8;
+    sp18.w = (u16)temp_s3->w - 0x10;
+    sp18.h = (u16)temp_s3->h - 0x10;
     temp_v0_2 = menu_emit_corner(
         menu_emit_corner(
-            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.unk0, 0xA0A0), temp_s2,
-                                              temp_s3->unk0, temp_s3->unk2, 0x70D0),
-                             temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2, 0x70D8),
-            temp_s2, temp_s3->unk0, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D0),
-        temp_s2, temp_s3->unk0 + temp_s3->unk4 - 8, temp_s3->unk2 + temp_s3->unk6 - 8, 0x78D8);
-    ((struct_var_s1*)temp_v0_2)->_u._s.unk3 = 1;
-    ((struct_var_s1*)temp_v0_2)->unk4 = 0xE1000005;
-    ((struct_var_s1*)temp_v0_2)->_u.unk0 =
-        (s32)((((struct_var_s1*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
+            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.x, 0xA0A0), temp_s2,
+                                              temp_s3->x, temp_s3->y, 0x70D0),
+                             temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y, 0x70D8),
+            temp_s2, temp_s3->x, temp_s3->y + temp_s3->h - 8, 0x78D0),
+        temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y + temp_s3->h - 8, 0x78D8);
+    ((MenuPrimHead*)temp_v0_2)->_u._s.unk3 = 1;
+    ((MenuPrimHead*)temp_v0_2)->unk4 = 0xE1000005;
+    ((MenuPrimHead*)temp_v0_2)->_u.unk0 =
+        (s32)((((MenuPrimHead*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
     gpu_work->unk4040 = (s32*)((char*)temp_v0_2 + 8);
 }
