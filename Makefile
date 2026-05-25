@@ -379,7 +379,7 @@ COMPLETE_MANIFEST := build/complete_overlays.txt
 .PHONY: all bin clean recopy splat
 .PHONY: target-objects base-objects objdiff-objects objdiff-config
 .PHONY: overlays everything
-.PHONY: verify-bins verify-gover
+.PHONY: verify-bins verify-gover verify-movie
 
 # Default target: build the main SLUS executable
 all: $(TARGET)
@@ -731,6 +731,33 @@ verify-gover: build/overlays/gover/GOVER.BIN
 	   exit 1; \
 	 fi
 
+# --- movie -------------------------------------------------------------------
+# Like GOVER, the original decompressed MOVIE starts with a 0x00 byte that
+# objcopy strips, so we prepend it to the raw .bin before compressing.
+build/overlays/movie/movie.raw: movie
+	@mkdir -p build/overlays/movie
+	$(OBJCOPY) -O binary $(STAGING)/build/overlays/movie/movie.elf $@.tmp
+	printf '\0' > $@
+	cat $@.tmp >> $@
+	rm -f $@.tmp
+
+build/overlays/movie/MOVIE.BIN: build/overlays/movie/movie.raw
+	python3 tools/compressor/compressor.py $< $@
+
+verify-movie: build/overlays/movie/MOVIE.BIN
+	@mkdir -p build
+	@expected=$$(sha1sum $(ROM_BIN_DIR)/MOVIE.BIN | awk '{print $$1}'); \
+	 actual=$$(sha1sum build/overlays/movie/MOVIE.BIN  | awk '{print $$1}'); \
+	 echo "MOVIE.BIN expected: $$expected"; \
+	 echo "MOVIE.BIN actual:   $$actual"; \
+	 if [ "$$expected" = "$$actual" ]; then \
+	   echo "[OK] MOVIE.BIN matches original ROM"; \
+	   grep -qxF movie $(COMPLETE_MANIFEST) 2>/dev/null || echo movie >> $(COMPLETE_MANIFEST); \
+	 else \
+	   echo "[FAIL] MOVIE.BIN sha1 mismatch"; \
+	   exit 1; \
+	 fi
+
 # Aggregate target — extend as more overlays reach 100%.
-verify-bins: verify-gover
+verify-bins: verify-gover verify-movie
 	@echo "Verified compressed overlays: $$(cat $(COMPLETE_MANIFEST) 2>/dev/null | tr '\n' ' ')"

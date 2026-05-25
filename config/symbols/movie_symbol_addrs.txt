@@ -12,6 +12,7 @@ get_next_video_entry                = 0x80141788;
 advance_video_read                  = 0x80141858;
 advance_audio_read                  = 0x801418B0;
 
+g_movieOverlayId = 0x80140000;
 g_allocInfo = 0x80180014;
 g_gpuMode = 0x801ED590;
 g_busy = 0x801ED596;
