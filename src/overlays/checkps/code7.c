@@ -42,9 +42,6 @@ s32 func_80050B14(s32 arg0)
 loop:
     switch (g_checkPSState)
     {
-    case 0: /* Idle / reset */
-        break;
-
     case 1: /* Init — show opening screen, advance to state 2 */
         SendCdCommand(1);
         g_checkPSState = 2;
@@ -129,14 +126,21 @@ loop:
 
         case 1:
         {
+            volatile u8 *bcd;
+            u8 bcd0;
+            u8 bcd1;
             s32 h;
             s32 m;
             s32 t;
             s32 hb;
             s32 mb;
 
-            h = ((g_RTCTimeBCD[0] >> 4) * 10) + (g_RTCTimeBCD[0] & 0xF);
-            m = (((g_RTCTimeBCD[1] >> 4) * 5) * 2) + (g_RTCTimeBCD[1] & 0xF);
+            bcd = (volatile u8 *)g_RTCTimeBCD;
+            bcd0 = bcd[0];
+            bcd1 = bcd[1];
+
+            h = ((bcd0 >> 4) * 10) + (bcd0 & 0xF);
+            m = (((bcd1 >> 4) * 5) * 2) + (bcd1 & 0xF);
             t = ((h * 60) + m) >> 1;
             hb = t / 60;
             mb = t % 60;
@@ -176,10 +180,11 @@ loop:
             }
             else if (base->unk1 & 0x40)
             {
+                volatile u8 *cmd = (volatile u8 *)g_CmdBuf;
                 state = 5;
-                g_CmdBuf[2] = 0;
-                g_CmdBuf[0] = g_timeBuffer[0];
-                g_CmdBuf[1] = g_timeBuffer[1];
+                cmd[2] = 0;
+                cmd[0] = g_timeBuffer[0];
+                cmd[1] = g_timeBuffer[1];
                 SendCdCommand(3);
                 g_checkPSState = 7;
             }
@@ -590,9 +595,10 @@ loop:
         state = 19;
         break;
 
-    default:
+    case 0: /* Idle / reset */
         state = 0;
         break;
+
     }
 
     if ((arg0 == 0) && (state != 0))
