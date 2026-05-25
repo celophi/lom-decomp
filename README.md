@@ -11,6 +11,43 @@ This project is an in-progress matching decompilation of Legend of Mana for Play
 
 **Future Goals**: In time, support may be added for the JP version, which includes リングりんぐランド content for PocketStation.
 
+## Progress
+
+The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each module moves through roughly these states:
+
+- 💤 **Not started** - splat config may exist, but no meaningful C has been written; the module is still almost entirely assembly stubs.
+- 🌱 **In progress** - some functions have been examined and have written C, but the module does not yet build as a byte-identical replacement.
+- 🪲 **Non-matching** - every function has a C implementation, but is not yet matching the target.
+- ☑️ **Matching** - every function has a C implementation that matches the target byte-for-byte.
+- 🔒 **Fully linked** - two conditions hold:
+  1. The build produces an **ELF whose bytes match the original decompressed file**, and
+  2. Running the project's compressor on that ELF (stripped to a raw binary) **reproduces an exact replica of the `.BIN` file as it appears on the disc**.
+
+  In other words, the round-trip `original .BIN -> decompress -> C source -> compile -> ELF -> compress -> .BIN` is bit-identical.
+
+| Module        |    | Status        |
+|---------------|----|---------------|
+| SLUS_010.13   | 🌱 | In progress   |
+| ADDHERO.BIN   | 💤 | Not started   |
+| CARDA.BIN     | 💤 | Not started   |
+| CHECKPS.BIN   | 🪲 | Non-matching  |
+| CLOAD.BIN     | 💤 | Not started   |
+| FIELD.BIN     | 🌱 | In progress   |
+| GNAME.BIN     | 🪲 | Non-matching  |
+| GOLEM.BIN     | 💤 | Not started   |
+| GOSUB.BIN     | 💤 | Not started   |
+| GOVER.BIN     | 🔒 | Fully linked  |
+| MENU.BIN      | 🌱 | In progress   |
+| MOVIE.BIN     | 🔒 | Fully linked  |
+| NIKI.BIN      | 💤 | Not started   |
+| SHOP.BIN      | 💤 | Not started   |
+| TITLE.BIN     | 🪲 | Non-matching  |
+| WMAP.BIN      | 💤 | Not started   |
+| WSEL.BIN      | 💤 | Not started   |
+| ZUKAN.BIN     | 💤 | Not started   |
+
+For function-level match percentages, see the [progress site].
+
 ## Prerequisites
 
 - **Git** — For cloning the repository
