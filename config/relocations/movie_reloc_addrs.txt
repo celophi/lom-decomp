@@ -1,4 +1,4 @@
-// Prevent assigning a symbol in movie_cd_sector_callback
+// Prevent assigning a symbol in cd_sector_callback
 rom:0x3A5 reloc:MIPS_NONE symbol:g_gpuMode
 rom:0x3A9 reloc:MIPS_NONE symbol:g_gpuMode
 rom:0xF15 reloc:MIPS_NONE symbol:g_sectorsRemaining
