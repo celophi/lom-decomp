@@ -33,7 +33,7 @@ options:
   o_as_suffix: True
   subalign: 4
 
-  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+  section_order: [".sdata", ".rodata", ".text", ".data", ".sbss", ".bss"]
 
   string_encoding: ASCII
   data_string_encoding: ASCII
