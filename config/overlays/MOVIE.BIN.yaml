@@ -31,9 +31,9 @@ options:
   make_full_disasm_for_code: True
   use_legacy_include_asm: False
   o_as_suffix: True
-  subalign: 2
+  subalign: 4
 
-  section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
+  section_order: [".sdata", ".rodata", ".text", ".data", ".sbss", ".bss"]
 
   string_encoding: ASCII
   data_string_encoding: ASCII
@@ -43,7 +43,9 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x80140000
+    align: 4
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, .sdata, movie]
+      - [0x5, .rodata, movie]
       - [0x19, c, movie]
   - [0x1915]
