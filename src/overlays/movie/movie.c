@@ -1,5 +1,7 @@
 #include "movie.h"
 
+const s32 g_movieOverlayId = 14;
+
 static s32 get_next_audio_entry(AudioSector** out_entry);
 static void draw_sync_callback(void);
 static s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header);
