@@ -2,6 +2,12 @@
 
 const s32 g_movieOverlayId = 14;
 
+static void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx);
+static void movie_update(void);
+static void movie_mdec_out_callback(void);
+static void movie_schedule_next_decode(void);
+static void movie_service_video_ops(void);
+static s32 movie_cd_sector_callback(void);
 static s32 get_next_audio_entry(AudioSector** out_entry);
 static void draw_sync_callback(void);
 static s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header);
@@ -278,7 +284,7 @@ void movie_play(s32 movie_index)
  *
  * @see https://decomp.me/scratch/g5PtA (100%)
  */
-void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx)
+static void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx)
 {
     AllocInfo* alloc_info = g_allocInfo;
     MovieState* ms;
@@ -421,7 +427,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
  *
  * @see https://decomp.me/scratch/NpM84 (100%)
  */
-void movie_update(void)
+static void movie_update(void)
 {
     s32 audio_capacity; /* audio_ring_capacity reload */
 
@@ -570,7 +576,7 @@ void movie_update(void)
  *
  * @see https://decomp.me/scratch/HVkZ6 (100%)
  */
-void movie_mdec_out_callback(void)
+static void movie_mdec_out_callback(void)
 {
     volatile MovieState* base = (volatile MovieState*)0x801ED500;
     s32 temp;
@@ -632,7 +638,7 @@ void movie_mdec_out_callback(void)
  *
  * @see https://decomp.me/scratch/E7XCZ (100%)
  */
-void movie_schedule_next_decode(void)
+static void movie_schedule_next_decode(void)
 {
     unsigned short next_out_buf_idx;
     u16 cur_frame_pos;
@@ -709,7 +715,7 @@ void movie_schedule_next_decode(void)
  *
  * @see https://decomp.me/scratch/JTTFr (100%)
  */
-void movie_service_video_ops(void)
+static void movie_service_video_ops(void)
 {
     volatile MovieState* G = (volatile MovieState*)0x801ED500;
     int word_count;
@@ -801,7 +807,7 @@ void movie_service_video_ops(void)
  *
  * @see https://decomp.me/scratch/5flHR (100%)
  */
-s32 movie_cd_sector_callback(void)
+static s32 movie_cd_sector_callback(void)
 {
     u32 hdr[8];
     int new_var2;
