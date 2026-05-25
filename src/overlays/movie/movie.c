@@ -1059,7 +1059,7 @@ static s32 cd_sector_callback(void)
         while (CdGetSector(&sector_header, CD_HEADER_WORDS) == 0);
 
         vms = VOL_MOVIE_STATE;
-        if (((u32)sector_header.header.frame_number) > ((u32)MOVIE_STATE->total_frames))
+        if (((u32)sector_header.header.frame_number) > MOVIE_STATE->total_frames)
         {
             VOL_MOVIE_STATE->end_of_stream = 1;
             return 0;
@@ -1085,10 +1085,10 @@ static s32 cd_sector_callback(void)
 
                 if (vms->video_ring_capacity < (vms->video_write_idx + sector_header.header.sector_count))
                 {
-                    if (video_read_idx_l >= ((s32)sector_header.header.sector_count))
+                    if (video_read_idx_l >= sector_header.header.sector_count)
                     {
                         has_room = 1;
-                        vms->video_ring_size = (s32)vms->video_write_idx;
+                        vms->video_ring_size = vms->video_write_idx;
                         vms->video_write_idx = 0;
                     }
                 }
@@ -1136,8 +1136,8 @@ static s32 cd_sector_callback(void)
                 {
                     u32 total_frames;
 
-                    total_frames = (u32)MOVIE_STATE->total_frames;
-                    VOL_MOVIE_STATE->video_write_idx = (s32)(VOL_MOVIE_STATE->video_write_idx + 1);
+                    total_frames = MOVIE_STATE->total_frames;
+                    VOL_MOVIE_STATE->video_write_idx = VOL_MOVIE_STATE->video_write_idx + 1;
 
                     VOL_MOVIE_STATE->last_video_frame = VOL_MOVIE_STATE->frame_number;
 
@@ -1165,10 +1165,10 @@ static s32 cd_sector_callback(void)
             {
                 if (vms->audio_ring_capacity < (vms->audio_write_idx + sector_header.header.sector_count))
                 {
-                    if (audio_read_idx_l >= ((s32)sector_header.header.sector_count))
+                    if (audio_read_idx_l >= sector_header.header.sector_count)
                     {
                         has_room = 1;
-                        vms->audio_ring_size = (s32)vms->audio_write_idx;
+                        vms->audio_ring_size = vms->audio_write_idx;
                         vms->audio_write_idx = 0;
                     }
                 }
@@ -1207,10 +1207,10 @@ static s32 cd_sector_callback(void)
                 MOVIE_STATE->sectors_remaining = sector_header.header.sector_count - 1;
                 if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
                 {
-                    VOL_MOVIE_STATE->audio_write_idx = (s32)(VOL_MOVIE_STATE->audio_write_idx + 1);
-                    VOL_MOVIE_STATE->last_audio_frame = (u32)VOL_MOVIE_STATE->frame_number;
+                    VOL_MOVIE_STATE->audio_write_idx = VOL_MOVIE_STATE->audio_write_idx + 1;
+                    VOL_MOVIE_STATE->last_audio_frame = VOL_MOVIE_STATE->frame_number;
 
-                    if (VOL_MOVIE_STATE->frame_number > ((u32)MOVIE_STATE->total_frames))
+                    if (VOL_MOVIE_STATE->frame_number > MOVIE_STATE->total_frames)
                     {
                         return 0;
                     }
@@ -1250,11 +1250,11 @@ static s32 cd_sector_callback(void)
             {
                 u32 offset;
                 u32 total_frames;
-                total_frames = (u32)MOVIE_STATE->total_frames;
+                total_frames = MOVIE_STATE->total_frames;
 
                 offset = 1;
                 VOL_MOVIE_STATE->video_write_idx =
-                    (s32)((VOL_MOVIE_STATE->video_write_idx + offset) + MOVIE_STATE->chunk_sector_idx);
+                    (VOL_MOVIE_STATE->video_write_idx + offset) + MOVIE_STATE->chunk_sector_idx;
 
                 VOL_MOVIE_STATE->last_video_frame = VOL_MOVIE_STATE->frame_number;
                 has_more_frames = ((u32)sector_hdr_ptr->frame_number) < total_frames;
@@ -1279,7 +1279,7 @@ static s32 cd_sector_callback(void)
             MOVIE_STATE->frame_number = (u32)sector_hdr_ptr->frame_number;
             MOVIE_STATE->sectors_remaining = 0U;
 
-            if (((u32)MOVIE_STATE->total_frames) > ((u32)sector_hdr_ptr->frame_number))
+            if (MOVIE_STATE->total_frames > ((u32)sector_hdr_ptr->frame_number))
             {
                 return 1;
             }
@@ -1308,10 +1308,10 @@ static s32 cd_sector_callback(void)
             if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
             {
                 audio_write_next = VOL_MOVIE_STATE->audio_write_idx + 1;
-                VOL_MOVIE_STATE->audio_write_idx = (s32)(audio_write_next + MOVIE_STATE->chunk_sector_idx);
+                VOL_MOVIE_STATE->audio_write_idx = audio_write_next + MOVIE_STATE->chunk_sector_idx;
 
                 MOVIE_STATE->last_audio_frame = VOL_MOVIE_STATE->frame_number;
-                if (((u32)sector_hdr_ptr->frame_number) > ((u32)MOVIE_STATE->total_frames))
+                if (((u32)sector_hdr_ptr->frame_number) > MOVIE_STATE->total_frames)
                 {
                     return 0;
                 }
@@ -1325,7 +1325,7 @@ static s32 cd_sector_callback(void)
         {
             MOVIE_STATE->frame_number = (u32)sector_hdr_ptr->frame_number;
             MOVIE_STATE->sectors_remaining = 0U;
-            if (((u32)sector_hdr_ptr->frame_number) <= ((u32)MOVIE_STATE->total_frames))
+            if (((u32)sector_hdr_ptr->frame_number) <= MOVIE_STATE->total_frames)
             {
                 return 1;
             }
