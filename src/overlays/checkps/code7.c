@@ -679,7 +679,12 @@ s32 PollCdResponse(s32 arg0)
                     if (arg0 != 0xA)
                     {
                         j = g_statusFlag.unk0;
-                        if (j & 0x10)
+
+                        // HACK
+                        __asm__ __volatile__ ("" : : : "$2");
+
+                        j &= 0x10;
+                        if (j)
                         {
                             idx = 2;
                             return -idx;
