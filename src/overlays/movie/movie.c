@@ -139,15 +139,18 @@ typedef struct
 /**
  * @brief Header layout shared by video- and audio-ring entries.
  *
- * 6 bytes preamble, then sector count and source frame number. Used for
- * both video (video_table_base, 32-byte stride) and audio (audio_data_base,
+ * 12 bytes total. The same layout is the leading prefix of every 32-byte
+ * raw CD sector header read by @ref cd_sector_callback. Used for both
+ * video (video_table_base, 32-byte stride) and audio (audio_data_base,
  * 2048-byte stride) ring entries.
  */
 typedef struct
 {
-    u8 pad[6];
-    u16 sector_count;
-    s32 frame_number;
+    u16 _unk0;            /**< 0x0 - always zero in the streams we read */
+    u16 sector_type;      /**< 0x2 - 0x8001 = video, 1 = audio */
+    u16 chunk_sector_idx; /**< 0x4 - sector position within a multi-sector frame */
+    u16 sector_count;     /**< 0x6 - sectors comprising this frame chunk */
+    s32 frame_number;     /**< 0x8 */
 } SectorEntry;
 
 /**
@@ -1023,7 +1026,7 @@ static void movie_service_video_ops(void)
  */
 static s32 cd_sector_callback(void)
 {
-    u32 hdr[8];
+    VideoSectorEntry hdr;
     s32 audio_read_idx_l;
     s32 has_room;
     s32 has_more_frames;
@@ -1043,20 +1046,20 @@ static s32 cd_sector_callback(void)
         while (CdGetSector(&hdr, 8) == 0);
 
         vms = VOL_MOVIE_STATE;
-        if (hdr[2] > ((u32)MOVIE_STATE->total_frames))
+        if (((u32)hdr.header.frame_number) > ((u32)MOVIE_STATE->total_frames))
         {
             VOL_MOVIE_STATE->end_of_stream = 1;
             return 0;
         }
 
-        vms->frame_number = hdr[2];
+        vms->frame_number = hdr.header.frame_number;
 
-        if (((u16*)hdr)[2] != 0)
+        if (hdr.header.chunk_sector_idx != 0)
         {
             return 1;
         }
 
-        if (((u16*)hdr)[1] == 0x8001)
+        if (hdr.header.sector_type == 0x8001)
         {
 
             video_write_idx_l = vms->video_write_idx;
@@ -1067,9 +1070,9 @@ static s32 cd_sector_callback(void)
                 ((video_write_idx_l != video_read_idx_l) && (video_read_idx_l < vms->video_write_idx)))
             {
 
-                if (vms->video_ring_capacity < (vms->video_write_idx + ((u16*)hdr)[3]))
+                if (vms->video_ring_capacity < (vms->video_write_idx + hdr.header.sector_count))
                 {
-                    if (video_read_idx_l >= ((s32)((u16*)hdr)[3]))
+                    if (video_read_idx_l >= ((s32)hdr.header.sector_count))
                     {
                         has_room = 1;
                         vms->video_ring_size = (s32)vms->video_write_idx;
@@ -1083,7 +1086,7 @@ static s32 cd_sector_callback(void)
             }
             else if (video_write_idx_l != video_read_idx_l)
             {
-                if (video_read_idx_l >= (vms->video_write_idx + ((u16*)hdr)[3]))
+                if (video_read_idx_l >= (vms->video_write_idx + hdr.header.sector_count))
                 {
                     has_room = 1;
                 }
@@ -1098,7 +1101,8 @@ static s32 cd_sector_callback(void)
                 sector_ptr = (u8*)MOVIE_STATE->video_data_base + ((8 * MOVIE_STATE->video_write_idx) * 252);
                 while (CdGetSector(sector_ptr, 0x1F8) == 0);
 
-                ptr_a = hdr;
+                /* Bulk-copy the raw 32-byte CD header as 8 u32 words. */
+                ptr_a = (u32*)&hdr;
 
                 write_index = MOVIE_STATE->video_write_idx;
                 sector_ptr = (u8*)MOVIE_STATE->video_table_base + (write_index << 5);
@@ -1113,7 +1117,7 @@ static s32 cd_sector_callback(void)
                 ((u32*)sector_ptr)[6] = ptr_a[6];
                 ((u32*)sector_ptr)[7] = ptr_a[7];
 
-                MOVIE_STATE->sectors_remaining = (((u16*)hdr)[3]) - 1;
+                MOVIE_STATE->sectors_remaining = hdr.header.sector_count - 1;
                 if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
                 {
                     u32 total_frames;
@@ -1145,9 +1149,9 @@ static s32 cd_sector_callback(void)
                  (vms->last_audio_frame == vms->last_consumed_audio_frame)) ||
                 ((audio_write_idx_l != audio_read_idx_l) && (audio_read_idx_l < vms->audio_write_idx)))
             {
-                if (vms->audio_ring_capacity < (vms->audio_write_idx + ((u16*)hdr)[3]))
+                if (vms->audio_ring_capacity < (vms->audio_write_idx + hdr.header.sector_count))
                 {
-                    if (audio_read_idx_l >= ((s32)((u16*)hdr)[3]))
+                    if (audio_read_idx_l >= ((s32)hdr.header.sector_count))
                     {
                         has_room = 1;
                         vms->audio_ring_size = (s32)vms->audio_write_idx;
@@ -1160,7 +1164,7 @@ static s32 cd_sector_callback(void)
                 }
             }
             else if ((audio_write_idx_l != audio_read_idx_l) &&
-                     (audio_read_idx_l >= (vms->audio_write_idx + ((u16*)hdr)[3])))
+                     (audio_read_idx_l >= (vms->audio_write_idx + hdr.header.sector_count)))
             {
                 has_room = 1;
             }
@@ -1172,7 +1176,7 @@ static s32 cd_sector_callback(void)
                 sector_ptr = ((u8*)MOVIE_STATE->audio_data_base + (VOL_MOVIE_STATE->audio_write_idx << 0xB)) + 0x20;
                 while (CdGetSector(sector_ptr, 0x1F8) == 0);
 
-                ptr_a = &hdr[0];
+                ptr_a = (u32*)&hdr;
                 audio_base_reload = (u32*)(*MOVIE_STATE).audio_data_base;
                 sector_ptr = (u32*)((u8*)MOVIE_STATE->audio_data_base + (VOL_MOVIE_STATE->audio_write_idx << 0xB));
                 ((u32*)sector_ptr)[0] = ptr_a[0];
@@ -1183,7 +1187,7 @@ static s32 cd_sector_callback(void)
                 ((u32*)sector_ptr)[5] = ptr_a[5];
                 ((u32*)sector_ptr)[6] = ptr_a[6];
                 ((u32*)sector_ptr)[7] = ptr_a[7];
-                MOVIE_STATE->sectors_remaining = ((u16*)hdr)[3] - 1;
+                MOVIE_STATE->sectors_remaining = hdr.header.sector_count - 1;
                 if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
                 {
                     VOL_MOVIE_STATE->audio_write_idx = (s32)(VOL_MOVIE_STATE->audio_write_idx + 1);
@@ -1215,8 +1219,9 @@ static s32 cd_sector_callback(void)
                                 ((VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx) << 5));
         while (CdGetSector(sector_hdr_ptr, 8) == 0);
 
-        if (((((u16*)sector_hdr_ptr)[1] == 0x8001) && (sector_hdr_ptr[2] == MOVIE_STATE->frame_number)) &&
-            (((u16*)sector_hdr_ptr)[2] == MOVIE_STATE->chunk_sector_idx))
+        if (((((SectorEntry*)sector_hdr_ptr)->sector_type == 0x8001) &&
+             (((SectorEntry*)sector_hdr_ptr)->frame_number == MOVIE_STATE->frame_number)) &&
+            (((SectorEntry*)sector_hdr_ptr)->chunk_sector_idx == MOVIE_STATE->chunk_sector_idx))
         {
             payload_dst = (u8*)MOVIE_STATE->video_data_base +
                           ((2 * (VOL_MOVIE_STATE->video_write_idx + (MOVIE_STATE->chunk_sector_idx & 0xFFFF))) * 1008);
@@ -1234,7 +1239,7 @@ static s32 cd_sector_callback(void)
                     (s32)((VOL_MOVIE_STATE->video_write_idx + offset) + MOVIE_STATE->chunk_sector_idx);
 
                 VOL_MOVIE_STATE->last_video_frame = VOL_MOVIE_STATE->frame_number;
-                has_more_frames = ((u32*)sector_hdr_ptr)[2] < total_frames;
+                has_more_frames = ((u32)((SectorEntry*)sector_hdr_ptr)->frame_number) < total_frames;
 
             check_end_of_stream:
                 if (has_more_frames == 0)
@@ -1242,7 +1247,7 @@ static s32 cd_sector_callback(void)
                     return 0;
                 }
 
-                has_more_frames = (u32)sector_hdr_ptr[2];
+                has_more_frames = (u32)((SectorEntry*)sector_hdr_ptr)->frame_number;
                 return 1;
             }
             else
@@ -1252,10 +1257,10 @@ static s32 cd_sector_callback(void)
         }
         else
         {
-            MOVIE_STATE->frame_number = (u32)sector_hdr_ptr[2];
+            MOVIE_STATE->frame_number = (u32)((SectorEntry*)sector_hdr_ptr)->frame_number;
             MOVIE_STATE->sectors_remaining = 0U;
 
-            if (((u32)MOVIE_STATE->total_frames) > ((u32)sector_hdr_ptr[2]))
+            if (((u32)MOVIE_STATE->total_frames) > ((u32)((SectorEntry*)sector_hdr_ptr)->frame_number))
             {
                 return 1;
             }
@@ -1271,8 +1276,9 @@ static s32 cd_sector_callback(void)
                          ((VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx) << 0xB);
         while (CdGetSector(sector_hdr_ptr, 8) == 0);
 
-        if (((((u16*)sector_hdr_ptr)[1] == 1) && (sector_hdr_ptr[2] == MOVIE_STATE->frame_number)) &&
-            (((u16*)sector_hdr_ptr)[2] == MOVIE_STATE->chunk_sector_idx))
+        if (((((SectorEntry*)sector_hdr_ptr)->sector_type == 1) &&
+             (((SectorEntry*)sector_hdr_ptr)->frame_number == MOVIE_STATE->frame_number)) &&
+            (((SectorEntry*)sector_hdr_ptr)->chunk_sector_idx == MOVIE_STATE->chunk_sector_idx))
         {
             payload_dst = ((u8*)MOVIE_STATE->audio_data_base +
                            ((VOL_MOVIE_STATE->audio_write_idx + (MOVIE_STATE->chunk_sector_idx & 0xFFFF)) << 0xB)) +
@@ -1286,7 +1292,7 @@ static s32 cd_sector_callback(void)
                 VOL_MOVIE_STATE->audio_write_idx = (s32)(audio_write_next + MOVIE_STATE->chunk_sector_idx);
 
                 MOVIE_STATE->last_audio_frame = VOL_MOVIE_STATE->frame_number;
-                if (((u32)sector_hdr_ptr[2]) > ((u32)MOVIE_STATE->total_frames))
+                if (((u32)((SectorEntry*)sector_hdr_ptr)->frame_number) > ((u32)MOVIE_STATE->total_frames))
                 {
                     return 0;
                 }
@@ -1298,9 +1304,9 @@ static s32 cd_sector_callback(void)
         }
         else
         {
-            MOVIE_STATE->frame_number = (u32)sector_hdr_ptr[2];
+            MOVIE_STATE->frame_number = (u32)((SectorEntry*)sector_hdr_ptr)->frame_number;
             MOVIE_STATE->sectors_remaining = 0U;
-            if (((u32)sector_hdr_ptr[2]) <= ((u32)MOVIE_STATE->total_frames))
+            if (((u32)((SectorEntry*)sector_hdr_ptr)->frame_number) <= ((u32)MOVIE_STATE->total_frames))
             {
                 return 1;
             }
