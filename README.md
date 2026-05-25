@@ -25,26 +25,26 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 
   In other words, the round-trip `original .BIN -> decompress -> C source -> compile -> ELF -> compress -> .BIN` is bit-identical.
 
-| Module        | Status              |
-|---------------|---------------------|
-| SLUS_010.13   | 🔧 In progress      |
-| ADDHERO.BIN   | 🌱 Not started      |
-| CARDA.BIN     | 🌱 Not started      |
-| CHECKPS.BIN   | ⚠️ Non-matching     |
-| CLOAD.BIN     | 🌱 Not started      |
-| FIELD.BIN     | 🔧 In progress      |
-| GNAME.BIN     | ⚠️ Non-matching     |
-| GOLEM.BIN     | 🌱 Not started      |
-| GOSUB.BIN     | 🌱 Not started      |
-| GOVER.BIN     | 🔒 Fully linked     |
-| MENU.BIN      | 🔧 In progress      |
-| MOVIE.BIN     | 🔒 Fully linked     |
-| NIKI.BIN      | 🌱 Not started      |
-| SHOP.BIN      | 🌱 Not started      |
-| TITLE.BIN     | ⚠️ Non-matching     |
-| WMAP.BIN      | 🌱 Not started      |
-| WSEL.BIN      | 🌱 Not started      |
-| ZUKAN.BIN     | 🌱 Not started      |
+| Module        |    | Status        |
+|---------------|----|---------------|
+| SLUS_010.13   | 🔧 | In progress   |
+| ADDHERO.BIN   | 🌱 | Not started   |
+| CARDA.BIN     | 🌱 | Not started   |
+| CHECKPS.BIN   | ⚠️ | Non-matching  |
+| CLOAD.BIN     | 🌱 | Not started   |
+| FIELD.BIN     | 🔧 | In progress   |
+| GNAME.BIN     | ⚠️ | Non-matching  |
+| GOLEM.BIN     | 🌱 | Not started   |
+| GOSUB.BIN     | 🌱 | Not started   |
+| GOVER.BIN     | 🔒 | Fully linked  |
+| MENU.BIN      | 🔧 | In progress   |
+| MOVIE.BIN     | 🔒 | Fully linked  |
+| NIKI.BIN      | 🌱 | Not started   |
+| SHOP.BIN      | 🌱 | Not started   |
+| TITLE.BIN     | ⚠️ | Non-matching  |
+| WMAP.BIN      | 🌱 | Not started   |
+| WSEL.BIN      | 🌱 | Not started   |
+| ZUKAN.BIN     | 🌱 | Not started   |
 
 For function-level match percentages, see the [progress site].
 
