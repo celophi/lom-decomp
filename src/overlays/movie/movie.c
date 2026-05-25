@@ -10,16 +10,16 @@
  * SCDRegs.buttonData (raw merged buttons), and SCDRegs.unk4 (a derived button
  * word; see SCDRegs comment in pad.h). */
 
-/*
- * TODO(investigate): MovieState aliases the AudioSystem block defined in cd.h
- * (both at 0x801ED500). The CD subsystem uses this block to save the DecDCT
- * and DrawSync callbacks that were active before XA audio playback began so
- * `cdrom_reset` can restore them. Movie playback temporarily re-uses the same
- * memory as scratch, which is why `decDCToutCallback` / `drawSyncCallback`
- * (offsets 0x38 / 0x3C) here hold the *previous* handlers - `movie_init`
- * captures them via `DecDCToutCallback(&movie_mdec_out_callback, ...)` etc.
- * Reconcile these two views (union, or pick one canonical struct) once the
- * full audio-system layout is understood.
+/**
+ * @brief Movie playback control block; lives at fixed RAM address 0x801ED500.
+ *
+ * Aliases the AudioSystem block defined in cd.h. The CD subsystem uses that
+ * block to save the DecDCT and DrawSync callbacks that were active before XA
+ * audio playback began so `cdrom_reset` can restore them. Movie playback
+ * temporarily re-uses the same memory as scratch, which is why the
+ * `dec_dct_out_callback` / `draw_sync_callback` fields (offsets 0x38 / 0x3C)
+ * here hold the *previous* handlers - `movie_init` captures them via
+ * `DecDCToutCallback(&movie_mdec_out_callback)` etc.
  */
 typedef struct
 {
@@ -93,44 +93,57 @@ typedef struct
     u8 end_state;          // 1 = near end, 2 = stream fully ended (END_STATE_*)
 } MovieState;
 
-/* MovieState::endState sentinel values. Token-equivalent to the literals
- * they replace, so codegen is unchanged. */
+/** @brief MovieState::end_state sentinel values. */
 #define END_STATE_RUNNING  0
 #define END_STATE_NEAR_END 1
 #define END_STATE_DONE     2
 
-/* Skip-cinematic gating used by movie_play. */
-#define MOVIE_SKIPPABLE_MAX  2       /* only movies with idx < this are skippable */
-#define MOVIE0_SKIP_MASK     0xFF0F  /* movie 0 (intro/logo): broad - any non-bit-4..7 button */
-#define MOVIE1_SKIP_MASK     0x400A  /* movie 1: narrow specific combination */
-#define SCD_DEVICE_STATE_OK  3       /* deviceState < this means controller is usable */
+/** @brief Skip-cinematic gating used by movie_play. */
+#define MOVIE_SKIPPABLE_MAX  2       /**< only movies with idx < this are skippable */
+#define MOVIE0_SKIP_MASK     0xFF0F  /**< movie 0 (intro/logo): broad - any non-bit-4..7 button */
+#define MOVIE1_SKIP_MASK     0x400A  /**< movie 1: narrow specific combination */
+#define SCD_DEVICE_STATE_OK  3       /**< deviceState < this means controller is usable */
 
-/* Audio fade-out ramp during a skip-triggered exit.
- *   armed by setting audioFadeVol = AUDIO_FADE_INITIAL,
- *   stepped down by AUDIO_FADE_STEP each outer-loop iteration,
- *   exits the loop when it reaches 0. */
+/**
+ * @brief Audio fade-out ramp during a skip-triggered exit.
+ *
+ * Armed by setting audio_fade_vol = AUDIO_FADE_INITIAL, stepped down by
+ * AUDIO_FADE_STEP each outer-loop iteration, exits the loop when it reaches 0.
+ */
 #define AUDIO_FADE_DISARMED  (-1)
 #define AUDIO_FADE_INITIAL   0x70
 #define AUDIO_FADE_STEP      0x10
 
-/* Movie playback control block lives at a fixed RAM address.
- * Macro is token-equivalent to the cast so codegen is unchanged.
- * Use the (volatile MovieState*) cast directly when a one-shot volatile
- * access is required - wrapping that in this macro would silently drop the
- * volatile qualifier. */
+/**
+ * @brief Accessors for the fixed-address MovieState block at 0x801ED500.
+ *
+ * Use the @ref VOL_MOVIE_STATE form when a volatile access is required;
+ * wrapping that cast in MOVIE_STATE would silently drop the volatile
+ * qualifier.
+ */
 #define MOVIE_STATE ((MovieState*)0x801ED500)
 #define VOL_MOVIE_STATE ((volatile MovieState*)0x801ED500)
 
 
+/**
+ * @brief Allocation descriptor consulted by @ref movie_init's path B.
+ *
+ * Only @c alloc_base (the buffer base address) is used here; the leading
+ * 0x38 bytes are owned by other subsystems.
+ */
 typedef struct
 {
     u8 pad[0x38];
-    u32 alloc_base; /* base address for movie buffer allocations */
+    u32 alloc_base;
 } AllocInfo;
 
-/* Header layout for a sector-table entry: 6 bytes preamble, then sector count
- * and the source frame number. Used for both video (video_table_base, 32-byte
- * stride) and audio (audio_data_base, 2048-byte stride) ring entries. */
+/**
+ * @brief Header layout shared by video- and audio-ring entries.
+ *
+ * 6 bytes preamble, then sector count and source frame number. Used for
+ * both video (video_table_base, 32-byte stride) and audio (audio_data_base,
+ * 2048-byte stride) ring entries.
+ */
 typedef struct
 {
     u8 pad[6];
@@ -138,32 +151,43 @@ typedef struct
     s32 frame_number;
 } SectorEntry;
 
-/* One PSX CD sector (2048 bytes) of audio ring data:
+/**
+ * @brief One PSX CD sector (2048 bytes) of audio ring data.
+ *
+ * Layout:
  *   - bytes 0x00..0x0B: SectorEntry header (sector_count, frame_number).
  *   - bytes 0x0C..0x1F: remaining 20 bytes of the CD-XA sector header
  *     (copied verbatim from the CD by movie_cd_sector_callback).
- *   - bytes 0x20..0x7FF: XA audio payload (2016 bytes). */
+ *   - bytes 0x20..0x7FF: XA audio payload (2016 bytes).
+ */
 typedef struct AudioSector
 {
-    SectorEntry header;             /* 12 bytes */
-    u8 _hdr_remainder[0x20 - 12];   /* 20 bytes - rest of the 32-byte CD header */
-    u8 payload[2048 - 0x20];        /* 2016 bytes XA */
+    SectorEntry header;             /**< 12 bytes */
+    u8 _hdr_remainder[0x20 - 12];   /**< 20 bytes - rest of the 32-byte CD header */
+    u8 payload[2048 - 0x20];        /**< 2016 bytes XA */
 } AudioSector;
 
-/* One video-ring table entry: 32 bytes (the full sector header copied as
- * 8 u32 words by movie_cd_sector_callback). The first 12 bytes are the
- * SectorEntry header; the remaining 20 bytes hold sector metadata. The
- * actual VLC payload lives in a parallel buffer (video_data_base, 2016-byte
- * stride). */
+/**
+ * @brief One video-ring table entry: 32 bytes copied as 8 u32 words by
+ *        @ref movie_cd_sector_callback.
+ *
+ * The first 12 bytes are the SectorEntry header; the remaining 20 bytes hold
+ * sector metadata. The actual VLC payload lives in a parallel buffer
+ * (video_data_base, 2016-byte stride).
+ */
 typedef struct VideoSectorEntry
 {
     SectorEntry header;
     u8 _rest[32 - 12];
 } VideoSectorEntry;
 
-/* One slot of the video VLC payload buffer: 2016 bytes of raw bitstream
- * data. video_data_base is a parallel array of these, indexed by the same
- * read/write indices as video_table_base. */
+/**
+ * @brief One slot of the video VLC payload buffer: 2016 bytes of raw
+ *        bitstream data.
+ *
+ * video_data_base is a parallel array of these, indexed by the same
+ * read/write indices as video_table_base.
+ */
 typedef struct VideoVlcPayload
 {
     u8 data[2016];
@@ -267,20 +291,17 @@ void movie_play(s32 movie_index)
 
     /*
      * Five MDEC cinematics; movie_index selects one (0..4). The frame count
-     * matches each movie's BS stream length and is used by movie_init to set
-     * the movie_init flags stop condition. The CD resource index is the per-movie
-     * BS file at base 0x16A0 (so resources 0x16A0..0x16A4).
+     * matches each movie's BS stream length and is used by movie_init as the
+     * stop condition. The CD resource index is the per-movie BS file at base
+     * 0x16A0 (so resources 0x16A0..0x16A4).
      *
-     *   index | resource | frames | known role
-     *   ------+----------+--------+----------------------
-     *     0   | 0x16A0   |  2098  | (TODO: identify)
-     *     1   | 0x16A1   |  2473  | (TODO: identify)
-     *     2   | 0x16A2   |  1318  | (TODO: identify)
-     *     3   | 0x16A3   |  5368  | (TODO: identify; longest — likely ending)
-     *     4   | 0x16A4   |   898  | (TODO: identify; shortest — also default)
-     *
-     * To label these semantically, grep callers of `movie_play` to see which
-     * index is invoked from where (intro screen, ending, etc.).
+     *   index | resource | frames
+     *   ------+----------+--------
+     *     0   | 0x16A0   |  2098
+     *     1   | 0x16A1   |  2473
+     *     2   | 0x16A2   |  1318
+     *     3   | 0x16A3   |  5368   (longest - likely ending)
+     *     4   | 0x16A4   |   898   (shortest - also the default fallthrough)
      */
 
     switch ((u16)(movie_index & 0xFFFF))
@@ -906,10 +927,6 @@ static void movie_schedule_next_decode(void)
  * gpu_mode selects the transfer path:
  *   - 0: wait for DrawSync then use LoadImage (standard DMA).
  *   - non-zero: interrupt the current draw via BreakDraw then use LoadImage2.
- *
- * @note The s8 status-byte fields (busy/draw_sync_target) emit `lb` where the
- *       original asm used `lbu`. Currently 93.87% non-matching; revisit the
- *       field types (s8 → u8) if the percentage regresses further.
  *
  * @see https://decomp.me/scratch/JTTFr (100%)
  */
