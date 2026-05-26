@@ -1229,82 +1229,64 @@ void* func_80142014(void* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
     return pkt; /* move v0,t1 */
 }
 
-typedef struct {
-    u32 field0;     // offset 0x00
-    u32 field4;     // offset 0x04
-    u16 field8;     // offset 0x08
-    u16 fieldA;     // offset 0x0A
-    u16 fieldC;     // offset 0x0C
-    u16 fieldE;     // offset 0x0E
-    u16 field10;    // offset 0x10
-    u16 field12;    // offset 0x12
-} FirstStruct;
-
-typedef struct {
-    u16 unk0;
-    u16 unk2;
-    s16 unk4;
-    s16 unk6;
-} Arg2Struct;
-
 /**
- * decomp.me (78.83%) https://decomp.me/scratch/19jr7
+ * @brief Build a textured sprite + texture-window primitive pair, mirror of func_80142014.
+ * @see decomp.me (78.83%) https://decomp.me/scratch/19jr7
  */
-void* func_8014218C(void* arg0, s32* arg1, void* arg2, s32 arg3)
+void* func_8014218C(void* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
 {
-    FirstStruct* var_t1 = (FirstStruct*)arg0;
-    u32* var_t2 = (u32*)arg1;
-    Arg2Struct* a2 = (Arg2Struct*)arg2;
-    u16 sp[4];
+    u8* pkt;      /* maps to t1 */
+    u_long* otp;  /* maps to t2 */
+    s32 texParam; /* maps to a0 */
+    SPRT* sprt;
+    DR_TWIN* twin;
+    RECT tw;
 
-    // Splitting the if-statement forces "var_a0 = arg3" into the delay slot
-    // of the first branch, exactly matching the target's register allocation.
-    if (a2->unk4 > 0)
+    pkt = (u8*)ot;
+    otp = ot_ptr;
+
+    if (input->w <= 0)
     {
-        s32 var_a0 = arg3;
-        if (a2->unk6 > 0)
-        {
-            // Initialize first struct fields
-            var_t1->field4 = 0x808080;
-            ((u8*)var_t1)[3] = 4;
-            ((u8*)var_t1)[7] = 0x64;
-            var_t1->fieldC = 0;
-            var_t1->field10 = (u16)a2->unk4;
-            var_t1->field12 = (u16)a2->unk6;
-            var_t1->field8 = a2->unk0;
-            var_t1->fieldE = 0x7CCA;
-            var_t1->fieldA = a2->unk2;
-
-            // Merge low 24 bits
-            var_t1->field0 = (var_t1->field0 & 0xFF000000) | (*var_t2 & 0x00FFFFFF);
-            *var_t2 = (*var_t2 & 0xFF000000) | ((u32)var_t1 & 0x00FFFFFF);
-
-            // Move pointer forward
-            var_t1 = (FirstStruct*)((char*)var_t1 + 0x14);
-
-            // Stack values setup
-            sp[0] = var_a0 & 0xFF;
-            sp[1] = var_a0 >> 8;
-            sp[2] = 8;
-            sp[3] = 0x10;
-
-            // Initialize advanced struct fields
-            ((u8*)var_t1)[3] = 2;
-
-            // Forces 'sw zero, 8(t1)'
-            *(u32*)&var_t1->field8 = 0;
-
-            var_t1->field4 = (s32)((((sp[1] & 0xFF) >> 3) << 0xF) | ((((*(u8*)sp) >> 3) << 0xA) | 0xE2000000) |
-                                   (-((s32)(sp[3] << 0x10) >> 0xE) & 0x3E0) | ((-(s16)sp[2] & 0xFF) >> 3));
-
-            // Final merge
-            var_t1->field0 = (var_t1->field0 & 0xFF000000) | (*var_t2 & 0x00FFFFFF);
-            *var_t2 = (*var_t2 & 0xFF000000) | ((u32)var_t1 & 0x00FFFFFF);
-
-            // Advance and prepare to return
-            var_t1 = (FirstStruct*)((char*)var_t1 + 0xC);
-        }
+        return ot;
     }
 
-    return var_t1;
+    texParam = arg3; /* placed in delay slot of first blez */
+
+    if (input->h <= 0)
+    {
+        return ot; /* lui v0,0x80 in delay slot */
+    }
+
+    sprt = (SPRT*)pkt;
+
+    /* Single 32-bit store to r0,g0,b0,code (offsets 4..7) */
+    *(u32*)(pkt + 4) = 0x00808080;
+
+    setlen(sprt, 4);     /* sb v0,3(t1) */
+    setcode(sprt, 0x64); /* sb v0,7(t1) */
+
+    /* Combined 16-bit store for u0,v0 (offset 0xC) */
+    *(u16*)(pkt + 0xc) = 0;
+
+    sprt->w = input->w;
+    sprt->h = input->h;
+    sprt->x0 = input->x;
+    sprt->clut = 0x7CCA;
+    sprt->y0 = input->y;
+
+    addPrim(otp, sprt);
+
+    pkt += 0x14;
+    twin = (DR_TWIN*)pkt;
+
+    tw.x = texParam & 0xFF;
+    tw.y = (texParam >> 8) & 0xFF;
+    tw.w = 8;
+    tw.h = 0x10;
+
+    setTexWindow(twin, &tw);
+    addPrim(otp, twin);
+
+    pkt += 0xC;
+    return pkt;
 }
