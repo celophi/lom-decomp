@@ -21,7 +21,8 @@ typedef struct
     s16 unkE;    // offset 0x0E
 } MenuSlotAnim;
 
-typedef struct {
+typedef struct
+{
     u16 x, y;
     s16 w, h;
 } InputStruct;
@@ -1226,4 +1227,43 @@ void* func_80142014(void* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
 
     pkt += 0xC; /* addiu t1,t1,0xC  -> after twin */
     return pkt; /* move v0,t1 */
+}
+
+/**
+ * @brief Build a textured sprite + texture-window primitive pair, mirror of func_80142014.
+ * @see decomp.me (100%) https://decomp.me/scratch/19jr7
+ */
+void* func_8014218C(u8* pkt, u_long* otp, InputStruct* input, s32 arg3)
+{
+    s32 texParam;
+    RECT tw;
+
+    if (input->w > 0) {
+        texParam = arg3;
+        if (input->h > 0) {
+            *(u32*)(pkt + 4) = 0x00808080;
+            setlen((SPRT*)pkt, 4);
+            setcode((SPRT*)pkt, 0x64);
+            *(u16*)(pkt + 0xc) = 0;
+            ((SPRT*)pkt)->w = input->w;
+            ((SPRT*)pkt)->h = input->h;
+            ((SPRT*)pkt)->x0 = input->x;
+            ((SPRT*)pkt)->y0 = input->y;
+            ((SPRT*)pkt)->clut = 0x7CCA;
+
+            addPrim(otp, (SPRT*)pkt);
+
+            pkt += 0x14;
+            tw.x = texParam & 0xFF;
+            tw.y = texParam >> 8;
+            tw.w = 8;
+            tw.h = 0x10;
+
+            setTexWindow((DR_TWIN*)pkt, &tw);
+            addPrim(otp, (DR_TWIN*)pkt);
+
+            pkt += 0xC;
+        }
+    }
+    return pkt;
 }
