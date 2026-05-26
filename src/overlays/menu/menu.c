@@ -21,7 +21,8 @@ typedef struct
     s16 unkE;    // offset 0x0E
 } MenuSlotAnim;
 
-typedef struct {
+typedef struct
+{
     u16 x, y;
     s16 w, h;
 } InputStruct;
@@ -1226,4 +1227,84 @@ void* func_80142014(void* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
 
     pkt += 0xC; /* addiu t1,t1,0xC  -> after twin */
     return pkt; /* move v0,t1 */
+}
+
+typedef struct {
+    u32 field0;     // offset 0x00
+    u32 field4;     // offset 0x04
+    u16 field8;     // offset 0x08
+    u16 fieldA;     // offset 0x0A
+    u16 fieldC;     // offset 0x0C
+    u16 fieldE;     // offset 0x0E
+    u16 field10;    // offset 0x10
+    u16 field12;    // offset 0x12
+} FirstStruct;
+
+typedef struct {
+    u16 unk0;
+    u16 unk2;
+    s16 unk4;
+    s16 unk6;
+} Arg2Struct;
+
+/**
+ * decomp.me (78.83%) https://decomp.me/scratch/19jr7
+ */
+void* func_8014218C(void* arg0, s32* arg1, void* arg2, s32 arg3)
+{
+    FirstStruct* var_t1 = (FirstStruct*)arg0;
+    u32* var_t2 = (u32*)arg1;
+    Arg2Struct* a2 = (Arg2Struct*)arg2;
+    u16 sp[4];
+
+    // Splitting the if-statement forces "var_a0 = arg3" into the delay slot
+    // of the first branch, exactly matching the target's register allocation.
+    if (a2->unk4 > 0)
+    {
+        s32 var_a0 = arg3;
+        if (a2->unk6 > 0)
+        {
+            // Initialize first struct fields
+            var_t1->field4 = 0x808080;
+            ((u8*)var_t1)[3] = 4;
+            ((u8*)var_t1)[7] = 0x64;
+            var_t1->fieldC = 0;
+            var_t1->field10 = (u16)a2->unk4;
+            var_t1->field12 = (u16)a2->unk6;
+            var_t1->field8 = a2->unk0;
+            var_t1->fieldE = 0x7CCA;
+            var_t1->fieldA = a2->unk2;
+
+            // Merge low 24 bits
+            var_t1->field0 = (var_t1->field0 & 0xFF000000) | (*var_t2 & 0x00FFFFFF);
+            *var_t2 = (*var_t2 & 0xFF000000) | ((u32)var_t1 & 0x00FFFFFF);
+
+            // Move pointer forward
+            var_t1 = (FirstStruct*)((char*)var_t1 + 0x14);
+
+            // Stack values setup
+            sp[0] = var_a0 & 0xFF;
+            sp[1] = var_a0 >> 8;
+            sp[2] = 8;
+            sp[3] = 0x10;
+
+            // Initialize advanced struct fields
+            ((u8*)var_t1)[3] = 2;
+
+            // Forces 'sw zero, 8(t1)'
+            *(u32*)&var_t1->field8 = 0;
+
+            var_t1->field4 = (s32)((((sp[1] & 0xFF) >> 3) << 0xF) | ((((*(u8*)sp) >> 3) << 0xA) | 0xE2000000) |
+                                   (-((s32)(sp[3] << 0x10) >> 0xE) & 0x3E0) | ((-(s16)sp[2] & 0xFF) >> 3));
+
+            // Final merge
+            var_t1->field0 = (var_t1->field0 & 0xFF000000) | (*var_t2 & 0x00FFFFFF);
+            *var_t2 = (*var_t2 & 0xFF000000) | ((u32)var_t1 & 0x00FFFFFF);
+
+            // Advance and prepare to return
+            var_t1 = (FirstStruct*)((char*)var_t1 + 0xC);
+        }
+    }
+
+    return var_t1;
 }
