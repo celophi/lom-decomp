@@ -1231,62 +1231,39 @@ void* func_80142014(void* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
 
 /**
  * @brief Build a textured sprite + texture-window primitive pair, mirror of func_80142014.
- * @see decomp.me (78.83%) https://decomp.me/scratch/19jr7
+ * @see decomp.me (100%) https://decomp.me/scratch/19jr7
  */
-void* func_8014218C(void* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
+void* func_8014218C(u8* pkt, u_long* otp, InputStruct* input, s32 arg3)
 {
-    u8* pkt;      /* maps to t1 */
-    u_long* otp;  /* maps to t2 */
-    s32 texParam; /* maps to a0 */
-    SPRT* sprt;
-    DR_TWIN* twin;
+    s32 texParam;
     RECT tw;
 
-    pkt = (u8*)ot;
-    otp = ot_ptr;
+    if (input->w > 0) {
+        texParam = arg3;
+        if (input->h > 0) {
+            *(u32*)(pkt + 4) = 0x00808080;
+            setlen((SPRT*)pkt, 4);
+            setcode((SPRT*)pkt, 0x64);
+            *(u16*)(pkt + 0xc) = 0;
+            ((SPRT*)pkt)->w = input->w;
+            ((SPRT*)pkt)->h = input->h;
+            ((SPRT*)pkt)->x0 = input->x;
+            ((SPRT*)pkt)->y0 = input->y;
+            ((SPRT*)pkt)->clut = 0x7CCA;
 
-    if (input->w <= 0)
-    {
-        return ot;
+            addPrim(otp, (SPRT*)pkt);
+
+            pkt += 0x14;
+            tw.x = texParam & 0xFF;
+            tw.y = texParam >> 8;
+            tw.w = 8;
+            tw.h = 0x10;
+
+            setTexWindow((DR_TWIN*)pkt, &tw);
+            addPrim(otp, (DR_TWIN*)pkt);
+
+            pkt += 0xC;
+        }
     }
-
-    texParam = arg3; /* placed in delay slot of first blez */
-
-    if (input->h <= 0)
-    {
-        return ot; /* lui v0,0x80 in delay slot */
-    }
-
-    sprt = (SPRT*)pkt;
-
-    /* Single 32-bit store to r0,g0,b0,code (offsets 4..7) */
-    *(u32*)(pkt + 4) = 0x00808080;
-
-    setlen(sprt, 4);     /* sb v0,3(t1) */
-    setcode(sprt, 0x64); /* sb v0,7(t1) */
-
-    /* Combined 16-bit store for u0,v0 (offset 0xC) */
-    *(u16*)(pkt + 0xc) = 0;
-
-    sprt->w = input->w;
-    sprt->h = input->h;
-    sprt->x0 = input->x;
-    sprt->clut = 0x7CCA;
-    sprt->y0 = input->y;
-
-    addPrim(otp, sprt);
-
-    pkt += 0x14;
-    twin = (DR_TWIN*)pkt;
-
-    tw.x = texParam & 0xFF;
-    tw.y = (texParam >> 8) & 0xFF;
-    tw.w = 8;
-    tw.h = 0x10;
-
-    setTexWindow(twin, &tw);
-    addPrim(otp, twin);
-
-    pkt += 0xC;
     return pkt;
 }
