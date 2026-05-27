@@ -16,6 +16,8 @@ menu_draw_window_transition = 0x80141570;
 menu_draw_window       = 0x8014169C;
 menu_emit_corner       = 0x80141E64;
 menu_fill_window_interior = 0x80141EE4;
+menu_build_h_edge      = 0x80142014;
+menu_build_v_edge      = 0x8014218C;
 
 // Data
 g_menu_frame           = 0x801690AC;
@@ -30,3 +32,11 @@ g_script_table         = 0x80168778;
 g_menu_glyph_src       = 0x80168AA8;
 g_menu_tim             = 0x80160260;
 g_menu_slots           = 0x80169420;
+
+// Unnamed globals (named during decomp)
+g_menu_pending_overlay = 0x80169124;
+g_menu_cursor_enable   = 0x80169130;
+g_menu_draw_early_out  = 0x80168C18;
+g_draw_buf_base        = 0x80168C0C;
+g_menu_suppress_cursor = 0x80168C28;
+g_menu_scene_type      = 0x80169548;
