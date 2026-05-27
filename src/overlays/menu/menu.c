@@ -1284,37 +1284,32 @@ extern unk_struct D_800EC3DA;
 extern unk_struct D_800EC3E4;
 
 /**
- * decomp.me (80.32%) https://decomp.me/scratch/ozwB7
+ * decomp.me (83.81%) https://decomp.me/scratch/ozwB7
  */
-void func_80142304(s32 arg0, s32 arg1, arg2_struct* arg2, s32 arg3)
-{
+void func_80142304(s32 arg0, s32 arg1, arg2_struct *arg2, s32 arg3) {
     u8 sp20[16];
-    u8* ptr = sp20;
+    u8 *ptr = sp20;
+    u32 addr;
     u8 unk1;
     u8 unk0;
-    u32 addr;
-    u8* temp_s0;
+    u8 *temp_s0;
 
-    /* bltz a3, 4c */
-    if (arg3 >= 0)
-    {
+    if (arg3 >= 0) {
         unk1 = D_800EC3DA.unk1;
         unk0 = D_800EC3DA.unk0;
         addr = (u32)&D_800EC3DA - 0x16;
-    }
-    else
-    {
+    } else {
         unk1 = D_800EC3E4.unk1;
         addr = (u32)&D_800EC3E4 - 0x20;
         unk0 = D_800EC3E4.unk0;
     }
 
-    temp_s0 = (u8*)(unk0 + (unk1 << 8) + addr);
+    temp_s0 = (u8 *)(unk0 + ((unk1 << 8) + addr));
 
     func_800A8E28(ptr, temp_s0);
     ptr += func_800A8DDC(temp_s0);
-
+    
     *ptr = 0;
-
+    
     func_800A88A0(arg1, arg0, sp20, 1, arg2->unk0, arg2->unk2, 0);
 }
