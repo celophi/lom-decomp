@@ -1356,50 +1356,50 @@ void func_80142304(s32 arg0, register s32 arg1, arg2_struct* arg2, s32 arg3)
 
 typedef struct
 {
-  u8 unk0;
-  u8 unk1;
-  union
-  {
-    u16 unk2;
-    struct
+    u8 unk0;
+    u8 unk1;
+    union
     {
-      u8 unk2_hi;
-      u8 unk3;
-    } s;
-  } u2;
-  u8 unk4;
-  u8 unk5;
-  union
-  {
-    u16 unk6;
-    struct
+        u16 unk2;
+        struct
+        {
+            u8 unk2_hi;
+            u8 unk3;
+        } s;
+    } u2;
+    u8 unk4;
+    u8 unk5;
+    union
     {
-      u8 unk6_hi;
-      u8 unk7;
-    } s;
-  } u6;
-  union
-  {
-    u16 unk8;
-    struct
+        u16 unk6;
+        struct
+        {
+            u8 unk6_hi;
+            u8 unk7;
+        } s;
+    } u6;
+    union
     {
-      u8 unk8_hi;
-      u8 unk9;
-    } s;
-  } u8_u;
-  union
-  {
-    u16 unkA;
-    struct
+        u16 unk8;
+        struct
+        {
+            u8 unk8_hi;
+            u8 unk9;
+        } s;
+    } u8_u;
+    union
     {
-      u8 unkA_hi;
-      u8 unkB;
-    } s;
-  } uA;
-  u8 unkC;
-  u8 unkD;
-  u8 unkE;
-  u8 unkF;
+        u16 unkA;
+        struct
+        {
+            u8 unkA_hi;
+            u8 unkB;
+        } s;
+    } uA;
+    u8 unkC;
+    u8 unkD;
+    u8 unkE;
+    u8 unkF;
 } UnkStruct;
 extern UnkStruct D_80169138[0x2C];
 extern u8 D_801690B3;
@@ -1407,19 +1407,19 @@ extern s32 D_80168C2C;
 
 typedef struct
 {
-  u32 unk0;
-  u32 unk4;
-  u32 unk8;
-  u32 unkC;
+    u32 unk0;
+    u32 unk4;
+    u32 unk8;
+    u32 unkC;
 } Struct_D_80169538;
 extern Struct_D_80169538 D_80169538;
 
 typedef struct
 {
-  u8 unk0;
-  u8 unk1;
-  u8 unk2;
-  u8 unk3;
+    u8 unk0;
+    u8 unk1;
+    u8 unk2;
+    u8 unk3;
 } Struct_D_80168C1C;
 extern Struct_D_80168C1C D_80168C1C;
 
@@ -1440,11 +1440,11 @@ extern u8 D_8016913D;
 
 typedef struct
 {
-  u16 unk0;
-  u8 pad2[0x266];
-  u16 unk268;
-  u8 unk26A;
-  u8 unk26B;
+    u16 unk0;
+    u8 pad2[0x266];
+    u16 unk268;
+    u8 unk26A;
+    u8 unk26B;
 } Struct_D_800FD818;
 
 extern Struct_D_800FD818 D_800FD818;
@@ -1860,4 +1860,16 @@ void func_801423D8(void)
     D_801690F9 = 0;
     func_8014E3C4(new_var4, var_a1, new_var3, var_a3);
     func_801436F0();
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/hyDM7
+ */
+void func_80142D24(void)
+{
+    s32 i;
+    for (i = 0; i < 0x2C; i++)
+    {
+        D_80169138[i].u2.unk2 &= 0xFFFD;
+    }
 }
