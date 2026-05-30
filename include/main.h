@@ -70,6 +70,8 @@ typedef struct
     u8  inject_enable;      /**< 0x840: non-zero allows input injection. */
     u8  _pad841[0x858 - 0x841]; /**< 0x841: not yet mapped. */
     u32 inject_flags;       /**< 0x858: bit 0x80 enables input injection. */
+    u8 pad85C[0x24C];
+    u32 unkAA8;
 } PadContext;
 
 /** @brief Pointer to the controller/pad context object. */
