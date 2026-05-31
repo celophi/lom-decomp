@@ -1873,3 +1873,49 @@ void func_80142D24(void)
         D_80169138[i].u2.unk2 &= 0xFFFD;
     }
 }
+
+extern s32 D_801693F8;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/YhGni
+ */
+void func_80142D54(void)
+{
+    s32 var_s3 = 0;
+    s32 var_a0 = var_s3;
+    s32 var_s2 = var_a0;
+
+    do
+    {
+        // Access offset 3 through the union
+        if (D_80169138[var_s2].u2.s.unk3 == 0xFF)
+        {
+            s32 temp_s0 = var_a0;
+            var_a0++;
+            var_a0--;
+
+            // Access offset 2 through the union
+            if (D_80169138[var_s2].u2.s.unk2_hi & 1)
+            {
+                var_a0 = func_80142E40(var_s2, temp_s0);
+                if (temp_s0 != (var_a0 - 0x13))
+                {
+                    var_s3 = 1;
+                    if (var_a0 >= 0xAC)
+                    {
+                        D_8016954C = var_a0 - 0xAB;
+                        D_80169400 = 8;
+                    }
+                }
+            }
+        }
+        var_s2 += 1;
+    } while (var_s2 < 0x2C);
+
+    D_801693F8 = var_a0;
+    if (var_s3 == 0)
+    {
+        D_8016954C = 0;
+        D_80169400 = 8;
+    }
+}
