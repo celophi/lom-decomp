@@ -1919,3 +1919,56 @@ void func_80142D54(void)
         D_80169400 = 8;
     }
 }
+
+/**
+ * decomp.me (99.04%) https://decomp.me/scratch/LDCeT
+ */
+s32 func_80142E40(s32 arg0, s32 arg1)
+{
+    UnkStruct* temp_a0;
+    s32 var_a2;
+    int new_var5;
+    UnkStruct* new_var4;
+    int new_var;
+    u32 temp_a1;
+    union
+    {
+        u16 unk8;
+        struct
+        {
+            u8 unk8_hi;
+            u8 unk9;
+        } s;
+    }* new_var2;
+    UnkStruct* new_var3;
+    var_a2 = arg1;
+    new_var = (((u16)(&D_80169138[arg0])->u2.unk2) >> 1) & 1;
+    temp_a1 = var_a2 & 0xFFFF;
+    var_a2 += 0x13;
+    new_var4 = &D_80169138[arg0];
+
+    (*(&D_80169138[arg0])).unk1 = 4;
+    new_var2 = &new_var4->u8_u;
+    new_var4->u8_u.unk8 = (*new_var2).s.unk8_hi | ((temp_a1 & 1) << 0xF);
+    (&D_80169138[arg0])->uA.unkA = ((&D_80169138[arg0])->uA.unkA & 0xFF00) | (0xFF & (temp_a1 >> 1));
+    new_var4->uA.unkA = (new_var4->uA.unkA & 0xFF00) | ((temp_a1 >> 1) & 0xFF);
+    new_var5 = 0;
+    if (new_var)
+    {
+        s32 var_s0;
+        s32 temp_v0;
+        for (var_s0 = new_var5; (var_s0 < 4) != 0;)
+        {
+            new_var3 = D_80169138 + arg0;
+            var_s0 = (&(&(*new_var3).uA.s)->unkB)[var_s0];
+            temp_v0 = var_s0;
+            if (temp_v0 == 0xFF)
+            {
+                break;
+            }
+            var_s0++;
+            var_a2 = func_80142E40(temp_v0, var_a2);
+        }
+    }
+    return var_a2;
+}
