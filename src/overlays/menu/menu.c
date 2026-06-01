@@ -2040,3 +2040,110 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
     }
     return cur_pos;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/x8WyZ
+ */
+u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
+{
+    DRAWENV stack_drawenv;
+    u_char* s1;
+    u_char* s0;
+    int var_a2;
+    int v0_190;
+    u8* new_var;
+    u_char* new_var2;
+    u8* ptr_801ed600;
+
+    new_var = (u8*)0x801ed600;
+
+    /* 30: jal func_80145608 */
+    s1 = (u_char*)func_80145608(arg0);
+
+    /* 3c: ternary generating the conditional branch at 48 */
+    var_a2 = flag ? 0xf0 : 8;
+
+    /* 58: SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0) */
+    SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0);
+
+    /* 64: SetDrawEnv(s1) passing &stack_drawenv as side argument */
+    SetDrawEnv(s1, &stack_drawenv);
+
+    /* 78 - 94: First OT link operation */
+    addPrim(ot, s1);
+
+    /* 98: Advance the structural pointer by 0x40 bytes */
+    s1 += 0x40;
+    s0 = s1;
+
+    /* a8 - c0: Decrement tracker logic */
+    ptr_801ed600 = new_var;
+    if (ptr_801ed600[0x92] != 0)
+    {
+        u8 val = ptr_801ed600[0x92] - 1;
+        ptr_801ed600[0x140] = val;
+        ptr_801ed600[0x92] = val;
+    }
+
+    /* c4: Explicit switch structure to enforce the exact MIPS jump table/branch sequence */
+    switch (g_menu_cursor_enable)
+    {
+    case 0:
+        s0 = (u_char*)func_80148900(s1, ot - 1, arg3);
+        func_80143964(0);
+        if (arg3 != 0)
+        {
+            func_80143190();
+        }
+        break;
+
+    case 1:
+        s0 = (u_char*)func_80148A20(s1, ot - 1, arg3);
+        if (g_menu_suppress_cursor == 0)
+        {
+            func_80143964(arg3);
+        }
+        break;
+
+    case 2:
+        s0 = (u_char*)func_80148A20(s1, ot - 1, arg3);
+        if (g_menu_suppress_cursor == 0)
+        {
+            g_menu_cursor_enable = 0;
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    /* 190: jal func_80149828 */
+    v0_190 = func_80149828(s0, ot);
+
+    /* 19c: jal func_8014874C */
+    s0 = (u_char*)func_8014874C(v0_190, ot - 1);
+
+    /* 1a8 - 1cc: Inline primitive data initialization */
+    *(u8*)(s0 + 3) = 1;
+    *(u_int*)(s0 + 4) = 0xe1000005;
+
+    /* 1d0 - 1fc: Second OT link operation */
+    addPrim(ot, s0);
+    s1 = s0 + 8;
+
+    /* 1f8: Second conditional ternary logic blocks */
+    var_a2 = flag ? 0xfc : 0x14;
+
+    /* 214: SetDefDrawEnv */
+    new_var2 = s0 + 0x48;
+    SetDefDrawEnv(&stack_drawenv, 0xf, var_a2, 0x24, 0xaa);
+
+    /* 220: SetDrawEnv with s1 advanced to s0 + 8 */
+    SetDrawEnv(s1, &stack_drawenv);
+
+    /* 22c - 254: Third OT link operation */
+    addPrim(ot, s1);
+
+    /* 248: Evaluates to `addiu v0, s0, 0x48` as the function's return statement */
+    return new_var2;
+}
