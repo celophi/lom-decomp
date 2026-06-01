@@ -838,7 +838,7 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
         var_a3 = 1;
     }
 
-    gpu_work->unk4040 = func_80142F10(gpu_work->unk4040, &gpu_work->unk34, gpu_work->unk404C, var_a3);
+    gpu_work->unk4040 = menu_draw_frame(gpu_work->unk4040, &gpu_work->unk34, gpu_work->unk404C, var_a3);
 
     if (g_menu_pending_overlay != 0)
     {
@@ -2041,26 +2041,31 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/x8WyZ
+ * @brief Draw the menu frame layers and optionally dispatch navigation input.
+ * @param prim_cursor_id Prim-buffer ID passed to the initial buffer setup call.
+ * @param ot Pointer into the ordering table used for addPrim calls.
+ * @param draw_page 0 = first display page (Y near 0); nonzero = second page (Y+240).
+ * @param handle_input When nonzero and cursor is disabled, calls menu_handle_node_input.
+ * @return Updated prim-buffer write cursor after all primitives are emitted.
+ * @see decomp.me (100%) https://decomp.me/scratch/x8WyZ
  */
-u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
+u_char* menu_draw_frame(int prim_cursor_id, u_int* ot, int draw_page, int handle_input)
 {
     DRAWENV stack_drawenv;
     u_char* s1;
     u_char* s0;
     int var_a2;
     int v0_190;
-    u8* new_var;
-    u_char* new_var2;
-    u8* ptr_801ed600;
+    u8* scd_base;
+    u_char* prim_end;
 
-    new_var = (u8*)0x801ed600;
+    scd_base = (u8*)0x801ed600;
 
     /* 30: jal func_80145608 */
-    s1 = (u_char*)func_80145608(arg0);
+    s1 = (u_char*)func_80145608(prim_cursor_id);
 
     /* 3c: ternary generating the conditional branch at 48 */
-    var_a2 = flag ? 0xf0 : 8;
+    var_a2 = draw_page ? 0xf0 : 8;
 
     /* 58: SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0) */
     SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0);
@@ -2076,36 +2081,35 @@ u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
     s0 = s1;
 
     /* a8 - c0: Decrement tracker logic */
-    ptr_801ed600 = new_var;
-    if (ptr_801ed600[0x92] != 0)
+    if (scd_base[0x92] != 0)
     {
-        u8 val = ptr_801ed600[0x92] - 1;
-        ptr_801ed600[0x140] = val;
-        ptr_801ed600[0x92] = val;
+        u8 val = scd_base[0x92] - 1;
+        scd_base[0x140] = val;
+        scd_base[0x92] = val;
     }
 
     /* c4: Explicit switch structure to enforce the exact MIPS jump table/branch sequence */
     switch (g_menu_cursor_enable)
     {
     case 0:
-        s0 = (u_char*)func_80148900(s1, ot - 1, arg3);
+        s0 = (u_char*)func_80148900(s1, ot - 1, handle_input);
         func_80143964(0);
-        if (arg3 != 0)
+        if (handle_input != 0)
         {
-            func_80143190();
+            menu_handle_node_input();
         }
         break;
 
     case 1:
-        s0 = (u_char*)func_80148A20(s1, ot - 1, arg3);
+        s0 = (u_char*)func_80148A20(s1, ot - 1, handle_input);
         if (g_menu_suppress_cursor == 0)
         {
-            func_80143964(arg3);
+            func_80143964(handle_input);
         }
         break;
 
     case 2:
-        s0 = (u_char*)func_80148A20(s1, ot - 1, arg3);
+        s0 = (u_char*)func_80148A20(s1, ot - 1, handle_input);
         if (g_menu_suppress_cursor == 0)
         {
             g_menu_cursor_enable = 0;
@@ -2131,10 +2135,10 @@ u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
     s1 = s0 + 8;
 
     /* 1f8: Second conditional ternary logic blocks */
-    var_a2 = flag ? 0xfc : 0x14;
+    var_a2 = draw_page ? 0xfc : 0x14;
 
     /* 214: SetDefDrawEnv */
-    new_var2 = s0 + 0x48;
+    prim_end = s0 + 0x48;
     SetDefDrawEnv(&stack_drawenv, 0xf, var_a2, 0x24, 0xaa);
 
     /* 220: SetDrawEnv with s1 advanced to s0 + 8 */
@@ -2144,15 +2148,15 @@ u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
     addPrim(ot, s1);
 
     /* 248: Evaluates to `addiu v0, s0, 0x48` as the function's return statement */
-    return new_var2;
+    return prim_end;
 }
 
 typedef struct
 {
-  u16 unk0;
-  u8 unk2;
+  u16 packed_x; /**< Bottom 9 bits = X screen position; upper bits unknown. */
+  u8 y;         /**< Y position; caller subtracts 8 when using as display offset. */
   u8 pad[5];
-} Unk801686F8_Item;
+} MenuContentItem;
 
 extern s32 D_801690B4;
 extern s32 D_801694B8;
@@ -2174,9 +2178,10 @@ extern struct
 extern void *D_801686F8[];
 
 /**
- * decomp.me (99.42%) https://decomp.me/scratch/YoOml
+ * @brief Process D-pad and face-button input to navigate and select menu nodes.
+ * @see decomp.me (99.42%) https://decomp.me/scratch/YoOml
  */
-unsigned int func_80143190(void)
+unsigned int menu_handle_node_input(void)
 {
     MenuNode* temp_a1;
     s32 temp_v0;
@@ -2208,7 +2213,7 @@ unsigned int func_80143190(void)
     u8* var_a0;
     u8* var_v0;
     unsigned int new_var12;
-    Unk801686F8_Item* temp_v1_2;
+    MenuContentItem* temp_v1_2;
     u8* new_var6;
     int new_var2;
     const u32 MENU_20 = 0x20;
@@ -2388,9 +2393,9 @@ unsigned int func_80143190(void)
             D_8016941C = func_8014847C(new_var12, temp_a1, &D_80169114, temp_v0_3);
             if (D_8016941C != (-1))
             {
-                temp_v1_2 = &((Unk801686F8_Item*)D_801686F8[new_var11[g_menu_scene_type].u6.s.self_idx])[D_8016941C];
-                D_80169128 = temp_v1_2->unk0 & 0x1FF;
-                new_var3 = temp_v1_2->unk2 - 8;
+                temp_v1_2 = &((MenuContentItem*)D_801686F8[new_var11[g_menu_scene_type].u6.s.self_idx])[D_8016941C];
+                D_80169128 = temp_v1_2->packed_x & 0x1FF;
+                new_var3 = temp_v1_2->y - 8;
                 g_menu_suppress_cursor = 5;
                 g_menu_cursor_enable = 1;
                 D_8016912C = new_var3;
