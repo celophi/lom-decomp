@@ -18,6 +18,9 @@ menu_emit_corner       = 0x80141E64;
 menu_fill_window_interior = 0x80141EE4;
 menu_build_h_edge      = 0x80142014;
 menu_build_v_edge      = 0x8014218C;
+menu_collapse_all      = 0x80142D24;
+menu_update_layout     = 0x80142D54;
+menu_layout_node       = 0x80142E40;
 
 // Data
 g_menu_frame           = 0x801690AC;
@@ -40,3 +43,5 @@ g_menu_draw_early_out  = 0x80168C18;
 g_draw_buf_base        = 0x80168C0C;
 g_menu_suppress_cursor = 0x80168C28;
 g_menu_scene_type      = 0x80169548;
+g_menu_nodes           = 0x80169138;
+g_menu_layout_end      = 0x801693F8;
