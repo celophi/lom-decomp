@@ -1408,7 +1408,7 @@ typedef struct
     u8 unkF;
 } MenuNode;
 extern MenuNode g_menu_nodes[0x2C];
-extern u8 D_801690B3;
+extern u8 g_menu_prev_node;
 extern s32 D_80168C2C;
 
 typedef struct
@@ -1437,12 +1437,13 @@ extern s32 D_8016911C;
 extern s32 D_80169554;
 extern s32 D_801694B0;
 extern s32 D_801694B4;
-extern s32 D_80169418;
+extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
-extern s32 D_80169400;
+extern s32 g_menu_redraw_state;
 extern s32 g_menu_active_node;
-extern s32 D_80169130;
-extern u8 D_8016913D;
+/* D_801694B4 used as s32[] nav-table base: D_801694B4[active_node] = L2 nav target */
+extern s32 D_801694B4;
+extern u8 g_menu_init_content_id;
 
 typedef struct
 {
@@ -1515,7 +1516,7 @@ void menu_node_tree_init(void)
     u16 temp2;
     var_t0 = 0;
     var_a0 = g_menu_nodes;
-    D_801690B3 = 0xFF;
+    g_menu_prev_node = 0xFF;
     D_80168C2C = 0;
     D_80169538.unk0 = 0;
     D_80169538.unk4 = 0;
@@ -1533,11 +1534,11 @@ void menu_node_tree_init(void)
     D_80169554 = 0;
     D_801694B0 = 0;
     D_801694B4 = 0;
-    D_80169418 = 0;
+    g_menu_content_height = 0;
     g_menu_scroll_pos = 0;
-    D_80169400 = 0;
+    g_menu_redraw_state = 0;
     g_menu_active_node = 0;
-    D_80169130 = 0;
+    g_menu_cursor_enable = 0;
     for (var_t0 = 0; var_t0 < 0x2C; var_t0++)
     {
         g_menu_nodes[var_t0].state = 0;
@@ -1865,7 +1866,7 @@ void menu_node_tree_init(void)
         return;
     }
     g_menu_scene_type = 0;
-    new_var4 = D_8016913D;
+    new_var4 = g_menu_init_content_id;
     D_801690F9 = 0;
     func_8014E3C4(new_var4, var_a1, new_var3, var_a3);
     menu_set_active_node();
@@ -1889,7 +1890,7 @@ extern s32 g_menu_layout_end;
 
 /**
  * @brief Assigns layout positions to all active root menu nodes and stores the final position count.
- * @note Sets g_menu_scroll_pos and D_80169400 to signal scroll state after layout.
+ * @note Sets g_menu_scroll_pos and g_menu_redraw_state to signal scroll state after layout.
  * @see decomp.me (100%) https://decomp.me/scratch/YhGni
  */
 void menu_update_layout(void)
@@ -1915,7 +1916,7 @@ void menu_update_layout(void)
                     if (pos >= 0xAC)
                     {
                         g_menu_scroll_pos = pos - 0xAB;
-                        D_80169400 = 8;
+                        g_menu_redraw_state = 8;
                     }
                 }
             }
@@ -1927,7 +1928,7 @@ void menu_update_layout(void)
     if (changed == 0)
     {
         g_menu_scroll_pos = 0;
-        D_80169400 = 8;
+        g_menu_redraw_state = 8;
     }
 }
 
