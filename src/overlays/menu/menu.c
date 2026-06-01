@@ -3,22 +3,22 @@
 typedef struct MenuFrameCtx
 {
     u8 pad0[0x34];
-    u8 unk34;         /* Start of buffer at offset 0x34 */
-    u8 pad35[0x400B]; /* Padding to 0x4040 */
-    s32 unk4040;      /* Offset 0x4040 */
-    u8 pad4044[8];    /* Padding to 0x404C */
-    s32 unk404C;      /* Offset 0x404C */
+    u8 ot_base;         /* 0x0034 - start of the ordering-table buffer */
+    u8 pad35[0x400B];   /* padding to 0x4040 */
+    s32 prim_cursor;    /* 0x4040 - current primitive write cursor (pointer stored as s32) */
+    u8 pad4044[8];      /* padding to 0x404C */
+    s32 draw_buf_idx;   /* 0x404C - display buffer page index (0 or 1, used for double-buffer flip) */
 } MenuFrameCtx;
 
 typedef struct
 {
-    u8 _pad0[2]; // offsets 0x00-0x01
-    u8 unk2;     // offset 0x02
-    u8 _pad1[5]; // offsets 0x03-0x07
-    u16 unk8;    // offset 0x08
-    u16 unkA;    // offset 0x0A
-    s16 unkC;    // offset 0x0C
-    s16 unkE;    // offset 0x0E
+    u8 _pad0[2];    // offsets 0x00-0x01 (active, index)
+    u8 anim_frame;  // offset 0x02 - animation frame counter (counts up during open/close)
+    u8 _pad1[5];    // offsets 0x03-0x07
+    u16 x;          // offset 0x08 - window X origin
+    u16 y;          // offset 0x0A - window Y origin
+    s16 w;          // offset 0x0C - target window width  (clamped to >= 0x20)
+    s16 h;          // offset 0x0E - target window height (clamped to >= 0x10)
 } MenuSlotAnim;
 
 typedef struct
@@ -60,9 +60,9 @@ typedef struct
 typedef struct
 {
     u8 pad[0x4040];
-    s32* unk4040;
+    s32* prim_cursor; /* 0x4040 - primitive write cursor */
     u8 pad4044[8];
-    s32 unk404C;
+    s32 draw_buf_idx; /* 0x404C - display buffer page index (0 or 1) */
 } MenuRenderCtx;
 
 typedef struct
@@ -838,12 +838,12 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
         var_a3 = 1;
     }
 
-    gpu_work->unk4040 = menu_draw_frame(gpu_work->unk4040, &gpu_work->unk34, gpu_work->unk404C, var_a3);
+    gpu_work->prim_cursor = menu_draw_frame(gpu_work->prim_cursor, &gpu_work->ot_base, gpu_work->draw_buf_idx, var_a3);
 
     if (g_menu_pending_overlay != 0)
     {
-        gpu_work->unk4040 =
-            func_800A88A0(gpu_work->unk4040, &gpu_work->unk34, g_menu_pending_overlay, 1, 0xA0, 0xCA, 2);
+        gpu_work->prim_cursor =
+            func_800A88A0(gpu_work->prim_cursor, &gpu_work->ot_base, g_menu_pending_overlay, 1, 0xA0, 0xCA, 2);
     }
 }
 
@@ -870,11 +870,11 @@ void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_en
     s32 clampE;
 
     /* First computation */
-    temp_a3 = ((s32)((u16)slot->unkC << 0x10) >> 0x11) - ((s16)(slot->unkC / 12) * slot->unk2);
+    temp_a3 = ((s32)((u16)slot->w << 0x10) >> 0x11) - ((s16)(slot->w / 12) * slot->anim_frame);
     sp[4] = (s16)temp_a3;
 
     /* Second computation */
-    temp_a1 = ((s32)((u16)slot->unkE << 0x10) >> 0x11) - ((s16)(slot->unkE / 12) * slot->unk2);
+    temp_a1 = ((s32)((u16)slot->h << 0x10) >> 0x11) - ((s16)(slot->h / 12) * slot->anim_frame);
 
     /* First branch logic block */
 
@@ -887,20 +887,20 @@ void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_en
         if (temp_a1 > 0)
         {
 
-            clampC = slot->unkC - (temp_a3 * 2);
+            clampC = slot->w - (temp_a3 * 2);
             if (clampC < 0x20)
             {
                 clampC = 0x20;
             }
 
-            clampE = slot->unkE - (temp_a1 * 2);
+            clampE = slot->h - (temp_a1 * 2);
             if (clampE < 0x10)
             {
                 clampE = 0x10;
             }
 
-            sp[0] = slot->unk8 + temp_a3;
-            sp[1] = slot->unkA + temp_a1;
+            sp[0] = slot->x + temp_a3;
+            sp[1] = slot->y + temp_a1;
             sp[2] = clampC;
             sp[3] = clampE;
 
@@ -947,7 +947,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     void* temp_v0_2;
 
     temp_s3 = rect;
-    var_s1 = gpu_work->unk4040;
+    var_s1 = gpu_work->prim_cursor;
     temp_s2 = (s32*)gpu_work + (((u32)slot->_u.unk4 >> 0x19));
     if (slot->unk18 != 0)
     {
@@ -970,7 +970,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
         {
             if ((temp_s3->h - 0x10) > 0)
             {
-                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->unk404C ^ 1) * 0x40C0) + 0x4064));
+                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * 0x40C0) + 0x4064));
                 var_a3 = 0;
                 *var_s1 = (*var_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 g_menu_draw_early_out = 0;
@@ -986,12 +986,12 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                 temp_s1 = slot->unk1C(temp_s2, slot, var_s1, arg3, var_a3);
                 if (g_menu_draw_early_out != 0)
                 {
-                    gpu_work->unk4040 = temp_s1;
+                    gpu_work->prim_cursor = temp_s1;
                     return;
                 }
                 temp_a0 = temp_s3->y;
                 var_a2_2 = temp_a0 + 0x10;
-                if (gpu_work->unk404C != 0)
+                if (gpu_work->draw_buf_idx != 0)
                 {
                     var_a2_2 = temp_a0 + 0xF8;
                 }
@@ -1111,7 +1111,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     ((MenuPrimHead*)temp_v0_2)->_u.unk0 =
         (s32)((((MenuPrimHead*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
-    gpu_work->unk4040 = (s32*)((char*)temp_v0_2 + 8);
+    gpu_work->prim_cursor = (s32*)((char*)temp_v0_2 + 8);
 }
 
 /**
@@ -1441,12 +1441,12 @@ typedef struct
         struct
         {
             u8 unkA_hi;
-            u8 unkB;
+            u8 child0; /**< First child node index (0xFF = none). */
         } s;
     } uA;
-    u8 unkC;
-    u8 unkD;
-    u8 unkE;
+    u8 child1; /**< Second child node index (0xFF = none). */
+    u8 child2; /**< Third child node index (0xFF = none). */
+    u8 child3; /**< Fourth child node index (0xFF = none). */
     u8 unkF;
 } MenuNode;
 extern MenuNode g_menu_nodes[0x2C];
@@ -1595,10 +1595,10 @@ void menu_node_tree_init(void)
         g_menu_nodes[var_t0].state = 0;
         g_menu_nodes[var_t0].unk4 = 0;
         g_menu_nodes[var_t0].content_id = var_a1;
-        g_menu_nodes[var_t0].unkE = var_a1;
-        g_menu_nodes[var_t0].unkD = var_a1;
-        g_menu_nodes[var_t0].unkC = var_a1;
-        g_menu_nodes[var_t0].uA.s.unkB = var_a1;
+        g_menu_nodes[var_t0].child3 = var_a1;
+        g_menu_nodes[var_t0].child2 = var_a1;
+        g_menu_nodes[var_t0].child1 = var_a1;
+        g_menu_nodes[var_t0].uA.s.child0 = var_a1;
         g_menu_nodes[var_t0].u2.unk2 = (u16)((g_menu_nodes[var_t0].u2.unk2 & 0xFFFC) | 0x30);
         g_menu_nodes[var_t0].u2.s.parent_idx = var_a1;
     }
@@ -1620,10 +1620,10 @@ void menu_node_tree_init(void)
     {
         g_menu_nodes[0].unk4 = 1;
     }
-    g_menu_nodes[0].uA.s.unkB = 1;
+    g_menu_nodes[0].uA.s.child0 = 1;
     g_menu_nodes[1].u6.s.self_idx = 1;
     g_menu_nodes[1].unk4 = 5;
-    g_menu_nodes[0].unkC = 2;
+    g_menu_nodes[0].child1 = 2;
     g_menu_nodes[2].unk0 = 2;
     g_menu_nodes[2].u6.s.self_idx = 2;
     g_menu_nodes[2].unk4 = 4;
@@ -1659,8 +1659,8 @@ void menu_node_tree_init(void)
     temp_v0_5 = temp_v0_4 | 0x10;
     *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3E);
-    g_menu_nodes[3].uA.s.unkB = 4;
-    g_menu_nodes[3].unkC = 5;
+    g_menu_nodes[3].uA.s.child0 = 4;
+    g_menu_nodes[3].child1 = 5;
     g_menu_nodes[4].unk0 = 6;
     g_menu_nodes[4].unk4 = 5;
     g_menu_nodes[5].unk0 = 5;
@@ -1669,8 +1669,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[6].unk0 = 7;
     g_menu_nodes[6].u6.s.self_idx = 6;
     g_menu_nodes[6].unk4 = 3;
-    g_menu_nodes[6].uA.s.unkB = 7;
-    g_menu_nodes[6].unkC = 8;
+    g_menu_nodes[6].uA.s.child0 = 7;
+    g_menu_nodes[6].child1 = 8;
     g_menu_nodes[7].unk0 = 9;
     g_menu_nodes[7].u6.s.self_idx = 7;
     new_var7 = 0xFF3E;
@@ -1699,7 +1699,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[9].unk0 = 0xA;
     g_menu_nodes[9].u6.s.self_idx = 9;
     g_menu_nodes[9].unk4 = 6;
-    g_menu_nodes[9].uA.s.unkB = 0xA;
+    g_menu_nodes[9].uA.s.child0 = 0xA;
     g_menu_nodes[0xA].unk0 = 0xB;
     g_menu_nodes[0x12].unk4 = 0xA;
     g_menu_nodes[0xA].u6.s.self_idx = 0xA;
@@ -1707,7 +1707,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[0xC].unk0 = 0xA;
     g_menu_nodes[0xC].u6.s.self_idx = 0xC;
     g_menu_nodes[0xC].unk4 = 6;
-    g_menu_nodes[0xC].uA.s.unkB = 0xD;
+    g_menu_nodes[0xC].uA.s.child0 = 0xD;
     g_menu_nodes[0xD].unk0 = 0xB;
     g_menu_nodes[0xD].u6.s.self_idx = 0xD;
     g_menu_nodes[0xD].unk4 = 7;
@@ -1728,8 +1728,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0xF].u2.s.parent_idx = 0xFF;
     g_menu_nodes[0xF].unk0 = 0xD;
     g_menu_nodes[0xF].u6.s.self_idx = 0xF;
-    g_menu_nodes[0xF].uA.s.unkB = 0x10;
-    g_menu_nodes[0xF].unkC = 0x11;
+    g_menu_nodes[0xF].uA.s.child0 = 0x10;
+    g_menu_nodes[0xF].child1 = 0x11;
     g_menu_nodes[0x10].unk0 = 0xC;
     g_menu_nodes[0x10].u6.s.self_idx = 0x10;
     g_menu_nodes[0x11].unk0 = 0xE;
@@ -1738,10 +1738,10 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x12].unk0 = 0x10;
     g_menu_nodes[0x12].u6.s.self_idx = 0x12;
     g_menu_nodes[0x12].content_id = 4;
-    g_menu_nodes[0x12].uA.s.unkB = 0x13;
-    g_menu_nodes[0x12].unkC = 0x16;
-    g_menu_nodes[0x12].unkD = 0x19;
-    g_menu_nodes[0x12].unkE = 0x1C;
+    g_menu_nodes[0x12].uA.s.child0 = 0x13;
+    g_menu_nodes[0x12].child1 = 0x16;
+    g_menu_nodes[0x12].child2 = 0x19;
+    g_menu_nodes[0x12].child3 = 0x1C;
     g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
@@ -1757,8 +1757,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x13].unk4 = 0xB;
     g_menu_nodes[0x13].u6.s.self_idx = 0x13;
     g_menu_nodes[0x13].content_id = 0;
-    g_menu_nodes[0x13].uA.s.unkB = 0x14;
-    g_menu_nodes[0x13].unkC = 0x15;
+    g_menu_nodes[0x13].uA.s.child0 = 0x14;
+    g_menu_nodes[0x13].child1 = 0x15;
     g_menu_nodes[0x14].unk0 = 0x12;
     g_menu_nodes[0x14].u6.s.self_idx = 0x14;
     g_menu_nodes[0x15].unk0 = 0x13;
@@ -1767,8 +1767,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x16].unk0 = 0x14;
     g_menu_nodes[0x16].u6.s.self_idx = 0x16;
     g_menu_nodes[0x16].unk4 = 0xC;
-    g_menu_nodes[0x16].uA.s.unkB = 0x17;
-    g_menu_nodes[0x16].unkC = 0x18;
+    g_menu_nodes[0x16].uA.s.child0 = 0x17;
+    g_menu_nodes[0x16].child1 = 0x18;
     g_menu_nodes[0x17].unk0 = 0x15;
     g_menu_nodes[0x17].u6.s.self_idx = 0x17;
     g_menu_nodes[0x13].u2.unk2 = (u16)((g_menu_nodes[0x13].u2.unk2 & 0xFF3F) | 0x40);
@@ -1789,8 +1789,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].unk0 = 0x16;
     g_menu_nodes[0x19].u6.s.self_idx = 0x19;
     g_menu_nodes[0x19].unk4 = 0xD;
-    g_menu_nodes[0x19].uA.s.unkB = 0x1A;
-    g_menu_nodes[0x19].unkC = 0x1B;
+    g_menu_nodes[0x19].uA.s.child0 = 0x1A;
+    g_menu_nodes[0x19].child1 = 0x1B;
     g_menu_nodes[0x1A].unk0 = 0x17;
     g_menu_nodes[0x1A].u6.s.self_idx = 0x1A;
     g_menu_nodes[0x1A].unk4 = 0x11;
@@ -1813,7 +1813,7 @@ void menu_node_tree_init(void)
     var_a2->uA.unkA += 0;
     g_menu_nodes[0x1C].unk4 = 0xE;
     g_menu_nodes[0x1D].u6.s.self_idx = 0x1D;
-    g_menu_nodes[0x1E].uA.s.unkB = 0x1F;
+    g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
     g_menu_nodes[0x1F].u6.s.self_idx = 0x1F;
     g_menu_nodes[0x1C].content_id = 5;
     g_menu_nodes[0x1D].unk0 = 0x1C;
@@ -2028,7 +2028,7 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
         for (child_idx = child_iter; (child_idx < 4) != 0;)
         {
             new_var3 = g_menu_nodes + node_idx;
-            child_idx = (&(&(*new_var3).uA.s)->unkB)[child_idx];
+            child_idx = (&(&(*new_var3).uA.s)->child0)[child_idx];
             child = child_idx;
             if (child == 0xFF)
             {
