@@ -1492,8 +1492,7 @@ extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
 extern s32 g_menu_active_node;
-/* D_801694B4 used as s32[] nav-table base: D_801694B4[active_node] = L2 nav target */
-extern s32 D_801694B4;
+extern s32 D_801694B4[];
 extern u8 g_menu_init_content_id;
 
 typedef struct
@@ -1584,7 +1583,7 @@ void menu_node_tree_init(void)
     D_8016911C = 0;
     D_80169554 = 0;
     D_801694B0 = 0;
-    D_801694B4 = 0;
+    D_801694B4[0] = 0;
     g_menu_content_height = 0;
     g_menu_scroll_pos = 0;
     g_menu_redraw_state = 0;
@@ -2147,6 +2146,31 @@ u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
     /* 248: Evaluates to `addiu v0, s0, 0x48` as the function's return statement */
     return new_var2;
 }
+
+typedef struct
+{
+  u16 unk0;
+  u8 unk2;
+  u8 pad[5];
+} Unk801686F8_Item;
+
+extern s32 D_801690B4;
+extern s32 D_801694B8;
+extern s32 D_8016912C;
+extern s32 D_8016940C;
+extern s32 D_80168C10;
+extern s32 D_80169110;
+extern s32 D_8016941C;
+extern s32 D_80169128;
+extern s32 D_80169114;
+
+extern struct
+{
+  s16 unk0;
+  s16 unk2;
+} D_80169104;
+
+extern void *D_801686F8[];
 
 /**
  * decomp.me (99.42%) https://decomp.me/scratch/YoOml
