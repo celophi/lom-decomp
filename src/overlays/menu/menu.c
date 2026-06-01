@@ -157,23 +157,23 @@ void menu_init(void)
  */
 
 /* VRAM coordinates for the per-slot cursor strip (16hword x 1 scanline). */
-#define PRIM_STRIP_VRAM_X     0x110   /* 272  - VRAM column                    */
-#define PRIM_STRIP_VRAM_Y0    0x1D8   /* 472  - VRAM row for slot 0            */
-#define PRIM_STRIP_W          0x10    /* 16 halfwords wide                     */
-#define PRIM_STRIP_H          1       /* 1 scanline tall                       */
+#define PRIM_STRIP_VRAM_X 0x110  /* 272  - VRAM column                    */
+#define PRIM_STRIP_VRAM_Y0 0x1D8 /* 472  - VRAM row for slot 0            */
+#define PRIM_STRIP_W 0x10        /* 16 halfwords wide                     */
+#define PRIM_STRIP_H 1           /* 1 scanline tall                       */
 
 /* VRAM coordinates for the per-slot content block (12hword x 48 scanlines). */
-#define PRIM_BLOCK_VRAM_X     0x3F4   /* 1012 - VRAM column for slots 0 and 1 */
-#define PRIM_BLOCK_VRAM_X2    0x3E8   /* 1000 - VRAM column for slot 2        */
-#define PRIM_BLOCK_VRAM_Y0    0x120   /* 288  - VRAM row for slot 0           */
-#define PRIM_BLOCK_VRAM_Y1    0x150   /* 336  - VRAM row for slots 1 and 2    */
-#define PRIM_BLOCK_W          0xC     /* 12 halfwords wide                    */
-#define PRIM_BLOCK_H          0x30    /* 48 scanlines tall                    */
+#define PRIM_BLOCK_VRAM_X 0x3F4  /* 1012 - VRAM column for slots 0 and 1 */
+#define PRIM_BLOCK_VRAM_X2 0x3E8 /* 1000 - VRAM column for slot 2        */
+#define PRIM_BLOCK_VRAM_Y0 0x120 /* 288  - VRAM row for slot 0           */
+#define PRIM_BLOCK_VRAM_Y1 0x150 /* 336  - VRAM row for slots 1 and 2    */
+#define PRIM_BLOCK_W 0xC         /* 12 halfwords wide                    */
+#define PRIM_BLOCK_H 0x30        /* 48 scanlines tall                    */
 
 /* Stride between each slot's data in g_prim_rect_buf (bytes). */
-#define PRIM_SLOT_STRIDE      0x4A0   /* 1184 bytes per slot                  */
+#define PRIM_SLOT_STRIDE 0x4A0 /* 1184 bytes per slot                  */
 /* Byte offset of the content-block data within each slot. */
-#define PRIM_BLOCK_BUF_OFFSET 0x20    /* 32 bytes into each slot              */
+#define PRIM_BLOCK_BUF_OFFSET 0x20 /* 32 bytes into each slot              */
 
 /**
  * @brief Upload primitive-rectangle pixel data for the three menu window slots to VRAM.
@@ -201,23 +201,23 @@ void menu_init_prim_rects(void)
 
     s32 block_offset = PRIM_BLOCK_BUF_OFFSET;
     s32 strip_offset = 0;
-    s16 rect[4];
+    RECT rect;
 
     for (i = 0; i < 3; i++)
     {
         /* Upload the 1-scanline cursor strip for slot i. */
-        rect[0] = PRIM_STRIP_VRAM_X;
-        rect[1] = i + PRIM_STRIP_VRAM_Y0;
-        rect[2] = PRIM_STRIP_W;
-        rect[3] = PRIM_STRIP_H;
-        func_80019A34(rect, (u8*)((u32)((strip_offset >> 2) << 2) + (u32)base));
+        rect.x = PRIM_STRIP_VRAM_X;
+        rect.y = i + PRIM_STRIP_VRAM_Y0;
+        rect.w = PRIM_STRIP_W;
+        rect.h = PRIM_STRIP_H;
+        func_80019A34(&rect, (u8*)((u32)((strip_offset >> 2) << 2) + (u32)base));
 
         /* Upload the 12x48 content block for slot i. */
-        rect[0] = (i == 2) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X;
-        rect[1] = (i == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1;
-        rect[2] = PRIM_BLOCK_W;
-        rect[3] = PRIM_BLOCK_H;
-        func_80019A34(rect, (u8*)((u32)((block_offset >> 2) << 2) + (u32)base));
+        rect.x = (i == 2) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X;
+        rect.y = (i == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1;
+        rect.w = PRIM_BLOCK_W;
+        rect.h = PRIM_BLOCK_H;
+        func_80019A34(&rect, (u8*)((u32)((block_offset >> 2) << 2) + (u32)base));
 
         block_offset += PRIM_SLOT_STRIDE;
         strip_offset += PRIM_SLOT_STRIDE;
