@@ -191,7 +191,7 @@ void menu_init(void)
  *
  * @note @c thing is an unused local retained to match the compiler's saved-register
  *       frame layout for the 100% match.
- * @see decomp.me (100%) https://decomp.me/scratch/AGd9K
+ * @see decomp.me (100%) https://decomp.me/scratch/QnGCP
  */
 void menu_init_prim_rects(void)
 {
@@ -210,14 +210,14 @@ void menu_init_prim_rects(void)
         rect.y = i + PRIM_STRIP_VRAM_Y0;
         rect.w = PRIM_STRIP_W;
         rect.h = PRIM_STRIP_H;
-        func_80019A34(&rect, (u8*)((u32)((strip_offset >> 2) << 2) + (u32)base));
+        LoadImage(&rect, (u8*)((u32)((strip_offset >> 2) << 2) + (u32)base));
 
         /* Upload the 12x48 content block for slot i. */
         rect.x = (i == 2) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X;
         rect.y = (i == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1;
         rect.w = PRIM_BLOCK_W;
         rect.h = PRIM_BLOCK_H;
-        func_80019A34(&rect, (u8*)((u32)((block_offset >> 2) << 2) + (u32)base));
+        LoadImage(&rect, (u8*)((u32)((block_offset >> 2) << 2) + (u32)base));
 
         block_offset += PRIM_SLOT_STRIDE;
         strip_offset += PRIM_SLOT_STRIDE;
