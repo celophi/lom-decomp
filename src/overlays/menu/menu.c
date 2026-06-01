@@ -140,7 +140,7 @@ void menu_init(void)
     menu_init_prim_rects();
     g_menu_frame = 0;
     g_script_cursor = 0;
-    func_801423D8();
+    menu_node_tree_init();
 }
 
 /**
@@ -1300,29 +1300,35 @@ void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
 /**
  * @brief Pair of (u8) indices into a packed text-lookup table.
  *
- * @c unk0 is the character/entry index within the page; @c unk1 is the page
- * index. Together they form a pointer into the string table via
- * @c unk0 + ((unk1 << 8) + base_ptr). See @ref func_80142304.
+ * @c entry is the character/entry index within the page; @c page is the page
+ * index. Together they form a string pointer via
+ * @c entry + ((page << 8) + base_ptr). See @ref menu_draw_label.
  */
 typedef struct
 {
-    u8 unk0; /**< Entry index within the page. */
-    u8 unk1; /**< Page index. */
-} unk_struct;
+    u8 entry; /**< Entry index within the page. */
+    u8 page;  /**< Page index. */
+} StringTableKey;
 
+/** @brief 2-D screen coordinate (pixels). */
 typedef struct
 {
-    s16 x; /**< Screen X coordinate. */
-    s16 y; /**< Screen Y coordinate. */
-} arg2_struct;
+    s16 x; /**< Screen X. */
+    s16 y; /**< Screen Y. */
+} ScreenPos;
 
-extern unk_struct D_800EC3DA;
-extern unk_struct D_800EC3E4;
+extern StringTableKey D_800EC3DA;
+extern StringTableKey D_800EC3E4;
 
 /**
- * decomp.me (83.81%) https://decomp.me/scratch/ozwB7
+ * @brief Render a text label from a packed string table at the given screen position.
+ * @param arg0 OT (ordering table) pointer.
+ * @param arg1 Primitive buffer context.
+ * @param arg2 Screen position to draw at.
+ * @param arg3 String table selector: >= 0 uses D_800EC3DA table, < 0 uses D_800EC3E4 table.
+ * @see decomp.me (83.81%) https://decomp.me/scratch/ozwB7
  */
-void func_80142304(s32 arg0, register s32 arg1, arg2_struct* arg2, s32 arg3)
+void menu_draw_label(s32 arg0, register s32 arg1, ScreenPos* arg2, s32 arg3)
 {
     u8 sp20[16];
     u8* ptr = sp20;
@@ -1333,15 +1339,15 @@ void func_80142304(s32 arg0, register s32 arg1, arg2_struct* arg2, s32 arg3)
 
     if (arg3 >= 0)
     {
-        unk1 = D_800EC3DA.unk1;
-        unk0 = D_800EC3DA.unk0;
+        unk1 = D_800EC3DA.page;
+        unk0 = D_800EC3DA.entry;
         addr = (u8*)&D_800EC3DA - 0x16;
     }
     else
     {
-        unk1 = D_800EC3E4.unk1;
+        unk1 = D_800EC3E4.page;
         addr = (u8*)&D_800EC3E4 - 0x20;
-        unk0 = D_800EC3E4.unk0;
+        unk0 = D_800EC3E4.entry;
     }
 
     temp_s0 = unk0 + ((unk1 << 8) + addr);
@@ -1357,24 +1363,24 @@ void func_80142304(s32 arg0, register s32 arg1, arg2_struct* arg2, s32 arg3)
 typedef struct
 {
     u8 unk0;
-    u8 unk1;
+    u8 state; /**< Node state: 0 = uninitialized, 4 = position assigned by menu_layout_node. */
     union
     {
         u16 unk2;
         struct
         {
             u8 unk2_hi;
-            u8 unk3;
+            u8 parent_idx;
         } s;
     } u2;
     u8 unk4;
-    u8 unk5;
+    u8 content_id; /**< Passed to the content-open function; 0xFF = no content. */
     union
     {
         u16 unk6;
         struct
         {
-            u8 unk6_hi;
+            u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
             u8 unk7;
         } s;
     } u6;
@@ -1400,43 +1406,53 @@ typedef struct
     u8 unkD;
     u8 unkE;
     u8 unkF;
-} UnkStruct;
-extern UnkStruct D_80169138[0x2C];
-extern u8 D_801690B3;
-extern s32 D_80168C2C;
+} MenuNode;
+extern MenuNode g_menu_nodes[0x2C];
+extern u8 g_menu_prev_node;
+/** @brief Gate flag for func_80148A20: 0 = draw empty slot, nonzero = full item render. */
+extern s32 g_menu_content_ready;
 
+/**
+ * @brief Four u32 pointers to item data for each comparison slot.
+ * @note Used alongside g_item_slot_flags; each element maps to g_item_slot_flags's parallel flag.
+ */
 typedef struct
 {
-    u32 unk0;
-    u32 unk4;
-    u32 unk8;
-    u32 unkC;
-} Struct_D_80169538;
-extern Struct_D_80169538 D_80169538;
+    u32 unk0; /**< Slot 0 data pointer. */
+    u32 unk4; /**< Slot 1 data pointer. */
+    u32 unk8; /**< Slot 2 data pointer. */
+    u32 unkC; /**< Slot 3 data pointer. */
+} ItemSlotData;
+extern ItemSlotData g_item_slot_data;
 
+/**
+ * @brief Four u8 flags indicating which item comparison slots are occupied (nonzero = active).
+ * @note Parallel to g_item_slot_data; checked in func_80145608 before reading slot data.
+ */
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
-    u8 unk2;
-    u8 unk3;
-} Struct_D_80168C1C;
-extern Struct_D_80168C1C D_80168C1C;
+    u8 slot0; /**< Slot 0 occupied flag. */
+    u8 slot1; /**< Slot 1 occupied flag. */
+    u8 slot2; /**< Slot 2 occupied flag. */
+    u8 slot3; /**< Slot 3 occupied flag. */
+} ItemSlotFlags;
+extern ItemSlotFlags g_item_slot_flags;
 
-extern s32 D_801690EC;
+/** @brief Pointer into g_pad_ctx item data for the current category; null = no items. */
+extern s32 g_menu_item_ptr;
 extern s32 D_80169410;
 extern s32 D_80169404;
 extern s32 D_80169408;
 extern s32 D_8016911C;
 extern s32 D_80169554;
 extern s32 D_801694B0;
+extern s32 g_menu_content_height;
+extern s32 g_menu_scroll_pos;
+extern s32 g_menu_redraw_state;
+extern s32 g_menu_active_node;
+/* D_801694B4 used as s32[] nav-table base: D_801694B4[active_node] = L2 nav target */
 extern s32 D_801694B4;
-extern s32 D_80169418;
-extern s32 D_8016954C;
-extern s32 D_80169400;
-extern s32 D_801690E4;
-extern s32 D_80169130;
-extern u8 D_8016913D;
+extern u8 g_menu_init_content_id;
 
 typedef struct
 {
@@ -1451,17 +1467,20 @@ extern Struct_D_800FD818 D_800FD818;
 extern u16 D_800FDA80;
 extern u16 D_800FDCE8;
 extern s8 D_801690F9;
-extern s32 D_80169548;
 extern s8 D_80169324;
 
 /**
- * decomp.me (90.94%) https://decomp.me/scratch/XJkmb
- * WARNING: DO NOT RELY ON THIS FUNCTION FOR ANALYSIS. IT IS NOT FUNCTIONALLY EQUIVALENT.
+ * @brief Initialize the full menu node tree and global menu state.
+ * @note Builds all 44 g_menu_nodes entries with hardcoded parent-child links and flags,
+ *       zeroes all layout counters, runs an initial position pass, then calls into the
+ *       layout and render pipeline unless a script is still active.
+ * @see decomp.me (90.94%) https://decomp.me/scratch/XJkmb
+ * @warning NOT FUNCTIONALLY EQUIVALENT -- do not rely on this C for logic analysis.
  */
-void func_801423D8(void)
+void menu_node_tree_init(void)
 {
-    UnkStruct* var_a0;
-    UnkStruct* var_a2;
+    MenuNode* var_a0;
+    MenuNode* var_a2;
     s32 temp_v0_3;
     s32 temp_v0_5;
     unsigned int temp_v0_7;
@@ -1469,13 +1488,13 @@ void func_801423D8(void)
     s32 var_a3;
     s32 var_t0;
     u8* new_var5;
-    UnkStruct* new_var2;
+    MenuNode* new_var2;
     int new_var7;
     s32 var_t0_2;
     u8 new_var4;
     int new_var8;
     s8 var_v0;
-    UnkStruct* new_var3;
+    MenuNode* new_var3;
     u16 temp_v0;
     int new_var6;
     u16 temp_v0_10;
@@ -1505,18 +1524,18 @@ void func_801423D8(void)
     u16 temp1;
     u16 temp2;
     var_t0 = 0;
-    var_a0 = D_80169138;
-    D_801690B3 = 0xFF;
-    D_80168C2C = 0;
-    D_80169538.unk0 = 0;
-    D_80169538.unk4 = 0;
-    D_80169538.unk8 = 0;
-    D_80169538.unkC = 0;
-    D_80168C1C.unk0 = 0;
-    D_80168C1C.unk1 = 0;
-    D_80168C1C.unk2 = 0;
-    D_80168C1C.unk3 = 0;
-    D_801690EC = 0;
+    var_a0 = g_menu_nodes;
+    g_menu_prev_node = 0xFF;
+    g_menu_content_ready = 0;
+    g_item_slot_data.unk0 = 0;
+    g_item_slot_data.unk4 = 0;
+    g_item_slot_data.unk8 = 0;
+    g_item_slot_data.unkC = 0;
+    g_item_slot_flags.slot0 = 0;
+    g_item_slot_flags.slot1 = 0;
+    g_item_slot_flags.slot2 = 0;
+    g_item_slot_flags.slot3 = 0;
+    g_menu_item_ptr = 0;
     D_80169410 = 0;
     D_80169404 = 0;
     D_80169408 = 0;
@@ -1524,296 +1543,296 @@ void func_801423D8(void)
     D_80169554 = 0;
     D_801694B0 = 0;
     D_801694B4 = 0;
-    D_80169418 = 0;
-    D_8016954C = 0;
-    D_80169400 = 0;
-    D_801690E4 = 0;
-    D_80169130 = 0;
+    g_menu_content_height = 0;
+    g_menu_scroll_pos = 0;
+    g_menu_redraw_state = 0;
+    g_menu_active_node = 0;
+    g_menu_cursor_enable = 0;
     for (var_t0 = 0; var_t0 < 0x2C; var_t0++)
     {
-        D_80169138[var_t0].unk1 = 0;
-        D_80169138[var_t0].unk4 = 0;
-        D_80169138[var_t0].unk5 = var_a1;
-        D_80169138[var_t0].unkE = var_a1;
-        D_80169138[var_t0].unkD = var_a1;
-        D_80169138[var_t0].unkC = var_a1;
-        D_80169138[var_t0].uA.s.unkB = var_a1;
-        D_80169138[var_t0].u2.unk2 = (u16)((D_80169138[var_t0].u2.unk2 & 0xFFFC) | 0x30);
-        D_80169138[var_t0].u2.s.unk3 = var_a1;
+        g_menu_nodes[var_t0].state = 0;
+        g_menu_nodes[var_t0].unk4 = 0;
+        g_menu_nodes[var_t0].content_id = var_a1;
+        g_menu_nodes[var_t0].unkE = var_a1;
+        g_menu_nodes[var_t0].unkD = var_a1;
+        g_menu_nodes[var_t0].unkC = var_a1;
+        g_menu_nodes[var_t0].uA.s.unkB = var_a1;
+        g_menu_nodes[var_t0].u2.unk2 = (u16)((g_menu_nodes[var_t0].u2.unk2 & 0xFFFC) | 0x30);
+        g_menu_nodes[var_t0].u2.s.parent_idx = var_a1;
     }
 
-    D_80169138[0].unk0 = 1;
-    D_80169138[0].u6.s.unk6_hi = 0;
-    original_unk2 = D_80169138[0].u2.unk2;
+    g_menu_nodes[0].unk0 = 1;
+    g_menu_nodes[0].u6.s.self_idx = 0;
+    original_unk2 = g_menu_nodes[0].u2.unk2;
     temp1 = original_unk2 & 0xFFCD;
     temp2 = original_unk2 & 0xFF0D;
-    *((volatile u16*)(&D_80169138[0].u2.unk2)) = temp1;
-    *((volatile u16*)(&D_80169138[0].u2.unk2)) = temp2;
-    *((volatile u16*)(&D_80169138[0].u2.unk2)) = temp2 | 1;
-    D_80169138[0].u2.s.unk3 = 0xFF;
+    *((volatile u16*)(&g_menu_nodes[0].u2.unk2)) = temp1;
+    *((volatile u16*)(&g_menu_nodes[0].u2.unk2)) = temp2;
+    *((volatile u16*)(&g_menu_nodes[0].u2.unk2)) = temp2 | 1;
+    g_menu_nodes[0].u2.s.parent_idx = 0xFF;
     if (D_800FD818.unk0 & 2)
     {
-        D_80169138[0].unk4 = 2;
+        g_menu_nodes[0].unk4 = 2;
     }
     else
     {
-        D_80169138[0].unk4 = 1;
+        g_menu_nodes[0].unk4 = 1;
     }
-    D_80169138[0].uA.s.unkB = 1;
-    D_80169138[1].u6.s.unk6_hi = 1;
-    D_80169138[1].unk4 = 5;
-    D_80169138[0].unkC = 2;
-    D_80169138[2].unk0 = 2;
-    D_80169138[2].u6.s.unk6_hi = 2;
-    D_80169138[2].unk4 = 4;
-    D_80169138[3].unk0 = 4;
-    D_80169138[1].unk0 = 3;
-    D_80169138[3].u6.s.unk6_hi = 3;
-    D_80169138[1].u2.unk2 = (u16)((D_80169138[1].u2.unk2 & 0xFF0F) | 0x40);
-    D_80169138[1].u2.s.unk3 = 0;
-    D_80169138[2].u2.unk2 = (u16)((D_80169138[2].u2.unk2 & 0xFF0F) | 0x40);
-    D_80169138[2].u2.s.unk3 = 0;
-    temp_v0_2 = (D_80169138[3].u2.unk2 & 0xFFCD) | 0x10;
-    *((volatile u16*)(&D_80169138[3].u2.unk2)) = temp_v0_2;
+    g_menu_nodes[0].uA.s.unkB = 1;
+    g_menu_nodes[1].u6.s.self_idx = 1;
+    g_menu_nodes[1].unk4 = 5;
+    g_menu_nodes[0].unkC = 2;
+    g_menu_nodes[2].unk0 = 2;
+    g_menu_nodes[2].u6.s.self_idx = 2;
+    g_menu_nodes[2].unk4 = 4;
+    g_menu_nodes[3].unk0 = 4;
+    g_menu_nodes[1].unk0 = 3;
+    g_menu_nodes[3].u6.s.self_idx = 3;
+    g_menu_nodes[1].u2.unk2 = (u16)((g_menu_nodes[1].u2.unk2 & 0xFF0F) | 0x40);
+    g_menu_nodes[1].u2.s.parent_idx = 0;
+    g_menu_nodes[2].u2.unk2 = (u16)((g_menu_nodes[2].u2.unk2 & 0xFF0F) | 0x40);
+    g_menu_nodes[2].u2.s.parent_idx = 0;
+    temp_v0_2 = (g_menu_nodes[3].u2.unk2 & 0xFFCD) | 0x10;
+    *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = temp_v0_2;
     temp_v0_3 = 0x10;
     temp_v0_3 = temp_v0_2 | temp_v0_3;
-    *((volatile u16*)(&D_80169138[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3F);
-    *((volatile u16*)(&D_80169138[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3E);
-    D_80169138[3].u2.s.unk3 = 0xFF;
-    D_80169138[4].u6.s.unk6_hi = 4;
+    *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3F);
+    *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3E);
+    g_menu_nodes[3].u2.s.parent_idx = 0xFF;
+    g_menu_nodes[4].u6.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
         var_v0 = 0x6F;
     }
     else
     {
-        D_80169138[3].u2.unk2 = (u16)(temp_v0_3 & 0xFF3E);
+        g_menu_nodes[3].u2.unk2 = (u16)(temp_v0_3 & 0xFF3E);
         var_v0 = 0x6E;
     }
-    D_80169138[3].unk4 = var_v0;
-    D_80169138[4].u2.unk2 = (u16)((0xFF5F & D_80169138[4].u2.unk2) | 0x50);
-    D_80169138[5].u2.unk2 = (u16)((D_80169138[5].u2.unk2 & 0xFF5F) | 0x50);
+    g_menu_nodes[3].unk4 = var_v0;
+    g_menu_nodes[4].u2.unk2 = (u16)((0xFF5F & g_menu_nodes[4].u2.unk2) | 0x50);
+    g_menu_nodes[5].u2.unk2 = (u16)((g_menu_nodes[5].u2.unk2 & 0xFF5F) | 0x50);
     ;
-    *((volatile u16*)(&D_80169138[6].u2.unk2)) = (D_80169138[6].u2.unk2 & 0xFFCD) | 0x10;
+    *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (g_menu_nodes[6].u2.unk2 & 0xFFCD) | 0x10;
     temp_v0_5 = temp_v0_4 | 0x10;
-    *((volatile u16*)(&D_80169138[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3F);
-    *((volatile u16*)(&D_80169138[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3E);
-    D_80169138[3].uA.s.unkB = 4;
-    D_80169138[3].unkC = 5;
-    D_80169138[4].unk0 = 6;
-    D_80169138[4].unk4 = 5;
-    D_80169138[5].unk0 = 5;
-    D_80169138[5].u6.s.unk6_hi = 5;
-    D_80169138[5].unk4 = 4;
-    D_80169138[6].unk0 = 7;
-    D_80169138[6].u6.s.unk6_hi = 6;
-    D_80169138[6].unk4 = 3;
-    D_80169138[6].uA.s.unkB = 7;
-    D_80169138[6].unkC = 8;
-    D_80169138[7].unk0 = 9;
-    D_80169138[7].u6.s.unk6_hi = 7;
+    *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3F);
+    *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3E);
+    g_menu_nodes[3].uA.s.unkB = 4;
+    g_menu_nodes[3].unkC = 5;
+    g_menu_nodes[4].unk0 = 6;
+    g_menu_nodes[4].unk4 = 5;
+    g_menu_nodes[5].unk0 = 5;
+    g_menu_nodes[5].u6.s.self_idx = 5;
+    g_menu_nodes[5].unk4 = 4;
+    g_menu_nodes[6].unk0 = 7;
+    g_menu_nodes[6].u6.s.self_idx = 6;
+    g_menu_nodes[6].unk4 = 3;
+    g_menu_nodes[6].uA.s.unkB = 7;
+    g_menu_nodes[6].unkC = 8;
+    g_menu_nodes[7].unk0 = 9;
+    g_menu_nodes[7].u6.s.self_idx = 7;
     new_var7 = 0xFF3E;
-    D_80169138[7].unk4 = 5;
-    D_80169138[8].unk0 = 8;
-    D_80169138[4].u2.s.unk3 = 3;
-    D_80169138[5].u2.s.unk3 = 3;
-    D_80169138[6].u2.s.unk3 = 0xFF;
-    D_80169138[7].u2.unk2 = (u16)((D_80169138[7].u2.unk2 & 0xFF5F) | 0x50);
-    D_80169138[7].u2.s.unk3 = 6;
-    D_80169138[8].u2.unk2 = (u16)((D_80169138[8].u2.unk2 & 0xFF5F) | 0x50);
-    D_80169138[8].u6.s.unk6_hi = 8;
-    temp_v0_6 = (D_80169138[9].u2.unk2 & 0xFFCD) | 0x20;
-    D_80169138[9].u2.unk2 = temp_v0_6;
+    g_menu_nodes[7].unk4 = 5;
+    g_menu_nodes[8].unk0 = 8;
+    g_menu_nodes[4].u2.s.parent_idx = 3;
+    g_menu_nodes[5].u2.s.parent_idx = 3;
+    g_menu_nodes[6].u2.s.parent_idx = 0xFF;
+    g_menu_nodes[7].u2.unk2 = (u16)((g_menu_nodes[7].u2.unk2 & 0xFF5F) | 0x50);
+    g_menu_nodes[7].u2.s.parent_idx = 6;
+    g_menu_nodes[8].u2.unk2 = (u16)((g_menu_nodes[8].u2.unk2 & 0xFF5F) | 0x50);
+    g_menu_nodes[8].u6.s.self_idx = 8;
+    temp_v0_6 = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
+    g_menu_nodes[9].u2.unk2 = temp_v0_6;
     temp_v0_7 = temp_v0_6 | 0x20;
-    D_80169138[9].u2.unk2 = (u16)(temp_v0_7 & 0xFF3E);
-    temp_v0_8 = (D_80169138[0xC].u2.unk2 & 0xFFCD) | 0x20;
+    g_menu_nodes[9].u2.unk2 = (u16)(temp_v0_7 & 0xFF3E);
+    temp_v0_8 = (g_menu_nodes[0xC].u2.unk2 & 0xFFCD) | 0x20;
     new_var8 = 0x16;
-    (*(&D_80169138[9])).u2.unk2 = (u16)(temp_v0_7 & 0xFF3F);
-    *((volatile u16*)D_80169138[0xC].u2.unk2) = temp_v0_8;
-    *((volatile u16*)D_80169138[0xC].u2.unk2) = (u16)((temp_v0_8 | 0x20) & 0xFF3F);
-    *((volatile u16*)D_80169138[0xC].u2.unk2) = (u16)((temp_v0_8 | 0x20) & new_var7);
-    D_80169138[0xA].u2.unk2 = (u16)((D_80169138[0xA].u2.unk2 & 0xFF6F) | 0x60);
-    D_80169138[8].u2.s.unk3 = 6;
-    D_80169138[8].unk4 = 4;
-    D_80169138[9].unk0 = 0xA;
-    D_80169138[9].u6.s.unk6_hi = 9;
-    D_80169138[9].unk4 = 6;
-    D_80169138[9].uA.s.unkB = 0xA;
-    D_80169138[0xA].unk0 = 0xB;
-    D_80169138[0x12].unk4 = 0xA;
-    D_80169138[0xA].u6.s.unk6_hi = 0xA;
-    D_80169138[0xA].unk4 = 7;
-    D_80169138[0xC].unk0 = 0xA;
-    D_80169138[0xC].u6.s.unk6_hi = 0xC;
-    D_80169138[0xC].unk4 = 6;
-    D_80169138[0xC].uA.s.unkB = 0xD;
-    D_80169138[0xD].unk0 = 0xB;
-    D_80169138[0xD].u6.s.unk6_hi = 0xD;
-    D_80169138[0xD].unk4 = 7;
-    D_80169138[9].u2.s.unk3 = 0xFF;
+    (*(&g_menu_nodes[9])).u2.unk2 = (u16)(temp_v0_7 & 0xFF3F);
+    *((volatile u16*)g_menu_nodes[0xC].u2.unk2) = temp_v0_8;
+    *((volatile u16*)g_menu_nodes[0xC].u2.unk2) = (u16)((temp_v0_8 | 0x20) & 0xFF3F);
+    *((volatile u16*)g_menu_nodes[0xC].u2.unk2) = (u16)((temp_v0_8 | 0x20) & new_var7);
+    g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
+    g_menu_nodes[8].u2.s.parent_idx = 6;
+    g_menu_nodes[8].unk4 = 4;
+    g_menu_nodes[9].unk0 = 0xA;
+    g_menu_nodes[9].u6.s.self_idx = 9;
+    g_menu_nodes[9].unk4 = 6;
+    g_menu_nodes[9].uA.s.unkB = 0xA;
+    g_menu_nodes[0xA].unk0 = 0xB;
+    g_menu_nodes[0x12].unk4 = 0xA;
+    g_menu_nodes[0xA].u6.s.self_idx = 0xA;
+    g_menu_nodes[0xA].unk4 = 7;
+    g_menu_nodes[0xC].unk0 = 0xA;
+    g_menu_nodes[0xC].u6.s.self_idx = 0xC;
+    g_menu_nodes[0xC].unk4 = 6;
+    g_menu_nodes[0xC].uA.s.unkB = 0xD;
+    g_menu_nodes[0xD].unk0 = 0xB;
+    g_menu_nodes[0xD].u6.s.self_idx = 0xD;
+    g_menu_nodes[0xD].unk4 = 7;
+    g_menu_nodes[9].u2.s.parent_idx = 0xFF;
     temp_v0_7 = 0xF;
-    D_80169138[0xA].u2.s.unk3 = 9;
-    D_80169138[0xC].u2.s.unk3 = 0xFF;
-    temp_v0_10 = (D_80169138[temp_v0_7].u2.unk2 & 0xFFCD) | 0x20;
-    D_80169138[temp_v0_7].u2.unk2 = temp_v0_10;
-    D_80169138[0xD].u2.unk2 = (u16)(D_80169138[0xD].u2.unk2 | 0x60);
+    g_menu_nodes[0xA].u2.s.parent_idx = 9;
+    g_menu_nodes[0xC].u2.s.parent_idx = 0xFF;
+    temp_v0_10 = (g_menu_nodes[temp_v0_7].u2.unk2 & 0xFFCD) | 0x20;
+    g_menu_nodes[temp_v0_7].u2.unk2 = temp_v0_10;
+    g_menu_nodes[0xD].u2.unk2 = (u16)(g_menu_nodes[0xD].u2.unk2 | 0x60);
     var_t0_2 = 0xF;
-    D_80169138[0xD].u2.s.unk3 = 0xC;
+    g_menu_nodes[0xD].u2.s.parent_idx = 0xC;
     temp_v0_11 = ((temp_v0_10 & 0xFF6D) | 0x60) ^ 0;
-    D_80169138[0xF].u2.unk2 = temp_v0_11;
-    D_80169138[var_t0_2].u2.unk2 = (u16)(temp_v0_11 & 0xFFFE);
-    D_80169138[0xF].unk4 = 8;
-    D_80169138[0x10].unk4 = 7;
-    D_80169138[0xF].u2.s.unk3 = 0xFF;
-    D_80169138[0xF].unk0 = 0xD;
-    D_80169138[0xF].u6.s.unk6_hi = 0xF;
-    D_80169138[0xF].uA.s.unkB = 0x10;
-    D_80169138[0xF].unkC = 0x11;
-    D_80169138[0x10].unk0 = 0xC;
-    D_80169138[0x10].u6.s.unk6_hi = 0x10;
-    D_80169138[0x11].unk0 = 0xE;
-    D_80169138[0x11].u6.s.unk6_hi = 0x11;
-    D_80169138[0x11].unk4 = 9;
-    D_80169138[0x12].unk0 = 0x10;
-    D_80169138[0x12].u6.s.unk6_hi = 0x12;
-    D_80169138[0x12].unk5 = 4;
-    D_80169138[0x12].uA.s.unkB = 0x13;
-    D_80169138[0x12].unkC = 0x16;
-    D_80169138[0x12].unkD = 0x19;
-    D_80169138[0x12].unkE = 0x1C;
-    D_80169138[0x10].u2.unk2 = (u16)((D_80169138[0x10].u2.unk2 & 0xFF6F) | 0x60);
-    D_80169138[0x10].u2.s.unk3 = 0xF;
-    D_80169138[0x11].u2.unk2 = (u16)((D_80169138[0x11].u2.unk2 & 0xFF6F) | 0x60);
-    D_80169138[0x11].u2.s.unk3 = 0xF;
-    temp_v0_12 = D_80169138[0x12].u2.unk2 & 0xFF3D;
-    D_80169138[0x12].u2.unk2 = (u16)(D_80169138[0x12].u2.unk2 & 0xFFFD);
-    D_80169138[0x12].u2.unk2 = temp_v0_12;
-    D_80169138[0x12].u2.unk2 = (u16)(temp_v0_12 | 1);
-    D_80169138[0x12].u2.s.unk3 = 0xFF;
-    D_80169138[0x13].unk0 = 0x11;
-    D_80169138[0x16].unk5 = 1;
-    D_80169138[0x14].unk4 = 0xF;
-    D_80169138[0x13].unk4 = 0xB;
-    D_80169138[0x13].u6.s.unk6_hi = 0x13;
-    D_80169138[0x13].unk5 = 0;
-    D_80169138[0x13].uA.s.unkB = 0x14;
-    D_80169138[0x13].unkC = 0x15;
-    D_80169138[0x14].unk0 = 0x12;
-    D_80169138[0x14].u6.s.unk6_hi = 0x14;
-    D_80169138[0x15].unk0 = 0x13;
-    D_80169138[0x15].u6.s.unk6_hi = 0x15;
-    D_80169138[0x15].unk4 = 0x12;
-    D_80169138[0x16].unk0 = 0x14;
-    D_80169138[0x16].u6.s.unk6_hi = 0x16;
-    D_80169138[0x16].unk4 = 0xC;
-    D_80169138[0x16].uA.s.unkB = 0x17;
-    D_80169138[0x16].unkC = 0x18;
-    D_80169138[0x17].unk0 = 0x15;
-    D_80169138[0x17].u6.s.unk6_hi = 0x17;
-    D_80169138[0x13].u2.unk2 = (u16)((D_80169138[0x13].u2.unk2 & 0xFF3F) | 0x40);
-    D_80169138[0x14].u2.unk2 = (u16)((D_80169138[0x14].u2.unk2 & 0xFF3F) | 0x80);
-    D_80169138[0x13].u2.s.unk3 = 0x12;
-    D_80169138[0x14].u2.s.unk3 = 0x13;
-    D_80169138[new_var8].u2.unk2 = (u16)((D_80169138[0x16].u2.unk2 & 0xFF3F) | 0x40);
-    D_80169138[0x16].u2.s.unk3 = 0x12;
-    D_80169138[0x15].u2.unk2 = (u16)((D_80169138[0x15].u2.unk2 & 0xFF3F) | 0x80);
-    D_80169138[0x15].u2.s.unk3 = 0x13;
-    D_80169138[0x17].u2.unk2 = (u16)((D_80169138[0x17].u2.unk2 & 0xFF3F) | 0x80);
-    D_80169138[0x17].u2.s.unk3 = 0x16;
-    D_80169138[0x19].unk5 = 2;
-    D_80169138[0x17].unk4 = 0x10;
-    D_80169138[0x18].unk0 = 0x13;
-    D_80169138[0x18].u6.s.unk6_hi = 0x18;
-    D_80169138[0x18].unk4 = 0x12;
-    D_80169138[0x19].unk0 = 0x16;
-    D_80169138[0x19].u6.s.unk6_hi = 0x19;
-    D_80169138[0x19].unk4 = 0xD;
-    D_80169138[0x19].uA.s.unkB = 0x1A;
-    D_80169138[0x19].unkC = 0x1B;
-    D_80169138[0x1A].unk0 = 0x17;
-    D_80169138[0x1A].u6.s.unk6_hi = 0x1A;
-    D_80169138[0x1A].unk4 = 0x11;
-    D_80169138[0x1B].unk0 = 0x13;
-    D_80169138[0x1B].u6.s.unk6_hi = 0x1B;
-    D_80169138[0x1B].unk4 = 0x12;
-    D_80169138[0x1C].unk0 = 0x18;
-    D_80169138[0x1C].u6.s.unk6_hi = 0x1C;
-    D_80169138[0x18].u2.unk2 = (u16)((D_80169138[0x18].u2.unk2 & 0xFF3F) | 0x80);
-    D_80169138[0x19].u2.unk2 = (u16)((D_80169138[0x19].u2.unk2 & 0xFF3F) | 0x40);
-    D_80169138[0x18].u2.s.unk3 = 0x16;
-    D_80169138[0x19].u2.s.unk3 = 0x12;
-    D_80169138[0x1B].u2.unk2 = (u16)((D_80169138[0x1B].u2.unk2 & 0xFF3F) | 0x80);
-    D_80169138[0x1B].u2.s.unk3 = 0x19;
-    D_80169138[0x1C].u2.unk2 = (u16)((D_80169138[0x1C].u2.unk2 & 0xFF3F) | 0x40);
-    D_80169138[0x1C].u2.s.unk3 = 0x12;
+    g_menu_nodes[0xF].u2.unk2 = temp_v0_11;
+    g_menu_nodes[var_t0_2].u2.unk2 = (u16)(temp_v0_11 & 0xFFFE);
+    g_menu_nodes[0xF].unk4 = 8;
+    g_menu_nodes[0x10].unk4 = 7;
+    g_menu_nodes[0xF].u2.s.parent_idx = 0xFF;
+    g_menu_nodes[0xF].unk0 = 0xD;
+    g_menu_nodes[0xF].u6.s.self_idx = 0xF;
+    g_menu_nodes[0xF].uA.s.unkB = 0x10;
+    g_menu_nodes[0xF].unkC = 0x11;
+    g_menu_nodes[0x10].unk0 = 0xC;
+    g_menu_nodes[0x10].u6.s.self_idx = 0x10;
+    g_menu_nodes[0x11].unk0 = 0xE;
+    g_menu_nodes[0x11].u6.s.self_idx = 0x11;
+    g_menu_nodes[0x11].unk4 = 9;
+    g_menu_nodes[0x12].unk0 = 0x10;
+    g_menu_nodes[0x12].u6.s.self_idx = 0x12;
+    g_menu_nodes[0x12].content_id = 4;
+    g_menu_nodes[0x12].uA.s.unkB = 0x13;
+    g_menu_nodes[0x12].unkC = 0x16;
+    g_menu_nodes[0x12].unkD = 0x19;
+    g_menu_nodes[0x12].unkE = 0x1C;
+    g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
+    g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
+    g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
+    g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
+    temp_v0_12 = g_menu_nodes[0x12].u2.unk2 & 0xFF3D;
+    g_menu_nodes[0x12].u2.unk2 = (u16)(g_menu_nodes[0x12].u2.unk2 & 0xFFFD);
+    g_menu_nodes[0x12].u2.unk2 = temp_v0_12;
+    g_menu_nodes[0x12].u2.unk2 = (u16)(temp_v0_12 | 1);
+    g_menu_nodes[0x12].u2.s.parent_idx = 0xFF;
+    g_menu_nodes[0x13].unk0 = 0x11;
+    g_menu_nodes[0x16].content_id = 1;
+    g_menu_nodes[0x14].unk4 = 0xF;
+    g_menu_nodes[0x13].unk4 = 0xB;
+    g_menu_nodes[0x13].u6.s.self_idx = 0x13;
+    g_menu_nodes[0x13].content_id = 0;
+    g_menu_nodes[0x13].uA.s.unkB = 0x14;
+    g_menu_nodes[0x13].unkC = 0x15;
+    g_menu_nodes[0x14].unk0 = 0x12;
+    g_menu_nodes[0x14].u6.s.self_idx = 0x14;
+    g_menu_nodes[0x15].unk0 = 0x13;
+    g_menu_nodes[0x15].u6.s.self_idx = 0x15;
+    g_menu_nodes[0x15].unk4 = 0x12;
+    g_menu_nodes[0x16].unk0 = 0x14;
+    g_menu_nodes[0x16].u6.s.self_idx = 0x16;
+    g_menu_nodes[0x16].unk4 = 0xC;
+    g_menu_nodes[0x16].uA.s.unkB = 0x17;
+    g_menu_nodes[0x16].unkC = 0x18;
+    g_menu_nodes[0x17].unk0 = 0x15;
+    g_menu_nodes[0x17].u6.s.self_idx = 0x17;
+    g_menu_nodes[0x13].u2.unk2 = (u16)((g_menu_nodes[0x13].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x14].u2.unk2 = (u16)((g_menu_nodes[0x14].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x13].u2.s.parent_idx = 0x12;
+    g_menu_nodes[0x14].u2.s.parent_idx = 0x13;
+    g_menu_nodes[new_var8].u2.unk2 = (u16)((g_menu_nodes[0x16].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x16].u2.s.parent_idx = 0x12;
+    g_menu_nodes[0x15].u2.unk2 = (u16)((g_menu_nodes[0x15].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x15].u2.s.parent_idx = 0x13;
+    g_menu_nodes[0x17].u2.unk2 = (u16)((g_menu_nodes[0x17].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x17].u2.s.parent_idx = 0x16;
+    g_menu_nodes[0x19].content_id = 2;
+    g_menu_nodes[0x17].unk4 = 0x10;
+    g_menu_nodes[0x18].unk0 = 0x13;
+    g_menu_nodes[0x18].u6.s.self_idx = 0x18;
+    g_menu_nodes[0x18].unk4 = 0x12;
+    g_menu_nodes[0x19].unk0 = 0x16;
+    g_menu_nodes[0x19].u6.s.self_idx = 0x19;
+    g_menu_nodes[0x19].unk4 = 0xD;
+    g_menu_nodes[0x19].uA.s.unkB = 0x1A;
+    g_menu_nodes[0x19].unkC = 0x1B;
+    g_menu_nodes[0x1A].unk0 = 0x17;
+    g_menu_nodes[0x1A].u6.s.self_idx = 0x1A;
+    g_menu_nodes[0x1A].unk4 = 0x11;
+    g_menu_nodes[0x1B].unk0 = 0x13;
+    g_menu_nodes[0x1B].u6.s.self_idx = 0x1B;
+    g_menu_nodes[0x1B].unk4 = 0x12;
+    g_menu_nodes[0x1C].unk0 = 0x18;
+    g_menu_nodes[0x1C].u6.s.self_idx = 0x1C;
+    g_menu_nodes[0x18].u2.unk2 = (u16)((g_menu_nodes[0x18].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x19].u2.unk2 = (u16)((g_menu_nodes[0x19].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x18].u2.s.parent_idx = 0x16;
+    g_menu_nodes[0x19].u2.s.parent_idx = 0x12;
+    g_menu_nodes[0x1B].u2.unk2 = (u16)((g_menu_nodes[0x1B].u2.unk2 & 0xFF3F) | 0x80);
+    g_menu_nodes[0x1B].u2.s.parent_idx = 0x19;
+    g_menu_nodes[0x1C].u2.unk2 = (u16)((g_menu_nodes[0x1C].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x1C].u2.s.parent_idx = 0x12;
     var_a1 = 0x1E;
-    D_80169138[0x1A].u2.unk2 = (D_80169138[0x1A].u2.unk2 & 0xFF3F) | 0x80;
-    D_80169138[0x1A].u2.s.unk3 = 0x19;
+    g_menu_nodes[0x1A].u2.unk2 = (g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80;
+    g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
     var_a2->uA.unkA += 0;
-    D_80169138[0x1C].unk4 = 0xE;
-    D_80169138[0x1D].u6.s.unk6_hi = 0x1D;
-    D_80169138[0x1E].uA.s.unkB = 0x1F;
-    D_80169138[0x1F].u6.s.unk6_hi = 0x1F;
-    D_80169138[0x1C].unk5 = 5;
-    D_80169138[0x1D].unk0 = 0x1C;
-    D_80169138[0x1D].unk5 = 3;
-    D_80169138[0x1D].unk4 = 0x18;
-    D_80169138[0x1E].unk0 = 0x19;
-    D_80169138[0x1E].u6.s.unk6_hi = 0x1E;
-    D_80169138[0x1E].unk4 = 0x13;
-    D_80169138[0x1F].unk0 = 0x1A;
-    D_80169138[0x1F].unk4 = 0x14;
-    D_80169138[0x2B].unk0 = 0x1A;
-    D_80169138[0x2B].u6.s.unk6_hi = 0x2B;
-    temp_v0_13 = D_80169138[0x1D].u2.unk2 & 0xFF3D;
-    D_80169138[0x1D].u2.unk2 = (u16)(D_80169138[0x1D].u2.unk2 & 0xFFFD);
-    (*(&D_80169138[0x1D])).u2.unk2 = temp_v0_13;
-    temp_v1 = D_80169138[0x1E].u2.unk2;
-    D_80169138[0x1D].u2.unk2 = (u16)(temp_v0_13 | 1);
-    D_80169138[0x1D].u2.s.unk3 = 0xFF;
-    D_80169138[0x1F].u2.unk2 = (u16)((D_80169138[0x1F].u2.unk2 & 0xFF3F) | 0x40);
-    D_80169138[0x1F].u2.s.unk3 = 0x1E;
-    D_80169138[0x1E].u2.unk2 = (u16)(temp_v1 & 0xFFFD);
+    g_menu_nodes[0x1C].unk4 = 0xE;
+    g_menu_nodes[0x1D].u6.s.self_idx = 0x1D;
+    g_menu_nodes[0x1E].uA.s.unkB = 0x1F;
+    g_menu_nodes[0x1F].u6.s.self_idx = 0x1F;
+    g_menu_nodes[0x1C].content_id = 5;
+    g_menu_nodes[0x1D].unk0 = 0x1C;
+    g_menu_nodes[0x1D].content_id = 3;
+    g_menu_nodes[0x1D].unk4 = 0x18;
+    g_menu_nodes[0x1E].unk0 = 0x19;
+    g_menu_nodes[0x1E].u6.s.self_idx = 0x1E;
+    g_menu_nodes[0x1E].unk4 = 0x13;
+    g_menu_nodes[0x1F].unk0 = 0x1A;
+    g_menu_nodes[0x1F].unk4 = 0x14;
+    g_menu_nodes[0x2B].unk0 = 0x1A;
+    g_menu_nodes[0x2B].u6.s.self_idx = 0x2B;
+    temp_v0_13 = g_menu_nodes[0x1D].u2.unk2 & 0xFF3D;
+    g_menu_nodes[0x1D].u2.unk2 = (u16)(g_menu_nodes[0x1D].u2.unk2 & 0xFFFD);
+    (*(&g_menu_nodes[0x1D])).u2.unk2 = temp_v0_13;
+    temp_v1 = g_menu_nodes[0x1E].u2.unk2;
+    g_menu_nodes[0x1D].u2.unk2 = (u16)(temp_v0_13 | 1);
+    g_menu_nodes[0x1D].u2.s.parent_idx = 0xFF;
+    g_menu_nodes[0x1F].u2.unk2 = (u16)((g_menu_nodes[0x1F].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x1F].u2.s.parent_idx = 0x1E;
+    g_menu_nodes[0x1E].u2.unk2 = (u16)(temp_v1 & 0xFFFD);
     temp_v1_2 = temp_v1 & 0xFF3D;
-    temp_v1 = (u16)((D_80169138[0x2B].u2.unk2 & 0xFF3F) | 0x40);
-    D_80169138[0x1E].u2.unk2 = temp_v1_2;
-    D_80169138[0x2B].u2.unk2 = temp_v1;
-    D_80169138[0x1E].u2.unk2 = (u16)(temp_v1_2 | 1);
-    D_80169138[0x1E].u2.s.unk3 = 0xFF;
-    D_80169138[0x2B].u2.s.unk3 = 0x1E;
-    D_80169138[0x1F].u2.unk2 = (u16)(D_80169138[0x1F].u2.unk2 & 0xFFCF);
-    D_80169138[0x2B].u2.unk2 = (u16)((D_80169138[0x2B].u2.unk2 & 0xFFCF) | 0x10);
-    D_80169138[0x2B].unk4 = 0x15;
-    D_80169138[0x20].unk0 = 0x1B;
-    D_80169138[0x20].u6.s.unk6_hi = 0x20;
+    temp_v1 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x1E].u2.unk2 = temp_v1_2;
+    g_menu_nodes[0x2B].u2.unk2 = temp_v1;
+    g_menu_nodes[0x1E].u2.unk2 = (u16)(temp_v1_2 | 1);
+    g_menu_nodes[0x1E].u2.s.parent_idx = 0xFF;
+    g_menu_nodes[0x2B].u2.s.parent_idx = 0x1E;
+    g_menu_nodes[0x1F].u2.unk2 = (u16)(g_menu_nodes[0x1F].u2.unk2 & 0xFFCF);
+    g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFFCF) | 0x10);
+    g_menu_nodes[0x2B].unk4 = 0x15;
+    g_menu_nodes[0x20].unk0 = 0x1B;
+    g_menu_nodes[0x20].u6.s.self_idx = 0x20;
     temp_v0_14 = 0xFF3D;
-    temp_v0_14 = D_80169138[0x20].u2.unk2 & temp_v0_14;
+    temp_v0_14 = g_menu_nodes[0x20].u2.unk2 & temp_v0_14;
     new_var6 = D_800FD818.unk268 & 1;
-    (*(D_80169138 + 0x20)).u2.unk2 = (u16)(D_80169138[0x20].u2.unk2 & 0xFFFD);
-    D_80169138[0x20].u2.unk2 = temp_v0_14;
-    D_80169138[0x20].unk4 = 0x16;
-    D_80169138[0x20].u2.unk2 = (u16)(temp_v0_14 | 1);
-    D_80169138[0x20].u2.s.unk3 = 0xFF;
+    (*(g_menu_nodes + 0x20)).u2.unk2 = (u16)(g_menu_nodes[0x20].u2.unk2 & 0xFFFD);
+    g_menu_nodes[0x20].u2.unk2 = temp_v0_14;
+    g_menu_nodes[0x20].unk4 = 0x16;
+    g_menu_nodes[0x20].u2.unk2 = (u16)(temp_v0_14 | 1);
+    g_menu_nodes[0x20].u2.s.parent_idx = 0xFF;
     if (new_var6)
     {
         if (D_800FD818.unk26B != 0)
         {
-            D_80169138[6].u2.unk2 = (u16)(D_80169138[6].u2.unk2 | 1);
+            g_menu_nodes[6].u2.unk2 = (u16)(g_menu_nodes[6].u2.unk2 | 1);
         }
         else
         {
-            D_80169138[3].u2.unk2 = (u16)((D_80169138 + 3)->u2.unk2 | 1);
+            g_menu_nodes[3].u2.unk2 = (u16)((g_menu_nodes + 3)->u2.unk2 | 1);
         }
     }
     if (D_800FDCE8 & 1)
     {
         if ((g_pad_ctx->unkAA8 & 0x7F) == 4)
         {
-            D_80169138[0xF].u2.unk2 = (u16)(D_80169138[0xF].u2.unk2 | 1);
+            g_menu_nodes[0xF].u2.unk2 = (u16)(g_menu_nodes[0xF].u2.unk2 | 1);
         }
         else
         {
-            D_80169138[9].u2.unk2 = (u16)(D_80169138[9].u2.unk2 | 1);
+            g_menu_nodes[9].u2.unk2 = (u16)(g_menu_nodes[9].u2.unk2 | 1);
         }
     }
     var_a3 = 0;
@@ -1823,13 +1842,13 @@ void func_801423D8(void)
     }
     temp_v0_11 = var_a3 & 0xFFFF;
     var_t0_2 = 0;
-    new_var3 = D_80169138;
+    new_var3 = g_menu_nodes;
     var_a2 = new_var3;
     var_a3 = 0;
     new_var = &var_a2->u8_u;
     do
     {
-        new_var5 = &new_var3->u2.s.unk3;
+        new_var5 = &new_var3->u2.s.parent_idx;
         if ((*new_var5) == 0xFF)
         {
             temp_a0 = temp_v0_11;
@@ -1852,84 +1871,91 @@ void func_801423D8(void)
     } while (var_t0_2 < 0x2C);
     if (g_active_script != 0)
     {
-        D_80169548 = -1;
+        g_menu_scene_type = -1;
         return;
     }
-    D_80169548 = 0;
-    new_var4 = D_8016913D;
+    g_menu_scene_type = 0;
+    new_var4 = g_menu_init_content_id;
     D_801690F9 = 0;
     func_8014E3C4(new_var4, var_a1, new_var3, var_a3);
-    func_801436F0();
+    menu_set_active_node();
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/hyDM7
+ * @brief Clears the expand flag (bit 1 of u2.unk2) for all menu nodes.
+ * @note Called before menu_update_layout to ensure no node recurses into children.
+ * @see decomp.me (100%) https://decomp.me/scratch/hyDM7
  */
-void func_80142D24(void)
+void menu_collapse_all(void)
 {
     s32 i;
     for (i = 0; i < 0x2C; i++)
     {
-        D_80169138[i].u2.unk2 &= 0xFFFD;
+        g_menu_nodes[i].u2.unk2 &= 0xFFFD;
     }
 }
 
-extern s32 D_801693F8;
+extern s32 g_menu_layout_end;
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/YhGni
+ * @brief Assigns layout positions to all active root menu nodes and stores the final position count.
+ * @note Sets g_menu_scroll_pos and g_menu_redraw_state to signal scroll state after layout.
+ * @see decomp.me (100%) https://decomp.me/scratch/YhGni
  */
-void func_80142D54(void)
+void menu_update_layout(void)
 {
-    s32 var_s3 = 0;
-    s32 var_a0 = var_s3;
-    s32 var_s2 = var_a0;
+    s32 changed = 0;
+    s32 pos = changed;
+    s32 i = pos;
 
     do
     {
-        // Access offset 3 through the union
-        if (D_80169138[var_s2].u2.s.unk3 == 0xFF)
+        if (g_menu_nodes[i].u2.s.parent_idx == 0xFF)
         {
-            s32 temp_s0 = var_a0;
-            var_a0++;
-            var_a0--;
+            s32 prev_pos = pos;
+            pos++;
+            pos--;
 
-            // Access offset 2 through the union
-            if (D_80169138[var_s2].u2.s.unk2_hi & 1)
+            if (g_menu_nodes[i].u2.s.unk2_hi & 1)
             {
-                var_a0 = func_80142E40(var_s2, temp_s0);
-                if (temp_s0 != (var_a0 - 0x13))
+                pos = menu_layout_node(i, prev_pos);
+                if (prev_pos != (pos - 0x13))
                 {
-                    var_s3 = 1;
-                    if (var_a0 >= 0xAC)
+                    changed = 1;
+                    if (pos >= 0xAC)
                     {
-                        D_8016954C = var_a0 - 0xAB;
-                        D_80169400 = 8;
+                        g_menu_scroll_pos = pos - 0xAB;
+                        g_menu_redraw_state = 8;
                     }
                 }
             }
         }
-        var_s2 += 1;
-    } while (var_s2 < 0x2C);
+        i += 1;
+    } while (i < 0x2C);
 
-    D_801693F8 = var_a0;
-    if (var_s3 == 0)
+    g_menu_layout_end = pos;
+    if (changed == 0)
     {
-        D_8016954C = 0;
-        D_80169400 = 8;
+        g_menu_scroll_pos = 0;
+        g_menu_redraw_state = 8;
     }
 }
 
 /**
- * decomp.me (99.04%) https://decomp.me/scratch/LDCeT
+ * @brief Assigns a position slot to a menu node and optionally recurses into its first child.
+ * @param node_idx Index into g_menu_nodes of the node to lay out.
+ * @param base_pos Running position counter; this node occupies [base_pos, base_pos+0x13).
+ * @return Updated position counter after processing this node and any expanded children.
+ * @note Bit 1 of u2.unk2 controls child recursion; menu_collapse_all clears it before layout.
+ * @see decomp.me (99.04%) https://decomp.me/scratch/LDCeT
  */
-s32 func_80142E40(s32 arg0, s32 arg1)
+s32 menu_layout_node(s32 node_idx, s32 base_pos)
 {
-    UnkStruct* temp_a0;
-    s32 var_a2;
-    int new_var5;
-    UnkStruct* new_var4;
-    int new_var;
+    MenuNode* temp_a0;
+    s32 cur_pos;
+    int child_iter;
+    MenuNode* new_var4;
+    int has_children;
     u32 temp_a1;
     union
     {
@@ -1940,35 +1966,35 @@ s32 func_80142E40(s32 arg0, s32 arg1)
             u8 unk9;
         } s;
     }* new_var2;
-    UnkStruct* new_var3;
-    var_a2 = arg1;
-    new_var = (((u16)(&D_80169138[arg0])->u2.unk2) >> 1) & 1;
-    temp_a1 = var_a2 & 0xFFFF;
-    var_a2 += 0x13;
-    new_var4 = &D_80169138[arg0];
+    MenuNode* new_var3;
+    cur_pos = base_pos;
+    has_children = (((u16)(&g_menu_nodes[node_idx])->u2.unk2) >> 1) & 1;
+    temp_a1 = cur_pos & 0xFFFF;
+    cur_pos += 0x13;
+    new_var4 = &g_menu_nodes[node_idx];
 
-    (*(&D_80169138[arg0])).unk1 = 4;
+    (*(&g_menu_nodes[node_idx])).state = 4;
     new_var2 = &new_var4->u8_u;
     new_var4->u8_u.unk8 = (*new_var2).s.unk8_hi | ((temp_a1 & 1) << 0xF);
-    (&D_80169138[arg0])->uA.unkA = ((&D_80169138[arg0])->uA.unkA & 0xFF00) | (0xFF & (temp_a1 >> 1));
+    (&g_menu_nodes[node_idx])->uA.unkA = ((&g_menu_nodes[node_idx])->uA.unkA & 0xFF00) | (0xFF & (temp_a1 >> 1));
     new_var4->uA.unkA = (new_var4->uA.unkA & 0xFF00) | ((temp_a1 >> 1) & 0xFF);
-    new_var5 = 0;
-    if (new_var)
+    child_iter = 0;
+    if (has_children)
     {
-        s32 var_s0;
-        s32 temp_v0;
-        for (var_s0 = new_var5; (var_s0 < 4) != 0;)
+        s32 child_idx;
+        s32 child;
+        for (child_idx = child_iter; (child_idx < 4) != 0;)
         {
-            new_var3 = D_80169138 + arg0;
-            var_s0 = (&(&(*new_var3).uA.s)->unkB)[var_s0];
-            temp_v0 = var_s0;
-            if (temp_v0 == 0xFF)
+            new_var3 = g_menu_nodes + node_idx;
+            child_idx = (&(&(*new_var3).uA.s)->unkB)[child_idx];
+            child = child_idx;
+            if (child == 0xFF)
             {
                 break;
             }
-            var_s0++;
-            var_a2 = func_80142E40(temp_v0, var_a2);
+            child_idx++;
+            cur_pos = menu_layout_node(child, cur_pos);
         }
     }
-    return var_a2;
+    return cur_pos;
 }
