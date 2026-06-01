@@ -71,3 +71,4 @@ g_content_view_x       = 0x80169128;
 g_content_view_y       = 0x8016912C;
 g_menu_content_table   = 0x801686F8;
 g_menu_hit_item_idx    = 0x8016941C;
+g_menu_default_view_pos = 0x80169104;

@@ -1492,7 +1492,8 @@ extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
 extern s32 g_menu_active_node;
-extern s32 D_801694B4[];
+/** @brief Array mapping navigation-list position to the previous node ID (up navigation, D-pad Up). */
+extern s32 g_menu_nav_prev[];
 extern u8 g_menu_init_content_id;
 
 typedef struct
@@ -1583,7 +1584,7 @@ void menu_node_tree_init(void)
     D_8016911C = 0;
     D_80169554 = 0;
     D_801694B0 = 0;
-    D_801694B4[0] = 0;
+    g_menu_nav_prev[0] = 0;
     g_menu_content_height = 0;
     g_menu_scroll_pos = 0;
     g_menu_redraw_state = 0;
@@ -2158,24 +2159,34 @@ typedef struct
   u8 pad[5];
 } MenuContentItem;
 
-extern s32 D_801690B4;
-extern s32 D_801694B8;
-extern s32 D_8016912C;
-extern s32 D_8016940C;
+/** @brief Number of nodes in the linear navigation list. */
+extern s32 g_menu_nav_count;
+/** @brief Node ID at the start of the navigation list; used for wrap-around on down-navigation. */
+extern s32 g_menu_nav_first;
+/** @brief Y display coordinate for the content viewport origin. */
+extern s32 g_content_view_y;
+/** @brief Set to 1 to request an overlay/scene load at end of this input frame. */
+extern s32 g_menu_load_request;
 extern s32 D_80168C10;
-extern s32 D_80169110;
-extern s32 D_8016941C;
-extern s32 D_80169128;
-extern s32 D_80169114;
-extern s32 D_801694BC[];
-
+/** @brief X pixel position of the content cursor within the content window. */
+extern s32 g_content_cursor_x;
+/** @brief Index of the item found by hit-test, or -1 if none. */
+extern s32 g_menu_hit_item_idx;
+/** @brief X display coordinate for the content viewport origin. */
+extern s32 g_content_view_x;
+/** @brief Y pixel position of the content cursor within the content window; clamped to [0xC, 0xA3]. */
+extern s32 g_content_cursor_y;
+/** @brief Array mapping navigation-list position to the next node ID (down navigation). */
+extern s32 g_menu_nav_next[];
+/** @brief Default X/Y origin for the content viewport when no item hit-test position is available. */
 extern struct
 {
-  s16 unk0;
-  s16 unk2;
-} D_80169104;
+  s16 x;
+  s16 y;
+} g_menu_default_view_pos;
 
-extern void *D_801686F8[];
+/** @brief Per-node table of MenuContentItem arrays, indexed by node.u6.s.self_idx; NULL = no cursor data. */
+extern void *g_menu_content_table[];
 
 /**
  * @brief Process D-pad and face-button input to navigate and select menu nodes.
@@ -2227,25 +2238,25 @@ unsigned int menu_handle_node_input(void)
     {
         if (temp_v0 != 0)
         {
-            g_menu_active_node = D_801694B4[temp_v0];
+            g_menu_active_node = g_menu_nav_prev[temp_v0];
         }
         else
         {
-            g_menu_active_node = D_801694B4[D_801690B4];
+            g_menu_active_node = g_menu_nav_prev[g_menu_nav_count];
         }
     }
     if (g_pad_input & 0x4000)
     {
-        if (temp_v0 >= (D_801690B4 - 1))
+        if (temp_v0 >= (g_menu_nav_count - 1))
         {
-            g_menu_active_node = D_801694B8;
+            g_menu_active_node = g_menu_nav_first;
             do
             {
             } while (0);
         }
         else
         {
-            g_menu_active_node = D_801694BC[temp_v0];
+            g_menu_active_node = g_menu_nav_next[temp_v0];
         }
     }
     if (g_pad_input & 0x40)
@@ -2253,10 +2264,10 @@ unsigned int menu_handle_node_input(void)
         if (g_menu_active_node == MENU_20)
         {
             func_8014F210(0x7F, 0x80);
-            D_8016940C = 1;
+            g_menu_load_request = 1;
             return;
         }
-        g_menu_active_node = D_801694B8;
+        g_menu_active_node = g_menu_nav_first;
         g_menu_active_node = MENU_20;
     }
     if (0x5040 & (g_pad_input & 0xFFFFu))
@@ -2290,11 +2301,11 @@ unsigned int menu_handle_node_input(void)
                 return;
             }
             SENTINEL = 0xFF;
-            D_8016940C = 1;
+            g_menu_load_request = 1;
         }
         if (g_menu_active_node == 0x11)
         {
-            D_8016940C = 1;
+            g_menu_load_request = 1;
             D_80168C10 = 0xA;
             return;
         }
@@ -2311,7 +2322,7 @@ unsigned int menu_handle_node_input(void)
         new_var8 = &temp_a1->u6;
         if (g_menu_scene_type != g_menu_active_node)
         {
-            if (D_801686F8[temp_a1->u6.s.self_idx] != 0)
+            if (g_menu_content_table[temp_a1->u6.s.self_idx] != 0)
             {
                 var_v1_2 = 3;
                 temp_a0_3 = new_var14;
@@ -2342,7 +2353,7 @@ unsigned int menu_handle_node_input(void)
         {
             if (g_pad_input & 0x220)
             {
-                D_8016940C = 1;
+                g_menu_load_request = 1;
             }
             return;
         }
@@ -2350,17 +2361,17 @@ unsigned int menu_handle_node_input(void)
         temp_v0_3 = temp_a1->u8_u.s.unk8_hi;
         new_var12 = temp_a0_3;
         new_var15 = g_menu_content_height;
-        D_80169114 = 0xC;
-        D_80169114 = ((temp_v0_3 * 2) | new_var12) - (new_var15 - D_80169114);
-        if (D_80169114 < 0xC)
+        g_content_cursor_y = 0xC;
+        g_content_cursor_y = ((temp_v0_3 * 2) | new_var12) - (new_var15 - g_content_cursor_y);
+        if (g_content_cursor_y < 0xC)
         {
-            D_80169114 = 0xC;
+            g_content_cursor_y = 0xC;
         }
-        if (D_80169114 >= 0xA3)
+        if (g_content_cursor_y >= 0xA3)
         {
-            D_80169114 = 0xA3;
+            g_content_cursor_y = 0xA3;
         }
-        D_80169110 = (((temp_a1->u6.unk6 >> 4) >> 4) & 0x7F) + 8;
+        g_content_cursor_x = (((temp_a1->u6.unk6 >> 4) >> 4) & 0x7F) + 8;
         if (0xFF != (&g_menu_nodes[g_menu_active_node])->content_id)
         {
             g_menu_cursor_enable = 1;
@@ -2384,21 +2395,21 @@ unsigned int menu_handle_node_input(void)
             }
 
             g_menu_suppress_cursor = 5;
-            D_80169128 = D_80169104.unk0;
-            new_var = &D_80169104.unk2;
-            D_8016912C = *new_var;
+            g_content_view_x = g_menu_default_view_pos.x;
+            new_var = &g_menu_default_view_pos.y;
+            g_content_view_y = *new_var;
         }
         else
         {
-            D_8016941C = func_8014847C(new_var12, temp_a1, &D_80169114, temp_v0_3);
-            if (D_8016941C != (-1))
+            g_menu_hit_item_idx = func_8014847C(new_var12, temp_a1, &g_content_cursor_y, temp_v0_3);
+            if (g_menu_hit_item_idx != (-1))
             {
-                temp_v1_2 = &((MenuContentItem*)D_801686F8[new_var11[g_menu_scene_type].u6.s.self_idx])[D_8016941C];
-                D_80169128 = temp_v1_2->packed_x & 0x1FF;
+                temp_v1_2 = &((MenuContentItem*)g_menu_content_table[new_var11[g_menu_scene_type].u6.s.self_idx])[g_menu_hit_item_idx];
+                g_content_view_x = temp_v1_2->packed_x & 0x1FF;
                 new_var3 = temp_v1_2->y - 8;
                 g_menu_suppress_cursor = 5;
                 g_menu_cursor_enable = 1;
-                D_8016912C = new_var3;
+                g_content_view_y = new_var3;
             }
         }
     }
