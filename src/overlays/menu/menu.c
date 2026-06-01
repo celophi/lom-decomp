@@ -1409,34 +1409,43 @@ typedef struct
 } MenuNode;
 extern MenuNode g_menu_nodes[0x2C];
 extern u8 g_menu_prev_node;
-extern s32 D_80168C2C;
+/** @brief Gate flag for func_80148A20: 0 = draw empty slot, nonzero = full item render. */
+extern s32 g_menu_content_ready;
 
+/**
+ * @brief Four u32 pointers to item data for each comparison slot.
+ * @note Used alongside g_item_slot_flags; each element maps to g_item_slot_flags's parallel flag.
+ */
 typedef struct
 {
-    u32 unk0;
-    u32 unk4;
-    u32 unk8;
-    u32 unkC;
-} Struct_D_80169538;
-extern Struct_D_80169538 D_80169538;
+    u32 unk0; /**< Slot 0 data pointer. */
+    u32 unk4; /**< Slot 1 data pointer. */
+    u32 unk8; /**< Slot 2 data pointer. */
+    u32 unkC; /**< Slot 3 data pointer. */
+} ItemSlotData;
+extern ItemSlotData g_item_slot_data;
 
+/**
+ * @brief Four u8 flags indicating which item comparison slots are occupied (nonzero = active).
+ * @note Parallel to g_item_slot_data; checked in func_80145608 before reading slot data.
+ */
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
-    u8 unk2;
-    u8 unk3;
-} Struct_D_80168C1C;
-extern Struct_D_80168C1C D_80168C1C;
+    u8 slot0; /**< Slot 0 occupied flag. */
+    u8 slot1; /**< Slot 1 occupied flag. */
+    u8 slot2; /**< Slot 2 occupied flag. */
+    u8 slot3; /**< Slot 3 occupied flag. */
+} ItemSlotFlags;
+extern ItemSlotFlags g_item_slot_flags;
 
-extern s32 D_801690EC;
+/** @brief Pointer into g_pad_ctx item data for the current category; null = no items. */
+extern s32 g_menu_item_ptr;
 extern s32 D_80169410;
 extern s32 D_80169404;
 extern s32 D_80169408;
 extern s32 D_8016911C;
 extern s32 D_80169554;
 extern s32 D_801694B0;
-extern s32 D_801694B4;
 extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
@@ -1517,16 +1526,16 @@ void menu_node_tree_init(void)
     var_t0 = 0;
     var_a0 = g_menu_nodes;
     g_menu_prev_node = 0xFF;
-    D_80168C2C = 0;
-    D_80169538.unk0 = 0;
-    D_80169538.unk4 = 0;
-    D_80169538.unk8 = 0;
-    D_80169538.unkC = 0;
-    D_80168C1C.unk0 = 0;
-    D_80168C1C.unk1 = 0;
-    D_80168C1C.unk2 = 0;
-    D_80168C1C.unk3 = 0;
-    D_801690EC = 0;
+    g_menu_content_ready = 0;
+    g_item_slot_data.unk0 = 0;
+    g_item_slot_data.unk4 = 0;
+    g_item_slot_data.unk8 = 0;
+    g_item_slot_data.unkC = 0;
+    g_item_slot_flags.slot0 = 0;
+    g_item_slot_flags.slot1 = 0;
+    g_item_slot_flags.slot2 = 0;
+    g_item_slot_flags.slot3 = 0;
+    g_menu_item_ptr = 0;
     D_80169410 = 0;
     D_80169404 = 0;
     D_80169408 = 0;
