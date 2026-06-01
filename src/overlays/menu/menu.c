@@ -189,8 +189,6 @@ void menu_init(void)
  * @c PRIM_SLOT_STRIDE bytes apart; the block data begins @c PRIM_BLOCK_BUF_OFFSET bytes
  * after the strip data within each slot.
  *
- * @note @c thing is an unused local retained to match the compiler's saved-register
- *       frame layout for the 100% match.
  * @see decomp.me (100%) https://decomp.me/scratch/QnGCP
  */
 void menu_init_prim_rects(void)
