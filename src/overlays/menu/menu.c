@@ -140,7 +140,7 @@ void menu_init(void)
     menu_init_prim_rects();
     g_menu_frame = 0;
     g_script_cursor = 0;
-    func_801423D8();
+    menu_node_tree_init();
 }
 
 /**
@@ -1300,29 +1300,35 @@ void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
 /**
  * @brief Pair of (u8) indices into a packed text-lookup table.
  *
- * @c unk0 is the character/entry index within the page; @c unk1 is the page
- * index. Together they form a pointer into the string table via
- * @c unk0 + ((unk1 << 8) + base_ptr). See @ref func_80142304.
+ * @c entry is the character/entry index within the page; @c page is the page
+ * index. Together they form a string pointer via
+ * @c entry + ((page << 8) + base_ptr). See @ref menu_draw_label.
  */
 typedef struct
 {
-    u8 unk0; /**< Entry index within the page. */
-    u8 unk1; /**< Page index. */
-} unk_struct;
+    u8 entry; /**< Entry index within the page. */
+    u8 page;  /**< Page index. */
+} StringTableKey;
 
+/** @brief 2-D screen coordinate (pixels). */
 typedef struct
 {
-    s16 x; /**< Screen X coordinate. */
-    s16 y; /**< Screen Y coordinate. */
-} arg2_struct;
+    s16 x; /**< Screen X. */
+    s16 y; /**< Screen Y. */
+} ScreenPos;
 
-extern unk_struct D_800EC3DA;
-extern unk_struct D_800EC3E4;
+extern StringTableKey D_800EC3DA;
+extern StringTableKey D_800EC3E4;
 
 /**
- * decomp.me (83.81%) https://decomp.me/scratch/ozwB7
+ * @brief Render a text label from a packed string table at the given screen position.
+ * @param arg0 OT (ordering table) pointer.
+ * @param arg1 Primitive buffer context.
+ * @param arg2 Screen position to draw at.
+ * @param arg3 String table selector: >= 0 uses D_800EC3DA table, < 0 uses D_800EC3E4 table.
+ * @see decomp.me (83.81%) https://decomp.me/scratch/ozwB7
  */
-void func_80142304(s32 arg0, register s32 arg1, arg2_struct* arg2, s32 arg3)
+void menu_draw_label(s32 arg0, register s32 arg1, ScreenPos* arg2, s32 arg3)
 {
     u8 sp20[16];
     u8* ptr = sp20;
@@ -1333,15 +1339,15 @@ void func_80142304(s32 arg0, register s32 arg1, arg2_struct* arg2, s32 arg3)
 
     if (arg3 >= 0)
     {
-        unk1 = D_800EC3DA.unk1;
-        unk0 = D_800EC3DA.unk0;
+        unk1 = D_800EC3DA.page;
+        unk0 = D_800EC3DA.entry;
         addr = (u8*)&D_800EC3DA - 0x16;
     }
     else
     {
-        unk1 = D_800EC3E4.unk1;
+        unk1 = D_800EC3E4.page;
         addr = (u8*)&D_800EC3E4 - 0x20;
-        unk0 = D_800EC3E4.unk0;
+        unk0 = D_800EC3E4.entry;
     }
 
     temp_s0 = unk0 + ((unk1 << 8) + addr);
@@ -1451,14 +1457,17 @@ extern Struct_D_800FD818 D_800FD818;
 extern u16 D_800FDA80;
 extern u16 D_800FDCE8;
 extern s8 D_801690F9;
-extern s32 D_80169548;
 extern s8 D_80169324;
 
 /**
- * decomp.me (90.94%) https://decomp.me/scratch/XJkmb
- * WARNING: DO NOT RELY ON THIS FUNCTION FOR ANALYSIS. IT IS NOT FUNCTIONALLY EQUIVALENT.
+ * @brief Initialize the full menu node tree and global menu state.
+ * @note Builds all 44 g_menu_nodes entries with hardcoded parent-child links and flags,
+ *       zeroes all layout counters, runs an initial position pass, then calls into the
+ *       layout and render pipeline unless a script is still active.
+ * @see decomp.me (90.94%) https://decomp.me/scratch/XJkmb
+ * @warning NOT FUNCTIONALLY EQUIVALENT -- do not rely on this C for logic analysis.
  */
-void func_801423D8(void)
+void menu_node_tree_init(void)
 {
     MenuNode* var_a0;
     MenuNode* var_a2;
@@ -1852,10 +1861,10 @@ void func_801423D8(void)
     } while (var_t0_2 < 0x2C);
     if (g_active_script != 0)
     {
-        D_80169548 = -1;
+        g_menu_scene_type = -1;
         return;
     }
-    D_80169548 = 0;
+    g_menu_scene_type = 0;
     new_var4 = D_8016913D;
     D_801690F9 = 0;
     func_8014E3C4(new_var4, var_a1, new_var3, var_a3);
