@@ -1492,8 +1492,7 @@ extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
 extern s32 g_menu_active_node;
-/* D_801694B4 used as s32[] nav-table base: D_801694B4[active_node] = L2 nav target */
-extern s32 D_801694B4;
+extern s32 D_801694B4[];
 extern u8 g_menu_init_content_id;
 
 typedef struct
@@ -1584,7 +1583,7 @@ void menu_node_tree_init(void)
     D_8016911C = 0;
     D_80169554 = 0;
     D_801694B0 = 0;
-    D_801694B4 = 0;
+    D_801694B4[0] = 0;
     g_menu_content_height = 0;
     g_menu_scroll_pos = 0;
     g_menu_redraw_state = 0;
@@ -2146,4 +2145,256 @@ u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
 
     /* 248: Evaluates to `addiu v0, s0, 0x48` as the function's return statement */
     return new_var2;
+}
+
+typedef struct
+{
+  u16 unk0;
+  u8 unk2;
+  u8 pad[5];
+} Unk801686F8_Item;
+
+extern s32 D_801690B4;
+extern s32 D_801694B8;
+extern s32 D_8016912C;
+extern s32 D_8016940C;
+extern s32 D_80168C10;
+extern s32 D_80169110;
+extern s32 D_8016941C;
+extern s32 D_80169128;
+extern s32 D_80169114;
+extern s32 D_801694BC[];
+
+extern struct
+{
+  s16 unk0;
+  s16 unk2;
+} D_80169104;
+
+extern void *D_801686F8[];
+
+/**
+ * decomp.me (99.42%) https://decomp.me/scratch/YoOml
+ */
+unsigned int func_80143190(void)
+{
+    MenuNode* temp_a1;
+    s32 temp_v0;
+    s32 new_var15;
+    MenuNode* new_var11;
+    const u32 new_var14;
+    int new_var13;
+    int new_var4;
+    s32 temp_v1;
+    s32 temp_v0_3;
+    s32 temp_a0_3;
+    int new_var3;
+    union
+    {
+        u16 unk6;
+        struct
+        {
+            u8 self_idx;
+            u8 unk7;
+        } s;
+    }* new_var8;
+    s32 temp_a0;
+    s16* new_var;
+    s32 var_v1_2;
+    s32 new_var10;
+    unsigned char new_var5;
+    int new_var7;
+    char new_var9;
+    u8* var_a0;
+    u8* var_v0;
+    unsigned int new_var12;
+    Unk801686F8_Item* temp_v1_2;
+    u8* new_var6;
+    int new_var2;
+    const u32 MENU_20 = 0x20;
+    const u8 SENTINEL;
+    temp_v0 = func_8014852C(g_menu_active_node);
+    if (temp_v0 == (-1))
+    {
+        return;
+    }
+    if (g_pad_input & 0x1000)
+    {
+        if (temp_v0 != 0)
+        {
+            g_menu_active_node = D_801694B4[temp_v0];
+        }
+        else
+        {
+            g_menu_active_node = D_801694B4[D_801690B4];
+        }
+    }
+    if (g_pad_input & 0x4000)
+    {
+        if (temp_v0 >= (D_801690B4 - 1))
+        {
+            g_menu_active_node = D_801694B8;
+            do
+            {
+            } while (0);
+        }
+        else
+        {
+            g_menu_active_node = D_801694BC[temp_v0];
+        }
+    }
+    if (g_pad_input & 0x40)
+    {
+        if (g_menu_active_node == MENU_20)
+        {
+            func_8014F210(0x7F, 0x80);
+            D_8016940C = 1;
+            return;
+        }
+        g_menu_active_node = D_801694B8;
+        g_menu_active_node = MENU_20;
+    }
+    if (0x5040 & (g_pad_input & 0xFFFFu))
+    {
+        func_8014F210(0x7D, 0x80);
+        temp_a0 = func_8014852C(g_menu_active_node);
+        temp_a0 = temp_a0 * 0x13;
+        var_v1_2 = temp_a0 - g_menu_scroll_pos;
+        temp_v1 = var_v1_2;
+        if (temp_v1 < 0)
+        {
+            g_menu_scroll_pos = temp_a0;
+            g_menu_redraw_state = 6;
+        }
+        else if (temp_v1 >= 0xAB)
+        {
+            g_menu_scroll_pos = temp_a0 - 0x98;
+            g_menu_redraw_state = 6;
+        }
+        return;
+    }
+    if (g_pad_input & 0x2220)
+    {
+        func_8014F210(0x7E, 0x80);
+        new_var13 = 0xFF;
+        new_var14 = MENU_20;
+        if (g_menu_active_node == new_var14)
+        {
+            if (!(g_pad_input & 0x220))
+            {
+                return;
+            }
+            SENTINEL = 0xFF;
+            D_8016940C = 1;
+        }
+        if (g_menu_active_node == 0x11)
+        {
+            D_8016940C = 1;
+            D_80168C10 = 0xA;
+            return;
+        }
+        new_var11 = g_menu_nodes;
+        temp_a1 = &g_menu_nodes[g_menu_active_node];
+        temp_v0_3 = new_var13;
+        (&g_menu_nodes[g_menu_active_node])->u2.unk2 |= 0xC;
+        new_var10 = temp_v0_3;
+        if (temp_a1->u2.s.parent_idx == temp_v0_3)
+        {
+            D_80169408 = (D_80169404 = (D_80169410 = (g_menu_item_ptr = 0)));
+        }
+        g_menu_prev_node = temp_v0_3;
+        new_var8 = &temp_a1->u6;
+        if (g_menu_scene_type != g_menu_active_node)
+        {
+            if (D_801686F8[temp_a1->u6.s.self_idx] != 0)
+            {
+                var_v1_2 = 3;
+                temp_a0_3 = new_var14;
+                new_var6 = &g_menu_slots;
+                g_menu_scene_type = g_menu_active_node;
+                var_v0 = new_var6 + 0x6C;
+                for (var_v1_2 = 3; var_v1_2 >= 0; var_v1_2--)
+                {
+                    *var_v0 = 0;
+                    var_v0 -= 0x24;
+                }
+
+                var_v1_2 = 3;
+                if (g_menu_nodes[g_menu_scene_type].content_id != 0xFF)
+                {
+                    D_801690F9 = 0;
+                    func_8014E3C4(g_menu_nodes[g_menu_scene_type].content_id, temp_a1, new_var14, temp_v0_3);
+                }
+            }
+            menu_set_active_node();
+            return;
+        }
+        if (g_menu_scene_type == (-1))
+        {
+            return;
+        }
+        if (g_menu_scene_type == new_var14)
+        {
+            if (g_pad_input & 0x220)
+            {
+                D_8016940C = 1;
+            }
+            return;
+        }
+        temp_a0_3 = (*new_var8).unk6 >> 0xF;
+        temp_v0_3 = temp_a1->u8_u.s.unk8_hi;
+        new_var12 = temp_a0_3;
+        new_var15 = g_menu_content_height;
+        D_80169114 = 0xC;
+        D_80169114 = ((temp_v0_3 * 2) | new_var12) - (new_var15 - D_80169114);
+        if (D_80169114 < 0xC)
+        {
+            D_80169114 = 0xC;
+        }
+        if (D_80169114 >= 0xA3)
+        {
+            D_80169114 = 0xA3;
+        }
+        D_80169110 = (((temp_a1->u6.unk6 >> 4) >> 4) & 0x7F) + 8;
+        if (0xFF != (&g_menu_nodes[g_menu_active_node])->content_id)
+        {
+            g_menu_cursor_enable = 1;
+            var_v1_2 = 0;
+            var_a0 = &g_menu_slots;
+            while (1)
+            {
+                if ((*var_a0) != 0)
+                {
+                    break;
+                }
+                var_v1_2++;
+                var_a0 += 0x24;
+                if (var_v1_2 >= 4)
+                {
+                    do
+                    {
+                    } while (0);
+                    return;
+                }
+            }
+
+            g_menu_suppress_cursor = 5;
+            D_80169128 = D_80169104.unk0;
+            new_var = &D_80169104.unk2;
+            D_8016912C = *new_var;
+        }
+        else
+        {
+            D_8016941C = func_8014847C(new_var12, temp_a1, &D_80169114, temp_v0_3);
+            if (D_8016941C != (-1))
+            {
+                temp_v1_2 = &((Unk801686F8_Item*)D_801686F8[new_var11[g_menu_scene_type].u6.s.self_idx])[D_8016941C];
+                D_80169128 = temp_v1_2->unk0 & 0x1FF;
+                new_var3 = temp_v1_2->unk2 - 8;
+                g_menu_suppress_cursor = 5;
+                g_menu_cursor_enable = 1;
+                D_8016912C = new_var3;
+            }
+        }
+    }
 }
