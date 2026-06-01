@@ -2163,6 +2163,7 @@ extern s32 D_80169110;
 extern s32 D_8016941C;
 extern s32 D_80169128;
 extern s32 D_80169114;
+extern s32 D_801694BC[];
 
 extern struct
 {
