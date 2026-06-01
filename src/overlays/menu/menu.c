@@ -1363,7 +1363,7 @@ void menu_draw_label(s32 arg0, register s32 arg1, ScreenPos* arg2, s32 arg3)
 typedef struct
 {
     u8 unk0;
-    u8 unk1;
+    u8 state; /**< Node state: 0 = uninitialized, 4 = position assigned by menu_layout_node. */
     union
     {
         u16 unk2;
@@ -1374,13 +1374,13 @@ typedef struct
         } s;
     } u2;
     u8 unk4;
-    u8 unk5;
+    u8 content_id; /**< Passed to the content-open function; 0xFF = no content. */
     union
     {
         u16 unk6;
         struct
         {
-            u8 unk6_hi;
+            u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
             u8 unk7;
         } s;
     } u6;
@@ -1438,9 +1438,9 @@ extern s32 D_80169554;
 extern s32 D_801694B0;
 extern s32 D_801694B4;
 extern s32 D_80169418;
-extern s32 D_8016954C;
+extern s32 g_menu_scroll_pos;
 extern s32 D_80169400;
-extern s32 D_801690E4;
+extern s32 g_menu_active_node;
 extern s32 D_80169130;
 extern u8 D_8016913D;
 
@@ -1534,15 +1534,15 @@ void menu_node_tree_init(void)
     D_801694B0 = 0;
     D_801694B4 = 0;
     D_80169418 = 0;
-    D_8016954C = 0;
+    g_menu_scroll_pos = 0;
     D_80169400 = 0;
-    D_801690E4 = 0;
+    g_menu_active_node = 0;
     D_80169130 = 0;
     for (var_t0 = 0; var_t0 < 0x2C; var_t0++)
     {
-        g_menu_nodes[var_t0].unk1 = 0;
+        g_menu_nodes[var_t0].state = 0;
         g_menu_nodes[var_t0].unk4 = 0;
-        g_menu_nodes[var_t0].unk5 = var_a1;
+        g_menu_nodes[var_t0].content_id = var_a1;
         g_menu_nodes[var_t0].unkE = var_a1;
         g_menu_nodes[var_t0].unkD = var_a1;
         g_menu_nodes[var_t0].unkC = var_a1;
@@ -1552,7 +1552,7 @@ void menu_node_tree_init(void)
     }
 
     g_menu_nodes[0].unk0 = 1;
-    g_menu_nodes[0].u6.s.unk6_hi = 0;
+    g_menu_nodes[0].u6.s.self_idx = 0;
     original_unk2 = g_menu_nodes[0].u2.unk2;
     temp1 = original_unk2 & 0xFFCD;
     temp2 = original_unk2 & 0xFF0D;
@@ -1569,15 +1569,15 @@ void menu_node_tree_init(void)
         g_menu_nodes[0].unk4 = 1;
     }
     g_menu_nodes[0].uA.s.unkB = 1;
-    g_menu_nodes[1].u6.s.unk6_hi = 1;
+    g_menu_nodes[1].u6.s.self_idx = 1;
     g_menu_nodes[1].unk4 = 5;
     g_menu_nodes[0].unkC = 2;
     g_menu_nodes[2].unk0 = 2;
-    g_menu_nodes[2].u6.s.unk6_hi = 2;
+    g_menu_nodes[2].u6.s.self_idx = 2;
     g_menu_nodes[2].unk4 = 4;
     g_menu_nodes[3].unk0 = 4;
     g_menu_nodes[1].unk0 = 3;
-    g_menu_nodes[3].u6.s.unk6_hi = 3;
+    g_menu_nodes[3].u6.s.self_idx = 3;
     g_menu_nodes[1].u2.unk2 = (u16)((g_menu_nodes[1].u2.unk2 & 0xFF0F) | 0x40);
     g_menu_nodes[1].u2.s.parent_idx = 0;
     g_menu_nodes[2].u2.unk2 = (u16)((g_menu_nodes[2].u2.unk2 & 0xFF0F) | 0x40);
@@ -1589,7 +1589,7 @@ void menu_node_tree_init(void)
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3E);
     g_menu_nodes[3].u2.s.parent_idx = 0xFF;
-    g_menu_nodes[4].u6.s.unk6_hi = 4;
+    g_menu_nodes[4].u6.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
         var_v0 = 0x6F;
@@ -1612,15 +1612,15 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].unk0 = 6;
     g_menu_nodes[4].unk4 = 5;
     g_menu_nodes[5].unk0 = 5;
-    g_menu_nodes[5].u6.s.unk6_hi = 5;
+    g_menu_nodes[5].u6.s.self_idx = 5;
     g_menu_nodes[5].unk4 = 4;
     g_menu_nodes[6].unk0 = 7;
-    g_menu_nodes[6].u6.s.unk6_hi = 6;
+    g_menu_nodes[6].u6.s.self_idx = 6;
     g_menu_nodes[6].unk4 = 3;
     g_menu_nodes[6].uA.s.unkB = 7;
     g_menu_nodes[6].unkC = 8;
     g_menu_nodes[7].unk0 = 9;
-    g_menu_nodes[7].u6.s.unk6_hi = 7;
+    g_menu_nodes[7].u6.s.self_idx = 7;
     new_var7 = 0xFF3E;
     g_menu_nodes[7].unk4 = 5;
     g_menu_nodes[8].unk0 = 8;
@@ -1630,7 +1630,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[7].u2.unk2 = (u16)((g_menu_nodes[7].u2.unk2 & 0xFF5F) | 0x50);
     g_menu_nodes[7].u2.s.parent_idx = 6;
     g_menu_nodes[8].u2.unk2 = (u16)((g_menu_nodes[8].u2.unk2 & 0xFF5F) | 0x50);
-    g_menu_nodes[8].u6.s.unk6_hi = 8;
+    g_menu_nodes[8].u6.s.self_idx = 8;
     temp_v0_6 = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
     g_menu_nodes[9].u2.unk2 = temp_v0_6;
     temp_v0_7 = temp_v0_6 | 0x20;
@@ -1645,19 +1645,19 @@ void menu_node_tree_init(void)
     g_menu_nodes[8].u2.s.parent_idx = 6;
     g_menu_nodes[8].unk4 = 4;
     g_menu_nodes[9].unk0 = 0xA;
-    g_menu_nodes[9].u6.s.unk6_hi = 9;
+    g_menu_nodes[9].u6.s.self_idx = 9;
     g_menu_nodes[9].unk4 = 6;
     g_menu_nodes[9].uA.s.unkB = 0xA;
     g_menu_nodes[0xA].unk0 = 0xB;
     g_menu_nodes[0x12].unk4 = 0xA;
-    g_menu_nodes[0xA].u6.s.unk6_hi = 0xA;
+    g_menu_nodes[0xA].u6.s.self_idx = 0xA;
     g_menu_nodes[0xA].unk4 = 7;
     g_menu_nodes[0xC].unk0 = 0xA;
-    g_menu_nodes[0xC].u6.s.unk6_hi = 0xC;
+    g_menu_nodes[0xC].u6.s.self_idx = 0xC;
     g_menu_nodes[0xC].unk4 = 6;
     g_menu_nodes[0xC].uA.s.unkB = 0xD;
     g_menu_nodes[0xD].unk0 = 0xB;
-    g_menu_nodes[0xD].u6.s.unk6_hi = 0xD;
+    g_menu_nodes[0xD].u6.s.self_idx = 0xD;
     g_menu_nodes[0xD].unk4 = 7;
     g_menu_nodes[9].u2.s.parent_idx = 0xFF;
     temp_v0_7 = 0xF;
@@ -1675,17 +1675,17 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x10].unk4 = 7;
     g_menu_nodes[0xF].u2.s.parent_idx = 0xFF;
     g_menu_nodes[0xF].unk0 = 0xD;
-    g_menu_nodes[0xF].u6.s.unk6_hi = 0xF;
+    g_menu_nodes[0xF].u6.s.self_idx = 0xF;
     g_menu_nodes[0xF].uA.s.unkB = 0x10;
     g_menu_nodes[0xF].unkC = 0x11;
     g_menu_nodes[0x10].unk0 = 0xC;
-    g_menu_nodes[0x10].u6.s.unk6_hi = 0x10;
+    g_menu_nodes[0x10].u6.s.self_idx = 0x10;
     g_menu_nodes[0x11].unk0 = 0xE;
-    g_menu_nodes[0x11].u6.s.unk6_hi = 0x11;
+    g_menu_nodes[0x11].u6.s.self_idx = 0x11;
     g_menu_nodes[0x11].unk4 = 9;
     g_menu_nodes[0x12].unk0 = 0x10;
-    g_menu_nodes[0x12].u6.s.unk6_hi = 0x12;
-    g_menu_nodes[0x12].unk5 = 4;
+    g_menu_nodes[0x12].u6.s.self_idx = 0x12;
+    g_menu_nodes[0x12].content_id = 4;
     g_menu_nodes[0x12].uA.s.unkB = 0x13;
     g_menu_nodes[0x12].unkC = 0x16;
     g_menu_nodes[0x12].unkD = 0x19;
@@ -1700,25 +1700,25 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x12].u2.unk2 = (u16)(temp_v0_12 | 1);
     g_menu_nodes[0x12].u2.s.parent_idx = 0xFF;
     g_menu_nodes[0x13].unk0 = 0x11;
-    g_menu_nodes[0x16].unk5 = 1;
+    g_menu_nodes[0x16].content_id = 1;
     g_menu_nodes[0x14].unk4 = 0xF;
     g_menu_nodes[0x13].unk4 = 0xB;
-    g_menu_nodes[0x13].u6.s.unk6_hi = 0x13;
-    g_menu_nodes[0x13].unk5 = 0;
+    g_menu_nodes[0x13].u6.s.self_idx = 0x13;
+    g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].uA.s.unkB = 0x14;
     g_menu_nodes[0x13].unkC = 0x15;
     g_menu_nodes[0x14].unk0 = 0x12;
-    g_menu_nodes[0x14].u6.s.unk6_hi = 0x14;
+    g_menu_nodes[0x14].u6.s.self_idx = 0x14;
     g_menu_nodes[0x15].unk0 = 0x13;
-    g_menu_nodes[0x15].u6.s.unk6_hi = 0x15;
+    g_menu_nodes[0x15].u6.s.self_idx = 0x15;
     g_menu_nodes[0x15].unk4 = 0x12;
     g_menu_nodes[0x16].unk0 = 0x14;
-    g_menu_nodes[0x16].u6.s.unk6_hi = 0x16;
+    g_menu_nodes[0x16].u6.s.self_idx = 0x16;
     g_menu_nodes[0x16].unk4 = 0xC;
     g_menu_nodes[0x16].uA.s.unkB = 0x17;
     g_menu_nodes[0x16].unkC = 0x18;
     g_menu_nodes[0x17].unk0 = 0x15;
-    g_menu_nodes[0x17].u6.s.unk6_hi = 0x17;
+    g_menu_nodes[0x17].u6.s.self_idx = 0x17;
     g_menu_nodes[0x13].u2.unk2 = (u16)((g_menu_nodes[0x13].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x14].u2.unk2 = (u16)((g_menu_nodes[0x14].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x13].u2.s.parent_idx = 0x12;
@@ -1729,24 +1729,24 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x15].u2.s.parent_idx = 0x13;
     g_menu_nodes[0x17].u2.unk2 = (u16)((g_menu_nodes[0x17].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x17].u2.s.parent_idx = 0x16;
-    g_menu_nodes[0x19].unk5 = 2;
+    g_menu_nodes[0x19].content_id = 2;
     g_menu_nodes[0x17].unk4 = 0x10;
     g_menu_nodes[0x18].unk0 = 0x13;
-    g_menu_nodes[0x18].u6.s.unk6_hi = 0x18;
+    g_menu_nodes[0x18].u6.s.self_idx = 0x18;
     g_menu_nodes[0x18].unk4 = 0x12;
     g_menu_nodes[0x19].unk0 = 0x16;
-    g_menu_nodes[0x19].u6.s.unk6_hi = 0x19;
+    g_menu_nodes[0x19].u6.s.self_idx = 0x19;
     g_menu_nodes[0x19].unk4 = 0xD;
     g_menu_nodes[0x19].uA.s.unkB = 0x1A;
     g_menu_nodes[0x19].unkC = 0x1B;
     g_menu_nodes[0x1A].unk0 = 0x17;
-    g_menu_nodes[0x1A].u6.s.unk6_hi = 0x1A;
+    g_menu_nodes[0x1A].u6.s.self_idx = 0x1A;
     g_menu_nodes[0x1A].unk4 = 0x11;
     g_menu_nodes[0x1B].unk0 = 0x13;
-    g_menu_nodes[0x1B].u6.s.unk6_hi = 0x1B;
+    g_menu_nodes[0x1B].u6.s.self_idx = 0x1B;
     g_menu_nodes[0x1B].unk4 = 0x12;
     g_menu_nodes[0x1C].unk0 = 0x18;
-    g_menu_nodes[0x1C].u6.s.unk6_hi = 0x1C;
+    g_menu_nodes[0x1C].u6.s.self_idx = 0x1C;
     g_menu_nodes[0x18].u2.unk2 = (u16)((g_menu_nodes[0x18].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x19].u2.unk2 = (u16)((g_menu_nodes[0x19].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x18].u2.s.parent_idx = 0x16;
@@ -1760,20 +1760,20 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
     var_a2->uA.unkA += 0;
     g_menu_nodes[0x1C].unk4 = 0xE;
-    g_menu_nodes[0x1D].u6.s.unk6_hi = 0x1D;
+    g_menu_nodes[0x1D].u6.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].uA.s.unkB = 0x1F;
-    g_menu_nodes[0x1F].u6.s.unk6_hi = 0x1F;
-    g_menu_nodes[0x1C].unk5 = 5;
+    g_menu_nodes[0x1F].u6.s.self_idx = 0x1F;
+    g_menu_nodes[0x1C].content_id = 5;
     g_menu_nodes[0x1D].unk0 = 0x1C;
-    g_menu_nodes[0x1D].unk5 = 3;
+    g_menu_nodes[0x1D].content_id = 3;
     g_menu_nodes[0x1D].unk4 = 0x18;
     g_menu_nodes[0x1E].unk0 = 0x19;
-    g_menu_nodes[0x1E].u6.s.unk6_hi = 0x1E;
+    g_menu_nodes[0x1E].u6.s.self_idx = 0x1E;
     g_menu_nodes[0x1E].unk4 = 0x13;
     g_menu_nodes[0x1F].unk0 = 0x1A;
     g_menu_nodes[0x1F].unk4 = 0x14;
     g_menu_nodes[0x2B].unk0 = 0x1A;
-    g_menu_nodes[0x2B].u6.s.unk6_hi = 0x2B;
+    g_menu_nodes[0x2B].u6.s.self_idx = 0x2B;
     temp_v0_13 = g_menu_nodes[0x1D].u2.unk2 & 0xFF3D;
     g_menu_nodes[0x1D].u2.unk2 = (u16)(g_menu_nodes[0x1D].u2.unk2 & 0xFFFD);
     (*(&g_menu_nodes[0x1D])).u2.unk2 = temp_v0_13;
@@ -1794,7 +1794,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFFCF) | 0x10);
     g_menu_nodes[0x2B].unk4 = 0x15;
     g_menu_nodes[0x20].unk0 = 0x1B;
-    g_menu_nodes[0x20].u6.s.unk6_hi = 0x20;
+    g_menu_nodes[0x20].u6.s.self_idx = 0x20;
     temp_v0_14 = 0xFF3D;
     temp_v0_14 = g_menu_nodes[0x20].u2.unk2 & temp_v0_14;
     new_var6 = D_800FD818.unk268 & 1;
@@ -1868,7 +1868,7 @@ void menu_node_tree_init(void)
     new_var4 = D_8016913D;
     D_801690F9 = 0;
     func_8014E3C4(new_var4, var_a1, new_var3, var_a3);
-    func_801436F0();
+    menu_set_active_node();
 }
 
 /**
@@ -1889,7 +1889,7 @@ extern s32 g_menu_layout_end;
 
 /**
  * @brief Assigns layout positions to all active root menu nodes and stores the final position count.
- * @note Sets D_8016954C and D_80169400 to signal scroll state after layout.
+ * @note Sets g_menu_scroll_pos and D_80169400 to signal scroll state after layout.
  * @see decomp.me (100%) https://decomp.me/scratch/YhGni
  */
 void menu_update_layout(void)
@@ -1914,7 +1914,7 @@ void menu_update_layout(void)
                     changed = 1;
                     if (pos >= 0xAC)
                     {
-                        D_8016954C = pos - 0xAB;
+                        g_menu_scroll_pos = pos - 0xAB;
                         D_80169400 = 8;
                     }
                 }
@@ -1926,7 +1926,7 @@ void menu_update_layout(void)
     g_menu_layout_end = pos;
     if (changed == 0)
     {
-        D_8016954C = 0;
+        g_menu_scroll_pos = 0;
         D_80169400 = 8;
     }
 }
@@ -1963,7 +1963,7 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
     cur_pos += 0x13;
     new_var4 = &g_menu_nodes[node_idx];
 
-    (*(&g_menu_nodes[node_idx])).unk1 = 4;
+    (*(&g_menu_nodes[node_idx])).state = 4;
     new_var2 = &new_var4->u8_u;
     new_var4->u8_u.unk8 = (*new_var2).s.unk8_hi | ((temp_a1 & 1) << 0xF);
     (&g_menu_nodes[node_idx])->uA.unkA = ((&g_menu_nodes[node_idx])->uA.unkA & 0xFF00) | (0xFF & (temp_a1 >> 1));
