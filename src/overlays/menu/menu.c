@@ -1554,42 +1554,52 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
 
 /**
  * @brief Render a text label from a packed string table at the given screen position.
- * @param arg0 OT (ordering table) pointer.
- * @param arg1 Primitive buffer context.
- * @param arg2 Screen position to draw at.
- * @param arg3 String table selector: >= 0 uses D_800EC3DA table, < 0 uses D_800EC3E4 table.
+ *
+ * Resolves one of two embedded @c StringTableKey entries in the shared string
+ * table (base 0x800EC3C4) using @p label_id's sign, copies the packed glyph
+ * string into a local buffer, then calls the glyph renderer.
+ *
+ * Both branches compute the same table base via pointer arithmetic from
+ * whichever key they select: @c &D_800EC3DA-0x16 == @c &D_800EC3E4-0x20 ==
+ * 0x800EC3C4.
+ *
+ * @param ot        Ordering-table head (@c u_long*; passed as arg1 to the glyph renderer).
+ * @param prim      Primitive write cursor (@c u_long*; passed as arg0 to the glyph renderer).
+ * @param pos       Screen position (x, y) to draw at.
+ * @param label_id  >= 0: draw string keyed by D_800EC3DA; < 0: keyed by D_800EC3E4.
  * @see decomp.me (83.81%) https://decomp.me/scratch/ozwB7
  */
-void menu_draw_label(s32 arg0, s32 arg1, ScreenPos* arg2, s32 arg3)
+void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
 {
     u8 sp20[16];
     u8* ptr = sp20;
-    u8* addr;
-    u32 unk1;
-    u32 unk0;
-    u8* temp_s0;
+    u8* table_base;
+    u32 page;
+    u32 entry;
+    u8* str_ptr;
 
-    if (arg3 >= 0)
+    if (label_id >= 0)
     {
-        unk1 = D_800EC3DA.page;
-        unk0 = D_800EC3DA.entry;
-        addr = (u8*)&D_800EC3DA - 0x16;
+        page = D_800EC3DA.page;
+        entry = D_800EC3DA.entry;
+        table_base = (u8*)&D_800EC3DA - 0x16;
     }
     else
     {
-        unk1 = D_800EC3E4.page;
-        addr = (u8*)&D_800EC3E4 - 0x20;
-        unk0 = D_800EC3E4.entry;
+        page = D_800EC3E4.page;
+        table_base = (u8*)&D_800EC3E4 - 0x20;
+        entry = D_800EC3E4.entry;
     }
 
-    temp_s0 = unk0 + ((unk1 << 8) + addr);
+    /* entry + page*256 + table_base = absolute pointer into string table data */
+    str_ptr = entry + ((page << 8) + table_base);
 
-    func_800A8E28(ptr, temp_s0);
-    ptr += func_800A8DDC(temp_s0);
+    func_800A8E28(ptr, str_ptr);       /* packed_str_copy: copies glyph bytes, null-terminates */
+    ptr += func_800A8DDC(str_ptr);     /* packed_str_byte_len: advance past the copied string */
 
     *ptr = 0;
 
-    func_800A88A0(arg1, arg0, sp20, 1, arg2->x, arg2->y, 0);
+    func_800A88A0(prim, ot, sp20, 1, pos->x, pos->y, 0);  /* draw_glyphs */
 }
 
 /**
