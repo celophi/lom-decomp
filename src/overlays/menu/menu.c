@@ -1444,7 +1444,7 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
  * @return Pointer to the byte immediately after the emitted DR_TWIN.
  * @see decomp.me (100%) https://decomp.me/scratch/u17Fi
  */
-u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
+u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 tw_uv)
 {
 
     u_long* otp;
@@ -1472,17 +1472,17 @@ u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 ar
 
             addPrim(otp, sprt);
 
-            ot += 5;
+            ot += sizeof(SPRT) / sizeof(u_long);
             twin = (DR_TWIN*)ot;
 
-            tw.x = ((s32)arg3) & 0xFF;
-            tw.y = ((s32)arg3) >> 8;
+            tw.x = tw_uv & 0xFF;
+            tw.y = tw_uv >> 8;
             tw.w = 16;
             tw.h = 8;
 
             setTexWindow(twin, &tw);
             addPrim(otp, twin);
-            ot += 0x3;
+            ot += sizeof(DR_TWIN) / sizeof(u_long);
         }
     }
     return ot;
@@ -1523,7 +1523,7 @@ void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
 
             addPrim(otp, (SPRT*)pkt);
 
-            pkt += 0x14;
+            pkt += sizeof(SPRT);
             tw.x = texParam & 0xFF;
             tw.y = texParam >> 8;
             tw.w = 8;
@@ -1532,7 +1532,7 @@ void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
             setTexWindow((DR_TWIN*)pkt, &tw);
             addPrim(otp, (DR_TWIN*)pkt);
 
-            pkt += 0xC;
+            pkt += sizeof(DR_TWIN);
         }
     }
     return pkt;
@@ -1546,7 +1546,7 @@ void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
  * @param arg3 String table selector: >= 0 uses D_800EC3DA table, < 0 uses D_800EC3E4 table.
  * @see decomp.me (83.81%) https://decomp.me/scratch/ozwB7
  */
-void menu_draw_label(s32 arg0, register s32 arg1, ScreenPos* arg2, s32 arg3)
+void menu_draw_label(s32 arg0,  s32 arg1, ScreenPos* arg2, s32 arg3)
 {
     u8 sp20[16];
     u8* ptr = sp20;
