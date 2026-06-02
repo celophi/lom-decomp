@@ -2234,7 +2234,7 @@ unsigned int menu_handle_node_input(void)
     {
         return;
     }
-    if (g_pad_input & 0x1000)
+    if (g_pad_input & PAD_BTN_UP)
     {
         if (temp_v0 != 0)
         {
@@ -2245,7 +2245,7 @@ unsigned int menu_handle_node_input(void)
             g_menu_active_node = g_menu_nav_prev[g_menu_nav_count];
         }
     }
-    if (g_pad_input & 0x4000)
+    if (g_pad_input & PAD_BTN_DOWN)
     {
         if (temp_v0 >= (g_menu_nav_count - 1))
         {
@@ -2259,7 +2259,7 @@ unsigned int menu_handle_node_input(void)
             g_menu_active_node = g_menu_nav_next[temp_v0];
         }
     }
-    if (g_pad_input & 0x40)
+    if (g_pad_input & PAD_BTN_CIRCLE)
     {
         if (g_menu_active_node == MENU_20)
         {
@@ -2270,7 +2270,7 @@ unsigned int menu_handle_node_input(void)
         g_menu_active_node = g_menu_nav_first;
         g_menu_active_node = MENU_20;
     }
-    if (0x5040 & (g_pad_input & 0xFFFFu))
+    if ((PAD_BTN_UP | PAD_BTN_DOWN | PAD_BTN_CIRCLE) & (g_pad_input & 0xFFFFu))
     {
         func_8014F210(0x7D, 0x80);
         temp_a0 = func_8014852C(g_menu_active_node);
@@ -2289,14 +2289,15 @@ unsigned int menu_handle_node_input(void)
         }
         return;
     }
-    if (g_pad_input & 0x2220)
+    /* 0x0200 = undocumented bit, likely L3 (DualShock stick click) - never set on digital pad */
+    if (g_pad_input & (PAD_BTN_RIGHT | PAD_BTN_CROSS | 0x0200))
     {
         func_8014F210(0x7E, 0x80);
         new_var13 = 0xFF;
         new_var14 = MENU_20;
         if (g_menu_active_node == new_var14)
         {
-            if (!(g_pad_input & 0x220))
+            if (!(g_pad_input & (PAD_BTN_CROSS | 0x0200)))
             {
                 return;
             }
@@ -2351,7 +2352,7 @@ unsigned int menu_handle_node_input(void)
         }
         if (g_menu_scene_type == new_var14)
         {
-            if (g_pad_input & 0x220)
+            if (g_pad_input & (PAD_BTN_CROSS | 0x0200))
             {
                 g_menu_load_request = 1;
             }
