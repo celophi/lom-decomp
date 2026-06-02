@@ -223,11 +223,11 @@ typedef struct
     u8 state; /**< Node state: 0 = uninitialized, 4 = position assigned by menu_layout_node. */
     union
     {
-        u16 unk2;
+        u16 unk2; /**< Full 16-bit word: low byte = flags, high byte = parent_idx. */
         struct
         {
-            u8 unk2_hi;
-            u8 parent_idx;
+            u8 flags;      /**< Bit 0: node active/enabled in layout. Bit 1: node expanded (children shown). */
+            u8 parent_idx; /**< Index of parent node in g_menu_nodes, or MENU_NONE (0xFF) for root nodes. */
         } s;
     } u2;
     u8 unk4;
@@ -2006,7 +2006,7 @@ void menu_node_tree_init(void)
 }
 
 /**
- * @brief Clears the expand flag (bit 1 of u2.unk2) for all menu nodes.
+ * @brief Clears the expand flag (bit 1 of u2.s.flags) for all menu nodes.
  * @note Called before menu_update_layout to ensure no node recurses into children.
  * @see decomp.me (100%) https://decomp.me/scratch/hyDM7
  */
@@ -2038,7 +2038,7 @@ void menu_update_layout(void)
             pos++;
             pos--;
 
-            if (g_menu_nodes[i].u2.s.unk2_hi & 1)
+            if (g_menu_nodes[i].u2.s.flags & 1)
             {
                 pos = menu_layout_node(i, prev_pos);
                 if (prev_pos != (pos - MENU_ROW_HEIGHT))
@@ -2068,7 +2068,7 @@ void menu_update_layout(void)
  * @param node_idx Index into g_menu_nodes of the node to lay out.
  * @param base_pos Running position counter; this node occupies [base_pos, base_pos + MENU_ROW_HEIGHT).
  * @return Updated position counter after processing this node and any expanded children.
- * @note Bit 1 of u2.unk2 controls child recursion; menu_collapse_all clears it before layout.
+ * @note Bit 1 of u2.s.flags controls child recursion; menu_collapse_all clears it before layout.
  * @see decomp.me (99.04%) https://decomp.me/scratch/LDCeT
  */
 s32 menu_layout_node(s32 node_idx, s32 base_pos)
