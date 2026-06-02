@@ -17,6 +17,36 @@
 #define MENU_CLUT_CORNER 0x7CCA
 
 /*
+ * Packed texture-window / UV origin constants for the menu window chrome.
+ * Format: bits 15..8 = VRAM v (y), bits 7..0 = VRAM u (x).
+ * The chrome tiles live in a tilesheet at u=0xD0..0xD8, v=0x70..0x90
+ * (8 px per tile). The interior fill uses a separate region at u=v=0xA0.
+ *
+ *   v=0x70: corner row (TL at u=0xD0, TR at u=0xD8)
+ *   v=0x78: corner row (BL at u=0xD0, BR at u=0xD8)
+ *   v=0x80: top h-edge  (16x8 tile, single column)
+ *   v=0x88: bot h-edge  (16x8 tile, single column)
+ *   v=0x90: v-edge row  (left at u=0xD0, right at u=0xD8, each 8x16)
+ */
+/*
+ * Interior fill tint: r=0x80, g=0x80, b=0x00, code=0x80 as the initial
+ * packed word. The code byte is immediately overwritten by setcode(0x64),
+ * leaving a warm/yellow-tinted SPRT distinct from GPU_TINT_NEUTRAL (all
+ * channels equal). Passed to SET_BGR0_PACKED so the store is one word write.
+ */
+#define MENU_TINT_FILL 0x80008080U
+
+#define MENU_TW_CORNER_TL  0x70D0
+#define MENU_TW_CORNER_TR  0x70D8
+#define MENU_TW_CORNER_BL  0x78D0
+#define MENU_TW_CORNER_BR  0x78D8
+#define MENU_TW_EDGE_TOP   0x80D0
+#define MENU_TW_EDGE_BOT   0x88D0
+#define MENU_TW_EDGE_LEFT  0x90D0
+#define MENU_TW_EDGE_RIGHT 0x90D8
+#define MENU_TW_FILL       0xA0A0
+
+/*
  * VRAM layout for the three menu window slots' primitive data.
  * Each slot has two regions:
  *   Strip: 16 halfwords wide x 1 scanline at x=272, y=472/473/474
@@ -97,12 +127,6 @@ typedef struct
     s16 w;         // offset 0x0C - target window width  (clamped to >= 0x20)
     s16 h;         // offset 0x0E - target window height (clamped to >= 0x10)
 } MenuSlotAnim;
-
-typedef struct
-{
-    u16 x, y;
-    s16 w, h;
-} InputStruct;
 
 typedef struct
 {
@@ -1146,7 +1170,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     s32* temp_s1;
     s32* temp_s1_2;
     s32* temp_s2;
-    s32* var_a2_4;
+    s32* prim_cur;
     s32* var_s1;
     u16 temp_a1;
     u16 temp_a2;
@@ -1271,21 +1295,21 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     }
     ((MenuPrimHead*)var_s1)->_u.unk0 = (((MenuPrimHead*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
-    var_a2_4 = var_s1 + 3;
+    prim_cur = var_s1 + 3;
     if (temp_s3->h >= 0x10)
     {
         sp18.x = (u16)temp_s3->x + 8;
         sp18.y = (u16)temp_s3->y;
         sp18.w = (u16)temp_s3->w - 0x10;
         sp18.h = 8;
-        var_a2_4 = menu_build_h_edge(var_a2_4, temp_s2, &sp18.x, 0x80D0);
+        prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_TOP);
         if (temp_s3->h >= 0x10)
         {
             sp18.x = (u16)temp_s3->x + 8;
             sp18.y = ((u16)temp_s3->y + (u16)temp_s3->h) - 8;
             sp18.w = (u16)temp_s3->w - 0x10;
             sp18.h = 8;
-            var_a2_4 = menu_build_h_edge(var_a2_4, temp_s2, &sp18.x, 0x88D0);
+            prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_BOT);
         }
     }
     if (temp_s3->w >= 0x20)
@@ -1294,14 +1318,14 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
         sp18.y = (u16)temp_s3->y + 8;
         sp18.w = 8;
         sp18.h = (u16)temp_s3->h - 0x10;
-        var_a2_4 = menu_build_v_edge(var_a2_4, temp_s2, &sp18.x, 0x90D0);
+        prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_LEFT);
         if (temp_s3->w >= 0x20)
         {
             sp18.x = ((u16)temp_s3->x + (u16)temp_s3->w) - 8;
             sp18.y = (u16)temp_s3->y + 8;
             sp18.w = 8;
             sp18.h = (u16)temp_s3->h - 0x10;
-            var_a2_4 = menu_build_v_edge(var_a2_4, temp_s2, &sp18.x, 0x90D8);
+            prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_RIGHT);
         }
     }
     sp18.x = (u16)temp_s3->x + 8;
@@ -1310,11 +1334,11 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     sp18.h = (u16)temp_s3->h - 0x10;
     temp_v0_2 = menu_emit_corner(
         menu_emit_corner(
-            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(var_a2_4, temp_s2, &sp18.x, 0xA0A0), temp_s2,
-                                              temp_s3->x, temp_s3->y, 0x70D0),
-                             temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y, 0x70D8),
-            temp_s2, temp_s3->x, temp_s3->y + temp_s3->h - 8, 0x78D0),
-        temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y + temp_s3->h - 8, 0x78D8);
+            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(prim_cur, temp_s2, &sp18, MENU_TW_FILL), temp_s2,
+                                              temp_s3->x, temp_s3->y, MENU_TW_CORNER_TL),
+                             temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y, MENU_TW_CORNER_TR),
+            temp_s2, temp_s3->x, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BL),
+        temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BR);
     ((MenuPrimHead*)temp_v0_2)->_u._s.unk3 = 1;
     ((MenuPrimHead*)temp_v0_2)->unk4 = 0xE1000005;
     ((MenuPrimHead*)temp_v0_2)->_u.unk0 =
@@ -1360,72 +1384,67 @@ void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
 /**
  * @brief Tile the interior of a window with 0x60x0x60 textured sprites.
  *
- * Walks the region described by @p rect (width at +4, height at +6, origin at
- * +0/+2) in 0x60-pixel steps on both axes, emitting one @c SPRT per tile
- * (code 0x64, tint 0x80008080, CLUT @c MENU_CLUT_GRID_ALT) clamped to the region edges,
- * and links each into the chain headed at @p ot.
+ * Walks @p rect in 0x60-pixel steps on both axes, emitting one @c SPRT per
+ * tile (code 0x64, tint @c MENU_TINT_FILL, CLUT @c MENU_CLUT_GRID_ALT)
+ * clamped to the region edges, and links each into the chain headed at @p ot.
  *
  * @param prim  Primitive write cursor (advanced past every emitted tile).
  * @param ot    Ordering-table head the tiles are linked into.
- * @param rect  Region descriptor: x (+0), y (+2), width (+4), height (+6).
+ * @param rect  Region to fill: x, y (screen origin), w, h (pixel size).
  * @param uv    Packed texture origin written to each tile's @c u0 / @c v0.
  * @return Primitive write cursor just past the last tile emitted.
  * @see decomp.me (90.20%) https://decomp.me/scratch/R9mdk
  */
-s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
+s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
 {
-    u16 new_var3;
-    int new_var2;
-    u8* ap = rect;
+    u16 tile_x;
     short pad;
-    u16 new_var;
+    u16 rect_y;
     s32 y = 0;
-    if ((*((s16*)(ap + 6))) > 0)
+    if (rect->h > 0)
     {
         do
         {
             s32 x = 0;
-            if ((*((s16*)(ap + 4))) > 0)
+            if (rect->w > 0)
             {
                 s32 y_plus_60 = y + 0x60;
                 u8* wp;
                 do
                 {
-                    *((u32*)((((u8*)prim) + 0x0E) - 0x0A)) = 0x80008080U;
-                    (((u8*)prim) + 0x0E)[-0x0B] = 4;
-                    (((u8*)prim) + 0x0E)[-7] = 0x64;
-                    *((u16*)((((u8*)prim) + 0x0E) - 2)) = uv;
-                    if ((*((s16*)(ap + 4))) < (x + 0x60))
+                    SET_BGR0_PACKED(prim, MENU_TINT_FILL);
+                    setlen((SPRT*)prim, 4);
+                    setcode((SPRT*)prim, 0x64);
+                    SET_SPRT_UV0_PACKED(prim, uv);
+                    if (rect->w < (x + 0x60))
                     {
-                        *((u16*)((((u8*)prim) + 0x0E) + 2)) = (u16)((*((u16*)(ap + 4))) - ((u16)x));
+                        ((SPRT*)prim)->w = (u16)((u16)rect->w - (u16)x);
                     }
                     else
                     {
-                        *((u16*)((((u8*)prim) + 0x0E) + 2)) = 0x60;
+                        ((SPRT*)prim)->w = 0x60;
                     }
-                    if (((*((s16*)(ap + 6))) < y_plus_60) != 0)
+                    if ((rect->h < y_plus_60) != 0)
                     {
-                        *((u16*)((((u8*)prim) + 0x0E) + 4)) = (u16)((*((u16*)(ap + 6))) - ((u16)y));
+                        ((SPRT*)prim)->h = (u16)((u16)rect->h - (u16)y);
                     }
                     else
                     {
-                        *((u16*)((((u8*)prim) + 0x0E) + 4)) = 0x60;
+                        ((SPRT*)prim)->h = 0x60;
                     }
-                    new_var3 = (u16)((*((u16*)(ap + 0))) + ((u16)x));
-                    *((u16*)((((u8*)prim) + 0x0E) - 6)) = new_var3;
-                    new_var = *((u16*)(ap + 2));
+                    tile_x = (u16)(rect->x + (u16)x);
+                    ((SPRT*)prim)->x0 = tile_x;
+                    rect_y = rect->y;
                     x += 0x60;
-                    new_var2 = 0x00FFFFFFU & ((u32)prim);
-                    *((u16*)((((u8*)prim) + 0x0E) - 4)) = (u16)(new_var + ((u16)y));
+                    ((SPRT*)prim)->y0 = (u16)(rect_y + (u16)y);
                     wp += 0x14;
-                    *((u16*)((((u8*)prim) + 0x0E) + 0)) = MENU_CLUT_GRID_ALT;
-                    *((u32*)prim) = ((*((u32*)prim)) & 0xFF000000U) | ((*((u32*)ot)) & 0x00FFFFFFU);
-                    *ot = ((*((u32*)ot)) & 0xFF000000U) | new_var2;
-                    prim = (s32*)(((u8*)prim) + 0x14);
-                } while (x < (*((s16*)(ap + 4))));
+                    SET_SPRT_CLUT(prim, MENU_CLUT_GRID_ALT);
+                    addPrim(ot, (SPRT*)prim);
+                    prim = (s32*)((SPRT*)prim + 1);
+                } while (x < rect->w);
             }
             y += 0x60;
-        } while (y < (*((s16*)(ap + 6))));
+        } while (y < rect->h);
     }
     return prim;
 }
@@ -1439,32 +1458,32 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
  *
  * @param ot      Primitive write cursor (SPRT is built here).
  * @param ot_ptr  Ordering-table head the primitives are linked into.
- * @param input   Edge rectangle: x, y (screen position), w, h (pixel size).
+ * @param rect    Edge rectangle: x, y (screen position), w, h (pixel size).
  * @param tw_uv   Packed texture-window origin: bits 7..0 = u (x), bits 15..8 = v (y).
  * @return Pointer to the byte immediately after the emitted DR_TWIN.
  * @see decomp.me (100%) https://decomp.me/scratch/u17Fi
  */
-u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 tw_uv)
+u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv)
 {
     RECT tw;
     SPRT* sprt;
     DR_TWIN* twin;
 
-    if (input->w <= 0)
+    if (rect->w <= 0)
     {
         return ot;
     }
 
-    if (input->h > 0)
+    if (rect->h > 0)
     {
         sprt = (SPRT*)ot;
         SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
         setSprt(sprt);
         SET_SPRT_UV0_PACKED(sprt, 0);
-        sprt->w = input->w;
-        sprt->h = input->h;
-        sprt->x0 = input->x;
-        sprt->y0 = input->y;
+        sprt->w = rect->w;
+        sprt->h = rect->h;
+        sprt->x0 = rect->x;
+        sprt->y0 = rect->y;
         sprt->clut = MENU_CLUT_CORNER;
         addPrim(ot_ptr, sprt);
         ot += sizeof(SPRT) / sizeof(u_long);
@@ -1488,34 +1507,34 @@ u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 tw
  * Mirror of @ref menu_build_h_edge for vertical (left/right) window edges.
  * The texture-window region is 8x16 instead of 16x8.
  *
- * @param pkt     Primitive write cursor (SPRT is built here).
- * @param otp     Ordering-table head the primitives are linked into.
- * @param input   Edge rectangle: x, y (screen position), w, h (pixel size).
+ * @param ot      Primitive write cursor (SPRT is built here).
+ * @param ot_ptr  Ordering-table head the primitives are linked into.
+ * @param rect    Edge rectangle: x, y (screen position), w, h (pixel size).
  * @param tw_uv   Packed texture-window origin: bits 7..0 = u (x), bits 15..8 = v (y).
  * @return Pointer to the byte immediately after the emitted DR_TWIN.
  * @see decomp.me (100%) https://decomp.me/scratch/19jr7
  */
-void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 tw_uv)
+void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv)
 {
     RECT tw;
     SPRT* sprt;
     DR_TWIN* twin;
 
-    if (input->w <= 0)
+    if (rect->w <= 0)
     {
         return ot;
     }
 
-    if (input->h > 0)
+    if (rect->h > 0)
     {
         sprt = (SPRT*)ot;
-        SET_BGR0_PACKED(ot, GPU_TINT_NEUTRAL);
+        SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
         setSprt(sprt);
-        SET_SPRT_UV0_PACKED(ot, 0);
-        sprt->w = input->w;
-        sprt->h = input->h;
-        sprt->x0 = input->x;
-        sprt->y0 = input->y;
+        SET_SPRT_UV0_PACKED(sprt, 0);
+        sprt->w = rect->w;
+        sprt->h = rect->h;
+        sprt->x0 = rect->x;
+        sprt->y0 = rect->y;
         sprt->clut = MENU_CLUT_CORNER;
         addPrim(ot_ptr, sprt);
         ot += sizeof(SPRT) / sizeof(u_long);
