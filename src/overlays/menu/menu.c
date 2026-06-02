@@ -1,5 +1,45 @@
 #include "menu.h"
 
+/* ----- Macros ----- */
+
+/*
+ * CLUT ids for the menu's chrome glyphs/sprites. These are libgpu @c getClut
+ * results; see @ref menu_upload_tim for where the two CLUT rows are placed in
+ * VRAM. Each row is 256 entries wide and breaks into 16 sub-palettes of 16
+ * colors (CLUT slots are 16-pixel aligned in x).
+ *
+ *   MENU_CLUT_GRID_BASE -> CLUT 0, slot 0  (VRAM x=0,   y=498)
+ *   MENU_CLUT_GRID_ALT  -> CLUT 0, slot 1  (VRAM x=16,  y=498)
+ *   MENU_CLUT_CORNER    -> CLUT 1, slot 10 (VRAM x=160, y=499)
+ */
+#define MENU_CLUT_GRID_BASE 0x7C80
+#define MENU_CLUT_GRID_ALT  0x7C81
+#define MENU_CLUT_CORNER    0x7CCA
+
+/*
+ * VRAM layout for the three menu window slots' primitive data.
+ * Each slot has two regions:
+ *   Strip: 16 halfwords wide x 1 scanline at x=272, y=472/473/474
+ *          (cursor/highlight bar, just above the CLUT rows at y=498)
+ *   Block: 12 halfwords wide x 48 scanlines at x=1012 (slots 0-1) or x=1000 (slot 2),
+ *          y=288 (slot 0) or y=336 (slots 1-2) (main content texture block)
+ * Source data stride between slots in g_prim_rect_buf: 0x4A0 bytes.
+ */
+#define PRIM_STRIP_VRAM_X   0x110  /* 272  - VRAM column                    */
+#define PRIM_STRIP_VRAM_Y0  0x1D8  /* 472  - VRAM row for slot 0            */
+#define PRIM_STRIP_W        0x10   /* 16 halfwords wide                     */
+#define PRIM_STRIP_H        1      /* 1 scanline tall                       */
+#define PRIM_BLOCK_VRAM_X   0x3F4  /* 1012 - VRAM column for slots 0 and 1  */
+#define PRIM_BLOCK_VRAM_X2  0x3E8  /* 1000 - VRAM column for slot 2         */
+#define PRIM_BLOCK_VRAM_Y0  0x120  /* 288  - VRAM row for slot 0            */
+#define PRIM_BLOCK_VRAM_Y1  0x150  /* 336  - VRAM row for slots 1 and 2     */
+#define PRIM_BLOCK_W        0xC    /* 12 halfwords wide                     */
+#define PRIM_BLOCK_H        0x30   /* 48 scanlines tall                     */
+#define PRIM_SLOT_STRIDE    0x4A0  /* 1184 bytes per slot                   */
+#define PRIM_BLOCK_BUF_OFFSET 0x20 /* 32 bytes into each slot               */
+
+/* ----- Types ----- */
+
 typedef struct MenuFrameCtx
 {
     u8 pad0[0x34];
@@ -96,6 +136,123 @@ typedef struct
     s16 h;
 } MenuRectU16;
 
+/** @brief 2-D screen coordinate (pixels). */
+typedef struct
+{
+    s16 x; /**< Screen X. */
+    s16 y; /**< Screen Y. */
+} ScreenPos;
+
+/**
+ * @brief Pair of (u8) indices into a packed text-lookup table.
+ *
+ * @c entry is the character/entry index within the page; @c page is the page
+ * index. Together they form a string pointer via
+ * @c entry + ((page << 8) + base_ptr). See @ref menu_draw_label.
+ */
+typedef struct
+{
+    u8 entry; /**< Entry index within the page. */
+    u8 page;  /**< Page index. */
+} StringTableKey;
+
+typedef struct
+{
+    u8 unk0;
+    u8 state; /**< Node state: 0 = uninitialized, 4 = position assigned by menu_layout_node. */
+    union
+    {
+        u16 unk2;
+        struct
+        {
+            u8 unk2_hi;
+            u8 parent_idx;
+        } s;
+    } u2;
+    u8 unk4;
+    u8 content_id; /**< Passed to the content-open function; 0xFF = no content. */
+    union
+    {
+        u16 unk6;
+        struct
+        {
+            u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
+            u8 unk7;
+        } s;
+    } u6;
+    union
+    {
+        u16 unk8;
+        struct
+        {
+            u8 unk8_hi;
+            u8 unk9;
+        } s;
+    } u8_u;
+    union
+    {
+        u16 unkA;
+        struct
+        {
+            u8 unkA_hi;
+            u8 child0; /**< First child node index (0xFF = none). */
+        } s;
+    } uA;
+    u8 child1; /**< Second child node index (0xFF = none). */
+    u8 child2; /**< Third child node index (0xFF = none). */
+    u8 child3; /**< Fourth child node index (0xFF = none). */
+    u8 unkF;
+} MenuNode;
+
+/**
+ * @brief Four u32 pointers to item data for each comparison slot.
+ * @note Used alongside g_item_slot_flags; each element maps to g_item_slot_flags's parallel flag.
+ */
+typedef struct
+{
+    u32 unk0; /**< Slot 0 data pointer. */
+    u32 unk4; /**< Slot 1 data pointer. */
+    u32 unk8; /**< Slot 2 data pointer. */
+    u32 unkC; /**< Slot 3 data pointer. */
+} ItemSlotData;
+
+/**
+ * @brief Four u8 flags indicating which item comparison slots are occupied (nonzero = active).
+ * @note Parallel to g_item_slot_data; checked in func_80145608 before reading slot data.
+ */
+typedef struct
+{
+    u8 slot0; /**< Slot 0 occupied flag. */
+    u8 slot1; /**< Slot 1 occupied flag. */
+    u8 slot2; /**< Slot 2 occupied flag. */
+    u8 slot3; /**< Slot 3 occupied flag. */
+} ItemSlotFlags;
+
+typedef struct
+{
+    u16 unk0;
+    u8 pad2[0x266];
+    u16 unk268;
+    u8 unk26A;
+    u8 unk26B;
+} Struct_D_800FD818;
+
+typedef struct
+{
+    u16 packed_x; /**< Bottom 9 bits = X screen position; upper bits unknown. */
+    u8 y;         /**< Y position; caller subtracts 8 when using as display offset. */
+    u8 pad[5];
+} MenuContentItem;
+
+/* ----- Forward declarations ----- */
+
+/* K&R-style declaration: original call site in menu_tick passes no explicit
+ * argument and relies on register a0 (the caller's first parameter) being
+ * live. Keep the empty parameter list to preserve that codegen exactly. */
+void menu_build_grid();
+
+/* ----- Extern globals ----- */
+
 /** @brief Pending overlay element to emit at end of @ref menu_update_slots (0 = none). */
 extern s32 g_menu_pending_overlay;
 /** @brief When non-zero, cursor highlight is enabled for the active slot. */
@@ -109,24 +266,67 @@ extern s32 g_menu_suppress_cursor;
 /** @brief Scene/language selector used in window title decoration layout switches. */
 extern s32 g_menu_scene_type;
 
-/*
- * CLUT ids for the menu's chrome glyphs/sprites. These are libgpu @c getClut
- * results; see @ref menu_upload_tim for where the two CLUT rows are placed in
- * VRAM. Each row is 256 entries wide and breaks into 16 sub-palettes of 16
- * colors (CLUT slots are 16-pixel aligned in x).
- *
- *   MENU_CLUT_GRID_BASE -> CLUT 0, slot 0  (VRAM x=0,   y=498)
- *   MENU_CLUT_GRID_ALT  -> CLUT 0, slot 1  (VRAM x=16,  y=498)
- *   MENU_CLUT_CORNER    -> CLUT 1, slot 10 (VRAM x=160, y=499)
- */
-#define MENU_CLUT_GRID_BASE 0x7C80
-#define MENU_CLUT_GRID_ALT 0x7C81
-#define MENU_CLUT_CORNER 0x7CCA
+extern MenuNode g_menu_nodes[0x2C];
+extern u8 g_menu_prev_node;
+/** @brief Gate flag for func_80148A20: 0 = draw empty slot, nonzero = full item render. */
+extern s32 g_menu_content_ready;
 
-/* K&R-style declaration: original call site in menu_tick passes no explicit
- * argument and relies on register a0 (the caller's first parameter) being
- * live. Keep the empty parameter list to preserve that codegen exactly. */
-void menu_build_grid();
+extern ItemSlotData  g_item_slot_data;
+extern ItemSlotFlags g_item_slot_flags;
+
+/** @brief Pointer into g_pad_ctx item data for the current category; null = no items. */
+extern s32 g_menu_item_ptr;
+extern s32 D_80169410;
+extern s32 D_80169404;
+extern s32 D_80169408;
+extern s32 D_8016911C;
+extern s32 D_80169554;
+extern s32 D_801694B0;
+extern s32 g_menu_content_height;
+extern s32 g_menu_scroll_pos;
+extern s32 g_menu_redraw_state;
+extern s32 g_menu_active_node;
+/** @brief Array mapping navigation-list position to the previous node ID (up navigation, D-pad Up). */
+extern s32 g_menu_nav_prev[];
+extern u8  g_menu_init_content_id;
+
+extern Struct_D_800FD818 D_800FD818;
+extern u16 D_800FDA80;
+extern u16 D_800FDCE8;
+extern s8  D_801690F9;
+extern s8  D_80169324;
+
+extern StringTableKey D_800EC3DA;
+extern StringTableKey D_800EC3E4;
+
+/** @brief Number of nodes in the linear navigation list. */
+extern s32 g_menu_nav_count;
+/** @brief Node ID at the start of the navigation list; used for wrap-around on down-navigation. */
+extern s32 g_menu_nav_first;
+/** @brief Y display coordinate for the content viewport origin. */
+extern s32 g_content_view_y;
+/** @brief Set to 1 to request an overlay/scene load at end of this input frame. */
+extern s32 g_menu_load_request;
+extern s32 D_80168C10;
+/** @brief X pixel position of the content cursor within the content window. */
+extern s32 g_content_cursor_x;
+/** @brief Index of the item found by hit-test, or -1 if none. */
+extern s32 g_menu_hit_item_idx;
+/** @brief X display coordinate for the content viewport origin. */
+extern s32 g_content_view_x;
+/** @brief Y pixel position of the content cursor within the content window; clamped to [0xC, 0xA3]. */
+extern s32 g_content_cursor_y;
+/** @brief Array mapping navigation-list position to the next node ID (down navigation). */
+extern s32 g_menu_nav_next[];
+/** @brief Default X/Y origin for the content viewport when no item hit-test position is available. */
+extern struct
+{
+    s16 x;
+    s16 y;
+} g_menu_default_view_pos;
+/** @brief Per-node table of MenuContentItem arrays, indexed by node.u6.s.self_idx; NULL = no cursor data. */
+extern MenuContentItem *g_menu_content_table[];
+extern s32 g_menu_layout_end;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/Dv8qB
@@ -145,35 +345,6 @@ void menu_init(void)
     g_script_cursor = 0;
     menu_node_tree_init();
 }
-
-/*
- * VRAM layout for the three menu window slots' primitive data.
- * Each slot has two regions:
- *   Strip: 16 halfwords wide x 1 scanline at x=272, y=472/473/474
- *          (cursor/highlight bar, just above the CLUT rows at y=498)
- *   Block: 12 halfwords wide x 48 scanlines at x=1012 (slots 0-1) or x=1000 (slot 2),
- *          y=288 (slot 0) or y=336 (slots 1-2) (main content texture block)
- * Source data stride between slots in g_prim_rect_buf: 0x4A0 bytes.
- */
-
-/* VRAM coordinates for the per-slot cursor strip (16hword x 1 scanline). */
-#define PRIM_STRIP_VRAM_X 0x110  /* 272  - VRAM column                    */
-#define PRIM_STRIP_VRAM_Y0 0x1D8 /* 472  - VRAM row for slot 0            */
-#define PRIM_STRIP_W 0x10        /* 16 halfwords wide                     */
-#define PRIM_STRIP_H 1           /* 1 scanline tall                       */
-
-/* VRAM coordinates for the per-slot content block (12hword x 48 scanlines). */
-#define PRIM_BLOCK_VRAM_X 0x3F4  /* 1012 - VRAM column for slots 0 and 1 */
-#define PRIM_BLOCK_VRAM_X2 0x3E8 /* 1000 - VRAM column for slot 2        */
-#define PRIM_BLOCK_VRAM_Y0 0x120 /* 288  - VRAM row for slot 0           */
-#define PRIM_BLOCK_VRAM_Y1 0x150 /* 336  - VRAM row for slots 1 and 2    */
-#define PRIM_BLOCK_W 0xC         /* 12 halfwords wide                    */
-#define PRIM_BLOCK_H 0x30        /* 48 scanlines tall                    */
-
-/* Stride between each slot's data in g_prim_rect_buf (bytes). */
-#define PRIM_SLOT_STRIDE 0x4A0 /* 1184 bytes per slot                  */
-/* Byte offset of the content-block data within each slot. */
-#define PRIM_BLOCK_BUF_OFFSET 0x20 /* 32 bytes into each slot              */
 
 /**
  * @brief Upload primitive-rectangle pixel data for the three menu window slots to VRAM.
@@ -1340,29 +1511,6 @@ void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
 }
 
 /**
- * @brief Pair of (u8) indices into a packed text-lookup table.
- *
- * @c entry is the character/entry index within the page; @c page is the page
- * index. Together they form a string pointer via
- * @c entry + ((page << 8) + base_ptr). See @ref menu_draw_label.
- */
-typedef struct
-{
-    u8 entry; /**< Entry index within the page. */
-    u8 page;  /**< Page index. */
-} StringTableKey;
-
-/** @brief 2-D screen coordinate (pixels). */
-typedef struct
-{
-    s16 x; /**< Screen X. */
-    s16 y; /**< Screen Y. */
-} ScreenPos;
-
-extern StringTableKey D_800EC3DA;
-extern StringTableKey D_800EC3E4;
-
-/**
  * @brief Render a text label from a packed string table at the given screen position.
  * @param arg0 OT (ordering table) pointer.
  * @param arg1 Primitive buffer context.
@@ -1401,115 +1549,6 @@ void menu_draw_label(s32 arg0, register s32 arg1, ScreenPos* arg2, s32 arg3)
 
     func_800A88A0(arg1, arg0, sp20, 1, arg2->x, arg2->y, 0);
 }
-
-typedef struct
-{
-    u8 unk0;
-    u8 state; /**< Node state: 0 = uninitialized, 4 = position assigned by menu_layout_node. */
-    union
-    {
-        u16 unk2;
-        struct
-        {
-            u8 unk2_hi;
-            u8 parent_idx;
-        } s;
-    } u2;
-    u8 unk4;
-    u8 content_id; /**< Passed to the content-open function; 0xFF = no content. */
-    union
-    {
-        u16 unk6;
-        struct
-        {
-            u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
-            u8 unk7;
-        } s;
-    } u6;
-    union
-    {
-        u16 unk8;
-        struct
-        {
-            u8 unk8_hi;
-            u8 unk9;
-        } s;
-    } u8_u;
-    union
-    {
-        u16 unkA;
-        struct
-        {
-            u8 unkA_hi;
-            u8 child0; /**< First child node index (0xFF = none). */
-        } s;
-    } uA;
-    u8 child1; /**< Second child node index (0xFF = none). */
-    u8 child2; /**< Third child node index (0xFF = none). */
-    u8 child3; /**< Fourth child node index (0xFF = none). */
-    u8 unkF;
-} MenuNode;
-extern MenuNode g_menu_nodes[0x2C];
-extern u8 g_menu_prev_node;
-/** @brief Gate flag for func_80148A20: 0 = draw empty slot, nonzero = full item render. */
-extern s32 g_menu_content_ready;
-
-/**
- * @brief Four u32 pointers to item data for each comparison slot.
- * @note Used alongside g_item_slot_flags; each element maps to g_item_slot_flags's parallel flag.
- */
-typedef struct
-{
-    u32 unk0; /**< Slot 0 data pointer. */
-    u32 unk4; /**< Slot 1 data pointer. */
-    u32 unk8; /**< Slot 2 data pointer. */
-    u32 unkC; /**< Slot 3 data pointer. */
-} ItemSlotData;
-extern ItemSlotData g_item_slot_data;
-
-/**
- * @brief Four u8 flags indicating which item comparison slots are occupied (nonzero = active).
- * @note Parallel to g_item_slot_data; checked in func_80145608 before reading slot data.
- */
-typedef struct
-{
-    u8 slot0; /**< Slot 0 occupied flag. */
-    u8 slot1; /**< Slot 1 occupied flag. */
-    u8 slot2; /**< Slot 2 occupied flag. */
-    u8 slot3; /**< Slot 3 occupied flag. */
-} ItemSlotFlags;
-extern ItemSlotFlags g_item_slot_flags;
-
-/** @brief Pointer into g_pad_ctx item data for the current category; null = no items. */
-extern s32 g_menu_item_ptr;
-extern s32 D_80169410;
-extern s32 D_80169404;
-extern s32 D_80169408;
-extern s32 D_8016911C;
-extern s32 D_80169554;
-extern s32 D_801694B0;
-extern s32 g_menu_content_height;
-extern s32 g_menu_scroll_pos;
-extern s32 g_menu_redraw_state;
-extern s32 g_menu_active_node;
-/** @brief Array mapping navigation-list position to the previous node ID (up navigation, D-pad Up). */
-extern s32 g_menu_nav_prev[];
-extern u8 g_menu_init_content_id;
-
-typedef struct
-{
-    u16 unk0;
-    u8 pad2[0x266];
-    u16 unk268;
-    u8 unk26A;
-    u8 unk26B;
-} Struct_D_800FD818;
-
-extern Struct_D_800FD818 D_800FD818;
-extern u16 D_800FDA80;
-extern u16 D_800FDCE8;
-extern s8 D_801690F9;
-extern s8 D_80169324;
 
 /**
  * @brief Initialize the full menu node tree and global menu state.
@@ -1937,8 +1976,6 @@ void menu_collapse_all(void)
     }
 }
 
-extern s32 g_menu_layout_end;
-
 /**
  * @brief Assigns layout positions to all active root menu nodes and stores the final position count.
  * @note Sets g_menu_scroll_pos and g_menu_redraw_state to signal scroll state after layout.
@@ -2151,42 +2188,6 @@ u_char* menu_draw_frame(int prim_cursor_id, u_int* ot, int draw_page, int handle
     /* 248: Evaluates to `addiu v0, s0, 0x48` as the function's return statement */
     return prim_end;
 }
-
-typedef struct
-{
-  u16 packed_x; /**< Bottom 9 bits = X screen position; upper bits unknown. */
-  u8 y;         /**< Y position; caller subtracts 8 when using as display offset. */
-  u8 pad[5];
-} MenuContentItem;
-
-/** @brief Number of nodes in the linear navigation list. */
-extern s32 g_menu_nav_count;
-/** @brief Node ID at the start of the navigation list; used for wrap-around on down-navigation. */
-extern s32 g_menu_nav_first;
-/** @brief Y display coordinate for the content viewport origin. */
-extern s32 g_content_view_y;
-/** @brief Set to 1 to request an overlay/scene load at end of this input frame. */
-extern s32 g_menu_load_request;
-extern s32 D_80168C10;
-/** @brief X pixel position of the content cursor within the content window. */
-extern s32 g_content_cursor_x;
-/** @brief Index of the item found by hit-test, or -1 if none. */
-extern s32 g_menu_hit_item_idx;
-/** @brief X display coordinate for the content viewport origin. */
-extern s32 g_content_view_x;
-/** @brief Y pixel position of the content cursor within the content window; clamped to [0xC, 0xA3]. */
-extern s32 g_content_cursor_y;
-/** @brief Array mapping navigation-list position to the next node ID (down navigation). */
-extern s32 g_menu_nav_next[];
-/** @brief Default X/Y origin for the content viewport when no item hit-test position is available. */
-extern struct
-{
-  s16 x;
-  s16 y;
-} g_menu_default_view_pos;
-
-/** @brief Per-node table of MenuContentItem arrays, indexed by node.u6.s.self_idx; NULL = no cursor data. */
-extern MenuContentItem *g_menu_content_table[];
 
 /**
  * @brief Process D-pad and face-button input to navigate and select menu nodes.
