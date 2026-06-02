@@ -1398,7 +1398,6 @@ void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
 s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
 {
     u16 tile_x;
-    int prim_link;
     short pad;
     u16 rect_y;
     s32 y = 0;
@@ -1437,13 +1436,11 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
                     ((SPRT*)prim)->x0 = tile_x;
                     rect_y = rect->y;
                     x += 0x60;
-                    prim_link = 0x00FFFFFFU & ((u32)prim);
                     ((SPRT*)prim)->y0 = (u16)(rect_y + (u16)y);
                     wp += 0x14;
                     SET_SPRT_CLUT(prim, MENU_CLUT_GRID_ALT);
-                    *((u32*)prim) = ((*((u32*)prim)) & 0xFF000000U) | ((*((u32*)ot)) & 0x00FFFFFFU);
-                    *ot = ((*((u32*)ot)) & 0xFF000000U) | prim_link;
-                    prim = (s32*)(((u8*)prim) + 0x14);
+                    addPrim(ot, (SPRT*)prim);
+                    prim = (s32*)((SPRT*)prim + 1);
                 } while (x < rect->w);
             }
             y += 0x60;
