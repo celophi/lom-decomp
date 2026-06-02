@@ -2186,7 +2186,7 @@ extern struct
 } g_menu_default_view_pos;
 
 /** @brief Per-node table of MenuContentItem arrays, indexed by node.u6.s.self_idx; NULL = no cursor data. */
-extern void *g_menu_content_table[];
+extern MenuContentItem *g_menu_content_table[];
 
 /**
  * @brief Process D-pad and face-button input to navigate and select menu nodes.
@@ -2323,7 +2323,7 @@ unsigned int menu_handle_node_input(void)
         new_var8 = &temp_a1->u6;
         if (g_menu_scene_type != g_menu_active_node)
         {
-            if (g_menu_content_table[temp_a1->u6.s.self_idx] != 0)
+            if (g_menu_content_table[temp_a1->u6.s.self_idx] != NULL)
             {
                 var_v1_2 = 3;
                 temp_a0_3 = new_var14;
@@ -2405,7 +2405,7 @@ unsigned int menu_handle_node_input(void)
             g_menu_hit_item_idx = func_8014847C(new_var12, temp_a1, &g_content_cursor_y, temp_v0_3);
             if (g_menu_hit_item_idx != (-1))
             {
-                temp_v1_2 = &((MenuContentItem*)g_menu_content_table[new_var11[g_menu_scene_type].u6.s.self_idx])[g_menu_hit_item_idx];
+                temp_v1_2 = &g_menu_content_table[new_var11[g_menu_scene_type].u6.s.self_idx][g_menu_hit_item_idx];
                 g_content_view_x = temp_v1_2->packed_x & 0x1FF;
                 new_var3 = temp_v1_2->y - 8;
                 g_menu_suppress_cursor = 5;
