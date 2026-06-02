@@ -3,22 +3,22 @@
 typedef struct MenuFrameCtx
 {
     u8 pad0[0x34];
-    u8 unk34;         /* Start of buffer at offset 0x34 */
-    u8 pad35[0x400B]; /* Padding to 0x4040 */
-    s32 unk4040;      /* Offset 0x4040 */
-    u8 pad4044[8];    /* Padding to 0x404C */
-    s32 unk404C;      /* Offset 0x404C */
+    u8 ot_base;         /* 0x0034 - start of the ordering-table buffer */
+    u8 pad35[0x400B];   /* padding to 0x4040 */
+    s32 prim_cursor;    /* 0x4040 - current primitive write cursor (pointer stored as s32) */
+    u8 pad4044[8];      /* padding to 0x404C */
+    s32 draw_buf_idx;   /* 0x404C - display buffer page index (0 or 1, used for double-buffer flip) */
 } MenuFrameCtx;
 
 typedef struct
 {
-    u8 _pad0[2]; // offsets 0x00-0x01
-    u8 unk2;     // offset 0x02
-    u8 _pad1[5]; // offsets 0x03-0x07
-    u16 unk8;    // offset 0x08
-    u16 unkA;    // offset 0x0A
-    s16 unkC;    // offset 0x0C
-    s16 unkE;    // offset 0x0E
+    u8 _pad0[2];    // offsets 0x00-0x01 (active, index)
+    u8 anim_frame;  // offset 0x02 - animation frame counter (counts up during open/close)
+    u8 _pad1[5];    // offsets 0x03-0x07
+    u16 x;          // offset 0x08 - window X origin
+    u16 y;          // offset 0x0A - window Y origin
+    s16 w;          // offset 0x0C - target window width  (clamped to >= 0x20)
+    s16 h;          // offset 0x0E - target window height (clamped to >= 0x10)
 } MenuSlotAnim;
 
 typedef struct
@@ -60,9 +60,9 @@ typedef struct
 typedef struct
 {
     u8 pad[0x4040];
-    s32* unk4040;
+    s32* prim_cursor; /* 0x4040 - primitive write cursor */
     u8 pad4044[8];
-    s32 unk404C;
+    s32 draw_buf_idx; /* 0x404C - display buffer page index (0 or 1) */
 } MenuRenderCtx;
 
 typedef struct
@@ -838,12 +838,12 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
         var_a3 = 1;
     }
 
-    gpu_work->unk4040 = func_80142F10(gpu_work->unk4040, &gpu_work->unk34, gpu_work->unk404C, var_a3);
+    gpu_work->prim_cursor = menu_draw_frame(gpu_work->prim_cursor, &gpu_work->ot_base, gpu_work->draw_buf_idx, var_a3);
 
     if (g_menu_pending_overlay != 0)
     {
-        gpu_work->unk4040 =
-            func_800A88A0(gpu_work->unk4040, &gpu_work->unk34, g_menu_pending_overlay, 1, 0xA0, 0xCA, 2);
+        gpu_work->prim_cursor =
+            func_800A88A0(gpu_work->prim_cursor, &gpu_work->ot_base, g_menu_pending_overlay, 1, 0xA0, 0xCA, 2);
     }
 }
 
@@ -870,11 +870,11 @@ void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_en
     s32 clampE;
 
     /* First computation */
-    temp_a3 = ((s32)((u16)slot->unkC << 0x10) >> 0x11) - ((s16)(slot->unkC / 12) * slot->unk2);
+    temp_a3 = ((s32)((u16)slot->w << 0x10) >> 0x11) - ((s16)(slot->w / 12) * slot->anim_frame);
     sp[4] = (s16)temp_a3;
 
     /* Second computation */
-    temp_a1 = ((s32)((u16)slot->unkE << 0x10) >> 0x11) - ((s16)(slot->unkE / 12) * slot->unk2);
+    temp_a1 = ((s32)((u16)slot->h << 0x10) >> 0x11) - ((s16)(slot->h / 12) * slot->anim_frame);
 
     /* First branch logic block */
 
@@ -887,20 +887,20 @@ void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_en
         if (temp_a1 > 0)
         {
 
-            clampC = slot->unkC - (temp_a3 * 2);
+            clampC = slot->w - (temp_a3 * 2);
             if (clampC < 0x20)
             {
                 clampC = 0x20;
             }
 
-            clampE = slot->unkE - (temp_a1 * 2);
+            clampE = slot->h - (temp_a1 * 2);
             if (clampE < 0x10)
             {
                 clampE = 0x10;
             }
 
-            sp[0] = slot->unk8 + temp_a3;
-            sp[1] = slot->unkA + temp_a1;
+            sp[0] = slot->x + temp_a3;
+            sp[1] = slot->y + temp_a1;
             sp[2] = clampC;
             sp[3] = clampE;
 
@@ -947,7 +947,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     void* temp_v0_2;
 
     temp_s3 = rect;
-    var_s1 = gpu_work->unk4040;
+    var_s1 = gpu_work->prim_cursor;
     temp_s2 = (s32*)gpu_work + (((u32)slot->_u.unk4 >> 0x19));
     if (slot->unk18 != 0)
     {
@@ -970,7 +970,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
         {
             if ((temp_s3->h - 0x10) > 0)
             {
-                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->unk404C ^ 1) * 0x40C0) + 0x4064));
+                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * 0x40C0) + 0x4064));
                 var_a3 = 0;
                 *var_s1 = (*var_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 g_menu_draw_early_out = 0;
@@ -986,12 +986,12 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                 temp_s1 = slot->unk1C(temp_s2, slot, var_s1, arg3, var_a3);
                 if (g_menu_draw_early_out != 0)
                 {
-                    gpu_work->unk4040 = temp_s1;
+                    gpu_work->prim_cursor = temp_s1;
                     return;
                 }
                 temp_a0 = temp_s3->y;
                 var_a2_2 = temp_a0 + 0x10;
-                if (gpu_work->unk404C != 0)
+                if (gpu_work->draw_buf_idx != 0)
                 {
                     var_a2_2 = temp_a0 + 0xF8;
                 }
@@ -1111,7 +1111,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     ((MenuPrimHead*)temp_v0_2)->_u.unk0 =
         (s32)((((MenuPrimHead*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
     *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
-    gpu_work->unk4040 = (s32*)((char*)temp_v0_2 + 8);
+    gpu_work->prim_cursor = (s32*)((char*)temp_v0_2 + 8);
 }
 
 /**
@@ -1441,12 +1441,12 @@ typedef struct
         struct
         {
             u8 unkA_hi;
-            u8 unkB;
+            u8 child0; /**< First child node index (0xFF = none). */
         } s;
     } uA;
-    u8 unkC;
-    u8 unkD;
-    u8 unkE;
+    u8 child1; /**< Second child node index (0xFF = none). */
+    u8 child2; /**< Third child node index (0xFF = none). */
+    u8 child3; /**< Fourth child node index (0xFF = none). */
     u8 unkF;
 } MenuNode;
 extern MenuNode g_menu_nodes[0x2C];
@@ -1492,7 +1492,8 @@ extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
 extern s32 g_menu_active_node;
-extern s32 D_801694B4[];
+/** @brief Array mapping navigation-list position to the previous node ID (up navigation, D-pad Up). */
+extern s32 g_menu_nav_prev[];
 extern u8 g_menu_init_content_id;
 
 typedef struct
@@ -1583,7 +1584,7 @@ void menu_node_tree_init(void)
     D_8016911C = 0;
     D_80169554 = 0;
     D_801694B0 = 0;
-    D_801694B4[0] = 0;
+    g_menu_nav_prev[0] = 0;
     g_menu_content_height = 0;
     g_menu_scroll_pos = 0;
     g_menu_redraw_state = 0;
@@ -1594,10 +1595,10 @@ void menu_node_tree_init(void)
         g_menu_nodes[var_t0].state = 0;
         g_menu_nodes[var_t0].unk4 = 0;
         g_menu_nodes[var_t0].content_id = var_a1;
-        g_menu_nodes[var_t0].unkE = var_a1;
-        g_menu_nodes[var_t0].unkD = var_a1;
-        g_menu_nodes[var_t0].unkC = var_a1;
-        g_menu_nodes[var_t0].uA.s.unkB = var_a1;
+        g_menu_nodes[var_t0].child3 = var_a1;
+        g_menu_nodes[var_t0].child2 = var_a1;
+        g_menu_nodes[var_t0].child1 = var_a1;
+        g_menu_nodes[var_t0].uA.s.child0 = var_a1;
         g_menu_nodes[var_t0].u2.unk2 = (u16)((g_menu_nodes[var_t0].u2.unk2 & 0xFFFC) | 0x30);
         g_menu_nodes[var_t0].u2.s.parent_idx = var_a1;
     }
@@ -1619,10 +1620,10 @@ void menu_node_tree_init(void)
     {
         g_menu_nodes[0].unk4 = 1;
     }
-    g_menu_nodes[0].uA.s.unkB = 1;
+    g_menu_nodes[0].uA.s.child0 = 1;
     g_menu_nodes[1].u6.s.self_idx = 1;
     g_menu_nodes[1].unk4 = 5;
-    g_menu_nodes[0].unkC = 2;
+    g_menu_nodes[0].child1 = 2;
     g_menu_nodes[2].unk0 = 2;
     g_menu_nodes[2].u6.s.self_idx = 2;
     g_menu_nodes[2].unk4 = 4;
@@ -1658,8 +1659,8 @@ void menu_node_tree_init(void)
     temp_v0_5 = temp_v0_4 | 0x10;
     *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3E);
-    g_menu_nodes[3].uA.s.unkB = 4;
-    g_menu_nodes[3].unkC = 5;
+    g_menu_nodes[3].uA.s.child0 = 4;
+    g_menu_nodes[3].child1 = 5;
     g_menu_nodes[4].unk0 = 6;
     g_menu_nodes[4].unk4 = 5;
     g_menu_nodes[5].unk0 = 5;
@@ -1668,8 +1669,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[6].unk0 = 7;
     g_menu_nodes[6].u6.s.self_idx = 6;
     g_menu_nodes[6].unk4 = 3;
-    g_menu_nodes[6].uA.s.unkB = 7;
-    g_menu_nodes[6].unkC = 8;
+    g_menu_nodes[6].uA.s.child0 = 7;
+    g_menu_nodes[6].child1 = 8;
     g_menu_nodes[7].unk0 = 9;
     g_menu_nodes[7].u6.s.self_idx = 7;
     new_var7 = 0xFF3E;
@@ -1698,7 +1699,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[9].unk0 = 0xA;
     g_menu_nodes[9].u6.s.self_idx = 9;
     g_menu_nodes[9].unk4 = 6;
-    g_menu_nodes[9].uA.s.unkB = 0xA;
+    g_menu_nodes[9].uA.s.child0 = 0xA;
     g_menu_nodes[0xA].unk0 = 0xB;
     g_menu_nodes[0x12].unk4 = 0xA;
     g_menu_nodes[0xA].u6.s.self_idx = 0xA;
@@ -1706,7 +1707,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[0xC].unk0 = 0xA;
     g_menu_nodes[0xC].u6.s.self_idx = 0xC;
     g_menu_nodes[0xC].unk4 = 6;
-    g_menu_nodes[0xC].uA.s.unkB = 0xD;
+    g_menu_nodes[0xC].uA.s.child0 = 0xD;
     g_menu_nodes[0xD].unk0 = 0xB;
     g_menu_nodes[0xD].u6.s.self_idx = 0xD;
     g_menu_nodes[0xD].unk4 = 7;
@@ -1727,8 +1728,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0xF].u2.s.parent_idx = 0xFF;
     g_menu_nodes[0xF].unk0 = 0xD;
     g_menu_nodes[0xF].u6.s.self_idx = 0xF;
-    g_menu_nodes[0xF].uA.s.unkB = 0x10;
-    g_menu_nodes[0xF].unkC = 0x11;
+    g_menu_nodes[0xF].uA.s.child0 = 0x10;
+    g_menu_nodes[0xF].child1 = 0x11;
     g_menu_nodes[0x10].unk0 = 0xC;
     g_menu_nodes[0x10].u6.s.self_idx = 0x10;
     g_menu_nodes[0x11].unk0 = 0xE;
@@ -1737,10 +1738,10 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x12].unk0 = 0x10;
     g_menu_nodes[0x12].u6.s.self_idx = 0x12;
     g_menu_nodes[0x12].content_id = 4;
-    g_menu_nodes[0x12].uA.s.unkB = 0x13;
-    g_menu_nodes[0x12].unkC = 0x16;
-    g_menu_nodes[0x12].unkD = 0x19;
-    g_menu_nodes[0x12].unkE = 0x1C;
+    g_menu_nodes[0x12].uA.s.child0 = 0x13;
+    g_menu_nodes[0x12].child1 = 0x16;
+    g_menu_nodes[0x12].child2 = 0x19;
+    g_menu_nodes[0x12].child3 = 0x1C;
     g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
@@ -1756,8 +1757,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x13].unk4 = 0xB;
     g_menu_nodes[0x13].u6.s.self_idx = 0x13;
     g_menu_nodes[0x13].content_id = 0;
-    g_menu_nodes[0x13].uA.s.unkB = 0x14;
-    g_menu_nodes[0x13].unkC = 0x15;
+    g_menu_nodes[0x13].uA.s.child0 = 0x14;
+    g_menu_nodes[0x13].child1 = 0x15;
     g_menu_nodes[0x14].unk0 = 0x12;
     g_menu_nodes[0x14].u6.s.self_idx = 0x14;
     g_menu_nodes[0x15].unk0 = 0x13;
@@ -1766,8 +1767,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x16].unk0 = 0x14;
     g_menu_nodes[0x16].u6.s.self_idx = 0x16;
     g_menu_nodes[0x16].unk4 = 0xC;
-    g_menu_nodes[0x16].uA.s.unkB = 0x17;
-    g_menu_nodes[0x16].unkC = 0x18;
+    g_menu_nodes[0x16].uA.s.child0 = 0x17;
+    g_menu_nodes[0x16].child1 = 0x18;
     g_menu_nodes[0x17].unk0 = 0x15;
     g_menu_nodes[0x17].u6.s.self_idx = 0x17;
     g_menu_nodes[0x13].u2.unk2 = (u16)((g_menu_nodes[0x13].u2.unk2 & 0xFF3F) | 0x40);
@@ -1788,8 +1789,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].unk0 = 0x16;
     g_menu_nodes[0x19].u6.s.self_idx = 0x19;
     g_menu_nodes[0x19].unk4 = 0xD;
-    g_menu_nodes[0x19].uA.s.unkB = 0x1A;
-    g_menu_nodes[0x19].unkC = 0x1B;
+    g_menu_nodes[0x19].uA.s.child0 = 0x1A;
+    g_menu_nodes[0x19].child1 = 0x1B;
     g_menu_nodes[0x1A].unk0 = 0x17;
     g_menu_nodes[0x1A].u6.s.self_idx = 0x1A;
     g_menu_nodes[0x1A].unk4 = 0x11;
@@ -1812,7 +1813,7 @@ void menu_node_tree_init(void)
     var_a2->uA.unkA += 0;
     g_menu_nodes[0x1C].unk4 = 0xE;
     g_menu_nodes[0x1D].u6.s.self_idx = 0x1D;
-    g_menu_nodes[0x1E].uA.s.unkB = 0x1F;
+    g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
     g_menu_nodes[0x1F].u6.s.self_idx = 0x1F;
     g_menu_nodes[0x1C].content_id = 5;
     g_menu_nodes[0x1D].unk0 = 0x1C;
@@ -2027,7 +2028,7 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
         for (child_idx = child_iter; (child_idx < 4) != 0;)
         {
             new_var3 = g_menu_nodes + node_idx;
-            child_idx = (&(&(*new_var3).uA.s)->unkB)[child_idx];
+            child_idx = (&(&(*new_var3).uA.s)->child0)[child_idx];
             child = child_idx;
             if (child == 0xFF)
             {
@@ -2041,26 +2042,31 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/x8WyZ
+ * @brief Draw the menu frame layers and optionally dispatch navigation input.
+ * @param prim_cursor_id Prim-buffer ID passed to the initial buffer setup call.
+ * @param ot Pointer into the ordering table used for addPrim calls.
+ * @param draw_page 0 = first display page (Y near 0); nonzero = second page (Y+240).
+ * @param handle_input When nonzero and cursor is disabled, calls menu_handle_node_input.
+ * @return Updated prim-buffer write cursor after all primitives are emitted.
+ * @see decomp.me (100%) https://decomp.me/scratch/x8WyZ
  */
-u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
+u_char* menu_draw_frame(int prim_cursor_id, u_int* ot, int draw_page, int handle_input)
 {
     DRAWENV stack_drawenv;
     u_char* s1;
     u_char* s0;
     int var_a2;
     int v0_190;
-    u8* new_var;
-    u_char* new_var2;
-    u8* ptr_801ed600;
+    u8* scd_base;
+    u_char* prim_end;
 
-    new_var = (u8*)0x801ed600;
+    scd_base = (u8*)0x801ed600;
 
     /* 30: jal func_80145608 */
-    s1 = (u_char*)func_80145608(arg0);
+    s1 = (u_char*)func_80145608(prim_cursor_id);
 
     /* 3c: ternary generating the conditional branch at 48 */
-    var_a2 = flag ? 0xf0 : 8;
+    var_a2 = draw_page ? 0xf0 : 8;
 
     /* 58: SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0) */
     SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0);
@@ -2076,36 +2082,35 @@ u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
     s0 = s1;
 
     /* a8 - c0: Decrement tracker logic */
-    ptr_801ed600 = new_var;
-    if (ptr_801ed600[0x92] != 0)
+    if (scd_base[0x92] != 0)
     {
-        u8 val = ptr_801ed600[0x92] - 1;
-        ptr_801ed600[0x140] = val;
-        ptr_801ed600[0x92] = val;
+        u8 val = scd_base[0x92] - 1;
+        scd_base[0x140] = val;
+        scd_base[0x92] = val;
     }
 
     /* c4: Explicit switch structure to enforce the exact MIPS jump table/branch sequence */
     switch (g_menu_cursor_enable)
     {
     case 0:
-        s0 = (u_char*)func_80148900(s1, ot - 1, arg3);
+        s0 = (u_char*)func_80148900(s1, ot - 1, handle_input);
         func_80143964(0);
-        if (arg3 != 0)
+        if (handle_input != 0)
         {
-            func_80143190();
+            menu_handle_node_input();
         }
         break;
 
     case 1:
-        s0 = (u_char*)func_80148A20(s1, ot - 1, arg3);
+        s0 = (u_char*)func_80148A20(s1, ot - 1, handle_input);
         if (g_menu_suppress_cursor == 0)
         {
-            func_80143964(arg3);
+            func_80143964(handle_input);
         }
         break;
 
     case 2:
-        s0 = (u_char*)func_80148A20(s1, ot - 1, arg3);
+        s0 = (u_char*)func_80148A20(s1, ot - 1, handle_input);
         if (g_menu_suppress_cursor == 0)
         {
             g_menu_cursor_enable = 0;
@@ -2131,10 +2136,10 @@ u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
     s1 = s0 + 8;
 
     /* 1f8: Second conditional ternary logic blocks */
-    var_a2 = flag ? 0xfc : 0x14;
+    var_a2 = draw_page ? 0xfc : 0x14;
 
     /* 214: SetDefDrawEnv */
-    new_var2 = s0 + 0x48;
+    prim_end = s0 + 0x48;
     SetDefDrawEnv(&stack_drawenv, 0xf, var_a2, 0x24, 0xaa);
 
     /* 220: SetDrawEnv with s1 advanced to s0 + 8 */
@@ -2144,39 +2149,50 @@ u_char* func_80142F10(int arg0, u_int* ot, int flag, int arg3)
     addPrim(ot, s1);
 
     /* 248: Evaluates to `addiu v0, s0, 0x48` as the function's return statement */
-    return new_var2;
+    return prim_end;
 }
 
 typedef struct
 {
-  u16 unk0;
-  u8 unk2;
+  u16 packed_x; /**< Bottom 9 bits = X screen position; upper bits unknown. */
+  u8 y;         /**< Y position; caller subtracts 8 when using as display offset. */
   u8 pad[5];
-} Unk801686F8_Item;
+} MenuContentItem;
 
-extern s32 D_801690B4;
-extern s32 D_801694B8;
-extern s32 D_8016912C;
-extern s32 D_8016940C;
+/** @brief Number of nodes in the linear navigation list. */
+extern s32 g_menu_nav_count;
+/** @brief Node ID at the start of the navigation list; used for wrap-around on down-navigation. */
+extern s32 g_menu_nav_first;
+/** @brief Y display coordinate for the content viewport origin. */
+extern s32 g_content_view_y;
+/** @brief Set to 1 to request an overlay/scene load at end of this input frame. */
+extern s32 g_menu_load_request;
 extern s32 D_80168C10;
-extern s32 D_80169110;
-extern s32 D_8016941C;
-extern s32 D_80169128;
-extern s32 D_80169114;
-extern s32 D_801694BC[];
-
+/** @brief X pixel position of the content cursor within the content window. */
+extern s32 g_content_cursor_x;
+/** @brief Index of the item found by hit-test, or -1 if none. */
+extern s32 g_menu_hit_item_idx;
+/** @brief X display coordinate for the content viewport origin. */
+extern s32 g_content_view_x;
+/** @brief Y pixel position of the content cursor within the content window; clamped to [0xC, 0xA3]. */
+extern s32 g_content_cursor_y;
+/** @brief Array mapping navigation-list position to the next node ID (down navigation). */
+extern s32 g_menu_nav_next[];
+/** @brief Default X/Y origin for the content viewport when no item hit-test position is available. */
 extern struct
 {
-  s16 unk0;
-  s16 unk2;
-} D_80169104;
+  s16 x;
+  s16 y;
+} g_menu_default_view_pos;
 
-extern void *D_801686F8[];
+/** @brief Per-node table of MenuContentItem arrays, indexed by node.u6.s.self_idx; NULL = no cursor data. */
+extern void *g_menu_content_table[];
 
 /**
- * decomp.me (99.42%) https://decomp.me/scratch/YoOml
+ * @brief Process D-pad and face-button input to navigate and select menu nodes.
+ * @see decomp.me (99.42%) https://decomp.me/scratch/YoOml
  */
-unsigned int func_80143190(void)
+unsigned int menu_handle_node_input(void)
 {
     MenuNode* temp_a1;
     s32 temp_v0;
@@ -2208,7 +2224,7 @@ unsigned int func_80143190(void)
     u8* var_a0;
     u8* var_v0;
     unsigned int new_var12;
-    Unk801686F8_Item* temp_v1_2;
+    MenuContentItem* temp_v1_2;
     u8* new_var6;
     int new_var2;
     const u32 MENU_20 = 0x20;
@@ -2222,25 +2238,25 @@ unsigned int func_80143190(void)
     {
         if (temp_v0 != 0)
         {
-            g_menu_active_node = D_801694B4[temp_v0];
+            g_menu_active_node = g_menu_nav_prev[temp_v0];
         }
         else
         {
-            g_menu_active_node = D_801694B4[D_801690B4];
+            g_menu_active_node = g_menu_nav_prev[g_menu_nav_count];
         }
     }
     if (g_pad_input & 0x4000)
     {
-        if (temp_v0 >= (D_801690B4 - 1))
+        if (temp_v0 >= (g_menu_nav_count - 1))
         {
-            g_menu_active_node = D_801694B8;
+            g_menu_active_node = g_menu_nav_first;
             do
             {
             } while (0);
         }
         else
         {
-            g_menu_active_node = D_801694BC[temp_v0];
+            g_menu_active_node = g_menu_nav_next[temp_v0];
         }
     }
     if (g_pad_input & 0x40)
@@ -2248,10 +2264,10 @@ unsigned int func_80143190(void)
         if (g_menu_active_node == MENU_20)
         {
             func_8014F210(0x7F, 0x80);
-            D_8016940C = 1;
+            g_menu_load_request = 1;
             return;
         }
-        g_menu_active_node = D_801694B8;
+        g_menu_active_node = g_menu_nav_first;
         g_menu_active_node = MENU_20;
     }
     if (0x5040 & (g_pad_input & 0xFFFFu))
@@ -2285,11 +2301,11 @@ unsigned int func_80143190(void)
                 return;
             }
             SENTINEL = 0xFF;
-            D_8016940C = 1;
+            g_menu_load_request = 1;
         }
         if (g_menu_active_node == 0x11)
         {
-            D_8016940C = 1;
+            g_menu_load_request = 1;
             D_80168C10 = 0xA;
             return;
         }
@@ -2306,7 +2322,7 @@ unsigned int func_80143190(void)
         new_var8 = &temp_a1->u6;
         if (g_menu_scene_type != g_menu_active_node)
         {
-            if (D_801686F8[temp_a1->u6.s.self_idx] != 0)
+            if (g_menu_content_table[temp_a1->u6.s.self_idx] != 0)
             {
                 var_v1_2 = 3;
                 temp_a0_3 = new_var14;
@@ -2337,7 +2353,7 @@ unsigned int func_80143190(void)
         {
             if (g_pad_input & 0x220)
             {
-                D_8016940C = 1;
+                g_menu_load_request = 1;
             }
             return;
         }
@@ -2345,17 +2361,17 @@ unsigned int func_80143190(void)
         temp_v0_3 = temp_a1->u8_u.s.unk8_hi;
         new_var12 = temp_a0_3;
         new_var15 = g_menu_content_height;
-        D_80169114 = 0xC;
-        D_80169114 = ((temp_v0_3 * 2) | new_var12) - (new_var15 - D_80169114);
-        if (D_80169114 < 0xC)
+        g_content_cursor_y = 0xC;
+        g_content_cursor_y = ((temp_v0_3 * 2) | new_var12) - (new_var15 - g_content_cursor_y);
+        if (g_content_cursor_y < 0xC)
         {
-            D_80169114 = 0xC;
+            g_content_cursor_y = 0xC;
         }
-        if (D_80169114 >= 0xA3)
+        if (g_content_cursor_y >= 0xA3)
         {
-            D_80169114 = 0xA3;
+            g_content_cursor_y = 0xA3;
         }
-        D_80169110 = (((temp_a1->u6.unk6 >> 4) >> 4) & 0x7F) + 8;
+        g_content_cursor_x = (((temp_a1->u6.unk6 >> 4) >> 4) & 0x7F) + 8;
         if (0xFF != (&g_menu_nodes[g_menu_active_node])->content_id)
         {
             g_menu_cursor_enable = 1;
@@ -2379,21 +2395,21 @@ unsigned int func_80143190(void)
             }
 
             g_menu_suppress_cursor = 5;
-            D_80169128 = D_80169104.unk0;
-            new_var = &D_80169104.unk2;
-            D_8016912C = *new_var;
+            g_content_view_x = g_menu_default_view_pos.x;
+            new_var = &g_menu_default_view_pos.y;
+            g_content_view_y = *new_var;
         }
         else
         {
-            D_8016941C = func_8014847C(new_var12, temp_a1, &D_80169114, temp_v0_3);
-            if (D_8016941C != (-1))
+            g_menu_hit_item_idx = func_8014847C(new_var12, temp_a1, &g_content_cursor_y, temp_v0_3);
+            if (g_menu_hit_item_idx != (-1))
             {
-                temp_v1_2 = &((Unk801686F8_Item*)D_801686F8[new_var11[g_menu_scene_type].u6.s.self_idx])[D_8016941C];
-                D_80169128 = temp_v1_2->unk0 & 0x1FF;
-                new_var3 = temp_v1_2->unk2 - 8;
+                temp_v1_2 = &((MenuContentItem*)g_menu_content_table[new_var11[g_menu_scene_type].u6.s.self_idx])[g_menu_hit_item_idx];
+                g_content_view_x = temp_v1_2->packed_x & 0x1FF;
+                new_var3 = temp_v1_2->y - 8;
                 g_menu_suppress_cursor = 5;
                 g_menu_cursor_enable = 1;
-                D_8016912C = new_var3;
+                g_content_view_y = new_var3;
             }
         }
     }
