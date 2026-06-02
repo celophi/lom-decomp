@@ -1567,39 +1567,30 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
  * @param prim      Primitive write cursor (@c u_long*; passed as arg0 to the glyph renderer).
  * @param pos       Screen position (x, y) to draw at.
  * @param label_id  >= 0: draw string keyed by g_menu_label_key_a; < 0: keyed by g_menu_label_key_b.
- * @see decomp.me (83.81%) https://decomp.me/scratch/ozwB7
+ * @see decomp.me (94.94%) https://decomp.me/scratch/ozwB7
  */
 void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
 {
     u8 sp20[16];
     u8* ptr = sp20;
-    u8* table_base;
-    u32 page;
-    u32 entry;
     u8* str_ptr;
+    
 
     if (label_id >= 0)
     {
-        page = g_menu_label_key_a.page;
-        entry = g_menu_label_key_a.entry;
-        table_base = (u8*)&g_menu_label_key_a - 0x16;
+        str_ptr = g_menu_label_key_a.entry + ((g_menu_label_key_a.page << 8) + ((u8*)&g_menu_label_key_a - 0x16));
     }
     else
     {
-        page = g_menu_label_key_b.page;
-        table_base = (u8*)&g_menu_label_key_b - 0x20;
-        entry = g_menu_label_key_b.entry;
+        str_ptr = g_menu_label_key_b.entry + ((g_menu_label_key_b.page << 8) + ((u8*)&g_menu_label_key_b - 0x20));
     }
 
-    /* entry + page*256 + table_base = absolute pointer into string table data */
-    str_ptr = entry + ((page << 8) + table_base);
-
-    func_800A8E28(ptr, str_ptr);       /* packed_str_copy: copies glyph bytes, null-terminates */
-    ptr += func_800A8DDC(str_ptr);     /* packed_str_byte_len: advance past the copied string */
+    func_800A8E28(ptr, str_ptr);
+    ptr += func_800A8DDC(str_ptr);
 
     *ptr = 0;
 
-    func_800A88A0(prim, ot, sp20, 1, pos->x, pos->y, 0);  /* draw_glyphs */
+    func_800A88A0(prim, ot, sp20, 1, pos->x, pos->y, 0);
 }
 
 /**
