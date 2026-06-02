@@ -24,6 +24,8 @@ menu_collapse_all      = 0x80142D24;
 menu_set_active_node   = 0x801436F0;
 menu_update_layout     = 0x80142D54;
 menu_layout_node       = 0x80142E40;
+menu_draw_frame        = 0x80142F10;
+menu_handle_node_input = 0x80143190;
 
 // Data
 g_menu_frame           = 0x801690AC;
@@ -58,3 +60,15 @@ g_menu_content_height  = 0x80169418;
 g_menu_scroll_pos      = 0x8016954C;
 g_menu_redraw_state    = 0x80169400;
 g_menu_layout_end      = 0x801693F8;
+g_menu_nav_count       = 0x801690B4;
+g_menu_nav_prev        = 0x801694B4;
+g_menu_nav_first       = 0x801694B8;
+g_menu_nav_next        = 0x801694BC;
+g_menu_load_request    = 0x8016940C;
+g_content_cursor_y     = 0x80169114;
+g_content_cursor_x     = 0x80169110;
+g_content_view_x       = 0x80169128;
+g_content_view_y       = 0x8016912C;
+g_menu_content_table   = 0x801686F8;
+g_menu_hit_item_idx    = 0x8016941C;
+g_menu_default_view_pos = 0x80169104;
