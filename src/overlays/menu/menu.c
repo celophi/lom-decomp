@@ -357,8 +357,8 @@ extern u16 D_800FDCE8;
 extern s8 D_801690F9;
 extern s8 D_80169324;
 
-extern StringTableKey D_800EC3DA;
-extern StringTableKey D_800EC3E4;
+extern StringTableKey g_menu_label_key_a; /* 0x800EC3DA: offset +0x16 into shared text table at 0x800EC3C4 */
+extern StringTableKey g_menu_label_key_b; /* 0x800EC3E4: offset +0x20 into shared text table at 0x800EC3C4 */
 
 /** @brief Number of nodes in the linear navigation list. */
 extern s32 g_menu_nav_count;
@@ -1560,13 +1560,13 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
  * string into a local buffer, then calls the glyph renderer.
  *
  * Both branches compute the same table base via pointer arithmetic from
- * whichever key they select: @c &D_800EC3DA-0x16 == @c &D_800EC3E4-0x20 ==
+ * whichever key they select: @c &g_menu_label_key_a-0x16 == @c &g_menu_label_key_b-0x20 ==
  * 0x800EC3C4.
  *
  * @param ot        Ordering-table head (@c u_long*; passed as arg1 to the glyph renderer).
  * @param prim      Primitive write cursor (@c u_long*; passed as arg0 to the glyph renderer).
  * @param pos       Screen position (x, y) to draw at.
- * @param label_id  >= 0: draw string keyed by D_800EC3DA; < 0: keyed by D_800EC3E4.
+ * @param label_id  >= 0: draw string keyed by g_menu_label_key_a; < 0: keyed by g_menu_label_key_b.
  * @see decomp.me (83.81%) https://decomp.me/scratch/ozwB7
  */
 void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
@@ -1580,15 +1580,15 @@ void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
 
     if (label_id >= 0)
     {
-        page = D_800EC3DA.page;
-        entry = D_800EC3DA.entry;
-        table_base = (u8*)&D_800EC3DA - 0x16;
+        page = g_menu_label_key_a.page;
+        entry = g_menu_label_key_a.entry;
+        table_base = (u8*)&g_menu_label_key_a - 0x16;
     }
     else
     {
-        page = D_800EC3E4.page;
-        table_base = (u8*)&D_800EC3E4 - 0x20;
-        entry = D_800EC3E4.entry;
+        page = g_menu_label_key_b.page;
+        table_base = (u8*)&g_menu_label_key_b - 0x20;
+        entry = g_menu_label_key_b.entry;
     }
 
     /* entry + page*256 + table_base = absolute pointer into string table data */
