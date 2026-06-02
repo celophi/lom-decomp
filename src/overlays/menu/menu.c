@@ -1446,45 +1446,39 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
  */
 u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 tw_uv)
 {
-
-    u_long* otp;
     RECT tw;
     SPRT* sprt;
     DR_TWIN* twin;
 
-    otp = ot_ptr;
-    if (input->w > 0)
+    if (input->w <= 0)
     {
-
-        if (input->h > 0)
-        {
-            sprt = (SPRT*)ot;
-            *((u32*)(ot + 1)) = 0x00808080;
-
-            setSprt(sprt);
-
-            *((u16*)(ot + 0x3)) = 0;
-            sprt->w = input->w;
-            sprt->h = input->h;
-            sprt->x0 = input->x;
-            sprt->y0 = input->y;
-            sprt->clut = 0x7CCA;
-
-            addPrim(otp, sprt);
-
-            ot += sizeof(SPRT) / sizeof(u_long);
-            twin = (DR_TWIN*)ot;
-
-            tw.x = tw_uv & 0xFF;
-            tw.y = tw_uv >> 8;
-            tw.w = 16;
-            tw.h = 8;
-
-            setTexWindow(twin, &tw);
-            addPrim(otp, twin);
-            ot += sizeof(DR_TWIN) / sizeof(u_long);
-        }
+        return ot;
     }
+
+    if (input->h > 0)
+    {
+        sprt = (SPRT*)ot;
+        SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+        setSprt(sprt);
+        SET_SPRT_UV0_PACKED(sprt, 0);
+        sprt->w = input->w;
+        sprt->h = input->h;
+        sprt->x0 = input->x;
+        sprt->y0 = input->y;
+        sprt->clut = MENU_CLUT_CORNER;
+        addPrim(ot_ptr, sprt);
+        ot += sizeof(SPRT) / sizeof(u_long);
+
+        twin = (DR_TWIN*)ot;
+        tw.x = tw_uv & 0xFF;
+        tw.y = tw_uv >> 8;
+        tw.w = 16;
+        tw.h = 8;
+        setTexWindow(twin, &tw);
+        addPrim(ot_ptr, twin);
+        ot += sizeof(DR_TWIN) / sizeof(u_long);
+    }
+
     return ot;
 }
 
@@ -1511,10 +1505,10 @@ void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
         texParam = tw_uv;
         if (input->h > 0)
         {
-            *(u32*)(pkt + 4) = 0x00808080;
+            SET_BGR0_PACKED(pkt, GPU_TINT_NEUTRAL);
             setlen((SPRT*)pkt, 4);
             setcode((SPRT*)pkt, 0x64);
-            *(u16*)(pkt + 0xc) = 0;
+            SET_SPRT_UV0_PACKED(pkt, 0);
             ((SPRT*)pkt)->w = input->w;
             ((SPRT*)pkt)->h = input->h;
             ((SPRT*)pkt)->x0 = input->x;
@@ -1546,7 +1540,7 @@ void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
  * @param arg3 String table selector: >= 0 uses D_800EC3DA table, < 0 uses D_800EC3E4 table.
  * @see decomp.me (83.81%) https://decomp.me/scratch/ozwB7
  */
-void menu_draw_label(s32 arg0,  s32 arg1, ScreenPos* arg2, s32 arg3)
+void menu_draw_label(s32 arg0, s32 arg1, ScreenPos* arg2, s32 arg3)
 {
     u8 sp20[16];
     u8* ptr = sp20;
