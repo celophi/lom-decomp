@@ -13,8 +13,8 @@
  *   MENU_CLUT_CORNER    -> CLUT 1, slot 10 (VRAM x=160, y=499)
  */
 #define MENU_CLUT_GRID_BASE 0x7C80
-#define MENU_CLUT_GRID_ALT  0x7C81
-#define MENU_CLUT_CORNER    0x7CCA
+#define MENU_CLUT_GRID_ALT 0x7C81
+#define MENU_CLUT_CORNER 0x7CCA
 
 /*
  * VRAM layout for the three menu window slots' primitive data.
@@ -25,77 +25,77 @@
  *          y=288 (slot 0) or y=336 (slots 1-2) (main content texture block)
  * Source data stride between slots in g_prim_rect_buf: 0x4A0 bytes.
  */
-#define PRIM_STRIP_VRAM_X   0x110  /* 272  - VRAM column                    */
-#define PRIM_STRIP_VRAM_Y0  0x1D8  /* 472  - VRAM row for slot 0            */
-#define PRIM_STRIP_W        0x10   /* 16 halfwords wide                     */
-#define PRIM_STRIP_H        1      /* 1 scanline tall                       */
-#define PRIM_BLOCK_VRAM_X   0x3F4  /* 1012 - VRAM column for slots 0 and 1  */
-#define PRIM_BLOCK_VRAM_X2  0x3E8  /* 1000 - VRAM column for slot 2         */
-#define PRIM_BLOCK_VRAM_Y0  0x120  /* 288  - VRAM row for slot 0            */
-#define PRIM_BLOCK_VRAM_Y1  0x150  /* 336  - VRAM row for slots 1 and 2     */
-#define PRIM_BLOCK_W        0xC    /* 12 halfwords wide                     */
-#define PRIM_BLOCK_H        0x30   /* 48 scanlines tall                     */
-#define PRIM_SLOT_STRIDE    0x4A0  /* 1184 bytes per slot                   */
+#define PRIM_STRIP_VRAM_X 0x110    /* 272  - VRAM column                    */
+#define PRIM_STRIP_VRAM_Y0 0x1D8   /* 472  - VRAM row for slot 0            */
+#define PRIM_STRIP_W 0x10          /* 16 halfwords wide                     */
+#define PRIM_STRIP_H 1             /* 1 scanline tall                       */
+#define PRIM_BLOCK_VRAM_X 0x3F4    /* 1012 - VRAM column for slots 0 and 1  */
+#define PRIM_BLOCK_VRAM_X2 0x3E8   /* 1000 - VRAM column for slot 2         */
+#define PRIM_BLOCK_VRAM_Y0 0x120   /* 288  - VRAM row for slot 0            */
+#define PRIM_BLOCK_VRAM_Y1 0x150   /* 336  - VRAM row for slots 1 and 2     */
+#define PRIM_BLOCK_W 0xC           /* 12 halfwords wide                     */
+#define PRIM_BLOCK_H 0x30          /* 48 scanlines tall                     */
+#define PRIM_SLOT_STRIDE 0x4A0     /* 1184 bytes per slot                   */
 #define PRIM_BLOCK_BUF_OFFSET 0x20 /* 32 bytes into each slot               */
 
 /*
  * Node / scroll / layout constants
  */
 /** @brief Total number of nodes in g_menu_nodes[]. */
-#define MENU_NODE_COUNT      0x2C
+#define MENU_NODE_COUNT 0x2C
 /** @brief Index of the "browse all items" root node; Circle navigates here. */
 #define MENU_NODE_BROWSE_ALL 0x20
 /** @brief Sentinel value meaning "none" for parent_idx, content_id, and child indices. */
-#define MENU_NONE            0xFF
+#define MENU_NONE 0xFF
 /** @brief Vertical spacing per node in scroll-position units (19 px). */
-#define MENU_ROW_HEIGHT      0x13
+#define MENU_ROW_HEIGHT 0x13
 /** @brief Full visible scroll-viewport height: 9 rows * MENU_ROW_HEIGHT (171 px). */
-#define MENU_VIEW_HEIGHT     0xAB
+#define MENU_VIEW_HEIGHT 0xAB
 /** @brief Minimum Y for g_content_cursor_y within the content sub-window (12 px). */
-#define MENU_CURSOR_Y_MIN    0x0C
+#define MENU_CURSOR_Y_MIN 0x0C
 /** @brief Maximum Y for g_content_cursor_y within the content sub-window (163 px). */
-#define MENU_CURSOR_Y_MAX    0xA3
+#define MENU_CURSOR_Y_MAX 0xA3
 /** @brief Frames to suppress cursor highlight after opening a content view. */
 #define MENU_CURSOR_REVEAL_DELAY 5
 /** @brief g_menu_redraw_state: navigation key pressed, scroll position adjusted. */
 #define MENU_REDRAW_NAVIGATE 6
 /** @brief g_menu_redraw_state: layout pass completed (position change or first run). */
-#define MENU_REDRAW_LAYOUT   8
+#define MENU_REDRAW_LAYOUT 8
 
 /*
  * Sound effect IDs -- passed as first arg to func_8014F210 (menu_play_se).
  * Second arg is always MENU_SE_VOLUME.
  */
 /** @brief Scroll navigation sound (D-up / D-down / Circle to scroll). */
-#define MENU_SE_NAVIGATE  0x7D
+#define MENU_SE_NAVIGATE 0x7D
 /** @brief Open / select sound (Circle or D-right to enter a node). */
-#define MENU_SE_SELECT    0x7E
+#define MENU_SE_SELECT 0x7E
 /** @brief Close / cancel sound (Circle while at MENU_NODE_BROWSE_ALL). */
-#define MENU_SE_CLOSE     0x7F
+#define MENU_SE_CLOSE 0x7F
 /** @brief Full volume level for all menu sound effects (128). */
-#define MENU_SE_VOLUME    0x80
+#define MENU_SE_VOLUME 0x80
 
 /* ----- Types ----- */
 
 typedef struct MenuFrameCtx
 {
     u8 pad0[0x34];
-    u8 ot_base;         /* 0x0034 - start of the ordering-table buffer */
-    u8 pad35[0x400B];   /* padding to 0x4040 */
-    s32 prim_cursor;    /* 0x4040 - current primitive write cursor (pointer stored as s32) */
-    u8 pad4044[8];      /* padding to 0x404C */
-    s32 draw_buf_idx;   /* 0x404C - display buffer page index (0 or 1, used for double-buffer flip) */
+    u8 ot_base;       /* 0x0034 - start of the ordering-table buffer */
+    u8 pad35[0x400B]; /* padding to 0x4040 */
+    s32 prim_cursor;  /* 0x4040 - current primitive write cursor (pointer stored as s32) */
+    u8 pad4044[8];    /* padding to 0x404C */
+    s32 draw_buf_idx; /* 0x404C - display buffer page index (0 or 1, used for double-buffer flip) */
 } MenuFrameCtx;
 
 typedef struct
 {
-    u8 _pad0[2];    // offsets 0x00-0x01 (active, index)
-    u8 anim_frame;  // offset 0x02 - animation frame counter (counts up during open/close)
-    u8 _pad1[5];    // offsets 0x03-0x07
-    u16 x;          // offset 0x08 - window X origin
-    u16 y;          // offset 0x0A - window Y origin
-    s16 w;          // offset 0x0C - target window width  (clamped to >= 0x20)
-    s16 h;          // offset 0x0E - target window height (clamped to >= 0x10)
+    u8 _pad0[2];   // offsets 0x00-0x01 (active, index)
+    u8 anim_frame; // offset 0x02 - animation frame counter (counts up during open/close)
+    u8 _pad1[5];   // offsets 0x03-0x07
+    u16 x;         // offset 0x08 - window X origin
+    u16 y;         // offset 0x0A - window Y origin
+    s16 w;         // offset 0x0C - target window width  (clamped to >= 0x20)
+    s16 h;         // offset 0x0E - target window height (clamped to >= 0x10)
 } MenuSlotAnim;
 
 typedef struct
@@ -308,7 +308,7 @@ extern u8 g_menu_prev_node;
 /** @brief Gate flag for func_80148A20: 0 = draw empty slot, nonzero = full item render. */
 extern s32 g_menu_content_ready;
 
-extern ItemSlotData  g_item_slot_data;
+extern ItemSlotData g_item_slot_data;
 extern ItemSlotFlags g_item_slot_flags;
 
 /** @brief Pointer into g_pad_ctx item data for the current category; null = no items. */
@@ -325,13 +325,13 @@ extern s32 g_menu_redraw_state;
 extern s32 g_menu_active_node;
 /** @brief Array mapping navigation-list position to the previous node ID (up navigation, D-pad Up). */
 extern s32 g_menu_nav_prev[];
-extern u8  g_menu_init_content_id;
+extern u8 g_menu_init_content_id;
 
 extern Struct_D_800FD818 D_800FD818;
 extern u16 D_800FDA80;
 extern u16 D_800FDCE8;
-extern s8  D_801690F9;
-extern s8  D_80169324;
+extern s8 D_801690F9;
+extern s8 D_80169324;
 
 extern StringTableKey D_800EC3DA;
 extern StringTableKey D_800EC3E4;
@@ -362,7 +362,7 @@ extern struct
     s16 y;
 } g_menu_default_view_pos;
 /** @brief Per-node table of MenuContentItem arrays, indexed by node.u6.s.self_idx; NULL = no cursor data. */
-extern MenuContentItem *g_menu_content_table[];
+extern MenuContentItem* g_menu_content_table[];
 extern s32 g_menu_layout_end;
 
 /**
@@ -1178,7 +1178,8 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
         {
             if ((temp_s3->h - 0x10) > 0)
             {
-                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * 0x40C0) + 0x4064));
+                SetDrawEnv((DR_ENV*)var_s1,
+                           (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * 0x40C0) + 0x4064));
                 var_a3 = 0;
                 *var_s1 = (*var_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 g_menu_draw_early_out = 0;
@@ -1441,60 +1442,50 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, u8* rect, s16 uv)
  * @param input   Edge rectangle: x, y (screen position), w, h (pixel size).
  * @param tw_uv   Packed texture-window origin: bits 7..0 = u (x), bits 15..8 = v (y).
  * @return Pointer to the byte immediately after the emitted DR_TWIN.
- * @see decomp.me (78.62%) https://decomp.me/scratch/u17Fi
+ * @see decomp.me (100%) https://decomp.me/scratch/u17Fi
  */
-void* menu_build_h_edge(void* ot, u_long* ot_ptr, InputStruct* input, s32 tw_uv)
+u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 arg3)
 {
-    u8* pkt;      /* maps to t1 */
-    u_long* otp;  /* maps to t2 */
-    s32 texParam; /* maps to a0 */
+
+    u_long* otp;
+    RECT tw;
     SPRT* sprt;
     DR_TWIN* twin;
-    RECT tw;
 
-    pkt = (u8*)ot;
     otp = ot_ptr;
+    if (input->w > 0)
+    {
 
-    if (input->w <= 0)
-        return ot;
+        if (input->h > 0)
+        {
+            sprt = (SPRT*)ot;
+            *((u32*)(ot + 1)) = 0x00808080;
 
-    texParam = tw_uv; /* placed in delay slot of first blez */
+            setSprt(sprt);
 
-    if (input->h <= 0)
-        return ot; /* lui v0,0x80 in delay slot */
+            *((u16*)(ot + 0x3)) = 0;
+            sprt->w = input->w;
+            sprt->h = input->h;
+            sprt->x0 = input->x;
+            sprt->y0 = input->y;
+            sprt->clut = 0x7CCA;
 
-    sprt = (SPRT*)pkt;
+            addPrim(otp, sprt);
 
-    /* Single 32‑bit store to r0,g0,b0,code (offsets 4..7) */
-    *(u32*)(pkt + 4) = 0x00808080;
+            ot += 5;
+            twin = (DR_TWIN*)ot;
 
-    setlen(sprt, 4);     /* sb v0,3(t1) */
-    setcode(sprt, 0x64); /* sb v0,7(t1) */
+            tw.x = ((s32)arg3) & 0xFF;
+            tw.y = ((s32)arg3) >> 8;
+            tw.w = 16;
+            tw.h = 8;
 
-    /* Combined 16‑bit store for u0,v0 (offset 0xC) */
-    *(u16*)(pkt + 0xc) = 0; /* sh zero,0xc(t1) */
-
-    sprt->w = input->w;  /* lhu w,  sh w  */
-    sprt->h = input->h;  /* lhu h,  sh h  */
-    sprt->x0 = input->x; /* lhu x,  sh x0 */
-    sprt->clut = 0x7CCA; /* li clut,sh clut */
-    sprt->y0 = input->y; /* lhu y,  sh y0 */
-
-    addPrim(otp, sprt);
-
-    pkt += 0x14; /* addiu t1,t1,0x14  -> pkt = &twin */
-    twin = (DR_TWIN*)pkt;
-
-    tw.x = texParam & 0xFF;
-    tw.y = (texParam >> 8) & 0xFF;
-    tw.w = 16;
-    tw.h = 8;
-
-    setTexWindow(twin, &tw); /* macro expands to len=2, code, zero */
-    addPrim(otp, twin);
-
-    pkt += 0xC; /* addiu t1,t1,0xC  -> after twin */
-    return pkt; /* move v0,t1 */
+            setTexWindow(twin, &tw);
+            addPrim(otp, twin);
+            ot += 0x3;
+        }
+    }
+    return ot;
 }
 
 /**
