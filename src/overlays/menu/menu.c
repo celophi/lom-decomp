@@ -1495,41 +1495,42 @@ u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 tw
  * @return Pointer to the byte immediately after the emitted DR_TWIN.
  * @see decomp.me (100%) https://decomp.me/scratch/19jr7
  */
-void* menu_build_v_edge(u8* pkt, u_long* otp, InputStruct* input, s32 tw_uv)
+void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, InputStruct* input, s32 tw_uv)
 {
-    s32 texParam;
     RECT tw;
+    SPRT* sprt;
+    DR_TWIN* twin;
 
-    if (input->w > 0)
+    if (input->w <= 0)
     {
-        texParam = tw_uv;
-        if (input->h > 0)
-        {
-            SET_BGR0_PACKED(pkt, GPU_TINT_NEUTRAL);
-            setlen((SPRT*)pkt, 4);
-            setcode((SPRT*)pkt, 0x64);
-            SET_SPRT_UV0_PACKED(pkt, 0);
-            ((SPRT*)pkt)->w = input->w;
-            ((SPRT*)pkt)->h = input->h;
-            ((SPRT*)pkt)->x0 = input->x;
-            ((SPRT*)pkt)->y0 = input->y;
-            ((SPRT*)pkt)->clut = 0x7CCA;
-
-            addPrim(otp, (SPRT*)pkt);
-
-            pkt += sizeof(SPRT);
-            tw.x = texParam & 0xFF;
-            tw.y = texParam >> 8;
-            tw.w = 8;
-            tw.h = 0x10;
-
-            setTexWindow((DR_TWIN*)pkt, &tw);
-            addPrim(otp, (DR_TWIN*)pkt);
-
-            pkt += sizeof(DR_TWIN);
-        }
+        return ot;
     }
-    return pkt;
+
+    if (input->h > 0)
+    {
+        sprt = (SPRT*)ot;
+        SET_BGR0_PACKED(ot, GPU_TINT_NEUTRAL);
+        setSprt(sprt);
+        SET_SPRT_UV0_PACKED(ot, 0);
+        sprt->w = input->w;
+        sprt->h = input->h;
+        sprt->x0 = input->x;
+        sprt->y0 = input->y;
+        sprt->clut = MENU_CLUT_CORNER;
+        addPrim(ot_ptr, sprt);
+        ot += sizeof(SPRT) / sizeof(u_long);
+
+        twin = (DR_TWIN*)ot;
+        tw.x = tw_uv & 0xFF;
+        tw.y = tw_uv >> 8;
+        tw.w = 8;
+        tw.h = 0x10;
+        setTexWindow(twin, &tw);
+        addPrim(ot_ptr, twin);
+        ot += sizeof(DR_TWIN) / sizeof(u_long);
+    }
+
+    return ot;
 }
 
 /**
