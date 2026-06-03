@@ -36,15 +36,15 @@
  */
 #define MENU_TINT_FILL 0x80008080U
 
-#define MENU_TW_CORNER_TL  0x70D0
-#define MENU_TW_CORNER_TR  0x70D8
-#define MENU_TW_CORNER_BL  0x78D0
-#define MENU_TW_CORNER_BR  0x78D8
-#define MENU_TW_EDGE_TOP   0x80D0
-#define MENU_TW_EDGE_BOT   0x88D0
-#define MENU_TW_EDGE_LEFT  0x90D0
+#define MENU_TW_CORNER_TL 0x70D0
+#define MENU_TW_CORNER_TR 0x70D8
+#define MENU_TW_CORNER_BL 0x78D0
+#define MENU_TW_CORNER_BR 0x78D8
+#define MENU_TW_EDGE_TOP 0x80D0
+#define MENU_TW_EDGE_BOT 0x88D0
+#define MENU_TW_EDGE_LEFT 0x90D0
 #define MENU_TW_EDGE_RIGHT 0x90D8
-#define MENU_TW_FILL       0xA0A0
+#define MENU_TW_FILL 0xA0A0
 
 /*
  * VRAM layout for the three menu window slots' primitive data.
@@ -223,11 +223,11 @@ typedef struct
     u8 state; /**< Node state: 0 = uninitialized, 4 = position assigned by menu_layout_node. */
     union
     {
-        u16 unk2;
+        u16 unk2; /**< Full 16-bit word: low byte = flags, high byte = parent_idx. */
         struct
         {
-            u8 unk2_hi;
-            u8 parent_idx;
+            u8 flags;      /**< Bit 0: node active/enabled in layout. Bit 1: node expanded (children shown). */
+            u8 parent_idx; /**< Index of parent node in g_menu_nodes, or MENU_NONE (0xFF) for root nodes. */
         } s;
     } u2;
     u8 unk4;
@@ -238,7 +238,7 @@ typedef struct
         struct
         {
             u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
-            u8 unk7;
+            u8 nav_x;    /**< Bits 0-6: nav cursor X = (nav_x & 0x7F) + 8. Bit 7: bit 0 of nav cursor Y. */
         } s;
     } u6;
     union
@@ -246,8 +246,8 @@ typedef struct
         u16 unk8;
         struct
         {
-            u8 unk8_hi;
-            u8 unk9;
+            u8 nav_y_hi;     /**< Bits 1-8 of the 9-bit nav cursor Y: reconstruct as (nav_y_hi<<1)|(nav_x>>7). */
+            u8 layout_y_lsb; /**< Bit 7 = bit 0 of layout Y position; bits 0-6 always 0 after layout. */
         } s;
     } u8_u;
     union
@@ -255,8 +255,9 @@ typedef struct
         u16 unkA;
         struct
         {
-            u8 unkA_hi;
-            u8 child0; /**< First child node index (0xFF = none). */
+            u8 layout_y_hi; /**< Bits 1-8 of the 9-bit layout Y position: reconstruct as
+                               (layout_y_hi<<1)|(layout_y_lsb>>7). */
+            u8 child0;      /**< First child node index (0xFF = none). */
         } s;
     } uA;
     u8 child1; /**< Second child node index (0xFF = none). */
@@ -357,8 +358,8 @@ extern u16 D_800FDCE8;
 extern s8 D_801690F9;
 extern s8 D_80169324;
 
-extern StringTableKey D_800EC3DA;
-extern StringTableKey D_800EC3E4;
+extern StringTableKey g_menu_label_key_a; /* 0x800EC3DA: offset +0x16 into shared text table at 0x800EC3C4 */
+extern StringTableKey g_menu_label_key_b; /* 0x800EC3E4: offset +0x20 into shared text table at 0x800EC3C4 */
 
 /** @brief Number of nodes in the linear navigation list. */
 extern s32 g_menu_nav_count;
@@ -1334,8 +1335,8 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     sp18.h = (u16)temp_s3->h - 0x10;
     temp_v0_2 = menu_emit_corner(
         menu_emit_corner(
-            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(prim_cur, temp_s2, &sp18, MENU_TW_FILL), temp_s2,
-                                              temp_s3->x, temp_s3->y, MENU_TW_CORNER_TL),
+            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(prim_cur, temp_s2, &sp18, MENU_TW_FILL),
+                                              temp_s2, temp_s3->x, temp_s3->y, MENU_TW_CORNER_TL),
                              temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y, MENU_TW_CORNER_TR),
             temp_s2, temp_s3->x, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BL),
         temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BR);
@@ -1554,42 +1555,42 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
 
 /**
  * @brief Render a text label from a packed string table at the given screen position.
- * @param arg0 OT (ordering table) pointer.
- * @param arg1 Primitive buffer context.
- * @param arg2 Screen position to draw at.
- * @param arg3 String table selector: >= 0 uses D_800EC3DA table, < 0 uses D_800EC3E4 table.
- * @see decomp.me (83.81%) https://decomp.me/scratch/ozwB7
+ *
+ * Resolves one of two embedded @c StringTableKey entries in the shared string
+ * table (base 0x800EC3C4) using @p label_id's sign, copies the packed glyph
+ * string into a local buffer, then calls the glyph renderer.
+ *
+ * Both branches compute the same table base via pointer arithmetic from
+ * whichever key they select: @c &g_menu_label_key_a-0x16 == @c &g_menu_label_key_b-0x20 ==
+ * 0x800EC3C4.
+ *
+ * @param ot        Ordering-table head (@c u_long*; passed as arg1 to the glyph renderer).
+ * @param prim      Primitive write cursor (@c u_long*; passed as arg0 to the glyph renderer).
+ * @param pos       Screen position (x, y) to draw at.
+ * @param label_id  >= 0: draw string keyed by g_menu_label_key_a; < 0: keyed by g_menu_label_key_b.
+ * @see decomp.me (94.94%) https://decomp.me/scratch/ozwB7
  */
-void menu_draw_label(s32 arg0, s32 arg1, ScreenPos* arg2, s32 arg3)
+void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
 {
     u8 sp20[16];
     u8* ptr = sp20;
-    u8* addr;
-    u32 unk1;
-    u32 unk0;
-    u8* temp_s0;
+    u8* str_ptr;
 
-    if (arg3 >= 0)
+    if (label_id >= 0)
     {
-        unk1 = D_800EC3DA.page;
-        unk0 = D_800EC3DA.entry;
-        addr = (u8*)&D_800EC3DA - 0x16;
+        str_ptr = g_menu_label_key_a.entry + ((g_menu_label_key_a.page << 8) + ((u8*)&g_menu_label_key_a - 0x16));
     }
     else
     {
-        unk1 = D_800EC3E4.page;
-        addr = (u8*)&D_800EC3E4 - 0x20;
-        unk0 = D_800EC3E4.entry;
+        str_ptr = g_menu_label_key_b.entry + ((g_menu_label_key_b.page << 8) + ((u8*)&g_menu_label_key_b - 0x20));
     }
 
-    temp_s0 = unk0 + ((unk1 << 8) + addr);
-
-    func_800A8E28(ptr, temp_s0);
-    ptr += func_800A8DDC(temp_s0);
+    func_800A8E28(ptr, str_ptr);
+    ptr += func_800A8DDC(str_ptr);
 
     *ptr = 0;
 
-    func_800A88A0(arg1, arg0, sp20, 1, arg2->x, arg2->y, 0);
+    func_800A88A0(prim, ot, sp20, 1, pos->x, pos->y, 0);
 }
 
 /**
@@ -1634,8 +1635,8 @@ void menu_node_tree_init(void)
         u16 unk8;
         struct
         {
-            u8 unk8_hi;
-            u8 unk9;
+            u8 nav_y_hi;
+            u8 layout_y_lsb;
         } s;
     }* new_var;
     u16 temp_v1;
@@ -2005,7 +2006,7 @@ void menu_node_tree_init(void)
 }
 
 /**
- * @brief Clears the expand flag (bit 1 of u2.unk2) for all menu nodes.
+ * @brief Clears the expand flag (bit 1 of u2.s.flags) for all menu nodes.
  * @note Called before menu_update_layout to ensure no node recurses into children.
  * @see decomp.me (100%) https://decomp.me/scratch/hyDM7
  */
@@ -2037,7 +2038,7 @@ void menu_update_layout(void)
             pos++;
             pos--;
 
-            if (g_menu_nodes[i].u2.s.unk2_hi & 1)
+            if (g_menu_nodes[i].u2.s.flags & 1)
             {
                 pos = menu_layout_node(i, prev_pos);
                 if (prev_pos != (pos - MENU_ROW_HEIGHT))
@@ -2067,7 +2068,7 @@ void menu_update_layout(void)
  * @param node_idx Index into g_menu_nodes of the node to lay out.
  * @param base_pos Running position counter; this node occupies [base_pos, base_pos + MENU_ROW_HEIGHT).
  * @return Updated position counter after processing this node and any expanded children.
- * @note Bit 1 of u2.unk2 controls child recursion; menu_collapse_all clears it before layout.
+ * @note Bit 1 of u2.s.flags controls child recursion; menu_collapse_all clears it before layout.
  * @see decomp.me (99.04%) https://decomp.me/scratch/LDCeT
  */
 s32 menu_layout_node(s32 node_idx, s32 base_pos)
@@ -2083,8 +2084,8 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
         u16 unk8;
         struct
         {
-            u8 unk8_hi;
-            u8 unk9;
+            u8 nav_y_hi;
+            u8 layout_y_lsb;
         } s;
     }* new_var2;
     MenuNode* new_var3;
@@ -2096,7 +2097,7 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
 
     (*(&g_menu_nodes[node_idx])).state = 4;
     new_var2 = &new_var4->u8_u;
-    new_var4->u8_u.unk8 = (*new_var2).s.unk8_hi | ((temp_a1 & 1) << 0xF);
+    new_var4->u8_u.unk8 = (*new_var2).s.nav_y_hi | ((temp_a1 & 1) << 0xF);
     (&g_menu_nodes[node_idx])->uA.unkA = ((&g_menu_nodes[node_idx])->uA.unkA & 0xFF00) | (0xFF & (temp_a1 >> 1));
     new_var4->uA.unkA = (new_var4->uA.unkA & 0xFF00) | ((temp_a1 >> 1) & 0xFF);
     child_iter = 0;
@@ -2402,7 +2403,7 @@ unsigned int menu_handle_node_input(void)
             return;
         }
         temp_a0_3 = (*new_var8).unk6 >> 0xF;
-        temp_v0_3 = temp_a1->u8_u.s.unk8_hi;
+        temp_v0_3 = temp_a1->u8_u.s.nav_y_hi;
         new_var12 = temp_a0_3;
         new_var15 = g_menu_content_height;
         g_content_cursor_y = MENU_CURSOR_Y_MIN;
@@ -2457,4 +2458,29 @@ unsigned int menu_handle_node_input(void)
             }
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/q39Ou
+ */
+s32 func_80143640(void)
+{
+    MenuContentItem* base;
+    MenuContentItem* temp_a0;
+    int new_var;
+    g_menu_hit_item_idx = func_8014847C();
+    if (g_menu_hit_item_idx != (-1))
+    {
+        MenuNode* nodes = g_menu_nodes;
+        u8 self_idx = (nodes + g_menu_scene_type)->u6.s.self_idx;
+        base = g_menu_content_table[self_idx];
+        temp_a0 = base - (-g_menu_hit_item_idx);
+        g_content_view_x = temp_a0->packed_x & 0x1FF;
+        new_var = temp_a0->y - 8;
+        g_menu_suppress_cursor = 5;
+        g_menu_cursor_enable = 1;
+        g_content_view_y = new_var;
+        return 1;
+    }
+    return 0;
 }
