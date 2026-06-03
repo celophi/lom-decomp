@@ -36,15 +36,15 @@
  */
 #define MENU_TINT_FILL 0x80008080U
 
-#define MENU_TW_CORNER_TL  0x70D0
-#define MENU_TW_CORNER_TR  0x70D8
-#define MENU_TW_CORNER_BL  0x78D0
-#define MENU_TW_CORNER_BR  0x78D8
-#define MENU_TW_EDGE_TOP   0x80D0
-#define MENU_TW_EDGE_BOT   0x88D0
-#define MENU_TW_EDGE_LEFT  0x90D0
+#define MENU_TW_CORNER_TL 0x70D0
+#define MENU_TW_CORNER_TR 0x70D8
+#define MENU_TW_CORNER_BL 0x78D0
+#define MENU_TW_CORNER_BR 0x78D8
+#define MENU_TW_EDGE_TOP 0x80D0
+#define MENU_TW_EDGE_BOT 0x88D0
+#define MENU_TW_EDGE_LEFT 0x90D0
 #define MENU_TW_EDGE_RIGHT 0x90D8
-#define MENU_TW_FILL       0xA0A0
+#define MENU_TW_FILL 0xA0A0
 
 /*
  * VRAM layout for the three menu window slots' primitive data.
@@ -255,7 +255,8 @@ typedef struct
         u16 unkA;
         struct
         {
-            u8 layout_y_hi; /**< Bits 1-8 of the 9-bit layout Y position: reconstruct as (layout_y_hi<<1)|(layout_y_lsb>>7). */
+            u8 layout_y_hi; /**< Bits 1-8 of the 9-bit layout Y position: reconstruct as
+                               (layout_y_hi<<1)|(layout_y_lsb>>7). */
             u8 child0;      /**< First child node index (0xFF = none). */
         } s;
     } uA;
@@ -1334,8 +1335,8 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     sp18.h = (u16)temp_s3->h - 0x10;
     temp_v0_2 = menu_emit_corner(
         menu_emit_corner(
-            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(prim_cur, temp_s2, &sp18, MENU_TW_FILL), temp_s2,
-                                              temp_s3->x, temp_s3->y, MENU_TW_CORNER_TL),
+            menu_emit_corner(menu_emit_corner(menu_fill_window_interior(prim_cur, temp_s2, &sp18, MENU_TW_FILL),
+                                              temp_s2, temp_s3->x, temp_s3->y, MENU_TW_CORNER_TL),
                              temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y, MENU_TW_CORNER_TR),
             temp_s2, temp_s3->x, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BL),
         temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BR);
@@ -1574,7 +1575,6 @@ void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
     u8 sp20[16];
     u8* ptr = sp20;
     u8* str_ptr;
-    
 
     if (label_id >= 0)
     {
@@ -2458,4 +2458,29 @@ unsigned int menu_handle_node_input(void)
             }
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/q39Ou
+ */
+s32 func_80143640(void)
+{
+    MenuContentItem* base;
+    MenuContentItem* temp_a0;
+    int new_var;
+    g_menu_hit_item_idx = func_8014847C();
+    if (g_menu_hit_item_idx != (-1))
+    {
+        MenuNode* nodes = g_menu_nodes;
+        u8 self_idx = (nodes + g_menu_scene_type)->u6.s.self_idx;
+        base = g_menu_content_table[self_idx];
+        temp_a0 = base - (-g_menu_hit_item_idx);
+        g_content_view_x = temp_a0->packed_x & 0x1FF;
+        new_var = temp_a0->y - 8;
+        g_menu_suppress_cursor = 5;
+        g_menu_cursor_enable = 1;
+        g_content_view_y = new_var;
+        return 1;
+    }
+    return 0;
 }
