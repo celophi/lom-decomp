@@ -238,7 +238,7 @@ typedef struct
         struct
         {
             u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
-            u8 unk7;
+            u8 nav_x;    /**< Bits 0-6: nav cursor X = (nav_x & 0x7F) + 8. Bit 7: bit 0 of nav cursor Y. */
         } s;
     } u6;
     union
@@ -246,8 +246,8 @@ typedef struct
         u16 unk8;
         struct
         {
-            u8 unk8_hi;
-            u8 unk9;
+            u8 nav_y_hi;     /**< Bits 1-8 of the 9-bit nav cursor Y: reconstruct as (nav_y_hi<<1)|(nav_x>>7). */
+            u8 layout_y_lsb; /**< Bit 7 = bit 0 of layout Y position; bits 0-6 always 0 after layout. */
         } s;
     } u8_u;
     union
@@ -255,8 +255,8 @@ typedef struct
         u16 unkA;
         struct
         {
-            u8 unkA_hi;
-            u8 child0; /**< First child node index (0xFF = none). */
+            u8 layout_y_hi; /**< Bits 1-8 of the 9-bit layout Y position: reconstruct as (layout_y_hi<<1)|(layout_y_lsb>>7). */
+            u8 child0;      /**< First child node index (0xFF = none). */
         } s;
     } uA;
     u8 child1; /**< Second child node index (0xFF = none). */
@@ -1635,8 +1635,8 @@ void menu_node_tree_init(void)
         u16 unk8;
         struct
         {
-            u8 unk8_hi;
-            u8 unk9;
+            u8 nav_y_hi;
+            u8 layout_y_lsb;
         } s;
     }* new_var;
     u16 temp_v1;
@@ -2084,8 +2084,8 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
         u16 unk8;
         struct
         {
-            u8 unk8_hi;
-            u8 unk9;
+            u8 nav_y_hi;
+            u8 layout_y_lsb;
         } s;
     }* new_var2;
     MenuNode* new_var3;
@@ -2097,7 +2097,7 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
 
     (*(&g_menu_nodes[node_idx])).state = 4;
     new_var2 = &new_var4->u8_u;
-    new_var4->u8_u.unk8 = (*new_var2).s.unk8_hi | ((temp_a1 & 1) << 0xF);
+    new_var4->u8_u.unk8 = (*new_var2).s.nav_y_hi | ((temp_a1 & 1) << 0xF);
     (&g_menu_nodes[node_idx])->uA.unkA = ((&g_menu_nodes[node_idx])->uA.unkA & 0xFF00) | (0xFF & (temp_a1 >> 1));
     new_var4->uA.unkA = (new_var4->uA.unkA & 0xFF00) | ((temp_a1 >> 1) & 0xFF);
     child_iter = 0;
@@ -2403,7 +2403,7 @@ unsigned int menu_handle_node_input(void)
             return;
         }
         temp_a0_3 = (*new_var8).unk6 >> 0xF;
-        temp_v0_3 = temp_a1->u8_u.s.unk8_hi;
+        temp_v0_3 = temp_a1->u8_u.s.nav_y_hi;
         new_var12 = temp_a0_3;
         new_var15 = g_menu_content_height;
         g_content_cursor_y = MENU_CURSOR_Y_MIN;
