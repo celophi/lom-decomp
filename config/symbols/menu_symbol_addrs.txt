@@ -41,6 +41,10 @@ g_menu_glyph_src       = 0x80168AA8;
 g_menu_tim             = 0x80160260;
 g_menu_slots           = 0x80169420;
 
+
+g_menu_label_key_a     = 0x800EC3DA;
+g_menu_label_key_b     = 0x800EC3E4;
+
 // Unnamed globals (named during decomp)
 g_menu_pending_overlay = 0x80169124;
 g_menu_cursor_enable   = 0x80169130;
