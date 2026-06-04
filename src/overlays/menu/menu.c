@@ -1981,11 +1981,11 @@ void menu_node_tree_init(void)
                 temp_a1 = 0x1FF;
                 temp_a1 = var_a3 & temp_a1;
                 var_a3 = var_a3 + MENU_ROW_HEIGHT;
-                var_a2->u6.unk6 = (u16)(var_a2->u6.unk6 & 0x80FF);
+                var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
                 var_a2->u8_u.unk8 = (u16)((*new_var).unk8 & 0x80FF);
                 var_a2->uA.unkA = (u16)((var_a2->uA.unkA & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
                 var_a2->u8_u.unk8 = (u16)(((*new_var).unk8 & 0x7FFF) | (temp_a0 << 0xF));
-                var_a2->u6.unk6 = (u16)((var_a2->u6.unk6 & 0x7FFF) | (((temp_a1 & 1) << 9) << 6));
+                var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | (((temp_a1 & 1) << 9) << 6));
                 var_a1 = temp_a1 >> 1;
                 var_a2->u8_u.unk8 = (u16)((new_var3->u8_u.unk8 & 0xFF00) | var_a1);
             }
@@ -2367,7 +2367,7 @@ unsigned int menu_handle_node_input(void)
         new_var8 = &temp_a1->u6;
         if (g_menu_scene_type != g_menu_active_node)
         {
-            if (g_menu_content_table[temp_a1->u6.s.self_idx] != NULL)
+            if (g_menu_content_table[temp_a1->idx_nav.s.self_idx] != NULL)
             {
                 var_v1_2 = 3;
                 temp_a0_3 = new_var14;
@@ -2416,7 +2416,7 @@ unsigned int menu_handle_node_input(void)
         {
             g_content_cursor_y = MENU_CURSOR_Y_MAX;
         }
-        g_content_cursor_x = (((temp_a1->u6.unk6 >> 4) >> 4) & 0x7F) + 8;
+        g_content_cursor_x = (((temp_a1->idx_nav.nav_x_packed >> 4) >> 4) & 0x7F) + 8;
         if (MENU_NONE != (&g_menu_nodes[g_menu_active_node])->content_id)
         {
             g_menu_cursor_enable = 1;
@@ -2472,7 +2472,7 @@ s32 func_80143640(void)
     if (g_menu_hit_item_idx != (-1))
     {
         MenuNode* nodes = g_menu_nodes;
-        u8 self_idx = (nodes + g_menu_scene_type)->u6.s.self_idx;
+        u8 self_idx = (nodes + g_menu_scene_type)->idx_nav.s.self_idx;
         base = g_menu_content_table[self_idx];
         temp_a0 = base - (-g_menu_hit_item_idx);
         g_content_view_x = temp_a0->packed_x & 0x1FF;
@@ -2539,18 +2539,18 @@ void menu_set_active_node(void)
                 break;
             }
             child_node = &g_menu_nodes[child_idx];
-            nav_x = temp_a0->u6.unk6 & 0x7F00;
-            child_node->u6.unk6 = child_node->u6.unk6 & 0x80FF;
-            child_node->u6.unk6 = child_node->u6.unk6 | nav_x;
+            nav_x = temp_a0->idx_nav.nav_x_packed & 0x7F00;
+            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed & 0x80FF;
+            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_x;
             child_node->u8_u.unk8 = child_node->u8_u.unk8 & 0x80FF;
             child_node->u8_u.unk8 = child_node->u8_u.unk8 | nav_x;
             child_idx = (&temp_a0->uA.s.child0)[child_i];
-            new_var = temp_a0->u6.unk6;
+            new_var = temp_a0->idx_nav.nav_x_packed;
             ;
             (&g_menu_nodes[child_idx])->u8_u.unk8 =
                 (((&g_menu_nodes[child_idx])->u8_u.unk8 & 0xFF00) & 0xFFFFFFFFFFFFFFFFu) |
                 (&g_menu_nodes[g_menu_active_node])->u8_u.s.nav_y_hi;
-            (&g_menu_nodes[child_idx])->u6.unk6 = ((&g_menu_nodes[child_idx])->u6.unk6 & 0x7FFF) | (new_var & 0x8000);
+            (&g_menu_nodes[child_idx])->idx_nav.nav_x_packed = ((&g_menu_nodes[child_idx])->idx_nav.nav_x_packed & 0x7FFF) | (new_var & 0x8000);
         }
     }
     temp_a0_4 = (((u16)g_menu_nodes[g_menu_active_node].u2.unk2) >> 4) & 3;
@@ -3225,14 +3225,14 @@ after_do_while:
                 {
                     g_menu_cursor_enable = 2;
                     active_node = &g_menu_nodes[g_menu_active_node];
-                    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | ((active_node->u6.unk6 >> 15) & 1);
+                    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | ((active_node->idx_nav.nav_x_packed >> 15) & 1);
                     g_content_view_y = nav_y - (g_menu_content_height - 12);
                     if (g_content_view_y < 12)
                         g_content_view_y = 12;
                     if (g_content_view_y >= 0xA3)
                         g_content_view_y = 0xA3;
                     g_menu_suppress_cursor = 5;
-                    g_content_view_x = ((active_node->u6.unk6 >> 8) & 0x7F) + 8;
+                    g_content_view_x = ((active_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
                 }
             }
             else if (s5[g_menu_hit_item_idx].pad[1 + dir_index] != 0)
@@ -3264,7 +3264,7 @@ after_do_while:
  *        axes to the current cursor position.
  * @note Called when the cursor is disabled (g_menu_cursor_enable == 0) after a node
  *       switch, so the viewport re-homes to wherever the cursor was left.  The X
- *       coordinate is derived from the active node's nav_x field (u6.unk6 bits 14:8).
+ *       coordinate is derived from the active node's nav_x field (idx_nav.nav_x_packed bits 14:8).
  * @see decomp.me (100%) https://decomp.me/scratch/wBlQo
  */
 void menu_snap_view_to_cursor(void)
