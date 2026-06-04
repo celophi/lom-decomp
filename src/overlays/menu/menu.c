@@ -2613,7 +2613,7 @@ typedef struct
 
 extern D_801690B0_type D_801690B0;
 extern u8 D_801686CC[];
-extern u8 D_8014FE54[];
+extern u8 D_8014FE54[][8];
 extern void* D_801690A8;
 extern void* D_801690E0;
 extern void* D_801227D4;
@@ -3273,4 +3273,87 @@ void func_80144FB8(void)
     g_content_view_y = g_content_cursor_y;
     g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].u6.unk6 >> 8) & 0x7F) + 8;
     g_content_view_x = g_content_cursor_x;
+}
+
+typedef struct
+{
+    u16 field_0;
+    u8 pad_2;
+    u8 field_3;
+    u8 pad_4[4];
+} MenuItem;
+
+/**
+ * decomp.me (91%) https://decomp.me/scratch/cV0x9
+ */
+int func_80145034(void)
+{
+    int new_var3;
+    int new_var;
+    MenuItem* items;
+    MenuItem* item;
+    u16 masked;
+    short new_var2;
+    int val;
+
+    items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].content_id];
+    if ((g_menu_scene_type == 0x1F) || (g_menu_scene_type == 0x2B))
+    {
+        if (((int)g_menu_hit_item_idx) >= 0x11)
+        {
+            if (((int)g_menu_hit_item_idx) < 0x19)
+            {
+                return 1;
+            }
+        }
+    }
+
+    item = (MenuItem*)((g_menu_hit_item_idx * 8u) + ((u32)items));
+    masked = item->field_0 & 0xF000;
+
+    if (masked == 0x5000)
+    {
+        D_80169118 = item->field_3;
+        new_var2 = item->field_3;
+        if (new_var2 != 0)
+        {
+            if (new_var2 >= 11)
+            {
+                if (new_var2 != 15)
+                {
+                }
+                else
+                {
+                    return 1;
+                }
+            }
+            else
+            {
+                return D_80169550 == 0;
+            }
+        }
+    }
+    else if (masked == 0xF000)
+    {
+        val = D_8014FE54[D_801686CC[g_menu_nodes[g_menu_scene_type].content_id]][(item->field_0 >> 9) & 7];
+        if (val == 0)
+        {
+        }
+        else if (val == 1)
+        {
+            return 1;
+        }
+        else if ((val != 0) && (val < 12))
+        {
+            if (val >= 6)
+            {
+                masked = !new_var2;
+                return 1;
+                if (((!new_var2) && masked) && (!new_var2))
+                {
+                }
+            }
+        }
+    }
+    return 0;
 }
