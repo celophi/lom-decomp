@@ -240,7 +240,7 @@ typedef struct
             u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
             u8 nav_x;    /**< Bits 0-6: nav cursor X = (nav_x & 0x7F) + 8. Bit 7: bit 0 of nav cursor Y. */
         } s;
-    } u6;
+    } idx_nav;
     union
     {
         u16 unk8;
@@ -386,7 +386,7 @@ extern struct
     s16 x;
     s16 y;
 } g_menu_default_view_pos;
-/** @brief Per-node table of MenuContentItem arrays, indexed by node.u6.s.self_idx; NULL = no cursor data. */
+/** @brief Per-node table of MenuContentItem arrays, indexed by node.idx_nav.s.self_idx; NULL = no cursor data. */
 extern MenuContentItem* g_menu_content_table[];
 extern s32 g_menu_layout_end;
 
@@ -1686,7 +1686,7 @@ void menu_node_tree_init(void)
     }
 
     g_menu_nodes[0].unk0 = 1;
-    g_menu_nodes[0].u6.s.self_idx = 0;
+    g_menu_nodes[0].idx_nav.s.self_idx = 0;
     original_unk2 = g_menu_nodes[0].u2.unk2;
     temp1 = original_unk2 & 0xFFCD;
     temp2 = original_unk2 & 0xFF0D;
@@ -1703,15 +1703,15 @@ void menu_node_tree_init(void)
         g_menu_nodes[0].unk4 = 1;
     }
     g_menu_nodes[0].uA.s.child0 = 1;
-    g_menu_nodes[1].u6.s.self_idx = 1;
+    g_menu_nodes[1].idx_nav.s.self_idx = 1;
     g_menu_nodes[1].unk4 = 5;
     g_menu_nodes[0].child1 = 2;
     g_menu_nodes[2].unk0 = 2;
-    g_menu_nodes[2].u6.s.self_idx = 2;
+    g_menu_nodes[2].idx_nav.s.self_idx = 2;
     g_menu_nodes[2].unk4 = 4;
     g_menu_nodes[3].unk0 = 4;
     g_menu_nodes[1].unk0 = 3;
-    g_menu_nodes[3].u6.s.self_idx = 3;
+    g_menu_nodes[3].idx_nav.s.self_idx = 3;
     g_menu_nodes[1].u2.unk2 = (u16)((g_menu_nodes[1].u2.unk2 & 0xFF0F) | 0x40);
     g_menu_nodes[1].u2.s.parent_idx = 0;
     g_menu_nodes[2].u2.unk2 = (u16)((g_menu_nodes[2].u2.unk2 & 0xFF0F) | 0x40);
@@ -1723,7 +1723,7 @@ void menu_node_tree_init(void)
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3E);
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[4].u6.s.self_idx = 4;
+    g_menu_nodes[4].idx_nav.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
         var_v0 = 0x6F;
@@ -1746,15 +1746,15 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].unk0 = 6;
     g_menu_nodes[4].unk4 = 5;
     g_menu_nodes[5].unk0 = 5;
-    g_menu_nodes[5].u6.s.self_idx = 5;
+    g_menu_nodes[5].idx_nav.s.self_idx = 5;
     g_menu_nodes[5].unk4 = 4;
     g_menu_nodes[6].unk0 = 7;
-    g_menu_nodes[6].u6.s.self_idx = 6;
+    g_menu_nodes[6].idx_nav.s.self_idx = 6;
     g_menu_nodes[6].unk4 = 3;
     g_menu_nodes[6].uA.s.child0 = 7;
     g_menu_nodes[6].child1 = 8;
     g_menu_nodes[7].unk0 = 9;
-    g_menu_nodes[7].u6.s.self_idx = 7;
+    g_menu_nodes[7].idx_nav.s.self_idx = 7;
     new_var7 = 0xFF3E;
     g_menu_nodes[7].unk4 = 5;
     g_menu_nodes[8].unk0 = 8;
@@ -1764,7 +1764,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[7].u2.unk2 = (u16)((g_menu_nodes[7].u2.unk2 & 0xFF5F) | 0x50);
     g_menu_nodes[7].u2.s.parent_idx = 6;
     g_menu_nodes[8].u2.unk2 = (u16)((g_menu_nodes[8].u2.unk2 & 0xFF5F) | 0x50);
-    g_menu_nodes[8].u6.s.self_idx = 8;
+    g_menu_nodes[8].idx_nav.s.self_idx = 8;
     temp_v0_6 = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
     g_menu_nodes[9].u2.unk2 = temp_v0_6;
     temp_v0_7 = temp_v0_6 | 0x20;
@@ -1779,19 +1779,19 @@ void menu_node_tree_init(void)
     g_menu_nodes[8].u2.s.parent_idx = 6;
     g_menu_nodes[8].unk4 = 4;
     g_menu_nodes[9].unk0 = 0xA;
-    g_menu_nodes[9].u6.s.self_idx = 9;
+    g_menu_nodes[9].idx_nav.s.self_idx = 9;
     g_menu_nodes[9].unk4 = 6;
     g_menu_nodes[9].uA.s.child0 = 0xA;
     g_menu_nodes[0xA].unk0 = 0xB;
     g_menu_nodes[0x12].unk4 = 0xA;
-    g_menu_nodes[0xA].u6.s.self_idx = 0xA;
+    g_menu_nodes[0xA].idx_nav.s.self_idx = 0xA;
     g_menu_nodes[0xA].unk4 = 7;
     g_menu_nodes[0xC].unk0 = 0xA;
-    g_menu_nodes[0xC].u6.s.self_idx = 0xC;
+    g_menu_nodes[0xC].idx_nav.s.self_idx = 0xC;
     g_menu_nodes[0xC].unk4 = 6;
     g_menu_nodes[0xC].uA.s.child0 = 0xD;
     g_menu_nodes[0xD].unk0 = 0xB;
-    g_menu_nodes[0xD].u6.s.self_idx = 0xD;
+    g_menu_nodes[0xD].idx_nav.s.self_idx = 0xD;
     g_menu_nodes[0xD].unk4 = 7;
     g_menu_nodes[9].u2.s.parent_idx = MENU_NONE;
     temp_v0_7 = 0xF;
@@ -1809,16 +1809,16 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x10].unk4 = 7;
     g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0xF].unk0 = 0xD;
-    g_menu_nodes[0xF].u6.s.self_idx = 0xF;
+    g_menu_nodes[0xF].idx_nav.s.self_idx = 0xF;
     g_menu_nodes[0xF].uA.s.child0 = 0x10;
     g_menu_nodes[0xF].child1 = 0x11;
     g_menu_nodes[0x10].unk0 = 0xC;
-    g_menu_nodes[0x10].u6.s.self_idx = 0x10;
+    g_menu_nodes[0x10].idx_nav.s.self_idx = 0x10;
     g_menu_nodes[0x11].unk0 = 0xE;
-    g_menu_nodes[0x11].u6.s.self_idx = 0x11;
+    g_menu_nodes[0x11].idx_nav.s.self_idx = 0x11;
     g_menu_nodes[0x11].unk4 = 9;
     g_menu_nodes[0x12].unk0 = 0x10;
-    g_menu_nodes[0x12].u6.s.self_idx = 0x12;
+    g_menu_nodes[0x12].idx_nav.s.self_idx = 0x12;
     g_menu_nodes[0x12].content_id = 4;
     g_menu_nodes[0x12].uA.s.child0 = 0x13;
     g_menu_nodes[0x12].child1 = 0x16;
@@ -1837,22 +1837,22 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x16].content_id = 1;
     g_menu_nodes[0x14].unk4 = 0xF;
     g_menu_nodes[0x13].unk4 = 0xB;
-    g_menu_nodes[0x13].u6.s.self_idx = 0x13;
+    g_menu_nodes[0x13].idx_nav.s.self_idx = 0x13;
     g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].uA.s.child0 = 0x14;
     g_menu_nodes[0x13].child1 = 0x15;
     g_menu_nodes[0x14].unk0 = 0x12;
-    g_menu_nodes[0x14].u6.s.self_idx = 0x14;
+    g_menu_nodes[0x14].idx_nav.s.self_idx = 0x14;
     g_menu_nodes[0x15].unk0 = 0x13;
-    g_menu_nodes[0x15].u6.s.self_idx = 0x15;
+    g_menu_nodes[0x15].idx_nav.s.self_idx = 0x15;
     g_menu_nodes[0x15].unk4 = 0x12;
     g_menu_nodes[0x16].unk0 = 0x14;
-    g_menu_nodes[0x16].u6.s.self_idx = 0x16;
+    g_menu_nodes[0x16].idx_nav.s.self_idx = 0x16;
     g_menu_nodes[0x16].unk4 = 0xC;
     g_menu_nodes[0x16].uA.s.child0 = 0x17;
     g_menu_nodes[0x16].child1 = 0x18;
     g_menu_nodes[0x17].unk0 = 0x15;
-    g_menu_nodes[0x17].u6.s.self_idx = 0x17;
+    g_menu_nodes[0x17].idx_nav.s.self_idx = 0x17;
     g_menu_nodes[0x13].u2.unk2 = (u16)((g_menu_nodes[0x13].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x14].u2.unk2 = (u16)((g_menu_nodes[0x14].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x13].u2.s.parent_idx = 0x12;
@@ -1866,21 +1866,21 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].content_id = 2;
     g_menu_nodes[0x17].unk4 = 0x10;
     g_menu_nodes[0x18].unk0 = 0x13;
-    g_menu_nodes[0x18].u6.s.self_idx = 0x18;
+    g_menu_nodes[0x18].idx_nav.s.self_idx = 0x18;
     g_menu_nodes[0x18].unk4 = 0x12;
     g_menu_nodes[0x19].unk0 = 0x16;
-    g_menu_nodes[0x19].u6.s.self_idx = 0x19;
+    g_menu_nodes[0x19].idx_nav.s.self_idx = 0x19;
     g_menu_nodes[0x19].unk4 = 0xD;
     g_menu_nodes[0x19].uA.s.child0 = 0x1A;
     g_menu_nodes[0x19].child1 = 0x1B;
     g_menu_nodes[0x1A].unk0 = 0x17;
-    g_menu_nodes[0x1A].u6.s.self_idx = 0x1A;
+    g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
     g_menu_nodes[0x1A].unk4 = 0x11;
     g_menu_nodes[0x1B].unk0 = 0x13;
-    g_menu_nodes[0x1B].u6.s.self_idx = 0x1B;
+    g_menu_nodes[0x1B].idx_nav.s.self_idx = 0x1B;
     g_menu_nodes[0x1B].unk4 = 0x12;
     g_menu_nodes[0x1C].unk0 = 0x18;
-    g_menu_nodes[0x1C].u6.s.self_idx = 0x1C;
+    g_menu_nodes[0x1C].idx_nav.s.self_idx = 0x1C;
     g_menu_nodes[0x18].u2.unk2 = (u16)((g_menu_nodes[0x18].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x19].u2.unk2 = (u16)((g_menu_nodes[0x19].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x18].u2.s.parent_idx = 0x16;
@@ -1894,20 +1894,20 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
     var_a2->uA.unkA += 0;
     g_menu_nodes[0x1C].unk4 = 0xE;
-    g_menu_nodes[0x1D].u6.s.self_idx = 0x1D;
+    g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
-    g_menu_nodes[0x1F].u6.s.self_idx = 0x1F;
+    g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
     g_menu_nodes[0x1C].content_id = 5;
     g_menu_nodes[0x1D].unk0 = 0x1C;
     g_menu_nodes[0x1D].content_id = 3;
     g_menu_nodes[0x1D].unk4 = 0x18;
     g_menu_nodes[0x1E].unk0 = 0x19;
-    g_menu_nodes[0x1E].u6.s.self_idx = 0x1E;
+    g_menu_nodes[0x1E].idx_nav.s.self_idx = 0x1E;
     g_menu_nodes[0x1E].unk4 = 0x13;
     g_menu_nodes[0x1F].unk0 = 0x1A;
     g_menu_nodes[0x1F].unk4 = 0x14;
     g_menu_nodes[0x2B].unk0 = 0x1A;
-    g_menu_nodes[0x2B].u6.s.self_idx = 0x2B;
+    g_menu_nodes[0x2B].idx_nav.s.self_idx = 0x2B;
     temp_v0_13 = g_menu_nodes[0x1D].u2.unk2 & 0xFF3D;
     g_menu_nodes[0x1D].u2.unk2 = (u16)(g_menu_nodes[0x1D].u2.unk2 & 0xFFFD);
     (*(&g_menu_nodes[0x1D])).u2.unk2 = temp_v0_13;
@@ -1928,7 +1928,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFFCF) | 0x10);
     g_menu_nodes[0x2B].unk4 = 0x15;
     g_menu_nodes[0x20].unk0 = 0x1B;
-    g_menu_nodes[0x20].u6.s.self_idx = 0x20;
+    g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
     temp_v0_14 = 0xFF3D;
     temp_v0_14 = g_menu_nodes[0x20].u2.unk2 & temp_v0_14;
     new_var6 = D_800FD818.unk268 & 1;
@@ -2449,7 +2449,7 @@ unsigned int menu_handle_node_input(void)
             g_menu_hit_item_idx = func_8014847C(new_var12, temp_a1, &g_content_cursor_y, temp_v0_3);
             if (g_menu_hit_item_idx != (-1))
             {
-                temp_v1_2 = &g_menu_content_table[new_var11[g_menu_scene_type].u6.s.self_idx][g_menu_hit_item_idx];
+                temp_v1_2 = &g_menu_content_table[new_var11[g_menu_scene_type].idx_nav.s.self_idx][g_menu_hit_item_idx];
                 g_content_view_x = temp_v1_2->packed_x & 0x1FF;
                 new_var3 = temp_v1_2->y - 8;
                 g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
@@ -2705,7 +2705,7 @@ void func_80143964(s32 arg0)
                 g_menu_hit_item_idx = func_8014847C((s32*)0);
                 if (g_menu_hit_item_idx != (-1))
                 {
-                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                     g_content_view_x = temp_s5[g_menu_hit_item_idx].packed_x & 0x1FF;
                     g_content_view_y = temp_s5[g_menu_hit_item_idx].y - 8;
                     g_menu_suppress_cursor = 5;
@@ -2718,7 +2718,7 @@ void func_80143964(s32 arg0)
     if (g_menu_scene_type < 0x11U && (g_pad_input & 0xF))
     {
         func_8014F210(0x7D, 0x80);
-        self_idx = g_menu_nodes[g_menu_scene_type].u6.s.self_idx;
+        self_idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
         if (self_idx - 0x14 < 0x16U)
         {
             switch (self_idx - 0x14)
@@ -2726,13 +2726,13 @@ void func_80143964(s32 arg0)
             case 0:
             case 3:
             case 6:
-                g_menu_nodes[g_menu_scene_type].u6.s.self_idx += 1;
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx += 1;
                 goto incdec_common;
 
             case 1:
             case 4:
             case 7:
-                g_menu_nodes[g_menu_scene_type].u6.s.self_idx -= 1;
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx -= 1;
                 goto incdec_common;
 
             case 2:
@@ -2742,7 +2742,7 @@ void func_80143964(s32 arg0)
                 g_menu_hit_item_idx = func_8014847C((s32*)0);
                 if (g_menu_hit_item_idx != (-1))
                 {
-                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                     g_content_view_x = temp_s5[g_menu_hit_item_idx].packed_x & 0x1FF;
                     g_content_view_y = temp_s5[g_menu_hit_item_idx].y - 8;
                     g_menu_suppress_cursor = 5;
@@ -2843,7 +2843,7 @@ void func_80143964(s32 arg0)
             g_menu_hit_item_idx = func_8014847C((s32*)0);
             if (g_menu_hit_item_idx != (-1))
             {
-                MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 g_content_view_x = temp_s5[g_menu_hit_item_idx].packed_x & 0x1FF;
                 g_content_view_y = temp_s5[g_menu_hit_item_idx].y - 8;
                 g_menu_suppress_cursor = 5;
@@ -2863,7 +2863,7 @@ after_do_while:
 
     if (arg0 != 0)
     {
-        s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+        s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
 
         if ((g_menu_scene_type == 0x1F || g_menu_scene_type == 0x2B) && g_menu_hit_item_idx >= 0x11 &&
             g_menu_hit_item_idx < 0x19)
@@ -3097,7 +3097,7 @@ after_do_while:
             }
             else if (top_nibble == 0xF000)
             {
-                table_idx = D_801686CC[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                table_idx = D_801686CC[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 val = D_8014FE54[(table_idx * 8) + ((packed_x >> 9) & 7)];
                 if (val != 0)
                 {
@@ -3177,7 +3177,7 @@ after_do_while:
         if (g_pad_input & 0x40)
         {
             func_8014F210(0x7F, 0x80);
-            self_idx = g_menu_nodes[g_menu_scene_type].u6.s.self_idx;
+            self_idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
             if (g_menu_scene_type >= 0x11 || self_idx < 0x14 || self_idx >= 0x1C)
             {
                 func_8014519C();
@@ -3186,18 +3186,18 @@ after_do_while:
             {
                 if (self_idx - 0x14 < 5)
                 {
-                    g_menu_nodes[(g_menu_char_slot * 3) + 1].u6.s.self_idx = 1;
+                    g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 1;
                     g_menu_nodes[(g_menu_char_slot * 3) + 1].unk0 = (g_menu_char_slot * 3) + 3;
                 }
                 else if (self_idx - 0x1A < 2)
                 {
-                    g_menu_nodes[(g_menu_char_slot * 3) + 2].u6.s.self_idx = 2;
+                    g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 2;
                     g_menu_nodes[(g_menu_char_slot * 3) + 2].unk0 = (g_menu_char_slot * 3) + 3;
                 }
                 g_menu_hit_item_idx = func_8014847C(&g_menu_char_slot);
                 if (g_menu_hit_item_idx != (-1))
                 {
-                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                     g_content_view_x = temp_s5[g_menu_hit_item_idx].packed_x & 0x1FF;
                     g_content_view_y = temp_s5[g_menu_hit_item_idx].y - 8;
                     g_menu_suppress_cursor = 5;
@@ -3220,8 +3220,8 @@ after_do_while:
             func_8014F210(0x7D, 0x80);
             if (s5[g_menu_hit_item_idx].pad[1 + dir_index] == 0xFF)
             {
-                if (g_menu_scene_type >= 0x11 || g_menu_nodes[g_menu_scene_type].u6.s.self_idx < 0x14 ||
-                    g_menu_nodes[g_menu_scene_type].u6.s.self_idx >= 0x1C)
+                if (g_menu_scene_type >= 0x11 || g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x14 ||
+                    g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx >= 0x1C)
                 {
                     g_menu_cursor_enable = 2;
                     active_node = &g_menu_nodes[g_menu_active_node];
@@ -3241,7 +3241,7 @@ after_do_while:
                 {
                     if ((s5[g_menu_hit_item_idx].packed_x & 0xF000) == 0x5000)
                     {
-                        if (g_menu_nodes[g_menu_scene_type].u6.s.self_idx < 0x11)
+                        if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x11)
                         {
                             g_menu_item_ptr = (void*)0;
                             D_80169410 = (void*)0;
@@ -3269,16 +3269,16 @@ after_do_while:
  */
 void menu_snap_view_to_cursor(void)
 {
-    if (g_content_cursor_y < 0xC)
+    if (g_content_cursor_y < 12)
     {
-        g_content_cursor_y = 0xC;
+        g_content_cursor_y = 12;
     }
-    if (g_content_cursor_y >= 0xA3)
+    if (g_content_cursor_y >= 163)
     {
-        g_content_cursor_y = 0xA3;
+        g_content_cursor_y = 163;
     }
     g_content_view_y = g_content_cursor_y;
-    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].u6.nav_x_packed >> 8) & 0x7F) + 8;
+    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
     g_content_view_x = g_content_cursor_x;
 }
 
