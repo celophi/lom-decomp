@@ -234,7 +234,7 @@ typedef struct
     u8 content_id; /**< Passed to the content-open function; 0xFF = no content. */
     union
     {
-        u16 unk6;
+        u16 nav_x_packed; /**< Raw word; high byte = nav_x, low byte = self_idx. */
         struct
         {
             u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
@@ -3278,7 +3278,7 @@ void menu_snap_view_to_cursor(void)
         g_content_cursor_y = 0xA3;
     }
     g_content_view_y = g_content_cursor_y;
-    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].u6.unk6 >> 8) & 0x7F) + 8;
+    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].u6.nav_x_packed >> 8) & 0x7F) + 8;
     g_content_view_x = g_content_cursor_x;
 }
 
