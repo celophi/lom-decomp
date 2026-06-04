@@ -2594,7 +2594,7 @@ extern u8 D_801ED600[];
 extern s32 D_801690FC;
 extern s32 D_80169118;
 extern s8 D_801226F0;
-extern void *D_80168C70;
+extern void* D_80168C70;
 extern s8 D_801226B8;
 extern s32 D_801229F4;
 extern s32 D_8011F424;
@@ -2603,7 +2603,8 @@ extern void func_8014B7DC(void);
 extern void func_8014CC08(void);
 extern void func_8014C200(void);
 
-typedef struct {
+typedef struct
+{
     u8 unk0;
     u8 unk1;
     u8 unk2;
@@ -2613,9 +2614,9 @@ typedef struct {
 extern D_801690B0_type D_801690B0;
 extern u8 D_801686CC[];
 extern u8 D_8014FE54[];
-extern void *D_801690A8;
-extern void *D_801690E0;
-extern void *D_801227D4;
+extern void* D_801690A8;
+extern void* D_801690E0;
+extern void* D_801227D4;
 
 /**
  * decomp.me (68.48%) https://decomp.me/scratch/DRmEd
@@ -3254,4 +3255,22 @@ after_do_while:
             }
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/wBlQo
+ */
+void func_80144FB8(void)
+{
+    if (g_content_cursor_y < 0xC)
+    {
+        g_content_cursor_y = 0xC;
+    }
+    if (g_content_cursor_y >= 0xA3)
+    {
+        g_content_cursor_y = 0xA3;
+    }
+    g_content_view_y = g_content_cursor_y;
+    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].u6.unk6 >> 8) & 0x7F) + 8;
+    g_content_view_x = g_content_cursor_x;
 }
