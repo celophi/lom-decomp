@@ -73,6 +73,12 @@
  */
 /** @brief Total number of nodes in g_menu_nodes[]. */
 #define MENU_NODE_COUNT 0x2C
+/** @brief Bits [14:8] of idx_nav.nav_x_packed: the 7-bit column (nav_x) field. */
+#define MENU_NAV_X_MASK  0x7F00
+/** @brief Clears bits [14:8] of idx_nav.nav_x_packed (inverse of MENU_NAV_X_MASK). */
+#define MENU_NAV_X_CLEAR 0x80FF
+/** @brief Bit 15 of idx_nav.nav_x_packed: bit 0 of the 9-bit nav cursor Y. */
+#define MENU_NAV_Y0_BIT  0x8000
 /** @brief Index of the "browse all items" root node; Circle navigates here. */
 #define MENU_NODE_BROWSE_ALL 0x20
 /** @brief Sentinel value meaning "none" for parent_idx, content_id, and child indices. */
@@ -2491,94 +2497,111 @@ s32 func_80143640(void)
 extern s32 g_menu_char_slot;
 
 /**
- * decomp.me (93.73%) https://decomp.me/scratch/UqSRu
+ * @brief Mark the active node's ancestor chain as expanded, propagate its nav cursor
+ *        position to its children, update g_menu_char_slot, and re-run the full layout.
+ * @note var_s3 and layout_pos are each reused for two unrelated purposes to match the
+ *       compiler's register allocation exactly.
+ * @see decomp.me (93.73%) https://decomp.me/scratch/UqSRu
  */
 void menu_set_active_node(void)
 {
-    s32 var_a0;
+    s32 node_idx;
     MenuNode* curr_node;
-    MenuNode* temp_a0;
+    MenuNode* active_node;
     u16 temp_v0;
-    s32 temp_a0_4;
-    s32 var_s3;
-    s32 layout_pos;
-    s32 var_s2;
-    MenuNode* var_s1;
-    s32 temp_s0;
-    long child_i;
+    s32 char_slot_bits;
+    s32 var_s3;      /* parent-walk: current ancestor index; layout: scroll-adjusted flag */
+    s32 layout_pos;  /* parent-walk: reused as temp for parent_idx check; layout: y accumulator */
+    s32 node_i;
+    MenuNode* node;
+    s32 prev_layout_y;
+    long child_slot;
     u8 child_idx;
     MenuNode* child_node;
-    u16 nav_x;
-    u16 new_var;
-    for (var_a0 = 0; var_a0 < 0x2C; var_a0++)
+    u16 nav_col;     /* bits [14:8] of nav_x_packed: 7-bit column, copied to children */
+    u16 parent_packed;
+
+    /* Clear the "expanded" bit (bit 1) on every node, then re-expand only the active path. */
+    for (node_idx = 0; node_idx < MENU_NODE_COUNT; node_idx++)
     {
-        g_menu_nodes[var_a0].u2.unk2 &= 0xFFFD;
+        g_menu_nodes[node_idx].u2.unk2 &= 0xFFFD;
     }
 
+    /* Walk from g_menu_active_node up to the root, marking each ancestor expanded. */
     var_s3 = g_menu_active_node;
     layout_pos = g_menu_nodes[g_menu_active_node].u2.s.parent_idx;
-    if (layout_pos != 0xFF)
+    if (layout_pos != MENU_NONE)
     {
         do
         {
-
             var_s3 = g_menu_nodes[var_s3].u2.s.parent_idx;
             curr_node = &g_menu_nodes[var_s3];
-
-            curr_node->u2.unk2 |= 2;
-        } while (curr_node->u2.s.parent_idx != 0xFF);
+            curr_node->u2.unk2 |= 2; /* set expanded */
+        } while (curr_node->u2.s.parent_idx != MENU_NONE);
     }
-    temp_a0 = &g_menu_nodes[g_menu_active_node];
-    temp_v0 = temp_a0->u2.unk2 | 2;
-    temp_a0->u2.unk2 = temp_v0;
+
+    /* Mark the active node itself expanded, then propagate its nav cursor to children. */
+    active_node = &g_menu_nodes[g_menu_active_node];
+    temp_v0 = active_node->u2.unk2 | 2;
+    active_node->u2.unk2 = temp_v0;
     if ((temp_v0 >> 1) & 1)
     {
-        for (child_i = 0; child_i < 4; child_i++)
+        for (child_slot = 0; child_slot < 4; child_slot++)
         {
-            child_idx = (&temp_a0->uA.s.child0)[child_i];
-            if (child_idx == (temp_v0 = 0xFF))
+            child_idx = (&active_node->uA.s.child0)[child_slot];
+            if (child_idx == (temp_v0 = MENU_NONE))
             {
                 break;
             }
             child_node = &g_menu_nodes[child_idx];
-            nav_x = temp_a0->idx_nav.nav_x_packed & 0x7F00;
-            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed & 0x80FF;
-            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_x;
-            child_node->u8_u.unk8 = child_node->u8_u.unk8 & 0x80FF;
-            child_node->u8_u.unk8 = child_node->u8_u.unk8 | nav_x;
-            child_idx = (&temp_a0->uA.s.child0)[child_i];
-            new_var = temp_a0->idx_nav.nav_x_packed;
+            /* Propagate nav column X (bits [14:8]) from parent to child. */
+            nav_col = active_node->idx_nav.nav_x_packed & MENU_NAV_X_MASK;
+            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed & MENU_NAV_X_CLEAR;
+            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_col;
+            child_node->u8_u.unk8 = child_node->u8_u.unk8 & MENU_NAV_X_CLEAR;
+            child_node->u8_u.unk8 = child_node->u8_u.unk8 | nav_col;
+            child_idx = (&active_node->uA.s.child0)[child_slot];
+            parent_packed = active_node->idx_nav.nav_x_packed;
             ;
+            /* Propagate nav_y_hi (nav Y bits 8:1) from parent to child's u8_u low byte. */
             (&g_menu_nodes[child_idx])->u8_u.unk8 =
                 (((&g_menu_nodes[child_idx])->u8_u.unk8 & 0xFF00) & 0xFFFFFFFFFFFFFFFFu) |
                 (&g_menu_nodes[g_menu_active_node])->u8_u.s.nav_y_hi;
-            (&g_menu_nodes[child_idx])->idx_nav.nav_x_packed = ((&g_menu_nodes[child_idx])->idx_nav.nav_x_packed & 0x7FFF) | (new_var & 0x8000);
+            /* Propagate nav Y bit 0 (bit 15 of nav_x_packed) from parent to child. */
+            (&g_menu_nodes[child_idx])->idx_nav.nav_x_packed =
+                ((&g_menu_nodes[child_idx])->idx_nav.nav_x_packed & ~MENU_NAV_Y0_BIT) |
+                (parent_packed & MENU_NAV_Y0_BIT);
         }
     }
-    temp_a0_4 = (((u16)g_menu_nodes[g_menu_active_node].u2.unk2) >> 4) & 3;
-    if (temp_a0_4 != 3)
+
+    /* Update g_menu_char_slot from bits [5:4] of u2.unk2 (3 = preserve current value). */
+    char_slot_bits = (((u16)g_menu_nodes[g_menu_active_node].u2.unk2) >> 4) & 3;
+    if (char_slot_bits != 3)
     {
-        g_menu_char_slot = temp_a0_4;
+        g_menu_char_slot = char_slot_bits;
     }
+
+    /* Re-run layout for all root nodes and adjust scroll if content overflows the viewport. */
     var_s3 = 0;
     layout_pos = 0;
-    var_s1 = g_menu_nodes;
-    for (var_s2 = 0; var_s2 < 0x2C; var_s2++, var_s1++)
+    node = g_menu_nodes;
+    for (node_i = 0; node_i < MENU_NODE_COUNT; node_i++, node++)
     {
-        temp_v0 = 0xAB;
-        if (var_s1->u2.s.parent_idx == 0xFF)
+        temp_v0 = MENU_VIEW_HEIGHT;
+        if (node->u2.s.parent_idx == MENU_NONE)
         {
-            if (var_s1->u2.s.flags & 1)
+            if (node->u2.s.flags & 1)
             {
-                temp_s0 = layout_pos;
-                layout_pos = menu_layout_node(var_s2, layout_pos);
-                if (temp_s0 != (layout_pos - 0x13))
+                prev_layout_y = layout_pos;
+                layout_pos = menu_layout_node(node_i, layout_pos);
+                /* If this node contributed more than one row, it has visible children. */
+                if (prev_layout_y != (layout_pos - MENU_ROW_HEIGHT))
                 {
-                    if (layout_pos > (0xAC - 1))
+                    if (layout_pos > MENU_VIEW_HEIGHT)
                     {
                         var_s3 = 1;
                         g_menu_scroll_pos = layout_pos - temp_v0;
-                        g_menu_redraw_state = 8;
+                        g_menu_redraw_state = MENU_REDRAW_LAYOUT;
                     }
                 }
             }
@@ -2589,7 +2612,7 @@ void menu_set_active_node(void)
     if (var_s3 == 0)
     {
         g_menu_scroll_pos = 0;
-        g_menu_redraw_state = 8;
+        g_menu_redraw_state = MENU_REDRAW_LAYOUT;
     }
 }
 
