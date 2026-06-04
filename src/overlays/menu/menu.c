@@ -355,8 +355,10 @@ extern u8 g_menu_init_content_id;
 extern Struct_D_800FD818 D_800FD818;
 extern u16 D_800FDA80;
 extern u16 D_800FDCE8;
+/** @brief Set to 0 before each content-load call; written back by func_8014E3C4. */
 extern s8 D_801690F9;
-extern s8 D_80169324;
+/** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
+extern s8 g_menu_companion_node;
 
 extern StringTableKey g_menu_label_key_a; /* 0x800EC3DA: offset +0x16 into shared text table at 0x800EC3C4 */
 extern StringTableKey g_menu_label_key_b; /* 0x800EC3E4: offset +0x20 into shared text table at 0x800EC3C4 */
@@ -1962,7 +1964,7 @@ void menu_node_tree_init(void)
     var_a3 = 0;
     if ((g_pad_ctx->inject_flags & 0x80) && (g_pad_ctx->inject_enable != 0))
     {
-        D_80169324 = 0x2B;
+        g_menu_companion_node = 0x2B;
     }
     temp_v0_11 = var_a3 & 0xFFFF;
     var_t0_2 = 0;
@@ -2592,7 +2594,8 @@ void menu_set_active_node(void)
 }
 
 extern u8 D_801ED600[];
-extern s32 D_801690FC;
+/** @brief Total page count for the current sub-menu view; g_script_repeat_last cycles in [0, g_menu_page_count-1]. */
+extern s32 g_menu_page_count;
 /** @brief Action sub-type of the most recently confirmed 0x5000 menu item; routes downstream handlers. */
 extern s32 g_menu_active_subtype;
 extern s8 D_801226F0;
@@ -2664,7 +2667,7 @@ void func_80143964(s32 arg0)
                         func_8014B69C(-1);
                         if (g_script_repeat_last == 0)
                         {
-                            g_script_repeat_last = D_801690FC - 1;
+                            g_script_repeat_last = g_menu_page_count - 1;
                         }
                         else
                         {
@@ -2674,7 +2677,7 @@ void func_80143964(s32 arg0)
                     else if (g_pad_input & 2)
                     {
                         func_8014B69C(1);
-                        if (g_script_repeat_last == (D_801690FC - 1))
+                        if (g_script_repeat_last == (g_menu_page_count - 1))
                         {
                             g_script_repeat_last = 0;
                         }
@@ -3140,7 +3143,7 @@ after_do_while:
                         if (var_s4[0xAE] != 0xFF)
                         {
                             g_pad_ctx->inject_flags |= 0x80;
-                            D_80169324 = 0x2B;
+                            g_menu_companion_node = 0x2B;
                             menu_set_active_node(0x2B);
                             var_s0 = 0;
                             goto direction_loop;
@@ -3153,7 +3156,7 @@ after_do_while:
                             slots = g_menu_slots + 3;
                             for (idxA = 3; idxA >= 0; idxA--)
                             {
-                                D_80169324 = 0x2B;
+                                g_menu_companion_node = 0x2B;
                                 slots->active = 0;
                                 slots--;
                             }
@@ -3165,7 +3168,7 @@ after_do_while:
 
                     case 11:
                         g_pad_ctx->inject_flags &= ~0x81;
-                        D_80169324 = 0xFF;
+                        g_menu_companion_node = 0xFF;
                         menu_set_active_node(0xFF);
                         var_s0 = 0;
                         goto direction_loop;

@@ -80,3 +80,5 @@ g_menu_hit_item_idx    = 0x8016941C;
 g_menu_default_view_pos = 0x80169104;
 g_menu_active_subtype  = 0x80169118;
 g_menu_char_slot       = 0x80169550;
+g_menu_page_count      = 0x801690FC;
+g_menu_companion_node  = 0x80169324;
