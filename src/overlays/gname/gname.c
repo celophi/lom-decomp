@@ -297,7 +297,7 @@ void gname_tick(s32 ctx)
  *    one of two SFX via @ref func_800A3938 (bank 0x80, sound 0x7E or 0x78)
  *    based on whether the cursor's current entry passes the
  *    @ref name_char_count / @ref name_is_blank validation pair, and on the
- *    "valid" path also kicks @c D_8014F7E4 = 5 to advance overlay state.
+ *    "valid" path also kicks @c g_overlay_result = 5 to advance overlay state.
  *
  * @see https://decomp.me/scratch/g5Rx3 (100%)
  */
@@ -333,7 +333,7 @@ void gname_update_state(void)
         if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
         {
             func_800A3938(0x7E, 0x80); /* accept */
-            D_8014F7E4 = 5;
+            g_overlay_result = 5;
             return;
         }
         func_800A3938(0x78, 0x80); /* reject */
@@ -345,32 +345,32 @@ void gname_update_state(void)
  *
  * Called from the boot path @ref gname_init. Zeros most counters/indices,
  * primes the lerp scalar (@c g_strip_width_steps = 5), seeds the cursor state
- * (@c D_8014F88C / @c D_8014F890 from frozen defaults @c D_8014F894 /
- * @c D_8014F89C), kicks @ref func_80140AB8 to compute initial @c D_8014F8AC,
+ * (@c g_cursor_x / @c g_cursor_y from frozen defaults @c g_cursor_x_target /
+ * @c g_cursor_y_target), kicks @ref func_80140AB8 to compute initial @c g_char_set_mode,
  * and registers the overlay's per-character buffer with
- * @ref name_copy (`g_active_name`, `&D_8014F7E8`).
+ * @ref name_copy (`g_active_name`, `&g_initial_name`).
  *
  * @see https://decomp.me/scratch/FboaU (100%)
  */
 void reset_run_state(void)
 {
-    D_8014F888 = 0xFF;
-    D_8014F8AC = func_80140AB8(0, 0);
-    D_8014F884 = 0;
-    D_8014F8B4 = 0;
-    D_8014F8C0 = 0;
-    D_8014F8C4 = 0;
-    D_8014F8D0 = 0;
-    D_8014F850 = 0;
-    D_8014F88C = D_8014F894;
-    D_8014F890 = D_8014F89C;
-    name_copy(g_active_name, &D_8014F7E8); /* matches 'la a1, D_8014F7E8' */
+    g_cursor_tab = 0xFF;
+    g_char_set_mode = func_80140AB8(0, 0);
+    g_cursor_lerp_steps = 0;
+    g_scroll_pos = 0;
+    g_scroll_target = 0;
+    g_scroll_steps = 0;
+    g_char_cursor = 0;
+    g_name_clipboard = 0;
+    g_cursor_x = g_cursor_x_target;
+    g_cursor_y = g_cursor_y_target;
+    name_copy(g_active_name, &g_initial_name); /* matches 'la a1, g_initial_name' */
     g_strip_width = 0;
     recalc_name_width();
     g_strip_width_steps = 5;
     g_append_anim_frame = 0;
     g_append_anim_timer = 2;
-    D_8014F848 = 0;
+    g_char_panel = 0;
 }
 
 /**
@@ -424,8 +424,8 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
     int new_var7;
 
     /* Prologue: initialize register-mapped locals */
-    new_var14 = &D_8014F7B0;
-    new_var11 = &D_8014F7E8;
+    new_var14 = &g_custom_name_buf;
+    new_var11 = &g_initial_name;
     reg_s1 = arg0;
     reg_s2 = arg1;
     repeat = 0xFF;
@@ -444,7 +444,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
     s1_lt4_block:
         if (reg_s2 & 0x220)
         {
-            D_8014F888 = reg_s1;
+            g_cursor_tab = reg_s1;
             if (reg_s1 != 1)
             {
                 if (reg_s1 < 2)
@@ -472,7 +472,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
                 {
                     func_800A3938(0x7E, 0x80);
-                    D_8014F7E4 = five;
+                    g_overlay_result = five;
                 }
                 else
                 {
@@ -491,10 +491,10 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
 
         s1_eq2_code:
             func_800A3938(0x7E, 0x80);
-            if (D_8014F7E0 == four)
+            if (g_name_source_mode == four)
             {
                 u16 half4;
-                D_8014F850 = 0;
+                g_name_clipboard = 0;
                 base_f04_addr = func_80016F5C();
                 var_v0_3 = base_f04_addr;
                 temp_v1_2 = var_v0_3;
@@ -509,11 +509,11 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 }
                 goto block_37;
             }
-            else if (D_8014F7E0 == five)
+            else if (g_name_source_mode == five)
             {
                 u16 half5;
                 u32 addr_f04;
-                D_8014F850 = 0;
+                g_name_clipboard = 0;
                 var_v0_4 = func_80016F5C();
                 temp_v1_3 = var_v0_4;
                 if (temp_v1_3 < 0)
@@ -528,18 +528,18 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 }
                 goto block_37;
             }
-            else if (D_8014F7E0 == 3)
+            else if (g_name_source_mode == 3)
             {
                 u32 idx3;
                 unsigned short half3a;
                 u16 half3b;
                 u32 rem3;
-                D_8014F850 = 0;
-                idx3 = D_8014F83C;
+                g_name_clipboard = 0;
+                idx3 = g_history_name_idx;
                 new_var8 = idx3;
                 if (new_var8 >= 0x81)
                 {
-                    var_a1 = &D_8014F7E8;
+                    var_a1 = &g_initial_name;
                     goto block_37;
                 }
                 new_var3 = new_var8 * 2;
@@ -565,7 +565,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 name_append(g_active_name, (void*)((f00 + half3b) + reg_s6), (s32)(new_var13 = f00));
                 goto block_38;
             }
-            else if (D_8014F7E0 == 1)
+            else if (g_name_source_mode == 1)
             {
                 var_a1 = new_var14;
                 goto block_36;
@@ -574,7 +574,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             func_800A3938(0x7E, 0x80);
             var_a1 = new_var11;
         block_36:
-            D_8014F850 = 0;
+            g_name_clipboard = 0;
         block_37:
             name_copy(g_active_name, var_a1);
         block_38:
@@ -605,15 +605,15 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         }
         goto end_if_s1_ge0;
     s14to8_block:
-        if ((reg_s2 & 0x220) && ((D_8014F888 = reg_s1, temp_v1 = reg_s1 - 4, D_8014F848 != temp_v1)))
+        if ((reg_s2 & 0x220) && ((g_cursor_tab = reg_s1, temp_v1 = reg_s1 - 4, g_char_panel != temp_v1)))
         {
             reg_s1 = 0x10;
             reg_s2 = 0;
-            D_8014F8C0 = 0;
-            D_8014F8B4 = 0;
-            D_8014F848 = temp_v1;
-            D_8014F8C4 = 0;
-            D_8014F8D0 = 0;
+            g_scroll_target = 0;
+            g_scroll_pos = 0;
+            g_char_panel = temp_v1;
+            g_scroll_steps = 0;
+            g_char_cursor = 0;
             func_800A3938(0x7E, 0x80);
             continue;
         }
@@ -654,17 +654,17 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         func_800A3938(0x7D, 0x80);
         temp_v1_4 = (void*)(((reg_s1 + 2) * 4) + ((u32)(&D_80142E0C)));
         repeat = 0;
-        D_8014F894 = ((*((u32*)temp_v1_4)) & 0x1FF) - 8;
+        g_cursor_x_target = ((*((u32*)temp_v1_4)) & 0x1FF) - 8;
         new_var8 = (s32)(*((u8*)((u32)temp_v1_4 + 2)));
-        D_8014F884 = five;
-        D_8014F89C = new_var8;
+        g_cursor_lerp_steps = five;
+        g_cursor_y_target = new_var8;
         repeat = 0;
         continue;
     end_if_s1_ge0:;
     block_62:
-        if ((reg_s2 & 0x220) && (((D_8014F8A0 * 0xA) + D_8014F898) >= D_8014F8D0))
+        if ((reg_s2 & 0x220) && (((g_char_last_row * 0xA) + g_char_last_col) >= g_char_cursor))
         {
-            if (D_8014F848 < 3)
+            if (g_char_panel < 3)
             {
                 if (name_char_count(g_active_name) < 0xA)
                 {
@@ -672,9 +672,9 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     u16 hw;
                     g_append_anim_timer = 2;
                     {
-                        u32 idx_lt3 = D_8014F8D0;
+                        u32 idx_lt3 = g_char_cursor;
                         ef8 = D_80142EF8;
-                        t1 = *((u32*)((D_8014F848 * 4) + ((u32)(&D_80142C98))));
+                        t1 = *((u32*)((g_char_panel * 4) + ((u32)(&D_80142C98))));
                         hw = *((u16*)(((ef8 + (t1 * 2)) + (idx_lt3 * 2)) + reg_s6));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
@@ -690,26 +690,26 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     goto block_73;
                 }
             }
-            else if (D_8014F848 == 3)
+            else if (g_char_panel == 3)
             {
                 u16 off;
-                if ((*((u32*)((D_8014F8D0 * 4) + ((u32)(&D_80142CAC))))) != 0xFF)
+                if ((*((u32*)((g_char_cursor * 4) + ((u32)(&D_80142CAC))))) != 0xFF)
                 {
                     var_a0 = 0x7E;
-                    D_8014F8C8 = D_8014F8D0;
-                    D_8014F8C0 = 0;
-                    D_8014F8B4 = 0;
-                    D_8014F8C4 = 0;
-                    D_8014F848 = four;
-                    D_8014F894 = 0x54;
-                    D_8014F89C = 0x68;
-                    D_8014F884 = four;
-                    temp_v1_5 = D_8014F8D0 * 2;
-                    D_8014F8D0 = 0;
+                    g_kanji_cat = g_char_cursor;
+                    g_scroll_target = 0;
+                    g_scroll_pos = 0;
+                    g_scroll_steps = 0;
+                    g_char_panel = four;
+                    g_cursor_x_target = 0x54;
+                    g_cursor_y_target = 0x68;
+                    g_cursor_lerp_steps = four;
+                    temp_v1_5 = g_char_cursor * 2;
+                    g_char_cursor = 0;
                     {
                         ef8 = D_80142EF8;
                         off = *((u16*)(((ef8 + (D_80142CA4 * 2)) + temp_v1_5) + reg_s6));
-                        D_8014F84C = (void*)((ef8 + off) + reg_s6);
+                        g_kanji_cat_name = (void*)((ef8 + off) + reg_s6);
                     }
                     repeat = 0;
                     func_800A3938(var_a0, 0x80);
@@ -720,7 +720,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     continue;
                 }
             }
-            else if (D_8014F848 == 4)
+            else if (g_char_panel == 4)
             {
                 if (name_char_count(g_active_name) < 0xA)
                 {
@@ -732,11 +732,11 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     g_append_anim_timer = 2;
                     g_append_anim_frame = 0;
                     {
-                        u32 idx4 = D_8014F8C8;
+                        u32 idx4 = g_kanji_cat;
                         efc = new_var9;
                         t1 = *((u32*)((idx4 * 4) + ((u32)(&D_80142CAC))));
                         t2 = *((u32*)((t1 * 4) + ((u32)(&D_80142E40))));
-                        hw = *((u16*)(((efc + (t2 * 2)) + (D_8014F8D0 * 2)) + reg_s6));
+                        hw = *((u16*)(((efc + (t2 * 2)) + (g_char_cursor * 2)) + reg_s6));
                         name_append(g_active_name, (void*)((efc + hw) + reg_s6), (s32)efc);
                     }
                     recalc_name_width();
@@ -762,34 +762,34 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             if (reg_s2 != 0)
             {
                 var_v0_6 = reg_s2 & 0x8000;
-                if ((reg_s2 & 0x1000) && ((D_8014F8D0 / 10) == (((s32)D_8014F8D0) >> 0x1F)))
+                if ((reg_s2 & 0x1000) && ((g_char_cursor / 10) == (((s32)g_char_cursor) >> 0x1F)))
                 {
                     reg_s1 = 0;
                     reg_s2 = 0;
                     continue;
                 }
                 var_v0_7 = reg_s2 & 0x1000;
-                if (var_v0_6 != 0 && D_8014F8D0 == ((D_8014F8D0 / 10) * 0xA))
+                if (var_v0_6 != 0 && g_char_cursor == ((g_char_cursor / 10) * 0xA))
                 {
                     reg_s1 = 4;
                     reg_s2 = 0;
                     continue;
                 }
-                if (var_v0_7 != 0 && (D_8014F8D0 / 10) != (((s32)D_8014F8D0) >> 0x1F))
+                if (var_v0_7 != 0 && (g_char_cursor / 10) != (((s32)g_char_cursor) >> 0x1F))
                 {
-                    D_8014F8D0 = D_8014F8D0 - 0xA;
+                    g_char_cursor = g_char_cursor - 0xA;
                 }
-                else if ((reg_s2 & 0x4000) && (D_8014F8D0 / 10) != D_8014F8A0)
+                else if ((reg_s2 & 0x4000) && (g_char_cursor / 10) != g_char_last_row)
                 {
-                    D_8014F8D0 = D_8014F8D0 + 0xA;
+                    g_char_cursor = g_char_cursor + 0xA;
                 }
-                else if ((reg_s2 & 0x8000) && D_8014F8D0 != (D_8014F8D0 / 10) * 0xA)
+                else if ((reg_s2 & 0x8000) && g_char_cursor != (g_char_cursor / 10) * 0xA)
                 {
-                    D_8014F8D0 = D_8014F8D0 - 1;
+                    g_char_cursor = g_char_cursor - 1;
                 }
-                else if ((reg_s2 & 0x2000) && ((D_8014F8D0 / 10) * 0xA) != (D_8014F8D0 - 9))
+                else if ((reg_s2 & 0x2000) && ((g_char_cursor / 10) * 0xA) != (g_char_cursor - 9))
                 {
-                    D_8014F8D0 = D_8014F8D0 + 1;
+                    g_char_cursor = g_char_cursor + 1;
                 }
                 else
                 {
@@ -800,25 +800,25 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
 
             func_800A3938(0x7D, 0x80);
 
-            D_8014F894 = ((D_8014F8D0 % 10) * 0x10) + 0x54;
-            new_var10 = 4 * (4 * (D_8014F8D0 / 10));
+            g_cursor_x_target = ((g_char_cursor % 10) * 0x10) + 0x54;
+            new_var10 = 4 * (4 * (g_char_cursor / 10));
             temp_a0 = new_var10;
-            new_var7 = D_8014F8B4 - 0x68;
+            new_var7 = g_scroll_pos - 0x68;
             temp_v0_2 = temp_a0 - new_var7;
-            D_8014F89C = temp_v0_2;
+            g_cursor_y_target = temp_v0_2;
             if (temp_v0_2 < 0x68)
             {
-                D_8014F89C = 0x68;
-                D_8014F8C0 = temp_a0;
-                D_8014F8C4 = four;
+                g_cursor_y_target = 0x68;
+                g_scroll_target = temp_a0;
+                g_scroll_steps = four;
             }
-            if (D_8014F89C >= 0xA9)
+            if (g_cursor_y_target >= 0xA9)
             {
-                D_8014F89C = 0xA8;
-                D_8014F8C0 = temp_a0 - 0x40;
-                D_8014F8C4 = four;
+                g_cursor_y_target = 0xA8;
+                g_scroll_target = temp_a0 - 0x40;
+                g_scroll_steps = four;
             }
-            D_8014F884 = four;
+            g_cursor_lerp_steps = four;
             repeat = 0;
         }
     }
@@ -858,20 +858,20 @@ void func_8014139C(void)
     u8* ptr;
     u16 val;
     temp_a1 = g_pad_input & 0xF220;
-    D_8014F888 = 0xFF;
+    g_cursor_tab = 0xFF;
     if (temp_a1 != 0)
     {
-        D_8014F8AC = func_80140AB8(D_8014F8AC, temp_a1);
+        g_char_set_mode = func_80140AB8(g_char_set_mode, temp_a1);
     }
     else if (g_pad_input & 1)
     {
         temp_s1 = name_pop_last_char(g_active_name);
-        while (name_char_count(&D_8014F850) >= 0xB)
+        while (name_char_count(&g_name_clipboard) >= 0xB)
         {
-            name_pop_last_char(&D_8014F850);
+            name_pop_last_char(&g_name_clipboard);
         }
 
-        name_prepend_char(&D_8014F850, temp_s1 & 0xFFFF);
+        name_prepend_char(&g_name_clipboard, temp_s1 & 0xFFFF);
         recalc_name_width();
         g_strip_width_steps = 5;
         var_a0 = 0x7D;
@@ -882,7 +882,7 @@ void func_8014139C(void)
     {
         if (name_char_count(g_active_name) < 0xA)
         {
-            new_var2 = &D_8014F850;
+            new_var2 = &g_name_clipboard;
             temp_v0 = name_pop_first_char(new_var2);
             temp_v0_2 = (u16)temp_v0;
             if (temp_v0_2 != 0)
@@ -904,14 +904,14 @@ void func_8014139C(void)
     }
     else if (g_pad_input & 0x40)
     {
-        if (D_8014F838 != 0)
+        if (g_allow_empty_cancel != 0)
         {
             if (name_char_count(g_active_name) == 0)
             {
-                D_8014F7E4 = 2;
+                g_overlay_result = 2;
                 func_800A3938(0x7F, 0x80);
                 return;
-                if (!D_8014F894)
+                if (!g_cursor_x_target)
                 {
                 }
             }
@@ -921,7 +921,7 @@ void func_8014139C(void)
         recalc_name_width();
         g_strip_width_steps = 5;
     }
-    if (((D_8014F8AC == 0x10) && (D_8014F848 == 4)) && (g_pad_input & 0xC))
+    if (((g_char_set_mode == 0x10) && (g_char_panel == 4)) && (g_pad_input & 0xC))
     {
         func_800A3938(0x7D, 0x80);
         if (g_pad_input & 0xC)
@@ -930,76 +930,76 @@ void func_8014139C(void)
             {
                 if (g_pad_input & 4)
                 {
-                    temp_a0 = D_8014F8C8;
+                    temp_a0 = g_kanji_cat;
                     temp_v1 = temp_a0 - 0xA;
-                    D_8014F8C8 = temp_v1;
+                    g_kanji_cat = temp_v1;
                     if (temp_v1 == (-1))
                     {
-                        D_8014F8C8 = 0;
+                        g_kanji_cat = 0;
                     }
                     else if (temp_v1 < 0)
                     {
-                        D_8014F8C8 = temp_a0 + 0x29;
+                        g_kanji_cat = temp_a0 + 0x29;
                     }
                 }
                 else
                 {
-                    original = D_8014F8C8;
+                    original = g_kanji_cat;
                     temp_v1_2 = original + 10;
-                    D_8014F8C8 = temp_v1_2;
+                    g_kanji_cat = temp_v1_2;
                     if (temp_v1_2 == 0x32)
                     {
-                        D_8014F8C8 = 9;
+                        g_kanji_cat = 9;
                     }
                     else if (temp_v1_2 >= 0x32)
                     {
-                        D_8014F8C8 = original - 0x29;
+                        g_kanji_cat = original - 0x29;
                     }
                 }
-                offset = D_8014F8C8;
+                offset = g_kanji_cat;
                 if (D_80142CAC[offset] != 0xFF)
                 {
-                    D_8014F8C0 = (long)0;
-                    D_8014F8B4 = 0;
+                    g_scroll_target = (long)0;
+                    g_scroll_pos = 0;
                     var_v0 = D_80142C98[3];
-                    D_8014F8C4 = 0;
-                    D_8014F8D0 = 0;
-                    D_8014F894 = 0x54;
-                    D_8014F89C = 0x68;
-                    D_8014F884 = 4;
+                    g_scroll_steps = 0;
+                    g_char_cursor = 0;
+                    g_cursor_x_target = 0x54;
+                    g_cursor_y_target = 0x68;
+                    g_cursor_lerp_steps = 4;
                     temp_c98 = var_v0;
                     base = D_80142EF4;
-                    idx = D_8014F8C8;
+                    idx = g_kanji_cat;
                     offset = (idx * 2) + ((temp_c98 * 2) + D_80142EF8);
                     tmp = *((u16*)(base + offset));
                     g_pad_input &= ~0xC;
-                    D_8014F84C = (void*)((D_80142EF8 + tmp) + ((unsigned long)base));
+                    g_kanji_cat_name = (void*)((D_80142EF8 + tmp) + ((unsigned long)base));
                 }
             } while (g_pad_input & 0xC);
         }
     }
-    if (D_8014F884 != 0)
+    if (g_cursor_lerp_steps != 0)
     {
-        temp_a1_2 = ((s32)(D_8014F894 - D_8014F88C)) / ((s32)D_8014F884);
-        temp_v1_3 = ((s32)(D_8014F89C - D_8014F890)) / ((s32)D_8014F884);
-        D_8014F884 -= 1;
-        D_8014F88C += temp_a1_2;
-        D_8014F890 += temp_v1_3;
+        temp_a1_2 = ((s32)(g_cursor_x_target - g_cursor_x)) / ((s32)g_cursor_lerp_steps);
+        temp_v1_3 = ((s32)(g_cursor_y_target - g_cursor_y)) / ((s32)g_cursor_lerp_steps);
+        g_cursor_lerp_steps -= 1;
+        g_cursor_x += temp_a1_2;
+        g_cursor_y += temp_v1_3;
     }
     else
     {
-        D_8014F88C = D_8014F894;
-        D_8014F890 = D_8014F89C;
+        g_cursor_x = g_cursor_x_target;
+        g_cursor_y = g_cursor_y_target;
     }
-    if (D_8014F8C4 != 0)
+    if (g_scroll_steps != 0)
     {
-        new_var = &D_8014F8B4;
-        temp_v0_3 = ((s32)(D_8014F8C0 - (*new_var))) / ((s32)D_8014F8C4);
-        D_8014F8C4 -= 1;
-        D_8014F8B4 += temp_v0_3;
+        new_var = &g_scroll_pos;
+        temp_v0_3 = ((s32)(g_scroll_target - (*new_var))) / ((s32)g_scroll_steps);
+        g_scroll_steps -= 1;
+        g_scroll_pos += temp_v0_3;
         return;
     }
-    D_8014F8B4 = D_8014F8C0;
+    g_scroll_pos = g_scroll_target;
 }
 
 /**
@@ -1063,17 +1063,17 @@ void* func_80141848(void* arg0, s32* arg1, s16 arg2, s16 arg3)
  *
  *  1. Character grid: walk grid-table entries 2..12 (skipping 9) and emit a
  *     drop-shadowed glyph SPRT for each via @ref func_80142274 into OT entry
- *     @c ot[0x0B] (offset 0x2C). The entry whose index equals @c D_8014F888
+ *     @c ot[0x0B] (offset 0x2C). The entry whose index equals @c g_cursor_tab
  *     is drawn highlighted (the @p arg6 flag of @ref func_80142274), marking
  *     the current selection.
  *  2. Append decoration: emit a static glyph plus the character-append
  *     animation (@ref draw_char_append_anim) into @c ot[0x0D] (offset 0x34),
  *     then run @ref func_80141C34.
  *  3. Text cursor: build a white textured SPRT (glyph @c g_glyph_table[0xA0])
- *     at the cursor position (@c D_8014F88C, @c D_8014F890), followed by an
+ *     at the cursor position (@c g_cursor_x, @c g_cursor_y), followed by an
  *     additive DrawMode, and chain both into @c ot[0x08] (offset 0x20).
- *  4. Conditional glyphs: when @c D_8014F8B4 is set, and again when
- *     @c D_8014F8A0 >= 5 passes a phase check, emit extra glyphs from the
+ *  4. Conditional glyphs: when @c g_scroll_pos is set, and again when
+ *     @c g_char_last_row >= 5 passes a phase check, emit extra glyphs from the
  *     @c D_80142E0C table.
  *  5. Hand off to the remaining sub-passes @ref func_80141D64,
  *     @ref func_80141F9C and @ref func_80141E04.
@@ -1107,13 +1107,13 @@ void gname_render(void* ctx)
         if (i != 9)
         {
             prim = func_80142274(prim, ((char*)ctx) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1,
-                                 (i - 2) == D_8014F888, 0);
+                                 (i - 2) == g_cursor_tab, 0);
         }
         i += 1;
         glyph_ptr += 4;
         entry++;
     } while (i < 0xD);
-    cursor_x = D_8014F88C;
+    cursor_x = g_cursor_x;
     ctx2 = ctx;
     /* 2. Static glyph + append animation, then func_80141C34. */
     cursor_sprite = func_80141C34(
@@ -1122,7 +1122,7 @@ void gname_render(void* ctx)
                                           ctx),
                             ((char*)ctx2) + 0x34),
         ctx);
-    /* 3. Text cursor SPRT at (D_8014F88C, D_8014F890) + additive DrawMode. */
+    /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
     tmp_ptr = ((char*)cursor_sprite) + 0x14;
     *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
     *((u8*)(((char*)cursor_sprite) + 7)) = 0x64;
@@ -1130,7 +1130,7 @@ void gname_render(void* ctx)
     *((u8*)(((char*)cursor_sprite) + 3)) = 4;
     *((s16*)(((char*)cursor_sprite) + 8)) = cursor_x;
     {
-        s32 tmp = D_8014F890;
+        s32 tmp = g_cursor_y;
         *((s16*)(((char*)cursor_sprite) + 10)) = tmp;
     }
     *((u8*)(((char*)cursor_sprite) + 12)) = g_glyph_table[0xA0];
@@ -1152,24 +1152,24 @@ void gname_render(void* ctx)
         *((u8*)(((char*)drawmode) + 3)) = 1;
         *((u32*)(((char*)drawmode) + 4)) = 0xE1000005;
         *((s32*)tmp_ptr) = ((*((s32*)tmp_ptr)) & 0xFF000000) | ((*((s32*)(ctx_bytes + 0x20))) & 0xFFFFFF);
-        f8b4 = D_8014F8B4;
+        f8b4 = g_scroll_pos;
         *((s32*)(ctx_bytes + 0x20)) = ((*((s32*)(ctx_bytes + 0x20))) & 0xFF000000) | (((s32)drawmode) & 0xFFFFFF);
     }
     tmp_ptr = ctx_bytes + 0x4040;
     /* 4. Conditional extra glyphs from the D_80142E0C table. */
-    if (D_8014F8B4 != 0)
+    if (g_scroll_pos != 0)
     {
         prim2 = func_80142274(prim2, ctx, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2],
                               0, 0, 0);
     }
-    if (D_8014F8A0 >= 5)
+    if (g_char_last_row >= 5)
     {
-        f8b4 = D_8014F8B4;
+        f8b4 = g_scroll_pos;
         if (f8b4 < 0)
         {
             f8b4 += 0xF;
         }
-        if ((((f8b4 >> 1) >> 1) >> 2) != (D_8014F8A0 - 4))
+        if ((((f8b4 >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
             prim2 = func_80142274(prim2, ctx, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF,
                                   (s32)D_80142E0C[6], 0, 0, 0);
@@ -1177,7 +1177,7 @@ void gname_render(void* ctx)
     }
     /* 5. Remaining sub-passes. */
     *((void**)tmp_ptr) = func_80141D64(emit_draw_mode_prim(prim2, ctx), ctx_bytes + 0x24);
-    func_80141F9C(ctx, D_8014F848);
+    func_80141F9C(ctx, g_char_panel);
     func_80141E04(ctx2, g_active_name, g_strip_width);
 }
 
@@ -1196,7 +1196,7 @@ s32 func_80141C34(s32 arg0, s32 arg1)
     s32 f848;
     void* ptr;
 
-    f8ac = D_8014F8AC;
+    f8ac = g_char_set_mode;
     var_a0 = arg0;
 
     if (f8ac < 8)
@@ -1211,7 +1211,7 @@ s32 func_80141C34(s32 arg0, s32 arg1)
     }
     else if (f8ac == 0x10)
     {
-        f848 = D_8014F848;
+        f848 = g_char_panel;
         if (((u32)(f848 - 3)) < 2U)
         {
             base = ((u8*)&D_80142EF8) - 4;
@@ -1242,7 +1242,7 @@ s32 func_80141D64(void)
     u32 n;
     void* var_a2;
 
-    n = D_8014F848;
+    n = g_char_panel;
     if (n < 4)
     {
         u32 t0;
@@ -1256,7 +1256,7 @@ s32 func_80141D64(void)
     }
     else
     {
-        var_a2 = D_8014F84C;
+        var_a2 = g_kanji_cat_name;
     }
 
     return func_800A88A0(var_a2, 1, 0x23, 0x47, 2);
@@ -1268,7 +1268,7 @@ s32 func_80141D64(void)
  *
  * Builds, in order:
  *   1. A 0x40-byte template packet copied from the inactive frame's reserve
- *      slot at `D_8014F840 + (alt_buf * 0x40C0) + 0x4064`.
+ *      slot at `g_render_buf_base + (alt_buf * 0x40C0) + 0x4064`.
  *   2. A textured sprite (tag 0x64) emitted via @ref func_800A88A0 using
  *      `tex_src` as its source data, then a Draw-Mode (GP0 0xE1) packet
  *      emitted via @ref emit_draw_mode_prim / @ref func_80142274.
@@ -1305,7 +1305,7 @@ void func_80141E04(RenderContext* ctx, s32 tex_src, s32 strip_width)
 
     /* 1. Copy template packet from the *other* frame's reserve slot, then
      *    splice it into the OT. */
-    func_8001A5D4(prim, (void*)(D_8014F840 + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
+    func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
     *prim = (*prim & 0xFF000000) | (ctx->ot[0x0E] & 0xFFFFFF);
     ctx->ot[0x0E] = (ctx->ot[0x0E] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
@@ -1350,7 +1350,7 @@ void func_80141F9C(void* arg0, s32 arg1)
     s32 temp_v1;
 
     /* First call and pointer setup */
-    func_8001A5D4(temp_s1, (void*)(D_8014F840 + ((obj->frame_parity ^ 1) * 0x40C0) + 0x4064));
+    func_8001A5D4(temp_s1, (void*)(g_render_buf_base + ((obj->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
     *temp_s1 = (*temp_s1 & 0xFF000000) | (obj->ot[0x0A] & 0x00FFFFFF);
     obj->ot[0x0A] = (obj->ot[0x0A] & 0xFF000000) | ((u32)temp_s1 & 0x00FFFFFF);
@@ -1358,12 +1358,12 @@ void func_80141F9C(void* arg0, s32 arg1)
     /* var_a2 = temp_s1 + 0x40 (byte addition) */
     var_a2 = (u32*)((u8*)temp_s1 + 0x40);
 
-    /* Determine var_s4, var_s1, var_s5, var_s2 based on D_8014F848 */
-    if (D_8014F848 == 4)
+    /* Determine var_s4, var_s1, var_s5, var_s2 based on g_char_panel */
+    if (g_char_panel == 4)
     {
         var_s4 = (u8*)(D_80142EFC + ((u32)&D_80142EFC - 8));
-        var_s1 = D_80142E40[D_80142CAC[D_8014F8C8]];
-        var_s5 = D_80142E40[D_80142CAC[D_8014F8C8] + 1];
+        var_s1 = D_80142E40[D_80142CAC[g_kanji_cat]];
+        var_s5 = D_80142E40[D_80142CAC[g_kanji_cat] + 1];
         var_s2 = 0;
     }
     else
@@ -1380,7 +1380,7 @@ void func_80141F9C(void* arg0, s32 arg1)
     /* Main loop */
     for (;;)
     {
-        temp_v1 = (var_s2 * 0x10) - D_8014F8B4;
+        temp_v1 = (var_s2 * 0x10) - g_scroll_pos;
         if ((u32)(temp_v1 + 0x0B) < 0x5B)
         {
             var_a2 = func_800A88A0(var_a2, (void*)&obj->ot[0x0A], (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
@@ -1401,8 +1401,8 @@ void func_80141F9C(void* arg0, s32 arg1)
     /* After loop - final setup and second call */
     {
         u32 param_a2 = 0x68;
-        D_8014F8A0 = var_s2;
-        D_8014F898 = var_s0;
+        g_char_last_row = var_s2;
+        g_char_last_col = var_s0;
         if (obj->frame_parity != 0)
         {
             param_a2 = 0x150;

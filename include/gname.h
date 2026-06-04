@@ -150,7 +150,7 @@ typedef struct
 
 extern void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7);
 
-extern s32 D_8014F840;
+/* --- Named data globals --- */
 extern s32 g_name_pixel_width;
 extern u8 g_char_append_anim[]; /* AppendAnimFrame[APPEND_ANIM_FRAME_COUNT]; declared as u8[] for byte-level accesses */
 extern FadeState g_fade_target;
@@ -160,45 +160,77 @@ extern u8 g_name_entry_tim[]; /* TIM-format glyph image uploaded by load_tim_to_
 extern s32 g_strip_width_target;
 extern s32 g_strip_width;
 extern u8* g_active_name;
-extern s32 D_8014F7E4;
 extern u8 g_append_anim_timer; /* render ticks until the next animation frame */
 extern u8 g_append_anim_frame; /* current frame index into g_char_append_anim */
-extern s8 D_8014F850;
-extern char D_8014F7E8;
-extern s32 D_8014F848;
-extern s32 D_8014F884;
-extern s32 D_8014F888;
-extern s32 D_8014F88C;
-extern s32 D_8014F890;
-extern s32 D_8014F894;
-extern s32 D_8014F89C;
 extern s32 g_strip_width_steps;
-extern s32 D_8014F8AC;
-extern s32 D_8014F8B4;
-extern s32 D_8014F8C0;
-extern s32 D_8014F8C4;
-extern s32 D_8014F8D0;
-extern u8 D_8014F7B0;
-extern u8* D_80142F04;
-extern s32 D_8014F7E0;
-extern s32 D_8014F83C;
-extern u8* D_80142F00;
-extern u32 D_80142E0C[];
-extern s32 D_8014F8A0;
-extern u8* D_80142EFC;
-extern u32 D_80142E40[];
-extern s32 D_8014F898;
-extern u8* D_80142EF8;
-extern u32 D_80142C98[];
-extern u32 D_80142CAC[];
-extern s32 D_8014F8C8;
-extern s32 D_80142CA4;
-extern void* D_8014F84C;
-extern s32 D_8014F838;
-extern u8 D_80142EF4[];
 extern u8 g_glyph_table[]; /* GlyphInfo[]; declared as u8[] for byte-level accesses elsewhere */
 extern s32 D_80142E14;
 extern GlyphSeqEntry g_name_cursor_glyphs[];
+
+/* --- Globals named during decomp --- */
+
+/** 48-byte name buffer holding the custom preset name (used when g_name_source_mode == 1). */
+extern u8 g_custom_name_buf;
+/** Which preset name source to paste: 1 = custom (g_custom_name_buf), 3 = history
+ *  (g_history_name_idx), 4/5 = timer-seeded random name table. */
+extern s32 g_name_source_mode;
+/** Overlay exit code written when the session ends: 2 = cancel, 5 = confirm. */
+extern s32 g_overlay_result;
+/** 48-byte name buffer; initial content copied into g_active_name at reset. */
+extern u8 g_initial_name;
+/** If non-zero, pressing cancel while the name is empty triggers an overlay exit. */
+extern s32 g_allow_empty_cancel;
+/** Index into the saved-name history list (used when g_name_source_mode == 3). */
+extern s32 g_history_name_idx;
+/** Base address for the double-buffered render/primitive scratch buffers. */
+extern s32 g_render_buf_base;
+/** Active character panel index: 0-2 = character-set tabs, 3 = kanji category
+ *  picker, 4 = kanji character picker within a selected category. */
+extern s32 g_char_panel;
+/** Pointer to the current kanji category's display data (set when g_char_panel == 4). */
+extern void* g_kanji_cat_name;
+/** 48-byte clipboard buffer; deleted chars are prepended here and can be re-pasted. */
+extern u8 g_name_clipboard;
+/** Frames remaining in the cursor-position lerp animation. */
+extern s32 g_cursor_lerp_steps;
+/** Index of the highlighted tab in the left selection grid (0xFF = none highlighted). */
+extern s32 g_cursor_tab;
+/** Cursor current X position (being lerped toward g_cursor_x_target). */
+extern s32 g_cursor_x;
+/** Cursor current Y position (being lerped toward g_cursor_y_target). */
+extern s32 g_cursor_y;
+/** Cursor target X position for the lerp animation. */
+extern s32 g_cursor_x_target;
+/** Last column index of the rightmost character in the current grid panel. */
+extern s32 g_char_last_col;
+/** Cursor target Y position for the lerp animation. */
+extern s32 g_cursor_y_target;
+/** Row index of the last character in the current grid panel (used for scroll bounds). */
+extern s32 g_char_last_row;
+/** Current character-set navigation state: 0-7 = character set tabs, 0x10 = kanji picker. */
+extern s32 g_char_set_mode;
+/** Current horizontal scroll position of the character grid in pixels. */
+extern s32 g_scroll_pos;
+/** Target horizontal scroll position for the scroll lerp. */
+extern s32 g_scroll_target;
+/** Frames remaining in the scroll lerp animation. */
+extern s32 g_scroll_steps;
+/** Currently selected kanji category index. */
+extern s32 g_kanji_cat;
+/** Linearized character cursor position in the grid: row * 10 + col. */
+extern s32 g_char_cursor;
+
+/* --- ROM data tables (addresses known, names TODO) --- */
+extern u8* D_80142F04;
+extern u8* D_80142F00;
+extern u32 D_80142E0C[];
+extern u8* D_80142EFC;
+extern u32 D_80142E40[];
+extern u8* D_80142EF8;
+extern u32 D_80142C98[];
+extern u32 D_80142CAC[];
+extern s32 D_80142CA4;
+extern u8 D_80142EF4[];
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
