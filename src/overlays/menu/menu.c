@@ -2613,7 +2613,7 @@ typedef struct
 
 extern D_801690B0_type D_801690B0;
 extern u8 D_801686CC[];
-extern u8 D_8014FE54[];
+extern u8 D_8014FE54[][8];
 extern void* D_801690A8;
 extern void* D_801690E0;
 extern void* D_801227D4;
