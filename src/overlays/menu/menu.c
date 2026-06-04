@@ -79,6 +79,14 @@
 #define MENU_NAV_X_CLEAR 0x80FF
 /** @brief Bit 15 of idx_nav.nav_x_packed: bit 0 of the 9-bit nav cursor Y. */
 #define MENU_NAV_Y0_BIT  0x8000
+/** @brief Bit 15 of u8_u.nav_y_packed: bit 0 of the 9-bit layout Y position. */
+#define MENU_LAYOUT_Y0_BIT 0x8000
+/** @brief Number of child-index slots per node (child0..child3). */
+#define MENU_MAX_CHILDREN 4
+/** @brief MenuNode::state value before menu_layout_node has run. */
+#define MENU_NODE_STATE_UNINIT 0
+/** @brief MenuNode::state value after menu_layout_node assigns a Y position. */
+#define MENU_NODE_STATE_LAID_OUT 4
 /** @brief Index of the "browse all items" root node; Circle navigates here. */
 #define MENU_NODE_BROWSE_ALL 0x20
 /** @brief Sentinel value meaning "none" for parent_idx, content_id, and child indices. */
@@ -249,7 +257,7 @@ typedef struct
     } idx_nav;
     union
     {
-        u16 unk8;
+        u16 nav_y_packed; /**< Raw word; high byte = layout_y_lsb, low byte = nav_y_hi. */
         struct
         {
             u8 nav_y_hi;     /**< Bits 1-8 of the 9-bit nav cursor Y: reconstruct as (nav_y_hi<<1)|(nav_x>>7). */
@@ -258,7 +266,7 @@ typedef struct
     } u8_u;
     union
     {
-        u16 unkA;
+        u16 layout_child_packed; /**< Raw word; high byte = child0, low byte = layout_y_hi. */
         struct
         {
             u8 layout_y_hi; /**< Bits 1-8 of the 9-bit layout Y position: reconstruct as
@@ -1640,7 +1648,7 @@ void menu_node_tree_init(void)
     unsigned int temp_v0_8;
     union
     {
-        u16 unk8;
+        u16 nav_y_packed;
         struct
         {
             u8 nav_y_hi;
@@ -1682,7 +1690,7 @@ void menu_node_tree_init(void)
     g_menu_cursor_enable = 0;
     for (var_t0 = 0; var_t0 < MENU_NODE_COUNT; var_t0++)
     {
-        g_menu_nodes[var_t0].state = 0;
+        g_menu_nodes[var_t0].state = MENU_NODE_STATE_UNINIT;
         g_menu_nodes[var_t0].unk4 = 0;
         g_menu_nodes[var_t0].content_id = var_a1;
         g_menu_nodes[var_t0].child3 = var_a1;
@@ -1900,7 +1908,7 @@ void menu_node_tree_init(void)
     var_a1 = 0x1E;
     g_menu_nodes[0x1A].u2.unk2 = (g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80;
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
-    var_a2->uA.unkA += 0;
+    var_a2->uA.layout_child_packed += 0;
     g_menu_nodes[0x1C].unk4 = 0xE;
     g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
@@ -1990,12 +1998,12 @@ void menu_node_tree_init(void)
                 temp_a1 = var_a3 & temp_a1;
                 var_a3 = var_a3 + MENU_ROW_HEIGHT;
                 var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
-                var_a2->u8_u.unk8 = (u16)((*new_var).unk8 & 0x80FF);
-                var_a2->uA.unkA = (u16)((var_a2->uA.unkA & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
-                var_a2->u8_u.unk8 = (u16)(((*new_var).unk8 & 0x7FFF) | (temp_a0 << 0xF));
+                var_a2->u8_u.nav_y_packed = (u16)((*new_var).nav_y_packed & 0x80FF);
+                var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
+                var_a2->u8_u.nav_y_packed = (u16)(((*new_var).nav_y_packed & 0x7FFF) | (temp_a0 << 0xF));
                 var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | (((temp_a1 & 1) << 9) << 6));
                 var_a1 = temp_a1 >> 1;
-                var_a2->u8_u.unk8 = (u16)((new_var3->u8_u.unk8 & 0xFF00) | var_a1);
+                var_a2->u8_u.nav_y_packed = (u16)((new_var3->u8_u.nav_y_packed & 0xFF00) | var_a1);
             }
         }
         var_t0_2 += 1;
@@ -2084,39 +2092,44 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
     MenuNode* temp_a0;
     s32 cur_pos;
     int child_iter;
-    MenuNode* new_var4;
-    int has_children;
-    u32 temp_a1;
+    MenuNode* node;
+    int is_expanded;
+    u32 layout_y; /* base_pos clamped to 16 bits; packed as 9-bit value into layout_y_lsb/layout_y_hi */
+    /* Codegen artifact: separate union pointer so the compiler reads nav_y_hi via a distinct register. */
     union
     {
-        u16 unk8;
+        u16 nav_y_packed;
         struct
         {
             u8 nav_y_hi;
             u8 layout_y_lsb;
         } s;
-    }* new_var2;
-    MenuNode* new_var3;
+    }* u8_alias;
+    MenuNode* node2; /* second pointer alias -- register allocation artifact, do not merge with node */
     cur_pos = base_pos;
-    has_children = (((u16)(&g_menu_nodes[node_idx])->u2.unk2) >> 1) & 1;
-    temp_a1 = cur_pos & 0xFFFF;
+    is_expanded = (((u16)(&g_menu_nodes[node_idx])->u2.unk2) >> 1) & 1;
+    layout_y = cur_pos & 0xFFFF;
     cur_pos += MENU_ROW_HEIGHT;
-    new_var4 = &g_menu_nodes[node_idx];
+    node = &g_menu_nodes[node_idx];
 
-    (*(&g_menu_nodes[node_idx])).state = 4;
-    new_var2 = &new_var4->u8_u;
-    new_var4->u8_u.unk8 = (*new_var2).s.nav_y_hi | ((temp_a1 & 1) << 0xF);
-    (&g_menu_nodes[node_idx])->uA.unkA = ((&g_menu_nodes[node_idx])->uA.unkA & 0xFF00) | (0xFF & (temp_a1 >> 1));
-    new_var4->uA.unkA = (new_var4->uA.unkA & 0xFF00) | ((temp_a1 >> 1) & 0xFF);
+    (*(&g_menu_nodes[node_idx])).state = MENU_NODE_STATE_LAID_OUT;
+    u8_alias = &node->u8_u;
+    /* Pack 9-bit layout Y: bit 0 goes into MENU_LAYOUT_Y0_BIT of u8_u.nav_y_packed (layout_y_lsb bit 7);
+     * bits 1-8 go into layout_y_hi. Reconstruct: (layout_y_hi << 1) | (layout_y_lsb >> 7). */
+    node->u8_u.nav_y_packed = (*u8_alias).s.nav_y_hi | ((layout_y & 1) << 15);
+    /* Duplicate write (codegen artifact): both lines store (layout_y >> 1) into layout_y_hi. */
+    (&g_menu_nodes[node_idx])->uA.layout_child_packed = ((&g_menu_nodes[node_idx])->uA.layout_child_packed & 0xFF00) | (0xFF & (layout_y >> 1));
+    node->uA.layout_child_packed = (node->uA.layout_child_packed & 0xFF00) | ((layout_y >> 1) & 0xFF);
     child_iter = 0;
-    if (has_children)
+    if (is_expanded)
     {
         s32 child_idx;
         s32 child;
-        for (child_idx = child_iter; (child_idx < 4) != 0;)
+        /* child0..child3 are consecutive bytes; treat as a 4-element array via pointer arithmetic. */
+        for (child_idx = child_iter; (child_idx < MENU_MAX_CHILDREN) != 0;)
         {
-            new_var3 = g_menu_nodes + node_idx;
-            child_idx = (&(&(*new_var3).uA.s)->child0)[child_idx];
+            node2 = g_menu_nodes + node_idx;
+            child_idx = (&(&(*node2).uA.s)->child0)[child_idx];
             child = child_idx;
             if (child == MENU_NONE)
             {
@@ -2546,7 +2559,7 @@ void menu_set_active_node(void)
     active_node->u2.unk2 = temp_v0;
     if ((temp_v0 >> 1) & 1)
     {
-        for (child_slot = 0; child_slot < 4; child_slot++)
+        for (child_slot = 0; child_slot < MENU_MAX_CHILDREN; child_slot++)
         {
             child_idx = (&active_node->uA.s.child0)[child_slot];
             if (child_idx == (temp_v0 = MENU_NONE))
@@ -2558,14 +2571,14 @@ void menu_set_active_node(void)
             nav_col = active_node->idx_nav.nav_x_packed & MENU_NAV_X_MASK;
             child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed & MENU_NAV_X_CLEAR;
             child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_col;
-            child_node->u8_u.unk8 = child_node->u8_u.unk8 & MENU_NAV_X_CLEAR;
-            child_node->u8_u.unk8 = child_node->u8_u.unk8 | nav_col;
+            child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed & MENU_NAV_X_CLEAR;
+            child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed | nav_col;
             child_idx = (&active_node->uA.s.child0)[child_slot];
             parent_packed = active_node->idx_nav.nav_x_packed;
             ;
             /* Propagate nav_y_hi (nav Y bits 8:1) from parent to child's u8_u low byte. */
-            (&g_menu_nodes[child_idx])->u8_u.unk8 =
-                (((&g_menu_nodes[child_idx])->u8_u.unk8 & 0xFF00) & 0xFFFFFFFFFFFFFFFFu) |
+            (&g_menu_nodes[child_idx])->u8_u.nav_y_packed =
+                (((&g_menu_nodes[child_idx])->u8_u.nav_y_packed & 0xFF00) & 0xFFFFFFFFFFFFFFFFu) |
                 (&g_menu_nodes[g_menu_active_node])->u8_u.s.nav_y_hi;
             /* Propagate nav Y bit 0 (bit 15 of nav_x_packed) from parent to child. */
             (&g_menu_nodes[child_idx])->idx_nav.nav_x_packed =
