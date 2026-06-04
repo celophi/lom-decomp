@@ -2364,7 +2364,7 @@ unsigned int menu_handle_node_input(void)
             D_80169408 = (D_80169404 = (D_80169410 = (g_menu_item_ptr = 0)));
         }
         g_menu_prev_node = temp_v0_3;
-        new_var8 = &temp_a1->u6;
+        new_var8 = &temp_a1->idx_nav;
         if (g_menu_scene_type != g_menu_active_node)
         {
             if (g_menu_content_table[temp_a1->idx_nav.s.self_idx] != NULL)
