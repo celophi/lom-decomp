@@ -79,6 +79,14 @@
 #define MENU_NAV_X_CLEAR 0x80FF
 /** @brief Bit 15 of idx_nav.nav_x_packed: bit 0 of the 9-bit nav cursor Y. */
 #define MENU_NAV_Y0_BIT  0x8000
+/** @brief Bit 15 of u8_u.nav_y_packed: bit 0 of the 9-bit layout Y position. */
+#define MENU_LAYOUT_Y0_BIT 0x8000
+/** @brief Number of child-index slots per node (child0..child3). */
+#define MENU_MAX_CHILDREN 4
+/** @brief MenuNode::state value before menu_layout_node has run. */
+#define MENU_NODE_STATE_UNINIT 0
+/** @brief MenuNode::state value after menu_layout_node assigns a Y position. */
+#define MENU_NODE_STATE_LAID_OUT 4
 /** @brief Index of the "browse all items" root node; Circle navigates here. */
 #define MENU_NODE_BROWSE_ALL 0x20
 /** @brief Sentinel value meaning "none" for parent_idx, content_id, and child indices. */
@@ -136,32 +144,32 @@ typedef struct
 
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
+    u8 active;     /* 0x00 - mirrors MenuSlot.active (2 = open/steady) */
+    u8 index;      /* 0x01 - mirrors MenuSlot.index */
     u8 pad2;
-    u8 unk3;
+    u8 has_title;  /* 0x03 - mirrors MenuSlot.has_title */
     union
     {
-        s32 unk4;
+        s32 flags;
         struct
         {
             u16 _unk4lo;
             u16 unk6;
         } _s;
     } _u;
-    u16 unk8;
-    u16 unkA;
-    u16 unkC;
-    u16 unkE;
-    u16 unk10;
-    u16 unk12;
-    u16 unk14;
-    u16 unk16;
-    u8 unk18;
+    u16 x;          /* 0x08 */
+    u16 y;          /* 0x0A */
+    u16 w;          /* 0x0C */
+    u16 h;          /* 0x0E */
+    u16 lerp_cur_a;    /* 0x10 */
+    u16 lerp_cur_b;    /* 0x12 */
+    u16 lerp_target_a; /* 0x14 */
+    u16 lerp_target_b; /* 0x16 */
+    u8 lerp_steps;     /* 0x18 */
     u8 pad19;
     u8 pad1A;
     u8 pad1B;
-    s32* (*unk1C)();
+    s32* (*content_cb)(); /* 0x1C */
 } MenuSlotView;
 
 typedef struct
@@ -249,7 +257,7 @@ typedef struct
     } idx_nav;
     union
     {
-        u16 unk8;
+        u16 nav_y_packed; /**< Raw word; high byte = layout_y_lsb, low byte = nav_y_hi. */
         struct
         {
             u8 nav_y_hi;     /**< Bits 1-8 of the 9-bit nav cursor Y: reconstruct as (nav_y_hi<<1)|(nav_x>>7). */
@@ -258,7 +266,7 @@ typedef struct
     } u8_u;
     union
     {
-        u16 unkA;
+        u16 layout_child_packed; /**< Raw word; high byte = child0, low byte = layout_y_hi. */
         struct
         {
             u8 layout_y_hi; /**< Bits 1-8 of the 9-bit layout Y position: reconstruct as
@@ -891,10 +899,10 @@ void* menu_slot_alloc(s32 arg0, void* rect)
     *((u16*)(((u8*)entry) + 4)) = 0;
     temp = entry->flags;
     entry->active = 1;
-    entry->unk1C = 0;
+    entry->content_cb = 0;
     entry->index = (u8)var_a2;
-    entry->unk20 = 0;
-    entry->unk2 = 0;
+    entry->tick_cb = 0;
+    entry->anim_frame = 0;
     mask = 0x1FFFFFF;
     temp = temp & mask;
     temp = temp | (((u32)arg0) << 25);
@@ -903,12 +911,12 @@ void* menu_slot_alloc(s32 arg0, void* rect)
     entry->y = src[1];
     entry->w = src[2];
     entry->h = src[3];
-    entry->unk10 = 0;
-    entry->unk12 = 0;
-    entry->unk14 = 0;
-    entry->unk16 = 0;
-    entry->unk18 = 0;
-    entry->unk3 = 0;
+    entry->lerp_cur_a = 0;
+    entry->lerp_cur_b = 0;
+    entry->lerp_target_a = 0;
+    entry->lerp_target_b = 0;
+    entry->lerp_steps = 0;
+    entry->has_title = 0;
     g_active_slot = var_a2;
     return (void*)entry;
 }
@@ -1012,12 +1020,12 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
             }
 
             menu_draw_window_transition(gpu_work, var_s0, g_menu_cursor_enable != 0);
-            temp_a0 = var_s0->unk2;
+            temp_a0 = var_s0->anim_frame;
             temp_v0 = temp_a0 + 1;
-            var_s0->unk2 = temp_v0;
+            var_s0->anim_frame = temp_v0;
             if ((temp_v0 & 0xff) == 6)
             {
-                var_s0->unk2 = temp_a0;
+                var_s0->anim_frame = temp_a0;
                 var_s0->active = tmp_s5;
             }
         }
@@ -1033,7 +1041,7 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
         if (var_s1 == g_active_slot)
         {
             /* Casting u32 to function pointer */
-            temp_v0_2 = (void (*)(MenuSlot*))var_s0->unk20;
+            temp_v0_2 = (void (*)(MenuSlot*))var_s0->tick_cb;
             if (temp_v0_2 != 0)
             {
                 temp_v0_2(var_s0);
@@ -1049,8 +1057,8 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
 
     branch_11C:
         menu_draw_window_transition(gpu_work, var_s0, g_menu_cursor_enable != 0);
-        temp_v0 = var_s0->unk2 - 1;
-        var_s0->unk2 = temp_v0;
+        temp_v0 = var_s0->anim_frame - 1;
+        var_s0->anim_frame = temp_v0;
         var_a0 = 1;
         if (!(temp_v0 & 0xFF))
         {
@@ -1189,23 +1197,23 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
 
     temp_s3 = rect;
     var_s1 = gpu_work->prim_cursor;
-    temp_s2 = (s32*)gpu_work + (((u32)slot->_u.unk4 >> 0x19));
-    if (slot->unk18 != 0)
+    temp_s2 = (s32*)gpu_work + (((u32)slot->_u.flags >> 0x19));
+    if (slot->lerp_steps != 0)
     {
-        temp_a2 = slot->unk10;
-        temp_v1 = (s32)(slot->unk14 - temp_a2) / (s32)slot->unk18;
-        temp_a1 = slot->unk12;
-        temp_a1 = temp_a1 + ((s32)(slot->unk16 - temp_a1) / (s32) * (volatile u8*)&slot->unk18);
-        slot->unk18 = (u8)(*(volatile u8*)&slot->unk18 - 1);
-        slot->unk10 = (u16)(temp_a2 + temp_v1);
-        slot->unk12 = (u16)temp_a1;
+        temp_a2 = slot->lerp_cur_a;
+        temp_v1 = (s32)(slot->lerp_target_a - temp_a2) / (s32)slot->lerp_steps;
+        temp_a1 = slot->lerp_cur_b;
+        temp_a1 = temp_a1 + ((s32)(slot->lerp_target_b - temp_a1) / (s32) * (volatile u8*)&slot->lerp_steps);
+        slot->lerp_steps = (u8)(*(volatile u8*)&slot->lerp_steps - 1);
+        slot->lerp_cur_a = (u16)(temp_a2 + temp_v1);
+        slot->lerp_cur_b = (u16)temp_a1;
     }
     else
     {
-        slot->unk10 = (u16)slot->unk14;
-        slot->unk12 = (u16)slot->unk16;
+        slot->lerp_cur_a = (u16)slot->lerp_target_a;
+        slot->lerp_cur_b = (u16)slot->lerp_target_b;
     }
-    if (slot->unk1C != NULL)
+    if (slot->content_cb != NULL)
     {
         if ((temp_s3->w - 0x20) > 0)
         {
@@ -1218,14 +1226,14 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                 g_menu_draw_early_out = 0;
                 *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
                 var_s1 += 0x10;
-                if ((slot->unk1 == g_active_slot) && (cursor_enable != 0))
+                if ((slot->index == g_active_slot) && (cursor_enable != 0))
                 {
                     if (g_menu_suppress_cursor == 0)
                     {
-                        var_a3 = slot->unk0 == 2;
+                        var_a3 = slot->active == 2;
                     }
                 }
-                temp_s1 = slot->unk1C(temp_s2, slot, var_s1, arg3, var_a3);
+                temp_s1 = slot->content_cb(temp_s2, slot, var_s1, arg3, var_a3);
                 if (g_menu_draw_early_out != 0)
                 {
                     gpu_work->prim_cursor = temp_s1;
@@ -1242,7 +1250,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                 *temp_s1 = (*temp_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
                 var_s1 = temp_s1 + 0x10;
-                if (slot->unk3 != 0)
+                if (slot->has_title != 0)
                 {
                     switch (g_menu_scene_type)
                     {        /* switch 1 */
@@ -1259,9 +1267,9 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     }
                     sp80[0] = var_v0;
                     sp80[1] = (u16)temp_s3->y;
-                    if (slot->_u.unk4 & 0x01FF0000)
+                    if (slot->_u.flags & 0x01FF0000)
                     {
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.unk4 + 1, 3, sp80, 0);
+                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.flags + 1, 3, sp80, 0);
                     }
                     else
                     {
@@ -1640,7 +1648,7 @@ void menu_node_tree_init(void)
     unsigned int temp_v0_8;
     union
     {
-        u16 unk8;
+        u16 nav_y_packed;
         struct
         {
             u8 nav_y_hi;
@@ -1682,7 +1690,7 @@ void menu_node_tree_init(void)
     g_menu_cursor_enable = 0;
     for (var_t0 = 0; var_t0 < MENU_NODE_COUNT; var_t0++)
     {
-        g_menu_nodes[var_t0].state = 0;
+        g_menu_nodes[var_t0].state = MENU_NODE_STATE_UNINIT;
         g_menu_nodes[var_t0].unk4 = 0;
         g_menu_nodes[var_t0].content_id = var_a1;
         g_menu_nodes[var_t0].child3 = var_a1;
@@ -1900,7 +1908,7 @@ void menu_node_tree_init(void)
     var_a1 = 0x1E;
     g_menu_nodes[0x1A].u2.unk2 = (g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80;
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
-    var_a2->uA.unkA += 0;
+    var_a2->uA.layout_child_packed += 0;
     g_menu_nodes[0x1C].unk4 = 0xE;
     g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
@@ -1990,12 +1998,12 @@ void menu_node_tree_init(void)
                 temp_a1 = var_a3 & temp_a1;
                 var_a3 = var_a3 + MENU_ROW_HEIGHT;
                 var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
-                var_a2->u8_u.unk8 = (u16)((*new_var).unk8 & 0x80FF);
-                var_a2->uA.unkA = (u16)((var_a2->uA.unkA & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
-                var_a2->u8_u.unk8 = (u16)(((*new_var).unk8 & 0x7FFF) | (temp_a0 << 0xF));
+                var_a2->u8_u.nav_y_packed = (u16)((*new_var).nav_y_packed & 0x80FF);
+                var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
+                var_a2->u8_u.nav_y_packed = (u16)(((*new_var).nav_y_packed & 0x7FFF) | (temp_a0 << 0xF));
                 var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | (((temp_a1 & 1) << 9) << 6));
                 var_a1 = temp_a1 >> 1;
-                var_a2->u8_u.unk8 = (u16)((new_var3->u8_u.unk8 & 0xFF00) | var_a1);
+                var_a2->u8_u.nav_y_packed = (u16)((new_var3->u8_u.nav_y_packed & 0xFF00) | var_a1);
             }
         }
         var_t0_2 += 1;
@@ -2084,39 +2092,44 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
     MenuNode* temp_a0;
     s32 cur_pos;
     int child_iter;
-    MenuNode* new_var4;
-    int has_children;
-    u32 temp_a1;
+    MenuNode* node;
+    int is_expanded;
+    u32 layout_y; /* base_pos clamped to 16 bits; packed as 9-bit value into layout_y_lsb/layout_y_hi */
+    /* Codegen artifact: separate union pointer so the compiler reads nav_y_hi via a distinct register. */
     union
     {
-        u16 unk8;
+        u16 nav_y_packed;
         struct
         {
             u8 nav_y_hi;
             u8 layout_y_lsb;
         } s;
-    }* new_var2;
-    MenuNode* new_var3;
+    }* u8_alias;
+    MenuNode* node2; /* second pointer alias -- register allocation artifact, do not merge with node */
     cur_pos = base_pos;
-    has_children = (((u16)(&g_menu_nodes[node_idx])->u2.unk2) >> 1) & 1;
-    temp_a1 = cur_pos & 0xFFFF;
+    is_expanded = (((u16)(&g_menu_nodes[node_idx])->u2.unk2) >> 1) & 1;
+    layout_y = cur_pos & 0xFFFF;
     cur_pos += MENU_ROW_HEIGHT;
-    new_var4 = &g_menu_nodes[node_idx];
+    node = &g_menu_nodes[node_idx];
 
-    (*(&g_menu_nodes[node_idx])).state = 4;
-    new_var2 = &new_var4->u8_u;
-    new_var4->u8_u.unk8 = (*new_var2).s.nav_y_hi | ((temp_a1 & 1) << 0xF);
-    (&g_menu_nodes[node_idx])->uA.unkA = ((&g_menu_nodes[node_idx])->uA.unkA & 0xFF00) | (0xFF & (temp_a1 >> 1));
-    new_var4->uA.unkA = (new_var4->uA.unkA & 0xFF00) | ((temp_a1 >> 1) & 0xFF);
+    (*(&g_menu_nodes[node_idx])).state = MENU_NODE_STATE_LAID_OUT;
+    u8_alias = &node->u8_u;
+    /* Pack 9-bit layout Y: bit 0 goes into MENU_LAYOUT_Y0_BIT of u8_u.nav_y_packed (layout_y_lsb bit 7);
+     * bits 1-8 go into layout_y_hi. Reconstruct: (layout_y_hi << 1) | (layout_y_lsb >> 7). */
+    node->u8_u.nav_y_packed = (*u8_alias).s.nav_y_hi | ((layout_y & 1) << 15);
+    /* Duplicate write (codegen artifact): both lines store (layout_y >> 1) into layout_y_hi. */
+    (&g_menu_nodes[node_idx])->uA.layout_child_packed = ((&g_menu_nodes[node_idx])->uA.layout_child_packed & 0xFF00) | (0xFF & (layout_y >> 1));
+    node->uA.layout_child_packed = (node->uA.layout_child_packed & 0xFF00) | ((layout_y >> 1) & 0xFF);
     child_iter = 0;
-    if (has_children)
+    if (is_expanded)
     {
         s32 child_idx;
         s32 child;
-        for (child_idx = child_iter; (child_idx < 4) != 0;)
+        /* child0..child3 are consecutive bytes; treat as a 4-element array via pointer arithmetic. */
+        for (child_idx = child_iter; (child_idx < MENU_MAX_CHILDREN) != 0;)
         {
-            new_var3 = g_menu_nodes + node_idx;
-            child_idx = (&(&(*new_var3).uA.s)->child0)[child_idx];
+            node2 = g_menu_nodes + node_idx;
+            child_idx = (&(&(*node2).uA.s)->child0)[child_idx];
             child = child_idx;
             if (child == MENU_NONE)
             {
@@ -2546,7 +2559,7 @@ void menu_set_active_node(void)
     active_node->u2.unk2 = temp_v0;
     if ((temp_v0 >> 1) & 1)
     {
-        for (child_slot = 0; child_slot < 4; child_slot++)
+        for (child_slot = 0; child_slot < MENU_MAX_CHILDREN; child_slot++)
         {
             child_idx = (&active_node->uA.s.child0)[child_slot];
             if (child_idx == (temp_v0 = MENU_NONE))
@@ -2558,14 +2571,14 @@ void menu_set_active_node(void)
             nav_col = active_node->idx_nav.nav_x_packed & MENU_NAV_X_MASK;
             child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed & MENU_NAV_X_CLEAR;
             child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_col;
-            child_node->u8_u.unk8 = child_node->u8_u.unk8 & MENU_NAV_X_CLEAR;
-            child_node->u8_u.unk8 = child_node->u8_u.unk8 | nav_col;
+            child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed & MENU_NAV_X_CLEAR;
+            child_node->u8_u.nav_y_packed = child_node->u8_u.nav_y_packed | nav_col;
             child_idx = (&active_node->uA.s.child0)[child_slot];
             parent_packed = active_node->idx_nav.nav_x_packed;
             ;
             /* Propagate nav_y_hi (nav Y bits 8:1) from parent to child's u8_u low byte. */
-            (&g_menu_nodes[child_idx])->u8_u.unk8 =
-                (((&g_menu_nodes[child_idx])->u8_u.unk8 & 0xFF00) & 0xFFFFFFFFFFFFFFFFu) |
+            (&g_menu_nodes[child_idx])->u8_u.nav_y_packed =
+                (((&g_menu_nodes[child_idx])->u8_u.nav_y_packed & 0xFF00) & 0xFFFFFFFFFFFFFFFFu) |
                 (&g_menu_nodes[g_menu_active_node])->u8_u.s.nav_y_hi;
             /* Propagate nav Y bit 0 (bit 15 of nav_x_packed) from parent to child. */
             (&g_menu_nodes[child_idx])->idx_nav.nav_x_packed =
@@ -2980,9 +2993,9 @@ after_do_while:
                         u16 sp14 = 0xF0;
                         u16 sp16 = 0x60;
                         MenuSlot* var_a3 = (MenuSlot*)menu_slot_alloc(3, &sp10);
-                        var_a3->unk1C = (s32 * (*)()) & func_8014B7DC;
+                        var_a3->content_cb = (s32 * (*)()) & func_8014B7DC;
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | ((func_80145310() & 0x1FF) << 16);
-                        var_a3->unk3 = 1;
+                        var_a3->has_title = 1;
                         func_8014F210(0x7D, 0x80);
                     }
                     break;
@@ -3011,7 +3024,7 @@ after_do_while:
                             }
                             {
                                 MenuSlot* var_a3 = (MenuSlot*)menu_slot_alloc(3, &sp10);
-                                var_a3->unk1C = (s32 * (*)()) & func_8014C200;
+                                var_a3->content_cb = (s32 * (*)()) & func_8014C200;
                                 new_var7 =
                                     (void*)((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + 0x5F0 + (content_type << 6) + 0x90);
                                 if ((flag != 0xFF) && (flag & 0x80))
@@ -3050,7 +3063,7 @@ after_do_while:
                         u16 sp14 = 0x70;
                         u16 sp16 = 0x60;
                         MenuSlot* var_a3 = (MenuSlot*)menu_slot_alloc(3, &sp10);
-                        var_a3->unk1C = (s32 * (*)()) & func_8014CC08;
+                        var_a3->content_cb = (s32 * (*)()) & func_8014CC08;
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x50000;
                         func_80145278(5);
                         {

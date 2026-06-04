@@ -66,20 +66,20 @@ typedef struct
  */
 typedef struct MenuSlot_s
 {
-    u8 active; /* 0x00 - non-zero when in use */
-    u8 index;  /* 0x01 - slot index within the pool */
-    u8 unk2;   /* 0x02 */
-    u8 unk3;   /* 0x03 */
-    u32 flags; /* 0x04 - top 7 bits sourced from the caller (arg0 << 25) */
-    u16 x;     /* 0x08 */
-    u16 y;     /* 0x0A */
-    u16 w;     /* 0x0C */
-    u16 h;     /* 0x0E */
-    u16 unk10; /* 0x10 */
-    u16 unk12; /* 0x12 */
-    u16 unk14; /* 0x14 */
-    u16 unk16; /* 0x16 */
-    u8 unk18;  /* 0x18 */
+    u8 active;     /* 0x00 - non-zero when in use (1=opening, 2=open, 3=closing) */
+    u8 index;      /* 0x01 - slot index within the pool */
+    u8 anim_frame; /* 0x02 - animation frame counter: counts up to 6 on open, down to 0 on close */
+    u8 has_title;  /* 0x03 - non-zero to draw the title/decoration bar above the window */
+    u32 flags;     /* 0x04 - top 7 bits sourced from the caller (arg0 << 25) */
+    u16 x;         /* 0x08 */
+    u16 y;         /* 0x0A */
+    u16 w;         /* 0x0C */
+    u16 h;         /* 0x0E */
+    u16 lerp_cur_a;    /* 0x10 - current interpolated value A (animated toward lerp_target_a) */
+    u16 lerp_cur_b;    /* 0x12 - current interpolated value B (animated toward lerp_target_b) */
+    u16 lerp_target_a; /* 0x14 - target value A for interpolation */
+    u16 lerp_target_b; /* 0x16 - target value B for interpolation */
+    u8 lerp_steps;     /* 0x18 - remaining interpolation steps (countdown divisor); 0 = snap to target */
     u8 _pad[3];
     /**
      * @brief Content callback - draws the window's interior primitives.
@@ -89,8 +89,8 @@ typedef struct MenuSlot_s
      * and an active-highlight flag. Returns the new primitive cursor.
      * Empty parameter list (K&R) is intentional to preserve callsite codegen.
      */
-    s32* (*unk1C)();        /* 0x1C - content callback */
-    void (*unk20)(struct MenuSlot_s* /* self */); /* 0x20 - per-frame active-slot callback */
+    s32* (*content_cb)();                            /* 0x1C */
+    void (*tick_cb)(struct MenuSlot_s* /* self */);  /* 0x20 - per-frame callback while slot is active */
 } MenuSlot;
 
 extern MenuSlot g_menu_slots[];
