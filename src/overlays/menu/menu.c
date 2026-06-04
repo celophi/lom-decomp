@@ -73,6 +73,12 @@
  */
 /** @brief Total number of nodes in g_menu_nodes[]. */
 #define MENU_NODE_COUNT 0x2C
+/** @brief Bits [14:8] of idx_nav.nav_x_packed: the 7-bit column (nav_x) field. */
+#define MENU_NAV_X_MASK  0x7F00
+/** @brief Clears bits [14:8] of idx_nav.nav_x_packed (inverse of MENU_NAV_X_MASK). */
+#define MENU_NAV_X_CLEAR 0x80FF
+/** @brief Bit 15 of idx_nav.nav_x_packed: bit 0 of the 9-bit nav cursor Y. */
+#define MENU_NAV_Y0_BIT  0x8000
 /** @brief Index of the "browse all items" root node; Circle navigates here. */
 #define MENU_NODE_BROWSE_ALL 0x20
 /** @brief Sentinel value meaning "none" for parent_idx, content_id, and child indices. */
@@ -234,13 +240,13 @@ typedef struct
     u8 content_id; /**< Passed to the content-open function; 0xFF = no content. */
     union
     {
-        u16 unk6;
+        u16 nav_x_packed; /**< Raw word; high byte = nav_x, low byte = self_idx. */
         struct
         {
             u8 self_idx; /**< This node's own index in g_menu_nodes (used as content-table key). */
             u8 nav_x;    /**< Bits 0-6: nav cursor X = (nav_x & 0x7F) + 8. Bit 7: bit 0 of nav cursor Y. */
         } s;
-    } u6;
+    } idx_nav;
     union
     {
         u16 unk8;
@@ -355,8 +361,10 @@ extern u8 g_menu_init_content_id;
 extern Struct_D_800FD818 D_800FD818;
 extern u16 D_800FDA80;
 extern u16 D_800FDCE8;
+/** @brief Set to 0 before each content-load call; written back by func_8014E3C4. */
 extern s8 D_801690F9;
-extern s8 D_80169324;
+/** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
+extern s8 g_menu_companion_node;
 
 extern StringTableKey g_menu_label_key_a; /* 0x800EC3DA: offset +0x16 into shared text table at 0x800EC3C4 */
 extern StringTableKey g_menu_label_key_b; /* 0x800EC3E4: offset +0x20 into shared text table at 0x800EC3C4 */
@@ -386,7 +394,7 @@ extern struct
     s16 x;
     s16 y;
 } g_menu_default_view_pos;
-/** @brief Per-node table of MenuContentItem arrays, indexed by node.u6.s.self_idx; NULL = no cursor data. */
+/** @brief Per-node table of MenuContentItem arrays, indexed by node.idx_nav.s.self_idx; NULL = no cursor data. */
 extern MenuContentItem* g_menu_content_table[];
 extern s32 g_menu_layout_end;
 
@@ -1686,7 +1694,7 @@ void menu_node_tree_init(void)
     }
 
     g_menu_nodes[0].unk0 = 1;
-    g_menu_nodes[0].u6.s.self_idx = 0;
+    g_menu_nodes[0].idx_nav.s.self_idx = 0;
     original_unk2 = g_menu_nodes[0].u2.unk2;
     temp1 = original_unk2 & 0xFFCD;
     temp2 = original_unk2 & 0xFF0D;
@@ -1703,15 +1711,15 @@ void menu_node_tree_init(void)
         g_menu_nodes[0].unk4 = 1;
     }
     g_menu_nodes[0].uA.s.child0 = 1;
-    g_menu_nodes[1].u6.s.self_idx = 1;
+    g_menu_nodes[1].idx_nav.s.self_idx = 1;
     g_menu_nodes[1].unk4 = 5;
     g_menu_nodes[0].child1 = 2;
     g_menu_nodes[2].unk0 = 2;
-    g_menu_nodes[2].u6.s.self_idx = 2;
+    g_menu_nodes[2].idx_nav.s.self_idx = 2;
     g_menu_nodes[2].unk4 = 4;
     g_menu_nodes[3].unk0 = 4;
     g_menu_nodes[1].unk0 = 3;
-    g_menu_nodes[3].u6.s.self_idx = 3;
+    g_menu_nodes[3].idx_nav.s.self_idx = 3;
     g_menu_nodes[1].u2.unk2 = (u16)((g_menu_nodes[1].u2.unk2 & 0xFF0F) | 0x40);
     g_menu_nodes[1].u2.s.parent_idx = 0;
     g_menu_nodes[2].u2.unk2 = (u16)((g_menu_nodes[2].u2.unk2 & 0xFF0F) | 0x40);
@@ -1723,7 +1731,7 @@ void menu_node_tree_init(void)
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[3].u2.unk2)) = (u16)(temp_v0_3 & 0xFF3E);
     g_menu_nodes[3].u2.s.parent_idx = MENU_NONE;
-    g_menu_nodes[4].u6.s.self_idx = 4;
+    g_menu_nodes[4].idx_nav.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
         var_v0 = 0x6F;
@@ -1746,15 +1754,15 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].unk0 = 6;
     g_menu_nodes[4].unk4 = 5;
     g_menu_nodes[5].unk0 = 5;
-    g_menu_nodes[5].u6.s.self_idx = 5;
+    g_menu_nodes[5].idx_nav.s.self_idx = 5;
     g_menu_nodes[5].unk4 = 4;
     g_menu_nodes[6].unk0 = 7;
-    g_menu_nodes[6].u6.s.self_idx = 6;
+    g_menu_nodes[6].idx_nav.s.self_idx = 6;
     g_menu_nodes[6].unk4 = 3;
     g_menu_nodes[6].uA.s.child0 = 7;
     g_menu_nodes[6].child1 = 8;
     g_menu_nodes[7].unk0 = 9;
-    g_menu_nodes[7].u6.s.self_idx = 7;
+    g_menu_nodes[7].idx_nav.s.self_idx = 7;
     new_var7 = 0xFF3E;
     g_menu_nodes[7].unk4 = 5;
     g_menu_nodes[8].unk0 = 8;
@@ -1764,7 +1772,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[7].u2.unk2 = (u16)((g_menu_nodes[7].u2.unk2 & 0xFF5F) | 0x50);
     g_menu_nodes[7].u2.s.parent_idx = 6;
     g_menu_nodes[8].u2.unk2 = (u16)((g_menu_nodes[8].u2.unk2 & 0xFF5F) | 0x50);
-    g_menu_nodes[8].u6.s.self_idx = 8;
+    g_menu_nodes[8].idx_nav.s.self_idx = 8;
     temp_v0_6 = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
     g_menu_nodes[9].u2.unk2 = temp_v0_6;
     temp_v0_7 = temp_v0_6 | 0x20;
@@ -1779,19 +1787,19 @@ void menu_node_tree_init(void)
     g_menu_nodes[8].u2.s.parent_idx = 6;
     g_menu_nodes[8].unk4 = 4;
     g_menu_nodes[9].unk0 = 0xA;
-    g_menu_nodes[9].u6.s.self_idx = 9;
+    g_menu_nodes[9].idx_nav.s.self_idx = 9;
     g_menu_nodes[9].unk4 = 6;
     g_menu_nodes[9].uA.s.child0 = 0xA;
     g_menu_nodes[0xA].unk0 = 0xB;
     g_menu_nodes[0x12].unk4 = 0xA;
-    g_menu_nodes[0xA].u6.s.self_idx = 0xA;
+    g_menu_nodes[0xA].idx_nav.s.self_idx = 0xA;
     g_menu_nodes[0xA].unk4 = 7;
     g_menu_nodes[0xC].unk0 = 0xA;
-    g_menu_nodes[0xC].u6.s.self_idx = 0xC;
+    g_menu_nodes[0xC].idx_nav.s.self_idx = 0xC;
     g_menu_nodes[0xC].unk4 = 6;
     g_menu_nodes[0xC].uA.s.child0 = 0xD;
     g_menu_nodes[0xD].unk0 = 0xB;
-    g_menu_nodes[0xD].u6.s.self_idx = 0xD;
+    g_menu_nodes[0xD].idx_nav.s.self_idx = 0xD;
     g_menu_nodes[0xD].unk4 = 7;
     g_menu_nodes[9].u2.s.parent_idx = MENU_NONE;
     temp_v0_7 = 0xF;
@@ -1809,16 +1817,16 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x10].unk4 = 7;
     g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0xF].unk0 = 0xD;
-    g_menu_nodes[0xF].u6.s.self_idx = 0xF;
+    g_menu_nodes[0xF].idx_nav.s.self_idx = 0xF;
     g_menu_nodes[0xF].uA.s.child0 = 0x10;
     g_menu_nodes[0xF].child1 = 0x11;
     g_menu_nodes[0x10].unk0 = 0xC;
-    g_menu_nodes[0x10].u6.s.self_idx = 0x10;
+    g_menu_nodes[0x10].idx_nav.s.self_idx = 0x10;
     g_menu_nodes[0x11].unk0 = 0xE;
-    g_menu_nodes[0x11].u6.s.self_idx = 0x11;
+    g_menu_nodes[0x11].idx_nav.s.self_idx = 0x11;
     g_menu_nodes[0x11].unk4 = 9;
     g_menu_nodes[0x12].unk0 = 0x10;
-    g_menu_nodes[0x12].u6.s.self_idx = 0x12;
+    g_menu_nodes[0x12].idx_nav.s.self_idx = 0x12;
     g_menu_nodes[0x12].content_id = 4;
     g_menu_nodes[0x12].uA.s.child0 = 0x13;
     g_menu_nodes[0x12].child1 = 0x16;
@@ -1837,22 +1845,22 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x16].content_id = 1;
     g_menu_nodes[0x14].unk4 = 0xF;
     g_menu_nodes[0x13].unk4 = 0xB;
-    g_menu_nodes[0x13].u6.s.self_idx = 0x13;
+    g_menu_nodes[0x13].idx_nav.s.self_idx = 0x13;
     g_menu_nodes[0x13].content_id = 0;
     g_menu_nodes[0x13].uA.s.child0 = 0x14;
     g_menu_nodes[0x13].child1 = 0x15;
     g_menu_nodes[0x14].unk0 = 0x12;
-    g_menu_nodes[0x14].u6.s.self_idx = 0x14;
+    g_menu_nodes[0x14].idx_nav.s.self_idx = 0x14;
     g_menu_nodes[0x15].unk0 = 0x13;
-    g_menu_nodes[0x15].u6.s.self_idx = 0x15;
+    g_menu_nodes[0x15].idx_nav.s.self_idx = 0x15;
     g_menu_nodes[0x15].unk4 = 0x12;
     g_menu_nodes[0x16].unk0 = 0x14;
-    g_menu_nodes[0x16].u6.s.self_idx = 0x16;
+    g_menu_nodes[0x16].idx_nav.s.self_idx = 0x16;
     g_menu_nodes[0x16].unk4 = 0xC;
     g_menu_nodes[0x16].uA.s.child0 = 0x17;
     g_menu_nodes[0x16].child1 = 0x18;
     g_menu_nodes[0x17].unk0 = 0x15;
-    g_menu_nodes[0x17].u6.s.self_idx = 0x17;
+    g_menu_nodes[0x17].idx_nav.s.self_idx = 0x17;
     g_menu_nodes[0x13].u2.unk2 = (u16)((g_menu_nodes[0x13].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x14].u2.unk2 = (u16)((g_menu_nodes[0x14].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x13].u2.s.parent_idx = 0x12;
@@ -1866,21 +1874,21 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x19].content_id = 2;
     g_menu_nodes[0x17].unk4 = 0x10;
     g_menu_nodes[0x18].unk0 = 0x13;
-    g_menu_nodes[0x18].u6.s.self_idx = 0x18;
+    g_menu_nodes[0x18].idx_nav.s.self_idx = 0x18;
     g_menu_nodes[0x18].unk4 = 0x12;
     g_menu_nodes[0x19].unk0 = 0x16;
-    g_menu_nodes[0x19].u6.s.self_idx = 0x19;
+    g_menu_nodes[0x19].idx_nav.s.self_idx = 0x19;
     g_menu_nodes[0x19].unk4 = 0xD;
     g_menu_nodes[0x19].uA.s.child0 = 0x1A;
     g_menu_nodes[0x19].child1 = 0x1B;
     g_menu_nodes[0x1A].unk0 = 0x17;
-    g_menu_nodes[0x1A].u6.s.self_idx = 0x1A;
+    g_menu_nodes[0x1A].idx_nav.s.self_idx = 0x1A;
     g_menu_nodes[0x1A].unk4 = 0x11;
     g_menu_nodes[0x1B].unk0 = 0x13;
-    g_menu_nodes[0x1B].u6.s.self_idx = 0x1B;
+    g_menu_nodes[0x1B].idx_nav.s.self_idx = 0x1B;
     g_menu_nodes[0x1B].unk4 = 0x12;
     g_menu_nodes[0x1C].unk0 = 0x18;
-    g_menu_nodes[0x1C].u6.s.self_idx = 0x1C;
+    g_menu_nodes[0x1C].idx_nav.s.self_idx = 0x1C;
     g_menu_nodes[0x18].u2.unk2 = (u16)((g_menu_nodes[0x18].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x19].u2.unk2 = (u16)((g_menu_nodes[0x19].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x18].u2.s.parent_idx = 0x16;
@@ -1894,20 +1902,20 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
     var_a2->uA.unkA += 0;
     g_menu_nodes[0x1C].unk4 = 0xE;
-    g_menu_nodes[0x1D].u6.s.self_idx = 0x1D;
+    g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
-    g_menu_nodes[0x1F].u6.s.self_idx = 0x1F;
+    g_menu_nodes[0x1F].idx_nav.s.self_idx = 0x1F;
     g_menu_nodes[0x1C].content_id = 5;
     g_menu_nodes[0x1D].unk0 = 0x1C;
     g_menu_nodes[0x1D].content_id = 3;
     g_menu_nodes[0x1D].unk4 = 0x18;
     g_menu_nodes[0x1E].unk0 = 0x19;
-    g_menu_nodes[0x1E].u6.s.self_idx = 0x1E;
+    g_menu_nodes[0x1E].idx_nav.s.self_idx = 0x1E;
     g_menu_nodes[0x1E].unk4 = 0x13;
     g_menu_nodes[0x1F].unk0 = 0x1A;
     g_menu_nodes[0x1F].unk4 = 0x14;
     g_menu_nodes[0x2B].unk0 = 0x1A;
-    g_menu_nodes[0x2B].u6.s.self_idx = 0x2B;
+    g_menu_nodes[0x2B].idx_nav.s.self_idx = 0x2B;
     temp_v0_13 = g_menu_nodes[0x1D].u2.unk2 & 0xFF3D;
     g_menu_nodes[0x1D].u2.unk2 = (u16)(g_menu_nodes[0x1D].u2.unk2 & 0xFFFD);
     (*(&g_menu_nodes[0x1D])).u2.unk2 = temp_v0_13;
@@ -1928,7 +1936,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFFCF) | 0x10);
     g_menu_nodes[0x2B].unk4 = 0x15;
     g_menu_nodes[0x20].unk0 = 0x1B;
-    g_menu_nodes[0x20].u6.s.self_idx = 0x20;
+    g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
     temp_v0_14 = 0xFF3D;
     temp_v0_14 = g_menu_nodes[0x20].u2.unk2 & temp_v0_14;
     new_var6 = D_800FD818.unk268 & 1;
@@ -1962,7 +1970,7 @@ void menu_node_tree_init(void)
     var_a3 = 0;
     if ((g_pad_ctx->inject_flags & 0x80) && (g_pad_ctx->inject_enable != 0))
     {
-        D_80169324 = 0x2B;
+        g_menu_companion_node = 0x2B;
     }
     temp_v0_11 = var_a3 & 0xFFFF;
     var_t0_2 = 0;
@@ -1981,11 +1989,11 @@ void menu_node_tree_init(void)
                 temp_a1 = 0x1FF;
                 temp_a1 = var_a3 & temp_a1;
                 var_a3 = var_a3 + MENU_ROW_HEIGHT;
-                var_a2->u6.unk6 = (u16)(var_a2->u6.unk6 & 0x80FF);
+                var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
                 var_a2->u8_u.unk8 = (u16)((*new_var).unk8 & 0x80FF);
                 var_a2->uA.unkA = (u16)((var_a2->uA.unkA & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
                 var_a2->u8_u.unk8 = (u16)(((*new_var).unk8 & 0x7FFF) | (temp_a0 << 0xF));
-                var_a2->u6.unk6 = (u16)((var_a2->u6.unk6 & 0x7FFF) | (((temp_a1 & 1) << 9) << 6));
+                var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | (((temp_a1 & 1) << 9) << 6));
                 var_a1 = temp_a1 >> 1;
                 var_a2->u8_u.unk8 = (u16)((new_var3->u8_u.unk8 & 0xFF00) | var_a1);
             }
@@ -2364,10 +2372,10 @@ unsigned int menu_handle_node_input(void)
             D_80169408 = (D_80169404 = (D_80169410 = (g_menu_item_ptr = 0)));
         }
         g_menu_prev_node = temp_v0_3;
-        new_var8 = &temp_a1->u6;
+        new_var8 = &temp_a1->idx_nav;
         if (g_menu_scene_type != g_menu_active_node)
         {
-            if (g_menu_content_table[temp_a1->u6.s.self_idx] != NULL)
+            if (g_menu_content_table[temp_a1->idx_nav.s.self_idx] != NULL)
             {
                 var_v1_2 = 3;
                 temp_a0_3 = new_var14;
@@ -2416,7 +2424,7 @@ unsigned int menu_handle_node_input(void)
         {
             g_content_cursor_y = MENU_CURSOR_Y_MAX;
         }
-        g_content_cursor_x = (((temp_a1->u6.unk6 >> 4) >> 4) & 0x7F) + 8;
+        g_content_cursor_x = (((temp_a1->idx_nav.nav_x_packed >> 4) >> 4) & 0x7F) + 8;
         if (MENU_NONE != (&g_menu_nodes[g_menu_active_node])->content_id)
         {
             g_menu_cursor_enable = 1;
@@ -2449,7 +2457,7 @@ unsigned int menu_handle_node_input(void)
             g_menu_hit_item_idx = func_8014847C(new_var12, temp_a1, &g_content_cursor_y, temp_v0_3);
             if (g_menu_hit_item_idx != (-1))
             {
-                temp_v1_2 = &g_menu_content_table[new_var11[g_menu_scene_type].u6.s.self_idx][g_menu_hit_item_idx];
+                temp_v1_2 = &g_menu_content_table[new_var11[g_menu_scene_type].idx_nav.s.self_idx][g_menu_hit_item_idx];
                 g_content_view_x = temp_v1_2->packed_x & 0x1FF;
                 new_var3 = temp_v1_2->y - 8;
                 g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
@@ -2472,7 +2480,7 @@ s32 func_80143640(void)
     if (g_menu_hit_item_idx != (-1))
     {
         MenuNode* nodes = g_menu_nodes;
-        u8 self_idx = (nodes + g_menu_scene_type)->u6.s.self_idx;
+        u8 self_idx = (nodes + g_menu_scene_type)->idx_nav.s.self_idx;
         base = g_menu_content_table[self_idx];
         temp_a0 = base - (-g_menu_hit_item_idx);
         g_content_view_x = temp_a0->packed_x & 0x1FF;
@@ -2485,97 +2493,115 @@ s32 func_80143640(void)
     return 0;
 }
 
-extern s32 D_80169550;
+/** @brief Active character slot index: 0 = char slot 0 (node 0x1F), 1 = char slot 1 (node 0x2B). */
+extern s32 g_menu_char_slot;
 
 /**
- * decomp.me (93.73%) https://decomp.me/scratch/UqSRu
+ * @brief Mark the active node's ancestor chain as expanded, propagate its nav cursor
+ *        position to its children, update g_menu_char_slot, and re-run the full layout.
+ * @note var_s3 and layout_pos are each reused for two unrelated purposes to match the
+ *       compiler's register allocation exactly.
+ * @see decomp.me (93.73%) https://decomp.me/scratch/UqSRu
  */
 void menu_set_active_node(void)
 {
-    s32 var_a0;
+    s32 node_idx;
     MenuNode* curr_node;
-    MenuNode* temp_a0;
+    MenuNode* active_node;
     u16 temp_v0;
-    s32 temp_a0_4;
-    s32 var_s3;
-    s32 layout_pos;
-    s32 var_s2;
-    MenuNode* var_s1;
-    s32 temp_s0;
-    long child_i;
+    s32 char_slot_bits;
+    s32 var_s3;      /* parent-walk: current ancestor index; layout: scroll-adjusted flag */
+    s32 layout_pos;  /* parent-walk: reused as temp for parent_idx check; layout: y accumulator */
+    s32 node_i;
+    MenuNode* node;
+    s32 prev_layout_y;
+    long child_slot;
     u8 child_idx;
     MenuNode* child_node;
-    u16 nav_x;
-    u16 new_var;
-    for (var_a0 = 0; var_a0 < 0x2C; var_a0++)
+    u16 nav_col;     /* bits [14:8] of nav_x_packed: 7-bit column, copied to children */
+    u16 parent_packed;
+
+    /* Clear the "expanded" bit (bit 1) on every node, then re-expand only the active path. */
+    for (node_idx = 0; node_idx < MENU_NODE_COUNT; node_idx++)
     {
-        g_menu_nodes[var_a0].u2.unk2 &= 0xFFFD;
+        g_menu_nodes[node_idx].u2.unk2 &= 0xFFFD;
     }
 
+    /* Walk from g_menu_active_node up to the root, marking each ancestor expanded. */
     var_s3 = g_menu_active_node;
     layout_pos = g_menu_nodes[g_menu_active_node].u2.s.parent_idx;
-    if (layout_pos != 0xFF)
+    if (layout_pos != MENU_NONE)
     {
         do
         {
-
             var_s3 = g_menu_nodes[var_s3].u2.s.parent_idx;
             curr_node = &g_menu_nodes[var_s3];
-
-            curr_node->u2.unk2 |= 2;
-        } while (curr_node->u2.s.parent_idx != 0xFF);
+            curr_node->u2.unk2 |= 2; /* set expanded */
+        } while (curr_node->u2.s.parent_idx != MENU_NONE);
     }
-    temp_a0 = &g_menu_nodes[g_menu_active_node];
-    temp_v0 = temp_a0->u2.unk2 | 2;
-    temp_a0->u2.unk2 = temp_v0;
+
+    /* Mark the active node itself expanded, then propagate its nav cursor to children. */
+    active_node = &g_menu_nodes[g_menu_active_node];
+    temp_v0 = active_node->u2.unk2 | 2;
+    active_node->u2.unk2 = temp_v0;
     if ((temp_v0 >> 1) & 1)
     {
-        for (child_i = 0; child_i < 4; child_i++)
+        for (child_slot = 0; child_slot < 4; child_slot++)
         {
-            child_idx = (&temp_a0->uA.s.child0)[child_i];
-            if (child_idx == (temp_v0 = 0xFF))
+            child_idx = (&active_node->uA.s.child0)[child_slot];
+            if (child_idx == (temp_v0 = MENU_NONE))
             {
                 break;
             }
             child_node = &g_menu_nodes[child_idx];
-            nav_x = temp_a0->u6.unk6 & 0x7F00;
-            child_node->u6.unk6 = child_node->u6.unk6 & 0x80FF;
-            child_node->u6.unk6 = child_node->u6.unk6 | nav_x;
-            child_node->u8_u.unk8 = child_node->u8_u.unk8 & 0x80FF;
-            child_node->u8_u.unk8 = child_node->u8_u.unk8 | nav_x;
-            child_idx = (&temp_a0->uA.s.child0)[child_i];
-            new_var = temp_a0->u6.unk6;
+            /* Propagate nav column X (bits [14:8]) from parent to child. */
+            nav_col = active_node->idx_nav.nav_x_packed & MENU_NAV_X_MASK;
+            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed & MENU_NAV_X_CLEAR;
+            child_node->idx_nav.nav_x_packed = child_node->idx_nav.nav_x_packed | nav_col;
+            child_node->u8_u.unk8 = child_node->u8_u.unk8 & MENU_NAV_X_CLEAR;
+            child_node->u8_u.unk8 = child_node->u8_u.unk8 | nav_col;
+            child_idx = (&active_node->uA.s.child0)[child_slot];
+            parent_packed = active_node->idx_nav.nav_x_packed;
             ;
+            /* Propagate nav_y_hi (nav Y bits 8:1) from parent to child's u8_u low byte. */
             (&g_menu_nodes[child_idx])->u8_u.unk8 =
                 (((&g_menu_nodes[child_idx])->u8_u.unk8 & 0xFF00) & 0xFFFFFFFFFFFFFFFFu) |
                 (&g_menu_nodes[g_menu_active_node])->u8_u.s.nav_y_hi;
-            (&g_menu_nodes[child_idx])->u6.unk6 = ((&g_menu_nodes[child_idx])->u6.unk6 & 0x7FFF) | (new_var & 0x8000);
+            /* Propagate nav Y bit 0 (bit 15 of nav_x_packed) from parent to child. */
+            (&g_menu_nodes[child_idx])->idx_nav.nav_x_packed =
+                ((&g_menu_nodes[child_idx])->idx_nav.nav_x_packed & ~MENU_NAV_Y0_BIT) |
+                (parent_packed & MENU_NAV_Y0_BIT);
         }
     }
-    temp_a0_4 = (((u16)g_menu_nodes[g_menu_active_node].u2.unk2) >> 4) & 3;
-    if (temp_a0_4 != 3)
+
+    /* Update g_menu_char_slot from bits [5:4] of u2.unk2 (3 = preserve current value). */
+    char_slot_bits = (((u16)g_menu_nodes[g_menu_active_node].u2.unk2) >> 4) & 3;
+    if (char_slot_bits != 3)
     {
-        D_80169550 = temp_a0_4;
+        g_menu_char_slot = char_slot_bits;
     }
+
+    /* Re-run layout for all root nodes and adjust scroll if content overflows the viewport. */
     var_s3 = 0;
     layout_pos = 0;
-    var_s1 = g_menu_nodes;
-    for (var_s2 = 0; var_s2 < 0x2C; var_s2++, var_s1++)
+    node = g_menu_nodes;
+    for (node_i = 0; node_i < MENU_NODE_COUNT; node_i++, node++)
     {
-        temp_v0 = 0xAB;
-        if (var_s1->u2.s.parent_idx == 0xFF)
+        temp_v0 = MENU_VIEW_HEIGHT;
+        if (node->u2.s.parent_idx == MENU_NONE)
         {
-            if (var_s1->u2.s.flags & 1)
+            if (node->u2.s.flags & 1)
             {
-                temp_s0 = layout_pos;
-                layout_pos = menu_layout_node(var_s2, layout_pos);
-                if (temp_s0 != (layout_pos - 0x13))
+                prev_layout_y = layout_pos;
+                layout_pos = menu_layout_node(node_i, layout_pos);
+                /* If this node contributed more than one row, it has visible children. */
+                if (prev_layout_y != (layout_pos - MENU_ROW_HEIGHT))
                 {
-                    if (layout_pos > (0xAC - 1))
+                    if (layout_pos > MENU_VIEW_HEIGHT)
                     {
                         var_s3 = 1;
                         g_menu_scroll_pos = layout_pos - temp_v0;
-                        g_menu_redraw_state = 8;
+                        g_menu_redraw_state = MENU_REDRAW_LAYOUT;
                     }
                 }
             }
@@ -2586,13 +2612,15 @@ void menu_set_active_node(void)
     if (var_s3 == 0)
     {
         g_menu_scroll_pos = 0;
-        g_menu_redraw_state = 8;
+        g_menu_redraw_state = MENU_REDRAW_LAYOUT;
     }
 }
 
 extern u8 D_801ED600[];
-extern s32 D_801690FC;
-extern s32 D_80169118;
+/** @brief Total page count for the current sub-menu view; g_script_repeat_last cycles in [0, g_menu_page_count-1]. */
+extern s32 g_menu_page_count;
+/** @brief Action sub-type of the most recently confirmed 0x5000 menu item; routes downstream handlers. */
+extern s32 g_menu_active_subtype;
 extern s8 D_801226F0;
 extern void* D_80168C70;
 extern s8 D_801226B8;
@@ -2662,7 +2690,7 @@ void func_80143964(s32 arg0)
                         func_8014B69C(-1);
                         if (g_script_repeat_last == 0)
                         {
-                            g_script_repeat_last = D_801690FC - 1;
+                            g_script_repeat_last = g_menu_page_count - 1;
                         }
                         else
                         {
@@ -2672,7 +2700,7 @@ void func_80143964(s32 arg0)
                     else if (g_pad_input & 2)
                     {
                         func_8014B69C(1);
-                        if (g_script_repeat_last == (D_801690FC - 1))
+                        if (g_script_repeat_last == (g_menu_page_count - 1))
                         {
                             g_script_repeat_last = 0;
                         }
@@ -2697,13 +2725,13 @@ void func_80143964(s32 arg0)
                 }
                 if (g_menu_cursor_enable == 0)
                 {
-                    func_80144FB8();
+                    menu_snap_view_to_cursor();
                 }
                 menu_set_active_node(g_menu_scene_type);
                 g_menu_hit_item_idx = func_8014847C((s32*)0);
                 if (g_menu_hit_item_idx != (-1))
                 {
-                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                     g_content_view_x = temp_s5[g_menu_hit_item_idx].packed_x & 0x1FF;
                     g_content_view_y = temp_s5[g_menu_hit_item_idx].y - 8;
                     g_menu_suppress_cursor = 5;
@@ -2716,7 +2744,7 @@ void func_80143964(s32 arg0)
     if (g_menu_scene_type < 0x11U && (g_pad_input & 0xF))
     {
         func_8014F210(0x7D, 0x80);
-        self_idx = g_menu_nodes[g_menu_scene_type].u6.s.self_idx;
+        self_idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
         if (self_idx - 0x14 < 0x16U)
         {
             switch (self_idx - 0x14)
@@ -2724,13 +2752,13 @@ void func_80143964(s32 arg0)
             case 0:
             case 3:
             case 6:
-                g_menu_nodes[g_menu_scene_type].u6.s.self_idx += 1;
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx += 1;
                 goto incdec_common;
 
             case 1:
             case 4:
             case 7:
-                g_menu_nodes[g_menu_scene_type].u6.s.self_idx -= 1;
+                g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx -= 1;
                 goto incdec_common;
 
             case 2:
@@ -2740,7 +2768,7 @@ void func_80143964(s32 arg0)
                 g_menu_hit_item_idx = func_8014847C((s32*)0);
                 if (g_menu_hit_item_idx != (-1))
                 {
-                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                     g_content_view_x = temp_s5[g_menu_hit_item_idx].packed_x & 0x1FF;
                     g_content_view_y = temp_s5[g_menu_hit_item_idx].y - 8;
                     g_menu_suppress_cursor = 5;
@@ -2836,12 +2864,12 @@ void func_80143964(s32 arg0)
 
             if (g_menu_cursor_enable == 0)
             {
-                func_80144FB8();
+                menu_snap_view_to_cursor();
             }
             g_menu_hit_item_idx = func_8014847C((s32*)0);
             if (g_menu_hit_item_idx != (-1))
             {
-                MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 g_content_view_x = temp_s5[g_menu_hit_item_idx].packed_x & 0x1FF;
                 g_content_view_y = temp_s5[g_menu_hit_item_idx].y - 8;
                 g_menu_suppress_cursor = 5;
@@ -2861,7 +2889,7 @@ after_do_while:
 
     if (arg0 != 0)
     {
-        s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+        s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
 
         if ((g_menu_scene_type == 0x1F || g_menu_scene_type == 0x2B) && g_menu_hit_item_idx >= 0x11 &&
             g_menu_hit_item_idx < 0x19)
@@ -2940,12 +2968,12 @@ after_do_while:
             if (top_nibble == 0x5000)
             {
                 content_type = s5[g_menu_hit_item_idx].pad[0];
-                D_80169118 = content_type;
+                g_menu_active_subtype = content_type;
                 switch (content_type)
                 {
                 case 1:
                 case 2:
-                    if (D_80169550 == 0)
+                    if (g_menu_char_slot == 0)
                     {
                         u16 sp10 = 0x40;
                         u16 sp12 = 0x60;
@@ -2963,9 +2991,9 @@ after_do_while:
                 case 4:
                 case 5:
                 case 6:
-                    if (D_80169550 == 0)
+                    if (g_menu_char_slot == 0)
                     {
-                        flag = ((u8*)g_pad_ctx)[(D_80169550 * 0x250) + 0x609 + content_type];
+                        flag = ((u8*)g_pad_ctx)[(g_menu_char_slot * 0x250) + 0x609 + content_type];
                         {
                             u16 sp10 = 0xB0;
                             u16 sp12, sp14, sp16;
@@ -2985,7 +3013,7 @@ after_do_while:
                                 MenuSlot* var_a3 = (MenuSlot*)menu_slot_alloc(3, &sp10);
                                 var_a3->unk1C = (s32 * (*)()) & func_8014C200;
                                 new_var7 =
-                                    (void*)((u8*)g_pad_ctx + (D_80169550 * 0x250) + 0x5F0 + (content_type << 6) + 0x90);
+                                    (void*)((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + 0x5F0 + (content_type << 6) + 0x90);
                                 if ((flag != 0xFF) && (flag & 0x80))
                                 {
                                     var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x40000;
@@ -3015,7 +3043,7 @@ after_do_while:
                 case 8:
                 case 9:
                 case 10:
-                    if (D_80169550 == 0)
+                    if (g_menu_char_slot == 0)
                     {
                         u16 sp10 = 0xB0;
                         u16 sp12 = 0x30;
@@ -3027,7 +3055,7 @@ after_do_while:
                         func_80145278(5);
                         {
                             void* ptr =
-                                (void*)((u8*)g_pad_ctx + (D_80169550 * 0x250) + 0x5F0 + (content_type << 6) - 0x170);
+                                (void*)((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + 0x5F0 + (content_type << 6) - 0x170);
                             D_80169554 = ptr;
                             D_801694B0 = ptr;
                             D_8016911C = ptr;
@@ -3095,7 +3123,7 @@ after_do_while:
             }
             else if (top_nibble == 0xF000)
             {
-                table_idx = D_801686CC[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                table_idx = D_801686CC[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                 val = D_8014FE54[(table_idx * 8) + ((packed_x >> 9) & 7)];
                 if (val != 0)
                 {
@@ -3104,7 +3132,7 @@ after_do_while:
                     {
                     case 1:
                         D_80169554 =
-                            (void*)((u8*)g_pad_ctx + (D_80169550 * 0x250) + 0x5F0 + (content_type << 6) - 0x170);
+                            (void*)((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + 0x5F0 + (content_type << 6) - 0x170);
                         break;
 
                     case 6:
@@ -3138,7 +3166,7 @@ after_do_while:
                         if (var_s4[0xAE] != 0xFF)
                         {
                             g_pad_ctx->inject_flags |= 0x80;
-                            D_80169324 = 0x2B;
+                            g_menu_companion_node = 0x2B;
                             menu_set_active_node(0x2B);
                             var_s0 = 0;
                             goto direction_loop;
@@ -3151,7 +3179,7 @@ after_do_while:
                             slots = g_menu_slots + 3;
                             for (idxA = 3; idxA >= 0; idxA--)
                             {
-                                D_80169324 = 0x2B;
+                                g_menu_companion_node = 0x2B;
                                 slots->active = 0;
                                 slots--;
                             }
@@ -3163,7 +3191,7 @@ after_do_while:
 
                     case 11:
                         g_pad_ctx->inject_flags &= ~0x81;
-                        D_80169324 = 0xFF;
+                        g_menu_companion_node = 0xFF;
                         menu_set_active_node(0xFF);
                         var_s0 = 0;
                         goto direction_loop;
@@ -3175,7 +3203,7 @@ after_do_while:
         if (g_pad_input & 0x40)
         {
             func_8014F210(0x7F, 0x80);
-            self_idx = g_menu_nodes[g_menu_scene_type].u6.s.self_idx;
+            self_idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
             if (g_menu_scene_type >= 0x11 || self_idx < 0x14 || self_idx >= 0x1C)
             {
                 func_8014519C();
@@ -3184,18 +3212,18 @@ after_do_while:
             {
                 if (self_idx - 0x14 < 5)
                 {
-                    g_menu_nodes[(D_80169550 * 3) + 1].u6.s.self_idx = 1;
-                    g_menu_nodes[(D_80169550 * 3) + 1].unk0 = (D_80169550 * 3) + 3;
+                    g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 1;
+                    g_menu_nodes[(g_menu_char_slot * 3) + 1].unk0 = (g_menu_char_slot * 3) + 3;
                 }
                 else if (self_idx - 0x1A < 2)
                 {
-                    g_menu_nodes[(D_80169550 * 3) + 2].u6.s.self_idx = 2;
-                    g_menu_nodes[(D_80169550 * 3) + 2].unk0 = (D_80169550 * 3) + 3;
+                    g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 2;
+                    g_menu_nodes[(g_menu_char_slot * 3) + 2].unk0 = (g_menu_char_slot * 3) + 3;
                 }
-                g_menu_hit_item_idx = func_8014847C(&D_80169550);
+                g_menu_hit_item_idx = func_8014847C(&g_menu_char_slot);
                 if (g_menu_hit_item_idx != (-1))
                 {
-                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].u6.s.self_idx];
+                    MenuContentItem* temp_s5 = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
                     g_content_view_x = temp_s5[g_menu_hit_item_idx].packed_x & 0x1FF;
                     g_content_view_y = temp_s5[g_menu_hit_item_idx].y - 8;
                     g_menu_suppress_cursor = 5;
@@ -3218,19 +3246,19 @@ after_do_while:
             func_8014F210(0x7D, 0x80);
             if (s5[g_menu_hit_item_idx].pad[1 + dir_index] == 0xFF)
             {
-                if (g_menu_scene_type >= 0x11 || g_menu_nodes[g_menu_scene_type].u6.s.self_idx < 0x14 ||
-                    g_menu_nodes[g_menu_scene_type].u6.s.self_idx >= 0x1C)
+                if (g_menu_scene_type >= 0x11 || g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x14 ||
+                    g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx >= 0x1C)
                 {
                     g_menu_cursor_enable = 2;
                     active_node = &g_menu_nodes[g_menu_active_node];
-                    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | ((active_node->u6.unk6 >> 15) & 1);
+                    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | ((active_node->idx_nav.nav_x_packed >> 15) & 1);
                     g_content_view_y = nav_y - (g_menu_content_height - 12);
                     if (g_content_view_y < 12)
                         g_content_view_y = 12;
                     if (g_content_view_y >= 0xA3)
                         g_content_view_y = 0xA3;
                     g_menu_suppress_cursor = 5;
-                    g_content_view_x = ((active_node->u6.unk6 >> 8) & 0x7F) + 8;
+                    g_content_view_x = ((active_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
                 }
             }
             else if (s5[g_menu_hit_item_idx].pad[1 + dir_index] != 0)
@@ -3239,7 +3267,7 @@ after_do_while:
                 {
                     if ((s5[g_menu_hit_item_idx].packed_x & 0xF000) == 0x5000)
                     {
-                        if (g_menu_nodes[g_menu_scene_type].u6.s.self_idx < 0x11)
+                        if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x11)
                         {
                             g_menu_item_ptr = (void*)0;
                             D_80169410 = (void*)0;
@@ -3258,43 +3286,57 @@ after_do_while:
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/wBlQo
+ * @brief Clamp the content cursor Y to the valid viewport range and snap both view
+ *        axes to the current cursor position.
+ * @note Called when the cursor is disabled (g_menu_cursor_enable == 0) after a node
+ *       switch, so the viewport re-homes to wherever the cursor was left.  The X
+ *       coordinate is derived from the active node's nav_x field (idx_nav.nav_x_packed bits 14:8).
+ * @see decomp.me (100%) https://decomp.me/scratch/wBlQo
  */
-void func_80144FB8(void)
+void menu_snap_view_to_cursor(void)
 {
-    if (g_content_cursor_y < 0xC)
+    if (g_content_cursor_y < 12)
     {
-        g_content_cursor_y = 0xC;
+        g_content_cursor_y = 12;
     }
-    if (g_content_cursor_y >= 0xA3)
+    if (g_content_cursor_y >= 163)
     {
-        g_content_cursor_y = 0xA3;
+        g_content_cursor_y = 163;
     }
     g_content_view_y = g_content_cursor_y;
-    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].u6.unk6 >> 8) & 0x7F) + 8;
+    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
     g_content_view_x = g_content_cursor_x;
 }
 
+/** @brief Content item layout -- mirrors MenuContentItem; action_type is pad[0]. */
 typedef struct
 {
-    u16 field_0;
-    u8 pad_2;
-    u8 field_3;
+    u16 packed_x;    /**< Bottom 9 bits = X screen pos; bits 15:12 = item type nibble. */
+    u8 y;
+    u8 action_type;  /**< Sub-menu routing byte (types 1-15 for 0x5000 items). */
     u8 pad_4[4];
 } MenuItem;
 
 /**
- * decomp.me (91%) https://decomp.me/scratch/cV0x9
+ * @brief Return non-zero if the item currently under the cursor has a confirm action.
+ * @return 1 if the item will trigger a sub-menu or named action on confirm, 0 otherwise.
+ * @note For character-page nodes (0x1F = char slot 0, 0x2B = char slot 1), items
+ *       17-24 are the 8 equipment/ability swap slots and always return 1.
+ *       0x5000 sub-menu items with action_type 1-10 only return 1 when char slot 0
+ *       is active (g_menu_char_slot == 0); type 15 (equip) always returns 1.
+ *       0xF000 action items look up an action code in D_8014FE54; codes 1 and 6-11
+ *       (navigation pointer setup and audio/companion controls) return 1.
+ * @see decomp.me (91%) https://decomp.me/scratch/cV0x9
  */
-int func_80145034(void)
+int menu_item_has_action(void)
 {
     int new_var3;
     int new_var;
     MenuItem* items;
     MenuItem* item;
-    u16 masked;
-    short new_var2;
-    int val;
+    u16 type_nibble;
+    short item_subtype;
+    int action_code;
 
     items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].content_id];
     if ((g_menu_scene_type == 0x1F) || (g_menu_scene_type == 0x2B))
@@ -3309,17 +3351,17 @@ int func_80145034(void)
     }
 
     item = (MenuItem*)((g_menu_hit_item_idx * 8u) + ((u32)items));
-    masked = item->field_0 & 0xF000;
+    type_nibble = item->packed_x & 0xF000;
 
-    if (masked == 0x5000)
+    if (type_nibble == 0x5000)
     {
-        D_80169118 = item->field_3;
-        new_var2 = item->field_3;
-        if (new_var2 != 0)
+        g_menu_active_subtype = item->action_type;
+        item_subtype = item->action_type;
+        if (item_subtype != 0)
         {
-            if (new_var2 >= 11)
+            if (item_subtype >= 11)
             {
-                if (new_var2 != 15)
+                if (item_subtype != 15)
                 {
                 }
                 else
@@ -3329,27 +3371,27 @@ int func_80145034(void)
             }
             else
             {
-                return D_80169550 == 0;
+                return g_menu_char_slot == 0;
             }
         }
     }
-    else if (masked == 0xF000)
+    else if (type_nibble == 0xF000)
     {
-        val = D_8014FE54[D_801686CC[g_menu_nodes[g_menu_scene_type].content_id]][(item->field_0 >> 9) & 7];
-        if (val == 0)
+        action_code = D_8014FE54[D_801686CC[g_menu_nodes[g_menu_scene_type].content_id]][(item->packed_x >> 9) & 7];
+        if (action_code == 0)
         {
         }
-        else if (val == 1)
+        else if (action_code == 1)
         {
             return 1;
         }
-        else if ((val != 0) && (val < 12))
+        else if ((action_code != 0) && (action_code < 12))
         {
-            if (val >= 6)
+            if (action_code >= 6)
             {
-                masked = !new_var2;
+                type_nibble = !item_subtype;
                 return 1;
-                if (((!new_var2) && masked) && (!new_var2))
+                if (((!item_subtype) && type_nibble) && (!item_subtype))
                 {
                 }
             }

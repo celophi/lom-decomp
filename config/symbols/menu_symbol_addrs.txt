@@ -26,6 +26,8 @@ menu_update_layout     = 0x80142D54;
 menu_layout_node       = 0x80142E40;
 menu_draw_frame        = 0x80142F10;
 menu_handle_node_input = 0x80143190;
+menu_snap_view_to_cursor = 0x80144FB8;
+menu_item_has_action   = 0x80145034;
 
 // Data
 g_menu_frame           = 0x801690AC;
@@ -76,3 +78,7 @@ g_content_view_y       = 0x8016912C;
 g_menu_content_table   = 0x801686F8;
 g_menu_hit_item_idx    = 0x8016941C;
 g_menu_default_view_pos = 0x80169104;
+g_menu_active_subtype  = 0x80169118;
+g_menu_char_slot       = 0x80169550;
+g_menu_page_count      = 0x801690FC;
+g_menu_companion_node  = 0x80169324;
