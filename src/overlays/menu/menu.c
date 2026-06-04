@@ -144,32 +144,32 @@ typedef struct
 
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
+    u8 active;     /* 0x00 - mirrors MenuSlot.active (2 = open/steady) */
+    u8 index;      /* 0x01 - mirrors MenuSlot.index */
     u8 pad2;
-    u8 unk3;
+    u8 has_title;  /* 0x03 - mirrors MenuSlot.has_title */
     union
     {
-        s32 unk4;
+        s32 flags;
         struct
         {
             u16 _unk4lo;
             u16 unk6;
         } _s;
     } _u;
-    u16 unk8;
-    u16 unkA;
-    u16 unkC;
-    u16 unkE;
-    u16 unk10;
-    u16 unk12;
-    u16 unk14;
-    u16 unk16;
-    u8 unk18;
+    u16 x;          /* 0x08 */
+    u16 y;          /* 0x0A */
+    u16 w;          /* 0x0C */
+    u16 h;          /* 0x0E */
+    u16 lerp_cur_a;    /* 0x10 */
+    u16 lerp_cur_b;    /* 0x12 */
+    u16 lerp_target_a; /* 0x14 */
+    u16 lerp_target_b; /* 0x16 */
+    u8 lerp_steps;     /* 0x18 */
     u8 pad19;
     u8 pad1A;
     u8 pad1B;
-    s32* (*unk1C)();
+    s32* (*content_cb)(); /* 0x1C */
 } MenuSlotView;
 
 typedef struct
@@ -899,10 +899,10 @@ void* menu_slot_alloc(s32 arg0, void* rect)
     *((u16*)(((u8*)entry) + 4)) = 0;
     temp = entry->flags;
     entry->active = 1;
-    entry->unk1C = 0;
+    entry->content_cb = 0;
     entry->index = (u8)var_a2;
-    entry->unk20 = 0;
-    entry->unk2 = 0;
+    entry->tick_cb = 0;
+    entry->anim_frame = 0;
     mask = 0x1FFFFFF;
     temp = temp & mask;
     temp = temp | (((u32)arg0) << 25);
@@ -911,12 +911,12 @@ void* menu_slot_alloc(s32 arg0, void* rect)
     entry->y = src[1];
     entry->w = src[2];
     entry->h = src[3];
-    entry->unk10 = 0;
-    entry->unk12 = 0;
-    entry->unk14 = 0;
-    entry->unk16 = 0;
-    entry->unk18 = 0;
-    entry->unk3 = 0;
+    entry->lerp_cur_a = 0;
+    entry->lerp_cur_b = 0;
+    entry->lerp_target_a = 0;
+    entry->lerp_target_b = 0;
+    entry->lerp_steps = 0;
+    entry->has_title = 0;
     g_active_slot = var_a2;
     return (void*)entry;
 }
@@ -1020,12 +1020,12 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
             }
 
             menu_draw_window_transition(gpu_work, var_s0, g_menu_cursor_enable != 0);
-            temp_a0 = var_s0->unk2;
+            temp_a0 = var_s0->anim_frame;
             temp_v0 = temp_a0 + 1;
-            var_s0->unk2 = temp_v0;
+            var_s0->anim_frame = temp_v0;
             if ((temp_v0 & 0xff) == 6)
             {
-                var_s0->unk2 = temp_a0;
+                var_s0->anim_frame = temp_a0;
                 var_s0->active = tmp_s5;
             }
         }
@@ -1041,7 +1041,7 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
         if (var_s1 == g_active_slot)
         {
             /* Casting u32 to function pointer */
-            temp_v0_2 = (void (*)(MenuSlot*))var_s0->unk20;
+            temp_v0_2 = (void (*)(MenuSlot*))var_s0->tick_cb;
             if (temp_v0_2 != 0)
             {
                 temp_v0_2(var_s0);
@@ -1057,8 +1057,8 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
 
     branch_11C:
         menu_draw_window_transition(gpu_work, var_s0, g_menu_cursor_enable != 0);
-        temp_v0 = var_s0->unk2 - 1;
-        var_s0->unk2 = temp_v0;
+        temp_v0 = var_s0->anim_frame - 1;
+        var_s0->anim_frame = temp_v0;
         var_a0 = 1;
         if (!(temp_v0 & 0xFF))
         {
@@ -1197,23 +1197,23 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
 
     temp_s3 = rect;
     var_s1 = gpu_work->prim_cursor;
-    temp_s2 = (s32*)gpu_work + (((u32)slot->_u.unk4 >> 0x19));
-    if (slot->unk18 != 0)
+    temp_s2 = (s32*)gpu_work + (((u32)slot->_u.flags >> 0x19));
+    if (slot->lerp_steps != 0)
     {
-        temp_a2 = slot->unk10;
-        temp_v1 = (s32)(slot->unk14 - temp_a2) / (s32)slot->unk18;
-        temp_a1 = slot->unk12;
-        temp_a1 = temp_a1 + ((s32)(slot->unk16 - temp_a1) / (s32) * (volatile u8*)&slot->unk18);
-        slot->unk18 = (u8)(*(volatile u8*)&slot->unk18 - 1);
-        slot->unk10 = (u16)(temp_a2 + temp_v1);
-        slot->unk12 = (u16)temp_a1;
+        temp_a2 = slot->lerp_cur_a;
+        temp_v1 = (s32)(slot->lerp_target_a - temp_a2) / (s32)slot->lerp_steps;
+        temp_a1 = slot->lerp_cur_b;
+        temp_a1 = temp_a1 + ((s32)(slot->lerp_target_b - temp_a1) / (s32) * (volatile u8*)&slot->lerp_steps);
+        slot->lerp_steps = (u8)(*(volatile u8*)&slot->lerp_steps - 1);
+        slot->lerp_cur_a = (u16)(temp_a2 + temp_v1);
+        slot->lerp_cur_b = (u16)temp_a1;
     }
     else
     {
-        slot->unk10 = (u16)slot->unk14;
-        slot->unk12 = (u16)slot->unk16;
+        slot->lerp_cur_a = (u16)slot->lerp_target_a;
+        slot->lerp_cur_b = (u16)slot->lerp_target_b;
     }
-    if (slot->unk1C != NULL)
+    if (slot->content_cb != NULL)
     {
         if ((temp_s3->w - 0x20) > 0)
         {
@@ -1226,14 +1226,14 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                 g_menu_draw_early_out = 0;
                 *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
                 var_s1 += 0x10;
-                if ((slot->unk1 == g_active_slot) && (cursor_enable != 0))
+                if ((slot->index == g_active_slot) && (cursor_enable != 0))
                 {
                     if (g_menu_suppress_cursor == 0)
                     {
-                        var_a3 = slot->unk0 == 2;
+                        var_a3 = slot->active == 2;
                     }
                 }
-                temp_s1 = slot->unk1C(temp_s2, slot, var_s1, arg3, var_a3);
+                temp_s1 = slot->content_cb(temp_s2, slot, var_s1, arg3, var_a3);
                 if (g_menu_draw_early_out != 0)
                 {
                     gpu_work->prim_cursor = temp_s1;
@@ -1250,7 +1250,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                 *temp_s1 = (*temp_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
                 var_s1 = temp_s1 + 0x10;
-                if (slot->unk3 != 0)
+                if (slot->has_title != 0)
                 {
                     switch (g_menu_scene_type)
                     {        /* switch 1 */
@@ -1267,9 +1267,9 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     }
                     sp80[0] = var_v0;
                     sp80[1] = (u16)temp_s3->y;
-                    if (slot->_u.unk4 & 0x01FF0000)
+                    if (slot->_u.flags & 0x01FF0000)
                     {
-                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.unk4 + 1, 3, sp80, 0);
+                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.flags + 1, 3, sp80, 0);
                     }
                     else
                     {
@@ -2993,9 +2993,9 @@ after_do_while:
                         u16 sp14 = 0xF0;
                         u16 sp16 = 0x60;
                         MenuSlot* var_a3 = (MenuSlot*)menu_slot_alloc(3, &sp10);
-                        var_a3->unk1C = (s32 * (*)()) & func_8014B7DC;
+                        var_a3->content_cb = (s32 * (*)()) & func_8014B7DC;
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | ((func_80145310() & 0x1FF) << 16);
-                        var_a3->unk3 = 1;
+                        var_a3->has_title = 1;
                         func_8014F210(0x7D, 0x80);
                     }
                     break;
@@ -3024,7 +3024,7 @@ after_do_while:
                             }
                             {
                                 MenuSlot* var_a3 = (MenuSlot*)menu_slot_alloc(3, &sp10);
-                                var_a3->unk1C = (s32 * (*)()) & func_8014C200;
+                                var_a3->content_cb = (s32 * (*)()) & func_8014C200;
                                 new_var7 =
                                     (void*)((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + 0x5F0 + (content_type << 6) + 0x90);
                                 if ((flag != 0xFF) && (flag & 0x80))
@@ -3063,7 +3063,7 @@ after_do_while:
                         u16 sp14 = 0x70;
                         u16 sp16 = 0x60;
                         MenuSlot* var_a3 = (MenuSlot*)menu_slot_alloc(3, &sp10);
-                        var_a3->unk1C = (s32 * (*)()) & func_8014CC08;
+                        var_a3->content_cb = (s32 * (*)()) & func_8014CC08;
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x50000;
                         func_80145278(5);
                         {
