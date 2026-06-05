@@ -5356,3 +5356,84 @@ s32 func_8014852C(s32 node_id)
 
     return -1;
 }
+
+/**
+ * @brief Emit up to two scroll-arrow SPRT primitives and a trailing Draw Mode Setting primitive.
+ * @param buf   Destination primitive buffer; each arrow occupies 0x14 bytes, the Draw Mode tail 8 bytes.
+ * @param ot    Pointer to the ordering-table entry to prepend each emitted primitive to.
+ * @param state Opaque scroll-state record; the following byte-offset fields are read:
+ *              - 0x06 (u16): total-item count, bottom 9 bits used (stride 0x10 each).
+ *              - 0x08 (u16): Y-base coordinate.
+ *              - 0x0A (u16): texture V origin for the up-arrow sprite.
+ *              - 0x0C (u16): Y offset added to Y-base.
+ *              - 0x0E (s16): current scroll position in pixels; also used as UV delta for down arrow.
+ *              - 0x12 (u16): number of items scrolled above the viewport (0 = at top).
+ * @return Pointer to the next free byte in @p buf after all emitted primitives.
+ * @note Up arrow emitted when unk12 != 0 (content hidden above viewport).
+ *       Down arrow emitted when (unk0E-16) < ((unk06 & 0x1FF)*16 - unk12) (content hidden below).
+ *       If either arrow was emitted, appends a one-word DR_MODE (0xE1000005) to restore draw mode.
+ *       All arrow sprites use GPU code 0x64 (semi-transparent texture-mapped variable sprite).
+ * @see decomp.me TODO
+ */
+void *func_80148578(void *buf, s32 *ot, void *state)
+{
+    u8 *prim = (u8 *)buf;
+    u8 *st   = (u8 *)state;
+    s32 emitted = 0;
+    s32 addr;
+    u16 scroll_top;
+    s16 y;
+
+    scroll_top = *(u16 *)(st + 0x12);
+
+    if (scroll_top != 0)
+    {
+        y = (s16)(*(u16 *)(st + 0x8) + *(u16 *)(st + 0xC) - 0x10);
+        emitted = 1;
+        *(u32 *)(prim + 0x4)  = 0x808080;
+        prim[3]               = 4;
+        prim[7]               = 0x64;
+        *(s16 *)(prim + 0x8)  = y;
+        *(u16 *)(prim + 0xA)  = *(u16 *)(st + 0xA);
+        *(u16 *)(prim + 0xC)  = 0x1080;
+        *(u16 *)(prim + 0xE)  = 0x7C86;
+        *(u32 *)(prim + 0x10) = 0x100010;
+        addr        = (s32)prim & 0xFFFFFF;
+        *(s32 *)prim = (*(s32 *)prim & 0xFF000000) | (*ot & 0xFFFFFF);
+        *ot          = (*ot & 0xFF000000) | addr;
+        prim        += 0x14;
+    }
+
+    {
+        s32 max = (s32)((*(u16 *)(st + 0x6) & 0x1FF) * 0x10) - (s32)scroll_top;
+        if ((s32)(*(s16 *)(st + 0xE) - 0x10) < max)
+        {
+            y = (s16)(*(u16 *)(st + 0x8) + *(u16 *)(st + 0xC) - 0x10);
+            emitted += 1;
+            *(u32 *)(prim + 0x4)  = 0x808080;
+            prim[3]               = 4;
+            prim[7]               = 0x64;
+            *(s16 *)(prim + 0x8)  = y;
+            *(u16 *)(prim + 0xA)  = (s16)(*(u16 *)(st + 0xA) + *(u16 *)(st + 0xE) - 8);
+            *(u16 *)(prim + 0xC)  = 0x2080;
+            *(u16 *)(prim + 0xE)  = 0x7C86;
+            *(u32 *)(prim + 0x10) = 0x100010;
+            addr        = (s32)prim & 0xFFFFFF;
+            *(s32 *)prim = (*(s32 *)prim & 0xFF000000) | (*ot & 0xFFFFFF);
+            *ot          = (*ot & 0xFF000000) | addr;
+            prim        += 0x14;
+        }
+    }
+
+    if (emitted != 0)
+    {
+        addr        = (s32)prim & 0xFFFFFF;
+        prim[3]     = 1;
+        *(u32 *)(prim + 0x4) = 0xE1000005;
+        *(s32 *)prim = (*(s32 *)prim & 0xFF000000) | (*ot & 0xFFFFFF);
+        *ot          = (*ot & 0xFF000000) | addr;
+        prim        += 8;
+    }
+
+    return prim;
+}
