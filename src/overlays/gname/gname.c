@@ -1112,7 +1112,7 @@ void gname_render(void* ctx)
     /* 2. Static glyph + append animation, then func_80141C34. */
     cursor_sprite =
         func_80141C34(emit_draw_mode_prim(draw_char_append_anim(
-                                              func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, 3U, 0xE8, 4, 0, 0, 0), ctx),
+                                              func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
                                           ((char*)ctx2) + 0x34),
                       ctx);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
@@ -1152,7 +1152,7 @@ void gname_render(void* ctx)
     /* 4. Conditional extra glyphs from the D_80142E0C table. */
     if (g_scroll_pos != 0)
     {
-        prim2 = func_80142274(prim2, ctx, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2], 0, 0, 0);
+        prim2 = func_80142274(prim2, ctx, (u8)D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2], 0, 0, 0);
     }
     if (g_char_last_row >= 5)
     {
@@ -1163,7 +1163,7 @@ void gname_render(void* ctx)
         }
         if ((((f8b4 >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
-            prim2 = func_80142274(prim2, ctx, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF, (s32)D_80142E0C[6], 0, 0, 0);
+            prim2 = func_80142274(prim2, ctx, (u8)D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF, (s32)D_80142E0C[6], 0, 0, 0);
         }
     }
     /* 5. Remaining sub-passes. */
@@ -1464,7 +1464,7 @@ void* emit_draw_mode_prim(void* arg0, s32* arg1)
  *             zero = semi-transparent black drop shadow.
  * @return Pointer to the byte after the last emitted primitive.
  *
- * @see decomp.me (100%) https://decomp.me/scratch/UHlWz
+ * @see decomp.me (100%) https://decomp.me/scratch/Au2h5
  */
 void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
 {
@@ -2137,7 +2137,7 @@ s32 draw_char_append_anim(s32 prim, s32 ctx)
         glyph = glyph_byte;
         if (glyph != 0)
         {
-            result = func_80142274(result, ot_base + 0x30, glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
+            result = func_80142274(result, ot_base + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
         }
     }
 
