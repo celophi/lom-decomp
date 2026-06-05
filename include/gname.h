@@ -180,7 +180,7 @@ typedef struct
     u8 pad1[2];
 } GlyphMeasure;
 
-extern void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7);
+extern void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7);
 
 /* --- Named data globals --- */
 extern s32 g_name_pixel_width;
