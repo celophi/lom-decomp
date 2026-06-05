@@ -5431,7 +5431,7 @@ s32 func_8014824C(s32 arg0)
  * @return Pointer to the byte immediately following the 8-byte primitive (next free prim slot).
  * @note Mirrors the inline OT-link pattern used throughout menu.c (e.g. around line 1361).
  *       Sets word count to 1 and hard-codes the mode word to 0xE1000005.
- * @see decomp.me TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/3Wup8
  */
 void* func_801482D0(MenuPrimHead* prim, s32* ot)
 {
@@ -6452,7 +6452,7 @@ void *func_80149BB4(void *arg0, s32 *arg1, s32 arg2, s32 arg3, s32 arg4,
  * @return Pointer to the next free byte after the emitted 0x14-byte SPRT.
  * @note Emits a SPRT with medium-gray tint (0x505050), code 0x64, 16x16 size,
  *       U=0x80, V=0x00, CLUT=0x7C86.
- * @see decomp.me TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/16UQc
  */
 void *func_80149D90(void *arg0, s32 *arg1, s16 arg2, s16 arg3)
 {
