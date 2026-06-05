@@ -5120,3 +5120,47 @@ block_402:
     }
     return var_s1;
 }
+
+extern u8 D_800F0BE0[];
+extern u8 D_800F0BEC[];
+
+/**
+ * @brief Scan up to arg0 entries in D_801693FC and OR together lookup bytes keyed by bits 10-15 of unk14.
+ * @param arg0 Maximum number of entries to inspect (loop exits early when the index equals this value).
+ * @return Bitwise OR of the looked-up bytes from each active entry, or 0 if none are active.
+ * @note Iterates at most 4 entries (indices 0-3). An entry is skipped when its byte at offset 0 is zero.
+ *       Bits 8-9 of unk14 select the table: set uses D_800F0BEC, clear uses D_800F0BE0. Bits 10-15 form
+ *       the 6-bit index into whichever table is selected.
+ * @see decomp.me TODO
+ */
+s32 func_8014824C(s32 arg0)
+{
+    s32 i;
+    s32 result;
+    u8 *entry;
+    u32 unk14;
+    u32 idx;
+
+    result = 0;
+    entry = (u8 *)D_801693FC;
+    i = 0;
+    do
+    {
+        if ((i != arg0) && (entry[0] != 0))
+        {
+            unk14 = *(u32 *)(entry + 0x14);
+            idx = (unk14 >> 10) & 0x3F;
+            if (unk14 & 0x300)
+            {
+                result |= D_800F0BEC[idx];
+            }
+            else
+            {
+                result |= D_800F0BE0[idx];
+            }
+        }
+        i += 1;
+        entry += 0x40;
+    } while (i < 4);
+    return result;
+}
