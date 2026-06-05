@@ -5224,3 +5224,56 @@ void func_80148324(u8 *dst, u8 *src1, u8 *src2)
 
     *dst = 0;
 }
+
+extern s8 D_800F0C38[];
+
+/**
+ * @brief Extract a 4-bit nibble from a packed u32 field in the item struct and look it up in a byte table.
+ * @param item  Pointer to the item data record; nibbles are packed into the u32 at byte offset 0x1C.
+ * @param index Nibble selector (0-7); selects bits [index*4 .. index*4+3] of the packed word.
+ *              If >= 8 the switch is skipped and @p fallback is used as the table index instead.
+ * @param fallback Default table index used when @p index is out of range.
+ * @return Signed byte from D_800F0C38 at the selected nibble index.
+ * @note Cases 1, 4, and 6 load the nibble via byte/halfword access rather than the full word;
+ *       this reflects the original compiler output and must be preserved for match work.
+ * @see decomp.me TODO
+ */
+s8 func_801483C4(void *item, u32 index, u32 fallback)
+{
+    u32 nibble;
+    u32 word;
+
+    nibble = fallback;
+    if (index < 8U)
+    {
+        word = *(u32 *)((u8 *)item + 0x1C);
+        switch (index)
+        {
+        case 0:
+            nibble = word & 0xF;
+            break;
+        case 1:
+            nibble = *(u8 *)((u8 *)item + 0x1C) >> 4;
+            break;
+        case 2:
+            nibble = (word >> 8) & 0xF;
+            break;
+        case 3:
+            nibble = (word >> 12) & 0xF;
+            break;
+        case 4:
+            nibble = *(u16 *)((u8 *)item + 0x1E) & 0xF;
+            break;
+        case 5:
+            nibble = (word >> 20) & 0xF;
+            break;
+        case 6:
+            nibble = *(u8 *)((u8 *)item + 0x1F) & 0xF;
+            break;
+        case 7:
+            nibble = word >> 28;
+            break;
+        }
+    }
+    return D_800F0C38[nibble];
+}
