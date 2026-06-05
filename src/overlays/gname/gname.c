@@ -208,12 +208,10 @@ void load_name_entry_tim(void)
 /**
  * @brief Upload a TIM image's pixel data and CLUT to VRAM.
  *
- * Parses the TIM-format blob @c g_name_entry_tim: the CLUT block starts at
- * byte 8 (its length word at offset 8, its 256-entry palette at offset
- * 0x14), and the pixel block immediately follows the CLUT block. Before
- * the CLUT is uploaded, the semi-transparency bit (0x8000) is OR'd into
- * every non-zero palette entry. The TIM's own embedded destination
- * coordinates are ignored; @p dst_coords supplies them instead.
+ * Parses @c g_name_entry_tim: the CLUT block starts at @c TIM_HEADER_SIZE,
+ * its @c CLUT_ENTRY_COUNT palette entries at @c TIM_CLUT_DATA_OFFSET. Before uploading,
+ * @c GPU_STP_BIT is OR'd into every non-zero CLUT entry. The TIM's own
+ * embedded destination coordinates are ignored; @p dst_coords supplies them.
  *
  * @param dst_coords Pixel and CLUT VRAM destination coordinates.
  *
@@ -226,9 +224,9 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
     RECT rect;
     TimBlock* pixel_block;
     int i;
-    u8* tim = g_name_entry_tim;
-    s32 clut_len = *(s32*)(tim + TIM_HEADER_SIZE);
-    u16* clut = (u16*)(tim + 0x14);
+    Tim* tim = (Tim*)g_name_entry_tim;
+    s32 clut_len = tim->clut.bnum;
+    u16* clut = (u16*)(tim + 1);
 
     rect.x = dst_coords->clut_x;
     rect.y = dst_coords->clut_y;
@@ -236,7 +234,6 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
     rect.h = 1;
 
     /* Mark every non-zero CLUT entry semi-transparent. */
-
     for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
         if ((*clut) != 0)
@@ -246,8 +243,8 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
         clut++;
     }
 
-    func_80019A34(&rect, ((u8*)tim) + 0x14);
-    pixel_block = (TimBlock*)(tim + (clut_len + TIM_HEADER_SIZE));
+    func_80019A34(&rect, tim + 1);
+    pixel_block = (TimBlock*)((u8*)tim + (clut_len + TIM_HEADER_SIZE));
 
     rect.x = dst_coords->pixel_x;
     rect.y = dst_coords->pixel_y;
