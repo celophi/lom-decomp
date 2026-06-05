@@ -11,3 +11,7 @@ PyYAML>=6.0
 # Required by decomp-permuter
 pycparser==2.23
 toml==0.10.2
+
+# m2c MIPS-to-C decompiler
+-e tools/m2c
+graphviz>=0.20.1
