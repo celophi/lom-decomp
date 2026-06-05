@@ -47,7 +47,7 @@ void reset_fade_state(void)
  *            `prim_cursor` is the primitive heap cursor.
  *
  * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
- * @see https://decomp.me/scratch/hVLdu (100%)
+ * @see https://decomp.me/scratch/NvocJ (100%)
  */
 void render_fade_overlay(RenderContext* ctx)
 {
@@ -77,61 +77,65 @@ void render_fade_overlay(RenderContext* ctx)
     }
 
     /* Skip emit when all channels are neutral (identity tint). */
-    if (!((g_fade_current.r == FADE_CHAN_NEUTRAL) && (g_fade_current.g == FADE_CHAN_NEUTRAL) && (g_fade_current.b == FADE_CHAN_NEUTRAL)))
+    if (!((g_fade_current.r != FADE_CHAN_NEUTRAL) || (g_fade_current.g != FADE_CHAN_NEUTRAL) || (g_fade_current.b != FADE_CHAN_NEUTRAL)))
     {
-        /* Write RGB into the flat-quad color bytes. */
-        if (g_fade_current.r >= FADE_CHAN_ADDITIVE)
+        ctx->prim_cursor = prim;
+        return;
+    }
+
+    /* Write RGB into the flat-quad color bytes. */
+    if (g_fade_current.r >= FADE_CHAN_ADDITIVE)
+    {
+        /* Additive bias: subtract 1 so FADE_CHAN_ADDITIVE maps to 0x00. */
+        ((TILE*)prim)->r0 = (u8)g_fade_current.r - 1;
+        ((TILE*)prim)->g0 = (u8)g_fade_current.g - 1;
+        ((TILE*)prim)->b0 = (u8)g_fade_current.b - 1;
+    }
+    else
+    {
+        /* Subtractive bias: bitwise NOT so 0xFF->0x00, 0x00->0xFF.
+         * FADE_CHAN_NEUTRAL (casts to 0 as u8) is clamped to 0 explicitly. */
+        if (g_fade_current.r == FADE_CHAN_NEUTRAL)
         {
-            /* Additive bias: subtract 1 so FADE_CHAN_ADDITIVE maps to 0x00. */
-            ((TILE*)prim)->r0 = (u8)g_fade_current.r - 1;
-            ((TILE*)prim)->g0 = (u8)g_fade_current.g - 1;
-            ((TILE*)prim)->b0 = (u8)g_fade_current.b - 1;
+            ((TILE*)prim)->r0 = 0;
         }
         else
         {
-            /* Subtractive bias: bitwise NOT so 0xFF->0x00, 0x00->0xFF. */
-            if (g_fade_current.r == FADE_CHAN_NEUTRAL)
-            {
-                ((TILE*)prim)->r0 = 0;
-            }
-            else
-            {
-                ((TILE*)prim)->r0 = ~(u8)g_fade_current.r;
-            }
-
-            if (g_fade_current.g == FADE_CHAN_NEUTRAL)
-            {
-                ((TILE*)prim)->g0 = 0;
-            }
-            else
-            {
-                ((TILE*)prim)->g0 = ~(u8)g_fade_current.g;
-            }
-
-            if (g_fade_current.b == FADE_CHAN_NEUTRAL)
-            {
-                ((TILE*)prim)->b0 = 0;
-            }
-            else
-            {
-                ((TILE*)prim)->b0 = ~(u8)g_fade_current.b;
-            }
+            ((TILE*)prim)->r0 = ~(u8)g_fade_current.r;
         }
 
-        setTile(prim);
-        setSemiTrans(prim, 1);
-        SET_YX0((TILE*)prim, 0, 0);
-        setWH((TILE*)prim, SCREEN_WIDTH, SCREEN_HEIGHT);
-        addPrim(p_ctx->ot, prim);
-        prim = (TILE*)prim + 1;
+        if (g_fade_current.g == FADE_CHAN_NEUTRAL)
+        {
+            ((TILE*)prim)->g0 = 0;
+        }
+        else
+        {
+            ((TILE*)prim)->g0 = ~(u8)g_fade_current.g;
+        }
 
-        /* Choose blend mode by direction of tint. */
-        tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
-
-        setDrawTPage(prim, 0, 0, tpage);
-        addPrim(p_ctx->ot, prim);
-        prim = (DR_TPAGE*)prim + 1;
+        if (g_fade_current.b == FADE_CHAN_NEUTRAL)
+        {
+            ((TILE*)prim)->b0 = 0;
+        }
+        else
+        {
+            ((TILE*)prim)->b0 = ~(u8)g_fade_current.b;
+        }
     }
+
+    setTile(prim);
+    setSemiTrans(prim, 1);
+    SET_YX0((TILE*)prim, 0, 0);
+    setWH((TILE*)prim, SCREEN_WIDTH, SCREEN_HEIGHT);
+    addPrim(p_ctx->ot, prim);
+    prim = (TILE*)prim + 1;
+
+    /* Choose blend mode by direction of tint. */
+    tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
+
+    setDrawTPage(prim, 0, 0, tpage);
+    addPrim(p_ctx->ot, prim);
+    prim = (DR_TPAGE*)prim + 1;
 
     ctx->prim_cursor = prim;
 }
