@@ -6196,24 +6196,20 @@ s32 func_80149948(s32, s32, s32*);
  *       After the loop, g_menu_content_height is lerped toward g_menu_scroll_pos using
  *       g_menu_redraw_state as the step count; snaps immediately when the count reaches
  *       zero or the values are already equal.
- * @see decomp.me TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/AIXmd
  */
 s32 func_80149828(s32 arg0, s32* arg1)
 {
-    MenuNode* node;
     s32 i;
-    s32 buf;
     s32 temp_v0;
 
-    buf = arg0;
     g_menu_nav_count = 0;
-    node = g_menu_nodes;
 
-    for (i = 0; i < MENU_NODE_COUNT; i++, node++)
+    for (i = 0; i < MENU_NODE_COUNT; i++)
     {
-        if ((node->u2.s.parent_idx == MENU_NONE) && (node->u2.s.flags & 1))
+        if ((g_menu_nodes[i].u2.s.parent_idx == MENU_NONE) && (g_menu_nodes[i].u2.s.flags & 1))
         {
-            buf = func_80149948(i, buf, arg1);
+            arg0 = func_80149948(i, arg0, arg1);
         }
     }
 
@@ -6229,7 +6225,7 @@ s32 func_80149828(s32 arg0, s32* arg1)
         g_menu_content_height += temp_v0;
     }
 
-    return buf;
+    return arg0;
 }
 
 void* func_80149BB4(void*, s32*, s32, s32, s32, s32, s32, s32, s32);
@@ -6248,87 +6244,88 @@ void* func_80149BB4(void*, s32*, s32, s32, s32, s32, s32, s32, s32);
  *       snaps immediately when state is zero.
  *       If the node's expanded flag (u2.s.flags bit 1) is set, recursively renders
  *       child0, child1, child2, child3 in order, stopping at the first MENU_NONE child.
- * @see decomp.me TODO
+ * @see decomp.me (90.48%) https://decomp.me/scratch/TNThR
  */
 s32 func_80149948(s32 arg0, s32 arg1, s32* arg2)
 {
     MenuNode* node;
-    u16 nav_x_packed;
-    u16 nav_y_packed;
-    u16 layout_packed;
-    u16 u2_word;
-    s32 current_y;
-    s32 target_y;
-    s32 delta_y;
-    u32 new_y;
-    s16 var_v0_2;
+    MenuNode* new_var7;
+    int new_var5;
+    int new_var6;
+    MenuNode* new_var4;
     s32 buf;
-    u32 anim_cnt;
-    MenuNode* node2;
-    u8* child;
-    s32 j;
+    int new_var2;
+    int new_var3;
+    int new_var;
 
-    *(&g_menu_nav_first + g_menu_nav_count) = arg0;
+    new_var3 = 3;
+    *((&g_menu_nav_first) + g_menu_nav_count) = arg0;
     node = &g_menu_nodes[arg0];
     g_menu_nav_count += 1;
+    buf = func_80149BB4(arg1, arg2, node->unk4, ((node->idx_nav.nav_x_packed >> 8) & (new_var5 = 0x7F)) - (-1),
+                        ((new_var6 = node->idx_nav.nav_x_packed >> 15) | (node->u8_u.s.nav_y_hi << 1)) - g_menu_content_height, 1,
+                        ((node->u2.unk2 >> 2) & 3) != 0, g_menu_scene_type == arg0, (node->u2.unk2 >> 6) & new_var3);
 
-    nav_x_packed = node->idx_nav.nav_x_packed;
-    u2_word = node->u2.unk2;
-
-    buf = func_80149BB4(arg1, arg2, node->unk4, ((nav_x_packed >> 8) & 0x7F) + 1,
-                        (s32)((node->u8_u.nav_y_packed * 2) | (nav_x_packed >> 15)) - g_menu_content_height, 1, (((u16)u2_word >> 2) & 3) != 0,
-                        g_menu_scene_type == arg0, ((u16)u2_word >> 6) & 3);
-
-    /* Decrement 2-bit animation counter in u2.unk2 bits [3:2]. */
-    anim_cnt = ((u16)u2_word >> 2) & 3;
-    if (anim_cnt != 0)
     {
-        node->u2.unk2 = (u16)((u2_word & 0xFFF3) | (((anim_cnt - 1) & 3) << 2));
+        u16 unk2 = (&node->u2)->unk2;
+        u32 anim_cnt = (unk2 >> 2) & 3;
+        if (anim_cnt != 0)
+        {
+            new_var6 = anim_cnt - 1;
+            new_var2 = new_var6 & 3;
+            new_var5 = new_var2 << 2;
+            new_var2 = (unk2 & 0xFFF3) | new_var5;
+            node->u2.unk2 = new_var2;
+        }
     }
 
-    /* Lerp nav cursor Y toward layout Y, or snap when step count reaches zero. */
     if (node->state == 0)
     {
-        node->idx_nav.nav_x_packed = (u16)((node->idx_nav.nav_x_packed & 0x7FFF) | (node->u8_u.nav_y_packed & 0x8000));
-        var_v0_2 = (s16)(((u16)node->u8_u.nav_y_packed & 0xFF00) | (node->uA.layout_child_packed & 0xFF));
-        node->u8_u.nav_y_packed = (u16)var_v0_2;
+        node->idx_nav.nav_x_packed = (new_var2 = node->idx_nav.nav_x_packed & 0x7FFF) | (node->u8_u.nav_y_packed & 0x8000);
+        node->u8_u.nav_y_packed = (node->u8_u.nav_y_packed & 0xFF00) | node->uA.s.layout_y_hi;
     }
     else
     {
-        nav_x_packed = node->idx_nav.nav_x_packed;
-        nav_y_packed = (u16)node->u8_u.nav_y_packed;
-        layout_packed = (u16)node->uA.layout_child_packed;
-
-        current_y = (s32)(((nav_y_packed & 0xFF) * 2) | (nav_x_packed >> 15));
-        target_y = (s32)((layout_packed * 2) | (nav_y_packed >> 15));
-
-        if (current_y == target_y)
+        u16 nav_x_packed = node->idx_nav.nav_x_packed;
+        u16 nav_y_packed = node->u8_u.nav_y_packed;
+        s32 current_y = (nav_x_packed >> 15) | ((nav_y_packed & 0xFF) << 1);
+        s32 target_y = (nav_y_packed >> 15) | (node->uA.s.layout_y_hi << 1);
+        s32 delta_y;
+        if (((u16)current_y) == target_y)
         {
             node->state = 0;
         }
         else
         {
-            delta_y = (target_y - current_y) / (s32)node->state;
-            node->state = (u8)(node->state - 1);
-            new_y = (u32)(current_y + delta_y) & 0xFFFF;
-            node->idx_nav.nav_x_packed = (u16)((nav_x_packed & 0x7FFF) | ((new_y & 1) << 15));
-            var_v0_2 = (s16)(((u16)nav_y_packed & 0xFF00) | ((new_y >> 1) & 0xFF));
-            node->u8_u.nav_y_packed = (u16)var_v0_2;
+            s32 step = (target_y - ((u16)current_y)) / ((s32)node->state);
+            u32 new_y = (current_y + step) & 0xFFFF;
+            new_var3 = 15;
+            new_var3 = (new_y & 1) << new_var3;
+            node->state -= 1;
+            node->idx_nav.nav_x_packed = (nav_x_packed & 0x7FFF) | new_var3;
+            new_var = node->u8_u.nav_y_packed & 0xFF00;
+            new_var7 = node;
+            node->u8_u.nav_y_packed = (new_y >> 1) & 0xFF;
+            new_var7->u8_u.nav_y_packed = new_var | node->u8_u.nav_y_packed;
         }
     }
 
-    /* Recurse into children when expanded (u2.s.flags bit 1). */
-    node2 = &g_menu_nodes[arg0];
-    if (((u16)node2->u2.unk2 >> 1) & 1)
     {
-        child = &node2->uA.s.child0;
-        for (j = 0; j < 4; j++, child++)
+        MenuNode* node2 = &g_menu_nodes[arg0];
+        node->state += 0;
+        if ((node2->u2.unk2 >> 1) & 1)
         {
-            if (*child == MENU_NONE)
+            s32 j;
+            new_var4 = node2;
+            for (j = 0; j < 4; j++)
             {
-                break;
+                u8 child = *((&new_var4->uA.s.child0) + j);
+                if (child == 0xFF)
+                {
+                    break;
+                }
+                buf = func_80149948(child & 0xFFu, buf, arg2);
             }
-            buf = func_80149948(*child, buf, arg2);
         }
     }
 
@@ -6348,7 +6345,7 @@ extern u8 D_8014FDB8[];
 
 inline int inline_fn(int arg0, int arg1)
 {
-  return arg0 | arg1;
+    return arg0 | arg1;
 }
 
 /**
