@@ -5182,3 +5182,45 @@ void *func_801482D0(MenuPrimHead *prim, s32 *ot)
     *ot = (*ot & 0xFF000000) | ((s32)prim & 0xFFFFFF);
     return (void *)((u8 *)prim + 8);
 }
+
+/**
+ * @brief Concatenate two encoded text command streams into a destination buffer.
+ * @param dst  Destination byte buffer; receives all bytes from src1, then src2, then a null terminator.
+ * @param src1 First source stream; processed until its null terminator.
+ * @param src2 Second source stream; appended after src1, processed until its null terminator.
+ * @note Both streams use a variable-width encoding: bytes in the range 0x19-0x1F are two-byte codes
+ *       (the control byte followed by one parameter byte); all other non-zero bytes are single-byte codes.
+ *       The function tail-calls itself in the original asm to loop, so the effective max depth is bounded
+ *       by the stream lengths, not the call stack.
+ * @see decomp.me TODO
+ */
+void func_80148324(u8 *dst, u8 *src1, u8 *src2)
+{
+    u8 ch;
+
+    ch = *src1;
+    while (ch != 0)
+    {
+        *dst++ = ch;
+        src1++;
+        if ((u32)(ch - 0x19U) < 7U)
+        {
+            *dst++ = *src1++;
+        }
+        ch = *src1;
+    }
+
+    ch = *src2;
+    while (ch != 0)
+    {
+        *dst++ = ch;
+        src2++;
+        if ((u32)(ch - 0x19U) < 7U)
+        {
+            *dst++ = *src2++;
+        }
+        ch = *src2;
+    }
+
+    *dst = 0;
+}
