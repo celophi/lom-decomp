@@ -20,6 +20,17 @@
  * so they can be called on a void* / u8* cursor without a typed cast.
  */
 
+/* --- Position setters --- */
+
+/*
+ * Set x0 and y0 writing y before x, matching the store order emitted by
+ * code that writes the y0 field (higher offset) first and then x0. libgpu's
+ * setXY0 writes x before y; use SET_YX0 when the original instruction stream
+ * stores y0 first and the reversed order is required for a matching build.
+ */
+#define SET_YX0(p, _y0, _x0) \
+    (p)->y0 = (_y0), (p)->x0 = (_x0)
+
 /* --- Color word (P_TAG: r0,g0,b0,code at offset 4; valid for any prim) --- */
 
 /*
