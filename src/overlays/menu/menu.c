@@ -6231,3 +6231,115 @@ s32 func_80149828(s32 arg0, s32 *arg1)
 
     return buf;
 }
+
+s32 func_80149BB4(s32, s32 *, u8, s32, s32, s32, s32, s32, s32);
+
+/**
+ * @brief Render one menu node's panel and update its animated Y position; recurse into children.
+ * @param arg0 Node index within g_menu_nodes.
+ * @param arg1 Current primitive buffer pointer.
+ * @param arg2 Pointer to the ordering-table entry.
+ * @return Updated primitive buffer pointer after rendering this node and all expanded children.
+ * @note Appends arg0 to the g_menu_nav_first list and increments g_menu_nav_count.
+ *       Calls func_80149BB4 to render the node's window panel, passing position, animation
+ *       counter state, and whether this node is the active scene.
+ *       Decrements the 2-bit animation counter in u2.unk2 bits [3:2] when nonzero.
+ *       Lerps the node's nav cursor Y toward its layout Y using node->state as step count;
+ *       snaps immediately when state is zero.
+ *       If the node's expanded flag (u2.s.flags bit 1) is set, recursively renders
+ *       child0, child1, child2, child3 in order, stopping at the first MENU_NONE child.
+ * @see decomp.me TODO
+ */
+s32 func_80149948(s32 arg0, s32 arg1, s32 *arg2)
+{
+    MenuNode *node;
+    u16 nav_x_packed;
+    u16 nav_y_packed;
+    u16 layout_packed;
+    u16 u2_word;
+    s32 current_y;
+    s32 target_y;
+    s32 delta_y;
+    u32 new_y;
+    s16 var_v0_2;
+    s32 buf;
+    u32 anim_cnt;
+    MenuNode *node2;
+    u8 *child;
+    s32 j;
+
+    *(&g_menu_nav_first + g_menu_nav_count) = arg0;
+    node = &g_menu_nodes[arg0];
+    g_menu_nav_count += 1;
+
+    nav_x_packed = node->idx_nav.nav_x_packed;
+    u2_word      = node->u2.unk2;
+
+    buf = func_80149BB4(
+        arg1,
+        arg2,
+        node->unk4,
+        ((nav_x_packed >> 8) & 0x7F) + 1,
+        (s32)((node->u8_u.nav_y_packed * 2) | (nav_x_packed >> 15)) - g_menu_content_height,
+        1,
+        (((u16)u2_word >> 2) & 3) != 0,
+        g_menu_scene_type == arg0,
+        ((u16)u2_word >> 6) & 3
+    );
+
+    /* Decrement 2-bit animation counter in u2.unk2 bits [3:2]. */
+    anim_cnt = ((u16)u2_word >> 2) & 3;
+    if (anim_cnt != 0)
+    {
+        node->u2.unk2 = (u16)((u2_word & 0xFFF3) | (((anim_cnt - 1) & 3) << 2));
+    }
+
+    /* Lerp nav cursor Y toward layout Y, or snap when step count reaches zero. */
+    if (node->state == 0)
+    {
+        node->idx_nav.nav_x_packed = (u16)((node->idx_nav.nav_x_packed & 0x7FFF) |
+                                            (node->u8_u.nav_y_packed & 0x8000));
+        var_v0_2 = (s16)(((u16)node->u8_u.nav_y_packed & 0xFF00) | (node->uA.layout_child_packed & 0xFF));
+        node->u8_u.nav_y_packed = (u16)var_v0_2;
+    }
+    else
+    {
+        nav_x_packed  = node->idx_nav.nav_x_packed;
+        nav_y_packed  = (u16)node->u8_u.nav_y_packed;
+        layout_packed = (u16)node->uA.layout_child_packed;
+
+        current_y = (s32)(((nav_y_packed & 0xFF) * 2) | (nav_x_packed >> 15));
+        target_y  = (s32)((layout_packed * 2) | (nav_y_packed >> 15));
+
+        if (current_y == target_y)
+        {
+            node->state = 0;
+        }
+        else
+        {
+            delta_y = (target_y - current_y) / (s32)node->state;
+            node->state = (u8)(node->state - 1);
+            new_y = (u32)(current_y + delta_y) & 0xFFFF;
+            node->idx_nav.nav_x_packed = (u16)((nav_x_packed & 0x7FFF) | ((new_y & 1) << 15));
+            var_v0_2 = (s16)(((u16)nav_y_packed & 0xFF00) | ((new_y >> 1) & 0xFF));
+            node->u8_u.nav_y_packed = (u16)var_v0_2;
+        }
+    }
+
+    /* Recurse into children when expanded (u2.s.flags bit 1). */
+    node2 = &g_menu_nodes[arg0];
+    if (((u16)node2->u2.unk2 >> 1) & 1)
+    {
+        child = &node2->uA.s.child0;
+        for (j = 0; j < 4; j++, child++)
+        {
+            if (*child == MENU_NONE)
+            {
+                break;
+            }
+            buf = func_80149948(*child, buf, arg2);
+        }
+    }
+
+    return buf;
+}
