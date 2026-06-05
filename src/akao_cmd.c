@@ -3,7 +3,6 @@
 #include "akao_driver.h"
 #include "psyq/libcd.h"
 
-
 /**
  * AKAO command parameter buffer. Each command opcode reads its inputs from
  * the first N slots; the layout is opcode-specific and the driver consumes
@@ -16,7 +15,7 @@
  * acknowledge that dual use; scalar stores rely on GCC 2.7.2's permissive
  * implicit int→pointer conversion.
  */
-extern void *g_akaoCmdParams[];
+extern void* g_akaoCmdParams[];
 extern SfxControl g_akao_sfx_control;
 extern u8 g_sfx_channels[];
 
@@ -97,8 +96,6 @@ void akao_cmd_98_9a_9c_9e(u32 arg0);
  * on the $v0 register convention).
  */
 extern s32 akao_send_command(s32 opcode);
-
-
 
 /**
  * @brief Public init entry — wraps akao_driver_init and returns 0.
@@ -1032,11 +1029,11 @@ s32 akao_reset_xfer_state(void)
  */
 s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
 {
-    s32 advance;          /* word-aligned bytes consumed from articulation */
-    u32 chunk;            /* clamped articulation chunk size               */
-    u32 sample_chunk;     /* clamped sample chunk size                     */
-    s32* new_var;         /* load-bearing temp for codegen                 */
-    void* arti_slot;      /* base of this bank's articulation slot         */
+    s32 advance;      /* word-aligned bytes consumed from articulation */
+    u32 chunk;        /* clamped articulation chunk size               */
+    u32 sample_chunk; /* clamped sample chunk size                     */
+    s32* new_var;     /* load-bearing temp for codegen                 */
+    void* arti_slot;  /* base of this bank's articulation slot         */
 
     if ((g_akao_driver_flags.unk0 & 1) == 0)
     {
@@ -1079,9 +1076,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             if (g_akao_streaming_state.articulation_remaining == 0)
             {
                 arti_slot = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&g_akao_articulation_slots)));
-                akao_relocate_articulations((AkaoArticulation*)arti_slot,
-                                            (AkaoArticulation*)arti_slot,
-                                            g_akao_bank_staging.spu_dest_addr,
+                akao_relocate_articulations((AkaoArticulation*)arti_slot, (AkaoArticulation*)arti_slot, g_akao_bank_staging.spu_dest_addr,
                                             g_akao_bank_staging.articulation_count);
             }
         }
@@ -1346,7 +1341,7 @@ s32 akao_cmd_e6(s32 arg0)
  * @return 0 on success; the akao_check_magic delta on failure (also clears
  *         @c g_akao_xa_program_staging.cached_spu_addr).
  *
- * @see https://decomp.me/scratch/C06sg (99.80%)
+ * @see https://decomp.me/scratch/C06sg (100%)
  */
 s32 akao_upload_xa_program(void* arg0, s32 arg1)
 {
@@ -1367,22 +1362,20 @@ s32 akao_upload_xa_program(void* arg0, s32 arg1)
         if (((AKAO_CHANNEL_STATE->unk4 | AKAO_CHANNEL_STATE->unk1C) != 0) && (AKAO_CHANNEL_STATE->flags & 0x40))
         {
             var_s2 += 0xFFFD0000;
+            var1 = (s32)arg0;
         }
-        var1 = arg0;
+        else
+        {
+            var1 = (s32)arg0;
+        }
         arg0 = (u8*)arg0 + 0x40;
         SpuSetTransferStartAddr(var_s2);
-        /*
-         * Note: this passes spu_dest_addr (offset 0x10) as the byte-count
-         * argument to akao_spu_write, which is suspicious — the analogous
-         * site in akao_upload_bank uses sample_size (offset 0x14) here. This
-         * mirrors the original ASM literally; it may explain why this scratch
-         * is at 99.80% rather than 100%. See docs/akao-review.md.
-         */
         akao_spu_write(arg0, ((AkaoBankHeader*)var1)->spu_dest_addr);
         ((AkaoBankHeader*)var1)->cached_spu_addr = var_s2;
         akao_copy_bytes(var1, &g_akao_xa_program_staging, 0x50);
         return temp_v0;
     }
+
     g_akao_xa_program_staging.cached_spu_addr = 0;
     return temp_v0;
 }
