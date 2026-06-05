@@ -5758,3 +5758,51 @@ void* func_8014874C(void* buf, s32* ot)
 
     return prim;
 }
+
+s32 func_8014A10C(s32, s32 *, s32, s32, s32);
+
+/**
+ * @brief Draw the navigation cursor for the active menu node, and optionally its label.
+ * @param buf   Primitive buffer pointer passed through to the rendering helpers.
+ * @param ot    Pointer to the ordering-table entry used by the rendering helpers.
+ * @param label When non-zero, also draws the node's text label from the g_menu_state_ptr string table.
+ * @return Updated primitive buffer pointer returned from the last rendering call.
+ * @note Cursor X = ((nav_x & 0x7F) + 8); cursor Y = ((nav_y_hi << 1) | (nav_x >> 7)) -
+ *       (g_menu_content_height - 0xC), clamped to [0xC, 0xA2].
+ *       Label pointer: base = (u8*)g_menu_state_ptr + *(s32*)(state + 4);
+ *                      text = base + *(u16*)(base + node->unk0 * 2).
+ * @see decomp.me TODO
+ */
+s32 func_80148900(s32 buf, s32 *ot, s32 label)
+{
+    MenuNode *node;
+    u16 nav_x_packed;
+    s32 cursor_x;
+    s32 cursor_y;
+    s32 result;
+    u8 *base;
+
+    node = &g_menu_nodes[g_menu_active_node];
+    nav_x_packed = node->idx_nav.nav_x_packed;
+
+    cursor_y = (s32)((node->u8_u.s.nav_y_hi << 1) | (nav_x_packed >> 15)) - (g_menu_content_height - 0xC);
+    if (cursor_y < 0xC)
+    {
+        cursor_y = 0xC;
+    }
+    if (cursor_y >= 0xA3)
+    {
+        cursor_y = 0xA3;
+    }
+
+    cursor_x = ((nav_x_packed >> 8) & 0x7F) + 8;
+    result = func_8014A10C(buf, ot, cursor_x, cursor_y, 1);
+
+    if (label != 0)
+    {
+        base = (u8 *)g_menu_state_ptr + *(s32 *)((u8 *)g_menu_state_ptr + 4);
+        result = func_800A88A0(result, ot, base + *(u16 *)(base + node->unk0 * 2), 1, 0xA0, 0xCA, 2);
+    }
+
+    return result;
+}
