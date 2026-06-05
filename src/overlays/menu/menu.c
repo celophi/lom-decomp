@@ -6364,73 +6364,56 @@ extern u8 D_8014FDB8[];
  *       code 0x64 when arg7 != 0 (active scene), 0x66 otherwise (semi-transparent).
  *       CLUT is computed from D_8014FDB8[arg2]: high nibble = VRAM Y delta from row 0x1F2,
  *       low nibble = VRAM X/16.
- * @see decomp.me TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/IXG0l
  */
 void* func_80149BB4(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8)
 {
+    int new_var;
     u8* p1 = (u8*)arg0;
-    u8* p2;
-    NodeSpriteInfo* info;
-    u8 clut_byte;
-    s16 clut;
-    s32 temp_v0;
-
     (void)arg8;
-
-    info = &D_8014FBF4[arg2];
-    clut_byte = D_8014FDB8[arg2];
-    clut = (s16)((((clut_byte >> 4) + 0x1F2) << 6) | (clut_byte & 0xF));
-
-    /* First SPRT: neutral-tinted panel background. */
-    *(u32*)(p1 + 0x4) = 0x808080;
+    *((u32*)(p1 + 0x4)) = 0x808080;
     p1[3] = 4;
+    new_var = arg3 - arg5;
     p1[7] = 0x64;
-    *(s16*)(p1 + 0x8) = (s16)((arg3 - arg5) + arg6);
-    *(s16*)(p1 + 0xA) = (s16)((arg4 - arg5) + arg6);
-    p1[0xC] = info->u_coord;
-    p1[0xD] = info->v_coord;
-    *(s16*)(p1 + 0xE) = clut;
-    *(s16*)(p1 + 0x10) = (s16)info->w;
-    *(s16*)(p1 + 0x12) = (s16)info->h;
-
-    /* OT-link first SPRT. */
-    *(s32*)p1 = (*(s32*)p1 & 0xFF000000) | (*arg1 & 0xFFFFFF);
-    p2 = p1 + 0x14;
-    *arg1 = (*arg1 & 0xFF000000) | ((s32)p1 & 0xFFFFFF);
-
+    *((s16*)(p1 + 0x8)) = (s16)(new_var + arg6);
+    *((s16*)(p1 + 0xA)) = (s16)((arg4 - arg5) + arg6);
+    p1[0xC] = D_8014FBF4[arg2].u_coord;
+    p1[0xD] = D_8014FBF4[arg2].v_coord;
+    *((s16*)(p1 + 0x10)) = (s16)D_8014FBF4[arg2].w;
+    *((s16*)(p1 + 0x12)) = (s16)D_8014FBF4[arg2].h;
+    *((s16*)(p1 + 0xE)) = (s16)inline_fn(((D_8014FDB8[arg2] >> 4) + 0x1F2) << 6, D_8014FDB8[arg2] & 0xF);
+    *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*arg1) & 0xFFFFFF);
+    *arg1 = inline_fn((*arg1) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
+    p1 += 0x14;
     if (arg5 != 0)
     {
-        /* Second SPRT: selection highlight / shadow. */
+        new_var = 0xA00000;
         if (arg7 != 0)
         {
-            *(u32*)(p2 + 0x4) = 0xA00000;
+            *((u32*)(p1 + 0x4)) = new_var;
         }
         else
         {
-            *(u32*)(p2 + 0x4) = 0;
+            *((u32*)(p1 + 0x4)) = 0;
         }
-        p2[3] = 4;
-        p2[7] = (arg7 == 0) ? 0x66 : 0x64;
-
-        temp_v0 = (arg5 - arg6) * 2;
-        *(s16*)(p2 + 0xA) = (s16)(arg4 + temp_v0);
-        *(s16*)(p2 + 0x8) = (s16)(arg3 + temp_v0);
-        p2[0xC] = info->u_coord;
-        p2[0xD] = info->v_coord;
-        *(s16*)(p2 + 0xE) = clut;
-        *(s16*)(p2 + 0x10) = (s16)info->w;
-        *(s16*)(p2 + 0x12) = (s16)info->h;
-
-        /* OT-link second SPRT. */
+        p1[3] = 4;
+        p1[7] = 0x64;
+        if (arg7 == 0)
         {
-            s32 p2_addr = (s32)p2 & 0xFFFFFF;
-            *(s32*)p2 = (*(s32*)p2 & 0xFF000000) | (*arg1 & 0xFFFFFF);
-            p2 += 0x14;
-            *arg1 = (*arg1 & 0xFF000000) | p2_addr;
+            p1[7] = 0x66;
         }
+        *((s16*)(p1 + 0x8)) = (s16)(arg3 + (arg5 - arg6) * 2);
+        *((s16*)(p1 + 0xA)) = (s16)(arg4 + (arg5 - arg6) * 2);
+        p1[0xC] = D_8014FBF4[arg2].u_coord;
+        p1[0xD] = D_8014FBF4[arg2].v_coord;
+        *((s16*)(p1 + 0x10)) = (s16)D_8014FBF4[arg2].w;
+        *((s16*)(p1 + 0x12)) = (s16)D_8014FBF4[arg2].h;
+        *((s16*)(p1 + 0xE)) = (s16)inline_fn(((D_8014FDB8[arg2] >> 4) + 0x1F2) << 6, D_8014FDB8[arg2] & 0xF);
+        *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*arg1) & 0xFFFFFF);
+        *arg1 = inline_fn((*arg1) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
+        p1 += 0x14;
     }
-
-    return p2;
+    return p1;
 }
 
 /**
@@ -6463,26 +6446,29 @@ void* func_80149D90(void* arg0, s32* arg1, s16 arg2, s16 arg3)
 
 void func_8014A044(void*, s32*);
 
-typedef struct {
+typedef struct
+{
     s16 x;
     s16 y;
 } Vec2s;
 
-typedef struct {
-    u32 pad;        /* 0x00 */
-    u16 unk_04;     /* 0x04 */
-    u16 unk_06;     /* 0x06 */
-    u16 unk_08;     /* 0x08 */
-    u16 unk_0A;     /* 0x0A */
-    u16 unk_0C;     /* 0x0C */
-    s16 unk_0E;     /* 0x0E */
-    u16 unk_10;     /* 0x10 */
-    u16 unk_12;     /* 0x12 */
+typedef struct
+{
+    u32 pad;    /* 0x00 */
+    u16 unk_04; /* 0x04 */
+    u16 unk_06; /* 0x06 */
+    u16 unk_08; /* 0x08 */
+    u16 unk_0A; /* 0x0A */
+    u16 unk_0C; /* 0x0C */
+    s16 unk_0E; /* 0x0E */
+    u16 unk_10; /* 0x10 */
+    u16 unk_12; /* 0x12 */
 } StructA;
 
-typedef struct {
-    s16 unk_00;     /* 0x00 */
-    s16 unk_02;     /* 0x02 */
+typedef struct
+{
+    s16 unk_00; /* 0x00 */
+    s16 unk_02; /* 0x02 */
 } StructB;
 
 /**
