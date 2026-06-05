@@ -224,8 +224,8 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
     RECT rect;
     TimBlock* pixel_block;
     int i;
-    Tim* tim = (Tim*)g_name_entry_tim;
-    s32 clut_len = tim->clut_block.bnum; /* loaded early into s2; reused for pixel block offset */
+    Tim* tim = &g_name_entry_tim;
+    s32 clut_len = tim->clut_block.bnum;
     u16* clut = tim->clut_data;
 
     rect.x = dst_coords->clut_x;

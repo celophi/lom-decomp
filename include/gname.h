@@ -188,7 +188,7 @@ extern u8 g_char_append_anim[]; /* AppendAnimFrame[APPEND_ANIM_FRAME_COUNT]; dec
 extern FadeState g_fade_target;
 extern FadeState g_fade_current;
 extern s32 g_startup_delay;
-extern u8 g_name_entry_tim[]; /* TIM-format glyph image uploaded by load_tim_to_vram */
+extern Tim g_name_entry_tim; /* glyph TIM blob; Tim covers the fixed header + CLUT, pixel block follows */
 extern s32 g_strip_width_target;
 extern s32 g_strip_width;
 extern u8* g_active_name;
