@@ -29,29 +29,28 @@ void reset_fade_state(void)
  * `(target - current) / steps` per channel and decrements `steps`.
  * Otherwise snaps current to target (RGB only - `steps` is left alone).
  *
- * If the current color is anything other than (0x100, 0x100, 0x100) - i.e.
- * not the no-tint identity - emits two primitives at @c ctx->prim_cursor:
- *   1. A 16-byte flat-shaded full-screen quad (tag 0x62) covering the
- *      320x240 viewport with the tinted RGB. When any channel is >0x100,
- *      colors are written as `value - 1` (additive bias); when <0x100,
- *      colors are written as `~value` (subtractive bias).
- *   2. An 8-byte Draw-Mode (GP0 0xE1) packet selecting abr=2 (additive,
- *      command bits 0x25) for >0x100 brightening or abr=1 (subtractive,
- *      0x45) for <=0x100 darkening.
+ * If the current color is not the identity (@c FADE_CHAN_NEUTRAL on all
+ * channels), emits two primitives at @c ctx->prim_cursor:
+ *   1. A full-screen TILE (@c SCREEN_WIDTH x @c SCREEN_HEIGHT) with the
+ *      tinted RGB. Channels >= @c FADE_CHAN_ADDITIVE are written as
+ *      `value - 1` (additive bias); channels below as `~value`
+ *      (subtractive bias).
+ *   2. A @c DR_TPAGE packet: @c FADE_TPAGE_ADD (abr=1, Back+Front,
+ *      brightening) when any channel >= @c FADE_CHAN_ADDITIVE, or
+ *      @c FADE_TPAGE_SUB (abr=2, Back-Front, darkening) otherwise.
  *
- * Both packets are spliced into the 24-bit OT at @c ctx->ot[0] and
- * `ctx->prim_cursor` is advanced past them. When the color is identity, no
- * primitives are emitted and the heap cursor is unchanged.
+ * Both packets are spliced into @c ctx->ot[0] and @c ctx->prim_cursor is
+ * advanced past them. When the color is identity no primitives are emitted.
  *
- * @param ctx Render context whose `ot[0]` is the OT entry written and
- *            `prim_cursor` is the primitive heap cursor.
+ * @param ctx Render context whose @c ot[0] is the OT entry and
+ *            @c prim_cursor is the primitive heap cursor.
  *
  * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
- * @see https://decomp.me/scratch/hVLdu (100%)
+ * @see https://decomp.me/scratch/NvocJ (100%)
  */
-void render_fade_overlay(RenderContext* ctx)
+static void render_fade_overlay(RenderContext* ctx)
 {
-    u32* prim = (u32*)ctx->prim_cursor;
+    void* prim = ctx->prim_cursor;
     RenderContext* p_ctx = ctx;
     s32 step_r;
     s32 step_g;
@@ -77,63 +76,65 @@ void render_fade_overlay(RenderContext* ctx)
     }
 
     /* Skip emit when all channels are neutral (identity tint). */
-    if (!((g_fade_current.r == FADE_CHAN_NEUTRAL) && (g_fade_current.g == FADE_CHAN_NEUTRAL) &&
-          (g_fade_current.b == FADE_CHAN_NEUTRAL)))
+    if (!((g_fade_current.r != FADE_CHAN_NEUTRAL) || (g_fade_current.g != FADE_CHAN_NEUTRAL) || (g_fade_current.b != FADE_CHAN_NEUTRAL)))
     {
-        /* Write RGB into the flat-quad color bytes. */
-        if (g_fade_current.r >= FADE_CHAN_ADDITIVE)
+        ctx->prim_cursor = prim;
+        return;
+    }
+
+    /* Write RGB into the flat-quad color bytes. */
+    if (g_fade_current.r >= FADE_CHAN_ADDITIVE)
+    {
+        /* Additive bias: subtract 1 so FADE_CHAN_ADDITIVE maps to 0x00. */
+        ((TILE*)prim)->r0 = (u8)g_fade_current.r - 1;
+        ((TILE*)prim)->g0 = (u8)g_fade_current.g - 1;
+        ((TILE*)prim)->b0 = (u8)g_fade_current.b - 1;
+    }
+    else
+    {
+        /* Subtractive bias: bitwise NOT so 0xFF->0x00, 0x00->0xFF.
+         * FADE_CHAN_NEUTRAL (casts to 0 as u8) is clamped to 0 explicitly. */
+        if (g_fade_current.r == FADE_CHAN_NEUTRAL)
         {
-            /* Additive bias: subtract 1 so FADE_CHAN_ADDITIVE maps to 0x00. */
-            ((u8*)prim)[4] = (u8)g_fade_current.r - 1;
-            ((u8*)prim)[5] = (u8)g_fade_current.g - 1;
-            ((u8*)prim)[6] = (u8)g_fade_current.b - 1;
+            ((TILE*)prim)->r0 = 0;
         }
         else
         {
-            /* Subtractive bias: bitwise NOT so 0xFF->0x00, 0x00->0xFF.
-             * FADE_CHAN_NEUTRAL (casts to 0 as u8) is clamped to 0 explicitly. */
-            if (g_fade_current.r == FADE_CHAN_NEUTRAL)
-            {
-                ((u8*)prim)[4] = 0;
-            }
-            else
-            {
-                ((u8*)prim)[4] = ~(u8)g_fade_current.r;
-            }
-
-            if (g_fade_current.g == FADE_CHAN_NEUTRAL)
-            {
-                ((u8*)prim)[5] = 0;
-            }
-            else
-            {
-                ((u8*)prim)[5] = ~(u8)g_fade_current.g;
-            }
-
-            if (g_fade_current.b == FADE_CHAN_NEUTRAL)
-            {
-                ((u8*)prim)[6] = 0;
-            }
-            else
-            {
-                ((u8*)prim)[6] = ~(u8)g_fade_current.b;
-            }
+            ((TILE*)prim)->r0 = ~g_fade_current.r;
         }
 
-        setTile(prim);
-        setSemiTrans(prim, 1);
-        SET_YX0((TILE*)prim, 0, 0);
-        setWH((TILE*)prim, SCREEN_WIDTH, SCREEN_HEIGHT);
-        addPrim(p_ctx->ot, prim);
-        prim += sizeof(TILE) / sizeof(u_long);
+        if (g_fade_current.g == FADE_CHAN_NEUTRAL)
+        {
+            ((TILE*)prim)->g0 = 0;
+        }
+        else
+        {
+            ((TILE*)prim)->g0 = ~g_fade_current.g;
+        }
 
-        /* Choose blend mode by direction of tint. */
-        tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
-
-        setDrawTPage(prim, 0, 0, tpage);
-        addPrim(p_ctx->ot, prim);
-        prim += sizeof(DR_TPAGE) / sizeof(u_long);
+        if (g_fade_current.b == FADE_CHAN_NEUTRAL)
+        {
+            ((TILE*)prim)->b0 = 0;
+        }
+        else
+        {
+            ((TILE*)prim)->b0 = ~g_fade_current.b;
+        }
     }
+
+    setTile(prim);
+    setSemiTrans(prim, 1);
+    SET_YX0((TILE*)prim, 0, 0);
+    setWH((TILE*)prim, SCREEN_WIDTH, SCREEN_HEIGHT);
+    addPrim(p_ctx->ot, prim);
+    prim = (TILE*)prim + 1;
+
+    /* Choose blend mode by direction of tint. */
+    tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
+
+    setDrawTPage(prim, 0, 0, tpage);
+    addPrim(p_ctx->ot, prim);
+    prim = (DR_TPAGE*)prim + 1;
 
     ctx->prim_cursor = prim;
 }
@@ -152,7 +153,7 @@ void render_fade_overlay(RenderContext* ctx)
  *
  * @see https://decomp.me/scratch/jq3uD (100%)
  */
-void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
+static void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
 {
     g_fade_target.r = r;
     g_fade_target.g = g;
@@ -189,80 +190,74 @@ void gname_init(void)
  *
  * Builds the destination-coordinate block consumed by @ref load_tim_to_vram
  * and loads @c g_name_entry_tim. The four packed s16 coordinates are:
- *   - [0],[1] = pixel-data destination, VRAM (320, 0).
- *   - [2],[3] = CLUT destination, VRAM (0, 498).
+ *   - [0],[1] = pixel-data destination, VRAM (@c SCREEN_WIDTH, 0).
+ *   - [2],[3] = CLUT destination, VRAM (0, @c VRAM_CLUT_Y).
  *
  * @see https://decomp.me/scratch/EWwJI (100%)
  */
 void load_name_entry_tim(void)
 {
-    s16 dst_coords[4];
-    dst_coords[0] = 0x140; /* pixel x = 320 */
-    dst_coords[1] = 0;     /* pixel y = 0   */
-    dst_coords[2] = 0;     /* clut x  = 0   */
-    dst_coords[3] = 0x1F2; /* clut y  = 498 */
-    load_tim_to_vram(dst_coords);
+    TimDstCoords dst_coords;
+    dst_coords.pixel_x = SCREEN_WIDTH;
+    dst_coords.pixel_y = 0;
+    dst_coords.clut_x = 0;
+    dst_coords.clut_y = VRAM_CLUT_Y;
+    load_tim_to_vram(&dst_coords);
 }
 
 /**
  * @brief Upload a TIM image's pixel data and CLUT to VRAM.
  *
- * Parses the TIM-format blob @c g_name_entry_tim: the CLUT block starts at
- * byte 8 (its length word at offset 8, its 256-entry palette at offset
- * 0x14), and the pixel block immediately follows the CLUT block. Before
- * the CLUT is uploaded, the semi-transparency bit (0x8000) is OR'd into
- * every non-zero palette entry. The TIM's own embedded destination
- * coordinates are ignored; @p dst_coords supplies them instead.
+ * Parses @c g_name_entry_tim: the CLUT block starts at @c TIM_HEADER_SIZE,
+ * its @c CLUT_ENTRY_COUNT palette entries at @c TIM_CLUT_DATA_OFFSET. Before uploading,
+ * @c GPU_STP_BIT is OR'd into every non-zero CLUT entry. The TIM's own
+ * embedded destination coordinates are ignored; @p dst_coords supplies them.
  *
- * @param dst_coords Four packed s16s: [0],[1] = pixel-data VRAM x,y;
- *                    [2],[3] = CLUT VRAM x,y.
+ * @param dst_coords Pixel and CLUT VRAM destination coordinates.
  *
  * @note @c func_80019A34 is the engine's LoadImage-style VRAM upload
  *       (RECT, source data).
  * @see https://decomp.me/scratch/P3W9C (100%)
  */
-void load_tim_to_vram(void* dst_coords)
+void load_tim_to_vram(TimDstCoords* dst_coords)
 {
-    void* coords = dst_coords;
-    u16 clut_y;
-    u16* tim = (u16*)g_name_entry_tim;
-    s32 clut_len = *((s32*)(((u8*)tim) + 8));
-    u16 clut_y2;
-    u16* clut = (u16*)(((u8*)tim) + 0x14);
-    u16 rect[4];
+    RECT rect;
+    TimBlock* pixel_block;
     int i;
-    u16 clut_x = *((u16*)(((u8*)coords) + 4));
-    i = 0;
-    rect[0] = clut_x;
-    clut_y = *((u16*)(((u8*)coords) + 6));
-    rect[2] = 0x100;
-    rect[3] = 1;
-    rect[1] = clut_y;
+    Tim* tim = &g_name_entry_tim;
+    s32 clut_len = tim->clut_block.bnum;
+    u16* clut = tim->clut_data;
+
+    rect.x = dst_coords->clut_x;
+    rect.y = dst_coords->clut_y;
+    rect.w = CLUT_ENTRY_COUNT;
+    rect.h = 1;
+
     /* Mark every non-zero CLUT entry semi-transparent. */
-    do
+    for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
         if ((*clut) != 0)
         {
-            *clut |= 0x8000;
+            *clut |= GPU_STP_BIT;
         }
         clut++;
-        i++;
-    } while (i < 0x100);
-    func_80019A34((u16*)rect, ((u8*)tim) + 0x14);
-    rect[0] = *((u16*)(((u8*)coords) + 0));
-    rect[1] = *((u16*)(((u8*)coords) + 2));
-    {
-        u16* pixel_block = (u16*)(((u8*)tim) + (clut_len + 8));
-        rect[2] = pixel_block[4];
-        rect[3] = pixel_block[5];
-        func_80019A34((u16*)rect, pixel_block + 6);
     }
+
+    func_80019A34(&rect, tim->clut_data);
+    pixel_block = TIM_PIXEL_BLOCK(tim, clut_len);
+
+    rect.x = dst_coords->pixel_x;
+    rect.y = dst_coords->pixel_y;
+    rect.w = pixel_block->w;
+    rect.h = pixel_block->h;
+
+    func_80019A34(&rect, pixel_block + 1);
+
     /* Trailing rect writes are dead but load-bearing for the match. */
-    rect[0] = *((u16*)(((u8*)coords) + 4));
-    clut_y2 = *((u16*)(((u8*)coords) + 6));
-    rect[2] = 0x100;
-    rect[3] = 1;
-    rect[1] = clut_y2 + 1;
+    rect.x = dst_coords->clut_x;
+    rect.y = dst_coords->clut_y + 1;
+    rect.w = CLUT_ENTRY_COUNT;
+    rect.h = 1;
 }
 
 /**
@@ -553,11 +548,10 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 f00_addr = (u32)(&D_80142F00);
                 if (temp_v0 < 0)
                 {
-                    var_v0_5 = ((s32)((((((temp_v0 & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) &
-                                        0xFFFFFFFFFFFFFFFF) &
-                                       0xFFFFFFFFFFFFFFFF) +
-                                      0x7F)) >>
-                               7;
+                    var_v0_5 =
+                        ((s32)((((((temp_v0 & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) +
+                               0x7F)) >>
+                        7;
                 }
                 rem3 = temp_v0 - (var_v0_5 << 7);
                 var_v0_3 = rem3;
@@ -1107,8 +1101,7 @@ void gname_render(void* ctx)
     {
         if (i != 9)
         {
-            prim = func_80142274(prim, ((char*)ctx) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1,
-                                 (i - 2) == g_cursor_tab, 0);
+            prim = func_80142274(prim, ((char*)ctx) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1, (i - 2) == g_cursor_tab, 0);
         }
         i += 1;
         glyph_ptr += 4;
@@ -1117,12 +1110,11 @@ void gname_render(void* ctx)
     cursor_x = g_cursor_x;
     ctx2 = ctx;
     /* 2. Static glyph + append animation, then func_80141C34. */
-    cursor_sprite = func_80141C34(
-        emit_draw_mode_prim(draw_char_append_anim(func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C),
-                                                                ((char*)ctx2) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
-                                                  ctx),
-                            ((char*)ctx2) + 0x34),
-        ctx);
+    cursor_sprite =
+        func_80141C34(emit_draw_mode_prim(draw_char_append_anim(
+                                              func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, 3U, 0xE8, 4, 0, 0, 0), ctx),
+                                          ((char*)ctx2) + 0x34),
+                      ctx);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
     tmp_ptr = ((char*)cursor_sprite) + 0x14;
     *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
@@ -1160,8 +1152,7 @@ void gname_render(void* ctx)
     /* 4. Conditional extra glyphs from the D_80142E0C table. */
     if (g_scroll_pos != 0)
     {
-        prim2 =
-            func_80142274(prim2, ctx, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2], 0, 0, 0);
+        prim2 = func_80142274(prim2, ctx, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2], 0, 0, 0);
     }
     if (g_char_last_row >= 5)
     {
@@ -1172,8 +1163,7 @@ void gname_render(void* ctx)
         }
         if ((((f8b4 >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
-            prim2 = func_80142274(prim2, ctx, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF, (s32)D_80142E0C[6], 0,
-                                  0, 0);
+            prim2 = func_80142274(prim2, ctx, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF, (s32)D_80142E0C[6], 0, 0, 0);
         }
     }
     /* 5. Remaining sub-passes. */
@@ -1313,8 +1303,7 @@ void func_80141E04(RenderContext* ctx, s32 tex_src, s32 strip_width)
 
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      *    Returns the heap cursor just past both packets. */
-    next_prim = emit_draw_mode_prim(
-        func_80142274(func_800A88A0(prim + 0x10, ot_head, tex_src, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
+    next_prim = emit_draw_mode_prim(func_80142274(func_800A88A0(prim + 0x10, ot_head, tex_src, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
 
     /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
      *    right edge of whichever page is currently the back buffer. */
@@ -1384,8 +1373,7 @@ void func_80141F9C(void* arg0, s32 arg1)
         temp_v1 = (var_s2 * 0x10) - g_scroll_pos;
         if ((u32)(temp_v1 + 0x0B) < 0x5B)
         {
-            var_a2 =
-                func_800A88A0(var_a2, (void*)&obj->ot[0x0A], (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
+            var_a2 = func_800A88A0(var_a2, (void*)&obj->ot[0x0A], (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
         }
         var_s1++;
         var_s3++;
