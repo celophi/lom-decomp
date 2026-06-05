@@ -5808,7 +5808,7 @@ s32 func_80148900(s32 buf, s32 *ot, s32 label)
 }
 
 extern s32 D_80168C6C;
-void *func_80149D90(void *, s32 *, u8, u8);
+void *func_80149D90(void *, s32 *, s16, s16);
 s32 func_8014DE1C(s32);
 
 /**
@@ -6441,4 +6441,32 @@ void *func_80149BB4(void *arg0, s32 *arg1, s32 arg2, s32 arg3, s32 arg4,
     }
 
     return p2;
+}
+
+/**
+ * @brief Emit a single 16x16 gray SPRT primitive and OT-link it.
+ * @param arg0 Current primitive buffer pointer; must have at least 0x14 bytes of space.
+ * @param arg1 Pointer to the ordering-table entry; updated to prepend this SPRT.
+ * @param arg2 X screen position of the sprite.
+ * @param arg3 Y screen position of the sprite.
+ * @return Pointer to the next free byte after the emitted 0x14-byte SPRT.
+ * @note Emits a SPRT with medium-gray tint (0x505050), code 0x64, 16x16 size,
+ *       U=0x80, V=0x00, CLUT=0x7C86.
+ * @see decomp.me TODO
+ */
+void *func_80149D90(void *arg0, s32 *arg1, s16 arg2, s16 arg3)
+{
+    u8 *p = (u8 *)arg0;
+
+    *(u32 *)(p + 0x4) = 0x505050;
+    p[3] = 4;
+    *(u32 *)(p + 0x10) = 0x100010;
+    p[7] = 0x64;
+    *(s16 *)(p + 0xC) = 0x80;
+    *(s16 *)(p + 0x8) = arg2;
+    *(s16 *)(p + 0xA) = arg3;
+    *(s16 *)(p + 0xE) = 0x7C86;
+    *(s32 *)p = (*(s32 *)p & (s32)0xFF000000) | (*arg1 & 0xFFFFFF);
+    *arg1 = (*arg1 & (s32)0xFF000000) | ((s32)p & 0xFFFFFF);
+    return p + 0x14;
 }
