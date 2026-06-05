@@ -24,3 +24,6 @@ src/overlays/*/unk*.c
 tools/splat_ext/__pycache__/
 
 assets/
+
+# m2c context cache files
+*.m2c
