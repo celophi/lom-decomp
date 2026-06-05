@@ -358,6 +358,7 @@ extern s32 D_80169408;
 extern s32 D_8016911C;
 extern s32 D_80169554;
 extern s32 D_801694B0;
+extern s32 D_801690B8[];
 extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
@@ -3447,4 +3448,50 @@ void func_8014519C(void)
     }
     g_menu_suppress_cursor = 5;
     g_content_view_x = (((u16)active_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
+}
+
+/**
+ * @brief Initialize circular prev/next link indices packed into D_801690B8[] entries.
+ * @param arg0 Number of entries to initialize (no-op if <= 0).
+ * @note  Each s32 element of D_801690B8 holds three packed bit-fields:
+ *        bits 13:0  -- (i * 0x10) & 0x3FFF (slot identity / stride field),
+ *        bits 22:14 -- previous circular index (wraps: entry 0's prev = arg0 - 1),
+ *        bits 30:23 -- next circular index (wraps: last entry's next = 0).
+ * @see decomp.me TODO
+ */
+void func_80145278(s32 arg0)
+{
+    s32 *temp_t0;
+    s32 temp_a1;
+    s32 temp_a2;
+    s32 temp_a3;
+    s32 var_a2;
+    s32 var_t1;
+    s32 var_v1;
+
+    var_t1 = 0;
+    if (arg0 > 0)
+    {
+        do
+        {
+            temp_t0 = (s32 *)((var_t1 * 4) + (u32)D_801690B8);
+            var_a2 = var_t1 - 1;
+            *temp_t0 = (*temp_t0 & ~0x3FFF) | ((var_t1 * 0x10) & 0x3FFF);
+            if (var_a2 < 0)
+            {
+                var_a2 = arg0 - 1;
+            }
+            temp_a1 = (*temp_t0 & 0xFF803FFF) | ((var_a2 & 0x1FF) << 0xE);
+            *temp_t0 = temp_a1;
+            temp_a2 = var_t1 + 1;
+            temp_a3 = temp_a2 < arg0;
+            var_v1 = 0;
+            if (temp_a3 != 0)
+            {
+                var_v1 = temp_a2;
+            }
+            *temp_t0 = (temp_a1 & 0x7FFFFF) | (var_v1 << 0x17);
+            var_t1 = temp_a2;
+        } while (temp_a3 != 0);
+    }
 }
