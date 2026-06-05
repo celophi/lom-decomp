@@ -5325,3 +5325,34 @@ s32 func_8014847C(void)
 
     return -1;
 }
+
+/**
+ * @brief Find the navigation-list index of a given node ID.
+ * @param node_id Node ID to search for (typically g_menu_active_node at call sites).
+ * @return Zero-based index of @p node_id within the navigation list starting at g_menu_nav_first,
+ *         or -1 if not found or the list is empty.
+ * @note The navigation list is a flat s32 array beginning at g_menu_nav_first with g_menu_nav_count
+ *       entries; each element is one node ID.
+ * @see decomp.me TODO
+ */
+s32 func_8014852C(s32 node_id)
+{
+    s32 *nav;
+    s32 i;
+
+    if (g_menu_nav_count <= 0)
+    {
+        return -1;
+    }
+
+    nav = &g_menu_nav_first;
+    for (i = 0; i < g_menu_nav_count; i++, nav++)
+    {
+        if (*nav == node_id)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
