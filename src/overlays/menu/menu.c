@@ -3655,3 +3655,74 @@ s32 func_801453F0(void)
     }
     return var_t1 | (var_t2 << 0x10);
 }
+
+/**
+ * @brief Count entries at g_pad_ctx + 0xCE0 (stride 0x40) whose 2-bit type
+ *        field matches arg0, then initialize D_80168C70 as a circular packed
+ *        linked list of those entries.
+ * @param arg0 2-bit type value to match against bits 9:8 of each entry's
+ *             s32 field at offset 0x14.
+ * @return Number of matching entries (and entries initialized in D_80168C70).
+ * @note  Scans up to 100 entries; stops early on the first entry whose byte
+ *        at offset 0 is 0 (sentinel / end-of-list marker).
+ * @see decomp.me TODO
+ */
+s32 func_8014551C(s32 arg0)
+{
+    s32 *temp_t0;
+    s32 temp_a0;
+    s32 temp_a1;
+    s32 temp_a3;
+    s32 temp_v1;
+    s32 var_a1;
+    s32 var_a2;
+    s32 var_a2_2;
+    s32 var_t1;
+    s32 var_v1_2;
+    u8 *var_v1;
+
+    var_a2 = 0;
+    var_t1 = 0;
+    var_v1 = (u8 *)g_pad_ctx + 0xCE0;
+    do
+    {
+        if (*var_v1 == 0)
+        {
+            break;
+        }
+        if ((((u32)*(s32 *)(var_v1 + 0x14) >> 8) & 3) == (u32)arg0)
+        {
+            var_t1 += 1;
+        }
+        var_a2 += 1;
+        var_v1 += 0x40;
+    } while (var_a2 < 0x64);
+    D_80168C70 = (void *)0;
+    var_a2_2 = 0;
+    if (var_t1 > 0)
+    {
+        do
+        {
+            temp_t0 = (s32 *)&D_80168C70 + var_a2_2;
+            var_a1 = var_a2_2 - 1;
+            temp_v1 = (*temp_t0 & ~0x3FFF) | ((var_a2_2 * 0x10) & 0x3FFF);
+            *temp_t0 = temp_v1;
+            if (var_a1 < 0)
+            {
+                var_a1 = var_t1 - 1;
+            }
+            temp_a0 = (temp_v1 & 0xFF803FFF) | ((var_a1 & 0x1FF) << 0xE);
+            *temp_t0 = temp_a0;
+            temp_a1 = var_a2_2 + 1;
+            temp_a3 = temp_a1 < var_t1;
+            var_v1_2 = 0;
+            if (temp_a3 != 0)
+            {
+                var_v1_2 = temp_a1;
+            }
+            *temp_t0 = (temp_a0 & 0x7FFFFF) | (var_v1_2 << 0x17);
+            var_a2_2 = temp_a1;
+        } while (temp_a3 != 0);
+    }
+    return var_t1;
+}
