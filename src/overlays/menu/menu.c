@@ -3412,3 +3412,39 @@ int menu_item_has_action(void)
     }
     return 0;
 }
+
+/**
+ * @brief Reset content viewport and cursor to the active node's navigation position.
+ * @note  Copies g_menu_default_view_pos into g_content_cursor_x/y when the scene node
+ *        has content (content_id != MENU_NONE). Then reconstructs the 9-bit nav cursor Y
+ *        from the active node's packed nav fields, writes it to g_content_view_y (clamped
+ *        to [12, 0xA3]), and sets g_content_view_x from the 7-bit nav_x column.
+ * @see decomp.me TODO
+ */
+void func_8014519C(void)
+{
+    MenuNode *scene_node;
+    MenuNode *active_node;
+    s32 nav_y;
+
+    scene_node = &g_menu_nodes[g_menu_scene_type];
+    if (scene_node->content_id != MENU_NONE)
+    {
+        g_content_cursor_x = g_menu_default_view_pos.x;
+        g_content_cursor_y = g_menu_default_view_pos.y;
+    }
+    g_menu_cursor_enable = 2;
+    active_node = &g_menu_nodes[g_menu_active_node];
+    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | ((active_node->idx_nav.nav_x_packed >> 15) & 1);
+    g_content_view_y = nav_y - (g_menu_content_height - 12);
+    if (g_content_view_y < 12)
+    {
+        g_content_view_y = 12;
+    }
+    if (g_content_view_y >= 0xA3)
+    {
+        g_content_view_y = 0xA3;
+    }
+    g_menu_suppress_cursor = 5;
+    g_content_view_x = (((u16)active_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
+}
