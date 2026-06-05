@@ -77,7 +77,8 @@ void render_fade_overlay(RenderContext* ctx)
     }
 
     /* Skip emit when all channels are neutral (identity tint). */
-    if (!((g_fade_current.r == FADE_CHAN_NEUTRAL) && (g_fade_current.g == FADE_CHAN_NEUTRAL) && (g_fade_current.b == FADE_CHAN_NEUTRAL)))
+    if (!((g_fade_current.r == FADE_CHAN_NEUTRAL) && (g_fade_current.g == FADE_CHAN_NEUTRAL) &&
+          (g_fade_current.b == FADE_CHAN_NEUTRAL)))
     {
         /* Write RGB into the flat-quad color bytes. */
         if (g_fade_current.r >= FADE_CHAN_ADDITIVE)
@@ -127,11 +128,7 @@ void render_fade_overlay(RenderContext* ctx)
         prim += sizeof(TILE) / sizeof(u_long);
 
         /* Choose blend mode by direction of tint. */
-        tpage = FADE_TPAGE_ADD;
-        if (g_fade_current.r < FADE_CHAN_ADDITIVE)
-        {
-            tpage = FADE_TPAGE_SUB;
-        }
+        tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
 
         setDrawTPage(prim, 0, 0, tpage);
         addPrim(arg->ot, prim);

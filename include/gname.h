@@ -66,8 +66,8 @@ typedef struct
 /* tpage arguments for the blend-mode DR_TPAGE emitted by render_fade_overlay.
  * The tile is flat-colored so only the abr bits matter; x=320 is the
  * right-half VRAM column used as the tpage base. */
-#define FADE_TPAGE_ADD  getTPage(0, 1, 320, 0) /* abr=1: Back + Front */
-#define FADE_TPAGE_SUB  getTPage(0, 2, 320, 0) /* abr=2: Back - Front */
+#define FADE_TPAGE_ADD  0x25 /* getTPage(0, 1, 320, 0) - abr=1: Back + Front */
+#define FADE_TPAGE_SUB  0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
 
 /**
  * @brief Glyph metrics entry: how to draw one glyph from VRAM.
