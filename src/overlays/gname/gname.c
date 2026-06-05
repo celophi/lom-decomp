@@ -1464,12 +1464,11 @@ void* emit_draw_mode_prim(void* arg0, s32* arg1)
  *             zero = semi-transparent black drop shadow.
  * @return Pointer to the byte after the last emitted primitive.
  *
- * @see decomp.me (88.88%) https://decomp.me/scratch/UHlWz
+ * @see decomp.me (100%) https://decomp.me/scratch/UHlWz
  */
-void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
 {
-    u8* base = (u8*)arg0;
-    u8* ptr = base;
+    u8* ptr = (u8*)arg0;
     SPRT* sprt = (SPRT*)ptr;
     /* (offset) + (base) form so gcc emits `addu v1,v1,v0` (vs the reverse
        order from `&g_glyph_table[arg2]`). Also keeps arg2 live for the
@@ -1499,34 +1498,38 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
 
     if (arg5 != 0)
     {
-        /* Secondary SPRT - drop shadow (arg7==0) or highlight (arg7!=0).
-           entry2 is re-derived (rather than reused) so gcc preserves arg2
-           in $a2 across both SPRT blocks, matching the target codegen. */
-        SPRT* sprt2 = (SPRT*)ptr;
-        u8* entry2 = (u8*)((arg2 << 3) + (u32)g_glyph_table);
+        /* Secondary SPRT - drop shadow (arg7==0) or highlight (arg7!=0). */
+        u8* new_var2;
+        u8* entry2;
         u32 clut_word2;
 
-        *(u32*)&sprt2->r0 = (arg7 != 0) ? 0xA00000 : 0;
-        setlen(sprt2, 4);
+        *(u32*)&((SPRT*)ptr)->r0 = (arg7 != 0) ? 0xA00000 : 0;
+        setlen((SPRT*)ptr, 4);
         /* Default code, then conditionally overlay 0x66 for the
            semi-trans shadow. The "store-default-then-override" form
            matches the target's branch-and-delay-slot peephole; a single
            ternary `(arg7 == 0) ? 0x66 : 0x64` would compile differently. */
-        setcode(sprt2, 0x64);
+        setcode((SPRT*)ptr, 0x64);
         if (arg7 == 0)
         {
-            setcode(sprt2, 0x66);
+            setcode((SPRT*)ptr, 0x66);
         }
 
         tmp2 = (arg5 - arg6) * 2;
-        sprt2->y0 = (s16)(arg4 + tmp2);
-        sprt2->x0 = (s16)(arg3 + tmp2);
-        sprt2->u0 = entry2[0];
-        sprt2->v0 = entry2[1];
-        sprt2->w = (s16)entry2[2];
-        sprt2->h = (s16)entry2[3];
+        /* new_var2 and clut_word2=arg3 are load-bearing temporaries: they
+           force entry2 to be derived here (after tmp2) and reuse a register
+           copy of arg3 for x0, matching the target's register allocation. */
+        new_var2 = g_glyph_table;
+        clut_word2 = arg3;
+        entry2 = (u8*)((arg2 << 3) + (u32)new_var2);
+        ((SPRT*)ptr)->x0 = (s16)(clut_word2 + tmp2);
+        ((SPRT*)ptr)->y0 = (s16)(arg4 + tmp2);
+        ((SPRT*)ptr)->u0 = entry2[0];
+        ((SPRT*)ptr)->v0 = entry2[1];
+        ((SPRT*)ptr)->w = (s16)entry2[2];
+        ((SPRT*)ptr)->h = (s16)entry2[3];
         clut_word2 = *(u32*)(entry2 + 4);
-        sprt2->clut = (u16)((clut_word2 & 0x3F) | GLYPH_CLUT_PAGE_BITS);
+        ((SPRT*)ptr)->clut = (u16)((clut_word2 & 0x3F) | GLYPH_CLUT_PAGE_BITS);
 
         /* Chain the secondary SPRT into the OT linked list. */
         addPrim((u_long*)arg1, (u_long*)ptr);
