@@ -6500,7 +6500,7 @@ typedef struct {
  *       Writes g_menu_default_view_pos with the viewport origin of the current item.
  * @see decomp.me (96.52%) https://decomp.me/scratch/tfyt3
  */
-void func_8014A2B8(int arg0, int arg1, StructA* arg2, u32* arg3, StructB* arg4, int arg5)
+void func_80149E10(int arg0, int arg1, StructA* arg2, u32* arg3, StructB* arg4, int arg5)
 {
     int a5 = arg5;
     StructB* a4 = arg4;
