@@ -52,11 +52,11 @@ void reset_fade_state(void)
 void render_fade_overlay(RenderContext* ctx)
 {
     u32* prim = (u32*)ctx->prim_cursor;
-    RenderContext* arg = ctx; /* preserves load order for register allocation */
+    RenderContext* p_ctx = ctx;
     s32 step_r;
     s32 step_g;
     s32 step_b;
-    s32 tpage; /* tpage arg for blend-mode DR_TPAGE packet */
+    s32 tpage;
 
     /* Lerp current toward target, or snap if no steps remain. */
     if (g_fade_target.steps != 0)
@@ -124,14 +124,14 @@ void render_fade_overlay(RenderContext* ctx)
         setSemiTrans(prim, 1);
         SET_YX0((TILE*)prim, 0, 0);
         setWH((TILE*)prim, SCREEN_WIDTH, SCREEN_HEIGHT);
-        addPrim(arg->ot, prim);
+        addPrim(p_ctx->ot, prim);
         prim += sizeof(TILE) / sizeof(u_long);
 
         /* Choose blend mode by direction of tint. */
         tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
 
         setDrawTPage(prim, 0, 0, tpage);
-        addPrim(arg->ot, prim);
+        addPrim(p_ctx->ot, prim);
 
         prim += sizeof(DR_TPAGE) / sizeof(u_long);
     }
