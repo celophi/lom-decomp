@@ -2,6 +2,7 @@
 #define _GNAME_H
 
 #include "common.h"
+#include "display.h"
 #include "main.h"
 #include "render_context.h"
 #include "psyq/libgte.h"
@@ -45,16 +46,28 @@
  * step count), `g_fade_current` is the *current* interpolated value (its
  * `steps` field is unused). Each tick @ref render_fade_overlay advances the
  * current toward the target by `(target - current) / steps` and decrements
- * `steps`. Channels are 0..0x100 with 0x100 meaning "no tint"; values
- * above 0x100 trigger an additive draw mode (GP0 0xE1 abr=2).
+ * `steps`. Channels are 0..FADE_CHAN_NEUTRAL (identity = no tint); values
+ * above FADE_CHAN_NEUTRAL trigger additive blend mode.
  */
 typedef struct
 {
-    s32 r;     /* 0x0 - red channel,   0..0x100 normal, >0x100 = additive */
-    s32 g;     /* 0x4 - green channel, 0..0x100 normal, >0x100 = additive */
-    s32 b;     /* 0x8 - blue channel,  0..0x100 normal, >0x100 = additive */
+    s32 r;     /* 0x0 - red channel,   0..FADE_CHAN_NEUTRAL normal, >FADE_CHAN_NEUTRAL = additive */
+    s32 g;     /* 0x4 - green channel, 0..FADE_CHAN_NEUTRAL normal, >FADE_CHAN_NEUTRAL = additive */
+    s32 b;     /* 0x8 - blue channel,  0..FADE_CHAN_NEUTRAL normal, >FADE_CHAN_NEUTRAL = additive */
     s32 steps; /* 0xC - frames remaining in the lerp (target struct only) */
 } FadeState;
+
+/* FadeState channel sentinels. Channels run 0 (fully dark) up to
+ * FADE_CHAN_NEUTRAL (identity, no tint). Values >= FADE_CHAN_ADDITIVE
+ * select additive blend; values below select subtractive. */
+#define FADE_CHAN_NEUTRAL   0x100
+#define FADE_CHAN_ADDITIVE  0x101
+
+/* tpage arguments for the blend-mode DR_TPAGE emitted by render_fade_overlay.
+ * The tile is flat-colored so only the abr bits matter; x=320 is the
+ * right-half VRAM column used as the tpage base. */
+#define FADE_TPAGE_ADD  getTPage(0, 1, 320, 0) /* abr=1: Back + Front */
+#define FADE_TPAGE_SUB  getTPage(0, 2, 320, 0) /* abr=2: Back - Front */
 
 /**
  * @brief Glyph metrics entry: how to draw one glyph from VRAM.

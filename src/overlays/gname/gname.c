@@ -51,10 +51,12 @@ void reset_fade_state(void)
  */
 void render_fade_overlay(RenderContext* ctx)
 {
-    u32* prim = (u32*)ctx->prim_cursor; /* t4 - current primitive write pos */
-    RenderContext* arg = ctx;           /* t6 = t7 - preserves load order */
-    s32 step_r, step_g, step_b;
-    s32 abr_cmd; /* low byte of GP0 0xE1 (abr select) */
+    u32* prim = (u32*)ctx->prim_cursor;
+    RenderContext* arg = ctx; /* preserves load order for register allocation */
+    s32 step_r;
+    s32 step_g;
+    s32 step_b;
+    s32 tpage; /* tpage arg for blend-mode DR_TPAGE packet */
 
     /* Lerp current toward target, or snap if no steps remain. */
     if (g_fade_target.steps != 0)
@@ -74,21 +76,22 @@ void render_fade_overlay(RenderContext* ctx)
         g_fade_current.b = g_fade_target.b;
     }
 
-    /* Skip emit when fully transparent / identity tint. */
-    if (!((g_fade_current.r == 0x100) && (g_fade_current.g == 0x100) && (g_fade_current.b == 0x100)))
+    /* Skip emit when all channels are neutral (identity tint). */
+    if (!((g_fade_current.r == FADE_CHAN_NEUTRAL) && (g_fade_current.g == FADE_CHAN_NEUTRAL) && (g_fade_current.b == FADE_CHAN_NEUTRAL)))
     {
-        /* Flat-quad RGB bytes at prim[4..6]. */
-        if (g_fade_current.r >= 0x101)
+        /* Write RGB into the flat-quad color bytes. */
+        if (g_fade_current.r >= FADE_CHAN_ADDITIVE)
         {
-            /* Additive bias: subtract 1 so 0x101 -> 0x00..0xFF. */
+            /* Additive bias: subtract 1 so FADE_CHAN_ADDITIVE maps to 0x00. */
             ((u8*)prim)[4] = (u8)g_fade_current.r - 1;
             ((u8*)prim)[5] = (u8)g_fade_current.g - 1;
             ((u8*)prim)[6] = (u8)g_fade_current.b - 1;
         }
         else
         {
-            /* Subtractive bias: bitwise NOT so 0xFF -> 0x00, 0x00 -> 0xFF. */
-            if (g_fade_current.r == 0x100)
+            /* Subtractive bias: bitwise NOT so 0xFF->0x00, 0x00->0xFF.
+             * FADE_CHAN_NEUTRAL (casts to 0 as u8) is clamped to 0 explicitly. */
+            if (g_fade_current.r == FADE_CHAN_NEUTRAL)
             {
                 ((u8*)prim)[4] = 0;
             }
@@ -97,7 +100,7 @@ void render_fade_overlay(RenderContext* ctx)
                 ((u8*)prim)[4] = ~(u8)g_fade_current.r;
             }
 
-            if (g_fade_current.g == 0x100)
+            if (g_fade_current.g == FADE_CHAN_NEUTRAL)
             {
                 ((u8*)prim)[5] = 0;
             }
@@ -106,7 +109,7 @@ void render_fade_overlay(RenderContext* ctx)
                 ((u8*)prim)[5] = ~(u8)g_fade_current.g;
             }
 
-            if (g_fade_current.b == 0x100)
+            if (g_fade_current.b == FADE_CHAN_NEUTRAL)
             {
                 ((u8*)prim)[6] = 0;
             }
@@ -119,19 +122,18 @@ void render_fade_overlay(RenderContext* ctx)
         setTile(prim);
         setSemiTrans(prim, 1);
         SET_YX0((TILE*)prim, 0, 0);
-        setWH((TILE*)prim, 0x140, 0xF0); /* w=320, h=240 */
+        setWH((TILE*)prim, SCREEN_WIDTH, SCREEN_HEIGHT);
         addPrim(arg->ot, prim);
         prim += sizeof(TILE) / sizeof(u_long);
 
         /* Choose blend mode by direction of tint. */
-
-        abr_cmd = 0x25;
-        if (g_fade_current.r < 0x101)
+        tpage = FADE_TPAGE_ADD;
+        if (g_fade_current.r < FADE_CHAN_ADDITIVE)
         {
-            abr_cmd = 0x45;
+            tpage = FADE_TPAGE_SUB;
         }
 
-        setDrawTPage(prim, 0, 0, abr_cmd);
+        setDrawTPage(prim, 0, 0, tpage);
         addPrim(arg->ot, prim);
 
         prim += sizeof(DR_TPAGE) / sizeof(u_long);
