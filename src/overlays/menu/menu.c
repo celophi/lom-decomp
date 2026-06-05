@@ -3745,7 +3745,7 @@ extern u8 D_80168C1C[];
  *        packed in each MenuContentItem. Handles navigation, equip, buy/sell,
  *        status, companion, and script-driven actions. Rebuilds D_801690B8
  *        and D_80168C70 circular lists via the four preceding helpers as needed.
- * @see decomp.me TODO
+ * @see decomp.me (67.06%) https://decomp.me/scratch/D6Nba
  */
 void* func_80145608(void* arg0, s32* arg1)
 {
