@@ -52,7 +52,7 @@ void reset_fade_state(void)
 void render_fade_overlay(RenderContext* ctx)
 {
     u32* prim = (u32*)ctx->prim_cursor; /* t4 - current primitive write pos */
-    RenderContext* arg = ctx;       /* t6 = t7 - preserves load order */
+    RenderContext* arg = ctx;           /* t6 = t7 - preserves load order */
     s32 step_r, step_g, step_b;
     s32 abr_cmd; /* low byte of GP0 0xE1 (abr select) */
 
@@ -89,49 +89,52 @@ void render_fade_overlay(RenderContext* ctx)
         {
             /* Subtractive bias: bitwise NOT so 0xFF -> 0x00, 0x00 -> 0xFF. */
             if (g_fade_current.r == 0x100)
+            {
                 ((u8*)prim)[4] = 0;
+            }
             else
+            {
                 ((u8*)prim)[4] = ~(u8)g_fade_current.r;
+            }
 
             if (g_fade_current.g == 0x100)
+            {
                 ((u8*)prim)[5] = 0;
+            }
             else
+            {
                 ((u8*)prim)[5] = ~(u8)g_fade_current.g;
+            }
 
             if (g_fade_current.b == 0x100)
+            {
                 ((u8*)prim)[6] = 0;
+            }
             else
+            {
                 ((u8*)prim)[6] = ~(u8)g_fade_current.b;
+            }
         }
 
-        /* Flat-shaded full-screen quad header: 3-word tag 0x62. */
-        ((u8*)prim)[3] = 3;
-        ((u8*)prim)[7] = 0x62;
-
-        *((u16*)((u8*)prim + 10)) = 0; /* y = 0   */
-        *((u16*)((u8*)prim + 8)) = 0;  /* x = 0   */
-
-        *((u16*)((u8*)prim + 12)) = 0x140; /* w = 320 */
-        *((u16*)((u8*)prim + 14)) = 0xF0;  /* h = 240 */
-
-        /* Splice quad into OT. */
-        *prim = (*prim & 0xFF000000) | (arg->ot[0] & 0xFFFFFF);
-        arg->ot[0] = (arg->ot[0] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+        setTile(prim);
+        setSemiTrans(prim, 1);
+        SET_YX0((TILE*)prim, 0, 0);
+        setWH((TILE*)prim, 0x140, 0xF0); /* w=320, h=240 */
+        addPrim(arg->ot, prim);
+        prim += sizeof(TILE) / sizeof(u_long);
 
         /* Choose blend mode by direction of tint. */
+
         abr_cmd = 0x25;
-        prim = (u32*)((u8*)prim + 0x10);
         if (g_fade_current.r < 0x101)
+        {
             abr_cmd = 0x45;
+        }
 
-        /* Draw-Mode packet (GP0 0xE1 | abr_cmd). */
-        ((u8*)prim)[3] = 1;
-        *((u32*)((u8*)prim + 4)) = abr_cmd | 0xE1000000;
+        setDrawTPage(prim, 0, 0, abr_cmd);
+        addPrim(arg->ot, prim);
 
-        /* Splice draw-mode packet into OT. */
-        *prim = (*prim & 0xFF000000) | (arg->ot[0] & 0xFFFFFF);
-        arg->ot[0] = (arg->ot[0] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
-        prim = (u32*)((u8*)prim + 8);
+        prim += sizeof(DR_TPAGE) / sizeof(u_long);
     }
 
     ctx->prim_cursor = prim;
@@ -1118,8 +1121,8 @@ void gname_render(void* ctx)
     /* 2. Static glyph + append animation, then func_80141C34. */
     cursor_sprite = func_80141C34(
         emit_draw_mode_prim(draw_char_append_anim(func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C),
-                                                        ((char*)ctx2) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
-                                          ctx),
+                                                                ((char*)ctx2) + 0x34, 3U, 0xE8, 4, 0, 0, 0),
+                                                  ctx),
                             ((char*)ctx2) + 0x34),
         ctx);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
@@ -1159,8 +1162,8 @@ void gname_render(void* ctx)
     /* 4. Conditional extra glyphs from the D_80142E0C table. */
     if (g_scroll_pos != 0)
     {
-        prim2 = func_80142274(prim2, ctx, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2],
-                              0, 0, 0);
+        prim2 =
+            func_80142274(prim2, ctx, D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2], 0, 0, 0);
     }
     if (g_char_last_row >= 5)
     {
@@ -1171,8 +1174,8 @@ void gname_render(void* ctx)
         }
         if ((((f8b4 >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
-            prim2 = func_80142274(prim2, ctx, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF,
-                                  (s32)D_80142E0C[6], 0, 0, 0);
+            prim2 = func_80142274(prim2, ctx, D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF, (s32)D_80142E0C[6], 0,
+                                  0, 0);
         }
     }
     /* 5. Remaining sub-passes. */
@@ -1383,7 +1386,8 @@ void func_80141F9C(void* arg0, s32 arg1)
         temp_v1 = (var_s2 * 0x10) - g_scroll_pos;
         if ((u32)(temp_v1 + 0x0B) < 0x5B)
         {
-            var_a2 = func_800A88A0(var_a2, (void*)&obj->ot[0x0A], (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
+            var_a2 =
+                func_800A88A0(var_a2, (void*)&obj->ot[0x0A], (void*)(var_s4 + *var_s3), 1, var_s0 * 0x10, temp_v1, 0);
         }
         var_s1++;
         var_s3++;
@@ -1489,8 +1493,8 @@ void* func_80142274(void* arg0, s32* arg1, u8 arg2, s32 arg3, s32 arg4, s32 arg5
     s32 tmp2;
 
     /* Primary glyph SPRT - white tint, fully opaque. */
-    *(u32*)&sprt->r0 = 0x808080;             /* r=g=b=0x80, code byte = 0 */
-    setSprt(sprt);                           /* len=4, code=0x64 (free-size textured sprite) */
+    *(u32*)&sprt->r0 = 0x808080; /* r=g=b=0x80, code byte = 0 */
+    setSprt(sprt);               /* len=4, code=0x64 (free-size textured sprite) */
     sprt->x0 = (s16)(arg3 - arg5 + arg6);
     sprt->y0 = (s16)(arg4 - arg5 + arg6);
     sprt->u0 = entry[0];
