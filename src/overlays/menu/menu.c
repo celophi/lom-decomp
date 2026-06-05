@@ -3417,6 +3417,57 @@ int menu_item_has_action(void)
 /* These are initial decompilations; review and refine each one */
 /* ============================================================ */
 
+/* -- extern declarations for globals used by unk1.s functions -- */
+extern s32   D_800F0BE0;
+extern s32   D_800F0BEC;
+extern void *D_800F0BF8;
+extern u32   D_800F0C0C;
+extern u16   D_800F0C1C;
+extern s32   D_800F0C38;
+extern s32   D_80105AE0;
+extern s32   D_8014FBF4;
+extern s32   D_8014FDB8;
+extern s32   D_8014FE2C;
+extern u8    D_8014FE4E;
+extern u16   D_80151A34;
+extern u8    D_80168659;
+extern u8    D_80168696;
+extern u8    D_8016869B;
+extern u8    D_8016869F;
+extern u8    D_801686A0;
+extern u8    D_801686B8;
+extern u8    D_80168C01;
+extern s32   D_80168C04;
+extern u8    D_80168C05;
+extern u8    D_80168C09;
+extern u8    D_80168C15;
+extern void *D_80168C20;
+extern void *D_80168C24;
+extern void *D_80168C30;
+extern s32   D_80168C38;
+extern u8    D_80168C6C;
+extern s32   D_801690B8;
+extern s32   D_801690F0;
+extern void *D_801693FC;
+extern s32   D_80169414;
+extern void *D_801694CC;
+extern void *D_801694DC;
+extern s32   D_8016951C;
+extern u8    D_80169558;
+extern void *D_80169560;
+extern u8    D_80169563;
+extern s32   D_80169760;
+extern s32   D_8016B760;
+extern s32   D_8016B764;
+extern s32   D_8016B768;
+extern s32   D_8016B76C;
+extern s32   D_8016B770;
+extern s32   D_8016B774;
+extern s32   D_8016B778;
+extern s32   D_8016B77C;
+extern void *D_8016B780;
+extern s32   D_8016B9D8;
+
 void *func_801482D0(void *arg0, s32 *arg1);         /* static */
 void func_80148324(u8 *arg0, u8 *arg1, void *arg2, void *); /* static */
 s8 func_801483C4(u8 *arg0, u32 arg1, u32 arg2);     /* static */
@@ -3439,17 +3490,17 @@ s32 func_8014EB4C();                                /* static */
 u8 *func_8014ECA4();                                /* static */
 s32 func_8014EDEC();                                /* static */
 u8 *func_8014F060();                                /* static */
-void func_8014F210(?, ?, s32, s32 *);               /* static */
+void func_8014F210(void *, void *, s32, s32 *);               /* static */
 s32 func_8014F23C();                                /* static */
-void *func_8014F274(s32 *arg2, void *arg4, u32 arg5, ?, s16 *, s32); /* static */
+void *func_8014F274(s32 *arg2, void *arg4, u32 arg5, void *, s16 *, s32); /* static */
 s32 func_8014F63C();                                /* static */
 void func_8014F6D8();                               /* static */
 s32 func_8014F730();                                /* static */
 void func_8014F7CC();                               /* static */
-s32 func_8014F824(? *arg0, ? *arg1);                /* static */
-s32 func_8014F9EC(? *arg0, ? *arg1);                /* static */
-void func_8014FBCC(? *arg0);                        /* static */
-static ? D_80140594;                                /* unable to generate initializer: unknown type; const */
+s32 func_8014F824(void *arg0, void *arg1);                /* static */
+s32 func_8014F9EC(void *arg0, s32 arg1);                  /* static */
+void func_8014FBCC(void *arg0);                        /* static */
+extern void *D_80140594;
 
 void func_8014519C(void) {
     s32 temp_v0;
@@ -3693,7 +3744,7 @@ void *func_80145608(void *arg0, s32 *arg1) {
     s16 spAA;
     u8 spB0;
     s32 spC0;
-    ? var_a3;
+    void *var_a3;
     s16 var_v0_12;
     s32 temp_a0_2;
     s32 temp_a1_3;
@@ -5067,6 +5118,57 @@ s32 func_8014824C(s32 arg0) {
     return var_a2;
 }
 
+/* -- extern declarations for globals used by unk1.s functions -- */
+extern s32   D_800F0BE0;
+extern s32   D_800F0BEC;
+extern void *D_800F0BF8;
+extern u32   D_800F0C0C;
+extern u16   D_800F0C1C;
+extern s32   D_800F0C38;
+extern s32   D_80105AE0;
+extern s32   D_8014FBF4;
+extern s32   D_8014FDB8;
+extern s32   D_8014FE2C;
+extern u8    D_8014FE4E;
+extern u16   D_80151A34;
+extern u8    D_80168659;
+extern u8    D_80168696;
+extern u8    D_8016869B;
+extern u8    D_8016869F;
+extern u8    D_801686A0;
+extern u8    D_801686B8;
+extern u8    D_80168C01;
+extern s32   D_80168C04;
+extern u8    D_80168C05;
+extern u8    D_80168C09;
+extern u8    D_80168C15;
+extern void *D_80168C20;
+extern void *D_80168C24;
+extern void *D_80168C30;
+extern s32   D_80168C38;
+extern u8    D_80168C6C;
+extern s32   D_801690B8;
+extern s32   D_801690F0;
+extern void *D_801693FC;
+extern s32   D_80169414;
+extern void *D_801694CC;
+extern void *D_801694DC;
+extern s32   D_8016951C;
+extern u8    D_80169558;
+extern void *D_80169560;
+extern u8    D_80169563;
+extern s32   D_80169760;
+extern s32   D_8016B760;
+extern s32   D_8016B764;
+extern s32   D_8016B768;
+extern s32   D_8016B76C;
+extern s32   D_8016B770;
+extern s32   D_8016B774;
+extern s32   D_8016B778;
+extern s32   D_8016B77C;
+extern void *D_8016B780;
+extern s32   D_8016B9D8;
+
 void *func_801482D0(void *arg0, s32 *arg1) {
     arg0->unk3 = 1;
     arg0->unk4 = 0xE1000005;
@@ -5780,7 +5882,7 @@ block_73:
 }
 
 void *func_80149828(void *arg0, s32 *arg1) {
-    ? *var_s0;
+    void *var_s0;
     s32 temp_v0;
     s32 var_s1;
     void *var_a2;
@@ -6098,10 +6200,10 @@ void *func_8014A3A4(s32 *arg0, void *arg1, void *arg2, void *arg3, s32 arg4) {
     u8 *sp74;
     s32 sp78;
     s32 sp7C;
-    ? *var_v0;
-    ? *var_v0_2;
-    ? *var_v0_3;
-    ? var_a3_2;
+    void *var_v0;
+    void *var_v0_2;
+    void *var_v0_3;
+    void *var_a3_2;
     s32 *temp_a3;
     s32 *temp_a3_2;
     s32 temp_a0_14;
@@ -7677,7 +7779,7 @@ block_72:
                             D_8016911C = NULL;
                             D_80169554 = NULL;
                             temp_a0_5 = g_menu_char_slot * 0x250;
-                            if ((((u32) (g_pad_ctx + temp_a0_5)->unk654 >> 0xA) & 0x3F) == (((u32) D_800F0BF8.unk14 >> 0xA) & 0x3F)) {
+                            if ((((u32) (g_pad_ctx + temp_a0_5)->unk654 >> 0xA) & 0x3F) == (((u32) D_800F0BF8->unk14 >> 0xA) & 0x3F)) {
                                 func_800A8F8C(temp_a0_5 + g_pad_ctx + 0x640, &D_800F0BF8, g_pad_ctx);
                                 goto block_101;
                             }
@@ -7907,7 +8009,7 @@ void *func_8014DEEC(s32 *arg0, void *arg1, void *arg2, void *arg3, s32 arg4) {
     void *sp24;
     s32 sp28;
     s32 sp30;
-    ? var_a3;
+    void *var_a3;
     s32 *var_s4;
     s32 *var_s4_2;
     s32 temp_a0;
@@ -8765,9 +8867,9 @@ void func_8014F7CC(void) {
     TestEvent(D_8016B77C);
 }
 
-s32 func_8014F824(? *arg0, ? *arg1) {
-    ? sp10;
-    ? *var_s0;
+s32 func_8014F824(void *arg0, void *arg1) {
+    void *sp10;
+    void *var_s0;
     s32 var_s1;
     s32 var_v0;
 
@@ -8828,33 +8930,33 @@ loop_1:
     return var_v0;
 }
 
-s32 func_8014F9EC(? *arg0, s32 arg1) {
-    ? *var_s0;
+s32 func_8014F9EC(void *arg0, s32 arg1) {
+    void *var_s0;
     s32 temp_s0;
     s32 temp_v0;
     s32 temp_v0_2;
     s32 var_a2;
     void *var_a3;
 
-    D_80169560.unk0 = 0x53;
+    D_80169560->unk0 = 0x53;
     var_s0 = &D_80169560;
-    D_80169560.unk1 = 0x43;
-    D_80169560.unk2 = 0x13;
-    D_80169560.unk3 = 1;
-    D_80169560.unk7 = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
-    D_80169560.unkB = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
-    D_80169560.unkF = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
-    D_80169560.unk13 = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
-    D_80169560.unk14 = (s8) D_80140594.unk10;
+    D_80169560->unk1 = 0x43;
+    D_80169560->unk2 = 0x13;
+    D_80169560->unk3 = 1;
+    D_80169560->unk7 = 0 /* TODO: unaligned lwr/lwl */;
+    D_80169560->unkB = 0 /* TODO: unaligned lwr/lwl */;
+    D_80169560->unkF = 0 /* TODO: unaligned lwr/lwl */;
+    D_80169560->unk13 = 0 /* TODO: unaligned lwr/lwl */;
+    D_80169560->unk14 = (s8) D_80140594->unk10;
     bzero(&D_80169560 + 0x44, 0x1C, &D_80140594);
     var_a2 = arg1;
     if ((arg1 | (s32) &D_80169560) & 3) {
         var_a3 = &D_80169560 + 0x200;
         do {
-            var_a2->unk3 = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
-            var_a2->unk7 = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
-            var_a2->unkB = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
-            var_a2->unkF = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
+            var_a2->unk3 = 0 /* TODO: unaligned lwr/lwl */;
+            var_a2->unk7 = 0 /* TODO: unaligned lwr/lwl */;
+            var_a2->unkB = 0 /* TODO: unaligned lwr/lwl */;
+            var_a2->unkF = 0 /* TODO: unaligned lwr/lwl */;
             var_s0 += 0x10;
             var_a2 += 0x10;
         } while (var_s0 != var_a3);
@@ -8889,7 +8991,7 @@ block_12:
     return 0;
 }
 
-void func_8014FBCC(? *arg0) {
-    arg0->unk3 = (unaligned s32) M2C_ERROR(/* Unable to handle lwr; missing a corresponding lwl */);
-    arg0->unk4 = (s8) "TEST\0\0\0\0'\xbd\xffȯ\xb1\0$<\x11\x80\x17\xae$\x8c\f\0\0 !\xaf\xbf\04\xaf\xb4\00\xaf\xb3\0,\xaf\xb2\0(\f\0e⯰\0 \f\0\x81S\0\0 !\f\0e\xbc\0\0 !'\xa4\0\x18\0\0(!\0\xa00!\0\xa08!$\x10\x01@$\x02\x01Ч\xa0\0\x18\xa7\xa0\0\x1a\xa7\xb0\0\x1c\f\0fC\xa7\xa2\0\x1e\0\0(!\0\xa00!$\x07\x01@$\x03\0\b$\b\0\xe0\x8e\"\x8c\f4\x12\x80\0$D@P\xa4@@D\xa4C@F\xa4P@H\xa4H@J\0R\x10!$\x03\0\xf0\xa4P\x01\b$\x10\0\xf0\xa4@\x01\x04\xa4C\x01\x06\xa4H\x01\n\f\0q\x8b\xaf\xb0\0\x10\0\0(!$\x06\0\xe8$\x07\x01@\x8e\"\x8c\f4\x04\x81\x10\xaf\xb0\0\x10\f\0q\x8b\0D !\0\0(!\x02\00!$\x07\x01@\x8e$\x8c\f$\x10\0௰\0\x10\f\0q[$\x84@d\0\0(!$\x06\0\b$\x07\x01@\x8e\"\x8c\f4\x04\x81$\xaf\xb0\0\x10\f\0q[\0D !\x8e#\x8c\f<\x14\x80\x1e\0r\x10!\xa0@\x01:\xa0`@z\x8e#\x8c\f<\x02\x80\x17\xac@\x94\f<\x02\x80\x17\xac@\x8c\x10$\x02\0\x01\xac`@L\0r\x18!\f\x05\x02B\xacb\x01\f\x8e2\x8c\f$\x05\0\x10\f\0g\x1d\x02@ !\x8e$\x8c\f$\x05\0\x10\f\0g\x1d$\x84@\xc0\f\0\x81S\0\0 !\f\0g\xee&D@P\f\0U\xf76\x94\xd6\0<\x02\x80\x12\x8cB(\xc8\0\0\0\0\x14@\0\n<\x03\x80\x17\f\0e\xe2\0\0 !\f\0\x81S\0\0 !\f\0e\xbc$\x04\0\x01<\x02\x80\x17\b\x05\x01\xe0\xac@\x8c\b$\x02\0\x02\xacb\x8c\b<\x13\x80\x17<\x11\x80\x17\x02@\x80!\x02\0 !\f\0g\x1d$\x05\0\x10&\x02\0@\f\x01\x91\x07\xae\x02@@\f\x05\x02\x92\x02\0 !\f\x01\x8ce\0\0\0\0\f\x01\xa1\x10\0\0\0\0\f\0e\xe2\0\0 !\f\0U\xec$\x04\0\x02\f\0\x81S$\x04\0\x02<\x02\x80\x17\x8cB\x94\f\0\0\0\0\x14@\04<\x02\x80\x12\x8cC)\x88$\x02\b\0\x10b\01\0\0 !&\x04@D\x92e\x91\f\x8eg\x91\f0\xa5\0\x1f\0\x05(\xc0\0\x070\x820\xc6\0\xf8\0\x079\xc2\f\0fC0\xe7\0\xf8<\x02\x80\x17\x8cD\x8c\f\0\0\0\0\x16\x04\0\x03\0\x80\x90!&\x04@\xc0\0\x80\x90!\f\0g\xee&D@P\f\0g{&D@d\f\0g_&\x04\0<\f\0U\xf7\0\0\0\0\f\0H\xb0\0\0\0\0<\x02\x80\x12\x8cB(\xc8\0\0\0\0\x14@\xff\xc5\0\0\0\0\x8e\"\x8c\b\0\0\0\0\x10@\xff\xc2\x02@\x80!$B\xff\xff\x10@\xff\xbf\xae\"\x8c\b\f\0e\xe2\0\0 !\f\0\x81S\0\0 !\f\0e\xbc$\x04\0\x01\b\x05\x01\xe3\x02@\x80!\0\0 !\xa2\x80\x01@\f\0e⢀\0\x92\f\0\x81S\0\0 !\f\x02\xa8\v\0\0\0\0\f\x01\x90\xf8\0\0\0\0<\x02\x80\x17\x8cB\x8c\x10\x8f\xbf\04\x8f\xb4\00\x8f\xb3\0,\x8f\xb2\0(\x8f\xb1\0$\x8f\xb0\0 '\xbd\08\x03\xe0\0\b"->unk4;
+void func_8014FBCC(void *arg0) {
+    arg0->unk3 = 0 /* TODO: unaligned lwr/lwl */;
+    arg0->unk4 = 0; /* TODO: m2c failed to decode value */
 }
