@@ -5164,3 +5164,21 @@ s32 func_8014824C(s32 arg0)
     } while (i < 4);
     return result;
 }
+
+/**
+ * @brief Initialize a one-word Draw Mode Setting primitive (GP0 0xE1000005) and link it into an OT slot.
+ * @param prim Pointer to an uninitialized MenuPrimHead to fill in (must have at least 8 bytes of space).
+ * @param ot   Pointer to the ordering-table entry that the new primitive should be prepended to.
+ * @return Pointer to the byte immediately following the 8-byte primitive (next free prim slot).
+ * @note Mirrors the inline OT-link pattern used throughout menu.c (e.g. around line 1361).
+ *       Sets word count to 1 and hard-codes the mode word to 0xE1000005.
+ * @see decomp.me TODO
+ */
+void *func_801482D0(MenuPrimHead *prim, s32 *ot)
+{
+    prim->_u._s.unk3 = 1;
+    prim->unk4 = 0xE1000005;
+    prim->_u.unk0 = (s32)((prim->_u.unk0 & 0xFF000000) | (*ot & 0xFFFFFF));
+    *ot = (*ot & 0xFF000000) | ((s32)prim & 0xFFFFFF);
+    return (void *)((u8 *)prim + 8);
+}
