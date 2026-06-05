@@ -48,7 +48,7 @@ void reset_fade_state(void)
  * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
  * @see https://decomp.me/scratch/NvocJ (100%)
  */
-void render_fade_overlay(RenderContext* ctx)
+static void render_fade_overlay(RenderContext* ctx)
 {
     void* prim = ctx->prim_cursor;
     RenderContext* p_ctx = ctx;
