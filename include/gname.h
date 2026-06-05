@@ -71,6 +71,23 @@ typedef struct
 #define FADE_TPAGE_SUB  0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
 
 /**
+ * @brief TIM upload destination coordinates for @ref load_tim_to_vram.
+ *
+ * Holds two VRAM destination points: one for the pixel data and one for the
+ * CLUT row. Not a libgpu RECT (which carries width/height); this is just
+ * two (x, y) pairs packed as four consecutive s16s.
+ *
+ * @see load_name_entry_tim for typical values.
+ */
+typedef struct
+{
+    s16 pixel_x; /* 0x0 - VRAM x of pixel-data destination */
+    s16 pixel_y; /* 0x2 - VRAM y of pixel-data destination */
+    s16 clut_x;  /* 0x4 - VRAM x of CLUT destination */
+    s16 clut_y;  /* 0x6 - VRAM y of CLUT destination */
+} TimDstCoords;
+
+/**
  * @brief Glyph metrics entry: how to draw one glyph from VRAM.
  *
  * Used as @c g_glyph_table, indexed by character ID. The

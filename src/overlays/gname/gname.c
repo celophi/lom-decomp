@@ -197,12 +197,12 @@ void gname_init(void)
  */
 void load_name_entry_tim(void)
 {
-    s16 dst_coords[4];
-    dst_coords[0] = SCREEN_WIDTH; /* pixel x */
-    dst_coords[1] = 0;            /* pixel y */
-    dst_coords[2] = 0;            /* clut x  */
-    dst_coords[3] = VRAM_CLUT_Y;  /* clut y  */
-    load_tim_to_vram(dst_coords);
+    TimDstCoords dst_coords;
+    dst_coords.pixel_x = SCREEN_WIDTH;
+    dst_coords.pixel_y = 0;
+    dst_coords.clut_x  = 0;
+    dst_coords.clut_y  = VRAM_CLUT_Y;
+    load_tim_to_vram(&dst_coords);
 }
 
 /**
@@ -215,30 +215,28 @@ void load_name_entry_tim(void)
  * every non-zero palette entry. The TIM's own embedded destination
  * coordinates are ignored; @p dst_coords supplies them instead.
  *
- * @param dst_coords Four packed s16s: [0],[1] = pixel-data VRAM x,y;
- *                    [2],[3] = CLUT VRAM x,y.
+ * @param dst_coords Pixel and CLUT VRAM destination coordinates.
  *
  * @note @c func_80019A34 is the engine's LoadImage-style VRAM upload
  *       (RECT, source data).
  * @see https://decomp.me/scratch/P3W9C (100%)
  */
-void load_tim_to_vram(void* dst_coords)
+void load_tim_to_vram(TimDstCoords* dst_coords)
 {
-    void* coords = dst_coords;
     u16 clut_y;
     u16* tim = (u16*)g_name_entry_tim;
     s32 clut_len = *((s32*)(((u8*)tim) + 8));
     u16 clut_y2;
     u16* clut = (u16*)(((u8*)tim) + 0x14);
-    u16 rect[4];
+    RECT rect;
     int i;
-    u16 clut_x = *((u16*)(((u8*)coords) + 4));
+    u16 clut_x = dst_coords->clut_x;
     i = 0;
-    rect[0] = clut_x;
-    clut_y = *((u16*)(((u8*)coords) + 6));
-    rect[2] = 0x100;
-    rect[3] = 1;
-    rect[1] = clut_y;
+    rect.x = clut_x;
+    clut_y = dst_coords->clut_y;
+    rect.w = 0x100;
+    rect.h = 1;
+    rect.y = clut_y;
     /* Mark every non-zero CLUT entry semi-transparent. */
     do
     {
@@ -249,21 +247,21 @@ void load_tim_to_vram(void* dst_coords)
         clut++;
         i++;
     } while (i < 0x100);
-    func_80019A34((u16*)rect, ((u8*)tim) + 0x14);
-    rect[0] = *((u16*)(((u8*)coords) + 0));
-    rect[1] = *((u16*)(((u8*)coords) + 2));
+    func_80019A34(&rect, ((u8*)tim) + 0x14);
+    rect.x = dst_coords->pixel_x;
+    rect.y = dst_coords->pixel_y;
     {
         u16* pixel_block = (u16*)(((u8*)tim) + (clut_len + 8));
-        rect[2] = pixel_block[4];
-        rect[3] = pixel_block[5];
-        func_80019A34((u16*)rect, pixel_block + 6);
+        rect.w = pixel_block[4];
+        rect.h = pixel_block[5];
+        func_80019A34(&rect, pixel_block + 6);
     }
     /* Trailing rect writes are dead but load-bearing for the match. */
-    rect[0] = *((u16*)(((u8*)coords) + 4));
-    clut_y2 = *((u16*)(((u8*)coords) + 6));
-    rect[2] = 0x100;
-    rect[3] = 1;
-    rect[1] = clut_y2 + 1;
+    rect.x = dst_coords->clut_x;
+    clut_y2 = dst_coords->clut_y;
+    rect.w = 0x100;
+    rect.h = 1;
+    rect.y = clut_y2 + 1;
 }
 
 /**
