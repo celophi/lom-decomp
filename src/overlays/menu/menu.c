@@ -5277,3 +5277,51 @@ s8 func_801483C4(void *item, u32 index, u32 fallback)
     }
     return D_800F0C38[nibble];
 }
+
+extern u8 D_801686CC[];
+extern u8 D_8014FE2C[];
+
+/**
+ * @brief Search the current scene's content table for the first item flagged as the active hit item.
+ * @return Index into the content table array of the first matching MenuContentItem, or -1 if none found.
+ * @note Looks up the current node's self_idx from g_menu_nodes[g_menu_scene_type], then resolves
+ *       the item count via D_8014FE2C[D_801686CC[self_idx]] and the item array via
+ *       g_menu_content_table[self_idx].  An item matches when bits 12-15 of packed_x are 0xF or 0x5
+ *       AND bits 9-11 are all set (== 0xE00).
+ * @see decomp.me TODO
+ */
+s32 func_8014847C(void)
+{
+    u8 self_idx;
+    u8 count;
+    MenuContentItem *items;
+    s32 i;
+    u16 packed_x;
+    u16 upper;
+
+    if (g_menu_scene_type == -1)
+    {
+        return -1;
+    }
+
+    self_idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
+    count = D_8014FE2C[D_801686CC[self_idx]];
+    items = g_menu_content_table[self_idx];
+
+    if (count == 0)
+    {
+        return -1;
+    }
+
+    for (i = 0; i < (s32)count; i++, items++)
+    {
+        packed_x = items->packed_x;
+        upper = packed_x & 0xF000;
+        if ((upper == 0xF000 || upper == 0x5000) && (packed_x & 0xE00) == 0xE00)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
