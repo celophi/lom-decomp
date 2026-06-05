@@ -153,7 +153,7 @@ static void render_fade_overlay(RenderContext* ctx)
  *
  * @see https://decomp.me/scratch/jq3uD (100%)
  */
-void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
+static void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
 {
     g_fade_target.r = r;
     g_fade_target.g = g;
@@ -190,18 +190,18 @@ void gname_init(void)
  *
  * Builds the destination-coordinate block consumed by @ref load_tim_to_vram
  * and loads @c g_name_entry_tim. The four packed s16 coordinates are:
- *   - [0],[1] = pixel-data destination, VRAM (320, 0).
- *   - [2],[3] = CLUT destination, VRAM (0, 498).
+ *   - [0],[1] = pixel-data destination, VRAM (@c SCREEN_WIDTH, 0).
+ *   - [2],[3] = CLUT destination, VRAM (0, @c VRAM_CLUT_Y).
  *
  * @see https://decomp.me/scratch/EWwJI (100%)
  */
 void load_name_entry_tim(void)
 {
     s16 dst_coords[4];
-    dst_coords[0] = 0x140; /* pixel x = 320 */
-    dst_coords[1] = 0;     /* pixel y = 0   */
-    dst_coords[2] = 0;     /* clut x  = 0   */
-    dst_coords[3] = 0x1F2; /* clut y  = 498 */
+    dst_coords[0] = SCREEN_WIDTH; /* pixel x */
+    dst_coords[1] = 0;            /* pixel y */
+    dst_coords[2] = 0;            /* clut x  */
+    dst_coords[3] = VRAM_CLUT_Y;  /* clut y  */
     load_tim_to_vram(dst_coords);
 }
 

@@ -45,4 +45,9 @@
 /** Height of the draw region for each buffer. */
 #define VRAM_DRAW_HEIGHT    224
 
+/** Y coordinate of the CLUT storage row in VRAM.
+ * Overlays store their 256-entry palettes in the lines starting here,
+ * below both display buffers. */
+#define VRAM_CLUT_Y         498
+
 #endif
