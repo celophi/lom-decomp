@@ -6346,6 +6346,11 @@ typedef struct
 extern NodeSpriteInfo D_8014FBF4[];
 extern u8 D_8014FDB8[];
 
+inline int inline_fn(int arg0, int arg1)
+{
+  return arg0 | arg1;
+}
+
 /**
  * @brief Emit one or two SPRT primitives for a single menu node's panel and OT-link them.
  * @param arg0 Current primitive buffer pointer; the function writes SPRTs starting here.
