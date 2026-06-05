@@ -225,8 +225,8 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
     TimBlock* pixel_block;
     int i;
     Tim* tim = (Tim*)g_name_entry_tim;
-    s32 clut_len = tim->clut.bnum;
-    u16* clut = (u16*)(tim + 1);
+    s32 clut_len = tim->clut_block.bnum; /* loaded early into s2; reused for pixel block offset */
+    u16* clut = tim->clut_data;
 
     rect.x = dst_coords->clut_x;
     rect.y = dst_coords->clut_y;
@@ -243,8 +243,8 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
         clut++;
     }
 
-    func_80019A34(&rect, tim + 1);
-    pixel_block = (TimBlock*)((u8*)tim + (clut_len + TIM_HEADER_SIZE));
+    func_80019A34(&rect, tim->clut_data);
+    pixel_block = TIM_PIXEL_BLOCK(tim, clut_len);
 
     rect.x = dst_coords->pixel_x;
     rect.y = dst_coords->pixel_y;

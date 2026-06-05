@@ -11,6 +11,18 @@
 /** Size of the TIM file header (magic word + flags word) in bytes. */
 #define TIM_HEADER_SIZE 8
 
+/** Advance to the next TIM block by skipping @p block->bnum bytes.
+ * Re-reads bnum at the call site; use TIM_PIXEL_BLOCK when bnum is
+ * already cached in a local variable and codegen order matters. */
+#define TIM_NEXT_BLOCK(block) ((TimBlock*)((u8*)(block) + (block)->bnum))
+
+/** Locate the pixel block given the TIM base and a pre-loaded CLUT bnum.
+ * The parenthesisation (bnum + TIM_HEADER_SIZE) is load-bearing: it forces
+ * addiu (bnum+8) before addu (+base), matching the compiler's register
+ * allocation when bnum is held in a saved register. */
+#define TIM_PIXEL_BLOCK(tim, bnum) \
+    ((TimBlock*)((u8*)(tim) + ((bnum) + TIM_HEADER_SIZE)))
+
 /** Number of entries in a 256-color (8bpp) CLUT. */
 #define CLUT_ENTRY_COUNT 0x100
 
@@ -35,19 +47,19 @@ typedef struct
 } TimBlock;
 
 /**
- * @brief PSX TIM file fixed header.
+ * @brief PSX TIM file header for an 8bpp (256-color) image.
  *
- * Covers the two-word file header plus the CLUT block header. The CLUT
- * palette data follows immediately at @c tim + 1 (i.e. at byte offset
- * @c sizeof(Tim) = 20 = 0x14). The pixel block begins at a variable offset
- * after the CLUT data and must be located at runtime via @c clut.bnum.
+ * Maps the fixed portion of a TIM file: two-word file header, CLUT block
+ * header, and the 256-entry CLUT palette. The pixel block follows at a
+ * variable offset; use @c TIM_NEXT_BLOCK(&tim->clut_block) to reach it.
  */
 typedef struct
 {
-    u32 magic;     /* 0x00 - TIM magic/type word (low byte = 0x10) */
-    u32 flags;     /* 0x04 - flag word (bit3=hasCLUT, bits1:0=bit-depth) */
-    TimBlock clut; /* 0x08 - CLUT block header */
-    /* CLUT palette data follows at sizeof(Tim) = 0x14 */
+    u32 magic;                       /* 0x00 - TIM magic/type word (low byte = 0x10) */
+    u32 flags;                       /* 0x04 - flag word (bit3=hasCLUT, bits1:0=bit-depth) */
+    TimBlock clut_block;             /* 0x08 - CLUT block header */
+    u16 clut_data[CLUT_ENTRY_COUNT]; /* 0x14 - 256-entry 16bpp palette */
+    /* pixel block follows clut_data */
 } Tim;
 
 #endif
