@@ -6183,3 +6183,51 @@ block_106:
 
     return var_s0;
 }
+
+s32 func_80149948(s32, s32, s32 *);
+
+/**
+ * @brief Render all root menu nodes, then lerp g_menu_content_height toward g_menu_scroll_pos.
+ * @param arg0 Current primitive buffer pointer.
+ * @param arg1 Pointer to the ordering-table entry used by node-rendering helpers.
+ * @return Updated primitive buffer pointer after rendering all active root nodes.
+ * @note Resets g_menu_nav_count to 0, then iterates all MENU_NODE_COUNT nodes.
+ *       Calls func_80149948 for each node with parent_idx == MENU_NONE and flags bit 0 set.
+ *       After the loop, g_menu_content_height is lerped toward g_menu_scroll_pos using
+ *       g_menu_redraw_state as the step count; snaps immediately when the count reaches
+ *       zero or the values are already equal.
+ * @see decomp.me TODO
+ */
+s32 func_80149828(s32 arg0, s32 *arg1)
+{
+    MenuNode *node;
+    s32 i;
+    s32 buf;
+    s32 temp_v0;
+
+    buf = arg0;
+    g_menu_nav_count = 0;
+    node = g_menu_nodes;
+
+    for (i = 0; i < MENU_NODE_COUNT; i++, node++)
+    {
+        if ((node->u2.s.parent_idx == MENU_NONE) && (node->u2.s.flags & 1))
+        {
+            buf = func_80149948(i, buf, arg1);
+        }
+    }
+
+    if ((g_menu_redraw_state == 0) || (g_menu_scroll_pos == g_menu_content_height))
+    {
+        g_menu_redraw_state = 0;
+        g_menu_content_height = g_menu_scroll_pos;
+    }
+    else
+    {
+        temp_v0 = (g_menu_scroll_pos - g_menu_content_height) / g_menu_redraw_state;
+        g_menu_redraw_state -= 1;
+        g_menu_content_height += temp_v0;
+    }
+
+    return buf;
+}
