@@ -5,6 +5,7 @@
 #include "display.h"
 #include "gpu_packet.h"
 #include "main.h"
+#include "tim.h"
 #include "render_context.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"

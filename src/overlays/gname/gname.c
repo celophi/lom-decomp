@@ -200,8 +200,8 @@ void load_name_entry_tim(void)
     TimDstCoords dst_coords;
     dst_coords.pixel_x = SCREEN_WIDTH;
     dst_coords.pixel_y = 0;
-    dst_coords.clut_x  = 0;
-    dst_coords.clut_y  = VRAM_CLUT_Y;
+    dst_coords.clut_x = 0;
+    dst_coords.clut_y = VRAM_CLUT_Y;
     load_tim_to_vram(&dst_coords);
 }
 
@@ -223,45 +223,44 @@ void load_name_entry_tim(void)
  */
 void load_tim_to_vram(TimDstCoords* dst_coords)
 {
-    u16 clut_y;
-    u16* tim = (u16*)g_name_entry_tim;
-    s32 clut_len = *((s32*)(((u8*)tim) + 8));
-    u16 clut_y2;
-    u16* clut = (u16*)(((u8*)tim) + 0x14);
     RECT rect;
+    TimBlock* pixel_block;
     int i;
-    u16 clut_x = dst_coords->clut_x;
-    i = 0;
-    rect.x = clut_x;
-    clut_y = dst_coords->clut_y;
-    rect.w = 0x100;
+    u8* tim = g_name_entry_tim;
+    s32 clut_len = *(s32*)(tim + TIM_HEADER_SIZE);
+    u16* clut = (u16*)(tim + 0x14);
+
+    rect.x = dst_coords->clut_x;
+    rect.y = dst_coords->clut_y;
+    rect.w = CLUT_ENTRY_COUNT;
     rect.h = 1;
-    rect.y = clut_y;
+
     /* Mark every non-zero CLUT entry semi-transparent. */
-    do
+
+    for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
         if ((*clut) != 0)
         {
-            *clut |= 0x8000;
+            *clut |= GPU_STP_BIT;
         }
         clut++;
-        i++;
-    } while (i < 0x100);
+    }
+
     func_80019A34(&rect, ((u8*)tim) + 0x14);
+    pixel_block = (TimBlock*)(tim + (clut_len + TIM_HEADER_SIZE));
+
     rect.x = dst_coords->pixel_x;
     rect.y = dst_coords->pixel_y;
-    {
-        u16* pixel_block = (u16*)(((u8*)tim) + (clut_len + 8));
-        rect.w = pixel_block[4];
-        rect.h = pixel_block[5];
-        func_80019A34(&rect, pixel_block + 6);
-    }
+    rect.w = pixel_block->w;
+    rect.h = pixel_block->h;
+
+    func_80019A34(&rect, pixel_block + 1);
+
     /* Trailing rect writes are dead but load-bearing for the match. */
     rect.x = dst_coords->clut_x;
-    clut_y2 = dst_coords->clut_y;
-    rect.w = 0x100;
+    rect.y = dst_coords->clut_y + 1;
+    rect.w = CLUT_ENTRY_COUNT;
     rect.h = 1;
-    rect.y = clut_y2 + 1;
 }
 
 /**
