@@ -6470,3 +6470,103 @@ void *func_80149D90(void *arg0, s32 *arg1, s16 arg2, s16 arg3)
     *arg1 = (*arg1 & (s32)0xFF000000) | ((s32)p & 0xFFFFFF);
     return p + 0x14;
 }
+
+void func_8014A044(void *, s32 *);
+
+/**
+ * @brief Process D-pad/shoulder scroll input for a list widget and call func_8014A10C to render it.
+ * @param arg0 Primitive buffer pointer passed to func_8014A10C.
+ * @param arg1 Ordering-table pointer passed to func_8014A10C.
+ * @param arg2 Scroll-list state block; fields at 0x4/0x6 are current/max index,
+ *             0x8/0xA are base x/y, 0xE is scroll speed hint, 0x10/0x12 are view offsets.
+ * @param arg3 Pointer to the list entry array; each entry is a u32 with linked
+ *             neighbor indices packed at bits [22:14] (previous) and [30:23] (next).
+ * @param arg4 Two-halfword view-origin: s16 x at offset 0, u16 y at offset 2.
+ * @param arg5 Non-zero enables input processing; zero skips it.
+ * @note Reads g_pad_input bits 8/4 (shoulder buttons) to enable fast-scroll;
+ *       bits 0x5000 (PAD_BTN_UP|DOWN) advance the list index via the linked entries.
+ *       Writes g_menu_default_view_pos with the viewport origin of the current item.
+ * @see decomp.me TODO
+ */
+void func_80149E10(s32 arg0, s32 *arg1, void *arg2, s32 *arg3, void *arg4, s32 arg5)
+{
+    u8 *p2 = (u8 *)arg2;
+    u8 *p4 = (u8 *)arg4;
+    s32 var_s0;
+    s32 var_v1;
+    u32 var_v0;
+    u16 temp_v1;
+    u16 unk4;
+    s32 cursor_x;
+    s32 cursor_y;
+
+    if (arg5 != 0)
+    {
+        if (g_pad_input & 8)
+        {
+            var_v1 = 0x4000;
+            goto block_5;
+        }
+        var_v1 = 0x1000;
+        if (g_pad_input & 4)
+        {
+block_5:
+            g_pad_input = var_v1;
+            var_s0 = (s32)(*(s16 *)(p2 + 0xE) - 0x10) >> 4;
+        }
+        else
+        {
+            var_s0 = 1;
+        }
+        if (var_s0 != 0)
+        {
+            do
+            {
+                if (g_pad_input & 0x5000)
+                {
+                    unk4 = *(u16 *)(p2 + 0x4);
+                    if (g_pad_input & 0x1000)
+                    {
+                        var_v0 = ((u32)arg3[unk4] >> 0xE) & 0x1FF;
+                    }
+                    else
+                    {
+                        var_v0 = (u32)arg3[unk4] >> 0x17;
+                    }
+                    *(u16 *)(p2 + 0x4) = (u16)var_v0;
+                    func_8014A044(arg2, arg3);
+                    temp_v1 = *(u16 *)(p2 + 0x4);
+                    if (temp_v1 == (u16)((*(u16 *)(p2 + 0x6) & 0x1FF) - 1))
+                    {
+                        var_s0 = 1;
+                    }
+                    var_s0 -= 1;
+                    if (temp_v1 == 0)
+                    {
+                        var_s0 = 1;
+                        goto block_16;
+                    }
+                }
+                else
+                {
+block_16:
+                    var_s0 -= 1;
+                }
+            } while (var_s0 != 0);
+        }
+        if (g_pad_input & 0x5000)
+        {
+            func_8014F210(0x7D, 0x80);
+        }
+        if (g_pad_input & 0x8000)
+        {
+            g_pad_input |= 0x40;
+        }
+    }
+    unk4 = *(u16 *)(p2 + 0x4);
+    cursor_x = (4 - (s32)*(u16 *)(p2 + 0x10)) - *(s16 *)p4;
+    cursor_y = (s32)((u32)arg3[unk4] & 0x3FFF) - (s32)*(u16 *)(p4 + 2) - (s32)*(u16 *)(p2 + 0x12);
+    func_8014A10C(arg0, arg1, cursor_x, cursor_y, arg5);
+    g_menu_default_view_pos.x = (s16)(*(u16 *)(p2 + 0x8) + cursor_x + 8);
+    g_menu_default_view_pos.y = (s16)(*(u16 *)(p2 + 0xA) + cursor_y + 8);
+}
