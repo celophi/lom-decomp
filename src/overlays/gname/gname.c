@@ -89,8 +89,7 @@ void render_fade_overlay(RenderContext* ctx)
         }
         else
         {
-            /* Subtractive bias: bitwise NOT so 0xFF->0x00, 0x00->0xFF.
-             * FADE_CHAN_NEUTRAL (casts to 0 as u8) is clamped to 0 explicitly. */
+            /* Subtractive bias: bitwise NOT so 0xFF->0x00, 0x00->0xFF. */
             if (g_fade_current.r == FADE_CHAN_NEUTRAL)
             {
                 ((TILE*)prim)->r0 = 0;
