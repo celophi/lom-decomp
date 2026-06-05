@@ -359,6 +359,7 @@ extern s32 D_8016911C;
 extern s32 D_80169554;
 extern s32 D_801694B0;
 extern s32 D_801690B8[];
+extern void *D_801693FC;
 extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
@@ -3566,4 +3567,91 @@ s32 func_80145310(void)
         } while (temp_a2 != 0);
     }
     return var_t0;
+}
+
+/**
+ * @brief Scan g_pad_ctx->unk034 for set bits, find the first match against
+ *        a 6-bit field in D_801693FC, then initialize D_80168C70 as a circular
+ *        packed linked list of the set-bit entries.
+ * @return Low 16 bits: total set-bit count. High 16 bits: index of the first
+ *         entry whose bit position matches bits 15:10 of D_801693FC->unk14,
+ *         or 0 if no match was found.
+ * @note  Scans 11 s32 slots at g_pad_ctx + 0x34, 24 bits each (bits 0-23).
+ *        The first match index defaults to 0 when the 0xFF sentinel is never
+ *        cleared (no slot matched).
+ * @see decomp.me TODO
+ */
+s32 func_801453F0(void)
+{
+    s32 *temp_t0;
+    s32 temp_a0;
+    s32 temp_a1;
+    s32 temp_a3;
+    s32 temp_v1;
+    s32 var_a0;
+    s32 var_a1;
+    s32 var_a2;
+    s32 var_a2_2;
+    s32 var_t1;
+    s32 var_t2;
+    s32 var_v1;
+    s32 var_v1_2;
+    s32 *var_a3;
+
+    var_t1 = 0;
+    var_t2 = 0xFF;
+    var_a0 = 0;
+    var_a3 = (s32 *)((u8 *)g_pad_ctx + 0x34);
+    do
+    {
+        var_v1 = 1;
+        var_a2 = 0x17;
+        do
+        {
+            if (*var_a3 & var_v1)
+            {
+                if ((var_a0 == (((u32)(*(s32 *)((u8 *)D_801693FC + 0x14)) >> 0xA) & 0x3F)) && (var_t2 == 0xFF))
+                {
+                    var_t2 = var_t1;
+                }
+                var_t1 += 1;
+            }
+            var_a2 -= 1;
+            var_v1 *= 2;
+        } while (var_a2 >= 0);
+        var_a0 += 1;
+        var_a3 += 1;
+    } while (var_a0 < 0xB);
+    if (var_t2 == 0xFF)
+    {
+        var_t2 = 0;
+    }
+    D_80168C70 = (void *)0;
+    var_a2_2 = 0;
+    if (var_t1 > 0)
+    {
+        do
+        {
+            temp_t0 = (s32 *)&D_80168C70 + var_a2_2;
+            var_a1 = var_a2_2 - 1;
+            temp_v1 = (*temp_t0 & ~0x3FFF) | ((var_a2_2 * 0x10) & 0x3FFF);
+            *temp_t0 = temp_v1;
+            if (var_a1 < 0)
+            {
+                var_a1 = var_t1 - 1;
+            }
+            temp_a0 = (temp_v1 & 0xFF803FFF) | ((var_a1 & 0x1FF) << 0xE);
+            *temp_t0 = temp_a0;
+            temp_a1 = var_a2_2 + 1;
+            temp_a3 = temp_a1 < var_t1;
+            var_v1_2 = 0;
+            if (temp_a3 != 0)
+            {
+                var_v1_2 = temp_a1;
+            }
+            *temp_t0 = (temp_a0 & 0x7FFFFF) | (var_v1_2 << 0x17);
+            var_a2_2 = temp_a1;
+        } while (temp_a3 != 0);
+    }
+    return var_t1 | (var_t2 << 0x10);
 }
