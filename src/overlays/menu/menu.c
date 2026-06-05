@@ -6232,7 +6232,7 @@ s32 func_80149828(s32 arg0, s32 *arg1)
     return buf;
 }
 
-s32 func_80149BB4(s32, s32 *, u8, s32, s32, s32, s32, s32, s32);
+void *func_80149BB4(void *, s32 *, s32, s32, s32, s32, s32, s32, s32);
 
 /**
  * @brief Render one menu node's panel and update its animated Y position; recurse into children.
@@ -6342,4 +6342,103 @@ s32 func_80149948(s32 arg0, s32 arg1, s32 *arg2)
     }
 
     return buf;
+}
+
+typedef struct
+{
+    u8 u_coord; /**< Texture U coordinate. */
+    u8 v_coord; /**< Texture V coordinate. */
+    u8 w;       /**< Sprite width in pixels. */
+    u8 h;       /**< Sprite height in pixels. */
+} NodeSpriteInfo;
+
+extern NodeSpriteInfo D_8014FBF4[];
+extern u8 D_8014FDB8[];
+
+/**
+ * @brief Emit one or two SPRT primitives for a single menu node's panel and OT-link them.
+ * @param arg0 Current primitive buffer pointer; the function writes SPRTs starting here.
+ * @param arg1 Pointer to the ordering-table entry; updated after each emitted primitive.
+ * @param arg2 Content-ID index used to look up UV, size, and CLUT data in D_8014FBF4/D_8014FDB8.
+ * @param arg3 Node column position (used as base X for both sprites).
+ * @param arg4 Node row position (used as base Y for both sprites).
+ * @param arg5 When non-zero, a second (highlight/shadow) SPRT is also emitted after the first.
+ * @param arg6 Animation-in-progress flag; adjusts the pixel offset applied to both sprite positions.
+ * @param arg7 Non-zero when this node is the active scene; selects opaque (0x64) vs.
+ *             semi-transparent (0x66) code and blue vs. black tint for the second SPRT.
+ * @param arg8 TODO: type-bits field from u2.unk2 bits [7:6]; not read inside this function.
+ * @return Pointer to the next free byte in the primitive buffer after the last emitted SPRT.
+ * @note First SPRT: neutral tint (0x808080), code 0x64, position (arg3-arg5+arg6, arg4-arg5+arg6).
+ *       Second SPRT (when arg5 != 0): blue/black tint, position offset by (arg5-arg6)*2 from base;
+ *       code 0x64 when arg7 != 0 (active scene), 0x66 otherwise (semi-transparent).
+ *       CLUT is computed from D_8014FDB8[arg2]: high nibble = VRAM Y delta from row 0x1F2,
+ *       low nibble = VRAM X/16.
+ * @see decomp.me TODO
+ */
+void *func_80149BB4(void *arg0, s32 *arg1, s32 arg2, s32 arg3, s32 arg4,
+                    s32 arg5, s32 arg6, s32 arg7, s32 arg8)
+{
+    u8 *p1 = (u8 *)arg0;
+    u8 *p2;
+    NodeSpriteInfo *info;
+    u8 clut_byte;
+    s16 clut;
+    s32 temp_v0;
+
+    (void)arg8;
+
+    info = &D_8014FBF4[arg2];
+    clut_byte = D_8014FDB8[arg2];
+    clut = (s16)((((clut_byte >> 4) + 0x1F2) << 6) | (clut_byte & 0xF));
+
+    /* First SPRT: neutral-tinted panel background. */
+    *(u32 *)(p1 + 0x4) = 0x808080;
+    p1[3]  = 4;
+    p1[7]  = 0x64;
+    *(s16 *)(p1 + 0x8) = (s16)((arg3 - arg5) + arg6);
+    *(s16 *)(p1 + 0xA) = (s16)((arg4 - arg5) + arg6);
+    p1[0xC] = info->u_coord;
+    p1[0xD] = info->v_coord;
+    *(s16 *)(p1 + 0xE) = clut;
+    *(s16 *)(p1 + 0x10) = (s16)info->w;
+    *(s16 *)(p1 + 0x12) = (s16)info->h;
+
+    /* OT-link first SPRT. */
+    *(s32 *)p1 = (*(s32 *)p1 & 0xFF000000) | (*arg1 & 0xFFFFFF);
+    p2 = p1 + 0x14;
+    *arg1 = (*arg1 & 0xFF000000) | ((s32)p1 & 0xFFFFFF);
+
+    if (arg5 != 0)
+    {
+        /* Second SPRT: selection highlight / shadow. */
+        if (arg7 != 0)
+        {
+            *(u32 *)(p2 + 0x4) = 0xA00000;
+        }
+        else
+        {
+            *(u32 *)(p2 + 0x4) = 0;
+        }
+        p2[3] = 4;
+        p2[7] = (arg7 == 0) ? 0x66 : 0x64;
+
+        temp_v0 = (arg5 - arg6) * 2;
+        *(s16 *)(p2 + 0xA) = (s16)(arg4 + temp_v0);
+        *(s16 *)(p2 + 0x8) = (s16)(arg3 + temp_v0);
+        p2[0xC] = info->u_coord;
+        p2[0xD] = info->v_coord;
+        *(s16 *)(p2 + 0xE) = clut;
+        *(s16 *)(p2 + 0x10) = (s16)info->w;
+        *(s16 *)(p2 + 0x12) = (s16)info->h;
+
+        /* OT-link second SPRT. */
+        {
+            s32 p2_addr = (s32)p2 & 0xFFFFFF;
+            *(s32 *)p2 = (*(s32 *)p2 & 0xFF000000) | (*arg1 & 0xFFFFFF);
+            p2 += 0x14;
+            *arg1 = (*arg1 & 0xFF000000) | p2_addr;
+        }
+    }
+
+    return p2;
 }
