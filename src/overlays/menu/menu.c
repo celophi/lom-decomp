@@ -6196,24 +6196,20 @@ s32 func_80149948(s32, s32, s32*);
  *       After the loop, g_menu_content_height is lerped toward g_menu_scroll_pos using
  *       g_menu_redraw_state as the step count; snaps immediately when the count reaches
  *       zero or the values are already equal.
- * @see decomp.me TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/AIXmd
  */
 s32 func_80149828(s32 arg0, s32* arg1)
 {
-    MenuNode* node;
     s32 i;
-    s32 buf;
     s32 temp_v0;
 
-    buf = arg0;
     g_menu_nav_count = 0;
-    node = g_menu_nodes;
 
-    for (i = 0; i < MENU_NODE_COUNT; i++, node++)
+    for (i = 0; i < MENU_NODE_COUNT; i++)
     {
-        if ((node->u2.s.parent_idx == MENU_NONE) && (node->u2.s.flags & 1))
+        if ((g_menu_nodes[i].u2.s.parent_idx == MENU_NONE) && (g_menu_nodes[i].u2.s.flags & 1))
         {
-            buf = func_80149948(i, buf, arg1);
+            arg0 = func_80149948(i, arg0, arg1);
         }
     }
 
@@ -6229,7 +6225,7 @@ s32 func_80149828(s32 arg0, s32* arg1)
         g_menu_content_height += temp_v0;
     }
 
-    return buf;
+    return arg0;
 }
 
 void* func_80149BB4(void*, s32*, s32, s32, s32, s32, s32, s32, s32);
