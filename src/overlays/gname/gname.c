@@ -29,22 +29,21 @@ void reset_fade_state(void)
  * `(target - current) / steps` per channel and decrements `steps`.
  * Otherwise snaps current to target (RGB only - `steps` is left alone).
  *
- * If the current color is anything other than (0x100, 0x100, 0x100) - i.e.
- * not the no-tint identity - emits two primitives at @c ctx->prim_cursor:
- *   1. A 16-byte flat-shaded full-screen quad (tag 0x62) covering the
- *      320x240 viewport with the tinted RGB. When any channel is >0x100,
- *      colors are written as `value - 1` (additive bias); when <0x100,
- *      colors are written as `~value` (subtractive bias).
- *   2. An 8-byte Draw-Mode (GP0 0xE1) packet selecting abr=2 (additive,
- *      command bits 0x25) for >0x100 brightening or abr=1 (subtractive,
- *      0x45) for <=0x100 darkening.
+ * If the current color is not the identity (@c FADE_CHAN_NEUTRAL on all
+ * channels), emits two primitives at @c ctx->prim_cursor:
+ *   1. A full-screen TILE (@c SCREEN_WIDTH x @c SCREEN_HEIGHT) with the
+ *      tinted RGB. Channels >= @c FADE_CHAN_ADDITIVE are written as
+ *      `value - 1` (additive bias); channels below as `~value`
+ *      (subtractive bias).
+ *   2. A @c DR_TPAGE packet: @c FADE_TPAGE_ADD (abr=1, Back+Front,
+ *      brightening) when any channel >= @c FADE_CHAN_ADDITIVE, or
+ *      @c FADE_TPAGE_SUB (abr=2, Back-Front, darkening) otherwise.
  *
- * Both packets are spliced into the 24-bit OT at @c ctx->ot[0] and
- * `ctx->prim_cursor` is advanced past them. When the color is identity, no
- * primitives are emitted and the heap cursor is unchanged.
+ * Both packets are spliced into @c ctx->ot[0] and @c ctx->prim_cursor is
+ * advanced past them. When the color is identity no primitives are emitted.
  *
- * @param ctx Render context whose `ot[0]` is the OT entry written and
- *            `prim_cursor` is the primitive heap cursor.
+ * @param ctx Render context whose @c ot[0] is the OT entry and
+ *            @c prim_cursor is the primitive heap cursor.
  *
  * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
  * @see https://decomp.me/scratch/NvocJ (100%)
@@ -101,7 +100,7 @@ void render_fade_overlay(RenderContext* ctx)
         }
         else
         {
-            ((TILE*)prim)->r0 = ~(u8)g_fade_current.r;
+            ((TILE*)prim)->r0 = ~g_fade_current.r;
         }
 
         if (g_fade_current.g == FADE_CHAN_NEUTRAL)
@@ -110,7 +109,7 @@ void render_fade_overlay(RenderContext* ctx)
         }
         else
         {
-            ((TILE*)prim)->g0 = ~(u8)g_fade_current.g;
+            ((TILE*)prim)->g0 = ~g_fade_current.g;
         }
 
         if (g_fade_current.b == FADE_CHAN_NEUTRAL)
@@ -119,7 +118,7 @@ void render_fade_overlay(RenderContext* ctx)
         }
         else
         {
-            ((TILE*)prim)->b0 = ~(u8)g_fade_current.b;
+            ((TILE*)prim)->b0 = ~g_fade_current.b;
         }
     }
 
