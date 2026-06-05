@@ -132,7 +132,6 @@ void render_fade_overlay(RenderContext* ctx)
 
         setDrawTPage(prim, 0, 0, tpage);
         addPrim(p_ctx->ot, prim);
-
         prim += sizeof(DR_TPAGE) / sizeof(u_long);
     }
 
