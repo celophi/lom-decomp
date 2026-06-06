@@ -376,7 +376,7 @@ ROM_BIN_DIR       := disc/BIN
 # Read by tools/objdiff/generate_objdiff_config.py to mark units complete.
 COMPLETE_MANIFEST := build/complete_overlays.txt
 
-.PHONY: all bin clean recopy splat
+.PHONY: all bin clean recopy splat dump-objs
 .PHONY: target-objects base-objects objdiff-objects objdiff-config
 .PHONY: overlays everything
 .PHONY: verify-bins verify-gover verify-movie
@@ -393,6 +393,18 @@ bin: all
 
 clean:
 	rm -rf build/ $(STAGING)
+
+# Disassemble every compiled .o in build/ and write a matching .s alongside it.
+# Run this after a build to get compiler output for the find_idioms.py tool.
+#   make dump-objs
+# The .s files end up at e.g. build/src/cdrom.s, build/overlays/gname/gname.s etc.
+OBJDUMP := $(CROSS)objdump
+dump-objs:
+	@find build -name '*.o' | while read f; do \
+		out="$${f%.o}.s"; \
+		$(OBJDUMP) -d -r --no-show-raw-insn "$$f" > "$$out" 2>/dev/null && echo "  $$out" || true; \
+	done
+	@echo "dump-objs complete."
 
 recopy:
 	rm -f $(COPY_SENTINEL)
@@ -523,10 +535,28 @@ base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_GCC_2
 	@cp -r $(STAGING)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
 	@echo "Base objects built."
 
+OBJDIFF_CLI := tools/objdiff/objdiff-cli-linux-x86_64
+
 objdiff-objects: target-objects base-objects $(addsuffix -objdiff,$(OVERLAYS))
 
 objdiff-config:
 	python3 tools/objdiff/generate_objdiff_config.py
+
+# Run objdiff diff on every unit in objdiff.json and write JSON results under
+# build/diffs/, mirroring the unit name as a path (e.g. main/cdrom.json).
+# Depends on objdiff-objects and objdiff-config so .o files and config are
+# up to date before diffing.
+.PHONY: diff-all diff-text
+diff-all: objdiff-objects objdiff-config
+	python3 tools/objdiff/run_diffs.py --cli $(OBJDIFF_CLI)
+
+# Convert every build/diffs/**/*.json into a compact side-by-side text file
+# at build/diffs/**/*.txt -- only non-100% functions, only differing lines.
+diff-text: diff-all
+	@find build/diffs -name '*.json' | while read f; do \
+		python3 tools/objdiff/format_diffs.py --all "$$f" -o "$${f%.json}.txt"; \
+	done
+	@echo "Text diffs written to build/diffs/**/*.txt"
 
 
 # ============================================================================
