@@ -376,7 +376,7 @@ ROM_BIN_DIR       := disc/BIN
 # Read by tools/objdiff/generate_objdiff_config.py to mark units complete.
 COMPLETE_MANIFEST := build/complete_overlays.txt
 
-.PHONY: all bin clean recopy splat
+.PHONY: all bin clean recopy splat dump-objs
 .PHONY: target-objects base-objects objdiff-objects objdiff-config
 .PHONY: overlays everything
 .PHONY: verify-bins verify-gover verify-movie
@@ -393,6 +393,18 @@ bin: all
 
 clean:
 	rm -rf build/ $(STAGING)
+
+# Disassemble every compiled .o in build/ and write a matching .s alongside it.
+# Run this after a build to get compiler output for the find_idioms.py tool.
+#   make dump-objs
+# The .s files end up at e.g. build/src/cdrom.s, build/overlays/gname/gname.s etc.
+OBJDUMP := $(CROSS)objdump
+dump-objs:
+	@find build -name '*.o' | while read f; do \
+		out="$${f%.o}.s"; \
+		$(OBJDUMP) -d -r --no-show-raw-insn "$$f" > "$$out" 2>/dev/null && echo "  $$out" || true; \
+	done
+	@echo "dump-objs complete."
 
 recopy:
 	rm -f $(COPY_SENTINEL)

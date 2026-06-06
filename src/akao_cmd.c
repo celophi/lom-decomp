@@ -1092,7 +1092,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             }
             chunk = sample_chunk;
             SpuSetTransferStartAddr(g_akao_streaming_state.spu_addr);
-            akao_spu_write(src, avail);
+            akao_spu_write(src, sample_chunk);
             g_akao_streaming_state.spu_addr += sample_chunk;
             g_akao_streaming_state.sample_remaining -= chunk;
             if (wait_for_spu != 0)
