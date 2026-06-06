@@ -6295,51 +6295,41 @@ typedef struct
  */
 void func_80149E10(int arg0, int arg1, StructA* arg2, u32* arg3, StructB* arg4, int arg5)
 {
-    int a5 = arg5;
-    StructB* a4 = arg4;
-    int a0 = arg0;
-    int a1 = arg1;
-    StructA* a2 = arg2;
-    u32* a3 = arg3;
     int count;
-
-    if (a5)
+    if (arg5)
     {
         if (g_pad_input & 0x8)
         {
             g_pad_input = 0x4000;
-            count = (a2->unk_0E - 16) >> 4;
+            count = (arg2->unk_0E - 16) >> 4;
         }
         else if (g_pad_input & 0x4)
         {
             g_pad_input = 0x1000;
-            count = (a2->unk_0E - 16) >> 4;
+            count = (arg2->unk_0E - 16) >> 4;
         }
         else
         {
             count = 1;
         }
-
         while (count != 0)
         {
             if (g_pad_input & 0x5000)
             {
                 if (g_pad_input & 0x1000)
                 {
-                    a2->unk_04 = (a3[a2->unk_04] >> 14) & 0x1FF;
+                    arg2->unk_04 = (arg3[arg2->unk_04] >> 14) & 0x1FF;
                 }
                 else
                 {
-                    a2->unk_04 = a3[a2->unk_04] >> 23;
+                    arg2->unk_04 = arg3[arg2->unk_04] >> 23;
                 }
-
-                func_8014A044(a2, a3);
-
-                if (a2->unk_04 == ((a2->unk_06 & 0x1FF) - 1))
+                func_8014A044(arg2, arg3);
+                if (arg2->unk_04 == ((arg2->unk_06 & 0x1FF) - 1))
                 {
                     count = 1;
                 }
-                if (a2->unk_04 == 0)
+                if (arg2->unk_04 == 0)
                 {
                     count = 1;
                 }
@@ -6351,15 +6341,12 @@ void func_80149E10(int arg0, int arg1, StructA* arg2, u32* arg3, StructB* arg4, 
         {
             func_8014F210(0x7D, 0x80);
         }
-
         if (g_pad_input & 0x8000)
         {
             g_pad_input |= 0x40;
         }
     }
-
-    func_8014A10C(a0, a1, (4 - a2->unk_10) - a4->unk_00, ((a3[a2->unk_04] & 0x3FFF) - a4->unk_02) - a2->unk_12, a5);
-
-    g_menu_default_view_pos.x = a2->unk_08 + ((4 - a2->unk_10) - a4->unk_00) + 8;
-    g_menu_default_view_pos.y = a2->unk_0A + (((a3[a2->unk_04] & 0x3FFF) - a4->unk_02) - a2->unk_12) + 8;
+    func_8014A10C(arg0, arg1, (4 - arg4->unk_00) - arg2->unk_10, ((arg3[arg2->unk_04] & 0x3FFF) - arg4->unk_02) - arg2->unk_12, arg5);
+    g_menu_default_view_pos.x = (arg2->unk_08 + ((4 - (arg4->unk_00 & 0xFFFFFFFF)) - arg2->unk_10)) + 8;
+    g_menu_default_view_pos.y = (arg2->unk_0A + (((arg3[arg2->unk_04] & 0x3FFF) - arg4->unk_02) - arg2->unk_12)) + 8;
 }
