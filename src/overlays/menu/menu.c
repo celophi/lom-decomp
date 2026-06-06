@@ -3337,7 +3337,7 @@ int menu_item_has_action(void)
     short item_subtype;
     int action_code;
 
-    items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].content_id];
+    items = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
     if ((g_menu_scene_type == 0x1F) || (g_menu_scene_type == 0x2B))
     {
         if (((int)g_menu_hit_item_idx) >= 0x11)
@@ -3360,10 +3360,7 @@ int menu_item_has_action(void)
         {
             if (item_subtype >= 11)
             {
-                if (item_subtype != 15)
-                {
-                }
-                else
+                if (item_subtype == 15)
                 {
                     return 1;
                 }
@@ -3376,7 +3373,7 @@ int menu_item_has_action(void)
     }
     else if (type_nibble == 0xF000)
     {
-        action_code = D_8014FE54[D_801686CC[g_menu_nodes[g_menu_scene_type].content_id]][(item->packed_x >> 9) & 7];
+        action_code = D_8014FE54[D_801686CC[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx]][(item->packed_x >> 9) & 7];
         if (action_code == 0)
         {
         }
@@ -3388,11 +3385,7 @@ int menu_item_has_action(void)
         {
             if (action_code >= 6)
             {
-                type_nibble = !item_subtype;
                 return 1;
-                if (((!item_subtype) && type_nibble) && (!item_subtype))
-                {
-                }
             }
         }
     }
