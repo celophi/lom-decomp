@@ -535,10 +535,28 @@ base-objects: $(COPY_SENTINEL) $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_GCC_2
 	@cp -r $(STAGING)/build/$(SRC_DIR)/* build/src/ 2>/dev/null || true
 	@echo "Base objects built."
 
+OBJDIFF_CLI := tools/objdiff/objdiff-cli-linux-x86_64
+
 objdiff-objects: target-objects base-objects $(addsuffix -objdiff,$(OVERLAYS))
 
 objdiff-config:
 	python3 tools/objdiff/generate_objdiff_config.py
+
+# Run objdiff diff on every unit in objdiff.json and write JSON results under
+# build/diffs/, mirroring the unit name as a path (e.g. main/cdrom.json).
+# Depends on objdiff-objects and objdiff-config so .o files and config are
+# up to date before diffing.
+.PHONY: diff-all diff-text
+diff-all: objdiff-objects objdiff-config
+	python3 tools/objdiff/run_diffs.py --cli $(OBJDIFF_CLI)
+
+# Convert every build/diffs/**/*.json into a compact side-by-side text file
+# at build/diffs/**/*.txt -- only non-100% functions, only differing lines.
+diff-text: diff-all
+	@find build/diffs -name '*.json' | while read f; do \
+		python3 tools/objdiff/format_diffs.py --all "$$f" -o "$${f%.json}.txt"; \
+	done
+	@echo "Text diffs written to build/diffs/**/*.txt"
 
 
 # ============================================================================
