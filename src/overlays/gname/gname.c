@@ -998,55 +998,71 @@ void func_8014139C(void)
 }
 
 /**
- * decomp.me (83.21%) https://decomp.me/scratch/oXGkF
+ * @brief Emit the text cursor glyph (g_glyph_table[0xA0]) as a SPRT + DrawMode pair.
+ *
+ * Writes a 20-byte SPRT primitive at @p prim_buf using the UV, size, and CLUT
+ * data stored at g_glyph_table[0xA0..0xA4], then writes an 8-byte GP0 draw-mode
+ * packet (0xE1000005, texture page 5) immediately after. Both primitives are
+ * linked into the ordering-table slot at @p ot_entry via the standard PSX
+ * AddPrim tag-pointer mask pattern.
+ *
+ * @param prim_buf  Write position in the primitive buffer; must have at
+ *                  least 0x1C bytes available.
+ * @param ot_entry  Pointer to the OT slot to chain both primitives into.
+ * @param x         Screen X position for the cursor sprite.
+ * @param y         Screen Y position for the cursor sprite.
+ * @return Pointer to the next free byte in the primitive buffer
+ *         (prim_buf + 0x1C).
+ * @see decomp.me (83.21%) https://decomp.me/scratch/oXGkF
  */
-void* func_80141848(void* arg0, s32* arg1, s16 arg2, s16 arg3)
+void* emit_cursor_sprite(void* prim_buf, s32* ot_entry, s16 x, s16 y)
 {
-    unsigned char* bp = (unsigned char*)arg0;
+    SPRT* sprt = (SPRT*)prim_buf;
+    unsigned char* glyph = g_glyph_table;
     unsigned int mask_lo;
     unsigned int mask_hi;
-    unsigned char* D = g_glyph_table;
-    unsigned int t0;
+    unsigned int draw_mode_cmd;
+    unsigned int clut_word;
     unsigned int w0;
     unsigned int w1;
-    *((unsigned int*)(bp + 4)) = 0x00808080U;
-    bp[3] = 4;
-    bp[7] = 0x64;
-    *((s16*)(bp + 8)) = arg2;
-    *((s16*)(bp + 10)) = arg3;
-    bp[12] = D[0xa0];
+
+    /* SET_BGR0_PACKED emits one word store (0x00808080), matching the original
+     * `*(u32*)(p+4) = 0x808080` before setSprt overwrites the code byte. */
+    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+    setSprt(sprt);
+    setXY0(sprt, x, y);
+    sprt->u0 = glyph[0xa0];
     mask_lo = 0x00ffffff;
-    bp[13] = D[0xa1];
-    *((s16*)(bp + 16)) = (s16)D[0xa2];
-    t0 = 0xe1000000;
-    *((s16*)(bp + 18)) = (s16)D[0xa3];
+    sprt->v0 = glyph[0xa1];
+    sprt->w = (s16)glyph[0xa2];
+    draw_mode_cmd = 0xe1000000;
+    sprt->h = (s16)glyph[0xa3];
     mask_hi = 0xff000000;
-    w0 = *((unsigned int*)(&D[0xa4]));
-    w1 = *((unsigned int*)bp);
-    w0 = (w0 & 0x3f) | 0x7c80;
-    *((s16*)(bp + 14)) = (s16)w0;
-    w0 = *((unsigned int*)arg1);
+    clut_word = *((unsigned int*)(&glyph[0xa4]));
+    w1 = *((unsigned int*)sprt);
+    SET_SPRT_CLUT(sprt, (clut_word & 0x3f) | 0x7c80);
+    w0 = *((unsigned int*)ot_entry);
     w1 = w1 & mask_hi;
     w0 = w0 & mask_lo;
-    *((unsigned int*)bp) = w1 | w0;
-    w1 = ((unsigned int)bp) & mask_lo;
-    w0 = *((unsigned int*)arg1);
-    bp += 0x14;
+    *((unsigned int*)sprt) = w1 | w0;
+    w1 = ((unsigned int)sprt) & mask_lo;
+    w0 = *((unsigned int*)ot_entry);
+    sprt++;
     w0 = w0 & mask_hi;
-    *((unsigned int*)arg1) = w0 | w1;
-    bp[3] = 1;
-    w1 = *((unsigned int*)bp);
-    t0 |= 5;
-    *((unsigned int*)(bp + 4)) = t0;
-    w0 = *((unsigned int*)arg1);
+    *((unsigned int*)ot_entry) = w0 | w1;
+    ((u8*)sprt)[3] = 1;
+    w1 = *((unsigned int*)sprt);
+    draw_mode_cmd |= 5;
+    *((unsigned int*)((u8*)sprt + 4)) = draw_mode_cmd;
+    w0 = *((unsigned int*)ot_entry);
     w1 = w1 & mask_hi;
     w0 = w0 & mask_lo;
-    *((unsigned int*)bp) = w1 | w0;
-    w0 = *((unsigned int*)arg1);
-    w1 = ((unsigned int)bp) & mask_lo;
+    *((unsigned int*)sprt) = w1 | w0;
+    w0 = *((unsigned int*)ot_entry);
+    w1 = ((unsigned int)sprt) & mask_lo;
     w0 = w0 & mask_hi;
-    *((unsigned int*)arg1) = w0 | w1;
-    return (void*)(bp + 8);
+    *((unsigned int*)ot_entry) = w0 | w1;
+    return (void*)((u8*)sprt + 8);
 }
 
 /**
