@@ -1,5 +1,5 @@
 #include "common.h"
-
+#include "cd_resources.h"
 
 /* Define the structure layout for the memory at 0x801ED600 */
 typedef struct {
@@ -21,9 +21,8 @@ extern s32 D_800F22BC;
 extern s32 D_800F22C0;
 extern s32 D_800F22C4;
 
-void func_8006828C(void)
+void field_func_8006828C(void)
 {
-    /* Declaring the pointer here forces the early lui/ori instructions for v1 */
     UnkStruct_801ED600* ptr = (UnkStruct_801ED600*)0x801ED600;
     s32 temp_v0;
 
@@ -37,7 +36,7 @@ void func_8006828C(void)
             ptr->unk92 = 0;
             ptr->unk13F = 0;
             ptr->unk91 = 0;
-            cdrom_stream(0xA, 0x80140000);
+            cdrom_stream(CD_RES_GOVER_BIN, 0x80140000);
             cdrom_wait_queue_empty();
             func_80140004(0x80160000, D_800F22B8, D_800F22BC, D_800F22C4);
             func_80084240();
