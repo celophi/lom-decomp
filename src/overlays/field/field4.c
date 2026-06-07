@@ -35,6 +35,12 @@ typedef struct
     s16 unk6;
 } Struct_D_800F2270;
 
+typedef struct
+{
+    u8 pad[0x1EC];
+    u16 unk1EC;
+} Struct_80068494;
+
 extern s32 D_800F22B8;
 extern s32 D_800F22BC;
 extern s32 D_800F22C0;
@@ -43,6 +49,7 @@ extern s32 D_800F2284;
 extern s32 D_800F22B4;
 extern s32 D_8012291C;
 extern s32 D_8003EC98;
+extern s32 D_80105788;
 extern s32 D_8011588C;
 extern Struct_D_800F2268 D_800F2268;
 extern Struct_D_800F2270 D_800F2270;
@@ -152,4 +159,12 @@ void func_80068440(void)
             func_800A3904(0, 1, D_8011588C);
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Xn30r
+ */
+s32 func_80068494(s32 arg0, s32 arg1)
+{
+    return ((Struct_80068494*)((u8*)arg0 + D_80105788 * 2))->unk1EC % arg1;
 }
