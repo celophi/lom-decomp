@@ -1025,13 +1025,13 @@ void* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
     setSprt(sprt);
     setXY0(sprt, x, y);
     
-    setUV0(sprt, g_glyph_table[(20 * (sizeof(GlyphInfo))) + 0],
-                 g_glyph_table[(20 * (sizeof(GlyphInfo))) + 1]);
-    sprt->w = (s16)g_glyph_table[(20 * (sizeof(GlyphInfo))) + 2];
-    
-    clut_word = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 3];
+    setUV0(sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u,
+                 g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v);
+    sprt->w = (s16)g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w;
+
+    clut_word = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h;
     sprt->h = (s16)clut_word;
-    clut_word = *((u32*)(&g_glyph_table[(20 * (sizeof(GlyphInfo))) + 4]));
+    clut_word = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut;
     sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
     addPrim(ot, sprt);
     
@@ -1119,12 +1119,12 @@ void gname_render(void* ctx)
         s32 tmp = g_cursor_y;
         *((s16*)(((char*)cursor_sprite) + 10)) = tmp;
     }
-    *((u8*)(((char*)cursor_sprite) + 12)) = g_glyph_table[0xA0];
-    *((u8*)(((char*)cursor_sprite) + 13)) = g_glyph_table[0xA1];
-    *((s16*)(((char*)cursor_sprite) + 16)) = (s16)g_glyph_table[0xA2];
-    *((s16*)(((char*)cursor_sprite) + 18)) = (s16)g_glyph_table[0xA3];
+    *((u8*)(((char*)cursor_sprite) + 12)) = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u;
+    *((u8*)(((char*)cursor_sprite) + 13)) = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v;
+    *((s16*)(((char*)cursor_sprite) + 16)) = (s16)g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w;
+    *((s16*)(((char*)cursor_sprite) + 18)) = (s16)g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h;
     {
-        u32 tmp = *((u32*)(g_glyph_table + 0xA4));
+        u32 tmp = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut;
         *((s16*)(((char*)cursor_sprite) + 14)) = (s16)((tmp & 0x3F) | 0x7C80);
     }
     ctx_bytes = (char*)ctx2;
@@ -1512,7 +1512,7 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
         /* new_var2 and clut_word2=arg3 are load-bearing temporaries: they
            force entry2 to be derived here (after tmp2) and reuse a register
            copy of arg3 for x0, matching the target's register allocation. */
-        new_var2 = g_glyph_table;
+        new_var2 = (u8*)g_glyph_table;
         clut_word2 = arg3;
         entry2 = (u8*)((arg2 << 3) + (u32)new_var2);
         ((SPRT*)ptr)->x0 = (s16)(clut_word2 + tmp2);
@@ -1594,7 +1594,7 @@ void draw_name_cursor_row(RenderContext* ctx)
 
     seq = g_name_cursor_glyphs;
     i = 0;
-    glyph_table_base = g_glyph_table;
+    glyph_table_base = (u8*)g_glyph_table;
 
     ptr_t1 += sizeof(DR_TWIN);
 

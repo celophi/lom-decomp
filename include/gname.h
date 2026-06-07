@@ -195,7 +195,7 @@ extern u8* g_active_name;
 extern u8 g_append_anim_timer; /* render ticks until the next animation frame */
 extern u8 g_append_anim_frame; /* current frame index into g_char_append_anim */
 extern s32 g_strip_width_steps;
-extern u8 g_glyph_table[]; /* GlyphInfo[]; declared as u8[] for byte-level accesses elsewhere */
+extern GlyphInfo g_glyph_table[];
 extern s32 D_80142E14;
 extern GlyphSeqEntry g_name_cursor_glyphs[];
 
