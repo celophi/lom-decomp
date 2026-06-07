@@ -23,6 +23,7 @@ name_prepend_char   = 0x801429A0;
 name_pop_first_char = 0x80142A54;
 draw_char_append_anim = 0x80142B18;
 name_is_blank       = 0x80142C50;
+emit_cursor_glyph = 0x80141848;
 
 // Data
 g_name_cursor_glyphs = 0x8014F6B8;

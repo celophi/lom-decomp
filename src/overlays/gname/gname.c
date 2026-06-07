@@ -1019,7 +1019,7 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
     SPRT* sprt = (SPRT*)prim;
     
     SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-    setSprt(sprt);
+    setSprt(sprt);a
     setXY0(sprt, x, y);
     
     setUV0(sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u,
