@@ -46,5 +46,8 @@ segments:
       - [0x29B9, c, field2]
       - [0x3C11, c, field3]
       - [0x400D, c, unk1]
+      - [0x14610, c, unk2]
+      - [0x14610, c, field4]
+      - [0x14694, c, unk3]
       - [0x7C2D5, data, data]
   - [0xD4368]
