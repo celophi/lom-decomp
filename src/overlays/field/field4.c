@@ -57,26 +57,25 @@ extern Struct_D_800F2270 D_800F2270;
 /**
  * decomp.me (100%) https://decomp.me/scratch/9Ady0
  */
-void field_func_8006828C(void)
+void func_8006828C(void)
 {
     UnkStruct_801ED600* ptr = (UnkStruct_801ED600*)0x801ED600;
-    s32 temp_v0;
 
-    if (D_800F22C0 != 0)
+    if (D_800F22C0 == 0)
     {
-        temp_v0 = D_800F22C0 - 1;
-        D_800F22C0 = temp_v0;
-        if (temp_v0 == 0)
-        {
-            ptr->unk140 = 0;
-            ptr->unk92 = 0;
-            ptr->unk13F = 0;
-            ptr->unk91 = 0;
-            cdrom_stream(CD_RES_GOVER_BIN, 0x80140000);
-            cdrom_wait_queue_empty();
-            func_80140004(0x80160000, D_800F22B8, D_800F22BC, D_800F22C4);
-            func_80084240();
-        }
+        return;
+    }
+
+    if (--D_800F22C0 == 0)
+    {
+        ptr->unk140 = 0;
+        ptr->unk92 = 0;
+        ptr->unk13F = 0;
+        ptr->unk91 = 0;
+        cdrom_stream(CD_RES_GOVER_BIN, 0x80140000);
+        cdrom_wait_queue_empty();
+        func_80140004(0x80160000, D_800F22B8, D_800F22BC, D_800F22C4);
+        func_80084240();
     }
 }
 
