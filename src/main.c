@@ -146,7 +146,7 @@ volatile void Main(void)
             case 3:
                 FUN_80015c28();
                 cdrom_stream(CD_RES_FIELD_BIN, g_overlayLoadAddress);
-                cdrom_stream(5, 0x80140000);
+                cdrom_stream(CD_RES_GNAME_BIN, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 func_800A3534();

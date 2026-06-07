@@ -39,11 +39,32 @@ typedef enum CdResourceId
     /* BIN/GOLEM.BIN */
     CD_RES_GOLEM_BIN = 9,
 
-    /* BIN/GOLEM.BIN */
-    CD_RES_GOLEM_BIN_2 = 10,
+    /* BIN/GOVER.BIN */
+    CD_RES_GOVER_BIN = 10,
 
     /* BIN/MOVIE.BIN */
     CD_RES_MOVIE_BIN = 11,
+
+    /* BIN/CARDA.BIN */
+    CD_RES_CARDA_BIN = 12,
+
+    /* BIN/GOSUB.BIN */
+    CD_RES_GOSUB_BIN = 13,
+
+    /* BIN/WSEL.BIN */
+    CD_RES_WSEL_BIN = 14,
+
+    /* BIN/CHECKPS.BIN */
+    CD_RES_CHECKPS_BIN = 15,
+
+    /* BIN/CLOAD.BIN */
+    CD_RES_CLOAD_BIN = 16,
+
+    /* BIN/NIKI.BIN */
+    CD_RES_NIKI_BIN = 17,
+
+    /* BIN/ADDHERO.BIN */
+    CD_RES_ADDHERO_BIN = 18,
 
     /* SOUND/EFFECT.SET */
     CD_RES_SOUND_EFFECT_SET = 21,
