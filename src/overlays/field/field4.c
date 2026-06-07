@@ -406,6 +406,9 @@ s32 func_80068734(Struct_Arg0* arg0, s32 arg1, u16 arg2)
     }
 }
 
+/**
+ * decomp.me (100%) https://decomp.me/scratch/MCyYP
+ */
 s32 func_80068970( func_80068970_Arg0 *arg0)
 {
   s32 found;
