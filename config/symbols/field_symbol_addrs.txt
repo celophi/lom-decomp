@@ -1,6 +1,3 @@
-// Named functions in field1.c / field2.c / field3.c. Addresses live in the
-// FIELD overlay's VRAM range (overlay base 0x8004FC70) and are referenced from
-// the main executable (decomp7.c, main.c) plus other overlay code.
 field_init_ctx                        = 0x80051F28;
 field_scene_reset                     = 0x80051FBC;
 field_draw_frame                      = 0x80051FF8;
@@ -12,9 +9,9 @@ field_select_object                   = 0x80052458;
 field_build_render_records            = 0x80052628;
 field_validate_and_rasterize_quads    = 0x80053880;
 
-// Field-arena globals living in shared scratch RAM (0x80180000 region). This
-// region is reused by other overlays (movie aliases 0x80180014 as g_allocInfo),
-// so these names only resolve when linking the FIELD overlay.
+field_func_8006828C                   = 0x8006828C;
+
+
 g_field_scene                         = 0x80180014;
 g_field_objects                       = 0x80180020;
 g_field_vram_byte_count               = 0x8018000C;
