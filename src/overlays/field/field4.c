@@ -61,17 +61,75 @@ typedef struct
 
 typedef struct
 {
-  u8 unk0;
-  u8 unk1;
-  s16 unk2;
-  s16 unk4;
+    u8 unk0;
+    u8 unk1;
+    s16 unk2;
+    s16 unk4;
 } Struct_Unk3;
 typedef struct
 {
-  u8 pad[4];
-  Struct_Unk3 *unk4;
-  u16 *unk8;
+    u8 pad[4];
+    Struct_Unk3* unk4;
+    u16* unk8;
 } Struct_Arg0;
+
+typedef struct Struct_C
+{
+  u8 pad0[0xC];
+  u16 unkC;
+  u8 padE[0x18 - 0x0E];
+  u16 unk18;
+} Struct_C;
+
+typedef struct 
+{
+  u8 pad0[0xC];
+  Struct_C *unkC;
+  u8 pad10[0x24 - 0x10];
+  u8 unk24;
+  u8 pad25[0x2A - 0x25];
+  u8 unk2A;
+  u8 pad2B[0x1EC - 0x2B];
+  u16 unk1EC[9];
+  u8 pad1FE[0x222 - 0x1FE];
+  u16 unk222;
+  u32 unk224;
+  u8 unk228;
+  u8 unk229[9];
+  u8 unk232;
+  u8 unk233;
+  u8 pad234[0x23A - 0x234];
+  u8 unk23A;
+  u8 unk23B;
+  u8 pad23C[0x244 - 0x23C];
+} func_80068970_Arg0;
+
+typedef struct
+{
+  u8 pad0[0x25];
+  u8 unk25;
+  u8 pad26[0x2A - 0x26];
+  s16 unk2A;
+  u8 pad2C[0x54 - 0x2C];
+} Struct_D800FDF58;
+
+typedef struct
+{
+  u8 pad0[0xC];
+  u32 unkC;
+  u8 pad10[0x178 - 0x10];
+  union
+  {
+    u32 unk178;
+    struct
+    {
+      u8 pad[2];
+      u8 unk17A;
+      u8 pad2;
+    } b;
+  } u;
+  u8 pad17C[0x23C - 0x17C];
+} Struct_D80105AE0;
 
 extern s32 D_801227C8;
 extern s32 D_800F22B8;
@@ -86,6 +144,12 @@ extern s32 D_80105788;
 extern s32 D_8011588C;
 extern Struct_D_800F2268 D_800F2268;
 extern Struct_D_800F2270 D_800F2270;
+extern s32 D_800F2278;
+extern s32 D_800F227C;
+extern s32 D_800F2280;
+extern  func_80068970_Arg0 D_800F22C8[80];
+extern  Struct_D800FDF58 D_800FDF58[];
+extern  Struct_D80105AE0 D_80105AE0[];
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/9Ady0
@@ -340,4 +404,121 @@ s32 func_80068734(Struct_Arg0* arg0, s32 arg1, u16 arg2)
         return (temp_s3->unk4 + var_s2) +
                (((((temp_s1 * (temp_v1_3 >> 10)) >> 5) - var_s2) * ((*((u16*)((((u8*)arg0) + (D_80105788 * 2)) + 0x1EC))) - var_s4)) / (temp_v1_3 & 0x3FF));
     }
+}
+
+s32 func_80068970( func_80068970_Arg0 *arg0)
+{
+  s32 found;
+  u8 temp_a0;
+  s32 i;
+   func_80068970_Arg0 *var;
+  s16 temp_v1;
+  if (arg0->unk222 == arg0->unk1EC[0])
+  {
+    if (arg0->unkC->unk18 & 0x20)
+    {
+      for (i = 8; i >= 0; i--)
+      {
+        arg0->unk1EC[i] = 0;
+      }
+
+      return 0;
+    }
+    arg0->unk23A = 0;
+  }
+  if (arg0->unk23A == 0)
+  {
+    arg0->unk23B = 0;
+    if (arg0->unkC->unk18 & 2)
+    {
+      if (D_80105AE0[arg0->unk228].u.b.unk17A == arg0->unk233)
+      {
+        temp_v1 = D_800FDF58[arg0->unk228].unk2A;
+        if (((temp_v1 != 0x90) && (temp_v1 != 0x94)) || (D_80105AE0[arg0->unk228].unkC & 0x200))
+        {
+          D_800FDF58[arg0->unk228].unk25 = 0;
+        }
+        D_80105AE0[arg0->unk228].u.unk178 &= ~1;
+      }
+    }
+    if (arg0->unkC->unk18 & 4)
+    {
+      for (found = 0; found < ((s32) arg0->unk232); found++)
+      {
+        if (arg0->unk229[found] != 0xFF)
+        {
+          temp_a0 = D_80105AE0[arg0->unk229[found]].u.unk178;
+          if ((temp_a0 & 1) && (D_80105AE0[arg0->unk229[found]].u.b.unk17A == arg0->unk233))
+          {
+            D_800FDF58[arg0->unk229[found]].unk25 = 0;
+            D_80105AE0[arg0->unk229[found]].u.unk178 &= ~1;
+          }
+        }
+      }
+
+    }
+    if (arg0->unkC->unkC & 0x1000)
+    {
+      D_800F2280 = 0;
+      D_800F227C = 0;
+  D_800F2278 = 0; 
+    }
+    if ((arg0->unkC->unkC >> 8) & 4)
+    {
+      s32 j;
+      var = D_800F22C8;
+      for (j = 0; j < 80; j++, var++)
+      {
+        found = 0;
+        if (((arg0 != var) && (var->unk24 != 0)) && ((var->unkC->unkC >> 8) & 4))
+        {
+          found = 1;
+          break;
+        }
+      }
+
+      if (found == 0)
+      {
+        func_8006A240(0x100, 0x100, 0x100);
+      }
+    }
+    if ((arg0->unk224 & 0xFFFF0001) != 0xC0000)
+    {
+      func_8006D21C(arg0);
+    }
+    if (!(arg0->unkC->unkC & 0x800))
+    {
+      arg0->unk222 = 0;
+      arg0->unk24 = 0;
+      if (arg0->unk224 & 1)
+      {
+        func_80084424(arg0->unk228);
+      }
+      return 1;
+    }
+    temp_a0 = arg0->unk2A;
+    if (temp_a0 != 0)
+    {
+      arg0->unk222 = 0;
+      arg0->unk24 = 0;
+      func_80084424(arg0->unk228);
+      for (i = 0; i < 80; i++)
+      {
+        if (((D_800F22C8[i].unk24 != 0) && (D_800F22C8[i].unk228 == arg0->unk228)) && ((temp_a0 = D_800F22C8[i].unk224) & 1))
+        {
+          D_800F22C8[i].unk23A = 0;
+          func_80068970(&D_800F22C8[i]);
+        }
+      }
+
+      arg0->unk2A = 0;
+    }
+    else
+    {
+      arg0->unk222 = 0;
+      arg0->unk24 = 0;
+    }
+    return 1;
+  }
+  return 0;
 }
