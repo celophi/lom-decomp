@@ -6298,6 +6298,8 @@ void func_8014A044(ScrollListState*, u32*);
 void scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
 {
     int count;
+    s32 cursor_x;
+    s32 cursor_y;
     if (active)
     {
         if (g_pad_input & PADR1)
