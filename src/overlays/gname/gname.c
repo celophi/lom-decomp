@@ -1025,8 +1025,8 @@ void* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
     setSprt(sprt);
     setXY0(sprt, x, y);
     
-    sprt->u0 = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 0];
-    sprt->v0 = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 1];
+    setUV0(sprt, g_glyph_table[(20 * (sizeof(GlyphInfo))) + 0],
+                 g_glyph_table[(20 * (sizeof(GlyphInfo))) + 1]);
     sprt->w = (s16)g_glyph_table[(20 * (sizeof(GlyphInfo))) + 2];
     
     clut_word = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 3];
