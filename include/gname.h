@@ -122,9 +122,15 @@ typedef struct
  *  @ref draw_name_cursor_row. */
 #define NAME_CURSOR_GLYPH_COUNT 20
 
+/** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
+ *  Bits [5:0] hold CLUT_X/16; upper bits carry unrelated data and must be
+ *  discarded before writing the CLUT id into a sprite primitive. */
+#define GLYPH_CLUT_X_MASK 0x3F
+
 /** CLUT-page bit pattern OR'd over the low 6 bits of @c GlyphInfo::clut
  *  before writing it into a sprite primitive (see @ref draw_name_cursor_row,
- *  @ref func_80142274). */
+ *  @ref func_80142274). Encodes the fixed VRAM Y row (498) shared by all
+ *  name-entry palettes; bits [5:0] are zero and supplied by @c GLYPH_CLUT_X_MASK. */
 #define GLYPH_CLUT_PAGE_BITS 0x7C80
 
 /**
