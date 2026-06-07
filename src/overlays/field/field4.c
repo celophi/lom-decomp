@@ -59,6 +59,21 @@ typedef struct
     u16 unk1EC;
 } Struct_1EC;
 
+typedef struct
+{
+  u8 unk0;
+  u8 unk1;
+  s16 unk2;
+  s16 unk4;
+} Struct_Unk3;
+typedef struct
+{
+  u8 pad[4];
+  Struct_Unk3 *unk4;
+  u16 *unk8;
+} Struct_Arg0;
+
+extern s32 D_801227C8;
 extern s32 D_800F22B8;
 extern s32 D_800F22BC;
 extern s32 D_800F22C0;
@@ -260,5 +275,69 @@ void func_800684E4(Struct_arg0* arg0, s32 arg1, s32 arg2, s16* arg3)
             var_t8++;
             var_t4++;
         } while (var_t6 < 16);
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/t5bIj
+ */
+s32 func_80068734(Struct_Arg0* arg0, s32 arg1, u16 arg2)
+{
+    s32 var_s4;
+    Struct_Unk3* temp_s3;
+    s32 var_s2;
+    s32 temp_s1;
+    u16* var_s0;
+    s32 var_a1;
+    u16 var_a2;
+    u16 temp_a0;
+    s32 temp_v1_2;
+    u16 temp_v1_3;
+    s32 rand_val;
+    var_s4 = 0;
+    temp_s3 = arg0->unk4 + arg1;
+    var_s2 = var_s4;
+    var_a1 = temp_s3->unk0 & 0x7F;
+    var_s0 = arg0->unk8 + temp_s3->unk1;
+    if (var_a1 != 0)
+    {
+        var_a2 = *((u16*)((((u8*)arg0) + (D_80105788 * 2)) + 0x1EC));
+        do
+        {
+            if (!arg0)
+            {
+            }
+            temp_a0 = *var_s0;
+            temp_v1_2 = var_s4 + (temp_a0 & 0x3FF);
+            if (((s32)var_a2) < temp_v1_2)
+            {
+                break;
+            }
+            var_s4 = temp_v1_2;
+            var_s2 = temp_a0 >> 10;
+            var_a1--;
+            var_s0++;
+        } while (var_a1 != 0);
+    }
+    temp_s1 = temp_s3->unk2 - temp_s3->unk4;
+    var_s2 = (temp_s1 * var_s2) >> 5;
+    if (var_a1 == 0)
+    {
+        return temp_s3->unk4;
+    }
+    if (((*((u16*)temp_s3)) & 0x80) && (D_801227C8 == 0))
+    {
+        rand_val = rand();
+        return temp_s3->unk4 +
+               (((var_s2 + (((((temp_s1 * ((*var_s0) >> 10)) >> 5) - var_s2) * ((*((u16*)((((u8*)arg0) + (D_80105788 * 2)) + 0x1EC))) - var_s4)) /
+                            ((*var_s0) & 0x3FF))) *
+                 rand_val) >>
+                15);
+    }
+    else
+    {
+        temp_v1_3 = *var_s0;
+        return (temp_s3->unk4 + var_s2) +
+               (((((temp_s1 * (temp_v1_3 >> 10)) >> 5) - var_s2) * ((*((u16*)((((u8*)arg0) + (D_80105788 * 2)) + 0x1EC))) - var_s4)) / (temp_v1_3 & 0x3FF));
     }
 }
