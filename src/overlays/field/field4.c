@@ -75,7 +75,7 @@ extern Struct_D_800F2270 D_800F2270;
 /**
  * decomp.me (100%) https://decomp.me/scratch/9Ady0
  */
-void func_8006828C(void)
+void field_func_8006828C(void)
 {
     UnkStruct_801ED600* ptr = (UnkStruct_801ED600*)0x801ED600;
 
