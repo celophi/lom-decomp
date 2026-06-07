@@ -35,7 +35,6 @@ typedef struct
     s16 unk6;
 } Struct_D_800F2270;
 
-
 extern s32 D_800F22B8;
 extern s32 D_800F22BC;
 extern s32 D_800F22C0;
@@ -43,6 +42,8 @@ extern s32 D_800F22C4;
 extern s32 D_800F2284;
 extern s32 D_800F22B4;
 extern s32 D_8012291C;
+extern s32 D_8003EC98;
+extern s32 D_8011588C;
 extern Struct_D_800F2268 D_800F2268;
 extern Struct_D_800F2270 D_800F2270;
 
@@ -131,4 +132,24 @@ void func_800683F0(void)
     D_800F2268.unk6 = 8;
     func_800643E0();
     D_8012291C = 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/KDXt0
+ */
+void func_80068440(void)
+{
+    s32 temp_v0;
+
+    if (D_8003EC98 != 0)
+    {
+        temp_v0 = D_8003EC98 - 1;
+        D_8003EC98 = temp_v0;
+        if (temp_v0 == 0)
+        {
+            FUN_8001160c();
+            func_800A380C();
+            func_800A3904(0, 1, D_8011588C);
+        }
+    }
 }
