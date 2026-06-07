@@ -41,6 +41,24 @@ typedef struct
     u16 unk1EC;
 } Struct_80068494;
 
+typedef struct
+{
+    u8 unk0;
+    u8 unk1;
+    u8 pad[4];
+} Struct_Unk4;
+typedef struct
+{
+    u8 pad[4];
+    Struct_Unk4* unk4;
+    u16* unk8;
+} Struct_arg0;
+typedef struct
+{
+    u8 pad[0x1EC];
+    u16 unk1EC;
+} Struct_1EC;
+
 extern s32 D_800F22B8;
 extern s32 D_800F22BC;
 extern s32 D_800F22C0;
@@ -166,4 +184,78 @@ void func_80068440(void)
 s32 func_80068494(s32 arg0, s32 arg1)
 {
     return ((Struct_80068494*)((u8*)arg0 + D_80105788 * 2))->unk1EC % arg1;
+}
+
+void func_800684E4(Struct_arg0* arg0, s32 arg1, s32 arg2, s16* arg3)
+{
+    s32 var_t9 = 0;
+    s32 var_t1 = 4;
+    s16* var_t7;
+    s32 var_t6;
+    s32 new_var;
+    Struct_Unk4* temp_v0;
+    s32 var_t0 = (&arg0->unk4[arg1 & 0xF])->unk0 & 0x7F;
+    u16* var_t5 = &arg0->unk8[(&arg0->unk4[arg1 & 0xF])->unk1];
+    new_var = arg1;
+    if (var_t0 != 0)
+    {
+        do
+        {
+            u16 temp = *var_t5;
+            s32 temp_v1 = var_t9 + (temp & 0x3FF);
+            if (((Struct_1EC*)(((u8*)arg0) + (D_80105788 * 2)))->unk1EC < temp_v1)
+            {
+                break;
+            }
+            var_t9 = temp_v1;
+            var_t5++;
+            var_t1 += 4;
+            var_t0--;
+            if (var_t1 == 16)
+            {
+                var_t1 = 4;
+            }
+        } while (var_t0 != 0);
+    }
+    if (var_t0 != 0)
+    {
+        s32 temp_a1 = new_var & 0xFFFF;
+        u16* var_t8 = (u16*)(arg2 + (((temp_a1 >> var_t1) & 0xF) << 5));
+        u16* var_t4;
+        s32 temp_v1_2;
+        if ((var_t1 + 4) != 16)
+        {
+            var_t4 = (u16*)(arg2 + (((temp_a1 >> (var_t1 + 4)) & 0xF) << 5));
+        }
+        else
+        {
+            var_t4 = (u16*)(arg2 + ((temp_a1 << 1) & 0x1E0));
+        }
+        var_t7 = arg3;
+        var_t6 = 0;
+        do
+        {
+            u16 a = *var_t8;
+            u16 b = *var_t4;
+            s32 low_a = a & 0x1F;
+            s32 low_b = b & 0x1F;
+            s32 diff0 = low_b - low_a;
+            s32 temp_t0 = ((Struct_1EC*)(((u8*)arg0) + (D_80105788 * 2)))->unk1EC - var_t9;
+            s32 temp_a1_2 = (*var_t5) & 0x3FF;
+            s32 temp_t3 = (diff0 * temp_t0) / temp_a1_2;
+            s32 mid_a = (a >> 5) & 0x1F;
+            s32 mid_b = (b >> 5) & 0x1F;
+            s32 diff1 = mid_b - mid_a;
+            s32 temp_t2 = (diff1 * temp_t0) / temp_a1_2;
+            s32 high_a = (a >> 10) & 0x1F;
+            s32 high_b = (b >> 10) & 0x1F;
+            s32 diff2 = high_b - high_a;
+            s32 temp_a1_3 = (diff2 * temp_t0) / temp_a1_2;
+            *var_t7 = (((a & 0x8000) | (low_a + temp_t3)) | ((mid_a + temp_t2) << 5)) | ((high_a + temp_a1_3) << 10);
+            var_t7++;
+            var_t6++;
+            var_t8++;
+            var_t4++;
+        } while (var_t6 < 16);
+    }
 }
