@@ -1015,28 +1015,31 @@ void func_8014139C(void)
  *         (prim_buf + 0x1C).
  * @see decomp.me (100%) https://decomp.me/scratch/oXGkF
  */
-void* emit_cursor_glyph(void* prim, s32* ot, s16 x, s16 y)
+void* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
 {
     P_TAG* new_var;
     u32 clut_word;
     SPRT* sprt = (SPRT*)prim;
-    *((u32*)(((u8*)sprt) + 4)) = (u32)(((((u32)0x80) << 16) | (((u32)0x80) << 8)) | ((u32)0x80));
-    ((P_TAG*)sprt)->len = (u_char)4, ((P_TAG*)sprt)->code = (u_char)0x64;
-    sprt->x0 = x;
-    sprt->y0 = y;
+    
+    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+    setSprt(sprt);
+    setXY0(sprt, x, y);
+    
     sprt->u0 = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 0];
     sprt->v0 = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 1];
     sprt->w = (s16)g_glyph_table[(20 * (sizeof(GlyphInfo))) + 2];
-    new_var = (P_TAG*)ot;
+    
     clut_word = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 3];
     sprt->h = (s16)clut_word;
     clut_word = *((u32*)(&g_glyph_table[(20 * (sizeof(GlyphInfo))) + 4]));
-    sprt->clut = (u16)((clut_word & 0x3F) | 0x7C80);
-    ((P_TAG*)sprt)->addr = (u_long)((u_long)new_var->addr), new_var->addr = (u_long)sprt;
-    prim = ((u8*)prim) + 0x14;
-    ((P_TAG*)prim)->len = (u_char)1, ((u_long*)prim)[1] = ((0xe1000000 | ((0) ? (0x0200) : (0))) | ((0) ? (0x0400) : (0))) | (5 & 0x9ff);
-    ((P_TAG*)prim)->addr = (u_long)((u_long)((P_TAG*)ot)->addr), new_var->addr = (u_long)prim;
-    return ((u8*)prim) + 8;
+    sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
+    addPrim(ot, sprt);
+    
+    prim += sizeof(SPRT) / sizeof(u_long);
+    setDrawTPage(prim, 0, 0, 5);
+    addPrim(ot, prim);
+    
+    return prim + sizeof(DR_TPAGE) / sizeof(u_long);
 }
 
 /**
