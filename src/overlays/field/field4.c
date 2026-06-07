@@ -16,8 +16,11 @@ s32 cdrom_stream(s32 resourceIndex, u32 destination);
 void cdrom_wait_queue_empty(void);
 extern void func_80084240(void); /* Fixed prototype */
 void func_80140004(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex);
+void func_800A74E8();
+void func_800AA02C();
 
-typedef struct {
+typedef struct
+{
     s16 unk0;
     s16 unk2;
     s16 unk4;
@@ -92,4 +95,13 @@ void func_80068310(s32 arg0)
             }
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/doJjR
+ */
+void func_800683C8(void)
+{
+    func_800AA02C();
+    func_800A74E8();
 }
