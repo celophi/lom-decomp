@@ -998,55 +998,44 @@ void func_8014139C(void)
 }
 
 /**
- * decomp.me (83.21%) https://decomp.me/scratch/oXGkF
+ * @brief Emit the text cursor glyph (g_glyph_table[NAME_CURSOR_GLYPH_COUNT]) as a SPRT + DR_TPAGE pair.
+ *
+ * Writes a 20-byte SPRT primitive at @p prim using the UV, size, and CLUT
+ * data from g_glyph_table[NAME_CURSOR_GLYPH_COUNT], then writes an 8-byte
+ * DR_TPAGE packet (texture page 5) immediately after. Both primitives are
+ * linked into @p ot via addPrim.
+ *
+ * @param prim  Write position in the primitive buffer; must have at least
+ *              sizeof(SPRT) + sizeof(DR_TPAGE) (28 bytes) available.
+ * @param ot    Pointer to the OT slot to chain both primitives into.
+ * @param x     Screen X position for the cursor sprite.
+ * @param y     Screen Y position for the cursor sprite.
+ * @return Pointer past the last written primitive (prim advanced by 7 u_longs).
+ * @see decomp.me (100%) https://decomp.me/scratch/oXGkF
  */
-void* func_80141848(void* arg0, s32* arg1, s16 arg2, s16 arg3)
+u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
 {
-    unsigned char* bp = (unsigned char*)arg0;
-    unsigned int mask_lo;
-    unsigned int mask_hi;
-    unsigned char* D = g_glyph_table;
-    unsigned int t0;
-    unsigned int w0;
-    unsigned int w1;
-    *((unsigned int*)(bp + 4)) = 0x00808080U;
-    bp[3] = 4;
-    bp[7] = 0x64;
-    *((s16*)(bp + 8)) = arg2;
-    *((s16*)(bp + 10)) = arg3;
-    bp[12] = D[0xa0];
-    mask_lo = 0x00ffffff;
-    bp[13] = D[0xa1];
-    *((s16*)(bp + 16)) = (s16)D[0xa2];
-    t0 = 0xe1000000;
-    *((s16*)(bp + 18)) = (s16)D[0xa3];
-    mask_hi = 0xff000000;
-    w0 = *((unsigned int*)(&D[0xa4]));
-    w1 = *((unsigned int*)bp);
-    w0 = (w0 & 0x3f) | 0x7c80;
-    *((s16*)(bp + 14)) = (s16)w0;
-    w0 = *((unsigned int*)arg1);
-    w1 = w1 & mask_hi;
-    w0 = w0 & mask_lo;
-    *((unsigned int*)bp) = w1 | w0;
-    w1 = ((unsigned int)bp) & mask_lo;
-    w0 = *((unsigned int*)arg1);
-    bp += 0x14;
-    w0 = w0 & mask_hi;
-    *((unsigned int*)arg1) = w0 | w1;
-    bp[3] = 1;
-    w1 = *((unsigned int*)bp);
-    t0 |= 5;
-    *((unsigned int*)(bp + 4)) = t0;
-    w0 = *((unsigned int*)arg1);
-    w1 = w1 & mask_hi;
-    w0 = w0 & mask_lo;
-    *((unsigned int*)bp) = w1 | w0;
-    w0 = *((unsigned int*)arg1);
-    w1 = ((unsigned int)bp) & mask_lo;
-    w0 = w0 & mask_hi;
-    *((unsigned int*)arg1) = w0 | w1;
-    return (void*)(bp + 8);
+    u32 clut;
+    SPRT* sprt = (SPRT*)prim;
+    
+    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+    setSprt(sprt);
+    setXY0(sprt, x, y);
+    
+    setUV0(sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u,
+                 g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v);
+    setWH(sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w,
+              g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h);
+    
+    clut = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut & GLYPH_CLUT_X_MASK;
+    sprt->clut = clut | GLYPH_CLUT_PAGE_BITS;
+    addPrim(ot, sprt);
+    
+    prim += sizeof(SPRT) / sizeof(u_long);
+    setDrawTPage(prim, 0, 0, 5);
+    addPrim(ot, prim);
+    
+    return prim + sizeof(DR_TPAGE) / sizeof(u_long);
 }
 
 /**
@@ -1110,11 +1099,11 @@ void gname_render(void* ctx)
     cursor_x = g_cursor_x;
     ctx2 = ctx;
     /* 2. Static glyph + append animation, then func_80141C34. */
-    cursor_sprite =
-        func_80141C34(emit_draw_mode_prim(draw_char_append_anim(
-                                              func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
-                                          ((char*)ctx2) + 0x34),
-                      ctx);
+    cursor_sprite = func_80141C34(
+        emit_draw_mode_prim(
+            draw_char_append_anim(func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
+            ((char*)ctx2) + 0x34),
+        ctx);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
     tmp_ptr = ((char*)cursor_sprite) + 0x14;
     *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
@@ -1126,13 +1115,13 @@ void gname_render(void* ctx)
         s32 tmp = g_cursor_y;
         *((s16*)(((char*)cursor_sprite) + 10)) = tmp;
     }
-    *((u8*)(((char*)cursor_sprite) + 12)) = g_glyph_table[0xA0];
-    *((u8*)(((char*)cursor_sprite) + 13)) = g_glyph_table[0xA1];
-    *((s16*)(((char*)cursor_sprite) + 16)) = (s16)g_glyph_table[0xA2];
-    *((s16*)(((char*)cursor_sprite) + 18)) = (s16)g_glyph_table[0xA3];
+    *((u8*)(((char*)cursor_sprite) + 12)) = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u;
+    *((u8*)(((char*)cursor_sprite) + 13)) = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v;
+    *((s16*)(((char*)cursor_sprite) + 16)) = (s16)g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w;
+    *((s16*)(((char*)cursor_sprite) + 18)) = (s16)g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h;
     {
-        u32 tmp = *((u32*)(g_glyph_table + 0xA4));
-        *((s16*)(((char*)cursor_sprite) + 14)) = (s16)((tmp & 0x3F) | 0x7C80);
+        u32 tmp = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut;
+        *((s16*)(((char*)cursor_sprite) + 14)) = (s16)((tmp & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
     }
     ctx_bytes = (char*)ctx2;
     {
@@ -1489,7 +1478,7 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
     /* Force a `lw` load on the clut word - accessing as u32 keeps the
        full word live so gcc doesn't shrink to `lhu`. */
     clut_word = *(u32*)(entry + 4);
-    sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
+    sprt->clut = (u16)((clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
 
     /* Chain the primary SPRT into the OT linked list. */
     addPrim((u_long*)arg1, (u_long*)arg0);
@@ -1519,7 +1508,7 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
         /* new_var2 and clut_word2=arg3 are load-bearing temporaries: they
            force entry2 to be derived here (after tmp2) and reuse a register
            copy of arg3 for x0, matching the target's register allocation. */
-        new_var2 = g_glyph_table;
+        new_var2 = (u8*)g_glyph_table;
         clut_word2 = arg3;
         entry2 = (u8*)((arg2 << 3) + (u32)new_var2);
         ((SPRT*)ptr)->x0 = (s16)(clut_word2 + tmp2);
@@ -1529,7 +1518,7 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
         ((SPRT*)ptr)->w = (s16)entry2[2];
         ((SPRT*)ptr)->h = (s16)entry2[3];
         clut_word2 = *(u32*)(entry2 + 4);
-        ((SPRT*)ptr)->clut = (u16)((clut_word2 & 0x3F) | GLYPH_CLUT_PAGE_BITS);
+        ((SPRT*)ptr)->clut = (u16)((clut_word2 & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
 
         /* Chain the secondary SPRT into the OT linked list. */
         addPrim((u_long*)arg1, (u_long*)ptr);
@@ -1601,7 +1590,7 @@ void draw_name_cursor_row(RenderContext* ctx)
 
     seq = g_name_cursor_glyphs;
     i = 0;
-    glyph_table_base = g_glyph_table;
+    glyph_table_base = (u8*)g_glyph_table;
 
     ptr_t1 += sizeof(DR_TWIN);
 
@@ -1644,7 +1633,7 @@ void draw_name_cursor_row(RenderContext* ctx)
                target's instruction scheduling. */
             u32 clut_word = *(u32*)(glyph + 4);
             seq++;
-            sprt->clut = (u16)((clut_word & 0x3F) | GLYPH_CLUT_PAGE_BITS);
+            sprt->clut = (u16)((clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
         }
 
         addPrim(&obj2->ot[0x0F], sprt);
