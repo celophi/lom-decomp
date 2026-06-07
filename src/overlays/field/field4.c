@@ -186,6 +186,9 @@ s32 func_80068494(s32 arg0, s32 arg1)
     return ((Struct_80068494*)((u8*)arg0 + D_80105788 * 2))->unk1EC % arg1;
 }
 
+/**
+ * decomp.me (100%) https://decomp.me/scratch/X9uyL
+ */
 void func_800684E4(Struct_arg0* arg0, s32 arg1, s32 arg2, s16* arg3)
 {
     s32 var_t9 = 0;
