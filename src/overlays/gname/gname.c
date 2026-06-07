@@ -1013,56 +1013,30 @@ void func_8014139C(void)
  * @param y         Screen Y position for the cursor sprite.
  * @return Pointer to the next free byte in the primitive buffer
  *         (prim_buf + 0x1C).
- * @see decomp.me (83.21%) https://decomp.me/scratch/oXGkF
+ * @see decomp.me (100%) https://decomp.me/scratch/oXGkF
  */
-void* emit_cursor_sprite(void* prim_buf, s32* ot_entry, s16 x, s16 y)
+void* emit_cursor_glyph(void* prim, s32* ot, s16 x, s16 y)
 {
-    SPRT* sprt = (SPRT*)prim_buf;
-    unsigned char* glyph = g_glyph_table;
-    unsigned int mask_lo;
-    unsigned int mask_hi;
-    unsigned int draw_mode_cmd;
-    unsigned int clut_word;
-    unsigned int w0;
-    unsigned int w1;
-
-    /* SET_BGR0_PACKED emits one word store (0x00808080), matching the original
-     * `*(u32*)(p+4) = 0x808080` before setSprt overwrites the code byte. */
-    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-    setSprt(sprt);
-    setXY0(sprt, x, y);
-    sprt->u0 = glyph[0xa0];
-    mask_lo = 0x00ffffff;
-    sprt->v0 = glyph[0xa1];
-    sprt->w = (s16)glyph[0xa2];
-    draw_mode_cmd = 0xe1000000;
-    sprt->h = (s16)glyph[0xa3];
-    mask_hi = 0xff000000;
-    clut_word = *((unsigned int*)(&glyph[0xa4]));
-    w1 = *((unsigned int*)sprt);
-    SET_SPRT_CLUT(sprt, (clut_word & 0x3f) | 0x7c80);
-    w0 = *((unsigned int*)ot_entry);
-    w1 = w1 & mask_hi;
-    w0 = w0 & mask_lo;
-    *((unsigned int*)sprt) = w1 | w0;
-    w1 = ((unsigned int)sprt) & mask_lo;
-    w0 = *((unsigned int*)ot_entry);
-    sprt++;
-    w0 = w0 & mask_hi;
-    *((unsigned int*)ot_entry) = w0 | w1;
-    ((u8*)sprt)[3] = 1;
-    w1 = *((unsigned int*)sprt);
-    draw_mode_cmd |= 5;
-    *((unsigned int*)((u8*)sprt + 4)) = draw_mode_cmd;
-    w0 = *((unsigned int*)ot_entry);
-    w1 = w1 & mask_hi;
-    w0 = w0 & mask_lo;
-    *((unsigned int*)sprt) = w1 | w0;
-    w0 = *((unsigned int*)ot_entry);
-    w1 = ((unsigned int)sprt) & mask_lo;
-    w0 = w0 & mask_hi;
-    *((unsigned int*)ot_entry) = w0 | w1;
-    return (void*)((u8*)sprt + 8);
+    P_TAG* new_var;
+    u32 clut_word;
+    SPRT* sprt = (SPRT*)prim;
+    *((u32*)(((u8*)sprt) + 4)) = (u32)(((((u32)0x80) << 16) | (((u32)0x80) << 8)) | ((u32)0x80));
+    ((P_TAG*)sprt)->len = (u_char)4, ((P_TAG*)sprt)->code = (u_char)0x64;
+    sprt->x0 = x;
+    sprt->y0 = y;
+    sprt->u0 = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 0];
+    sprt->v0 = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 1];
+    sprt->w = (s16)g_glyph_table[(20 * (sizeof(GlyphInfo))) + 2];
+    new_var = (P_TAG*)ot;
+    clut_word = g_glyph_table[(20 * (sizeof(GlyphInfo))) + 3];
+    sprt->h = (s16)clut_word;
+    clut_word = *((u32*)(&g_glyph_table[(20 * (sizeof(GlyphInfo))) + 4]));
+    sprt->clut = (u16)((clut_word & 0x3F) | 0x7C80);
+    ((P_TAG*)sprt)->addr = (u_long)((u_long)new_var->addr), new_var->addr = (u_long)sprt;
+    prim = ((u8*)prim) + 0x14;
+    ((P_TAG*)prim)->len = (u_char)1, ((u_long*)prim)[1] = ((0xe1000000 | ((0) ? (0x0200) : (0))) | ((0) ? (0x0400) : (0))) | (5 & 0x9ff);
+    ((P_TAG*)prim)->addr = (u_long)((u_long)((P_TAG*)ot)->addr), new_var->addr = (u_long)prim;
+    return ((u8*)prim) + 8;
 }
 
 /**
@@ -1126,11 +1100,11 @@ void gname_render(void* ctx)
     cursor_x = g_cursor_x;
     ctx2 = ctx;
     /* 2. Static glyph + append animation, then func_80141C34. */
-    cursor_sprite =
-        func_80141C34(emit_draw_mode_prim(draw_char_append_anim(
-                                              func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
-                                          ((char*)ctx2) + 0x34),
-                      ctx);
+    cursor_sprite = func_80141C34(
+        emit_draw_mode_prim(
+            draw_char_append_anim(func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
+            ((char*)ctx2) + 0x34),
+        ctx);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
     tmp_ptr = ((char*)cursor_sprite) + 0x14;
     *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
