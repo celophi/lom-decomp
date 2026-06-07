@@ -6251,62 +6251,64 @@ void* func_80149D90(void* arg0, s32* arg1, s16 arg2, s16 arg3)
     return p + 0x14;
 }
 
-void func_8014A044(void*, s32*);
-
 typedef struct
 {
     s16 x;
     s16 y;
 } Vec2s;
 
+/**
+ * @brief State block for a scrollable circular linked-list widget.
+ * @note Fields 0x14/0x16/0x18 (target_x, target_y, lerp_steps) are written
+ *       by func_8014A044 to drive smooth-scroll interpolation.
+ */
 typedef struct
 {
-    u32 pad;    /* 0x00 */
-    u16 unk_04; /* 0x04 */
-    u16 unk_06; /* 0x06 */
-    u16 unk_08; /* 0x08 */
-    u16 unk_0A; /* 0x0A */
-    u16 unk_0C; /* 0x0C */
-    s16 unk_0E; /* 0x0E */
-    u16 unk_10; /* 0x10 */
-    u16 unk_12; /* 0x12 */
-} StructA;
+    u32 pad;         /* 0x00 */
+    u16 sel_idx;     /* 0x04 - currently selected item index */
+    u16 item_count;  /* 0x06 - total items; lower 9 bits active (& 0x1FF) */
+    u16 base_x;      /* 0x08 - widget screen base x */
+    u16 base_y;      /* 0x0A - widget screen base y */
+    s16 unk_0C;      /* 0x0C - TODO: used in func_8014A044 x-lerp target calc */
+    s16 viewport_h;  /* 0x0E - visible list height; (viewport_h - 16) >> 4 = fast-scroll step */
+    u16 scroll_x;    /* 0x10 - current applied x scroll offset */
+    u16 scroll_y;    /* 0x12 - current applied y scroll offset */
+    s16 target_x;    /* 0x14 - x scroll lerp target (set by func_8014A044) */
+    s16 target_y;    /* 0x16 - y scroll lerp target (set by func_8014A044) */
+    u8  lerp_steps;  /* 0x18 - remaining lerp steps; always reset to 4 */
+} ScrollListState;
 
-typedef struct
-{
-    s16 unk_00; /* 0x00 */
-    s16 unk_02; /* 0x02 */
-} StructB;
+void func_8014A044(ScrollListState*, u32*);
 
 /**
- * @brief Process D-pad/shoulder scroll input for a list widget and call func_8014A10C to render it.
- * @param arg0 Primitive buffer pointer passed to func_8014A10C.
- * @param arg1 Ordering-table pointer passed to func_8014A10C.
- * @param arg2 Scroll-list state block; fields at 0x4/0x6 are current/max index,
- *             0x8/0xA are base x/y, 0xE is scroll speed hint, 0x10/0x12 are view offsets.
- * @param arg3 Pointer to the list entry array; each entry is a u32 with linked
- *             neighbor indices packed at bits [22:14] (previous) and [30:23] (next).
- * @param arg4 Two-halfword view-origin: s16 x at offset 0, u16 y at offset 2.
- * @param arg5 Non-zero enables input processing; zero skips it.
- * @note Reads g_pad_input bits 8/4 (shoulder buttons) to enable fast-scroll;
- *       bits 0x5000 (PAD_BTN_UP|DOWN) advance the list index via the linked entries.
- *       Writes g_menu_default_view_pos with the viewport origin of the current item.
+ * @brief Process shoulder/D-pad scroll input for a list widget and draw its animated cursor.
+ * @param prim_buf    Primitive buffer write cursor; forwarded to func_8014A10C.
+ * @param ot          Ordering-table pointer; forwarded to func_8014A10C.
+ * @param state       Scroll-list state block.
+ * @param entries     Packed circular linked-list entry array (D_80168C70).
+ *                    Each u32: bits [13:0] = item y position, [22:14] = prev index (9 bits),
+ *                    [31:23] = next index (9 bits).
+ * @param view_origin Viewport anchor in list-local coordinates.
+ * @param active      Non-zero to process input this frame; zero draws cursor only.
+ * @note R1 (PADR1) injects PADLdown for fast-scroll down; L1 (PADL1) injects PADLup for fast-scroll up.
+ *       MENU_PAD_CONFIRM_CANCEL advances the linked-list index; PADLleft is remapped to PAD_BTN_CIRCLE.
+ *       Writes g_menu_default_view_pos with the selected item's screen coordinates.
  * @see decomp.me (96.52%) https://decomp.me/scratch/tfyt3
  */
-void func_80149E10(int arg0, int arg1, StructA* arg2, u32* arg3, StructB* arg4, int arg5)
+void scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
 {
     int count;
-    if (arg5)
+    if (active)
     {
-        if (g_pad_input & 0x8)
+        if (g_pad_input & PADR1)
         {
-            g_pad_input = 0x4000;
-            count = (arg2->unk_0E - 16) >> 4;
+            g_pad_input = PADLdown;
+            count = (state->viewport_h - 16) >> 4;
         }
-        else if (g_pad_input & 0x4)
+        else if (g_pad_input & PADL1)
         {
-            g_pad_input = 0x1000;
-            count = (arg2->unk_0E - 16) >> 4;
+            g_pad_input = PADLup;
+            count = (state->viewport_h - 16) >> 4;
         }
         else
         {
@@ -6314,22 +6316,22 @@ void func_80149E10(int arg0, int arg1, StructA* arg2, u32* arg3, StructB* arg4, 
         }
         while (count != 0)
         {
-            if (g_pad_input & 0x5000)
+            if (g_pad_input & MENU_PAD_CONFIRM_CANCEL)
             {
-                if (g_pad_input & 0x1000)
+                if (g_pad_input & PADLup)
                 {
-                    arg2->unk_04 = (arg3[arg2->unk_04] >> 14) & 0x1FF;
+                    state->sel_idx = (entries[state->sel_idx] >> 14) & 0x1FF;
                 }
                 else
                 {
-                    arg2->unk_04 = arg3[arg2->unk_04] >> 23;
+                    state->sel_idx = entries[state->sel_idx] >> 23;
                 }
-                func_8014A044(arg2, arg3);
-                if (arg2->unk_04 == ((arg2->unk_06 & 0x1FF) - 1))
+                func_8014A044(state, entries);
+                if (state->sel_idx == ((state->item_count & 0x1FF) - 1))
                 {
                     count = 1;
                 }
-                if (arg2->unk_04 == 0)
+                if (state->sel_idx == 0)
                 {
                     count = 1;
                 }
@@ -6337,16 +6339,16 @@ void func_80149E10(int arg0, int arg1, StructA* arg2, u32* arg3, StructB* arg4, 
             count--;
         }
 
-        if (g_pad_input & 0x5000)
+        if (g_pad_input & MENU_PAD_CONFIRM_CANCEL)
         {
-            func_8014F210(0x7D, 0x80);
+            func_8014F210(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
         }
-        if (g_pad_input & 0x8000)
+        if (g_pad_input & PADLleft)
         {
-            g_pad_input |= 0x40;
+            g_pad_input |= PAD_BTN_CIRCLE;
         }
     }
-    func_8014A10C(arg0, arg1, (4 - arg4->unk_00) - arg2->unk_10, ((arg3[arg2->unk_04] & 0x3FFF) - arg4->unk_02) - arg2->unk_12, arg5);
-    g_menu_default_view_pos.x = (arg2->unk_08 + ((4 - (arg4->unk_00 & 0xFFFFFFFF)) - arg2->unk_10)) + 8;
-    g_menu_default_view_pos.y = (arg2->unk_0A + (((arg3[arg2->unk_04] & 0x3FFF) - arg4->unk_02) - arg2->unk_12)) + 8;
+    func_8014A10C(prim_buf, ot, (4 - view_origin->x) - state->scroll_x, ((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y, active);
+    g_menu_default_view_pos.x = (state->base_x + ((4 - (view_origin->x & 0xFFFFFFFF)) - state->scroll_x)) + 8;
+    g_menu_default_view_pos.y = (state->base_y + (((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y)) + 8;
 }
