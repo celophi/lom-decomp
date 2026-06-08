@@ -740,3 +740,24 @@ void func_8006911C(void)
         var_v1_2 += 0x244;
     } while (var_a0_2 < 0x50);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/0JqYo
+ */
+void func_80069184(void)
+{
+    s32 var_a0 = 0;
+    func_80068970_Arg0* var_v1 = D_800F22C8;
+
+    do
+    {
+        var_a0 += 1;
+        var_v1->unk24 = 0;
+        var_v1->unk232 = 0;
+        var_v1->unk23A = 0;
+        var_v1->unk23B = 0;
+        var_v1->pad25[2] = 0;
+        var_v1->pad25[3] = 0;
+        var_v1++;
+    } while (var_a0 < 0x50);
+}
