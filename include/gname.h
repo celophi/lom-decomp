@@ -274,7 +274,7 @@ extern void func_800A3938(int, int);
 extern void func_8014139C(void);
 extern s32 name_char_count(u8*);
 extern s32 name_is_blank(u8*);
-extern s32 func_80140AB8(s32, s32);
+extern s32 handle_char_set_input(s32 mode, s32 buttons);
 extern void name_copy(u8*, u8*);
 
 #endif
