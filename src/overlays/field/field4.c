@@ -710,3 +710,33 @@ void func_80069028(MainStruct2* arg0)
         }
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/3KrRM
+ */
+void func_8006911C(void)
+{
+    s32 var_a0;
+    s32 var_a0_2;
+    func_80068970_Arg0* new_var;
+    volatile u8* var_v1_2;
+    var_a0 = 0;
+    do
+    {
+        D_80105AE0[var_a0].u.unk178 &= ~1;
+        var_a0++;
+    } while (var_a0 < 0xD);
+    var_a0_2 = 0;
+    new_var = D_800F22C8;
+    var_v1_2 = ((u8*)new_var) + 0x238;
+    do
+    {
+        var_v1_2[-5] = var_a0_2;
+        var_a0_2++;
+        var_v1_2[-0x213] = 0;
+        var_v1_2[-0x214] = 0;
+        *((volatile u16*)(var_v1_2 - 0x16)) = 0;
+        *((volatile u16*)var_v1_2) = 0;
+        var_v1_2 += 0x244;
+    } while (var_a0_2 < 0x50);
+}
