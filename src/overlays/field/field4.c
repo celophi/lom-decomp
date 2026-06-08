@@ -21,6 +21,18 @@ void func_800AA02C();
 
 typedef struct
 {
+    char pad_00[0x1EC];
+    u16 unk1EC[35]; /* 0x1EC - Array size bound by 0x232 offset */
+    u8 unk232;      /* 0x232 */
+    char pad_233;   /* 0x233 */
+    u16 unk234;     /* 0x234 */
+    u16 unk236;     /* 0x236 */
+    u16 unk238;     /* 0x238 */
+    u8 unk23A;      /* 0x23A */
+} MainStruct2;
+
+typedef struct
+{
     s16 unk0;
     s16 unk2;
     s16 unk4;
@@ -660,6 +672,41 @@ void func_80068F94(MainStruct* arg0)
         for (j = 0; j < 9; j++)
         {
             arg0->unk2B[i] = (arg0->inner2[j][i] = (arg0->inner1[j][i] = 0));
+        }
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/PjqLA
+ */
+void func_80069028(MainStruct2* arg0)
+{
+    s32 var_a0;
+
+    if (func_80068970() == 0)
+    {
+        /* Removed the redundant 'if (arg0->unk232 != 0)' wrapper */
+        for (var_a0 = 0; var_a0 < arg0->unk232; var_a0++)
+        {
+            if (((s32)arg0->unk23A >> var_a0) & 1)
+            {
+                arg0->unk1EC[var_a0]++;
+            }
+        }
+
+        /* Incremented before checking conditions to match delay slot scheduling */
+        arg0->unk236++;
+
+        if (arg0->unk238 != 0 && arg0->unk232 != 0)
+        {
+            if ((arg0->unk236 % arg0->unk238) == 0)
+            {
+                s32 temp_a0 = arg0->unk236 / arg0->unk238;
+                if (temp_a0 < arg0->unk232)
+                {
+                    arg0->unk23A |= (1 << temp_a0);
+                }
+            }
         }
     }
 }
