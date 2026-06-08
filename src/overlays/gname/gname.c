@@ -369,74 +369,81 @@ void reset_run_state(void)
     g_char_panel = 0;
 }
 
+inline int inline_fn(s32 arg0)
+{
+  return arg0 * 2;
+}
+
+
 /**
- * decomp.me (85.93%) https://decomp.me/scratch/JHyuJ
- * WARNING. MIGHT NOT BE FUNCTIONALLY EQUIVALENT YET.
+ * decomp.me (92.81%) https://decomp.me/scratch/QbLPO
  */
 s32 func_80140AB8(s32 arg0, s32 arg1)
 {
-    /* s-register mapped locals */
-    s32 repeat;         /* s0: loop condition, init 0xFF */
-    s32 reg_s1;         /* s1: arg0 */
-    s32 reg_s2;         /* s2: arg1 */
-    u32 reg_s6;         /* s6: (u32)(&D_80142F04) - 0x10 */
-    const s32 five = 5; /* s7 */
-    const s32 four = 4; /* s8 */
-
-    /* Other locals */
-    u8* new_var14;
-    const s32 new_var5;
+    s32 repeat;
+    u8* new_var12;
+    s32 reg_s1;
+    u32(*new_var13)[];
+    s32 reg_s2;
+    s32 five;
+    s32 four;
+    int new_var17;
+    u32 reg_s6;
+    u32(*new_var9)[];
     s32 var_a0;
     void* var_a1;
     s32 temp_a0;
     s32 temp_v0;
     s32 temp_v0_2;
     s32 temp_v1;
-    u32 new_var;
+    u8* new_var2;
     s32 temp_v1_2;
+    s32 new_var4;
     int new_var10;
     s32 temp_v1_3;
     s32 temp_v1_5;
+    u8** new_var;
     s32 var_v0;
     s32 var_v0_2;
-    s32 var_v0_3;
+    long var_v0_3;
     int new_var8;
+    int new_var6;
     s32 var_v0_4;
+    int new_var14;
     s32 var_v0_5;
     int new_var3;
-    s32 var_v0_6;
     s32 var_v0_7;
-    u8* new_var9;
-    const s32 new_var2;
-    s32 var_v0_8;
-    u8* new_var13;
+    int new_var11;
     s32 var_v1;
     void* temp_v1_4;
-    u8* f00;
-    u8* ef8;
-    u32 f00_addr;
-    u32 base_f04_addr;
-    u8* new_var11;
+    u8* new_var5;
     int new_var7;
-
-    /* Prologue: initialize register-mapped locals */
-    new_var14 = &g_custom_name_buf;
-    new_var11 = &g_initial_name;
     reg_s1 = arg0;
     reg_s2 = arg1;
     repeat = 0xFF;
-    reg_s6 = (u32)(&D_80142F04) - 0x10;
-
+    five = 5;
+    four = 4;
+    reg_s6 = 0x10;
+    reg_s6 = ((u32)(&D_80142F04)) - reg_s6;
     while (repeat == 0xFF)
     {
+        new_var13 = &D_80142CAC;
         if (reg_s1 < 0)
+        {
             goto block_62;
+        }
         if (reg_s1 < 4)
+        {
             goto s1_lt4_block;
+        }
         if (reg_s1 >= 8)
+        {
             goto block_62;
+        }
         else
+        {
             goto s14to8_block;
+        }
     s1_lt4_block:
         if (reg_s2 & 0x220)
         {
@@ -464,7 +471,6 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     repeat = 0;
                     continue;
                 }
-
                 if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
                 {
                     func_800A3938(0x7E, 0x80);
@@ -474,7 +480,6 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 {
                     func_800A3938(0x78, 0x80);
                 }
-
                 repeat = 0;
                 continue;
             }
@@ -484,15 +489,17 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 name_pop_last_char(g_active_name);
                 goto block_38;
             }
-
         s1_eq2_code:
             func_800A3938(0x7E, 0x80);
+
             if (g_name_source_mode == four)
             {
                 u16 half4;
                 g_name_clipboard = 0;
-                base_f04_addr = func_80016F5C();
-                var_v0_3 = base_f04_addr;
+                if (!D_80142F04)
+                {
+                }
+                var_v0_3 = rand();
                 temp_v1_2 = var_v0_3;
                 if (temp_v1_2 < 0)
                 {
@@ -508,9 +515,9 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             else if (g_name_source_mode == five)
             {
                 u16 half5;
-                u32 addr_f04;
                 g_name_clipboard = 0;
-                var_v0_4 = func_80016F5C();
+                new_var6 = 2;
+                var_v0_4 = rand();
                 temp_v1_3 = var_v0_4;
                 if (temp_v1_3 < 0)
                 {
@@ -518,8 +525,7 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 }
                 {
                     u32 rem5 = temp_v1_3 - ((var_v0_4 >> 7) << 7);
-                    addr_f04 = (u32)(&D_80142F04);
-                    half5 = *((u16*)((((u32)D_80142F04) + (addr_f04 + (rem5 * 2))) + 0xF0));
+                    half5 = *((u16*)(((((u32)(&D_80142F04)) + ((u32)D_80142F04)) + (rem5 * new_var6)) + 0xF0));
                     var_a1 = (void*)((D_80142F04 + half5) + reg_s6);
                 }
                 goto block_37;
@@ -531,49 +537,54 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 u16 half3b;
                 u32 rem3;
                 g_name_clipboard = 0;
+                if (0)
+                {
+                }
                 idx3 = g_history_name_idx;
                 new_var8 = idx3;
                 if (new_var8 >= 0x81)
                 {
-                    var_a1 = &g_initial_name;
-                    goto block_37;
+                    g_active_name += 0;
+                    do
+                    {
+                        var_a1 = &g_initial_name;
+                        goto block_37;
+                    } while (0);
                 }
                 new_var3 = new_var8 * 2;
-                f00 = D_80142F00;
-                f00_addr = (u32)(&D_80142F00);
-                half3a = *((u16*)((f00 + new_var3) + reg_s6));
-                name_copy(g_active_name, (void*)((f00 + half3a) + reg_s6));
-                temp_v0 = func_80016F5C();
+                half3a = *((u16*)((D_80142F00 + new_var3) + reg_s6));
+                name_copy(g_active_name, (void*)((D_80142F00 + half3a) + reg_s6));
+                temp_v0 = rand();
                 var_v0_5 = temp_v0 >> 7;
-                f00_addr = (u32)(&D_80142F00);
                 if (temp_v0 < 0)
                 {
-                    var_v0_5 =
-                        ((s32)((((((temp_v0 & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) & 0xFFFFFFFFFFFFFFFF) +
-                               0x7F)) >>
-                        7;
+                    var_v0_5 = (temp_v0 + 0x7F) >> 7;
                 }
+                new_var = &D_80142F00;
                 rem3 = temp_v0 - (var_v0_5 << 7);
                 var_v0_3 = rem3;
-                f00 = D_80142F00;
-                half3b = *((u16*)(((f00_addr + (var_v0_3 * 2)) + ((u32)f00)) + 0xF4));
-                name_append(g_active_name, (void*)((f00 + half3b) + reg_s6), (s32)(new_var13 = f00));
+                half3b = *((u16*)(((((u32)new_var) + ((u32)D_80142F00)) + (var_v0_3 * 2)) + 0xF4));
+                name_append(g_active_name, (void*)((D_80142F00 + half3b) + reg_s6));
                 goto block_38;
             }
             else if (g_name_source_mode == 1)
             {
-                var_a1 = new_var14;
+                var_a1 = &g_custom_name_buf;
                 goto block_36;
             }
         s1_eq3_code:
             func_800A3938(0x7E, 0x80);
-            var_a1 = new_var11;
+
+            var_a1 = &g_initial_name;
         block_36:
             g_name_clipboard = 0;
+
         block_37:
             name_copy(g_active_name, var_a1);
+
         block_38:
             recalc_name_width();
+
             repeat = 0;
             g_strip_width_steps = five;
             repeat = 0;
@@ -582,21 +593,34 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
         else
         {
             if (reg_s2 == 0)
+            {
                 goto block_61;
+            }
             if (reg_s2 & 0x4000)
+            {
                 goto block_51;
+            }
             if (reg_s2 & 0x8000)
             {
                 var_v0 = 3;
                 if (reg_s1 != 0)
+                {
                     var_v0 = reg_s1 - 1;
+                }
                 goto block_55;
             }
             if (!(reg_s2 & 0x2000))
+            {
                 goto block_61;
+            }
             var_v1 = 0;
-            var_v0_2 = reg_s1 < 3;
+            var_v0_2 = 3;
+            var_v0_2 = reg_s1 < var_v0_2;
             goto block_58;
+        }
+
+        if (0)
+        {
         }
         goto end_if_s1_ge0;
     s14to8_block:
@@ -620,15 +644,16 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 {
                 block_51:
                     reg_s1 = 0x10;
+
                     reg_s2 = 0;
                     continue;
                 }
+                new_var14 = reg_s2 & 0x4000;
                 if (reg_s2 & 0x1000)
                 {
-                    reg_s1 = (reg_s1 == four) ? 6 : reg_s1 - 1;
-                    goto block_61;
+                    reg_s1 = (reg_s1 == four) ? (6) : (reg_s1 - 1);
                 }
-                if (reg_s2 & 0x4000)
+                if (new_var14)
                 {
                     var_v1 = 4;
                     var_v0_2 = reg_s1 < 6;
@@ -637,25 +662,32 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             }
             goto block_61;
         }
+
         goto end_if_s1_ge0;
     block_55:
         reg_s1 = var_v0;
+
         goto block_61;
     block_58:
         if (var_v0_2 != 0)
+        {
             var_v1 = reg_s1 + 1;
+        }
+
         reg_s1 = var_v1;
     block_61:
         func_800A3938(0x7D, 0x80);
-        temp_v1_4 = (void*)(((reg_s1 + 2) * 4) + ((u32)(&D_80142E0C)));
+
+        new_var9 = &D_80142E0C;
+        temp_v1_4 = (void*)(((reg_s1 + 2) * 4) + ((u32)new_var9));
         repeat = 0;
         g_cursor_x_target = ((*((u32*)temp_v1_4)) & 0x1FF) - 8;
-        new_var8 = (s32)(*((u8*)((u32)temp_v1_4 + 2)));
-        g_cursor_lerp_steps = five;
+        new_var8 = (s32)(*((u8*)(((u32)temp_v1_4) + 2)));
+        g_cursor_lerp_steps = (repeat = five);
         g_cursor_y_target = new_var8;
         repeat = 0;
         continue;
-    end_if_s1_ge0:;
+    end_if_s1_ge0:
     block_62:
         if ((reg_s2 & 0x220) && (((g_char_last_row * 0xA) + g_char_last_col) >= g_char_cursor))
         {
@@ -665,14 +697,14 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                 {
                     u32 t1;
                     u16 hw;
+                    new_var12 = D_80142EF8;
                     g_append_anim_timer = 2;
                     {
                         u32 idx_lt3 = g_char_cursor;
-                        ef8 = D_80142EF8;
                         t1 = *((u32*)((g_char_panel * 4) + ((u32)(&D_80142C98))));
-                        hw = *((u16*)(((ef8 + (t1 * 2)) + (idx_lt3 * 2)) + reg_s6));
+                        hw = *((u16*)(((D_80142EF8 + (t1 * 2)) + (idx_lt3 * 2)) + reg_s6));
                         g_append_anim_frame = 0;
-                        name_append(g_active_name, (void*)((D_80142EF8 + hw) + reg_s6), (s32)ef8);
+                        name_append(g_active_name, (void*)((new_var12 + hw) + reg_s6));
                     }
                     recalc_name_width();
                     g_strip_width_steps = five;
@@ -685,26 +717,61 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     goto block_73;
                 }
             }
-            else if (g_char_panel == 3)
+            else
             {
-                u16 off;
-                if ((*((u32*)((g_char_cursor * 4) + ((u32)(&D_80142CAC))))) != 0xFF)
+                if (g_char_panel == 3)
                 {
-                    var_a0 = 0x7E;
-                    g_kanji_cat = g_char_cursor;
-                    g_scroll_target = 0;
-                    g_scroll_pos = 0;
-                    g_scroll_steps = 0;
-                    g_char_panel = four;
-                    g_cursor_x_target = 0x54;
-                    g_cursor_y_target = 0x68;
-                    g_cursor_lerp_steps = four;
-                    temp_v1_5 = g_char_cursor * 2;
-                    g_char_cursor = 0;
+                    u16 off;
+                    if ((*((u32*)((g_char_cursor * 4) + ((u32)new_var13)))) != 0xFF)
                     {
-                        ef8 = D_80142EF8;
-                        off = *((u16*)(((ef8 + (D_80142CA4 * 2)) + temp_v1_5) + reg_s6));
-                        g_kanji_cat_name = (void*)((ef8 + off) + reg_s6);
+                        g_kanji_cat = g_char_cursor;
+                        g_char_panel = four;
+                        var_a0 = 0x7E;
+                        g_scroll_target = 0;
+                        g_scroll_pos = 0;
+                        g_scroll_steps = 0;
+                        new_var2 = D_80142EF8 + (D_80142CA4 * 2);
+                        g_cursor_x_target = 0x54;
+                        g_cursor_y_target = 0x68;
+                        g_cursor_lerp_steps = four;
+                        temp_v1_5 = g_char_cursor * 2;
+                        g_char_cursor = 0;
+                        {
+                            off = *((u16*)((new_var2 + temp_v1_5) + reg_s6));
+                            g_kanji_cat_name = (void*)((D_80142EF8 + off) + reg_s6);
+                        }
+                        repeat = 0;
+                        func_800A3938(var_a0, 0x80);
+                    }
+                    else
+                    {
+                        repeat = 0;
+                        continue;
+                    }
+                }
+                else if (g_char_panel == 4)
+                {
+                    if (name_char_count(g_active_name) < 0xA)
+                    {
+                        u32 t1;
+                        u32 t2;
+                        g_append_anim_timer = 2;
+                        new_var5 = D_80142EFC;
+                        g_append_anim_frame = 0;
+                        {
+                            int idx4 = g_kanji_cat;
+                            t1 = *((u32*)((idx4 * 4) + ((u32)new_var13)));
+                            t2 = *((u32*)((t1 * 4) + ((u32)(&D_80142E40))));
+                            name_append(g_active_name, (void*)((new_var5 + (*((u16*)(((new_var5 + (t2 * 2)) + (g_char_cursor * 2)) + reg_s6)))) + reg_s6));
+                        }
+                        recalc_name_width();
+                        g_strip_width_steps = five;
+                        var_a0 = 0x7D;
+                    }
+                    else
+                    {
+                    block_73:
+                        var_a0 = 0x78;
                     }
                     repeat = 0;
                     func_800A3938(var_a0, 0x80);
@@ -714,75 +781,40 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     repeat = 0;
                     continue;
                 }
-            }
-            else if (g_char_panel == 4)
-            {
-                if (name_char_count(g_active_name) < 0xA)
-                {
-                    u32 t1;
-                    u32 t2;
-                    u16 hw;
-                    u8* efc;
-                    new_var9 = D_80142EFC;
-                    g_append_anim_timer = 2;
-                    g_append_anim_frame = 0;
-                    {
-                        u32 idx4 = g_kanji_cat;
-                        efc = new_var9;
-                        t1 = *((u32*)((idx4 * 4) + ((u32)(&D_80142CAC))));
-                        t2 = *((u32*)((t1 * 4) + ((u32)(&D_80142E40))));
-                        hw = *((u16*)(((efc + (t2 * 2)) + (g_char_cursor * 2)) + reg_s6));
-                        name_append(g_active_name, (void*)((efc + hw) + reg_s6), (s32)efc);
-                    }
-                    recalc_name_width();
-                    g_strip_width_steps = five;
-                    var_a0 = 0x7D;
-                }
-                else
-                {
-                block_73:
-                    var_a0 = 0x78;
-                }
                 repeat = 0;
-                func_800A3938(var_a0, 0x80);
-            }
-            else
-            {
-                repeat = 0;
-                continue;
             }
         }
         else
         {
             if (reg_s2 != 0)
             {
-                var_v0_6 = reg_s2 & 0x8000;
-                if ((reg_s2 & 0x1000) && ((g_char_cursor / 10) == (((s32)g_char_cursor) >> 0x1F)))
+                if ((reg_s2 & 0x1000) && ((g_char_cursor / 10) == (((s32)(g_char_cursor & 0xFFFF)) >> 0x1F)))
                 {
                     reg_s1 = 0;
                     reg_s2 = 0;
                     continue;
                 }
                 var_v0_7 = reg_s2 & 0x1000;
-                if (var_v0_6 != 0 && g_char_cursor == ((g_char_cursor / 10) * 0xA))
+                if (((reg_s2 & 0x8000) != 0) && (g_char_cursor == ((g_char_cursor / 10) * 0xA)))
                 {
                     reg_s1 = 4;
                     reg_s2 = 0;
                     continue;
                 }
-                if (var_v0_7 != 0 && (g_char_cursor / 10) != (((s32)g_char_cursor) >> 0x1F))
+                if (((reg_s2 & 0x1000) != 0) &&
+                    ((g_char_cursor / 10) != (((((((((s32)g_char_cursor) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) >> 0x1F)))
                 {
                     g_char_cursor = g_char_cursor - 0xA;
                 }
-                else if ((reg_s2 & 0x4000) && (g_char_cursor / 10) != g_char_last_row)
+                else if ((reg_s2 & 0x4000) && ((g_char_cursor / 10) != g_char_last_row))
                 {
-                    g_char_cursor = g_char_cursor + 0xA;
+                    g_char_cursor += 0xA;
                 }
-                else if ((reg_s2 & 0x8000) && g_char_cursor != (g_char_cursor / 10) * 0xA)
+                else if ((reg_s2 & 0x8000) && (g_char_cursor != ((g_char_cursor / 10) * 0xA)))
                 {
                     g_char_cursor = g_char_cursor - 1;
                 }
-                else if ((reg_s2 & 0x2000) && ((g_char_cursor / 10) * 0xA) != (g_char_cursor - 9))
+                else if ((new_var17 = reg_s2 & 0x2000) && (((g_char_cursor / 10) * 0xA) != (g_char_cursor - 9)))
                 {
                     g_char_cursor = g_char_cursor + 1;
                 }
@@ -792,14 +824,14 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
                     continue;
                 }
             }
-
             func_800A3938(0x7D, 0x80);
-
-            g_cursor_x_target = ((g_char_cursor % 10) * 0x10) + 0x54;
+            g_cursor_x_target = ((g_char_cursor % 10) * 0x10) + (var_v0_4 = 0x54);
             new_var10 = 4 * (4 * (g_char_cursor / 10));
             temp_a0 = new_var10;
-            new_var7 = g_scroll_pos - 0x68;
-            temp_v0_2 = temp_a0 - new_var7;
+            new_var4 = g_scroll_pos;
+            new_var7 = new_var4 - 0x68;
+            new_var11 = temp_a0 - new_var7;
+            temp_v0_2 = new_var11;
             g_cursor_y_target = temp_v0_2;
             if (temp_v0_2 < 0x68)
             {
@@ -817,9 +849,9 @@ s32 func_80140AB8(s32 arg0, s32 arg1)
             repeat = 0;
         }
     }
+
     return reg_s1;
 }
-
 /**
  * decomp.me (96.22%) https://decomp.me/scratch/ctu1w
  */
@@ -1017,24 +1049,22 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
 {
     u32 clut;
     SPRT* sprt = (SPRT*)prim;
-    
+
     SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
     setSprt(sprt);
     setXY0(sprt, x, y);
-    
-    setUV0(sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u,
-                 g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v);
-    setWH(sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w,
-              g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h);
-    
+
+    setUV0(sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v);
+    setWH(sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h);
+
     clut = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut & GLYPH_CLUT_X_MASK;
     sprt->clut = clut | GLYPH_CLUT_PAGE_BITS;
     addPrim(ot, sprt);
-    
+
     prim += sizeof(SPRT) / sizeof(u_long);
     setDrawTPage(prim, 0, 0, 5);
     addPrim(ot, prim);
-    
+
     return prim + sizeof(DR_TPAGE) / sizeof(u_long);
 }
 
