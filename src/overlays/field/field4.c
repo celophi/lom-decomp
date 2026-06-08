@@ -83,6 +83,29 @@ typedef struct Struct_C
 
 typedef struct
 {
+    char pad_00[0x32];
+    u8 unk32;
+    char pad_33[0x48 - 0x33];
+} SubStruct;
+typedef struct
+{
+    SubStruct* sub_array;
+    char pad_04[0x21];
+    u8 unk25;
+    char pad_26[0x5];
+    u8 unk2B[9];
+    char pad_34[7];
+    u8 inner1[9][16];
+    char pad_CB[1];
+    u16 inner2[9][16];
+    u16 unk1EC[9];
+    char pad_1FE[0x36];
+    u16 unk234;
+    u16 unk236;
+} MainStruct;
+
+typedef struct
+{
     u8 pad0[0xC];
     Struct_C* unkC;
     u8 pad10[0x24 - 0x10];
@@ -610,5 +633,33 @@ unsigned int func_80068DA8(DataStruct* arg0, s32 arg1, s32 arg2)
         fraction = ((((diff * (val >> 10)) >> 5) - v1_reg) * (local_arg2 - accumulated_val)) / (val & new_var2);
         result = fraction;
         return (entry->unk4 + v1_reg) + result;
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/eRVUu
+ */
+void func_80068F94(MainStruct* arg0)
+{
+    s32 i;
+    s32 j;
+
+    /* Changing this to use 'j' binds 'j' to register a1, */
+    /* which forces 'i' to take register a3 later on.     */
+    for (j = 8; j >= 0; j--)
+    {
+        arg0->unk1EC[j] = 0;
+    }
+
+    arg0->unk236 = 0;
+    arg0->unk234 = 0;
+
+    for (i = 0; i < arg0->unk25; i++)
+    {
+        arg0->sub_array[i].unk32 = i;
+        for (j = 0; j < 9; j++)
+        {
+            arg0->unk2B[i] = (arg0->inner2[j][i] = (arg0->inner1[j][i] = 0));
+        }
     }
 }
