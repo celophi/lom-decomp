@@ -1888,40 +1888,34 @@ s32 name_pop_last_char(u8* name)
  * @param src Null-terminated source name.
  * @see https://decomp.me/scratch/UeYRe (100%)
  */
-void name_copy(u8* dst, u8* src)
+void name_copy(u8* dst, const u8* src)
 {
-    u8* p;
+    const u8* p;
     s32 i;
     s32 src_len;
+
     p = src;
     src_len = 0;
-    if ((*src) != 0)
+
+    while (*p)
     {
-        do
+        if (IS_DBSC_LEAD_BYTE(*p))
         {
-            if (((u32)((unsigned char)((*p) - 0x19))) < 7U)
-            {
-                p += 2;
-                src_len += 2;
-            }
-            else
-            {
-                p += 1;
-                src_len += 1;
-            }
-        } while ((*p) != 0);
+            p += 2;
+            src_len += 2;
+        }
+        else
+        {
+            p += 1;
+            src_len += 1;
+        }
     }
-    i = 0;
-    if (src_len > 0)
+
+    for (i = 0; i < src_len; i++)
     {
-        u8* dest; /* unused; preserved to match original codegen */
-        do
-        {
-            *(&dst[i]) = src[i];
-            i++;
-            dest = &dst[i];
-        } while (i < src_len);
+        dst[i] = src[i];
     }
+
     dst[i] = 0;
 }
 
