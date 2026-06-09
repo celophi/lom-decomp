@@ -290,7 +290,7 @@ void gname_tick(s32 ctx)
  *    @c g_strip_width_steps frames using the same `(target - current)/steps` shape
  *    as the RGB fade.
  *  - When input mask @c g_pad_input == 0x800 (a specific button bit), plays
- *    one of two SFX via @ref func_800A3938 (bank 0x80, sound 0x7E or 0x78)
+ *    one of two SFX via @ref play_menu_sfx (bank 0x80, sound 0x7E or 0x78)
  *    based on whether the cursor's current entry passes the
  *    @ref name_char_count / @ref name_is_blank validation pair, and on the
  *    "valid" path also kicks @c g_overlay_result = 5 to advance overlay state.
@@ -328,11 +328,11 @@ void gname_update_state(void)
     {
         if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
         {
-            func_800A3938(0x7E, 0x80); /* accept */
+            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME); /* accept */
             g_overlay_result = 5;
             return;
         }
-        func_800A3938(0x78, 0x80); /* reject */
+        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME); /* reject */
     }
 }
 
@@ -380,9 +380,9 @@ inline int inline_fn(s32 arg0)
  *
  * State machine for the name-entry character selection screen. @p mode encodes
  * which region of the UI is currently focused:
- *   - 0-3: action tab bar (0=OK, 1=Delete, 2=Random, 3=Default)
- *   - 4-7: character-panel selector tabs (tab N corresponds to panel N-4)
- *   - 0x10: in-grid character cursor mode
+ *   - GNAME_MODE_ACTION_OK..DEFAULT (0-3): action tab bar
+ *   - GNAME_MODE_PANEL_BASE..+3 (4-7): character-panel selector tabs (panel N-4)
+ *   - GNAME_MODE_GRID (0x10): in-grid character cursor mode
  *
  * @p buttons is the caller-filtered pad bitmask (e.g. @c g_pad_input & @c GNAME_BTN_NAV_MASK).
  * As a side effect the function updates cursor position, panel, scroll state,
@@ -463,21 +463,21 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         if (btns & GNAME_BTN_CONFIRM)
         {
             g_cursor_tab = cur_mode;
-            if (cur_mode != 1)
+            if (cur_mode != GNAME_MODE_ACTION_DELETE)
             {
                 if (cur_mode < 2)
                 {
-                    if (cur_mode != 0)
+                    if (cur_mode != GNAME_MODE_ACTION_OK)
                     {
                         repeat = 0;
                         continue;
                     }
                 }
-                else if (cur_mode == 2)
+                else if (cur_mode == GNAME_MODE_ACTION_RANDOM)
                 {
                     goto s1_eq2_code;
                 }
-                else if (cur_mode == 3)
+                else if (cur_mode == GNAME_MODE_ACTION_DEFAULT)
                 {
                     goto s1_eq3_code;
                 }
@@ -488,24 +488,24 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 }
                 if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
                 {
-                    func_800A3938(0x7E, 0x80);
+                    play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     g_overlay_result = five;
                 }
                 else
                 {
-                    func_800A3938(0x78, 0x80);
+                    play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
                 }
                 repeat = 0;
                 continue;
             }
             else
             {
-                func_800A3938(0x7E, 0x80);
+                play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                 name_pop_last_char(g_active_name);
                 goto block_38;
             }
         s1_eq2_code:
-            func_800A3938(0x7E, 0x80);
+            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
 
             if (g_name_source_mode == four)
             {
@@ -545,7 +545,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 }
                 goto block_37;
             }
-            else if (g_name_source_mode == 3)
+            else if (g_name_source_mode == GNAME_SRC_HISTORY)
             {
                 u32 idx3;
                 unsigned short half3a;
@@ -582,13 +582,13 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 name_append(g_active_name, (void*)((g_history_names + half3b) + data_base));
                 goto block_38;
             }
-            else if (g_name_source_mode == 1)
+            else if (g_name_source_mode == GNAME_SRC_CUSTOM)
             {
                 name_src = &g_custom_name_buf;
                 goto block_36;
             }
         s1_eq3_code:
-            func_800A3938(0x7E, 0x80);
+            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
 
             name_src = &g_initial_name;
         block_36:
@@ -641,14 +641,14 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
     s14to8_block:
         if ((btns & GNAME_BTN_CONFIRM) && ((g_cursor_tab = cur_mode, panel_idx = cur_mode - 4, g_char_panel != panel_idx)))
         {
-            cur_mode = 0x10;
+            cur_mode = GNAME_MODE_GRID;
             btns = 0;
             g_scroll_target = 0;
             g_scroll_pos = 0;
             g_char_panel = panel_idx;
             g_scroll_steps = 0;
             g_char_cursor = 0;
-            func_800A3938(0x7E, 0x80);
+            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
             continue;
         }
         else
@@ -658,7 +658,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 if (btns & PAD_BTN_RIGHT)
                 {
                 block_51:
-                    cur_mode = 0x10;
+                    cur_mode = GNAME_MODE_GRID;
 
                     btns = 0;
                     continue;
@@ -670,7 +670,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 }
                 if (btn_down)
                 {
-                    next_mode = 4;
+                    next_mode = GNAME_MODE_PANEL_BASE;
                     can_advance = cur_mode < 6;
                     goto block_58;
                 }
@@ -691,7 +691,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
 
         cur_mode = next_mode;
     block_61:
-        func_800A3938(0x7D, 0x80);
+        play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
 
         tab_pos_tbl = &g_tab_cursor_pos;
         temp_v1_4 = (void*)(((cur_mode + 2) * 4) + ((u32)tab_pos_tbl));
@@ -704,11 +704,11 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         continue;
     end_if_s1_ge0:
     block_62:
-        if ((btns & GNAME_BTN_CONFIRM) && (((g_char_last_row * 0xA) + g_char_last_col) >= g_char_cursor))
+        if ((btns & GNAME_BTN_CONFIRM) && (((g_char_last_row * NAME_GRID_CHARS_PER_ROW) + g_char_last_col) >= g_char_cursor))
         {
             if (g_char_panel < 3)
             {
-                if (name_char_count(g_active_name) < 0xA)
+                if (name_char_count(g_active_name) < NAME_MAX_CHARS)
                 {
                     u32 t1;
                     u16 hw;
@@ -723,7 +723,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     }
                     recalc_name_width();
                     g_strip_width_steps = five;
-                    func_800A3938(0x7D, 0x80);
+                    play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
                     repeat = 0;
                     continue;
                 }
@@ -741,13 +741,13 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     {
                         g_kanji_cat = g_char_cursor;
                         g_char_panel = four;
-                        sfx_id = 0x7E;
+                        sfx_id = GNAME_SFX_CONFIRM;
                         g_scroll_target = 0;
                         g_scroll_pos = 0;
                         g_scroll_steps = 0;
                         kanji_cat_names_ptr = g_char_panel_data + (g_kanji_cat_names_offset * 2);
-                        g_cursor_x_target = 0x54;
-                        g_cursor_y_target = 0x68;
+                        g_cursor_x_target = NAME_GRID_X_BASE;
+                        g_cursor_y_target = NAME_GRID_Y_TOP;
                         g_cursor_lerp_steps = four;
                         kanji_cursor_byte_off = g_char_cursor * 2;
                         g_char_cursor = 0;
@@ -756,7 +756,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                             g_kanji_cat_name = (void*)((g_char_panel_data + off) + data_base);
                         }
                         repeat = 0;
-                        func_800A3938(sfx_id, 0x80);
+                        play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
                     }
                     else
                     {
@@ -766,7 +766,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 }
                 else if (g_char_panel == 4)
                 {
-                    if (name_char_count(g_active_name) < 0xA)
+                    if (name_char_count(g_active_name) < NAME_MAX_CHARS)
                     {
                         u32 t1;
                         u32 t2;
@@ -781,15 +781,15 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                         }
                         recalc_name_width();
                         g_strip_width_steps = five;
-                        sfx_id = 0x7D;
+                        sfx_id = GNAME_SFX_MOVE;
                     }
                     else
                     {
                     block_73:
-                        sfx_id = 0x78;
+                        sfx_id = GNAME_SFX_ERROR;
                     }
                     repeat = 0;
-                    func_800A3938(sfx_id, 0x80);
+                    play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
                 }
                 else
                 {
@@ -803,33 +803,33 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         {
             if (btns != 0)
             {
-                if ((btns & PAD_BTN_UP) && ((g_char_cursor / 10) == (((s32)(g_char_cursor & 0xFFFF)) >> 0x1F)))
+                if ((btns & PAD_BTN_UP) && ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) == (((s32)(g_char_cursor & 0xFFFF)) >> 0x1F)))
                 {
-                    cur_mode = 0;
+                    cur_mode = GNAME_MODE_ACTION_OK;
                     btns = 0;
                     continue;
                 }
                 var_v0_7 = btns & PAD_BTN_UP;
-                if (((btns & PAD_BTN_LEFT) != 0) && (g_char_cursor == ((g_char_cursor / 10) * 0xA)))
+                if (((btns & PAD_BTN_LEFT) != 0) && (g_char_cursor == ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) * NAME_GRID_CHARS_PER_ROW)))
                 {
-                    cur_mode = 4;
+                    cur_mode = GNAME_MODE_PANEL_BASE;
                     btns = 0;
                     continue;
                 }
                 if (((btns & PAD_BTN_UP) != 0) &&
-                    ((g_char_cursor / 10) != (((((((((s32)g_char_cursor) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) >> 0x1F)))
+                    ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) != (((((((((s32)g_char_cursor) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) >> 0x1F)))
                 {
-                    g_char_cursor = g_char_cursor - 0xA;
+                    g_char_cursor = g_char_cursor - NAME_GRID_CHARS_PER_ROW;
                 }
-                else if ((btns & PAD_BTN_DOWN) && ((g_char_cursor / 10) != g_char_last_row))
+                else if ((btns & PAD_BTN_DOWN) && ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) != g_char_last_row))
                 {
-                    g_char_cursor += 0xA;
+                    g_char_cursor += NAME_GRID_CHARS_PER_ROW;
                 }
-                else if ((btns & PAD_BTN_LEFT) && (g_char_cursor != ((g_char_cursor / 10) * 0xA)))
+                else if ((btns & PAD_BTN_LEFT) && (g_char_cursor != ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) * NAME_GRID_CHARS_PER_ROW)))
                 {
                     g_char_cursor = g_char_cursor - 1;
                 }
-                else if ((btn_right = btns & PAD_BTN_RIGHT) && (((g_char_cursor / 10) * 0xA) != (g_char_cursor - 9)))
+                else if ((btn_right = btns & PAD_BTN_RIGHT) && (((g_char_cursor / NAME_GRID_CHARS_PER_ROW) * NAME_GRID_CHARS_PER_ROW) != (g_char_cursor - 9)))
                 {
                     g_char_cursor = g_char_cursor + 1;
                 }
@@ -839,25 +839,25 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     continue;
                 }
             }
-            func_800A3938(0x7D, 0x80);
-            g_cursor_x_target = ((g_char_cursor % 10) * 0x10) + (var_v0_4 = 0x54);
-            row_y_px = 4 * (4 * (g_char_cursor / 10));
+            play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+            g_cursor_x_target = ((g_char_cursor % NAME_GRID_CHARS_PER_ROW) * NAME_GRID_CELL_SIZE) + (var_v0_4 = NAME_GRID_X_BASE);
+            row_y_px = 4 * (4 * (g_char_cursor / NAME_GRID_CHARS_PER_ROW));
             row_y_copy = row_y_px;
             scroll_pos_copy = g_scroll_pos;
-            scroll_y_off = scroll_pos_copy - 0x68;
+            scroll_y_off = scroll_pos_copy - NAME_GRID_Y_TOP;
             cursor_y_raw = row_y_copy - scroll_y_off;
             temp_v0_2 = cursor_y_raw;
             g_cursor_y_target = temp_v0_2;
-            if (temp_v0_2 < 0x68)
+            if (temp_v0_2 < NAME_GRID_Y_TOP)
             {
-                g_cursor_y_target = 0x68;
+                g_cursor_y_target = NAME_GRID_Y_TOP;
                 g_scroll_target = row_y_copy;
                 g_scroll_steps = four;
             }
-            if (g_cursor_y_target >= 0xA9)
+            if (g_cursor_y_target >= (NAME_GRID_Y_BOTTOM + 1))
             {
-                g_cursor_y_target = 0xA8;
-                g_scroll_target = row_y_copy - 0x40;
+                g_cursor_y_target = NAME_GRID_Y_BOTTOM;
+                g_scroll_target = row_y_copy - NAME_GRID_SCROLL_STEP;
                 g_scroll_steps = four;
             }
             g_cursor_lerp_steps = four;
@@ -916,13 +916,13 @@ void func_8014139C(void)
         name_prepend_char(&g_name_clipboard, temp_s1 & 0xFFFF);
         recalc_name_width();
         g_strip_width_steps = 5;
-        var_a0 = 0x7D;
-        new_var3 = 0x80;
-        func_800A3938(var_a0, new_var3);
+        var_a0 = GNAME_SFX_MOVE;
+        new_var3 = GNAME_SFX_VOLUME;
+        play_menu_sfx(var_a0, new_var3);
     }
     else if (g_pad_input & 2)
     {
-        if (name_char_count(g_active_name) < 0xA)
+        if (name_char_count(g_active_name) < NAME_MAX_CHARS)
         {
             new_var2 = &g_name_clipboard;
             temp_v0 = name_pop_first_char(new_var2);
@@ -936,12 +936,12 @@ void func_8014139C(void)
                 recalc_name_width();
                 g_strip_width_steps = 5;
             }
-            var_a0 = 0x7D;
-            func_800A3938(var_a0, 0x80);
+            var_a0 = GNAME_SFX_MOVE;
+            play_menu_sfx(var_a0, GNAME_SFX_VOLUME);
         }
         else
         {
-            func_800A3938(0x78, 0x80);
+            play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
         }
     }
     else if (g_pad_input & 0x40)
@@ -951,21 +951,21 @@ void func_8014139C(void)
             if (name_char_count(g_active_name) == 0)
             {
                 g_overlay_result = 2;
-                func_800A3938(0x7F, 0x80);
+                play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
                 return;
                 if (!g_cursor_x_target)
                 {
                 }
             }
         }
-        func_800A3938(0x7F, 0x80);
+        play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
         name_pop_last_char(g_active_name);
         recalc_name_width();
         g_strip_width_steps = 5;
     }
-    if (((g_char_set_mode == 0x10) && (g_char_panel == 4)) && (g_pad_input & 0xC))
+    if (((g_char_set_mode == GNAME_MODE_GRID) && (g_char_panel == 4)) && (g_pad_input & 0xC))
     {
-        func_800A3938(0x7D, 0x80);
+        play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
         if (g_pad_input & 0xC)
         {
             do
