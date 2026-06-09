@@ -1504,6 +1504,7 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
 {
     u8* ptr = (u8*)arg0;
     SPRT* sprt = (SPRT*)ptr;
+    
     /* (offset) + (base) form so gcc emits `addu v1,v1,v0` (vs the reverse
        order from `&g_glyph_table[arg2]`). Also keeps arg2 live for the
        second SPRT's re-derivation below. */
@@ -1513,22 +1514,13 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
 
     /* Primary glyph SPRT - white tint, fully opaque. */
     *(u32*)&sprt->r0 = 0x808080; /* r=g=b=0x80, code byte = 0 */
-    setSprt(sprt);               /* len=4, code=0x64 (free-size textured sprite) */
-    sprt->x0 = (s16)(arg3 - arg5 + arg6);
-    sprt->y0 = (s16)(arg4 - arg5 + arg6);
-    sprt->u0 = entry[0];
-    sprt->v0 = entry[1];
-    sprt->w = (s16)entry[2];
-    sprt->h = (s16)entry[3];
-    /* Force a `lw` load on the clut word - accessing as u32 keeps the
-       full word live so gcc doesn't shrink to `lhu`. */
-    clut_word = *(u32*)(entry + 4);
-    sprt->clut = (u16)((clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
-
-    /* Chain the primary SPRT into the OT linked list. */
-    addPrim((u_long*)arg1, (u_long*)arg0);
-
-    ptr += 0x14;
+    setSprt(sprt);
+    setXY0(sprt, (s16)(arg3 - arg5 + arg6), (s16)(arg4 - arg5 + arg6));
+    setUV0(sprt, entry[0], entry[1]);
+    setWH(sprt, entry[2], entry[3]);
+    setClut(sprt, *(u32*)(entry + 4) << 4, 498);
+    addPrim(arg1, sprt);
+    ptr += sizeof(SPRT);
 
     if (arg5 != 0)
     {
@@ -1538,37 +1530,27 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
         u32 clut_word2;
 
         *(u32*)&((SPRT*)ptr)->r0 = (arg7 != 0) ? 0xA00000 : 0;
-        setlen((SPRT*)ptr, 4);
-        /* Default code, then conditionally overlay 0x66 for the
-           semi-trans shadow. The "store-default-then-override" form
-           matches the target's branch-and-delay-slot peephole; a single
-           ternary `(arg7 == 0) ? 0x66 : 0x64` would compile differently. */
-        setcode((SPRT*)ptr, 0x64);
+        
+        setSprt((SPRT*)ptr);
+
         if (arg7 == 0)
         {
-            setcode((SPRT*)ptr, 0x66);
+            setSemiTrans((SPRT*)ptr, 1);
         }
-
+        
         tmp2 = (arg5 - arg6) * 2;
-        /* new_var2 and clut_word2=arg3 are load-bearing temporaries: they
-           force entry2 to be derived here (after tmp2) and reuse a register
-           copy of arg3 for x0, matching the target's register allocation. */
+        
         new_var2 = (u8*)g_glyph_table;
-        clut_word2 = arg3;
+        
         entry2 = (u8*)((arg2 << 3) + (u32)new_var2);
-        ((SPRT*)ptr)->x0 = (s16)(clut_word2 + tmp2);
-        ((SPRT*)ptr)->y0 = (s16)(arg4 + tmp2);
-        ((SPRT*)ptr)->u0 = entry2[0];
-        ((SPRT*)ptr)->v0 = entry2[1];
-        ((SPRT*)ptr)->w = (s16)entry2[2];
-        ((SPRT*)ptr)->h = (s16)entry2[3];
-        clut_word2 = *(u32*)(entry2 + 4);
-        ((SPRT*)ptr)->clut = (u16)((clut_word2 & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
+      
+        setXY0((SPRT*)ptr, (s16)(arg3 + tmp2), (s16)(arg4 + tmp2));
+        setUV0((SPRT*)ptr, entry2[0], entry2[1]);
+        setWH((SPRT*)ptr, (s16)entry2[2], (s16)entry2[3]);
+        setClut((SPRT*)ptr,  *(u32*)(entry2 + 4) << 4, 498);
+        addPrim(arg1, ptr);
 
-        /* Chain the secondary SPRT into the OT linked list. */
-        addPrim((u_long*)arg1, (u_long*)ptr);
-
-        ptr += 0x14;
+        ptr += sizeof(SPRT);
     }
 
     return (void*)ptr;
