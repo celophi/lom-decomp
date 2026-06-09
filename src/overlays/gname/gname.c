@@ -1781,62 +1781,55 @@ s32 name_char_count(const u8* name)
  * @param src Null-terminated source name to append.
  * @see https://decomp.me/scratch/1lsbD (100%)
  */
-void name_append(u8* dst, u8* src)
+void name_append(u8* dst, const u8* src)
 {
-    u8* p;
+    const u8* p;
     s32 dst_len;
     s32 src_len;
-    s32 saved_dst_len;
-    u8 c;
+    s32 offset;
+    s32 i;
+    
     p = dst;
     dst_len = 0;
-    if ((*dst) != 0)
+    
+    while (*p)
     {
-        do
+        if (IS_DBSC_LEAD_BYTE(*p))
         {
-            c = *p;
-            if (((u32)((unsigned char)(c - 0x19))) < 7U)
-            {
-                p += 2;
-                dst_len += 2;
-            }
-            else
-            {
-                p += 1;
-                dst_len += 1;
-            }
-        } while ((*p) != 0);
+            p += 2;
+            dst_len += 2;
+        }
+        else
+        {
+            p += 1;
+            dst_len += 1;
+        }
     }
+    
     p = src;
     src_len = 0;
-    saved_dst_len = dst_len;
-    if ((*p) != 0)
+    offset = dst_len;
+    
+    while (*p)
     {
-        do
+        if (IS_DBSC_LEAD_BYTE(*p))
         {
-            c = *p;
-            if (((u32)((unsigned char)(c - 0x19))) < 7U)
-            {
-                p += 2;
-                src_len += 2;
-            }
-            else
-            {
-                p += 1;
-                src_len += 1;
-            }
-        } while ((*p) != 0);
+            p += 2;
+            src_len += 2;
+        }
+        else
+        {
+            p += 1;
+            src_len += 1;
+        }
     }
-    dst_len = 0;
-    if (src_len > 0)
+    
+    for (i = 0; i < src_len; i++)
     {
-        do
-        {
-            dst[saved_dst_len + dst_len] = src[dst_len];
-            dst_len++;
-        } while (dst_len < src_len);
+        dst[offset + i] = src[i];
     }
-    dst[saved_dst_len + dst_len] = 0;
+    
+    dst[offset + i] = 0;
 }
 
 /**
