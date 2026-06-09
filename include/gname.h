@@ -5,6 +5,7 @@
 #include "display.h"
 #include "gpu_packet.h"
 #include "main.h"
+#include "pad.h"
 #include "tim.h"
 #include "render_context.h"
 #include "psyq/libgte.h"
@@ -40,6 +41,27 @@
 
 /* Pack two bytes into a single 16-bit DBCS-style glyph */
 #define MAKE_DBCS_GLYPH(lo, hi) (u16)(((u16)(hi) << 8) | (u16)(lo))
+
+/**
+ * Button mask for confirming a character selection in the name-entry grid.
+ * Combines PAD_BTN_CROSS (physical Circle/O = confirm on Japanese PSX) with
+ * 0x200 (R2 shoulder button as a secondary confirm input).
+ */
+#define GNAME_BTN_CONFIRM (PAD_BTN_CROSS | 0x200)
+
+/**
+ * Full input mask passed to handle_char_set_input each frame: all four
+ * D-pad directions plus the confirm pair.
+ */
+#define GNAME_BTN_NAV_MASK \
+    (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT | GNAME_BTN_CONFIRM)
+
+/* Character selection grid layout constants. */
+#define NAME_GRID_CHARS_PER_ROW  10  /**< Characters per row in the grid. */
+#define NAME_GRID_X_BASE         84  /**< Pixel X of the leftmost grid column (0x54). */
+#define NAME_GRID_Y_TOP         104  /**< Pixel Y of the top of the visible grid area (0x68). */
+#define NAME_GRID_Y_BOTTOM      168  /**< Pixel Y of the bottom clamp (0xA8). */
+#define NAME_GRID_SCROLL_STEP    64  /**< Scroll delta per step: 4 rows * 16 px/row (0x40). */
 
 /**
  * @brief RGB lerp state.
@@ -122,6 +144,23 @@ typedef struct
  *  @ref draw_name_cursor_row. */
 #define NAME_CURSOR_GLYPH_COUNT 20
 
+/**
+ * @brief One entry in the tab-cursor and scroll-indicator position table.
+ *
+ * @c g_tab_cursor_pos[0..1] are the scroll-up and scroll-down indicator
+ * glyphs. @c g_tab_cursor_entries[0..10] are the cursor target positions for
+ * the 11 character-panel tabs.
+ *
+ * The @c x field is read whole (LW) by gname_render for use with @c & 0x1FF;
+ * only the low 9 bits represent the screen X coordinate.
+ */
+typedef struct
+{
+    u16 x;     /* 0x0 - screen X target; only bits [8:0] are the pixel column */
+    u8  y;     /* 0x2 - screen Y target */
+    u8  glyph; /* 0x3 - glyph/tile index for the indicator sprite */
+} TabCursorEntry;
+
 /** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
  *  Bits [5:0] hold CLUT_X/16; upper bits carry unrelated data and must be
  *  discarded before writing the CLUT id into a sprite primitive. */
@@ -202,7 +241,19 @@ extern u8 g_append_anim_timer; /* render ticks until the next animation frame */
 extern u8 g_append_anim_frame; /* current frame index into g_char_append_anim */
 extern s32 g_strip_width_steps;
 extern GlyphInfo g_glyph_table[];
-extern s32 D_80142E14;
+/**
+ * Tab cursor and scroll-indicator position table (@ref TabCursorEntry).
+ * Entry [0] = scroll-up indicator; entry [1] = scroll-down indicator.
+ * The table is contiguous with @ref g_tab_cursor_entries at 0x80142E14.
+ */
+extern TabCursorEntry g_tab_cursor_pos[];
+/**
+ * Cursor target positions for the 11 character-panel tabs (@ref TabCursorEntry).
+ * Indexed 0..10; tab index 7 is unused (no valid mode maps to it).
+ * Immediately follows @ref g_tab_cursor_pos in ROM; accessed together via
+ * @c g_tab_cursor_pos base + @c (cur_mode + 2) * 4 in @ref handle_char_set_input.
+ */
+extern TabCursorEntry g_tab_cursor_entries[];
 extern GlyphSeqEntry g_name_cursor_glyphs[];
 
 /* --- Globals named during decomp --- */
@@ -258,23 +309,30 @@ extern s32 g_kanji_cat;
 /** Linearized character cursor position in the grid: row * 10 + col. */
 extern s32 g_char_cursor;
 
-/* --- ROM data tables (addresses known, names TODO) --- */
-extern u8* D_80142F04;
-extern u8* D_80142F00;
-extern u32 D_80142E0C[];
-extern u8* D_80142EFC;
-extern u32 D_80142E40[];
-extern u8* D_80142EF8;
-extern u32 D_80142C98[];
-extern u32 D_80142CAC[];
-extern s32 D_80142CA4;
+/* --- ROM data tables --- */
+/** Random name pool used when g_name_source_mode == 4 or 5. */
+extern u8* g_random_names;
+/** History name list used when g_name_source_mode == 3. */
+extern u8* g_history_names;
+/** Kanji character panel glyph data base pointer. */
+extern u8* g_kanji_panel_data;
+/** Kanji category entry index table: [cat] -> sub-index into g_kanji_entry_offsets, or 0xFF. */
+extern u32 g_kanji_cat_entries[];
+/** Kanji sub-index to glyph offset lookup table. */
+extern u32 g_kanji_entry_offsets[];
+/** Character panel glyph data: element[0] is the self-referential base offset. */
+extern u8* g_char_panel_data;
+/** Per-panel character set base offsets (u32 per panel; low u16 = row count). */
+extern u32 g_panel_char_offsets[];
+/** u16 offset within g_char_panel_data where kanji category name offsets begin. */
+extern s32 g_kanji_cat_names_offset;
 extern u8 D_80142EF4[];
 
 extern void func_800A3938(int, int);
 extern void func_8014139C(void);
 extern s32 name_char_count(u8*);
 extern s32 name_is_blank(u8*);
-extern s32 func_80140AB8(s32, s32);
+extern s32 handle_char_set_input(s32 mode, s32 buttons);
 extern void name_copy(u8*, u8*);
 
 #endif
