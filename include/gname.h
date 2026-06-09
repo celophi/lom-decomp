@@ -144,6 +144,23 @@ typedef struct
  *  @ref draw_name_cursor_row. */
 #define NAME_CURSOR_GLYPH_COUNT 20
 
+/**
+ * @brief One entry in the tab-cursor and scroll-indicator position table.
+ *
+ * @c g_tab_cursor_pos[0..1] are the scroll-up and scroll-down indicator
+ * glyphs. @c g_tab_cursor_entries[0..10] are the cursor target positions for
+ * the 11 character-panel tabs.
+ *
+ * The @c x field is read whole (LW) by gname_render for use with @c & 0x1FF;
+ * only the low 9 bits represent the screen X coordinate.
+ */
+typedef struct
+{
+    u16 x;     /* 0x0 - screen X target; only bits [8:0] are the pixel column */
+    u8  y;     /* 0x2 - screen Y target */
+    u8  glyph; /* 0x3 - glyph/tile index for the indicator sprite */
+} TabCursorEntry;
+
 /** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
  *  Bits [5:0] hold CLUT_X/16; upper bits carry unrelated data and must be
  *  discarded before writing the CLUT id into a sprite primitive. */
@@ -224,7 +241,19 @@ extern u8 g_append_anim_timer; /* render ticks until the next animation frame */
 extern u8 g_append_anim_frame; /* current frame index into g_char_append_anim */
 extern s32 g_strip_width_steps;
 extern GlyphInfo g_glyph_table[];
-extern s32 D_80142E14;
+/**
+ * Tab cursor and scroll-indicator position table (@ref TabCursorEntry).
+ * Entry [0] = scroll-up indicator; entry [1] = scroll-down indicator.
+ * The table is contiguous with @ref g_tab_cursor_entries at 0x80142E14.
+ */
+extern TabCursorEntry g_tab_cursor_pos[];
+/**
+ * Cursor target positions for the 11 character-panel tabs (@ref TabCursorEntry).
+ * Indexed 0..10; tab index 7 is unused (no valid mode maps to it).
+ * Immediately follows @ref g_tab_cursor_pos in ROM; accessed together via
+ * @c g_tab_cursor_pos base + @c (cur_mode + 2) * 4 in @ref handle_char_set_input.
+ */
+extern TabCursorEntry g_tab_cursor_entries[];
 extern GlyphSeqEntry g_name_cursor_glyphs[];
 
 /* --- Globals named during decomp --- */
@@ -285,8 +314,6 @@ extern s32 g_char_cursor;
 extern u8* g_random_names;
 /** History name list used when g_name_source_mode == 3. */
 extern u8* g_history_names;
-/** Tab cursor target positions: each u32 packs x (low 9 bits) and y (byte 2). */
-extern u32 g_tab_cursor_pos[];
 /** Kanji character panel glyph data base pointer. */
 extern u8* g_kanji_panel_data;
 /** Kanji category entry index table: [cat] -> sub-index into g_kanji_entry_offsets, or 0xFF. */

@@ -404,7 +404,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
     s32 four;
     int btn_right;
     u32 data_base;
-    u32(*tab_pos_tbl)[];
+    TabCursorEntry(*tab_pos_tbl)[];
     s32 sfx_id;
     void* name_src;
     s32 row_y_copy;
@@ -1126,9 +1126,9 @@ void gname_render(void* ctx)
     void* ctx2;
     unsigned char* glyph_ptr;
     char* tmp_ptr;
-    entry = &D_80142E14;
+    entry = (s32*)g_tab_cursor_entries;
     i = 2;
-    glyph_ptr = ((unsigned char*)(&D_80142E14)) + 2;
+    glyph_ptr = (unsigned char*)g_tab_cursor_entries + 2;
     prim = *((void**)(((char*)ctx) + 0x4040));
     /* 1. Character grid: entries 2..12, skip 9; highlight the selection. */
     do
@@ -1186,7 +1186,7 @@ void gname_render(void* ctx)
     /* 4. Conditional extra glyphs from the g_tab_cursor_pos table. */
     if (g_scroll_pos != 0)
     {
-        prim2 = func_80142274(prim2, ctx, (u8)g_tab_cursor_pos[3], (*((s32*)(g_tab_cursor_pos + 0))) & 0x1FF, (s32)g_tab_cursor_pos[2], 0, 0, 0);
+        prim2 = func_80142274(prim2, ctx, g_tab_cursor_pos[0].glyph, (*(s32*)&g_tab_cursor_pos[0]) & 0x1FF, (s32)g_tab_cursor_pos[0].y, 0, 0, 0);
     }
     if (g_char_last_row >= 5)
     {
@@ -1197,7 +1197,7 @@ void gname_render(void* ctx)
         }
         if ((((f8b4 >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
-            prim2 = func_80142274(prim2, ctx, (u8)g_tab_cursor_pos[7], (*((s32*)(g_tab_cursor_pos + 4))) & 0x1FF, (s32)g_tab_cursor_pos[6], 0, 0, 0);
+            prim2 = func_80142274(prim2, ctx, g_tab_cursor_pos[1].glyph, (*(s32*)&g_tab_cursor_pos[1]) & 0x1FF, (s32)g_tab_cursor_pos[1].y, 0, 0, 0);
         }
     }
     /* 5. Remaining sub-passes. */

@@ -44,6 +44,7 @@ g_panel_char_offsets = 0x80142C98;
 g_kanji_cat_names_offset = 0x80142CA4;
 g_kanji_cat_entries  = 0x80142CAC;
 g_tab_cursor_pos     = 0x80142E0C;
+g_tab_cursor_entries = 0x80142E14;
 g_kanji_entry_offsets = 0x80142E40;
 g_char_panel_data    = 0x80142EF8;
 g_kanji_panel_data   = 0x80142EFC;
