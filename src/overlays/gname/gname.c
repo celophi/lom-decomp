@@ -371,9 +371,8 @@ void reset_run_state(void)
 
 inline int inline_fn(s32 arg0)
 {
-  return arg0 * 2;
+    return arg0 * 2;
 }
-
 
 /**
  * @brief Process one frame of name-entry UI input and return the new char-set mode.
@@ -777,7 +776,8 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                             int idx4 = g_kanji_cat;
                             t1 = *((u32*)((idx4 * 4) + ((u32)kanji_cat_tbl)));
                             t2 = *((u32*)((t1 * 4) + ((u32)(&g_kanji_entry_offsets))));
-                            name_append(g_active_name, (void*)((kanji_data + (*((u16*)(((kanji_data + (t2 * 2)) + (g_char_cursor * 2)) + data_base)))) + data_base));
+                            name_append(g_active_name,
+                                        (void*)((kanji_data + (*((u16*)(((kanji_data + (t2 * 2)) + (g_char_cursor * 2)) + data_base)))) + data_base));
                         }
                         recalc_name_width();
                         g_strip_width_steps = five;
@@ -816,8 +816,8 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     btns = 0;
                     continue;
                 }
-                if (((btns & PAD_BTN_UP) != 0) &&
-                    ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) != (((((((((s32)g_char_cursor) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) >> 0x1F)))
+                if (((btns & PAD_BTN_UP) != 0) && ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) !=
+                                                   (((((((((s32)g_char_cursor) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) >> 0x1F)))
                 {
                     g_char_cursor = g_char_cursor - NAME_GRID_CHARS_PER_ROW;
                 }
@@ -1275,8 +1275,8 @@ s32 func_80141D64(void)
         u16 h;
 
         t0 = g_char_panel_data;
-        v1 = (char*)&g_char_panel_data - 4;    /* two addiu instructions */
-        h = *(u16*)(v1 + (2 * n + t0)); /* lhu from (v1 + 2n + t0) */
+        v1 = (char*)&g_char_panel_data - 4; /* two addiu instructions */
+        h = *(u16*)(v1 + (2 * n + t0));     /* lhu from (v1 + 2n + t0) */
         var_a2 = (void*)(t0 + (h + (u32)v1));
     }
     else
@@ -1788,10 +1788,10 @@ void name_append(u8* dst, const u8* src)
     s32 src_len;
     s32 offset;
     s32 i;
-    
+
     p = dst;
     dst_len = 0;
-    
+
     while (*p)
     {
         if (IS_DBSC_LEAD_BYTE(*p))
@@ -1805,11 +1805,11 @@ void name_append(u8* dst, const u8* src)
             dst_len += 1;
         }
     }
-    
+
     p = src;
     src_len = 0;
     offset = dst_len;
-    
+
     while (*p)
     {
         if (IS_DBSC_LEAD_BYTE(*p))
@@ -1823,12 +1823,12 @@ void name_append(u8* dst, const u8* src)
             src_len += 1;
         }
     }
-    
+
     for (i = 0; i < src_len; i++)
     {
         dst[offset + i] = src[i];
     }
-    
+
     dst[offset + i] = 0;
 }
 
@@ -1853,26 +1853,27 @@ s32 name_pop_last_char(u8* name)
 
     prev_pos = name;
     scan_pos = prev_pos;
-    if (*prev_pos != 0)
+
+    while (*scan_pos)
     {
-        do
+        prev_pos = scan_pos;
+        if (IS_DBSC_LEAD_BYTE(*scan_pos))
         {
-            prev_pos = scan_pos;
-            if ((u32)(*scan_pos - 0x19) < 7U)
-            {
-                scan_pos = prev_pos + 2;
-            }
-            else
-            {
-                scan_pos = prev_pos + 1;
-            }
-        } while (*scan_pos != 0);
+            scan_pos += 2;
+        }
+        else
+        {
+            scan_pos++;
+        }
     }
-    last_char = prev_pos[0] | (prev_pos[1] << 8);
+
+    last_char = MAKE_DBCS_GLYPH(prev_pos[0], prev_pos[1]);
+
     if (prev_pos != scan_pos)
     {
         *prev_pos = 0;
     }
+
     return last_char;
 }
 
