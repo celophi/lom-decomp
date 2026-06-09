@@ -1933,34 +1933,30 @@ void name_copy(u8* dst, const u8* src)
 void recalc_name_width(void)
 {
     GlyphMeasure glyphs[16];
+    GlyphMeasure* cursor;
     GlyphMeasure* entry;
     s16 width;
     s32 glyph_count;
     s32 i;
-    GlyphMeasure* cursor;
-    s32 count;
-    s32* psum;
+    
     glyph_count = func_800644FC(glyphs, g_active_name, 0);
     i = 0;
-    width = entry->width; /* uninitialized read - load-bearing for the match */
-    count = glyph_count;
-    g_name_pixel_width = i;
-    if (i < count)
+    width = entry->width;
+    g_name_pixel_width = 0;
+    
+    if (i < glyph_count)
     {
-        if (!count)
-        {
-        }
         cursor = glyphs;
-        while (i < ((0, count)))
+        while (i < glyph_count)
         {
-            psum = &g_name_pixel_width;
             entry = cursor;
             width = entry->width;
-            *psum += width;
+            g_name_pixel_width += width;
             cursor++;
             i++;
         }
     }
+    
     g_strip_width_target = g_name_pixel_width + 0x18;
 }
 
