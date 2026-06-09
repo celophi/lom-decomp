@@ -56,8 +56,41 @@
 #define GNAME_BTN_NAV_MASK \
     (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT | GNAME_BTN_CONFIRM)
 
+/*
+ * Character-set navigation mode values stored in g_char_set_mode and
+ * passed to / returned from handle_char_set_input.
+ *
+ *   0-3  : action tab bar (OK, Delete, Random, Default)
+ *   4-7  : character-panel selector tabs (panel N at mode 4+N)
+ *   0x10 : in-grid character cursor
+ */
+#define GNAME_MODE_ACTION_OK       0    /* action bar: commit the name */
+#define GNAME_MODE_ACTION_DELETE   1    /* action bar: delete last character */
+#define GNAME_MODE_ACTION_RANDOM   2    /* action bar: fill with random name */
+#define GNAME_MODE_ACTION_DEFAULT  3    /* action bar: reset to default name */
+#define GNAME_MODE_PANEL_BASE      4    /* first char-panel tab; panel N is at 4+N */
+#define GNAME_MODE_GRID            0x10 /* in-grid character cursor mode */
+
+/* g_name_source_mode values: selects which name is pasted on Random/Default action. */
+#define GNAME_SRC_CUSTOM       1  /* use g_custom_name_buf */
+#define GNAME_SRC_HISTORY      3  /* pick from g_history_names via g_history_name_idx */
+#define GNAME_SRC_RAND_PRIMARY 4  /* random entry from g_random_names primary index table */
+#define GNAME_SRC_RAND_ALT     5  /* random entry from g_random_names alternate offset table */
+
+/* Maximum number of logical characters allowed in a name (distinct from
+ * NAME_GRID_CHARS_PER_ROW, which is the grid display width). */
+#define NAME_MAX_CHARS  10
+
+/* Sound effect IDs passed as the first argument to play_menu_sfx. */
+#define GNAME_SFX_ERROR   0x78  /* error: name is full, blank, or action is invalid */
+#define GNAME_SFX_MOVE    0x7D  /* cursor movement / navigation */
+#define GNAME_SFX_CONFIRM 0x7E  /* confirm / OK action */
+#define GNAME_SFX_CANCEL  0x7F  /* cancel / back action */
+#define GNAME_SFX_VOLUME  0x80  /* default volume argument for play_menu_sfx */
+
 /* Character selection grid layout constants. */
 #define NAME_GRID_CHARS_PER_ROW  10  /**< Characters per row in the grid. */
+#define NAME_GRID_CELL_SIZE      16  /**< Pixel width and height of each grid cell (0x10). */
 #define NAME_GRID_X_BASE         84  /**< Pixel X of the leftmost grid column (0x54). */
 #define NAME_GRID_Y_TOP         104  /**< Pixel Y of the top of the visible grid area (0x68). */
 #define NAME_GRID_Y_BOTTOM      168  /**< Pixel Y of the bottom clamp (0xA8). */
@@ -328,7 +361,12 @@ extern u32 g_panel_char_offsets[];
 extern s32 g_kanji_cat_names_offset;
 extern u8 D_80142EF4[];
 
-extern void func_800A3938(int, int);
+/**
+ * @brief Play a one-shot UI sound effect via the AKAO driver.
+ * @param sfx_id Sound effect index (GNAME_SFX_* constants).
+ * @param volume Playback volume; use GNAME_SFX_VOLUME (0x80) for default.
+ */
+extern void play_menu_sfx(int sfx_id, int volume);
 extern void func_8014139C(void);
 extern s32 name_char_count(u8*);
 extern s32 name_is_blank(u8*);
