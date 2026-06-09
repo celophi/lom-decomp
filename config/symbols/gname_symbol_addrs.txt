@@ -40,6 +40,15 @@ g_append_anim_timer  = 0x8014F8B8;
 g_strip_width_target = 0x8014F8BC;
 g_name_pixel_width   = 0x8014F8CC;
 g_glyph_table        = 0x80142CD4;
+g_panel_char_offsets = 0x80142C98;
+g_kanji_cat_names_offset = 0x80142CA4;
+g_kanji_cat_entries  = 0x80142CAC;
+g_tab_cursor_pos     = 0x80142E0C;
+g_kanji_entry_offsets = 0x80142E40;
+g_char_panel_data    = 0x80142EF8;
+g_kanji_panel_data   = 0x80142EFC;
+g_random_names       = 0x80142F04;
+g_history_names      = 0x80142F00;
 g_name_entry_tim     = 0x80147494;
 
 // Unnamed globals (named during decomp)

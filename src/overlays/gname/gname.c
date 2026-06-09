@@ -384,7 +384,7 @@ inline int inline_fn(s32 arg0)
  *   - 4-7: character-panel selector tabs (tab N corresponds to panel N-4)
  *   - 0x10: in-grid character cursor mode
  *
- * @p buttons is the caller-filtered pad bitmask (e.g. @c g_pad_input & 0xF220).
+ * @p buttons is the caller-filtered pad bitmask (e.g. @c g_pad_input & @c GNAME_BTN_NAV_MASK).
  * As a side effect the function updates cursor position, panel, scroll state,
  * and name buffer contents before returning the next mode value.
  *
@@ -402,47 +402,47 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
     s32 btns;
     s32 five;
     s32 four;
-    int new_var17;
+    int btn_right;
     u32 data_base;
     u32(*tab_pos_tbl)[];
-    s32 var_a0;
-    void* var_a1;
-    s32 temp_a0;
+    s32 sfx_id;
+    void* name_src;
+    s32 row_y_copy;
     s32 temp_v0;
     s32 temp_v0_2;
-    s32 temp_v1;
-    u8* new_var2;
+    s32 panel_idx;
+    u8* kanji_cat_names_ptr;
     s32 temp_v1_2;
-    s32 new_var4;
-    int new_var10;
+    s32 scroll_pos_copy;
+    int row_y_px;
     s32 temp_v1_3;
-    s32 temp_v1_5;
-    u8** new_var;
-    s32 var_v0;
-    s32 var_v0_2;
-    long var_v0_3;
+    s32 kanji_cursor_byte_off;
+    u8** hist_names_ref;
+    s32 prev_mode;
+    s32 can_advance;
+    long rand_r;
     int new_var8;
-    int new_var6;
+    int u16_stride;
     s32 var_v0_4;
-    int new_var14;
-    s32 var_v0_5;
-    int new_var3;
+    int btn_down;
+    s32 rand_div;
+    int hist_byte_off;
     s32 var_v0_7;
-    int new_var11;
-    s32 var_v1;
+    int cursor_y_raw;
+    s32 next_mode;
     void* temp_v1_4;
-    u8* new_var5;
-    int new_var7;
+    u8* kanji_data;
+    int scroll_y_off;
     cur_mode = mode;
     btns = buttons;
     repeat = 0xFF;
     five = 5;
     four = 4;
     data_base = 0x10;
-    data_base = ((u32)(&D_80142F04)) - data_base;
+    data_base = ((u32)(&g_random_names)) - data_base;
     while (repeat == 0xFF)
     {
-        kanji_cat_tbl = &D_80142CAC;
+        kanji_cat_tbl = &g_kanji_cat_entries;
         if (cur_mode < 0)
         {
             goto block_62;
@@ -460,7 +460,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
             goto s14to8_block;
         }
     s1_lt4_block:
-        if (btns & 0x220)
+        if (btns & GNAME_BTN_CONFIRM)
         {
             g_cursor_tab = cur_mode;
             if (cur_mode != 1)
@@ -511,19 +511,19 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
             {
                 u16 half4;
                 g_name_clipboard = 0;
-                if (!D_80142F04)
+                if (!g_random_names)
                 {
                 }
-                var_v0_3 = rand();
-                temp_v1_2 = var_v0_3;
+                rand_r = rand();
+                temp_v1_2 = rand_r;
                 if (temp_v1_2 < 0)
                 {
-                    var_v0_3 = temp_v1_2 + 0x7F;
+                    rand_r = temp_v1_2 + 0x7F;
                 }
                 {
-                    u32 rem4 = temp_v1_2 - ((var_v0_3 >> 7) << 7);
-                    half4 = *((u16*)((D_80142F04 + (rem4 * 2)) + data_base));
-                    var_a1 = (void*)((D_80142F04 + half4) + data_base);
+                    u32 rem4 = temp_v1_2 - ((rand_r >> 7) << 7);
+                    half4 = *((u16*)((g_random_names + (rem4 * 2)) + data_base));
+                    name_src = (void*)((g_random_names + half4) + data_base);
                 }
                 goto block_37;
             }
@@ -531,7 +531,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
             {
                 u16 half5;
                 g_name_clipboard = 0;
-                new_var6 = 2;
+                u16_stride = 2;
                 var_v0_4 = rand();
                 temp_v1_3 = var_v0_4;
                 if (temp_v1_3 < 0)
@@ -540,8 +540,8 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 }
                 {
                     u32 rem5 = temp_v1_3 - ((var_v0_4 >> 7) << 7);
-                    half5 = *((u16*)(((((u32)(&D_80142F04)) + ((u32)D_80142F04)) + (rem5 * new_var6)) + 0xF0));
-                    var_a1 = (void*)((D_80142F04 + half5) + data_base);
+                    half5 = *((u16*)(((((u32)(&g_random_names)) + ((u32)g_random_names)) + (rem5 * u16_stride)) + 0xF0));
+                    name_src = (void*)((g_random_names + half5) + data_base);
                 }
                 goto block_37;
             }
@@ -562,40 +562,40 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     g_active_name += 0;
                     do
                     {
-                        var_a1 = &g_initial_name;
+                        name_src = &g_initial_name;
                         goto block_37;
                     } while (0);
                 }
-                new_var3 = new_var8 * 2;
-                half3a = *((u16*)((D_80142F00 + new_var3) + data_base));
-                name_copy(g_active_name, (void*)((D_80142F00 + half3a) + data_base));
+                hist_byte_off = new_var8 * 2;
+                half3a = *((u16*)((g_history_names + hist_byte_off) + data_base));
+                name_copy(g_active_name, (void*)((g_history_names + half3a) + data_base));
                 temp_v0 = rand();
-                var_v0_5 = temp_v0 >> 7;
+                rand_div = temp_v0 >> 7;
                 if (temp_v0 < 0)
                 {
-                    var_v0_5 = (temp_v0 + 0x7F) >> 7;
+                    rand_div = (temp_v0 + 0x7F) >> 7;
                 }
-                new_var = &D_80142F00;
-                rem3 = temp_v0 - (var_v0_5 << 7);
-                var_v0_3 = rem3;
-                half3b = *((u16*)(((((u32)new_var) + ((u32)D_80142F00)) + (var_v0_3 * 2)) + 0xF4));
-                name_append(g_active_name, (void*)((D_80142F00 + half3b) + data_base));
+                hist_names_ref = &g_history_names;
+                rem3 = temp_v0 - (rand_div << 7);
+                rand_r = rem3;
+                half3b = *((u16*)(((((u32)hist_names_ref) + ((u32)g_history_names)) + (rand_r * 2)) + 0xF4));
+                name_append(g_active_name, (void*)((g_history_names + half3b) + data_base));
                 goto block_38;
             }
             else if (g_name_source_mode == 1)
             {
-                var_a1 = &g_custom_name_buf;
+                name_src = &g_custom_name_buf;
                 goto block_36;
             }
         s1_eq3_code:
             func_800A3938(0x7E, 0x80);
 
-            var_a1 = &g_initial_name;
+            name_src = &g_initial_name;
         block_36:
             g_name_clipboard = 0;
 
         block_37:
-            name_copy(g_active_name, var_a1);
+            name_copy(g_active_name, name_src);
 
         block_38:
             recalc_name_width();
@@ -611,26 +611,26 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
             {
                 goto block_61;
             }
-            if (btns & 0x4000)
+            if (btns & PAD_BTN_DOWN)
             {
                 goto block_51;
             }
-            if (btns & 0x8000)
+            if (btns & PAD_BTN_LEFT)
             {
-                var_v0 = 3;
+                prev_mode = 3;
                 if (cur_mode != 0)
                 {
-                    var_v0 = cur_mode - 1;
+                    prev_mode = cur_mode - 1;
                 }
                 goto block_55;
             }
-            if (!(btns & 0x2000))
+            if (!(btns & PAD_BTN_RIGHT))
             {
                 goto block_61;
             }
-            var_v1 = 0;
-            var_v0_2 = 3;
-            var_v0_2 = cur_mode < var_v0_2;
+            next_mode = 0;
+            can_advance = 3;
+            can_advance = cur_mode < can_advance;
             goto block_58;
         }
 
@@ -639,13 +639,13 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         }
         goto end_if_s1_ge0;
     s14to8_block:
-        if ((btns & 0x220) && ((g_cursor_tab = cur_mode, temp_v1 = cur_mode - 4, g_char_panel != temp_v1)))
+        if ((btns & GNAME_BTN_CONFIRM) && ((g_cursor_tab = cur_mode, panel_idx = cur_mode - 4, g_char_panel != panel_idx)))
         {
             cur_mode = 0x10;
             btns = 0;
             g_scroll_target = 0;
             g_scroll_pos = 0;
-            g_char_panel = temp_v1;
+            g_char_panel = panel_idx;
             g_scroll_steps = 0;
             g_char_cursor = 0;
             func_800A3938(0x7E, 0x80);
@@ -655,7 +655,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         {
             if (btns != 0)
             {
-                if (btns & 0x2000)
+                if (btns & PAD_BTN_RIGHT)
                 {
                 block_51:
                     cur_mode = 0x10;
@@ -663,15 +663,15 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     btns = 0;
                     continue;
                 }
-                new_var14 = btns & 0x4000;
-                if (btns & 0x1000)
+                btn_down = btns & PAD_BTN_DOWN;
+                if (btns & PAD_BTN_UP)
                 {
                     cur_mode = (cur_mode == four) ? (6) : (cur_mode - 1);
                 }
-                if (new_var14)
+                if (btn_down)
                 {
-                    var_v1 = 4;
-                    var_v0_2 = cur_mode < 6;
+                    next_mode = 4;
+                    can_advance = cur_mode < 6;
                     goto block_58;
                 }
             }
@@ -680,20 +680,20 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
 
         goto end_if_s1_ge0;
     block_55:
-        cur_mode = var_v0;
+        cur_mode = prev_mode;
 
         goto block_61;
     block_58:
-        if (var_v0_2 != 0)
+        if (can_advance != 0)
         {
-            var_v1 = cur_mode + 1;
+            next_mode = cur_mode + 1;
         }
 
-        cur_mode = var_v1;
+        cur_mode = next_mode;
     block_61:
         func_800A3938(0x7D, 0x80);
 
-        tab_pos_tbl = &D_80142E0C;
+        tab_pos_tbl = &g_tab_cursor_pos;
         temp_v1_4 = (void*)(((cur_mode + 2) * 4) + ((u32)tab_pos_tbl));
         repeat = 0;
         g_cursor_x_target = ((*((u32*)temp_v1_4)) & 0x1FF) - 8;
@@ -704,7 +704,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         continue;
     end_if_s1_ge0:
     block_62:
-        if ((btns & 0x220) && (((g_char_last_row * 0xA) + g_char_last_col) >= g_char_cursor))
+        if ((btns & GNAME_BTN_CONFIRM) && (((g_char_last_row * 0xA) + g_char_last_col) >= g_char_cursor))
         {
             if (g_char_panel < 3)
             {
@@ -712,12 +712,12 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 {
                     u32 t1;
                     u16 hw;
-                    char_data_ptr = D_80142EF8;
+                    char_data_ptr = g_char_panel_data;
                     g_append_anim_timer = 2;
                     {
                         u32 idx_lt3 = g_char_cursor;
-                        t1 = *((u32*)((g_char_panel * 4) + ((u32)(&D_80142C98))));
-                        hw = *((u16*)(((D_80142EF8 + (t1 * 2)) + (idx_lt3 * 2)) + data_base));
+                        t1 = *((u32*)((g_char_panel * 4) + ((u32)(&g_panel_char_offsets))));
+                        hw = *((u16*)(((g_char_panel_data + (t1 * 2)) + (idx_lt3 * 2)) + data_base));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, (void*)((char_data_ptr + hw) + data_base));
                     }
@@ -741,22 +741,22 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     {
                         g_kanji_cat = g_char_cursor;
                         g_char_panel = four;
-                        var_a0 = 0x7E;
+                        sfx_id = 0x7E;
                         g_scroll_target = 0;
                         g_scroll_pos = 0;
                         g_scroll_steps = 0;
-                        new_var2 = D_80142EF8 + (D_80142CA4 * 2);
+                        kanji_cat_names_ptr = g_char_panel_data + (g_kanji_cat_names_offset * 2);
                         g_cursor_x_target = 0x54;
                         g_cursor_y_target = 0x68;
                         g_cursor_lerp_steps = four;
-                        temp_v1_5 = g_char_cursor * 2;
+                        kanji_cursor_byte_off = g_char_cursor * 2;
                         g_char_cursor = 0;
                         {
-                            off = *((u16*)((new_var2 + temp_v1_5) + data_base));
-                            g_kanji_cat_name = (void*)((D_80142EF8 + off) + data_base);
+                            off = *((u16*)((kanji_cat_names_ptr + kanji_cursor_byte_off) + data_base));
+                            g_kanji_cat_name = (void*)((g_char_panel_data + off) + data_base);
                         }
                         repeat = 0;
-                        func_800A3938(var_a0, 0x80);
+                        func_800A3938(sfx_id, 0x80);
                     }
                     else
                     {
@@ -771,25 +771,25 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                         u32 t1;
                         u32 t2;
                         g_append_anim_timer = 2;
-                        new_var5 = D_80142EFC;
+                        kanji_data = g_kanji_panel_data;
                         g_append_anim_frame = 0;
                         {
                             int idx4 = g_kanji_cat;
                             t1 = *((u32*)((idx4 * 4) + ((u32)kanji_cat_tbl)));
-                            t2 = *((u32*)((t1 * 4) + ((u32)(&D_80142E40))));
-                            name_append(g_active_name, (void*)((new_var5 + (*((u16*)(((new_var5 + (t2 * 2)) + (g_char_cursor * 2)) + data_base)))) + data_base));
+                            t2 = *((u32*)((t1 * 4) + ((u32)(&g_kanji_entry_offsets))));
+                            name_append(g_active_name, (void*)((kanji_data + (*((u16*)(((kanji_data + (t2 * 2)) + (g_char_cursor * 2)) + data_base)))) + data_base));
                         }
                         recalc_name_width();
                         g_strip_width_steps = five;
-                        var_a0 = 0x7D;
+                        sfx_id = 0x7D;
                     }
                     else
                     {
                     block_73:
-                        var_a0 = 0x78;
+                        sfx_id = 0x78;
                     }
                     repeat = 0;
-                    func_800A3938(var_a0, 0x80);
+                    func_800A3938(sfx_id, 0x80);
                 }
                 else
                 {
@@ -803,33 +803,33 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         {
             if (btns != 0)
             {
-                if ((btns & 0x1000) && ((g_char_cursor / 10) == (((s32)(g_char_cursor & 0xFFFF)) >> 0x1F)))
+                if ((btns & PAD_BTN_UP) && ((g_char_cursor / 10) == (((s32)(g_char_cursor & 0xFFFF)) >> 0x1F)))
                 {
                     cur_mode = 0;
                     btns = 0;
                     continue;
                 }
-                var_v0_7 = btns & 0x1000;
-                if (((btns & 0x8000) != 0) && (g_char_cursor == ((g_char_cursor / 10) * 0xA)))
+                var_v0_7 = btns & PAD_BTN_UP;
+                if (((btns & PAD_BTN_LEFT) != 0) && (g_char_cursor == ((g_char_cursor / 10) * 0xA)))
                 {
                     cur_mode = 4;
                     btns = 0;
                     continue;
                 }
-                if (((btns & 0x1000) != 0) &&
+                if (((btns & PAD_BTN_UP) != 0) &&
                     ((g_char_cursor / 10) != (((((((((s32)g_char_cursor) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) >> 0x1F)))
                 {
                     g_char_cursor = g_char_cursor - 0xA;
                 }
-                else if ((btns & 0x4000) && ((g_char_cursor / 10) != g_char_last_row))
+                else if ((btns & PAD_BTN_DOWN) && ((g_char_cursor / 10) != g_char_last_row))
                 {
                     g_char_cursor += 0xA;
                 }
-                else if ((btns & 0x8000) && (g_char_cursor != ((g_char_cursor / 10) * 0xA)))
+                else if ((btns & PAD_BTN_LEFT) && (g_char_cursor != ((g_char_cursor / 10) * 0xA)))
                 {
                     g_char_cursor = g_char_cursor - 1;
                 }
-                else if ((new_var17 = btns & 0x2000) && (((g_char_cursor / 10) * 0xA) != (g_char_cursor - 9)))
+                else if ((btn_right = btns & PAD_BTN_RIGHT) && (((g_char_cursor / 10) * 0xA) != (g_char_cursor - 9)))
                 {
                     g_char_cursor = g_char_cursor + 1;
                 }
@@ -841,23 +841,23 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
             }
             func_800A3938(0x7D, 0x80);
             g_cursor_x_target = ((g_char_cursor % 10) * 0x10) + (var_v0_4 = 0x54);
-            new_var10 = 4 * (4 * (g_char_cursor / 10));
-            temp_a0 = new_var10;
-            new_var4 = g_scroll_pos;
-            new_var7 = new_var4 - 0x68;
-            new_var11 = temp_a0 - new_var7;
-            temp_v0_2 = new_var11;
+            row_y_px = 4 * (4 * (g_char_cursor / 10));
+            row_y_copy = row_y_px;
+            scroll_pos_copy = g_scroll_pos;
+            scroll_y_off = scroll_pos_copy - 0x68;
+            cursor_y_raw = row_y_copy - scroll_y_off;
+            temp_v0_2 = cursor_y_raw;
             g_cursor_y_target = temp_v0_2;
             if (temp_v0_2 < 0x68)
             {
                 g_cursor_y_target = 0x68;
-                g_scroll_target = temp_a0;
+                g_scroll_target = row_y_copy;
                 g_scroll_steps = four;
             }
             if (g_cursor_y_target >= 0xA9)
             {
                 g_cursor_y_target = 0xA8;
-                g_scroll_target = temp_a0 - 0x40;
+                g_scroll_target = row_y_copy - 0x40;
                 g_scroll_steps = four;
             }
             g_cursor_lerp_steps = four;
@@ -899,7 +899,7 @@ void func_8014139C(void)
     int new_var3;
     u8* ptr;
     u16 val;
-    temp_a1 = g_pad_input & 0xF220;
+    temp_a1 = g_pad_input & GNAME_BTN_NAV_MASK;
     g_cursor_tab = 0xFF;
     if (temp_a1 != 0)
     {
@@ -999,11 +999,11 @@ void func_8014139C(void)
                     }
                 }
                 offset = g_kanji_cat;
-                if (D_80142CAC[offset] != 0xFF)
+                if (g_kanji_cat_entries[offset] != 0xFF)
                 {
                     g_scroll_target = (long)0;
                     g_scroll_pos = 0;
-                    var_v0 = D_80142C98[3];
+                    var_v0 = g_panel_char_offsets[3];
                     g_scroll_steps = 0;
                     g_char_cursor = 0;
                     g_cursor_x_target = 0x54;
@@ -1012,10 +1012,10 @@ void func_8014139C(void)
                     temp_c98 = var_v0;
                     base = D_80142EF4;
                     idx = g_kanji_cat;
-                    offset = (idx * 2) + ((temp_c98 * 2) + D_80142EF8);
+                    offset = (idx * 2) + ((temp_c98 * 2) + g_char_panel_data);
                     tmp = *((u16*)(base + offset));
                     g_pad_input &= ~0xC;
-                    g_kanji_cat_name = (void*)((D_80142EF8 + tmp) + ((unsigned long)base));
+                    g_kanji_cat_name = (void*)((g_char_panel_data + tmp) + ((unsigned long)base));
                 }
             } while (g_pad_input & 0xC);
         }
@@ -1103,7 +1103,7 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
  *     additive DrawMode, and chain both into @c ot[0x08] (offset 0x20).
  *  4. Conditional glyphs: when @c g_scroll_pos is set, and again when
  *     @c g_char_last_row >= 5 passes a phase check, emit extra glyphs from the
- *     @c D_80142E0C table.
+ *     @c g_tab_cursor_pos table.
  *  5. Hand off to the remaining sub-passes @ref func_80141D64,
  *     @ref func_80141F9C and @ref func_80141E04.
  *
@@ -1183,10 +1183,10 @@ void gname_render(void* ctx)
         *((s32*)(ctx_bytes + 0x20)) = ((*((s32*)(ctx_bytes + 0x20))) & 0xFF000000) | (((s32)drawmode) & 0xFFFFFF);
     }
     tmp_ptr = ctx_bytes + 0x4040;
-    /* 4. Conditional extra glyphs from the D_80142E0C table. */
+    /* 4. Conditional extra glyphs from the g_tab_cursor_pos table. */
     if (g_scroll_pos != 0)
     {
-        prim2 = func_80142274(prim2, ctx, (u8)D_80142E0C[3], (*((s32*)(D_80142E0C + 0))) & 0x1FF, (s32)D_80142E0C[2], 0, 0, 0);
+        prim2 = func_80142274(prim2, ctx, (u8)g_tab_cursor_pos[3], (*((s32*)(g_tab_cursor_pos + 0))) & 0x1FF, (s32)g_tab_cursor_pos[2], 0, 0, 0);
     }
     if (g_char_last_row >= 5)
     {
@@ -1197,7 +1197,7 @@ void gname_render(void* ctx)
         }
         if ((((f8b4 >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
-            prim2 = func_80142274(prim2, ctx, (u8)D_80142E0C[7], (*((s32*)(D_80142E0C + 4))) & 0x1FF, (s32)D_80142E0C[6], 0, 0, 0);
+            prim2 = func_80142274(prim2, ctx, (u8)g_tab_cursor_pos[7], (*((s32*)(g_tab_cursor_pos + 4))) & 0x1FF, (s32)g_tab_cursor_pos[6], 0, 0, 0);
         }
     }
     /* 5. Remaining sub-passes. */
@@ -1226,10 +1226,10 @@ s32 func_80141C34(s32 arg0, s32 arg1)
 
     if (f8ac < 8)
     {
-        entry = (u32*)((u32)&D_80142EF8 + ((f8ac + 2) * 4));
+        entry = (u32*)((u32)&g_char_panel_data + ((f8ac + 2) * 4));
         temp = *entry;
-        base = ((u8*)&D_80142EF8) - 4;
-        var = D_80142EF8; /* value, not address */
+        base = ((u8*)&g_char_panel_data) - 4;
+        var = g_char_panel_data; /* value, not address */
         val16 = *(u16*)(base + ((temp >> 8) & 0xFE) + var);
         ptr = base + val16 + var;
         var_a0 = func_800A88A0(var_a0, arg1, ptr, 1, 0xb0, 0xc8, 2);
@@ -1239,18 +1239,18 @@ s32 func_80141C34(s32 arg0, s32 arg1)
         f848 = g_char_panel;
         if (((u32)(f848 - 3)) < 2U)
         {
-            base = ((u8*)&D_80142EF8) - 4;
-            var = D_80142EF8;
-            /* val16 from &D_80142EF8 + (f848*4) + 0x10 */
-            val16 = *(u16*)((u8*)&D_80142EF8 + (f848 * 4) + 0x10);
+            base = ((u8*)&g_char_panel_data) - 4;
+            var = g_char_panel_data;
+            /* val16 from &g_char_panel_data + (f848*4) + 0x10 */
+            val16 = *(u16*)((u8*)&g_char_panel_data + (f848 * 4) + 0x10);
             ptr = base + val16 + var;
             var_a0 = func_800A88A0(var_a0, arg1, ptr, 1, 0xb0, 0xc8, 2);
         }
         else
         {
-            base = ((u8*)&D_80142EF8) - 4;
-            /* val16 from &D_80142EF8 + (arg0*4) + 0x50 */
-            val16 = *(u16*)((u8*)&D_80142EF8 + (arg0 * 4) + 0x50);
+            base = ((u8*)&g_char_panel_data) - 4;
+            /* val16 from &g_char_panel_data + (arg0*4) + 0x50 */
+            val16 = *(u16*)((u8*)&g_char_panel_data + (arg0 * 4) + 0x50);
             ptr = base + val16 + (arg0 * 4);
             var_a0 = func_800A88A0(var_a0, arg1, ptr, 1, 0xb0, 0xc8, 2);
         }
@@ -1274,8 +1274,8 @@ s32 func_80141D64(void)
         char* v1; /* pointer arithmetic, no constant folding */
         u16 h;
 
-        t0 = D_80142EF8;
-        v1 = (char*)&D_80142EF8 - 4;    /* two addiu instructions */
+        t0 = g_char_panel_data;
+        v1 = (char*)&g_char_panel_data - 4;    /* two addiu instructions */
         h = *(u16*)(v1 + (2 * n + t0)); /* lhu from (v1 + 2n + t0) */
         var_a2 = (void*)(t0 + (h + (u32)v1));
     }
@@ -1385,16 +1385,16 @@ void func_80141F9C(void* arg0, s32 arg1)
     /* Determine var_s4, var_s1, var_s5, var_s2 based on g_char_panel */
     if (g_char_panel == 4)
     {
-        var_s4 = (u8*)(D_80142EFC + ((u32)&D_80142EFC - 8));
-        var_s1 = D_80142E40[D_80142CAC[g_kanji_cat]];
-        var_s5 = D_80142E40[D_80142CAC[g_kanji_cat] + 1];
+        var_s4 = (u8*)(g_kanji_panel_data + ((u32)&g_kanji_panel_data - 8));
+        var_s1 = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]];
+        var_s5 = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat] + 1];
         var_s2 = 0;
     }
     else
     {
-        var_s1 = D_80142C98[arg1][0];
-        var_s5 = D_80142C98[arg1][1];
-        var_s4 = (u8*)(D_80142EF8 + ((u32)&D_80142EF8 - 4));
+        var_s1 = g_panel_char_offsets[arg1][0];
+        var_s5 = g_panel_char_offsets[arg1][1];
+        var_s4 = (u8*)(g_char_panel_data + ((u32)&g_char_panel_data - 4));
         var_s2 = 0;
     }
 
