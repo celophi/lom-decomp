@@ -1756,31 +1756,16 @@ s32 name_byte_length(u8* name)
  * @return Glyph (character) count.
  * @see https://decomp.me/scratch/c8fPe (100%)
  */
-s32 name_char_count(u8* name)
+s32 name_char_count(const u8* name)
 {
-    s32 char_count;
-    u8 c;
-    u8* p;
+    s32 char_count = 0;
 
-    p = name;
-    c = *p;
-    char_count = 0;
-    if (c != 0)
+    while (*name)
     {
-        do
-        {
-            if ((u32)(c - 0x19) < 7U) /* DBCS lead byte: 2-byte glyph */
-            {
-                p += 2;
-            }
-            else
-            {
-                p += 1;
-            }
-            c = *p;
-            char_count += 1;
-        } while (c != 0);
+        name += IS_DBSC_LEAD_BYTE(*name) ? 2 : 1;
+        char_count++;
     }
+
     return char_count;
 }
 
