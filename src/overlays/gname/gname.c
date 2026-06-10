@@ -269,11 +269,11 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
  *  - increments the global frame counter @c g_frame_counter.
  *  - @ref gname_update_state  - countdown / lerp / SFX trigger update.
  *
- * @param ctx Render context passed through to @ref gname_render.
+ * @param ctx Render context (@ref RenderContext) passed through to @ref gname_render.
  *
  * @see https://decomp.me/scratch/yYkTM (100%)
  */
-void gname_tick(s32 ctx)
+void gname_tick(RenderContext* ctx)
 {
     draw_name_cursor_row();
     gname_render(ctx);
@@ -2022,12 +2022,12 @@ s32 name_pop_first_char(u8* name)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
  */
-s32 draw_char_append_anim(s32 prim, s32 ctx)
+void* draw_char_append_anim(void* prim, void* ctx)
 {
     u8 frame = g_append_anim_frame;
-    s32 result = prim;
+    void* result = prim;
     u8* table;
-    s32 ot_base = ctx;
+    u8* ot_base = (u8*)ctx;
     s32 i;
     /* px points at a slot's x byte; py = px + 1 reads y at [0] and glyph at
        [1]. The two incrementing pointers are load-bearing for the match. */
