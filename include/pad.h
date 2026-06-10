@@ -15,6 +15,10 @@
  */
 typedef enum
 {
+    PAD_BTN_L2 = 0x0001,
+    PAD_BTN_R2 = 0x0002,
+    PAD_BTN_L1 = 0x0004,
+    PAD_BTN_R1 = 0x0008,
     PAD_BTN_SQUARE = 0x0010,
     PAD_BTN_CROSS = 0x0020,
     PAD_BTN_CIRCLE = 0x0040,
