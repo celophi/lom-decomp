@@ -385,31 +385,27 @@ void reset_run_state(void)
  * @param mode    Current char-set mode (see above).
  * @param buttons Filtered button bitmask from @c g_pad_input.
  * @return        New char-set mode after processing the input.
- * @see decomp.me (98.22%) https://decomp.me/scratch/PpqVd
+ * @see decomp.me (99.78%) https://decomp.me/scratch/PpqVd
  */
-s32 handle_char_set_input(s32 mode, s32 buttons)
+s32 handle_char_set_input(s32 arg0, s32 arg1)
 {
-    s32 cur_mode = mode;
-    s32 cur_buttons = buttons;
-    s32 done = 0xFF;
-    int offset = 0x68;
+    s32 var_s0 = 0xFF;
 
-    while (done == 0xFF)
+    while (var_s0 == 0xFF)
     {
-        switch (cur_mode)
+        switch (arg0)
         {
         case 0:
         case 1:
         case 2:
         case 3:
-            /* tabs 0-3: control tabs (back, delete, random, history, etc.) */
-            if (cur_buttons & (PAD_BTN_L3 | PAD_BTN_CROSS))
+            if (arg1 & 0x220)
             {
-                g_cursor_tab = cur_mode;
-                switch (cur_mode)
+                g_cursor_tab = arg0;
+                switch (arg0)
                 {
                 case 0:
-                    if (name_char_count(g_active_name) != 0 && !name_is_blank(g_active_name))
+                    if ((name_char_count(g_active_name) != 0) && (!name_is_blank(g_active_name)))
                     {
                         play_menu_sfx(0x7E, 0x80);
                         g_overlay_result = 5;
@@ -418,25 +414,27 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     {
                         play_menu_sfx(0x78, 0x80);
                     }
-                    done = 0;
+                    var_s0 = 0;
                     continue;
+
                 case 1:
                     play_menu_sfx(0x7E, 0x80);
                     name_pop_last_char(g_active_name);
                     break;
+
                 case 2:
                     play_menu_sfx(0x7E, 0x80);
                     if (g_name_source_mode == 4)
                     {
                         g_name_clipboard = 0;
-                        name_copy(g_active_name, (g_random_names - 0x10) + *(u32*)g_random_names +
-                                                     *(u16*)((g_random_names - 0x10) + *(u32*)g_random_names + (rand() % 128) * 2));
+                        name_copy(g_active_name, ((g_random_names - 0x10) + (*((u32*)g_random_names))) +
+                                                     (*((u16*)(((g_random_names - 0x10) + (*((u32*)g_random_names))) + ((rand() % 128) * 2)))));
                     }
                     else if (g_name_source_mode == 5)
                     {
                         g_name_clipboard = 0;
-                        name_copy(g_active_name, (g_random_names - 0x10) + *(u32*)g_random_names +
-                                                     *(u16*)((g_random_names - 0x10) + *(u32*)g_random_names + ((rand() % 128) + 128) * 2));
+                        name_copy(g_active_name, ((g_random_names - 0x10) + (*((u32*)g_random_names))) +
+                                                     (*((u16*)(((g_random_names - 0x10) + (*((u32*)g_random_names))) + (((rand() % 128) + 128) * 2)))));
                     }
                     else if (g_name_source_mode == 3)
                     {
@@ -447,10 +445,10 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                         }
                         else
                         {
-                            name_copy(g_active_name, (g_random_names - 0x10) + *(u32*)g_history_names +
-                                                         *(u16*)((g_random_names - 0x10) + *(u32*)g_history_names + g_history_name_idx * 2));
-                            name_append(g_active_name, (g_random_names - 0x10) + *(u32*)g_history_names +
-                                                           *(u16*)((g_history_names - 0x10) + *(u32*)g_history_names + ((rand() % 128) + 130) * 2));
+                            name_copy(g_active_name, ((g_random_names - 0x10) + (*((u32*)g_history_names))) +
+                                                         (*((u16*)(((g_random_names - 0x10) + (*((u32*)g_history_names))) + (g_history_name_idx * 2)))));
+                            name_append(g_active_name, ((g_random_names - 0x10) + ((*((u32*)g_history_names)))) +
+                                                           (*((u16*)(((g_history_names - 0x10) + (*((u32*)g_history_names))) + (((rand() % 128) + 130) * 2)))));
                         }
                     }
                     else if (g_name_source_mode == 1)
@@ -464,45 +462,50 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                         g_name_clipboard = 0;
                         name_copy(g_active_name, &g_initial_name);
                     }
-                    break;
+                    recalc_name_width();
+                    var_s0 = 0;
+                    g_strip_width_steps = 5;
+                    continue;
+
                 case 3:
                     play_menu_sfx(0x7E, 0x80);
                     g_name_clipboard = 0;
                     name_copy(g_active_name, &g_initial_name);
                     break;
+
                 default:
-                    done = 0;
+                    var_s0 = 0;
                     continue;
                 }
+
                 recalc_name_width();
-                done = 0;
+                var_s0 = 0;
                 g_strip_width_steps = 5;
             }
             else
             {
-                if (cur_buttons != 0)
+                if (arg1 != 0)
                 {
-                    if (cur_buttons & PAD_BTN_DOWN)
-                    { /* DOWN */
-                        cur_mode = 0x10;
-                        cur_buttons = 0;
+                    if (arg1 & PAD_BTN_DOWN)
+                    {
+                        arg0 = 0x10;
+                        arg1 = 0;
                         continue;
                     }
-                    if (cur_buttons & PAD_BTN_LEFT)
-                    { /* LEFT */
-                        cur_mode = (cur_mode == 0) ? 3 : (cur_mode - 1);
+                    if (arg1 & PAD_BTN_LEFT)
+                    {
+                        arg0 = (arg0 == 0) ? (3) : (arg0 - 1);
                     }
-                    else if (cur_buttons & PAD_BTN_RIGHT)
-                    { /* RIGHT */
-                        cur_mode = (cur_mode < 3) ? (cur_mode + 1) : 0;
+                    else if (arg1 & PAD_BTN_RIGHT)
+                    {
+                        arg0 = (arg0 < 3) ? (arg0 + 1) : (0);
                     }
                 }
-
                 play_menu_sfx(0x7D, 0x80);
-                g_cursor_x_target = g_tab_cursor_pos[cur_mode + 2].x - 8;
+                g_cursor_x_target = g_tab_cursor_pos[arg0 + 2].x - 8;
+                g_cursor_y_target = g_tab_cursor_pos[arg0 + 2].y;
                 g_cursor_lerp_steps = 5;
-                g_cursor_y_target = g_tab_cursor_pos[cur_mode + 2].y;
-                done = 0;
+                var_s0 = 0;
             }
             break;
 
@@ -510,62 +513,57 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         case 5:
         case 6:
         case 7:
-
-            if ((cur_buttons & (PAD_BTN_L3 | PAD_BTN_CROSS)) && (g_cursor_tab = cur_mode, g_char_panel != cur_mode - 4))
+            if (((arg1 & 0x220) && ((g_cursor_tab = arg0, g_char_panel != (arg0 - 4)))) != 0)
             {
-                cur_buttons = 0;
-
+                g_char_panel = g_cursor_tab - 4;
+                arg0 = 0x10;
+                arg1 = 0;
                 g_scroll_target = 0;
                 g_scroll_pos = 0;
-                g_char_panel = g_cursor_tab - 4;
                 g_scroll_steps = 0;
                 g_char_cursor = 0;
                 play_menu_sfx(0x7E, 0x80);
-
                 continue;
             }
             else
             {
-                if (cur_buttons != 0)
+                if (arg1 != 0)
                 {
-                    if (cur_buttons & PAD_BTN_RIGHT)
-                    { /* RIGHT */
-                        cur_mode = 0x10;
-                        cur_buttons = 0;
+                    if (arg1 & PAD_BTN_RIGHT)
+                    {
+                        arg0 = 0x10;
+                        arg1 = 0;
                         continue;
                     }
-                    if (cur_buttons & PAD_BTN_UP)
-                    { /* UP */
-                        cur_mode = (cur_mode == 4) ? 6 : (cur_mode - 1);
+                    if (arg1 & PAD_BTN_UP)
+                    {
+                        arg0 = (arg0 == 4) ? (6) : (arg0 - 1);
                     }
-                    else if (cur_buttons & PAD_BTN_DOWN)
-                    { /* DOWN */
-                        cur_mode = (cur_mode < 6) ? (cur_mode + 1) : 4;
+                    else if (arg1 & PAD_BTN_DOWN)
+                    {
+                        arg0 = (arg0 < 6) ? (arg0 + 1) : (4);
                     }
                 }
-
                 play_menu_sfx(0x7D, 0x80);
-                g_cursor_x_target = g_tab_cursor_pos[cur_mode + 2].x - 8;
+                g_cursor_x_target = g_tab_cursor_pos[arg0 + 2].x - 8;
+                g_cursor_y_target = g_tab_cursor_pos[arg0 + 2].y;
                 g_cursor_lerp_steps = 5;
-                g_cursor_y_target = g_tab_cursor_pos[cur_mode + 2].y;
-                done = 0;
+                var_s0 = 0;
             }
             break;
 
         default:
-            /* character selection panel */
-            if ((cur_buttons & (PAD_BTN_L3 | PAD_BTN_CROSS)) && ((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)
+            if (((arg1 & 0x220) && (((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)) != 0U)
             {
-
                 if (g_char_panel < 3)
                 {
                     if (name_char_count(g_active_name) < 10)
                     {
                         u8* argA;
                         g_append_anim_timer = 2;
-                        argA =
-                            ((g_random_names - 0x10) + (u32)g_char_panel_data) +
-                            (*((u16*)((((g_random_names - 0x10) + (u32)g_char_panel_data) + (g_panel_char_offsets[g_char_panel] * 2)) + (g_char_cursor * 2))));
+                        argA = ((g_random_names - 0x10) + ((u32)g_char_panel_data)) +
+                               (*((u16*)((((g_random_names - 0x10) + ((u32)g_char_panel_data)) + (g_panel_char_offsets[g_char_panel] * 2)) +
+                                         (g_char_cursor * 2))));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
                         recalc_name_width();
@@ -581,7 +579,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 {
                     if (g_kanji_cat_entries[g_char_cursor] == 0xFF)
                     {
-                        done = 0;
+                        var_s0 = 0;
                         continue;
                     }
                     g_kanji_cat = g_char_cursor;
@@ -593,8 +591,8 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     g_cursor_y_target = 0x68;
                     g_cursor_lerp_steps = 4;
                     g_char_cursor = 0;
-                    g_kanji_cat_name = (g_random_names - 0x10) + (u32)g_char_panel_data +
-                                       *(u16*)((g_random_names - 0x10) + (u32)g_char_panel_data + g_kanji_cat_names_offset * 2 + g_kanji_cat * 2);
+                    g_kanji_cat_name = ((g_random_names - 0x10) + ((u32)g_char_panel_data)) +
+                                       (*((u16*)((((g_random_names - 0x10) + ((u32)g_char_panel_data)) + (g_kanji_cat_names_offset * 2)) + (g_kanji_cat * 2))));
                     play_menu_sfx(0x7E, 0x80);
                 }
                 else if (g_char_panel == 4)
@@ -603,9 +601,10 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     {
                         u8* argA;
                         g_append_anim_timer = 2;
-                        argA = (g_random_names - 0x10) + (u32)g_kanji_panel_data +
-                               *(u16*)((g_random_names - 0x10) + (u32)g_kanji_panel_data + g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] * 2 +
-                                       g_char_cursor * 2);
+                        argA =
+                            ((g_random_names - 0x10) + ((u32)g_kanji_panel_data)) +
+                            (*((u16*)((((g_random_names - 0x10) + ((u32)g_kanji_panel_data)) + (g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] * 2)) +
+                                      (g_char_cursor * 2))));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
                         recalc_name_width();
@@ -617,52 +616,56 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                         play_menu_sfx(0x78, 0x80);
                     }
                 }
-                done = 0;
+                var_s0 = 0;
             }
             else
             {
-                if (cur_buttons != 0)
-                {
-                    /* Early-out panel jump chain */
-                    if ((cur_buttons & PAD_BTN_UP) && (g_char_cursor / 10 == 0))
-                    {
-                        cur_mode = 0;
-                        cur_buttons = 0;
-                        continue;
-                    }
-                    if ((cur_buttons & PAD_BTN_LEFT) && ((g_char_cursor % 10) == 0))
-                    {
-                        cur_mode = 4;
-                        cur_buttons = 0;
-                        continue;
-                    }
+                s32 scroll_off;
 
-                    if ((cur_buttons & PAD_BTN_UP) && (g_char_cursor / 10 != 0))
+                if (arg1 != 0)
+                {
+                    if ((arg1 & PAD_BTN_UP) && ((g_char_cursor / 10) == 0))
+                    {
+                        arg0 = 0;
+                        arg1 = 0;
+                        continue;
+                    }
+                    if ((arg1 & PAD_BTN_LEFT) && ((g_char_cursor % 10) == 0))
+                    {
+                        arg0 = 4;
+                        arg1 = 0;
+                        continue;
+                    }
+                    if ((arg1 & PAD_BTN_UP) && ((g_char_cursor / 10) != 0))
                     {
                         g_char_cursor -= 10;
                     }
-                    else if ((cur_buttons & PAD_BTN_DOWN) && (g_char_cursor / 10 != g_char_last_row))
+                    else if ((arg1 & PAD_BTN_DOWN) && ((g_char_cursor / 10) != g_char_last_row))
                     {
                         g_char_cursor += 10;
                     }
-                    else if ((cur_buttons & PAD_BTN_LEFT) && ((g_char_cursor % 10) != 0))
+                    else if ((arg1 & PAD_BTN_LEFT) && ((g_char_cursor % 10) != 0))
                     {
                         g_char_cursor -= 1;
                     }
-                    else if ((cur_buttons & PAD_BTN_RIGHT) && ((g_char_cursor % 10) != 9))
-                    {
-                        g_char_cursor += 1;
-                    }
                     else
                     {
-                        done = 0;
-                        continue;
+
+                        if ((arg1 & PAD_BTN_RIGHT) && ((g_char_cursor % 10) != 9))
+                        {
+                            g_char_cursor += 1;
+                        }
+                        else
+                        {
+                            var_s0 = 0;
+                            continue;
+                        }
                     }
                 }
 
                 play_menu_sfx(0x7D, 0x80);
-                g_cursor_x_target = (g_char_cursor % 10) * 0x10 + 0x54;
-                g_cursor_y_target = (g_char_cursor / 10) * 0x10 - (g_scroll_pos - offset);
+                g_cursor_x_target = ((g_char_cursor % 10) * 0x10) + 0x54;
+                g_cursor_y_target = ((g_char_cursor / 10) * 0x10) + 0x68 - g_scroll_pos;
 
                 if (g_cursor_y_target < 0x68)
                 {
@@ -670,21 +673,22 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     g_scroll_target = (g_char_cursor / 10) * 0x10;
                     g_scroll_steps = 4;
                 }
+
                 if (g_cursor_y_target >= 0xA9)
                 {
                     g_cursor_y_target = 0xA8;
-                    g_scroll_target = (g_char_cursor / 10) * 0x10 - 0x40;
+                    g_scroll_target = ((g_char_cursor / 10) * 0x10) - 0x40;
                     g_scroll_steps = 4;
                 }
 
                 g_cursor_lerp_steps = 4;
-                done = 0;
+                var_s0 = 0;
             }
             break;
         }
     }
 
-    return cur_mode;
+    return arg0;
 }
 
 /**
@@ -1154,7 +1158,7 @@ s32 emit_panel_label(void)
         u16 label_offset;
 
         base_val = g_char_panel_data;
-        data_base = (char*)&g_char_panel_data - 4; /* two addiu instructions */
+        data_base = (char*)&g_char_panel_data - 4;                  /* two addiu instructions */
         label_offset = *(u16*)(data_base + (2 * panel + base_val)); /* lhu from (data_base + 2*panel + base_val) */
         label_data = (void*)(base_val + (label_offset + (u32)data_base));
     }
@@ -1320,9 +1324,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
         screen_y = (row * NAME_GRID_CELL_SIZE) - g_scroll_pos;
         if ((u32)(screen_y + 0x0B) < 0x5B)
         {
-            write_cur = func_800A88A0(write_cur, (void*)&ctx->ot[0x0A],
-                                      (void*)(glyph_base + *entry_ptr),
-                                      1, col * NAME_GRID_CELL_SIZE, screen_y, 0);
+            write_cur = func_800A88A0(write_cur, (void*)&ctx->ot[0x0A], (void*)(glyph_base + *entry_ptr), 1, col * NAME_GRID_CELL_SIZE, screen_y, 0);
         }
         entry_idx++;
         entry_ptr++;
