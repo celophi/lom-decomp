@@ -14,6 +14,7 @@ gname_tick          = 0x80140888;
 gname_update_state  = 0x801408D0;
 reset_run_state          = 0x801409EC;
 handle_char_set_input    = 0x80140AB8;
+gname_process_input      = 0x8014139C;
 gname_render        = 0x80141928;
 emit_draw_mode_prim = 0x80142220;
 draw_name_cursor_row = 0x80142410;

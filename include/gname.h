@@ -106,6 +106,8 @@
 #define NAME_GRID_Y_TOP         104  /**< Pixel Y of the top of the visible grid area (0x68). */
 #define NAME_GRID_Y_BOTTOM      168  /**< Pixel Y of the bottom clamp (0xA8). */
 #define NAME_GRID_SCROLL_STEP    64  /**< Scroll delta per step: 4 rows * 16 px/row (0x40). */
+#define NAME_GRID_VRAM_X        0x60 /**< VRAM X of the grid area upload rect (96 px). */
+#define NAME_GRID_VIS_HEIGHT    0x50 /**< Visible grid height in pixels: 5 rows * 16 (80 px). */
 
 /**
  * @brief RGB lerp state.
