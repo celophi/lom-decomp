@@ -31,7 +31,9 @@ name_prepend_char   = 0x801429A0;
 name_pop_first_char = 0x80142A54;
 draw_char_append_anim = 0x80142B18;
 name_is_blank       = 0x80142C50;
-emit_cursor_glyph = 0x80141848;
+emit_cursor_glyph        = 0x80141848;
+emit_panel_tab_sprite    = 0x80141C34;
+emit_panel_label         = 0x80141D64;
 
 // Data
 g_name_cursor_glyphs = 0x8014F6B8;
@@ -53,6 +55,7 @@ g_kanji_cat_entries  = 0x80142CAC;
 g_tab_cursor_pos     = 0x80142E0C;
 g_tab_cursor_entries = 0x80142E14;
 g_kanji_entry_offsets = 0x80142E40;
+g_panel_data_base    = 0x80142EF4;
 g_char_panel_data    = 0x80142EF8;
 g_kanji_panel_data   = 0x80142EFC;
 g_random_names       = 0x80142F04;

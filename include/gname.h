@@ -197,8 +197,8 @@ typedef struct
  * glyphs. @c g_tab_cursor_entries[0..10] are the cursor target positions for
  * the 11 character-panel tabs.
  *
- * The @c x field is read whole (LW) by gname_render for use with @c & 0x1FF;
- * only the low 9 bits represent the screen X coordinate.
+ * The @c x bitfield occupies the low 9 bits of the first word; accessing it
+ * directly generates the same @c lw + @c andi sequence as the raw LW+mask form.
  */
 typedef struct {
     unsigned int x : 9;
@@ -271,7 +271,8 @@ typedef struct
     u8 pad1[2];
 } GlyphMeasure;
 
-extern void* emit_glyph_sprt(void* prim_buf, s32* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight);
+extern void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head);
+extern void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight);
 
 /* --- Named data globals --- */
 extern s32 g_name_pixel_width;
@@ -372,7 +373,8 @@ extern u8* g_char_panel_data;
 extern u32 g_panel_char_offsets[];
 /** u16 offset within g_char_panel_data where kanji category name offsets begin. */
 extern s32 g_kanji_cat_names_offset;
-extern u8 D_80142EF4[];
+/** Base of the panel data blob; the 4 bytes immediately before @ref g_char_panel_data. */
+extern u8 g_panel_data_base[];
 
 /**
  * @brief Play a one-shot UI sound effect via the AKAO driver.
