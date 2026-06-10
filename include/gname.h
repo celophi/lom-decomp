@@ -344,7 +344,7 @@ extern s32 g_char_cursor;
 
 /* --- ROM data tables --- */
 /** Random name pool used when g_name_source_mode == 4 or 5. */
-extern u8* g_random_names;
+extern u8 g_random_names[];
 /** History name list used when g_name_source_mode == 3. */
 extern u8* g_history_names;
 /** Kanji character panel glyph data base pointer. */
