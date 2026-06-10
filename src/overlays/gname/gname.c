@@ -289,7 +289,7 @@ void gname_tick(RenderContext* ctx)
  *  - Lerps the scalar @c g_strip_width toward @c g_strip_width_target over
  *    @c g_strip_width_steps frames using the same `(target - current)/steps` shape
  *    as the RGB fade.
- *  - When input mask @c g_pad_input == 0x800 (a specific button bit), plays
+ *  - When @c g_pad_input == @c PAD_BTN_START (only START held), plays
  *    one of two SFX via @ref play_menu_sfx (bank 0x80, sound 0x7E or 0x78)
  *    based on whether the cursor's current entry passes the
  *    @ref name_char_count / @ref name_is_blank validation pair, and on the
@@ -324,7 +324,7 @@ void gname_update_state(void)
     }
 
     /* Confirm-button: play accept SFX on valid entry, reject SFX otherwise. */
-    if (g_pad_input == 0x800)
+    if (g_pad_input == PAD_BTN_START)
     {
         if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
         {
@@ -403,7 +403,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         case 2:
         case 3:
             /* tabs 0-3: control tabs (back, delete, random, history, etc.) */
-            if (cur_buttons & 0x220)
+            if (cur_buttons & (PAD_BTN_L3 | PAD_BTN_CROSS))
             {
                 g_cursor_tab = cur_mode;
                 switch (cur_mode)
@@ -511,7 +511,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
         case 6:
         case 7:
 
-            if ((cur_buttons & 0x220) && (g_cursor_tab = cur_mode, g_char_panel != cur_mode - 4))
+            if ((cur_buttons & (PAD_BTN_L3 | PAD_BTN_CROSS)) && (g_cursor_tab = cur_mode, g_char_panel != cur_mode - 4))
             {
                 cur_buttons = 0;
 
@@ -554,7 +554,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
 
         default:
             /* character selection panel */
-            if ((cur_buttons & 0x220) && ((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)
+            if ((cur_buttons & (PAD_BTN_L3 | PAD_BTN_CROSS)) && ((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)
             {
 
                 if (g_char_panel < 3)
