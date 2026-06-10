@@ -285,7 +285,7 @@ void gname_tick(s32 ctx)
  * @brief Per-frame state-machine update: countdown, scalar lerp, input SFX.
  *
  *  - When the startup countdown @c g_startup_delay hits zero, hands off to
- *    @ref func_8014139C (the next stage); otherwise decrements it.
+ *    @ref gname_process_input (the next stage); otherwise decrements it.
  *  - Lerps the scalar @c g_strip_width toward @c g_strip_width_target over
  *    @c g_strip_width_steps frames using the same `(target - current)/steps` shape
  *    as the RGB fade.
@@ -304,7 +304,7 @@ void gname_update_state(void)
     /* Startup delay countdown. */
     if (g_startup_delay == 0)
     {
-        func_8014139C();
+        gname_process_input();
     }
     else
     {
@@ -696,81 +696,123 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
 /**
  * decomp.me (96.22%) https://decomp.me/scratch/ctu1w
  */
-void func_8014139C(void)
+/**
+ * @brief Per-frame input handler for the active name-entry phase.
+ *
+ * Called every frame by @ref gname_update_state once @c g_startup_delay
+ * reaches zero. Processes pad input, updates @c g_char_set_mode and the
+ * kanji category state, then advances the cursor and scroll lerp animations.
+ *
+ * Input dispatch (evaluated in priority order):
+ *  - @c GNAME_BTN_NAV_MASK (D-pad + confirm): delegated to
+ *    @ref handle_char_set_input for grid/tab navigation and character
+ *    selection.
+ *  - @c GNAME_BTN_UNDO (L2): pop the last character from @c g_active_name,
+ *    prepend it to the clipboard (@c g_name_clipboard), trimming the clipboard
+ *    to 10 chars first. Plays GNAME_SFX_MOVE.
+ *  - @c GNAME_BTN_REDO (R2): pop the first character from the clipboard and
+ *    append it to @c g_active_name (if not already at NAME_MAX_CHARS).
+ *    Plays GNAME_SFX_MOVE on success, GNAME_SFX_ERROR when full.
+ *  - @c PAD_BTN_CIRCLE (cancel): if @c g_allow_empty_cancel and the name is
+ *    empty, sets @c g_overlay_result = 2 and returns immediately; otherwise
+ *    pops the last character. Plays GNAME_SFX_CANCEL.
+ *
+ * Kanji category navigation (only when @c g_char_set_mode == GNAME_MODE_GRID
+ * and @c g_char_panel == 4):
+ *  - @c GNAME_BTN_KANJI_PREV (L1): cycle @c g_kanji_cat back by 10 with wrap.
+ *  - @c GNAME_BTN_KANJI_NEXT (R1): cycle @c g_kanji_cat forward by 10 with wrap.
+ *  - On a valid category (@c g_kanji_cat_entries[cat] != 0xFF), resets scroll
+ *    and cursor to the top-left of the new page, resolves and stores
+ *    @c g_kanji_cat_name, and clears the nav bits from @c g_pad_input.
+ *
+ * Lerp updates (run unconditionally after input):
+ *  - Cursor (@c g_cursor_x / @c g_cursor_y): step toward target by
+ *    (target - current) / steps, decrement @c g_cursor_lerp_steps; snap on 0.
+ *  - Scroll (@c g_scroll_pos): same shape toward @c g_scroll_target via
+ *    @c g_scroll_steps; snap on 0.
+ *
+ * @note The dead code block after the empty-cancel @c return (lines following
+ *       "if (!g_cursor_x_target)") is a codegen artifact and must be preserved.
+ * @see decomp.me TODO
+ */
+void gname_process_input(void)
 {
-    s8 sp10;
-    s8 sp11;
-    s8 sp12;
-    s32 var_a0;
-    s32 temp_a0;
-    u8(*new_var2)[];
+    s8 char_lo;
+    s8 char_hi;
+    s8 char_null;
+    s32 sfx_id;
+    s32 cat_prev;
+    u8(*clipboard_ptr)[];
     s32 temp_a0_2;
-    s32 temp_a1;
-    s32 temp_v1;
-    s32 temp_a1_2;
-    s32 temp_s1;
-    s32 temp_v0_3;
-    s32* new_var;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    s32 var_v0;
-    s8 temp_v0;
-    u16 temp_v0_2;
+    s32 nav_input;
+    s32 cat_after_dec;
+    s32 cursor_dx;
+    s32 undo_char;
+    s32 scroll_step;
+    s32* scroll_ptr;
+    s32 cat_after_inc;
+    s32 cursor_dy;
+    s32 panel3_off;
+    s8 clipboard_char;
+    u16 clipboard_char_u16;
     u8* base;
     u32 idx;
     u32 offset;
-    u16 tmp;
-    s32 original;
-    s32 temp_c98;
-    int new_var3;
+    u16 kanji_name_tbl_off;
+    s32 cat_prev_inc;
+    s32 kanji_panel_offset;
+    int sfx_vol;
     u8* ptr;
     u16 val;
-    temp_a1 = g_pad_input & GNAME_BTN_NAV_MASK;
+    nav_input = g_pad_input & GNAME_BTN_NAV_MASK;
     g_cursor_tab = 0xFF;
-    if (temp_a1 != 0)
+    if (nav_input != 0)
     {
-        g_char_set_mode = handle_char_set_input(g_char_set_mode, temp_a1);
+        g_char_set_mode = handle_char_set_input(g_char_set_mode, nav_input);
     }
-    else if (g_pad_input & 1)
+    else if (g_pad_input & GNAME_BTN_UNDO)
     {
-        temp_s1 = name_pop_last_char(g_active_name);
+        /* Undo: move last char of active name to front of clipboard. */
+        undo_char = name_pop_last_char(g_active_name);
         while (name_char_count(&g_name_clipboard) >= 0xB)
         {
             name_pop_last_char(&g_name_clipboard);
         }
 
-        name_prepend_char(&g_name_clipboard, temp_s1 & 0xFFFF);
+        name_prepend_char(&g_name_clipboard, undo_char & 0xFFFF);
         recalc_name_width();
         g_strip_width_steps = 5;
-        var_a0 = GNAME_SFX_MOVE;
-        new_var3 = GNAME_SFX_VOLUME;
-        play_menu_sfx(var_a0, new_var3);
+        sfx_id = GNAME_SFX_MOVE;
+        sfx_vol = GNAME_SFX_VOLUME;
+        play_menu_sfx(sfx_id, sfx_vol);
     }
-    else if (g_pad_input & 2)
+    else if (g_pad_input & GNAME_BTN_REDO)
     {
+        /* Redo: move first char of clipboard to end of active name. */
         if (name_char_count(g_active_name) < NAME_MAX_CHARS)
         {
-            new_var2 = &g_name_clipboard;
-            temp_v0 = name_pop_first_char(new_var2);
-            temp_v0_2 = (u16)temp_v0;
-            if (temp_v0_2 != 0)
+            clipboard_ptr = &g_name_clipboard;
+            clipboard_char = name_pop_first_char(clipboard_ptr);
+            clipboard_char_u16 = (u16)clipboard_char;
+            if (clipboard_char_u16 != 0)
             {
-                sp10 = temp_v0;
-                (&sp10)[1] = (s8)(temp_v0_2 >> 8);
-                (&sp10)[2] = 0;
-                name_append(g_active_name, &sp10);
+                /* Unpack the 2-byte glyph (or single byte) into a stack buffer for name_append. */
+                char_lo = clipboard_char;
+                (&char_lo)[1] = (s8)(clipboard_char_u16 >> 8);
+                (&char_lo)[2] = 0;
+                name_append(g_active_name, &char_lo);
                 recalc_name_width();
                 g_strip_width_steps = 5;
             }
-            var_a0 = GNAME_SFX_MOVE;
-            play_menu_sfx(var_a0, GNAME_SFX_VOLUME);
+            sfx_id = GNAME_SFX_MOVE;
+            play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
         }
         else
         {
             play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
         }
     }
-    else if (g_pad_input & 0x40)
+    else if (g_pad_input & PAD_BTN_CIRCLE)
     {
         if (g_allow_empty_cancel != 0)
         {
@@ -789,39 +831,41 @@ void func_8014139C(void)
         recalc_name_width();
         g_strip_width_steps = 5;
     }
-    if (((g_char_set_mode == GNAME_MODE_GRID) && (g_char_panel == 4)) && (g_pad_input & 0xC))
+    if (((g_char_set_mode == GNAME_MODE_GRID) && (g_char_panel == 4)) && (g_pad_input & GNAME_BTN_KANJI_NAV))
     {
         play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
-        if (g_pad_input & 0xC)
+        if (g_pad_input & GNAME_BTN_KANJI_NAV)
         {
             do
             {
-                if (g_pad_input & 4)
+                if (g_pad_input & GNAME_BTN_KANJI_PREV)
                 {
-                    temp_a0 = g_kanji_cat;
-                    temp_v1 = temp_a0 - 0xA;
-                    g_kanji_cat = temp_v1;
-                    if (temp_v1 == (-1))
+                    /* Decrement category by 10; wrap from -1 -> 0 or from below 0 -> +41. */
+                    cat_prev = g_kanji_cat;
+                    cat_after_dec = cat_prev - 0xA;
+                    g_kanji_cat = cat_after_dec;
+                    if (cat_after_dec == (-1))
                     {
                         g_kanji_cat = 0;
                     }
-                    else if (temp_v1 < 0)
+                    else if (cat_after_dec < 0)
                     {
-                        g_kanji_cat = temp_a0 + 0x29;
+                        g_kanji_cat = cat_prev + 0x29;
                     }
                 }
                 else
                 {
-                    original = g_kanji_cat;
-                    temp_v1_2 = original + 10;
-                    g_kanji_cat = temp_v1_2;
-                    if (temp_v1_2 == 0x32)
+                    /* Increment category by 10; wrap from 50 -> 9 or from above 50 -> -41. */
+                    cat_prev_inc = g_kanji_cat;
+                    cat_after_inc = cat_prev_inc + 10;
+                    g_kanji_cat = cat_after_inc;
+                    if (cat_after_inc == 0x32)
                     {
                         g_kanji_cat = 9;
                     }
-                    else if (temp_v1_2 >= 0x32)
+                    else if (cat_after_inc >= 0x32)
                     {
-                        g_kanji_cat = original - 0x29;
+                        g_kanji_cat = cat_prev_inc - 0x29;
                     }
                 }
                 offset = g_kanji_cat;
@@ -829,30 +873,30 @@ void func_8014139C(void)
                 {
                     g_scroll_target = (long)0;
                     g_scroll_pos = 0;
-                    var_v0 = g_panel_char_offsets[3];
+                    panel3_off = g_panel_char_offsets[3];
                     g_scroll_steps = 0;
                     g_char_cursor = 0;
-                    g_cursor_x_target = 0x54;
-                    g_cursor_y_target = 0x68;
+                    g_cursor_x_target = NAME_GRID_X_BASE;
+                    g_cursor_y_target = NAME_GRID_Y_TOP;
                     g_cursor_lerp_steps = 4;
-                    temp_c98 = var_v0;
+                    kanji_panel_offset = panel3_off;
                     base = D_80142EF4;
                     idx = g_kanji_cat;
-                    offset = (idx * 2) + ((temp_c98 * 2) + g_char_panel_data);
-                    tmp = *((u16*)(base + offset));
-                    g_pad_input &= ~0xC;
-                    g_kanji_cat_name = (void*)((g_char_panel_data + tmp) + ((unsigned long)base));
+                    offset = (idx * 2) + ((kanji_panel_offset * 2) + g_char_panel_data);
+                    kanji_name_tbl_off = *((u16*)(base + offset));
+                    g_pad_input &= ~GNAME_BTN_KANJI_NAV;
+                    g_kanji_cat_name = (void*)((g_char_panel_data + kanji_name_tbl_off) + ((unsigned long)base));
                 }
-            } while (g_pad_input & 0xC);
+            } while (g_pad_input & GNAME_BTN_KANJI_NAV);
         }
     }
     if (g_cursor_lerp_steps != 0)
     {
-        temp_a1_2 = ((s32)(g_cursor_x_target - g_cursor_x)) / ((s32)g_cursor_lerp_steps);
-        temp_v1_3 = ((s32)(g_cursor_y_target - g_cursor_y)) / ((s32)g_cursor_lerp_steps);
+        cursor_dx = ((s32)(g_cursor_x_target - g_cursor_x)) / ((s32)g_cursor_lerp_steps);
+        cursor_dy = ((s32)(g_cursor_y_target - g_cursor_y)) / ((s32)g_cursor_lerp_steps);
         g_cursor_lerp_steps -= 1;
-        g_cursor_x += temp_a1_2;
-        g_cursor_y += temp_v1_3;
+        g_cursor_x += cursor_dx;
+        g_cursor_y += cursor_dy;
     }
     else
     {
@@ -861,10 +905,10 @@ void func_8014139C(void)
     }
     if (g_scroll_steps != 0)
     {
-        new_var = &g_scroll_pos;
-        temp_v0_3 = ((s32)(g_scroll_target - (*new_var))) / ((s32)g_scroll_steps);
+        scroll_ptr = &g_scroll_pos;
+        scroll_step = ((s32)(g_scroll_target - (*scroll_ptr))) / ((s32)g_scroll_steps);
         g_scroll_steps -= 1;
-        g_scroll_pos += temp_v0_3;
+        g_scroll_pos += scroll_step;
         return;
     }
     g_scroll_pos = g_scroll_target;

@@ -49,6 +49,17 @@
  */
 #define GNAME_BTN_CONFIRM (PAD_BTN_CROSS | 0x200)
 
+/** L2: undo -- pop the last character from the active name back to the clipboard. */
+#define GNAME_BTN_UNDO PAD_BTN_L2
+/** R2: redo -- pop the first character from the clipboard and append to the active name. */
+#define GNAME_BTN_REDO PAD_BTN_R2
+/** L1: scroll/cycle to the previous kanji category (decrement by 10). */
+#define GNAME_BTN_KANJI_PREV PAD_BTN_L1
+/** R1: scroll/cycle to the next kanji category (increment by 10). */
+#define GNAME_BTN_KANJI_NEXT PAD_BTN_R1
+/** Combined mask: either kanji-category navigation button (L1 or R1). */
+#define GNAME_BTN_KANJI_NAV (GNAME_BTN_KANJI_PREV | GNAME_BTN_KANJI_NEXT)
+
 /**
  * Full input mask passed to handle_char_set_input each frame: all four
  * D-pad directions plus the confirm pair.
@@ -367,7 +378,7 @@ extern u8 D_80142EF4[];
  * @param volume Playback volume; use GNAME_SFX_VOLUME (0x80) for default.
  */
 extern void play_menu_sfx(int sfx_id, int volume);
-extern void func_8014139C(void);
+extern void gname_process_input(void);
 extern s32 name_char_count(u8*);
 extern s32 name_is_blank(u8*);
 extern s32 handle_char_set_input(s32 mode, s32 buttons);
