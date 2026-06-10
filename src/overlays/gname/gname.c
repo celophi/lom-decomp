@@ -557,7 +557,6 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
             if ((cur_buttons & 0x220) && ((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)
             {
 
-                /* Replaced Switch with If-Else chain */
                 if (g_char_panel < 3)
                 {
                     if (name_char_count(g_active_name) < 10)
@@ -689,9 +688,6 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
 }
 
 /**
- * decomp.me (96.22%) https://decomp.me/scratch/ctu1w
- */
-/**
  * @brief Per-frame input handler for the active name-entry phase.
  *
  * Called every frame by @ref gname_update_state once @c g_startup_delay
@@ -728,7 +724,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
  *
  * @note The dead code block after the empty-cancel @c return (lines following
  *       "if (!g_cursor_x_target)") is a codegen artifact and must be preserved.
- * @see decomp.me TODO
+ * @see decomp.me (96.22%) https://decomp.me/scratch/ctu1w
  */
 void gname_process_input(void)
 {
@@ -1008,7 +1004,7 @@ void gname_render(void* ctx)
     } while (i < 0xD);
     cursor_x = g_cursor_x;
     ctx2 = ctx;
-    /* 2. Static glyph + append animation, then func_80141C34. */
+    /* 2. Static glyph + append animation, then panel-tab sprite. */
     cursor_sprite = emit_panel_tab_sprite(
         emit_draw_mode_prim(
             draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
