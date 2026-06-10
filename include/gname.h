@@ -271,7 +271,8 @@ typedef struct
     u8 pad1[2];
 } GlyphMeasure;
 
-extern void* emit_glyph_sprt(void* prim_buf, s32* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight);
+extern void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head);
+extern void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight);
 
 /* --- Named data globals --- */
 extern s32 g_name_pixel_width;

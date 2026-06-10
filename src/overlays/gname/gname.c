@@ -1270,10 +1270,10 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
  *
  * @see decomp.me (77.64%) https://decomp.me/scratch/Glw7t
  */
-void render_char_panel(void* ctx_ptr, s32 panel_idx)
+void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
 {
     u8 grid_load_pkt[0x80];
-    RenderContext* ctx = (RenderContext*)ctx_ptr;
+    RenderContext* ctx = ctx_ptr;
     u32* prim = ctx->prim_cursor;
     u32* write_cur;
     u8* glyph_base;
@@ -1370,13 +1370,13 @@ void render_char_panel(void* ctx_ptr, s32 panel_idx)
  * using the standard `(top_byte | next_addr & 0xFFFFFF)` chain idiom and
  * returns the heap cursor advanced by 8 bytes.
  *
- * @param prim    Destination address for the 8-byte packet (heap cursor).
- * @param ot_head Pointer to the 24-bit OT head pointer.
+ * @param prim    Destination @ref DR_TPAGE packet (8 bytes on the primitive heap).
+ * @param ot_head Pointer to the 24-bit OT head entry (@ref u_long).
  * @return Heap cursor advanced past the packet (`prim + 8`).
  *
  * @see https://decomp.me/scratch/EyVeo (100%)
  */
-void* emit_draw_mode_prim(void* prim, s32* ot_head)
+void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head)
 {
     unsigned char* bytes = (unsigned char*)prim;
     u32* words = (u32*)prim;
@@ -1418,7 +1418,7 @@ void* emit_draw_mode_prim(void* prim, s32* ot_head)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Au2h5
  */
-void* emit_glyph_sprt(void* prim_buf, s32* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight)
+void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight)
 {
     u8* ptr = (u8*)prim_buf;
     SPRT* sprt = (SPRT*)ptr;
