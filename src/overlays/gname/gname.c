@@ -968,13 +968,13 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
  *  5. Hand off to the remaining sub-passes @ref emit_panel_label,
  *     @ref render_char_panel and @ref render_name_strip.
  *
- * @param ctx Render context (@ref RenderContext). Uses OT entries at byte
- *            offsets 0x20/0x24/0x2C/0x34 and the heap cursor at 0x4040.
+ * @param ctx Render context. Uses OT entries at byte offsets
+ *            0x20/0x24/0x2C/0x34 and the heap cursor at 0x4040.
  *
  * @note Still WIP; locals/params renamed but control flow is left verbatim.
  * @see decomp.me (82.68%) https://decomp.me/scratch/rQBi6
  */
-void gname_render(void* ctx)
+void gname_render(RenderContext* ctx)
 {
     s32 cursor_x;
     s32 i;
