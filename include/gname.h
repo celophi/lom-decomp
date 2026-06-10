@@ -197,8 +197,8 @@ typedef struct
  * glyphs. @c g_tab_cursor_entries[0..10] are the cursor target positions for
  * the 11 character-panel tabs.
  *
- * The @c x field is read whole (LW) by gname_render for use with @c & 0x1FF;
- * only the low 9 bits represent the screen X coordinate.
+ * The @c x bitfield occupies the low 9 bits of the first word; accessing it
+ * directly generates the same @c lw + @c andi sequence as the raw LW+mask form.
  */
 typedef struct {
     unsigned int x : 9;

@@ -971,7 +971,8 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
  * @param ctx Render context. Uses OT entries at byte offsets
  *            0x20/0x24/0x2C/0x34 and the heap cursor at 0x4040.
  *
- * @note Still WIP; locals/params renamed but control flow is left verbatim.
+ * @note Control flow is left verbatim; the manual OT-splice bit-masking is
+ *       load-bearing for the 82.68% match and must not be replaced with addPrim.
  * @see decomp.me (82.68%) https://decomp.me/scratch/rQBi6
  */
 void gname_render(RenderContext* ctx)
@@ -984,13 +985,13 @@ void gname_render(RenderContext* ctx)
     char* ctx_bytes;
     void* cursor_sprite;
     void* prim2;
-    void* ctx2;
+    RenderContext* ctx2;
     unsigned char* glyph_ptr;
     char* tmp_ptr;
     entry = (s32*)g_tab_cursor_entries;
     i = 2;
     glyph_ptr = (unsigned char*)g_tab_cursor_entries + 2;
-    prim = *((void**)(((char*)ctx) + 0x4040));
+    prim = ctx->prim_cursor;
     /* 1. Character grid: entries 2..12, skip 9; highlight the selection. */
     do
     {
@@ -1009,7 +1010,7 @@ void gname_render(RenderContext* ctx)
         emit_draw_mode_prim(
             draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
             ((char*)ctx2) + 0x34),
-        ctx);
+        (s32)ctx);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
     tmp_ptr = ((char*)cursor_sprite) + 0x14;
     *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
@@ -1047,7 +1048,7 @@ void gname_render(RenderContext* ctx)
     /* 4. Conditional extra glyphs from the g_tab_cursor_pos table. */
     if (g_scroll_pos != 0)
     {
-        prim2 = emit_glyph_sprt(prim2, ctx, g_tab_cursor_pos[0].glyph, (*(s32*)&g_tab_cursor_pos[0]) & 0x1FF, (s32)g_tab_cursor_pos[0].y, 0, 0, 0);
+        prim2 = emit_glyph_sprt(prim2, (u_long*)ctx, g_tab_cursor_pos[0].glyph, g_tab_cursor_pos[0].x, (s32)g_tab_cursor_pos[0].y, 0, 0, 0);
     }
     if (g_char_last_row >= 5)
     {
@@ -1058,11 +1059,11 @@ void gname_render(RenderContext* ctx)
         }
         if ((((scroll_pos >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
-            prim2 = emit_glyph_sprt(prim2, ctx, g_tab_cursor_pos[1].glyph, (*(s32*)&g_tab_cursor_pos[1]) & 0x1FF, (s32)g_tab_cursor_pos[1].y, 0, 0, 0);
+            prim2 = emit_glyph_sprt(prim2, (u_long*)ctx, g_tab_cursor_pos[1].glyph, g_tab_cursor_pos[1].x, (s32)g_tab_cursor_pos[1].y, 0, 0, 0);
         }
     }
     /* 5. Remaining sub-passes. */
-    *((void**)tmp_ptr) = emit_panel_label(emit_draw_mode_prim(prim2, ctx), ctx_bytes + 0x24);
+    *((void**)tmp_ptr) = emit_panel_label(emit_draw_mode_prim(prim2, (u_long*)ctx), ctx_bytes + 0x24);
     render_char_panel(ctx, g_char_panel);
     render_name_strip(ctx2, g_active_name, g_strip_width);
 }
