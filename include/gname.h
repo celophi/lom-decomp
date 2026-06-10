@@ -187,11 +187,11 @@ typedef struct
  * The @c x field is read whole (LW) by gname_render for use with @c & 0x1FF;
  * only the low 9 bits represent the screen X coordinate.
  */
-typedef struct
-{
-    u16 x;     /* 0x0 - screen X target; only bits [8:0] are the pixel column */
-    u8  y;     /* 0x2 - screen Y target */
-    u8  glyph; /* 0x3 - glyph/tile index for the indicator sprite */
+typedef struct {
+    unsigned int x : 9;
+    unsigned int pad : 7;
+    u8 y;
+    u8 glyph;
 } TabCursorEntry;
 
 /** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
