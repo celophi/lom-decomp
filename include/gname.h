@@ -372,7 +372,8 @@ extern u8* g_char_panel_data;
 extern u32 g_panel_char_offsets[];
 /** u16 offset within g_char_panel_data where kanji category name offsets begin. */
 extern s32 g_kanji_cat_names_offset;
-extern u8 D_80142EF4[];
+/** Base of the panel data blob; the 4 bytes immediately before @ref g_char_panel_data. */
+extern u8 g_panel_data_base[];
 
 /**
  * @brief Play a one-shot UI sound effect via the AKAO driver.
