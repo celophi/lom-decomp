@@ -961,9 +961,9 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
  * after @ref draw_name_cursor_row. The work, in order:
  *
  *  1. Character grid: walk grid-table entries 2..12 (skipping 9) and emit a
- *     drop-shadowed glyph SPRT for each via @ref func_80142274 into OT entry
+ *     drop-shadowed glyph SPRT for each via @ref emit_glyph_sprt into OT entry
  *     @c ot[0x0B] (offset 0x2C). The entry whose index equals @c g_cursor_tab
- *     is drawn highlighted (the @p arg6 flag of @ref func_80142274), marking
+ *     is drawn highlighted (the @p primary_adj flag of @ref emit_glyph_sprt), marking
  *     the current selection.
  *  2. Append decoration: emit a static glyph plus the character-append
  *     animation (@ref draw_char_append_anim) into @c ot[0x0D] (offset 0x34),
@@ -1005,7 +1005,7 @@ void gname_render(void* ctx)
     {
         if (i != 9)
         {
-            prim = func_80142274(prim, ((char*)ctx) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1, (i - 2) == g_cursor_tab, 0);
+            prim = emit_glyph_sprt(prim, ((char*)ctx) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1, (i - 2) == g_cursor_tab, 0);
         }
         i += 1;
         glyph_ptr += 4;
@@ -1016,7 +1016,7 @@ void gname_render(void* ctx)
     /* 2. Static glyph + append animation, then func_80141C34. */
     cursor_sprite = func_80141C34(
         emit_draw_mode_prim(
-            draw_char_append_anim(func_80142274(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
+            draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
             ((char*)ctx2) + 0x34),
         ctx);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
@@ -1056,7 +1056,7 @@ void gname_render(void* ctx)
     /* 4. Conditional extra glyphs from the g_tab_cursor_pos table. */
     if (g_scroll_pos != 0)
     {
-        prim2 = func_80142274(prim2, ctx, g_tab_cursor_pos[0].glyph, (*(s32*)&g_tab_cursor_pos[0]) & 0x1FF, (s32)g_tab_cursor_pos[0].y, 0, 0, 0);
+        prim2 = emit_glyph_sprt(prim2, ctx, g_tab_cursor_pos[0].glyph, (*(s32*)&g_tab_cursor_pos[0]) & 0x1FF, (s32)g_tab_cursor_pos[0].y, 0, 0, 0);
     }
     if (g_char_last_row >= 5)
     {
@@ -1067,7 +1067,7 @@ void gname_render(void* ctx)
         }
         if ((((f8b4 >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
-            prim2 = func_80142274(prim2, ctx, g_tab_cursor_pos[1].glyph, (*(s32*)&g_tab_cursor_pos[1]) & 0x1FF, (s32)g_tab_cursor_pos[1].y, 0, 0, 0);
+            prim2 = emit_glyph_sprt(prim2, ctx, g_tab_cursor_pos[1].glyph, (*(s32*)&g_tab_cursor_pos[1]) & 0x1FF, (s32)g_tab_cursor_pos[1].y, 0, 0, 0);
         }
     }
     /* 5. Remaining sub-passes. */
@@ -1166,7 +1166,7 @@ s32 func_80141D64(void)
  *      slot at `g_render_buf_base + (alt_buf * 0x40C0) + 0x4064`.
  *   2. A textured sprite (tag 0x64) emitted via @ref func_800A88A0 using
  *      `tex_src` as its source data, then a Draw-Mode (GP0 0xE1) packet
- *      emitted via @ref emit_draw_mode_prim / @ref func_80142274.
+ *      emitted via @ref emit_draw_mode_prim / @ref emit_glyph_sprt.
  *   3. A 0x60-byte image-load packet built on the stack by
  *      @ref func_8001C56C describing a `strip_width x 32` rectangle at VRAM
  *      `(240 - strip_width, 24 | 256)` - i.e. right-aligned on whichever
@@ -1207,7 +1207,7 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      *    Returns the heap cursor just past both packets. */
-    next_prim = emit_draw_mode_prim(func_80142274(func_800A88A0(prim + 0x10, ot_head, name_buf, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
+    next_prim = emit_draw_mode_prim(emit_glyph_sprt(func_800A88A0(prim + 0x10, ot_head, name_buf, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
 
     /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
      *    right edge of whichever page is currently the back buffer. */
@@ -1383,81 +1383,82 @@ void* emit_draw_mode_prim(void* arg0, s32* arg1)
 /**
  * @brief Emit 1 or 2 glyph SPRT primitives and chain them onto an OT tag.
  *
- * Always writes a primary white-tinted (RGB=0x80) SPRT for glyph @p arg2
- * at @c (arg3 - arg5 + arg6, arg4 - arg5 + arg6). When @p arg5 != 0,
- * writes a second SPRT at @c (arg3 + tmp, arg4 + tmp) with
- * @c tmp = (arg5 - arg6) * 2. The second sprite's tint and code byte
- * depend on @p arg7:
- *   - @p arg7 != 0: opaque blue (RGB=(0,0,0xA0), code 0x64) - highlight.
- *   - @p arg7 == 0: semi-transparent black (RGB=0, code 0x66) - drop shadow.
+ * Always writes a primary white-tinted (RGB=0x80) SPRT for glyph @p glyph_id
+ * at @c (x - shadow_dist + primary_adj, y - shadow_dist + primary_adj).
+ * When @p shadow_dist != 0, writes a second SPRT at @c (x + tmp, y + tmp)
+ * with @c tmp = (shadow_dist - primary_adj) * 2. The second sprite's tint
+ * and code byte depend on @p highlight:
+ *   - @p highlight != 0: opaque blue (RGB=(0,0,0xA0), code 0x64).
+ *   - @p highlight == 0: semi-transparent black (RGB=0, code 0x66) - drop shadow.
  *
- * Both sprites pull u/v/w/h/clut from @c g_glyph_table[arg2] and are
- * appended to the linked list at @p arg1 via the standard addPrim sequence.
+ * Both sprites pull u/v/w/h/clut from @c g_glyph_table[glyph_id] and are
+ * appended to the linked list at @p ot_tag via the standard addPrim sequence.
  *
- * @param arg0 Pointer to the next free byte in the primitive buffer.
- * @param arg1 Pointer to the OT head tag (addPrim "ot" arg).
- * @param arg2 Glyph ID (index into @c g_glyph_table).
- * @param arg3 Base X coordinate.
- * @param arg4 Base Y coordinate.
- * @param arg5 Shadow/highlight offset distance. When 0, only the primary
- *             sprite is emitted (the second SPRT block is skipped).
- * @param arg6 Origin compensation (subtracted from base for the primary
- *             sprite; combined into @c tmp for the secondary).
- * @param arg7 Secondary-sprite mode: non-zero = opaque blue highlight,
- *             zero = semi-transparent black drop shadow.
+ * @param prim_buf  Pointer to the next free byte in the primitive buffer.
+ * @param ot_tag    Pointer to the OT head tag (addPrim "ot" arg).
+ * @param glyph_id  Glyph index into @c g_glyph_table.
+ * @param x         Base X screen coordinate.
+ * @param y         Base Y screen coordinate.
+ * @param shadow_dist Shadow offset distance in pixels. When 0, only the
+ *                    primary SPRT is emitted.
+ * @param primary_adj Added to the primary sprite's position offset. When
+ *                    equal to @p shadow_dist the primary renders at (x,y)
+ *                    with no shift (used for the selected/highlighted state).
+ * @param highlight   Secondary-sprite mode: 0 = semi-transparent black drop
+ *                    shadow; non-zero = opaque blue overlay.
  * @return Pointer to the byte after the last emitted primitive.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Au2h5
  */
-void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7)
+void* emit_glyph_sprt(void* prim_buf, s32* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight)
 {
-    u8* ptr = (u8*)arg0;
+    u8* ptr = (u8*)prim_buf;
     SPRT* sprt = (SPRT*)ptr;
 
     /* (offset) + (base) form so gcc emits `addu v1,v1,v0` (vs the reverse
-       order from `&g_glyph_table[arg2]`). Also keeps arg2 live for the
+       order from `&g_glyph_table[glyph_id]`). Also keeps glyph_id live for the
        second SPRT's re-derivation below. */
-    u8* entry = (u8*)((arg2 << 3) + (u32)g_glyph_table);
+    u8* entry = (u8*)((glyph_id << 3) + (u32)g_glyph_table);
     u32 clut_word;
     s32 tmp2;
 
     /* Primary glyph SPRT - white tint, fully opaque. */
     *(u32*)&sprt->r0 = 0x808080; /* r=g=b=0x80, code byte = 0 */
     setSprt(sprt);
-    setXY0(sprt, (s16)(arg3 - arg5 + arg6), (s16)(arg4 - arg5 + arg6));
+    setXY0(sprt, (s16)(x - shadow_dist + primary_adj), (s16)(y - shadow_dist + primary_adj));
     setUV0(sprt, entry[0], entry[1]);
     setWH(sprt, entry[2], entry[3]);
     setClut(sprt, *(u32*)(entry + 4) << 4, 498);
-    addPrim(arg1, sprt);
+    addPrim(ot_tag, sprt);
     ptr += sizeof(SPRT);
 
-    if (arg5 != 0)
+    if (shadow_dist != 0)
     {
-        /* Secondary SPRT - drop shadow (arg7==0) or highlight (arg7!=0). */
+        /* Secondary SPRT - drop shadow (highlight==0) or blue overlay (highlight!=0). */
         u8* new_var2;
         u8* entry2;
         u32 clut_word2;
 
-        *(u32*)&((SPRT*)ptr)->r0 = (arg7 != 0) ? 0xA00000 : 0;
+        *(u32*)&((SPRT*)ptr)->r0 = (highlight != 0) ? 0xA00000 : 0;
 
         setSprt((SPRT*)ptr);
 
-        if (arg7 == 0)
+        if (highlight == 0)
         {
             setSemiTrans((SPRT*)ptr, 1);
         }
 
-        tmp2 = (arg5 - arg6) * 2;
+        tmp2 = (shadow_dist - primary_adj) * 2;
 
         new_var2 = (u8*)g_glyph_table;
 
-        entry2 = (u8*)((arg2 << 3) + (u32)new_var2);
+        entry2 = (u8*)((glyph_id << 3) + (u32)new_var2);
 
-        setXY0((SPRT*)ptr, (s16)(arg3 + tmp2), (s16)(arg4 + tmp2));
+        setXY0((SPRT*)ptr, (s16)(x + tmp2), (s16)(y + tmp2));
         setUV0((SPRT*)ptr, entry2[0], entry2[1]);
         setWH((SPRT*)ptr, (s16)entry2[2], (s16)entry2[3]);
         setClut((SPRT*)ptr, *(u32*)(entry2 + 4) << 4, 498);
-        addPrim(arg1, ptr);
+        addPrim(ot_tag, ptr);
 
         ptr += sizeof(SPRT);
     }
@@ -2031,7 +2032,7 @@ s32 draw_char_append_anim(s32 prim, s32 ctx)
         glyph = glyph_byte;
         if (glyph != 0)
         {
-            result = func_80142274(result, ot_base + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
+            result = emit_glyph_sprt(result, ot_base + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
         }
     }
 

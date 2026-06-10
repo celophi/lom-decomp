@@ -161,7 +161,7 @@ typedef struct
  *
  * Used as @c g_glyph_table, indexed by character ID. The
  * fields are written directly into a sprite (tag 0x64) primitive by
- * @ref func_80142274: `u`/`v` at byte offsets 12/13, the CLUT ID at u16
+ * @ref emit_glyph_sprt: `u`/`v` at byte offsets 12/13, the CLUT ID at u16
  * offset 14, and `w`/`h` at u16 offsets 16/18.
  */
 typedef struct
@@ -214,7 +214,7 @@ typedef struct {
 
 /** CLUT-page bit pattern OR'd over the low 6 bits of @c GlyphInfo::clut
  *  before writing it into a sprite primitive (see @ref draw_name_cursor_row,
- *  @ref func_80142274). Encodes the fixed VRAM Y row (498) shared by all
+ *  @ref emit_glyph_sprt). Encodes the fixed VRAM Y row (498) shared by all
  *  name-entry palettes; bits [5:0] are zero and supplied by @c GLYPH_CLUT_X_MASK. */
 #define GLYPH_CLUT_PAGE_BITS 0x7C80
 
@@ -271,7 +271,7 @@ typedef struct
     u8 pad1[2];
 } GlyphMeasure;
 
-extern void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7);
+extern void* emit_glyph_sprt(void* prim_buf, s32* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight);
 
 /* --- Named data globals --- */
 extern s32 g_name_pixel_width;
