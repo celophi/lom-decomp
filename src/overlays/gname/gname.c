@@ -371,9 +371,8 @@ void reset_run_state(void)
 
 inline int inline_fn(s32 arg0)
 {
-  return arg0 * 2;
+    return arg0 * 2;
 }
-
 
 /**
  * @brief Process one frame of name-entry UI input and return the new char-set mode.
@@ -391,482 +390,309 @@ inline int inline_fn(s32 arg0)
  * @param mode    Current char-set mode (see above).
  * @param buttons Filtered button bitmask from @c g_pad_input.
  * @return        New char-set mode after processing the input.
- * @see decomp.me (92.81%) https://decomp.me/scratch/QbLPO
+ * @see decomp.me (98.22%) https://decomp.me/scratch/PpqVd
  */
-s32 handle_char_set_input(s32 mode, s32 buttons)
+s32 handle_char_set_input(s32 arg0, s32 arg1)
 {
-    s32 repeat;
-    u8* char_data_ptr;
-    s32 cur_mode;
-    u32(*kanji_cat_tbl)[];
-    s32 btns;
-    s32 five;
-    s32 four;
-    int btn_right;
-    u32 data_base;
-    TabCursorEntry(*tab_pos_tbl)[];
-    s32 sfx_id;
-    void* name_src;
-    s32 row_y_copy;
-    s32 temp_v0;
-    s32 temp_v0_2;
-    s32 panel_idx;
-    u8* kanji_cat_names_ptr;
-    s32 temp_v1_2;
-    s32 scroll_pos_copy;
-    int row_y_px;
-    s32 temp_v1_3;
-    s32 kanji_cursor_byte_off;
-    u8** hist_names_ref;
-    s32 prev_mode;
-    s32 can_advance;
-    long rand_r;
-    int new_var8;
-    int u16_stride;
-    s32 var_v0_4;
-    int btn_down;
-    s32 rand_div;
-    int hist_byte_off;
-    s32 var_v0_7;
-    int cursor_y_raw;
-    s32 next_mode;
-    void* temp_v1_4;
-    u8* kanji_data;
-    int scroll_y_off;
-    cur_mode = mode;
-    btns = buttons;
-    repeat = 0xFF;
-    five = 5;
-    four = 4;
-    data_base = 0x10;
-    data_base = ((u32)(&g_random_names)) - data_base;
-    while (repeat == 0xFF)
+    s32 var_s1 = arg0;
+    s32 var_s2 = arg1;
+    s32 var_s0 = 0xFF;
+    int offset = 0x68;
+
+    while (var_s0 == 0xFF)
     {
-        kanji_cat_tbl = &g_kanji_cat_entries;
-        if (cur_mode < 0)
+        switch (var_s1)
         {
-            goto block_62;
-        }
-        if (cur_mode < 4)
-        {
-            goto s1_lt4_block;
-        }
-        if (cur_mode >= 8)
-        {
-            goto block_62;
-        }
-        else
-        {
-            goto s14to8_block;
-        }
-    s1_lt4_block:
-        if (btns & GNAME_BTN_CONFIRM)
-        {
-            g_cursor_tab = cur_mode;
-            if (cur_mode != GNAME_MODE_ACTION_DELETE)
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            /* tabs 0-3: control tabs (back, delete, random, history, etc.) */
+            if (var_s2 & 0x220)
             {
-                if (cur_mode < 2)
+                g_cursor_tab = var_s1;
+                switch (var_s1)
                 {
-                    if (cur_mode != GNAME_MODE_ACTION_OK)
+                case 0:
+                    if (name_char_count(g_active_name) != 0 && !name_is_blank(g_active_name))
                     {
-                        repeat = 0;
-                        continue;
+                        play_menu_sfx(0x7E, 0x80);
+                        g_overlay_result = 5;
                     }
-                }
-                else if (cur_mode == GNAME_MODE_ACTION_RANDOM)
-                {
-                    goto s1_eq2_code;
-                }
-                else if (cur_mode == GNAME_MODE_ACTION_DEFAULT)
-                {
-                    goto s1_eq3_code;
-                }
-                else
-                {
-                    repeat = 0;
+                    else
+                    {
+                        play_menu_sfx(0x78, 0x80);
+                    }
+                    var_s0 = 0;
+                    continue;
+                case 1:
+                    play_menu_sfx(0x7E, 0x80);
+                    name_pop_last_char(g_active_name);
+                    break;
+                case 2:
+                    play_menu_sfx(0x7E, 0x80);
+                    if (g_name_source_mode == 4)
+                    {
+                        g_name_clipboard = 0;
+                        name_copy(g_active_name, (g_random_names - 0x10) + *(u32*)g_random_names +
+                                                     *(u16*)((g_random_names - 0x10) + *(u32*)g_random_names + (rand() % 128) * 2));
+                    }
+                    else if (g_name_source_mode == 5)
+                    {
+                        g_name_clipboard = 0;
+                        name_copy(g_active_name, (g_random_names - 0x10) + *(u32*)g_random_names +
+                                                     *(u16*)((g_random_names - 0x10) + *(u32*)g_random_names + ((rand() % 128) + 128) * 2));
+                    }
+                    else if (g_name_source_mode == 3)
+                    {
+                        g_name_clipboard = 0;
+                        if (g_history_name_idx >= 0x81)
+                        {
+                            name_copy(g_active_name, &g_initial_name);
+                        }
+                        else
+                        {
+                            name_copy(g_active_name, (g_random_names - 0x10) + *(u32*)g_history_names +
+                                                         *(u16*)((g_random_names - 0x10) + *(u32*)g_history_names + g_history_name_idx * 2));
+                            name_append(g_active_name, (g_random_names - 0x10) + *(u32*)g_history_names +
+                                                           *(u16*)((g_history_names - 0x10) + *(u32*)g_history_names + ((rand() % 128) + 130) * 2));
+                        }
+                    }
+                    else if (g_name_source_mode == 1)
+                    {
+                        g_name_clipboard = 0;
+                        name_copy(g_active_name, &g_custom_name_buf);
+                    }
+                    else
+                    {
+                        play_menu_sfx(0x7E, 0x80);
+                        g_name_clipboard = 0;
+                        name_copy(g_active_name, &g_initial_name);
+                    }
+                    break;
+                case 3:
+                    play_menu_sfx(0x7E, 0x80);
+                    g_name_clipboard = 0;
+                    name_copy(g_active_name, &g_initial_name);
+                    break;
+                default:
+                    var_s0 = 0;
                     continue;
                 }
-                if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
+                recalc_name_width();
+                var_s0 = 0;
+                g_strip_width_steps = 5;
+            }
+            else
+            {
+                if (var_s2 != 0)
                 {
-                    play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-                    g_overlay_result = five;
+                    if (var_s2 & PAD_BTN_DOWN)
+                    { /* DOWN */
+                        var_s1 = 0x10;
+                        var_s2 = 0;
+                        continue;
+                    }
+                    if (var_s2 & PAD_BTN_LEFT)
+                    { /* LEFT */
+                        var_s1 = (var_s1 == 0) ? 3 : (var_s1 - 1);
+                    }
+                    else if (var_s2 & PAD_BTN_RIGHT)
+                    { /* RIGHT */
+                        var_s1 = (var_s1 < 3) ? (var_s1 + 1) : 0;
+                    }
                 }
-                else
-                {
-                    play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
-                }
-                repeat = 0;
+
+                play_menu_sfx(0x7D, 0x80);
+                g_cursor_x_target = g_tab_cursor_pos[var_s1 + 2].x - 8;
+                g_cursor_lerp_steps = 5;
+                g_cursor_y_target = g_tab_cursor_pos[var_s1 + 2].y;
+                var_s0 = 0;
+            }
+            break;
+
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+
+            if ((var_s2 & 0x220) && (g_cursor_tab = var_s1, g_char_panel != var_s1 - 4))
+            {
+                var_s2 = 0;
+
+                g_scroll_target = 0;
+                g_scroll_pos = 0;
+                g_char_panel = g_cursor_tab - 4;
+                g_scroll_steps = 0;
+                g_char_cursor = 0;
+                play_menu_sfx(0x7E, 0x80);
+
                 continue;
             }
             else
             {
-                play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-                name_pop_last_char(g_active_name);
-                goto block_38;
-            }
-        s1_eq2_code:
-            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-
-            if (g_name_source_mode == four)
-            {
-                u16 half4;
-                g_name_clipboard = 0;
-                if (!g_random_names)
+                if (var_s2 != 0)
                 {
-                }
-                rand_r = rand();
-                temp_v1_2 = rand_r;
-                if (temp_v1_2 < 0)
-                {
-                    rand_r = temp_v1_2 + 0x7F;
-                }
-                {
-                    u32 rem4 = temp_v1_2 - ((rand_r >> 7) << 7);
-                    half4 = *((u16*)((g_random_names + (rem4 * 2)) + data_base));
-                    name_src = (void*)((g_random_names + half4) + data_base);
-                }
-                goto block_37;
-            }
-            else if (g_name_source_mode == five)
-            {
-                u16 half5;
-                g_name_clipboard = 0;
-                u16_stride = 2;
-                var_v0_4 = rand();
-                temp_v1_3 = var_v0_4;
-                if (temp_v1_3 < 0)
-                {
-                    var_v0_4 = temp_v1_3 + 0x7F;
-                }
-                {
-                    u32 rem5 = temp_v1_3 - ((var_v0_4 >> 7) << 7);
-                    half5 = *((u16*)(((((u32)(&g_random_names)) + ((u32)g_random_names)) + (rem5 * u16_stride)) + 0xF0));
-                    name_src = (void*)((g_random_names + half5) + data_base);
-                }
-                goto block_37;
-            }
-            else if (g_name_source_mode == GNAME_SRC_HISTORY)
-            {
-                u32 idx3;
-                unsigned short half3a;
-                u16 half3b;
-                u32 rem3;
-                g_name_clipboard = 0;
-                if (0)
-                {
-                }
-                idx3 = g_history_name_idx;
-                new_var8 = idx3;
-                if (new_var8 >= 0x81)
-                {
-                    g_active_name += 0;
-                    do
-                    {
-                        name_src = &g_initial_name;
-                        goto block_37;
-                    } while (0);
-                }
-                hist_byte_off = new_var8 * 2;
-                half3a = *((u16*)((g_history_names + hist_byte_off) + data_base));
-                name_copy(g_active_name, (void*)((g_history_names + half3a) + data_base));
-                temp_v0 = rand();
-                rand_div = temp_v0 >> 7;
-                if (temp_v0 < 0)
-                {
-                    rand_div = (temp_v0 + 0x7F) >> 7;
-                }
-                hist_names_ref = &g_history_names;
-                rem3 = temp_v0 - (rand_div << 7);
-                rand_r = rem3;
-                half3b = *((u16*)(((((u32)hist_names_ref) + ((u32)g_history_names)) + (rand_r * 2)) + 0xF4));
-                name_append(g_active_name, (void*)((g_history_names + half3b) + data_base));
-                goto block_38;
-            }
-            else if (g_name_source_mode == GNAME_SRC_CUSTOM)
-            {
-                name_src = &g_custom_name_buf;
-                goto block_36;
-            }
-        s1_eq3_code:
-            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-
-            name_src = &g_initial_name;
-        block_36:
-            g_name_clipboard = 0;
-
-        block_37:
-            name_copy(g_active_name, name_src);
-
-        block_38:
-            recalc_name_width();
-
-            repeat = 0;
-            g_strip_width_steps = five;
-            repeat = 0;
-            continue;
-        }
-        else
-        {
-            if (btns == 0)
-            {
-                goto block_61;
-            }
-            if (btns & PAD_BTN_DOWN)
-            {
-                goto block_51;
-            }
-            if (btns & PAD_BTN_LEFT)
-            {
-                prev_mode = 3;
-                if (cur_mode != 0)
-                {
-                    prev_mode = cur_mode - 1;
-                }
-                goto block_55;
-            }
-            if (!(btns & PAD_BTN_RIGHT))
-            {
-                goto block_61;
-            }
-            next_mode = 0;
-            can_advance = 3;
-            can_advance = cur_mode < can_advance;
-            goto block_58;
-        }
-
-        if (0)
-        {
-        }
-        goto end_if_s1_ge0;
-    s14to8_block:
-        if ((btns & GNAME_BTN_CONFIRM) && ((g_cursor_tab = cur_mode, panel_idx = cur_mode - 4, g_char_panel != panel_idx)))
-        {
-            cur_mode = GNAME_MODE_GRID;
-            btns = 0;
-            g_scroll_target = 0;
-            g_scroll_pos = 0;
-            g_char_panel = panel_idx;
-            g_scroll_steps = 0;
-            g_char_cursor = 0;
-            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-            continue;
-        }
-        else
-        {
-            if (btns != 0)
-            {
-                if (btns & PAD_BTN_RIGHT)
-                {
-                block_51:
-                    cur_mode = GNAME_MODE_GRID;
-
-                    btns = 0;
-                    continue;
-                }
-                btn_down = btns & PAD_BTN_DOWN;
-                if (btns & PAD_BTN_UP)
-                {
-                    cur_mode = (cur_mode == four) ? (6) : (cur_mode - 1);
-                }
-                if (btn_down)
-                {
-                    next_mode = GNAME_MODE_PANEL_BASE;
-                    can_advance = cur_mode < 6;
-                    goto block_58;
-                }
-            }
-            goto block_61;
-        }
-
-        goto end_if_s1_ge0;
-    block_55:
-        cur_mode = prev_mode;
-
-        goto block_61;
-    block_58:
-        if (can_advance != 0)
-        {
-            next_mode = cur_mode + 1;
-        }
-
-        cur_mode = next_mode;
-    block_61:
-        play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
-
-        tab_pos_tbl = &g_tab_cursor_pos;
-        temp_v1_4 = (void*)(((cur_mode + 2) * 4) + ((u32)tab_pos_tbl));
-        repeat = 0;
-        g_cursor_x_target = ((*((u32*)temp_v1_4)) & 0x1FF) - 8;
-        new_var8 = (s32)(*((u8*)(((u32)temp_v1_4) + 2)));
-        g_cursor_lerp_steps = (repeat = five);
-        g_cursor_y_target = new_var8;
-        repeat = 0;
-        continue;
-    end_if_s1_ge0:
-    block_62:
-        if ((btns & GNAME_BTN_CONFIRM) && (((g_char_last_row * NAME_GRID_CHARS_PER_ROW) + g_char_last_col) >= g_char_cursor))
-        {
-            if (g_char_panel < 3)
-            {
-                if (name_char_count(g_active_name) < NAME_MAX_CHARS)
-                {
-                    u32 t1;
-                    u16 hw;
-                    char_data_ptr = g_char_panel_data;
-                    g_append_anim_timer = 2;
-                    {
-                        u32 idx_lt3 = g_char_cursor;
-                        t1 = *((u32*)((g_char_panel * 4) + ((u32)(&g_panel_char_offsets))));
-                        hw = *((u16*)(((g_char_panel_data + (t1 * 2)) + (idx_lt3 * 2)) + data_base));
-                        g_append_anim_frame = 0;
-                        name_append(g_active_name, (void*)((char_data_ptr + hw) + data_base));
+                    if (var_s2 & PAD_BTN_RIGHT)
+                    { /* RIGHT */
+                        var_s1 = 0x10;
+                        var_s2 = 0;
+                        continue;
                     }
-                    recalc_name_width();
-                    g_strip_width_steps = five;
-                    play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
-                    repeat = 0;
-                    continue;
+                    if (var_s2 & PAD_BTN_UP)
+                    { /* UP */
+                        var_s1 = (var_s1 == 4) ? 6 : (var_s1 - 1);
+                    }
+                    else if (var_s2 & PAD_BTN_DOWN)
+                    { /* DOWN */
+                        var_s1 = (var_s1 < 6) ? (var_s1 + 1) : 4;
+                    }
                 }
-                else
-                {
-                    goto block_73;
-                }
+
+                play_menu_sfx(0x7D, 0x80);
+                g_cursor_x_target = g_tab_cursor_pos[var_s1 + 2].x - 8;
+                g_cursor_lerp_steps = 5;
+                g_cursor_y_target = g_tab_cursor_pos[var_s1 + 2].y;
+                var_s0 = 0;
             }
-            else
+            break;
+
+        default:
+            /* character selection panel */
+            if ((var_s2 & 0x220) && ((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)
             {
-                if (g_char_panel == 3)
+
+                /* Replaced Switch with If-Else chain */
+                if (g_char_panel < 3)
                 {
-                    u16 off;
-                    if ((*((u32*)((g_char_cursor * 4) + ((u32)kanji_cat_tbl)))) != 0xFF)
+                    if (name_char_count(g_active_name) < 10)
                     {
-                        g_kanji_cat = g_char_cursor;
-                        g_char_panel = four;
-                        sfx_id = GNAME_SFX_CONFIRM;
-                        g_scroll_target = 0;
-                        g_scroll_pos = 0;
-                        g_scroll_steps = 0;
-                        kanji_cat_names_ptr = g_char_panel_data + (g_kanji_cat_names_offset * 2);
-                        g_cursor_x_target = NAME_GRID_X_BASE;
-                        g_cursor_y_target = NAME_GRID_Y_TOP;
-                        g_cursor_lerp_steps = four;
-                        kanji_cursor_byte_off = g_char_cursor * 2;
-                        g_char_cursor = 0;
-                        {
-                            off = *((u16*)((kanji_cat_names_ptr + kanji_cursor_byte_off) + data_base));
-                            g_kanji_cat_name = (void*)((g_char_panel_data + off) + data_base);
-                        }
-                        repeat = 0;
-                        play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
+                        u8* argA;
+                        g_append_anim_timer = 2;
+                        argA =
+                            ((g_random_names - 0x10) + (u32)g_char_panel_data) +
+                            (*((u16*)((((g_random_names - 0x10) + (u32)g_char_panel_data) + (g_panel_char_offsets[g_char_panel] * 2)) + (g_char_cursor * 2))));
+                        g_append_anim_frame = 0;
+                        name_append(g_active_name, argA);
+                        recalc_name_width();
+                        g_strip_width_steps = 5;
+                        play_menu_sfx(0x7D, 0x80);
                     }
                     else
                     {
-                        repeat = 0;
+                        play_menu_sfx(0x78, 0x80);
+                    }
+                }
+                else if (g_char_panel == 3)
+                {
+                    if (g_kanji_cat_entries[g_char_cursor] == 0xFF)
+                    {
+                        var_s0 = 0;
                         continue;
                     }
+                    g_kanji_cat = g_char_cursor;
+                    g_char_panel = 4;
+                    g_scroll_target = 0;
+                    g_scroll_pos = 0;
+                    g_scroll_steps = 0;
+                    g_cursor_x_target = 0x54;
+                    g_cursor_y_target = 0x68;
+                    g_cursor_lerp_steps = 4;
+                    g_char_cursor = 0;
+                    g_kanji_cat_name = (g_random_names - 0x10) + (u32)g_char_panel_data +
+                                       *(u16*)((g_random_names - 0x10) + (u32)g_char_panel_data + g_kanji_cat_names_offset * 2 + g_kanji_cat * 2);
+                    play_menu_sfx(0x7E, 0x80);
                 }
                 else if (g_char_panel == 4)
                 {
-                    if (name_char_count(g_active_name) < NAME_MAX_CHARS)
+                    if (name_char_count(g_active_name) < 10)
                     {
-                        u32 t1;
-                        u32 t2;
+                        u8* argA;
                         g_append_anim_timer = 2;
-                        kanji_data = g_kanji_panel_data;
+                        argA = (g_random_names - 0x10) + (u32)g_kanji_panel_data +
+                               *(u16*)((g_random_names - 0x10) + (u32)g_kanji_panel_data + g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] * 2 +
+                                       g_char_cursor * 2);
                         g_append_anim_frame = 0;
-                        {
-                            int idx4 = g_kanji_cat;
-                            t1 = *((u32*)((idx4 * 4) + ((u32)kanji_cat_tbl)));
-                            t2 = *((u32*)((t1 * 4) + ((u32)(&g_kanji_entry_offsets))));
-                            name_append(g_active_name, (void*)((kanji_data + (*((u16*)(((kanji_data + (t2 * 2)) + (g_char_cursor * 2)) + data_base)))) + data_base));
-                        }
+                        name_append(g_active_name, argA);
                         recalc_name_width();
-                        g_strip_width_steps = five;
-                        sfx_id = GNAME_SFX_MOVE;
+                        g_strip_width_steps = 5;
+                        play_menu_sfx(0x7D, 0x80);
                     }
                     else
                     {
-                    block_73:
-                        sfx_id = GNAME_SFX_ERROR;
+                        play_menu_sfx(0x78, 0x80);
                     }
-                    repeat = 0;
-                    play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
                 }
-                else
-                {
-                    repeat = 0;
-                    continue;
-                }
-                repeat = 0;
+                var_s0 = 0;
             }
-        }
-        else
-        {
-            if (btns != 0)
+            else
             {
-                if ((btns & PAD_BTN_UP) && ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) == (((s32)(g_char_cursor & 0xFFFF)) >> 0x1F)))
+                if (var_s2 != 0)
                 {
-                    cur_mode = GNAME_MODE_ACTION_OK;
-                    btns = 0;
-                    continue;
+                    /* Early-out panel jump chain */
+                    if ((var_s2 & PAD_BTN_UP) && (g_char_cursor / 10 == 0))
+                    {
+                        var_s1 = 0;
+                        var_s2 = 0;
+                        continue;
+                    }
+                    if ((var_s2 & PAD_BTN_LEFT) && ((g_char_cursor % 10) == 0))
+                    {
+                        var_s1 = 4;
+                        var_s2 = 0;
+                        continue;
+                    }
+
+                    if ((var_s2 & PAD_BTN_UP) && (g_char_cursor / 10 != 0))
+                    {
+                        g_char_cursor -= 10;
+                    }
+                    else if ((var_s2 & PAD_BTN_DOWN) && (g_char_cursor / 10 != g_char_last_row))
+                    {
+                        g_char_cursor += 10;
+                    }
+                    else if ((var_s2 & PAD_BTN_LEFT) && ((g_char_cursor % 10) != 0))
+                    {
+                        g_char_cursor -= 1;
+                    }
+                    else if ((var_s2 & PAD_BTN_RIGHT) && ((g_char_cursor % 10) != 9))
+                    {
+                        g_char_cursor += 1;
+                    }
+                    else
+                    {
+                        var_s0 = 0;
+                        continue;
+                    }
                 }
-                var_v0_7 = btns & PAD_BTN_UP;
-                if (((btns & PAD_BTN_LEFT) != 0) && (g_char_cursor == ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) * NAME_GRID_CHARS_PER_ROW)))
+
+                play_menu_sfx(0x7D, 0x80);
+                g_cursor_x_target = (g_char_cursor % 10) * 0x10 + 0x54;
+                g_cursor_y_target = (g_char_cursor / 10) * 0x10 - (g_scroll_pos - offset);
+
+                if (g_cursor_y_target < 0x68)
                 {
-                    cur_mode = GNAME_MODE_PANEL_BASE;
-                    btns = 0;
-                    continue;
+                    g_cursor_y_target = 0x68;
+                    g_scroll_target = (g_char_cursor / 10) * 0x10;
+                    g_scroll_steps = 4;
                 }
-                if (((btns & PAD_BTN_UP) != 0) &&
-                    ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) != (((((((((s32)g_char_cursor) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) & 0xFFFF) >> 0x1F)))
+                if (g_cursor_y_target >= 0xA9)
                 {
-                    g_char_cursor = g_char_cursor - NAME_GRID_CHARS_PER_ROW;
+                    g_cursor_y_target = 0xA8;
+                    g_scroll_target = (g_char_cursor / 10) * 0x10 - 0x40;
+                    g_scroll_steps = 4;
                 }
-                else if ((btns & PAD_BTN_DOWN) && ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) != g_char_last_row))
-                {
-                    g_char_cursor += NAME_GRID_CHARS_PER_ROW;
-                }
-                else if ((btns & PAD_BTN_LEFT) && (g_char_cursor != ((g_char_cursor / NAME_GRID_CHARS_PER_ROW) * NAME_GRID_CHARS_PER_ROW)))
-                {
-                    g_char_cursor = g_char_cursor - 1;
-                }
-                else if ((btn_right = btns & PAD_BTN_RIGHT) && (((g_char_cursor / NAME_GRID_CHARS_PER_ROW) * NAME_GRID_CHARS_PER_ROW) != (g_char_cursor - 9)))
-                {
-                    g_char_cursor = g_char_cursor + 1;
-                }
-                else
-                {
-                    repeat = 0;
-                    continue;
-                }
+
+                g_cursor_lerp_steps = 4;
+                var_s0 = 0;
             }
-            play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
-            g_cursor_x_target = ((g_char_cursor % NAME_GRID_CHARS_PER_ROW) * NAME_GRID_CELL_SIZE) + (var_v0_4 = NAME_GRID_X_BASE);
-            row_y_px = 4 * (4 * (g_char_cursor / NAME_GRID_CHARS_PER_ROW));
-            row_y_copy = row_y_px;
-            scroll_pos_copy = g_scroll_pos;
-            scroll_y_off = scroll_pos_copy - NAME_GRID_Y_TOP;
-            cursor_y_raw = row_y_copy - scroll_y_off;
-            temp_v0_2 = cursor_y_raw;
-            g_cursor_y_target = temp_v0_2;
-            if (temp_v0_2 < NAME_GRID_Y_TOP)
-            {
-                g_cursor_y_target = NAME_GRID_Y_TOP;
-                g_scroll_target = row_y_copy;
-                g_scroll_steps = four;
-            }
-            if (g_cursor_y_target >= (NAME_GRID_Y_BOTTOM + 1))
-            {
-                g_cursor_y_target = NAME_GRID_Y_BOTTOM;
-                g_scroll_target = row_y_copy - NAME_GRID_SCROLL_STEP;
-                g_scroll_steps = four;
-            }
-            g_cursor_lerp_steps = four;
-            repeat = 0;
+            break;
         }
     }
 
-    return cur_mode;
+    return var_s1;
 }
+
 /**
  * decomp.me (96.22%) https://decomp.me/scratch/ctu1w
  */
@@ -1275,8 +1101,8 @@ s32 func_80141D64(void)
         u16 h;
 
         t0 = g_char_panel_data;
-        v1 = (char*)&g_char_panel_data - 4;    /* two addiu instructions */
-        h = *(u16*)(v1 + (2 * n + t0)); /* lhu from (v1 + 2n + t0) */
+        v1 = (char*)&g_char_panel_data - 4; /* two addiu instructions */
+        h = *(u16*)(v1 + (2 * n + t0));     /* lhu from (v1 + 2n + t0) */
         var_a2 = (void*)(t0 + (h + (u32)v1));
     }
     else
@@ -1504,6 +1330,7 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
 {
     u8* ptr = (u8*)arg0;
     SPRT* sprt = (SPRT*)ptr;
+
     /* (offset) + (base) form so gcc emits `addu v1,v1,v0` (vs the reverse
        order from `&g_glyph_table[arg2]`). Also keeps arg2 live for the
        second SPRT's re-derivation below. */
@@ -1513,22 +1340,13 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
 
     /* Primary glyph SPRT - white tint, fully opaque. */
     *(u32*)&sprt->r0 = 0x808080; /* r=g=b=0x80, code byte = 0 */
-    setSprt(sprt);               /* len=4, code=0x64 (free-size textured sprite) */
-    sprt->x0 = (s16)(arg3 - arg5 + arg6);
-    sprt->y0 = (s16)(arg4 - arg5 + arg6);
-    sprt->u0 = entry[0];
-    sprt->v0 = entry[1];
-    sprt->w = (s16)entry[2];
-    sprt->h = (s16)entry[3];
-    /* Force a `lw` load on the clut word - accessing as u32 keeps the
-       full word live so gcc doesn't shrink to `lhu`. */
-    clut_word = *(u32*)(entry + 4);
-    sprt->clut = (u16)((clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
-
-    /* Chain the primary SPRT into the OT linked list. */
-    addPrim((u_long*)arg1, (u_long*)arg0);
-
-    ptr += 0x14;
+    setSprt(sprt);
+    setXY0(sprt, (s16)(arg3 - arg5 + arg6), (s16)(arg4 - arg5 + arg6));
+    setUV0(sprt, entry[0], entry[1]);
+    setWH(sprt, entry[2], entry[3]);
+    setClut(sprt, *(u32*)(entry + 4) << 4, 498);
+    addPrim(arg1, sprt);
+    ptr += sizeof(SPRT);
 
     if (arg5 != 0)
     {
@@ -1538,37 +1356,27 @@ void* func_80142274(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg
         u32 clut_word2;
 
         *(u32*)&((SPRT*)ptr)->r0 = (arg7 != 0) ? 0xA00000 : 0;
-        setlen((SPRT*)ptr, 4);
-        /* Default code, then conditionally overlay 0x66 for the
-           semi-trans shadow. The "store-default-then-override" form
-           matches the target's branch-and-delay-slot peephole; a single
-           ternary `(arg7 == 0) ? 0x66 : 0x64` would compile differently. */
-        setcode((SPRT*)ptr, 0x64);
+
+        setSprt((SPRT*)ptr);
+
         if (arg7 == 0)
         {
-            setcode((SPRT*)ptr, 0x66);
+            setSemiTrans((SPRT*)ptr, 1);
         }
 
         tmp2 = (arg5 - arg6) * 2;
-        /* new_var2 and clut_word2=arg3 are load-bearing temporaries: they
-           force entry2 to be derived here (after tmp2) and reuse a register
-           copy of arg3 for x0, matching the target's register allocation. */
+
         new_var2 = (u8*)g_glyph_table;
-        clut_word2 = arg3;
+
         entry2 = (u8*)((arg2 << 3) + (u32)new_var2);
-        ((SPRT*)ptr)->x0 = (s16)(clut_word2 + tmp2);
-        ((SPRT*)ptr)->y0 = (s16)(arg4 + tmp2);
-        ((SPRT*)ptr)->u0 = entry2[0];
-        ((SPRT*)ptr)->v0 = entry2[1];
-        ((SPRT*)ptr)->w = (s16)entry2[2];
-        ((SPRT*)ptr)->h = (s16)entry2[3];
-        clut_word2 = *(u32*)(entry2 + 4);
-        ((SPRT*)ptr)->clut = (u16)((clut_word2 & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
 
-        /* Chain the secondary SPRT into the OT linked list. */
-        addPrim((u_long*)arg1, (u_long*)ptr);
+        setXY0((SPRT*)ptr, (s16)(arg3 + tmp2), (s16)(arg4 + tmp2));
+        setUV0((SPRT*)ptr, entry2[0], entry2[1]);
+        setWH((SPRT*)ptr, (s16)entry2[2], (s16)entry2[3]);
+        setClut((SPRT*)ptr, *(u32*)(entry2 + 4) << 4, 498);
+        addPrim(arg1, ptr);
 
-        ptr += 0x14;
+        ptr += sizeof(SPRT);
     }
 
     return (void*)ptr;
@@ -1756,31 +1564,16 @@ s32 name_byte_length(u8* name)
  * @return Glyph (character) count.
  * @see https://decomp.me/scratch/c8fPe (100%)
  */
-s32 name_char_count(u8* name)
+s32 name_char_count(const u8* name)
 {
-    s32 char_count;
-    u8 c;
-    u8* p;
+    s32 char_count = 0;
 
-    p = name;
-    c = *p;
-    char_count = 0;
-    if (c != 0)
+    while (*name)
     {
-        do
-        {
-            if ((u32)(c - 0x19) < 7U) /* DBCS lead byte: 2-byte glyph */
-            {
-                p += 2;
-            }
-            else
-            {
-                p += 1;
-            }
-            c = *p;
-            char_count += 1;
-        } while (c != 0);
+        name += IS_DBSC_LEAD_BYTE(*name) ? 2 : 1;
+        char_count++;
     }
+
     return char_count;
 }
 
@@ -1796,62 +1589,55 @@ s32 name_char_count(u8* name)
  * @param src Null-terminated source name to append.
  * @see https://decomp.me/scratch/1lsbD (100%)
  */
-void name_append(u8* dst, u8* src)
+void name_append(u8* dst, const u8* src)
 {
-    u8* p;
+    const u8* p;
     s32 dst_len;
     s32 src_len;
-    s32 saved_dst_len;
-    u8 c;
+    s32 offset;
+    s32 i;
+
     p = dst;
     dst_len = 0;
-    if ((*dst) != 0)
+
+    while (*p)
     {
-        do
+        if (IS_DBSC_LEAD_BYTE(*p))
         {
-            c = *p;
-            if (((u32)((unsigned char)(c - 0x19))) < 7U)
-            {
-                p += 2;
-                dst_len += 2;
-            }
-            else
-            {
-                p += 1;
-                dst_len += 1;
-            }
-        } while ((*p) != 0);
+            p += 2;
+            dst_len += 2;
+        }
+        else
+        {
+            p += 1;
+            dst_len += 1;
+        }
     }
+
     p = src;
     src_len = 0;
-    saved_dst_len = dst_len;
-    if ((*p) != 0)
+    offset = dst_len;
+
+    while (*p)
     {
-        do
+        if (IS_DBSC_LEAD_BYTE(*p))
         {
-            c = *p;
-            if (((u32)((unsigned char)(c - 0x19))) < 7U)
-            {
-                p += 2;
-                src_len += 2;
-            }
-            else
-            {
-                p += 1;
-                src_len += 1;
-            }
-        } while ((*p) != 0);
+            p += 2;
+            src_len += 2;
+        }
+        else
+        {
+            p += 1;
+            src_len += 1;
+        }
     }
-    dst_len = 0;
-    if (src_len > 0)
+
+    for (i = 0; i < src_len; i++)
     {
-        do
-        {
-            dst[saved_dst_len + dst_len] = src[dst_len];
-            dst_len++;
-        } while (dst_len < src_len);
+        dst[offset + i] = src[i];
     }
-    dst[saved_dst_len + dst_len] = 0;
+
+    dst[offset + i] = 0;
 }
 
 /**
@@ -1875,26 +1661,27 @@ s32 name_pop_last_char(u8* name)
 
     prev_pos = name;
     scan_pos = prev_pos;
-    if (*prev_pos != 0)
+
+    while (*scan_pos)
     {
-        do
+        prev_pos = scan_pos;
+        if (IS_DBSC_LEAD_BYTE(*scan_pos))
         {
-            prev_pos = scan_pos;
-            if ((u32)(*scan_pos - 0x19) < 7U)
-            {
-                scan_pos = prev_pos + 2;
-            }
-            else
-            {
-                scan_pos = prev_pos + 1;
-            }
-        } while (*scan_pos != 0);
+            scan_pos += 2;
+        }
+        else
+        {
+            scan_pos++;
+        }
     }
-    last_char = prev_pos[0] | (prev_pos[1] << 8);
+
+    last_char = MAKE_DBCS_GLYPH(prev_pos[0], prev_pos[1]);
+
     if (prev_pos != scan_pos)
     {
         *prev_pos = 0;
     }
+
     return last_char;
 }
 
@@ -1909,40 +1696,34 @@ s32 name_pop_last_char(u8* name)
  * @param src Null-terminated source name.
  * @see https://decomp.me/scratch/UeYRe (100%)
  */
-void name_copy(u8* dst, u8* src)
+void name_copy(u8* dst, const u8* src)
 {
-    u8* p;
+    const u8* p;
     s32 i;
     s32 src_len;
+
     p = src;
     src_len = 0;
-    if ((*src) != 0)
+
+    while (*p)
     {
-        do
+        if (IS_DBSC_LEAD_BYTE(*p))
         {
-            if (((u32)((unsigned char)((*p) - 0x19))) < 7U)
-            {
-                p += 2;
-                src_len += 2;
-            }
-            else
-            {
-                p += 1;
-                src_len += 1;
-            }
-        } while ((*p) != 0);
+            p += 2;
+            src_len += 2;
+        }
+        else
+        {
+            p += 1;
+            src_len += 1;
+        }
     }
-    i = 0;
-    if (src_len > 0)
+
+    for (i = 0; i < src_len; i++)
     {
-        u8* dest; /* unused; preserved to match original codegen */
-        do
-        {
-            *(&dst[i]) = src[i];
-            i++;
-            dest = &dst[i];
-        } while (i < src_len);
+        dst[i] = src[i];
     }
+
     dst[i] = 0;
 }
 
@@ -1960,34 +1741,30 @@ void name_copy(u8* dst, u8* src)
 void recalc_name_width(void)
 {
     GlyphMeasure glyphs[16];
+    GlyphMeasure* cursor;
     GlyphMeasure* entry;
     s16 width;
     s32 glyph_count;
     s32 i;
-    GlyphMeasure* cursor;
-    s32 count;
-    s32* psum;
+
     glyph_count = func_800644FC(glyphs, g_active_name, 0);
     i = 0;
-    width = entry->width; /* uninitialized read - load-bearing for the match */
-    count = glyph_count;
-    g_name_pixel_width = i;
-    if (i < count)
+    width = entry->width;
+    g_name_pixel_width = 0;
+
+    if (i < glyph_count)
     {
-        if (!count)
-        {
-        }
         cursor = glyphs;
-        while (i < ((0, count)))
+        while (i < glyph_count)
         {
-            psum = &g_name_pixel_width;
             entry = cursor;
             width = entry->width;
-            *psum += width;
+            g_name_pixel_width += width;
             cursor++;
             i++;
         }
     }
+
     g_strip_width_target = g_name_pixel_width + 0x18;
 }
 
