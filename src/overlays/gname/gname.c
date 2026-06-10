@@ -1143,31 +1143,28 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
  * position (0x23, 0x47).
  *
  * @return Updated primitive write cursor after appending the label sprite.
- * @see decomp.me (43.25%) https://decomp.me/scratch/0GHRZ
+ * @see decomp.me (100%) https://decomp.me/scratch/jK7bc
  */
-s32 emit_panel_label(void)
+s32 emit_panel_label(void* arg0, u32 arg1)
 {
-    u32 panel;
-    void* label_data;
-
-    panel = g_char_panel;
-    if (panel < 4)
+    unsigned short new_var;
+    s32 panel = g_char_panel;
+    new_var = 4;
+    if (panel < new_var)
     {
-        u32 base_val;
-        char* data_base; /* pointer arithmetic, no constant folding */
+        u32 base_addr = ((u32)(&g_char_panel_data)) - new_var;
+        u32 offset_val = (u32)g_char_panel_data;
         u16 label_offset;
-
-        base_val = g_char_panel_data;
-        data_base = (char*)&g_char_panel_data - 4;                  /* two addiu instructions */
-        label_offset = *(u16*)(data_base + (2 * panel + base_val)); /* lhu from (data_base + 2*panel + base_val) */
-        label_data = (void*)(base_val + (label_offset + (u32)data_base));
+        void* label_data;
+        label_offset = *((u16*)(((panel * 2) + offset_val) + base_addr));
+        label_data = (void*)(offset_val + (label_offset + base_addr));
+        arg0 = (void*)func_800A88A0(arg0, arg1, label_data, 1, 0x23, 0x47, 2);
     }
     else
     {
-        label_data = g_kanji_cat_name;
+        arg0 = (void*)func_800A88A0(arg0, arg1, g_kanji_cat_name, 1, 0x23, 0x47, 2);
     }
-
-    return func_800A88A0(label_data, 1, 0x23, 0x47, 2);
+    return (s32)arg0;
 }
 
 /**
