@@ -277,7 +277,7 @@ void gname_tick(s32 ctx)
 {
     draw_name_cursor_row();
     gname_render(ctx);
-    g_frame_counter += 1;
+    g_frame_counter++;
     gname_update_state();
 }
 
@@ -360,18 +360,13 @@ void reset_run_state(void)
     g_name_clipboard = 0;
     g_cursor_x = g_cursor_x_target;
     g_cursor_y = g_cursor_y_target;
-    name_copy(g_active_name, &g_initial_name); /* matches 'la a1, g_initial_name' */
+    name_copy(g_active_name, &g_initial_name);
     g_strip_width = 0;
     recalc_name_width();
     g_strip_width_steps = 5;
     g_append_anim_frame = 0;
     g_append_anim_timer = 2;
     g_char_panel = 0;
-}
-
-inline int inline_fn(s32 arg0)
-{
-    return arg0 * 2;
 }
 
 /**
