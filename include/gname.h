@@ -187,11 +187,11 @@ typedef struct
  * The @c x field is read whole (LW) by gname_render for use with @c & 0x1FF;
  * only the low 9 bits represent the screen X coordinate.
  */
-typedef struct
-{
-    u16 x;     /* 0x0 - screen X target; only bits [8:0] are the pixel column */
-    u8  y;     /* 0x2 - screen Y target */
-    u8  glyph; /* 0x3 - glyph/tile index for the indicator sprite */
+typedef struct {
+    unsigned int x : 9;
+    unsigned int pad : 7;
+    u8 y;
+    u8 glyph;
 } TabCursorEntry;
 
 /** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
@@ -344,9 +344,9 @@ extern s32 g_char_cursor;
 
 /* --- ROM data tables --- */
 /** Random name pool used when g_name_source_mode == 4 or 5. */
-extern u8* g_random_names;
+extern u8 g_random_names[];
 /** History name list used when g_name_source_mode == 3. */
-extern u8* g_history_names;
+extern u8 g_history_names[];
 /** Kanji character panel glyph data base pointer. */
 extern u8* g_kanji_panel_data;
 /** Kanji category entry index table: [cat] -> sub-index into g_kanji_entry_offsets, or 0xFF. */
