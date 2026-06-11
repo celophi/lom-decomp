@@ -221,6 +221,7 @@ extern s32 D_800F2280;
 extern func_80068970_Arg0 D_800F22C8[80];
 extern Struct_D800FDF58 D_800FDF58[];
 extern Struct_D80105AE0 D_80105AE0[];
+extern u8 D_800FF59C;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/9Ady0
@@ -864,4 +865,89 @@ void func_800691C4(s32 arg0, int arg1, u8* arg2)
             temp_s0->unk2B[i] = (temp_s0->unkCC[j][i] = (temp_s0->unk3B[j][i] = 0));
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/XDOcQ
+ */
+void func_800693B4(void *arg0, s32 arg1, s32 arg2)
+{
+  u8 *ptr;
+  Struct_D800FDF58 *global_table;
+  s32 i;
+  s32 idx;
+  u8 *table;
+  u16 val;
+  s32 temp;
+  u8 *new_var;
+  Struct_D800FDF58 *entry;
+  u8 d;
+
+  for (i = 0; i < 2; i++)
+  {
+    ptr = (u8 *) arg0 + i;
+    idx = i << 1;
+    if (ptr[0x27] == 0)
+    {
+      table = *((u8 **) ((u8 *) arg0 + 0x0C));
+      if ((*((u16 *) (idx + (u32) table + 4))) == arg1)
+      {
+        if (arg1 != 1)
+        {
+          if ((*((table + i) + 2)) != arg2)
+          {
+            continue;
+          }
+        }
+        temp = func_8006CE70(((u8 *) arg0)[0x228]);
+        table = (new_var = *((u8 **) ((u8 *) arg0 + 0x0C)));
+        val = *((u16 *) ((table + idx) + 8));
+        switch (val >> 10)
+        {
+          case 0:
+            func_800A3938(val & 0x3FF, temp);
+            break;
+
+          case 1:
+            if (((u8 *) arg0)[0x228] < 2)
+            {
+              func_800A3A90(val & 0x3FF, temp, ((u8 *) arg0)[0x228]);
+            }
+            else
+            {
+              global_table = D_800FDF58;
+              entry = &global_table[((u8 *) arg0)[0x228]];
+              d = entry->pad2C[0xF];
+              if (((u32) (d - 3)) < 3)
+              {
+                if (D_800FF59C != 0)
+                {
+                  func_800A39A8(val & 0x3FF, temp, 0, ((u8 *) arg0)[0x228]);
+                }
+                else
+                {
+                  func_800A39A8(val & 0x3FF, temp, entry->pad2C[0xF] - 3, ((u8 *) arg0)[0x228]);
+                }
+              }
+            }
+            break;
+
+          case 2:
+            if ((val & 0x3FF) < 2)
+            {
+              s32 *field = (s32 *) (((val & 0x3FF) << 2) + (u32) arg0 + 0x1C);
+              func_800A3E10(*field, temp, ((u8 *) arg0)[0x228]);
+            }
+            break;
+
+        }
+
+        if (arg1 == 5)
+        {
+          ptr[0x27] |= 0x80;
+        }
+        ((u8 *) arg0 + i)[0x27] |= 1;
+      }
+    }
+  }
 }
