@@ -1082,56 +1082,51 @@ void gname_render(RenderContext* ctx)
  * @param prim    Primitive write cursor (linked-list head).
  * @param ot_entry Pointer into the render context OT for chaining.
  * @return Updated primitive write cursor after appending the sprite.
- * @see decomp.me (62.11%) https://decomp.me/scratch/Yf7Ha
+ * @see decomp.me (96.64%) https://decomp.me/scratch/RnoNS
  */
 s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
 {
-    s32 char_set_mode;
-    s32 next_prim;
+    s32 char_set_mode = g_char_set_mode;
     u16 sprite_offset;
-    u32* entry_ptr;
-    u32 entry_val;
-    u8* data_base;
     s32 base_val;
+    u8* new_var3;
+    int new_var2;
     s32 panel;
-    void* sprite_data;
-
-    char_set_mode = g_char_set_mode;
-    next_prim = prim;
-
-    if (char_set_mode < 8)
+    s32 new_var;
+    u8* sprite_data;
+    if (g_char_set_mode < 8)
     {
-        entry_ptr = (u32*)((u32)&g_char_panel_data + ((char_set_mode + 2) * 4));
-        entry_val = *entry_ptr;
-        data_base = ((u8*)&g_char_panel_data) - 4;
-        base_val = g_char_panel_data; /* value, not address */
-        sprite_offset = *(u16*)(data_base + ((entry_val >> 8) & 0xFE) + base_val);
-        sprite_data = data_base + sprite_offset + base_val;
-        next_prim = func_800A88A0(next_prim, ot_entry, sprite_data, 1, 0xb0, 0xc8, 2);
+        TabCursorEntry* tab_base = g_tab_cursor_pos;
+        s32 idx = char_set_mode + 2;
+        base_val = g_char_panel_data;
+        sprite_offset = *((u16*)(((new_var3 = ((u8*)(&g_char_panel_data)) - 4) + (((((*((u32*)(&tab_base[idx]))) >> 3) >> 1) >> 4) & 0xFE)) + base_val));
+        sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
+        new_var = base_val;
+        g_char_panel_data += 0;
+        prim = func_800A88A0(prim, ot_entry, sprite_data + new_var, 1, 0xB0, 0xC8, 2);
     }
-    else if (char_set_mode == 0x10)
+    else if (g_char_set_mode == 0x10)
     {
         panel = g_char_panel;
+
         if (((u32)(panel - 3)) < 2U)
         {
-            data_base = ((u8*)&g_char_panel_data) - 4;
+
             base_val = g_char_panel_data;
-            /* sprite_offset from &g_char_panel_data + (panel*4) + 0x10 */
-            sprite_offset = *(u16*)((u8*)&g_char_panel_data + (panel * 4) + 0x10);
-            sprite_data = data_base + sprite_offset + base_val;
-            next_prim = func_800A88A0(next_prim, ot_entry, sprite_data, 1, 0xb0, 0xc8, 2);
+            sprite_offset = *((u16*)(((((u8*)(&g_char_panel_data)) + base_val) + (panel * 2)) + 16));
+            sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
+            prim = func_800A88A0(prim, ot_entry, sprite_data + base_val, 1, 0xB0, 0xC8, 2);
         }
         else
         {
-            data_base = ((u8*)&g_char_panel_data) - 4;
-            /* sprite_offset from &g_char_panel_data + (prim*4) + 0x50 */
-            sprite_offset = *(u16*)((u8*)&g_char_panel_data + (prim * 4) + 0x50);
-            sprite_data = data_base + sprite_offset + (prim * 4);
-            next_prim = func_800A88A0(next_prim, ot_entry, sprite_data, 1, 0xb0, 0xc8, 2);
+
+            (new_var = g_char_panel_data);
+            sprite_offset = *((u16*)((((u8*)(&g_char_panel_data)) + (new_var)) + 0x14));
+            sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
+            prim = func_800A88A0(prim, ot_entry, sprite_data + new_var, 1, 0xB0, 0xC8, 2);
         }
     }
-
-    return next_prim;
+    return prim;
 }
 
 /**
