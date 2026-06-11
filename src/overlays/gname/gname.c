@@ -445,10 +445,12 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                         }
                         else
                         {
-                            name_copy(g_active_name, ((g_random_names_off - 0x10) + (*((u32*)g_history_names_off))) +
-                                                         (*((u16*)(((g_random_names_off - 0x10) + (*((u32*)g_history_names_off))) + (g_history_name_idx * 2)))));
-                            name_append(g_active_name, ((g_random_names_off - 0x10) + ((*((u32*)g_history_names_off)))) +
-                                                           (*((u16*)(((g_history_names_off - 0x10) + (*((u32*)g_history_names_off))) + (((rand() % 128) + 130) * 2)))));
+                            name_copy(g_active_name,
+                                      ((g_random_names_off - 0x10) + (*((u32*)g_history_names_off))) +
+                                          (*((u16*)(((g_random_names_off - 0x10) + (*((u32*)g_history_names_off))) + (g_history_name_idx * 2)))));
+                            name_append(g_active_name,
+                                        ((g_random_names_off - 0x10) + ((*((u32*)g_history_names_off)))) +
+                                            (*((u16*)(((g_history_names_off - 0x10) + (*((u32*)g_history_names_off))) + (((rand() % 128) + 130) * 2)))));
                         }
                     }
                     else if (g_name_source_mode == 1)
@@ -562,8 +564,7 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                         u8* argA;
                         g_append_anim_timer = 2;
                         argA = ((g_random_names_off - 0x10) + g_panel_tbl_off) +
-                               (*((u16*)((((g_random_names_off - 0x10) + g_panel_tbl_off) + (g_panel_char_offsets[g_char_panel] * 2)) +
-                                         (g_char_cursor * 2))));
+                               (*((u16*)((((g_random_names_off - 0x10) + g_panel_tbl_off) + (g_panel_char_offsets[g_char_panel] * 2)) + (g_char_cursor * 2))));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
                         recalc_name_width();
@@ -601,10 +602,10 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                     {
                         u8* argA;
                         g_append_anim_timer = 2;
-                        argA =
-                            ((g_random_names_off - 0x10) + ((u32)g_kanji_panel_off)) +
-                            (*((u16*)((((g_random_names_off - 0x10) + ((u32)g_kanji_panel_off)) + (g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] * 2)) +
-                                      (g_char_cursor * 2))));
+                        argA = ((g_random_names_off - 0x10) + ((u32)g_kanji_panel_off)) +
+                               (*((u16*)((((g_random_names_off - 0x10) + ((u32)g_kanji_panel_off)) +
+                                          (g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] * 2)) +
+                                         (g_char_cursor * 2))));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
                         recalc_name_width();
@@ -1094,55 +1095,27 @@ void gname_render(RenderContext* ctx)
  * @param prim     Primitive write cursor (linked-list head).
  * @param ot_entry Pointer into the render context OT for chaining.
  * @return Updated primitive write cursor after appending the sprite.
- * @see decomp.me (96.64%) https://decomp.me/scratch/RnoNS
+ * @see decomp.me (100%) https://decomp.me/scratch/RnoNS
  */
 s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
 {
-    s32 char_set_mode = g_char_set_mode;
-    u16 sprite_offset;
-    s32 tbl_off;
-    u8* blob_base;
-    s32 panel;
-    s32 tbl_off2; /* duplicate of tbl_off; the copy steers regalloc for the shared call tail */
-    u8* sprite_data;
+    s32 mode = g_char_set_mode;
 
     if (g_char_set_mode < 8)
     {
-        TabCursorEntry* tab_base = g_tab_cursor_pos;
-        s32 idx = char_set_mode + 2;
-
-        tbl_off = g_panel_tbl_off;
-        /* Table byte offset = sprite_idx * 2, extracted from the raw entry
-         * word; see the TabCursorEntry docblock for why this is not a
-         * bitfield read. The embedded blob_base assignment is part of the
-         * matched expression shape. */
-        sprite_offset = *((u16*)(((blob_base = PANEL_DATA_BLOB) + ((*((u32*)(&tab_base[idx])) >> 8) & 0xFE)) + tbl_off));
-        sprite_data = PANEL_DATA_BLOB + sprite_offset;
-        tbl_off2 = tbl_off;
-        g_panel_tbl_off += 0; /* no-op store; nudges regalloc in the current match */
-        prim = func_800A88A0(prim, ot_entry, sprite_data + tbl_off2, 1, 0xB0, 0xC8, 2);
+        prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(g_tab_cursor_pos[mode + 2].sprite_idx), 1, 0xB0, 0xC8, 2);
     }
     else if (g_char_set_mode == 0x10)
     {
-        panel = g_char_panel;
+        s32 panel = g_char_panel;
 
-        if (((u32)(panel - 3)) < 2U)
+        if ((u32)(panel - 3) < 2U)
         {
-            /* Entry panel + 10. This lhu anchors at &g_panel_tbl_off
-             * (blob + 4), so the +16 displacement is +20 from the blob; the
-             * -4 base correction is folded into the load offset. */
-            tbl_off = g_panel_tbl_off;
-            sprite_offset = *((u16*)(((((u8*)(&g_panel_tbl_off)) + tbl_off) + (panel * 2)) + 16));
-            sprite_data = PANEL_DATA_BLOB + sprite_offset;
-            prim = func_800A88A0(prim, ot_entry, sprite_data + tbl_off, 1, 0xB0, 0xC8, 2);
+            prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(panel + 10), 1, 0xB0, 0xC8, 2);
         }
         else
         {
-            /* Entry 12 (+0x18 from the blob); same anchoring as above. */
-            tbl_off2 = g_panel_tbl_off;
-            sprite_offset = *((u16*)((((u8*)(&g_panel_tbl_off)) + tbl_off2) + 0x14));
-            sprite_data = PANEL_DATA_BLOB + sprite_offset;
-            prim = func_800A88A0(prim, ot_entry, sprite_data + tbl_off2, 1, 0xB0, 0xC8, 2);
+            prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(12), 1, 0xB0, 0xC8, 2);
         }
     }
     return prim;

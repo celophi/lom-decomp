@@ -434,6 +434,15 @@ extern u32 g_panel_tbl_off;
  */
 #define PANEL_DATA_BLOB (((u8*)(&g_panel_tbl_off)) - 4)
 
+/** The blob's u16 record-offset table. Must stay a macro: the original
+ *  re-derives the table at every use (no CSE), which a named local would
+ *  destroy. */
+#define PANEL_REC_TBL ((u16*)(PANEL_DATA_BLOB + g_panel_tbl_off))
+
+/** Pointer to record i: the table is self-relative, entries are byte
+ *  offsets from the table itself (same idiom as FF8's string tables). */
+#define PANEL_RECORD(i) ((u8*)PANEL_REC_TBL + PANEL_REC_TBL[(i)])
+
 /** Per-panel character set base offsets (u32 per panel; low u16 = row count). */
 extern u32 g_panel_char_offsets[];
 /** First @ref g_panel_record_offsets entry index of the kanji category name
