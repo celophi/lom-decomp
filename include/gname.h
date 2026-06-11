@@ -199,10 +199,16 @@ typedef struct
  *
  * The @c x bitfield occupies the low 9 bits of the first word; accessing it
  * directly generates the same @c lw + @c andi sequence as the raw LW+mask form.
+ *
+ * @note @c sprite_idx (bits 9..15) is the tab's entry index into the panel
+ * data blob's u16 sprite-offset table (see @ref PanelDataHeader).
+ * @ref emit_panel_tab_sprite must read it as the raw word via
+ * @c (word >> 8) & 0xFE (= @c sprite_idx * 2); a bitfield read would compile
+ * to @c srl 9 / @c andi 0x7F / @c sll 1 and break the match.
  */
 typedef struct {
     unsigned int x : 9;
-    unsigned int pad : 7;
+    unsigned int sprite_idx : 7;
     u8 y;
     u8 glyph;
 } TabCursorEntry;
@@ -357,29 +363,78 @@ extern s32 g_kanji_cat;
 extern s32 g_char_cursor;
 
 /* --- ROM data tables --- */
-/** Random name pool used when g_name_source_mode == 4 or 5. */
+
+/**
+ * @brief Header layout of the character-panel resource blob at
+ *        @ref g_panel_data_base (0x80142EF4).
+ *
+ * The "tables" below are really one serialized data file whose header is a
+ * run of u32 byte offsets; splat carved each header field into its own
+ * symbol. A record inside the blob is always resolved as
+ * @c blob_base + header_field + table_entry.
+ *
+ * This typedef is documentation only - do not re-type the accesses with it.
+ * The matched code anchors each access at the individual field symbol and
+ * subtracts the field's offset at runtime (e.g. @c &g_char_panel_data - 4,
+ * @c g_random_names - 0x10), which shares one @c lui between the field load
+ * and the base address. Anchoring at a blob-base symbol instead drops the
+ * runtime @c addiu and breaks the match.
+ */
+typedef struct
+{
+    u32 unk0;           /* 0x00 - g_panel_data_base: stored value 4; purpose unknown */
+    u32 sprite_tbl_off; /* 0x04 - g_char_panel_data: offset of the u16 sprite/label offset table (0x14) */
+    u32 kanji_off;      /* 0x08 - g_kanji_panel_data: offset of the kanji panel glyph data (0x2A0) */
+    u32 history_off;    /* 0x0C - g_history_names: offset of the history name list (0x3754) */
+    u32 random_off;     /* 0x10 - g_random_names: offset of the random name pool (0x3C9C) */
+    /* u16 sprite_offsets[] follows at +0x14; each entry is a byte offset
+     * from the table itself to one sprite/label record. */
+} PanelDataHeader;
+
+/** Header field at blob + 0x10: u32 offset (0x3C9C) of the random name pool
+ *  used when g_name_source_mode == 4 or 5. Declared as an array so
+ *  `g_random_names - 0x10` yields the blob base (see @ref PanelDataHeader). */
 extern u8 g_random_names[];
-/** History name list used when g_name_source_mode == 3. */
+/** Header field at blob + 0x0C: u32 offset (0x3754) of the history name list
+ *  used when g_name_source_mode == 3 (see @ref PanelDataHeader). */
 extern u8 g_history_names[];
-/** Kanji character panel glyph data base pointer. */
+/** Header field at blob + 0x08: offset (0x2A0) of the kanji panel glyph data
+ *  (see @ref PanelDataHeader). */
 extern u8* g_kanji_panel_data;
 /** Kanji category entry index table: [cat] -> sub-index into g_kanji_entry_offsets, or 0xFF. */
 extern u32 g_kanji_cat_entries[];
 /** Kanji sub-index to glyph offset lookup table. */
 extern u32 g_kanji_entry_offsets[];
 /**
- * @brief Base offset of the character panel sprite data blob.
+ * @brief Header field at blob + 4 of the character panel data blob
+ *        (see @ref PanelDataHeader).
  *
- * Holds the byte distance from @ref g_panel_data_base to itself (= 4),
- * making it self-referential. Used as an integer addend when indexing the
- * u16 sprite-offset table that begins at @c &g_char_panel_data.
+ * Holds the byte offset (0x14) from the blob base to the u16 sprite/label
+ * offset table; each table entry is in turn a byte offset from the table
+ * itself to one sprite record. A sprite pointer is therefore
+ * @c PANEL_DATA_BLOB + g_char_panel_data + table[i].
  */
 extern u32 g_char_panel_data;
+
+/**
+ * @brief Base address of the character panel data blob, derived from
+ *        @ref g_char_panel_data (the header field at blob + 4).
+ *
+ * The base must be derived from @c &g_char_panel_data with a runtime
+ * @c - 4 (not referenced via the @ref g_panel_data_base symbol): the
+ * original code shares a single @c lui between loading the field's value
+ * and forming the base address, leaving the @c -4 as a separate @c addiu
+ * in the binary.
+ */
+#define PANEL_DATA_BLOB (((u8*)(&g_char_panel_data)) - 4)
+
 /** Per-panel character set base offsets (u32 per panel; low u16 = row count). */
 extern u32 g_panel_char_offsets[];
 /** u16 offset within g_char_panel_data where kanji category name offsets begin. */
 extern s32 g_kanji_cat_names_offset;
-/** Base of the panel data blob; the 4 bytes immediately before @ref g_char_panel_data. */
+/** Base of the panel data blob; the 4 bytes immediately before @ref g_char_panel_data
+ *  (see @ref PanelDataHeader). Not referenced by matched code - accesses derive the
+ *  base from a header-field symbol instead. */
 extern u8 g_panel_data_base[];
 
 /**

@@ -1075,14 +1075,21 @@ void gname_render(RenderContext* ctx)
 /**
  * @brief Emit the panel-tab indicator sprite for the current character-set mode.
  *
- * Reads a u16 sprite offset from the panel data blob (@ref g_panel_data_base /
- * @ref g_char_panel_data) and forwards the resulting sprite pointer to
- * @ref func_800A88A0 at fixed screen position (0xB0, 0xC8).
+ * Resolves a sprite record from the character panel data blob (see
+ * @ref PanelDataHeader / @ref PANEL_DATA_BLOB) and forwards it to
+ * @ref func_800A88A0 at fixed screen position (0xB0, 0xC8). A record is
+ * always @c blob + tbl_off + table[i], where @c tbl_off is
+ * @ref g_char_panel_data and @c table is the u16 sprite-offset table.
  *
- * The blob is indexed differently per mode:
- *  - mode 0-7 (kana/alpha): offset = blob_base[base_val + (tab_entry >> 8 & 0xFE)]
- *  - mode 0x10, panel 3-4:  offset = blob_base[base_val + panel*2 + 0x10]
- *  - mode 0x10, other:      offset = blob_base[base_val + 0x14]
+ * Table index per mode:
+ *  - mode 0-7 (kana/alpha): i = sprite_idx of the @ref g_tab_cursor_pos
+ *    entry for tab (mode + 2)
+ *  - mode 0x10, panel 3-4:  i = panel + 10 (entries 13-14)
+ *  - mode 0x10, other:      i = 12
+ *
+ * All three branches share one compiled call tail that adds @c tbl_off last
+ * (in the jal delay slot), which is why every call passes
+ * @c sprite_data + tbl_off instead of folding the add earlier.
  *
  * @param prim     Primitive write cursor (linked-list head).
  * @param ot_entry Pointer into the render context OT for chaining.
@@ -1093,22 +1100,27 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
 {
     s32 char_set_mode = g_char_set_mode;
     u16 sprite_offset;
-    s32 base_val;
+    s32 tbl_off;
     u8* blob_base;
-    int new_var2;
     s32 panel;
-    s32 base_off;
+    s32 tbl_off2; /* duplicate of tbl_off; the copy steers regalloc for the shared call tail */
     u8* sprite_data;
+
     if (g_char_set_mode < 8)
     {
         TabCursorEntry* tab_base = g_tab_cursor_pos;
         s32 idx = char_set_mode + 2;
-        base_val = g_char_panel_data;
-        sprite_offset = *((u16*)(((blob_base = ((u8*)(&g_char_panel_data)) - 4) + ((*((u32*)(&tab_base[idx])) >> 8) & 0xFE)) + base_val));
-        sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
-        base_off = base_val;
-        g_char_panel_data += 0;
-        prim = func_800A88A0(prim, ot_entry, sprite_data + base_off, 1, 0xB0, 0xC8, 2);
+
+        tbl_off = g_char_panel_data;
+        /* Table byte offset = sprite_idx * 2, extracted from the raw entry
+         * word; see the TabCursorEntry docblock for why this is not a
+         * bitfield read. The embedded blob_base assignment is part of the
+         * matched expression shape. */
+        sprite_offset = *((u16*)(((blob_base = PANEL_DATA_BLOB) + ((*((u32*)(&tab_base[idx])) >> 8) & 0xFE)) + tbl_off));
+        sprite_data = PANEL_DATA_BLOB + sprite_offset;
+        tbl_off2 = tbl_off;
+        g_char_panel_data += 0; /* no-op store; nudges regalloc in the current match */
+        prim = func_800A88A0(prim, ot_entry, sprite_data + tbl_off2, 1, 0xB0, 0xC8, 2);
     }
     else if (g_char_set_mode == 0x10)
     {
@@ -1116,19 +1128,21 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
 
         if (((u32)(panel - 3)) < 2U)
         {
-
-            base_val = g_char_panel_data;
-            sprite_offset = *((u16*)(((((u8*)(&g_char_panel_data)) + base_val) + (panel * 2)) + 16));
-            sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
-            prim = func_800A88A0(prim, ot_entry, sprite_data + base_val, 1, 0xB0, 0xC8, 2);
+            /* Entry panel + 10. This lhu anchors at &g_char_panel_data
+             * (blob + 4), so the +16 displacement is +20 from the blob; the
+             * -4 base correction is folded into the load offset. */
+            tbl_off = g_char_panel_data;
+            sprite_offset = *((u16*)(((((u8*)(&g_char_panel_data)) + tbl_off) + (panel * 2)) + 16));
+            sprite_data = PANEL_DATA_BLOB + sprite_offset;
+            prim = func_800A88A0(prim, ot_entry, sprite_data + tbl_off, 1, 0xB0, 0xC8, 2);
         }
         else
         {
-
-            (base_off = g_char_panel_data);
-            sprite_offset = *((u16*)((((u8*)(&g_char_panel_data)) + (base_off)) + 0x14));
-            sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
-            prim = func_800A88A0(prim, ot_entry, sprite_data + base_off, 1, 0xB0, 0xC8, 2);
+            /* Entry 12 (+0x18 from the blob); same anchoring as above. */
+            tbl_off2 = g_char_panel_data;
+            sprite_offset = *((u16*)((((u8*)(&g_char_panel_data)) + tbl_off2) + 0x14));
+            sprite_data = PANEL_DATA_BLOB + sprite_offset;
+            prim = func_800A88A0(prim, ot_entry, sprite_data + tbl_off2, 1, 0xB0, 0xC8, 2);
         }
     }
     return prim;
