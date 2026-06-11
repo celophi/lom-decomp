@@ -127,23 +127,23 @@ typedef struct Struct_D
 
 typedef struct func_80068970_Arg0
 {
-    Struct_D *unk0;
-    u8 pad4[0xC - 4];               // 8 bytes
-    Struct_C *unkC;
-    u8 pad10[0x24 - 0x10];          // 20 bytes
+    Struct_D* unk0;
+    u8 pad4[0xC - 4]; // 8 bytes
+    Struct_C* unkC;
+    u8 pad10[0x24 - 0x10]; // 20 bytes
     u8 unk24;
     u8 unk25;
     u8 unk26;
     u8 unk27;
     u8 unk28;
-    u8 pad29;                       // offset 0x29 (from second def)
-    u8 unk2A;                       // offset 0x2A (from first def)
+    u8 pad29; // offset 0x29 (from second def)
+    u8 unk2A; // offset 0x2A (from first def)
     u8 unk2B[16];
     u8 unk3B[9][16];
     u8 padCB;
     u16 unkCC[9][16];
     u16 unk1EC[9];
-    u8 pad1FE[0x222 - 0x1FE];       // 36 bytes
+    u8 pad1FE[0x222 - 0x1FE]; // 36 bytes
     u16 unk222;
     u8 unk224;
     u8 unk225;
@@ -157,9 +157,8 @@ typedef struct func_80068970_Arg0
     u8 pad238[2];
     u8 unk23A;
     u8 unk23B;
-    u8 pad23C[0x244 - 0x23C];       // 8 bytes
+    u8 pad23C[0x244 - 0x23C]; // 8 bytes
 } func_80068970_Arg0;
-
 
 typedef struct
 {
@@ -556,7 +555,7 @@ s32 func_80068970(func_80068970_Arg0* arg0)
                 func_8006A240(0x100, 0x100, 0x100);
             }
         }
-        if ((arg0->unk224 & 0xFFFF0001) != 0xC0000)
+        if ((*(u32*)&arg0->unk224 & 0xFFFF0001) != 0xC0000)
         {
             func_8006D21C(arg0);
         }
@@ -564,7 +563,7 @@ s32 func_80068970(func_80068970_Arg0* arg0)
         {
             arg0->unk222 = 0;
             arg0->unk24 = 0;
-            if (arg0->unk224 & 1)
+            if (*(u32*)(&arg0->unk224) & 1)
             {
                 func_80084424(arg0->unk228);
             }
