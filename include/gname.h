@@ -367,8 +367,14 @@ extern u8* g_kanji_panel_data;
 extern u32 g_kanji_cat_entries[];
 /** Kanji sub-index to glyph offset lookup table. */
 extern u32 g_kanji_entry_offsets[];
-/** Character panel glyph data: element[0] is the self-referential base offset. */
-extern u8* g_char_panel_data;
+/**
+ * @brief Base offset of the character panel sprite data blob.
+ *
+ * Holds the byte distance from @ref g_panel_data_base to itself (= 4),
+ * making it self-referential. Used as an integer addend when indexing the
+ * u16 sprite-offset table that begins at @c &g_char_panel_data.
+ */
+extern u32 g_char_panel_data;
 /** Per-panel character set base offsets (u32 per panel; low u16 = row count). */
 extern u32 g_panel_char_offsets[];
 /** u16 offset within g_char_panel_data where kanji category name offsets begin. */

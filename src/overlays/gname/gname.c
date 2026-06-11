@@ -561,8 +561,8 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                     {
                         u8* argA;
                         g_append_anim_timer = 2;
-                        argA = ((g_random_names - 0x10) + ((u32)g_char_panel_data)) +
-                               (*((u16*)((((g_random_names - 0x10) + ((u32)g_char_panel_data)) + (g_panel_char_offsets[g_char_panel] * 2)) +
+                        argA = ((g_random_names - 0x10) + g_char_panel_data) +
+                               (*((u16*)((((g_random_names - 0x10) + g_char_panel_data) + (g_panel_char_offsets[g_char_panel] * 2)) +
                                          (g_char_cursor * 2))));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
@@ -591,8 +591,8 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                     g_cursor_y_target = 0x68;
                     g_cursor_lerp_steps = 4;
                     g_char_cursor = 0;
-                    g_kanji_cat_name = ((g_random_names - 0x10) + ((u32)g_char_panel_data)) +
-                                       (*((u16*)((((g_random_names - 0x10) + ((u32)g_char_panel_data)) + (g_kanji_cat_names_offset * 2)) + (g_kanji_cat * 2))));
+                    g_kanji_cat_name = ((g_random_names - 0x10) + g_char_panel_data) +
+                                       (*((u16*)((((g_random_names - 0x10) + g_char_panel_data) + (g_kanji_cat_names_offset * 2)) + (g_kanji_cat * 2))));
                     play_menu_sfx(0x7E, 0x80);
                 }
                 else if (g_char_panel == 4)
@@ -1075,11 +1075,16 @@ void gname_render(RenderContext* ctx)
 /**
  * @brief Emit the panel-tab indicator sprite for the current character-set mode.
  *
- * Selects sprite data from @ref g_char_panel_data based on @ref g_char_set_mode
- * (values 0-7 = kana/alpha panels; 0x10 = kanji panel) and forwards it to
+ * Reads a u16 sprite offset from the panel data blob (@ref g_panel_data_base /
+ * @ref g_char_panel_data) and forwards the resulting sprite pointer to
  * @ref func_800A88A0 at fixed screen position (0xB0, 0xC8).
  *
- * @param prim    Primitive write cursor (linked-list head).
+ * The blob is indexed differently per mode:
+ *  - mode 0-7 (kana/alpha): offset = blob_base[base_val + (tab_entry >> 8 & 0xFE)]
+ *  - mode 0x10, panel 3-4:  offset = blob_base[base_val + panel*2 + 0x10]
+ *  - mode 0x10, other:      offset = blob_base[base_val + 0x14]
+ *
+ * @param prim     Primitive write cursor (linked-list head).
  * @param ot_entry Pointer into the render context OT for chaining.
  * @return Updated primitive write cursor after appending the sprite.
  * @see decomp.me (96.64%) https://decomp.me/scratch/RnoNS
@@ -1089,21 +1094,21 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
     s32 char_set_mode = g_char_set_mode;
     u16 sprite_offset;
     s32 base_val;
-    u8* new_var3;
+    u8* blob_base;
     int new_var2;
     s32 panel;
-    s32 new_var;
+    s32 base_off;
     u8* sprite_data;
     if (g_char_set_mode < 8)
     {
         TabCursorEntry* tab_base = g_tab_cursor_pos;
         s32 idx = char_set_mode + 2;
         base_val = g_char_panel_data;
-        sprite_offset = *((u16*)(((new_var3 = ((u8*)(&g_char_panel_data)) - 4) + (((((*((u32*)(&tab_base[idx]))) >> 3) >> 1) >> 4) & 0xFE)) + base_val));
+        sprite_offset = *((u16*)(((blob_base = ((u8*)(&g_char_panel_data)) - 4) + ((*((u32*)(&tab_base[idx])) >> 8) & 0xFE)) + base_val));
         sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
-        new_var = base_val;
+        base_off = base_val;
         g_char_panel_data += 0;
-        prim = func_800A88A0(prim, ot_entry, sprite_data + new_var, 1, 0xB0, 0xC8, 2);
+        prim = func_800A88A0(prim, ot_entry, sprite_data + base_off, 1, 0xB0, 0xC8, 2);
     }
     else if (g_char_set_mode == 0x10)
     {
@@ -1120,10 +1125,10 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
         else
         {
 
-            (new_var = g_char_panel_data);
-            sprite_offset = *((u16*)((((u8*)(&g_char_panel_data)) + (new_var)) + 0x14));
+            (base_off = g_char_panel_data);
+            sprite_offset = *((u16*)((((u8*)(&g_char_panel_data)) + (base_off)) + 0x14));
             sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
-            prim = func_800A88A0(prim, ot_entry, sprite_data + new_var, 1, 0xB0, 0xC8, 2);
+            prim = func_800A88A0(prim, ot_entry, sprite_data + base_off, 1, 0xB0, 0xC8, 2);
         }
     }
     return prim;
@@ -1148,7 +1153,7 @@ s32 emit_panel_label(void* arg0, u32 arg1)
     if (panel < new_var)
     {
         u32 base_addr = ((u32)(&g_char_panel_data)) - new_var;
-        u32 offset_val = (u32)g_char_panel_data;
+        u32 offset_val = g_char_panel_data;
         u16 label_offset;
         void* label_data;
         label_offset = *((u16*)(((panel * 2) + offset_val) + base_addr));
