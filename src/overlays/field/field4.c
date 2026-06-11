@@ -85,14 +85,6 @@ typedef struct
     u16* unk8;
 } Struct_Arg0;
 
-typedef struct Struct_C
-{
-    u8 pad0[0xC];
-    u16 unkC;
-    u8 padE[0x18 - 0x0E];
-    u16 unk18;
-} Struct_C;
-
 typedef struct
 {
     char pad_00[0x32];
@@ -116,27 +108,56 @@ typedef struct
     u16 unk236;
 } MainStruct;
 
-typedef struct
+typedef struct Struct_C
 {
     u8 pad0[0xC];
+    u16 unkC;
+    u8 padE[0x14 - 0x0E];
+    u8 unk14;
+    u8 pad15[0x18 - 0x15];
+    u16 unk18;
+} Struct_C;
+
+typedef struct Struct_D
+{
+    u8 pad0[0x32];
+    u8 unk32;
+    u8 pad33[0x48 - 0x33];
+} Struct_D;
+
+typedef struct func_80068970_Arg0
+{
+    Struct_D* unk0;
+    u8 pad4[0xC - 4]; // 8 bytes
     Struct_C* unkC;
-    u8 pad10[0x24 - 0x10];
+    u8 pad10[0x24 - 0x10]; // 20 bytes
     u8 unk24;
-    u8 pad25[0x2A - 0x25];
-    u8 unk2A;
-    u8 pad2B[0x1EC - 0x2B];
+    u8 unk25;
+    u8 unk26;
+    u8 unk27;
+    u8 unk28;
+    u8 pad29; // offset 0x29 (from second def)
+    u8 unk2A; // offset 0x2A (from first def)
+    u8 unk2B[16];
+    u8 unk3B[9][16];
+    u8 padCB;
+    u16 unkCC[9][16];
     u16 unk1EC[9];
-    u8 pad1FE[0x222 - 0x1FE];
+    u8 pad1FE[0x222 - 0x1FE]; // 36 bytes
     u16 unk222;
-    u32 unk224;
+    u8 unk224;
+    u8 unk225;
+    u8 pad226[2];
     u8 unk228;
     u8 unk229[9];
     u8 unk232;
     u8 unk233;
-    u8 pad234[0x23A - 0x234];
+    u16 unk234;
+    u16 unk236;
+    u8 pad238[2];
     u8 unk23A;
     u8 unk23B;
-    u8 pad23C[0x244 - 0x23C];
+    u8 pad23C[0x244 - 0x23C]; // 8 bytes
 } func_80068970_Arg0;
 
 typedef struct
@@ -534,7 +555,7 @@ s32 func_80068970(func_80068970_Arg0* arg0)
                 func_8006A240(0x100, 0x100, 0x100);
             }
         }
-        if ((arg0->unk224 & 0xFFFF0001) != 0xC0000)
+        if ((*(u32*)&arg0->unk224 & 0xFFFF0001) != 0xC0000)
         {
             func_8006D21C(arg0);
         }
@@ -542,7 +563,7 @@ s32 func_80068970(func_80068970_Arg0* arg0)
         {
             arg0->unk222 = 0;
             arg0->unk24 = 0;
-            if (arg0->unk224 & 1)
+            if (*(u32*)(&arg0->unk224) & 1)
             {
                 func_80084424(arg0->unk228);
             }
@@ -756,8 +777,91 @@ void func_80069184(void)
         var_v1->unk232 = 0;
         var_v1->unk23A = 0;
         var_v1->unk23B = 0;
-        var_v1->pad25[2] = 0;
-        var_v1->pad25[3] = 0;
+        var_v1->unk27 = 0;
+        var_v1->unk28 = 0;
         var_v1++;
     } while (var_a0 < 0x50);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/BUS6C
+ */
+void func_800691C4(s32 arg0, int arg1, u8* arg2)
+{
+    s32 i;
+    s32 k;
+    s32 j;
+    s32 m;
+    func_80068970_Arg0* temp_s0;
+    u8* src;
+    m = arg0;
+    temp_s0 = &D_800F22C8[m];
+    temp_s0->unk28 = 0;
+    temp_s0->unk27 = 0;
+    if (temp_s0->unk25 == 0)
+    {
+        return;
+    }
+    temp_s0->unkC->unk14 &= 0x7F;
+    temp_s0->unk23A = 0;
+    temp_s0->unk23B = 1;
+    temp_s0->unk229[0] = 0;
+    temp_s0->unk232 = arg1;
+    temp_s0->unk225 = 0;
+    if (arg1 != 0)
+    {
+        src = arg2;
+        j = 0;
+        i = 0;
+        if (arg1 > 0)
+        {
+            do
+            {
+                temp_s0->unk229[j] = *src;
+                j++;
+                src += 4;
+                i++;
+            } while (i < arg1);
+        }
+        if (j != 0)
+        {
+            temp_s0->unk232 = j;
+        }
+        else
+        {
+            func_80068970(temp_s0);
+            return;
+        }
+    }
+    else
+    {
+        temp_s0->unk232 = 1;
+        temp_s0->unk229[0] = 0xFF;
+    }
+    func_8006D21C(temp_s0);
+    for (i = 8; i >= 0; i--)
+    {
+        temp_s0->unk1EC[i] = 0;
+    }
+
+    temp_s0->unk236 = 0;
+    temp_s0->unk234 = 0;
+    for (k = 0; k < temp_s0->unk25; k++)
+    {
+        temp_s0->unk0[k].unk32 = k;
+        for (m = 0; m < 9; m++)
+        {
+            temp_s0->unk2B[k] = (temp_s0->unkCC[m][k] = (temp_s0->unk3B[m][k] = 0));
+        }
+    }
+
+    func_800693B4(temp_s0, 1, 0);
+    for (i = 0; i < temp_s0->unk25; i++)
+    {
+        temp_s0->unk0[i].unk32 = i;
+        for (j = 0; j < 9; j++)
+        {
+            temp_s0->unk2B[i] = (temp_s0->unkCC[j][i] = (temp_s0->unk3B[j][i] = 0));
+        }
+    }
 }
