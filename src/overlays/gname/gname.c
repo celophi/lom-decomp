@@ -427,14 +427,14 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                     if (g_name_source_mode == 4)
                     {
                         g_name_clipboard = 0;
-                        name_copy(g_active_name, ((g_random_names - 0x10) + (*((u32*)g_random_names))) +
-                                                     (*((u16*)(((g_random_names - 0x10) + (*((u32*)g_random_names))) + ((rand() % 128) * 2)))));
+                        name_copy(g_active_name, ((g_random_names_off - 0x10) + (*((u32*)g_random_names_off))) +
+                                                     (*((u16*)(((g_random_names_off - 0x10) + (*((u32*)g_random_names_off))) + ((rand() % 128) * 2)))));
                     }
                     else if (g_name_source_mode == 5)
                     {
                         g_name_clipboard = 0;
-                        name_copy(g_active_name, ((g_random_names - 0x10) + (*((u32*)g_random_names))) +
-                                                     (*((u16*)(((g_random_names - 0x10) + (*((u32*)g_random_names))) + (((rand() % 128) + 128) * 2)))));
+                        name_copy(g_active_name, ((g_random_names_off - 0x10) + (*((u32*)g_random_names_off))) +
+                                                     (*((u16*)(((g_random_names_off - 0x10) + (*((u32*)g_random_names_off))) + (((rand() % 128) + 128) * 2)))));
                     }
                     else if (g_name_source_mode == 3)
                     {
@@ -445,10 +445,12 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                         }
                         else
                         {
-                            name_copy(g_active_name, ((g_random_names - 0x10) + (*((u32*)g_history_names))) +
-                                                         (*((u16*)(((g_random_names - 0x10) + (*((u32*)g_history_names))) + (g_history_name_idx * 2)))));
-                            name_append(g_active_name, ((g_random_names - 0x10) + ((*((u32*)g_history_names)))) +
-                                                           (*((u16*)(((g_history_names - 0x10) + (*((u32*)g_history_names))) + (((rand() % 128) + 130) * 2)))));
+                            name_copy(g_active_name,
+                                      ((g_random_names_off - 0x10) + (*((u32*)g_history_names_off))) +
+                                          (*((u16*)(((g_random_names_off - 0x10) + (*((u32*)g_history_names_off))) + (g_history_name_idx * 2)))));
+                            name_append(g_active_name,
+                                        ((g_random_names_off - 0x10) + ((*((u32*)g_history_names_off)))) +
+                                            (*((u16*)(((g_history_names_off - 0x10) + (*((u32*)g_history_names_off))) + (((rand() % 128) + 130) * 2)))));
                         }
                     }
                     else if (g_name_source_mode == 1)
@@ -561,9 +563,8 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                     {
                         u8* argA;
                         g_append_anim_timer = 2;
-                        argA = ((g_random_names - 0x10) + ((u32)g_char_panel_data)) +
-                               (*((u16*)((((g_random_names - 0x10) + ((u32)g_char_panel_data)) + (g_panel_char_offsets[g_char_panel] * 2)) +
-                                         (g_char_cursor * 2))));
+                        argA = ((g_random_names_off - 0x10) + g_panel_tbl_off) +
+                               (*((u16*)((((g_random_names_off - 0x10) + g_panel_tbl_off) + (g_panel_char_offsets[g_char_panel] * 2)) + (g_char_cursor * 2))));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
                         recalc_name_width();
@@ -591,8 +592,8 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                     g_cursor_y_target = 0x68;
                     g_cursor_lerp_steps = 4;
                     g_char_cursor = 0;
-                    g_kanji_cat_name = ((g_random_names - 0x10) + ((u32)g_char_panel_data)) +
-                                       (*((u16*)((((g_random_names - 0x10) + ((u32)g_char_panel_data)) + (g_kanji_cat_names_offset * 2)) + (g_kanji_cat * 2))));
+                    g_kanji_cat_name = ((g_random_names_off - 0x10) + g_panel_tbl_off) +
+                                       (*((u16*)((((g_random_names_off - 0x10) + g_panel_tbl_off) + (g_kanji_cat_names_offset * 2)) + (g_kanji_cat * 2))));
                     play_menu_sfx(0x7E, 0x80);
                 }
                 else if (g_char_panel == 4)
@@ -601,10 +602,10 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
                     {
                         u8* argA;
                         g_append_anim_timer = 2;
-                        argA =
-                            ((g_random_names - 0x10) + ((u32)g_kanji_panel_data)) +
-                            (*((u16*)((((g_random_names - 0x10) + ((u32)g_kanji_panel_data)) + (g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] * 2)) +
-                                      (g_char_cursor * 2))));
+                        argA = ((g_random_names_off - 0x10) + ((u32)g_kanji_panel_off)) +
+                               (*((u16*)((((g_random_names_off - 0x10) + ((u32)g_kanji_panel_off)) +
+                                          (g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] * 2)) +
+                                         (g_char_cursor * 2))));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
                         recalc_name_width();
@@ -877,10 +878,10 @@ void gname_process_input(void)
                     kanji_panel_offset = panel3_off;
                     base = g_panel_data_base;
                     idx = g_kanji_cat;
-                    offset = (idx * 2) + ((kanji_panel_offset * 2) + g_char_panel_data);
+                    offset = (idx * 2) + ((kanji_panel_offset * 2) + g_panel_tbl_off);
                     kanji_name_tbl_off = *((u16*)(base + offset));
                     g_pad_input &= ~GNAME_BTN_KANJI_NAV;
-                    g_kanji_cat_name = (void*)((g_char_panel_data + kanji_name_tbl_off) + ((unsigned long)base));
+                    g_kanji_cat_name = (void*)((g_panel_tbl_off + kanji_name_tbl_off) + ((unsigned long)base));
                 }
             } while (g_pad_input & GNAME_BTN_KANJI_NAV);
         }
@@ -1075,55 +1076,46 @@ void gname_render(RenderContext* ctx)
 /**
  * @brief Emit the panel-tab indicator sprite for the current character-set mode.
  *
- * Selects sprite data from @ref g_char_panel_data based on @ref g_char_set_mode
- * (values 0-7 = kana/alpha panels; 0x10 = kanji panel) and forwards it to
- * @ref func_800A88A0 at fixed screen position (0xB0, 0xC8).
+ * Resolves a sprite record from the character panel data blob (see
+ * @ref PanelDataHeader / @ref PANEL_DATA_BLOB) and forwards it to
+ * @ref func_800A88A0 at fixed screen position (0xB0, 0xC8). A record is
+ * always @c blob + tbl_off + table[i], where @c tbl_off is
+ * @ref g_panel_tbl_off and @c table is @ref g_panel_record_offsets.
  *
- * @param prim    Primitive write cursor (linked-list head).
+ * Table index per mode:
+ *  - mode 0-7 (kana/alpha): i = sprite_idx of the @ref g_tab_cursor_pos
+ *    entry for tab (mode + 2)
+ *  - mode 0x10, panel 3-4:  i = panel + 10 (entries 13-14)
+ *  - mode 0x10, other:      i = 12
+ *
+ * All three branches share one compiled call tail that adds @c tbl_off last
+ * (in the jal delay slot), which is why every call passes
+ * @c sprite_data + tbl_off instead of folding the add earlier.
+ *
+ * @param prim     Primitive write cursor (linked-list head).
  * @param ot_entry Pointer into the render context OT for chaining.
  * @return Updated primitive write cursor after appending the sprite.
- * @see decomp.me (96.64%) https://decomp.me/scratch/RnoNS
+ * @see decomp.me (100%) https://decomp.me/scratch/RnoNS
  */
 s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
 {
-    s32 char_set_mode = g_char_set_mode;
-    u16 sprite_offset;
-    s32 base_val;
-    u8* new_var3;
-    int new_var2;
-    s32 panel;
-    s32 new_var;
-    u8* sprite_data;
+    s32 mode = g_char_set_mode;
+
     if (g_char_set_mode < 8)
     {
-        TabCursorEntry* tab_base = g_tab_cursor_pos;
-        s32 idx = char_set_mode + 2;
-        base_val = g_char_panel_data;
-        sprite_offset = *((u16*)(((new_var3 = ((u8*)(&g_char_panel_data)) - 4) + (((((*((u32*)(&tab_base[idx]))) >> 3) >> 1) >> 4) & 0xFE)) + base_val));
-        sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
-        new_var = base_val;
-        g_char_panel_data += 0;
-        prim = func_800A88A0(prim, ot_entry, sprite_data + new_var, 1, 0xB0, 0xC8, 2);
+        prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(g_tab_cursor_pos[mode + 2].sprite_idx), 1, 0xB0, 0xC8, 2);
     }
     else if (g_char_set_mode == 0x10)
     {
-        panel = g_char_panel;
+        s32 panel = g_char_panel;
 
-        if (((u32)(panel - 3)) < 2U)
+        if ((u32)(panel - 3) < 2U)
         {
-
-            base_val = g_char_panel_data;
-            sprite_offset = *((u16*)(((((u8*)(&g_char_panel_data)) + base_val) + (panel * 2)) + 16));
-            sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
-            prim = func_800A88A0(prim, ot_entry, sprite_data + base_val, 1, 0xB0, 0xC8, 2);
+            prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(panel + 10), 1, 0xB0, 0xC8, 2);
         }
         else
         {
-
-            (new_var = g_char_panel_data);
-            sprite_offset = *((u16*)((((u8*)(&g_char_panel_data)) + (new_var)) + 0x14));
-            sprite_data = (((u8*)(&g_char_panel_data)) - 4) + sprite_offset;
-            prim = func_800A88A0(prim, ot_entry, sprite_data + new_var, 1, 0xB0, 0xC8, 2);
+            prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(12), 1, 0xB0, 0xC8, 2);
         }
     }
     return prim;
@@ -1132,7 +1124,7 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
 /**
  * @brief Emit the category-label sprite for the current character panel.
  *
- * For panels 0-3 resolves the label data from @ref g_char_panel_data using a
+ * For panels 0-3 resolves the label data from @ref g_panel_tbl_off using a
  * packed u16 offset; for panel >= 4 (kanji) uses @ref g_kanji_cat_name
  * directly. Forwards the pointer to @ref func_800A88A0 at fixed screen
  * position (0x23, 0x47).
@@ -1147,8 +1139,8 @@ s32 emit_panel_label(void* arg0, u32 arg1)
     new_var = 4;
     if (panel < new_var)
     {
-        u32 base_addr = ((u32)(&g_char_panel_data)) - new_var;
-        u32 offset_val = (u32)g_char_panel_data;
+        u32 base_addr = ((u32)(&g_panel_tbl_off)) - new_var;
+        u32 offset_val = g_panel_tbl_off;
         u16 label_offset;
         void* label_data;
         label_offset = *((u16*)(((panel * 2) + offset_val) + base_addr));
@@ -1246,9 +1238,9 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
  *
  * Panel data sources:
  *  - @c g_char_panel == 4 (kanji picker): glyph entries come from
- *    @c g_kanji_panel_data, bounded by
+ *    @c g_kanji_panel_off, bounded by
  *    @c g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] .. [..+1].
- *  - Otherwise: glyph entries come from @c g_char_panel_data, bounded by
+ *  - Otherwise: glyph entries come from @c g_panel_tbl_off, bounded by
  *    @c g_panel_char_offsets[panel_idx][0] .. [1].
  *
  * Visibility culling: a glyph at row @c r with @c g_scroll_pos is visible when
@@ -1292,7 +1284,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
     if (g_char_panel == 4)
     {
         /* Kanji picker: use the kanji panel data blob and the current category's entry range. */
-        glyph_base = (u8*)(g_kanji_panel_data + ((u32)&g_kanji_panel_data - 8));
+        glyph_base = (u8*)(g_kanji_panel_off + ((u32)&g_kanji_panel_off - 8));
         entry_idx = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]];
         entry_end = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat] + 1];
         row = 0;
@@ -1302,7 +1294,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
         /* Normal panel: use the char panel data blob and the panel's entry range. */
         entry_idx = ((u16*)g_panel_char_offsets)[panel_idx * 2];
         entry_end = ((u16*)g_panel_char_offsets)[panel_idx * 2 + 1];
-        glyph_base = (u8*)(g_char_panel_data + ((u32)&g_char_panel_data - 4));
+        glyph_base = (u8*)(g_panel_tbl_off + ((u32)&g_panel_tbl_off - 4));
         row = 0;
     }
 
