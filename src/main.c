@@ -4,7 +4,7 @@
 u32 g_overlayLoadAddress;
 
 /**
- * decomp.me link (98.23%) https://decomp.me/scratch/iAIgl
+ * decomp.me link (98.23%) https://decomp.me/scratch/ZgsxK
  */
 volatile void Main(void)
 {
