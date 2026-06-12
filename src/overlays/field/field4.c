@@ -863,7 +863,7 @@ void func_800691C4(s32 arg0, int arg1, u8* arg2)
     temp_s0->unk23B = 1;
     temp_s0->unk229[0] = 0;
     temp_s0->unk232 = arg1;
-    temp_s0->unk225 = 0;
+    ((u8*)&temp_s0->u224.h.lo)[1] = 0;
     if (arg1 != 0)
     {
         src = arg2;
