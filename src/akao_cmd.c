@@ -1025,7 +1025,7 @@ s32 akao_reset_xfer_state(void)
  *       than the clamped @c sample_chunk; this mirrors the original asm
  *       literally and is the suspected reason this scratch sits at 98.59%.
  *
- * @see decomp.me (98.59%) https://decomp.me/scratch/0IPqT
+ * @see decomp.me (100%) https://decomp.me/scratch/0IPqT
  */
 s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
 {
