@@ -117,37 +117,41 @@ typedef struct Struct_C
     u8 pad15[0x18 - 0x15];
     u16 unk18;
 } Struct_C;
-
 typedef struct Struct_D
 {
     u8 pad0[0x32];
     u8 unk32;
     u8 pad33[0x48 - 0x33];
 } Struct_D;
-
 typedef struct func_80068970_Arg0
 {
     Struct_D* unk0;
-    u8 pad4[0xC - 4]; // 8 bytes
+    u8 pad4[0xC - 4];
     Struct_C* unkC;
-    u8 pad10[0x24 - 0x10]; // 20 bytes
+    u8 pad10[0x24 - 0x10];
     u8 unk24;
     u8 unk25;
     u8 unk26;
     u8 unk27;
     u8 unk28;
-    u8 pad29; // offset 0x29 (from second def)
-    u8 unk2A; // offset 0x2A (from first def)
+    u8 pad29;
+    u8 unk2A;
     u8 unk2B[16];
     u8 unk3B[9][16];
     u8 padCB;
     u16 unkCC[9][16];
     u16 unk1EC[9];
-    u8 pad1FE[0x222 - 0x1FE]; // 36 bytes
+    u8 pad1FE[0x222 - 0x1FE];
     u16 unk222;
-    u8 unk224;
-    u8 unk225;
-    u8 pad226[2];
+    union
+    {
+        u32 unk224;
+        struct
+        {
+            u16 lo;
+            u16 unk226;
+        } h;
+    } u224;
     u8 unk228;
     u8 unk229[9];
     u8 unk232;
@@ -157,7 +161,7 @@ typedef struct func_80068970_Arg0
     u8 pad238[2];
     u8 unk23A;
     u8 unk23B;
-    u8 pad23C[0x244 - 0x23C]; // 8 bytes
+    u8 pad23C[0x244 - 0x23C];
 } func_80068970_Arg0;
 
 typedef struct
@@ -556,7 +560,7 @@ s32 func_80068970(func_80068970_Arg0* arg0)
                 func_8006A240(0x100, 0x100, 0x100);
             }
         }
-        if ((*(u32*)&arg0->unk224 & 0xFFFF0001) != 0xC0000)
+        if ((arg0->u224.unk224 & 0xFFFF0001) != 0xC0000)
         {
             func_8006D21C(arg0);
         }
@@ -564,7 +568,7 @@ s32 func_80068970(func_80068970_Arg0* arg0)
         {
             arg0->unk222 = 0;
             arg0->unk24 = 0;
-            if (*(u32*)(&arg0->unk224) & 1)
+            if (arg0->u224.unk224 & 1)
             {
                 func_80084424(arg0->unk228);
             }
@@ -960,4 +964,34 @@ s32 func_800695D4(s32 arg0)
 
     temp_v1 = &D_800F22C8[arg0];
     return (temp_v1->unk23A | temp_v1->unk23B) != 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/8lvHC
+ */
+s32 func_8006960C(void)
+{
+    int new_var3;
+    func_80068970_Arg0* ptr;
+    s32 i;
+    int new_var2;
+    u16 tmp;
+    ptr = D_800F22C8;
+    for (i = 0; i < 80; i++)
+    {
+        new_var2 = 0x1F;
+        if ((ptr->unk24 != 0) && (!(ptr->u224.unk224 & 1)))
+        {
+            tmp = tmp >> 16;
+            new_var3 = 0x24;
+            tmp = ptr->u224.h.unk226;
+            if ((tmp < new_var3) && (tmp >= new_var2))
+            {
+                return ptr->unk228 | 0x200;
+            }
+        }
+        ptr++;
+    }
+
+    return 0;
 }
