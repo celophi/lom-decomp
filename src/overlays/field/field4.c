@@ -271,6 +271,16 @@ typedef struct
     Struct_Unk28 unk28;
 } func_80068970_Arg2;
 
+typedef struct
+{
+    u8 pad000[0x232];
+    u8 unk232;
+    u8 pad233[0x5];
+    u16 unk238;
+    u8 unk23A;
+    u8 unk23B;
+} ContextStruct;
+
 extern s32 D_801227C8;
 extern s32 D_800F22B8;
 extern s32 D_800F22BC;
@@ -1186,4 +1196,37 @@ void func_80069684(void)
         var_s6 += 1;
         var_s3 += 1;
     } while (var_s6 < 0x50);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/VZWgF
+ */
+void func_80069AF8(ContextStruct* arg0)
+{
+    s32 i;
+    u16 check238 = arg0->unk238;
+
+    // hack
+    check238++;
+    check238--;
+
+    arg0->unk23A = 1;
+    if (check238 == 0)
+    {
+        arg0->unk23A = 0;
+        for (i = 0; i < arg0->unk232; i++)
+        {
+            arg0->unk23A |= 1 << i;
+        }
+    }
+    arg0->unk23B = 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/hvTSS
+ */
+void func_80069B44(s32 arg0, s32 arg1)
+{
+    func_80074D7C();
+    func_80069B84(arg0, arg1);
 }
