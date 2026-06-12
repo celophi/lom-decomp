@@ -131,6 +131,50 @@ typedef struct Struct_D
     u32 unk34;
     u8 pad38[0x48 - 0x38];
 } Struct_D;
+
+typedef struct
+{
+    u8 pad0[0x91];
+    u8 unk91;
+    u8 unk92;
+    u8 pad93[0x13F - 0x93];
+    u8 unk13F;
+    u8 unk140;
+} Struct_801ED600;
+
+typedef struct
+{
+    u8 unk0;
+    u8 pad1;
+    u8 unk2;
+    u8 unk3[16];
+    u8 unk13[9][16];
+    u8 padA3;
+    u16 unkA4[9][16];
+    u16 unk1C4[9];
+    u8 pad1D6[0x1FA - 0x1D6];
+    u16 unk1FA;
+    union
+    {
+        u32 unk1FC;
+        struct
+        {
+            u16 lo;
+            u16 unk1FE;
+        } h;
+    } u1FC;
+    u8 unk200;
+    u8 unk201[9];
+    u8 unk20A;
+    u8 unk20B;
+    u16 unk20C;
+    u16 unk20E;
+    u16 unk210;
+    u8 unk212;
+    u8 unk213;
+    u8 pad214[0x21C - 0x214];
+} Struct_Unk28;
+
 typedef struct
 {
     Struct_D* unk0;
@@ -216,46 +260,16 @@ typedef struct
 
 typedef struct
 {
-    u8 pad0[0x91];
-    u8 unk91;
-    u8 unk92;
-    u8 pad93[0x13F - 0x93];
-    u8 unk13F;
-    u8 unk140;
-} Struct_801ED600;
-
-typedef struct
-{
-    u8 unk0;
-    u8 pad1;
-    u8 unk2;
-    u8 unk3[16];
-    u8 unk13[9][16];
-    u8 padA3;
-    u16 unkA4[9][16];
-    u16 unk1C4[9];
-    u8 pad1D6[0x1FA - 0x1D6];
-    u16 unk1FA;
-    union
-    {
-        u32 unk1FC;
-        struct
-        {
-            u16 lo;
-            u16 unk1FE;
-        } h;
-    } u1FC;
-    u8 unk200;
-    u8 unk201[9];
-    u8 unk20A;
-    u8 unk20B;
-    u16 unk20C;
-    u16 unk20E;
-    u16 unk210;
-    u8 unk212;
-    u8 unk213;
-    u8 pad214[0x21C - 0x214];
-} Struct_Unk28;
+    Struct_D* unk0;
+    u8 pad4[0xC - 4];
+    Struct_C* unkC;
+    u8 pad10[0x24 - 0x10];
+    u8 unk24;
+    u8 unk25;
+    u8 unk26;
+    u8 unk27;
+    Struct_Unk28 unk28;
+} func_80068970_Arg2;
 
 extern s32 D_801227C8;
 extern s32 D_800F22B8;
@@ -1053,7 +1067,7 @@ s32 func_8006960C(void)
 void func_80069684(void)
 {
     Struct_801ED600* ptr_801ED600 = (Struct_801ED600*)0x801ED600;
-    func_80068970_Arg0* var_s3;
+    func_80068970_Arg2* var_s3;
     Struct_Unk28* var_s1;
     Struct_C* temp_v1_3;
     s32 var_s0;
