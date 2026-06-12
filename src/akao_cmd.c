@@ -1029,12 +1029,11 @@ s32 akao_reset_xfer_state(void)
  */
 s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
 {
-    s32 advance;      /* word-aligned bytes consumed from articulation */
-    u32 chunk;        /* clamped articulation chunk size               */
-    u32 sample_chunk; /* clamped sample chunk size                     */
-    s32* new_var;     /* load-bearing temp for codegen                 */
-    void* arti_slot;  /* base of this bank's articulation slot         */
-
+    s32 advance;
+    u32 chunk;
+    u32 sample_chunk;
+    s32* new_var;
+    void* arti_slot;
     if ((g_akao_driver_flags.unk0 & 1) == 0)
     {
         return D_8004F828;
@@ -1043,7 +1042,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
     {
         if (akao_check_magic(src) == 0)
         {
-            akao_copy_bytes(*(new_var = &src), &g_akao_bank_staging, 0x40U);
+            func_80029A0C(*(new_var = &src), &g_akao_bank_staging, 0x40U);
             src += 0x40;
             avail -= 0x40;
             g_akao_streaming_state.spu_addr = (s32)g_akao_bank_staging.spu_dest_addr;
@@ -1067,7 +1066,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             {
                 chunk = avail;
             }
-            akao_copy_bytes(src, g_akao_streaming_state.articulation_dst, chunk);
+            func_80029A0C(src, g_akao_streaming_state.articulation_dst, chunk);
             advance = (chunk >> 2) * 4;
             src += advance;
             avail -= chunk;
@@ -1076,8 +1075,7 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             if (g_akao_streaming_state.articulation_remaining == 0)
             {
                 arti_slot = (void*)((g_akao_bank_staging.bank_id * 0x10) + ((u32)(&g_akao_articulation_slots)));
-                akao_relocate_articulations((AkaoArticulation*)arti_slot, (AkaoArticulation*)arti_slot, g_akao_bank_staging.spu_dest_addr,
-                                            g_akao_bank_staging.articulation_count);
+                akao_relocate_articulations(arti_slot, arti_slot, g_akao_bank_staging.spu_dest_addr, g_akao_bank_staging.articulation_count);
             }
         }
     }
@@ -1090,11 +1088,11 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
             {
                 sample_chunk = avail;
             }
-            chunk = sample_chunk;
+            avail = sample_chunk;
             SpuSetTransferStartAddr(g_akao_streaming_state.spu_addr);
-            akao_spu_write(src, sample_chunk);
-            g_akao_streaming_state.spu_addr += sample_chunk;
-            g_akao_streaming_state.sample_remaining -= chunk;
+            akao_spu_write(src, avail);
+            g_akao_streaming_state.spu_addr += avail;
+            g_akao_streaming_state.sample_remaining -= avail;
             if (wait_for_spu != 0)
             {
                 akao_spu_wait();
