@@ -32,3 +32,7 @@ rom:0x18E8 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
 rom:0x1930 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
 rom:0x19C0 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
 rom:0x1A08 reloc:MIPS_LO16 symbol:g_overlayLoadAddress
+
+// Prevent assigning a symbol in main
+rom:0x15D4 reloc:MIPS_NONE symbol:D_8003EC88
+rom:0x17D0 reloc:MIPS_NONE symbol:D_8003EC88
