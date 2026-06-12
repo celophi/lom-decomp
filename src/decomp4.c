@@ -442,8 +442,7 @@ void akao_irq_handler(void)
     }
 
     /* Third conditional */
-    if (((D_8004F758 | g_akao_seq_channel0->unk14 | D_8004D408) != 0) ||
-        ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk14 != 0)))
+    if (((D_8004F758 | g_akao_seq_channel0->unk14 | D_8004D408) != 0) || ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk14 != 0)))
     {
         func_800258B8(D_8004D408);
     }
@@ -852,9 +851,9 @@ void akao_bind_articulation_for_key(u8* channel, u32 key, s32 next_opcode)
  * @param vol Note volume; low 8 bits scale the output volume.
  * @param out_vol Receives the computed volume, octave-shifted to match.
  * @return 16-bit SPU pitch value.
- * @see decomp.me (99.70%) https://decomp.me/scratch/GBbit
+ * @see decomp.me (100%) https://decomp.me/scratch/mWTad
  */
-s32 akao_compute_pitch(AkaoArticulation* art, s32 note, s32 vol, s32* out_vol)
+s32 akao_compute_pitch(AkaoArticulation* arg0, s32 arg1, s32 arg2, s32* arg3)
 {
     unsigned int new_var;
     s32 tmp3;
@@ -869,41 +868,32 @@ s32 akao_compute_pitch(AkaoArticulation* art, s32 note, s32 vol, s32* out_vol)
     u32 var_t0;
     u32 var_v0;
     s32 result;
-    var_a0 = note - art->adsr.half.hi;
+    var_a0 = arg1 - arg0->adsr.half.hi;
     if (var_a0 < 0)
     {
-        s32 tmp;
-        tmp = var_a0 + 0xC;
-        while (1)
+        do
         {
-            new_var = tmp >= 0;
-            if (new_var)
-            {
-                break;
-            }
-            tmp += 0xC;
-        }
-
-        var_a0 -= 12;
+            var_a0 = var_a0 + 0xC;
+        } while (var_a0 < 0);
     }
     new_var2 = var_a0 % 12;
     temp_a0 = new_var2;
-    if (art->adsr.half.lo == 0)
+    if (arg0->adsr.half.lo == 0)
     {
         s32 tmp2 = g_akao_pitch_table[temp_a0];
         var_t0 = tmp2 << 8;
     }
-    else if (art->adsr.half.lo < 0)
+    else if (arg0->adsr.half.lo < 0)
     {
-        var_t0 = ((u32)(g_akao_pitch_table[temp_a0] * ((u16)art->adsr.half.lo))) >> 8;
+        var_t0 = ((u32)(g_akao_pitch_table[temp_a0] * ((u16)arg0->adsr.half.lo))) >> 8;
     }
     else
     {
         temp_v0 = g_akao_pitch_table[temp_a0];
-        var_t0 = ((u32)(temp_v0 * art->adsr.half.lo)) >> 7;
+        var_t0 = ((u32)(temp_v0 * arg0->adsr.half.lo)) >> 7;
         var_t0 = var_t0 + (temp_v0 << 8);
     }
-    temp_a2 = vol & 0xFF;
+    temp_a2 = arg2 & 0xFF;
     if (temp_a2 != 0)
     {
         if (temp_a2 < 0x80U)
@@ -916,31 +906,32 @@ s32 akao_compute_pitch(AkaoArticulation* art, s32 note, s32 vol, s32* out_vol)
             u32 temp_lo2 = var_t0 * temp_a2;
             var_v0 = (temp_lo2 >> 8) - var_t0;
         }
-        *out_vol = var_v0;
+        *arg3 = var_v0;
     }
-    if (note < art->adsr.half.hi)
+    if (arg1 < arg0->adsr.half.hi)
     {
         do
         {
-            *out_vol = (u32)(((s32)(*out_vol)) >> 1);
+            *arg3 = (u32)(((s32)(*arg3)) >> 1);
             var_t0 = (u32)(((s32)var_t0) >> 1);
-            note += 0xC;
-        } while (note < art->adsr.half.hi);
+            arg1 += 0xC;
+        } while (arg1 < arg0->adsr.half.hi);
     }
     else
     {
-        temp_a0_3 = (note - art->adsr.half.hi) / 12;
+        temp_a0_3 = (arg1 - arg0->adsr.half.hi) / 12;
         temp_a0 = temp_a0_3;
-        if (temp_a0_3 != 0)
+        var_a0 = temp_a0_3;
+        if (var_a0 != 0)
         {
             temp_lo = temp_a0;
             var_t0 <<= temp_lo;
-            *out_vol <<= temp_a0_3;
+            *arg3 <<= var_a0;
         }
     }
-    temp_a0 = ((s32)var_t0) >> 8;
-    result = temp_a0 & 0xFFFF;
-    *out_vol = (u32)(((s32)(*out_vol)) >> 8);
+    var_t0 = ((s32)var_t0) >> 8;
+    result = var_t0 & 0xFFFF;
+    *arg3 = (u32)(((s32)(*arg3)) >> 8);
     return result;
 }
 
@@ -1224,8 +1215,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
                     arg0->unkEE = temp_s1;
                     var_s1_2 = temp_s1 + (s16)arg0->unkEA;
                 }
-                var_a2 = akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots),
-                                            var_s1_2, arg0->unkEC, &arg0->unk54);
+                var_a2 = akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots), var_s1_2, arg0->unkEC, &arg0->unk54);
                 temp_v1_5 = arg0->unkDA;
                 if (temp_v1_5 != 0)
                 {
@@ -1299,9 +1289,9 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
         {
             temp_v0_5 = arg0->unkEE + arg0->unkF0;
             arg0->unkEE = temp_v0_5;
-            temp_a2_2 = akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots),
-                                           temp_v0_5 + (s16)arg0->unkEA, arg0->unkEC, &sp10)
-                        << 0x10;
+            temp_a2_2 =
+                akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots), temp_v0_5 + (s16)arg0->unkEA, arg0->unkEC, &sp10)
+                << 0x10;
             arg0->unk94 = arg0->unk98;
             arg0->unkF0 = 0U;
             arg0->unk50 = (s32)((s32)(temp_a2_2 - ((arg0->pitch << 0x10) + arg0->unk30)) / (s32)arg0->unk94);
