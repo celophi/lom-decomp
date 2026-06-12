@@ -78,7 +78,13 @@ typedef struct
     Node* unk8;    // offset 0x08 (pointer to head of list)
 } FieldScene;
 
-extern FieldScene* g_field_scene;
+typedef struct
+{
+  FieldScene *scene;
+  u32 vram_byte_count;
+} FieldSceneGlobals;
+
+extern FieldSceneGlobals g_field_scene;
 extern void func_80056A04(void); /* extern */
 
 /**
@@ -174,7 +180,7 @@ void field_clear_node_accumulators(s32 arg0, s32 arg1)
 {
     Node* var_v0;
 
-    var_v0 = g_field_scene->unk8;
+    var_v0 = g_field_scene.scene->unk8;
     if (var_v0 != 0)
     {
         do
@@ -293,11 +299,10 @@ void field_load_map(s32 arg0)
     FieldObject* var_v0;
     s32 temp_a0_2;
     FieldObject** var_s0_2;
-
+    u16 map_id;
     DrawSync(0);
-
-    // Use arg0 (s0) directly — no copy to s1 yet
-    if (((u32)(arg0 & 0xFFFF)) < 0xFU)
+    map_id = arg0;
+    if (map_id < 0xFU)
     {
         cdrom_queue_read((arg0 + 0xB4) & 0xFFFF, 0x80180000);
         cdrom_wait_queue_empty();
@@ -306,15 +311,11 @@ void field_load_map(s32 arg0)
     {
         cdrom_stream((arg0 + 0xB4) & 0xFFFF, 0x80180000);
     }
-
-    // Load g_field_scene into v1; store 0x140 using v0 so v1 survives for g_field_vram_byte_count reuse
-    var_s1 = g_field_scene;
-    sp[0] = 0x140; // was: sp[0] = (var_v1_2 = 0x140) — that put 0x140 in v1, clobbering the lui
+    var_s1 = (u32)g_field_scene.scene;
+    sp[0] = 0x140;
     sp[1] = 0x100;
-    var_s0 = g_field_vram_byte_count >> 9; // compiler reuses v1 (%hi shared with g_field_scene)
+    var_s0 = g_field_scene.vram_byte_count >> 9;
     sp[3] = 0x100;
-    // Removed dead: if ((temp_a0_2 && temp_a0_2) && temp_a0_2) {}
-
     while (var_s0 != 0)
     {
         sp[2] = (s16)((var_s0 < 0x11) ? (var_s0) : (0x10));
@@ -325,9 +326,6 @@ void field_load_map(s32 arg0)
     }
 
     DrawSync(0);
-
-    // Single pointer var — walks s0 in-place; value in v0
-    // Collapsed var_s0_2 and var_s0_3 into one variable
     var_s0_2 = g_field_objects;
     var_v0 = *var_s0_2;
     if (var_v0 != 0)
@@ -340,10 +338,9 @@ void field_load_map(s32 arg0)
             var_s0_2++;
         } while (var_v0 != 0);
     }
-
     if (D_801ED490 != 0)
     {
-        var_s0_2 = g_field_objects; // reload (was var_s0_3, now same variable)
+        var_s0_2 = g_field_objects;
         var_s1_2 = 0;
         if ((*var_s0_2) != 0)
         {
@@ -359,6 +356,7 @@ void field_load_map(s32 arg0)
                     if ((*var_a1) != temp_a0_2)
                     {
                         var_v1_2 -= 1;
+                        var_s1 = (u32)g_field_scene.scene;
                         var_a1 += 1;
                         if (var_v1_2 != 0)
                         {
