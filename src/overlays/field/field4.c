@@ -110,20 +110,28 @@ typedef struct
 
 typedef struct Struct_C
 {
-    u8 pad0[0xC];
+    u8 unk0[2];
+    u8 pad2[0xC - 2];
     u16 unkC;
-    u8 padE[0x14 - 0x0E];
+    u16 unkE;
+    u8 pad10[0x14 - 0x10];
     u8 unk14;
-    u8 pad15[0x18 - 0x15];
+    u8 unk15;
+    u8 pad16[0x18 - 0x16];
     u16 unk18;
 } Struct_C;
 typedef struct Struct_D
 {
-    u8 pad0[0x32];
+    u8 pad0[0xD];
+    u8 unkD;
+    u8 padE[0x31 - 0xE];
+    u8 unk31;
     u8 unk32;
-    u8 pad33[0x48 - 0x33];
+    u8 pad33[1];
+    u32 unk34;
+    u8 pad38[0x48 - 0x38];
 } Struct_D;
-typedef struct func_80068970_Arg0
+typedef struct
 {
     Struct_D* unk0;
     u8 pad4[0xC - 4];
@@ -205,6 +213,49 @@ typedef struct
     TableEntry* unk4;
     u16* unk8;
 } DataStruct;
+
+typedef struct
+{
+    u8 pad0[0x91];
+    u8 unk91;
+    u8 unk92;
+    u8 pad93[0x13F - 0x93];
+    u8 unk13F;
+    u8 unk140;
+} Struct_801ED600;
+
+typedef struct
+{
+    u8 unk0;
+    u8 pad1;
+    u8 unk2;
+    u8 unk3[16];
+    u8 unk13[9][16];
+    u8 padA3;
+    u16 unkA4[9][16];
+    u16 unk1C4[9];
+    u8 pad1D6[0x1FA - 0x1D6];
+    u16 unk1FA;
+    union
+    {
+        u32 unk1FC;
+        struct
+        {
+            u16 lo;
+            u16 unk1FE;
+        } h;
+    } u1FC;
+    u8 unk200;
+    u8 unk201[9];
+    u8 unk20A;
+    u8 unk20B;
+    u16 unk20C;
+    u16 unk20E;
+    u16 unk210;
+    u8 unk212;
+    u8 unk213;
+    u8 pad214[0x21C - 0x214];
+} Struct_Unk28;
 
 extern s32 D_801227C8;
 extern s32 D_800F22B8;
@@ -994,4 +1045,131 @@ s32 func_8006960C(void)
     }
 
     return 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/etUW8
+ */
+void func_80069684(void)
+{
+    Struct_801ED600* ptr_801ED600 = (Struct_801ED600*)0x801ED600;
+    func_80068970_Arg0* var_s3;
+    Struct_Unk28* var_s1;
+    Struct_C* temp_v1_3;
+    s32 var_s0;
+    s32 var_s6;
+    u8* new_var;
+    s32 i;
+    s32 tmp;
+    u16 temp_a0_4;
+    u32 div_num;
+    u32 div_den;
+    var_s3 = D_800F22C8;
+    var_s6 = 0;
+    ptr_801ED600->unk140 = 0U;
+    ptr_801ED600->unk92 = 0U;
+    do
+    {
+        var_s1 = &var_s3->unk28;
+        if ((&var_s3->unk28)->unk1FA != 0)
+        {
+            if ((&var_s3->unk28)->unk213 != 0)
+            {
+                func_80069AF8(var_s3);
+            }
+            if ((&var_s3->unk28)->unk212 != (var_s3->unkC->unk15 * 0))
+            {
+                func_8007100C(var_s3);
+                i = var_s3->unkC->unk14;
+                if (((unsigned char)i) == 2)
+                {
+                    if ((&var_s3->unk0[var_s3->unkC->unk15])->unk34 & 0x04000000)
+                    {
+                        for (var_s0 = 0; var_s0 < (&var_s3->unk28)->unk20A; var_s0++)
+                        {
+                            u16 unk1ec = (&var_s3->unk28)->unk1C4[var_s0];
+                            if (((&var_s3->unk0[var_s3->unkC->unk15])->unk31 < unk1ec) &&
+                                ((&var_s3->unk28)->unk1C4[var_s0] < ((&var_s3->unk0[var_s3->unkC->unk15])->unk31 + (&var_s3->unk0[var_s3->unkC->unk15])->unkD)))
+                            {
+                                D_80105788 = var_s0;
+                                func_80099A48(var_s3, &var_s3->unk0[var_s3->unkC->unk15]);
+                            }
+                        }
+                    }
+                    else if ((&var_s3->unk0[var_s3->unkC->unk15])->unk31 == 0xFF)
+                    {
+                        for (var_s0 = 0; var_s0 < (&var_s3->unk28)->unk20A; var_s0++)
+                        {
+                            if ((&var_s3->unk0[var_s3->unkC->unk15])->unkD > (&var_s3->unk28)->unk1C4[var_s0])
+                            {
+                                D_80105788 = var_s0;
+                                func_80099A48(var_s3, &var_s3->unk0[var_s3->unkC->unk15]);
+                            }
+                        }
+                    }
+                    else if (((&var_s3->unk0[var_s3->unkC->unk15])->unk31 < (&var_s3->unk28)->unk1C4[0]) &&
+                             ((&var_s3->unk28)->unk1C4[0] < ((&var_s3->unk0[var_s3->unkC->unk15])->unk31 + (&var_s3->unk0[var_s3->unkC->unk15])->unkD)))
+                    {
+                        D_80105788 = 0;
+                        func_80099A48(var_s3, &var_s3->unk0[var_s3->unkC->unk15]);
+                    }
+                }
+                temp_v1_3 = var_s3->unkC;
+                temp_a0_4 = temp_v1_3->unkE;
+                if ((temp_a0_4 & 0x8000) && (((u8*)temp_v1_3)[0xE] == (&var_s3->unk28)->unk1C4[0]))
+                {
+                    func_8005A67C((temp_a0_4 >> 8) & 0x7F, 0);
+                }
+                func_8006D270(var_s3);
+                if (func_80068970(var_s3) == 0)
+                {
+                    for (i = 0; i < (&var_s3->unk28)->unk20A; i++)
+                    {
+                        if (((&var_s3->unk28)->unk212 >> i) & 1)
+                        {
+                            (&var_s3->unk28)->unk1C4[i] += 1;
+                        }
+                    }
+
+                    (&var_s3->unk28)->unk20E += 1;
+                    if (((&var_s3->unk28)->unk210 != 0) && ((&var_s3->unk28)->unk20A != 0))
+                    {
+                        div_num = var_s1->unk20E;
+                        div_den = var_s1->unk210;
+                        if ((div_num % div_den) == 0)
+                        {
+                            i = (div_num / div_den) & 0xFFFF;
+                            if (i < (&var_s3->unk28)->unk20A)
+                            {
+                                (&var_s3->unk28)->unk212 |= 1 << i;
+                            }
+                        }
+                    }
+                }
+                D_80105788 = 0;
+                for (var_s0 = 0; var_s0 < 2; var_s0++)
+                {
+                    u8 temp_a1 = (new_var = var_s3->unkC->unk0)[var_s0];
+                    if ((new_var[var_s0] != 0xFF) && (temp_a1 < 0x10U))
+                    {
+                        if (var_s0 != 0)
+                        {
+                            u8 temp_v1_6 = func_80068734((Struct_Arg0*)var_s3, temp_a1 & 0xF) | ptr_801ED600->unk92;
+                            ptr_801ED600->unk92 = temp_v1_6;
+                            ptr_801ED600->unk140 = temp_v1_6;
+                        }
+                        else
+                        {
+                            u8 temp_v0_2 = func_80068734((Struct_Arg0*)var_s3, (tmp = new_var[0]) & 0xF);
+                            ptr_801ED600->unk91 = (ptr_801ED600->unk13F = temp_v0_2);
+                        }
+                    }
+                }
+            }
+            var_s3->unk27 &= 0xFE;
+            (&var_s3->unk28)->unk0 &= 0xFE;
+        }
+        var_s6 += 1;
+        var_s3 += 1;
+    } while (var_s6 < 0x50);
 }
