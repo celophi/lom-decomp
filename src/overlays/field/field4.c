@@ -114,7 +114,8 @@ typedef struct Struct_C
     u8 pad2[0xC - 2];
     u16 unkC;
     u16 unkE;
-    u8 pad10[0x14 - 0x10];
+    u16 unk10;
+    u8 pad10[0x14 - 14];
     u8 unk14;
     u8 unk15;
     u8 pad16[0x18 - 0x16];
@@ -280,6 +281,14 @@ typedef struct
     u8 unk23A;
     u8 unk23B;
 } ContextStruct;
+
+typedef struct
+{
+  u8 pad[0x40];
+  u32 unk40;
+  u8 pad44[0x40B8 - 0x44];
+  void *unk40B8;
+} Struct_Arg4;
 
 extern s32 D_801227C8;
 extern s32 D_800F22B8;
@@ -1229,4 +1238,232 @@ void func_80069B44(s32 arg0, s32 arg1)
 {
     func_80074D7C();
     func_80069B84(arg0, arg1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Sgd61
+ */
+void func_80069B84(void *arg0)
+{
+  u32 new_var;
+  Struct_Arg4 *arg0_1 = (Struct_Arg4 *) arg0;
+  s32 new_var4;
+  u32 *var_s7 = &arg0_1->unk40;
+  u32 *p_s4 = (u32 *) arg0_1->unk40B8;
+  func_80068970_Arg0 *var_s2 = D_800F22C8;
+  s32 var_s5 = 0;
+  u32 sp_arr_word;
+  int new_var6;
+  int new_var3;
+  int new_var2;
+  do
+  {
+    new_var3 = var_s2->unk23A != 0;
+    if (new_var3)
+    {
+      u16 temp_v1 = var_s2->unkC->unk18;
+      if ((temp_v1 & 2) && (!(var_s2->unkC->unk18 & 8)))
+      {
+        u8 var_a1;
+        s32 cond;
+        D_80105788 = 0;
+        cond = func_80068734(var_s2, (var_s2->unkC->unk18 >> 8) & 0xF);
+        var_a1 = 0;
+        if (cond != 0)
+        {
+          var_a1 = 0xFE;
+        }
+        if (var_a1 != 0)
+        {
+          D_800FDF58[var_s2->unk228].unk25 = var_a1;
+          D_80105AE0[var_s2->unk228].u.unk178 |= 1;
+          D_80105AE0[var_s2->unk228].u.b.unk17A = var_s2->unk233;
+        }
+        else
+        {
+          u8 temp_v1_2 = var_s2->unk228;
+          s16 temp_a0 = D_800FDF58[temp_v1_2].unk2A;
+          if ((temp_a0 == 0x90) || (temp_a0 == 0x94))
+          {
+            if (D_80105AE0[temp_v1_2].unkC & 0x200)
+            {
+              D_800FDF58[var_s2->unk228].unk25 = var_a1;
+            }
+          }
+          else
+          {
+            D_800FDF58[var_s2->unk228].unk25 = var_a1;
+          }
+        }
+      }
+      new_var2 = var_s2->unkC->unk18 & 4;
+      if (new_var2 && (!(var_s2->unkC->unk18 & 0x10)))
+      {
+        s32 var_s1 = 0;
+        if (var_s2->unk232 != 0)
+        {
+          do
+          {
+            u8 var_a1_2;
+            s32 cond2;
+            D_80105788 = var_s1;
+            cond2 = func_80068734(var_s2, var_s2->unkC->unk18 >> 0xC);
+            var_a1_2 = 0;
+            if (cond2 != 0)
+            {
+              var_a1_2 = 0xFE;
+            }
+            if (var_s2->unk229[var_s1] != 0xFF)
+            {
+              if (var_a1_2 != 0)
+              {
+                D_800FDF58[var_s2->unk229[var_s1]].unk25 = var_a1_2;
+                do
+                {
+                  D_80105AE0[var_s2->unk229[var_s1]].u.unk178 |= 1;
+                  D_80105AE0[var_s2->unk229[var_s1]].u.b.unk17A = var_s2->unk233;
+                }
+                while (0);
+                ((u8 *) var_s2)[0x225] = 1;
+              }
+              else
+              {
+                new_var4 = var_s1;
+                D_800FDF58[var_s2->unk229[new_var4]].unk25 = 0;
+              }
+            }
+            var_s1++;
+          }
+          while (var_s1 < var_s2->unk232);
+        }
+      }
+    }
+    var_s5++;
+    var_s2++;
+  }
+  while (var_s5 < 0x50);
+  D_80105788 = 0;
+  var_s2 = D_800F22C8;
+  var_s5 = 0;
+  do
+  {
+    if (var_s2->unk23A != 0)
+    {
+      Struct_C *temp_a0_2 = var_s2->unkC;
+      if (temp_a0_2->unkC & 0x1000)
+      {
+        s32 new_var33 = temp_a0_2->unkC >> 0xD;
+        switch (new_var33 & 3)
+        {
+          case 0:
+            D_800F2278 = func_80068734(var_s2, temp_a0_2->unk10 >> 0xC);
+            break;
+
+          case 1:
+            D_800F227C = func_80068734(var_s2, temp_a0_2->unk10 >> 0xC);
+            break;
+
+          case 2:
+            D_800F227C = (D_800F2278 = func_80068734(var_s2, temp_a0_2->unk10 >> 0xC));
+            break;
+
+          case 3:
+            D_800F2278 = func_80068734(var_s2, temp_a0_2->unk10 >> 0xC);
+            D_800F227C = func_80068734(var_s2, ((var_s2->unkC->unk10 >> 0xC) + 1) & 0xF);
+            break;
+
+        }
+
+      }
+    }
+    var_s5++;
+    var_s2++;
+  }
+  while (var_s5 < 0x50);
+  var_s2 = D_800F22C8;
+  var_s5 = 0;
+  do
+  {
+    new_var3 = 0x00FFFFFF;
+    if ((var_s2->unk23A != 0) && (var_s2->unk24 != 0))
+    {
+      Struct_C *temp_v1_7 = var_s2->unkC;
+      u8 temp_a1 = (u8) temp_v1_7->unkC;
+      if (((u8) temp_v1_7->unkC) < 0x10)
+      {
+        if (((temp_v1_7->unkC >> 8) & 1) != 0)
+        {
+          do
+          {
+            ((u8 *) (&sp_arr_word))[0] = func_80068734(var_s2, (u8) temp_v1_7->unkC);
+          }
+          while (0);
+          ((u8 *) (&sp_arr_word))[1] = func_80068734(var_s2, (((u8) var_s2->unkC->unkC) + 1) & 0xF);
+          ((u8 *) (&sp_arr_word))[2] = func_80068734(var_s2, (((u8) var_s2->unkC->unkC) + 2) & 0xF);
+        }
+        else
+        {
+          ((u8 *) (&sp_arr_word))[0] = (((u8 *) (&sp_arr_word))[1] = (((u8 *) (&sp_arr_word))[2] = func_80068734(var_s2, temp_a1 & 0xF)));
+        }
+        if ((var_s2->unkC->unkC >> 8) & 4)
+        {
+          func_8006A240(((u8 *) (&sp_arr_word))[0] * 2, ((u8 *) (&sp_arr_word))[1] * 2, ((u8 *) (&sp_arr_word))[2] * 2);
+        }
+        else
+        {
+          u32 var_a0;
+          if ((var_s2->unkC->unkC >> 8) & 1)
+          {
+            if (((u8 *) (&sp_arr_word))[0] == 0)
+            {
+              if (((u8 *) (&sp_arr_word))[1] == 0)
+              {
+                if (((u8 *) (&sp_arr_word))[2] == 0)
+                {
+                  goto block_59;
+                }
+              }
+            }
+          }
+          else
+            if (((u8 *) (&sp_arr_word))[0] == 0)
+          {
+            goto block_59;
+          }
+          var_a0 = 0xE1000005;
+          {
+            u8 *p_s0 = ((u8 *) p_s4) + 4;
+            new_var = sp_arr_word;
+            p_s0[-1] = 3;
+            *((u16 *) (p_s0 + 8)) = 0x140;
+            *((u16 *) (p_s0 + 0xA)) = 0xF0;
+            *((u16 *) (p_s0 + 6)) = 0;
+            *((u16 *) (p_s0 + 4)) = 0;
+            *((u32 *) p_s0) = new_var;
+            p_s0[3] = 0x62;
+            p_s4[0] = (p_s4[0 ^ 0] & 0xFF000000) | ((*var_s7) & new_var3);
+            *var_s7 = ((*var_s7) & 0xFF000000) | (((u32) p_s4) & 0x00FFFFFF);
+            new_var6 = (((var_s2->unkC->unkC >> 9) & 3) + 1) & 3;
+            p_s4 += 4;
+            {
+              u8 *p_s0_2 = ((u8 *) p_s4) + 4;
+              p_s0_2[-1] = 1;
+              *((u32 *) p_s0_2) = (new_var6 << 5) | var_a0;
+            }
+            var_a0 = 0x00FFFFFF;
+            p_s4[0] = (p_s4[0] & 0xFF000000) | ((*var_s7) & var_a0);
+            *var_s7 = ((*var_s7) & 0xFF000000) | (((u32) p_s4) & 0x00FFFFFF);
+            p_s4 += 2;
+          }
+        }
+      }
+    }
+    block_59:
+    var_s5++;
+
+    var_s2++;
+  }
+  while (var_s5 < 0x50);
+  func_8006A258();
+  arg0_1->unk40B8 = p_s4;
 }
