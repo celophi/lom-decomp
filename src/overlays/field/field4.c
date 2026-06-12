@@ -115,7 +115,7 @@ typedef struct Struct_C
     u16 unkC;
     u16 unkE;
     u16 unk10;
-    u8 pad10[0x14 - 14];
+    u8 pad10[0x14 - 0x12];
     u8 unk14;
     u8 unk15;
     u8 pad16[0x18 - 0x16];
