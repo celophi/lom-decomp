@@ -1221,3 +1221,12 @@ void func_80069AF8(ContextStruct* arg0)
     }
     arg0->unk23B = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/hvTSS
+ */
+void func_80069B44(s32 arg0, s32 arg1)
+{
+    func_80074D7C();
+    func_80069B84(arg0, arg1);
+}
