@@ -731,7 +731,7 @@ void MenuCursorUp(void)
 
 /**
  * Walks D_80102670 and emits the cursor + each enabled menu item's quad.
- * The cursor uses D_8007FD2C[(g_titleAnimFrame >> 2) & 3] as a 4-frame
+ * The cursor uses g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3] as a 4-frame
  * blink palette index.
  *
  * decomp.me (65.89%) https://decomp.me/scratch/K627m
@@ -776,7 +776,7 @@ void RenderTitleMenuItems(void* arg0)
         var_s1 += 2;
     } while (var_s0 < 0x10);
     result = EmitMenuItemQuad(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
-                              (s32)D_8007FD2C[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
+                              (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
     *((s32*)(((u8*)arg0) + 0x80B8)) = result;
     g_titleAnimFrame++;
 }
@@ -847,7 +847,7 @@ void* EmitMenuItemQuad(s32* otHead, void* prim, s32 slot, s16 x, s32 y, s32 colo
 /**
  * Initialises menu-state globals: zeros the per-slot flag table, enables
  * the first 4 slots, sets the idle countdown to 0xE10 frames (≈60 s @ 60Hz),
- * and uploads the two menu TIMs from D_800522E8[1..2] to VRAM.
+ * and uploads the two menu TIMs from g_titleMenuTimTable[1..2] to VRAM.
  *
  * decomp.me (100%) https://decomp.me/scratch/HW23j
  */
@@ -879,8 +879,8 @@ void InitTitleMenuState(void)
     g_lastInputState = 0;
     g_debouncedInput = 0;
     g_titleIdleCountdown = 0xE10;
-    UploadTim((void*)(((u8*)&D_800522E8) + D_800522E8[1]), 0x140, 0, 0, 0x1E0);
-    UploadTim((void*)(((u8*)&D_800522E8) + D_800522E8[2]), 0x140, 0x100, 0, 0x1E1);
+    UploadTim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[1]), 0x140, 0, 0, 0x1E0);
+    UploadTim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[2]), 0x140, 0x100, 0, 0x1E1);
     if (g_previousGameState == 0)
     {
         idx = g_titleSelectedItem + 1;
@@ -889,7 +889,7 @@ void InitTitleMenuState(void)
             q = g_titleMenuItemFlags + (idx << 1);
             do
             {
-                if ((D_800522E8 && D_800522E8) && D_800522E8)
+                if ((g_titleMenuTimTable && g_titleMenuTimTable) && g_titleMenuTimTable)
                 {
                 }
                 if ((*q) != 0)
@@ -1231,7 +1231,7 @@ void HandleSaveSlotInput(void)
         {
             SaveLayoutEntry* entry;
             PlayTitleSfx(0x7D, 0x80);
-            entry = ((SaveLayoutEntry*)D_800F993C);
+            entry = ((SaveLayoutEntry*)g_saveLayoutTable);
             if (entry[18].type != 0)
             {
                 entry[18].type = 0;
@@ -1285,7 +1285,7 @@ void HandleSaveSlotInput(void)
             temp_s0 |= new_var2 << 0xF;
             var_a1->rng_seed = (s16)temp_s0;
             dest_ptr = D_80043618;
-            var_v1 = D_800F9BC4 + (g_slotSelectedIndex << 6);
+            var_v1 = g_saveSlotData + (g_slotSelectedIndex << 6);
             var_a0 = 0;
             while (var_a0 < 0x40U)
             {
@@ -1357,7 +1357,7 @@ void HandleSaveSlotInput(void)
  * Lerps g_slotHighlightX toward g_slotHighlightTargetX over
  * g_slotHighlightFrames frames, pans the scroll window so the selected
  * slot is always visible, then writes the updated V-coordinate and
- * visibility flags for the highlight-bar layout entries in D_800F993C.
+ * visibility flags for the highlight-bar layout entries in g_saveLayoutTable.
  *
  * decomp.me (99.73%) https://decomp.me/scratch/MhuAG
  */
@@ -1405,14 +1405,14 @@ void AnimateSaveSlotPanel(void)
             g_slotHighlightFrames = 4;
         }
     }
-    ptr = (SaveLayoutEntry*)D_800F993C;
+    ptr = (SaveLayoutEntry*)g_saveLayoutTable;
     ptr[2].v0 = (u16)g_slotHighlightX;
     ptr[3].v0 = ((u16)g_slotHighlightX) + 0x20;
     ptr[9].v0 = (u16)g_slotHighlightX;
     ptr[10].v0 = ((u16)g_slotHighlightX) + 0x20;
     if (g_slotHighlightX != 0)
     {
-        SaveLayoutEntry* ptr4 = (SaveLayoutEntry*)D_800F993C;
+        SaveLayoutEntry* ptr4 = (SaveLayoutEntry*)g_saveLayoutTable;
         ptr4[7].type = 1;
         ptr4[8].type = 1;
         ptr4[14].type = 1;
@@ -1420,7 +1420,7 @@ void AnimateSaveSlotPanel(void)
     }
     else
     {
-        SaveLayoutEntry* ptr5 = (SaveLayoutEntry*)D_800F993C;
+        SaveLayoutEntry* ptr5 = (SaveLayoutEntry*)g_saveLayoutTable;
         ptr5[7].type = 0;
         ptr5[8].type = 0;
         ptr5[14].type = 0;
@@ -1429,7 +1429,7 @@ void AnimateSaveSlotPanel(void)
     new_var2 = 0;
     if (g_slotHighlightX != 0x40)
     {
-        SaveLayoutEntry* ptr3 = (SaveLayoutEntry*)D_800F993C;
+        SaveLayoutEntry* ptr3 = (SaveLayoutEntry*)g_saveLayoutTable;
         ptr3[4].type = 1;
         ptr3[5].type = 1;
         ptr3[11].type = 1;
@@ -1437,7 +1437,7 @@ void AnimateSaveSlotPanel(void)
     }
     else
     {
-        SaveLayoutEntry* ptr2 = (SaveLayoutEntry*)D_800F993C;
+        SaveLayoutEntry* ptr2 = (SaveLayoutEntry*)g_saveLayoutTable;
         ptr2[4].type = new_var2;
         ptr2[5].type = new_var2;
         ptr2[11].type = new_var2;
@@ -1452,7 +1452,7 @@ void AnimateSaveSlotPanel(void)
     {
         scroll_offset = 0x60;
     }
-    layout = D_800F993C;
+    layout = g_saveLayoutTable;
     scroll_width = scroll_offset + 0x40;
     *((u16*)(layout + 0x96)) = scroll_width;
     *((u16*)(layout + 0x9A)) = scroll_width;
@@ -1471,7 +1471,7 @@ void ResetSaveSlotPanel(void)
     s16 temp_v1;
     if (g_slotSlideX != 0)
     {
-        u32 base = (u32)(&D_800F993C);
+        u32 base = (u32)(&g_saveLayoutTable);
         *((u16*)(base + 0xE)) = 0x10;
         g_slotSelectedIndex = 0;
         g_slotHighlightX = 0;
@@ -1501,7 +1501,7 @@ void ResetSaveSlotPanel(void)
         return;
     }
     {
-        u32 low_addr = (u32)(&D_800F993C);
+        u32 low_addr = (u32)(&g_saveLayoutTable);
         u32 ptr = g_slotSlideX + low_addr;
         *((u16*)(ptr + 0xC)) = 0x10;
         *((u16*)(ptr + 0xE)) = 0;
@@ -1558,7 +1558,7 @@ inline u16 inline_fn(unsigned char* arg0)
 }
 
 /**
- * Walks the 0x1B-entry × 0x18-byte layout table at D_800F993C+2 and emits
+ * Walks the 0x1B-entry × 0x18-byte layout table at g_saveLayoutTable+2 and emits
  * one of four primitive shapes per entry (text quad, simple sprite,
  * solid-coloured POLY_F4, or chunked glyph strip). Returns the new prim
  * head.
@@ -1606,12 +1606,12 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
     s32 v1;
     t0 = arg0;
     t6 = arg1;
-    t2 = D_800F993C + 2;
+    t2 = g_saveLayoutTable + 2;
     s2 = 0;
     s5 = 3;
     s4 = &g_slotSlideXLerped;
     s3 = (s32)(&g_slotSlideYLerped);
-    s0 = D_800F97FC;
+    s0 = g_saveLayoutTexTable;
     t4 = 0x00FFFFFF;
     t8 = 0xFF000000;
     do
@@ -1875,7 +1875,7 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
 }
 
 /**
- * For each of the 11 entries in D_800F97FC (stride 0x10), uploads the
+ * For each of the 11 entries in g_saveLayoutTexTable (stride 0x10), uploads the
  * CLUT and image data to VRAM and bit-packs the resulting tex-page info
  * back into the entry's control word.
  *
@@ -1896,7 +1896,7 @@ unsigned short UploadSaveLayoutTextures(void)
     RECT rect;
     int counter;
     unsigned char* new_var;
-    entry_base = D_800F97FC;
+    entry_base = g_saveLayoutTexTable;
 
     for (counter = 0; counter < 11; counter++)
     {

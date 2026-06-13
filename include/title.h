@@ -66,7 +66,11 @@ extern s32 g_debouncedInput;
 extern u8 g_titleMenuItemFlags[];
 extern u8 g_titleVisibleItemRank;
 extern u8 g_titleAnimFrame;
-extern u8 D_8007FD2C[];
+/**
+ * 4-entry CLUT-index table that blinks the title-menu cursor; indexed by
+ * (g_titleAnimFrame >> 2) & 3 in RenderTitleMenuItems.
+ */
+extern u8 g_cursorBlinkPalette[];
 
 /**
  * Timer used to implement input repeating (auto-repeat).
@@ -76,7 +80,12 @@ extern u8 D_8007FD2C[];
  */
 extern s32 g_inputRepeatTimer;
 extern s32 g_lastInputState;
-extern u32 D_800522E8[3];
+/**
+ * Self-relative offset table for the two title-menu TIMs uploaded by
+ * InitTitleMenuState: entries [1] and [2] are byte offsets from the table's
+ * own base to each TIM ([0] is unused).
+ */
+extern u32 g_titleMenuTimTable[3];
 extern u8 D_801ED600[];
 extern s32 g_slotSlideX;
 extern s32 g_slotSlideY;
@@ -88,14 +97,18 @@ extern s32 g_slotSlideXLerped;
 extern s32 g_slotSlideYLerped;
 extern s32 g_slotHighlightFrames;
 extern u8 D_80043618[0x40];
-extern u8 D_800F9BC4[];
+/**
+ * Source array of save-slot records (stride 0x40); HandleSaveSlotInput copies
+ * the record selected by g_slotSelectedIndex into D_80043618.
+ */
+extern u8 g_saveSlotData[];
 extern u8 D_800F9AED;
 /**
- * @brief One entry in the 27-element save-slot UI layout table (D_800F993C).
+ * @brief One entry in the 27-element save-slot UI layout table (g_saveLayoutTable).
  *
  * The layout has 0x1B entries × 0x18 bytes = 0x288 bytes total.
  *
- * @note D_800F993C is kept as @c u8[] so that all existing raw byte-offset
+ * @note g_saveLayoutTable is kept as @c u8[] so that all existing raw byte-offset
  *       accesses in the function bodies compile to unchanged codegen.
  *       Cast to @c SaveLayoutEntry* at call sites that benefit from named
  *       field access.
@@ -103,7 +116,7 @@ extern u8 D_800F9AED;
 typedef struct {
     u8  flags;    /**< +0x00: bit0=apply_slide, bit1=semi_transparent, bits2-3=abr */
     u8  type;     /**< +0x01: prim type: 0=skip, 2=TILE, 3=POLY_FT4, 4=SPRT, other=glyph */
-    u8  tex_slot; /**< +0x02: index into D_800F97FC[] tex table (stride 0x10) */
+    u8  tex_slot; /**< +0x02: index into g_saveLayoutTexTable[] tex table (stride 0x10) */
     u8  pad;      /**< +0x03 */
     s16 x;        /**< +0x04: screen base X (POLY_FT4, SPRT, glyph) */
     s16 y;        /**< +0x06: screen base Y */
@@ -117,8 +130,13 @@ typedef struct {
 } SaveLayoutEntry;             /* sizeof == 0x18 */
 
 /* 0x1B (27) entries; kept as u8[] to preserve byte-granular pointer arithmetic */
-extern u8 D_800F993C[0x288];
-extern u8 D_800F97FC[];
+extern u8 g_saveLayoutTable[0x288];
+/**
+ * Texture-descriptor table for the save-slot layout: 11 entries of stride 0x10,
+ * each holding VRAM coords plus the source TIM pointer/control word uploaded by
+ * UploadSaveLayoutTextures. Indexed by SaveLayoutEntry::tex_slot.
+ */
+extern u8 g_saveLayoutTexTable[];
 extern u8 D_800F98AC[];
 extern u8 D_800F98F4[];
 /** Menu-layout template copied into g_menuLayoutBuffer for the default menu. */
