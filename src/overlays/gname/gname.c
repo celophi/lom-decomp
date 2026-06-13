@@ -1015,7 +1015,7 @@ void gname_render(RenderContext* ctx)
         emit_draw_mode_prim(
             draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
             ((char*)ctx2) + 0x34),
-        (s32)&ctx->ot[0]);
+        &ctx->ot[0]);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
     tmp_ptr = ((char*)cursor_sprite) + 0x14;
     *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
@@ -1068,7 +1068,7 @@ void gname_render(RenderContext* ctx)
         }
     }
     /* 5. Remaining sub-passes. */
-    *((void**)tmp_ptr) = emit_panel_label(emit_draw_mode_prim(prim2, &ctx->ot[0]), ctx_bytes + 0x24);
+    *((void**)tmp_ptr) = emit_panel_label(emit_draw_mode_prim(prim2, &ctx->ot[0]), (u_long*)(ctx_bytes + 0x24));
     render_char_panel(ctx, g_char_panel);
     render_name_strip(ctx2, g_active_name, g_strip_width);
 }
@@ -1097,7 +1097,7 @@ void gname_render(RenderContext* ctx)
  * @return Updated primitive write cursor after appending the sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/RnoNS
  */
-s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
+void* emit_panel_tab_sprite(void* prim, u_long* ot_entry)
 {
     s32 mode = g_char_set_mode;
 
@@ -1132,19 +1132,20 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
  * @return Updated primitive write cursor after appending the label sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/jK7bc
  */
-s32 emit_panel_label(void* arg0, u32 arg1)
+void* emit_panel_label(void* prim, u_long* ot_entry)
 {
     s32 panel = g_char_panel;
-    
+
     if (panel < 4)
     {
-        arg0 = (void*)func_800A88A0(arg0, arg1, PANEL_RECORD(panel), 1, 0x23, 0x47, 2);
+        prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(panel), 1, 0x23, 0x47, 2);
     }
     else
     {
-        arg0 = (void*)func_800A88A0(arg0, arg1, g_kanji_cat_name, 1, 0x23, 0x47, 2);
+        prim = func_800A88A0(prim, ot_entry, g_kanji_cat_name, 1, 0x23, 0x47, 2);
     }
-    return (s32)arg0;
+    
+    return prim;
 }
 
 /**
