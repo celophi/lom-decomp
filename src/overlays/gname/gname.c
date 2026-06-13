@@ -1174,7 +1174,7 @@ void* emit_panel_label(void* prim, u_long* ot_entry)
  * @param strip_width Width in pixels of the back-page VRAM upload strip; also
  *                    sets the strip's X position as `240 - strip_width`.
  *
- * @see https://decomp.me/scratch/LxujJ (99.26%)
+ * @see https://decomp.me/scratch/LxujJ (100%)
  */
 void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 {
@@ -1182,26 +1182,27 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
     s32* prim;      /* current primitive being emitted */
     s32* next_prim; /* heap cursor after the sprite/draw-mode pair */
     s32 vram_y;     /* VRAM Y of the back page (0x18 or 0x100) */
+    s32 vram_x;     /* VRAM X of the right-aligned strip */
+    u32* pkt;
     u32 vram_load_pkt[0x19];
-    s32 vram_x; /* VRAM X of the right-aligned strip */
 
     ot_head = (s32*)&ctx->ot[0x0E];
     prim = ctx->prim_cursor;
     next_prim = prim;
 
     /* 1. Copy template packet from the *other* frame's reserve slot, then
-     *    splice it into the OT. */
+     * splice it into the OT. */
     func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
-    setaddr(prim, getaddr(&ctx->ot[0x0E]));
-    setaddr(&ctx->ot[0x0E], prim);
-
+    addPrim(&ctx->ot[0x0E], prim);
+    
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
-     *    Returns the heap cursor just past both packets. */
+     * Returns the heap cursor just past both packets. */
     next_prim = emit_draw_mode_prim(emit_glyph_sprt(func_800A88A0(prim + 0x10, ot_head, name_buf, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
 
     /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
-     *    right edge of whichever page is currently the back buffer. */
+     * right edge of whichever page is currently the back buffer. */
+    pkt = vram_load_pkt + 2;
     vram_x = 0xF0 - strip_width;
     vram_y = 0x18;
     if (ctx->frame_parity != 0)
@@ -1209,15 +1210,13 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
         vram_y = 0x100;
     }
 
-    func_8001C56C(vram_load_pkt, vram_x, vram_y, strip_width, 0x20);
-    func_8001A5D4(next_prim, vram_load_pkt);
-
-    setaddr(next_prim, getaddr(&ctx->ot[0x0E]));
-
+    func_8001C56C(pkt, vram_x, vram_y, strip_width, 0x20);
+    func_8001A5D4(next_prim, pkt);
+    
+    addPrim(&ctx->ot[0x0E], next_prim);
     /* Advance heap cursor 0x40 bytes past the load packet. */
-    ctx->prim_cursor = next_prim + 0x10;
-
-    setaddr(&ctx->ot[0x0E], next_prim);
+    next_prim += 0x10;
+    ctx->prim_cursor = next_prim;
 }
 
 /**
