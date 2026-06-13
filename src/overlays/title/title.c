@@ -1184,42 +1184,54 @@ void InitSaveSlotMenu(void)
 void RenderSaveSlotMenu(MenuContext* arg0)
 {
     arg0->next_prim_ptr = (u_long*)RenderSaveLayoutPrims(arg0->next_prim_ptr, (s32*)((char*)arg0 + 0x40));
-    HandleSaveSlotInput();
+    handle_save_slot_input();
 }
 
 /**
- * Per-frame input dispatcher for the save-slot sub-menu: drives the slide
- * lerper, decodes confirm/cancel/select, and reacts to L/R panel scrolls.
+ * @brief Per-frame input dispatcher for the save-slot sub-menu.
  *
- * decomp.me (99.41%) https://decomp.me/scratch/Xl8gF
+ * @details While a slide is in flight (g_slotSlideFrames != 0) it only steps
+ * the X/Y slide lerpers and returns. Once settled it snaps the lerpers to
+ * their targets, reads input, and branches on whether the stage is at its
+ * home column (g_slotSlideX == 0) or scrolled to a side panel:
+ *  - Home column: confirm toggles the new-game expand entries (18/19), a
+ *    left/right press scrolls to a side panel, and cancel quits the sub-menu
+ *    (g_titleMenuExitState = 2).
+ *  - Side panel: confirm loads the matching sub-menu layout, seeds its RNG,
+ *    copies the selected save record into D_80043618, clears the per-slot
+ *    field of every other menu-layout slot, and confirms (exit state 1);
+ *    cancel scrolls back home; up/down move the slot cursor (wrapping over
+ *    the 11 slots). Always re-runs the highlight-panel animation.
+ *
+ * @see decomp.me (99.41%) https://decomp.me/scratch/Xl8gF
  */
-void HandleSaveSlotInput(void)
+void handle_save_slot_input(void)
 {
-    s32 temp_a1;
-    s32 temp_s0;
-    u8* new_var;
-    s32* new_var4;
-    s32 temp_v0_2;
-    int new_var2;
-    s32 temp_v0_3;
-    s32 new_var3;
-    s32 temp_v1;
-    s32 var_a0_2;
-    s32 var_v0;
-    u32 var_a0;
-    u8 temp_v0;
-    MenuLayout* var_a1;
-    u8* var_v1;
+    s32 slide_x_step;
+    s32 rng_lo;
+    u8* unused_ptr;
+    s32* slide_x_lerped_ptr;
+    s32 prev_index;
+    int rng_hi;
+    s32 next_index;
+    s32 selected_slot;
+    s32 slide_y_step;
+    s32 slot_idx;
+    s32 new_flags;
+    u32 copy_count;
+    u8 byte;
+    MenuLayout* layout;
+    u8* src_ptr;
     u8* dest_ptr;
-    s32 flag;
+    s32 flag_mask;
     if (g_slotSlideFrames != 0)
     {
-        new_var4 = &g_slotSlideXLerped;
-        temp_a1 = ((s32)(g_slotSlideX - (*new_var4))) / ((s32)g_slotSlideFrames);
-        temp_v1 = ((s32)(g_slotSlideY - g_slotSlideYLerped)) / ((s32)g_slotSlideFrames);
+        slide_x_lerped_ptr = &g_slotSlideXLerped;
+        slide_x_step = ((s32)(g_slotSlideX - (*slide_x_lerped_ptr))) / ((s32)g_slotSlideFrames);
+        slide_y_step = ((s32)(g_slotSlideY - g_slotSlideYLerped)) / ((s32)g_slotSlideFrames);
         g_slotSlideFrames -= 1;
-        g_slotSlideXLerped += temp_a1;
-        g_slotSlideYLerped += temp_v1;
+        g_slotSlideXLerped += slide_x_step;
+        g_slotSlideYLerped += slide_y_step;
         return;
     }
     g_slotSlideXLerped = g_slotSlideX;
@@ -1227,7 +1239,7 @@ void HandleSaveSlotInput(void)
     UpdateMenuInput();
     if (g_slotSlideX == 0)
     {
-        if (g_debouncedInput & 0xA000)
+        if (g_debouncedInput & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
         {
             SaveLayoutEntry* entry;
             PlayTitleSfx(0x7D, 0x80);
@@ -1242,7 +1254,7 @@ void HandleSaveSlotInput(void)
             entry[19].type = g_slotSlideYLerped * 0;
             return;
         }
-        if (g_debouncedInput & 0xA20)
+        if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
             PlayTitleSfx(0x7E, 0x80);
             if (D_800F9AED != 0)
@@ -1255,7 +1267,7 @@ void HandleSaveSlotInput(void)
             reset_save_slot_panel();
             return;
         }
-        if (g_debouncedInput & 0x40)
+        if (g_debouncedInput & PAD_BTN_CIRCLE)
         {
             PlayTitleSfx(0x7F, 0x80);
             g_titleMenuExitState = 2;
@@ -1263,56 +1275,56 @@ void HandleSaveSlotInput(void)
     }
     else
     {
-        if (g_debouncedInput & 0xA20)
+        if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
             if (g_slotSlideX > 0)
             {
                 load_sub_menu_layout(0);
-                flag = ~0x7F;
-                var_a1 = (MenuLayout*)g_menuLayoutBuffer;
-                var_v0 = (var_a1->slot_flags) & flag;
+                flag_mask = ~0x7F;
+                layout = (MenuLayout*)g_menuLayoutBuffer;
+                new_flags = (layout->slot_flags) & flag_mask;
             }
             else
             {
                 load_sub_menu_layout(1);
-                flag = ~0x7F;
-                var_a1 = (MenuLayout*)g_menuLayoutBuffer;
-                var_v0 = ((var_a1->slot_flags) & flag) | 1;
+                flag_mask = ~0x7F;
+                layout = (MenuLayout*)g_menuLayoutBuffer;
+                new_flags = ((layout->slot_flags) & flag_mask) | 1;
             }
-            var_a1->slot_flags = var_v0;
-            temp_s0 = rand();
-            new_var2 = rand();
-            temp_s0 |= new_var2 << 0xF;
-            var_a1->rng_seed = (s16)temp_s0;
+            layout->slot_flags = new_flags;
+            rng_lo = rand();
+            rng_hi = rand();
+            rng_lo |= rng_hi << 0xF;
+            layout->rng_seed = (s16)rng_lo;
             dest_ptr = D_80043618;
-            var_v1 = g_saveSlotData + (g_slotSelectedIndex << 6);
-            var_a0 = 0;
-            while (var_a0 < 0x40U)
+            src_ptr = g_saveSlotData + (g_slotSelectedIndex << 6);
+            copy_count = 0;
+            while (copy_count < 0x40U)
             {
-                var_a0 += 1;
-                temp_v0 = *var_v1;
-                var_v1 += 1;
-                *dest_ptr = temp_v0;
+                copy_count += 1;
+                byte = *src_ptr;
+                src_ptr += 1;
+                *dest_ptr = byte;
                 dest_ptr += 1;
             }
 
-            var_a0_2 = 0;
-            new_var3 = g_slotSelectedIndex;
-            var_v1 = g_menuLayoutBuffer;
-            var_a0_2 = 0;
+            slot_idx = 0;
+            selected_slot = g_slotSelectedIndex;
+            src_ptr = g_menuLayoutBuffer;
+            slot_idx = 0;
             do
             {
-                if (new_var3 != var_a0_2)
+                if (selected_slot != slot_idx)
                 {
-                    *((s32*)(var_v1 + 0x34)) = 0;
+                    *((s32*)(src_ptr + 0x34)) = 0;
                 }
-                var_a0_2 += 1;
-                var_v1 += 4;
-            } while (var_a0_2 < 0xB);
+                slot_idx += 1;
+                src_ptr += 4;
+            } while (slot_idx < 0xB);
             PlayTitleSfx(0x7E, 0x80);
             g_titleMenuExitState = 1;
         }
-        else if (g_debouncedInput & 0x40)
+        else if (g_debouncedInput & PAD_BTN_CIRCLE)
         {
             PlayTitleSfx(0x7F, 0x80);
             if (g_slotSlideX > 0)
@@ -1328,22 +1340,22 @@ void HandleSaveSlotInput(void)
         }
         else if (g_slotHighlightFrames == 0)
         {
-            if ((g_debouncedInput & 0x1000) != 0U)
+            if ((g_debouncedInput & PAD_BTN_UP) != 0U)
             {
                 PlayTitleSfx(0x7D, 0x80);
-                temp_v0_2 = g_slotSelectedIndex - 1;
-                g_slotSelectedIndex = temp_v0_2;
-                if (temp_v0_2 < 0)
+                prev_index = g_slotSelectedIndex - 1;
+                g_slotSelectedIndex = prev_index;
+                if (prev_index < 0)
                 {
                     g_slotSelectedIndex = 0xA;
                 }
             }
-            if (g_debouncedInput & 0x4000)
+            if (g_debouncedInput & PAD_BTN_DOWN)
             {
                 PlayTitleSfx(0x7D, 0x80);
-                temp_v0_3 = g_slotSelectedIndex + 1;
-                g_slotSelectedIndex = temp_v0_3;
-                if (temp_v0_3 >= 0xB)
+                next_index = g_slotSelectedIndex + 1;
+                g_slotSelectedIndex = next_index;
+                if (next_index >= 0xB)
                 {
                     g_slotSelectedIndex = 0;
                 }

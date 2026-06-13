@@ -98,7 +98,7 @@ extern s32 g_slotSlideYLerped;
 extern s32 g_slotHighlightFrames;
 extern u8 D_80043618[0x40];
 /**
- * Source array of save-slot records (stride 0x40); HandleSaveSlotInput copies
+ * Source array of save-slot records (stride 0x40); handle_save_slot_input copies
  * the record selected by g_slotSelectedIndex into D_80043618.
  */
 extern u8 g_saveSlotData[];
