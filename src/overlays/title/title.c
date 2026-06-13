@@ -26,6 +26,14 @@
  * slot selected") on the load-a-saved-game path. */
 #define TITLE_ITEM_IDLE_QUIT 0xFF
 
+/* Number of selectable slots in the title menu item-flag table
+ * (g_titleMenuItemFlags), each occupying 2 bytes. */
+#define TITLE_MENU_SLOT_COUNT 16
+
+/* Idle countdown loaded by init_title_menu_state: 0xE10 == 3600 frames (~60 s at
+ * 60 Hz) before the title times out to the attract loop. */
+#define TITLE_IDLE_COUNTDOWN_FRAMES 0xE10
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
@@ -312,7 +320,7 @@ void InitTitleDisplay(void* arg0)
 
     ResetFadeState();
     SetFadeTarget(0x100, 0x100, 0x100, 0x14);
-    InitTitleMenuState();
+    init_title_menu_state();
 
     g_titleMenuExitState = 0;
 }
@@ -845,25 +853,30 @@ void* EmitMenuItemQuad(s32* otHead, void* prim, s32 slot, s16 x, s32 y, s32 colo
 }
 
 /**
- * Initialises menu-state globals: zeros the per-slot flag table, enables
- * the first 4 slots, sets the idle countdown to 0xE10 frames (≈60 s @ 60Hz),
- * and uploads the two menu TIMs from g_titleMenuTimTable[1..2] to VRAM.
+ * @brief Initialise the title-menu state globals and upload its TIMs.
  *
- * decomp.me (100%) https://decomp.me/scratch/HW23j
+ * @details Zeros the per-slot flag table (TITLE_MENU_SLOT_COUNT entries),
+ * enables the first 4 slots, resets cursor/input/animation globals, arms the
+ * idle countdown to TITLE_IDLE_COUNTDOWN_FRAMES, and uploads the two menu TIMs
+ * from g_titleMenuTimTable[1..2] to VRAM. When re-entering from the attract
+ * loop (g_previousGameState == 0) it advances the cursor to the first enabled
+ * slot (same forward scan as MenuCursorDown).
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/HW23j
  */
-void InitTitleMenuState(void)
+void init_title_menu_state(void)
 {
-    u8* ptr;
+    u8* flag_ptr;
     s32 i;
-    s32 idx;
-    u8* q;
+    s32 next_item;
+    u8* item_ptr;
     i = 0;
-    ptr = g_titleMenuItemFlags;
-    for (i = 0; i < 16; i++)
+    flag_ptr = g_titleMenuItemFlags;
+    for (i = 0; i < TITLE_MENU_SLOT_COUNT; i++)
     {
-        ptr[0] = 0;
-        ptr[1] = 0;
-        ptr += 2;
+        flag_ptr[0] = 0;
+        flag_ptr[1] = 0;
+        flag_ptr += 2;
     }
 
     g_titleMenuItemFlags[0] = 1;
@@ -878,36 +891,36 @@ void InitTitleMenuState(void)
     g_inputRepeatTimer = 0;
     g_lastInputState = 0;
     g_debouncedInput = 0;
-    g_titleIdleCountdown = 0xE10;
+    g_titleIdleCountdown = TITLE_IDLE_COUNTDOWN_FRAMES;
     upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[1]), 0x140, 0, 0, 0x1E0);
     upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[2]), 0x140, 0x100, 0, 0x1E1);
     if (g_previousGameState == 0)
     {
-        idx = g_titleSelectedItem + 1;
-        if (idx < 16)
+        next_item = g_titleSelectedItem + 1;
+        if (next_item < TITLE_MENU_SLOT_COUNT)
         {
-            q = g_titleMenuItemFlags + (idx << 1);
+            item_ptr = g_titleMenuItemFlags + (next_item << 1);
             do
             {
                 if ((g_titleMenuTimTable && g_titleMenuTimTable) && g_titleMenuTimTable)
                 {
                 }
-                if ((*q) != 0)
+                if ((*item_ptr) != 0)
                 {
                     break;
                 }
-                idx++;
-                q += 2;
-            } while (idx < 16);
+                next_item++;
+                item_ptr += 2;
+            } while (next_item < TITLE_MENU_SLOT_COUNT);
         }
-        if (idx == 16)
+        if (next_item == TITLE_MENU_SLOT_COUNT)
         {
             g_titleVisibleItemRank = 0;
             g_titleSelectedItem = 0;
         }
         else
         {
-            g_titleSelectedItem = (u8)idx;
+            g_titleSelectedItem = (u8)next_item;
             g_titleVisibleItemRank++;
         }
     }

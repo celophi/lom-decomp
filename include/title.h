@@ -82,7 +82,7 @@ extern s32 g_inputRepeatTimer;
 extern s32 g_lastInputState;
 /**
  * Self-relative offset table for the two title-menu TIMs uploaded by
- * InitTitleMenuState: entries [1] and [2] are byte offsets from the table's
+ * init_title_menu_state: entries [1] and [2] are byte offsets from the table's
  * own base to each TIM ([0] is unused).
  */
 extern u32 g_titleMenuTimTable[3];
