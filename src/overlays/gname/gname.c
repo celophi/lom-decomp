@@ -1134,18 +1134,11 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
  */
 s32 emit_panel_label(void* arg0, u32 arg1)
 {
-    unsigned short new_var;
     s32 panel = g_char_panel;
-    new_var = 4;
-    if (panel < new_var)
+    
+    if (panel < 4)
     {
-        u32 base_addr = ((u32)(&g_panel_tbl_off)) - new_var;
-        u32 offset_val = g_panel_tbl_off;
-        u16 label_offset;
-        void* label_data;
-        label_offset = *((u16*)(((panel * 2) + offset_val) + base_addr));
-        label_data = (void*)(offset_val + (label_offset + base_addr));
-        arg0 = (void*)func_800A88A0(arg0, arg1, label_data, 1, 0x23, 0x47, 2);
+        arg0 = (void*)func_800A88A0(arg0, arg1, PANEL_RECORD(panel), 1, 0x23, 0x47, 2);
     }
     else
     {
