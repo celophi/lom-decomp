@@ -1,17 +1,6 @@
 #include "common.h"
 #include "cd_resources.h"
 
-/* Define the structure layout for the memory at 0x801ED600 */
-typedef struct
-{
-    u8 pad0[0x91];
-    u8 unk91;
-    u8 unk92;
-    u8 pad93[0xAC]; /* 0x13F - 0x093 = 0xAC bytes of padding */
-    u8 unk13F;
-    u8 unk140;
-} UnkStruct_801ED600;
-
 s32 cdrom_stream(s32 resourceIndex, u32 destination);
 void cdrom_wait_queue_empty(void);
 extern void func_80084240(void); /* Fixed prototype */
@@ -51,39 +40,7 @@ typedef struct
 {
     u8 pad[0x1EC];
     u16 unk1EC;
-} Struct_80068494;
-
-typedef struct
-{
-    u8 unk0;
-    u8 unk1;
-    u8 pad[4];
-} Struct_Unk4;
-typedef struct
-{
-    u8 pad[4];
-    Struct_Unk4* unk4;
-    u16* unk8;
-} Struct_arg0;
-typedef struct
-{
-    u8 pad[0x1EC];
-    u16 unk1EC;
 } Struct_1EC;
-
-typedef struct
-{
-    u8 unk0;
-    u8 unk1;
-    s16 unk2;
-    s16 unk4;
-} Struct_Unk3;
-typedef struct
-{
-    u8 pad[4];
-    Struct_Unk3* unk4;
-    u16* unk8;
-} Struct_Arg0;
 
 typedef struct
 {
@@ -316,7 +273,7 @@ extern u8 D_800FF59C;
  */
 void field_func_8006828C(void)
 {
-    UnkStruct_801ED600* ptr = (UnkStruct_801ED600*)0x801ED600;
+    Struct_801ED600* ptr = (Struct_801ED600*)0x801ED600;
 
     if (D_800F22C0 == 0)
     {
@@ -422,20 +379,20 @@ void func_80068440(void)
  */
 s32 func_80068494(s32 arg0, s32 arg1)
 {
-    return ((Struct_80068494*)((u8*)arg0 + D_80105788 * 2))->unk1EC % arg1;
+    return ((Struct_1EC*)((u8*)arg0 + D_80105788 * 2))->unk1EC % arg1;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/X9uyL
  */
-void func_800684E4(Struct_arg0* arg0, s32 arg1, s32 arg2, s16* arg3)
+void func_800684E4(DataStruct* arg0, s32 arg1, s32 arg2, s16* arg3)
 {
     s32 var_t9 = 0;
     s32 var_t1 = 4;
     s16* var_t7;
     s32 var_t6;
     s32 new_var;
-    Struct_Unk4* temp_v0;
+    TableEntry* temp_v0;
     s32 var_t0 = (&arg0->unk4[arg1 & 0xF])->unk0 & 0x7F;
     u16* var_t5 = &arg0->unk8[(&arg0->unk4[arg1 & 0xF])->unk1];
     new_var = arg1;
@@ -505,10 +462,10 @@ void func_800684E4(Struct_arg0* arg0, s32 arg1, s32 arg2, s16* arg3)
 /**
  * decomp.me (100%) https://decomp.me/scratch/t5bIj
  */
-s32 func_80068734(Struct_Arg0* arg0, s32 arg1, u16 arg2)
+s32 func_80068734(DataStruct* arg0, s32 arg1, u16 arg2)
 {
     s32 var_s4;
-    Struct_Unk3* temp_s3;
+    TableEntry* temp_s3;
     s32 var_s2;
     s32 temp_s1;
     u16* var_s0;
@@ -1187,13 +1144,13 @@ void func_80069684(void)
                     {
                         if (var_s0 != 0)
                         {
-                            u8 temp_v1_6 = func_80068734((Struct_Arg0*)var_s3, temp_a1 & 0xF) | ptr_801ED600->unk92;
+                            u8 temp_v1_6 = func_80068734((DataStruct*)var_s3, temp_a1 & 0xF) | ptr_801ED600->unk92;
                             ptr_801ED600->unk92 = temp_v1_6;
                             ptr_801ED600->unk140 = temp_v1_6;
                         }
                         else
                         {
-                            u8 temp_v0_2 = func_80068734((Struct_Arg0*)var_s3, (tmp = new_var[0]) & 0xF);
+                            u8 temp_v0_2 = func_80068734((DataStruct*)var_s3, (tmp = new_var[0]) & 0xF);
                             ptr_801ED600->unk91 = (ptr_801ED600->unk13F = temp_v0_2);
                         }
                     }
