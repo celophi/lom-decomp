@@ -1294,7 +1294,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
         /* Normal panel: use the char panel data blob and the panel's entry range. */
         entry_idx = ((u16*)g_panel_char_offsets)[panel_idx * 2];
         entry_end = ((u16*)g_panel_char_offsets)[panel_idx * 2 + 1];
-        glyph_base = (u8*)(g_panel_tbl_off + ((u32)&g_panel_tbl_off - 4));
+        glyph_base = (u8*)PANEL_REC_TBL;
         row = 0;
     }
 
