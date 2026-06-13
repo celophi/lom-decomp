@@ -601,7 +601,7 @@ void RenderTitleBackdrop(void* arg0)
 void HandleTitleMenuInput(void)
 {
     s32 op = 0x7C;
-    UpdateMenuInput();
+    update_menu_input();
     if (g_titleIdleCountdown == 0)
     {
         g_titleMenuExitState = 1;
@@ -975,113 +975,128 @@ void UploadTim(void* tim, s16 x, s16 y, s16 clutX, s32 clutY)
  */
 s32 read_pad_state(void)
 {
-    signed short new_var;
+    signed short axis_x_dup;
     unsigned char* ptr;
-    unsigned char a2;
-    unsigned short v1;
-    unsigned short v0;
-    unsigned long a0_val;
-    unsigned int new_var2;
-    signed short t;
+    unsigned char device_status;
+    unsigned short raw_buttons;
+    unsigned short raw_buttons_hi;
+    unsigned long buttons;
+    unsigned int raw_buttons_reread;
+    signed short axis;
     ptr = (unsigned char*)0x801ED600;
-    a2 = ptr[0];
-    if (a2 >= 0xFE)
+    device_status = ptr[0];
+    if (device_status >= 0xFE)
     {
         return 0;
     }
-    v1 = *((unsigned short*)(ptr + 2));
-    new_var2 = *((unsigned short*)(ptr + 2));
-    v0 = new_var2;
-    a0_val = (v1 >> 8) | (v0 << 8);
-    a0_val = PAD_REMAP_FACE_BITS(a0_val);
-    if (a2)
+    raw_buttons = *((unsigned short*)(ptr + 2));
+    raw_buttons_reread = *((unsigned short*)(ptr + 2));
+    raw_buttons_hi = raw_buttons_reread;
+    buttons = (raw_buttons >> 8) | (raw_buttons_hi << 8);
+    buttons = PAD_REMAP_FACE_BITS(buttons);
+    if (device_status)
     {
-        t = *((signed short*)(ptr + 0x2C));
-        new_var = t;
-        if (t < (-1))
+        axis = *((signed short*)(ptr + 0x2C));
+        axis_x_dup = axis;
+        if (axis < (-1))
         {
-            a0_val |= 0x8000;
+            buttons |= PAD_BTN_LEFT;
         }
-        else if (new_var >= 2)
+        else if (axis_x_dup >= 2)
         {
-            a0_val |= 0x2000;
+            buttons |= PAD_BTN_RIGHT;
         }
-        t = *((signed short*)(ptr + 0x2E));
-        if (t < (-1))
+        axis = *((signed short*)(ptr + 0x2E));
+        if (axis < (-1))
         {
-            a0_val |= 0x1000;
+            buttons |= PAD_BTN_UP;
         }
-        else if (t >= 2)
+        else if (axis >= 2)
         {
-            a0_val |= 0x4000;
+            buttons |= PAD_BTN_DOWN;
         }
     }
-    return a0_val;
+    return buttons;
 }
 
 /**
- * Counterpart of CHECKPS UpdateInputDebounced: reads SCD pad state, builds
- * the remapped button bitmap, applies debounce + auto-repeat using
- * g_lastInputState / g_inputRepeatTimer, and stores the result in
- * g_debouncedInput.
+ * @brief Read the SCD pad, debounce it, and publish the result in g_debouncedInput.
  *
- * decomp.me (99.90%) https://decomp.me/scratch/yZqQJ
+ * @details Counterpart of CHECKPS UpdateInputDebounced. Builds the remapped
+ * button bitmap (byte-swap + face-bit remap + analog-stick to d-pad
+ * thresholding) exactly like read_pad_input, then runs an auto-repeat state
+ * machine over g_lastInputState / g_inputRepeatTimer:
+ *  - If this frame matches the previous state (or shares any repeat-eligible
+ *    bit with it), only the d-pad directions auto-repeat: g_debouncedInput
+ *    fires every (2 + 1) frames while held, otherwise it is suppressed.
+ *  - A fresh, different press is published immediately and arms the longer
+ *    initial-repeat delay (15 frames).
+ *  - No input clears all three globals.
+ *
+ * @note The pad registers are read through a raw pointer (with a duplicate
+ *       buttonData load and a volatile axisY read) rather than the SCDRegs
+ *       struct used by read_pad_input; those reads are load-bearing artifacts
+ *       of the matched codegen, so they are left as-is.
+ *
+ * @see decomp.me (99.90%) https://decomp.me/scratch/yZqQJ
  */
-void UpdateMenuInput(void)
+void update_menu_input(void)
 {
     u8* ptr = (u8*)0x801ED600;
-    u8 a2 = D_801ED600[0];
-    u16 v1;
-    u16 v0;
-    u32 a1_val;
-    s16 t;
-    s32 var_v1;
-    if (a2 >= 0xFE)
+    u8 device_status = D_801ED600[0];
+    u16 raw_buttons;
+    u16 unused;
+    u32 buttons;
+    s16 axis;
+    s32 state;
+    if (device_status >= 0xFE)
     {
-        var_v1 = 0;
+        state = 0;
     }
     else
     {
-        v1 = *((u16*)(ptr + 2));
+        raw_buttons = *((u16*)(ptr + 2));
 
-        a1_val = (v1 >> 8) | (*((u16*)(2 + ptr)) << 8);
-        a1_val = PAD_REMAP_FACE_BITS(a1_val);
+        buttons = (raw_buttons >> 8) | (*((u16*)(2 + ptr)) << 8);
+        buttons = PAD_REMAP_FACE_BITS(buttons);
         if ((*ptr) != 0)
         {
-            t = *((s16*)(ptr + 0x2C));
-            if (t < (-1))
+            axis = *((s16*)(ptr + 0x2C));
+            if (axis < (-1))
             {
-                a1_val |= 0x8000;
+                buttons |= PAD_BTN_LEFT;
             }
-            else if (t >= 2)
+            else if (axis >= 2)
             {
-                a1_val |= 0x2000;
+                buttons |= PAD_BTN_RIGHT;
             }
-            t = *((volatile s16*)(ptr + 0x2E));
-            if (t < (-1))
+            axis = *((volatile s16*)(ptr + 0x2E));
+            if (axis < (-1))
             {
-                a1_val |= 0x1000;
+                buttons |= PAD_BTN_UP;
             }
-            else if (t >= 2)
+            else if (axis >= 2)
             {
-                a1_val |= 0x4000;
+                buttons |= PAD_BTN_DOWN;
             }
         }
-        var_v1 = a1_val;
+        state = buttons;
     }
     g_debouncedInput = 0;
-    if ((var_v1 == g_lastInputState) || ((g_lastInputState != 0) && (var_v1 & (g_lastInputState | 0xB6F))))
+    /* 0xB6F: the non-d-pad button bits that, when shared with the previous
+     * state, keep us on the auto-repeat path. */
+    if ((state == g_lastInputState) || ((g_lastInputState != 0) && (state & (g_lastInputState | 0xB6F))))
     {
-        if (var_v1 != 0)
+        if (state != 0)
         {
-            u32 tmp = var_v1 & 0xF000;
-            if (tmp != 0)
+            u32 dpad = state & (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT);
+            if (dpad != 0)
             {
-                var_v1 = tmp;
+                state = dpad;
             }
             if (g_inputRepeatTimer == 0)
             {
-                g_debouncedInput = var_v1;
+                g_debouncedInput = state;
                 g_inputRepeatTimer = 2;
             }
             else
@@ -1096,7 +1111,7 @@ void UpdateMenuInput(void)
         }
         *((s32*)(&g_lastInputState)) = 0;
     }
-    else if (var_v1 == 0)
+    else if (state == 0)
     {
         (void)(&g_debouncedInput);
         *((s32*)(&g_inputRepeatTimer)) = 0;
@@ -1104,8 +1119,8 @@ void UpdateMenuInput(void)
     }
     else
     {
-        g_debouncedInput = var_v1;
-        g_lastInputState = var_v1;
+        g_debouncedInput = state;
+        g_lastInputState = state;
         g_inputRepeatTimer = 15;
     }
 }
@@ -1236,7 +1251,7 @@ void handle_save_slot_input(void)
     }
     g_slotSlideXLerped = g_slotSlideX;
     g_slotSlideYLerped = g_slotSlideY;
-    UpdateMenuInput();
+    update_menu_input();
     if (g_slotSlideX == 0)
     {
         if (g_debouncedInput & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
