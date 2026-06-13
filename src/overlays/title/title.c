@@ -26,6 +26,14 @@
  * slot selected") on the load-a-saved-game path. */
 #define TITLE_ITEM_IDLE_QUIT 0xFF
 
+/* Number of selectable slots in the title menu item-flag table
+ * (g_titleMenuItemFlags), each occupying 2 bytes. */
+#define TITLE_MENU_SLOT_COUNT 16
+
+/* Idle countdown loaded by init_title_menu_state: 0xE10 == 3600 frames (~60 s at
+ * 60 Hz) before the title times out to the attract loop. */
+#define TITLE_IDLE_COUNTDOWN_FRAMES 0xE10
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
@@ -160,7 +168,7 @@ void render_menu(MenuContext* context)
         VSync(1);
         RenderFadeOverlay(s0);
         RenderTitleBackdrop(s0);
-        RenderTitleMenuItems(s0);
+        render_title_menu_items(s0);
         HandleTitleMenuInput();
 
         if (g_titleMenuExitState == 0)
@@ -312,7 +320,7 @@ void InitTitleDisplay(void* arg0)
 
     ResetFadeState();
     SetFadeTarget(0x100, 0x100, 0x100, 0x14);
-    InitTitleMenuState();
+    init_title_menu_state();
 
     g_titleMenuExitState = 0;
 }
@@ -601,7 +609,7 @@ void RenderTitleBackdrop(void* arg0)
 void HandleTitleMenuInput(void)
 {
     s32 op = 0x7C;
-    UpdateMenuInput();
+    update_menu_input();
     if (g_titleIdleCountdown == 0)
     {
         g_titleMenuExitState = 1;
@@ -617,7 +625,7 @@ void HandleTitleMenuInput(void)
     }
     if (g_debouncedInput & 0x9000)
     {
-        MenuCursorUp();
+        menu_cursor_up();
         PlayTitleSfx(0x7D, 0x80);
     }
     else if (g_debouncedInput & 0x6100)
@@ -671,199 +679,242 @@ void MenuCursorDown(void)
 }
 
 /**
- * Mirror of MenuCursorDown searching backward.
+ * @brief Move the menu cursor to the previous enabled slot, wrapping to the
+ *        last enabled slot if already at the top.
  *
- * decomp.me (100%) https://decomp.me/scratch/mmzjI
+ * @details Mirror of MenuCursorDown searching backward. Scans
+ * g_titleMenuItemFlags from the slot before the current selection toward 0
+ * for the next enabled slot, decrementing the visible rank. If the search
+ * runs past slot 0, it wraps: a forward pass over all TITLE_MENU_SLOT_COUNT
+ * slots counts the enabled ones and records the last enabled index, then the
+ * cursor is parked on that slot with rank = count - 1.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/mmzjI
  */
-void MenuCursorUp(void)
+void menu_cursor_up(void)
 {
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_a2;
-    s32 var_v1_2;
-    u8* var_a0;
-    u8* var_v1;
-    u8* base;
-    u8 temp;
-    var_a1 = g_titleSelectedItem - 1;
-    if (var_a1 >= 0)
+    s32 item;
+    s32 idx;
+    s32 last_enabled;
+    s32 enabled_count;
+    u8* scan_ptr;
+    u8* item_ptr;
+    u8* flags_base;
+    u8 rank;
+    item = g_titleSelectedItem - 1;
+    if (item >= 0)
     {
-        base = &g_titleMenuItemFlags[0];
-        var_v1 = base + (var_a1 * 2);
-        while (var_a1 >= 0)
+        flags_base = &g_titleMenuItemFlags[0];
+        item_ptr = flags_base + (item * 2);
+        while (item >= 0)
         {
-            if ((*var_v1) != 0)
+            if ((*item_ptr) != 0)
             {
                 break;
             }
-            var_a1--;
-            var_v1 -= 2;
+            item--;
+            item_ptr -= 2;
         }
     }
-    if (var_a1 < 0)
+    if (item < 0)
     {
-        var_v1_2 = 0;
-        var_a1_2 = 0;
+        enabled_count = 0;
+        idx = 0;
         do
         {
-            var_a0 = &g_titleMenuItemFlags[0];
-            while (var_a1_2 < 0x10)
+            scan_ptr = &g_titleMenuItemFlags[0];
+            while (idx < TITLE_MENU_SLOT_COUNT)
             {
-                if ((*var_a0) != 0)
+                if ((*scan_ptr) != 0)
                 {
-                    var_v1_2++;
-                    var_a2 = var_a1_2;
+                    enabled_count++;
+                    last_enabled = idx;
                 }
-                var_a1_2++;
-                var_a0 += 2;
+                idx++;
+                scan_ptr += 2;
             };
         } while (0);
 
-        g_titleVisibleItemRank = var_v1_2 - 1;
-        g_titleSelectedItem = (u8)var_a2;
+        g_titleVisibleItemRank = enabled_count - 1;
+        g_titleSelectedItem = (u8)last_enabled;
         return;
     }
-    temp = g_titleVisibleItemRank;
-    g_titleSelectedItem = (u8)var_a1;
-    g_titleVisibleItemRank = temp - 1;
+    rank = g_titleVisibleItemRank;
+    g_titleSelectedItem = (u8)item;
+    g_titleVisibleItemRank = rank - 1;
     return;
 }
 
 /**
- * Walks D_80102670 and emits the cursor + each enabled menu item's quad.
- * The cursor uses D_8007FD2C[(g_titleAnimFrame >> 2) & 3] as a 4-frame
- * blink palette index.
+ * @brief Emit the title-menu header, each enabled item, and the cursor.
  *
- * decomp.me (65.89%) https://decomp.me/scratch/K627m
+ * @details Walks the 16-slot g_titleMenuItemFlags table and emits one
+ * emit_menu_item_quad per enabled slot, stacking them vertically (item_y += 0xC
+ * each). The currently selected item (visible_index == g_titleVisibleItemRank)
+ * uses CLUT 1, the rest CLUT 2. A fixed header quad is emitted first, and the
+ * cursor quad last; the cursor's U coordinate cycles through
+ * g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
+ * its Y tracks the selected rank. The advanced prim cursor is written back to
+ * MenuContext::next_prim_ptr.
+ *
+ * @param ctx Active MenuContext render buffer.
+ *
+ * @see decomp.me (65.89%) https://decomp.me/scratch/K627m
  */
-void RenderTitleMenuItems(void* arg0)
+void render_title_menu_items(void* ctx)
 {
-    s32 temp_s4;
-    s32 var_a1;
-    s32 var_s0;
-    s32 var_s2;
-    s32 var_s3;
-    s32 var_s6;
-    u8* var_s1;
-    s32 unk80B8;
-    s32 var_v0;
-    s32 result;
-    temp_s4 = (s32)(((u8*)arg0) + 0x40);
-    var_s6 = 0x88;
-    var_s3 = 0xA0;
-    var_s2 = 0;
-    var_s0 = 0;
-    unk80B8 = *((s32*)(((u8*)arg0) + 0x80B8));
-    var_a1 = EmitMenuItemQuad(temp_s4, unk80B8, 0, 0x64, 0xC8, 0, 0x80, 1);
-    var_s1 = &g_titleMenuItemFlags[0];
+    s32 ot_head;
+    s32 prim;
+    s32 slot;
+    s32 visible_index;
+    s32 item_y;
+    s32 item_x;
+    u8* flag_ptr;
+    s32 first_prim;
+    s32 clut_index;
+    s32 last_prim;
+    ot_head = (s32)(((u8*)ctx) + 0x40);
+    item_x = 0x88;
+    item_y = 0xA0;
+    visible_index = 0;
+    slot = 0;
+    first_prim = *((s32*)(((u8*)ctx) + 0x80B8));
+    prim = emit_menu_item_quad(ot_head, first_prim, 0, 0x64, 0xC8, 0, 0x80, 1);
+    flag_ptr = &g_titleMenuItemFlags[0];
     do
     {
-        if ((*var_s1) != 0)
+        if ((*flag_ptr) != 0)
         {
-            if (g_titleVisibleItemRank == var_s2)
+            if (g_titleVisibleItemRank == visible_index)
             {
-                var_v0 = 1;
+                clut_index = 1;
             }
             else
             {
-                var_v0 = 2;
+                clut_index = 2;
             }
-            var_a1 = EmitMenuItemQuad(temp_s4, var_a1, var_s0 + 1, var_s6, var_s3, 0, 0x80, var_v0) + 0x28;
-            var_s2++;
-            var_s3 += 0xC;
+            prim = emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, clut_index) + 0x28;
+            visible_index++;
+            item_y += 0xC;
         }
-        var_s0++;
-        var_s1 += 2;
-    } while (var_s0 < 0x10);
-    result = EmitMenuItemQuad(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
-                              (s32)D_8007FD2C[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
-    *((s32*)(((u8*)arg0) + 0x80B8)) = result;
+        slot++;
+        flag_ptr += 2;
+    } while (slot < 0x10);
+    last_prim = emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
+                                    (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
+    *((s32*)(((u8*)ctx) + 0x80B8)) = last_prim;
     g_titleAnimFrame++;
 }
 
 /**
- * Builds a single menu-item sprite primitive (text quad + tex-page word)
- * at (x, y) and links it into the OT.
+ * @brief Build one menu-item POLY_FT4 (textured quad) and link it into the OT.
  *
- * decomp.me (100%) https://decomp.me/scratch/FcuOZ
+ * @details Hand-writes a libgpu POLY_FT4 (code 0x2C, len 9, equivalent to
+ * setPolyFT4) at screen (x, y) with size @p width, samples a 16-px-tall
+ * texture row selected by @p tex_row (V = tex_row*16 .. +0x10), and links it
+ * at the head of @p ot_head. The four corners are neutral-grey (0x80) flat
+ * shaded; the texture page is fixed at 5 and the CLUT y is fixed at 480
+ * (the packed 0x7800), with @p clut_index choosing the CLUT x.
+ *
+ * Uses setPolyFT4 for the tag; the remaining fields are written as raw
+ * byte/halfword stores rather than setUV4/setXY4/setRGB0/setClut/addPrim,
+ * because the original interleaves them in a non-canonical order (and hoists
+ * the OT-link load) that those bulk macros would reorder, breaking the match.
+ *
+ * @param ot_head    OT entry to link this primitive in front of.
+ * @param prim       Destination primitive buffer (>= 0x28 bytes).
+ * @param tex_row    Texture row index; selects V = tex_row*16 (top) .. +16.
+ * @param x          Screen X of the quad's left edge.
+ * @param y          Screen Y of the quad's top edge.
+ * @param u0_base    Base U texture coordinate (left edge).
+ * @param width      Quad width in pixels, added to x and u0_base for the
+ *                   right edge.
+ * @param clut_index CLUT x index (low 6 bits) packed into the CLUT word.
+ * @return Pointer just past the emitted primitive (prim + 0x28).
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/FcuOZ
  */
-void* EmitMenuItemQuad(s32* otHead, void* prim, s32 slot, s16 x, s32 y, s32 colorY, s32 step, s32 paletteIdx)
+void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s32 u0_base, s32 width, s32 clut_index)
 {
     u8* ptr;
-    u8 tmp1;
-    u8 tmp2;
-    u16 sum1;
-    u16 sum2;
-    u8 bsum;
-    u8* new_var;
-    u16 t1_val;
+    u8 v_top;
+    u8 v_bottom;
+    u16 x_right;
+    u16 y_bottom;
+    u8 u_right;
+    u8* y1_ptr;
+    u16 clut_word;
     u32 old_word;
     u32 new_word;
-    u32 mask_lo;
-    u32 mask_hi;
+    u32 addr_mask;
+    u32 tag_mask;
     ptr = (u8*)prim;
-    mask_lo = 0x00FFFFFF;
-    ptr[0x03] = 9;
-    ptr[0x07] = 0x2C;
-    tmp1 = (u8)(slot << 4);
-    ptr[0x06] = 0x80;
-    ptr[0x15] = tmp1;
-    ptr[0x0D] = tmp1;
-    tmp2 = (u8)((slot << 4) + 0x10);
-    ptr[0x05] = 0x80;
-    ptr[0x04] = 0x80;
-    ptr[0x25] = tmp2;
-    ptr[0x1D] = tmp2;
-    *((u16*)(ptr + 0x18)) = (u16)x;
-    *((u16*)(ptr + 0x08)) = (u16)x;
-    *((u16*)(ptr + 0x16)) = 5;
-    mask_hi = 0xFF000000;
-    sum1 = (u16)(x + step);
-    new_var = ptr + 0x12;
-    *((u16*)new_var) = (u16)y;
-    *((u16*)(ptr + 0x0A)) = (u16)y;
-    sum2 = (u16)(y + 0x10);
+    addr_mask = 0x00FFFFFF;
+    setPolyFT4(ptr); /* len = 9, code = 0x2C */
+    v_top = (u8)(tex_row << 4);
+    ptr[0x06] = 0x80; /* b0 */
+    ptr[0x15] = v_top; /* v1 */
+    ptr[0x0D] = v_top; /* v0 */
+    v_bottom = (u8)((tex_row << 4) + 0x10);
+    ptr[0x05] = 0x80; /* g0 */
+    ptr[0x04] = 0x80; /* r0 */
+    ptr[0x25] = v_bottom; /* v3 */
+    ptr[0x1D] = v_bottom; /* v2 */
+    *((u16*)(ptr + 0x18)) = (u16)x; /* x2 */
+    *((u16*)(ptr + 0x08)) = (u16)x; /* x0 */
+    *((u16*)(ptr + 0x16)) = 5;      /* tpage */
+    tag_mask = 0xFF000000;
+    x_right = (u16)(x + width);
+    y1_ptr = ptr + 0x12;
+    *((u16*)y1_ptr) = (u16)y;       /* y1 */
+    *((u16*)(ptr + 0x0A)) = (u16)y; /* y0 */
+    y_bottom = (u16)(y + 0x10);
     do
     {
     } while (0);
-    ptr[0x1C] = (u8)colorY;
-    ptr[0x0C] = (u8)colorY;
-    bsum = (u8)(colorY + step);
-    t1_val = (u16)((paletteIdx & 0x3F) | 0x7800);
-    *((u16*)(ptr + 0x22)) = sum2;
-    *((u16*)(ptr + 0x1A)) = sum2;
+    ptr[0x1C] = (u8)u0_base; /* u2 */
+    ptr[0x0C] = (u8)u0_base; /* u0 */
+    u_right = (u8)(u0_base + width);
+    clut_word = (u16)((clut_index & 0x3F) | 0x7800);
+    *((u16*)(ptr + 0x22)) = y_bottom; /* y3 */
+    *((u16*)(ptr + 0x1A)) = y_bottom; /* y2 */
     old_word = *((u32*)ptr);
-    *((u16*)(ptr + 0x20)) = sum1;
-    *((u16*)(ptr + 0x10)) = sum1;
-    ptr[0x24] = bsum;
-    ptr[0x14] = bsum;
-    *((u16*)(ptr + 0x0E)) = t1_val;
-    new_word = (old_word & mask_hi) | (((u32)(*otHead)) & mask_lo);
+    *((u16*)(ptr + 0x20)) = x_right; /* x3 */
+    *((u16*)(ptr + 0x10)) = x_right; /* x1 */
+    ptr[0x24] = u_right; /* u3 */
+    ptr[0x14] = u_right; /* u1 */
+    *((u16*)(ptr + 0x0E)) = clut_word; /* clut */
+    new_word = (old_word & tag_mask) | (((u32)(*ot_head)) & addr_mask);
     *((u32*)ptr) = new_word;
-    *otHead = (s32)((((u32)(*otHead)) & mask_hi) | (((u32)ptr) & mask_lo));
+    *ot_head = (s32)((((u32)(*ot_head)) & tag_mask) | (((u32)ptr) & addr_mask));
     return (void*)(ptr + 0x28);
 }
 
 /**
- * Initialises menu-state globals: zeros the per-slot flag table, enables
- * the first 4 slots, sets the idle countdown to 0xE10 frames (≈60 s @ 60Hz),
- * and uploads the two menu TIMs from D_800522E8[1..2] to VRAM.
+ * @brief Initialise the title-menu state globals and upload its TIMs.
  *
- * decomp.me (100%) https://decomp.me/scratch/HW23j
+ * @details Zeros the per-slot flag table (TITLE_MENU_SLOT_COUNT entries),
+ * enables the first 4 slots, resets cursor/input/animation globals, arms the
+ * idle countdown to TITLE_IDLE_COUNTDOWN_FRAMES, and uploads the two menu TIMs
+ * from g_titleMenuTimTable[1..2] to VRAM. When re-entering from the attract
+ * loop (g_previousGameState == 0) it advances the cursor to the first enabled
+ * slot (same forward scan as MenuCursorDown).
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/HW23j
  */
-void InitTitleMenuState(void)
+void init_title_menu_state(void)
 {
-    u8* ptr;
+    u8* flag_ptr;
     s32 i;
-    s32 idx;
-    u8* q;
+    s32 next_item;
+    u8* item_ptr;
     i = 0;
-    ptr = g_titleMenuItemFlags;
-    for (i = 0; i < 16; i++)
+    flag_ptr = g_titleMenuItemFlags;
+    for (i = 0; i < TITLE_MENU_SLOT_COUNT; i++)
     {
-        ptr[0] = 0;
-        ptr[1] = 0;
-        ptr += 2;
+        flag_ptr[0] = 0;
+        flag_ptr[1] = 0;
+        flag_ptr += 2;
     }
 
     g_titleMenuItemFlags[0] = 1;
@@ -878,71 +929,89 @@ void InitTitleMenuState(void)
     g_inputRepeatTimer = 0;
     g_lastInputState = 0;
     g_debouncedInput = 0;
-    g_titleIdleCountdown = 0xE10;
-    UploadTim((void*)(((u8*)&D_800522E8) + D_800522E8[1]), 0x140, 0, 0, 0x1E0);
-    UploadTim((void*)(((u8*)&D_800522E8) + D_800522E8[2]), 0x140, 0x100, 0, 0x1E1);
+    g_titleIdleCountdown = TITLE_IDLE_COUNTDOWN_FRAMES;
+    upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[1]), 0x140, 0, 0, 0x1E0);
+    upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[2]), 0x140, 0x100, 0, 0x1E1);
     if (g_previousGameState == 0)
     {
-        idx = g_titleSelectedItem + 1;
-        if (idx < 16)
+        next_item = g_titleSelectedItem + 1;
+        if (next_item < TITLE_MENU_SLOT_COUNT)
         {
-            q = g_titleMenuItemFlags + (idx << 1);
+            item_ptr = g_titleMenuItemFlags + (next_item << 1);
             do
             {
-                if ((D_800522E8 && D_800522E8) && D_800522E8)
+                if ((g_titleMenuTimTable && g_titleMenuTimTable) && g_titleMenuTimTable)
                 {
                 }
-                if ((*q) != 0)
+                if ((*item_ptr) != 0)
                 {
                     break;
                 }
-                idx++;
-                q += 2;
-            } while (idx < 16);
+                next_item++;
+                item_ptr += 2;
+            } while (next_item < TITLE_MENU_SLOT_COUNT);
         }
-        if (idx == 16)
+        if (next_item == TITLE_MENU_SLOT_COUNT)
         {
             g_titleVisibleItemRank = 0;
             g_titleSelectedItem = 0;
         }
         else
         {
-            g_titleSelectedItem = (u8)idx;
+            g_titleSelectedItem = (u8)next_item;
             g_titleVisibleItemRank++;
         }
     }
 }
 
 /**
- * Standard TIM-style image uploader: reads the header flags at +4, then
- * conditionally LoadImages the CLUT followed by the pixel block.
+ * @brief Upload a standard PSX TIM image (optional CLUT + pixel block) to VRAM.
  *
- * decomp.me (100%) https://decomp.me/scratch/fzh5x
+ * @details Reads the TIM flag word at +4: if the CLUT-present bit is set,
+ * loads the CLUT (clut_width x clut_height entries as a single VRAM row) at
+ * (clut_x, clut_y), then advances @c p past the CLUT block by its byte length.
+ * The pixel block that follows is then loaded at (x, y) using its own
+ * width/height header.
+ *
+ * The TIM layout used here (offsets from @c p):
+ *  - +0x04 flag word (bit 3 = has CLUT; happens to equal TIM_HEADER_SIZE)
+ *  - CLUT block: +0x08 block byte length, +0x0C/0x0E VRAM x/y,
+ *    +0x10/0x12 width/height, +0x14 entries
+ *  - pixel block: +0x08 VRAM x/y, +0x10/0x12 width/height (here read as
+ *    +0x08/0x0A after @c p is advanced), +0x0C pixels
+ *
+ * @param tim   Pointer to the TIM image header.
+ * @param x     Destination VRAM X for the pixel block.
+ * @param y     Destination VRAM Y for the pixel block.
+ * @param clut_x Destination VRAM X for the CLUT.
+ * @param clut_y Destination VRAM Y for the CLUT.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/fzh5x
  */
-void UploadTim(void* tim, s16 x, s16 y, s16 clutX, s32 clutY)
+void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
 {
     u8* p = (u8*)tim;
-    int new_var;
+    int tim_header_size;
     RECT rect;
-    s32 temp_s1;
-    u16 mul_h;
-    int new_var2;
-    int new_var3;
-    u16 mul_l;
-    new_var = 8;
-    new_var2 = 1;
-    if (p[4] & new_var)
+    s32 clut_block_len;
+    u16 clut_width;
+    int clut_rows;
+    int clut_skip_base;
+    u16 clut_height;
+    tim_header_size = 8;
+    clut_rows = 1;
+    if (p[4] & tim_header_size)
     {
-        mul_h = *((u16*)(p + 0x10));
-        mul_l = *((u16*)(p + 0x12));
-        temp_s1 = *((s32*)(p + new_var));
-        new_var3 = 8;
-        rect.x = clutX;
-        rect.y = (s16)clutY;
-        rect.w = mul_h * mul_l;
-        rect.h = new_var2;
+        clut_width = *((u16*)(p + 0x10));
+        clut_height = *((u16*)(p + 0x12));
+        clut_block_len = *((s32*)(p + tim_header_size));
+        clut_skip_base = 8;
+        rect.x = clut_x;
+        rect.y = (s16)clut_y;
+        rect.w = clut_width * clut_height;
+        rect.h = clut_rows;
         LoadImage(&rect, (u_long*)(p + 0x14));
-        p = (p + new_var3) + temp_s1;
+        p = (p + clut_skip_base) + clut_block_len;
     }
     else
     {
@@ -975,113 +1044,128 @@ void UploadTim(void* tim, s16 x, s16 y, s16 clutX, s32 clutY)
  */
 s32 read_pad_state(void)
 {
-    signed short new_var;
+    signed short axis_x_dup;
     unsigned char* ptr;
-    unsigned char a2;
-    unsigned short v1;
-    unsigned short v0;
-    unsigned long a0_val;
-    unsigned int new_var2;
-    signed short t;
+    unsigned char device_status;
+    unsigned short raw_buttons;
+    unsigned short raw_buttons_hi;
+    unsigned long buttons;
+    unsigned int raw_buttons_reread;
+    signed short axis;
     ptr = (unsigned char*)0x801ED600;
-    a2 = ptr[0];
-    if (a2 >= 0xFE)
+    device_status = ptr[0];
+    if (device_status >= 0xFE)
     {
         return 0;
     }
-    v1 = *((unsigned short*)(ptr + 2));
-    new_var2 = *((unsigned short*)(ptr + 2));
-    v0 = new_var2;
-    a0_val = (v1 >> 8) | (v0 << 8);
-    a0_val = PAD_REMAP_FACE_BITS(a0_val);
-    if (a2)
+    raw_buttons = *((unsigned short*)(ptr + 2));
+    raw_buttons_reread = *((unsigned short*)(ptr + 2));
+    raw_buttons_hi = raw_buttons_reread;
+    buttons = (raw_buttons >> 8) | (raw_buttons_hi << 8);
+    buttons = PAD_REMAP_FACE_BITS(buttons);
+    if (device_status)
     {
-        t = *((signed short*)(ptr + 0x2C));
-        new_var = t;
-        if (t < (-1))
+        axis = *((signed short*)(ptr + 0x2C));
+        axis_x_dup = axis;
+        if (axis < (-1))
         {
-            a0_val |= 0x8000;
+            buttons |= PAD_BTN_LEFT;
         }
-        else if (new_var >= 2)
+        else if (axis_x_dup >= 2)
         {
-            a0_val |= 0x2000;
+            buttons |= PAD_BTN_RIGHT;
         }
-        t = *((signed short*)(ptr + 0x2E));
-        if (t < (-1))
+        axis = *((signed short*)(ptr + 0x2E));
+        if (axis < (-1))
         {
-            a0_val |= 0x1000;
+            buttons |= PAD_BTN_UP;
         }
-        else if (t >= 2)
+        else if (axis >= 2)
         {
-            a0_val |= 0x4000;
+            buttons |= PAD_BTN_DOWN;
         }
     }
-    return a0_val;
+    return buttons;
 }
 
 /**
- * Counterpart of CHECKPS UpdateInputDebounced: reads SCD pad state, builds
- * the remapped button bitmap, applies debounce + auto-repeat using
- * g_lastInputState / g_inputRepeatTimer, and stores the result in
- * g_debouncedInput.
+ * @brief Read the SCD pad, debounce it, and publish the result in g_debouncedInput.
  *
- * decomp.me (99.90%) https://decomp.me/scratch/yZqQJ
+ * @details Counterpart of CHECKPS UpdateInputDebounced. Builds the remapped
+ * button bitmap (byte-swap + face-bit remap + analog-stick to d-pad
+ * thresholding) exactly like read_pad_input, then runs an auto-repeat state
+ * machine over g_lastInputState / g_inputRepeatTimer:
+ *  - If this frame matches the previous state (or shares any repeat-eligible
+ *    bit with it), only the d-pad directions auto-repeat: g_debouncedInput
+ *    fires every (2 + 1) frames while held, otherwise it is suppressed.
+ *  - A fresh, different press is published immediately and arms the longer
+ *    initial-repeat delay (15 frames).
+ *  - No input clears all three globals.
+ *
+ * @note The pad registers are read through a raw pointer (with a duplicate
+ *       buttonData load and a volatile axisY read) rather than the SCDRegs
+ *       struct used by read_pad_input; those reads are load-bearing artifacts
+ *       of the matched codegen, so they are left as-is.
+ *
+ * @see decomp.me (99.90%) https://decomp.me/scratch/yZqQJ
  */
-void UpdateMenuInput(void)
+void update_menu_input(void)
 {
     u8* ptr = (u8*)0x801ED600;
-    u8 a2 = D_801ED600[0];
-    u16 v1;
-    u16 v0;
-    u32 a1_val;
-    s16 t;
-    s32 var_v1;
-    if (a2 >= 0xFE)
+    u8 device_status = D_801ED600[0];
+    u16 raw_buttons;
+    u16 unused;
+    u32 buttons;
+    s16 axis;
+    s32 state;
+    if (device_status >= 0xFE)
     {
-        var_v1 = 0;
+        state = 0;
     }
     else
     {
-        v1 = *((u16*)(ptr + 2));
+        raw_buttons = *((u16*)(ptr + 2));
 
-        a1_val = (v1 >> 8) | (*((u16*)(2 + ptr)) << 8);
-        a1_val = PAD_REMAP_FACE_BITS(a1_val);
+        buttons = (raw_buttons >> 8) | (*((u16*)(2 + ptr)) << 8);
+        buttons = PAD_REMAP_FACE_BITS(buttons);
         if ((*ptr) != 0)
         {
-            t = *((s16*)(ptr + 0x2C));
-            if (t < (-1))
+            axis = *((s16*)(ptr + 0x2C));
+            if (axis < (-1))
             {
-                a1_val |= 0x8000;
+                buttons |= PAD_BTN_LEFT;
             }
-            else if (t >= 2)
+            else if (axis >= 2)
             {
-                a1_val |= 0x2000;
+                buttons |= PAD_BTN_RIGHT;
             }
-            t = *((volatile s16*)(ptr + 0x2E));
-            if (t < (-1))
+            axis = *((volatile s16*)(ptr + 0x2E));
+            if (axis < (-1))
             {
-                a1_val |= 0x1000;
+                buttons |= PAD_BTN_UP;
             }
-            else if (t >= 2)
+            else if (axis >= 2)
             {
-                a1_val |= 0x4000;
+                buttons |= PAD_BTN_DOWN;
             }
         }
-        var_v1 = a1_val;
+        state = buttons;
     }
     g_debouncedInput = 0;
-    if ((var_v1 == g_lastInputState) || ((g_lastInputState != 0) && (var_v1 & (g_lastInputState | 0xB6F))))
+    /* 0xB6F: the non-d-pad button bits that, when shared with the previous
+     * state, keep us on the auto-repeat path. */
+    if ((state == g_lastInputState) || ((g_lastInputState != 0) && (state & (g_lastInputState | 0xB6F))))
     {
-        if (var_v1 != 0)
+        if (state != 0)
         {
-            u32 tmp = var_v1 & 0xF000;
-            if (tmp != 0)
+            u32 dpad = state & (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT);
+            if (dpad != 0)
             {
-                var_v1 = tmp;
+                state = dpad;
             }
             if (g_inputRepeatTimer == 0)
             {
-                g_debouncedInput = var_v1;
+                g_debouncedInput = state;
                 g_inputRepeatTimer = 2;
             }
             else
@@ -1096,7 +1180,7 @@ void UpdateMenuInput(void)
         }
         *((s32*)(&g_lastInputState)) = 0;
     }
-    else if (var_v1 == 0)
+    else if (state == 0)
     {
         (void)(&g_debouncedInput);
         *((s32*)(&g_inputRepeatTimer)) = 0;
@@ -1104,8 +1188,8 @@ void UpdateMenuInput(void)
     }
     else
     {
-        g_debouncedInput = var_v1;
-        g_lastInputState = var_v1;
+        g_debouncedInput = state;
+        g_lastInputState = state;
         g_inputRepeatTimer = 15;
     }
 }
@@ -1184,54 +1268,66 @@ void InitSaveSlotMenu(void)
 void RenderSaveSlotMenu(MenuContext* arg0)
 {
     arg0->next_prim_ptr = (u_long*)RenderSaveLayoutPrims(arg0->next_prim_ptr, (s32*)((char*)arg0 + 0x40));
-    HandleSaveSlotInput();
+    handle_save_slot_input();
 }
 
 /**
- * Per-frame input dispatcher for the save-slot sub-menu: drives the slide
- * lerper, decodes confirm/cancel/select, and reacts to L/R panel scrolls.
+ * @brief Per-frame input dispatcher for the save-slot sub-menu.
  *
- * decomp.me (99.41%) https://decomp.me/scratch/Xl8gF
+ * @details While a slide is in flight (g_slotSlideFrames != 0) it only steps
+ * the X/Y slide lerpers and returns. Once settled it snaps the lerpers to
+ * their targets, reads input, and branches on whether the stage is at its
+ * home column (g_slotSlideX == 0) or scrolled to a side panel:
+ *  - Home column: confirm toggles the new-game expand entries (18/19), a
+ *    left/right press scrolls to a side panel, and cancel quits the sub-menu
+ *    (g_titleMenuExitState = 2).
+ *  - Side panel: confirm loads the matching sub-menu layout, seeds its RNG,
+ *    copies the selected save record into D_80043618, clears the per-slot
+ *    field of every other menu-layout slot, and confirms (exit state 1);
+ *    cancel scrolls back home; up/down move the slot cursor (wrapping over
+ *    the 11 slots). Always re-runs the highlight-panel animation.
+ *
+ * @see decomp.me (99.41%) https://decomp.me/scratch/Xl8gF
  */
-void HandleSaveSlotInput(void)
+void handle_save_slot_input(void)
 {
-    s32 temp_a1;
-    s32 temp_s0;
-    u8* new_var;
-    s32* new_var4;
-    s32 temp_v0_2;
-    int new_var2;
-    s32 temp_v0_3;
-    s32 new_var3;
-    s32 temp_v1;
-    s32 var_a0_2;
-    s32 var_v0;
-    u32 var_a0;
-    u8 temp_v0;
-    MenuLayout* var_a1;
-    u8* var_v1;
+    s32 slide_x_step;
+    s32 rng_lo;
+    u8* unused_ptr;
+    s32* slide_x_lerped_ptr;
+    s32 prev_index;
+    int rng_hi;
+    s32 next_index;
+    s32 selected_slot;
+    s32 slide_y_step;
+    s32 slot_idx;
+    s32 new_flags;
+    u32 copy_count;
+    u8 byte;
+    MenuLayout* layout;
+    u8* src_ptr;
     u8* dest_ptr;
-    s32 flag;
+    s32 flag_mask;
     if (g_slotSlideFrames != 0)
     {
-        new_var4 = &g_slotSlideXLerped;
-        temp_a1 = ((s32)(g_slotSlideX - (*new_var4))) / ((s32)g_slotSlideFrames);
-        temp_v1 = ((s32)(g_slotSlideY - g_slotSlideYLerped)) / ((s32)g_slotSlideFrames);
+        slide_x_lerped_ptr = &g_slotSlideXLerped;
+        slide_x_step = ((s32)(g_slotSlideX - (*slide_x_lerped_ptr))) / ((s32)g_slotSlideFrames);
+        slide_y_step = ((s32)(g_slotSlideY - g_slotSlideYLerped)) / ((s32)g_slotSlideFrames);
         g_slotSlideFrames -= 1;
-        g_slotSlideXLerped += temp_a1;
-        g_slotSlideYLerped += temp_v1;
+        g_slotSlideXLerped += slide_x_step;
+        g_slotSlideYLerped += slide_y_step;
         return;
     }
     g_slotSlideXLerped = g_slotSlideX;
     g_slotSlideYLerped = g_slotSlideY;
-    UpdateMenuInput();
+    update_menu_input();
     if (g_slotSlideX == 0)
     {
-        if (g_debouncedInput & 0xA000)
+        if (g_debouncedInput & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
         {
             SaveLayoutEntry* entry;
             PlayTitleSfx(0x7D, 0x80);
-            entry = ((SaveLayoutEntry*)D_800F993C);
+            entry = ((SaveLayoutEntry*)g_saveLayoutTable);
             if (entry[18].type != 0)
             {
                 entry[18].type = 0;
@@ -1242,20 +1338,20 @@ void HandleSaveSlotInput(void)
             entry[19].type = g_slotSlideYLerped * 0;
             return;
         }
-        if (g_debouncedInput & 0xA20)
+        if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
             PlayTitleSfx(0x7E, 0x80);
             if (D_800F9AED != 0)
             {
                 scroll_slots_right();
-                ResetSaveSlotPanel();
+                reset_save_slot_panel();
                 return;
             }
             scroll_slots_left();
-            ResetSaveSlotPanel();
+            reset_save_slot_panel();
             return;
         }
-        if (g_debouncedInput & 0x40)
+        if (g_debouncedInput & PAD_BTN_CIRCLE)
         {
             PlayTitleSfx(0x7F, 0x80);
             g_titleMenuExitState = 2;
@@ -1263,87 +1359,87 @@ void HandleSaveSlotInput(void)
     }
     else
     {
-        if (g_debouncedInput & 0xA20)
+        if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
             if (g_slotSlideX > 0)
             {
                 load_sub_menu_layout(0);
-                flag = ~0x7F;
-                var_a1 = (MenuLayout*)g_menuLayoutBuffer;
-                var_v0 = (var_a1->slot_flags) & flag;
+                flag_mask = ~0x7F;
+                layout = (MenuLayout*)g_menuLayoutBuffer;
+                new_flags = (layout->slot_flags) & flag_mask;
             }
             else
             {
                 load_sub_menu_layout(1);
-                flag = ~0x7F;
-                var_a1 = (MenuLayout*)g_menuLayoutBuffer;
-                var_v0 = ((var_a1->slot_flags) & flag) | 1;
+                flag_mask = ~0x7F;
+                layout = (MenuLayout*)g_menuLayoutBuffer;
+                new_flags = ((layout->slot_flags) & flag_mask) | 1;
             }
-            var_a1->slot_flags = var_v0;
-            temp_s0 = rand();
-            new_var2 = rand();
-            temp_s0 |= new_var2 << 0xF;
-            var_a1->rng_seed = (s16)temp_s0;
+            layout->slot_flags = new_flags;
+            rng_lo = rand();
+            rng_hi = rand();
+            rng_lo |= rng_hi << 0xF;
+            layout->rng_seed = (s16)rng_lo;
             dest_ptr = D_80043618;
-            var_v1 = D_800F9BC4 + (g_slotSelectedIndex << 6);
-            var_a0 = 0;
-            while (var_a0 < 0x40U)
+            src_ptr = g_saveSlotData + (g_slotSelectedIndex << 6);
+            copy_count = 0;
+            while (copy_count < 0x40U)
             {
-                var_a0 += 1;
-                temp_v0 = *var_v1;
-                var_v1 += 1;
-                *dest_ptr = temp_v0;
+                copy_count += 1;
+                byte = *src_ptr;
+                src_ptr += 1;
+                *dest_ptr = byte;
                 dest_ptr += 1;
             }
 
-            var_a0_2 = 0;
-            new_var3 = g_slotSelectedIndex;
-            var_v1 = g_menuLayoutBuffer;
-            var_a0_2 = 0;
+            slot_idx = 0;
+            selected_slot = g_slotSelectedIndex;
+            src_ptr = g_menuLayoutBuffer;
+            slot_idx = 0;
             do
             {
-                if (new_var3 != var_a0_2)
+                if (selected_slot != slot_idx)
                 {
-                    *((s32*)(var_v1 + 0x34)) = 0;
+                    *((s32*)(src_ptr + 0x34)) = 0;
                 }
-                var_a0_2 += 1;
-                var_v1 += 4;
-            } while (var_a0_2 < 0xB);
+                slot_idx += 1;
+                src_ptr += 4;
+            } while (slot_idx < 0xB);
             PlayTitleSfx(0x7E, 0x80);
             g_titleMenuExitState = 1;
         }
-        else if (g_debouncedInput & 0x40)
+        else if (g_debouncedInput & PAD_BTN_CIRCLE)
         {
             PlayTitleSfx(0x7F, 0x80);
             if (g_slotSlideX > 0)
             {
                 scroll_slots_left();
-                ResetSaveSlotPanel();
+                reset_save_slot_panel();
             }
             else
             {
                 scroll_slots_right();
-                ResetSaveSlotPanel();
+                reset_save_slot_panel();
             }
         }
         else if (g_slotHighlightFrames == 0)
         {
-            if ((g_debouncedInput & 0x1000) != 0U)
+            if ((g_debouncedInput & PAD_BTN_UP) != 0U)
             {
                 PlayTitleSfx(0x7D, 0x80);
-                temp_v0_2 = g_slotSelectedIndex - 1;
-                g_slotSelectedIndex = temp_v0_2;
-                if (temp_v0_2 < 0)
+                prev_index = g_slotSelectedIndex - 1;
+                g_slotSelectedIndex = prev_index;
+                if (prev_index < 0)
                 {
                     g_slotSelectedIndex = 0xA;
                 }
             }
-            if (g_debouncedInput & 0x4000)
+            if (g_debouncedInput & PAD_BTN_DOWN)
             {
                 PlayTitleSfx(0x7D, 0x80);
-                temp_v0_3 = g_slotSelectedIndex + 1;
-                g_slotSelectedIndex = temp_v0_3;
-                if (temp_v0_3 >= 0xB)
+                next_index = g_slotSelectedIndex + 1;
+                g_slotSelectedIndex = next_index;
+                if (next_index >= 0xB)
                 {
                     g_slotSelectedIndex = 0;
                 }
@@ -1357,7 +1453,7 @@ void HandleSaveSlotInput(void)
  * Lerps g_slotHighlightX toward g_slotHighlightTargetX over
  * g_slotHighlightFrames frames, pans the scroll window so the selected
  * slot is always visible, then writes the updated V-coordinate and
- * visibility flags for the highlight-bar layout entries in D_800F993C.
+ * visibility flags for the highlight-bar layout entries in g_saveLayoutTable.
  *
  * decomp.me (99.73%) https://decomp.me/scratch/MhuAG
  */
@@ -1405,14 +1501,14 @@ void AnimateSaveSlotPanel(void)
             g_slotHighlightFrames = 4;
         }
     }
-    ptr = (SaveLayoutEntry*)D_800F993C;
+    ptr = (SaveLayoutEntry*)g_saveLayoutTable;
     ptr[2].v0 = (u16)g_slotHighlightX;
     ptr[3].v0 = ((u16)g_slotHighlightX) + 0x20;
     ptr[9].v0 = (u16)g_slotHighlightX;
     ptr[10].v0 = ((u16)g_slotHighlightX) + 0x20;
     if (g_slotHighlightX != 0)
     {
-        SaveLayoutEntry* ptr4 = (SaveLayoutEntry*)D_800F993C;
+        SaveLayoutEntry* ptr4 = (SaveLayoutEntry*)g_saveLayoutTable;
         ptr4[7].type = 1;
         ptr4[8].type = 1;
         ptr4[14].type = 1;
@@ -1420,7 +1516,7 @@ void AnimateSaveSlotPanel(void)
     }
     else
     {
-        SaveLayoutEntry* ptr5 = (SaveLayoutEntry*)D_800F993C;
+        SaveLayoutEntry* ptr5 = (SaveLayoutEntry*)g_saveLayoutTable;
         ptr5[7].type = 0;
         ptr5[8].type = 0;
         ptr5[14].type = 0;
@@ -1429,7 +1525,7 @@ void AnimateSaveSlotPanel(void)
     new_var2 = 0;
     if (g_slotHighlightX != 0x40)
     {
-        SaveLayoutEntry* ptr3 = (SaveLayoutEntry*)D_800F993C;
+        SaveLayoutEntry* ptr3 = (SaveLayoutEntry*)g_saveLayoutTable;
         ptr3[4].type = 1;
         ptr3[5].type = 1;
         ptr3[11].type = 1;
@@ -1437,7 +1533,7 @@ void AnimateSaveSlotPanel(void)
     }
     else
     {
-        SaveLayoutEntry* ptr2 = (SaveLayoutEntry*)D_800F993C;
+        SaveLayoutEntry* ptr2 = (SaveLayoutEntry*)g_saveLayoutTable;
         ptr2[4].type = new_var2;
         ptr2[5].type = new_var2;
         ptr2[11].type = new_var2;
@@ -1452,7 +1548,7 @@ void AnimateSaveSlotPanel(void)
     {
         scroll_offset = 0x60;
     }
-    layout = D_800F993C;
+    layout = g_saveLayoutTable;
     scroll_width = scroll_offset + 0x40;
     *((u16*)(layout + 0x96)) = scroll_width;
     *((u16*)(layout + 0x9A)) = scroll_width;
@@ -1461,49 +1557,61 @@ void AnimateSaveSlotPanel(void)
 }
 
 /**
- * Snaps the save-slot panel back to its home position and clears its
- * highlight/selection state.
+ * @brief Snap the save-slot panel back to its home position and clear its
+ *        highlight/selection state.
  *
- * decomp.me (100%) https://decomp.me/scratch/0YgmZ
+ * @details When a horizontal slide is in progress (g_slotSlideX != 0) this
+ * rebuilds the panel's layout entries in g_saveLayoutTable: it re-homes the
+ * scroll window (entries 6 and 13 reset to SAVE_SCROLL_WIDTH_HOME), shows the
+ * right highlight halves (entries 4/5/11/12) while hiding the left halves
+ * (entries 7/8/14/15), and rewrites the highlight-bar V coordinates (entries
+ * 2/3/9/10) from the now-zeroed g_slotHighlightX. The selection/highlight
+ * globals are all cleared. When no slide is active it only resets entry 0's
+ * U/V to their home values.
+ *
+ * @note When a slide is active the entries are reached through a
+ *       @ref SaveLayoutEntry pointer, matching AnimateSaveSlotPanel. The
+ *       inactive-slide branch indexes the table by g_slotSlideX (always 0
+ *       here) added to its base, so it stays raw pointer arithmetic.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/0YgmZ
  */
-void ResetSaveSlotPanel(void)
+void reset_save_slot_panel(void)
 {
-    s16 temp_v1;
+    s16 highlight_bottom_v;
     if (g_slotSlideX != 0)
     {
-        u32 base = (u32)(&D_800F993C);
-        *((u16*)(base + 0xE)) = 0x10;
+        SaveLayoutEntry* entry = (SaveLayoutEntry*)g_saveLayoutTable;
+        entry[0].v0 = SAVE_SLOT_HOME_V;
         g_slotSelectedIndex = 0;
         g_slotHighlightX = 0;
         g_slotHighlightTargetX = 0;
         g_slotHighlightFrames = 0;
-        *((u8*)(base + 0xA9)) = 0;
-        base++;
-        base--;
-        *((u8*)(base + 0xC1)) = 0;
-        *((u8*)(base + 0x151)) = 0;
-        *((u8*)(base + 0x169)) = 0;
-        temp_v1 = ((u16)g_slotHighlightX) + 0x20;
-        *((u16*)(base + 0x96)) = 0x40;
-        *((u16*)(base + 0x9A)) = 0x40;
-        *((u16*)(base + 0x13E)) = 0x40;
-        *((u16*)(base + 0x142)) = 0x40;
-        *((u16*)(base + 0xC)) = 0;
-        *((u8*)(base + 0x61)) = 1;
-        *((u8*)(base + 0x79)) = 1;
-        *((u8*)(base + 0x109)) = 1;
-        *((u8*)(base + 0x121)) = 1;
+        entry[7].type = 0;
+        entry[8].type = 0;
+        entry[14].type = 0;
+        entry[15].type = 0;
+        highlight_bottom_v = ((u16)g_slotHighlightX) + SAVE_HIGHLIGHT_SPAN;
+        entry[6].y = SAVE_SCROLL_WIDTH_HOME;
+        entry[6].tile_y = SAVE_SCROLL_WIDTH_HOME;
+        entry[13].y = SAVE_SCROLL_WIDTH_HOME;
+        entry[13].tile_y = SAVE_SCROLL_WIDTH_HOME;
+        entry[0].u0 = 0;
+        entry[4].type = 1;
+        entry[5].type = 1;
+        entry[11].type = 1;
+        entry[12].type = 1;
 
-        *((u16*)(base + 0x3E)) = (u16)g_slotHighlightX;
-        *((u16*)(base + 0x56)) = temp_v1;
-        *((u16*)(base + 0xE6)) = (u16)g_slotHighlightX;
-        *((u16*)(base + 0xFE)) = temp_v1;
+        entry[2].v0 = (u16)g_slotHighlightX;
+        entry[3].v0 = highlight_bottom_v;
+        entry[9].v0 = (u16)g_slotHighlightX;
+        entry[10].v0 = highlight_bottom_v;
         return;
     }
     {
-        u32 low_addr = (u32)(&D_800F993C);
+        u32 low_addr = (u32)(&g_saveLayoutTable);
         u32 ptr = g_slotSlideX + low_addr;
-        *((u16*)(ptr + 0xC)) = 0x10;
+        *((u16*)(ptr + 0xC)) = SAVE_SLOT_HOME_V;
         *((u16*)(ptr + 0xE)) = 0;
     }
 }
@@ -1558,7 +1666,7 @@ inline u16 inline_fn(unsigned char* arg0)
 }
 
 /**
- * Walks the 0x1B-entry × 0x18-byte layout table at D_800F993C+2 and emits
+ * Walks the 0x1B-entry × 0x18-byte layout table at g_saveLayoutTable+2 and emits
  * one of four primitive shapes per entry (text quad, simple sprite,
  * solid-coloured POLY_F4, or chunked glyph strip). Returns the new prim
  * head.
@@ -1606,12 +1714,12 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
     s32 v1;
     t0 = arg0;
     t6 = arg1;
-    t2 = D_800F993C + 2;
+    t2 = g_saveLayoutTable + 2;
     s2 = 0;
     s5 = 3;
     s4 = &g_slotSlideXLerped;
     s3 = (s32)(&g_slotSlideYLerped);
-    s0 = D_800F97FC;
+    s0 = g_saveLayoutTexTable;
     t4 = 0x00FFFFFF;
     t8 = 0xFF000000;
     do
@@ -1875,7 +1983,7 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
 }
 
 /**
- * For each of the 11 entries in D_800F97FC (stride 0x10), uploads the
+ * For each of the 11 entries in g_saveLayoutTexTable (stride 0x10), uploads the
  * CLUT and image data to VRAM and bit-packs the resulting tex-page info
  * back into the entry's control word.
  *
@@ -1896,7 +2004,7 @@ unsigned short UploadSaveLayoutTextures(void)
     RECT rect;
     int counter;
     unsigned char* new_var;
-    entry_base = D_800F97FC;
+    entry_base = g_saveLayoutTexTable;
 
     for (counter = 0; counter < 11; counter++)
     {
