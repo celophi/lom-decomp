@@ -799,8 +799,10 @@ void RenderTitleMenuItems(void* arg0)
  * shaded; the texture page is fixed at 5 and the CLUT y is fixed at 480
  * (the packed 0x7800), with @p clut_index choosing the CLUT x.
  *
- * The writes are kept as raw byte/halfword stores rather than libgpu macros
- * (setUV4/setXY4/setClut/addPrim) to preserve the matched codegen.
+ * Uses setPolyFT4 for the tag; the remaining fields are written as raw
+ * byte/halfword stores rather than setUV4/setXY4/setRGB0/setClut/addPrim,
+ * because the original interleaves them in a non-canonical order (and hoists
+ * the OT-link load) that those bulk macros would reorder, breaking the match.
  *
  * @param ot_head    OT entry to link this primitive in front of.
  * @param prim       Destination primitive buffer (>= 0x28 bytes).
@@ -831,8 +833,7 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
     u32 tag_mask;
     ptr = (u8*)prim;
     addr_mask = 0x00FFFFFF;
-    ptr[0x03] = 9;    /* P_TAG len */
-    ptr[0x07] = 0x2C; /* POLY_FT4 code */
+    setPolyFT4(ptr); /* len = 9, code = 0x2C */
     v_top = (u8)(tex_row << 4);
     ptr[0x06] = 0x80; /* b0 */
     ptr[0x15] = v_top; /* v1 */
