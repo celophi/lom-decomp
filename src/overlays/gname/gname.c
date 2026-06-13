@@ -6,7 +6,7 @@
  * Zeros the current color (@c g_fade_current) and the target color +
  * step count (@c g_fade_target). After this call the next
  * @ref render_fade_overlay tick will write a black tint (0,0,0) to the
- * primitive at @c arg0->prim_cursor.
+ * primitive at @c ctx->prim_cursor.
  *
  * @see https://decomp.me/scratch/ld2aW (100%)
  */
@@ -387,22 +387,22 @@ void reset_run_state(void)
  * @return        New char-set mode after processing the input.
  * @see decomp.me (99.78%) https://decomp.me/scratch/PpqVd
  */
-s32 handle_char_set_input(s32 arg0, s32 arg1)
+s32 handle_char_set_input(s32 mode, s32 buttons)
 {
     s32 var_s0 = 0xFF;
 
     while (var_s0 == 0xFF)
     {
-        switch (arg0)
+        switch (mode)
         {
         case 0:
         case 1:
         case 2:
         case 3:
-            if (arg1 & 0x220)
+            if (buttons & 0x220)
             {
-                g_cursor_tab = arg0;
-                switch (arg0)
+                g_cursor_tab = mode;
+                switch (mode)
                 {
                 case 0:
                     if ((name_char_count(g_active_name) != 0) && (!name_is_blank(g_active_name)))
@@ -486,26 +486,26 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
             }
             else
             {
-                if (arg1 != 0)
+                if (buttons != 0)
                 {
-                    if (arg1 & PAD_BTN_DOWN)
+                    if (buttons & PAD_BTN_DOWN)
                     {
-                        arg0 = 0x10;
-                        arg1 = 0;
+                        mode = 0x10;
+                        buttons = 0;
                         continue;
                     }
-                    if (arg1 & PAD_BTN_LEFT)
+                    if (buttons & PAD_BTN_LEFT)
                     {
-                        arg0 = (arg0 == 0) ? (3) : (arg0 - 1);
+                        mode = (mode == 0) ? (3) : (mode - 1);
                     }
-                    else if (arg1 & PAD_BTN_RIGHT)
+                    else if (buttons & PAD_BTN_RIGHT)
                     {
-                        arg0 = (arg0 < 3) ? (arg0 + 1) : (0);
+                        mode = (mode < 3) ? (mode + 1) : (0);
                     }
                 }
                 play_menu_sfx(0x7D, 0x80);
-                g_cursor_x_target = g_tab_cursor_pos[arg0 + 2].x - 8;
-                g_cursor_y_target = g_tab_cursor_pos[arg0 + 2].y;
+                g_cursor_x_target = g_tab_cursor_pos[mode + 2].x - 8;
+                g_cursor_y_target = g_tab_cursor_pos[mode + 2].y;
                 g_cursor_lerp_steps = 5;
                 var_s0 = 0;
             }
@@ -515,11 +515,11 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
         case 5:
         case 6:
         case 7:
-            if (((arg1 & 0x220) && ((g_cursor_tab = arg0, g_char_panel != (arg0 - 4)))) != 0)
+            if (((buttons & 0x220) && ((g_cursor_tab = mode, g_char_panel != (mode - 4)))) != 0)
             {
                 g_char_panel = g_cursor_tab - 4;
-                arg0 = 0x10;
-                arg1 = 0;
+                mode = 0x10;
+                buttons = 0;
                 g_scroll_target = 0;
                 g_scroll_pos = 0;
                 g_scroll_steps = 0;
@@ -529,33 +529,33 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
             }
             else
             {
-                if (arg1 != 0)
+                if (buttons != 0)
                 {
-                    if (arg1 & PAD_BTN_RIGHT)
+                    if (buttons & PAD_BTN_RIGHT)
                     {
-                        arg0 = 0x10;
-                        arg1 = 0;
+                        mode = 0x10;
+                        buttons = 0;
                         continue;
                     }
-                    if (arg1 & PAD_BTN_UP)
+                    if (buttons & PAD_BTN_UP)
                     {
-                        arg0 = (arg0 == 4) ? (6) : (arg0 - 1);
+                        mode = (mode == 4) ? (6) : (mode - 1);
                     }
-                    else if (arg1 & PAD_BTN_DOWN)
+                    else if (buttons & PAD_BTN_DOWN)
                     {
-                        arg0 = (arg0 < 6) ? (arg0 + 1) : (4);
+                        mode = (mode < 6) ? (mode + 1) : (4);
                     }
                 }
                 play_menu_sfx(0x7D, 0x80);
-                g_cursor_x_target = g_tab_cursor_pos[arg0 + 2].x - 8;
-                g_cursor_y_target = g_tab_cursor_pos[arg0 + 2].y;
+                g_cursor_x_target = g_tab_cursor_pos[mode + 2].x - 8;
+                g_cursor_y_target = g_tab_cursor_pos[mode + 2].y;
                 g_cursor_lerp_steps = 5;
                 var_s0 = 0;
             }
             break;
 
         default:
-            if (((arg1 & 0x220) && (((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)) != 0U)
+            if (((buttons & 0x220) && (((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)) != 0U)
             {
                 if (g_char_panel < 3)
                 {
@@ -623,36 +623,36 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
             {
                 s32 scroll_off;
 
-                if (arg1 != 0)
+                if (buttons != 0)
                 {
-                    if ((arg1 & PAD_BTN_UP) && ((g_char_cursor / 10) == 0))
+                    if ((buttons & PAD_BTN_UP) && ((g_char_cursor / 10) == 0))
                     {
-                        arg0 = 0;
-                        arg1 = 0;
+                        mode = 0;
+                        buttons = 0;
                         continue;
                     }
-                    if ((arg1 & PAD_BTN_LEFT) && ((g_char_cursor % 10) == 0))
+                    if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % 10) == 0))
                     {
-                        arg0 = 4;
-                        arg1 = 0;
+                        mode = 4;
+                        buttons = 0;
                         continue;
                     }
-                    if ((arg1 & PAD_BTN_UP) && ((g_char_cursor / 10) != 0))
+                    if ((buttons & PAD_BTN_UP) && ((g_char_cursor / 10) != 0))
                     {
                         g_char_cursor -= 10;
                     }
-                    else if ((arg1 & PAD_BTN_DOWN) && ((g_char_cursor / 10) != g_char_last_row))
+                    else if ((buttons & PAD_BTN_DOWN) && ((g_char_cursor / 10) != g_char_last_row))
                     {
                         g_char_cursor += 10;
                     }
-                    else if ((arg1 & PAD_BTN_LEFT) && ((g_char_cursor % 10) != 0))
+                    else if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % 10) != 0))
                     {
                         g_char_cursor -= 1;
                     }
                     else
                     {
 
-                        if ((arg1 & PAD_BTN_RIGHT) && ((g_char_cursor % 10) != 9))
+                        if ((buttons & PAD_BTN_RIGHT) && ((g_char_cursor % 10) != 9))
                         {
                             g_char_cursor += 1;
                         }
@@ -689,7 +689,7 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
         }
     }
 
-    return arg0;
+    return mode;
 }
 
 /**
@@ -1015,7 +1015,7 @@ void gname_render(RenderContext* ctx)
         emit_draw_mode_prim(
             draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
             ((char*)ctx2) + 0x34),
-        (s32)&ctx->ot[0]);
+        &ctx->ot[0]);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
     tmp_ptr = ((char*)cursor_sprite) + 0x14;
     *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
@@ -1068,7 +1068,7 @@ void gname_render(RenderContext* ctx)
         }
     }
     /* 5. Remaining sub-passes. */
-    *((void**)tmp_ptr) = emit_panel_label(emit_draw_mode_prim(prim2, &ctx->ot[0]), ctx_bytes + 0x24);
+    *((void**)tmp_ptr) = emit_panel_label(emit_draw_mode_prim(prim2, &ctx->ot[0]), (u_long*)(ctx_bytes + 0x24));
     render_char_panel(ctx, g_char_panel);
     render_name_strip(ctx2, g_active_name, g_strip_width);
 }
@@ -1097,7 +1097,7 @@ void gname_render(RenderContext* ctx)
  * @return Updated primitive write cursor after appending the sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/RnoNS
  */
-s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
+void* emit_panel_tab_sprite(void* prim, u_long* ot_entry)
 {
     s32 mode = g_char_set_mode;
 
@@ -1132,26 +1132,20 @@ s32 emit_panel_tab_sprite(s32 prim, s32 ot_entry)
  * @return Updated primitive write cursor after appending the label sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/jK7bc
  */
-s32 emit_panel_label(void* arg0, u32 arg1)
+void* emit_panel_label(void* prim, u_long* ot_entry)
 {
-    unsigned short new_var;
     s32 panel = g_char_panel;
-    new_var = 4;
-    if (panel < new_var)
+
+    if (panel < 4)
     {
-        u32 base_addr = ((u32)(&g_panel_tbl_off)) - new_var;
-        u32 offset_val = g_panel_tbl_off;
-        u16 label_offset;
-        void* label_data;
-        label_offset = *((u16*)(((panel * 2) + offset_val) + base_addr));
-        label_data = (void*)(offset_val + (label_offset + base_addr));
-        arg0 = (void*)func_800A88A0(arg0, arg1, label_data, 1, 0x23, 0x47, 2);
+        prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(panel), 1, 0x23, 0x47, 2);
     }
     else
     {
-        arg0 = (void*)func_800A88A0(arg0, arg1, g_kanji_cat_name, 1, 0x23, 0x47, 2);
+        prim = func_800A88A0(prim, ot_entry, g_kanji_cat_name, 1, 0x23, 0x47, 2);
     }
-    return (s32)arg0;
+
+    return prim;
 }
 
 /**
@@ -1180,7 +1174,7 @@ s32 emit_panel_label(void* arg0, u32 arg1)
  * @param strip_width Width in pixels of the back-page VRAM upload strip; also
  *                    sets the strip's X position as `240 - strip_width`.
  *
- * @see https://decomp.me/scratch/LxujJ (99.26%)
+ * @see https://decomp.me/scratch/LxujJ (100%)
  */
 void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 {
@@ -1188,26 +1182,27 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
     s32* prim;      /* current primitive being emitted */
     s32* next_prim; /* heap cursor after the sprite/draw-mode pair */
     s32 vram_y;     /* VRAM Y of the back page (0x18 or 0x100) */
+    s32 vram_x;     /* VRAM X of the right-aligned strip */
+    u32* pkt;
     u32 vram_load_pkt[0x19];
-    s32 vram_x; /* VRAM X of the right-aligned strip */
 
     ot_head = (s32*)&ctx->ot[0x0E];
     prim = ctx->prim_cursor;
     next_prim = prim;
 
     /* 1. Copy template packet from the *other* frame's reserve slot, then
-     *    splice it into the OT. */
+     * splice it into the OT. */
     func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
-    *prim = (*prim & 0xFF000000) | (ctx->ot[0x0E] & 0xFFFFFF);
-    ctx->ot[0x0E] = (ctx->ot[0x0E] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+    addPrim(&ctx->ot[0x0E], prim);
 
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
-     *    Returns the heap cursor just past both packets. */
+     * Returns the heap cursor just past both packets. */
     next_prim = emit_draw_mode_prim(emit_glyph_sprt(func_800A88A0(prim + 0x10, ot_head, name_buf, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
 
     /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
-     *    right edge of whichever page is currently the back buffer. */
+     * right edge of whichever page is currently the back buffer. */
+    pkt = vram_load_pkt + 2;
     vram_x = 0xF0 - strip_width;
     vram_y = 0x18;
     if (ctx->frame_parity != 0)
@@ -1215,15 +1210,13 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
         vram_y = 0x100;
     }
 
-    func_8001C56C(vram_load_pkt, vram_x, vram_y, strip_width, 0x20);
-    func_8001A5D4(next_prim, vram_load_pkt);
+    func_8001C56C(pkt, vram_x, vram_y, strip_width, 0x20);
+    func_8001A5D4(next_prim, pkt);
 
-    *next_prim = (*next_prim & 0xFF000000) | (ctx->ot[0x0E] & 0xFFFFFF);
-
+    addPrim(&ctx->ot[0x0E], next_prim);
     /* Advance heap cursor 0x40 bytes past the load packet. */
-    ctx->prim_cursor = next_prim + 0x10;
-
-    ctx->ot[0x0E] = (ctx->ot[0x0E] & 0xFF000000) | ((u32)next_prim & 0xFFFFFF);
+    next_prim += 0x10;
+    ctx->prim_cursor = next_prim;
 }
 
 /**
@@ -1274,8 +1267,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
      *    splice it into OT[0x0A]. */
     func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
-    *prim = (*prim & 0xFF000000) | (ctx->ot[0x0A] & 0x00FFFFFF);
-    ctx->ot[0x0A] = (ctx->ot[0x0A] & 0xFF000000) | ((u32)prim & 0x00FFFFFF);
+    addPrim(&ctx->ot[0x0A], prim);
 
     /* Write cursor starts 0x40 bytes past the template packet. */
     write_cur = (u32*)((u8*)prim + 0x40);
@@ -1294,7 +1286,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
         /* Normal panel: use the char panel data blob and the panel's entry range. */
         entry_idx = ((u16*)g_panel_char_offsets)[panel_idx * 2];
         entry_end = ((u16*)g_panel_char_offsets)[panel_idx * 2 + 1];
-        glyph_base = (u8*)(g_panel_tbl_off + ((u32)&g_panel_tbl_off - 4));
+        glyph_base = (u8*)PANEL_REC_TBL;
         row = 0;
     }
 
@@ -1339,8 +1331,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
         func_8001C56C(grid_load_pkt, NAME_GRID_VRAM_X, grid_vram_y, 0xA0, NAME_GRID_VIS_HEIGHT);
         func_8001A5D4(write_cur, grid_load_pkt);
 
-        *write_cur = (*write_cur & 0xFF000000) | (ctx->ot[0x0A] & 0x00FFFFFF);
-        ctx->ot[0x0A] = (ctx->ot[0x0A] & 0xFF000000) | ((u32)write_cur & 0x00FFFFFF);
+        addPrim(&ctx->ot[0x0A], write_cur);
         /* Byte addition of 0x40, not element addition. */
         ctx->prim_cursor = (u32*)((u8*)write_cur + 0x40);
     }
@@ -1862,17 +1853,19 @@ void recalc_name_width(void)
  * @param new_char Glyph to prepend, packed `lead | (trail << 8)`.
  * @see https://decomp.me/scratch/VOLcD (100%)
  */
-void name_prepend_char(u8* buffer, u16 header)
+void name_prepend_char(u8* buffer, u16 new_char)
 {
     u8* ptr;
     u32 len;
     u32 header_size;
     u32 move_count;
     u32 i;
-    u16 h = header; // save header to match register usage
+    u16 h = new_char; /* copy to match register usage */
 
     if ((h & 0xFF) == 0)
+    {
         return;
+    }
 
     if (IS_DBSC_LEAD_BYTE(h & 0xFF))
     {
@@ -2003,31 +1996,32 @@ s32 name_pop_first_char(u8* name)
  *     duration is loaded from byte 3 of its record (@c slots[0].pad).
  *
  * @param prim Primitive-buffer cursor (next free byte).
- * @param ctx  Render-context base; the OT head tag for this layer is at
- *             offset 0x30.
+ * @param ctx  Render context; @c ot[0x0C] (offset 0x30) is the OT head tag
+ *             for this layer.
  * @return Primitive-buffer cursor advanced past the emitted SPRTs.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
  */
-void* draw_char_append_anim(void* prim, void* ctx)
+void* draw_char_append_anim(void* prim, RenderContext* ctx)
 {
     u8 frame = g_append_anim_frame;
     void* result = prim;
     u8* table;
-    u8* ot_base = (u8*)ctx;
+    RenderContext* ot_base = ctx;
     s32 i;
     /* px points at a slot's x byte; py = px + 1 reads y at [0] and glyph at
        [1]. The two incrementing pointers are load-bearing for the match. */
     u8* px = &g_char_append_anim[frame * APPEND_ANIM_FRAME_STRIDE];
     u8* py = px + 1;
     short glyph;
+    
     for (i = 0; i < APPEND_ANIM_SLOT_COUNT; i++, py += 4, px += 4)
     {
         s32 glyph_byte = py[1];
         glyph = glyph_byte;
         if (glyph != 0)
         {
-            result = emit_glyph_sprt(result, ot_base + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
+            result = emit_glyph_sprt(result, (u8*)&ot_base->ot + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
         }
     }
 
@@ -2067,7 +2061,7 @@ void* draw_char_append_anim(void* prim, void* ctx)
  */
 s32 name_is_blank(u8* name)
 {
-    while (*name != 0)
+    while (*name)
     {
         if (*name != CHAR_SPACE && *name != CHAR_WIDE_SPACE)
         {
