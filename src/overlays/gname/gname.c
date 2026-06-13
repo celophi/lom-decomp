@@ -1144,7 +1144,7 @@ void* emit_panel_label(void* prim, u_long* ot_entry)
     {
         prim = func_800A88A0(prim, ot_entry, g_kanji_cat_name, 1, 0x23, 0x47, 2);
     }
-    
+
     return prim;
 }
 
@@ -1193,8 +1193,8 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
      *    splice it into the OT. */
     func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
-    *prim = (*prim & 0xFF000000) | (ctx->ot[0x0E] & 0xFFFFFF);
-    ctx->ot[0x0E] = (ctx->ot[0x0E] & 0xFF000000) | ((u32)prim & 0xFFFFFF);
+    setaddr(prim, getaddr(&ctx->ot[0x0E]));
+    setaddr(&ctx->ot[0x0E], prim);
 
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      *    Returns the heap cursor just past both packets. */
@@ -1212,12 +1212,12 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
     func_8001C56C(vram_load_pkt, vram_x, vram_y, strip_width, 0x20);
     func_8001A5D4(next_prim, vram_load_pkt);
 
-    *next_prim = (*next_prim & 0xFF000000) | (ctx->ot[0x0E] & 0xFFFFFF);
+    setaddr(next_prim, getaddr(&ctx->ot[0x0E]));
 
     /* Advance heap cursor 0x40 bytes past the load packet. */
     ctx->prim_cursor = next_prim + 0x10;
 
-    ctx->ot[0x0E] = (ctx->ot[0x0E] & 0xFF000000) | ((u32)next_prim & 0xFFFFFF);
+    setaddr(&ctx->ot[0x0E], next_prim);
 }
 
 /**
@@ -1268,8 +1268,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
      *    splice it into OT[0x0A]. */
     func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
-    *prim = (*prim & 0xFF000000) | (ctx->ot[0x0A] & 0x00FFFFFF);
-    ctx->ot[0x0A] = (ctx->ot[0x0A] & 0xFF000000) | ((u32)prim & 0x00FFFFFF);
+    addPrim(&ctx->ot[0x0A], prim);
 
     /* Write cursor starts 0x40 bytes past the template packet. */
     write_cur = (u32*)((u8*)prim + 0x40);
@@ -1333,8 +1332,7 @@ void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
         func_8001C56C(grid_load_pkt, NAME_GRID_VRAM_X, grid_vram_y, 0xA0, NAME_GRID_VIS_HEIGHT);
         func_8001A5D4(write_cur, grid_load_pkt);
 
-        *write_cur = (*write_cur & 0xFF000000) | (ctx->ot[0x0A] & 0x00FFFFFF);
-        ctx->ot[0x0A] = (ctx->ot[0x0A] & 0xFF000000) | ((u32)write_cur & 0x00FFFFFF);
+        addPrim(&ctx->ot[0x0A], write_cur);
         /* Byte addition of 0x40, not element addition. */
         ctx->prim_cursor = (u32*)((u8*)write_cur + 0x40);
     }
