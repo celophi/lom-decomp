@@ -879,8 +879,8 @@ void InitTitleMenuState(void)
     g_lastInputState = 0;
     g_debouncedInput = 0;
     g_titleIdleCountdown = 0xE10;
-    UploadTim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[1]), 0x140, 0, 0, 0x1E0);
-    UploadTim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[2]), 0x140, 0x100, 0, 0x1E1);
+    upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[1]), 0x140, 0, 0, 0x1E0);
+    upload_tim((void*)(((u8*)&g_titleMenuTimTable) + g_titleMenuTimTable[2]), 0x140, 0x100, 0, 0x1E1);
     if (g_previousGameState == 0)
     {
         idx = g_titleSelectedItem + 1;
@@ -914,35 +914,53 @@ void InitTitleMenuState(void)
 }
 
 /**
- * Standard TIM-style image uploader: reads the header flags at +4, then
- * conditionally LoadImages the CLUT followed by the pixel block.
+ * @brief Upload a standard PSX TIM image (optional CLUT + pixel block) to VRAM.
  *
- * decomp.me (100%) https://decomp.me/scratch/fzh5x
+ * @details Reads the TIM flag word at +4: if the CLUT-present bit is set,
+ * loads the CLUT (clut_width x clut_height entries as a single VRAM row) at
+ * (clut_x, clut_y), then advances @c p past the CLUT block by its byte length.
+ * The pixel block that follows is then loaded at (x, y) using its own
+ * width/height header.
+ *
+ * The TIM layout used here (offsets from @c p):
+ *  - +0x04 flag word (bit 3 = has CLUT; happens to equal TIM_HEADER_SIZE)
+ *  - CLUT block: +0x08 block byte length, +0x0C/0x0E VRAM x/y,
+ *    +0x10/0x12 width/height, +0x14 entries
+ *  - pixel block: +0x08 VRAM x/y, +0x10/0x12 width/height (here read as
+ *    +0x08/0x0A after @c p is advanced), +0x0C pixels
+ *
+ * @param tim   Pointer to the TIM image header.
+ * @param x     Destination VRAM X for the pixel block.
+ * @param y     Destination VRAM Y for the pixel block.
+ * @param clut_x Destination VRAM X for the CLUT.
+ * @param clut_y Destination VRAM Y for the CLUT.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/fzh5x
  */
-void UploadTim(void* tim, s16 x, s16 y, s16 clutX, s32 clutY)
+void upload_tim(void* tim, s16 x, s16 y, s16 clut_x, s32 clut_y)
 {
     u8* p = (u8*)tim;
-    int new_var;
+    int tim_header_size;
     RECT rect;
-    s32 temp_s1;
-    u16 mul_h;
-    int new_var2;
-    int new_var3;
-    u16 mul_l;
-    new_var = 8;
-    new_var2 = 1;
-    if (p[4] & new_var)
+    s32 clut_block_len;
+    u16 clut_width;
+    int clut_rows;
+    int clut_skip_base;
+    u16 clut_height;
+    tim_header_size = 8;
+    clut_rows = 1;
+    if (p[4] & tim_header_size)
     {
-        mul_h = *((u16*)(p + 0x10));
-        mul_l = *((u16*)(p + 0x12));
-        temp_s1 = *((s32*)(p + new_var));
-        new_var3 = 8;
-        rect.x = clutX;
-        rect.y = (s16)clutY;
-        rect.w = mul_h * mul_l;
-        rect.h = new_var2;
+        clut_width = *((u16*)(p + 0x10));
+        clut_height = *((u16*)(p + 0x12));
+        clut_block_len = *((s32*)(p + tim_header_size));
+        clut_skip_base = 8;
+        rect.x = clut_x;
+        rect.y = (s16)clut_y;
+        rect.w = clut_width * clut_height;
+        rect.h = clut_rows;
         LoadImage(&rect, (u_long*)(p + 0x14));
-        p = (p + new_var3) + temp_s1;
+        p = (p + clut_skip_base) + clut_block_len;
     }
     else
     {
