@@ -762,7 +762,7 @@ void RenderTitleMenuItems(void* arg0)
     var_s2 = 0;
     var_s0 = 0;
     unk80B8 = *((s32*)(((u8*)arg0) + 0x80B8));
-    var_a1 = EmitMenuItemQuad(temp_s4, unk80B8, 0, 0x64, 0xC8, 0, 0x80, 1);
+    var_a1 = emit_menu_item_quad(temp_s4, unk80B8, 0, 0x64, 0xC8, 0, 0x80, 1);
     var_s1 = &g_titleMenuItemFlags[0];
     do
     {
@@ -776,79 +776,99 @@ void RenderTitleMenuItems(void* arg0)
             {
                 var_v0 = 2;
             }
-            var_a1 = EmitMenuItemQuad(temp_s4, var_a1, var_s0 + 1, var_s6, var_s3, 0, 0x80, var_v0) + 0x28;
+            var_a1 = emit_menu_item_quad(temp_s4, var_a1, var_s0 + 1, var_s6, var_s3, 0, 0x80, var_v0) + 0x28;
             var_s2++;
             var_s3 += 0xC;
         }
         var_s0++;
         var_s1 += 2;
     } while (var_s0 < 0x10);
-    result = EmitMenuItemQuad(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
+    result = emit_menu_item_quad(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
                               (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
     *((s32*)(((u8*)arg0) + 0x80B8)) = result;
     g_titleAnimFrame++;
 }
 
 /**
- * Builds a single menu-item sprite primitive (text quad + tex-page word)
- * at (x, y) and links it into the OT.
+ * @brief Build one menu-item POLY_FT4 (textured quad) and link it into the OT.
  *
- * decomp.me (100%) https://decomp.me/scratch/FcuOZ
+ * @details Hand-writes a libgpu POLY_FT4 (code 0x2C, len 9, equivalent to
+ * setPolyFT4) at screen (x, y) with size @p width, samples a 16-px-tall
+ * texture row selected by @p tex_row (V = tex_row*16 .. +0x10), and links it
+ * at the head of @p ot_head. The four corners are neutral-grey (0x80) flat
+ * shaded; the texture page is fixed at 5 and the CLUT y is fixed at 480
+ * (the packed 0x7800), with @p clut_index choosing the CLUT x.
+ *
+ * The writes are kept as raw byte/halfword stores rather than libgpu macros
+ * (setUV4/setXY4/setClut/addPrim) to preserve the matched codegen.
+ *
+ * @param ot_head    OT entry to link this primitive in front of.
+ * @param prim       Destination primitive buffer (>= 0x28 bytes).
+ * @param tex_row    Texture row index; selects V = tex_row*16 (top) .. +16.
+ * @param x          Screen X of the quad's left edge.
+ * @param y          Screen Y of the quad's top edge.
+ * @param u0_base    Base U texture coordinate (left edge).
+ * @param width      Quad width in pixels, added to x and u0_base for the
+ *                   right edge.
+ * @param clut_index CLUT x index (low 6 bits) packed into the CLUT word.
+ * @return Pointer just past the emitted primitive (prim + 0x28).
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/FcuOZ
  */
-void* EmitMenuItemQuad(s32* otHead, void* prim, s32 slot, s16 x, s32 y, s32 colorY, s32 step, s32 paletteIdx)
+void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s32 u0_base, s32 width, s32 clut_index)
 {
     u8* ptr;
-    u8 tmp1;
-    u8 tmp2;
-    u16 sum1;
-    u16 sum2;
-    u8 bsum;
-    u8* new_var;
-    u16 t1_val;
+    u8 v_top;
+    u8 v_bottom;
+    u16 x_right;
+    u16 y_bottom;
+    u8 u_right;
+    u8* y1_ptr;
+    u16 clut_word;
     u32 old_word;
     u32 new_word;
-    u32 mask_lo;
-    u32 mask_hi;
+    u32 addr_mask;
+    u32 tag_mask;
     ptr = (u8*)prim;
-    mask_lo = 0x00FFFFFF;
-    ptr[0x03] = 9;
-    ptr[0x07] = 0x2C;
-    tmp1 = (u8)(slot << 4);
-    ptr[0x06] = 0x80;
-    ptr[0x15] = tmp1;
-    ptr[0x0D] = tmp1;
-    tmp2 = (u8)((slot << 4) + 0x10);
-    ptr[0x05] = 0x80;
-    ptr[0x04] = 0x80;
-    ptr[0x25] = tmp2;
-    ptr[0x1D] = tmp2;
-    *((u16*)(ptr + 0x18)) = (u16)x;
-    *((u16*)(ptr + 0x08)) = (u16)x;
-    *((u16*)(ptr + 0x16)) = 5;
-    mask_hi = 0xFF000000;
-    sum1 = (u16)(x + step);
-    new_var = ptr + 0x12;
-    *((u16*)new_var) = (u16)y;
-    *((u16*)(ptr + 0x0A)) = (u16)y;
-    sum2 = (u16)(y + 0x10);
+    addr_mask = 0x00FFFFFF;
+    ptr[0x03] = 9;    /* P_TAG len */
+    ptr[0x07] = 0x2C; /* POLY_FT4 code */
+    v_top = (u8)(tex_row << 4);
+    ptr[0x06] = 0x80; /* b0 */
+    ptr[0x15] = v_top; /* v1 */
+    ptr[0x0D] = v_top; /* v0 */
+    v_bottom = (u8)((tex_row << 4) + 0x10);
+    ptr[0x05] = 0x80; /* g0 */
+    ptr[0x04] = 0x80; /* r0 */
+    ptr[0x25] = v_bottom; /* v3 */
+    ptr[0x1D] = v_bottom; /* v2 */
+    *((u16*)(ptr + 0x18)) = (u16)x; /* x2 */
+    *((u16*)(ptr + 0x08)) = (u16)x; /* x0 */
+    *((u16*)(ptr + 0x16)) = 5;      /* tpage */
+    tag_mask = 0xFF000000;
+    x_right = (u16)(x + width);
+    y1_ptr = ptr + 0x12;
+    *((u16*)y1_ptr) = (u16)y;       /* y1 */
+    *((u16*)(ptr + 0x0A)) = (u16)y; /* y0 */
+    y_bottom = (u16)(y + 0x10);
     do
     {
     } while (0);
-    ptr[0x1C] = (u8)colorY;
-    ptr[0x0C] = (u8)colorY;
-    bsum = (u8)(colorY + step);
-    t1_val = (u16)((paletteIdx & 0x3F) | 0x7800);
-    *((u16*)(ptr + 0x22)) = sum2;
-    *((u16*)(ptr + 0x1A)) = sum2;
+    ptr[0x1C] = (u8)u0_base; /* u2 */
+    ptr[0x0C] = (u8)u0_base; /* u0 */
+    u_right = (u8)(u0_base + width);
+    clut_word = (u16)((clut_index & 0x3F) | 0x7800);
+    *((u16*)(ptr + 0x22)) = y_bottom; /* y3 */
+    *((u16*)(ptr + 0x1A)) = y_bottom; /* y2 */
     old_word = *((u32*)ptr);
-    *((u16*)(ptr + 0x20)) = sum1;
-    *((u16*)(ptr + 0x10)) = sum1;
-    ptr[0x24] = bsum;
-    ptr[0x14] = bsum;
-    *((u16*)(ptr + 0x0E)) = t1_val;
-    new_word = (old_word & mask_hi) | (((u32)(*otHead)) & mask_lo);
+    *((u16*)(ptr + 0x20)) = x_right; /* x3 */
+    *((u16*)(ptr + 0x10)) = x_right; /* x1 */
+    ptr[0x24] = u_right; /* u3 */
+    ptr[0x14] = u_right; /* u1 */
+    *((u16*)(ptr + 0x0E)) = clut_word; /* clut */
+    new_word = (old_word & tag_mask) | (((u32)(*ot_head)) & addr_mask);
     *((u32*)ptr) = new_word;
-    *otHead = (s32)((((u32)(*otHead)) & mask_hi) | (((u32)ptr) & mask_lo));
+    *ot_head = (s32)((((u32)(*ot_head)) & tag_mask) | (((u32)ptr) & addr_mask));
     return (void*)(ptr + 0x28);
 }
 
