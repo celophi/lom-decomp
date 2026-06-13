@@ -1195,7 +1195,7 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
     func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
     addPrim(&ctx->ot[0x0E], prim);
-    
+
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      * Returns the heap cursor just past both packets. */
     next_prim = emit_draw_mode_prim(emit_glyph_sprt(func_800A88A0(prim + 0x10, ot_head, name_buf, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
@@ -1212,7 +1212,7 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 
     func_8001C56C(pkt, vram_x, vram_y, strip_width, 0x20);
     func_8001A5D4(next_prim, pkt);
-    
+
     addPrim(&ctx->ot[0x0E], next_prim);
     /* Advance heap cursor 0x40 bytes past the load packet. */
     next_prim += 0x10;
@@ -1994,31 +1994,32 @@ s32 name_pop_first_char(u8* name)
  *     duration is loaded from byte 3 of its record (@c slots[0].pad).
  *
  * @param prim Primitive-buffer cursor (next free byte).
- * @param ctx  Render-context base; the OT head tag for this layer is at
- *             offset 0x30.
+ * @param ctx  Render context; @c ot[0x0C] (offset 0x30) is the OT head tag
+ *             for this layer.
  * @return Primitive-buffer cursor advanced past the emitted SPRTs.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
  */
-void* draw_char_append_anim(void* prim, void* ctx)
+void* draw_char_append_anim(void* prim, RenderContext* ctx)
 {
     u8 frame = g_append_anim_frame;
     void* result = prim;
     u8* table;
-    u8* ot_base = (u8*)ctx;
+    RenderContext* ot_base = ctx;
     s32 i;
     /* px points at a slot's x byte; py = px + 1 reads y at [0] and glyph at
        [1]. The two incrementing pointers are load-bearing for the match. */
     u8* px = &g_char_append_anim[frame * APPEND_ANIM_FRAME_STRIDE];
     u8* py = px + 1;
     short glyph;
+    
     for (i = 0; i < APPEND_ANIM_SLOT_COUNT; i++, py += 4, px += 4)
     {
         s32 glyph_byte = py[1];
         glyph = glyph_byte;
         if (glyph != 0)
         {
-            result = emit_glyph_sprt(result, ot_base + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
+            result = emit_glyph_sprt(result, (u8*)&ot_base->ot + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
         }
     }
 
