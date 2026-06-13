@@ -129,6 +129,15 @@ typedef struct {
     u8  unk14[4]; /**< +0x14: TODO */
 } SaveLayoutEntry;             /* sizeof == 0x18 */
 
+/* Home U/V texture coordinate the panel's primary entry resets to. */
+#define SAVE_SLOT_HOME_V 0x10
+/* Vertical span of the slot highlight bar (added to g_slotHighlightX to get
+ * the bottom V coordinate). */
+#define SAVE_HIGHLIGHT_SPAN 0x20
+/* Scroll-window width when the panel is re-homed (minimum value; see
+ * AnimateSaveSlotPanel which adds the pan offset to this base). */
+#define SAVE_SCROLL_WIDTH_HOME 0x40
+
 /* 0x1B (27) entries; kept as u8[] to preserve byte-granular pointer arithmetic */
 extern u8 g_saveLayoutTable[0x288];
 /**

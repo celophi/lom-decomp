@@ -1248,11 +1248,11 @@ void HandleSaveSlotInput(void)
             if (D_800F9AED != 0)
             {
                 scroll_slots_right();
-                ResetSaveSlotPanel();
+                reset_save_slot_panel();
                 return;
             }
             scroll_slots_left();
-            ResetSaveSlotPanel();
+            reset_save_slot_panel();
             return;
         }
         if (g_debouncedInput & 0x40)
@@ -1318,12 +1318,12 @@ void HandleSaveSlotInput(void)
             if (g_slotSlideX > 0)
             {
                 scroll_slots_left();
-                ResetSaveSlotPanel();
+                reset_save_slot_panel();
             }
             else
             {
                 scroll_slots_right();
-                ResetSaveSlotPanel();
+                reset_save_slot_panel();
             }
         }
         else if (g_slotHighlightFrames == 0)
@@ -1461,49 +1461,61 @@ void AnimateSaveSlotPanel(void)
 }
 
 /**
- * Snaps the save-slot panel back to its home position and clears its
- * highlight/selection state.
+ * @brief Snap the save-slot panel back to its home position and clear its
+ *        highlight/selection state.
  *
- * decomp.me (100%) https://decomp.me/scratch/0YgmZ
+ * @details When a horizontal slide is in progress (g_slotSlideX != 0) this
+ * rebuilds the panel's layout entries in g_saveLayoutTable: it re-homes the
+ * scroll window (entries 6 and 13 reset to SAVE_SCROLL_WIDTH_HOME), shows the
+ * right highlight halves (entries 4/5/11/12) while hiding the left halves
+ * (entries 7/8/14/15), and rewrites the highlight-bar V coordinates (entries
+ * 2/3/9/10) from the now-zeroed g_slotHighlightX. The selection/highlight
+ * globals are all cleared. When no slide is active it only resets entry 0's
+ * U/V to their home values.
+ *
+ * @note When a slide is active the entries are reached through a
+ *       @ref SaveLayoutEntry pointer, matching AnimateSaveSlotPanel. The
+ *       inactive-slide branch indexes the table by g_slotSlideX (always 0
+ *       here) added to its base, so it stays raw pointer arithmetic.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/0YgmZ
  */
-void ResetSaveSlotPanel(void)
+void reset_save_slot_panel(void)
 {
-    s16 temp_v1;
+    s16 highlight_bottom_v;
     if (g_slotSlideX != 0)
     {
-        u32 base = (u32)(&g_saveLayoutTable);
-        *((u16*)(base + 0xE)) = 0x10;
+        SaveLayoutEntry* entry = (SaveLayoutEntry*)g_saveLayoutTable;
+        entry[0].v0 = SAVE_SLOT_HOME_V;
         g_slotSelectedIndex = 0;
         g_slotHighlightX = 0;
         g_slotHighlightTargetX = 0;
         g_slotHighlightFrames = 0;
-        *((u8*)(base + 0xA9)) = 0;
-        base++;
-        base--;
-        *((u8*)(base + 0xC1)) = 0;
-        *((u8*)(base + 0x151)) = 0;
-        *((u8*)(base + 0x169)) = 0;
-        temp_v1 = ((u16)g_slotHighlightX) + 0x20;
-        *((u16*)(base + 0x96)) = 0x40;
-        *((u16*)(base + 0x9A)) = 0x40;
-        *((u16*)(base + 0x13E)) = 0x40;
-        *((u16*)(base + 0x142)) = 0x40;
-        *((u16*)(base + 0xC)) = 0;
-        *((u8*)(base + 0x61)) = 1;
-        *((u8*)(base + 0x79)) = 1;
-        *((u8*)(base + 0x109)) = 1;
-        *((u8*)(base + 0x121)) = 1;
+        entry[7].type = 0;
+        entry[8].type = 0;
+        entry[14].type = 0;
+        entry[15].type = 0;
+        highlight_bottom_v = ((u16)g_slotHighlightX) + SAVE_HIGHLIGHT_SPAN;
+        entry[6].y = SAVE_SCROLL_WIDTH_HOME;
+        entry[6].tile_y = SAVE_SCROLL_WIDTH_HOME;
+        entry[13].y = SAVE_SCROLL_WIDTH_HOME;
+        entry[13].tile_y = SAVE_SCROLL_WIDTH_HOME;
+        entry[0].u0 = 0;
+        entry[4].type = 1;
+        entry[5].type = 1;
+        entry[11].type = 1;
+        entry[12].type = 1;
 
-        *((u16*)(base + 0x3E)) = (u16)g_slotHighlightX;
-        *((u16*)(base + 0x56)) = temp_v1;
-        *((u16*)(base + 0xE6)) = (u16)g_slotHighlightX;
-        *((u16*)(base + 0xFE)) = temp_v1;
+        entry[2].v0 = (u16)g_slotHighlightX;
+        entry[3].v0 = highlight_bottom_v;
+        entry[9].v0 = (u16)g_slotHighlightX;
+        entry[10].v0 = highlight_bottom_v;
         return;
     }
     {
         u32 low_addr = (u32)(&g_saveLayoutTable);
         u32 ptr = g_slotSlideX + low_addr;
-        *((u16*)(ptr + 0xC)) = 0x10;
+        *((u16*)(ptr + 0xC)) = SAVE_SLOT_HOME_V;
         *((u16*)(ptr + 0xE)) = 0;
     }
 }
