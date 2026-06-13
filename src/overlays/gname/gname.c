@@ -6,7 +6,7 @@
  * Zeros the current color (@c g_fade_current) and the target color +
  * step count (@c g_fade_target). After this call the next
  * @ref render_fade_overlay tick will write a black tint (0,0,0) to the
- * primitive at @c arg0->prim_cursor.
+ * primitive at @c ctx->prim_cursor.
  *
  * @see https://decomp.me/scratch/ld2aW (100%)
  */
@@ -387,22 +387,22 @@ void reset_run_state(void)
  * @return        New char-set mode after processing the input.
  * @see decomp.me (99.78%) https://decomp.me/scratch/PpqVd
  */
-s32 handle_char_set_input(s32 arg0, s32 arg1)
+s32 handle_char_set_input(s32 mode, s32 buttons)
 {
     s32 var_s0 = 0xFF;
 
     while (var_s0 == 0xFF)
     {
-        switch (arg0)
+        switch (mode)
         {
         case 0:
         case 1:
         case 2:
         case 3:
-            if (arg1 & 0x220)
+            if (buttons & 0x220)
             {
-                g_cursor_tab = arg0;
-                switch (arg0)
+                g_cursor_tab = mode;
+                switch (mode)
                 {
                 case 0:
                     if ((name_char_count(g_active_name) != 0) && (!name_is_blank(g_active_name)))
@@ -486,26 +486,26 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
             }
             else
             {
-                if (arg1 != 0)
+                if (buttons != 0)
                 {
-                    if (arg1 & PAD_BTN_DOWN)
+                    if (buttons & PAD_BTN_DOWN)
                     {
-                        arg0 = 0x10;
-                        arg1 = 0;
+                        mode = 0x10;
+                        buttons = 0;
                         continue;
                     }
-                    if (arg1 & PAD_BTN_LEFT)
+                    if (buttons & PAD_BTN_LEFT)
                     {
-                        arg0 = (arg0 == 0) ? (3) : (arg0 - 1);
+                        mode = (mode == 0) ? (3) : (mode - 1);
                     }
-                    else if (arg1 & PAD_BTN_RIGHT)
+                    else if (buttons & PAD_BTN_RIGHT)
                     {
-                        arg0 = (arg0 < 3) ? (arg0 + 1) : (0);
+                        mode = (mode < 3) ? (mode + 1) : (0);
                     }
                 }
                 play_menu_sfx(0x7D, 0x80);
-                g_cursor_x_target = g_tab_cursor_pos[arg0 + 2].x - 8;
-                g_cursor_y_target = g_tab_cursor_pos[arg0 + 2].y;
+                g_cursor_x_target = g_tab_cursor_pos[mode + 2].x - 8;
+                g_cursor_y_target = g_tab_cursor_pos[mode + 2].y;
                 g_cursor_lerp_steps = 5;
                 var_s0 = 0;
             }
@@ -515,11 +515,11 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
         case 5:
         case 6:
         case 7:
-            if (((arg1 & 0x220) && ((g_cursor_tab = arg0, g_char_panel != (arg0 - 4)))) != 0)
+            if (((buttons & 0x220) && ((g_cursor_tab = mode, g_char_panel != (mode - 4)))) != 0)
             {
                 g_char_panel = g_cursor_tab - 4;
-                arg0 = 0x10;
-                arg1 = 0;
+                mode = 0x10;
+                buttons = 0;
                 g_scroll_target = 0;
                 g_scroll_pos = 0;
                 g_scroll_steps = 0;
@@ -529,33 +529,33 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
             }
             else
             {
-                if (arg1 != 0)
+                if (buttons != 0)
                 {
-                    if (arg1 & PAD_BTN_RIGHT)
+                    if (buttons & PAD_BTN_RIGHT)
                     {
-                        arg0 = 0x10;
-                        arg1 = 0;
+                        mode = 0x10;
+                        buttons = 0;
                         continue;
                     }
-                    if (arg1 & PAD_BTN_UP)
+                    if (buttons & PAD_BTN_UP)
                     {
-                        arg0 = (arg0 == 4) ? (6) : (arg0 - 1);
+                        mode = (mode == 4) ? (6) : (mode - 1);
                     }
-                    else if (arg1 & PAD_BTN_DOWN)
+                    else if (buttons & PAD_BTN_DOWN)
                     {
-                        arg0 = (arg0 < 6) ? (arg0 + 1) : (4);
+                        mode = (mode < 6) ? (mode + 1) : (4);
                     }
                 }
                 play_menu_sfx(0x7D, 0x80);
-                g_cursor_x_target = g_tab_cursor_pos[arg0 + 2].x - 8;
-                g_cursor_y_target = g_tab_cursor_pos[arg0 + 2].y;
+                g_cursor_x_target = g_tab_cursor_pos[mode + 2].x - 8;
+                g_cursor_y_target = g_tab_cursor_pos[mode + 2].y;
                 g_cursor_lerp_steps = 5;
                 var_s0 = 0;
             }
             break;
 
         default:
-            if (((arg1 & 0x220) && (((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)) != 0U)
+            if (((buttons & 0x220) && (((g_char_last_row * 10) + g_char_last_col) >= g_char_cursor)) != 0U)
             {
                 if (g_char_panel < 3)
                 {
@@ -623,36 +623,36 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
             {
                 s32 scroll_off;
 
-                if (arg1 != 0)
+                if (buttons != 0)
                 {
-                    if ((arg1 & PAD_BTN_UP) && ((g_char_cursor / 10) == 0))
+                    if ((buttons & PAD_BTN_UP) && ((g_char_cursor / 10) == 0))
                     {
-                        arg0 = 0;
-                        arg1 = 0;
+                        mode = 0;
+                        buttons = 0;
                         continue;
                     }
-                    if ((arg1 & PAD_BTN_LEFT) && ((g_char_cursor % 10) == 0))
+                    if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % 10) == 0))
                     {
-                        arg0 = 4;
-                        arg1 = 0;
+                        mode = 4;
+                        buttons = 0;
                         continue;
                     }
-                    if ((arg1 & PAD_BTN_UP) && ((g_char_cursor / 10) != 0))
+                    if ((buttons & PAD_BTN_UP) && ((g_char_cursor / 10) != 0))
                     {
                         g_char_cursor -= 10;
                     }
-                    else if ((arg1 & PAD_BTN_DOWN) && ((g_char_cursor / 10) != g_char_last_row))
+                    else if ((buttons & PAD_BTN_DOWN) && ((g_char_cursor / 10) != g_char_last_row))
                     {
                         g_char_cursor += 10;
                     }
-                    else if ((arg1 & PAD_BTN_LEFT) && ((g_char_cursor % 10) != 0))
+                    else if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % 10) != 0))
                     {
                         g_char_cursor -= 1;
                     }
                     else
                     {
 
-                        if ((arg1 & PAD_BTN_RIGHT) && ((g_char_cursor % 10) != 9))
+                        if ((buttons & PAD_BTN_RIGHT) && ((g_char_cursor % 10) != 9))
                         {
                             g_char_cursor += 1;
                         }
@@ -689,7 +689,7 @@ s32 handle_char_set_input(s32 arg0, s32 arg1)
         }
     }
 
-    return arg0;
+    return mode;
 }
 
 /**
@@ -1853,17 +1853,19 @@ void recalc_name_width(void)
  * @param new_char Glyph to prepend, packed `lead | (trail << 8)`.
  * @see https://decomp.me/scratch/VOLcD (100%)
  */
-void name_prepend_char(u8* buffer, u16 header)
+void name_prepend_char(u8* buffer, u16 new_char)
 {
     u8* ptr;
     u32 len;
     u32 header_size;
     u32 move_count;
     u32 i;
-    u16 h = header; // save header to match register usage
+    u16 h = new_char; /* copy to match register usage */
 
     if ((h & 0xFF) == 0)
+    {
         return;
+    }
 
     if (IS_DBSC_LEAD_BYTE(h & 0xFF))
     {
