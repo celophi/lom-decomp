@@ -2058,7 +2058,7 @@ void* draw_char_append_anim(void* prim, void* ctx)
  */
 s32 name_is_blank(u8* name)
 {
-    while (*name != 0)
+    while (*name)
     {
         if (*name != CHAR_SPACE && *name != CHAR_WIDE_SPACE)
         {
