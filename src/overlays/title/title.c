@@ -168,7 +168,7 @@ void render_menu(MenuContext* context)
         VSync(1);
         RenderFadeOverlay(s0);
         RenderTitleBackdrop(s0);
-        RenderTitleMenuItems(s0);
+        render_title_menu_items(s0);
         HandleTitleMenuInput();
 
         if (g_titleMenuExitState == 0)
@@ -625,7 +625,7 @@ void HandleTitleMenuInput(void)
     }
     if (g_debouncedInput & 0x9000)
     {
-        MenuCursorUp();
+        menu_cursor_up();
         PlayTitleSfx(0x7D, 0x80);
     }
     else if (g_debouncedInput & 0x6100)
@@ -679,113 +679,130 @@ void MenuCursorDown(void)
 }
 
 /**
- * Mirror of MenuCursorDown searching backward.
+ * @brief Move the menu cursor to the previous enabled slot, wrapping to the
+ *        last enabled slot if already at the top.
  *
- * decomp.me (100%) https://decomp.me/scratch/mmzjI
+ * @details Mirror of MenuCursorDown searching backward. Scans
+ * g_titleMenuItemFlags from the slot before the current selection toward 0
+ * for the next enabled slot, decrementing the visible rank. If the search
+ * runs past slot 0, it wraps: a forward pass over all TITLE_MENU_SLOT_COUNT
+ * slots counts the enabled ones and records the last enabled index, then the
+ * cursor is parked on that slot with rank = count - 1.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/mmzjI
  */
-void MenuCursorUp(void)
+void menu_cursor_up(void)
 {
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_a2;
-    s32 var_v1_2;
-    u8* var_a0;
-    u8* var_v1;
-    u8* base;
-    u8 temp;
-    var_a1 = g_titleSelectedItem - 1;
-    if (var_a1 >= 0)
+    s32 item;
+    s32 idx;
+    s32 last_enabled;
+    s32 enabled_count;
+    u8* scan_ptr;
+    u8* item_ptr;
+    u8* flags_base;
+    u8 rank;
+    item = g_titleSelectedItem - 1;
+    if (item >= 0)
     {
-        base = &g_titleMenuItemFlags[0];
-        var_v1 = base + (var_a1 * 2);
-        while (var_a1 >= 0)
+        flags_base = &g_titleMenuItemFlags[0];
+        item_ptr = flags_base + (item * 2);
+        while (item >= 0)
         {
-            if ((*var_v1) != 0)
+            if ((*item_ptr) != 0)
             {
                 break;
             }
-            var_a1--;
-            var_v1 -= 2;
+            item--;
+            item_ptr -= 2;
         }
     }
-    if (var_a1 < 0)
+    if (item < 0)
     {
-        var_v1_2 = 0;
-        var_a1_2 = 0;
+        enabled_count = 0;
+        idx = 0;
         do
         {
-            var_a0 = &g_titleMenuItemFlags[0];
-            while (var_a1_2 < 0x10)
+            scan_ptr = &g_titleMenuItemFlags[0];
+            while (idx < TITLE_MENU_SLOT_COUNT)
             {
-                if ((*var_a0) != 0)
+                if ((*scan_ptr) != 0)
                 {
-                    var_v1_2++;
-                    var_a2 = var_a1_2;
+                    enabled_count++;
+                    last_enabled = idx;
                 }
-                var_a1_2++;
-                var_a0 += 2;
+                idx++;
+                scan_ptr += 2;
             };
         } while (0);
 
-        g_titleVisibleItemRank = var_v1_2 - 1;
-        g_titleSelectedItem = (u8)var_a2;
+        g_titleVisibleItemRank = enabled_count - 1;
+        g_titleSelectedItem = (u8)last_enabled;
         return;
     }
-    temp = g_titleVisibleItemRank;
-    g_titleSelectedItem = (u8)var_a1;
-    g_titleVisibleItemRank = temp - 1;
+    rank = g_titleVisibleItemRank;
+    g_titleSelectedItem = (u8)item;
+    g_titleVisibleItemRank = rank - 1;
     return;
 }
 
 /**
- * Walks D_80102670 and emits the cursor + each enabled menu item's quad.
- * The cursor uses g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3] as a 4-frame
- * blink palette index.
+ * @brief Emit the title-menu header, each enabled item, and the cursor.
  *
- * decomp.me (65.89%) https://decomp.me/scratch/K627m
+ * @details Walks the 16-slot g_titleMenuItemFlags table and emits one
+ * emit_menu_item_quad per enabled slot, stacking them vertically (item_y += 0xC
+ * each). The currently selected item (visible_index == g_titleVisibleItemRank)
+ * uses CLUT 1, the rest CLUT 2. A fixed header quad is emitted first, and the
+ * cursor quad last; the cursor's U coordinate cycles through
+ * g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
+ * its Y tracks the selected rank. The advanced prim cursor is written back to
+ * MenuContext::next_prim_ptr.
+ *
+ * @param ctx Active MenuContext render buffer.
+ *
+ * @see decomp.me (65.89%) https://decomp.me/scratch/K627m
  */
-void RenderTitleMenuItems(void* arg0)
+void render_title_menu_items(void* ctx)
 {
-    s32 temp_s4;
-    s32 var_a1;
-    s32 var_s0;
-    s32 var_s2;
-    s32 var_s3;
-    s32 var_s6;
-    u8* var_s1;
-    s32 unk80B8;
-    s32 var_v0;
-    s32 result;
-    temp_s4 = (s32)(((u8*)arg0) + 0x40);
-    var_s6 = 0x88;
-    var_s3 = 0xA0;
-    var_s2 = 0;
-    var_s0 = 0;
-    unk80B8 = *((s32*)(((u8*)arg0) + 0x80B8));
-    var_a1 = emit_menu_item_quad(temp_s4, unk80B8, 0, 0x64, 0xC8, 0, 0x80, 1);
-    var_s1 = &g_titleMenuItemFlags[0];
+    s32 ot_head;
+    s32 prim;
+    s32 slot;
+    s32 visible_index;
+    s32 item_y;
+    s32 item_x;
+    u8* flag_ptr;
+    s32 first_prim;
+    s32 clut_index;
+    s32 last_prim;
+    ot_head = (s32)(((u8*)ctx) + 0x40);
+    item_x = 0x88;
+    item_y = 0xA0;
+    visible_index = 0;
+    slot = 0;
+    first_prim = *((s32*)(((u8*)ctx) + 0x80B8));
+    prim = emit_menu_item_quad(ot_head, first_prim, 0, 0x64, 0xC8, 0, 0x80, 1);
+    flag_ptr = &g_titleMenuItemFlags[0];
     do
     {
-        if ((*var_s1) != 0)
+        if ((*flag_ptr) != 0)
         {
-            if (g_titleVisibleItemRank == var_s2)
+            if (g_titleVisibleItemRank == visible_index)
             {
-                var_v0 = 1;
+                clut_index = 1;
             }
             else
             {
-                var_v0 = 2;
+                clut_index = 2;
             }
-            var_a1 = emit_menu_item_quad(temp_s4, var_a1, var_s0 + 1, var_s6, var_s3, 0, 0x80, var_v0) + 0x28;
-            var_s2++;
-            var_s3 += 0xC;
+            prim = emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, clut_index) + 0x28;
+            visible_index++;
+            item_y += 0xC;
         }
-        var_s0++;
-        var_s1 += 2;
-    } while (var_s0 < 0x10);
-    result = emit_menu_item_quad(temp_s4, var_a1, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
-                              (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
-    *((s32*)(((u8*)arg0) + 0x80B8)) = result;
+        slot++;
+        flag_ptr += 2;
+    } while (slot < 0x10);
+    last_prim = emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
+                                    (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
+    *((s32*)(((u8*)ctx) + 0x80B8)) = last_prim;
     g_titleAnimFrame++;
 }
 

@@ -68,7 +68,7 @@ extern u8 g_titleVisibleItemRank;
 extern u8 g_titleAnimFrame;
 /**
  * 4-entry CLUT-index table that blinks the title-menu cursor; indexed by
- * (g_titleAnimFrame >> 2) & 3 in RenderTitleMenuItems.
+ * (g_titleAnimFrame >> 2) & 3 in render_title_menu_items.
  */
 extern u8 g_cursorBlinkPalette[];
 
