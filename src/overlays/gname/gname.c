@@ -1250,90 +1250,89 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
  *                  @c frame_parity.
  * @param panel_idx Active character panel index (0-3 normal, 4 kanji).
  *
- * @see decomp.me (77.64%) https://decomp.me/scratch/Glw7t
+ * @see decomp.me (100%) https://decomp.me/scratch/ckF2S
  */
-void render_char_panel(RenderContext* ctx_ptr, s32 panel_idx)
+void render_char_panel(RenderContext* ctx, s32 panel_idx)
 {
-    u8 grid_load_pkt[0x80];
-    RenderContext* ctx = ctx_ptr;
-    u32* prim = ctx->prim_cursor;
+    u8* new_var4;
+    u32* ot_ptr;
+    u8 _unused[8];
+    u8 grid_load_pkt[0x60];
+    u8* new_var;
+    void* prim;
     u32* write_cur;
     u8* glyph_base;
     u16* entry_ptr;
-    s32 col, entry_idx, row, entry_end;
+    s32 col;
+    s32 entry_idx;
+    unsigned long long new_var3;
+    s32 new_var5;
+    s32 row;
     s32 screen_y;
-
-    /* 1. Copy template packet from the inactive frame's reserve slot and
-     *    splice it into OT[0x0A]. */
-    func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
-
-    addPrim(&ctx->ot[0x0A], prim);
-
-    /* Write cursor starts 0x40 bytes past the template packet. */
-    write_cur = (u32*)((u8*)prim + 0x40);
-
-    /* 2. Select glyph data source based on the active panel. */
+    unsigned new_var2;
+    s32 entry_end;
+    ot_ptr = (u32*)(((u8*)ctx) + 0x28);
+    prim = ctx->prim_cursor;
+    SetDrawEnv(prim, (DRAWENV*)((g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0)) + 0x4064));
+    ((P_TAG*)prim)->addr = (u_long)((u_long)((P_TAG*)((u32*)(((u8*)ctx) + 0x28)))->addr), ((P_TAG*)((u32*)(((u8*)ctx) + 0x28)))->addr = (u_long)prim;
+    write_cur = prim + (sizeof(DR_ENV));
     if (g_char_panel == 4)
     {
-        /* Kanji picker: use the kanji panel data blob and the current category's entry range. */
-        glyph_base = (u8*)(g_kanji_panel_off + ((u32)&g_kanji_panel_off - 8));
+        glyph_base = (u8*)((((u32)(&g_kanji_panel_off)) - 8) + g_kanji_panel_off);
         entry_idx = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]];
         entry_end = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat] + 1];
         row = 0;
     }
     else
     {
-        /* Normal panel: use the char panel data blob and the panel's entry range. */
-        entry_idx = ((u16*)g_panel_char_offsets)[panel_idx * 2];
-        entry_end = ((u16*)g_panel_char_offsets)[panel_idx * 2 + 1];
-        glyph_base = (u8*)PANEL_REC_TBL;
+        entry_end = g_panel_char_offsets[panel_idx];
+        entry_idx = entry_end;
+        entry_end = g_panel_char_offsets[panel_idx + 1];
+        glyph_base = (u8*)((u16*)((((u8*)(&g_panel_tbl_off)) - 4) + g_panel_tbl_off));
+        do
+        {
+
+        } while (0);
         row = 0;
     }
-
-    col = row; /* row is 0 here; col starts at 0 too */
-    entry_ptr = (u16*)(glyph_base + (entry_idx * 2));
-
-    /* 3. Walk every glyph entry in the panel, emitting sprites for visible ones. */
-    for (;;)
+    col = row;
+    while (1)
     {
-        /* Unsigned range check: visible if screen_y in [-11, 79] (within the 80-px grid window). */
-        screen_y = (row * NAME_GRID_CELL_SIZE) - g_scroll_pos;
-        if ((u32)(screen_y + 0x0B) < 0x5B)
+        screen_y = (row * 16) - g_scroll_pos;
+        new_var5 = entry_end;
+        if (((u32)(screen_y + 0x0B)) <= (0x5B - 1))
         {
-            write_cur = func_800A88A0(write_cur, (void*)&ctx->ot[0x0A], (void*)(glyph_base + *entry_ptr), 1, col * NAME_GRID_CELL_SIZE, screen_y, 0);
+            write_cur = func_800A88A0(write_cur, ot_ptr, (void*)(glyph_base + ((u16*)glyph_base)[entry_idx]), 1, col * 16, screen_y, 0);
         }
         entry_idx++;
-        entry_ptr++;
-        if (entry_end == entry_idx)
+        if (new_var5 == entry_idx)
         {
             break;
         }
-
         col++;
-        if (col == NAME_GRID_CHARS_PER_ROW)
+        if (col == 10)
         {
             col = 0;
             row++;
         }
     }
 
-    /* 4. Record the final grid position and append the VRAM upload RECT for the
-     *    grid area on the back buffer page. */
     {
-        u32 grid_vram_y = NAME_GRID_Y_TOP; /* 0x68; on page 1 it becomes 0x150 */
+        u8* pkt = grid_load_pkt;
+        u32 grid_vram_y;
         g_char_last_row = row;
         g_char_last_col = col;
+        prim = write_cur;
+        grid_vram_y = 104;
         if (ctx->frame_parity != 0)
         {
             grid_vram_y = 0x150;
         }
-
-        func_8001C56C(grid_load_pkt, NAME_GRID_VRAM_X, grid_vram_y, 0xA0, NAME_GRID_VIS_HEIGHT);
-        func_8001A5D4(write_cur, grid_load_pkt);
-
-        addPrim(&ctx->ot[0x0A], write_cur);
-        /* Byte addition of 0x40, not element addition. */
-        ctx->prim_cursor = (u32*)((u8*)write_cur + 0x40);
+        SetDefDrawEnv(pkt, 0x60, grid_vram_y, 0xA0, 0x50);
+        SetDrawEnv(prim, pkt);
+        (((P_TAG*)prim)->addr = (u_long)((u_long)((P_TAG*)ot_ptr)->addr)), ((P_TAG*)ot_ptr)->addr = (u_long)prim;
+        prim += sizeof(DR_ENV);
+        ctx->prim_cursor = prim;
     }
 }
 
@@ -2014,7 +2013,7 @@ void* draw_char_append_anim(void* prim, RenderContext* ctx)
     u8* px = &g_char_append_anim[frame * APPEND_ANIM_FRAME_STRIDE];
     u8* py = px + 1;
     short glyph;
-    
+
     for (i = 0; i < APPEND_ANIM_SLOT_COUNT; i++, py += 4, px += 4)
     {
         s32 glyph_byte = py[1];
