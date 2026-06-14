@@ -1436,3 +1436,13 @@ void func_8006A21C(void)
     D_800FD808.unk4 = 0x100;
     D_800FD810 = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/iwb2J
+ */
+void func_8006A240(s16 arg0, s16 arg1, s16 arg2)
+{
+    D_800FD808.unk0 = arg0;
+    D_800FD808.unk2 = arg1;
+    D_800FD808.unk4 = arg2;
+}
