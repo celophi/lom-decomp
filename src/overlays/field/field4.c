@@ -247,11 +247,13 @@ typedef struct
     void* unk40B8;
 } Struct_Arg4;
 
-typedef struct
-{
-    u16 unk0;
-    u16 unk2;
-    u16 unk4;
+typedef union {
+    struct {
+        s16 unk0;       /* offset 0 */
+        s16 unk2;       /* offset 2 */
+        s16 unk4;       /* offset 4 */
+    } s;
+    u32 w;              /* covers unk0 and unk2 as a 32‑bit word */
 } D_800FD808_t;
 
 extern D_800FD808_t D_800FD808;
@@ -1431,9 +1433,9 @@ void func_80069B84(void* arg0)
  */
 void func_8006A21C(void)
 {
-    D_800FD808.unk0 = 0x100;
-    D_800FD808.unk2 = 0x100;
-    D_800FD808.unk4 = 0x100;
+    D_800FD808.s.unk0 = 0x100;
+    D_800FD808.s.unk2 = 0x100;
+    D_800FD808.s.unk4 = 0x100;
     D_800FD810 = 0;
 }
 
@@ -1442,7 +1444,33 @@ void func_8006A21C(void)
  */
 void func_8006A240(s16 arg0, s16 arg1, s16 arg2)
 {
-    D_800FD808.unk0 = arg0;
-    D_800FD808.unk2 = arg1;
-    D_800FD808.unk4 = arg2;
+    D_800FD808.s.unk0 = arg0;
+    D_800FD808.s.unk2 = arg1;
+    D_800FD808.s.unk4 = arg2;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/eDBPu
+ */
+void func_8006A258(void)
+{
+    u8* q = &D_800FD810; 
+
+    if (*q != 0)
+    {
+        func_8005A0D0(-1, D_800FD808.s.unk0, D_800FD808.s.unk2, D_800FD808.s.unk4);
+        if (D_800FD808.w == 0x1000100UL && D_800FD808.s.unk4 == 0x100)
+        {
+            *q = 0;
+        }
+    }
+    else
+    {
+        D_800FD808_t* p = &D_800FD808; /* forces s0/s1 registers in else branch */
+        if (p->w != 0x1000100UL || p->s.unk4 != 0x100)
+        {
+            func_8005A0D0(-1, p->s.unk0, p->s.unk2, p->s.unk4);
+            *q = 1;
+        }
+    }
 }
