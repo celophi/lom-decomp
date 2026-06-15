@@ -247,14 +247,37 @@ typedef struct
     void* unk40B8;
 } Struct_Arg4;
 
-typedef union {
-    struct {
-        s16 unk0;       /* offset 0 */
-        s16 unk2;       /* offset 2 */
-        s16 unk4;       /* offset 4 */
+typedef union
+{
+    struct
+    {
+        s16 unk0; /* offset 0 */
+        s16 unk2; /* offset 2 */
+        s16 unk4; /* offset 4 */
     } s;
-    u32 w;              /* covers unk0 and unk2 as a 32‑bit word */
+    u32 w; /* covers unk0 and unk2 as a 32‑bit word */
 } D_800FD808_t;
+
+/* Structure matching the offsets used in the assembly */
+typedef struct
+{
+    u16 unk0;               /* offset 0x00 */
+    u8 pad0[0x254 - 2];     /* 0x02 .. 0x253 */
+    u16 unk254;             /* offset 0x254 */
+    u8 unk256;              /* offset 0x256 */
+    u8 pad1[0x268 - 0x257]; /* 0x257 .. 0x267 */
+    u16 unk268;             /* offset 0x268 */
+    u8 pad2[0x4BC - 0x26A]; /* 0x26A .. 0x4BB */
+    u16 unk4BC;             /* offset 0x4BC */
+    u8 unk4BE;              /* offset 0x4BE */
+    u8 pad3[0x4D0 - 0x4BF]; /* 0x4BF .. 0x4CF */
+    u16 unk4D0;             /* offset 0x4D0 */
+    u8 pad4[0x724 - 0x4D2]; /* 0x4D2 .. 0x723 */
+    u16 unk724;             /* offset 0x724 */
+    u8 unk726;              /* offset 0x726 */
+} D_800FD818_type;
+
+extern D_800FD818_type D_800FD818;
 
 extern D_800FD808_t D_800FD808;
 extern s8 D_800FD810;
@@ -1454,7 +1477,7 @@ void func_8006A240(s16 arg0, s16 arg1, s16 arg2)
  */
 void func_8006A258(void)
 {
-    u8* q = &D_800FD810; 
+    u8* q = &D_800FD810;
 
     if (*q != 0)
     {
@@ -1473,4 +1496,22 @@ void func_8006A258(void)
             *q = 1;
         }
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/a1YEc
+ */
+void func_8006A324(void)
+{
+    D_800FD818.unk254 = 0;
+    D_800FD818.unk4BC = 0;
+    D_800FD818.unk724 = 0;
+
+    D_800FD818.unk256 = 0xFF;
+    D_800FD818.unk4BE = 0xFF;
+    D_800FD818.unk726 = 0xFF;
+
+    D_800FD818.unk0 = (u16)(D_800FD818.unk0 & 0xFFFD);
+    D_800FD818.unk268 = (u16)(D_800FD818.unk268 & 0xFFFE);
+    D_800FD818.unk4D0 = (u16)(D_800FD818.unk4D0 & 0xFFFE);
 }
