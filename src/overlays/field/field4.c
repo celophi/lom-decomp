@@ -176,10 +176,15 @@ typedef struct
 
 typedef struct
 {
-    u8 pad0[0x25];
-    u8 unk25;
+    u32 unk0;            /* 0x00 */
+    u32 unk4;            /* 0x04 */
+    u32 unk8;            /* 0x08 */
+    u8 padC[0x1C - 0xC]; /* 0x0C */
+    s32 unk1C;           /* 0x1C */
+    u8 pad20[0x25 - 0x20];
+    u8 unk25; /* 0x25 */
     u8 pad26[0x2A - 0x26];
-    s16 unk2A;
+    s16 unk2A; /* 0x2A */
     u8 pad2C[0x54 - 0x2C];
 } Struct_D800FDF58;
 
@@ -258,26 +263,22 @@ typedef union
     u32 w; /* covers unk0 and unk2 as a 32‑bit word */
 } D_800FD808_t;
 
-/* Structure matching the offsets used in the assembly */
+/*
+ * Per-element structure (stride 0x268). D_800FD818 is a 3-element array; the
+ * absolute offsets previously used by func_8006A324 (0x268, 0x4BC, 0x4D0,
+ * 0x724, ...) are elements [1] and [2] of this array.
+ */
 typedef struct
 {
-    u16 unk0;               /* offset 0x00 */
+    u8 unk0;                /* offset 0x00 (low byte of a u16 flags field) */
+    u8 unk1;                /* offset 0x01 */
     u8 pad0[0x254 - 2];     /* 0x02 .. 0x253 */
     u16 unk254;             /* offset 0x254 */
     u8 unk256;              /* offset 0x256 */
     u8 pad1[0x268 - 0x257]; /* 0x257 .. 0x267 */
-    u16 unk268;             /* offset 0x268 */
-    u8 pad2[0x4BC - 0x26A]; /* 0x26A .. 0x4BB */
-    u16 unk4BC;             /* offset 0x4BC */
-    u8 unk4BE;              /* offset 0x4BE */
-    u8 pad3[0x4D0 - 0x4BF]; /* 0x4BF .. 0x4CF */
-    u16 unk4D0;             /* offset 0x4D0 */
-    u8 pad4[0x724 - 0x4D2]; /* 0x4D2 .. 0x723 */
-    u16 unk724;             /* offset 0x724 */
-    u8 unk726;              /* offset 0x726 */
 } D_800FD818_type;
 
-extern D_800FD818_type D_800FD818;
+extern D_800FD818_type D_800FD818[];
 
 extern D_800FD808_t D_800FD808;
 extern s8 D_800FD810;
@@ -1503,15 +1504,239 @@ void func_8006A258(void)
  */
 void func_8006A324(void)
 {
-    D_800FD818.unk254 = 0;
-    D_800FD818.unk4BC = 0;
-    D_800FD818.unk724 = 0;
+    D_800FD818[0].unk254 = 0;
+    D_800FD818[1].unk254 = 0;
+    D_800FD818[2].unk254 = 0;
 
-    D_800FD818.unk256 = 0xFF;
-    D_800FD818.unk4BE = 0xFF;
-    D_800FD818.unk726 = 0xFF;
+    D_800FD818[0].unk256 = 0xFF;
+    D_800FD818[1].unk256 = 0xFF;
+    D_800FD818[2].unk256 = 0xFF;
 
-    D_800FD818.unk0 = (u16)(D_800FD818.unk0 & 0xFFFD);
-    D_800FD818.unk268 = (u16)(D_800FD818.unk268 & 0xFFFE);
-    D_800FD818.unk4D0 = (u16)(D_800FD818.unk4D0 & 0xFFFE);
+    *(u16*)&D_800FD818[0].unk0 = (u16)(*(u16*)&D_800FD818[0].unk0 & 0xFFFD);
+    *(u16*)&D_800FD818[1].unk0 = (u16)(*(u16*)&D_800FD818[1].unk0 & 0xFFFE);
+    *(u16*)&D_800FD818[2].unk0 = (u16)(*(u16*)&D_800FD818[2].unk0 & 0xFFFE);
+}
+
+extern void* bcopy(const void*, void*, int);
+
+typedef struct
+{
+    u8 pad0[0x10];
+    u32 unk10;
+} Struct_FF558;
+
+typedef struct
+{
+    u8 _pad000[0x840];
+    u8 inject_enable;
+    u8 _pad841[0x858 - 0x841];
+    u32 inject_flags;
+    u8 pad85C[0x24C];
+    u32 unkAA8;
+} PadContext;
+
+extern PadContext* g_pad_ctx;
+
+extern u8 D_800CBF84[];
+extern u16 D_800FDA80;
+extern Struct_D D_800FE3A0[];
+extern Struct_C D_800FE758;
+extern s32 D_800FE774;
+extern Struct_FF558 D_800FF558[];
+extern void* D_800FF60C;
+extern s32 D_801158A0;
+
+void func_8006A780(s32);
+void func_8006A858(s32);
+s32 func_8006A88C(s32, D_800FD818_type*, s32);
+void func_8006A9A4(s32, s32, s32, s32);
+void func_8006B4D0(s32, s32);
+void func_8006B7A0(s32, s32);
+void func_8006CF88(void*, void*, s32, void*);
+void func_80091438(s32);
+void func_800A3D44(s32, u8);
+
+/**
+ * @brief Reset and re-initialize the field actor/voice state tables.
+ * @note  Matching decompilation; the pointer arithmetic and forced addition
+ *        ordering in the final loops are load-bearing for codegen.
+ * @see decomp.me (100%) https://decomp.me/scratch/ (func_8006A370)
+ */
+void func_8006A370(void)
+{
+    s32 i;
+    s32 j;
+    unsigned int new_var4;
+    int new_var2;
+    u8* new_var;
+    Struct_C* new_var3;
+    int new_var5;
+    Struct_D* ptr_D;
+    u8* new_var7;
+    func_80068970_Arg0* arg0_ptr;
+    u8* ptr_a0;
+    u8* ptr_a1;
+    int new_var8;
+    u8* new_var6;
+    s32 temp_a2;
+    u8* ptr_a3;
+    u8* pad_base;
+    int new_var9;
+    u8* pad_ptr;
+    u8* new_var10;
+    u32 dest_addr; /* temporary for address computation */
+
+    D_801227C8 = 0;
+    D_8012291C = 0;
+
+    for (i = 0; i < 0xD; i++)
+    {
+        D_800FDF58[i].unk25 = 0xFF;
+        D_800FDF58[i].unk0 = 0xFFFB0000;
+        D_800FDF58[i].unk4 = 0;
+        D_800FDF58[i].unk8 = 0;
+    }
+
+    bcopy(D_800CBF84, (void*) 0x80180000, 0x10000);
+    D_800FE774 = 0;
+    D_800FF60C = D_800CBF84;
+
+    for (i = 0; i < 9; i++)
+    {
+        D_800FF558[i].unk10 &= ~2;
+    }
+
+    if (D_801158A0 != 0)
+    {
+        for (j = 0; j < 3; j++)
+        {
+            if (D_800FD818[j].unk0 & 1)
+            {
+                D_800FE774++;
+                if (j == 2)
+                {
+                    new_var4 = func_8006A88C(2, &D_800FD818[2], 1);
+                    i = new_var4;
+                }
+                else
+                {
+                    i = func_8006A88C(j, &D_800FD818[j], 0);
+                }
+                if (i != D_800FD818[j].unk254)
+                {
+                    D_800FD818[j].unk254 = i;
+                    if (j == 2)
+                    {
+                        func_8006A9A4(2, 2, i, 1);
+                    }
+                    else
+                    {
+                        func_8006A9A4(j, j, i, 0);
+                    }
+                }
+                else
+                {
+                    func_8006A780(j);
+                    new_var2 = 2;
+                    if (j == new_var2)
+                    {
+                        D_800FF558[new_var2].unk10 = D_800FF558[new_var2].unk10 | 1;
+                    }
+                }
+                func_8006B4D0(j, j);
+
+                pad_base = (u8*) g_pad_ctx;
+                new_var8 = D_800FDF58[j].unk1C & (~0x1FF);
+                pad_ptr = pad_base + (j * 0x250);
+                D_800FDF58[j].unk1C = new_var8 | ((pad_ptr[0x608] >> 7) ^ 1);
+
+                if (j < 2)
+                {
+                    func_800A3D44(j, D_800FD818[j].unk1);
+                }
+            }
+        }
+    }
+    else
+    {
+        for (j = 0; (j < 3) & 0xFFFFFFFFu; j++)
+        {
+            if ((D_800FD818[j].unk0 & 1) != 0)
+            {
+                D_800FE774++;
+                i = func_8006A88C(j, &D_800FD818[j], 0);
+                if (i != D_800FD818[j].unk254)
+                {
+                    D_800FD818[j].unk254 = i;
+                    func_8006A9A4(j, j, i, 0);
+                }
+                else
+                {
+                    func_8006A780(j);
+                }
+                func_8006B4D0(j, j);
+
+                pad_base = (u8*) g_pad_ctx;
+                new_var9 = D_800FDF58[j].unk1C & (~0x1FF);
+                pad_ptr = pad_base + (j * 0x250);
+                D_800FDF58[j].unk1C = new_var9 | ((pad_ptr[0x608] >> 7) ^ 1);
+            }
+        }
+    }
+
+    func_80091438(0);
+    if (D_800FDA80 & 1)
+    {
+        func_80091438(1);
+    }
+
+    D_800FE758.unk14 = 0;
+    i = 0;
+    new_var = (u8*) D_800F22C8;
+    new_var3 = &D_800FE758;
+    ptr_D = D_800FE3A0;
+    j = 0x6CC0;
+
+    for (; i < 0xD; i++)
+    {
+        arg0_ptr = (func_80068970_Arg0*) (((u32) j) + ((u32) new_var));
+        arg0_ptr->unk0 = ptr_D;
+        arg0_ptr->unkC = new_var3;
+        func_8006B7A0(i, 0);
+        ptr_D++;
+        j += 0x244;
+    }
+
+    func_8006A858(new_var5 = 0);
+
+    for (i = 0; i < 0x10; i++)
+    {
+        j = 0;
+        new_var7 = ((u8*) D_800F22C8) + i;
+        ptr_a3 = new_var7 + 0xB327;
+        temp_a2 = i * 2;
+        new_var4 = 0xB3C8;
+
+        {
+            u8* base = (u8*) D_800F22C8;
+            new_var10 = base;
+            new_var6 = new_var10;
+            ptr_a0 = new_var6;
+            ptr_a1 = ptr_a0;
+        }
+
+        for (; j < 9; j++)
+        {
+            new_var6 = ptr_a1 + 0xB337;
+            /* Force addition order: temp_a2 + (ptr_a0 + new_var4) */
+            dest_addr = temp_a2;
+            dest_addr += (u32)(ptr_a0 + new_var4);
+            *((u16*)dest_addr) = (*(i + new_var6) = 0);
+            ptr_a1 += 0x10;
+            ptr_a0 += 0x20;
+            *ptr_a3 = 0;
+        }
+    }
+
+    func_8006CF88(ptr_a0, ptr_a1, temp_a2, ptr_a3);
 }
