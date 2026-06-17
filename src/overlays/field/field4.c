@@ -270,8 +270,15 @@ typedef union
  */
 typedef struct
 {
-    u8 unk0;                /* offset 0x00 (low byte of a u16 flags field) */
-    u8 unk1;                /* offset 0x01 */
+    union
+    {
+        u16 h; /* offset 0x00 as a halfword (flags) */
+        struct
+        {
+            u8 unk0; /* offset 0x00 */
+            u8 unk1; /* offset 0x01 */
+        } b;
+    } u0;
     u8 pad0[0x254 - 2];     /* 0x02 .. 0x253 */
     u16 unk254;             /* offset 0x254 */
     u8 unk256;              /* offset 0x256 */
@@ -1512,9 +1519,9 @@ void func_8006A324(void)
     D_800FD818[1].unk256 = 0xFF;
     D_800FD818[2].unk256 = 0xFF;
 
-    *(u16*)&D_800FD818[0].unk0 = (u16)(*(u16*)&D_800FD818[0].unk0 & 0xFFFD);
-    *(u16*)&D_800FD818[1].unk0 = (u16)(*(u16*)&D_800FD818[1].unk0 & 0xFFFE);
-    *(u16*)&D_800FD818[2].unk0 = (u16)(*(u16*)&D_800FD818[2].unk0 & 0xFFFE);
+    D_800FD818[0].u0.h = (u16)(D_800FD818[0].u0.h & 0xFFFD);
+    D_800FD818[1].u0.h = (u16)(D_800FD818[1].u0.h & 0xFFFE);
+    D_800FD818[2].u0.h = (u16)(D_800FD818[2].u0.h & 0xFFFE);
 }
 
 extern void* bcopy(const void*, void*, int);
@@ -1610,7 +1617,7 @@ void func_8006A370(void)
     {
         for (j = 0; j < 3; j++)
         {
-            if (D_800FD818[j].unk0 & 1)
+            if (D_800FD818[j].u0.b.unk0 & 1)
             {
                 D_800FE774++;
                 if (j == 2)
@@ -1652,7 +1659,7 @@ void func_8006A370(void)
 
                 if (j < 2)
                 {
-                    func_800A3D44(j, D_800FD818[j].unk1);
+                    func_800A3D44(j, D_800FD818[j].u0.b.unk1);
                 }
             }
         }
@@ -1661,7 +1668,7 @@ void func_8006A370(void)
     {
         for (j = 0; (j < 3) & 0xFFFFFFFFu; j++)
         {
-            if ((D_800FD818[j].unk0 & 1) != 0)
+            if ((D_800FD818[j].u0.b.unk0 & 1) != 0)
             {
                 D_800FE774++;
                 i = func_8006A88C(j, &D_800FD818[j], 0);
