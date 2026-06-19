@@ -65,6 +65,28 @@ typedef struct
     u16 unk236;
 } MainStruct;
 
+typedef struct
+{
+    u8 pad0[2];  // 0x00 - 0x01
+    u16 unk2;    // 0x02 - 0x03
+    u8 pad1[6];  // 0x04 - 0x09
+    u16 unkA;    // 0x0A - 0x0B
+    u8 pad2[11]; // 0x0C - 0x16
+    u8 unk17;    // 0x17
+    u8 pad3[3];  // 0x18 - 0x1A
+    u8 unk1B;    // 0x1B
+    u8 pad4[8];  // 0x1C - 0x23
+    u16 unk24;   // 0x24 - 0x25
+    u8 pad5[6];  // 0x26 - 0x2B
+    u16 unk2C;   // 0x2C - 0x2D
+    u8 pad6[11]; // 0x2E - 0x38
+    u8 unk39;    // 0x39
+    u8 pad7[3];  // 0x3A - 0x3C
+    u8 unk3D;    // 0x3D
+} D_8010AE88_t;
+
+extern D_8010AE88_t D_8010AE88;
+
 typedef struct Struct_C
 {
     u8 unk0[2];
@@ -1528,10 +1550,10 @@ extern void* bcopy(const void*, void*, int);
 
 typedef struct
 {
-    u8* unk0;  /* 0x00 */
-    u8* unk4;  /* 0x04 */
+    u8* unk0; /* 0x00 */
+    u8* unk4; /* 0x04 */
     u8 pad8[1];
-    u8 unk9;   /* 0x09 */
+    u8 unk9; /* 0x09 */
     u8 padA[6];
     u32 unk10; /* 0x10 */
 } Struct_FF558;
@@ -1609,7 +1631,7 @@ void func_8006A370(void)
         D_800FDF58[i].unk8 = 0;
     }
 
-    bcopy(D_800CBF84, (void*) 0x80180000, 0x10000);
+    bcopy(D_800CBF84, (void*)0x80180000, 0x10000);
     D_800FE774 = 0;
     D_800FF60C = D_800CBF84;
 
@@ -1657,7 +1679,7 @@ void func_8006A370(void)
                 }
                 func_8006B4D0(j, j);
 
-                pad_base = (u8*) g_pad_ctx;
+                pad_base = (u8*)g_pad_ctx;
                 new_var8 = D_800FDF58[j].unk1C & (~0x1FF);
                 pad_ptr = pad_base + (j * 0x250);
                 D_800FDF58[j].unk1C = new_var8 | ((pad_ptr[0x608] >> 7) ^ 1);
@@ -1688,7 +1710,7 @@ void func_8006A370(void)
                 }
                 func_8006B4D0(j, j);
 
-                pad_base = (u8*) g_pad_ctx;
+                pad_base = (u8*)g_pad_ctx;
                 new_var9 = D_800FDF58[j].unk1C & (~0x1FF);
                 pad_ptr = pad_base + (j * 0x250);
                 D_800FDF58[j].unk1C = new_var9 | ((pad_ptr[0x608] >> 7) ^ 1);
@@ -1704,14 +1726,14 @@ void func_8006A370(void)
 
     D_800FE758.unk14 = 0;
     i = 0;
-    new_var = (u8*) D_800F22C8;
+    new_var = (u8*)D_800F22C8;
     new_var3 = &D_800FE758;
     ptr_D = D_800FE3A0;
     j = 0x6CC0;
 
     for (; i < 0xD; i++)
     {
-        arg0_ptr = (func_80068970_Arg0*) (((u32) j) + ((u32) new_var));
+        arg0_ptr = (func_80068970_Arg0*)(((u32)j) + ((u32)new_var));
         arg0_ptr->unk0 = ptr_D;
         arg0_ptr->unkC = new_var3;
         func_8006B7A0(i, 0);
@@ -1724,13 +1746,13 @@ void func_8006A370(void)
     for (i = 0; i < 0x10; i++)
     {
         j = 0;
-        new_var7 = ((u8*) D_800F22C8) + i;
+        new_var7 = ((u8*)D_800F22C8) + i;
         ptr_a3 = new_var7 + 0xB327;
         temp_a2 = i * 2;
         new_var4 = 0xB3C8;
 
         {
-            u8* base = (u8*) D_800F22C8;
+            u8* base = (u8*)D_800F22C8;
             new_var10 = base;
             new_var6 = new_var10;
             ptr_a0 = new_var6;
@@ -1770,18 +1792,33 @@ void func_8006A780(s32 arg0)
     Struct_D800FDF58* new_var;
     u8* old_unk0;
 
-    new_var2 = (u32) 0x80180000;
+    new_var2 = (u32)0x80180000;
     D_800FF60C += 0;
-    new_var4 = (u32) D_800CBF84;
-    bcopy((void*) ((new_var2 - new_var4) + ((u32) D_800FF558[arg0].unk0)), D_800FF60C, D_800FF558[arg0].unk4 - D_800FF558[arg0].unk0);
+    new_var4 = (u32)D_800CBF84;
+    bcopy((void*)((new_var2 - new_var4) + ((u32)D_800FF558[arg0].unk0)), D_800FF60C, D_800FF558[arg0].unk4 - D_800FF558[arg0].unk0);
     new_var4 = D_800FF558[arg0].unk4 - D_800FF558[arg0].unk0;
     old_unk0 = D_800FF558[arg0].unk0;
-    D_800FF558[arg0].unk0 = (u8*) D_800FF60C;
-    D_800FF558[arg0].unk4 = ((u8*) D_800FF60C) + new_var4;
+    D_800FF558[arg0].unk0 = (u8*)D_800FF60C;
+    D_800FF558[arg0].unk4 = ((u8*)D_800FF60C) + new_var4;
     D_800FF558[arg0].unk10 &= ~1;
     D_800FF558[arg0].unk9 = arg0;
     D_800FF558[arg0].unk10 |= 2;
     D_800FF60C = D_800FF558[arg0].unk4;
     new_var = &D_800FDF58[arg0];
     func_8006C3FC(new_var, old_unk0);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/oaoFZ
+ */
+void func_8006A858(void)
+{
+    D_8010AE88.unk2 = 0x185;
+    D_8010AE88.unk24 = 0x185;
+    D_8010AE88.unk17 = 0;
+    D_8010AE88.unk39 = 0;
+    D_8010AE88.unk1B = 0;
+    D_8010AE88.unkA = 0x585;
+    D_8010AE88.unk3D = 0;
+    D_8010AE88.unk2C = 0x585;
 }
