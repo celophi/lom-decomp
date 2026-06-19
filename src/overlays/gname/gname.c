@@ -385,7 +385,7 @@ void reset_run_state(void)
  * @param mode    Current char-set mode (see above).
  * @param buttons Filtered button bitmask from @c g_pad_input.
  * @return        New char-set mode after processing the input.
- * @see decomp.me (99.78%) https://decomp.me/scratch/PpqVd
+ * @see decomp.me (99.78%) https://decomp.me/scratch/Wz7gq
  */
 s32 handle_char_set_input(s32 mode, s32 buttons)
 {

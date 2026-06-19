@@ -1528,8 +1528,12 @@ extern void* bcopy(const void*, void*, int);
 
 typedef struct
 {
-    u8 pad0[0x10];
-    u32 unk10;
+    u8* unk0;  /* 0x00 */
+    u8* unk4;  /* 0x04 */
+    u8 pad8[1];
+    u8 unk9;   /* 0x09 */
+    u8 padA[6];
+    u32 unk10; /* 0x10 */
 } Struct_FF558;
 
 typedef struct
@@ -1554,6 +1558,7 @@ extern void* D_800FF60C;
 extern s32 D_801158A0;
 
 void func_8006A780(s32);
+void func_8006C3FC(Struct_D800FDF58*, void*);
 void func_8006A858(s32);
 s32 func_8006A88C(s32, D_800FD818_type*, s32);
 void func_8006A9A4(s32, s32, s32, s32);
@@ -1746,4 +1751,37 @@ void func_8006A370(void)
     }
 
     func_8006CF88(ptr_a0, ptr_a1, temp_a2, ptr_a3);
+}
+
+/**
+ * @brief TODO: relocate field entry buffer into the streaming window.
+ *
+ * Copies the entry's payload into the rolling destination at D_800FF60C,
+ * repoints the entry's begin/end pointers at the new location, updates its
+ * state flags, and hands the previous buffer to func_8006C3FC.
+ *
+ * @param arg0 Index into D_800FF558 / D_800FDF58.
+ * @see decomp.me (98.98%) https://decomp.me/scratch/iTv8i
+ */
+void func_8006A780(s32 arg0)
+{
+    u32 new_var4;
+    u32 new_var2;
+    Struct_D800FDF58* new_var;
+    u8* old_unk0;
+
+    new_var2 = (u32) 0x80180000;
+    D_800FF60C += 0;
+    new_var4 = (u32) D_800CBF84;
+    bcopy((void*) ((new_var2 - new_var4) + ((u32) D_800FF558[arg0].unk0)), D_800FF60C, D_800FF558[arg0].unk4 - D_800FF558[arg0].unk0);
+    new_var4 = D_800FF558[arg0].unk4 - D_800FF558[arg0].unk0;
+    old_unk0 = D_800FF558[arg0].unk0;
+    D_800FF558[arg0].unk0 = (u8*) D_800FF60C;
+    D_800FF558[arg0].unk4 = ((u8*) D_800FF60C) + new_var4;
+    D_800FF558[arg0].unk10 &= ~1;
+    D_800FF558[arg0].unk9 = arg0;
+    D_800FF558[arg0].unk10 |= 2;
+    D_800FF60C = D_800FF558[arg0].unk4;
+    new_var = &D_800FDF58[arg0];
+    func_8006C3FC(new_var, old_unk0);
 }
