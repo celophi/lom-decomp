@@ -1042,25 +1042,19 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
  *
  * @param ctx Render context. Uses OT entries at byte offsets
  *            0x20/0x24/0x2C/0x34 and the heap cursor at 0x4040.
- *
- * @note Control flow is left verbatim; the manual OT-splice bit-masking is
- *       load-bearing for the 82.68% match and must not be replaced with addPrim.
- * @see decomp.me (82.68%) https://decomp.me/scratch/rQBi6
+ * @see decomp.me (91.42%) https://decomp.me/scratch/a0Oye
  */
 void gname_render(RenderContext* ctx)
 {
-    s32 cursor_x;
     s32 i;
     s32 scroll_pos;
     s32* entry;
     void* prim;
-    char* ctx_bytes;
-    void* cursor_sprite;
-    void* prim2;
+    DR_TPAGE* drawmode;
     RenderContext* ctx2;
     unsigned char* glyph_ptr;
-    char* tmp_ptr;
-    entry = (s32*)g_tab_cursor_entries;
+    ctx2 = ctx;
+    entry = g_tab_cursor_entries;
     i = 2;
     glyph_ptr = (unsigned char*)g_tab_cursor_entries + 2;
     prim = ctx->prim_cursor;
@@ -1069,58 +1063,46 @@ void gname_render(RenderContext* ctx)
     {
         if (i != 9)
         {
-            prim = emit_glyph_sprt(prim, ((char*)ctx) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1, (i - 2) == g_cursor_tab, 0);
+            prim = emit_glyph_sprt(prim, ((char*)ctx2) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1, (i - 2) == g_cursor_tab, 0);
         }
         i += 1;
         glyph_ptr += 4;
         entry++;
     } while (i < 0xD);
-    cursor_x = g_cursor_x;
-    ctx2 = ctx;
     /* 2. Static glyph + append animation, then panel-tab sprite. */
-    cursor_sprite = emit_panel_tab_sprite(
+    prim = emit_panel_tab_sprite(
         emit_draw_mode_prim(
-            draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx),
+            draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx2),
             ((char*)ctx2) + 0x34),
-        &ctx->ot[0]);
-    /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawMode. */
-    tmp_ptr = ((char*)cursor_sprite) + 0x14;
-    *((s32*)(((char*)cursor_sprite) + 4)) = 0x808080;
-    *((u8*)(((char*)cursor_sprite) + 7)) = 0x64;
-    prim2 = ((char*)cursor_sprite) + 0x1C;
-    *((u8*)(((char*)cursor_sprite) + 3)) = 4;
-    *((s16*)(((char*)cursor_sprite) + 8)) = cursor_x;
+        &ctx2->ot[0]);
+    /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawTPage. */
+    ((u_long*)prim)[1] = 0x808080;
+    setSprt(prim);
+    {
+        s32 tmp = g_cursor_x;
+        ((SPRT*)prim)->x0 = tmp;
+    }
     {
         s32 tmp = g_cursor_y;
-        *((s16*)(((char*)cursor_sprite) + 10)) = tmp;
+        ((SPRT*)prim)->y0 = tmp;
     }
-    *((u8*)(((char*)cursor_sprite) + 12)) = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u;
-    *((u8*)(((char*)cursor_sprite) + 13)) = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v;
-    *((s16*)(((char*)cursor_sprite) + 16)) = (s16)g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w;
-    *((s16*)(((char*)cursor_sprite) + 18)) = (s16)g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h;
+    ((SPRT*)prim)->u0 = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u;
+    ((SPRT*)prim)->v0 = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v;
+    ((SPRT*)prim)->w = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w;
+    ((SPRT*)prim)->h = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h;
     {
         u32 tmp = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut;
-        *((s16*)(((char*)cursor_sprite) + 14)) = (s16)((tmp & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
+        ((SPRT*)prim)->clut = (tmp & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
     }
-    ctx_bytes = (char*)ctx2;
-    {
-        s32 old = *((s32*)cursor_sprite);
-        *((s32*)cursor_sprite) = (old & 0xFF000000) | ((*((s32*)(ctx_bytes + 0x20))) & 0xFFFFFF);
-    }
-    *((s32*)(ctx_bytes + 0x20)) = ((*((s32*)(ctx_bytes + 0x20))) & 0xFF000000) | (((s32)cursor_sprite) & 0xFFFFFF);
-    {
-        void* drawmode = ((char*)cursor_sprite) + 0x14;
-        *((u8*)(((char*)drawmode) + 3)) = 1;
-        *((u32*)(((char*)drawmode) + 4)) = 0xE1000005;
-        *((s32*)tmp_ptr) = ((*((s32*)tmp_ptr)) & 0xFF000000) | ((*((s32*)(ctx_bytes + 0x20))) & 0xFFFFFF);
-        scroll_pos = g_scroll_pos;
-        *((s32*)(ctx_bytes + 0x20)) = ((*((s32*)(ctx_bytes + 0x20))) & 0xFF000000) | (((s32)drawmode) & 0xFFFFFF);
-    }
-    tmp_ptr = ctx_bytes + 0x4040;
+    addPrim(&ctx2->ot[8], prim);
+    drawmode = (DR_TPAGE*)((SPRT*)prim + 1);
+    setDrawTPage(drawmode, 0, 0, 5);
+    addPrim(&ctx2->ot[8], drawmode);
+    prim = (DR_TPAGE*)drawmode + 1;
     /* 4. Conditional extra glyphs from the g_tab_cursor_pos table. */
     if (g_scroll_pos != 0)
     {
-        prim2 = emit_glyph_sprt(prim2, &ctx->ot[0], g_tab_cursor_pos[0].glyph, g_tab_cursor_pos[0].x, (s32)g_tab_cursor_pos[0].y, 0, 0, 0);
+        prim = emit_glyph_sprt(prim, &ctx2->ot[0], g_tab_cursor_pos[0].glyph, g_tab_cursor_pos[0].x, (s32)g_tab_cursor_pos[0].y, 0, 0, 0);
     }
     if (g_char_last_row >= 5)
     {
@@ -1131,13 +1113,13 @@ void gname_render(RenderContext* ctx)
         }
         if ((((scroll_pos >> 1) >> 1) >> 2) != (g_char_last_row - 4))
         {
-            prim2 = emit_glyph_sprt(prim2, &ctx->ot[0], g_tab_cursor_pos[1].glyph, g_tab_cursor_pos[1].x, (s32)g_tab_cursor_pos[1].y, 0, 0, 0);
+            prim = emit_glyph_sprt(prim, &ctx2->ot[0], g_tab_cursor_pos[1].glyph, g_tab_cursor_pos[1].x, (s32)g_tab_cursor_pos[1].y, 0, 0, 0);
         }
     }
     /* 5. Remaining sub-passes. */
-    *((void**)tmp_ptr) = emit_panel_label(emit_draw_mode_prim(prim2, &ctx->ot[0]), (u_long*)(ctx_bytes + 0x24));
+    *((void**)(((char*)ctx) + 0x4040)) = emit_panel_label(emit_draw_mode_prim(prim, &ctx2->ot[0]), (u_long*)(((char*)ctx2) + 0x24));
     render_char_panel(ctx, g_char_panel);
-    render_name_strip(ctx2, g_active_name, g_strip_width);
+    render_name_strip(ctx, g_active_name, g_strip_width);
 }
 
 /**
@@ -2091,25 +2073,28 @@ void* draw_char_append_anim(void* prim, RenderContext* ctx)
         }
     }
 
-    if (g_append_anim_timer != 0)
+    if (g_append_anim_timer == 0)
     {
-        g_append_anim_timer--;
-        if (g_append_anim_timer == 0)
-        {
-            g_append_anim_frame++;
-            if (g_append_anim_frame == APPEND_ANIM_FRAME_COUNT)
-            {
-                g_append_anim_frame = 0;
-                g_append_anim_timer = 0;
-                return result;
-            }
-            else
-            {
-                table = g_char_append_anim;
-                g_append_anim_timer = table[(g_append_anim_frame * APPEND_ANIM_FRAME_STRIDE) + 3];
-            }
-        }
+        return result;
     }
+
+    g_append_anim_timer--;
+
+    if (g_append_anim_timer == 0)
+    {
+        g_append_anim_frame++;
+
+        if (g_append_anim_frame == APPEND_ANIM_FRAME_COUNT)
+        {
+            g_append_anim_frame = 0;
+            g_append_anim_timer = 0;
+            return result;
+        }
+
+        table = g_char_append_anim;
+        g_append_anim_timer = table[(g_append_anim_frame * APPEND_ANIM_FRAME_STRIDE) + 3];
+    }
+
     return result;
 }
 
