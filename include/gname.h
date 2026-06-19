@@ -379,32 +379,15 @@ typedef struct
      * labels, tab sprites, kanji category names). */
 } PanelDataHeader;
 
-/** Header field at blob + 0x10: u32 offset (0x3C9C) of the random name pool
- *  used when g_name_source_mode == 4 or 5. Declared as an array so
- *  `g_random_names_off - 0x10` yields the blob base (see @ref PanelDataHeader). */
-extern u8 g_random_names_off[];
-/** Header field at blob + 0x0C: u32 offset (0x3754) of the history name list
- *  used when g_name_source_mode == 3 (see @ref PanelDataHeader). */
-extern u8 g_history_names_off[];
-/** Header field at blob + 0x08: offset (0x2A0) of the kanji panel glyph data
- *  (see @ref PanelDataHeader). */
-extern u8* g_kanji_panel_off;
-/** The blob's u16 record-offset table (at blob + 0x14, 138 entries). Each
- *  entry is a byte offset from the table itself to one record. Not referenced
- *  directly by matched code - records are reached via
- *  @c PANEL_DATA_BLOB + g_panel_tbl_off + entry. */
-extern u16 g_panel_record_offsets[];
-/* g_kanji_cat_entries and g_kanji_entry_offsets are defined in gname.c. */
-/**
- * @brief Header field at blob + 4 of the character panel data blob
- *        (see @ref PanelDataHeader).
+/* The panel data blob header fields and record-offset table
+ * (g_random_names_off, g_history_names_off, g_kanji_panel_off,
+ * g_panel_record_offsets, g_panel_tbl_off, g_panel_data_base) plus
+ * g_kanji_cat_entries and g_kanji_entry_offsets are defined in gname.c.
  *
- * Holds the byte offset (0x14) from the blob base to the u16 record-offset
- * table (@ref g_panel_record_offsets); each table entry is in turn a byte
- * offset from the table itself to one record. A record pointer is therefore
- * @c PANEL_DATA_BLOB + g_panel_tbl_off + table[i].
- */
-extern u32 g_panel_tbl_off;
+ * g_panel_tbl_off (blob + 4) holds the byte offset (0x14) from the blob base
+ * to the u16 record-offset table; a record pointer is therefore
+ * PANEL_DATA_BLOB + g_panel_tbl_off + table[i]. The PANEL_* macros below
+ * depend on g_panel_tbl_off being defined ahead of their use. */
 
 /**
  * @brief Base address of the character panel data blob, derived from
@@ -428,11 +411,6 @@ extern u32 g_panel_tbl_off;
 #define PANEL_RECORD(i) ((u8*)PANEL_REC_TBL + PANEL_REC_TBL[(i)])
 
 /* g_panel_char_offsets and g_kanji_cat_names_offset are defined in gname.c. */
-/** Base of the panel data blob; the 4 bytes immediately before @ref g_panel_tbl_off
- *  (see @ref PanelDataHeader). Referenced directly only where the original code
- *  anchored at the blob base itself; most accesses derive the base from a
- *  header-field symbol at runtime instead. */
-extern u8 g_panel_data_base[];
 
 /**
  * @brief Play a one-shot UI sound effect via the AKAO driver.
