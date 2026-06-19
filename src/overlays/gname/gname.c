@@ -1,5 +1,72 @@
 #include "gname.h"
 
+/* --- Constant data tables ---------------------------------------------------
+ *
+ * These reproduce the leading run of the overlay's .data section
+ * (0x80142C98..0x80142EF4), in the exact order the original binary lays them
+ * out. They must stay in this order, and ahead of the panel data blob that
+ * still lives in asm/overlays/gname/data/data.data.s, for the .data section to
+ * match byte-for-byte. The linker places gname.o(.data) before
+ * data.data.o(.data), so this block occupies the start of .data.
+ */
+
+/** Per-panel character set base offsets (low u16 = row count). */
+extern u32 g_panel_char_offsets[];
+
+/** First record-offset entry index of the kanji category name records. */
+extern s32 g_kanji_cat_names_offset;
+/** Trailing word inside the g_kanji_cat_names_offset symbol span (0x80142CA8);
+ *  never referenced by name. Kept as its own global so it is emitted and not
+ *  discarded, preserving the layout. TODO: meaning unknown (value 0x8A). */
+extern s32 D_80142CA8;
+
+/** Kanji category entry index table: [cat] -> sub-index into
+ *  g_kanji_entry_offsets, or 0xFF when empty. */
+extern u32 g_kanji_cat_entries[];
+
+/** Glyph metrics table indexed by character id (see @ref GlyphInfo). */
+extern GlyphInfo g_glyph_table[];
+
+/* TabCursorEntry initializers are {x:9, sprite_idx:7, y, glyph}. */
+
+/** Scroll-up [0] and scroll-down [1] indicator glyphs. */
+extern TabCursorEntry g_tab_cursor_pos[];
+
+/** Cursor target positions for the 11 character-panel tabs. */
+extern TabCursorEntry g_tab_cursor_entries[];
+
+/** Kanji sub-index to glyph offset lookup table. */
+extern u32 g_kanji_entry_offsets[];
+
+/* --- Character panel data blob ----------------------------------------------
+ *
+ * The next run (0x80142EF4..0x8014301C) is the header of the serialized panel
+ * data file (see @ref PanelDataHeader) followed by its u16 record-offset
+ * table. These six symbols must stay contiguous and in this order: the code
+ * derives the blob base from individual field addresses at runtime
+ * (e.g. PANEL_DATA_BLOB = &g_panel_tbl_off - 4, g_random_names_off - 0x10).
+ * The blob body (D_8014301C and the glyph TIM) still follows in
+ * data.data.s and must remain immediately after g_panel_record_offsets.
+ *
+ * The header fields are u32 byte offsets; the u8[] ones are kept as byte
+ * arrays so the pointer arithmetic in the referencing code is unchanged.
+ */
+
+/** Blob + 0x00: stored value 4; purpose unknown. */
+extern u8 g_panel_data_base[];
+/** Blob + 0x04: offset (0x14) of the u16 record-offset table. */
+extern u32 g_panel_tbl_off;
+/** Blob + 0x08: offset (0x2A0) of the kanji panel glyph data. */
+extern u8* g_kanji_panel_off;
+/** Blob + 0x0C: offset (0x3754) of the history name list. */
+extern u8 g_history_names_off[];
+/** Blob + 0x10: offset (0x3C9C) of the random name pool. */
+extern u8 g_random_names_off[];
+
+/** Blob + 0x14: u16 record-offset table (138 entries). Each entry is a byte
+ *  offset from the table itself to one record. */
+extern u16 g_panel_record_offsets[];
+
 /**
  * @brief Reset the RGB fade state.
  *
