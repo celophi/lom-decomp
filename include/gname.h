@@ -293,20 +293,7 @@ extern u8* g_active_name;
 extern u8 g_append_anim_timer; /* render ticks until the next animation frame */
 extern u8 g_append_anim_frame; /* current frame index into g_char_append_anim */
 extern s32 g_strip_width_steps;
-extern GlyphInfo g_glyph_table[];
-/**
- * Tab cursor and scroll-indicator position table (@ref TabCursorEntry).
- * Entry [0] = scroll-up indicator; entry [1] = scroll-down indicator.
- * The table is contiguous with @ref g_tab_cursor_entries at 0x80142E14.
- */
-extern TabCursorEntry g_tab_cursor_pos[];
-/**
- * Cursor target positions for the 11 character-panel tabs (@ref TabCursorEntry).
- * Indexed 0..10; tab index 7 is unused (no valid mode maps to it).
- * Immediately follows @ref g_tab_cursor_pos in ROM; accessed together via
- * @c g_tab_cursor_pos base + @c (cur_mode + 2) * 4 in @ref handle_char_set_input.
- */
-extern TabCursorEntry g_tab_cursor_entries[];
+/* g_glyph_table, g_tab_cursor_pos, g_tab_cursor_entries are defined in gname.c. */
 extern GlyphSeqEntry g_name_cursor_glyphs[];
 
 /* --- Globals named during decomp --- */
@@ -407,10 +394,7 @@ extern u8* g_kanji_panel_off;
  *  directly by matched code - records are reached via
  *  @c PANEL_DATA_BLOB + g_panel_tbl_off + entry. */
 extern u16 g_panel_record_offsets[];
-/** Kanji category entry index table: [cat] -> sub-index into g_kanji_entry_offsets, or 0xFF. */
-extern u32 g_kanji_cat_entries[];
-/** Kanji sub-index to glyph offset lookup table. */
-extern u32 g_kanji_entry_offsets[];
+/* g_kanji_cat_entries and g_kanji_entry_offsets are defined in gname.c. */
 /**
  * @brief Header field at blob + 4 of the character panel data blob
  *        (see @ref PanelDataHeader).
@@ -443,11 +427,7 @@ extern u32 g_panel_tbl_off;
  *  offsets from the table itself (same idiom as FF8's string tables). */
 #define PANEL_RECORD(i) ((u8*)PANEL_REC_TBL + PANEL_REC_TBL[(i)])
 
-/** Per-panel character set base offsets (u32 per panel; low u16 = row count). */
-extern u32 g_panel_char_offsets[];
-/** First @ref g_panel_record_offsets entry index of the kanji category name
- *  records; the record for category c is entry (g_kanji_cat_names_offset + c). */
-extern s32 g_kanji_cat_names_offset;
+/* g_panel_char_offsets and g_kanji_cat_names_offset are defined in gname.c. */
 /** Base of the panel data blob; the 4 bytes immediately before @ref g_panel_tbl_off
  *  (see @ref PanelDataHeader). Referenced directly only where the original code
  *  anchored at the blob base itself; most accesses derive the base from a
