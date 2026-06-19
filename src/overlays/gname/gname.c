@@ -2174,25 +2174,28 @@ void* draw_char_append_anim(void* prim, RenderContext* ctx)
         }
     }
 
-    if (g_append_anim_timer != 0)
+    if (g_append_anim_timer == 0)
     {
-        g_append_anim_timer--;
-        if (g_append_anim_timer == 0)
-        {
-            g_append_anim_frame++;
-            if (g_append_anim_frame == APPEND_ANIM_FRAME_COUNT)
-            {
-                g_append_anim_frame = 0;
-                g_append_anim_timer = 0;
-                return result;
-            }
-            else
-            {
-                table = g_char_append_anim;
-                g_append_anim_timer = table[(g_append_anim_frame * APPEND_ANIM_FRAME_STRIDE) + 3];
-            }
-        }
+        return result;
     }
+
+    g_append_anim_timer--;
+
+    if (g_append_anim_timer == 0)
+    {
+        g_append_anim_frame++;
+        
+        if (g_append_anim_frame == APPEND_ANIM_FRAME_COUNT)
+        {
+            g_append_anim_frame = 0;
+            g_append_anim_timer = 0;
+            return result;
+        }
+        
+        table = g_char_append_anim;
+        g_append_anim_timer = table[(g_append_anim_frame * APPEND_ANIM_FRAME_STRIDE) + 3];
+    }
+
     return result;
 }
 
