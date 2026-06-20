@@ -136,10 +136,10 @@ void reset_fade_state(void)
  *      brightening) when any channel >= @c FADE_CHAN_ADDITIVE, or
  *      @c FADE_TPAGE_SUB (abr=2, Back-Front, darkening) otherwise.
  *
- * Both packets are spliced into @c ctx->ot[0] and @c ctx->prim_cursor is
+ * Both packets are spliced into @ref GNAME_OT_FRONT and @c ctx->prim_cursor is
  * advanced past them. When the color is identity no primitives are emitted.
  *
- * @param ctx Render context whose @c ot[0] is the OT entry and
+ * @param ctx Render context whose @ref GNAME_OT_FRONT is the OT entry and
  *            @c prim_cursor is the primitive heap cursor.
  *
  * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
@@ -223,14 +223,14 @@ static void render_fade_overlay(RenderContext* ctx)
     setSemiTrans(prim, 1);
     SET_YX0((TILE*)prim, 0, 0);
     setWH((TILE*)prim, SCREEN_WIDTH, SCREEN_HEIGHT);
-    addPrim(p_ctx->ot, prim);
+    addPrim(&p_ctx->ot[GNAME_OT_FRONT], prim);
     prim = (TILE*)prim + 1;
 
     /* Choose blend mode by direction of tint. */
     tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
 
     setDrawTPage(prim, 0, 0, tpage);
-    addPrim(p_ctx->ot, prim);
+    addPrim(&p_ctx->ot[GNAME_OT_FRONT], prim);
     prim = (DR_TPAGE*)prim + 1;
 
     ctx->prim_cursor = prim;
@@ -350,7 +350,7 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
 
     func_80019A34(&rect, pixel_block + 1);
 
-    /* Trailing rect writes are dead but load-bearing for the match. */
+    /* Trailing rect writes are dead but required to match. */
     rect.x = dst_coords->clut_x;
     rect.y = dst_coords->clut_y + 1;
     rect.w = CLUT_ENTRY_COUNT;
@@ -1049,107 +1049,108 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
 /**
  * @brief Main per-frame render pass for the name-entry overlay.
  *
- * Builds this frame's primitives into @p ctx and splices them onto the
+ * Builds this frame's primitives into @p context and splices them onto the
  * render context's ordering table. Runs each tick from @ref gname_tick,
  * after @ref draw_name_cursor_row. The work, in order:
  *
  *  1. Character grid: walk grid-table entries 2..12 (skipping 9) and emit a
- *     drop-shadowed glyph SPRT for each via @ref emit_glyph_sprt into OT entry
- *     @c ot[0x0B] (offset 0x2C). The entry whose index equals @c g_cursor_tab
+ *     drop-shadowed glyph SPRT for each via @ref emit_glyph_sprt into OT slot
+ *     @ref GNAME_OT_CHAR_GRID. The entry whose index equals @c g_cursor_tab
  *     is drawn highlighted (the @p primary_adj flag of @ref emit_glyph_sprt), marking
  *     the current selection.
  *  2. Append decoration: emit a static glyph plus the character-append
- *     animation (@ref draw_char_append_anim) into @c ot[0x0D] (offset 0x34),
+ *     animation (@ref draw_char_append_anim) into @ref GNAME_OT_CHAR_APPEND,
  *     then run @ref emit_panel_tab_sprite.
- *  3. Text cursor: build a white textured SPRT (glyph @c g_glyph_table[0xA0])
- *     at the cursor position (@c g_cursor_x, @c g_cursor_y), followed by an
- *     additive DrawMode, and chain both into @c ot[0x08] (offset 0x20).
+ *  3. Text cursor: build a white textured SPRT (glyph
+ *     @c g_glyph_table[NAME_CURSOR_GLYPH_COUNT]) at the cursor position
+ *     (@c g_cursor_x, @c g_cursor_y), followed by an additive DrawMode, and
+ *     chain both into @ref GNAME_OT_TEXT_CURSOR.
  *  4. Conditional glyphs: when @c g_scroll_pos is set, and again when
  *     @c g_char_last_row >= 5 passes a phase check, emit extra glyphs from the
  *     @c g_tab_cursor_pos table.
  *  5. Hand off to the remaining sub-passes @ref emit_panel_label,
  *     @ref render_char_panel and @ref render_name_strip.
  *
- * @param ctx Render context. Uses OT entries at byte offsets
- *            0x20/0x24/0x2C/0x34 and the heap cursor at 0x4040.
- * @see decomp.me (91.42%) https://decomp.me/scratch/a0Oye
+ * @param context Render context. Chains primitives into OT slots
+ *                @ref GNAME_OT_FRONT, @ref GNAME_OT_TEXT_CURSOR,
+ *                @ref GNAME_OT_PANEL_LABEL, @ref GNAME_OT_CHAR_GRID, and
+ *                @ref GNAME_OT_CHAR_APPEND, and advances the heap cursor
+ *                @c prim_cursor.
+ * @see decomp.me (100%) https://decomp.me/scratch/a0Oye
  */
-void gname_render(RenderContext* ctx)
+void gname_render(RenderContext* context)
 {
-    s32 i;
+    s32 tab;
     s32 scroll_pos;
-    s32* entry;
+    TabCursorEntry* grid_entry;
     void* prim;
-    DR_TPAGE* drawmode;
-    RenderContext* ctx2;
-    unsigned char* glyph_ptr;
-    ctx2 = ctx;
-    entry = g_tab_cursor_entries;
-    i = 2;
-    glyph_ptr = (unsigned char*)g_tab_cursor_entries + 2;
-    prim = ctx->prim_cursor;
-    /* 1. Character grid: entries 2..12, skip 9; highlight the selection. */
-    do
+    SPRT* cursor_sprt;
+    DR_TPAGE* cursor_tpage;
+    RenderContext* ctx;
+    s32 cursor_x;
+    s32 cursor_y;
+    ctx = context;
+    prim = context->prim_cursor;
+    grid_entry = g_tab_cursor_entries;
+
+    /* 1. Character grid: tabs 2..12, skip 9; highlight the selected tab. */
+    for (tab = 2; tab < 13; tab++, grid_entry++)
     {
-        if (i != 9)
+        if (tab != 9)
         {
-            prim = emit_glyph_sprt(prim, ((char*)ctx2) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1, (i - 2) == g_cursor_tab, 0);
+            prim = emit_glyph_sprt(prim, &ctx->ot[GNAME_OT_CHAR_GRID], grid_entry->glyph, grid_entry->x, (s32)grid_entry->y - 8, 1, (tab - 2) == g_cursor_tab, 0);
         }
-        i += 1;
-        glyph_ptr += 4;
-        entry++;
-    } while (i < 0xD);
+    }
+
     /* 2. Static glyph + append animation, then panel-tab sprite. */
     prim = emit_panel_tab_sprite(
         emit_draw_mode_prim(
-            draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, ((char*)ctx2) + 0x2C), ((char*)ctx2) + 0x34, (u8)3, 0xE8, 4, 0, 0, 0), ctx2),
-            ((char*)ctx2) + 0x34),
-        &ctx2->ot[0]);
+            draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, &ctx->ot[GNAME_OT_CHAR_GRID]), &ctx->ot[GNAME_OT_CHAR_APPEND], (u8)3, 0xE8, 4, 0, 0, 0), ctx),
+            &ctx->ot[GNAME_OT_CHAR_APPEND]),
+        &ctx->ot[GNAME_OT_FRONT]);
+
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawTPage. */
-    ((u_long*)prim)[1] = 0x808080;
-    setSprt(prim);
-    {
-        s32 tmp = g_cursor_x;
-        ((SPRT*)prim)->x0 = tmp;
-    }
-    {
-        s32 tmp = g_cursor_y;
-        ((SPRT*)prim)->y0 = tmp;
-    }
-    ((SPRT*)prim)->u0 = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u;
-    ((SPRT*)prim)->v0 = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v;
-    ((SPRT*)prim)->w = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w;
-    ((SPRT*)prim)->h = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h;
-    {
-        u32 tmp = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut;
-        ((SPRT*)prim)->clut = (tmp & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
-    }
-    addPrim(&ctx2->ot[8], prim);
-    drawmode = (DR_TPAGE*)((SPRT*)prim + 1);
-    setDrawTPage(drawmode, 0, 0, 5);
-    addPrim(&ctx2->ot[8], drawmode);
-    prim = (DR_TPAGE*)drawmode + 1;
-    /* 4. Conditional extra glyphs from the g_tab_cursor_pos table. */
+    cursor_x = g_cursor_x;
+    cursor_y = g_cursor_y;
+    cursor_sprt = (SPRT*)prim;
+    SET_BGR0_PACKED(cursor_sprt, GPU_TINT_NEUTRAL);
+    setSprt(cursor_sprt);
+    setXY0(cursor_sprt, cursor_x, cursor_y);
+    setUV0(cursor_sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v);
+    setWH(cursor_sprt, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].w, g_glyph_table[NAME_CURSOR_GLYPH_COUNT].h);
+    setClut(cursor_sprt, (g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut & GLYPH_CLUT_X_MASK) << 4, 498);
+    addPrim(&ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_sprt);
+    cursor_tpage = (DR_TPAGE*)(cursor_sprt + 1);
+    setDrawTPage(cursor_tpage, 0, 0, 5);
+    addPrim(&ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_tpage);
+    prim = (DR_TPAGE*)cursor_tpage + 1;
+
+    /* 4. Scroll indicators: top arrow whenever scrolled, bottom arrow unless
+     * the current scroll page already shows the last character row. */
     if (g_scroll_pos != 0)
     {
-        prim = emit_glyph_sprt(prim, &ctx2->ot[0], g_tab_cursor_pos[0].glyph, g_tab_cursor_pos[0].x, (s32)g_tab_cursor_pos[0].y, 0, 0, 0);
+        prim = emit_glyph_sprt(prim, &ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[0].glyph, g_tab_cursor_pos[0].x, g_tab_cursor_pos[0].y, 0, 0, 0);
     }
+
     if (g_char_last_row >= 5)
     {
+        /* scroll_pos / 16, with the round-toward-zero bias for negatives. */
         scroll_pos = g_scroll_pos;
         if (scroll_pos < 0)
         {
-            scroll_pos += 0xF;
+            scroll_pos += 15;
         }
-        if ((((scroll_pos >> 1) >> 1) >> 2) != (g_char_last_row - 4))
+
+        if ((scroll_pos >> 4) != (g_char_last_row - 4))
         {
-            prim = emit_glyph_sprt(prim, &ctx2->ot[0], g_tab_cursor_pos[1].glyph, g_tab_cursor_pos[1].x, (s32)g_tab_cursor_pos[1].y, 0, 0, 0);
+            prim = emit_glyph_sprt(prim, &ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[1].glyph, g_tab_cursor_pos[1].x, g_tab_cursor_pos[1].y, 0, 0, 0);
         }
     }
-    /* 5. Remaining sub-passes. */
-    *((void**)(((char*)ctx) + 0x4040)) = emit_panel_label(emit_draw_mode_prim(prim, &ctx2->ot[0]), (u_long*)(((char*)ctx2) + 0x24));
-    render_char_panel(ctx, g_char_panel);
-    render_name_strip(ctx, g_active_name, g_strip_width);
+
+    /* 5. Panel label, character panel, and name strip sub-passes. */
+    context->prim_cursor = emit_panel_label(emit_draw_mode_prim(prim, &ctx->ot[GNAME_OT_FRONT]), &ctx->ot[GNAME_OT_PANEL_LABEL]);
+    render_char_panel(context, g_char_panel);
+    render_name_strip(context, g_active_name, g_strip_width);
 }
 
 /**
@@ -1242,12 +1243,13 @@ void* emit_panel_label(void* prim, u_long* ot_entry)
  *      `(240 - strip_width, 24 | 256)` - i.e. right-aligned on whichever
  *      VRAM page is currently the back buffer (Y=0x18 vs 0x100).
  *
- * Each packet is spliced into the 24-bit OT at @c ctx->ot[0x0E] with the
- * standard `(top_byte | next_addr & 0xFFFFFF)` link idiom, and the heap
+ * Each packet is spliced into the 24-bit OT at @ref GNAME_OT_NAME_STRIP with
+ * the standard `(top_byte | next_addr & 0xFFFFFF)` link idiom, and the heap
  * cursor @c ctx->prim_cursor is advanced by 0x40 bytes past the last packet.
  *
- * @param ctx         Render context: OT head at ot[0x0E], primitive heap cursor
- *                    at prim_cursor, double-buffer parity at frame_parity.
+ * @param ctx         Render context: OT head at @ref GNAME_OT_NAME_STRIP,
+ *                    primitive heap cursor at prim_cursor, double-buffer
+ *                    parity at frame_parity.
  * @param name_buf    Active name buffer passed as the source data for the
  *                    sprite primitive (forwarded to func_800A88A0).
  * @param strip_width Width in pixels of the back-page VRAM upload strip; also
@@ -1257,7 +1259,7 @@ void* emit_panel_label(void* prim, u_long* ot_entry)
  */
 void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 {
-    s32* ot_head;   /* &ctx->ot[0x0E] - passed as the OT head pointer */
+    s32* ot_head;   /* &ctx->ot[GNAME_OT_NAME_STRIP] - passed as the OT head pointer */
     s32* prim;      /* current primitive being emitted */
     s32* next_prim; /* heap cursor after the sprite/draw-mode pair */
     s32 vram_y;     /* VRAM Y of the back page (0x18 or 0x100) */
@@ -1265,7 +1267,7 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
     u32* pkt;
     u32 vram_load_pkt[0x19];
 
-    ot_head = (s32*)&ctx->ot[0x0E];
+    ot_head = (s32*)&ctx->ot[GNAME_OT_NAME_STRIP];
     prim = ctx->prim_cursor;
     next_prim = prim;
 
@@ -1273,7 +1275,7 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
      * splice it into the OT. */
     func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
 
-    addPrim(&ctx->ot[0x0E], prim);
+    addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], prim);
 
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      * Returns the heap cursor just past both packets. */
@@ -1292,7 +1294,7 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
     func_8001C56C(pkt, vram_x, vram_y, strip_width, 0x20);
     func_8001A5D4(next_prim, pkt);
 
-    addPrim(&ctx->ot[0x0E], next_prim);
+    addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], next_prim);
     /* Advance heap cursor 0x40 bytes past the load packet. */
     next_prim += 0x10;
     ctx->prim_cursor = next_prim;
@@ -1325,8 +1327,8 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
  * @c frame_parity==1), size @c 0xA0 x @c NAME_GRID_VIS_HEIGHT.
  *
  * @param ctx_ptr   Render context cast to void* for codegen; OT head at
- *                  @c ot[0x0A], prim heap at @c prim_cursor, parity at
- *                  @c frame_parity.
+ *                  @ref GNAME_OT_CHAR_PANEL, prim heap at @c prim_cursor,
+ *                  parity at @c frame_parity.
  * @param panel_idx Active character panel index (0-3 normal, 4 kanji).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/ckF2S
@@ -1350,6 +1352,7 @@ void render_char_panel(RenderContext* ctx, s32 panel_idx)
     s32 screen_y;
     unsigned new_var2;
     s32 entry_end;
+    /* (u8*)ctx + 0x28 == &ctx->ot[GNAME_OT_CHAR_PANEL]; raw offset is required to match. */
     ot_ptr = (u32*)(((u8*)ctx) + 0x28);
     prim = ctx->prim_cursor;
     SetDrawEnv(prim, (DRAWENV*)((g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0)) + 0x4064));
@@ -1543,7 +1546,7 @@ void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y
  * The buffer cursor at @c obj->prim_cursor is advanced past the final primitive.
  *
  * @param ctx Render context (@ref RenderContext). Reads/writes:
- *             - @c ot[0x0F] at offset 0x3C - addPrim OT entry.
+ *             - @ref GNAME_OT_NAME_CURSOR (offset 0x3C) - addPrim OT entry.
  *             - @c prim_cursor at offset 0x4040 - primitive scratch-pool cursor.
  *
  * @note Called by @ref gname_tick via the implicit-@c $a0 convention
@@ -1568,7 +1571,7 @@ void draw_name_cursor_row(RenderContext* ctx)
 
     /* Two aliases of the same context pointer: gcc allocates them to t6/t2
        and uses t6 for the very first addPrim/buf access and t2 for every
-       subsequent addPrim. This split is load-bearing for the asm match. */
+       subsequent addPrim. This split is required for the asm match. */
     RenderContext* obj = ctx;
     RenderContext* obj2;
     u8* glyph_table_base;
@@ -1587,7 +1590,7 @@ void draw_name_cursor_row(RenderContext* ctx)
        of the prologue (the mask is the first non-arg constant used). */
     twin = (DR_TWIN*)ptr_t1;
     setTexWindow(twin, &tw_rect);
-    addPrim(&obj->ot[0x0F], twin);
+    addPrim(&obj->ot[GNAME_OT_NAME_CURSOR], twin);
 
     seq = g_name_cursor_glyphs;
     i = 0;
@@ -1637,7 +1640,7 @@ void draw_name_cursor_row(RenderContext* ctx)
             sprt->clut = (u16)((clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
         }
 
-        addPrim(&obj2->ot[0x0F], sprt);
+        addPrim(&obj2->ot[GNAME_OT_NAME_CURSOR], sprt);
         list_ptr += sizeof(SPRT);
     } while (i < NAME_CURSOR_GLYPH_COUNT);
     ptr_t1 = list_ptr;
@@ -1651,7 +1654,7 @@ void draw_name_cursor_row(RenderContext* ctx)
     tw_rect.y = 0;
     twin = (DR_TWIN*)ptr_t1;
     setTexWindow(twin, &tw_rect);
-    addPrim(&obj2->ot[0x0F], twin);
+    addPrim(&obj2->ot[GNAME_OT_NAME_CURSOR], twin);
     ptr_t1 += sizeof(DR_TWIN);
 
     /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word.
@@ -1659,7 +1662,7 @@ void draw_name_cursor_row(RenderContext* ctx)
        ptr_t1 first), which yields `addiu v0,t1,8; sw v0,0x4040(...)`. */
     drawmode = ptr_t1;
     setDrawTPage(drawmode, 0, 0, 5);
-    addPrim(&obj2->ot[0x0F], drawmode);
+    addPrim(&obj2->ot[GNAME_OT_NAME_CURSOR], drawmode);
 
     ctx->prim_cursor = (u32*)(drawmode + 8);
 }
@@ -2074,8 +2077,8 @@ s32 name_pop_first_char(u8* name)
  *     duration is loaded from byte 3 of its record (@c slots[0].pad).
  *
  * @param prim Primitive-buffer cursor (next free byte).
- * @param ctx  Render context; @c ot[0x0C] (offset 0x30) is the OT head tag
- *             for this layer.
+ * @param ctx  Render context; @ref GNAME_OT_CHAR_APPEND_ANIM (offset 0x30) is
+ *             the OT head tag for this layer.
  * @return Primitive-buffer cursor advanced past the emitted SPRTs.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
@@ -2088,7 +2091,7 @@ void* draw_char_append_anim(void* prim, RenderContext* ctx)
     RenderContext* ot_base = ctx;
     s32 i;
     /* px points at a slot's x byte; py = px + 1 reads y at [0] and glyph at
-       [1]. The two incrementing pointers are load-bearing for the match. */
+       [1]. The two incrementing pointers are required to match. */
     u8* px = &g_char_append_anim[frame * APPEND_ANIM_FRAME_STRIDE];
     u8* py = px + 1;
     short glyph;
@@ -2099,6 +2102,7 @@ void* draw_char_append_anim(void* prim, RenderContext* ctx)
         glyph = glyph_byte;
         if (glyph != 0)
         {
+            /* (u8*)&ot->ot + 0x30 == &ot->ot[GNAME_OT_CHAR_APPEND_ANIM]; raw offset is required to match. */
             result = emit_glyph_sprt(result, (u8*)&ot_base->ot + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
         }
     }
