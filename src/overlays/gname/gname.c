@@ -1072,7 +1072,7 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
  *
  * @param ctx Render context. Uses OT entries at byte offsets
  *            0x20/0x24/0x2C/0x34 and the heap cursor at 0x4040.
- * @see decomp.me (91.42%) https://decomp.me/scratch/a0Oye
+ * @see decomp.me (100%) https://decomp.me/scratch/a0Oye
  */
 void gname_render(RenderContext* ctx)
 {
@@ -1082,23 +1082,21 @@ void gname_render(RenderContext* ctx)
     void* prim;
     DR_TPAGE* drawmode;
     RenderContext* ctx2;
-    unsigned char* glyph_ptr;
     ctx2 = ctx;
     entry = g_tab_cursor_entries;
     i = 2;
-    glyph_ptr = (unsigned char*)g_tab_cursor_entries + 2;
     prim = ctx->prim_cursor;
     /* 1. Character grid: entries 2..12, skip 9; highlight the selection. */
-    do
+    while (i < 0xD)
     {
         if (i != 9)
         {
+            unsigned char* glyph_ptr = (unsigned char*)entry + 2;
             prim = emit_glyph_sprt(prim, ((char*)ctx2) + 0x2C, glyph_ptr[1], (*entry) & 0x1FF, ((s32)glyph_ptr[0]) - 8, 1, (i - 2) == g_cursor_tab, 0);
         }
         i += 1;
-        glyph_ptr += 4;
         entry++;
-    } while (i < 0xD);
+    }
     /* 2. Static glyph + append animation, then panel-tab sprite. */
     prim = emit_panel_tab_sprite(
         emit_draw_mode_prim(
@@ -1106,15 +1104,13 @@ void gname_render(RenderContext* ctx)
             ((char*)ctx2) + 0x34),
         &ctx2->ot[0]);
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawTPage. */
-    ((u_long*)prim)[1] = 0x808080;
-    setSprt(prim);
     {
-        s32 tmp = g_cursor_x;
-        ((SPRT*)prim)->x0 = tmp;
-    }
-    {
-        s32 tmp = g_cursor_y;
-        ((SPRT*)prim)->y0 = tmp;
+        s32 tmpx = g_cursor_x;
+        s32 tmpy = g_cursor_y;
+        ((u_long*)prim)[1] = 0x808080;
+        setSprt(prim);
+        ((SPRT*)prim)->x0 = tmpx;
+        ((SPRT*)prim)->y0 = tmpy;
     }
     ((SPRT*)prim)->u0 = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].u;
     ((SPRT*)prim)->v0 = g_glyph_table[NAME_CURSOR_GLYPH_COUNT].v;
@@ -1147,8 +1143,12 @@ void gname_render(RenderContext* ctx)
         }
     }
     /* 5. Remaining sub-passes. */
-    *((void**)(((char*)ctx) + 0x4040)) = emit_panel_label(emit_draw_mode_prim(prim, &ctx2->ot[0]), (u_long*)(((char*)ctx2) + 0x24));
-    render_char_panel(ctx, g_char_panel);
+    {
+        void* label = emit_panel_label(emit_draw_mode_prim(prim, &ctx2->ot[0]), (u_long*)(((char*)ctx2) + 0x24));
+        s32 panel = g_char_panel;
+        *((void**)(((char*)ctx) + 0x4040)) = label;
+        render_char_panel(ctx, panel);
+    }
     render_name_strip(ctx, g_active_name, g_strip_width);
 }
 
