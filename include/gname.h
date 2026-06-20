@@ -12,6 +12,28 @@
 #include "psyq/libgpu.h"
 
 /**
+ * @name GNAME ordering-table depth slots
+ *
+ * Hand-assigned indices into @ref RenderContext::ot that the name-entry
+ * render passes chain their primitives into. The OT is a Z-priority bucket
+ * list, so each constant just fixes one element's place in the draw order;
+ * the numbers carry no meaning beyond their relative layering. Lower slots
+ * sort in front of higher ones, so the text cursor (8) draws over the
+ * character grid (11), which draws over the name strip (14).
+ * @{
+ */
+#define GNAME_OT_FRONT          0x00 /* fade overlay, scroll indicators, panel-tab sprite, label draw-mode */
+#define GNAME_OT_TEXT_CURSOR    0x08 /* text cursor glyph + DrawTPage */
+#define GNAME_OT_PANEL_LABEL    0x09 /* category-label sprite */
+#define GNAME_OT_CHAR_PANEL     0x0A /* scrolling character-panel grid */
+#define GNAME_OT_CHAR_GRID      0x0B /* character grid glyphs */
+#define GNAME_OT_CHAR_APPEND_ANIM 0x0C /* character-append animation glyphs */
+#define GNAME_OT_CHAR_APPEND    0x0D /* static append glyph + draw-mode */
+#define GNAME_OT_NAME_STRIP     0x0E /* name strip (entered-name display) */
+#define GNAME_OT_NAME_CURSOR    0x0F /* name-entry cursor row */
+/** @} */
+
+/**
  * @brief Name-buffer character encoding.
  *
  * A "name" is a null-terminated byte buffer (`u8*`) used by the name-entry
