@@ -826,11 +826,10 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
  *
  * @note The dead code block after the empty-cancel @c return (lines following
  *       "if (!g_cursor_x_target)") is a codegen artifact and must be preserved.
- * @see decomp.me (99.65%) https://decomp.me/scratch/pCzH6
+ * @see decomp.me (100%) https://decomp.me/scratch/pCzH6
  */
 void gname_process_input(void)
 {
-    /* Reordered locals – cat_after_inc and cat_prev_inc placed first */
     s32 cat_after_inc;
     s32 cat_prev_inc;
     s8 char_lo;
@@ -853,13 +852,14 @@ void gname_process_input(void)
     u8* base;
     u32 idx;
     u32 offset;
+    u32 byte_off;
     u16 kanji_name_tbl_off;
     s32 kanji_panel_offset;
     int sfx_vol;
     u8* ptr;
     u16 val;
     void** kanji_name_dst;
-
+    s32 scroll_steps_v;
     g_cursor_tab = 0xFF;
     nav_input = g_pad_input & ((((PAD_BTN_UP | PAD_BTN_RIGHT) | PAD_BTN_DOWN) | PAD_BTN_LEFT) | (PAD_BTN_CROSS | 0x200));
     if (nav_input != 0)
@@ -964,6 +964,7 @@ void gname_process_input(void)
                     g_scroll_target = (long)0;
                     g_scroll_pos = 0;
                     panel3_off = g_panel_char_offsets[3];
+                    sfx_vol = ~(PAD_BTN_L1 | PAD_BTN_R1);
                     g_scroll_steps = 0;
                     g_char_cursor = 0;
                     g_cursor_x_target = 84;
@@ -971,10 +972,10 @@ void gname_process_input(void)
                     g_cursor_lerp_steps = 4;
                     kanji_panel_offset = panel3_off;
                     idx = g_kanji_cat;
-                    offset = (idx * 2) + ((kanji_panel_offset * 2) + g_panel_tbl_off);
+                    byte_off = (idx * 2) + ((kanji_panel_offset * 2) + g_panel_tbl_off);
                     base = g_panel_data_base;
-                    kanji_name_tbl_off = *((u16*)(base + offset));
-                    g_pad_input &= ~(PAD_BTN_L1 | PAD_BTN_R1);
+                    kanji_name_tbl_off = *((u16*)(base + byte_off));
+                    g_pad_input &= sfx_vol;
                     *kanji_name_dst = (void*)(g_panel_tbl_off + (kanji_name_tbl_off + ((unsigned long)base)));
                 }
             }
@@ -991,11 +992,11 @@ void gname_process_input(void)
         g_cursor_x = g_cursor_x_target;
         g_cursor_y = g_cursor_y_target;
     }
-    cat_after_inc = g_scroll_steps;
-    if (cat_after_inc != 0)
+    scroll_steps_v = g_scroll_steps;
+    if (scroll_steps_v != 0)
     {
         scroll_ptr = &g_scroll_pos;
-        scroll_step = ((s32)(g_scroll_target - (*scroll_ptr))) / ((s32)cat_after_inc);
+        scroll_step = ((s32)(g_scroll_target - (*scroll_ptr))) / ((s32)scroll_steps_v);
         g_scroll_steps -= 1;
         g_scroll_pos += scroll_step;
         return;
