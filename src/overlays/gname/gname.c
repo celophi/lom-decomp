@@ -826,10 +826,13 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
  *
  * @note The dead code block after the empty-cancel @c return (lines following
  *       "if (!g_cursor_x_target)") is a codegen artifact and must be preserved.
- * @see decomp.me (96.22%) https://decomp.me/scratch/ctu1w
+ * @see decomp.me (99.65%) https://decomp.me/scratch/pCzH6
  */
 void gname_process_input(void)
 {
+    /* Reordered locals – cat_after_inc and cat_prev_inc placed first */
+    s32 cat_after_inc;
+    s32 cat_prev_inc;
     s8 char_lo;
     s8 char_hi;
     s8 char_null;
@@ -843,66 +846,63 @@ void gname_process_input(void)
     s32 undo_char;
     s32 scroll_step;
     s32* scroll_ptr;
-    s32 cat_after_inc;
     s32 cursor_dy;
     s32 panel3_off;
-    s8 clipboard_char;
+    s32 clipboard_char;
     u16 clipboard_char_u16;
     u8* base;
     u32 idx;
     u32 offset;
     u16 kanji_name_tbl_off;
-    s32 cat_prev_inc;
     s32 kanji_panel_offset;
     int sfx_vol;
     u8* ptr;
     u16 val;
-    nav_input = g_pad_input & GNAME_BTN_NAV_MASK;
+    void** kanji_name_dst;
+
     g_cursor_tab = 0xFF;
+    nav_input = g_pad_input & ((((PAD_BTN_UP | PAD_BTN_RIGHT) | PAD_BTN_DOWN) | PAD_BTN_LEFT) | (PAD_BTN_CROSS | 0x200));
     if (nav_input != 0)
     {
         g_char_set_mode = handle_char_set_input(g_char_set_mode, nav_input);
     }
-    else if (g_pad_input & GNAME_BTN_UNDO)
+    else if (g_pad_input & PAD_BTN_L2)
     {
-        /* Undo: move last char of active name to front of clipboard. */
         undo_char = name_pop_last_char(g_active_name);
         while (name_char_count(&g_name_clipboard) >= 0xB)
         {
             name_pop_last_char(&g_name_clipboard);
         }
 
-        name_prepend_char(&g_name_clipboard, undo_char & 0xFFFF);
+        name_prepend_char(&g_name_clipboard, (unsigned long)(undo_char & 0xFFFF));
         recalc_name_width();
         g_strip_width_steps = 5;
-        sfx_id = GNAME_SFX_MOVE;
-        sfx_vol = GNAME_SFX_VOLUME;
+        sfx_id = 0x7D;
+        sfx_vol = 0x80;
         play_menu_sfx(sfx_id, sfx_vol);
     }
-    else if (g_pad_input & GNAME_BTN_REDO)
+    else if (g_pad_input & PAD_BTN_R2)
     {
-        /* Redo: move first char of clipboard to end of active name. */
-        if (name_char_count(g_active_name) < NAME_MAX_CHARS)
+        if (name_char_count(g_active_name) < 10)
         {
             clipboard_ptr = &g_name_clipboard;
-            clipboard_char = name_pop_first_char(clipboard_ptr);
-            clipboard_char_u16 = (u16)clipboard_char;
+            undo_char = name_pop_first_char(clipboard_ptr);
+            clipboard_char_u16 = (u16)undo_char;
             if (clipboard_char_u16 != 0)
             {
-                /* Unpack the 2-byte glyph (or single byte) into a stack buffer for name_append. */
-                char_lo = clipboard_char;
+                char_lo = undo_char;
                 (&char_lo)[1] = (s8)(clipboard_char_u16 >> 8);
                 (&char_lo)[2] = 0;
                 name_append(g_active_name, &char_lo);
                 recalc_name_width();
                 g_strip_width_steps = 5;
             }
-            sfx_id = GNAME_SFX_MOVE;
-            play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
+            sfx_id = 0x7D;
+            play_menu_sfx(sfx_id, 0x80);
         }
         else
         {
-            play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
+            play_menu_sfx(0x78, 0x80);
         }
     }
     else if (g_pad_input & PAD_BTN_CIRCLE)
@@ -912,30 +912,27 @@ void gname_process_input(void)
             if (name_char_count(g_active_name) == 0)
             {
                 g_overlay_result = 2;
-                play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
+                play_menu_sfx(0x7F, 0x80);
                 return;
-                if (!g_cursor_x_target)
-                {
-                }
             }
         }
-        play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
+        play_menu_sfx(0x7F, 0x80);
         name_pop_last_char(g_active_name);
         recalc_name_width();
         g_strip_width_steps = 5;
     }
-    if (((g_char_set_mode == GNAME_MODE_GRID) && (g_char_panel == 4)) && (g_pad_input & GNAME_BTN_KANJI_NAV))
+    if (((g_char_set_mode == 0x10) && (g_char_panel == 4)) && (g_pad_input & (PAD_BTN_L1 | PAD_BTN_R1)))
     {
-        play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
-        if (g_pad_input & GNAME_BTN_KANJI_NAV)
+        play_menu_sfx(0x7D, 0x80);
+        if (g_pad_input & (PAD_BTN_L1 | PAD_BTN_R1))
         {
-            do
+            while (g_pad_input & (PAD_BTN_L1 | PAD_BTN_R1))
             {
-                if (g_pad_input & GNAME_BTN_KANJI_PREV)
+                if (g_pad_input & PAD_BTN_L1)
                 {
-                    /* Decrement category by 10; wrap from -1 -> 0 or from below 0 -> +41. */
                     cat_prev = g_kanji_cat;
-                    cat_after_dec = cat_prev - 0xA;
+                    cat_prev_inc = cat_prev;
+                    cat_after_dec = cat_prev_inc - 0xA;
                     g_kanji_cat = cat_after_dec;
                     if (cat_after_dec == (-1))
                     {
@@ -948,7 +945,6 @@ void gname_process_input(void)
                 }
                 else
                 {
-                    /* Increment category by 10; wrap from 50 -> 9 or from above 50 -> -41. */
                     cat_prev_inc = g_kanji_cat;
                     cat_after_inc = cat_prev_inc + 10;
                     g_kanji_cat = cat_after_inc;
@@ -964,42 +960,42 @@ void gname_process_input(void)
                 offset = g_kanji_cat;
                 if (g_kanji_cat_entries[offset] != 0xFF)
                 {
+                    kanji_name_dst = &g_kanji_cat_name;
                     g_scroll_target = (long)0;
                     g_scroll_pos = 0;
                     panel3_off = g_panel_char_offsets[3];
                     g_scroll_steps = 0;
                     g_char_cursor = 0;
-                    g_cursor_x_target = NAME_GRID_X_BASE;
-                    g_cursor_y_target = NAME_GRID_Y_TOP;
+                    g_cursor_x_target = 84;
+                    g_cursor_y_target = 104;
                     g_cursor_lerp_steps = 4;
                     kanji_panel_offset = panel3_off;
-                    base = g_panel_data_base;
                     idx = g_kanji_cat;
                     offset = (idx * 2) + ((kanji_panel_offset * 2) + g_panel_tbl_off);
+                    base = g_panel_data_base;
                     kanji_name_tbl_off = *((u16*)(base + offset));
-                    g_pad_input &= ~GNAME_BTN_KANJI_NAV;
-                    g_kanji_cat_name = (void*)((g_panel_tbl_off + kanji_name_tbl_off) + ((unsigned long)base));
+                    g_pad_input &= ~(PAD_BTN_L1 | PAD_BTN_R1);
+                    *kanji_name_dst = (void*)(g_panel_tbl_off + (kanji_name_tbl_off + ((unsigned long)base)));
                 }
-            } while (g_pad_input & GNAME_BTN_KANJI_NAV);
+            }
         }
     }
     if (g_cursor_lerp_steps != 0)
     {
-        cursor_dx = ((s32)(g_cursor_x_target - g_cursor_x)) / ((s32)g_cursor_lerp_steps);
-        cursor_dy = ((s32)(g_cursor_y_target - g_cursor_y)) / ((s32)g_cursor_lerp_steps);
+        g_cursor_x += ((s32)(g_cursor_x_target - g_cursor_x)) / ((s32)g_cursor_lerp_steps);
+        g_cursor_y += ((s32)(g_cursor_y_target - g_cursor_y)) / ((s32)g_cursor_lerp_steps);
         g_cursor_lerp_steps -= 1;
-        g_cursor_x += cursor_dx;
-        g_cursor_y += cursor_dy;
     }
     else
     {
         g_cursor_x = g_cursor_x_target;
         g_cursor_y = g_cursor_y_target;
     }
-    if (g_scroll_steps != 0)
+    cat_after_inc = g_scroll_steps;
+    if (cat_after_inc != 0)
     {
         scroll_ptr = &g_scroll_pos;
-        scroll_step = ((s32)(g_scroll_target - (*scroll_ptr))) / ((s32)g_scroll_steps);
+        scroll_step = ((s32)(g_scroll_target - (*scroll_ptr))) / ((s32)cat_after_inc);
         g_scroll_steps -= 1;
         g_scroll_pos += scroll_step;
         return;
@@ -1098,16 +1094,17 @@ void gname_render(RenderContext* context)
     {
         if (tab != 9)
         {
-            prim = emit_glyph_sprt(prim, &ctx->ot[GNAME_OT_CHAR_GRID], grid_entry->glyph, grid_entry->x, (s32)grid_entry->y - 8, 1, (tab - 2) == g_cursor_tab, 0);
+            prim =
+                emit_glyph_sprt(prim, &ctx->ot[GNAME_OT_CHAR_GRID], grid_entry->glyph, grid_entry->x, (s32)grid_entry->y - 8, 1, (tab - 2) == g_cursor_tab, 0);
         }
     }
 
     /* 2. Static glyph + append animation, then panel-tab sprite. */
-    prim = emit_panel_tab_sprite(
-        emit_draw_mode_prim(
-            draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, &ctx->ot[GNAME_OT_CHAR_GRID]), &ctx->ot[GNAME_OT_CHAR_APPEND], (u8)3, 0xE8, 4, 0, 0, 0), ctx),
-            &ctx->ot[GNAME_OT_CHAR_APPEND]),
-        &ctx->ot[GNAME_OT_FRONT]);
+    prim = emit_panel_tab_sprite(emit_draw_mode_prim(draw_char_append_anim(emit_glyph_sprt(emit_draw_mode_prim(prim, &ctx->ot[GNAME_OT_CHAR_GRID]),
+                                                                                           &ctx->ot[GNAME_OT_CHAR_APPEND], (u8)3, 0xE8, 4, 0, 0, 0),
+                                                                           ctx),
+                                                     &ctx->ot[GNAME_OT_CHAR_APPEND]),
+                                 &ctx->ot[GNAME_OT_FRONT]);
 
     /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) + additive DrawTPage. */
     cursor_x = g_cursor_x;
