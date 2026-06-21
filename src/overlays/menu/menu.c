@@ -1220,7 +1220,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
         {
             if ((temp_s3->h - 0x10) > 0)
             {
-                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * 0x40C0) + 0x4064));
+                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
                 var_a3 = 0;
                 *var_s1 = (*var_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 g_menu_draw_early_out = 0;
@@ -1500,7 +1500,7 @@ u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_
         sprt->y0 = rect->y;
         sprt->clut = MENU_CLUT_CORNER;
         addPrim(ot_ptr, sprt);
-        ot += sizeof(SPRT) / sizeof(u_long);
+        ot += PRIM_WORDS(SPRT);
 
         twin = (DR_TWIN*)ot;
         tw.x = tw_uv & 0xFF;
@@ -1509,7 +1509,7 @@ u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_
         tw.h = 8;
         setTexWindow(twin, &tw);
         addPrim(ot_ptr, twin);
-        ot += sizeof(DR_TWIN) / sizeof(u_long);
+        ot += PRIM_WORDS(DR_TWIN);
     }
 
     return ot;
@@ -1551,7 +1551,7 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
         sprt->y0 = rect->y;
         sprt->clut = MENU_CLUT_CORNER;
         addPrim(ot_ptr, sprt);
-        ot += sizeof(SPRT) / sizeof(u_long);
+        ot += PRIM_WORDS(SPRT);
 
         twin = (DR_TWIN*)ot;
         tw.x = tw_uv & 0xFF;
@@ -1560,7 +1560,7 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
         tw.h = 0x10;
         setTexWindow(twin, &tw);
         addPrim(ot_ptr, twin);
-        ot += sizeof(DR_TWIN) / sizeof(u_long);
+        ot += PRIM_WORDS(DR_TWIN);
     }
 
     return ot;
