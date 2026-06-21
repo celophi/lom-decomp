@@ -802,8 +802,10 @@ void gname_process_input(void)
     int sfx_vol;
     void** kanji_name_dst;
     s32 scroll_steps_v;
+
     g_cursor_tab = GNAME_TAB_NONE;
     nav_input = g_pad_input & GNAME_BTN_NAV_MASK;
+    
     if (nav_input != 0)
     {
         g_char_set_mode = handle_char_set_input(g_char_set_mode, nav_input);
@@ -947,19 +949,17 @@ void gname_process_input(void)
 }
 
 /**
- * @brief Emit the text cursor glyph (g_glyph_table[NAME_CURSOR_GLYPH_COUNT]) as a SPRT + DR_TPAGE pair.
+ * @brief Emit the text cursor glyph as a SPRT + DR_TPAGE pair into @p ot.
  *
- * Writes a 20-byte SPRT primitive at @p prim using the UV, size, and CLUT
- * data from g_glyph_table[NAME_CURSOR_GLYPH_COUNT], then writes an 8-byte
- * DR_TPAGE packet (texture page 5) immediately after. Both primitives are
- * linked into @p ot via addPrim.
+ * Builds a SPRT at @p prim from @c g_glyph_table[NAME_CURSOR_GLYPH_COUNT]
+ * (UV, size, CLUT), then a texture-page DR_TPAGE packet right after it, and
+ * chains both into @p ot.
  *
- * @param prim  Write position in the primitive buffer; must have at least
- *              sizeof(SPRT) + sizeof(DR_TPAGE) (28 bytes) available.
- * @param ot    Pointer to the OT slot to chain both primitives into.
- * @param x     Screen X position for the cursor sprite.
- * @param y     Screen Y position for the cursor sprite.
- * @return Pointer past the last written primitive (prim advanced by 7 u_longs).
+ * @param prim Write position; needs sizeof(SPRT) + sizeof(DR_TPAGE) bytes.
+ * @param ot   OT slot to chain both primitives into.
+ * @param x    Cursor sprite screen X.
+ * @param y    Cursor sprite screen Y.
+ * @return Pointer just past the written primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/oXGkF
  */
 u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
@@ -978,11 +978,11 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
     sprt->clut = clut | GLYPH_CLUT_PAGE_BITS;
     addPrim(ot, sprt);
 
-    prim += sizeof(SPRT) / sizeof(u_long);
-    setDrawTPage(prim, 0, 0, 5);
+    prim += PRIM_WORDS(SPRT);
+    setDrawTPage(prim, 0, 0, GNAME_GLYPH_TPAGE);
     addPrim(ot, prim);
 
-    return prim + sizeof(DR_TPAGE) / sizeof(u_long);
+    return prim + PRIM_WORDS(DR_TPAGE);
 }
 
 /**
@@ -1061,7 +1061,7 @@ void gname_render(RenderContext* context)
     setClut(cursor_sprt, (g_glyph_table[NAME_CURSOR_GLYPH_COUNT].clut & GLYPH_CLUT_X_MASK) << 4, 498);
     addPrim(&ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_sprt);
     cursor_tpage = (DR_TPAGE*)(cursor_sprt + 1);
-    setDrawTPage(cursor_tpage, 0, 0, 5);
+    setDrawTPage(cursor_tpage, 0, 0, GNAME_GLYPH_TPAGE);
     addPrim(&ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_tpage);
     prim = (DR_TPAGE*)cursor_tpage + 1;
 
@@ -1381,7 +1381,7 @@ void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head)
     u32* words = (u32*)prim;
     u32 temp1, temp2;
 
-    setDrawTPage(bytes, 0, 0, 0x05);
+    setDrawTPage(bytes, 0, 0, GNAME_GLYPH_TPAGE);
     addPrim(ot_head, prim);
 
     return (void*)(bytes + 8);
@@ -1482,7 +1482,7 @@ void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y
  * cell, looks each glyph up in @c g_glyph_table, and emits a white
  * (RGB=0x80) free-size textured SPRT primitive (code 0x64). The chain is
  * wrapped with @c setTexWindow at both ends (rect @c {0,0,0xFF,0xFF} -
- * a no-op full-page window) and closed with @c setDrawTPage(0,0,5).
+ * a no-op full-page window) and closed with a @c GNAME_GLYPH_TPAGE DrawMode.
  * The buffer cursor at @c obj->prim_cursor is advanced past the final primitive.
  *
  * @param ctx Render context (@ref RenderContext). Reads/writes:
@@ -1601,7 +1601,7 @@ void draw_name_cursor_row(RenderContext* ctx)
        The buffer cursor is computed as `drawmode + 8` (not by mutating
        ptr_t1 first), which yields `addiu v0,t1,8; sw v0,0x4040(...)`. */
     drawmode = ptr_t1;
-    setDrawTPage(drawmode, 0, 0, 5);
+    setDrawTPage(drawmode, 0, 0, GNAME_GLYPH_TPAGE);
     addPrim(&obj2->ot[GNAME_OT_NAME_CURSOR], drawmode);
 
     ctx->prim_cursor = (u32*)(drawmode + 8);

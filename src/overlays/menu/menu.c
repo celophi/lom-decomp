@@ -1500,7 +1500,7 @@ u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_
         sprt->y0 = rect->y;
         sprt->clut = MENU_CLUT_CORNER;
         addPrim(ot_ptr, sprt);
-        ot += sizeof(SPRT) / sizeof(u_long);
+        ot += PRIM_WORDS(SPRT);
 
         twin = (DR_TWIN*)ot;
         tw.x = tw_uv & 0xFF;
@@ -1509,7 +1509,7 @@ u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_
         tw.h = 8;
         setTexWindow(twin, &tw);
         addPrim(ot_ptr, twin);
-        ot += sizeof(DR_TWIN) / sizeof(u_long);
+        ot += PRIM_WORDS(DR_TWIN);
     }
 
     return ot;
@@ -1551,7 +1551,7 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
         sprt->y0 = rect->y;
         sprt->clut = MENU_CLUT_CORNER;
         addPrim(ot_ptr, sprt);
-        ot += sizeof(SPRT) / sizeof(u_long);
+        ot += PRIM_WORDS(SPRT);
 
         twin = (DR_TWIN*)ot;
         tw.x = tw_uv & 0xFF;
@@ -1560,7 +1560,7 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
         tw.h = 0x10;
         setTexWindow(twin, &tw);
         addPrim(ot_ptr, twin);
-        ot += sizeof(DR_TWIN) / sizeof(u_long);
+        ot += PRIM_WORDS(DR_TWIN);
     }
 
     return ot;

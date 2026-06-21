@@ -92,4 +92,10 @@
 #define SET_SPRT_CLUT(p, _clut) \
     (*(u16*)((u8*)(p) + 0x0E) = (u16)(_clut))
 
+/*
+ * Size of a GPU packet type T in u_long words, for advancing a u_long*
+ * primitive cursor one packet at a time: `prim += PRIM_WORDS(SPRT);`.
+ */
+#define PRIM_WORDS(T) (sizeof(T) / sizeof(u_long))
+
 #endif

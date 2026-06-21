@@ -174,6 +174,10 @@ typedef struct
 #define FADE_TPAGE_ADD  0x25 /* getTPage(0, 1, 320, 0) - abr=1: Back + Front */
 #define FADE_TPAGE_SUB  0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
 
+/* tpage for the overlay's 4-bit glyph/font texture (cursor, text, DrawMode
+ * packets). getTPage(0, 0, 320, 0): 4-bit CLUT, abr=0, VRAM page at x=320. */
+#define GNAME_GLYPH_TPAGE 5
+
 /**
  * @brief TIM upload destination coordinates for @ref load_tim_to_vram.
  *
