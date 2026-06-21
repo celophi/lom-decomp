@@ -32,4 +32,20 @@ typedef struct
     /* The buffer continues past 0x4050 (packet heap etc.); not yet mapped. */
 } RenderContext;
 
+/**
+ * @brief Stride in bytes between the two double-buffered draw buffers.
+ *
+ * Each frame's draw buffer (OT + heap + DRAWENV) occupies this many bytes, so
+ * the inactive buffer is at @c base + ((parity ^ 1) * DRAW_BUF_STRIDE).
+ */
+#define DRAW_BUF_STRIDE 0x40C0
+
+/**
+ * @brief Offset of the DRAWENV reserve slot within a draw buffer.
+ *
+ * Used as the @c SetDrawEnv target (and the template-packet source) for the
+ * inactive frame: @c base + ((parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF.
+ */
+#define DRAW_BUF_DRAWENV_OFF 0x4064
+
 #endif

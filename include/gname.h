@@ -104,6 +104,19 @@
 #define GNAME_MODE_PANEL_BASE      4    /* first char-panel tab; panel N is at 4+N */
 #define GNAME_MODE_GRID            0x10 /* in-grid character cursor mode */
 
+/* Sentinel for g_cursor_tab meaning "no tab/grid cell selected". */
+#define GNAME_TAB_NONE 0xFF
+
+/* g_overlay_result values: how the overlay finished, read by the caller. */
+#define GNAME_RESULT_CANCEL  2  /* cancelled with an empty name (when allowed) */
+#define GNAME_RESULT_CONFIRM 5  /* name committed; advance to the next overlay stage */
+
+/* Frame count seeded into g_strip_width_steps to start a name-strip width lerp. */
+#define NAME_STRIP_LERP_STEPS 5
+
+/* Frame count seeded into g_append_anim_timer to start the append animation. */
+#define APPEND_ANIM_TIMER_START 2
+
 /* g_name_source_mode values: selects which name is pasted on Random/Default action. */
 #define GNAME_SRC_CUSTOM       1  /* use g_custom_name_buf */
 #define GNAME_SRC_HISTORY      3  /* pick from g_history_names_off via g_history_name_idx */
@@ -160,6 +173,10 @@ typedef struct
  * right-half VRAM column used as the tpage base. */
 #define FADE_TPAGE_ADD  0x25 /* getTPage(0, 1, 320, 0) - abr=1: Back + Front */
 #define FADE_TPAGE_SUB  0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
+
+/* tpage for the overlay's 4-bit glyph/font texture (cursor, text, DrawMode
+ * packets). getTPage(0, 0, 320, 0): 4-bit CLUT, abr=0, VRAM page at x=320. */
+#define GNAME_GLYPH_TPAGE 5
 
 /**
  * @brief TIM upload destination coordinates for @ref load_tim_to_vram.
