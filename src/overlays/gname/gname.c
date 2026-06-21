@@ -351,18 +351,13 @@ void gname_tick(RenderContext* ctx)
 }
 
 /**
- * @brief Per-frame state-machine update: countdown, scalar lerp, input SFX.
+ * @brief Per-frame state-machine update: startup countdown, strip-width lerp,
+ *        and confirm-button handling.
  *
- *  - When the startup countdown @c g_startup_delay hits zero, hands off to
- *    @ref gname_process_input (the next stage); otherwise decrements it.
- *  - Lerps the scalar @c g_strip_width toward @c g_strip_width_target over
- *    @c g_strip_width_steps frames using the same `(target - current)/steps` shape
- *    as the RGB fade.
- *  - When @c g_pad_input == @c PAD_BTN_START (only START held), plays
- *    one of two SFX via @ref play_menu_sfx (bank 0x80, sound 0x7E or 0x78)
- *    based on whether the cursor's current entry passes the
- *    @ref name_char_count / @ref name_is_blank validation pair, and on the
- *    "valid" path also kicks @c g_overlay_result = 5 to advance overlay state.
+ * Once the startup delay elapses, input is handled by @ref gname_process_input.
+ * On confirm (START), a valid name plays the accept SFX and sets
+ * @c g_overlay_result = @c GNAME_RESULT_CONFIRM to advance the overlay; an invalid one plays the
+ * reject SFX.
  *
  * @see https://decomp.me/scratch/g5Rx3 (100%)
  */
@@ -395,31 +390,31 @@ void gname_update_state(void)
     /* Confirm-button: play accept SFX on valid entry, reject SFX otherwise. */
     if (g_pad_input == PAD_BTN_START)
     {
+        /* accept */
         if ((name_char_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
         {
-            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME); /* accept */
-            g_overlay_result = 5;
+            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+            g_overlay_result = GNAME_RESULT_CONFIRM;
             return;
         }
-        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME); /* reject */
+
+        /* reject */
+        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME); 
     }
 }
 
 /**
  * @brief Reset the overlay's run-state globals to their per-session defaults.
  *
- * Called from the boot path @ref gname_init. Zeros most counters/indices,
- * primes the lerp scalar (@c g_strip_width_steps = 5), seeds the cursor state
- * (@c g_cursor_x / @c g_cursor_y from frozen defaults @c g_cursor_x_target /
- * @c g_cursor_y_target), kicks @ref handle_char_set_input to compute initial @c g_char_set_mode,
- * and registers the overlay's per-character buffer with
- * @ref name_copy (`g_active_name`, `&g_initial_name`).
+ * Zeros the counters and indices, seeds the cursor from its frozen defaults,
+ * computes the initial @c g_char_set_mode, and copies @c g_initial_name into
+ * the active name buffer.
  *
  * @see https://decomp.me/scratch/FboaU (100%)
  */
 void reset_run_state(void)
 {
-    g_cursor_tab = 0xFF;
+    g_cursor_tab = GNAME_TAB_NONE;
     g_char_set_mode = handle_char_set_input(0, 0);
     g_cursor_lerp_steps = 0;
     g_scroll_pos = 0;
@@ -432,9 +427,9 @@ void reset_run_state(void)
     name_copy(g_active_name, &g_initial_name);
     g_strip_width = 0;
     recalc_name_width();
-    g_strip_width_steps = 5;
+    g_strip_width_steps = NAME_STRIP_LERP_STEPS;
     g_append_anim_frame = 0;
-    g_append_anim_timer = 2;
+    g_append_anim_timer = APPEND_ANIM_TIMER_START;
     g_char_panel = 0;
 }
 
@@ -477,7 +472,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     if ((name_char_count(g_active_name) != 0) && (!name_is_blank(g_active_name)))
                     {
                         play_menu_sfx(0x7E, 0x80);
-                        g_overlay_result = 5;
+                        g_overlay_result = GNAME_RESULT_CONFIRM;
                     }
                     else
                     {
@@ -535,7 +530,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     }
                     recalc_name_width();
                     var_s0 = 0;
-                    g_strip_width_steps = 5;
+                    g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                     continue;
 
                 case 3:
@@ -551,7 +546,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
 
                 recalc_name_width();
                 var_s0 = 0;
-                g_strip_width_steps = 5;
+                g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
             else
             {
@@ -631,13 +626,13 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     if (name_char_count(g_active_name) < 10)
                     {
                         u8* argA;
-                        g_append_anim_timer = 2;
+                        g_append_anim_timer = APPEND_ANIM_TIMER_START;
                         argA = ((g_random_names_off - 0x10) + g_panel_tbl_off) +
                                (*((u16*)((((g_random_names_off - 0x10) + g_panel_tbl_off) + (g_panel_char_offsets[g_char_panel] * 2)) + (g_char_cursor * 2))));
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
                         recalc_name_width();
-                        g_strip_width_steps = 5;
+                        g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                         play_menu_sfx(0x7D, 0x80);
                     }
                     else
@@ -670,7 +665,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     if (name_char_count(g_active_name) < 10)
                     {
                         u8* argA;
-                        g_append_anim_timer = 2;
+                        g_append_anim_timer = APPEND_ANIM_TIMER_START;
                         argA = ((g_random_names_off - 0x10) + ((u32)g_kanji_panel_off)) +
                                (*((u16*)((((g_random_names_off - 0x10) + ((u32)g_kanji_panel_off)) +
                                           (g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] * 2)) +
@@ -678,7 +673,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                         g_append_anim_frame = 0;
                         name_append(g_active_name, argA);
                         recalc_name_width();
-                        g_strip_width_steps = 5;
+                        g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                         play_menu_sfx(0x7D, 0x80);
                     }
                     else
@@ -779,7 +774,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
  *    append it to @c g_active_name (if not already at NAME_MAX_CHARS).
  *    Plays GNAME_SFX_MOVE on success, GNAME_SFX_ERROR when full.
  *  - @c PAD_BTN_CIRCLE (cancel): if @c g_allow_empty_cancel and the name is
- *    empty, sets @c g_overlay_result = 2 and returns immediately; otherwise
+ *    empty, sets @c g_overlay_result = @c GNAME_RESULT_CANCEL and returns immediately; otherwise
  *    pops the last character. Plays GNAME_SFX_CANCEL.
  *
  * Kanji category navigation (only when @c g_char_set_mode == GNAME_MODE_GRID
@@ -832,7 +827,7 @@ void gname_process_input(void)
     u16 val;
     void** kanji_name_dst;
     s32 scroll_steps_v;
-    g_cursor_tab = 0xFF;
+    g_cursor_tab = GNAME_TAB_NONE;
     nav_input = g_pad_input & ((((PAD_BTN_UP | PAD_BTN_RIGHT) | PAD_BTN_DOWN) | PAD_BTN_LEFT) | (PAD_BTN_CROSS | 0x200));
     if (nav_input != 0)
     {
@@ -848,7 +843,7 @@ void gname_process_input(void)
 
         name_prepend_char(&g_name_clipboard, (unsigned long)(undo_char & 0xFFFF));
         recalc_name_width();
-        g_strip_width_steps = 5;
+        g_strip_width_steps = NAME_STRIP_LERP_STEPS;
         sfx_id = 0x7D;
         sfx_vol = 0x80;
         play_menu_sfx(sfx_id, sfx_vol);
@@ -867,7 +862,7 @@ void gname_process_input(void)
                 (&char_lo)[2] = 0;
                 name_append(g_active_name, &char_lo);
                 recalc_name_width();
-                g_strip_width_steps = 5;
+                g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
             sfx_id = 0x7D;
             play_menu_sfx(sfx_id, 0x80);
@@ -883,7 +878,7 @@ void gname_process_input(void)
         {
             if (name_char_count(g_active_name) == 0)
             {
-                g_overlay_result = 2;
+                g_overlay_result = GNAME_RESULT_CANCEL;
                 play_menu_sfx(0x7F, 0x80);
                 return;
             }
@@ -891,7 +886,7 @@ void gname_process_input(void)
         play_menu_sfx(0x7F, 0x80);
         name_pop_last_char(g_active_name);
         recalc_name_width();
-        g_strip_width_steps = 5;
+        g_strip_width_steps = NAME_STRIP_LERP_STEPS;
     }
     if (((g_char_set_mode == 0x10) && (g_char_panel == 4)) && (g_pad_input & (PAD_BTN_L1 | PAD_BTN_R1)))
     {
