@@ -98,12 +98,10 @@ u16 g_panel_record_offsets[] = {
 };
 
 /**
- * @brief Reset the RGB fade state.
+ * @brief Clear the RGB fade state to all zeros.
  *
- * Zeros the current color (@c g_fade_current) and the target color +
- * step count (@c g_fade_target). After this call the next
- * @ref render_fade_overlay tick will write a black tint (0,0,0) to the
- * primitive at @c ctx->prim_cursor.
+ * Zeros @c g_fade_current (current color) and @c g_fade_target (target color
+ * plus step count), so the fade starts from black with no animation pending.
  *
  * @see https://decomp.me/scratch/ld2aW (100%)
  */
@@ -119,28 +117,17 @@ void reset_fade_state(void)
 }
 
 /**
- * @brief Per-frame RGB fade tick: lerp current toward target and emit a
- *        full-screen tint quad + draw-mode pair into the OT.
+ * @brief Per-frame RGB fade tick: lerp the tint toward its target and emit
+ *        the full-screen tint quad into the OT.
  *
- * If `g_fade_target.steps` is non-zero, advances `g_fade_current` by one step of
- * `(target - current) / steps` per channel and decrements `steps`.
- * Otherwise snaps current to target (RGB only - `steps` is left alone).
+ * Advances @c g_fade_current toward @c g_fade_target by one of the remaining
+ * @c steps (snapping if none remain). Unless the tint is neutral, emits a
+ * full-screen TILE plus a @c DR_TPAGE blend packet into @ref GNAME_OT_FRONT:
+ * additive (@c FADE_TPAGE_ADD, brighten) when a channel is >=
+ * @c FADE_CHAN_ADDITIVE, otherwise subtractive (@c FADE_TPAGE_SUB, darken).
  *
- * If the current color is not the identity (@c FADE_CHAN_NEUTRAL on all
- * channels), emits two primitives at @c ctx->prim_cursor:
- *   1. A full-screen TILE (@c SCREEN_WIDTH x @c SCREEN_HEIGHT) with the
- *      tinted RGB. Channels >= @c FADE_CHAN_ADDITIVE are written as
- *      `value - 1` (additive bias); channels below as `~value`
- *      (subtractive bias).
- *   2. A @c DR_TPAGE packet: @c FADE_TPAGE_ADD (abr=1, Back+Front,
- *      brightening) when any channel >= @c FADE_CHAN_ADDITIVE, or
- *      @c FADE_TPAGE_SUB (abr=2, Back-Front, darkening) otherwise.
- *
- * Both packets are spliced into @ref GNAME_OT_FRONT and @c ctx->prim_cursor is
- * advanced past them. When the color is identity no primitives are emitted.
- *
- * @param ctx Render context whose @ref GNAME_OT_FRONT is the OT entry and
- *            @c prim_cursor is the primitive heap cursor.
+ * @param ctx Render context; primitives are written at @c prim_cursor (which is
+ *            advanced past them) and linked into @ref GNAME_OT_FRONT.
  *
  * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
  * @see https://decomp.me/scratch/NvocJ (100%)
@@ -239,9 +226,8 @@ static void render_fade_overlay(RenderContext* ctx)
 /**
  * @brief Set the RGB fade target and step count.
  *
- * Writes the four-field target struct in one call. The next
- * `steps` ticks of @ref render_fade_overlay will lerp the current color toward
- * `(r, g, b)` and then snap on the final tick.
+ * The next @c steps ticks of @ref render_fade_overlay lerp the current color
+ * toward (r, g, b), snapping on the final tick.
  *
  * @param r     Target red   (0..0x100 normal, >0x100 = additive).
  * @param g     Target green (0..0x100 normal, >0x100 = additive).
@@ -259,21 +245,13 @@ static void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
 }
 
 /**
- * @brief Overlay boot/reset entry: prep VRAM, load CLUT, init run state.
- *
- * Calls (in order):
- *  - @ref load_name_entry_tim  - uploads the overlay's glyph TIM to VRAM.
- *  - @ref func_800AA02C  - engine helper (audio/SFX init).
- *  - sets @c g_startup_delay = 0x28 (40 - likely a startup delay countdown).
- *  - @ref func_8006441C  - engine helper.
- *  - @ref reset_run_state  - zero/seed all of the overlay's run-state globals.
- *  - @ref func_80063194  - engine helper.
+ * @brief Overlay boot entry: upload glyph TIM, init engine state, seed run state.
  *
  * @see https://decomp.me/scratch/pnzC1 (100%)
  */
 void gname_init(void)
 {
-    volatile int dummy[2]; /* forces 0x20 stack frame, ra at 0x18(sp) */
+    volatile int stack_pad[2]; /* padding to force a 0x20 stack frame, ra at 0x18(sp) */
     load_name_entry_tim();
     func_800AA02C();
     g_startup_delay = 0x28;
@@ -303,17 +281,15 @@ void load_name_entry_tim(void)
 }
 
 /**
- * @brief Upload a TIM image's pixel data and CLUT to VRAM.
+ * @brief Upload the CLUT and pixel data of @c g_name_entry_tim to VRAM.
  *
- * Parses @c g_name_entry_tim: the CLUT block starts at @c TIM_HEADER_SIZE,
- * its @c CLUT_ENTRY_COUNT palette entries at @c TIM_CLUT_DATA_OFFSET. Before uploading,
- * @c GPU_STP_BIT is OR'd into every non-zero CLUT entry. The TIM's own
- * embedded destination coordinates are ignored; @p dst_coords supplies them.
+ * ORs @c GPU_STP_BIT into every non-zero CLUT entry, then uploads the CLUT and
+ * pixel blocks. The TIM's embedded destination coordinates are ignored;
+ * @p dst_coords supplies them.
  *
  * @param dst_coords Pixel and CLUT VRAM destination coordinates.
  *
- * @note @c func_80019A34 is the engine's LoadImage-style VRAM upload
- *       (RECT, source data).
+ * @note @c func_80019A34 is the engine's LoadImage-style VRAM upload.
  * @see https://decomp.me/scratch/P3W9C (100%)
  */
 void load_tim_to_vram(TimDstCoords* dst_coords)
@@ -321,6 +297,7 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
     RECT rect;
     TimBlock* pixel_block;
     int i;
+
     Tim* tim = &g_name_entry_tim;
     s32 clut_len = tim->clut_block.bnum;
     u16* clut = tim->clut_data;
@@ -333,7 +310,7 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
     /* Mark every non-zero CLUT entry semi-transparent. */
     for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
-        if ((*clut) != 0)
+        if (*clut)
         {
             *clut |= GPU_STP_BIT;
         }
@@ -358,21 +335,16 @@ void load_tim_to_vram(TimDstCoords* dst_coords)
 }
 
 /**
- * @brief Per-frame tick: reset/prep, render frame contents, advance frame
- *        counter, advance overlay state machine.
+ * @brief Per-frame tick: render the frame, advance the frame counter, and
+ *        update the overlay state machine.
  *
- *  - @ref draw_name_cursor_row  - emits the name-entry cursor glyph row.
- *  - @ref gname_render  - main render pass for this overlay.
- *  - increments the global frame counter @c g_frame_counter.
- *  - @ref gname_update_state  - countdown / lerp / SFX trigger update.
- *
- * @param ctx Render context (@ref RenderContext) passed through to @ref gname_render.
+ * @param ctx Render context passed through to @ref gname_render.
  *
  * @see https://decomp.me/scratch/yYkTM (100%)
  */
 void gname_tick(RenderContext* ctx)
 {
-    draw_name_cursor_row();
+    draw_name_cursor_row(ctx);
     gname_render(ctx);
     g_frame_counter++;
     gname_update_state();
