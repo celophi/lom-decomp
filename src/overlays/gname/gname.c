@@ -773,8 +773,9 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
  * 4), L1/R1 cycle @c g_kanji_cat by 10 with wrap and reset the page. Finally,
  * advances the cursor and scroll lerp animations.
  *
- * @note The dead code after the empty-cancel @c return is a codegen artifact
- *       and must be preserved.
+ * @note The kanji-nav block re-tests @c GNAME_BTN_KANJI_NAV in a nested @c if
+ *       that is always true (the outer @c if already guaranteed it). This
+ *       redundant check is a codegen artifact and must be preserved.
  * @see decomp.me (100%) https://decomp.me/scratch/pCzH6
  */
 void gname_process_input(void)
