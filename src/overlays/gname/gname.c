@@ -760,39 +760,21 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
  * @brief Per-frame input handler for the active name-entry phase.
  *
  * Called every frame by @ref gname_update_state once @c g_startup_delay
- * reaches zero. Processes pad input, updates @c g_char_set_mode and the
- * kanji category state, then advances the cursor and scroll lerp animations.
+ * reaches zero. Dispatches pad input in priority order:
+ *  - Nav/confirm (@c GNAME_BTN_NAV_MASK): delegated to
+ *    @ref handle_char_set_input.
+ *  - Undo (L2): move the last character from @c g_active_name back onto the
+ *    clipboard @c g_name_clipboard.
+ *  - Redo (R2): move the first clipboard character back into @c g_active_name.
+ *  - Cancel (Circle): pop the last character, or finish with
+ *    @c GNAME_RESULT_CANCEL when empty and @c g_allow_empty_cancel is set.
  *
- * Input dispatch (evaluated in priority order):
- *  - @c GNAME_BTN_NAV_MASK (D-pad + confirm): delegated to
- *    @ref handle_char_set_input for grid/tab navigation and character
- *    selection.
- *  - @c GNAME_BTN_UNDO (L2): pop the last character from @c g_active_name,
- *    prepend it to the clipboard (@c g_name_clipboard), trimming the clipboard
- *    to 10 chars first. Plays GNAME_SFX_MOVE.
- *  - @c GNAME_BTN_REDO (R2): pop the first character from the clipboard and
- *    append it to @c g_active_name (if not already at NAME_MAX_CHARS).
- *    Plays GNAME_SFX_MOVE on success, GNAME_SFX_ERROR when full.
- *  - @c PAD_BTN_CIRCLE (cancel): if @c g_allow_empty_cancel and the name is
- *    empty, sets @c g_overlay_result = @c GNAME_RESULT_CANCEL and returns immediately; otherwise
- *    pops the last character. Plays GNAME_SFX_CANCEL.
+ * In the kanji grid (@c g_char_set_mode == GNAME_MODE_GRID, @c g_char_panel ==
+ * 4), L1/R1 cycle @c g_kanji_cat by 10 with wrap and reset the page. Finally,
+ * advances the cursor and scroll lerp animations.
  *
- * Kanji category navigation (only when @c g_char_set_mode == GNAME_MODE_GRID
- * and @c g_char_panel == 4):
- *  - @c GNAME_BTN_KANJI_PREV (L1): cycle @c g_kanji_cat back by 10 with wrap.
- *  - @c GNAME_BTN_KANJI_NEXT (R1): cycle @c g_kanji_cat forward by 10 with wrap.
- *  - On a valid category (@c g_kanji_cat_entries[cat] != 0xFF), resets scroll
- *    and cursor to the top-left of the new page, resolves and stores
- *    @c g_kanji_cat_name, and clears the nav bits from @c g_pad_input.
- *
- * Lerp updates (run unconditionally after input):
- *  - Cursor (@c g_cursor_x / @c g_cursor_y): step toward target by
- *    (target - current) / steps, decrement @c g_cursor_lerp_steps; snap on 0.
- *  - Scroll (@c g_scroll_pos): same shape toward @c g_scroll_target via
- *    @c g_scroll_steps; snap on 0.
- *
- * @note The dead code block after the empty-cancel @c return (lines following
- *       "if (!g_cursor_x_target)") is a codegen artifact and must be preserved.
+ * @note The dead code after the empty-cancel @c return is a codegen artifact
+ *       and must be preserved.
  * @see decomp.me (100%) https://decomp.me/scratch/pCzH6
  */
 void gname_process_input(void)
@@ -828,7 +810,7 @@ void gname_process_input(void)
     void** kanji_name_dst;
     s32 scroll_steps_v;
     g_cursor_tab = GNAME_TAB_NONE;
-    nav_input = g_pad_input & ((((PAD_BTN_UP | PAD_BTN_RIGHT) | PAD_BTN_DOWN) | PAD_BTN_LEFT) | (PAD_BTN_CROSS | 0x200));
+    nav_input = g_pad_input & GNAME_BTN_NAV_MASK;
     if (nav_input != 0)
     {
         g_char_set_mode = handle_char_set_input(g_char_set_mode, nav_input);
@@ -844,13 +826,13 @@ void gname_process_input(void)
         name_prepend_char(&g_name_clipboard, (unsigned long)(undo_char & 0xFFFF));
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-        sfx_id = 0x7D;
-        sfx_vol = 0x80;
+        sfx_id = GNAME_SFX_MOVE;
+        sfx_vol = GNAME_SFX_VOLUME;
         play_menu_sfx(sfx_id, sfx_vol);
     }
     else if (g_pad_input & PAD_BTN_R2)
     {
-        if (name_char_count(g_active_name) < 10)
+        if (name_char_count(g_active_name) < NAME_MAX_CHARS)
         {
             clipboard_ptr = &g_name_clipboard;
             undo_char = name_pop_first_char(clipboard_ptr);
@@ -864,12 +846,12 @@ void gname_process_input(void)
                 recalc_name_width();
                 g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
-            sfx_id = 0x7D;
-            play_menu_sfx(sfx_id, 0x80);
+            sfx_id = GNAME_SFX_MOVE;
+            play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
         }
         else
         {
-            play_menu_sfx(0x78, 0x80);
+            play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
         }
     }
     else if (g_pad_input & PAD_BTN_CIRCLE)
@@ -879,21 +861,21 @@ void gname_process_input(void)
             if (name_char_count(g_active_name) == 0)
             {
                 g_overlay_result = GNAME_RESULT_CANCEL;
-                play_menu_sfx(0x7F, 0x80);
+                play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
                 return;
             }
         }
-        play_menu_sfx(0x7F, 0x80);
+        play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
         name_pop_last_char(g_active_name);
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
     }
-    if (((g_char_set_mode == 0x10) && (g_char_panel == 4)) && (g_pad_input & (PAD_BTN_L1 | PAD_BTN_R1)))
+    if (((g_char_set_mode == GNAME_MODE_GRID) && (g_char_panel == 4)) && (g_pad_input & GNAME_BTN_KANJI_NAV))
     {
-        play_menu_sfx(0x7D, 0x80);
-        if (g_pad_input & (PAD_BTN_L1 | PAD_BTN_R1))
+        play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+        if (g_pad_input & GNAME_BTN_KANJI_NAV)
         {
-            while (g_pad_input & (PAD_BTN_L1 | PAD_BTN_R1))
+            while (g_pad_input & GNAME_BTN_KANJI_NAV)
             {
                 if (g_pad_input & PAD_BTN_L1)
                 {
@@ -931,11 +913,11 @@ void gname_process_input(void)
                     g_scroll_target = (long)0;
                     g_scroll_pos = 0;
                     panel3_off = g_panel_char_offsets[3];
-                    sfx_vol = ~(PAD_BTN_L1 | PAD_BTN_R1);
+                    sfx_vol = ~GNAME_BTN_KANJI_NAV;
                     g_scroll_steps = 0;
                     g_char_cursor = 0;
-                    g_cursor_x_target = 84;
-                    g_cursor_y_target = 104;
+                    g_cursor_x_target = NAME_GRID_X_BASE;
+                    g_cursor_y_target = NAME_GRID_Y_TOP;
                     g_cursor_lerp_steps = 4;
                     kanji_panel_offset = panel3_off;
                     idx = g_kanji_cat;
