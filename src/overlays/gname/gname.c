@@ -988,33 +988,17 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
 /**
  * @brief Main per-frame render pass for the name-entry overlay.
  *
- * Builds this frame's primitives into @p context and splices them onto the
- * render context's ordering table. Runs each tick from @ref gname_tick,
- * after @ref draw_name_cursor_row. The work, in order:
+ * Runs each tick from @ref gname_tick (after @ref draw_name_cursor_row),
+ * building this frame's primitives and chaining them into @p context's OT.
+ * In order:
+ *  1. Character grid glyphs (highlighting the selected @c g_cursor_tab).
+ *  2. Append glyph + animation, then @ref emit_panel_tab_sprite.
+ *  3. Text cursor SPRT at (@c g_cursor_x, @c g_cursor_y) + its DrawMode.
+ *  4. Scroll indicator arrows, conditional on @c g_scroll_pos and the row.
+ *  5. @ref emit_panel_label, @ref render_char_panel, @ref render_name_strip.
  *
- *  1. Character grid: walk grid-table entries 2..12 (skipping 9) and emit a
- *     drop-shadowed glyph SPRT for each via @ref emit_glyph_sprt into OT slot
- *     @ref GNAME_OT_CHAR_GRID. The entry whose index equals @c g_cursor_tab
- *     is drawn highlighted (the @p primary_adj flag of @ref emit_glyph_sprt), marking
- *     the current selection.
- *  2. Append decoration: emit a static glyph plus the character-append
- *     animation (@ref draw_char_append_anim) into @ref GNAME_OT_CHAR_APPEND,
- *     then run @ref emit_panel_tab_sprite.
- *  3. Text cursor: build a white textured SPRT (glyph
- *     @c g_glyph_table[NAME_CURSOR_GLYPH_COUNT]) at the cursor position
- *     (@c g_cursor_x, @c g_cursor_y), followed by an additive DrawMode, and
- *     chain both into @ref GNAME_OT_TEXT_CURSOR.
- *  4. Conditional glyphs: when @c g_scroll_pos is set, and again when
- *     @c g_char_last_row >= 5 passes a phase check, emit extra glyphs from the
- *     @c g_tab_cursor_pos table.
- *  5. Hand off to the remaining sub-passes @ref emit_panel_label,
- *     @ref render_char_panel and @ref render_name_strip.
- *
- * @param context Render context. Chains primitives into OT slots
- *                @ref GNAME_OT_FRONT, @ref GNAME_OT_TEXT_CURSOR,
- *                @ref GNAME_OT_PANEL_LABEL, @ref GNAME_OT_CHAR_GRID, and
- *                @ref GNAME_OT_CHAR_APPEND, and advances the heap cursor
- *                @c prim_cursor.
+ * @param context Render context; primitives are chained into its OT slots and
+ *                @c prim_cursor is advanced.
  * @see decomp.me (100%) https://decomp.me/scratch/a0Oye
  */
 void gname_render(RenderContext* context)
@@ -1096,21 +1080,12 @@ void gname_render(RenderContext* context)
 /**
  * @brief Emit the panel-tab indicator sprite for the current character-set mode.
  *
- * Resolves a sprite record from the character panel data blob (see
- * @ref PanelDataHeader / @ref PANEL_DATA_BLOB) and forwards it to
- * @ref func_800A88A0 at fixed screen position (0xB0, 0xC8). A record is
- * always @c blob + tbl_off + table[i], where @c tbl_off is
- * @ref g_panel_tbl_off and @c table is @ref g_panel_record_offsets.
- *
- * Table index per mode:
- *  - mode 0-7 (kana/alpha): i = sprite_idx of the @ref g_tab_cursor_pos
- *    entry for tab (mode + 2)
- *  - mode 0x10, panel 3-4:  i = panel + 10 (entries 13-14)
- *  - mode 0x10, other:      i = 12
- *
- * All three branches share one compiled call tail that adds @c tbl_off last
- * (in the jal delay slot), which is why every call passes
- * @c sprite_data + tbl_off instead of folding the add earlier.
+ * Resolves a @ref PANEL_RECORD by index and draws it via @ref func_800A88A0
+ * at fixed screen position (0xB0, 0xC8). The index per mode:
+ *  - mode 0-7 (kana/alpha): sprite_idx of the @ref g_tab_cursor_pos tab
+ *    (mode + 2)
+ *  - mode 0x10, panel 3-4:  panel + 10 (records 13-14)
+ *  - mode 0x10, other:      12
  *
  * @param prim     Primitive write cursor (linked-list head).
  * @param ot_entry Pointer into the render context OT for chaining.
@@ -1125,7 +1100,7 @@ void* emit_panel_tab_sprite(void* prim, u_long* ot_entry)
     {
         prim = func_800A88A0(prim, ot_entry, PANEL_RECORD(g_tab_cursor_pos[mode + 2].sprite_idx), 1, 0xB0, 0xC8, 2);
     }
-    else if (g_char_set_mode == 0x10)
+    else if (g_char_set_mode == GNAME_MODE_GRID)
     {
         s32 panel = g_char_panel;
 
@@ -1144,11 +1119,12 @@ void* emit_panel_tab_sprite(void* prim, u_long* ot_entry)
 /**
  * @brief Emit the category-label sprite for the current character panel.
  *
- * For panels 0-3 resolves the label data from @ref g_panel_tbl_off using a
- * packed u16 offset; for panel >= 4 (kanji) uses @ref g_kanji_cat_name
- * directly. Forwards the pointer to @ref func_800A88A0 at fixed screen
+ * Panels 0-3 use a @ref PANEL_RECORD label; panel >= 4 (kanji) uses
+ * @ref g_kanji_cat_name directly. Drawn via @ref func_800A88A0 at fixed screen
  * position (0x23, 0x47).
  *
+ * @param prim     Primitive write cursor (linked-list head).
+ * @param ot_entry Pointer into the render context OT for chaining.
  * @return Updated primitive write cursor after appending the label sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/jK7bc
  */
@@ -1172,28 +1148,16 @@ void* emit_panel_label(void* prim, u_long* ot_entry)
  * @brief Append three GPU primitives to the render context's OT and reserve a
  *        right-edge VRAM strip for upload on the back page.
  *
- * Builds, in order:
- *   1. A 0x40-byte template packet copied from the inactive frame's reserve
- *      slot at `g_render_buf_base + (alt_buf * 0x40C0) + 0x4064`.
- *   2. A textured sprite (tag 0x64) emitted via @ref func_800A88A0 using
- *      `tex_src` as its source data, then a Draw-Mode (GP0 0xE1) packet
- *      emitted via @ref emit_draw_mode_prim / @ref emit_glyph_sprt.
- *   3. A 0x60-byte image-load packet built on the stack by
- *      @ref func_8001C56C describing a `strip_width x 32` rectangle at VRAM
- *      `(240 - strip_width, 24 | 256)` - i.e. right-aligned on whichever
- *      VRAM page is currently the back buffer (Y=0x18 vs 0x100).
+ * Builds, in order, into @ref GNAME_OT_NAME_STRIP:
+ *   1. A template packet copied from the inactive frame's reserve slot.
+ *   2. A textured name sprite plus its Draw-Mode packet.
+ *   3. A VRAM upload RECT (strip_width x 32) right-aligned on the current back
+ *      page (Y = 0x18 or 0x100 by @c frame_parity).
+ * Then advances @c ctx->prim_cursor past the last packet.
  *
- * Each packet is spliced into the 24-bit OT at @ref GNAME_OT_NAME_STRIP with
- * the standard `(top_byte | next_addr & 0xFFFFFF)` link idiom, and the heap
- * cursor @c ctx->prim_cursor is advanced by 0x40 bytes past the last packet.
- *
- * @param ctx         Render context: OT head at @ref GNAME_OT_NAME_STRIP,
- *                    primitive heap cursor at prim_cursor, double-buffer
- *                    parity at frame_parity.
- * @param name_buf    Active name buffer passed as the source data for the
- *                    sprite primitive (forwarded to func_800A88A0).
- * @param strip_width Width in pixels of the back-page VRAM upload strip; also
- *                    sets the strip's X position as `240 - strip_width`.
+ * @param ctx         Render context (OT, prim_cursor, frame_parity).
+ * @param name_buf    Active name buffer; source data for the sprite.
+ * @param strip_width Strip width in pixels; also sets its X as 0xF0 - strip_width.
  *
  * @see https://decomp.me/scratch/LxujJ (100%)
  */
@@ -1213,7 +1177,7 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 
     /* 1. Copy template packet from the *other* frame's reserve slot, then
      * splice it into the OT. */
-    func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0) + 0x4064));
+    func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
 
     addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], prim);
 
@@ -1295,7 +1259,7 @@ void render_char_panel(RenderContext* ctx, s32 panel_idx)
     /* (u8*)ctx + 0x28 == &ctx->ot[GNAME_OT_CHAR_PANEL]; raw offset is required to match. */
     ot_ptr = (u32*)(((u8*)ctx) + 0x28);
     prim = ctx->prim_cursor;
-    SetDrawEnv(prim, (DRAWENV*)((g_render_buf_base + ((ctx->frame_parity ^ 1) * 0x40C0)) + 0x4064));
+    SetDrawEnv(prim, (DRAWENV*)((g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE)) + DRAW_BUF_DRAWENV_OFF));
     ((P_TAG*)prim)->addr = (u_long)((u_long)((P_TAG*)((u32*)(((u8*)ctx) + 0x28)))->addr), ((P_TAG*)((u32*)(((u8*)ctx) + 0x28)))->addr = (u_long)prim;
     write_cur = prim + (sizeof(DR_ENV));
     if (g_char_panel == 4)
