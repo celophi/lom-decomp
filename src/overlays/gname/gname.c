@@ -9,11 +9,9 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
-/* --- Overlay-private types, macros, and declarations ------------------------
- *
- * Everything below is private to this overlay. It used to live in gname.h, but
- * since nothing outside gname.c references it, it belongs here.
- */
+/** Number of glyph slots per @ref AppendAnimFrame; defined here because it is
+ *  the array dimension of the struct's @c slots[] member below. */
+#define APPEND_ANIM_SLOT_COUNT 3
 
 /**
  * @name GNAME ordering-table depth slots
@@ -148,6 +146,76 @@
 #define NAME_GRID_VRAM_X        0x60 /**< VRAM X of the grid area upload rect (96 px). */
 #define NAME_GRID_VIS_HEIGHT    0x50 /**< Visible grid height in pixels: 5 rows * 16 (80 px). */
 
+/* FadeState channel sentinels. Channels run 0 (fully dark) up to
+ * FADE_CHAN_NEUTRAL (identity, no tint). Values >= FADE_CHAN_ADDITIVE
+ * select additive blend; values below select subtractive. */
+#define FADE_CHAN_NEUTRAL   0x100
+#define FADE_CHAN_ADDITIVE  0x101
+
+/* tpage arguments for the blend-mode DR_TPAGE emitted by render_fade_overlay.
+ * The tile is flat-colored so only the abr bits matter; x=320 is the
+ * right-half VRAM column used as the tpage base. */
+#define FADE_TPAGE_ADD  0x25 /* getTPage(0, 1, 320, 0) - abr=1: Back + Front */
+#define FADE_TPAGE_SUB  0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
+
+/* tpage for the overlay's 4-bit glyph/font texture (cursor, text, DrawMode
+ * packets). getTPage(0, 0, 320, 0): 4-bit CLUT, abr=0, VRAM page at x=320. */
+#define GNAME_GLYPH_TPAGE 5
+
+/** Number of glyph cells in the name-entry cursor row drawn by
+ *  @ref draw_name_cursor_row. */
+#define NAME_CURSOR_GLYPH_COUNT 20
+
+/** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
+ *  Bits [5:0] hold CLUT_X/16; upper bits carry unrelated data and must be
+ *  discarded before writing the CLUT id into a sprite primitive. */
+#define GLYPH_CLUT_X_MASK 0x3F
+
+/** CLUT-page bit pattern OR'd over the low 6 bits of @c GlyphInfo::clut
+ *  before writing it into a sprite primitive (see @ref draw_name_cursor_row,
+ *  @ref emit_glyph_sprt). Encodes the fixed VRAM Y row (498) shared by all
+ *  name-entry palettes; bits [5:0] are zero and supplied by @c GLYPH_CLUT_X_MASK. */
+#define GLYPH_CLUT_PAGE_BITS 0x7C80
+
+/** Number of frames in @c g_char_append_anim; reaching this index wraps the
+ *  animation back to the idle frame and stops it. */
+#define APPEND_ANIM_FRAME_COUNT 7
+
+/** Byte stride of one @ref AppendAnimFrame record in @c g_char_append_anim. */
+#define APPEND_ANIM_FRAME_STRIDE 12
+
+/* The panel data blob is described by the PanelDataHeader struct above. Its
+ * header fields and record-offset table
+ * (g_random_names_off, g_history_names_off, g_kanji_panel_off,
+ * g_panel_record_offsets, g_panel_tbl_off, g_panel_data_base) plus
+ * g_kanji_cat_entries and g_kanji_entry_offsets are defined below in this file.
+ *
+ * g_panel_tbl_off (blob + 4) holds the byte offset (0x14) from the blob base
+ * to the u16 record-offset table; a record pointer is therefore
+ * PANEL_DATA_BLOB + g_panel_tbl_off + table[i]. The PANEL_* macros below
+ * depend on g_panel_tbl_off being defined ahead of their use. */
+
+/**
+ * @brief Base address of the character panel data blob, derived from
+ *        @ref g_panel_tbl_off (the header field at blob + 4).
+ *
+ * The base must be derived from @c &g_panel_tbl_off with a runtime
+ * @c - 4 (not referenced via the @ref g_panel_data_base symbol): the
+ * original code shares a single @c lui between loading the field's value
+ * and forming the base address, leaving the @c -4 as a separate @c addiu
+ * in the binary.
+ */
+#define PANEL_DATA_BLOB (((u8*)(&g_panel_tbl_off)) - 4)
+
+/** The blob's u16 record-offset table. Must stay a macro: the original
+ *  re-derives the table at every use (no CSE), which a named local would
+ *  destroy. */
+#define PANEL_REC_TBL ((u16*)(PANEL_DATA_BLOB + g_panel_tbl_off))
+
+/** Pointer to record i: the table is self-relative, entries are byte
+ *  offsets from the table itself (same idiom as FF8's string tables). */
+#define PANEL_RECORD(i) ((u8*)PANEL_REC_TBL + PANEL_REC_TBL[(i)])
+
 /**
  * @brief RGB lerp state.
  *
@@ -165,22 +233,6 @@ typedef struct
     s32 b;     /* 0x8 - blue channel,  0..FADE_CHAN_NEUTRAL normal, >FADE_CHAN_NEUTRAL = additive */
     s32 steps; /* 0xC - frames remaining in the lerp (target struct only) */
 } FadeState;
-
-/* FadeState channel sentinels. Channels run 0 (fully dark) up to
- * FADE_CHAN_NEUTRAL (identity, no tint). Values >= FADE_CHAN_ADDITIVE
- * select additive blend; values below select subtractive. */
-#define FADE_CHAN_NEUTRAL   0x100
-#define FADE_CHAN_ADDITIVE  0x101
-
-/* tpage arguments for the blend-mode DR_TPAGE emitted by render_fade_overlay.
- * The tile is flat-colored so only the abr bits matter; x=320 is the
- * right-half VRAM column used as the tpage base. */
-#define FADE_TPAGE_ADD  0x25 /* getTPage(0, 1, 320, 0) - abr=1: Back + Front */
-#define FADE_TPAGE_SUB  0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
-
-/* tpage for the overlay's 4-bit glyph/font texture (cursor, text, DrawMode
- * packets). getTPage(0, 0, 320, 0): 4-bit CLUT, abr=0, VRAM page at x=320. */
-#define GNAME_GLYPH_TPAGE 5
 
 /**
  * @brief TIM upload destination coordinates for @ref load_tim_to_vram.
@@ -252,21 +304,6 @@ typedef struct {
     u8 glyph;
 } TabCursorEntry;
 
-/** Number of glyph cells in the name-entry cursor row drawn by
- *  @ref draw_name_cursor_row. */
-#define NAME_CURSOR_GLYPH_COUNT 20
-
-/** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
- *  Bits [5:0] hold CLUT_X/16; upper bits carry unrelated data and must be
- *  discarded before writing the CLUT id into a sprite primitive. */
-#define GLYPH_CLUT_X_MASK 0x3F
-
-/** CLUT-page bit pattern OR'd over the low 6 bits of @c GlyphInfo::clut
- *  before writing it into a sprite primitive (see @ref draw_name_cursor_row,
- *  @ref emit_glyph_sprt). Encodes the fixed VRAM Y row (498) shared by all
- *  name-entry palettes; bits [5:0] are zero and supplied by @c GLYPH_CLUT_X_MASK. */
-#define GLYPH_CLUT_PAGE_BITS 0x7C80
-
 /**
  * @brief One glyph slot inside an @ref AppendAnimFrame.
  *
@@ -282,9 +319,6 @@ typedef struct
     u8 pad;   /* 0x3 - unused; slot 0 only: frame duration in render ticks */
 } AppendAnimSlot;
 
-/** Number of glyph slots per @ref AppendAnimFrame. */
-#define APPEND_ANIM_SLOT_COUNT 3
-
 /**
  * @brief One frame of the character-append animation played by
  *        @ref draw_char_append_anim.
@@ -297,13 +331,6 @@ typedef struct
 {
     AppendAnimSlot slots[APPEND_ANIM_SLOT_COUNT];
 } AppendAnimFrame; /* 0xC bytes */
-
-/** Number of frames in @c g_char_append_anim; reaching this index wraps the
- *  animation back to the idle frame and stops it. */
-#define APPEND_ANIM_FRAME_COUNT 7
-
-/** Byte stride of one @ref AppendAnimFrame record in @c g_char_append_anim. */
-#define APPEND_ANIM_FRAME_STRIDE 12
 
 /**
  * @brief Per-glyph measurement record produced by @c func_800644FC.
@@ -319,6 +346,34 @@ typedef struct
     s16 width; /* 0x10 - glyph advance / pixel width */
     u8 pad1[2];
 } GlyphMeasure;
+
+/**
+ * @brief Header layout of the character-panel resource blob at
+ *        @ref g_panel_data_base (0x80142EF4).
+ *
+ * The "tables" below are really one serialized data file whose header is a
+ * run of u32 byte offsets; splat carved each header field into its own
+ * symbol. A record inside the blob is always resolved as
+ * @c blob_base + header_field + table_entry.
+ *
+ * This typedef is documentation only - do not re-type the accesses with it.
+ * The matched code anchors each access at the individual field symbol and
+ * subtracts the field's offset at runtime (e.g. @c &g_panel_tbl_off - 4,
+ * @c g_random_names_off - 0x10), which shares one @c lui between the field load
+ * and the base address. Anchoring at a blob-base symbol instead drops the
+ * runtime @c addiu and breaks the match.
+ */
+typedef struct
+{
+    u32 unk0;        /* 0x00 - g_panel_data_base: stored value 4; purpose unknown */
+    u32 tbl_off;     /* 0x04 - g_panel_tbl_off: offset of the u16 record-offset table (0x14) */
+    u32 kanji_off;   /* 0x08 - g_kanji_panel_off: offset of the kanji panel glyph data (0x2A0) */
+    u32 history_off; /* 0x0C - g_history_names_off: offset of the history name list (0x3754) */
+    u32 random_off;  /* 0x10 - g_random_names_off: offset of the random name pool (0x3C9C) */
+    /* g_panel_record_offsets (u16[]) follows at +0x14; each entry is a byte
+     * offset from the table itself to one record (panel glyph lists, category
+     * labels, tab sprites, kanji category names). */
+} PanelDataHeader;
 
 /* --- Data globals defined in this overlay's asm (.data) --- */
 extern s32 g_name_pixel_width;
@@ -385,65 +440,6 @@ extern s32 g_scroll_steps;
 extern s32 g_kanji_cat;
 /** Linearized character cursor position in the grid: row * 10 + col. */
 extern s32 g_char_cursor;
-
-/**
- * @brief Header layout of the character-panel resource blob at
- *        @ref g_panel_data_base (0x80142EF4).
- *
- * The "tables" below are really one serialized data file whose header is a
- * run of u32 byte offsets; splat carved each header field into its own
- * symbol. A record inside the blob is always resolved as
- * @c blob_base + header_field + table_entry.
- *
- * This typedef is documentation only - do not re-type the accesses with it.
- * The matched code anchors each access at the individual field symbol and
- * subtracts the field's offset at runtime (e.g. @c &g_panel_tbl_off - 4,
- * @c g_random_names_off - 0x10), which shares one @c lui between the field load
- * and the base address. Anchoring at a blob-base symbol instead drops the
- * runtime @c addiu and breaks the match.
- */
-typedef struct
-{
-    u32 unk0;        /* 0x00 - g_panel_data_base: stored value 4; purpose unknown */
-    u32 tbl_off;     /* 0x04 - g_panel_tbl_off: offset of the u16 record-offset table (0x14) */
-    u32 kanji_off;   /* 0x08 - g_kanji_panel_off: offset of the kanji panel glyph data (0x2A0) */
-    u32 history_off; /* 0x0C - g_history_names_off: offset of the history name list (0x3754) */
-    u32 random_off;  /* 0x10 - g_random_names_off: offset of the random name pool (0x3C9C) */
-    /* g_panel_record_offsets (u16[]) follows at +0x14; each entry is a byte
-     * offset from the table itself to one record (panel glyph lists, category
-     * labels, tab sprites, kanji category names). */
-} PanelDataHeader;
-
-/* The panel data blob header fields and record-offset table
- * (g_random_names_off, g_history_names_off, g_kanji_panel_off,
- * g_panel_record_offsets, g_panel_tbl_off, g_panel_data_base) plus
- * g_kanji_cat_entries and g_kanji_entry_offsets are defined below in this file.
- *
- * g_panel_tbl_off (blob + 4) holds the byte offset (0x14) from the blob base
- * to the u16 record-offset table; a record pointer is therefore
- * PANEL_DATA_BLOB + g_panel_tbl_off + table[i]. The PANEL_* macros below
- * depend on g_panel_tbl_off being defined ahead of their use. */
-
-/**
- * @brief Base address of the character panel data blob, derived from
- *        @ref g_panel_tbl_off (the header field at blob + 4).
- *
- * The base must be derived from @c &g_panel_tbl_off with a runtime
- * @c - 4 (not referenced via the @ref g_panel_data_base symbol): the
- * original code shares a single @c lui between loading the field's value
- * and forming the base address, leaving the @c -4 as a separate @c addiu
- * in the binary.
- */
-#define PANEL_DATA_BLOB (((u8*)(&g_panel_tbl_off)) - 4)
-
-/** The blob's u16 record-offset table. Must stay a macro: the original
- *  re-derives the table at every use (no CSE), which a named local would
- *  destroy. */
-#define PANEL_REC_TBL ((u16*)(PANEL_DATA_BLOB + g_panel_tbl_off))
-
-/** Pointer to record i: the table is self-relative, entries are byte
- *  offsets from the table itself (same idiom as FF8's string tables). */
-#define PANEL_RECORD(i) ((u8*)PANEL_REC_TBL + PANEL_REC_TBL[(i)])
 
 /**
  * @brief Play a one-shot UI sound effect via the AKAO driver.
