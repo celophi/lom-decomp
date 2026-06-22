@@ -1,5 +1,489 @@
 #include "gname.h"
 
+#include "common.h"
+#include "display.h"
+#include "gpu_packet.h"
+#include "main.h"
+#include "pad.h"
+#include "tim.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+
+/** Number of glyph slots per @ref AppendAnimFrame; defined here because it is
+ *  the array dimension of the struct's @c slots[] member below. */
+#define APPEND_ANIM_SLOT_COUNT 3
+
+/**
+ * @name GNAME ordering-table depth slots
+ *
+ * Hand-assigned indices into @ref RenderContext::ot that the name-entry
+ * render passes chain their primitives into. The OT is a Z-priority bucket
+ * list, so each constant just fixes one element's place in the draw order;
+ * the numbers carry no meaning beyond their relative layering. Lower slots
+ * sort in front of higher ones, so the text cursor (8) draws over the
+ * character grid (11), which draws over the name strip (14).
+ * @{
+ */
+#define GNAME_OT_FRONT          0x00 /* fade overlay, scroll indicators, panel-tab sprite, label draw-mode */
+#define GNAME_OT_TEXT_CURSOR    0x08 /* text cursor glyph + DrawTPage */
+#define GNAME_OT_PANEL_LABEL    0x09 /* category-label sprite */
+#define GNAME_OT_CHAR_PANEL     0x0A /* scrolling character-panel grid */
+#define GNAME_OT_CHAR_GRID      0x0B /* character grid glyphs */
+#define GNAME_OT_CHAR_APPEND_ANIM 0x0C /* character-append animation glyphs */
+#define GNAME_OT_CHAR_APPEND    0x0D /* static append glyph + draw-mode */
+#define GNAME_OT_NAME_STRIP     0x0E /* name strip (entered-name display) */
+#define GNAME_OT_NAME_CURSOR    0x0F /* name-entry cursor row */
+/** @} */
+
+/**
+ * @brief Name-buffer character encoding.
+ *
+ * A "name" is a null-terminated byte buffer (`u8*`) used by the name-entry
+ * UI. It uses a small DBCS-style variable-width encoding:
+ *
+ *  - Most bytes are single-byte glyphs (1 byte each).
+ *  - A byte in the range [0x19, 0x20) is the *lead* byte of a 2-byte glyph;
+ *    the following byte is its trail byte. There are 7 lead-byte values
+ *    (0x19..0x1F), giving up to 7 "pages" of wide glyphs.
+ *  - 0x00 terminates the string.
+ *
+ * The `name_*` helpers in gname.c walk the buffer respecting this encoding:
+ * `name_byte_length` returns raw bytes, `name_char_count` returns logical
+ * glyphs, `name_pop_first_char` / `name_pop_last_char` strip and return one
+ * glyph (packing a 2-byte glyph as `lead | (trail << 8)`), and
+ * `name_prepend_char` inserts one glyph at the front.
+ *
+ * `name_is_blank` is a special case: it walks byte-by-byte (not
+ * glyph-by-glyph) and treats both ASCII space (0x20) and wide-space
+ * sentinel (0x80) as blank.
+ */
+#define CHAR_SPACE      0x20 /**< ASCII space; blank glyph in name buffers. */
+#define CHAR_WIDE_SPACE 0x80 /**< Wide-space sentinel byte; also blank. */
+
+/* True if byte is a custom 2-byte DBCS-style lead byte */
+#define IS_DBSC_LEAD_BYTE(c) ((c) >= 0x19 && (c) <= 0x1F)
+
+/* Pack two bytes into a single 16-bit DBCS-style glyph */
+#define MAKE_DBCS_GLYPH(lo, hi) (u16)(((u16)(hi) << 8) | (u16)(lo))
+
+/**
+ * Button mask for confirming a character selection in the name-entry grid.
+ * Combines PAD_BTN_CROSS (physical Circle/O = confirm on Japanese PSX) with
+ * 0x200 (R2 shoulder button as a secondary confirm input).
+ */
+#define GNAME_BTN_CONFIRM (PAD_BTN_CROSS | 0x200)
+
+/** L2: undo -- pop the last character from the active name back to the clipboard. */
+#define GNAME_BTN_UNDO PAD_BTN_L2
+/** R2: redo -- pop the first character from the clipboard and append to the active name. */
+#define GNAME_BTN_REDO PAD_BTN_R2
+/** L1: scroll/cycle to the previous kanji category (decrement by 10). */
+#define GNAME_BTN_KANJI_PREV PAD_BTN_L1
+/** R1: scroll/cycle to the next kanji category (increment by 10). */
+#define GNAME_BTN_KANJI_NEXT PAD_BTN_R1
+/** Combined mask: either kanji-category navigation button (L1 or R1). */
+#define GNAME_BTN_KANJI_NAV (GNAME_BTN_KANJI_PREV | GNAME_BTN_KANJI_NEXT)
+
+/**
+ * Full input mask passed to handle_char_set_input each frame: all four
+ * D-pad directions plus the confirm pair.
+ */
+#define GNAME_BTN_NAV_MASK \
+    (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT | GNAME_BTN_CONFIRM)
+
+/*
+ * Character-set navigation mode values stored in g_char_set_mode and
+ * passed to / returned from handle_char_set_input.
+ *
+ *   0-3  : action tab bar (OK, Delete, Random, Default)
+ *   4-7  : character-panel selector tabs (panel N at mode 4+N)
+ *   0x10 : in-grid character cursor
+ */
+#define GNAME_MODE_ACTION_OK       0    /* action bar: commit the name */
+#define GNAME_MODE_ACTION_DELETE   1    /* action bar: delete last character */
+#define GNAME_MODE_ACTION_RANDOM   2    /* action bar: fill with random name */
+#define GNAME_MODE_ACTION_DEFAULT  3    /* action bar: reset to default name */
+#define GNAME_MODE_PANEL_BASE      4    /* first char-panel tab; panel N is at 4+N */
+#define GNAME_MODE_GRID            0x10 /* in-grid character cursor mode */
+
+/* Sentinel for g_cursor_tab meaning "no tab/grid cell selected". */
+#define GNAME_TAB_NONE 0xFF
+
+/* g_overlay_result values: how the overlay finished, read by the caller. */
+#define GNAME_RESULT_CANCEL  2  /* cancelled with an empty name (when allowed) */
+#define GNAME_RESULT_CONFIRM 5  /* name committed; advance to the next overlay stage */
+
+/* Frame count seeded into g_strip_width_steps to start a name-strip width lerp. */
+#define NAME_STRIP_LERP_STEPS 5
+
+/* Frame count seeded into g_append_anim_timer to start the append animation. */
+#define APPEND_ANIM_TIMER_START 2
+
+/* g_name_source_mode values: selects which name is pasted on Random/Default action. */
+#define GNAME_SRC_CUSTOM       1  /* use g_custom_name_buf */
+#define GNAME_SRC_HISTORY      3  /* pick from g_history_names_off via g_history_name_idx */
+#define GNAME_SRC_RAND_PRIMARY 4  /* random entry from g_random_names_off primary index table */
+#define GNAME_SRC_RAND_ALT     5  /* random entry from g_random_names_off alternate offset table */
+
+/* Maximum number of logical characters allowed in a name (distinct from
+ * NAME_GRID_CHARS_PER_ROW, which is the grid display width). */
+#define NAME_MAX_CHARS  10
+
+/* Sound effect IDs passed as the first argument to play_menu_sfx. */
+#define GNAME_SFX_ERROR   0x78  /* error: name is full, blank, or action is invalid */
+#define GNAME_SFX_MOVE    0x7D  /* cursor movement / navigation */
+#define GNAME_SFX_CONFIRM 0x7E  /* confirm / OK action */
+#define GNAME_SFX_CANCEL  0x7F  /* cancel / back action */
+#define GNAME_SFX_VOLUME  0x80  /* default volume argument for play_menu_sfx */
+
+/* Character selection grid layout constants. */
+#define NAME_GRID_CHARS_PER_ROW  10  /**< Characters per row in the grid. */
+#define NAME_GRID_CELL_SIZE      16  /**< Pixel width and height of each grid cell (0x10). */
+#define NAME_GRID_X_BASE         84  /**< Pixel X of the leftmost grid column (0x54). */
+#define NAME_GRID_Y_TOP         104  /**< Pixel Y of the top of the visible grid area (0x68). */
+#define NAME_GRID_Y_BOTTOM      168  /**< Pixel Y of the bottom clamp (0xA8). */
+#define NAME_GRID_SCROLL_STEP    64  /**< Scroll delta per step: 4 rows * 16 px/row (0x40). */
+#define NAME_GRID_VRAM_X        0x60 /**< VRAM X of the grid area upload rect (96 px). */
+#define NAME_GRID_VIS_HEIGHT    0x50 /**< Visible grid height in pixels: 5 rows * 16 (80 px). */
+
+/* FadeState channel sentinels. Channels run 0 (fully dark) up to
+ * FADE_CHAN_NEUTRAL (identity, no tint). Values >= FADE_CHAN_ADDITIVE
+ * select additive blend; values below select subtractive. */
+#define FADE_CHAN_NEUTRAL   0x100
+#define FADE_CHAN_ADDITIVE  0x101
+
+/* tpage arguments for the blend-mode DR_TPAGE emitted by render_fade_overlay.
+ * The tile is flat-colored so only the abr bits matter; x=320 is the
+ * right-half VRAM column used as the tpage base. */
+#define FADE_TPAGE_ADD  0x25 /* getTPage(0, 1, 320, 0) - abr=1: Back + Front */
+#define FADE_TPAGE_SUB  0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
+
+/* tpage for the overlay's 4-bit glyph/font texture (cursor, text, DrawMode
+ * packets). getTPage(0, 0, 320, 0): 4-bit CLUT, abr=0, VRAM page at x=320. */
+#define GNAME_GLYPH_TPAGE 5
+
+/** Number of glyph cells in the name-entry cursor row drawn by
+ *  @ref draw_name_cursor_row. */
+#define NAME_CURSOR_GLYPH_COUNT 20
+
+/** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
+ *  Bits [5:0] hold CLUT_X/16; upper bits carry unrelated data and must be
+ *  discarded before writing the CLUT id into a sprite primitive. */
+#define GLYPH_CLUT_X_MASK 0x3F
+
+/** CLUT-page bit pattern OR'd over the low 6 bits of @c GlyphInfo::clut
+ *  before writing it into a sprite primitive (see @ref draw_name_cursor_row,
+ *  @ref emit_glyph_sprt). Encodes the fixed VRAM Y row (498) shared by all
+ *  name-entry palettes; bits [5:0] are zero and supplied by @c GLYPH_CLUT_X_MASK. */
+#define GLYPH_CLUT_PAGE_BITS 0x7C80
+
+/** Number of frames in @c g_char_append_anim; reaching this index wraps the
+ *  animation back to the idle frame and stops it. */
+#define APPEND_ANIM_FRAME_COUNT 7
+
+/** Byte stride of one @ref AppendAnimFrame record in @c g_char_append_anim. */
+#define APPEND_ANIM_FRAME_STRIDE 12
+
+/* The panel data blob is described by the PanelDataHeader struct above. Its
+ * header fields and record-offset table
+ * (g_random_names_off, g_history_names_off, g_kanji_panel_off,
+ * g_panel_record_offsets, g_panel_tbl_off, g_panel_data_base) plus
+ * g_kanji_cat_entries and g_kanji_entry_offsets are defined below in this file.
+ *
+ * g_panel_tbl_off (blob + 4) holds the byte offset (0x14) from the blob base
+ * to the u16 record-offset table; a record pointer is therefore
+ * PANEL_DATA_BLOB + g_panel_tbl_off + table[i]. The PANEL_* macros below
+ * depend on g_panel_tbl_off being defined ahead of their use. */
+
+/**
+ * @brief Base address of the character panel data blob, derived from
+ *        @ref g_panel_tbl_off (the header field at blob + 4).
+ *
+ * The base must be derived from @c &g_panel_tbl_off with a runtime
+ * @c - 4 (not referenced via the @ref g_panel_data_base symbol): the
+ * original code shares a single @c lui between loading the field's value
+ * and forming the base address, leaving the @c -4 as a separate @c addiu
+ * in the binary.
+ */
+#define PANEL_DATA_BLOB (((u8*)(&g_panel_tbl_off)) - 4)
+
+/** The blob's u16 record-offset table. Must stay a macro: the original
+ *  re-derives the table at every use (no CSE), which a named local would
+ *  destroy. */
+#define PANEL_REC_TBL ((u16*)(PANEL_DATA_BLOB + g_panel_tbl_off))
+
+/** Pointer to record i: the table is self-relative, entries are byte
+ *  offsets from the table itself (same idiom as FF8's string tables). */
+#define PANEL_RECORD(i) ((u8*)PANEL_REC_TBL + PANEL_REC_TBL[(i)])
+
+/**
+ * @brief RGB lerp state.
+ *
+ * Used as a pair: `g_fade_target` is the *target* (final color + remaining
+ * step count), `g_fade_current` is the *current* interpolated value (its
+ * `steps` field is unused). Each tick @ref render_fade_overlay advances the
+ * current toward the target by `(target - current) / steps` and decrements
+ * `steps`. Channels are 0..FADE_CHAN_NEUTRAL (identity = no tint); values
+ * above FADE_CHAN_NEUTRAL trigger additive blend mode.
+ */
+typedef struct
+{
+    s32 r;     /* 0x0 - red channel,   0..FADE_CHAN_NEUTRAL normal, >FADE_CHAN_NEUTRAL = additive */
+    s32 g;     /* 0x4 - green channel, 0..FADE_CHAN_NEUTRAL normal, >FADE_CHAN_NEUTRAL = additive */
+    s32 b;     /* 0x8 - blue channel,  0..FADE_CHAN_NEUTRAL normal, >FADE_CHAN_NEUTRAL = additive */
+    s32 steps; /* 0xC - frames remaining in the lerp (target struct only) */
+} FadeState;
+
+/**
+ * @brief TIM upload destination coordinates for @ref load_tim_to_vram.
+ *
+ * Holds two VRAM destination points: one for the pixel data and one for the
+ * CLUT row. Not a libgpu RECT (which carries width/height); this is just
+ * two (x, y) pairs packed as four consecutive s16s.
+ *
+ * @see load_name_entry_tim for typical values.
+ */
+typedef struct
+{
+    s16 pixel_x; /* 0x0 - VRAM x of pixel-data destination */
+    s16 pixel_y; /* 0x2 - VRAM y of pixel-data destination */
+    s16 clut_x;  /* 0x4 - VRAM x of CLUT destination */
+    s16 clut_y;  /* 0x6 - VRAM y of CLUT destination */
+} TimDstCoords;
+
+/**
+ * @brief Glyph metrics entry: how to draw one glyph from VRAM.
+ *
+ * Used as @c g_glyph_table, indexed by character ID. The
+ * fields are written directly into a sprite (tag 0x64) primitive by
+ * @ref emit_glyph_sprt: `u`/`v` at byte offsets 12/13, the CLUT ID at u16
+ * offset 14, and `w`/`h` at u16 offsets 16/18.
+ */
+typedef struct
+{
+    u8 u;     /* 0x0 - texture U in VRAM */
+    u8 v;     /* 0x1 - texture V in VRAM */
+    u8 w;     /* 0x2 - sprite width */
+    u8 h;     /* 0x3 - sprite height */
+    u32 clut; /* 0x4 - CLUT id (low 6 bits used; combined with 0x7C80) */
+} GlyphInfo;
+
+/**
+ * @brief One entry of the name-entry cursor glyph table at
+ *        @c g_name_cursor_glyphs.
+ *
+ * 20 of these are walked by @ref draw_name_cursor_row each frame to emit
+ * the cursor's textured-sprite row.
+ */
+typedef struct
+{
+    u32 id; /* 0x0 - index into g_glyph_table (selects which glyph to draw) */
+    u32 xy; /* 0x4 - packed s16 x,y screen position (low half = x, high = y) */
+} GlyphSeqEntry;
+
+/**
+ * @brief One entry in the tab-cursor and scroll-indicator position table.
+ *
+ * @c g_tab_cursor_pos[0..1] are the scroll-up and scroll-down indicator
+ * glyphs. @c g_tab_cursor_entries[0..10] are the cursor target positions for
+ * the 11 character-panel tabs.
+ *
+ * The @c x bitfield occupies the low 9 bits of the first word; accessing it
+ * directly generates the same @c lw + @c andi sequence as the raw LW+mask form.
+ *
+ * @note @c sprite_idx (bits 9..15) is the tab's entry index into the panel
+ * data blob's u16 record-offset table (see @ref g_panel_record_offsets).
+ * @ref emit_panel_tab_sprite must read it as the raw word via
+ * @c (word >> 8) & 0xFE (= @c sprite_idx * 2); a bitfield read would compile
+ * to @c srl 9 / @c andi 0x7F / @c sll 1 and break the match.
+ */
+typedef struct {
+    unsigned int x : 9;
+    unsigned int sprite_idx : 7;
+    u8 y;
+    u8 glyph;
+} TabCursorEntry;
+
+/**
+ * @brief One glyph slot inside an @ref AppendAnimFrame.
+ *
+ * @ref draw_char_append_anim emits a textured-glyph SPRT for every slot
+ * whose @c glyph id is non-zero, at screen position (@c x + 0xE8,
+ * @c y + 4).
+ */
+typedef struct
+{
+    u8 x;     /* 0x0 - X position (biased by 0xE8 when drawn) */
+    u8 y;     /* 0x1 - Y position (biased by 4 when drawn) */
+    u8 glyph; /* 0x2 - glyph id (index into g_glyph_table); 0 = empty slot */
+    u8 pad;   /* 0x3 - unused; slot 0 only: frame duration in render ticks */
+} AppendAnimSlot;
+
+/**
+ * @brief One frame of the character-append animation played by
+ *        @ref draw_char_append_anim.
+ *
+ * @c g_char_append_anim holds @ref APPEND_ANIM_FRAME_COUNT of these. Frame 0
+ * is the idle (empty) frame; frames 1.. are the animation. The frame is
+ * shown for @c slots[0].pad render ticks before advancing.
+ */
+typedef struct
+{
+    AppendAnimSlot slots[APPEND_ANIM_SLOT_COUNT];
+} AppendAnimFrame; /* 0xC bytes */
+
+/**
+ * @brief Per-glyph measurement record produced by @c func_800644FC.
+ *
+ * @ref recalc_name_width passes an array of these to @c func_800644FC,
+ * which fills one entry per glyph of a name buffer. @c width is then
+ * summed to obtain the name's rendered pixel width. Only @c width is
+ * currently understood; the surrounding bytes are unknown.
+ */
+typedef struct
+{
+    u8 pad0[0x10];
+    s16 width; /* 0x10 - glyph advance / pixel width */
+    u8 pad1[2];
+} GlyphMeasure;
+
+/**
+ * @brief Header layout of the character-panel resource blob at
+ *        @ref g_panel_data_base (0x80142EF4).
+ *
+ * The "tables" below are really one serialized data file whose header is a
+ * run of u32 byte offsets; splat carved each header field into its own
+ * symbol. A record inside the blob is always resolved as
+ * @c blob_base + header_field + table_entry.
+ *
+ * This typedef is documentation only - do not re-type the accesses with it.
+ * The matched code anchors each access at the individual field symbol and
+ * subtracts the field's offset at runtime (e.g. @c &g_panel_tbl_off - 4,
+ * @c g_random_names_off - 0x10), which shares one @c lui between the field load
+ * and the base address. Anchoring at a blob-base symbol instead drops the
+ * runtime @c addiu and breaks the match.
+ */
+typedef struct
+{
+    u32 unk0;        /* 0x00 - g_panel_data_base: stored value 4; purpose unknown */
+    u32 tbl_off;     /* 0x04 - g_panel_tbl_off: offset of the u16 record-offset table (0x14) */
+    u32 kanji_off;   /* 0x08 - g_kanji_panel_off: offset of the kanji panel glyph data (0x2A0) */
+    u32 history_off; /* 0x0C - g_history_names_off: offset of the history name list (0x3754) */
+    u32 random_off;  /* 0x10 - g_random_names_off: offset of the random name pool (0x3C9C) */
+    /* g_panel_record_offsets (u16[]) follows at +0x14; each entry is a byte
+     * offset from the table itself to one record (panel glyph lists, category
+     * labels, tab sprites, kanji category names). */
+} PanelDataHeader;
+
+/* --- Data globals defined in this overlay's asm (.data) --- */
+extern s32 g_name_pixel_width;
+extern u8 g_char_append_anim[]; /* AppendAnimFrame[APPEND_ANIM_FRAME_COUNT]; declared as u8[] for byte-level accesses */
+extern FadeState g_fade_target;
+extern FadeState g_fade_current;
+extern s32 g_startup_delay;
+extern Tim g_name_entry_tim; /* glyph TIM blob; Tim covers the fixed header + CLUT, pixel block follows */
+extern s32 g_strip_width_target;
+extern s32 g_strip_width;
+extern u8* g_active_name;
+extern u8 g_append_anim_timer; /* render ticks until the next animation frame */
+extern u8 g_append_anim_frame; /* current frame index into g_char_append_anim */
+extern s32 g_strip_width_steps;
+extern GlyphSeqEntry g_name_cursor_glyphs[];
+
+/** 48-byte name buffer holding the custom preset name (used when g_name_source_mode == 1). */
+extern u8 g_custom_name_buf;
+/** Which preset name source to paste: 1 = custom (g_custom_name_buf), 3 = history
+ *  (g_history_name_idx), 4/5 = timer-seeded random name table. */
+extern s32 g_name_source_mode;
+/** Overlay exit code written when the session ends: 2 = cancel, 5 = confirm. */
+extern s32 g_overlay_result;
+/** 48-byte name buffer; initial content copied into g_active_name at reset. */
+extern u8 g_initial_name;
+/** If non-zero, pressing cancel while the name is empty triggers an overlay exit. */
+extern s32 g_allow_empty_cancel;
+/** Index into the saved-name history list (used when g_name_source_mode == 3). */
+extern s32 g_history_name_idx;
+/** Base address for the double-buffered render/primitive scratch buffers. */
+extern s32 g_render_buf_base;
+/** Active character panel index: 0-2 = character-set tabs, 3 = kanji category
+ *  picker, 4 = kanji character picker within a selected category. */
+extern s32 g_char_panel;
+/** Pointer to the current kanji category's display data (set when g_char_panel == 4). */
+extern void* g_kanji_cat_name;
+/** 48-byte clipboard buffer; deleted chars are prepended here and can be re-pasted. */
+extern u8 g_name_clipboard;
+/** Frames remaining in the cursor-position lerp animation. */
+extern s32 g_cursor_lerp_steps;
+/** Index of the highlighted tab in the left selection grid (0xFF = none highlighted). */
+extern s32 g_cursor_tab;
+/** Cursor current X position (being lerped toward g_cursor_x_target). */
+extern s32 g_cursor_x;
+/** Cursor current Y position (being lerped toward g_cursor_y_target). */
+extern s32 g_cursor_y;
+/** Cursor target X position for the lerp animation. */
+extern s32 g_cursor_x_target;
+/** Last column index of the rightmost character in the current grid panel. */
+extern s32 g_char_last_col;
+/** Cursor target Y position for the lerp animation. */
+extern s32 g_cursor_y_target;
+/** Row index of the last character in the current grid panel (used for scroll bounds). */
+extern s32 g_char_last_row;
+/** Current character-set navigation state: 0-7 = character set tabs, 0x10 = kanji picker. */
+extern s32 g_char_set_mode;
+/** Current horizontal scroll position of the character grid in pixels. */
+extern s32 g_scroll_pos;
+/** Target horizontal scroll position for the scroll lerp. */
+extern s32 g_scroll_target;
+/** Frames remaining in the scroll lerp animation. */
+extern s32 g_scroll_steps;
+/** Currently selected kanji category index. */
+extern s32 g_kanji_cat;
+/** Linearized character cursor position in the grid: row * 10 + col. */
+extern s32 g_char_cursor;
+
+/**
+ * @brief Play a one-shot UI sound effect via the AKAO driver.
+ * @param sfx_id Sound effect index (GNAME_SFX_* constants).
+ * @param volume Playback volume; use GNAME_SFX_VOLUME (0x80) for default.
+ * @note Defined in MENU.BIN; see config/symbols/gname_symbol_addrs.txt.
+ */
+void play_menu_sfx(int sfx_id, int volume);
+
+/* --- Internal (file-local) function forward declarations --------------------
+ *
+ * Everything this overlay implements is private except gname_init and
+ * gname_tick (declared in gname.h), the two entry points FIELD invokes. The
+ * rest are static so they stay encapsulated in this translation unit.
+ */
+static void reset_fade_state(void);
+static void render_fade_overlay(RenderContext* ctx);
+static void set_fade_target(s32 r, s32 g, s32 b, s32 steps);
+static void load_name_entry_tim(void);
+static void load_tim_to_vram(TimDstCoords* dst_coords);
+static void gname_update_state(void);
+static void reset_run_state(void);
+static s32 handle_char_set_input(s32 mode, s32 buttons);
+static void gname_process_input(void);
+static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y);
+static void gname_render(RenderContext* context);
+static void* emit_panel_tab_sprite(void* prim, u_long* ot_entry);
+static void* emit_panel_label(void* prim, u_long* ot_entry);
+static void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width);
+static void render_char_panel(RenderContext* ctx, s32 panel_idx);
+static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head);
+static void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight);
+static void draw_name_cursor_row(RenderContext* ctx);
+static s32 name_byte_length(u8* name);
+static s32 name_char_count(const u8* name);
+static void name_append(u8* dst, const u8* src);
+static s32 name_pop_last_char(u8* name);
+static void name_copy(u8* dst, const u8* src);
+static void recalc_name_width(void);
+static void name_prepend_char(u8* buffer, u16 new_char);
+static s32 name_pop_first_char(u8* name);
+static void* draw_char_append_anim(void* prim, RenderContext* ctx);
+static s32 name_is_blank(u8* name);
+
 /* --- Constant data tables ---------------------------------------------------
  *
  * These reproduce the leading run of the overlay's .data section
@@ -105,7 +589,7 @@ u16 g_panel_record_offsets[] = {
  *
  * @see https://decomp.me/scratch/ld2aW (100%)
  */
-void reset_fade_state(void)
+static void reset_fade_state(void)
 {
     g_fade_current.r = 0;
     g_fade_current.g = 0;
@@ -270,7 +754,7 @@ void gname_init(void)
  *
  * @see https://decomp.me/scratch/EWwJI (100%)
  */
-void load_name_entry_tim(void)
+static void load_name_entry_tim(void)
 {
     TimDstCoords dst_coords;
     dst_coords.pixel_x = SCREEN_WIDTH;
@@ -292,7 +776,7 @@ void load_name_entry_tim(void)
  * @note @c func_80019A34 is the engine's LoadImage-style VRAM upload.
  * @see https://decomp.me/scratch/P3W9C (100%)
  */
-void load_tim_to_vram(TimDstCoords* dst_coords)
+static void load_tim_to_vram(TimDstCoords* dst_coords)
 {
     RECT rect;
     TimBlock* pixel_block;
@@ -361,7 +845,7 @@ void gname_tick(RenderContext* ctx)
  *
  * @see https://decomp.me/scratch/g5Rx3 (100%)
  */
-void gname_update_state(void)
+static void gname_update_state(void)
 {
     s32 steps;
 
@@ -412,7 +896,7 @@ void gname_update_state(void)
  *
  * @see https://decomp.me/scratch/FboaU (100%)
  */
-void reset_run_state(void)
+static void reset_run_state(void)
 {
     g_cursor_tab = GNAME_TAB_NONE;
     g_char_set_mode = handle_char_set_input(0, 0);
@@ -450,7 +934,7 @@ void reset_run_state(void)
  * @return        New char-set mode after processing the input.
  * @see decomp.me (100%) https://decomp.me/scratch/jAuWs
  */
-s32 handle_char_set_input(s32 mode, s32 buttons)
+static s32 handle_char_set_input(s32 mode, s32 buttons)
 {
     /* 0xFF: re-run the switch with the updated mode; 0: done */
     s32 redispatch = 0xFF;
@@ -792,7 +1276,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
  *       redundant check is a codegen artifact and must be preserved.
  * @see decomp.me (100%) https://decomp.me/scratch/pCzH6
  */
-void gname_process_input(void)
+static void gname_process_input(void)
 {
     s32 cat_after_inc;
     s32 cat_prev_inc;
@@ -976,7 +1460,7 @@ void gname_process_input(void)
  * @return Pointer just past the written primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/oXGkF
  */
-u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
+static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
 {
     u32 clut;
     SPRT* sprt = (SPRT*)prim;
@@ -1015,7 +1499,7 @@ u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
  *                @c prim_cursor is advanced.
  * @see decomp.me (100%) https://decomp.me/scratch/a0Oye
  */
-void gname_render(RenderContext* context)
+static void gname_render(RenderContext* context)
 {
     s32 tab;
     s32 scroll_pos;
@@ -1106,7 +1590,7 @@ void gname_render(RenderContext* context)
  * @return Updated primitive write cursor after appending the sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/RnoNS
  */
-void* emit_panel_tab_sprite(void* prim, u_long* ot_entry)
+static void* emit_panel_tab_sprite(void* prim, u_long* ot_entry)
 {
     s32 mode = g_char_set_mode;
 
@@ -1142,7 +1626,7 @@ void* emit_panel_tab_sprite(void* prim, u_long* ot_entry)
  * @return Updated primitive write cursor after appending the label sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/jK7bc
  */
-void* emit_panel_label(void* prim, u_long* ot_entry)
+static void* emit_panel_label(void* prim, u_long* ot_entry)
 {
     s32 panel = g_char_panel;
 
@@ -1175,7 +1659,7 @@ void* emit_panel_label(void* prim, u_long* ot_entry)
  *
  * @see https://decomp.me/scratch/LxujJ (100%)
  */
-void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
+static void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 {
     s32* ot_head;   /* &ctx->ot[GNAME_OT_NAME_STRIP] - passed as the OT head pointer */
     s32* prim;      /* current primitive being emitted */
@@ -1251,7 +1735,7 @@ void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/ckF2S
  */
-void render_char_panel(RenderContext* ctx, s32 panel_idx)
+static void render_char_panel(RenderContext* ctx, s32 panel_idx)
 {
     u8* new_var4;
     u32* ot_ptr;
@@ -1353,7 +1837,7 @@ void render_char_panel(RenderContext* ctx, s32 panel_idx)
  *
  * @see https://decomp.me/scratch/EyVeo (100%)
  */
-void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head)
+static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head)
 {
     unsigned char* bytes = (unsigned char*)prim;
     u32* words = (u32*)prim;
@@ -1395,7 +1879,7 @@ void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Au2h5
  */
-void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight)
+static void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight)
 {
     u8* ptr = (u8*)prim_buf;
     SPRT* sprt = (SPRT*)ptr;
@@ -1473,7 +1957,7 @@ void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
-void draw_name_cursor_row(RenderContext* ctx)
+static void draw_name_cursor_row(RenderContext* ctx)
 {
     RECT tw_rect;
 
@@ -1595,7 +2079,7 @@ void draw_name_cursor_row(RenderContext* ctx)
  * @return Byte length excluding the terminator.
  * @see https://decomp.me/scratch/2QgjW (100%)
  */
-s32 name_byte_length(u8* name)
+static s32 name_byte_length(u8* name)
 {
     s32 byte_len;
     u8 c;
@@ -1633,7 +2117,7 @@ s32 name_byte_length(u8* name)
  * @return Glyph (character) count.
  * @see https://decomp.me/scratch/c8fPe (100%)
  */
-s32 name_char_count(const u8* name)
+static s32 name_char_count(const u8* name)
 {
     s32 char_count = 0;
 
@@ -1658,7 +2142,7 @@ s32 name_char_count(const u8* name)
  * @param src Null-terminated source name to append.
  * @see https://decomp.me/scratch/1lsbD (100%)
  */
-void name_append(u8* dst, const u8* src)
+static void name_append(u8* dst, const u8* src)
 {
     const u8* p;
     s32 dst_len;
@@ -1722,7 +2206,7 @@ void name_append(u8* dst, const u8* src)
  * @return Removed glyph packed as `lead | (trail << 8)`, or 0 if empty.
  * @see https://decomp.me/scratch/agZ8y (100%)
  */
-s32 name_pop_last_char(u8* name)
+static s32 name_pop_last_char(u8* name)
 {
     u8* prev_pos;
     u8* scan_pos;
@@ -1765,7 +2249,7 @@ s32 name_pop_last_char(u8* name)
  * @param src Null-terminated source name.
  * @see https://decomp.me/scratch/UeYRe (100%)
  */
-void name_copy(u8* dst, const u8* src)
+static void name_copy(u8* dst, const u8* src)
 {
     const u8* p;
     s32 i;
@@ -1807,7 +2291,7 @@ void name_copy(u8* dst, const u8* src)
  *
  * @see https://decomp.me/scratch/y0CgJ (100%)
  */
-void recalc_name_width(void)
+static void recalc_name_width(void)
 {
     GlyphMeasure glyphs[16];
     GlyphMeasure* cursor;
@@ -1852,7 +2336,7 @@ void recalc_name_width(void)
  * @param new_char Glyph to prepend, packed `lead | (trail << 8)`.
  * @see https://decomp.me/scratch/VOLcD (100%)
  */
-void name_prepend_char(u8* buffer, u16 new_char)
+static void name_prepend_char(u8* buffer, u16 new_char)
 {
     u8* ptr;
     u32 len;
@@ -1918,7 +2402,7 @@ void name_prepend_char(u8* buffer, u16 new_char)
  * @return Removed glyph packed in low 16 bits, or 0 if @p name was empty.
  * @see https://decomp.me/scratch/ArXXq (100%)
  */
-s32 name_pop_first_char(u8* name)
+static s32 name_pop_first_char(u8* name)
 {
     u8 first;
     u32 width;
@@ -2001,7 +2485,7 @@ s32 name_pop_first_char(u8* name)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
  */
-void* draw_char_append_anim(void* prim, RenderContext* ctx)
+static void* draw_char_append_anim(void* prim, RenderContext* ctx)
 {
     u8 frame = g_append_anim_frame;
     void* result = prim;
@@ -2062,7 +2546,7 @@ void* draw_char_append_anim(void* prim, RenderContext* ctx)
  * @return 1 if blank, 0 otherwise.
  * @see https://decomp.me/scratch/rdbBA (100%)
  */
-s32 name_is_blank(u8* name)
+static s32 name_is_blank(u8* name)
 {
     while (*name)
     {
