@@ -41,20 +41,11 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, .rodata, rodata]
       - [0x3E1, c, gname]
-      # Constant tables + panel-blob header, now defined in gname.c.
       - [0x2C99, .data, gname]
-      # Panel data blob body: opaque, only reached via offset arithmetic from
-      # the header-field symbols, so no named symbol is needed. Extracted as a
-      # binary incbin rather than disassembled.
       - [0x301D, databin, panel_data]
-      # Name-entry glyph TIM image (g_name_entry_tim symbol emitted on top).
       - [0x7495, databin, name_entry_tim]
-      # Remaining initialized tables: g_name_cursor_glyphs, g_char_append_anim.
       - [0xF6B9, data, data]
-      # Zero-init runtime state (g_custom_name_buf .. g_char_cursor). These are
-      # uninitialized globals, so they belong in .bss. On PSX ld_bss_is_noload
-      # defaults to False, so this .bss is still file-backed and matches.
-      - [0xF7B1, bss, data]
+      - [0xF7B1, .bss, data]
   - [0xF8D9]
