@@ -448,12 +448,18 @@ void reset_run_state(void)
  * @param mode    Current char-set mode (see above).
  * @param buttons Filtered pad bitmask (e.g. @c g_pad_input & @c GNAME_BTN_NAV_MASK).
  * @return        New char-set mode after processing the input.
- * @see decomp.me (99.78%) https://decomp.me/scratch/Wz7gq
+ * @see decomp.me (100%) https://decomp.me/scratch/jAuWs
  */
 s32 handle_char_set_input(s32 mode, s32 buttons)
 {
     /* 0xFF: re-run the switch with the updated mode; 0: done */
-    s32 redispatch = 0xFF; 
+    s32 redispatch = 0xFF;
+    /*
+     * Holds the constant 1, assigned only inside the case 0-3 confirm branch
+     * but reused as an operand in later branches. Required to match the
+     * original register allocation; do not fold back to literal 1.
+     */
+    int tmp;
 
     while (redispatch == 0xFF)
     {
@@ -466,6 +472,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
             if (buttons & 0x220)
             {
                 g_cursor_tab = mode;
+                tmp = 1;
                 switch (mode)
                 {
                 case 0:
@@ -484,7 +491,14 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                 case 1:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     name_pop_last_char(g_active_name);
-                    break;
+                    recalc_name_width();
+                    /* empty statement required to match */
+                    do
+                    {
+                    } while (0);
+                    redispatch = 0;
+                    g_strip_width_steps = NAME_STRIP_LERP_STEPS;
+                    continue;
 
                 case 2:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
@@ -517,7 +531,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                                             (*((u16*)(((g_history_names_off - 0x10) + (*((u32*)g_history_names_off))) + (((rand() % 128) + 130) * 2)))));
                         }
                     }
-                    else if (g_name_source_mode == GNAME_SRC_CUSTOM)
+                    else if (g_name_source_mode == tmp)
                     {
                         g_name_clipboard = 0;
                         name_copy(g_active_name, &g_custom_name_buf);
@@ -560,7 +574,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     }
                     if (buttons & PAD_BTN_LEFT)
                     {
-                        mode = (mode == 0) ? (3) : (mode - 1);
+                        mode = (mode == 0) ? (3) : (mode - tmp);
                     }
                     else if (buttons & PAD_BTN_RIGHT)
                     {
@@ -603,11 +617,11 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
                     }
                     if (buttons & PAD_BTN_UP)
                     {
-                        mode = (mode == 4) ? (6) : (mode - 1);
+                        mode = (mode == 4) ? (6) : (mode - tmp);
                     }
                     else if (buttons & PAD_BTN_DOWN)
                     {
-                        mode = (mode < 6) ? (mode + 1) : (4);
+                        mode = (mode < 6) ? (mode + tmp) : (4);
                     }
                 }
                 play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
@@ -718,7 +732,7 @@ s32 handle_char_set_input(s32 mode, s32 buttons)
 
                         if ((buttons & PAD_BTN_RIGHT) && ((g_char_cursor % 10) != 9))
                         {
-                            g_char_cursor += 1;
+                            g_char_cursor += tmp;
                         }
                         else
                         {

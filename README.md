@@ -33,7 +33,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | CHECKPS.BIN   | 🪲 | Non-matching  |
 | CLOAD.BIN     | 💤 | Not started   |
 | FIELD.BIN     | 🌱 | In progress   |
-| GNAME.BIN     | 🪲 | Non-matching  |
+| GNAME.BIN     | ☑️ | Matching      |
 | GOLEM.BIN     | 💤 | Not started   |
 | GOSUB.BIN     | 💤 | Not started   |
 | GOVER.BIN     | 🔒 | Fully linked  |
