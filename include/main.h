@@ -72,6 +72,13 @@ typedef struct
     u32 inject_flags;       /**< 0x858: bit 0x80 enables input injection. */
     u8 pad85C[0x24C];
     u32 unkAA8;
+    u8  _padAAC[0x29D7 - 0xAAC];  /**< 0xAAC: not yet mapped. */
+    s8  unk29D7;                  /**< 0x29D7: when (low 7 bits == 4) the entered name is
+                                   *           written into the 0x14C-stride history table. */
+    u8  _pad29D8[0x2B0C - 0x29D8];/**< 0x29D8: not yet mapped. */
+    u8  unk2B0C_arr[3][0x14C];    /**< 0x2B0C: three 0x14C-byte name-history slots. */
+    u32 unk2EF0;                  /**< 0x2EF0: slot index into @c unk2EF4_arr. */
+    u8  unk2EF4_arr[3][0x60];     /**< 0x2EF4: three 0x60-byte name-history slots. */
 } PadContext;
 
 /** @brief Pointer to the controller/pad context object. */

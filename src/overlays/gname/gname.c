@@ -1,13 +1,16 @@
 #include "gname.h"
 
+#include "cd.h"
 #include "common.h"
 #include "display.h"
 #include "gpu_packet.h"
 #include "main.h"
 #include "pad.h"
 #include "tim.h"
-#include "psyq/libgte.h"
+#include "psyq/libetc.h"
 #include "psyq/libgpu.h"
+#include "psyq/libgte.h"
+#include "psyq/memory.h"
 
 /** Number of glyph slots per @ref AppendAnimFrame; defined here because it is
  *  the array dimension of the struct's @c slots[] member below. */
@@ -403,8 +406,10 @@ extern u8 g_initial_name;
 extern s32 g_allow_empty_cancel;
 /** Index into the saved-name history list (used when g_name_source_mode == 3). */
 extern s32 g_history_name_idx;
-/** Base address for the double-buffered render/primitive scratch buffers. */
-extern s32 g_render_buf_base;
+/** Base of the double-buffered render/primitive scratch buffers; the two frames
+ *  are @c g_render_buf_base[0] and @c g_render_buf_base[1] (stride
+ *  @ref DRAW_BUF_STRIDE == @c sizeof(RenderContext)). */
+extern RenderContext* g_render_buf_base;
 /** Active character panel index: 0-2 = character-set tabs, 3 = kanji category
  *  picker, 4 = kanji character picker within a selected category. */
 extern s32 g_char_panel;
@@ -580,6 +585,152 @@ u16 g_panel_record_offsets[] = {
     0x024D, 0x024F, 0x0251, 0x0253, 0x0255, 0x0257, 0x0259, 0x025B, 0x025D, 0x025F, 0x0261, 0x0263, 0x0265, 0x0267, 0x0269, 0x026B, 0x026D, 0x026F,
     0x0271, 0x0273, 0x0275, 0x0277, 0x0279, 0x027B, 0x027D, 0x027F, 0x0281, 0x0283, 0x0285, 0x0287,
 };
+
+/* --- Cross-module helpers invoked by the GNAME run loop (defined in other
+ *     overlays / the main executable). ------------------------------------- */
+void func_800157B0(unsigned long arg0);
+void func_800157DC(void);
+void func_80063194(void);
+void func_8006441C(void);
+void func_80068440(void);
+void func_800A9E78(void);
+void func_800AA02C(void);
+
+/**
+ * @brief GNAME overlay entry point: run the name-entry UI to completion.
+ *
+ * Installs the caller's double-buffered render context, seeds the name-entry
+ * state (initial/custom/clipboard buffers, source mode, history index), sets up
+ * both frames' display/draw environments, then spins the per-frame loop:
+ * rebuild the OT, draw the world and fade overlay, tick the name-entry UI, and
+ * flip buffers - until @ref g_overlay_result becomes non-zero (confirm/cancel).
+ *
+ * On exit, when entering a history name (@c arg3 == 3) targeting the pad
+ * context's history buffer, the entered name is copied back into the
+ * appropriate per-slot history table (0x14C-stride when @c unk29D7's low 7 bits
+ * are 4, otherwise the 0x60-stride table).
+ *
+ * @param arg0 Render context base; the two double buffers are @c arg0[0] and @c arg0[1].
+ * @param arg1 Initial name buffer (0x30 bytes) copied into @ref g_initial_name.
+ * @param arg2 Active name buffer the UI edits in place (stored in @ref g_active_name).
+ * @param arg3 Name source mode (stored in @ref g_name_source_mode).
+ * @param arg4 History list index (stored in @ref g_history_name_idx).
+ * @param arg5 Custom preset name buffer (0x30 bytes) copied into @ref g_custom_name_buf.
+ * @param arg6 Allow-empty-cancel flag (stored in @ref g_allow_empty_cancel).
+ * @return The overlay result code (@ref g_overlay_result): cancel or confirm.
+ */
+s32 func_80140004(RenderContext* arg0, u8* arg1, u8* arg2, s32 arg3, s32 arg4, u8* arg5, s32 arg6)
+{
+    s32 var_a1;
+    RenderContext* var_s0;
+    RenderContext* new_var;
+    RenderContext* var_s2;
+    RenderContext* rb0;
+
+    g_render_buf_base = arg0;
+    bcopy(arg1, &g_initial_name, 0x30);
+    bcopy(arg5, &g_custom_name_buf, 0x30);
+    g_allow_empty_cancel = arg6;
+    g_active_name = arg2;
+    g_name_source_mode = arg3;
+    g_history_name_idx = arg4;
+    g_render_buf_base[0].clear_rect.x = 0;
+    g_render_buf_base[0].clear_rect.y = 8;
+    g_render_buf_base[0].clear_rect.w = 0x140;
+    g_render_buf_base[0].clear_rect.h = 0xE0;
+    g_render_buf_base[1].clear_rect.x = 0;
+    g_render_buf_base[1].clear_rect.y = 0xF0;
+    g_render_buf_base[1].clear_rect.w = 0x140;
+    g_render_buf_base[1].clear_rect.h = 0xE0;
+    VSync(0);
+    DrawSync(0);
+    SetDefDispEnv(&g_render_buf_base[0].disp_env, 0, 0, 0x140, 0xF0);
+    SetDefDispEnv(&g_render_buf_base[1].disp_env, 0, 0xE8, 0x140, 0xF0);
+    SetDefDrawEnv(&g_render_buf_base[0].draw_env, 0, 0xF0, 0x140, 0xE0);
+    SetDefDrawEnv(&g_render_buf_base[1].draw_env, 0, 8, 0x140, 0xE0);
+    rb0 = g_render_buf_base;
+    rb0[1].draw_env.dtd = 0;
+    rb0[0].draw_env.dtd = 0;
+    g_overlay_result = 0;
+    g_render_buf_base[0].frame_parity = 0;
+    g_render_buf_base[1].frame_parity = 1;
+    reset_fade_state();
+    set_fade_target(0x100, 0x100, 0x100, 0x14);
+    gname_init();
+    new_var = g_render_buf_base;
+    ClearOTagR((u32*)new_var, 0x10);
+    ClearOTagR((u32*)(&g_render_buf_base[1]), 0x10);
+    VSync(0);
+    PutDispEnv(&new_var->disp_env);
+    func_800157DC();
+    SetDispMask(1);
+    func_800AA02C();
+    while (1)
+    {
+        var_s0 = new_var;
+        ClearOTagR((u32*)var_s0, 0x10);
+        var_s0->prim_cursor = &var_s0->ot[0x10];
+        func_8006441C();
+        func_800A9E78();
+        render_fade_overlay(var_s0);
+        gname_tick(var_s0);
+        func_80063194();
+        if (g_overlay_result != 0)
+        {
+            break;
+        }
+        func_80068440();
+        DrawSync(0);
+        func_800157B0(2U);
+        VSync(2);
+        if (g_overlay_result != 0)
+        {
+            break;
+        }
+        ClearImage(&var_s0->clear_rect, 0U, 0U, 0U);
+        var_s2 = g_render_buf_base;
+        if (var_s0 == g_render_buf_base)
+        {
+            var_s2 = &g_render_buf_base[1];
+        }
+        new_var = var_s2;
+        PutDispEnv(&var_s2->disp_env);
+        PutDrawEnv(&new_var->draw_env);
+        DrawOTag(&var_s0->ot[15]);
+        var_s0 = var_s2;
+        func_800157DC();
+        cdrom_process_state();
+    }
+
+    DrawSync(0);
+    VSync(0);
+    func_800AA02C();
+    if ((arg3 == 3) && (arg2 == (&g_pad_ctx->pad85C[0x234])))
+    {
+        var_a1 = 0;
+        if ((g_pad_ctx->unkAA8 & 0x7F) == 4)
+        {
+            while (var_a1 < 0x15)
+            {
+                s32 m = g_pad_ctx->unk29D7 * 0x14C;
+                u8* p = (u8*)g_pad_ctx + m + var_a1;
+                p[0x2B0C] = arg2[var_a1];
+                var_a1 += 1;
+            }
+        }
+        else
+        {
+            while (var_a1 < 0x15)
+            {
+                s32 m = g_pad_ctx->unk2EF0 * 0x60;
+                u8* p = (u8*)g_pad_ctx + m + var_a1;
+                p[0x2EF4] = arg2[var_a1];
+                var_a1 += 1;
+            }
+        }
+    }
+    return g_overlay_result;
+}
 
 /**
  * @brief Clear the RGB fade state to all zeros.
@@ -1675,7 +1826,7 @@ static void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 
     /* 1. Copy template packet from the *other* frame's reserve slot, then
      * splice it into the OT. */
-    func_8001A5D4(prim, (void*)(g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
+    func_8001A5D4(prim, (void*)((s32)g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
 
     addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], prim);
 
@@ -1757,7 +1908,7 @@ static void render_char_panel(RenderContext* ctx, s32 panel_idx)
     /* (u8*)ctx + 0x28 == &ctx->ot[GNAME_OT_CHAR_PANEL]; raw offset is required to match. */
     ot_ptr = (u32*)(((u8*)ctx) + 0x28);
     prim = ctx->prim_cursor;
-    SetDrawEnv(prim, (DRAWENV*)((g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE)) + DRAW_BUF_DRAWENV_OFF));
+    SetDrawEnv(prim, (DRAWENV*)(((s32)g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE)) + DRAW_BUF_DRAWENV_OFF));
     ((P_TAG*)prim)->addr = (u_long)((u_long)((P_TAG*)((u32*)(((u8*)ctx) + 0x28)))->addr), ((P_TAG*)((u32*)(((u8*)ctx) + 0x28)))->addr = (u_long)prim;
     write_cur = prim + (sizeof(DR_ENV));
     if (g_char_panel == 4)
