@@ -504,12 +504,10 @@ const s32 g_gname_overlay_id = 5;
 /** Per-panel character set base offsets (low u16 = row count). */
 u32 g_panel_char_offsets[] = {0x12, 0x30, 0x4E};
 
-/** First record-offset entry index of the kanji category name records. */
-s32 g_kanji_cat_names_offset = 0x80;
-/** Trailing word inside the g_kanji_cat_names_offset symbol span (0x80142CA8);
- *  never referenced by name. Kept as its own global so it is emitted and not
- *  discarded, preserving the layout. TODO: meaning unknown (value 0x8A). */
-s32 D_80142CA8 = 0x8A;
+/** First record-offset entry indices of the kanji category name records.
+ *  Only [0] is referenced by name; [1] (0x8A) is emitted to preserve the
+ *  .data layout. TODO: meaning of [1] unknown. */
+s32 g_kanji_cat_names_offset[] = {0x80, 0x8A};
 
 /** Kanji category entry index table: [cat] -> sub-index into
  *  g_kanji_entry_offsets, or 0xFF when empty. */
@@ -1309,7 +1307,7 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
                     g_cursor_lerp_steps = 4;
                     g_char_cursor = 0;
                     g_kanji_cat_name = ((g_random_names_off - 0x10) + g_panel_tbl_off) +
-                                       (*((u16*)((((g_random_names_off - 0x10) + g_panel_tbl_off) + (g_kanji_cat_names_offset * 2)) + (g_kanji_cat * 2))));
+                                       (*((u16*)((((g_random_names_off - 0x10) + g_panel_tbl_off) + (g_kanji_cat_names_offset[0] * 2)) + (g_kanji_cat * 2))));
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                 }
                 else if (g_char_panel == 4)
