@@ -4,6 +4,7 @@
 play_menu_sfx = 0x800A3938; // play_menu_sfx(sfx_id, volume) - one-shot UI sound effect
 
 // Functions
+gname_run           = 0x80140004;
 reset_fade_state    = 0x801403E0;
 render_fade_overlay = 0x80140410;
 set_fade_target     = 0x801406F8;
