@@ -489,6 +489,8 @@ static s32 name_pop_first_char(u8* name);
 static void* draw_char_append_anim(void* prim, RenderContext* ctx);
 static s32 name_is_blank(u8* name);
 
+const s32 g_gname_overlay_id = 5;
+
 /* --- Constant data tables ---------------------------------------------------
  *
  * These reproduce the leading run of the overlay's .data section

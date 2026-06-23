@@ -37,6 +37,7 @@ emit_panel_tab_sprite    = 0x80141C34;
 emit_panel_label         = 0x80141D64;
 
 // Data
+g_gname_overlay_id   = 0x80140000;
 g_name_cursor_glyphs = 0x8014F6B8;
 g_char_append_anim   = 0x8014F758;
 g_fade_target        = 0x8014F818;
