@@ -605,35 +605,36 @@ void func_800AA02C(void);
  * rebuild the OT, draw the world and fade overlay, tick the name-entry UI, and
  * flip buffers - until @ref g_overlay_result becomes non-zero (confirm/cancel).
  *
- * On exit, when entering a history name (@c arg3 == 3) targeting the pad
+ * On exit, when entering a history name (@c source_mode == 3) targeting the pad
  * context's history buffer, the entered name is copied back into the
  * appropriate per-slot history table (0x14C-stride when @c unk29D7's low 7 bits
  * are 4, otherwise the 0x60-stride table).
  *
- * @param arg0 Render context base; the two double buffers are @c arg0[0] and @c arg0[1].
- * @param arg1 Initial name buffer (0x30 bytes) copied into @ref g_initial_name.
- * @param arg2 Active name buffer the UI edits in place (stored in @ref g_active_name).
- * @param arg3 Name source mode (stored in @ref g_name_source_mode).
- * @param arg4 History list index (stored in @ref g_history_name_idx).
- * @param arg5 Custom preset name buffer (0x30 bytes) copied into @ref g_custom_name_buf.
- * @param arg6 Allow-empty-cancel flag (stored in @ref g_allow_empty_cancel).
+ * @param buf_base Render context base; the two double buffers are @c buf_base[0] and @c buf_base[1].
+ * @param initial_name Initial name buffer (0x30 bytes) copied into @ref g_initial_name.
+ * @param active_name Active name buffer the UI edits in place (stored in @ref g_active_name).
+ * @param source_mode Name source mode (stored in @ref g_name_source_mode).
+ * @param history_idx History list index (stored in @ref g_history_name_idx).
+ * @param custom_name Custom preset name buffer (0x30 bytes) copied into @ref g_custom_name_buf.
+ * @param allow_empty_cancel Allow-empty-cancel flag (stored in @ref g_allow_empty_cancel).
  * @return The overlay result code (@ref g_overlay_result): cancel or confirm.
+ * @see https://decomp.me/scratch/FAyP7 (100%)
  */
-s32 func_80140004(RenderContext* arg0, u8* arg1, u8* arg2, s32 arg3, s32 arg4, u8* arg5, s32 arg6)
+s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 source_mode, s32 history_idx, u8* custom_name, s32 allow_empty_cancel)
 {
-    s32 var_a1;
-    RenderContext* var_s0;
-    RenderContext* new_var;
-    RenderContext* var_s2;
-    RenderContext* rb0;
+    s32 i;
+    RenderContext* draw_buf;
+    RenderContext* next_buf;
+    RenderContext* other_buf;
+    RenderContext* buf;
 
-    g_render_buf_base = arg0;
-    bcopy(arg1, &g_initial_name, 0x30);
-    bcopy(arg5, &g_custom_name_buf, 0x30);
-    g_allow_empty_cancel = arg6;
-    g_active_name = arg2;
-    g_name_source_mode = arg3;
-    g_history_name_idx = arg4;
+    g_render_buf_base = buf_base;
+    bcopy(initial_name, &g_initial_name, 0x30);
+    bcopy(custom_name, &g_custom_name_buf, 0x30);
+    g_allow_empty_cancel = allow_empty_cancel;
+    g_active_name = active_name;
+    g_name_source_mode = source_mode;
+    g_history_name_idx = history_idx;
     g_render_buf_base[0].clear_rect.x = 0;
     g_render_buf_base[0].clear_rect.y = 8;
     g_render_buf_base[0].clear_rect.w = 0x140;
@@ -648,32 +649,32 @@ s32 func_80140004(RenderContext* arg0, u8* arg1, u8* arg2, s32 arg3, s32 arg4, u
     SetDefDispEnv(&g_render_buf_base[1].disp_env, 0, 0xE8, 0x140, 0xF0);
     SetDefDrawEnv(&g_render_buf_base[0].draw_env, 0, 0xF0, 0x140, 0xE0);
     SetDefDrawEnv(&g_render_buf_base[1].draw_env, 0, 8, 0x140, 0xE0);
-    rb0 = g_render_buf_base;
-    rb0[1].draw_env.dtd = 0;
-    rb0[0].draw_env.dtd = 0;
+    buf = g_render_buf_base;
+    buf[1].draw_env.dtd = 0;
+    buf[0].draw_env.dtd = 0;
     g_overlay_result = 0;
     g_render_buf_base[0].frame_parity = 0;
     g_render_buf_base[1].frame_parity = 1;
     reset_fade_state();
     set_fade_target(0x100, 0x100, 0x100, 0x14);
     gname_init();
-    new_var = g_render_buf_base;
-    ClearOTagR((u32*)new_var, 0x10);
+    next_buf = g_render_buf_base;
+    ClearOTagR((u32*)next_buf, 0x10);
     ClearOTagR((u32*)(&g_render_buf_base[1]), 0x10);
     VSync(0);
-    PutDispEnv(&new_var->disp_env);
+    PutDispEnv(&next_buf->disp_env);
     func_800157DC();
     SetDispMask(1);
     func_800AA02C();
     while (1)
     {
-        var_s0 = new_var;
-        ClearOTagR((u32*)var_s0, 0x10);
-        var_s0->prim_cursor = &var_s0->ot[0x10];
+        draw_buf = next_buf;
+        ClearOTagR((u32*)draw_buf, 0x10);
+        draw_buf->prim_cursor = &draw_buf->ot[0x10];
         func_8006441C();
         func_800A9E78();
-        render_fade_overlay(var_s0);
-        gname_tick(var_s0);
+        render_fade_overlay(draw_buf);
+        gname_tick(draw_buf);
         func_80063194();
         if (g_overlay_result != 0)
         {
@@ -687,17 +688,17 @@ s32 func_80140004(RenderContext* arg0, u8* arg1, u8* arg2, s32 arg3, s32 arg4, u
         {
             break;
         }
-        ClearImage(&var_s0->clear_rect, 0U, 0U, 0U);
-        var_s2 = g_render_buf_base;
-        if (var_s0 == g_render_buf_base)
+        ClearImage(&draw_buf->clear_rect, 0U, 0U, 0U);
+        other_buf = g_render_buf_base;
+        if (draw_buf == g_render_buf_base)
         {
-            var_s2 = &g_render_buf_base[1];
+            other_buf = &g_render_buf_base[1];
         }
-        new_var = var_s2;
-        PutDispEnv(&var_s2->disp_env);
-        PutDrawEnv(&new_var->draw_env);
-        DrawOTag(&var_s0->ot[15]);
-        var_s0 = var_s2;
+        next_buf = other_buf;
+        PutDispEnv(&other_buf->disp_env);
+        PutDrawEnv(&next_buf->draw_env);
+        DrawOTag(&draw_buf->ot[15]);
+        draw_buf = other_buf;
         func_800157DC();
         cdrom_process_state();
     }
@@ -705,27 +706,27 @@ s32 func_80140004(RenderContext* arg0, u8* arg1, u8* arg2, s32 arg3, s32 arg4, u
     DrawSync(0);
     VSync(0);
     func_800AA02C();
-    if ((arg3 == 3) && (arg2 == (&g_pad_ctx->pad85C[0x234])))
+    if ((source_mode == 3) && (active_name == (&g_pad_ctx->pad85C[0x234])))
     {
-        var_a1 = 0;
+        i = 0;
         if ((g_pad_ctx->unkAA8 & 0x7F) == 4)
         {
-            while (var_a1 < 0x15)
+            while (i < 0x15)
             {
                 s32 m = g_pad_ctx->unk29D7 * 0x14C;
-                u8* p = (u8*)g_pad_ctx + m + var_a1;
-                p[0x2B0C] = arg2[var_a1];
-                var_a1 += 1;
+                u8* p = (u8*)g_pad_ctx + m + i;
+                p[0x2B0C] = active_name[i];
+                i += 1;
             }
         }
         else
         {
-            while (var_a1 < 0x15)
+            while (i < 0x15)
             {
                 s32 m = g_pad_ctx->unk2EF0 * 0x60;
-                u8* p = (u8*)g_pad_ctx + m + var_a1;
-                p[0x2EF4] = arg2[var_a1];
-                var_a1 += 1;
+                u8* p = (u8*)g_pad_ctx + m + i;
+                p[0x2EF4] = active_name[i];
+                i += 1;
             }
         }
     }
