@@ -2,6 +2,7 @@
 #define _RENDER_CONTEXT_H
 
 #include "common.h"
+#include "psyq/libgpu.h"
 
 /**
  * @brief Per-frame render context handed to the in-game overlay modules
@@ -25,12 +26,13 @@
  */
 typedef struct
 {
-    u_long ot[0x1010];   /* 0x0000 - ordering table (24-bit tag-link array) */
-    void*  prim_cursor;  /* 0x4040 - next free byte in the primitive heap */
-    u8     _pad4044[8];  /* 0x4044 - unknown */
-    u32    frame_parity; /* 0x404C - active double-buffer index (0 or 1) */
-    /* The buffer continues past 0x4050 (packet heap etc.); not yet mapped. */
-} RenderContext;
+    u_long  ot[0x1010];   /* 0x0000 - ordering table (24-bit tag-link array) */
+    void*   prim_cursor;  /* 0x4040 - next free byte in the primitive heap */
+    RECT    clear_rect;   /* 0x4044 - ClearImage rect for this buffer's draw area */
+    u32     frame_parity; /* 0x404C - active double-buffer index (0 or 1) */
+    DISPENV disp_env;     /* 0x4050 - display environment for this buffer */
+    DRAWENV draw_env;     /* 0x4064 - drawing environment for this buffer */
+} RenderContext;          /* 0x40C0 bytes == DRAW_BUF_STRIDE */
 
 /**
  * @brief Stride in bytes between the two double-buffered draw buffers.
