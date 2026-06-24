@@ -378,73 +378,92 @@ typedef struct
      * labels, tab sprites, kanji category names). */
 } PanelDataHeader;
 
-/* --- Data globals defined in this overlay's asm (.data) --- */
-extern s32 g_name_pixel_width;
+/* --- Data-blob globals (raw bytes in the gname_data databin) --- */
 extern u8 g_char_append_anim[]; /* AppendAnimFrame[APPEND_ANIM_FRAME_COUNT]; declared as u8[] for byte-level accesses */
-extern FadeState g_fade_target;
-extern FadeState g_fade_current;
-extern s32 g_startup_delay;
 extern Tim g_name_entry_tim; /* glyph TIM blob; Tim covers the fixed header + CLUT, pixel block follows */
-extern s32 g_strip_width_target;
-extern s32 g_strip_width;
-extern u8* g_active_name;
-extern u8 g_append_anim_timer; /* render ticks until the next animation frame */
-extern u8 g_append_anim_frame; /* current frame index into g_char_append_anim */
-extern s32 g_strip_width_steps;
 extern GlyphSeqEntry g_name_cursor_glyphs[];
 
+/* --- Overlay .bss scratch globals -------------------------------------------
+ *
+ * Uninitialized run-state RAM owned by this translation unit (gname.o(.bss),
+ * 0x8014F7B0..0x8014F8D8). Defined here in ascending address order so the
+ * compiler lays them out matching the original; do not reorder. The single-byte
+ * fields (g_append_anim_frame, g_append_anim_timer) take their trailing word of
+ * padding from the alignment of the following word-sized global.
+ */
+
 /** 48-byte name buffer holding the custom preset name (used when g_name_source_mode == 1). */
-extern u8 g_custom_name_buf[48];
+u8 g_custom_name_buf[48];
 /** Which preset name source to paste: 1 = custom (g_custom_name_buf), 3 = history
  *  (g_history_name_idx), 4/5 = timer-seeded random name table. */
-extern s32 g_name_source_mode;
+s32 g_name_source_mode;
 /** Overlay exit code written when the session ends: 2 = cancel, 5 = confirm. */
-extern s32 g_overlay_result;
+s32 g_overlay_result;
 /** 48-byte name buffer; initial content copied into g_active_name at reset. */
-extern u8 g_initial_name[48];
+u8 g_initial_name[48];
+/** RGB fade target color plus remaining lerp step count. */
+FadeState g_fade_target;
+/** RGB fade current interpolated color. */
+FadeState g_fade_current;
 /** If non-zero, pressing cancel while the name is empty triggers an overlay exit. */
-extern s32 g_allow_empty_cancel;
+s32 g_allow_empty_cancel;
 /** Index into the saved-name history list (used when g_name_source_mode == 3). */
-extern s32 g_history_name_idx;
+s32 g_history_name_idx;
 /** Base of the double-buffered render/primitive scratch buffers; the two frames
  *  are @c g_render_buf_base[0] and @c g_render_buf_base[1] (stride
  *  @ref DRAW_BUF_STRIDE == @c sizeof(RenderContext)). */
-extern RenderContext* g_render_buf_base;
+RenderContext* g_render_buf_base;
+/** Active name buffer the UI edits in place. */
+u8* g_active_name;
 /** Active character panel index: 0-2 = character-set tabs, 3 = kanji category
  *  picker, 4 = kanji character picker within a selected category. */
-extern s32 g_char_panel;
+s32 g_char_panel;
 /** Pointer to the current kanji category's display data (set when g_char_panel == 4). */
-extern void* g_kanji_cat_name;
+void* g_kanji_cat_name;
 /** 48-byte clipboard buffer; deleted chars are prepended here and can be re-pasted. */
-extern u8 g_name_clipboard[48];
+u8 g_name_clipboard[48];
+/** Frames remaining before name-entry input is accepted at startup. */
+s32 g_startup_delay;
 /** Frames remaining in the cursor-position lerp animation. */
-extern s32 g_cursor_lerp_steps;
+s32 g_cursor_lerp_steps;
 /** Index of the highlighted tab in the left selection grid (0xFF = none highlighted). */
-extern s32 g_cursor_tab;
+s32 g_cursor_tab;
 /** Cursor current X position (being lerped toward g_cursor_x_target). */
-extern s32 g_cursor_x;
+s32 g_cursor_x;
 /** Cursor current Y position (being lerped toward g_cursor_y_target). */
-extern s32 g_cursor_y;
+s32 g_cursor_y;
 /** Cursor target X position for the lerp animation. */
-extern s32 g_cursor_x_target;
+s32 g_cursor_x_target;
 /** Last column index of the rightmost character in the current grid panel. */
-extern s32 g_char_last_col;
+s32 g_char_last_col;
 /** Cursor target Y position for the lerp animation. */
-extern s32 g_cursor_y_target;
+s32 g_cursor_y_target;
 /** Row index of the last character in the current grid panel (used for scroll bounds). */
-extern s32 g_char_last_row;
+s32 g_char_last_row;
+/** Frames remaining in the name-strip width lerp animation. */
+s32 g_strip_width_steps;
+/** Current name-strip width in pixels (being lerped toward g_strip_width_target). */
+s32 g_strip_width;
 /** Current character-set navigation state: 0-7 = character set tabs, 0x10 = kanji picker. */
-extern s32 g_char_set_mode;
+s32 g_char_set_mode;
+/** Current frame index into g_char_append_anim. */
+u8 g_append_anim_frame;
 /** Current horizontal scroll position of the character grid in pixels. */
-extern s32 g_scroll_pos;
+s32 g_scroll_pos;
+/** Render ticks until the next append-animation frame. */
+u8 g_append_anim_timer;
+/** Target name-strip width in pixels for the width lerp. */
+s32 g_strip_width_target;
 /** Target horizontal scroll position for the scroll lerp. */
-extern s32 g_scroll_target;
+s32 g_scroll_target;
 /** Frames remaining in the scroll lerp animation. */
-extern s32 g_scroll_steps;
+s32 g_scroll_steps;
 /** Currently selected kanji category index. */
-extern s32 g_kanji_cat;
+s32 g_kanji_cat;
+/** Rendered pixel width of the current name. */
+s32 g_name_pixel_width;
 /** Linearized character cursor position in the grid: row * 10 + col. */
-extern s32 g_char_cursor;
+s32 g_char_cursor;
 
 /**
  * @brief Play a one-shot UI sound effect via the AKAO driver.

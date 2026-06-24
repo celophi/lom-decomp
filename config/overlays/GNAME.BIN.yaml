@@ -47,5 +47,5 @@ segments:
       - [0x301D, databin, panel_data]
       - [0x7495, databin, name_entry_tim]
       - [0xF6B9, data, data-alt2]
-      - [0xF7B1, bss, gname]
+      - [0xF7B1, .bss, gname]
   - [0xF8D9]
