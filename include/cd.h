@@ -244,6 +244,7 @@ extern u8 D_801ED590;
 #define QUEUE_ITEM_CALLBACK(ptr) (*((CdCommandCallback*)(ptr) + 0x13))
 
 #define CD_INIT_STATE_ERROR_PAUSE 0x20
+#define VCD (*(volatile CdSystem*) 0x801ED800)
 
 // Prototypes
 
