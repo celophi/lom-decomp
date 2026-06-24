@@ -401,7 +401,7 @@ extern s32 g_name_source_mode;
 /** Overlay exit code written when the session ends: 2 = cancel, 5 = confirm. */
 extern s32 g_overlay_result;
 /** 48-byte name buffer; initial content copied into g_active_name at reset. */
-extern u8 g_initial_name;
+extern u8 g_initial_name[48];
 /** If non-zero, pressing cancel while the name is empty triggers an overlay exit. */
 extern s32 g_allow_empty_cancel;
 /** Index into the saved-name history list (used when g_name_source_mode == 3). */
@@ -631,7 +631,7 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
     RenderContext* buf;
 
     g_render_buf_base = buf_base;
-    bcopy(initial_name, &g_initial_name, 0x30);
+    bcopy(initial_name, g_initial_name, sizeof(g_initial_name));
     bcopy(custom_name, g_custom_name_buf, sizeof(g_custom_name_buf));
     g_allow_empty_cancel = allow_empty_cancel;
     g_active_name = active_name;
@@ -1062,7 +1062,7 @@ static void reset_run_state(void)
     g_name_clipboard = 0;
     g_cursor_x = g_cursor_x_target;
     g_cursor_y = g_cursor_y_target;
-    name_copy(g_active_name, &g_initial_name);
+    name_copy(g_active_name, g_initial_name);
     g_strip_width = 0;
     recalc_name_width();
     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
@@ -1157,7 +1157,7 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
                         g_name_clipboard = 0;
                         if (g_history_name_idx >= 0x81)
                         {
-                            name_copy(g_active_name, &g_initial_name);
+                            name_copy(g_active_name, g_initial_name);
                         }
                         else
                         {
@@ -1178,7 +1178,7 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
                     {
                         play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                         g_name_clipboard = 0;
-                        name_copy(g_active_name, &g_initial_name);
+                        name_copy(g_active_name, g_initial_name);
                     }
                     recalc_name_width();
                     redispatch = 0;
@@ -1188,7 +1188,7 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
                 case 3:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     g_name_clipboard = 0;
-                    name_copy(g_active_name, &g_initial_name);
+                    name_copy(g_active_name, g_initial_name);
                     break;
 
                 default:
