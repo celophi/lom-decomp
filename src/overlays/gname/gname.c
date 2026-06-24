@@ -394,7 +394,7 @@ extern s32 g_strip_width_steps;
 extern GlyphSeqEntry g_name_cursor_glyphs[];
 
 /** 48-byte name buffer holding the custom preset name (used when g_name_source_mode == 1). */
-extern u8 g_custom_name_buf;
+extern u8 g_custom_name_buf[48];
 /** Which preset name source to paste: 1 = custom (g_custom_name_buf), 3 = history
  *  (g_history_name_idx), 4/5 = timer-seeded random name table. */
 extern s32 g_name_source_mode;
@@ -632,7 +632,7 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
 
     g_render_buf_base = buf_base;
     bcopy(initial_name, &g_initial_name, 0x30);
-    bcopy(custom_name, &g_custom_name_buf, 0x30);
+    bcopy(custom_name, g_custom_name_buf, sizeof(g_custom_name_buf));
     g_allow_empty_cancel = allow_empty_cancel;
     g_active_name = active_name;
     g_name_source_mode = source_mode;
@@ -1172,7 +1172,7 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
                     else if (g_name_source_mode == tmp)
                     {
                         g_name_clipboard = 0;
-                        name_copy(g_active_name, &g_custom_name_buf);
+                        name_copy(g_active_name, g_custom_name_buf);
                     }
                     else
                     {
