@@ -3,8 +3,8 @@
 Extract a single function and its jump tables from splat-generated .s files.
 
 Usage (run from /staging):
-    python3 tools/extract_func.py asm/cdrom.s cdrom_complete_command
-    python3 tools/extract_func.py asm/cdrom.s cdrom_complete_command -o /tmp/target.s
+    python3 tools/permuter-scripts/extract_func.py asm/cdrom.s cdrom_complete_command
+    python3 tools/permuter-scripts/extract_func.py asm/cdrom.s cdrom_complete_command -o /tmp/target.s
 
 The output is a self-contained .s file with:
   - Standard MIPS header
@@ -17,13 +17,9 @@ import re
 import sys
 from pathlib import Path
 
-# Standard header for all splat-generated .s files in this project
-HEADER = """.include "macro.inc"
-
-.set noat
-.set noreorder
-
-"""
+# No preamble — import.py prepends prelude.inc which already defines all macros
+# and sets .set noat / .set noreorder / .set gp=64.
+HEADER = ""
 
 # Rodata files to search for jump tables (main game, in order)
 MAIN_RODATA_FILES = [
@@ -209,7 +205,7 @@ def main():
 
     # --- Assemble output ---
     out_parts = [HEADER]
-    out_parts.append(".section .text, \"ax\"\n\n")
+    out_parts.append(".text\n\n")
     out_parts.extend(func_lines)
 
     if rodata_blocks:
