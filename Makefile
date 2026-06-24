@@ -49,16 +49,16 @@ ASM_DIR      := asm
 
 # ─── Toolchain ──────────────────────────────────────────────────────────────────
 #
-# CC       — GCC 2.8.0 cross-compiler for PSX (installed in /opt/psx-gcc/)
+# CC       — GCC 2.8.0 cross-compiler for PSX (installed in /opt/psx-gcc-2.8.0/)
 # LD       — modern mipsel linker (binutils from apt)
 # OBJCOPY  — converts ELF ↔ raw binary
 
 CROSS        	:= mipsel-linux-gnu-
-CC           	:= /opt/psx-gcc/gcc -B/opt/psx-gcc/
-CC_CDK       	:= /opt/cdk-gcc/gcc -B/opt/cdk-gcc/
-CC_GNU       	:= /opt/psx-gnu-gcc/gcc -B/opt/psx-gnu-gcc/
-CC_260_PSX		:= /opt/gcc-2.6.0-psx/gcc -B/opt/gcc-2.6.0-psx/
-AS_GNU       	:= /opt/psx-gnu-gcc/as
+CC           	:= /opt/psx-gcc-2.8.0/gcc -B/opt/psx-gcc-2.8.0/
+CC_CDK       	:= /opt/psx-gcc-2.7.2-cdk/gcc -B/opt/psx-gcc-2.7.2-cdk/
+CC_GNU       	:= /opt/psx-gcc-2.7.2-gnuas/gcc -B/opt/psx-gcc-2.7.2-gnuas/
+CC_260_PSX		:= /opt/psx-gcc-2.6.0/gcc -B/opt/psx-gcc-2.6.0/
+AS_GNU       	:= /opt/psx-gcc-2.7.2-gnuas/as
 LD           	:= $(CROSS)ld
 OBJCOPY      	:= $(CROSS)objcopy
 

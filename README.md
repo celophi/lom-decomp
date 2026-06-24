@@ -89,7 +89,7 @@ This step may take several minutes.
 ### 4. Build the Development Environment
 
 ```bash
-docker build -t lom-dev .
+docker build -t lom-dev -f dockerfiles/dev.dockerfile .
 ```
 
 ### 5. Start the Development Environment
@@ -245,7 +245,10 @@ lom-decomp/
 │   ├── splat/                      # Binary splitting and disassembly (submodule)
 │   ├── splat_ext/                  # Custom splat extensions for LOM's compression
 │   └── compile.sh                  # Compiler wrapper used by decomp-permuter
-├── Dockerfile                      # Development environment definition
+├── dockerfiles/
+│   ├── dev.dockerfile              # Development environment definition
+│   ├── pipeline.dockerfile         # CI image for the progress pipeline
+│   └── gnu-as.dockerfile           # GCC 2.7.2 + GNU as toolchain build
 ├── Makefile                        # Build system
 └── requirements.txt                # Python dependencies
 ```
