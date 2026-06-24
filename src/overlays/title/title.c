@@ -534,40 +534,30 @@ void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
 /**
  * Emits the title screen's tiled backdrop strip (5 quads stepping 0x40 px).
  *
- * decomp.me (94.41%) https://decomp.me/scratch/Lluk6
+ * decomp.me (100%) https://decomp.me/scratch/aKAFU
  */
 void RenderTitleBackdrop(void* arg0)
 {
     u8* base = (u8*)arg0;
-    unsigned int new_var;
     u8* t3;
     u32* a2;
     s32 t0;
     s32 t1;
     s32 a3;
-    u8* a1;
     s32 temp_v0;
     s32 temp_v1;
 
     a2 = *((u32**)(base + 0x80B8));
-
     t3 = base + 0x40;
-
     t0 = 0;
-
-    t1 = 0x140;
-
-    a3 = 0x40;
 
     while (t0 < 5)
     {
-        temp_v1 = t1 & 0x3FF;
-
-        t1 += 0x40;
-
+        a3 = 0x40 + (t0 << 6);
         *((short*)((((u8*)a2) + 0x0E) + 0x12)) = (short)a3;
         *((short*)((((u8*)a2) + 0x0E) + 2)) = (short)a3;
-        a3 += 0x40;
+        t1 = 0x140 + (t0 << 6);
+        temp_v1 = t1 & 0x3FF;
         temp_v0 = t0 << 6;
         t0++;
         *((short*)((((u8*)a2) + 0x0E) + 0x0A)) = (short)temp_v0;
@@ -591,12 +581,12 @@ void RenderTitleBackdrop(void* arg0)
         (((u8*)a2) + 0x0E)[0x0F] = 0xE8;
         *((short*)((((u8*)a2) + 0x0E) + 8)) = (short)((temp_v1 >> 6) | 0x110);
         *((short*)((((u8*)a2) + 0x0E) + 0)) = 0x7840;
-        new_var = ((u32)a2) & 0xFFFFFF;
-        a1 += 0x28;
-        *a2 = ((*a2) & 0xFF000000) | ((*((u32*)(t3 + 0x3FFC))) & 0xFFFFFF);
-        *((u32*)(t3 + 0x3FFC)) = ((*((u32*)(t3 + 0x3FFC))) & 0xFF000000) | new_var;
+        /* addPrim((P_TAG *)(t3 + 0x3FFC), a2) */
+        ((P_TAG*)a2)->addr = (u_long)(((P_TAG*)(t3 + 0x3FFC))->addr);
+        ((P_TAG*)(t3 + 0x3FFC))->addr = (u_long)a2;
         a2 = (u32*)(((u8*)a2) + 0x28);
     }
+
     *((u32**)(base + 0x80B8)) = a2;
 }
 
@@ -1454,7 +1444,7 @@ void handle_save_slot_input(void)
  * slot is always visible, then writes the updated V-coordinate and
  * visibility flags for the highlight-bar layout entries in g_saveLayoutTable.
  *
- * decomp.me (99.73%) https://decomp.me/scratch/d3s3Q
+ * decomp.me (100%) https://decomp.me/scratch/d3s3Q
  */
 void AnimateSaveSlotPanel(void)
 {
