@@ -428,8 +428,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
 
                 // --- Chunked mode: decompress into staging buffer, then copy to caller ---
                 srcPtr = stagingWritePtr; // Remember staging write position before this call
-                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr,
-                                                         decompressEnd, (u32)stagingEnd);
+                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr, decompressEnd, (u32)stagingEnd);
 
                 // How many bytes did the decompressor write to the staging buffer this pass?
                 stagingBytesProduced = (int)stagingWritePtr - (int)srcPtr;
@@ -674,9 +673,8 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
 
     // Deduplicate: skip enqueue if system is busy AND the command matches
     // the previously enqueued one exactly (same command, resource, buffer, callback)
-    if ((cdSystem->currentCommand == 0 && cdSystem->initCommand == 0) ||
-        ((CD_SYSTEM.lastCommand != command) || (CD_SYSTEM.resourceIndex != resourceIndex) ||
-         (CD_SYSTEM.dstBuffer != dstBuffer) || (CD_SYSTEM.callback != callback)))
+    if ((cdSystem->currentCommand == 0 && cdSystem->initCommand == 0) || ((CD_SYSTEM.lastCommand != command) || (CD_SYSTEM.resourceIndex != resourceIndex) ||
+                                                                          (CD_SYSTEM.dstBuffer != dstBuffer) || (CD_SYSTEM.callback != callback)))
     {
 
         // Validate resource entry has a valid disc location and non-zero size
@@ -1097,10 +1095,8 @@ u32 cdrom_process_state(void)
 
                 if (indexDiff != 0)
                 {
-                    CD_SYSTEM.currentResourceIndex =
-                        (u16)CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].resourceIndex;
-                    CD_SYSTEM.currentDataSize =
-                        (s32)(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].entry)->dataSize;
+                    CD_SYSTEM.currentResourceIndex = (u16)CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].resourceIndex;
+                    CD_SYSTEM.currentDataSize = (s32)(CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].entry)->dataSize;
                     CD_SYSTEM.targetDataSize = (s32)CD_SYSTEM.readRemainingBytes;
                 }
 
@@ -1372,9 +1368,7 @@ void cdrom_complete_command(u_char intr, u_char* result)
     u8 nextCommand;
     u32 readIndex;
     u32 writeIndex;
-    u8 nopCommand;
     s32 statusFlags;
-    volatile s32 vsyncArg;
     volatile CdSystem* cdSystem;
 
     // Signal to main-loop poller that a sync event occurred
@@ -1390,137 +1384,126 @@ void cdrom_complete_command(u_char intr, u_char* result)
         }
     }
 
-    // If the command did not complete successfully, handle retry/fallthrough
-    if ((intr & 0xFF) != CdlComplete)
+    // Command completed: dispatch based on which command just finished.
+    // Otherwise drop to the retry/fallthrough handler in the else branch.
+    if ((intr & 0xFF) == CdlComplete)
     {
-        goto HandleIncomplete;
-    }
-
-    // Command completed — dispatch based on which command just finished
-    cdSystem = &CD_SYSTEM;
-    switch (cdSystem->currentCommand)
-    {
-    default:
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 7:
-    case 8:
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-    case 16:
-    case 17:
-    case 18:
-    case 19:
-    case 20:
-    case 22:
-    case 23:
-    case 24:
-    case 25:
-    case 26:
-    case 27:
-        // Read the command at the current queue head
-        cdSystem = &CD_SYSTEM;
-        nextCommand = cdSystem->commandQueue.items[CD_SYSTEM.queueReadIndex].command;
-
-        // Skip past consecutive CdlNop (1) entries in the queue
-        if (nextCommand == 1)
+        // The switch reads currentCommand through the volatile alias so the
+        // base address is re-materialized independently (matches the original
+        // codegen for the jump-table dispatch).
+        switch (VCD.currentCommand)
         {
-            writeIndex = CD_SYSTEM.queueWriteIndex;
-            nopCommand = 1;
-            do
+        default:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 7:
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        case 13:
+        case 14:
+        case 15:
+        case 16:
+        case 17:
+        case 18:
+        case 19:
+        case 20:
+        case 22:
+        case 23:
+        case 24:
+        case 25:
+        case 26:
+        case 27:
+            // Read the command at the current queue head
+            cdSystem = &CD_SYSTEM;
+            nextCommand = cdSystem->commandQueue.items[CD_SYSTEM.queueReadIndex].command;
+
+            // Skip past consecutive CdlNop (1) entries in the queue
+            if (nextCommand == 1)
             {
-                readIndex = CD_SYSTEM.queueReadIndex;
-                if (readIndex == writeIndex)
+                writeIndex = CD_SYSTEM.queueWriteIndex;
+                do
                 {
-                    goto QueueDrained;
-                }
-                readIndex = (readIndex + 1) & 0xF;
-                CD_SYSTEM.queueReadIndex = readIndex;
-                nextCommand = CD_SYSTEM.commandQueue.items[readIndex].command;
-            } while (nextCommand == nopCommand);
+                    readIndex = CD_SYSTEM.queueReadIndex;
+                    if (readIndex == writeIndex)
+                    {
+                        // All commands consumed: drop the sync callback and
+                        // reset execution state.
+                        CdSyncCallback(NULL);
+                        statusFlags = CD_SYSTEM.statusFlags.word;
+                        CD_SYSTEM.playbackState = 0;
+                        CD_SYSTEM.transferCallback = NULL;
+                        CD_SYSTEM.currentCommand = 0;
+                        CD_SYSTEM.retryCounter = 0;
+                        CD_SYSTEM.statusFlags.word = statusFlags & ~0x10;
+                        CD_SYSTEM.vsyncTimestamp = VSync(-1);
+                        return;
+                    }
+                    readIndex = (readIndex + 1) & 0xF;
+                    CD_SYSTEM.queueReadIndex = readIndex;
+                    nextCommand = CD_SYSTEM.commandQueue.items[readIndex].command;
+                } while (nextCommand == 1);
+            }
+            break;
+
+        case 21:
+            // CdlPause completed: reset playback state and advance queue
+            CD_SYSTEM.playbackState = 0;
+            CD_SYSTEM.transferCallback = NULL;
+            readIndex = (CD_SYSTEM.queueReadIndex + 1) & 0xF;
+            CD_SYSTEM.queueReadIndex = readIndex;
+
+            // If queue is now empty after pause, clean up and return
+            if (readIndex == CD_SYSTEM.queueWriteIndex)
+            {
+                CdSyncCallback(NULL);
+                statusFlags = CD_SYSTEM.statusFlags.word;
+                CD_SYSTEM.currentCommand = 0;
+                CD_SYSTEM.initCommand = 0;
+                CD_SYSTEM.retryCounter = 0;
+                CD_SYSTEM.statusFlags.word = statusFlags & ~0x10;
+                CD_SYSTEM.vsyncTimestamp = VSync(-1);
+                return;
+            }
+
+            // Queue still has entries: dispatch the next one
+            nextCommand = CD_SYSTEM.commandQueue.items[readIndex].command;
+            break;
         }
-        goto DispatchCommand;
 
-    case 21:
-        // CdlPause completed — reset playback state and advance queue
-        CD_SYSTEM.playbackState = 0;
-        CD_SYSTEM.transferCallback = NULL;
-        readIndex = (CD_SYSTEM.queueReadIndex + 1) & 0xF;
-        CD_SYSTEM.queueReadIndex = readIndex;
-
-        // If queue is now empty after pause, clean up and return
-        if (readIndex == CD_SYSTEM.queueWriteIndex)
+        // Special case: command CdlReadS - used for CD-DA/XA streaming.
+        // This translation only applies on the completed-command path.
+        if (nextCommand == CdlReadS)
         {
-            CdSyncCallback(NULL);
-            statusFlags = CD_SYSTEM.statusFlags.word;
-            CD_SYSTEM.currentCommand = 0;
-            CD_SYSTEM.initCommand = 0;
-            CD_SYSTEM.retryCounter = 0;
-            goto ApplyFlagsAndTimestamp;
+            cdSystem = &CD_SYSTEM;
+            if (g_cdAudioEnabled == 0)
+            {
+                CD_SYSTEM.audioEnabled = 1;
+            }
+            nextCommand = CdlReadN;
         }
-
-        // Queue still has entries — dispatch the next one
-        nextCommand = CD_SYSTEM.commandQueue.items[readIndex].command;
-        goto DispatchCommand;
+        cdrom_run_command(nextCommand, 0, 0);
     }
-
-DispatchCommand:
-    // cdSystem = &CD_SYSTEM; // this seems to be necessary SOMEWHERE in order to force loading 801ed800, but I don't
-    // know where.
-
-    // Special case: command CdlReadS — used for CD-DA/XA streaming
-    if (nextCommand == CdlReadS)
+    else
     {
+        // Command did not complete: if not already probing with CdlNop, retry
+        // with CdlNop. Otherwise re-read the queue head and execute it directly
+        // (no CdlReadS translation on this path).
         cdSystem = &CD_SYSTEM;
-        if (g_cdAudioEnabled == 0)
+        if (cdSystem->currentCommand != 1)
         {
-            CD_SYSTEM.audioEnabled = 1;
+            CD_SYSTEM.currentCommand = 1;
+            CdControlF(1, NULL);
+            return;
         }
-        nextCommand = CdlReadN;
+        nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
+        cdrom_run_command(nextCommand, 0, 0);
     }
-    goto ExecuteNext;
-
-HandleIncomplete:
-    // Command did not complete — if not already probing with CdlNop, retry with CdlNop
-    cdSystem = &CD_SYSTEM;
-    if (cdSystem->currentCommand != 1)
-    {
-        CD_SYSTEM.currentCommand = 1;
-        CdControlF(1, NULL);
-        return;
-    }
-    // Already was CdlNop — fall through to re-read queue head and execute
-    goto ReadQueueHead;
-
-QueueDrained:
-    // All commands consumed — remove sync callback and reset execution state
-    CdSyncCallback(NULL);
-
-    statusFlags = CD_SYSTEM.statusFlags.word & ~0x10;
-    vsyncArg = -1;
-    CD_SYSTEM.playbackState = 0;
-    CD_SYSTEM.transferCallback = NULL;
-    CD_SYSTEM.currentCommand = 0;
-    CD_SYSTEM.retryCounter = 0;
-
-ApplyFlagsAndTimestamp:
-    CD_SYSTEM.statusFlags.word = statusFlags;
-    CD_SYSTEM.vsyncTimestamp = VSync(vsyncArg);
-    return;
-
-ReadQueueHead:
-    nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
-
-ExecuteNext:
-    cdrom_run_command(nextCommand, 0, 0);
 }
 
 void cdrom_handle_recovery_sync(u_char intr, u_char* result)
@@ -1843,8 +1826,7 @@ void cdrom_process_sector(s32 arg0)
         if (CD_SYSTEM.transferCallback != NULL)
         {
             // transferCallback(bytesTransferred, bytesRemaining) returns destination buffer
-            buffer = CD_SYSTEM.transferCallback(CD_SYSTEM.totalDataSize - CD_SYSTEM.readRemainingBytes,
-                                                CD_SYSTEM.readRemainingBytes);
+            buffer = CD_SYSTEM.transferCallback(CD_SYSTEM.totalDataSize - CD_SYSTEM.readRemainingBytes, CD_SYSTEM.readRemainingBytes);
             if (buffer == NULL)
             {
                 // Callback rejected the transfer — re-issue the current read command
@@ -1938,8 +1920,7 @@ void cdrom_process_sector(s32 arg0)
     {
 
         // Position matches — invoke transferCallback callback to check if audio is complete
-        if (CD_SYSTEM.transferCallback(CD_SYSTEM.totalDataSize - CD_SYSTEM.readRemainingBytes,
-                                       CD_SYSTEM.readRemainingBytes) == NULL)
+        if (CD_SYSTEM.transferCallback(CD_SYSTEM.totalDataSize - CD_SYSTEM.readRemainingBytes, CD_SYSTEM.readRemainingBytes) == NULL)
         {
 
             // Audio track complete — shut down audio playback
@@ -2031,8 +2012,7 @@ void cdrom_run_command(u8 cmd, void* sectorBuffer, s32 executionMode)
         if ((cmd == 0x06) || (cmd == 0x1B))
         {
             queueEntryPtr = (CD_SYSTEM_V.queueReadIndex * 0x10) + 0x801ED800;
-            if (((*(((u32*)queueEntryPtr) + 0x13)) == 0) &&
-                (CD_SYSTEM_V.currentWritePtr == *(void**)((u8*)queueEntryPtr + 0x48)))
+            if (((*(((u32*)queueEntryPtr) + 0x13)) == 0) && (CD_SYSTEM_V.currentWritePtr == *(void**)((u8*)queueEntryPtr + 0x48)))
             {
                 CD_SYSTEM_V.playbackState = 0;
             }
