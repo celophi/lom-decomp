@@ -1096,7 +1096,7 @@ s32 read_pad_state(void)
  *       struct used by read_pad_input; those reads are load-bearing artifacts
  *       of the matched codegen, so they are left as-is.
  *
- * @see decomp.me (99.90%) https://decomp.me/scratch/yZqQJ
+ * @see decomp.me (100%) https://decomp.me/scratch/geg1v
  */
 void update_menu_input(void)
 {
@@ -1141,33 +1141,25 @@ void update_menu_input(void)
         state = buttons;
     }
     g_debouncedInput = 0;
-    /* 0xB6F: the non-d-pad button bits that, when shared with the previous
-     * state, keep us on the auto-repeat path. */
-    if ((state == g_lastInputState) || ((g_lastInputState != 0) && (state & (g_lastInputState | 0xB6F))))
+
+    if (((state == g_lastInputState) || ((g_lastInputState != 0) && (state & (g_lastInputState | 0xB6F)))) && state != 0)
     {
-        if (state != 0)
+        u32 dpad = state & (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT);
+        if (dpad != 0)
         {
-            u32 dpad = state & (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT);
-            if (dpad != 0)
-            {
-                state = dpad;
-            }
-            if (g_inputRepeatTimer == 0)
-            {
-                g_debouncedInput = state;
-                g_inputRepeatTimer = 2;
-            }
-            else
-            {
-                g_inputRepeatTimer--;
-                g_debouncedInput = 0;
-            }
+            state = dpad;
+        }
+        if (g_inputRepeatTimer == 0)
+        {
+            g_debouncedInput = state;
+            g_inputRepeatTimer = 2;
         }
         else
         {
-            *((s32*)(&g_inputRepeatTimer)) = 0;
+            g_inputRepeatTimer--;
+            g_debouncedInput = 0;
         }
-        *((s32*)(&g_lastInputState)) = 0;
+        return;
     }
     else if (state == 0)
     {
