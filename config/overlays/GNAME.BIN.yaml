@@ -41,11 +41,11 @@ segments:
     start: 0x1
     vram: 0x80140000
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, .rodata, gname]
       - [0x5, c, gname]
       - [0x2C99, data, data-alt]
       - [0x301D, databin, panel_data]
       - [0x7495, databin, name_entry_tim]
       - [0xF6B9, data, data-alt2]
-      - [0xF7B1, bss, data-alt3]
+      - [0xF7B1, .bss, gname]
   - [0xF8D9]
