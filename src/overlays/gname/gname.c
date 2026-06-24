@@ -416,7 +416,7 @@ extern s32 g_char_panel;
 /** Pointer to the current kanji category's display data (set when g_char_panel == 4). */
 extern void* g_kanji_cat_name;
 /** 48-byte clipboard buffer; deleted chars are prepended here and can be re-pasted. */
-extern u8 g_name_clipboard;
+extern u8 g_name_clipboard[48];
 /** Frames remaining in the cursor-position lerp animation. */
 extern s32 g_cursor_lerp_steps;
 /** Index of the highlighted tab in the left selection grid (0xFF = none highlighted). */
@@ -1059,7 +1059,7 @@ static void reset_run_state(void)
     g_scroll_target = 0;
     g_scroll_steps = 0;
     g_char_cursor = 0;
-    g_name_clipboard = 0;
+    g_name_clipboard[0] = 0;
     g_cursor_x = g_cursor_x_target;
     g_cursor_y = g_cursor_y_target;
     name_copy(g_active_name, g_initial_name);
@@ -1142,19 +1142,19 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     if (g_name_source_mode == GNAME_SRC_RAND_PRIMARY)
                     {
-                        g_name_clipboard = 0;
+                        g_name_clipboard[0] = 0;
                         name_copy(g_active_name, ((g_random_names_off - 0x10) + (*((u32*)g_random_names_off))) +
                                                      (*((u16*)(((g_random_names_off - 0x10) + (*((u32*)g_random_names_off))) + ((rand() % 128) * 2)))));
                     }
                     else if (g_name_source_mode == GNAME_SRC_RAND_ALT)
                     {
-                        g_name_clipboard = 0;
+                        g_name_clipboard[0] = 0;
                         name_copy(g_active_name, ((g_random_names_off - 0x10) + (*((u32*)g_random_names_off))) +
                                                      (*((u16*)(((g_random_names_off - 0x10) + (*((u32*)g_random_names_off))) + (((rand() % 128) + 128) * 2)))));
                     }
                     else if (g_name_source_mode == GNAME_SRC_HISTORY)
                     {
-                        g_name_clipboard = 0;
+                        g_name_clipboard[0] = 0;
                         if (g_history_name_idx >= 0x81)
                         {
                             name_copy(g_active_name, g_initial_name);
@@ -1171,13 +1171,13 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
                     }
                     else if (g_name_source_mode == tmp)
                     {
-                        g_name_clipboard = 0;
+                        g_name_clipboard[0] = 0;
                         name_copy(g_active_name, g_custom_name_buf);
                     }
                     else
                     {
                         play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-                        g_name_clipboard = 0;
+                        g_name_clipboard[0] = 0;
                         name_copy(g_active_name, g_initial_name);
                     }
                     recalc_name_width();
@@ -1187,7 +1187,7 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
 
                 case 3:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-                    g_name_clipboard = 0;
+                    g_name_clipboard[0] = 0;
                     name_copy(g_active_name, g_initial_name);
                     break;
 
@@ -1465,12 +1465,12 @@ static void gname_process_input(void)
     else if (g_pad_input & PAD_BTN_L2)
     {
         undo_char = name_pop_last_char(g_active_name);
-        while (name_char_count(&g_name_clipboard) >= 0xB)
+        while (name_char_count(g_name_clipboard) >= 0xB)
         {
-            name_pop_last_char(&g_name_clipboard);
+            name_pop_last_char(g_name_clipboard);
         }
 
-        name_prepend_char(&g_name_clipboard, (unsigned long)(undo_char & 0xFFFF));
+        name_prepend_char(g_name_clipboard, (unsigned long)(undo_char & 0xFFFF));
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
         sfx_id = GNAME_SFX_MOVE;
@@ -1481,7 +1481,7 @@ static void gname_process_input(void)
     {
         if (name_char_count(g_active_name) < NAME_MAX_CHARS)
         {
-            clipboard_ptr = &g_name_clipboard;
+            clipboard_ptr = g_name_clipboard;
             undo_char = name_pop_first_char(clipboard_ptr);
             clipboard_char_u16 = (u16)undo_char;
             if (clipboard_char_u16 != 0)
