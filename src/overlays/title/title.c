@@ -339,8 +339,7 @@ void LoadTitleAudioBank(void)
     u8* base;
     u32* off;
 
-    if (((u32)(g_previousGameState - 2) >= 2U) && (g_previousGameState != 6) && (g_previousGameState != 7) &&
-        (g_previousGameState != 5))
+    if (((u32)(g_previousGameState - 2) >= 2U) && (g_previousGameState != 6) && (g_previousGameState != 7) && (g_previousGameState != 5))
     {
 
         g_titleAudioBankBase = 0x8013C000;
@@ -852,14 +851,14 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
     addr_mask = 0x00FFFFFF;
     setPolyFT4(ptr); /* len = 9, code = 0x2C */
     v_top = (u8)(tex_row << 4);
-    ptr[0x06] = 0x80; /* b0 */
+    ptr[0x06] = 0x80;  /* b0 */
     ptr[0x15] = v_top; /* v1 */
     ptr[0x0D] = v_top; /* v0 */
     v_bottom = (u8)((tex_row << 4) + 0x10);
-    ptr[0x05] = 0x80; /* g0 */
-    ptr[0x04] = 0x80; /* r0 */
-    ptr[0x25] = v_bottom; /* v3 */
-    ptr[0x1D] = v_bottom; /* v2 */
+    ptr[0x05] = 0x80;               /* g0 */
+    ptr[0x04] = 0x80;               /* r0 */
+    ptr[0x25] = v_bottom;           /* v3 */
+    ptr[0x1D] = v_bottom;           /* v2 */
     *((u16*)(ptr + 0x18)) = (u16)x; /* x2 */
     *((u16*)(ptr + 0x08)) = (u16)x; /* x0 */
     *((u16*)(ptr + 0x16)) = 5;      /* tpage */
@@ -879,10 +878,10 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
     *((u16*)(ptr + 0x22)) = y_bottom; /* y3 */
     *((u16*)(ptr + 0x1A)) = y_bottom; /* y2 */
     old_word = *((u32*)ptr);
-    *((u16*)(ptr + 0x20)) = x_right; /* x3 */
-    *((u16*)(ptr + 0x10)) = x_right; /* x1 */
-    ptr[0x24] = u_right; /* u3 */
-    ptr[0x14] = u_right; /* u1 */
+    *((u16*)(ptr + 0x20)) = x_right;   /* x3 */
+    *((u16*)(ptr + 0x10)) = x_right;   /* x1 */
+    ptr[0x24] = u_right;               /* u3 */
+    ptr[0x14] = u_right;               /* u1 */
     *((u16*)(ptr + 0x0E)) = clut_word; /* clut */
     new_word = (old_word & tag_mask) | (((u32)(*ot_head)) & addr_mask);
     *((u32*)ptr) = new_word;
@@ -1455,54 +1454,46 @@ void handle_save_slot_input(void)
  * slot is always visible, then writes the updated V-coordinate and
  * visibility flags for the highlight-bar layout entries in g_saveLayoutTable.
  *
- * decomp.me (99.73%) https://decomp.me/scratch/MhuAG
+ * decomp.me (99.73%) https://decomp.me/scratch/d3s3Q
  */
 void AnimateSaveSlotPanel(void)
 {
     u8* layout;
-    s16 highlight_v_offset;
     s16 scroll_width;
+    s32* new_var2;
     s32 target_adjusted;
-    s32 lerp_step;
-    unsigned short new_var2;
     s32 scroll_offset;
-    int new_var;
-    s32 window_low;
+    s32 new_var;
     SaveLayoutEntry* ptr;
     if (g_slotHighlightFrames != 0)
     {
-        lerp_step = (g_slotHighlightTargetX - g_slotHighlightX) / g_slotHighlightFrames;
+        g_slotHighlightX += (g_slotHighlightTargetX - g_slotHighlightX) / g_slotHighlightFrames;
         g_slotHighlightFrames -= 1;
-        g_slotHighlightX += lerp_step;
     }
     else
     {
         g_slotHighlightX = g_slotHighlightTargetX;
     }
-    target_adjusted = g_slotHighlightTargetX;
-    if (g_slotHighlightTargetX < 0)
+    new_var = g_slotHighlightTargetX;
+    target_adjusted = new_var;
+    if (new_var < 0)
     {
-        target_adjusted = 0xF;
-        target_adjusted = g_slotHighlightTargetX + target_adjusted;
+        target_adjusted = new_var + 0xF;
     }
-    window_low = target_adjusted >> 4;
-    if (g_slotSelectedIndex < (target_adjusted >> 4))
+    target_adjusted >>= 4;
+    scroll_offset = *(new_var2 = &g_slotSelectedIndex);
+    if (g_slotSelectedIndex < target_adjusted)
     {
-        g_slotHighlightTargetX = g_slotSelectedIndex * 0x10;
+        g_slotHighlightTargetX = scroll_offset * 0x10;
         g_slotHighlightFrames = 4;
     }
-    else
+    else if ((target_adjusted + 6) < (*new_var2))
     {
-        new_var = (g_slotSelectedIndex - 6);
-        if ((window_low + 6) < g_slotSelectedIndex)
-        {
-            scroll_offset = 0x10;
-            g_slotHighlightTargetX = new_var * scroll_offset;
-            g_slotHighlightFrames = 4;
-        }
+        g_slotHighlightTargetX = (g_slotSelectedIndex - 6) * 0x10;
+        g_slotHighlightFrames = 4;
     }
     ptr = (SaveLayoutEntry*)g_saveLayoutTable;
-    ptr[2].v0 = (u16)g_slotHighlightX;
+    (ptr + 2)->v0 = (u16)g_slotHighlightX;
     ptr[3].v0 = ((u16)g_slotHighlightX) + 0x20;
     ptr[9].v0 = (u16)g_slotHighlightX;
     ptr[10].v0 = ((u16)g_slotHighlightX) + 0x20;
@@ -1522,7 +1513,6 @@ void AnimateSaveSlotPanel(void)
         ptr5[14].type = 0;
         ptr5[15].type = 0;
     }
-    new_var2 = 0;
     if (g_slotHighlightX != 0x40)
     {
         SaveLayoutEntry* ptr3 = (SaveLayoutEntry*)g_saveLayoutTable;
@@ -1534,9 +1524,9 @@ void AnimateSaveSlotPanel(void)
     else
     {
         SaveLayoutEntry* ptr2 = (SaveLayoutEntry*)g_saveLayoutTable;
-        ptr2[4].type = new_var2;
-        ptr2[5].type = new_var2;
-        ptr2[11].type = new_var2;
+        ptr2[4].type = 0;
+        ptr2[5].type = 0;
+        ptr2[11].type = 0;
         ptr2[12].type = 0;
     }
     scroll_offset = (g_slotSelectedIndex * 0x10) - (new_var = g_slotHighlightX);
@@ -1781,8 +1771,7 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
             *((u16*)((t0 - 0x28) + 0x0E)) = v0;
             a1 = (unsigned char*)((a2[0] * 0x10) + ((unsigned long)s0));
             a2_16 = inline_fn(a1 + 2);
-            v0 = ((((((*((u32*)(t2 - 2))) << 3) & 0x60) | ((a1[0x0C] & 3) << 7)) | ((a2_16 & 0x100) >> 4)) |
-                  ((inline_fn(a1) & 0x3FF) >> new_var3)) |
+            v0 = ((((((*((u32*)(t2 - 2))) << 3) & 0x60) | ((a1[0x0C] & 3) << 7)) | ((a2_16 & 0x100) >> 4)) | ((inline_fn(a1) & 0x3FF) >> new_var3)) |
                  ((a2_16 & 0x200) * 4);
             *((u16*)((t0 - 0x28) + 0x16)) = v0;
             ;
@@ -1832,8 +1821,7 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
             a2_16 = inline_fn(a1 + 2);
             new_var6 = (*((u32*)(t2 - 2))) << 3;
             ;
-            *((u32*)(t0 + 4)) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | (new_var6 & 0x60)) | ((a2_16 & 0x100) >> 4)) |
-                                  ((inline_fn(a1) & 0x3FF) >> 6)) |
+            *((u32*)(t0 + 4)) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | (new_var6 & 0x60)) | ((a2_16 & 0x100) >> 4)) | ((inline_fn(a1) & 0x3FF) >> 6)) |
                                  ((a2_16 & 0x200) * 4)) |
                                 0xE1000000;
             v1 = (*((u32*)t0)) & t8;
@@ -1939,8 +1927,7 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
                     a1 = s0 + (t2[0] * 0x10);
                     a2_16 = inline_fn(a1 + 2);
                     t9_16 = ((*((u32*)(t2 - 2))) << 3) & 0x60;
-                    *((u32*)a2) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | t9_16) | ((a2_16 & 0x100) >> 4)) |
-                                    (((s32)(a3_16 & 0x3FF)) >> 6)) |
+                    *((u32*)a2) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | t9_16) | ((a2_16 & 0x100) >> 4)) | (((s32)(a3_16 & 0x3FF)) >> 6)) |
                                    ((0, (a2_16 & 0x200) * 4))) |
                                   0xE1000000;
                     a2 += 8;
