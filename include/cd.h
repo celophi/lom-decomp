@@ -244,6 +244,7 @@ extern u8 D_801ED590;
 #define QUEUE_ITEM_CALLBACK(ptr) (*((CdCommandCallback*)(ptr) + 0x13))
 
 #define CD_INIT_STATE_ERROR_PAUSE 0x20
+#define VCD (*(volatile CdSystem*) 0x801ED800)
 
 // Prototypes
 
@@ -521,7 +522,7 @@ void cdrom_verify_recovery(void);
  *
  * @warning Runs in interrupt context; must not call blocking functions.
  *
- * @see decomp.me: (91.68%) https://decomp.me/scratch/F0oiy
+ * @see decomp.me: (94.06%) https://decomp.me/scratch/4W0j5
  */
 void cdrom_complete_command(u_char intr, u_char* result);
 
