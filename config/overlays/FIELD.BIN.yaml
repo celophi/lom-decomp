@@ -48,6 +48,8 @@ segments:
       - [0x4B0D, c, unk1]
       - [0xB5A9, c, func_8005b218]
       - [0xB5B9, c, unk1_b]
+      - [0xB619, c, func_8005b288]
+      - [0xB629, c, unk1_c]
       - [0x1861D, c, field4]
       - [0x1AC1D, c, unk2]
       - [0x7C2D5, data, data]
