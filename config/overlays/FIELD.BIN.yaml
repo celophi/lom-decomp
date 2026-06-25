@@ -48,18 +48,24 @@ segments:
       - [0x4B0D, c, unk1]
       - [0x9625, c, func_80059294] # gcc280_g4
       - [0x9645, c, unk1_e]
+      - [0xAEDD, c, func_8005ab4c] # gcc280_g4
+      - [0xAF11, c, unk1_e_tail]
       - [0xB57D, c, func_8005b1ec] # gcc280_g4
       - [0xB5B9, c, unk1_b]
       - [0xB619, c, func_8005b288] # gcc280_g4
       - [0xB629, c, unk1_c]
+      - [0x1462D, c, func_8006429c] # gcc280_g4
+      - [0x14665, c, unk1_c_b]
       - [0x17839, c, func_800674a8] # gcc280_g4
       - [0x17869, c, unk1_c_tail]
       - [0x17929, c, func_80067598] # gcc280_g4
       - [0x17959, c, unk1_c_tail2]
       - [0x17F1D, c, func_80067b8c] # gcc280_g4
       - [0x17F4D, c, unk1_c_tail3]
+      - [0x18245, c, func_80067eb4] # gcc280_g4
       - [0x18275, c, field5] # gcc280_g4
-      - [0x182B9, c, unk1_d]
+      - [0x182B9, c, func_80067f28] # gcc280_g4
+      - [0x182ED, c, func_80067f5c] # gcc280_g4
       - [0x1831D, c, func_80067f8c] # gcc280_g4
       - [0x18341, c, unk1_f]
       - [0x18551, c, func_800681c0] # gcc272_cdk
