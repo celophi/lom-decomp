@@ -42,21 +42,23 @@ segments:
     vram: 0x8004FC70
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x22B9, c, field1]
-      - [0x29B9, c, field2]
-      - [0x3C11, c, field3]
+      - [0x22B9, c, field1]       # gcc280_g4
+      - [0x29B9, c, field2]       # gcc280_g4
+      - [0x3C11, c, field3]       # CDK (default)
       - [0x4B0D, c, unk1]
-      - [0x9625, c, func_80059294]
+      - [0x9625, c, func_80059294] # gcc280_g4
       - [0x9645, c, unk1_e]
-      - [0xB5A9, c, func_8005b218]
+      - [0xB5A9, c, func_8005b218] # CDK (default)
       - [0xB5B9, c, unk1_b]
-      - [0xB619, c, func_8005b288]
+      - [0xB619, c, func_8005b288] # gcc280_g4
       - [0xB629, c, unk1_c]
-      - [0x1829D, c, func_80067f0c]
+      - [0x1829D, c, func_80067f0c] # gcc280_g4
       - [0x182B9, c, unk1_d]
-      - [0x1831D, c, func_80067f8c]
+      - [0x1831D, c, func_80067f8c] # gcc280_g4
       - [0x18341, c, unk1_f]
-      - [0x1861D, c, field4]
+      - [0x18551, c, func_800681c0] # gcc272_cdk
+      - [0x18575, c, unk1_g]
+      - [0x1861D, c, field4]      # CDK (default)
       - [0x1AC1D, c, unk2]
       - [0x7C2D5, data, data]
   - [0xD4368]
