@@ -50,6 +50,8 @@ segments:
       - [0xB5B9, c, unk1_b]
       - [0xB619, c, func_8005b288]
       - [0xB629, c, unk1_c]
+      - [0x1829D, c, func_80067f0c]
+      - [0x182B9, c, unk1_d]
       - [0x1861D, c, field4]
       - [0x1AC1D, c, unk2]
       - [0x7C2D5, data, data]
