@@ -46,6 +46,8 @@ segments:
       - [0x29B9, c, field2]
       - [0x3C11, c, field3]
       - [0x4B0D, c, unk1]
+      - [0x9625, c, func_80059294]
+      - [0x9645, c, unk1_e]
       - [0xB5A9, c, func_8005b218]
       - [0xB5B9, c, unk1_b]
       - [0xB619, c, func_8005b288]
