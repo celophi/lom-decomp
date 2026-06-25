@@ -748,7 +748,7 @@ void menu_cursor_up(void)
  *
  * @param ctx Active MenuContext render buffer.
  *
- * @see decomp.me (96.75%) https://decomp.me/scratch/qegw7
+ * @see decomp.me (100%) https://decomp.me/scratch/qegw7
  */
 void render_title_menu_items(void* ctx)
 {
@@ -761,6 +761,8 @@ void render_title_menu_items(void* ctx)
     u8* flag_ptr;
     s32 first_prim;
     s32 item_visible;
+    s32 result;
+    u8 anim;
 
     ot_head = (s32)(((u8*)ctx) + 0x40);
     first_prim = *((s32*)(((u8*)ctx) + 0x80B8));
@@ -783,9 +785,12 @@ void render_title_menu_items(void* ctx)
         slot++;
         flag_ptr += 2;
     } while (slot < 0x10);
-    *((s32*)(((u8*)ctx) + 0x80B8)) = emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
-                                                         (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
-    g_titleAnimFrame++;
+    result = (s32)emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
+                                      (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
+    
+    anim = g_titleAnimFrame;
+    *((s32*)(((u8*)ctx) + 0x80B8)) = result;
+    g_titleAnimFrame = anim + 1;
 }
 
 /**
