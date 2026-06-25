@@ -52,7 +52,7 @@ segments:
       - [0xB5B9, c, unk1_b]
       - [0xB619, c, func_8005b288] # gcc280_g4
       - [0xB629, c, unk1_c]
-      - [0x1829D, c, func_80067f0c] # gcc280_g4
+      - [0x18275, c, field5] # gcc280_g4
       - [0x182B9, c, unk1_d]
       - [0x1831D, c, func_80067f8c] # gcc280_g4
       - [0x18341, c, unk1_f]

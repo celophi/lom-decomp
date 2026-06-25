@@ -331,7 +331,7 @@ overlay_cload_gcc_srcs   := src/overlays/cload/unk1.c
 
 OVERLAYS += field
 overlay_field_gcc_srcs      := src/overlays/field/unk1.c src/overlays/field/unk2.c
-overlay_field_gcc_g4_srcs   := src/overlays/field/field1.c src/overlays/field/field2.c src/overlays/field/func_8005b288.c src/overlays/field/func_80067f0c.c src/overlays/field/func_80059294.c src/overlays/field/func_80067f8c.c
+overlay_field_gcc_g4_srcs   := src/overlays/field/field1.c src/overlays/field/field2.c src/overlays/field/func_8005b288.c src/overlays/field/field5.c src/overlays/field/func_80059294.c src/overlays/field/func_80067f8c.c
 
 OVERLAYS += gname
 

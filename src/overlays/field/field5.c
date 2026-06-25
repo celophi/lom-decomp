@@ -10,6 +10,17 @@ typedef struct {
 extern Struct_D_800F2268 D_800F2268;
 
 /**
+ * @brief Initialize D_800F2268 to (0xD0, 0x100, 0x100, 5).
+ * @see decomp.me (100%) TODO
+ */
+void func_80067EE4(void) {
+    D_800F2268.unk0 = 0xD0;
+    D_800F2268.unk2 = 0x100;
+    D_800F2268.unk4 = 0x100;
+    D_800F2268.unk6 = 5;
+}
+
+/**
  * @brief Write four s16 values into the four fields of D_800F2268.
  * @param arg0 Value for unk0.
  * @param arg1 Value for unk2.
