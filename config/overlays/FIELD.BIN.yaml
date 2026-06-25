@@ -48,6 +48,8 @@ segments:
       - [0x4B0D, c, unk1]
       - [0x9625, c, func_80059294] # gcc280_g4
       - [0x9645, c, unk1_e]
+      - [0xAEDD, c, func_8005ab4c] # gcc280_g4
+      - [0xAF11, c, unk1_e_tail]
       - [0xB57D, c, func_8005b1ec] # gcc280_g4
       - [0xB5B9, c, unk1_b]
       - [0xB619, c, func_8005b288] # gcc280_g4
