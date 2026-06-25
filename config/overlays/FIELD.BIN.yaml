@@ -48,7 +48,7 @@ segments:
       - [0x4B0D, c, unk1]
       - [0x9625, c, func_80059294] # gcc280_g4
       - [0x9645, c, unk1_e]
-      - [0xB5A9, c, func_8005b218] # CDK (default)
+      - [0xB57D, c, func_8005b1ec] # gcc280_g4
       - [0xB5B9, c, unk1_b]
       - [0xB619, c, func_8005b288] # gcc280_g4
       - [0xB629, c, unk1_c]
