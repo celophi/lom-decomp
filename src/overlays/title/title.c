@@ -748,7 +748,7 @@ void menu_cursor_up(void)
  *
  * @param ctx Active MenuContext render buffer.
  *
- * @see decomp.me (65.89%) https://decomp.me/scratch/K627m
+ * @see decomp.me (100%) https://decomp.me/scratch/qegw7
  */
 void render_title_menu_items(void* ctx)
 {
@@ -760,39 +760,37 @@ void render_title_menu_items(void* ctx)
     s32 item_x;
     u8* flag_ptr;
     s32 first_prim;
-    s32 clut_index;
-    s32 last_prim;
+    s32 item_visible;
+    s32 result;
+    u8 anim;
+
     ot_head = (s32)(((u8*)ctx) + 0x40);
+    first_prim = *((s32*)(((u8*)ctx) + 0x80B8));
+    prim = emit_menu_item_quad(ot_head, first_prim, 0, 0x64, 0xC8, 0, 0x80, 1);
     item_x = 0x88;
     item_y = 0xA0;
     visible_index = 0;
     slot = 0;
-    first_prim = *((s32*)(((u8*)ctx) + 0x80B8));
-    prim = emit_menu_item_quad(ot_head, first_prim, 0, 0x64, 0xC8, 0, 0x80, 1);
     flag_ptr = &g_titleMenuItemFlags[0];
     do
     {
-        if ((*flag_ptr) != 0)
+        item_visible = (*flag_ptr) != 0;
+        if (item_visible)
         {
-            if (g_titleVisibleItemRank == visible_index)
-            {
-                clut_index = 1;
-            }
-            else
-            {
-                clut_index = 2;
-            }
-            prim = emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, clut_index) + 0x28;
-            visible_index++;
+            prim = (s32)emit_menu_item_quad(ot_head, prim, slot + 1, item_x, item_y, 0, 0x80, (g_titleVisibleItemRank == visible_index) ? 1 : 2);
             item_y += 0xC;
+            visible_index++;
+            prim += 0x28;
         }
         slot++;
         flag_ptr += 2;
     } while (slot < 0x10);
-    last_prim = emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
-                                    (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
-    *((s32*)(((u8*)ctx) + 0x80B8)) = last_prim;
-    g_titleAnimFrame++;
+    result = (s32)emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
+                                      (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
+    
+    anim = g_titleAnimFrame;
+    *((s32*)(((u8*)ctx) + 0x80B8)) = result;
+    g_titleAnimFrame = anim + 1;
 }
 
 /**
