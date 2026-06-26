@@ -275,7 +275,7 @@ typedef struct CollNode
  *       seeded by the uninitialised reads, the denom1 division ordering, and
  *       the denom2 ty/max2 coloring); every source rearrangement tried so
  *       far - including decomp-permuter - regresses it.
- * @see decomp.me (98.85%) TODO
+ * @see decomp.me (98.85%) https://decomp.me/scratch/ElbpA
  */
 s16 func_8005B368(Query *q)
 {
