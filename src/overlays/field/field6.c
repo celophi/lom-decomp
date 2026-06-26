@@ -172,13 +172,13 @@ void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, voi
  * @return Pointer to the matching Node, or NULL if not found.
  *
  * @note Matches 100% with gcc280_g4 and gcc272_cdk.
- * @see decomp.me (100%) TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/FThyS
  */
 void* func_8005B31C(s32 arg0)
 {
     Node* node;
 
-    node = g_field_scene->head;
+    node = g_field_scene.scene->head;
     if (node != 0)
     {
         do
