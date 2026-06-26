@@ -1,10 +1,16 @@
 #include "common.h"
 
+typedef struct {
+    u8 _pad[0x2C];
+    s32 unk2C;
+    s32 unk30;
+} FieldState;
+
 typedef struct Node
 {
     struct Node *unk0;   /* 0x00 next pointer */
     u8 _pad[0x14];
-    s8 unk18;            /* 0x18 byte written by this function */
+    s8 unk18;            /* 0x18 byte written by func_8005B228 */
 } Node;
 
 typedef struct
@@ -20,8 +26,32 @@ typedef struct
     FieldScene *scene;
 } FieldSceneGlobals;
 
+extern unsigned int D_801ED02C;
 extern FieldSceneGlobals g_field_scene;
+extern volatile s32 D_801ED490;
+
 void func_8005F5BC(s32 arg0);
+
+/**
+ * @brief If D_801ED02C is zero, set it to 1 and write 0x100 to D_801ED030.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005B1EC(void) {
+    volatile FieldState *s = (volatile FieldState *)0x801ED000;
+    if (s->unk2C == 0) {
+        s->unk2C = 1;
+        s->unk30 = 0x100;
+    }
+}
+
+/**
+ * @brief Return non-zero if D_801ED02C is set.
+ * @return 1 if D_801ED02C != 0, 0 otherwise.
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8005B218(void) {
+    return D_801ED02C != 0;
+}
 
 /**
  * @brief Walk the field scene's node list @p arg0 steps and store @p arg1 at
@@ -61,4 +91,13 @@ void func_8005B228(s32 arg0, s8 arg1)
     {
         func_8005F5BC(0);
     }
+}
+
+/**
+ * @brief Set D_801ED490 to the given value.
+ * @param arg0 Value to store.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005B288(s32 arg0) {
+    D_801ED490 = arg0;
 }
