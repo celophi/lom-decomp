@@ -5,6 +5,7 @@ field_clear_node_accumulators         = 0x800520A0;
 field_init_with_fmv                   = 0x80052108;
 field_init_with_fmv_alloc             = 0x800521DC;
 field_load_map                        = 0x800522B4;
+field_apply_pixel_lookup              = 0x8005B298;
 field_select_object                   = 0x80052458;
 field_build_render_records            = 0x80052628;
 field_validate_and_rasterize_quads    = 0x80053880;

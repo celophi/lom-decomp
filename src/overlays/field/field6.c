@@ -28,6 +28,7 @@ typedef struct
 
 extern unsigned int D_801ED02C;
 extern FieldSceneGlobals g_field_scene;
+extern u8 D_800CBF44[];
 extern volatile s32 D_801ED490;
 
 void func_8005F5BC(s32 arg0);
@@ -100,4 +101,61 @@ void func_8005B228(s32 arg0, s8 arg1)
  */
 void func_8005B288(s32 arg0) {
     D_801ED490 = arg0;
+}
+
+/**
+ * @brief Apply a color-correction lookup to a range of 16-bit pixels.
+ *
+ * For each pixel in @p pixels[0..pixel_count-1], extracts the maximum of the
+ * three 5-bit color components (B: bits 0-4, G: bits 5-9, R: bits 10-14),
+ * uses that maximum as an index into a 64-entry lookup table selected by
+ * @p table_index, adds the looked-up value to the STP bit (bit 15) of the
+ * original pixel, and writes the result back.
+ *
+ * @param pixels      Pointer to an array of 16-bit pixel values.
+ * @param pixel_count Number of pixels to process (0 = no-op).
+ * @param table_index Lookup-table selector; table is D_800CBF44[table_index * 64 ..].
+ * @param unused      Unused (FieldObject* in caller).
+ *
+ * @note Called by field_load_map with pixel_count = object->unk2A and
+ *       table_index = D_801ED490 - 1.
+ * @note Matches 100% with gcc280_g4 and gcc272_cdk.
+ * @see decomp.me (100%) TODO
+ */
+void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, void* unused)
+{
+    u16* ptr;
+    s32 count;
+    u16 pixel;
+    u32 b;
+    u32 g;
+    u32 r;
+    u32 max_component;
+    u32 table_base;
+
+    ptr = pixels;
+    count = pixel_count - 1;
+    table_base = (u32)&D_800CBF44[table_index * 64];
+    if (pixel_count != 0)
+    {
+        do
+        {
+            pixel = *ptr;
+            max_component = pixel & 0x1F;
+            g = (pixel >> 5) & 0x1F;
+            if (max_component < g)
+            {
+                max_component = g;
+            }
+            r = (pixel >> 10) & 0x1F;
+            if (max_component < r)
+            {
+                max_component = r;
+            }
+            count -= 1;
+            *ptr = *(u16*)(table_base + max_component * 2) + (pixel & 0x8000);
+            ptr += 1;
+        }
+        while (count != -1);
+    }
 }

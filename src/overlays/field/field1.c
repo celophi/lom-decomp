@@ -41,7 +41,7 @@ typedef struct
     u8 _pad1[0x26 - 8];
     u16 flag26; /**< 0x26 cleared at the start of each map load (field_load_map) */
     u16 unk28;  /**< 0x28 hi byte = texture height, lo byte = CLUT width */
-    u16 unk2A;  /**< 0x2A passed to func_8005B298 */
+    u16 unk2A;  /**< 0x2A passed to field_apply_pixel_lookup */
     u8 unk2C;   /**< 0x2C bit0 = has explicit color, bit1 -> RegStruct.unk4 */
     u8 unk2D;   /**< 0x2D background red   */
     u8 unk2E;   /**< 0x2E background green */
@@ -282,7 +282,7 @@ void field_init_with_fmv_alloc(void)
  * Reads map resource (0xB4 + @p arg0) into 0x80180000, uploads its texture
  * pages to VRAM via LoadImage, clears flag26 on every object in g_field_objects,
  * and (when D_801ED490 is set) registers each distinct object through
- * func_8005B298.
+ * field_apply_pixel_lookup.
  *
  * @param arg0 Map id; values below 15 use a blocking CD read, others stream.
  * @see decomp.me (97.33%) https://decomp.me/scratch/V1GlO
@@ -375,7 +375,7 @@ void field_load_map(s32 arg0)
                     var_s1_2 += 1;
 
                     *var_a1 = temp_a0_2;
-                    func_8005B298(temp_a0_2, temp_a3->unk2A, D_801ED490 - 1, temp_a3);
+                    field_apply_pixel_lookup(temp_a0_2, temp_a3->unk2A, D_801ED490 - 1, temp_a3);
                 }
                 var_s0_2 += 1;
                 var_a1 = &sp[4];
