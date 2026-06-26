@@ -41,7 +41,7 @@ typedef struct
     u8 _pad1[0x26 - 8];
     u16 flag26; /**< 0x26 cleared at the start of each map load (field_load_map) */
     u16 unk28;  /**< 0x28 hi byte = texture height, lo byte = CLUT width */
-    u16 unk2A;  /**< 0x2A passed to func_8005B298 */
+    u16 unk2A;  /**< 0x2A pixel count passed to field_apply_pixel_lookup */
     u8 unk2C;   /**< 0x2C bit0 = has explicit color, bit1 -> RegStruct.unk4 */
     u8 unk2D;   /**< 0x2D background red   */
     u8 unk2E;   /**< 0x2E background green */
@@ -282,7 +282,7 @@ void field_init_with_fmv_alloc(void)
  * Reads map resource (0xB4 + @p arg0) into 0x80180000, uploads its texture
  * pages to VRAM via LoadImage, clears flag26 on every object in g_field_objects,
  * and (when D_801ED490 is set) registers each distinct object through
- * func_8005B298.
+ * field_apply_pixel_lookup.
  *
  * @param arg0 Map id; values below 15 use a blocking CD read, others stream.
  * @see decomp.me (97.33%) https://decomp.me/scratch/V1GlO
@@ -290,15 +290,15 @@ void field_init_with_fmv_alloc(void)
 void field_load_map(s32 arg0)
 {
     u16 sp[24];
-    s32 var_s1_2;
-    s32 var_v1_2;
-    s32* var_a1;
+    s32 seen_count;
+    s32 remaining;
+    s32* seen;
     s32 var_s0;
     u32 var_s1;
-    FieldObject* temp_a3;
+    FieldObject* obj;
     FieldObject* var_v0;
-    s32 temp_a0_2;
-    FieldObject** var_s0_2;
+    s32 vram_addr;
+    FieldObject** obj_iter;
     u16 map_id;
     DrawSync(0);
     map_id = arg0;
@@ -326,45 +326,45 @@ void field_load_map(s32 arg0)
     }
 
     DrawSync(0);
-    var_s0_2 = g_field_objects;
-    var_v0 = *var_s0_2;
+    obj_iter = g_field_objects;
+    var_v0 = *obj_iter;
     if (var_v0 != 0)
     {
-        var_s0_2++;
+        obj_iter++;
         do
         {
             var_v0->flag26 = 0;
-            var_v0 = *var_s0_2;
-            var_s0_2++;
+            var_v0 = *obj_iter;
+            obj_iter++;
         } while (var_v0 != 0);
     }
     if (D_801ED490 != 0)
     {
-        var_s0_2 = g_field_objects;
-        var_s1_2 = 0;
-        if ((*var_s0_2) != 0)
+        obj_iter = g_field_objects;
+        seen_count = 0;
+        if ((*obj_iter) != 0)
         {
-            var_a1 = &sp[4];
+            seen = &sp[4];
             do
             {
-                temp_a3 = *var_s0_2;
-                temp_a0_2 = temp_a3->unk4;
-                var_v1_2 = var_s1_2;
-                if (var_s1_2 != 0)
+                obj = *obj_iter;
+                vram_addr = obj->unk4;
+                remaining = seen_count;
+                if (seen_count != 0)
                 {
                 loop_13:
-                    if ((*var_a1) != temp_a0_2)
+                    if ((*seen) != vram_addr)
                     {
-                        var_v1_2 -= 1;
+                        remaining -= 1;
                         var_s1 = (u32)g_field_scene.scene;
-                        var_a1 += 1;
-                        if (var_v1_2 != 0)
+                        seen += 1;
+                        if (remaining != 0)
                         {
                             goto loop_13;
                         }
                     }
 
-                    if (var_v1_2 == 0)
+                    if (remaining == 0)
                     {
                         goto block_16;
                     }
@@ -372,14 +372,14 @@ void field_load_map(s32 arg0)
                 else
                 {
                 block_16:
-                    var_s1_2 += 1;
+                    seen_count += 1;
 
-                    *var_a1 = temp_a0_2;
-                    func_8005B298(temp_a0_2, temp_a3->unk2A, D_801ED490 - 1, temp_a3);
+                    *seen = vram_addr;
+                    field_apply_pixel_lookup(vram_addr, obj->unk2A, D_801ED490 - 1, obj);
                 }
-                var_s0_2 += 1;
-                var_a1 = &sp[4];
-            } while ((*var_s0_2) != 0);
+                obj_iter += 1;
+                seen = &sp[4];
+            } while ((*obj_iter) != 0);
         }
     }
 }
