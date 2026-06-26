@@ -5,7 +5,7 @@
 #   tools/permuter-scripts/permute-setup.sh <c_file> <asm_file> <func_name> [options]
 #
 # Options:
-#   --toolchain  gcc280 | gcc280-g4 | cdk | gcc260 | gnuas  (default: gcc280)
+#   --toolchain  gcc280 | gcc280-g4 | gcc280-g4-noexpanddiv | cdk | gcc260 | gnuas  (default: gcc280)
 #   --out-dir    output directory                            (default: /permute/<func_name>)
 #
 # Examples:
@@ -63,6 +63,14 @@ case "$TOOLCHAIN" in
         AS_CMD="bash tools/permuter-scripts/maspsx_asm.sh --run-assembler -Iinclude -Iinclude/psyq -no-pad-sections --aspsx-version=2.77 --expand-div"
         COMPILER_TYPE="gcc"
         ;;
+    gcc280-g4-noexpanddiv)
+        # Same as gcc280-g4 but WITHOUT --expand-div: some -G4 objects use bare
+        # `div $zero,...` with no div-by-zero / overflow break checks.
+        CC_CMD="/opt/psx-gcc-2.8.0/gcc -B/opt/psx-gcc-2.8.0/ -O2 -G4 -gcoff -fsigned-char -Iinclude -Iinclude/psyq -S -o -"
+        AS_PIPE="python3 tools/maspsx/maspsx.py --run-assembler -Iinclude -Iinclude/psyq -no-pad-sections --aspsx-version=2.77"
+        AS_CMD="bash tools/permuter-scripts/maspsx_asm.sh --run-assembler -Iinclude -Iinclude/psyq -no-pad-sections --aspsx-version=2.77"
+        COMPILER_TYPE="gcc"
+        ;;
     cdk)
         CC_CMD="/opt/psx-gcc-2.7.2-cdk/gcc -B/opt/psx-gcc-2.7.2-cdk/ -O2 -G0 -msoft-float -gcoff -Iinclude -Iinclude/psyq -S -o -"
         AS_PIPE="python3 tools/maspsx/maspsx.py --run-assembler -Iinclude -Iinclude/psyq -no-pad-sections --aspsx-version=2.67 --expand-div"
@@ -83,7 +91,7 @@ case "$TOOLCHAIN" in
         ;;
     *)
         echo "ERROR: unknown toolchain '$TOOLCHAIN'" >&2
-        echo "       valid options: gcc280 gcc280-g4 cdk gcc260 gnuas" >&2
+        echo "       valid options: gcc280 gcc280-g4 gcc280-g4-noexpanddiv cdk gcc260 gnuas" >&2
         exit 1
         ;;
 esac

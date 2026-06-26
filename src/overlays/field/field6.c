@@ -14,13 +14,17 @@ typedef struct Node
     s8 unk18;            /* 0x18 byte written by func_8005B228 */
 } Node;
 
+struct CollNode;
+
 typedef struct
 {
-    u8 _pad0[4];         /* 0x00-0x03 */
-    Node *head;           /* 0x04 head of list searched by func_8005B31C */
-    Node *unk8;           /* 0x08 head of the node list */
-    u8 _pad1[0x28 - 0xC]; /* 0x0C-0x27 */
-    s32 unk28;            /* 0x28 flag gating the func_8005F5BC call */
+    u8 _pad0[4];           /* 0x00-0x03 */
+    Node *head;             /* 0x04 head of list searched by func_8005B31C */
+    Node *unk8;             /* 0x08 head of the node list */
+    u8 _pad1[0x10 - 0xC];   /* 0x0C-0x0F */
+    struct CollNode *coll_list; /* 0x10 collision-node list traversed by func_8005B368 */
+    u8 _pad2[0x28 - 0x14];  /* 0x14-0x27 */
+    s32 unk28;              /* 0x28 flag gating the func_8005F5BC call */
 } FieldScene;
 
 typedef struct
@@ -192,4 +196,237 @@ void* func_8005B31C(s32 arg0)
         while (node != 0);
     }
     return 0;
+}
+
+/**
+ * @brief Probe position and footprint passed to func_8005B368.
+ *
+ * Carries the world-space probe position (x, y, z) plus the footprint
+ * extents (unkC = width along x, unk10 = depth along z) and a height
+ * tolerance (unkE).
+ */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 z;
+    u16 unkC;
+    s16 unkE;
+    u16 unk10;
+} Query;
+
+/**
+ * @brief Collision object referenced by a CollNode.
+ * @note unk10/unk12 are the vertical band the object occupies; unk14 is the
+ *       value returned to the caller on a successful hit.
+ */
+typedef struct
+{
+    u8 pad[0x10];
+    s16 unk10;
+    s16 unk12;
+    s16 unk14;
+} Object;
+
+/**
+ * @brief One entry in the field scene's collision-node list (scene+0x10).
+ *
+ * @note right/left/bottom/top form the node's axis-aligned bounding box.
+ *       Each of the two (denom, mult, max, min) groups describes a sloped
+ *       edge: when denom != 0 the edge is diagonal and the probe is tested
+ *       against mult*coord/denom; when denom == 0 the edge is axis-aligned
+ *       and only max/min are used.
+ */
+typedef struct CollNode
+{
+    struct CollNode *next;
+    Object *obj;
+    u8 pad[8];
+    s16 right;
+    s16 left;
+    s16 bottom;
+    s16 top;
+    s32 denom1;
+    s32 mult1;
+    s32 denom2;
+    s32 mult2;
+    s32 max1;
+    s32 min1;
+    s32 max2;
+    s32 min2;
+} CollNode;
+
+/**
+ * @brief Hit-test a probe against the field scene's collision-node list.
+ *
+ * Converts the query position from world units to grid cells (signed divide
+ * by 256, i.e. a >> 8 with a round-toward-zero bias for negatives) and
+ * centres the footprint by subtracting half the extent. Each node is
+ * rejected by its bounding box first; survivors are tested against the
+ * node's two sloped/axis-aligned edges. The first node that passes returns
+ * its object's unk14.
+ *
+ * @param q Probe query (position, footprint extents, height tolerance).
+ * @return obj->unk14 of the first node hit, or -1 if nothing is hit.
+ *
+ * @note Matches 98.85% under gcc280_g4 (no expand-div) and is functionally
+ *       faithful to the target. The residual diff is register-allocation
+ *       noise in three tightly-coupled clusters (the start-x/start-z setup
+ *       seeded by the uninitialised reads, the denom1 division ordering, and
+ *       the denom2 ty/max2 coloring); every source rearrangement tried so
+ *       far - including decomp-permuter - regresses it.
+ * @see decomp.me (98.85%) TODO
+ */
+s16 func_8005B368(Query *q)
+{
+    s32 sx;
+    s32 ex;
+    unsigned long new_var;
+    Query *q_dup;
+    s32 sz;
+    FieldScene *scene;
+    s32 ez;
+    s32 sy;
+    s32 half_x;
+    s32 start_z;
+    s32 half_z;
+    s32 temp;
+    CollNode *node;
+    s32 hit;
+
+    /* half_x = (s16)unkC / 2: sign-extend, add the sign bit, then arithmetic
+     * shift right by one. The two-step (ez then >>1) and the redundant q_dup
+     * copy are kept verbatim because they are required to match. */
+    temp = q->unkC;
+    half_x = ((s16) temp) + (((u32) (temp << 16)) >> 31);
+    q_dup = q;
+    scene = g_field_scene.scene;
+    ez = half_x;
+    half_x = ((s32) ez) >> 1;
+
+    /* sx reads q->x: the explicit "sx = q->x" load is omitted so the compiler
+     * keeps q->x in sx's register (an m2c artifact, but required to match).
+     * The +0xFF before >>8 biases negative values toward zero (signed /256). */
+    if (q->x < 0)
+    {
+        sx += 0xFF;
+    }
+    sx = (sx >> 8) - half_x;
+    temp = q_dup->unk10;
+    ex = sx + ((s16) q->unkC);
+    half_z = ((s32) (((s16) temp) + (((u32) (temp << 16)) >> 31))) >> 1;
+
+    /* sz reads q->z (same omitted-load artifact as sx). The "^ 0" is a no-op
+     * kept to match. */
+    if (q->z >= 0)
+    {
+        sz = (sz ^ 0) >> 8;
+    }
+    else
+    {
+        sz = (sz + 0xFF) >> 8;
+    }
+    sz -= half_z;
+    start_z = sz;
+    ez = start_z + ((s16) q->unk10);
+    if (q->y >= 0)
+    {
+        sy = sy >> 8;
+    }
+    else
+    {
+        sy = (sy + 0xFF) >> 8;
+    }
+
+    for (node = scene->coll_list; node != 0; node = node->next)
+    {
+        Object *obj;
+        s16 val;
+        obj = node->obj;
+        val = obj->unk10;
+
+        /* Reject by vertical band and bounding box. */
+        if ((sy - q->unkE) >= val)
+        {
+            continue;
+        }
+        if ((obj->unk12 != 1) && ((val + obj->unk12) >= sy))
+        {
+            continue;
+        }
+        if (node->top >= ez)
+        {
+            continue;
+        }
+        if (start_z >= node->bottom)
+        {
+            continue;
+        }
+        if (node->left >= ex)
+        {
+            continue;
+        }
+        if (sx >= node->right)
+        {
+            continue;
+        }
+
+        hit = 0;
+        if (node->denom1 != 0)
+        {
+            s32 tx;
+            s32 ty;
+            new_var = (node->mult1 * ex) / node->denom1;
+            tx = (node->mult1 * sx) / node->denom1;
+            ty = new_var;
+            if (((((start_z - tx) >= node->max1) || ((ez - tx) >= node->max1)) || ((start_z - ty) >= node->max1)) || ((ez - ty) >= node->max1))
+            {
+                if ((((node->min1 >= (start_z - tx)) || (node->min1 >= (ez - tx))) || (node->min1 >= (start_z - ty))) || (node->min1 >= (ez - ty)))
+                {
+                    hit = 1;
+                }
+            }
+        }
+        else
+            if (ex >= node->max1)
+        {
+            if (node->min1 >= (sx ^ 0))
+            {
+                hit = 1;
+            }
+        }
+
+        if (hit)
+        {
+            if (node->denom2 != 0)
+            {
+                s32 tx;
+                s32 ty;
+                tx = (node->mult2 * sx) / node->denom2;
+                ty = (node->mult2 * ex) / node->denom2;
+                /* half_x is reused here as a scratch for ty; required to match. */
+                half_x = ty;
+                if (((((start_z - tx) >= node->max2) || ((ez - tx) >= node->max2)) || ((start_z - half_x) >= node->max2)) || ((ez - half_x) >= node->max2))
+                {
+                    if ((((node->min2 < (start_z - tx)) && (node->min2 < (ez - tx))) && (node->min2 < (start_z - half_x))) && (node->min2 < (ez - half_x)))
+                    {
+                    }
+                    else
+                    {
+                        return obj->unk14;
+                    }
+                }
+            }
+            else
+                if (ex >= node->max2)
+            {
+                if (node->min2 >= sx)
+                {
+                    return obj->unk14;
+                }
+            }
+        }
+    }
+
+    return -1;
 }
