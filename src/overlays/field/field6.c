@@ -9,16 +9,18 @@ typedef struct {
 typedef struct Node
 {
     struct Node *unk0;   /* 0x00 next pointer */
-    u8 _pad[0x14];
+    s32 key;             /* 0x04 compared by func_8005B31C */
+    u8 _pad[0x10];       /* 0x08-0x17 */
     s8 unk18;            /* 0x18 byte written by func_8005B228 */
 } Node;
 
 typedef struct
 {
-    u8 _pad0[8];
-    Node *unk8;          /* 0x08 head of the node list */
-    u8 _pad1[0x28 - 0xC];
-    s32 unk28;           /* 0x28 flag gating the func_8005F5BC call */
+    u8 _pad0[4];         /* 0x00-0x03 */
+    Node *head;           /* 0x04 head of list searched by func_8005B31C */
+    Node *unk8;           /* 0x08 head of the node list */
+    u8 _pad1[0x28 - 0xC]; /* 0x0C-0x27 */
+    s32 unk28;            /* 0x28 flag gating the func_8005F5BC call */
 } FieldScene;
 
 typedef struct
@@ -158,4 +160,36 @@ void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, voi
         }
         while (count != -1);
     }
+}
+
+/**
+ * @brief Find a node in the field scene's linked list by key.
+ *
+ * Walks the linked list starting at g_field_scene->head, returning the first
+ * node whose key field matches @p arg0.
+ *
+ * @param arg0 Key to search for (compared against node->key at offset 0x4).
+ * @return Pointer to the matching Node, or NULL if not found.
+ *
+ * @note Matches 100% with gcc280_g4 and gcc272_cdk.
+ * @see decomp.me (100%) TODO
+ */
+void* func_8005B31C(s32 arg0)
+{
+    Node* node;
+
+    node = g_field_scene->head;
+    if (node != 0)
+    {
+        do
+        {
+            if (arg0 == node->key)
+            {
+                return node;
+            }
+            node = node->unk0;
+        }
+        while (node != 0);
+    }
+    return 0;
 }
