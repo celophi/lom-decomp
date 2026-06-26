@@ -97,6 +97,10 @@ INCLUDE_FLAGS   := -Iinclude -Iinclude/psyq
 
 MASPSX_AS       	:= python3 tools/maspsx/maspsx.py --run-assembler
 MASPSX_AS_FLAGS 	:= -no-pad-sections --aspsx-version=2.77 --expand-div
+# GCC 2.8.0 -G4 builds omit --expand-div: the original objects use bare
+# `div $zero,...` with no div-by-zero / overflow break checks, so expanding
+# the compiler's `div $reg,...` form would add breaks the target lacks.
+MASPSX_AS_FLAGS_G4  := -no-pad-sections --aspsx-version=2.77
 MASPSX_AS_FLAGS_CDK := -no-pad-sections --aspsx-version=2.67 --expand-div
 MASPSX_PP       	:= python3 tools/maspsx/maspsx.py
 MASPSX_PP_FLAGS 	:= --macro-inc
@@ -458,7 +462,7 @@ $(OBJS_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 $(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_G4) -o build/$(SRC_DIR)/$*.o
 
 # ── C files compiled with CDK GCC 2.7.2 + maspsx -G0 (checkps overlay) ──
 $(OBJS_CDK_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
@@ -643,7 +647,7 @@ $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_S
 $$($(1)_GCC_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_G4) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with PSX GNU GCC 2.7.2 + its own assembler (no maspsx)
 $$($(1)_GNU_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
