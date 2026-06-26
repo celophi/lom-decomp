@@ -97,6 +97,14 @@ INCLUDE_FLAGS   := -Iinclude -Iinclude/psyq
 
 MASPSX_AS       	:= python3 tools/maspsx/maspsx.py --run-assembler
 MASPSX_AS_FLAGS 	:= -no-pad-sections --aspsx-version=2.77 --expand-div
+# GCC 2.8.0 -G4: whether maspsx expands `div $reg,...` into the div-by-zero /
+# overflow break-check sequence is per-file. Most G4 objects (cdrom.c,
+# decomp2/4/6.c) need --expand-div; some (e.g. the field overlay) have bare
+# `div $zero,...` with no checks and must omit it. MASPSX_DIV_FLAG_G4 defaults
+# to --expand-div and is overridden to empty per-object for the exceptions via
+# a target-specific variable (see SRCS_G4_NOEXPAND / *_gcc_g4_noexpand_srcs).
+MASPSX_DIV_FLAG_G4  := --expand-div
+MASPSX_AS_FLAGS_G4   = -no-pad-sections --aspsx-version=2.77 $(MASPSX_DIV_FLAG_G4)
 MASPSX_AS_FLAGS_CDK := -no-pad-sections --aspsx-version=2.67 --expand-div
 MASPSX_PP       	:= python3 tools/maspsx/maspsx.py
 MASPSX_PP_FLAGS 	:= --macro-inc
@@ -261,7 +269,12 @@ SRCS_G4 := \
 	src/decomp2.c \
 	src/decomp4.c \
 	src/akao_driver.c \
-	src/decomp6.c 
+	src/decomp6.c
+
+# Subset of SRCS_G4 (or any G4 object) whose original code uses bare
+# `div $zero,...` and must be assembled WITHOUT --expand-div. List the .c here
+# in addition to SRCS_G4; their objects get MASPSX_DIV_FLAG_G4 cleared below.
+SRCS_G4_NOEXPAND :=
 
 SRCS_CDK_G0 := \
 	src/overlays/checkps/code.c \
@@ -285,6 +298,9 @@ ASM_SRCS := \
 
 OBJS_G0  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G0))
 OBJS_G4  			:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4))
+OBJS_G4_NOEXPAND	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_G4_NOEXPAND))
+# Clear the div-expansion flag for the no-expand subset (target-specific var).
+$(OBJS_G4_NOEXPAND): MASPSX_DIV_FLAG_G4 :=
 OBJS_CDK_G0 		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_CDK_G0))
 OBJS_GCC_260_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_GCC_260_G0))	
 OBJS_ASM 			:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
@@ -331,7 +347,7 @@ overlay_cload_gcc_srcs   := src/overlays/cload/unk1.c
 
 OVERLAYS += field
 overlay_field_gcc_srcs      := src/overlays/field/unk1.c src/overlays/field/unk2.c
-overlay_field_gcc_g4_srcs   := src/overlays/field/field1.c src/overlays/field/field2.c src/overlays/field/field6.c src/overlays/field/field5.c src/overlays/field/func_80059294.c src/overlays/field/func_800591C4.c src/overlays/field/func_800674a8.c src/overlays/field/func_80067598.c src/overlays/field/func_80067b8c.c src/overlays/field/func_8005ab4c.c src/overlays/field/func_8006429c.c
+overlay_field_gcc_g4_noexpand_srcs := src/overlays/field/field1.c src/overlays/field/field2.c src/overlays/field/field6.c src/overlays/field/field5.c src/overlays/field/func_80059294.c src/overlays/field/func_800591C4.c src/overlays/field/func_800674a8.c src/overlays/field/func_80067598.c src/overlays/field/func_80067b8c.c src/overlays/field/func_8005ab4c.c src/overlays/field/func_8006429c.c
 
 OVERLAYS += gname
 
@@ -458,7 +474,7 @@ $(OBJS_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 $(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_G4) -o build/$(SRC_DIR)/$*.o
 
 # ── C files compiled with CDK GCC 2.7.2 + maspsx -G0 (checkps overlay) ──
 $(OBJS_CDK_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
@@ -615,11 +631,18 @@ $(1)_TARGET    := $(STAGING)/$$($(1)_BUILD_DIR)/$(1).elf
 $(1)_C_SRCS      := $$(wildcard $$($(1)_SRC_DIR)/*.c)
 $(1)_GCC_SRCS    := $$(overlay_$(1)_gcc_srcs)
 $(1)_GNU_SRCS    := $$(overlay_$(1)_gnu_srcs)
-$(1)_GCC_G4_SRCS := $$(overlay_$(1)_gcc_g4_srcs)
+# G4 sources: the normal (--expand-div) set plus the no-expand subset. Files in
+# overlay_<name>_gcc_g4_noexpand_srcs build -G4 but WITHOUT --expand-div (bare
+# `div $zero,...`); list them only there, not in overlay_<name>_gcc_g4_srcs.
+$(1)_GCC_G4_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_g4_noexpand_srcs)
+$(1)_GCC_G4_SRCS := $$(overlay_$(1)_gcc_g4_srcs) $$($(1)_GCC_G4_NOEXPAND_SRCS)
 $(1)_CDK_SRCS    := $$(filter-out $$($(1)_GCC_SRCS) $$($(1)_GNU_SRCS) $$($(1)_GCC_G4_SRCS),$$($(1)_C_SRCS))
 $(1)_GCC_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_SRCS))
 $(1)_GNU_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GNU_SRCS))
 $(1)_GCC_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_G4_SRCS))
+$(1)_GCC_G4_NOEXPAND_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_G4_NOEXPAND_SRCS))
+# Clear the div-expansion flag for the no-expand subset (target-specific var).
+$$($(1)_GCC_G4_NOEXPAND_OBJS): MASPSX_DIV_FLAG_G4 :=
 $(1)_CDK_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CDK_SRCS))
 $(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS) $$($(1)_GNU_OBJS) $$($(1)_GCC_G4_OBJS)
 
@@ -643,7 +666,7 @@ $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_S
 $$($(1)_GCC_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) -no-pad-sections --aspsx-version=2.77 $$(MASPSX_DIV_FLAG_G4) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with PSX GNU GCC 2.7.2 + its own assembler (no maspsx)
 $$($(1)_GNU_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
