@@ -12,7 +12,7 @@ extern u32 g_previousGameState;
 extern u32 g_overlayLoadAddress;
 extern u32 g_gameDataBasePtr;
 
-extern u8* D_800351A0;
+extern u8 D_800351A0[];
 extern u32 D_8003EC88;
 extern s32 D_8003EC8C;
 extern u16 D_8003EC90;
@@ -133,13 +133,13 @@ typedef struct
 
 void __main(void);
 void _bu_init(void);
-s32 func_80015C48(void);
-u32 func_8004FC74(void);
+u32 *func_80015C48(void);
 u32 func_8004FC8C(u32);
 void field_scene_reset(u32);
 void func_800A3534(void);
 u32 run_overlay(u32, u32, u32, s32, s32, u32, s32);
 s32 func_801400C4(void);
 void srand(u_int param_1);
+s32 func_8004FC74(s32);
 
 #endif
