@@ -320,7 +320,7 @@ extern s32 D_800F22C4;
 extern s32 D_800F2284;
 extern s32 D_800F22B4;
 extern s32 D_8012291C;
-extern s32 D_8003EC98;
+extern s32 g_field_audio_timer;
 extern s32 D_80105788;
 extern s32 D_8011588C;
 extern Struct_D_800F2268 D_800F2268;
@@ -426,10 +426,10 @@ void func_80068440(void)
 {
     s32 temp_v0;
 
-    if (D_8003EC98 != 0)
+    if (g_field_audio_timer != 0)
     {
-        temp_v0 = D_8003EC98 - 1;
-        D_8003EC98 = temp_v0;
+        temp_v0 = g_field_audio_timer - 1;
+        g_field_audio_timer = temp_v0;
         if (temp_v0 == 0)
         {
             FUN_8001160c();

@@ -134,7 +134,7 @@ extern s32 func_800A39A8(s32, s32, s32, s32); /* one-shot SFX/voice playback */
  */
 extern s32 g_akao_music_volume;
 
-extern u32 D_8003EC90;
+extern u32 g_scene_mode;
 extern s32 D_8010D018;
 extern AudioDataBlock g_audioData;
 extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
@@ -415,7 +415,7 @@ static void gover_run(void)
     akao_cmd_f0();
     akao_cmd_f1();
     SetDispMask(0);
-    D_8003EC90 = 0;
+    g_scene_mode = 0;
     func_800AA02C();
     D_8010D018 = 1;
 }

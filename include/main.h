@@ -12,16 +12,23 @@ extern u32 g_previousGameState;
 extern u32 g_overlayLoadAddress;
 extern u32 g_gameDataBasePtr;
 
-extern u8 D_800351A0[];
-extern u32 D_8003EC88;
-extern s32 D_8003EC8C;
-extern u16 D_8003EC90;
-extern s32 D_8003EC94;
-extern s32 D_8003EC98;
-extern s32 D_8003EC9C;
-extern s32 D_80042FC4;
-extern s32 D_80042FCC;
-extern s32 D_80042FD0;
+/** @brief Table of music/song resource IDs indexed by g_music_track_index. */
+extern u8 g_music_track_table[];
+extern u32 D_8003EC88;              /**< TODO: unknown; read by func_8009AFE0, never written in C */
+extern s32 D_8003EC8C;              /**< TODO: unknown; one-time init to 0xB */
+/** @brief Current scene/mode identifier (0, 0xD for default menu template). */
+extern u16 g_scene_mode;
+/** @brief Option/parameter word from MenuLayout; -1 = unset. */
+extern s32 g_layout_option;
+/** @brief Countdown timer for delayed music/SFX trigger on field entry. */
+extern s32 g_field_audio_timer;
+/** @brief Selected save slot index (7 = init, 0xFF = no save selected). */
+extern s32 g_save_slot_index;
+/** @brief Menu layout configuration flag byte (from MenuLayout.layout_flags). */
+extern s32 g_layout_flag;
+/** @brief Field-entry behavior flag (from MenuLayout.field_flags). Cleared in field-entry states. */
+extern s32 g_field_entry_flag;
+extern s32 D_80042FD0;              /**< TODO: unknown; one-time init to 0x13, sits at g_menuLayoutBuffer - 8 */
 /**
  * @brief Working buffer for the active menu/save layout (main executable .bss).
  *
@@ -29,16 +36,24 @@ extern s32 D_80042FD0;
  * layout table into this buffer; load_sub_menu_layout overwrites a 0x94-word
  * sub-region whose base is the separately-named g_gameDataBasePtr (offset
  * 0x5F0 within this same buffer). Fields accessed so far by the title overlay:
- *   +0x0D4  s16  composed random value (seed) written from rand()
- *   +0x2E0  s32  mode flags; bit 0 = "continue mode"
- *   +0x608  s32  slot flags (low 7 bits cleared, bit 0 set for continue)
+ *   +0x0D4  s16  rng_seed - composed random value (seed) written from rand()
+ *   +0x2E0  s32  mode_flags - bit 0 = "continue mode"
+ *   +0x608  s32  slot_flags - low 7 bits cleared, bit 0 set for continue
+ *
+ * Companion globals shadow several MenuLayout fields for use by the main loop
+ * and field overlay: g_scene_mode, g_layout_option, g_field_audio_timer,
+ * g_save_slot_index, g_layout_flag, g_field_entry_flag, g_layout_sub_mode,
+ * g_music_track_index.
  *
  * @note Kept as @c u8[] so existing byte-granular pointer arithmetic compiles
  *       to unchanged codegen; cast to @c MenuLayout* per converted call site.
  */
 extern u8 g_menuLayoutBuffer[];
-extern s32 D_80046FD8;
-extern u16 D_80046FDE;
+/** @brief Signed sub-mode byte from MenuLayout.sub_mode; -1 = unset. */
+extern s32 g_layout_sub_mode;
+/** @brief Index into g_music_track_table[] selecting the current music track. */
+extern u16 g_music_track_index;
+/** @brief TODO: unknown; one-time init to 0. */
 extern s32 D_800473E0;
 
 /*
@@ -113,16 +128,16 @@ typedef struct
 {
     u8  _unk000[0x18];          /**< 0x000: not yet mapped. */
     s32 unk018;                 /**< 0x018: main.c masks 0xFE000000 and ORs in 6. */
-    s16 unk01C;                 /**< 0x01C: copied to companion global D_8003EC94. */
-    s8  unk01E;                 /**< 0x01E: copied to companion global D_80046FD8. */
+    s16 option_id;                 /**< 0x01C: copied to companion global g_layout_option. */
+    s8  sub_mode;                 /**< 0x01E: copied to companion global g_layout_sub_mode. */
     u8  unk01F;                 /**< 0x01F: not yet mapped. */
-    u32 unk020;                 /**< 0x020: -> D_80046FDE; index into D_800351A0[]. */
-    u16 unk024;                 /**< 0x024: -> D_8003EC90; mode/scene id. */
-    u8  unk026;                 /**< 0x026: copied to companion global D_80042FCC. */
-    u8  unk027;                 /**< 0x027: copied to companion global D_80042FC4. */
+    u32 music_track;                 /**< 0x020: -> g_music_track_index; index into g_music_track_table[]. */
+    u16 scene_mode;                 /**< 0x024: -> g_scene_mode; mode/scene id. */
+    u8  field_flags;                 /**< 0x026: copied to companion global g_field_entry_flag. */
+    u8  layout_flags;                 /**< 0x027: copied to companion global g_layout_flag. */
     u32 unk028;                 /**< 0x028: flag word; bits 0xC tested together. */
     u8  _unk02C[0x34 - 0x2C];   /**< 0x02C: not yet mapped. */
-    s32 unk034[0xB];            /**< 0x034: 11 s32 slots; cleared per non-selected save slot. */
+    s32 save_slot_data[0xB];            /**< 0x034: 11 s32 slots; cleared per non-selected save slot. */
     u8  _unk060[0xD4 - 0x60];   /**< 0x060: not yet mapped. */
     s16 rng_seed;               /**< 0x0D4: composed random value (rand() based). */
     u8  _unk0D6[0x2E0 - 0xD6];  /**< 0x0D6: not yet mapped. */
