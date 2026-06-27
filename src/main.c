@@ -18,8 +18,28 @@ undefined4 FUN_80021fbc(void);
 void FUN_80011638(int param_1);
 s32 akao_cmd_f0(void);
 
+/** @brief Fixed base address for scratch/system register access.
+ *  @note D_8003EC88 lives at (SCRATCH_BASE - 0x1378). */
+#define SCRATCH_BASE 0x80040000
+
 /**
- * decomp.me (100%) https://decomp.me/scratch/Tc7j3
+ * @brief Main game loop — initializes hardware, then runs the top-level
+ *        state machine forever.
+ *
+ * State transitions:
+ *   - 0/9/10 (FIELD): Load FIELD.BIN overlay. States 9/10 play attract
+ *     movies first. Transitions to the field scene loop via FUN_80015c58.
+ *   - 1 (WORLD_MAP): Load WMAP.BIN, run world map, may play map music.
+ *   - 2 (TITLE): Load TITLE.BIN, run title screen (new game / continue).
+ *   - 3 (GNAME): Load FIELD.BIN + GNAME.BIN, run name-entry overlay.
+ *   - 5 (WORLD_SELECT): Load WSEL.BIN, run world select overlay.
+ *   - 7 (MENU_LOAD): Load FIELD.BIN + CLOAD.BIN, run save/continue menu.
+ *     Copies MenuLayout companion fields from the loaded save layout into
+ *     the globals consumed by the field overlay and FUN_80015c58.
+ *   - 8 (INTRO_MOVIE): Play intro movie, then jump to title.
+ *   - 4 is a transient dead state immediately redirected to TITLE.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/Tc7j3
  */
 void Main(void)
 {
@@ -64,36 +84,37 @@ void Main(void)
     D_800473E0 = 0;
     D_8003EC8C = 0xB;
     D_80042FD0 = 0x13;
-    g_gameState = 8U;
+    g_gameState = GAME_STATE_INTRO_MOVIE;
     FUN_80015c28();
-    cdrom_stream(15, g_overlayLoadAddress);
+    cdrom_stream(CD_RES_CHECKPS_BIN, g_overlayLoadAddress);
     cdrom_wait_queue_empty();
     RunCheckPS(0x80100000);
     DrawSync(0);
     VSync(0);
-    g_previousGameState = 0xFF;
+    g_previousGameState = GAME_STATE_NONE;
     while (1)
     {
         {
             state = g_gameState;
-            scratch_base = (u8*)0x80040000;
+            scratch_base = (u8*)SCRATCH_BASE;
             switch (state)
             {
-            case 0:
+            /* ---- Field entry (attract / demo / normal) ---- */
+            case GAME_STATE_FIELD:
 
-            case 9:
+            case GAME_STATE_ATTRACT_1:
 
-            case 10:
+            case GAME_STATE_ATTRACT_2:
                 SetDispMask(0);
                 VSync(0);
                 DrawSync(0);
                 FUN_80015c28();
                 cdrom_stream(CD_RES_FIELD_BIN, g_overlayLoadAddress);
-                if (g_gameState != 0)
+                if (g_gameState != GAME_STATE_FIELD)
                 {
-                    cdrom_stream(11, 0x80140000);
+                    cdrom_stream(CD_RES_MOVIE_BIN, 0x80140000);
                     cdrom_wait_queue_empty();
-                    if ((unsigned long)(g_gameState == 9))
+                    if ((unsigned long)(g_gameState == GAME_STATE_ATTRACT_1))
                     {
                         movie_play(1);
                     }
@@ -114,12 +135,13 @@ void Main(void)
                 akao_cmd_f0();
                 akao_cmd_f1();
                 akao_cmd_c0(0, 0x7F);
-                g_previousGameState = 0;
+                g_previousGameState = GAME_STATE_FIELD;
                 break;
 
-            case 1:
+            /* ---- World map ---- */
+            case GAME_STATE_WORLD_MAP:
                 FUN_80015c38();
-                cdrom_stream(3, g_overlayLoadAddress);
+                cdrom_stream(CD_RES_WMAP_BIN, g_overlayLoadAddress);
                 GFX_Transition(0);
                 rect.x = 0;
                 rect.y = 0;
@@ -134,22 +156,23 @@ void Main(void)
                 g_gameState = FUN_80060814();
                 akao_cmd_f0();
                 akao_cmd_f1();
-                if (((g_gameState != 2) && (g_gameState != 9)) && (g_gameState != 10))
+                if (((g_gameState != GAME_STATE_TITLE) && (g_gameState != GAME_STATE_ATTRACT_1)) && (g_gameState != GAME_STATE_ATTRACT_2))
                 {
                     FUN_80011638(g_music_track_table[g_music_track_index]);
                 }
                 g_layout_sub_mode = -1;
-                g_previousGameState = 1;
+                g_previousGameState = GAME_STATE_WORLD_MAP;
                 break;
 
-            case 2:
+            /* ---- Title screen ---- */
+            case GAME_STATE_TITLE:
             {
                 cd_stop_ret = (long)func_80015C48();
                 cdrom_stop();
-                cdrom_stream(4, g_overlayLoadAddress);
+                cdrom_stream(CD_RES_TITLE_BIN, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                prev_state = 2;
+                prev_state = GAME_STATE_TITLE;
                 g_gameState = func_8004FC74(cd_stop_ret);
                 DrawSync(0);
                 VSync(0);
@@ -157,7 +180,8 @@ void Main(void)
                 break;
             }
 
-            case 3:
+            /* ---- Name entry (GNAME overlay) ---- */
+            case GAME_STATE_GNAME:
                 FUN_80015c28();
                 cdrom_stream(CD_RES_FIELD_BIN, g_overlayLoadAddress);
                 cdrom_stream(CD_RES_GNAME_BIN, 0x80140000);
@@ -171,34 +195,44 @@ void Main(void)
                 g_gameState = run_overlay(0x80160000, (u32)overlay_arg, (u32)overlay_arg, ((*((u8*)(&menu_layout->slot_flags))) & 0x7F) + 4, 0, (u32)overlay_arg, 1);
                 DrawSync(0);
                 VSync(0);
-                g_previousGameState = 3;
+                g_previousGameState = GAME_STATE_GNAME;
                 break;
 
-            case 5:
+            /* ---- World select ---- */
+            case GAME_STATE_WORLD_SELECT:
                 FUN_80015c28();
-                cdrom_stream(14, g_overlayLoadAddress);
+                cdrom_stream(CD_RES_WSEL_BIN, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 g_gameState = func_8004FC8C(0x80170000);
                 DrawSync(0);
                 VSync(0);
-                g_previousGameState = 5;
+                g_previousGameState = GAME_STATE_WORLD_SELECT;
                 break;
 
-            case 7:
+            /* ---- Menu / load save ---- */
+            case GAME_STATE_MENU_LOAD:
                 FUN_80015c28();
-                cdrom_stream((float)2, g_overlayLoadAddress);
-                cdrom_stream(16, 0x80140000);
+                /* (float)2 is a codegen artifact: the compiler uses an FP
+                 * register to hold the CD_RES_FIELD_BIN value. The cast
+                 * forces the same register allocation as the original. */
+                cdrom_stream((float)CD_RES_FIELD_BIN, g_overlayLoadAddress);
+                cdrom_stream(CD_RES_CLOAD_BIN, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 func_80051FBC(0);
                 g_save_slot_index = 7;
                 if (func_801400C4() != 0)
                 {
-                    g_gameState = 2;
+                    g_gameState = GAME_STATE_TITLE;
                 }
                 else
                 {
+                    /* Mask 0xFE000000 preserves the upper 25 bits of unk018
+                     * (likely a base address or segment), OR-ing in 6 as the
+                     * field overlay sub-mode. Written both to the scratch
+                     * register at (SCRATCH_BASE - 0x1378) = D_8003EC88 and
+                     * back into the MenuLayout struct. */
                     field_config = (u32)(raw_config = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk018);
                     field_config = field_config & 0xFE000000U;
                     field_config = field_config | 6;
@@ -216,7 +250,7 @@ void Main(void)
                     }
                     if ((((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk028 & 0xC) == 0xC)
                     {
-                        g_gameState = 5;
+                        g_gameState = GAME_STATE_WORLD_SELECT;
                     }
                     else
                     {
@@ -226,25 +260,27 @@ void Main(void)
                 }
                 DrawSync(0);
                 VSync(0);
-                g_previousGameState = 0;
+                g_previousGameState = GAME_STATE_FIELD;
                 break;
 
-            case 8:
+            /* ---- Intro movie, then title ---- */
+            case GAME_STATE_INTRO_MOVIE:
                 func_80015C48();
-                cdrom_stream(11, 0x80140000);
+                cdrom_stream(CD_RES_MOVIE_BIN, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 movie_play(0);
-                g_gameState = 2;
+                g_gameState = GAME_STATE_TITLE;
                 DrawSync(0);
                 VSync(0);
-                g_previousGameState = 8;
+                g_previousGameState = GAME_STATE_INTRO_MOVIE;
                 break;
             }
         }
+        /* State 4 is a transient dead state — immediately redirect to title. */
         if (g_gameState == 4)
         {
-            g_gameState = 2;
+            g_gameState = GAME_STATE_TITLE;
         }
     }
 }

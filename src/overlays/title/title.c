@@ -109,16 +109,16 @@ s32 run_title(s32 base_address)
                 GFX_Transition(0);
                 continue;
             }
-            return 3;
+            return GAME_STATE_GNAME;
         }
         else if (selected_item == 1)
         {
-            return 7;
+            return GAME_STATE_MENU_LOAD;
         }
         else if (selected_item == idle_quit)
         {
             StopTitleMusic();
-            return 8;
+            return GAME_STATE_INTRO_MOVIE;
         }
         else
         {
@@ -128,7 +128,7 @@ s32 run_title(s32 base_address)
             rand_lo = rand();
             rand_hi = rand();
             layout->rng_seed = (s16)(rand_lo | (rand_hi << 0xF));
-            return 0;
+            return GAME_STATE_FIELD;
         }
     }
 }

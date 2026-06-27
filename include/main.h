@@ -7,6 +7,24 @@
 #include "psyq/libapi.h"
 #include "psyq/libetc.h"
 
+/**
+ * @brief Top-level game state machine values stored in g_gameState.
+ *
+ * Main() drives the game through these states in an infinite loop. States
+ * 0/9/10 share a code path (enter field, optionally with attract movies).
+ * State 4 is a transient that is immediately redirected to STATE_TITLE.
+ */
+#define GAME_STATE_FIELD        0   /**< Enter field overlay (attract / demo / normal). */
+#define GAME_STATE_WORLD_MAP    1   /**< Enter world map overlay (WMAP.BIN). */
+#define GAME_STATE_TITLE        2   /**< Enter title screen (TITLE.BIN). */
+#define GAME_STATE_GNAME        3   /**< Enter GNAME overlay (name entry, within field). */
+#define GAME_STATE_WORLD_SELECT 5   /**< Enter world select overlay (WSEL.BIN). */
+#define GAME_STATE_MENU_LOAD    7   /**< Enter menu/load overlay (save / continue). */
+#define GAME_STATE_INTRO_MOVIE  8   /**< Play intro movie, then transition to title. */
+#define GAME_STATE_ATTRACT_1    9   /**< Attract demo: play movie 1, then field. */
+#define GAME_STATE_ATTRACT_2    10  /**< Attract demo: play movies 2-4, then field. */
+#define GAME_STATE_NONE         0xFF /**< Sentinel: no previous state (init). */
+
 extern u32 g_gameState;
 extern u32 g_previousGameState;
 extern u32 g_overlayLoadAddress;
