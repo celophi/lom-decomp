@@ -133,7 +133,7 @@ typedef struct
 
 void __main(void);
 void _bu_init(void);
-s32 func_80015C48(void);
+u32 *func_80015C48(void);
 u32 func_8004FC74(void);
 u32 func_8004FC8C(u32);
 void field_scene_reset(u32);
