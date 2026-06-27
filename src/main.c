@@ -24,14 +24,14 @@ s32 akao_cmd_f0(void);
 void Main(void)
 {
     RECT rect;
-    MenuLayout* temp_s2;
-    u8* ptrB;
-    u32* ptrA;
-    int new_var;
-    s32 new_var3;
+    MenuLayout* menu_layout;
+    u8* scratch_base;
+    u32* overlay_arg;
+    int field_config;
+    s32 raw_config;
     long cd_stop_ret;
     u32 state;
-    int new_var2;
+    int prev_state;
     __main();
     SetMem(2);
     SetConf(0x10, 4, 0x801FFF00);
@@ -76,7 +76,7 @@ void Main(void)
     {
         {
             state = g_gameState;
-            ptrB = (u8*)0x80040000;
+            scratch_base = (u8*)0x80040000;
             switch (state)
             {
             case 0:
@@ -109,7 +109,7 @@ void Main(void)
                     cdrom_wait_queue_empty();
                 }
                 g_field_entry_flag = 0;
-                *((u32*)(ptrB - 0x1378)) = 0;
+                *((u32*)(scratch_base - 0x1378)) = 0;
                 g_gameState = FUN_80015c58();
                 akao_cmd_f0();
                 akao_cmd_f1();
@@ -149,11 +149,11 @@ void Main(void)
                 cdrom_stream(4, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                new_var2 = 2;
+                prev_state = 2;
                 g_gameState = func_8004FC74(cd_stop_ret);
                 DrawSync(0);
                 VSync(0);
-                g_previousGameState = new_var2;
+                g_previousGameState = prev_state;
                 break;
             }
 
@@ -166,9 +166,9 @@ void Main(void)
                 func_800A3534();
                 func_80051FBC(0);
                 g_field_audio_timer = 0;
-                ptrA = &g_gameDataBasePtr;
-                temp_s2 = (MenuLayout*)(((u8*)ptrA) - 0x5F0);
-                g_gameState = run_overlay(0x80160000, (u32)ptrA, (u32)ptrA, ((*((u8*)(&temp_s2->slot_flags))) & 0x7F) + 4, 0, (u32)ptrA, 1);
+                overlay_arg = &g_gameDataBasePtr;
+                menu_layout = (MenuLayout*)(((u8*)overlay_arg) - 0x5F0);
+                g_gameState = run_overlay(0x80160000, (u32)overlay_arg, (u32)overlay_arg, ((*((u8*)(&menu_layout->slot_flags))) & 0x7F) + 4, 0, (u32)overlay_arg, 1);
                 DrawSync(0);
                 VSync(0);
                 g_previousGameState = 3;
@@ -199,17 +199,17 @@ void Main(void)
                 }
                 else
                 {
-                    new_var = (u32)(new_var3 = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk018);
-                    new_var = new_var & 0xFE000000U;
-                    new_var = new_var | 6;
-                    *((u32*)(ptrB - 0x1378)) = 6;
-                    ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk018 = new_var;
+                    field_config = (u32)(raw_config = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk018);
+                    field_config = field_config & 0xFE000000U;
+                    field_config = field_config | 6;
+                    *((u32*)(scratch_base - 0x1378)) = 6;
+                    ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk018 = field_config;
                     g_scene_mode = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->scene_mode;
                     g_field_entry_flag = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->field_flags;
                     g_layout_flag = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->layout_flags;
                     g_layout_option = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->option_id;
                     g_layout_sub_mode = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->sub_mode;
-                    ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk018 = new_var;
+                    ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk018 = field_config;
                     {
                         u32 tmp_u20 = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->music_track;
                         g_music_track_index = (u16)tmp_u20;
