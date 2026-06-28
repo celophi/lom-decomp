@@ -62,13 +62,13 @@ extern FrameBufferUnion g_GfxPrimaryFrame;
 // prototypes
 void func_800157DC(void);
 void func_800158E0(void);
-void load_and_play_song(int param_1);
+void load_and_play_song(s32 song_index);
 undefined* FUN_80015c18(void);
 undefined* FUN_80015c38(void);
 int FUN_80015c58(void);
 undefined4 FUN_80021fbc(void);
 void akao_song_cmd_12c(void);
-void akao_set_song_params(int param_1, s16 param_2, s16 param_3, s16 param_4);
+void akao_set_song_params(int flags, s16 duration, s16 field_id, s16 sub_id);
 void akao_cmd_c0(undefined4 param_1, u_int param_2);
 void akao_cmd_f0(void);
 void akao_cmd_f1(void);
