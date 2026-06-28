@@ -155,3 +155,16 @@ void func_800243E4(s32 arg0, s32 arg1)
 
     *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0xFF0F) | (arg1);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/2UD84
+ */
+void func_8002440C(s32 arg0, s32 arg1)
+{
+    s32 temp_a0;
+    s32 ptr = (s32)0x1F801C08;
+
+    arg0 = arg0 << 4;
+
+    *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0xFFF0) | (arg1);
+}
