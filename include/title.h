@@ -156,7 +156,7 @@ extern MenuLayout g_menuLayoutTemplateAlt;
 extern s32 g_subMenuLayoutDefault[0x94];
 /** Sub-menu layout table copied by load_sub_menu_layout when resuming a save. */
 extern s32 g_subMenuLayoutContinue[0x94];
-/* D_8003EC90, D_80046FDE, D_80042FC4, g_gameDataBasePtr are declared in main.h. */
+/* g_scene_mode, g_music_track_index, g_layout_flag, g_gameDataBasePtr are declared in main.h. */
 
 extern FadeCurrent g_fadeCurrent;
 extern FadeTarget g_fadeTarget;

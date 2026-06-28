@@ -22,7 +22,7 @@
 
 /* Value g_titleSelectedItem holds when the idle countdown expires with no
  * input (set by HandleTitleMenuInput); dispatching it quits the title back to
- * the attract loop. The same 0xFF is also written into D_8003EC9C ("no save
+ * the attract loop. The same 0xFF is also written into g_save_slot_index ("no save
  * slot selected") on the load-a-saved-game path. */
 #define TITLE_ITEM_IDLE_QUIT 0xFF
 
@@ -56,7 +56,7 @@ static void scroll_slots_left(void);
  *         - 7: menu item 1 selected (continue / load a saved game).
  *         - 8: idle timeout (@ref TITLE_ITEM_IDLE_QUIT); music is stopped and
  *              control returns to the attract loop.
- *         - 0: any other item; arms the load path (D_8003EC9C, layout template,
+ *         - 0: any other item; arms the load path (g_save_slot_index, layout template,
  *              RNG seed) and drops into the field/demo state.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/mEAXF
@@ -109,26 +109,26 @@ s32 run_title(s32 base_address)
                 GFX_Transition(0);
                 continue;
             }
-            return 3;
+            return GAME_STATE_GNAME;
         }
         else if (selected_item == 1)
         {
-            return 7;
+            return GAME_STATE_MENU_LOAD;
         }
         else if (selected_item == idle_quit)
         {
             StopTitleMusic();
-            return 8;
+            return GAME_STATE_INTRO_MOVIE;
         }
         else
         {
             akao_cmd_c1(0, 0x3C, 0);
             load_menu_layout(-1);
-            D_8003EC9C = idle_quit;
+            g_save_slot_index = idle_quit;
             rand_lo = rand();
             rand_hi = rand();
             layout->rng_seed = (s16)(rand_lo | (rand_hi << 0xF));
-            return 0;
+            return GAME_STATE_FIELD;
         }
     }
 }
@@ -2016,11 +2016,11 @@ unsigned short UploadSaveLayoutTextures(void)
  * @brief Load one of the two full menu-layout templates into g_menuLayoutBuffer.
  *
  * Copies a MENU_LAYOUT_WORDS-word (~13 KB) MenuLayout template over the working
- * g_menuLayoutBuffer and sets the companion mode field D_8003EC90.
+ * g_menuLayoutBuffer and sets the companion mode field g_scene_mode.
  *
  * @param use_alt Zero selects the default template (g_menuLayoutTemplateDefault,
- *                D_8003EC90 = 0xD); non-zero selects the alternate template
- *                (g_menuLayoutTemplateAlt, D_8003EC90 = 0).
+ *                g_scene_mode = 0xD); non-zero selects the alternate template
+ *                (g_menuLayoutTemplateAlt, g_scene_mode = 0).
  *
  * @note The copy is an explicit word loop, not a struct assignment, so it
  *       reproduces the original codegen; MenuLayout is only partially mapped.
@@ -2035,15 +2035,15 @@ void load_menu_layout(s32 use_alt)
     if (use_alt == 0)
     {
         src = (s32*)&g_menuLayoutTemplateDefault;
-        D_8003EC90 = 0xD;
+        g_scene_mode = 0xD;
     }
     else
     {
         src = (s32*)&g_menuLayoutTemplateAlt;
-        D_8003EC90 = 0;
+        g_scene_mode = 0;
     }
-    D_80046FDE = 0;
-    D_80042FC4 = 0;
+    g_music_track_index = 0;
+    g_layout_flag = 0;
 
     do
     {
