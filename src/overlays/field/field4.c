@@ -432,7 +432,7 @@ void func_80068440(void)
         g_field_audio_timer = temp_v0;
         if (temp_v0 == 0)
         {
-            FUN_8001160c();
+            akao_song_cmd_12c();
             func_800A380C();
             func_800A3904(0, 1, D_8011588C);
         }

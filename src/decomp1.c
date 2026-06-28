@@ -122,15 +122,15 @@ void GFX_Transition(s32 skipScreenClear)
 /**
  * decomp.me link (100%) https://decomp.me/scratch/mXgky
  */
-void FUN_8001160c(void)
+void akao_song_cmd_12c(void)
 {
-    akao_cmd_c1(D_80042FB8, 0x12C, 0);
+    akao_cmd_c1(g_current_song_handle, 0x12C, 0);
 }
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/Oy5Dh
  */
-void FUN_80011638(s32 arg0)
+void load_and_play_song(s32 arg0)
 {
     u32 addr;
     u32 base;
@@ -149,29 +149,29 @@ void FUN_80011638(s32 arg0)
     cdrom_wait_queue_empty();
     base = 0x80180000;
     info = (s32*)0x80180004;
-    ptr = &D_80046FE0;
+    ptr = &g_music_data_buffer;
 
     bcopy((u_char*)((*info) + base), ptr, info[1] - (*info));
     akao_play_sequence_blocking((AkaoSeqHeader*)(info[1] + base), 1);
 
     temp = akao_play_song(ptr);
-    D_80042FB8 = temp;
+    g_current_song_handle = temp;
     akao_cmd_c0(temp, 0x7f);
 }
 
 /**
  * decomp.me link: (100%) https://decomp.me/scratch/DRBPP
  */
-void FUN_800116d8(int arg0, s16 arg1, s16 arg2, s16 arg3)
+void akao_set_song_params(int arg0, s16 arg1, s16 arg2, s16 arg3)
 {
-    D_80042FBC = arg0;
+    g_akao_song_cmd_arg0 = arg0;
 
     if ((arg0 << 0x10) < 0)
     {
-        D_80046FDC = arg0;
+        g_akao_song_cmd_neg_arg0 = arg0;
     }
 
-    D_80042FBE = arg1;
-    D_80042FC0 = arg2;
-    D_80042FC2 = arg3;
+    g_akao_song_cmd_arg1 = arg1;
+    g_akao_song_cmd_arg2 = arg2;
+    g_akao_song_cmd_arg3 = arg3;
 }

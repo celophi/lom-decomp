@@ -32,13 +32,20 @@ typedef union {
     FrameBufferOverlap overlap;
 } FrameBufferUnion;
 
-extern s32 D_80042FB8;
-extern u8 D_80046FE0;
-extern s16 D_80042FBC;
-extern s16 D_80046FDC;
-extern s16 D_80042FBE;
-extern s16 D_80042FC0;
-extern s16 D_80042FC2;
+/** @brief Handle returned by akao_play_song(), used for subsequent AKAO commands. */
+extern s32 g_current_song_handle;
+/** @brief Destination buffer for CD-loaded music/song sequence data. */
+extern u8 g_music_data_buffer;
+/** @brief AKAO song command parameter 0 (bitmask, always 0x8001 from field overlay). */
+extern s16 g_akao_song_cmd_arg0;
+/** @brief Alternate copy of arg0 when negative. */
+extern s16 g_akao_song_cmd_neg_arg0;
+/** @brief AKAO song command parameter 1 (often 0x320 / 800). */
+extern s16 g_akao_song_cmd_arg1;
+/** @brief AKAO song command parameter 2 (small int, often character slot index). */
+extern s16 g_akao_song_cmd_arg2;
+/** @brief AKAO song command parameter 3 (often 0 or entity index). */
+extern s16 g_akao_song_cmd_arg3;
 
 /**
  * These are the two frame buffers used for double buffering. 
@@ -55,11 +62,13 @@ extern FrameBufferUnion g_GfxPrimaryFrame;
 // prototypes
 void func_800157DC(void);
 void func_800158E0(void);
-void FUN_80011638(int param_1);
+void load_and_play_song(int param_1);
 undefined* FUN_80015c18(void);
 undefined* FUN_80015c38(void);
 int FUN_80015c58(void);
 undefined4 FUN_80021fbc(void);
+void akao_song_cmd_12c(void);
+void akao_set_song_params(int param_1, s16 param_2, s16 param_3, s16 param_4);
 void akao_cmd_c0(undefined4 param_1, u_int param_2);
 void akao_cmd_f0(void);
 void akao_cmd_f1(void);
