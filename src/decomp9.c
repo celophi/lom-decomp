@@ -88,3 +88,13 @@ void func_80024334(s32 arg0, s16 arg1)
     arg0 = arg0 << 4;
     *(s16*)(ptr + arg0) = arg1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/4xQ5z
+ */
+void func_8002434C(s32 arg0, u32 arg1)
+{
+    s32 ptr = (s32)0x1F801C06;
+    arg0 = arg0 << 4;
+    *(s16*)(ptr + arg0) = (s16)(arg1 >> 3);
+}
