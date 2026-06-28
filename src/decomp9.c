@@ -181,3 +181,16 @@ void func_80024434(s32 arg0, s32 arg1, u32 arg2)
 
     *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0x3F) | (((arg2 >> 1) << 0xE) | (arg1 << 6));
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/cztam
+ */
+void func_80024468(s32 arg0, s32 arg1, u32 arg2)
+{
+    s32 temp_a0;
+    s32 ptr = (s32)0x1F801C0A;
+
+    arg0 = arg0 << 4;
+
+    *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0xFFC0) | (((arg2 >> 2) << 0x5) | (arg1));
+}
