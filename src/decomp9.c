@@ -128,3 +128,16 @@ void func_8002439C(s32 arg0, s16 arg1)
     arg0 = arg0 << 4;
     *(s16*)(ptr + arg0) = arg1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Ua4UK
+ */
+void func_800243B4(s32 arg0, s32 arg1, u32 arg2)
+{
+    s32 temp_a0;
+    s32 ptr = (s32)0x1F801C08;
+
+    arg0 = arg0 << 4;
+
+    *(s16*)(ptr + arg0) = (*(u8*)(ptr + arg0)) | (((arg2 >> 2) << 0xF) | (arg1 << 8));
+}
