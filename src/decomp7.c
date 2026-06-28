@@ -19,7 +19,7 @@ s32 FUN_80015c58(void)
     {
         result = 0x1E;
         D_801158A4 = 0;
-        func_8009AFE0(D_8003EC90, D_80042FCC, D_8003EC88, D_80042FC4, D_8003EC94, D_80046FD8);
+        func_8009AFE0(g_scene_mode, g_field_entry_flag, D_8003EC88, g_layout_flag, g_layout_option, g_layout_sub_mode);
         func_80067EB4(0x100, 0x100, 0x100, result);
         func_80015D6C(temp_v0);
     } while (D_8010D018 == 0);

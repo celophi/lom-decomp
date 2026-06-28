@@ -3547,7 +3547,7 @@ s32 func_80145310(void)
 }
 
 /**
- * @brief Scan g_pad_ctx->unk034 for set bits, find the first match against
+ * @brief Scan g_pad_ctx->save_slot_data for set bits, find the first match against
  *        a 6-bit field in D_801693FC, then initialize D_80168C70 as a circular
  *        packed linked list of the set-bit entries.
  * @return Low 16 bits: total set-bit count. High 16 bits: index of the first
