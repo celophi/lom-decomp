@@ -15,7 +15,7 @@ void InitVSyncController(void);
 undefined* FUN_80015c18(void);
 u32* FUN_80015c28(void);
 undefined4 FUN_80021fbc(void);
-void FUN_80011638(int param_1);
+void load_and_play_song(int param_1);
 s32 akao_cmd_f0(void);
 
 /** @brief Fixed base address for scratch/system register access.
@@ -158,7 +158,7 @@ void Main(void)
                 akao_cmd_f1();
                 if (((g_gameState != GAME_STATE_TITLE) && (g_gameState != GAME_STATE_ATTRACT_1)) && (g_gameState != GAME_STATE_ATTRACT_2))
                 {
-                    FUN_80011638(g_music_track_table[g_music_track_index]);
+                    load_and_play_song(g_music_track_table[g_music_track_index]);
                 }
                 g_layout_sub_mode = -1;
                 g_previousGameState = GAME_STATE_WORLD_MAP;
