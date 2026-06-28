@@ -262,6 +262,7 @@ SRCS_G0 := \
 	src/decomp1.c \
 	src/akao_cmd.c \
 	src/decomp7.c \
+	src/decomp9.c \
 	src/main.c
 
 SRCS_G4 := \
