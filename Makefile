@@ -110,7 +110,7 @@ MASPSX_PP       	:= python3 tools/maspsx/maspsx.py
 MASPSX_PP_FLAGS 	:= --macro-inc
 
 
-# ─── Source Files ───────────────────────────────────────────────────────────────
+# ─── Source Files ──────────────────────────────────────────────────────────────
 #
 # C files are split by compiler flags. Most use CFLAGS_G0; only cdrom.c uses G4.
 # If a future file needs different flags, add it to the appropriate list.
