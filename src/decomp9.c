@@ -78,3 +78,13 @@ void func_800242EC(s32 arg0, u32 arg1, u32 arg2, s32 arg3)
     ((f_struct*)(temp_v0 + ptr))->unk1 = (s16)(var_a1 & 0x7FFF);
     ((f_struct*)(temp_v0 + ptr))->unk2 = (s16)(var_a2 & 0x7FFF);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/3fXi9
+ */
+void func_80024334(s32 arg0, s16 arg1)
+{
+    s32 ptr = (s32)0x1F801C04;
+    arg0 = arg0 << 4;
+    *(s16*)(ptr + arg0) = arg1;
+}
