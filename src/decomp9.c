@@ -27,10 +27,10 @@ void func_8002427C(u32 arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/3KFgT
  */
-void func_8002427C(u32 arg0)
+void func_80024298(u32 arg0)
 {
-    *(u16*)0x1F801D8C = arg0;
-    *(s16*)0x1F801D8E = (s16)(arg0 >> 0x10);
+    *(u16*)0x1F801D98 = arg0;
+    *(s16*)0x1F801D9A = (s16)(arg0 >> 0x10);
 }
 
 /**
