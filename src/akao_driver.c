@@ -190,26 +190,27 @@ s32 akao_submit(AkaoBankHeader* bank, s32 wait_for_completion)
  *
  * @return 0 on success, -1 on AKAO magic mismatch.
  *
- * @see https://decomp.me/scratch/Awfhy (99.90%)
+ * @see https://decomp.me/scratch/Awfhy (100%)
  */
 s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_base)
 {
+    u8* base;
     s32 new_var;
     s32 var_v0;
-    AkaoBankHeader* bank_hdr;
-    u8* base;
-
     s32 ret_val;
+    AkaoBankHeader* bank_hdr;
+    s32 hdr_copy;
+
     akao_spu_wait();
     var_v0 = -1;
-    if (akao_check_magic((AkaoSeqHeader*)bank) == 0)
+    if ((hdr_copy = akao_check_magic((AkaoSeqHeader*)bank)) == 0)
     {
-        new_var = bank;
-        bank_hdr = (AkaoBankHeader*)bank;
+        hdr_copy = bank;
+        bank_hdr = (AkaoBankHeader*)hdr_copy;
 
         SpuSetTransferStartAddr(spu_base);
+        bank = (u8*)bank + 0x40;
         base = (u8*)bank;
-        base = base + 0x40;
         akao_spu_write((s32)(base + (bank_hdr->articulation_count * 0x10)), bank_hdr->sample_size);
         akao_relocate_articulations((AkaoArticulation*)base,
                                     (AkaoArticulation*)(g_akao_articulation_slots + (bank_id * 0x10)), spu_base,
