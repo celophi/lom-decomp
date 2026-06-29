@@ -78,3 +78,119 @@ void func_800242EC(s32 arg0, u32 arg1, u32 arg2, s32 arg3)
     ((f_struct*)(temp_v0 + ptr))->unk1 = (s16)(var_a1 & 0x7FFF);
     ((f_struct*)(temp_v0 + ptr))->unk2 = (s16)(var_a2 & 0x7FFF);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/3fXi9
+ */
+void func_80024334(s32 arg0, s16 arg1)
+{
+    s32 ptr = (s32)0x1F801C04;
+    arg0 = arg0 << 4;
+    *(s16*)(ptr + arg0) = arg1;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/4xQ5z
+ */
+void func_8002434C(s32 arg0, u32 arg1)
+{
+    s32 ptr = (s32)0x1F801C06;
+    arg0 = arg0 << 4;
+    *(s16*)(ptr + arg0) = (s16)(arg1 >> 3);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/UI7qr
+ */
+void func_80024368(s32 arg0, u32 arg1)
+{
+    s32 ptr = (s32)0x1F801C0E;
+    arg0 = arg0 << 4;
+    *(s16*)(ptr + arg0) = (s16)(arg1 >> 3);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ghHQZ
+ */
+void func_80024384(s32 arg0, s16 arg1)
+{
+    s32 ptr = (s32)0x1F801C08;
+    arg0 = arg0 << 4;
+    *(s16*)(ptr + arg0) = arg1;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/aDnJj
+ */
+void func_8002439C(s32 arg0, s16 arg1)
+{
+    s32 ptr = (s32)0x1F801C0A;
+    arg0 = arg0 << 4;
+    *(s16*)(ptr + arg0) = arg1;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Ua4UK
+ */
+void func_800243B4(s32 arg0, s32 arg1, u32 arg2)
+{
+    s32 temp_a0;
+    s32 ptr = (s32)0x1F801C08;
+
+    arg0 = arg0 << 4;
+
+    *(s16*)(ptr + arg0) = (*(u8*)(ptr + arg0)) | (((arg2 >> 2) << 0xF) | (arg1 << 8));
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ymuym
+ */
+void func_800243E4(s32 arg0, s32 arg1)
+{
+    s32 temp_a0;
+    s32 ptr = (s32)0x1F801C08;
+
+    arg0 = arg0 << 4;
+    arg1 = arg1 << 4;
+
+    *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0xFF0F) | (arg1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/2UD84
+ */
+void func_8002440C(s32 arg0, s32 arg1)
+{
+    s32 temp_a0;
+    s32 ptr = (s32)0x1F801C08;
+
+    arg0 = arg0 << 4;
+
+    *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0xFFF0) | (arg1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ZWKKM
+ */
+void func_80024434(s32 arg0, s32 arg1, u32 arg2)
+{
+    s32 temp_a0;
+    s32 ptr = (s32)0x1F801C0A;
+
+    arg0 = arg0 << 4;
+
+    *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0x3F) | (((arg2 >> 1) << 0xE) | (arg1 << 6));
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/cztam
+ */
+void func_80024468(s32 arg0, s32 arg1, u32 arg2)
+{
+    s32 temp_a0;
+    s32 ptr = (s32)0x1F801C0A;
+
+    arg0 = arg0 << 4;
+
+    *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0xFFC0) | (((arg2 >> 2) << 0x5) | (arg1));
+}
