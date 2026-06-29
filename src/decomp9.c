@@ -6,6 +6,21 @@ typedef struct
     s16 unk2;
 } f_struct;
 
+
+typedef struct {
+    s32 pad0;
+    s32 unk4;
+    u32 unk8;
+    u32 unkC;
+    u16 unk10;
+    u16 unk12;
+    u16 unk14;
+    u16 unk16;
+    s16 unk18;
+    s16 unk1A;
+} arg_s;
+
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/lKkom
  */
@@ -193,4 +208,62 @@ void func_80024468(s32 arg0, s32 arg1, u32 arg2)
     arg0 = arg0 << 4;
 
     *(s16*)(ptr + arg0) = ((*(s16*)(ptr + arg0)) & 0xFFC0) | (((arg2 >> 2) << 0x5) | (arg1));
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/MkQTS
+ */
+void func_80024498(s32 arg0, arg_s* arg1, s32 arg2)
+{
+    s32 var_a2;
+    s32 var_v0;
+    s32 temp_a0;
+    u8* temp_a0_2;
+    u8* temp_a0_3;
+    u8* temp_a0_4;
+    u8* temp_a0_5;
+    u8* temp_a0_6;
+    s32 ptr;
+
+    arg1->unk4 = 0;
+    ptr = (s32)0x1F801C00;
+    arg0 = arg0 << 4;
+    arg0 = (arg0 + ptr);
+
+    if (arg2 == 0)
+    {
+        var_v0 = arg1->unk18;
+        var_a2 = arg1->unk1A;
+    }
+    else
+    {
+        var_v0 = (arg1->unk18 * arg2);
+        var_v0 = var_v0 >> 7;
+        var_a2 = (arg1->unk1A * arg2);
+        var_a2 = var_a2 >> 7;
+    }
+
+    *(s16*)arg0 = var_v0 & 0x7FFF;
+
+    arg0 += 2;
+    temp_a0_3 = arg0;
+    *(s16*)(arg0) = (var_a2 & 0x7FFF);
+
+    arg0 += 2;
+    temp_a0_4 = temp_a0_3 + 2;
+    *(s16*)(arg0) = (u16)arg1->unk10;
+
+    arg0 += 2;
+    temp_a0_5 = temp_a0_4 + 2;
+    *(s16*)(arg0) = (s16)((u32)arg1->unk8 >> 3);
+
+    arg0 += 2;
+    temp_a0_6 = temp_a0_5 + 2;
+    *(s16*)(arg0) = (u16)arg1->unk12;
+
+    arg0 += 2;
+    *(s16*)(arg0) = (u16)arg1->unk14;
+
+    arg0 += 4;
+    *(s16*)(arg0) = (s16)((u32)arg1->unkC >> 3);
 }
