@@ -353,7 +353,7 @@ void akao_driver_init_state(void)
             *((u16*)(v1 + 0x58)) = new_var7;
             *((u16*)(v1 + 0x02)) = 0;
             *((u16*)(v1 - 0x04)) = 0;
-            *((u32*)((*(new_var4 = &v1)) - 0x4C)) = 0;
+            *((u32*)(v1 - 0x4C)) = 0;
             *((u16*)v1) = 0;
             v1 += 0x118;
         } while ((a3 & 0xFFFF) < 0x18);
