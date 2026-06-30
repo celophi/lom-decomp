@@ -717,6 +717,25 @@ SpuSetTransferMode                  = 0x80024200;
 // src/psyq/libspu/S_STC
 SpuSetTransferCallback              = 0x80024230;
 
+// src/decomp9.c
+spu_set_key                         = 0x80024260;
+spu_set_voice_mode                  = 0x8002427C;
+spu_set_reverb_addrs                = 0x80024298;
+spu_set_reverb_control              = 0x800242B4;
+spu_set_reverb_mode                 = 0x800242D0;
+spu_set_voice_volume                = 0x800242EC;
+spu_set_voice_pitch                 = 0x80024334;
+spu_set_voice_start_addr            = 0x8002434C;
+spu_set_voice_loop_addr             = 0x80024368;
+spu_set_voice_adsr1                 = 0x80024384;
+spu_set_voice_adsr2                 = 0x8002439C;
+spu_set_voice_attack_decay          = 0x800243B4;
+spu_set_voice_sustain_rate          = 0x800243E4;
+spu_set_voice_sustain_level         = 0x8002440C;
+spu_set_voice_sr_mode               = 0x80024434;
+spu_set_voice_release_rate          = 0x80024468;
+spu_set_voice_attr                  = 0x80024498;
+
 // Uncategorized
 akao_send_command                   = 0x80028E84;
 
