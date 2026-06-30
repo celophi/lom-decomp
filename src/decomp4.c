@@ -28,6 +28,58 @@ typedef struct
     u8 unk7;
 } SmallSlot;
 
+typedef struct
+{
+    s32 unk0;
+    char pad_1[0x80];
+    s16 unk84;
+    char pad_2[0x100 - 0x88];
+    s32 unk100;
+} a_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad4[0x80];
+    u16 unk84;
+    u16 unk86;
+    char pad88[0xE0 - 0x88];
+    s16 unkE0;
+} b_struct;
+
+typedef struct
+{
+    s8* unk0;
+    char pad_1[0x48 - 0x4];
+    s32 unk48;
+    char pad_2[0x8A - 0x4C];
+    s16 unk8A;
+    s16 unk8C;
+    char pad_3[0x100 - 0x90];
+    s32 unk100;
+} c_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x48 - 4];
+    s32 unk48;
+    s32 unk4C;
+    char pad2[0x8A - 0x50];
+    u16 unk8A;
+    s16 unk8C;
+} d_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x5C - 4];
+    s32 unk5C;
+    s32 unk60;
+    char pad2[0x8C - 0x64];
+    u16 unk8C;
+} e_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -1620,4 +1672,133 @@ void akao_seq_op_call(void* arg0)
 void akao_seq_op_return(s32* arg0)
 {
     arg0[0] = (s32)arg0[5];
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/BN6jO
+ */
+void func_8002B90C(a_struct* arg0)
+{
+    u8* temp_v0;
+    s16 tmp;
+
+    temp_v0 = arg0->unk0;
+    tmp = (s16)(*temp_v0 << 8);
+    arg0->unk0 = (s32)(u8*)(temp_v0 + 1);
+    arg0->unk100 = (s32)(arg0->unk100 | 3);
+    arg0->unk84 = tmp;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/CjVYW
+ */
+void func_8002B934(b_struct* arg0)
+{
+    u16 temp_a0;
+    u16 temp_v1;
+    u8* temp_a1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    temp_v1 = *temp_v0;
+
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk86 = temp_v1;
+
+    if (temp_v1 == 0)
+    {
+        arg0->unk86 = 0x100U;
+    }
+
+    temp_a1 = arg0->unk0;
+    temp_a0 = arg0->unk84;
+    temp_a0 &= 0x7F00;
+
+    temp_v1 = (s16)(((s32)(((*(arg0->unk0++)) << 8) - temp_a0)) / ((s32)arg0->unk86));
+    arg0->unkE0 = temp_v1;
+
+    arg0->unk0 = (u8*)(temp_a1 + 1);
+    arg0->unk84 = temp_a0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/hGVxk
+ */
+void func_8002B9B8(c_struct* arg0)
+{
+    s8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    arg0->unk48 = (s32)(*temp_v0 << 0x17);
+    arg0->unk0 = (s8*)(temp_v0 + 1);
+    arg0->unk8A = 0;
+    arg0->unk100 = (s32)(arg0->unk100 | 3);
+    arg0->unk8C = 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/jLHGo
+ */
+void func_8002B9E8(d_struct* arg0)
+{
+    s32 temp_a0;
+    s32 temp_v1;
+    u8* temp_a1;
+    u8* temp_v0;
+    s32 tmp;
+    s32 new_var;
+
+    temp_v0 = arg0->unk0;
+
+    temp_v1 = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk8A = (u16)temp_v1;
+    if (temp_v1 == 0)
+    {
+        arg0->unk8A = 0x100U;
+    }
+    temp_a1 = arg0->unk0;
+    new_var = arg0->unk48;
+    temp_a0 = new_var;
+    temp_a0 &= 0xFFFF0000;
+
+    tmp = (s32)((s32)(((s8)*temp_a1++ << 0x17) - temp_a0) / (s32)arg0->unk8A);
+    arg0->unk4C = tmp;
+    arg0->unk0 = (u8*)(temp_a1);
+    arg0->unk48 = temp_a0;
+    arg0->unk8C = 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/aOcaK
+ */
+void func_8002BA74(e_struct* arg0)
+{
+    s32 temp_v1;
+    u8* temp_a0;
+    s8* temp_v0;
+
+    u32 tmp;
+
+    temp_v0 = arg0->unk0;
+
+    tmp = *temp_v0;
+    temp_v0++;
+
+    arg0->unk0 = temp_v0;
+    arg0->unk5C = (s32)(tmp << 0x17);
+    temp_v1 = *(u8*)temp_v0;
+    temp_v0++;
+    arg0->unk0 = (void*)((u8*)temp_v0);
+    arg0->unk8C = (u16)temp_v1;
+
+    if (temp_v1 == 0)
+    {
+        arg0->unk8C = 0x100U;
+    }
+
+    temp_a0 = arg0->unk0;
+
+    arg0->unk60 = (s32)((s32)((*(s8*)temp_a0 << 0x17) - arg0->unk5C) / (s32)arg0->unk8C);
+    arg0->unk0 = (void*)((u8*)temp_a0 + 1);
 }
