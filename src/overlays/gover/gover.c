@@ -71,14 +71,23 @@ typedef struct
 /**
  * @brief Audio data block consumed by the AKAO driver.
  *
- * @details Begins with a 12-byte status header (@p status_size = 12 when
- * populated), followed by the AKAO sequence payload copied in from a CD load.
- * @p gover_load_audio_clip stages bytes into @p &block + 12 (i.e. into
- * @p payload onwards). Field names beyond @p status_size are still unknown.
+ * @details Begins with a 12-byte status header, followed by the AKAO sequence
+ * payload copied in from a CD load. @p gover_load_audio_clip stages bytes into
+ * @p &block + 12 (i.e. into @p payload onwards).
+ *
+ * @p payload_offset is the only header word with a known consumer
+ * (func_800A39A8): it doubles as a "populated" flag (nonzero = a clip is
+ * loaded) and as the header length, so the payload starts at
+ * @c base + payload_offset. gover sets it to 12 (the fixed header size); the
+ * field-overlay loader instead writes the running byte count as it copies.
+ *
+ * @note @p unk4 and @p unk8 are only ever written (always zeroed) - no read of
+ * either offset appears anywhere in the disassembly, so their purpose is
+ * unknown. They are most likely reserved/cleared header words.
  */
 typedef struct
 {
-    u32 status_size;
+    u32 payload_offset;
     u32 unk4;
     u32 unk8;
     u8 payload[1];
@@ -136,7 +145,7 @@ extern s32 g_akao_music_volume;
 
 extern u32 g_scene_mode;
 extern s32 D_8010D018;
-extern AudioDataBlock g_audioData;
+extern AudioDataBlock g_audio_data;
 extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 
 /**
@@ -149,8 +158,20 @@ extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
 #define GOVER_CLUT_Y 480
 
-/** Constant added to an audioClipIndex to produce its CD resource index. */
+/** Constant added to an audio_clip_index to produce its CD resource index. */
 #define GOVER_AUDIO_RESOURCE_BASE 81
+
+/**
+ * Sentinel audio_clip_index meaning "leave the audio block untouched": return
+ * immediately without clearing g_audio_data or loading anything.
+ */
+#define GOVER_AUDIO_CLIP_NONE (-2)
+
+/**
+ * Sentinel audio_clip_index meaning "clear only": zero g_audio_data's status
+ * header but do not load a clip from CD.
+ */
+#define GOVER_AUDIO_CLIP_CLEAR (-1)
 
 /** RAM staging address used to load audio clip data from CD. */
 #define GOVER_AUDIO_LOAD_ADDR 0x80180000
@@ -208,7 +229,7 @@ u8 g_goverFrameHeader[0x90];
 u8 g_goverFrameTail[0x8A8];
 s32 g_fadeLevel;
 
-static void gover_load_audio_clip(s32 audioClipIndex);
+static void gover_load_audio_clip(s32 audio_clip_index);
 static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordinates);
 static void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer);
 static void gover_build_otag(unsigned char* pOtBuf);
@@ -309,7 +330,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     akao_cmd_f1();
     akao_cmd_a8(AKAO_VOLUME_MAX);
 
-    if (audioClipIndex != -1)
+    if (audioClipIndex != GOVER_AUDIO_CLIP_CLEAR)
     {
         gover_load_audio_clip(audioClipIndex);
         func_800A39A8(0, 0x80, 0, 0);
@@ -585,50 +606,51 @@ static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* 
  * @details The loaded blob begins with an indexed offset table: word 0 is an
  * index N into the same table, and word N gives the byte offset (relative to
  * the table) at which the AKAO sequence starts. Bytes from the start of the
- * table up to that offset are copied into @p g_audioData (after its 12-byte
+ * table up to that offset are copied into @p g_audio_data (after its 12-byte
  * status header), and the AKAO sequence is then handed to
  * akao_play_sequence_blocking.
  *
- * @param audioClipIndex   Clip index (resource = audioClipIndex + 0x51), or -1
- *                         to clear @p g_audioData without loading, or -2 to
- *                         skip entirely.
+ * @param audio_clip_index Clip index (resource = audio_clip_index + 0x51), or
+ *                         @p GOVER_AUDIO_CLIP_CLEAR (-1) to clear
+ *                         @p g_audio_data without loading, or
+ *                         @p GOVER_AUDIO_CLIP_NONE (-2) to skip entirely.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/At0Tp
+ * @see decomp.me: (100%) https://decomp.me/scratch/G5r92
  */
-static void gover_load_audio_clip(s32 audioClipIndex)
+static void gover_load_audio_clip(s32 audio_clip_index)
 {
-    AkaoSeqHeader* akaoSeq;
+    AkaoSeqHeader* akao_seq;
     u8* dst;
     u8* src;
     s32* offsets;
 
-    if (audioClipIndex == -2)
+    if (audio_clip_index == GOVER_AUDIO_CLIP_NONE)
     {
         return;
     }
 
-    g_audioData.unk8 = 0;
-    g_audioData.unk4 = 0;
-    g_audioData.status_size = 0;
+    g_audio_data.unk8 = 0;
+    g_audio_data.unk4 = 0;
+    g_audio_data.payload_offset = 0;
 
-    if (audioClipIndex == -1)
+    if (audio_clip_index == GOVER_AUDIO_CLIP_CLEAR)
     {
         return;
     }
 
-    cdrom_queue_read((audioClipIndex + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
+    cdrom_queue_read((audio_clip_index + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
     cdrom_wait_queue_empty();
-    g_audioData.status_size = 0xC;
+    g_audio_data.payload_offset = 0xC;
 
     src = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
     offsets = (s32*)src;
-    akaoSeq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
-    dst = ((u8*)(&g_audioData)) + 12;
+    akao_seq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
+    dst = ((u8*)(&g_audio_data)) + 12;
 
-    while (src != (u8*)akaoSeq)
+    while (src != (u8*)akao_seq)
     {
         *(dst++) = *(src++);
     }
 
-    akao_play_sequence_blocking(akaoSeq, 1);
+    akao_play_sequence_blocking(akao_seq, 1);
 }
