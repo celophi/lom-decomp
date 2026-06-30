@@ -247,7 +247,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
  */
 void akao_driver_init_state(void)
 {
-    volatile u16* hw = (u16*)0x1F801DAA;
+    u16* hw = (u16*)0x1F801DAA;
     u32 t0 = 0x18;
     u8** new_var4;
     u32* new_var3;
@@ -335,10 +335,10 @@ void akao_driver_init_state(void)
         a2 += 0x118;
     } while ((a3 & 0xFFFF) < 0x20);
 
-    new_var7 = 0x7F00;
     a3 = 0xC;
-    new_var5 = 0x8C;
     new_var6 = 1;
+    new_var7 = 0x7F00;
+    new_var5 = 0x8C;
 
     {
         u8* v1 = g_sfx_channels + new_var5;
