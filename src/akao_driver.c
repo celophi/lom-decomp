@@ -1,5 +1,6 @@
 #include "akao_driver.h"
 #include "akao.h"
+#include "decomp9.h"
 #include "psyq/libspu.h"
 
 /* "AKAO" in little-endian */
@@ -470,6 +471,6 @@ void akao_driver_shutdown(void)
     while (DisableEvent(g_akao_rcnt2_event) == 0);
     while (CloseEvent(g_akao_rcnt2_event) == 0);
 
-    func_8002427C(0xFFFFFF);
+    spu_set_voice_mode(0xFFFFFF);
     SpuQuit();
 }

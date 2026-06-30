@@ -1,4 +1,5 @@
 #include "decomp4.h"
+#include "decomp9.h"
 
 u16 g_akao_irq_frame_counter;
 s32 D_8004D40C;
@@ -122,17 +123,17 @@ void akao_tick_fades(void)
             if (D_8004F754 & 2)
             {
                 temp_s0 = (xa->unk40 * D_8003D47C) >> 16;
-                func_800242EC(xa->unk10, temp_s0, temp_s0, 0);
+                spu_set_voice_volume(xa->unk10, temp_s0, temp_s0, 0);
                 t0 = temp_s0;
                 t1 = temp_s0;
             }
             else
             {
                 t1 = (temp_s0 = (temp << 15) >> 16);
-                func_800242EC(xa->unk10, temp_s0, 0, 0);
+                spu_set_voice_volume(xa->unk10, temp_s0, 0, 0);
                 t0 = 0;
             }
-            func_800242EC(xa->unk10 + 1, t0, t1, 0);
+            spu_set_voice_volume(xa->unk10 + 1, t0, t1, 0);
         }
         g_akao_xa_pan_current = temp & 0xFFFF;
     }
