@@ -249,12 +249,11 @@ void akao_driver_init_state(void)
 {
     volatile u16* hw = (u16*)0x1F801DAA;
     u32 t0 = 0x18;
-    u8** new_var4; // kept if needed elsewhere; simplified usage later
+    u8** new_var4;
     u32* new_var3;
     u32* new_var2;
     u32* new_var;
     int new_var7;
-    u16 new_var8;
     int new_var5;
     u8* a0 = (u8*)&g_akao_seq_master_state;
     u8* a2 = g_akao_seq_channels;
@@ -275,7 +274,6 @@ void akao_driver_init_state(void)
     *((u32*)off(&g_akao_driver_flags, 0x04)) = 1;
     new_var = (u32*)off(D_8004F830, 0x00);
 
-    // Fix: use & for struct variables
     *((u32*)off(&g_akao_sfx_control, 0x00)) = 0;
     *((u32*)off(a0, 0x04)) = 0;
     *((u32*)off(a0, 0x08)) = 0;
@@ -303,31 +301,27 @@ void akao_driver_init_state(void)
     *((u32*)off(a0, 0x3C)) = 0;
     *((u32*)off(&g_akao_sfx_control, 0x20)) = 0;
 
-    a3 = (new_var8 = *hw);
+    a3 = *hw;
     *((s16*)0x1F801D80) = 0x3FFF;
     *((s16*)0x1F801D82) = 0x3FFF;
     *((s16*)0x1F801DB0) = 0x7FFF;
     *((s16*)0x1F801DB2) = 0x7FFF;
     *((u32*)off(a0, 0x40)) = 0;
-    a3 = 0;
-    *((u32*)off(&g_akao_sfx_control, 0x24)) = a3;
+    *((u32*)off(&g_akao_sfx_control, 0x24)) = 0;
     *((u32*)off(a0, 0x44)) = 0;
     *((u16*)off(a0, 0x68)) = 0;
     *((u16*)off(a0, 0x66)) = 0;
-    *((u16*)off(a0, 0x64)) = a3;
-    *((u16*)off(a0, 0x6C)) = a3;
+    *((u16*)off(a0, 0x64)) = 0;
+    *((u16*)off(a0, 0x6C)) = 0;
     *((u32*)off(&g_akao_xa_tracker, 0x40)) = 0x7F00;
-    *((u32*)off(&g_akao_xa_tracker, 0x48)) = a3;
-    g_akao_seq_pending_ticks = a3;
-    D_8003EC6C = a3;
-    g_akao_driver_mode_flags = a3;
-    *((u32*)off(D_8004F830, 0x08)) = a3;
-    *((u32*)off(D_8004F830, 0x04)) = a3;
-    a3 = *hw;
+    *((u32*)off(&g_akao_xa_tracker, 0x48)) = 0;
+    g_akao_seq_pending_ticks = 0;
+    D_8003EC6C = 0;
+    g_akao_driver_mode_flags = 0;
+    *((u32*)off(D_8004F830, 0x08)) = 0;
+    *((u32*)off(D_8004F830, 0x04)) = 0;
     *new_var = 0;
-    *hw = a3;
-    *hw = (*hw) & 0xFFFA;
-    *hw = (*hw) | 1;
+    *hw = (a3 & 0xFFFA) | 1;
     a3 = 0;
     hw = (u16*)(a2 - 0x24);
 
@@ -336,8 +330,8 @@ void akao_driver_init_state(void)
         a3++;
         *((u32*)hw) = 0;
         *((u32*)(a2 + 0xA4)) = t0;
-        *((u16*)(a2 + 0x0C)) = a3;
-        *((u32*)(a0 = a2 + 0x00)) = a3;
+        *((u16*)(a2 + 0x0C)) = 0;
+        *((u32*)(a0 = a2 + 0x00)) = 0;
         a2 += 0x118;
     } while ((a3 & 0xFFFF) < 0x20);
 
@@ -346,7 +340,6 @@ void akao_driver_init_state(void)
     new_var5 = 0x8C;
     new_var6 = 1;
 
-    // Fixed loop: removed new_var4 pointer assignment that caused warning
     {
         u8* v1 = g_sfx_channels + new_var5;
         do
@@ -359,8 +352,8 @@ void akao_driver_init_state(void)
             *((u32*)(v1 - 0x34)) = 0;
             *((u16*)(v1 + 0x58)) = new_var7;
             *((u16*)(v1 + 0x02)) = 0;
-            *((u16*)(v1 - 0x04)) = a3;
-            *((u32*)(v1 - 0x4C)) = 0; // was *(new_var4 = &v1) ... simplified
+            *((u16*)(v1 - 0x04)) = 0;
+            *((u32*)(v1 - 0x4C)) = 0;
             *((u16*)v1) = 0;
             v1 += 0x118;
         } while ((a3 & 0xFFFF) < 0x18);
@@ -374,23 +367,22 @@ void akao_driver_init_state(void)
         *((u32*)off(a0, 0x18)) = 0;
         *((u32*)off(a0, 0x14)) = 0;
         new_var2 = (u32*)off(v0_ptr, 0x18);
-        *((u32*)off(a0, 0x10)) = a3;
+        *((u32*)off(a0, 0x10)) = 0;
 
         *new_var2 = 1;
         *((u32*)off(v0_ptr, 0x14)) = 0x66A80000;
-        *((u32*)off(v0_ptr, 0x0C)) = a3;
-        *((u32*)off(v0_ptr, 0x08)) = a3;
-        *((u32*)off(v0_ptr, 0x04)) = a3;
+        *((u32*)off(v0_ptr, 0x0C)) = 0;
+        *((u32*)off(v0_ptr, 0x08)) = 0;
+        *((u32*)off(v0_ptr, 0x04)) = 0;
         new_var6 = 0x03FFF000;
         *((u32*)off(a0, 0x48)) = new_var6;
-        *((u32*)off(a0, 0x4C)) = a3;
-        *((u16*)off(a0, 0x5A)) = a3;
+        *((u32*)off(a0, 0x4C)) = 0;
+        *((u16*)off(a0, 0x5A)) = 0;
         new_var9 = v1_ptr;
         *((u32*)off(new_var9, 0x08)) = (*((u32*)off(new_var9, 0x08))) | 0x80;
     }
 
-    // Fix overflow warning: second argument expects short, use 0x3FFF (common SPU value)
-    func_80028E34(4, 0x3FFF, a2, a3);
+    func_80028E34(4, new_var6, a2, a3);
     SpuSetReverb(1);
 }
 
