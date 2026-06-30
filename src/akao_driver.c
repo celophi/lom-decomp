@@ -254,7 +254,6 @@ void akao_driver_init_state(void)
     u32* new_var2;
     u32* new_var;
     int new_var7;
-    u16 new_var8;
     int new_var5;
     u8* a0 = (u8*)&g_akao_seq_master_state;
     u8* a2 = g_akao_seq_channels;
