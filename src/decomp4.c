@@ -28,13 +28,23 @@ typedef struct
     u8 unk7;
 } SmallSlot;
 
-typedef struct {
+typedef struct
+{
     s32 unk0;
     char pad_1[0x80];
     s16 unk84;
     char pad_2[0x100 - 0x88];
     s32 unk100;
 } a_struct;
+
+typedef struct {
+    u8* unk0;
+    char pad4[0x80];
+    u16 unk84;
+    u16 unk86;
+    char pad88[0xE0 - 0x88];
+    s16 unkE0;
+} b_struct;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
@@ -1643,4 +1653,36 @@ void func_8002B90C(a_struct* arg0)
     arg0->unk0 = (s32)(u8*)(temp_v0 + 1);
     arg0->unk100 = (s32)(arg0->unk100 | 3);
     arg0->unk84 = tmp;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/CjVYW
+ */
+void func_8002B934(b_struct* arg0)
+{
+    u16 temp_a0;
+    u16 temp_v1;
+    u8* temp_a1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    temp_v1 = *temp_v0;
+
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk86 = temp_v1;
+
+    if (temp_v1 == 0)
+    {
+        arg0->unk86 = 0x100U;
+    }
+
+    temp_a1 = arg0->unk0;
+    temp_a0 = arg0->unk84;
+    temp_a0 &= 0x7F00;
+
+    temp_v1 = (s16)(((s32)(((*(arg0->unk0++)) << 8) - temp_a0)) / ((s32)arg0->unk86));
+    arg0->unkE0 = temp_v1;
+
+    arg0->unk0 = (u8*)(temp_a1 + 1);
+    arg0->unk84 = temp_a0;
 }
