@@ -37,7 +37,8 @@ typedef struct
     s32 unk100;
 } a_struct;
 
-typedef struct {
+typedef struct
+{
     u8* unk0;
     char pad4[0x80];
     u16 unk84;
@@ -45,6 +46,17 @@ typedef struct {
     char pad88[0xE0 - 0x88];
     s16 unkE0;
 } b_struct;
+
+typedef struct {
+    s8* unk0;
+    char pad_1[0x48 - 0x4];
+    s32 unk48;
+    char pad_2[0x8A - 0x4C];
+    s16 unk8A;
+    s16 unk8C;
+    char pad_3[0x100 - 0x90];
+    s32 unk100;
+} c_struct;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
@@ -1685,4 +1697,19 @@ void func_8002B934(b_struct* arg0)
 
     arg0->unk0 = (u8*)(temp_a1 + 1);
     arg0->unk84 = temp_a0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/hGVxk
+ */
+void func_8002B9B8(c_struct* arg0)
+{
+    s8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    arg0->unk48 = (s32)(*temp_v0 << 0x17);
+    arg0->unk0 = (s8*)(temp_v0 + 1);
+    arg0->unk8A = 0;
+    arg0->unk100 = (s32)(arg0->unk100 | 3);
+    arg0->unk8C = 0;
 }
