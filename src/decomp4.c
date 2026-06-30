@@ -28,6 +28,14 @@ typedef struct
     u8 unk7;
 } SmallSlot;
 
+typedef struct {
+    s32 unk0;
+    char pad_1[0x80];
+    s16 unk84;
+    char pad_2[0x100 - 0x88];
+    s32 unk100;
+} a_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -1620,4 +1628,19 @@ void akao_seq_op_call(void* arg0)
 void akao_seq_op_return(s32* arg0)
 {
     arg0[0] = (s32)arg0[5];
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/BN6jO
+ */
+void func_8002B90C(a_struct* arg0)
+{
+    u8* temp_v0;
+    s16 tmp;
+
+    temp_v0 = arg0->unk0;
+    tmp = (s16)(*temp_v0 << 8);
+    arg0->unk0 = (s32)(u8*)(temp_v0 + 1);
+    arg0->unk100 = (s32)(arg0->unk100 | 3);
+    arg0->unk84 = tmp;
 }
