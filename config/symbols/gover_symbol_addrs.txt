@@ -13,7 +13,7 @@ g_fadeLevel = 0x80141048;
 g_fadeStep = 0x80140708;
 D_8014070C = 0x8014070C;
 g_audioDataOffset = 0x80180004;
-g_audioData = 0x80119F00;
+g_audio_data = 0x80119F00;
 
 // AKAO music master volume slot. The underlying storage is defined in the
 // FIELD overlay's data section (as D_8011588C); this alias lets gover.c
