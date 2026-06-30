@@ -136,7 +136,7 @@ extern s32 g_akao_music_volume;
 
 extern u32 g_scene_mode;
 extern s32 D_8010D018;
-extern AudioDataBlock g_audioData;
+extern AudioDataBlock g_audio_data;
 extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 
 /**
@@ -208,7 +208,7 @@ u8 g_goverFrameHeader[0x90];
 u8 g_goverFrameTail[0x8A8];
 s32 g_fadeLevel;
 
-static void gover_load_audio_clip(s32 audioClipIndex);
+static void gover_load_audio_clip(s32 audio_clip_index);
 static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordinates);
 static void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer);
 static void gover_build_otag(unsigned char* pOtBuf);
@@ -585,50 +585,50 @@ static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* 
  * @details The loaded blob begins with an indexed offset table: word 0 is an
  * index N into the same table, and word N gives the byte offset (relative to
  * the table) at which the AKAO sequence starts. Bytes from the start of the
- * table up to that offset are copied into @p g_audioData (after its 12-byte
+ * table up to that offset are copied into @p g_audio_data (after its 12-byte
  * status header), and the AKAO sequence is then handed to
  * akao_play_sequence_blocking.
  *
- * @param audioClipIndex   Clip index (resource = audioClipIndex + 0x51), or -1
- *                         to clear @p g_audioData without loading, or -2 to
+ * @param audio_clip_index Clip index (resource = audio_clip_index + 0x51), or -1
+ *                         to clear @p g_audio_data without loading, or -2 to
  *                         skip entirely.
  *
- * @see decomp.me: (100%) https://decomp.me/scratch/At0Tp
+ * @see decomp.me: (100%) https://decomp.me/scratch/G5r92
  */
-static void gover_load_audio_clip(s32 audioClipIndex)
+static void gover_load_audio_clip(s32 audio_clip_index)
 {
-    AkaoSeqHeader* akaoSeq;
+    AkaoSeqHeader* akao_seq;
     u8* dst;
     u8* src;
     s32* offsets;
 
-    if (audioClipIndex == -2)
+    if (audio_clip_index == -2)
     {
         return;
     }
 
-    g_audioData.unk8 = 0;
-    g_audioData.unk4 = 0;
-    g_audioData.status_size = 0;
+    g_audio_data.unk8 = 0;
+    g_audio_data.unk4 = 0;
+    g_audio_data.status_size = 0;
 
-    if (audioClipIndex == -1)
+    if (audio_clip_index == -1)
     {
         return;
     }
 
-    cdrom_queue_read((audioClipIndex + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
+    cdrom_queue_read((audio_clip_index + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
     cdrom_wait_queue_empty();
-    g_audioData.status_size = 0xC;
+    g_audio_data.status_size = 0xC;
 
     src = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
     offsets = (s32*)src;
-    akaoSeq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
-    dst = ((u8*)(&g_audioData)) + 12;
+    akao_seq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
+    dst = ((u8*)(&g_audio_data)) + 12;
 
-    while (src != (u8*)akaoSeq)
+    while (src != (u8*)akao_seq)
     {
         *(dst++) = *(src++);
     }
 
-    akao_play_sequence_blocking(akaoSeq, 1);
+    akao_play_sequence_blocking(akao_seq, 1);
 }
