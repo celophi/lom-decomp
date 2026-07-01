@@ -112,22 +112,34 @@ generated". F6 IS generated (first confirmed at GNAME dec 18247).
 
 ## Current status (2026-07-01)
 
-Roundtrip results with all rules below implemented:
+Full-suite roundtrip results with all rules below implemented (byte diffs
+and first-diff position in COMPRESSED bytes; remember regions, not byte
+diffs, are the honest metric):
 
-| File    | Result                                                  |
-|---------|---------------------------------------------------------|
-| GOVER   | MATCH                                                   |
-| MOVIE   | MATCH                                                   |
-| SHOP    | 85 diffs (was 3,820 at session start)                   |
-| CLOAD   | 905 diffs (was 1,843)                                   |
-| GNAME   | 21,200 diffs, ~123 regions (was 31,098, first diff 8638)|
-| ZUKAN   | 34,609 diffs, first 8,466 (was first diff at byte 142 - old "Issue 2" is fixed) |
-| CHECKPS | 33,777 diffs, first 7,854 (was 34,306 / 7,525)          |
-| GOLEM   | 25,514 diffs, 136 regions, first 3,472 (regions are a mix of the backref class and more sav-0 F3 interplay, e.g. dec 10408 ref picks F3(cnt 2, sav 0) over our F5, dec 10594 ref picks F3(2) over raw) |
-| others  | not re-measured since the new rules landed              |
+| File    | Diffs   | First diff | Notes                                   |
+|---------|---------|------------|-----------------------------------------|
+| GOVER   | MATCH   | -          | regression anchor                       |
+| MOVIE   | MATCH   | -          | regression anchor                       |
+| SHOP    | 85      | 8,173      | was 3,820 at session start              |
+| CLOAD   | 905     | 16,912     | was 1,843 / first 16,606                |
+| GNAME   | 21,200  | 12,740     | was 31,098 / first 8,638; ~123 regions  |
+| GOLEM   | 25,514  | 3,472      | 136 regions; mix of backref class and sav-0 F3 interplay (dec 10408: ref picks F3 cnt=2 sav=0 over our F5; dec 10594: F3(2) over raw) |
+| CHECKPS | 33,777  | 7,854      | was 34,306 / 7,525                      |
+| ZUKAN   | 34,609  | 8,466      | old "Issue 2" (first diff at byte 142) is FIXED |
+| MENU    | 53,747  | 40,156     | old "Issue 3" (first diff at byte 527) is FIXED |
+| ADDHERO | 80,892  | 18,525     | was 81,479 / 18,219                     |
+| CARDA   | 83,451  | 13,024     | first diff unchanged                    |
+| NIKI    | 87,988  | 9,024      | first diff unchanged                    |
+| GOSUB   | 102,058 | 17,957     | first diff unchanged                    |
+| WMAP    | 260,375 | 188        | very early first diff - possibly a distinct rule; triage with region_diff.py WMAP |
+| TITLE   | 267,827 | 7,144      | was 268,934 / 7,220                     |
+| WSEL    | 277,687 | 2,312      | not in old table                        |
+| FIELD   | 376,241 | 3,040      | first diff unchanged                    |
 
-Essentially all remaining GNAME/SHOP/CLOAD regions are ONE class: backref
-candidate selection (see "Open problem" below).
+2/17 files match exactly. Essentially all remaining GNAME/SHOP/CLOAD
+regions are ONE class: backref candidate selection (see "Open problem"
+below). The unchanged first-diffs (CARDA/NIKI/GOSUB/FIELD, WMAP's very
+early 188) are the places to look for any rule GNAME never exercised.
 
 ## Confirmed rules (all implemented in compressor.py)
 
