@@ -602,7 +602,7 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
     u8 *base, *col;
 
     /* first call: fill buffer */
-    func_800171CC(sp10, src, len);
+    strncpy(sp10, src, len);
     sp10[len] = 0;
 
     /* second call: get number of elements */
@@ -824,7 +824,7 @@ void menu_upload_tim(Rect16* rect)
 
         clut_color++;
     }
-    func_80019A34(&vram_rect, tim_body + 0x14);
+    LoadImage(&vram_rect, tim_body + 0x14);
 
     /* Upload the texture image. */
     vram_rect.x = rect->x;
@@ -837,7 +837,7 @@ void menu_upload_tim(Rect16* rect)
         TimBlock* image_block = (TimBlock*)(tim_body + (clut_block_len + 8));
         vram_rect.w = image_block->w;
         vram_rect.h = image_block->h;
-        func_80019A34(&vram_rect, image_block + 1); /* payload follows header */
+        LoadImage(&vram_rect, image_block + 1); /* payload follows header */
     }
 
     /* Upload CLUT 1. */
@@ -856,7 +856,7 @@ void menu_upload_tim(Rect16* rect)
 
         clut_color++;
     }
-    func_80019A34(&vram_rect, tim + 0x822C);
+    LoadImage(&vram_rect, tim + 0x822C);
 }
 
 /**
@@ -2624,7 +2624,6 @@ void menu_set_active_node(void)
     }
 }
 
-extern u8 D_801ED600[];
 /** @brief Total page count for the current sub-menu view; g_script_repeat_last cycles in [0, g_menu_page_count-1]. */
 extern s32 g_menu_page_count;
 /** @brief Action sub-type of the most recently confirmed 0x5000 menu item; routes downstream handlers. */
@@ -2661,7 +2660,7 @@ extern u8 D_801686F8[];
  */
 void func_80143964(s32 arg0)
 {
-    u8* var_s4 = D_801ED600;
+    u8* var_s4 = (u8*)0x801ED600;
     MenuContentItem* s5;
     u8 content_type;
     MenuSlot* slots;
