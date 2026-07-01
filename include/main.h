@@ -35,7 +35,9 @@ extern u8 g_music_track_table[];
 extern u32 D_8003EC88;              /**< TODO: unknown; read by func_8009AFE0, never written in C */
 extern s32 D_8003EC8C;              /**< TODO: unknown; one-time init to 0xB */
 /** @brief Current scene/mode identifier (0, 0xD for default menu template). */
+#ifndef GOVER_C
 extern u16 g_scene_mode;
+#endif
 /** @brief Option/parameter word from MenuLayout; -1 = unset. */
 extern s32 g_layout_option;
 /** @brief Countdown timer for delayed music/SFX trigger on field entry. */

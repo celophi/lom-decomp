@@ -1,3 +1,8 @@
+/* gover.c uses a wider (u32) declaration of g_scene_mode than main.h's
+ * canonical u16, matching the original codegen for its assignment at line
+ * 439 (sw, not sh). Suppress main.h's declaration in this TU to avoid the
+ * conflicting-types warning without changing which type governs codegen. */
+#define GOVER_C
 #include "gover.h"
 #include "akao.h"
 #include "akao_cmd.h"
@@ -143,6 +148,7 @@ extern s32 func_800A39A8(s32, s32, s32, s32); /* one-shot SFX/voice playback */
  */
 extern s32 g_akao_music_volume;
 
+extern u32 g_scene_mode;
 extern s32 D_8010D018;
 extern AudioDataBlock g_audio_data;
 extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
