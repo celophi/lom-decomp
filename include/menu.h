@@ -9,6 +9,7 @@
 #include "tim.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
+#include "psyq/strings.h"
 
 extern void func_800AA02C(void);
 extern void menu_init_prim_rects(void);
