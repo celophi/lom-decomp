@@ -42,6 +42,12 @@ segments:
     vram: 0x8004FC70
     subsegments:
       - [0x1, rodata, rodata]
+      - [0x5, .rodata, field3]
+      - [0x65, .rodata, unk1]
+      - [0x115, .rodata, unk1_e]
+      - [0x129, .rodata, unk1_c]
+      - [0x26D, .rodata, unk1_c_b]
+      - [0x285, .rodata, unk2]
       - [0x22B9, c, field1]       # gcc280_g4
       - [0x29B9, c, field2]       # gcc280_g4
       - [0x3C11, c, field3]       # CDK (default)

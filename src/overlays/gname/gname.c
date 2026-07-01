@@ -946,7 +946,7 @@ static void load_name_entry_tim(void)
  *
  * @param dst_coords Pixel and CLUT VRAM destination coordinates.
  *
- * @note @c func_80019A34 is the engine's LoadImage-style VRAM upload.
+ * @note Uses LoadImage for VRAM upload.
  * @see https://decomp.me/scratch/P3W9C (100%)
  */
 static void load_tim_to_vram(TimDstCoords* dst_coords)
@@ -974,7 +974,7 @@ static void load_tim_to_vram(TimDstCoords* dst_coords)
         clut++;
     }
 
-    func_80019A34(&rect, tim->clut_data);
+    LoadImage(&rect, tim->clut_data);
     pixel_block = TIM_PIXEL_BLOCK(tim, clut_len);
 
     rect.x = dst_coords->pixel_x;
@@ -982,7 +982,7 @@ static void load_tim_to_vram(TimDstCoords* dst_coords)
     rect.w = pixel_block->w;
     rect.h = pixel_block->h;
 
-    func_80019A34(&rect, pixel_block + 1);
+    LoadImage(&rect, pixel_block + 1);
 
     /* Trailing rect writes are dead but required to match. */
     rect.x = dst_coords->clut_x;
@@ -1848,7 +1848,7 @@ static void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 
     /* 1. Copy template packet from the *other* frame's reserve slot, then
      * splice it into the OT. */
-    func_8001A5D4(prim, (void*)((s32)g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
+    SetDrawEnv(prim, (void*)((s32)g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
 
     addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], prim);
 
@@ -1866,8 +1866,8 @@ static void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
         vram_y = 0x100;
     }
 
-    func_8001C56C(pkt, vram_x, vram_y, strip_width, 0x20);
-    func_8001A5D4(next_prim, pkt);
+    SetDefDrawEnv(pkt, vram_x, vram_y, strip_width, 0x20);
+    SetDrawEnv(next_prim, pkt);
 
     addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], next_prim);
     /* Advance heap cursor 0x40 bytes past the load packet. */
