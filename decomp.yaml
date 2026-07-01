@@ -1,0 +1,13 @@
+name: Legend of Mana
+platform: psx
+build_system: make
+versions:
+  - name: us
+    fullname: SLUS-01013 (US)
+    sha1: d11dfdd50d412ac3fa3e2eb80fbde138da118f27
+    paths:
+      target: disc/SLUS_010.13
+      build_dir: build/
+      map: build/SLUS_010.13.map
+      compiled_target: build/SLUS_010.13.bin
+      elf: build/SLUS_010.13.elf
