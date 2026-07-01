@@ -43,6 +43,8 @@ tools/compressor/test_roundtrip.py- canonical progress metric (see below)
 tools/compressor/region_diff.py   - opcode-level diff vs reference (see below)
 tools/compressor/backref_candidates.py - candidate inspector for the one
                                     remaining unsolved rule
+tools/compressor/fc_rule_lab.py   - 2,798-site FC decision dataset +
+                                    selection-rule scorer (see open problem)
 tools/splat_ext/decompress.py     - reference decompressor (frozen, correct)
 disc/BIN/*.BIN                    - 17 original compressed overlays (targets)
 build/overlays/<name>/            - linked ELFs / raw images (only for
@@ -193,45 +195,71 @@ accelerates FC/FD.
 ## Open problem: backref candidate selection (the last GNAME blocker)
 
 When several FC/FD/FE candidates have EQUAL savings, which one did the
-original pick? Current evidence is contradictory and this is the one rule
-still unknown:
+original pick? This is the one rule still unknown.
 
-- GNAME mid-file (11 sampled FC sites, e.g. dec 21985/22045/23221/26116):
-  the reference picks the NEWEST matching candidate (smallest offset) at
-  10/11 sites. Our oldest-first pick is wrong there.
-- BUT flipping to newest-first globally breaks GOVER (22 diffs, first
-  region at dec 246) and MOVIE (1,769) and early GNAME (first diff 311).
-  Early-file the reference behaves oldest-first/largest-offset.
-- The 11th site (GNAME dec 21985) is also anomalous for newest-first: the
-  newest candidate (p=21133, covered by FC+3 of an adv-4 FC) is skipped in
-  favor of the 2nd newest (p=20269). Reproduce the table with:
+THE DATASET (built 2026-07-01, tool: `fc_rule_lab.py`): every FC opcode in
+the reference streams of GOVER/MOVIE/GNAME/SHOP/CLOAD where 2+ window
+candidates existed = 2,798 decision sites. A correct rule must hit 100%
+here. Score any candidate rule with:
+
+```
+python fc_rule_lab.py                     # score all built-in rules
+python fc_rule_lab.py --failures oldest   # dump the sites a rule misses
+```
+
+Quantitative picture:
+- `oldest` (= current compressor: max savings, tie -> largest distance)
+  fits 2,660/2,798 = 95.1%, including 100% of GOVER (17/17) and MOVIE
+  (258/258). The problem is ~138 deviant sites: GNAME 89, SHOP 38,
+  CLOAD 11.
+- At the deviant sites the ref pick has VARIABLE rank in the savings-tied
+  candidate list: often newest (GNAME dec 22045/23221/26116), sometimes
+  2nd-newest (dec 21985), sometimes 2nd-oldest (dec 31936/32427),
+  sometimes the middle of 3 (dec 31424/33823). No fixed rank or fixed
+  chain depth can fit this; whatever the mechanism is, it must be
+  data-dependent (eviction/collision-like).
+- Inspect a single site with:
   `python backref_candidates.py GNAME 21985 --ref-off 0x6b3`
-- FE beats FC on savings ties (GNAME dec 32770: ref `fe ff` over an
-  equal-savings FC; also dec 34361). Our current dist-based tie-break gets
-  these wrong but fixing it via "first candidate wins, FE evaluated first"
-  was only tested together with newest-first, so retest it standalone.
+- Separate sub-issue: FE beats FC on savings ties (GNAME dec 32770: ref
+  `fe ff` over an equal-savings FC; also dec 34361). Our dist-based
+  tie-break gets these wrong. "First candidate wins, FE evaluated first"
+  was only tested bundled with newest-first, so retest it standalone -
+  but note plain `oldest` fits GOVER/MOVIE 100%, so any FE fix must not
+  disturb FC-vs-FC ordering.
 
-Hypotheses TESTED AND REJECTED (2026-07-01):
-- Global newest-first (breaks GOVER/MOVIE, see above).
+Hypotheses TESTED AND REJECTED (2026-07-01), with scores on the dataset:
+- Global newest-first: 33.3%. Breaks GOVER (22 diffs, first region dec
+  246) and MOVIE (1,769) when actually wired into the compressor.
+- Fixed-depth-K bounded chain, pick oldest of the K newest: peaks at
+  84.4% (K=8), always below plain oldest. Exact-gram bounded chains are
+  out; if eviction is the mechanism it needs cross-gram collisions.
+- zlib-style head[]/prev[] with an undersized prev ring (link slots
+  clobbered mod table size), oldest reachable: 94.9% at mask 4095
+  (= oldest with an off-by-one), DEGRADES at smaller masks (72.1% at
+  2047, 55.5% at 1023). Rejected.
+- Static ring-buffer scan order (b = p & 4095): scan-from-0 first-max
+  79.9%, scan-from-write-pointer first-max 94.9% (mathematically almost
+  = oldest), last-max variants ~35%. Rejected.
 - Hash insertion only at scan positions (opcode starts + raw literal
-  bytes): reference picks at GNAME dec 23221/26116/27186/30876/30891 are
+  bytes): ref picks at GNAME dec 23221/26116/27186/30876/30891 are
   INTERIOR to emitted FC/FE opcodes, so interiors are inserted too.
 - Insertion only when the 4-gram fits inside the covering opcode's span:
   GNAME dec 23221 (FC+3 of adv-4, does not fit) is still the ref pick.
 
-Hypotheses NOT yet tested:
-- A real bounded hash table like the era's LZ coders: small table indexed
-  by a WEAK hash of 2-4 bytes (collisions between different grams), single
-  slot or short chain per bucket, entries overwritten by newer insertions.
-  Collision-eviction would naturally produce "sometimes the near match,
-  sometimes a far one" depending on what else hashed into the bucket since.
-  This is the most promising direction. Try: table sizes 256/1024/4096,
-  keys of 2/3/4 bytes, hash = sum/xor/shift combos, 1-2 slots per bucket.
-  Fit against the GOVER first-region case (dec 246: ref picks offset 0x33,
-  newest-first would pick 0x1b) AND the GNAME site table simultaneously.
-- Chain search depth limits interacting with a weak hash.
-- Insertion cadence tied to opcode advance (e.g. inserting every K-th byte
-  of long opcodes).
+Hypotheses NOT yet tested (next session starts here):
+- Bounded WEAK-HASH buckets: small table indexed by a weak hash of the
+  gram (different grams collide), N slots per bucket, newer insertions
+  evict oldest; query scans the bucket, byte-verifies, picks
+  oldest-verified with max savings. Cross-gram collision traffic gives
+  exactly the variable effective depth the failures show. Sweep table
+  size (256/1024/4096) x slots (1/2/4/8) x hash (sum, xor, shift-xor of
+  2/3/4 bytes, zlib-style (b0<<10)^(b1<<5)^b2). Implement as a simulation
+  scored against the fc_rule_lab dataset - insertion history = every
+  position 0..i-1 in order, no compressor simulation needed.
+- Two-tier search: e.g. brute scan of the last M bytes (finds newest
+  nearby) plus hash for older matches, with a preference between tiers.
+- Insertion cadence tied to opcode advance (e.g. inserting every K-th
+  byte of long opcodes).
 - Remaining non-FC regions (GNAME dec 30415 F0-vs-FE, 32995 raw-split,
   30209/34869 sav-0 F3) may share a root cause with the backref rule -
   our FE/FC choice feeds the efficiency comparison of rule 4 - so fix
@@ -261,9 +289,10 @@ well-scoped; expect several files to collapse to MATCH once it lands.
 
 1. `cd tools/compressor && python test_roundtrip.py GNAME GOVER MOVIE CLOAD SHOP`
    to confirm the baseline in "Current status" still holds.
-2. Attack the open problem above. Start with the bounded/weak-hash
-   hypothesis; the two anchor cases to satisfy simultaneously are
-   GOVER dec 246 and the GNAME 11-site table (backref_candidates.py).
+2. Attack the open problem above using `fc_rule_lab.py` as the scorer:
+   add candidate rules there and iterate until one hits 100% of the
+   2,798-site dataset (start with the bounded weak-hash bucket sweep).
+   Only then wire it into compressor.py and run the roundtrip suite.
 3. After any win, re-run the full suite (`python test_roundtrip.py`) and
    update the status table here.
 4. When GNAME reaches MATCH: add gname compress+verify rules to the
