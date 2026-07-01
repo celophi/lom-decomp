@@ -122,8 +122,7 @@ void func_80062F48(void*, s32*);                        /* extern */
 /**
  * decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
  */
-s32 func_8005B6AC(void* arg0) {
-    Mover* a0 = (Mover*)arg0;
+s32 func_8005B6AC(Mover* a0) {
     Mover* sp10;
     s32 sp14;
     s32 sp18;
@@ -757,8 +756,7 @@ s32 func_8005B6AC(void* arg0) {
                     var_s5 = func_8005E1A8(NULL, 0x7E, sp58, var_s5);
                 }
             }
-            sp64_var = 0x801E1000;
-            sp64 = (void** )sp64_var;
+            sp64 = (void** )0x801E1000;
             var_t7 = sp20 - 1;
             sp24 = 0;
             if (var_t7 != -1) {
@@ -1190,24 +1188,11 @@ s32 func_8005B6AC(void* arg0) {
                 if ((((UnkNode3*)temp_a2_3)->unk2C & 2) && ((temp_a0_16 = (u16) a0->unk24, temp_a1_7 = (u16) a0->unk28, temp_a3_2 = (u16) sp14 - ((s32) ((s16) temp_a0_16 + ((u32) (temp_a0_16 << 0x10) >> 0x1F)) >> 1), temp_v0_14 = (u16) sp18 - ((s32) ((s16) temp_a1_7 + ((u32) (temp_a1_7 << 0x10) >> 0x1F)) >> 1), (temp_v0_14 & 0x8000)) || ((s16) (temp_v0_14 + temp_a1_7) >= ((UnkNode3*)temp_a2_3)->unk32) || (temp_a3_2 & 0x8000) || ((s16) (temp_a3_2 + temp_a0_16) >= ((UnkNode3*)temp_a2_3)->unk30))) {
                     var_t8_5 = 1;
                 }
-                if ((sp20 == 0) && (var_t8_5 == 0)) {
-                    a0->unk0 = (s32) (a0->unk0 + sp5C);
-                    var_v1 = a0->unk8 + sp60;
-                    a0->unk8 = var_v1;
-                } else {
-                    var_v0_30 = a0->unk0;
-                    if (var_v0_30 < 0) {
-                        var_v0_30 += 0xFF;
-                    }
-                    sp14 = var_v0_30 >> 8;
-                    var_v0_31 = a0->unk8;
-                    if (var_v0_31 < 0) {
-                        var_v0_31 += 0xFF;
-                    }
-                    sp18 = var_v0_31 >> 8;
-                    func_8005DA7C((void**)&sp10, sp2C, &sp20, &sp24);
-                    sp50 |= 3;
-                }
+            }
+            if ((sp20 == 0) && (var_t8_5 == 0)) {
+                a0->unk0 = (s32) (a0->unk0 + sp5C);
+                var_v1 = a0->unk8 + sp60;
+                a0->unk8 = var_v1;
             } else {
                 var_v0_30 = a0->unk0;
                 if (var_v0_30 < 0) {
