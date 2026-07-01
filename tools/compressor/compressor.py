@@ -147,17 +147,29 @@ def best_pattern_savings(src, i, n):
 
     if i + 1 < n:
         fixed = v0
+        # Extend pair-by-pair; stop right after a pair whose varying byte
+        # (odd alignment) starts a qualifying FB run - the reference
+        # compressor yields to FB there.
+        cnt = 0
+        while cnt < 259 and i + cnt * 2 + 1 < n and src[i + cnt * 2] == fixed:
+            cnt += 1
+            if fb_qualifies_at(src, i + cnt * 2 - 1, n):
+                break
         cnt_q = 0
-        while (cnt_q < 259 and i + cnt_q * 2 + 1 < n
-               and src[i + cnt_q * 2] == fixed
-               and src[i + cnt_q * 2 + 1] != fixed):
+        while cnt_q < cnt and src[i + cnt_q * 2 + 1] != fixed:
             cnt_q += 1
-        if cnt_q >= 1:
-            cnt = cnt_q
-            while (cnt < 259 and i + cnt * 2 + 1 < n and src[i + cnt * 2] == fixed):
-                cnt += 1
-            if cnt >= 4 and f5_cnt_qualifies(src, i, fixed, cnt_q, cnt) and not fb_qualifies_at(src, i + 1, n):
-                chk(3 + cnt, cnt * 2)
+        if cnt >= 4 and cnt_q >= 1 and f5_cnt_qualifies(src, i, fixed, cnt_q, cnt):
+            chk(3 + cnt, cnt * 2)
+
+    if i + 2 < n:
+        b0, b1 = src[i], src[i + 1]
+        cnt = 1
+        while (cnt < 258 and i + cnt * 3 + 2 < n
+               and src[i + cnt * 3] == b0
+               and src[i + cnt * 3 + 1] == b1):
+            cnt += 1
+        if cnt >= 3:
+            chk(4 + cnt, cnt * 3)
 
     if i + 3 < n:
         b0, b1, b2 = src[i], src[i + 1], src[i + 2]
@@ -228,10 +240,12 @@ def find_best(src, i, n, hash_table):
     # ──────────────────────────────────────────────────────────────────
     candidates = []  # list of (enc, adv, sav)
 
-    def pat(enc, adv):
+    def pat(enc, adv, cnt):
+        # sav == 0 qualifies: the reference emits zero-savings F3 (cnt=2)
+        # rather than falling back to raw (GNAME dec 30209/32766/34869).
         sav = adv - len(enc)
-        if sav > 0:
-            candidates.append((bytearray(enc), adv, sav))
+        if sav >= 0:
+            candidates.append((bytearray(enc), adv, sav, cnt))
 
     p_enc = None
     p_sav = 0
@@ -243,14 +257,14 @@ def find_best(src, i, n, hash_table):
         while cnt < 18 and i + cnt < n and src[i + cnt] == v0:
             cnt += 1
         if cnt >= 3:
-            pat([0xF0, (v0 << 4) | (cnt - 3)], cnt)
+            pat([0xF0, (v0 << 4) | (cnt - 3)], cnt, cnt)
 
     # F1: any byte repeated 4-259 times → 3 bytes
     cnt = 1
     while cnt < 259 and i + cnt < n and src[i + cnt] == v0:
         cnt += 1
     if cnt >= 4:
-        pat([0xF1, cnt - 4, v0], cnt)
+        pat([0xF1, cnt - 4, v0], cnt, cnt)
 
     # F2: nibble pair (both 0-15) repeated 2-257 times → 3 bytes
     if i + 1 < n:
@@ -261,7 +275,7 @@ def find_best(src, i, n, hash_table):
                    and src[i + cnt * 2] == b0 and src[i + cnt * 2 + 1] == b1):
                 cnt += 1
             if cnt >= 2:
-                pat([0xF2, cnt - 2, (b1 << 4) | b0], cnt * 2)
+                pat([0xF2, cnt - 2, (b1 << 4) | b0], cnt * 2, cnt)
 
     # F3: 2-byte pattern repeated 2-257 times → 4 bytes
     if i + 1 < n:
@@ -270,8 +284,8 @@ def find_best(src, i, n, hash_table):
         while (cnt < 257 and i + cnt * 2 + 1 < n
                and src[i + cnt * 2] == b0 and src[i + cnt * 2 + 1] == b1):
             cnt += 1
-        if cnt >= 3:
-            pat([0xF3, cnt - 2, b0, b1], cnt * 2)
+        if cnt >= 2:
+            pat([0xF3, cnt - 2, b0, b1], cnt * 2, cnt)
 
     # F4: 3-byte pattern repeated 2-257 times → 5 bytes
     if i + 2 < n:
@@ -283,26 +297,42 @@ def find_best(src, i, n, hash_table):
                and src[i + cnt * 3 + 2] == b2):
             cnt += 1
         if cnt >= 2:
-            pat([0xF4, cnt - 2, b0, b1, b2], cnt * 3)
+            pat([0xF4, cnt - 2, b0, b1, b2], cnt * 3, cnt)
 
     # F5: {fixed, var} pairs, 4-259 pairs → 3+cnt bytes
+    # Extension stops right after a pair whose varying byte (odd alignment)
+    # starts a qualifying FB run - the reference compressor yields to FB
+    # there (confirmed at GNAME dec 12042/12060/12324/12591). The pair-0
+    # case reproduces the old "FB at i+1 suppresses F5" rule (cnt=1 < 4),
+    # and the truncation explains the CLOAD 24240 F5(4)+F5(13) split: the
+    # scan resumes at a pair boundary where the odd-aligned FB no longer
+    # applies, so another F5 fires.
     if i + 1 < n:
         fixed = v0
+        cnt = 0
+        while cnt < 259 and i + cnt * 2 + 1 < n and src[i + cnt * 2] == fixed:
+            cnt += 1
+            if fb_qualifies_at(src, i + cnt * 2 - 1, n):
+                break
         cnt_q = 0
-        while (cnt_q < 259 and i + cnt_q * 2 + 1 < n
-               and src[i + cnt_q * 2] == fixed
-               and src[i + cnt_q * 2 + 1] != fixed):
+        while cnt_q < cnt and src[i + cnt_q * 2 + 1] != fixed:
             cnt_q += 1
-        if cnt_q >= 1:
-            cnt = cnt_q
-            while (cnt < 259 and i + cnt * 2 + 1 < n
-                   and src[i + cnt * 2] == fixed):
-                cnt += 1
-            if cnt >= 4 and f5_cnt_qualifies(src, i, fixed, cnt_q, cnt) and not fb_qualifies_at(src, i + 1, n):
-                varying = bytes(src[i + k * 2 + 1] for k in range(cnt))
-                pat(bytes([0xF5, cnt - 4, fixed]) + varying, cnt * 2)
+        if cnt >= 4 and cnt_q >= 1 and f5_cnt_qualifies(src, i, fixed, cnt_q, cnt):
+            varying = bytes(src[i + k * 2 + 1] for k in range(cnt))
+            pat(bytes([0xF5, cnt - 4, fixed]) + varying, cnt * 2, cnt)
 
-    # F6: never used in practice (0 instances observed in reference output)
+    # F6: {b0, b1, var} triples, 3-258 triples, 4+cnt enc bytes
+    # (confirmed in reference output at GNAME dec 18247)
+    if i + 2 < n:
+        b0, b1 = src[i], src[i + 1]
+        cnt = 1
+        while (cnt < 258 and i + cnt * 3 + 2 < n
+               and src[i + cnt * 3] == b0
+               and src[i + cnt * 3 + 1] == b1):
+            cnt += 1
+        if cnt >= 3:
+            varying = bytes(src[i + k * 3 + 2] for k in range(cnt))
+            pat(bytes([0xF6, cnt - 3, b0, b1]) + varying, cnt * 3, cnt)
 
     # F7: {b0, b1, b2, var} quads, 2-257 quads → 5+cnt bytes
     # Not used when b0==b1==b2 (degenerate case handled by other opcodes).
@@ -317,21 +347,21 @@ def find_best(src, i, n, hash_table):
                 cnt += 1
             if cnt >= 2:
                 varying = bytes(src[i + k * 4 + 3] for k in range(cnt))
-                pat(bytes([0xF7, cnt - 2, b0, b1, b2]) + varying, cnt * 4)
+                pat(bytes([0xF7, cnt - 2, b0, b1, b2]) + varying, cnt * 4, cnt)
 
     # F8: ascending +1 run, 4-259 bytes → 3 bytes
     cnt = 1
     while cnt < 259 and i + cnt < n and src[i + cnt] == (v0 + cnt) & 0xFF:
         cnt += 1
     if cnt >= 4:
-        pat([0xF8, cnt - 4, v0], cnt)
+        pat([0xF8, cnt - 4, v0], cnt, cnt)
 
     # F9: descending -1 run, 4-259 bytes → 3 bytes
     cnt = 1
     while cnt < 259 and i + cnt < n and src[i + cnt] == (v0 - cnt) & 0xFF:
         cnt += 1
     if cnt >= 4:
-        pat([0xF9, cnt - 4, v0], cnt)
+        pat([0xF9, cnt - 4, v0], cnt, cnt)
 
     # FA: arithmetic run with step, 5-260 bytes → 4 bytes
     if i + 1 < n:
@@ -340,7 +370,7 @@ def find_best(src, i, n, hash_table):
         while cnt < 260 and i + cnt < n and src[i + cnt] == (v0 + step * cnt) & 0xFF:
             cnt += 1
         if cnt >= 5:
-            pat([0xFA, cnt - 5, v0, step], cnt)
+            pat([0xFA, cnt - 5, v0, step], cnt, cnt)
 
     # FB: 16-bit pair run with signed delta, 3-258 pairs → 5 bytes
     if i + 3 < n:
@@ -358,7 +388,7 @@ def find_best(src, i, n, hash_table):
                 v16 = (v16 + raw_delta) & 0xFFFF
                 cnt += 1
             if cnt >= 3:
-                pat([0xFB, cnt - 3, src[i], src[i + 1], raw_delta & 0xFF], cnt * 2)
+                pat([0xFB, cnt - 3, src[i], src[i + 1], raw_delta & 0xFF], cnt * 2, cnt)
 
     # ──────────────────────────────────────────────────────────────────
     # Back-reference opcodes FE / FD / FC
@@ -420,11 +450,18 @@ def find_best(src, i, n, hash_table):
     if has_f5:
         candidates = [c for c in candidates if c[0][0] != 0xF7]
 
-    # Pick best pattern using 1-level lookahead.
-    for enc, adv, sav in candidates:
+    # Pick best pattern using 1-level lookahead. Ties go to the candidate
+    # with the larger iteration count (confirmed: FA cnt=8 beats F3 cnt=4 at
+    # GNAME dec 12502, F1 cnt=19 beats F0 cnt=18 at dec 34420, F1 cnt=186
+    # beats F2 cnt=93 at dec 27352); remaining ties to the first candidate
+    # in F0..FB order.
+    p_cnt = 0
+    for enc, adv, sav, cnt in candidates:
         total = sav + best_pattern_savings(src, i + adv, n)
-        if p_enc is None or total > p_sav:  # reuse p_sav as best_total
-            p_enc, p_sav, p_adv = enc, total, adv
+        if total <= 0:
+            continue  # zero-savings candidates need a positive lookahead
+        if p_enc is None or total > p_sav or (total == p_sav and cnt > p_cnt):
+            p_enc, p_sav, p_adv, p_cnt = enc, total, adv, cnt
 
     # Compare best pattern vs best back-ref by raw efficiency (savings/advance).
     # Back-ref wins only if strictly higher efficiency; patterns win ties.

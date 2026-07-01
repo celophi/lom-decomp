@@ -388,8 +388,10 @@ extern GlyphSeqEntry g_name_cursor_glyphs[];
  * Uninitialized run-state RAM owned by this translation unit (gname.o(.bss),
  * 0x8014F7B0..0x8014F8D8). Defined here in ascending address order so the
  * compiler lays them out matching the original; do not reorder. The single-byte
- * fields (g_append_anim_frame, g_append_anim_timer) take their trailing word of
- * padding from the alignment of the following word-sized global.
+ * fields (g_append_anim_frame, g_append_anim_timer) are each followed by an
+ * explicit 3-byte pad field: this compiler does not implicitly align the
+ * following s32 global to a 4-byte boundary, so the gap must be spelled out
+ * or the subsequent globals land 3 bytes early.
  */
 
 /** 48-byte name buffer holding the custom preset name (used when g_name_source_mode == 1). */
@@ -448,10 +450,14 @@ s32 g_strip_width;
 s32 g_char_set_mode;
 /** Current frame index into g_char_append_anim. */
 u8 g_append_anim_frame;
+/** Explicit alignment pad; see the block comment above. */
+u8 pad_8014F8B1[3];
 /** Current horizontal scroll position of the character grid in pixels. */
 s32 g_scroll_pos;
 /** Render ticks until the next append-animation frame. */
 u8 g_append_anim_timer;
+/** Explicit alignment pad; see the block comment above. */
+u8 pad_8014F8B9[3];
 /** Target name-strip width in pixels for the width lerp. */
 s32 g_strip_width_target;
 /** Target horizontal scroll position for the scroll lerp. */
@@ -464,6 +470,10 @@ s32 g_kanji_cat;
 s32 g_name_pixel_width;
 /** Linearized character cursor position in the grid: row * 10 + col. */
 s32 g_char_cursor;
+/** Trailing 4 bytes of the overlay's .bss; unreferenced by name, purpose
+ *  unknown. Kept so the overlay's total .bss size (and file length once
+ *  linked) matches the original exactly. */
+s32 D_8014F8D4;
 
 /**
  * @brief Play a one-shot UI sound effect via the AKAO driver.
@@ -512,12 +522,13 @@ const s32 g_gname_overlay_id = 5;
 
 /* --- Constant data tables ---------------------------------------------------
  *
- * These reproduce the leading run of the overlay's .data section
- * (0x80142C98..0x80142EF4), in the exact order the original binary lays them
- * out. They must stay in this order, and ahead of the panel data blob that
- * still lives in asm/overlays/gname/data/data.data.s, for the .data section to
- * match byte-for-byte. The linker places gname.o(.data) before
- * data.data.o(.data), so this block occupies the start of .data.
+ * These map onto the leading run of the overlay's .data section
+ * (0x80142C98..0x8014301C), which is now packed into the databin asset blob
+ * (see config/overlays/GNAME.BIN.yaml) instead of being emitted from this
+ * file, since it is derived from copyrighted game data. The extern
+ * declarations below just give the existing references in this file a
+ * symbol and layout to resolve against; the bytes themselves come from the
+ * linked databin.
  */
 
 /** Per-panel character set base offsets (low u16 = row count). */
@@ -525,10 +536,6 @@ extern u32 g_panel_char_offsets[];
 
 /** First record-offset entry index of the kanji category name records. */
 extern s32 g_kanji_cat_names_offset;
-/** Trailing word inside the g_kanji_cat_names_offset symbol span (0x80142CA8);
- *  never referenced by name. Kept as its own global so it is emitted and not
- *  discarded, preserving the layout. TODO: meaning unknown (value 0x8A). */
-extern s32 D_80142CA8;
 
 /** Kanji category entry index table: [cat] -> sub-index into
  *  g_kanji_entry_offsets, or 0xFF when empty. */
@@ -537,12 +544,9 @@ extern u32 g_kanji_cat_entries[];
 /** Glyph metrics table indexed by character id (see @ref GlyphInfo). */
 extern GlyphInfo g_glyph_table[];
 
-/* TabCursorEntry initializers are {x:9, sprite_idx:7, y, glyph}. */
-
-/** Scroll-up [0] and scroll-down [1] indicator glyphs. */
+/** Scroll-up [0] and scroll-down [1] indicator glyphs, followed by cursor
+ *  target positions for the 11 character-panel tabs. */
 extern TabCursorEntry g_tab_cursor_pos[];
-
-/** Cursor target positions for the 11 character-panel tabs. */
 extern TabCursorEntry g_tab_cursor_entries[];
 
 /** Kanji sub-index to glyph offset lookup table. */
@@ -552,11 +556,10 @@ extern u32 g_kanji_entry_offsets[];
  *
  * The next run (0x80142EF4..0x8014301C) is the header of the serialized panel
  * data file (see @ref PanelDataHeader) followed by its u16 record-offset
- * table. These six symbols must stay contiguous and in this order: the code
- * derives the blob base from individual field addresses at runtime
- * (e.g. PANEL_DATA_BLOB = &g_panel_tbl_off - 4, g_random_names_off - 0x10).
- * The blob body (D_8014301C and the glyph TIM) still follows in
- * data.data.s and must remain immediately after g_panel_record_offsets.
+ * table. These symbols stay contiguous and in this order inside the databin
+ * blob: the code derives the blob base from individual field addresses at
+ * runtime (e.g. PANEL_DATA_BLOB = &g_panel_tbl_off - 4,
+ * g_random_names_off - 0x10).
  *
  * The header fields are u32 byte offsets; the u8[] ones are kept as byte
  * arrays so the pointer arithmetic in the referencing code is unchanged.
