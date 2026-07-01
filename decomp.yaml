@@ -11,3 +11,43 @@ versions:
       map: build/SLUS_010.13.map
       compiled_target: build/SLUS_010.13.bin
       elf: build/SLUS_010.13.elf
+  - name: menu
+    fullname: Menu Overlay
+    paths:
+      target: disc/SLUS_010.13
+      build_dir: build/overlays/menu/
+      map: build/overlays/menu/menu.map
+      compiled_target: build/overlays/menu/menu.elf
+      elf: build/overlays/menu/menu.elf
+  - name: title
+    fullname: Title Overlay
+    paths:
+      target: disc/SLUS_010.13
+      build_dir: build/overlays/title/
+      map: build/overlays/title/title.map
+      compiled_target: build/overlays/title/title.elf
+      elf: build/overlays/title/title.elf
+  - name: movie
+    fullname: Movie Overlay
+    paths:
+      target: disc/SLUS_010.13
+      build_dir: build/overlays/movie/
+      map: build/overlays/movie/movie.map
+      compiled_target: build/overlays/movie/movie.elf
+      elf: build/overlays/movie/movie.elf
+  - name: gname
+    fullname: GName Overlay
+    paths:
+      target: disc/SLUS_010.13
+      build_dir: build/overlays/gname/
+      map: build/overlays/gname/gname.map
+      compiled_target: build/overlays/gname/gname.elf
+      elf: build/overlays/gname/gname.elf
+  - name: gover
+    fullname: GOver Overlay
+    paths:
+      target: disc/SLUS_010.13
+      build_dir: build/overlays/gover/
+      map: build/overlays/gover/gover.map
+      compiled_target: build/overlays/gover/gover.elf
+      elf: build/overlays/gover/gover.elf
