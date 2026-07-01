@@ -1,6 +1,4 @@
 field_init_ctx                        = 0x80051F28;
-// field_scene_reset, field_draw_frame, field_clear_node_accumulators moved to
-// shared_symbol_addrs.txt (called cross-module from main's decomp7.c)
 field_init_with_fmv                   = 0x80052108;
 field_init_with_fmv_alloc             = 0x800521DC;
 field_load_map                        = 0x800522B4;

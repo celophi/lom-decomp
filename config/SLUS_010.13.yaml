@@ -57,11 +57,6 @@ segments:
     align: 4
     section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
     subsegments:
-      # Front-of-segment rodata. Jump-table blocks owned by matched-C files are
-      # ".rodata" linked subsegments so the C compiler regenerates them (its own
-      # local labels); the linker gathers each object's .rodata. Pure data blocks
-      # (D_ constants referenced extern) stay standalone "rodata" objects so the
-      # D_ symbols are actually defined.
       - [0x800, rodata, rodata_data0]        # D_80010000 boot-path string (referenced by unk8)
       - [0x818, .rodata, main]               # jtbl -> main
       - [0x844, .rodata, cdrom]              # jtbl -> cdrom
