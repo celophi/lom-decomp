@@ -388,8 +388,10 @@ extern GlyphSeqEntry g_name_cursor_glyphs[];
  * Uninitialized run-state RAM owned by this translation unit (gname.o(.bss),
  * 0x8014F7B0..0x8014F8D8). Defined here in ascending address order so the
  * compiler lays them out matching the original; do not reorder. The single-byte
- * fields (g_append_anim_frame, g_append_anim_timer) take their trailing word of
- * padding from the alignment of the following word-sized global.
+ * fields (g_append_anim_frame, g_append_anim_timer) are each followed by an
+ * explicit 3-byte pad field: this compiler does not implicitly align the
+ * following s32 global to a 4-byte boundary, so the gap must be spelled out
+ * or the subsequent globals land 3 bytes early.
  */
 
 /** 48-byte name buffer holding the custom preset name (used when g_name_source_mode == 1). */
@@ -448,10 +450,14 @@ s32 g_strip_width;
 s32 g_char_set_mode;
 /** Current frame index into g_char_append_anim. */
 u8 g_append_anim_frame;
+/** Explicit alignment pad; see the block comment above. */
+u8 pad_8014F8B1[3];
 /** Current horizontal scroll position of the character grid in pixels. */
 s32 g_scroll_pos;
 /** Render ticks until the next append-animation frame. */
 u8 g_append_anim_timer;
+/** Explicit alignment pad; see the block comment above. */
+u8 pad_8014F8B9[3];
 /** Target name-strip width in pixels for the width lerp. */
 s32 g_strip_width_target;
 /** Target horizontal scroll position for the scroll lerp. */
