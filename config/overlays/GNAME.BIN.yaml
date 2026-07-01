@@ -43,7 +43,6 @@ segments:
     subsegments:
       - [0x1, .rodata, gname]
       - [0x5, c, gname]
-      - [0x2C99, .data, gname]
-      - [0x301D, databin, gname_data]
+      - [0x2C99, databin, gname_data]
       - [0xF7B1, .bss, gname]
   - [0xF8D9]
