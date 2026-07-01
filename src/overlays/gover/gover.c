@@ -143,7 +143,6 @@ extern s32 func_800A39A8(s32, s32, s32, s32); /* one-shot SFX/voice playback */
  */
 extern s32 g_akao_music_volume;
 
-extern u32 g_scene_mode;
 extern s32 D_8010D018;
 extern AudioDataBlock g_audio_data;
 extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
@@ -549,7 +548,7 @@ static void gover_build_otag(unsigned char* pOtBuf)
 static void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer)
 {
     volatile u8 _match_pad[8]; /* stack-shape padding required for matching codegen */
-    cdrom_queue_read(cdResourceIndex & 0xFFFF, ramBuffer);
+    cdrom_queue_read(cdResourceIndex & 0xFFFF, (void*)ramBuffer);
     cdrom_wait_queue_empty();
     gover_upload_image_to_vram((ClutSectionHeader*)ramBuffer, coordinates);
 }
@@ -642,7 +641,7 @@ static void gover_load_audio_clip(s32 audio_clip_index)
     cdrom_wait_queue_empty();
     g_audio_data.payload_offset = 0xC;
 
-    src = (GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
+    src = (u8*)(GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
     offsets = (s32*)src;
     akao_seq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
     dst = ((u8*)(&g_audio_data)) + 12;
