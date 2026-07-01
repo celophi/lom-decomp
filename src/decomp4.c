@@ -1,10 +1,13 @@
 #include "decomp4.h"
 #include "decomp9.h"
 
-u16 g_akao_irq_frame_counter;
+/* Defined in the sdata segment (asm/data/sdata.data.s) at their gp-relative
+ * addresses near gp_value 0x8003EC14; declared extern here so decomp4 does not
+ * emit a second (.bss) definition. */
+extern u16 g_akao_irq_frame_counter;
 s32 D_8004D40C;
 u32 D_8004F758;
-s32 D_8003EC18;
+extern s32 D_8003EC18;
 
 /** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
 extern u32 g_akao_pitch_table[];
@@ -163,7 +166,7 @@ void akao_tick_fades(void)
     {
         g_akao_cdvol_fade_ticks--;
         g_akao_cdvol_acc += g_akao_cdvol_step;
-        akao_apply_cdvol_to_spu(new_var4);
+        akao_apply_cdvol_to_spu();
     }
     xa = &g_akao_xa_tracker;
     if ((xa->unkC != 0) && (xa->unk48 != 0))
