@@ -69,7 +69,10 @@ extern u8 g_testPatternSizeTable[][2];
  */
 extern s32 g_glyphAtlasY;
 
-const u32 D_8004FCC4[15] = {
+/* Identical dead-data copy is duplicated into every TU that includes this
+ * header in the original binary; "static" gives each includer its own
+ * internal-linkage instance instead of clashing at link time. */
+static const u32 D_8004FCC4[15] = {
     0xA790AD8B, 0xB997498F, 0xDC82B582, 0xBD82B582, 0x960A4281, 0x82CC917B, 0x91FC89AA, 0x82B382A2,
     0x82C482EA, 0x0AE982A2, 0xBB82A882, 0xAA82EA82, 0xE882A082, 0xB782DC82, 0x00004281,
 };

@@ -36,6 +36,15 @@ g_glyphAtlasY                       = 0x800894D4;
 // jumptable
 jtbl_80010C30                       = 0x80010C30; // type:jtbl rom:0x1430
 
+// FIELD overlay functions called cross-module from decomp7.c/main.c. Kept
+// here (main-only) rather than in shared_symbol_addrs.txt because that file
+// is loaded by every overlay's own splat config too, and these addresses
+// collide with unrelated code when other overlays (e.g. CHECKPS) reuse the
+// same VRAM range at runtime.
+field_scene_reset                   = 0x80051FBC;
+field_draw_frame                    = 0x80051FF8;
+field_clear_node_accumulators       = 0x800520A0;
+
 // Uncategorized
 run_overlay                         = 0x80140004;
 movie_play                          = 0x80140018;

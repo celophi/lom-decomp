@@ -183,7 +183,7 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
         {
         }
         low = base | low;
-        cb = D_800473EC; // Bug 1 fix: cb was uninitialized
+        cb = D_800473EC; /* Bug 1 fix: cb was uninitialized */
         new_var4 = (u8*)cb;
         high = (((t - 0x20) & ((short)0xF0)) >> 1) + 0xE0;
         new_var = low | (high << 8);
@@ -199,7 +199,7 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
         cb_addr = (u32)cb;
         D_800473EC = (CommandBuffer*)(new_var4 + 0x14);
         high = new_var2 & new_var8;
-        node->unk10 = high | (cb_addr & 0x00FFFFFF); // Bug 2 fix: removed (cb_addr = 0x00FFFFFF) assignment
+        node->unk10 = high | (cb_addr & 0x00FFFFFF); /* Bug 2 fix: removed (cb_addr = 0x00FFFFFF) assignment */
     }
     D_80047404 += 8;
 }

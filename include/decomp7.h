@@ -41,8 +41,8 @@ typedef struct {
 extern u32 *FUN_80015c28(void);
 extern void akao_cmd_f0(void);
 extern void akao_cmd_f1(void);
-extern void func_80015D6C(s32);
-extern void func_80015F88(s32);
+void func_80015D6C(void*);
+void func_80015F88(void*);
 extern void func_80067EB4(s32, s32, s32, s32);
 extern void func_8009AFE0(s32, s32, u32, s32, s32, s32);
 extern void func_800A379C(void);

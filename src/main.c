@@ -10,7 +10,6 @@ void InitializeControllers(undefined1 controllerMode);
 extern void SpuInit(void);
 void McxStartCom();
 void func_8004FD14(s32);
-void func_80051FBC(u32);
 void InitVSyncController(void);
 undefined* FUN_80015c18(void);
 u32* FUN_80015c28(void);
@@ -188,7 +187,7 @@ void Main(void)
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 func_800A3534();
-                func_80051FBC(0);
+                field_scene_reset(0);
                 g_field_audio_timer = 0;
                 overlay_arg = &g_gameDataBasePtr;
                 menu_layout = (MenuLayout*)(((u8*)overlay_arg) - 0x5F0);
@@ -220,7 +219,7 @@ void Main(void)
                 cdrom_stream(CD_RES_CLOAD_BIN, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                func_80051FBC(0);
+                field_scene_reset(0);
                 g_save_slot_index = 7;
                 if (func_801400C4() != 0)
                 {
