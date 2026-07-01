@@ -878,3 +878,8 @@ g_cdReadyCallbackResult             = 0x801ED96C;
 g_defaultCdResource                 = 0x801ED990;
 g_SKCDPOSE_DAT                      = 0x801ED998;
 g_cdResource176                     = 0x801EDF18;
+
+// FIELD overlay functions called cross-module from decomp7.c
+field_scene_reset                   = 0x80051FBC;
+field_draw_frame                    = 0x80051FF8;
+field_clear_node_accumulators       = 0x800520A0;

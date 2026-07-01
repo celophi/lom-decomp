@@ -221,6 +221,7 @@ SRCS_G0 := \
 	src/psyq/libspu/S_SI.c \
 	src/psyq/libspu/S_SIA.c \
 	src/psyq/libspu/S_STSA.c \
+	src/psyq/libspu/S_SRA.c \
 	src/psyq/libapi/A13.c \
 	src/psyq/libapi/A32.c \
 	src/psyq/libapi/COUNTER.c \
@@ -284,12 +285,20 @@ SRCS_CDK_G0 := \
 SRCS_GCC_260_G0 := \
 	src/decomp8.c
 
-# Hand-written assembly (header + initialized data sections).
-# Rodata is NOT here — it's inlined into C files via asm directives.
+# Hand-written / splat-generated assembly (header, initialized data, sdata).
+# Matched-C rodata (jump tables, including unk8's) is inlined into the C
+# objects via ".rodata" linked subsegments; the rodata_data*.rodata.s files
+# below are the standalone leftovers: pure data constants (D_ symbols
+# referenced extern).
 ASM_SRCS := \
 	asm/header.s \
 	asm/data/initialized.data.s \
-	asm/data/sdata.data.s
+	asm/data/sdata.data.s \
+	asm/data/rodata_data0.rodata.s \
+	asm/data/rodata_data1.rodata.s \
+	asm/data/rodata_data2.rodata.s \
+	asm/data/rodata_data3.rodata.s \
+	asm/data/rodata_data4.rodata.s
 
 
 # ─── Object File Paths ─────────────────────────────────────────────────────────

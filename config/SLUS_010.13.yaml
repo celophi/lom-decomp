@@ -4,7 +4,7 @@ options:
   base_path: ../
   basename: SLUS_010.13
   target_path: disc/SLUS_010.13
-  elf_path: build/slus_010.13.elf
+  elf_path: build/SLUS_010.13.elf
   
   platform: psx
   compiler: PSYQ
@@ -13,7 +13,7 @@ options:
   src_path: src
   build_path: build
 
-  ld_script_path: linker/slus_010.13.ld
+  ld_script_path: linker/SLUS_010.13.ld
   ld_dependencies: True
   ld_bss_is_noload: True
 
@@ -55,9 +55,27 @@ segments:
     start: 0x800
     vram: 0x80010000
     align: 4
+    section_order: [".rodata", ".text", ".data", ".sdata", ".sbss", ".bss"]
     subsegments:
-      - [0x800, rodata, rodata1]
-      - [0xAAC, rodata, rodata2]
+      # Front-of-segment rodata. Jump-table blocks owned by matched-C files are
+      # ".rodata" linked subsegments so the C compiler regenerates them (its own
+      # local labels); the linker gathers each object's .rodata. Pure data blocks
+      # (D_ constants referenced extern) stay standalone "rodata" objects so the
+      # D_ symbols are actually defined.
+      - [0x800, rodata, rodata_data0]        # D_80010000 boot-path string (referenced by unk8)
+      - [0x818, .rodata, main]               # jtbl -> main
+      - [0x844, .rodata, cdrom]              # jtbl -> cdrom
+      - [0xA90, .rodata, decomp6]            # jtbl -> decomp6
+      - [0xAAC, rodata, rodata_data1]        # g_overlayLoadAddress + data
+      - [0xB44, .rodata, psyq/libc2/PRNT]    # jtbl -> PRNT
+      - [0xD34, rodata, rodata_data2]        # psyq/data constants
+      - [0x1134, .rodata, psyq/libcd/BIOS]   # jtbl -> BIOS
+      - [0x1148, rodata, rodata_data3]       # psyq/data constants
+      - [0x1314, .rodata, akao_cmd]          # jtbl -> akao_cmd
+      - [0x1328, rodata, rodata_data4]       # data constants
+      - [0x1358, .rodata, decomp4]           # jtbl -> decomp4
+      - [0x1458, .rodata, unk8]              # jtbl -> unk8; merged into unk8's own object so the
+                                              # .L local labels from its INCLUDE_ASM functions resolve
       - [0x1558, c, main]
       - [0x1B58, c, decomp1]
       - [0x1F10, c, cdrom]
