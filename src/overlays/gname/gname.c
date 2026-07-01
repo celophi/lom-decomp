@@ -470,6 +470,10 @@ s32 g_kanji_cat;
 s32 g_name_pixel_width;
 /** Linearized character cursor position in the grid: row * 10 + col. */
 s32 g_char_cursor;
+/** Trailing 4 bytes of the overlay's .bss; unreferenced by name, purpose
+ *  unknown. Kept so the overlay's total .bss size (and file length once
+ *  linked) matches the original exactly. */
+s32 D_8014F8D4;
 
 /**
  * @brief Play a one-shot UI sound effect via the AKAO driver.
