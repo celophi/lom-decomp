@@ -3437,7 +3437,8 @@ void func_8014519C(void)
  *        bits 30:23 -- next circular index (wraps: last entry's next = 0).
  * @see decomp.me (100%) https://decomp.me/scratch/x87Jm
  */
-void func_80145278(s32 arg0) {
+void func_80145278(s32 arg0)
+{
     s32 temp_a1;
     s32 temp_a2;
     s32 temp_a3;
@@ -3450,39 +3451,40 @@ void func_80145278(s32 arg0) {
     s32 tmp;
     s32 tmp2;
     s32 tmp3;
-    
+
     var_t1 = 0;
-    if (arg0 > 0) {
-        do {
+    if (arg0 > 0)
+    {
+        do
+        {
             temp_t0 = (var_t1) + D_801690B8;
-            
+
             tmp = *temp_t0;
             var_a2 = var_t1 - 1;
 
-            
             temp_v1 = (tmp & ~0x3FFF);
 
             tmp2 = (var_t1 * 0x10);
             tmp2 = tmp2 & 0x3FFF;
-            
-            temp_v1 = temp_v1  | tmp2;
+
+            temp_v1 = temp_v1 | tmp2;
             *temp_t0 = temp_v1;
-            
-            if (var_a2 < 0) {
+
+            if (var_a2 < 0)
+            {
                 var_a2 = arg0 - 1;
             }
 
             tmp3 = (temp_v1 & 0xFF803FFF);
-            
-            
+
             tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
 
-            
             *temp_t0 = tmp3;
             temp_a2 = var_t1 + 1;
             temp_a3 = temp_a2 < arg0;
             var_v1 = 0;
-            if (temp_a3 != 0) {
+            if (temp_a3 != 0)
+            {
                 var_v1 = temp_a2;
             }
             *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
@@ -3500,78 +3502,87 @@ void func_80145278(s32 arg0) {
  *        func_80145278: bits 13:0 = slot field, bits 22:14 = prev index, bits 30:23 = next.
  * @see decomp.me (100%) https://decomp.me/scratch/VjQt5
  */
+
 s32 func_80145310(void)
 {
-  s32 temp_a0;
-  s32 temp_a2;
-  s32 temp_v1;
-  s32 var_a1;
-  s32 new_var;
-  s32 var_a2_2;
-  s32 var_a3;
-  s32 var_t0;
-  s32 var_v1;
-  s32 var_v1_2;
-  s32 *temp_a3;
-  u8 *var_a2;
-  s32 tmp;
-  s32 tmp2;
-  s32 tmp3;
-  var_t0 = 0;
-  var_a2 = g_pad_ctx + 0x60;
-  for (var_a3 = 0xB; var_a3 >= 0; var_a3--)
-  {
-    var_v1 = 1;
-    temp_a0 = *var_a2;
-    for (var_a1 = 7; var_a1 >= 0; var_a1--)
+    s32 temp_a0;
+    s32 temp_a2;
+    s32 temp_v1;
+    s32 var_a1;
+    s32 new_var;
+    s32 var_a2_2;
+    s32 var_a3;
+    s32 var_t0;
+    s32 var_v1;
+    s32 var_v1_2;
+    s32* temp_a3;
+    u8* var_a2;
+    s32 tmp;
+    s32 tmp2;
+    s32 tmp3;
+
+    var_t0 = 0;
+
+    var_a2 = (u8*)g_pad_ctx + 0x60;
+
+    for (var_a3 = 0xB; var_a3 >= 0; var_a3--)
     {
-      if (temp_a0 & var_v1)
-      {
-        var_t0++;
-      }
-      var_v1 *= 2;
+        var_v1 = 1;
+        temp_a0 = *var_a2;
+        for (var_a1 = 7; var_a1 >= 0; var_a1--)
+        {
+            if (temp_a0 & var_v1)
+            {
+                var_t0++;
+            }
+            var_v1 *= 2;
+        }
+
+        var_a2 += 1;
     }
 
-    var_a2 += 1;
-  }
+    D_80168C70 = 0;
+    var_a1 = 0;
+    if (((var_t0 - 1) + 1) <= ((0 - 1) + 1))
+    {
+        return var_t0;
+    }
 
-  D_80168C70 = 0;
-  var_a1 = 0;
-  if (((var_t0 - 1) + 1) <= ((0 - 1) + 1))
-  {
+    do
+    {
+        temp_a3 = &(&D_80168C70)[var_a1];
+        tmp = *temp_a3;
+        var_a2_2 = var_a1 - 1;
+        temp_v1 = tmp & (~0x3FFF);
+        tmp2 = (new_var = var_a1) * 0x10;
+        tmp2 = tmp2 & 0x3FFF;
+        temp_v1 = temp_v1 | tmp2;
+        *temp_a3 = temp_v1;
+
+        if (var_a2_2 < 0)
+        {
+            var_a2_2 = var_t0 - 1;
+        }
+
+        var_v1 = var_a2_2;
+        tmp3 = temp_v1;
+        tmp3 = tmp3 & 0xFF803FFF;
+        tmp3 = tmp3 | ((var_v1 & 0x1FF) << 0xE);
+        *temp_a3 = tmp3;
+        var_a1 += 1;
+        temp_a2 = var_a1 < var_t0;
+        var_v1_2 = 0;
+
+        if (temp_a2 != 0)
+        {
+            var_v1_2 = var_a1;
+        }
+
+        new_var = tmp3;
+        *temp_a3 = (new_var & 0x7FFFFF) | (var_v1_2 << 0x17);
+    } while (temp_a2 != 0);
+
     return var_t0;
-  }
-  do
-  {
-    temp_a3 = &(&D_80168C70)[var_a1];
-    tmp = *temp_a3;
-    var_a2_2 = var_a1 - 1;
-    temp_v1 = tmp & (~0x3FFF);
-    tmp2 = (new_var = var_a1) * 0x10;
-    tmp2 = tmp2 & 0x3FFF;
-    temp_v1 = temp_v1 | tmp2;
-    *temp_a3 = temp_v1;
-    if (var_a2_2 < 0)
-    {
-      var_a2_2 = var_t0 - 1;
-    }
-    var_v1 = var_a2_2;
-    tmp3 = temp_v1;
-    tmp3 = tmp3 & 0xFF803FFF;
-    tmp3 = tmp3 | ((var_v1 & 0x1FF) << 0xE);
-    *temp_a3 = tmp3;
-    var_a1 += 1;
-    temp_a2 = var_a1 < var_t0;
-    var_v1_2 = 0;
-    if (temp_a2 != 0)
-    {
-      var_v1_2 = var_a1;
-    }
-    new_var = tmp3;
-    *temp_a3 = (new_var & 0x7FFFFF) | (var_v1_2 << 0x17);
-  }
-  while (temp_a2 != 0);
-  return var_t0;
 }
 
 /**
@@ -6292,18 +6303,18 @@ typedef struct
  */
 typedef struct
 {
-    u32 pad;         /* 0x00 */
-    u16 sel_idx;     /* 0x04 - currently selected item index */
-    u16 item_count;  /* 0x06 - total items; lower 9 bits active (& 0x1FF) */
-    u16 base_x;      /* 0x08 - widget screen base x */
-    u16 base_y;      /* 0x0A - widget screen base y */
-    s16 unk_0C;      /* 0x0C - TODO: used in func_8014A044 x-lerp target calc */
-    s16 viewport_h;  /* 0x0E - visible list height; (viewport_h - 16) >> 4 = fast-scroll step */
-    u16 scroll_x;    /* 0x10 - current applied x scroll offset */
-    u16 scroll_y;    /* 0x12 - current applied y scroll offset */
-    s16 target_x;    /* 0x14 - x scroll lerp target (set by func_8014A044) */
-    s16 target_y;    /* 0x16 - y scroll lerp target (set by func_8014A044) */
-    u8  lerp_steps;  /* 0x18 - remaining lerp steps; always reset to 4 */
+    u32 pad;        /* 0x00 */
+    u16 sel_idx;    /* 0x04 - currently selected item index */
+    u16 item_count; /* 0x06 - total items; lower 9 bits active (& 0x1FF) */
+    u16 base_x;     /* 0x08 - widget screen base x */
+    u16 base_y;     /* 0x0A - widget screen base y */
+    s16 unk_0C;     /* 0x0C - TODO: used in func_8014A044 x-lerp target calc */
+    s16 viewport_h; /* 0x0E - visible list height; (viewport_h - 16) >> 4 = fast-scroll step */
+    u16 scroll_x;   /* 0x10 - current applied x scroll offset */
+    u16 scroll_y;   /* 0x12 - current applied y scroll offset */
+    s16 target_x;   /* 0x14 - x scroll lerp target (set by func_8014A044) */
+    s16 target_y;   /* 0x16 - y scroll lerp target (set by func_8014A044) */
+    u8 lerp_steps;  /* 0x18 - remaining lerp steps; always reset to 4 */
 } ScrollListState;
 
 void func_8014A044(ScrollListState*, u32*);
