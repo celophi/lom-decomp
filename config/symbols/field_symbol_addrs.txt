@@ -13,6 +13,11 @@ field_validate_and_rasterize_quads    = 0x80053880;
 
 field_func_8006828C                   = 0x8006828C;
 
+// Standalone rodata referenced by still-unmatched (INCLUDE_ASM) unk2.c functions;
+// keep as named symbols rather than folding into unk2's .rodata linked subsegment.
+D_800513E8                            = 0x800513E8;
+D_80051EB4                            = 0x80051EB4;
+
 
 g_field_scene                         = 0x80180014;
 g_field_objects                       = 0x80180020;

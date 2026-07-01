@@ -45,6 +45,7 @@ g_subMenuLayoutContinue = 0x801023F0;
 g_titleMenuExitState = 0x80102640;
 g_fadeTarget = 0x80102648;
 g_fadeCurrent = 0x80102658;
+g_titleAudioBankBase = 0x80102668;
 g_titleMenuItemFlags = 0x80102670;
 g_titleVisibleItemRank = 0x80102690;
 g_titleAnimFrame = 0x80102691;

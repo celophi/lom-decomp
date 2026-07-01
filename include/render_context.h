@@ -2,6 +2,7 @@
 #define _RENDER_CONTEXT_H
 
 #include "common.h"
+#include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
 /**
