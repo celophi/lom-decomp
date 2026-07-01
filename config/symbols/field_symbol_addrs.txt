@@ -1,4 +1,7 @@
 field_init_ctx                        = 0x80051F28;
+field_scene_reset                     = 0x80051FBC;
+field_draw_frame                      = 0x80051FF8;
+field_clear_node_accumulators         = 0x800520A0;
 field_init_with_fmv                   = 0x80052108;
 field_init_with_fmv_alloc             = 0x800521DC;
 field_load_map                        = 0x800522B4;
