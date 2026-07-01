@@ -660,6 +660,20 @@ $(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS) $$($(1)_GNU_OBJS) $$($(1
 $(1)_ASSET_SRC := $$(overlay_$(1)_asset)
 $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 
+# ── Hand-written/unmatched data asm (e.g. data/rodata.rodata.s) ──
+# The splat-generated linker script pulls these .o files in directly by path
+# (e.g. build/overlays/<name>/asm/overlays/<name>/data/rodata.rodata.o), so
+# they must be assembled to that exact location even though they're excluded
+# from the objdiff target-object set above.
+$(1)_DATA_ASM  := $$(wildcard $$($(1)_ASM_DIR)/data/*.s)
+$(1)_DATA_OBJS := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o,$$($(1)_DATA_ASM))
+
+$$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL)
+	@mkdir -p $$(@D)
+	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
+		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o
+
 # Rule: compile matched C files with CDK GCC 2.7.2 + maspsx
 $$($(1)_CDK_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
@@ -694,7 +708,7 @@ endif
 
 # Rule: link the overlay ELF
 # Dependencies include the asset object only if the overlay has an asset.
-$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $(STAGING)/$$($(1)_LINK_DIR)/$(1).ld
+$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $(STAGING)/$$($(1)_LINK_DIR)/$(1).ld
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(LD) -o $$($(1)_BUILD_DIR)/$(1).elf \
 		-T $$($(1)_LINK_DIR)/$(1).ld \
