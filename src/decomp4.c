@@ -83,6 +83,27 @@ typedef struct
     u16 unk8C;
 } e_struct;
 
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x90 - 0x4];
+    s16 unk90;
+    s16 unk92;
+    char pad2[0x100 - 0x94];
+    s32 unk100;
+} f_struct;
+
+typedef struct
+{
+    char pad1[0x34];
+    s32 unk34;
+} ee_struct;
+
+typedef struct {
+    char pad1[0x34];
+    s32 unk34;
+} ff_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -1804,4 +1825,34 @@ void func_8002BA74(e_struct* arg0)
 
     arg0->unk60 = (s32)((s32)((*(s8*)temp_a0 << 0x17) - arg0->unk5C) / (s32)arg0->unk8C);
     arg0->unk0 = (void*)((u8*)temp_a0 + 1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/cNPss
+ */
+void func_8002BB04(ee_struct* arg0)
+{
+    arg0->unk34 = (s32)(arg0->unk34 | 0x40);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ryS0d
+ */
+void func_8002BB18(ff_struct* arg0)
+{
+    arg0->unk34 = (s32)(arg0->unk34 & ~0x40);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ZUdZO
+ */
+void func_8002BB2C(f_struct* arg0)
+{
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    arg0->unk90 = (s16)(((*temp_v0 + 0x40) & 0xFF) << 8);
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk92 = 0;
+    arg0->unk100 = (s32)(arg0->unk100 | 3);
 }
