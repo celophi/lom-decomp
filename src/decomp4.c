@@ -99,10 +99,66 @@ typedef struct
     s32 unk34;
 } ee_struct;
 
-typedef struct {
+typedef struct
+{
     char pad1[0x34];
     s32 unk34;
 } ff_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x90 - 0x4];
+    u16 unk90;
+    u16 unk92;
+    char pad2[0xE8 - 0x94];
+    s16 unkE8;
+} g_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x96 - 0x4];
+    s16 unk96;
+} h_struct;
+
+typedef struct
+{
+    char pad1[0x96];
+    u16 unk96;
+} i_struct;
+
+typedef struct
+{
+    char pad1[0x96];
+    u16 unk96;
+} j_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x34 - 0x4];
+    s32 unk34;
+    s32 unk38;
+    char pad2[0x64 - 0x3C];
+    u16 unk64;
+    s16 unk66;
+    s16 unk68;
+    s16 unk6A;
+    char pad3[0x112 - 0x6C];
+    s16 unk112;
+} k_struct;
+
+typedef struct {
+    u8* unk0;
+    char pad1[0x34 - 0x4];
+    s32 unk34;
+    char pad2[0x6A - 0x38];
+    s16 unk6A;
+    char pad3[0x112 - 0x6C];
+    s16 unk112;
+} l_struct;
+
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
@@ -1855,4 +1911,104 @@ void func_8002BB2C(f_struct* arg0)
     arg0->unk0 = (u8*)(temp_v0 + 1);
     arg0->unk92 = 0;
     arg0->unk100 = (s32)(arg0->unk100 | 3);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/MjjmM
+ */
+void func_8002BB60(g_struct* arg0)
+{
+    u16 temp_a0;
+    s32 temp_v1;
+    u8* temp_a1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    temp_v1 = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk92 = (u16)temp_v1;
+    if (temp_v1 == 0)
+    {
+        arg0->unk92 = 0x100U;
+    }
+    temp_a1 = arg0->unk0;
+    temp_a0 = arg0->unk90;
+    temp_a0 &= 0xFF00;
+    arg0->unkE8 = (s16)((s32)((((*temp_a1 + 0x40) & 0xFF) << 8) - temp_a0) / (s32)arg0->unk92);
+    arg0->unk0 = (u8*)(temp_a1 + 1);
+    arg0->unk90 = temp_a0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FRzyk
+ */
+void func_8002BBEC(h_struct* arg0)
+{
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    arg0->unk96 = (s16)*temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/2bdR3
+ */
+void func_8002BC08(i_struct* arg0)
+{
+    arg0->unk96 = (u16)((arg0->unk96 + 1) & 0xF);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/SJfbQ
+ */
+void func_8002BC20(j_struct* arg0)
+{
+    arg0->unk96 = (u16)((arg0->unk96 - 1) & 0xF);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/1MXGr
+ */
+void func_8002BC38(k_struct* arg0)
+{
+    s32* temp_a1_2;
+    s32 temp_a1;
+    s32 var_s1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    temp_a1 = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    if (arg0->unk64 == 0)
+    {
+        var_s1 = temp_a1;
+    }
+    else
+    {
+        var_s1 = func_8002B540(arg0->unk38, temp_a1);
+    }
+
+    temp_a1_2 = (var_s1 * 0x10) + g_akao_articulation_slots;
+    akao_channel_load_articulation_fields(arg0, temp_a1_2, *temp_a1_2);
+    arg0->unk6A = (s16)var_s1;
+    arg0->unk112 = 0;
+    arg0->unk34 = (s32)(arg0->unk34 & 0xE6FFEFF7);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/GAl01
+ */
+void func_8002BCC8(l_struct* arg0)
+{
+    s32 temp_s1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    temp_s1 = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    akao_channel_load_articulation_fields(arg0, (temp_s1 * 0x10) + g_akao_articulation_slots, 0x1010);
+    arg0->unk6A = (s16)temp_s1;
+    arg0->unk112 = 0;
+    arg0->unk34 = (s32)(arg0->unk34 & 0xE6FFEFF7);
 }
