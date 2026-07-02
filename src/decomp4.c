@@ -104,6 +104,15 @@ typedef struct {
     s32 unk34;
 } ff_struct;
 
+typedef struct {
+    u8* unk0;
+    char pad1[0x90 - 0x4];
+    u16 unk90;
+    u16 unk92;
+    char pad2[0xE8 - 0x94];
+    s16 unkE8;
+} g_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -1855,4 +1864,28 @@ void func_8002BB2C(f_struct* arg0)
     arg0->unk0 = (u8*)(temp_v0 + 1);
     arg0->unk92 = 0;
     arg0->unk100 = (s32)(arg0->unk100 | 3);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/MjjmM
+ */
+void func_8002BB60(g_struct* arg0) {
+    u16 temp_a0;
+    s32 temp_v1;
+    u8* temp_a1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    temp_v1 = *temp_v0;
+    arg0->unk0 = (u8* ) (temp_v0 + 1);
+    arg0->unk92 = (u16) temp_v1;
+    if (temp_v1 == 0) {
+        arg0->unk92 = 0x100U;
+    }
+    temp_a1 = arg0->unk0;
+    temp_a0 = arg0->unk90;
+    temp_a0 &= 0xFF00;
+    arg0->unkE8 = (s16) ((s32) ((((*temp_a1 + 0x40) & 0xFF) << 8) - temp_a0) / (s32) arg0->unk92);
+    arg0->unk0 = (u8* ) (temp_a1 + 1);
+    arg0->unk90 = temp_a0;
 }
