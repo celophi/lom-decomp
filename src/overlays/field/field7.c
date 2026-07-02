@@ -130,7 +130,7 @@ typedef struct Probe {
 
 /**
  * @see decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
- * @note local objdiff 75.44% (gcc280_g4_noexpanddiv), 2026-07-02 - active
+ * @note local objdiff 80.21% (gcc280_g4_noexpanddiv), 2026-07-02 - active
  *       matching scratch is working/func_8005B6AC.c.
  */
 s32 func_8005B6AC(Mover* a0) {
@@ -351,8 +351,6 @@ s32 func_8005B6AC(Mover* a0) {
     void* temp_a0_7;
     void* temp_a2;
     void* temp_a2_3;
-    void* temp_fp;
-    void* temp_fp_2;
     void* temp_s3;
     void* temp_s3_2;
     void* temp_s3_3;
@@ -755,15 +753,15 @@ s32 func_8005B6AC(Mover* a0) {
                 sp6C = temp_s2_3;
                 sp7C = temp_s2_3 - 1;
                 do {
-                    temp_fp = *sp64;
+                    var_fp = *sp64;
                     sp64 += 1;
                     temp_a0_8 = (s32) ((UnkNode1*)sp2C)->unk40 >> 8;
                     temp_a2_2 = (s32) (((UnkNode1*)sp2C)->unk34 << 8) >> 0x10;
-                    temp_s6_4 = ((UnkNode1*)temp_fp)->unk4;
-                    if (((((UnkNode1*)temp_fp)->unk1C + temp_a2_2) < sp6C) && (((((UnkNode1*)temp_fp)->unk1E + temp_a2_2) >= e_x_min))) {
-                        temp_a1_4 = ((UnkNode1*)temp_fp)->unk22 + (s16) temp_a0_8;
+                    temp_s6_4 = ((UnkNode1*)var_fp)->unk4;
+                    if (((((UnkNode1*)var_fp)->unk1C + temp_a2_2) < sp6C) && (((((UnkNode1*)var_fp)->unk1E + temp_a2_2) >= e_x_min))) {
+                        temp_a1_4 = ((UnkNode1*)var_fp)->unk22 + (s16) temp_a0_8;
                         if (temp_a1_4 < sp70) {
-                            temp_v1_10 = ((UnkNode1*)temp_fp)->unk20 + (s16) temp_a0_8;
+                            temp_v1_10 = ((UnkNode1*)var_fp)->unk20 + (s16) temp_a0_8;
                             if (temp_v1_10 >= sp74) {
                                 var_s0_4 = temp_v1_10;
                                 var_t1 = temp_a1_4;
@@ -777,8 +775,8 @@ s32 func_8005B6AC(Mover* a0) {
                                 temp_lo = (var_t1 - temp_a1_4) * temp_a0_9;
                                 temp_lo_2 = ((var_s0_4 - var_t1) + 1) * temp_a0_9;
                                 var_t8 = 0;
-                                var_s1_2 = (u8*)((UnkNode1*)temp_fp)->unk10 + (temp_lo * 4);
-                                var_s4 = (s8*)((UnkNode1*)temp_fp)->unk14 + (temp_lo * 2);
+                                var_s1_2 = (u8*)((UnkNode1*)var_fp)->unk10 + (temp_lo * 4);
+                                var_s4 = (s8*)((UnkNode1*)var_fp)->unk14 + (temp_lo * 2);
                                 if (((UnkNode2*)temp_s6_4)->unk4 & 8) {
                                     var_s0_5 = temp_lo_2 - 1;
                                     var_s3 = var_s4 + 1;
@@ -861,7 +859,7 @@ s32 func_8005B6AC(Mover* a0) {
                                     }
                                 }
                                 if (var_t8 != 0) {
-                                    *sp68 = temp_fp;
+                                    *sp68 = var_fp;
                                     sp68 += 1;
                                     sp24 += 1;
                                 }
@@ -952,13 +950,13 @@ s32 func_8005B6AC(Mover* a0) {
                 sp84 = (s32) (s16) temp_v1_16;
                 sp88 = (s32) (((UnkNode1*)sp2C)->unk40 << 8) >> 0x10;
                 do {
-                    temp_fp_2 = *sp68;
+                    var_fp = *sp68;
                     sp68 += 1;
-                    temp_s6_5 = ((UnkNode1*)temp_fp_2)->unk4;
-                    if (((((UnkNode1*)temp_fp_2)->unk1C + sp84) < f_x_max) && (((((UnkNode1*)temp_fp_2)->unk1E + sp84) >= f_x_min))) {
-                        temp_a0_14 = ((UnkNode1*)temp_fp_2)->unk22 + sp88;
+                    temp_s6_5 = ((UnkNode1*)var_fp)->unk4;
+                    if (((((UnkNode1*)var_fp)->unk1C + sp84) < f_x_max) && (((((UnkNode1*)var_fp)->unk1E + sp84) >= f_x_min))) {
+                        temp_a0_14 = ((UnkNode1*)var_fp)->unk22 + sp88;
                         if (temp_a0_14 < f_y_max) {
-                            temp_v1_17 = ((UnkNode1*)temp_fp_2)->unk20 + sp88;
+                            temp_v1_17 = ((UnkNode1*)var_fp)->unk20 + sp88;
                             if (temp_v1_17 >= f_y_min) {
                                 var_s0_8 = temp_v1_17;
                                 var_t1_2 = temp_a0_14;
@@ -970,8 +968,8 @@ s32 func_8005B6AC(Mover* a0) {
                                 }
                                 temp_lo_4 = (var_t1_2 - temp_a0_14) * ((u8*)temp_s6_5)[6];
                                 var_s0_9 = var_s0_8 - var_t1_2;
-                                var_s1_4 = (u8*)((UnkNode1*)temp_fp_2)->unk10 + (temp_lo_4 * 4);
-                                var_s4_2 = (u8*)((UnkNode1*)temp_fp_2)->unk14 + (temp_lo_4 * 2);
+                                var_s1_4 = (u8*)((UnkNode1*)var_fp)->unk10 + (temp_lo_4 * 4);
+                                var_s4_2 = (u8*)((UnkNode1*)var_fp)->unk14 + (temp_lo_4 * 2);
                                 if (var_s0_9 != -1) {
                                     temp_s7 = f_x_max - 1;
                                     do {
