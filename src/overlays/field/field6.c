@@ -37,7 +37,7 @@ extern FieldSceneGlobals g_field_scene;
 extern u8 D_800CBF44[];
 extern volatile s32 D_801ED490;
 
-void func_8005F5BC(s32 arg0);
+void func_8005F5BC(s32, Node*, FieldScene*, s32);
 
 /**
  * @brief If D_801ED02C is zero, set it to 1 and write 0x100 to D_801ED030.
@@ -74,29 +74,22 @@ s32 func_8005B218(void) {
  *       tie breaks by allocno (creation) order, so node (born at scene->unk8,
  *       before the loop) wins $v1. No pin-free shape found yet that flips this
  *       without changing another instruction.
- * @see decomp.me (94.38%) TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/lN7ye
  */
-void func_8005B228(s32 arg0, s8 arg1)
-{
-    FieldScene *scene;
-    Node *node;
-    s32 i;
+void func_8005B228(s32 arg0, s32 arg1) {
+    Node* var_a1;
+    s32 var_v0;
+    FieldScene* scene = g_field_scene.scene; 
 
-    scene = g_field_scene.scene;
-    node = scene->unk8;
-    i = arg0 - 1;
-    if (arg0 != 0)
-    {
-        do
-        {
-            node = node->unk0;
-            i -= 1;
-        } while (i != -1);
+    var_a1 = scene->unk8;
+    var_v0 = arg0 - 1;
+    while (var_v0 != -1) {
+        var_a1 = var_a1->unk0; 
+        var_v0 -= 1;
     }
-    node->unk18 = arg1;
-    if (scene->unk28 != 0)
-    {
-        func_8005F5BC(0);
+    var_a1->unk18 = arg1;
+    if (scene->unk28 != 0) {
+        func_8005F5BC(0, var_a1, scene, arg1);
     }
 }
 
