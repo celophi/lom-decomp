@@ -113,6 +113,12 @@ typedef struct {
     s16 unkE8;
 } g_struct;
 
+typedef struct {
+    u8* unk0;
+    char pad1[0x96 - 0x4];
+    s16 unk96;
+} h_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -1888,4 +1894,15 @@ void func_8002BB60(g_struct* arg0) {
     arg0->unkE8 = (s16) ((s32) ((((*temp_a1 + 0x40) & 0xFF) << 8) - temp_a0) / (s32) arg0->unk92);
     arg0->unk0 = (u8* ) (temp_a1 + 1);
     arg0->unk90 = temp_a0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FRzyk
+ */
+void func_8002BBEC(h_struct* arg0) {
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    arg0->unk96 = (s16) *temp_v0;
+    arg0->unk0 = (u8* ) (temp_v0 + 1);
 }
