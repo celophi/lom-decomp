@@ -128,6 +128,11 @@ typedef struct
     u16 unk96;
 } i_struct;
 
+typedef struct {
+    char pad1[0x96];
+    u16 unk96;
+} j_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -1925,4 +1930,11 @@ void func_8002BBEC(h_struct* arg0)
 void func_8002BC08(i_struct* arg0)
 {
     arg0->unk96 = (u16)((arg0->unk96 + 1) & 0xF);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/SJfbQ
+ */
+void func_8002BC20(j_struct* arg0) {
+    arg0->unk96 = (u16) ((arg0->unk96 - 1) & 0xF);
 }
