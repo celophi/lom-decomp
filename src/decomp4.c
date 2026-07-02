@@ -99,12 +99,14 @@ typedef struct
     s32 unk34;
 } ee_struct;
 
-typedef struct {
+typedef struct
+{
     char pad1[0x34];
     s32 unk34;
 } ff_struct;
 
-typedef struct {
+typedef struct
+{
     u8* unk0;
     char pad1[0x90 - 0x4];
     u16 unk90;
@@ -113,11 +115,18 @@ typedef struct {
     s16 unkE8;
 } g_struct;
 
-typedef struct {
+typedef struct
+{
     u8* unk0;
     char pad1[0x96 - 0x4];
     s16 unk96;
 } h_struct;
+
+typedef struct
+{
+    char pad1[0x96];
+    u16 unk96;
+} i_struct;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
@@ -1875,7 +1884,8 @@ void func_8002BB2C(f_struct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/MjjmM
  */
-void func_8002BB60(g_struct* arg0) {
+void func_8002BB60(g_struct* arg0)
+{
     u16 temp_a0;
     s32 temp_v1;
     u8* temp_a1;
@@ -1883,26 +1893,36 @@ void func_8002BB60(g_struct* arg0) {
 
     temp_v0 = arg0->unk0;
     temp_v1 = *temp_v0;
-    arg0->unk0 = (u8* ) (temp_v0 + 1);
-    arg0->unk92 = (u16) temp_v1;
-    if (temp_v1 == 0) {
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk92 = (u16)temp_v1;
+    if (temp_v1 == 0)
+    {
         arg0->unk92 = 0x100U;
     }
     temp_a1 = arg0->unk0;
     temp_a0 = arg0->unk90;
     temp_a0 &= 0xFF00;
-    arg0->unkE8 = (s16) ((s32) ((((*temp_a1 + 0x40) & 0xFF) << 8) - temp_a0) / (s32) arg0->unk92);
-    arg0->unk0 = (u8* ) (temp_a1 + 1);
+    arg0->unkE8 = (s16)((s32)((((*temp_a1 + 0x40) & 0xFF) << 8) - temp_a0) / (s32)arg0->unk92);
+    arg0->unk0 = (u8*)(temp_a1 + 1);
     arg0->unk90 = temp_a0;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/FRzyk
  */
-void func_8002BBEC(h_struct* arg0) {
+void func_8002BBEC(h_struct* arg0)
+{
     u8* temp_v0;
 
     temp_v0 = arg0->unk0;
-    arg0->unk96 = (s16) *temp_v0;
-    arg0->unk0 = (u8* ) (temp_v0 + 1);
+    arg0->unk96 = (s16)*temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/2bdR3
+ */
+void func_8002BC08(i_struct* arg0)
+{
+    arg0->unk96 = (u16)((arg0->unk96 + 1) & 0xF);
 }
