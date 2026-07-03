@@ -132,7 +132,7 @@ void spu_set_voice_volume(s32 voice, u32 vol_l, u32 vol_r, s32 scale)
  * @param pitch Raw pitch value written directly to the PITCH register.
  * @see decomp.me (100%) https://decomp.me/scratch/3fXi9
  */
-void spu_set_voice_pitch(s32 voice, s16 pitch)
+void spu_set_voice_pitch(s32 voice, u16 pitch)
 {
     s32 ptr = (s32)0x1F801C04;
     voice = voice << 4;
@@ -181,7 +181,7 @@ void spu_set_voice_loop_addr(s32 voice, u32 addr)
  * @param adsr1 Raw 16-bit ADSR1 value.
  * @see decomp.me (100%) https://decomp.me/scratch/ghHQZ
  */
-void spu_set_voice_adsr1(s32 voice, s16 adsr1)
+void spu_set_voice_adsr1(s32 voice, u16 adsr1)
 {
     s32 ptr = (s32)0x1F801C08;
     voice = voice << 4;
@@ -198,7 +198,7 @@ void spu_set_voice_adsr1(s32 voice, s16 adsr1)
  * @param adsr2 Raw 16-bit ADSR2 value.
  * @see decomp.me (100%) https://decomp.me/scratch/aDnJj
  */
-void spu_set_voice_adsr2(s32 voice, s16 adsr2)
+void spu_set_voice_adsr2(s32 voice, u16 adsr2)
 {
     s32 ptr = (s32)0x1F801C0A;
     voice = voice << 4;
