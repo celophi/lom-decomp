@@ -28,11 +28,20 @@ s32 g_vsyncTimestamp = 0;
 
 s32 g_displayMode = 0;
 
-u8 g_timeBuffer[2] = {0};
+volatile u8 g_timeBuffer[2] = {0};
 
 /**
- * 68% match with GNU AS
- * Note that this could be probably FUNCTIONALLY INCORRECT!
+ * @brief CheckPS state machine: drives the RTC clock-set screens via CD commands.
+ *
+ * 91.33% match with GCC 2.7.2 + GNU AS (gcc272_gnu). See
+ * working/func_80050B14/STATUS.md for the remaining mismatch analysis.
+ *
+ * @param arg0 Nonzero to run a single step; zero to loop until state reaches 0.
+ * @return Current state value (-1, or the active state number).
+ *
+ * @note The backward goto is required to match: a syntactic do/while triggers
+ *       gcc's loop optimizer (invariant hoisting into s-regs, frame -0x30)
+ *       and drops the match to 81%.
  */
 s32 func_80050B14(s32 arg0)
 {
@@ -129,6 +138,9 @@ loop:
             volatile u8 *bcd;
             u8 bcd0;
             u8 bcd1;
+            u32 x;
+            u32 y;
+            u32 z;
             s32 h;
             s32 m;
             s32 t;
@@ -145,11 +157,16 @@ loop:
             hb = t / 60;
             mb = t % 60;
 
+            /* Store then reload each byte (g_timeBuffer is volatile);
+               the original really does take the minute low nibble from
+               the re-packed HOUR byte (z), an original-developer bug. */
             g_timeBuffer[0] = hb;
-            g_timeBuffer[0] = ((g_timeBuffer[0] / 10) << 4) | (g_timeBuffer[0] % 10);
-
+            x = g_timeBuffer[0];
             g_timeBuffer[1] = mb;
-            g_timeBuffer[1] = ((g_timeBuffer[1] / 10) << 4) | (g_timeBuffer[0] % 10);
+            y = g_timeBuffer[1];
+            g_timeBuffer[0] = ((x / 10) << 4) | (x % 10);
+            z = g_timeBuffer[0];
+            g_timeBuffer[1] = ((y / 10) << 4) | (z % 10);
 
             SendCdCommand(0xC);
             state = 7;
@@ -180,7 +197,7 @@ loop:
             }
             else if (base->unk1 & 0x40)
             {
-                volatile u8 *cmd = (volatile u8 *)g_CmdBuf;
+                u8 *cmd = g_CmdBuf;
                 state = 5;
                 cmd[2] = 0;
                 cmd[0] = g_timeBuffer[0];
@@ -223,24 +240,19 @@ loop:
             state = -1;
             break;
 
-        case 0:
-            do
-            {
-                state = 6;
-                break;
-            } while (0);
-            break;
-
         case 1:
         {
-            g_CmdBuf[2] = 0;
-            g_CmdBuf[0] = g_timeBuffer[0];
-            g_CmdBuf[1] = g_timeBuffer[1];
+            u8 *cmd = g_CmdBuf;
+            cmd[2] = 0;
+            cmd[0] = g_timeBuffer[0];
+            cmd[1] = g_timeBuffer[1];
             SendCdCommand(3);
             g_checkPSState = 7;
+        }
+        /* fall through */
+        case 0:
             state = 6;
             break;
-        }
 
         case -2:
             SendCdCommand(0);
