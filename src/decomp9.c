@@ -1,5 +1,18 @@
 #include "decomp9.h"
 
+typedef struct {
+    s32 unk0;
+    s32 unk4;
+    s32 unk8;
+    s32 unkC;
+    u16 unk10;
+    s16 unk12;
+    s16 unk14;
+    u16 unk16;
+    s16 unk18;
+    s16 unk1A;
+} s_struct;
+
 /**
  * @brief Write the SPU Key ON / Key OFF registers.
  *
@@ -363,3 +376,68 @@ void spu_set_voice_attr(s32 voice, SpuVoiceSetup* attr, s32 scale)
     *(s16*)(voice) = (s16)((u32)attr->loop_addr >> 3);
 }
 
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ORS8e
+ */
+void func_80024544(s32 arg0, s_struct* arg1)
+{
+    s32 var_s0 = arg1->unk4;
+
+    if (var_s0 == 0)
+    {
+        return;
+    }
+
+    arg1->unk4 = 0;
+
+    // Handle Pitch (0x10)
+    if (var_s0 & 0x10)
+    {
+        var_s0 &= ~0x10;
+        spu_set_voice_pitch(arg0, arg1->unk10);
+        if (var_s0 == 0)
+            return;
+    }
+
+    // Handle Volume (0x03)
+    if (var_s0 & 3)
+    {
+        var_s0 &= ~3;
+        spu_set_voice_volume(arg0, (u32)arg1->unk18, (u32)arg1->unk1A, (s32)arg1->unk16);
+        if (var_s0 == 0)
+            return;
+    }
+
+    // Handle Start Address (0x80)
+    if (var_s0 & 0x80)
+    {
+        var_s0 &= ~0x80;
+        spu_set_voice_start_addr(arg0, arg1->unk8);
+        if (var_s0 == 0)
+            return;
+    }
+
+    // Handle Loop Address (0x10000)
+    if (var_s0 & 0x10000)
+    {
+        var_s0 &= 0xFFFEFFFF;
+        spu_set_voice_loop_addr(arg0, arg1->unkC);
+        if (var_s0 == 0)
+            return;
+    }
+
+    // Handle ADSR2 (0x6600)
+    if (var_s0 & 0x6600)
+    {
+        var_s0 &= ~0x6600;
+        spu_set_voice_adsr2(arg0, (s16)arg1->unk14);
+        if (var_s0 == 0)
+            return;
+    }
+
+    // Handle ADSR1 (0x9900)
+    if (var_s0 & 0x9900)
+    {
+        spu_set_voice_adsr1(arg0, (s16)arg1->unk12);
+    }
+}
