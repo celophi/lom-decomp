@@ -33,7 +33,7 @@ volatile u8 g_timeBuffer[2] = {0};
 /**
  * @brief CheckPS state machine: drives the RTC clock-set screens via CD commands.
  *
- * 91.33% match with GCC 2.7.2 + GNU AS (gcc272_gnu). See
+ * 93.00% match with GCC 2.7.2 + GNU AS (gcc272_gnu). See
  * working/func_80050B14/STATUS.md for the remaining mismatch analysis.
  *
  * @param arg0 Nonzero to run a single step; zero to loop until state reaches 0.
@@ -169,11 +169,9 @@ loop:
             g_timeBuffer[1] = ((y / 10) << 4) | (z % 10);
 
             SendCdCommand(0xC);
-            state = 7;
             g_checkPSState = 5;
-            break;
         }
-
+        /* fall through */
         case 0:
         default:
             state = 7;
@@ -237,6 +235,10 @@ loop:
         {
         case -1:
             ExitCheckPS();
+            /* HACK: emits no code, but blocks jump2's cross-jump from merging
+               this arm's identical jal ExitCheckPS tail with case 16's copy
+               (the target binary keeps both copies inline). */
+            __asm__ __volatile__("" : : : "$2");
             state = -1;
             break;
 
