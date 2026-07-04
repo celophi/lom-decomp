@@ -551,7 +551,7 @@ void cdrom_complete_command(u_char intr, u_char* result);
  *
  * @note Runs from the CD-ROM library's interrupt handler.
  *
- * @see decomp.me: (73.39%) https://decomp.me/scratch/0Dz2i
+ * @see decomp.me: (99.71%) https://decomp.me/scratch/0Dz2i
  */
 void cdrom_handle_recovery_sync(u_char intr, u_char* result);
 
