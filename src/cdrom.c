@@ -1419,7 +1419,6 @@ void cdrom_complete_command(u_char intr, u_char* result)
         case 24:
         case 25:
         case 26:
-        case 27:
             // Read the command at the current queue head
             nextCommand = VCD.commandQueue.items[VCD.queueReadIndex].command;
 
@@ -1474,6 +1473,12 @@ void cdrom_complete_command(u_char intr, u_char* result)
             // Queue still has entries: dispatch the next one
             nextCommand = cd_sys->commandQueue.items[readIndex].command;
             break;
+
+        case 6:
+        case 27:
+            // These commands complete without dispatching a follow-up:
+            // their jump-table entries point straight at the epilogue.
+            return;
         }
 
         // Special case: command CdlReadS - used for CD-DA/XA streaming.
