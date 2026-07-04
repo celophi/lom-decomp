@@ -2750,36 +2750,35 @@ s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
     return 1;
 }
 
-s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining)
+s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
 {
     s32 unconsumed;
     s32 align_pad;
     s32 word_count;
     s32 word_count_b;
     s32 aligned_bytes;
+    CdStreamState* state;
     s32 aligned_bytes_b;
-    u8* dest;
-    s32* read_ptr_slot; /* dummy load of &readPtr, load-bearing for asm match */
     u8* dst;
-    u8* dst_b;
     u8* src;
     u8* src_b;
-    u32 wrap_overflow_cur;
-    u32 bytesBuffered;
-    u32 bytesConsumed;
-    u32 wrapOverflow;
-    u8* result_dst; /* dummy temp returned via assignment, load-bearing */
+    u32 bytes_buffered;
+    u32 bytes_consumed;
+    u32 wrap_overflow;
     u32 read_ptr;
     u32 read_ptr_b;
+    u32 read_ptr_c;
     u32 old_wrap_overflow;
     u32 aligned_write_base;
     u32 chunk_size;
-    chunk_size = bytesRemaining;
-    if (bytesRemaining >= 0x801U)
+
+    chunk_size = bytes_remaining;
+    if (bytes_remaining >= 0x801U)
     {
         chunk_size = 0x800;
     }
-    if (bytesTransferred == 0)
+
+    if (bytes_transferred == 0)
     {
         CD_STREAM_STATE.dataReady = 1;
         CD_STREAM_STATE.writePtr = 0x801DC001U;
@@ -2788,88 +2787,80 @@ s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining)
         CD_STREAM_STATE.wrapOverflow = 0;
         return (s32*)0x801DC000;
     }
-    if (!CD_STREAM_STATE.dataReady)
+
+    state = (CdStreamState*)0x1F800000;
+    if (!state->dataReady)
     {
-        unconsumed = CD_STREAM_STATE.bytesBuffered - CD_STREAM_STATE.bytesConsumed;
-        bytesConsumed = CD_STREAM_STATE.bytesConsumed;
-        wrapOverflow = CD_STREAM_STATE.wrapOverflow;
+        unconsumed = state->bytesBuffered - CD_STREAM_STATE.bytesConsumed;
+        bytes_consumed = CD_STREAM_STATE.bytesConsumed;
+        wrap_overflow = state->wrapOverflow;
         align_pad = (4 - (unconsumed & 3)) & 3;
-        if (wrapOverflow != 0)
+        if (wrap_overflow != 0)
         {
-            read_ptr_slot = &CD_STREAM_STATE.readPtr;
-            read_ptr = *read_ptr_slot;
+            read_ptr = state->readPtr;
             dst = (u8*)(0x801DC118 - unconsumed);
-            CD_STREAM_STATE.writePtr = (s32)dst;
-            CD_STREAM_STATE.readPtr = (s32)dst;
+            state->writePtr = (s32)dst;
+            state->readPtr = (s32)dst;
             dst -= align_pad;
             aligned_bytes = unconsumed + 3;
-            CD_STREAM_STATE.bytesBuffered = (wrapOverflow + unconsumed) + chunk_size;
-            src = (u8*)((read_ptr + bytesConsumed) - align_pad);
+            CD_STREAM_STATE.bytesBuffered = (wrap_overflow + unconsumed) + chunk_size;
+            src = (u8*)((read_ptr + bytes_consumed) - align_pad);
             if (aligned_bytes < 0)
             {
                 aligned_bytes = unconsumed + 6;
             }
             word_count = aligned_bytes >> 2;
-            word_count = word_count - 1;
-            if (word_count != -1)
+            word_count--;
+            while (word_count != -1)
             {
-                do
-                {
-                    *((s32*)dst) = *((s32*)src);
-                    src += 4;
-                    word_count -= 1;
-                    dst += 4;
-                } while (word_count != -1);
+                *((s32*)dst) = *((s32*)src);
+                src += 4;
+                dst += 4;
+                word_count--;
             }
             old_wrap_overflow = CD_STREAM_STATE.wrapOverflow;
             CD_STREAM_STATE.wrapOverflow = 0U;
-            dst_b = dst + old_wrap_overflow;
+            dst += old_wrap_overflow;
         }
         else
         {
-            if (CD_STREAM_STATE.readPtr)
-            {
-                /* dummy load, load-bearing for asm match */
-            }
-            dst_b = (u8*)0x801DC000;
-
+            dst = (u8*)0x801DC000;
             aligned_bytes_b = unconsumed + 3;
-            CD_STREAM_STATE.bytesBuffered = unconsumed + chunk_size;
-            read_ptr_b = CD_STREAM_STATE.readPtr;
+            read_ptr_b = (CD_STREAM_STATE.bytesBuffered = unconsumed + chunk_size);
+            read_ptr_b = state->readPtr;
             aligned_write_base = align_pad + 0x801DC000;
-            CD_STREAM_STATE.writePtr = aligned_write_base;
-            CD_STREAM_STATE.readPtr = aligned_write_base;
-            src_b = (u8*)((read_ptr_b + bytesConsumed) - align_pad);
+            state->writePtr = aligned_write_base;
+            state->readPtr = aligned_write_base;
+            src_b = (u8*)((read_ptr_b + bytes_consumed) - align_pad);
             if (aligned_bytes_b < 0)
             {
                 aligned_bytes_b = unconsumed + 6;
             }
             word_count_b = aligned_bytes_b >> 2;
-            word_count_b = word_count_b - 1;
-            if (word_count_b != -1)
+            word_count_b--;
+            while (word_count_b != -1)
             {
-                do
-                {
-                    *((s32*)dst_b) = *((s32*)src_b);
-                    src_b += 4;
-                    word_count_b -= 1;
-                    dst_b += 4;
-                } while (word_count_b != (-1));
+                *((s32*)dst) = *((s32*)src_b);
+                src_b += 4;
+                dst += 4;
+                word_count_b--;
             }
         }
-        (*((CdStreamState*)(0x1F800000))).dataReady = 1U;
-        return (s32*)(result_dst = dst_b);
+        (*((volatile CdStreamState*)(0x1F800000))).dataReady = 1U;
+        return (s32*)dst;
     }
-    read_ptr_b = CD_STREAM_STATE.readPtr;
-    bytesBuffered = CD_STREAM_STATE.bytesBuffered;
-    wrap_overflow_cur = CD_STREAM_STATE.wrapOverflow;
-    dest = (u8*)(read_ptr_b + bytesBuffered);
-    if ((wrap_overflow_cur != 0) || (((u32)(dest + chunk_size)) > 0x801DE000U))
+
+    read_ptr_c = state->readPtr;
+    bytes_buffered = state->bytesBuffered;
+    bytes_transferred = CD_STREAM_STATE.wrapOverflow;
+    dst = (u8*)(read_ptr_c + bytes_buffered);
+
+    if ((bytes_transferred != 0) || (((u32)(dst + chunk_size)) > 0x801DE000U))
     {
-        dest = (u8*)(wrap_overflow_cur + 0x801DC118);
-        if (((u32)CD_STREAM_STATE.writePtr) >= ((u32)(dest + chunk_size)))
+        dst = (u8*)(bytes_transferred + 0x801DC118);
+        if (((u32)state->writePtr) >= ((u32)(dst + chunk_size)))
         {
-            CD_STREAM_STATE.wrapOverflow = wrap_overflow_cur + chunk_size;
+            CD_STREAM_STATE.wrapOverflow = bytes_transferred + chunk_size;
         }
         else
         {
@@ -2879,14 +2870,16 @@ s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining)
     }
     else
     {
-        unconsumed = bytesBuffered;
-        CD_STREAM_STATE.bytesBuffered = unconsumed + chunk_size;
+        unconsumed = bytes_buffered;
+        state->bytesBuffered = unconsumed + chunk_size;
     }
-    if (bytesRemaining == chunk_size)
+
+    if (bytes_remaining != chunk_size)
     {
-        (*((CdStreamState*)0x1F800000)).bufferWrapped = 1;
+        return (s32*)dst;
     }
-    return (s32*)dest;
+    (*((volatile CdStreamState*)0x1F800000)).bufferWrapped = 1;
+    return (s32*)dst;
 }
 
 void cdrom_decompress_buffer(u8* srcStart, u8* dstStart)
