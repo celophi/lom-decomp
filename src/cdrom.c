@@ -1366,10 +1366,11 @@ void cdrom_verify_recovery(void)
 void cdrom_complete_command(u_char intr, u_char* result)
 {
     u8 nextCommand;
-    u32 readIndex;
     u32 writeIndex;
+    u32 readIndex;
     s32 statusFlags;
     volatile CdSystem* cdSystem;
+    CdSystem* cd_sys;
 
     // Signal to main-loop poller that a sync event occurred
     CD_SYSTEM.syncComplete = 1;
@@ -1420,59 +1421,58 @@ void cdrom_complete_command(u_char intr, u_char* result)
         case 26:
         case 27:
             // Read the command at the current queue head
-            cdSystem = &CD_SYSTEM;
-            nextCommand = cdSystem->commandQueue.items[CD_SYSTEM.queueReadIndex].command;
+            nextCommand = VCD.commandQueue.items[VCD.queueReadIndex].command;
 
             // Skip past consecutive CdlNop (1) entries in the queue
             if (nextCommand == 1)
             {
-                writeIndex = CD_SYSTEM.queueWriteIndex;
+                cd_sys = &CD_SYSTEM;
+                writeIndex = cd_sys->queueWriteIndex;
                 do
                 {
-                    readIndex = CD_SYSTEM.queueReadIndex;
+                    readIndex = cd_sys->queueReadIndex;
                     if (readIndex == writeIndex)
                     {
                         // All commands consumed: drop the sync callback and
                         // reset execution state.
                         CdSyncCallback(NULL);
-                        statusFlags = CD_SYSTEM.statusFlags.word;
-                        CD_SYSTEM.playbackState = 0;
-                        CD_SYSTEM.transferCallback = NULL;
-                        CD_SYSTEM.currentCommand = 0;
-                        CD_SYSTEM.retryCounter = 0;
-                        CD_SYSTEM.statusFlags.word = statusFlags & ~0x10;
-                        CD_SYSTEM.vsyncTimestamp = VSync(-1);
+                        cd_sys->playbackState = 0;
+                        cd_sys->transferCallback = NULL;
+                        cd_sys->currentCommand = 0;
+                        cd_sys->retryCounter = 0;
+                        cd_sys->statusFlags.word &= ~0x10;
+                        cd_sys->vsyncTimestamp = VSync(-1);
                         return;
                     }
                     readIndex = (readIndex + 1) & 0xF;
-                    CD_SYSTEM.queueReadIndex = readIndex;
-                    nextCommand = CD_SYSTEM.commandQueue.items[readIndex].command;
+                    cd_sys->queueReadIndex = readIndex;
+                    nextCommand = (cd_sys->commandQueue.items + readIndex)->command;
                 } while (nextCommand == 1);
             }
             break;
 
         case 21:
             // CdlPause completed: reset playback state and advance queue
-            CD_SYSTEM.playbackState = 0;
-            CD_SYSTEM.transferCallback = NULL;
-            readIndex = (CD_SYSTEM.queueReadIndex + 1) & 0xF;
-            CD_SYSTEM.queueReadIndex = readIndex;
+            cd_sys = &CD_SYSTEM;
+            cd_sys->playbackState = 0;
+            cd_sys->transferCallback = NULL;
+            readIndex = (cd_sys->queueReadIndex + 1) & 0xF;
+            cd_sys->queueReadIndex = readIndex;
 
             // If queue is now empty after pause, clean up and return
-            if (readIndex == CD_SYSTEM.queueWriteIndex)
+            if (readIndex == cd_sys->queueWriteIndex)
             {
                 CdSyncCallback(NULL);
-                statusFlags = CD_SYSTEM.statusFlags.word;
-                CD_SYSTEM.currentCommand = 0;
-                CD_SYSTEM.initCommand = 0;
-                CD_SYSTEM.retryCounter = 0;
-                CD_SYSTEM.statusFlags.word = statusFlags & ~0x10;
-                CD_SYSTEM.vsyncTimestamp = VSync(-1);
+                cd_sys->currentCommand = 0;
+                cd_sys->retryCounter = 0;
+                cd_sys->initCommand = 0;
+                cd_sys->statusFlags.word &= ~0x10;
+                cd_sys->vsyncTimestamp = VSync(-1);
                 return;
             }
 
             // Queue still has entries: dispatch the next one
-            nextCommand = CD_SYSTEM.commandQueue.items[readIndex].command;
+            nextCommand = cd_sys->commandQueue.items[readIndex].command;
             break;
         }
 
@@ -1502,7 +1502,10 @@ void cdrom_complete_command(u_char intr, u_char* result)
             return;
         }
         nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
-        cdrom_run_command(nextCommand, 0, 0);
+        do
+        {
+            cdrom_run_command(nextCommand, 0, 0);
+        } while (0);
     }
 }
 
