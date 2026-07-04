@@ -83,7 +83,7 @@ void InitializeControllers(s8 arg0)
 }
 
 /**
- * decomp.me link (92.77%) https://decomp.me/scratch/rDO0T
+ * decomp.me link (100%) https://decomp.me/scratch/rDO0T
  */
 void func_80014C54(arg0_struct* arg0, s32* arg1)
 {
@@ -99,15 +99,16 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
     s32 loop_end;
     int new_var4;
     u8 const_ff;
-    unsigned short var_t1;
+    s32 const_seven;
+    s32 fill_end;
+    u8 var_t1;
     int var_a0_2;
     u8 var_a3;
     s32 var_t0;
-    s32 v;
     u16 temp_v1_4;
     s32 diff;
-    u16 mask;
-    u16 a1_mask;
+    s32 mask;
+    u32 a1_mask;
     int new_var3;
     u8* var_a2;
     base = (u8*)0x801ED600;
@@ -200,17 +201,19 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
         switch ((arg0->unk92 >> 9) & 3)
         {
         case 0:
-            idx = 0;
             arg0->unk92 = (arg0->unk92 & 0xF9FF) | 0x200;
+            
             cnt = func_8002EAB0(arg0->unkAD, 4, -1);
+            idx = 0;
             new_var6 = cnt;
             if (new_var6 != 0)
             {
                 cnt--;
+                const_seven = 7;
                 loop_end = -1;
                 do
                 {
-                    if (func_8002EAB0(arg0->unkAD, 4, idx) != 7)
+                    if (func_8002EAB0(arg0->unkAD, 4, idx) != const_seven)
                     {
                         idx++;
                         cnt--;
@@ -231,11 +234,11 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
         case 1:
             arg0->unk92 = (arg0->unk92 & 0xF9FF) | 0xC00;
             cnt = 5;
-            loop_end = -1;
             const_ff = 0xFF;
-            while (cnt != loop_end)
+            fill_end = -1;
+            while (cnt != fill_end)
             {
-                ((u8*)arg0)[0x98 + cnt] = 0xFF;
+                ((u8*)arg0 + cnt)[0x98] = const_ff;
                 cnt--;
             }
 
@@ -253,24 +256,25 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 int temp1 = func_8002EBA8(arg0->unkAD, cnt, 1);
                 if (temp1 == 1)
                 {
-                    int val = func_8002EBA8(arg0->unkAD, cnt, 3);
-                    if (val == 0)
+                    switch (func_8002EBA8(arg0->unkAD, cnt, 3))
                     {
+                    case 0:
                         if (arg0->unk98 == 0xFF)
                         {
                             arg0->unkAB = func_8002EBA8(arg0->unkAD, cnt, 4);
                             arg0->unk98 = cnt;
                         }
-                    }
-                    else if (val == temp1)
-                    {
+                        break;
+                    case 1:
                         if (arg0->unk99 == 0xFF)
                         {
                             arg0->unkAC = func_8002EBA8(arg0->unkAD, cnt, 4);
                             arg0->unk99 = cnt;
                         }
+                        break;
                     }
                 }
+                cnt++;
                 rem--;
             }
 
@@ -291,19 +295,18 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
 
     if (arg0->unkAD & 0x10)
     {
-        var_a2 = base + 0x15C;
+        var_a2 = base + 0x17E;
     }
     else
     {
-        var_a2 = base + 0x17E;
+        var_a2 = base + 0x15C;
     }
-    new_var = 1;
-    new_var4 = 0x8000;
-    if ((arg0->unkAD & 0xF) != 0)
+    new_var4 = arg0->unkAD & 0xF;
+    if (new_var4 != 0)
     {
-        if ((*((u16*)var_a2)) == new_var4)
+        if ((*((u16*)var_a2)) == 0x8000)
         {
-            var_a2 += (temp_v0 * 8) + 2;
+            var_a2 += (new_var4 * 8) + 2;
         }
         else
         {
@@ -319,33 +322,34 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
     {
         u8 tmp = var_a2[1];
         u8 shift = tmp >> 4;
-        var_t1 = 0;
-        if (shift == 5)
+        switch (shift)
         {
-        }
-        else if (shift == 4)
-        {
-        }
-        else if (shift == 7)
-        {
+        case 4:
+            var_t1 = 0;
+            break;
+        case 5:
+            var_t1 = 1;
+            break;
+        case 7:
             var_t1 = 2;
-        }
-        else
-        {
-            var_t1 = -1;
-            arg0->unkA6 = 0x80;
+            break;
+        default:
+            var_t1 = 0xFF;
+            break;
         }
         var_a0_2 = var_t1;
         if (var_a0_2 < 3)
         {
+            if (var_a0_2 >= 0)
+            {
             temp_v1_4 = ~(*((u16*)(var_a2 + 2)));
             if (arg0->unk20 == var_a0_2)
             {
-                arg0->unk26 = (arg0->unk24 = temp_v1_4 & (temp_v1_4 ^ arg0->unk22));
+                arg0->unk24 = (arg0->unk26 = temp_v1_4 & (arg0->unk22 ^ temp_v1_4));
             }
             else
             {
-                arg0->unk26 = (arg0->unk24 = temp_v1_4);
+                arg0->unk24 = (arg0->unk26 = temp_v1_4);
                 if (var_a0_2 == 1)
                 {
                     arg0->unkA6 = var_a2[4];
@@ -356,19 +360,20 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 }
                 else if (var_a0_2 == 2)
                 {
-                    if (arg0->unk92 & 0x800)
-                    {
-                        arg0->unkA7 = 0x80;
-                        arg0->unkA8 = 0x80;
-                        arg0->unkA9 = 0x80;
-                        arg0->unk21 = 0;
-                    }
-                    else
+                    if (!(arg0->unk92 & 0x800))
                     {
                         arg0->unkA6 = var_a2[4];
                         arg0->unkA7 = var_a2[5];
                         arg0->unkA8 = var_a2[6];
                         arg0->unkA9 = var_a2[7];
+                        arg0->unk21 = 0;
+                    }
+                    else
+                    {
+                        arg0->unkA6 = 0x80;
+                        arg0->unkA7 = 0x80;
+                        arg0->unkA8 = 0x80;
+                        arg0->unkA9 = 0x80;
                         arg0->unk21 = 0;
                     }
                 }
@@ -385,7 +390,7 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 var_a3 = 0x16;
                 var_t0 = 6;
             }
-            var_a0_2 = new_var;
+            new_var = 1;
             if (temp_v1_4 & 0x10)
             {
                 if ((arg0->unk24 & 0x10) && (base[0x1AA] == 0))
@@ -394,13 +399,13 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 }
                 else
                 {
-                    v = arg0->unk9E - var_a0_2;
-                    if (v <= 0)
+                    diff = arg0->unk9E - new_var;
+                    if (diff <= 0)
                     {
-                        v = var_t0;
+                        diff = var_t0;
                         arg0->unk26 |= 0x10;
                     }
-                    arg0->unk9E = v;
+                    arg0->unk9E = diff;
                 }
             }
             if (temp_v1_4 & 0x20)
@@ -411,13 +416,13 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 }
                 else
                 {
-                    v = arg0->unk9F - var_a0_2;
-                    if (v <= 0)
+                    diff = arg0->unk9F - new_var;
+                    if (diff <= 0)
                     {
-                        v = var_t0;
+                        diff = var_t0;
                         arg0->unk26 |= 0x20;
                     }
-                    arg0->unk9F = v;
+                    arg0->unk9F = diff;
                 }
             }
             if (temp_v1_4 & 0x40)
@@ -428,13 +433,13 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 }
                 else
                 {
-                    v = arg0->unkA0 - var_a0_2;
-                    if (v <= 0)
+                    diff = arg0->unkA0 - new_var;
+                    if (diff <= 0)
                     {
-                        v = var_t0;
+                        diff = var_t0;
                         arg0->unk26 |= 0x40;
                     }
-                    arg0->unkA0 = v;
+                    arg0->unkA0 = diff;
                 }
             }
             if (temp_v1_4 & 0x80)
@@ -445,13 +450,13 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 }
                 else
                 {
-                    v = arg0->unkA1 - var_a0_2;
-                    if (v <= 0)
+                    diff = arg0->unkA1 - new_var;
+                    if (diff <= 0)
                     {
-                        v = var_t0;
+                        diff = var_t0;
                         arg0->unk26 |= 0x80;
                     }
-                    arg0->unkA1 = v;
+                    arg0->unkA1 = diff;
                 }
             }
             if (var_t1 != 0)
@@ -513,18 +518,17 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 {
                     diff = 0x7F;
                 }
+                new_var5 = diff >> 4;
                 if (diff < 0)
                 {
-                    arg0->unk2C = (diff + 0xF) >> 4;
+                    new_var5 = (diff + 0xF) >> 4;
                 }
-                else
-                {
-                    arg0->unk2C = diff >> 4;
-                }
+                diff = new_var5;
+                arg0->unk2C = diff;
                 a1_mask = 0x80;
-                if (arg0->unk2C >= 0)
+                if (diff >= 0)
                 {
-                    if (arg0->unk2C > 0)
+                    if (diff > 0)
                     {
                         a1_mask = 0x20;
                     }
@@ -546,24 +550,23 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                 {
                     diff = 0x7F;
                 }
-                loop_end = arg0->unk2E;
+                new_var5 = diff >> 4;
                 if (diff < 0)
                 {
-                    arg0->unk2E = (diff + 0xF) >> 4;
+                    new_var5 = (diff + 0xF) >> 4;
                 }
-                else
-                {
-                    arg0->unk2E = diff >> 4;
-                }
-                if (loop_end < 0)
+                diff = new_var5;
+                arg0->unk2E = diff;
+                if (diff < 0)
                 {
                     a1_mask |= 0x10;
                 }
-                else if (loop_end > 0)
+                else if (diff > 0)
                 {
                     a1_mask |= 0x40;
                 }
-                mask = a1_mask & (a1_mask ^ ((arg0->unk21 & 0xF) * 0x10));
+                diff = a1_mask & (a1_mask ^ ((arg0->unk21 & 0xF) * 0x10));
+                mask = diff;
                 var_a0_2 = mask | ((a1_mask & 0xFF) >> 4);
                 if (a1_mask & 0x10)
                 {
@@ -573,13 +576,13 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                     }
                     else
                     {
-                        short v2;
-                        if ((arg0->unkA2 - var_a0_2) <= 0)
+                        diff = arg0->unkA2 - new_var;
+                        if (diff <= 0)
                         {
                             var_a0_2 |= 0x10;
-                            v2 = var_t0;
+                            diff = var_t0;
                         }
-                        arg0->unkA2 = v2;
+                        arg0->unkA2 = diff;
                     }
                 }
                 if (a1_mask & 0x20)
@@ -590,13 +593,13 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                     }
                     else
                     {
-                        s32 v2 = arg0->unkA3 - var_a0_2;
-                        if (v2 <= 0)
+                        diff = arg0->unkA3 - new_var;
+                        if (diff <= 0)
                         {
                             var_a0_2 |= 0x20;
-                            v2 = var_t0;
+                            diff = var_t0;
                         }
-                        arg0->unkA3 = v2;
+                        arg0->unkA3 = diff;
                     }
                 }
                 if (a1_mask & 0x40)
@@ -607,13 +610,13 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                     }
                     else
                     {
-                        s32 v2 = arg0->unkA4 - var_a0_2;
-                        if (v2 <= 0)
+                        diff = arg0->unkA4 - new_var;
+                        if (diff <= 0)
                         {
                             var_a0_2 |= 0x40;
-                            v2 = var_t0;
+                            diff = var_t0;
                         }
-                        arg0->unkA4 = v2;
+                        arg0->unkA4 = diff;
                     }
                 }
                 if (a1_mask & 0x80)
@@ -624,16 +627,22 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
                     }
                     else
                     {
-                        s32 v2 = arg0->unkA5 - var_a0_2;
-                        if (v2 <= 0)
+                        diff = arg0->unkA5 - new_var;
+                        if (diff <= 0)
                         {
                             var_a0_2 |= 0x80;
-                            v2 = var_t0;
+                            diff = var_t0;
                         }
-                        arg0->unkA5 = v2;
+                        arg0->unkA5 = diff;
                     }
                 }
                 arg0->unk21 = var_a0_2;
+                return;
+            }
+            }
+            else
+            {
+                arg0->unk20 = 0xFF;
                 return;
             }
         }
