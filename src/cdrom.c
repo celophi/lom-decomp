@@ -1516,41 +1516,35 @@ void cdrom_complete_command(u_char intr, u_char* result)
 
 void cdrom_handle_recovery_sync(u_char intr, u_char* result)
 {
-    u8 sp10;
-    s8 sp11;
     s32 temp_v1;
-    s32 temp_v1_2;
-    s32 var_v1;
-    s8 var_v0_2;
-    s8 var_v0_3;
+    s32 queue_read;
+    s32 queue_write;
+    u8 sp10[2];
     u8 temp_a0;
-    u8 temp_v0;
-    u8 temp_v0_2;
-    u8 var_a0;
-    u8 var_a0_2;
-    u8 var_v0;
-    u8* var_a1;
+    AudioSystem* audioSystem;
     CdSystem* cdSystem;
 
-    CD_SYSTEM.syncComplete = 1;
-    if (CD_SYSTEM.initCommand & 0x80)
+    // Volatile (CD_SYSTEM_V) stores of syncComplete/initCommand throughout
+    // this function are required to match: they pin the stores in program
+    // order and keep the delay-slot filler from moving them into jump slots.
+    CD_SYSTEM_V.syncComplete = 1;
+
+    // The (s8) sign test reproduces the original's sll/bltz check of the
+    // 0x80 retry flag. cdSystem is assigned in both branches (not hoisted)
+    // to match the original register allocation.
+    if (((s8)CD_SYSTEM_V.initCommand < 0) && !(CD_SYSTEM.statusFlags.word & 8))
     {
-        if (!(CD_SYSTEM.statusFlags.word & 8))
+        cdSystem = &CD_SYSTEM;
+        if (*result & 0x10)
         {
-            cdSystem = &CD_SYSTEM;
-            if (*result & 0x10)
-            {
-                cdrom_handle_sync_error();
-                return;
-            }
-            goto block_6;
+            cdrom_handle_sync_error();
+            return;
         }
-        goto block_5;
     }
-block_5:
-    cdSystem = &CD_SYSTEM;
-block_6:
-    var_v1 = intr & 0xFF;
+    else
+    {
+        cdSystem = &CD_SYSTEM;
+    }
     if (((cdSystem->initCommand & 0x7F) == 0x21) && (cdSystem->statusByte & 1))
     {
         if (cdSystem->filterModeFlags & 0x40)
@@ -1558,27 +1552,32 @@ block_6:
             CdSyncCallback(NULL);
             CdReadyCallback(NULL);
             cdSystem->initState = 0x20;
-            cdSystem->initCommand = 0U;
-            cdSystem->statusFlags.word = (s32)(cdSystem->statusFlags.word & ~0x10 & ~4);
-            var_v1 = intr & 0xFF;
+            cdSystem->initCommand = 0;
+            cdSystem->statusFlags.word &= ~0x10;
+            cdSystem->statusFlags.word &= ~4;
         }
     }
-    if (var_v1 == 2)
+    // Reusing queue_write for the intr test extends its live range, which
+    // demotes its register-allocation priority below temp_v1 in case 35
+    // (required to match).
+    queue_write = intr;
+    if ((queue_write & 0xFF) == 2)
     {
-        CD_SYSTEM.initCommand = (u8)(CD_SYSTEM.initCommand & 0x7F);
-        temp_v0 = CD_SYSTEM.initCommand;
-        switch (temp_v0)
+        CD_SYSTEM.initCommand &= 0x7F;
+        // Volatile read forces the reload of initCommand after the masking
+        // store above (required to match).
+        switch (CD_SYSTEM_V.initCommand)
         {       /* switch 1 */
         case 1: /* switch 1 */
         case 3: /* switch 1 */
-            CD_SYSTEM.initCommand = 0U;
+            CD_SYSTEM_V.initCommand = 0;
             if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex)
             {
                 CdSyncCallback(cdrom_complete_command);
                 temp_a0 = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
                 if ((temp_a0 == 0x1B) && (CD_SYSTEM.audioEnabled == 0))
                 {
-                    CD_SYSTEM.audioEnabled = 1U;
+                    CD_SYSTEM.audioEnabled = 1;
                 }
                 CD_SYSTEM.playbackState = 0;
                 CD_SYSTEM.transferCallback = NULL;
@@ -1590,121 +1589,129 @@ block_6:
             }
             break;
         case 2: /* switch 1 */
-            var_a0 = 0xE;
-            var_v0 = CD_SYSTEM.initCommand;
-            var_a1 = (u8*)0x801ED950;
-        block_25:
-            CD_SYSTEM.initCommand = (u8)(var_v0 + 1);
-            CdControlF(var_a0, var_a1);
+            CD_SYSTEM_V.initCommand = CD_SYSTEM.initCommand + 1;
+            CdControlF(0xE, (u8*)0x801ED950);
             break;
         case 16: /* switch 1 */
-            var_v0_2 = 2;
-        block_29:
-            CD_SYSTEM.initState = var_v0_2;
+            CD_SYSTEM.initState = 2;
             CdSyncCallback(NULL);
-            CD_SYSTEM.initCommand = 0U;
+            CD_SYSTEM_V.initCommand = 0;
             break;
         case 17: /* switch 1 */
-            var_a0 = 0xC;
-        block_24:
-            var_v0 = CD_SYSTEM.initCommand;
-            var_a1 = NULL;
-            goto block_25;
+            CD_SYSTEM_V.initCommand = CD_SYSTEM.initCommand + 1;
+            CdControlF(0xC, NULL);
+            break;
         case 18: /* switch 1 */
-            var_a0 = 9;
-            goto block_24;
+            CD_SYSTEM_V.initCommand = CD_SYSTEM.initCommand + 1;
+            CdControlF(9, NULL);
+            break;
         case 19: /* switch 1 */
             CdSyncCallback(NULL);
             CD_SYSTEM.initState = 0;
-            CD_SYSTEM.initCommand = 0U;
-            CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word & ~8);
+            CD_SYSTEM_V.initCommand = 0;
+            CD_SYSTEM.statusFlags.word &= ~8;
             break;
         case 33: /* switch 1 */
             CdSyncCallback(NULL);
-            CD_SYSTEM.initCommand = 0U;
+            CD_SYSTEM_V.initCommand = 0;
             break;
         case 32: /* switch 1 */
         case 34: /* switch 1 */
-            var_v0_2 = 7;
-            goto block_29;
+            CD_SYSTEM.initState = 7;
+            CdSyncCallback(NULL);
+            CD_SYSTEM_V.initCommand = 0;
+            break;
         case 35: /* switch 1 */
-            CD_SYSTEM.initCommand = 0U;
+            CD_SYSTEM_V.initCommand = 0;
             CD_SYSTEM.initState = 0;
             CD_SYSTEM.retryCounter = 0;
-            temp_v1 = CD_SYSTEM.statusFlags.word & ~1;
+            // Single reused temp keeps gcc's combine pass from folding the
+            // ~2 and ~4 masks into one AND; the first store must be volatile
+            // or it is eliminated as dead (required to match).
+            temp_v1 = CD_SYSTEM.statusFlags.word;
+            queue_read = CD_SYSTEM.queueReadIndex;
+            queue_write = CD_SYSTEM.queueWriteIndex;
+            temp_v1 &= ~1;
+            CD_SYSTEM_V.statusFlags.word = temp_v1;
+            temp_v1 &= ~2;
+            temp_v1 &= ~4;
             CD_SYSTEM.statusFlags.word = temp_v1;
-            temp_v1_2 = temp_v1 & ~2 & ~4;
-            CD_SYSTEM.statusFlags.word = temp_v1_2;
-            if (CD_SYSTEM.queueReadIndex != CD_SYSTEM.queueWriteIndex)
+            if (queue_read != queue_write)
             {
                 CD_SYSTEM.currentCommand = 1;
-                CD_SYSTEM.statusFlags.word = (s32)(temp_v1_2 | 0x10);
+                CD_SYSTEM.statusFlags.word = temp_v1 | 0x10;
                 CdSyncCallback(cdrom_complete_command);
                 CdSync(0, NULL);
-                CdControlF(1U, NULL);
+                CdControlF(1, NULL);
             }
             else
             {
                 CdSyncCallback(NULL);
-                CD_SYSTEM.statusFlags.word = (s32)(CD_SYSTEM.statusFlags.word & ~0x10);
+                CD_SYSTEM.statusFlags.word &= ~0x10;
             }
-            if ((g_cdAudioEnabled != 0) && (g_cdAudioReady != 0))
+            if (g_cdAudioEnabled != 0)
             {
-                AUDIO_SYSTEM.readFlag = 1;
+                // Pointer assigned between the two tests so the base address
+                // stays in a register (required to match).
+                audioSystem = &AUDIO_SYSTEM;
+                if (g_cdAudioReady != 0)
+                {
+                    audioSystem->readFlag = 1;
+                }
             }
             break;
         }
         g_cdVSyncTimestamp = VSync(-1);
         return;
     }
-    if (!(CD_SYSTEM.initCommand & 0x80))
+    if ((s8)CD_SYSTEM_V.initCommand >= 0)
     {
-        CD_SYSTEM.initCommand = (u8)(CD_SYSTEM.initCommand | 0x80);
-        CdControlF(1U, NULL);
+        CD_SYSTEM_V.initCommand |= 0x80;
+        CdControlF(1, NULL);
         return;
     }
-    CD_SYSTEM.initCommand = (u8)(CD_SYSTEM.initCommand & 0x7F);
-    temp_v0_2 = CD_SYSTEM.initCommand;
-    switch (temp_v0_2)
+    CD_SYSTEM_V.initCommand &= 0x7F;
+    switch (CD_SYSTEM_V.initCommand)
     {       /* switch 2 */
     case 3: /* switch 2 */
-        CdControlF(0xEU, (u8*)0x801ED950);
+        CdControlF(0xE, (u8*)0x801ED950);
         return;
     case 16: /* switch 2 */
         CD_SYSTEM.initState = 1;
         CdSyncCallback(NULL);
-        CD_SYSTEM.initCommand = 0U;
+        CD_SYSTEM_V.initCommand = 0;
         return;
     case 17: /* switch 2 */
-        sp10 = 1;
-        sp11 = 1;
-        CdControlF(0xDU, &sp10);
+        // Two-byte array (not two scalars): keeps the second byte's store
+        // from being eliminated as dead (required to match).
+        sp10[0] = 1;
+        sp10[1] = 1;
+        CdControlF(0xD, sp10);
         return;
     case 18: /* switch 2 */
-        var_a0_2 = 0xC;
-    block_46:
-        CdControlF(var_a0_2, NULL);
+        CdControlF(0xC, NULL);
         return;
     case 1:  /* switch 2 */
     case 2:  /* switch 2 */
     case 19: /* switch 2 */
-        var_a0_2 = 9;
-        goto block_46;
+        CdControlF(9, NULL);
+        return;
     case 33: /* switch 2 */
-        CdControlF(6U, (u8*)0x801ED95C);
+        CdControlF(6, (u8*)0x801ED95C);
         return;
     case 34: /* switch 2 */
-        var_v0_3 = 7;
-    block_50:
-        CD_SYSTEM.initState = var_v0_3;
-        CD_SYSTEM.initCommand = 0U;
+        CD_SYSTEM.initState = 7;
+        CD_SYSTEM_V.initCommand = 0;
         CdSyncCallback(NULL);
-    default: /* switch 2 */
         return;
     case 32: /* switch 2 */
     case 35: /* switch 2 */
-        var_v0_3 = 6;
-        goto block_50;
+        CD_SYSTEM.initState = 6;
+        CD_SYSTEM_V.initCommand = 0;
+        CdSyncCallback(NULL);
+        return;
+    default: /* switch 2 */
+        return;
     }
 }
 
