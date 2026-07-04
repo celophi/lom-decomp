@@ -1,16 +1,18 @@
 #include "decomp6.h"
 
 /**
- * decomp.me link (99.63%) https://decomp.me/scratch/b48Yj
+ * decomp.me link (100%) https://decomp.me/scratch/b48Yj
  */
 void InitializeControllers(s8 arg0)
 {
     u8* base;
     u8** new_var;
     u8* ptr;
+    u8* ptr2;
     u8* new_var2;
     int new_var3;
     u16 temp;
+    u16 temp2;
     int i;
     int sentinel;
     unsigned int val_ff;
@@ -34,7 +36,7 @@ void InitializeControllers(s8 arg0)
     ptr = base + 0xAE;
     do
     {
-        temp = *((u16*)(ptr + 0x92));
+        temp = *((u16*)((*(new_var = &ptr)) + 0x92));
         i--;
         ptr[0x94] = val_40;
         ptr[0x97] = 0;
@@ -64,16 +66,16 @@ void InitializeControllers(s8 arg0)
         func_80015674();
         a2 = 1;
         a1 = a2;
-        ptr = base + 0xAE;
+        ptr2 = base + 0xAE;
         do
         {
-            temp = *((u16*)((*(new_var = &ptr)) + 0x92));
-            if ((!(((temp >> 6) >> 2) & 1)) && (((temp >> 9) & 3) != 2))
+            temp2 = *((u16*)((*(new_var = &ptr2)) + 0x92));
+            if ((!(((temp2 >> 6) >> 2) & 1)) && (((temp2 >> 9) & 3) != 2))
             {
                 a2 = 0;
             }
             a1--;
-            ptr -= 0xAE;
+            ptr2 -= 0xAE;
         } while (a1 != (-1));
     } while (a2 == 0);
     base[0x1A2] = 0;
