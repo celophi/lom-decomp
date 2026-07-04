@@ -1523,6 +1523,7 @@ void cdrom_handle_recovery_sync(u_char intr, u_char* result)
     u8 temp_a0;
     AudioSystem* audioSystem;
     CdSystem* cdSystem;
+    s32* new_var;
 
     // Volatile (CD_SYSTEM_V) stores of syncComplete/initCommand throughout
     // this function are required to match: they pin the stores in program
@@ -1629,14 +1630,16 @@ void cdrom_handle_recovery_sync(u_char intr, u_char* result)
             // ~2 and ~4 masks into one AND; the first store must be volatile
             // or it is eliminated as dead (required to match).
             temp_v1 = CD_SYSTEM.statusFlags.word;
-            queue_read = CD_SYSTEM.queueReadIndex;
-            queue_write = CD_SYSTEM.queueWriteIndex;
+
+            queue_write = CD_SYSTEM.queueReadIndex;
+            queue_read = CD_SYSTEM.queueWriteIndex;
+
             temp_v1 &= ~1;
             CD_SYSTEM_V.statusFlags.word = temp_v1;
             temp_v1 &= ~2;
             temp_v1 &= ~4;
-            CD_SYSTEM.statusFlags.word = temp_v1;
-            if (queue_read != queue_write)
+            CD_SYSTEM.statusFlags.word = *(new_var = &temp_v1);
+            if (queue_write != queue_read)
             {
                 CD_SYSTEM.currentCommand = 1;
                 CD_SYSTEM.statusFlags.word = temp_v1 | 0x10;
