@@ -819,16 +819,16 @@ void func_80014434(void);
  * returns the ring buffer base address. On subsequent calls, compacts unconsumed
  * bytes and advances the write pointer for the next incoming sector.
  *
- * @param bytesTransferred  Bytes delivered so far; 0 on the first call (initialization), non-zero on each subsequent
+ * @param bytes_transferred  Bytes delivered so far; 0 on the first call (initialization), non-zero on each subsequent
  * sector arrival.
- * @param bytesRemaining    Bytes still to read in the stream, passed as readRemainingBytes; clamped to 0x800 per
+ * @param bytes_remaining    Bytes still to read in the stream, passed as readRemainingBytes; clamped to 0x800 per
  * sector.
  *
  * @return Destination address for the next sector DMA write.
  *
- * @see decomp.me: (95.08%) https://decomp.me/scratch/UDwSD
+ * @see decomp.me: (97.98%) https://decomp.me/scratch/UDwSD
  */
-s32* cdrom_handle_stream_data(s32 bytesTransferred, u32 bytesRemaining);
+s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining);
 
 /**
  * @brief Decompresses a run-length encoded block from srcStart into dstStart.
