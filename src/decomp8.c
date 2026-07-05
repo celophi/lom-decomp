@@ -244,6 +244,7 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
  */
 void func_800166C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 {
+    u8 table[17]; /* unused; required to match the -0x40 frame size */
     short new_var3;
     signed char* new_var5;
     s32 temp4;
