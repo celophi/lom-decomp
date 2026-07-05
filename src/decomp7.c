@@ -138,12 +138,12 @@ void field_init_display(FieldRenderHalf* render_ctx)
 
     arg->unk40B0 = 0;
     arg->unk40B2 = 0;
-    arg->unk40B4 = 0x140;
-    arg->unk40B6 = 0xF0;
-    arg->unkBD76 = 0xE8;
+    arg->unk40B4 = SCREEN_WIDTH;
+    arg->unk40B6 = SCREEN_HEIGHT;
+    arg->unkBD76 = VRAM_BACK_DISP_Y;
     arg->unkBD74 = 0;
-    arg->unkBD78 = 0x140;
-    arg->unkBD7A = 0xF0;
+    arg->unkBD78 = SCREEN_WIDTH;
+    arg->unkBD7A = SCREEN_HEIGHT;
 
     /* setup RECT for ClearImage */
     rect.x = 0;
@@ -152,10 +152,10 @@ void field_init_display(FieldRenderHalf* render_ctx)
     rect.h = VRAM_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
 
-    SetDefDispEnv((DISPENV*)(base + 0x4040), 0, 0, 0x140, 0xF0);
-    SetDefDispEnv((DISPENV*)(base + 0xBD04), 0, 0xE8, 0x140, 0xF0);
-    SetDefDrawEnv((DRAWENV*)(base + 0x4054), 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv((DRAWENV*)(base + 0xBD18), 0, 8, 0x140, 0xE0);
+    SetDefDispEnv((DISPENV*)(base + 0x4040), 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv((DISPENV*)(base + 0xBD04), 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv((DRAWENV*)(base + 0x4054), 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv((DRAWENV*)(base + 0xBD18), 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     arg->unkBD2E = 0;
     arg->unk406A = 0;
