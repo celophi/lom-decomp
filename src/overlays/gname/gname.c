@@ -759,7 +759,7 @@ static void reset_fade_state(void)
  * @param ctx Render context; primitives are written at @c prim_cursor (which is
  *            advanced past them) and linked into @ref GNAME_OT_FRONT.
  *
- * @note Equivalent to TITLE.BIN's RenderFadeOverlay.
+ * @note Equivalent to TITLE.BIN's render_fade_overlay.
  * @see https://decomp.me/scratch/NvocJ (100%)
  */
 static void render_fade_overlay(RenderContext* ctx)

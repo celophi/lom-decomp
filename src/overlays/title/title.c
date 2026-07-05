@@ -1,5 +1,6 @@
 #include "title.h"
 #include "cd_resources.h"
+#include "display.h"
 
 /* Width in pixels of a single save-slot panel; one horizontal slide moves the
  * stage by exactly this much. */
@@ -8,7 +9,7 @@
 /* Number of frames the slide-lerper takes to animate a full panel scroll. */
 #define SLOT_SLIDE_FRAMES 8
 
-/* CD resource index of the first title SEQ. LoadTitleSeq adds the variant
+/* CD resource index of the first title SEQ. load_title_seq adds the variant
  * index to this base to obtain the actual resource passed to cdrom_queue_read. */
 #define TITLE_SEQ_RESOURCE_BASE 0x17
 
@@ -21,7 +22,7 @@
 #define MENU_LAYOUT_WORDS 0xC9AU
 
 /* Value g_titleSelectedItem holds when the idle countdown expires with no
- * input (set by HandleTitleMenuInput); dispatching it quits the title back to
+ * input (set by handle_title_menu_input); dispatching it quits the title back to
  * the attract loop. The same 0xFF is also written into g_save_slot_index ("no save
  * slot selected") on the load-a-saved-game path. */
 #define TITLE_ITEM_IDLE_QUIT 0xFF
@@ -50,7 +51,7 @@ static void scroll_slots_left(void);
  *
  * @param base_address Base address of the double-buffered MenuContext render
  *        buffer (returned by func_80015C48 in main.c); forwarded as-is to
- *        InitTitleDisplay, render_menu and RunSaveSlotMenu.
+ *        init_title_display, render_menu and run_save_slot_menu.
  * @return Next game-state code consumed by the main state machine:
  *         - 3: "New Game" confirmed in the save-slot menu (start a new field).
  *         - 7: menu item 1 selected (continue / load a saved game).
@@ -72,9 +73,9 @@ s32 run_title(s32 base_address)
     u8 selected_item;
     ctx_base = base_address;
 
-    LoadTitleAudioBank();
-    LoadTitleSeq(0);
-    StartTitleMusic();
+    load_title_audio_bank();
+    load_title_seq(0);
+    start_title_music();
     /* 0x80100000 is the global-RAM base; g_titleMenuExitState lives at
      * 0x80102640 (word index 0x990). The exit-state flag is read/written
      * through this base pointer rather than via the symbol directly so the
@@ -86,7 +87,7 @@ s32 run_title(s32 base_address)
     layout = (MenuLayout*)g_menuLayoutBuffer;
     while (1)
     {
-        InitTitleDisplay(ctx_base);
+        init_title_display(ctx_base);
         scene_state->unk0 = 0;
         scene_state->unk2 = 0;
         scene_state->unk4 = 0;
@@ -104,7 +105,7 @@ s32 run_title(s32 base_address)
         {
             load_menu_layout(0);
             exit_state_base[0x990] = 0; /* g_titleMenuExitState = 0 */
-            if (RunSaveSlotMenu(ctx_base) == 2)
+            if (run_save_slot_menu(ctx_base) == 2)
             {
                 GFX_Transition(0);
                 continue;
@@ -117,7 +118,7 @@ s32 run_title(s32 base_address)
         }
         else if (selected_item == idle_quit)
         {
-            StopTitleMusic();
+            stop_title_music();
             return GAME_STATE_INTRO_MOVIE;
         }
         else
@@ -166,10 +167,10 @@ void render_menu(MenuContext* context)
         s0->next_prim_ptr = s0->prim_buffer;
         rand();
         VSync(1);
-        RenderFadeOverlay(s0);
-        RenderTitleBackdrop(s0);
+        render_fade_overlay(s0);
+        render_title_backdrop(s0);
         render_title_menu_items(s0);
-        HandleTitleMenuInput();
+        handle_title_menu_input();
 
         if (g_titleMenuExitState == 0)
         {
@@ -202,57 +203,68 @@ void render_menu(MenuContext* context)
 }
 
 /**
- * Save-slot picker: same loop shape as render_menu but drives the
- * sub-screen reached after the player selects "New Game" from the title.
- * Returns the menu exit state once the player confirms or cancels.
+ * @brief Save-slot picker sub-screen shown after selecting "New Game".
  *
- * decomp.me (100%) https://decomp.me/scratch/AKk7x
+ * @details Same double-buffered render loop shape as @ref render_menu, but
+ * drives the save-slot layout/highlight instead of the main title menu.
+ * Loops rendering and swapping the two display buffers until
+ * g_titleMenuExitState becomes non-zero (set by handle_save_slot_input),
+ * then resets the frame-queue state and returns.
+ *
+ * @param ctx_base Base address of the double-buffered MenuContext render
+ *        buffer, forwarded as-is from run_title.
+ * @return The final value of g_titleMenuExitState: 2 if the player
+ *         confirmed a save slot, otherwise the cancel/back code.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/AKk7x
  */
-s32 RunSaveSlotMenu(void* arg0)
+s32 run_save_slot_menu(MenuContext* ctx_base)
 {
-    short rect[4];
-    void* base;
-    void* current;
+    RECT rect;
+    MenuContext* base;
+    MenuContext* current;
     void* tmp;
     u_long* ot;
 
-    base = arg0;
+    base = ctx_base;
 
     InitSaveSlotMenu();
     GFX_Transition(0);
-    SetFadeTarget(0x100, 0x100, 0x100, 0x14);
+    set_fade_target(0x100, 0x100, 0x100, 0x14);
     DrawSync(0);
     VSync(0);
-    rect[0] = 0;
-    rect[1] = 0;
-    rect[2] = 0x140;
-    rect[3] = 0x1D8;
-    ClearImage((RECT*)rect, 0, 0, 0);
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = SCREEN_WIDTH;
+    rect.h = 0x1D8;
+    ClearImage(&rect, 0, 0, 0);
     current = base;
-    ClearOTagR((u_long*)((char*)current + 0x40), 0x1000);
-    ClearOTagR((u_long*)((char*)current + 0xBD0C), 0x1000);
+    ClearOTagR(current->otag_buffer, 0x1000);
+    ClearOTagR(current->otag_buffer2, 0x1000);
     VSync(0);
-    PutDispEnv((DISPENV*)((char*)current + 0x4040));
+    PutDispEnv(&current->disp_env);
     func_800157DC();
     SetDispMask(1);
     do
     {
-        ot = (u_long*)((char*)current + 0x40);
+        ot = current->otag_buffer;
         ClearOTagR(ot, 0x1000);
-        *(void**)((char*)current + 0x80B8) = (void*)((char*)current + 0x40B8);
+        current->next_prim_ptr = current->prim_buffer;
         VSync(1);
-        RenderFadeOverlay(current);
+        render_fade_overlay(current);
         RenderSaveSlotMenu(current);
         DrawSync(0);
         func_800157B0(2);
         VSync(2);
         tmp = base;
         if (current == base)
-            tmp = (char*)current + 0xBCCC;
+        {
+            tmp = current->_pad4;
+        }
         current = tmp;
-        PutDispEnv((DISPENV*)((char*)current + 0x4040));
-        PutDrawEnv((DRAWENV*)((char*)current + 0x4054));
-        DrawOTag((u_long*)((char*)ot + 0x3FFC));
+        PutDispEnv(&current->disp_env);
+        PutDrawEnv(&current->draw_env);
+        DrawOTag(ot + 4095); /* last entry of the 4096-word otag_buffer */
         func_800157DC();
         cdrom_process_state();
     } while (g_titleMenuExitState == 0);
@@ -262,16 +274,24 @@ s32 RunSaveSlotMenu(void* arg0)
 }
 
 /**
- * Counterpart of InitCheckPSDisplay in the CHECKPS overlay.
+ * @brief Set up the title overlay's double-buffered display/draw environments.
  *
- * decomp.me (100%) https://decomp.me/scratch/evJur
+ * @details Counterpart of InitCheckPSDisplay in the CHECKPS overlay. Clears
+ * the hardware display registers, configures the geometry screen/offset,
+ * clears all of VRAM, and sets up the front and back DISPENV/DRAWENV pairs
+ * (front at ctx_base->disp_env/draw_env, back at ctx_base->disp_env2/draw_env2).
+ * Called once per title-menu iteration from run_title.
+ *
+ * @param ctx_base Base address of the double-buffered MenuContext render
+ *        buffer, forwarded as-is from run_title.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/evJur
  */
-void InitTitleDisplay(void* arg0)
+void init_title_display(MenuContext* ctx_base)
 {
     RECT rect;
-    unsigned char* base = (unsigned char*)arg0;
-    unsigned char* hw = (unsigned char*)0x801ED600; /* hardware registers */
-    unsigned char* base2;                           /* base + 0x8000 */
+    u8* base = (u8*)ctx_base;
+    u8* hw = (u8*)0x801ED600; /* hardware registers */
 
     /* Clear hardware register bytes */
     hw[0x13F] = 0;
@@ -286,55 +306,58 @@ void InitTitleDisplay(void* arg0)
     /* Write shorts at offsets 0x40B0..0x40B6 */
     *(short*)(base + 0x40B0) = 0;
     *(short*)(base + 0x40B2) = 0;
-    *(short*)(base + 0x40B4) = 0x140;
-    *(short*)(base + 0x40B6) = 0xF0;
+    *(short*)(base + 0x40B4) = SCREEN_WIDTH;
+    *(short*)(base + 0x40B6) = SCREEN_HEIGHT;
 
-    /* Secondary base (s0 = arg0 + 0x8000) */
-    base2 = base + 0x8000;
-    *(short*)(base2 + 0x7D7C) = 0;
-    *(short*)(base2 + 0x7D7E) = 0xE8;
-    *(short*)(base2 + 0x7D80) = 0x140;
-    *(short*)(base2 + 0x7D82) = 0xF0;
+    /* _pad5 (mirrors _pad2, but past the back-buffer disp/draw env pair) */
+    *(short*)&ctx_base->_pad5[0] = 0;
+    *(short*)&ctx_base->_pad5[2] = VRAM_BACK_DISP_Y;
+    *(short*)&ctx_base->_pad5[4] = SCREEN_WIDTH;
+    *(short*)&ctx_base->_pad5[6] = SCREEN_HEIGHT;
 
     DrawSync(0);
     VSync(0);
 
-    /* Clear a 0x400×0x200 rectangle */
+    /* Clear the full VRAM extent */
     rect.x = 0;
     rect.y = 0;
-    rect.w = 0x400;
-    rect.h = 0x200;
+    rect.w = VRAM_WIDTH;
+    rect.h = VRAM_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
 
     /* Set display environments */
-    SetDefDispEnv((DISPENV*)(base + 0x4040), 0, 0, 0x140, 0xF0);
-    SetDefDispEnv((DISPENV*)(base + 0xFD0C), 0, 0xE8, 0x140, 0xF0);
+    SetDefDispEnv(&ctx_base->disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&ctx_base->disp_env2, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     /* Set drawing environments */
-    SetDefDrawEnv((DRAWENV*)(base + 0x4054), 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv((DRAWENV*)(base + 0xFD20), 0, 8, 0x140, 0xE0);
+    SetDefDrawEnv(&ctx_base->draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&ctx_base->draw_env2, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     /* Clear two more bytes */
-    *(base + 0xFD36) = 0; /* was ctx->unkFD36 */
-    *(base + 0x406A) = 0; /* was ctx->unk406A */
+    ctx_base->draw_env2.dtd = 0;
+    ctx_base->draw_env.dtd = 0;
 
-    ResetFadeState();
-    SetFadeTarget(0x100, 0x100, 0x100, 0x14);
+    reset_fade_state();
+    set_fade_target(0x100, 0x100, 0x100, 0x14);
     init_title_menu_state();
 
     g_titleMenuExitState = 0;
 }
 
 /**
- * Counterpart of CHECKPS func_800500FC: loads the title's AKAO audio bank
- * from CD-ROM (SOUND/EFFECT.SET) into 0x80180000, splits the loaded blob via
- * its self-referential offset table, copies the instrument/sample sub-block
- * to 0x8013C000 and registers it as the active AKAO bank, then submits the
- * trailing AKAO sequence sub-block for playback.
+ * @brief Load and register the title overlay's AKAO instrument/sample bank.
  *
- * decomp.me (100%) https://decomp.me/scratch/6zUZp
+ * @details Counterpart of CHECKPS func_800500FC. Skipped if g_previousGameState
+ * indicates the bank is already resident (values 2, 3, 5, 6, 7). Otherwise
+ * loads SOUND/EFFECT.SET from CD-ROM into the 0x80180000 scratch buffer,
+ * splits the blob via its self-referential offset table, copies the
+ * instrument/sample sub-block to g_titleAudioBankBase (0x8013C000) and
+ * registers it as the active AKAO bank, then submits the trailing AKAO
+ * sequence sub-block for blocking playback.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/6zUZp
  */
-void LoadTitleAudioBank(void)
+void load_title_audio_bank(void)
 {
     u8* base;
     u32* off;
@@ -357,65 +380,86 @@ void LoadTitleAudioBank(void)
 }
 
 /**
- * Counterpart of CHECKPS func_80050138: loads a SEQ resource from CD-ROM
- * into D_8003ECA0.
+ * @brief Load and play a title-screen SEQ resource from CD-ROM.
  *
- * decomp.me (100%) https://decomp.me/scratch/mBQ6i
+ * @details Counterpart of CHECKPS func_80050138. Reads CD resource
+ * (TITLE_SEQ_RESOURCE_BASE + seq_variant) into the 0x80180000 scratch
+ * buffer, splits it via its self-referential offset table, copies the
+ * sequence sub-block to D_8003ECA0, then submits it for blocking playback.
+ *
+ * @param seq_variant Offset added to TITLE_SEQ_RESOURCE_BASE to select
+ *        which title SEQ variant to load.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/mBQ6i
  */
-void LoadTitleSeq(s32 seqVariant)
+void load_title_seq(s32 seq_variant)
 {
     u32* off;
     u8* base;
 
-    cdrom_queue_read((seqVariant + TITLE_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)0x80180000);
+    cdrom_queue_read((seq_variant + TITLE_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)0x80180000);
     cdrom_wait_queue_empty();
 
     off = (u32*)0x80180004;
     base = (u8*)0x80180000;
 
-    bcopy(base + off[0], (unsigned char*)&D_8003ECA0, (int)(off[1] - off[0]));
+    bcopy(base + off[0], (u8*)&D_8003ECA0, (int)(off[1] - off[0]));
     akao_play_sequence_blocking((AkaoSeqHeader*)(base + off[1]), 1);
 }
 
 /**
- * Counterpart of CHECKPS func_800501AC.
+ * @brief Stop the title-screen background music.
  *
- * decomp.me (100%) https://decomp.me/scratch/1cta3
+ * @details Counterpart of CHECKPS func_800501AC.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/1cta3
  */
-void StopTitleMusic(void)
+void stop_title_music(void)
 {
     akao_stop_song(0);
 }
 
 /**
- * Counterpart of CHECKPS func_800501CC.
+ * @brief Start playback of the title-screen background music.
  *
- * decomp.me (100%) https://decomp.me/scratch/xYPkq
+ * @details Counterpart of CHECKPS func_800501CC. Plays the SEQ loaded into
+ * D_8003ECA0 (by load_title_seq) and sets the song volume to maximum via
+ * akao_cmd_c0.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/xYPkq
  */
-void StartTitleMusic(void)
+void start_title_music(void)
 {
     akao_play_song(&D_8003ECA0);
     akao_cmd_c0(0, 0x7F);
 }
 
 /**
- * Counterpart of CHECKPS func_800501FC (with the first parameter folded
- * away to a constant 0). soundId values observed: 0x3C (selection chime),
- * 0x7C..0x7F (cursor / cancel / confirm beeps).
+ * @brief Play a title-screen UI sound effect at maximum volume.
  *
- * decomp.me (100%) https://decomp.me/scratch/ZuKeL
+ * @details Counterpart of CHECKPS func_800501FC (with the first parameter
+ * folded away to a constant 0). sound_id values observed: 0x3C (selection
+ * chime), 0x7C..0x7F (cursor / cancel / confirm beeps).
+ *
+ * @param sound_id Sound id forwarded to akao_play_sfx's arg0 (lower 10 bits used).
+ * @param pan Forwarded to akao_play_sfx's arg2 (8-bit, possibly pan); every
+ *        call site in this file passes the constant 0x80.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/ZuKeL
  */
-void PlayTitleSfx(s32 soundId, s32 arg1)
+void play_title_sfx(s32 sound_id, s32 pan)
 {
-    akao_play_sfx(soundId, 0, arg1, 0x7F);
+    akao_play_sfx(sound_id, 0, pan, 0x7F);
 }
 
 /**
- * Counterpart of CHECKPS ResetFadeState.
+ * @brief Reset the title-screen fade state to opaque black with no fade in progress.
  *
- * decomp.me (100%) https://decomp.me/scratch/m80gj
+ * @details Counterpart of CHECKPS ResetFadeState.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/m80gj
  */
-void ResetFadeState(void)
+void reset_fade_state(void)
 {
     g_fadeCurrent.red = 0;
     g_fadeCurrent.green = 0;
@@ -428,17 +472,21 @@ void ResetFadeState(void)
 }
 
 /**
- * Counterpart of CHECKPS func_80050258: interpolates g_fadeCurrent toward
- * g_fadeTarget and emits the fade-overlay primitive into the active prim
- * buffer.
+ * @brief Interpolate the screen fade and emit its overlay primitive.
  *
- * decomp.me (100%) https://decomp.me/scratch/fBro2
+ * @details Counterpart of CHECKPS func_80050258: interpolates g_fadeCurrent
+ * toward g_fadeTarget and emits the fade-overlay primitive into the active
+ * prim buffer.
+ *
+ * @param ctx Active MenuContext render buffer.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/fBro2
  */
-void RenderFadeOverlay(MenuContext* arg0)
+void render_fade_overlay(MenuContext* ctx)
 {
-    MenuContext* arg = arg0;
-    u32* var_t4 = (u32*)arg->next_prim_ptr;
-    u32* unk40_ptr = (u32*)(((u8*)arg) + 0x40);
+    MenuContext* base = ctx;
+    u32* var_t4 = (u32*)base->next_prim_ptr;
+    u32* unk40_ptr = (u32*)base->otag_buffer;
     s32 temp_a2;
     s32 temp_a0;
     s32 temp_v1;
@@ -463,43 +511,43 @@ void RenderFadeOverlay(MenuContext* arg0)
     {
         if (((s32)g_fadeCurrent.red) >= 0x101)
         {
-            ((u8*)var_t4)[4] = ((u8)g_fadeCurrent.red) - 1;
-            ((u8*)var_t4)[5] = ((u8)g_fadeCurrent.green) - 1;
-            ((u8*)var_t4)[6] = ((u8)g_fadeCurrent.blue) - 1;
+            ((TILE*)var_t4)->r0 = ((u8)g_fadeCurrent.red) - 1;
+            ((TILE*)var_t4)->g0 = ((u8)g_fadeCurrent.green) - 1;
+            ((TILE*)var_t4)->b0 = ((u8)g_fadeCurrent.blue) - 1;
         }
         else
         {
             if (g_fadeCurrent.red == 0x100)
             {
-                ((u8*)var_t4)[4] = 0;
+                ((TILE*)var_t4)->r0 = 0;
             }
             else
             {
-                ((u8*)var_t4)[4] = ~((u8)g_fadeCurrent.red);
+                ((TILE*)var_t4)->r0 = ~((u8)g_fadeCurrent.red);
             }
             if (g_fadeCurrent.green == 0x100)
             {
-                ((u8*)var_t4)[5] = 0;
+                ((TILE*)var_t4)->g0 = 0;
             }
             else
             {
-                ((u8*)var_t4)[5] = ~((u8)g_fadeCurrent.green);
+                ((TILE*)var_t4)->g0 = ~((u8)g_fadeCurrent.green);
             }
             if (g_fadeCurrent.blue == 0x100)
             {
-                ((u8*)var_t4)[6] = 0;
+                ((TILE*)var_t4)->b0 = 0;
             }
             else
             {
-                ((u8*)var_t4)[6] = ~((u8)g_fadeCurrent.blue);
+                ((TILE*)var_t4)->b0 = ~((u8)g_fadeCurrent.blue);
             }
         }
-        ((u8*)var_t4)[3] = 3;
-        ((u8*)var_t4)[7] = 0x62;
-        *((u16*)(((u8*)var_t4) + 12)) = 0x140;
-        *((u16*)(((u8*)var_t4) + 10)) = 0;
-        *((u16*)(((u8*)var_t4) + 8)) = 0;
-        *((u16*)(((u8*)var_t4) + 14)) = 0xF0;
+        setlen(var_t4, 3);
+        setcode(var_t4, 0x62);
+        ((TILE*)var_t4)->w = SCREEN_WIDTH;
+        ((TILE*)var_t4)->y0 = 0;
+        ((TILE*)var_t4)->x0 = 0;
+        ((TILE*)var_t4)->h = SCREEN_HEIGHT;
         *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
         *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
         ;
@@ -509,21 +557,29 @@ void RenderFadeOverlay(MenuContext* arg0)
         {
             var_a1 = 0x45;
         }
-        ((u8*)var_t4)[3] = 1;
-        *((u32*)(((u8*)var_t4) + 4)) = (s32)(var_a1 | 0xE1000000);
+        setlen(var_t4, 1);
+        ((DR_TPAGE*)var_t4)->code[0] = (s32)(var_a1 | 0xE1000000);
         *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
         *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
         var_t4 = (u32*)(((u8*)var_t4) + 8);
     }
-    arg->next_prim_ptr = (u_long*)var_t4;
+    base->next_prim_ptr = (u_long*)var_t4;
 }
 
 /**
- * Counterpart of CHECKPS SetFadeTarget.
+ * @brief Set the target fade color and step count for the title-screen fade.
  *
- * decomp.me (100%) https://decomp.me/scratch/zxqdP
+ * @details Counterpart of CHECKPS SetFadeTarget. render_fade_overlay
+ * interpolates g_fadeCurrent toward this target over the given number of steps.
+ *
+ * @param red Target red channel value.
+ * @param green Target green channel value.
+ * @param blue Target blue channel value.
+ * @param steps Number of frames over which to interpolate toward the target.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/zxqdP
  */
-void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
+void set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
 {
     g_fadeTarget.red = red;
     g_fadeTarget.green = green;
@@ -532,70 +588,78 @@ void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
 }
 
 /**
- * Emits the title screen's tiled backdrop strip (5 quads stepping 0x40 px).
+ * @brief Emit the title screen's tiled backdrop strip.
  *
- * decomp.me (100%) https://decomp.me/scratch/aKAFU
+ * @details Emits 5 POLY_FT4 quads stepping 0x40 px, each linked into the
+ * active OT's tail entry.
+ *
+ * @param ctx Active MenuContext render buffer.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/aKAFU
  */
-void RenderTitleBackdrop(void* arg0)
+void render_title_backdrop(MenuContext* ctx)
 {
-    u8* base = (u8*)arg0;
-    u8* t3;
-    u32* a2;
+    u_long* ot;
+    POLY_FT4* prim;
     s32 t0;
     s32 t1;
     s32 a3;
     s32 temp_v0;
     s32 temp_v1;
 
-    a2 = *((u32**)(base + 0x80B8));
-    t3 = base + 0x40;
+    prim = (POLY_FT4*)ctx->next_prim_ptr;
+    ot = ctx->otag_buffer;
     t0 = 0;
 
     while (t0 < 5)
     {
         a3 = 0x40 + (t0 << 6);
-        *((short*)((((u8*)a2) + 0x0E) + 0x12)) = (short)a3;
-        *((short*)((((u8*)a2) + 0x0E) + 2)) = (short)a3;
+        prim->x3 = (short)a3;
+        prim->x1 = (short)a3;
         t1 = 0x140 + (t0 << 6);
         temp_v1 = t1 & 0x3FF;
         temp_v0 = t0 << 6;
         t0++;
-        *((short*)((((u8*)a2) + 0x0E) + 0x0A)) = (short)temp_v0;
-        *((short*)((((u8*)a2) + 0x0E) - 6)) = (short)temp_v0;
-        (((u8*)a2) + 0x0E)[-0x0B] = 9;
-        (((u8*)a2) + 0x0E)[-7] = 0x2C;
-        (((u8*)a2) + 0x0E)[-8] = 0x80;
-        (((u8*)a2) + 0x0E)[-9] = 0x80;
-        (((u8*)a2) + 0x0E)[-0x0A] = 0x80;
-        *((short*)((((u8*)a2) + 0x0E) + 4)) = 0;
-        *((short*)((((u8*)a2) + 0x0E) - 4)) = 0;
-        *((short*)((((u8*)a2) + 0x0E) + 0x14)) = 0xE0;
-        *((short*)((((u8*)a2) + 0x0E) + 0x0C)) = 0xE0;
-        (((u8*)a2) + 0x0E)[0x0E] = 0;
-        (((u8*)a2) + 0x0E)[-2] = 0;
-        (((u8*)a2) + 0x0E)[0x16] = 0x40;
-        (((u8*)a2) + 0x0E)[6] = 0x40;
-        (((u8*)a2) + 0x0E)[7] = 8;
-        (((u8*)a2) + 0x0E)[-1] = 8;
-        (((u8*)a2) + 0x0E)[0x17] = 0xE8;
-        (((u8*)a2) + 0x0E)[0x0F] = 0xE8;
-        *((short*)((((u8*)a2) + 0x0E) + 8)) = (short)((temp_v1 >> 6) | 0x110);
-        *((short*)((((u8*)a2) + 0x0E) + 0)) = 0x7840;
-        /* addPrim((P_TAG *)(t3 + 0x3FFC), a2) */
-        ((P_TAG*)a2)->addr = (u_long)(((P_TAG*)(t3 + 0x3FFC))->addr);
-        ((P_TAG*)(t3 + 0x3FFC))->addr = (u_long)a2;
-        a2 = (u32*)(((u8*)a2) + 0x28);
+        prim->x2 = (short)temp_v0;
+        prim->x0 = (short)temp_v0;
+        setlen(prim, 9);
+        setcode(prim, 0x2C);
+        prim->b0 = 0x80;
+        prim->g0 = 0x80;
+        prim->r0 = 0x80;
+        prim->y1 = 0;
+        prim->y0 = 0;
+        prim->y3 = 0xE0;
+        prim->y2 = 0xE0;
+        prim->u2 = 0;
+        prim->u0 = 0;
+        prim->u3 = 0x40;
+        prim->u1 = 0x40;
+        prim->v1 = 8;
+        prim->v0 = 8;
+        prim->v3 = 0xE8;
+        prim->v2 = 0xE8;
+        prim->tpage = (u_short)((temp_v1 >> 6) | 0x110);
+        prim->clut = 0x7840;
+        /* addPrim((P_TAG *)(ot + 4095), prim) */
+        ((P_TAG*)prim)->addr = (u_long)(((P_TAG*)(ot + 4095))->addr);
+        ((P_TAG*)(ot + 4095))->addr = (u_long)prim;
+        prim = (POLY_FT4*)(((u8*)prim) + 0x28);
     }
 
-    *((u32**)(base + 0x80B8)) = a2;
+    ctx->next_prim_ptr = (u_long*)prim;
 }
 
 /**
- * Per-frame input dispatcher for the main title menu.
+ * @brief Per-frame input dispatcher for the main title menu.
  *
- * decomp.me (100%) https://decomp.me/scratch/vmcmD
+ * @details Ticks the idle countdown (dispatching the idle-quit item once it
+ * expires), then debounces the confirm/cancel and cursor up/down button
+ * combos and moves the cursor or arms g_titleMenuExitState accordingly.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/vmcmD
  */
-void HandleTitleMenuInput(void)
+void handle_title_menu_input(void)
 {
     s32 op = 0x7C;
     update_menu_input();
@@ -606,63 +670,65 @@ void HandleTitleMenuInput(void)
         return;
     }
     g_titleIdleCountdown -= 1;
-    if (g_debouncedInput & 0xA20)
+    if (g_debouncedInput & (PADh | PADi | PADRright))
     {
-        PlayTitleSfx(op, 0x80);
+        play_title_sfx(op, 0x80);
         g_titleMenuExitState = 1;
         return;
     }
-    if (g_debouncedInput & 0x9000)
+    if (g_debouncedInput & (PADLup | PADLleft))
     {
         menu_cursor_up();
-        PlayTitleSfx(0x7D, 0x80);
+        play_title_sfx(0x7D, 0x80);
     }
-    else if (g_debouncedInput & 0x6100)
+    else if (g_debouncedInput & (PADLdown | PADLright | PADselect))
     {
-        MenuCursorDown();
-        PlayTitleSfx(0x7D, 0x80);
+        menu_cursor_down();
+        play_title_sfx(0x7D, 0x80);
     }
 }
 
 /**
- * Linear-search D_80102670 forward for the next enabled menu slot. If none
- * remain, the cursor is reset to slot 0 with rank 0.
+ * @brief Move the menu cursor to the next enabled slot, wrapping to slot 0
+ *        if none remain.
  *
- * decomp.me (100%) https://decomp.me/scratch/6k8uV
+ * @details Linear-search g_titleMenuItemFlags forward for the next enabled
+ * menu slot. If none remain, the cursor is reset to slot 0 with rank 0.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/6k8uV
  */
-void MenuCursorDown(void)
+void menu_cursor_down(void)
 {
-    s32 a1;
-    u8* var_v1;
-    const s32 LIMIT = 16;
-    a1 = g_titleSelectedItem + 1;
-    if (a1 < LIMIT)
+    s32 item;
+    u8* item_ptr;
+    item = g_titleSelectedItem + 1;
+    if (item < TITLE_MENU_SLOT_COUNT)
     {
-        u8* base = g_titleMenuItemFlags; // forces lui/addiu first
-        var_v1 = base + a1 * 2;          // sll comes after
+        u8* flags_base = g_titleMenuItemFlags; // forces lui/addiu first
+        item_ptr = flags_base + item * 2;      // sll comes after
         while (1)
         {
-            if (*var_v1 != 0)
+            if (*item_ptr != 0)
             {
                 break;
             }
-            a1++;
-            if (a1 < LIMIT)
+            item++;
+            if (item < TITLE_MENU_SLOT_COUNT)
             {
-                var_v1 += 2;
+                item_ptr += 2;
                 continue;
             }
             break;
         }
     }
-    if (a1 == LIMIT)
+    if (item == TITLE_MENU_SLOT_COUNT)
     {
         g_titleVisibleItemRank = 0;
         g_titleSelectedItem = 0;
     }
     else
     {
-        g_titleSelectedItem = (u8)a1;
+        g_titleSelectedItem = (u8)item;
         g_titleVisibleItemRank++;
     }
 }
@@ -671,7 +737,7 @@ void MenuCursorDown(void)
  * @brief Move the menu cursor to the previous enabled slot, wrapping to the
  *        last enabled slot if already at the top.
  *
- * @details Mirror of MenuCursorDown searching backward. Scans
+ * @details Mirror of menu_cursor_down searching backward. Scans
  * g_titleMenuItemFlags from the slot before the current selection toward 0
  * for the next enabled slot, decrementing the visible rank. If the search
  * runs past slot 0, it wraps: a forward pass over all TITLE_MENU_SLOT_COUNT
@@ -885,7 +951,7 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
  * idle countdown to TITLE_IDLE_COUNTDOWN_FRAMES, and uploads the two menu TIMs
  * from g_titleMenuTimTable[1..2] to VRAM. When re-entering from the attract
  * loop (g_previousGameState == 0) it advances the cursor to the first enabled
- * slot (same forward scan as MenuCursorDown).
+ * slot (same forward scan as menu_cursor_down).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/HW23j
  */
@@ -1305,7 +1371,7 @@ void handle_save_slot_input(void)
         if (g_debouncedInput & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
         {
             SaveLayoutEntry* entry;
-            PlayTitleSfx(0x7D, 0x80);
+            play_title_sfx(0x7D, 0x80);
             entry = ((SaveLayoutEntry*)g_saveLayoutTable);
             if (entry[18].type != 0)
             {
@@ -1319,7 +1385,7 @@ void handle_save_slot_input(void)
         }
         if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
-            PlayTitleSfx(0x7E, 0x80);
+            play_title_sfx(0x7E, 0x80);
             if (D_800F9AED != 0)
             {
                 scroll_slots_right();
@@ -1332,7 +1398,7 @@ void handle_save_slot_input(void)
         }
         if (g_debouncedInput & PAD_BTN_CIRCLE)
         {
-            PlayTitleSfx(0x7F, 0x80);
+            play_title_sfx(0x7F, 0x80);
             g_titleMenuExitState = 2;
         }
     }
@@ -1393,13 +1459,13 @@ void handle_save_slot_input(void)
                     slot_idx += 1;
                     src_ptr += 4;
                 } while (slot_idx < 0xB);
-                PlayTitleSfx(0x7E, 0x80);
+                play_title_sfx(0x7E, 0x80);
             } while (0);
             g_titleMenuExitState = 1;
         }
         else if (g_debouncedInput & PAD_BTN_CIRCLE)
         {
-            PlayTitleSfx(0x7F, 0x80);
+            play_title_sfx(0x7F, 0x80);
             if (g_slotSlideX > 0)
             {
                 scroll_slots_left();
@@ -1415,7 +1481,7 @@ void handle_save_slot_input(void)
         {
             if ((g_debouncedInput & PAD_BTN_UP) != 0U)
             {
-                PlayTitleSfx(0x7D, 0x80);
+                play_title_sfx(0x7D, 0x80);
                 prev_index = g_slotSelectedIndex - 1;
                 g_slotSelectedIndex = prev_index;
                 if (prev_index < 0)
@@ -1425,7 +1491,7 @@ void handle_save_slot_input(void)
             }
             if (g_debouncedInput & PAD_BTN_DOWN)
             {
-                PlayTitleSfx(0x7D, 0x80);
+                play_title_sfx(0x7D, 0x80);
                 next_index = g_slotSelectedIndex + 1;
                 g_slotSelectedIndex = next_index;
                 if (next_index >= 0xB)
