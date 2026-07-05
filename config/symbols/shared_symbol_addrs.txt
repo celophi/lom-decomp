@@ -862,6 +862,7 @@ g_pad_input                         = 0x80122988;
 g_pad_input_inject                  = 0x801229FC;
 
 // Globals
+g_pending_game_state                = 0x8010D018;
 g_cdAudioReady                      = 0x801ED591;
 g_cdSystem                          = 0x801ED800;
 g_cdStatusByte3                     = 0x801ED802;
