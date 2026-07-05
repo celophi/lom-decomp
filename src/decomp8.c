@@ -56,43 +56,51 @@ void field_draw_uint2(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/RGs7q
+ * @brief Draw a value as a right-aligned 3-digit unsigned number, blanking
+ *        (advancing the cursor without drawing) any leading zero digits.
+ *        The ones digit is always drawn.
+ * @param value    Number to draw (0-999 expected).
+ * @param x        Starting X of the text cursor (g_text_cursor_x).
+ * @param y        Starting Y of the text cursor (g_text_cursor_y).
+ * @param ot_depth Ordering-table depth/priority each glyph is linked into.
+ * @param clut     Font CLUT/color variant, added to g_text_atlas_base.
+ * @see decomp.me (100%) https://decomp.me/scratch/RGs7q
  */
-void func_8001627C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
 {
-    s32 orig = arg0;
-    s32 flag = 1;
+    s32 remaining = value;
+    s32 still_blanking = 1;
     s32 new_var;
     s32 quot;
     s32 prod;
     s32 digit;
-    s32 sign = orig >> 31;
-    digit = orig / 100;
-    g_text_cursor_x = arg1;
-    g_text_cursor_y = arg2;
+    s32 sign = remaining >> 31;
+    digit = remaining / 100;
+    g_text_cursor_x = x;
+    g_text_cursor_y = y;
     quot = digit;
     prod = quot * 100;
     digit = quot + 0x30;
     if (digit == 0x30)
     {
-        g_text_cursor_x = arg1 + 8;
+        g_text_cursor_x = x + 8;
     }
     else
     {
-        func_800165CC(digit, arg3, arg4);
-        flag = 0;
+        func_800165CC(digit, ot_depth, clut);
+        still_blanking = 0;
     }
 
-    orig -= prod;
-    quot = orig >> 31;
+    remaining -= prod;
+    quot = remaining >> 31;
     sign = quot;
-    quot = (digit = orig / 10);
+    quot = (digit = remaining / 10);
     prod = quot * 10;
     digit = quot + 0x30;
 
-    if (flag == 0)
+    if (still_blanking == 0)
     {
-        func_800165CC(digit, arg3, arg4);
+        func_800165CC(digit, ot_depth, clut);
     }
     else if (digit == 0x30)
     {
@@ -100,10 +108,10 @@ void func_8001627C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     }
     else
     {
-        func_800165CC(digit, arg3, arg4);
+        func_800165CC(digit, ot_depth, clut);
     }
 
-    func_800165CC((orig - prod) + 0x30, arg3, arg4);
+    func_800165CC((remaining - prod) + 0x30, ot_depth, clut);
 }
 
 /**

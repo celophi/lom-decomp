@@ -54,6 +54,7 @@ field_run_frame_loop                = 0x80015D6C;
 field_init_display                  = 0x80015F88;
 field_draw_string                   = 0x8001615C;
 field_draw_uint2                    = 0x800161DC;
+field_draw_uint3                    = 0x8001627C;
 
 // src/psyq/libcard/C112
 _bu_init                            = 0x8001676C;
