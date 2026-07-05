@@ -80,8 +80,8 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
     g_text_cursor_y = y;
     quot = digit;
     prod = quot * 100;
-    digit = quot + 0x30;
-    if (digit == 0x30)
+    digit = DIGIT_TO_ASCII(quot);
+    if (digit == DIGIT_TO_ASCII(0))
     {
         g_text_cursor_x = x + 8;
     }
@@ -96,13 +96,13 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
     sign = quot;
     quot = (digit = remaining / 10);
     prod = quot * 10;
-    digit = quot + 0x30;
+    digit = DIGIT_TO_ASCII(quot);
 
     if (still_blanking == 0)
     {
         func_800165CC(digit, ot_depth, clut);
     }
-    else if (digit == 0x30)
+    else if (digit == DIGIT_TO_ASCII(0))
     {
         g_text_cursor_x += 8;
     }
@@ -111,7 +111,7 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
         func_800165CC(digit, ot_depth, clut);
     }
 
-    func_800165CC((remaining - prod) + 0x30, ot_depth, clut);
+    func_800165CC(DIGIT_TO_ASCII(remaining - prod), ot_depth, clut);
 }
 
 /**
