@@ -9,12 +9,13 @@
 /** @brief Fixed-address scene-selection state block; see S_801ED480. */
 #define SCENE_STATE ((S_801ED480*)0x801ED480)
 
+/** @brief One 0x7CC4-byte half of the field overlay's double-buffered render context. */
 typedef struct obj_struct
 {
   u8 pad0[0x40B8];
   u32 unk40B8;
   u8 pad1[0x7CC4 - 0x40BC];
-} ObjStruct;
+} FieldRenderHalf;
 
 typedef struct {
     u8   _pad0[0x406A];                 /* padding up to offset 0x406A */
@@ -45,7 +46,7 @@ typedef struct {
 extern u32 *FUN_80015c28(void);
 extern void akao_cmd_f0(void);
 extern void akao_cmd_f1(void);
-void func_80015D6C(void*);
+void field_run_frame_loop(void*);
 void func_80015F88(void*);
 extern void func_80067EB4(s32, s32, s32, s32);
 extern void func_8009AFE0(s32, s32, u32, s32, s32, s32);

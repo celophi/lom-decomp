@@ -25,7 +25,7 @@ s32 run_field_scene(void)
         D_801158A4 = 0;
         func_8009AFE0(g_scene_mode, g_field_entry_flag, D_8003EC88, g_layout_flag, g_layout_option, g_layout_sub_mode);
         func_80067EB4(0x100, 0x100, 0x100, next_state);
-        func_80015D6C(overlay_arg);
+        field_run_frame_loop(overlay_arg);
     } while (g_pending_game_state == 0);
     func_800A379C();
     akao_cmd_f0();
@@ -39,17 +39,20 @@ s32 run_field_scene(void)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/ViJdW
+ * @brief Per-frame field render loop; runs until a state transition is
+ *        requested via g_pending_game_state.
+ * @param arg0 Field render context (two 0x7CC4-byte frame buffers).
+ * @see decomp.me (100%) https://decomp.me/scratch/ViJdW
  */
-void func_80015D6C(void* arg0)
+void field_run_frame_loop(void* arg0)
 {
     RECT rect;
-    ObjStruct* var_s0;
+    FieldRenderHalf* draw_half;
     int new_var4;
     int new_var2;
     u32* new_var;
-    s32 s1;
-    ObjStruct* new_var3;
+    s32 is_alt_half;
+    FieldRenderHalf* primary_half;
     u32 temp_v0;
     char* new_var5;
     rect.x = 0;
@@ -59,55 +62,50 @@ void func_80015D6C(void* arg0)
     new_var = (u32*)0x801ED000; // FIX 1: new_var (s3) initialized first
     new_var2 = 0x801ED600;      // FIX 1: new_var2 (s8) initialized second
     ClearImage(&rect, 0, 0, 0);
-    var_s0 = (ObjStruct*)arg0;
-    ClearOTagR((u_long*)var_s0, 0x1010);
-    ClearOTagR((u_long*)(((char*)var_s0) + 0x7CC4), 0x1010);
+    draw_half = (FieldRenderHalf*)arg0;
+    ClearOTagR((u_long*)draw_half, 0x1010);
+    ClearOTagR((u_long*)(((char*)draw_half) + 0x7CC4), 0x1010);
     VSync(0);
-    PutDispEnv((DISPENV*)(((char*)var_s0) + 0x4040));
+    PutDispEnv((DISPENV*)(((char*)draw_half) + 0x4040));
     func_800157DC();
     SetDispMask(new_var4 = 1);
     do
     {
         func_8009B028();
-        D_800473F4 = (void*)var_s0;
-        new_var5 = (char*)var_s0;
+        D_800473F4 = (void*)draw_half;
+        new_var5 = (char*)draw_half;
         D_800473EC = (void*)(new_var5 + 0x40BC);
-        if (1)
-        {
-        }
-        ClearOTagR((u_long*)var_s0, 0x1010);
-        if (var_s0 == ((ObjStruct*)arg0))
+
+        ClearOTagR((u_long*)draw_half, 0x1010);
+        if (draw_half == ((FieldRenderHalf*)arg0))
         {
             temp_v0 = new_var[0xC / 4];
-            if (((!arg0) && (!arg0)) && (!arg0))
-            {
-            }
         }
         else
         {
             temp_v0 = new_var[0x10 / 4];
         }
-        var_s0->unk40B8 = temp_v0;
+        draw_half->unk40B8 = temp_v0;
         field_clear_node_accumulators(D_800473E8, D_80035248);
-        s1 = (var_s0 != ((ObjStruct*)arg0)) ? (1) : (0);
-        func_800676B4(var_s0, s1);
-        new_var3 = (ObjStruct*)arg0;
+        is_alt_half = (draw_half != ((FieldRenderHalf*)arg0)) ? (1) : (0);
+        func_800676B4(draw_half, is_alt_half);
+        primary_half = (FieldRenderHalf*)arg0;
         if (g_pending_game_state == 0)
         {
             VSync(1);
-            field_draw_frame(s1, var_s0, D_800473E8, D_80035248);
+            field_draw_frame(is_alt_half, draw_half, D_800473E8, D_80035248);
             VSync(new_var4);
             DrawSync(0 * 0);
             func_800157B0(2);
             VSync(2);
             new_var5 = (char*)arg0; // FIX 2: temp = arg0 (move v0,s2)
-            if (var_s0 == new_var3) // FIX 2: bne skips this block
+            if (draw_half == primary_half) // FIX 2: bne skips this block
             {
-                new_var5 = ((char*)var_s0) + 0x7CC4; // addiu v0,s0,0x7cc4
+                new_var5 = ((char*)draw_half) + 0x7CC4; // addiu v0,s0,0x7cc4
             }
-            var_s0 = (ObjStruct*)new_var5; // FIX 2: always: move s0,v0
-            PutDispEnv((DISPENV*)(((char*)var_s0) + 0x4040));
-            PutDrawEnv((DRAWENV*)(((char*)var_s0) + 0x4054));
+            draw_half = (FieldRenderHalf*)new_var5; // FIX 2: always: move s0,v0
+            PutDispEnv((DISPENV*)(((char*)draw_half) + 0x4040));
+            PutDrawEnv((DRAWENV*)(((char*)draw_half) + 0x4054));
             func_80056998();
             DrawOTag((u_long*)(((char*)D_800473F4) + 0x403C));
             func_800157DC();
