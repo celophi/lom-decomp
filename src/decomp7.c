@@ -59,14 +59,14 @@ void field_run_frame_loop(void* arg0)
     rect.y = 0;
     rect.w = 0x140;
     rect.h = 0x1D8;
-    new_var = (u32*)0x801ED000; // FIX 1: new_var (s3) initialized first
-    new_var2 = 0x801ED600;      // FIX 1: new_var2 (s8) initialized second
+    new_var = (u32*)0x801ED000;
+    new_var2 = 0x801ED600;
     ClearImage(&rect, 0, 0, 0);
     draw_half = (FieldRenderHalf*)arg0;
     ClearOTagR((u_long*)draw_half, 0x1010);
     ClearOTagR((u_long*)(((char*)draw_half) + 0x7CC4), 0x1010);
     VSync(0);
-    PutDispEnv((DISPENV*)(((char*)draw_half) + 0x4040));
+    PutDispEnv(&draw_half->disp_env);
     func_800157DC();
     SetDispMask(new_var4 = 1);
     do
@@ -104,8 +104,8 @@ void field_run_frame_loop(void* arg0)
                 new_var5 = ((char*)draw_half) + 0x7CC4; // addiu v0,s0,0x7cc4
             }
             draw_half = (FieldRenderHalf*)new_var5; // FIX 2: always: move s0,v0
-            PutDispEnv((DISPENV*)(((char*)draw_half) + 0x4040));
-            PutDrawEnv((DRAWENV*)(((char*)draw_half) + 0x4054));
+            PutDispEnv(&draw_half->disp_env);
+            PutDrawEnv(&draw_half->draw_env);
             func_80056998();
             DrawOTag((u_long*)(((char*)D_800473F4) + 0x403C));
             func_800157DC();

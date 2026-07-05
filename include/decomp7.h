@@ -12,7 +12,10 @@
 /** @brief One 0x7CC4-byte half of the field overlay's double-buffered render context. */
 typedef struct obj_struct
 {
-  u8 pad0[0x40B8];
+  u8 pad0[0x4040];
+  DISPENV disp_env;   /**< 0x4040 */
+  DRAWENV draw_env;   /**< 0x4054 */
+  u8 pad2[0x40B8 - 0x40B0];
   u32 unk40B8;
   u8 pad1[0x7CC4 - 0x40BC];
 } FieldRenderHalf;
