@@ -98,12 +98,12 @@ void field_run_frame_loop(void* arg0)
             DrawSync(0 * 0);
             func_800157B0(2);
             VSync(2);
-            new_var5 = (char*)arg0; // FIX 2: temp = arg0 (move v0,s2)
-            if (draw_half == primary_half) // FIX 2: bne skips this block
+            new_var5 = (char*)arg0;
+            if (draw_half == primary_half)
             {
-                new_var5 = ((char*)draw_half) + 0x7CC4; // addiu v0,s0,0x7cc4
+                new_var5 = ((char*)draw_half) + 0x7CC4;
             }
-            draw_half = (FieldRenderHalf*)new_var5; // FIX 2: always: move s0,v0
+            draw_half = (FieldRenderHalf*)new_var5;
             PutDispEnv(&draw_half->disp_env);
             PutDrawEnv(&draw_half->draw_env);
             func_80056998();
@@ -112,9 +112,9 @@ void field_run_frame_loop(void* arg0)
             cdrom_process_state();
         }
     } while (g_pending_game_state == 0);
-    ((u8*)new_var2)[0x13E] = 0;             // FIX 3: sb [0x13e] standalone
-    ((u8*)new_var2)[0x90] = 0 & 0xFFFFFFFF; // FIX 3: moved before func_800158E0
-    func_800158E0();                        // FIX 3: [0x90] becomes delay slot
+    ((u8*)new_var2)[0x13E] = 0;
+    ((u8*)new_var2)[0x90] = 0 & 0xFFFFFFFF;
+    func_800158E0();
     akao_cmd_f0();
     akao_cmd_f1();
     DrawSync(0);
