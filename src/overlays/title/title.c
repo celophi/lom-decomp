@@ -1358,33 +1358,43 @@ void handle_save_slot_input(void)
             rng_lo = rand();
             rng_hi = rand();
             rng_lo |= rng_hi << 0xF;
-            layout->rng_seed = (s16)rng_lo;
-            dest_ptr = D_80043618;
-            src_ptr = g_saveSlotData + (g_slotSelectedIndex << 6);
-            copy_count = 0;
-            while (copy_count < 0x40U)
-            {
-                copy_count += 1;
-                byte = *src_ptr;
-                src_ptr += 1;
-                *dest_ptr = byte;
-                dest_ptr += 1;
-            }
-
-            slot_idx = 0;
-            selected_slot = g_slotSelectedIndex;
-            src_ptr = g_menuLayoutBuffer;
-            slot_idx = 0;
+            /* Cast store (not layout->rng_seed): a struct-member store is
+             * marked MEM_IN_STRUCT, which lets the gcc 2.7.2 scheduler hoist
+             * the copy-loop setup loads above it; the cast form keeps the
+             * store in place, matching the original order. */
+            *(s16*)((u8*)layout + 0xD4) = (s16)rng_lo;
+            /* The do/while(0) wrapper is required to match: its loop notes
+             * end the scheduling region after the store above, preventing
+             * the address setup below from being scheduled before it. */
             do
             {
-                if (selected_slot != slot_idx)
+                dest_ptr = D_80043618;
+                src_ptr = g_saveSlotData + (g_slotSelectedIndex << 6);
+                copy_count = 0;
+                while (copy_count < 0x40U)
                 {
-                    *((s32*)(src_ptr + 0x34)) = 0;
+                    copy_count += 1;
+                    byte = *src_ptr;
+                    src_ptr += 1;
+                    *dest_ptr = byte;
+                    dest_ptr += 1;
                 }
-                slot_idx += 1;
-                src_ptr += 4;
-            } while (slot_idx < 0xB);
-            PlayTitleSfx(0x7E, 0x80);
+
+                slot_idx = 0;
+                selected_slot = g_slotSelectedIndex;
+                src_ptr = g_menuLayoutBuffer;
+                slot_idx = 0;
+                do
+                {
+                    if (selected_slot != slot_idx)
+                    {
+                        *((s32*)(src_ptr + 0x34)) = 0;
+                    }
+                    slot_idx += 1;
+                    src_ptr += 4;
+                } while (slot_idx < 0xB);
+                PlayTitleSfx(0x7E, 0x80);
+            } while (0);
             g_titleMenuExitState = 1;
         }
         else if (g_debouncedInput & PAD_BTN_CIRCLE)
