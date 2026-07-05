@@ -4,7 +4,7 @@
 run_title = 0x8004FC74;
 render_menu = 0x8004FDBC;
 run_save_slot_menu = 0x8004FF48;
-InitTitleDisplay = 0x800500CC;
+init_title_display = 0x800500CC;
 LoadTitleAudioBank = 0x80050244;
 LoadTitleSeq = 0x80050300;
 StopTitleMusic = 0x80050374;

@@ -51,7 +51,7 @@ static void scroll_slots_left(void);
  *
  * @param base_address Base address of the double-buffered MenuContext render
  *        buffer (returned by func_80015C48 in main.c); forwarded as-is to
- *        InitTitleDisplay, render_menu and run_save_slot_menu.
+ *        init_title_display, render_menu and run_save_slot_menu.
  * @return Next game-state code consumed by the main state machine:
  *         - 3: "New Game" confirmed in the save-slot menu (start a new field).
  *         - 7: menu item 1 selected (continue / load a saved game).
@@ -87,7 +87,7 @@ s32 run_title(s32 base_address)
     layout = (MenuLayout*)g_menuLayoutBuffer;
     while (1)
     {
-        InitTitleDisplay(ctx_base);
+        init_title_display(ctx_base);
         scene_state->unk0 = 0;
         scene_state->unk2 = 0;
         scene_state->unk4 = 0;
@@ -274,14 +274,24 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
 }
 
 /**
- * Counterpart of InitCheckPSDisplay in the CHECKPS overlay.
+ * @brief Set up the title overlay's double-buffered display/draw environments.
  *
- * decomp.me (100%) https://decomp.me/scratch/evJur
+ * @details Counterpart of InitCheckPSDisplay in the CHECKPS overlay. Clears
+ * the hardware display registers, configures the geometry screen/offset,
+ * clears all of VRAM, and sets up the front and back DISPENV/DRAWENV pairs
+ * (front at ctx_base->disp_env/draw_env; back at the fixed 0xFD0C/0xFD20
+ * byte offsets past ctx_base, whose fields are not yet named in
+ * MenuContext). Called once per title-menu iteration from run_title.
+ *
+ * @param ctx_base Base address of the double-buffered MenuContext render
+ *        buffer, forwarded as-is from run_title.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/evJur
  */
-void InitTitleDisplay(void* arg0)
+void init_title_display(MenuContext* ctx_base)
 {
     RECT rect;
-    unsigned char* base = (unsigned char*)arg0;
+    unsigned char* base = (unsigned char*)ctx_base;
     unsigned char* hw = (unsigned char*)0x801ED600; /* hardware registers */
     unsigned char* base2;                           /* base + 0x8000 */
 
@@ -298,33 +308,33 @@ void InitTitleDisplay(void* arg0)
     /* Write shorts at offsets 0x40B0..0x40B6 */
     *(short*)(base + 0x40B0) = 0;
     *(short*)(base + 0x40B2) = 0;
-    *(short*)(base + 0x40B4) = 0x140;
-    *(short*)(base + 0x40B6) = 0xF0;
+    *(short*)(base + 0x40B4) = SCREEN_WIDTH;
+    *(short*)(base + 0x40B6) = SCREEN_HEIGHT;
 
-    /* Secondary base (s0 = arg0 + 0x8000) */
+    /* Secondary base (s0 = ctx_base + 0x8000) */
     base2 = base + 0x8000;
     *(short*)(base2 + 0x7D7C) = 0;
-    *(short*)(base2 + 0x7D7E) = 0xE8;
-    *(short*)(base2 + 0x7D80) = 0x140;
-    *(short*)(base2 + 0x7D82) = 0xF0;
+    *(short*)(base2 + 0x7D7E) = VRAM_BACK_DISP_Y;
+    *(short*)(base2 + 0x7D80) = SCREEN_WIDTH;
+    *(short*)(base2 + 0x7D82) = SCREEN_HEIGHT;
 
     DrawSync(0);
     VSync(0);
 
-    /* Clear a 0x400×0x200 rectangle */
+    /* Clear the full VRAM extent */
     rect.x = 0;
     rect.y = 0;
-    rect.w = 0x400;
-    rect.h = 0x200;
+    rect.w = VRAM_WIDTH;
+    rect.h = VRAM_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
 
     /* Set display environments */
-    SetDefDispEnv((DISPENV*)(base + 0x4040), 0, 0, 0x140, 0xF0);
-    SetDefDispEnv((DISPENV*)(base + 0xFD0C), 0, 0xE8, 0x140, 0xF0);
+    SetDefDispEnv(&ctx_base->disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv((DISPENV*)(base + 0xFD0C), 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     /* Set drawing environments */
-    SetDefDrawEnv((DRAWENV*)(base + 0x4054), 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv((DRAWENV*)(base + 0xFD20), 0, 8, 0x140, 0xE0);
+    SetDefDrawEnv(&ctx_base->draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv((DRAWENV*)(base + 0xFD20), 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     /* Clear two more bytes */
     *(base + 0xFD36) = 0; /* was ctx->unkFD36 */
