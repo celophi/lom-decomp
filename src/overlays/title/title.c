@@ -211,7 +211,7 @@ void render_menu(MenuContext* context)
  */
 s32 run_save_slot_menu(MenuContext* arg0)
 {
-    short rect[4];
+    RECT rect;
     MenuContext* base;
     MenuContext* current;
     void* tmp;
@@ -224,11 +224,11 @@ s32 run_save_slot_menu(MenuContext* arg0)
     SetFadeTarget(0x100, 0x100, 0x100, 0x14);
     DrawSync(0);
     VSync(0);
-    rect[0] = 0;
-    rect[1] = 0;
-    rect[2] = SCREEN_WIDTH;
-    rect[3] = 0x1D8;
-    ClearImage((RECT*)rect, 0, 0, 0);
+    rect.x = 0;
+    rect.y = 0;
+    rect.w = SCREEN_WIDTH;
+    rect.h = 0x1D8;
+    ClearImage(&rect, 0, 0, 0);
     current = base;
     ClearOTagR(current->otag_buffer, 0x1000);
     ClearOTagR(current->otag_buffer2, 0x1000);
@@ -249,11 +249,13 @@ s32 run_save_slot_menu(MenuContext* arg0)
         VSync(2);
         tmp = base;
         if (current == base)
+        {
             tmp = current->_pad4;
+        }
         current = tmp;
         PutDispEnv(&current->disp_env);
         PutDrawEnv(&current->draw_env);
-        DrawOTag((u_long*)((char*)ot + 0x3FFC));
+        DrawOTag(ot + 4095); /* last entry of the 4096-word otag_buffer */
         func_800157DC();
         cdrom_process_state();
     } while (g_titleMenuExitState == 0);
