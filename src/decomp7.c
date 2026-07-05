@@ -11,14 +11,14 @@ s32 run_field_scene(void)
 {
     s32 overlay_arg;
     s32 next_state;
-    u8* base = (u8*)0x801ED480;
+    S_801ED480* scene_state = SCENE_STATE;
     overlay_arg = (s32)FUN_80015c28();
     func_80015F88(overlay_arg);
-    *((u16*)(base + 0)) = 0;
-    *((u16*)(base + 2)) = 0;
-    *((u32*)(base + 4)) = 0;
-    *((u32*)(base + 8)) = 0;
-    *((u32*)(base + 12)) = 0;
+    scene_state->unk0 = 0;
+    scene_state->unk2 = 0;
+    scene_state->unk4 = 0;
+    scene_state->unk8 = 0;
+    scene_state->unkC = 0;
     do
     {
         next_state = 0x1E;

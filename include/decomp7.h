@@ -4,6 +4,10 @@
 #include "common.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
+#include "scene_state.h"
+
+/** @brief Fixed-address scene-selection state block; see S_801ED480. */
+#define SCENE_STATE ((S_801ED480*)0x801ED480)
 
 typedef struct obj_struct
 {
