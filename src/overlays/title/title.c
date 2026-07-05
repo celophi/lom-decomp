@@ -203,13 +203,22 @@ void render_menu(MenuContext* context)
 }
 
 /**
- * Save-slot picker: same loop shape as render_menu but drives the
- * sub-screen reached after the player selects "New Game" from the title.
- * Returns the menu exit state once the player confirms or cancels.
+ * @brief Save-slot picker sub-screen shown after selecting "New Game".
  *
- * decomp.me (100%) https://decomp.me/scratch/AKk7x
+ * @details Same double-buffered render loop shape as @ref render_menu, but
+ * drives the save-slot layout/highlight instead of the main title menu.
+ * Loops rendering and swapping the two display buffers until
+ * g_titleMenuExitState becomes non-zero (set by handle_save_slot_input),
+ * then resets the frame-queue state and returns.
+ *
+ * @param ctx_base Base address of the double-buffered MenuContext render
+ *        buffer, forwarded as-is from run_title.
+ * @return The final value of g_titleMenuExitState: 2 if the player
+ *         confirmed a save slot, otherwise the cancel/back code.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/AKk7x
  */
-s32 run_save_slot_menu(MenuContext* arg0)
+s32 run_save_slot_menu(MenuContext* ctx_base)
 {
     RECT rect;
     MenuContext* base;
@@ -217,7 +226,7 @@ s32 run_save_slot_menu(MenuContext* arg0)
     void* tmp;
     u_long* ot;
 
-    base = arg0;
+    base = ctx_base;
 
     InitSaveSlotMenu();
     GFX_Transition(0);
