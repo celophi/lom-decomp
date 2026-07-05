@@ -67,8 +67,8 @@ extern void *D_800473F4;
 extern void *D_800473EC;
 extern s32 D_80035248;
 extern s32 D_800473E8;
-extern s32 D_80047400;
-extern s32 D_80047404;
-extern s32 D_80047408;
+extern s32 g_text_atlas_base;
+extern s32 g_text_cursor_x;
+extern s32 g_text_cursor_y;
 
 #endif

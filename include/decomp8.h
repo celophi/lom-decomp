@@ -19,12 +19,12 @@ typedef struct
     u32 unk10;
 } NodeWithOffset16;
 
-extern s32 D_80047404;
-extern s32 D_80047408;
+extern s32 g_text_cursor_x;
+extern s32 g_text_cursor_y;
 extern u8 D_800102B0[17];
 extern CommandBuffer *D_800473EC;
 extern NodeWithOffset16 *D_800473F4;
-extern s32 D_80047400;
+extern s32 g_text_atlas_base;
 
 
 extern void func_800165CC(int, int, s32);

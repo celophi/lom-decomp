@@ -129,9 +129,9 @@ void field_run_frame_loop(FieldRenderHalf* render_ctx)
  */
 void field_init_display(FieldRenderHalf* render_ctx)
 {
-    u_char* base = (u_char*)render_ctx; /* for pointer arithmetic */
-    ArgStruct* arg = (ArgStruct*)base; /* for field access */
-    RECT rect;                         /* replaced separate s16 variables */
+    u_char* base = (u_char*)render_ctx;
+    ArgStruct* arg = (ArgStruct*)base;
+    RECT rect;
 
     SetGeomScreen(0x5DC);
     SetGeomOffset(0xA0, 0x78);
@@ -172,18 +172,18 @@ void field_init_display(FieldRenderHalf* render_ctx)
  */
 void func_800160C8(void* arg0)
 {
-    s16 params[4]; // replaces sp10, sp12, sp14, sp16
+    s16 params[4];
     ArgStruct2* arg = (ArgStruct2*)arg0;
 
-    D_80047408 = 0;
-    D_80047404 = 0;
+    g_text_cursor_y = 0;
+    g_text_cursor_x = 0;
     params[0] = 0x120;
     params[1] = 0x1E0;
     params[2] = 0x100;
     params[3] = 0x1FF;
-    func_80086310(0x5DC, params); // passes pointer to the array
+    func_80086310(0x5DC, params);
     cdrom_wait_queue_empty();
-    D_80047400 = 0x7FD0;
+    g_text_atlas_base = 0x7FD0;
     arg->unk7CBF = 1;
     arg->unk7CC0 = 0xE1000234;
     arg->unkF983 = 1;

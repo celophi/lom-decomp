@@ -10,8 +10,8 @@ void func_8001615C(u8* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     s32 len;
     s32 a3_val;
 
-    D_80047404 = arg1;
-    D_80047408 = arg2;
+    g_text_cursor_x = arg1;
+    g_text_cursor_y = arg2;
     a3_val = arg3;
     len = strlen((const char*)arg0);
     if (len > 0)
@@ -33,8 +33,8 @@ void func_800161DC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 {
     s32 q;
     int new_var;
-    D_80047404 = arg1;
-    D_80047408 = arg2;
+    g_text_cursor_x = arg1;
+    g_text_cursor_y = arg2;
     q = arg0 / 10;
     new_var = q * 10;
     func_800165CC(q + 0x30, arg3, arg4);
@@ -55,14 +55,14 @@ void func_8001627C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     s32 digit;
     s32 sign = orig >> 31;
     digit = orig / 100;
-    D_80047404 = arg1;
-    D_80047408 = arg2;
+    g_text_cursor_x = arg1;
+    g_text_cursor_y = arg2;
     quot = digit;
     prod = quot * 100;
     digit = quot + 0x30;
     if (digit == 0x30)
     {
-        D_80047404 = arg1 + 8;
+        g_text_cursor_x = arg1 + 8;
     }
     else
     {
@@ -83,7 +83,7 @@ void func_8001627C(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     }
     else if (digit == 0x30)
     {
-        D_80047404 += 8;
+        g_text_cursor_x += 8;
     }
     else
     {
@@ -105,8 +105,8 @@ void func_800163B4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     u32 high;
     var_s1 = arg0;
     memcpy(table, D_800102B0, 17);
-    D_80047404 = arg1;
-    D_80047408 = arg2;
+    g_text_cursor_x = arg1;
+    g_text_cursor_y = arg2;
     if (((u32)(var_s1 & 0xFFFF)) >= 0x100)
     {
         var_s1 = 0xFF;
@@ -131,9 +131,9 @@ void func_800164B0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     memcpy(table, D_800102B0, 17);
 
     /* match assembly order */
-    D_80047404 = arg1;
+    g_text_cursor_x = arg1;
     temp = (u32)(arg0 & 0xFFFF);
-    D_80047408 = arg2;
+    g_text_cursor_y = arg2;
 
     /* Four calls using the four nibbles of the 16-bit value */
     func_800165CC(table[(temp >> 12) & 0xF], arg3, arg4);
@@ -173,13 +173,13 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
 
         high = t;
         D_800473EC->unk4 = 0x66808080;
-        low = (u16)D_80047400;
-        if (!D_80047404)
+        low = (u16)g_text_atlas_base;
+        if (!g_text_cursor_x)
         {
         }
         base = (low + arg2) << 16;
         low = ((high & 0xF) * 8) + 0x80;
-        if (!D_80047408)
+        if (!g_text_cursor_y)
         {
         }
         low = base | low;
@@ -188,7 +188,7 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
         high = (((t - 0x20) & ((short)0xF0)) >> 1) + 0xE0;
         new_var = low | (high << 8);
         D_800473EC->unkC = new_var;
-        D_800473EC->unk8 = (D_80047408 << 16) | D_80047404;
+        D_800473EC->unk8 = (g_text_cursor_y << 16) | g_text_cursor_x;
         new_var8 = (new_var6 = 0xFF000000);
         new_var5 = (u8*)D_800473F4;
         D_800473EC->unk10 = 0x80008;
@@ -201,7 +201,7 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
         high = new_var2 & new_var8;
         node->unk10 = high | (cb_addr & 0x00FFFFFF); /* Bug 2 fix: removed (cb_addr = 0x00FFFFFF) assignment */
     }
-    D_80047404 += 8;
+    g_text_cursor_x += 8;
 }
 
 /**
@@ -228,7 +228,7 @@ void func_800166C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     s32 extra2;
     s32 extra3;
     temp4 = arg4;
-    D_80047404 = arg1;
+    g_text_cursor_x = arg1;
     temp3 = arg3;
     new_var4 = arg3;
     temp0 = !temp3;
@@ -248,7 +248,7 @@ void func_800166C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     if ((!D_800102B0) && (!D_800102B0))
     {
     }
-    D_80047408 = arg2;
+    g_text_cursor_y = arg2;
     new_var7 = new_var3;
     new_var6 = (new_var4 = temp3);
     if (new_var7)
