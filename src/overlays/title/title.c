@@ -279,9 +279,8 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
  * @details Counterpart of InitCheckPSDisplay in the CHECKPS overlay. Clears
  * the hardware display registers, configures the geometry screen/offset,
  * clears all of VRAM, and sets up the front and back DISPENV/DRAWENV pairs
- * (front at ctx_base->disp_env/draw_env; back at the fixed 0xFD0C/0xFD20
- * byte offsets past ctx_base, whose fields are not yet named in
- * MenuContext). Called once per title-menu iteration from run_title.
+ * (front at ctx_base->disp_env/draw_env, back at ctx_base->disp_env2/draw_env2).
+ * Called once per title-menu iteration from run_title.
  *
  * @param ctx_base Base address of the double-buffered MenuContext render
  *        buffer, forwarded as-is from run_title.
@@ -291,9 +290,8 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
 void init_title_display(MenuContext* ctx_base)
 {
     RECT rect;
-    unsigned char* base = (unsigned char*)ctx_base;
-    unsigned char* hw = (unsigned char*)0x801ED600; /* hardware registers */
-    unsigned char* base2;                           /* base + 0x8000 */
+    u8* base = (u8*)ctx_base;
+    u8* hw = (u8*)0x801ED600; /* hardware registers */
 
     /* Clear hardware register bytes */
     hw[0x13F] = 0;
@@ -311,12 +309,11 @@ void init_title_display(MenuContext* ctx_base)
     *(short*)(base + 0x40B4) = SCREEN_WIDTH;
     *(short*)(base + 0x40B6) = SCREEN_HEIGHT;
 
-    /* Secondary base (s0 = ctx_base + 0x8000) */
-    base2 = base + 0x8000;
-    *(short*)(base2 + 0x7D7C) = 0;
-    *(short*)(base2 + 0x7D7E) = VRAM_BACK_DISP_Y;
-    *(short*)(base2 + 0x7D80) = SCREEN_WIDTH;
-    *(short*)(base2 + 0x7D82) = SCREEN_HEIGHT;
+    /* _pad5 (mirrors _pad2, but past the back-buffer disp/draw env pair) */
+    *(short*)&ctx_base->_pad5[0] = 0;
+    *(short*)&ctx_base->_pad5[2] = VRAM_BACK_DISP_Y;
+    *(short*)&ctx_base->_pad5[4] = SCREEN_WIDTH;
+    *(short*)&ctx_base->_pad5[6] = SCREEN_HEIGHT;
 
     DrawSync(0);
     VSync(0);
@@ -330,15 +327,15 @@ void init_title_display(MenuContext* ctx_base)
 
     /* Set display environments */
     SetDefDispEnv(&ctx_base->disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv((DISPENV*)(base + 0xFD0C), 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&ctx_base->disp_env2, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     /* Set drawing environments */
     SetDefDrawEnv(&ctx_base->draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv((DRAWENV*)(base + 0xFD20), 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&ctx_base->draw_env2, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     /* Clear two more bytes */
-    *(base + 0xFD36) = 0; /* was ctx->unkFD36 */
-    *(base + 0x406A) = 0; /* was ctx->unk406A */
+    ctx_base->draw_env2.dtd = 0;
+    ctx_base->draw_env.dtd = 0;
 
     ResetFadeState();
     SetFadeTarget(0x100, 0x100, 0x100, 0x14);
