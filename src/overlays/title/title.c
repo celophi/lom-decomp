@@ -167,7 +167,7 @@ void render_menu(MenuContext* context)
         s0->next_prim_ptr = s0->prim_buffer;
         rand();
         VSync(1);
-        RenderFadeOverlay(s0);
+        render_fade_overlay(s0);
         RenderTitleBackdrop(s0);
         render_title_menu_items(s0);
         HandleTitleMenuInput();
@@ -251,7 +251,7 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
         ClearOTagR(ot, 0x1000);
         current->next_prim_ptr = current->prim_buffer;
         VSync(1);
-        RenderFadeOverlay(current);
+        render_fade_overlay(current);
         RenderSaveSlotMenu(current);
         DrawSync(0);
         func_800157B0(2);
@@ -472,17 +472,21 @@ void reset_fade_state(void)
 }
 
 /**
- * Counterpart of CHECKPS func_80050258: interpolates g_fadeCurrent toward
- * g_fadeTarget and emits the fade-overlay primitive into the active prim
- * buffer.
+ * @brief Interpolate the screen fade and emit its overlay primitive.
  *
- * decomp.me (100%) https://decomp.me/scratch/fBro2
+ * @details Counterpart of CHECKPS func_80050258: interpolates g_fadeCurrent
+ * toward g_fadeTarget and emits the fade-overlay primitive into the active
+ * prim buffer.
+ *
+ * @param ctx Active MenuContext render buffer.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/fBro2
  */
-void RenderFadeOverlay(MenuContext* arg0)
+void render_fade_overlay(MenuContext* ctx)
 {
-    MenuContext* arg = arg0;
-    u32* var_t4 = (u32*)arg->next_prim_ptr;
-    u32* unk40_ptr = (u32*)(((u8*)arg) + 0x40);
+    MenuContext* base = ctx;
+    u32* var_t4 = (u32*)base->next_prim_ptr;
+    u32* unk40_ptr = (u32*)base->otag_buffer;
     s32 temp_a2;
     s32 temp_a0;
     s32 temp_v1;
@@ -540,10 +544,10 @@ void RenderFadeOverlay(MenuContext* arg0)
         }
         ((u8*)var_t4)[3] = 3;
         ((u8*)var_t4)[7] = 0x62;
-        *((u16*)(((u8*)var_t4) + 12)) = 0x140;
+        *((u16*)(((u8*)var_t4) + 12)) = SCREEN_WIDTH;
         *((u16*)(((u8*)var_t4) + 10)) = 0;
         *((u16*)(((u8*)var_t4) + 8)) = 0;
-        *((u16*)(((u8*)var_t4) + 14)) = 0xF0;
+        *((u16*)(((u8*)var_t4) + 14)) = SCREEN_HEIGHT;
         *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
         *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
         ;
@@ -559,7 +563,7 @@ void RenderFadeOverlay(MenuContext* arg0)
         *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
         var_t4 = (u32*)(((u8*)var_t4) + 8);
     }
-    arg->next_prim_ptr = (u_long*)var_t4;
+    base->next_prim_ptr = (u_long*)var_t4;
 }
 
 /**
