@@ -65,7 +65,7 @@ void func_800158E0(void);
 void load_and_play_song(s32 song_index);
 undefined* FUN_80015c18(void);
 undefined* FUN_80015c38(void);
-int FUN_80015c58(void);
+int run_field_scene(void);
 undefined4 FUN_80021fbc(void);
 void akao_song_cmd_12c(void);
 void akao_set_song_params(int flags, s16 duration, s16 field_id, s16 sub_id);
