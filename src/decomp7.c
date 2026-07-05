@@ -44,11 +44,10 @@ s32 run_field_scene(void)
  * @param arg0 Field render context (two 0x7CC4-byte frame buffers).
  * @see decomp.me (100%) https://decomp.me/scratch/ViJdW
  */
-void field_run_frame_loop(void* arg0)
+void field_run_frame_loop(FieldRenderHalf* arg0)
 {
     RECT rect;
     FieldRenderHalf* draw_half;
-    int new_var4;
     int new_var2;
     u32* new_var;
     s32 is_alt_half;
@@ -57,18 +56,18 @@ void field_run_frame_loop(void* arg0)
     char* new_var5;
     rect.x = 0;
     rect.y = 0;
-    rect.w = 0x140;
-    rect.h = 0x1D8;
+    rect.w = SCREEN_WIDTH;
+    rect.h = VRAM_BACK_DISP_Y + SCREEN_HEIGHT;
     new_var = (u32*)0x801ED000;
     new_var2 = 0x801ED600;
     ClearImage(&rect, 0, 0, 0);
-    draw_half = (FieldRenderHalf*)arg0;
+    draw_half = arg0;
     ClearOTagR(draw_half->otag, 0x1010);
     ClearOTagR((draw_half + 1)->otag, 0x1010);
     VSync(0);
     PutDispEnv(&draw_half->disp_env);
     func_800157DC();
-    SetDispMask(new_var4 = 1);
+    SetDispMask(1);
     do
     {
         func_8009B028();
@@ -77,7 +76,7 @@ void field_run_frame_loop(void* arg0)
         D_800473EC = (void*)(new_var5 + 0x40BC);
 
         ClearOTagR(draw_half->otag, 0x1010);
-        if (draw_half == ((FieldRenderHalf*)arg0))
+        if (draw_half == arg0)
         {
             temp_v0 = new_var[0xC / 4];
         }
@@ -87,14 +86,14 @@ void field_run_frame_loop(void* arg0)
         }
         draw_half->unk40B8 = temp_v0;
         field_clear_node_accumulators(D_800473E8, D_80035248);
-        is_alt_half = (draw_half != ((FieldRenderHalf*)arg0)) ? (1) : (0);
+        is_alt_half = (draw_half != arg0) ? 1 : 0;
         func_800676B4(draw_half, is_alt_half);
-        primary_half = (FieldRenderHalf*)arg0;
+        primary_half = arg0;
         if (g_pending_game_state == 0)
         {
             VSync(1);
             field_draw_frame(is_alt_half, draw_half, D_800473E8, D_80035248);
-            VSync(new_var4);
+            VSync(1);
             DrawSync(0 * 0);
             func_800157B0(2);
             VSync(2);
@@ -146,8 +145,8 @@ void func_80015F88(void* arg0)
     /* setup RECT for ClearImage */
     rect.x = 0;
     rect.y = 0;
-    rect.w = 0x400;
-    rect.h = 0x200;
+    rect.w = VRAM_WIDTH;
+    rect.h = VRAM_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
 
     SetDefDispEnv((DISPENV*)(base + 0x4040), 0, 0, 0x140, 0xF0);
