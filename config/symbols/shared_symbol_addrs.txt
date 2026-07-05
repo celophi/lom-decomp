@@ -1,5 +1,6 @@
 // Globals
 g_overlayLoadAddress                = 0x800102AC;
+g_hex_digit_table                   = 0x800102B0;
 
 Main                                = 0x80010D58;
 GFX_Transition                      = 0x80011358;
@@ -49,7 +50,14 @@ func_800158E0                       = 0x800158E0;
 FUN_80015c18                        = 0x80015C18;
 FUN_80015c28                        = 0x80015C28;
 FUN_80015c38                        = 0x80015C38;
-FUN_80015c58                        = 0x80015C58;
+run_field_scene                     = 0x80015C58;
+field_run_frame_loop                = 0x80015D6C;
+field_init_display                  = 0x80015F88;
+field_draw_string                   = 0x8001615C;
+field_draw_uint2                    = 0x800161DC;
+field_draw_uint3                    = 0x8001627C;
+field_draw_hex_byte                 = 0x800163B4;
+field_draw_hex_word                 = 0x800164B0;
 
 // src/psyq/libcard/C112
 _bu_init                            = 0x8001676C;
@@ -837,6 +845,9 @@ g_akao_song_cmd_neg_arg0            = 0x80046FDC;
 g_music_track_index                 = 0x80046FDE;
 g_music_data_buffer                 = 0x80046FE0;
 D_800473E0                          = 0x800473E0;
+g_text_atlas_base                   = 0x80047400;
+g_text_cursor_x                     = 0x80047404;
+g_text_cursor_y                     = 0x80047408;
 g_akao_seq_channels                 = 0x80049130;
 g_sfx_channels                      = 0x8004B430;
 g_akao_xa_program_staging           = 0x8004C150;
@@ -862,6 +873,7 @@ g_pad_input                         = 0x80122988;
 g_pad_input_inject                  = 0x801229FC;
 
 // Globals
+g_pending_game_state                = 0x8010D018;
 g_cdAudioReady                      = 0x801ED591;
 g_cdSystem                          = 0x801ED800;
 g_cdStatusByte3                     = 0x801ED802;

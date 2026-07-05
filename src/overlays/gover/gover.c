@@ -149,7 +149,7 @@ extern s32 func_800A39A8(s32, s32, s32, s32); /* one-shot SFX/voice playback */
 extern s32 g_akao_music_volume;
 
 extern u32 g_scene_mode;
-extern s32 D_8010D018;
+extern s32 g_pending_game_state;
 extern AudioDataBlock g_audio_data;
 extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 
@@ -376,7 +376,7 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  *   5. Pumps @p cdrom_process_state to keep CD-streaming alive during the loop.
  *
  * The fade-out break condition is @p g_fadeLevel == 0; on exit, audio is
- * stopped, the display is masked off, and @p D_8010D018 is set to signal the
+ * stopped, the display is masked off, and @p g_pending_game_state is set to signal the
  * caller that the Game Over sequence has completed.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/IfwJm
@@ -443,7 +443,7 @@ static void gover_run(void)
     SetDispMask(0);
     g_scene_mode = 0;
     func_800AA02C();
-    D_8010D018 = 1;
+    g_pending_game_state = 1;
 }
 
 /**
