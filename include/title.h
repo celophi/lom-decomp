@@ -46,16 +46,19 @@ typedef struct
     char _pad3[0x3C10];         /* 0x80BC */
 
     char _pad4[0x40];
-    u_long otag_buffer2[0x1000];
+    u_long otag_buffer2[0x1000]; /* 0xBD0C */
+    DISPENV disp_env2;           /* 0xFD0C */
+    DRAWENV draw_env2;           /* 0xFD20 */
+    char _pad5[8];               /* 0xFD7C */
 
-} MenuContext; /* 0xBCCC total */
+} MenuContext; /* 0xFD84 total */
 
 /* MenuLayout and g_menuLayoutBuffer are declared in main.h (shared). */
 extern s32 D_80042FB4;
 extern u8 g_titleSelectedItem;
 extern s32 g_titleMenuExitState;
 /**
- * Base address of the AKAO instrument/sample bank loaded by LoadTitleAudioBank
+ * Base address of the AKAO instrument/sample bank loaded by load_title_audio_bank
  * (always 0x8013C000). Passed to akao_register_bank to register it with the
  * audio driver.
  */
