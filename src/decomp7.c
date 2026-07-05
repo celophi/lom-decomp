@@ -63,8 +63,8 @@ void field_run_frame_loop(void* arg0)
     new_var2 = 0x801ED600;
     ClearImage(&rect, 0, 0, 0);
     draw_half = (FieldRenderHalf*)arg0;
-    ClearOTagR((u_long*)draw_half, 0x1010);
-    ClearOTagR((u_long*)(((char*)draw_half) + 0x7CC4), 0x1010);
+    ClearOTagR(draw_half->otag, 0x1010);
+    ClearOTagR((draw_half + 1)->otag, 0x1010);
     VSync(0);
     PutDispEnv(&draw_half->disp_env);
     func_800157DC();
@@ -76,7 +76,7 @@ void field_run_frame_loop(void* arg0)
         new_var5 = (char*)draw_half;
         D_800473EC = (void*)(new_var5 + 0x40BC);
 
-        ClearOTagR((u_long*)draw_half, 0x1010);
+        ClearOTagR(draw_half->otag, 0x1010);
         if (draw_half == ((FieldRenderHalf*)arg0))
         {
             temp_v0 = new_var[0xC / 4];
