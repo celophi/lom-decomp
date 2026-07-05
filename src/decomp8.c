@@ -115,19 +115,25 @@ void field_draw_uint3(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/S8Wds
+ * @brief Draw a value clamped to a byte as 2 hex digits.
+ * @param value    Number to draw (clamped to 0-0xFF).
+ * @param x        Starting X of the text cursor (g_text_cursor_x).
+ * @param y        Starting Y of the text cursor (g_text_cursor_y).
+ * @param ot_depth Ordering-table depth/priority each glyph is linked into.
+ * @param clut     Font CLUT/color variant, added to g_text_atlas_base.
+ * @see decomp.me (100%) https://decomp.me/scratch/S8Wds
  */
-void func_800163B4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+void field_draw_hex_byte(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
 {
     u8 table[17];
     s32 var_s1;
     u32 index;
     u32 new_var;
     u32 high;
-    var_s1 = arg0;
-    memcpy(table, D_800102B0, 17);
-    g_text_cursor_x = arg1;
-    g_text_cursor_y = arg2;
+    var_s1 = value;
+    memcpy(table, g_hex_digit_table, 17);
+    g_text_cursor_x = x;
+    g_text_cursor_y = y;
     if (((u32)(var_s1 & 0xFFFF)) >= 0x100)
     {
         var_s1 = 0xFF;
@@ -135,8 +141,8 @@ void func_800163B4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     index = (u32)(var_s1 & 0xFFFF);
     high = index >> 4;
     new_var = high << 4;
-    func_800165CC(table[high], arg3, arg4);
-    func_800165CC(table[(unsigned short)((u32)((var_s1 - ((s32)new_var)) & 0xFFFF))], arg3, arg4);
+    func_800165CC(table[high], ot_depth, clut);
+    func_800165CC(table[(unsigned short)((u32)((var_s1 - ((s32)new_var)) & 0xFFFF))], ot_depth, clut);
 }
 
 /**
@@ -149,7 +155,7 @@ void func_800164B0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     u32 temp;
 
     /* Copy the unaligned data using memcpy (compiles to efficient byte loop) */
-    memcpy(table, D_800102B0, 17);
+    memcpy(table, g_hex_digit_table, 17);
 
     /* match assembly order */
     g_text_cursor_x = arg1;
@@ -236,7 +242,7 @@ void func_800166C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     signed char* new_var5;
     s32 temp4;
     int new_var6;
-    signed char* base = D_800102B0;
+    signed char* base = g_hex_digit_table;
     signed char* new_var;
     short new_var7;
     int new_var4;
@@ -266,7 +272,7 @@ void func_800166C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     if (new_var2)
     {
     }
-    if ((!D_800102B0) && (!D_800102B0))
+    if ((!g_hex_digit_table) && (!g_hex_digit_table))
     {
     }
     g_text_cursor_y = arg2;
