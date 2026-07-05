@@ -41,10 +41,10 @@ s32 run_field_scene(void)
 /**
  * @brief Per-frame field render loop; runs until a state transition is
  *        requested via g_pending_game_state.
- * @param arg0 Field render context (two 0x7CC4-byte frame buffers).
+ * @param render_ctx Field render context (two 0x7CC4-byte frame buffers).
  * @see decomp.me (100%) https://decomp.me/scratch/ViJdW
  */
-void field_run_frame_loop(FieldRenderHalf* arg0)
+void field_run_frame_loop(FieldRenderHalf* render_ctx)
 {
     RECT rect;
     FieldRenderHalf* draw_half;
@@ -61,7 +61,7 @@ void field_run_frame_loop(FieldRenderHalf* arg0)
     new_var = (u32*)0x801ED000;
     new_var2 = 0x801ED600;
     ClearImage(&rect, 0, 0, 0);
-    draw_half = arg0;
+    draw_half = render_ctx;
     ClearOTagR(draw_half->otag, 0x1010);
     ClearOTagR((draw_half + 1)->otag, 0x1010);
     VSync(0);
@@ -76,7 +76,7 @@ void field_run_frame_loop(FieldRenderHalf* arg0)
         D_800473EC = (void*)(new_var5 + 0x40BC);
 
         ClearOTagR(draw_half->otag, 0x1010);
-        if (draw_half == arg0)
+        if (draw_half == render_ctx)
         {
             temp_v0 = new_var[0xC / 4];
         }
@@ -86,9 +86,9 @@ void field_run_frame_loop(FieldRenderHalf* arg0)
         }
         draw_half->unk40B8 = temp_v0;
         field_clear_node_accumulators(D_800473E8, D_80035248);
-        is_alt_half = (draw_half != arg0) ? 1 : 0;
+        is_alt_half = (draw_half != render_ctx) ? 1 : 0;
         func_800676B4(draw_half, is_alt_half);
-        primary_half = arg0;
+        primary_half = render_ctx;
         if (g_pending_game_state == 0)
         {
             VSync(1);
@@ -97,7 +97,7 @@ void field_run_frame_loop(FieldRenderHalf* arg0)
             DrawSync(0 * 0);
             func_800157B0(2);
             VSync(2);
-            new_var5 = (char*)arg0;
+            new_var5 = (char*)render_ctx;
             if (draw_half == primary_half)
             {
                 new_var5 = ((char*)draw_half) + 0x7CC4;
