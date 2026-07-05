@@ -511,43 +511,43 @@ void render_fade_overlay(MenuContext* ctx)
     {
         if (((s32)g_fadeCurrent.red) >= 0x101)
         {
-            ((u8*)var_t4)[4] = ((u8)g_fadeCurrent.red) - 1;
-            ((u8*)var_t4)[5] = ((u8)g_fadeCurrent.green) - 1;
-            ((u8*)var_t4)[6] = ((u8)g_fadeCurrent.blue) - 1;
+            ((TILE*)var_t4)->r0 = ((u8)g_fadeCurrent.red) - 1;
+            ((TILE*)var_t4)->g0 = ((u8)g_fadeCurrent.green) - 1;
+            ((TILE*)var_t4)->b0 = ((u8)g_fadeCurrent.blue) - 1;
         }
         else
         {
             if (g_fadeCurrent.red == 0x100)
             {
-                ((u8*)var_t4)[4] = 0;
+                ((TILE*)var_t4)->r0 = 0;
             }
             else
             {
-                ((u8*)var_t4)[4] = ~((u8)g_fadeCurrent.red);
+                ((TILE*)var_t4)->r0 = ~((u8)g_fadeCurrent.red);
             }
             if (g_fadeCurrent.green == 0x100)
             {
-                ((u8*)var_t4)[5] = 0;
+                ((TILE*)var_t4)->g0 = 0;
             }
             else
             {
-                ((u8*)var_t4)[5] = ~((u8)g_fadeCurrent.green);
+                ((TILE*)var_t4)->g0 = ~((u8)g_fadeCurrent.green);
             }
             if (g_fadeCurrent.blue == 0x100)
             {
-                ((u8*)var_t4)[6] = 0;
+                ((TILE*)var_t4)->b0 = 0;
             }
             else
             {
-                ((u8*)var_t4)[6] = ~((u8)g_fadeCurrent.blue);
+                ((TILE*)var_t4)->b0 = ~((u8)g_fadeCurrent.blue);
             }
         }
-        ((u8*)var_t4)[3] = 3;
-        ((u8*)var_t4)[7] = 0x62;
-        *((u16*)(((u8*)var_t4) + 12)) = SCREEN_WIDTH;
-        *((u16*)(((u8*)var_t4) + 10)) = 0;
-        *((u16*)(((u8*)var_t4) + 8)) = 0;
-        *((u16*)(((u8*)var_t4) + 14)) = SCREEN_HEIGHT;
+        setlen(var_t4, 3);
+        setcode(var_t4, 0x62);
+        ((TILE*)var_t4)->w = SCREEN_WIDTH;
+        ((TILE*)var_t4)->y0 = 0;
+        ((TILE*)var_t4)->x0 = 0;
+        ((TILE*)var_t4)->h = SCREEN_HEIGHT;
         *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
         *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
         ;
@@ -557,8 +557,8 @@ void render_fade_overlay(MenuContext* ctx)
         {
             var_a1 = 0x45;
         }
-        ((u8*)var_t4)[3] = 1;
-        *((u32*)(((u8*)var_t4) + 4)) = (s32)(var_a1 | 0xE1000000);
+        setlen(var_t4, 1);
+        ((DR_TPAGE*)var_t4)->code[0] = (s32)(var_a1 | 0xE1000000);
         *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
         *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
         var_t4 = (u32*)(((u8*)var_t4) + 8);
