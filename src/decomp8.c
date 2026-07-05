@@ -146,9 +146,15 @@ void field_draw_hex_byte(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/4kW8K
+ * @brief Draw a value masked to 16 bits as 4 hex digits, most significant first.
+ * @param value    Number to draw (masked to 0-0xFFFF).
+ * @param x        Starting X of the text cursor (g_text_cursor_x).
+ * @param y        Starting Y of the text cursor (g_text_cursor_y).
+ * @param ot_depth Ordering-table depth/priority each glyph is linked into.
+ * @param clut     Font CLUT/color variant, added to g_text_atlas_base.
+ * @see decomp.me (100%) https://decomp.me/scratch/4kW8K
  */
-void func_800164B0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+void field_draw_hex_word(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
 {
     /* local copy (stack area sp+0x10 to sp+0x20) */
     u8 table[17];
@@ -158,15 +164,15 @@ void func_800164B0(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     memcpy(table, g_hex_digit_table, 17);
 
     /* match assembly order */
-    g_text_cursor_x = arg1;
-    temp = (u32)(arg0 & 0xFFFF);
-    g_text_cursor_y = arg2;
+    g_text_cursor_x = x;
+    temp = (u32)(value & 0xFFFF);
+    g_text_cursor_y = y;
 
     /* Four calls using the four nibbles of the 16-bit value */
-    func_800165CC(table[(temp >> 12) & 0xF], arg3, arg4);
-    func_800165CC(table[(temp >> 8) & 0xF], arg3, arg4);
-    func_800165CC(table[(temp >> 4) & 0xF], arg3, arg4);
-    func_800165CC(table[temp & 0xF], arg3, arg4);
+    func_800165CC(table[(temp >> 12) & 0xF], ot_depth, clut);
+    func_800165CC(table[(temp >> 8) & 0xF], ot_depth, clut);
+    func_800165CC(table[(temp >> 4) & 0xF], ot_depth, clut);
+    func_800165CC(table[temp & 0xF], ot_depth, clut);
 }
 
 /**
