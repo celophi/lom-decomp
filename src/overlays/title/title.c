@@ -1,5 +1,6 @@
 #include "title.h"
 #include "cd_resources.h"
+#include "display.h"
 
 /* Width in pixels of a single save-slot panel; one horizontal slide moves the
  * stage by exactly this much. */
@@ -50,7 +51,7 @@ static void scroll_slots_left(void);
  *
  * @param base_address Base address of the double-buffered MenuContext render
  *        buffer (returned by func_80015C48 in main.c); forwarded as-is to
- *        InitTitleDisplay, render_menu and RunSaveSlotMenu.
+ *        InitTitleDisplay, render_menu and run_save_slot_menu.
  * @return Next game-state code consumed by the main state machine:
  *         - 3: "New Game" confirmed in the save-slot menu (start a new field).
  *         - 7: menu item 1 selected (continue / load a saved game).
@@ -104,7 +105,7 @@ s32 run_title(s32 base_address)
         {
             load_menu_layout(0);
             exit_state_base[0x990] = 0; /* g_titleMenuExitState = 0 */
-            if (RunSaveSlotMenu(ctx_base) == 2)
+            if (run_save_slot_menu(ctx_base) == 2)
             {
                 GFX_Transition(0);
                 continue;
@@ -208,11 +209,11 @@ void render_menu(MenuContext* context)
  *
  * decomp.me (100%) https://decomp.me/scratch/AKk7x
  */
-s32 RunSaveSlotMenu(void* arg0)
+s32 run_save_slot_menu(MenuContext* arg0)
 {
     short rect[4];
-    void* base;
-    void* current;
+    MenuContext* base;
+    MenuContext* current;
     void* tmp;
     u_long* ot;
 
@@ -225,21 +226,21 @@ s32 RunSaveSlotMenu(void* arg0)
     VSync(0);
     rect[0] = 0;
     rect[1] = 0;
-    rect[2] = 0x140;
+    rect[2] = SCREEN_WIDTH;
     rect[3] = 0x1D8;
     ClearImage((RECT*)rect, 0, 0, 0);
     current = base;
-    ClearOTagR((u_long*)((char*)current + 0x40), 0x1000);
-    ClearOTagR((u_long*)((char*)current + 0xBD0C), 0x1000);
+    ClearOTagR(current->otag_buffer, 0x1000);
+    ClearOTagR(current->otag_buffer2, 0x1000);
     VSync(0);
-    PutDispEnv((DISPENV*)((char*)current + 0x4040));
+    PutDispEnv(&current->disp_env);
     func_800157DC();
     SetDispMask(1);
     do
     {
-        ot = (u_long*)((char*)current + 0x40);
+        ot = current->otag_buffer;
         ClearOTagR(ot, 0x1000);
-        *(void**)((char*)current + 0x80B8) = (void*)((char*)current + 0x40B8);
+        current->next_prim_ptr = current->prim_buffer;
         VSync(1);
         RenderFadeOverlay(current);
         RenderSaveSlotMenu(current);
@@ -248,10 +249,10 @@ s32 RunSaveSlotMenu(void* arg0)
         VSync(2);
         tmp = base;
         if (current == base)
-            tmp = (char*)current + 0xBCCC;
+            tmp = current->_pad4;
         current = tmp;
-        PutDispEnv((DISPENV*)((char*)current + 0x4040));
-        PutDrawEnv((DRAWENV*)((char*)current + 0x4054));
+        PutDispEnv(&current->disp_env);
+        PutDrawEnv(&current->draw_env);
         DrawOTag((u_long*)((char*)ot + 0x3FFC));
         func_800157DC();
         cdrom_process_state();
