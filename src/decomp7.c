@@ -152,10 +152,10 @@ void field_init_display(FieldRenderHalf* render_ctx)
     rect.h = VRAM_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
 
-    SetDefDispEnv((DISPENV*)(base + 0x4040), 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv((DISPENV*)(base + 0xBD04), 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv((DRAWENV*)(base + 0x4054), 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv((DRAWENV*)(base + 0xBD18), 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDispEnv(&render_ctx->disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&(render_ctx + 1)->disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&render_ctx->draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&(render_ctx + 1)->draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     arg->unkBD2E = 0;
     arg->unk406A = 0;
