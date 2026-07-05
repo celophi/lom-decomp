@@ -241,6 +241,17 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
  * decomp.me link (63%) https://decomp.me/scratch/7XlDl
  * Note that this code could be a completely different compiler toolchain
  * It might have been compiled with a different optimization level like -O1
+ *
+ * Local objdiff results (working/func_800166C8/): 40.8% at -O2, 67.2% at -O1
+ * with this source. The remaining diffs look like non-gcc codegen: trapping
+ * add (not addu) for the table indexing, ori+and for plain immediate masks,
+ * the 5th arg loaded at 0x10(sp) BEFORE the sp decrement, and s0..s3,ra save
+ * order. Same signatures in func_800165CC (addi a1,a1,0x80). Suspected
+ * LSI-style toolchain, as in the PSX BIOS/kernel.
+ *
+ * The target asm passes arg3 (ot_depth) to BOTH func_800165CC calls
+ * (addu s1,a1 / addu a1,s1 around the calls), so the second call below
+ * passes arg3; an earlier revision wrongly passed new_var4 (0xF0).
  */
 void func_800166C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
 {
@@ -292,7 +303,7 @@ void func_800166C8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
     extra1 = (temp3 & ((int)temp0)) >> 3;
     func_800165CC(base[extra1 >> 1], arg3, temp4);
     new_var = base;
-    func_800165CC(*(new_var5 = &new_var[new_var8 & temp0]), new_var4, temp4);
+    func_800165CC(*(new_var5 = &new_var[new_var8 & temp0]), arg3, temp4);
 }
 
 /**
