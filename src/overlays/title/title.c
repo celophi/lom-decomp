@@ -9,7 +9,7 @@
 /* Number of frames the slide-lerper takes to animate a full panel scroll. */
 #define SLOT_SLIDE_FRAMES 8
 
-/* CD resource index of the first title SEQ. LoadTitleSeq adds the variant
+/* CD resource index of the first title SEQ. load_title_seq adds the variant
  * index to this base to obtain the actual resource passed to cdrom_queue_read. */
 #define TITLE_SEQ_RESOURCE_BASE 0x17
 
@@ -74,8 +74,8 @@ s32 run_title(s32 base_address)
     ctx_base = base_address;
 
     load_title_audio_bank();
-    LoadTitleSeq(0);
-    StartTitleMusic();
+    load_title_seq(0);
+    start_title_music();
     /* 0x80100000 is the global-RAM base; g_titleMenuExitState lives at
      * 0x80102640 (word index 0x990). The exit-state flag is read/written
      * through this base pointer rather than via the symbol directly so the
@@ -118,7 +118,7 @@ s32 run_title(s32 base_address)
         }
         else if (selected_item == idle_quit)
         {
-            StopTitleMusic();
+            stop_title_music();
             return GAME_STATE_INTRO_MOVIE;
         }
         else
@@ -337,7 +337,7 @@ void init_title_display(MenuContext* ctx_base)
     ctx_base->draw_env2.dtd = 0;
     ctx_base->draw_env.dtd = 0;
 
-    ResetFadeState();
+    reset_fade_state();
     SetFadeTarget(0x100, 0x100, 0x100, 0x14);
     init_title_menu_state();
 
@@ -380,65 +380,86 @@ void load_title_audio_bank(void)
 }
 
 /**
- * Counterpart of CHECKPS func_80050138: loads a SEQ resource from CD-ROM
- * into D_8003ECA0.
+ * @brief Load and play a title-screen SEQ resource from CD-ROM.
  *
- * decomp.me (100%) https://decomp.me/scratch/mBQ6i
+ * @details Counterpart of CHECKPS func_80050138. Reads CD resource
+ * (TITLE_SEQ_RESOURCE_BASE + seq_variant) into the 0x80180000 scratch
+ * buffer, splits it via its self-referential offset table, copies the
+ * sequence sub-block to D_8003ECA0, then submits it for blocking playback.
+ *
+ * @param seq_variant Offset added to TITLE_SEQ_RESOURCE_BASE to select
+ *        which title SEQ variant to load.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/mBQ6i
  */
-void LoadTitleSeq(s32 seqVariant)
+void load_title_seq(s32 seq_variant)
 {
     u32* off;
     u8* base;
 
-    cdrom_queue_read((seqVariant + TITLE_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)0x80180000);
+    cdrom_queue_read((seq_variant + TITLE_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)0x80180000);
     cdrom_wait_queue_empty();
 
     off = (u32*)0x80180004;
     base = (u8*)0x80180000;
 
-    bcopy(base + off[0], (unsigned char*)&D_8003ECA0, (int)(off[1] - off[0]));
+    bcopy(base + off[0], (u8*)&D_8003ECA0, (int)(off[1] - off[0]));
     akao_play_sequence_blocking((AkaoSeqHeader*)(base + off[1]), 1);
 }
 
 /**
- * Counterpart of CHECKPS func_800501AC.
+ * @brief Stop the title-screen background music.
  *
- * decomp.me (100%) https://decomp.me/scratch/1cta3
+ * @details Counterpart of CHECKPS func_800501AC.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/1cta3
  */
-void StopTitleMusic(void)
+void stop_title_music(void)
 {
     akao_stop_song(0);
 }
 
 /**
- * Counterpart of CHECKPS func_800501CC.
+ * @brief Start playback of the title-screen background music.
  *
- * decomp.me (100%) https://decomp.me/scratch/xYPkq
+ * @details Counterpart of CHECKPS func_800501CC. Plays the SEQ loaded into
+ * D_8003ECA0 (by load_title_seq) and sets the song volume to maximum via
+ * akao_cmd_c0.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/xYPkq
  */
-void StartTitleMusic(void)
+void start_title_music(void)
 {
     akao_play_song(&D_8003ECA0);
     akao_cmd_c0(0, 0x7F);
 }
 
 /**
- * Counterpart of CHECKPS func_800501FC (with the first parameter folded
- * away to a constant 0). soundId values observed: 0x3C (selection chime),
- * 0x7C..0x7F (cursor / cancel / confirm beeps).
+ * @brief Play a title-screen UI sound effect at maximum volume.
  *
- * decomp.me (100%) https://decomp.me/scratch/ZuKeL
+ * @details Counterpart of CHECKPS func_800501FC (with the first parameter
+ * folded away to a constant 0). sound_id values observed: 0x3C (selection
+ * chime), 0x7C..0x7F (cursor / cancel / confirm beeps).
+ *
+ * @param sound_id Sound id forwarded to akao_play_sfx's arg0 (lower 10 bits used).
+ * @param pan Forwarded to akao_play_sfx's arg2 (8-bit, possibly pan); every
+ *        call site in this file passes the constant 0x80.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/ZuKeL
  */
-void PlayTitleSfx(s32 soundId, s32 arg1)
+void play_title_sfx(s32 sound_id, s32 pan)
 {
-    akao_play_sfx(soundId, 0, arg1, 0x7F);
+    akao_play_sfx(sound_id, 0, pan, 0x7F);
 }
 
 /**
- * Counterpart of CHECKPS ResetFadeState.
+ * @brief Reset the title-screen fade state to opaque black with no fade in progress.
  *
- * decomp.me (100%) https://decomp.me/scratch/m80gj
+ * @details Counterpart of CHECKPS ResetFadeState.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/m80gj
  */
-void ResetFadeState(void)
+void reset_fade_state(void)
 {
     g_fadeCurrent.red = 0;
     g_fadeCurrent.green = 0;
@@ -631,19 +652,19 @@ void HandleTitleMenuInput(void)
     g_titleIdleCountdown -= 1;
     if (g_debouncedInput & 0xA20)
     {
-        PlayTitleSfx(op, 0x80);
+        play_title_sfx(op, 0x80);
         g_titleMenuExitState = 1;
         return;
     }
     if (g_debouncedInput & 0x9000)
     {
         menu_cursor_up();
-        PlayTitleSfx(0x7D, 0x80);
+        play_title_sfx(0x7D, 0x80);
     }
     else if (g_debouncedInput & 0x6100)
     {
         MenuCursorDown();
-        PlayTitleSfx(0x7D, 0x80);
+        play_title_sfx(0x7D, 0x80);
     }
 }
 
@@ -1328,7 +1349,7 @@ void handle_save_slot_input(void)
         if (g_debouncedInput & (PAD_BTN_LEFT | PAD_BTN_RIGHT))
         {
             SaveLayoutEntry* entry;
-            PlayTitleSfx(0x7D, 0x80);
+            play_title_sfx(0x7D, 0x80);
             entry = ((SaveLayoutEntry*)g_saveLayoutTable);
             if (entry[18].type != 0)
             {
@@ -1342,7 +1363,7 @@ void handle_save_slot_input(void)
         }
         if (g_debouncedInput & (PAD_BTN_START | PAD_BTN_L3 | PAD_BTN_CROSS))
         {
-            PlayTitleSfx(0x7E, 0x80);
+            play_title_sfx(0x7E, 0x80);
             if (D_800F9AED != 0)
             {
                 scroll_slots_right();
@@ -1355,7 +1376,7 @@ void handle_save_slot_input(void)
         }
         if (g_debouncedInput & PAD_BTN_CIRCLE)
         {
-            PlayTitleSfx(0x7F, 0x80);
+            play_title_sfx(0x7F, 0x80);
             g_titleMenuExitState = 2;
         }
     }
@@ -1416,13 +1437,13 @@ void handle_save_slot_input(void)
                     slot_idx += 1;
                     src_ptr += 4;
                 } while (slot_idx < 0xB);
-                PlayTitleSfx(0x7E, 0x80);
+                play_title_sfx(0x7E, 0x80);
             } while (0);
             g_titleMenuExitState = 1;
         }
         else if (g_debouncedInput & PAD_BTN_CIRCLE)
         {
-            PlayTitleSfx(0x7F, 0x80);
+            play_title_sfx(0x7F, 0x80);
             if (g_slotSlideX > 0)
             {
                 scroll_slots_left();
@@ -1438,7 +1459,7 @@ void handle_save_slot_input(void)
         {
             if ((g_debouncedInput & PAD_BTN_UP) != 0U)
             {
-                PlayTitleSfx(0x7D, 0x80);
+                play_title_sfx(0x7D, 0x80);
                 prev_index = g_slotSelectedIndex - 1;
                 g_slotSelectedIndex = prev_index;
                 if (prev_index < 0)
@@ -1448,7 +1469,7 @@ void handle_save_slot_input(void)
             }
             if (g_debouncedInput & PAD_BTN_DOWN)
             {
-                PlayTitleSfx(0x7D, 0x80);
+                play_title_sfx(0x7D, 0x80);
                 next_index = g_slotSelectedIndex + 1;
                 g_slotSelectedIndex = next_index;
                 if (next_index >= 0xB)

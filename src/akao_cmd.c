@@ -246,7 +246,7 @@ void akao_cmd_12(s32 arg0, s32 arg1)
  *   arg1 (24 bits) — wider opaque parameter (possibly pitch/frequency)
  *   arg2 ( 8 bits) — byte-sized parameter (possibly pan)
  *   arg3 ( 7 bits) — volume (0–127)
- * Caller in TITLE: PlayTitleSfx(soundId, _, arg1, 0x7F).
+ * Caller in TITLE: play_title_sfx(sound_id, _, pan, 0x7F).
  *
  * @param arg0  Sound id (lower 10 bits used).
  * @param arg1  24-bit packed parameter.
