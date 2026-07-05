@@ -33,19 +33,26 @@ void field_draw_string(u8* str, s32 x, s32 y, s32 ot_depth, s32 clut)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/ENN60
+ * @brief Draw a value as a fixed 2-digit unsigned number (no leading-zero
+ *        suppression) using the field text engine.
+ * @param value    Number to draw (0-99 expected).
+ * @param x        Starting X of the text cursor (g_text_cursor_x).
+ * @param y        Starting Y of the text cursor (g_text_cursor_y).
+ * @param ot_depth Ordering-table depth/priority each glyph is linked into.
+ * @param clut     Font CLUT/color variant, added to g_text_atlas_base.
+ * @see decomp.me (100%) https://decomp.me/scratch/ENN60
  */
-void func_800161DC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+void field_draw_uint2(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut)
 {
-    s32 q;
-    int new_var;
-    g_text_cursor_x = arg1;
-    g_text_cursor_y = arg2;
-    q = arg0 / 10;
-    new_var = q * 10;
-    func_800165CC(q + 0x30, arg3, arg4);
-    q = arg0 - new_var;
-    func_800165CC(q + 0x30, arg3, arg4);
+    s32 digit;
+    int tens_value;
+    g_text_cursor_x = x;
+    g_text_cursor_y = y;
+    digit = value / 10;
+    tens_value = digit * 10;
+    func_800165CC(DIGIT_TO_ASCII(digit), ot_depth, clut);
+    digit = value - tens_value;
+    func_800165CC(DIGIT_TO_ASCII(digit), ot_depth, clut);
 }
 
 /**

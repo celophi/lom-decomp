@@ -5,6 +5,9 @@
 #include "psyq/strings.h"
 #include "psyq/memory.h"
 
+/** @brief Convert a 0-9 digit value to its ASCII character code. */
+#define DIGIT_TO_ASCII(d) ((d) + 0x30)
+
 typedef struct
 {
     u32 unk0;
