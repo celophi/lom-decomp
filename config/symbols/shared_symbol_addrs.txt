@@ -50,6 +50,7 @@ FUN_80015c18                        = 0x80015C18;
 FUN_80015c28                        = 0x80015C28;
 FUN_80015c38                        = 0x80015C38;
 run_field_scene                     = 0x80015C58;
+field_run_frame_loop                = 0x80015D6C;
 
 // src/psyq/libcard/C112
 _bu_init                            = 0x8001676C;
