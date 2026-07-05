@@ -27,14 +27,14 @@ s32 akao_cmd_f0(void);
  *
  * State transitions:
  *   - 0/9/10 (FIELD): Load FIELD.BIN overlay. States 9/10 play attract
- *     movies first. Transitions to the field scene loop via FUN_80015c58.
+ *     movies first. Transitions to the field scene loop via run_field_scene.
  *   - 1 (WORLD_MAP): Load WMAP.BIN, run world map, may play map music.
  *   - 2 (TITLE): Load TITLE.BIN, run title screen (new game / continue).
  *   - 3 (GNAME): Load FIELD.BIN + GNAME.BIN, run name-entry overlay.
  *   - 5 (WORLD_SELECT): Load WSEL.BIN, run world select overlay.
  *   - 7 (MENU_LOAD): Load FIELD.BIN + CLOAD.BIN, run save/continue menu.
  *     Copies MenuLayout companion fields from the loaded save layout into
- *     the globals consumed by the field overlay and FUN_80015c58.
+ *     the globals consumed by the field overlay and run_field_scene.
  *   - 8 (INTRO_MOVIE): Play intro movie, then jump to title.
  *   - 4 is a transient dead state immediately redirected to TITLE.
  *
@@ -130,7 +130,7 @@ void Main(void)
                 }
                 g_field_entry_flag = 0;
                 *((u32*)(scratch_base - 0x1378)) = 0;
-                g_gameState = FUN_80015c58();
+                g_gameState = run_field_scene();
                 akao_cmd_f0();
                 akao_cmd_f1();
                 akao_cmd_c0(0, 0x7F);
@@ -254,7 +254,7 @@ void Main(void)
                     else
                     {
                         GFX_Transition(0);
-                        g_gameState = FUN_80015c58();
+                        g_gameState = run_field_scene();
                     }
                 }
                 DrawSync(0);

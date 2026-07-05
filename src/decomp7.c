@@ -1,15 +1,19 @@
 #include "decomp7.h"
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/CPx5C
+ * @brief Run the field overlay's top-level scene loop until a state
+ *        transition is requested, then return the next game state.
+ * @return Next g_gameState value: the raw D_8010D018 exit code if it is
+ *         a valid state (< 5), otherwise clamped to GAME_STATE_WORLD_MAP.
+ * @see decomp.me (100%) https://decomp.me/scratch/CPx5C
  */
-s32 FUN_80015c58(void)
+s32 run_field_scene(void)
 {
-    s32 temp_v0;
-    s32 result;
+    s32 overlay_arg;
+    s32 next_state;
     u8* base = (u8*)0x801ED480;
-    temp_v0 = (s32)FUN_80015c28();
-    func_80015F88(temp_v0);
+    overlay_arg = (s32)FUN_80015c28();
+    func_80015F88(overlay_arg);
     *((u16*)(base + 0)) = 0;
     *((u16*)(base + 2)) = 0;
     *((u32*)(base + 4)) = 0;
@@ -17,19 +21,19 @@ s32 FUN_80015c58(void)
     *((u32*)(base + 12)) = 0;
     do
     {
-        result = 0x1E;
+        next_state = 0x1E;
         D_801158A4 = 0;
         func_8009AFE0(g_scene_mode, g_field_entry_flag, D_8003EC88, g_layout_flag, g_layout_option, g_layout_sub_mode);
-        func_80067EB4(0x100, 0x100, 0x100, result);
-        func_80015D6C(temp_v0);
+        func_80067EB4(0x100, 0x100, 0x100, next_state);
+        func_80015D6C(overlay_arg);
     } while (D_8010D018 == 0);
     func_800A379C();
     akao_cmd_f0();
     akao_cmd_f1();
-    result = D_8010D018;
-    if (result < 5)
+    next_state = D_8010D018;
+    if (next_state < 5)
     {
-        return result;
+        return next_state;
     }
     return 1;
 }
