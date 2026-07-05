@@ -13,7 +13,7 @@ s32 run_field_scene(void)
     s32 next_state;
     S_801ED480* scene_state = SCENE_STATE;
     overlay_arg = (s32)FUN_80015c28();
-    func_80015F88(overlay_arg);
+    field_init_display(overlay_arg);
     scene_state->unk0 = 0;
     scene_state->unk2 = 0;
     scene_state->unk4 = 0;
@@ -122,11 +122,14 @@ void field_run_frame_loop(FieldRenderHalf* render_ctx)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/JAUtV
+ * @brief Field overlay one-time init: projection geometry, double-buffer
+ *        display/draw environments, and initial scene state reset.
+ * @param render_ctx Field render context (two 0x7CC4-byte frame buffers).
+ * @see decomp.me (100%) https://decomp.me/scratch/JAUtV
  */
-void func_80015F88(void* arg0)
+void field_init_display(FieldRenderHalf* render_ctx)
 {
-    u_char* base = (u_char*)arg0;      /* for pointer arithmetic */
+    u_char* base = (u_char*)render_ctx; /* for pointer arithmetic */
     ArgStruct* arg = (ArgStruct*)base; /* for field access */
     RECT rect;                         /* replaced separate s16 variables */
 
@@ -159,9 +162,9 @@ void func_80015F88(void* arg0)
 
     func_800A3534();
     g_pending_game_state = 0;
-    func_800678D4(arg0);
+    func_800678D4(render_ctx);
     D_800473E8 = 0;
-    field_scene_reset(arg0);
+    field_scene_reset(render_ctx);
 }
 
 /**

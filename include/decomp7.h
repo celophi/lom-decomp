@@ -51,7 +51,7 @@ extern u32 *FUN_80015c28(void);
 extern void akao_cmd_f0(void);
 extern void akao_cmd_f1(void);
 void field_run_frame_loop(FieldRenderHalf*);
-void func_80015F88(void*);
+void field_init_display(FieldRenderHalf*);
 extern void func_80067EB4(s32, s32, s32, s32);
 extern void func_8009AFE0(s32, s32, u32, s32, s32, s32);
 extern void func_800A379C(void);
