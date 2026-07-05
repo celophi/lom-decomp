@@ -73,7 +73,7 @@ s32 run_title(s32 base_address)
     u8 selected_item;
     ctx_base = base_address;
 
-    LoadTitleAudioBank();
+    load_title_audio_bank();
     LoadTitleSeq(0);
     StartTitleMusic();
     /* 0x80100000 is the global-RAM base; g_titleMenuExitState lives at
@@ -345,15 +345,19 @@ void init_title_display(MenuContext* ctx_base)
 }
 
 /**
- * Counterpart of CHECKPS func_800500FC: loads the title's AKAO audio bank
- * from CD-ROM (SOUND/EFFECT.SET) into 0x80180000, splits the loaded blob via
- * its self-referential offset table, copies the instrument/sample sub-block
- * to 0x8013C000 and registers it as the active AKAO bank, then submits the
- * trailing AKAO sequence sub-block for playback.
+ * @brief Load and register the title overlay's AKAO instrument/sample bank.
  *
- * decomp.me (100%) https://decomp.me/scratch/6zUZp
+ * @details Counterpart of CHECKPS func_800500FC. Skipped if g_previousGameState
+ * indicates the bank is already resident (values 2, 3, 5, 6, 7). Otherwise
+ * loads SOUND/EFFECT.SET from CD-ROM into the 0x80180000 scratch buffer,
+ * splits the blob via its self-referential offset table, copies the
+ * instrument/sample sub-block to g_titleAudioBankBase (0x8013C000) and
+ * registers it as the active AKAO bank, then submits the trailing AKAO
+ * sequence sub-block for blocking playback.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/6zUZp
  */
-void LoadTitleAudioBank(void)
+void load_title_audio_bank(void)
 {
     u8* base;
     u32* off;
