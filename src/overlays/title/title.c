@@ -22,7 +22,7 @@
 #define MENU_LAYOUT_WORDS 0xC9AU
 
 /* Value g_titleSelectedItem holds when the idle countdown expires with no
- * input (set by HandleTitleMenuInput); dispatching it quits the title back to
+ * input (set by handle_title_menu_input); dispatching it quits the title back to
  * the attract loop. The same 0xFF is also written into g_save_slot_index ("no save
  * slot selected") on the load-a-saved-game path. */
 #define TITLE_ITEM_IDLE_QUIT 0xFF
@@ -168,9 +168,9 @@ void render_menu(MenuContext* context)
         rand();
         VSync(1);
         render_fade_overlay(s0);
-        RenderTitleBackdrop(s0);
+        render_title_backdrop(s0);
         render_title_menu_items(s0);
-        HandleTitleMenuInput();
+        handle_title_menu_input();
 
         if (g_titleMenuExitState == 0)
         {
@@ -230,7 +230,7 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
 
     InitSaveSlotMenu();
     GFX_Transition(0);
-    SetFadeTarget(0x100, 0x100, 0x100, 0x14);
+    set_fade_target(0x100, 0x100, 0x100, 0x14);
     DrawSync(0);
     VSync(0);
     rect.x = 0;
@@ -338,7 +338,7 @@ void init_title_display(MenuContext* ctx_base)
     ctx_base->draw_env.dtd = 0;
 
     reset_fade_state();
-    SetFadeTarget(0x100, 0x100, 0x100, 0x14);
+    set_fade_target(0x100, 0x100, 0x100, 0x14);
     init_title_menu_state();
 
     g_titleMenuExitState = 0;
@@ -567,11 +567,19 @@ void render_fade_overlay(MenuContext* ctx)
 }
 
 /**
- * Counterpart of CHECKPS SetFadeTarget.
+ * @brief Set the target fade color and step count for the title-screen fade.
  *
- * decomp.me (100%) https://decomp.me/scratch/zxqdP
+ * @details Counterpart of CHECKPS SetFadeTarget. render_fade_overlay
+ * interpolates g_fadeCurrent toward this target over the given number of steps.
+ *
+ * @param red Target red channel value.
+ * @param green Target green channel value.
+ * @param blue Target blue channel value.
+ * @param steps Number of frames over which to interpolate toward the target.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/zxqdP
  */
-void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
+void set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
 {
     g_fadeTarget.red = red;
     g_fadeTarget.green = green;
@@ -580,70 +588,78 @@ void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
 }
 
 /**
- * Emits the title screen's tiled backdrop strip (5 quads stepping 0x40 px).
+ * @brief Emit the title screen's tiled backdrop strip.
  *
- * decomp.me (100%) https://decomp.me/scratch/aKAFU
+ * @details Emits 5 POLY_FT4 quads stepping 0x40 px, each linked into the
+ * active OT's tail entry.
+ *
+ * @param ctx Active MenuContext render buffer.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/aKAFU
  */
-void RenderTitleBackdrop(void* arg0)
+void render_title_backdrop(MenuContext* ctx)
 {
-    u8* base = (u8*)arg0;
-    u8* t3;
-    u32* a2;
+    u_long* ot;
+    POLY_FT4* prim;
     s32 t0;
     s32 t1;
     s32 a3;
     s32 temp_v0;
     s32 temp_v1;
 
-    a2 = *((u32**)(base + 0x80B8));
-    t3 = base + 0x40;
+    prim = (POLY_FT4*)ctx->next_prim_ptr;
+    ot = ctx->otag_buffer;
     t0 = 0;
 
     while (t0 < 5)
     {
         a3 = 0x40 + (t0 << 6);
-        *((short*)((((u8*)a2) + 0x0E) + 0x12)) = (short)a3;
-        *((short*)((((u8*)a2) + 0x0E) + 2)) = (short)a3;
+        prim->x3 = (short)a3;
+        prim->x1 = (short)a3;
         t1 = 0x140 + (t0 << 6);
         temp_v1 = t1 & 0x3FF;
         temp_v0 = t0 << 6;
         t0++;
-        *((short*)((((u8*)a2) + 0x0E) + 0x0A)) = (short)temp_v0;
-        *((short*)((((u8*)a2) + 0x0E) - 6)) = (short)temp_v0;
-        (((u8*)a2) + 0x0E)[-0x0B] = 9;
-        (((u8*)a2) + 0x0E)[-7] = 0x2C;
-        (((u8*)a2) + 0x0E)[-8] = 0x80;
-        (((u8*)a2) + 0x0E)[-9] = 0x80;
-        (((u8*)a2) + 0x0E)[-0x0A] = 0x80;
-        *((short*)((((u8*)a2) + 0x0E) + 4)) = 0;
-        *((short*)((((u8*)a2) + 0x0E) - 4)) = 0;
-        *((short*)((((u8*)a2) + 0x0E) + 0x14)) = 0xE0;
-        *((short*)((((u8*)a2) + 0x0E) + 0x0C)) = 0xE0;
-        (((u8*)a2) + 0x0E)[0x0E] = 0;
-        (((u8*)a2) + 0x0E)[-2] = 0;
-        (((u8*)a2) + 0x0E)[0x16] = 0x40;
-        (((u8*)a2) + 0x0E)[6] = 0x40;
-        (((u8*)a2) + 0x0E)[7] = 8;
-        (((u8*)a2) + 0x0E)[-1] = 8;
-        (((u8*)a2) + 0x0E)[0x17] = 0xE8;
-        (((u8*)a2) + 0x0E)[0x0F] = 0xE8;
-        *((short*)((((u8*)a2) + 0x0E) + 8)) = (short)((temp_v1 >> 6) | 0x110);
-        *((short*)((((u8*)a2) + 0x0E) + 0)) = 0x7840;
-        /* addPrim((P_TAG *)(t3 + 0x3FFC), a2) */
-        ((P_TAG*)a2)->addr = (u_long)(((P_TAG*)(t3 + 0x3FFC))->addr);
-        ((P_TAG*)(t3 + 0x3FFC))->addr = (u_long)a2;
-        a2 = (u32*)(((u8*)a2) + 0x28);
+        prim->x2 = (short)temp_v0;
+        prim->x0 = (short)temp_v0;
+        setlen(prim, 9);
+        setcode(prim, 0x2C);
+        prim->b0 = 0x80;
+        prim->g0 = 0x80;
+        prim->r0 = 0x80;
+        prim->y1 = 0;
+        prim->y0 = 0;
+        prim->y3 = 0xE0;
+        prim->y2 = 0xE0;
+        prim->u2 = 0;
+        prim->u0 = 0;
+        prim->u3 = 0x40;
+        prim->u1 = 0x40;
+        prim->v1 = 8;
+        prim->v0 = 8;
+        prim->v3 = 0xE8;
+        prim->v2 = 0xE8;
+        prim->tpage = (u_short)((temp_v1 >> 6) | 0x110);
+        prim->clut = 0x7840;
+        /* addPrim((P_TAG *)(ot + 4095), prim) */
+        ((P_TAG*)prim)->addr = (u_long)(((P_TAG*)(ot + 4095))->addr);
+        ((P_TAG*)(ot + 4095))->addr = (u_long)prim;
+        prim = (POLY_FT4*)(((u8*)prim) + 0x28);
     }
 
-    *((u32**)(base + 0x80B8)) = a2;
+    ctx->next_prim_ptr = (u_long*)prim;
 }
 
 /**
- * Per-frame input dispatcher for the main title menu.
+ * @brief Per-frame input dispatcher for the main title menu.
  *
- * decomp.me (100%) https://decomp.me/scratch/vmcmD
+ * @details Ticks the idle countdown (dispatching the idle-quit item once it
+ * expires), then debounces the confirm/cancel and cursor up/down button
+ * combos and moves the cursor or arms g_titleMenuExitState accordingly.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/vmcmD
  */
-void HandleTitleMenuInput(void)
+void handle_title_menu_input(void)
 {
     s32 op = 0x7C;
     update_menu_input();
@@ -654,63 +670,65 @@ void HandleTitleMenuInput(void)
         return;
     }
     g_titleIdleCountdown -= 1;
-    if (g_debouncedInput & 0xA20)
+    if (g_debouncedInput & (PADh | PADi | PADRright))
     {
         play_title_sfx(op, 0x80);
         g_titleMenuExitState = 1;
         return;
     }
-    if (g_debouncedInput & 0x9000)
+    if (g_debouncedInput & (PADLup | PADLleft))
     {
         menu_cursor_up();
         play_title_sfx(0x7D, 0x80);
     }
-    else if (g_debouncedInput & 0x6100)
+    else if (g_debouncedInput & (PADLdown | PADLright | PADselect))
     {
-        MenuCursorDown();
+        menu_cursor_down();
         play_title_sfx(0x7D, 0x80);
     }
 }
 
 /**
- * Linear-search D_80102670 forward for the next enabled menu slot. If none
- * remain, the cursor is reset to slot 0 with rank 0.
+ * @brief Move the menu cursor to the next enabled slot, wrapping to slot 0
+ *        if none remain.
  *
- * decomp.me (100%) https://decomp.me/scratch/6k8uV
+ * @details Linear-search g_titleMenuItemFlags forward for the next enabled
+ * menu slot. If none remain, the cursor is reset to slot 0 with rank 0.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/6k8uV
  */
-void MenuCursorDown(void)
+void menu_cursor_down(void)
 {
-    s32 a1;
-    u8* var_v1;
-    const s32 LIMIT = 16;
-    a1 = g_titleSelectedItem + 1;
-    if (a1 < LIMIT)
+    s32 item;
+    u8* item_ptr;
+    item = g_titleSelectedItem + 1;
+    if (item < TITLE_MENU_SLOT_COUNT)
     {
-        u8* base = g_titleMenuItemFlags; // forces lui/addiu first
-        var_v1 = base + a1 * 2;          // sll comes after
+        u8* flags_base = g_titleMenuItemFlags; // forces lui/addiu first
+        item_ptr = flags_base + item * 2;      // sll comes after
         while (1)
         {
-            if (*var_v1 != 0)
+            if (*item_ptr != 0)
             {
                 break;
             }
-            a1++;
-            if (a1 < LIMIT)
+            item++;
+            if (item < TITLE_MENU_SLOT_COUNT)
             {
-                var_v1 += 2;
+                item_ptr += 2;
                 continue;
             }
             break;
         }
     }
-    if (a1 == LIMIT)
+    if (item == TITLE_MENU_SLOT_COUNT)
     {
         g_titleVisibleItemRank = 0;
         g_titleSelectedItem = 0;
     }
     else
     {
-        g_titleSelectedItem = (u8)a1;
+        g_titleSelectedItem = (u8)item;
         g_titleVisibleItemRank++;
     }
 }
@@ -719,7 +737,7 @@ void MenuCursorDown(void)
  * @brief Move the menu cursor to the previous enabled slot, wrapping to the
  *        last enabled slot if already at the top.
  *
- * @details Mirror of MenuCursorDown searching backward. Scans
+ * @details Mirror of menu_cursor_down searching backward. Scans
  * g_titleMenuItemFlags from the slot before the current selection toward 0
  * for the next enabled slot, decrementing the visible rank. If the search
  * runs past slot 0, it wraps: a forward pass over all TITLE_MENU_SLOT_COUNT
@@ -933,7 +951,7 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
  * idle countdown to TITLE_IDLE_COUNTDOWN_FRAMES, and uploads the two menu TIMs
  * from g_titleMenuTimTable[1..2] to VRAM. When re-entering from the attract
  * loop (g_previousGameState == 0) it advances the cursor to the first enabled
- * slot (same forward scan as MenuCursorDown).
+ * slot (same forward scan as menu_cursor_down).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/HW23j
  */
