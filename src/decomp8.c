@@ -1,27 +1,33 @@
 #include "decomp8.h"
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/mLcZm
+ * @brief Draw a string at a fixed screen position using the field text engine.
+ * @param str      Null-terminated ASCII string to draw.
+ * @param x        Starting X of the text cursor (g_text_cursor_x).
+ * @param y        Starting Y of the text cursor (g_text_cursor_y).
+ * @param ot_depth Ordering-table depth/priority each glyph is linked into.
+ * @param clut     Font CLUT/color variant, added to g_text_atlas_base.
+ * @see decomp.me (100%) https://decomp.me/scratch/mLcZm
  */
-void func_8001615C(u8* arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+void field_draw_string(u8* str, s32 x, s32 y, s32 ot_depth, s32 clut)
 {
     u8* p;
     u8* end;
     s32 len;
-    s32 a3_val;
+    s32 ot_depth_val;
 
-    g_text_cursor_x = arg1;
-    g_text_cursor_y = arg2;
-    a3_val = arg3;
-    len = strlen((const char*)arg0);
+    g_text_cursor_x = x;
+    g_text_cursor_y = y;
+    ot_depth_val = ot_depth;
+    len = strlen((const char*)str);
     if (len > 0)
     {
-        p = arg0;
+        p = str;
         end = (u8*)(len + (s32)p);
         do
         {
             u8 ch = *p++;
-            func_800165CC(ch, a3_val, arg4);
+            func_800165CC(ch, ot_depth_val, clut);
         } while ((s32)p < (s32)end);
     }
 }
