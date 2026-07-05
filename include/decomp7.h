@@ -56,7 +56,7 @@ extern u32 D_8003EC88;
 extern s32 g_layout_flag;
 extern s32 g_layout_option;
 extern s32 g_layout_sub_mode;
-extern s32 D_8010D018;
+extern s32 g_pending_game_state;
 extern s32 D_801158A4;
 extern void *D_800473F4;
 extern void *D_800473EC;
