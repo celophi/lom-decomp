@@ -2039,58 +2039,67 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
  * @return Not explicitly set on any path (matches original codegen); callers
  *         should not rely on the return value.
  *
+ * @note @p data_ptr and @p block_ptr are kept as two distinct pointers that
+ *       both start out holding the source blob: @p data_ptr is the working
+ *       cursor (advanced past the header, used for the CLUT upload) while
+ *       @p block_ptr is reused to point at the pixel block. Merging them into a
+ *       single variable changes gcc 2.7's register allocation and drops the
+ *       match, so the pair is required to match.
+ *
  * @see decomp.me (100%) https://decomp.me/scratch/lzJHa
  */
 unsigned short upload_save_layout_textures(void)
 {
     u8* tex_entry;
-    u32 packed_control;
+    u32 orig_control;
     u8* entry_ctrl_ptr;
-    u8* src_blob;
+    u8* data_ptr;
     u32 pixel_block_offset;
-    u8* pixel_block;
-    int clut_pixel_count;
-    int shift_amount;
+    u8* block_ptr;
+    int clut_pixels;
+    int shift;
+    u32 reload_control;
     u32 control;
     RECT rect;
     int counter;
-    u8* clut_height_ptr;
-    u32 unused_control_read;
+    u8* clut_h_ptr;
     tex_entry = g_saveLayoutTexTable;
 
     for (counter = 0; counter < 11; counter++)
     {
         entry_ctrl_ptr = tex_entry;
-        src_blob = *((u8**)(entry_ctrl_ptr + 8));
-        packed_control = *((u32*)(entry_ctrl_ptr + 0xc));
-        control = packed_control;
-        clut_height_ptr = src_blob + 0x12;
-        control = (control & ((u32)(-8))) | (src_blob[4] & 7);
+        block_ptr = *((u8**)(entry_ctrl_ptr + 8));
+        orig_control = *((u32*)(entry_ctrl_ptr + 0xc));
+        control = orig_control;
+        data_ptr = block_ptr;
+        clut_h_ptr = data_ptr + 0x12;
+        control = (control & ((u32)(-8))) | (data_ptr[4] & 7);
         *((u32*)(entry_ctrl_ptr + 0xc)) = control;
-        clut_pixel_count = (*((u16*)(src_blob + 0x10))) * (*((u16*)clut_height_ptr));
-        pixel_block_offset = *((u32*)(src_blob + 8));
-        src_blob += 8;
+        clut_pixels = (*((u16*)(data_ptr + 0x10))) * (*((u16*)clut_h_ptr));
+        pixel_block_offset = *((u32*)(data_ptr + 8));
+        data_ptr += 8;
         rect.x = *((s16*)((tex_entry + 0xc) - 8));
-        clut_pixel_count++;
-        clut_pixel_count--;
+        clut_pixels++;
+        clut_pixels--;
         rect.y = *((s16*)((tex_entry + 0xc) - 6));
         rect.h = 1;
-        rect.w = clut_pixel_count;
+        rect.w = clut_pixels;
 
-        LoadImage(&rect, (u_long*)(src_blob + 0xc), clut_pixel_count);
-        pixel_block = src_blob + pixel_block_offset;
-        shift_amount = 3;
-        control = (unused_control_read = *((u32*)(entry_ctrl_ptr + 0xc)));
-        control = (control & ((u32)(-0x1ff9))) | (((*((u16*)(pixel_block + 8))) & 0x3ff) << shift_amount);
+        LoadImage(&rect, (u_long*)(data_ptr + 0xc), clut_pixels);
+        block_ptr = data_ptr + pixel_block_offset;
+        shift = 3;
+        control = (reload_control = *((u32*)(entry_ctrl_ptr + 0xc)));
+        control = (control & ((u32)(-0x1ff9))) | (((*((u16*)(block_ptr + 8))) & 0x3ff) << shift);
         *((u32*)(tex_entry + 0xc)) = control;
         control = control & 0xFF801FFF;
-        control = control | (((*((u16*)(pixel_block + 0xa))) & 0x3ff) << 13);
+        control = control | (((*((u16*)(block_ptr + 0xa))) & 0x3ff) << 13);
         *((u32*)(tex_entry + 0xc)) = control;
-        rect.x = *((s16*)tex_entry);
-        rect.y = *((s16*)((tex_entry + 0xc) - 0xa));
-        rect.w = ((*((u32*)(tex_entry + 0xc))) >> 3) & 0x3ff;
-        rect.h = ((*((u32*)(tex_entry + 0xc))) >> 13) & 0x3ff;
-        LoadImage(&rect, (u_long*)(pixel_block + 0xc));
+        setRECT(&rect,
+                *((s16*)tex_entry),
+                *((s16*)((tex_entry + 0xc) - 0xa)),
+                ((*((u32*)(tex_entry + 0xc))) >> 3) & 0x3ff,
+                ((*((u32*)(tex_entry + 0xc))) >> 13) & 0x3ff);
+        LoadImage(&rect, (u_long*)(block_ptr + 0xc));
         tex_entry += 0x10;
         entry_ctrl_ptr += 0x10;
     }
