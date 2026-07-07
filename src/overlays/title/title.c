@@ -2050,9 +2050,9 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
  */
 unsigned short upload_save_layout_textures(void)
 {
-    u8* tex_entry;
+    SaveLayoutTex* tex_entry;
     u32 orig_control;
-    u8* entry_ctrl_ptr;
+    SaveLayoutTex* entry_ctrl_ptr;
     u8* data_ptr;
     u32 pixel_block_offset;
     u8* block_ptr;
@@ -2063,45 +2063,45 @@ unsigned short upload_save_layout_textures(void)
     RECT rect;
     int counter;
     u8* clut_h_ptr;
-    tex_entry = g_saveLayoutTexTable;
+    tex_entry = (SaveLayoutTex*)g_saveLayoutTexTable;
 
     for (counter = 0; counter < 11; counter++)
     {
         entry_ctrl_ptr = tex_entry;
-        block_ptr = *((u8**)(entry_ctrl_ptr + 8));
-        orig_control = *((u32*)(entry_ctrl_ptr + 0xc));
+        block_ptr = entry_ctrl_ptr->src;
+        orig_control = entry_ctrl_ptr->control;
         control = orig_control;
         data_ptr = block_ptr;
         clut_h_ptr = data_ptr + 0x12;
         control = (control & ((u32)(-8))) | (data_ptr[4] & 7);
-        *((u32*)(entry_ctrl_ptr + 0xc)) = control;
+        entry_ctrl_ptr->control = control;
         clut_pixels = (*((u16*)(data_ptr + 0x10))) * (*((u16*)clut_h_ptr));
         pixel_block_offset = *((u32*)(data_ptr + 8));
         data_ptr += 8;
-        rect.x = *((s16*)((tex_entry + 0xc) - 8));
+        rect.x = tex_entry->clut_x;
         clut_pixels++;
         clut_pixels--;
-        rect.y = *((s16*)((tex_entry + 0xc) - 6));
+        rect.y = tex_entry->clut_y;
         rect.h = 1;
         rect.w = clut_pixels;
 
         LoadImage(&rect, (u_long*)(data_ptr + 0xc), clut_pixels);
         block_ptr = data_ptr + pixel_block_offset;
         shift = 3;
-        control = (reload_control = *((u32*)(entry_ctrl_ptr + 0xc)));
+        control = (reload_control = entry_ctrl_ptr->control);
         control = (control & ((u32)(-0x1ff9))) | (((*((u16*)(block_ptr + 8))) & 0x3ff) << shift);
-        *((u32*)(tex_entry + 0xc)) = control;
+        tex_entry->control = control;
         control = control & 0xFF801FFF;
         control = control | (((*((u16*)(block_ptr + 0xa))) & 0x3ff) << 13);
-        *((u32*)(tex_entry + 0xc)) = control;
+        tex_entry->control = control;
         setRECT(&rect,
-                *((s16*)tex_entry),
-                *((s16*)((tex_entry + 0xc) - 0xa)),
-                ((*((u32*)(tex_entry + 0xc))) >> 3) & 0x3ff,
-                ((*((u32*)(tex_entry + 0xc))) >> 13) & 0x3ff);
+                tex_entry->tex_x,
+                tex_entry->tex_y,
+                (tex_entry->control >> 3) & 0x3ff,
+                (tex_entry->control >> 13) & 0x3ff);
         LoadImage(&rect, (u_long*)(block_ptr + 0xc));
-        tex_entry += 0x10;
-        entry_ctrl_ptr += 0x10;
+        tex_entry++;
+        entry_ctrl_ptr++;
     }
 }
 
