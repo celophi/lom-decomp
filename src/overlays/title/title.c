@@ -1304,7 +1304,7 @@ void InitSaveSlotMenu(void)
     g_slotHighlightX = 0;
     g_slotHighlightTargetX = 0;
     g_slotHighlightFrames = 0;
-    UploadSaveLayoutTextures();
+    upload_save_layout_textures();
 }
 
 /**
@@ -2026,65 +2026,73 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
 }
 
 /**
- * For each of the 11 entries in g_saveLayoutTexTable (stride 0x10), uploads the
- * CLUT and image data to VRAM and bit-packs the resulting tex-page info
- * back into the entry's control word.
+ * @brief Upload every g_saveLayoutTexTable entry's CLUT and pixel data to VRAM.
  *
- * decomp.me (100%) https://decomp.me/scratch/lzJHa
+ * @details For each of the 11 entries in g_saveLayoutTexTable (stride 0x10),
+ * reads an on-disk-TIM-style source blob via the entry's data pointer
+ * (+0x8), uploads its CLUT block and then its pixel block with LoadImage,
+ * and bit-packs the resulting CLUT/tex-page VRAM coordinates back into the
+ * entry's control word (+0xc). The exact field layout of both the source
+ * blob and the destination entry is only partially understood; raw byte
+ * offsets are kept as-is rather than guessed at via named fields.
+ *
+ * @return Not explicitly set on any path (matches original codegen); callers
+ *         should not rely on the return value.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/lzJHa
  */
-unsigned short UploadSaveLayoutTextures(void)
+unsigned short upload_save_layout_textures(void)
 {
-    unsigned char* entry_base;
-    u32 new_var3;
-    unsigned char* control_ptr;
-    unsigned char* db;
-    u32 offset8;
-    unsigned char* secondary;
-    int product;
-    int new_var2;
-    u32 new_var4;
+    u8* tex_entry;
+    u32 packed_control;
+    u8* entry_ctrl_ptr;
+    u8* src_blob;
+    u32 pixel_block_offset;
+    u8* pixel_block;
+    int clut_pixel_count;
+    int shift_amount;
     u32 control;
     RECT rect;
     int counter;
-    unsigned char* new_var;
-    entry_base = g_saveLayoutTexTable;
+    u8* clut_height_ptr;
+    u32 unused_control_read;
+    tex_entry = g_saveLayoutTexTable;
 
     for (counter = 0; counter < 11; counter++)
     {
-        control_ptr = entry_base;
-        secondary = *((unsigned char**)(control_ptr + 8));
-        new_var3 = *((u32*)(control_ptr + 0xc));
-        control = new_var3;
-        db = secondary;
-        new_var = db + 0x12;
-        control = (control & ((u32)(-8))) | (db[4] & 7);
-        *((u32*)(control_ptr + 0xc)) = control;
-        product = (*((u16*)(db + 0x10))) * (*((u16*)new_var));
-        offset8 = *((u32*)(db + 8));
-        db += 8;
-        rect.x = *((s16*)((entry_base + 0xc) - 8));
-        product++;
-        product--;
-        rect.y = *((s16*)((entry_base + 0xc) - 6));
+        entry_ctrl_ptr = tex_entry;
+        src_blob = *((u8**)(entry_ctrl_ptr + 8));
+        packed_control = *((u32*)(entry_ctrl_ptr + 0xc));
+        control = packed_control;
+        clut_height_ptr = src_blob + 0x12;
+        control = (control & ((u32)(-8))) | (src_blob[4] & 7);
+        *((u32*)(entry_ctrl_ptr + 0xc)) = control;
+        clut_pixel_count = (*((u16*)(src_blob + 0x10))) * (*((u16*)clut_height_ptr));
+        pixel_block_offset = *((u32*)(src_blob + 8));
+        src_blob += 8;
+        rect.x = *((s16*)((tex_entry + 0xc) - 8));
+        clut_pixel_count++;
+        clut_pixel_count--;
+        rect.y = *((s16*)((tex_entry + 0xc) - 6));
         rect.h = 1;
-        rect.w = product;
+        rect.w = clut_pixel_count;
 
-        LoadImage(&rect, (u_long*)(db + 0xc), product);
-        secondary = db + offset8;
-        new_var2 = 3;
-        control = (new_var4 = *((u32*)(control_ptr + 0xc)));
-        control = (control & ((u32)(-0x1ff9))) | (((*((u16*)(secondary + 8))) & 0x3ff) << new_var2);
-        *((u32*)(entry_base + 0xc)) = control;
+        LoadImage(&rect, (u_long*)(src_blob + 0xc), clut_pixel_count);
+        pixel_block = src_blob + pixel_block_offset;
+        shift_amount = 3;
+        control = (unused_control_read = *((u32*)(entry_ctrl_ptr + 0xc)));
+        control = (control & ((u32)(-0x1ff9))) | (((*((u16*)(pixel_block + 8))) & 0x3ff) << shift_amount);
+        *((u32*)(tex_entry + 0xc)) = control;
         control = control & 0xFF801FFF;
-        control = control | (((*((u16*)(secondary + 0xa))) & 0x3ff) << 13);
-        *((u32*)(entry_base + 0xc)) = control;
-        rect.x = *((s16*)entry_base);
-        rect.y = *((s16*)((entry_base + 0xc) - 0xa));
-        rect.w = ((*((u32*)(entry_base + 0xc))) >> 3) & 0x3ff;
-        rect.h = ((*((u32*)(entry_base + 0xc))) >> 13) & 0x3ff;
-        LoadImage(&rect, (u_long*)(secondary + 0xc));
-        entry_base += 0x10;
-        control_ptr += 0x10;
+        control = control | (((*((u16*)(pixel_block + 0xa))) & 0x3ff) << 13);
+        *((u32*)(tex_entry + 0xc)) = control;
+        rect.x = *((s16*)tex_entry);
+        rect.y = *((s16*)((tex_entry + 0xc) - 0xa));
+        rect.w = ((*((u32*)(tex_entry + 0xc))) >> 3) & 0x3ff;
+        rect.h = ((*((u32*)(tex_entry + 0xc))) >> 13) & 0x3ff;
+        LoadImage(&rect, (u_long*)(pixel_block + 0xc));
+        tex_entry += 0x10;
+        entry_ctrl_ptr += 0x10;
     }
 }
 

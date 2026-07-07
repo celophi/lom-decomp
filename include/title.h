@@ -146,7 +146,7 @@ extern u8 g_saveLayoutTable[0x288];
 /**
  * Texture-descriptor table for the save-slot layout: 11 entries of stride 0x10,
  * each holding VRAM coords plus the source TIM pointer/control word uploaded by
- * UploadSaveLayoutTextures. Indexed by SaveLayoutEntry::tex_slot.
+ * upload_save_layout_textures. Indexed by SaveLayoutEntry::tex_slot.
  */
 extern u8 g_saveLayoutTexTable[];
 extern u8 D_800F98AC[];
