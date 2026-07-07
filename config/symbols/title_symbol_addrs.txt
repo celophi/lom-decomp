@@ -32,7 +32,7 @@ reset_save_slot_panel = 0x80051854;
 scroll_slots_right = 0x80051904;
 scroll_slots_left = 0x80051938;
 RenderSaveLayoutPrims = 0x8005196C;
-UploadSaveLayoutTextures = 0x800520D4;
+upload_save_layout_textures = 0x800520D4;
 load_menu_layout = 0x80052220;
 load_sub_menu_layout = 0x8005228C;
 

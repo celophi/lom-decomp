@@ -144,9 +144,27 @@ typedef struct {
 /* 0x1B (27) entries; kept as u8[] to preserve byte-granular pointer arithmetic */
 extern u8 g_saveLayoutTable[0x288];
 /**
+ * @brief One texture-descriptor entry in g_saveLayoutTexTable (stride 0x10).
+ *
+ * @details Holds the destination VRAM coordinates plus the source TIM pointer
+ * and a packed control word that upload_save_layout_textures fills in from the
+ * uploaded image's dimensions.
+ */
+typedef struct {
+    s16 tex_x;   /**< +0x00: pixel-block destination VRAM X */
+    s16 tex_y;   /**< +0x02: pixel-block destination VRAM Y */
+    s16 clut_x;  /**< +0x04: CLUT destination VRAM X */
+    s16 clut_y;  /**< +0x06: CLUT destination VRAM Y */
+    u8* src;     /**< +0x08: source TIM-style blob */
+    u32 control; /**< +0x0C: packed bits0-2=mode, bits3-12=width, bits13-22=height */
+} SaveLayoutTex; /* sizeof == 0x10 */
+
+/**
  * Texture-descriptor table for the save-slot layout: 11 entries of stride 0x10,
  * each holding VRAM coords plus the source TIM pointer/control word uploaded by
- * UploadSaveLayoutTextures. Indexed by SaveLayoutEntry::tex_slot.
+ * upload_save_layout_textures. Indexed by SaveLayoutEntry::tex_slot. Declared
+ * as u8[] because RenderSaveLayoutPrims walks it with byte arithmetic;
+ * upload_save_layout_textures casts it to SaveLayoutTex*.
  */
 extern u8 g_saveLayoutTexTable[];
 extern u8 D_800F98AC[];

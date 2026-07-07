@@ -1304,7 +1304,7 @@ void InitSaveSlotMenu(void)
     g_slotHighlightX = 0;
     g_slotHighlightTargetX = 0;
     g_slotHighlightFrames = 0;
-    UploadSaveLayoutTextures();
+    upload_save_layout_textures();
 }
 
 /**
@@ -2026,65 +2026,89 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
 }
 
 /**
- * For each of the 11 entries in g_saveLayoutTexTable (stride 0x10), uploads the
- * CLUT and image data to VRAM and bit-packs the resulting tex-page info
- * back into the entry's control word.
+ * @brief Upload every g_saveLayoutTexTable entry's CLUT and pixel data to VRAM.
  *
- * decomp.me (100%) https://decomp.me/scratch/lzJHa
+ * @details For each of the 11 entries in g_saveLayoutTexTable (stride 0x10),
+ * reads an on-disk-TIM-style source blob via the entry's data pointer
+ * (+0x8), uploads its CLUT block and then its pixel block with LoadImage,
+ * and bit-packs the uploaded image's dimensions back into the entry's control
+ * word (SaveLayoutTex::control). The destination entry is typed as
+ * SaveLayoutTex; the source blob's internal TIM-style block layout is only
+ * partially understood, so it is still walked with raw byte offsets.
+ *
+ * @return Not explicitly set on any path (matches original codegen); callers
+ *         should not rely on the return value.
+ *
+ * @note @p data_ptr and @p block_ptr are kept as two distinct pointers that
+ *       both start out holding the source blob: @p data_ptr is the working
+ *       cursor (advanced past the header, used for the CLUT upload) while
+ *       @p block_ptr is reused to point at the pixel block. Merging them into a
+ *       single variable changes gcc 2.7's register allocation and drops the
+ *       match, so the pair is required to match.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/lzJHa
  */
-unsigned short UploadSaveLayoutTextures(void)
+/* Bit layout of SaveLayoutTex::control: bits 0-2 = TIM pixel mode, bits 3-12 =
+ * texture width, bits 13-22 = texture height (widths/heights are 10-bit). */
+#define SAVE_TEX_MODE_MASK    0x7
+#define SAVE_TEX_WIDTH_SHIFT  3
+#define SAVE_TEX_HEIGHT_SHIFT 13
+#define SAVE_TEX_DIM_MASK     0x3ff
+unsigned short upload_save_layout_textures(void)
 {
-    unsigned char* entry_base;
-    u32 new_var3;
-    unsigned char* control_ptr;
-    unsigned char* db;
-    u32 offset8;
-    unsigned char* secondary;
-    int product;
-    int new_var2;
-    u32 new_var4;
+    SaveLayoutTex* tex_entry;
+    u32 orig_control;
+    SaveLayoutTex* entry_ctrl_ptr;
+    u8* data_ptr;
+    u32 pixel_block_offset;
+    u8* block_ptr;
+    int clut_pixels;
+    int shift;
+    u32 reload_control;
     u32 control;
     RECT rect;
     int counter;
-    unsigned char* new_var;
-    entry_base = g_saveLayoutTexTable;
+    u8* clut_h_ptr;
+    tex_entry = (SaveLayoutTex*)g_saveLayoutTexTable;
 
     for (counter = 0; counter < 11; counter++)
     {
-        control_ptr = entry_base;
-        secondary = *((unsigned char**)(control_ptr + 8));
-        new_var3 = *((u32*)(control_ptr + 0xc));
-        control = new_var3;
-        db = secondary;
-        new_var = db + 0x12;
-        control = (control & ((u32)(-8))) | (db[4] & 7);
-        *((u32*)(control_ptr + 0xc)) = control;
-        product = (*((u16*)(db + 0x10))) * (*((u16*)new_var));
-        offset8 = *((u32*)(db + 8));
-        db += 8;
-        rect.x = *((s16*)((entry_base + 0xc) - 8));
-        product++;
-        product--;
-        rect.y = *((s16*)((entry_base + 0xc) - 6));
+        entry_ctrl_ptr = tex_entry;
+        block_ptr = entry_ctrl_ptr->src;
+        orig_control = entry_ctrl_ptr->control;
+        control = orig_control;
+        data_ptr = block_ptr;
+        clut_h_ptr = data_ptr + 0x12;
+        control = (control & ~SAVE_TEX_MODE_MASK) | (data_ptr[4] & SAVE_TEX_MODE_MASK);
+        entry_ctrl_ptr->control = control;
+        clut_pixels = (*((u16*)(data_ptr + 0x10))) * (*((u16*)clut_h_ptr));
+        pixel_block_offset = *((u32*)(data_ptr + 8));
+        data_ptr += 8;
+        rect.x = tex_entry->clut_x;
+        clut_pixels++;
+        clut_pixels--;
+        rect.y = tex_entry->clut_y;
         rect.h = 1;
-        rect.w = product;
+        rect.w = clut_pixels;
 
-        LoadImage(&rect, (u_long*)(db + 0xc), product);
-        secondary = db + offset8;
-        new_var2 = 3;
-        control = (new_var4 = *((u32*)(control_ptr + 0xc)));
-        control = (control & ((u32)(-0x1ff9))) | (((*((u16*)(secondary + 8))) & 0x3ff) << new_var2);
-        *((u32*)(entry_base + 0xc)) = control;
-        control = control & 0xFF801FFF;
-        control = control | (((*((u16*)(secondary + 0xa))) & 0x3ff) << 13);
-        *((u32*)(entry_base + 0xc)) = control;
-        rect.x = *((s16*)entry_base);
-        rect.y = *((s16*)((entry_base + 0xc) - 0xa));
-        rect.w = ((*((u32*)(entry_base + 0xc))) >> 3) & 0x3ff;
-        rect.h = ((*((u32*)(entry_base + 0xc))) >> 13) & 0x3ff;
-        LoadImage(&rect, (u_long*)(secondary + 0xc));
-        entry_base += 0x10;
-        control_ptr += 0x10;
+        LoadImage(&rect, (u_long*)(data_ptr + 0xc), clut_pixels);
+        block_ptr = data_ptr + pixel_block_offset;
+        shift = SAVE_TEX_WIDTH_SHIFT;
+        control = (reload_control = entry_ctrl_ptr->control);
+        control = (control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_WIDTH_SHIFT)) |
+                  (((*((u16*)(block_ptr + 8))) & SAVE_TEX_DIM_MASK) << shift);
+        tex_entry->control = control;
+        control = control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_HEIGHT_SHIFT);
+        control = control | (((*((u16*)(block_ptr + 0xa))) & SAVE_TEX_DIM_MASK) << SAVE_TEX_HEIGHT_SHIFT);
+        tex_entry->control = control;
+        setRECT(&rect,
+                tex_entry->tex_x,
+                tex_entry->tex_y,
+                (tex_entry->control >> SAVE_TEX_WIDTH_SHIFT) & SAVE_TEX_DIM_MASK,
+                (tex_entry->control >> SAVE_TEX_HEIGHT_SHIFT) & SAVE_TEX_DIM_MASK);
+        LoadImage(&rect, (u_long*)(block_ptr + 0xc));
+        tex_entry++;
+        entry_ctrl_ptr++;
     }
 }
 
