@@ -2031,10 +2031,10 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
  * @details For each of the 11 entries in g_saveLayoutTexTable (stride 0x10),
  * reads an on-disk-TIM-style source blob via the entry's data pointer
  * (+0x8), uploads its CLUT block and then its pixel block with LoadImage,
- * and bit-packs the resulting CLUT/tex-page VRAM coordinates back into the
- * entry's control word (+0xc). The exact field layout of both the source
- * blob and the destination entry is only partially understood; raw byte
- * offsets are kept as-is rather than guessed at via named fields.
+ * and bit-packs the uploaded image's dimensions back into the entry's control
+ * word (SaveLayoutTex::control). The destination entry is typed as
+ * SaveLayoutTex; the source blob's internal TIM-style block layout is only
+ * partially understood, so it is still walked with raw byte offsets.
  *
  * @return Not explicitly set on any path (matches original codegen); callers
  *         should not rely on the return value.
@@ -2048,6 +2048,12 @@ void* RenderSaveLayoutPrims(void* arg0, s32* arg1)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/lzJHa
  */
+/* Bit layout of SaveLayoutTex::control: bits 0-2 = TIM pixel mode, bits 3-12 =
+ * texture width, bits 13-22 = texture height (widths/heights are 10-bit). */
+#define SAVE_TEX_MODE_MASK    0x7
+#define SAVE_TEX_WIDTH_SHIFT  3
+#define SAVE_TEX_HEIGHT_SHIFT 13
+#define SAVE_TEX_DIM_MASK     0x3ff
 unsigned short upload_save_layout_textures(void)
 {
     SaveLayoutTex* tex_entry;
@@ -2073,7 +2079,7 @@ unsigned short upload_save_layout_textures(void)
         control = orig_control;
         data_ptr = block_ptr;
         clut_h_ptr = data_ptr + 0x12;
-        control = (control & ((u32)(-8))) | (data_ptr[4] & 7);
+        control = (control & ~SAVE_TEX_MODE_MASK) | (data_ptr[4] & SAVE_TEX_MODE_MASK);
         entry_ctrl_ptr->control = control;
         clut_pixels = (*((u16*)(data_ptr + 0x10))) * (*((u16*)clut_h_ptr));
         pixel_block_offset = *((u32*)(data_ptr + 8));
@@ -2087,18 +2093,19 @@ unsigned short upload_save_layout_textures(void)
 
         LoadImage(&rect, (u_long*)(data_ptr + 0xc), clut_pixels);
         block_ptr = data_ptr + pixel_block_offset;
-        shift = 3;
+        shift = SAVE_TEX_WIDTH_SHIFT;
         control = (reload_control = entry_ctrl_ptr->control);
-        control = (control & ((u32)(-0x1ff9))) | (((*((u16*)(block_ptr + 8))) & 0x3ff) << shift);
+        control = (control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_WIDTH_SHIFT)) |
+                  (((*((u16*)(block_ptr + 8))) & SAVE_TEX_DIM_MASK) << shift);
         tex_entry->control = control;
-        control = control & 0xFF801FFF;
-        control = control | (((*((u16*)(block_ptr + 0xa))) & 0x3ff) << 13);
+        control = control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_HEIGHT_SHIFT);
+        control = control | (((*((u16*)(block_ptr + 0xa))) & SAVE_TEX_DIM_MASK) << SAVE_TEX_HEIGHT_SHIFT);
         tex_entry->control = control;
         setRECT(&rect,
                 tex_entry->tex_x,
                 tex_entry->tex_y,
-                (tex_entry->control >> 3) & 0x3ff,
-                (tex_entry->control >> 13) & 0x3ff);
+                (tex_entry->control >> SAVE_TEX_WIDTH_SHIFT) & SAVE_TEX_DIM_MASK,
+                (tex_entry->control >> SAVE_TEX_HEIGHT_SHIFT) & SAVE_TEX_DIM_MASK);
         LoadImage(&rect, (u_long*)(block_ptr + 0xc));
         tex_entry++;
         entry_ctrl_ptr++;
