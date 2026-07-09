@@ -5760,6 +5760,21 @@ inline u32 inline_fn23(u8 arg0)
 #define MENU_EMIT_101()  var_a2 = (u8*)g_menu_state_ptr + var_t0; MENU_EMIT_102()
 
 /**
+ * @brief Set var_a2 to the state-pointer base for a table at byte @p off, in two steps.
+ *
+ * Expands to @c "var_a2 = g_menu_state_ptr; var_a2 = var_a2 + *(state+off)".
+ * Assigning the state-pointer base to var_a2 first (rather than a flat
+ * @c "var_a2 = g_menu_state_ptr + *(state+off)") makes var_a2 inherit the
+ * state-pointer register directly.  var_a2 is the shared (cross-jumped)
+ * argument accumulator for @ref func_800A88A0: fixing its allocation in the
+ * first emitting case propagates to the whole emit chain, matching the target's
+ * choice of $a2 (a flat expression pushes var_a2 to $t0 and shifts the tail).
+ */
+#define MENU_STATE_A2(off)                                          \
+    var_a2 = (u8*)g_menu_state_ptr;                                 \
+    var_a2 = var_a2 + *(s32*)((u8*)g_menu_state_ptr + (off))
+
+/**
  * @brief Render the content cursor, update its lerped position, and optionally render the active hit-item label.
  * @param arg0 Current primitive buffer pointer.
  * @param arg1 Pointer to the current ordering-table entry.
@@ -5773,15 +5788,16 @@ inline u32 inline_fn23(u8 arg0)
  *       the 0x5000 family additionally considers g_pad_ctx slot data and may copy
  *       encoded text into stack scratch buffers before rendering.
  *       A final sprite from D_801690B0 is appended and OT-linked when unk3 != 0xFF.
- * @note Local match 85.50% (gcc272_cdk); frame matches, register allocation
+ * @note Local match 88.96% (gcc272_cdk); frame matches, register allocation
  *       matches the target (var_s0->s0, item_sub->s1, arg2->s2, arg1->s3). Wins:
  *       per-case func_800A88A0 calls (see MENU_EMIT_10N) fixed the s0 flip, the
  *       inline_fn guard fixed copy-loop inversion, the inline_fn2 pad read fixed
  *       the F-case content_base t0-vs-t1 shift, grouping the func_8014DE1C arg
  *       kept 0x5F0/-0x170 separate, the surname load reorder + inline_fn23 cast
- *       helper (copy loops and index math) + s16 var_v0 closed most of the rest.
- *       Remaining gap is local-alloc/scheduling/CSE (kind==2 unk654 reload,
- *       item_sub<0xF0 re-reads, var_a2 coalescing). See working/func_80148A20/STATUS.md.
+ *       helper + s16 var_v0 + lerp cursor caching + the MENU_STATE_A2 two-step
+ *       var_a2 assignment (state-pointer base first) closed most of the rest.
+ *       Remaining gap is local-alloc/scheduling/CSE (kind==2 unk654 reload and a
+ *       per-case var_a2 = $t0-vs-$a2 argdiff). See working/func_80148A20/STATUS.md.
  * @see decomp.me TODO
  */
 void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
@@ -5828,11 +5844,18 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
 
     if (g_menu_suppress_cursor != 0)
     {
-        s32 dx = (g_content_view_x - g_content_cursor_x) / g_menu_suppress_cursor;
-        s32 dy = (g_content_view_y - g_content_cursor_y) / g_menu_suppress_cursor;
+        /* Read cursor x/y into temps first so the source order matches the
+         * target's schedule: g_content_cursor_x's base has two uses (this read
+         * and the store below), so the target loads it before g_content_view_x.
+         * A bare `view_x - g_content_cursor_x` follows source order and loads
+         * view_x's base first, shifting the whole lerp's dx/dy allocation. */
+        s32 cx = g_content_cursor_x;
+        s32 cy = g_content_cursor_y;
+        s32 dx = (g_content_view_x - cx) / g_menu_suppress_cursor;
+        s32 dy = (g_content_view_y - cy) / g_menu_suppress_cursor;
         g_menu_suppress_cursor -= 1;
-        g_content_cursor_x += dx;
-        g_content_cursor_y += dy;
+        g_content_cursor_x = cx + dx;
+        g_content_cursor_y = cy + dy;
     }
     else
     {
@@ -5854,7 +5877,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
             if (inline_fn2(content_base[g_menu_hit_item_idx].pad) < 0xF0U)
             {
                 var_v0 = (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2;
-                var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x4);
+                MENU_STATE_A2(0x4);
                 MENU_EMIT_103();
             }
             else
@@ -5864,42 +5887,46 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                 {
                 case 0xF0:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x48);
+                    MENU_STATE_A2(0x48);
                     MENU_EMIT_102();
                     break;
+                    /* NB: cases 0xF8, 0xF9 and the case 3-6 non-flag branch keep the
+                     * flat var_a2 = state + *(state+off) form on purpose - splitting
+                     * those with MENU_STATE_A2 shifts content_base off $t1 and
+                     * regresses the match. Only the cases below use MENU_STATE_A2. */
                 case 0xF1:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x14);
+                    MENU_STATE_A2(0x14);
                     MENU_EMIT_102();
                     break;
                 case 0xF2:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x34);
+                    MENU_STATE_A2(0x34);
                     MENU_EMIT_102();
                     break;
                 case 0xF3:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x24);
+                    MENU_STATE_A2(0x24);
                     MENU_EMIT_102();
                     break;
                 case 0xF4:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x40);
+                    MENU_STATE_A2(0x40);
                     MENU_EMIT_102();
                     break;
                 case 0xF5:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x58);
+                    MENU_STATE_A2(0x58);
                     MENU_EMIT_102();
                     break;
                 case 0xF6:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x50);
+                    MENU_STATE_A2(0x50);
                     MENU_EMIT_102();
                     break;
                 case 0xF7:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x60);
+                    MENU_STATE_A2(0x60);
                     MENU_EMIT_102();
                     break;
                 case 0xF8:
@@ -5925,7 +5952,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                     break;
                 case 0xFA:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x3C);
+                    MENU_STATE_A2(0x3C);
                     MENU_EMIT_102();
                     break;
                 case 0xFB:
@@ -5933,7 +5960,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                 case 0xFD:
                 case 0xFE:
                     var_v0_2 = inline_fn2(content_base[g_menu_hit_item_idx].pad);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x2C);
+                    MENU_STATE_A2(0x2C);
                     MENU_EMIT_102();
                     break;
                 }
@@ -5964,7 +5991,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                         u8* item_ptr = pad_base + (inline_fn23(flag & 0x7F) << 6) + 0x740;
                         u8 cat = *(item_ptr + 0x24);
                         u8 entry = *(item_ptr + 0x25);
-                        var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44);
+                        MENU_STATE_A2(0x44);
                         var_v1 = *(u16*)(var_a2 + inline_fn23(cat) * 0x1C + inline_fn23(entry) * 2);
                         MENU_EMIT_105();
                     }
@@ -6115,7 +6142,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                 {
                     u8 cat = *((u8*)D_80169408 + 0x24);
                     u8 entry = *((u8*)D_80169408 + 0x25);
-                    var_a2 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x40);
+                    MENU_STATE_A2(0x40);
                     var_v1 = *(u16*)(var_a2 + inline_fn23(cat) * 0x1C + inline_fn23(entry) * 2);
                     MENU_EMIT_105();
                 }
