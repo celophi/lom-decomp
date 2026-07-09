@@ -1,5 +1,112 @@
 #include "decomp9.h"
 
+typedef struct
+{
+  u32 unk0;
+  u32 unk4;
+  u32 unk8;
+} AkaoDriverFlags;
+typedef struct AkaoChannelState
+{
+  u32 flags;
+  u32 unk4;
+  u32 unk8;
+  u32 unkC;
+  u32 unk10;
+  u32 unk14;
+  u32 unk18;
+  u32 unk1C;
+  u32 unk20;
+  u32 unk24;
+  u32 unk28;
+  s32 pitch;
+  s32 unk30;
+  u8 *unk34;
+  u8 _pad38[4];
+  u32 unk3C;
+  u32 unk40;
+  u32 unk44;
+  u32 unk48;
+  u32 unk4C;
+  s32 unk50;
+  s32 unk54;
+  u16 unk58;
+  s16 unk5A;
+  u16 unk5C;
+  u16 unk5E;
+  u32 unk60;
+  u16 unk64;
+  u16 unk66;
+  u16 unk68;
+  u16 unk6A;
+  u16 unk6C;
+  u8 _pad6E[4];
+  u16 unk72;
+  u16 unk74[11];
+  u16 unk8A;
+  u16 unk8C;
+  u8 _pad8E[6];
+  u16 unk94;
+  u16 unk96;
+  u16 unk98;
+  u16 unk9A;
+  u16 unk9C;
+  u16 unk9E;
+  u8 _padA0[2];
+  u16 unkA2;
+  u16 unkA4;
+  u8 _padA6[2];
+  u16 unkA8;
+  u16 unkAA;
+  s16 unkAC;
+  u16 unkAE;
+  u8 _padB0[6];
+  u16 unkB6;
+  u16 unkB8;
+  u8 _padBA[2];
+  u16 unkBC;
+  u16 unkBE;
+  u8 _padC0[24];
+  u16 unkD8;
+  u16 unkDA;
+  u16 unkDC;
+  u16 unkDE;
+  u8 _padE0[10];
+  u16 unkEA;
+  s16 unkEC;
+  u16 unkEE;
+  u16 unkF0;
+  s16 unkF2;
+  u16 unkF4;
+  u16 unkF6;
+  u8 _padF8[4];
+  u32 unkFC;
+  s32 unk100;
+  s32 spu_sample_addr;
+  s32 spu_loop_addr;
+  u8 _pad10C[2];
+  u16 unk10E;
+  u16 unk110;
+  u8 _pad112[6];
+} AkaoChannelState;
+typedef struct
+{
+  u32 unk0;
+  s32 unk4;
+  u32 unk8;
+  u32 unkC;
+  u32 unk10;
+  u8 _pad14[2];
+  u16 unk16;
+  u32 unk18;
+  u32 unk1C;
+  u32 unk20;
+  u32 unk24;
+} SfxControl;
+extern AkaoDriverFlags g_akao_driver_flags;
+extern AkaoChannelState *g_akao_seq_channel0;
+extern SfxControl g_akao_sfx_control;
+
 typedef struct {
     s32 unk0;
     s32 unk4;
