@@ -149,7 +149,8 @@ typedef struct
     s16 unk112;
 } k_struct;
 
-typedef struct {
+typedef struct
+{
     u8* unk0;
     char pad1[0x34 - 0x4];
     s32 unk34;
@@ -158,7 +159,6 @@ typedef struct {
     char pad3[0x112 - 0x6C];
     s16 unk112;
 } l_struct;
-
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
