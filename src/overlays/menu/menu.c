@@ -5527,56 +5527,47 @@ void* func_80148578(SPRT* buf, s32* ot, MenuSlotView* state)
  *       (content extends below viewport). Both use fixed X=0x20, code=0x64, color=0x808080.
  *       If either arrow was emitted, appends a one-word DR_MODE (0xE1000005). Mirrors the
  *       pattern of func_80148578 but reads from globals rather than a state struct.
- * @see decomp.me TODO
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
  */
-void* func_8014874C(void* buf, s32* ot)
+void* func_8014874C(SPRT* buf, s32* ot)
 {
-    u8* prim = (u8*)buf;
-    s32 addr;
+    u8* end;
 
     if (g_menu_content_height != 0)
     {
-        *(u32*)(prim + 0x4) = 0x808080;
-        prim[3] = 4;
-        prim[7] = 0x64;
-        *(u16*)(prim + 0x8) = 0x20;
-        *(u16*)(prim + 0xA) = 3;
-        *(u16*)(prim + 0xC) = 0x1080;
-        *(u16*)(prim + 0xE) = 0x7C86;
-        *(u32*)(prim + 0x10) = 0x100010;
-        addr = (s32)prim & 0xFFFFFF;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 0x14;
+        SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
+        setSprt(buf);
+        setXY0(buf, 0x20, 3);
+        SET_SPRT_UV0_PACKED(buf, 0x1080);
+        SET_SPRT_CLUT(buf, 0x7C86);
+        SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
+        addPrim(ot, buf);
+        buf++;
     }
 
     if ((g_menu_layout_end - g_menu_content_height) >= 0xAC)
     {
-        *(u32*)(prim + 0x4) = 0x808080;
-        prim[3] = 4;
-        prim[7] = 0x64;
-        *(u16*)(prim + 0x8) = 0x20;
-        *(u16*)(prim + 0xA) = 0xBA;
-        *(u16*)(prim + 0xC) = 0x2080;
-        *(u16*)(prim + 0xE) = 0x7C86;
-        *(u32*)(prim + 0x10) = 0x100010;
-        addr = (s32)prim & 0xFFFFFF;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 0x14;
+        SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
+        setSprt(buf);
+        setXY0(buf, 0x20, 0xBA);
+        SET_SPRT_UV0_PACKED(buf, 0x2080);
+        SET_SPRT_CLUT(buf, 0x7C86);
+        SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
+        addPrim(ot, buf);
+        buf++;
     }
 
+    end = (u8*)buf;
     if ((g_menu_content_height != 0) || (g_menu_layout_end >= 0xAC))
     {
-        addr = (s32)prim & 0xFFFFFF;
-        prim[3] = 1;
-        *(u32*)(prim + 0x4) = 0xE1000005;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 8;
+        DR_MODE* mode = (DR_MODE*)end;
+        setlen(mode, 1);
+        mode->code[0] = 0xE1000005;
+        addPrim(ot, mode);
+        end += 8;
     }
 
-    return prim;
+    return end;
 }
 
 s32 func_8014A10C(s32, s32*, s32, s32, s32);
@@ -5591,21 +5582,25 @@ s32 func_8014A10C(s32, s32*, s32, s32, s32);
  *       (g_menu_content_height - 0xC), clamped to [0xC, 0xA2].
  *       Label pointer: base = (u8*)g_menu_state_ptr + *(s32*)(state + 4);
  *                      text = base + *(u16*)(base + node->unk0 * 2).
- * @see decomp.me TODO
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
  */
 s32 func_80148900(s32 buf, s32* ot, s32 label)
 {
-    MenuNode* node;
     u16 nav_x_packed;
-    s32 cursor_x;
+    u8 y_hi;
+    s32 hi_bit;
+    s32 y_base;
     s32 cursor_y;
-    s32 result;
+    s32 scroll;
     u8* base;
 
-    node = &g_menu_nodes[g_menu_active_node];
-    nav_x_packed = node->idx_nav.nav_x_packed;
+    nav_x_packed = g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed;
+    y_hi = g_menu_nodes[g_menu_active_node].u8_u.s.nav_y_hi;
 
-    cursor_y = (s32)((node->u8_u.s.nav_y_hi << 1) | (nav_x_packed >> 15)) - (g_menu_content_height - 0xC);
+    hi_bit = nav_x_packed >> 15;
+    y_base = (y_hi << 1) | hi_bit;
+    scroll = g_menu_content_height - 0xC;
+    cursor_y = y_base - scroll;
     if (cursor_y < 0xC)
     {
         cursor_y = 0xC;
@@ -5615,16 +5610,15 @@ s32 func_80148900(s32 buf, s32* ot, s32 label)
         cursor_y = 0xA3;
     }
 
-    cursor_x = ((nav_x_packed >> 8) & 0x7F) + 8;
-    result = func_8014A10C(buf, ot, cursor_x, cursor_y, 1);
+    buf = func_8014A10C(buf, ot, ((nav_x_packed >> 8) & 0x7F) + 8, cursor_y, 1);
 
     if (label != 0)
     {
         base = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 4);
-        result = func_800A88A0(result, ot, base + *(u16*)(base + node->unk0 * 2), 1, 0xA0, 0xCA, 2);
+        buf = func_800A88A0(buf, ot, base + *(u16*)(base + g_menu_nodes[g_menu_active_node].unk0 * 2), 1, 0xA0, 0xCA, 2);
     }
 
-    return result;
+    return buf;
 }
 
 extern s32 D_80168C6C;
