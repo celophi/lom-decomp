@@ -1611,8 +1611,9 @@ void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
  * @note Builds all 44 g_menu_nodes entries with hardcoded parent-child links and flags,
  *       zeroes all layout counters, runs an initial position pass, then calls into the
  *       layout and render pipeline unless a script is still active.
- * @see decomp.me (90.94%) https://decomp.me/scratch/XJkmb
- * @warning NOT FUNCTIONALLY EQUIVALENT -- do not rely on this C for logic analysis.
+ * @see decomp.me (90.94%, old non-equivalent body) https://decomp.me/scratch/XJkmb
+ * @note Current body is the corrected rewrite (86.71% local match, functionally
+ *       equivalent; store values/order transcribed from the target asm).
  */
 void menu_node_tree_init(void)
 {
@@ -1660,9 +1661,11 @@ void menu_node_tree_init(void)
     u16 original_unk2;
     u16 temp1;
     u16 temp2;
-    var_t0 = 0;
+    volatile u32 new_var9;
     var_a0 = g_menu_nodes;
-    g_menu_prev_node = MENU_NONE;
+    var_a1 = MENU_NONE;
+    var_t0 = 0;
+    g_menu_prev_node = var_a1;
     g_menu_content_ready = 0;
     g_item_slot_data.unk0 = 0;
     g_item_slot_data.unk4 = 0;
@@ -1687,15 +1690,15 @@ void menu_node_tree_init(void)
     g_menu_cursor_enable = 0;
     for (var_t0 = 0; var_t0 < MENU_NODE_COUNT; var_t0++)
     {
-        g_menu_nodes[var_t0].state = MENU_NODE_STATE_UNINIT;
-        g_menu_nodes[var_t0].unk4 = 0;
-        g_menu_nodes[var_t0].content_id = var_a1;
-        g_menu_nodes[var_t0].child3 = var_a1;
-        g_menu_nodes[var_t0].child2 = var_a1;
-        g_menu_nodes[var_t0].child1 = var_a1;
-        g_menu_nodes[var_t0].uA.s.child0 = var_a1;
-        g_menu_nodes[var_t0].u2.unk2 = (u16)((g_menu_nodes[var_t0].u2.unk2 & 0xFFFC) | 0x30);
-        g_menu_nodes[var_t0].u2.s.parent_idx = var_a1;
+        var_a0[var_t0].state = MENU_NODE_STATE_UNINIT;
+        var_a0[var_t0].unk4 = 0;
+        var_a0[var_t0].content_id = var_a1;
+        var_a0[var_t0].child3 = var_a1;
+        var_a0[var_t0].child2 = var_a1;
+        var_a0[var_t0].child1 = var_a1;
+        var_a0[var_t0].uA.s.child0 = var_a1;
+        var_a0[var_t0].u2.unk2 = (u16)((var_a0[var_t0].u2.unk2 & 0xFFFC) | 0x30);
+        var_a0[var_t0].u2.s.parent_idx = var_a1;
     }
 
     g_menu_nodes[0].unk0 = 1;
@@ -1739,18 +1742,16 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].idx_nav.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
-        var_v0 = 0x6F;
+        g_menu_nodes[3].unk4 = 0x6F;
     }
     else
     {
-        g_menu_nodes[3].u2.unk2 = (u16)(temp_v0_3 & 0xFF3E);
-        var_v0 = 0x6E;
+        g_menu_nodes[3].unk4 = 0x6E;
     }
-    g_menu_nodes[3].unk4 = var_v0;
     g_menu_nodes[4].u2.unk2 = (u16)((0xFF5F & g_menu_nodes[4].u2.unk2) | 0x50);
     g_menu_nodes[5].u2.unk2 = (u16)((g_menu_nodes[5].u2.unk2 & 0xFF5F) | 0x50);
-    ;
-    *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (g_menu_nodes[6].u2.unk2 & 0xFFCD) | 0x10;
+    temp_v0_4 = (g_menu_nodes[6].u2.unk2 & 0xFFCD) | 0x10;
+    *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = temp_v0_4;
     temp_v0_5 = temp_v0_4 | 0x10;
     *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3F);
     *((volatile u16*)(&g_menu_nodes[6].u2.unk2)) = (u16)(temp_v0_5 & 0xFF3E);
@@ -1779,16 +1780,15 @@ void menu_node_tree_init(void)
     g_menu_nodes[8].u2.unk2 = (u16)((g_menu_nodes[8].u2.unk2 & 0xFF5F) | 0x50);
     g_menu_nodes[8].idx_nav.s.self_idx = 8;
     temp_v0_6 = (g_menu_nodes[9].u2.unk2 & 0xFFCD) | 0x20;
-    g_menu_nodes[9].u2.unk2 = temp_v0_6;
+    *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = temp_v0_6;
     temp_v0_7 = temp_v0_6 | 0x20;
-    g_menu_nodes[9].u2.unk2 = (u16)(temp_v0_7 & 0xFF3E);
+    *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = (u16)(temp_v0_7 & 0xFF3F);
+    *((volatile u16*)(&g_menu_nodes[9].u2.unk2)) = (u16)(temp_v0_7 & 0xFF3E);
     temp_v0_8 = (g_menu_nodes[0xC].u2.unk2 & 0xFFCD) | 0x20;
-    new_var8 = 0x16;
-    (*(&g_menu_nodes[9])).u2.unk2 = (u16)(temp_v0_7 & 0xFF3F);
-    *((volatile u16*)g_menu_nodes[0xC].u2.unk2) = temp_v0_8;
-    *((volatile u16*)g_menu_nodes[0xC].u2.unk2) = (u16)((temp_v0_8 | 0x20) & 0xFF3F);
-    *((volatile u16*)g_menu_nodes[0xC].u2.unk2) = (u16)((temp_v0_8 | 0x20) & new_var7);
+    *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = temp_v0_8;
     g_menu_nodes[0xA].u2.unk2 = (u16)((g_menu_nodes[0xA].u2.unk2 & 0xFF6F) | 0x60);
+    *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = (u16)((temp_v0_8 | 0x20) & 0xFF3F);
+    *((volatile u16*)(&g_menu_nodes[0xC].u2.unk2)) = (u16)((temp_v0_8 | 0x20) & 0xFF3E);
     g_menu_nodes[8].u2.s.parent_idx = 6;
     g_menu_nodes[8].unk4 = 4;
     g_menu_nodes[9].unk0 = 0xA;
@@ -1807,17 +1807,15 @@ void menu_node_tree_init(void)
     g_menu_nodes[0xD].idx_nav.s.self_idx = 0xD;
     g_menu_nodes[0xD].unk4 = 7;
     g_menu_nodes[9].u2.s.parent_idx = MENU_NONE;
-    temp_v0_7 = 0xF;
     g_menu_nodes[0xA].u2.s.parent_idx = 9;
     g_menu_nodes[0xC].u2.s.parent_idx = MENU_NONE;
-    temp_v0_10 = (g_menu_nodes[temp_v0_7].u2.unk2 & 0xFFCD) | 0x20;
-    g_menu_nodes[temp_v0_7].u2.unk2 = temp_v0_10;
-    g_menu_nodes[0xD].u2.unk2 = (u16)(g_menu_nodes[0xD].u2.unk2 | 0x60);
-    var_t0_2 = 0xF;
+    temp_v0_10 = (g_menu_nodes[0xF].u2.unk2 & 0xFFCD) | 0x20;
+    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_10;
+    g_menu_nodes[0xD].u2.unk2 = (u16)((g_menu_nodes[0xD].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0xD].u2.s.parent_idx = 0xC;
-    temp_v0_11 = ((temp_v0_10 & 0xFF6D) | 0x60) ^ 0;
-    g_menu_nodes[0xF].u2.unk2 = temp_v0_11;
-    g_menu_nodes[var_t0_2].u2.unk2 = (u16)(temp_v0_11 & 0xFFFE);
+    temp_v0_11 = (temp_v0_10 & 0xFF6D) | 0x60;
+    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = temp_v0_11;
+    *((volatile u16*)(&g_menu_nodes[0xF].u2.unk2)) = (u16)(temp_v0_11 & 0xFFFE);
     g_menu_nodes[0xF].unk4 = 8;
     g_menu_nodes[0x10].unk4 = 7;
     g_menu_nodes[0xF].u2.s.parent_idx = MENU_NONE;
@@ -1841,10 +1839,12 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
-    temp_v0_12 = g_menu_nodes[0x12].u2.unk2 & 0xFF3D;
-    g_menu_nodes[0x12].u2.unk2 = (u16)(g_menu_nodes[0x12].u2.unk2 & 0xFFFD);
-    g_menu_nodes[0x12].u2.unk2 = temp_v0_12;
-    g_menu_nodes[0x12].u2.unk2 = (u16)(temp_v0_12 | 1);
+    new_var9 = g_menu_nodes[0x12].u2.unk2;
+    temp_v0 = new_var9;
+    *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
+    temp_v0_12 = temp_v0 & 0xFF3D;
+    *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = temp_v0_12;
+    *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = (u16)(temp_v0_12 | 1);
     g_menu_nodes[0x12].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x13].unk0 = 0x11;
     g_menu_nodes[0x16].content_id = 1;
@@ -1870,7 +1870,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x14].u2.unk2 = (u16)((g_menu_nodes[0x14].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x13].u2.s.parent_idx = 0x12;
     g_menu_nodes[0x14].u2.s.parent_idx = 0x13;
-    g_menu_nodes[new_var8].u2.unk2 = (u16)((g_menu_nodes[0x16].u2.unk2 & 0xFF3F) | 0x40);
+    g_menu_nodes[0x16].u2.unk2 = (u16)((g_menu_nodes[0x16].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x16].u2.s.parent_idx = 0x12;
     g_menu_nodes[0x15].u2.unk2 = (u16)((g_menu_nodes[0x15].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x15].u2.s.parent_idx = 0x13;
@@ -1902,10 +1902,8 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1B].u2.s.parent_idx = 0x19;
     g_menu_nodes[0x1C].u2.unk2 = (u16)((g_menu_nodes[0x1C].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x1C].u2.s.parent_idx = 0x12;
-    var_a1 = 0x1E;
-    g_menu_nodes[0x1A].u2.unk2 = (g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80;
+    g_menu_nodes[0x1A].u2.unk2 = (u16)((g_menu_nodes[0x1A].u2.unk2 & 0xFF3F) | 0x80);
     g_menu_nodes[0x1A].u2.s.parent_idx = 0x19;
-    var_a2->uA.layout_child_packed += 0;
     g_menu_nodes[0x1C].unk4 = 0xE;
     g_menu_nodes[0x1D].idx_nav.s.self_idx = 0x1D;
     g_menu_nodes[0x1E].uA.s.child0 = 0x1F;
@@ -1921,20 +1919,20 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x1F].unk4 = 0x14;
     g_menu_nodes[0x2B].unk0 = 0x1A;
     g_menu_nodes[0x2B].idx_nav.s.self_idx = 0x2B;
-    temp_v0_13 = g_menu_nodes[0x1D].u2.unk2 & 0xFF3D;
-    g_menu_nodes[0x1D].u2.unk2 = (u16)(g_menu_nodes[0x1D].u2.unk2 & 0xFFFD);
-    (*(&g_menu_nodes[0x1D])).u2.unk2 = temp_v0_13;
+    temp_v0 = g_menu_nodes[0x1D].u2.unk2;
+    *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
+    temp_v0_13 = temp_v0 & 0xFF3D;
+    *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = temp_v0_13;
     temp_v1 = g_menu_nodes[0x1E].u2.unk2;
-    g_menu_nodes[0x1D].u2.unk2 = (u16)(temp_v0_13 | 1);
+    *((volatile u16*)(&g_menu_nodes[0x1D].u2.unk2)) = (u16)(temp_v0_13 | 1);
     g_menu_nodes[0x1D].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x1F].u2.unk2 = (u16)((g_menu_nodes[0x1F].u2.unk2 & 0xFF3F) | 0x40);
     g_menu_nodes[0x1F].u2.s.parent_idx = 0x1E;
-    g_menu_nodes[0x1E].u2.unk2 = (u16)(temp_v1 & 0xFFFD);
+    *((volatile u16*)(&g_menu_nodes[0x1E].u2.unk2)) = (u16)(temp_v1 & 0xFFFD);
     temp_v1_2 = temp_v1 & 0xFF3D;
-    temp_v1 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFF3F) | 0x40);
-    g_menu_nodes[0x1E].u2.unk2 = temp_v1_2;
-    g_menu_nodes[0x2B].u2.unk2 = temp_v1;
-    g_menu_nodes[0x1E].u2.unk2 = (u16)(temp_v1_2 | 1);
+    *((volatile u16*)(&g_menu_nodes[0x1E].u2.unk2)) = temp_v1_2;
+    g_menu_nodes[0x2B].u2.unk2 = (u16)((g_menu_nodes[0x2B].u2.unk2 & 0xFF3F) | 0x40);
+    *((volatile u16*)(&g_menu_nodes[0x1E].u2.unk2)) = (u16)(temp_v1_2 | 1);
     g_menu_nodes[0x1E].u2.s.parent_idx = MENU_NONE;
     g_menu_nodes[0x2B].u2.s.parent_idx = 0x1E;
     g_menu_nodes[0x1F].u2.unk2 = (u16)(g_menu_nodes[0x1F].u2.unk2 & 0xFFCF);
@@ -1942,15 +1940,14 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x2B].unk4 = 0x15;
     g_menu_nodes[0x20].unk0 = 0x1B;
     g_menu_nodes[0x20].idx_nav.s.self_idx = 0x20;
-    temp_v0_14 = 0xFF3D;
-    temp_v0_14 = g_menu_nodes[0x20].u2.unk2 & temp_v0_14;
-    new_var6 = D_800FD818.unk268 & 1;
-    (*(g_menu_nodes + 0x20)).u2.unk2 = (u16)(g_menu_nodes[0x20].u2.unk2 & 0xFFFD);
-    g_menu_nodes[0x20].u2.unk2 = temp_v0_14;
+    temp_v0 = g_menu_nodes[0x20].u2.unk2;
+    temp_v0_14 = temp_v0 & 0xFF3D;
+    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
+    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = temp_v0_14;
     g_menu_nodes[0x20].unk4 = 0x16;
-    g_menu_nodes[0x20].u2.unk2 = (u16)(temp_v0_14 | 1);
+    *((volatile u16*)(&g_menu_nodes[0x20].u2.unk2)) = (u16)(temp_v0_14 | 1);
     g_menu_nodes[0x20].u2.s.parent_idx = MENU_NONE;
-    if (new_var6)
+    if (D_800FD818.unk268 & 1)
     {
         if (D_800FD818.unk26B != 0)
         {
@@ -1976,31 +1973,26 @@ void menu_node_tree_init(void)
     if ((g_pad_ctx->inject_flags & 0x80) && (g_pad_ctx->inject_enable != 0))
     {
         g_menu_companion_node = 0x2B;
+        var_a3 = 0;
     }
-    temp_v0_11 = var_a3 & 0xFFFF;
-    var_t0_2 = 0;
-    new_var3 = g_menu_nodes;
-    var_a2 = new_var3;
-    var_a3 = 0;
-    new_var = &var_a2->u8_u;
+    var_t0 = var_a3;
+    var_t0_2 = var_a3;
+    var_a2 = g_menu_nodes;
     do
     {
-        new_var5 = &new_var3->u2.s.parent_idx;
-        if ((*new_var5) == 0xFF)
+        if (var_a2->u2.s.parent_idx == var_a1)
         {
-            temp_a0 = temp_v0_11;
-            if (((char)var_a2->u2.unk2) & 1)
+            if (var_a2->u2.s.flags & 1)
             {
-                temp_a1 = 0x1FF;
-                temp_a1 = var_a3 & temp_a1;
-                var_a3 = var_a3 + MENU_ROW_HEIGHT;
+                temp_a0 = var_a3 & 0xFFFF;
+                temp_a1 = var_a3 & 0x1FF;
+                var_a3 += MENU_ROW_HEIGHT;
                 var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
-                var_a2->u8_u.nav_y_packed = (u16)((*new_var).nav_y_packed & 0x80FF);
+                var_a2->u8_u.nav_y_packed = (u16)(var_a2->u8_u.nav_y_packed & 0x80FF);
                 var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
-                var_a2->u8_u.nav_y_packed = (u16)(((*new_var).nav_y_packed & 0x7FFF) | (temp_a0 << 0xF));
-                var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | (((temp_a1 & 1) << 9) << 6));
-                var_a1 = temp_a1 >> 1;
-                var_a2->u8_u.nav_y_packed = (u16)((new_var3->u8_u.nav_y_packed & 0xFF00) | var_a1);
+                var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | ((temp_a0 & 1) << 15));
+                var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | ((temp_a1 & 1) << 15));
+                var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0xFF00) | (temp_a1 >> 1));
             }
         }
         var_t0_2 += 1;
@@ -2014,7 +2006,7 @@ void menu_node_tree_init(void)
     g_menu_scene_type = 0;
     new_var4 = g_menu_init_content_id;
     D_801690F9 = 0;
-    func_8014E3C4(new_var4, var_a1, new_var3, var_a3);
+    func_8014E3C4(new_var4);
     menu_set_active_node();
 }
 
@@ -5435,109 +5427,94 @@ s32 func_8014847C(void)
  *         or -1 if not found or the list is empty.
  * @note The navigation list is a flat s32 array beginning at g_menu_nav_first with g_menu_nav_count
  *       entries; each element is one node ID.
- * @see decomp.me TODO
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
  */
 s32 func_8014852C(s32 node_id)
 {
     s32* nav;
     s32 i;
+    s32 count;
 
-    if (g_menu_nav_count <= 0)
+    i = 0;
+    if (g_menu_nav_count > 0)
     {
-        return -1;
-    }
-
-    nav = &g_menu_nav_first;
-    for (i = 0; i < g_menu_nav_count; i++, nav++)
-    {
-        if (*nav == node_id)
+        count = g_menu_nav_count;
+        nav = &g_menu_nav_first;
+        do
         {
-            return i;
-        }
+            if (*nav == node_id)
+            {
+                return i;
+            }
+            i++;
+            nav++;
+        } while (i < count);
     }
 
     return -1;
 }
 
 /**
- * @brief Emit up to two scroll-arrow SPRT primitives and a trailing Draw Mode Setting primitive.
- * @param buf   Destination primitive buffer; each arrow occupies 0x14 bytes, the Draw Mode tail 8 bytes.
+ * @brief Emit up to two scroll-arrow SPRT primitives and a trailing draw-mode reset primitive.
+ * @param buf   Destination primitive buffer; each arrow occupies 0x14 bytes, the DR_MODE tail 8 bytes.
  * @param ot    Pointer to the ordering-table entry to prepend each emitted primitive to.
- * @param state Opaque scroll-state record; the following byte-offset fields are read:
- *              - 0x06 (u16): total-item count, bottom 9 bits used (stride 0x10 each).
- *              - 0x08 (u16): Y-base coordinate.
- *              - 0x0A (u16): texture V origin for the up-arrow sprite.
- *              - 0x0C (u16): Y offset added to Y-base.
- *              - 0x0E (s16): current scroll position in pixels; also used as UV delta for down arrow.
- *              - 0x12 (u16): number of items scrolled above the viewport (0 = at top).
+ * @param state Slot view whose scroll fields drive the arrows: x/w place the arrow column,
+ *              y is the top edge, h the window height, _u._s.unk6 (low 9 bits) the row count
+ *              (16 px per row), and lerp_cur_b the pixel amount scrolled above the viewport.
  * @return Pointer to the next free byte in @p buf after all emitted primitives.
- * @note Up arrow emitted when unk12 != 0 (content hidden above viewport).
- *       Down arrow emitted when (unk0E-16) < ((unk06 & 0x1FF)*16 - unk12) (content hidden below).
- *       If either arrow was emitted, appends a one-word DR_MODE (0xE1000005) to restore draw mode.
- *       All arrow sprites use GPU code 0x64 (semi-transparent texture-mapped variable sprite).
- * @see decomp.me TODO
+ * @note Up arrow (v=0x10) emitted when lerp_cur_b != 0 (content hidden above).
+ *       Down arrow (v=0x20) emitted when (h-16) < ((unk6 & 0x1FF)*16 - lerp_cur_b)
+ *       (content hidden below); it hangs at y+h-8. If either arrow was emitted, a
+ *       one-word DR_MODE (0xE1000005) restores the draw mode. Arrows are 16x16 SPRTs,
+ *       CLUT 0x7C86, neutral tint.
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
  */
-void* func_80148578(void* buf, s32* ot, void* state)
+void* func_80148578(SPRT* buf, s32* ot, MenuSlotView* state)
 {
-    u8* prim = (u8*)buf;
-    u8* st = (u8*)state;
     s32 emitted = 0;
-    s32 addr;
-    u16 scroll_top;
-    s16 y;
+    s32 max;
+    u8* end;
 
-    scroll_top = *(u16*)(st + 0x12);
-
-    if (scroll_top != 0)
+    if (state->lerp_cur_b != 0)
     {
-        y = (s16)(*(u16*)(st + 0x8) + *(u16*)(st + 0xC) - 0x10);
+        SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
+        setSprt(buf);
+        buf->x0 = state->x + state->w - 0x10;
+        buf->y0 = state->y;
+        SET_SPRT_UV0_PACKED(buf, 0x1080);
+        SET_SPRT_CLUT(buf, 0x7C86);
+        SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
+        addPrim(ot, buf);
         emitted = 1;
-        *(u32*)(prim + 0x4) = 0x808080;
-        prim[3] = 4;
-        prim[7] = 0x64;
-        *(s16*)(prim + 0x8) = y;
-        *(u16*)(prim + 0xA) = *(u16*)(st + 0xA);
-        *(u16*)(prim + 0xC) = 0x1080;
-        *(u16*)(prim + 0xE) = 0x7C86;
-        *(u32*)(prim + 0x10) = 0x100010;
-        addr = (s32)prim & 0xFFFFFF;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 0x14;
+        buf++;
     }
 
+    max = ((state->_u._s.unk6 & 0x1FF) << 4) - state->lerp_cur_b;
+    if (((s16)state->h - 0x10) < max)
     {
-        s32 max = (s32)((*(u16*)(st + 0x6) & 0x1FF) * 0x10) - (s32)scroll_top;
-        if ((s32)(*(s16*)(st + 0xE) - 0x10) < max)
-        {
-            y = (s16)(*(u16*)(st + 0x8) + *(u16*)(st + 0xC) - 0x10);
-            emitted += 1;
-            *(u32*)(prim + 0x4) = 0x808080;
-            prim[3] = 4;
-            prim[7] = 0x64;
-            *(s16*)(prim + 0x8) = y;
-            *(u16*)(prim + 0xA) = (s16)(*(u16*)(st + 0xA) + *(u16*)(st + 0xE) - 8);
-            *(u16*)(prim + 0xC) = 0x2080;
-            *(u16*)(prim + 0xE) = 0x7C86;
-            *(u32*)(prim + 0x10) = 0x100010;
-            addr = (s32)prim & 0xFFFFFF;
-            *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-            *ot = (*ot & 0xFF000000) | addr;
-            prim += 0x14;
-        }
+        SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
+        setSprt(buf);
+        buf->x0 = state->x + state->w - 0x10;
+        buf->y0 = state->y + state->h - 8;
+        SET_SPRT_UV0_PACKED(buf, 0x2080);
+        SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
+        SET_SPRT_CLUT(buf, 0x7C86);
+        addPrim(ot, buf);
+        emitted += 1;
+        buf++;
     }
 
+    end = (u8*)buf;
     if (emitted != 0)
     {
-        addr = (s32)prim & 0xFFFFFF;
-        prim[3] = 1;
-        *(u32*)(prim + 0x4) = 0xE1000005;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 8;
+        DR_MODE* mode = (DR_MODE*)end;
+        setlen(mode, 1);
+        mode->code[0] = 0xE1000005;
+        addPrim(ot, mode);
+        end += 8;
     }
 
-    return prim;
+    return end;
 }
 
 /**
@@ -5550,56 +5527,47 @@ void* func_80148578(void* buf, s32* ot, void* state)
  *       (content extends below viewport). Both use fixed X=0x20, code=0x64, color=0x808080.
  *       If either arrow was emitted, appends a one-word DR_MODE (0xE1000005). Mirrors the
  *       pattern of func_80148578 but reads from globals rather than a state struct.
- * @see decomp.me TODO
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
  */
-void* func_8014874C(void* buf, s32* ot)
+void* func_8014874C(SPRT* buf, s32* ot)
 {
-    u8* prim = (u8*)buf;
-    s32 addr;
+    u8* end;
 
     if (g_menu_content_height != 0)
     {
-        *(u32*)(prim + 0x4) = 0x808080;
-        prim[3] = 4;
-        prim[7] = 0x64;
-        *(u16*)(prim + 0x8) = 0x20;
-        *(u16*)(prim + 0xA) = 3;
-        *(u16*)(prim + 0xC) = 0x1080;
-        *(u16*)(prim + 0xE) = 0x7C86;
-        *(u32*)(prim + 0x10) = 0x100010;
-        addr = (s32)prim & 0xFFFFFF;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 0x14;
+        SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
+        setSprt(buf);
+        setXY0(buf, 0x20, 3);
+        SET_SPRT_UV0_PACKED(buf, 0x1080);
+        SET_SPRT_CLUT(buf, 0x7C86);
+        SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
+        addPrim(ot, buf);
+        buf++;
     }
 
     if ((g_menu_layout_end - g_menu_content_height) >= 0xAC)
     {
-        *(u32*)(prim + 0x4) = 0x808080;
-        prim[3] = 4;
-        prim[7] = 0x64;
-        *(u16*)(prim + 0x8) = 0x20;
-        *(u16*)(prim + 0xA) = 0xBA;
-        *(u16*)(prim + 0xC) = 0x2080;
-        *(u16*)(prim + 0xE) = 0x7C86;
-        *(u32*)(prim + 0x10) = 0x100010;
-        addr = (s32)prim & 0xFFFFFF;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 0x14;
+        SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
+        setSprt(buf);
+        setXY0(buf, 0x20, 0xBA);
+        SET_SPRT_UV0_PACKED(buf, 0x2080);
+        SET_SPRT_CLUT(buf, 0x7C86);
+        SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
+        addPrim(ot, buf);
+        buf++;
     }
 
+    end = (u8*)buf;
     if ((g_menu_content_height != 0) || (g_menu_layout_end >= 0xAC))
     {
-        addr = (s32)prim & 0xFFFFFF;
-        prim[3] = 1;
-        *(u32*)(prim + 0x4) = 0xE1000005;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 8;
+        DR_MODE* mode = (DR_MODE*)end;
+        setlen(mode, 1);
+        mode->code[0] = 0xE1000005;
+        addPrim(ot, mode);
+        end += 8;
     }
 
-    return prim;
+    return end;
 }
 
 s32 func_8014A10C(s32, s32*, s32, s32, s32);
@@ -5614,21 +5582,25 @@ s32 func_8014A10C(s32, s32*, s32, s32, s32);
  *       (g_menu_content_height - 0xC), clamped to [0xC, 0xA2].
  *       Label pointer: base = (u8*)g_menu_state_ptr + *(s32*)(state + 4);
  *                      text = base + *(u16*)(base + node->unk0 * 2).
- * @see decomp.me TODO
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
  */
 s32 func_80148900(s32 buf, s32* ot, s32 label)
 {
-    MenuNode* node;
     u16 nav_x_packed;
-    s32 cursor_x;
+    u8 y_hi;
+    s32 hi_bit;
+    s32 y_base;
     s32 cursor_y;
-    s32 result;
+    s32 scroll;
     u8* base;
 
-    node = &g_menu_nodes[g_menu_active_node];
-    nav_x_packed = node->idx_nav.nav_x_packed;
+    nav_x_packed = g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed;
+    y_hi = g_menu_nodes[g_menu_active_node].u8_u.s.nav_y_hi;
 
-    cursor_y = (s32)((node->u8_u.s.nav_y_hi << 1) | (nav_x_packed >> 15)) - (g_menu_content_height - 0xC);
+    hi_bit = nav_x_packed >> 15;
+    y_base = (y_hi << 1) | hi_bit;
+    scroll = g_menu_content_height - 0xC;
+    cursor_y = y_base - scroll;
     if (cursor_y < 0xC)
     {
         cursor_y = 0xC;
@@ -5638,16 +5610,15 @@ s32 func_80148900(s32 buf, s32* ot, s32 label)
         cursor_y = 0xA3;
     }
 
-    cursor_x = ((nav_x_packed >> 8) & 0x7F) + 8;
-    result = func_8014A10C(buf, ot, cursor_x, cursor_y, 1);
+    buf = func_8014A10C(buf, ot, ((nav_x_packed >> 8) & 0x7F) + 8, cursor_y, 1);
 
     if (label != 0)
     {
         base = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 4);
-        result = func_800A88A0(result, ot, base + *(u16*)(base + node->unk0 * 2), 1, 0xA0, 0xCA, 2);
+        buf = func_800A88A0(buf, ot, base + *(u16*)(base + g_menu_nodes[g_menu_active_node].unk0 * 2), 1, 0xA0, 0xCA, 2);
     }
 
-    return result;
+    return buf;
 }
 
 extern s32 D_80168C6C;
