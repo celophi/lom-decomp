@@ -5795,7 +5795,7 @@ inline u32 inline_fn23(u8 arg0)
  *       the 0x5000 family additionally considers g_pad_ctx slot data and may copy
  *       encoded text into stack scratch buffers before rendering.
  *       A final sprite from D_801690B0 is appended and OT-linked when unk3 != 0xFF.
- * @note Local match 95.19% (gcc272_cdk); frame and sp-slot traffic match. Shapes
+ * @note Local match 97.20% (gcc272_cdk); frame and sp-slot traffic match. Shapes
  *       required to match: reusing arg0 instead of a var_s0 local (prologue copies
  *       args in order), sp20 declared before sp60 (buffer stack slots), the inline
  *       argument expressions in MENU_EMIT_EXPR/MENU_EMIT_STATE (hard-$a2 expansion
@@ -5804,9 +5804,11 @@ inline u32 inline_fn23(u8 arg0)
  *       MENU_TEXT_COPY (pointer coalescing), switch(kind) with a fresh unk654
  *       re-read in the default arm, the 0x5F0 grouped with the slot term in the
  *       func_8014DE1C argument, the slot term first in MENU_SLOT_BASE, and the
- *       epilogue writing *arg1 before arg0 += 8.  Remaining gap is local-alloc/
- *       scheduling/CSE residue (content_base t0/t1, lerp lui order, item_sub<0xF0
- *       re-reads, kind==2 slot-math detail). See working/func_80148A20/STATUS.md.
+ *       epilogue writing *arg1 before arg0 += 8, and the volatile pad-byte reads
+ *       in the item_sub<0xF0 guard/then-arm (triple re-read), and the lerp
+ *       cursor globals read through address-taken pointers. Remaining gap is
+ *       local-alloc/scheduling residue (content_base t0/t1, surname-block
+ *       out a2/a3, kind==2 slot-math detail). See working/func_80148A20/STATUS.md.
  * @see decomp.me TODO
  */
 void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
@@ -5840,11 +5842,20 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
 
     if (g_menu_suppress_cursor != 0)
     {
-        s32 dx = (g_content_view_x - g_content_cursor_x) / g_menu_suppress_cursor;
-        s32 dy = (g_content_view_y - g_content_cursor_y) / g_menu_suppress_cursor;
+        /*
+         * The cursor globals are read through address-taken pointers: the
+         * &global birth order puts the cursor hi parts (lui) ahead of the
+         * view loads and steers the a2/a3 assignment, matching the original
+         * lerp block exactly. Plain global reads swap the lui/load order.
+         * Required to match.
+         */
+        s32* cxp = &g_content_cursor_x;
+        s32 dx = (g_content_view_x - *cxp) / g_menu_suppress_cursor;
+        s32* cyp = &g_content_cursor_y;
+        s32 dy = (g_content_view_y - *cyp) / g_menu_suppress_cursor;
         g_menu_suppress_cursor -= 1;
-        g_content_cursor_x = dx + g_content_cursor_x;
-        g_content_cursor_y = dy + g_content_cursor_y;
+        *cxp = dx + *cxp;
+        *cyp = dy + *cyp;
     }
     else
     {
@@ -5859,9 +5870,16 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
 
         if (upper == 0xF000)
         {
-            if (inline_fn2(content_base[g_menu_hit_item_idx].pad) < 0xF0U)
+            /*
+             * The original reads the hit item's pad byte three separate times
+             * (guard, then-arm, and the switch value below). gcc 2.7.2 CSE
+             * folds plain re-reads into one, so the first two go through a
+             * volatile cast; volatile loads never enter the CSE table, which
+             * also keeps the plain reads below fresh. Required to match.
+             */
+            if (*(volatile u8*)content_base[g_menu_hit_item_idx].pad < 0xF0U)
             {
-                MENU_EMIT_STATE(0x4, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                MENU_EMIT_STATE(0x4, (s32)*(volatile u8*)content_base[g_menu_hit_item_idx].pad * 2);
             }
             else
             {
@@ -5964,7 +5982,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                     {
                         if (func_8014DE1C((s32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + (((s32)item_sub << 6) - 0x170))) != 0)
                         {
-                            u16 idx656 = *(u16*)(MENU_SLOT_BASE + 0x656) & 0x3F;
+                            s32 idx656 = *(u16*)(MENU_SLOT_BASE + 0x656) & 0x3F;
                             u8* state30 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30);
                             u8* state8 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x8);
                             u16 name_off = *(u16*)(state30 + idx656 * 2);
@@ -6014,9 +6032,15 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                             }
                             default:
                             {
-                                u32 unk654_2 = *(u32*)(MENU_SLOT_BASE + 0x654);
+                                /* Address-taken slot pointer before the unk654 recompute;
+                                   steers the state_ptr lui/regalloc order. Required to match. */
+                                s32* state68_off = (s32*)((u8*)g_menu_state_ptr + 0x68);
+                                /* Item term first here (not MENU_SLOT_BASE): with state68_off
+                                   above, this arm's recompute keeps the in-arm addiu and the
+                                   target's addu operand order. Required to match. */
+                                u32 unk654_2 = *(u32*)((u8*)g_pad_ctx + (((item_sub - 7) << 6) + (g_menu_char_slot * 0x250)) + 0x654);
                                 u32 idx = (unk654_2 >> 9) & 0x7E;
-                                u8* state68 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68);
+                                u8* state68 = (u8*)g_menu_state_ptr + *state68_off;
                                 u8* str2 = state68 + *(u16*)(state68 + idx + 0x2E);
                                 u8 ch;
                                 u8* out = sp20;
