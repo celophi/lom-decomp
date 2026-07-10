@@ -5735,7 +5735,7 @@ inline u32 inline_fn23(u8 arg0)
  * register sequence the original emits; caching it in a local would occupy a
  * callee-saved register and shift the whole allocation.
  */
-#define MENU_SLOT_BASE ((u8*)g_pad_ctx + (((item_sub - 7) << 6) + (g_menu_char_slot * 0x250)))
+#define MENU_SLOT_BASE ((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + ((item_sub - 7) << 6)))
 
 /**
  * @brief Emit the label string at @p e via func_800A88A0, expanded once per switch arm.
@@ -5766,8 +5766,19 @@ inline u32 inline_fn23(u8 arg0)
 
 /**
  * @brief Emit the label string at index @p idx of the state table at byte @p off.
+ *
+ * The statement expression reproduces three codegen properties of the original:
+ * the index is evaluated first (its lui leads the case body), the two-step
+ * @c b assignment ties the table base to the state-pointer register via a copy
+ * (so the base accumulates in $a2, "addu a2, a2, v1", instead of spilling to a
+ * fresh $t0), and the base is named once so the two uses in the final sum share
+ * one register.
  */
-#define MENU_EMIT_STATE(off, idx) MENU_EMIT_EXPR(MENU_TAIL(MENU_STATE_BASE(off), (idx)))
+#define MENU_EMIT_STATE(off, idx) MENU_EMIT_EXPR(({ \
+    s32 i = (idx); \
+    u8* b = (u8*)g_menu_state_ptr; \
+    b = b + *(s32*)((u8*)g_menu_state_ptr + (off)); \
+    (u8*)b + *(u16*)((u8*)b + i); }))
 
 /**
  * @brief Render the content cursor, update its lerped position, and optionally render the active hit-item label.
@@ -5784,15 +5795,18 @@ inline u32 inline_fn23(u8 arg0)
  *       the 0x5000 family additionally considers g_pad_ctx slot data and may copy
  *       encoded text into stack scratch buffers before rendering.
  *       A final sprite from D_801690B0 is appended and OT-linked when unk3 != 0xFF.
- * @note Local match 91.70% (gcc272_cdk); frame and sp-slot traffic match. Load-bearing
- *       shapes: reusing arg0 instead of a var_s0 local (prologue copies args in order),
- *       sp20 declared before sp60 (buffer stack slots), the inline argument expressions
- *       in MENU_EMIT_EXPR/MENU_EMIT_STATE (hard-$a2 expansion), the parameterized
- *       MENU_TEXT_COPY (pointer coalescing), switch(kind) for the 3-way name-suffix
- *       dispatch (up-front compare chain), and the epilogue writing *arg1 before
- *       arg0 += 8.  Remaining gap is local-alloc/scheduling/CSE residue (kind==2
- *       unk654 reload, per-case addiu-a3 cross-jump depth, content_base t0/t1).
- *       See working/func_80148A20/STATUS.md.
+ * @note Local match 95.19% (gcc272_cdk); frame and sp-slot traffic match. Shapes
+ *       required to match: reusing arg0 instead of a var_s0 local (prologue copies
+ *       args in order), sp20 declared before sp60 (buffer stack slots), the inline
+ *       argument expressions in MENU_EMIT_EXPR/MENU_EMIT_STATE (hard-$a2 expansion
+ *       plus the two-step base copy and idx-first evaluation in the statement
+ *       expression), block-local out/first/ch copy pointers and the parameterized
+ *       MENU_TEXT_COPY (pointer coalescing), switch(kind) with a fresh unk654
+ *       re-read in the default arm, the 0x5F0 grouped with the slot term in the
+ *       func_8014DE1C argument, the slot term first in MENU_SLOT_BASE, and the
+ *       epilogue writing *arg1 before arg0 += 8.  Remaining gap is local-alloc/
+ *       scheduling/CSE residue (content_base t0/t1, lerp lui order, item_sub<0xF0
+ *       re-reads, kind==2 slot-math detail). See working/func_80148A20/STATUS.md.
  * @see decomp.me TODO
  */
 void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
@@ -5807,9 +5821,6 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
     MenuContentItem* content_base;
     u16 upper;
     s32 item_sub;
-    u8 ch;
-    u8* dst;
-    u8* src;
     MenuPrimHead* ot_head;
 
     if (g_menu_content_ready == 0)
@@ -5916,7 +5927,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
             {
             case 1:
             case 2:
-                MENU_EMIT_STATE(0x3C, (s32)*((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + item_sub + 0x609) * 2);
+                MENU_EMIT_STATE(0x3C, ({ u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250); (s32)*(pb + item_sub + 0x609) * 2; }));
                 break;
             case 3:
             case 4:
@@ -5951,7 +5962,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                 {
                     if (*(MENU_SLOT_BASE + 0x640) != 0)
                     {
-                        if (func_8014DE1C((s32)(((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + 0x5F0) + (((s32)item_sub << 6) - 0x170))) != 0)
+                        if (func_8014DE1C((s32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + (((s32)item_sub << 6) - 0x170))) != 0)
                         {
                             u16 idx656 = *(u16*)(MENU_SLOT_BASE + 0x656) & 0x3F;
                             u8* state30 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30);
@@ -5960,10 +5971,11 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                             u16 surname_off = *(u16*)((u8*)state8 + 0xB4);
                             u8* name = state30 + name_off;
                             u8* surname = state8 + surname_off;
-                            dst = sp60;
-                            MENU_TEXT_COPY(dst, name);
-                            MENU_TEXT_COPY(dst, surname);
-                            *dst = 0;
+                            u8 ch;
+                            u8* out = sp60;
+                            MENU_TEXT_COPY(out, name);
+                            MENU_TEXT_COPY(out, surname);
+                            *out = 0;
                         }
                         else
                         {
@@ -5979,11 +5991,12 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                                 u32 idx = (unk654 >> 9) & 0x7E;
                                 u8* state68 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68);
                                 u8* str2 = state68 + *(u16*)(state68 + idx + 0);
-                                dst = sp20;
-                                src = sp60;
-                                MENU_TEXT_COPY(dst, src);
-                                MENU_TEXT_COPY(dst, str2);
-                                *dst = 0;
+                                u8 ch;
+                                u8* out = sp20;
+                                u8* first = sp60;
+                                MENU_TEXT_COPY(out, first);
+                                MENU_TEXT_COPY(out, str2);
+                                *out = 0;
                                 break;
                             }
                             case 1:
@@ -5991,23 +6004,26 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                                 u32 idx = (unk654 >> 9) & 0x7E;
                                 u8* state68 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68);
                                 u8* str2 = state68 + *(u16*)(state68 + idx + 0x16);
-                                dst = sp20;
-                                src = sp60;
-                                MENU_TEXT_COPY(dst, src);
-                                MENU_TEXT_COPY(dst, str2);
-                                *dst = 0;
+                                u8 ch;
+                                u8* out = sp20;
+                                u8* first = sp60;
+                                MENU_TEXT_COPY(out, first);
+                                MENU_TEXT_COPY(out, str2);
+                                *out = 0;
                                 break;
                             }
                             default:
                             {
-                                u32 idx = (unk654 >> 9) & 0x7E;
+                                u32 unk654_2 = *(u32*)(MENU_SLOT_BASE + 0x654);
+                                u32 idx = (unk654_2 >> 9) & 0x7E;
                                 u8* state68 = (u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68);
                                 u8* str2 = state68 + *(u16*)(state68 + idx + 0x2E);
-                                dst = sp20;
-                                src = sp60;
-                                MENU_TEXT_COPY(dst, src);
-                                MENU_TEXT_COPY(dst, str2);
-                                *dst = 0;
+                                u8 ch;
+                                u8* out = sp20;
+                                u8* first = sp60;
+                                MENU_TEXT_COPY(out, first);
+                                MENU_TEXT_COPY(out, str2);
+                                *out = 0;
                                 break;
                             }
                             }
@@ -6029,7 +6045,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                 break;
             }
             case 14:
-                MENU_EMIT_STATE(0x48, (s32)*((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + 0x609) * 2);
+                MENU_EMIT_STATE(0x48, ({ u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250); (s32)*(pb + 0x609) * 2; }));
                 break;
             case 15:
                 if ((u8*)g_menu_item_ptr != NULL)
@@ -6080,7 +6096,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                 }
                 break;
             case 25:
-                MENU_EMIT_STATE(0x78, (s32)*((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + 0x633) * 2);
+                MENU_EMIT_STATE(0x78, ({ u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250); (s32)*(pb + 0x633) * 2; }));
                 break;
             }
         }
