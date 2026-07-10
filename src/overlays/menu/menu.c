@@ -1612,7 +1612,7 @@ void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
  *       zeroes all layout counters, runs an initial position pass, then calls into the
  *       layout and render pipeline unless a script is still active.
  * @see decomp.me (90.94%, old non-equivalent body) https://decomp.me/scratch/XJkmb
- * @note Current body is the corrected rewrite (86.29% local match, functionally
+ * @note Current body is the corrected rewrite (86.71% local match, functionally
  *       equivalent; store values/order transcribed from the target asm).
  */
 void menu_node_tree_init(void)
@@ -1980,7 +1980,7 @@ void menu_node_tree_init(void)
     var_a2 = g_menu_nodes;
     do
     {
-        if (var_a2->u2.s.parent_idx == 0xFF)
+        if (var_a2->u2.s.parent_idx == var_a1)
         {
             if (var_a2->u2.s.flags & 1)
             {
