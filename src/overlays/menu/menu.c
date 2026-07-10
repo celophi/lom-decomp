@@ -5455,84 +5455,66 @@ s32 func_8014852C(s32 node_id)
 }
 
 /**
- * @brief Emit up to two scroll-arrow SPRT primitives and a trailing Draw Mode Setting primitive.
- * @param buf   Destination primitive buffer; each arrow occupies 0x14 bytes, the Draw Mode tail 8 bytes.
+ * @brief Emit up to two scroll-arrow SPRT primitives and a trailing draw-mode reset primitive.
+ * @param buf   Destination primitive buffer; each arrow occupies 0x14 bytes, the DR_MODE tail 8 bytes.
  * @param ot    Pointer to the ordering-table entry to prepend each emitted primitive to.
- * @param state Opaque scroll-state record; the following byte-offset fields are read:
- *              - 0x06 (u16): total-item count, bottom 9 bits used (stride 0x10 each).
- *              - 0x08 (u16): Y-base coordinate.
- *              - 0x0A (u16): texture V origin for the up-arrow sprite.
- *              - 0x0C (u16): Y offset added to Y-base.
- *              - 0x0E (s16): current scroll position in pixels; also used as UV delta for down arrow.
- *              - 0x12 (u16): number of items scrolled above the viewport (0 = at top).
+ * @param state Slot view whose scroll fields drive the arrows: x/w place the arrow column,
+ *              y is the top edge, h the window height, _u._s.unk6 (low 9 bits) the row count
+ *              (16 px per row), and lerp_cur_b the pixel amount scrolled above the viewport.
  * @return Pointer to the next free byte in @p buf after all emitted primitives.
- * @note Up arrow emitted when unk12 != 0 (content hidden above viewport).
- *       Down arrow emitted when (unk0E-16) < ((unk06 & 0x1FF)*16 - unk12) (content hidden below).
- *       If either arrow was emitted, appends a one-word DR_MODE (0xE1000005) to restore draw mode.
- *       All arrow sprites use GPU code 0x64 (semi-transparent texture-mapped variable sprite).
- * @see decomp.me TODO
+ * @note Up arrow (v=0x10) emitted when lerp_cur_b != 0 (content hidden above).
+ *       Down arrow (v=0x20) emitted when (h-16) < ((unk6 & 0x1FF)*16 - lerp_cur_b)
+ *       (content hidden below); it hangs at y+h-8. If either arrow was emitted, a
+ *       one-word DR_MODE (0xE1000005) restores the draw mode. Arrows are 16x16 SPRTs,
+ *       CLUT 0x7C86, neutral tint.
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
  */
-void* func_80148578(void* buf, s32* ot, void* state)
+void* func_80148578(SPRT* buf, s32* ot, MenuSlotView* state)
 {
-    u8* prim = (u8*)buf;
-    u8* st = (u8*)state;
     s32 emitted = 0;
-    s32 addr;
-    u16 scroll_top;
-    s16 y;
+    s32 max;
+    u8* end;
 
-    scroll_top = *(u16*)(st + 0x12);
-
-    if (scroll_top != 0)
+    if (state->lerp_cur_b != 0)
     {
-        y = (s16)(*(u16*)(st + 0x8) + *(u16*)(st + 0xC) - 0x10);
+        SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
+        setSprt(buf);
+        buf->x0 = state->x + state->w - 0x10;
+        buf->y0 = state->y;
+        SET_SPRT_UV0_PACKED(buf, 0x1080);
+        SET_SPRT_CLUT(buf, 0x7C86);
+        SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
+        addPrim(ot, buf);
         emitted = 1;
-        *(u32*)(prim + 0x4) = 0x808080;
-        prim[3] = 4;
-        prim[7] = 0x64;
-        *(s16*)(prim + 0x8) = y;
-        *(u16*)(prim + 0xA) = *(u16*)(st + 0xA);
-        *(u16*)(prim + 0xC) = 0x1080;
-        *(u16*)(prim + 0xE) = 0x7C86;
-        *(u32*)(prim + 0x10) = 0x100010;
-        addr = (s32)prim & 0xFFFFFF;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 0x14;
+        buf++;
     }
 
+    max = ((state->_u._s.unk6 & 0x1FF) << 4) - state->lerp_cur_b;
+    if (((s16)state->h - 0x10) < max)
     {
-        s32 max = (s32)((*(u16*)(st + 0x6) & 0x1FF) * 0x10) - (s32)scroll_top;
-        if ((s32)(*(s16*)(st + 0xE) - 0x10) < max)
-        {
-            y = (s16)(*(u16*)(st + 0x8) + *(u16*)(st + 0xC) - 0x10);
-            emitted += 1;
-            *(u32*)(prim + 0x4) = 0x808080;
-            prim[3] = 4;
-            prim[7] = 0x64;
-            *(s16*)(prim + 0x8) = y;
-            *(u16*)(prim + 0xA) = (s16)(*(u16*)(st + 0xA) + *(u16*)(st + 0xE) - 8);
-            *(u16*)(prim + 0xC) = 0x2080;
-            *(u16*)(prim + 0xE) = 0x7C86;
-            *(u32*)(prim + 0x10) = 0x100010;
-            addr = (s32)prim & 0xFFFFFF;
-            *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-            *ot = (*ot & 0xFF000000) | addr;
-            prim += 0x14;
-        }
+        SET_BGR0_PACKED(buf, GPU_TINT_NEUTRAL);
+        setSprt(buf);
+        buf->x0 = state->x + state->w - 0x10;
+        buf->y0 = state->y + state->h - 8;
+        SET_SPRT_UV0_PACKED(buf, 0x2080);
+        SET_SPRT_WH_PACKED(buf, 0x10, 0x10);
+        SET_SPRT_CLUT(buf, 0x7C86);
+        addPrim(ot, buf);
+        emitted += 1;
+        buf++;
     }
 
+    end = (u8*)buf;
     if (emitted != 0)
     {
-        addr = (s32)prim & 0xFFFFFF;
-        prim[3] = 1;
-        *(u32*)(prim + 0x4) = 0xE1000005;
-        *(s32*)prim = (*(s32*)prim & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | addr;
-        prim += 8;
+        DR_MODE* mode = (DR_MODE*)end;
+        setlen(mode, 1);
+        mode->code[0] = 0xE1000005;
+        addPrim(ot, mode);
+        end += 8;
     }
 
-    return prim;
+    return end;
 }
 
 /**
