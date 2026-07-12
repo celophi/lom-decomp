@@ -5296,34 +5296,50 @@ void* func_801482D0(MenuPrimHead* prim, s32* ot)
  *       (the control byte followed by one parameter byte); all other non-zero bytes are single-byte codes.
  *       The function tail-calls itself in the original asm to loop, so the effective max depth is bounded
  *       by the stream lengths, not the call stack.
- * @see decomp.me TODO
+ * @note Two shapes are required to match. The scan variable must be u32, not u8: a u8 would make
+ *       GCC re-truncate it with an andi 0xff before the zero test, but the lbu already zero-extends.
+ *       The loops must be written as goto-based top-tested loops; as `while` loops GCC rotates the
+ *       second one so its test lands at the bottom, which the original does not do.
+ * @see decomp.me (100%) TODO
  */
 void func_80148324(u8* dst, u8* src1, u8* src2)
 {
-    u8 ch;
+    u32 ch;
 
+loop_src1:
     ch = *src1;
-    while (ch != 0)
+    if (ch != 0)
     {
-        *dst++ = ch;
-        src1++;
-        if ((u32)(ch - 0x19U) < 7U)
+        if ((u32)(ch - 0x19) < 7)
         {
+            *dst++ = ch;
+            src1++;
             *dst++ = *src1++;
         }
-        ch = *src1;
+        else
+        {
+            *dst++ = ch;
+            src1++;
+        }
+        goto loop_src1;
     }
 
+loop_src2:
     ch = *src2;
-    while (ch != 0)
+    if (ch != 0)
     {
-        *dst++ = ch;
-        src2++;
-        if ((u32)(ch - 0x19U) < 7U)
+        if ((u32)(ch - 0x19) < 7)
         {
+            *dst++ = ch;
+            src2++;
             *dst++ = *src2++;
         }
-        ch = *src2;
+        else
+        {
+            *dst++ = ch;
+            src2++;
+        }
+        goto loop_src2;
     }
 
     *dst = 0;
