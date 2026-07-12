@@ -3680,66 +3680,87 @@ s32 func_801453F0(void)
  * @return Number of matching entries (and entries initialized in D_80168C70).
  * @note  Scans up to 100 entries; stops early on the first entry whose byte
  *        at offset 0 is 0 (sentinel / end-of-list marker).
- * @see decomp.me TODO
+ * @note  Three shapes are required to match, all of them register-allocation levers
+ *        (the instruction sequence is otherwise identical either way):
+ *        - `active` is declared INSIDE the do-while body. That block emits a
+ *          NOTE_INSN_BLOCK_BEG which stops expand_end_loop (gcc 2.7.2 stmt.c) from
+ *          rotating the loop; hoisting it duplicates the exit test (+4 insns).
+ *        - `link` doubles as the scratch for the first packed word, and each word is
+ *          built with a split `x = a & M; x = x | b;` pair rather than one expression.
+ *          MIPS defines no REG_ALLOC_ORDER, so GCC allocates ascending (v0, v1, a0...)
+ *          and the split makes each word's live range start at the AND, which is what
+ *          forces word_prev out of v0/v1 and into a0. Merging either pair into a single
+ *          expression re-colors the whole loop.
+ *        - `prev` and `next` are separate variables (they share a1 only because their
+ *          live ranges are disjoint); merging them into one inflates its ref count and
+ *          steals a0.
+ * @see decomp.me (100%) TODO
  */
 s32 func_8014551C(s32 arg0)
 {
-    s32* temp_t0;
-    s32 temp_a0;
-    s32 temp_a1;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a1;
-    s32 var_a2;
-    s32 var_a2_2;
-    s32 var_t1;
-    s32 var_v1_2;
-    u8* var_v1;
+    s32 i;
+    s32 prev;
+    s32 next;
+    s32 count;
+    s32 more;
+    s32 link;
+    s32 word_prev;
+    u8* entry;
 
-    var_a2 = 0;
-    var_t1 = 0;
-    var_v1 = (u8*)g_pad_ctx + 0xCE0;
+    i = 0;
+    count = 0;
+    entry = (u8*)g_pad_ctx + 0xCE0;
     do
     {
-        if (*var_v1 == 0)
+        u8 active = entry[0];
+
+        if (active == 0)
         {
             break;
         }
-        if ((((u32) * (s32*)(var_v1 + 0x14) >> 8) & 3) == (u32)arg0)
+        if ((((u32) * (s32*)(entry + 0x14) >> 8) & 3) == (u32)arg0)
         {
-            var_t1 += 1;
+            count += 1;
         }
-        var_a2 += 1;
-        var_v1 += 0x40;
-    } while (var_a2 < 0x64);
+        i += 1;
+        entry += 0x40;
+    } while (i < 0x64);
+
     D_80168C70 = (void*)0;
-    var_a2_2 = 0;
-    if (var_t1 > 0)
+
+    i = 0;
+    if (count > 0)
     {
         do
         {
-            temp_t0 = (s32*)&D_80168C70 + var_a2_2;
-            var_a1 = var_a2_2 - 1;
-            temp_v1 = (*temp_t0 & ~0x3FFF) | ((var_a2_2 * 0x10) & 0x3FFF);
-            *temp_t0 = temp_v1;
-            if (var_a1 < 0)
+            s32* slot = (s32*)&D_80168C70 + i;
+            s32 cur = *slot;
+            s32 word_self;
+
+            prev = i - 1;
+            link = cur & ~0x3FFF;
+            link = link | ((i * 0x10) & 0x3FFF);
+            word_self = link;
+            *slot = word_self;
+            if (prev < 0)
             {
-                var_a1 = var_t1 - 1;
+                prev = count - 1;
             }
-            temp_a0 = (temp_v1 & 0xFF803FFF) | ((var_a1 & 0x1FF) << 0xE);
-            *temp_t0 = temp_a0;
-            temp_a1 = var_a2_2 + 1;
-            temp_a3 = temp_a1 < var_t1;
-            var_v1_2 = 0;
-            if (temp_a3 != 0)
+            word_prev = word_self & 0xFF803FFF;
+            word_prev = word_prev | ((prev & 0x1FF) << 14);
+            *slot = word_prev;
+            next = i + 1;
+            more = next < count;
+            link = 0;
+            if (more != 0)
             {
-                var_v1_2 = temp_a1;
+                link = next;
             }
-            *temp_t0 = (temp_a0 & 0x7FFFFF) | (var_v1_2 << 0x17);
-            var_a2_2 = temp_a1;
-        } while (temp_a3 != 0);
+            *slot = (word_prev & 0x7FFFFF) | (link << 23);
+            i = next;
+        } while (more != 0);
     }
-    return var_t1;
+    return count;
 }
 /* ----- M2C macros required by func_80145608 ----- */
 typedef s32 M2C_UNK;
