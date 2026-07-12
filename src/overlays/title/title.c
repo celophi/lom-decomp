@@ -1721,6 +1721,17 @@ typedef struct
     u8 oy; /**< +0x05: Y origin offset, in 8-pixel units */
 } SlotUvRect;                  /* sizeof == 6 */
 
+/*
+ * getTPage() with the operand order the original used: the abr (blend) term,
+ * taken straight from the entry's flags word, is evaluated BEFORE the tpage
+ * bits. Psy-Q's getTPage macro emits `tp` first, which schedules the
+ * `sll 3 / andi 0x60` pair late and does not match.
+ *   _flags: entry flags word (bits 2-3 are abr)
+ *   _tp:    texture-page mode (already masked to 2 bits)
+ *   _x,_y:  texture page origin in VRAM
+ */
+#define TPAGE_WORD(_flags, _tp, _x, _y)                                            (((((u32)(_flags)) << 3) & 0x60) | (((_tp) & 3) << 7) |                         (((_y) & 0x100) >> 4) | (((_x) & 0x3FF) >> 6) | (((_y) & 0x200) << 2))
+
 /** Number of entries in g_saveLayoutTable. */
 #define SAVE_LAYOUT_ENTRIES 0x1B
 
@@ -1763,12 +1774,14 @@ typedef struct
  *       source. That base scored higher but was not functionally equivalent:
  *       it reused the loop counter as a scratch temp
  *       (@c s2 @c = @c flags @c & @c 1), which the target never does. This
- *       rewrite is correct and structurally clean but currently measures
- *       80.75% under objdiff; the residual gap is register allocation only.
- *       gcc hoists three loop invariants (the packed 0x808080 tint word and
- *       both UV-table base addresses) into callee-saved registers that the
- *       original re-materializes inline, so the frame is -0x20 where the
- *       target's is -0x18.
+ *       rewrite is correct and structurally clean, and currently measures
+ *       83.15% under objdiff. The residual gap is register allocation: gcc's
+ *       loop.c combine_movables merges the duplicated constants (0x808080,
+ *       used in three branches, and 0x2C, emitted once by setPolyFT4 and once
+ *       by the else arm below), summing their savings and lifetimes until they
+ *       clear the move_movables hoist threshold. They land in callee-saved
+ *       registers that the original re-materializes inline, so the frame is
+ *       -0x20 where the target's is -0x18.
  *
  * @see decomp.me (87.28%) https://decomp.me/scratch/UVLSm (old m2c base)
  * @see decomp.me (91.76%) https://decomp.me/scratch/P2gt5 (old m2c base,
@@ -1794,8 +1807,6 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
             SlotUvRect* uv;
             u8* tex;
             s32 idx;
-            s32 x0;
-            s32 y0;
 
             if (g_slotSlideX > 0)
             {
@@ -1822,10 +1833,11 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                 setcode(poly, 0x2C);
             }
 
-            poly->x0 = x0 = (*(u16*)(p + 2) + g_slotSlideXLerped) - ((uv->ox * 8) - 0x20);
-            poly->x2 = x0;
-            poly->y0 = y0 = (*(u16*)(p + 4) + g_slotSlideYLerped) - ((uv->oy * 8) - 0x28);
-            poly->y1 = y0;
+            /* Chained assignment: the value propagated to x2/y1 is the *short*
+               result of the store, so gcc sinks the 16-bit truncation into the
+               add and loads the lerp global with lhu rather than lw. */
+            poly->x2 = poly->x0 = (*(u16*)(p + 2) + g_slotSlideXLerped) - ((uv->ox * 8) - 0x20);
+            poly->y1 = poly->y0 = (*(u16*)(p + 4) + g_slotSlideYLerped) - ((uv->oy * 8) - 0x28);
 
             poly->x3 = poly->x1 = (poly->x0 + (uv->w * 8)) - 1;
             poly->y3 = poly->y2 = (poly->y0 + (uv->h * 8)) - 1;
@@ -1838,11 +1850,11 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
 
             ptr = (u8*)poly + sizeof(POLY_FT4);
 
-            tex = tex_base + (p[0] * 0x10);
+            tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
             poly->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
 
-            tex = tex_base + (p[0] * 0x10);
-            poly->tpage = getTPage(tex[0x0C] & 3, *(u32*)hdr >> 2, *(u16*)tex, *(u16*)(tex + 2));
+            tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
+            poly->tpage = TPAGE_WORD(*(u32*)hdr, tex[0x0C] & 3, *(u16*)tex, *(u16*)(tex + 2));
 
             addPrim(ot, poly);
         }
@@ -1882,7 +1894,7 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
             sprt->w = uv->w * 8;
             sprt->h = uv->h * 8;
 
-            tex = tex_base + (p[0] * 0x10);
+            tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
             sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
 
             addPrim(ot, sprt);
@@ -1891,8 +1903,8 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
             tp = (DR_TPAGE*)ptr;
             setlen(tp, 1);
 
-            tex = tex_base + (p[0] * 0x10);
-            tp->code[0] = getTPage(*(u32*)(tex + 0x0C) & 3, *(u32*)hdr >> 2, *(u16*)tex, *(u16*)(tex + 2)) | 0xE1000000;
+            tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
+            tp->code[0] = TPAGE_WORD(*(u32*)hdr, *(u32*)(tex + 0x0C) & 3, *(u16*)tex, *(u16*)(tex + 2)) | 0xE1000000;
 
             addPrim(ot, tp);
             ptr += sizeof(DR_TPAGE);
@@ -1926,8 +1938,12 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
             /* Glyph strip: one SPRT + DR_TPAGE per GLYPH_CHUNK_WIDTH pixels. */
             s32 remaining = *(u16*)(p + 14);
             u16 u0 = *(u16*)(p + 10);
-            u8* tex = tex_base + (p[0] * 0x10);
-            u16 tex_x = *(u16*)tex;
+            u8* tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
+            /* Signed: gcc cannot prove this stays non-negative once the chunk
+               loop accumulates += 0x20/0x40 into it, so getTPage's
+               `(x & 0x3ff) >> 6` becomes an arithmetic shift (sra), as in the
+               target. A u16 here folds to srl. */
+            s32 tex_x = *(u16*)tex;
             s32 x;
             s32 y;
             s32 chunk;
@@ -1977,7 +1993,7 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
 
                 remaining -= chunk;
 
-                tex = tex_base + (p[0] * 0x10);
+                tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
                 sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
 
                 cur += sizeof(SPRT);
@@ -1988,8 +2004,8 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                 tp = (DR_TPAGE*)(cur - 4);
                 setlen(tp, 1);
 
-                tex = tex_base + (p[0] * 0x10);
-                tp->code[0] = getTPage(*(u32*)(tex + 0x0C) & 3, *(u32*)hdr >> 2, tex_x, *(u16*)(tex + 2)) | 0xE1000000;
+                tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
+                tp->code[0] = TPAGE_WORD(*(u32*)hdr, *(u32*)(tex + 0x0C) & 3, tex_x, *(u16*)(tex + 2)) | 0xE1000000;
 
                 cur += sizeof(DR_TPAGE);
 
@@ -2005,7 +2021,7 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                    step the page origin on when the mode bits say the strip
                    spans pages. */
                 u0 ^= 0x80;
-                tex = tex_base + (p[0] * 0x10);
+                tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
 
                 if (!(*(u32*)(tex + 0x0C) & 7))
                 {
