@@ -3594,81 +3594,104 @@ s32 func_80145310(void)
  * @note  Scans 11 s32 slots at g_pad_ctx + 0x34, 24 bits each (bits 0-23).
  *        The first match index defaults to 0 when the 0xFF sentinel is never
  *        cleared (no slot matched).
- * @see decomp.me TODO
+ * @note  Shapes required to match, all register-allocation levers:
+ *        - `j` is ONE variable doing double duty: the inner bit counter, and then the
+ *          index of the list-building loop. The two uses are disjoint and the original
+ *          shares a2 between them; giving them separate variables costs 2% and cannot
+ *          be recovered by any priority tweak.
+ *        - `sentinel` holds a second copy of 0xFF so the in-loop test compares against
+ *          a live register (bne t2, t3) instead of an immediate; the later test against
+ *          0xFF does use an immediate.
+ *        - `word = *p;` must be assigned BETWEEN `mask` and `j` so the `j` init lands in
+ *          the load-delay slot of the lw.
+ *        - The list loop is identical to the one in func_8014551C; see its notes for the
+ *          split `x = a & M; x = x | b;` pairs and the copy through `link`.
+ * @see decomp.me (100%) TODO
  */
 s32 func_801453F0(void)
 {
-    s32* temp_t0;
-    s32 temp_a0;
-    s32 temp_a1;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a0;
-    s32 var_a1;
-    s32 var_a2;
-    s32 var_a2_2;
-    s32 var_t1;
-    s32 var_t2;
-    s32 var_v1;
-    s32 var_v1_2;
-    s32* var_a3;
+    s32 i;
+    s32 j;
+    s32 prev;
+    s32 next;
+    s32 count;
+    s32 more;
+    s32 link;
+    s32 word_prev;
+    s32 found;
+    s32 sentinel;
+    s32 mask;
+    s32 word;
+    s32* p;
 
-    var_t1 = 0;
-    var_t2 = 0xFF;
-    var_a0 = 0;
-    var_a3 = (s32*)((u8*)g_pad_ctx + 0x34);
+    count = 0;
+    found = 0xFF;
+    i = 0;
+    sentinel = found;
+    p = (s32*)((u8*)g_pad_ctx + 0x34);
     do
     {
-        var_v1 = 1;
-        var_a2 = 0x17;
+        mask = 1;
+        word = *p;
+        j = 0x17;
+
         do
         {
-            if (*var_a3 & var_v1)
+            if ((word & mask) != 0)
             {
-                if ((var_a0 == (((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F)) && (var_t2 == 0xFF))
+                if ((i == (s32)(((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F)) && (found == sentinel))
                 {
-                    var_t2 = var_t1;
+                    found = count;
                 }
-                var_t1 += 1;
+                count += 1;
             }
-            var_a2 -= 1;
-            var_v1 *= 2;
-        } while (var_a2 >= 0);
-        var_a0 += 1;
-        var_a3 += 1;
-    } while (var_a0 < 0xB);
-    if (var_t2 == 0xFF)
+            j -= 1;
+            mask = mask * 2;
+        } while (j >= 0);
+        i += 1;
+        p += 1;
+    } while (i < 0xB);
+
+    if (found == 0xFF)
     {
-        var_t2 = 0;
+        found = 0;
     }
+
     D_80168C70 = (void*)0;
-    var_a2_2 = 0;
-    if (var_t1 > 0)
+
+    j = 0;
+    if (count > 0)
     {
         do
         {
-            temp_t0 = (s32*)&D_80168C70 + var_a2_2;
-            var_a1 = var_a2_2 - 1;
-            temp_v1 = (*temp_t0 & ~0x3FFF) | ((var_a2_2 * 0x10) & 0x3FFF);
-            *temp_t0 = temp_v1;
-            if (var_a1 < 0)
+            s32* slot = (s32*)&D_80168C70 + j;
+            s32 cur = *slot;
+            s32 word_self;
+
+            prev = j - 1;
+            link = cur & ~0x3FFF;
+            link = link | ((j * 0x10) & 0x3FFF);
+            word_self = link;
+            *slot = word_self;
+            if (prev < 0)
             {
-                var_a1 = var_t1 - 1;
+                prev = count - 1;
             }
-            temp_a0 = (temp_v1 & 0xFF803FFF) | ((var_a1 & 0x1FF) << 0xE);
-            *temp_t0 = temp_a0;
-            temp_a1 = var_a2_2 + 1;
-            temp_a3 = temp_a1 < var_t1;
-            var_v1_2 = 0;
-            if (temp_a3 != 0)
+            word_prev = word_self & 0xFF803FFF;
+            word_prev = word_prev | ((prev & 0x1FF) << 14);
+            *slot = word_prev;
+            next = j + 1;
+            more = next < count;
+            link = 0;
+            if (more != 0)
             {
-                var_v1_2 = temp_a1;
+                link = next;
             }
-            *temp_t0 = (temp_a0 & 0x7FFFFF) | (var_v1_2 << 0x17);
-            var_a2_2 = temp_a1;
-        } while (temp_a3 != 0);
+            *slot = (word_prev & 0x7FFFFF) | (link << 23);
+            j = next;
+        } while (more != 0);
     }
-    return var_t1 | (var_t2 << 0x10);
+    return count | (found << 16);
 }
 
 /**
