@@ -147,7 +147,19 @@
 #define NAME_GRID_Y_BOTTOM      168  /**< Pixel Y of the bottom clamp (0xA8). */
 #define NAME_GRID_SCROLL_STEP    64  /**< Scroll delta per step: 4 rows * 16 px/row (0x40). */
 #define NAME_GRID_VRAM_X        0x60 /**< VRAM X of the grid area upload rect (96 px). */
+#define NAME_GRID_VRAM_W        0xA0 /**< Width of the grid area upload rect (160 px). */
 #define NAME_GRID_VIS_HEIGHT    0x50 /**< Visible grid height in pixels: 5 rows * 16 (80 px). */
+#define NAME_GRID_OVERSCAN      0x0B /**< Rows partly above the window are still drawn down to y = -11. */
+
+/**
+ * @brief True when a glyph drawn at screen Y @p y falls inside the scrolling
+ *        grid window, i.e. y is in [-NAME_GRID_OVERSCAN, NAME_GRID_VIS_HEIGHT-1].
+ *
+ * The single unsigned compare (rather than two signed ones) is what the
+ * original emits, so the biased form is required to match.
+ */
+#define NAME_GRID_ROW_VISIBLE(y) \
+    (((u32)((y) + NAME_GRID_OVERSCAN)) <= (NAME_GRID_VIS_HEIGHT + NAME_GRID_OVERSCAN - 1))
 
 /* FadeState channel sentinels. Channels run 0 (fully dark) up to
  * FADE_CHAN_NEUTRAL (identity, no tint). Values >= FADE_CHAN_ADDITIVE
@@ -218,6 +230,18 @@
 /** Pointer to record i: the table is self-relative, entries are byte
  *  offsets from the table itself (same idiom as FF8's string tables). */
 #define PANEL_RECORD(i) ((u8*)PANEL_REC_TBL + PANEL_REC_TBL[(i)])
+
+/** Same blob, reached via the kanji header field at blob + 8. Kept separate
+ *  from @ref PANEL_DATA_BLOB so the lui/addiu pair is shared with the field
+ *  load, exactly as in @ref PANEL_DATA_BLOB. */
+#define KANJI_DATA_BLOB (((u32)(&g_kanji_panel_off)) - 8)
+
+/** The kanji picker's self-relative glyph table (blob + the kanji offset). */
+#define KANJI_GLYPH_TBL ((u8*)(KANJI_DATA_BLOB + g_kanji_panel_off))
+
+/** Entry i of a self-relative u16 offset table at @p tbl, as a byte pointer.
+ *  Generalizes @ref PANEL_RECORD over a table chosen at runtime. */
+#define TBL_ENTRY(tbl, i) ((u8*)(tbl) + ((u16*)(tbl))[(i)])
 
 /**
  * @brief RGB lerp state.
@@ -1849,118 +1873,96 @@ static void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
 }
 
 /**
- * @brief Render all visible character glyphs for the active panel into the OT.
+ * @brief Emit the visible glyphs of the active character panel into
+ *        @ref GNAME_OT_CHAR_PANEL, then queue the grid area's VRAM upload.
  *
- * Splices a template packet into @c OT[0x0A], then walks every glyph entry in
- * the current panel (or kanji category when @c g_char_panel == 4), emitting a
- * sprite for each one whose scroll-adjusted Y position falls within the visible
- * grid window. After the loop, records the final grid position in
- * @c g_char_last_row / @c g_char_last_col, then appends a VRAM upload RECT
- * covering the full @c NAME_GRID_VIS_HEIGHT x @c 0xA0 grid area.
- *
- * Panel data sources:
- *  - @c g_char_panel == 4 (kanji picker): glyph entries come from
- *    @c g_kanji_panel_off, bounded by
- *    @c g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]] .. [..+1].
- *  - Otherwise: glyph entries come from @c g_panel_tbl_off, bounded by
- *    @c g_panel_char_offsets[panel_idx][0] .. [1].
- *
- * Visibility culling: a glyph at row @c r with @c g_scroll_pos is visible when
- * @c (u32)((r*16 - g_scroll_pos) + 11) < 91, i.e. its screen Y is in [-11, 79].
- * Glyphs are emitted at @c x = col*NAME_GRID_CELL_SIZE,
- * @c y = row*NAME_GRID_CELL_SIZE - g_scroll_pos.
- *
- * The final VRAM rect is at (@c NAME_GRID_VRAM_X, @c NAME_GRID_Y_TOP) on the
- * back buffer page (@c NAME_GRID_Y_TOP for @c frame_parity==0, @c 0x150 for
- * @c frame_parity==1), size @c 0xA0 x @c NAME_GRID_VIS_HEIGHT.
- *
- * @param ctx_ptr   Render context cast to void* for codegen; OT head at
- *                  @ref GNAME_OT_CHAR_PANEL, prim heap at @c prim_cursor,
- *                  parity at @c frame_parity.
- * @param panel_idx Active character panel index (0-3 normal, 4 kanji).
+ * @param ctx       Render context (OT, primitive heap, frame parity).
+ * @param panel_idx Active character panel index (0-3 normal; 4 selects the
+ *                  kanji picker, whose entries come from the kanji tables
+ *                  instead and ignore this index).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/ckF2S
  */
 static void render_char_panel(RenderContext* ctx, s32 panel_idx)
 {
-    u8* new_var4;
     u32* ot_ptr;
-    u8 _unused[8];
-    u8 grid_load_pkt[0x60];
-    u8* new_var;
+    u8 _unused[8];          /* Frame padding: without it the frame is -0xa8, not -0xb0. */
+    u8 grid_load_pkt[0x60]; /* Scratch DRAWENV for the grid-area VRAM upload. */
     void* prim;
     u32* write_cur;
     u8* glyph_base;
-    u16* entry_ptr;
     s32 col;
     s32 entry_idx;
-    unsigned long long new_var3;
-    s32 new_var5;
+    s32 entry_limit;
     s32 row;
     s32 screen_y;
-    unsigned new_var2;
     s32 entry_end;
-    /* (u8*)ctx + 0x28 == &ctx->ot[GNAME_OT_CHAR_PANEL]; raw offset is required to match. */
-    ot_ptr = (u32*)(((u8*)ctx) + 0x28);
+    ot_ptr = (u32*)&ctx->ot[GNAME_OT_CHAR_PANEL];
     prim = ctx->prim_cursor;
     SetDrawEnv(prim, (DRAWENV*)(((s32)g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE)) + DRAW_BUF_DRAWENV_OFF));
-    ((P_TAG*)prim)->addr = (u_long)((u_long)((P_TAG*)((u32*)(((u8*)ctx) + 0x28)))->addr), ((P_TAG*)((u32*)(((u8*)ctx) + 0x28)))->addr = (u_long)prim;
+    addPrim(ot_ptr, prim);
     write_cur = prim + (sizeof(DR_ENV));
     if (g_char_panel == 4)
     {
-        glyph_base = (u8*)((((u32)(&g_kanji_panel_off)) - 8) + g_kanji_panel_off);
+        glyph_base = KANJI_GLYPH_TBL;
         entry_idx = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]];
         entry_end = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat] + 1];
         row = 0;
     }
     else
     {
-        entry_end = g_panel_char_offsets[panel_idx];
-        entry_idx = entry_end;
+        entry_idx = g_panel_char_offsets[panel_idx];
         entry_end = g_panel_char_offsets[panel_idx + 1];
-        glyph_base = (u8*)((u16*)((((u8*)(&g_panel_tbl_off)) - 4) + g_panel_tbl_off));
+        glyph_base = (u8*)PANEL_REC_TBL;
+        /* Empty statement: required to match (it splits the basic block here). */
         do
         {
-
         } while (0);
         row = 0;
     }
+    /* Copying row (always 0 here) rather than assigning 0 is required to match. */
     col = row;
     while (1)
     {
-        screen_y = (row * 16) - g_scroll_pos;
-        new_var5 = entry_end;
-        if (((u32)(screen_y + 0x0B)) <= (0x5B - 1))
+        screen_y = (row * NAME_GRID_CELL_SIZE) - g_scroll_pos;
+        /* Reloading the limit into its own local each pass is required to match. */
+        entry_limit = entry_end;
+        if (NAME_GRID_ROW_VISIBLE(screen_y))
         {
-            write_cur = func_800A88A0(write_cur, ot_ptr, (void*)(glyph_base + ((u16*)glyph_base)[entry_idx]), 1, col * 16, screen_y, 0);
+            write_cur = func_800A88A0(write_cur, ot_ptr, (void*)TBL_ENTRY(glyph_base, entry_idx), 1,
+                                      col * NAME_GRID_CELL_SIZE, screen_y, 0);
         }
         entry_idx++;
-        if (new_var5 == entry_idx)
+        if (entry_limit == entry_idx)
         {
             break;
         }
         col++;
-        if (col == 10)
+        if (col == NAME_GRID_CHARS_PER_ROW)
         {
             col = 0;
             row++;
         }
     }
 
+    /* The packet pointer and its scope are required to match: declaring `pkt`
+       at the top of the function moves the stack-address materialization and
+       costs the match. */
     {
         u8* pkt = grid_load_pkt;
         u32 grid_vram_y;
+
         g_char_last_row = row;
         g_char_last_col = col;
         prim = write_cur;
-        grid_vram_y = 104;
+        grid_vram_y = NAME_GRID_Y_TOP;
         if (ctx->frame_parity != 0)
         {
             grid_vram_y = 0x150;
         }
-        SetDefDrawEnv(pkt, 0x60, grid_vram_y, 0xA0, 0x50);
+        SetDefDrawEnv(pkt, NAME_GRID_VRAM_X, grid_vram_y, NAME_GRID_VRAM_W, NAME_GRID_VIS_HEIGHT);
         SetDrawEnv(prim, pkt);
-        (((P_TAG*)prim)->addr = (u_long)((u_long)((P_TAG*)ot_ptr)->addr)), ((P_TAG*)ot_ptr)->addr = (u_long)prim;
+        addPrim(ot_ptr, prim);
         prim += sizeof(DR_ENV);
         ctx->prim_cursor = prim;
     }
