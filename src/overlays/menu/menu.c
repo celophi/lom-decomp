@@ -5298,18 +5298,22 @@ void* func_801482D0(MenuPrimHead* prim, s32* ot)
  *       by the stream lengths, not the call stack.
  * @note Two shapes are required to match. The scan variable must be u32, not u8: a u8 would make
  *       GCC re-truncate it with an andi 0xff before the zero test, but the lbu already zero-extends.
- *       The loops must be written as goto-based top-tested loops; as `while` loops GCC rotates the
- *       second one so its test lands at the bottom, which the original does not do.
+ *       And `ch` must be declared INSIDE each loop body: that block emits a NOTE_INSN_BLOCK_BEG,
+ *       which terminates the scan in expand_end_loop (gcc 2.7.2 stmt.c) before it finds a
+ *       conditional exit to roll to the bottom, so the loop is never rotated. Hoisting `ch` to
+ *       function scope lets GCC rotate the second loop's test to the bottom and drops this to 77%.
  * @see decomp.me (100%) TODO
  */
 void func_80148324(u8* dst, u8* src1, u8* src2)
 {
-    u32 ch;
-
-loop_src1:
-    ch = *src1;
-    if (ch != 0)
+    for (;;)
     {
+        u32 ch = *src1;
+
+        if (ch == 0)
+        {
+            break;
+        }
         if ((u32)(ch - 0x19) < 7)
         {
             *dst++ = ch;
@@ -5321,13 +5325,16 @@ loop_src1:
             *dst++ = ch;
             src1++;
         }
-        goto loop_src1;
     }
 
-loop_src2:
-    ch = *src2;
-    if (ch != 0)
+    for (;;)
     {
+        u32 ch = *src2;
+
+        if (ch == 0)
+        {
+            break;
+        }
         if ((u32)(ch - 0x19) < 7)
         {
             *dst++ = ch;
@@ -5339,7 +5346,6 @@ loop_src2:
             *dst++ = ch;
             src2++;
         }
-        goto loop_src2;
     }
 
     *dst = 0;
