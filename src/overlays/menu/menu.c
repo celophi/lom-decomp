@@ -5356,42 +5356,51 @@ extern s8 D_800F0C38[];
  * @return Signed byte from D_800F0C38 at the selected nibble index.
  * @note Cases 1, 4, and 6 load the nibble via byte/halfword access rather than the full word;
  *       this reflects the original compiler output and must be preserved for match work.
- * @see decomp.me TODO
+ * @note Two shapes are required to match. The word must NOT be hoisted into a local before the
+ *       switch -- each case reloads item+0x1C itself. And each shift/mask must be a separate
+ *       statement assigning back to `nibble`: written as one expression, GCC computes the shift in
+ *       a temp (v0) and only lands in the result register at the mask, whereas the original shifts
+ *       in place in the destination register.
+ * @see decomp.me (100%) TODO
  */
 s8 func_801483C4(void* item, u32 index, u32 fallback)
 {
     u32 nibble;
-    u32 word;
 
     nibble = fallback;
     if (index < 8U)
     {
-        word = *(u32*)((u8*)item + 0x1C);
         switch (index)
         {
         case 0:
-            nibble = word & 0xF;
+            nibble = *(u32*)((u8*)item + 0x1C) & 0xF;
             break;
         case 1:
-            nibble = *(u8*)((u8*)item + 0x1C) >> 4;
+            nibble = *(u8*)((u8*)item + 0x1C);
+            nibble = nibble >> 4;
             break;
         case 2:
-            nibble = (word >> 8) & 0xF;
+            nibble = *(u32*)((u8*)item + 0x1C) >> 8;
+            nibble = nibble & 0xF;
             break;
         case 3:
-            nibble = (word >> 12) & 0xF;
+            nibble = *(u32*)((u8*)item + 0x1C) >> 12;
+            nibble = nibble & 0xF;
             break;
         case 4:
-            nibble = *(u16*)((u8*)item + 0x1E) & 0xF;
+            nibble = *(u16*)((u8*)item + 0x1E);
+            nibble = nibble & 0xF;
             break;
         case 5:
-            nibble = (word >> 20) & 0xF;
+            nibble = *(u32*)((u8*)item + 0x1C) >> 20;
+            nibble = nibble & 0xF;
             break;
         case 6:
-            nibble = *(u8*)((u8*)item + 0x1F) & 0xF;
+            nibble = *(u8*)((u8*)item + 0x1F);
+            nibble = nibble & 0xF;
             break;
         case 7:
-            nibble = word >> 28;
+            nibble = *(u32*)((u8*)item + 0x1C) >> 28;
             break;
         }
     }
