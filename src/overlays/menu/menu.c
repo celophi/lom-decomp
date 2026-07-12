@@ -1628,6 +1628,7 @@ void menu_node_tree_init(void)
     u8* new_var5;
     MenuNode* new_var2;
     int new_var7;
+    int new_var10;
     s32 var_t0_2;
     u8 new_var4;
     int new_var8;
@@ -1742,6 +1743,11 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].idx_nav.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
+        /* Empty conditional forces a basic-block boundary the compiler needs
+           to reproduce the target's scheduling here; required to match. */
+        if (1)
+        {
+        }
         g_menu_nodes[3].unk4 = 0x6F;
     }
     else
@@ -1838,9 +1844,9 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
-    g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
     new_var9 = g_menu_nodes[0x12].u2.unk2;
     temp_v0 = new_var9;
+    g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
     *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
     temp_v0_12 = temp_v0 & 0xFF3D;
     *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = temp_v0_12;
@@ -1987,10 +1993,12 @@ void menu_node_tree_init(void)
                 temp_a0 = var_a3 & 0xFFFF;
                 temp_a1 = var_a3 & 0x1FF;
                 var_a3 += MENU_ROW_HEIGHT;
+                new_var10 = (temp_a0 & 1) << 15;
+                new_var6 = (temp_a0 >> 1) & 0xFF;
                 var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
                 var_a2->u8_u.nav_y_packed = (u16)(var_a2->u8_u.nav_y_packed & 0x80FF);
-                var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
-                var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | ((temp_a0 & 1) << 15));
+                var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | new_var6);
+                var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | new_var10);
                 var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | ((temp_a1 & 1) << 15));
                 var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0xFF00) | (temp_a1 >> 1));
             }
@@ -2505,7 +2513,7 @@ extern s32 g_menu_char_slot;
  *       compiler's register allocation exactly.
  * @see decomp.me (93.73%) https://decomp.me/scratch/UqSRu
  */
-void menu_set_active_node(void)
+void menu_set_active_node()
 {
     s32 node_idx;
     MenuNode* curr_node;
@@ -2666,6 +2674,7 @@ void func_80143964(s32 arg0)
     s32 dir_index;
     MenuNode* active_node;
     s32 nav_y;
+    s32 nav_hi;
     s32 new_type;
     u8 flag;
     void* new_var7;
@@ -3389,31 +3398,47 @@ int menu_item_has_action(void)
  *        has content (content_id != MENU_NONE). Then reconstructs the 9-bit nav cursor Y
  *        from the active node's packed nav fields, writes it to g_content_view_y (clamped
  *        to [12, 0xA3]), and sets g_content_view_x from the 7-bit nav_x column.
- * @see decomp.me TODO
+ * @note  Four shapes are required to match:
+ *        - `view_top` must be its own statement. Written inline as
+ *          `nav_y - (g_menu_content_height - 12)`, fold-const rewrites it as
+ *          `(nav_y + 12) - height` and emits `addiu 0xc` instead of `addiu -0xc`.
+ *        - `view_y` aliases &g_content_view_y. Accessing the global directly gives its
+ *          %hi a short live range, so it shares a register with the lbu temp and the
+ *          scheduler cannot hoist the lui; the alias gives it a dedicated register (a2)
+ *          held across all four accesses, as in the original.
+ *        - `view_y` must be assigned BEFORE `active_node` (this is what lets the
+ *          cursor_enable store schedule ahead of the two luis).
+ *        - `nav_hi` is split out so the lhu is emitted before the lbu, while the `or`
+ *          still takes the shifted nav_y_hi as its first operand.
+ * @see decomp.me (100%) TODO
  */
 void func_8014519C(void)
 {
-    MenuNode* scene_node;
     MenuNode* active_node;
     s32 nav_y;
+    s32 nav_hi;
+    s32 view_top;
+    s32* view_y;
 
-    scene_node = &g_menu_nodes[g_menu_scene_type];
-    if (scene_node->content_id != MENU_NONE)
+    if (g_menu_nodes[g_menu_scene_type].content_id != MENU_NONE)
     {
         g_content_cursor_x = g_menu_default_view_pos.x;
         g_content_cursor_y = g_menu_default_view_pos.y;
     }
     g_menu_cursor_enable = 2;
+    view_y = &g_content_view_y;
     active_node = &g_menu_nodes[g_menu_active_node];
-    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | ((active_node->idx_nav.nav_x_packed >> 15) & 1);
-    g_content_view_y = nav_y - (g_menu_content_height - 12);
-    if (g_content_view_y < 12)
+    nav_hi = active_node->idx_nav.nav_x_packed >> 15;
+    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | nav_hi;
+    view_top = g_menu_content_height - 12;
+    *view_y = nav_y - view_top;
+    if (*view_y < 12)
     {
-        g_content_view_y = 12;
+        *view_y = 12;
     }
-    if (g_content_view_y >= 0xA3)
+    if (*view_y >= 0xA3)
     {
-        g_content_view_y = 0xA3;
+        *view_y = 0xA3;
     }
     g_menu_suppress_cursor = 5;
     g_content_view_x = (((u16)active_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
@@ -3586,81 +3611,104 @@ s32 func_80145310(void)
  * @note  Scans 11 s32 slots at g_pad_ctx + 0x34, 24 bits each (bits 0-23).
  *        The first match index defaults to 0 when the 0xFF sentinel is never
  *        cleared (no slot matched).
- * @see decomp.me TODO
+ * @note  Shapes required to match, all register-allocation levers:
+ *        - `j` is ONE variable doing double duty: the inner bit counter, and then the
+ *          index of the list-building loop. The two uses are disjoint and the original
+ *          shares a2 between them; giving them separate variables costs 2% and cannot
+ *          be recovered by any priority tweak.
+ *        - `sentinel` holds a second copy of 0xFF so the in-loop test compares against
+ *          a live register (bne t2, t3) instead of an immediate; the later test against
+ *          0xFF does use an immediate.
+ *        - `word = *p;` must be assigned BETWEEN `mask` and `j` so the `j` init lands in
+ *          the load-delay slot of the lw.
+ *        - The list loop is identical to the one in func_8014551C; see its notes for the
+ *          split `x = a & M; x = x | b;` pairs and the copy through `link`.
+ * @see decomp.me (100%) TODO
  */
 s32 func_801453F0(void)
 {
-    s32* temp_t0;
-    s32 temp_a0;
-    s32 temp_a1;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a0;
-    s32 var_a1;
-    s32 var_a2;
-    s32 var_a2_2;
-    s32 var_t1;
-    s32 var_t2;
-    s32 var_v1;
-    s32 var_v1_2;
-    s32* var_a3;
+    s32 i;
+    s32 j;
+    s32 prev;
+    s32 next;
+    s32 count;
+    s32 more;
+    s32 link;
+    s32 word_prev;
+    s32 found;
+    s32 sentinel;
+    s32 mask;
+    s32 word;
+    s32* p;
 
-    var_t1 = 0;
-    var_t2 = 0xFF;
-    var_a0 = 0;
-    var_a3 = (s32*)((u8*)g_pad_ctx + 0x34);
+    count = 0;
+    found = 0xFF;
+    i = 0;
+    sentinel = found;
+    p = (s32*)((u8*)g_pad_ctx + 0x34);
     do
     {
-        var_v1 = 1;
-        var_a2 = 0x17;
+        mask = 1;
+        word = *p;
+        j = 0x17;
+
         do
         {
-            if (*var_a3 & var_v1)
+            if ((word & mask) != 0)
             {
-                if ((var_a0 == (((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F)) && (var_t2 == 0xFF))
+                if ((i == (s32)(((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F)) && (found == sentinel))
                 {
-                    var_t2 = var_t1;
+                    found = count;
                 }
-                var_t1 += 1;
+                count += 1;
             }
-            var_a2 -= 1;
-            var_v1 *= 2;
-        } while (var_a2 >= 0);
-        var_a0 += 1;
-        var_a3 += 1;
-    } while (var_a0 < 0xB);
-    if (var_t2 == 0xFF)
+            j -= 1;
+            mask = mask * 2;
+        } while (j >= 0);
+        i += 1;
+        p += 1;
+    } while (i < 0xB);
+
+    if (found == 0xFF)
     {
-        var_t2 = 0;
+        found = 0;
     }
+
     D_80168C70 = (void*)0;
-    var_a2_2 = 0;
-    if (var_t1 > 0)
+
+    j = 0;
+    if (count > 0)
     {
         do
         {
-            temp_t0 = (s32*)&D_80168C70 + var_a2_2;
-            var_a1 = var_a2_2 - 1;
-            temp_v1 = (*temp_t0 & ~0x3FFF) | ((var_a2_2 * 0x10) & 0x3FFF);
-            *temp_t0 = temp_v1;
-            if (var_a1 < 0)
+            s32* slot = (s32*)&D_80168C70 + j;
+            s32 cur = *slot;
+            s32 word_self;
+
+            prev = j - 1;
+            link = cur & ~0x3FFF;
+            link = link | ((j * 0x10) & 0x3FFF);
+            word_self = link;
+            *slot = word_self;
+            if (prev < 0)
             {
-                var_a1 = var_t1 - 1;
+                prev = count - 1;
             }
-            temp_a0 = (temp_v1 & 0xFF803FFF) | ((var_a1 & 0x1FF) << 0xE);
-            *temp_t0 = temp_a0;
-            temp_a1 = var_a2_2 + 1;
-            temp_a3 = temp_a1 < var_t1;
-            var_v1_2 = 0;
-            if (temp_a3 != 0)
+            word_prev = word_self & 0xFF803FFF;
+            word_prev = word_prev | ((prev & 0x1FF) << 14);
+            *slot = word_prev;
+            next = j + 1;
+            more = next < count;
+            link = 0;
+            if (more != 0)
             {
-                var_v1_2 = temp_a1;
+                link = next;
             }
-            *temp_t0 = (temp_a0 & 0x7FFFFF) | (var_v1_2 << 0x17);
-            var_a2_2 = temp_a1;
-        } while (temp_a3 != 0);
+            *slot = (word_prev & 0x7FFFFF) | (link << 23);
+            j = next;
+        } while (more != 0);
     }
-    return var_t1 | (var_t2 << 0x10);
+    return count | (found << 16);
 }
 
 /**
@@ -3672,66 +3720,87 @@ s32 func_801453F0(void)
  * @return Number of matching entries (and entries initialized in D_80168C70).
  * @note  Scans up to 100 entries; stops early on the first entry whose byte
  *        at offset 0 is 0 (sentinel / end-of-list marker).
- * @see decomp.me TODO
+ * @note  Three shapes are required to match, all of them register-allocation levers
+ *        (the instruction sequence is otherwise identical either way):
+ *        - `active` is declared INSIDE the do-while body. That block emits a
+ *          NOTE_INSN_BLOCK_BEG which stops expand_end_loop (gcc 2.7.2 stmt.c) from
+ *          rotating the loop; hoisting it duplicates the exit test (+4 insns).
+ *        - `link` doubles as the scratch for the first packed word, and each word is
+ *          built with a split `x = a & M; x = x | b;` pair rather than one expression.
+ *          MIPS defines no REG_ALLOC_ORDER, so GCC allocates ascending (v0, v1, a0...)
+ *          and the split makes each word's live range start at the AND, which is what
+ *          forces word_prev out of v0/v1 and into a0. Merging either pair into a single
+ *          expression re-colors the whole loop.
+ *        - `prev` and `next` are separate variables (they share a1 only because their
+ *          live ranges are disjoint); merging them into one inflates its ref count and
+ *          steals a0.
+ * @see decomp.me (100%) TODO
  */
 s32 func_8014551C(s32 arg0)
 {
-    s32* temp_t0;
-    s32 temp_a0;
-    s32 temp_a1;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a1;
-    s32 var_a2;
-    s32 var_a2_2;
-    s32 var_t1;
-    s32 var_v1_2;
-    u8* var_v1;
+    s32 i;
+    s32 prev;
+    s32 next;
+    s32 count;
+    s32 more;
+    s32 link;
+    s32 word_prev;
+    u8* entry;
 
-    var_a2 = 0;
-    var_t1 = 0;
-    var_v1 = (u8*)g_pad_ctx + 0xCE0;
+    i = 0;
+    count = 0;
+    entry = (u8*)g_pad_ctx + 0xCE0;
     do
     {
-        if (*var_v1 == 0)
+        u8 active = entry[0];
+
+        if (active == 0)
         {
             break;
         }
-        if ((((u32) * (s32*)(var_v1 + 0x14) >> 8) & 3) == (u32)arg0)
+        if ((((u32) * (s32*)(entry + 0x14) >> 8) & 3) == (u32)arg0)
         {
-            var_t1 += 1;
+            count += 1;
         }
-        var_a2 += 1;
-        var_v1 += 0x40;
-    } while (var_a2 < 0x64);
+        i += 1;
+        entry += 0x40;
+    } while (i < 0x64);
+
     D_80168C70 = (void*)0;
-    var_a2_2 = 0;
-    if (var_t1 > 0)
+
+    i = 0;
+    if (count > 0)
     {
         do
         {
-            temp_t0 = (s32*)&D_80168C70 + var_a2_2;
-            var_a1 = var_a2_2 - 1;
-            temp_v1 = (*temp_t0 & ~0x3FFF) | ((var_a2_2 * 0x10) & 0x3FFF);
-            *temp_t0 = temp_v1;
-            if (var_a1 < 0)
+            s32* slot = (s32*)&D_80168C70 + i;
+            s32 cur = *slot;
+            s32 word_self;
+
+            prev = i - 1;
+            link = cur & ~0x3FFF;
+            link = link | ((i * 0x10) & 0x3FFF);
+            word_self = link;
+            *slot = word_self;
+            if (prev < 0)
             {
-                var_a1 = var_t1 - 1;
+                prev = count - 1;
             }
-            temp_a0 = (temp_v1 & 0xFF803FFF) | ((var_a1 & 0x1FF) << 0xE);
-            *temp_t0 = temp_a0;
-            temp_a1 = var_a2_2 + 1;
-            temp_a3 = temp_a1 < var_t1;
-            var_v1_2 = 0;
-            if (temp_a3 != 0)
+            word_prev = word_self & 0xFF803FFF;
+            word_prev = word_prev | ((prev & 0x1FF) << 14);
+            *slot = word_prev;
+            next = i + 1;
+            more = next < count;
+            link = 0;
+            if (more != 0)
             {
-                var_v1_2 = temp_a1;
+                link = next;
             }
-            *temp_t0 = (temp_a0 & 0x7FFFFF) | (var_v1_2 << 0x17);
-            var_a2_2 = temp_a1;
-        } while (temp_a3 != 0);
+            *slot = (word_prev & 0x7FFFFF) | (link << 23);
+            i = next;
+        } while (more != 0);
     }
-    return var_t1;
+    return count;
 }
 /* ----- M2C macros required by func_80145608 ----- */
 typedef s32 M2C_UNK;
@@ -3745,6 +3814,7 @@ extern s32 D_80042FB4;
 extern u16 D_800F0C1C;
 extern M2C_UNK D_80105AE0;
 extern u8 D_8014FE4E;
+extern u8 D_8014FE2C[];
 extern u16 D_80151A34;
 extern u8 D_80168659[];
 extern u8 D_80168696[];
@@ -5226,7 +5296,9 @@ extern u8 D_800F0BEC[];
  * @note Iterates at most 4 entries (indices 0-3). An entry is skipped when its byte at offset 0 is zero.
  *       Bits 8-9 of unk14 select the table: set uses D_800F0BEC, clear uses D_800F0BE0. Bits 10-15 form
  *       the 6-bit index into whichever table is selected.
- * @see decomp.me TODO
+ * @note The index expression must be repeated in both arms rather than hoisted into a local:
+ *       hoisting it makes GCC compute the mask once before the branch and drops to 83%.
+ * @see decomp.me (100%) TODO
  */
 s32 func_8014824C(s32 arg0)
 {
@@ -5234,7 +5306,6 @@ s32 func_8014824C(s32 arg0)
     s32 result;
     u8* entry;
     u32 unk14;
-    u32 idx;
 
     result = 0;
     entry = (u8*)D_801693FC;
@@ -5244,14 +5315,13 @@ s32 func_8014824C(s32 arg0)
         if ((i != arg0) && (entry[0] != 0))
         {
             unk14 = *(u32*)(entry + 0x14);
-            idx = (unk14 >> 10) & 0x3F;
             if (unk14 & 0x300)
             {
-                result |= D_800F0BEC[idx];
+                result |= D_800F0BEC[(unk14 >> 10) & 0x3F];
             }
             else
             {
-                result |= D_800F0BE0[idx];
+                result |= D_800F0BE0[(unk14 >> 10) & 0x3F];
             }
         }
         i += 1;
@@ -5287,34 +5357,56 @@ void* func_801482D0(MenuPrimHead* prim, s32* ot)
  *       (the control byte followed by one parameter byte); all other non-zero bytes are single-byte codes.
  *       The function tail-calls itself in the original asm to loop, so the effective max depth is bounded
  *       by the stream lengths, not the call stack.
- * @see decomp.me TODO
+ * @note Two shapes are required to match. The scan variable must be u32, not u8: a u8 would make
+ *       GCC re-truncate it with an andi 0xff before the zero test, but the lbu already zero-extends.
+ *       And `ch` must be declared INSIDE each loop body: that block emits a NOTE_INSN_BLOCK_BEG,
+ *       which terminates the scan in expand_end_loop (gcc 2.7.2 stmt.c) before it finds a
+ *       conditional exit to roll to the bottom, so the loop is never rotated. Hoisting `ch` to
+ *       function scope lets GCC rotate the second loop's test to the bottom and drops this to 77%.
+ * @see decomp.me (100%) TODO
  */
 void func_80148324(u8* dst, u8* src1, u8* src2)
 {
-    u8 ch;
-
-    ch = *src1;
-    while (ch != 0)
+    for (;;)
     {
-        *dst++ = ch;
-        src1++;
-        if ((u32)(ch - 0x19U) < 7U)
+        u32 ch = *src1;
+
+        if (ch == 0)
         {
+            break;
+        }
+        if ((u32)(ch - 0x19) < 7)
+        {
+            *dst++ = ch;
+            src1++;
             *dst++ = *src1++;
         }
-        ch = *src1;
+        else
+        {
+            *dst++ = ch;
+            src1++;
+        }
     }
 
-    ch = *src2;
-    while (ch != 0)
+    for (;;)
     {
-        *dst++ = ch;
-        src2++;
-        if ((u32)(ch - 0x19U) < 7U)
+        u32 ch = *src2;
+
+        if (ch == 0)
         {
+            break;
+        }
+        if ((u32)(ch - 0x19) < 7)
+        {
+            *dst++ = ch;
+            src2++;
             *dst++ = *src2++;
         }
-        ch = *src2;
+        else
+        {
+            *dst++ = ch;
+            src2++;
+        }
     }
 
     *dst = 0;
@@ -5331,42 +5423,51 @@ extern s8 D_800F0C38[];
  * @return Signed byte from D_800F0C38 at the selected nibble index.
  * @note Cases 1, 4, and 6 load the nibble via byte/halfword access rather than the full word;
  *       this reflects the original compiler output and must be preserved for match work.
- * @see decomp.me TODO
+ * @note Two shapes are required to match. The word must NOT be hoisted into a local before the
+ *       switch -- each case reloads item+0x1C itself. And each shift/mask must be a separate
+ *       statement assigning back to `nibble`: written as one expression, GCC computes the shift in
+ *       a temp (v0) and only lands in the result register at the mask, whereas the original shifts
+ *       in place in the destination register.
+ * @see decomp.me (100%) TODO
  */
 s8 func_801483C4(void* item, u32 index, u32 fallback)
 {
     u32 nibble;
-    u32 word;
 
     nibble = fallback;
     if (index < 8U)
     {
-        word = *(u32*)((u8*)item + 0x1C);
         switch (index)
         {
         case 0:
-            nibble = word & 0xF;
+            nibble = *(u32*)((u8*)item + 0x1C) & 0xF;
             break;
         case 1:
-            nibble = *(u8*)((u8*)item + 0x1C) >> 4;
+            nibble = *(u8*)((u8*)item + 0x1C);
+            nibble = nibble >> 4;
             break;
         case 2:
-            nibble = (word >> 8) & 0xF;
+            nibble = *(u32*)((u8*)item + 0x1C) >> 8;
+            nibble = nibble & 0xF;
             break;
         case 3:
-            nibble = (word >> 12) & 0xF;
+            nibble = *(u32*)((u8*)item + 0x1C) >> 12;
+            nibble = nibble & 0xF;
             break;
         case 4:
-            nibble = *(u16*)((u8*)item + 0x1E) & 0xF;
+            nibble = *(u16*)((u8*)item + 0x1E);
+            nibble = nibble & 0xF;
             break;
         case 5:
-            nibble = (word >> 20) & 0xF;
+            nibble = *(u32*)((u8*)item + 0x1C) >> 20;
+            nibble = nibble & 0xF;
             break;
         case 6:
-            nibble = *(u8*)((u8*)item + 0x1F) & 0xF;
+            nibble = *(u8*)((u8*)item + 0x1F);
+            nibble = nibble & 0xF;
             break;
         case 7:
-            nibble = word >> 28;
+            nibble = *(u32*)((u8*)item + 0x1C) >> 28;
             break;
         }
     }
