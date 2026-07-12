@@ -27,15 +27,15 @@
  * character grid (11), which draws over the name strip (14).
  * @{
  */
-#define GNAME_OT_FRONT          0x00 /* fade overlay, scroll indicators, panel-tab sprite, label draw-mode */
-#define GNAME_OT_TEXT_CURSOR    0x08 /* text cursor glyph + DrawTPage */
-#define GNAME_OT_PANEL_LABEL    0x09 /* category-label sprite */
-#define GNAME_OT_CHAR_PANEL     0x0A /* scrolling character-panel grid */
-#define GNAME_OT_CHAR_GRID      0x0B /* character grid glyphs */
+#define GNAME_OT_FRONT 0x00            /* fade overlay, scroll indicators, panel-tab sprite, label draw-mode */
+#define GNAME_OT_TEXT_CURSOR 0x08      /* text cursor glyph + DrawTPage */
+#define GNAME_OT_PANEL_LABEL 0x09      /* category-label sprite */
+#define GNAME_OT_CHAR_PANEL 0x0A       /* scrolling character-panel grid */
+#define GNAME_OT_CHAR_GRID 0x0B        /* character grid glyphs */
 #define GNAME_OT_CHAR_APPEND_ANIM 0x0C /* character-append animation glyphs */
-#define GNAME_OT_CHAR_APPEND    0x0D /* static append glyph + draw-mode */
-#define GNAME_OT_NAME_STRIP     0x0E /* name strip (entered-name display) */
-#define GNAME_OT_NAME_CURSOR    0x0F /* name-entry cursor row */
+#define GNAME_OT_CHAR_APPEND 0x0D      /* static append glyph + draw-mode */
+#define GNAME_OT_NAME_STRIP 0x0E       /* name strip (entered-name display) */
+#define GNAME_OT_NAME_CURSOR 0x0F      /* name-entry cursor row */
 /** @} */
 
 /**
@@ -60,7 +60,7 @@
  * glyph-by-glyph) and treats both ASCII space (0x20) and wide-space
  * sentinel (0x80) as blank.
  */
-#define CHAR_SPACE      0x20 /**< ASCII space; blank glyph in name buffers. */
+#define CHAR_SPACE 0x20      /**< ASCII space; blank glyph in name buffers. */
 #define CHAR_WIDE_SPACE 0x80 /**< Wide-space sentinel byte; also blank. */
 
 /* True if byte is a custom 2-byte DBCS-style lead byte */
@@ -91,8 +91,7 @@
  * Full input mask passed to handle_char_set_input each frame: all four
  * D-pad directions plus the confirm pair.
  */
-#define GNAME_BTN_NAV_MASK \
-    (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT | GNAME_BTN_CONFIRM)
+#define GNAME_BTN_NAV_MASK (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT | GNAME_BTN_CONFIRM)
 
 /*
  * Character-set navigation mode values stored in g_char_set_mode and
@@ -102,19 +101,19 @@
  *   4-7  : character-panel selector tabs (panel N at mode 4+N)
  *   0x10 : in-grid character cursor
  */
-#define GNAME_MODE_ACTION_OK       0    /* action bar: commit the name */
-#define GNAME_MODE_ACTION_DELETE   1    /* action bar: delete last character */
-#define GNAME_MODE_ACTION_RANDOM   2    /* action bar: fill with random name */
-#define GNAME_MODE_ACTION_DEFAULT  3    /* action bar: reset to default name */
-#define GNAME_MODE_PANEL_BASE      4    /* first char-panel tab; panel N is at 4+N */
-#define GNAME_MODE_GRID            0x10 /* in-grid character cursor mode */
+#define GNAME_MODE_ACTION_OK 0      /* action bar: commit the name */
+#define GNAME_MODE_ACTION_DELETE 1  /* action bar: delete last character */
+#define GNAME_MODE_ACTION_RANDOM 2  /* action bar: fill with random name */
+#define GNAME_MODE_ACTION_DEFAULT 3 /* action bar: reset to default name */
+#define GNAME_MODE_PANEL_BASE 4     /* first char-panel tab; panel N is at 4+N */
+#define GNAME_MODE_GRID 0x10        /* in-grid character cursor mode */
 
 /* Sentinel for g_cursor_tab meaning "no tab/grid cell selected". */
 #define GNAME_TAB_NONE 0xFF
 
 /* g_overlay_result values: how the overlay finished, read by the caller. */
-#define GNAME_RESULT_CANCEL  2  /* cancelled with an empty name (when allowed) */
-#define GNAME_RESULT_CONFIRM 5  /* name committed; advance to the next overlay stage */
+#define GNAME_RESULT_CANCEL 2  /* cancelled with an empty name (when allowed) */
+#define GNAME_RESULT_CONFIRM 5 /* name committed; advance to the next overlay stage */
 
 /* Frame count seeded into g_strip_width_steps to start a name-strip width lerp. */
 #define NAME_STRIP_LERP_STEPS 5
@@ -123,33 +122,34 @@
 #define APPEND_ANIM_TIMER_START 2
 
 /* g_name_source_mode values: selects which name is pasted on Random/Default action. */
-#define GNAME_SRC_CUSTOM       1  /* use g_custom_name_buf */
-#define GNAME_SRC_HISTORY      3  /* pick from g_history_names_off via g_history_name_idx */
-#define GNAME_SRC_RAND_PRIMARY 4  /* random entry from g_random_names_off primary index table */
-#define GNAME_SRC_RAND_ALT     5  /* random entry from g_random_names_off alternate offset table */
+#define GNAME_SRC_CUSTOM 1       /* use g_custom_name_buf */
+#define GNAME_SRC_HISTORY 3      /* pick from g_history_names_off via g_history_name_idx */
+#define GNAME_SRC_RAND_PRIMARY 4 /* random entry from g_random_names_off primary index table */
+#define GNAME_SRC_RAND_ALT 5     /* random entry from g_random_names_off alternate offset table */
 
 /* Maximum number of logical characters allowed in a name (distinct from
  * NAME_GRID_CHARS_PER_ROW, which is the grid display width). */
-#define NAME_MAX_CHARS  10
+#define NAME_MAX_CHARS 10
 
 /* Sound effect IDs passed as the first argument to play_menu_sfx. */
-#define GNAME_SFX_ERROR   0x78  /* error: name is full, blank, or action is invalid */
-#define GNAME_SFX_MOVE    0x7D  /* cursor movement / navigation */
-#define GNAME_SFX_CONFIRM 0x7E  /* confirm / OK action */
-#define GNAME_SFX_CANCEL  0x7F  /* cancel / back action */
-#define GNAME_SFX_VOLUME  0x80  /* default volume argument for play_menu_sfx */
+#define GNAME_SFX_ERROR 0x78   /* error: name is full, blank, or action is invalid */
+#define GNAME_SFX_MOVE 0x7D    /* cursor movement / navigation */
+#define GNAME_SFX_CONFIRM 0x7E /* confirm / OK action */
+#define GNAME_SFX_CANCEL 0x7F  /* cancel / back action */
+#define GNAME_SFX_VOLUME 0x80  /* default volume argument for play_menu_sfx */
 
 /* Character selection grid layout constants. */
-#define NAME_GRID_CHARS_PER_ROW  10  /**< Characters per row in the grid. */
-#define NAME_GRID_CELL_SIZE      16  /**< Pixel width and height of each grid cell (0x10). */
-#define NAME_GRID_X_BASE         84  /**< Pixel X of the leftmost grid column (0x54). */
-#define NAME_GRID_Y_TOP         104  /**< Pixel Y of the top of the visible grid area (0x68). */
-#define NAME_GRID_Y_BOTTOM      168  /**< Pixel Y of the bottom clamp (0xA8). */
-#define NAME_GRID_SCROLL_STEP    64  /**< Scroll delta per step: 4 rows * 16 px/row (0x40). */
-#define NAME_GRID_VRAM_X        0x60 /**< VRAM X of the grid area upload rect (96 px). */
-#define NAME_GRID_VRAM_W        0xA0 /**< Width of the grid area upload rect (160 px). */
-#define NAME_GRID_VIS_HEIGHT    0x50 /**< Visible grid height in pixels: 5 rows * 16 (80 px). */
-#define NAME_GRID_OVERSCAN      0x0B /**< Rows partly above the window are still drawn down to y = -11. */
+#define NAME_GRID_CHARS_PER_ROW 10 /**< Characters per row in the grid. */
+#define NAME_GRID_CELL_SIZE 16     /**< Pixel width and height of each grid cell (0x10). */
+#define NAME_GRID_X_BASE 84        /**< Pixel X of the leftmost grid column (0x54). */
+#define NAME_GRID_Y_TOP 104        /**< Pixel Y of the top of the visible grid area (0x68). */
+#define NAME_GRID_Y_BOTTOM 168     /**< Pixel Y of the bottom clamp (0xA8). */
+#define NAME_GRID_SCROLL_STEP 64   /**< Scroll delta per step: 4 rows * 16 px/row (0x40). */
+#define NAME_GRID_VRAM_X 0x60      /**< VRAM X of the grid area upload rect (96 px). */
+#define NAME_GRID_VRAM_W 0xA0      /**< Width of the grid area upload rect (160 px). */
+#define NAME_GRID_VIS_HEIGHT 0x50  /**< Visible grid height in pixels: 5 rows * 16 (80 px). */
+#define NAME_GRID_OVERSCAN 0x0B    /**< Rows partly above the window are still drawn down to y = -11. */
+#define CHAR_PANEL_KANJI 4         /**< g_char_panel value selecting the kanji picker. */
 
 /**
  * @brief True when a glyph drawn at screen Y @p y falls inside the scrolling
@@ -158,20 +158,19 @@
  * The single unsigned compare (rather than two signed ones) is what the
  * original emits, so the biased form is required to match.
  */
-#define NAME_GRID_ROW_VISIBLE(y) \
-    (((u32)((y) + NAME_GRID_OVERSCAN)) <= (NAME_GRID_VIS_HEIGHT + NAME_GRID_OVERSCAN - 1))
+#define NAME_GRID_ROW_VISIBLE(y) (((u32)((y) + NAME_GRID_OVERSCAN)) <= (NAME_GRID_VIS_HEIGHT + NAME_GRID_OVERSCAN - 1))
 
 /* FadeState channel sentinels. Channels run 0 (fully dark) up to
  * FADE_CHAN_NEUTRAL (identity, no tint). Values >= FADE_CHAN_ADDITIVE
  * select additive blend; values below select subtractive. */
-#define FADE_CHAN_NEUTRAL   0x100
-#define FADE_CHAN_ADDITIVE  0x101
+#define FADE_CHAN_NEUTRAL 0x100
+#define FADE_CHAN_ADDITIVE 0x101
 
 /* tpage arguments for the blend-mode DR_TPAGE emitted by render_fade_overlay.
  * The tile is flat-colored so only the abr bits matter; x=320 is the
  * right-half VRAM column used as the tpage base. */
-#define FADE_TPAGE_ADD  0x25 /* getTPage(0, 1, 320, 0) - abr=1: Back + Front */
-#define FADE_TPAGE_SUB  0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
+#define FADE_TPAGE_ADD 0x25 /* getTPage(0, 1, 320, 0) - abr=1: Back + Front */
+#define FADE_TPAGE_SUB 0x45 /* getTPage(0, 2, 320, 0) - abr=2: Back - Front */
 
 /* tpage for the overlay's 4-bit glyph/font texture (cursor, text, DrawMode
  * packets). getTPage(0, 0, 320, 0): 4-bit CLUT, abr=0, VRAM page at x=320. */
@@ -324,7 +323,8 @@ typedef struct
  * @c (word >> 8) & 0xFE (= @c sprite_idx * 2); a bitfield read would compile
  * to @c srl 9 / @c andi 0x7F / @c sll 1 and break the match.
  */
-typedef struct {
+typedef struct
+{
     unsigned int x : 9;
     unsigned int sprite_idx : 7;
     u8 y;
@@ -404,7 +404,7 @@ typedef struct
 
 /* --- Data-blob globals (raw bytes in the gname_data databin) --- */
 extern u8 g_char_append_anim[]; /* AppendAnimFrame[APPEND_ANIM_FRAME_COUNT]; declared as u8[] for byte-level accesses */
-extern Tim g_name_entry_tim; /* glyph TIM blob; Tim covers the fixed header + CLUT, pixel block follows */
+extern Tim g_name_entry_tim;    /* glyph TIM blob; Tim covers the fixed header + CLUT, pixel block follows */
 extern GlyphSeqEntry g_name_cursor_glyphs[];
 
 /* --- Overlay .bss scratch globals -------------------------------------------
@@ -1053,7 +1053,7 @@ static void gname_update_state(void)
         }
 
         /* reject */
-        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME); 
+        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
     }
 }
 
@@ -1473,7 +1473,7 @@ static void gname_process_input(void)
 
     g_cursor_tab = GNAME_TAB_NONE;
     nav_input = g_pad_input & GNAME_BTN_NAV_MASK;
-    
+
     if (nav_input != 0)
     {
         g_char_set_mode = handle_char_set_input(g_char_set_mode, nav_input);
@@ -1897,12 +1897,14 @@ static void render_char_panel(RenderContext* ctx, s32 panel_idx)
     s32 row;
     s32 screen_y;
     s32 entry_end;
+    u8* pkt;
+    u32 grid_vram_y;
     ot_ptr = (u32*)&ctx->ot[GNAME_OT_CHAR_PANEL];
     prim = ctx->prim_cursor;
     SetDrawEnv(prim, (DRAWENV*)(((s32)g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE)) + DRAW_BUF_DRAWENV_OFF));
     addPrim(ot_ptr, prim);
     write_cur = prim + (sizeof(DR_ENV));
-    if (g_char_panel == 4)
+    if (g_char_panel == CHAR_PANEL_KANJI)
     {
         glyph_base = KANJI_GLYPH_TBL;
         entry_idx = g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]];
@@ -1929,8 +1931,7 @@ static void render_char_panel(RenderContext* ctx, s32 panel_idx)
         entry_limit = entry_end;
         if (NAME_GRID_ROW_VISIBLE(screen_y))
         {
-            write_cur = func_800A88A0(write_cur, ot_ptr, (void*)TBL_ENTRY(glyph_base, entry_idx), 1,
-                                      col * NAME_GRID_CELL_SIZE, screen_y, 0);
+            write_cur = func_800A88A0(write_cur, ot_ptr, (void*)TBL_ENTRY(glyph_base, entry_idx), 1, col * NAME_GRID_CELL_SIZE, screen_y, 0);
         }
         entry_idx++;
         if (entry_limit == entry_idx)
@@ -1945,27 +1946,20 @@ static void render_char_panel(RenderContext* ctx, s32 panel_idx)
         }
     }
 
-    /* The packet pointer and its scope are required to match: declaring `pkt`
-       at the top of the function moves the stack-address materialization and
-       costs the match. */
+    pkt = grid_load_pkt;
+    g_char_last_row = row;
+    g_char_last_col = col;
+    prim = write_cur;
+    grid_vram_y = NAME_GRID_Y_TOP;
+    if (ctx->frame_parity != 0)
     {
-        u8* pkt = grid_load_pkt;
-        u32 grid_vram_y;
-
-        g_char_last_row = row;
-        g_char_last_col = col;
-        prim = write_cur;
-        grid_vram_y = NAME_GRID_Y_TOP;
-        if (ctx->frame_parity != 0)
-        {
-            grid_vram_y = 0x150;
-        }
-        SetDefDrawEnv(pkt, NAME_GRID_VRAM_X, grid_vram_y, NAME_GRID_VRAM_W, NAME_GRID_VIS_HEIGHT);
-        SetDrawEnv(prim, pkt);
-        addPrim(ot_ptr, prim);
-        prim += sizeof(DR_ENV);
-        ctx->prim_cursor = prim;
+        grid_vram_y = 0x150;
     }
+    SetDefDrawEnv(pkt, NAME_GRID_VRAM_X, grid_vram_y, NAME_GRID_VRAM_W, NAME_GRID_VIS_HEIGHT);
+    SetDrawEnv(prim, pkt);
+    addPrim(ot_ptr, prim);
+    prim += sizeof(DR_ENV);
+    ctx->prim_cursor = prim;
 }
 
 /**
