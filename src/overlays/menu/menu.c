@@ -1628,6 +1628,7 @@ void menu_node_tree_init(void)
     u8* new_var5;
     MenuNode* new_var2;
     int new_var7;
+    int new_var10;
     s32 var_t0_2;
     u8 new_var4;
     int new_var8;
@@ -1742,6 +1743,11 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].idx_nav.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
+        /* Empty conditional forces a basic-block boundary the compiler needs
+           to reproduce the target's scheduling here; required to match. */
+        if (1)
+        {
+        }
         g_menu_nodes[3].unk4 = 0x6F;
     }
     else
@@ -1838,9 +1844,9 @@ void menu_node_tree_init(void)
     g_menu_nodes[0x10].u2.unk2 = (u16)((g_menu_nodes[0x10].u2.unk2 & 0xFF6F) | 0x60);
     g_menu_nodes[0x10].u2.s.parent_idx = 0xF;
     g_menu_nodes[0x11].u2.unk2 = (u16)((g_menu_nodes[0x11].u2.unk2 & 0xFF6F) | 0x60);
-    g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
     new_var9 = g_menu_nodes[0x12].u2.unk2;
     temp_v0 = new_var9;
+    g_menu_nodes[0x11].u2.s.parent_idx = 0xF;
     *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = (u16)(temp_v0 & 0xFFFD);
     temp_v0_12 = temp_v0 & 0xFF3D;
     *((volatile u16*)(&g_menu_nodes[0x12].u2.unk2)) = temp_v0_12;
@@ -1987,10 +1993,12 @@ void menu_node_tree_init(void)
                 temp_a0 = var_a3 & 0xFFFF;
                 temp_a1 = var_a3 & 0x1FF;
                 var_a3 += MENU_ROW_HEIGHT;
+                new_var10 = (temp_a0 & 1) << 15;
+                new_var6 = (temp_a0 >> 1) & 0xFF;
                 var_a2->idx_nav.nav_x_packed = (u16)(var_a2->idx_nav.nav_x_packed & 0x80FF);
                 var_a2->u8_u.nav_y_packed = (u16)(var_a2->u8_u.nav_y_packed & 0x80FF);
-                var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | ((temp_a0 >> 1) & 0xFF));
-                var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | ((temp_a0 & 1) << 15));
+                var_a2->uA.layout_child_packed = (u16)((var_a2->uA.layout_child_packed & 0xFF00) | new_var6);
+                var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0x7FFF) | new_var10);
                 var_a2->idx_nav.nav_x_packed = (u16)((var_a2->idx_nav.nav_x_packed & 0x7FFF) | ((temp_a1 & 1) << 15));
                 var_a2->u8_u.nav_y_packed = (u16)((var_a2->u8_u.nav_y_packed & 0xFF00) | (temp_a1 >> 1));
             }
