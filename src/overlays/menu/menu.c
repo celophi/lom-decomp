@@ -6487,7 +6487,7 @@ typedef struct
     u16 item_count; /* 0x06 - total items; lower 9 bits active (& 0x1FF) */
     u16 base_x;     /* 0x08 - widget screen base x */
     u16 base_y;     /* 0x0A - widget screen base y */
-    s16 unk_0C;     /* 0x0C - TODO: used in func_8014A044 x-lerp target calc */
+    s16 viewport_w; /* 0x0C - visible list width */
     s16 viewport_h; /* 0x0E - visible list height; (viewport_h - 16) >> 4 = fast-scroll step */
     u16 scroll_x;   /* 0x10 - current applied x scroll offset */
     u16 scroll_y;   /* 0x12 - current applied y scroll offset */
@@ -6571,4 +6571,41 @@ void scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entrie
     func_8014A10C(prim_buf, ot, (4 - view_origin->x) - state->scroll_x, ((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y, active);
     g_menu_default_view_pos.x = (state->base_x + ((4 - (view_origin->x & 0xFFFFFFFF)) - state->scroll_x)) + 8;
     g_menu_default_view_pos.y = (state->base_y + (((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y)) + 8;
+}
+
+/**
+ * @brief Recompute the scroll lerp targets so the selected list item is inside the viewport.
+ *
+ * Clamps the x scroll to a 4..(viewport_w - 0x20) band, then clamps the y scroll so the
+ * selected entry's item position (low 14 bits of its packed linked-list word) is visible.
+ * Restarts the 4-step scroll interpolation either way.
+ *
+ * @param state   Scroll-list state block to update.
+ * @param entries Packed circular linked-list entry array; bits [13:0] hold the item y position.
+ * @see decomp.me (100%) TODO
+ */
+void func_8014A044(ScrollListState* state, u32* entries)
+{
+    s32 item_y;
+
+    if (4 - state->scroll_x > state->viewport_w - 0x20)
+    {
+        state->target_x = -0x1C - state->viewport_w;
+    }
+    if (4 - state->scroll_x < 0)
+    {
+        state->target_x = 4;
+    }
+
+    if ((s32)((entries[state->sel_idx] & 0x3FFF) - state->scroll_y) > state->viewport_h - 0x20)
+    {
+        state->target_y = (entries[state->sel_idx] & 0x3FFF) - state->viewport_h + 0x20;
+    }
+
+    item_y = entries[state->sel_idx] & 0x3FFF;
+    if (item_y - state->scroll_y < 0)
+    {
+        state->target_y = item_y;
+    }
+    state->lerp_steps = 4;
 }
