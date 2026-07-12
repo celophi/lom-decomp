@@ -2513,7 +2513,7 @@ extern s32 g_menu_char_slot;
  *       compiler's register allocation exactly.
  * @see decomp.me (93.73%) https://decomp.me/scratch/UqSRu
  */
-void menu_set_active_node(void)
+void menu_set_active_node()
 {
     s32 node_idx;
     MenuNode* curr_node;
@@ -3753,6 +3753,7 @@ extern s32 D_80042FB4;
 extern u16 D_800F0C1C;
 extern M2C_UNK D_80105AE0;
 extern u8 D_8014FE4E;
+extern u8 D_8014FE2C[];
 extern u16 D_80151A34;
 extern u8 D_80168659[];
 extern u8 D_80168696[];
