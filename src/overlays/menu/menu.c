@@ -8711,7 +8711,7 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
  *       separate arms lets strength reduction derive two (0x50 + 64i and 64i), which is what
  *       the original does. The @c list / @c buf aliases defer the a1 and a2 entry copies so
  *       a3 is copied second, and @c slot_off is split out to fix the addu operand order.
- * @see decomp.me (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/JSzAG
  */
 s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
