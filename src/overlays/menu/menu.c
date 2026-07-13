@@ -7445,3 +7445,124 @@ s32 func_8014B7DC(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
     return prim_buf;
 }
+
+/**
+ * @brief Draw a character's equipment grid and handle its selection input.
+ *
+ * A sibling of @ref func_8014B7DC for the equipment page. Draws the scroll-list
+ * chrome, then walks a 16x8 grid of cells whose 4-bit kind codes are packed into
+ * one u32 per row in the word array at g_pad_ctx + 0x104 (low nibble first).
+ * A cell is present when its kind is >= 2; each present cell advances the running
+ * y position by 16 and, when it falls inside the viewport, is drawn as a glyph via
+ * @ref func_800A88A0. Cells with kind >= 8 additionally get an overlay icon
+ * (0x70 for kind >= 0xF, 0x69 otherwise) drawn by @ref func_80149BB4, followed by
+ * a one-word Draw Mode Setting primitive (GP0 0xE1000005) linked into the OT.
+ * The cell whose row matches the list's selection is remembered in @c sel and,
+ * when the page is active, points @c g_menu_pending_overlay at its description entry.
+ *
+ * On cancel (pad bit 0x40) the page plays a sound and calls @ref func_8014519C.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this grid.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x20 - x, rel_y - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note Three shapes are required to match. @c list aliases @c state (as in
+ *       func_8014B7DC) so the parameter gets its own spill slot at 0x28 rather
+ *       than its incoming home slot. The two icon calls must be written out
+ *       separately per arm - hoisting the id into a variable and making one call
+ *       loses the cross-jumped tail GCC emits here. And the row index must be
+ *       @c row << 2, not @c row * 4: the shift form gives the address add its
+ *       (pointer, index) operand order, which is what puts g_pad_ctx in v0.
+ * @see decomp.me (100%)
+ */
+s32 func_8014BA58(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    ScrollListState* list;
+    u32 scroll_y;
+    s32 sel;
+    s32 row;
+    s32 col;
+    s32 y;
+    s32 rel_y;
+    s32 kind;
+    u32 word;
+    void* base;
+    void* sel_base;
+    DR_TPAGE* tp;
+
+    list = state;
+
+    prim_buf = scroll_list_draw(prim_buf, ot, list, &D_80168C70, view_origin, active);
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(0x7F, 0x80);
+        func_8014519C();
+        g_pad_input = 0;
+    }
+
+    y = 0;
+    scroll_y = list->scroll_y;
+    sel = -1;
+    row = 0;
+
+    do
+    {
+        col = 0;
+        word = *(u32*)((u8*)g_pad_ctx + (row << 2) + 0x104);
+        do
+        {
+            kind = word & 0xF;
+            if (kind >= 2)
+            {
+                rel_y = y - scroll_y;
+                if ((rel_y >= -0xF) && (rel_y < (list->viewport_h - 0x10)))
+                {
+                    base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x6C));
+                    prim_buf = func_800A88A0(prim_buf, ot,
+                                             (void*)((u8*)base + *(u16*)((u8*)base + (col * 2) + (row * 0x10))),
+                                             1, 0x20 - view_origin->x, rel_y - view_origin->y, 0);
+                    if (kind >= 8)
+                    {
+                        if (kind >= 0xF)
+                        {
+                            prim_buf = (s32)func_80149BB4((void*)prim_buf, ot, 0x70,
+                                                          0x10 - view_origin->x, rel_y - view_origin->y,
+                                                          0, 0, 0, 0);
+                        }
+                        else
+                        {
+                            prim_buf = (s32)func_80149BB4((void*)prim_buf, ot, 0x69,
+                                                          0x10 - view_origin->x, rel_y - view_origin->y,
+                                                          0, 0, 0, 0);
+                        }
+
+                        tp = (DR_TPAGE*)prim_buf;
+                        setlen(tp, 1);
+                        tp->code[0] = 0xE1000005;
+                        addPrim(ot, tp);
+                        prim_buf = (s32)(tp + 1);
+                    }
+                }
+                if (list->unk4 == (y >> 4))
+                {
+                    sel = col + (row * 8);
+                }
+                y += 0x10;
+            }
+            col += 1;
+            word >>= 4;
+        } while (col < 8);
+        row += 1;
+    } while (row < 0x10);
+
+    if ((active != 0) && (sel != -1))
+    {
+        sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x84));
+        g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+    }
+
+    return prim_buf;
+}
