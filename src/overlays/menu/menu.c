@@ -7661,3 +7661,106 @@ s32 func_8014BD48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
     return prim_buf;
 }
+
+/**
+ * @brief Draw a character's ability list and handle its selection input.
+ *
+ * Fourth sibling of @ref func_8014B7DC / @ref func_8014BA58 / @ref func_8014BD48.
+ * Draws the scroll-list chrome, then walks the 64-entry, 0xC-byte-stride record
+ * array at g_pad_ctx + 0x2F0. Bit 0 of each record's first byte marks the entry as
+ * present: it advances the running y position by 16 and, when it falls inside the
+ * viewport, is drawn as a glyph via @ref func_800A88A0. Bit 1 additionally draws
+ * marker icon 0x2C via @ref func_80149BB4, followed by a one-word Draw Mode Setting
+ * primitive (GP0 0xE1000005) linked into the OT. The entry whose row matches the
+ * list's selection is remembered in @c sel and, when the page is active, points
+ * @c g_menu_pending_overlay at its description entry.
+ *
+ * On cancel (pad bit 0x40) the page plays a sound and calls @ref func_8014519C.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this list.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x20 - x, rel_y - y) and
+ *                    the marker origin is (0x10 - x, rel_y - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note @c list aliases @c state, as in the other three pages: without the alias the
+ *       param stays in its incoming home slot (sp+0x5C) and @c sel takes s8, the
+ *       reverse of the original's "state in s8, sel spilled to sp+0x2C".
+ * @see decomp.me (100%)
+ */
+s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    u32 scroll_y;
+    s32 sel;
+    s32 idx;
+    s32 y;
+    s32 rel_y;
+    u8* item;
+    void* base;
+    void* sel_base;
+    DR_TPAGE* tp;
+    ScrollListState* list;
+
+    list = state;
+
+    prim_buf = scroll_list_draw(prim_buf, ot, list, &D_80168C70, view_origin, active);
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(0x7F, 0x80);
+        func_8014519C();
+        g_pad_input = 0;
+    }
+
+    y = 0;
+    sel = -1;
+    idx = 0;
+    item = (u8*)g_pad_ctx + 0x2F0;
+    scroll_y = list->scroll_y;
+
+    do
+    {
+        if (*item & 1)
+        {
+            rel_y = y - scroll_y;
+            if ((rel_y >= -0xF) && (rel_y < (list->viewport_h - 0x10)))
+            {
+                base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x18));
+                prim_buf = func_800A88A0(prim_buf, ot,
+                                         (void*)((u8*)base + *(u16*)((u8*)base + (idx * 2))),
+                                         1, 0x20 - view_origin->x, rel_y - view_origin->y, 0);
+                if (*item & 2)
+                {
+                    prim_buf = (s32)func_80149BB4((void*)prim_buf, ot, 0x2C,
+                                                  0x10 - view_origin->x, rel_y - view_origin->y,
+                                                  0, 0, 0, 0);
+
+                    tp = (DR_TPAGE*)prim_buf;
+                    setlen(tp, 1);
+                    tp->code[0] = 0xE1000005;
+                    addPrim(ot, tp);
+                    prim_buf = (s32)(tp + 1);
+                }
+            }
+            if (list->unk4 == (y >> 4))
+            {
+                sel = idx;
+            }
+            y += 0x10;
+        }
+        idx += 1;
+        item += 0xC;
+    } while (idx < 0x40);
+
+    if (sel != -1)
+    {
+        if (active != 0)
+        {
+            sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x14));
+            g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+        }
+    }
+
+    return prim_buf;
+}
