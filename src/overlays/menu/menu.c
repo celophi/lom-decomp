@@ -8711,7 +8711,7 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
  *       separate arms lets strength reduction derive two (0x50 + 64i and 64i), which is what
  *       the original does. The @c list / @c buf aliases defer the a1 and a2 entry copies so
  *       a3 is copied second, and @c slot_off is split out to fix the addu operand order.
- * @see decomp.me (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/JSzAG
  */
 s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
@@ -8826,7 +8826,7 @@ s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
  * @return 1 as soon as a byte differs; 0 if all 0x40 bytes are equal.
  * @note Callers use a non-zero result as "this slot holds a real item", i.e. the
  *       record is not the default entry.
- * @see decomp.me (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/Jm6yb
  */
 s32 func_8014DE1C(s32 arg0)
 {
@@ -8836,17 +8836,14 @@ s32 func_8014DE1C(s32 arg0)
 
     item = (u8*)arg0;
     cmp = D_800F0BF8;
-    i = 0;
-    do
+    
+    for (i = 0; i < 0x40; i++, cmp++, item++)
     {
         if (*cmp != *item)
         {
             return 1;
         }
-        i += 1;
-        cmp += 1;
-        item += 1;
-    } while (i < 0x40);
+    } 
 
     return 0;
 }
@@ -8882,19 +8879,17 @@ void func_8014DE5C(s32 arg0, s32 arg1)
  * @note The call site in @ref menu_update_slots passes an argument that this
  *       function ignores, so no prototype is declared for it - the implicit
  *       declaration at that call site is what the original codegen relies on.
- * @see decomp.me (100%)
+ * @see decomp.me (100%) https://decomp.me/scratch/7whwm
  */
 void func_8014DEB0(void)
 {
     s32 i;
 
-    i = 0;
-    do
+    for (i = 0; i < 4; i++)
     {
         if (g_menu_slots[i].active != 0)
         {
             g_active_slot = i;
         }
-        i += 1;
-    } while (i < 4);
+    } 
 }
