@@ -7190,3 +7190,125 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
     }
     return buf;
 }
+
+/**
+ * @brief Clear the four "pending" character-status bytes for the active character slot.
+ *
+ * Walks the 4-byte status array at offset 0x60C of the active slot in @c g_pad_ctx.
+ * A byte is reset to 0xFF unless it is already 0xFF or has bit 7 set (locked/held).
+ *
+ * @return 1 if at least one byte was reset, 0 if none were.
+ * @see decomp.me (100%)
+ */
+s32 func_8014B628(void)
+{
+    s32 changed;
+    s32 i;
+
+    changed = 0;
+    for (i = 0; i < 4; i++)
+    {
+        u8* p = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + i;
+
+        if (p[0x60C] != 0xFF)
+        {
+            if ((p[0x60C] & 0x80) == 0)
+            {
+                p[0x60C] = 0xFF;
+                changed = 1;
+            }
+        }
+    }
+    return changed;
+}
+
+/** @brief Index of the item the table scan is currently parked on. */
+extern u32 D_801690F0;
+/** @brief Item kind the table scan is looking for (0, 1 or 2). */
+extern s32 D_80169414;
+
+/** @brief One 0x40-byte menu item entry in the item table at g_pad_ctx + 0xCE0. */
+typedef struct
+{
+    u8 flag;   /* 0x00: 0 = empty slot */
+    u8 pad01[0x13];
+    u32 attr;  /* 0x14: bits [9:8] select the item kind */
+    u8 pad18[0x28];
+} MenuItemEntry;
+
+/**
+ * @brief Scan the item table for the next entry whose kind matches D_80169414.
+ *
+ * Walks the 0x64-entry item table at g_pad_ctx + 0xCE0 starting at
+ * D_801690F0 + step and stepping by @p step until the index leaves [0, 0x64)
+ * (the compare is unsigned, so a -1 step exits by wrapping). The first
+ * non-empty entry whose kind - bits [9:8] of @c attr - equals D_80169414 wins:
+ * D_801690F0 is parked on it, g_menu_item_ptr is set, and the entry is also
+ * cached in the per-kind global (0 -> D_80169410, 1 -> D_80169404,
+ * 2 -> D_80169408). If nothing matched, D_801690F0 wraps to the far end and the
+ * scan recurses once so the search continues from the other side.
+ *
+ * @param step Direction/stride to walk the table (1 = forward, -1 = backward).
+ * @return Index of the matching entry, or the value of g_menu_item_ptr from the
+ *         recursive wrap-around scan.
+ * @note Not yet matching. The residual gap is register allocation around the two
+ *       induction variables (the item address and the byte offset used for
+ *       g_menu_item_ptr); the loop structure, strength reduction and instruction
+ *       count (80) already agree with the target.
+ * @see decomp.me (85.62%)
+ */
+u32 func_8014B69C(s32 step)
+{
+    MenuItemEntry* items;
+    u32 index;
+    s32 kind;
+    u32 found;
+    u32 result;
+
+    g_menu_item_ptr = 0;
+    index = D_801690F0 + step;
+    items = (MenuItemEntry*)((u8*)g_pad_ctx + 0xCE0);
+
+    while (index < 0x64U)
+    {
+        if (items[index].flag != 0)
+        {
+            kind = (items[index].attr >> 8) & 3;
+            if (kind == D_80169414)
+            {
+                found = (u32)((u8*)g_pad_ctx + ((index << 6) + 0xCE0));
+                D_801690F0 = index;
+                g_menu_item_ptr = found;
+                switch (kind)
+                {
+                case 0:
+                    D_80169410 = found;
+                    break;
+                case 1:
+                    D_80169404 = found;
+                    break;
+                case 2:
+                    D_80169408 = found;
+                    break;
+                }
+                return index;
+            }
+        }
+        index += step;
+    }
+
+    result = g_menu_item_ptr;
+    if (result == 0)
+    {
+        if (step == 1)
+        {
+            D_801690F0 = -1;
+        }
+        else
+        {
+            D_801690F0 = 0x64;
+        }
+        result = func_8014B69C(step);
+    }
+    return result;
+}
