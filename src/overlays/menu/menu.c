@@ -6715,7 +6715,7 @@ extern s32 D_80169414;
 extern s32 D_8016951C[];
 extern s32 D_80169558;
 
-void func_8014C9B0(void);
+s32 func_8014C9B0(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
 void func_8014DA48(void);
 void func_800A8F8C(s32, s32);
 /** @note Empty parameter list (K&R) is intentional: func_8014C200 passes the slot
@@ -8052,5 +8052,93 @@ s32 func_8014C8C8(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
     buf = func_800A88A0(buf, ot, D_801690A8, 1, 0x88 - view_origin->x, -view_origin->y, 2);
     buf = func_800A88A0(buf, ot, D_801690E0, 1, 0x88 - view_origin->x, 0x10 - view_origin->y, 2);
+    return buf;
+}
+
+/**
+ * @brief Draws a two-glyph scroll-list page and handles its cancel/confirm input.
+ *
+ * On cancel (pad bit 0x40) the page plays the close SE and asks for a state change,
+ * then still draws. On confirm (pad bits 0x220) it plays the navigate SE and takes one
+ * of two paths, drawing nothing either way: if a row is selected (@c unk4 != 0) it
+ * closes the page and clears the pending item, marking @ref D_80169558 as "no row";
+ * otherwise it descends to the next scene node -- bumps @ref g_menu_scene_type, clears
+ * the four menu slots, re-runs the hit test, and parks the content cursor on the hit
+ * item's position. With no input it draws the list chrome plus the two glyphs at
+ * tail offsets 0x88 and 0x8A.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this page.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origins are (0x30 - x, N - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note Four shapes are required to match. @c pos (never read) restores the 0x40 frame
+ *       and @c buf aliases @c prim_buf to defer that parameter's entry copy -- the same
+ *       pair @ref func_8014C820 needs. The slot-clear loop must be written indexed
+ *       (@c g_menu_slots[i].active), not as a hand-rolled @c s8* walk: only then is the
+ *       0x24-stride pointer a strength-reduced induction register, which is allocated
+ *       after the plain pseudos and leaves a0 for @c idx. And the item address must be
+ *       formed as @c (idx * 8) + (s32)tbl so the add's destination ties to the shifted
+ *       index rather than to the loaded table base.
+ * @see decomp.me (100%)
+ */
+s32 func_8014C9B0(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    MenuContentItem* item;
+    MenuContentItem* tbl;
+    ScrollListState* list;
+    Vec2s pos;
+    s32 i;
+    s32 buf;
+    s32 idx;
+
+    list = state;
+    buf = prim_buf;
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(MENU_SE_CLOSE, MENU_SE_VOLUME);
+        list->unk0 = 3;
+    }
+    else if ((g_pad_input & 0x220) && (active != 0))
+    {
+        func_8014F210(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+        if (list->unk4 != 0)
+        {
+            list->unk0 = 3;
+            *(u8*)g_menu_item_ptr = 0;
+            func_800A8FB4();
+            D_80169558 = 0xFF;
+        }
+        else
+        {
+            g_menu_scene_type += 1;
+            g_menu_active_node = g_menu_scene_type;
+            for (i = 3; i >= 0; i--)
+            {
+                g_menu_slots[i].active = 0;
+            }
+            idx = func_8014847C();
+            g_menu_hit_item_idx = idx;
+            if (idx != -1)
+            {
+                tbl = g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+                item = (MenuContentItem*)((idx * 8) + (s32)tbl);
+                g_content_view_x = item->packed_x & 0x1FF;
+                g_content_view_y = item->y - 8;
+                g_menu_suppress_cursor = 5;
+                g_menu_cursor_enable = 1;
+            }
+        }
+        return buf;
+    }
+
+    buf = scroll_list_draw(buf, ot, list, D_801690B8, view_origin, active);
+
+    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x88), 1,
+                        0x30 - view_origin->x, -view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x8A), 1,
+                        0x30 - view_origin->x, 0x10 - view_origin->y, 2);
     return buf;
 }
