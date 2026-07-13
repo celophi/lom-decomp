@@ -8816,3 +8816,37 @@ s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     g_pad_input = 0;
     return buf;
 }
+
+/**
+ * @brief Test whether an item record differs from the default/empty compare entry.
+ *
+ * Compares the 0x40-byte record at @p arg0 against @ref D_800F0BF8 byte by byte.
+ *
+ * @param arg0 Address of the 0x40-byte item record to test.
+ * @return 1 as soon as a byte differs; 0 if all 0x40 bytes are equal.
+ * @note Callers use a non-zero result as "this slot holds a real item", i.e. the
+ *       record is not the default entry.
+ * @see decomp.me (100%)
+ */
+s32 func_8014DE1C(s32 arg0)
+{
+    u8* item;
+    u8* cmp;
+    u32 i;
+
+    item = (u8*)arg0;
+    cmp = D_800F0BF8;
+    i = 0;
+    do
+    {
+        if (*cmp != *item)
+        {
+            return 1;
+        }
+        i += 1;
+        cmp += 1;
+        item += 1;
+    } while (i < 0x40);
+
+    return 0;
+}
