@@ -6726,7 +6726,7 @@ extern s32 D_8016951C[];
 extern s32 D_80169558;
 
 s32 func_8014C9B0(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-void func_8014DA48(void);
+s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
 /** @note Empty parameter list (K&R) is intentional: most call sites pass (handle, addr),
  *        but func_8014CC08 has sites that pass the address alone. */
 void func_800A8F8C();
@@ -8128,6 +8128,8 @@ s32 func_8014C9B0(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 /* Globals and helpers used only by func_8014CC08. */
 extern u8 D_8016869B[];
 extern u8 D_800F0BF8[];
+/** @brief The u32 at D_800F0BF8 + 0x14; the item-kind word of the default compare entry. */
+extern u32 D_800F0C0C;
 s32 func_8014EB4C();
 s32 func_8014EDEC();
 
@@ -8677,5 +8679,140 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                              0x30 - view_origin->x, 0x30 - view_origin->y, 2);
     buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x86), 1,
                              0x30 - view_origin->x, 0x40 - view_origin->y, 2);
+    return buf;
+}
+
+/**
+ * @brief Content callback for the item-compare window opened by @ref func_8014CC08.
+ *
+ * With no confirm/cancel input pending it just draws: the scroll list over
+ * @ref D_801690B8 plus the two label strings at state-table indices 0x90 and 0x92.
+ *
+ * When a confirm/cancel button is down (@c 0x260) and the window is active it closes the
+ * comparison instead. If the list has a selection (or Circle was pressed) it walks the four
+ * compare slots: each occupied slot with item data is committed via @ref func_8014DE5C, an
+ * empty slot 0 hands its item back and re-registers the default entry (@ref D_800F0BF8),
+ * and an empty slot i > 0 hands its item back and clears the slot byte. Otherwise it
+ * cancels, and if the pending item's kind field differs from the current one it reloads
+ * the node (@ref func_8014E3C4). Either way the four @ref g_item_slot_flags are cleared.
+ *
+ * @param ot          Ordering-table pointer.
+ * @param state       Scroll-list state for this window.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor in list-local coordinates.
+ * @param active      Non-zero when this window owns input.
+ * @return Updated primitive write cursor; the unchanged @p prim_buf on the close path.
+ *
+ * @note @c rect is deliberately unused: gcc 2.7.2 gives every declared aggregate a stack
+ *       slot even when it is never referenced, and those 8 dead bytes are what makes the
+ *       frame 0x50 rather than 0x48.
+ * @note @c off and @c row are NOT written out as locals on purpose. Naming @c i << 6 once
+ *       makes gcc build a single induction variable; leaving the two expressions inline in
+ *       separate arms lets strength reduction derive two (0x50 + 64i and 64i), which is what
+ *       the original does. The @c list / @c buf aliases defer the a1 and a2 entry copies so
+ *       a3 is copied second, and @c slot_off is split out to fix the addu operand order.
+ * @see decomp.me (100%)
+ */
+s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    u16 rect[4];
+    ScrollListState* list;
+    s32 i;
+    s32 item;
+    s32 slot_off;
+    s32 buf;
+
+    list = state;
+    buf = prim_buf;
+    if ((g_pad_input & 0x260) && (active != 0))
+    {
+        g_menu_unk_e8 = 0;
+
+        if ((list->sel_idx != 0) || (g_pad_input & 0x40))
+        {
+            func_8014F210(MENU_SE_CLOSE, MENU_SE_VOLUME);
+            list->unk0 = 3;
+
+            i = 0;
+            do
+            {
+                if (((u8*)&g_item_slot_flags)[i] != 0)
+                {
+                    item = (s32)((u32*)&g_item_slot_data)[i];
+                    if (item != 0)
+                    {
+                        func_8014DE5C(item, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0))
+                                                  + ((i << 6) + 0x50)));
+                    }
+                    else if (i == 0)
+                    {
+                        func_800A8F8C(func_800A9060(),
+                                      (s32)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx + 0x640));
+                        func_800A8F8C((s32)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx + 0x640), D_800F0BF8);
+                    }
+                    else
+                    {
+                        func_800A8F8C(func_800A9060(),
+                                      (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0))
+                                            + ((i << 6) + 0x50)));
+                        slot_off = g_menu_char_slot * 0x250;
+                        *((u8*)g_pad_ctx + ((i << 6) + slot_off) + 0x640) = 0;
+                    }
+                }
+                i += 1;
+            } while (i < 4);
+        }
+        else
+        {
+            func_8014F210(MENU_SE_SELECT, MENU_SE_VOLUME);
+            list->unk0 = 3;
+
+            if (g_item_slot_flags.slot0 != 0)
+            {
+                if (g_item_slot_data.unk0 != 0)
+                {
+                    if ((PAD_ITEM_W14(g_item_slot_data.unk0) & 0xFC00) != (PAD_ITEM_W14(D_801693FC) & 0xFC00))
+                    {
+                        goto reload;
+                    }
+                }
+                else if ((D_800F0C0C & 0xFC00) != (PAD_ITEM_W14(D_801693FC) & 0xFC00))
+                {
+                reload:
+                    if (func_8014B628() != 0)
+                    {
+                        s32 n = 3;
+                        u8* base;
+                        u8* sp;
+
+                        D_801690A8 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0x3A);
+                        base = (u8*)g_menu_slots;
+                        sp = base + 0x6C;
+                        do
+                        {
+                            *sp = 0;
+                            n -= 1;
+                            sp -= 0x24;
+                        } while (n >= 0);
+                        func_8014E3C4(MENU_REDRAW_NAVIGATE);
+                    }
+                }
+            }
+        }
+
+        func_800A8FB4();
+        g_item_slot_flags.slot0 = 0;
+        g_item_slot_flags.slot1 = 0;
+        g_item_slot_flags.slot2 = 0;
+        g_item_slot_flags.slot3 = 0;
+        return buf;
+    }
+
+    buf = scroll_list_draw(buf, ot, list, D_801690B8, view_origin, active);
+    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x90), 1,
+                        0x30 - view_origin->x, -view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x92), 1,
+                        0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    g_pad_input = 0;
     return buf;
 }
