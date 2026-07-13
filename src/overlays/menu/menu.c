@@ -6627,12 +6627,15 @@ extern u8 D_80168C04[];
  * @param y      Cursor screen Y before the bob offset is applied.
  * @param active Non-zero to animate and to emit the second, semi-transparent (0x66) SPRT.
  * @return Pointer to the next free primitive slot (past the 8-byte texpage prim).
- * @note The trailing prim is a one-word 0xE1000005 GPU texpage command.
- * @see decomp.me (98.25%) TODO
+ * @note The CLUT id is packed from D_8014FDB8[id]: high nibble = VRAM row offset from
+ *       0x1F2, low nibble = VRAM x/16. The trailing prim is a one-word 0xE1000005 texpage
+ *       command.
+ * @see decomp.me (100%) TODO
  */
 s32 func_8014A10C(s32 prim, s32* ot, s32 x, s32 y, s32 active)
 {
-    u8* p1 = (u8*)prim;
+    SPRT* p = (SPRT*)prim;
+    DR_TPAGE* tp;
     u8* id;
     NodeSpriteInfo* spr;
     u8* clut;
@@ -6663,44 +6666,36 @@ s32 func_8014A10C(s32 prim, s32* ot, s32 x, s32 y, s32 active)
         }
     }
 
-    p1[3] = 4;
-    id = &D_80168C04[phase];
+    setlen(p, 4);
     spr = D_8014FBF4;
+    id = &D_80168C04[phase];
     clut = D_8014FDB8;
 
-    *((u32*)(p1 + 0x4)) = 0x808080;
-    p1[7] = 0x64;
-    *((s16*)(p1 + 0x8)) = (s16)(x - phase);
-    *((s16*)(p1 + 0xA)) = (s16)(y + phase);
-    p1[0xC] = spr[*id].u_coord;
-    p1[0xD] = spr[*id].v_coord;
-    *((s16*)(p1 + 0x10)) = (s16)spr[*id].w;
-    *((s16*)(p1 + 0x12)) = (s16)spr[*id].h;
-    *((s16*)(p1 + 0xE)) = (s16)inline_fn(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF);
-    *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*ot) & 0xFFFFFF);
-    *ot = inline_fn((*ot) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
-    p1 += 0x14;
+    SET_BGR0_PACKED(p, GPU_TINT_NEUTRAL);
+    setcode(p, 0x64);
+    setXY0(p, x - phase, y + phase);
+    setUV0(p, spr[*id].u_coord, spr[*id].v_coord);
+    setWH(p, spr[*id].w, spr[*id].h);
+    SET_SPRT_CLUT(p, inline_fn(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF));
+    addPrim(ot, p);
+    p++;
 
     if (active != 0)
     {
-        *((u32*)(p1 + 0x4)) = 0;
-        p1[7] = 0x66;
-        p1[3] = 4;
-        *((s16*)(p1 + 0x8)) = (s16)((x - phase) + 2);
-        *((s16*)(p1 + 0xA)) = (s16)((y + phase) + 2);
-        p1[0xC] = spr[*id].u_coord;
-        p1[0xD] = spr[*id].v_coord;
-        *((s16*)(p1 + 0x10)) = (s16)spr[*id].w;
-        *((s16*)(p1 + 0x12)) = (s16)spr[*id].h;
-        *((s16*)(p1 + 0xE)) = (s16)inline_fn(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF);
-        *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*ot) & 0xFFFFFF);
-        *ot = inline_fn((*ot) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
-        p1 += 0x14;
+        SET_BGR0_PACKED(p, 0);
+        setcode(p, 0x66);
+        setlen(p, 4);
+        setXY0(p, (x - phase) + 2, (y + phase) + 2);
+        setUV0(p, spr[*id].u_coord, spr[*id].v_coord);
+        setWH(p, spr[*id].w, spr[*id].h);
+        SET_SPRT_CLUT(p, inline_fn(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF));
+        addPrim(ot, p);
+        p++;
     }
 
-    p1[3] = 1;
-    *((u32*)(p1 + 0x4)) = 0xE1000005;
-    *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*ot) & 0xFFFFFF);
-    *ot = inline_fn((*ot) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
-    return (s32)(p1 + 8);
+    tp = (DR_TPAGE*)p;
+    setlen(tp, 1);
+    tp->code[0] = 0xE1000005;
+    addPrim(ot, tp);
+    return (s32)(tp + 1);
 }
