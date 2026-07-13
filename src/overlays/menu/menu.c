@@ -2634,9 +2634,11 @@ extern s8 D_801226B8;
 extern s32 D_801229F4;
 extern s32 D_8011F424;
 
-extern void func_8014B7DC(void);
-extern void func_8014CC08(void);
-extern void func_8014C200(void);
+/** @note K&R empty parameter lists: these are declared before ScrollListState /
+ *        Vec2s exist, and are only used to take their addresses as content callbacks. */
+s32 func_8014B7DC();
+s32 func_8014CC08();
+s32 func_8014C200();
 
 typedef struct
 {
@@ -6482,8 +6484,11 @@ typedef struct
  */
 typedef struct
 {
-    u32 pad;        /* 0x00 */
-    u16 sel_idx;    /* 0x04 - currently selected item index */
+    u8 unk0;        /* 0x00 - set to 3 to request a state change */
+    u8 pad01;
+    u8 unk2;        /* 0x02 - cleared when the page opens a sub-window */
+    u8 pad03;
+    u16 sel_idx;    /* 0x04 - currently selected item index (the page code's "unk4") */
     u16 item_count; /* 0x06 - total items; lower 9 bits active (& 0x1FF) */
     u16 base_x;     /* 0x08 - widget screen base x */
     u16 base_y;     /* 0x0A - widget screen base y */
@@ -6508,16 +6513,20 @@ void func_8014A044(ScrollListState*, u32*);
  *                    [31:23] = next index (9 bits).
  * @param view_origin Viewport anchor in list-local coordinates.
  * @param active      Non-zero to process input this frame; zero draws cursor only.
+ * @return The advanced primitive write cursor (the value func_8014A10C returns).
  * @note R1 (PADR1) injects PADLdown for fast-scroll down; L1 (PADL1) injects PADLup for fast-scroll up.
  *       MENU_PAD_CONFIRM_CANCEL advances the linked-list index; PADLleft is remapped to PAD_BTN_CIRCLE.
  *       Writes g_menu_default_view_pos with the selected item's screen coordinates.
- * @see decomp.me (96.52%) https://decomp.me/scratch/tfyt3
+ * @note Previously typed @c void, which could not compile: every caller consumes the
+ *       returned cursor. Returning func_8014A10C's result is what the original does.
+ * @see decomp.me (99.52%) https://decomp.me/scratch/tfyt3
  */
-void scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
+s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
 {
     int count;
     s32 cursor_x;
     s32 cursor_y;
+    s32 buf;
     if (active)
     {
         if (g_pad_input & PADR1)
@@ -6568,9 +6577,10 @@ void scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entrie
             g_pad_input |= PAD_BTN_CIRCLE;
         }
     }
-    func_8014A10C(prim_buf, ot, (4 - view_origin->x) - state->scroll_x, ((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y, active);
+    buf = func_8014A10C(prim_buf, ot, (4 - view_origin->x) - state->scroll_x, ((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y, active);
     g_menu_default_view_pos.x = (state->base_x + ((4 - (view_origin->x & 0xFFFFFFFF)) - state->scroll_x)) + 8;
     g_menu_default_view_pos.y = (state->base_y + (((entries[state->sel_idx] & 0x3FFF) - view_origin->y) - state->scroll_y)) + 8;
+    return buf;
 }
 
 /**
@@ -6745,7 +6755,9 @@ void func_8014DE5C(s32, s32);
  * @param view_origin Viewport anchor in list-local coordinates.
  * @param active      Non-zero when this window owns input this frame.
  * @return The advanced primitive write cursor.
- * @see decomp.me (78.18%) TODO
+ * @see decomp.me (71.75%) TODO
+ * @note The 78.18%% previously recorded here was measured in a standalone scratch that
+ *       used a different struct set (ListState / flat MenuNode); in-file it is 71.75%%.
  */
 void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_origin, s32 active)
 {
@@ -7230,10 +7242,6 @@ s32 func_8014B628(void)
     return changed;
 }
 
-/** @brief Index of the item the table scan is currently parked on. */
-extern u32 D_801690F0;
-/** @brief Item kind the table scan is looking for (0, 1 or 2). */
-extern s32 D_80169414;
 
 /** @brief One 0x40-byte menu item entry in the item table at g_pad_ctx + 0xCE0. */
 typedef struct
@@ -7321,38 +7329,8 @@ u32 func_8014B69C(s32 step)
     return result;
 }
 
-/** @brief Screen-space point used for the list viewport anchor. */
-typedef struct
-{
-    s16 x; /* 0x00 */
-    s16 y; /* 0x02 */
-} Vec2s;
-
-/**
- * @brief Scroll-list widget state.
- * @note Only the fields this file touches are named; see menu.c for the full block.
- */
-typedef struct
-{
-    u8 unk0;        /* 0x00 - set to 3 to request a state change */
-    u8 pad01;
-    u8 unk2;        /* 0x02 - cleared when the page opens a sub-window */
-    u8 pad03;
-    u16 unk4;       /* 0x04 - selected row (in units of 16 y-pixels) */
-    u8 pad06[8];
-    s16 viewport_h; /* 0x0E - visible list height */
-    u16 scroll_x;   /* 0x10 */
-    u16 scroll_y;   /* 0x12 - current applied y scroll offset */
-} ScrollListState;
-
-s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
 void func_8014F210(s32 sound_id, s32 volume);
-
-extern u32 D_80168C70;
-extern s32 g_menu_active_subtype;
-extern s32 g_menu_char_slot;
-extern s32 g_menu_pending_overlay;
 
 /**
  * @brief Draw the character's spell/ability grid and handle its selection input.
@@ -7427,7 +7405,7 @@ s32 func_8014B7DC(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                                              (void*)((u8*)base + *(u16*)((u8*)base + (col * 2) + (row * 0x10))),
                                              1, 0x10 - view_origin->x, rel_y - view_origin->y, 0);
                 }
-                if (list->unk4 == (y >> 4))
+                if (list->sel_idx == (y >> 4))
                 {
                     sel = col + (row * 8);
                 }
@@ -7556,7 +7534,7 @@ s32 func_8014BA58(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                         prim_buf = (s32)(tp + 1);
                     }
                 }
-                if (list->unk4 == (y >> 4))
+                if (list->sel_idx == (y >> 4))
                 {
                     sel = col + (row * 8);
                 }
@@ -7650,7 +7628,7 @@ s32 func_8014BD48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                                          1, 0x10 - view_origin->x, rel_y - view_origin->y, 0);
                 prim_buf = func_8014F274(ot, prim_buf, *item, 1, &pos, 1);
             }
-            if (list->unk4 == (y >> 4))
+            if (list->sel_idx == (y >> 4))
             {
                 sel = idx;
             }
@@ -7753,7 +7731,7 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                     prim_buf = (s32)(tp + 1);
                 }
             }
-            if (list->unk4 == (y >> 4))
+            if (list->sel_idx == (y >> 4))
             {
                 sel = idx;
             }
@@ -7847,7 +7825,7 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     else if ((g_pad_input & 0x220) && (active != 0))
     {
         func_8014F210(0x7D, 0x80);
-        switch (list->unk4)
+        switch (list->sel_idx)
         {
         case 0:
             list->unk2 = 0;
@@ -8108,7 +8086,7 @@ s32 func_8014C9B0(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     else if ((g_pad_input & 0x220) && (active != 0))
     {
         func_8014F210(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
-        if (list->unk4 != 0)
+        if (list->sel_idx != 0)
         {
             list->unk0 = 3;
             *(u8*)g_menu_item_ptr = 0;
@@ -8264,7 +8242,7 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     else if ((g_pad_input & 0x220) && (active != 0))
     {
         func_8014F210(0x7D, 0x80);
-        switch (list->unk4)
+        switch (list->sel_idx)
         {
         case 0:
             switch (g_menu_active_subtype)
