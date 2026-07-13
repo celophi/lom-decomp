@@ -6609,3 +6609,98 @@ void func_8014A044(ScrollListState* state, u32* entries)
     }
     state->lerp_steps = 4;
 }
+
+extern u8 D_80168C04[];
+
+/**
+ * @brief Emit the animated menu cursor: one or two SPRTs plus a texpage prim, OT-linked.
+ *
+ * Derives a 4-phase bob offset from @c g_menu_frame (0, 1, 2, 1 across frames 9/0x10/0x17,
+ * resetting the counter at 0x1E). The phase both shifts the sprite position and indexes
+ * @ref D_80168C04 to pick the content id used for the UV/size lookup in @ref D_8014FBF4 and
+ * the CLUT lookup in @ref D_8014FDB8. When @p active is zero the phase is forced to 0 and
+ * only the first sprite is emitted.
+ *
+ * @param prim   Primitive write cursor; the SPRTs are built here.
+ * @param ot     Ordering-table entry; updated after each emitted primitive.
+ * @param x      Cursor screen X before the bob offset is applied.
+ * @param y      Cursor screen Y before the bob offset is applied.
+ * @param active Non-zero to animate and to emit the second, semi-transparent (0x66) SPRT.
+ * @return Pointer to the next free primitive slot (past the 8-byte texpage prim).
+ * @note The trailing prim is a one-word 0xE1000005 GPU texpage command.
+ * @see decomp.me (98.25%) TODO
+ */
+s32 func_8014A10C(s32 prim, s32* ot, s32 x, s32 y, s32 active)
+{
+    u8* p1 = (u8*)prim;
+    u8* id;
+    NodeSpriteInfo* spr;
+    u8* clut;
+    s32 phase;
+
+    if (active == 0 || g_menu_frame < 9)
+    {
+        phase = 0;
+    }
+    else
+    {
+        if (g_menu_frame < 0x10)
+        {
+            phase = 1;
+        }
+        else if (g_menu_frame < 0x17)
+        {
+            phase = 2;
+        }
+        else if (g_menu_frame < 0x1E)
+        {
+            phase = 1;
+        }
+        else
+        {
+            phase = 0;
+            g_menu_frame = 0;
+        }
+    }
+
+    p1[3] = 4;
+    id = &D_80168C04[phase];
+    spr = D_8014FBF4;
+    clut = D_8014FDB8;
+
+    *((u32*)(p1 + 0x4)) = 0x808080;
+    p1[7] = 0x64;
+    *((s16*)(p1 + 0x8)) = (s16)(x - phase);
+    *((s16*)(p1 + 0xA)) = (s16)(y + phase);
+    p1[0xC] = spr[*id].u_coord;
+    p1[0xD] = spr[*id].v_coord;
+    *((s16*)(p1 + 0x10)) = (s16)spr[*id].w;
+    *((s16*)(p1 + 0x12)) = (s16)spr[*id].h;
+    *((s16*)(p1 + 0xE)) = (s16)inline_fn(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF);
+    *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*ot) & 0xFFFFFF);
+    *ot = inline_fn((*ot) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
+    p1 += 0x14;
+
+    if (active != 0)
+    {
+        *((u32*)(p1 + 0x4)) = 0;
+        p1[7] = 0x66;
+        p1[3] = 4;
+        *((s16*)(p1 + 0x8)) = (s16)((x - phase) + 2);
+        *((s16*)(p1 + 0xA)) = (s16)((y + phase) + 2);
+        p1[0xC] = spr[*id].u_coord;
+        p1[0xD] = spr[*id].v_coord;
+        *((s16*)(p1 + 0x10)) = (s16)spr[*id].w;
+        *((s16*)(p1 + 0x12)) = (s16)spr[*id].h;
+        *((s16*)(p1 + 0xE)) = (s16)inline_fn(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF);
+        *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*ot) & 0xFFFFFF);
+        *ot = inline_fn((*ot) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
+        p1 += 0x14;
+    }
+
+    p1[3] = 1;
+    *((u32*)(p1 + 0x4)) = 0xE1000005;
+    *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*ot) & 0xFFFFFF);
+    *ot = inline_fn((*ot) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
+    return (s32)(p1 + 8);
+}
