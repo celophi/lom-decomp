@@ -6718,7 +6718,11 @@ extern s32 D_80169558;
 void func_8014C9B0(void);
 void func_8014DA48(void);
 void func_800A8F8C(s32, s32);
-void func_800A8FB4(void);
+/** @note Empty parameter list (K&R) is intentional: func_8014C200 passes the slot
+ *        offset in a0, while the other call site in this file passes nothing. */
+void func_800A8FB4();
+s32 func_800A9060(s32);
+void func_8014DEEC(void);
 void func_8014DE5C(s32, s32);
 
 /**
@@ -7188,5 +7192,865 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
             }
         }
     }
+    return buf;
+}
+
+/**
+ * @brief Clear the four "pending" character-status bytes for the active character slot.
+ *
+ * Walks the 4-byte status array at offset 0x60C of the active slot in @c g_pad_ctx.
+ * A byte is reset to 0xFF unless it is already 0xFF or has bit 7 set (locked/held).
+ *
+ * @return 1 if at least one byte was reset, 0 if none were.
+ * @see decomp.me (100%)
+ */
+s32 func_8014B628(void)
+{
+    s32 changed;
+    s32 i;
+
+    changed = 0;
+    for (i = 0; i < 4; i++)
+    {
+        u8* p = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + i;
+
+        if (p[0x60C] != 0xFF)
+        {
+            if ((p[0x60C] & 0x80) == 0)
+            {
+                p[0x60C] = 0xFF;
+                changed = 1;
+            }
+        }
+    }
+    return changed;
+}
+
+/** @brief Index of the item the table scan is currently parked on. */
+extern u32 D_801690F0;
+/** @brief Item kind the table scan is looking for (0, 1 or 2). */
+extern s32 D_80169414;
+
+/** @brief One 0x40-byte menu item entry in the item table at g_pad_ctx + 0xCE0. */
+typedef struct
+{
+    u8 flag;   /* 0x00: 0 = empty slot */
+    u8 pad01[0x13];
+    u32 attr;  /* 0x14: bits [9:8] select the item kind */
+    u8 pad18[0x28];
+} MenuItemEntry;
+
+/**
+ * @brief Scan the item table for the next entry whose kind matches D_80169414.
+ *
+ * Walks the 0x64-entry item table at g_pad_ctx + 0xCE0 starting at
+ * D_801690F0 + step and stepping by @p step until the index leaves [0, 0x64)
+ * (the compare is unsigned, so a -1 step exits by wrapping). The first
+ * non-empty entry whose kind - bits [9:8] of @c attr - equals D_80169414 wins:
+ * D_801690F0 is parked on it, g_menu_item_ptr is set, and the entry is also
+ * cached in the per-kind global (0 -> D_80169410, 1 -> D_80169404,
+ * 2 -> D_80169408). If nothing matched, D_801690F0 wraps to the far end and the
+ * scan recurses once so the search continues from the other side.
+ *
+ * @param step Direction/stride to walk the table (1 = forward, -1 = backward).
+ * @return Index of the matching entry, or the value of g_menu_item_ptr from the
+ *         recursive wrap-around scan.
+ * @note Not yet matching. The residual gap is register allocation around the two
+ *       induction variables (the item address and the byte offset used for
+ *       g_menu_item_ptr); the loop structure, strength reduction and instruction
+ *       count (80) already agree with the target.
+ * @see decomp.me (85.62%)
+ */
+u32 func_8014B69C(s32 step)
+{
+    MenuItemEntry* items;
+    u32 index;
+    s32 kind;
+    u32 found;
+    u32 result;
+
+    g_menu_item_ptr = 0;
+    index = D_801690F0 + step;
+    items = (MenuItemEntry*)((u8*)g_pad_ctx + 0xCE0);
+
+    while (index < 0x64U)
+    {
+        if (items[index].flag != 0)
+        {
+            kind = (items[index].attr >> 8) & 3;
+            if (kind == D_80169414)
+            {
+                found = (u32)((u8*)g_pad_ctx + ((index << 6) + 0xCE0));
+                D_801690F0 = index;
+                g_menu_item_ptr = found;
+                switch (kind)
+                {
+                case 0:
+                    D_80169410 = found;
+                    break;
+                case 1:
+                    D_80169404 = found;
+                    break;
+                case 2:
+                    D_80169408 = found;
+                    break;
+                }
+                return index;
+            }
+        }
+        index += step;
+    }
+
+    result = g_menu_item_ptr;
+    if (result == 0)
+    {
+        if (step == 1)
+        {
+            D_801690F0 = -1;
+        }
+        else
+        {
+            D_801690F0 = 0x64;
+        }
+        result = func_8014B69C(step);
+    }
+    return result;
+}
+
+/** @brief Screen-space point used for the list viewport anchor. */
+typedef struct
+{
+    s16 x; /* 0x00 */
+    s16 y; /* 0x02 */
+} Vec2s;
+
+/**
+ * @brief Scroll-list widget state.
+ * @note Only the fields this file touches are named; see menu.c for the full block.
+ */
+typedef struct
+{
+    u8 unk0;        /* 0x00 - set to 3 to request a state change */
+    u8 pad01;
+    u8 unk2;        /* 0x02 - cleared when the page opens a sub-window */
+    u8 pad03;
+    u16 unk4;       /* 0x04 - selected row (in units of 16 y-pixels) */
+    u8 pad06[8];
+    s16 viewport_h; /* 0x0E - visible list height */
+    u16 scroll_x;   /* 0x10 */
+    u16 scroll_y;   /* 0x12 - current applied y scroll offset */
+} ScrollListState;
+
+s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
+s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
+void func_8014F210(s32 sound_id, s32 volume);
+
+extern u32 D_80168C70;
+extern s32 g_menu_active_subtype;
+extern s32 g_menu_char_slot;
+extern s32 g_menu_pending_overlay;
+
+/**
+ * @brief Draw the character's spell/ability grid and handle its selection input.
+ *
+ * Draws the scroll-list chrome, then walks the 12x8 grid of grid cells whose
+ * presence bits live in the byte array at g_pad_ctx + 0x60 (one byte per row,
+ * one bit per column). Each present cell advances the running y position by 16
+ * and, when it falls inside the viewport, is drawn as a glyph via func_800A88A0.
+ * The cell whose row matches the list's selection is remembered in @c sel.
+ *
+ * On confirm (pad bits 0x220) the selected cell index is written to the active
+ * character's slot byte at g_pad_ctx + slot * 0x250 + g_menu_active_subtype +
+ * 0x609. If a cell is selected, g_menu_pending_overlay is pointed at its
+ * description entry.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this grid.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x10 - x, rel_y - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note @c list aliases @c state, and @c row is reused to hold the 0x609 slot
+ *       offset inside the store expression; both are required to match. The
+ *       alias raises the parameter's allocation priority so it lands in s5, and
+ *       the in-expression assignment fixes the operand order of the address add.
+ * @see decomp.me (100%)
+ */
+s32 func_8014B7DC(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    s32 sel;
+    s32 row;
+    s32 col;
+    s32 bit;
+    s32 y;
+    s32 rel_y;
+    u8* mask;
+    u32 scroll_y;
+    void* base;
+    void* sel_base;
+    ScrollListState* list;
+
+    list = state;
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(0x7F, 0x80);
+        list->unk0 = 3;
+        g_pad_input = 0;
+    }
+
+    prim_buf = scroll_list_draw(prim_buf, ot, list, &D_80168C70, view_origin, active);
+
+    y = 0;
+    sel = -1;
+    row = 0;
+    mask = (u8*)g_pad_ctx + 0x60;
+    scroll_y = list->scroll_y;
+
+    do
+    {
+        col = 0;
+        bit = 1;
+        do
+        {
+            if (*mask & bit)
+            {
+                rel_y = y - scroll_y;
+                if ((rel_y >= -0xF) && (rel_y < (list->viewport_h - 0x10)))
+                {
+                    base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x10));
+                    prim_buf = func_800A88A0(prim_buf, ot,
+                                             (void*)((u8*)base + *(u16*)((u8*)base + (col * 2) + (row * 0x10))),
+                                             1, 0x10 - view_origin->x, rel_y - view_origin->y, 0);
+                }
+                if (list->unk4 == (y >> 4))
+                {
+                    sel = col + (row * 8);
+                }
+                y += 0x10;
+            }
+            col += 1;
+            bit *= 2;
+        } while (col < 8);
+        row += 1;
+        mask += 1;
+    } while (row < 0xC);
+
+    if ((g_pad_input & 0x220) && (active != 0))
+    {
+        *((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + (row = 0x609)) = sel;
+        func_8014F210(0x7E, 0x80);
+        list->unk0 = 3;
+    }
+
+    if (sel != -1)
+    {
+        sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x3C));
+        g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+    }
+
+    return prim_buf;
+}
+
+/**
+ * @brief Draw a character's equipment grid and handle its selection input.
+ *
+ * A sibling of @ref func_8014B7DC for the equipment page. Draws the scroll-list
+ * chrome, then walks a 16x8 grid of cells whose 4-bit kind codes are packed into
+ * one u32 per row in the word array at g_pad_ctx + 0x104 (low nibble first).
+ * A cell is present when its kind is >= 2; each present cell advances the running
+ * y position by 16 and, when it falls inside the viewport, is drawn as a glyph via
+ * @ref func_800A88A0. Cells with kind >= 8 additionally get an overlay icon
+ * (0x70 for kind >= 0xF, 0x69 otherwise) drawn by @ref func_80149BB4, followed by
+ * a one-word Draw Mode Setting primitive (GP0 0xE1000005) linked into the OT.
+ * The cell whose row matches the list's selection is remembered in @c sel and,
+ * when the page is active, points @c g_menu_pending_overlay at its description entry.
+ *
+ * On cancel (pad bit 0x40) the page plays a sound and calls @ref func_8014519C.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this grid.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x20 - x, rel_y - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note Three shapes are required to match. @c list aliases @c state (as in
+ *       func_8014B7DC) so the parameter gets its own spill slot at 0x28 rather
+ *       than its incoming home slot. The two icon calls must be written out
+ *       separately per arm - hoisting the id into a variable and making one call
+ *       loses the cross-jumped tail GCC emits here. And the row index must be
+ *       @c row << 2, not @c row * 4: the shift form gives the address add its
+ *       (pointer, index) operand order, which is what puts g_pad_ctx in v0.
+ * @see decomp.me (100%)
+ */
+s32 func_8014BA58(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    ScrollListState* list;
+    u32 scroll_y;
+    s32 sel;
+    s32 row;
+    s32 col;
+    s32 y;
+    s32 rel_y;
+    s32 kind;
+    u32 word;
+    void* base;
+    void* sel_base;
+    DR_TPAGE* tp;
+
+    list = state;
+
+    prim_buf = scroll_list_draw(prim_buf, ot, list, &D_80168C70, view_origin, active);
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(0x7F, 0x80);
+        func_8014519C();
+        g_pad_input = 0;
+    }
+
+    y = 0;
+    scroll_y = list->scroll_y;
+    sel = -1;
+    row = 0;
+
+    do
+    {
+        col = 0;
+        word = *(u32*)((u8*)g_pad_ctx + (row << 2) + 0x104);
+        do
+        {
+            kind = word & 0xF;
+            if (kind >= 2)
+            {
+                rel_y = y - scroll_y;
+                if ((rel_y >= -0xF) && (rel_y < (list->viewport_h - 0x10)))
+                {
+                    base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x6C));
+                    prim_buf = func_800A88A0(prim_buf, ot,
+                                             (void*)((u8*)base + *(u16*)((u8*)base + (col * 2) + (row * 0x10))),
+                                             1, 0x20 - view_origin->x, rel_y - view_origin->y, 0);
+                    if (kind >= 8)
+                    {
+                        if (kind >= 0xF)
+                        {
+                            prim_buf = (s32)func_80149BB4((void*)prim_buf, ot, 0x70,
+                                                          0x10 - view_origin->x, rel_y - view_origin->y,
+                                                          0, 0, 0, 0);
+                        }
+                        else
+                        {
+                            prim_buf = (s32)func_80149BB4((void*)prim_buf, ot, 0x69,
+                                                          0x10 - view_origin->x, rel_y - view_origin->y,
+                                                          0, 0, 0, 0);
+                        }
+
+                        tp = (DR_TPAGE*)prim_buf;
+                        setlen(tp, 1);
+                        tp->code[0] = 0xE1000005;
+                        addPrim(ot, tp);
+                        prim_buf = (s32)(tp + 1);
+                    }
+                }
+                if (list->unk4 == (y >> 4))
+                {
+                    sel = col + (row * 8);
+                }
+                y += 0x10;
+            }
+            col += 1;
+            word >>= 4;
+        } while (col < 8);
+        row += 1;
+    } while (row < 0x10);
+
+    if ((active != 0) && (sel != -1))
+    {
+        sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x84));
+        g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+    }
+
+    return prim_buf;
+}
+
+/**
+ * @brief Draw a character's key-item list and handle its selection input.
+ *
+ * Third sibling of @ref func_8014B7DC / @ref func_8014BA58, for the key-item page.
+ * Draws the scroll-list chrome, then walks the 256-entry byte array at
+ * g_pad_ctx + 0x25E0, one item id per entry. A non-zero id is a present item: it
+ * advances the running y position by 16 and, when it falls inside the viewport,
+ * is drawn as a glyph via @ref func_800A88A0 followed by its count/quantity via
+ * @ref func_8014F274 at the anchor built in @c pos. The item whose row matches the
+ * list's selection is remembered in @c sel and, when the page is active, points
+ * @c g_menu_pending_overlay at its description entry.
+ *
+ * On cancel (pad bit 0x40) the page plays a sound and calls @ref func_8014519C.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this list.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x10 - x, rel_y - y) and
+ *                    the quantity anchor is (0xC0 - x, rel_y - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note @c list aliases @c state, as in func_8014B7DC: without the alias the
+ *       parameter loses the ref-count tie against @c sel and the two swap saved
+ *       registers (state lands in s6, sel in s5, the reverse of the original).
+ *       @c func_8014F274 is called without a prototype, matching the rest of the file.
+ * @see decomp.me (100%)
+ */
+s32 func_8014BD48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    Vec2s pos;
+    s32 idx;
+    s32 y;
+    s32 rel_y;
+    u32 scroll_y;
+    u8* item;
+    s32 sel;
+    void* base;
+    void* sel_base;
+    ScrollListState* list;
+
+    list = state;
+
+    prim_buf = scroll_list_draw(prim_buf, ot, list, &D_80168C70, view_origin, active);
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(0x7F, 0x80);
+        func_8014519C();
+        g_pad_input = 0;
+    }
+
+    y = 0;
+    sel = -1;
+    idx = 0;
+    item = (u8*)g_pad_ctx + 0x25E0;
+    scroll_y = list->scroll_y;
+
+    do
+    {
+        if (*item != 0)
+        {
+            rel_y = y - scroll_y;
+            if ((rel_y >= -0xF) && (rel_y < (list->viewport_h - 0x10)))
+            {
+                pos.x = 0xC0 - (u16)view_origin->x;
+                pos.y = rel_y - (u16)view_origin->y;
+
+                base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x30));
+                prim_buf = func_800A88A0(prim_buf, ot,
+                                         (void*)((u8*)base + *(u16*)((u8*)base + (idx * 2))),
+                                         1, 0x10 - view_origin->x, rel_y - view_origin->y, 0);
+                prim_buf = func_8014F274(ot, prim_buf, *item, 1, &pos, 1);
+            }
+            if (list->unk4 == (y >> 4))
+            {
+                sel = idx;
+            }
+            y += 0x10;
+        }
+        idx += 1;
+        item += 1;
+    } while (idx < 0x100);
+
+    if (sel != -1)
+    {
+        if (active != 0)
+        {
+            sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x2C));
+            g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+        }
+    }
+
+    return prim_buf;
+}
+
+/**
+ * @brief Draw a character's ability list and handle its selection input.
+ *
+ * Fourth sibling of @ref func_8014B7DC / @ref func_8014BA58 / @ref func_8014BD48.
+ * Draws the scroll-list chrome, then walks the 64-entry, 0xC-byte-stride record
+ * array at g_pad_ctx + 0x2F0. Bit 0 of each record's first byte marks the entry as
+ * present: it advances the running y position by 16 and, when it falls inside the
+ * viewport, is drawn as a glyph via @ref func_800A88A0. Bit 1 additionally draws
+ * marker icon 0x2C via @ref func_80149BB4, followed by a one-word Draw Mode Setting
+ * primitive (GP0 0xE1000005) linked into the OT. The entry whose row matches the
+ * list's selection is remembered in @c sel and, when the page is active, points
+ * @c g_menu_pending_overlay at its description entry.
+ *
+ * On cancel (pad bit 0x40) the page plays a sound and calls @ref func_8014519C.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this list.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x20 - x, rel_y - y) and
+ *                    the marker origin is (0x10 - x, rel_y - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note @c list aliases @c state, as in the other three pages: without the alias the
+ *       param stays in its incoming home slot (sp+0x5C) and @c sel takes s8, the
+ *       reverse of the original's "state in s8, sel spilled to sp+0x2C".
+ * @see decomp.me (100%)
+ */
+s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    u32 scroll_y;
+    s32 sel;
+    s32 idx;
+    s32 y;
+    s32 rel_y;
+    u8* item;
+    void* base;
+    void* sel_base;
+    DR_TPAGE* tp;
+    ScrollListState* list;
+
+    list = state;
+
+    prim_buf = scroll_list_draw(prim_buf, ot, list, &D_80168C70, view_origin, active);
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(0x7F, 0x80);
+        func_8014519C();
+        g_pad_input = 0;
+    }
+
+    y = 0;
+    sel = -1;
+    idx = 0;
+    item = (u8*)g_pad_ctx + 0x2F0;
+    scroll_y = list->scroll_y;
+
+    do
+    {
+        if (*item & 1)
+        {
+            rel_y = y - scroll_y;
+            if ((rel_y >= -0xF) && (rel_y < (list->viewport_h - 0x10)))
+            {
+                base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x18));
+                prim_buf = func_800A88A0(prim_buf, ot,
+                                         (void*)((u8*)base + *(u16*)((u8*)base + (idx * 2))),
+                                         1, 0x20 - view_origin->x, rel_y - view_origin->y, 0);
+                if (*item & 2)
+                {
+                    prim_buf = (s32)func_80149BB4((void*)prim_buf, ot, 0x2C,
+                                                  0x10 - view_origin->x, rel_y - view_origin->y,
+                                                  0, 0, 0, 0);
+
+                    tp = (DR_TPAGE*)prim_buf;
+                    setlen(tp, 1);
+                    tp->code[0] = 0xE1000005;
+                    addPrim(ot, tp);
+                    prim_buf = (s32)(tp + 1);
+                }
+            }
+            if (list->unk4 == (y >> 4))
+            {
+                sel = idx;
+            }
+            y += 0x10;
+        }
+        idx += 1;
+        item += 0xC;
+    } while (idx < 0x40);
+
+    if (sel != -1)
+    {
+        if (active != 0)
+        {
+            sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x14));
+            g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+        }
+    }
+
+    return prim_buf;
+}
+
+/**
+ * @brief Handle input for the equip/status page and draw its four state-table labels.
+ *
+ * The controller sibling of the scroll-list pages (@ref func_8014B7DC,
+ * @ref func_8014BA58, @ref func_8014BD48, @ref func_8014BF68): instead of walking a
+ * list it dispatches on the page's sub-view id (@c unk4).
+ *
+ * On cancel (pad bit 0x40) it plays a sound and requests a state change. On confirm
+ * (pad bits 0x220) it plays a sound and dispatches:
+ * - sub-view 0: opens a 0xF0 x 0x60 window at (0x40, 0x60) via @ref menu_slot_alloc,
+ *   wires @ref func_8014DEEC as its content callback, and seeds the window's lerp from
+ *   @ref func_801453F0.
+ * - sub-view 1: clears the slot pool, points the character's node at content 0x29, and
+ *   reloads its content via @ref func_8014E3C4.
+ * - sub-view 2: reads the equipped-item byte at g_pad_ctx + slot * 0x250 + subtype +
+ *   0x609. If it has bit 0x80 the item is unequipped (@ref func_800A8F8C /
+ *   @ref func_800A8FB4) unless @ref func_800A9060 reports no handle, in which case the
+ *   pool is cleared and content 6 loaded instead. The byte is then reset to 0xFF.
+ * - sub-view 3: when the byte at D_8016911C is set, clears the pool, points the node at
+ *   content 0x1A, and re-runs the hit test to reposition the content cursor.
+ *
+ * Sub-views 0, 1 and 3 return without drawing. Everything else falls through to the
+ * draw path: the list chrome plus four labels from the state table at offset 8
+ * (entries 0x7A, 0x7C, 0x86, 0x80), stacked 0x10 apart.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this page.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor (unchanged on the early-return paths).
+ * @note Four shapes are required to match. @c rect must be an ARRAY: as four scalars
+ *       only the first store survives dead-store elimination. The three slot-clear
+ *       loops must each use their OWN locals -- sharing one pair puts them all in
+ *       a1/a2 instead of v0/v1. The @ref func_800A8F8C address must stay grouped as
+ *       (base + (slot + 0x5F0)) + ((subtype << 6) + 0x90), or fold-const merges
+ *       0x5F0 + 0x90 into a single addiu. And the label bases use MENU_STATE_BASE /
+ *       MENU_TAIL so the base is CSE'd into a2 rather than spilled to a fresh t0.
+ * @note The residual gap is 20 register-permuted rows plus one extra nop: the original
+ *       emits the entry copy of @c state (a1 -> s0) before that of @c prim_buf
+ *       (a2 -> s1), and fills the g_pad_ctx load-delay slot in the func_800A8FB4
+ *       address chain. Not yet reproduced.
+ * @see decomp.me (99.20%)
+ */
+s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    u16 rect[4];
+    MenuSlot* slot;
+    s32 packed;
+    s32 hi;
+    s32 handle;
+    s32 off;
+    s8* p;
+    s32 i;
+    s8* p1;
+    s32 i1;
+    s8* p3;
+    s32 i3;
+    u8 flag;
+    MenuContentItem* item;
+    ScrollListState* list;
+
+    list = state;
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(0x7F, 0x80);
+        list->unk0 = 3;
+    }
+    else if ((g_pad_input & 0x220) && (active != 0))
+    {
+        func_8014F210(0x7D, 0x80);
+        switch (list->unk4)
+        {
+        case 0:
+            list->unk2 = 0;
+            list->unk0 = 0;
+            rect[0] = 0x40;
+            rect[1] = 0x60;
+            rect[2] = 0xF0;
+            rect[3] = 0x60;
+            slot = (MenuSlot*)menu_slot_alloc(3, rect);
+            slot->content_cb = (s32 * (*)()) & func_8014DEEC;
+            packed = func_801453F0();
+            hi = packed >> 0x10;
+            slot->lerp_target_b = hi * 0x10;
+            slot->lerp_cur_b = hi * 0x10;
+            slot->anim_frame = 5;
+            slot->active = 2;
+            slot->has_title = 1;
+            g_menu_draw_early_out = 1;
+            slot->flags = (slot->flags & 0xFE00FFFF) | ((packed & 0x1FF) << 0x10);
+            *(u16*)&slot->flags = (u16)hi;
+            return prim_buf;
+
+        case 1:
+            i1 = 3;
+            p1 = (s8*)g_menu_slots;
+            p1 += 0x6C;
+            while (i1 >= 0)
+            {
+                *p1 = 0;
+                i1--;
+                p1 -= 0x24;
+            }
+            g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 0x29;
+            g_menu_nodes[(g_menu_char_slot * 3) + 2].unk0 =
+                D_801686A0[g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx];
+            D_801690F9 = 0;
+            g_menu_content_ready = 1;
+            func_8014E3C4(2);
+            g_menu_draw_early_out = 1;
+            g_menu_item_ptr = 0;
+            D_80169410 = 0;
+            D_80169404 = 0;
+            D_80169408 = 0;
+            return prim_buf;
+
+        case 2:
+            flag = *((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + 0x609);
+            if (flag == 0xFF)
+            {
+                break;
+            }
+            if (flag & 0x80)
+            {
+                handle = func_800A9060(g_menu_active_subtype);
+                if (handle != 0)
+                {
+                    func_800A8F8C(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0))
+                                                + ((g_menu_active_subtype << 6) + 0x90)));
+                    *((u8*)g_pad_ctx
+                      + (off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250))
+                      + 0x640) = 0;
+                    func_800A8FB4(off);
+                }
+                else
+                {
+                    D_801690A8 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
+                    i = 3;
+                    p = (s8*)g_menu_slots;
+                    p += 0x6C;
+                    while (i >= 0)
+                    {
+                        *p = 0;
+                        i--;
+                        p -= 0x24;
+                    }
+                    func_8014E3C4(6);
+                    return prim_buf;
+                }
+            }
+            *((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + 0x609) = 0xFF;
+            list->unk0 = 3;
+            break;
+
+        case 3:
+            if (*(u8*)D_8016911C == 0)
+            {
+                break;
+            }
+            i3 = 3;
+            p3 = (s8*)g_menu_slots;
+            p3 += 0x6C;
+            while (i3 >= 0)
+            {
+                *p3 = 0;
+                i3--;
+                p3 -= 0x24;
+            }
+            g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 0x1A;
+            g_menu_nodes[(g_menu_char_slot * 3) + 2].unk0 = 0x17;
+            g_menu_hit_item_idx = func_8014847C();
+            if (g_menu_hit_item_idx != -1)
+            {
+                item = &g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx][g_menu_hit_item_idx];
+                g_content_view_x = item->packed_x & 0x1FF;
+                g_content_view_y = item->y - 8;
+                g_menu_suppress_cursor = 5;
+                g_menu_cursor_enable = 1;
+            }
+            g_menu_draw_early_out = 1;
+            return prim_buf;
+        }
+    }
+
+    prim_buf = scroll_list_draw(prim_buf, ot, list, D_801690B8, view_origin, active);
+
+    prim_buf = func_800A88A0(prim_buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7A), 1,
+                             0x30 - view_origin->x, -view_origin->y, 2);
+    prim_buf = func_800A88A0(prim_buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7C), 1,
+                             0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    prim_buf = func_800A88A0(prim_buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x86), 1,
+                             0x30 - view_origin->x, 0x20 - view_origin->y, 2);
+    prim_buf = func_800A88A0(prim_buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x80), 1,
+                             0x30 - view_origin->x, 0x30 - view_origin->y, 2);
+    return prim_buf;
+}
+
+/**
+ * @brief Draws the confirmation page and dismisses it on any cancel/confirm press.
+ *
+ * When the page is active and the pad reports cancel or either confirm bit (0x260),
+ * it plays the navigate SE and clears the page's sub-window and state-change bytes,
+ * which returns the caller to the previous page. Regardless of input, it always draws
+ * the single glyph currently held in @ref D_801690A8 at (0x88 - x, -y) relative to the
+ * viewport anchor.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this page.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x88 - x, -y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note Two shapes are required to match. @c pos is never read, but an aggregate local
+ *       still takes a frame slot at expand time, and without it the frame is 0x38 -> 0x30.
+ *       And @c buf must alias @c prim_buf: the original emits the entry copy of
+ *       @c view_origin (a3 -> s1) before that of @c prim_buf (a2 -> s0), and aliasing the
+ *       modified parameter defers its copy to first use. Aliasing @c view_origin instead
+ *       does nothing.
+ * @see decomp.me (100%)
+ */
+s32 func_8014C820(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    Vec2s pos;
+    ScrollListState* list;
+    s32 buf;
+
+    list = state;
+    buf = prim_buf;
+
+    if ((g_pad_input & 0x260) && (active != 0))
+    {
+        list->unk2 = 0;
+        list->unk0 = 0;
+        func_8014F210(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+    }
+
+    buf = func_800A88A0(buf, ot, D_801690A8, 1, 0x88 - view_origin->x, -view_origin->y, 2);
+    return buf;
+}
+
+/**
+ * @brief Draws the two-line confirmation page and dismisses it on cancel/confirm.
+ *
+ * Identical input handling to @ref func_8014C820: when the page is active and the pad
+ * reports cancel or either confirm bit (0x260), it plays the navigate SE and clears the
+ * page's sub-window and state-change bytes. It then always draws two glyphs, stacked
+ * 0x10 apart -- @ref D_801690A8 at (0x88 - x, -y) and @ref D_801690E0 at
+ * (0x88 - x, 0x10 - y).
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this page.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origins are (0x88 - x, N - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note The same two shapes func_8014C820 needs are required here. @c pos is never read,
+ *       but an aggregate local still takes a frame slot at expand time (0x40 -> 0x38
+ *       without it). And @c buf must alias @c prim_buf so the modified parameter's entry
+ *       copy is deferred, letting @c view_origin copy into s2 first.
+ * @see decomp.me (100%)
+ */
+s32 func_8014C8C8(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    Vec2s pos;
+    ScrollListState* list;
+    s32 buf;
+
+    list = state;
+    buf = prim_buf;
+
+    if ((g_pad_input & 0x260) && (active != 0))
+    {
+        list->unk2 = 0;
+        list->unk0 = 0;
+        func_8014F210(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+    }
+
+    buf = func_800A88A0(buf, ot, D_801690A8, 1, 0x88 - view_origin->x, -view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, D_801690E0, 1, 0x88 - view_origin->x, 0x10 - view_origin->y, 2);
     return buf;
 }
