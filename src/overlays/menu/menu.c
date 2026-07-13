@@ -6718,7 +6718,11 @@ extern s32 D_80169558;
 void func_8014C9B0(void);
 void func_8014DA48(void);
 void func_800A8F8C(s32, s32);
-void func_800A8FB4(void);
+/** @note Empty parameter list (K&R) is intentional: func_8014C200 passes the slot
+ *        offset in a0, while the other call site in this file passes nothing. */
+void func_800A8FB4();
+s32 func_800A9060(s32);
+void func_8014DEEC(void);
 void func_8014DE5C(s32, s32);
 
 /**
@@ -7327,7 +7331,9 @@ typedef struct
 typedef struct
 {
     u8 unk0;        /* 0x00 - set to 3 to request a state change */
-    u8 pad01[3];
+    u8 pad01;
+    u8 unk2;        /* 0x02 - cleared when the page opens a sub-window */
+    u8 pad03;
     u16 unk4;       /* 0x04 - selected row (in units of 16 y-pixels) */
     u8 pad06[8];
     s16 viewport_h; /* 0x0E - visible list height */
@@ -7762,5 +7768,204 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
         }
     }
 
+    return prim_buf;
+}
+
+/**
+ * @brief Handle input for the equip/status page and draw its four state-table labels.
+ *
+ * The controller sibling of the scroll-list pages (@ref func_8014B7DC,
+ * @ref func_8014BA58, @ref func_8014BD48, @ref func_8014BF68): instead of walking a
+ * list it dispatches on the page's sub-view id (@c unk4).
+ *
+ * On cancel (pad bit 0x40) it plays a sound and requests a state change. On confirm
+ * (pad bits 0x220) it plays a sound and dispatches:
+ * - sub-view 0: opens a 0xF0 x 0x60 window at (0x40, 0x60) via @ref menu_slot_alloc,
+ *   wires @ref func_8014DEEC as its content callback, and seeds the window's lerp from
+ *   @ref func_801453F0.
+ * - sub-view 1: clears the slot pool, points the character's node at content 0x29, and
+ *   reloads its content via @ref func_8014E3C4.
+ * - sub-view 2: reads the equipped-item byte at g_pad_ctx + slot * 0x250 + subtype +
+ *   0x609. If it has bit 0x80 the item is unequipped (@ref func_800A8F8C /
+ *   @ref func_800A8FB4) unless @ref func_800A9060 reports no handle, in which case the
+ *   pool is cleared and content 6 loaded instead. The byte is then reset to 0xFF.
+ * - sub-view 3: when the byte at D_8016911C is set, clears the pool, points the node at
+ *   content 0x1A, and re-runs the hit test to reposition the content cursor.
+ *
+ * Sub-views 0, 1 and 3 return without drawing. Everything else falls through to the
+ * draw path: the list chrome plus four labels from the state table at offset 8
+ * (entries 0x7A, 0x7C, 0x86, 0x80), stacked 0x10 apart.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this page.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor (unchanged on the early-return paths).
+ * @note Four shapes are required to match. @c rect must be an ARRAY: as four scalars
+ *       only the first store survives dead-store elimination. The three slot-clear
+ *       loops must each use their OWN locals -- sharing one pair puts them all in
+ *       a1/a2 instead of v0/v1. The @ref func_800A8F8C address must stay grouped as
+ *       (base + (slot + 0x5F0)) + ((subtype << 6) + 0x90), or fold-const merges
+ *       0x5F0 + 0x90 into a single addiu. And the label bases use MENU_STATE_BASE /
+ *       MENU_TAIL so the base is CSE'd into a2 rather than spilled to a fresh t0.
+ * @note The residual gap is 20 register-permuted rows plus one extra nop: the original
+ *       emits the entry copy of @c state (a1 -> s0) before that of @c prim_buf
+ *       (a2 -> s1), and fills the g_pad_ctx load-delay slot in the func_800A8FB4
+ *       address chain. Not yet reproduced.
+ * @see decomp.me (99.20%)
+ */
+s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    u16 rect[4];
+    MenuSlot* slot;
+    s32 packed;
+    s32 hi;
+    s32 handle;
+    s32 off;
+    s8* p;
+    s32 i;
+    s8* p1;
+    s32 i1;
+    s8* p3;
+    s32 i3;
+    u8 flag;
+    MenuContentItem* item;
+    ScrollListState* list;
+
+    list = state;
+
+    if ((g_pad_input & 0x40) && (active != 0))
+    {
+        func_8014F210(0x7F, 0x80);
+        list->unk0 = 3;
+    }
+    else if ((g_pad_input & 0x220) && (active != 0))
+    {
+        func_8014F210(0x7D, 0x80);
+        switch (list->unk4)
+        {
+        case 0:
+            list->unk2 = 0;
+            list->unk0 = 0;
+            rect[0] = 0x40;
+            rect[1] = 0x60;
+            rect[2] = 0xF0;
+            rect[3] = 0x60;
+            slot = (MenuSlot*)menu_slot_alloc(3, rect);
+            slot->content_cb = (s32 * (*)()) & func_8014DEEC;
+            packed = func_801453F0();
+            hi = packed >> 0x10;
+            slot->lerp_target_b = hi * 0x10;
+            slot->lerp_cur_b = hi * 0x10;
+            slot->anim_frame = 5;
+            slot->active = 2;
+            slot->has_title = 1;
+            g_menu_draw_early_out = 1;
+            slot->flags = (slot->flags & 0xFE00FFFF) | ((packed & 0x1FF) << 0x10);
+            *(u16*)&slot->flags = (u16)hi;
+            return prim_buf;
+
+        case 1:
+            i1 = 3;
+            p1 = (s8*)g_menu_slots;
+            p1 += 0x6C;
+            while (i1 >= 0)
+            {
+                *p1 = 0;
+                i1--;
+                p1 -= 0x24;
+            }
+            g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 0x29;
+            g_menu_nodes[(g_menu_char_slot * 3) + 2].unk0 =
+                D_801686A0[g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx];
+            D_801690F9 = 0;
+            g_menu_content_ready = 1;
+            func_8014E3C4(2);
+            g_menu_draw_early_out = 1;
+            g_menu_item_ptr = 0;
+            D_80169410 = 0;
+            D_80169404 = 0;
+            D_80169408 = 0;
+            return prim_buf;
+
+        case 2:
+            flag = *((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + 0x609);
+            if (flag == 0xFF)
+            {
+                break;
+            }
+            if (flag & 0x80)
+            {
+                handle = func_800A9060(g_menu_active_subtype);
+                if (handle != 0)
+                {
+                    func_800A8F8C(handle, (s32)(((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0))
+                                                + ((g_menu_active_subtype << 6) + 0x90)));
+                    *((u8*)g_pad_ctx
+                      + (off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250))
+                      + 0x640) = 0;
+                    func_800A8FB4(off);
+                }
+                else
+                {
+                    D_801690A8 = (void*)MENU_TAIL(MENU_STATE_BASE(8), 0xAC);
+                    i = 3;
+                    p = (s8*)g_menu_slots;
+                    p += 0x6C;
+                    while (i >= 0)
+                    {
+                        *p = 0;
+                        i--;
+                        p -= 0x24;
+                    }
+                    func_8014E3C4(6);
+                    return prim_buf;
+                }
+            }
+            *((u8*)g_pad_ctx + (g_menu_char_slot * 0x250) + g_menu_active_subtype + 0x609) = 0xFF;
+            list->unk0 = 3;
+            break;
+
+        case 3:
+            if (*(u8*)D_8016911C == 0)
+            {
+                break;
+            }
+            i3 = 3;
+            p3 = (s8*)g_menu_slots;
+            p3 += 0x6C;
+            while (i3 >= 0)
+            {
+                *p3 = 0;
+                i3--;
+                p3 -= 0x24;
+            }
+            g_menu_nodes[(g_menu_char_slot * 3) + 2].idx_nav.s.self_idx = 0x1A;
+            g_menu_nodes[(g_menu_char_slot * 3) + 2].unk0 = 0x17;
+            g_menu_hit_item_idx = func_8014847C();
+            if (g_menu_hit_item_idx != -1)
+            {
+                item = &g_menu_content_table[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx][g_menu_hit_item_idx];
+                g_content_view_x = item->packed_x & 0x1FF;
+                g_content_view_y = item->y - 8;
+                g_menu_suppress_cursor = 5;
+                g_menu_cursor_enable = 1;
+            }
+            g_menu_draw_early_out = 1;
+            return prim_buf;
+        }
+    }
+
+    prim_buf = scroll_list_draw(prim_buf, ot, list, D_801690B8, view_origin, active);
+
+    prim_buf = func_800A88A0(prim_buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7A), 1,
+                             0x30 - view_origin->x, -view_origin->y, 2);
+    prim_buf = func_800A88A0(prim_buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x7C), 1,
+                             0x30 - view_origin->x, 0x10 - view_origin->y, 2);
+    prim_buf = func_800A88A0(prim_buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x86), 1,
+                             0x30 - view_origin->x, 0x20 - view_origin->y, 2);
+    prim_buf = func_800A88A0(prim_buf, ot, MENU_TAIL(MENU_STATE_BASE(8), 0x80), 1,
+                             0x30 - view_origin->x, 0x30 - view_origin->y, 2);
     return prim_buf;
 }
