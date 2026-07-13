@@ -8871,3 +8871,30 @@ void func_8014DE5C(s32 arg0, s32 arg1)
     func_800A8F8C(arg0, arg1);
     func_800A8F8C(arg1, tmp);
 }
+
+/**
+ * @brief Point @ref g_active_slot at the highest-numbered menu slot still in use.
+ *
+ * Scans all four slots of @ref g_menu_slots and records the index of every active
+ * one, so the last (highest-index) active slot wins. If no slot is active
+ * @ref g_active_slot keeps its previous value; callers reset it to -1 beforehand.
+ *
+ * @note The call site in @ref menu_update_slots passes an argument that this
+ *       function ignores, so no prototype is declared for it - the implicit
+ *       declaration at that call site is what the original codegen relies on.
+ * @see decomp.me (100%)
+ */
+void func_8014DEB0(void)
+{
+    s32 i;
+
+    i = 0;
+    do
+    {
+        if (g_menu_slots[i].active != 0)
+        {
+            g_active_slot = i;
+        }
+        i += 1;
+    } while (i < 4);
+}
