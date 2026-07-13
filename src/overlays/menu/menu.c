@@ -7969,3 +7969,46 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                              0x30 - view_origin->x, 0x30 - view_origin->y, 2);
     return prim_buf;
 }
+
+/**
+ * @brief Draws the confirmation page and dismisses it on any cancel/confirm press.
+ *
+ * When the page is active and the pad reports cancel or either confirm bit (0x260),
+ * it plays the navigate SE and clears the page's sub-window and state-change bytes,
+ * which returns the caller to the previous page. Regardless of input, it always draws
+ * the single glyph currently held in @ref D_801690A8 at (0x88 - x, -y) relative to the
+ * viewport anchor.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this page.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x88 - x, -y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note Two shapes are required to match. @c pos is never read, but an aggregate local
+ *       still takes a frame slot at expand time, and without it the frame is 0x38 -> 0x30.
+ *       And @c buf must alias @c prim_buf: the original emits the entry copy of
+ *       @c view_origin (a3 -> s1) before that of @c prim_buf (a2 -> s0), and aliasing the
+ *       modified parameter defers its copy to first use. Aliasing @c view_origin instead
+ *       does nothing.
+ * @see decomp.me (100%)
+ */
+s32 func_8014C820(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    Vec2s pos;
+    ScrollListState* list;
+    s32 buf;
+
+    list = state;
+    buf = prim_buf;
+
+    if ((g_pad_input & 0x260) && (active != 0))
+    {
+        list->unk2 = 0;
+        list->unk0 = 0;
+        func_8014F210(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+    }
+
+    buf = func_800A88A0(buf, ot, D_801690A8, 1, 0x88 - view_origin->x, -view_origin->y, 2);
+    return buf;
+}
