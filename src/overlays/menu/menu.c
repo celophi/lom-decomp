@@ -8850,3 +8850,24 @@ s32 func_8014DE1C(s32 arg0)
 
     return 0;
 }
+
+/**
+ * @brief Swap two 0x40-byte item records through a stack buffer.
+ *
+ * Three @ref func_800A8F8C record copies: @p arg0 -> scratch, @p arg1 -> @p arg0,
+ * scratch -> @p arg1.
+ *
+ * @param arg0 Address of the first 0x40-byte item record.
+ * @param arg1 Address of the second 0x40-byte item record.
+ * @note Used by @ref func_8014DA48 to commit an item-compare slot, exchanging the
+ *       staged item with the one already equipped.
+ * @see decomp.me (100%)
+ */
+void func_8014DE5C(s32 arg0, s32 arg1)
+{
+    u8 tmp[0x40];
+
+    func_800A8F8C(tmp, arg0);
+    func_800A8F8C(arg0, arg1);
+    func_800A8F8C(arg1, tmp);
+}
