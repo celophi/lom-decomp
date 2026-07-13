@@ -8012,3 +8012,45 @@ s32 func_8014C820(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     buf = func_800A88A0(buf, ot, D_801690A8, 1, 0x88 - view_origin->x, -view_origin->y, 2);
     return buf;
 }
+
+/**
+ * @brief Draws the two-line confirmation page and dismisses it on cancel/confirm.
+ *
+ * Identical input handling to @ref func_8014C820: when the page is active and the pad
+ * reports cancel or either confirm bit (0x260), it plays the navigate SE and clears the
+ * page's sub-window and state-change bytes. It then always draws two glyphs, stacked
+ * 0x10 apart -- @ref D_801690A8 at (0x88 - x, -y) and @ref D_801690E0 at
+ * (0x88 - x, 0x10 - y).
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state       Scroll-list state for this page.
+ * @param prim_buf    Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origins are (0x88 - x, N - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note The same two shapes func_8014C820 needs are required here. @c pos is never read,
+ *       but an aggregate local still takes a frame slot at expand time (0x40 -> 0x38
+ *       without it). And @c buf must alias @c prim_buf so the modified parameter's entry
+ *       copy is deferred, letting @c view_origin copy into s2 first.
+ * @see decomp.me (100%)
+ */
+s32 func_8014C8C8(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+{
+    Vec2s pos;
+    ScrollListState* list;
+    s32 buf;
+
+    list = state;
+    buf = prim_buf;
+
+    if ((g_pad_input & 0x260) && (active != 0))
+    {
+        list->unk2 = 0;
+        list->unk0 = 0;
+        func_8014F210(MENU_SE_NAVIGATE, MENU_SE_VOLUME);
+    }
+
+    buf = func_800A88A0(buf, ot, D_801690A8, 1, 0x88 - view_origin->x, -view_origin->y, 2);
+    buf = func_800A88A0(buf, ot, D_801690E0, 1, 0x88 - view_origin->x, 0x10 - view_origin->y, 2);
+    return buf;
+}
