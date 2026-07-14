@@ -28,14 +28,6 @@
  *   v=0x88: bot h-edge  (16x8 tile, single column)
  *   v=0x90: v-edge row  (left at u=0xD0, right at u=0xD8, each 8x16)
  */
-/*
- * Interior fill tint: r=0x80, g=0x80, b=0x00, code=0x80 as the initial
- * packed word. The code byte is immediately overwritten by setcode(0x64),
- * leaving a warm/yellow-tinted SPRT distinct from GPU_TINT_NEUTRAL (all
- * channels equal). Passed to SET_BGR0_PACKED so the store is one word write.
- */
-#define MENU_TINT_FILL 0x80008080U
-
 #define MENU_TW_CORNER_TL 0x70D0
 #define MENU_TW_CORNER_TR 0x70D8
 #define MENU_TW_CORNER_BL 0x78D0
@@ -1375,7 +1367,7 @@ void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
  * @brief Tile the interior of a window with 0x60x0x60 textured sprites.
  *
  * Walks @p rect in 0x60-pixel steps on both axes, emitting one @c SPRT per
- * tile (code 0x64, tint @c MENU_TINT_FILL, CLUT @c MENU_CLUT_GRID_ALT)
+ * tile (code 0x64, tint @c GPU_TINT_NEUTRAL, CLUT @c MENU_CLUT_GRID_ALT)
  * clamped to the region edges, and links each into the chain headed at @p ot.
  *
  * @param prim  Primitive write cursor (advanced past every emitted tile).
@@ -1383,12 +1375,15 @@ void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
  * @param rect  Region to fill: x, y (screen origin), w, h (pixel size).
  * @param uv    Packed texture origin written to each tile's @c u0 / @c v0.
  * @return Primitive write cursor just past the last tile emitted.
- * @see decomp.me (90.20%) https://decomp.me/scratch/R9mdk
+ * @note @c pad is an unused stack local: the original allocates an 8-byte
+ *       frame it never touches, and forcing one local to memory reproduces it.
+ *       The @c tile_x / @c rect_y u16 temporaries are required to match.
+ * @see decomp.me (100%) https://decomp.me/scratch/R9mdk
  */
 s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
 {
     u16 tile_x;
-    short pad;
+    volatile s32 pad;
     u16 rect_y;
     s32 y = 0;
     if (rect->h > 0)
@@ -1399,10 +1394,9 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
             if (rect->w > 0)
             {
                 s32 y_plus_60 = y + 0x60;
-                u8* wp;
                 do
                 {
-                    SET_BGR0_PACKED(prim, MENU_TINT_FILL);
+                    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
                     setlen((SPRT*)prim, 4);
                     setcode((SPRT*)prim, 0x64);
                     SET_SPRT_UV0_PACKED(prim, uv);
@@ -1427,7 +1421,6 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
                     rect_y = rect->y;
                     x += 0x60;
                     ((SPRT*)prim)->y0 = (u16)(rect_y + (u16)y);
-                    wp += 0x14;
                     SET_SPRT_CLUT(prim, MENU_CLUT_GRID_ALT);
                     addPrim(ot, (SPRT*)prim);
                     prim = (s32*)((SPRT*)prim + 1);
