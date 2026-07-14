@@ -574,96 +574,81 @@ void menu_tick(RenderContext* gpu_work)
 /**
  * @brief Lay out a run of glyph sprites and link them into an OT chain.
  *
- * @param sprites Array of libgpu @c SPRT primitives (stride 0x14) - both the
- *                working buffer and the function's output.
- * @param ot      OT chain column the sprites are linked into via @c addPrim.
- * @param src     Source text/data copied into the local glyph buffer.
+ * @param sprites Primitive write cursor: the glyph @c SPRT records are built
+ *                here, and the cursor is advanced past the run.
+ * @param ot      Ordering-table head the glyphs are linked into via @c addPrim.
+ * @param src     Source text copied into the local glyph buffer.
  * @param arg3    TODO: unknown - passed to @ref func_800644FC.
- * @param x       Starting X of the run; pre-shifted left by the total glyph
- *                width when @p mode is 1 or 2 (centering).
+ * @param x       Starting X of the run; shifted left by the total glyph width
+ *                when @p mode is 1 or 2 (centering).
  * @param y       Y coordinate of the run.
- * @param len     Source length: element count for the buffer fill and the
- *                index at which the buffer is null-terminated.
- * @param mode    Glyph-width interpretation: 1 = signed halfword,
- *                2 = unsigned halfword (>> 1); other = no width adjustment.
- * @return Pointer just past the run (offset 0x8 of the trailing primitive).
+ * @param len     Source length: byte count for the buffer fill and the index
+ *                at which the buffer is null-terminated.
+ * @param mode    Centering: 1 = subtract each glyph's full width,
+ *                2 = subtract half of it; other = no adjustment.
+ * @return Pointer just past the trailing @c DR_TPAGE's tag+code words.
  *
- * @note A @c SPRT (offset 0x4 @c rgbc, 0x8 packed @c (x0,y0), 0x10 signed
- *       @c w) is 0x14 bytes. Retyping @p sprites to @c SPRT* is desirable but
- *       must be verified against the asm - this scratch is not yet matched.
- * @see decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
+ * @note @ref func_800644FC fills the SPRT records (uv, clut, w, h) from the
+ *       text and returns the glyph count; this function only positions them,
+ *       tints them, and links them.
+ * @see decomp.me (100%) https://decomp.me/scratch/AW5Sa
  */
 s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
 {
-    u8 sp10[0x90]; /* buffer - size matches target frame */
-    s32 tmp, count, i;
-    s32 *ptr0, *ptr1;
-    s32 acc; /* accumulator for halfwords */
-    u8 *base, *col;
+    char buf[0x80];
+    s32 count, i, acc;
+    SPRT* sprt;
 
-    /* first call: fill buffer */
-    strncpy(sp10, src, len);
-    sp10[len] = 0;
+    strncpy(buf, (char*)src, len);
+    buf[len] = 0;
 
-    /* second call: get number of elements */
-    count = func_800644FC(sprites, sp10, arg3);
+    count = func_800644FC(sprites, buf, arg3);
 
-    /* subtract halfword values according to mode */
-    if (mode == 1)
+    if (mode != 1)
     {
-        /* signed halfword (lh) */
-        ptr0 = sprites;
-        for (i = 0; i < count; i++)
+        if (mode == 2)
         {
-            x -= *(s16*)((char*)ptr0 + 0x10);
-            ptr0 = (s32*)((char*)ptr0 + 0x14);
+            sprt = (SPRT*)sprites;
+            for (i = 0; i < count; i++)
+            {
+                u16 w = (u16)sprt[i].w;
+                x -= (s16)w >> 1;
+            }
         }
     }
-    else if (mode == 2)
+    else
     {
-        /* unsigned halfword -> (val << 16) >> 17 */
-        ptr0 = sprites;
+        sprt = (SPRT*)sprites;
         for (i = 0; i < count; i++)
         {
-            u16 val = *(u16*)((char*)ptr0 + 0x10);
-            x -= ((s16)val) >> 1; /* arithmetic right shift, matches sra */
-            ptr0 = (s32*)((char*)ptr0 + 0x14);
+            x -= sprt[i].w;
         }
     }
 
     acc = 0;
 
-    /* main loop - process each structure */
-    if (count > 0)
+    if (count != 0)
     {
-        base = (u8*)sprites;
-        col = (u8*)ot;
-        tmp = x + (y << 16); /* constant used inside loop */
-
         do
         {
-            /* SPRT primitive: pos, white tint, len=4, code=0x64 */
-            *(s32*)(base + 0x8) = tmp + acc;
-            SET_BGR0_PACKED(base, GPU_TINT_NEUTRAL);
-            setSprt(base);
+            sprt = (SPRT*)sprites;
+            SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+            setSprt(sprt);
 
-            acc += *(s16*)(base + 0x10); /* accumulate halfword */
+            /* x0/y0 are written as one word: acc is the running pen X. */
+            *(s32*)&sprt->x0 = (x + (y << 16)) + acc;
+            acc += sprt->w;
 
-            /* link this SPRT into the OT chain headed at @c col */
-            addPrim(col, base);
-
-            /* advance to next structure (20 bytes) */
-            base += 0x14;
-            col += 0x14;
-        } while (--count);
+            addPrim(ot, sprt);
+            sprites = (s32*)((u8*)sprites + sizeof(SPRT));
+            count--;
+        } while (count != 0);
     }
 
-    /* terminating DR_TPAGE primitive (tpage=0x1F) */
-    setDrawTPage((DR_TPAGE*)base, 0, 0, 0x1F);
-    addPrim(col, base);
+    setDrawTPage((DR_TPAGE*)sprites, 0, 0, 0x1F);
+    addPrim(ot, sprites);
 
-    /* return pointer to offset 0x8 of the current structure */
-    return (s32*)(base + 8);
+    return (s32*)((u8*)sprites + 8);
 }
 
 /**
