@@ -28,14 +28,6 @@
  *   v=0x88: bot h-edge  (16x8 tile, single column)
  *   v=0x90: v-edge row  (left at u=0xD0, right at u=0xD8, each 8x16)
  */
-/*
- * Interior fill tint: r=0x80, g=0x80, b=0x00, code=0x80 as the initial
- * packed word. The code byte is immediately overwritten by setcode(0x64),
- * leaving a warm/yellow-tinted SPRT distinct from GPU_TINT_NEUTRAL (all
- * channels equal). Passed to SET_BGR0_PACKED so the store is one word write.
- */
-#define MENU_TINT_FILL 0x80008080U
-
 #define MENU_TW_CORNER_TL 0x70D0
 #define MENU_TW_CORNER_TR 0x70D8
 #define MENU_TW_CORNER_BL 0x78D0
@@ -574,96 +566,81 @@ void menu_tick(RenderContext* gpu_work)
 /**
  * @brief Lay out a run of glyph sprites and link them into an OT chain.
  *
- * @param sprites Array of libgpu @c SPRT primitives (stride 0x14) - both the
- *                working buffer and the function's output.
- * @param ot      OT chain column the sprites are linked into via @c addPrim.
- * @param src     Source text/data copied into the local glyph buffer.
+ * @param sprites Primitive write cursor: the glyph @c SPRT records are built
+ *                here, and the cursor is advanced past the run.
+ * @param ot      Ordering-table head the glyphs are linked into via @c addPrim.
+ * @param src     Source text copied into the local glyph buffer.
  * @param arg3    TODO: unknown - passed to @ref func_800644FC.
- * @param x       Starting X of the run; pre-shifted left by the total glyph
- *                width when @p mode is 1 or 2 (centering).
+ * @param x       Starting X of the run; shifted left by the total glyph width
+ *                when @p mode is 1 or 2 (centering).
  * @param y       Y coordinate of the run.
- * @param len     Source length: element count for the buffer fill and the
- *                index at which the buffer is null-terminated.
- * @param mode    Glyph-width interpretation: 1 = signed halfword,
- *                2 = unsigned halfword (>> 1); other = no width adjustment.
- * @return Pointer just past the run (offset 0x8 of the trailing primitive).
+ * @param len     Source length: byte count for the buffer fill and the index
+ *                at which the buffer is null-terminated.
+ * @param mode    Centering: 1 = subtract each glyph's full width,
+ *                2 = subtract half of it; other = no adjustment.
+ * @return Pointer just past the trailing @c DR_TPAGE's tag+code words.
  *
- * @note A @c SPRT (offset 0x4 @c rgbc, 0x8 packed @c (x0,y0), 0x10 signed
- *       @c w) is 0x14 bytes. Retyping @p sprites to @c SPRT* is desirable but
- *       must be verified against the asm - this scratch is not yet matched.
- * @see decomp.me (75.58%) https://decomp.me/scratch/AW5Sa
+ * @note @ref func_800644FC fills the SPRT records (uv, clut, w, h) from the
+ *       text and returns the glyph count; this function only positions them,
+ *       tints them, and links them.
+ * @see decomp.me (100%) https://decomp.me/scratch/AW5Sa
  */
 s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
 {
-    u8 sp10[0x90]; /* buffer - size matches target frame */
-    s32 tmp, count, i;
-    s32 *ptr0, *ptr1;
-    s32 acc; /* accumulator for halfwords */
-    u8 *base, *col;
+    char buf[0x80];
+    s32 count, i, acc;
+    SPRT* sprt;
 
-    /* first call: fill buffer */
-    strncpy(sp10, src, len);
-    sp10[len] = 0;
+    strncpy(buf, (char*)src, len);
+    buf[len] = 0;
 
-    /* second call: get number of elements */
-    count = func_800644FC(sprites, sp10, arg3);
+    count = func_800644FC(sprites, buf, arg3);
 
-    /* subtract halfword values according to mode */
-    if (mode == 1)
+    if (mode != 1)
     {
-        /* signed halfword (lh) */
-        ptr0 = sprites;
-        for (i = 0; i < count; i++)
+        if (mode == 2)
         {
-            x -= *(s16*)((char*)ptr0 + 0x10);
-            ptr0 = (s32*)((char*)ptr0 + 0x14);
+            sprt = (SPRT*)sprites;
+            for (i = 0; i < count; i++)
+            {
+                u16 w = (u16)sprt[i].w;
+                x -= (s16)w >> 1;
+            }
         }
     }
-    else if (mode == 2)
+    else
     {
-        /* unsigned halfword -> (val << 16) >> 17 */
-        ptr0 = sprites;
+        sprt = (SPRT*)sprites;
         for (i = 0; i < count; i++)
         {
-            u16 val = *(u16*)((char*)ptr0 + 0x10);
-            x -= ((s16)val) >> 1; /* arithmetic right shift, matches sra */
-            ptr0 = (s32*)((char*)ptr0 + 0x14);
+            x -= sprt[i].w;
         }
     }
 
     acc = 0;
 
-    /* main loop - process each structure */
-    if (count > 0)
+    if (count != 0)
     {
-        base = (u8*)sprites;
-        col = (u8*)ot;
-        tmp = x + (y << 16); /* constant used inside loop */
-
         do
         {
-            /* SPRT primitive: pos, white tint, len=4, code=0x64 */
-            *(s32*)(base + 0x8) = tmp + acc;
-            SET_BGR0_PACKED(base, GPU_TINT_NEUTRAL);
-            setSprt(base);
+            sprt = (SPRT*)sprites;
+            SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+            setSprt(sprt);
 
-            acc += *(s16*)(base + 0x10); /* accumulate halfword */
+            /* x0/y0 are written as one word: acc is the running pen X. */
+            *(s32*)&sprt->x0 = (x + (y << 16)) + acc;
+            acc += sprt->w;
 
-            /* link this SPRT into the OT chain headed at @c col */
-            addPrim(col, base);
-
-            /* advance to next structure (20 bytes) */
-            base += 0x14;
-            col += 0x14;
-        } while (--count);
+            addPrim(ot, sprt);
+            sprites = (s32*)((u8*)sprites + sizeof(SPRT));
+            count--;
+        } while (count != 0);
     }
 
-    /* terminating DR_TPAGE primitive (tpage=0x1F) */
-    setDrawTPage((DR_TPAGE*)base, 0, 0, 0x1F);
-    addPrim(col, base);
+    setDrawTPage((DR_TPAGE*)sprites, 0, 0, 0x1F);
+    addPrim(ot, sprites);
 
-    /* return pointer to offset 0x8 of the current structure */
-    return (s32*)(base + 8);
+    return (s32*)((u8*)sprites + 8);
 }
 
 /**
@@ -1173,7 +1150,7 @@ void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_en
  * @param rect          Window rectangle: x, y, w, h halfwords.
  * @param arg3          TODO: forwarded to the content callback and edge builders.
  * @param cursor_enable Cursor-highlight enable for the active slot.
- * @see decomp.me (91.20%) https://decomp.me/scratch/5k4SF
+ * @see decomp.me (99.73%) https://decomp.me/scratch/5k4SF
  */
 void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, s32 arg3, s32 cursor_enable)
 {
@@ -1192,19 +1169,20 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     s32* var_s1;
     u16 temp_a1;
     u16 temp_a2;
-    MenuRect* temp_s3;
     u16 var_v0;
     void* temp_v0_2;
+    s32 fill_uv;
+    s32 draw_x;
+    DRAWENV* env;
+    s32 title_mask;
 
-    temp_s3 = rect;
     var_s1 = gpu_work->prim_cursor;
     temp_s2 = (s32*)gpu_work + (((u32)slot->_u.flags >> 0x19));
     if (slot->lerp_steps != 0)
     {
+        temp_v1 = (s32)(slot->lerp_target_a - slot->lerp_cur_a) / (s32)slot->lerp_steps;
         temp_a2 = slot->lerp_cur_a;
-        temp_v1 = (s32)(slot->lerp_target_a - temp_a2) / (s32)slot->lerp_steps;
-        temp_a1 = slot->lerp_cur_b;
-        temp_a1 = temp_a1 + ((s32)(slot->lerp_target_b - temp_a1) / (s32) * (volatile u8*)&slot->lerp_steps);
+        temp_a1 = slot->lerp_cur_b + ((s32)(slot->lerp_target_b - slot->lerp_cur_b) / (s32) * (volatile u8*)&slot->lerp_steps);
         slot->lerp_steps = (u8)(*(volatile u8*)&slot->lerp_steps - 1);
         slot->lerp_cur_a = (u16)(temp_a2 + temp_v1);
         slot->lerp_cur_b = (u16)temp_a1;
@@ -1216,17 +1194,16 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     }
     if (slot->content_cb != NULL)
     {
-        if ((temp_s3->w - 0x20) > 0)
+        if ((rect->w - 0x20) > 0)
         {
-            if ((temp_s3->h - 0x10) > 0)
+            if ((rect->h - 0x10) > 0)
             {
                 SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
+                addPrim(temp_s2, var_s1);
                 var_a3 = 0;
-                *var_s1 = (*var_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 g_menu_draw_early_out = 0;
-                *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
-                var_s1 += 0x10;
-                if ((slot->index == g_active_slot) && (cursor_enable != 0))
+                var_s1 += PRIM_WORDS(DR_ENV);
+                if ((slot->index == g_active_slot) && (0 != cursor_enable))
                 {
                     if (g_menu_suppress_cursor == 0)
                     {
@@ -1239,17 +1216,19 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     gpu_work->prim_cursor = temp_s1;
                     return;
                 }
-                temp_a0 = temp_s3->y;
+                env = &sp20;
+                temp_a0 = rect->y;
+                draw_x = rect->x + 8;
                 var_a2_2 = temp_a0 + 0x10;
                 if (gpu_work->draw_buf_idx != 0)
                 {
                     var_a2_2 = temp_a0 + 0xF8;
                 }
-                SetDefDrawEnv(&sp20, temp_s3->x + 8, var_a2_2, temp_s3->w - 0x10, temp_s3->h - 0x10);
-                SetDrawEnv((DR_ENV*)temp_s1, &sp20);
-                *temp_s1 = (*temp_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
-                *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
-                var_s1 = temp_s1 + 0x10;
+                SetDefDrawEnv(env, draw_x, var_a2_2, rect->w - 0x10, rect->h - 0x10);
+                SetDrawEnv((DR_ENV*)temp_s1, env);
+                addPrim(temp_s2, temp_s1);
+                var_s1 = temp_s1 + PRIM_WORDS(DR_ENV);
+                title_mask = 0x1FF;
                 if (slot->has_title != 0)
                 {
                     switch (g_menu_scene_type)
@@ -1259,14 +1238,14 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     case 19: /* switch 1 */
                     case 22: /* switch 1 */
                     case 25: /* switch 1 */
-                        var_v0 = ((u16)temp_s3->x + (u16)temp_s3->w) - 0x68;
+                        var_v0 = ((u16)rect->x + (u16)rect->w) - 0x68;
                         break;
                     default: /* switch 1 */
-                        var_v0 = ((u16)temp_s3->x + (u16)temp_s3->w) - 0x48;
+                        var_v0 = ((u16)rect->x + (u16)rect->w) - 0x48;
                         break;
                     }
                     sp80[0] = var_v0;
-                    sp80[1] = (u16)temp_s3->y;
+                    sp80[1] = (u16)rect->y;
                     if (slot->_u.flags & 0x01FF0000)
                     {
                         var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.flags + 1, 3, sp80, 0);
@@ -1277,7 +1256,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     }
                     temp_a1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
                     sp80[0] += 8;
-                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, slot->_u._s.unk6 & 0x1FF, 3, sp80, 0);
+                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, slot->_u._s.unk6 & title_mask, 3, sp80, 0);
                     switch (g_menu_scene_type)
                     {        /* switch 2 */
                     case 1:  /* switch 2 */
@@ -1299,68 +1278,57 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     sp18.h = 0xFF;
     sp18.x = 0;
     sp18.y = 0;
-    ((MenuPrimHead*)var_s1)->_u._s.unk3 = 2;
+    setTexWindow((DR_TWIN*)var_s1, &sp18);
+    addPrim(temp_s2, var_s1);
+    prim_cur = var_s1 + PRIM_WORDS(DR_TWIN);
+    fill_uv = MENU_TW_FILL;
+    if (rect->h >= 0x10)
     {
-        u8 t_unk2 = (u8)sp18.y;
-        u8 t_unk0 = (u8)sp18.x;
-
-        s16 t_unk4 = sp18.w;
-        s16 t_unk6 = sp18.h;
-        ((MenuPrimHead*)var_s1)->unk8 = 0;
-        ((MenuPrimHead*)var_s1)->unk4 =
-            (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) | ((-t_unk6 << 2) & 0x3E0) | ((s32)(-t_unk4 & 0xFF) >> 3));
-    }
-    ((MenuPrimHead*)var_s1)->_u.unk0 = (((MenuPrimHead*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
-    *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
-    prim_cur = var_s1 + 3;
-    if (temp_s3->h >= 0x10)
-    {
-        sp18.x = (u16)temp_s3->x + 8;
-        sp18.y = (u16)temp_s3->y;
-        sp18.w = (u16)temp_s3->w - 0x10;
+        sp18.x = (u16)rect->x + 8;
+        sp18.y = (u16)rect->y;
+        sp18.w = (u16)rect->w - 0x10;
         sp18.h = 8;
         prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_TOP);
-        if (temp_s3->h >= 0x10)
+        if (rect->h >= 0x10)
         {
-            sp18.x = (u16)temp_s3->x + 8;
-            sp18.y = ((u16)temp_s3->y + (u16)temp_s3->h) - 8;
-            sp18.w = (u16)temp_s3->w - 0x10;
+            sp18.x = (u16)rect->x + 8;
+            sp18.y = ((u16)rect->y + (u16)rect->h) - 8;
+            sp18.w = (u16)rect->w - 0x10;
             sp18.h = 8;
             prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_BOT);
         }
     }
-    if (temp_s3->w >= 0x20)
+    if (rect->w >= 0x20)
     {
-        sp18.x = (u16)temp_s3->x;
-        sp18.y = (u16)temp_s3->y + 8;
+        sp18.x = (u16)rect->x;
+        sp18.y = (u16)rect->y + 8;
         sp18.w = 8;
-        sp18.h = (u16)temp_s3->h - 0x10;
+        sp18.h = (u16)rect->h - 0x10;
         prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_LEFT);
-        if (temp_s3->w >= 0x20)
+        if (rect->w >= 0x20)
         {
-            sp18.x = ((u16)temp_s3->x + (u16)temp_s3->w) - 8;
-            sp18.y = (u16)temp_s3->y + 8;
+            sp18.x = ((u16)rect->x + (u16)rect->w) - 8;
+            sp18.y = (u16)rect->y + 8;
             sp18.w = 8;
-            sp18.h = (u16)temp_s3->h - 0x10;
+            sp18.h = (u16)rect->h - 0x10;
             prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_RIGHT);
         }
     }
-    sp18.x = (u16)temp_s3->x + 8;
-    sp18.y = (u16)temp_s3->y + 8;
-    sp18.w = (u16)temp_s3->w - 0x10;
-    sp18.h = (u16)temp_s3->h - 0x10;
-    temp_v0_2 = menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_fill_window_interior(prim_cur, temp_s2, &sp18, MENU_TW_FILL), temp_s2,
-                                                                                    temp_s3->x, temp_s3->y, MENU_TW_CORNER_TL),
-                                                                   temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y, MENU_TW_CORNER_TR),
-                                                  temp_s2, temp_s3->x, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BL),
-                                 temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BR);
-    ((MenuPrimHead*)temp_v0_2)->_u._s.unk3 = 1;
-    ((MenuPrimHead*)temp_v0_2)->unk4 = 0xE1000005;
-    ((MenuPrimHead*)temp_v0_2)->_u.unk0 = (s32)((((MenuPrimHead*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
-    *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
-    gpu_work->prim_cursor = (s32*)((char*)temp_v0_2 + 8);
+    sp18.x = (u16)rect->x + 8;
+    sp18.y = (u16)rect->y + 8;
+    sp18.w = (u16)rect->w - 0x10;
+    sp18.h = (u16)rect->h - 0x10;
+    prim_cur = menu_fill_window_interior(prim_cur, temp_s2, &sp18, fill_uv);
+    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x, rect->y, MENU_TW_CORNER_TL);
+    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x + rect->w - 8, rect->y, MENU_TW_CORNER_TR);
+    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x, rect->y + rect->h - 8, MENU_TW_CORNER_BL);
+    temp_v0_2 = menu_emit_corner(prim_cur, temp_s2, rect->x + rect->w - 8, rect->y + rect->h - 8, MENU_TW_CORNER_BR);
+    prim_cur = temp_v0_2;
+    setDrawTPage((DR_TPAGE*)prim_cur, 0, 0, 5);
+    setaddr(prim_cur, getaddr(temp_s2));
+    setaddr(temp_s2, temp_v0_2);
+    gpu_work->prim_cursor = (s32*)((char*)prim_cur + 8);
 }
-
 /**
  * @brief Emit one 8x8 textured corner sprite and splice it into a prim chain.
  *
@@ -1399,7 +1367,7 @@ void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
  * @brief Tile the interior of a window with 0x60x0x60 textured sprites.
  *
  * Walks @p rect in 0x60-pixel steps on both axes, emitting one @c SPRT per
- * tile (code 0x64, tint @c MENU_TINT_FILL, CLUT @c MENU_CLUT_GRID_ALT)
+ * tile (code 0x64, tint @c GPU_TINT_NEUTRAL, CLUT @c MENU_CLUT_GRID_ALT)
  * clamped to the region edges, and links each into the chain headed at @p ot.
  *
  * @param prim  Primitive write cursor (advanced past every emitted tile).
@@ -1407,12 +1375,15 @@ void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
  * @param rect  Region to fill: x, y (screen origin), w, h (pixel size).
  * @param uv    Packed texture origin written to each tile's @c u0 / @c v0.
  * @return Primitive write cursor just past the last tile emitted.
- * @see decomp.me (90.20%) https://decomp.me/scratch/R9mdk
+ * @note @c pad is an unused stack local: the original allocates an 8-byte
+ *       frame it never touches, and forcing one local to memory reproduces it.
+ *       The @c tile_x / @c rect_y u16 temporaries are required to match.
+ * @see decomp.me (100%) https://decomp.me/scratch/R9mdk
  */
 s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
 {
     u16 tile_x;
-    short pad;
+    volatile s32 pad;
     u16 rect_y;
     s32 y = 0;
     if (rect->h > 0)
@@ -1423,10 +1394,9 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
             if (rect->w > 0)
             {
                 s32 y_plus_60 = y + 0x60;
-                u8* wp;
                 do
                 {
-                    SET_BGR0_PACKED(prim, MENU_TINT_FILL);
+                    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
                     setlen((SPRT*)prim, 4);
                     setcode((SPRT*)prim, 0x64);
                     SET_SPRT_UV0_PACKED(prim, uv);
@@ -1451,7 +1421,6 @@ s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
                     rect_y = rect->y;
                     x += 0x60;
                     ((SPRT*)prim)->y0 = (u16)(rect_y + (u16)y);
-                    wp += 0x14;
                     SET_SPRT_CLUT(prim, MENU_CLUT_GRID_ALT);
                     addPrim(ot, (SPRT*)prim);
                     prim = (s32*)((SPRT*)prim + 1);
@@ -1581,9 +1550,18 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
  * @param prim      Primitive write cursor (@c u_long*; passed as arg0 to the glyph renderer).
  * @param pos       Screen position (x, y) to draw at.
  * @param label_id  >= 0: draw string keyed by g_menu_label_key_a; < 0: keyed by g_menu_label_key_b.
+ * @return The advanced primitive write cursor returned by the glyph renderer.
+ * @note The glyph-copy call is written once per arm on purpose: the target's arms each
+ *       carry their own `addu a0, s1, zero`, the leftover of a cross-jumped common tail.
+ *       Hoisting the call below the if/else drops the match to 92.42%.
+ * @note @c sum is scoped to each arm and the address math is done in @c s32 (not pointer)
+ *       space. Both are required to match: integer arithmetic keeps the operand order
+ *       (@c entry first), and the arm-local scope is what makes gcc color the page byte
+ *       into v0 and the key address into v1 rather than the reverse.
  * @see decomp.me (94.94%) https://decomp.me/scratch/ozwB7
+ * @see local match 100% (working/menu_draw_label/code_v18.c)
  */
-void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
+u_long* menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
 {
     u8 sp20[16];
     u8* ptr = sp20;
@@ -1591,19 +1569,24 @@ void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
 
     if (label_id >= 0)
     {
-        str_ptr = g_menu_label_key_a.entry + ((g_menu_label_key_a.page << 8) + ((u8*)&g_menu_label_key_a - 0x16));
+        s32 sum = (g_menu_label_key_a.page << 8) + (s32)((u8*)&g_menu_label_key_a - 0x16);
+        str_ptr = (u8*)(g_menu_label_key_a.entry + sum);
+        func_800A8E28(ptr, str_ptr);
     }
     else
     {
-        str_ptr = g_menu_label_key_b.entry + ((g_menu_label_key_b.page << 8) + ((u8*)&g_menu_label_key_b - 0x20));
+        s32 sum = (g_menu_label_key_b.page << 8) + (s32)((u8*)&g_menu_label_key_b - 0x20);
+        str_ptr = (u8*)(g_menu_label_key_b.entry + sum);
+        func_800A8E28(ptr, str_ptr);
     }
 
-    func_800A8E28(ptr, str_ptr);
     ptr += func_800A8DDC(str_ptr);
 
     *ptr = 0;
 
-    func_800A88A0(prim, ot, sp20, 1, pos->x, pos->y, 0);
+    prim = (u_long*)func_800A88A0(prim, ot, sp20, 1, pos->x, pos->y, 0);
+
+    return prim;
 }
 
 /**
