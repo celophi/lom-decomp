@@ -1557,7 +1557,16 @@ void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv
  * @param prim      Primitive write cursor (@c u_long*; passed as arg0 to the glyph renderer).
  * @param pos       Screen position (x, y) to draw at.
  * @param label_id  >= 0: draw string keyed by g_menu_label_key_a; < 0: keyed by g_menu_label_key_b.
+ * @note The glyph-copy call is written once per arm on purpose: the target's arms each
+ *       carry their own `addu a0, s1, zero`, the leftover of a cross-jumped common tail.
+ *       Hoisting the call below the if/else costs 5.75% (98.17% -> 92.42%).
+ * @note Not matched. The residual is register coloring only (0 structural rows, exact
+ *       insn count): prim/pos are colored s3/s2 where the target has s2/s3, and the two
+ *       lbu temps are swapped. `pos` is deref'd twice, so it outranks `prim` in gcc's
+ *       allocation priority; the original's prim must win that race. See
+ *       working/menu_draw_label/status.md for the measured priorities and every probe tried.
  * @see decomp.me (94.94%) https://decomp.me/scratch/ozwB7
+ * @see local match 98.17% (working/menu_draw_label/code.c)
  */
 void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
 {
@@ -1567,14 +1576,15 @@ void menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
 
     if (label_id >= 0)
     {
-        str_ptr = g_menu_label_key_a.entry + ((g_menu_label_key_a.page << 8) + ((u8*)&g_menu_label_key_a - 0x16));
+        str_ptr = ((g_menu_label_key_a.page << 8) + ((u8*)&g_menu_label_key_a - 0x16)) + g_menu_label_key_a.entry;
+        func_800A8E28(ptr, str_ptr);
     }
     else
     {
-        str_ptr = g_menu_label_key_b.entry + ((g_menu_label_key_b.page << 8) + ((u8*)&g_menu_label_key_b - 0x20));
+        str_ptr = ((g_menu_label_key_b.page << 8) + ((u8*)&g_menu_label_key_b - 0x20)) + g_menu_label_key_b.entry;
+        func_800A8E28(ptr, str_ptr);
     }
 
-    func_800A8E28(ptr, str_ptr);
     ptr += func_800A8DDC(str_ptr);
 
     *ptr = 0;
