@@ -1158,7 +1158,7 @@ void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_en
  * @param rect          Window rectangle: x, y, w, h halfwords.
  * @param arg3          TODO: forwarded to the content callback and edge builders.
  * @param cursor_enable Cursor-highlight enable for the active slot.
- * @see decomp.me (91.20%) https://decomp.me/scratch/5k4SF
+ * @see decomp.me (99.73%) https://decomp.me/scratch/5k4SF
  */
 void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, s32 arg3, s32 cursor_enable)
 {
@@ -1177,19 +1177,20 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     s32* var_s1;
     u16 temp_a1;
     u16 temp_a2;
-    MenuRect* temp_s3;
     u16 var_v0;
     void* temp_v0_2;
+    s32 fill_uv;
+    s32 draw_x;
+    DRAWENV* env;
+    s32 title_mask;
 
-    temp_s3 = rect;
     var_s1 = gpu_work->prim_cursor;
     temp_s2 = (s32*)gpu_work + (((u32)slot->_u.flags >> 0x19));
     if (slot->lerp_steps != 0)
     {
+        temp_v1 = (s32)(slot->lerp_target_a - slot->lerp_cur_a) / (s32)slot->lerp_steps;
         temp_a2 = slot->lerp_cur_a;
-        temp_v1 = (s32)(slot->lerp_target_a - temp_a2) / (s32)slot->lerp_steps;
-        temp_a1 = slot->lerp_cur_b;
-        temp_a1 = temp_a1 + ((s32)(slot->lerp_target_b - temp_a1) / (s32) * (volatile u8*)&slot->lerp_steps);
+        temp_a1 = slot->lerp_cur_b + ((s32)(slot->lerp_target_b - slot->lerp_cur_b) / (s32) * (volatile u8*)&slot->lerp_steps);
         slot->lerp_steps = (u8)(*(volatile u8*)&slot->lerp_steps - 1);
         slot->lerp_cur_a = (u16)(temp_a2 + temp_v1);
         slot->lerp_cur_b = (u16)temp_a1;
@@ -1201,17 +1202,16 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     }
     if (slot->content_cb != NULL)
     {
-        if ((temp_s3->w - 0x20) > 0)
+        if ((rect->w - 0x20) > 0)
         {
-            if ((temp_s3->h - 0x10) > 0)
+            if ((rect->h - 0x10) > 0)
             {
                 SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
+                addPrim(temp_s2, var_s1);
                 var_a3 = 0;
-                *var_s1 = (*var_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
                 g_menu_draw_early_out = 0;
-                *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
-                var_s1 += 0x10;
-                if ((slot->index == g_active_slot) && (cursor_enable != 0))
+                var_s1 += PRIM_WORDS(DR_ENV);
+                if ((slot->index == g_active_slot) && (0 != cursor_enable))
                 {
                     if (g_menu_suppress_cursor == 0)
                     {
@@ -1224,17 +1224,19 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     gpu_work->prim_cursor = temp_s1;
                     return;
                 }
-                temp_a0 = temp_s3->y;
+                env = &sp20;
+                temp_a0 = rect->y;
+                draw_x = rect->x + 8;
                 var_a2_2 = temp_a0 + 0x10;
                 if (gpu_work->draw_buf_idx != 0)
                 {
                     var_a2_2 = temp_a0 + 0xF8;
                 }
-                SetDefDrawEnv(&sp20, temp_s3->x + 8, var_a2_2, temp_s3->w - 0x10, temp_s3->h - 0x10);
-                SetDrawEnv((DR_ENV*)temp_s1, &sp20);
-                *temp_s1 = (*temp_s1 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
-                *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
-                var_s1 = temp_s1 + 0x10;
+                SetDefDrawEnv(env, draw_x, var_a2_2, rect->w - 0x10, rect->h - 0x10);
+                SetDrawEnv((DR_ENV*)temp_s1, env);
+                addPrim(temp_s2, temp_s1);
+                var_s1 = temp_s1 + PRIM_WORDS(DR_ENV);
+                title_mask = 0x1FF;
                 if (slot->has_title != 0)
                 {
                     switch (g_menu_scene_type)
@@ -1244,14 +1246,14 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     case 19: /* switch 1 */
                     case 22: /* switch 1 */
                     case 25: /* switch 1 */
-                        var_v0 = ((u16)temp_s3->x + (u16)temp_s3->w) - 0x68;
+                        var_v0 = ((u16)rect->x + (u16)rect->w) - 0x68;
                         break;
                     default: /* switch 1 */
-                        var_v0 = ((u16)temp_s3->x + (u16)temp_s3->w) - 0x48;
+                        var_v0 = ((u16)rect->x + (u16)rect->w) - 0x48;
                         break;
                     }
                     sp80[0] = var_v0;
-                    sp80[1] = (u16)temp_s3->y;
+                    sp80[1] = (u16)rect->y;
                     if (slot->_u.flags & 0x01FF0000)
                     {
                         var_s1 = (s32*)func_800AD208(temp_s2, var_s1, (u16)slot->_u.flags + 1, 3, sp80, 0);
@@ -1262,7 +1264,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     }
                     temp_a1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
                     sp80[0] += 8;
-                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, slot->_u._s.unk6 & 0x1FF, 3, sp80, 0);
+                    var_s1 = (s32*)func_800AD208(temp_s2, temp_a1_2, slot->_u._s.unk6 & title_mask, 3, sp80, 0);
                     switch (g_menu_scene_type)
                     {        /* switch 2 */
                     case 1:  /* switch 2 */
@@ -1284,68 +1286,57 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     sp18.h = 0xFF;
     sp18.x = 0;
     sp18.y = 0;
-    ((MenuPrimHead*)var_s1)->_u._s.unk3 = 2;
+    setTexWindow((DR_TWIN*)var_s1, &sp18);
+    addPrim(temp_s2, var_s1);
+    prim_cur = var_s1 + PRIM_WORDS(DR_TWIN);
+    fill_uv = MENU_TW_FILL;
+    if (rect->h >= 0x10)
     {
-        u8 t_unk2 = (u8)sp18.y;
-        u8 t_unk0 = (u8)sp18.x;
-
-        s16 t_unk4 = sp18.w;
-        s16 t_unk6 = sp18.h;
-        ((MenuPrimHead*)var_s1)->unk8 = 0;
-        ((MenuPrimHead*)var_s1)->unk4 =
-            (s32)(((t_unk2 >> 3) << 0xF) | (((t_unk0 >> 3) << 0xA) | 0xE2000000) | ((-t_unk6 << 2) & 0x3E0) | ((s32)(-t_unk4 & 0xFF) >> 3));
-    }
-    ((MenuPrimHead*)var_s1)->_u.unk0 = (((MenuPrimHead*)var_s1)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF);
-    *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)var_s1 & 0xFFFFFF);
-    prim_cur = var_s1 + 3;
-    if (temp_s3->h >= 0x10)
-    {
-        sp18.x = (u16)temp_s3->x + 8;
-        sp18.y = (u16)temp_s3->y;
-        sp18.w = (u16)temp_s3->w - 0x10;
+        sp18.x = (u16)rect->x + 8;
+        sp18.y = (u16)rect->y;
+        sp18.w = (u16)rect->w - 0x10;
         sp18.h = 8;
         prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_TOP);
-        if (temp_s3->h >= 0x10)
+        if (rect->h >= 0x10)
         {
-            sp18.x = (u16)temp_s3->x + 8;
-            sp18.y = ((u16)temp_s3->y + (u16)temp_s3->h) - 8;
-            sp18.w = (u16)temp_s3->w - 0x10;
+            sp18.x = (u16)rect->x + 8;
+            sp18.y = ((u16)rect->y + (u16)rect->h) - 8;
+            sp18.w = (u16)rect->w - 0x10;
             sp18.h = 8;
             prim_cur = menu_build_h_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_BOT);
         }
     }
-    if (temp_s3->w >= 0x20)
+    if (rect->w >= 0x20)
     {
-        sp18.x = (u16)temp_s3->x;
-        sp18.y = (u16)temp_s3->y + 8;
+        sp18.x = (u16)rect->x;
+        sp18.y = (u16)rect->y + 8;
         sp18.w = 8;
-        sp18.h = (u16)temp_s3->h - 0x10;
+        sp18.h = (u16)rect->h - 0x10;
         prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_LEFT);
-        if (temp_s3->w >= 0x20)
+        if (rect->w >= 0x20)
         {
-            sp18.x = ((u16)temp_s3->x + (u16)temp_s3->w) - 8;
-            sp18.y = (u16)temp_s3->y + 8;
+            sp18.x = ((u16)rect->x + (u16)rect->w) - 8;
+            sp18.y = (u16)rect->y + 8;
             sp18.w = 8;
-            sp18.h = (u16)temp_s3->h - 0x10;
+            sp18.h = (u16)rect->h - 0x10;
             prim_cur = menu_build_v_edge(prim_cur, temp_s2, &sp18, MENU_TW_EDGE_RIGHT);
         }
     }
-    sp18.x = (u16)temp_s3->x + 8;
-    sp18.y = (u16)temp_s3->y + 8;
-    sp18.w = (u16)temp_s3->w - 0x10;
-    sp18.h = (u16)temp_s3->h - 0x10;
-    temp_v0_2 = menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_emit_corner(menu_fill_window_interior(prim_cur, temp_s2, &sp18, MENU_TW_FILL), temp_s2,
-                                                                                    temp_s3->x, temp_s3->y, MENU_TW_CORNER_TL),
-                                                                   temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y, MENU_TW_CORNER_TR),
-                                                  temp_s2, temp_s3->x, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BL),
-                                 temp_s2, temp_s3->x + temp_s3->w - 8, temp_s3->y + temp_s3->h - 8, MENU_TW_CORNER_BR);
-    ((MenuPrimHead*)temp_v0_2)->_u._s.unk3 = 1;
-    ((MenuPrimHead*)temp_v0_2)->unk4 = 0xE1000005;
-    ((MenuPrimHead*)temp_v0_2)->_u.unk0 = (s32)((((MenuPrimHead*)temp_v0_2)->_u.unk0 & 0xFF000000) | (*temp_s2 & 0xFFFFFF));
-    *temp_s2 = (*temp_s2 & 0xFF000000) | ((s32)temp_v0_2 & 0xFFFFFF);
-    gpu_work->prim_cursor = (s32*)((char*)temp_v0_2 + 8);
+    sp18.x = (u16)rect->x + 8;
+    sp18.y = (u16)rect->y + 8;
+    sp18.w = (u16)rect->w - 0x10;
+    sp18.h = (u16)rect->h - 0x10;
+    prim_cur = menu_fill_window_interior(prim_cur, temp_s2, &sp18, fill_uv);
+    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x, rect->y, MENU_TW_CORNER_TL);
+    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x + rect->w - 8, rect->y, MENU_TW_CORNER_TR);
+    prim_cur = menu_emit_corner(prim_cur, temp_s2, rect->x, rect->y + rect->h - 8, MENU_TW_CORNER_BL);
+    temp_v0_2 = menu_emit_corner(prim_cur, temp_s2, rect->x + rect->w - 8, rect->y + rect->h - 8, MENU_TW_CORNER_BR);
+    prim_cur = temp_v0_2;
+    setDrawTPage((DR_TPAGE*)prim_cur, 0, 0, 5);
+    setaddr(prim_cur, getaddr(temp_s2));
+    setaddr(temp_s2, temp_v0_2);
+    gpu_work->prim_cursor = (s32*)((char*)prim_cur + 8);
 }
-
 /**
  * @brief Emit one 8x8 textured corner sprite and splice it into a prim chain.
  *
