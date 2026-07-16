@@ -323,32 +323,29 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     int loopCount;
     u32 alignCheck;
     u32 decompressEnd;        // Source-side guard address passed to cdrom_decompress_data
-    u8* srcPtr;               // Read cursor into the staging buffer during the copy-out phase
-    int totalBytesDelivered;  // Total decompressed bytes given to caller so far (passed to pfnGetBuffer)
-    int chunkIndex;           // How many chunks delivered so far (passed to pfnChunkDone)
+    u8* srcPtr;               // Read cursor into the staging buffer during the copy-out phase // s1
+    int totalBytesDelivered;  // Total decompressed bytes given to caller so far // s5
+    int chunkIndex;           // How many chunks delivered so far // s7
     int chunkBytesRemaining;  // Capacity left in the current destination chunk (or -1 = unlimited)
     u8* destination;          // Write cursor into the current caller-supplied destination chunk
-    u8* stagingWritePtr;      // Write cursor into the intermediate staging buffer // s1
-    u8* stagingEnd;           // End of the staging buffer (0x801DBBE8) // t0
-    u8* dstEnd;               // End of the current caller chunk (or 0xFFFFFFFC in direct mode) // t0
+    u8* stagingWritePtr;      // Write cursor into the intermediate staging buffer
+    u8* stagingEnd;           // End of the staging buffer (0x801DBBE8)
+    u8* dstEnd;               // End of the current caller chunk (or 0xFFFFFFFC in direct mode)
     s32 remainingDataSize;    // Bytes of compressed input still to consume (counts down to 0)
     int isDirectMode;         // Non-zero (0x1000) = direct mode; 0 = chunked/staging mode
-    s32 bytesBuffered;        // s3
-    s32 stagingBytesProduced; // Bytes written into staging buffer by last cdrom_decompress_data call
-    s32 bytesConsumed;
-    s32 unprocessedBytes;
+    s32 bytesBuffered;        // Also reused for bytesConsumed in the tail // s3
+    s32 stagingBytesProduced; // Bytes written into staging by decompress; reused in the wrap tail // s0
     s32 alignRemainder;
     s32 copySize;
+    s32 negOne;    // Per-loop -1 terminator for the copy-out do-while loops // a0
     s32 relocDstAddr;
-    s32 prevReadPtr;
-    s32* relocSrcPtr;
+    s32 prevReadPtr;          // Also reused as the relocation source cursor // a2
     u32 wrapOverflow;
     CdStreamState* scratchpad;
     CdStreamState* streamState;
-    s32 sentinel;          // Always -1; used as a do-while-not-(-1) terminator (MIPS loop idiom) // s8
+    s32 sentinel;          // Always -1; compared against only in loop GUARDS // s8
     u8** pDestination;     // Pointer-to-pointer to `destination`; kept in register for copy loops // s2
     u8** pStagingWritePtr; // Same pattern, used during LZ window copy
-    s32 new_var;
 
     // --- Initialise streaming state in scratchpad RAM ---
     scratchpad = &CD_STREAM_STATE;
@@ -368,8 +365,6 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     if (chunkBytesRemaining == -1)
     {
         // --- Direct mode: caller provided an "unlimited" buffer ---
-        // Sentinel dstEnd well past any real address; isDirectMode flag routes
-        // the inner loop to decompress straight into `destination`.
         dstEnd = (u8*)0xfffffffc;
         isDirectMode = 0x1000;
     }
@@ -377,13 +372,13 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     {
         // --- Chunked mode: caller provided a fixed-size chunk ---
         // Reserve 0x418 (1048) bytes at the end as a guard region.
-        // TODO: Determine exactly why this guard is needed.
         dstEnd = destination + chunkBytesRemaining - 0x418;
         isDirectMode = 0;
     }
 
     // Staging buffer lives in main RAM. Decompressor fills this; we copy out to caller chunks.
-    stagingWritePtr = (u8*)0x801da000; // Start of staging buffer
+    srcPtr = (u8*)0x801da000;
+    stagingWritePtr = srcPtr;          // Start of staging buffer
     stagingEnd = (u8*)0x801dbbe8;      // End of staging buffer
 
     timestamp = VSync(-1);
@@ -446,22 +441,23 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
 
                         // --- Destination alignment preamble ---
                         // Byte-copy until `destination` is word-aligned.
-                        alignCheck = (u32)destination & 3;
-                        relocDstAddr = (int)alignCheck;
-                        if ((alignCheck != 0) && (relocDstAddr < stagingBytesProduced))
+                        loopCount = (u32)destination & 3;
+                        if ((loopCount != 0) && (loopCount < stagingBytesProduced))
                         {
-                            stagingBytesProduced -= alignCheck;
-                            new_var = sentinel;
-                            loopCount = alignCheck - 1;
-                            while (loopCount != new_var)
+                            stagingBytesProduced -= loopCount;
+                            loopCount--;
+                            if (loopCount != sentinel)
                             {
-                                u8* dest;
-                                sentinel = -1;
-                                srcByte = *srcPtr++;
-                                dest = *pDestination;
-                                *dest = srcByte;
-                                *pDestination = dest + 1;
-                                loopCount--;
+                                negOne = -1;
+                                do
+                                {
+                                    u8* dest;
+                                    srcByte = *srcPtr++;
+                                    dest = *pDestination;
+                                    *dest = srcByte;
+                                    *pDestination = dest + 1;
+                                    loopCount--;
+                                } while (loopCount != negOne);
                             }
                         }
 
@@ -472,30 +468,36 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                             loopCount = stagingBytesProduced >> 2;
                             stagingBytesProduced -= loopCount * 4;
                             loopCount--;
-                            while (loopCount != sentinel)
+                            if (loopCount != sentinel)
                             {
-                                u32* dest;
-                                sentinel = -1;
-                                srcWord = *(u32*)srcPtr;
-                                srcPtr += 4;
-                                dest = (u32*)*pDestination;
-                                *dest = srcWord;
-                                *pDestination = (u8*)(dest + 1);
-                                loopCount--;
+                                negOne = -1;
+                                do
+                                {
+                                    u32* dest;
+                                    srcWord = *(u32*)srcPtr;
+                                    srcPtr += 4;
+                                    dest = (u32*)*pDestination;
+                                    *dest = srcWord;
+                                    *pDestination = (u8*)(dest + 1);
+                                    loopCount--;
+                                } while (loopCount != negOne);
                             }
                         }
 
                         // --- Byte-copy for any remaining tail bytes ---
                         stagingBytesProduced--;
-                        while (stagingBytesProduced != sentinel)
+                        if (stagingBytesProduced != sentinel)
                         {
-                            u8* dest;
-                            sentinel = -1;
-                            srcByte = *srcPtr++;
-                            dest = *pDestination;
-                            *dest = srcByte;
-                            *pDestination = dest + 1;
-                            stagingBytesProduced--;
+                            negOne = -1;
+                            do
+                            {
+                                u8* dest;
+                                srcByte = *srcPtr++;
+                                dest = *pDestination;
+                                *dest = srcByte;
+                                *pDestination = dest + 1;
+                                stagingBytesProduced--;
+                            } while (stagingBytesProduced != negOne);
                         }
 
                         break; // Done with this batch of staging bytes
@@ -504,25 +506,25 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                     // --- Staging bytes span a chunk boundary: fill the current chunk ---
                     // Copy exactly chunkBytesRemaining bytes, fire pfnChunkDone,
                     // then get the next chunk from the caller and keep copying.
-                    loopCount = chunkBytesRemaining - 1;
                     stagingBytesProduced -= chunkBytesRemaining; // Bytes that will spill into next chunk
                     totalBytesDelivered += chunkBytesRemaining;
-                    chunkBytesRemaining = loopCount;
+                    chunkBytesRemaining--;
 
-                    while (loopCount != sentinel)
+                    if (chunkBytesRemaining != sentinel)
                     {
-                        u8* dest = *pDestination;
-                        sentinel = -1;
-                        srcByte = *srcPtr;
-                        *dest = srcByte;
-                        *pDestination = dest + 1;
-                        srcPtr++;
-                        loopCount = chunkBytesRemaining;
-                        loopCount--;
-                        chunkBytesRemaining = loopCount;
+                        negOne = -1;
+                        do
+                        {
+                            u8* dest = *pDestination;
+                            srcByte = *srcPtr;
+                            *dest = srcByte;
+                            *pDestination = dest + 1;
+                            srcPtr++;
+                            chunkBytesRemaining--;
+                        } while (chunkBytesRemaining != negOne);
                     }
 
-                    // Notify caller chunk is complete and request the next one —
+                    // Notify caller chunk is complete and request the next one --
                     // but only if there's still data to copy or the decompressor has more pending.
                     if (stagingBytesProduced > 0 || decompressResult != 0)
                     {
@@ -573,12 +575,13 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
             // the CD callback), loop again immediately to consume the fresh data.
 
             // --- Update streaming state after processing all buffered data ---
-            bytesConsumed = streamState->writePtr - streamState->readPtr;
+            // bytesBuffered is reused here to hold the consumed-byte count.
+            bytesBuffered = streamState->writePtr - streamState->readPtr;
             prevReadPtr = streamState->readPtr;
 
             streamState->dataReady = 0; // Clear the "new data ready" flag
-            streamState->bytesConsumed = bytesConsumed;
-            remainingDataSize -= bytesConsumed;
+            streamState->bytesConsumed = bytesBuffered;
+            remainingDataSize -= bytesBuffered;
 
             if (streamState->bufferWrapped != 1)
             {
@@ -593,42 +596,43 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
 
             if (wrapOverflow != 0)
             {
-                unprocessedBytes = streamState->bytesBuffered - bytesConsumed;
-                alignRemainder = (unprocessedBytes & 3);
-                relocDstAddr = 0x801dc118 - unprocessedBytes;
+                stagingBytesProduced = streamState->bytesBuffered - bytesBuffered;
+                alignRemainder = (stagingBytesProduced & 3);
+                copySize = (4 - alignRemainder) & 3;
+                relocDstAddr = 0x801dc118 - stagingBytesProduced;
+                prevReadPtr = (prevReadPtr + bytesBuffered) - copySize;
 
-                copySize = 4 - alignRemainder;
-                copySize = copySize & 3;
-
-                relocDstAddr = relocDstAddr - copySize;
                 streamState->writePtr = relocDstAddr;
                 streamState->readPtr = relocDstAddr;
+                relocDstAddr = relocDstAddr - copySize;
 
-                relocSrcPtr = (s32*)((prevReadPtr + bytesConsumed) - copySize);
+                alignRemainder = stagingBytesProduced + 3;
+                streamState->bytesBuffered = wrapOverflow + stagingBytesProduced;
 
-                streamState->bytesBuffered = wrapOverflow + unprocessedBytes;
-                alignRemainder = unprocessedBytes + 3;
-                copySize = alignRemainder;
-
-                if (copySize < 0)
+                if (alignRemainder < 0)
                 {
-                    copySize = unprocessedBytes + 6;
+                    alignRemainder = stagingBytesProduced + 6;
                 }
 
-                unprocessedBytes = (copySize >> 2);
-                unprocessedBytes--;
+                stagingBytesProduced = (alignRemainder >> 2);
+                stagingBytesProduced--;
 
-                while (unprocessedBytes != sentinel)
+                if (stagingBytesProduced != sentinel)
                 {
-                    *(s32*)relocDstAddr = *relocSrcPtr++;
-                    relocDstAddr += 4;
-                    unprocessedBytes--;
+                    s32 wrapNegOne = -1;
+                    do
+                    {
+                        *(s32*)relocDstAddr = *(s32*)prevReadPtr;
+                        prevReadPtr += 4;
+                        relocDstAddr += 4;
+                        stagingBytesProduced--;
+                    } while (stagingBytesProduced != wrapNegOne);
                 }
             }
             else
             {
-                streamState->readPtr = prevReadPtr + bytesConsumed;
-                streamState->bytesBuffered -= bytesConsumed;
+                streamState->readPtr = prevReadPtr + bytesBuffered;
+                streamState->bytesBuffered -= bytesBuffered;
             }
 
             *(volatile u8*)streamState = 1; // Memory barrier: signal callback that buffer is ready again
@@ -636,7 +640,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
             continue;
         }
 
-        // Timeout — pump the CD command queue and reset the timer.
+        // Timeout -- pump the CD command queue and reset the timer.
         cdrom_process_state();
         timestamp = VSync(-1);
     }
