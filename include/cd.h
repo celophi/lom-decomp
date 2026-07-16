@@ -356,7 +356,10 @@ s32 cdrom_stream(s32 resourceIndex, u32 destination);
  * @param pfnChunkDone    Callback: void fn(int chunkIndex)
  *                          Called when each chunk is filled and once at end-of-stream.
  *
- * @see decomp.me: (93.03%) https://decomp.me/scratch/4WZBs
+ * @see decomp.me (93.03% scratch) https://decomp.me/scratch/4WZBs
+ * @note Local best 94.48% (objdiff, 2026-07-16); remaining diff is a
+ *       loopCount/negOne a0-a1 regalloc swap in the copy loops plus four
+ *       scheduling nits. See working/cdrom_stream_chunked/status.md.
  */
 void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pfnChunkDone);
 
