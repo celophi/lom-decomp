@@ -6257,7 +6257,14 @@ void* func_80149BB4(void*, s32*, s32, s32, s32, s32, s32, s32, s32);
  *       snaps immediately when state is zero.
  *       If the node's expanded flag (u2.s.flags bit 1) is set, recursively renders
  *       child0, child1, child2, child3 in order, stopping at the first MENU_NONE child.
- * @see decomp.me (90.48%) https://decomp.me/scratch/TNThR
+ * @note Shapes required to match (see working/func_80149948/status.md for the full log):
+ *       the volatile STORES on both nav_x_packed writes pin the 0x8 reload after the
+ *       0x6 store; @c delta_y is ONE variable carrying target_y -> delta -> step ->
+ *       new_y (the original reused it, matching the single-register div chain);
+ *       @c arg1 is reused as the scratch temp (dead after the first call); the child
+ *       loop sits in a do { } while (0) and @c sentinel gets two in-loop sets so the
+ *       0xFF constant is rematerialized per iteration instead of hoisted.
+ * @see decomp.me (91.29%) https://decomp.me/scratch/TNThR
  */
 s32 func_80149948(s32 arg0, s32 arg1, s32* arg2)
 {
@@ -6276,7 +6283,7 @@ s32 func_80149948(s32 arg0, s32 arg1, s32* arg2)
     node = &g_menu_nodes[arg0];
     g_menu_nav_count += 1;
     buf = func_80149BB4(arg1, arg2, node->unk4, ((node->idx_nav.nav_x_packed >> 8) & (new_var5 = 0x7F)) - (-1),
-                        ((new_var6 = node->idx_nav.nav_x_packed >> 15) | (node->u8_u.s.nav_y_hi << 1)) - g_menu_content_height, 1,
+                        ((node->u8_u.s.nav_y_hi << 1) | (new_var6 = node->idx_nav.nav_x_packed >> 15)) - g_menu_content_height, 1,
                         ((node->u2.unk2 >> 2) & 3) != 0, g_menu_scene_type == arg0, (node->u2.unk2 >> 6) & new_var3);
 
     {
@@ -6284,17 +6291,19 @@ s32 func_80149948(s32 arg0, s32 arg1, s32* arg2)
         u32 anim_cnt = (unk2 >> 2) & 3;
         if (anim_cnt != 0)
         {
+            s32 split_tmp;
             new_var6 = anim_cnt - 1;
             new_var2 = new_var6 & 3;
             new_var5 = new_var2 << 2;
-            new_var2 = (unk2 & 0xFFF3) | new_var5;
-            node->u2.unk2 = new_var2;
+            split_tmp = unk2 & 0xFFF3;
+            node->u2.unk2 = split_tmp | new_var5;
         }
     }
 
     if (node->state == 0)
     {
-        node->idx_nav.nav_x_packed = (new_var2 = node->idx_nav.nav_x_packed & 0x7FFF) | (node->u8_u.nav_y_packed & 0x8000);
+        arg1 = node->u8_u.nav_y_packed & 0x8000;
+        ((volatile MenuNode*)node)->idx_nav.nav_x_packed = (node->idx_nav.nav_x_packed & 0x7FFF) | arg1;
         node->u8_u.nav_y_packed = (node->u8_u.nav_y_packed & 0xFF00) | node->uA.s.layout_y_hi;
     }
     else
@@ -6302,44 +6311,56 @@ s32 func_80149948(s32 arg0, s32 arg1, s32* arg2)
         u16 nav_x_packed = node->idx_nav.nav_x_packed;
         u16 nav_y_packed = node->u8_u.nav_y_packed;
         s32 current_y = (nav_x_packed >> 15) | ((nav_y_packed & 0xFF) << 1);
-        s32 target_y = (nav_y_packed >> 15) | (node->uA.s.layout_y_hi << 1);
-        s32 delta_y;
-        if (((u16)current_y) == target_y)
+        s32 delta_y = (nav_y_packed >> 15) | (node->uA.s.layout_y_hi << 1);
+
+        new_var7 = node;
+        arg1 = delta_y;
+        if (((u16)current_y) == arg1)
         {
             node->state = 0;
         }
         else
         {
-            s32 step = (target_y - ((u16)current_y)) / ((s32)node->state);
-            u32 new_y = (current_y + step) & 0xFFFF;
+            delta_y = delta_y - ((u16)current_y);
+            delta_y = delta_y / ((s32)node->state);
+            delta_y = current_y + delta_y;
+            delta_y &= 0xFFFF;
             new_var3 = 15;
-            new_var3 = (new_y & 1) << new_var3;
-            node->state -= 1;
-            node->idx_nav.nav_x_packed = (nav_x_packed & 0x7FFF) | new_var3;
-            new_var = node->u8_u.nav_y_packed & 0xFF00;
-            new_var7 = node;
-            node->u8_u.nav_y_packed = (new_y >> 1) & 0xFF;
-            new_var7->u8_u.nav_y_packed = new_var | node->u8_u.nav_y_packed;
+            new_var3 = (delta_y & 1) << new_var3;
+            ((volatile MenuNode*)node)->state -= 1;
+            delta_y = (u32)delta_y >> 1;
+            ((volatile MenuNode*)new_var7)->idx_nav.nav_x_packed = (nav_x_packed & 0x7FFF) | new_var3;
+            nav_y_packed = ((volatile MenuNode*)node)->u8_u.nav_y_packed;
+            arg1 = nav_y_packed & 0xFF00;
+            current_y = delta_y & 0xFF;
+            node->u8_u.nav_y_packed = current_y;
+            new_var7->u8_u.nav_y_packed = arg1 | node->u8_u.nav_y_packed;
         }
     }
 
     {
         MenuNode* node2 = &g_menu_nodes[arg0];
-        node->state += 0;
-        if ((node2->u2.unk2 >> 1) & 1)
+        do
         {
-            s32 j;
-            new_var4 = node2;
-            for (j = 0; j < 4; j++)
+            if ((node2->u2.unk2 >> 1) & 1)
             {
-                u8 child = *((&new_var4->uA.s.child0) + j);
-                if (child == 0xFF)
+                s32 j = 0;
+                s32 sentinel;
+                new_var4 = node2;
+                for (; j < 4; j++)
                 {
-                    break;
+                    u8 child = *((&new_var4->uA.s.child0) + j);
+                    sentinel = 0xFF;
+                    new_var5 = sentinel;
+                    if (child == new_var5)
+                    {
+                        break;
+                    }
+                    buf = func_80149948(child, buf, arg2);
+                    sentinel = 0;
                 }
-                buf = func_80149948(child & 0xFFu, buf, arg2);
             }
-        }
+        } while (0);
     }
 
     return buf;
