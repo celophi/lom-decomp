@@ -39,6 +39,40 @@ s32 func_800A9060();
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
 void func_8014F210(s32 sound_id, s32 volume);
 
+/**
+ * @brief Scroll-list content callback for the item/technique list page.
+ *
+ * Circle (0x40) closes the page (SE 0x7F, state->unk0 = 3). Otherwise scans the
+ * 11-word x 24-bit availability bitmask at g_pad_ctx + 0x34 to find the absolute
+ * bit index of the sel_idx'th set bit. On confirm (0x220), if that entry's row
+ * matches the active category ((D_801693FC->unk14 >> 10) & 0x3F), the per-char
+ * slot byte at g_pad_ctx + slot * 0x250 + subtype + 0x609 is read: 0xFF or
+ * 0x80-clear assigns the entry there (SE 0x7E); 0x80-set tries the
+ * func_800A9060 / func_800A8F8C swap path, clearing all four g_menu_slots and
+ * loading content 6 on failure. A wrong category plays SE 0x78. The draw pass
+ * renders the list chrome via scroll_list_draw, then draws each set bit's glyph
+ * string (func_800A88A0, color 1 on the active category's row) and finally
+ * points g_menu_pending_overlay at the found entry's description.
+ *
+ * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
+ * @param arg1        Scroll-list state for this page (aliased into @c state).
+ * @param arg2        Primitive buffer write cursor (aliased into @c prim).
+ * @param view_origin Viewport anchor; glyph origins are (0x10 - x, rel - y).
+ * @param active      Non-zero to process input this frame; zero draws only.
+ * @return Updated primitive buffer write cursor.
+ * @note Shapes required to match: @c flag_ptr and @c ctx must be SEPARATE
+ *       variables (the target colors the 0x609 read chain v1 and the write
+ *       chain a2; one shared local forces one color). The func_800A8F8C call
+ *       and the 0x640 store must sit inside a do { } while (0) block - its
+ *       block notes keep the off-chain addu out of the g_pad_ctx load-delay
+ *       slot the scheduler must fill with it. @c off is assigned inside the
+ *       store expression (operand-order idiom, as in func_8014B7DC). In the
+ *       draw block, @c glyph is computed BEFORE the color compare, the
+ *       D_801693FC deref stays inline in the compare (a named local outranks
+ *       @c base and steals v1), and @c base accumulates via the two-step
+ *       assignment.
+ * @see decomp.me (100%)
+ */
 s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, s32 active)
 {
     ScrollListState* state = arg1;
@@ -92,9 +126,11 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
     {
         if ((found / 24) == (s32)(((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F))
         {
-            u8* ctx = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+            u8* flag_ptr = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
+            u8* ctx;
 
-            flag = *(ctx + g_menu_active_subtype + 0x609);
+            flag_ptr += g_menu_active_subtype;
+            flag = *(flag_ptr + 0x609);
             if (flag != 0xFF)
             {
                 if (flag & 0x80)
@@ -104,9 +140,11 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
                     {
                         s32 off;
 
-                        func_800A8F8C(v0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
-                        off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250);
-                        *((u8*)g_pad_ctx + off + 0x640) = 0;
+                        do
+                        {
+                            func_800A8F8C(v0, (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) + 0x90));
+                            *((u8*)g_pad_ctx + (off = ((g_menu_active_subtype + 1) << 6) + (g_menu_char_slot * 0x250)) + 0x640) = 0;
+                        } while (0);
                         func_800A8FB4(off);
                     }
                     else
@@ -132,7 +170,8 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
                 }
             }
             ctx = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
-            *(ctx + g_menu_active_subtype + 0x609) = found % 24;
+            ctx += g_menu_active_subtype;
+            *(ctx + 0x609) = found % 24;
             func_8014F210(0x7E, 0x80);
             state->unk0 = 3;
         }
@@ -164,18 +203,19 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
                     {
                         s32 color;
                         u8* base;
-                        u8* entry;
                         s32 offs;
+                        u8* glyph;
 
                         color = 3;
-                        base = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x20);
-                        entry = (u8*)D_801693FC;
+                        base = g_menu_state_ptr;
+                        base += *(s32*)(base + 0x20);
                         offs = *(u16*)((u8*)base + (j * 2) + (i * 0x30));
-                        if (i == (s32)(((u32)(*(s32*)(entry + 0x14)) >> 0xA) & 0x3F))
+                        glyph = base + offs;
+                        if (i == (s32)(((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F))
                         {
                             color = 1;
                         }
-                        prim = func_800A88A0(prim, ot, base + offs, color, 0x10 - view_origin->x, rel - view_origin->y, 0);
+                        prim = func_800A88A0(prim, ot, glyph, color, 0x10 - view_origin->x, rel - view_origin->y, 0);
                     }
                 }
                 if (state->sel_idx == (count >> 4))
