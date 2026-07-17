@@ -28,12 +28,12 @@ s32 g_vsyncTimestamp = 0;
 
 s32 g_displayMode = 0;
 
-volatile u8 g_timeBuffer[2] = {0};
+u8 g_timeBuffer[2] = {0};
 
 /**
  * @brief CheckPS state machine: drives the RTC clock-set screens via CD commands.
  *
- * 93.00% match with GCC 2.7.2 + GNU AS (gcc272_gnu). See
+ * 98.11% match with GCC 2.7.2 + GNU AS (gcc272_gnu). See
  * working/func_80050B14/STATUS.md for the remaining mismatch analysis.
  *
  * @param arg0 Nonzero to run a single step; zero to loop until state reaches 0.
@@ -95,7 +95,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
         case 1:
@@ -123,7 +124,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
@@ -135,7 +137,7 @@ loop:
 
         case 1:
         {
-            volatile u8 *bcd;
+            u8 *bcd;
             u8 bcd0;
             u8 bcd1;
             u32 x;
@@ -146,10 +148,16 @@ loop:
             s32 t;
             s32 hb;
             s32 mb;
+            int idx0;
+            int idx1;
+            int idx2;
+            int idx3;
+            int idx4;
+            int idx5;
 
-            bcd = (volatile u8 *)g_RTCTimeBCD;
-            bcd0 = bcd[0];
-            bcd1 = bcd[1];
+            bcd = (u8 *)g_RTCTimeBCD;
+            bcd0 = *bcd++;
+            bcd1 = *bcd;
 
             h = ((bcd0 >> 4) * 10) + (bcd0 & 0xF);
             m = (((bcd1 >> 4) * 5) * 2) + (bcd1 & 0xF);
@@ -157,15 +165,21 @@ loop:
             hb = t / 60;
             mb = t % 60;
 
-            /* Store then reload each byte (g_timeBuffer is volatile);
-               the original really does take the minute low nibble from
-               the re-packed HOUR byte (z), an original-developer bug. */
-            g_timeBuffer[0] = hb;
-            x = g_timeBuffer[0];
-            g_timeBuffer[1] = mb;
-            y = g_timeBuffer[1];
-            g_timeBuffer[0] = ((x / 10) << 4) | (x % 10);
-            z = g_timeBuffer[0];
+            /* Volatile-CAST stores + plain reads (tb_A shape): stores stay
+               un-forwarded and reads need no andi split. The array itself
+               must be non-volatile for the reads to come out clean. */
+            idx0 = 0;
+            *(volatile u8 *)&g_timeBuffer[idx0] = hb;
+            idx1 = 0;
+            x = g_timeBuffer[idx1];
+            idx4 = 1;
+            *(volatile u8 *)&g_timeBuffer[idx4] = mb;
+            idx5 = 1;
+            y = g_timeBuffer[idx5];
+            idx2 = 0;
+            *(volatile u8 *)&g_timeBuffer[idx2] = ((x / 10) << 4) | (x % 10);
+            idx3 = 0;
+            z = g_timeBuffer[idx3];
             g_timeBuffer[1] = ((y / 10) << 4) | (z % 10);
 
             SendCdCommand(0xC);
@@ -182,26 +196,33 @@ loop:
 
     case 5: /* Wait for screen 0xC; on confirm button (statusFlag bit 6), fill g_CmdBuf with encoded time and send */
     {
-        D_8005CFE0_t* base;
         state = PollCdResponse(0xC);
-        base = &g_statusFlag;
         switch (state)
         {
         case -1:
-            if (!(base->unk0 & 1))
             {
-                g_checkPSState = 1;
+            /* Post-increment keeps sf twice-set and every access a bare
+               (mem (reg)), so both flag bytes read through one base
+               register as in the original (required to match). */
+            u8 *sf = (u8 *)&g_statusFlag;
+            if (!(*sf++ & 1))
+            {
+                new_var2 = 1;
+                g_checkPSState = new_var2;
                 state = -1;
             }
-            else if (base->unk1 & 0x40)
+            else if (*sf & 0x40)
             {
+                u8 tb0 = g_timeBuffer[0];
+                u8 tb1 = g_timeBuffer[1];
                 u8 *cmd = g_CmdBuf;
                 state = 5;
                 cmd[2] = 0;
-                cmd[0] = g_timeBuffer[0];
-                cmd[1] = g_timeBuffer[1];
+                *cmd++ = tb0;
+                *cmd = tb1;
                 SendCdCommand(3);
                 g_checkPSState = 7;
+            }
             }
             break;
 
@@ -235,19 +256,20 @@ loop:
         {
         case -1:
             ExitCheckPS();
-            /* HACK: emits no code, but blocks jump2's cross-jump from merging
-               this arm's identical jal ExitCheckPS tail with case 16's copy
-               (the target binary keeps both copies inline). */
+            /* HACK: no-code insn to block cross-jump merge with case 16's arm */
             __asm__ __volatile__("" : : : "$2");
             state = -1;
             break;
 
         case 1:
         {
+            u8 tb0 = g_timeBuffer[0];
+            u8 tb1 = g_timeBuffer[1];
             u8 *cmd = g_CmdBuf;
+            __asm__("" : "=r"(cmd) : "0"(cmd));
             cmd[2] = 0;
-            cmd[0] = g_timeBuffer[0];
-            cmd[1] = g_timeBuffer[1];
+            cmd[0] = tb0;
+            cmd[1] = tb1;
             SendCdCommand(3);
             g_checkPSState = 7;
         }
@@ -274,7 +296,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
@@ -305,7 +328,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
@@ -346,7 +370,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
@@ -376,7 +401,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
@@ -406,7 +432,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
@@ -437,7 +464,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
@@ -478,12 +506,14 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
         case 1:
-            if (g_RTCTimeBCD[0] != 0)
+            state = g_RTCTimeBCD[0];
+            if (state != 0)
             {
                 SendCdCommand(0);
                 g_checkPSState = 16;
@@ -516,7 +546,8 @@ loop:
         switch (state)
         {
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
@@ -552,7 +583,8 @@ loop:
             break;
 
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
         case -2:
@@ -581,7 +613,8 @@ loop:
             state = -1;
             break;
         case -1:
-            g_checkPSState = 1;
+            new_var2 = 1;
+            g_checkPSState = new_var2;
             state = -1;
             break;
 
