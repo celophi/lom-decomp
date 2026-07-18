@@ -573,3 +573,100 @@ s32 func_8014E8B8(void)
     }
     return count;
 }
+
+/**
+ * @brief Count active byte entries in the pad-ctx table at +0x25E0 and rebuild
+ *        the D_80168C70 circular nav list to that size.
+ *
+ * Clears the byte at g_pad_ctx + 0x26DF, then scans the 0x100 bytes at
+ * g_pad_ctx + 0x25E0 counting non-zero entries. Clears D_80168C70[0] and packs
+ * each of the count entries with the same three bit-fields as func_80145278
+ * (bits 13:0 = i * 0x10, bits 22:14 = circular prev, bits 30:23 = circular
+ * next). Sibling of func_8014E8B8 (case 4 vs case 3 of func_8014E3C4).
+ *
+ * @return Number of entries counted (also the nav-list length).
+ * @note Shapes required to match: unlike func_8014E8B8 this one keeps the
+ *       func_80145278 next/copy pair (temp_a1 = j + 1; ...; j = temp_a1) and
+ *       the byte scan is a plain pointer walk (gcc's countdown reversal IS the
+ *       target here). The link loop must sit inside a do { } while (0) block -
+ *       its block notes shorten the live ranges so j outranks the temp_t0
+ *       address temp and takes a3, cascading t0/t5/t4/t3/t2 into place.
+ * @see decomp.me (100%)
+ */
+s32 func_8014E9A0(void)
+{
+    s32 temp_a1;
+    s32 temp_a3;
+    s32 temp_v1;
+    s32 var_a2;
+    s32 var_v1;
+    s32* temp_t0;
+
+    s32 tmp;
+    s32 tmp2;
+    s32 tmp3;
+
+    s32 count;
+    s32 i;
+    s32 j;
+    u8* p;
+
+    count = 0;
+    ((u8*)g_pad_ctx)[0x26DF] = 0;
+    p = (u8*)g_pad_ctx + 0x25E0;
+    i = 0xFF;
+    do
+    {
+        if (*p != 0)
+        {
+            count += 1;
+        }
+        i -= 1;
+        p += 1;
+    } while (i >= 0);
+
+    D_80168C70 = 0;
+    j = 0;
+    if (count > 0)
+    {
+        do
+        {
+        do
+        {
+            temp_t0 = (j) + (s32*)&D_80168C70;
+
+            tmp = *temp_t0;
+            var_a2 = j - 1;
+
+            temp_v1 = (tmp & ~0x3FFF);
+
+            tmp2 = (j * 0x10);
+            tmp2 = tmp2 & 0x3FFF;
+
+            temp_v1 = temp_v1 | tmp2;
+            *temp_t0 = temp_v1;
+
+            if (var_a2 < 0)
+            {
+                var_a2 = count - 1;
+            }
+
+            tmp3 = (temp_v1 & 0xFF803FFF);
+
+            tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
+
+            *temp_t0 = tmp3;
+            temp_a1 = j + 1;
+            temp_a3 = temp_a1 < count;
+            var_v1 = 0;
+            if (temp_a3 != 0)
+            {
+                var_v1 = temp_a1;
+            }
+            *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
+            j = temp_a1;
+        } while (temp_a3 != 0);
+        } while (0);
+    }
+    return count;
+}
