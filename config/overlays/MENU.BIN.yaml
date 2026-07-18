@@ -45,6 +45,6 @@ segments:
       - [0x544, .rodata, unk1]
       - [0x909, c, menu]
       - [0xDEED, c, menu2]
-      - [0xECA5, c, unk1]
+      - [0xEDED, c, unk1]
       - [0xFBF5, data, data]
   - [0x2B9DD]

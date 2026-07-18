@@ -31,6 +31,8 @@ extern s32 g_menu_active_subtype;
 extern void* D_80168C70;
 extern void* D_801690A8;
 extern void* D_801693FC;
+extern u8 D_800F0BE0[];
+extern u8 D_800F0BEC[];
 
 s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
 void func_800A8F8C();
@@ -861,4 +863,86 @@ done:
         return 1;
     }
     return 0;
+}
+
+/**
+ * @brief Select the highest-valued eligible item record from the pad-context item table.
+ *
+ * Builds an exclusion mask from the other three active character-slot records, then
+ * scans the 100 records at g_pad_ctx + 0xCE0. Records using the alternate lookup table
+ * or an excluded category are skipped; the eligible record with the greatest halfword
+ * value at offset 0x24 is returned.
+ *
+ * @return Pointer to the selected 0x40-byte record, or NULL if no eligible record exists.
+ * @note The remaining mismatch is a pure a1/a2/a3 allocation rotation; instruction
+ *       count and control-flow structure match the target. Continue from
+ *       working/func_8014ECA4/.
+ * @see decomp.me (98.84%)
+ */
+void* func_8014ECA4(void)
+{
+    s32 var_a0;
+    s32 var_a0_2;
+    s32 var_a1;
+    s32 temp_v1_3;
+    s32 var_t1;
+    u32 temp_v1;
+    u32 temp_v1_2;
+    u8* var_v0;
+    u8* temp_v0;
+    u8* var_a2;
+    u8* var_a3;
+    u8* var_t0;
+
+    var_t1 = 0;
+    temp_v0 = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0);
+    var_t0 = temp_v0 + 0x50;
+    if (*(u8*)(temp_v0 + 0x50) != 0)
+    {
+        var_t1 = *(u16*)(var_t0 + 0x24);
+    }
+    var_a3 = (u8*)g_pad_ctx + 0xCE0;
+    var_t0 = 0;
+    var_a1 = 0;
+    var_a2 = (u8*)D_801693FC;
+    var_a0 = 0;
+    do
+    {
+        if ((var_a0 != 0) && (*var_a2 != 0))
+        {
+            temp_v1_2 = *(u32*)(var_a2 + 0x14);
+            temp_v1 = temp_v1_2;
+            if (temp_v1 & 0x300)
+            {
+                var_v0 = ((temp_v1 >> 0xA) & 0x3F) + D_800F0BEC;
+            }
+            else
+            {
+                var_v0 = ((temp_v1 >> 0xA) & 0x3F) + D_800F0BE0;
+            }
+            var_a1 |= *var_v0;
+        }
+        var_a0 += 1;
+        var_a2 += 0x40;
+    } while (var_a0 < 4);
+    var_a0_2 = 0;
+    do
+    {
+        if (*var_a3 != 0)
+        {
+            temp_v1_2 = *(u32*)(var_a3 + 0x14);
+            if (!(temp_v1_2 & 0x300) && !(var_a1 & D_800F0BE0[(temp_v1_2 >> 0xA) & 0x3F]))
+            {
+                temp_v1_3 = *(u16*)(var_a3 + 0x24);
+                if (var_t1 < temp_v1_3)
+                {
+                    var_t0 = var_a3;
+                    var_t1 = temp_v1_3;
+                }
+            }
+        }
+        var_a0_2 += 1;
+        var_a3 += 0x40;
+    } while (var_a0_2 < 0x64);
+    return var_t0;
 }
