@@ -763,3 +763,102 @@ s32 func_8014EA78(void)
     }
     return count;
 }
+
+typedef struct
+{
+    u32 unk0; /* Slot 0 data pointer. */
+    u32 unk4; /* Slot 1 data pointer. */
+    u32 unk8; /* Slot 2 data pointer. */
+    u32 unkC; /* Slot 3 data pointer. */
+} ItemSlotData;
+
+typedef struct
+{
+    u8 slot0; /* Slot 0 occupied flag. */
+    u8 slot1; /* Slot 1 occupied flag. */
+    u8 slot2; /* Slot 2 occupied flag. */
+    u8 slot3; /* Slot 3 occupied flag. */
+} ItemSlotFlags;
+
+extern ItemSlotData g_item_slot_data;
+extern ItemSlotFlags g_item_slot_flags;
+extern u8 D_800F0BF8[];
+
+/**
+ * @brief Try to commit the pending item into the active character's slot
+ *        buffer at g_pad_ctx + char_slot * 0x250 + 0x640.
+ *
+ * func_8014ECA4 supplies the candidate 0x40-byte record (returns 0 on failure,
+ * which aborts with return 0). If the slot buffer still equals the template at
+ * D_800F0BF8 (byte-wise), the candidate is copied in, its first byte is
+ * cleared, and g_item_slot_data.unk0 is zeroed. Otherwise the slot and the
+ * candidate are exchanged through a stack buffer (three func_800A8F8C copies,
+ * same pattern as func_8014DE5C) and g_item_slot_data.unk0 points at the
+ * candidate. Either way g_item_slot_flags.slot0 is set.
+ *
+ * @return 1 if a record was committed/exchanged, 0 if func_8014ECA4 failed.
+ * @note Shapes required to match: the equality scan must use the
+ *       mismatch-goto shape (every break/flag rewrite loses rows). buf must be
+ *       the FIRST local so its address is virtual-stack-vars + 0 and reload
+ *       rematerializes it per call (any nonzero offset routes &buf through a
+ *       pseudo that cse merges across calls into a saved register). The
+ *       `if (0)` six-arg call is required for that: gcc sizes the outgoing arg
+ *       area (0x18) at expand time and jump1 deletes the call afterwards,
+ *       which is how the original (likely a compiled-out debug call) got
+ *       buf to sp+0x18. Residual 3 rows: the equal arm's a1 copy and
+ *       %hi(g_pad_ctx) are scheduled earlier in the target (see
+ *       working/func_8014EB4C/status.md).
+ * @see decomp.me (96.92%)
+ */
+s32 func_8014EB4C(void)
+{
+    u8 buf[0x40];
+    u8* entry;
+    u8* t;
+    u8* p;
+    u8* slot_buf;
+    u32 i;
+    s32 diff;
+
+    if (0)
+    {
+        func_800A8F8C(0, 0, 0, 0, 0, 0);
+    }
+    entry = (u8*)func_8014ECA4();
+    if (entry != 0)
+    {
+        t = D_800F0BF8;
+        i = 0;
+        p = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640;
+        do
+        {
+            i += 1;
+            if (*t != *p)
+            {
+                diff = 1;
+                goto done;
+            }
+            t += 1;
+            p += 1;
+        } while (i < 0x40);
+        diff = 0;
+done:
+        if (diff == 0)
+        {
+            func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, entry);
+            *entry = 0;
+            g_item_slot_data.unk0 = 0;
+        }
+        else
+        {
+            slot_buf = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640;
+            func_800A8F8C(buf, slot_buf);
+            func_800A8F8C(slot_buf, entry);
+            func_800A8F8C(entry, buf);
+            g_item_slot_data.unk0 = (u32)entry;
+        }
+        g_item_slot_flags.slot0 = 1;
+        return 1;
+    }
+    return 0;
+}
