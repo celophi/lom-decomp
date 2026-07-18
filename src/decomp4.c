@@ -173,6 +173,19 @@ typedef struct
     s16 unk112;
 } m_struct;
 
+typedef struct
+{
+    char pad0[0x34];
+    s32 unk34;
+    char pad1[0x6A - 0x38];
+    u16 unk6A;
+    char pad2[0x100 - 0x6C];
+    s32 unk100;
+    char pad3[0x10E - 0x104];
+    u16 unk10E;
+    u16 unk110;
+} n_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -2060,4 +2073,28 @@ void func_8002BD34(m_struct* arg0)
         arg0->unkEE = 0xFF;
         arg0->unk34 = (s32)((arg0->unk34 & 0xE6FFEFF7) | 0x1000);
     }
+}
+
+/**
+ * @brief Reloads articulation fields for the channel's current articulation.
+ * @param arg0 Channel state to update.
+ * @see decomp.me (100%)
+ */
+void func_8002BDC8(n_struct* arg0)
+{
+    AkaoArticulation* articulation;
+    u16 tmp_c;
+    u16 tmp_e;
+    s32 old_value;
+    s32 flags;
+
+    articulation = (AkaoArticulation*)(g_akao_articulation_slots + (arg0->unk6A * 0x10));
+    tmp_c = articulation->pitch_misc.half.lo;
+    arg0->unk10E = tmp_c;
+    tmp_e = articulation->pitch_misc.half.hi;
+    old_value = arg0->unk100;
+    flags = arg0->unk34;
+    arg0->unk100 = old_value | 0xFF00;
+    arg0->unk34 = flags & 0xE6FFFFFF;
+    arg0->unk110 = tmp_e;
 }
