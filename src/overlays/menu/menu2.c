@@ -472,3 +472,104 @@ void func_8014E3C4(u32 arg0)
         break;
     }
 }
+
+/**
+ * @brief Count usable 4-bit entries in the pad-ctx table at +0x104 and rebuild
+ *        the D_80168C70 circular nav list to that size.
+ *
+ * Scans 16 words (128 nibbles) at g_pad_ctx + 0x104; every nibble with value
+ * >= 2 adds one entry. Clears D_80168C70[0], then packs each of the count
+ * entries with the same three bit-fields as func_80145278 (bits 13:0 = i * 0x10,
+ * bits 22:14 = circular prev, bits 30:23 = circular next).
+ *
+ * @return Number of entries counted (also the nav-list length).
+ * @note Shapes required to match: the outer scan must index by @c i
+ *       (*(u32*)((u8*)g_pad_ctx + i * 4 + 0x104)) so loop.c strength-reduces it
+ *       to the a0 pointer while keeping i for the slti compare - a separate
+ *       pointer walk lets check_dbra_loop reverse the loop into a countdown.
+ *       The 0xF nibble mask must be a local so it stays in a register. The
+ *       link loop must REUSE @c j (the nibble counter) as its induction
+ *       variable and route @c prev through the @c word temp - both reuses merge
+ *       pseudos so the allocator reproduces the target's a0/a1/a2 coloring.
+ * @see decomp.me (100%)
+ */
+s32 func_8014E8B8(void)
+{
+    s32 temp_a1;
+    s32 temp_a3;
+    s32 temp_v1;
+    s32 var_a2;
+    s32 var_v1;
+    s32* temp_t0;
+
+    s32 tmp;
+    s32 tmp2;
+    s32 tmp3;
+
+    s32 count;
+    s32 i;
+    s32 j;
+    u32 word;
+    s32 mask;
+
+    count = 0;
+    i = count;
+    mask = 0xF;
+    do
+    {
+        word = *(u32*)((u8*)g_pad_ctx + (i * 4) + 0x104);
+        j = 7;
+        do
+        {
+            if ((word & mask) >= 2)
+            {
+                count += 1;
+            }
+            j -= 1;
+            word = word >> 4;
+        } while (j >= 0);
+        i += 1;
+    } while (i < 0x10);
+
+    D_80168C70 = 0;
+    j = 0;
+    if (count > 0)
+    {
+        do
+        {
+            temp_t0 = (j) + (s32*)&D_80168C70;
+
+            tmp = *temp_t0;
+            var_a2 = j - 1;
+
+            temp_v1 = (tmp & ~0x3FFF);
+
+            tmp2 = (j * 0x10);
+            tmp2 = tmp2 & 0x3FFF;
+
+            temp_v1 = temp_v1 | tmp2;
+            *temp_t0 = temp_v1;
+
+            if (var_a2 < 0)
+            {
+                var_a2 = count - 1;
+            }
+
+            word = var_a2;
+            tmp3 = (temp_v1 & 0xFF803FFF);
+
+            tmp3 = tmp3 | ((word & 0x1FF) << 0xE);
+
+            *temp_t0 = tmp3;
+            j += 1;
+            temp_a3 = j < count;
+            var_v1 = 0;
+            if (temp_a3 != 0)
+            {
+                var_v1 = j;
+            }
+            *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
+        } while (temp_a3 != 0);
+    }
+    return count;
+}
