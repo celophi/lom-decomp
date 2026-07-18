@@ -38,6 +38,24 @@ void func_800A8FB4();
 s32 func_800A9060();
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
 void func_8014F210(s32 sound_id, s32 volume);
+void func_8014E3C4(u32 content_id);
+
+extern s32 g_menu_draw_early_out;
+extern s32 D_801690B8[];
+extern s32 D_80169414;
+extern s32 D_80169558;
+
+void* menu_slot_alloc(s32 arg0, void* rect);
+s32 func_8014551C(s32 arg0);
+s32 func_8014E8B8(void);
+s32 func_8014E9A0(void);
+s32 func_8014EA78(void);
+s32* func_8014A3A4();
+s32* func_8014BA58();
+s32* func_8014BD48();
+s32* func_8014BF68();
+s32* func_8014C820();
+s32* func_8014C8C8();
 
 /**
  * @brief Scroll-list content callback for the item/technique list page.
@@ -238,4 +256,219 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
         g_menu_pending_overlay = (s32)(base + *(u16*)(base + (found * 2)));
     }
     return prim;
+}
+
+/**
+ * @brief Open the menu content window for the given content page id.
+ *
+ * Sets D_80169558 (pending item row) to 0xFF, then for ids 0-7 allocates a
+ * MenuSlot window and installs its content callback:
+ * - 0/1/2: 0xF0 x 0x60 window at (0x40, 0x60), callback func_8014A3A4; sets
+ *   D_80169414 (active category) to the id and packs func_8014551C(id) into
+ *   flags bits 24:16.
+ * - 3/4/5: 0xE8 x 0x90/0x80/0x90 window at (0x40, 0x2C), callbacks
+ *   func_8014BA58 / func_8014BD48 / func_8014BF68; sets D_80169414 = 3 and
+ *   packs func_8014E8B8 / func_8014E9A0 / func_8014EA78 into flags bits 24:16.
+ * - 6/7: 0x120 x 0x20/0x30 window at (0x10, 0x60), callbacks func_8014C820 /
+ *   func_8014C8C8, flags bits 24:16 = 1; rebuilds D_801690B8 as a 1-entry
+ *   circular nav list and sets g_menu_draw_early_out.
+ * Ids >= 8 only reset D_80169558.
+ *
+ * @param content_id Content page id (0-7); out of range is a no-op beyond the
+ *        D_80169558 reset.
+ * @note Shapes required to match: the rect must be a single u16 rect[4] array
+ *       (separate locals get their stores dead-eliminated since only the first
+ *       address escapes), and the raw callee result must be held in @c v0 with
+ *       the (& 0x1FF) << 16 done inside the flags assignment so gcc 2.7.2
+ *       cross-jumping merges the case 1-5 tails at one label.
+ * @see decomp.me (100%)
+ */
+void func_8014E3C4(u32 arg0)
+{
+    u16 rect[4];
+    MenuSlot* slot;
+    s32 v0;
+    s32 j;
+    s32 prev;
+    s32 next;
+    s32 more;
+    s32 link;
+    s32 word_self;
+    s32 word_prev;
+
+    D_80169558 = 0xFF;
+    switch (arg0)
+    {
+    case 0:
+        rect[0] = 0x40;
+        rect[1] = 0x60;
+        rect[2] = 0xF0;
+        rect[3] = 0x60;
+        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        slot->content_cb = (s32 * (*)()) & func_8014A3A4;
+        slot->has_title = 1;
+        slot->anim_frame = 5;
+        slot->active = 2;
+        v0 = func_8014551C(0);
+        D_80169414 = 0;
+        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        break;
+
+    case 1:
+        rect[0] = 0x40;
+        rect[1] = 0x60;
+        rect[2] = 0xF0;
+        rect[3] = 0x60;
+        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        slot->content_cb = (s32 * (*)()) & func_8014A3A4;
+        slot->has_title = 1;
+        slot->anim_frame = 5;
+        slot->active = 2;
+        v0 = func_8014551C(1);
+        D_80169414 = 1;
+        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        break;
+
+    case 2:
+        rect[0] = 0x40;
+        rect[1] = 0x60;
+        rect[2] = 0xF0;
+        rect[3] = 0x60;
+        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        slot->content_cb = (s32 * (*)()) & func_8014A3A4;
+        slot->has_title = 1;
+        slot->anim_frame = 5;
+        slot->active = 2;
+        v0 = func_8014551C(2);
+        D_80169414 = 2;
+        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        break;
+
+    case 3:
+        rect[0] = 0x40;
+        rect[1] = 0x2C;
+        rect[2] = 0xE8;
+        rect[3] = 0x90;
+        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        slot->content_cb = (s32 * (*)()) & func_8014BA58;
+        slot->has_title = 1;
+        slot->anim_frame = 5;
+        slot->active = 2;
+        v0 = func_8014E8B8();
+        D_80169414 = 3;
+        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        break;
+
+    case 4:
+        rect[0] = 0x40;
+        rect[1] = 0x2C;
+        rect[2] = 0xE8;
+        rect[3] = 0x80;
+        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        slot->content_cb = (s32 * (*)()) & func_8014BD48;
+        slot->has_title = 1;
+        slot->anim_frame = 5;
+        slot->active = 2;
+        v0 = func_8014E9A0();
+        D_80169414 = 3;
+        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        break;
+
+    case 5:
+        rect[0] = 0x40;
+        rect[1] = 0x2C;
+        rect[2] = 0xE8;
+        rect[3] = 0x90;
+        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        slot->content_cb = (s32 * (*)()) & func_8014BF68;
+        slot->has_title = 1;
+        slot->anim_frame = 5;
+        slot->active = 2;
+        v0 = func_8014EA78();
+        D_80169414 = 3;
+        slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
+        break;
+
+    case 6:
+        rect[0] = 0x10;
+        rect[1] = 0x60;
+        rect[2] = 0x120;
+        rect[3] = 0x20;
+        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        slot->content_cb = (s32 * (*)()) & func_8014C820;
+        slot->anim_frame = 5;
+        slot->active = 2;
+        slot->flags = (slot->flags & 0xFE00FFFF) | 0x10000;
+
+        j = 0;
+        do
+        {
+            s32 cur = D_801690B8[j];
+
+            prev = 0;
+            link = cur & ~0x3FFF;
+            link = link | ((j * 0x10) & 0x3FFF);
+            word_self = link;
+            D_801690B8[j] = word_self;
+            if ((j - 1) >= 0)
+            {
+                prev = j - 1;
+            }
+            word_prev = word_self & 0xFF803FFF;
+            word_prev = word_prev | ((prev & 0x1FF) << 14);
+            D_801690B8[j] = word_prev;
+            next = j + 1;
+            more = next < 1;
+            link = 0;
+            if (more != 0)
+            {
+                link = next;
+            }
+            D_801690B8[j] = (word_prev & 0x7FFFFF) | (link << 23);
+            j = next;
+        } while (more != 0);
+        g_menu_draw_early_out = 1;
+        break;
+
+    case 7:
+        rect[0] = 0x10;
+        rect[1] = 0x60;
+        rect[2] = 0x120;
+        rect[3] = 0x30;
+        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        slot->content_cb = (s32 * (*)()) & func_8014C8C8;
+        slot->anim_frame = 5;
+        slot->active = 2;
+        slot->flags = (slot->flags & 0xFE00FFFF) | 0x10000;
+
+        j = 0;
+        do
+        {
+            s32 cur = D_801690B8[j];
+
+            prev = 0;
+            link = cur & ~0x3FFF;
+            link = link | ((j * 0x10) & 0x3FFF);
+            word_self = link;
+            D_801690B8[j] = word_self;
+            if ((j - 1) >= 0)
+            {
+                prev = j - 1;
+            }
+            word_prev = word_self & 0xFF803FFF;
+            word_prev = word_prev | ((prev & 0x1FF) << 14);
+            D_801690B8[j] = word_prev;
+            next = j + 1;
+            more = next < 1;
+            link = 0;
+            if (more != 0)
+            {
+                link = next;
+            }
+            D_801690B8[j] = (word_prev & 0x7FFFFF) | (link << 23);
+            j = next;
+        } while (more != 0);
+        g_menu_draw_early_out = 1;
+        break;
+    }
 }
