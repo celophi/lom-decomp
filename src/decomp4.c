@@ -160,6 +160,32 @@ typedef struct
     s16 unk112;
 } l_struct;
 
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x18 - 0x4];
+    u32 unk18;
+    char pad2[0x34 - 0x1C];
+    s32 unk34;
+    char pad3[0xEE - 0x38];
+    u16 unkEE;
+    char pad4[0x112 - 0xF0];
+    s16 unk112;
+} m_struct;
+
+typedef struct
+{
+    char pad0[0x34];
+    s32 unk34;
+    char pad1[0x6A - 0x38];
+    u16 unk6A;
+    char pad2[0x100 - 0x6C];
+    s32 unk100;
+    char pad3[0x10E - 0x104];
+    u16 unk10E;
+    u16 unk110;
+} n_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -508,7 +534,7 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
 }
 
 /**
- * decomp.me (84.56%) https://decomp.me/scratch/ICO2k
+ * decomp.me (95.79%) https://decomp.me/scratch/ICO2k
  */
 void akao_irq_handler(void)
 {
@@ -520,6 +546,7 @@ void akao_irq_handler(void)
     u16 temp_v1_2;
     SfxChannel* channel;
     u32 bitMask;
+    AkaoChannelState* new_var;
 
     temp_s5 = GetRCnt(0xF2000002);
 
@@ -574,6 +601,8 @@ void akao_irq_handler(void)
         }
     }
 
+    new_var = &g_akao_seq_master_state;
+
     /* Third conditional */
     if (((D_8004F758 | g_akao_seq_channel0->unk14 | D_8004D408) != 0) || ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk14 != 0)))
     {
@@ -591,7 +620,7 @@ void akao_irq_handler(void)
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
         akao_seq_tick_channels(g_akao_pending_channels, 1);
-        g_akao_seq_channel0 = &g_akao_seq_master_state;
+        g_akao_seq_channel0 = new_var;
     }
 
     /* SFX channel processing loop */
@@ -654,16 +683,18 @@ void akao_irq_handler(void)
         temp_s5 += 0x44E8;
     }
 
+    var_s3 = temp_s5;
+
     {
         s32 d4 = D_8003D160.unk4;
         s32 d8 = D_8003D160.unk8;
         temp_a3 = D_8003D160.unkC;
-        D_8003D160.unkC = temp_s5;
+        D_8003D160.unkC = var_s3;
         D_8003D160.unk0 = d4;
         temp_v1_3 = d4 + d8 + temp_a3;
         D_8003D160.unk4 = d8;
         D_8003D160.unk8 = temp_a3;
-        D_8003EC18 = temp_v1_3 + temp_s5;
+        D_8003EC18 = temp_v1_3 + var_s3;
     }
 }
 
@@ -2011,4 +2042,59 @@ void func_8002BCC8(l_struct* arg0)
     arg0->unk6A = (s16)temp_s1;
     arg0->unk112 = 0;
     arg0->unk34 = (s32)(arg0->unk34 & 0xE6FFEFF7);
+}
+
+/**
+ * @brief Handles AKAO extended sequence opcode 0x14.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BD34(m_struct* arg0)
+{
+    s32 base;
+    u16* entry;
+    u8* temp_v0;
+    u8 opcode;
+
+    temp_v0 = arg0->unk0;
+    opcode = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    base = g_akao_seq_channel0->unk30;
+    if (base != 0)
+    {
+        entry = (u16*)((opcode & 0xFF) * 2 + base);
+        if ((u16)*entry > 0x8000U)
+        {
+            arg0->unk112 = 0;
+            arg0->unk34 = (s32)(arg0->unk34 & ~0x1000);
+            return;
+        }
+        arg0->unk18 = (s32)(base + *entry + 0x20);
+        arg0->unkEE = 0xFF;
+        arg0->unk34 = (s32)((arg0->unk34 & 0xE6FFEFF7) | 0x1000);
+    }
+}
+
+/**
+ * @brief Reloads articulation fields for the channel's current articulation.
+ * @param arg0 Channel state to update.
+ * @see decomp.me (100%)
+ */
+void func_8002BDC8(n_struct* arg0)
+{
+    AkaoArticulation* articulation;
+    u16 tmp_c;
+    u16 tmp_e;
+    s32 old_value;
+    s32 flags;
+
+    articulation = (AkaoArticulation*)(g_akao_articulation_slots + (arg0->unk6A * 0x10));
+    tmp_c = articulation->pitch_misc.half.lo;
+    arg0->unk10E = tmp_c;
+    tmp_e = articulation->pitch_misc.half.hi;
+    old_value = arg0->unk100;
+    flags = arg0->unk34;
+    arg0->unk100 = old_value | 0xFF00;
+    arg0->unk34 = flags & 0xE6FFFFFF;
+    arg0->unk110 = tmp_e;
 }

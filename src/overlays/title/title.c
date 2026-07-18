@@ -1787,268 +1787,311 @@ typedef struct
  * @see decomp.me (91.76%) https://decomp.me/scratch/P2gt5 (old m2c base,
  *      not functionally equivalent)
  */
-void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
+inline u16 inline_fn(unsigned char* arg0)
 {
-    u8* ptr = (u8*)prim_buf;
-    u_long* ot = ot_tag;
-    u8* hdr = (u8*)g_saveLayoutTable;
-    u8* tex_base = (u8*)g_saveLayoutTexTable;
-    s32 i = 0;
-    u8* p = hdr + 2;
+    return *((u16*)arg0);
+}
 
+void* RenderSaveLayoutPrims(void* arg0, u_long* arg1)
+{
+    unsigned char* t0;
+    unsigned char* new_var;
+    unsigned int new_var8;
+    s32* t6;
+    s32 s2;
+    s32 s5;
+    s32 new_var6;
+    unsigned char* new_var4;
+    s32 s4;
+    s32 s3;
+    unsigned char* s0;
+    u32 t4;
+    s32 s1;
+    unsigned char* t2;
+    int new_var3;
+    unsigned char* a3;
+    u32* new_var10;
+    unsigned char* a1;
+    unsigned char* a2;
+    unsigned char* new_var7;
+    s32 t1;
+    s32 t3;
+    u16 t5;
+    unsigned char new_var2;
+    u16 a3_16;
+    s32 a1_16;
+    s32 t9_16;
+    int new_var5;
+    u8 v0_8;
+    int new_var9;
+    u16 a2_16;
+    unsigned long temp_ul;
+    s32 v0;
+    s32 v1;
+    t0 = arg0;
+    t6 = arg1;
+    t2 = g_saveLayoutTable + 2;
+    s2 = 0;
+    s5 = 3;
+    s4 = &g_slotSlideXLerped;
+    s3 = (s32)(&g_slotSlideYLerped);
+    s0 = g_saveLayoutTexTable;
+    t4 = 0x00FFFFFF;
     do
     {
-        s32 type = p[-1];
-
-        if (type == 3)
+        if (1)
         {
-            /* Slot panel background: a single textured quad. */
-            POLY_FT4* poly;
-            SlotUvRect* uv;
-            u8* tex;
-            s32 idx;
-
+            s1 = 0x64;
+        }
+        v0 = t2[-1];
+        if (v0 == s5)
+        {
             if (g_slotSlideX > 0)
             {
-                idx = g_slotSelectedIndex + 1;
+                a3 = (unsigned char*)(g_slotSelectedIndex + 1);
             }
             else
             {
-                idx = 0;
+                a3 = 0;
             }
-
-            /* (offset) + (base) so gcc emits `addu v1,v1,v0`, not the reverse. */
-            uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98AC);
-
-            *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
-            poly = (POLY_FT4*)ptr;
-            setPolyFT4(poly);
-
-            if (*(u32*)hdr & 2)
+            a1 = (unsigned char*)(((unsigned long)D_800F98AC) + (((unsigned long)a3) * 6));
+            *((u32*)(t0 + 4)) = 0x808080;
+            new_var9 = 0;
+            t0[3] = 9;
+            a3 = t0;
+            if (((new_var9, *((u32*)(t2 - 2)))) & 2)
             {
-                setcode(poly, 0x2E);
+                a3[7] = 0x2E;
             }
             else
             {
-                setcode(poly, 0x2C);
+                a3[7] = 0x2C;
             }
-
-            /* Chained assignment: the value propagated to x2/y1 is the *short*
-               result of the store, so gcc sinks the 16-bit truncation into the
-               add and loads the lerp global with lhu rather than lw. */
-            poly->x2 = poly->x0 = (*(u16*)(p + 2) + g_slotSlideXLerped) - ((uv->ox * 8) - 0x20);
-            poly->y1 = poly->y0 = (*(u16*)(p + 4) + g_slotSlideYLerped) - ((uv->oy * 8) - 0x28);
-
-            poly->x3 = poly->x1 = (poly->x0 + (uv->w * 8)) - 1;
-            poly->y3 = poly->y2 = (poly->y0 + (uv->h * 8)) - 1;
-
-            poly->u3 = poly->u1 = uv->u * 8;
-            poly->v1 = poly->v0 = uv->v * 8;
-
-            poly->u2 = poly->u0 = (poly->u1 + (uv->w * 8)) - 1;
-            poly->v3 = poly->v2 = (poly->v1 + (uv->h * 8)) - 1;
-
-            ptr = (u8*)poly + sizeof(POLY_FT4);
-
-            tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
-            poly->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
-
-            tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
-            poly->tpage = TPAGE_WORD(*(u32*)hdr, tex[0x0C] & 3, *(u16*)tex, *(u16*)(tex + 2));
-
-            addPrim(ot, poly);
+            v0 = 0x20;
+            v0 = (*((u16*)(a3 + 8)) = (inline_fn(t2 + 2) + g_slotSlideXLerped) - ((a1[4] * 8) - v0));
+            *((u16*)(a3 + 0x18)) = v0;
+            v0 = (*((u16*)(a3 + 10)) = (inline_fn(t2 + 4) + g_slotSlideYLerped) - ((a1[5] * 8) - 0x28));
+            *((u16*)(a3 + 0x12)) = v0;
+            new_var5 = (inline_fn(a3 + 8) + (a1[2] * 8)) - 1;
+            *((u16*)(a3 + 0x20)) = new_var5;
+            *((u16*)(a3 + 0x10)) = new_var5;
+            *((u16*)(a3 + 0x22)) = (v0 = (inline_fn(a3 + 10) + (a1[3] * 8)) - 1);
+            *((u16*)(a3 + 0x1A)) = v0;
+            v0_8 = a1[0] * 8;
+            a3[0x14] = v0_8;
+            a3[0x24] = v0_8;
+            v0_8 = (new_var2 = a1[1]) * 8;
+            a3[0x0D] = v0_8;
+            a3[0x15] = v0_8;
+            t3 = a3[0x14];
+            v0 = (a3[0x1C] = (t3 + (a1[2] * 8)) - 1);
+            a3[0x0C] = v0;
+            v0 = (a3[0x25] = (a3[0x0D] + (a1[3] * 8)) - 1);
+            a3[0x1D] = v0;
+            t0 = a3 + 0x28;
+            a3 = (unsigned char*)((t2[0] * 0x10) + ((unsigned long)s0));
+            v0 = (inline_fn(a3 + 6) << 6) | ((inline_fn(a3 + 4) >> 4) & 0x3F);
+            a2 = t2;
+            new_var3 = 6;
+            *((u16*)((t0 - 0x28) + 0x0E)) = v0;
+            a1 = (unsigned char*)((a2[0] * 0x10) + ((unsigned long)s0));
+            a2_16 = inline_fn(a1 + 2);
+            v0 = ((((((*((u32*)(t2 - 2))) << 3) & 0x60) | ((a1[0x0C] & 3) << 7)) | ((a2_16 & 0x100) >> 4)) | ((inline_fn(a1) & 0x3FF) >> new_var3)) |
+                 ((a2_16 & 0x200) * 4);
+            *((u16*)((t0 - 0x28) + 0x16)) = v0;
+            ;
+            ;
+            *((u32*)((t0 + (-0x28)) + 0)) = ((*((u32*)((t0 - 0x28) + 0))) & 0xFF000000) | ((*t6) & t4);
+            v1 = (*t6) & 0xFF000000;
+            v0 = ((unsigned long)(t0 - 0x28)) & t4;
+            *t6 = v1 | v0;
         }
-        else if (type == 4)
+        else if (v0 == 4)
         {
-            /* Slot cursor / decoration: one free-size sprite. */
-            SlotUvRect* uv;
-            u8* tex;
-            s32 idx;
-            SPRT* sprt;
-            DR_TPAGE* tp;
-
             if (g_slotSlideX < 0)
             {
-                idx = g_slotSelectedIndex + 1;
+                a3 = (unsigned char*)(g_slotSelectedIndex + 1);
             }
             else
             {
-                idx = 0;
+                a3 = 0;
             }
-
-            sprt = (SPRT*)ptr;
-            *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
-            setSprt(sprt);
-
-            uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
-
-            if (*(u32*)hdr & 2)
+            *((u32*)(t0 + 4)) = 0x808080;
+            t0[3] = 4;
+            t0[7] = s1;
+            a1 = (unsigned char*)(((unsigned long)D_800F98F4) + (((unsigned long)a3) * 6));
+            if ((*((u32*)(t2 - 2))) & 2)
             {
-                setcode(sprt, 0x66);
+                t0[7] = 0x66;
             }
-
-            sprt->x0 = (*(u16*)(p + 2) + g_slotSlideXLerped) - ((uv->ox * 8) - 0x20);
-            sprt->y0 = (*(u16*)(p + 4) + g_slotSlideYLerped) - ((uv->oy * 8) - 0x28);
-            sprt->u0 = uv->u * 8;
-            sprt->v0 = uv->v * 8;
-            sprt->w = uv->w * 8;
-            sprt->h = uv->h * 8;
-
-            tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
-            sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
-
-            addPrim(ot, sprt);
-            ptr += sizeof(SPRT);
-
-            tp = (DR_TPAGE*)ptr;
-            setlen(tp, 1);
-
-            tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
-            tp->code[0] = TPAGE_WORD(*(u32*)hdr, *(u32*)(tex + 0x0C) & 3, *(u16*)tex, *(u16*)(tex + 2)) | 0xE1000000;
-
-            addPrim(ot, tp);
-            ptr += sizeof(DR_TPAGE);
+            v1 = ((unsigned long)t0) & t4;
+            *((u16*)(t0 + 8)) = (inline_fn(t2 - (-2)) + g_slotSlideXLerped) - ((a1[4] * 8) - 0x20);
+            *((u16*)(t0 + 10)) = (inline_fn(t2 + 4) + g_slotSlideYLerped) - ((a1[5] * 8) - 0x28);
+            t0[12] = a1[0] * 8;
+            t0[13] = a1[1] * 8;
+            *((u16*)(t0 + 0x10)) = a1[2] * 8;
+            *((u16*)(t0 + 0x12)) = a1[3] * 8;
+            a3 = s0 + ((t2[0] * 8) * 2);
+            v0 = (inline_fn(a3 + 6) << 6) | ((inline_fn(a3 - (-4)) >> 4) & 0x3F);
+            *((u16*)(t0 + 0x0E)) = v0;
+            v1 = (*((u32*)t0)) & 0xFF000000;
+            ;
+            *((u32*)t0) = v1 | ((*t6) & t4);
+            v1 = ((unsigned long)t0) & t4;
+            t0 += 0x14;
+            v0 = (*t6) & 0xFF000000;
+            *t6 = v0 | v1;
+            t0[3] = 1;
+            a1 = s0 + (t2[0] * 0x10);
+            a2_16 = inline_fn(a1 + 2);
+            new_var6 = (*((u32*)(t2 - 2))) << 3;
+            ;
+            *((u32*)(t0 + 4)) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | (new_var6 & 0x60)) | ((a2_16 & 0x100) >> 4)) | ((inline_fn(a1) & 0x3FF) >> 6)) |
+                                 ((a2_16 & 0x200) * 4)) |
+                                0xE1000000;
+            v1 = (*((u32*)t0)) & 0xFF000000;
+            ;
+            new_var8 = v1 | ((*t6) & t4);
+            *((u32*)t0) = new_var8;
+            t0 += 8;
+            v0 = (*t6) & 0xFF000000;
+            // FIX: use the old address of t0 (before the +8) instead of the old value
+            *t6 = v0 | ((unsigned long)(t0 - 8) & t4);
         }
-        else if (type == 2)
+        else if (v0 == 2)
         {
-            /* Dimmed backdrop behind the slot list: one solid tile. */
-            TILE* tile = (TILE*)ptr;
-            DR_TPAGE* tp;
-
-            *(u32*)(ptr + 4) = 0x40; /* solid dark-blue fill; code byte set below */
-            setlen(tile, 3);
-            setcode(tile, 0x62);
-
-            tile->x0 = *(u16*)(p + 6) + g_slotSlideXLerped;
-            tile->y0 = *(u16*)(p + 8) + g_slotSlideYLerped;
-            tile->w = *(u16*)(p + 14);
-            tile->h = *(u16*)(p + 16);
-
-            addPrim(ot, tile);
-
-            tp = (DR_TPAGE*)(ptr + sizeof(TILE));
-            setlen(tp, 1);
-            tp->code[0] = 0xE1000025;
-            addPrim(ot, tp);
-
-            ptr += sizeof(TILE) + sizeof(DR_TPAGE);
+            new_var10 = (u32*)t0;
+            *((u32*)(t0 + 4)) = 0x40;
+            v1 = ((unsigned long)t0) & t4;
+            t0[3] = s5;
+            t0[7] = 0x62;
+            *((u16*)(t0 + 8)) = inline_fn(t2 + 6) + g_slotSlideXLerped;
+            do
+            {
+                *((u16*)(t0 + 10)) = inline_fn(t2 + 8) + g_slotSlideYLerped;
+                *((u16*)(t0 + 12)) = inline_fn(t2 + 14);
+                *((u16*)(t0 + 14)) = inline_fn(t2 + 16);
+                v1 = 0xFF000000;
+                v1 = (*((u32*)t0)) & v1;
+                v0 = (*t6) & t4;
+                *new_var10 = v1 | v0;
+                v1 = (*t6) & 0xFF000000;
+                v0 = ((unsigned long)t0) & t4;
+                *t6 = v1 | v0;
+                a2 = t0 + 0x10;
+                a2[3] = 1;
+                *((u32*)(a2 + 4)) = 0xE1000025;
+                v1 = (*((u32*)(t0 + 0x10))) & 0xFF000000;
+                v0 = (*t6) & t4;
+                *((u32*)(t0 + 0x10)) = v1 | v0;
+                // FIX: Use the address of the second sprite, not the lower bits of *t6
+                *t6 = ((*t6) & 0xFF000000) | ((unsigned long)a2 & t4);
+                t0 += 0x18;
+            } while (0);
         }
-        else if (type != 0)
+        else
         {
-            /* Glyph strip: one SPRT + DR_TPAGE per GLYPH_CHUNK_WIDTH pixels. */
-            s32 remaining = *(u16*)(p + 14);
-            u16 u0 = *(u16*)(p + 10);
-            u8* tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
-            /* Signed: gcc cannot prove this stays non-negative once the chunk
-               loop accumulates += 0x20/0x40 into it, so getTPage's
-               `(x & 0x3ff) >> 6` becomes an arithmetic shift (sra), as in the
-               target. A u16 here folds to srl. */
-            s32 tex_x = *(u16*)tex;
-            s32 x;
-            s32 y;
-            s32 chunk;
-            u8* cur;
-
-            if (*(u32*)hdr & 1)
+            new_var = t0;
+            if (v0 != 0)
             {
-                x = *(s16*)(p + 2) + g_slotSlideXLerped;
-                y = *(s16*)(p + 4) + g_slotSlideYLerped;
-            }
-            else
-            {
-                x = *(s16*)(p + 2);
-                y = *(s16*)(p + 4);
-            }
-
-            chunk = GLYPH_CHUNK_WIDTH;
-            if (remaining < GLYPH_CHUNK_WIDTH + 1)
-            {
-                chunk = remaining;
-            }
-
-            /* cur runs one primitive ahead of ptr: it points at the colour word
-               (prim + 4) of the primitive currently being filled in, while ptr
-               stays at the primitive's tag for addPrim. */
-            cur = ptr + 4;
-            while (1)
-            {
-                SPRT* sprt = (SPRT*)(cur - 4);
-                DR_TPAGE* tp;
-
-                *(u32*)cur = 0x808080; /* cur is prim + 4: the packed colour word */
-                setlen(sprt, 4);
-                setcode(sprt, 0x64);
-
-                if (*(u32*)hdr & 2)
+                t3 = inline_fn(t2 + 14);
+                t5 = inline_fn(t2 + 10);
+                a1 = s0 + (t2[0] * 0x10);
+                a3_16 = inline_fn(a1);
+                v0 = (*((u32*)(t2 - 2))) & 1;
+                if (v0)
                 {
-                    setcode(sprt, 0x66);
-                }
-
-                sprt->x0 = x;
-                sprt->y0 = y;
-                sprt->u0 = u0;
-                sprt->w = chunk;
-                sprt->v0 = p[12];
-                sprt->h = *(u16*)(p + 16);
-
-                remaining -= chunk;
-
-                tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
-                sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
-
-                cur += sizeof(SPRT);
-
-                addPrim(ot, ptr);
-                ptr += sizeof(SPRT);
-
-                tp = (DR_TPAGE*)(cur - 4);
-                setlen(tp, 1);
-
-                tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
-                tp->code[0] = TPAGE_WORD(*(u32*)hdr, *(u32*)(tex + 0x0C) & 3, tex_x, *(u16*)(tex + 2)) | 0xE1000000;
-
-                cur += sizeof(DR_TPAGE);
-
-                addPrim(ot, ptr);
-                ptr += sizeof(DR_TPAGE);
-
-                if (remaining == 0)
-                {
-                    break;
-                }
-
-                /* Next chunk: flip to the other half of the texture page, or
-                   step the page origin on when the mode bits say the strip
-                   spans pages. */
-                u0 ^= 0x80;
-                tex = (u8*)((p[0] * 0x10) + (u32)tex_base);
-
-                if (!(*(u32*)(tex + 0x0C) & 7))
-                {
-                    tex_x += 0x20;
+                    do
+                    {
+                        a1_16 = (*((s16*)(t2 + 2))) + g_slotSlideXLerped;
+                        t9_16 = (*((s16*)(t2 + 4))) + g_slotSlideYLerped;
+                    } while (0);
                 }
                 else
                 {
-                    tex_x += 0x40;
-                    u0 = 0;
+                    a1_16 = *((s16*)(t2 + 2));
+                    t9_16 = *((s16*)(t2 + 4));
                 }
-
-                chunk = GLYPH_CHUNK_WIDTH;
-                if (remaining < GLYPH_CHUNK_WIDTH + 1)
+                t1 = 0x80;
+                if (((t3 + 1) - 1) < 0x81)
                 {
-                    chunk = remaining;
+                    t1 = t3;
                 }
+                a2 = new_var + 4;
+                while (1)
+                {
+                    *((u32*)(a2 + 0)) = 0x808080;
+                    a2[-1] = 4;
+                    a2[3] = 0x64;
+                    if ((*((u32*)(t2 - 2))) & 2)
+                    {
+                        a2[3] = 0x66;
+                    }
+                    *((s16*)(a2 + 4)) = a1_16;
+                    *((s16*)(a2 + 6)) = t9_16;
+                    a2[8] = t5;
+                    new_var7 = a2 + 14;
+                    *((u16*)(a2 + 12)) = t1;
+                    a2[9] = t2[12];
+                    *((u16*)new_var7) = inline_fn(t2 + 16);
+                    t3 -= t1;
+                    a1 = s0 + (t2[0] * 0x10);
+                    v0 = (inline_fn(a1 + 6) << 6) | ((inline_fn(a1 + 4) >> 4) & 0x3F);
+                    *((u16*)(a2 + 10)) = v0;
 
-                x += GLYPH_CHUNK_WIDTH;
+                    a2 += 0x14;
+
+                    v1 = (*((u32*)t0)) & 0xFF000000;
+                    v0 = (*t6) & t4;
+                    *((u32*)t0) = v1 | v0;
+                    v1 = ((unsigned long)t0) & t4;
+                    t0 += 0x14;
+                    v0 = (*t6) & 0xFF000000;
+                    *t6 = v0 | v1;
+                    a2[-1] = 1;
+                    a1 = s0 + (t2[0] * 0x10);
+                    a2_16 = inline_fn(a1 + 2);
+                    t9_16 = ((*((u32*)(t2 - 2))) << 3) & 0x60;
+                    *((u32*)a2) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | t9_16) | ((a2_16 & 0x100) >> 4)) | (((s32)(a3_16 & 0x3FF)) >> 6)) |
+                                   ((0, (a2_16 & 0x200) * 4))) |
+                                  0xE1000000;
+                    a2 += 8;
+                    v1 = (*((u32*)t0)) & 0xFF000000;
+                    v0 = ((0, *t6)) & t4;
+                    *((u32*)t0) = v1 | v0;
+                    v1 = ((unsigned long)t0) & t4;
+                    t0 += 8;
+                    t9_16 = (*t6) & 0xFF000000;
+                    v0 = t9_16;
+                    *t6 = v0 | v1;
+                    if (t3 == 0)
+                    {
+                        break;
+                    }
+                    t5 ^= 0x80;
+                    a1 = (new_var4 = s0 + (t2[0] * 0x10));
+                    if (!((*((u32*)(a1 + 0x0C))) & 7))
+                    {
+                        a3_16 += 0x20;
+                    }
+                    else
+                    {
+                        a3_16 += 0x40;
+                        t5 = 0;
+                    }
+                    t1 = 0x80;
+                    if (t3 < 0x81)
+                    {
+                        t1 = t3;
+                    }
+                    a1_16 += 0x80;
+                }
             }
         }
-
-        i++;
-        p += sizeof(SaveLayoutEntry);
-        hdr += sizeof(SaveLayoutEntry);
-    } while (i < SAVE_LAYOUT_ENTRIES);
-
-    return ptr;
+        s2++;
+        t2 += 0x18;
+    } while (s2 < 0x1B);
+    return t0;
 }
 
 /**
