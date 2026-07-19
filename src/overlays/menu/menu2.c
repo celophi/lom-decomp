@@ -1114,8 +1114,12 @@ tail:
  *         the fields. Splitting `rec_flag` into an extra copy raises its
  *         allocation priority (pri = floor_log2(refs)*refs/live_len) above the
  *         mask carrier's and swaps a3/t0.
- *       - `char_base` uses `- (-(offset))` rather than `+ offset`; see
- *         @ref func_8014EDEC for why the MINUS routing is kept.
+ * @note Measured NON-factors (probed at the 100% base, all still 100%): the
+ *       `- (-(offset))` minus routing that @ref func_8014EDEC needs is NOT
+ *       needed here, and neither is splitting `char_base` out of the `best`
+ *       expression. Plain `+` is used because it is the readable form and it
+ *       matches; do not reintroduce the minus spelling on the assumption that
+ *       a sibling's requirement transfers.
  * @see decomp.me (100%)
  */
 void* func_8014F060(void)
@@ -1134,7 +1138,7 @@ void* func_8014F060(void)
     u8* rec;
     u8* best;
 
-    char_base = (u8*)g_pad_ctx - (-((g_menu_char_slot * 0x250) + 0x5F0));
+    char_base = (u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0);
     best = char_base + ((g_menu_active_subtype << 6) - 0x170);
     if (*best == 0)
     {
@@ -1191,4 +1195,23 @@ void* func_8014F060(void)
         rec_flag += 0x40;
     } while (rec_idx < 0x64);
     return best;
+}
+
+/**
+ * @brief Play a menu sound effect, unless a menu script is currently driving input.
+ * @param sound_id Sound effect ID (see the MENU_SE_* constants in menu.c).
+ * @param volume Playback volume (menu callers always pass 0x80).
+ * @note Suppressed while @c g_active_script is non-zero so scripted/demo input
+ *       replay does not retrigger UI blips.
+ * @note func_800A3938 is left implicitly declared here, matching the rest of this
+ *       translation unit. Measured non-factor: adding an explicit prototype also
+ *       gives 100%.
+ * @see decomp.me (100%)
+ */
+void func_8014F210(s32 sound_id, s32 volume)
+{
+    if (g_active_script == 0)
+    {
+        func_800A3938(sound_id, volume);
+    }
 }
