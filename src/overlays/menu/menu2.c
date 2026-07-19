@@ -1268,3 +1268,53 @@ void func_8014F274(s32 prim, s32 cursor, s32 value, s32 arg3, Vec2s* origin, s32
     }
     func_800A8A78(prim, cursor, value, arg3, origin, color);
 }
+
+extern s32 D_8016B760;
+extern s32 D_8016B764;
+extern s32 D_8016B768;
+extern s32 D_8016B76C;
+extern s32 D_8016B770;
+extern s32 D_8016B774;
+extern s32 D_8016B778;
+extern s32 D_8016B77C;
+
+/**
+ * @brief Open and enable the eight memory-card events used by the save/load menu.
+ *
+ * Opens the four standard card event specs (end-of-IO, error, timeout, new
+ * device) against both the BIOS card driver (@c SwCARD) and the card hardware
+ * (@c HwCARD), stashes the eight descriptors in D_8016B760..D_8016B77C, then
+ * enables all eight. The whole sequence runs inside a critical section.
+ *
+ * @note All eight events use @c EvMdNOINTR with a NULL handler, i.e. they are
+ *       polled via TestEvent rather than delivering callbacks.
+ * @note The eight descriptors are separate globals, not an array: the target
+ *       emits a distinct @c lui per symbol and pins seven of them in saved
+ *       registers, which an array base would not do.
+ * @note kernel.h and libapi.h are already in scope through menu.h -> main.h ->
+ *       libapi.h, so the named constants need no extra include. Measured
+ *       non-factor: the raw hex form (0xF4000001, 4, 0x2000, 0) is also 100%.
+ * @see decomp.me (100%)
+ */
+void func_8014F2B0(void)
+{
+    func_800158E0();
+    EnterCriticalSection();
+    D_8016B760 = OpenEvent(SwCARD, EvSpIOE, EvMdNOINTR, NULL);
+    D_8016B764 = OpenEvent(SwCARD, EvSpERROR, EvMdNOINTR, NULL);
+    D_8016B768 = OpenEvent(SwCARD, EvSpTIMOUT, EvMdNOINTR, NULL);
+    D_8016B76C = OpenEvent(SwCARD, EvSpNEW, EvMdNOINTR, NULL);
+    D_8016B770 = OpenEvent(HwCARD, EvSpIOE, EvMdNOINTR, NULL);
+    D_8016B774 = OpenEvent(HwCARD, EvSpERROR, EvMdNOINTR, NULL);
+    D_8016B778 = OpenEvent(HwCARD, EvSpTIMOUT, EvMdNOINTR, NULL);
+    D_8016B77C = OpenEvent(HwCARD, EvSpNEW, EvMdNOINTR, NULL);
+    EnableEvent(D_8016B760);
+    EnableEvent(D_8016B764);
+    EnableEvent(D_8016B768);
+    EnableEvent(D_8016B76C);
+    EnableEvent(D_8016B770);
+    EnableEvent(D_8016B774);
+    EnableEvent(D_8016B778);
+    EnableEvent(D_8016B77C);
+    ExitCriticalSection();
+}
