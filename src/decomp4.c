@@ -186,6 +186,13 @@ typedef struct
     u16 unk110;
 } n_struct;
 
+typedef struct
+{
+    u8* unk0;
+    char pad1[0xEA - 0x4];
+    s16 unkEA;
+} o_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -2097,4 +2104,38 @@ void func_8002BDC8(n_struct* arg0)
     arg0->unk100 = old_value | 0xFF00;
     arg0->unk34 = flags & 0xE6FFFFFF;
     arg0->unk110 = tmp_e;
+}
+
+/**
+ * @brief Reads a signed byte from the channel bytecode stream and stores it
+ *        as a halfword at offset 0xEA.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BE10(o_struct* arg0)
+{
+    u8* temp_v0;
+    s8 val;
+
+    temp_v0 = arg0->unk0;
+    val = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unkEA = val;
+}
+
+/**
+ * @brief Reads a signed byte from the channel bytecode stream and adds it to
+ *        the halfword at offset 0xEA.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BE34(o_struct* arg0)
+{
+    u8* temp_v0;
+    s8 val;
+
+    temp_v0 = arg0->unk0;
+    val = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unkEA += val;
 }
