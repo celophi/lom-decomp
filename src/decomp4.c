@@ -193,6 +193,26 @@ typedef struct
     s16 unkEA;
 } o_struct;
 
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x98 - 0x4];
+    u16 unk98;
+    char pad2[0xF0 - 0x9A];
+    s16 unkF0;
+} p_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x9A - 0x4];
+    u16 unk9A;
+    u16 unk9C;
+    u16 unk9E;
+    char pad2[0xF2 - 0xA0];
+    u16 unkF2;
+} q_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -2138,4 +2158,55 @@ void func_8002BE34(o_struct* arg0)
     val = *temp_v0;
     arg0->unk0 = (u8*)(temp_v0 + 1);
     arg0->unkEA += val;
+}
+
+/**
+ * @brief Reads a byte for field 0x98 (defaulting 0 to 0x100), then a signed
+ *        byte stored at field 0xF0.
+ * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
+ * @see decomp.me (100%)
+ */
+void func_8002BE60(p_struct* arg0)
+{
+    u8* temp_v0;
+    u8* temp_v0_2;
+    s32 b;
+    s8 b2;
+
+    temp_v0 = arg0->unk0;
+    b = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk98 = b;
+    if (b == 0)
+    {
+        arg0->unk98 = 0x100;
+    }
+    temp_v0_2 = arg0->unk0;
+    b2 = *temp_v0_2;
+    arg0->unk0 = (u8*)(temp_v0_2 + 1);
+    arg0->unkF0 = b2;
+}
+
+/**
+ * @brief Reads one byte for field 0x9C (defaulting 0 to 0x100) and resets the
+ *        related state fields 0x9A/0x9E/0xF2.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BEA8(q_struct* arg0)
+{
+    u8* temp_v0;
+    s32 b;
+
+    temp_v0 = arg0->unk0;
+    b = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk9C = b;
+    if (b == 0)
+    {
+        arg0->unk9C = 0x100;
+    }
+    arg0->unkF2 = 0;
+    arg0->unk9A = 0;
+    arg0->unk9E = 1;
 }
