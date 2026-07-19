@@ -1751,3 +1751,30 @@ s32 func_8014F9EC(char* name, void* buf)
     close(fd);
     return 1;
 }
+
+extern u8 D_801405A8[];
+
+/**
+ * @brief Fill the card work buffer with placeholder save contents.
+ *
+ * Copies the 5-byte string "TEST" (including its terminator) from D_801405A8 to
+ * the front of @p buf. Paired with func_8014F9EC by func_8014F5FC, which fills
+ * the buffer here and then commits it to the card.
+ *
+ * @param buf Card work buffer to fill; only the first 5 bytes are touched.
+ * @note This is placeholder/debug content - the shipped save path writes the
+ *       literal text "TEST" as its payload, with the real header supplied
+ *       separately by func_8014F9EC.
+ * @note The source string must be the rodata symbol, not a literal: a "TEST"
+ *       literal emits a fresh local label and scores 99.00%. It must also be
+ *       memcpy and not strcpy (strcpy emits a real call, 0.00%). Measured
+ *       non-factor: declaring @p buf as u8* instead of void* is also 100%.
+ * @note gcc inlines the 5-byte copy as an lwl/lwr + lb pair, with no runtime
+ *       alignment test - unlike the 0x200 copy in func_8014F9EC, which is large
+ *       enough to get the (src|dst)&3 check and two loop bodies.
+ * @see decomp.me (100%)
+ */
+void func_8014FBCC(void* buf)
+{
+    memcpy(buf, D_801405A8, 5);
+}
