@@ -36,6 +36,7 @@
 #define GNAME_OT_CHAR_APPEND 0x0D      /* static append glyph + draw-mode */
 #define GNAME_OT_NAME_STRIP 0x0E       /* name strip (entered-name display) */
 #define GNAME_OT_NAME_CURSOR 0x0F      /* name-entry cursor row */
+#define GNAME_OT_ENTRY_COUNT (GNAME_OT_NAME_CURSOR + 1)
 /** @} */
 
 /**
@@ -126,6 +127,17 @@
 #define GNAME_SRC_HISTORY 3      /* pick from g_history_names_off via g_history_name_idx */
 #define GNAME_SRC_RAND_PRIMARY 4 /* random entry from g_random_names_off primary index table */
 #define GNAME_SRC_RAND_ALT 5     /* random entry from g_random_names_off alternate offset table */
+
+/* Run-loop display and history-copy constants. */
+#define GNAME_FADE_IN_FRAMES 20
+#define GNAME_HISTORY_LAYOUT_MASK 0x7F
+#define GNAME_HISTORY_LAYOUT_LARGE 4
+#define GNAME_HISTORY_COPY_SIZE 0x15
+#define GNAME_LARGE_HISTORY_STRIDE sizeof(((PadContext*)0)->large_history_names[0])
+#define GNAME_SMALL_HISTORY_STRIDE sizeof(((PadContext*)0)->small_history_names[0])
+#define GNAME_LARGE_HISTORY_OFFSET 0x2B0C
+#define GNAME_SMALL_HISTORY_OFFSET 0x2EF4
+#define GNAME_USES_LARGE_HISTORY(ctx) (((ctx)->unkAA8 & GNAME_HISTORY_LAYOUT_MASK) == GNAME_HISTORY_LAYOUT_LARGE)
 
 /* Maximum number of logical characters allowed in a name (distinct from
  * NAME_GRID_CHARS_PER_ROW, which is the grid display width). */
@@ -259,6 +271,16 @@ typedef struct
     s32 b;     /* 0x8 - blue channel,  0..FADE_CHAN_NEUTRAL normal, >FADE_CHAN_NEUTRAL = additive */
     s32 steps; /* 0xC - frames remaining in the lerp (target struct only) */
 } FadeState;
+
+/** Packet view used while emitting the fade TILE followed by its draw mode. */
+typedef union
+{
+    TILE tile;
+    DR_TPAGE draw_mode;
+} FadePrimitive;
+
+/** Advance a fade packet cursor by the concrete packet just emitted. */
+#define NEXT_FADE_PACKET(packet, type) ((FadePrimitive*)((u8*)(packet) + sizeof(type)))
 
 /**
  * @brief TIM upload destination coordinates for @ref load_tim_to_vram.
@@ -615,18 +637,11 @@ void func_800A9E78(void);
 void func_800AA02C(void);
 
 /**
- * @brief GNAME overlay entry point: run the name-entry UI to completion.
- *
- * Installs the caller's double-buffered render context, seeds the name-entry
- * state (initial/custom/clipboard buffers, source mode, history index), sets up
- * both frames' display/draw environments, then spins the per-frame loop:
- * rebuild the OT, draw the world and fade overlay, tick the name-entry UI, and
- * flip buffers - until @ref g_overlay_result becomes non-zero (confirm/cancel).
+ * @brief Run the name-entry UI until the user confirms or cancels.
  *
  * On exit, when entering a history name (@c source_mode == 3) targeting the pad
  * context's history buffer, the entered name is copied back into the
- * appropriate per-slot history table (0x14C-stride when @c unk29D7's low 7 bits
- * are 4, otherwise the 0x60-stride table).
+ * appropriate large or compact per-slot history table.
  *
  * @param buf_base Render context base; the two double buffers are @c buf_base[0] and @c buf_base[1].
  * @param initial_name Initial name buffer (0x30 bytes) copied into @ref g_initial_name.
@@ -644,8 +659,9 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
     RenderContext* draw_buf;
     RenderContext* next_buf;
     RenderContext* other_buf;
-    RenderContext* buf;
+    RenderContext* render_bufs;
 
+    /* Install the caller's buffers and seed the persistent name-entry state. */
     g_render_buf_base = buf_base;
     bcopy(initial_name, g_initial_name, sizeof(g_initial_name));
     bcopy(custom_name, g_custom_name_buf, sizeof(g_custom_name_buf));
@@ -653,69 +669,86 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
     g_active_name = active_name;
     g_name_source_mode = source_mode;
     g_history_name_idx = history_idx;
+
+    /* Configure the two vertically stacked VRAM display/draw buffers. */
     g_render_buf_base[0].clear_rect.x = 0;
     g_render_buf_base[0].clear_rect.y = 8;
-    g_render_buf_base[0].clear_rect.w = 0x140;
-    g_render_buf_base[0].clear_rect.h = 0xE0;
+    g_render_buf_base[0].clear_rect.w = SCREEN_WIDTH;
+    g_render_buf_base[0].clear_rect.h = VRAM_DRAW_HEIGHT;
     g_render_buf_base[1].clear_rect.x = 0;
-    g_render_buf_base[1].clear_rect.y = 0xF0;
-    g_render_buf_base[1].clear_rect.w = 0x140;
-    g_render_buf_base[1].clear_rect.h = 0xE0;
+    g_render_buf_base[1].clear_rect.y = SCREEN_HEIGHT;
+    g_render_buf_base[1].clear_rect.w = SCREEN_WIDTH;
+    g_render_buf_base[1].clear_rect.h = VRAM_DRAW_HEIGHT;
+
     VSync(0);
     DrawSync(0);
-    SetDefDispEnv(&g_render_buf_base[0].disp_env, 0, 0, 0x140, 0xF0);
-    SetDefDispEnv(&g_render_buf_base[1].disp_env, 0, 0xE8, 0x140, 0xF0);
-    SetDefDrawEnv(&g_render_buf_base[0].draw_env, 0, 0xF0, 0x140, 0xE0);
-    SetDefDrawEnv(&g_render_buf_base[1].draw_env, 0, 8, 0x140, 0xE0);
-    buf = g_render_buf_base;
-    buf[1].draw_env.dtd = 0;
-    buf[0].draw_env.dtd = 0;
+    SetDefDispEnv(&g_render_buf_base[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&g_render_buf_base[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&g_render_buf_base[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&g_render_buf_base[1].draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+
+    render_bufs = g_render_buf_base;
+    render_bufs[1].draw_env.dtd = 0;
+    render_bufs[0].draw_env.dtd = 0;
     g_overlay_result = 0;
     g_render_buf_base[0].frame_parity = 0;
     g_render_buf_base[1].frame_parity = 1;
+
     reset_fade_state();
-    set_fade_target(0x100, 0x100, 0x100, 0x14);
+    set_fade_target(FADE_CHAN_NEUTRAL, FADE_CHAN_NEUTRAL, FADE_CHAN_NEUTRAL, GNAME_FADE_IN_FRAMES);
     gname_init();
+
+    /* Clear both ordering tables before enabling display output. */
     next_buf = g_render_buf_base;
-    ClearOTagR((u32*)next_buf, 0x10);
-    ClearOTagR((u32*)(&g_render_buf_base[1]), 0x10);
+    ClearOTagR(next_buf->ot, GNAME_OT_ENTRY_COUNT);
+    ClearOTagR(g_render_buf_base[1].ot, GNAME_OT_ENTRY_COUNT);
     VSync(0);
     PutDispEnv(&next_buf->disp_env);
     func_800157DC();
     SetDispMask(1);
     func_800AA02C();
+
+    /* Render and submit frames until the overlay reports a final result. */
     while (1)
     {
         draw_buf = next_buf;
-        ClearOTagR((u32*)draw_buf, 0x10);
-        draw_buf->prim_cursor = &draw_buf->ot[0x10];
+        ClearOTagR(draw_buf->ot, GNAME_OT_ENTRY_COUNT);
+        draw_buf->prim_cursor = &draw_buf->ot[GNAME_OT_ENTRY_COUNT];
         func_8006441C();
         func_800A9E78();
         render_fade_overlay(draw_buf);
         gname_tick(draw_buf);
         func_80063194();
+
         if (g_overlay_result != 0)
         {
             break;
         }
+
         func_80068440();
         DrawSync(0);
         func_800157B0(2U);
         VSync(2);
+
         if (g_overlay_result != 0)
         {
             break;
         }
+
         ClearImage(&draw_buf->clear_rect, 0U, 0U, 0U);
+
+        /* Select the other half of the double buffer for the next frame. */
         other_buf = g_render_buf_base;
+
         if (draw_buf == g_render_buf_base)
         {
             other_buf = &g_render_buf_base[1];
         }
+
         next_buf = other_buf;
         PutDispEnv(&other_buf->disp_env);
         PutDrawEnv(&next_buf->draw_env);
-        DrawOTag(&draw_buf->ot[15]);
+        DrawOTag(&draw_buf->ot[GNAME_OT_NAME_CURSOR]);
         draw_buf = other_buf;
         func_800157DC();
         cdrom_process_state();
@@ -724,26 +757,32 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
     DrawSync(0);
     VSync(0);
     func_800AA02C();
-    if ((source_mode == 3) && (active_name == (&g_pad_ctx->pad85C[0x234])))
+
+    /* Persist edits only when this run targeted the pad context's history name. */
+    if ((source_mode == GNAME_SRC_HISTORY) && (active_name == g_pad_ctx->gname_name))
     {
         i = 0;
-        if ((g_pad_ctx->unkAA8 & 0x7F) == 4)
+        if (GNAME_USES_LARGE_HISTORY(g_pad_ctx))
         {
-            while (i < 0x15)
+            while (i < GNAME_HISTORY_COPY_SIZE)
             {
-                s32 m = g_pad_ctx->unk29D7 * 0x14C;
-                u8* p = (u8*)g_pad_ctx + m + i;
-                p[0x2B0C] = active_name[i];
+                s32 history_offset = g_pad_ctx->large_history_index * GNAME_LARGE_HISTORY_STRIDE;
+
+                /* Keeping the member offset on the store preserves GCC's original register allocation. */
+                u8* history_byte = (u8*)g_pad_ctx + history_offset + i;
+                history_byte[GNAME_LARGE_HISTORY_OFFSET] = active_name[i];
                 i += 1;
             }
         }
         else
         {
-            while (i < 0x15)
+            while (i < GNAME_HISTORY_COPY_SIZE)
             {
-                s32 m = g_pad_ctx->unk2EF0 * 0x60;
-                u8* p = (u8*)g_pad_ctx + m + i;
-                p[0x2EF4] = active_name[i];
+                s32 history_offset = g_pad_ctx->small_history_index * GNAME_SMALL_HISTORY_STRIDE;
+
+                /* See the large-history loop above: direct array indexing rotates v0/v1/a0. */
+                u8* history_byte = (u8*)g_pad_ctx + history_offset + i;
+                history_byte[GNAME_SMALL_HISTORY_OFFSET] = active_name[i];
                 i += 1;
             }
         }
@@ -771,8 +810,7 @@ static void reset_fade_state(void)
 }
 
 /**
- * @brief Per-frame RGB fade tick: lerp the tint toward its target and emit
- *        the full-screen tint quad into the OT.
+ * @brief Update and render the fade overlay.
  *
  * Advances @c g_fade_current toward @c g_fade_target by one of the remaining
  * @c steps (snapping if none remain). Unless the tint is neutral, emits a
@@ -788,12 +826,12 @@ static void reset_fade_state(void)
  */
 static void render_fade_overlay(RenderContext* ctx)
 {
-    void* prim = ctx->prim_cursor;
-    RenderContext* p_ctx = ctx;
+    FadePrimitive* packet = ctx->prim_cursor;
+    RenderContext* ot_ctx = ctx;
     s32 step_r;
     s32 step_g;
     s32 step_b;
-    s32 tpage;
+    s32 blend_tpage;
 
     /* Lerp current toward target, or snap if no steps remain. */
     if (g_fade_target.steps != 0)
@@ -814,9 +852,11 @@ static void render_fade_overlay(RenderContext* ctx)
     }
 
     /* Skip emit when all channels are neutral (identity tint). */
-    if (!((g_fade_current.r != FADE_CHAN_NEUTRAL) || (g_fade_current.g != FADE_CHAN_NEUTRAL) || (g_fade_current.b != FADE_CHAN_NEUTRAL)))
+    if ((g_fade_current.r == FADE_CHAN_NEUTRAL) &&
+        (g_fade_current.g == FADE_CHAN_NEUTRAL) &&
+        (g_fade_current.b == FADE_CHAN_NEUTRAL))
     {
-        ctx->prim_cursor = prim;
+        ctx->prim_cursor = packet;
         return;
     }
 
@@ -824,9 +864,9 @@ static void render_fade_overlay(RenderContext* ctx)
     if (g_fade_current.r >= FADE_CHAN_ADDITIVE)
     {
         /* Additive bias: subtract 1 so FADE_CHAN_ADDITIVE maps to 0x00. */
-        ((TILE*)prim)->r0 = (u8)g_fade_current.r - 1;
-        ((TILE*)prim)->g0 = (u8)g_fade_current.g - 1;
-        ((TILE*)prim)->b0 = (u8)g_fade_current.b - 1;
+        packet->tile.r0 = (u8)g_fade_current.r - 1;
+        packet->tile.g0 = (u8)g_fade_current.g - 1;
+        packet->tile.b0 = (u8)g_fade_current.b - 1;
     }
     else
     {
@@ -834,47 +874,47 @@ static void render_fade_overlay(RenderContext* ctx)
          * FADE_CHAN_NEUTRAL (casts to 0 as u8) is clamped to 0 explicitly. */
         if (g_fade_current.r == FADE_CHAN_NEUTRAL)
         {
-            ((TILE*)prim)->r0 = 0;
+            packet->tile.r0 = 0;
         }
         else
         {
-            ((TILE*)prim)->r0 = ~g_fade_current.r;
+            packet->tile.r0 = ~g_fade_current.r;
         }
 
         if (g_fade_current.g == FADE_CHAN_NEUTRAL)
         {
-            ((TILE*)prim)->g0 = 0;
+            packet->tile.g0 = 0;
         }
         else
         {
-            ((TILE*)prim)->g0 = ~g_fade_current.g;
+            packet->tile.g0 = ~g_fade_current.g;
         }
 
         if (g_fade_current.b == FADE_CHAN_NEUTRAL)
         {
-            ((TILE*)prim)->b0 = 0;
+            packet->tile.b0 = 0;
         }
         else
         {
-            ((TILE*)prim)->b0 = ~g_fade_current.b;
+            packet->tile.b0 = ~g_fade_current.b;
         }
     }
 
-    setTile(prim);
-    setSemiTrans(prim, 1);
-    SET_YX0((TILE*)prim, 0, 0);
-    setWH((TILE*)prim, SCREEN_WIDTH, SCREEN_HEIGHT);
-    addPrim(&p_ctx->ot[GNAME_OT_FRONT], prim);
-    prim = (TILE*)prim + 1;
+    setTile(&packet->tile);
+    setSemiTrans(&packet->tile, 1);
+    SET_YX0(&packet->tile, 0, 0);
+    setWH(&packet->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
+    addPrim(&ot_ctx->ot[GNAME_OT_FRONT], &packet->tile);
+    packet = NEXT_FADE_PACKET(packet, TILE);
 
     /* Choose blend mode by direction of tint. */
-    tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
+    blend_tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
 
-    setDrawTPage(prim, 0, 0, tpage);
-    addPrim(&p_ctx->ot[GNAME_OT_FRONT], prim);
-    prim = (DR_TPAGE*)prim + 1;
+    setDrawTPage(&packet->draw_mode, 0, 0, blend_tpage);
+    addPrim(&ot_ctx->ot[GNAME_OT_FRONT], &packet->draw_mode);
+    packet = NEXT_FADE_PACKET(packet, DR_TPAGE);
 
-    ctx->prim_cursor = prim;
+    ctx->prim_cursor = packet;
 }
 
 /**
