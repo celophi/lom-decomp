@@ -1367,3 +1367,113 @@ void func_8014F51C(void)
     D_8016B9D8 = 0;
     D_8016B9D8 = func_8014F824(D_8014057C, D_8016B780);
 }
+
+/**
+ * @brief Bring memory card slot 1 up to a usable state, formatting it if needed.
+ *
+ * Queries the card, then dispatches on the func_8014F63C status code: an error
+ * (1) or timeout (2) aborts immediately, and a newly inserted card (3) triggers
+ * a reset/clear cycle before the load. After _card_load the status is polled
+ * again; a 3 at that point means the card is unformatted, so _card_format is
+ * attempted.
+ *
+ * @return 1 if the card is ready for use, 0 if it was rejected up front or the
+ *         format attempt failed.
+ * @note The status codes come from func_8014F63C, which maps them to the SwCARD
+ *       events opened by func_8014F2B0: 0 EvSpIOE, 1 EvSpERROR, 2 EvSpTIMOUT,
+ *       3 EvSpNEW.
+ * @note Testing 1 and 2 in ONE @c || condition is required to match: gcc folds
+ *       the pair into the target's @c addiu/sltiu range check, and splitting
+ *       them into two separate @c if statements scores 86.85%. Writing the
+ *       condition explicitly as @c (u32)(status-1)<2U is a measured non-factor
+ *       (also 100%), so the readable form is kept.
+ * @note Measured non-factor: collapsing the trailing status/format pair into a
+ *       single @c && condition is also 100%.
+ * @see decomp.me (100%)
+ */
+s32 func_8014F55C(void)
+{
+    s32 status;
+
+    _card_info(0);
+    status = func_8014F63C();
+    if ((status == 1) || (status == 2))
+    {
+        return 0;
+    }
+    if (status == 3)
+    {
+        func_8014F7CC();
+        _card_clear(0);
+        func_8014F730();
+    }
+    func_8014F6D8();
+    _card_load(0);
+    if (func_8014F63C() == 3)
+    {
+        if (_card_format(0) == 0)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+extern char D_80140584[];
+extern u8 D_80169760[];
+
+/**
+ * @brief Populate the card work buffer and write it out under the "bu00:HAND" name.
+ * @note D_80140584 is the pre-split rodata string "bu00:HAND"; like the "bu00:"
+ *       path in func_8014F51C it must be referenced as the symbol rather than a
+ *       literal so the relocation targets the existing rodata.
+ * @note D_80169760 is the shared card work buffer; func_8014FBCC fills it and
+ *       func_8014F9EC commits it. Its size and layout are not yet known.
+ * @see decomp.me (100%)
+ */
+void func_8014F5FC(void)
+{
+    func_8014FBCC(D_80169760);
+    func_8014F9EC(D_80140584, D_80169760);
+}
+
+/**
+ * @brief Block until one of the four SwCARD events fires and report which.
+ *
+ * Spins over the first four descriptors opened by func_8014F2B0, in the order
+ * they were opened, and returns as soon as TestEvent reports one ready. Events
+ * that are not ready leave the loop running, so this busy-waits until the card
+ * driver signals something.
+ *
+ * @return 0 for EvSpIOE (operation completed), 1 for EvSpERROR, 2 for
+ *         EvSpTIMOUT, 3 for EvSpNEW (card newly inserted / unformatted).
+ * @note Comparing TestEvent's result against 1 explicitly is required to match:
+ *       gcc pins the constant 1 in s0 and compares with @c bne against it, so
+ *       the looser @c !=0 form scores 59.74%.
+ * @note The four tests must be four symmetric @c if blocks. m2c reconstructs the
+ *       third as an inverted test wrapping the fourth; that shape is 75.18%.
+ * @note Measured non-factor: @c while(1) instead of @c for(;;) is also 100%.
+ * @see decomp.me (100%)
+ */
+s32 func_8014F63C(void)
+{
+    for (;;)
+    {
+        if (TestEvent(D_8016B760) == 1)
+        {
+            return 0;
+        }
+        if (TestEvent(D_8016B764) == 1)
+        {
+            return 1;
+        }
+        if (TestEvent(D_8016B768) == 1)
+        {
+            return 2;
+        }
+        if (TestEvent(D_8016B76C) == 1)
+        {
+            return 3;
+        }
+    }
+}
