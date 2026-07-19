@@ -1244,3 +1244,27 @@ s32 func_8014F23C(void)
     }
     return count;
 }
+
+/**
+ * @brief Draw a number through func_800A8A78, clamped to a maximum of 99.
+ * @param prim Primitive buffer write cursor.
+ * @param cursor Glyph write cursor, forwarded unchanged.
+ * @param value Number to draw; anything >= 100 is drawn as 99.
+ * @param arg3 Forwarded unchanged. TODO: meaning unknown (call sites pass 1).
+ * @param origin Viewport anchor, forwarded unchanged.
+ * @param color Palette index, forwarded unchanged.
+ * @note Every other arg is a pure pass-through, which is why the asm only ever
+ *       touches a2 and re-stages the two stack args.
+ * @note Measured non-factors (all 100%): declaring this s32 and returning the
+ *       callee's result, writing the clamp as @c value>0x63, and clamping into a
+ *       separate local instead of the parameter.
+ * @see decomp.me (100%)
+ */
+void func_8014F274(s32 prim, s32 cursor, s32 value, s32 arg3, Vec2s* origin, s32 color)
+{
+    if (value >= 0x64)
+    {
+        value = 0x63;
+    }
+    func_800A8A78(prim, cursor, value, arg3, origin, color);
+}
