@@ -12,6 +12,9 @@ extern s32 D_8003EC18;
 /** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
 extern u32 g_akao_pitch_table[];
 
+/** @brief Pointer table in the initialized data segment, indexed by field 0xAA in func_8002BFAC. */
+extern s32 D_8003DD80[];
+
 /**
  * @brief One 8-byte note slot in the per-channel note table at
  *        @c channel->unk34. Each entry encodes the articulation index plus
@@ -225,6 +228,27 @@ typedef struct
     char pad4[0x100 - 0xEE];
     s32 unk100;
 } r_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x1C - 0x4];
+    s32 unk1C;
+    char pad2[0x2C - 0x20];
+    u16 unk2C;
+    char pad3[0x34 - 0x2E];
+    s32 unk34;
+    char pad4[0x64 - 0x38];
+    u16 unk64;
+    char pad5[0xA2 - 0x66];
+    u16 unkA2;
+    u16 unkA4;
+    s16 unkA6;
+    u16 unkA8;
+    u16 unkAA;
+    s16 unkAC;
+    u16 unkAE;
+} s_struct;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
@@ -2265,4 +2289,107 @@ void func_8002BEE8(r_struct* arg0)
     }
     arg0->unk54 = result;
     arg0->unk100 = (s32)(arg0->unk100 | 0x10);
+}
+
+/**
+ * @brief Adds a signed byte to field 0xEC, then recomputes the scaled result
+ *        at field 0x54 and sets flag 0x10 in field 0x100.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BF48(r_struct* arg0)
+{
+    s32 scale;
+    u8* temp_v0;
+    u32 prod;
+    u32 result;
+
+    temp_v0 = arg0->unk0;
+    scale = arg0->unk2C;
+    arg0->unkEC += (s8)*temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    result = (u8)arg0->unkEC;
+    prod = scale * result;
+    if (arg0->unkEC < 0)
+    {
+        result = (prod >> 8) - scale;
+    }
+    else
+    {
+        result = prod >> 7;
+    }
+    arg0->unk54 = result;
+    arg0->unk100 = (s32)(arg0->unk100 | 0x10);
+}
+
+/**
+ * @brief AKAO opcode handler that reads several bytecode bytes into the
+ *        channel's portamento/pitch state (0xA2..0xAE), computes the scaled
+ *        slide value at 0xAC, and looks up a table entry into 0x1C.
+ * @param arg0 Channel state whose bytecode cursor is advanced.
+ * @note @c temp_a0 must be widened past u16 so gcc keeps the second mult
+ *       operand order (@c hi first) matching the other branch.
+ * @see decomp.me (100%)
+ */
+void func_8002BFAC(s_struct* arg0)
+{
+    s_struct* p;
+    u32 temp_a0;
+    u32 raw;
+    u16 flags;
+    u32 hi;
+    u32 var_lo;
+    u8* temp_v0;
+    u8* temp_v0_2;
+    u8* temp_v0_3;
+    u8* temp_v0_4;
+    s32 temp_v1;
+    s32 temp_v1_2;
+
+    p = arg0;
+    p->unk34 = (s32)(p->unk34 | 1);
+    if (p->unk64 != 0)
+    {
+        temp_v0 = p->unk0;
+        p->unkA2 = 0;
+        temp_v1 = *temp_v0;
+        p->unk0 = (u8*)(temp_v0 + 1);
+        if (temp_v1 != 0)
+        {
+            p->unkAE = temp_v1 << 8;
+        }
+    }
+    else
+    {
+        temp_v0_2 = p->unk0;
+        p->unkA2 = *temp_v0_2;
+        p->unk0 = (u8*)(temp_v0_2 + 1);
+    }
+    temp_v0_3 = p->unk0;
+    temp_v1_2 = *temp_v0_3;
+    p->unk0 = (u8*)(temp_v0_3 + 1);
+    p->unkA6 = temp_v1_2;
+    if (temp_v1_2 == 0)
+    {
+        p->unkA6 = 0x100;
+    }
+    temp_v0_4 = p->unk0;
+    flags = p->unkAE;
+    raw = *temp_v0_4;
+    p->unk0 = (u8*)(temp_v0_4 + 1);
+    p->unkAA = raw;
+    temp_a0 = p->unk2C;
+    hi = (u32)(flags & 0x7F00) >> 8;
+    if (!(flags & 0x8000))
+    {
+        var_lo = hi * ((s32)(temp_a0 * 0xF) >> 8);
+    }
+    else
+    {
+        var_lo = hi * temp_a0;
+    }
+    p->unkAC = var_lo >> 7;
+    p->unk1C = D_8003DD80[p->unkAA];
+    p->unkA4 = p->unkA2;
+    p->unkA8 = 1;
 }
