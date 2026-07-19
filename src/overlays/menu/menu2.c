@@ -1341,3 +1341,29 @@ void func_8014F46C(void)
     CloseEvent(D_8016B77C);
     ExitCriticalSection();
 }
+
+extern char D_8014057C[];
+extern struct DIRENTRY D_8016B780[];
+extern s32 D_8016B9D8;
+
+/**
+ * @brief Scan memory card slot 1 and record how many save files it holds.
+ *
+ * Delegates to func_8014F824, which globs "bu00:" + a wildcard through
+ * firstfile/nextfile and fills the D_8016B780 directory-entry table. The
+ * resulting file count is cached in D_8016B9D8.
+ *
+ * @note The redundant-looking @c D_8016B9D8=0 before the call is required to
+ *       match: the target stores $zero in the jal delay slot, and dropping the
+ *       statement scores 32.06%. It also leaves the count at 0 if the callee
+ *       never returns (card removed mid-scan).
+ * @note The "bu00:" path must be referenced as the pre-split rodata symbol
+ *       D_8014057C, not as a string literal: a literal emits a fresh local
+ *       rodata label and scores 99.38% (2 relocation rows).
+ * @see decomp.me (100%)
+ */
+void func_8014F51C(void)
+{
+    D_8016B9D8 = 0;
+    D_8016B9D8 = func_8014F824(D_8014057C, D_8016B780);
+}
