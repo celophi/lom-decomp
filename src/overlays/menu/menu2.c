@@ -1318,3 +1318,26 @@ void func_8014F2B0(void)
     EnableEvent(D_8016B77C);
     ExitCriticalSection();
 }
+
+/**
+ * @brief Close the eight memory-card events opened by func_8014F2B0.
+ * @note Teardown counterpart to func_8014F2B0; same critical-section wrapper and
+ *       the same D_8016B760..D_8016B77C descriptor order.
+ * @note The descriptors are not cleared afterwards, so the globals hold stale
+ *       handles until the next func_8014F2B0 call overwrites them.
+ * @see decomp.me (100%)
+ */
+void func_8014F46C(void)
+{
+    func_800158E0();
+    EnterCriticalSection();
+    CloseEvent(D_8016B760);
+    CloseEvent(D_8016B764);
+    CloseEvent(D_8016B768);
+    CloseEvent(D_8016B76C);
+    CloseEvent(D_8016B770);
+    CloseEvent(D_8016B774);
+    CloseEvent(D_8016B778);
+    CloseEvent(D_8016B77C);
+    ExitCriticalSection();
+}
