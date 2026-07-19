@@ -1599,3 +1599,155 @@ s32 func_8014F824(char* path, struct DIRENTRY* entry)
     }
     return count;
 }
+
+/**
+ * @brief Read block 0 of a memory card and report whether it is formatted.
+ *
+ * Drains the four HwCARD events, forces a re-detect with _new_card(), reads the
+ * first block into a local buffer, then runs the same four-way event poll as
+ * func_8014F730 with the outcome in @c status. A non-zero status (error,
+ * timeout, or newly inserted card) aborts. Otherwise the block is checked for
+ * the "MC" signature that starts every formatted PlayStation card.
+ *
+ * @param chan Card channel / slot to probe, passed straight to _card_read.
+ * @return 1 if the card is formatted, 0 if the "MC" magic is absent, -1 if the
+ *         event poll reported anything other than completion.
+ * @note NOT A MATCH - 93.28%. Instruction selection and count are exact
+ *       (81/81); the entire residue is a saved-register permutation. Target map
+ *       (m2c --reg-vars): status s0, chan s1, constant-1 s2, &D_8016B774 s3,
+ *       &D_8016B770 s4. This build gets status s3, chan s2, constant-1 s0.
+ * @note Cause is ALLOC-ORDER: the constant-1 pseudo is hoisted to the loop
+ *       preheader with 9 loop-weighted refs (pri 5400) and outranks status
+ *       (5 refs, pri 2500), so it takes s0 first. Underneath that is a
+ *       SCHED-LUID ordering problem - the target materializes the constant in
+ *       the 2nd drain delay slot and status=3 in the 4th, mine has them
+ *       swapped, and the preheader-created constant can never get a luid
+ *       earlier than a status=3 written before the loop.
+ * @note Do not "fix" this with a shared zero local or a short-typed flag. Those
+ *       reach 96.21% but emit a saved register where the target uses hardware
+ *       $zero, and xori/bnez where the target has bne. See
+ *       working/func_8014F8A8/status.md for the full probe log.
+ * @see decomp.me (93.28%)
+ */
+s32 func_8014F8A8(s32 chan)
+{
+    u8 header[0x80];
+    s32 status;
+
+    bzero(header, 0x80);
+    TestEvent(D_8016B770);
+    TestEvent(D_8016B774);
+    TestEvent(D_8016B778);
+    status = 3;
+    TestEvent(D_8016B77C);
+    _new_card();
+    _card_read(chan, 0, header);
+    for (;;)
+    {
+        if (TestEvent(D_8016B770) == 1)
+        {
+            status = 0;
+            break;
+        }
+        if (TestEvent(D_8016B774) == 1)
+        {
+            status = 1;
+            break;
+        }
+        if (TestEvent(D_8016B778) == 1)
+        {
+            status = 2;
+            break;
+        }
+        if (TestEvent(D_8016B77C) == 1)
+        {
+            break;
+        }
+    }
+    if (status != 0)
+    {
+        return -1;
+    }
+    if (header[0] != 'M')
+    {
+        return 0;
+    }
+    if (header[1] == 'C')
+    {
+        return 1;
+    }
+    return 0;
+}
+
+extern u8 D_80140594[];
+extern u8 D_80169560[];
+extern u8 D_80169563;
+
+/**
+ * @brief Create a memory-card save file and write one block of save data to it.
+ *
+ * Fills the 0x200-byte card header at D_80169560 - the "SC" magic, icon/display
+ * byte 0x13, the block count, and the Shift-JIS title "\x90\xB9\x8C\x95\x83Z\x81[\x83u\x83f\x81[\x83^"
+ * ("Seiken save data") - zeroes the reserved tail, then stamps that header over
+ * the front of the caller's buffer. The file is created with open(), closed,
+ * reopened for writing, and the whole 8 KB block is written.
+ *
+ * @param name Card path to create, e.g. the "bu00:HAND" string at D_80140584.
+ * @param buf  Caller's 8 KB save buffer; its first 0x200 bytes are overwritten
+ *             with the header before the write.
+ * @return 1 if the file was created and fully written, 0 if either open failed
+ *         or the write was short.
+ * @note The create flags are (blocks << 16) | 0x200 - the PS1 BIOS takes the
+ *       file's block count in the upper half of open()'s mode argument.
+ * @note @c blocks must be a SHARED local feeding both the header byte and the
+ *       write size (`blocks << 13`). The target keeps the constant 1 in s3 and
+ *       derives 0x2000 from it; writing the two constants independently scores
+ *       93.59%. Measured non-factors: `blocks * 0x2000` for the shift, and
+ *       inlining the size into the write/compare (both 100%).
+ * @note The header byte at +3 is written through the D_80169560 array but read
+ *       back through the separate symbol D_80169563. That asymmetry is required:
+ *       routing the store through D_80169563 too costs an insn and scores
+ *       94.17%, and reading via D_80169560[3] emits a `+0x3` relocation instead
+ *       of the target's own symbol (99.88%).
+ * @note Both copies are gcc's inlined memcpy on byte-aligned char pointers -
+ *       hence the lwl/lwr pairs and, for the 0x200 copy into a pointer
+ *       parameter, the runtime (src|dst)&3 alignment test with two loop bodies.
+ *       m2c cannot reconstruct these and reports M2C_ERROR on every lwr.
+ * @note Statement order matters: swapping the bzero and the 0x200 memcpy scores
+ *       88.71%.
+ * @see decomp.me (100%)
+ */
+s32 func_8014F9EC(char* name, void* buf)
+{
+    s32 blocks;
+    s32 fd;
+    s32 size;
+
+    D_80169560[0] = 'S';
+    D_80169560[1] = 'C';
+    D_80169560[2] = 0x13;
+    blocks = 1;
+    D_80169560[3] = blocks;
+    memcpy(&D_80169560[4], D_80140594, 0x11);
+    bzero(&D_80169560[0x44], 0x1C);
+    memcpy(buf, D_80169560, 0x200);
+    fd = open(name, (D_80169563 << 16) | 0x200);
+    if (fd == -1)
+    {
+        return 0;
+    }
+    close(fd);
+    fd = open(name, 2);
+    if (fd == -1)
+    {
+        return 0;
+    }
+    size = blocks << 13;
+    if (write(fd, buf, size) != size)
+    {
+        close(fd);
+        return 0;
+    }
+    close(fd);
+    return 1;
+}
