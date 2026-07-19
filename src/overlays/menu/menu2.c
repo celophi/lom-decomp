@@ -1537,3 +1537,65 @@ s32 func_8014F730(void)
         }
     }
 }
+
+/**
+ * @brief Drain the four HwCARD events by testing each one once.
+ *
+ * Hardware-side twin of func_8014F6D8. func_8014F55C runs this first in its
+ * status-3 path, so the _card_clear that follows starts from a clean slate and
+ * the func_8014F730 poll after it can only see events that clear raised.
+ *
+ * @note Same descriptor order as func_8014F2B0 and func_8014F730: EvSpIOE,
+ *       EvSpERROR, EvSpTIMOUT, EvSpNEW.
+ * @see decomp.me (100%)
+ */
+void func_8014F7CC(void)
+{
+    TestEvent(D_8016B770);
+    TestEvent(D_8016B774);
+    TestEvent(D_8016B778);
+    TestEvent(D_8016B77C);
+}
+
+extern char D_80140590[];
+
+/**
+ * @brief Count the files on a memory card matching a path prefix.
+ *
+ * Builds "<path>*" in a local buffer and walks the card directory with
+ * firstfile/nextfile, filling @p entry as it goes. Both BIOS calls return the
+ * entry pointer they were given on success and NULL when the enumeration ends,
+ * so the loop compares the result against the pointer rather than testing NULL.
+ *
+ * @param path Device path prefix, e.g. the "bu00:" string at D_8014057C.
+ * @param entry Start of the caller's directory-entry table; one struct DIRENTRY
+ *              is filled per file found, so it must have room for every match.
+ * @return Number of files found; 0 if the card holds no match at all.
+ * @note D_80140590 is the pre-split rodata string "*" (the wildcard suffix).
+ * @note Inside the do/while, @c count must be incremented BEFORE @c entry:
+ *       the reverse order scores 98.67%.
+ * @note The target's trailing @c addiu s1,s1,-0x1 is NOT in the source. gcc
+ *       speculatively puts the count increment in the @c beq delay slot, where
+ *       it runs on both paths, then compensates on the exit path. m2c
+ *       reconstructs that as a literal @c count-1 with a second variable; that
+ *       shape is only 93.12%, and the clean loop below is 100%.
+ * @see decomp.me (100%)
+ */
+s32 func_8014F824(char* path, struct DIRENTRY* entry)
+{
+    char pattern[0x80];
+    s32 count;
+
+    strcpy(pattern, path);
+    strcat(pattern, D_80140590);
+    count = 0;
+    if (firstfile(pattern, entry) == entry)
+    {
+        do
+        {
+            count += 1;
+            entry += 1;
+        } while (nextfile(entry) == entry);
+    }
+    return count;
+}
