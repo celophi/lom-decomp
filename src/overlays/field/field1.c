@@ -4,7 +4,7 @@
 
 extern void DrawSync(s32);
 extern void ClearOTagR(void*, s32);
-extern void field_select_object(s32, void*);
+extern void field_select_object(unsigned short, void*);
 extern void field_build_render_records(void*, unsigned short);
 extern void func_80054B1C(void);
 
@@ -83,6 +83,14 @@ typedef struct
   FieldScene *scene;
   u32 vram_byte_count;
 } FieldSceneGlobals;
+
+typedef struct
+{
+    u32 padding[3];
+    u32 vram_byte_count;
+    u32 dyn_count;
+    FieldScene* scene;
+} FieldScenePage;
 
 extern FieldSceneGlobals g_field_scene;
 extern void func_80056A04(void); /* extern */
@@ -285,7 +293,7 @@ void field_init_with_fmv_alloc(void)
  * field_apply_pixel_lookup.
  *
  * @param arg0 Map id; values below 15 use a blocking CD read, others stream.
- * @see decomp.me (97.33%) https://decomp.me/scratch/V1GlO
+ * @see decomp.me (99.67%) https://decomp.me/scratch/V1GlO
  */
 void field_load_map(s32 arg0)
 {
@@ -300,8 +308,11 @@ void field_load_map(s32 arg0)
     s32 vram_addr;
     FieldObject** obj_iter;
     u16 map_id;
+    FieldScenePage* globals;
+
     DrawSync(0);
-    map_id = arg0;
+    var_s1 = arg0;
+    map_id = var_s1;
     if (map_id < 0xFU)
     {
         cdrom_queue_read((arg0 + 0xB4) & 0xFFFF, 0x80180000);
@@ -311,10 +322,11 @@ void field_load_map(s32 arg0)
     {
         cdrom_stream((arg0 + 0xB4) & 0xFFFF, 0x80180000);
     }
-    var_s1 = (u32)g_field_scene.scene;
+    globals = (FieldScenePage*)0x80180000;
+    var_s1 = (u32)globals->scene;
     sp[0] = 0x140;
     sp[1] = 0x100;
-    var_s0 = g_field_scene.vram_byte_count >> 9;
+    var_s0 = globals->vram_byte_count >> 9;
     sp[3] = 0x100;
     while (var_s0 != 0)
     {
@@ -356,7 +368,7 @@ void field_load_map(s32 arg0)
                     if ((*seen) != vram_addr)
                     {
                         remaining -= 1;
-                        var_s1 = (u32)g_field_scene.scene;
+                        var_s1 = (u32)globals->scene;
                         seen += 1;
                         if (remaining != 0)
                         {
