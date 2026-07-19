@@ -31,11 +31,11 @@
 #define GNAME_OT_TEXT_CURSOR 0x08      /* text cursor glyph + DrawTPage */
 #define GNAME_OT_PANEL_LABEL 0x09      /* category-label sprite */
 #define GNAME_OT_CHAR_PANEL 0x0A       /* scrolling character-panel grid */
-#define GNAME_OT_CHAR_GRID 0x0B        /* character grid glyphs */
+#define GNAME_OT_CHAR_GRID 0x0B        /* action/panel selection glyphs */
 #define GNAME_OT_CHAR_APPEND_ANIM 0x0C /* character-append animation glyphs */
 #define GNAME_OT_CHAR_APPEND 0x0D      /* static append glyph + draw-mode */
 #define GNAME_OT_NAME_STRIP 0x0E       /* name strip (entered-name display) */
-#define GNAME_OT_NAME_CURSOR 0x0F      /* name-entry cursor row */
+#define GNAME_OT_NAME_CURSOR 0x0F      /* fixed background/layout sprite batch */
 #define GNAME_OT_ENTRY_COUNT (GNAME_OT_NAME_CURSOR + 1)
 /** @} */
 
@@ -48,7 +48,7 @@
  *  - Most bytes are single-byte glyphs (1 byte each).
  *  - A byte in the range [0x19, 0x20) is the *lead* byte of a 2-byte glyph;
  *    the following byte is its trail byte. There are 7 lead-byte values
- *    (0x19..0x1F), giving up to 7 "pages" of wide glyphs.
+ *    (0x19..0x1F); their higher-level grouping is not established here.
  *  - 0x00 terminates the string.
  *
  * The `name_*` helpers in gname.c walk the buffer respecting this encoding:
@@ -58,11 +58,10 @@
  * `name_prepend_char` inserts one glyph at the front.
  *
  * `name_is_blank` is a special case: it walks byte-by-byte (not
- * glyph-by-glyph) and treats both ASCII space (0x20) and wide-space
- * sentinel (0x80) as blank.
+ * glyph-by-glyph) and treats both ASCII space (0x20) and byte 0x80 as blank.
  */
 #define CHAR_SPACE 0x20      /**< ASCII space; blank glyph in name buffers. */
-#define CHAR_WIDE_SPACE 0x80 /**< Wide-space sentinel byte; also blank. */
+#define CHAR_WIDE_SPACE 0x80 /**< Alternate byte value treated as blank. */
 
 /* True if byte is a custom 2-byte DBCS-style lead byte */
 #define IS_DBSC_LEAD_BYTE(c) ((c) >= 0x19 && (c) <= 0x1F)
@@ -71,9 +70,8 @@
 #define MAKE_DBCS_GLYPH(lo, hi) (u16)(((u16)(hi) << 8) | (u16)(lo))
 
 /**
- * Button mask for confirming a character selection in the name-entry grid.
- * Combines PAD_BTN_CROSS (physical Circle/O = confirm on Japanese PSX) with
- * 0x200 (R2 shoulder button as a secondary confirm input).
+ * Button mask for confirming the current name-entry selection.
+ * Combines PAD_BTN_CROSS with PAD_BTN_L3 as an auxiliary confirm input.
  */
 #define GNAME_BTN_CONFIRM (PAD_BTN_CROSS | 0x200)
 
@@ -101,7 +99,8 @@
  * passed to / returned from handle_char_set_input.
  *
  *   0-3  : action tab bar (OK, Delete, Random, Default)
- *   4-7  : character-panel selector tabs (panel N at mode 4+N)
+ *   4-6  : visible character-panel selector tabs (panel N at mode 4+N)
+ *   7    : hidden kanji-category tab retained by the state machine
  *   0x10 : in-grid character cursor
  */
 #define GNAME_MODE_ACTION_OK 0      /* action bar: commit the name */
@@ -110,7 +109,7 @@
 #define GNAME_MODE_ACTION_DEFAULT 3 /* action bar: reset to default name */
 #define GNAME_MODE_PANEL_BASE 4     /* first char-panel tab; panel N is at 4+N */
 #define GNAME_MODE_PANEL_NAV_LAST (GNAME_MODE_PANEL_BASE + 2)
-#define GNAME_MODE_PANEL_LAST (GNAME_MODE_PANEL_BASE + 3)
+#define GNAME_MODE_PANEL_LAST (GNAME_MODE_PANEL_BASE + 3) /* hidden kanji-category tab */
 #define GNAME_MODE_GRID 0x10        /* in-grid character cursor mode */
 
 #define GNAME_REDISPATCH_PENDING 0xFF
@@ -119,7 +118,7 @@
 #define GNAME_CURSOR_LERP_STEPS 5
 #define GNAME_GRID_LERP_STEPS 4
 
-/* Sentinel for g_cursor_tab meaning "no tab/grid cell selected". */
+/* Sentinel for g_cursor_tab meaning "no action/panel entry activated this frame". */
 #define GNAME_TAB_NONE 0xFF
 
 /* g_overlay_result values: how the overlay finished, read by the caller. */
@@ -132,7 +131,7 @@
 /* Frame count seeded into g_append_anim_timer to start the append animation. */
 #define APPEND_ANIM_TIMER_START 2
 
-/* g_name_source_mode values: selects which name is pasted on Random/Default action. */
+/* g_name_source_mode values: selects the source used by the Random action. */
 #define GNAME_SRC_CUSTOM 1       /* use g_custom_name_buf */
 #define GNAME_SRC_HISTORY 3      /* pick from g_history_names_off via g_history_name_idx */
 #define GNAME_SRC_RAND_PRIMARY 4 /* random entry from g_random_names_off primary index table */
@@ -173,15 +172,15 @@
 #define NAME_GRID_CELL_SHIFT 4     /**< Shift equivalent of division by the 16-pixel cell size. */
 #define NAME_GRID_DIV_BIAS (NAME_GRID_CELL_SIZE - 1)
 #define NAME_GRID_VISIBLE_ROWS (NAME_GRID_VIS_HEIGHT / NAME_GRID_CELL_SIZE)
-#define NAME_GRID_VRAM_X 0x60      /**< VRAM X of the grid area upload rect (96 px). */
-#define NAME_GRID_VRAM_W 0xA0      /**< Width of the grid area upload rect (160 px). */
+#define NAME_GRID_VRAM_X 0x60      /**< VRAM X of the grid backing region (96 px). */
+#define NAME_GRID_VRAM_W 0xA0      /**< Width of the grid backing region (160 px). */
 #define NAME_GRID_VIS_HEIGHT 0x50  /**< Visible grid height in pixels: 5 rows * 16 (80 px). */
 #define NAME_GRID_VRAM_PAGE0_Y NAME_GRID_Y_TOP
 #define NAME_GRID_VRAM_PAGE1_Y 0x150
-#define NAME_GRID_OVERSCAN 0x0B    /**< Rows partly above the window are still drawn down to y = -11. */
+#define NAME_GRID_OVERSCAN 0x0B    /**< Glyphs partly above the window are still drawn down to y = -11. */
 #define CHAR_PANEL_STANDARD_COUNT 3 /**< Number of ordinary character panels. */
-#define CHAR_PANEL_KANJI_CATEGORY 3 /**< g_char_panel value selecting the kanji category list. */
-#define CHAR_PANEL_KANJI 4          /**< g_char_panel value selecting the kanji picker. */
+#define CHAR_PANEL_KANJI_CATEGORY 3 /**< Dormant panel value for the kanji category list. */
+#define CHAR_PANEL_KANJI 4          /**< Dormant panel value for the kanji character picker. */
 #define KANJI_CATEGORY_EMPTY 0xFF
 #define CHAR_PANEL_GLYPH_COLOR 1
 #define CHAR_PANEL_GLYPH_MODE 0
@@ -197,17 +196,17 @@
 #define KANJI_CATEGORY_NEXT_EDGE 9
 
 /**
- * @brief True when a glyph drawn at screen Y @p y falls inside the scrolling
+ * @brief True when a glyph drawn at panel-local Y @p y falls inside the scrolling
  *        grid window, i.e. y is in [-NAME_GRID_OVERSCAN, NAME_GRID_VIS_HEIGHT-1].
  *
  * The single unsigned compare (rather than two signed ones) is what the
- * original emits, so the biased form is required to match.
+ * target uses, so the biased form is required to match.
  */
 #define NAME_GRID_ROW_VISIBLE(y) (((u32)((y) + NAME_GRID_OVERSCAN)) <= (NAME_GRID_VIS_HEIGHT + NAME_GRID_OVERSCAN - 1))
 
 /* FadeState channel sentinels. Channels run 0 (fully dark) up to
- * FADE_CHAN_NEUTRAL (identity, no tint). Values >= FADE_CHAN_ADDITIVE
- * select additive blend; values below select subtractive. */
+ * FADE_CHAN_NEUTRAL (identity, no tint). The red channel selects additive
+ * blending at FADE_CHAN_ADDITIVE and above; otherwise blending is subtractive. */
 #define FADE_CHAN_NEUTRAL 0x100
 #define FADE_CHAN_ADDITIVE 0x101
 
@@ -221,9 +220,10 @@
  * packets). getTPage(0, 0, 320, 0): 4-bit CLUT, abr=0, VRAM page at x=320. */
 #define GNAME_GLYPH_TPAGE 5
 
-/** Number of glyph cells in the name-entry cursor row drawn by
+/** Number of entries in the fixed layout-sprite batch emitted by
  *  @ref draw_name_cursor_row. */
 #define NAME_CURSOR_GLYPH_COUNT 20
+/** Width/height that encodes a zero texture-window mask through Psy-Q's _get_tw. */
 #define GNAME_FULL_TEX_WINDOW_SIZE 0xFF
 
 /* Entries rendered from g_tab_cursor_entries by gname_render. */
@@ -249,7 +249,7 @@
 #define GNAME_PANEL_SPRITE_COLOR 1
 #define GNAME_PANEL_SPRITE_MODE 2
 
-/* Entered-name strip placement and back-page upload dimensions. */
+/* Entered-name strip placement and backing-region dimensions. */
 #define NAME_STRIP_TEXT_COLOR 1
 #define NAME_STRIP_TEXT_X 0x10
 #define NAME_STRIP_TEXT_Y 8
@@ -261,8 +261,7 @@
 #define NAME_STRIP_VRAM_HEIGHT 0x20
 
 /** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
- *  Bits [5:0] hold CLUT_X/16; upper bits carry unrelated data and must be
- *  discarded before writing the CLUT id into a sprite primitive. */
+ *  Bits [5:0] hold CLUT_X/16, the portion encoded in a sprite's CLUT id. */
 #define GLYPH_CLUT_X_MASK 0x3F
 
 /** CLUT-page bit pattern OR'd over the low 6 bits of @c GlyphInfo::clut
@@ -273,17 +272,17 @@
 #define GLYPH_HIGHLIGHT_TINT GPU_COLOR_WORD(0, 0, 0xA0)
 
 /** Number of frames in @c g_char_append_anim; reaching this index wraps the
- *  animation back to the idle frame and stops it. */
+ *  animation back to the resting frame and stops advancement. */
 #define APPEND_ANIM_FRAME_COUNT 7
 
 #define APPEND_ANIM_X_BIAS 0xE8
 #define APPEND_ANIM_Y_BIAS 4
 
-/* The panel data blob is described by the PanelDataHeader struct above. Its
+/* The panel data blob is described by the PanelDataHeader struct below. Its
  * header fields and record-offset table
  * (g_random_names_off, g_history_names_off, g_kanji_panel_off,
  * g_panel_record_offsets, g_panel_tbl_off, g_panel_data_base) plus
- * g_kanji_cat_entries and g_kanji_entry_offsets are defined below in this file.
+ * g_kanji_cat_entries and g_kanji_entry_offsets are declared below in this file.
  *
  * g_panel_tbl_off (blob + 4) holds the byte offset (0x14) from the blob base
  * to the u16 record-offset table; a record pointer is therefore
@@ -296,13 +295,13 @@
  *
  * The base must be derived from @c &g_panel_tbl_off with a runtime
  * @c - 4 (not referenced via the @ref g_panel_data_base symbol): the
- * original code shares a single @c lui between loading the field's value
+ * matched code shares a single @c lui between loading the field's value
  * and forming the base address, leaving the @c -4 as a separate @c addiu
  * in the binary.
  */
 #define PANEL_DATA_BLOB (((u8*)(&g_panel_tbl_off)) - 4)
 
-/** The blob's u16 record-offset table. Must stay a macro: the original
+/** The blob's u16 record-offset table. Must stay a macro: the target
  *  re-derives the table at every use (no CSE), which a named local would
  *  destroy. */
 #define PANEL_REC_TBL ((u16*)(PANEL_DATA_BLOB + g_panel_tbl_off))
@@ -316,7 +315,7 @@
  *  load, exactly as in @ref PANEL_DATA_BLOB. */
 #define KANJI_DATA_BLOB (((u32)(&g_kanji_panel_off)) - 8)
 
-/** The kanji picker's self-relative glyph table (blob + the kanji offset). */
+/** The dormant kanji path's self-relative glyph table (blob + the kanji offset). */
 #define KANJI_GLYPH_TBL ((u8*)(KANJI_DATA_BLOB + g_kanji_panel_off))
 
 /** Entry i of a self-relative u16 offset table at @p tbl, as a byte pointer.
@@ -325,7 +324,7 @@
 
 /*
  * Name and glyph records are selected through self-relative u16 offset
- * tables. These macros deliberately preserve the original symbol anchors and
+ * tables. These macros deliberately preserve the matched symbol anchors and
  * addition order; simplifying them to the generic blob helpers changes the
  * generated address setup under GCC 2.7.2.
  */
@@ -357,8 +356,9 @@
  * step count), `g_fade_current` is the *current* interpolated value (its
  * `steps` field is unused). Each tick @ref render_fade_overlay advances the
  * current toward the target by `(target - current) / steps` and decrements
- * `steps`. Channels are 0..FADE_CHAN_NEUTRAL (identity = no tint); values
- * above FADE_CHAN_NEUTRAL trigger additive blend mode.
+ * `steps`. Channels are 0..FADE_CHAN_NEUTRAL (identity = no tint), with values
+ * above neutral representing additive intensity. The red channel selects the
+ * packet's additive or subtractive blend mode.
  */
 typedef struct
 {
@@ -409,19 +409,19 @@ typedef struct
     u8 v;     /* 0x1 - texture V in VRAM */
     u8 w;     /* 0x2 - sprite width */
     u8 h;     /* 0x3 - sprite height */
-    u32 clut; /* 0x4 - CLUT id (low 6 bits used; combined with 0x7C80) */
+    u32 clut; /* 0x4 - CLUT X-column index; low 6 bits are encoded in the sprite CLUT id */
 } GlyphInfo;
 
 /**
- * @brief One entry of the name-entry cursor glyph table at
+ * @brief One entry of the fixed layout-sprite table at
  *        @c g_name_cursor_glyphs.
  *
  * 20 of these are walked by @ref draw_name_cursor_row each frame to emit
- * the cursor's textured-sprite row.
+ * the backmost fixed layout sprites.
  */
 typedef struct
 {
-    u32 id; /* 0x0 - index into g_glyph_table (selects which glyph to draw) */
+    u32 id; /* 0x0 - index into g_glyph_table (selects which sprite tile to draw) */
     u32 xy; /* 0x4 - packed s16 x,y screen position (low half = x, high = y) */
 } GlyphSeqEntry;
 
@@ -430,7 +430,8 @@ typedef struct
  *
  * @c g_tab_cursor_pos[0..1] are the scroll-up and scroll-down indicator
  * glyphs. @c g_tab_cursor_entries[0..10] are the cursor target positions for
- * the 11 character-panel tabs.
+ * the 11 action/panel entries. The tables are contiguous, so matched accesses
+ * anchored at @c g_tab_cursor_pos[2 + n] alias @c g_tab_cursor_entries[n].
  *
  * The @c x bitfield occupies the low 9 bits of the first word; accessing it
  * directly generates the same @c lw + @c andi sequence as the raw LW+mask form.
@@ -461,7 +462,7 @@ typedef struct
     u8 x;     /* 0x0 - X position (biased by 0xE8 when drawn) */
     u8 y;     /* 0x1 - Y position (biased by 4 when drawn) */
     u8 glyph; /* 0x2 - glyph id (index into g_glyph_table); 0 = empty slot */
-    u8 pad;   /* 0x3 - unused; slot 0 only: frame duration in render ticks */
+    u8 pad;   /* 0x3 - slot 0: frame duration in render ticks; otherwise unused */
 } AppendAnimSlot;
 
 /**
@@ -469,8 +470,9 @@ typedef struct
  *        @ref draw_char_append_anim.
  *
  * @c g_char_append_anim holds @ref APPEND_ANIM_FRAME_COUNT of these. Frame 0
- * is the idle (empty) frame; frames 1.. are the animation. The frame is
- * shown for @c slots[0].pad render ticks before advancing.
+ * is the resting frame and is still rendered while the timer is zero. Starting
+ * the timer advances through frames 0..6, then returns to frame 0 and stops.
+ * Each active frame lasts @c slots[0].pad render ticks.
  */
 typedef struct
 {
@@ -534,7 +536,7 @@ typedef struct
      * labels, tab sprites, kanji category names). */
 } PanelDataHeader;
 
-/* --- Data-blob globals (raw bytes in the gname_data databin) --- */
+/* --- Typed views into tables stored in the gname_data databin. --- */
 extern AppendAnimFrame g_char_append_anim[];
 extern Tim g_name_entry_tim;    /* glyph TIM blob; Tim covers the fixed header + CLUT, pixel block follows */
 extern GlyphSeqEntry g_name_cursor_glyphs[];
@@ -552,8 +554,8 @@ extern GlyphSeqEntry g_name_cursor_glyphs[];
 
 /** 48-byte name buffer holding the custom preset name (used when g_name_source_mode == 1). */
 u8 g_custom_name_buf[48];
-/** Which preset name source to paste: 1 = custom (g_custom_name_buf), 3 = history
- *  (g_history_name_idx), 4/5 = timer-seeded random name table. */
+/** Which source the Random action uses: 1 = custom, 3 = history-derived,
+ *  and 4/5 = the first or second half of the random-name table. */
 s32 g_name_source_mode;
 /** Overlay exit code written when the session ends: 2 = cancel, 5 = confirm. */
 s32 g_overlay_result;
@@ -573,8 +575,8 @@ s32 g_history_name_idx;
 RenderContext* g_render_buf_base;
 /** Active name buffer the UI edits in place. */
 u8* g_active_name;
-/** Active character panel index: 0-2 = character-set tabs, 3 = kanji category
- *  picker, 4 = kanji character picker within a selected category. */
+/** Active character panel index: 0-2 = standard panels; 3-4 are dormant
+ *  kanji category/character paths not reachable through the shipped tab data. */
 s32 g_char_panel;
 /** Pointer to the current kanji category's display data (set when g_char_panel == 4). */
 void* g_kanji_cat_name;
@@ -584,7 +586,7 @@ u8 g_name_clipboard[48];
 s32 g_startup_delay;
 /** Frames remaining in the cursor-position lerp animation. */
 s32 g_cursor_lerp_steps;
-/** Index of the highlighted tab in the left selection grid (0xFF = none highlighted). */
+/** Action/panel entry activated this frame (0xFF = none). */
 s32 g_cursor_tab;
 /** Cursor current X position (being lerped toward g_cursor_x_target). */
 s32 g_cursor_x;
@@ -602,7 +604,7 @@ s32 g_char_last_row;
 s32 g_strip_width_steps;
 /** Current name-strip width in pixels (being lerped toward g_strip_width_target). */
 s32 g_strip_width;
-/** Current character-set navigation state: 0-7 = character set tabs, 0x10 = kanji picker. */
+/** Current navigation region: 0-7 = action/panel tabs, 0x10 = active panel grid. */
 s32 g_char_set_mode;
 /** Current frame index into g_char_append_anim. */
 u8 g_append_anim_frame;
@@ -627,8 +629,7 @@ s32 g_name_pixel_width;
 /** Linearized character cursor position in the grid: row * 10 + col. */
 s32 g_char_cursor;
 /** Trailing 4 bytes of the overlay's .bss; unreferenced by name, purpose
- *  unknown. Kept so the overlay's total .bss size (and file length once
- *  linked) matches the original exactly. */
+ *  unknown. Kept so the overlay's linked .bss extent matches the original. */
 s32 D_8014F8D4;
 
 /**
@@ -641,9 +642,9 @@ void play_menu_sfx(int sfx_id, int volume);
 
 /* --- Internal (file-local) function forward declarations --------------------
  *
- * Everything this overlay implements is private except gname_init and
- * gname_tick (declared in gname.h), the two entry points FIELD invokes. The
- * rest are static so they stay encapsulated in this translation unit.
+ * @ref gname_run is the overlay entry point. @ref gname_init and
+ * @ref gname_tick also have external linkage and are declared in gname.h;
+ * the remaining helpers are private to this translation unit.
  */
 static void reset_fade_state(void);
 static void render_fade_overlay(RenderContext* ctx);
@@ -674,6 +675,7 @@ static s32 name_pop_first_char(u8* name);
 static void* draw_char_append_anim(void* prim_cursor, RenderContext* ctx);
 static s32 name_is_blank(u8* name);
 
+/** Overlay header identifier stored immediately before @ref gname_run. */
 const s32 g_gname_overlay_id = 5;
 
 /* --- Constant data tables ---------------------------------------------------
@@ -687,22 +689,25 @@ const s32 g_gname_overlay_id = 5;
  * linked databin.
  */
 
-/** Per-panel character set base offsets (low u16 = row count). */
+/** Record-index boundaries for the non-kanji character panels.
+ *  Index 3 aliases @ref g_kanji_cat_names_offset; index 4 is the following
+ *  boundary word immediately before @ref g_kanji_cat_entries. */
 extern u32 g_panel_char_offsets[];
 
 /** First record-offset entry index of the kanji category name records. */
 extern s32 g_kanji_cat_names_offset;
 
 /** Kanji category entry index table: [cat] -> sub-index into
- *  g_kanji_entry_offsets, or 0xFF when empty. */
+ *  g_kanji_entry_offsets, or 0xFF when empty. The shipped table contains ten
+ *  entries and all are 0xFF, leaving the kanji path disabled. */
 extern u32 g_kanji_cat_entries[];
 
 /** Glyph metrics table indexed by character id (see @ref GlyphInfo). */
 extern GlyphInfo g_glyph_table[];
 
-/** Scroll-up [0] and scroll-down [1] indicator glyphs, followed by cursor
- *  target positions for the 11 character-panel tabs. */
+/** Scroll-up [0] and scroll-down [1] indicator entries. */
 extern TabCursorEntry g_tab_cursor_pos[];
+/** Cursor targets and glyphs for the 11 action/panel selection entries. */
 extern TabCursorEntry g_tab_cursor_entries[];
 
 /** Kanji sub-index to glyph offset lookup table. */
@@ -717,8 +722,8 @@ extern u32 g_kanji_entry_offsets[];
  * runtime (e.g. PANEL_DATA_BLOB = &g_panel_tbl_off - 4,
  * g_random_names_off - 0x10).
  *
- * The header fields are u32 byte offsets; the u8[] ones are kept as byte
- * arrays so the pointer arithmetic in the referencing code is unchanged.
+ * The header fields are u32 byte offsets. Some declarations deliberately use
+ * pointer or byte-array types to preserve the matched address arithmetic.
  */
 
 /** Blob + 0x00: stored value 4; purpose unknown. */
@@ -745,6 +750,10 @@ void func_8006441C(void);
 void func_80068440(void);
 void func_800A9E78(void);
 void func_800AA02C(void);
+
+/* func_800644FC and func_800A88A0 intentionally have no visible prototypes
+ * here. Their call sites therefore use this compiler's implicit-int rules,
+ * which are part of the matched declaration context. */
 
 /**
  * @brief Run the name-entry UI until the user confirms or cancels.
@@ -780,7 +789,7 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
     g_name_source_mode = source_mode;
     g_history_name_idx = history_idx;
 
-    /* Configure the two vertically stacked VRAM display/draw buffers. */
+    /* Configure the two overlapping VRAM display/draw pages. */
     g_render_buf_base[0].clear_rect.x = 0;
     g_render_buf_base[0].clear_rect.y = 8;
     g_render_buf_base[0].clear_rect.w = SCREEN_WIDTH;
@@ -878,7 +887,7 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
             {
                 s32 history_offset = g_pad_ctx->large_history_index * GNAME_LARGE_HISTORY_STRIDE;
 
-                /* Keeping the member offset on the store preserves GCC's original register allocation. */
+                /* Keeping the member offset on the store preserves the target register allocation. */
                 u8* history_byte = (u8*)g_pad_ctx + history_offset + i;
                 history_byte[GNAME_LARGE_HISTORY_OFFSET] = active_name[i];
                 i += 1;
@@ -925,7 +934,7 @@ static void reset_fade_state(void)
  * Advances @c g_fade_current toward @c g_fade_target by one of the remaining
  * @c steps (snapping if none remain). Unless the tint is neutral, emits a
  * full-screen TILE plus a @c DR_TPAGE blend packet into @ref GNAME_OT_FRONT:
- * additive (@c FADE_TPAGE_ADD, brighten) when a channel is >=
+ * additive (@c FADE_TPAGE_ADD, brighten) when the red channel is >=
  * @c FADE_CHAN_ADDITIVE, otherwise subtractive (@c FADE_TPAGE_SUB, darken).
  *
  * @param ctx Render context; primitives are written at @c prim_cursor (which is
@@ -1017,7 +1026,7 @@ static void render_fade_overlay(RenderContext* ctx)
     addPrim(&ot_ctx->ot[GNAME_OT_FRONT], &packet->tile);
     packet = NEXT_FADE_PACKET(packet, TILE);
 
-    /* Choose blend mode by direction of tint. */
+    /* The red channel selects the representation and blend mode for all channels. */
     blend_tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
 
     setDrawTPage(&packet->draw_mode, 0, 0, blend_tpage);
@@ -1033,9 +1042,9 @@ static void render_fade_overlay(RenderContext* ctx)
  * The next @c steps ticks of @ref render_fade_overlay lerp the current color
  * toward (r, g, b), snapping on the final tick.
  *
- * @param r     Target red   (0..0x100 normal, >0x100 = additive).
- * @param g     Target green (0..0x100 normal, >0x100 = additive).
- * @param b     Target blue  (0..0x100 normal, >0x100 = additive).
+ * @param r     Target red; values above 0x100 select additive blending.
+ * @param g     Target green intensity, encoded in the mode selected by @p r.
+ * @param b     Target blue intensity, encoded in the mode selected by @p r.
  * @param steps Frames over which to interpolate. 0 means "snap immediately".
  *
  * @see https://decomp.me/scratch/jq3uD (100%)
@@ -1049,12 +1058,13 @@ static void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
 }
 
 /**
- * @brief Overlay boot entry: upload glyph TIM, init engine state, seed run state.
+ * @brief Initialize name-entry resources and per-run state.
  *
  * @see https://decomp.me/scratch/pnzC1 (100%)
  */
 void gname_init(void)
 {
+    /* Unused storage preserves the target stack frame. */
     volatile int stack_pad[2];
 
     load_name_entry_tim();
@@ -1132,7 +1142,7 @@ static void load_tim_to_vram(TimDstCoords* dst_coords)
 
     LoadImage(&rect, pixel_block + 1);
 
-    /* Trailing rect writes are dead but required to match. */
+    /* The escaped RECT keeps these otherwise-unused trailing stores observable. */
     rect.x = dst_coords->clut_x;
     rect.y = dst_coords->clut_y + 1;
     rect.w = CLUT_ENTRY_COUNT;
@@ -1211,7 +1221,7 @@ static void gname_update_state(void)
 /**
  * @brief Reset the overlay's run-state globals to their per-session defaults.
  *
- * Zeros the counters and indices, seeds the cursor from its frozen defaults,
+ * Zeros the counters and indices, seeds the cursor from its initial targets,
  * computes the initial @c g_char_set_mode, and copies @c g_initial_name into
  * the active name buffer.
  *
@@ -1244,7 +1254,8 @@ static void reset_run_state(void)
  * State machine for the character-selection screen. @p mode names the focused
  * UI region:
  *   - GNAME_MODE_ACTION_OK..DEFAULT (0-3): action tab bar
- *   - GNAME_MODE_PANEL_BASE..+3 (4-7): character-panel selector tabs (panel N-4)
+ *   - GNAME_MODE_PANEL_BASE..+2 (4-6): visible character-panel selector tabs
+ *   - GNAME_MODE_PANEL_LAST (7): hidden kanji-category tab
  *   - GNAME_MODE_GRID (0x10): in-grid character cursor
  *
  * Updates cursor position, panel, scroll state, and the name buffer as a side
@@ -1262,7 +1273,7 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
     /*
      * Holds the constant 1, assigned only inside the case 0-3 confirm branch
      * but reused as an operand in later branches. Required to match the
-     * original register allocation; do not fold back to literal 1.
+     * target register allocation; do not fold back to literal 1.
      */
     int one;
 
@@ -1435,7 +1446,7 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
             break;
 
         default:
-            /* The only remaining valid mode is the character grid. */
+            /* Other mode values are handled as the active character grid. */
             if (((buttons & GNAME_BTN_CONFIRM) && (((g_char_last_row * NAME_GRID_CHARS_PER_ROW) + g_char_last_col) >= g_char_cursor)) != 0U)
             {
                 if (g_char_panel < CHAR_PANEL_STANDARD_COUNT)
@@ -1581,9 +1592,10 @@ static s32 handle_char_set_input(s32 mode, s32 buttons)
  *  - Cancel (Circle): pop the last character, or finish with
  *    @c GNAME_RESULT_CANCEL when empty and @c g_allow_empty_cancel is set.
  *
- * In the kanji grid (@c g_char_set_mode == GNAME_MODE_GRID, @c g_char_panel ==
- * @c CHAR_PANEL_KANJI), L1/R1 cycle @c g_kanji_cat by one category page with
- * wrap and reset the page. Finally, advances the cursor and scroll lerps.
+ * In the dormant kanji grid path (@c g_char_set_mode == GNAME_MODE_GRID,
+ * @c g_char_panel == @c CHAR_PANEL_KANJI), L1/R1 cycle @c g_kanji_cat by one
+ * category page with wrap and reset the page. Finally, advances the cursor
+ * and scroll lerps.
  *
  * @note The kanji-nav block re-tests @c GNAME_BTN_KANJI_NAV in a nested @c if
  *       that is always true (the outer @c if already guaranteed it). This
@@ -1680,7 +1692,7 @@ static void gname_process_input(void)
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
     }
-    /* Cycle kanji categories, skipping entries that have no category data. */
+    /* Dormant in the shipped data: cycle kanji categories, skipping empty entries. */
     if (((g_char_set_mode == GNAME_MODE_GRID) && (g_char_panel == CHAR_PANEL_KANJI)) && (g_pad_input & GNAME_BTN_KANJI_NAV))
     {
         play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
@@ -1781,6 +1793,7 @@ static void gname_process_input(void)
  * @param x    Cursor sprite screen X.
  * @param y    Cursor sprite screen Y.
  * @return Pointer just past the written primitives.
+ * @note No current call sites; @ref gname_render emits the same packet pair inline.
  * @see decomp.me (100%) https://decomp.me/scratch/oXGkF
  */
 static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
@@ -1810,9 +1823,9 @@ static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
  * @brief Main per-frame render pass for the name-entry overlay.
  *
  * Runs each tick from @ref gname_tick (after @ref draw_name_cursor_row),
- * building this frame's primitives and chaining them into @p context's OT.
+ * building this frame's primitives and chaining them into @p render_ctx's OT.
  * In order:
- *  1. Character grid glyphs (highlighting the selected @c g_cursor_tab).
+ *  1. Action/panel selection glyphs (marking @c g_cursor_tab).
  *  2. Append glyph + animation, then @ref emit_panel_tab_sprite.
  *  3. Text cursor SPRT at (@c g_cursor_x, @c g_cursor_y) + its DrawMode.
  *  4. Scroll indicator arrows, conditional on @c g_scroll_pos and the row.
@@ -1837,7 +1850,7 @@ static void gname_render(RenderContext* render_ctx)
     prim = render_ctx->prim_cursor;
     grid_entry = g_tab_cursor_entries;
 
-    /* 1. Character grid: emit the visible tab entries and highlight the selection. */
+    /* 1. Emit the action/panel selection entries and mark the selected one. */
     for (tab_index = GNAME_RENDER_TAB_FIRST; tab_index < GNAME_RENDER_TAB_END_EXCLUSIVE; tab_index++, grid_entry++)
     {
         if (tab_index != GNAME_RENDER_TAB_HIDDEN)
@@ -1907,12 +1920,12 @@ static void gname_render(RenderContext* render_ctx)
  *
  * Resolves a @ref PANEL_RECORD by index and draws it via @ref func_800A88A0
  * at fixed screen position (0xB0, 0xC8). The index per mode:
- *  - mode 0-7 (kana/alpha): sprite_idx of the @ref g_tab_cursor_pos tab
+ *  - mode 0-7 (action/panel tabs): sprite_idx of the @ref g_tab_cursor_pos entry
  *    (mode + 2)
  *  - mode 0x10, panel 3-4:  panel + 10 (records 13-14)
  *  - mode 0x10, other:      12
  *
- * @param prim_cursor Primitive write cursor (linked-list head).
+ * @param prim_cursor Next free position in the primitive buffer.
  * @param ot_entry Pointer into the render context OT for chaining.
  * @return Updated primitive write cursor after appending the sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/RnoNS
@@ -1953,7 +1966,7 @@ static void* emit_panel_tab_sprite(void* prim_cursor, u_long* ot_entry)
  * @ref g_kanji_cat_name directly. Drawn via @ref func_800A88A0 at fixed screen
  * position (0x23, 0x47).
  *
- * @param prim_cursor Primitive write cursor (linked-list head).
+ * @param prim_cursor Next free position in the primitive buffer.
  * @param ot_entry Pointer into the render context OT for chaining.
  * @return Updated primitive write cursor after appending the label sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/jK7bc
@@ -1977,13 +1990,13 @@ static void* emit_panel_label(void* prim_cursor, u_long* ot_entry)
 }
 
 /**
- * @brief Render the entered-name strip and queue its VRAM upload.
+ * @brief Render the entered-name strip into its backing-page region.
  *
  * Builds, in order, into @ref GNAME_OT_NAME_STRIP:
- *   1. A template packet copied from the inactive frame's reserve slot.
- *   2. A textured name sprite plus its Draw-Mode packet.
- *   3. A VRAM upload RECT (strip_width x 32) right-aligned on the current back
- *      page (Y = 0x18 or 0x100 by @c frame_parity).
+ *   1. A DR_ENV packet built from the inactive frame's drawing environment.
+ *   2. The name text, a decorative glyph, and their Draw-Mode packet.
+ *   3. A DR_ENV packet that redirects drawing to a strip_width x 32 region,
+ *      right-aligned on the current backing page (Y = 0x18 or 0x100).
  * Then advances @c ctx->prim_cursor past the last packet.
  *
  * @param ctx         Render context (OT, prim_cursor, frame_parity).
@@ -2007,21 +2020,18 @@ static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width)
     /* The initial alias is required to preserve the target's register allocation. */
     packet_cursor = template_packet;
 
-    /* 1. Copy template packet from the *other* frame's reserve slot, then
-     * splice it into the OT. */
+    /* 1. Restore the inactive frame's drawing environment after this OT pass. */
     SetDrawEnv(template_packet, &g_render_buf_base[ctx->frame_parity ^ 1].draw_env);
 
     addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], template_packet);
 
-    /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
-     * Returns the heap cursor just past both packets. */
+    /* 2. Emit the name text, decorative glyph, and glyph Draw-Mode packet. */
     packet_cursor = func_800A88A0(template_packet + 1, ot_head, name_buf, NAME_STRIP_TEXT_COLOR, NAME_STRIP_TEXT_X, NAME_STRIP_TEXT_Y,
                                   NAME_STRIP_TEXT_MODE);
     packet_cursor = emit_glyph_sprt(packet_cursor, ot_head, NAME_STRIP_DECOR_GLYPH, 0, 0, 0, 0, 0);
     packet_cursor = emit_draw_mode_prim(packet_cursor, ot_head);
 
-    /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
-     * right edge of whichever page is currently the back buffer. */
+    /* 3. Redirect drawing to a strip-sized region on this frame's backing page. */
     upload_env = &vram_load_scratch.draw_env;
     vram_x = NAME_STRIP_VRAM_RIGHT - strip_width;
     vram_y = NAME_STRIP_VRAM_PAGE0_Y;
@@ -2039,12 +2049,11 @@ static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width)
 }
 
 /**
- * @brief Render the visible character panel and queue its VRAM upload.
+ * @brief Render the visible character panel into its backing-page region.
  *
  * @param ctx       Render context (OT, primitive heap, frame parity).
- * @param panel_idx Active character panel index (0-3 normal; 4 selects the
- *                  kanji picker, whose entries come from the kanji tables
- *                  instead and ignore this index).
+ * @param panel_idx Active character panel index (0-3 non-kanji; dormant value
+ *                  4 selects the kanji tables and ignores this parameter).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/ckF2S
  */
@@ -2116,7 +2125,7 @@ static void render_char_panel(RenderContext* ctx, s32 panel_idx)
         }
     }
 
-    /* Queue the completed grid area for upload to this frame's VRAM page. */
+    /* Redirect this OT pass into the grid region on this frame's backing page. */
     upload_env = &grid_load_scratch.draw_env;
     g_char_last_row = row;
     g_char_last_col = column;
@@ -2166,11 +2175,11 @@ static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head)
  * When @p shadow_dist != 0, writes a second SPRT at @c (x + tmp, y + tmp)
  * with @c tmp = (shadow_dist - primary_adj) * 2. The second sprite's tint
  * and code byte depend on @p highlight:
- *   - @p highlight != 0: opaque blue (RGB=(0,0,0xA0), code 0x64).
+ *   - @p highlight != 0: opaque blue secondary sprite (RGB=(0,0,0xA0), code 0x64).
  *   - @p highlight == 0: semi-transparent black (RGB=0, code 0x66) - drop shadow.
  *
  * Both sprites pull u/v/w/h/clut from @c g_glyph_table[glyph_id] and are
- * appended to the linked list at @p ot_tag via the standard addPrim sequence.
+ * appended to the linked list at @p ot_entry via the standard addPrim sequence.
  *
  * @param prim_cursor Pointer to the next free byte in the primitive buffer.
  * @param ot_entry    Pointer to the OT head tag (addPrim "ot" arg).
@@ -2181,9 +2190,9 @@ static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head)
  *                    primary SPRT is emitted.
  * @param primary_adj Added to the primary sprite's position offset. When
  *                    equal to @p shadow_dist the primary renders at (x,y)
- *                    with no shift (used for the selected/highlighted state).
+ *                    with no shift (used for the activated-entry state).
  * @param highlight   Secondary-sprite mode: 0 = semi-transparent black drop
- *                    shadow; non-zero = opaque blue overlay.
+ *                    shadow; non-zero = opaque blue tint.
  * @return Pointer to the byte after the last emitted primitive.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Au2h5
@@ -2211,7 +2220,7 @@ static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, 
 
     if (shadow_dist != 0)
     {
-        /* Secondary SPRT - drop shadow (highlight==0) or blue overlay (highlight!=0). */
+        /* Secondary SPRT - drop shadow (highlight==0) or blue tint (highlight!=0). */
         GlyphInfo* glyph_table_base;
         GlyphInfo* secondary_glyph_info;
 
@@ -2244,22 +2253,17 @@ static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, 
 }
 
 /**
- * @brief Render the name-cursor row and its texture state.
+ * @brief Render the fixed background/layout sprite batch.
  *
- * Walks @c g_name_cursor_glyphs (a @ref GlyphSeqEntry array) one entry per glyph
- * cell, looks each glyph up in @c g_glyph_table, and emits a white
- * (RGB=0x80) free-size textured SPRT primitive (code 0x64). The chain is
- * wrapped with @c setTexWindow at both ends (rect @c {0,0,0xFF,0xFF} -
- * a no-op full-page window) and closed with a @c GNAME_GLYPH_TPAGE DrawMode.
+ * Walks @c g_name_cursor_glyphs, looks each entry up in @c g_glyph_table,
+ * and emits a neutral-tinted textured SPRT at its fixed packed coordinates.
+ * The batch is bracketed by full-size texture-window packets and closed with
+ * a @c GNAME_GLYPH_TPAGE DrawMode.
  * The render context's primitive cursor is advanced past the final packet.
  *
  * @param ctx Render context (@ref RenderContext). Reads/writes:
  *             - @ref GNAME_OT_NAME_CURSOR (offset 0x3C) - addPrim OT entry.
  *             - @c prim_cursor at offset 0x4040 - primitive scratch-pool cursor.
- *
- * @note Called by @ref gname_tick via the implicit-@c $a0 convention
- *       (the call site passes no args; the function reads whatever the
- *       caller left in @c $a0).
  *
  * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
@@ -2349,9 +2353,8 @@ static void draw_name_cursor_row(RenderContext* ctx)
     } while (glyph_count < NAME_CURSOR_GLYPH_COUNT);
     packet_cursor = glyph_cursor;
 
-    /* Closing texture window. Field-assignment order differs from the
-       opening call (w,h,x,y vs. h,w,y,x) - the original C wrote them in
-       this exact order and gcc preserves it. */
+    /* Closing texture window. This field order differs from the opening call
+       and preserves the target's store order. */
     tw_rect.w = GNAME_FULL_TEX_WINDOW_SIZE;
     tw_rect.h = GNAME_FULL_TEX_WINDOW_SIZE;
     tw_rect.x = 0;
@@ -2375,6 +2378,7 @@ static void draw_name_cursor_row(RenderContext* ctx)
  *
  * @param name Null-terminated name buffer.
  * @return Byte length excluding the terminator.
+ * @note No current call sites; the other name helpers retain their own matched loops.
  * @see https://decomp.me/scratch/2QgjW (100%)
  */
 static s32 name_byte_length(const u8* name)
@@ -2498,10 +2502,12 @@ static void name_append(u8* dst, const u8* src)
  * points at the last glyph and @c scan_pos at the null. The returned
  * @c s32 packs the glyph as `lead | (trail << 8)` for a DBCS pair, or just
  * the byte value for a 1-byte glyph. The buffer is truncated by writing
- * 0 at @c prev_pos. Empty names return 0 unchanged.
+ * 0 at @c prev_pos. For an empty buffer, the low byte of the result is zero
+ * and the high byte is whatever already follows the terminator.
  *
  * @param name Null-terminated name buffer (truncated in-place).
- * @return Removed glyph packed as `lead | (trail << 8)`, or 0 if empty.
+ * @return Removed glyph packed as `lead | (trail << 8)`; an empty buffer
+ *         guarantees only that the returned low byte is zero.
  * @see https://decomp.me/scratch/agZ8y (100%)
  */
 static s32 name_pop_last_char(u8* name)
@@ -2600,6 +2606,7 @@ static void recalc_name_width(void)
 
     glyph_count = func_800644FC(glyphs, g_active_name, 0);
     i = 0;
+    /* TODO: This uninitialized source-level read is absent from the matched assembly. */
     width = entry->width;
     g_name_pixel_width = 0;
 
@@ -2761,7 +2768,7 @@ static s32 name_pop_first_char(u8* name)
  * @brief Render and advance the character-append animation.
  *
  * Emits every populated glyph slot in the current frame. When the frame timer
- * expires, advances to the next frame or returns to the idle frame.
+ * expires, advances to the next frame or returns to the resting frame.
  *
  * @param prim_cursor Primitive-buffer cursor (next free byte).
  * @param ctx  Render context; @ref GNAME_OT_CHAR_APPEND_ANIM (offset 0x30) is
@@ -2824,7 +2831,7 @@ static void* draw_char_append_anim(void* prim_cursor, RenderContext* ctx)
  *
  * Walks @p name byte-by-byte (note: not glyph-by-glyph). The buffer is
  * blank if every byte is either ASCII space (@ref CHAR_SPACE) or the
- * wide-space sentinel (@ref CHAR_WIDE_SPACE). An empty (immediate-null)
+ * alternate blank byte (@ref CHAR_WIDE_SPACE). An empty (immediate-null)
  * buffer also counts as blank.
  *
  * @param name Null-terminated name buffer.
