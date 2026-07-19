@@ -362,6 +362,44 @@ typedef struct
     s32 unk100;
 } ad_struct;
 
+typedef struct
+{
+    char pad0[0x64];
+    u16 unk64;
+    char pad1[0xD4 - 0x66];
+    u16 unkD4;
+} ae_struct;
+
+typedef struct
+{
+    char pad0[0x34];
+    s32 unk34;
+    char pad1[0x64 - 0x38];
+    u16 unk64;
+} af_struct;
+
+typedef struct
+{
+    char pad0[0x64];
+    u16 unk64;
+    char pad1[0xD6 - 0x66];
+    u16 unkD6;
+} ag_struct;
+
+typedef struct
+{
+    char pad0[0x9E];
+    u16 unk9E;
+} ah_struct;
+
+typedef struct
+{
+    char pad0[0x64];
+    u16 unk64;
+    char pad1[0x9E - 0x66];
+    u16 unk9E;
+} ai_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -2774,4 +2812,185 @@ void func_8002C3F4(ad_struct* arg0)
     arg0->unkF8 = 0;
     arg0->unk34 = arg0->unk34 & ~4;
     arg0->unk100 = arg0->unk100 | 3;
+}
+
+/**
+ * @brief AKAO opcode handler: OR-sets a caller-supplied flag mask into either
+ *        the SFX control block or the primary sequence channel (depending on
+ *        whether this channel is an SFX channel), then raises driver flags 0x110.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to OR in.
+ * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
+ *       register), a gcc 2.8 coloring tie-break the permuter cannot move.
+ * @see decomp.me (99.58%)
+ */
+void func_8002C418(AkaoChannelState* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk3C |= arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk1C |= arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x110;
+}
+
+/**
+ * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
+ *        the SFX control block or the primary sequence channel, raises driver
+ *        flags 0x110, and clears channel field 0xD4.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
+ * @note Residual: the seq-channel path register coloring differs (5 rows), a
+ *       gcc 2.8 coloring tie-break the permuter cannot move (shared with
+ *       func_8002C418).
+ * @see decomp.me (98.27%)
+ */
+void func_8002C478(ae_struct* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk3C &= ~arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk1C &= ~arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x110;
+    arg0->unkD4 = 0;
+}
+
+/**
+ * @brief AKAO opcode handler: OR-sets a caller-supplied flag mask into the
+ *        sequence channel (0x44) when this channel is a sequence channel, or
+ *        into the SFX control block (0x24) when SFX flag 0x10000 is set, then
+ *        raises driver flags 0x100.
+ * @param arg0 Channel state; @c unk64 selects sequence routing, @c unk34 gates SFX.
+ * @param arg1 Flag bitmask to OR in.
+ * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
+ *       register), a gcc 2.8 coloring tie-break shared with func_8002C418.
+ * @see decomp.me (99.66%)
+ */
+void func_8002C4E0(af_struct* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk44 |= arg1;
+    }
+    else if (arg0->unk34 & 0x10000)
+    {
+        g_akao_sfx_control.unk24 |= arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+}
+
+/**
+ * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
+ *        the sequence channel (0x44) or the SFX control block (0x24), raises
+ *        driver flags 0x100, and clears channel field 0xD6.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
+ * @note Residual: the seq-channel path register coloring differs (5 rows), a
+ *       gcc 2.8 coloring tie-break shared with func_8002C418/C478.
+ * @see decomp.me (98.27%)
+ */
+void func_8002C554(ag_struct* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk44 &= ~arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk24 &= ~arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+    arg0->unkD6 = 0;
+}
+
+/**
+ * @brief AKAO opcode handler: OR-sets a caller-supplied flag mask into either
+ *        the sequence channel (0x40) or the SFX control block (0x20), then
+ *        raises driver flags 0x100.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to OR in.
+ * @note Residual: the g_akao_seq_channel0 %hi coloring tie-break shared with
+ *       func_8002C418.
+ * @see decomp.me (99.58%)
+ */
+void func_8002C5BC(AkaoChannelState* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk40 |= arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk20 |= arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+}
+
+/**
+ * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
+ *        the sequence channel (0x40) or the SFX control block (0x20), then
+ *        raises driver flags 0x100.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
+ * @note Residual: the seq-channel path register coloring differs (5 rows), a
+ *       gcc 2.8 coloring tie-break shared with func_8002C418/C478.
+ * @see decomp.me (98.13%)
+ */
+void func_8002C61C(AkaoChannelState* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk40 &= ~arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk20 &= ~arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+}
+
+/**
+ * @brief AKAO opcode handler: sets field 0x9E to 1.
+ * @param arg0 Channel state.
+ * @see decomp.me (100%)
+ */
+void func_8002C67C(ah_struct* arg0)
+{
+    arg0->unk9E = 1;
+}
+
+/**
+ * @brief AKAO opcode handler stub: no operation.
+ * @see decomp.me (100%)
+ */
+void func_8002C688(void)
+{
+}
+
+/**
+ * @brief AKAO opcode handler: sets field 0x9E to 4 when the channel is active.
+ * @param arg0 Channel state; @c unk64 selects whether the store happens.
+ * @see decomp.me (100%)
+ */
+void func_8002C690(ai_struct* arg0)
+{
+    if (arg0->unk64 != 0)
+    {
+        arg0->unk9E = 4;
+    }
+}
+
+/**
+ * @brief AKAO opcode handler stub: no operation.
+ * @see decomp.me (100%)
+ */
+void func_8002C6AC(void)
+{
 }
