@@ -12,6 +12,9 @@ extern s32 D_8003EC18;
 /** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
 extern u32 g_akao_pitch_table[];
 
+/** @brief Pointer table in the initialized data segment, indexed by field 0xAA in func_8002BFAC. */
+extern s32 D_8003DD80[];
+
 /**
  * @brief One 8-byte note slot in the per-channel note table at
  *        @c channel->unk34. Each entry encodes the articulation index plus
@@ -185,6 +188,217 @@ typedef struct
     u16 unk10E;
     u16 unk110;
 } n_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0xEA - 0x4];
+    s16 unkEA;
+} o_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x98 - 0x4];
+    u16 unk98;
+    char pad2[0xF0 - 0x9A];
+    s16 unkF0;
+} p_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x9A - 0x4];
+    u16 unk9A;
+    u16 unk9C;
+    u16 unk9E;
+    char pad2[0xF2 - 0xA0];
+    u16 unkF2;
+} q_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x2C - 0x4];
+    s32 unk2C;
+    char pad2[0x54 - 0x30];
+    s32 unk54;
+    char pad3[0xEC - 0x58];
+    s16 unkEC;
+    char pad4[0x100 - 0xEE];
+    s32 unk100;
+} r_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x1C - 0x4];
+    s32 unk1C;
+    char pad2[0x2C - 0x20];
+    u16 unk2C;
+    char pad3[0x34 - 0x2E];
+    s32 unk34;
+    char pad4[0x64 - 0x38];
+    u16 unk64;
+    char pad5[0xA2 - 0x66];
+    u16 unkA2;
+    u16 unkA4;
+    s16 unkA6;
+    u16 unkA8;
+    u16 unkAA;
+    s16 unkAC;
+    u16 unkAE;
+} s_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x2C - 0x4];
+    s32 unk2C;
+    char pad2[0xAC - 0x30];
+    s16 unkAC;
+    u16 unkAE;
+} t_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0xAE - 0x4];
+    u16 unkAE;
+    s16 unkB0;
+    s16 unkB2;
+} u_struct;
+
+typedef struct
+{
+    char pad0[0x34];
+    s32 unk34;
+    char pad1[0xF4 - 0x38];
+    u16 unkF4;
+    char pad2[0x100 - 0xF6];
+    s32 unk100;
+} v_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x20 - 0x4];
+    s32 unk20;
+    char pad2[0x34 - 0x24];
+    s32 unk34;
+    char pad3[0x64 - 0x38];
+    u16 unk64;
+    char pad4[0xB6 - 0x66];
+    u16 unkB6;
+    u16 unkB8;
+    s16 unkBA;
+    u16 unkBC;
+    u16 unkBE;
+    s16 unkC0;
+} w_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0xC0 - 0x4];
+    s16 unkC0;
+} x_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0xC0 - 0x4];
+    u16 unkC0;
+    s16 unkC2;
+    s16 unkC4;
+} y_struct;
+
+typedef struct
+{
+    char pad0[0x34];
+    s32 unk34;
+    char pad1[0xF6 - 0x38];
+    u16 unkF6;
+    char pad2[0x100 - 0xF8];
+    s32 unk100;
+} z_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x24 - 0x4];
+    s32 unk24;
+    char pad2[0x34 - 0x28];
+    s32 unk34;
+    char pad3[0xC8 - 0x38];
+    u16 unkC8;
+    s16 unkCA;
+    u16 unkCC;
+} aa_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0xCE - 0x4];
+    s16 unkCE;
+} ab_struct;
+
+typedef struct
+{
+    u8* unk0;
+    char pad1[0xCE - 0x4];
+    u16 unkCE;
+    s16 unkD0;
+    s16 unkD2;
+} ac_struct;
+
+typedef struct
+{
+    char pad0[0x34];
+    s32 unk34;
+    char pad1[0xF8 - 0x38];
+    u16 unkF8;
+    char pad2[0x100 - 0xFA];
+    s32 unk100;
+} ad_struct;
+
+typedef struct
+{
+    char pad0[0x64];
+    u16 unk64;
+    char pad1[0xD4 - 0x66];
+    u16 unkD4;
+} ae_struct;
+
+typedef struct
+{
+    char pad0[0x34];
+    s32 unk34;
+    char pad1[0x64 - 0x38];
+    u16 unk64;
+} af_struct;
+
+typedef struct
+{
+    char pad0[0x64];
+    u16 unk64;
+    char pad1[0xD6 - 0x66];
+    u16 unkD6;
+} ag_struct;
+
+typedef struct
+{
+    char pad0[0x9E];
+    u16 unk9E;
+} ah_struct;
+
+typedef struct
+{
+    char pad0[0x64];
+    u16 unk64;
+    char pad1[0x9E - 0x66];
+    u16 unk9E;
+} ai_struct;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
@@ -2097,4 +2311,686 @@ void func_8002BDC8(n_struct* arg0)
     arg0->unk100 = old_value | 0xFF00;
     arg0->unk34 = flags & 0xE6FFFFFF;
     arg0->unk110 = tmp_e;
+}
+
+/**
+ * @brief Reads a signed byte from the channel bytecode stream and stores it
+ *        as a halfword at offset 0xEA.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BE10(o_struct* arg0)
+{
+    u8* temp_v0;
+    s8 val;
+
+    temp_v0 = arg0->unk0;
+    val = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unkEA = val;
+}
+
+/**
+ * @brief Reads a signed byte from the channel bytecode stream and adds it to
+ *        the halfword at offset 0xEA.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BE34(o_struct* arg0)
+{
+    u8* temp_v0;
+    s8 val;
+
+    temp_v0 = arg0->unk0;
+    val = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unkEA += val;
+}
+
+/**
+ * @brief Reads a byte for field 0x98 (defaulting 0 to 0x100), then a signed
+ *        byte stored at field 0xF0.
+ * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
+ * @see decomp.me (100%)
+ */
+void func_8002BE60(p_struct* arg0)
+{
+    u8* temp_v0;
+    u8* temp_v0_2;
+    s32 b;
+    s8 b2;
+
+    temp_v0 = arg0->unk0;
+    b = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk98 = b;
+    if (b == 0)
+    {
+        arg0->unk98 = 0x100;
+    }
+    temp_v0_2 = arg0->unk0;
+    b2 = *temp_v0_2;
+    arg0->unk0 = (u8*)(temp_v0_2 + 1);
+    arg0->unkF0 = b2;
+}
+
+/**
+ * @brief Reads one byte for field 0x9C (defaulting 0 to 0x100) and resets the
+ *        related state fields 0x9A/0x9E/0xF2.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BEA8(q_struct* arg0)
+{
+    u8* temp_v0;
+    s32 b;
+
+    temp_v0 = arg0->unk0;
+    b = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unk9C = b;
+    if (b == 0)
+    {
+        arg0->unk9C = 0x100;
+    }
+    arg0->unkF2 = 0;
+    arg0->unk9A = 0;
+    arg0->unk9E = 1;
+}
+
+/**
+ * @brief Clears field 0x9C.
+ * @param arg0 Channel state.
+ * @see decomp.me (100%)
+ */
+void func_8002BEE0(q_struct* arg0)
+{
+    arg0->unk9C = 0;
+}
+
+/**
+ * @brief Reads a signed byte scale factor into field 0xEC and computes the
+ *        scaled result stored at field 0x54, then sets flag 0x10 in field 0x100.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BEE8(r_struct* arg0)
+{
+    s32 scale;
+    u8* next;
+    u32 prod;
+    u32 result;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    next = (u8*)(temp_v0 + 1);
+    arg0->unkEC = (s16)(s8)*temp_v0;
+    result = (u8)arg0->unkEC;
+    scale = arg0->unk2C;
+    prod = scale * result;
+    arg0->unk0 = next;
+    if (arg0->unkEC < 0)
+    {
+        result = (prod >> 8) - scale;
+    }
+    else
+    {
+        result = prod >> 7;
+    }
+    arg0->unk54 = result;
+    arg0->unk100 = (s32)(arg0->unk100 | 0x10);
+}
+
+/**
+ * @brief Adds a signed byte to field 0xEC, then recomputes the scaled result
+ *        at field 0x54 and sets flag 0x10 in field 0x100.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BF48(r_struct* arg0)
+{
+    s32 scale;
+    u8* temp_v0;
+    u32 prod;
+    u32 result;
+
+    temp_v0 = arg0->unk0;
+    scale = arg0->unk2C;
+    arg0->unkEC += (s8)*temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    result = (u8)arg0->unkEC;
+    prod = scale * result;
+    if (arg0->unkEC < 0)
+    {
+        result = (prod >> 8) - scale;
+    }
+    else
+    {
+        result = prod >> 7;
+    }
+    arg0->unk54 = result;
+    arg0->unk100 = (s32)(arg0->unk100 | 0x10);
+}
+
+/**
+ * @brief AKAO opcode handler that reads several bytecode bytes into the
+ *        channel's portamento/pitch state (0xA2..0xAE), computes the scaled
+ *        slide value at 0xAC, and looks up a table entry into 0x1C.
+ * @param arg0 Channel state whose bytecode cursor is advanced.
+ * @note @c temp_a0 must be widened past u16 so gcc keeps the second mult
+ *       operand order (@c hi first) matching the other branch.
+ * @see decomp.me (100%)
+ */
+void func_8002BFAC(s_struct* arg0)
+{
+    s_struct* p;
+    u32 temp_a0;
+    u32 raw;
+    u16 flags;
+    u32 hi;
+    u32 var_lo;
+    u8* temp_v0;
+    u8* temp_v0_2;
+    u8* temp_v0_3;
+    u8* temp_v0_4;
+    s32 temp_v1;
+    s32 temp_v1_2;
+
+    p = arg0;
+    p->unk34 = (s32)(p->unk34 | 1);
+    if (p->unk64 != 0)
+    {
+        temp_v0 = p->unk0;
+        p->unkA2 = 0;
+        temp_v1 = *temp_v0;
+        p->unk0 = (u8*)(temp_v0 + 1);
+        if (temp_v1 != 0)
+        {
+            p->unkAE = temp_v1 << 8;
+        }
+    }
+    else
+    {
+        temp_v0_2 = p->unk0;
+        p->unkA2 = *temp_v0_2;
+        p->unk0 = (u8*)(temp_v0_2 + 1);
+    }
+    temp_v0_3 = p->unk0;
+    temp_v1_2 = *temp_v0_3;
+    p->unk0 = (u8*)(temp_v0_3 + 1);
+    p->unkA6 = temp_v1_2;
+    if (temp_v1_2 == 0)
+    {
+        p->unkA6 = 0x100;
+    }
+    temp_v0_4 = p->unk0;
+    flags = p->unkAE;
+    raw = *temp_v0_4;
+    p->unk0 = (u8*)(temp_v0_4 + 1);
+    p->unkAA = raw;
+    temp_a0 = p->unk2C;
+    hi = (u32)(flags & 0x7F00) >> 8;
+    if (!(flags & 0x8000))
+    {
+        var_lo = hi * ((s32)(temp_a0 * 0xF) >> 8);
+    }
+    else
+    {
+        var_lo = hi * temp_a0;
+    }
+    p->unkAC = var_lo >> 7;
+    p->unk1C = D_8003DD80[p->unkAA];
+    p->unkA4 = p->unkA2;
+    p->unkA8 = 1;
+}
+
+/**
+ * @brief AKAO opcode handler: reads one bytecode byte, stores it shifted at
+ *        field 0xAE, and computes a scaled slide value into field 0xAC.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @note The @c flags re-read of 0xAE is required to keep the base pointer in
+ *       a1 to match; it leaves one residual @c andi (see status).
+ * @see decomp.me (90.96%)
+ */
+void func_8002C0A4(t_struct* arg0)
+{
+    t_struct* p;
+    s32 scale;
+    u8* temp_v0;
+    u32 shifted;
+    u32 flags;
+    u32 hi;
+    u32 var_lo;
+
+    p = arg0;
+    temp_v0 = p->unk0;
+    shifted = *temp_v0 << 8;
+    p->unk0 = (u8*)(temp_v0 + 1);
+    scale = p->unk2C;
+    p->unkAE = shifted;
+    flags = p->unkAE;
+    hi = (u32)(flags & 0x7F00) >> 8;
+    if (!(flags & 0x8000))
+    {
+        var_lo = hi * ((s32)(scale * 0xF) >> 8);
+    }
+    else
+    {
+        var_lo = hi * scale;
+    }
+    p->unkAC = var_lo >> 7;
+}
+
+/**
+ * @brief AKAO opcode handler: reads a divisor byte (0 defaults to 0x100) and a
+ *        target byte, storing the divisor at 0xB0 and the scaled quotient at 0xB2.
+ * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
+ * @see decomp.me (100%)
+ */
+void func_8002C104(u_struct* arg0)
+{
+    u8* temp_a1;
+    s32 divisor;
+    s32 result;
+
+    temp_a1 = arg0->unk0;
+    divisor = *temp_a1;
+    temp_a1 += 1;
+    arg0->unk0 = temp_a1;
+    if (divisor == 0)
+    {
+        divisor = 0x100;
+    }
+    result = ((s32)(*temp_a1 << 8) - arg0->unkAE) / divisor;
+    arg0->unk0 = (u8*)(temp_a1 + 1);
+    arg0->unkB0 = divisor;
+    arg0->unkB2 = result;
+}
+
+/**
+ * @brief AKAO opcode handler: clears field 0xF4, clears bit 0 of the flags at
+ *        0x34, and sets bit 0x10 in the flags at 0x100.
+ * @param arg0 Channel state.
+ * @see decomp.me (100%)
+ */
+void func_8002C170(v_struct* arg0)
+{
+    arg0->unkF4 = 0;
+    arg0->unk34 = arg0->unk34 & ~1;
+    arg0->unk100 = arg0->unk100 | 0x10;
+}
+
+/**
+ * @brief AKAO opcode handler: reads three bytecode bytes into the channel's
+ *        portamento state (0xB6..0xC0), defaults 0xBA when zero, and looks up a
+ *        table entry into field 0x20.
+ * @param arg0 Channel state whose bytecode cursor is advanced by three bytes.
+ * @see decomp.me (100%)
+ */
+void func_8002C194(w_struct* arg0)
+{
+    w_struct* p;
+    u8* temp_v0;
+    u8* temp_v0_2;
+    u8* temp_v1;
+    s32 temp_a0;
+    s32 temp_v1_2;
+    u32 raw;
+
+    p = arg0;
+    temp_v1 = p->unk0;
+    p->unk34 = (s32)(p->unk34 | 2);
+    temp_a0 = *temp_v1;
+    p->unk0 = (u8*)(temp_v1 + 1);
+    if (p->unk64 != 0)
+    {
+        p->unkB6 = 0;
+        if (temp_a0 != 0)
+        {
+            p->unkC0 = (temp_a0 & 0x7F) << 8;
+        }
+    }
+    else
+    {
+        p->unkB6 = temp_a0;
+    }
+    temp_v0 = p->unk0;
+    temp_v1_2 = *temp_v0;
+    p->unk0 = (u8*)(temp_v0 + 1);
+    p->unkBA = temp_v1_2;
+    if (temp_v1_2 == 0)
+    {
+        p->unkBA = 0x100;
+    }
+    temp_v0_2 = p->unk0;
+    raw = *temp_v0_2;
+    p->unk0 = (u8*)(temp_v0_2 + 1);
+    p->unkBE = raw;
+    p->unk20 = D_8003DD80[p->unkBE];
+    p->unkB8 = p->unkB6;
+    p->unkBC = 1;
+}
+
+/**
+ * @brief AKAO opcode handler: reads a byte, masks it to 7 bits and shifts it
+ *        left 8, storing the result at field 0xC0.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002C244(x_struct* arg0)
+{
+    u8* temp_v0;
+    s32 b;
+
+    temp_v0 = arg0->unk0;
+    b = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unkC0 = (b & 0x7F) << 8;
+}
+
+/**
+ * @brief AKAO opcode handler: reads a divisor byte (0 defaults to 0x100) and a
+ *        target byte, storing the divisor at 0xC2 and the scaled quotient at 0xC4.
+ * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
+ * @see decomp.me (100%)
+ */
+void func_8002C268(y_struct* arg0)
+{
+    u8* temp_a1;
+    s32 divisor;
+    s32 result;
+
+    temp_a1 = arg0->unk0;
+    divisor = *temp_a1;
+    temp_a1 += 1;
+    arg0->unk0 = temp_a1;
+    if (divisor == 0)
+    {
+        divisor = 0x100;
+    }
+    result = (((s32)(*temp_a1 & 0x7F) << 8) - arg0->unkC0) / divisor;
+    arg0->unk0 = (u8*)(temp_a1 + 1);
+    arg0->unkC2 = divisor;
+    arg0->unkC4 = result;
+}
+
+/**
+ * @brief AKAO opcode handler: clears field 0xF6, clears bit 1 of the flags at
+ *        0x34, and sets bits 0x3 in the flags at 0x100.
+ * @param arg0 Channel state.
+ * @see decomp.me (100%)
+ */
+void func_8002C2D8(z_struct* arg0)
+{
+    arg0->unkF6 = 0;
+    arg0->unk34 = arg0->unk34 & ~2;
+    arg0->unk100 = arg0->unk100 | 3;
+}
+
+/**
+ * @brief AKAO opcode handler: sets flag 0x4 at 0x34, reads a byte (0 defaults
+ *        to 0x100) into 0xC8, reads an index byte into 0xCC, sets 0xCA, and
+ *        looks up a table entry into field 0x24.
+ * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
+ * @see decomp.me (100%)
+ */
+void func_8002C2FC(aa_struct* arg0)
+{
+    u8* temp_v0;
+    u8* temp_v0_2;
+    s32 b1;
+    u32 raw;
+
+    arg0->unk34 = (s32)(arg0->unk34 | 4);
+    temp_v0 = arg0->unk0;
+    b1 = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unkC8 = b1;
+    if (b1 == 0)
+    {
+        arg0->unkC8 = 0x100;
+    }
+    temp_v0_2 = arg0->unk0;
+    raw = *temp_v0_2;
+    arg0->unk0 = (u8*)(temp_v0_2 + 1);
+    arg0->unkCC = raw;
+    arg0->unk24 = D_8003DD80[arg0->unkCC];
+    arg0->unkCA = 1;
+}
+
+/**
+ * @brief AKAO opcode handler: reads a byte, shifts it left 7, and stores the
+ *        result at field 0xCE.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002C368(ab_struct* arg0)
+{
+    u8* temp_v0;
+    s32 b;
+
+    temp_v0 = arg0->unk0;
+    b = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->unkCE = b << 7;
+}
+
+/**
+ * @brief AKAO opcode handler: reads a divisor byte (0 defaults to 0x100) and a
+ *        target byte, storing the divisor at 0xD0 and the scaled quotient at 0xD2.
+ * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
+ * @see decomp.me (100%)
+ */
+void func_8002C388(ac_struct* arg0)
+{
+    u8* temp_a1;
+    s32 divisor;
+    s32 result;
+
+    temp_a1 = arg0->unk0;
+    divisor = *temp_a1;
+    temp_a1 += 1;
+    arg0->unk0 = temp_a1;
+    if (divisor == 0)
+    {
+        divisor = 0x100;
+    }
+    result = (((s32)*temp_a1 << 7) - arg0->unkCE) / divisor;
+    arg0->unk0 = (u8*)(temp_a1 + 1);
+    arg0->unkD0 = divisor;
+    arg0->unkD2 = result;
+}
+
+/**
+ * @brief AKAO opcode handler: clears field 0xF8, clears bit 2 of the flags at
+ *        0x34, and sets bits 0x3 in the flags at 0x100.
+ * @param arg0 Channel state.
+ * @see decomp.me (100%)
+ */
+void func_8002C3F4(ad_struct* arg0)
+{
+    arg0->unkF8 = 0;
+    arg0->unk34 = arg0->unk34 & ~4;
+    arg0->unk100 = arg0->unk100 | 3;
+}
+
+/**
+ * @brief AKAO opcode handler: OR-sets a caller-supplied flag mask into either
+ *        the SFX control block or the primary sequence channel (depending on
+ *        whether this channel is an SFX channel), then raises driver flags 0x110.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to OR in.
+ * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
+ *       register), a gcc 2.8 coloring tie-break the permuter cannot move.
+ * @see decomp.me (99.58%)
+ */
+void func_8002C418(AkaoChannelState* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk3C |= arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk1C |= arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x110;
+}
+
+/**
+ * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
+ *        the SFX control block or the primary sequence channel, raises driver
+ *        flags 0x110, and clears channel field 0xD4.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
+ * @note Residual: the seq-channel path register coloring differs (5 rows), a
+ *       gcc 2.8 coloring tie-break the permuter cannot move (shared with
+ *       func_8002C418).
+ * @see decomp.me (98.27%)
+ */
+void func_8002C478(ae_struct* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk3C &= ~arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk1C &= ~arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x110;
+    arg0->unkD4 = 0;
+}
+
+/**
+ * @brief AKAO opcode handler: OR-sets a caller-supplied flag mask into the
+ *        sequence channel (0x44) when this channel is a sequence channel, or
+ *        into the SFX control block (0x24) when SFX flag 0x10000 is set, then
+ *        raises driver flags 0x100.
+ * @param arg0 Channel state; @c unk64 selects sequence routing, @c unk34 gates SFX.
+ * @param arg1 Flag bitmask to OR in.
+ * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
+ *       register), a gcc 2.8 coloring tie-break shared with func_8002C418.
+ * @see decomp.me (99.66%)
+ */
+void func_8002C4E0(af_struct* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk44 |= arg1;
+    }
+    else if (arg0->unk34 & 0x10000)
+    {
+        g_akao_sfx_control.unk24 |= arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+}
+
+/**
+ * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
+ *        the sequence channel (0x44) or the SFX control block (0x24), raises
+ *        driver flags 0x100, and clears channel field 0xD6.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
+ * @note Residual: the seq-channel path register coloring differs (5 rows), a
+ *       gcc 2.8 coloring tie-break shared with func_8002C418/C478.
+ * @see decomp.me (98.27%)
+ */
+void func_8002C554(ag_struct* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk44 &= ~arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk24 &= ~arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+    arg0->unkD6 = 0;
+}
+
+/**
+ * @brief AKAO opcode handler: OR-sets a caller-supplied flag mask into either
+ *        the sequence channel (0x40) or the SFX control block (0x20), then
+ *        raises driver flags 0x100.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to OR in.
+ * @note Residual: the g_akao_seq_channel0 %hi coloring tie-break shared with
+ *       func_8002C418.
+ * @see decomp.me (99.58%)
+ */
+void func_8002C5BC(AkaoChannelState* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk40 |= arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk20 |= arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+}
+
+/**
+ * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
+ *        the sequence channel (0x40) or the SFX control block (0x20), then
+ *        raises driver flags 0x100.
+ * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
+ * @note Residual: the seq-channel path register coloring differs (5 rows), a
+ *       gcc 2.8 coloring tie-break shared with func_8002C418/C478.
+ * @see decomp.me (98.13%)
+ */
+void func_8002C61C(AkaoChannelState* arg0, s32 arg1)
+{
+    if (arg0->unk64 == 0)
+    {
+        g_akao_seq_channel0->unk40 &= ~arg1;
+    }
+    else
+    {
+        g_akao_sfx_control.unk20 &= ~arg1;
+    }
+    g_akao_driver_flags.unk8 |= 0x100;
+}
+
+/**
+ * @brief AKAO opcode handler: sets field 0x9E to 1.
+ * @param arg0 Channel state.
+ * @see decomp.me (100%)
+ */
+void func_8002C67C(ah_struct* arg0)
+{
+    arg0->unk9E = 1;
+}
+
+/**
+ * @brief AKAO opcode handler stub: no operation.
+ * @see decomp.me (100%)
+ */
+void func_8002C688(void)
+{
+}
+
+/**
+ * @brief AKAO opcode handler: sets field 0x9E to 4 when the channel is active.
+ * @param arg0 Channel state; @c unk64 selects whether the store happens.
+ * @see decomp.me (100%)
+ */
+void func_8002C690(ai_struct* arg0)
+{
+    if (arg0->unk64 != 0)
+    {
+        arg0->unk9E = 4;
+    }
+}
+
+/**
+ * @brief AKAO opcode handler stub: no operation.
+ * @see decomp.me (100%)
+ */
+void func_8002C6AC(void)
+{
 }
