@@ -40,6 +40,7 @@ void func_800A8FB4();
 s32 func_800A9060();
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
 void func_8014F210(s32 sound_id, s32 volume);
+void* func_8014F060(void);
 void func_8014E3C4(u32 content_id);
 
 extern s32 g_menu_draw_early_out;
@@ -945,4 +946,249 @@ void* func_8014ECA4(void)
         var_a3 += 0x40;
     } while (var_a0_2 < 0x64);
     return var_t0;
+}
+
+/** @brief Slot-data pointer table indexed by menu subtype; @ref g_item_slot_data is its entry 7. */
+extern u32 D_8016951C[];
+/** @brief Slot-occupied flag table indexed by menu subtype; @ref g_item_slot_flags is its entry 7. */
+extern u8 D_80168C15[];
+
+/**
+ * @brief Commit the pending item into the active character's slot buffer for the
+ *        CURRENT menu subtype (@ref g_menu_active_subtype).
+ *
+ * The subtype-indexed sibling of @ref func_8014EB4C, which handles subtype 7
+ * (slot 0) only. func_8014F060 supplies the candidate 0x40-byte record; a NULL
+ * return aborts with 0. Any of comparison slots 1..3 that still points at this
+ * subtype's slot buffer is re-pointed at it first.
+ *
+ * If the slot buffer is empty (its first byte is 0) the candidate is copied in,
+ * its own first byte cleared, and the subtype's slot-data entry zeroed.
+ * Otherwise the slot and the candidate are exchanged through a stack buffer
+ * (three func_800A8F8C copies, same pattern as func_8014EB4C / func_8014DE5C)
+ * and the subtype's slot-data entry points at the candidate. Either way the
+ * subtype's slot-occupied flag is set.
+ *
+ * @return 1 if a record was committed or exchanged, 0 if func_8014F060 failed.
+ *
+ * @note D_8016951C and D_80168C15 are the bases of the subtype-indexed tables
+ *       that @ref g_item_slot_data (0x80169538 = D_8016951C + 7*4) and
+ *       @ref g_item_slot_flags (0x80168C1C = D_80168C15 + 7) sit inside. The
+ *       relocation must name these bases, not `&g_item_slot_data - 0x1C`:
+ *       the addresses are equal but the emitted symbol is not.
+ *
+ * @note Shapes required to match:
+ *       - The two found-store blocks are OUT OF LINE. gcc 2.7.2 has no
+ *         basic-block reorder pass, so the emitted order is the source order:
+ *         arm A's store sits AFTER its common code and jumps backwards into it,
+ *         and arm B's store sits BEFORE its scan loop, reached only by the
+ *         loop's branch. The leading `goto scan_b;` is deleted by jump.c's
+ *         jump-to-jump redirection but is what places found_b ahead of the
+ *         loop. Writing either store inline with `break` costs ~27%: the store's
+ *         address expression becomes loop-invariant, loop.c hoists it to the
+ *         preheader, and CSE then shares it with the following call argument
+ *         instead of recomputing it.
+ *       - `slots[i]` indexing (not a `p = &g_item_slot_data.unk4` pointer walk)
+ *         is what makes loop.c strength-reduce to the target's two-step
+ *         `addiu v0, v0, %lo(g_item_slot_data)` + `addiu a1, v0, 0x4`.
+ *       - `slots` must be assigned separately inside each arm; hoisting it
+ *         above the `if` costs a fifth saved register (frame 0x68 -> 0x70).
+ *       - `pad` aliases g_pad_ctx so its %hi becomes a long-lived allocno and
+ *         its `lui` is emitted early, and `off` is assigned before it so the
+ *         subtype `lui` comes first.
+ *       - `ret` carries the 1 into the shared tail, producing the target's
+ *         `li v0, 1` + `addu v1, v0, zero` pair. It only works assigned at the
+ *         very end of the if/else; hoisting it anywhere earlier adds two insns.
+ *       - `pad - (-(offset))` rather than `pad + offset`: gcc canonicalizes the
+ *         operands of a commutative PLUS itself, so the sum coalesces into the
+ *         char-slot chain's register. Routing it through MINUS preserves the
+ *         operand order and gives the target's `addu a0, a0, v0`. Every
+ *         plain-`+` spelling tried tops out at 99.87%.
+ *       - The `if (0)` six-arg call sizes the outgoing-argument area to 0x18 so
+ *         `buf` lands at sp+0x18; see func_8014EB4C. `&buf` must never be
+ *         cached in a named local - it has to rematerialize at each call.
+ * @see decomp.me (100%)
+ */
+s32 func_8014EDEC(void)
+{
+    u8 buf[0x40];
+    u8* entry;
+    u8* slot_buf;
+    u32* slots;
+    u8* pad;
+    s32 ret;
+    s32 off;
+    s32 i;
+
+    if (0)
+    {
+        func_800A8F8C(0, 0, 0, 0, 0, 0);
+    }
+    entry = (u8*)func_8014F060();
+    if (entry != 0)
+    {
+        i = 1;
+        off = g_menu_active_subtype - 7;
+        pad = (u8*)g_pad_ctx;
+        if (*(pad - (-((off << 6) + (g_menu_char_slot * 0x250))) + 0x640) == 0)
+        {
+            slots = &g_item_slot_data.unk0;
+            do
+            {
+                if ((u32)entry == slots[i])
+                {
+                    goto found_a;
+                }
+                i += 1;
+            } while (i < 4);
+done_a:
+            func_800A8F8C((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), entry);
+            *entry = 0;
+            D_8016951C[g_menu_active_subtype] = 0;
+            goto tail;
+found_a:
+            slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+            goto done_a;
+        }
+        else
+        {
+            goto scan_b;
+found_b:
+            slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
+            goto done_b;
+scan_b:
+            slots = &g_item_slot_data.unk0;
+            do
+            {
+                if ((u32)entry == slots[i])
+                {
+                    goto found_b;
+                }
+                i += 1;
+            } while (i < 4);
+done_b:
+            slot_buf = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + (g_menu_active_subtype << 6) + 0x480;
+            func_800A8F8C(buf, slot_buf);
+            func_800A8F8C(slot_buf, entry);
+            func_800A8F8C(entry, buf);
+            D_8016951C[g_menu_active_subtype] = (u32)entry;
+        }
+        ret = 1;
+tail:
+        D_80168C15[g_menu_active_subtype] = ret;
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * @brief Pick the highest-valued eligible item record for the CURRENT menu subtype.
+ *
+ * The subtype-generic sibling of @ref func_8014ECA4 (which handles subtype 7 only).
+ * The active character's slot buffer for @ref g_menu_active_subtype supplies the
+ * score to beat: the sum of its four halfwords at 0x24/0x26/0x28/0x2A, or 0 when
+ * the slot is empty. An exclusion mask is then built from the other three
+ * comparison slots at D_801693FC, and the 100 records at g_pad_ctx + 0xCE0 are
+ * scanned for the best record that is not excluded.
+ *
+ * @return Pointer to the winning 0x40-byte record, or NULL if none qualifies.
+ *
+ * @note Shapes required to match:
+ *       - The opening test is a real `if/else` (`if (empty) { total = 0; } else
+ *         { total = sum; }`), NOT `total = 0;` followed by a bare `if`. The
+ *         target re-reads g_pad_ctx AND g_menu_active_subtype after the test
+ *         (0x94-0xA8). With the bare `if`, gcc 2.7.2's CSE takes the AROUND
+ *         path (`-fcse-skip-blocks`, on at -O2): cse_end_of_basic_block follows
+ *         the branch around the if-body straight into the join block with its
+ *         value table intact, so both globals are still live in registers there
+ *         and the reloads fold away. The else arm puts a BARRIER in the way,
+ *         CSE stops at the join, and both globals are re-read. Worth 9.36%.
+ *       - `slot_idx` is deliberately reused after loop A as the loop-B mask
+ *         carrier, and `mask` is reused inside loop B as the staging temp for
+ *         `best_total`. gcc 2.7 has no live-range splitting, so one C variable
+ *         is one hard register for the whole function; these two reuses are
+ *         what give the target's a3 and a2 their second lives. A fresh variable
+ *         in either place is coalesced away and costs the move.
+ *       - `rec_flag` and `rec` walk the same records but must be ONE variable
+ *         each in the roles shown: `rec_flag` for the occupancy byte, `rec` for
+ *         the fields. Splitting `rec_flag` into an extra copy raises its
+ *         allocation priority (pri = floor_log2(refs)*refs/live_len) above the
+ *         mask carrier's and swaps a3/t0.
+ *       - `char_base` uses `- (-(offset))` rather than `+ offset`; see
+ *         @ref func_8014EDEC for why the MINUS routing is kept.
+ * @see decomp.me (100%)
+ */
+void* func_8014F060(void)
+{
+    s32 slot_idx;
+    s32 rec_idx;
+    s32 mask;
+    s32 total;
+    s32 best_total;
+    u32 slot_flags;
+    u32 rec_flags;
+    u8* category;
+    u8* char_base;
+    u8* slot;
+    u8* rec_flag;
+    u8* rec;
+    u8* best;
+
+    char_base = (u8*)g_pad_ctx - (-((g_menu_char_slot * 0x250) + 0x5F0));
+    best = char_base + ((g_menu_active_subtype << 6) - 0x170);
+    if (*best == 0)
+    {
+        best_total = 0;
+    }
+    else
+    {
+        best_total = *(u16*)(best + 0x24) + *(u16*)(best + 0x26) + *(u16*)(best + 0x28) + *(u16*)(best + 0x2A);
+    }
+    best = 0;
+    mask = 0;
+    slot_idx = 0;
+    slot = (u8*)D_801693FC;
+    rec_flag = (u8*)g_pad_ctx + 0xCE0;
+    do
+    {
+        if ((slot_idx != (g_menu_active_subtype - 7)) && (*slot != 0))
+        {
+            slot_flags = *(u32*)(slot + 0x14);
+            if (slot_flags & 0x300)
+            {
+                category = ((slot_flags >> 0xA) & 0x3F) + D_800F0BEC;
+            }
+            else
+            {
+                category = ((slot_flags >> 0xA) & 0x3F) + D_800F0BE0;
+            }
+            mask |= *category;
+        }
+        slot_idx += 1;
+        slot += 0x40;
+    } while (slot_idx < 4);
+    slot_idx = mask;
+    rec_idx = 0;
+    rec = rec_flag;
+    do
+    {
+        if (*rec_flag != 0)
+        {
+            rec_flags = *(u32*)(rec + 0x14);
+            if (((rec_flags & 0x300) == 0x100) && !(slot_idx & D_800F0BEC[(rec_flags >> 0xA) & 0x3F]))
+            {
+                total = *(u16*)(rec + 0x24) + *(u16*)(rec + 0x26) + *(u16*)(rec + 0x28) + *(u16*)(rec + 0x2A);
+                if (best_total < total)
+                {
+                    best = rec;
+                    mask = total;
+                    best_total = mask;
+                }
+            }
+        }
+        rec_idx += 1;
+        rec += 0x40;
+        rec_flag += 0x40;
+    } while (rec_idx < 0x64);
+    return best;
 }
