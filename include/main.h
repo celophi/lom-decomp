@@ -105,15 +105,15 @@ typedef struct
     u8  inject_enable;      /**< 0x840: non-zero allows input injection. */
     u8  _pad841[0x858 - 0x841]; /**< 0x841: not yet mapped. */
     u32 inject_flags;       /**< 0x858: bit 0x80 enables input injection. */
-    u8 pad85C[0x24C];
+    u8  _pad85C[0x234];          /**< 0x85C: not yet mapped. */
+    u8  gname_name[0x18];        /**< 0xA90: name buffer edited by the GNAME overlay. */
     u32 unkAA8;
     u8  _padAAC[0x29D7 - 0xAAC];  /**< 0xAAC: not yet mapped. */
-    s8  unk29D7;                  /**< 0x29D7: when (low 7 bits == 4) the entered name is
-                                   *           written into the 0x14C-stride history table. */
+    s8  large_history_index;      /**< 0x29D7: slot index into @c large_history_names. */
     u8  _pad29D8[0x2B0C - 0x29D8];/**< 0x29D8: not yet mapped. */
-    u8  unk2B0C_arr[3][0x14C];    /**< 0x2B0C: three 0x14C-byte name-history slots. */
-    u32 unk2EF0;                  /**< 0x2EF0: slot index into @c unk2EF4_arr. */
-    u8  unk2EF4_arr[3][0x60];     /**< 0x2EF4: three 0x60-byte name-history slots. */
+    u8  large_history_names[3][0x14C]; /**< 0x2B0C: three large name-history slots. */
+    u32 small_history_index;      /**< 0x2EF0: slot index into @c small_history_names. */
+    u8  small_history_names[3][0x60]; /**< 0x2EF4: three compact name-history slots. */
 } PadContext;
 
 /** @brief Pointer to the controller/pad context object. */
