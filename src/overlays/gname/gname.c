@@ -244,6 +244,17 @@
 #define GNAME_PANEL_SPRITE_COLOR 1
 #define GNAME_PANEL_SPRITE_MODE 2
 
+/* Entered-name strip placement and back-page upload dimensions. */
+#define NAME_STRIP_TEXT_COLOR 1
+#define NAME_STRIP_TEXT_X 0x10
+#define NAME_STRIP_TEXT_Y 8
+#define NAME_STRIP_TEXT_MODE 0
+#define NAME_STRIP_DECOR_GLYPH 2
+#define NAME_STRIP_VRAM_RIGHT 0xF0
+#define NAME_STRIP_VRAM_PAGE0_Y 0x18
+#define NAME_STRIP_VRAM_PAGE1_Y 0x100
+#define NAME_STRIP_VRAM_HEIGHT 0x20
+
 /** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
  *  Bits [5:0] hold CLUT_X/16; upper bits carry unrelated data and must be
  *  discarded before writing the CLUT id into a sprite primitive. */
@@ -475,6 +486,13 @@ typedef struct
     u8 pad1[2];
 } GlyphMeasure;
 
+/** Stack scratch used to build a DRAWENV before packing it into a DR_ENV. */
+typedef struct
+{
+    u32 reserved[2]; /* DRAWENV scratch begins at byte offset 8. */
+    DRAWENV draw_env;
+} DrawEnvScratch;
+
 /**
  * @brief Header layout of the character-panel resource blob at
  *        @ref g_panel_data_base (0x80142EF4).
@@ -627,7 +645,7 @@ static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y);
 static void gname_render(RenderContext* render_ctx);
 static void* emit_panel_tab_sprite(void* prim_cursor, u_long* ot_entry);
 static void* emit_panel_label(void* prim_cursor, u_long* ot_entry);
-static void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width);
+static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width);
 static void render_char_panel(RenderContext* ctx, s32 panel_idx);
 static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head);
 static void* emit_glyph_sprt(void* prim_buf, u_long* ot_tag, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight);
@@ -1946,8 +1964,7 @@ static void* emit_panel_label(void* prim_cursor, u_long* ot_entry)
 }
 
 /**
- * @brief Append three GPU primitives to the render context's OT and reserve a
- *        right-edge VRAM strip for upload on the back page.
+ * @brief Render the entered-name strip and queue its VRAM upload.
  *
  * Builds, in order, into @ref GNAME_OT_NAME_STRIP:
  *   1. A template packet copied from the inactive frame's reserve slot.
@@ -1962,47 +1979,50 @@ static void* emit_panel_label(void* prim_cursor, u_long* ot_entry)
  *
  * @see https://decomp.me/scratch/LxujJ (100%)
  */
-static void render_name_strip(RenderContext* ctx, s32 name_buf, s32 strip_width)
+static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width)
 {
-    s32* ot_head;   /* &ctx->ot[GNAME_OT_NAME_STRIP] - passed as the OT head pointer */
-    s32* prim;      /* current primitive being emitted */
-    s32* next_prim; /* heap cursor after the sprite/draw-mode pair */
+    u_long* ot_head;
+    DR_ENV* template_packet;
+    DR_ENV* packet_cursor;
     s32 vram_y;     /* VRAM Y of the back page (0x18 or 0x100) */
     s32 vram_x;     /* VRAM X of the right-aligned strip */
-    u32* pkt;
-    u32 vram_load_pkt[0x19];
+    DRAWENV* upload_env;
+    DrawEnvScratch vram_load_scratch;
 
-    ot_head = (s32*)&ctx->ot[GNAME_OT_NAME_STRIP];
-    prim = ctx->prim_cursor;
-    next_prim = prim;
+    ot_head = &ctx->ot[GNAME_OT_NAME_STRIP];
+    template_packet = ctx->prim_cursor;
+    /* The initial alias is required to preserve the target's register allocation. */
+    packet_cursor = template_packet;
 
     /* 1. Copy template packet from the *other* frame's reserve slot, then
      * splice it into the OT. */
-    SetDrawEnv(prim, (void*)((s32)g_render_buf_base + ((ctx->frame_parity ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
+    SetDrawEnv(template_packet, &g_render_buf_base[ctx->frame_parity ^ 1].draw_env);
 
-    addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], prim);
+    addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], template_packet);
 
     /* 2. Emit textured sprite (tag 0x64) wrapped by a Draw-Mode (0xE1) packet.
      * Returns the heap cursor just past both packets. */
-    next_prim = emit_draw_mode_prim(emit_glyph_sprt(func_800A88A0(prim + 0x10, ot_head, name_buf, 1, 0x10, 8, 0), ot_head, 2, 0, 0, 0, 0, 0), ot_head);
+    packet_cursor = func_800A88A0(template_packet + 1, ot_head, name_buf, NAME_STRIP_TEXT_COLOR, NAME_STRIP_TEXT_X, NAME_STRIP_TEXT_Y,
+                                  NAME_STRIP_TEXT_MODE);
+    packet_cursor = emit_glyph_sprt(packet_cursor, ot_head, NAME_STRIP_DECOR_GLYPH, 0, 0, 0, 0, 0);
+    packet_cursor = emit_draw_mode_prim(packet_cursor, ot_head);
 
     /* 3. Build a back-page VRAM upload RECT (W = strip_width, H = 32) at the
      * right edge of whichever page is currently the back buffer. */
-    pkt = vram_load_pkt + 2;
-    vram_x = 0xF0 - strip_width;
-    vram_y = 0x18;
+    upload_env = &vram_load_scratch.draw_env;
+    vram_x = NAME_STRIP_VRAM_RIGHT - strip_width;
+    vram_y = NAME_STRIP_VRAM_PAGE0_Y;
     if (ctx->frame_parity != 0)
     {
-        vram_y = 0x100;
+        vram_y = NAME_STRIP_VRAM_PAGE1_Y;
     }
 
-    SetDefDrawEnv(pkt, vram_x, vram_y, strip_width, 0x20);
-    SetDrawEnv(next_prim, pkt);
+    SetDefDrawEnv(upload_env, vram_x, vram_y, strip_width, NAME_STRIP_VRAM_HEIGHT);
+    SetDrawEnv(packet_cursor, upload_env);
 
-    addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], next_prim);
-    /* Advance heap cursor 0x40 bytes past the load packet. */
-    next_prim += 0x10;
-    ctx->prim_cursor = next_prim;
+    addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], packet_cursor);
+    packet_cursor += 1;
+    ctx->prim_cursor = packet_cursor;
 }
 
 /**
