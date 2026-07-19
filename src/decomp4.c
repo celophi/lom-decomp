@@ -213,6 +213,19 @@ typedef struct
     u16 unkF2;
 } q_struct;
 
+typedef struct
+{
+    u8* unk0;
+    char pad1[0x2C - 0x4];
+    s32 unk2C;
+    char pad2[0x54 - 0x30];
+    s32 unk54;
+    char pad3[0xEC - 0x58];
+    s16 unkEC;
+    char pad4[0x100 - 0xEE];
+    s32 unk100;
+} r_struct;
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -2209,4 +2222,47 @@ void func_8002BEA8(q_struct* arg0)
     arg0->unkF2 = 0;
     arg0->unk9A = 0;
     arg0->unk9E = 1;
+}
+
+/**
+ * @brief Clears field 0x9C.
+ * @param arg0 Channel state.
+ * @see decomp.me (100%)
+ */
+void func_8002BEE0(q_struct* arg0)
+{
+    arg0->unk9C = 0;
+}
+
+/**
+ * @brief Reads a signed byte scale factor into field 0xEC and computes the
+ *        scaled result stored at field 0x54, then sets flag 0x10 in field 0x100.
+ * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%)
+ */
+void func_8002BEE8(r_struct* arg0)
+{
+    s32 scale;
+    u8* next;
+    u32 prod;
+    u32 result;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    next = (u8*)(temp_v0 + 1);
+    arg0->unkEC = (s16)(s8)*temp_v0;
+    result = (u8)arg0->unkEC;
+    scale = arg0->unk2C;
+    prod = scale * result;
+    arg0->unk0 = next;
+    if (arg0->unkEC < 0)
+    {
+        result = (prod >> 8) - scale;
+    }
+    else
+    {
+        result = prod >> 7;
+    }
+    arg0->unk54 = result;
+    arg0->unk100 = (s32)(arg0->unk100 | 0x10);
 }
