@@ -1215,3 +1215,32 @@ void func_8014F210(s32 sound_id, s32 volume)
         func_800A3938(sound_id, volume);
     }
 }
+
+/**
+ * @brief Count the in-use entries in the 100-slot record table at g_pad_ctx+0xCE0.
+ * @return Index of the first empty (zero first byte) record, i.e. the number of
+ *         occupied records; 0x64 if the table is full.
+ * @note Records are 0x40 bytes apart; the same table is walked by func_8014F060.
+ * @note The `for` loop with a `break` on the empty slot is required to match: the
+ *       equivalent `do { if (!*rec) break; ... } while (count < 0x64)` scores
+ *       39.43% (gcc rotates and peels the loop) and the `while (*rec != 0)` form
+ *       with the bound check inside scores 32.64%. A literal goto/label version of
+ *       this same shape also reaches 100%.
+ * @see decomp.me (100%)
+ */
+s32 func_8014F23C(void)
+{
+    s32 count;
+    u8* rec;
+
+    rec = (u8*)g_pad_ctx + 0xCE0;
+    for (count = 0; count < 0x64; count++)
+    {
+        if (*rec == 0)
+        {
+            break;
+        }
+        rec += 0x40;
+    }
+    return count;
+}
