@@ -1477,3 +1477,23 @@ s32 func_8014F63C(void)
         }
     }
 }
+
+/**
+ * @brief Drain the four SwCARD events by testing each one once.
+ *
+ * TestEvent clears an event's ready flag as a side effect, so calling it on all
+ * four descriptors and discarding the results leaves them in a known-clear state.
+ * func_8014F55C runs this immediately before _card_load so the status poll that
+ * follows can only observe events raised by that load.
+ *
+ * @note Same descriptor order as func_8014F2B0 and func_8014F63C: EvSpIOE,
+ *       EvSpERROR, EvSpTIMOUT, EvSpNEW.
+ * @see decomp.me (100%)
+ */
+void func_8014F6D8(void)
+{
+    TestEvent(D_8016B760);
+    TestEvent(D_8016B764);
+    TestEvent(D_8016B768);
+    TestEvent(D_8016B76C);
+}
