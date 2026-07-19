@@ -1612,10 +1612,16 @@ s32 func_8014F824(char* path, struct DIRENTRY* entry)
  * @param chan Card channel / slot to probe, passed straight to _card_read.
  * @return 1 if the card is formatted, 0 if the "MC" magic is absent, -1 if the
  *         event poll reported anything other than completion.
- * @note NOT A MATCH - 93.28%. Instruction selection and count are exact
- *       (81/81); the entire residue is a saved-register permutation. Target map
- *       (m2c --reg-vars): status s0, chan s1, constant-1 s2, &D_8016B774 s3,
- *       &D_8016B770 s4. This build gets status s3, chan s2, constant-1 s0.
+ * @note NOT A MATCH - 97.54%. 80 insns vs the target's 81: the ONE missing
+ *       instruction is `addu s4, v0, zero` at 0x38, the loop-base copy for
+ *       D_8016B770. Everything else is a saved-register permutation that
+ *       cascades from that copy not existing. Target map (m2c --reg-vars):
+ *       status s0, chan s1, constant-1 s2, &D_8016B774 s3, &D_8016B770 s4;
+ *       this build gets status s3, chan s2, constant-1 s0, &D_8016B774 s1.
+ * @note @c new_var is required to match: assigning 0 to a local and returning
+ *       it (instead of a bare `return 0`) is worth +5 exact rows and removes
+ *       the spurious instruction the bare form emits. Reverting it scores
+ *       93.28% with 4 `replace` rows and an extra wrong insn.
  * @note Cause is ALLOC-ORDER: the constant-1 pseudo is hoisted to the loop
  *       preheader with 9 loop-weighted refs (pri 5400) and outranks status
  *       (5 refs, pri 2500), so it takes s0 first. Underneath that is a
@@ -1627,22 +1633,24 @@ s32 func_8014F824(char* path, struct DIRENTRY* entry)
  *       reach 96.21% but emit a saved register where the target uses hardware
  *       $zero, and xori/bnez where the target has bne. See
  *       working/func_8014F8A8/status.md for the full probe log.
- * @see decomp.me (93.28%)
+ * @see decomp.me (97.54%)
  */
 s32 func_8014F8A8(s32 chan)
 {
     u8 header[0x80];
     s32 status;
+    s32 new_var;
 
     bzero(header, 0x80);
     TestEvent(D_8016B770);
     TestEvent(D_8016B774);
     TestEvent(D_8016B778);
-    status = 3;
     TestEvent(D_8016B77C);
+    status = 3;
     _new_card();
+    new_var = 0;
     _card_read(chan, 0, header);
-    for (;;)
+    while (1)
     {
         if (TestEvent(D_8016B770) == 1)
         {
@@ -1676,7 +1684,7 @@ s32 func_8014F8A8(s32 chan)
     {
         return 1;
     }
-    return 0;
+    return new_var;
 }
 
 extern u8 D_80140594[];
