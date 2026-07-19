@@ -224,6 +224,7 @@
 /** Number of glyph cells in the name-entry cursor row drawn by
  *  @ref draw_name_cursor_row. */
 #define NAME_CURSOR_GLYPH_COUNT 20
+#define GNAME_FULL_TEX_WINDOW_SIZE 0xFF
 
 /* Entries rendered from g_tab_cursor_entries by gname_render. */
 #define GNAME_RENDER_TAB_FIRST 2
@@ -275,8 +276,8 @@
  *  animation back to the idle frame and stops it. */
 #define APPEND_ANIM_FRAME_COUNT 7
 
-/** Byte stride of one @ref AppendAnimFrame record in @c g_char_append_anim. */
-#define APPEND_ANIM_FRAME_STRIDE 12
+#define APPEND_ANIM_X_BIAS 0xE8
+#define APPEND_ANIM_Y_BIAS 4
 
 /* The panel data blob is described by the PanelDataHeader struct above. Its
  * header fields and record-offset table
@@ -534,7 +535,7 @@ typedef struct
 } PanelDataHeader;
 
 /* --- Data-blob globals (raw bytes in the gname_data databin) --- */
-extern u8 g_char_append_anim[]; /* AppendAnimFrame[APPEND_ANIM_FRAME_COUNT]; declared as u8[] for byte-level accesses */
+extern AppendAnimFrame g_char_append_anim[];
 extern Tim g_name_entry_tim;    /* glyph TIM blob; Tim covers the fixed header + CLUT, pixel block follows */
 extern GlyphSeqEntry g_name_cursor_glyphs[];
 
@@ -662,7 +663,7 @@ static void render_char_panel(RenderContext* ctx, s32 panel_idx);
 static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head);
 static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, s32 x, s32 y, s32 shadow_dist, s32 primary_adj, s32 highlight);
 static void draw_name_cursor_row(RenderContext* ctx);
-static s32 name_byte_length(u8* name);
+static s32 name_byte_length(const u8* name);
 static s32 name_char_count(const u8* name);
 static void name_append(u8* dst, const u8* src);
 static s32 name_pop_last_char(u8* name);
@@ -670,7 +671,7 @@ static void name_copy(u8* dst, const u8* src);
 static void recalc_name_width(void);
 static void name_prepend_char(u8* buffer, u16 new_char);
 static s32 name_pop_first_char(u8* name);
-static void* draw_char_append_anim(void* prim, RenderContext* ctx);
+static void* draw_char_append_anim(void* prim_cursor, RenderContext* ctx);
 static s32 name_is_blank(u8* name);
 
 const s32 g_gname_overlay_id = 5;
@@ -2243,16 +2244,14 @@ static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, 
 }
 
 /**
- * @brief Build the name-entry cursor's per-frame sprite packet:
- *        a TexWindow bracket around @ref NAME_CURSOR_GLYPH_COUNT textured
- *        glyph sprites, terminated by a DrawMode.
+ * @brief Render the name-cursor row and its texture state.
  *
  * Walks @c g_name_cursor_glyphs (a @ref GlyphSeqEntry array) one entry per glyph
  * cell, looks each glyph up in @c g_glyph_table, and emits a white
  * (RGB=0x80) free-size textured SPRT primitive (code 0x64). The chain is
  * wrapped with @c setTexWindow at both ends (rect @c {0,0,0xFF,0xFF} -
  * a no-op full-page window) and closed with a @c GNAME_GLYPH_TPAGE DrawMode.
- * The buffer cursor at @c obj->prim_cursor is advanced past the final primitive.
+ * The render context's primitive cursor is advanced past the final packet.
  *
  * @param ctx Render context (@ref RenderContext). Reads/writes:
  *             - @ref GNAME_OT_NAME_CURSOR (offset 0x3C) - addPrim OT entry.
@@ -2268,148 +2267,140 @@ static void draw_name_cursor_row(RenderContext* ctx)
 {
     RECT tw_rect;
 
-    s32 i;
+    s32 glyph_count;
 
-    u8* ptr_t1;
-    u8* list_ptr;
-    DR_TWIN* twin;
-    SPRT* sprt;
-    u8* drawmode;
-    u_long* ptr;
-    GlyphSeqEntry* seq;
+    u8* packet_cursor;
+    u8* glyph_cursor;
+    DR_TWIN* tex_window;
+    SPRT* glyph_sprt;
+    DR_TPAGE* draw_mode;
+    const GlyphSeqEntry* sequence;
 
     /* Two aliases of the same context pointer: gcc allocates them to t6/t2
        and uses t6 for the very first addPrim/buf access and t2 for every
        subsequent addPrim. This split is required for the asm match. */
-    RenderContext* obj = ctx;
-    RenderContext* obj2;
-    u8* glyph_table_base;
-    obj2 = obj;
+    RenderContext* first_ctx = ctx;
+    RenderContext* ot_ctx;
+    GlyphInfo* glyph_table_base;
+    ot_ctx = first_ctx;
 
-    ptr_t1 = (u8*)obj->prim_cursor;
+    packet_cursor = first_ctx->prim_cursor;
 
     /* First TexWindow init: source order is h, w, y, x. */
-    tw_rect.h = 0xFF;
-    tw_rect.w = 0xFF;
+    tw_rect.h = GNAME_FULL_TEX_WINDOW_SIZE;
+    tw_rect.w = GNAME_FULL_TEX_WINDOW_SIZE;
     tw_rect.y = 0;
     tw_rect.x = 0;
 
-    /* Opening texture window. The first addPrim runs *before* seq/i/glyph_table_base
-       are assigned so gcc materializes the 0x00FFFFFF mask at the very top
-       of the prologue (the mask is the first non-arg constant used). */
-    twin = (DR_TWIN*)ptr_t1;
-    setTexWindow(twin, &tw_rect);
-    addPrim(&obj->ot[GNAME_OT_NAME_CURSOR], twin);
+    /* The first addPrim precedes the sequence/count/table assignments so gcc
+       materializes the OT address mask at the top of the prologue. */
+    tex_window = (DR_TWIN*)packet_cursor;
+    setTexWindow(tex_window, &tw_rect);
+    addPrim(&first_ctx->ot[GNAME_OT_NAME_CURSOR], tex_window);
 
-    seq = g_name_cursor_glyphs;
-    i = 0;
-    glyph_table_base = (u8*)g_glyph_table;
+    sequence = g_name_cursor_glyphs;
+    glyph_count = 0;
+    glyph_table_base = g_glyph_table;
 
-    ptr_t1 += sizeof(DR_TWIN);
+    packet_cursor += sizeof(DR_TWIN);
 
-    /* Glyph sprites. list_ptr is a separate variable aliased to ptr_t1 so
+    /* glyph_cursor is a separate alias of packet_cursor so
        gcc keeps both pointers live across the loop (target uses t1 + a2 in
        parallel). */
-    list_ptr = ptr_t1;
+    glyph_cursor = packet_cursor;
     do
     {
-        u32 idx = seq->id;
-        u32 xy;
-        u8* glyph;
+        u32 glyph_id = sequence->id;
+        u32 packed_xy;
+        GlyphInfo* glyph;
 
-        sprt = (SPRT*)list_ptr;
+        glyph_sprt = (SPRT*)glyph_cursor;
         /* RGB only (high byte lands in `code`, immediately overwritten). */
-        *(u32*)&sprt->r0 = 0x808080;
-        setlen(sprt, 4);
-        setcode(sprt, 0x64);
+        SET_BGR0_PACKED(glyph_sprt, GPU_TINT_NEUTRAL);
+        setSprt(glyph_sprt);
 
-        xy = seq->xy;
-        /* (offset) + (base) order forces gcc to emit `addu v1,v1,s0` (vs.
-           the reverse order `s0,v1` you'd get from `&glyph_table[idx]`). */
-        glyph = (u8*)((idx << 3) + (u32)glyph_table_base);
-        *(u32*)&sprt->x0 = xy;
+        packed_xy = sequence->xy;
+        /* Offset + base order preserves the target's addu operand order. */
+        glyph = (GlyphInfo*)((glyph_id << 3) + (u32)glyph_table_base);
+        /* Coordinates are pre-packed and must be written with one word store. */
+        *(u32*)&glyph_sprt->x0 = packed_xy;
 
-        sprt->u0 = glyph[0];
-        sprt->v0 = glyph[1];
-        sprt->w = glyph[2];
+        glyph_sprt->u0 = glyph->u;
+        glyph_sprt->v0 = glyph->v;
+        glyph_sprt->w = glyph->w;
         {
-            /* `i++` between the load and store of `h` so gcc schedules the
-               counter increment into the slot the target asm uses. */
-            u8 hh = glyph[3];
-            i++;
-            sprt->h = hh;
+            /* Increment between the load and store of h to preserve scheduling. */
+            u8 glyph_height = glyph->h;
+            glyph_count++;
+            glyph_sprt->h = glyph_height;
         }
         {
             /* Read clut as a full word (gcc would otherwise optimize this
                to `lhu` since only the low 16 bits affect the result). The
-               `seq++` advance sits between read and store to match the
+               sequence advance sits between read and store to match the
                target's instruction scheduling. */
-            u32 clut_word = *(u32*)(glyph + 4);
-            seq++;
-            sprt->clut = (u16)((clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS);
+            u32 clut_word = glyph->clut;
+            sequence++;
+            glyph_sprt->clut = (clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
         }
 
-        addPrim(&obj2->ot[GNAME_OT_NAME_CURSOR], sprt);
-        list_ptr += sizeof(SPRT);
-    } while (i < NAME_CURSOR_GLYPH_COUNT);
-    ptr_t1 = list_ptr;
+        addPrim(&ot_ctx->ot[GNAME_OT_NAME_CURSOR], glyph_sprt);
+        glyph_cursor += sizeof(SPRT);
+    } while (glyph_count < NAME_CURSOR_GLYPH_COUNT);
+    packet_cursor = glyph_cursor;
 
     /* Closing texture window. Field-assignment order differs from the
        opening call (w,h,x,y vs. h,w,y,x) - the original C wrote them in
        this exact order and gcc preserves it. */
-    tw_rect.w = 0xFF;
-    tw_rect.h = 0xFF;
+    tw_rect.w = GNAME_FULL_TEX_WINDOW_SIZE;
+    tw_rect.h = GNAME_FULL_TEX_WINDOW_SIZE;
     tw_rect.x = 0;
     tw_rect.y = 0;
-    twin = (DR_TWIN*)ptr_t1;
-    setTexWindow(twin, &tw_rect);
-    addPrim(&obj2->ot[GNAME_OT_NAME_CURSOR], twin);
-    ptr_t1 += sizeof(DR_TWIN);
+    tex_window = (DR_TWIN*)packet_cursor;
+    setTexWindow(tex_window, &tw_rect);
+    addPrim(&ot_ctx->ot[GNAME_OT_NAME_CURSOR], tex_window);
+    packet_cursor += sizeof(DR_TWIN);
 
     /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word.
-       The buffer cursor is computed as `drawmode + 8` (not by mutating
-       ptr_t1 first), which yields `addiu v0,t1,8; sw v0,0x4040(...)`. */
-    drawmode = ptr_t1;
-    setDrawTPage(drawmode, 0, 0, GNAME_GLYPH_TPAGE);
-    addPrim(&obj2->ot[GNAME_OT_NAME_CURSOR], drawmode);
+       Advance from the typed packet so the final cursor is exactly 8 bytes later. */
+    draw_mode = (DR_TPAGE*)packet_cursor;
+    setDrawTPage(draw_mode, 0, 0, GNAME_GLYPH_TPAGE);
+    addPrim(&ot_ctx->ot[GNAME_OT_NAME_CURSOR], draw_mode);
 
-    ctx->prim_cursor = (u32*)(drawmode + 8);
+    ctx->prim_cursor = draw_mode + 1;
 }
 
 /**
- * @brief Number of bytes in a name buffer, excluding the null terminator.
- *
- * Walks the variable-width encoding: each byte in [0x19, 0x20) consumes
- * two buffer bytes (DBCS lead + trail), every other byte consumes one.
+ * @brief Get the encoded byte length of a name.
  *
  * @param name Null-terminated name buffer.
  * @return Byte length excluding the terminator.
  * @see https://decomp.me/scratch/2QgjW (100%)
  */
-static s32 name_byte_length(u8* name)
+static s32 name_byte_length(const u8* name)
 {
     s32 byte_len;
     u8 c;
-    u8* p;
+    const u8* cursor;
 
-    p = name;
-    c = *p;
+    cursor = name;
+    c = *cursor;
     byte_len = 0;
     if (c != 0)
     {
         do
         {
-            if ((u32)(c - 0x19) < 7U) /* DBCS lead byte: 2-byte glyph */
+            if (IS_DBSC_LEAD_BYTE(c))
             {
-                p += 2;
+                cursor += 2;
                 byte_len += 2;
             }
             else
             {
-                p += 1;
+                cursor += 1;
                 byte_len += 1;
             }
-            c = *p;
+            c = *cursor;
         } while (c != 0);
     }
     return byte_len;
@@ -2767,58 +2758,45 @@ static s32 name_pop_first_char(u8* name)
 }
 
 /**
- * @brief Draw the current frame of the character-append animation and
- *        advance its frame timer.
+ * @brief Render and advance the character-append animation.
  *
- * When the player commits a glyph into the name being entered, the input
- * handler seeds @c g_append_anim_frame to 0 and @c g_append_anim_timer to 2
- * (see the @ref name_append call sites). This routine then runs once per
- * render tick from @ref gname_render:
+ * Emits every populated glyph slot in the current frame. When the frame timer
+ * expires, advances to the next frame or returns to the idle frame.
  *
- *  1. Draw: emit up to @ref APPEND_ANIM_SLOT_COUNT textured-glyph SPRTs for
- *     the current frame. The frame index @c g_append_anim_frame selects a
- *     record in @c g_char_append_anim (logically an @ref AppendAnimFrame).
- *     Each glyph slot gives an (x, y, glyph) triple; a slot whose glyph id
- *     is 0 is skipped. X is biased by 0xE8, Y by 4.
- *  2. Advance: decrement @c g_append_anim_timer; when it reaches 0, step to
- *     the next frame. Frame @ref APPEND_ANIM_FRAME_COUNT wraps back to 0 and
- *     stops the animation (timer left at 0); otherwise the new frame's
- *     duration is loaded from byte 3 of its record (@c slots[0].pad).
- *
- * @param prim Primitive-buffer cursor (next free byte).
+ * @param prim_cursor Primitive-buffer cursor (next free byte).
  * @param ctx  Render context; @ref GNAME_OT_CHAR_APPEND_ANIM (offset 0x30) is
  *             the OT head tag for this layer.
  * @return Primitive-buffer cursor advanced past the emitted SPRTs.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
  */
-static void* draw_char_append_anim(void* prim, RenderContext* ctx)
+static void* draw_char_append_anim(void* prim_cursor, RenderContext* ctx)
 {
     u8 frame = g_append_anim_frame;
-    void* result = prim;
-    u8* table;
-    RenderContext* ot_base = ctx;
-    s32 i;
-    /* px points at a slot's x byte; py = px + 1 reads y at [0] and glyph at
-       [1]. The two incrementing pointers are required to match. */
-    u8* px = &g_char_append_anim[frame * APPEND_ANIM_FRAME_STRIDE];
-    u8* py = px + 1;
-    short glyph;
+    void* packet_cursor = prim_cursor;
+    const AppendAnimFrame* anim_frames;
+    RenderContext* ot_ctx = ctx;
+    s32 slot_index;
+    /* Separate X and Y cursors preserve the target's parallel pointer walk. */
+    const AppendAnimSlot* slot = g_char_append_anim[frame].slots;
+    const u8* slot_y = &slot->y;
+    s16 glyph_id;
 
-    for (i = 0; i < APPEND_ANIM_SLOT_COUNT; i++, py += 4, px += 4)
+    for (slot_index = 0; slot_index < APPEND_ANIM_SLOT_COUNT; slot_index++, slot_y += sizeof(AppendAnimSlot), slot++)
     {
-        s32 glyph_byte = py[1];
-        glyph = glyph_byte;
-        if (glyph != 0)
+        s32 raw_glyph_id = slot_y[1];
+        /* This s32 -> s16 -> u8 path preserves a separate argument-register move. */
+        glyph_id = raw_glyph_id;
+        if (glyph_id != 0)
         {
-            /* (u8*)&ot->ot + 0x30 == &ot->ot[GNAME_OT_CHAR_APPEND_ANIM]; raw offset is required to match. */
-            result = emit_glyph_sprt(result, (u8*)&ot_base->ot + 0x30, (u8)glyph, px[0] + 0xE8, py[0] + 4, 0, 0, 0);
+            packet_cursor = emit_glyph_sprt(packet_cursor, &ot_ctx->ot[GNAME_OT_CHAR_APPEND_ANIM], (u8)glyph_id, slot->x + APPEND_ANIM_X_BIAS,
+                                            slot_y[0] + APPEND_ANIM_Y_BIAS, 0, 0, 0);
         }
     }
 
     if (g_append_anim_timer == 0)
     {
-        return result;
+        return packet_cursor;
     }
 
     g_append_anim_timer--;
@@ -2831,14 +2809,14 @@ static void* draw_char_append_anim(void* prim, RenderContext* ctx)
         {
             g_append_anim_frame = 0;
             g_append_anim_timer = 0;
-            return result;
+            return packet_cursor;
         }
 
-        table = g_char_append_anim;
-        g_append_anim_timer = table[(g_append_anim_frame * APPEND_ANIM_FRAME_STRIDE) + 3];
+        anim_frames = g_char_append_anim;
+        g_append_anim_timer = anim_frames[g_append_anim_frame].slots[0].pad;
     }
 
-    return result;
+    return packet_cursor;
 }
 
 /**
