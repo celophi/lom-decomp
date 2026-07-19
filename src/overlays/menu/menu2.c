@@ -1497,3 +1497,43 @@ void func_8014F6D8(void)
     TestEvent(D_8016B768);
     TestEvent(D_8016B76C);
 }
+
+/**
+ * @brief Block until one of the four HwCARD events fires and report which.
+ *
+ * Hardware-side twin of func_8014F63C: identical polling loop and identical
+ * return mapping, but over the second group of descriptors opened by
+ * func_8014F2B0 (HwCARD rather than SwCARD).
+ *
+ * @return 0 for EvSpIOE (operation completed), 1 for EvSpERROR, 2 for
+ *         EvSpTIMOUT, 3 for EvSpNEW (card newly inserted / unformatted).
+ * @note func_8014F55C calls this for its blocking side effect only, discarding
+ *       the result, to let the hardware settle after _card_clear.
+ * @note Re-measured on this function rather than inherited from func_8014F63C:
+ *       the explicit @c ==1 compare is required (@c !=0 scores 59.74%), and the
+ *       four symmetric @c if blocks are required (m2c's inverted-third-test
+ *       shape scores 75.18%). Same figures as the SwCARD twin.
+ * @see decomp.me (100%)
+ */
+s32 func_8014F730(void)
+{
+    for (;;)
+    {
+        if (TestEvent(D_8016B770) == 1)
+        {
+            return 0;
+        }
+        if (TestEvent(D_8016B774) == 1)
+        {
+            return 1;
+        }
+        if (TestEvent(D_8016B778) == 1)
+        {
+            return 2;
+        }
+        if (TestEvent(D_8016B77C) == 1)
+        {
+            return 3;
+        }
+    }
+}
