@@ -273,3 +273,184 @@ void func_80054904(FieldTileDesc *desc, FieldTileRec *prim, s32 mode, s32 flags)
         *(s32 *) prim = -1;
     }
 }
+
+/**
+ * @brief Per-object definition record; only the flags word is read here.
+ */
+typedef struct
+{
+    u8 _pad[0xC];
+    /** 0x0C bit 2 and bits 4-5 select the base multiplier; bit 3 doubles it. */
+    s32 flags;
+} FieldObjDef;
+
+/**
+ * @brief Element of an object's part list.
+ */
+typedef struct FieldPart FieldPart;
+struct FieldPart
+{
+    FieldPart *next;        /* 0x00 */
+    u8 _pad0[0x21 - 4];
+    /** 0x21 selects the per-part byte cost: 0x18, 0x1C, 0x28 or 0x34 units. */
+    u8 kind;
+    u8 _pad1[0x26 - 0x22];
+    /** 0x26 number of instances; zero means the part is skipped entirely. */
+    u16 count;
+};
+
+/**
+ * @brief Element of the scene's object list.
+ */
+typedef struct FieldObj FieldObj;
+struct FieldObj
+{
+    FieldObj *next;         /* 0x00 */
+    FieldObjDef *def;       /* 0x04 */
+    FieldPart *parts;       /* 0x08 head of the part list */
+};
+
+typedef struct
+{
+    u8 _pad[4];
+    FieldObj *head;         /* 0x04 head of the object list */
+} FieldScene;
+
+typedef struct
+{
+    FieldScene *scene;
+} FieldSceneGlobals;
+
+/**
+ * @brief Field memory-allocator state block at 0x801ED000.
+ */
+typedef struct
+{
+    /** 0x00 top of the allocated region. */
+    u32 unk0;
+    u8 _pad[0xC - 4];
+    /** 0x0C base of the allocated region. */
+    u32 unkC;
+    /** 0x10 end of the first half of the region. */
+    u32 unk10;
+} FieldMemState;
+
+extern FieldSceneGlobals g_field_scene;
+
+/**
+ * @brief Size the field working buffer from the current scene's object list.
+ *
+ * Walks every object in the scene, derives a per-object multiplier from its
+ * definition flags, then sums a per-part byte cost over each object's part
+ * list. The total gets a 0xA000 header allowance, is clamped to a 0x12000
+ * minimum, and is written back to the allocator state at 0x801ED000 as a
+ * base / midpoint / top triple (the region is sized to twice the total).
+ *
+ * @note The four multipliers MUST be assigned to named locals inside the inner
+ *       loop. Written inline as `part->count * (n * 0x18)`, gcc reassociates to
+ *       `(part->count * 0x18) * n`, which is no longer loop-invariant, so
+ *       nothing gets hoisted into the preheader and the multiplies are
+ *       strength-reduced inside the loop instead (74.75%). Declaring them in
+ *       the loop body lets loop.c hoist all four. See [CSE-05] in idioms.md.
+ * @note The dispatch MUST be a `switch`, not an if/else chain (88.54%). gcc
+ *       merges `case 2..5` into a single range node, giving a three-node
+ *       decision tree that tests `== 1`, then `< 2`, then `< 6` -- and it emits
+ *       the case bodies in case-label order after the tests, which an if/else
+ *       chain cannot reproduce. No jump table is generated.
+ * @note `kind` must be `s32`, not `u8`: `u8` compares unsigned (`sltiu`) where
+ *       the target uses signed `slti` (98.23%).
+ * @note `obj->def->flags` must be re-read for the `& 8` test rather than
+ *       reusing the `flags` local; reusing it drops the second load (95.91%).
+ * @note `total` must be accumulated in place (`total = total + 0xA000`, then
+ *       clamped in place) rather than assigned to a second variable, which
+ *       colors it into the wrong register (99.34%). See [ALLOC-17].
+ * @note The 0x12000 limit must go through a variable. Compared directly,
+ *       gcc rewrites `total < 0x12000` into the negated `0x11FFF < total`
+ *       and flips the branch (99.28%).
+ * @note Measured non-factor: `n * 2` vs `n << 1`, both 100%.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_80054B1C(void)
+{
+    FieldMemState *state = (FieldMemState *) 0x801ED000;
+    FieldObj *obj;
+    FieldPart *part;
+    s32 n;
+    u32 total;
+    u32 base;
+    u32 lim;
+
+    total = 0;
+    obj = g_field_scene.scene->head;
+    if (obj != 0)
+    {
+        do
+        {
+            s32 flags = obj->def->flags;
+
+            n = 1;
+            if (flags & 4)
+            {
+                n = 3;
+                if (flags & 0x30)
+                {
+                    n = 2;
+                }
+            }
+            if (obj->def->flags & 8)
+            {
+                n = n * 2;
+            }
+            part = obj->parts;
+            if (part != 0)
+            {
+                do
+                {
+                    s32 m18 = n * 0x18;
+                    s32 m1C = n * 0x1C;
+                    s32 m28 = n * 0x28;
+                    s32 m34 = n * 0x34;
+
+                    if (part->count != 0)
+                    {
+                        s32 kind = part->kind;
+
+                        switch (kind)
+                        {
+                        case 0:
+                            total += part->count * m18;
+                            break;
+                        case 1:
+                            total += m1C;
+                            break;
+                        case 2:
+                        case 3:
+                        case 4:
+                        case 5:
+                            total += part->count * m28;
+                            break;
+                        default:
+                            total += part->count * m34;
+                            break;
+                        }
+                    }
+                    part = part->next;
+                }
+                while (part != 0);
+            }
+            obj = obj->next;
+        }
+        while (obj != 0);
+    }
+    total = total + 0xA000;
+    base = state->unk0;
+    lim = 0x12000;
+    if (total < lim)
+    {
+        total = 0x12000;
+    }
+    state->unk10 = base + total;
+    state->unkC = base;
+    state->unk0 = base + total * 2;
+}
