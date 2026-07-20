@@ -1,4 +1,20 @@
 #include "common.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+
+/**
+ * @brief Truncating divide by two, written out as the conditional GCC would
+ *        NOT generate for `/ 2`.
+ *
+ * gcc 2.8's expmed.c refuses the branchy power-of-two divide expansion for
+ * `abs_d == 2`, so `x / 2` always comes out as `srl 31 / addu / sra 1`. The
+ * target uses the branch form, which means the rounding was spelled out in the
+ * source. Reverting this to `/ 2` costs the whole halving block.
+ *
+ * @param v Signed value to halve.
+ * @return @p v divided by two, rounded toward zero.
+ */
+#define HALF_TOWARD_ZERO(v) ((v) >= 0 ? ((v) >> 1) : (((v) + 1) >> 1))
 
 /**
  * @brief Packed 4-byte per-tile source descriptor consumed by func_8005477C.
@@ -371,10 +387,59 @@ typedef struct
     s16 unk30;
 } FieldSceneHeader;
 
+/**
+ * @brief Per-marker record hanging off FieldMarker::def.
+ *
+ * unk4/unk6 and unk8/unkA are two screen-space point pairs; unk10 is a depth
+ * bias folded into the marker's vertical origin and unk14 the numeric label
+ * drawn next to it.
+ */
+typedef struct
+{
+    u8 _pad0[4];
+    /** 0x04 first point, horizontal. */
+    u16 unk4;
+    /** 0x06 first point, vertical (halved before use). */
+    u16 unk6;
+    /** 0x08 second point, horizontal. */
+    u16 unk8;
+    /** 0x0A second point, vertical (halved before use). */
+    u16 unkA;
+    u8 _pad1[0x10 - 0xC];
+    /** 0x10 depth bias added to the fixed 0xE0 vertical origin. */
+    s16 unk10;
+    u8 _pad2[0x14 - 0x12];
+    /** 0x14 value rendered as the marker's numeric label. */
+    u16 unk14;
+} FieldMarkerDef;
+
+/**
+ * @brief Element of the scene's marker list (FieldScene offset 0x10).
+ *
+ * @note Only drawn when D_8003524C is set, so this is most likely a debug
+ *       overlay rather than something the retail render path shows.
+ */
+typedef struct FieldMarker FieldMarker;
+struct FieldMarker
+{
+    FieldMarker *next;      /* 0x00 */
+    FieldMarkerDef *def;    /* 0x04 */
+    /** 0x08 third point, horizontal. */
+    u16 unk8;
+    /** 0x0A third point, vertical (halved before use). */
+    u16 unkA;
+    /** 0x0C fourth point, horizontal. */
+    u16 unkC;
+    /** 0x0E fourth point, vertical (halved before use). */
+    u16 unkE;
+};
+
 typedef struct
 {
     FieldSceneHeader *unk0; /* 0x00 */
     FieldObj *head;         /* 0x04 head of the object list */
+    u8 _pad0[0x10 - 8];
+    FieldMarker *markers;   /* 0x10 head of the marker list */
 } FieldScene;
 
 typedef struct
@@ -418,7 +483,7 @@ extern s32 D_801ED48C;
 
 s32 rcos(s32);
 s32 rsin(s32);
-void func_8005538C(s32, s32);
+void func_8005538C(u32 *, u32 *);
 void func_8005692C(FieldPart *, s32, s32 *, s32);
 
 /**
@@ -846,6 +911,141 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
     }
     if (D_8003524C != 0)
     {
-        func_8005538C(arg0, arg1);
+        func_8005538C((u32 *)arg0, (u32 *)arg1);
+    }
+}
+
+/**
+ * @brief Draw the field's marker overlay: an outline and a numeric label per
+ *        marker.
+ *
+ * Walks the scene's marker list (FieldScene offset 0x10). Each marker emits a
+ * red LINE_F4 quad through its def's two points and its own two points, then a
+ * red LINE_F2 closing the first point back to the third, then a numeric label
+ * (func_800AD208) drawn at the first point with one digit below 10 and two
+ * otherwise. All points are shifted by the camera scroll, and every vertical
+ * coordinate is halved toward zero. The whole run is chained onto the ordering
+ * table entry at @p ot[-1], ahead of whatever the cursor already pointed at.
+ *
+ * @param cursor Packet-buffer cursor; read for the first primitive address and
+ *               written back with the address one past the last primitive.
+ * @param ot     Ordering table pointer; the run is linked into @p ot[-1].
+ *
+ * @note `prim` must be ONE pointer variable advanced in place, not a separate
+ *       LINE_F4 and LINE_F2 local: two locals allocate two registers (a3/a1)
+ *       where the target carries everything in t0. Splitting them costs 36
+ *       exact rows.
+ * @note The advance past the LINE_F2 must be its own statement before the
+ *       label block, not an argument expression at the call (`prim + 1`):
+ *       folding it into the call costs 3 rows.
+ * @note `depth` must be assigned BEFORE setLineF4/setRGB0, not after. That one
+ *       move is worth 8 exact rows (82.49% -> 92.51%): it lets sched1 hoist the
+ *       `lh` above the primitive stores.
+ * @note `depth` must exist at all. Written inline as `sy + (def->unk10 + 0xE0)`
+ *       GCC reassociates to `(sy + 0xE0) + def->unk10` and hoists the constant
+ *       add out of the loop; that costs 18 rows.
+ * @note `scene` must be split out of the marker-list read: `g_field_scene.scene`
+ *       and `scene->markers` are two statements straddling the scroll divides,
+ *       which is what puts the `lw 0x10(a0)` after them. Merging them costs 7
+ *       rows.
+ * @note `shadow = shadow->next` belongs AFTER the call, not before it (2 rows).
+ * @note The camera-Y divide needs its own `cam_y` temp and BOTH statements need
+ *       the do/while(0) wrapper. The wrappers are not decoration: the loop
+ *       notes they leave in the RTL stop the next global load from being
+ *       hoisted across the divide's compare, which is what keeps `sx` in v0 and
+ *       duplicates the shift into the delay slot. Dropping the second wrapper
+ *       costs 17 rows; dropping the `cam_y` temp costs 6.
+ * @note The tail is `addPrims`, not two hand-written `setaddr` calls, even
+ *       though they expand to the same stores - the macro form gets the two
+ *       mask constants into a0/a1 the way the target has them (7 rows).
+ * @note Measured NON-factors, all 100% either way: `sy + depth` vs
+ *       `depth + sy`, `count`/`mode` statement order, a plain `{ }` block or a
+ *       block-local temp in place of either do/while(0), and `addPrims` spelled
+ *       out as `setaddr(prev, getaddr(&ot[-1]))`.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005538C(u32 *cursor, u32 *ot)
+{
+    s16 pos[2];
+    FieldScene *scene;
+    FieldMarker *marker;
+    FieldMarkerDef *def;
+    LINE_F4 *prim;
+    void *prev;
+    s32 sx;
+    s32 sy;
+    s32 cam_y;
+    s32 base_y;
+    s32 depth;
+    s32 value;
+    s32 digits;
+    u32 *ot_entry;
+
+    prim = (LINE_F4 *)*cursor;
+    prev = NULL;
+    scene = g_field_scene.scene;
+    sx = D_801ED484 / 256;
+    do
+    {
+        cam_y = D_801ED488 / 256;
+    }
+    while (0);
+    do
+    {
+        sy = cam_y - D_801ED48C / 512;
+    }
+    while (0);
+    marker = scene->markers;
+    if (marker != NULL)
+    {
+        ot_entry = ot - 1;
+        do
+        {
+            def = marker->def;
+            depth = def->unk10 + 0xE0;
+            setLineF4(prim);
+            setRGB0(prim, 0xFF, 0, 0);
+            base_y = sy + depth;
+            prim->x0 = def->unk4 + sx;
+            prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->unk6);
+            prim->x1 = def->unk8 + sx;
+            prim->y1 = base_y - HALF_TOWARD_ZERO((s16)def->unkA);
+            prim->x2 = marker->unkC + sx;
+            prim->y2 = base_y - HALF_TOWARD_ZERO((s16)marker->unkE);
+            prim->x3 = marker->unk8 + sx;
+            prim->y3 = base_y - HALF_TOWARD_ZERO((s16)marker->unkA);
+            if (prev != NULL)
+            {
+                setaddr(prev, prim);
+            }
+            prev = prim;
+            prim = prim + 1;
+            setLineF2((LINE_F2 *)prim);
+            setRGB0(prim, 0xFF, 0, 0);
+            prim->x0 = def->unk4 + sx;
+            prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->unk6);
+            prim->x1 = marker->unk8 + sx;
+            prim->y1 = base_y - HALF_TOWARD_ZERO((s16)marker->unkA);
+            setaddr(prev, prim);
+            prev = prim;
+            prim = (LINE_F4 *)((LINE_F2 *)prim + 1);
+            pos[0] = def->unk4 + sx;
+            pos[1] = base_y - HALF_TOWARD_ZERO((s16)def->unk6);
+            value = def->unk14;
+            digits = 2;
+            if (def->unk14 < 0xA)
+            {
+                digits = 1;
+            }
+            prim = (LINE_F4 *)func_800AD208(ot_entry, prim, value, digits, pos);
+            marker = marker->next;
+        }
+        while (marker != NULL);
+    }
+    if (prev != NULL)
+    {
+        addPrims(&ot[-1], (void *)*cursor, prev);
+        *cursor = (u32)prim;
     }
 }
