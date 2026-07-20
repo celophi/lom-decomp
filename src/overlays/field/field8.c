@@ -275,14 +275,53 @@ void func_80054904(FieldTileDesc *desc, FieldTileRec *prim, s32 mode, s32 flags)
 }
 
 /**
- * @brief Per-object definition record; only the flags word is read here.
+ * @brief Overlapping view of FieldObj's word at 0x0C.
+ *
+ * The word is tested as a whole (bit 0 = object active) while bytes 0x0E and
+ * 0x0F are read separately as a magnitude and an angle, so the two views have
+ * to share storage.
+ */
+typedef union
+{
+    s32 word;
+    struct
+    {
+        u8 unk0;
+        u8 unk1;
+        /** 0x0E drift magnitude; zero disables the per-frame drift. */
+        u8 unk2;
+        /** 0x0F drift angle, scaled by 0x10 before rcos/rsin. */
+        u8 unk3;
+    } b;
+} FieldObjFlags;
+
+/**
+ * @brief Per-object definition record.
  */
 typedef struct
 {
-    u8 _pad[0xC];
-    /** 0x0C bit 2 and bits 4-5 select the base multiplier; bit 3 doubles it. */
-    s32 flags;
+    u8 _pad0[0xC];
+    /**
+     * 0x0C bit 1 zeroes the offsets; bit 2 and bits 4-5 select the horizontal
+     * multiplier / wrap; bit 3 and bits 6-7 the vertical one. Must be UNSIGNED:
+     * the target shifts it with `srl`, not `sra`.
+     */
+    u32 flags;
+    u8 _pad1[0x1C - 0x10];
+    /** 0x1C horizontal scale; 0x10 means "unscaled", bit 7 negates. */
+    u8 unk1C;
+    /** 0x1D vertical scale; same encoding as unk1C. */
+    u8 unk1D;
 } FieldObjDef;
+
+/**
+ * @brief Definition record hanging off a part; only the 0x0B byte is read.
+ */
+typedef struct
+{
+    u8 _pad[0xB];
+    u8 unkB;
+} FieldPartDef;
 
 /**
  * @brief Element of an object's part list.
@@ -291,12 +330,18 @@ typedef struct FieldPart FieldPart;
 struct FieldPart
 {
     FieldPart *next;        /* 0x00 */
-    u8 _pad0[0x21 - 4];
+    FieldPartDef *def;      /* 0x04 */
+    u8 _pad0[0x20 - 8];
+    /** 0x20 zero means the part is not drawn. */
+    u8 unk20;
     /** 0x21 selects the per-part byte cost: 0x18, 0x1C, 0x28 or 0x34 units. */
     u8 kind;
     u8 _pad1[0x26 - 0x22];
     /** 0x26 number of instances; zero means the part is skipped entirely. */
     u16 count;
+    s32 unk28;              /* 0x28 x offset within the object */
+    s32 unk2C;              /* 0x2C y offset within the object */
+    s32 unk30;              /* 0x30 z offset within the object */
 };
 
 /**
@@ -308,11 +353,27 @@ struct FieldObj
     FieldObj *next;         /* 0x00 */
     FieldObjDef *def;       /* 0x04 */
     FieldPart *parts;       /* 0x08 head of the part list */
+    FieldObjFlags flags;    /* 0x0C */
+    u8 _pad0[0x1C - 0x10];
+    s32 unk1C;              /* 0x1C x offset */
+    s32 unk20;              /* 0x20 y offset */
+    s32 unk24;              /* 0x24 z offset */
+    s32 unk28;              /* 0x28 accumulated x drift */
+    s32 unk2C;              /* 0x2C accumulated y drift */
 };
+
+/**
+ * @brief Header hanging off FieldScene offset 0; only the 0x30 halfword is read.
+ */
+typedef struct
+{
+    u8 _pad[0x30];
+    s16 unk30;
+} FieldSceneHeader;
 
 typedef struct
 {
-    u8 _pad[4];
+    FieldSceneHeader *unk0; /* 0x00 */
     FieldObj *head;         /* 0x04 head of the object list */
 } FieldScene;
 
@@ -335,7 +396,30 @@ typedef struct
     u32 unk10;
 } FieldMemState;
 
+/**
+ * @brief Camera / scroll state block at 0x801ED480.
+ *
+ * The individual words are also referenced as the standalone symbols
+ * D_801ED484 / D_801ED488 / D_801ED48C; func_80054CA8 uses BOTH forms and the
+ * distinction is load-bearing for the addressing mode.
+ */
+typedef struct
+{
+    u8 _pad[8];
+    s32 unk8;               /* 0x08 == D_801ED488 */
+    s32 unkC;               /* 0x0C == D_801ED48C */
+} FieldCamera;
+
 extern FieldSceneGlobals g_field_scene;
+extern s32 D_8003524C;
+extern s32 D_801ED484;
+extern s32 D_801ED488;
+extern s32 D_801ED48C;
+
+s32 rcos(s32);
+s32 rsin(s32);
+void func_8005538C(s32, s32);
+void func_8005692C(FieldPart *, s32, s32 *, s32);
 
 /**
  * @brief Size the field working buffer from the current scene's object list.
@@ -453,4 +537,315 @@ void func_80054B1C(void)
     state->unk10 = base + total;
     state->unkC = base;
     state->unk0 = base + total * 2;
+}
+
+/**
+ * @brief Draw every visible part of every active field object.
+ *
+ * Walks the scene's object list; for each active object it derives a scroll
+ * offset from the camera state (scaled per-axis by the object's definition,
+ * optionally negated and wrapped to a power-of-two boundary), applies the
+ * object's per-frame drift, then walks the object's part list and submits each
+ * visible part to func_8005692C. Parts near a wrap boundary are submitted more
+ * than once so they appear on both sides of the seam.
+ *
+ * @param arg0 Render target / context handle, forwarded to func_8005692C and
+ *             func_8005538C.
+ * @param arg1 TODO: opaque, forwarded unchanged as the 4th arg of
+ *             func_8005692C and 2nd of func_8005538C.
+ * @param arg2 Mode selector: 0 advances the per-frame drift; 2 forces the
+ *             unscaled camera offsets.
+ *
+ * @warning **THIS FUNCTION IS NOT A MATCH (92.92%) AND MAY NOT BE FUNCTIONALLY
+ *          EQUIVALENT.** It is committed as work in progress. Do not rely on
+ *          its exact behaviour, and re-verify before building a release image.
+ *          The running analysis lives in working/func_80054CA8/status.md,
+ *          including eleven measured-and-retired probe classes.
+ *
+ * @note The signed divides come in TWO forms and the choice is per-site.
+ *       `x / 256` yields the compact `bgez / addiu / sra` sequence, which is
+ *       what the target uses inside the part loop and for D_801ED488 /
+ *       D_801ED48C. The head divide of D_801ED484 and the px/py/pz divides use
+ *       a two-block form that ONLY appears if the rounding is written out as a
+ *       real `if/else`. Collapsing those to `/ 256` costs ~11 exact rows.
+ * @note `params` is one 5-word array, not five locals: params[2..4] are written
+ *       and never read here, and survive only because the array's address is
+ *       passed to func_8005692C.
+ * @note `FieldObjDef.flags` must be `u32` (`srl`, not `sra`) - worth 6 rows.
+ * @note The mask must be computed BEFORE loading obj->unk28 / obj->unk2C in the
+ *       two wrap blocks - worth 3 rows.
+ * @note Measured and rejected, despite the target visibly doing it: writing
+ *       `ox`/`oz` as accumulate-in-place (`ox = ox + obj->unk28`) scores 15-42
+ *       exact rows WORSE. See status.md before retrying.
+ *
+ * @see decomp.me (92.92%) TODO
+ */
+void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
+{
+    s32 params[5];
+    FieldObj *obj;
+    FieldObjDef *def;
+    FieldPart *part;
+    s32 ox;
+    s32 oy;
+    s32 oz;
+    s32 modX;
+    s32 modY;
+    s32 px;
+    s32 py;
+    s32 pz;
+
+    modX = 0;
+    modY = 0;
+    params[2] = g_field_scene.scene->unk0->unk30;
+    {
+        s32 t = D_801ED484;
+        s32 q;
+
+        if (t >= 0)
+        {
+            q = t >> 8;
+        }
+        else
+        {
+            q = (t + 0xFF) >> 8;
+        }
+        params[3] = q;
+    }
+    params[4] = (D_801ED488 / 256 - D_801ED48C / 512) + 0xE0;
+    obj = g_field_scene.scene->head;
+    if (obj != 0)
+    {
+        do
+        {
+            if (obj->flags.word & 1)
+            {
+                def = obj->def;
+                ox = 0;
+                if (def->flags & 2)
+                {
+                    oy = 0;
+                    oz = 0;
+                }
+                else
+                {
+                    u8 sx = def->unk1C;
+
+                    if ((sx == 0x10) || (arg2 == 2))
+                    {
+                        ox = D_801ED484;
+                    }
+                    else
+                    {
+                        u8 mag = sx & 0x7F;
+                        s32 v;
+
+                        if (sx & 0x80)
+                        {
+                            v = -D_801ED484;
+                        }
+                        else
+                        {
+                            mag = def->unk1C;
+                            v = D_801ED484;
+                        }
+                        ox = (v * mag) / 16;
+                    }
+                    {
+                        u8 sy = def->unk1D;
+
+                        if ((sy == 0x10) || (arg2 == 2))
+                        {
+                            oy = ((FieldCamera *) 0x801ED480)->unk8;
+                            oz = ((FieldCamera *) 0x801ED480)->unkC;
+                        }
+                        else
+                        {
+                            s32 a;
+                            s32 b;
+
+                            if (sy & 0x80)
+                            {
+                                oy = (-D_801ED488 * (sy & 0x7F)) / 16;
+                                a = -D_801ED48C;
+                                b = def->unk1D & 0x7F;
+                            }
+                            else
+                            {
+                                a = def->unk1D;
+                                oy = (D_801ED488 * a) / 16;
+                                b = D_801ED48C;
+                            }
+                            oz = (b * a) / 16;
+                        }
+                    }
+                }
+                if (obj->flags.b.unk2 != 0)
+                {
+                    if (arg2 == 0)
+                    {
+                        obj->unk28 += (rcos(obj->flags.b.unk3 * 0x10) * obj->flags.b.unk2) / 256;
+                        obj->unk2C -= (rsin(obj->flags.b.unk3 * 0x10) * obj->flags.b.unk2) / 256;
+                    }
+                    if (def->flags & 4)
+                    {
+                        s32 t;
+
+                        modX = 0x10000 << ((def->flags >> 4) & 3);
+                        t = obj->unk28;
+                        if (t >= 0)
+                        {
+                            obj->unk28 = t & (modX - 1);
+                        }
+                        else
+                        {
+                            obj->unk28 = -(-t & (modX - 1));
+                        }
+                    }
+                    if (def->flags & 8)
+                    {
+                        s32 t;
+
+                        modX = 0x20000 << ((def->flags >> 6) & 3);
+                        t = obj->unk2C;
+                        if (t >= 0)
+                        {
+                            obj->unk2C = t & (modX - 1);
+                        }
+                        else
+                        {
+                            obj->unk2C = -(-t & (modX - 1));
+                        }
+                    }
+                }
+                {
+                    s32 tx = ox + obj->unk28;
+                    s32 tz = oz + obj->unk2C;
+
+                    if (tx >= 0)
+                    {
+                        px = tx >> 8;
+                    }
+                    else
+                    {
+                        px = (tx + 0xFF) >> 8;
+                    }
+                    if (oy >= 0)
+                    {
+                        py = oy >> 8;
+                    }
+                    else
+                    {
+                        py = (oy + 0xFF) >> 8;
+                    }
+                    if (tz >= 0)
+                    {
+                        pz = tz >> 9;
+                    }
+                    else
+                    {
+                        pz = (tz + 0x1FF) >> 9;
+                    }
+                }
+                part = obj->parts;
+                if (part != 0)
+                {
+                    do
+                    {
+                        if ((part->unk20 != 0) && (part->count != 0))
+                        {
+                            params[0] = px + (obj->unk1C + part->unk28) / 256;
+                            {
+                                s32 a = (py - pz) + (obj->unk20 + part->unk2C) / 256;
+                                s32 d = part->def->unkB * 0x10 - 0xE0;
+
+                                a = a - (obj->unk24 + part->unk30) / 512;
+                                params[1] = a - d;
+                            }
+                            if (def->flags & 4)
+                            {
+                                modX = 0x100 << ((def->flags >> 4) & 3);
+                                if (params[0] >= 0)
+                                {
+                                    params[0] = params[0] & (modX - 1);
+                                }
+                                else
+                                {
+                                    params[0] = modX - (-params[0] & (modX - 1));
+                                }
+                            }
+                            if (def->flags & 8)
+                            {
+                                modY = 0x100 << ((def->flags >> 6) & 3);
+                                if (params[1] >= 0)
+                                {
+                                    params[1] = params[1] & (modY - 1);
+                                }
+                                else
+                                {
+                                    params[1] = modY - (-params[1] & (modY - 1));
+                                }
+                            }
+                            func_8005692C(part, arg0, params, arg1);
+                            if (def->flags & 4)
+                            {
+                                if (params[0] > 0)
+                                {
+                                    params[0] -= modX;
+                                    func_8005692C(part, arg0, params, arg1);
+                                    params[0] += modX;
+                                }
+                                if (!(def->flags & 0x30))
+                                {
+                                    s32 t = params[0] + modX;
+
+                                    if (t < 0x140)
+                                    {
+                                        params[0] = t;
+                                        func_8005692C(part, arg0, params, arg1);
+                                        params[0] -= modX;
+                                    }
+                                }
+                            }
+                            if (def->flags & 8)
+                            {
+                                if (params[1] > 0)
+                                {
+                                    params[1] -= modY;
+                                    func_8005692C(part, arg0, params, arg1);
+                                }
+                                if (def->flags & 4)
+                                {
+                                    if (params[0] > 0)
+                                    {
+                                        params[0] -= modX;
+                                        func_8005692C(part, arg0, params, arg1);
+                                        params[0] += modX;
+                                    }
+                                    if (!(def->flags & 0x30))
+                                    {
+                                        s32 t = params[0] + modX;
+
+                                        if (t < 0x140)
+                                        {
+                                            params[0] = t;
+                                            func_8005692C(part, arg0, params, arg1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        part = part->next;
+                    }
+                    while (part != 0);
+                }
+            }
+            obj = obj->next;
+        }
+        while (obj != 0);
+    }
+    if (D_8003524C != 0)
+    {
+        func_8005538C(arg0, arg1);
+    }
 }
