@@ -3794,6 +3794,12 @@ typedef s16 M2C_UNK16;
 #define M2C_FIELD(expr, type_ptr, offset) (*(type_ptr)((s8*)(expr) + (offset)))
 #define M2C_BITWISE(type, expr) ((type)(expr))
 
+typedef struct
+{
+    s16 x;
+    s16 y;
+} Vec2s;
+
 /* New globals introduced by func_80145608 */
 extern s32 D_80042FB4;
 extern u16 D_800F0C1C;
@@ -3804,6 +3810,7 @@ extern u16 D_80151A34;
 extern u8 D_80168659[];
 extern u8 D_80168696[];
 extern u8 D_801686B8[];
+extern u8 D_801686CC[];
 extern u8 D_80168C01[];
 extern u8 D_80168C05[];
 extern u8 D_80168C09[];
@@ -3823,16 +3830,34 @@ extern u8 D_80168C1C[];
  *        packed in each MenuContentItem. Handles navigation, equip, buy/sell,
  *        status, companion, and script-driven actions. Rebuilds D_801690B8
  *        and D_80168C70 circular lists via the four preceding helpers as needed.
- * @see decomp.me (67.06%) https://decomp.me/scratch/D6Nba
+ * @note  Content entries are 8 bytes: u16 x|type<<12, u8 y+8, u8 id. var_s3
+ *        walks the u16 view and var_s4 is a byte cursor at entry+2; both
+ *        advance 8 bytes per entry.
+ * @note  func_800A88A0 takes 7 args here (dest, ot, text, mode, x, y, sel);
+ *        GCC cross-jumps the identical call tails, so the target shows only
+ *        three real jals. Most loop sites recompute x/y/sel from the entry;
+ *        the spB0 label sites read pos.x/pos.y; after-loop sites pass
+ *        (0xAC, 0xC, 2).
+ * @note  The outer loop must be a goto loop (label + if (--spC0) goto): with
+ *        loop notes, gcc 2.7.2 loop.c hoists/combines the in-loop lui pairs
+ *        and reduces a var_s4+1 giv, none of which exist in the target. See
+ *        idioms.md [LOOP-09]. pos_p and pad_base are the only invariants the
+ *        target holds in callee-saved registers (s6 and fp), assigned in the
+ *        preheader.
+ * @note  In-progress match; working/func_80145608/status.md has the full log
+ *        (remaining: frame -0xE8 vs -0xF0 spC0 spill, saved-reg rotation,
+ *        six small structural runs).
+ * @see decomp.me (86.97%) https://decomp.me/scratch/D6Nba
  */
 void* func_80145608(void* arg0, s32* arg1)
 {
-    s32 spC0;
+    u8 sp28[0x40];
+    u8 sp68[0x40];
+    Vec2s pos;
     u8 spB0[16];
-    s16 spAA;
-    s16 spA8;
-    u8 sp68[4];
-    u8 sp28[4];
+    s32 spC0;
+    Vec2s* pos_p;
+    u8* pad_base;
     s32 var_a0_3, var_a0_4, var_a0_7, var_a0_8;
     s32 var_a1, var_a2_3, var_a2_4, var_a2_5, var_a2_7, var_a2_8, var_a2_10;
     s32 var_a2_11, var_a2_12, var_a2_13, var_a2_14, var_a2_15;
@@ -3844,7 +3869,7 @@ void* func_80145608(void* arg0, s32* arg1)
     u32 var_a2_26;
     s32 temp_v0_5, temp_v0_6;
     u16* var_s3;
-    u16* var_s4;
+    u8* var_s4;
     u8 **var_t0_2, **var_t0_3, **var_t0_4, **var_t0_5;
     u8 *var_a2_2, *var_a2_6, *var_a2_27, *var_a2_28;
     u8 *var_v1_2, *var_v1_7, *var_v1_9, *var_v1_12, *var_v1_13, *var_v1_14, *var_v1_15, *var_v1_16, *var_v1_18, *var_v1_20;
@@ -3859,6 +3884,7 @@ void* func_80145608(void* arg0, s32* arg1)
     u16 temp_s0_17;
     u32 temp_s0_16, temp_s2;
     s32 temp_t3;
+    s32* link_p;
     void *temp_s1, *temp_s1_2, *temp_s1_3;
     void* var_s1_2;
     s32 i, k;
@@ -3875,7 +3901,7 @@ void* func_80145608(void* arg0, s32* arg1)
     {
         u8 idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
         var_s3 = (u16*)g_menu_content_table[idx];
-        spC0 = D_8014FE2C[idx];
+        spC0 = D_8014FE2C[D_801686CC[idx]];
     }
 
     if (var_s3 != NULL)
@@ -3903,128 +3929,164 @@ void* func_80145608(void* arg0, s32* arg1)
 
             if (spC0 != 0)
             {
-                var_s4 = var_s3 + 2;
-                do
+                var_s4 = (u8*)var_s3 + 2;
+                pos_p = &pos;
+                pad_base = (u8*)&g_pad_ctx;
+            loop_top:
                 {
-                    spA8 = (s16)(*var_s3 & 0x1FF);
-                    spAA = (s16)(*(u8*)var_s4 - 8);
+                    pos.x = (s16)(*var_s3 & 0x1FF);
+                    pos.y = (s16)(*var_s4 - 8);
                     switch ((*var_s3) >> 12)
                     {
                     case 1:
                         var_a0 = var_s1;
                         var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
-                        var_v1_2 = (u8*)((u8*)var_a2 + (*(u8*)((u8*)var_s4 + 1) * 2));
                         {
                             s32 a3 = 1;
-                            void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                            var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3);
+                            void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(var_s4 + 1) * 2)));
+                            var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                         }
                         break;
 
                     case 2:
                     {
-                        u8 t0 = 0xFF;
-                        u8 b1 = *(u8*)((u8*)var_s4 + 1);
-                        if (b1 < 2)
+                        s32 t0 = 0xFF;
+                        if (*(u8*)(var_s4 + 1) < 2)
                         {
                             t0 = 0x1E;
                         }
-                        else if (b1 - 2 < 8)
+                        if ((u32)(*(u8*)(var_s4 + 1) - 2) < 8)
                         {
                             s32 a2_3 = 0;
-                            if (D_80169404 != 0 && *(u8*)D_80169404 != 0)
+                            if (*(u8*)D_80169404 != 0 && D_80169404 != 0)
+                            {
                                 a2_3 = *(u8*)(D_80169404 + 0x2C);
-                            if (((a2_3 >> (b1 - 2)) & 1) != 0)
-                                t0 = b1 + 0x3B;
+                            }
+                            if (((a2_3 >> (*(u8*)(var_s4 + 1) - 2)) & 1) != 0)
+                            {
+                                t0 = *(u8*)(var_s4 + 1) + 0x3B;
+                            }
                             else
+                            {
                                 t0 = 0x21;
+                            }
                         }
-                        else if (b1 - 0xA < 8)
+                        else if ((u32)(*(u8*)(var_s4 + 1) - 0xA) < 8)
                         {
                             s32 a2_4 = 0;
-                            if (D_80169404 != 0 && *(u8*)D_80169404 != 0)
+                            if (*(u8*)D_80169404 != 0 && D_80169404 != 0)
+                            {
                                 a2_4 = *(u8*)(D_80169404 + 0x2D);
-                            if (((a2_4 >> (b1 - 0xA)) & 1) != 0)
-                                t0 = b1 + 0x2B;
+                            }
+                            if (((a2_4 >> (*(u8*)(var_s4 + 1) - 0xA)) & 1) != 0)
+                            {
+                                t0 = *(u8*)(var_s4 + 1) + 0x2B;
+                            }
                             else
+                            {
                                 t0 = 0x21;
+                            }
                         }
-                        else if (b1 - 0x12 < 8)
+                        else if ((u32)(*(u8*)(var_s4 + 1) - 0x12) < 8)
                         {
                             s32 a2_4 = 0;
                             if (*(u8*)(D_80168C20 + 0x40) != 0)
+                            {
                                 a2_4 = *(u8*)(D_80168C20 + 0x6C);
+                            }
                             if (*(u8*)(D_80168C20 + 0x80) != 0)
+                            {
                                 a2_4 |= *(u8*)(D_80168C20 + 0xAC);
+                            }
                             if (*(u8*)(D_80168C20 + 0xC0) != 0)
+                            {
                                 a2_4 |= *(u8*)(D_80168C20 + 0xEC);
-                            if (((a2_4 >> (b1 - 0x12)) & 1) != 0)
-                                t0 = b1 + 0x2B;
+                            }
+                            if (((a2_4 >> (*(u8*)(var_s4 + 1) - 0x12)) & 1) != 0)
+                            {
+                                t0 = *(u8*)(var_s4 + 1) + 0x2B;
+                            }
                             else
+                            {
                                 t0 = 0x21;
+                            }
                         }
-                        else if (b1 - 0x1A < 8)
+                        else if ((u32)(*(u8*)(var_s4 + 1) - 0x1A) < 8)
                         {
                             s32 a2_5 = 0;
                             if (*(u8*)(D_80168C20 + 0x40) != 0)
+                            {
                                 a2_5 = *(u8*)(D_80168C20 + 0x6D);
+                            }
                             if (*(u8*)(D_80168C20 + 0x80) != 0)
+                            {
                                 a2_5 |= *(u8*)(D_80168C20 + 0xAD);
+                            }
                             if (*(u8*)(D_80168C20 + 0xC0) != 0)
+                            {
                                 a2_5 |= *(u8*)(D_80168C20 + 0xED);
-                            if (((a2_5 >> (b1 - 0x1A)) & 1) != 0)
-                                t0 = D_80168696[b1];
+                            }
+                            if (((a2_5 >> (*(u8*)(var_s4 + 1) - 0x1A)) & 1) != 0)
+                            {
+                                t0 = D_80168696[*(u8*)(var_s4 + 1)];
+                            }
                             else
+                            {
                                 t0 = 0x21;
+                            }
                         }
-                        else if (b1 - 0x22 < 8)
+                        else if ((u32)(*(u8*)(var_s4 + 1) - 0x22) < 8)
                         {
                             t0 = 0x21;
                             if (D_80169410 != 0)
                             {
-                                if (((*(u8*)(D_80169410 + 0x2C) >> (b1 - 0x22)) & 1) != 0)
-                                    t0 = b1 + 0x13;
+                                if (((*(u8*)(D_80169410 + 0x2C) >> (*(u8*)(var_s4 + 1) - 0x22)) & 1) != 0)
+                                {
+                                    t0 = *(u8*)(var_s4 + 1) + 0x13;
+                                }
                             }
                         }
-                        else if (b1 - 0x2A < 8)
+                        else if ((u32)(*(u8*)(var_s4 + 1) - 0x2A) < 8)
                         {
                             s32 idx = 0;
-                            void* base2 = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                            void* base2 = *(void**)(pad_base + 0x271C);
                             u8* ptr = (u8*)base2 + g_menu_char_slot * 0x250;
                             while (idx < 8)
                             {
-                                if (*(u8*)(ptr + idx + 0x638) == b1 - 0x2A)
+                                if (*(u8*)(ptr + idx + 0x638) == *(u8*)(var_s4 + 1) - 0x2A)
+                                {
                                     break;
+                                }
                                 idx++;
                             }
                             t0 = D_801686B8[idx];
                         }
-                        else if (b1 - 0x32 < 4)
+                        else if ((u32)(*(u8*)(var_s4 + 1) - 0x32) < 4)
                         {
                             if (g_menu_char_slot != 2)
                             {
-                                u8* tmp2 = (u8*)D_801693FC + (b1 << 6);
+                                u8* tmp2 = (u8*)D_801693FC + (*(u8*)(var_s4 + 1) << 6) - 0xC80;
                                 t0 = 0x21;
-                                if (*(u8*)(tmp2 - 0xC80) != 0)
+                                if (*tmp2 != 0)
                                 {
-                                    u32 val = *(u32*)(tmp2 - 0xC80 + 0x14);
-                                    u32 v1 = (val >> 8) & 3;
-                                    if (v1 == 1)
+                                    u32 val = *(u32*)(tmp2 + 0x14);
+                                    s32 sel = (val >> 8) & 3;
+                                    switch (sel)
                                     {
+                                    case 1:
                                         t0 = ((val >> 10) & 0x3F) + 0x50;
-                                    }
-                                    else if (v1 == 2)
-                                    {
+                                        break;
+                                    case 2:
                                         t0 = ((val >> 10) & 0x3F) + 0x5C;
-                                    }
-                                    else if (v1 == 0)
-                                    {
+                                        break;
+                                    case 0:
                                         t0 = ((val >> 10) & 0x3F) + 0x45;
+                                        break;
                                     }
                                 }
                             }
                         }
-                        else if (b1 == 0x36)
+                        else if (*(u8*)(var_s4 + 1) == 0x36)
                         {
                             t0 = 0xFF;
                             if (g_menu_item_ptr != 0)
@@ -4032,47 +4094,73 @@ void* func_80145608(void* arg0, s32* arg1)
                                 if (*(u8*)g_menu_item_ptr != 0)
                                 {
                                     u32 val = *(u32*)(g_menu_item_ptr + 0x14);
-                                    u32 v1 = (val >> 8) & 3;
-                                    if (v1 == 1)
+                                    s32 sel = (val >> 8) & 3;
+                                    switch (sel)
+                                    {
+                                    case 1:
                                         t0 = ((val >> 10) & 0x3F) + 0x50;
-                                    else if (v1 == 2)
+                                        break;
+                                    case 2:
                                         t0 = ((val >> 10) & 0x3F) + 0x5C;
+                                        break;
+                                    case 0:
+                                        t0 = ((val >> 10) & 0x3F) + 0x45;
+                                        break;
+                                    }
                                 }
                             }
                         }
-                        else if (b1 - 0x37 < 0x1E)
+                        else if ((u32)(*(u8*)(var_s4 + 1) - 0x37) < 0x1E)
                         {
-                            t0 = D_80168659[b1];
+                            t0 = D_80168659[*(u8*)(var_s4 + 1)];
                         }
-                        else if (b1 == 0x55)
+                        else if (*(u8*)(var_s4 + 1) == 0x55)
                         {
-                            u32 v0 = (*(u32*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x28) >> 1) & 1;
-                            t0 = (v0 != 0) ? 0x6A : 0xFF;
+                            t0 = 0xFF;
+                            if (((*(u32*)(*(void**)(pad_base + 0x271C) + 0x28) >> 1) & 1) != 0)
+                            {
+                                t0 = 0x6A;
+                            }
                         }
-                        else if (b1 == 0x56)
+                        else if (*(u8*)(var_s4 + 1) == 0x56)
                         {
-                            u32 v0 = (*(u32*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x28) >> 1) & 1;
-                            t0 = (v0 != 0) ? 0xFF : 0x6A;
+                            t0 = 0x6A;
+                            if (((*(u32*)(*(void**)(pad_base + 0x271C) + 0x28) >> 1) & 1) != 0)
+                            {
+                                t0 = 0xFF;
+                            }
                         }
-                        else if (b1 == 0x57)
+                        else if (*(u8*)(var_s4 + 1) == 0x57)
                         {
-                            u32 v0 = *(u32*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x28) & 1;
-                            t0 = (v0 != 0) ? 0x6A : 0xFF;
+                            t0 = 0xFF;
+                            if ((*(u32*)(*(void**)(pad_base + 0x271C) + 0x28) & 1) != 0)
+                            {
+                                t0 = 0x6A;
+                            }
                         }
-                        else if (b1 == 0x58)
+                        else if (*(u8*)(var_s4 + 1) == 0x58)
                         {
-                            u32 v0 = *(u32*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x28) & 1;
-                            t0 = (v0 != 0) ? 0xFF : 0x6A;
+                            t0 = 0x6A;
+                            if ((*(u32*)(*(void**)(pad_base + 0x271C) + 0x28) & 1) != 0)
+                            {
+                                t0 = 0xFF;
+                            }
                         }
-                        else if (b1 == 0x59)
+                        else if (*(u8*)(var_s4 + 1) == 0x59)
                         {
-                            u32 v0 = *(s32*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x858) & 0x80;
-                            t0 = (v0 != 0) ? 0x6A : 0xFF;
+                            t0 = 0xFF;
+                            if ((*(s32*)(*(void**)(pad_base + 0x271C) + 0x858) & 0x80) != 0)
+                            {
+                                t0 = 0x6A;
+                            }
                         }
-                        else if (b1 == 0x5A)
+                        else if (*(u8*)(var_s4 + 1) == 0x5A)
                         {
-                            u32 v0 = *(s32*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x858) & 0x80;
-                            t0 = (v0 != 0) ? 0xFF : 0x6A;
+                            t0 = 0x6A;
+                            if ((*(s32*)(*(void**)(pad_base + 0x271C) + 0x858) & 0x80) != 0)
+                            {
+                                t0 = 0xFF;
+                            }
                         }
                         else
                         {
@@ -4080,14 +4168,14 @@ void* func_80145608(void* arg0, s32* arg1)
                         }
                         if (t0 != 0xFF)
                         {
-                            var_s1 = func_801482D0(func_80149BB4(var_s1, arg1, t0, *var_s3 & 0x1FF, *(u8*)var_s4 - 8, 0, 0, 0, 0), arg1);
+                            var_s1 = func_801482D0(func_80149BB4(var_s1, arg1, t0, *var_s3 & 0x1FF, *var_s4 - 8, 0, 0, 0, 0), arg1);
                         }
                     }
                     break;
 
                     case 3:
                     {
-                        u8 tmp = *(u8*)((u8*)var_s4 + 1);
+                        u8 tmp = *(u8*)(var_s4 + 1);
                         switch (tmp)
                         {
                         case 0x1:
@@ -4095,7 +4183,7 @@ void* func_80145608(void* arg0, s32* arg1)
                             {
                                 var_a0 = var_s1;
                                 var_a2_2 = (void*)g_menu_item_ptr;
-                                var_s1 = func_800A88A0(var_a0, arg1, var_a2_2, 1);
+                                var_s1 = func_800A88A0(var_a0, arg1, var_a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                             break;
                         case 0x2:
@@ -4109,7 +4197,8 @@ void* func_80145608(void* arg0, s32* arg1)
                                 {
                                     void* a3 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x30));
                                     void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
-                                    func_80148324(&sp68, (void*)((u8*)a3 + (*(u16*)(g_menu_item_ptr + 0x16) & 0x3F) * 2),
+                                    func_80148324(&sp68,
+                                                  (void*)((u8*)a3 + *(u16*)((u8*)a3 + (*(u16*)(g_menu_item_ptr + 0x16) & 0x3F) * 2)),
                                                   (void*)((u8*)a2 + *(u16*)((u8*)a2 + 0xB4)), a3);
                                 }
                                 else
@@ -4118,69 +4207,71 @@ void* func_80145608(void* arg0, s32* arg1)
                                 }
                                 v = *(u32*)(g_menu_item_ptr + 0x14);
                                 v1 = (v >> 8) & 3;
-                                base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
                                 if (v1 == 0)
                                 {
+                                    base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
                                     a2_6 = (void*)((u8*)base2 + *(u16*)((u8*)base2 + ((v >> 9) & 0x7E)));
                                 }
                                 else if (v1 == 1)
                                 {
+                                    base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
                                     a2_6 = (void*)((u8*)base2 + *(u16*)((u8*)base2 + ((v >> 9) & 0x7E) + 0x16));
                                 }
                                 else
                                 {
-                                    a2_6 = (void*)((u8*)base2 + *(u16*)((u8*)base2 + ((v >> 9) & 0x7E) + 0x2E));
+                                    base2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x68));
+                                    a2_6 = (void*)((u8*)base2 + *(u16*)((u8*)base2 + ((*(u32*)(g_menu_item_ptr + 0x14) >> 9) & 0x7E) + 0x2E));
                                 }
                                 func_80148324(&sp28, &sp68, a2_6);
-                                var_s1 = func_800A88A0(var_s1, arg1, &sp28, 1);
+                                var_s1 = func_800A88A0(var_s1, arg1, &sp28, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                             break;
                         case 0x3:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, *(u32*)(g_menu_item_ptr + 0x18) & 0xF, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, *(u32*)(g_menu_item_ptr + 0x18) & 0xF, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x4:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 4) & 0xF, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 4) & 0xF, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x5:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 8) & 0xF, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 8) & 0xF, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x6:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 12) & 0xF, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 12) & 0xF, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x7:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, *(u16*)(g_menu_item_ptr + 0x1A) & 0xF, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, *(u16*)(g_menu_item_ptr + 0x1A) & 0xF, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x8:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 20) & 0xF, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 20) & 0xF, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x9:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, *(u8*)(g_menu_item_ptr + 0x1B) & 0xF, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, *(u8*)(g_menu_item_ptr + 0x1B) & 0xF, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0xA:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 28) & 0xF, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, (*(u32*)(g_menu_item_ptr + 0x18) >> 28) & 0xF, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0xB:
@@ -4190,11 +4281,10 @@ void* func_80145608(void* arg0, s32* arg1)
                             {
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x5C));
-                                var_v1_2 = (u8*)((u8*)var_a2 + (*(u8*)(g_menu_item_ptr + (tmp - 0xB + 0x15)) * 2));
                                 {
                                     s32 a3 = 1;
-                                    void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3);
+                                    void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(g_menu_item_ptr + (tmp - 0xB + 0x15)) * 2)));
+                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
                             break;
@@ -4205,24 +4295,23 @@ void* func_80145608(void* arg0, s32* arg1)
                             {
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
-                                var_v1_2 = (u8*)((u8*)var_a2 + (*(u8*)(D_80169410 + (tmp - 0xE + 0x1A)) * 2));
                                 {
                                     s32 a3 = 1;
-                                    void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3);
+                                    void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(D_80169410 + (tmp - 0xE + 0x1A)) * 2)));
+                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
                             break;
                         case 0x11:
                             if (D_80169410 != 0)
                             {
-                                var_s1 = func_800A8A78(arg1, var_s1, *(u16*)(D_80169410 + 0x24), 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_800A8A78(arg1, var_s1, *(u16*)(D_80169410 + 0x24), 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x12:
                             if (D_80169404 != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, *(u16*)(D_80169404 + 0x24), 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, *(u16*)(D_80169404 + 0x24), 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x13:
@@ -4237,7 +4326,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 a3ptr = (u8*)D_80169408;
                                 idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
                                 a2_2 = (void*)((u8*)a2 + *(u16*)((u8*)a2 + idx));
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                             break;
                         case 0x14:
@@ -4245,10 +4334,9 @@ void* func_80145608(void* arg0, s32* arg1)
                             {
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
-                                var_v1_2 = (u8*)((u8*)var_a2 + (*(u8*)(D_80169408 + 0x24) * 2));
                                 {
-                                    void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                    void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(D_80169408 + 0x24) * 2)));
+                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
                             break;
@@ -4257,17 +4345,16 @@ void* func_80145608(void* arg0, s32* arg1)
                             {
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
-                                var_v1_2 = (u8*)((u8*)var_a2 + (*(u8*)(D_80169408 + 0x25) * 2));
                                 {
-                                    void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                    void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(D_80169408 + 0x25) * 2)));
+                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
                             break;
                         case 0x16:
                             if (g_menu_item_ptr != 0)
                             {
-                                var_s1 = func_800A8A78(arg1, var_s1, *(u8*)(D_80169408 + 0x26), 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_800A8A78(arg1, var_s1, *(u8*)(D_80169408 + 0x26), 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x17:
@@ -4293,15 +4380,19 @@ void* func_80145608(void* arg0, s32* arg1)
                                     delta -= D_800F0C1C;
                                 if (delta < 0)
                                     delta = -delta;
-                                var_s1 = func_800A8A78(arg1, var_s1, (u16)delta, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_800A8A78(arg1, var_s1, (u16)delta, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
-                            if (tmp >= 0x1B && tmp <= 0x1E)
+                            if (tmp >= 0x1B)
                             {
                                 s32 delta2 = 0;
                                 if (D_80168C01[tmp] != 0)
                                 {
                                     u8* base2 = (u8*)D_80168C30 + (tmp << 6);
                                     void* v1;
+                                    u8 v0_6;
+                                    u8 a1_2;
+                                    u8* v1_4;
+                                    void* tmp2;
                                     if (*(u8*)(base2 - 0x6C0) != 0)
                                         delta2 = *(u16*)(base2 - 0x6C0 + 0x24);
                                     v1 = (void*)D_801694CC[tmp];
@@ -4311,24 +4402,20 @@ void* func_80145608(void* arg0, s32* arg1)
                                         delta2 -= D_800F0C1C;
                                     if (delta2 >= 0)
                                     {
-                                        u8 v0_6 = g_menu_label_key_a.page;
-                                        u8 a1_2 = g_menu_label_key_a.entry;
-                                        u8* v1_4 = (u8*)((u8*)&g_menu_label_key_a - 0x16);
-                                        void* tmp2 = (void*)(a1_2 + ((v0_6 << 8) + (s32)v1_4));
-                                        func_800A8E28(&spB0, tmp2, delta2);
-                                        ((u8*)&spB0)[func_800A8DDC(tmp2)] = 0;
-                                        var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1);
+                                        v0_6 = g_menu_label_key_a.page;
+                                        a1_2 = g_menu_label_key_a.entry;
+                                        v1_4 = (u8*)((u8*)&g_menu_label_key_a - 0x16);
                                     }
                                     else
                                     {
-                                        u8 v0_6 = g_menu_label_key_b.page;
-                                        u8 a1_2 = g_menu_label_key_b.entry;
-                                        u8* v1_4 = (u8*)((u8*)&g_menu_label_key_b - 0x20);
-                                        void* tmp2 = (void*)(a1_2 + ((v0_6 << 8) + (s32)v1_4));
-                                        func_800A8E28(&spB0, tmp2, delta2);
-                                        ((u8*)&spB0)[func_800A8DDC(tmp2)] = 0;
-                                        var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1);
+                                        v0_6 = g_menu_label_key_b.page;
+                                        a1_2 = g_menu_label_key_b.entry;
+                                        v1_4 = (u8*)((u8*)&g_menu_label_key_b - 0x20);
                                     }
+                                    tmp2 = (void*)(a1_2 + ((v0_6 << 8) + (s32)v1_4));
+                                    func_800A8E28(&spB0, tmp2, delta2);
+                                    ((u8*)&spB0)[func_800A8DDC(tmp2)] = 0;
+                                    var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                                 }
                             }
                         }
@@ -4362,7 +4449,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 tmp2 = (void*)(a1_3 + ((v0_7 << 8) + (s32)v1_5));
                                 func_800A8E28(&spB0, tmp2);
                                 ((u8*)&spB0)[func_800A8DDC(tmp2)] = 0;
-                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1);
+                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                             }
                             break;
                         case 0x27:
@@ -4378,7 +4465,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 s32 diff = func_801483C4(g_menu_item_ptr, tmp - 0x27, 0);
                                 if (diff < 0)
                                     diff = -diff;
-                                var_s1 = func_8014F274(arg1, var_s1, (u32)diff, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, (u32)diff, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x2F:
@@ -4414,7 +4501,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 tmp2 = (void*)(a1_4 + ((v0_8 << 8) + (s32)v1_6));
                                 func_800A8E28(&spB0, tmp2);
                                 ((u8*)&spB0)[func_800A8DDC(tmp2)] = 0;
-                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1);
+                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                             }
                         }
                         break;
@@ -4435,7 +4522,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 s32 diff = v1 - v2;
                                 if (diff < 0)
                                     diff = -diff;
-                                var_s1 = func_800A8A78(arg1, var_s1, (u16)diff, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_800A8A78(arg1, var_s1, (u16)diff, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                         }
                         break;
@@ -4445,7 +4532,7 @@ void* func_80145608(void* arg0, s32* arg1)
                         case 0x42:
                             if (D_80169404 != 0)
                             {
-                                var_s1 = func_8014F274(arg1, var_s1, *(u16*)(D_80169404 + (tmp * 2) - 0x5A), 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, *(u16*)(D_80169404 + (tmp * 2) - 0x5A), 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                             break;
                         case 0x43:
@@ -4499,7 +4586,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 tmp2 = (void*)(a1_5 + ((v0_9 << 8) + (s32)v1_8));
                                 func_800A8E28(&spB0, tmp2, total, k);
                                 ((u8*)&spB0)[func_800A8DDC(tmp2)] = 0;
-                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1);
+                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                             }
                         }
                         break;
@@ -4538,7 +4625,7 @@ void* func_80145608(void* arg0, s32* arg1)
                             {
                                 if (total < 0)
                                     total = -total;
-                                var_s1 = func_800A8A78(arg1, var_s1, (u16)total, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_800A8A78(arg1, var_s1, (u16)total, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                         }
                         break;
@@ -4550,90 +4637,98 @@ void* func_80145608(void* arg0, s32* arg1)
 
                     case 4:
                     {
-                        u8 tmp = *(u8*)((u8*)var_s4 + 1);
+                        u8 tmp = *(u8*)(var_s4 + 1);
                         switch (tmp)
                         {
                         case 0x1:
                         {
                             s32* ptr = (s32*)var_s1;
+                            u8* prim = (u8*)var_s1;
                             u8 a0_5;
                             u8 v1_10;
                             u8 a0_6;
                             u8 v1_11;
                             ptr[1] = 0x808080;
-                            *(s8*)((u8*)var_s1 + 3) = 4;
-                            *(s8*)((u8*)var_s1 + 7) = 0x64;
-                            *(s16*)((u8*)var_s1 + 8) = (s16)(*var_s3 & 0x1FF);
-                            *(s16*)((u8*)var_s1 + 10) = (s16)(*(u8*)var_s4 - 8);
-                            a0_5 = (g_menu_char_slot == 2) ? 0xA0 : 0xD0;
-                            *(s8*)((u8*)var_s1 + 12) = a0_5;
-                            v1_10 = (g_menu_char_slot == 0) ? 0x20 : 0x50;
-                            *(s8*)((u8*)var_s1 + 13) = v1_10;
-                            *(s32*)((u8*)var_s1 + 0x10) = 0x300030;
-                            *(s16*)((u8*)var_s1 + 14) = (s16)((((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
+                            *(s8*)(prim + 3) = 4;
+                            *(s8*)(prim + 7) = 0x64;
+                            *(s16*)(prim + 8) = (s16)(*var_s3 & 0x1FF);
+                            *(s16*)(prim + 10) = (s16)(*var_s4 - 8);
+                            a0_5 = 0xD0;
+                            if (g_menu_char_slot == 2)
+                            {
+                                a0_5 = 0xA0;
+                            }
+                            *(s8*)(prim + 12) = a0_5;
+                            v1_10 = 0x50;
+                            if (g_menu_char_slot == 0)
+                            {
+                                v1_10 = 0x20;
+                            }
+                            *(s8*)(prim + 13) = v1_10;
+                            *(s32*)(prim + 0x10) = 0x300030;
+                            *(s16*)(prim + 14) = (s16)((((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
                             *(s32*)var_s1 = (*(s32*)var_s1 & 0xFF000000) | (*arg1 & 0xFFFFFF);
-                            temp_s1 = (void*)((u8*)var_s1 + 0x14);
+                            temp_s1 = (void*)(prim + 0x14);
                             *arg1 = (*arg1 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
                             *(s32*)((u8*)temp_s1 + 4) = 0;
                             *(s8*)((u8*)temp_s1 + 3) = 4;
                             *(s8*)((u8*)temp_s1 + 7) = 0x66;
                             *(s16*)((u8*)temp_s1 + 8) = (s16)((*var_s3 & 0x1FF) + 2);
-                            *(s16*)((u8*)temp_s1 + 10) = (s16)(*(u8*)var_s4 - 6);
-                            a0_6 = (g_menu_char_slot == 2) ? 0xA0 : 0xD0;
+                            *(s16*)((u8*)temp_s1 + 10) = (s16)(*var_s4 - 6);
+                            a0_6 = 0xD0;
+                            if (g_menu_char_slot == 2)
+                            {
+                                a0_6 = 0xA0;
+                            }
                             *(s8*)((u8*)temp_s1 + 12) = a0_6;
-                            v1_11 = (g_menu_char_slot == 0) ? 0x20 : 0x50;
+                            v1_11 = 0x50;
+                            if (g_menu_char_slot == 0)
+                            {
+                                v1_11 = 0x20;
+                            }
                             *(s8*)((u8*)temp_s1 + 13) = v1_11;
                             *(s32*)((u8*)temp_s1 + 0x10) = 0x300030;
                             *(s16*)((u8*)temp_s1 + 14) = (s16)((((u16)g_menu_char_slot + 0x1D8) << 6) | 0x11);
-                            *(s32*)((u8*)var_s1 + 0x14) = (*(s32*)((u8*)var_s1 + 0x14) & 0xFF000000) | (*arg1 & 0xFFFFFF);
+                            *(s32*)(prim + 0x14) = (*(s32*)(prim + 0x14) & 0xFF000000) | (*arg1 & 0xFFFFFF);
                             temp_s1_2 = (void*)((u8*)temp_s1 + 0x14);
                             *arg1 = (*arg1 & 0xFF000000) | ((s32)temp_s1 & 0xFFFFFF);
                             *(s8*)((u8*)temp_s1_2 + 3) = 1;
                             *(s32*)((u8*)temp_s1_2 + 4) = 0xE100001F;
-                            *(s32*)((u8*)temp_s1 + 0x14) = (*(s32*)((u8*)temp_s1 + 0x14) & 0xFF000000) | (*arg1 & 0xFFFFFF);
+                            link_p = (s32*)((u8*)temp_s1 + 0x14);
+                            *link_p = (*link_p & 0xFF000000) | (*arg1 & 0xFFFFFF);
                             var_s1 = (void*)((u8*)temp_s1_2 + 8);
                             *arg1 = (*arg1 & 0xFF000000) | ((s32)temp_s1_2 & 0xFFFFFF);
                         }
                         break;
                         case 0x2:
                         {
-                            s32 a3;
-                            u16* lvar_v1_2;
-                            void* lvar_a2;
-                            void* a2_2;
-                            var_a0 = var_s1;
-                            a3 = 1;
-                            lvar_v1_2 = *(u16**)((u8*)&g_pad_ctx + 0x271C);
-                            lvar_a2 = (void*)((u8*)lvar_v1_2 + g_menu_char_slot * 0x250 + 0x5F0);
-                            a2_2 = (void*)((u8*)lvar_a2 + (s32)lvar_v1_2);
-                            var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3);
+                            u16* lvar_v1_2 = *(u16**)(pad_base + 0x271C);
+                            void* a2_2 = (void*)((u8*)lvar_v1_2 + g_menu_char_slot * 0x250 + 0x5F0);
+                            var_s1 = func_800A88A0(var_s1, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                         }
                         break;
                         case 0x3:
                         {
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                            void* base = *(void**)(pad_base + 0x271C);
                             u8 v = *(u8*)((u8*)base + g_menu_char_slot * 0x250 + 0x610);
-                            var_s1 = func_8014F274(arg1, var_s1, v, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_8014F274(arg1, var_s1, v, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x4:
-                        {
-                            s32 v = *(s32*)((u8*)&D_80105AE0 + g_menu_char_slot * 0x23C + 4);
-                            var_s1 = func_800A8A78(arg1, var_s1, (u16)v, 1, &spA8, ((*var_s3 >> 9) & 7));
-                        }
-                        break;
+                            var_s1 = func_800A8A78(arg1, var_s1, *(s32*)((u8*)&D_80105AE0 + g_menu_char_slot * 0x23C + 4), 1, pos_p, ((*var_s3 >> 9) & 7));
+                            break;
                         case 0x5:
                         {
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                            void* base = *(void**)(pad_base + 0x271C);
                             u16 v = *(u16*)((u8*)base + g_menu_char_slot * 0x250 + 0x614);
-                            var_s1 = func_800A8A78(arg1, var_s1, v, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, v, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x6:
                         {
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                            void* base = *(void**)(pad_base + 0x271C);
                             u32 v = *(u32*)((u8*)base + g_menu_char_slot * 0x250 + 0x610);
-                            var_s1 = func_800A8A78(arg1, var_s1, (u16)(v >> 8), 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, (u16)(v >> 8), 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x7:
@@ -4645,9 +4740,9 @@ void* func_80145608(void* arg0, s32* arg1)
                         case 0xD:
                         case 0xE:
                         {
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                            void* base = *(void**)(pad_base + 0x271C);
                             u16 v = *(u16*)((u8*)base + ((tmp - 7) * 2) + g_menu_char_slot * 0x250 + 0x620);
-                            var_s1 = func_8014F274(arg1, var_s1, v >> 9, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_8014F274(arg1, var_s1, v >> 9, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0xF:
@@ -4658,7 +4753,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 s32 a3 = 1;
                                 if (g_item_slot_flags.slot0 != 0)
                                     a3 = 2;
-                                var_s1 = func_800A88A0(var_s1, arg1, a2_2, a3);
+                                var_s1 = func_800A88A0(var_s1, arg1, a2_2, a3, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
                         break;
@@ -4669,10 +4764,9 @@ void* func_80145608(void* arg0, s32* arg1)
                             {
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
-                                var_v1_2 = (u8*)((u8*)var_a2 + (*(u8*)(D_80168C30 + (tmp - 0x10 + 0x18)) * 2));
                                 {
-                                    void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                    void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(D_80168C30 + (tmp - 0x10 + 0x18)) * 2)));
+                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
                             break;
@@ -4692,7 +4786,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 if (*(u8*)D_80168C30 != 0)
                                     a2_15 = *(u16*)(D_80168C30 + 0x24);
                             }
-                            var_s1 = func_800A8A78(arg1, var_s1, a2_15, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, a2_15, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x14:
@@ -4707,7 +4801,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 if (D_80168C09[tmp] != 0)
                                     a3 = 2;
                                 a2_2 = (void*)(D_801693FC + (tmp << 6) - 0x4C0);
-                                var_s1 = func_800A88A0(var_s1, arg1, a2_2, a3);
+                                var_s1 = func_800A88A0(var_s1, arg1, a2_2, a3, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
                         break;
@@ -4718,21 +4812,23 @@ void* func_80145608(void* arg0, s32* arg1)
                             u8 idx;
                             var_a0 = var_s1;
                             var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x10));
-                            base = *(void**)((u8*)&g_pad_ctx + 0x271C);
-                            idx = *(u8*)((u8*)base + g_menu_char_slot * 0x250 + (tmp - 0x17) + 0x5F3);
-                            var_v1_2 = (u8*)((u8*)var_a2 + (idx * 2));
+                            base = *(void**)(pad_base + 0x271C);
                             {
-                                void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + (tmp - 0x17) + 0x5F3;
+                                idx = *idxp;
+                            }
+                            {
+                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (idx * 2)));
+                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
                         break;
                         case 0x19:
                         {
                             s32 v = func_800B607C(g_menu_char_slot);
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                            void* base = *(void**)(pad_base + 0x271C);
                             u32 shift = *(u32*)((u8*)base + g_menu_char_slot * 0x250 + 0x610) >> 8;
-                            var_s1 = func_800A8A78(arg1, var_s1, (u16)(v - shift), 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, (u16)(v - shift), 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x1B:
@@ -4740,16 +4836,16 @@ void* func_80145608(void* arg0, s32* arg1)
                         case 0x1D:
                         case 0x1E:
                         {
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                            void* base = *(void**)(pad_base + 0x271C);
                             u8* ptr = (u8*)base + g_menu_char_slot * 0x250 + (tmp - 0x1B) + 0x5F1;
                             if (*ptr != 0xFF)
                             {
                                 if (*ptr & 0x80)
                                 {
-                                    u16* lvar_v1_2 = *(u16**)((u8*)&g_pad_ctx + 0x271C);
-                                    void* lvar_a2 = (void*)((u8*)lvar_v1_2 + g_menu_char_slot * 0x250 + 0x5F0);
-                                    void* a2_2 = (void*)((u8*)lvar_a2 + ((*ptr & 0x7F) << 6) + 0x150);
-                                    var_s1 = func_800A88A0(var_s1, arg1, a2_2, 1);
+                                    u16* lvar_v1_2 = *(u16**)(pad_base + 0x271C);
+                                    void* lvar_a2 = (void*)((u8*)lvar_v1_2 + (g_menu_char_slot * 0x250 + 0x5F0));
+                                    void* a2_2 = (void*)((u8*)lvar_a2 + (((*ptr & 0x7F) << 6) + 0x150));
+                                    var_s1 = func_800A88A0(var_s1, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                                 else
                                 {
@@ -4759,10 +4855,9 @@ void* func_80145608(void* arg0, s32* arg1)
                                     var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20));
                                     tmpv = ((*(u32*)(D_801693FC + 0x14) >> 10) & 0x3F) * 0x30;
                                     idx = *ptr & 0x7F;
-                                    var_v1_2 = (u8*)((u8*)var_a2 + (idx * 2) + tmpv);
                                     {
-                                        void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                        var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                        void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (idx * 2) + tmpv));
+                                        var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                     }
                                 }
                             }
@@ -4774,12 +4869,14 @@ void* func_80145608(void* arg0, s32* arg1)
                             u8 idx;
                             var_a0 = var_s1;
                             var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x4C));
-                            base = *(void**)((u8*)&g_pad_ctx + 0x271C);
-                            idx = *(u8*)((u8*)base + g_menu_char_slot * 0x250 + 0x609);
-                            var_v1_2 = (u8*)((u8*)var_a2 + (idx * 2));
+                            base = *(void**)(pad_base + 0x271C);
                             {
-                                void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x609;
+                                idx = *idxp;
+                            }
+                            {
+                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (idx * 2)));
+                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
                         break;
@@ -4801,7 +4898,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                         total += *(u16*)(v + 0x24);
                                 }
                             }
-                            var_s1 = func_8014F274(arg1, var_s1, total, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_8014F274(arg1, var_s1, total, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x21:
@@ -4822,7 +4919,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                         total += *(u16*)(v + 0x26);
                                 }
                             }
-                            var_s1 = func_8014F274(arg1, var_s1, total, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_8014F274(arg1, var_s1, total, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x22:
@@ -4843,7 +4940,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                         total += *(u16*)(v + 0x28);
                                 }
                             }
-                            var_s1 = func_8014F274(arg1, var_s1, total, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_8014F274(arg1, var_s1, total, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x23:
@@ -4864,7 +4961,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                         total += *(u16*)(v + 0x2A);
                                 }
                             }
-                            var_s1 = func_8014F274(arg1, var_s1, total, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_8014F274(arg1, var_s1, total, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         case 0x3F:
@@ -4897,7 +4994,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 tmp2 = (void*)(a1_10 + ((v0_10 << 8) + (s32)v1_17));
                                 func_800A8E28(&spB0, tmp2, diff);
                                 ((u8*)&spB0)[func_800A8DDC(tmp2)] = 0;
-                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1);
+                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                             }
                         }
                         break;
@@ -4948,7 +5045,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                 tmp2 = (void*)(a1_11 + ((v0_11 << 8) + (s32)v1_19));
                                 func_800A8E28(&spB0, tmp2, total, k);
                                 ((u8*)&spB0)[func_800A8DDC(tmp2)] = 0;
-                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1);
+                                var_s1 = func_800A88A0(var_s1, arg1, &spB0, 1, pos.x, pos.y, 0);
                             }
                         }
                         break;
@@ -4966,7 +5063,7 @@ void* func_80145608(void* arg0, s32* arg1)
                                     diff = a2_23 - D_800F0C1C;
                                 if (diff < 0)
                                     diff = -diff;
-                                var_s1 = func_800A8A78(arg1, var_s1, (u16)diff, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_800A8A78(arg1, var_s1, (u16)diff, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                         }
                         break;
@@ -5001,7 +5098,7 @@ void* func_80145608(void* arg0, s32* arg1)
                             {
                                 if (total < 0)
                                     total = -total;
-                                var_s1 = func_8014F274(arg1, var_s1, (u32)total, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_8014F274(arg1, var_s1, (u32)total, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                         }
                         break;
@@ -5011,69 +5108,66 @@ void* func_80145608(void* arg0, s32* arg1)
                             u8 idx;
                             var_a0 = var_s1;
                             var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x74));
-                            base = *(void**)((u8*)&g_pad_ctx + 0x271C);
-                            idx = *(u8*)((u8*)base + g_menu_char_slot * 0x250 + 0x633);
-                            var_v1_2 = (u8*)((u8*)var_a2 + (idx * 2));
+                            base = *(void**)(pad_base + 0x271C);
                             {
-                                void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                u8* idxp = (u8*)base + g_menu_char_slot * 0x250 + 0x633;
+                                idx = *idxp;
+                            }
+                            {
+                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (idx * 2)));
+                                var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
                         break;
                         case 0x4A:
                         {
-                            s8 v1 = *(s8*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x29D7);
+                            s8 v1 = *(s8*)(*(void**)(pad_base + 0x271C) + 0x29D7);
                             if (v1 >= 0)
                             {
-                                void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                                void* base = *(void**)(pad_base + 0x271C);
                                 u8 v = *(u8*)((u8*)base + v1 * 0x14C + 0x2B50) & 0xF;
                                 void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x80));
-                                void* a2_2 = (void*)((u8*)a2 + (v * 2));
-                                a2_2 = (void*)((u8*)a2 + *(u16*)a2_2);
-                                var_s1 = func_800A88A0(var_s1, arg1, a2_2, 1);
+                                var_s1 = func_800A88A0(var_s1, arg1, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
                         break;
                         case 0x4B:
                         {
-                            s8 v1 = *(s8*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x29D7);
+                            s8 v1 = *(s8*)(*(void**)(pad_base + 0x271C) + 0x29D7);
                             if (v1 >= 0)
                             {
-                                void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                                void* base = *(void**)(pad_base + 0x271C);
                                 u8 v = *(u8*)((u8*)base + v1 * 0x14C + 0x2B50) >> 4;
                                 void* a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x7C));
-                                void* a2_2 = (void*)((u8*)a2 + (v * 2));
-                                a2_2 = (void*)((u8*)a2 + *(u16*)a2_2);
-                                var_s1 = func_800A88A0(var_s1, arg1, a2_2, 1);
+                                var_s1 = func_800A88A0(var_s1, arg1, (void*)((u8*)a2 + *(u16*)((u8*)a2 + (v * 2))), 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
                         break;
                         case 0x4C:
                         {
-                            s8 v1 = *(s8*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x29D7);
+                            s8 v1 = *(s8*)(*(void**)(pad_base + 0x271C) + 0x29D7);
                             if (v1 >= 0)
                             {
-                                void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                                void* base = *(void**)(pad_base + 0x271C);
                                 u8 v = *(u8*)((u8*)base + v1 * 0x14C + 0x2B52);
-                                var_s1 = func_800A8A78(arg1, var_s1, v, 1, &spA8, ((*var_s3 >> 9) & 7));
+                                var_s1 = func_800A8A78(arg1, var_s1, v, 1, pos_p, ((*var_s3 >> 9) & 7));
                             }
                         }
                         break;
                         case 0x4D:
                         {
-                            s8 v1 = *(s8*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x29D7);
+                            s8 v1 = *(s8*)(*(void**)(pad_base + 0x271C) + 0x29D7);
                             if (v1 >= 0)
                             {
                                 void* base;
                                 s32 idx;
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x70));
-                                base = *(void**)((u8*)&g_pad_ctx + 0x271C);
+                                base = *(void**)(pad_base + 0x271C);
                                 idx = *(s32*)((u8*)base + v1 * 0x14C + 0x2B54);
-                                var_v1_2 = (u8*)((u8*)var_a2 + (idx * 2));
                                 {
-                                    void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                    void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (idx * 2)));
+                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
                         }
@@ -5088,36 +5182,34 @@ void* func_80145608(void* arg0, s32* arg1)
                         case 0x55:
                         {
                             u32 a2_26 = 0;
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C);
-                            u8* ptr = (u8*)base + g_menu_char_slot * 0x250;
                             switch (tmp)
                             {
                             case 0x4E:
-                                a2_26 = *(u32*)(ptr + 0x658) & 0xF;
+                                a2_26 = *(u32*)((u8*)*(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250 + 0x658) & 0xF;
                                 break;
                             case 0x4F:
-                                a2_26 = (*(u8*)(ptr + 0x658) >> 4);
+                                a2_26 = (*(u8*)((u8*)*(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250 + 0x658) >> 4);
                                 break;
                             case 0x50:
-                                a2_26 = (*(u32*)(ptr + 0x658) >> 8) & 0xF;
+                                a2_26 = (*(u32*)((u8*)*(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250 + 0x658) >> 8) & 0xF;
                                 break;
                             case 0x51:
-                                a2_26 = (*(u32*)(ptr + 0x658) >> 12) & 0xF;
+                                a2_26 = (*(u32*)((u8*)*(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250 + 0x658) >> 12) & 0xF;
                                 break;
                             case 0x52:
-                                a2_26 = *(u16*)(ptr + 0x65A) & 0xF;
+                                a2_26 = *(u16*)((u8*)*(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250 + 0x65A) & 0xF;
                                 break;
                             case 0x53:
-                                a2_26 = (*(u32*)(ptr + 0x658) >> 20) & 0xF;
+                                a2_26 = (*(u32*)((u8*)*(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250 + 0x658) >> 20) & 0xF;
                                 break;
                             case 0x54:
-                                a2_26 = *(u8*)(ptr + 0x65B) & 0xF;
+                                a2_26 = *(u8*)((u8*)*(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250 + 0x65B) & 0xF;
                                 break;
                             case 0x55:
-                                a2_26 = *(u32*)(ptr + 0x658) >> 28;
+                                a2_26 = *(u32*)((u8*)*(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250 + 0x658) >> 28;
                                 break;
                             }
-                            var_s1 = func_8014F274(arg1, var_s1, a2_26, 1, &spA8, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_8014F274(arg1, var_s1, a2_26, 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                         default:
@@ -5128,78 +5220,87 @@ void* func_80145608(void* arg0, s32* arg1)
 
                     case 6:
                     {
-                        u8 tmp = *(u8*)((u8*)var_s4 + 1);
-                        if (tmp == 1)
+                        u8 tmp = *(u8*)(var_s4 + 1);
+                        switch (tmp)
                         {
-                            u32 val = *(u32*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x2C);
-                            if (val > 0x989680U)
-                                var_s1 = func_800A8A78(arg1, var_s1, 0x989680U, 1, &spA8, ((*var_s3 >> 9) & 7));
+                        case 1:
+                            if (*(u32*)(*(void**)(pad_base + 0x271C) + 0x2C) > 0x989680U)
+                            {
+                                var_s1 = func_800A8A78(arg1, var_s1, 0x989680U, 1, pos_p, ((*var_s3 >> 9) & 7));
+                            }
                             else
-                                var_s1 = func_800A8A78(arg1, var_s1, (u16)val, 1, &spA8, ((*var_s3 >> 9) & 7));
-                        }
-                        else if (tmp == 2)
+                            {
+                                var_s1 = func_800A8A78(arg1, var_s1, *(u32*)(*(void**)(pad_base + 0x271C) + 0x2C), 1, pos_p, ((*var_s3 >> 9) & 7));
+                            }
+                            break;
+                        case 2:
                         {
                             u32 ltemp_v0_6;
                             s32 v1;
-                            s32 diff;
-                            s32 quotient;
+                            u32 diff;
+                            u32 quotient;
                             s32 s2;
                             u16 remainder;
                             ltemp_v0_6 = (*var_s3 >> 9) & 7;
                             if (ltemp_v0_6 == 1)
-                                spA8 -= 0x32;
+                                pos.x -= 0x32;
                             else if (ltemp_v0_6 == tmp)
-                                spA8 -= 0x19;
-                            v1 = *(s32*)(*(void**)((u8*)&g_pad_ctx + 0x271C) + 0x30) + VSync(-1);
+                                pos.x -= 0x19;
+                            v1 = *(s32*)(*(void**)(pad_base + 0x271C) + 0x30) + VSync(-1);
                             diff = v1 - D_80042FB4;
                             quotient = diff / 6750;
-                            spA8 += 0x14;
+                            pos.x += 0x14;
                             s2 = quotient >> 5;
-                            var_s1_2 = (void*)func_800A8A78(arg1, var_s1, (u16)s2, 1, &spA8, 1);
+                            var_s1_2 = (void*)func_800A8A78(arg1, var_s1, (u16)s2, 1, pos_p, 1);
                             if ((g_frame_counter / 15) & 1)
                             {
-                                var_s1_2 = func_800A88A0(var_s1_2, arg1, ":", 1);
+                                var_s1_2 = func_800A88A0(var_s1_2, arg1, ":", 1, pos.x, pos.y, 0);
                             }
-                            spA8 += 7;
+                            pos.x += 7;
                             remainder = (diff / 3600) - (s2 * 0x3C);
                             if (remainder < 0xA)
-                                var_s1_2 = (void*)func_800A8A78(arg1, var_s1_2, 0U, 1, &spA8, 0);
-                            spA8 += 0x10;
-                            var_s1 = (void*)func_800A8A78(arg1, var_s1_2, remainder, 1, &spA8, 1);
+                                var_s1_2 = (void*)func_800A8A78(arg1, var_s1_2, 0U, 1, pos_p, 0);
+                            pos.x += 0x10;
+                            var_s1 = (void*)func_800A8A78(arg1, var_s1_2, remainder, 1, pos_p, 1);
+                        }
+                        break;
                         }
                     }
                     break;
 
                     case 7:
                     {
-                        u8 tmp = *(u8*)((u8*)var_s4 + 1);
-                        if (tmp == 1)
+                        u8 tmp = *(u8*)(var_s4 + 1);
+                        switch (tmp)
                         {
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C) + g_menu_char_slot * 0x250;
+                        case 1:
+                        {
+                            void* base = *(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250;
                             if ((*(u8*)((u8*)base + 0x608) & 0x7F) != 2 || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
                             {
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
-                                var_v1_2 = (u8*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + 0x74));
                                 {
-                                    void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                    void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + 0x74));
+                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
                         }
-                        else if (tmp == 2)
+                        break;
+                        case 2:
                         {
-                            void* base = *(void**)((u8*)&g_pad_ctx + 0x271C) + g_menu_char_slot * 0x250;
+                            void* base = *(void**)(pad_base + 0x271C) + g_menu_char_slot * 0x250;
                             if ((*(u8*)((u8*)base + 0x608) & 0x7F) != 2 || ((*(u8*)((u8*)base + 0x609) != 5) && (*(u8*)((u8*)base + 0x609) != 8)))
                             {
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
-                                var_v1_2 = (u8*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + 0x76));
                                 {
-                                    void* a2_2 = (void*)((u8*)var_a2 + (s32)var_v1_2);
-                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1);
+                                    void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + 0x76));
+                                    var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                                 }
                             }
+                        }
+                        break;
                         }
                     }
                     break;
@@ -5209,8 +5310,13 @@ void* func_80145608(void* arg0, s32* arg1)
                     }
 
                     var_s4 += 8;
+                    var_s3 += 4;
                     spC0--;
-                } while (spC0 != 0);
+                    if (spC0 != 0)
+                    {
+                        goto loop_top;
+                    }
+                }
             }
 
             {
@@ -5220,7 +5326,7 @@ void* func_80145608(void* arg0, s32* arg1)
                     u8* a2_27 = (u8*)g_menu_item_ptr;
                     if (*a2_27 != 0)
                     {
-                        var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1);
+                        var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1, 0xAC, 0xC, 2);
                     }
                 }
                 else if (g_menu_scene_type == 0x1D)
@@ -5228,14 +5334,14 @@ void* func_80145608(void* arg0, s32* arg1)
                     void* a2_28 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
                     u16 v1 = *(u16*)((u8*)a2_28 + 0x78);
                     void* a2_27 = (void*)((u8*)a2_28 + v1);
-                    var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1);
+                    var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1, 0xAC, 0xC, 2);
                 }
                 else if (g_menu_scene_type != -1)
                 {
                     void* a2_28 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 8));
                     u16 v1 = *(u16*)((u8*)a2_28 + node->unk0 * 2);
                     void* a2_27 = (void*)((u8*)a2_28 + v1);
-                    var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1);
+                    var_s1 = func_800A88A0(var_s1, arg1, a2_27, 1, 0xAC, 0xC, 2);
                 }
             }
 
@@ -5250,16 +5356,16 @@ void* func_80145608(void* arg0, s32* arg1)
             {
                 s32 la2_29;
                 void* ltemp;
-                spA8 = 0x88;
-                spAA = 0x28;
+                pos.x = 0x88;
+                pos.y = 0x28;
                 la2_29 = (g_menu_page_count != 0) ? (g_script_repeat_last + 1) : 0;
-                ltemp = func_800AD208(arg1, var_s1, la2_29, 3, &spA8, 0);
-                ltemp = func_800AD524(ltemp, arg1, 0xB, &spA8, 0);
-                spA8 += 8;
-                ltemp = func_800AD208(arg1, ltemp, g_menu_page_count, 3, &spA8, 0);
-                ltemp = func_800AD524(ltemp, arg1, 0xB, &spA8, 0);
-                spA8 += 8;
-                var_s1 = func_800AD208(arg1, ltemp, func_8014F23C(), 3, &spA8, 0);
+                ltemp = func_800AD208(arg1, var_s1, la2_29, 3, &pos, 0);
+                ltemp = func_800AD524(ltemp, arg1, 0xB, &pos, 0);
+                pos.x += 8;
+                ltemp = func_800AD208(arg1, ltemp, g_menu_page_count, 3, &pos, 0);
+                ltemp = func_800AD524(ltemp, arg1, 0xB, &pos, 0);
+                pos.x += 8;
+                var_s1 = func_800AD208(arg1, ltemp, func_8014F23C(), 3, &pos, 0);
             }
             break;
             default:
@@ -6475,11 +6581,6 @@ void* func_80149D90(void* arg0, s32* arg1, s16 arg2, s16 arg3)
     return p + 0x14;
 }
 
-typedef struct
-{
-    s16 x;
-    s16 y;
-} Vec2s;
 
 /**
  * @brief State block for a scrollable circular linked-list widget.

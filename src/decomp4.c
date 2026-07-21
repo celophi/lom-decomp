@@ -400,6 +400,14 @@ typedef struct
     u16 unk9E;
 } ai_struct;
 
+typedef struct {
+    u8* unk0;
+    u8 pad1[0x64 - 0x4];
+    u16 unk64;
+} argst1;
+
+extern s16 D_8004D428[];
+
 /**
  * decomp.me (100%) https://decomp.me/scratch/hjYpL
  */
@@ -2993,4 +3001,37 @@ void func_8002C690(ai_struct* arg0)
  */
 void func_8002C6AC(void)
 {
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Get0N
+ */
+void func_8002C6B4(argst1* arg0)
+{
+    s16 temp_a1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->unk0;
+    temp_a1 = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+    if (arg0->unk64 == 0)
+    {
+        if (temp_a1 & 0xC0)
+        {
+            g_akao_seq_channel0->unk62 = (u16)((g_akao_seq_channel0->unk62 + (temp_a1 & 0x3F)) & 0x3F);
+        }
+        else
+        {
+            g_akao_seq_channel0->unk62 = (u16)temp_a1;
+        }
+    }
+    else if (temp_a1 & 0xC0)
+    {
+        g_akao_sfx_control.unk28 = (u16)((g_akao_sfx_control.unk28 + (temp_a1 & 0x3F)) & 0x3F);
+    }
+    else
+    {
+        D_8004D428[0] = (s16)temp_a1;
+    }
+    g_akao_driver_flags.unk8 |= 0x10;
 }
