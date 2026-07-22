@@ -1,11 +1,30 @@
-#ifndef _DECOMP7_H
-#define _DECOMP7_H
+#ifndef _FIELD_RUNTIME_H
+#define _FIELD_RUNTIME_H
 
 #include "common.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
+#include "psyq/strings.h"
+#include "psyq/memory.h"
 #include "scene_state.h"
 #include "display.h"
+
+#define DIGIT_TO_ASCII(d) ((d) + 0x30)
+
+typedef struct FieldGlyphPrimitive
+{
+    u32 tag;
+    u32 color_code;
+    u32 position;
+    u32 texcoord_clut;
+    u32 size;
+} FieldGlyphPrimitive;
+
+typedef struct FieldOrderingTableEntry
+{
+    u8 pad[0x10];
+    u32 tag;
+} FieldOrderingTableEntry;
 
 /** @brief Fixed-address scene-selection state block; see S_801ED480. */
 #define SCENE_STATE ((S_801ED480*)0x801ED480)
@@ -73,12 +92,21 @@ extern s32 g_layout_option;
 extern s32 g_layout_sub_mode;
 extern s32 g_pending_game_state;
 extern s32 g_field_scene_request_pending;
-extern void *g_field_current_render_half;
-extern void *g_field_primitive_cursor;
+extern FieldOrderingTableEntry *g_field_current_render_half;
+extern FieldGlyphPrimitive *g_field_primitive_cursor;
 extern s32 g_field_force_two_primitives;
 extern s32 g_field_draw_count;
 extern s32 g_text_clut_base;
 extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
+extern u8 g_hex_digit_table[17];
+
+void field_draw_string(u8*, s32, s32, s32, s32);
+void field_draw_uint2(s32, s32, s32, s32, s32);
+void field_draw_uint3(s32, s32, s32, s32, s32);
+void field_draw_hex_byte_clamped(s32, s32, s32, s32, s32);
+void field_draw_hex_word(s32, s32, s32, s32, s32);
+void field_draw_glyph(s32, s32, s32);
+void field_draw_hex_byte_masked(s32, s32, s32, s32, s32);
 
 #endif

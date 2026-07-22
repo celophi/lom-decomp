@@ -1,4 +1,13 @@
-#include "decomp2.h"
+#include "overlay_memory.h"
+
+/**
+ * @brief Return the common base address used for loading overlays.
+ * @return Overlay load base at 0x8004FC70.
+ */
+s32* get_overlay_load_base(void)
+{
+    return &g_overlay_load_base;
+}
 
 /**
  * @brief Return the render-buffer base immediately after the FIELD overlay image.

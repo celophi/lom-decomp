@@ -4,7 +4,7 @@
 #include "movie.h"
 
 /* Prototypes not yet in any project header, or whose existing header declarations
- * conflict (e.g. decomp1.h has stale/conflicting signatures for several of these).
+ * conflict with the signatures required by this matching translation unit.
  * Keep them local until the headers are unified. */
 void initialize_controllers(undefined1 enable_actuators);
 extern void SpuInit(void);

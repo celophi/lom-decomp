@@ -1,4 +1,4 @@
-#include "decomp8.h"
+#include "field_runtime.h"
 
 /**
  * @brief Draw a string at a fixed screen position using the field text engine.
@@ -316,13 +316,4 @@ void field_draw_hex_byte_masked(s32 value, s32 x, s32 y, s32 ot_depth, s32 clut_
     field_draw_glyph(digit_table[digit_index >> 1], ot_depth, clut_offset_copy);
     digit_table_copy = digit_table;
     field_draw_glyph(*(digit_ptr = &digit_table_copy[low_nibble_mask & working_value]), ot_depth, clut_offset_copy);
-}
-
-/**
- * @brief No-op compatibility hook invoked after loading a CARD overlay resource.
- * @see decomp.me (100%) https://decomp.me/scratch/LO4aD
- * @note The corresponding Japanese function may have supported Ring Ring Land.
- */
-void card_resource_noop_hook(void)
-{
 }

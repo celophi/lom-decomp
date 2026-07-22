@@ -181,7 +181,7 @@ lom-decomp/
 │   ├── data/                       # Initialized data and sdata sections
 │   ├── nonmatchings/               # Functions not yet matched to C
 │   │   ├── psyq/                   # Unmatched PSY-Q SDK functions
-│   │   ├── decomp1/ ... decomp8/   # Unmatched functions in identified translation units
+│   │   ├── decomp*/                 # Legacy unmatched-function output
 │   │   └── unk3/ ... unk9/         # Unmatched functions in unidentified translation units
 │   ├── overlays/
 │   │   ├── checkps/                # CHECKPS overlay assembly
@@ -232,7 +232,11 @@ lom-decomp/
 │   │   ├── libpress/               # Data compression
 │   │   └── libspu/                 # Sound Processing Unit
 │   ├── cdrom.c                     # CD-ROM subsystem
-│   ├── decomp1.c ... decomp8.c     # Identified translation units
+│   ├── controller.c                # Controller input and actuator subsystem
+│   ├── field_runtime*.c            # Resident FIELD runtime and text support
+│   ├── game_audio.c                # Game-facing AKAO/CD audio helpers
+│   ├── overlay_memory.c            # Overlay and render-buffer address accessors
+│   ├── screen_transition.c         # Shared screen transition renderer
 │   ├── main.c                      # Entry point
 │   └── unk3.c ... unk9.c           # Translation units pending identification
 ├── tools/
