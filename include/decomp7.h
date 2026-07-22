@@ -77,7 +77,7 @@ extern void *g_field_current_render_half;
 extern void *g_field_primitive_cursor;
 extern s32 g_field_force_two_primitives;
 extern s32 g_field_draw_count;
-extern s32 g_text_atlas_base;
+extern s32 g_text_clut_base;
 extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
 

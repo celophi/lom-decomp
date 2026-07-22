@@ -186,7 +186,7 @@ void field_init_text_renderer(FieldRenderHalf* render_ctx)
     font_vram_layout[3] = 0x1FF;
     field_load_vram_resource(0x5DC, font_vram_layout);
     cdrom_wait_queue_empty();
-    g_text_atlas_base = 0x7FD0;
+    g_text_clut_base = 0x7FD0;
     draw_modes->front_packet_length = 1;
     draw_modes->front_draw_mode_command = 0xE1000234;
     draw_modes->back_packet_length = 1;

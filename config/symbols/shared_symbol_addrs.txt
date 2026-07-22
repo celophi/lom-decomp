@@ -68,8 +68,11 @@ field_init_text_renderer            = 0x800160C8;
 field_draw_string                   = 0x8001615C;
 field_draw_uint2                    = 0x800161DC;
 field_draw_uint3                    = 0x8001627C;
-field_draw_hex_byte                 = 0x800163B4;
+field_draw_hex_byte_clamped         = 0x800163B4;
 field_draw_hex_word                 = 0x800164B0;
+field_draw_glyph                    = 0x800165CC;
+field_draw_hex_byte_masked          = 0x800166C8;
+card_resource_noop_hook             = 0x80016764;
 
 // src/psyq/libcard/C112
 _bu_init                            = 0x8001676C;
@@ -872,7 +875,7 @@ g_akao_song_cmd_neg_arg0            = 0x80046FDC;
 g_music_track_index                 = 0x80046FDE;
 g_music_data_buffer                 = 0x80046FE0;
 D_800473E0                          = 0x800473E0;
-g_text_atlas_base                   = 0x80047400;
+g_text_clut_base                    = 0x80047400;
 g_text_cursor_x                     = 0x80047404;
 g_text_cursor_y                     = 0x80047408;
 g_akao_seq_channels                 = 0x80049130;

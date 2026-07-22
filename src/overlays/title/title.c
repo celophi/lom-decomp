@@ -88,8 +88,8 @@ s32 run_title(s32 base_address)
     while (1)
     {
         init_title_display(ctx_base);
-        scene_state->unk0 = 0;
-        scene_state->unk2 = 0;
+        scene_state->map_id = 0;
+        scene_state->object_index = 0;
         scene_state->unk4 = 0;
         scene_state->unk8 = 0;
         scene_state->unkC = 0;
