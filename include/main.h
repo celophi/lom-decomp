@@ -168,7 +168,8 @@ typedef struct
 
 void __main(void);
 void _bu_init(void);
-u32 *func_80015C48(void);
+u32 *get_title_menu_buffers(void);
+u32 *get_world_map_overlay_end(void);
 u32 func_8004FC8C(u32);
 void field_scene_reset(u32);
 void field_draw_frame(s32, s32, s32, s32);

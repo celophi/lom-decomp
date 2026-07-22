@@ -1,14 +1,14 @@
-#ifndef _DECOMP1_H
-#define _DECOMP1_H
+#ifndef _DECOMP2_H
+#define _DECOMP2_H
 
 #include "common.h"
 
-extern u32 D_80123FD8;
-extern u32 D_801B32D8;
-extern u32 D_801026D0;
+extern u32 g_field_render_buffers;
+extern u32 g_world_map_overlay_end;
+extern u32 g_title_menu_buffers;
 
-u32* FUN_80015c28(void);
-u32* FUN_80015c38(void);
-u32* func_80015C48(void);
+u32* get_field_render_buffers(void);
+u32* get_world_map_overlay_end(void);
+u32* get_title_menu_buffers(void);
 
 #endif

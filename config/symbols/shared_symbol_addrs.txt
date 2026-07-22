@@ -58,8 +58,9 @@ merge_latest_controller_sample      = 0x80015AA4;
 copy_controller_sample              = 0x80015B58;
 get_overlay_load_base               = 0x80015C18;
 
-FUN_80015c28                        = 0x80015C28;
-FUN_80015c38                        = 0x80015C38;
+get_field_render_buffers            = 0x80015C28;
+get_world_map_overlay_end           = 0x80015C38;
+get_title_menu_buffers              = 0x80015C48;
 run_field_scene                     = 0x80015C58;
 field_run_frame_loop                = 0x80015D6C;
 field_init_display                  = 0x80015F88;

@@ -8,6 +8,9 @@ RunCheckPS                          = 0x8004FD14;
 // Main-only alias for the common overlay load base. This must not be shared,
 // because each overlay defines its own code symbols in the same address range.
 g_overlay_load_base                 = 0x8004FC70;
+g_title_menu_buffers                = 0x801026D0;
+g_field_render_buffers              = 0x80123FD8;
+g_world_map_overlay_end             = 0x801B32D8;
 
 // CHECKPS.BIN
 PollInputDevice                     = 0x800507B4;

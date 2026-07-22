@@ -64,7 +64,7 @@ void update_controllers(void);
 void reset_controller_vsync_state(void);
 void load_and_play_song(s32 song_index);
 undefined* get_overlay_load_base(void);
-undefined* FUN_80015c38(void);
+u32* get_world_map_overlay_end(void);
 int run_field_scene(void);
 undefined4 FUN_80021fbc(void);
 void akao_song_cmd_12c(void);

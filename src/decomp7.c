@@ -9,11 +9,11 @@
  */
 s32 run_field_scene(void)
 {
-    s32 overlay_arg;
+    s32 field_render_buffers;
     s32 next_state;
     S_801ED480* scene_state = SCENE_STATE;
-    overlay_arg = (s32)FUN_80015c28();
-    field_init_display(overlay_arg);
+    field_render_buffers = (s32)get_field_render_buffers();
+    field_init_display(field_render_buffers);
     scene_state->unk0 = 0;
     scene_state->unk2 = 0;
     scene_state->unk4 = 0;
@@ -25,7 +25,7 @@ s32 run_field_scene(void)
         D_801158A4 = 0;
         func_8009AFE0(g_scene_mode, g_field_entry_flag, D_8003EC88, g_layout_flag, g_layout_option, g_layout_sub_mode);
         func_80067EB4(0x100, 0x100, 0x100, next_state);
-        field_run_frame_loop(overlay_arg);
+        field_run_frame_loop(field_render_buffers);
     } while (g_pending_game_state == 0);
     func_800A379C();
     akao_cmd_f0();

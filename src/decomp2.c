@@ -1,25 +1,31 @@
 #include "decomp2.h"
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/rgamP
+ * @brief Return the render-buffer base immediately after the FIELD overlay image.
+ * @return Base of the two field render buffers at 0x80123FD8.
+ * @see decomp.me (100%) https://decomp.me/scratch/rgamP
  */
-u32* FUN_80015c28(void)
+u32* get_field_render_buffers(void)
 {
-    return &D_80123FD8;
+    return &g_field_render_buffers;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/B5ptQ
+ * @brief Return the address immediately after the decompressed WMAP overlay image.
+ * @return WMAP overlay end at 0x801B32D8.
+ * @see decomp.me (100%) https://decomp.me/scratch/B5ptQ
  */
-u32* FUN_80015c38(void)
+u32* get_world_map_overlay_end(void)
 {
-    return &D_801B32D8;
+    return &g_world_map_overlay_end;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/fl1lB
+ * @brief Return the menu-buffer base immediately after the TITLE overlay image.
+ * @return Base of the title menu buffers at 0x801026D0.
+ * @see decomp.me (100%) https://decomp.me/scratch/fl1lB
  */
-u32* func_80015C48(void)
+u32* get_title_menu_buffers(void)
 {
-    return &D_801026D0;
+    return &g_title_menu_buffers;
 }

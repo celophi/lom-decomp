@@ -12,7 +12,7 @@ void McxStartCom();
 void func_8004FD14(s32);
 void initialize_controller_vsync(void);
 undefined* get_overlay_load_base(void);
-u32* FUN_80015c28(void);
+u32* get_field_render_buffers(void);
 undefined4 FUN_80021fbc(void);
 void load_and_play_song(int param_1);
 s32 akao_cmd_f0(void);
@@ -48,7 +48,7 @@ void Main(void)
     u32* overlay_arg;
     int field_config;
     s32 raw_config;
-    long cd_stop_ret;
+    long title_menu_buffers;
     u32 state;
     int prev_state;
     __main();
@@ -84,7 +84,7 @@ void Main(void)
     D_8003EC8C = 0xB;
     D_80042FD0 = 0x13;
     g_gameState = GAME_STATE_INTRO_MOVIE;
-    FUN_80015c28();
+    get_field_render_buffers();
     cdrom_stream(CD_RES_CHECKPS_BIN, g_overlayLoadAddress);
     cdrom_wait_queue_empty();
     RunCheckPS(0x80100000);
@@ -107,7 +107,7 @@ void Main(void)
                 SetDispMask(0);
                 VSync(0);
                 DrawSync(0);
-                FUN_80015c28();
+                get_field_render_buffers();
                 cdrom_stream(CD_RES_FIELD_BIN, g_overlayLoadAddress);
                 if (g_gameState != GAME_STATE_FIELD)
                 {
@@ -139,7 +139,7 @@ void Main(void)
 
             /* ---- World map ---- */
             case GAME_STATE_WORLD_MAP:
-                FUN_80015c38();
+                get_world_map_overlay_end();
                 cdrom_stream(CD_RES_WMAP_BIN, g_overlayLoadAddress);
                 GFX_Transition(0);
                 rect.x = 0;
@@ -166,13 +166,13 @@ void Main(void)
             /* ---- Title screen ---- */
             case GAME_STATE_TITLE:
             {
-                cd_stop_ret = (long)func_80015C48();
+                title_menu_buffers = (long)get_title_menu_buffers();
                 cdrom_stop();
                 cdrom_stream(CD_RES_TITLE_BIN, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
                 prev_state = GAME_STATE_TITLE;
-                g_gameState = func_8004FC74(cd_stop_ret);
+                g_gameState = func_8004FC74(title_menu_buffers);
                 DrawSync(0);
                 VSync(0);
                 g_previousGameState = prev_state;
@@ -181,7 +181,7 @@ void Main(void)
 
             /* ---- Name entry (GNAME overlay) ---- */
             case GAME_STATE_GNAME:
-                FUN_80015c28();
+                get_field_render_buffers();
                 cdrom_stream(CD_RES_FIELD_BIN, g_overlayLoadAddress);
                 cdrom_stream(CD_RES_GNAME_BIN, 0x80140000);
                 GFX_Transition(0);
@@ -199,7 +199,7 @@ void Main(void)
 
             /* ---- World select ---- */
             case GAME_STATE_WORLD_SELECT:
-                FUN_80015c28();
+                get_field_render_buffers();
                 cdrom_stream(CD_RES_WSEL_BIN, g_overlayLoadAddress);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
@@ -211,7 +211,7 @@ void Main(void)
 
             /* ---- Menu / load save ---- */
             case GAME_STATE_MENU_LOAD:
-                FUN_80015c28();
+                get_field_render_buffers();
                 /* (float)2 is a codegen artifact: the compiler uses an FP
                  * register to hold the CD_RES_FIELD_BIN value. The cast
                  * forces the same register allocation as the original. */
@@ -264,7 +264,7 @@ void Main(void)
 
             /* ---- Intro movie, then title ---- */
             case GAME_STATE_INTRO_MOVIE:
-                func_80015C48();
+                get_title_menu_buffers();
                 cdrom_stream(CD_RES_MOVIE_BIN, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();

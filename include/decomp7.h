@@ -47,7 +47,7 @@ typedef struct {
     u32  unkF984;                      /* offset 0xF984 */
 } ArgStruct2;
 
-extern u32 *FUN_80015c28(void);
+extern u32 *get_field_render_buffers(void);
 extern void akao_cmd_f0(void);
 extern void akao_cmd_f1(void);
 void field_run_frame_loop(FieldRenderHalf*);

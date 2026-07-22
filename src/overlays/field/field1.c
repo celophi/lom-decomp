@@ -7,6 +7,7 @@ extern void ClearOTagR(void*, s32);
 extern void field_select_object(unsigned short, void*);
 extern void field_build_render_records(void*, unsigned short);
 extern void func_80054B1C(void);
+extern u32* get_field_render_buffers(void);
 
 extern u8 g_cdAudioEnabled;
 extern unsigned int D_801ED02C;
@@ -253,33 +254,33 @@ void field_init_with_fmv(void* unused, void* arg1)
  * @brief Initialize a field scene and its FMV, allocating the render context.
  *
  * Same flow as field_init_with_fmv, but obtains the render context from
- * FUN_80015c28 instead of receiving it as a parameter.
+ * get_field_render_buffers instead of receiving it as a parameter.
  * @see decomp.me (100%) https://decomp.me/scratch/KMYoZ
  */
 void field_init_with_fmv_alloc(void)
 {
-    u16 temp_s1;
-    void* temp_s0;
-    char* ptr;
+    u16 map_id;
+    void* render_buffers;
+    char* render_bytes;
 
-    temp_s0 = FUN_80015c28();
+    render_buffers = get_field_render_buffers();
     DrawSync(0);
     cdrom_stream(CD_RES_MOVIE_BIN, (void*)0x80140000);
     func_80140018(0); /* MOVIE.BIN entry point (offset 0x18) */
     field_load_map(D_801ED480);
-    temp_s1 = D_801ED482;
+    map_id = D_801ED482;
     DrawSync(0);
-    ClearOTagR(temp_s0, 0x1010);
-    ClearOTagR((void*)((char*)temp_s0 + 0x7CC4), 0x1010);
-    field_select_object(temp_s1 & 0xFFFF, temp_s0);
+    ClearOTagR(render_buffers, 0x1010);
+    ClearOTagR((void*)((char*)render_buffers + 0x7CC4), 0x1010);
+    field_select_object(map_id & 0xFFFF, render_buffers);
     D_801ED004 = D_801ED000;
     D_801ED000 += 0x60;
     func_80054B1C();
 
-    ptr = (char*)temp_s0;
-    *(s32*)(ptr + 0x40B8) = D_801ED00C;
-    ptr += 0x8000;
-    *(s32*)(ptr + 0x3D7C) = D_801ED010;
+    render_bytes = (char*)render_buffers;
+    *(s32*)(render_bytes + 0x40B8) = D_801ED00C;
+    render_bytes += 0x8000;
+    *(s32*)(render_bytes + 0x3D7C) = D_801ED010;
 
     func_800643E0();
 }
