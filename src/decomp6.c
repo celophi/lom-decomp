@@ -1,286 +1,291 @@
 #include "decomp6.h"
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/b48Yj
+ * @brief Initialize LIBPAD, both controller-port records, and their receive buffers.
+ * @param enable_actuators Nonzero to enable actuator updates for each port.
+ * @see decomp.me (100%) https://decomp.me/scratch/b48Yj
  */
-void InitializeControllers(s8 arg0)
+void initialize_controllers(s8 enable_actuators)
 {
-    u8* base;
-    u8** new_var;
-    u8* ptr;
-    u8* ptr2;
-    u8* new_var2;
-    int new_var3;
-    u16 temp;
-    u16 temp2;
-    int i;
-    int sentinel;
-    unsigned int val_ff;
-    int val_40;
-    int a2;
-    int a1;
-    func_80030DF8((void*)0x801ED75C, (void*)0x801ED77E);
-    D_801ED7A4 = VSyncCallback(0);
-    base = (u8*)0x801ED600;
-    base[0xAD] = 0;
-    base[0x15B] = 0x10;
-    func_80015708(base);
-    func_80015708(base + 0xAE);
-    func_80015708(base + 0x20);
-    new_var2 = base + 0xCE;
-    func_80015708(new_var2);
-    i = 1;
-    val_40 = 0x40;
-    val_ff = 0xFF;
-    sentinel = -1;
-    ptr = base + 0xAE;
+    u8* controller_base;
+    u8** port_pointer;
+    u8* port_bytes;
+    u8* status_port;
+    u8* second_port_sample;
+    int loop_condition;
+    u16 port_config;
+    u16 port_status;
+    int port_index;
+    int loop_end;
+    unsigned int invalid_device_type;
+    int initial_actuator_command;
+    int all_ports_ready;
+    int ports_remaining;
+    PadInitDirect((void*)0x801ED75C, (void*)0x801ED77E);
+    g_previous_controller_vsync_callback = VSyncCallback(0);
+    controller_base = (u8*)0x801ED600;
+    controller_base[0xAD] = 0;
+    controller_base[0x15B] = 0x10;
+    clear_controller_sample(controller_base);
+    clear_controller_sample(controller_base + 0xAE);
+    clear_controller_sample(controller_base + 0x20);
+    second_port_sample = controller_base + 0xCE;
+    clear_controller_sample(second_port_sample);
+    port_index = 1;
+    initial_actuator_command = 0x40;
+    invalid_device_type = 0xFF;
+    loop_end = -1;
+    port_bytes = controller_base + 0xAE;
     do
     {
-        temp = *((u16*)((*(new_var = &ptr)) + 0x92));
-        i--;
-        ptr[0x94] = val_40;
-        ptr[0x97] = 0;
-        ptr[0x96] = 0;
-        ptr[0x95] = 0;
-        ptr[0x90] = arg0;
-        ptr[0x91] = 0;
-        ptr[0xAA] = 0;
-        ptr[0xAB] = 0;
-        ptr[0xAC] = 0;
-        ptr[0x20] = val_ff;
-        ptr[0x00] = val_ff;
-        temp &= 0xF0FF;
-        *((u16*)(ptr - -0x92)) = temp;
-        ptr[0x92] = 0;
-        ptr -= 0xAE;
-    } while (new_var3 = i != sentinel);
-    base[0x1A8] = 0 * 0;
-    base[0x1A9] = 0;
-    base[0x1A0] = 0;
-    base[0x1A1] = 0;
-    base[0x1AA] = 0;
-    func_8002E958(val_ff, i, sentinel, val_40);
+        port_config = *((u16*)((*(port_pointer = &port_bytes)) + 0x92));
+        port_index--;
+        port_bytes[0x94] = initial_actuator_command;
+        port_bytes[0x97] = 0;
+        port_bytes[0x96] = 0;
+        port_bytes[0x95] = 0;
+        port_bytes[0x90] = enable_actuators;
+        port_bytes[0x91] = 0;
+        port_bytes[0xAA] = 0;
+        port_bytes[0xAB] = 0;
+        port_bytes[0xAC] = 0;
+        port_bytes[0x20] = invalid_device_type;
+        port_bytes[0x00] = invalid_device_type;
+        port_config &= 0xF0FF;
+        *((u16*)(port_bytes - -0x92)) = port_config;
+        port_bytes[0x92] = 0;
+        port_bytes -= 0xAE;
+    } while (loop_condition = port_index != loop_end);
+    controller_base[0x1A8] = 0 * 0;
+    controller_base[0x1A9] = 0;
+    controller_base[0x1A0] = 0;
+    controller_base[0x1A1] = 0;
+    controller_base[0x1AA] = 0;
+    PadStartCom(invalid_device_type, port_index, loop_end, initial_actuator_command);
     do
     {
         VSync(0);
-        func_80015674();
-        a2 = 1;
-        a1 = a2;
-        ptr2 = base + 0xAE;
+        controller_poll();
+        all_ports_ready = 1;
+        ports_remaining = all_ports_ready;
+        status_port = controller_base + 0xAE;
         do
         {
-            temp2 = *((u16*)((*(new_var = &ptr2)) + 0x92));
-            if ((!(((temp2 >> 6) >> 2) & 1)) && (((temp2 >> 9) & 3) != 2))
+            port_status = *((u16*)((*(port_pointer = &status_port)) + 0x92));
+            if ((!(((port_status >> 6) >> 2) & 1)) && (((port_status >> 9) & 3) != 2))
             {
-                a2 = 0;
+                all_ports_ready = 0;
             }
-            a1--;
-            ptr2 -= 0xAE;
-        } while (a1 != (-1));
-    } while (a2 == 0);
-    base[0x1A2] = 0;
-    base[0x1A3] = 0;
+            ports_remaining--;
+            status_port -= 0xAE;
+        } while (ports_remaining != (-1));
+    } while (all_ports_ready == 0);
+    controller_base[0x1A2] = 0;
+    controller_base[0x1A3] = 0;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/rDO0T
+ * @brief Poll one LIBPAD port and update buttons, analog axes, repeat state, and actuators.
+ * @param port Per-port controller state to update.
+ * @param actuator_power_total Accumulator for the active actuators' current draw.
+ * @see decomp.me (100%) https://decomp.me/scratch/rDO0T
  */
-void func_80014C54(arg0_struct* arg0, s32* arg1)
+void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
 {
-    int new_var;
-    u8* base;
-    u32 temp_v0;
-    s32 cnt;
-    int new_var2;
-    s32 idx;
-    unsigned int new_var6;
-    s32 rem;
-    s32 new_var5;
+    int one;
+    u8* controller_base;
+    u32 pad_state;
+    s32 count;
+    int updated_flags;
+    s32 index;
+    unsigned int unsigned_temp;
+    s32 remaining;
+    s32 shifted_delta;
     s32 loop_end;
-    int new_var4;
-    u8 const_ff;
-    s32 const_seven;
+    int slot;
+    u8 disabled_actuator;
+    s32 dualshock_mode_id;
     s32 fill_end;
-    u8 var_t1;
-    int var_a0_2;
-    u8 var_a3;
-    s32 var_t0;
-    u16 temp_v1_4;
-    s32 diff;
-    s32 mask;
-    u32 a1_mask;
-    int new_var3;
-    u8* var_a2;
-    base = (u8*)0x801ED600;
-    temp_v0 = func_8002E9E4(arg0->unkAD);
-    switch (temp_v0)
+    u8 device_type;
+    int direction_bits;
+    u8 initial_repeat_delay;
+    s32 repeat_interval;
+    u16 held_buttons;
+    s32 delta;
+    s32 new_direction_bits;
+    u32 direction_mask;
+    int detected_actuator_count;
+    u8* raw_pad_data;
+    controller_base = (u8*)0x801ED600;
+    pad_state = PadGetState(port->port_id);
+    switch (pad_state)
     {
     case 0:
-        new_var2 = arg0->unk92 | 0x100;
-        arg0->unk20 = 0xFF;
-        arg0->unk92 = new_var2 & 0xF9FF;
+        updated_flags = port->actuator_config | 0x100;
+        port->device_type = 0xFF;
+        port->actuator_config = updated_flags & 0xF9FF;
         return;
 
     case 1:
-        arg0->unk92 &= 0xFEFF;
-        if (arg0->unk92 & 0x600)
+        port->actuator_config &= 0xFEFF;
+        if (port->actuator_config & 0x600)
         {
-            arg0->unk92 = (arg0->unk92 & 0xF8FF) | 0x200;
+            port->actuator_config = (port->actuator_config & 0xF8FF) | 0x200;
         }
 
     case 4:
 
     case 5:
-        arg0->unk20 = 0xFE;
-        func_80015708(((u8*)arg0) + 0x20);
+        port->device_type = 0xFE;
+        clear_controller_sample(((u8*)port) + 0x20);
         return;
 
     case 2:
-        arg0->unk94 = 0x40;
-        if (arg0->unk90 != 0)
+        port->actuator_header = 0x40;
+        if (port->actuators_enabled != 0)
         {
-            if (arg0->unk91 & 1)
+            if (port->small_motor_command & 1)
             {
-                arg0->unk95 = arg0->unk91;
-                *arg1 += arg0->unkAB;
+                port->small_motor_value = port->small_motor_command;
+                *actuator_power_total += port->small_motor_power;
             }
             else
             {
-                u8 temp = arg0->unk92;
-                if ((temp != 0) && ((temp * 0x10) >= base[0x1A9]))
+                u8 large_motor_command = port->actuator_config;
+                if ((large_motor_command != 0) && ((large_motor_command * 0x10) >= controller_base[0x1A9]))
                 {
-                    arg0->unk95 = 1;
-                    *arg1 += arg0->unkAB;
+                    port->small_motor_value = 1;
+                    *actuator_power_total += port->small_motor_power;
                 }
                 else
                 {
-                    arg0->unk95 = 0;
+                    port->small_motor_value = 0;
                 }
             }
         }
         else
         {
-            arg0->unk95 = 0;
+            port->small_motor_value = 0;
         }
-        if ((arg0->unk92 & 0x600) != 0x400)
+        if ((port->actuator_config & 0x600) != 0x400)
         {
-            func_8002EDA4(arg0->unkAD, &arg0->unk94, 2);
-            arg0->unkAB = 10;
-            arg0->unk92 = (arg0->unk92 | 0x400) & 0xF5FF;
+            PadSetAct(port->port_id, &port->actuator_header, 2);
+            port->small_motor_power = 10;
+            port->actuator_config = (port->actuator_config | 0x400) & 0xF5FF;
         }
         break;
 
     case 6:
-        if (arg0->unk90 != 0)
+        if (port->actuators_enabled != 0)
         {
-            u8 temp = arg0->unk92;
-            if (temp != 0)
+            u8 large_motor_command = port->actuator_config;
+            if (large_motor_command != 0)
             {
-                arg0->unk96 = temp;
-                *arg1 += arg0->unkAC;
+                port->large_motor_value = large_motor_command;
+                *actuator_power_total += port->large_motor_power;
             }
             else
             {
-                arg0->unk96 = 0;
+                port->large_motor_value = 0;
             }
-            if (arg0->unk91 & 1)
+            if (port->small_motor_command & 1)
             {
-                arg0->unk95 = 1;
-                *arg1 += arg0->unkAB;
+                port->small_motor_value = 1;
+                *actuator_power_total += port->small_motor_power;
             }
             else
             {
-                arg0->unk95 = 0;
+                port->small_motor_value = 0;
             }
         }
         else
         {
-            arg0->unk95 = 0;
-            arg0->unk96 = 0;
+            port->small_motor_value = 0;
+            port->large_motor_value = 0;
         }
-        switch ((arg0->unk92 >> 9) & 3)
+        switch ((port->actuator_config >> 9) & 3)
         {
         case 0:
-            arg0->unk92 = (arg0->unk92 & 0xF9FF) | 0x200;
+            port->actuator_config = (port->actuator_config & 0xF9FF) | 0x200;
             
-            cnt = func_8002EAB0(arg0->unkAD, 4, -1);
-            idx = 0;
-            new_var6 = cnt;
-            if (new_var6 != 0)
+            count = PadInfoMode(port->port_id, 4, -1);
+            index = 0;
+            unsigned_temp = count;
+            if (unsigned_temp != 0)
             {
-                cnt--;
-                const_seven = 7;
+                count--;
+                dualshock_mode_id = 7;
                 loop_end = -1;
                 do
                 {
-                    if (func_8002EAB0(arg0->unkAD, 4, idx) != const_seven)
+                    if (PadInfoMode(port->port_id, 4, index) != dualshock_mode_id)
                     {
-                        idx++;
-                        cnt--;
+                        index++;
+                        count--;
                         continue;
                     }
-                    if (func_8002EAB0(arg0->unkAD, 3, 0) != idx)
+                    if (PadInfoMode(port->port_id, 3, 0) != index)
                     {
-                        func_8002ED5C(arg0->unkAD, idx, 0);
-                        arg0->unk20 = 0xFE;
-                        func_80015708(((u8*)arg0) + 0x20);
+                        PadSetMainMode(port->port_id, index, 0);
+                        port->device_type = 0xFE;
+                        clear_controller_sample(((u8*)port) + 0x20);
                         return;
                     }
-                    idx++;
-                    cnt--;
-                } while (cnt != loop_end);
+                    index++;
+                    count--;
+                } while (count != loop_end);
             }
 
         case 1:
-            arg0->unk92 = (arg0->unk92 & 0xF9FF) | 0xC00;
-            cnt = 5;
-            const_ff = 0xFF;
+            port->actuator_config = (port->actuator_config & 0xF9FF) | 0xC00;
+            count = 5;
+            disabled_actuator = 0xFF;
             fill_end = -1;
-            while (cnt != fill_end)
+            while (count != fill_end)
             {
-                ((u8*)arg0 + cnt)[0x98] = const_ff;
-                cnt--;
+                ((u8*)port + count)[0x98] = disabled_actuator;
+                count--;
             }
 
-            idx++;
-            rem = func_8002EBA8(arg0->unkAD, -1, idx = 0);
-            new_var3 = rem;
-            arg0->unkAA = new_var3;
-            func_8002EDA4(arg0->unkAD, &arg0->unk95, rem);
-            cnt = idx;
-            rem--;
-            arg0->unkAB = 0;
-            arg0->unkAC = 0;
-            while (rem != (-1))
+            index++;
+            remaining = PadInfoAct(port->port_id, -1, index = 0);
+            detected_actuator_count = remaining;
+            port->actuator_count = detected_actuator_count;
+            PadSetAct(port->port_id, &port->small_motor_value, remaining);
+            count = index;
+            remaining--;
+            port->small_motor_power = 0;
+            port->large_motor_power = 0;
+            while (remaining != (-1))
             {
-                int temp1 = func_8002EBA8(arg0->unkAD, cnt, 1);
-                if (temp1 == 1)
+                int actuator_supported = PadInfoAct(port->port_id, count, 1);
+                if (actuator_supported == 1)
                 {
-                    switch (func_8002EBA8(arg0->unkAD, cnt, 3))
+                    switch (PadInfoAct(port->port_id, count, 3))
                     {
                     case 0:
-                        if (arg0->unk98 == 0xFF)
+                        if (port->small_motor_index == 0xFF)
                         {
-                            arg0->unkAB = func_8002EBA8(arg0->unkAD, cnt, 4);
-                            arg0->unk98 = cnt;
+                            port->small_motor_power = PadInfoAct(port->port_id, count, 4);
+                            port->small_motor_index = count;
                         }
                         break;
                     case 1:
-                        if (arg0->unk99 == 0xFF)
+                        if (port->large_motor_index == 0xFF)
                         {
-                            arg0->unkAC = func_8002EBA8(arg0->unkAD, cnt, 4);
-                            arg0->unk99 = cnt;
+                            port->large_motor_power = PadInfoAct(port->port_id, count, 4);
+                            port->large_motor_index = count;
                         }
                         break;
                     }
                 }
-                cnt++;
-                rem--;
+                count++;
+                remaining--;
             }
 
-            func_8002ED24(arg0->unkAD, &arg0->unk98);
-            arg0->unk20 = 0xFE;
-            func_80015708(((u8*)arg0) + 0x20);
+            PadSetActAlign(port->port_id, &port->small_motor_index);
+            port->device_type = 0xFE;
+            clear_controller_sample(((u8*)port) + 0x20);
             return;
 
         default:
@@ -293,640 +298,665 @@ void func_80014C54(arg0_struct* arg0, s32* arg1)
         break;
     }
 
-    if (arg0->unkAD & 0x10)
+    if (port->port_id & 0x10)
     {
-        var_a2 = base + 0x17E;
+        raw_pad_data = controller_base + 0x17E;
     }
     else
     {
-        var_a2 = base + 0x15C;
+        raw_pad_data = controller_base + 0x15C;
     }
-    new_var4 = arg0->unkAD & 0xF;
-    if (new_var4 != 0)
+    slot = port->port_id & 0xF;
+    if (slot != 0)
     {
-        if ((*((u16*)var_a2)) == 0x8000)
+        if ((*((u16*)raw_pad_data)) == 0x8000)
         {
-            var_a2 += (new_var4 * 8) + 2;
+            raw_pad_data += (slot * 8) + 2;
         }
         else
         {
-            arg0->unk20 = 0xFF;
+            port->device_type = 0xFF;
             return;
         }
     }
-    else if ((*((u16*)var_a2)) == 0x8000)
+    else if ((*((u16*)raw_pad_data)) == 0x8000)
     {
-        var_a2 += 2;
+        raw_pad_data += 2;
     }
-    if (var_a2[0] == 0)
+    if (raw_pad_data[0] == 0)
     {
-        u8 tmp = var_a2[1];
-        u8 shift = tmp >> 4;
-        switch (shift)
+        u8 controller_id = raw_pad_data[1];
+        u8 controller_class = controller_id >> 4;
+        switch (controller_class)
         {
         case 4:
-            var_t1 = 0;
+            device_type = 0;
             break;
         case 5:
-            var_t1 = 1;
+            device_type = 1;
             break;
         case 7:
-            var_t1 = 2;
+            device_type = 2;
             break;
         default:
-            var_t1 = 0xFF;
+            device_type = 0xFF;
             break;
         }
-        var_a0_2 = var_t1;
-        if (var_a0_2 < 3)
+        direction_bits = device_type;
+        if (direction_bits < 3)
         {
-            if (var_a0_2 >= 0)
+            if (direction_bits >= 0)
             {
-            temp_v1_4 = ~(*((u16*)(var_a2 + 2)));
-            if (arg0->unk20 == var_a0_2)
+            held_buttons = ~(*((u16*)(raw_pad_data + 2)));
+            if (port->device_type == direction_bits)
             {
-                arg0->unk24 = (arg0->unk26 = temp_v1_4 & (arg0->unk22 ^ temp_v1_4));
+                port->pressed_buttons = (port->repeat_buttons = held_buttons & (port->held_buttons ^ held_buttons));
             }
             else
             {
-                arg0->unk24 = (arg0->unk26 = temp_v1_4);
-                if (var_a0_2 == 1)
+                port->pressed_buttons = (port->repeat_buttons = held_buttons);
+                if (direction_bits == 1)
                 {
-                    arg0->unkA6 = var_a2[4];
-                    arg0->unkA7 = var_a2[5];
-                    arg0->unkA8 = var_a2[6];
-                    arg0->unkA9 = var_a2[7];
-                    arg0->unk21 = 0;
+                    port->right_stick_center_x = raw_pad_data[4];
+                    port->right_stick_center_y = raw_pad_data[5];
+                    port->left_stick_center_x = raw_pad_data[6];
+                    port->left_stick_center_y = raw_pad_data[7];
+                    port->analog_direction_bits = 0;
                 }
-                else if (var_a0_2 == 2)
+                else if (direction_bits == 2)
                 {
-                    if (!(arg0->unk92 & 0x800))
+                    if (!(port->actuator_config & 0x800))
                     {
-                        arg0->unkA6 = var_a2[4];
-                        arg0->unkA7 = var_a2[5];
-                        arg0->unkA8 = var_a2[6];
-                        arg0->unkA9 = var_a2[7];
-                        arg0->unk21 = 0;
+                        port->right_stick_center_x = raw_pad_data[4];
+                        port->right_stick_center_y = raw_pad_data[5];
+                        port->left_stick_center_x = raw_pad_data[6];
+                        port->left_stick_center_y = raw_pad_data[7];
+                        port->analog_direction_bits = 0;
                     }
                     else
                     {
-                        arg0->unkA6 = 0x80;
-                        arg0->unkA7 = 0x80;
-                        arg0->unkA8 = 0x80;
-                        arg0->unkA9 = 0x80;
-                        arg0->unk21 = 0;
+                        port->right_stick_center_x = 0x80;
+                        port->right_stick_center_y = 0x80;
+                        port->left_stick_center_x = 0x80;
+                        port->left_stick_center_y = 0x80;
+                        port->analog_direction_bits = 0;
                     }
                 }
-                arg0->unk20 = var_t1;
+                port->device_type = device_type;
             }
-            arg0->unk22 = temp_v1_4;
-            if (base[0x1A8] != 0)
+            port->held_buttons = held_buttons;
+            if (controller_base[0x1A8] != 0)
             {
-                var_a3 = 0x0B;
-                var_t0 = 3;
+                initial_repeat_delay = 0x0B;
+                repeat_interval = 3;
             }
             else
             {
-                var_a3 = 0x16;
-                var_t0 = 6;
+                initial_repeat_delay = 0x16;
+                repeat_interval = 6;
             }
-            new_var = 1;
-            if (temp_v1_4 & 0x10)
+            one = 1;
+            if (held_buttons & 0x10)
             {
-                if ((arg0->unk24 & 0x10) && (base[0x1AA] == 0))
+                if ((port->pressed_buttons & 0x10) && (controller_base[0x1AA] == 0))
                 {
-                    arg0->unk9E = var_a3;
+                    port->face_repeat_timer_0 = initial_repeat_delay;
                 }
                 else
                 {
-                    diff = arg0->unk9E - new_var;
-                    if (diff <= 0)
+                    delta = port->face_repeat_timer_0 - one;
+                    if (delta <= 0)
                     {
-                        diff = var_t0;
-                        arg0->unk26 |= 0x10;
+                        delta = repeat_interval;
+                        port->repeat_buttons |= 0x10;
                     }
-                    arg0->unk9E = diff;
+                    port->face_repeat_timer_0 = delta;
                 }
             }
-            if (temp_v1_4 & 0x20)
+            if (held_buttons & 0x20)
             {
-                if ((arg0->unk24 & 0x20) && (base[0x1AA] == 0))
+                if ((port->pressed_buttons & 0x20) && (controller_base[0x1AA] == 0))
                 {
-                    arg0->unk9F = var_a3;
+                    port->face_repeat_timer_1 = initial_repeat_delay;
                 }
                 else
                 {
-                    diff = arg0->unk9F - new_var;
-                    if (diff <= 0)
+                    delta = port->face_repeat_timer_1 - one;
+                    if (delta <= 0)
                     {
-                        diff = var_t0;
-                        arg0->unk26 |= 0x20;
+                        delta = repeat_interval;
+                        port->repeat_buttons |= 0x20;
                     }
-                    arg0->unk9F = diff;
+                    port->face_repeat_timer_1 = delta;
                 }
             }
-            if (temp_v1_4 & 0x40)
+            if (held_buttons & 0x40)
             {
-                if ((arg0->unk24 & 0x40) && (base[0x1AA] == 0))
+                if ((port->pressed_buttons & 0x40) && (controller_base[0x1AA] == 0))
                 {
-                    arg0->unkA0 = var_a3;
+                    port->face_repeat_timer_2 = initial_repeat_delay;
                 }
                 else
                 {
-                    diff = arg0->unkA0 - new_var;
-                    if (diff <= 0)
+                    delta = port->face_repeat_timer_2 - one;
+                    if (delta <= 0)
                     {
-                        diff = var_t0;
-                        arg0->unk26 |= 0x40;
+                        delta = repeat_interval;
+                        port->repeat_buttons |= 0x40;
                     }
-                    arg0->unkA0 = diff;
+                    port->face_repeat_timer_2 = delta;
                 }
             }
-            if (temp_v1_4 & 0x80)
+            if (held_buttons & 0x80)
             {
-                if ((arg0->unk24 & 0x80) && (base[0x1AA] == 0))
+                if ((port->pressed_buttons & 0x80) && (controller_base[0x1AA] == 0))
                 {
-                    arg0->unkA1 = var_a3;
+                    port->face_repeat_timer_3 = initial_repeat_delay;
                 }
                 else
                 {
-                    diff = arg0->unkA1 - new_var;
-                    if (diff <= 0)
+                    delta = port->face_repeat_timer_3 - one;
+                    if (delta <= 0)
                     {
-                        diff = var_t0;
-                        arg0->unk26 |= 0x80;
+                        delta = repeat_interval;
+                        port->repeat_buttons |= 0x80;
                     }
-                    arg0->unkA1 = diff;
+                    port->face_repeat_timer_3 = delta;
                 }
             }
-            if (var_t1 != 0)
+            if (device_type != 0)
             {
-                diff = var_a2[4] - arg0->unkA6;
-                if (((u32)(diff + 0x38)) < 0x71U)
+                delta = raw_pad_data[4] - port->right_stick_center_x;
+                if (((u32)(delta + 0x38)) < 0x71U)
                 {
-                    diff = 0;
+                    delta = 0;
                 }
-                if (diff < (-0x80))
+                if (delta < (-0x80))
                 {
-                    diff = -0x80;
+                    delta = -0x80;
                 }
-                else if (diff >= 0x80)
+                else if (delta >= 0x80)
                 {
-                    diff = 0x7F;
+                    delta = 0x7F;
                 }
-                new_var5 = diff >> 4;
-                if (diff < 0)
+                shifted_delta = delta >> 4;
+                if (delta < 0)
                 {
-                    arg0->unk28 = (diff + 0xF) >> 4;
-                }
-                else
-                {
-                    arg0->unk28 = new_var5;
-                }
-                diff = var_a2[5] - arg0->unkA7;
-                if (((u32)(diff + 0x38)) < 0x71U)
-                {
-                    diff = 0;
-                }
-                if (diff < (-0x80))
-                {
-                    diff = -0x80;
-                }
-                else if (diff >= 0x80)
-                {
-                    diff = 0x7F;
-                }
-                new_var6 = diff >> 4;
-                if (diff < 0)
-                {
-                    arg0->unk2A = (diff + 0xF) >> 4;
+                    port->right_stick_x = (delta + 0xF) >> 4;
                 }
                 else
                 {
-                    arg0->unk2A = new_var6;
+                    port->right_stick_x = shifted_delta;
                 }
-                diff = var_a2[6] - arg0->unkA8;
-                if (((u32)(diff + 0x38)) < 0x71U)
+                delta = raw_pad_data[5] - port->right_stick_center_y;
+                if (((u32)(delta + 0x38)) < 0x71U)
                 {
-                    diff = 0;
+                    delta = 0;
                 }
-                if (diff < (-0x80))
+                if (delta < (-0x80))
                 {
-                    diff = -0x80;
+                    delta = -0x80;
                 }
-                else if (diff >= 0x80)
+                else if (delta >= 0x80)
                 {
-                    diff = 0x7F;
+                    delta = 0x7F;
                 }
-                new_var5 = diff >> 4;
-                if (diff < 0)
+                unsigned_temp = delta >> 4;
+                if (delta < 0)
                 {
-                    new_var5 = (diff + 0xF) >> 4;
+                    port->right_stick_y = (delta + 0xF) >> 4;
                 }
-                diff = new_var5;
-                arg0->unk2C = diff;
-                a1_mask = 0x80;
-                if (diff >= 0)
+                else
                 {
-                    if (diff > 0)
+                    port->right_stick_y = unsigned_temp;
+                }
+                delta = raw_pad_data[6] - port->left_stick_center_x;
+                if (((u32)(delta + 0x38)) < 0x71U)
+                {
+                    delta = 0;
+                }
+                if (delta < (-0x80))
+                {
+                    delta = -0x80;
+                }
+                else if (delta >= 0x80)
+                {
+                    delta = 0x7F;
+                }
+                shifted_delta = delta >> 4;
+                if (delta < 0)
+                {
+                    shifted_delta = (delta + 0xF) >> 4;
+                }
+                delta = shifted_delta;
+                port->left_stick_x = delta;
+                direction_mask = 0x80;
+                if (delta >= 0)
+                {
+                    if (delta > 0)
                     {
-                        a1_mask = 0x20;
+                        direction_mask = 0x20;
                     }
                     else
                     {
-                        a1_mask = 0;
+                        direction_mask = 0;
                     }
                 }
-                diff = var_a2[7] - arg0->unkA9;
-                if (((u32)(diff + 0x38)) < 0x71U)
+                delta = raw_pad_data[7] - port->left_stick_center_y;
+                if (((u32)(delta + 0x38)) < 0x71U)
                 {
-                    diff = 0;
+                    delta = 0;
                 }
-                if (diff < (-0x80))
+                if (delta < (-0x80))
                 {
-                    diff = -0x80;
+                    delta = -0x80;
                 }
-                else if (diff >= 0x80)
+                else if (delta >= 0x80)
                 {
-                    diff = 0x7F;
+                    delta = 0x7F;
                 }
-                new_var5 = diff >> 4;
-                if (diff < 0)
+                shifted_delta = delta >> 4;
+                if (delta < 0)
                 {
-                    new_var5 = (diff + 0xF) >> 4;
+                    shifted_delta = (delta + 0xF) >> 4;
                 }
-                diff = new_var5;
-                arg0->unk2E = diff;
-                if (diff < 0)
+                delta = shifted_delta;
+                port->left_stick_y = delta;
+                if (delta < 0)
                 {
-                    a1_mask |= 0x10;
+                    direction_mask |= 0x10;
                 }
-                else if (diff > 0)
+                else if (delta > 0)
                 {
-                    a1_mask |= 0x40;
+                    direction_mask |= 0x40;
                 }
-                diff = a1_mask & (a1_mask ^ ((arg0->unk21 & 0xF) * 0x10));
-                mask = diff;
-                var_a0_2 = mask | ((a1_mask & 0xFF) >> 4);
-                if (a1_mask & 0x10)
+                delta = direction_mask & (direction_mask ^ ((port->analog_direction_bits & 0xF) * 0x10));
+                new_direction_bits = delta;
+                direction_bits = new_direction_bits | ((direction_mask & 0xFF) >> 4);
+                if (direction_mask & 0x10)
                 {
-                    if ((mask & 0x10) && (base[0x1AA] == 0))
+                    if ((new_direction_bits & 0x10) && (controller_base[0x1AA] == 0))
                     {
-                        arg0->unkA2 = var_a3;
+                        port->direction_repeat_timer_0 = initial_repeat_delay;
                     }
                     else
                     {
-                        diff = arg0->unkA2 - new_var;
-                        if (diff <= 0)
+                        delta = port->direction_repeat_timer_0 - one;
+                        if (delta <= 0)
                         {
-                            var_a0_2 |= 0x10;
-                            diff = var_t0;
+                            direction_bits |= 0x10;
+                            delta = repeat_interval;
                         }
-                        arg0->unkA2 = diff;
+                        port->direction_repeat_timer_0 = delta;
                     }
                 }
-                if (a1_mask & 0x20)
+                if (direction_mask & 0x20)
                 {
-                    if ((mask & 0x20) && (base[0x1AA] == 0))
+                    if ((new_direction_bits & 0x20) && (controller_base[0x1AA] == 0))
                     {
-                        arg0->unkA3 = var_a3;
+                        port->direction_repeat_timer_1 = initial_repeat_delay;
                     }
                     else
                     {
-                        diff = arg0->unkA3 - new_var;
-                        if (diff <= 0)
+                        delta = port->direction_repeat_timer_1 - one;
+                        if (delta <= 0)
                         {
-                            var_a0_2 |= 0x20;
-                            diff = var_t0;
+                            direction_bits |= 0x20;
+                            delta = repeat_interval;
                         }
-                        arg0->unkA3 = diff;
+                        port->direction_repeat_timer_1 = delta;
                     }
                 }
-                if (a1_mask & 0x40)
+                if (direction_mask & 0x40)
                 {
-                    if ((mask & 0x40) && (base[0x1AA] == 0))
+                    if ((new_direction_bits & 0x40) && (controller_base[0x1AA] == 0))
                     {
-                        arg0->unkA4 = var_a3;
+                        port->direction_repeat_timer_2 = initial_repeat_delay;
                     }
                     else
                     {
-                        diff = arg0->unkA4 - new_var;
-                        if (diff <= 0)
+                        delta = port->direction_repeat_timer_2 - one;
+                        if (delta <= 0)
                         {
-                            var_a0_2 |= 0x40;
-                            diff = var_t0;
+                            direction_bits |= 0x40;
+                            delta = repeat_interval;
                         }
-                        arg0->unkA4 = diff;
+                        port->direction_repeat_timer_2 = delta;
                     }
                 }
-                if (a1_mask & 0x80)
+                if (direction_mask & 0x80)
                 {
-                    if ((mask & 0x80) && (base[0x1AA] == 0))
+                    if ((new_direction_bits & 0x80) && (controller_base[0x1AA] == 0))
                     {
-                        arg0->unkA5 = var_a3;
+                        port->direction_repeat_timer_3 = initial_repeat_delay;
                     }
                     else
                     {
-                        diff = arg0->unkA5 - new_var;
-                        if (diff <= 0)
+                        delta = port->direction_repeat_timer_3 - one;
+                        if (delta <= 0)
                         {
-                            var_a0_2 |= 0x80;
-                            diff = var_t0;
+                            direction_bits |= 0x80;
+                            delta = repeat_interval;
                         }
-                        arg0->unkA5 = diff;
+                        port->direction_repeat_timer_3 = delta;
                     }
                 }
-                arg0->unk21 = var_a0_2;
+                port->analog_direction_bits = direction_bits;
                 return;
             }
             }
             else
             {
-                arg0->unk20 = 0xFF;
+                port->device_type = 0xFF;
                 return;
             }
         }
         else
         {
-            arg0->unk20 = 0xFF;
+            port->device_type = 0xFF;
             return;
         }
     }
     else
     {
-        func_80015708(((u8*)arg0) + 0x20);
+        clear_controller_sample(((u8*)port) + 0x20);
         return;
     }
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/FnYh0
+ * @brief Poll both controller ports once when LIBPAD reports a new VSync sample.
+ * @see decomp.me (100%) https://decomp.me/scratch/FnYh0
  */
-void func_80015674(void)
+void controller_poll(void)
 {
-    s32 sp10;
-    u8* base = (u8*)0x801ED600;
+    s32 actuator_power_total;
+    u8* controller_base = (u8*)0x801ED600;
 
-    if (func_8002E938() != 0)
+    if (PadChkVsync() != 0)
     {
-        sp10 = 0;
-        base[0x1A9] = (base[0x1A9] + 1) & 0xF;
-        func_80014C54((arg0_struct*)base, &sp10);
-        func_80014C54((arg0_struct*)(base + 0xAE), &sp10);
-        base[0x1AA] = 0;
+        actuator_power_total = 0;
+        controller_base[0x1A9] = (controller_base[0x1A9] + 1) & 0xF;
+        poll_controller_port((ControllerPortState*)controller_base, &actuator_power_total);
+        poll_controller_port((ControllerPortState*)(controller_base + 0xAE), &actuator_power_total);
+        controller_base[0x1AA] = 0;
         return;
     }
-    func_80015708((void*)(base + 0x20));
-    func_80015708((void*)(base + 0xCE));
-    base[0x1AA] = 1;
+    clear_controller_sample((void*)(controller_base + 0x20));
+    clear_controller_sample((void*)(controller_base + 0xCE));
+    controller_base[0x1AA] = 1;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/TSmff
+ * @brief Clear the mutable fields of a 16-byte controller sample.
+ * @param sample Controller sample to clear.
+ * @see decomp.me (100%) https://decomp.me/scratch/TSmff
  */
-void func_80015708(void* arg0)
+void clear_controller_sample(void* sample)
 {
-    unsigned char* p8 = (unsigned char*)arg0;
-    unsigned short* p16 = (unsigned short*)arg0;
+    unsigned char* bytes = (unsigned char*)sample;
+    unsigned short* halfwords = (unsigned short*)sample;
 
-    p16[3] = 0; // sh zero,6(a0)
-    p16[2] = 0; // sh zero,4(a0)
-    p16[1] = 0; // sh zero,2(a0)
-    p8[1] = 0;  // sb zero,1(a0)
-    p16[7] = 0; // sh zero,0xe(a0)
-    p16[6] = 0; // sh zero,0xc(a0)
-    p16[5] = 0; // sh zero,0xa(a0)
-    p16[4] = 0; // sh zero,8(a0)
+    halfwords[3] = 0; // sh zero,6(a0)
+    halfwords[2] = 0; // sh zero,4(a0)
+    halfwords[1] = 0; // sh zero,2(a0)
+    bytes[1] = 0;  // sb zero,1(a0)
+    halfwords[7] = 0; // sh zero,0xe(a0)
+    halfwords[6] = 0; // sh zero,0xc(a0)
+    halfwords[5] = 0; // sh zero,0xa(a0)
+    halfwords[4] = 0; // sh zero,8(a0)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/NkZqx
+ * @brief Stop LIBPAD communication and restore the previous VSync callback.
+ * @see decomp.me (100%) https://decomp.me/scratch/NkZqx
  */
-void func_8001572C(void)
+void shutdown_controllers(void)
 {
-    u8* base = (u8*)0x801ED600;
+    u8* controller_base = (u8*)0x801ED600;
     VSync(0);
-    func_8002E978();
-    VSyncCallback(*(void (**)(void))(base + 0x1A4));
-    base[0x1AA] = 0;
+    PadStopCom();
+    VSyncCallback(*(void (**)(void))(controller_base + 0x1A4));
+    controller_base[0x1AA] = 0;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/BwqlO
+ * @brief Install the controller VSync callback and reset its sample counters.
+ * @see decomp.me (100%) https://decomp.me/scratch/BwqlO
  */
-void InitVSyncController(void)
+void initialize_controller_vsync(void)
 {
-    u8* base = (u8*)0x801ED600;
+    u8* controller_base = (u8*)0x801ED600;
     VSync(0);
-    VSyncCallback(func_800158FC);
-    base[0x1A2] = 0;
-    base[0x1A1] = 0;
+    VSyncCallback(controller_vsync_callback);
+    controller_base[0x1A2] = 0;
+    controller_base[0x1A1] = 0;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/zw8m7
+ * @brief Set the number of VSyncs over which controller samples are accumulated.
+ * @param interval VSync accumulation interval; zero leaves rollover disabled.
+ * @see decomp.me (100%) https://decomp.me/scratch/zw8m7
  */
-void func_800157B0(unsigned long arg0)
+void set_controller_vsync_interval(unsigned long interval)
 {
-    u8* base = (u8*)0x801ED600;
-    if (base[0x1A2] >= arg0)
+    u8* controller_base = (u8*)0x801ED600;
+    if (controller_base[0x1A2] >= interval)
     {
-        base[0x1A2] = 0;
+        controller_base[0x1A2] = 0;
         return;
     }
-    base[0x1A3] = arg0;
+    controller_base[0x1A3] = interval;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/GawXK
+ * @brief Publish the latest controller state and transfer queued VSync samples to history.
+ * @see decomp.me (100%) https://decomp.me/scratch/GawXK
  */
-void func_800157DC(void)
+void update_controllers(void)
 {
-    u8* new_var;
-    u8* base;
-    s32 var_s0;
-    s32 var_s1;
-    s32 var_s3;
-    s32 var_s4;
-    s32 var_s5;
-    u8 temp_s0;
-    s32 mul;
-    s32 neg;
-    func_80015674();
-    base = (u8*)0x801ED600;
-    if (D_801ED7A1 == 0)
+    u8* source_sample;
+    u8* controller_base;
+    s32 sample_index;
+    s32 port1_dest_offset;
+    s32 port2_dest_offset;
+    s32 port1_source_offset;
+    s32 port2_source_offset;
+    u8 sample_count;
+    s32 history_offset;
+    s32 loop_end;
+    controller_poll();
+    controller_base = (u8*)0x801ED600;
+    if (g_controller_vsync_sample_count == 0)
     {
-        func_80015708((void*)(base + 0x10));
-        func_80015708((void*)(base + 0xBE));
+        clear_controller_sample((void*)(controller_base + 0x10));
+        clear_controller_sample((void*)(controller_base + 0xBE));
     }
-    func_80015AA4((void*)base);
-    func_80015AA4((void*)(base + 0xAE));
-    var_s0 = base[0x1A1];
-    temp_s0 = var_s0;
-    base[0x1A0] = temp_s0;
-    var_s0 = temp_s0 - 1;
-    if (var_s0 != (-1))
+    merge_latest_controller_sample((void*)controller_base);
+    merge_latest_controller_sample((void*)(controller_base + 0xAE));
+    sample_index = controller_base[0x1A1];
+    sample_count = sample_index;
+    controller_base[0x1A0] = sample_count;
+    sample_index = sample_count - 1;
+    if (sample_index != (-1))
     {
-        neg = -1;
-        mul = var_s0 * 0x10;
-        var_s5 = mul + 0x10E;
-        var_s4 = mul + 0x60;
-        var_s3 = 0xDE;
-        var_s1 = 0x30;
+        loop_end = -1;
+        history_offset = sample_index * 0x10;
+        port2_source_offset = history_offset + 0x10E;
+        port1_source_offset = history_offset + 0x60;
+        port2_dest_offset = 0xDE;
+        port1_dest_offset = 0x30;
         do
         {
-            new_var = base + var_s5;
-            func_80015B58((void*)(base + var_s4), (void*)(base + var_s1));
-            func_80015B58((void*)new_var, (void*)(base + var_s3));
-            var_s3 += 0x10;
-            var_s1 += 0x10;
-            var_s5 -= 0x10;
-            var_s0 -= 1;
-            var_s4 -= 0x10;
-        } while (var_s0 != neg);
+            source_sample = controller_base + port2_source_offset;
+            copy_controller_sample((void*)(controller_base + port1_source_offset), (void*)(controller_base + port1_dest_offset));
+            copy_controller_sample((void*)source_sample, (void*)(controller_base + port2_dest_offset));
+            port2_dest_offset += 0x10;
+            port1_dest_offset += 0x10;
+            port2_source_offset -= 0x10;
+            sample_index -= 1;
+            port1_source_offset -= 0x10;
+        } while (sample_index != loop_end);
     }
-    base[0x1A1] = 0;
-    base[0x1A2] = 1;
-    base[0x1A3] = 0;
+    controller_base[0x1A1] = 0;
+    controller_base[0x1A2] = 1;
+    controller_base[0x1A3] = 0;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/RJyNE
+ * @brief Reset controller VSync accumulation without stopping LIBPAD communication.
+ * @see decomp.me (100%) https://decomp.me/scratch/RJyNE
  */
-void func_800158E0(void)
+void reset_controller_vsync_state(void)
 {
-    u8* base = (u8*)0x801ED600;
+    u8* controller_base = (u8*)0x801ED600;
 
-    base[0x1A2] = 0;
-    base[0x1A0] = 0;
-    base[0x1A1] = 0;
-    base[0x1AA] = 0;
+    controller_base[0x1A2] = 0;
+    controller_base[0x1A0] = 0;
+    controller_base[0x1A1] = 0;
+    controller_base[0x1AA] = 0;
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/srP3p
+ * @brief Poll and accumulate controller samples from the installed VSync callback.
+ * @see decomp.me (100%) https://decomp.me/scratch/srP3p
  */
-void func_800158FC(void)
+void controller_vsync_callback(void)
 {
-    u8* base = (u8*)0x801ED600;
+    u8* controller_base = (u8*)0x801ED600;
 
-    if (D_801ED7A2 != 0)
+    if (g_controller_vsync_counter != 0)
     {
-        func_80015674();
+        controller_poll();
 
-        if (base[0x1A1] < 3)
+        if (controller_base[0x1A1] < 3)
         {
-            func_80015B58((void*)(base + 0x20), (void*)(base + ((base[0x1A1] << 4) + 0x60)));
-            func_80015B58((void*)(base + 0xCE), (void*)(base + ((base[0x1A1] << 4) + 0x10E)));
-            base[0x1A1] = base[0x1A1] + 1;
+            copy_controller_sample((void*)(controller_base + 0x20), (void*)(controller_base + ((controller_base[0x1A1] << 4) + 0x60)));
+            copy_controller_sample((void*)(controller_base + 0xCE), (void*)(controller_base + ((controller_base[0x1A1] << 4) + 0x10E)));
+            controller_base[0x1A1] = controller_base[0x1A1] + 1;
         }
 
-        if (base[0x1A2] == 1)
+        if (controller_base[0x1A2] == 1)
         {
-            func_80015708((void*)(base + 0x10));
-            func_80015708((void*)(base + 0xBE));
+            clear_controller_sample((void*)(controller_base + 0x10));
+            clear_controller_sample((void*)(controller_base + 0xBE));
         }
 
-        func_800159F8((void*)base);
-        func_800159F8((void*)(base + 0xAE));
+        accumulate_controller_sample((void*)controller_base);
+        accumulate_controller_sample((void*)(controller_base + 0xAE));
 
         {
-            u8 new_val = base[0x1A2] + 1;
-            u8 limit = base[0x1A3];
-            base[0x1A2] = new_val;
-            if (limit != 0 && new_val >= limit)
+            u8 next_counter = controller_base[0x1A2] + 1;
+            u8 interval = controller_base[0x1A3];
+            controller_base[0x1A2] = next_counter;
+            if (interval != 0 && next_counter >= interval)
             {
-                base[0x1A2] = 0;
+                controller_base[0x1A2] = 0;
             }
         }
     }
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/aj1vL
+ * @brief Accumulate the latest sample into a port's interval aggregate.
+ * @param port_state Base of the per-port controller state.
+ * @see decomp.me (100%) https://decomp.me/scratch/aj1vL
  */
-void func_800159F8(void* arg0)
+void accumulate_controller_sample(void* port_state)
 {
-    u8* base = (u8*)arg0;
-    s32 t = (s32)base[0x20];
-    if (t == 0)
+    u8* port_bytes = (u8*)port_state;
+    s32 device_type = (s32)port_bytes[0x20];
+    if (device_type == 0)
     {
     }
-    else if (t < 0)
+    else if (device_type < 0)
     {
         return;
     }
-    else if (t >= 3)
+    else if (device_type >= 3)
     {
         return;
     }
     else
     {
-        *((u16*)(base + 0x18)) += *((u16*)(base + 0x28));
-        *((u16*)(base + 0x1A)) += *((u16*)(((u8*)arg0) + 0x2A));
-        *((u16*)(((u8*)arg0) + 0x1C)) += *((u16*)(((u8*)arg0) + 0x2C));
-        *((u16*)(((u8*)arg0) + 0x1E)) += *((u16*)(((u8*)arg0) + 0x2E));
-        ((u8*)arg0)[0x11] |= ((u8*)arg0)[0x21];
+        *((u16*)(port_bytes + 0x18)) += *((u16*)(port_bytes + 0x28));
+        *((u16*)(port_bytes + 0x1A)) += *((u16*)(((u8*)port_state) + 0x2A));
+        *((u16*)(((u8*)port_state) + 0x1C)) += *((u16*)(((u8*)port_state) + 0x2C));
+        *((u16*)(((u8*)port_state) + 0x1E)) += *((u16*)(((u8*)port_state) + 0x2E));
+        ((u8*)port_state)[0x11] |= ((u8*)port_state)[0x21];
     }
-    *((u16*)(((u8*)arg0) + 0x12)) |= *((u16*)(((u8*)arg0) + 0x22));
-    *((u16*)(((u8*)arg0) + 0x14)) |= *((u16*)(((u8*)arg0) + 0x24));
-    *((u16*)(((u8*)arg0) + 0x16)) |= *((u16*)(((u8*)arg0) + 0x26));
+    *((u16*)(((u8*)port_state) + 0x12)) |= *((u16*)(((u8*)port_state) + 0x22));
+    *((u16*)(((u8*)port_state) + 0x14)) |= *((u16*)(((u8*)port_state) + 0x24));
+    *((u16*)(((u8*)port_state) + 0x16)) |= *((u16*)(((u8*)port_state) + 0x26));
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/ORRFA
+ * @brief Merge the accumulated and latest samples into a port's published sample.
+ * @param port_state Base of the per-port controller state.
+ * @see decomp.me (100%) https://decomp.me/scratch/ORRFA
  */
-void func_80015AA4(void* arg0)
+void merge_latest_controller_sample(void* port_state)
 {
-    s32 t = ((u8*)arg0)[0x20];
-    ((u8*)arg0)[0] = t;
-    t &= 0xFF;
+    s32 device_type = ((u8*)port_state)[0x20];
+    ((u8*)port_state)[0] = device_type;
+    device_type &= 0xFF;
 
-    if (t == 0)
+    if (device_type == 0)
     {
-        /* empty – forces nop in delay slot */
+        /* Empty branch forces a nop in the delay slot. */
     }
     else
     {
-        if (t < 0)
+        if (device_type < 0)
+        {
             return;
-        if (t >= 3)
+        }
+        if (device_type >= 3)
+        {
             return;
-        *(u16*)((u8*)arg0 + 8) = *(u16*)((u8*)arg0 + 0x18) + *(u16*)((u8*)arg0 + 0x28);
-        *(u16*)((u8*)arg0 + 0xA) = *(u16*)((u8*)arg0 + 0x1A) + *(u16*)((u8*)arg0 + 0x2A);
-        *(u16*)((u8*)arg0 + 0xC) = *(u16*)((u8*)arg0 + 0x1C) + *(u16*)((u8*)arg0 + 0x2C);
-        *(u16*)((u8*)arg0 + 0xE) = *(u16*)((u8*)arg0 + 0x1E) + *(u16*)((u8*)arg0 + 0x2E);
-        ((u8*)arg0)[1] = ((u8*)arg0)[0x11] | ((u8*)arg0)[0x21];
+        }
+        *(u16*)((u8*)port_state + 8) = *(u16*)((u8*)port_state + 0x18) + *(u16*)((u8*)port_state + 0x28);
+        *(u16*)((u8*)port_state + 0xA) = *(u16*)((u8*)port_state + 0x1A) + *(u16*)((u8*)port_state + 0x2A);
+        *(u16*)((u8*)port_state + 0xC) = *(u16*)((u8*)port_state + 0x1C) + *(u16*)((u8*)port_state + 0x2C);
+        *(u16*)((u8*)port_state + 0xE) = *(u16*)((u8*)port_state + 0x1E) + *(u16*)((u8*)port_state + 0x2E);
+        ((u8*)port_state)[1] = ((u8*)port_state)[0x11] | ((u8*)port_state)[0x21];
     }
 
-    *(u16*)((u8*)arg0 + 2) = *(u16*)((u8*)arg0 + 0x12) | *(u16*)((u8*)arg0 + 0x22);
-    *(u16*)((u8*)arg0 + 4) = *(u16*)((u8*)arg0 + 0x14) | *(u16*)((u8*)arg0 + 0x24);
-    *(u16*)((u8*)arg0 + 6) = *(u16*)((u8*)arg0 + 0x16) | *(u16*)((u8*)arg0 + 0x26);
+    *(u16*)((u8*)port_state + 2) = *(u16*)((u8*)port_state + 0x12) | *(u16*)((u8*)port_state + 0x22);
+    *(u16*)((u8*)port_state + 4) = *(u16*)((u8*)port_state + 0x14) | *(u16*)((u8*)port_state + 0x24);
+    *(u16*)((u8*)port_state + 6) = *(u16*)((u8*)port_state + 0x16) | *(u16*)((u8*)port_state + 0x26);
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/Hkz5t
+ * @brief Copy one 16-byte controller sample while preserving device-type handling.
+ * @param source Controller sample to copy.
+ * @param destination Controller sample to overwrite.
+ * @see decomp.me (100%) https://decomp.me/scratch/Hkz5t
  */
-void func_80015B58(void* arg0, void* arg1)
+void copy_controller_sample(void* source, void* destination)
 {
-    u8* src = (u8*)arg0;
-    u8* dst = (u8*)arg1;
-    s32 t;
+    u8* src = (u8*)source;
+    u8* dst = (u8*)destination;
+    s32 device_type;
 
-    func_80015708(dst);
+    clear_controller_sample(dst);
     dst[0] = src[0];
-    t = (s32)src[0]; /* second load for comparison */
+    device_type = (s32)src[0]; /* second load for comparison */
 
-    if (t == 0)
+    if (device_type == 0)
     {
-        /* empty – forces nop in delay slot of beqz */
+        /* Empty branch forces a nop in the beqz delay slot. */
     }
     else
     {
-        if (t < 0)
+        if (device_type < 0)
+        {
             return; /* bltz */
-        if (t >= 3)
+        }
+        if (device_type >= 3)
+        {
             return; /* slti + beqz with nop */
+        }
         *(u16*)(dst + 8) = *(u16*)(src + 8);
         *(u16*)(dst + 10) = *(u16*)(src + 10);
         *(u16*)(dst + 12) = *(u16*)(src + 12);
@@ -934,16 +964,18 @@ void func_80015B58(void* arg0, void* arg1)
         dst[1] = src[1];
     }
 
-    /* OR block – executed for t == 0, 1, or 2 */
+    /* Button block - executed for device_type 0, 1, or 2. */
     *(u16*)(dst + 2) = *(u16*)(src + 2);
     *(u16*)(dst + 4) = *(u16*)(src + 4);
     *(u16*)(dst + 6) = *(u16*)(src + 6);
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/wUn6G
+ * @brief Return the common load base used by mutually exclusive overlays.
+ * @return Overlay load base at 0x8004FC70.
+ * @see decomp.me (100%) https://decomp.me/scratch/wUn6G
  */
-s32* FUN_80015c18(void)
+s32* get_overlay_load_base(void)
 {
-    return &D_8004FC70;
+    return &g_overlay_load_base;
 }

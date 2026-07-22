@@ -743,8 +743,8 @@ extern u16 g_panel_record_offsets[];
 
 /* --- Cross-module helpers invoked by the GNAME run loop (defined in other
  *     overlays / the main executable). ------------------------------------- */
-void func_800157B0(unsigned long arg0);
-void func_800157DC(void);
+void set_controller_vsync_interval(unsigned long interval);
+void update_controllers(void);
 void func_80063194(void);
 void func_8006441C(void);
 void func_80068440(void);
@@ -823,7 +823,7 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
     ClearOTagR(g_render_buf_base[1].ot, GNAME_OT_ENTRY_COUNT);
     VSync(0);
     PutDispEnv(&next_buf->disp_env);
-    func_800157DC();
+    update_controllers();
     SetDispMask(1);
     func_800AA02C();
 
@@ -846,7 +846,7 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
 
         func_80068440();
         DrawSync(0);
-        func_800157B0(2U);
+        set_controller_vsync_interval(2U);
         VSync(2);
 
         if (g_overlay_result != 0)
@@ -869,7 +869,7 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
         PutDrawEnv(&next_buf->draw_env);
         DrawOTag(&draw_buf->ot[GNAME_OT_LAYOUT_BACKGROUND]);
         draw_buf = other_buf;
-        func_800157DC();
+        update_controllers();
         cdrom_process_state();
     }
 
