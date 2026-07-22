@@ -6,9 +6,8 @@
 #include "psyq/libcd.h"
 
 /* The block at 0x801ED600 is the merged-controller SCDRegs (see pad.h).
- * Skip-cinematic checks read SCDRegs.deviceState (port active),
- * SCDRegs.buttonData (raw merged buttons), and SCDRegs.unk4 (a derived button
- * word; see SCDRegs comment in pad.h). */
+ * Skip-cinematic checks read the merged controller type, held buttons, and
+ * newly pressed buttons from SCDRegs. */
 
 /**
  * @brief Movie playback control block; lives at fixed RAM address 0x801ED500.
@@ -102,7 +101,7 @@ typedef struct
 #define MOVIE_SKIPPABLE_MAX 2   /**< only movies with idx < this are skippable */
 #define MOVIE0_SKIP_MASK 0xFF0F /**< movie 0 (intro/logo): broad - any non-bit-4..7 button */
 #define MOVIE1_SKIP_MASK 0x400A /**< movie 1: narrow specific combination */
-#define SCD_DEVICE_STATE_OK 3   /**< deviceState < this means controller is usable */
+#define SCD_DEVICE_STATE_OK 3   /**< device_type < this means the controller is usable */
 
 /**
  * @brief Audio fade-out ramp during a skip-triggered exit.
@@ -225,9 +224,9 @@ void cdrom_process_state(void);
 void cdrom_verify_recovery(void);
 s32 cdrom_get_error_status(void);
 void cdrom_reset(void);
-void func_800157DC(void);
-void func_800157B0(u_long arg0);
-void func_800158E0(void);
+void update_controllers(void);
+void set_controller_vsync_interval(u_long interval);
+void reset_controller_vsync_state(void);
 
 /* AKAO XA-streaming helpers (see config/symbols/shared_symbol_addrs.txt). */
 void akao_cmd_c8(u32 arg0);                                /* AKAO cmd 0xC8 (raw param) */
@@ -283,20 +282,20 @@ void movie_play(s32 movie_index)
     s32 init_flags;
 
     VSync(0);
-    func_800157DC();
-    func_800157B0(1);
+    update_controllers();
+    set_controller_vsync_interval(1);
     VSync(0);
-    func_800157DC();
+    update_controllers();
     cdrom_process_state();
     /* Pre-playback skip gate: if user is already holding a skip button on
      * movie 0 when we get here, bail before staging the stream. */
-    if ((((movie_index & 0xFFFF) == 0) && ((SCD_REGS)->deviceState < SCD_DEVICE_STATE_OK)) &&
-        (((SCD_REGS)->buttonData & MOVIE0_SKIP_MASK) != 0))
+    if ((((movie_index & 0xFFFF) == 0) && ((SCD_REGS)->device_type < SCD_DEVICE_STATE_OK)) &&
+        (((SCD_REGS)->held_buttons & MOVIE0_SKIP_MASK) != 0))
     {
         return;
     }
 
-    func_800158E0();
+    reset_controller_vsync_state();
     DecDCTReset(0);
     timeout = 0xF0;
     SetDefDispEnv(&env[0], 0, 0, 320, timeout);
@@ -352,7 +351,7 @@ void movie_play(s32 movie_index)
     resource_idx = (movie_index & 0xFFFF) + 0x16A0;
     movie_init(resource_idx, init_flags, frame_count, 0);
     VSync(0);
-    func_800157DC();
+    update_controllers();
     audio_fade_vol = AUDIO_FADE_DISARMED;
     retry_limit = 5;
     state = (MovieState*)0x801ED500;
@@ -364,9 +363,9 @@ void movie_play(s32 movie_index)
 
         while ((error_status != 0) && (error_status != retry_limit))
         {
-            func_800157B0(1);
+            set_controller_vsync_interval(1);
             VSync(0);
-            func_800157DC();
+            update_controllers();
             cdrom_process_state();
             error_status = cdrom_get_error_status();
         }
@@ -386,7 +385,7 @@ void movie_play(s32 movie_index)
 
                 if (state->end_state == end_state_match)
                 {
-                    func_800158E0();
+                    reset_controller_vsync_state();
                     cdrom_reset();
                     DrawSync(0);
                     VSync(0);
@@ -409,7 +408,7 @@ void movie_play(s32 movie_index)
         }
 
         state->frame_ready = 0;
-        func_800157B0(4);
+        set_controller_vsync_interval(4);
         movie_idx_u16 = (u16)(movie_index & 0xFFFF);
         VSync(0);
         p_disp_env = &env[0];
@@ -419,13 +418,13 @@ void movie_play(s32 movie_index)
         }
         PutDispEnv(p_disp_env);
         SetDispMask(1);
-        func_800157DC();
+        update_controllers();
         cdrom_process_state();
 
         idx = movie_idx_u16;
-        if ((idx < MOVIE_SKIPPABLE_MAX) && ((SCD_REGS)->deviceState < SCD_DEVICE_STATE_OK))
+        if ((idx < MOVIE_SKIPPABLE_MAX) && ((SCD_REGS)->device_type < SCD_DEVICE_STATE_OK))
         {
-            buttons = (SCD_REGS)->unk4;
+            buttons = (SCD_REGS)->pressed_buttons;
             if (((idx != 0) ? ((buttons & MOVIE1_SKIP_MASK) != 0) : ((buttons & MOVIE0_SKIP_MASK) != 0)) != 0)
             {
                 if (g_cdAudioReady == 0)
@@ -458,7 +457,7 @@ void movie_play(s32 movie_index)
         }
     }
 
-    func_800158E0();
+    reset_controller_vsync_state();
     cdrom_reset();
     DrawSync(0);
     VSync(0);

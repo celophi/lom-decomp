@@ -60,7 +60,7 @@ void func_8004FD68(int baseAddress)
     VSync(0);
 
     var_s0 = baseAddress;
-    func_800158E0();
+    reset_controller_vsync_state();
 
     rect.w = SCREEN_WIDTH;
     rect.x = 0;
@@ -71,7 +71,7 @@ void func_8004FD68(int baseAddress)
     ClearOTagR(var_s0 + 0x40, 0x1000);
     ClearOTagR(var_s0 + 0xBD0C, 0x1000);
     PutDispEnv(var_s0 + 0x4040);
-    func_800157DC();
+    update_controllers();
     SetDispMask(1);
 
     do
@@ -85,7 +85,7 @@ void func_8004FD68(int baseAddress)
         func_80050570();
         ClearInvalidGlyphs();
         DrawSync(0);
-        func_800157B0(2);
+        set_controller_vsync_interval(2);
         VSync(2);
         ClearImage(var_s0 + 0x40B0, 0, 0, 0);
         var_v0 = baseAddress;
@@ -100,11 +100,11 @@ void func_8004FD68(int baseAddress)
         temp_s1 = (u8*)temp_s1 + 0x3FFC;
         DrawOTag(temp_s1);
 
-        func_800157DC();
+        update_controllers();
         cdrom_process_state();
     } while (D_8005D060 == 0);
 
-    func_800158E0();
+    reset_controller_vsync_state();
     VSync(0);
 }
 
@@ -524,7 +524,7 @@ s32 PollInputDevice(void)
     u16 loRead;
     u16 axisRaw;
 
-    if (regs->deviceState >= 0xFEU)
+    if (regs->device_type >= 0xFEU)
     {
         return 0;
     }
@@ -552,7 +552,7 @@ s32 PollInputDevice(void)
         inputMask = remappedUpper | workingBits;
     } while (0);
 
-    if (regs->deviceState != 0)
+    if (regs->device_type != 0)
     {
         // X axis → left/right flags
         axisPtrX = (volatile u16*)(((u8*)regs) + 0x2C);
@@ -627,14 +627,14 @@ void ProcessControllerInput(void)
     {
         // PSX sends face buttons in the high byte and D-pad in the low byte;
         // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
-        processedButtons = (controllerRegs->buttonData >> 8) | (controllerRegs->buttonData << 8);
+        processedButtons = (controllerRegs->held_buttons >> 8) | (controllerRegs->held_buttons << 8);
 
         // Remap face buttons from hardware order to game order.
         processedButtons = PAD_REMAP_FACE_BITS(processedButtons);
 
-        if (controllerRegs->deviceState != 0)
+        if (controllerRegs->device_type != 0)
         {
-            axisX = (s16)controllerRegs->axisX;
+            axisX = (s16)controllerRegs->axis_x;
 
             if (axisX < -1)
             {
@@ -645,7 +645,7 @@ void ProcessControllerInput(void)
                 processedButtons |= PAD_BTN_RIGHT;
             }
 
-            axisY = (s16)controllerRegs->axisY;
+            axisY = (s16)controllerRegs->axis_y;
 
             if (axisY < -1)
             {
@@ -740,7 +740,7 @@ void UpdateControllerInput(void)
     {
         // PSX sends face buttons in the high byte and D-pad in the low byte;
         // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
-        processedButtons = (regs->buttonData >> 8) | (regs->buttonData << 8);
+        processedButtons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
 
         // Reorder face button bits 4-7 from hardware order (Triangle, Circle, Cross, Square)
         // to game order (Square, Cross, Circle, Triangle) by swapping Triangle<->Square and Circle<->Cross.
@@ -750,9 +750,9 @@ void UpdateControllerInput(void)
                             ((processedButtons & PAD_BTN_SQUARE) << 3)) |
                            (processedButtons & ~0xF0);
 
-        if (regs->deviceState != 0)
+        if (regs->device_type != 0)
         {
-            axisX = regs->axisX;
+            axisX = regs->axis_x;
 
             if (axisX < -1)
             {
@@ -763,7 +763,7 @@ void UpdateControllerInput(void)
                 processedButtons |= PAD_BTN_RIGHT;
             }
 
-            axisY = regs->axisY;
+            axisY = regs->axis_y;
 
             if (axisY < -1)
             {

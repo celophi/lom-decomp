@@ -394,7 +394,7 @@ static void gover_run(void)
     ClearOTagR((u_long*)current[1].otag, 8);
     VSync(0);
     PutDispEnv(&current->disp);
-    func_800157DC();
+    update_controllers();
     SetDispMask(1);
 
     drawing = current;
@@ -406,7 +406,7 @@ static void gover_run(void)
         func_800A9E78();
         gover_build_otag((unsigned char*)drawing);
         DrawSync(0);
-        func_800157B0(2);
+        set_controller_vsync_interval(2);
 
         VSync(2);
 
@@ -431,13 +431,13 @@ static void gover_run(void)
         // The OT linked list is built backward, so DrawOTag is invoked starting
         // at the last entry (otag[7] at offset 0x1C).
         DrawOTag((u_long*)((u_char*)drawing + 0x1C));
-        func_800157DC();
+        update_controllers();
         cdrom_process_state();
     }
 
     DrawSync(0);
     VSync(0);
-    func_800158E0();
+    reset_controller_vsync_state();
     akao_cmd_f0();
     akao_cmd_f1();
     SetDispMask(0);

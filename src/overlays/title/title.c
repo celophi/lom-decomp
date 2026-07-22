@@ -157,7 +157,7 @@ void render_menu(MenuContext* context)
     ClearOTagR(s0->otag_buffer, 0x1000);
     ClearOTagR(s0->otag_buffer2, 0x1000);
     PutDispEnv(&s0->disp_env);
-    func_800157DC();
+    update_controllers();
     SetDispMask(1);
 
     while (1)
@@ -175,7 +175,7 @@ void render_menu(MenuContext* context)
         if (g_titleMenuExitState == 0)
         {
             DrawSync(0);
-            func_800157B0(2);
+            set_controller_vsync_interval(2);
             VSync(2);
 
             tmp = base;
@@ -187,7 +187,7 @@ void render_menu(MenuContext* context)
             PutDispEnv(&s0->disp_env);
             PutDrawEnv(&s0->draw_env);
             DrawOTag((u_long*)(s1 + 4095));
-            func_800157DC();
+            update_controllers();
             cdrom_process_state();
             if (g_titleMenuExitState == 0)
             {
@@ -197,7 +197,7 @@ void render_menu(MenuContext* context)
         break;
     }
 
-    func_800158E0();
+    reset_controller_vsync_state();
     VSync(0);
     DrawSync(0);
 }
@@ -243,7 +243,7 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
     ClearOTagR(current->otag_buffer2, 0x1000);
     VSync(0);
     PutDispEnv(&current->disp_env);
-    func_800157DC();
+    update_controllers();
     SetDispMask(1);
     do
     {
@@ -254,7 +254,7 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
         render_fade_overlay(current);
         RenderSaveSlotMenu(current);
         DrawSync(0);
-        func_800157B0(2);
+        set_controller_vsync_interval(2);
         VSync(2);
         tmp = base;
         if (current == base)
@@ -265,10 +265,10 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
         PutDispEnv(&current->disp_env);
         PutDrawEnv(&current->draw_env);
         DrawOTag(ot + 4095); /* last entry of the 4096-word otag_buffer */
-        func_800157DC();
+        update_controllers();
         cdrom_process_state();
     } while (g_titleMenuExitState == 0);
-    func_800158E0();
+    reset_controller_vsync_state();
     VSync(0);
     return g_titleMenuExitState;
 }
@@ -1156,7 +1156,7 @@ s32 read_pad_state(void)
  *  - No input clears all three globals.
  *
  * @note The pad registers are read through a raw pointer (with a duplicate
- *       buttonData load and a volatile axisY read) rather than the SCDRegs
+ *       held_buttons load and a volatile axis_y read) rather than the SCDRegs
  *       struct used by read_pad_input; those reads are load-bearing artifacts
  *       of the matched codegen, so they are left as-is.
  *
@@ -1258,11 +1258,11 @@ static void read_pad_input(void)
     }
     else
     {
-        buttons = ((base->buttonData >> 8) & 0xFF) | (base->buttonData << 8);
+        buttons = ((base->held_buttons >> 8) & 0xFF) | (base->held_buttons << 8);
         buttons = PAD_REMAP_FACE_BITS(buttons);
-        if (base->deviceState != 0)
+        if (base->device_type != 0)
         {
-            axis = base->axisX;
+            axis = base->axis_x;
             if (axis < (-1))
             {
                 buttons |= PAD_BTN_LEFT;
@@ -1271,7 +1271,7 @@ static void read_pad_input(void)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
-            axis = base->axisY;
+            axis = base->axis_y;
             if (axis < (-1))
             {
                 buttons |= PAD_BTN_UP;

@@ -6,12 +6,12 @@
 /* Prototypes not yet in any project header, or whose existing header declarations
  * conflict (e.g. decomp1.h has stale/conflicting signatures for several of these).
  * Keep them local until the headers are unified. */
-void InitializeControllers(undefined1 controllerMode);
+void initialize_controllers(undefined1 enable_actuators);
 extern void SpuInit(void);
 void McxStartCom();
 void func_8004FD14(s32);
-void InitVSyncController(void);
-undefined* FUN_80015c18(void);
+void initialize_controller_vsync(void);
+undefined* get_overlay_load_base(void);
 u32* FUN_80015c28(void);
 undefined4 FUN_80021fbc(void);
 void load_and_play_song(int param_1);
@@ -61,7 +61,7 @@ void Main(void)
     ResetCallback();
     SetVideoMode(0);
     SpuInit();
-    FUN_80015c18();
+    get_overlay_load_base();
     cdrom_init();
     InitGeom();
     InitCARD(0);
@@ -69,11 +69,11 @@ void Main(void)
     _bu_init();
     McxStartCom();
     ChangeClearPAD(0);
-    InitializeControllers(0);
+    initialize_controllers(0);
     cdrom_load_resource_table(0x18, 0xB598);
     FUN_80021fbc();
     cdrom_stream(0xB2, 0x801E1200);
-    InitVSyncController();
+    initialize_controller_vsync();
     srand(1);
     g_layout_flag = 0;
     g_layout_sub_mode = -1;

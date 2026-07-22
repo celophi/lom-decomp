@@ -60,10 +60,10 @@ extern FrameBufferUnion g_GfxDoubleBuffer;
 extern FrameBufferUnion g_GfxPrimaryFrame;
 
 // prototypes
-void func_800157DC(void);
-void func_800158E0(void);
+void update_controllers(void);
+void reset_controller_vsync_state(void);
 void load_and_play_song(s32 song_index);
-undefined* FUN_80015c18(void);
+undefined* get_overlay_load_base(void);
 undefined* FUN_80015c38(void);
 int run_field_scene(void);
 undefined4 FUN_80021fbc(void);
@@ -76,7 +76,7 @@ s32 RunCheckPS(s32 baseAddress);
 u32 FUN_80060814();
 u32 movie_play(u32 param_1);
 void GFX_Transition(s32 skipScreenClear);
-void InitVSyncController(void);
-void InitializeControllers(undefined1 controllerMode);
+void initialize_controller_vsync(void);
+void initialize_controllers(undefined1 enable_actuators);
 
 #endif

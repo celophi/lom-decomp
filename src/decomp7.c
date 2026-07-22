@@ -66,7 +66,7 @@ void field_run_frame_loop(FieldRenderHalf* render_ctx)
     ClearOTagR((draw_half + 1)->otag, 0x1010);
     VSync(0);
     PutDispEnv(&draw_half->disp_env);
-    func_800157DC();
+    update_controllers();
     SetDispMask(1);
     do
     {
@@ -95,7 +95,7 @@ void field_run_frame_loop(FieldRenderHalf* render_ctx)
             field_draw_frame(is_alt_half, draw_half, D_800473E8, D_80035248);
             VSync(1);
             DrawSync(0 * 0);
-            func_800157B0(2);
+            set_controller_vsync_interval(2);
             VSync(2);
             new_var5 = (char*)render_ctx;
             if (draw_half == primary_half)
@@ -107,13 +107,13 @@ void field_run_frame_loop(FieldRenderHalf* render_ctx)
             PutDrawEnv(&draw_half->draw_env);
             func_80056998();
             DrawOTag((u_long*)(((char*)D_800473F4) + 0x403C));
-            func_800157DC();
+            update_controllers();
             cdrom_process_state();
         }
     } while (g_pending_game_state == 0);
     ((u8*)new_var2)[0x13E] = 0;
     ((u8*)new_var2)[0x90] = 0 & 0xFFFFFFFF;
-    func_800158E0();
+    reset_controller_vsync_state();
     akao_cmd_f0();
     akao_cmd_f1();
     DrawSync(0);
