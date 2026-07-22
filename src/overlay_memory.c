@@ -1,5 +1,10 @@
 #include "overlay_memory.h"
 
+extern s32 g_overlay_load_base;
+extern u32 g_field_render_buffers;
+extern u32 g_world_map_overlay_end;
+extern u32 g_title_menu_buffers;
+
 /**
  * @brief Return the common base address used for loading overlays.
  * @return Overlay load base at 0x8004FC70.

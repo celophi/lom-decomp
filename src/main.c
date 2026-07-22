@@ -2,20 +2,34 @@
 #include "cd_resources.h"
 #include "cd.h"
 #include "movie.h"
+#include "screen_transition.h"
+#include "game_audio.h"
+#include "controller.h"
+#include "overlay_memory.h"
+#include "field_runtime.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+#include "psyq/libapi.h"
+#include "psyq/libetc.h"
 
-/* Prototypes not yet in any project header, or whose existing header declarations
- * conflict with the signatures required by this matching translation unit.
- * Keep them local until the headers are unified. */
-void initialize_controllers(undefined1 enable_actuators);
+extern u32 g_overlayLoadAddress;
+extern u8 g_music_track_table[];
+extern s32 D_8003EC8C;
+extern s32 D_80042FD0;
+extern s32 D_800473E0;
+
+void __main(void);
+void _bu_init(void);
 extern void SpuInit(void);
 void McxStartCom();
 void func_8004FD14(s32);
-void initialize_controller_vsync(void);
-undefined* get_overlay_load_base(void);
-u32* get_field_render_buffers(void);
 undefined4 FUN_80021fbc(void);
-void load_and_play_song(int param_1);
 s32 akao_cmd_f0(void);
+u32 func_8004FC8C(u32);
+u32 run_overlay(u32, u32, u32, s32, s32, u32, s32);
+s32 func_801400C4(void);
+void srand(u_int param_1);
+s32 func_8004FC74(s32);
 
 /** @brief Fixed base address for scratch/system register access.
  *  @note g_field_scene_config lives at (SCRATCH_BASE - 0x1378). */

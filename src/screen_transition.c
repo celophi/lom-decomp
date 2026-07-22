@@ -1,4 +1,34 @@
 #include "screen_transition.h"
+#include "cd.h"
+#include "controller.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+
+typedef struct {
+    u_long ot[4];
+    u32 packetBuffer[64];
+    DISPENV dispenv;
+    DRAWENV drawenv;
+} GfxBuffer;
+
+typedef struct {
+    GfxBuffer buf;
+    RECT frame;
+} FrameBuffer;
+
+typedef struct {
+    RECT frameA;
+    GfxBuffer bufB;
+    RECT frameB;
+} FrameBufferOverlap;
+
+typedef union {
+    FrameBuffer fb;
+    FrameBufferOverlap overlap;
+} FrameBufferUnion;
+
+extern FrameBufferUnion g_GfxDoubleBuffer;
+extern FrameBufferUnion g_GfxPrimaryFrame;
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/clAOi
