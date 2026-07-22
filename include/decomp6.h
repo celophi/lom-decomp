@@ -4,72 +4,83 @@
 #include "common.h"
 #include "psyq/libetc.h"
 
-extern s32 D_801ED7A4;
-extern u8 D_801ED7A1;
-extern u8 D_801ED7A2;
-extern s32 D_8004FC70;
+extern s32 g_previous_controller_vsync_callback;
+extern u8 g_controller_vsync_sample_count;
+extern u8 g_controller_vsync_counter;
+extern s32 g_overlay_load_base;
 
-typedef struct arg0_struct
+/**
+ * @brief Per-port controller state, including the current sample and LIBPAD setup state.
+ * @note The leading 0x90 bytes contain four 16-byte samples and unmapped history storage.
+ */
+typedef struct ControllerPortState
 {
   u8 pad0[0x20];
-  u8 unk20;
-  u8 unk21;
-  u16 unk22;
-  u16 unk24;
-  u16 unk26;
-  s16 unk28;
-  s16 unk2A;
-  s16 unk2C;
-  s16 unk2E;
+  u8 device_type;
+  u8 analog_direction_bits;
+  u16 held_buttons;
+  u16 pressed_buttons;
+  u16 repeat_buttons;
+  s16 right_stick_x;
+  s16 right_stick_y;
+  s16 left_stick_x;
+  s16 left_stick_y;
   u8 pad1[0x90 - 0x30];
-  u8 unk90;
-  u8 unk91;
-  u16 unk92;
-  u8 unk94;
-  u8 unk95;
-  u8 unk96;
-  u8 unk97;
-  u8 unk98;
-  u8 unk99;
-  u8 unk9A;
-  u8 unk9B;
-  u8 unk9C;
-  u8 unk9D;
-  u8 unk9E;
-  u8 unk9F;
-  u8 unkA0;
-  u8 unkA1;
-  u8 unkA2;
-  u8 unkA3;
-  u8 unkA4;
-  u8 unkA5;
-  u8 unkA6;
-  u8 unkA7;
-  u8 unkA8;
-  u8 unkA9;
-  u8 unkAA;
-  u8 unkAB;
-  u8 unkAC;
-  u8 unkAD;
-} arg0_struct;
+  u8 actuators_enabled;
+  u8 small_motor_command;
+  u16 actuator_config;
+  u8 actuator_header;
+  u8 small_motor_value;
+  u8 large_motor_value;
+  u8 actuator_value_2;
+  u8 small_motor_index;
+  u8 large_motor_index;
+  u8 actuator_align_2;
+  u8 actuator_align_3;
+  u8 actuator_align_4;
+  u8 actuator_align_5;
+  u8 face_repeat_timer_0;
+  u8 face_repeat_timer_1;
+  u8 face_repeat_timer_2;
+  u8 face_repeat_timer_3;
+  u8 direction_repeat_timer_0;
+  u8 direction_repeat_timer_1;
+  u8 direction_repeat_timer_2;
+  u8 direction_repeat_timer_3;
+  u8 right_stick_center_x;
+  u8 right_stick_center_y;
+  u8 left_stick_center_x;
+  u8 left_stick_center_y;
+  u8 actuator_count;
+  u8 small_motor_power;
+  u8 large_motor_power;
+  u8 port_id;
+} ControllerPortState;
 
-extern void func_80015674(void);
-extern void func_80015708(void *);
-extern void func_8002E958(int, int, int, int);
-extern void func_80030DF8(void *, void *);
-extern u32 func_8002E9E4(u8);
-extern s32 func_8002EAB0(u8, u8, s32);
-extern int func_8002EBA8(u8, s32, u8);
-extern void func_8002ED24(u8, void *);
-extern void func_8002ED5C(u8, s32, u8);
-extern void func_8002EDA4(u8, void *, int);
-extern s32 func_8002E938();
-extern void func_8002E978(void);
-extern void func_800158FC(void);
-extern void func_80015AA4(void *);
-extern void func_80015B58(void *, void *);
+extern void controller_poll(void);
+extern void clear_controller_sample(void *sample);
+extern void PadStartCom();
+extern void PadInitDirect(void *port1_buffer, void *port2_buffer);
+extern u32 PadGetState(u8 port);
+extern s32 PadInfoMode(u8 port, u8 info_mode, s32 index);
+extern int PadInfoAct(u8 port, s32 actuator, u8 property);
+extern void PadSetActAlign(u8 port, void *alignment);
+extern void PadSetMainMode(u8 port, s32 mode, u8 lock);
+extern void PadSetAct(u8 port, void *actuator_data, int length);
+extern s32 PadChkVsync(void);
+extern void PadStopCom(void);
+extern void controller_vsync_callback(void);
+extern void initialize_controllers(s8 enable_actuators);
+extern void shutdown_controllers(void);
+extern void initialize_controller_vsync(void);
+extern void set_controller_vsync_interval(unsigned long interval);
+extern void update_controllers(void);
+extern void reset_controller_vsync_state(void);
+extern void accumulate_controller_sample(void *port_state);
+extern void merge_latest_controller_sample(void *port_state);
+extern void copy_controller_sample(void *source, void *destination);
+extern s32* get_overlay_load_base(void);
 
-
-void func_80014C54(arg0_struct* arg0, s32* arg1);
+void poll_controller_port(ControllerPortState* port, s32* actuator_power_total);
 
 #endif

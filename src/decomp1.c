@@ -105,11 +105,11 @@ void GFX_Transition(s32 skipScreenClear)
         PutDispEnv(&cur_fb->fb.buf.dispenv);
         PutDrawEnv(&cur_fb->fb.buf.drawenv);
         DrawOTag(&cur_fb->fb.buf.ot[3]);
-        func_800157DC();
+        update_controllers();
         cdrom_process_state();
     }
 
-    func_800158E0();
+    reset_controller_vsync_state();
     DrawSync(0);
     VSync(0);
 

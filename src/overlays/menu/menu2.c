@@ -1298,7 +1298,7 @@ extern s32 D_8016B77C;
  */
 void func_8014F2B0(void)
 {
-    func_800158E0();
+    reset_controller_vsync_state();
     EnterCriticalSection();
     D_8016B760 = OpenEvent(SwCARD, EvSpIOE, EvMdNOINTR, NULL);
     D_8016B764 = OpenEvent(SwCARD, EvSpERROR, EvMdNOINTR, NULL);
@@ -1329,7 +1329,7 @@ void func_8014F2B0(void)
  */
 void func_8014F46C(void)
 {
-    func_800158E0();
+    reset_controller_vsync_state();
     EnterCriticalSection();
     CloseEvent(D_8016B760);
     CloseEvent(D_8016B764);

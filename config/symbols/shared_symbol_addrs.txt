@@ -42,12 +42,22 @@ cdrom_handle_stream_data            = 0x80014888;
 cdrom_decompress_buffer             = 0x80014A8C;
 cdrom_clear_data_ready              = 0x80014AD0;
 
-// Uncategorized
-InitializeControllers               = 0x80014ADC;
-InitVSyncController                 = 0x80015770;
-func_800157DC                       = 0x800157DC;
-func_800158E0                       = 0x800158E0;
-FUN_80015c18                        = 0x80015C18;
+// Controller subsystem
+initialize_controllers              = 0x80014ADC;
+poll_controller_port                = 0x80014C54;
+controller_poll                     = 0x80015674;
+clear_controller_sample             = 0x80015708;
+shutdown_controllers                = 0x8001572C;
+initialize_controller_vsync         = 0x80015770;
+set_controller_vsync_interval       = 0x800157B0;
+update_controllers                  = 0x800157DC;
+reset_controller_vsync_state        = 0x800158E0;
+controller_vsync_callback           = 0x800158FC;
+accumulate_controller_sample        = 0x800159F8;
+merge_latest_controller_sample      = 0x80015AA4;
+copy_controller_sample              = 0x80015B58;
+get_overlay_load_base               = 0x80015C18;
+
 FUN_80015c28                        = 0x80015C28;
 FUN_80015c38                        = 0x80015C38;
 run_field_scene                     = 0x80015C58;
@@ -784,6 +794,19 @@ WaitEvent                           = 0x800299CC;
 SpuGetReverbModeType                = 0x800299DC;
 
 __main                              = 0x8002E850;
+
+// psyq/libpad
+PadChkVsync                         = 0x8002E938;
+PadStartCom                         = 0x8002E958;
+PadStopCom                          = 0x8002E978;
+PadGetState                         = 0x8002E9E4;
+PadInfoMode                         = 0x8002EAB0;
+PadInfoAct                          = 0x8002EBA8;
+PadSetActAlign                      = 0x8002ED24;
+PadSetMainMode                      = 0x8002ED5C;
+PadSetAct                           = 0x8002EDA4;
+PadInitDirect                       = 0x80030DF8;
+
 McxStartCom                         = 0x800319D8;
 
 // Globals
@@ -871,6 +894,11 @@ g_script_repeat_count               = 0x80122730;
 g_active_script                     = 0x801228C8;
 g_pad_input                         = 0x80122988;
 g_pad_input_inject                  = 0x801229FC;
+
+// Controller subsystem globals
+g_controller_vsync_sample_count     = 0x801ED7A1;
+g_controller_vsync_counter          = 0x801ED7A2;
+g_previous_controller_vsync_callback = 0x801ED7A4;
 
 // Globals
 g_pending_game_state                = 0x8010D018;
