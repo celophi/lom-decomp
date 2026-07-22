@@ -25,8 +25,8 @@ typedef struct
 extern s32 g_text_cursor_x;
 extern s32 g_text_cursor_y;
 extern u8 g_hex_digit_table[17];
-extern CommandBuffer *D_800473EC;
-extern NodeWithOffset16 *D_800473F4;
+extern CommandBuffer *g_field_primitive_cursor;
+extern NodeWithOffset16 *g_field_current_render_half;
 extern s32 g_text_atlas_base;
 
 

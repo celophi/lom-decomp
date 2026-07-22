@@ -130,8 +130,8 @@ void field_init_ctx(void* arg0, unsigned short arg1)
 void field_scene_reset(void)
 {
     S_801ED480* ptr = (S_801ED480*)0x801ED480;
-    ptr->unk0 = 0;
-    ptr->unk2 = 0;
+    ptr->map_id = 0;
+    ptr->object_index = 0;
     ptr->unk10 = 0;
     D_801ED02C = 0;
     func_800642D4();

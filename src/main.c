@@ -18,7 +18,7 @@ void load_and_play_song(int param_1);
 s32 akao_cmd_f0(void);
 
 /** @brief Fixed base address for scratch/system register access.
- *  @note D_8003EC88 lives at (SCRATCH_BASE - 0x1378). */
+ *  @note g_field_scene_config lives at (SCRATCH_BASE - 0x1378). */
 #define SCRATCH_BASE 0x80040000
 
 /**
@@ -186,7 +186,7 @@ void Main(void)
                 cdrom_stream(CD_RES_GNAME_BIN, 0x80140000);
                 GFX_Transition(0);
                 cdrom_wait_queue_empty();
-                func_800A3534();
+                field_restore_entry_music();
                 field_scene_reset(0);
                 g_field_audio_timer = 0;
                 overlay_arg = &g_gameDataBasePtr;
@@ -230,7 +230,7 @@ void Main(void)
                     /* Mask 0xFE000000 preserves the upper 25 bits of unk018
                      * (likely a base address or segment), OR-ing in 6 as the
                      * field overlay sub-mode. Written both to the scratch
-                     * register at (SCRATCH_BASE - 0x1378) = D_8003EC88 and
+                     * register at (SCRATCH_BASE - 0x1378) = g_field_scene_config and
                      * back into the MenuLayout struct. */
                     field_config = (u32)(raw_config = ((MenuLayout*)(((u8*)(&g_gameDataBasePtr)) - 0x5F0))->unk018);
                     field_config = field_config & 0xFE000000U;

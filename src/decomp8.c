@@ -205,7 +205,7 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
     {
 
         high = t;
-        D_800473EC->unk4 = 0x66808080;
+        g_field_primitive_cursor->unk4 = 0x66808080;
         low = (u16)g_text_atlas_base;
         if (!g_text_cursor_x)
         {
@@ -216,21 +216,21 @@ void func_800165CC(s32 arg0, s32 arg1, s32 arg2)
         {
         }
         low = base | low;
-        cb = D_800473EC; /* Bug 1 fix: cb was uninitialized */
+        cb = g_field_primitive_cursor; /* Bug 1 fix: cb was uninitialized */
         new_var4 = (u8*)cb;
         high = (((t - 0x20) & ((short)0xF0)) >> 1) + 0xE0;
         new_var = low | (high << 8);
-        D_800473EC->unkC = new_var;
-        D_800473EC->unk8 = (g_text_cursor_y << 16) | g_text_cursor_x;
+        g_field_primitive_cursor->unkC = new_var;
+        g_field_primitive_cursor->unk8 = (g_text_cursor_y << 16) | g_text_cursor_x;
         new_var8 = (new_var6 = 0xFF000000);
-        new_var5 = (u8*)D_800473F4;
-        D_800473EC->unk10 = 0x80008;
+        new_var5 = (u8*)g_field_current_render_half;
+        g_field_primitive_cursor->unk10 = 0x80008;
         new_var9 = 0x04000000;
         node = (NodeWithOffset16*)(new_var5 + new_var7);
         new_var2 = node->unk10;
-        D_800473EC->unk0 = new_var9 | (node->unk10 & 0x00FFFFFF);
+        g_field_primitive_cursor->unk0 = new_var9 | (node->unk10 & 0x00FFFFFF);
         cb_addr = (u32)cb;
-        D_800473EC = (CommandBuffer*)(new_var4 + 0x14);
+        g_field_primitive_cursor = (CommandBuffer*)(new_var4 + 0x14);
         high = new_var2 & new_var8;
         node->unk10 = high | (cb_addr & 0x00FFFFFF); /* Bug 2 fix: removed (cb_addr = 0x00FFFFFF) assignment */
     }

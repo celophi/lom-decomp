@@ -64,6 +64,7 @@ get_title_menu_buffers              = 0x80015C48;
 run_field_scene                     = 0x80015C58;
 field_run_frame_loop                = 0x80015D6C;
 field_init_display                  = 0x80015F88;
+field_init_text_renderer            = 0x800160C8;
 field_draw_string                   = 0x8001615C;
 field_draw_uint2                    = 0x800161DC;
 field_draw_uint3                    = 0x8001627C;
@@ -845,7 +846,9 @@ g_akao_mastervol_acc                = 0x8003EC74;
 g_akao_masterpan_acc                = 0x8003EC78;
 g_akao_master_vol_scalar            = 0x8003EC7A;
 g_akao_driver_mode_flags            = 0x8003EC7C;
-D_8003EC88                          = 0x8003EC88;
+g_field_scene_config               = 0x8003EC88;
+g_field_force_two_primitives       = 0x80035248;
+g_field_draw_count                 = 0x800473E8;
 D_8003EC8C                          = 0x8003EC8C;
 g_scene_mode                        = 0x8003EC90;
 g_layout_option                     = 0x8003EC94;
@@ -900,6 +903,8 @@ g_pad_input_inject                  = 0x801229FC;
 g_controller_vsync_sample_count     = 0x801ED7A1;
 g_controller_vsync_counter          = 0x801ED7A2;
 g_previous_controller_vsync_callback = 0x801ED7A4;
+g_field_primitive_cursor            = 0x800473EC;
+g_field_current_render_half         = 0x800473F4;
 
 // Globals
 g_pending_game_state                = 0x8010D018;
