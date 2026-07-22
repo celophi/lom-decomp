@@ -4,6 +4,190 @@
 #include "psyq/libpress.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
+#include "akao.h"
+
+#define CD_RESOURCE_INDEX_INVALID 0xFFFE
+#define CD_RESOURCE_INDEX_DEFAULT 0xFFFF
+#define CD_COMMAND_QUEUE_SIZE 16
+#define CD_INIT_STATE_ERROR_PAUSE 0x20
+
+typedef void (*DecDCToutCallbackHandler)();
+typedef void (*DrawSyncCallbackHandler)();
+typedef CdStreamGetBufferCallback codeA;
+typedef CdStreamChunkDoneCallback codeB;
+
+typedef union
+{
+    CdlLOC pos;
+    u32 raw;
+} CdlLOCRaw;
+
+typedef struct CdResourceEntry
+{
+    CdlLOCRaw location;
+    int dataSize;
+} CdResourceEntry;
+
+typedef struct CdCommandQueueItem
+{
+    u_char command;
+    u_char padding;
+    unsigned short resourceIndex;
+    CdResourceEntry* entry;
+    CdResourceEntry* dstBuffer;
+    CdCommandCallback callback;
+} CdCommandQueueItem;
+
+typedef struct CdCommandQueue
+{
+    CdCommandQueueItem items[CD_COMMAND_QUEUE_SIZE];
+} CdCommandQueue;
+
+typedef union
+{
+    u_int word;
+    struct
+    {
+        u_char b0;
+        u_char b1;
+        u_char b2;
+        u_char retryExhausted;
+    } bytes;
+} CdStatusFlags;
+
+typedef struct CdSystem
+{
+    CdStatusFlags statusFlags;
+    undefined1 audioEnabled;
+    undefined1 playbackState;
+    u8 pendingQueueCount;
+    u8 padding_0x7;
+    undefined2 currentResourceIndex;
+    u16 padding_0xA;
+    undefined4 currentDataSize;
+    undefined4 targetDataSize;
+    undefined1 syncComplete;
+    undefined1 initState;
+    undefined1 currentCommand;
+    undefined1 initCommand;
+    undefined1 retryCount;
+    undefined1 retryCounter;
+    undefined1 lastCommand;
+    u8 padding_0x1B;
+    undefined2 resourceIndex;
+    u16 padding_0x1E;
+    CdResourceEntry* dstBuffer;
+    CdCommandCallback callback;
+    u32 readRemainingBytes;
+    u32 totalDataSize;
+    void* currentWritePtr;
+    CdCommandCallback transferCallback;
+    undefined4 queueReadIndex;
+    undefined4 queueWriteIndex;
+    CdCommandQueue commandQueue;
+    u32 sectorHeaderBuffer[3];
+    undefined4 vsyncTimestamp;
+    u_char setModeParamBlocking[4];
+    u_char setModeParamAsync[4];
+    CdlLOCRaw currentLocation;
+    CdlLOCRaw recoveryReadPosition;
+    undefined1 statusByte;
+    undefined1 filterModeFlags;
+    u8 u_162;
+    u8 u_163;
+    u32 u_164;
+    CdlCB previousSyncCallback;
+    CdlCB previousReadyCallback;
+    u_char discValidationId[32];
+    CdResourceEntry defaultCdResource;
+} CdSystem;
+
+typedef struct
+{
+    u8 dataReady;
+    u8 bufferWrapped;
+    u8 pad[2];
+    s32 readPtr;
+    s32 writePtr;
+    s32 bytesBuffered;
+    s32 wrapOverflow;
+    s32 bytesConsumed;
+    s32 dropped_sectors;
+} CdStreamState;
+
+typedef struct
+{
+    u8 u_0[0x38];
+    DecDCToutCallbackHandler decDCToutCallbackHandler;
+    DrawSyncCallbackHandler drawSyncCallbackHandler;
+    u8 u_1[82];
+    u8 readFlag;
+    u8 u2[3];
+} AudioSystem;
+
+typedef struct SKCDPOSE_DAT
+{
+    CdResourceEntry resources[178];
+    char unknown[45065];
+} SKCDPOSE_DAT;
+
+extern CdlCB g_cdSyncCallbackResult;
+extern CdlCB g_cdReadyCallbackResult;
+extern int g_cdVSyncTimestamp;
+extern u_char g_cdStatusByte;
+extern u_char g_cdAudioEnabled;
+extern u_char g_cdAudioReady;
+extern u8 g_playbackState;
+extern u32 g_cdReadRemainingBytes;
+extern s32 g_cdResource176;
+extern s8 g_cdStatusByte3;
+extern u8 g_initState;
+extern s8 D_801ED801;
+extern u8 g_cdPendingQueueCount;
+extern CdSystem g_cdSystem;
+extern const u_char g_DiscValidationId[21];
+extern u8 D_801ED590;
+
+#define CD_SYSTEM (*(struct CdSystem*)0x801ED800)
+#define CD_SYSTEM_V (*(volatile CdSystem*)0x801ED800)
+#define AUDIO_SYSTEM (*(AudioSystem*)0x801ED500)
+#define CD_SECTOR_HEADER_BUFFER (*(u32*)0x801ED940)
+#define CD_COMMAND_PARAM_BUFFER ((u_char*)0x801ED958)
+#define g_defaultCdResource (*(CdResourceEntry*)0x801ED990)
+#define CD_RESOURCE_ENTRIES ((CdResourceEntry*)0x801ED998)
+#define g_commandQueueOffset (*(CdCommandQueueItem*)0x801ED8F0)
+#define SCRATCHPAD ((void*)0x1F800000)
+#define CD_STREAM_STATE (*(CdStreamState*)0x1F800000)
+#define CdControlF_1(cmd) ((int (*)(u_char))CdControlF)(cmd)
+#define QUEUE_ITEM_BASE(idx) ((void*)(((idx) * 0x10) + (u8*)&CD_SYSTEM))
+#define QUEUE_ITEM_DST_BUFFER(ptr) (*((u32*)(ptr) + 0x12))
+#define QUEUE_ITEM_CALLBACK(ptr) (*((CdCommandCallback*)(ptr) + 0x13))
+#define VCD (*(volatile CdSystem*) 0x801ED800)
+
+int cdrom_recover(void);
+void cdrom_complete_command(u_char intr, u_char* result);
+void cdrom_handle_recovery_sync(u_char intr, u_char* result);
+void cdrom_handle_ready_intr(u_char intr, u_char* result);
+void cdrom_process_sector(s32 arg0);
+void cdrom_run_command(u8 command, void* sectorBuffer, s32 executionMode);
+void cdrom_verify_disc(u_char intr, u_char* result);
+void cdrom_handle_sync_error(void);
+void cdrom_set_audio_volume(u_char volume, int stereoChannel);
+s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
+void func_80014434(void);
+s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining);
+void cdrom_decompress_buffer(u8* srcStart, u8* dstStart);
+void cdrom_clear_data_ready(s8* dataReady);
+void cdrom_restore_callbacks(void);
+s32 cdrom_enter_recovery_mode(void);
+
+extern void akao_cmd_c1(u32 param_1, u32 param_2, u32 param_3);
+extern void akao_cmd_99_9b_9d_9f(u_int param_1);
+extern undefined FUN_80140d48(void);
+extern void akao_cmd_e2(void);
+extern void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForCompletion);
+extern s32 akao_play_song(u8* param_1);
+extern void akao_cmd_c0(undefined4 param_1, u_int param_2);
 
 void cdrom_init()
 {

@@ -2,10 +2,6 @@
 #define _MAIN_H
 
 #include "common.h"
-#include "psyq/libgte.h"
-#include "psyq/libgpu.h"
-#include "psyq/libapi.h"
-#include "psyq/libetc.h"
 
 /**
  * @brief Top-level game state machine values stored in g_gameState.
@@ -27,13 +23,9 @@
 
 extern u32 g_gameState;
 extern u32 g_previousGameState;
-extern u32 g_overlayLoadAddress;
 extern u32 g_gameDataBasePtr;
 
-/** @brief Table of music/song resource IDs indexed by g_music_track_index. */
-extern u8 g_music_track_table[];
 extern u32 g_field_scene_config;    /**< Packed field-entry configuration passed to field_set_scene_parameters. */
-extern s32 D_8003EC8C;              /**< TODO: unknown; one-time init to 0xB */
 /** @brief Current scene/mode identifier (0, 0xD for default menu template). */
 #ifndef GOVER_C
 extern u16 g_scene_mode;
@@ -48,7 +40,6 @@ extern s32 g_save_slot_index;
 extern s32 g_layout_flag;
 /** @brief Field-entry behavior flag (from MenuLayout.field_flags). Cleared in field-entry states. */
 extern s32 g_field_entry_flag;
-extern s32 D_80042FD0;              /**< TODO: unknown; one-time init to 0x13, sits at g_menuLayoutBuffer - 8 */
 /**
  * @brief Working buffer for the active menu/save layout (main executable .bss).
  *
@@ -73,8 +64,6 @@ extern u8 g_menuLayoutBuffer[];
 extern s32 g_layout_sub_mode;
 /** @brief Index into g_music_track_table[] selecting the current music track. */
 extern u16 g_music_track_index;
-/** @brief TODO: unknown; one-time init to 0. */
-extern s32 D_800473E0;
 
 /*
  * Shared input / frame / script state.
@@ -166,18 +155,8 @@ typedef struct
     s32 slot_flags;             /**< 0x608: low 7 bits + bit 0 (continue). */
 } MenuLayout;                   /* partial; sizeof so far == 0x60C */
 
-void __main(void);
-void _bu_init(void);
-u32 *get_title_menu_buffers(void);
-u32 *get_world_map_overlay_end(void);
-u32 func_8004FC8C(u32);
 void field_scene_reset(u32);
 void field_draw_frame(s32, s32, s32, s32);
 void field_clear_node_accumulators(s32, s32);
 void field_restore_entry_music(void);
-u32 run_overlay(u32, u32, u32, s32, s32, u32, s32);
-s32 func_801400C4(void);
-void srand(u_int param_1);
-s32 func_8004FC74(s32);
-
 #endif

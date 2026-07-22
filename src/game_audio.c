@@ -1,4 +1,14 @@
 #include "game_audio.h"
+#include "akao.h"
+#include "cd.h"
+
+extern s32 g_current_song_handle;
+extern u8 g_music_data_buffer;
+extern s16 g_akao_song_cmd_arg0;
+extern s16 g_akao_song_cmd_neg_arg0;
+extern s16 g_akao_song_cmd_arg1;
+extern s16 g_akao_song_cmd_arg2;
+extern s16 g_akao_song_cmd_arg3;
 
 /**
  * decomp.me link (100%) https://decomp.me/scratch/mXgky

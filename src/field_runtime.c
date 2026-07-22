@@ -1,4 +1,80 @@
 #include "field_runtime.h"
+#include "cd.h"
+#include "controller.h"
+#include "overlay_memory.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+#include "scene_state.h"
+#include "display.h"
+
+#define SCENE_STATE ((S_801ED480*)0x801ED480)
+
+typedef struct obj_struct
+{
+  u_long otag[0x1010];
+  DISPENV disp_env;
+  DRAWENV draw_env;
+  RECT display_rect;
+  u32 primitive_cursor;
+  u8 primitive_arena[0x7CBC - 0x40BC];
+  DR_TPAGE draw_mode;
+} FieldRenderHalf;
+
+typedef struct FieldRenderContextLayout {
+    u8 _pad0[0x406A];
+    u8 front_draw_dither;
+    u8 _pad1[0x40B0 - 0x406B];
+    s16 front_display_x;
+    s16 front_display_y;
+    s16 front_display_width;
+    s16 front_display_height;
+    u8 _pad2[0xBD2E - 0x40B8];
+    u8 back_draw_dither;
+    u8 _pad3[0xBD74 - 0xBD2F];
+    s16 back_display_x;
+    s16 back_display_y;
+    s16 back_display_width;
+    s16 back_display_height;
+} FieldRenderContextLayout;
+
+typedef struct FieldDrawModeLayout {
+    u8 _pad0[0x7CBF];
+    u8 front_packet_length;
+    u32 front_draw_mode_command;
+    u8 _pad2[0xF983 - 0x7CC4];
+    u8 back_packet_length;
+    u32 back_draw_mode_command;
+} FieldDrawModeLayout;
+
+extern void akao_cmd_f0(void);
+extern void akao_cmd_f1(void);
+void field_run_frame_loop(FieldRenderHalf*);
+void field_init_display(FieldRenderHalf*);
+void field_init_text_renderer(FieldRenderHalf*);
+extern void field_set_fade_target(s16, s16, s16, s16);
+extern void field_set_scene_parameters(s32, s32, u32, s32, s32, s32);
+extern void field_stop_song(void);
+extern void field_update_scene(void);
+extern void field_build_frame_commands(FieldRenderHalf*, s32);
+extern void field_initialize_subsystems(FieldRenderHalf*);
+extern void field_flush_vram_uploads(void);
+extern void field_load_vram_resource(s32, s16*);
+extern void field_restore_entry_music(void);
+extern s32 g_scene_mode;
+extern s32 g_field_entry_flag;
+extern u32 g_field_scene_config;
+extern s32 g_layout_flag;
+extern s32 g_layout_option;
+extern s32 g_layout_sub_mode;
+extern s32 g_pending_game_state;
+extern s32 g_field_scene_request_pending;
+extern void *g_field_current_render_half;
+extern void *g_field_primitive_cursor;
+extern s32 g_field_force_two_primitives;
+extern s32 g_field_draw_count;
+extern s32 g_text_clut_base;
+extern s32 g_text_cursor_x;
+extern s32 g_text_cursor_y;
 
 /**
  * @brief Run the field overlay's top-level scene loop until a state

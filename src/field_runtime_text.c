@@ -1,4 +1,32 @@
 #include "field_runtime.h"
+#include "psyq/strings.h"
+#include "psyq/memory.h"
+
+#define DIGIT_TO_ASCII(d) ((d) + 0x30)
+
+typedef struct FieldGlyphPrimitive
+{
+    u32 tag;
+    u32 color_code;
+    u32 position;
+    u32 texcoord_clut;
+    u32 size;
+} FieldGlyphPrimitive;
+
+typedef struct FieldOrderingTableEntry
+{
+    u8 pad[0x10];
+    u32 tag;
+} FieldOrderingTableEntry;
+
+extern s32 g_text_cursor_x;
+extern s32 g_text_cursor_y;
+extern u8 g_hex_digit_table[17];
+extern FieldGlyphPrimitive *g_field_primitive_cursor;
+extern FieldOrderingTableEntry *g_field_current_render_half;
+extern s32 g_text_clut_base;
+
+void field_draw_glyph(s32 character, s32 ot_depth, s32 clut_offset);
 
 /**
  * @brief Draw a string at a fixed screen position using the field text engine.
