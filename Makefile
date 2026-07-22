@@ -99,7 +99,7 @@ MASPSX_AS       	:= python3 tools/maspsx/maspsx.py --run-assembler
 MASPSX_AS_FLAGS 	:= -no-pad-sections --aspsx-version=2.77 --expand-div
 # GCC 2.8.0 -G4: whether maspsx expands `div $reg,...` into the div-by-zero /
 # overflow break-check sequence is per-file. Most G4 objects (cdrom.c,
-# decomp2/4/6.c) need --expand-div; some (e.g. the field overlay) have bare
+# overlay_memory.c, decomp4.c, controller.c) need --expand-div; some have bare
 # `div $zero,...` with no checks and must omit it. MASPSX_DIV_FLAG_G4 defaults
 # to --expand-div and is overridden to empty per-object for the exceptions via
 # a target-specific variable (see SRCS_G4_NOEXPAND / *_gcc_g4_noexpand_srcs).
@@ -260,18 +260,19 @@ SRCS_G0 := \
 	src/psyq/libspu/S_GRMT.c \
 	src/unk8.c \
 	src/unk9.c \
-	src/decomp1.c \
+	src/screen_transition.c \
+	src/game_audio.c \
 	src/akao_cmd.c \
-	src/decomp7.c \
+	src/field_runtime.c \
 	src/decomp9.c \
 	src/main.c
 
 SRCS_G4 := \
 	src/cdrom.c \
-	src/decomp2.c \
+	src/overlay_memory.c \
 	src/decomp4.c \
 	src/akao_driver.c \
-	src/decomp6.c
+	src/controller.c
 
 # Subset of SRCS_G4 (or any G4 object) whose original code uses bare
 # `div $zero,...` and must be assembled WITHOUT --expand-div. List the .c here
@@ -283,7 +284,8 @@ SRCS_CDK_G0 := \
 	src/overlays/checkps/code2.c 
 
 SRCS_GCC_260_G0 := \
-	src/decomp8.c
+	src/field_runtime_text.c \
+	src/card_callbacks.c
 
 # Hand-written / splat-generated assembly (header, initialized data, sdata).
 # Matched-C rodata (jump tables, including unk8's) is inlined into the C

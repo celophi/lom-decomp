@@ -50,7 +50,7 @@ static void scroll_slots_left(void);
  * was @c title_func_8004FC74.
  *
  * @param base_address Base address of the double-buffered MenuContext render
- *        buffer (returned by func_80015C48 in main.c); forwarded as-is to
+ *        buffer (returned by get_title_menu_buffers in main.c); forwarded as-is to
  *        init_title_display, render_menu and run_save_slot_menu.
  * @return Next game-state code consumed by the main state machine:
  *         - 3: "New Game" confirmed in the save-slot menu (start a new field).
@@ -88,8 +88,8 @@ s32 run_title(s32 base_address)
     while (1)
     {
         init_title_display(ctx_base);
-        scene_state->unk0 = 0;
-        scene_state->unk2 = 0;
+        scene_state->map_id = 0;
+        scene_state->object_index = 0;
         scene_state->unk4 = 0;
         scene_state->unk8 = 0;
         scene_state->unkC = 0;

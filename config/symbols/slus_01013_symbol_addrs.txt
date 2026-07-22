@@ -8,6 +8,9 @@ RunCheckPS                          = 0x8004FD14;
 // Main-only alias for the common overlay load base. This must not be shared,
 // because each overlay defines its own code symbols in the same address range.
 g_overlay_load_base                 = 0x8004FC70;
+g_title_menu_buffers                = 0x801026D0;
+g_field_render_buffers              = 0x80123FD8;
+g_world_map_overlay_end             = 0x801B32D8;
 
 // CHECKPS.BIN
 PollInputDevice                     = 0x800507B4;
@@ -40,7 +43,7 @@ g_glyphAtlasY                       = 0x800894D4;
 // jumptable
 jtbl_80010C30                       = 0x80010C30; // type:jtbl rom:0x1430
 
-// FIELD overlay functions called cross-module from decomp7.c/main.c. Kept
+// FIELD overlay functions called cross-module from field_runtime.c/main.c. Kept
 // here (main-only) rather than in shared_symbol_addrs.txt because that file
 // is loaded by every overlay's own splat config too, and these addresses
 // collide with unrelated code when other overlays (e.g. CHECKPS) reuse the

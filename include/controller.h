@@ -1,5 +1,5 @@
-#ifndef _DECOMP6_H
-#define _DECOMP6_H
+#ifndef _CONTROLLER_H
+#define _CONTROLLER_H
 
 #include "common.h"
 #include "psyq/libetc.h"
@@ -7,7 +7,6 @@
 extern s32 g_previous_controller_vsync_callback;
 extern u8 g_controller_vsync_sample_count;
 extern u8 g_controller_vsync_counter;
-extern s32 g_overlay_load_base;
 
 /**
  * @brief Per-port controller state, including the current sample and LIBPAD setup state.
@@ -79,8 +78,6 @@ extern void reset_controller_vsync_state(void);
 extern void accumulate_controller_sample(void *port_state);
 extern void merge_latest_controller_sample(void *port_state);
 extern void copy_controller_sample(void *source, void *destination);
-extern s32* get_overlay_load_base(void);
-
 void poll_controller_port(ControllerPortState* port, s32* actuator_power_total);
 
 #endif
