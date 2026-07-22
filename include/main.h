@@ -2,6 +2,10 @@
 #define _MAIN_H
 
 #include "common.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+#include "psyq/libapi.h"
+#include "psyq/libetc.h"
 
 /**
  * @brief Top-level game state machine values stored in g_gameState.
