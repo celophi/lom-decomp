@@ -17,22 +17,21 @@ extern Struct_D_800F2268 D_800F2268;
 extern Struct_D_800F2270 D_800F2270;
 
 /**
- * @brief Write arg0/arg1/arg2 into both D_800F2268 and D_800F2270 (unk0/unk2/unk4),
- *        and write arg3 into D_800F2268.unk6.
- * @param arg0 Value written to unk0 of both structs.
- * @param arg1 Value written to unk2 of both structs.
- * @param arg2 Value written to unk4 of both structs.
- * @param arg3 Value written to D_800F2268.unk6 only.
+ * @brief Set the target RGB intensity and transition duration for the field fade.
+ * @param red Target red intensity.
+ * @param green Target green intensity.
+ * @param blue Target blue intensity.
+ * @param duration Transition duration in frames.
  * @see decomp.me (100%) TODO
  */
-void func_80067EB4(s16 arg0, s16 arg1, s16 arg2, s16 arg3) {
-    D_800F2268.unk0 = arg0;
-    D_800F2270.unk0 = arg0;
-    D_800F2268.unk2 = arg1;
-    D_800F2270.unk2 = arg1;
-    D_800F2268.unk4 = arg2;
-    D_800F2270.unk4 = arg2;
-    D_800F2268.unk6 = arg3;
+void field_set_fade_target(s16 red, s16 green, s16 blue, s16 duration) {
+    D_800F2268.unk0 = red;
+    D_800F2270.unk0 = red;
+    D_800F2268.unk2 = green;
+    D_800F2270.unk2 = green;
+    D_800F2268.unk4 = blue;
+    D_800F2270.unk4 = blue;
+    D_800F2268.unk6 = duration;
 }
 
 /**

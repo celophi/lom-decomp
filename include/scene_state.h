@@ -8,17 +8,17 @@
  *
  * Lives in the global RAM region (outside every overlay's address range), so it
  * survives overlay swaps. Reset on mode entry by both the TITLE overlay
- * (run_title) and the FIELD overlay (field_scene_reset). FIELD reads @c unk0 and
- * @c unk2 back as the map id and object index when initializing a scene.
+ * (run_title) and the FIELD overlay (field_scene_reset). FIELD reads @c map_id and
+ * @c object_index back when initializing a scene.
  *
  * @note The first two fields are also reached field-by-field through the
- *       standalone symbols @c D_801ED480 (== @c unk0) and @c D_801ED482
- *       (== @c unk2) elsewhere in the FIELD overlay.
+ *       standalone symbols @c D_801ED480 (== @c map_id) and @c D_801ED482
+ *       (== @c object_index) elsewhere in the FIELD overlay.
  */
 typedef struct
 {
-    u16 unk0;  /**< 0x00 map id       (standalone symbol D_801ED480) */
-    u16 unk2;  /**< 0x02 object index (standalone symbol D_801ED482) */
+    u16 map_id;       /**< 0x00 map id (standalone symbol D_801ED480) */
+    u16 object_index; /**< 0x02 object index (standalone symbol D_801ED482) */
     u32 unk4;  /**< 0x04 TODO: unknown; zeroed on TITLE entry */
     u32 unk8;  /**< 0x08 TODO: unknown; zeroed on TITLE entry */
     u32 unkC;  /**< 0x0C TODO: unknown; zeroed on TITLE entry */

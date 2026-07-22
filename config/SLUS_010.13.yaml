@@ -60,7 +60,7 @@ segments:
       - [0x800, rodata, rodata_data0]        # D_80010000 boot-path string (referenced by unk8)
       - [0x818, .rodata, main]               # jtbl -> main
       - [0x844, .rodata, cdrom]              # jtbl -> cdrom
-      - [0xA90, .rodata, decomp6]            # jtbl -> decomp6
+      - [0xA90, .rodata, controller]         # jtbl -> controller
       - [0xAAC, rodata, rodata_data1]        # g_overlayLoadAddress + data
       - [0xB44, .rodata, psyq/libc2/PRNT]    # jtbl -> PRNT
       - [0xD34, rodata, rodata_data2]        # psyq/data constants
@@ -72,12 +72,14 @@ segments:
       - [0x1458, .rodata, unk8]              # jtbl -> unk8; merged into unk8's own object so the
                                               # .L local labels from its INCLUDE_ASM functions resolve
       - [0x1558, c, main]
-      - [0x1B58, c, decomp1]
+      - [0x1B58, c, screen_transition]
+      - [0x1E0C, c, game_audio]
       - [0x1F10, c, cdrom]
-      - [0x52DC, c, decomp6]
-      - [0x6428, c, decomp2]
-      - [0x6458, c, decomp7]
-      - [0x695C, c, decomp8]
+      - [0x52DC, c, controller]
+      - [0x6418, c, overlay_memory]
+      - [0x6458, c, field_runtime]
+      - [0x695C, c, field_runtime_text]
+      - [0x6F64, c, card_callbacks]
       - [0x6F6C, c, psyq/libcard/C112]
       - [0x6F84, c, psyq/libapi/C114]
       - [0x6F9C, c, psyq/libapi/C159]

@@ -32,7 +32,7 @@ extern u32 g_gameDataBasePtr;
 
 /** @brief Table of music/song resource IDs indexed by g_music_track_index. */
 extern u8 g_music_track_table[];
-extern u32 D_8003EC88;              /**< TODO: unknown; read by func_8009AFE0, never written in C */
+extern u32 g_field_scene_config;    /**< Packed field-entry configuration passed to field_set_scene_parameters. */
 extern s32 D_8003EC8C;              /**< TODO: unknown; one-time init to 0xB */
 /** @brief Current scene/mode identifier (0, 0xD for default menu template). */
 #ifndef GOVER_C
@@ -168,12 +168,13 @@ typedef struct
 
 void __main(void);
 void _bu_init(void);
-u32 *func_80015C48(void);
+u32 *get_title_menu_buffers(void);
+u32 *get_world_map_overlay_end(void);
 u32 func_8004FC8C(u32);
 void field_scene_reset(u32);
 void field_draw_frame(s32, s32, s32, s32);
 void field_clear_node_accumulators(s32, s32);
-void func_800A3534(void);
+void field_restore_entry_music(void);
 u32 run_overlay(u32, u32, u32, s32, s32, u32, s32);
 s32 func_801400C4(void);
 void srand(u_int param_1);

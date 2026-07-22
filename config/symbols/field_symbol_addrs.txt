@@ -10,6 +10,16 @@ func_8005B31C                          = 0x8005B31C;
 field_select_object                   = 0x80052458;
 field_build_render_records            = 0x80052628;
 field_validate_and_rasterize_quads    = 0x80053880;
+field_flush_vram_uploads               = 0x80056998;
+field_build_frame_commands             = 0x800676B4;
+field_initialize_subsystems            = 0x800678D4;
+field_set_fade_target                   = 0x80067EB4;
+field_load_vram_resource               = 0x80086310;
+field_set_scene_parameters             = 0x8009AFE0;
+field_update_scene                      = 0x8009B028;
+field_restore_entry_music               = 0x800A3534;
+field_stop_song                         = 0x800A379C;
+g_field_scene_request_pending           = 0x801158A4;
 
 field_func_8006828C                   = 0x8006828C;
 

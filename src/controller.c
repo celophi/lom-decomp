@@ -1,4 +1,4 @@
-#include "decomp6.h"
+#include "controller.h"
 
 /**
  * @brief Initialize LIBPAD, both controller-port records, and their receive buffers.
@@ -968,14 +968,4 @@ void copy_controller_sample(void* source, void* destination)
     *(u16*)(dst + 2) = *(u16*)(src + 2);
     *(u16*)(dst + 4) = *(u16*)(src + 4);
     *(u16*)(dst + 6) = *(u16*)(src + 6);
-}
-
-/**
- * @brief Return the common load base used by mutually exclusive overlays.
- * @return Overlay load base at 0x8004FC70.
- * @see decomp.me (100%) https://decomp.me/scratch/wUn6G
- */
-s32* get_overlay_load_base(void)
-{
-    return &g_overlay_load_base;
 }
