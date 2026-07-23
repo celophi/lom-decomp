@@ -3594,7 +3594,7 @@ s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
  *
  * @return Destination address for the next sector DMA write.
  *
- * @see decomp.me: (97.98%) https://decomp.me/scratch/UDwSD
+ * @see decomp.me: (100%) https://decomp.me/scratch/UDwSD
  */
 s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
 {
@@ -3617,6 +3617,8 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
     u32 old_wrap_overflow;
     u32 aligned_write_base;
     u32 chunk_size;
+    s32* result;
+    volatile CdStreamState* flag_state;
 
     chunk_size = bytes_remaining;
     if (bytes_remaining >= 0x801U)
@@ -3656,17 +3658,20 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
                 aligned_bytes = unconsumed + 6;
             }
             word_count = aligned_bytes >> 2;
-            word_count--;
-            while (word_count != -1)
+            word_count = word_count - 1;
+            if (word_count != -1)
             {
-                *((s32*)dst) = *((s32*)src);
-                src += 4;
-                dst += 4;
-                word_count--;
+                do
+                {
+                    *((s32*)dst) = *((s32*)src);
+                    src += 4;
+                    word_count -= 1;
+                    dst += 4;
+                } while (word_count != -1);
             }
             old_wrap_overflow = CD_STREAM_STATE.wrapOverflow;
             CD_STREAM_STATE.wrapOverflow = 0U;
-            dst += old_wrap_overflow;
+            dst = dst + old_wrap_overflow;
         }
         else
         {
@@ -3683,13 +3688,16 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
                 aligned_bytes_b = unconsumed + 6;
             }
             word_count_b = aligned_bytes_b >> 2;
-            word_count_b--;
-            while (word_count_b != -1)
+            word_count_b = word_count_b - 1;
+            if (word_count_b != -1)
             {
-                *((s32*)dst) = *((s32*)src_b);
-                src_b += 4;
-                dst += 4;
-                word_count_b--;
+                do
+                {
+                    *((s32*)dst) = *((s32*)src_b);
+                    src_b += 4;
+                    word_count_b -= 1;
+                    dst += 4;
+                } while (word_count_b != (-1));
             }
         }
         (*((volatile CdStreamState*)(0x1F800000))).dataReady = 1U;
@@ -3700,7 +3708,6 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
     bytes_buffered = state->bytesBuffered;
     bytes_transferred = CD_STREAM_STATE.wrapOverflow;
     dst = (u8*)(read_ptr_c + bytes_buffered);
-
     if ((bytes_transferred != 0) || (((u32)(dst + chunk_size)) > 0x801DE000U))
     {
         dst = (u8*)(bytes_transferred + 0x801DC118);
@@ -3720,12 +3727,15 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
         state->bytesBuffered = unconsumed + chunk_size;
     }
 
-    if (bytes_remaining != chunk_size)
+    result = (s32*)dst;
+    if (bytes_remaining == chunk_size)
     {
-        return (s32*)dst;
+        flag_state = (CdStreamState*)0x1F800000;
+        flag_state->bufferWrapped = 1;
+        result = (s32*)dst;
+        return result;
     }
-    (*((volatile CdStreamState*)0x1F800000)).bufferWrapped = 1;
-    return (s32*)dst;
+    return result;
 }
 
 /**
