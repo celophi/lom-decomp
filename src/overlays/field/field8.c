@@ -316,14 +316,17 @@ typedef union
  */
 typedef struct
 {
-    u8 _pad0[0xC];
+    u8 _pad0[4];
+    /** 0x04 shared-source handle; two defs with the same one are compatible. */
+    s32 unk4;
+    u8 _pad1[0xC - 8];
     /**
      * 0x0C bit 1 zeroes the offsets; bit 2 and bits 4-5 select the horizontal
      * multiplier / wrap; bit 3 and bits 6-7 the vertical one. Must be UNSIGNED:
      * the target shifts it with `srl`, not `sra`.
      */
     u32 flags;
-    u8 _pad1[0x1C - 0x10];
+    u8 _pad2[0x1C - 0x10];
     /** 0x1C horizontal scale; 0x10 means "unscaled", bit 7 negates. */
     u8 unk1C;
     /** 0x1D vertical scale; same encoding as unk1C. */
@@ -340,10 +343,13 @@ typedef struct
  */
 typedef struct
 {
-    u8 _pad0[8];
+    /** 0x00 identity key; func_80056824 matches parts on it. */
+    s32 unk0;
+    u8 _pad0[8 - 4];
     union
     {
-        /** 0x08 whole word; bits 12-15 select the placement mode. */
+        /** 0x08 whole word; bit 7 marks the part unshareable, bits 12-15
+            select func_80055D20's placement mode. */
         u32 word;
         struct
         {
@@ -420,7 +426,9 @@ struct FieldObj
     FieldObjDef *def;       /* 0x04 */
     FieldPart *parts;       /* 0x08 head of the part list */
     FieldObjFlags flags;    /* 0x0C */
-    u8 _pad0[0x1C - 0x10];
+    s32 unk10;              /* 0x10 compared when matching two objects */
+    u16 unk14;              /* 0x14 compared when matching two objects */
+    u8 _pad0[0x1C - 0x16];
     s32 unk1C;              /* 0x1C x offset */
     s32 unk20;              /* 0x20 y offset */
     s32 unk24;              /* 0x24 z offset */
@@ -1879,4 +1887,74 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
         addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
     }
     *cursor_ptr = (s32 *) cursor;
+}
+
+/**
+ * @brief Find an already-built part in the scene that this one can share.
+ *
+ * Scans every part of every object in @p scene for one whose definition key
+ * matches @p key and whose owning object is interchangeable with @p obj - either
+ * literally the same definition, or one with the same shared-source handle and
+ * the same 0x10/0x14 pair. The caller uses the result to reuse an existing
+ * part's build instead of doing the work twice.
+ *
+ * @param scene Scene whose object list is searched.
+ * @param obj   Object the candidate must be interchangeable with.
+ * @param part  Part being built; excluded from its own search, and skipped
+ *              entirely when its definition is marked unshareable (bit 7).
+ * @param key   Definition key to match on (FieldPartDef::unk0).
+ * @return The matching FieldPart, or NULL if none qualifies - including when
+ *         the only candidate found is @p part itself on @p obj.
+ *
+ * @note The whole body must be wrapped in `if (!(part->def->u.word & 0x80))`
+ *       with ONE trailing `return NULL;`. Spelling it as an early
+ *       `if (...) { return NULL; }` guard makes gcc emit a second `jr ra` tail
+ *       and merges the in-loop return into it - the exact opposite of the
+ *       target, which shares the guard's exit with the final return and keeps
+ *       the in-loop one separate (89.70%).
+ * @note The success test must be one `||` expression. Splitting it into two
+ *       consecutive `if`s costs the shared tail (92.12%).
+ * @note `obj->unk14` must be `u16`; `s16` turns the `lhu` pair into `lh`
+ *       (98.18%).
+ * @note Operand order is required on both equality tests: `key == p->def->unk0`
+ *       (99.85% reversed) and `(obj == o) && (part == p)` (99.70% reversed).
+ * @note Measured non-factor: the `want`/`have` temporaries are cosmetic -
+ *       repeating `obj->def` and `o->def` inline is also 100%.
+ *
+ * @see decomp.me (100%) TODO
+ */
+FieldPart *func_80056824(FieldScene *scene, FieldObj *obj, FieldPart *part, s32 key)
+{
+    FieldObj *o;
+    FieldPart *p;
+    FieldObjDef *want;
+    FieldObjDef *have;
+
+    if (!(part->def->u.word & 0x80))
+    {
+        for (o = scene->head; o != NULL; o = o->next)
+        {
+            for (p = o->parts; p != NULL; p = p->next)
+            {
+                if (key == p->def->unk0)
+                {
+                    if ((obj == o) && (part == p))
+                    {
+                        return NULL;
+                    }
+                    if (!(p->def->u.word & 0x80))
+                    {
+                        want = obj->def;
+                        have = o->def;
+                        if ((want == have)
+                         || ((want->unk4 == have->unk4) && (obj->unk10 == o->unk10) && (obj->unk14 == o->unk14)))
+                        {
+                            return p;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return NULL;
 }
