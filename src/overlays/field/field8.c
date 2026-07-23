@@ -492,12 +492,28 @@ struct FieldMarker
     u16 unkE;
 };
 
+/**
+ * @brief Element of the scene's pending VRAM upload list.
+ *
+ * Each node carries a ready-made LoadImage argument pair: the destination
+ * rectangle sits inline at 0x04 so its address can be taken directly.
+ */
+typedef struct FieldImageReq FieldImageReq;
+struct FieldImageReq
+{
+    FieldImageReq *next; /* 0x00 */
+    RECT rect;           /* 0x04 destination rectangle in VRAM */
+    u_long *data;        /* 0x0C source pixel data */
+};
+
 typedef struct
 {
     FieldSceneHeader *unk0; /* 0x00 */
     FieldObj *head;         /* 0x04 head of the object list */
     u8 _pad0[0x10 - 8];
     FieldMarker *markers;   /* 0x10 head of the marker list */
+    u8 _pad1[0x34 - 0x14];
+    FieldImageReq *uploads; /* 0x34 head of the pending upload list */
 } FieldScene;
 
 typedef struct
@@ -1957,4 +1973,83 @@ FieldPart *func_80056824(FieldScene *scene, FieldObj *obj, FieldPart *part, s32 
         }
     }
     return NULL;
+}
+
+/**
+ * @brief Dispatch one field part to the emitter its kind selects.
+ *
+ * Kind 0 draws an axis-aligned grid, kinds 2 through 5 a rotated/scaled one.
+ * Kind 1 and anything from 6 up draw nothing. All four arguments are forwarded
+ * verbatim.
+ *
+ * @param part Field part to draw; its kind byte selects the emitter.
+ * @param arg1 Primitive-buffer cursor, forwarded as func_8005571C's 2nd param.
+ * @param arg2 Screen-space placement, forwarded as the 3rd param.
+ * @param arg3 Ordering-table head array base, forwarded as the 4th param.
+ *
+ * @note **`case 1: break;` must be written out** even though it does nothing.
+ *       gcc balances the switch's comparison tree around the median case node,
+ *       so the presence of a do-nothing case 1 is what makes `beq v1, 1` the
+ *       ROOT test; without it the tree re-balances around case 0 and the whole
+ *       cascade changes (52.59%). The case set is readable straight off the
+ *       tree: adding a case 6 also breaks it (47.41%).
+ * @note It must be a `switch`. The equivalent
+ *       `if (kind == 0) ... else if (kind >= 2 && kind < 6)` chain folds the
+ *       range test into a single unsigned compare (47.22%) - see [EXPAND-09].
+ * @note `kind` must stay `u8`; `s8` costs the zero-extend shape (97.78%).
+ * @note Measured non-factor: adding `default:` alongside `case 1:` is also 100%.
+ * @note The parameters keep the loose `(FieldPart *, s32, s32 *, s32)` shape of
+ *       the forward declaration above, which func_80054CA8's six call sites are
+ *       matched against; the casts at the two calls are free.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005692C(FieldPart *part, s32 arg1, s32 *arg2, s32 arg3)
+{
+    switch (part->kind)
+    {
+    case 0:
+        func_8005571C(part, (s32 **) arg1, (FieldViewport *) arg2, arg3);
+        break;
+    case 1:
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        func_80055D20(part, (s32 **) arg1, (FieldViewport *) arg2, arg3);
+        break;
+    }
+}
+
+/**
+ * @brief Flush the scene's pending VRAM uploads.
+ *
+ * Walks the scene's upload list, issues each node's LoadImage, then empties the
+ * list. Nodes are not freed - the list head is simply cleared.
+ *
+ * @note The `scene` local is required to match: LoadImage is an ordinary call,
+ *       so gcc's alias model treats it as clobbering memory. Writing
+ *       `g_field_scene.scene->uploads = NULL;` inline after the loop forces a
+ *       reload of the global that the target does not have - it keeps the scene
+ *       pointer in s1 across every call (68.17%).
+ * @note Measured non-factors, all still 100%: `while` and guarded `do/while`
+ *       loop forms, declaring `data` as `void *` and casting at the call, and
+ *       replacing the inline `RECT rect;` member with a raw `(RECT *)(p + 4)`
+ *       cast. The inline RECT member is kept because it is what makes
+ *       `&req->rect` read naturally.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_80056998(void)
+{
+    FieldScene *scene;
+    FieldImageReq *req;
+
+    scene = g_field_scene.scene;
+    for (req = scene->uploads; req != NULL; req = req->next)
+    {
+        LoadImage(&req->rect, req->data);
+    }
+    scene->uploads = NULL;
 }
