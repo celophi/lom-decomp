@@ -331,11 +331,16 @@ typedef struct
 } FieldObjDef;
 
 /**
- * @brief Definition record hanging off a part; only the 0x0B byte is read.
+ * @brief Definition record hanging off a part.
+ *
+ * unkA/unkB are the part's cell grid dimensions, in 16x16 cells.
  */
 typedef struct
 {
-    u8 _pad[0xB];
+    u8 _pad[0xA];
+    /** 0x0A grid width, in cells. */
+    u8 unkA;
+    /** 0x0B grid height, in cells. */
     u8 unkB;
 } FieldPartDef;
 
@@ -347,17 +352,40 @@ struct FieldPart
 {
     FieldPart *next;        /* 0x00 */
     FieldPartDef *def;      /* 0x04 */
-    u8 _pad0[0x20 - 8];
+    u8 _pad0[0xC - 8];
+    /** 0x0C bit plane: one bit per grid cell, row-major, LSB first. */
+    s32 *bits;
+    /** 0x10 packed stream of FieldCellRec, one per set bit. */
+    u8 *records;
+    u8 _pad1[0x18 - 0x14];
+    /**
+     * 0x18 texture-page word shared by every cell; when non-zero it is emitted
+     * once as its own primitive instead of per record, shortening the stride.
+     */
+    s32 tpage_word;
+    /** 0x1C rgb/code word shared by every cell; same stride effect as tpage. */
+    s32 code_word;
     /** 0x20 zero means the part is not drawn. */
     u8 unk20;
     /** 0x21 selects the per-part byte cost: 0x18, 0x1C, 0x28 or 0x34 units. */
     u8 kind;
-    u8 _pad1[0x26 - 0x22];
+    u8 _pad2[0x26 - 0x22];
     /** 0x26 number of instances; zero means the part is skipped entirely. */
     u16 count;
     s32 unk28;              /* 0x28 x offset within the object */
     s32 unk2C;              /* 0x2C y offset within the object */
     s32 unk30;              /* 0x30 z offset within the object */
+    u8 _pad3[0x44 - 0x34];
+    /**
+     * 0x44..0x4A the four corner CLUT ids, bilinearly interpolated across the
+     * grid. Derived from the interpolation endpoints: the row weight resolves
+     * to unk46 on the first (topmost) row and unk44 on the last, and the
+     * column weight to the "left" pair on the first (leftmost) column.
+     */
+    s16 clut_bl;            /* 0x44 bottom left */
+    s16 clut_tl;            /* 0x46 top left */
+    s16 clut_br;            /* 0x48 bottom right */
+    s16 clut_tr;            /* 0x4A top right */
 };
 
 /**
@@ -1048,4 +1076,377 @@ void func_8005538C(u32 *cursor, u32 *ot)
         addPrims(&ot[-1], (void *)*cursor, prev);
         *cursor = (u32)prim;
     }
+}
+
+/**
+ * @brief Screen-space origin of the grid being drawn.
+ */
+typedef struct
+{
+    s32 x; /* 0x00 */
+    s32 y; /* 0x04 */
+} FieldViewport;
+
+/**
+ * @brief GPU primitive as func_8005571C writes it: four raw words.
+ *
+ * Layout-compatible with SPRT_16 (tag / rgb+code / x0+y0 / u0+v0+clut) and,
+ * for the 8-byte form, with DR_TPAGE. It is declared as plain words rather
+ * than reusing those Psy-Q types because every field is written as one whole
+ * 32-bit store; going through setaddr/setlen or the byte members turns each
+ * tag write into a read-modify-write and costs the match.
+ */
+typedef struct
+{
+    u32 tag;  /* 0x00 */
+    u32 code; /* 0x04 */
+    u32 xy;   /* 0x08 packed (y << 16) | (x & 0xFFFF) */
+    u32 uv;   /* 0x0C uv pair plus CLUT id */
+} FieldPrim;
+
+/**
+ * @brief One entry of FieldPart::records, consumed per set bit plane bit.
+ *
+ * The stride is 0xC bytes, less 4 when the part carries a global code word and
+ * another 4 when it carries a global texture page, so unk4/unk8 are only
+ * present in the longer forms.
+ */
+typedef struct
+{
+    /** 0x00 uv pair plus CLUT id; -1 means the cell emits nothing. */
+    s32 unk0;
+    /** 0x04 rgb/code word used when the part has no global code word. */
+    s32 unk4;
+    /** 0x08 texture-page word tested against the running page code. */
+    s32 unk8;
+} FieldCellRec;
+
+/**
+ * @brief Emit GPU primitives for one bit-plane driven 16x16 sprite grid.
+ *
+ * Walks @p part 's bit plane row-major. Each set bit consumes one record from
+ * the part's record stream and emits a 16-byte len-3 primitive at the current
+ * grid cell, preceded by an 8-byte len-1 texture-page primitive whenever the
+ * page code changes. Emitted primitives accumulate into a local chain that is
+ * spliced into @p ot_base 's ordering-table head for the current CLUT with
+ * addPrims, both whenever the interpolated CLUT changes and once at the end.
+ * Rows and columns outside the 320x224 viewport are skipped by consuming their
+ * bits without emitting.
+ *
+ * Sibling of func_80055D20; both are reached from the func_8005692C dispatch
+ * on FieldPart::kind.
+ *
+ * @param part Field part supplying the grid, the bit plane, the record stream
+ *             and the four corner CLUT ids.
+ * @param cursor_ptr In/out primitive-buffer cursor; advanced past everything
+ *                   emitted.
+ * @param origin Screen-space origin of the grid, in pixels.
+ * @param ot_base Base of the 8-byte-per-entry ordering-table head array,
+ *                indexed by CLUT id.
+ *
+ * @note `step` is the record stride: 0xC, less 4 when a global code word makes
+ *       the per-record copy unnecessary, less another 4 for a global page word.
+ * @note The 0xFFFFFF masks and the `-1` loop sentinels are written as literals
+ *       on purpose; loop.c hoists them into the loop preheaders, which is where
+ *       the target's s2 and s7 come from. Naming them costs the match.
+ * @note The two CLUT multiplies must be written out inline. The `col * clut`
+ *       accumulators m2c reconstructs are loop.c strength reduction, not source.
+ * @note `bit = 0;` must sit below the tpage test so that it shares a CSE block
+ *       with the two NULL inits; that is what makes them copy from `bit`'s
+ *       register instead of materialising zero again.
+ * @note `row = height; row = row - 1;` is required to match ([ALLOC-19]): the
+ *       extra ref crosses the floor_log2 step in global.c's priority formula and
+ *       moves `row` into t9. The split only works together with the preceding
+ *       statement move, and `width` must stay `u8`.
+ * @note `prim->code = last_code;` is duplicated into both arms, and the record
+ *       loads are written as `last_code = (prim->code = ...)`, for the same
+ *       allocation-priority reason.
+ *
+ * @see working/func_8005571C/status.md for the full match log and the residue.
+ * @see decomp.me (99.73%) TODO
+ */
+void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32 ot_base)
+{
+    s32 uv_word;
+    s32 tpage_word;
+    s32 code_word;
+    s32 height;
+    s32 interp;
+    u32 clut_right;
+    s32 clut_cur;
+    s32 clut_left;
+    s32 last_code;
+    s32 row;
+    s32 col;
+    s32 idx;
+    s32 x;
+    s32 y;
+    s32 step;
+    s32 bits;
+    s32 bit;
+    s32 count;
+    u32 clut;
+    u32 clut_b;
+    s16 val_a;
+    s16 val_b;
+    FieldPrim *prim;
+    u8 *cursor;
+    u8 *chain;
+    u8 *recp;
+    s32 *bitp;
+    u8 width;
+    FieldPartDef *info;
+
+    last_code = 0;
+    bits = 0;
+    clut_cur = part->clut_tl;
+    clut_left = 0;
+    clut_right = 0;
+    if ((clut_cur == part->clut_tr) && (clut_cur == part->clut_bl) && (clut_cur == part->clut_br))
+    {
+        interp = 0;
+    }
+    else
+    {
+        clut_cur = 0xFFFF;
+        interp = 1;
+    }
+    code_word = part->code_word;
+    tpage_word = part->tpage_word;
+    step = 0xC;
+    if (code_word != 0)
+    {
+        step = 8;
+    }
+    if (tpage_word != 0)
+    {
+        step -= 4;
+    }
+    bit = 0;
+    prim = NULL;
+    bitp = part->bits;
+    recp = part->records;
+    info = part->def;
+    cursor = (u8 *) *cursor_ptr;
+    y = origin->y;
+    height = info->unkB;
+    row = height;
+    row = row - 1;
+    width = info->unkA;
+    chain = NULL;
+    while (row != -1)
+    {
+        if (y >= 0xE0)
+        {
+            break;
+        }
+        if (y < -0xF)
+        {
+            count = 0;
+            do
+            {
+                for (col = width - 1; col != -1; col--)
+                {
+                    if (bit == 0)
+                    {
+                        bits = *bitp++;
+                        bit = 1;
+                    }
+                    if ((bits & bit) != 0)
+                    {
+                        count++;
+                    }
+                    bit <<= 1;
+                }
+                y += 0x10;
+            } while ((y < -0xF) && (--row != -1));
+            recp += step * count;
+            if (row <= 0)
+            {
+                break;
+            }
+            row--;
+        }
+        if (interp != 0)
+        {
+            val_a = part->clut_tl;
+            val_b = part->clut_bl;
+            if (val_a != val_b)
+            {
+                clut_left = ((val_a * (row + 1)) + (val_b * ((height - row) - 1))) / height;
+            }
+            else
+            {
+                clut_left = val_a;
+            }
+            val_a = part->clut_tr;
+            /* Staging through col is dead (col is re-initialised for the
+               column loop below) but is required to match: it is the one extra
+               REG_N_REFS that lifts col's global.c priority over clut's, so col
+               takes t0 and clut t1. See [ALLOC-21]. This is a reconstruction
+               artifact, not recovered source - see status.md. */
+            col = part->clut_br;
+            val_b = col;
+            if (val_a != val_b)
+            {
+                clut_right = ((val_a * (row + 1)) + (val_b * ((height - row) - 1))) / height;
+            }
+            else
+            {
+                clut_right = val_a;
+            }
+        }
+        x = origin->x;
+        for (col = width - 1; col != -1; col--)
+        {
+            if (x >= 0x140)
+            {
+                count = 0;
+                do
+                {
+                    if (bit == 0)
+                    {
+                        bits = *bitp++;
+                        bit = 1;
+                    }
+                    if ((bits & bit) != 0)
+                    {
+                        count++;
+                    }
+                    col--;
+                    bit <<= 1;
+                } while (col != -1);
+                recp += step * count;
+                break;
+            }
+            if (x < -0xF)
+            {
+                count = 0;
+                do
+                {
+                    if (bit == 0)
+                    {
+                        bits = *bitp++;
+                        bit = 1;
+                    }
+                    if ((bits & bit) != 0)
+                    {
+                        count++;
+                    }
+                    x += 0x10;
+                    bit <<= 1;
+                } while ((x < -0xF) && (--col != -1));
+                recp += step * count;
+                if (col <= 0)
+                {
+                    break;
+                }
+                col--;
+            }
+            if (bit == 0)
+            {
+                bits = *bitp++;
+                bit = 1;
+            }
+            if ((bits & bit) != 0)
+            {
+                uv_word = ((FieldCellRec *) recp)->unk0;
+                if (uv_word != -1)
+                {
+                    if (interp != 0)
+                    {
+                        idx = width - col;
+                        if (clut_left != clut_right)
+                        {
+                            clut = ((clut_left * (col + 1)) + (clut_right * (idx - 1))) / width;
+                            clut_b = ((clut_left * col) + (clut_right * idx)) / width;
+                            if (clut < clut_b)
+                            {
+                                clut = clut_b;
+                            }
+                        }
+                        else
+                        {
+                            clut = clut_left;
+                        }
+                        if (clut != clut_cur)
+                        {
+                            if (chain != NULL)
+                            {
+                                addPrims((FieldPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+                                chain = NULL;
+                            }
+                            clut_cur = clut;
+                        }
+                    }
+                    if (tpage_word != 0)
+                    {
+                        prim = (FieldPrim *) cursor;
+                        if (chain == NULL)
+                        {
+                            chain = cursor;
+                            cursor += 8;
+                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            prim->code = tpage_word;
+                            prim = (FieldPrim *) cursor;
+                        }
+                    }
+                    else
+                    {
+                        prim = (FieldPrim *) cursor;
+                        if (chain == NULL)
+                        {
+                            chain = cursor;
+                            cursor += 8;
+                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            if (code_word != 0)
+                            {
+                                last_code = (prim->code = ((FieldCellRec *) recp)->unk4);
+                            }
+                            else
+                            {
+                                last_code = (prim->code = ((FieldCellRec *) recp)->unk8);
+                            }
+                        }
+                        else if (last_code != ((FieldCellRec *) recp)->unk8)
+                        {
+                            cursor += 8;
+                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            if (code_word != 0)
+                            {
+                                last_code = (prim->code = ((FieldCellRec *) recp)->unk4);
+                            }
+                            else
+                            {
+                                last_code = (prim->code = ((FieldCellRec *) recp)->unk8);
+                            }
+                        }
+                        prim = (FieldPrim *) cursor;
+                    }
+                    cursor += 0x10;
+                    prim->tag = ((u32) cursor & 0xFFFFFF) | 0x03000000;
+                    if (code_word != 0)
+                    {
+                        prim->code = code_word;
+                    }
+                    else
+                    {
+                        prim->code = ((FieldCellRec *) recp)->unk4;
+                    }
+                    prim->xy = (x & 0xFFFF) | (y << 16);
+                    prim->uv = uv_word;
+                }
+                recp += step;
+            }
+            bit <<= 1;
+            x += 0x10;
+        }
+        row--;
+        y += 0x10;
+    }
+    if (chain != NULL)
+    {
+        addPrims((FieldPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+    }
+    *cursor_ptr = (s32 *) cursor;
 }
