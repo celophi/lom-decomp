@@ -333,15 +333,27 @@ typedef struct
 /**
  * @brief Definition record hanging off a part.
  *
- * unkA/unkB are the part's cell grid dimensions, in 16x16 cells.
+ * The word at 0x08 is read whole (its bits 12-15 select func_80055D20's
+ * placement mode) while bytes 0x0A and 0x0B are read separately as the cell
+ * grid dimensions, so the two views have to share storage - same arrangement
+ * as FieldObjFlags below.
  */
 typedef struct
 {
-    u8 _pad[0xA];
-    /** 0x0A grid width, in cells. */
-    u8 unkA;
-    /** 0x0B grid height, in cells. */
-    u8 unkB;
+    u8 _pad0[8];
+    union
+    {
+        /** 0x08 whole word; bits 12-15 select the placement mode. */
+        u32 word;
+        struct
+        {
+            u8 _pad1[2];
+            /** 0x0A grid width, in cells. */
+            u8 unkA;
+            /** 0x0B grid height, in cells. */
+            u8 unkB;
+        } b;
+    } u;
 } FieldPartDef;
 
 /**
@@ -375,7 +387,17 @@ struct FieldPart
     s32 unk28;              /* 0x28 x offset within the object */
     s32 unk2C;              /* 0x2C y offset within the object */
     s32 unk30;              /* 0x30 z offset within the object */
-    u8 _pad3[0x44 - 0x34];
+    u8 _pad3[0x3A - 0x34];
+    /** 0x3A rotation angle applied to the vertical (row) step. */
+    u16 unk3A;
+    /** 0x3C rotation angle applied to the horizontal (column) step. */
+    u16 unk3C;
+    /** 0x3E rotation angle of the grid as a whole; feeds both rsin and rcos. */
+    u16 unk3E;
+    /** 0x40 horizontal scale, 8.8 fixed point. */
+    u16 unk40;
+    /** 0x42 vertical scale, 8.8 fixed point. */
+    u16 unk42;
     /**
      * 0x44..0x4A the four corner CLUT ids, bilinearly interpolated across the
      * grid. Derived from the interpolation endpoints: the row weight resolves
@@ -850,7 +872,7 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
                             params[0] = px + (obj->unk1C + part->unk28) / 256;
                             {
                                 s32 a = (py - pz) + (obj->unk20 + part->unk2C) / 256;
-                                s32 d = part->def->unkB * 0x10 - 0xE0;
+                                s32 d = part->def->u.b.unkB * 0x10 - 0xE0;
 
                                 a = a - (obj->unk24 + part->unk30) / 512;
                                 params[1] = a - d;
@@ -1079,12 +1101,18 @@ void func_8005538C(u32 *cursor, u32 *ot)
 }
 
 /**
- * @brief Screen-space origin of the grid being drawn.
+ * @brief Screen-space placement of the grid being drawn.
+ *
+ * func_8005571C only needs the origin; func_80055D20 also reads unk8/unkC/unk10
+ * to derive the rotation centre for its non-default placement modes.
  */
 typedef struct
 {
-    s32 x; /* 0x00 */
-    s32 y; /* 0x04 */
+    s32 x;     /* 0x00 */
+    s32 y;     /* 0x04 */
+    s32 unk8;  /* 0x08 */
+    s32 unkC;  /* 0x0C */
+    s32 unk10; /* 0x10 */
 } FieldViewport;
 
 /**
@@ -1229,10 +1257,10 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     info = part->def;
     cursor = (u8 *) *cursor_ptr;
     y = origin->y;
-    height = info->unkB;
+    height = info->u.b.unkB;
     row = height;
     row = row - 1;
-    width = info->unkA;
+    width = info->u.b.unkA;
     chain = NULL;
     while (row != -1)
     {
@@ -1447,6 +1475,408 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     if (chain != NULL)
     {
         addPrims((FieldPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+    }
+    *cursor_ptr = (s32 *) cursor;
+}
+
+/**
+ * @brief Arithmetic right shift that rounds toward zero instead of down.
+ *
+ * The generalisation of HALF_TOWARD_ZERO above. It names its argument three
+ * times on purpose: gcc cannot CSE the two arms of the conditional across the
+ * branch, so a nested use expands to the target's triplicated multiply chains.
+ * Spelling these as `/ 256`, `/ 4096` and `/ 65536` instead gives a compact
+ * two-branch expansion and loses 107 instructions in func_80055D20.
+ *
+ * @param v Signed value to shift.
+ * @param n Shift amount, i.e. divide by 1 << n.
+ * @return @p v divided by `1 << n`, rounded toward zero.
+ */
+#define SHIFT_TOWARD_ZERO(v, n) ((v) >= 0 ? ((v) >> (n)) : (((v) + ((1 << (n)) - 1)) >> (n)))
+
+/**
+ * @brief POLY_FT4 as func_80055D20 writes it: ten raw words.
+ *
+ * Layout-compatible with Psy-Q's POLY_FT4 (tag / rgb+code / four x,y pairs each
+ * followed by its u,v pair). It is declared as plain words rather than reusing
+ * POLY_FT4 because every field is written as one whole 32-bit store: the vertex
+ * slots take a packed (x,y) pair straight out of the point buffer, and going
+ * through the byte members or setXY0 would turn each into a read-modify-write.
+ */
+typedef struct
+{
+    u32 tag;  /* 0x00 */
+    u32 code; /* 0x04 */
+    u32 xy0;  /* 0x08 */
+    u32 uv0;  /* 0x0C uv pair plus CLUT id, straight from the record */
+    u32 xy1;  /* 0x10 */
+    u32 uv1;  /* 0x14 uv pair plus texture page */
+    u32 xy2;  /* 0x18 */
+    u32 uv2;  /* 0x1C */
+    u32 xy3;  /* 0x20 */
+    u32 uv3;  /* 0x24 */
+} FieldPolyPrim;
+
+/**
+ * @brief One column's rotated unit step, cached in the scratchpad at 0x1F800000.
+ *
+ * There are width + 1 of these, one per column edge. Each holds the column
+ * offset already multiplied by the grid's sine and cosine, so the per-row pass
+ * only has to add the row's contribution and shift.
+ */
+typedef struct
+{
+    s32 sin_term; /* 0x00 column offset * sin */
+    s32 cos_term; /* 0x04 column offset * cos */
+} FieldColStep;
+
+/**
+ * @brief A screen-space point in one of the two scratchpad row buffers.
+ *
+ * The pair is compared component-wise for the viewport reject but copied into
+ * the primitive as a single word, so the two views have to share storage.
+ */
+typedef union
+{
+    /** Packed (y << 16) | (x & 0xFFFF), as stored into a POLY_FT4 vertex. */
+    s32 word;
+    struct
+    {
+        s16 x;
+        s16 y;
+    } p;
+} FieldPoint;
+
+/**
+ * @brief Emit rotated, scaled POLY_FT4 primitives for one bit-plane sprite grid.
+ *
+ * Rotated sibling of func_8005571C, reached from the same func_8005692C
+ * dispatch on FieldPart::kind. Walks @p part 's bit plane row-major and emits
+ * one 40-byte POLY_FT4 per set bit, taking the quad's four corners from two
+ * ping-pong row buffers of pre-rotated points.
+ *
+ * The rotation is precomputed in the PSX scratchpad: 0x1F800000 holds width + 1
+ * FieldColStep entries (one per column edge), and 0x1F800200 / 0x1F800300 hold
+ * width + 1 points each for the previous and current row. Each row advances the
+ * vertical offset by 16, rebuilds the current row's points, then walks the
+ * columns emitting a quad per set bit. Cells whose four corners all fall off one
+ * side of the 320x224 viewport are skipped. Primitives accumulate into a local
+ * chain spliced into @p ot_base 's ordering-table head for the current CLUT with
+ * addPrims, both when the interpolated CLUT changes and once at the end.
+ *
+ * @param part Field part: def gives the grid size and the placement mode, bits
+ *             the bit plane, records the record stream, unk3A/3C/3E the rotation
+ *             angles, unk40/42 the scales, unk44..4A the four corner CLUT ids.
+ * @param cursor_ptr In/out primitive-buffer cursor; advanced past everything
+ *                   emitted.
+ * @param origin Screen-space placement; the mode selects which of its words
+ *               form the rotation centre.
+ * @param ot_base Base of the 8-byte-per-entry ordering-table head array,
+ *                indexed by CLUT id.
+ *
+ * @note The placement mode is `(def->u.word >> 12) & 0xF`, and the switch needs
+ *       an explicit `case 5:` falling into `default:` - that is what makes gcc
+ *       emit a five-entry jump table whose last slot points at the default arm.
+ * @note `scaled` is assigned the vertical term BEFORE the column-fill loop, and
+ *       the loop immediately overwrites it. Those 14 instructions are dead, but
+ *       gcc cannot delete them because `mult` clobbers HI/LO and is not a
+ *       deletable dead insn. Removing the assignment costs the whole block.
+ * @note `origin->unk8 / 2` really is a plain `/ 2` here (`srl 31 / addu / sra 1`),
+ *       NOT the HALF_TOWARD_ZERO branch form used elsewhere in this file.
+ * @note `prim = NULL; chain = NULL;` must sit BEFORE the four rcos/rsin calls.
+ *       Placed after them, prim's live range starts after the calls, it crosses
+ *       none, and it takes a caller-saved register; placed before, it crosses
+ *       four calls and lands in s0 like the target (+26 exact rows).
+ * @note The three point-fill loops reuse `col` rather than a separate index;
+ *       the target allocates a2 for both them and the column loop.
+ * @note Declaration order sets the spill-slot order (see func_8005571C's note):
+ *       the locals are declared in the target's slot order, 0x10 recp through
+ *       0x48 clut_right.
+ * @note The visibility test is assigned to `visible` first rather than tested
+ *       inline; the target materialises 0/1 in a register before branching.
+ * @note `part->def` is re-read rather than cached in a local because the
+ *       rcos/rsin calls clobber memory for gcc's alias model and kill the CSE.
+ *
+ * @see working/func_80055D20/status.md for the full match log and the residue.
+ * @see decomp.me (92.08%) TODO
+ */
+void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32 ot_base)
+{
+    u8 *recp;
+    s32 *bitp;
+    s32 tpage_word;
+    s32 code_word;
+    s32 bits;
+    s32 bit;
+    s32 height;
+    s32 interp;
+    s32 step;
+    s32 sin_c;
+    s32 cos_c;
+    s32 flip;
+    s32 clut_cur;
+    s32 clut_left;
+    s32 clut_right;
+    /* TODO: not recovered source. A second pseudo for `height` is what pushes
+       height out of a saved register and into its stack slot, which the target
+       reads back twice per interpolation block. Removing it costs 27 rows.
+       The real cause is register pressure; see status.md. */
+    s32 hdiv;
+    s32 row;
+    s32 col;
+    s32 idx;
+    s32 width;
+    s32 x_off;
+    s32 y_off;
+    s32 cx;
+    s32 cy;
+    s32 cos_a;
+    s32 cos_b;
+    s32 scaled;
+    s32 dx;
+    s32 dy;
+    s32 visible;
+    s32 uv_word;
+    u32 clut;
+    u32 clut_b;
+    FieldColStep *steps;
+    FieldPoint *pt;
+    FieldPoint *prev_row;
+    FieldPoint *this_row;
+    FieldPolyPrim *prim;
+    u8 *cursor;
+    u8 *chain;
+
+    bits = 0;
+    clut_left = 0;
+    clut_cur = part->clut_tl;
+    clut_right = 0;
+    if ((clut_cur == part->clut_tr) && (clut_cur == part->clut_bl) && (clut_cur == part->clut_br))
+    {
+        interp = 0;
+    }
+    else
+    {
+        clut_cur = 0xFFFF;
+        interp = 1;
+    }
+    step = 0xC;
+    code_word = part->code_word;
+    tpage_word = part->tpage_word;
+    if (code_word != 0)
+    {
+        step = 8;
+    }
+    if (tpage_word != 0)
+    {
+        step -= 4;
+    }
+    bit = 0;
+    bitp = part->bits;
+    recp = part->records;
+    cursor = (u8 *) *cursor_ptr;
+    prim = NULL;
+    chain = NULL;
+    width = part->def->u.b.unkA;
+    height = part->def->u.b.unkB;
+    cos_a = rcos(part->unk3A);
+    cos_b = rcos(part->unk3C);
+    sin_c = rsin(part->unk3E);
+    cos_c = rcos(part->unk3E);
+    hdiv = height;
+    switch ((part->def->u.word >> 12) & 0xF)
+    {
+    case 1:
+    case 2:
+        cy = origin->unk10;
+        cx = origin->unkC + (origin->unk8 / 2);
+        x_off = origin->x - cx;
+        y_off = origin->y - cy;
+        break;
+    case 3:
+        cx = origin->unkC;
+        cy = origin->unk10;
+        x_off = origin->x - cx;
+        y_off = origin->y - cy;
+        break;
+    case 4:
+        cx = origin->unk8 + origin->unkC;
+        cy = origin->unk10;
+        x_off = origin->x - cx;
+        y_off = origin->y - cy;
+        break;
+    case 5:
+    default:
+        x_off = -width * 8;
+        y_off = -height * 8;
+        cx = origin->x + (width * 8);
+        cy = origin->y + (height * 8);
+        break;
+    }
+    scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->unk42, 8) * cos_a, 12);
+    steps = (FieldColStep *) 0x1F800000;
+    for (col = width; col != -1; col--)
+    {
+        scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(x_off * part->unk40, 8) * cos_b, 12);
+        x_off += 0x10;
+        steps->sin_term = scaled * sin_c;
+        steps->cos_term = scaled * cos_c;
+        steps++;
+    }
+    scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->unk42, 8) * cos_a, 12);
+    dx = scaled * sin_c;
+    dy = scaled * cos_c;
+    steps = (FieldColStep *) 0x1F800000;
+    pt = (FieldPoint *) 0x1F800200;
+    for (col = width; col != -1; col--)
+    {
+        pt->p.x = SHIFT_TOWARD_ZERO(steps->cos_term - dx, 16) + cx;
+        pt->p.y = SHIFT_TOWARD_ZERO(steps->sin_term + dy, 16) + cy;
+        steps++;
+        pt++;
+    }
+    flip = 0;
+    if (height != 0)
+    {
+        row = height - 1;
+        do
+        {
+            if (interp != 0)
+            {
+                if (part->clut_tl != part->clut_bl)
+                {
+                    clut_left = ((part->clut_tl * (row + 1)) + (part->clut_bl * ((height - row) - 1))) / height;
+                }
+                else
+                {
+                    clut_left = part->clut_tl;
+                }
+                if (part->clut_tr != part->clut_br)
+                {
+                    clut_right = ((part->clut_tr * (row + 1)) + (part->clut_br * ((hdiv - row) - 1))) / hdiv;
+                }
+                else
+                {
+                    clut_right = part->clut_tr;
+                }
+            }
+            if (flip == 0)
+            {
+                prev_row = (FieldPoint *) 0x1F800200;
+                this_row = (FieldPoint *) 0x1F800300;
+                flip = 1;
+            }
+            else
+            {
+                prev_row = (FieldPoint *) 0x1F800300;
+                this_row = (FieldPoint *) 0x1F800200;
+                flip = 0;
+            }
+            y_off += 0x10;
+            scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->unk42, 8) * cos_a, 12);
+            dx = scaled * sin_c;
+            dy = scaled * cos_c;
+            steps = (FieldColStep *) 0x1F800000;
+            pt = this_row;
+            for (col = width; col != -1; col--)
+            {
+                pt->p.x = SHIFT_TOWARD_ZERO(steps->cos_term - dx, 16) + cx;
+                pt->p.y = SHIFT_TOWARD_ZERO(steps->sin_term + dy, 16) + cy;
+                steps++;
+                pt++;
+            }
+            for (col = width - 1; col != -1; col--)
+            {
+                if (bit == 0)
+                {
+                    bits = *bitp++;
+                    bit = 1;
+                }
+                if ((bits & bit) != 0)
+                {
+                    visible = ((prev_row[0].p.x >= 0) || (prev_row[1].p.x >= 0) || (this_row[0].p.x >= 0) || (this_row[1].p.x >= 0))
+                           && ((prev_row[0].p.y >= 0) || (prev_row[1].p.y >= 0) || (this_row[0].p.y >= 0) || (this_row[1].p.y >= 0))
+                           && ((prev_row[0].p.x < 0x140) || (prev_row[1].p.x < 0x140) || (this_row[0].p.x < 0x140) || (this_row[1].p.x < 0x140))
+                           && ((prev_row[0].p.y < 0xE0) || (prev_row[1].p.y < 0xE0) || (this_row[0].p.y < 0xE0) || (this_row[1].p.y < 0xE0));
+                    if (visible != 0)
+                    {
+                        uv_word = ((FieldCellRec *) recp)->unk0;
+                        if (uv_word != -1)
+                        {
+                            if (interp != 0)
+                            {
+                                idx = width - col;
+                                if (clut_left != clut_right)
+                                {
+                                    clut = ((clut_left * (col + 1)) + (clut_right * (idx - 1))) / width;
+                                    clut_b = ((clut_left * col) + (clut_right * idx)) / width;
+                                    if (clut < clut_b)
+                                    {
+                                        clut = clut_b;
+                                    }
+                                }
+                                else
+                                {
+                                    clut = clut_left;
+                                }
+                                if (clut != clut_cur)
+                                {
+                                    if (chain != NULL)
+                                    {
+                                        addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+                                        chain = NULL;
+                                    }
+                                    clut_cur = clut;
+                                }
+                            }
+                            prim = (FieldPolyPrim *) cursor;
+                            if (chain == NULL)
+                            {
+                                chain = cursor;
+                            }
+                            cursor += 0x28;
+                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x09000000;
+                            if (code_word != 0)
+                            {
+                                prim->code = code_word;
+                            }
+                            else
+                            {
+                                prim->code = ((FieldCellRec *) recp)->unk4;
+                            }
+                            if (tpage_word != 0)
+                            {
+                                prim->uv1 = ((uv_word & 0xFFFF) + 0xF) | tpage_word;
+                            }
+                            else if (code_word != 0)
+                            {
+                                prim->uv1 = ((FieldCellRec *) recp)->unk4;
+                            }
+                            else
+                            {
+                                prim->uv1 = ((FieldCellRec *) recp)->unk8;
+                            }
+                            prim->uv0 = uv_word;
+                            prim->uv2 = (uv_word & 0xFFFF) + 0xF00;
+                            prim->uv3 = (uv_word & 0xFFFF) + 0xF0F;
+                            prim->xy0 = prev_row[0].word;
+                            prim->xy1 = prev_row[1].word;
+                            prim->xy2 = this_row[0].word;
+                            prim->xy3 = this_row[1].word;
+                        }
+                    }
+                    recp += step;
+                }
+                prev_row++;
+                this_row++;
+                bit <<= 1;
+            }
+            row--;
+        } while (row != -1);
+    }
+    if (chain != NULL)
+    {
+        addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
     }
     *cursor_ptr = (s32 *) cursor;
 }
