@@ -387,13 +387,19 @@ struct FieldPart
     u8 unk20;
     /** 0x21 selects the per-part byte cost: 0x18, 0x1C, 0x28 or 0x34 units. */
     u8 kind;
-    u8 _pad2[0x26 - 0x22];
+    /** 0x22 number of attached FieldNode instances func_80057A28 updates. */
+    u8 node_count;
+    u8 _pad2[0x26 - 0x23];
     /** 0x26 number of instances; zero means the part is skipped entirely. */
     u16 count;
     s32 unk28;              /* 0x28 x offset within the object */
     s32 unk2C;              /* 0x2C y offset within the object */
     s32 unk30;              /* 0x30 z offset within the object */
-    u8 _pad3[0x3A - 0x34];
+    u8 _pad3[0x36 - 0x34];
+    /** 0x36 reload period for the sweep phase at 0x38. */
+    u16 sweep_period;
+    /** 0x38 sweep phase; counts down each frame, reloads from 0x36 at zero. */
+    u16 sweep_phase;
     /** 0x3A rotation angle applied to the vertical (row) step. */
     u16 unk3A;
     /** 0x3C rotation angle applied to the horizontal (column) step. */
@@ -614,11 +620,50 @@ typedef struct
     u8 end_state;      /* 0x9F */
 } FieldMovieState;
 
+/**
+ * @brief Definition record shared by a FieldNode.
+ *
+ * unkA/unkC index the signed angle table pointed to by D_8018001C; unk10/unk12
+ * are the horizontal/vertical base offsets (each shifted left by 8).
+ */
+typedef struct
+{
+    u8 _pad0[0xA];
+    u16 unkA;  /* 0x0A angle-table index for the horizontal step */
+    u16 unkC;  /* 0x0C angle-table index for the vertical step */
+    u8 _pad1[0x10 - 0xE];
+    s16 unk10; /* 0x10 horizontal base offset (<< 8) */
+    s16 unk12; /* 0x12 vertical base offset (<< 8) */
+} FieldNodeDef;
+
+/**
+ * @brief Element of the scene's attached-node list (FieldScene offset 0x08).
+ *
+ * Each node hangs off a FieldPart and carries a swept 2D position that
+ * func_80057A28 recomputes every frame. The same list is walked by
+ * field_clear_node_accumulators in field1.c.
+ */
+typedef struct FieldNode FieldNode;
+struct FieldNode
+{
+    FieldNode *next;   /* 0x00 */
+    FieldNodeDef *def; /* 0x04 */
+    u8 _pad0[0xC - 8];
+    FieldPart *part;   /* 0x0C owning part */
+    u8 _pad1[0x28 - 0x10];
+    s32 unk28;         /* 0x28 horizontal delta since the previous frame */
+    s32 unk2C;         /* 0x2C vertical delta since the previous frame */
+    u8 _pad2[0x38 - 0x30];
+    s32 unk38;         /* 0x38 current horizontal position */
+    s32 unk3C;         /* 0x3C current vertical position */
+};
+
 typedef struct
 {
     FieldSceneHeader *unk0; /* 0x00 */
     FieldObj *head;         /* 0x04 head of the object list */
-    u8 _pad0[0x10 - 8];
+    FieldNode *nodes;       /* 0x08 head of the attached-node list */
+    u8 _pad0[0x10 - 0xC];
     FieldMarker *markers;   /* 0x10 head of the marker list */
     FieldSeq *seqs;         /* 0x14 head of the sequence list */
     FieldAnim *anims;       /* 0x18 head of the animation list */
@@ -2210,6 +2255,8 @@ void func_800569FC(void)
 
 extern u16 D_80140000;
 extern u16 D_80140002;
+/** @brief Pointer to the signed angle table indexed by FieldNodeDef::unkA/unkC. */
+extern s16 *D_8018001C;
 
 void func_800157B0(s32);
 s32 cdrom_process_state(void);
@@ -2869,5 +2916,169 @@ void func_80056A04(void)
             }
             seq = seq->next;
         } while (seq != NULL);
+    }
+}
+
+/**
+ * @brief Advance the swept 2D positions of a part's attached FieldNode list.
+ *
+ * Decrements the part's sweep phase (0x38) and turns it into an angle - rsin of
+ * phase * 0x1000 / period, divided by a per-mode divisor - stored at 0x3E. That
+ * angle feeds a second rsin whose negation scales every attached node: for each
+ * node on the scene list (0x08) whose owner is @p part, the horizontal and
+ * vertical steps are (angle_table[def index] - base) * -rsin, rounded toward
+ * zero, offset-clamped, and written as the node's absolute position (0x38/0x3C)
+ * plus its per-frame delta (0x28/0x2C). The walk stops after node_count matching
+ * nodes. When the phase underflows to zero it reloads from the period (0x36).
+ *
+ * @param part Part whose attached nodes are advanced.
+ *
+ * @note Built -G4 WITHOUT --expand-div: the target has bare div/divu, so
+ *       field8.c lives in overlay_field_gcc_g4_noexpand_srcs.
+ * @note Both per-mode selects are written as explicit goto chains, not nested
+ *       if/else. gcc 2.8 lays labelled blocks out in source order, and only the
+ *       goto form reproduces the target block layout (equality case in the
+ *       middle, fall-through case first). Reverting the divisor select to nested
+ *       if/else costs 4 exact rows; reverting the base select costs 3.
+ * @note `val = base;` before the first arm's subtraction is required: it steers
+ *       the global allocator so val/y take a0/a1 (not a1/a0) across BOTH arms.
+ *       Dropping it costs 14 exact rows.
+ * @note The angle-table element is taken by address (`ep = &arr[i]`) so the base
+ *       register leads the index in the address `addu` (target order); the plain
+ *       subscript reverses the operands and costs one row per arm.
+ * @note `arr = D_8018001C` is read at the top of the node block so its load fills
+ *       the load-delay slot after the mode reload and hoists above the base
+ *       select, matching the target scheduling.
+ * @note The `(s16)(u16)` cast on the halved unk30 read is a non-factor here: the
+ *       plain `scene->unk0->unk30 / 2` (s16 field) also matches.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_80057A28(FieldPart *part)
+{
+    FieldScene *scene;
+    FieldNode *node;
+    FieldNodeDef *def;
+    s32 mode;
+    u32 divisor;
+    s32 sin_val;
+    s32 neg_sin;
+    s32 base;
+    s32 count;
+    s32 x;
+    s32 val;
+    s32 y;
+    s32 old;
+    s16 *arr;
+    s16 *ep;
+
+    scene = g_field_scene.scene;
+    part->sweep_phase = part->sweep_phase - 1;
+    mode = (part->def->u.word >> 12) & 0xF;
+    if (mode == 2)
+    {
+        goto div_a1;
+    }
+    if (mode >= 3)
+    {
+        goto div_default;
+    }
+    divisor = 0x101;
+    if (mode == 1)
+    {
+        divisor = 0x121;
+    }
+    goto div_done;
+div_a1:
+    divisor = 0xA1;
+    goto div_done;
+div_default:
+    divisor = 0x101;
+div_done:
+    ;
+    sin_val = rsin((part->sweep_phase << 12) / part->sweep_period);
+    if (sin_val >= 0)
+    {
+        part->unk3E = sin_val / divisor;
+    }
+    else
+    {
+        part->unk3E = 0x1000 - ((u32) -sin_val / divisor);
+    }
+    neg_sin = -rsin(part->unk3E);
+    if (part->node_count != 0)
+    {
+        arr = D_8018001C;
+        mode = (part->def->u.word >> 12) & 0xF;
+        if (mode == 3)
+        {
+            goto base_0;
+        }
+        if ((mode >= 4) || (mode == 0))
+        {
+            goto base_default;
+        }
+        base = scene->unk0->unk30 / 2;
+        goto base_done;
+    base_0:
+        base = 0;
+        goto base_done;
+    base_default:
+        base = scene->unk0->unk30;
+    base_done:
+        ;
+        node = scene->nodes;
+        count = part->node_count;
+        if (node != NULL)
+        {
+            do
+            {
+                if (node->part == part)
+                {
+                    val = base;
+                    def = node->def;
+                    ep = &arr[def->unkA * 2];
+                    x = (*ep - val) * neg_sin;
+                    val = x >> 4;
+                    if (x < 0)
+                    {
+                        val = (x + 0xF) >> 4;
+                    }
+                    y = def->unk10 << 8;
+                    if ((val + y) < 0)
+                    {
+                        val = -y;
+                    }
+                    old = node->unk38;
+                    node->unk38 = val;
+                    node->unk28 = val - old;
+                    ep = &arr[def->unkC * 2];
+                    x = (*ep - base) * neg_sin;
+                    val = x >> 4;
+                    if (x < 0)
+                    {
+                        val = (x + 0xF) >> 4;
+                    }
+                    y = def->unk12 << 8;
+                    if ((val + y) < 0)
+                    {
+                        val = -y;
+                    }
+                    old = node->unk3C;
+                    count -= 1;
+                    node->unk3C = val;
+                    node->unk2C = val - old;
+                    if (count == 0)
+                    {
+                        break;
+                    }
+                }
+                node = node->next;
+            } while (node != NULL);
+        }
+    }
+    if (part->sweep_phase == 0)
+    {
+        part->sweep_phase = part->sweep_period;
     }
 }
