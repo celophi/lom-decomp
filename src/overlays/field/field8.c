@@ -1206,16 +1206,25 @@ typedef struct
  * @note `bit = 0;` must sit below the tpage test so that it shares a CSE block
  *       with the two NULL inits; that is what makes them copy from `bit`'s
  *       register instead of materialising zero again.
- * @note `row = height; row = row - 1;` is required to match ([ALLOC-19]): the
- *       extra ref crosses the floor_log2 step in global.c's priority formula and
- *       moves `row` into t9. The split only works together with the preceding
- *       statement move, and `width` must stay `u8`.
+ * @note Both loop counters are seeded in two statements (`row = height;
+ *       row = row - 1;` and the same for `col`/`width`) rather than one
+ *       `height - 1`. The extra ref crosses the floor_log2 step in global.c's
+ *       priority formula, which is what puts `row` in t9 and `col` in t0
+ *       ([ALLOC-19]). Collapsing the row pair costs -29 exact rows; collapsing
+ *       the col pair costs -21.
+ * @note `idx = width; idx -= col;` must stay split for the same reason, and
+ *       only pays off while `width` is a full-width `s32`: `u8 width` with the
+ *       split is -52 exact, `s32 width` without it is -254. The two are one
+ *       change, not two. SImode `width` needs no separate zero_extend, which
+ *       shortens `clut`'s live range by exactly the insn that made it conflict
+ *       with a1; the split then restores `col`'s ref count so it still outranks
+ *       `clut` and keeps t0.
+ * @note `width` may be `s32` or `u32` (both 100%); `s32` matches `height`.
  * @note `prim->code = last_code;` is duplicated into both arms, and the record
  *       loads are written as `last_code = (prim->code = ...)`, for the same
  *       allocation-priority reason.
  *
- * @see working/func_8005571C/status.md for the full match log and the residue.
- * @see decomp.me (99.73%) TODO
+ * @see decomp.me (100%) TODO
  */
 void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32 ot_base)
 {
@@ -1246,7 +1255,7 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     u8 *chain;
     u8 *recp;
     s32 *bitp;
-    u8 width;
+    s32 width;
     FieldPartDef *info;
 
     last_code = 0;
@@ -1332,13 +1341,7 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
                 clut_left = val_a;
             }
             val_a = part->clut_tr;
-            /* Staging through col is dead (col is re-initialised for the
-               column loop below) but is required to match: it is the one extra
-               REG_N_REFS that lifts col's global.c priority over clut's, so col
-               takes t0 and clut t1. See [ALLOC-21]. This is a reconstruction
-               artifact, not recovered source - see status.md. */
-            col = part->clut_br;
-            val_b = col;
+            val_b = part->clut_br;
             if (val_a != val_b)
             {
                 clut_right = ((val_a * (row + 1)) + (val_b * ((height - row) - 1))) / height;
@@ -1349,7 +1352,9 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
             }
         }
         x = origin->x;
-        for (col = width - 1; col != -1; col--)
+        col = width;
+        col = col - 1;
+        while (col != -1)
         {
             if (x >= 0x140)
             {
@@ -1407,7 +1412,8 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
                 {
                     if (interp != 0)
                     {
-                        idx = width - col;
+                        idx = width;
+                        idx -= col;
                         if (clut_left != clut_right)
                         {
                             clut = ((clut_left * (col + 1)) + (clut_right * (idx - 1))) / width;
@@ -1492,6 +1498,7 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
             }
             bit <<= 1;
             x += 0x10;
+            col--;
         }
         row--;
         y += 0x10;
@@ -2052,4 +2059,33 @@ void func_80056998(void)
         LoadImage(&req->rect, req->data);
     }
     scene->uploads = NULL;
+}
+
+/**
+ * @brief Does nothing.
+ *
+ * @note The original is `jr $ra; nop` with no frame and no body. Nothing in the
+ *       decompiled tree references it, and no data table holds its address, so
+ *       neither its purpose nor its parameter list can be recovered; a `void`
+ *       signature is a placeholder that happens to be codegen-correct, since an
+ *       empty body ignores its arguments either way. func_800569FC directly
+ *       below it is a second, identical stub - the pair is most likely two
+ *       unused slots in a per-part hook set whose siblings do real work.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_800569F4(void)
+{
+}
+
+/**
+ * @brief Does nothing.
+ *
+ * @note Byte-identical twin of func_800569F4 above; the same caveats apply.
+ *       Unreferenced and unrecoverable as to purpose or parameters.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_800569FC(void)
+{
 }
