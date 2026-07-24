@@ -387,13 +387,19 @@ struct FieldPart
     u8 unk20;
     /** 0x21 selects the per-part byte cost: 0x18, 0x1C, 0x28 or 0x34 units. */
     u8 kind;
-    u8 _pad2[0x26 - 0x22];
+    /** 0x22 number of attached FieldNode instances func_80057A28 updates. */
+    u8 node_count;
+    u8 _pad2[0x26 - 0x23];
     /** 0x26 number of instances; zero means the part is skipped entirely. */
     u16 count;
     s32 unk28;              /* 0x28 x offset within the object */
     s32 unk2C;              /* 0x2C y offset within the object */
     s32 unk30;              /* 0x30 z offset within the object */
-    u8 _pad3[0x3A - 0x34];
+    u8 _pad3[0x36 - 0x34];
+    /** 0x36 reload period for the sweep phase at 0x38. */
+    u16 sweep_period;
+    /** 0x38 sweep phase; counts down each frame, reloads from 0x36 at zero. */
+    u16 sweep_phase;
     /** 0x3A rotation angle applied to the vertical (row) step. */
     u16 unk3A;
     /** 0x3C rotation angle applied to the horizontal (column) step. */
@@ -437,12 +443,20 @@ struct FieldObj
 };
 
 /**
- * @brief Header hanging off FieldScene offset 0; only the 0x30 halfword is read.
+ * @brief Header hanging off FieldScene offset 0.
+ *
+ * @note func_80054... reads only the 0x30 halfword; the streaming update in
+ *       func_80056A04 also reads the strip pixel-source base at 0x04 and the
+ *       column stride at 0x28.
  */
 typedef struct
 {
-    u8 _pad[0x30];
-    s16 unk30;
+    u8 _pad0[4];
+    u16 *unk4;             /* 0x04 strip pixel-source base */
+    u8 _pad1[0x28 - 8];
+    u16 unk28;             /* 0x28 column stride, in halfwords */
+    u8 _pad2[0x30 - 0x2A];
+    s16 unk30;             /* 0x30 */
 } FieldSceneHeader;
 
 /**
@@ -506,13 +520,157 @@ struct FieldImageReq
     u_long *data;        /* 0x0C source pixel data */
 };
 
+/** @brief Definition record shared by the animation and sequence lists. */
+typedef struct
+{
+    u8 unk0;   /* 0x00 */
+    u8 unk1;   /* 0x01 */
+    u8 unk2;   /* 0x02 */
+    u8 _pad0;
+    u8 unk4;   /* 0x04 low three bits select the handler */
+    u8 unk5;   /* 0x05 */
+    u8 unk6;   /* 0x06 */
+    u8 _pad1;
+    u16 unk8;  /* 0x08 */
+    u16 unkA;  /* 0x0A */
+    u8 unkC;   /* 0x0C */
+    u8 unkD;   /* 0x0D */
+    u8 unkE;   /* 0x0E */
+    u8 unkF;   /* 0x0F */
+    u8 unk10;  /* 0x10 */
+    u8 _pad2;
+    u16 unk12; /* 0x12 */
+    u8 *unk14; /* 0x14 */
+} FieldAnimDef;
+
+/** @brief Element of an animation node's cel ring. */
+typedef struct FieldAnimCel FieldAnimCel;
+struct FieldAnimCel
+{
+    FieldAnimCel *next; /* 0x00 */
+    u8 _pad0[0x20 - 4];
+    u8 unk20; /* 0x20 */
+};
+
+/**
+ * @brief Animation node flags at 0x24.
+ *
+ * The word is tested and rewritten as a whole while byte 0x25 is read and
+ * written separately as the node's frame index, so the two views share storage.
+ */
+typedef union
+{
+    s32 word;
+    struct
+    {
+        u8 unk0;
+        /** 0x25 current frame / cel index. */
+        u8 state;
+        u8 unk2;
+        u8 unk3;
+    } b;
+} FieldAnimFlags;
+
+/** @brief Element of the scene's animation lists (0x18/0x1C/0x20/0x24). */
+typedef struct FieldAnim FieldAnim;
+struct FieldAnim
+{
+    FieldAnim *next;      /* 0x00 */
+    FieldAnimDef *def;    /* 0x04 */
+    u8 _pad0[0xC - 8];
+    FieldAnimCel *cels;   /* 0x0C */
+    s32 unk10;            /* 0x10 */
+    u8 _pad1[0x24 - 0x14];
+    FieldAnimFlags flags; /* 0x24 */
+    u8 _pad2[0x2A - 0x28];
+    u16 counter;          /* 0x2A */
+    u8 _pad3[0x30 - 0x2C];
+    FieldImageReq req;    /* 0x30 */
+    u16 buf40[0x10];      /* 0x40 */
+    u16 buf60[0xF0];      /* 0x60 */
+    u16 buf240[1];        /* 0x240 */
+};
+
+/** @brief Element of the scene's sequence list (0x14). */
+typedef struct FieldSeq FieldSeq;
+struct FieldSeq
+{
+    FieldSeq *next;    /* 0x00 */
+    FieldAnimDef *def; /* 0x04 */
+    s32 flags;         /* 0x08 */
+    u16 unkC;          /* 0x0C */
+};
+
+/** @brief View of the movie/streaming control block at 0x801ED500. */
+typedef struct
+{
+    u8 _pad0[0x20];
+    struct
+    {
+        u16 x;
+        u16 y;
+        u16 w;
+        u16 h;
+    } rects[3];        /* 0x20 */
+    u8 _pad1[0x98 - 0x38];
+    u8 chunk_idx;      /* 0x98 */
+    u8 _pad2[0x9D - 0x99];
+    u8 frame_ready;    /* 0x9D */
+    u8 _pad3;
+    u8 end_state;      /* 0x9F */
+} FieldMovieState;
+
+/**
+ * @brief Definition record shared by a FieldNode.
+ *
+ * unkA/unkC index the signed angle table pointed to by D_8018001C; unk10/unk12
+ * are the horizontal/vertical base offsets (each shifted left by 8).
+ */
+typedef struct
+{
+    u8 _pad0[0xA];
+    u16 unkA;  /* 0x0A angle-table index for the horizontal step */
+    u16 unkC;  /* 0x0C angle-table index for the vertical step */
+    u8 _pad1[0x10 - 0xE];
+    s16 unk10; /* 0x10 horizontal base offset (<< 8) */
+    s16 unk12; /* 0x12 vertical base offset (<< 8) */
+} FieldNodeDef;
+
+/**
+ * @brief Element of the scene's attached-node list (FieldScene offset 0x08).
+ *
+ * Each node hangs off a FieldPart and carries a swept 2D position that
+ * func_80057A28 recomputes every frame. The same list is walked by
+ * field_clear_node_accumulators in field1.c.
+ */
+typedef struct FieldNode FieldNode;
+struct FieldNode
+{
+    FieldNode *next;   /* 0x00 */
+    FieldNodeDef *def; /* 0x04 */
+    u8 _pad0[0xC - 8];
+    FieldPart *part;   /* 0x0C owning part */
+    u8 _pad1[0x28 - 0x10];
+    s32 unk28;         /* 0x28 horizontal delta since the previous frame */
+    s32 unk2C;         /* 0x2C vertical delta since the previous frame */
+    u8 _pad2[0x38 - 0x30];
+    s32 unk38;         /* 0x38 current horizontal position */
+    s32 unk3C;         /* 0x3C current vertical position */
+};
+
 typedef struct
 {
     FieldSceneHeader *unk0; /* 0x00 */
     FieldObj *head;         /* 0x04 head of the object list */
-    u8 _pad0[0x10 - 8];
+    FieldNode *nodes;       /* 0x08 head of the attached-node list */
+    u8 _pad0[0x10 - 0xC];
     FieldMarker *markers;   /* 0x10 head of the marker list */
-    u8 _pad1[0x34 - 0x14];
+    FieldSeq *seqs;         /* 0x14 head of the sequence list */
+    FieldAnim *anims;       /* 0x18 head of the animation list */
+    FieldAnim *strips;      /* 0x1C head of the strip list */
+    FieldAnim *sprites;     /* 0x20 head of the sprite list */
+    FieldAnim *effects;     /* 0x24 head of the effect list */
+    u8 _pad1[0x34 - 0x28];
     FieldImageReq *uploads; /* 0x34 head of the pending upload list */
 } FieldScene;
 
@@ -2088,4 +2246,839 @@ void func_800569F4(void)
  */
 void func_800569FC(void)
 {
+}
+
+/** @brief Movie/streaming control block at 0x801ED500. */
+#define FIELD_MOVIE ((volatile FieldMovieState *) 0x801ED500)
+/** @brief Field CD/movie flag word at 0x801ED800. */
+#define FIELD_CD_FLAGS (*(volatile s32 *) 0x801ED800)
+
+extern u16 D_80140000;
+extern u16 D_80140002;
+/** @brief Pointer to the signed angle table indexed by FieldNodeDef::unkA/unkC. */
+extern s16 *D_8018001C;
+
+void func_800157B0(s32);
+s32 cdrom_process_state(void);
+void cdrom_reset(void);
+void cdrom_stream(s32, void *);
+void cdrom_queue_seek(s32);
+void cdrom_queue_read(s32, void *);
+s32 cdrom_can_queue_resource(s32);
+void func_80057A28(FieldPart *);
+void func_80057CA4(FieldAnimDef *, FieldAnim *, s32);
+void func_80057E88(FieldAnimDef *, FieldAnim *, s32);
+void func_80058154(FieldAnimDef *, FieldAnim *);
+void func_800584DC(FieldAnimDef *, FieldAnimCel *, s32);
+u_long *func_8005866C(FieldAnimDef *, FieldAnim *);
+void func_800589F0(FieldAnimDef *, FieldAnimCel *, s32, s32);
+void func_80058C00(FieldAnimDef *, FieldAnimCel *, s32);
+void func_80058E28(FieldAnimDef *, FieldAnim *);
+void func_800591C4(FieldAnimDef *, FieldAnimCel *, s32);
+void func_80059294(FieldImageReq *);
+void func_80059F18(void);
+void func_8005A744(FieldSeq *, s32);
+s32 func_8005A84C(s32, s32);
+void func_80084240(void);
+void func_80140358(s32, s32, s32, s32);
+void func_801406E4(void);
+void func_80140D48(void);
+
+/**
+ * @brief Per-frame update for the field scene's animation, strip, sprite,
+ *        effect and sequence lists (plus the object/part walk).
+ *
+ * Walks the six lists hanging off @c g_field_scene.scene and advances each:
+ * object parts get a per-part hook (func_80057A28); animation nodes drive a
+ * CD/MDEC movie state machine and per-handler dispatch; strip nodes copy their
+ * pixel source out of the scene header (hdr->unk4) into per-node scratch buffers
+ * and queue a VRAM upload (func_80059294); sprite/effect nodes tick their
+ * counters; sequence nodes advance a small state machine keyed on flags & 3.
+ *
+ * @note Match is 98.07% (1005/1058 exact rows). The residual is a cluster of
+ *       gcc 2.8.0 codegen-boundary phenomena with no known source lever: the
+ *       cross-jump tail-merge topology of the case-3/4/5 @c req->data stores and
+ *       the coupled branch-delay-slot fill land at different byte offsets, plus
+ *       a handful of sched1 slot shifts (the 0x801ED800 address hoist) and
+ *       register-coloring residue (the case-5 v/w pair, the 0x798 flags reload).
+ * @note The second strip copy loop must reuse @c count (not a fresh @c i) to
+ *       reproduce the target's counter/sentinel register coloring, and the
+ *       @c unkD==0 stride count must be spelled @c (unk5 + 1 - state) so gcc
+ *       keeps the target's @c addiu -1 reassociation.
+ * @note @c one holds the literal 1 so gcc's loop.c hoists it into a saved
+ *       register for the three @c req->rect.h = 1 strip stores; writing @c 1
+ *       inline leaves the hoist undone. The @c do{}while(0) around the case-5
+ *       body gives @c req the extra references it needs to win s1 over @c anim
+ *       in the global allocator (see working notes).
+ *
+ * @see decomp.me (98.07%) TODO
+ */
+void func_80056A04(void)
+{
+    FieldScene *scene;
+    FieldSceneHeader *hdr;
+    FieldObj *obj;
+    FieldPart *part;
+    FieldAnim *anim;
+    FieldAnimDef *def;
+    FieldAnimDef *def2;
+    FieldAnimDef *def3;
+    FieldAnimCel *cel;
+    FieldImageReq *req;
+    FieldSeq *seq;
+    FieldSeq *walk;
+    FieldAnimDef *rec;
+    u16 *src;
+    u16 *dst;
+    s32 prev_state;
+    s32 flags;
+    s32 mode;
+    s32 count;
+    s32 count2;
+    s32 i;
+    s32 v;
+    s32 w;
+    s32 t;
+    s32 y;
+    s32 one;
+
+    scene = g_field_scene.scene;
+
+    obj = scene->head;
+    if (obj != NULL)
+    {
+        do
+        {
+            part = obj->parts;
+            if (part != NULL)
+            {
+                do
+                {
+                    if (part->def->u.word & 0xF000)
+                    {
+                        mode = (part->def->u.word >> 12) & 0xF;
+                        if ((mode != 0) && (mode < 5))
+                        {
+                            func_80057A28(part);
+                        }
+                    }
+                    part = part->next;
+                } while (part != NULL);
+            }
+            obj = obj->next;
+        } while (obj != NULL);
+    }
+
+    anim = scene->anims;
+    hdr = scene->unk0;
+    if (anim != NULL)
+    {
+        do
+        {
+            def = anim->def;
+            def2 = anim->def;
+            if (anim->flags.word & 0x20)
+            {
+                req = &anim->req;
+                if ((*(s32 *) &def->unk4 & 7) == 3)
+                {
+                    req->rect.x = def->unkC * 4 + 0x140;
+                    req->rect.y = def->unkD * 0x10 + 0x100;
+                    req->rect.w = def->unkE * 4;
+                    req->rect.h = def->unkF * 0x10;
+                    req->data = (u_long *) (def->unk14 + ((anim->flags.b.state * def->unkE * def->unkF) << 7));
+                    func_80059294(req);
+                }
+                anim->flags.word &= ~0x20;
+            }
+            if (anim->flags.word & 0x40)
+            {
+                anim->counter--;
+                switch (def->unk4 & 7)
+                {
+                case 4:
+                    switch (anim->flags.b.state)
+                    {
+                    case 0:
+                        if (cdrom_process_state() == 0)
+                        {
+                            cdrom_stream(0xB, (void *) 0x80140000);
+                            cdrom_queue_seek(def->unk1 * 2 + 0x16A6);
+                            anim->flags.b.state = 1;
+                            FIELD_CD_FLAGS |= 0x40;
+                        }
+                        /* fallthrough */
+                    case 1:
+                        if (cdrom_can_queue_resource(def->unk1 * 2 + 0x16A6) != 0)
+                        {
+                            FIELD_MOVIE->rects[0].x = def2->unkC * 4 + 0x140;
+                            FIELD_MOVIE->rects[0].y = def2->unkD * 0x10 + 0x100;
+                            FIELD_MOVIE->rects[0].w = def2->unkE * 4;
+                            FIELD_MOVIE->rects[0].h = def2->unkF * 0x10;
+                            FIELD_CD_FLAGS &= ~0x40;
+                            cel = anim->cels;
+                            if (def->unk1 < 2)
+                            {
+                                func_80140358(def->unk1 * 2 + 0x16A6, 1, def->unk5 - 2, cel->unk20);
+                            }
+                            else
+                            {
+                                func_80140358(def->unk1 * 2 + 0x16A6, 1, 0x12E, 0);
+                            }
+                            anim->flags.b.state = 2;
+                        }
+                        anim->counter = 1;
+                        break;
+                    default:
+                        if (FIELD_MOVIE->end_state >= 3)
+                        {
+                            if (FIELD_MOVIE->end_state == 3)
+                            {
+                                if (cdrom_can_queue_resource(def->unk1 * 2 + 0x16A7) != 0)
+                                {
+                                    req = &anim->req;
+                                    if (def->unk1 < 2)
+                                    {
+                                        cel = anim->cels;
+                                        req->rect.x = FIELD_MOVIE->rects[cel->unk20].x;
+                                        req->rect.y = FIELD_MOVIE->rects[cel->unk20].y;
+                                        req->rect.w = FIELD_MOVIE->rects[cel->unk20].w;
+                                        req->rect.h = FIELD_MOVIE->rects[cel->unk20].h;
+                                        req->data = (u_long *) 0x80140000;
+                                        func_80059294(req);
+                                        if (cel->unk20 == 1)
+                                        {
+                                            cel->unk20 = 0;
+                                            cel = cel->next;
+                                            cel->unk20 = 1;
+                                        }
+                                        else
+                                        {
+                                            cel->unk20 = 1;
+                                            cel = cel->next;
+                                            cel->unk20 = 0;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        cel = anim->cels;
+                                        req->rect.x = 0x140;
+                                        req->rect.y = 0x100;
+                                        req->data = (u_long *) 0x80140004;
+                                        req->rect.w = D_80140000;
+                                        req->rect.h = D_80140002;
+                                        func_80059294(req);
+                                        cel->unk20 = 0;
+                                        cel = cel->next;
+                                        cel->unk20 = 0;
+                                    }
+                                    FIELD_MOVIE->end_state = 4;
+                                }
+                                anim->counter = 1;
+                            }
+                            else
+                            {
+                                if (def->unk1 >= 2)
+                                {
+                                    func_80059F18();
+                                }
+                                anim->flags.word &= ~0x40;
+                                anim->counter = 1;
+                                func_80084240();
+                            }
+                        }
+                        else
+                        {
+                            if (def->unk1 < 2)
+                            {
+                                func_800157B0(2);
+                            }
+                            func_801406E4();
+                            func_80140D48();
+                            if (FIELD_MOVIE->frame_ready == 1)
+                            {
+                                cel = anim->cels;
+                                if (FIELD_MOVIE->chunk_idx == 1)
+                                {
+                                    cel->unk20 = 1;
+                                    cel = cel->next;
+                                    cel->unk20 = 0;
+                                }
+                                else
+                                {
+                                    cel->unk20 = 0;
+                                    cel = cel->next;
+                                    cel->unk20 = 1;
+                                }
+                                FIELD_MOVIE->frame_ready = 0;
+                            }
+                            if (FIELD_MOVIE->end_state == 2)
+                            {
+                                cdrom_reset();
+                                cdrom_queue_read(def->unk1 * 2 + 0x16A7, (void *) 0x80140000);
+                                FIELD_MOVIE->end_state = 3;
+                            }
+                            anim->counter = 1;
+                        }
+                        break;
+                    }
+                    break;
+                case 5:
+                case 6:
+                    func_80057E88(def, anim, 1);
+                    break;
+                }
+            }
+            if (anim->counter == 0)
+            {
+                prev_state = anim->flags.b.state;
+                func_80058E28(def, anim);
+                switch (def->unk4 & 7)
+                {
+                case 0:
+                    if (prev_state != anim->flags.b.state)
+                    {
+                        func_80057CA4(def, anim, anim->flags.b.state);
+                    }
+                    break;
+                case 2:
+                    cel = anim->cels;
+                    i = prev_state - 1;
+                    while (i != -1)
+                    {
+                        cel = cel->next;
+                        i--;
+                    }
+                    cel->unk20 = 0;
+                    cel = anim->cels;
+                    i = anim->flags.b.state;
+                    i--;
+                    while (i != -1)
+                    {
+                        cel = cel->next;
+                        i--;
+                    }
+                    cel->unk20 = 1;
+                    break;
+                case 3:
+                    req = &anim->req;
+                    req->rect.x = def2->unkC * 4 + 0x140;
+                    req->rect.y = def2->unkD * 0x10 + 0x100;
+                    req->rect.w = def2->unkE * 4;
+                    req->rect.h = def2->unkF * 0x10;
+                    req->data = (u_long *) (def2->unk14 + ((anim->flags.b.state * def2->unkE * def2->unkF) << 7));
+                    func_80059294(req);
+                    break;
+                case 5:
+                case 6:
+                    while (anim->counter == 0)
+                    {
+                        func_80057E88(def, anim, 1);
+                        func_80058E28(def, anim);
+                    }
+                    break;
+                case 7:
+                    func_80058154(def, anim);
+                    break;
+                }
+            }
+            anim = anim->next;
+        } while (anim != NULL);
+    }
+
+    one = 1;
+    anim = scene->strips;
+    if (anim != NULL)
+    {
+        do
+        {
+            def = anim->def;
+            flags = anim->flags.word;
+            def3 = anim->def;
+            if (flags & 0x20)
+            {
+                req = &anim->req;
+                switch (def->unk4 & 7)
+                {
+                case 2:
+                    if (flags & 0x10)
+                    {
+                        dst = anim->buf240;
+                        if (def->unkC == 0)
+                        {
+                            dst = anim->buf60;
+                        }
+                        anim->flags.word = anim->flags.word & ~0x10;
+                    }
+                    else
+                    {
+                        dst = anim->buf40;
+                        anim->flags.word = flags | 0x10;
+                    }
+                    req->data = (u_long *) dst;
+                    count2 = 0;
+                    if (anim->flags.b.state != 0)
+                    {
+                        if (def3->unkD != 0)
+                        {
+                            t = anim->flags.b.state - 1;
+                            count2 = (def->unk5 - t) * def3->unk10;
+                            count = anim->flags.b.state * def3->unk10;
+                        }
+                        else
+                        {
+                            count2 = anim->flags.b.state * def3->unk10;
+                            count = (def->unk5 + 1 - anim->flags.b.state) * def3->unk10;
+                        }
+                    }
+                    else
+                    {
+                        count = (def->unk5 + 1) * def3->unk10;
+                    }
+                    if (def3->unkC == 0)
+                    {
+                        src = (u16 *) ((u8 *) hdr->unk4 + (def3->unkE << 5) + def3->unkF * 2 + count2 * 2);
+                    }
+                    else
+                    {
+                        src = (u16 *) ((u8 *) hdr->unk4 + (def3->unkE << 9) + def3->unkF * 2 + count2 * 2);
+                    }
+                    count--;
+                    while (count != -1)
+                    {
+                        *dst++ = *src++;
+                        count--;
+                    }
+                    if (count2 != 0)
+                    {
+                        if (def3->unkC == 0)
+                        {
+                            src = (u16 *) ((u8 *) hdr->unk4 + (def3->unkE << 5) + def3->unkF * 2);
+                        }
+                        else
+                        {
+                            src = (u16 *) ((u8 *) hdr->unk4 + (def3->unkE << 9) + def3->unkF * 2);
+                        }
+                        count = count2 - 1;
+                        while (count != -1)
+                        {
+                            *dst++ = *src++;
+                            count--;
+                        }
+                    }
+                    if (def3->unkC == 0)
+                    {
+                        req->rect.x = def3->unkF + ((def3->unkE & 0xF) * 0x10);
+                        y = def3->unkE >> 4;
+                    }
+                    else
+                    {
+                        req->rect.x = def3->unkF;
+                        y = def3->unkE;
+                    }
+                    req->rect.y = y + 0x1D8;
+                    req->rect.h = one;
+                    req->rect.w = def->unk5 + 1;
+                    func_80059294(req);
+                    break;
+                case 3:
+                    if (def->unkC == 0)
+                    {
+                        req->rect.x = def->unkF + ((def->unkE & 0xF) * 0x10);
+                        req->rect.y = (def->unkE >> 4) + 0x1D8;
+                        req->rect.w = def->unk10;
+                        req->rect.h = one;
+                        if (anim->flags.b.state == 0)
+                        {
+                            req->data = (u_long *) ((u8 *) hdr->unk4 + (def->unkE << 5) + (def->unkF & 0xE) * 2);
+                        }
+                        else
+                        {
+                            req->data = (u_long *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + def->unk12 * 2 +
+                                                    ((anim->flags.b.state - 1) * def->unk10) * 2);
+                        }
+                    }
+                    else
+                    {
+                        req->rect.x = def->unkF;
+                        req->rect.y = def->unkE + 0x1D8;
+                        req->rect.w = def->unk10;
+                        req->rect.h = one;
+                        if (anim->flags.b.state == 0)
+                        {
+                            req->data = (u_long *) ((u8 *) hdr->unk4 + (def->unkE << 9) + def->unkF * 2);
+                        }
+                        else
+                        {
+                            req->data = (u_long *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + def->unk12 * 2 +
+                                                    ((anim->flags.b.state - 1) * def->unk10) * 2);
+                        }
+                    }
+                    func_80059294(req);
+                    break;
+                case 4:
+                    if (def->unkC == 0)
+                    {
+                        req->rect.x = (def->unkE & 0xF) * 0x10;
+                        req->rect.y = (def->unkE >> 4) + 0x1D8;
+                        v = def->unk10 * 0x10;
+                        w = 0x100;
+                        if (v < 0x101)
+                        {
+                            w = v;
+                        }
+                        req->rect.w = w;
+                        req->rect.h = (def->unk10 + 0xF) / 0x10;
+                        if (anim->flags.b.state == 0)
+                        {
+                            req->data = (u_long *) ((u8 *) hdr->unk4 + (def->unkE << 5));
+                        }
+                        else
+                        {
+                            req->data = (u_long *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + def->unk12 * 2 +
+                                                    (((anim->flags.b.state - 1) * def->unk10) << 5));
+                        }
+                    }
+                    else
+                    {
+                        req->rect.x = 0;
+                        req->rect.y = def->unkE + 0x1D8;
+                        req->rect.w = 0x100;
+                        req->rect.h = def->unk10;
+                        if (anim->flags.b.state == 0)
+                        {
+                            req->data = (u_long *) ((u8 *) hdr->unk4 + (def->unkE << 9));
+                        }
+                        else
+                        {
+                            req->data = (u_long *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + def->unk12 * 2 +
+                                                    (((anim->flags.b.state - 1) * def->unk10) << 9));
+                        }
+                    }
+                    func_80059294(req);
+                    break;
+                case 5:
+                    req->data = func_8005866C(def, anim);
+                    do {
+                    if (def->unkC == 0)
+                    {
+                        req->rect.x = (def->unkE & 0xF) * 0x10;
+                        req->rect.y = (def->unkE >> 4) + 0x1D8;
+                        v = def->unk10 * 0x10;
+                        w = 0x100;
+                        if (v < 0x101)
+                        {
+                            w = v;
+                        }
+                        req->rect.w = w;
+                        v = (def->unk10 + 0xF) / 0x10;
+                    }
+                    else
+                    {
+                        req->rect.x = 0;
+                        req->rect.w = 0x100;
+                        req->rect.y = def->unkE + 0x1D8;
+                        v = def->unk10;
+                    }
+                    req->rect.h = v;
+                    func_80059294(req);
+                    } while (0);
+                    break;
+                }
+                anim->flags.word &= ~0x20;
+            }
+            if (anim->flags.word & 0x40)
+            {
+                anim->counter--;
+                if ((*(s32 *) &def->unk4 & 7) == 5)
+                {
+                    anim->flags.word |= 0x20;
+                }
+                if (anim->counter == 0)
+                {
+                    func_80058E28(def, anim);
+                    switch (def->unk4 & 7)
+                    {
+                    case 0:
+                        func_800584DC(def, anim->cels, anim->flags.b.state);
+                        break;
+                    case 1:
+                        func_800591C4(def, anim->cels, anim->flags.b.state);
+                        break;
+                    default:
+                        anim->flags.word |= 0x20;
+                        break;
+                    }
+                }
+            }
+            anim = anim->next;
+        } while (anim != NULL);
+    }
+
+    anim = scene->sprites;
+    if (anim != NULL)
+    {
+        do
+        {
+            def = anim->def;
+            if (anim->flags.word & 0x40)
+            {
+                if (--anim->counter == 0)
+                {
+                    func_80058E28(def, anim);
+                    switch (def->unk4 & 7)
+                    {
+                    case 0:
+                        func_800589F0(def, anim->cels, anim->unk10, anim->flags.b.state);
+                        break;
+                    case 1:
+                        func_80058C00(def, anim->cels, anim->flags.b.state);
+                        break;
+                    case 2:
+                        break;
+                    }
+                }
+            }
+            anim = anim->next;
+        } while (anim != NULL);
+    }
+
+    anim = scene->effects;
+    if (anim != NULL)
+    {
+        do
+        {
+            def = anim->def;
+            if (anim->flags.word & 0x40)
+            {
+                if (--anim->counter == 0)
+                {
+                    func_80058E28(def, anim);
+                    func_80057CA4(def, anim, anim->flags.b.state);
+                }
+            }
+            anim = anim->next;
+        } while (anim != NULL);
+    }
+
+    seq = scene->seqs;
+    if (seq != NULL)
+    {
+        do
+        {
+            if ((seq->flags & 3) != 0)
+            {
+                rec = seq->def;
+                if ((seq->flags & 3) == 1)
+                {
+                    if ((rec->unk5 != 0xFF) && (rec->unk8 == seq->unkC))
+                    {
+                        walk = scene->seqs;
+                        i = rec->unk5;
+                        i--;
+                        while (i != -1)
+                        {
+                            walk = walk->next;
+                            i--;
+                        }
+                        func_8005A744(walk, ((u8 *) &seq->flags)[1]);
+                    }
+                    if (func_8005A84C(rec->unk0, rec->unk2) == 2)
+                    {
+                        if (rec->unk6 != 0xFF)
+                        {
+                            seq->unkC = 0;
+                            seq->flags = (seq->flags & ~3) | 2;
+                        }
+                        else
+                        {
+                            seq->flags = seq->flags & ~3;
+                        }
+                    }
+                }
+                if (((seq->flags & 3) == 2) && (rec->unkA == seq->unkC))
+                {
+                    walk = scene->seqs;
+                    i = rec->unk6;
+                    i--;
+                    while (i != -1)
+                    {
+                        walk = walk->next;
+                        i--;
+                    }
+                    func_8005A744(walk, ((u8 *) &seq->flags)[1]);
+                    if (walk != seq)
+                    {
+                        seq->flags &= ~3;
+                    }
+                }
+                seq->unkC = seq->unkC + 1;
+            }
+            seq = seq->next;
+        } while (seq != NULL);
+    }
+}
+
+/**
+ * @brief Advance the swept 2D positions of a part's attached FieldNode list.
+ *
+ * Decrements the part's sweep phase (0x38) and turns it into an angle - rsin of
+ * phase * 0x1000 / period, divided by a per-mode divisor - stored at 0x3E. That
+ * angle feeds a second rsin whose negation scales every attached node: for each
+ * node on the scene list (0x08) whose owner is @p part, the horizontal and
+ * vertical steps are (angle_table[def index] - base) * -rsin, rounded toward
+ * zero, offset-clamped, and written as the node's absolute position (0x38/0x3C)
+ * plus its per-frame delta (0x28/0x2C). The walk stops after node_count matching
+ * nodes. When the phase underflows to zero it reloads from the period (0x36).
+ *
+ * @param part Part whose attached nodes are advanced.
+ *
+ * @note Built -G4 WITHOUT --expand-div: the target has bare div/divu, so
+ *       field8.c lives in overlay_field_gcc_g4_noexpand_srcs.
+ * @note Both per-mode selects are written as explicit goto chains, not nested
+ *       if/else. gcc 2.8 lays labelled blocks out in source order, and only the
+ *       goto form reproduces the target block layout (equality case in the
+ *       middle, fall-through case first). Reverting the divisor select to nested
+ *       if/else costs 4 exact rows; reverting the base select costs 3.
+ * @note `val = base;` before the first arm's subtraction is required: it steers
+ *       the global allocator so val/y take a0/a1 (not a1/a0) across BOTH arms.
+ *       Dropping it costs 14 exact rows.
+ * @note The angle-table element is taken by address (`ep = &arr[i]`) so the base
+ *       register leads the index in the address `addu` (target order); the plain
+ *       subscript reverses the operands and costs one row per arm.
+ * @note `arr = D_8018001C` is read at the top of the node block so its load fills
+ *       the load-delay slot after the mode reload and hoists above the base
+ *       select, matching the target scheduling.
+ * @note The `(s16)(u16)` cast on the halved unk30 read is a non-factor here: the
+ *       plain `scene->unk0->unk30 / 2` (s16 field) also matches.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_80057A28(FieldPart *part)
+{
+    FieldScene *scene;
+    FieldNode *node;
+    FieldNodeDef *def;
+    s32 mode;
+    u32 divisor;
+    s32 sin_val;
+    s32 neg_sin;
+    s32 base;
+    s32 count;
+    s32 x;
+    s32 val;
+    s32 y;
+    s32 old;
+    s16 *arr;
+    s16 *ep;
+
+    scene = g_field_scene.scene;
+    part->sweep_phase = part->sweep_phase - 1;
+    mode = (part->def->u.word >> 12) & 0xF;
+    if (mode == 2)
+    {
+        goto div_a1;
+    }
+    if (mode >= 3)
+    {
+        goto div_default;
+    }
+    divisor = 0x101;
+    if (mode == 1)
+    {
+        divisor = 0x121;
+    }
+    goto div_done;
+div_a1:
+    divisor = 0xA1;
+    goto div_done;
+div_default:
+    divisor = 0x101;
+div_done:
+    ;
+    sin_val = rsin((part->sweep_phase << 12) / part->sweep_period);
+    if (sin_val >= 0)
+    {
+        part->unk3E = sin_val / divisor;
+    }
+    else
+    {
+        part->unk3E = 0x1000 - ((u32) -sin_val / divisor);
+    }
+    neg_sin = -rsin(part->unk3E);
+    if (part->node_count != 0)
+    {
+        arr = D_8018001C;
+        mode = (part->def->u.word >> 12) & 0xF;
+        if (mode == 3)
+        {
+            goto base_0;
+        }
+        if ((mode >= 4) || (mode == 0))
+        {
+            goto base_default;
+        }
+        base = scene->unk0->unk30 / 2;
+        goto base_done;
+    base_0:
+        base = 0;
+        goto base_done;
+    base_default:
+        base = scene->unk0->unk30;
+    base_done:
+        ;
+        node = scene->nodes;
+        count = part->node_count;
+        if (node != NULL)
+        {
+            do
+            {
+                if (node->part == part)
+                {
+                    val = base;
+                    def = node->def;
+                    ep = &arr[def->unkA * 2];
+                    x = (*ep - val) * neg_sin;
+                    val = x >> 4;
+                    if (x < 0)
+                    {
+                        val = (x + 0xF) >> 4;
+                    }
+                    y = def->unk10 << 8;
+                    if ((val + y) < 0)
+                    {
+                        val = -y;
+                    }
+                    old = node->unk38;
+                    node->unk38 = val;
+                    node->unk28 = val - old;
+                    ep = &arr[def->unkC * 2];
+                    x = (*ep - base) * neg_sin;
+                    val = x >> 4;
+                    if (x < 0)
+                    {
+                        val = (x + 0xF) >> 4;
+                    }
+                    y = def->unk12 << 8;
+                    if ((val + y) < 0)
+                    {
+                        val = -y;
+                    }
+                    old = node->unk3C;
+                    count -= 1;
+                    node->unk3C = val;
+                    node->unk2C = val - old;
+                    if (count == 0)
+                    {
+                        break;
+                    }
+                }
+                node = node->next;
+            } while (node != NULL);
+        }
+    }
+    if (part->sweep_phase == 0)
+    {
+        part->sweep_phase = part->sweep_period;
+    }
 }
