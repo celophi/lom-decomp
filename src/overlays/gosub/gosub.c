@@ -79,6 +79,7 @@ extern u8 D_80145DF8;
 extern u8 D_80145EA4;
 extern u8 D_801460D0;
 extern u8 D_80145F80;
+extern u8 D_80146418;
 extern u8 D_80170960;
 extern s32 D_8016B8E8;
 
@@ -616,4 +617,89 @@ void func_80140FA0(void)
     p->unk4_0 = 1;
     p->y = 0x24;
     SET_ELEM_CODE(p, 0);
+}
+
+/**
+ * @brief Build the three elements of the gosub screens entered by arms 2 to 5.
+ *
+ * Same layout as func_80140C18 and func_80140DDC, with its own handlers and
+ * attr bytes; the third element also sits higher up the screen than in the
+ * other two variants.
+ */
+void func_80141024(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x28;
+    p->unk4_0 = 0;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0xE8);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801460D0;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0xB0;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80146418;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the elements of the gosub screens entered by arms 0, 1, 6-8,
+ *        15, 16 and 19.
+ *
+ * Same layout as func_80141024, except the middle element is optional: callers
+ * pass zero to get just the header and footer elements.
+ *
+ * @param arg0 Non-zero to include the middle element, zero to skip it.
+ */
+void func_801411E8(s32 arg0)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x28;
+    p->unk4_0 = 0;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0xE8);
+    D_80170960 = 0;
+
+    if (arg0 != 0)
+    {
+        p = func_80143C04();
+        p->handler = (void*)&D_801460D0;
+        p->attr.f.unk0_3 = 1;
+        p->attr.f.x = 0x1C;
+        p->attr.f.unk0_16 = 0xB0;
+        p->unk4_0 = 1;
+        p->y = 0x14;
+        SET_ELEM_CODE(p, 8);
+    }
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80146418;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
 }
