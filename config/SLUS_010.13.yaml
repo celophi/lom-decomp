@@ -69,7 +69,7 @@ segments:
       - [0x1314, .rodata, akao_cmd]          # jtbl -> akao_cmd
       - [0x1328, rodata, rodata_data4]       # data constants
       - [0x1358, .rodata, decomp4]           # jtbl -> decomp4
-      - [0x149C, .rodata, unk8]              # jtbl -> unk8; merged into unk8's own object so the
+      - [0x1458, .rodata, unk8]              # jtbl -> unk8; merged into unk8's own object so the
                                               # .L local labels from its INCLUDE_ASM functions resolve
       - [0x1558, c, main]
       - [0x1B58, c, screen_transition]
@@ -224,7 +224,7 @@ segments:
       - [0x1A1CC, c, psyq/libapi/A10]
       - [0x1A1DC, c, psyq/libspu/S_GRMT]
       - [0x1A1EC, c, decomp4]
-      - [0x1CF58, c, unk8]
+      - [0x1CF9C, c, unk8]
       - [0x25990, data, initialized]
 
   - name: sdata
