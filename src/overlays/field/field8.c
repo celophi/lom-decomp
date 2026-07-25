@@ -543,13 +543,54 @@ typedef struct
     u8 *unk14; /* 0x14 */
 } FieldAnimDef;
 
+/**
+ * @brief Tile grid dimensions referenced by a tile-blit animation definition.
+ *
+ * Only the two bytes at 0x0A/0x0B are known. They line up with the low and high
+ * halves of some other record's `unk0A` halfword, so this may well be a view of
+ * a second FieldAnimDef rather than a struct of its own.
+ */
+typedef struct
+{
+    u8 _pad0[0xA];
+    /** 0x0A grid width in tiles. */
+    u8 cols;
+    /** 0x0B grid height in tiles. */
+    u8 rows;
+} FieldTileGrid;
+
+/**
+ * @brief Tile-blit view of FieldAnimDef.
+ *
+ * The `unk4 & 7` handler kind decides what lives at offset 0x10: the image-DMA
+ * handlers read it as the byte `FieldAnimDef::unk10`, while the tile-blit
+ * handler reads the whole word as a pointer to the grid dimensions. The two
+ * uses never overlap, so they are kept as separate types rather than a union.
+ */
+typedef struct
+{
+    u8 _pad0[0x10];
+    FieldTileGrid *grid; /* 0x10 */
+} FieldTileAnimDef;
+
 /** @brief Element of an animation node's cel ring. */
 typedef struct FieldAnimCel FieldAnimCel;
 struct FieldAnimCel
 {
     FieldAnimCel *next; /* 0x00 */
-    u8 _pad0[0x20 - 4];
+    u8 _pad0[0xC - 4];
+    /** 0x0C tile-presence bitmap, one bit per grid cell, LSB first. */
+    u32 *mask;
+    /** 0x10 packed destination tile records, advanced past every present tile. */
+    u8 *tiles;
+    u8 _pad1[0x18 - 0x14];
+    /** 0x18 when set, the tile record is 4 bytes shorter. */
+    s32 unk18;
+    /** 0x1C when set, the tile record is 4 bytes shorter. */
+    s32 unk1C;
     u8 unk20; /* 0x20 */
+    /** 0x21 record-format selector, 0-6; see func_80057CA4. */
+    u8 format;
 };
 
 /**
@@ -580,11 +621,15 @@ struct FieldAnim
     u8 _pad0[0xC - 8];
     FieldAnimCel *cels;   /* 0x0C */
     s32 unk10;            /* 0x10 */
-    u8 _pad1[0x24 - 0x14];
+    u8 _pad1[0x20 - 0x14];
+    /** 0x20 base of the per-frame packed tile records. */
+    u8 *frames;
     FieldAnimFlags flags; /* 0x24 */
     u8 _pad2[0x2A - 0x28];
     u16 counter;          /* 0x2A */
-    u8 _pad3[0x30 - 0x2C];
+    /** 0x2C tile records per frame, i.e. the stride from one frame to the next. */
+    u16 frame_tiles;
+    u8 _pad3[0x30 - 0x2E];
     FieldImageReq req;    /* 0x30 */
     u16 buf40[0x10];      /* 0x40 */
     u16 buf60[0xF0];      /* 0x60 */
@@ -3082,5 +3127,164 @@ void func_80057A28(FieldPart *part)
     if (part->sweep_phase == 0)
     {
         part->sweep_phase = part->sweep_period;
+    }
+}
+
+/**
+ * @brief Blit one frame of an animation into the cel's packed tile array.
+ *
+ * The cel keeps its tiles packed: only grid cells whose bit is set in
+ * FieldAnimCel::mask have a record in FieldAnimCel::tiles, and each record is
+ * `stride` bytes wide. This walks the whole grid in raster order, tracking the
+ * destination cursor across every present tile, and copies the frame's records
+ * over the sub-rectangle (@p def unkC/unkD origin, unkE/unkF extent). Rows above
+ * the sub-rectangle are skipped by advancing the cursor only; the walk returns
+ * as soon as it passes the bottom row.
+ *
+ * The record width is 12 bytes, less 4 for each of the cel's two optional
+ * fields, and 0 for the formats that have no records at all.
+ *
+ * @param def   Animation definition; supplies the sub-rectangle and the grid.
+ * @param anim  Animation node holding the frame data and the target cel.
+ * @param state Frame index into FieldAnim::frames.
+ *
+ * @note Built -G4 WITHOUT --expand-div, like the rest of field8.c.
+ * @note `case 1:`/`case 6:` must be spelled out even though their bodies are
+ *       empty. They make the case values contiguous 0-6, which is what gets gcc
+ *       to emit jtbl_8004FD08; with only the five 12-byte formats listed it
+ *       emits a compare tree instead (94.96%, -9 exact rows).
+ * @note The two countdown loops must initialise and decrement in separate
+ *       statements. Folding the copy count to `i = (stride >> 2) - 1` gives the
+ *       shift its own pseudo, which is then loop-invariant and gets hoisted out
+ *       of both enclosing loops - 19.59%, -69 exact rows. Written as two
+ *       statements the shift lands directly in the counter, which is set again
+ *       inside the loop and so cannot be hoisted. The same split on the
+ *       row-skip counter is worth 2 rows.
+ * @note `stride >> 2`, not `stride / 4`: the signed divide expands to
+ *       srl/addu/sra (96.65%, +4 insns).
+ * @note Both grid loops test `!=`, not `<`. `<` adds an slt per loop (98.68%).
+ * @note The row-skip counter must REUSE `col`, which is dead on that path. A
+ *       dedicated counter swaps the counter and the -1 compare constant between
+ *       a1 and v1 (97.98%, -7 exact rows). Giving the copy loop its own
+ *       variable, and reordering the declarations, both measured inert.
+ * @note The in-range test is written positively with the copy in the `if` arm.
+ *       Inverting it to `col < unkC || col >= unkC + unkE` and swapping the arms
+ *       costs 6 exact rows (92.85%).
+ * @note `anim->frame_tiles * stride * state` in that order; hoisting `stride`
+ *       to the front swaps the first multiply's operands (99.92%).
+ * @note Non-factors, measured: `return` vs `break` for the bottom-row exit, and
+ *       `word = *mask++` vs `word = mask[0]; mask++;` - all four spellings are
+ *       100%.
+ * @note All 121 instructions match. Diffed inside field8.c the tool reports
+ *       99.92%: the two `lui`/`addiu` that form the jump-table address relocate
+ *       against a local `.rodata+0x38` label rather than the named
+ *       jtbl_8004FD08, because field8.o now carries three jump tables while the
+ *       overlay yaml still assigns that rodata range to `unk1`. The +0x38 is an
+ *       isolated-object artifact too: .rodata is built 8-aligned here, so a pad
+ *       word appears after the 5-entry jtbl_8004FCD4, whereas the real section
+ *       base 0x8004FCD4 is 4 mod 8 and the three tables pack to +0x00/+0x14/
+ *       +0x34 with no padding. Moving `[0x65, .rodata, unk1]` to
+ *       `[0x65, .rodata, field8]` plus `[0xB9, .rodata, unk1]` is the pending
+ *       fix; the function's own codegen is unaffected either way.
+ */
+void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
+{
+    FieldAnimCel *cel;
+    FieldTileGrid *grid;
+    u8 *dst;
+    u32 *src;
+    u32 *mask;
+    u32 word;
+    u32 bit;
+    s32 stride;
+    s32 row;
+    s32 col;
+    s32 i;
+
+    cel = anim->cels;
+    grid = ((FieldTileAnimDef *) def)->grid;
+    dst = cel->tiles;
+    stride = 0;
+    switch (cel->format)
+    {
+    case 0:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        stride = 12;
+        break;
+    case 1:
+    case 6:
+        break;
+    }
+    if (cel->unk1C != 0)
+    {
+        stride -= 4;
+    }
+    if (cel->unk18 != 0)
+    {
+        stride -= 4;
+    }
+    src = (u32 *) (anim->frames + anim->frame_tiles * stride * state);
+    bit = 1;
+    mask = cel->mask;
+    word = *mask++;
+    for (row = 0; row != grid->rows; row++)
+    {
+        if (row < def->unkD)
+        {
+            /* Above the sub-rectangle: step the cursor over the whole row. */
+            col = grid->cols;
+            col--;
+            while (col != -1)
+            {
+                if (word & bit)
+                {
+                    dst += stride;
+                }
+                bit <<= 1;
+                if (bit == 0)
+                {
+                    word = *mask++;
+                    bit = 1;
+                }
+                col--;
+            }
+        }
+        else
+        {
+            if (row >= def->unkD + def->unkF)
+            {
+                return;
+            }
+            for (col = 0; col != grid->cols; col++)
+            {
+                if (word & bit)
+                {
+                    if ((col >= def->unkC) && (col < def->unkC + def->unkE))
+                    {
+                        i = stride >> 2;
+                        i--;
+                        while (i != -1)
+                        {
+                            *(u32 *) dst = *src++;
+                            dst += 4;
+                            i--;
+                        }
+                    }
+                    else
+                    {
+                        dst += stride;
+                    }
+                }
+                bit <<= 1;
+                if (bit == 0)
+                {
+                    word = *mask++;
+                    bit = 1;
+                }
+            }
+        }
     }
 }
