@@ -78,7 +78,9 @@ extern u8 D_801452F0;
 extern u8 D_80145DF8;
 extern u8 D_80145EA4;
 extern u8 D_801460D0;
+extern u8 D_80145F80;
 extern u8 D_80170960;
+extern s32 D_8016B8E8;
 
 /**
  * @brief One entry in the gosub screen's element list, as handed out by
@@ -120,6 +122,8 @@ typedef struct
  * @param c New top-byte value. TODO: meaning unknown; observed 0xE8 and 0x08.
  */
 #define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
+
+extern GosubElement D_80170998;
 
 GosubElement* func_80143C04();
 
@@ -589,4 +593,27 @@ void func_80140DDC(void)
     p->unk4_0 = 1;
     p->y = 0x24;
     SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Configure the fixed element D_80170998 and clear D_8016B8E8.
+ *
+ * Unlike func_80140C18 / func_80140DDC this one does not allocate: it reuses a
+ * single statically allocated element, so it needs no frame. Its attr top byte
+ * is cleared rather than set to a handler code.
+ */
+void func_80140FA0(void)
+{
+    GosubElement* p;
+
+    p = &D_80170998;
+    p->handler = (void*)&D_80145F80;
+    D_8016B8E8 = 0;
+    p->attr.f.unk0_0 = 1;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x20;
+    p->attr.f.unk0_16 = 0x70;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 0);
 }
