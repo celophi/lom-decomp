@@ -2935,11 +2935,24 @@ void func_80056A04(void)
  *
  * @note Built -G4 WITHOUT --expand-div: the target has bare div/divu, so
  *       field8.c lives in overlay_field_gcc_g4_noexpand_srcs.
- * @note Both per-mode selects are written as explicit goto chains, not nested
- *       if/else. gcc 2.8 lays labelled blocks out in source order, and only the
- *       goto form reproduces the target block layout (equality case in the
- *       middle, fall-through case first). Reverting the divisor select to nested
- *       if/else costs 4 exact rows; reverting the base select costs 3.
+ * @note Both per-mode selects are `switch` statements, and the trailing
+ *       `case N: default:` on each is required to match. gcc 2.8 balances the
+ *       case list into a decision tree (stmt.c balance_case_nodes): with exactly
+ *       three case nodes the middle one becomes the root, which is what puts the
+ *       equality test on 2 (resp. 3) first, followed by the `> root` bound test
+ *       to the default. Drop the extra case and only two nodes remain, so gcc
+ *       emits a flat compare chain instead (-8 exact rows). Adding a `case 0:`
+ *       instead adds a fourth node and re-roots the tree (-9). The extra case
+ *       may equally be spelled with its own duplicated body, or use any value
+ *       above the last distinguished one (`case 4:`/`case 5:` in the divisor
+ *       select also match) - the target cannot distinguish those.
+ * @note The two `>= 3` / `>= 4` guards are gcc's `bgt root` bound test, and the
+ *       `mode == 0` guard in the base select is the low-bound test `mode < 1`
+ *       that combine narrows to `beqz` because `(word >> 12) & 0xF` is known
+ *       non-negative. Neither is written in the source.
+ * @note Nested if/else does NOT match: it emits the case bodies in the wrong
+ *       order (X, D, A instead of X, A, D), costing 4 exact rows on the divisor
+ *       select and 3 on the base select.
  * @note `val = base;` before the first arm's subtraction is required: it steers
  *       the global allocator so val/y take a0/a1 (not a1/a0) across BOTH arms.
  *       Dropping it costs 14 exact rows.
@@ -2975,27 +2988,19 @@ void func_80057A28(FieldPart *part)
     scene = g_field_scene.scene;
     part->sweep_phase = part->sweep_phase - 1;
     mode = (part->def->u.word >> 12) & 0xF;
-    if (mode == 2)
+    switch (mode)
     {
-        goto div_a1;
-    }
-    if (mode >= 3)
-    {
-        goto div_default;
-    }
-    divisor = 0x101;
-    if (mode == 1)
-    {
+    case 1:
         divisor = 0x121;
+        break;
+    case 2:
+        divisor = 0xA1;
+        break;
+    case 3:
+    default:
+        divisor = 0x101;
+        break;
     }
-    goto div_done;
-div_a1:
-    divisor = 0xA1;
-    goto div_done;
-div_default:
-    divisor = 0x101;
-div_done:
-    ;
     sin_val = rsin((part->sweep_phase << 12) / part->sweep_period);
     if (sin_val >= 0)
     {
@@ -3010,23 +3015,20 @@ div_done:
     {
         arr = D_8018001C;
         mode = (part->def->u.word >> 12) & 0xF;
-        if (mode == 3)
+        switch (mode)
         {
-            goto base_0;
+        case 1:
+        case 2:
+            base = scene->unk0->unk30 / 2;
+            break;
+        case 3:
+            base = 0;
+            break;
+        case 4:
+        default:
+            base = scene->unk0->unk30;
+            break;
         }
-        if ((mode >= 4) || (mode == 0))
-        {
-            goto base_default;
-        }
-        base = scene->unk0->unk30 / 2;
-        goto base_done;
-    base_0:
-        base = 0;
-        goto base_done;
-    base_default:
-        base = scene->unk0->unk30;
-    base_done:
-        ;
         node = scene->nodes;
         count = part->node_count;
         if (node != NULL)
