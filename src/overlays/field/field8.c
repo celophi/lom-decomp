@@ -543,13 +543,54 @@ typedef struct
     u8 *unk14; /* 0x14 */
 } FieldAnimDef;
 
+/**
+ * @brief Tile grid dimensions referenced by a tile-blit animation definition.
+ *
+ * Only the two bytes at 0x0A/0x0B are known. They line up with the low and high
+ * halves of some other record's `unk0A` halfword, so this may well be a view of
+ * a second FieldAnimDef rather than a struct of its own.
+ */
+typedef struct
+{
+    u8 _pad0[0xA];
+    /** 0x0A grid width in tiles. */
+    u8 cols;
+    /** 0x0B grid height in tiles. */
+    u8 rows;
+} FieldTileGrid;
+
+/**
+ * @brief Tile-blit view of FieldAnimDef.
+ *
+ * The `unk4 & 7` handler kind decides what lives at offset 0x10: the image-DMA
+ * handlers read it as the byte `FieldAnimDef::unk10`, while the tile-blit
+ * handler reads the whole word as a pointer to the grid dimensions. The two
+ * uses never overlap, so they are kept as separate types rather than a union.
+ */
+typedef struct
+{
+    u8 _pad0[0x10];
+    FieldTileGrid *grid; /* 0x10 */
+} FieldTileAnimDef;
+
 /** @brief Element of an animation node's cel ring. */
 typedef struct FieldAnimCel FieldAnimCel;
 struct FieldAnimCel
 {
     FieldAnimCel *next; /* 0x00 */
-    u8 _pad0[0x20 - 4];
+    u8 _pad0[0xC - 4];
+    /** 0x0C tile-presence bitmap, one bit per grid cell, LSB first. */
+    u32 *mask;
+    /** 0x10 packed destination tile records, advanced past every present tile. */
+    u8 *tiles;
+    u8 _pad1[0x18 - 0x14];
+    /** 0x18 when set, the tile record is 4 bytes shorter. */
+    s32 unk18;
+    /** 0x1C when set, the tile record is 4 bytes shorter. */
+    s32 unk1C;
     u8 unk20; /* 0x20 */
+    /** 0x21 record-format selector, 0-6; see func_80057CA4. */
+    u8 format;
 };
 
 /**
@@ -580,11 +621,20 @@ struct FieldAnim
     u8 _pad0[0xC - 8];
     FieldAnimCel *cels;   /* 0x0C */
     s32 unk10;            /* 0x10 */
-    u8 _pad1[0x24 - 0x14];
+    /** 0x14 last horizontal tween offset pushed to the target (see func_80057E88). */
+    s32 unk14;
+    /** 0x18 last vertical tween offset pushed to the target. */
+    s32 unk18;
+    /** 0x1C last depth tween offset pushed to the target. */
+    s32 unk1C;
+    /** 0x20 base of the per-frame packed tile records. */
+    u8 *frames;
     FieldAnimFlags flags; /* 0x24 */
     u8 _pad2[0x2A - 0x28];
     u16 counter;          /* 0x2A */
-    u8 _pad3[0x30 - 0x2C];
+    /** 0x2C tile records per frame, i.e. the stride from one frame to the next. */
+    u16 frame_tiles;
+    u8 _pad3[0x30 - 0x2E];
     FieldImageReq req;    /* 0x30 */
     u16 buf40[0x10];      /* 0x40 */
     u16 buf60[0xF0];      /* 0x60 */
@@ -698,11 +748,12 @@ typedef struct
  *
  * The individual words are also referenced as the standalone symbols
  * D_801ED484 / D_801ED488 / D_801ED48C; func_80054CA8 uses BOTH forms and the
- * distinction is load-bearing for the addressing mode.
+ * distinction is required to match, because it selects the addressing mode.
  */
 typedef struct
 {
-    u8 _pad[8];
+    u8 _pad[4];
+    s32 unk4;               /* 0x04 == D_801ED484 */
     s32 unk8;               /* 0x08 == D_801ED488 */
     s32 unkC;               /* 0x0C == D_801ED48C */
 } FieldCamera;
@@ -2935,11 +2986,24 @@ void func_80056A04(void)
  *
  * @note Built -G4 WITHOUT --expand-div: the target has bare div/divu, so
  *       field8.c lives in overlay_field_gcc_g4_noexpand_srcs.
- * @note Both per-mode selects are written as explicit goto chains, not nested
- *       if/else. gcc 2.8 lays labelled blocks out in source order, and only the
- *       goto form reproduces the target block layout (equality case in the
- *       middle, fall-through case first). Reverting the divisor select to nested
- *       if/else costs 4 exact rows; reverting the base select costs 3.
+ * @note Both per-mode selects are `switch` statements, and the trailing
+ *       `case N: default:` on each is required to match. gcc 2.8 balances the
+ *       case list into a decision tree (stmt.c balance_case_nodes): with exactly
+ *       three case nodes the middle one becomes the root, which is what puts the
+ *       equality test on 2 (resp. 3) first, followed by the `> root` bound test
+ *       to the default. Drop the extra case and only two nodes remain, so gcc
+ *       emits a flat compare chain instead (-8 exact rows). Adding a `case 0:`
+ *       instead adds a fourth node and re-roots the tree (-9). The extra case
+ *       may equally be spelled with its own duplicated body, or use any value
+ *       above the last distinguished one (`case 4:`/`case 5:` in the divisor
+ *       select also match) - the target cannot distinguish those.
+ * @note The two `>= 3` / `>= 4` guards are gcc's `bgt root` bound test, and the
+ *       `mode == 0` guard in the base select is the low-bound test `mode < 1`
+ *       that combine narrows to `beqz` because `(word >> 12) & 0xF` is known
+ *       non-negative. Neither is written in the source.
+ * @note Nested if/else does NOT match: it emits the case bodies in the wrong
+ *       order (X, D, A instead of X, A, D), costing 4 exact rows on the divisor
+ *       select and 3 on the base select.
  * @note `val = base;` before the first arm's subtraction is required: it steers
  *       the global allocator so val/y take a0/a1 (not a1/a0) across BOTH arms.
  *       Dropping it costs 14 exact rows.
@@ -2975,27 +3039,19 @@ void func_80057A28(FieldPart *part)
     scene = g_field_scene.scene;
     part->sweep_phase = part->sweep_phase - 1;
     mode = (part->def->u.word >> 12) & 0xF;
-    if (mode == 2)
+    switch (mode)
     {
-        goto div_a1;
-    }
-    if (mode >= 3)
-    {
-        goto div_default;
-    }
-    divisor = 0x101;
-    if (mode == 1)
-    {
+    case 1:
         divisor = 0x121;
+        break;
+    case 2:
+        divisor = 0xA1;
+        break;
+    case 3:
+    default:
+        divisor = 0x101;
+        break;
     }
-    goto div_done;
-div_a1:
-    divisor = 0xA1;
-    goto div_done;
-div_default:
-    divisor = 0x101;
-div_done:
-    ;
     sin_val = rsin((part->sweep_phase << 12) / part->sweep_period);
     if (sin_val >= 0)
     {
@@ -3010,23 +3066,20 @@ div_done:
     {
         arr = D_8018001C;
         mode = (part->def->u.word >> 12) & 0xF;
-        if (mode == 3)
+        switch (mode)
         {
-            goto base_0;
+        case 1:
+        case 2:
+            base = scene->unk0->unk30 / 2;
+            break;
+        case 3:
+            base = 0;
+            break;
+        case 4:
+        default:
+            base = scene->unk0->unk30;
+            break;
         }
-        if ((mode >= 4) || (mode == 0))
-        {
-            goto base_default;
-        }
-        base = scene->unk0->unk30 / 2;
-        goto base_done;
-    base_0:
-        base = 0;
-        goto base_done;
-    base_default:
-        base = scene->unk0->unk30;
-    base_done:
-        ;
         node = scene->nodes;
         count = part->node_count;
         if (node != NULL)
@@ -3080,5 +3133,602 @@ div_done:
     if (part->sweep_phase == 0)
     {
         part->sweep_phase = part->sweep_period;
+    }
+}
+
+/**
+ * @brief Blit one frame of an animation into the cel's packed tile array.
+ *
+ * The cel keeps its tiles packed: only grid cells whose bit is set in
+ * FieldAnimCel::mask have a record in FieldAnimCel::tiles, and each record is
+ * `stride` bytes wide. This walks the whole grid in raster order, tracking the
+ * destination cursor across every present tile, and copies the frame's records
+ * over the sub-rectangle (@p def unkC/unkD origin, unkE/unkF extent). Rows above
+ * the sub-rectangle are skipped by advancing the cursor only; the walk returns
+ * as soon as it passes the bottom row.
+ *
+ * The record width is 12 bytes, less 4 for each of the cel's two optional
+ * fields, and 0 for the formats that have no records at all.
+ *
+ * @param def   Animation definition; supplies the sub-rectangle and the grid.
+ * @param anim  Animation node holding the frame data and the target cel.
+ * @param state Frame index into FieldAnim::frames.
+ *
+ * @note Built -G4 WITHOUT --expand-div, like the rest of field8.c.
+ * @note The overlay yaml still assigns this function's jump table's rodata range
+ *       to `unk1`; `[0x65, .rodata, unk1]` needs to become
+ *       `[0x65, .rodata, field8]` plus `[0xB9, .rodata, unk1]` before
+ *       jtbl_8004FD08 links at the right address.
+ */
+void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
+{
+    FieldAnimCel *cel;
+    FieldTileGrid *grid;
+    u8 *dst;
+    u32 *src;
+    u32 *mask;
+    u32 word;
+    u32 bit;
+    s32 stride;
+    s32 row;
+    s32 col;
+    s32 i;
+
+    cel = anim->cels;
+    grid = ((FieldTileAnimDef *) def)->grid;
+    dst = cel->tiles;
+    stride = 0;
+    switch (cel->format)
+    {
+    case 0:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        stride = 12;
+        break;
+    case 1:
+    case 6:
+        break;
+    }
+    if (cel->unk1C != 0)
+    {
+        stride -= 4;
+    }
+    if (cel->unk18 != 0)
+    {
+        stride -= 4;
+    }
+    src = (u32 *) (anim->frames + anim->frame_tiles * stride * state);
+    bit = 1;
+    mask = cel->mask;
+    word = *mask++;
+    for (row = 0; row != grid->rows; row++)
+    {
+        if (row < def->unkD)
+        {
+            /* Above the sub-rectangle: step the cursor over the whole row. */
+            col = grid->cols;
+            col--;
+            while (col != -1)
+            {
+                if (word & bit)
+                {
+                    dst += stride;
+                }
+                bit <<= 1;
+                if (bit == 0)
+                {
+                    word = *mask++;
+                    bit = 1;
+                }
+                col--;
+            }
+        }
+        else
+        {
+            if (row >= def->unkD + def->unkF)
+            {
+                return;
+            }
+            for (col = 0; col != grid->cols; col++)
+            {
+                if (word & bit)
+                {
+                    if ((col >= def->unkC) && (col < def->unkC + def->unkE))
+                    {
+                        i = stride >> 2;
+                        i--;
+                        while (i != -1)
+                        {
+                            *(u32 *) dst = *src++;
+                            dst += 4;
+                            i--;
+                        }
+                    }
+                    else
+                    {
+                        dst += stride;
+                    }
+                }
+                bit <<= 1;
+                if (bit == 0)
+                {
+                    word = *mask++;
+                    bit = 1;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief One entry of an animation's keyframe table (FieldAnimDef::unk14).
+ *
+ * The three signed deltas are the horizontal / vertical / depth offsets the
+ * keyframe ends on; they are scaled by the fraction of the keyframe elapsed so
+ * far. Only bit 15 of the trailing halfword is used.
+ */
+typedef struct
+{
+    /** 0x00 horizontal end offset. */
+    s16 unk0;
+    /** 0x02 vertical end offset. */
+    s16 unk2;
+    /** 0x04 depth end offset. */
+    s16 unk4;
+    /** 0x06 bit 15 is copied to the target's visibility flag. */
+    u16 unk6;
+} FieldTweenKey;
+
+/**
+ * @brief Count-table record returned by func_80059224.
+ *
+ * Only the duration is read here; func_80057CA4's caller uses the same halfword
+ * to reload FieldAnim::counter.
+ */
+typedef struct
+{
+    u8 _pad0[2];
+    /** 0x02 length of the keyframe this record covers, in frames. */
+    u16 unk2;
+} FieldTweenSpan;
+
+u8 *func_80059224(FieldAnimDef *, s32, volatile s8 *);
+void func_8005A984(FieldPart *, s32, s32);
+void func_8005AA68(FieldObj *, s32, s32);
+
+/**
+ * @brief Apply the current keyframe's tweened offsets to an animation's target.
+ *
+ * Resolves the keyframe indexed by FieldAnim::flags.b.state and the keyframe's
+ * duration (func_80059224), then interpolates each of the key's three offsets by
+ * the fraction of the keyframe already elapsed: `(elapsed * end << 8) / duration`.
+ *
+ * The target is FieldAnim::cels reinterpreted according to the definition's
+ * handler kind: kind 5 drives a FieldPart (offsets 0x28/0x2C/0x30, visibility
+ * byte 0x20), every other kind drives a FieldObj (offsets 0x1C/0x20/0x24,
+ * visibility bit 0 of the flags word).
+ *
+ * @param def    Animation definition; supplies the handler kind and keyframe table.
+ * @param anim   Animation node holding the frame state, counter and target.
+ * @param commit When zero the tweened values are only recorded on the node; when
+ *               non-zero the delta since the previous frame is also added to the
+ *               target and pushed through func_8005A984 / func_8005AA68. The
+ *               record is cleared instead of stored on the keyframe's last frame
+ *               (counter == 0), so the next keyframe starts from zero.
+ *
+ * @note The keyframe table is read through @c rec rather than @c def. Both hold
+ *       the same pointer, but folding the access onto @c def costs the match.
+ * @note @c obj and @c part must be cleared by two separate statements; the
+ *       chained @c obj = part = NULL form does not match.
+ * @note The handler kind is read as a whole word (@c *(s32 *) &def->unk4): the
+ *       byte access gcc emits for @c def->unk4 is an @c lbu, the target an @c lw.
+ *       Repeating the test at each of the four sites is also required - hoisting
+ *       it into a local reorders the blocks.
+ * @note @c unk6 must stay unsigned so the visibility bit comes out as @c srl 15.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_80057E88(FieldAnimDef *def, FieldAnim *anim, s32 commit)
+{
+    FieldAnimDef *rec;
+    FieldObj *obj;
+    FieldPart *part;
+    FieldTweenKey *key;
+    s32 duration;
+    s32 elapsed;
+    s32 value;
+    s32 delta;
+    volatile s8 base;
+
+    rec = def;
+    obj = NULL;
+    part = NULL;
+    if ((*(s32 *) &def->unk4 & 7) == 5)
+    {
+        part = (FieldPart *) anim->cels;
+    }
+    else
+    {
+        obj = (FieldObj *) anim->cels;
+    }
+    key = (FieldTweenKey *) (rec->unk14 + anim->flags.b.state * 8);
+    duration = ((FieldTweenSpan *) func_80059224(def, anim->flags.b.unk2, &base))->unk2;
+    if (duration == 0)
+    {
+        duration = 1;
+    }
+    elapsed = duration - anim->counter;
+    if ((*(s32 *) &def->unk4 & 7) == 5)
+    {
+        part->unk20 = key->unk6 >> 15;
+    }
+    else
+    {
+        obj->flags.word = (obj->flags.word & ~1) | (key->unk6 >> 15);
+    }
+
+    value = ((elapsed * key->unk0) << 8) / duration;
+    if (commit != 0)
+    {
+        delta = value - anim->unk14;
+        if ((*(s32 *) &def->unk4 & 7) == 5)
+        {
+            part->unk28 += delta;
+            func_8005A984(part, delta, 0);
+        }
+        else
+        {
+            obj->unk1C += delta;
+            func_8005AA68(obj, delta, 0);
+        }
+        if (anim->counter == 0)
+        {
+            anim->unk14 = 0;
+        }
+        else
+        {
+            anim->unk14 = value;
+        }
+    }
+    else
+    {
+        anim->unk14 = value;
+    }
+
+    value = ((elapsed * key->unk2) << 8) / duration;
+    if (commit != 0)
+    {
+        delta = value - anim->unk18;
+        if ((*(s32 *) &def->unk4 & 7) == 5)
+        {
+            part->unk2C += delta;
+            func_8005A984(part, delta, 1);
+        }
+        else
+        {
+            obj->unk20 += delta;
+            func_8005AA68(obj, delta, 1);
+        }
+        if (anim->counter == 0)
+        {
+            anim->unk18 = 0;
+        }
+        else
+        {
+            anim->unk18 = value;
+        }
+    }
+    else
+    {
+        anim->unk18 = value;
+    }
+
+    value = ((elapsed * key->unk4) << 8) / duration;
+    if (commit != 0)
+    {
+        delta = value - anim->unk1C;
+        if ((*(s32 *) &def->unk4 & 7) == 5)
+        {
+            part->unk30 += delta;
+            func_8005A984(part, delta, 2);
+        }
+        else
+        {
+            obj->unk24 += delta;
+            func_8005AA68(obj, delta, 2);
+        }
+        if (anim->counter == 0)
+        {
+            anim->unk1C = 0;
+        }
+        else
+        {
+            anim->unk1C = value;
+        }
+    }
+    else
+    {
+        anim->unk1C = value;
+    }
+}
+
+/**
+ * @brief 16-bit field of a FieldSfxKey, addressed as a whole or by byte.
+ *
+ * Word 0 is read as a byte for the entry kind and as a halfword for the flag
+ * bits; word 1 as a byte for the sound's bank/index and as a halfword for its
+ * flag bit and base attenuation.
+ */
+typedef union
+{
+    u16 word;
+    struct
+    {
+        u8 lo;
+        u8 hi;
+    } b;
+} FieldSfxWord;
+
+/**
+ * @brief One entry of the sound keyframe table at FieldAnimDef::unk14.
+ *
+ * Shares the 8-byte stride with FieldTweenKey; the low three bits of byte 0
+ * say which of the two an entry is (1 = sound).
+ */
+typedef struct
+{
+    /**
+     * 0x00 bits 0-2 entry kind (1 = sound); bits 8-12 a channel-slot number
+     * (zero means "use the sound id at unk4" instead); bit 14 clear selects
+     * positional playback; bit 15 clear stops the channel.
+     */
+    FieldSfxWord unk0;
+    /**
+     * 0x02 low byte is the sound's bank/index, bits 8-14 its base attenuation
+     * and bit 15 selects one-shot playback over the a1/a3 pair.
+     */
+    FieldSfxWord unk2;
+    /** 0x04 bits 0-9 sound id, used when unk0 carries no channel slot. */
+    u16 unk4;
+    u16 unk6;  /* 0x06 */
+} FieldSfxKey;
+
+void akao_play_sfx(s32, s32, s32, s32);
+void akao_cmd_21(s32, s32);
+void akao_cmd_a1(s32, s32, s32, s32);
+void akao_cmd_a3(s32, s32, s32, s32);
+
+/**
+ * @brief Play or update the sound attached to an animation's current keyframe.
+ *
+ * Reads the keyframe indexed by FieldAnim::flags.b.state out of the table at
+ * FieldAnimDef::unk14 and does nothing unless it is a sound entry (kind 1).
+ * The entry names either a channel slot (1 << (slot - 1), sound id 0) or a
+ * sound id, and its flag bits pick one of three actions: stop the channel
+ * (akao_cmd_21), play without positioning, or position the sound in the scene
+ * first.
+ *
+ * The positional path projects the owning object and part into screen space --
+ * camera offsets at 0x801ED480 (suppressed when the object definition's
+ * "no offsets" bit is set), plus the part's own offsets and its grid origin --
+ * and maps the result to a volume and an attenuation. Horizontally, x below
+ * -0x20 or above 0x160 falls off in steps of four toward 0 / 0xFF, and the
+ * range between them is a linear 0x40..0xBF ramp. Vertically, y outside
+ * -0x20..0x100 subtracts the same quarter-step from the entry's base
+ * attenuation, clamped at zero.
+ *
+ * @param def  Animation definition; supplies the keyframe table.
+ * @param anim Animation node; supplies the frame index, the owning part
+ *             (FieldAnim::cels) and object (FieldAnim::unk10), the repeat
+ *             counter, and the retrigger flag (bit 3 of FieldAnim::flags).
+ *
+ * @warning **THIS FUNCTION IS NOT A MATCH (95.20%, 195/226 exact rows).** It is
+ *          committed as work in progress and may not be functionally
+ *          equivalent. Re-verify before building a release image. The running
+ *          analysis, including thirteen measured-and-retired probe classes,
+ *          lives in working/func_80058154/status.md.
+ *
+ * @note The residual is four instructions, all in the screen-position block.
+ *       The target RELOADS `part->def` for the `row` term; gcc 2.8's cse
+ *       deletes the second load here because the `/ 256` rounding expands to a
+ *       branch around a single insn whose join label has `LABEL_NUSES == 1`, so
+ *       `cse_end_of_basic_block` walks straight through it. The target also
+ *       keeps `cam_y - cam_z` in its own pseudo and copies it into `y`, where
+ *       regmove coalesces the two here. The other two instructions are the
+ *       delay-slot `nop` pair that follows from the reload. Everything else in
+ *       the block is register naming downstream of those two.
+ * @note `cam_z` is deliberately reused to carry `row - 0xE0` (it is dead by
+ *       then). It is worth 15 exact rows; every other carrier, including a
+ *       fresh local, loses 17-20. Likewise the three camera divides must be
+ *       spelled as explicit if/else rounding sharing one `q` temp, and `col` /
+ *       `row` must be named statements rather than inline terms.
+ * @note `kind` is read through a second, duplicate address expression so that
+ *       `key` becomes a separate pseudo, matching the target's `addu` copy.
+ *
+ * @see decomp.me (95.20%) TODO
+ */
+void func_80058154(FieldAnimDef *def, FieldAnim *anim)
+{
+    FieldPart *part;
+    FieldObj *obj;
+    FieldSfxKey *key;
+    s32 sfx_id;
+    s32 chan_mask;
+    s32 kind;
+    s32 cam_x;
+    s32 cam_y;
+    s32 cam_z;
+    s32 x;
+    s32 y;
+    u32 vol;
+    u32 att;
+    u32 tmp;
+    s32 col;
+    s32 row;
+    s32 q;
+
+    part = (FieldPart *) anim->cels;
+    obj = (FieldObj *) anim->unk10;
+    kind = def->unk14[anim->flags.b.state * 8] & 7;
+    if (kind == 1)
+    {
+        key = (FieldSfxKey *) (def->unk14 + anim->flags.b.state * 8);
+        if (key->unk0.word & 0x1F00)
+        {
+            chan_mask = kind << (((key->unk0.word >> 8) & 0x1F) - 1);
+            sfx_id = 0;
+        }
+        else
+        {
+            chan_mask = 0;
+            sfx_id = key->unk4 & 0x3FF;
+        }
+        if (key->unk0.word & 0x8000)
+        {
+            if (key->unk0.word & 0x4000)
+            {
+                if (key->unk2.word & 0x8000)
+                {
+                    if (anim->flags.word & 8)
+                    {
+                        akao_play_sfx(sfx_id, chan_mask, key->unk2.b.lo, (key->unk2.word >> 8) & 0x7F);
+                        anim->flags.word &= ~8;
+                    }
+                }
+                else
+                {
+                    akao_play_sfx(sfx_id, chan_mask, key->unk2.b.lo, (key->unk2.word >> 8) & 0x7F);
+                }
+            }
+            else
+            {
+                if (obj->def->flags & 2)
+                {
+                    cam_x = 0;
+                    cam_y = 0;
+                    cam_z = 0;
+                }
+                else
+                {
+                    cam_x = ((FieldCamera *) 0x801ED480)->unk4;
+                    cam_y = ((FieldCamera *) 0x801ED480)->unk8;
+                    cam_z = ((FieldCamera *) 0x801ED480)->unkC;
+                }
+                if (cam_x >= 0)
+                {
+                    q = cam_x >> 8;
+                }
+                else
+                {
+                    q = (cam_x + 0xFF) >> 8;
+                }
+                x = q;
+                if (cam_y >= 0)
+                {
+                    cam_y = cam_y >> 8;
+                }
+                else
+                {
+                    cam_y = (cam_y + 0xFF) >> 8;
+                }
+                if (cam_z >= 0)
+                {
+                    q = cam_z >> 9;
+                }
+                else
+                {
+                    q = (cam_z + 0x1FF) >> 9;
+                }
+                y = cam_y - q;
+                col = part->def->u.b.unkA * 8;
+                x = x + (obj->unk1C + part->unk28) / 256 + col;
+                row = part->def->u.b.unkB * 8;
+                y = y + ((obj->unk20 + part->unk2C) * 2 - (obj->unk24 + part->unk30)) / 512;
+                cam_z = row - 0xE0;
+                y = y - cam_z;
+                if (x < -0x20)
+                {
+                    vol = (-0x20 - x) >> 2;
+                    if (vol < 0x3F)
+                    {
+                        vol = 0x3F - vol;
+                    }
+                    else
+                    {
+                        vol = 0;
+                    }
+                }
+                else if (x > 0x160)
+                {
+                    vol = (x - 0x160) >> 2;
+                    tmp = vol + 0xC0;
+                    if (tmp < 0x100)
+                    {
+                        vol = tmp;
+                    }
+                    else
+                    {
+                        vol = 0xFF;
+                    }
+                }
+                else
+                {
+                    vol = ((x + 0x20) * 0x7F) / 384 + 0x40;
+                }
+                if (y < -0x20)
+                {
+                    att = (-0x20 - y) >> 2;
+                    tmp = (key->unk2.word >> 8) & 0x7F;
+                    if (att < tmp)
+                    {
+                        att = tmp - att;
+                    }
+                    else
+                    {
+                        att = 0;
+                    }
+                }
+                else if (y > 0x100)
+                {
+                    att = (y - 0x100) >> 2;
+                    tmp = (key->unk2.word >> 8) & 0x7F;
+                    if (att < tmp)
+                    {
+                        att = tmp - att;
+                    }
+                    else
+                    {
+                        att = 0;
+                    }
+                }
+                else
+                {
+                    att = (key->unk2.word >> 8) & 0x7F;
+                }
+                if (key->unk2.word & 0x8000)
+                {
+                    if (anim->flags.word & 8)
+                    {
+                        akao_play_sfx(sfx_id, chan_mask, vol, att);
+                        anim->flags.word &= ~8;
+                    }
+                    else
+                    {
+                        akao_cmd_a1(sfx_id, chan_mask, anim->counter * 2, att);
+                        akao_cmd_a3(sfx_id, chan_mask, anim->counter * 2, vol);
+                    }
+                }
+                else
+                {
+                    akao_play_sfx(sfx_id, chan_mask, vol, att);
+                }
+            }
+        }
+        else
+        {
+            akao_cmd_21(sfx_id, chan_mask);
+        }
     }
 }
