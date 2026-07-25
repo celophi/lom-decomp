@@ -418,7 +418,8 @@ typedef struct
     u16 unk10E;                /* 0x10E */
 } SomeStruct;
 
-typedef struct {
+typedef struct
+{
     u8* unk0;
     u8 pad1[0x100 - 0x4];
     s32 unk100;
@@ -3099,6 +3100,25 @@ void func_8002C79C(s_8002C79C* arg0)
     new_unk100 = arg0->unk100 | 0x1000;
     new_unk10E = ((arg0->unk10E & 0xFF0F) | (byte_val * 0x10));
 
+    arg0->unk100 = new_unk100;
+    arg0->unk10E = new_unk10E;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ZOmaE
+ */
+void func_8002C7D0(s_8002C79C* arg0)
+{
+    u8* ptr;
+    u32 byte_val;
+    u32 new_unk100;
+    u16 new_unk10E;
+
+    ptr = arg0->unk0;
+    byte_val = *ptr;
+    arg0->unk0 = ptr + 1;
+    new_unk100 = arg0->unk100 | 0x8000;
+    new_unk10E = (arg0->unk10E & 0xFFF0) | byte_val;
     arg0->unk100 = new_unk100;
     arg0->unk10E = new_unk10E;
 }
