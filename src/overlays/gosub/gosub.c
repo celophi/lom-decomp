@@ -961,3 +961,38 @@ void func_80141A14(void)
     D_8016B950 = 0x84;
     D_80170994 = GOSUB_MSG_PTR(0x14);
 }
+
+/**
+ * @brief Build the item list for the gosub screen entered by arm 0.
+ *
+ * Identical row layout and archive blocks to func_80141808, over the slot
+ * range D_8012271C[0x25E0 + 0x00 .. 0x3F] -- the block immediately below the
+ * one func_80141A14 walks. The row count lands in D_8016B8D4 and the screen's
+ * title message pointer in D_80170994.
+ */
+void func_80141B28(void)
+{
+    s32 i;
+    s32 count;
+
+    count = 0;
+    for (i = 0; i < 0x40; i++)
+    {
+        if (*(D_8012271C + i + 0x25E0) != 0)
+        {
+            GosubListEntry* e = &D_80170A58[count];
+            e->name = ARCHIVE_ENTRY(D_8014F280[0], i);
+            e->desc = ARCHIVE_ENTRY(D_8014F27C[2], i);
+            e->value = *(D_8012271C + i + 0x25E0);
+            e->kind = 4;
+            e->index = i;
+            count++;
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 8;
+    D_80170980 = 0x10;
+    D_8016B958 = 0xE8;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x12);
+}
