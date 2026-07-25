@@ -748,11 +748,12 @@ typedef struct
  *
  * The individual words are also referenced as the standalone symbols
  * D_801ED484 / D_801ED488 / D_801ED48C; func_80054CA8 uses BOTH forms and the
- * distinction is load-bearing for the addressing mode.
+ * distinction is required to match, because it selects the addressing mode.
  */
 typedef struct
 {
-    u8 _pad[8];
+    u8 _pad[4];
+    s32 unk4;               /* 0x04 == D_801ED484 */
     s32 unk8;               /* 0x08 == D_801ED488 */
     s32 unkC;               /* 0x0C == D_801ED48C */
 } FieldCamera;
@@ -3450,5 +3451,284 @@ void func_80057E88(FieldAnimDef *def, FieldAnim *anim, s32 commit)
     else
     {
         anim->unk1C = value;
+    }
+}
+
+/**
+ * @brief 16-bit field of a FieldSfxKey, addressed as a whole or by byte.
+ *
+ * Word 0 is read as a byte for the entry kind and as a halfword for the flag
+ * bits; word 1 as a byte for the sound's bank/index and as a halfword for its
+ * flag bit and base attenuation.
+ */
+typedef union
+{
+    u16 word;
+    struct
+    {
+        u8 lo;
+        u8 hi;
+    } b;
+} FieldSfxWord;
+
+/**
+ * @brief One entry of the sound keyframe table at FieldAnimDef::unk14.
+ *
+ * Shares the 8-byte stride with FieldTweenKey; the low three bits of byte 0
+ * say which of the two an entry is (1 = sound).
+ */
+typedef struct
+{
+    /**
+     * 0x00 bits 0-2 entry kind (1 = sound); bits 8-12 a channel-slot number
+     * (zero means "use the sound id at unk4" instead); bit 14 clear selects
+     * positional playback; bit 15 clear stops the channel.
+     */
+    FieldSfxWord unk0;
+    /**
+     * 0x02 low byte is the sound's bank/index, bits 8-14 its base attenuation
+     * and bit 15 selects one-shot playback over the a1/a3 pair.
+     */
+    FieldSfxWord unk2;
+    /** 0x04 bits 0-9 sound id, used when unk0 carries no channel slot. */
+    u16 unk4;
+    u16 unk6;  /* 0x06 */
+} FieldSfxKey;
+
+void akao_play_sfx(s32, s32, s32, s32);
+void akao_cmd_21(s32, s32);
+void akao_cmd_a1(s32, s32, s32, s32);
+void akao_cmd_a3(s32, s32, s32, s32);
+
+/**
+ * @brief Play or update the sound attached to an animation's current keyframe.
+ *
+ * Reads the keyframe indexed by FieldAnim::flags.b.state out of the table at
+ * FieldAnimDef::unk14 and does nothing unless it is a sound entry (kind 1).
+ * The entry names either a channel slot (1 << (slot - 1), sound id 0) or a
+ * sound id, and its flag bits pick one of three actions: stop the channel
+ * (akao_cmd_21), play without positioning, or position the sound in the scene
+ * first.
+ *
+ * The positional path projects the owning object and part into screen space --
+ * camera offsets at 0x801ED480 (suppressed when the object definition's
+ * "no offsets" bit is set), plus the part's own offsets and its grid origin --
+ * and maps the result to a volume and an attenuation. Horizontally, x below
+ * -0x20 or above 0x160 falls off in steps of four toward 0 / 0xFF, and the
+ * range between them is a linear 0x40..0xBF ramp. Vertically, y outside
+ * -0x20..0x100 subtracts the same quarter-step from the entry's base
+ * attenuation, clamped at zero.
+ *
+ * @param def  Animation definition; supplies the keyframe table.
+ * @param anim Animation node; supplies the frame index, the owning part
+ *             (FieldAnim::cels) and object (FieldAnim::unk10), the repeat
+ *             counter, and the retrigger flag (bit 3 of FieldAnim::flags).
+ *
+ * @warning **THIS FUNCTION IS NOT A MATCH (95.20%, 195/226 exact rows).** It is
+ *          committed as work in progress and may not be functionally
+ *          equivalent. Re-verify before building a release image. The running
+ *          analysis, including thirteen measured-and-retired probe classes,
+ *          lives in working/func_80058154/status.md.
+ *
+ * @note The residual is four instructions, all in the screen-position block.
+ *       The target RELOADS `part->def` for the `row` term; gcc 2.8's cse
+ *       deletes the second load here because the `/ 256` rounding expands to a
+ *       branch around a single insn whose join label has `LABEL_NUSES == 1`, so
+ *       `cse_end_of_basic_block` walks straight through it. The target also
+ *       keeps `cam_y - cam_z` in its own pseudo and copies it into `y`, where
+ *       regmove coalesces the two here. The other two instructions are the
+ *       delay-slot `nop` pair that follows from the reload. Everything else in
+ *       the block is register naming downstream of those two.
+ * @note `cam_z` is deliberately reused to carry `row - 0xE0` (it is dead by
+ *       then). It is worth 15 exact rows; every other carrier, including a
+ *       fresh local, loses 17-20. Likewise the three camera divides must be
+ *       spelled as explicit if/else rounding sharing one `q` temp, and `col` /
+ *       `row` must be named statements rather than inline terms.
+ * @note `kind` is read through a second, duplicate address expression so that
+ *       `key` becomes a separate pseudo, matching the target's `addu` copy.
+ *
+ * @see decomp.me (95.20%) TODO
+ */
+void func_80058154(FieldAnimDef *def, FieldAnim *anim)
+{
+    FieldPart *part;
+    FieldObj *obj;
+    FieldSfxKey *key;
+    s32 sfx_id;
+    s32 chan_mask;
+    s32 kind;
+    s32 cam_x;
+    s32 cam_y;
+    s32 cam_z;
+    s32 x;
+    s32 y;
+    u32 vol;
+    u32 att;
+    u32 tmp;
+    s32 col;
+    s32 row;
+    s32 q;
+
+    part = (FieldPart *) anim->cels;
+    obj = (FieldObj *) anim->unk10;
+    kind = def->unk14[anim->flags.b.state * 8] & 7;
+    if (kind == 1)
+    {
+        key = (FieldSfxKey *) (def->unk14 + anim->flags.b.state * 8);
+        if (key->unk0.word & 0x1F00)
+        {
+            chan_mask = kind << (((key->unk0.word >> 8) & 0x1F) - 1);
+            sfx_id = 0;
+        }
+        else
+        {
+            chan_mask = 0;
+            sfx_id = key->unk4 & 0x3FF;
+        }
+        if (key->unk0.word & 0x8000)
+        {
+            if (key->unk0.word & 0x4000)
+            {
+                if (key->unk2.word & 0x8000)
+                {
+                    if (anim->flags.word & 8)
+                    {
+                        akao_play_sfx(sfx_id, chan_mask, key->unk2.b.lo, (key->unk2.word >> 8) & 0x7F);
+                        anim->flags.word &= ~8;
+                    }
+                }
+                else
+                {
+                    akao_play_sfx(sfx_id, chan_mask, key->unk2.b.lo, (key->unk2.word >> 8) & 0x7F);
+                }
+            }
+            else
+            {
+                if (obj->def->flags & 2)
+                {
+                    cam_x = 0;
+                    cam_y = 0;
+                    cam_z = 0;
+                }
+                else
+                {
+                    cam_x = ((FieldCamera *) 0x801ED480)->unk4;
+                    cam_y = ((FieldCamera *) 0x801ED480)->unk8;
+                    cam_z = ((FieldCamera *) 0x801ED480)->unkC;
+                }
+                if (cam_x >= 0)
+                {
+                    q = cam_x >> 8;
+                }
+                else
+                {
+                    q = (cam_x + 0xFF) >> 8;
+                }
+                x = q;
+                if (cam_y >= 0)
+                {
+                    cam_y = cam_y >> 8;
+                }
+                else
+                {
+                    cam_y = (cam_y + 0xFF) >> 8;
+                }
+                if (cam_z >= 0)
+                {
+                    q = cam_z >> 9;
+                }
+                else
+                {
+                    q = (cam_z + 0x1FF) >> 9;
+                }
+                y = cam_y - q;
+                col = part->def->u.b.unkA * 8;
+                x = x + (obj->unk1C + part->unk28) / 256 + col;
+                row = part->def->u.b.unkB * 8;
+                y = y + ((obj->unk20 + part->unk2C) * 2 - (obj->unk24 + part->unk30)) / 512;
+                cam_z = row - 0xE0;
+                y = y - cam_z;
+                if (x < -0x20)
+                {
+                    vol = (-0x20 - x) >> 2;
+                    if (vol < 0x3F)
+                    {
+                        vol = 0x3F - vol;
+                    }
+                    else
+                    {
+                        vol = 0;
+                    }
+                }
+                else if (x > 0x160)
+                {
+                    vol = (x - 0x160) >> 2;
+                    tmp = vol + 0xC0;
+                    if (tmp < 0x100)
+                    {
+                        vol = tmp;
+                    }
+                    else
+                    {
+                        vol = 0xFF;
+                    }
+                }
+                else
+                {
+                    vol = ((x + 0x20) * 0x7F) / 384 + 0x40;
+                }
+                if (y < -0x20)
+                {
+                    att = (-0x20 - y) >> 2;
+                    tmp = (key->unk2.word >> 8) & 0x7F;
+                    if (att < tmp)
+                    {
+                        att = tmp - att;
+                    }
+                    else
+                    {
+                        att = 0;
+                    }
+                }
+                else if (y > 0x100)
+                {
+                    att = (y - 0x100) >> 2;
+                    tmp = (key->unk2.word >> 8) & 0x7F;
+                    if (att < tmp)
+                    {
+                        att = tmp - att;
+                    }
+                    else
+                    {
+                        att = 0;
+                    }
+                }
+                else
+                {
+                    att = (key->unk2.word >> 8) & 0x7F;
+                }
+                if (key->unk2.word & 0x8000)
+                {
+                    if (anim->flags.word & 8)
+                    {
+                        akao_play_sfx(sfx_id, chan_mask, vol, att);
+                        anim->flags.word &= ~8;
+                    }
+                    else
+                    {
+                        akao_cmd_a1(sfx_id, chan_mask, anim->counter * 2, att);
+                        akao_cmd_a3(sfx_id, chan_mask, anim->counter * 2, vol);
+                    }
+                }
+                else
+                {
+                    akao_play_sfx(sfx_id, chan_mask, vol, att);
+                }
+            }
+        }
+        else
+        {
+            akao_cmd_21(sfx_id, chan_mask);
+        }
     }
 }
