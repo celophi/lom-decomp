@@ -73,6 +73,55 @@ extern void* D_8016B954;
 extern s32 D_8016B958;
 extern s32 D_8017097C;
 extern s32 D_80170980;
+extern u8 D_801448EC;
+extern u8 D_801452F0;
+extern u8 D_80145DF8;
+extern u8 D_80145EA4;
+extern u8 D_801460D0;
+extern u8 D_80170960;
+
+/**
+ * @brief One entry in the gosub screen's element list, as handed out by
+ *        func_80143C04.
+ *
+ * The first word packs several bitfields plus a top byte that the code always
+ * rewrites through the whole word (see SET_ELEM_CODE), so it is exposed as a
+ * union. The second word carries a flag and the y coordinate.
+ *
+ * @note Field meanings beyond x/y are unconfirmed; the `_N` suffixes record the
+ *       bit position each one starts at.
+ */
+typedef struct
+{
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 unk0_0 : 3;
+            u32 unk0_3 : 4;
+            u32 x : 9;
+            u32 unk0_16 : 8;
+        } f;
+    } attr;
+    u32 unk4_0 : 1;
+    u32 y : 8;
+    u32 unk4_9 : 23;
+    void* handler;
+} GosubElement;
+
+/**
+ * @brief Set the top byte of an element's attr word.
+ *
+ * Must go through the whole word rather than an 8-bit bitfield: a bitfield
+ * assignment narrows to `sb` at offset 3, which is not what the game does.
+ *
+ * @param e Element to update.
+ * @param c New top-byte value. TODO: meaning unknown; observed 0xE8 and 0x08.
+ */
+#define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
+
+GosubElement* func_80143C04();
 
 /**
  * @brief Resolve the message-archive entry at @p off and hand it to func_80145CEC.
@@ -458,4 +507,86 @@ void func_8014020C(s32 arg0, s32 arg1)
         }
         break;
     }
+}
+
+/**
+ * @brief Build the three elements of the gosub screen entered by arm 9.
+ *
+ * Each element is allocated by func_80143C04, given its draw handler, and
+ * positioned. The first is centred horizontally against the current window
+ * width in D_8016B958 and stacked vertically by D_80170980 * D_8016B8D8; the
+ * other two sit at a fixed x with only their attr byte differing.
+ */
+void func_80140C18(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x38;
+    p->unk4_0 = 0;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0xE8);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80145EA4;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801460D0;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0xB0;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the three elements of the gosub screen entered by arm 10.
+ *
+ * Same layout as func_80140C18 - the first element is centred against the
+ * window width in D_8016B958 and stacked by D_80170980 * D_8016B8D8, the other
+ * two sit at a fixed x - but with a different set of draw handlers and attr
+ * bytes.
+ */
+void func_80140DDC(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x48;
+    p->unk4_0 = 0;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0xE8);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80145DF8;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0xB0;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801452F0;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x20;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
 }
