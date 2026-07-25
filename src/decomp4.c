@@ -400,11 +400,22 @@ typedef struct
     u16 unk9E;
 } ai_struct;
 
-typedef struct {
+typedef struct
+{
     u8* unk0;
     u8 pad1[0x64 - 0x4];
     u16 unk64;
 } argst1;
+
+typedef struct {
+    u8* unk0;                    /* 0x00 */
+    u8  pad_04[0x30];           /* 0x04 - 0x33 */
+    u32 unk34;                   /* 0x34 */
+    u8  pad_38[0x100 - 0x38];   /* 0x38 - 0xFF */
+    u32 unk100;                  /* 0x100 */
+    u8  pad_104[0x10E - 0x104]; /* 0x104 - 0x10D */
+    u16 unk10E;                  /* 0x10E */
+} SomeStruct;
 
 extern s16 D_8004D428[];
 
@@ -3034,4 +3045,30 @@ void func_8002C6B4(argst1* arg0)
         D_8004D428[0] = (s16)temp_a1;
     }
     g_akao_driver_flags.unk8 |= 0x10;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/gwBIb
+ */
+void func_8002C758(SomeStruct* arg0)
+{
+    u8* ptr;
+    u32 byte_val;
+    u32 new_unk100;
+    u32 new_unk34;
+    u16 new_unk10E;
+
+    ptr = arg0->unk0;
+    byte_val = *ptr;
+    arg0->unk0 = ptr + 1;
+
+    new_unk100 = arg0->unk100 | 0x900;
+    arg0->unk100 = new_unk100;
+
+    new_unk34 = arg0->unk34 | 0x01000000;
+
+    new_unk10E = (arg0->unk10E & 0x80FF) | ((u16)byte_val << 8);
+
+    arg0->unk34 = new_unk34;
+    arg0->unk10E = new_unk10E;
 }
