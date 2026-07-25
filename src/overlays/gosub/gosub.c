@@ -16,6 +16,7 @@ typedef unsigned short u16;
 typedef signed short s16;
 
 void func_80067F8C();    /* extern */
+void func_800A8B90();    /* extern */
 void func_800AA02C();    /* extern */
 void func_80140114(s32*); /* extern */
 void func_80140C18();    /* extern */
@@ -43,6 +44,8 @@ void func_80142C64();    /* extern */
 void func_80143054();    /* extern */
 void func_80143B64();    /* extern */
 void func_80145CEC();    /* extern */
+void func_80146468();    /* extern */
+void func_80146538();    /* extern */
 extern s32 D_8016B8C8;
 extern s32 D_8016B8CC;
 extern s32 D_8016B8E0;
@@ -82,8 +85,11 @@ extern u8 D_80145F80;
 extern u8 D_80146418;
 extern u8 D_80170960;
 extern s32 D_8016B8E8;
+extern u8 D_800EC3DA[];
 extern u32 D_8014F27C[];
 extern u32 D_8014F280[];
+extern u32 D_8014F294[];
+extern u8 D_8016B960[];
 extern u8 D_8016B5AC[];
 extern u8* D_80170994;
 
@@ -133,21 +139,29 @@ extern GosubElement D_80170998;
 GosubElement* func_80143C04();
 
 /**
- * @brief One row of the item list built by func_801416E0.
+ * @brief One row of the item list built by the gosub screen builders.
  *
- * @note Only the fields the builder touches are known; 0x10..0x1F is untouched
- *       here and left as unk10.
+ * The word at 0xC packs three signed bytes below a 4-bit row kind. The simple
+ * slot builders only ever write @c kind, but func_80141C3C uses all three
+ * bytes, so they are declared as byte-aligned 8-bit bitfields: writes narrow
+ * to @c sb and reads to @c lb, which is what the target does.
+ *
+ * @note Only the fields the builders touch are known; 0x10..0x1B is untouched
+ *       and left as unk10.
  */
 typedef struct
 {
     u8* name;
     u8* desc;
-    u16 value;
+    s16 value;
     u16 index;
-    u32 unkC_0 : 24;
-    u32 kind : 4;
-    u32 unkC_28 : 4;
-    u32 unk10[4];
+    s32 unkC : 8;
+    s32 unkD : 8;
+    s32 unkE : 8;
+    s32 kind : 4;
+    s32 unkC_28 : 4;
+    u32 unk10[3];
+    u32 unk1C;
 } GosubListEntry;
 
 extern GosubListEntry D_80170A58[];
@@ -995,4 +1009,59 @@ void func_80141B28(void)
     D_8016B958 = 0xE8;
     D_8016B950 = 0x84;
     D_80170994 = GOSUB_MSG_PTR(0x12);
+}
+
+/**
+ * @brief Build the equipment list for the gosub screen entered by arm 17.
+ *
+ * Unlike the slot builders above, every record produces a row: the count comes
+ * from D_8012271C[0x29D6] and each record is a packed word at
+ * D_8012271C[0x29DC + i * 4]. Three fields are unpacked out of it into the
+ * row's byte fields, and the row's name is composed into its own 0x50-byte
+ * scratch buffer in D_8016B960 -- the archive string, then optionally a
+ * separator and the decimal form of the unkC field appended after it.
+ *
+ * @note Bit 2 of unk1C is cleared only for records that are both unflagged at
+ *       bit 16 and have both low bits set; every other record sets it.
+ */
+void func_80141C3C(void)
+{
+    s32 i;
+    u8* buf;
+    u8 tmp[32];
+
+    for (i = 0; i < *(D_8012271C + 0x29D6); i++)
+    {
+        D_80170A58[i].unkE = *(D_8012271C + (i << 2) + 0x29DC) >> 2;
+        D_80170A58[i].unkC = (*(u32*)(D_8012271C + (i << 2) + 0x29DC) >> 8) & 0xF;
+        buf = D_8016B960 + i * 0x50;
+        func_80146538(buf, ARCHIVE_ENTRY(D_8014F294[0], D_80170A58[i].unkE));
+        if (D_80170A58[i].unkC != 0)
+        {
+            func_80146468(buf, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
+            func_800A8B90(tmp, D_80170A58[i].unkC, 1);
+            func_80146468(buf, tmp);
+        }
+        D_80170A58[i].name = buf;
+        D_80170A58[i].desc = ARCHIVE_ENTRY(D_8014F27C[7], D_80170A58[i].unkE);
+        D_80170A58[i].value = -2;
+        D_80170A58[i].unkD = (*(u32*)(D_8012271C + (i << 2) + 0x29DC) >> 12) & 0xF;
+        if (((*(u32*)(D_8012271C + (i << 2) + 0x29DC) >> 16) & 1) != 0 ||
+            (*(u32*)(D_8012271C + (i << 2) + 0x29DC) & 3) != 3)
+        {
+            D_80170A58[i].unk1C |= 4;
+        }
+        else
+        {
+            D_80170A58[i].unk1C &= ~4;
+        }
+        D_80170A58[i].index = i;
+        D_80170A58[i].kind = 4;
+    }
+    D_8016B8D4 = *(D_8012271C + 0x29D6);
+    D_8016B8D8 = 4;
+    D_80170980 = 0x20;
+    D_8016B958 = 0x120;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x18);
 }
