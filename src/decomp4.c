@@ -400,11 +400,32 @@ typedef struct
     u16 unk9E;
 } ai_struct;
 
-typedef struct {
+typedef struct
+{
     u8* unk0;
     u8 pad1[0x64 - 0x4];
     u16 unk64;
 } argst1;
+
+typedef struct
+{
+    u8* unk0;                  /* 0x00 */
+    u8 pad_04[0x30];           /* 0x04 - 0x33 */
+    u32 unk34;                 /* 0x34 */
+    u8 pad_38[0x100 - 0x38];   /* 0x38 - 0xFF */
+    u32 unk100;                /* 0x100 */
+    u8 pad_104[0x10E - 0x104]; /* 0x104 - 0x10D */
+    u16 unk10E;                /* 0x10E */
+} SomeStruct;
+
+typedef struct
+{
+    u8* unk0;
+    u8 pad1[0x100 - 0x4];
+    s32 unk100;
+    u8 pad2[0x10E - 0x104];
+    u16 unk10E;
+} s_8002C79C;
 
 extern s16 D_8004D428[];
 
@@ -3034,4 +3055,70 @@ void func_8002C6B4(argst1* arg0)
         D_8004D428[0] = (s16)temp_a1;
     }
     g_akao_driver_flags.unk8 |= 0x10;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/gwBIb
+ */
+void func_8002C758(SomeStruct* arg0)
+{
+    u8* ptr;
+    u32 byte_val;
+    u32 new_unk100;
+    u32 new_unk34;
+    u16 new_unk10E;
+
+    ptr = arg0->unk0;
+    byte_val = *ptr;
+    arg0->unk0 = ptr + 1;
+
+    new_unk100 = arg0->unk100 | 0x900;
+    arg0->unk100 = new_unk100;
+
+    new_unk34 = arg0->unk34 | 0x01000000;
+
+    new_unk10E = (arg0->unk10E & 0x80FF) | ((u16)byte_val << 8);
+
+    arg0->unk34 = new_unk34;
+    arg0->unk10E = new_unk10E;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ID5s7
+ */
+void func_8002C79C(s_8002C79C* arg0)
+{
+    u8* ptr;
+    u32 byte_val;
+    u32 new_unk100;
+    u16 new_unk10E;
+
+    ptr = arg0->unk0;
+    byte_val = *ptr;
+    arg0->unk0 = ptr + 1;
+
+    new_unk100 = arg0->unk100 | 0x1000;
+    new_unk10E = ((arg0->unk10E & 0xFF0F) | (byte_val * 0x10));
+
+    arg0->unk100 = new_unk100;
+    arg0->unk10E = new_unk10E;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ZOmaE
+ */
+void func_8002C7D0(s_8002C79C* arg0)
+{
+    u8* ptr;
+    u32 byte_val;
+    u32 new_unk100;
+    u16 new_unk10E;
+
+    ptr = arg0->unk0;
+    byte_val = *ptr;
+    arg0->unk0 = ptr + 1;
+    new_unk100 = arg0->unk100 | 0x8000;
+    new_unk10E = (arg0->unk10E & 0xFFF0) | byte_val;
+    arg0->unk100 = new_unk100;
+    arg0->unk10E = new_unk10E;
 }
