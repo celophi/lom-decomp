@@ -38,9 +38,10 @@ segments:
   - name: gosub
     type: decompress_overlay
     start: 0x1
-    vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
+    vram: 0x80140000 #This might be incorrect fix it later when we know the correct VRAM address
     subsegments:
       - [0x1, rodata, rodata]
-      - [0x81, c, unk1]
+      - [0x81, c, gosub]
+      - [0x20D, c, unk1]
       - [0x28D9, data, data]
   - [0x34A5D]
