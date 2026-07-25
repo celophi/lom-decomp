@@ -621,7 +621,12 @@ struct FieldAnim
     u8 _pad0[0xC - 8];
     FieldAnimCel *cels;   /* 0x0C */
     s32 unk10;            /* 0x10 */
-    u8 _pad1[0x20 - 0x14];
+    /** 0x14 last horizontal tween offset pushed to the target (see func_80057E88). */
+    s32 unk14;
+    /** 0x18 last vertical tween offset pushed to the target. */
+    s32 unk18;
+    /** 0x1C last depth tween offset pushed to the target. */
+    s32 unk1C;
     /** 0x20 base of the per-frame packed tile records. */
     u8 *frames;
     FieldAnimFlags flags; /* 0x24 */
@@ -3149,43 +3154,10 @@ void func_80057A28(FieldPart *part)
  * @param state Frame index into FieldAnim::frames.
  *
  * @note Built -G4 WITHOUT --expand-div, like the rest of field8.c.
- * @note `case 1:`/`case 6:` must be spelled out even though their bodies are
- *       empty. They make the case values contiguous 0-6, which is what gets gcc
- *       to emit jtbl_8004FD08; with only the five 12-byte formats listed it
- *       emits a compare tree instead (94.96%, -9 exact rows).
- * @note The two countdown loops must initialise and decrement in separate
- *       statements. Folding the copy count to `i = (stride >> 2) - 1` gives the
- *       shift its own pseudo, which is then loop-invariant and gets hoisted out
- *       of both enclosing loops - 19.59%, -69 exact rows. Written as two
- *       statements the shift lands directly in the counter, which is set again
- *       inside the loop and so cannot be hoisted. The same split on the
- *       row-skip counter is worth 2 rows.
- * @note `stride >> 2`, not `stride / 4`: the signed divide expands to
- *       srl/addu/sra (96.65%, +4 insns).
- * @note Both grid loops test `!=`, not `<`. `<` adds an slt per loop (98.68%).
- * @note The row-skip counter must REUSE `col`, which is dead on that path. A
- *       dedicated counter swaps the counter and the -1 compare constant between
- *       a1 and v1 (97.98%, -7 exact rows). Giving the copy loop its own
- *       variable, and reordering the declarations, both measured inert.
- * @note The in-range test is written positively with the copy in the `if` arm.
- *       Inverting it to `col < unkC || col >= unkC + unkE` and swapping the arms
- *       costs 6 exact rows (92.85%).
- * @note `anim->frame_tiles * stride * state` in that order; hoisting `stride`
- *       to the front swaps the first multiply's operands (99.92%).
- * @note Non-factors, measured: `return` vs `break` for the bottom-row exit, and
- *       `word = *mask++` vs `word = mask[0]; mask++;` - all four spellings are
- *       100%.
- * @note All 121 instructions match. Diffed inside field8.c the tool reports
- *       99.92%: the two `lui`/`addiu` that form the jump-table address relocate
- *       against a local `.rodata+0x38` label rather than the named
- *       jtbl_8004FD08, because field8.o now carries three jump tables while the
- *       overlay yaml still assigns that rodata range to `unk1`. The +0x38 is an
- *       isolated-object artifact too: .rodata is built 8-aligned here, so a pad
- *       word appears after the 5-entry jtbl_8004FCD4, whereas the real section
- *       base 0x8004FCD4 is 4 mod 8 and the three tables pack to +0x00/+0x14/
- *       +0x34 with no padding. Moving `[0x65, .rodata, unk1]` to
- *       `[0x65, .rodata, field8]` plus `[0xB9, .rodata, unk1]` is the pending
- *       fix; the function's own codegen is unaffected either way.
+ * @note The overlay yaml still assigns this function's jump table's rodata range
+ *       to `unk1`; `[0x65, .rodata, unk1]` needs to become
+ *       `[0x65, .rodata, field8]` plus `[0xB9, .rodata, unk1]` before
+ *       jtbl_8004FD08 links at the right address.
  */
 void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
 {
@@ -3286,5 +3258,197 @@ void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
                 }
             }
         }
+    }
+}
+
+/**
+ * @brief One entry of an animation's keyframe table (FieldAnimDef::unk14).
+ *
+ * The three signed deltas are the horizontal / vertical / depth offsets the
+ * keyframe ends on; they are scaled by the fraction of the keyframe elapsed so
+ * far. Only bit 15 of the trailing halfword is used.
+ */
+typedef struct
+{
+    /** 0x00 horizontal end offset. */
+    s16 unk0;
+    /** 0x02 vertical end offset. */
+    s16 unk2;
+    /** 0x04 depth end offset. */
+    s16 unk4;
+    /** 0x06 bit 15 is copied to the target's visibility flag. */
+    u16 unk6;
+} FieldTweenKey;
+
+/**
+ * @brief Count-table record returned by func_80059224.
+ *
+ * Only the duration is read here; func_80057CA4's caller uses the same halfword
+ * to reload FieldAnim::counter.
+ */
+typedef struct
+{
+    u8 _pad0[2];
+    /** 0x02 length of the keyframe this record covers, in frames. */
+    u16 unk2;
+} FieldTweenSpan;
+
+u8 *func_80059224(FieldAnimDef *, s32, volatile s8 *);
+void func_8005A984(FieldPart *, s32, s32);
+void func_8005AA68(FieldObj *, s32, s32);
+
+/**
+ * @brief Apply the current keyframe's tweened offsets to an animation's target.
+ *
+ * Resolves the keyframe indexed by FieldAnim::flags.b.state and the keyframe's
+ * duration (func_80059224), then interpolates each of the key's three offsets by
+ * the fraction of the keyframe already elapsed: `(elapsed * end << 8) / duration`.
+ *
+ * The target is FieldAnim::cels reinterpreted according to the definition's
+ * handler kind: kind 5 drives a FieldPart (offsets 0x28/0x2C/0x30, visibility
+ * byte 0x20), every other kind drives a FieldObj (offsets 0x1C/0x20/0x24,
+ * visibility bit 0 of the flags word).
+ *
+ * @param def    Animation definition; supplies the handler kind and keyframe table.
+ * @param anim   Animation node holding the frame state, counter and target.
+ * @param commit When zero the tweened values are only recorded on the node; when
+ *               non-zero the delta since the previous frame is also added to the
+ *               target and pushed through func_8005A984 / func_8005AA68. The
+ *               record is cleared instead of stored on the keyframe's last frame
+ *               (counter == 0), so the next keyframe starts from zero.
+ *
+ * @note The keyframe table is read through @c rec rather than @c def. Both hold
+ *       the same pointer, but folding the access onto @c def costs the match.
+ * @note @c obj and @c part must be cleared by two separate statements; the
+ *       chained @c obj = part = NULL form does not match.
+ * @note The handler kind is read as a whole word (@c *(s32 *) &def->unk4): the
+ *       byte access gcc emits for @c def->unk4 is an @c lbu, the target an @c lw.
+ *       Repeating the test at each of the four sites is also required - hoisting
+ *       it into a local reorders the blocks.
+ * @note @c unk6 must stay unsigned so the visibility bit comes out as @c srl 15.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_80057E88(FieldAnimDef *def, FieldAnim *anim, s32 commit)
+{
+    FieldAnimDef *rec;
+    FieldObj *obj;
+    FieldPart *part;
+    FieldTweenKey *key;
+    s32 duration;
+    s32 elapsed;
+    s32 value;
+    s32 delta;
+    volatile s8 base;
+
+    rec = def;
+    obj = NULL;
+    part = NULL;
+    if ((*(s32 *) &def->unk4 & 7) == 5)
+    {
+        part = (FieldPart *) anim->cels;
+    }
+    else
+    {
+        obj = (FieldObj *) anim->cels;
+    }
+    key = (FieldTweenKey *) (rec->unk14 + anim->flags.b.state * 8);
+    duration = ((FieldTweenSpan *) func_80059224(def, anim->flags.b.unk2, &base))->unk2;
+    if (duration == 0)
+    {
+        duration = 1;
+    }
+    elapsed = duration - anim->counter;
+    if ((*(s32 *) &def->unk4 & 7) == 5)
+    {
+        part->unk20 = key->unk6 >> 15;
+    }
+    else
+    {
+        obj->flags.word = (obj->flags.word & ~1) | (key->unk6 >> 15);
+    }
+
+    value = ((elapsed * key->unk0) << 8) / duration;
+    if (commit != 0)
+    {
+        delta = value - anim->unk14;
+        if ((*(s32 *) &def->unk4 & 7) == 5)
+        {
+            part->unk28 += delta;
+            func_8005A984(part, delta, 0);
+        }
+        else
+        {
+            obj->unk1C += delta;
+            func_8005AA68(obj, delta, 0);
+        }
+        if (anim->counter == 0)
+        {
+            anim->unk14 = 0;
+        }
+        else
+        {
+            anim->unk14 = value;
+        }
+    }
+    else
+    {
+        anim->unk14 = value;
+    }
+
+    value = ((elapsed * key->unk2) << 8) / duration;
+    if (commit != 0)
+    {
+        delta = value - anim->unk18;
+        if ((*(s32 *) &def->unk4 & 7) == 5)
+        {
+            part->unk2C += delta;
+            func_8005A984(part, delta, 1);
+        }
+        else
+        {
+            obj->unk20 += delta;
+            func_8005AA68(obj, delta, 1);
+        }
+        if (anim->counter == 0)
+        {
+            anim->unk18 = 0;
+        }
+        else
+        {
+            anim->unk18 = value;
+        }
+    }
+    else
+    {
+        anim->unk18 = value;
+    }
+
+    value = ((elapsed * key->unk4) << 8) / duration;
+    if (commit != 0)
+    {
+        delta = value - anim->unk1C;
+        if ((*(s32 *) &def->unk4 & 7) == 5)
+        {
+            part->unk30 += delta;
+            func_8005A984(part, delta, 2);
+        }
+        else
+        {
+            obj->unk24 += delta;
+            func_8005AA68(obj, delta, 2);
+        }
+        if (anim->counter == 0)
+        {
+            anim->unk1C = 0;
+        }
+        else
+        {
+            anim->unk1C = value;
+        }
+    }
+    else
+    {
+        anim->unk1C = value;
     }
 }
