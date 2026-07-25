@@ -82,6 +82,10 @@ extern u8 D_80145F80;
 extern u8 D_80146418;
 extern u8 D_80170960;
 extern s32 D_8016B8E8;
+extern u32 D_8014F27C[];
+extern u32 D_8014F280[];
+extern u8 D_8016B5AC[];
+extern u8* D_80170994;
 
 /**
  * @brief One entry in the gosub screen's element list, as handed out by
@@ -129,16 +133,60 @@ extern GosubElement D_80170998;
 GosubElement* func_80143C04();
 
 /**
- * @brief Resolve the message-archive entry at @p off and hand it to func_80145CEC.
+ * @brief One row of the item list built by func_801416E0.
  *
- * D_8014F29C is a self-relative offset word inside the archive header that
- * starts 0x20 bytes earlier; adding it to the header base yields the block
- * whose u16 at @p off is the entry's offset from that same base.
+ * @note Only the fields the builder touches are known; 0x10..0x1F is untouched
+ *       here and left as unk10.
+ */
+typedef struct
+{
+    u8* name;
+    u8* desc;
+    u16 value;
+    u16 index;
+    u32 unkC_0 : 24;
+    u32 kind : 4;
+    u32 unkC_28 : 4;
+    u32 unk10[4];
+} GosubListEntry;
+
+extern GosubListEntry D_80170A58[];
+
+/**
+ * @brief Resolve one entry of a text archive block.
+ *
+ * D_8014F27C heads a 13-word table of block offsets, each relative to the
+ * table itself. A block begins with a u16 per entry giving that entry's offset
+ * from the same table base, so a lookup is base + block + block[idx].
+ *
+ * @param blk Block offset word, e.g. D_8014F280[0] or D_8014F27C[12].
+ * @param idx Entry index within the block.
+ * @return Pointer to the entry.
+ * @note The term order matters: writing the base first is what produces the
+ *       target's accumulate chain (see idioms.md [EXPAND-14]).
+ */
+#define ARCHIVE_ENTRY(blk, idx) \
+    ((u8*)D_8014F27C + (blk) + *(u16*)((u8*)D_8014F27C + (blk) + (idx) * 2))
+
+/**
+ * @brief Resolve a message-archive entry at byte offset @p off.
+ *
+ * The same lookup as ARCHIVE_ENTRY against block 8, but spelled through
+ * D_8014F29C (which is that block's offset word) because that is the
+ * relocation the game's code carries; do not fold it into ARCHIVE_ENTRY.
+ *
+ * @param off Byte offset of the u16 entry index within the resolved block.
+ * @return Pointer to the entry.
+ */
+#define GOSUB_MSG_PTR(off) \
+    ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
+
+/**
+ * @brief Resolve the message-archive entry at @p off and hand it to func_80145CEC.
  *
  * @param off Byte offset of the u16 entry index within the resolved block.
  */
-#define GOSUB_MSG(off) \
-    func_80145CEC((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
+#define GOSUB_MSG(off) func_80145CEC(GOSUB_MSG_PTR(off))
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/qM81L
@@ -702,4 +750,110 @@ void func_801411E8(s32 arg0)
     p->unk4_0 = 1;
     p->y = 0x14;
     SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the three elements of the gosub screen entered by arm 11.
+ *
+ * Same layout as func_80141024, but the first element has its unk4_0 flag set
+ * rather than cleared and takes attr code 0x20 instead of 0xE8.
+ */
+void func_801413C0(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x28;
+    p->unk4_0 = 1;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0x20);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801460D0;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0xB0;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80146418;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the two elements of the gosub screens entered by arms 12-14 and
+ *        17-18.
+ *
+ * The shortest member of this family: no middle element, so only a header
+ * centred against D_8016B958 and a footer at a fixed x.
+ */
+void func_80141580(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x30;
+    p->unk4_0 = 1;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0x18);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80146418;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the item list for the gosub screen entered by arm 15.
+ *
+ * Walks the player's item slots at D_8012271C[0x25E0 + 0x60 .. 0x84] and emits
+ * one D_80170A58 row per non-empty slot, resolving the item's two archive
+ * strings, recording the slot's count and index, and tagging the row kind. The
+ * number of rows lands in D_8016B8D4, and the screen's title message pointer in
+ * D_80170994.
+ */
+void func_801416E0(void)
+{
+    s32 i;
+    s32 count;
+
+    count = 0;
+    for (i = 0x60; i < 0x85; i++)
+    {
+        if (*(D_8012271C + i + 0x25E0) != 0)
+        {
+            GosubListEntry* e = &D_80170A58[count];
+            e->name = ARCHIVE_ENTRY(D_8014F280[0], i);
+            e->desc = ARCHIVE_ENTRY(D_8014F27C[12], D_8016B5AC[i]);
+            e->value = *(D_8012271C + i + 0x25E0);
+            e->kind = 4;
+            e->index = i;
+            count++;
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 8;
+    D_80170980 = 0x10;
+    D_8016B958 = 0xE8;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x3A);
 }
