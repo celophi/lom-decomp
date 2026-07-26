@@ -4,41 +4,14 @@
 #include "akao.h"
 #include "akao_cmd.h"
 #include "display.h"
+#include "pad.h"
+#include "tim.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libetc.h"
 
 /**
- * @brief Describes the palette section of a staged image resource.
- *
- * The palette data is stored inline. @c pixel_data_offset locates the
- * following pixel-data section relative to its own field.
- */
-typedef struct
-{
-    u8 padding_0[8];
-    u32 pixel_data_offset;
-    u8 padding_1[4];
-    u16 width;
-    u16 height;
-    u_long clut_data;
-} ClutSectionHeader;
-
-/**
- * @brief Describes the pixel section of a staged image resource.
- *
- * The image dimensions are followed by the inline pixel data.
- */
-typedef struct
-{
-    u8 padding[8];
-    u16 width;
-    u16 height;
-    u_long pixel_data;
-} PixelDataHeader;
-
-/**
- * @brief VRAM destinations for an image's pixel and palette data.
+ * @brief VRAM destinations for a TIM's pixel and palette data.
  */
 typedef struct
 {
@@ -46,20 +19,21 @@ typedef struct
     u16 pixel_y;
     u16 clut_x;
     u16 clut_y;
-} VramDstCoords;
+} TimUploadDestinations;
 
 /**
- * @brief Holds a staged sequence for the AKAO audio driver.
+ * @brief Holds SFX table data consumed by the AKAO audio driver.
  *
- * @c payload_offset identifies populated data and locates the sequence payload.
+ * @c active_table_offset identifies populated data and locates the active SFX
+ * table in @c table_data.
  */
 typedef struct
 {
-    u32 payload_offset;
+    u32 active_table_offset;
     u32 reserved_0;
     u32 reserved_1;
-    u8 payload[1];
-} AudioDataBlock;
+    u8 table_data[1];
+} SfxTableBuffer;
 
 /**
  * @brief One half of the Game Over screen's double-buffered frame.
@@ -78,16 +52,16 @@ typedef struct GoverFrameHalf
 } GoverFrameHalf;
 
 /* Audio helpers used while presenting the Game Over screen. */
-extern s32 func_800A368C(s32, s32);             /* Starts music from a resource. */
-extern s32 func_800A380C(void);                  /* Applies pending music state. */
-extern s32 func_800A39A8(s32, s32, s32, s32);  /* Plays the staged audio clip. */
+extern s32 func_800A368C(s32 music_index, s32 destination_index); /* Loads and registers a music sequence. */
+extern s32 func_800A380C(void);                                  /* Starts the registered music sequence. */
+extern s32 func_800A39A8(s32 sfx_index, s32 volume, s32 unused, s32 channel_group); /* Plays a staged SFX. */
 
 /** @brief AKAO music volume applied by func_800A380C. */
 extern s32 g_akao_music_volume;
 
 extern u32 g_scene_mode;
 extern s32 g_pending_game_state;
-extern AudioDataBlock g_audio_data;
+extern SfxTableBuffer g_sfx_table_buffer;
 extern void cdrom_queue_read(s32 resource_index, void* destination);
 
 /** Accesses a half of the contiguous double-buffered frame. */
@@ -96,22 +70,22 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
 #define GOVER_CLUT_Y 480
 
-/** Base CD resource for Game Over audio clips. */
-#define GOVER_AUDIO_RESOURCE_BASE 81
+/** Base CD resource for Game Over SFX banks. */
+#define GOVER_SFX_RESOURCE_BASE 81
 
-/** Leaves the staged audio block unchanged. */
-#define GOVER_AUDIO_CLIP_NONE (-2)
+/** Reuses the currently staged SFX bank. */
+#define GOVER_SFX_BANK_REUSE (-2)
 
-/** Clears the staged audio block without loading a replacement. */
-#define GOVER_AUDIO_CLIP_CLEAR (-1)
+/** Disables Game Over SFX playback. */
+#define GOVER_SFX_DISABLED (-1)
 
-/** RAM staging address used to load audio clip data from CD. */
-#define GOVER_AUDIO_LOAD_ADDR 0x80180000
+/** RAM staging address used to load an SFX resource from CD. */
+#define GOVER_SFX_LOAD_ADDR 0x80180000
 
 /** Base CD resource for the Game Over image. */
 #define GOVER_IMAGE_RESOURCE_BASE 0xFFC
 
-/** Maximum AKAO volume level (7-bit MIDI-style volume). */
+/** Maximum 7-bit AKAO volume level. */
 #define AKAO_VOLUME_MAX 0x7F
 
 /** Fade level representing full brightness. */
@@ -120,11 +94,11 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 /** Per-frame fade increment. */
 #define GOVER_FADE_STEP 4
 
-/** Buttons that dismiss the screen after the fade-in completes. */
-#define GOVER_DISMISS_BUTTON_MASK 0x260
+/** Cross, Circle, and L3 dismiss the screen. */
+#define GOVER_DISMISS_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_L3)
 
-/** Locates sequence data within the staged audio resource. */
-#define GOVER_AUDIO_DATA_OFFSET (*(u32*)(GOVER_AUDIO_LOAD_ADDR + 4))
+/** Locates the SFX table within the staged resource. */
+#define GOVER_SFX_TABLE_OFFSET (*(u32*)(GOVER_SFX_LOAD_ADDR + 4))
 
 const s32 g_gover_overlay_id = 10;
 s32 D_80140704;
@@ -136,9 +110,9 @@ u8 g_gover_frame_header[0x90];
 u8 g_gover_frame_tail[0x8A8];
 s32 g_fade_level;
 
-static void gover_load_audio_clip(s32 audio_clip_index);
-static u32 gover_upload_image_to_vram(ClutSectionHeader* image, VramDstCoords* destinations);
-static void gover_load_image_from_cd(s32 cd_resource_index, VramDstCoords* destinations, u32 ram_buffer);
+static void gover_load_sfx_bank(s32 sfx_bank_index);
+static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations);
+static void gover_load_image_from_cd(s32 cd_resource_index, TimUploadDestinations* destinations, u32 ram_buffer);
 static void gover_build_otag(unsigned char* frame_buffer);
 static void gover_run(void);
 
@@ -149,14 +123,15 @@ static void gover_run(void);
  * the requested audio, and runs the fade sequence.
  *
  * @param cd_load_address      RAM staging address for the image resource.
- * @param image_resource_index Game Over image resource index.
- * @param music_resource_index Music resource index, or -1 to skip music.
- * @param audio_clip_index     Audio clip index, or -1 to skip playback.
+ * @param image_index          Game Over image index.
+ * @param music_index          Music index, or -1 to skip music.
+ * @param sfx_bank_index       SFX bank index, -1 to skip playback, or -2 to
+ *                             reuse the currently staged bank.
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/1qYnn
  */
 void gover_show_screen(
-    s32 cd_load_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index)
+    s32 cd_load_address, s32 image_index, s32 music_index, s32 sfx_bank_index)
 {
     RECT vram_rect;
     u8* frame_tail;
@@ -206,21 +181,21 @@ void gover_show_screen(
     vram_rect.h = GOVER_CLUT_Y;
 
     gover_load_image_from_cd(
-        image_resource_index + GOVER_IMAGE_RESOURCE_BASE, (VramDstCoords*)(&vram_rect), cd_load_address);
+        image_index + GOVER_IMAGE_RESOURCE_BASE, (TimUploadDestinations*)(&vram_rect), cd_load_address);
 
     akao_cmd_f0();
     akao_cmd_f1();
     akao_cmd_a8(AKAO_VOLUME_MAX);
 
-    if (audio_clip_index != GOVER_AUDIO_CLIP_CLEAR)
+    if (sfx_bank_index != GOVER_SFX_DISABLED)
     {
-        gover_load_audio_clip(audio_clip_index);
+        gover_load_sfx_bank(sfx_bank_index);
         func_800A39A8(0, 0x80, 0, 0);
     }
 
-    if (music_resource_index != -1)
+    if (music_index != -1)
     {
-        func_800A368C(music_resource_index, 0);
+        func_800A368C(music_index, 0);
         g_akao_music_volume = AKAO_VOLUME_MAX;
         func_800A380C();
         akao_cmd_c0(0, AKAO_VOLUME_MAX);
@@ -391,99 +366,100 @@ static void gover_build_otag(unsigned char* frame_buffer)
  * @brief Reads a CD image resource into RAM, then uploads it to VRAM.
  *
  * @param cd_resource_index CD resource index.
- * @param destinations      VRAM destinations for the palette and pixel data.
+ * @param destinations      VRAM destinations for the TIM blocks.
  * @param ram_buffer        RAM staging address for the resource.
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/OafFK
  */
-static void gover_load_image_from_cd(s32 cd_resource_index, VramDstCoords* destinations, u32 ram_buffer)
+static void gover_load_image_from_cd(s32 cd_resource_index, TimUploadDestinations* destinations, u32 ram_buffer)
 {
     volatile u8 padding[8];
 
     cdrom_queue_read(cd_resource_index & 0xFFFF, (void*)ram_buffer);
     cdrom_wait_queue_empty();
-    gover_upload_image_to_vram((ClutSectionHeader*)ram_buffer, destinations);
+    gover_upload_image_to_vram((Tim*)ram_buffer, destinations);
 }
 
 /**
- * @brief Uploads a staged image's palette and pixel data to VRAM.
+ * @brief Uploads a staged 8bpp TIM to VRAM.
  *
- * @param image        Staged image resource.
+ * @param tim          Staged TIM resource.
  * @param destinations VRAM destinations for the palette and pixel data.
- * @return Pixel width rounded up to a texture-page boundary.
+ * @return Pixel-block width in 16-bit VRAM words, rounded up to a 64-word
+ *         texture-page boundary.
  * @see decomp.me (100%) https://decomp.me/scratch/BEM7D
  */
-static u32 gover_upload_image_to_vram(ClutSectionHeader* image, VramDstCoords* destinations)
+static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations)
 {
     RECT upload_rect;
-    PixelDataHeader* pixel_header;
-    u32 pixel_section_offset = image->pixel_data_offset;
+    TimBlock* pixel_block;
+    u32 clut_block_length = tim->clut_block.bnum;
 
     upload_rect.x = destinations->clut_x;
     upload_rect.y = destinations->clut_y;
-    upload_rect.w = image->width * image->height;
+    upload_rect.w = tim->clut_block.w * tim->clut_block.h;
     upload_rect.h = 1;
-    LoadImage(&upload_rect, &image->clut_data);
+    LoadImage(&upload_rect, tim->clut_data);
 
-    // Locate the pixel section that follows the variable-length palette.
-    pixel_header = (PixelDataHeader*)((u8*)image + 8 + pixel_section_offset);
+    // Locate the pixel block that follows the variable-length CLUT block.
+    pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
 
     upload_rect.x = destinations->pixel_x;
     upload_rect.y = destinations->pixel_y;
-    upload_rect.w = pixel_header->width;
-    upload_rect.h = pixel_header->height;
-    LoadImage(&upload_rect, &pixel_header->pixel_data);
+    upload_rect.w = pixel_block->w;
+    upload_rect.h = pixel_block->h;
+    LoadImage(&upload_rect, pixel_block + 1);
 
-    return ALIGN64(pixel_header->width);
+    return ALIGN64(pixel_block->w);
 }
 
 /**
- * @brief Loads and plays a Game Over audio clip.
+ * @brief Loads and registers a Game Over SFX bank.
  *
- * Clears the current staged block, reads the selected resource, copies its
- * driver data, and submits the contained AKAO sequence.
+ * Clears the staged bank, reads the selected resource, copies its SFX table,
+ * and submits the accompanying AKAO program to the driver.
  *
- * @param audio_clip_index Clip index, GOVER_AUDIO_CLIP_CLEAR to clear the
- *                         staged block, or GOVER_AUDIO_CLIP_NONE to leave it.
+ * @param sfx_bank_index Bank index, GOVER_SFX_DISABLED to clear the staged
+ *                       bank, or GOVER_SFX_BANK_REUSE to leave it unchanged.
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/G5r92
  */
-static void gover_load_audio_clip(s32 audio_clip_index)
+static void gover_load_sfx_bank(s32 sfx_bank_index)
 {
-    AkaoSeqHeader* sequence;
-    u8* destination;
-    u8* source;
-    s32* offset_table;
+    AkaoSeqHeader* akao_program;
+    u8* table_destination;
+    u8* table_source;
+    s32* sfx_table;
 
-    if (audio_clip_index == GOVER_AUDIO_CLIP_NONE)
+    if (sfx_bank_index == GOVER_SFX_BANK_REUSE)
     {
         return;
     }
 
-    g_audio_data.reserved_1 = 0;
-    g_audio_data.reserved_0 = 0;
-    g_audio_data.payload_offset = 0;
+    g_sfx_table_buffer.reserved_1 = 0;
+    g_sfx_table_buffer.reserved_0 = 0;
+    g_sfx_table_buffer.active_table_offset = 0;
 
-    if (audio_clip_index == GOVER_AUDIO_CLIP_CLEAR)
+    if (sfx_bank_index == GOVER_SFX_DISABLED)
     {
         return;
     }
 
-    // Load the clip and find its sequence through the resource's offset table.
-    cdrom_queue_read((audio_clip_index + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
+    // Load the resource and locate its first SFX table.
+    cdrom_queue_read((sfx_bank_index + GOVER_SFX_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_SFX_LOAD_ADDR);
     cdrom_wait_queue_empty();
-    g_audio_data.payload_offset = 0xC;
+    g_sfx_table_buffer.active_table_offset = 0xC;
 
-    source = (u8*)(GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
-    offset_table = (s32*)source;
-    sequence = (AkaoSeqHeader*)(source + ((u32)offset_table[*offset_table]));
-    destination = ((u8*)(&g_audio_data)) + 12;
+    table_source = (u8*)(GOVER_SFX_LOAD_ADDR + GOVER_SFX_TABLE_OFFSET);
+    sfx_table = (s32*)table_source;
+    akao_program = (AkaoSeqHeader*)(table_source + ((u32)sfx_table[*sfx_table]));
+    table_destination = g_sfx_table_buffer.table_data;
 
-    // Preserve the driver data that precedes the sequence.
-    while (source != (u8*)sequence)
+    // Preserve the SFX table that precedes the AKAO program.
+    while (table_source != (u8*)akao_program)
     {
-        *(destination++) = *(source++);
+        *(table_destination++) = *(table_source++);
     }
 
-    akao_play_sequence_blocking(sequence, 1);
+    akao_play_sequence_blocking(akao_program, 1);
 }
