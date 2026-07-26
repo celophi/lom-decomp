@@ -32,12 +32,12 @@ void func_80141A14();    /* extern */
 void func_80141B28();    /* extern */
 void func_80141C3C();    /* extern */
 void func_80141ED8();    /* extern */
-void func_8014229C();    /* extern */
-void func_80142398();    /* extern */
-void func_80142400();    /* extern */
-void func_80142460();    /* extern */
-void func_80142610();    /* extern */
-void func_80142820();    /* extern */
+s32 func_8014229C();    /* extern */
+s32 func_80142398();    /* extern */
+s32 func_80142400();    /* extern */
+s32 func_80142460();    /* extern */
+s32 func_80142610();    /* extern */
+s32 func_80142820();    /* extern */
 void func_8014289C();    /* extern */
 void func_80142B98();    /* extern */
 void func_80142C64();    /* extern */
@@ -74,6 +74,10 @@ extern s32 D_8016B900;
 extern s32 D_8016B950;
 extern void* D_8016B954;
 extern s32 D_8016B958;
+extern s32 D_8016B95C;
+extern u8 D_8016B94C[2];
+extern s32 D_8016B908[];
+extern s32 D_801229B0[];
 extern s32 D_8017097C;
 extern s32 D_80170980;
 extern u8 D_801448EC;
@@ -144,24 +148,44 @@ GosubElement* func_80143C04();
  * The word at 0xC packs three signed bytes below a 4-bit row kind. The simple
  * slot builders only ever write @c kind, but func_80141C3C uses all three
  * bytes, so they are declared as byte-aligned 8-bit bitfields: writes narrow
- * to @c sb and reads to @c lb, which is what the target does.
+ * to @c sb and reads to @c lb, which is what the target does. The top nibble
+ * @c unkC_28 is unsigned: func_80142610 reads it with a plain @c srl, where a
+ * signed field would sign-extend.
  *
- * @note Only the fields the builders touch are known; 0x10..0x1B is untouched
- *       and left as unk10.
+ * The word at 0x1C is a flag set. Most builders write single bits through the
+ * @c f bitfields, but func_80141ED8 tests bit 0 through the @c half alias and
+ * func_80141C3C rewrites bit 2 through @c word, so all three views are exposed
+ * as a union; each spelling is the access width the game's code uses.
+ *
+ * @note Only the fields the builders touch are known; 0x10..0x1B is a block of
+ *       u16s copied verbatim out of the source record.
  */
 typedef struct
 {
     u8* name;
     u8* desc;
     s16 value;
-    u16 index;
+    s16 index;
     s32 unkC : 8;
     s32 unkD : 8;
     s32 unkE : 8;
     s32 kind : 4;
-    s32 unkC_28 : 4;
-    u32 unk10[3];
-    u32 unk1C;
+    u32 unkC_28 : 4;
+    u16 unk10;
+    u16 unk12[4];
+    u16 unk1A;
+    union
+    {
+        struct
+        {
+            u32 flag0 : 1;
+            u32 flag1 : 1;
+            u32 flag2 : 1;
+            u32 unk1C_3 : 29;
+        } f;
+        u16 half;
+        u32 word;
+    } flags;
 } GosubListEntry;
 
 extern GosubListEntry D_80170A58[];
@@ -1021,7 +1045,7 @@ void func_80141B28(void)
  * scratch buffer in D_8016B960 -- the archive string, then optionally a
  * separator and the decimal form of the unkC field appended after it.
  *
- * @note Bit 2 of unk1C is cleared only for records that are both unflagged at
+ * @note Bit 2 of the flag word is cleared only for records that are both unflagged at
  *       bit 16 and have both low bits set; every other record sets it.
  */
 void func_80141C3C(void)
@@ -1049,11 +1073,11 @@ void func_80141C3C(void)
         if (((*(u32*)(D_8012271C + (i << 2) + 0x29DC) >> 16) & 1) != 0 ||
             (*(u32*)(D_8012271C + (i << 2) + 0x29DC) & 3) != 3)
         {
-            D_80170A58[i].unk1C |= 4;
+            D_80170A58[i].flags.word |= 4;
         }
         else
         {
-            D_80170A58[i].unk1C &= ~4;
+            D_80170A58[i].flags.word &= ~4;
         }
         D_80170A58[i].index = i;
         D_80170A58[i].kind = 4;
@@ -1064,4 +1088,388 @@ void func_80141C3C(void)
     D_8016B958 = 0x120;
     D_8016B950 = 0x84;
     D_80170994 = GOSUB_MSG_PTR(0x18);
+}
+
+/**
+ * @brief Build the party/character list for the gosub screen entered by arm 18.
+ *
+ * Two record sources feed the same D_80170A58 row array, and @p mode selects
+ * which of them contribute: mode 1 suppresses the first block, mode 2
+ * suppresses the second, and any other value emits both back to back.
+ *
+ * The first block walks the three kind bytes at D_8012271C[0x29D8]. A byte
+ * below 3 selects a 332-byte record at D_8012271C[0x2B0C], whose name string,
+ * two packed bytes and five u16s are copied into the row; the row is marked
+ * current when the kind matches the selection byte at D_8012271C[0x29D7]. In
+ * mode 0 the row's index keeps only bit 7 of the kind instead of the kind
+ * itself.
+ *
+ * The second block walks five 0x60-byte slots at D_8012271C[0x2EF4], skipping
+ * any whose first byte (the name string's first character) is zero. Each row
+ * takes its name straight from the slot and its unkC/unkD from the slot's byte
+ * fields, unless bit 31 of the slot word at +0x44 is set: those rows bias unkC
+ * by 0x48 and derive unkD from three ranges of the u16 at +0x42. The row is
+ * marked current when the slot index matches the selection word at
+ * D_8012271C[0x2EF0].
+ *
+ * @param mode Which blocks to emit: 1 = second only, 2 = first only, otherwise
+ *             both. Also picks the screen's title message.
+ * @note @c tmp is reserved but never written; the sibling builders use their
+ *       scratch buffer to compose names, and this one has nothing to compose.
+ */
+void func_80141ED8(s32 mode)
+{
+    s32 i;
+    s32 j;
+    s32 count;
+    s32 kind;
+    s32 off;
+    s32 slot;
+    s32 reload_off;
+    u8 tmp[32];
+
+    count = 0;
+    if (mode != 1)
+    {
+        for (i = 0; i < 3; i++)
+        {
+            kind = *(D_8012271C + i + 0x29D8);
+            if (kind < 3)
+            {
+                if (mode == 0)
+                {
+                    D_80170A58[count].index = kind & 0x80;
+                }
+                else
+                {
+                    D_80170A58[count].index = kind;
+                }
+                D_80170A58[count].value = -3;
+                D_80170A58[count].flags.f.flag2 = 0;
+                if (*(s8*)(D_8012271C + 0x29D7) == kind)
+                {
+                    D_80170A58[count].unkE = 1;
+                }
+                else
+                {
+                    D_80170A58[count].unkE = 0;
+                }
+                D_80170A58[count].flags.f.flag0 = 0;
+                D_80170A58[count].flags.f.flag1 = 0;
+                D_80170A58[count].kind = 4;
+                off = kind * 332;
+                D_80170A58[count].name = D_8012271C + 0x2B0C + off;
+                D_80170A58[count].unkC = *(D_8012271C + off + 0x2B50) & 0xF;
+                D_80170A58[count].unkD = *(D_8012271C + off + 0x2B54);
+                D_80170A58[count].unk10 = *(u16*)(D_8012271C + off + 0x2B24);
+                for (j = 0; j < 4; j++)
+                {
+                    D_80170A58[count].unk12[j] = *(u16*)(D_8012271C + off + 0x2B26 + j * 2);
+                }
+                reload_off = kind * 332;
+                D_80170A58[count].unk1A = *(u16*)(D_8012271C + reload_off + 0x2B22);
+                count++;
+            }
+        }
+    }
+    if (mode != 2)
+    {
+        for (slot = 0; slot < 5; slot++)
+        {
+            off = slot * 0x60;
+            if (*(D_8012271C + off + 0x2EF4) != 0)
+            {
+                D_80170A58[count].index = slot;
+                D_80170A58[count].value = -3;
+                D_80170A58[count].flags.f.flag2 = 1;
+                if (*(s32*)(D_8012271C + 0x2EF0) == slot)
+                {
+                    D_80170A58[count].unkE = 1;
+                }
+                else
+                {
+                    D_80170A58[count].unkE = 0;
+                }
+                D_80170A58[count].kind = 4;
+                D_80170A58[count].name = D_8012271C + 0x2EF4 + slot * 0x60;
+                D_80170A58[count].unkC = *(D_8012271C + off + 0x2F09);
+                D_80170A58[count].unk10 = *(u16*)(D_8012271C + off + 0x2F12);
+                D_80170A58[count].flags.f.flag0 = *(u32*)(D_8012271C + off + 0x2F38) >> 31;
+                D_80170A58[count].flags.f.flag1 = (*(u32*)(D_8012271C + off + 0x2F38) >> 30) & 1;
+                D_80170A58[count].unkD = *(D_8012271C + off + 0x2F0C);
+                if (D_80170A58[count].flags.half & 1)
+                {
+                    D_80170A58[count].unkC = *(D_8012271C + off + 0x2F0A) + 0x48;
+                    if (*(u16*)(D_8012271C + off + 0x2F36) < 6)
+                    {
+                        D_80170A58[count].unkD = 0;
+                    }
+                    else if (*(u16*)(D_8012271C + off + 0x2F36) < 0x1F)
+                    {
+                        D_80170A58[count].unkD = 1;
+                    }
+                    else
+                    {
+                        D_80170A58[count].unkD = 2;
+                    }
+                }
+                for (j = 0; j < 4; j++)
+                {
+                    D_80170A58[count].unk12[j] = *(u16*)(D_8012271C + off + 0x2F14 + j * 2);
+                }
+                reload_off = slot * 0x60;
+                D_80170A58[count].unk1A = *(u16*)(D_8012271C + reload_off + 0x2F10);
+                count++;
+            }
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 3;
+    D_80170980 = 0x30;
+    D_8016B958 = 0x120;
+    D_8016B950 = 0x94;
+    D_80170994 = GOSUB_MSG_PTR(mode * 2 + 0x2C);
+}
+
+/**
+ * @brief Confirm the currently highlighted row of the gosub list.
+ *
+ * Rows carrying either of the two low flag bits cannot be picked: each shows
+ * its own refusal message, clears D_80170960 to close the picker and raises
+ * D_8016B95C, then reports failure. Otherwise, and only while D_80170960 is
+ * still set, the row is appended to the running selection: its index goes to
+ * D_801229B0 and the row number itself to D_8016B908, both keyed by the shared
+ * write cursor D_801228F0.
+ *
+ * @return 0 if the row was rejected by a flag, 1 otherwise. Note that 1 is also
+ *         returned when D_80170960 is clear and nothing was appended.
+ */
+s32 func_8014229C(void)
+{
+    s32 row;
+    GosubListEntry* list;
+    GosubListEntry* e;
+
+    list = D_80170A58;
+    row = D_8016B8D0;
+    e = &list[row];
+    if (e->flags.half & 1)
+    {
+        GOSUB_MSG(0x42);
+        D_80170960 = 0;
+        D_8016B95C = 1;
+        return 0;
+    }
+    if (e->flags.f.flag1)
+    {
+        GOSUB_MSG(0x50);
+        D_80170960 = 0;
+        D_8016B95C = 1;
+        return 0;
+    }
+    if (D_80170960 != 0)
+    {
+        D_801229B0[D_801228F0] = e->index;
+        D_8016B908[D_801228F0] = row;
+        D_801228F0++;
+    }
+    return 1;
+}
+
+/**
+ * @brief Append the highlighted row to the selection, with no flag checks.
+ *
+ * The unconditional counterpart to func_8014229C: the same append -- row index
+ * to D_801229B0, row number to D_8016B908, both keyed by the shared write
+ * cursor D_801228F0 -- but no refusal messages, so any row may be picked. It is
+ * the handler D_8016B954 is pointed at for the plain list screens.
+ *
+ * @return Always 1. Nothing is appended while D_80170960 is clear.
+ */
+s32 func_80142398(void)
+{
+    s32 n;
+
+    if (D_80170960 != 0)
+    {
+        n = D_801228F0;
+        D_801228F0 = n + 1;
+        D_801229B0[n] = D_80170A58[D_8016B8D0].index;
+        D_8016B908[n] = D_8016B8D0;
+    }
+    return 1;
+}
+
+/**
+ * @brief Close the picker, or hand off to func_80142820 while it is busy.
+ *
+ * Runs only while the picker is open (D_80170960 non-zero). If D_8017097C is
+ * still set the work is delegated to func_80142820 and its result passed
+ * straight back; otherwise the picker state is stepped from 2 down to 1 and the
+ * caller is told nothing happened.
+ *
+ * @return func_80142820's result while D_8017097C is set, 0 on every other path.
+ */
+s32 func_80142400(void)
+{
+    if (D_80170960 != 0)
+    {
+        if (D_8017097C == 0)
+        {
+            if (D_80170960 == 2)
+            {
+                D_80170960 = 1;
+            }
+            return 0;
+        }
+        return func_80142820();
+    }
+    return 0;
+}
+
+/**
+ * @brief Commit a pending row move by swapping the two marked rows.
+ *
+ * Runs only in picker state 2. D_8016B94C holds the pair being reordered --
+ * [0] is the row the move started on and [1] is where it was dropped. If they
+ * differ, three things are exchanged: the rows' 4-byte records in the
+ * D_8012271C[0x29DC] table (keyed by each row's index), the D_80170A58 rows
+ * themselves, and finally the index fields, which must stay with the slot
+ * rather than travel with the row. The picker is then closed.
+ *
+ * Dropping a row onto itself is not a move: func_801458A4 is rung instead and
+ * the picker falls back to state 1.
+ *
+ * @return Always 0.
+ */
+s32 func_80142460(void)
+{
+    GosubListEntry entry_tmp;
+    u32 rec_tmp;
+    s32 tmp;
+
+    if (D_80170960 == 0)
+    {
+        return 0;
+    }
+    if (D_80170960 != 2)
+    {
+        return 0;
+    }
+    if (D_8016B94C[0] != D_8016B94C[1])
+    {
+        func_80146AA8(&rec_tmp, D_8012271C + (D_80170A58[D_8016B94C[0]].index * 4 + 0x29DC));
+        func_80146AA8(D_8012271C + (D_80170A58[D_8016B94C[0]].index * 4 + 0x29DC),
+                      D_8012271C + (D_80170A58[D_8016B94C[1]].index * 4 + 0x29DC));
+        func_80146AA8(D_8012271C + (D_80170A58[D_8016B94C[1]].index * 4 + 0x29DC), &rec_tmp);
+        func_80146AD0(&entry_tmp, &D_80170A58[D_8016B94C[0]]);
+        func_80146AD0(&D_80170A58[D_8016B94C[0]], &D_80170A58[D_8016B94C[1]]);
+        func_80146AD0(&D_80170A58[D_8016B94C[1]], &entry_tmp);
+        tmp = D_80170A58[D_8016B94C[0]].index;
+        D_80170A58[D_8016B94C[0]].index = D_80170A58[D_8016B94C[1]].index;
+        D_80170A58[D_8016B94C[1]].index = tmp;
+        D_80170960 = 0;
+    }
+    else
+    {
+        func_801458A4();
+        D_80170960 = 1;
+    }
+    return 0;
+}
+
+/**
+ * @brief Recompute every row's kind for the current pick, and report when the
+ *        selection is complete.
+ *
+ * Runs in four passes. The first resets all D_8016B8D4 rows to kind 4. The
+ * second walks the D_80170960 entries already picked in D_8016B94C and tallies
+ * them by their rows' top nibble: unmarked rows into @c open_count, marked rows
+ * into @c marked_count. The remaining two passes promote candidate rows to kind
+ * 5 -- unmarked ones once anything unmarked has been picked, marked ones once
+ * exactly three marked rows have been -- with func_80142C18 deciding whether an
+ * individual row qualifies.
+ *
+ * @return 1 when both conditions hold, in which case func_80142B98 is rung to
+ *         announce the completed selection; 0 otherwise.
+ */
+s32 func_80142610(void)
+{
+    s32 i;
+    s32 open_count;
+    s32 marked_count;
+
+    for (i = 0; i < D_8016B8D4; i++)
+    {
+        D_80170A58[i].kind = 4;
+    }
+    open_count = 0;
+    marked_count = 0;
+    for (i = 0; i < D_80170960; i++)
+    {
+        if (D_80170A58[D_8016B94C[i]].unkC_28 == 0)
+        {
+            open_count++;
+        }
+        else
+        {
+            marked_count++;
+        }
+    }
+    if (open_count != 0)
+    {
+        for (i = 0; i < D_8016B8D4; i++)
+        {
+            if (D_80170A58[i].unkC_28 == 0 && func_80142C18(i) != 0)
+            {
+                D_80170A58[i].kind = 5;
+            }
+        }
+    }
+    if (marked_count == 3)
+    {
+        for (i = 0; i < D_8016B8D4; i++)
+        {
+            if (D_80170A58[i].unkC_28 != 0 && func_80142C18(i) != 0)
+            {
+                D_80170A58[i].kind = 5;
+            }
+        }
+    }
+    if (open_count != 0)
+    {
+        if (marked_count == 3)
+        {
+            func_80142B98();
+            return 1;
+        }
+        return 0;
+    }
+    return 0;
+}
+
+/**
+ * @brief Publish the picked rows' indices as the screen's result.
+ *
+ * Only acts in picker state 2. The number of entries picked so far
+ * (D_80170960) becomes the result count in D_801228F0, and each entry in
+ * D_8016B94C is resolved through D_80170A58 so that D_801229B0 ends up holding
+ * the rows' index fields rather than their row numbers.
+ *
+ * @return 1 if the result was published, 0 if the picker was not in state 2.
+ */
+s32 func_80142820(void)
+{
+    s32 i;
+
+    if (D_80170960 == 2)
+    {
+        D_801228F0 = D_80170960;
+        for (i = 0; i < D_80170960; i++)
+        {
+            D_801229B0[i] = D_80170A58[D_8016B94C[i]].index;
+        }
+        return 1;
+    }
+    return 0;
 }
