@@ -11,17 +11,17 @@
 /**
  * @brief Describes the palette section of a staged image resource.
  *
- * The palette data is stored inline. @p size locates the following pixel-data
- * section relative to its own field.
+ * The palette data is stored inline. @c pixel_data_offset locates the
+ * following pixel-data section relative to its own field.
  */
 typedef struct
 {
-    u8 _pad0[8];
-    u32 size;
-    u8 _pad1[4];
+    u8 padding_0[8];
+    u32 pixel_data_offset;
+    u8 padding_1[4];
     u16 width;
     u16 height;
-    u_long clutData;
+    u_long clut_data;
 } ClutSectionHeader;
 
 /**
@@ -31,10 +31,10 @@ typedef struct
  */
 typedef struct
 {
-    u8 _pad0[8];
-    u16 w;
-    u16 h;
-    u_long data;
+    u8 padding[8];
+    u16 width;
+    u16 height;
+    u_long pixel_data;
 } PixelDataHeader;
 
 /**
@@ -42,22 +42,22 @@ typedef struct
  */
 typedef struct
 {
-    u16 pixelX;
-    u16 pixelY;
-    u16 clutX;
-    u16 clutY;
+    u16 pixel_x;
+    u16 pixel_y;
+    u16 clut_x;
+    u16 clut_y;
 } VramDstCoords;
 
 /**
  * @brief Holds a staged sequence for the AKAO audio driver.
  *
- * @p payload_offset identifies populated data and locates the sequence payload.
+ * @c payload_offset identifies populated data and locates the sequence payload.
  */
 typedef struct
 {
     u32 payload_offset;
-    u32 unk4;
-    u32 unk8;
+    u32 reserved_0;
+    u32 reserved_1;
     u8 payload[1];
 } AudioDataBlock;
 
@@ -69,12 +69,12 @@ typedef struct
  */
 typedef struct GoverFrameHalf
 {
-    u8 otag[0x20];
-    DISPENV disp;
-    DRAWENV draw;
-    RECT vramRect;
-    u8 primBuf[0x400];
-    u8* allocCursor;
+    u8 ordering_table[0x20];
+    DISPENV display_environment;
+    DRAWENV draw_environment;
+    RECT vram_rect;
+    u8 primitive_buffer[0x400];
+    u8* allocation_cursor;
 } GoverFrameHalf;
 
 /* Audio helpers used while presenting the Game Over screen. */
@@ -88,10 +88,10 @@ extern s32 g_akao_music_volume;
 extern u32 g_scene_mode;
 extern s32 g_pending_game_state;
 extern AudioDataBlock g_audio_data;
-extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
+extern void cdrom_queue_read(s32 resource_index, void* destination);
 
 /** Accesses a half of the contiguous double-buffered frame. */
-#define FRAME_HALF(i) (((GoverFrameHalf*)(frameTail - 0x90))[i])
+#define FRAME_HALF(index) (((GoverFrameHalf*)(frame_tail - 0x90))[index])
 
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
 #define GOVER_CLUT_Y 480
@@ -126,20 +126,20 @@ extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 /** Locates sequence data within the staged audio resource. */
 #define GOVER_AUDIO_DATA_OFFSET (*(u32*)(GOVER_AUDIO_LOAD_ADDR + 4))
 
-const s32 g_goverOverlayId = 10;
+const s32 g_gover_overlay_id = 10;
 s32 D_80140704;
-s32 g_fadeStep;
+s32 g_fade_step;
 s32 D_8014070C;
 
 /* Adjacent storage for the Game Over screen's double-buffered frame. */
-u8 g_goverFrameHeader[0x90];
-u8 g_goverFrameTail[0x8A8];
-s32 g_fadeLevel;
+u8 g_gover_frame_header[0x90];
+u8 g_gover_frame_tail[0x8A8];
+s32 g_fade_level;
 
 static void gover_load_audio_clip(s32 audio_clip_index);
-static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordinates);
-static void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer);
-static void gover_build_otag(unsigned char* pOtBuf);
+static u32 gover_upload_image_to_vram(ClutSectionHeader* image, VramDstCoords* destinations);
+static void gover_load_image_from_cd(s32 cd_resource_index, VramDstCoords* destinations, u32 ram_buffer);
+static void gover_build_otag(unsigned char* frame_buffer);
 static void gover_run(void);
 
 /**
@@ -148,85 +148,87 @@ static void gover_run(void);
  * Initializes double-buffered rendering, uploads the screen artwork, starts
  * the requested audio, and runs the fade sequence.
  *
- * @param cdLoadAddr         RAM staging address for the image resource.
- * @param imageResourceIndex Game Over image resource index.
- * @param musicResourceIndex Music resource index, or -1 to skip music.
- * @param audioClipIndex     Audio clip index, or -1 to skip playback.
+ * @param cd_load_address      RAM staging address for the image resource.
+ * @param image_resource_index Game Over image resource index.
+ * @param music_resource_index Music resource index, or -1 to skip music.
+ * @param audio_clip_index     Audio clip index, or -1 to skip playback.
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/1qYnn
  */
-void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex)
+void gover_show_screen(
+    s32 cd_load_address, s32 image_resource_index, s32 music_resource_index, s32 audio_clip_index)
 {
-    RECT rect;
-    u8* frameTail;
-    RECT* half1VramRect;
-    GoverFrameHalf* halves;
-    u8(*frameTailPtr)[];
+    RECT vram_rect;
+    u8* frame_tail;
+    RECT* back_vram_rect;
+    GoverFrameHalf* frames;
+    u8(*frame_tail_ptr)[];
 
-    frameTailPtr = &g_goverFrameTail;
+    frame_tail_ptr = &g_gover_frame_tail;
     VSync(0);
     DrawSync(0);
-    frameTail = *frameTailPtr;
+    frame_tail = *frame_tail_ptr;
 
     // Place the display buffers in vertically adjacent VRAM regions.
-    FRAME_HALF(0).vramRect.x = 0;
-    FRAME_HALF(0).vramRect.y = 0;
-    FRAME_HALF(0).vramRect.w = SCREEN_WIDTH;
-    FRAME_HALF(0).vramRect.h = SCREEN_HEIGHT;
+    FRAME_HALF(0).vram_rect.x = 0;
+    FRAME_HALF(0).vram_rect.y = 0;
+    FRAME_HALF(0).vram_rect.w = SCREEN_WIDTH;
+    FRAME_HALF(0).vram_rect.h = SCREEN_HEIGHT;
 
-    half1VramRect = (RECT*)(frameTail + 0x49C);
-    half1VramRect->x = 0;
-    half1VramRect->y = VRAM_BACK_DISP_Y;
-    half1VramRect->w = SCREEN_WIDTH;
-    half1VramRect->h = SCREEN_HEIGHT;
+    back_vram_rect = (RECT*)(frame_tail + 0x49C);
+    back_vram_rect->x = 0;
+    back_vram_rect->y = VRAM_BACK_DISP_Y;
+    back_vram_rect->w = SCREEN_WIDTH;
+    back_vram_rect->h = SCREEN_HEIGHT;
 
     // Clear the entire VRAM frame area before uploading the new image.
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = VRAM_WIDTH;
-    rect.h = VRAM_HEIGHT;
-    ClearImage(&rect, 0, 0, 0);
+    vram_rect.x = 0;
+    vram_rect.y = 0;
+    vram_rect.w = VRAM_WIDTH;
+    vram_rect.h = VRAM_HEIGHT;
+    ClearImage(&vram_rect, 0, 0, 0);
 
     // Configure alternating display and draw regions.
-    SetDefDispEnv(&FRAME_HALF(0).disp, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv(&FRAME_HALF(1).disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&FRAME_HALF(0).draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv(&FRAME_HALF(1).draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDispEnv(&FRAME_HALF(0).display_environment, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&FRAME_HALF(1).display_environment, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&FRAME_HALF(0).draw_environment, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&FRAME_HALF(1).draw_environment, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     // Disable dithering for both frame buffers.
-    halves = &FRAME_HALF(0);
-    halves[1].draw.dtd = 0;
-    halves[0].draw.dtd = 0;
+    frames = &FRAME_HALF(0);
+    frames[1].draw_environment.dtd = 0;
+    frames[0].draw_environment.dtd = 0;
 
     // Stage the texture beside the frame buffers and its palette below them.
-    rect.x = SCREEN_WIDTH;
-    rect.y = 0;
-    rect.w = 0;
-    rect.h = GOVER_CLUT_Y;
+    vram_rect.x = SCREEN_WIDTH;
+    vram_rect.y = 0;
+    vram_rect.w = 0;
+    vram_rect.h = GOVER_CLUT_Y;
 
-    gover_load_image_from_cd(imageResourceIndex + GOVER_IMAGE_RESOURCE_BASE, (VramDstCoords*)(&rect), cdLoadAddr);
+    gover_load_image_from_cd(
+        image_resource_index + GOVER_IMAGE_RESOURCE_BASE, (VramDstCoords*)(&vram_rect), cd_load_address);
 
     akao_cmd_f0();
     akao_cmd_f1();
     akao_cmd_a8(AKAO_VOLUME_MAX);
 
-    if (audioClipIndex != GOVER_AUDIO_CLIP_CLEAR)
+    if (audio_clip_index != GOVER_AUDIO_CLIP_CLEAR)
     {
-        gover_load_audio_clip(audioClipIndex);
+        gover_load_audio_clip(audio_clip_index);
         func_800A39A8(0, 0x80, 0, 0);
     }
 
-    if (musicResourceIndex != -1)
+    if (music_resource_index != -1)
     {
-        func_800A368C(musicResourceIndex, 0);
+        func_800A368C(music_resource_index, 0);
         g_akao_music_volume = AKAO_VOLUME_MAX;
         func_800A380C();
         akao_cmd_c0(0, AKAO_VOLUME_MAX);
     }
 
     // Begin the fade-in; player input reverses it after full brightness.
-    g_fadeLevel = GOVER_FADE_STEP;
-    g_fadeStep = GOVER_FADE_STEP;
+    g_fade_level = GOVER_FADE_STEP;
+    g_fade_step = GOVER_FADE_STEP;
     gover_run();
 }
 
@@ -242,58 +244,58 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
  */
 static void gover_run(void)
 {
-    GoverFrameHalf* current;
-    GoverFrameHalf* drawing;
-    GoverFrameHalf* next;
-    u8 _match_pad[8];
+    GoverFrameHalf* current_frame;
+    GoverFrameHalf* drawing_frame;
+    GoverFrameHalf* next_frame;
+    u8 padding[8];
 
     // Prime both ordering tables before enabling display output.
     func_800AA02C();
-    current = (GoverFrameHalf*)g_goverFrameHeader;
-    ClearOTagR((u_long*)current->otag, 8);
-    ClearOTagR((u_long*)current[1].otag, 8);
+    current_frame = (GoverFrameHalf*)g_gover_frame_header;
+    ClearOTagR((u_long*)current_frame->ordering_table, 8);
+    ClearOTagR((u_long*)current_frame[1].ordering_table, 8);
     VSync(0);
-    PutDispEnv(&current->disp);
+    PutDispEnv(&current_frame->display_environment);
     update_controllers();
     SetDispMask(1);
 
-    drawing = current;
+    drawing_frame = current_frame;
     while (1)
     {
         // Rebuild the next frame and advance the fade.
-        drawing = current;
-        ClearOTagR((u_long*)drawing->otag, 8);
-        drawing->allocCursor = drawing->primBuf;
+        drawing_frame = current_frame;
+        ClearOTagR((u_long*)drawing_frame->ordering_table, 8);
+        drawing_frame->allocation_cursor = drawing_frame->primitive_buffer;
         func_800A9E78();
-        gover_build_otag((unsigned char*)drawing);
+        gover_build_otag((unsigned char*)drawing_frame);
         DrawSync(0);
         set_controller_vsync_interval(2);
 
         VSync(2);
 
-        if ((g_fadeLevel == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
+        if ((g_fade_level == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
         {
             akao_cmd_c1(0, 0x20, 0);
-            g_fadeStep = -GOVER_FADE_STEP;
+            g_fade_step = -GOVER_FADE_STEP;
         }
 
-        if (g_fadeLevel == (0 & 0xFF))
+        if (g_fade_level == (0 & 0xFF))
         {
             break;
         }
 
         // Present the newly selected buffer and draw the frame just built.
-        next = (GoverFrameHalf*)g_goverFrameHeader;
-        if (current == (GoverFrameHalf*)g_goverFrameHeader)
+        next_frame = (GoverFrameHalf*)g_gover_frame_header;
+        if (current_frame == (GoverFrameHalf*)g_gover_frame_header)
         {
-            next = current + 1;
+            next_frame = current_frame + 1;
         }
-        current = next;
-        PutDispEnv(&current->disp);
+        current_frame = next_frame;
+        PutDispEnv(&current_frame->display_environment);
 
-        PutDrawEnv(&current->draw);
+        PutDrawEnv(&current_frame->draw_environment);
         // Ordering-table links are traversed from the final entry.
-        DrawOTag((u_long*)((u_char*)drawing + 0x1C));
+        DrawOTag((u_long*)((u_char*)drawing_frame + 0x1C));
         update_controllers();
         cdrom_process_state();
     }
@@ -315,124 +317,124 @@ static void gover_run(void)
  * Splits the artwork across two texture pages and modulates both sprites with
  * the current fade level.
  *
- * @param pOtBuf Frame buffer containing the ordering table and primitive pool.
+ * @param frame_buffer Frame buffer containing the ordering table and primitive pool.
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/q3LKi
  */
-static void gover_build_otag(unsigned char* pOtBuf)
+static void gover_build_otag(unsigned char* frame_buffer)
 {
-    GoverFrameHalf* half;
-    unsigned char* pPrimA;
-    unsigned char* pPrimB;
-    unsigned char leftFadeLevel;
-    unsigned char rightFadeLevel;
+    GoverFrameHalf* frame;
+    unsigned char* primitive_a;
+    unsigned char* primitive_b;
+    unsigned char left_fade_level;
+    unsigned char right_fade_level;
 
-    if (g_fadeStep != 0)
+    if (g_fade_step != 0)
     {
-        g_fadeLevel += g_fadeStep;
+        g_fade_level += g_fade_step;
     }
 
-    if (g_fadeLevel == GOVER_FADE_FULL)
+    if (g_fade_level == GOVER_FADE_FULL)
     {
-        g_fadeStep = 0;
+        g_fade_step = 0;
     }
 
     // Append primitives at the frame's current allocation cursor.
-    half = (GoverFrameHalf*)pOtBuf;
-    pPrimA = half->allocCursor;
+    frame = (GoverFrameHalf*)frame_buffer;
+    primitive_a = frame->allocation_cursor;
 
     // Draw the left image region from its texture page.
-    setSprt(pPrimA);
+    setSprt(primitive_a);
 
-    leftFadeLevel = (unsigned char)g_fadeLevel;
+    left_fade_level = (unsigned char)g_fade_level;
 
-    setXY0((SPRT*)pPrimA, 0, 0);
-    setWH((SPRT*)pPrimA, 256, 224);
-    setUV0((SPRT*)pPrimA, 0, 0);
-    setClut((SPRT*)pPrimA, 0, GOVER_CLUT_Y);
-    SET_BGR0((SPRT*)pPrimA, leftFadeLevel, leftFadeLevel, leftFadeLevel);
-    addPrim(pOtBuf, pPrimA);
+    setXY0((SPRT*)primitive_a, 0, 0);
+    setWH((SPRT*)primitive_a, 256, 224);
+    setUV0((SPRT*)primitive_a, 0, 0);
+    setClut((SPRT*)primitive_a, 0, GOVER_CLUT_Y);
+    SET_BGR0((SPRT*)primitive_a, left_fade_level, left_fade_level, left_fade_level);
+    addPrim(frame_buffer, primitive_a);
 
-    pPrimA += sizeof(SPRT);
+    primitive_a += sizeof(SPRT);
 
-    setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
-    addPrim(pOtBuf, pPrimA);
+    setDrawTPage((DR_TPAGE*)primitive_a, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
+    addPrim(frame_buffer, primitive_a);
 
-    pPrimB = pPrimA + sizeof(DR_TPAGE);
-    pPrimA = pPrimB;
+    primitive_b = primitive_a + sizeof(DR_TPAGE);
+    primitive_a = primitive_b;
 
     // Draw the remaining image region from the adjacent texture page.
-    setSprt(pPrimB);
+    setSprt(primitive_b);
 
-    rightFadeLevel = (unsigned char)g_fadeLevel;
+    right_fade_level = (unsigned char)g_fade_level;
 
-    SET_BGR0((SPRT*)pPrimB, rightFadeLevel, rightFadeLevel, rightFadeLevel);
-    setXY0((SPRT*)pPrimB, 256, 0);
-    setWH((SPRT*)pPrimB, 64, 224);
-    setUV0((SPRT*)pPrimB, 0, 0);
-    setClut((SPRT*)pPrimB, 0, GOVER_CLUT_Y);
+    SET_BGR0((SPRT*)primitive_b, right_fade_level, right_fade_level, right_fade_level);
+    setXY0((SPRT*)primitive_b, 256, 0);
+    setWH((SPRT*)primitive_b, 64, 224);
+    setUV0((SPRT*)primitive_b, 0, 0);
+    setClut((SPRT*)primitive_b, 0, GOVER_CLUT_Y);
 
-    addPrim(pOtBuf, pPrimB);
+    addPrim(frame_buffer, primitive_b);
 
-    pPrimA += sizeof(SPRT);
+    primitive_a += sizeof(SPRT);
 
-    setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH + 128, 0));
-    pPrimB = pPrimA;
-    pPrimB += sizeof(DR_TPAGE);
+    setDrawTPage((DR_TPAGE*)primitive_a, 0, 0, getTPage(1, 1, SCREEN_WIDTH + 128, 0));
+    primitive_b = primitive_a;
+    primitive_b += sizeof(DR_TPAGE);
 
-    addPrim(pOtBuf, pPrimA);
+    addPrim(frame_buffer, primitive_a);
 
-    half->allocCursor = pPrimB;
+    frame->allocation_cursor = primitive_b;
 }
 
 /**
  * @brief Reads a CD image resource into RAM, then uploads it to VRAM.
  *
- * @param cdResourceIndex CD resource index.
- * @param coordinates     VRAM destinations for the palette and pixel data.
- * @param ramBuffer       RAM staging address for the resource.
+ * @param cd_resource_index CD resource index.
+ * @param destinations      VRAM destinations for the palette and pixel data.
+ * @param ram_buffer        RAM staging address for the resource.
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/OafFK
  */
-static void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer)
+static void gover_load_image_from_cd(s32 cd_resource_index, VramDstCoords* destinations, u32 ram_buffer)
 {
-    volatile u8 _match_pad[8];
+    volatile u8 padding[8];
 
-    cdrom_queue_read(cdResourceIndex & 0xFFFF, (void*)ramBuffer);
+    cdrom_queue_read(cd_resource_index & 0xFFFF, (void*)ram_buffer);
     cdrom_wait_queue_empty();
-    gover_upload_image_to_vram((ClutSectionHeader*)ramBuffer, coordinates);
+    gover_upload_image_to_vram((ClutSectionHeader*)ram_buffer, destinations);
 }
 
 /**
  * @brief Uploads a staged image's palette and pixel data to VRAM.
  *
- * @param header      Staged image resource.
- * @param coordinates VRAM destinations for the palette and pixel data.
+ * @param image        Staged image resource.
+ * @param destinations VRAM destinations for the palette and pixel data.
  * @return Pixel width rounded up to a texture-page boundary.
  * @see decomp.me (100%) https://decomp.me/scratch/BEM7D
  */
-static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordinates)
+static u32 gover_upload_image_to_vram(ClutSectionHeader* image, VramDstCoords* destinations)
 {
-    RECT rect;
-    PixelDataHeader* pdh;
-    u32 clutSectionSize = header->size;
+    RECT upload_rect;
+    PixelDataHeader* pixel_header;
+    u32 pixel_section_offset = image->pixel_data_offset;
 
-    rect.x = coordinates->clutX;
-    rect.y = coordinates->clutY;
-    rect.w = header->width * header->height;
-    rect.h = 1;
-    LoadImage(&rect, &header->clutData);
+    upload_rect.x = destinations->clut_x;
+    upload_rect.y = destinations->clut_y;
+    upload_rect.w = image->width * image->height;
+    upload_rect.h = 1;
+    LoadImage(&upload_rect, &image->clut_data);
 
     // Locate the pixel section that follows the variable-length palette.
-    pdh = (PixelDataHeader*)((u8*)header + 8 + clutSectionSize);
+    pixel_header = (PixelDataHeader*)((u8*)image + 8 + pixel_section_offset);
 
-    rect.x = coordinates->pixelX;
-    rect.y = coordinates->pixelY;
-    rect.w = pdh->w;
-    rect.h = pdh->h;
-    LoadImage(&rect, &pdh->data);
+    upload_rect.x = destinations->pixel_x;
+    upload_rect.y = destinations->pixel_y;
+    upload_rect.w = pixel_header->width;
+    upload_rect.h = pixel_header->height;
+    LoadImage(&upload_rect, &pixel_header->pixel_data);
 
-    return ALIGN64(pdh->w);
+    return ALIGN64(pixel_header->width);
 }
 
 /**
@@ -448,18 +450,18 @@ static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* 
  */
 static void gover_load_audio_clip(s32 audio_clip_index)
 {
-    AkaoSeqHeader* akao_seq;
-    u8* dst;
-    u8* src;
-    s32* offsets;
+    AkaoSeqHeader* sequence;
+    u8* destination;
+    u8* source;
+    s32* offset_table;
 
     if (audio_clip_index == GOVER_AUDIO_CLIP_NONE)
     {
         return;
     }
 
-    g_audio_data.unk8 = 0;
-    g_audio_data.unk4 = 0;
+    g_audio_data.reserved_1 = 0;
+    g_audio_data.reserved_0 = 0;
     g_audio_data.payload_offset = 0;
 
     if (audio_clip_index == GOVER_AUDIO_CLIP_CLEAR)
@@ -472,16 +474,16 @@ static void gover_load_audio_clip(s32 audio_clip_index)
     cdrom_wait_queue_empty();
     g_audio_data.payload_offset = 0xC;
 
-    src = (u8*)(GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
-    offsets = (s32*)src;
-    akao_seq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
-    dst = ((u8*)(&g_audio_data)) + 12;
+    source = (u8*)(GOVER_AUDIO_LOAD_ADDR + GOVER_AUDIO_DATA_OFFSET);
+    offset_table = (s32*)source;
+    sequence = (AkaoSeqHeader*)(source + ((u32)offset_table[*offset_table]));
+    destination = ((u8*)(&g_audio_data)) + 12;
 
     // Preserve the driver data that precedes the sequence.
-    while (src != (u8*)akao_seq)
+    while (source != (u8*)sequence)
     {
-        *(dst++) = *(src++);
+        *(destination++) = *(source++);
     }
 
-    akao_play_sequence_blocking(akao_seq, 1);
+    akao_play_sequence_blocking(sequence, 1);
 }

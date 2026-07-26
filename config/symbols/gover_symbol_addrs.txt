@@ -6,13 +6,13 @@ gover_load_image_from_cd = 0x80140538;
 gover_upload_image_to_vram = 0x80140588;
 gover_load_audio_clip = 0x80140648;
 
-g_goverOverlayId = 0x80140000;
-g_goverFrameHeader = 0x80140710;
-g_goverFrameTail = 0x801407A0;
-g_fadeLevel = 0x80141048;
-g_fadeStep = 0x80140708;
+g_gover_overlay_id = 0x80140000;
+g_gover_frame_header = 0x80140710;
+g_gover_frame_tail = 0x801407A0;
+g_fade_level = 0x80141048;
+g_fade_step = 0x80140708;
 D_8014070C = 0x8014070C;
-g_audioDataOffset = 0x80180004;
+g_audio_data_offset = 0x80180004;
 g_audio_data = 0x80119F00;
 
 // AKAO music master volume slot. The underlying storage is defined in the
