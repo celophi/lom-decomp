@@ -32,7 +32,7 @@ void func_80141A14();    /* extern */
 void func_80141B28();    /* extern */
 void func_80141C3C();    /* extern */
 void func_80141ED8();    /* extern */
-void func_8014229C();    /* extern */
+s32 func_8014229C();    /* extern */
 void func_80142398();    /* extern */
 void func_80142400();    /* extern */
 void func_80142460();    /* extern */
@@ -74,6 +74,9 @@ extern s32 D_8016B900;
 extern s32 D_8016B950;
 extern void* D_8016B954;
 extern s32 D_8016B958;
+extern s32 D_8016B95C;
+extern s32 D_8016B908[];
+extern s32 D_801229B0[];
 extern s32 D_8017097C;
 extern s32 D_80170980;
 extern u8 D_801448EC;
@@ -159,7 +162,7 @@ typedef struct
     u8* name;
     u8* desc;
     s16 value;
-    u16 index;
+    s16 index;
     s32 unkC : 8;
     s32 unkD : 8;
     s32 unkE : 8;
@@ -1223,4 +1226,49 @@ void func_80141ED8(s32 mode)
     D_8016B958 = 0x120;
     D_8016B950 = 0x94;
     D_80170994 = GOSUB_MSG_PTR(mode * 2 + 0x2C);
+}
+
+/**
+ * @brief Confirm the currently highlighted row of the gosub list.
+ *
+ * Rows carrying either of the two low flag bits cannot be picked: each shows
+ * its own refusal message, clears D_80170960 to close the picker and raises
+ * D_8016B95C, then reports failure. Otherwise, and only while D_80170960 is
+ * still set, the row is appended to the running selection: its index goes to
+ * D_801229B0 and the row number itself to D_8016B908, both keyed by the shared
+ * write cursor D_801228F0.
+ *
+ * @return 0 if the row was rejected by a flag, 1 otherwise. Note that 1 is also
+ *         returned when D_80170960 is clear and nothing was appended.
+ */
+s32 func_8014229C(void)
+{
+    s32 row;
+    GosubListEntry* list;
+    GosubListEntry* e;
+
+    list = D_80170A58;
+    row = D_8016B8D0;
+    e = &list[row];
+    if (e->flags.half & 1)
+    {
+        GOSUB_MSG(0x42);
+        D_80170960 = 0;
+        D_8016B95C = 1;
+        return 0;
+    }
+    if (e->flags.f.flag1)
+    {
+        GOSUB_MSG(0x50);
+        D_80170960 = 0;
+        D_8016B95C = 1;
+        return 0;
+    }
+    if (D_80170960 != 0)
+    {
+        D_801229B0[D_801228F0] = e->index;
+        D_8016B908[D_801228F0] = row;
+        D_801228F0++;
+    }
+    return 1;
 }
