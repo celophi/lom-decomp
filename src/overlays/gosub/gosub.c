@@ -36,7 +36,7 @@ s32 func_8014229C();    /* extern */
 s32 func_80142398();    /* extern */
 s32 func_80142400();    /* extern */
 s32 func_80142460();    /* extern */
-void func_80142610();    /* extern */
+s32 func_80142610();    /* extern */
 s32 func_80142820();    /* extern */
 void func_8014289C();    /* extern */
 void func_80142B98();    /* extern */
@@ -148,7 +148,9 @@ GosubElement* func_80143C04();
  * The word at 0xC packs three signed bytes below a 4-bit row kind. The simple
  * slot builders only ever write @c kind, but func_80141C3C uses all three
  * bytes, so they are declared as byte-aligned 8-bit bitfields: writes narrow
- * to @c sb and reads to @c lb, which is what the target does.
+ * to @c sb and reads to @c lb, which is what the target does. The top nibble
+ * @c unkC_28 is unsigned: func_80142610 reads it with a plain @c srl, where a
+ * signed field would sign-extend.
  *
  * The word at 0x1C is a flag set. Most builders write single bits through the
  * @c f bitfields, but func_80141ED8 tests bit 0 through the @c half alias and
@@ -168,7 +170,7 @@ typedef struct
     s32 unkD : 8;
     s32 unkE : 8;
     s32 kind : 4;
-    s32 unkC_28 : 4;
+    u32 unkC_28 : 4;
     u16 unk10;
     u16 unk12[4];
     u16 unk1A;
@@ -1372,6 +1374,102 @@ s32 func_80142460(void)
     {
         func_801458A4();
         D_80170960 = 1;
+    }
+    return 0;
+}
+
+/**
+ * @brief Recompute every row's kind for the current pick, and report when the
+ *        selection is complete.
+ *
+ * Runs in four passes. The first resets all D_8016B8D4 rows to kind 4. The
+ * second walks the D_80170960 entries already picked in D_8016B94C and tallies
+ * them by their rows' top nibble: unmarked rows into @c open_count, marked rows
+ * into @c marked_count. The remaining two passes promote candidate rows to kind
+ * 5 -- unmarked ones once anything unmarked has been picked, marked ones once
+ * exactly three marked rows have been -- with func_80142C18 deciding whether an
+ * individual row qualifies.
+ *
+ * @return 1 when both conditions hold, in which case func_80142B98 is rung to
+ *         announce the completed selection; 0 otherwise.
+ */
+s32 func_80142610(void)
+{
+    s32 i;
+    s32 open_count;
+    s32 marked_count;
+
+    for (i = 0; i < D_8016B8D4; i++)
+    {
+        D_80170A58[i].kind = 4;
+    }
+    open_count = 0;
+    marked_count = 0;
+    for (i = 0; i < D_80170960; i++)
+    {
+        if (D_80170A58[D_8016B94C[i]].unkC_28 == 0)
+        {
+            open_count++;
+        }
+        else
+        {
+            marked_count++;
+        }
+    }
+    if (open_count != 0)
+    {
+        for (i = 0; i < D_8016B8D4; i++)
+        {
+            if (D_80170A58[i].unkC_28 == 0 && func_80142C18(i) != 0)
+            {
+                D_80170A58[i].kind = 5;
+            }
+        }
+    }
+    if (marked_count == 3)
+    {
+        for (i = 0; i < D_8016B8D4; i++)
+        {
+            if (D_80170A58[i].unkC_28 != 0 && func_80142C18(i) != 0)
+            {
+                D_80170A58[i].kind = 5;
+            }
+        }
+    }
+    if (open_count != 0)
+    {
+        if (marked_count == 3)
+        {
+            func_80142B98();
+            return 1;
+        }
+        return 0;
+    }
+    return 0;
+}
+
+/**
+ * @brief Publish the picked rows' indices as the screen's result.
+ *
+ * Only acts in picker state 2. The number of entries picked so far
+ * (D_80170960) becomes the result count in D_801228F0, and each entry in
+ * D_8016B94C is resolved through D_80170A58 so that D_801229B0 ends up holding
+ * the rows' index fields rather than their row numbers.
+ *
+ * @return 1 if the result was published, 0 if the picker was not in state 2.
+ */
+s32 func_80142820(void)
+{
+    s32 i;
+
+    if (D_80170960 == 2)
+    {
+        D_801228F0 = D_80170960;
+        for (i = 0; i < D_80170960; i++)
+        {
+            D_801229B0[i] = D_80170A58[D_8016B94C[i]].index;
+        }
+        return 1;
     }
     return 0;
 }
