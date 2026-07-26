@@ -52,8 +52,8 @@ typedef struct GoverFrameHalf
 } GoverFrameHalf;
 
 /* Audio helpers used while presenting the Game Over screen. */
-extern s32 func_800A368C(s32 music_index, s32 destination_index); /* Loads and registers a music sequence. */
-extern s32 func_800A380C(void);                                  /* Starts the registered music sequence. */
+extern s32 func_800A368C(s32 music_index, s32 destination_index);                   /* Loads and registers a music sequence. */
+extern s32 func_800A380C(void);                                                     /* Starts the registered music sequence. */
 extern s32 func_800A39A8(s32 sfx_index, s32 volume, s32 unused, s32 channel_group); /* Plays a staged SFX. */
 
 /** @brief AKAO music volume applied by func_800A380C. */
@@ -130,8 +130,7 @@ static void gover_run(void);
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/1qYnn
  */
-void gover_show_screen(
-    s32 cd_load_address, s32 image_index, s32 music_index, s32 sfx_bank_index)
+void gover_show_screen(s32 cd_load_address, s32 image_index, s32 music_index, s32 sfx_bank_index)
 {
     RECT vram_rect;
     u8* frame_tail;
@@ -180,8 +179,7 @@ void gover_show_screen(
     vram_rect.w = 0;
     vram_rect.h = GOVER_CLUT_Y;
 
-    gover_load_image_from_cd(
-        image_index + GOVER_IMAGE_RESOURCE_BASE, (TimUploadDestinations*)(&vram_rect), cd_load_address);
+    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE, (TimUploadDestinations*)(&vram_rect), cd_load_address);
 
     akao_cmd_f0();
     akao_cmd_f1();
