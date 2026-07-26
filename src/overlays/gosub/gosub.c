@@ -33,11 +33,11 @@ void func_80141B28();    /* extern */
 void func_80141C3C();    /* extern */
 void func_80141ED8();    /* extern */
 s32 func_8014229C();    /* extern */
-void func_80142398();    /* extern */
-void func_80142400();    /* extern */
+s32 func_80142398();    /* extern */
+s32 func_80142400();    /* extern */
 void func_80142460();    /* extern */
 void func_80142610();    /* extern */
-void func_80142820();    /* extern */
+s32 func_80142820();    /* extern */
 void func_8014289C();    /* extern */
 void func_80142B98();    /* extern */
 void func_80142C64();    /* extern */
@@ -1271,4 +1271,55 @@ s32 func_8014229C(void)
         D_801228F0++;
     }
     return 1;
+}
+
+/**
+ * @brief Append the highlighted row to the selection, with no flag checks.
+ *
+ * The unconditional counterpart to func_8014229C: the same append -- row index
+ * to D_801229B0, row number to D_8016B908, both keyed by the shared write
+ * cursor D_801228F0 -- but no refusal messages, so any row may be picked. It is
+ * the handler D_8016B954 is pointed at for the plain list screens.
+ *
+ * @return Always 1. Nothing is appended while D_80170960 is clear.
+ */
+s32 func_80142398(void)
+{
+    s32 n;
+
+    if (D_80170960 != 0)
+    {
+        n = D_801228F0;
+        D_801228F0 = n + 1;
+        D_801229B0[n] = D_80170A58[D_8016B8D0].index;
+        D_8016B908[n] = D_8016B8D0;
+    }
+    return 1;
+}
+
+/**
+ * @brief Close the picker, or hand off to func_80142820 while it is busy.
+ *
+ * Runs only while the picker is open (D_80170960 non-zero). If D_8017097C is
+ * still set the work is delegated to func_80142820 and its result passed
+ * straight back; otherwise the picker state is stepped from 2 down to 1 and the
+ * caller is told nothing happened.
+ *
+ * @return func_80142820's result while D_8017097C is set, 0 on every other path.
+ */
+s32 func_80142400(void)
+{
+    if (D_80170960 != 0)
+    {
+        if (D_8017097C == 0)
+        {
+            if (D_80170960 == 2)
+            {
+                D_80170960 = 1;
+            }
+            return 0;
+        }
+        return func_80142820();
+    }
+    return 0;
 }
