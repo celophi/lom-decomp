@@ -2,6 +2,17 @@
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 
+/*
+ * TODO: this file's .rodata does not byte-match yet. gcc emits `.rdata` plus
+ * `.align 3` ahead of every jump table, so the four tables land at +0x00,
+ * +0x18, +0x38 and +0x58 of the segment's rodata, while the original packs them
+ * at +0x00, +0x14, +0x34 and +0x54 - the 5-word first table (jtbl_8004FCD4)
+ * gets a 4-byte pad the original does not have, and everything after it shifts.
+ * The .text of every function here is unaffected; only the %hi/%lo operands of
+ * the three later jump-table loads point 4 bytes high. Needs 4-byte alignment
+ * for jump tables out of the toolchain (gcc or maspsx), not a source change.
+ */
+
 /**
  * @brief Truncating divide by two, written out as the conditional GCC would
  *        NOT generate for `/ 2`.
@@ -544,19 +555,36 @@ typedef struct
 } FieldAnimDef;
 
 /**
- * @brief Tile grid dimensions referenced by a tile-blit animation definition.
+ * @brief Tile grid referenced by a tile-blit animation definition.
  *
- * Only the two bytes at 0x0A/0x0B are known. They line up with the low and high
- * halves of some other record's `unk0A` halfword, so this may well be a view of
- * a second FieldAnimDef rather than a struct of its own.
+ * Reached two ways: through FieldTileAnimDef::grid (func_80057CA4) and through
+ * FieldAnimCel::grid (func_800584DC). The word at 0x08 is read whole for its
+ * packing-mode bits while bytes 0x0A and 0x0B are read separately as the grid
+ * dimensions, so the two views have to share storage - same arrangement as
+ * FieldPartDef.
+ *
+ * @note The dimensions line up with the low and high halves of some other
+ *       record's `unk0A` halfword, so this may well be a view of a second
+ *       FieldAnimDef rather than a struct of its own.
  */
 typedef struct
 {
-    u8 _pad0[0xA];
-    /** 0x0A grid width in tiles. */
-    u8 cols;
-    /** 0x0B grid height in tiles. */
-    u8 rows;
+    /** 0x00 packed tile descriptors, one 4-byte entry per grid cell. */
+    FieldTileDesc *tiles;
+    u8 _pad0[8 - 4];
+    union
+    {
+        /** 0x08 whole word; bits 4-5 select the CLUT packing mode. */
+        u32 word;
+        struct
+        {
+            u8 _pad1[2];
+            /** 0x0A grid width in tiles. */
+            u8 cols;
+            /** 0x0B grid height in tiles. */
+            u8 rows;
+        } b;
+    } u;
 } FieldTileGrid;
 
 /**
@@ -578,7 +606,9 @@ typedef struct FieldAnimCel FieldAnimCel;
 struct FieldAnimCel
 {
     FieldAnimCel *next; /* 0x00 */
-    u8 _pad0[0xC - 4];
+    /** 0x04 grid this cel's bit plane and tile records are laid out on. */
+    FieldTileGrid *grid;
+    u8 _pad0[0xC - 8];
     /** 0x0C tile-presence bitmap, one bit per grid cell, LSB first. */
     u32 *mask;
     /** 0x10 packed destination tile records, advanced past every present tile. */
@@ -3155,10 +3185,6 @@ void func_80057A28(FieldPart *part)
  * @param state Frame index into FieldAnim::frames.
  *
  * @note Built -G4 WITHOUT --expand-div, like the rest of field8.c.
- * @note The overlay yaml still assigns this function's jump table's rodata range
- *       to `unk1`; `[0x65, .rodata, unk1]` needs to become
- *       `[0x65, .rodata, field8]` plus `[0xB9, .rodata, unk1]` before
- *       jtbl_8004FD08 links at the right address.
  */
 void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
 {
@@ -3203,12 +3229,12 @@ void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
     bit = 1;
     mask = cel->mask;
     word = *mask++;
-    for (row = 0; row != grid->rows; row++)
+    for (row = 0; row != grid->u.b.rows; row++)
     {
         if (row < def->unkD)
         {
             /* Above the sub-rectangle: step the cursor over the whole row. */
-            col = grid->cols;
+            col = grid->u.b.cols;
             col--;
             while (col != -1)
             {
@@ -3231,7 +3257,7 @@ void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
             {
                 return;
             }
-            for (col = 0; col != grid->cols; col++)
+            for (col = 0; col != grid->u.b.cols; col++)
             {
                 if (word & bit)
                 {
@@ -3289,7 +3315,9 @@ typedef struct
  */
 typedef struct
 {
-    u8 _pad0[2];
+    u8 _pad0;
+    /** 0x01 running total of the spans before this one, in frames. */
+    u8 unk1;
     /** 0x02 length of the keyframe this record covers, in frames. */
     u16 unk2;
 } FieldTweenSpan;
@@ -3731,4 +3759,351 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
             akao_cmd_21(sfx_id, chan_mask);
         }
     }
+}
+
+/**
+ * @brief Re-point every visible tile of a cel at the frame's VRAM band.
+ *
+ * Walks @p cel 's bit plane row-major, consuming one tile record per set bit,
+ * and rewrites the CLUT halfword at offset 2 of each record so it addresses the
+ * band of VRAM holding frame @p state. Only tiles whose descriptor row falls
+ * inside the definition's sub-rectangle (@c unkE for @c unk10 rows) are
+ * touched; the rest keep whatever CLUT they were built with. The whole call is
+ * skipped unless the definition's packing mode agrees with the grid's.
+ *
+ * The CLUT id is the usual `(y << 6) | (x >> 4)` packing with the tile page
+ * based at VRAM y = 0x1D8: mode 0 splits the descriptor's row/column out of one
+ * byte, any other mode treats the whole byte as the row.
+ *
+ * @param anim_def Animation definition; supplies the packing mode (@c unkC),
+ *                 the first row of the sub-rectangle (@c unkE) and its height
+ *                 (@c unk10), which doubles as the per-frame band stride.
+ * @param cel      Cel whose bit plane, tile records and record format are used.
+ * @param state    Frame index; scales the band stride to reach frame @p state.
+ *
+ * @note @c def is a local copy of the parameter rather than the parameter
+ *       itself. The extra reference is what pushes @p state out to s0 and keeps
+ *       the definition pointer in a0; using the parameter directly rotates
+ *       def/last/mode through the wrong three registers (99.00%).
+ * @note The switch needs the otherwise-empty `case 1:` and `case 6:`. They
+ *       widen the case range to 0..6, which is what makes gcc emit the
+ *       seven-entry jump table instead of a compare tree (89.30%).
+ * @note @c grid and @c mode must be locals; re-reading @c cel->grid or
+ *       @c def->unkC at the point of use costs the match (93.54% / 92.33%).
+ * @note @c first and @c mode must be `s32`. As `u8` gcc re-truncates them after
+ *       the byte loads (97.75%).
+ * @note @c slot is computed inside the presence test, not before it; hoisting it
+ *       out unfills the branch delay slot the `andi` belongs in (97.84%).
+ * @note @c tile is advanced before @c col so the column reload lands in the
+ *       load-delay slot ahead of the increment (98.40%).
+ * @note Measured non-factors, all still 100%: `bit`/`word` as `s32` instead of
+ *       `u32`, `0xC` instead of `12`, and `* 64` instead of `<< 6`.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_800584DC(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 state)
+{
+    FieldAnimDef *def;
+    FieldTileGrid *grid;
+    FieldTileDesc *tile;
+    u8 *dst;
+    s16 *clut_ptr;
+    u32 *mask;
+    u32 word;
+    u32 bit;
+    s32 stride;
+    s32 row;
+    s32 col;
+    s32 slot;
+    s32 y;
+    s32 first;
+    s32 last;
+    s32 mode;
+    s16 clut;
+
+    def = anim_def;
+    grid = cel->grid;
+    stride = 0;
+    if (def->unkC == ((grid->u.word >> 4) & 3))
+    {
+        tile = grid->tiles;
+        dst = cel->tiles;
+        switch (cel->format)
+        {
+        case 0:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+            stride = 12;
+            break;
+        case 1:
+        case 6:
+            break;
+        }
+        if (cel->unk1C != 0)
+        {
+            stride -= 4;
+        }
+        bit = 1;
+        if (cel->unk18 != 0)
+        {
+            stride -= 4;
+        }
+        row = 0;
+        mask = cel->mask;
+        first = def->unkE;
+        last = first + def->unk10;
+        mode = def->unkC;
+        word = *mask++;
+        if (grid->u.b.rows != 0)
+        {
+            do
+            {
+                col = 0;
+                if (grid->u.b.cols != 0)
+                {
+                    clut_ptr = (s16 *) (dst + 2);
+                    do
+                    {
+                        if (word & bit)
+                        {
+                            u8 packed = tile->unk0;
+
+                            if (packed & 0x80)
+                            {
+                                slot = packed & 0x1F;
+                                if ((slot >= first) && (slot < last))
+                                {
+                                    y = slot + (state * def->unk10);
+                                    if (mode == 0)
+                                    {
+                                        clut = (((y >> 4) + 0x1D8) << 6) | (y & 0xF);
+                                    }
+                                    else
+                                    {
+                                        clut = (y + 0x1D8) << 6;
+                                    }
+                                    *clut_ptr = clut;
+                                }
+                            }
+                            clut_ptr = (s16 *) ((u8 *) clut_ptr + stride);
+                            dst += stride;
+                        }
+                        bit <<= 1;
+                        if (bit == 0)
+                        {
+                            word = *mask++;
+                            bit = 1;
+                        }
+                        tile++;
+                        col++;
+                    }
+                    while (col != grid->u.b.cols);
+                }
+                row++;
+            }
+            while (row != grid->u.b.rows);
+        }
+    }
+}
+
+/**
+ * @brief Cross-fade an animation's two neighbouring frames into a scratch buffer.
+ *
+ * Picks the frame to blend against - the next or previous one, depending on
+ * FieldAnim::flags bits 0 and 2, wrapping at the definition's frame count - then
+ * blends it with the current frame into one of the two halves of the node's
+ * scratch buffer at offset 0x40, alternating halves each call (flags bit 4).
+ * Each RGB555 pixel is interpolated component-wise by the fraction of the
+ * keyframe elapsed so far; pixels that are equal in both frames, and every pixel
+ * while nothing has elapsed yet, are copied straight across. Bit 15 is the OR of
+ * the two sources.
+ *
+ * @param def  Animation definition; supplies the frame count (@c unk5), the
+ *             packing mode (@c unkC), the source row (@c unkE), the per-frame
+ *             row count (@c unk10) and the frame-table offset (@c unk12).
+ * @param anim Animation node; supplies the keyframe index, the countdown, the
+ *             flags and the destination scratch buffer.
+ * @return Base of the half of the scratch buffer just written, ready to be
+ *         handed to a FieldImageReq as its source data.
+ *
+ * @note @c rec is a local copy of @p def, as in func_80057E88: the extra
+ *       reference is what keeps the definition pointer's allocno ahead of the
+ *       argument registers. Reading everything through @p def costs 57 rows.
+ * @note The @c do/while(0) around the countdown and flag reads is required. It
+ *       emits loop notes, so flow.c counts those two @p anim references at the
+ *       deeper @c loop_depth; that is worth +2 to @p anim 's REG_N_REFS, which
+ *       is exactly what lifts it past @c elapsed in the global.c priority
+ *       formula and swaps the two into s4/s5. A plain braced block does NOT
+ *       work - it emits block notes, not loop notes, and measures inert.
+ *       Without the wrapper the whole s4/s5 pair is exchanged (99.55%).
+ *       See [ALLOC-23] in idioms.md.
+ * @note @c c and @c p must be @c u16. The zero-extends gcc emits to compare two
+ *       HImode locals are what feed the shifted component reads; as @c u32 the
+ *       masking collapses and 49 rows go with it.
+ * @note @c step is reused in place as the loop counter. Counting down a separate
+ *       variable leaves @c step live, so gcc folds the loop guard to
+ *       @c step != 0 instead of comparing the decremented value against -1
+ *       (98.20%).
+ * @note Each index update tests the value BEFORE it is changed, so the delayed
+ *       branch pass can hoist the increment out of the else arm into the delay
+ *       slot. Computing the new value first and then testing the old costs an
+ *       instruction (99.24%).
+ * @note @c base must be @c volatile @c u8; as @c s8 the read after the second
+ *       call sign-extends (98.98%).
+ * @note Measured non-factors, both still 100%: @c unk10 @c * @c 0x10 vs
+ *       @c << @c 4, and a separate local for the second flags read.
+ *
+ * @see decomp.me (100%) TODO
+ */
+u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
+{
+    FieldAnimDef *rec;
+    FieldSceneHeader *hdr;
+    u16 *cur;
+    u16 *prev;
+    u16 *dst;
+    u16 *out;
+    s32 total;
+    s32 remain;
+    s32 elapsed;
+    s32 idx;
+    s32 other;
+    s32 step;
+    s32 flags;
+    s32 newflags;
+    u16 c;
+    u16 p;
+    volatile u8 base;
+
+    rec = def;
+    hdr = g_field_scene.scene->unk0;
+    total = ((FieldTweenSpan *) func_80059224(rec, anim->flags.b.unk2, (volatile s8 *) &base))->unk2;
+    idx = anim->flags.b.unk2;
+    do
+    {
+        remain = anim->counter;
+        flags = anim->flags.word;
+    }
+    while (0);
+    elapsed = total - remain;
+    if (flags & 1)
+    {
+        if (flags & 4)
+        {
+            if (idx == 0)
+            {
+                idx = 1;
+            }
+            else
+            {
+                idx = idx - 1;
+            }
+        }
+        else if (idx == rec->unk5)
+        {
+            idx = idx - 1;
+        }
+        else
+        {
+            idx = idx + 1;
+        }
+    }
+    else
+    {
+        if (idx == rec->unk5)
+        {
+            idx = 0;
+        }
+        else
+        {
+            idx = idx + 1;
+        }
+    }
+    if (*(s32 *) &def->unk4 & 0x40)
+    {
+        other = (((FieldTweenSpan *) func_80059224(def, idx, (volatile s8 *) &base))->unk1 + idx) - base;
+    }
+    else
+    {
+        other = idx;
+    }
+    if (rec->unkC == 0)
+    {
+        step = rec->unk10 * 0x10;
+        if (anim->flags.b.state == 0)
+        {
+            cur = (u16 *) ((u8 *) hdr->unk4 + (rec->unkE << 5));
+        }
+        else
+        {
+            cur = (u16 *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + rec->unk12 * 2 +
+                           ((anim->flags.b.state - 1) * step) * 2);
+        }
+        if (other == 0)
+        {
+            prev = (u16 *) ((u8 *) hdr->unk4 + (rec->unkE << 5));
+        }
+        else
+        {
+            prev = (u16 *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + rec->unk12 * 2 +
+                            ((other - 1) * step) * 2);
+        }
+    }
+    else
+    {
+        step = rec->unk10 << 8;
+        if (anim->flags.b.state == 0)
+        {
+            cur = (u16 *) ((u8 *) hdr->unk4 + (rec->unkE << 9));
+        }
+        else
+        {
+            cur = (u16 *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + rec->unk12 * 2 +
+                           ((anim->flags.b.state - 1) * step) * 2);
+        }
+        if (other == 0)
+        {
+            prev = (u16 *) ((u8 *) hdr->unk4 + (rec->unkE << 9));
+        }
+        else
+        {
+            prev = (u16 *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + rec->unk12 * 2 +
+                            ((other - 1) * step) * 2);
+        }
+    }
+    flags = anim->flags.word;
+    if (flags & 0x10)
+    {
+        dst = &anim->buf40[step];
+        newflags = flags & ~0x10;
+    }
+    else
+    {
+        dst = anim->buf40;
+        newflags = flags | 0x10;
+    }
+    anim->flags.word = newflags;
+    step--;
+    out = dst;
+    while (step != -1)
+    {
+        c = *cur++;
+        p = *prev++;
+        if ((elapsed == 0) || (c == p))
+        {
+            *dst = c;
+        }
+        else
+        {
+            *dst = ((c | p) & 0x8000) |
+                   ((((c & 0x1F) * remain) + ((p & 0x1F) * elapsed)) / total) |
+                   (((((c >> 5) & 0x1F) * remain) + (((p >> 5) & 0x1F) * elapsed)) / total) << 5 |
+                   (((((c >> 10) & 0x1F) * remain) + (((p >> 10) & 0x1F) * elapsed)) / total) << 10;
+        }
+        step--;
+        dst++;
+    }
+    return (u_long *) out;
 }
