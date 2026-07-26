@@ -1,7 +1,4 @@
-/* gover.c uses a wider (u32) declaration of g_scene_mode than main.h's
- * canonical u16, matching the original codegen for its assignment at line
- * 439 (sw, not sh). Suppress main.h's declaration in this TU to avoid the
- * conflicting-types warning without changing which type governs codegen. */
+/* Use the Game Over overlay's scene-state declarations. */
 #define GOVER_C
 #include "gover.h"
 #include "akao.h"
@@ -12,20 +9,10 @@
 #include "psyq/libetc.h"
 
 /**
- * @brief Header for the CLUT (palette) section of a CD image file.
+ * @brief Describes the palette section of a staged image resource.
  *
- * @details First structure in the custom binary image format read from CD.
- * Contains the CLUT dimensions and inline palette data, followed at a
- * variable offset by a PixelDataHeader. The @p size field is self-relative:
- * adding its value to its own address yields the start of the PixelDataHeader.
- *
- * Binary layout:
- *   0x00  _pad0[8]   - unknown
- *   0x08  size       - byte distance from &size to the PixelDataHeader
- *   0x0C  _pad1[4]   - unknown
- *   0x10  width      - CLUT entries per row
- *   0x12  height     - CLUT rows (width * height = total palette entries)
- *   0x14  clutData   - inline CLUT pixel data begins here
+ * The palette data is stored inline. @p size locates the following pixel-data
+ * section relative to its own field.
  */
 typedef struct
 {
@@ -38,17 +25,9 @@ typedef struct
 } ClutSectionHeader;
 
 /**
- * @brief Header for the pixel data section of a CD image file.
+ * @brief Describes the pixel section of a staged image resource.
  *
- * @details Located immediately after the inline CLUT data in the binary
- * image buffer. Found at runtime via ClutSectionHeader::size. Contains
- * the pixel data dimensions and inline pixel data.
- *
- * Binary layout:
- *   0x00  _pad0[8]   - unknown
- *   0x08  w          - image width in 16bpp VRAM texels
- *   0x0A  h          - image height in pixels
- *   0x0C  data       - inline pixel data begins here
+ * The image dimensions are followed by the inline pixel data.
  */
 typedef struct
 {
@@ -59,11 +38,7 @@ typedef struct
 } PixelDataHeader;
 
 /**
- * @brief VRAM destination coordinates for a two-section CD image upload.
- *
- * @details Passed to gover_upload_image_to_vram to specify where in VRAM to place
- * the CLUT palette strip and the pixel data independently. Overlaid on a PSX
- * RECT at the call site (x/y map to pixelX/Y; w/h map to clutX/Y).
+ * @brief VRAM destinations for an image's pixel and palette data.
  */
 typedef struct
 {
@@ -74,21 +49,9 @@ typedef struct
 } VramDstCoords;
 
 /**
- * @brief Audio data block consumed by the AKAO driver.
+ * @brief Holds a staged sequence for the AKAO audio driver.
  *
- * @details Begins with a 12-byte status header, followed by the AKAO sequence
- * payload copied in from a CD load. @p gover_load_audio_clip stages bytes into
- * @p &block + 12 (i.e. into @p payload onwards).
- *
- * @p payload_offset is the only header word with a known consumer
- * (func_800A39A8): it doubles as a "populated" flag (nonzero = a clip is
- * loaded) and as the header length, so the payload starts at
- * @c base + payload_offset. gover sets it to 12 (the fixed header size); the
- * field-overlay loader instead writes the running byte count as it copies.
- *
- * @note @p unk4 and @p unk8 are only ever written (always zeroed) - no read of
- * either offset appears anywhere in the disassembly, so their purpose is
- * unknown. They are most likely reserved/cleared header words.
+ * @p payload_offset identifies populated data and locates the sequence payload.
  */
 typedef struct
 {
@@ -101,25 +64,8 @@ typedef struct
 /**
  * @brief One half of the Game Over screen's double-buffered frame.
  *
- * @details The Game Over overlay maintains two of these halves back-to-back as
- * one contiguous buffer (total 0x938 bytes). The two halves are flipped each
- * frame in @p gover_run - one is presented while the other is drawn into.
- *
- * The buffer is split across two C symbols for historical layout reasons:
- *
- *   g_goverFrameHeader - anchors @p halves[0] (struct start)
- *   g_goverFrameTail   - equals @c &halves[0].vramRect (i.e. g_goverFrameHeader + 0x90)
- *
- * Field offsets within each half:
- *
- *   0x000  otag         - ordering-table linked-list head (8 entries x 4 bytes)
- *   0x020  disp         - DISPENV configured by SetDefDispEnv
- *   0x034  draw         - DRAWENV configured by SetDefDrawEnv
- *   0x090  vramRect     - VRAM display rect (x, y, w, h)
- *   0x098  primBuf      - scratch space for per-frame GPU primitives
- *   0x498  allocCursor  - next-primitive write pointer (reset to &primBuf each
- *                         frame by gover_run, advanced by gover_build_otag)
- *   0x49C  (size)
+ * Each half owns its display environments, ordering table, and primitive
+ * workspace. One half is displayed while the other is prepared.
  */
 typedef struct GoverFrameHalf
 {
@@ -131,21 +77,12 @@ typedef struct GoverFrameHalf
     u8* allocCursor;
 } GoverFrameHalf;
 
-/*
- * Audio/music helpers used by gover_show_screen. Real names are still unknown;
- * roles below are inferred from call-site context and AKAO sequencing.
- */
-extern s32 func_800A368C(s32, s32); /* music: load/start track from resource index */
-extern s32 func_800A380C(void);     /* music: commit/apply pending state (e.g. volume) */
-extern s32 func_800A39A8(s32, s32, s32, s32); /* one-shot SFX/voice playback */
+/* Audio helpers used while presenting the Game Over screen. */
+extern s32 func_800A368C(s32, s32);             /* Starts music from a resource. */
+extern s32 func_800A380C(void);                  /* Applies pending music state. */
+extern s32 func_800A39A8(s32, s32, s32, s32);  /* Plays the staged audio clip. */
 
-/**
- * @brief AKAO music master volume slot, sampled by func_800A380C on commit.
- *
- * @note Name inferred from usage - it is set to AKAO_VOLUME_MAX immediately
- * before func_800A380C() and an akao_cmd_c0 volume command. Only referenced
- * from this overlay; not in any shared symbol map.
- */
+/** @brief AKAO music volume applied by func_800A380C. */
 extern s32 g_akao_music_volume;
 
 extern u32 g_scene_mode;
@@ -153,58 +90,40 @@ extern s32 g_pending_game_state;
 extern AudioDataBlock g_audio_data;
 extern void cdrom_queue_read(s32 resourceIndex, void* dstBuffer);
 
-/**
- * FRAME_HALF(i) names the i-th GoverFrameHalf relative to the tail anchor.
- * (frameTail - 0x90) == &halves[0];
- * this expression constant-folds back to frameTail-relative offsets in the emitted code.
- */
+/** Accesses a half of the contiguous double-buffered frame. */
 #define FRAME_HALF(i) (((GoverFrameHalf*)(frameTail - 0x90))[i])
 
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
 #define GOVER_CLUT_Y 480
 
-/** Constant added to an audio_clip_index to produce its CD resource index. */
+/** Base CD resource for Game Over audio clips. */
 #define GOVER_AUDIO_RESOURCE_BASE 81
 
-/**
- * Sentinel audio_clip_index meaning "leave the audio block untouched": return
- * immediately without clearing g_audio_data or loading anything.
- */
+/** Leaves the staged audio block unchanged. */
 #define GOVER_AUDIO_CLIP_NONE (-2)
 
-/**
- * Sentinel audio_clip_index meaning "clear only": zero g_audio_data's status
- * header but do not load a clip from CD.
- */
+/** Clears the staged audio block without loading a replacement. */
 #define GOVER_AUDIO_CLIP_CLEAR (-1)
 
 /** RAM staging address used to load audio clip data from CD. */
 #define GOVER_AUDIO_LOAD_ADDR 0x80180000
 
-/** Constant added to an imageResourceIndex to produce its CD resource index. */
+/** Base CD resource for the Game Over image. */
 #define GOVER_IMAGE_RESOURCE_BASE 0xFFC
 
 /** Maximum AKAO volume level (7-bit MIDI-style volume). */
 #define AKAO_VOLUME_MAX 0x7F
 
-/** g_fadeLevel value representing full brightness (end of fade-in / start of hold). */
+/** Fade level representing full brightness. */
 #define GOVER_FADE_FULL 0x80
 
-/** Per-frame increment applied to g_fadeLevel during fade-in (negated for fade-out). */
+/** Per-frame fade increment. */
 #define GOVER_FADE_STEP 4
 
-/**
- * Bitmask of g_pad_input bits that dismiss the Game Over screen once the
- * fade-in has held at @p GOVER_FADE_FULL. Exact button mapping unknown.
- */
+/** Buttons that dismiss the screen after the fade-in completes. */
 #define GOVER_DISMISS_BUTTON_MASK 0x260
 
-/**
- * Self-referential offset stored at GOVER_AUDIO_LOAD_ADDR + 4 by the loaded
- * audio resource. Kept as a literal-address dereference (not a global symbol)
- * so the lui/lw pair encodes against the address directly, matching the
- * original asm.
- */
+/** Locates sequence data within the staged audio resource. */
 #define GOVER_AUDIO_DATA_OFFSET (*(u32*)(GOVER_AUDIO_LOAD_ADDR + 4))
 
 const s32 g_goverOverlayId = 10;
@@ -212,24 +131,7 @@ s32 D_80140704;
 s32 g_fadeStep;
 s32 D_8014070C;
 
-/*
- * The Game Over screen's double-buffered frame (2x GoverFrameHalf, 0x938 bytes
- * total) is split across two adjacent globals. They alias the same buffer:
- *
- *   g_goverFrameHeader  - &halves[0]              (struct start, 0x90 bytes)
- *   g_goverFrameTail    - &halves[0].vramRect     (= g_goverFrameHeader + 0x90)
- *
- * The asymmetric split is a fossil of incremental development: in the
- * single-buffered version, the first 0x90 bytes were the per-frame render
- * header (otag + DISPENV + DRAWENV) and the remaining bytes were a transient
- * frame-data buffer. When double-buffering was added, the second half was
- * appended onto the data buffer rather than refactoring into a struct array.
- *
- * As a result, gover_show_screen anchors most of its accesses on the tail
- * symbol (where the cluster of writes sits) and gover_run anchors on the
- * header symbol (where its loop starts). Merging them into one symbol breaks
- * the relocation entries in the original object file - keep them separate.
- */
+/* Adjacent storage for the Game Over screen's double-buffered frame. */
 u8 g_goverFrameHeader[0x90];
 u8 g_goverFrameTail[0x8A8];
 s32 g_fadeLevel;
@@ -241,37 +143,17 @@ static void gover_build_otag(unsigned char* pOtBuf);
 static void gover_run(void);
 
 /**
- * @brief Entry point for the Game Over screen overlay.
+ * @brief Loads and presents the Game Over screen.
  *
- * @details Initializes a double-buffered 320x240 display, uploads the Game Over
- * image and palette from CD into VRAM, optionally starts background music and a
- * one-shot audio cue, primes the fade-in state, and hands control to the
- * per-frame loop in gover_run().
+ * Initializes double-buffered rendering, uploads the screen artwork, starts
+ * the requested audio, and runs the fade sequence.
  *
- * The display structures live in one contiguous double-buffered frame; see
- * @p GoverFrameHalf for the field layout, and the comment block above
- * @p g_goverFrameHeader for the symbol-split rationale. This function anchors
- * its accesses on @p g_goverFrameTail (mid-buffer) while gover_run anchors
- * on @p g_goverFrameHeader (buffer start).
- *
- * The two halves are stacked vertically in VRAM (Y=0 and Y=VRAM_BACK_DISP_Y) for
- * double buffering; the CLUT lands at VRAM (0, GOVER_CLUT_Y) and the pixel data
- * at VRAM (SCREEN_WIDTH, 0), matching the SPRT/DR_TPAGE primitives produced by
- * gover_build_otag.
- *
- * @param cdLoadAddr           RAM staging address that receives the raw CD image
- *                             data before VRAM upload (e.g. 0x80160000).
- * @param imageResourceIndex   Logical resource index for the Game Over image; the
- *                             actual CD resource is @p imageResourceIndex + 0xFFC
- *                             after truncation to 16 bits.
- * @param musicResourceIndex   Background music resource to start, or -1 to skip.
- * @param audioClipIndex       One-shot audio clip (voice/SFX) to play, or -1 to skip.
- *
- * @note The implementation takes 4 arguments; the prototype in main.h exposes 7
- *       to preserve the call-site codegen in main.c. Only the first four are
- *       meaningful.
- *
- * @see decomp.me link (100%) https://decomp.me/scratch/1qYnn
+ * @param cdLoadAddr         RAM staging address for the image resource.
+ * @param imageResourceIndex Game Over image resource index.
+ * @param musicResourceIndex Music resource index, or -1 to skip music.
+ * @param audioClipIndex     Audio clip index, or -1 to skip playback.
+ * @return void No return value.
+ * @see decomp.me (100%) https://decomp.me/scratch/1qYnn
  */
 void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResourceIndex, s32 audioClipIndex)
 {
@@ -281,20 +163,17 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     GoverFrameHalf* halves;
     u8(*frameTailPtr)[];
 
-    frameTailPtr = &g_goverFrameTail; // matching: original used a pointer-to-array indirection
+    frameTailPtr = &g_goverFrameTail;
     VSync(0);
     DrawSync(0);
     frameTail = *frameTailPtr;
 
-    // halves[0].vramRect: front buffer at VRAM (0, 0)
+    // Place the display buffers in vertically adjacent VRAM regions.
     FRAME_HALF(0).vramRect.x = 0;
     FRAME_HALF(0).vramRect.y = 0;
     FRAME_HALF(0).vramRect.w = SCREEN_WIDTH;
     FRAME_HALF(0).vramRect.h = SCREEN_HEIGHT;
 
-    // halves[1].vramRect: back buffer at VRAM (0, VRAM_BACK_DISP_Y). Kept as a
-    // typed alias to preserve the addiu+stores pattern in the original asm;
-    // switching to FRAME_HALF(1).vramRect.x reorders the instruction stream.
     half1VramRect = (RECT*)(frameTail + 0x49C);
     half1VramRect->x = 0;
     half1VramRect->y = VRAM_BACK_DISP_Y;
@@ -308,22 +187,18 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
     rect.h = VRAM_HEIGHT;
     ClearImage(&rect, 0, 0, 0);
 
-    // Configure halves[0]/halves[1] disp/draw for vertical double-buffering.
-    // Front buffer draws at Y=SCREEN_HEIGHT (just below its display region);
-    // back buffer draws at Y=VRAM_BACK_DRAW_Y (above its display region).
+    // Configure alternating display and draw regions.
     SetDefDispEnv(&FRAME_HALF(0).disp, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDispEnv(&FRAME_HALF(1).disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
     SetDefDrawEnv(&FRAME_HALF(0).draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDefDrawEnv(&FRAME_HALF(1).draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
-    // Clear the dtd (dither) flag on both DRAWENVs.
+    // Disable dithering for both frame buffers.
     halves = &FRAME_HALF(0);
     halves[1].draw.dtd = 0;
     halves[0].draw.dtd = 0;
 
-    // VRAM destination coordinates for the Game Over image (overlaid on RECT):
-    // pixelX/Y = (SCREEN_WIDTH, 0)  - texture area, just past the framebuffers.
-    // clutX/Y  = (0, GOVER_CLUT_Y)  - CLUT slot in the bottom of VRAM.
+    // Stage the texture beside the frame buffers and its palette below them.
     rect.x = SCREEN_WIDTH;
     rect.y = 0;
     rect.w = 0;
@@ -349,45 +224,30 @@ void gover_show_screen(s32 cdLoadAddr, s32 imageResourceIndex, s32 musicResource
         akao_cmd_c0(0, AKAO_VOLUME_MAX);
     }
 
-    // Begin a GOVER_FADE_STEP-per-frame fade-in (0 -> GOVER_FADE_FULL); gover_run flips the sign on input.
+    // Begin the fade-in; player input reverses it after full brightness.
     g_fadeLevel = GOVER_FADE_STEP;
     g_fadeStep = GOVER_FADE_STEP;
     gover_run();
 }
 
 /**
- * @brief Per-frame loop for the Game Over screen.
+ * @brief Runs the Game Over screen until its fade-out completes.
  *
- * @details Drives the fade-in / hold / fade-out cycle on the double-buffered
- * frame configured by @p gover_show_screen. The loop exits when @p g_fadeLevel
- * has been ramped back to 0 (fully black).
+ * Builds and displays alternating frames while processing controller and CD
+ * state. Dismissal begins the fade-out and returns control to the game state.
  *
- * Each iteration:
- *   1. Resets the drawing half's allocation cursor (@p allocCursor = @p primBuf)
- *      and clears its ordering table.
- *   2. Calls @p gover_build_otag to emit the per-frame SPRT/DR_TPAGE primitives,
- *      which also advances @p g_fadeLevel by @p g_fadeStep.
- *   3. Waits for VSync, then checks user input (@p g_pad_input & 0x260) - once
- *      the fade has held at full brightness (0x80) and a button is pressed,
- *      flips @p g_fadeStep to -4 to begin the fade-out.
- *   4. Swaps display halves and queues @p PutDispEnv / @p PutDrawEnv /
- *      @p DrawOTag for the previously built half. The OT chain is drawn from
- *      its tail entry (@p otag[7], byte offset 0x1C).
- *   5. Pumps @p cdrom_process_state to keep CD-streaming alive during the loop.
- *
- * The fade-out break condition is @p g_fadeLevel == 0; on exit, audio is
- * stopped, the display is masked off, and @p g_pending_game_state is set to signal the
- * caller that the Game Over sequence has completed.
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/IfwJm
+ * @param void No parameters.
+ * @return void No return value.
+ * @see decomp.me (100%) https://decomp.me/scratch/IfwJm
  */
 static void gover_run(void)
 {
     GoverFrameHalf* current;
     GoverFrameHalf* drawing;
     GoverFrameHalf* next;
-    u8 _match_pad[8]; /* stack-shape padding required for matching codegen */
+    u8 _match_pad[8];
 
+    // Prime both ordering tables before enabling display output.
     func_800AA02C();
     current = (GoverFrameHalf*)g_goverFrameHeader;
     ClearOTagR((u_long*)current->otag, 8);
@@ -400,6 +260,7 @@ static void gover_run(void)
     drawing = current;
     while (1)
     {
+        // Rebuild the next frame and advance the fade.
         drawing = current;
         ClearOTagR((u_long*)drawing->otag, 8);
         drawing->allocCursor = drawing->primBuf;
@@ -415,10 +276,13 @@ static void gover_run(void)
             akao_cmd_c1(0, 0x20, 0);
             g_fadeStep = -GOVER_FADE_STEP;
         }
+
         if (g_fadeLevel == (0 & 0xFF))
         {
             break;
         }
+
+        // Present the newly selected buffer and draw the frame just built.
         next = (GoverFrameHalf*)g_goverFrameHeader;
         if (current == (GoverFrameHalf*)g_goverFrameHeader)
         {
@@ -428,8 +292,7 @@ static void gover_run(void)
         PutDispEnv(&current->disp);
 
         PutDrawEnv(&current->draw);
-        // The OT linked list is built backward, so DrawOTag is invoked starting
-        // at the last entry (otag[7] at offset 0x1C).
+        // Ordering-table links are traversed from the final entry.
         DrawOTag((u_long*)((u_char*)drawing + 0x1C));
         update_controllers();
         cdrom_process_state();
@@ -447,26 +310,13 @@ static void gover_run(void)
 }
 
 /**
- * @brief Builds the per-frame GPU primitive list for the Game Over screen.
+ * @brief Builds the textured primitives for one Game Over frame.
  *
- * @details Called every frame from gover_run. Advances @p g_fadeLevel by
- * @p g_fadeStep and inserts four primitives into the ordering table at
- * @p pOtBuf in back-to-front order:
+ * Splits the artwork across two texture pages and modulates both sprites with
+ * the current fade level.
  *
- *   1. DR_TPAGE  - selects texture page 0xA7 (8bpp, VRAM X=448)
- *   2. SPRT      - right half of the image (64x224) at screen X=256
- *   3. DR_TPAGE  - selects texture page 0xA5 (8bpp, VRAM X=320)
- *   4. SPRT      - left half of the image (256x224) at screen X=0
- *
- * Both sprites share the CLUT at VRAM (0, GOVER_CLUT_Y) and are color-modulated by
- * @p g_fadeLevel (0 = black, 0x80 = full brightness), producing the fade-in
- * and fade-out effect. Primitives are allocated from the buffer region starting
- * at @p pOtBuf+0x98, with the allocation cursor stored at @p pOtBuf+0x498.
- *
- * @param pOtBuf  Pointer to the double-buffered OTag buffer. Serves as both
- *                the OTag[0] linked-list head and the container for the
- *                primitive allocation cursor at offset 0x498.
- *
+ * @param pOtBuf Frame buffer containing the ordering table and primitive pool.
+ * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/q3LKi
  */
 static void gover_build_otag(unsigned char* pOtBuf)
@@ -487,12 +337,11 @@ static void gover_build_otag(unsigned char* pOtBuf)
         g_fadeStep = 0;
     }
 
-    // The primitive allocation cursor (allocCursor, struct offset 0x498) is reset to
-    // &primBuf (offset 0x98) each frame by gover_run and advanced by this function.
+    // Append primitives at the frame's current allocation cursor.
     half = (GoverFrameHalf*)pOtBuf;
     pPrimA = half->allocCursor;
 
-    // SPRT: left half (256x224), texture page 0xA5 (8bpp, VRAM X=SCREEN_WIDTH)
+    // Draw the left image region from its texture page.
     setSprt(pPrimA);
 
     leftFadeLevel = (unsigned char)g_fadeLevel;
@@ -506,14 +355,13 @@ static void gover_build_otag(unsigned char* pOtBuf)
 
     pPrimA += sizeof(SPRT);
 
-    // DR_TPAGE: select texture page 0xA5 before drawing left SPRT (8bpp, VRAM X=SCREEN_WIDTH, ABR=add)
     setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH, 0));
     addPrim(pOtBuf, pPrimA);
 
     pPrimB = pPrimA + sizeof(DR_TPAGE);
     pPrimA = pPrimB;
 
-    // SPRT: right half (64x224), texture page 0xA7 (8bpp, VRAM X=SCREEN_WIDTH+128)
+    // Draw the remaining image region from the adjacent texture page.
     setSprt(pPrimB);
 
     rightFadeLevel = (unsigned char)g_fadeLevel;
@@ -528,55 +376,39 @@ static void gover_build_otag(unsigned char* pOtBuf)
 
     pPrimA += sizeof(SPRT);
 
-    // DR_TPAGE: select texture page 0xA7 before drawing right SPRT (8bpp, VRAM X=SCREEN_WIDTH+128, ABR=add)
     setDrawTPage((DR_TPAGE*)pPrimA, 0, 0, getTPage(1, 1, SCREEN_WIDTH + 128, 0));
     pPrimB = pPrimA;
     pPrimB += sizeof(DR_TPAGE);
 
     addPrim(pOtBuf, pPrimA);
 
-    half->allocCursor = pPrimB; // advance allocation cursor
+    half->allocCursor = pPrimB;
 }
 
 /**
  * @brief Reads a CD image resource into RAM, then uploads it to VRAM.
  *
- * @details Queues a CD read for the given resource into the supplied RAM buffer,
- * blocks until the read completes, then defers to gover_upload_image_to_vram to
- * split the buffer into its CLUT and pixel-data sections and DMA each to VRAM.
- *
- * @param cdResourceIndex   CD resource index (lower 16 bits used).
- * @param coordinates       VRAM destination for the CLUT and pixel sections.
- * @param ramBuffer         RAM staging address that receives the raw CD bytes.
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/OafFK
+ * @param cdResourceIndex CD resource index.
+ * @param coordinates     VRAM destinations for the palette and pixel data.
+ * @param ramBuffer       RAM staging address for the resource.
+ * @return void No return value.
+ * @see decomp.me (100%) https://decomp.me/scratch/OafFK
  */
 static void gover_load_image_from_cd(s32 cdResourceIndex, VramDstCoords* coordinates, u32 ramBuffer)
 {
-    volatile u8 _match_pad[8]; /* stack-shape padding required for matching codegen */
+    volatile u8 _match_pad[8];
+
     cdrom_queue_read(cdResourceIndex & 0xFFFF, (void*)ramBuffer);
     cdrom_wait_queue_empty();
     gover_upload_image_to_vram((ClutSectionHeader*)ramBuffer, coordinates);
 }
 
 /**
- * @brief Uploads a CLUT palette and pixel data from a CD image buffer into VRAM.
+ * @brief Uploads a staged image's palette and pixel data to VRAM.
  *
- * @details Performs two LoadImage calls against a custom binary image format
- * read from CD. The first uploads the CLUT palette as a single-row strip at
- * the coordinates given by @p coordinates->clutX/Y. The second uploads the
- * pixel data at @p coordinates->pixelX/Y using dimensions from the
- * PixelDataHeader, which is located at a variable byte offset inside the
- * ClutSectionHeader (stored in ClutSectionHeader::size, measured from the
- * address of that field itself).
- *
- * @param header      Pointer to the ClutSectionHeader at the start of the
- *                    CD image buffer.
- * @param coordinates VRAM destination coordinates for both the CLUT and pixel
- *                    data sections.
- * @return            Pixel data width rounded up to the nearest 64-texel
- *                    texture page boundary (see ALIGN64).
- *
+ * @param header      Staged image resource.
+ * @param coordinates VRAM destinations for the palette and pixel data.
+ * @return Pixel width rounded up to a texture-page boundary.
  * @see decomp.me (100%) https://decomp.me/scratch/BEM7D
  */
 static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* coordinates)
@@ -591,8 +423,7 @@ static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* 
     rect.h = 1;
     LoadImage(&rect, &header->clutData);
 
-    // The pixel data header is located at a variable offset from the start of the CLUT section header,
-    // so we have to calculate its address using the size field in the CLUT header.
+    // Locate the pixel section that follows the variable-length palette.
     pdh = (PixelDataHeader*)((u8*)header + 8 + clutSectionSize);
 
     rect.x = coordinates->pixelX;
@@ -605,22 +436,15 @@ static u32 gover_upload_image_to_vram(ClutSectionHeader* header, VramDstCoords* 
 }
 
 /**
- * @brief Loads an audio clip from CD, primes the audio-data block, and posts
- *        the clip's AKAO sequence to the audio driver.
+ * @brief Loads and plays a Game Over audio clip.
  *
- * @details The loaded blob begins with an indexed offset table: word 0 is an
- * index N into the same table, and word N gives the byte offset (relative to
- * the table) at which the AKAO sequence starts. Bytes from the start of the
- * table up to that offset are copied into @p g_audio_data (after its 12-byte
- * status header), and the AKAO sequence is then handed to
- * akao_play_sequence_blocking.
+ * Clears the current staged block, reads the selected resource, copies its
+ * driver data, and submits the contained AKAO sequence.
  *
- * @param audio_clip_index Clip index (resource = audio_clip_index + 0x51), or
- *                         @p GOVER_AUDIO_CLIP_CLEAR (-1) to clear
- *                         @p g_audio_data without loading, or
- *                         @p GOVER_AUDIO_CLIP_NONE (-2) to skip entirely.
- *
- * @see decomp.me: (100%) https://decomp.me/scratch/G5r92
+ * @param audio_clip_index Clip index, GOVER_AUDIO_CLIP_CLEAR to clear the
+ *                         staged block, or GOVER_AUDIO_CLIP_NONE to leave it.
+ * @return void No return value.
+ * @see decomp.me (100%) https://decomp.me/scratch/G5r92
  */
 static void gover_load_audio_clip(s32 audio_clip_index)
 {
@@ -643,6 +467,7 @@ static void gover_load_audio_clip(s32 audio_clip_index)
         return;
     }
 
+    // Load the clip and find its sequence through the resource's offset table.
     cdrom_queue_read((audio_clip_index + GOVER_AUDIO_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_AUDIO_LOAD_ADDR);
     cdrom_wait_queue_empty();
     g_audio_data.payload_offset = 0xC;
@@ -652,6 +477,7 @@ static void gover_load_audio_clip(s32 audio_clip_index)
     akao_seq = (AkaoSeqHeader*)(src + ((u32)offsets[*offsets]));
     dst = ((u8*)(&g_audio_data)) + 12;
 
+    // Preserve the driver data that precedes the sequence.
     while (src != (u8*)akao_seq)
     {
         *(dst++) = *(src++);
