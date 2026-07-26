@@ -18,7 +18,6 @@
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/1qYnn
  */
-void gover_show_screen(
-    s32 cd_load_address, s32 image_index, s32 music_index, s32 sfx_bank_index);
+void gover_show_screen(s32 cd_load_address, s32 image_index, s32 music_index, s32 sfx_bank_index);
 
 #endif
