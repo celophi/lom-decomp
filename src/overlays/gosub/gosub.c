@@ -35,7 +35,7 @@ void func_80141ED8();    /* extern */
 s32 func_8014229C();    /* extern */
 s32 func_80142398();    /* extern */
 s32 func_80142400();    /* extern */
-void func_80142460();    /* extern */
+s32 func_80142460();    /* extern */
 void func_80142610();    /* extern */
 s32 func_80142820();    /* extern */
 void func_8014289C();    /* extern */
@@ -75,6 +75,7 @@ extern s32 D_8016B950;
 extern void* D_8016B954;
 extern s32 D_8016B958;
 extern s32 D_8016B95C;
+extern u8 D_8016B94C[2];
 extern s32 D_8016B908[];
 extern s32 D_801229B0[];
 extern s32 D_8017097C;
@@ -1320,6 +1321,57 @@ s32 func_80142400(void)
             return 0;
         }
         return func_80142820();
+    }
+    return 0;
+}
+
+/**
+ * @brief Commit a pending row move by swapping the two marked rows.
+ *
+ * Runs only in picker state 2. D_8016B94C holds the pair being reordered --
+ * [0] is the row the move started on and [1] is where it was dropped. If they
+ * differ, three things are exchanged: the rows' 4-byte records in the
+ * D_8012271C[0x29DC] table (keyed by each row's index), the D_80170A58 rows
+ * themselves, and finally the index fields, which must stay with the slot
+ * rather than travel with the row. The picker is then closed.
+ *
+ * Dropping a row onto itself is not a move: func_801458A4 is rung instead and
+ * the picker falls back to state 1.
+ *
+ * @return Always 0.
+ */
+s32 func_80142460(void)
+{
+    GosubListEntry entry_tmp;
+    u32 rec_tmp;
+    s32 tmp;
+
+    if (D_80170960 == 0)
+    {
+        return 0;
+    }
+    if (D_80170960 != 2)
+    {
+        return 0;
+    }
+    if (D_8016B94C[0] != D_8016B94C[1])
+    {
+        func_80146AA8(&rec_tmp, D_8012271C + (D_80170A58[D_8016B94C[0]].index * 4 + 0x29DC));
+        func_80146AA8(D_8012271C + (D_80170A58[D_8016B94C[0]].index * 4 + 0x29DC),
+                      D_8012271C + (D_80170A58[D_8016B94C[1]].index * 4 + 0x29DC));
+        func_80146AA8(D_8012271C + (D_80170A58[D_8016B94C[1]].index * 4 + 0x29DC), &rec_tmp);
+        func_80146AD0(&entry_tmp, &D_80170A58[D_8016B94C[0]]);
+        func_80146AD0(&D_80170A58[D_8016B94C[0]], &D_80170A58[D_8016B94C[1]]);
+        func_80146AD0(&D_80170A58[D_8016B94C[1]], &entry_tmp);
+        tmp = D_80170A58[D_8016B94C[0]].index;
+        D_80170A58[D_8016B94C[0]].index = D_80170A58[D_8016B94C[1]].index;
+        D_80170A58[D_8016B94C[1]].index = tmp;
+        D_80170960 = 0;
+    }
+    else
+    {
+        func_801458A4();
+        D_80170960 = 1;
     }
     return 0;
 }
