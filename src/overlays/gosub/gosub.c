@@ -146,8 +146,13 @@ GosubElement* func_80143C04();
  * bytes, so they are declared as byte-aligned 8-bit bitfields: writes narrow
  * to @c sb and reads to @c lb, which is what the target does.
  *
- * @note Only the fields the builders touch are known; 0x10..0x1B is untouched
- *       and left as unk10.
+ * The word at 0x1C is a flag set. Most builders write single bits through the
+ * @c f bitfields, but func_80141ED8 tests bit 0 through the @c half alias and
+ * func_80141C3C rewrites bit 2 through @c word, so all three views are exposed
+ * as a union; each spelling is the access width the game's code uses.
+ *
+ * @note Only the fields the builders touch are known; 0x10..0x1B is a block of
+ *       u16s copied verbatim out of the source record.
  */
 typedef struct
 {
@@ -160,8 +165,21 @@ typedef struct
     s32 unkE : 8;
     s32 kind : 4;
     s32 unkC_28 : 4;
-    u32 unk10[3];
-    u32 unk1C;
+    u16 unk10;
+    u16 unk12[4];
+    u16 unk1A;
+    union
+    {
+        struct
+        {
+            u32 flag0 : 1;
+            u32 flag1 : 1;
+            u32 flag2 : 1;
+            u32 unk1C_3 : 29;
+        } f;
+        u16 half;
+        u32 word;
+    } flags;
 } GosubListEntry;
 
 extern GosubListEntry D_80170A58[];
@@ -1021,7 +1039,7 @@ void func_80141B28(void)
  * scratch buffer in D_8016B960 -- the archive string, then optionally a
  * separator and the decimal form of the unkC field appended after it.
  *
- * @note Bit 2 of unk1C is cleared only for records that are both unflagged at
+ * @note Bit 2 of the flag word is cleared only for records that are both unflagged at
  *       bit 16 and have both low bits set; every other record sets it.
  */
 void func_80141C3C(void)
@@ -1049,11 +1067,11 @@ void func_80141C3C(void)
         if (((*(u32*)(D_8012271C + (i << 2) + 0x29DC) >> 16) & 1) != 0 ||
             (*(u32*)(D_8012271C + (i << 2) + 0x29DC) & 3) != 3)
         {
-            D_80170A58[i].unk1C |= 4;
+            D_80170A58[i].flags.word |= 4;
         }
         else
         {
-            D_80170A58[i].unk1C &= ~4;
+            D_80170A58[i].flags.word &= ~4;
         }
         D_80170A58[i].index = i;
         D_80170A58[i].kind = 4;
@@ -1064,4 +1082,145 @@ void func_80141C3C(void)
     D_8016B958 = 0x120;
     D_8016B950 = 0x84;
     D_80170994 = GOSUB_MSG_PTR(0x18);
+}
+
+/**
+ * @brief Build the party/character list for the gosub screen entered by arm 18.
+ *
+ * Two record sources feed the same D_80170A58 row array, and @p mode selects
+ * which of them contribute: mode 1 suppresses the first block, mode 2
+ * suppresses the second, and any other value emits both back to back.
+ *
+ * The first block walks the three kind bytes at D_8012271C[0x29D8]. A byte
+ * below 3 selects a 332-byte record at D_8012271C[0x2B0C], whose name string,
+ * two packed bytes and five u16s are copied into the row; the row is marked
+ * current when the kind matches the selection byte at D_8012271C[0x29D7]. In
+ * mode 0 the row's index keeps only bit 7 of the kind instead of the kind
+ * itself.
+ *
+ * The second block walks five 0x60-byte slots at D_8012271C[0x2EF4], skipping
+ * any whose first byte (the name string's first character) is zero. Each row
+ * takes its name straight from the slot and its unkC/unkD from the slot's byte
+ * fields, unless bit 31 of the slot word at +0x44 is set: those rows bias unkC
+ * by 0x48 and derive unkD from three ranges of the u16 at +0x42. The row is
+ * marked current when the slot index matches the selection word at
+ * D_8012271C[0x2EF0].
+ *
+ * @param mode Which blocks to emit: 1 = second only, 2 = first only, otherwise
+ *             both. Also picks the screen's title message.
+ * @note @c tmp is reserved but never written; the sibling builders use their
+ *       scratch buffer to compose names, and this one has nothing to compose.
+ */
+void func_80141ED8(s32 mode)
+{
+    s32 i;
+    s32 j;
+    s32 count;
+    s32 kind;
+    s32 off;
+    s32 slot;
+    s32 reload_off;
+    u8 tmp[32];
+
+    count = 0;
+    if (mode != 1)
+    {
+        for (i = 0; i < 3; i++)
+        {
+            kind = *(D_8012271C + i + 0x29D8);
+            if (kind < 3)
+            {
+                if (mode == 0)
+                {
+                    D_80170A58[count].index = kind & 0x80;
+                }
+                else
+                {
+                    D_80170A58[count].index = kind;
+                }
+                D_80170A58[count].value = -3;
+                D_80170A58[count].flags.f.flag2 = 0;
+                if (*(s8*)(D_8012271C + 0x29D7) == kind)
+                {
+                    D_80170A58[count].unkE = 1;
+                }
+                else
+                {
+                    D_80170A58[count].unkE = 0;
+                }
+                D_80170A58[count].flags.f.flag0 = 0;
+                D_80170A58[count].flags.f.flag1 = 0;
+                D_80170A58[count].kind = 4;
+                off = kind * 332;
+                D_80170A58[count].name = D_8012271C + 0x2B0C + off;
+                D_80170A58[count].unkC = *(D_8012271C + off + 0x2B50) & 0xF;
+                D_80170A58[count].unkD = *(D_8012271C + off + 0x2B54);
+                D_80170A58[count].unk10 = *(u16*)(D_8012271C + off + 0x2B24);
+                for (j = 0; j < 4; j++)
+                {
+                    D_80170A58[count].unk12[j] = *(u16*)(D_8012271C + off + 0x2B26 + j * 2);
+                }
+                reload_off = kind * 332;
+                D_80170A58[count].unk1A = *(u16*)(D_8012271C + reload_off + 0x2B22);
+                count++;
+            }
+        }
+    }
+    if (mode != 2)
+    {
+        for (slot = 0; slot < 5; slot++)
+        {
+            off = slot * 0x60;
+            if (*(D_8012271C + off + 0x2EF4) != 0)
+            {
+                D_80170A58[count].index = slot;
+                D_80170A58[count].value = -3;
+                D_80170A58[count].flags.f.flag2 = 1;
+                if (*(s32*)(D_8012271C + 0x2EF0) == slot)
+                {
+                    D_80170A58[count].unkE = 1;
+                }
+                else
+                {
+                    D_80170A58[count].unkE = 0;
+                }
+                D_80170A58[count].kind = 4;
+                D_80170A58[count].name = D_8012271C + 0x2EF4 + slot * 0x60;
+                D_80170A58[count].unkC = *(D_8012271C + off + 0x2F09);
+                D_80170A58[count].unk10 = *(u16*)(D_8012271C + off + 0x2F12);
+                D_80170A58[count].flags.f.flag0 = *(u32*)(D_8012271C + off + 0x2F38) >> 31;
+                D_80170A58[count].flags.f.flag1 = (*(u32*)(D_8012271C + off + 0x2F38) >> 30) & 1;
+                D_80170A58[count].unkD = *(D_8012271C + off + 0x2F0C);
+                if (D_80170A58[count].flags.half & 1)
+                {
+                    D_80170A58[count].unkC = *(D_8012271C + off + 0x2F0A) + 0x48;
+                    if (*(u16*)(D_8012271C + off + 0x2F36) < 6)
+                    {
+                        D_80170A58[count].unkD = 0;
+                    }
+                    else if (*(u16*)(D_8012271C + off + 0x2F36) < 0x1F)
+                    {
+                        D_80170A58[count].unkD = 1;
+                    }
+                    else
+                    {
+                        D_80170A58[count].unkD = 2;
+                    }
+                }
+                for (j = 0; j < 4; j++)
+                {
+                    D_80170A58[count].unk12[j] = *(u16*)(D_8012271C + off + 0x2F14 + j * 2);
+                }
+                reload_off = slot * 0x60;
+                D_80170A58[count].unk1A = *(u16*)(D_8012271C + reload_off + 0x2F10);
+                count++;
+            }
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 3;
+    D_80170980 = 0x30;
+    D_8016B958 = 0x120;
+    D_8016B950 = 0x94;
+    D_80170994 = GOSUB_MSG_PTR(mode * 2 + 0x2C);
 }
