@@ -16,8 +16,36 @@ typedef unsigned short u16;
 typedef signed short s16;
 
 void func_80067F8C();    /* extern */
+void func_800A8B90();    /* extern */
 void func_800AA02C();    /* extern */
-void func_80140114(s32); /* extern */
+void func_80140114(s32*); /* extern */
+void func_80140C18();    /* extern */
+void func_80140DDC();    /* extern */
+void func_80141024();    /* extern */
+void func_801411E8();    /* extern */
+void func_801413C0();    /* extern */
+void func_80141580();    /* extern */
+void func_801416E0();    /* extern */
+void func_80141808();    /* extern */
+void func_8014191C();    /* extern */
+void func_80141A14();    /* extern */
+void func_80141B28();    /* extern */
+void func_80141C3C();    /* extern */
+void func_80141ED8();    /* extern */
+void func_8014229C();    /* extern */
+void func_80142398();    /* extern */
+void func_80142400();    /* extern */
+void func_80142460();    /* extern */
+void func_80142610();    /* extern */
+void func_80142820();    /* extern */
+void func_8014289C();    /* extern */
+void func_80142B98();    /* extern */
+void func_80142C64();    /* extern */
+void func_80143054();    /* extern */
+void func_80143B64();    /* extern */
+void func_80145CEC();    /* extern */
+void func_80146468();    /* extern */
+void func_80146538();    /* extern */
 extern s32 D_8016B8C8;
 extern s32 D_8016B8CC;
 extern s32 D_8016B8E0;
@@ -27,10 +55,152 @@ extern s32 D_8016B8D0;
 extern s32 D_8017098C;
 extern u8 D_8016B8DC;
 extern s32 D_801228F0;
-extern u8 D_80145744;  
-extern void* D_80174A58;    
+extern u8 D_80145744;
+extern void* D_80174A58;
 extern s32 D_8016B948;
-extern u8 D_80170968[];    
+extern u8 D_80170968[];
+extern u8 D_80142B18;
+extern u8* D_8012271C;
+extern s32 D_8014F29C;
+extern s32 D_8016B8D4;
+extern s32 D_8016B8D8;
+extern s32 D_8016B8E4;
+extern s32 D_8016B8EC;
+extern s32 D_8016B8F0;
+extern void* D_8016B8F8;
+extern u8 D_8016B8FC;
+extern u8 D_8016B8FD;
+extern s32 D_8016B900;
+extern s32 D_8016B950;
+extern void* D_8016B954;
+extern s32 D_8016B958;
+extern s32 D_8017097C;
+extern s32 D_80170980;
+extern u8 D_801448EC;
+extern u8 D_801452F0;
+extern u8 D_80145DF8;
+extern u8 D_80145EA4;
+extern u8 D_801460D0;
+extern u8 D_80145F80;
+extern u8 D_80146418;
+extern u8 D_80170960;
+extern s32 D_8016B8E8;
+extern u8 D_800EC3DA[];
+extern u32 D_8014F27C[];
+extern u32 D_8014F280[];
+extern u32 D_8014F294[];
+extern u8 D_8016B960[];
+extern u8 D_8016B5AC[];
+extern u8* D_80170994;
+
+/**
+ * @brief One entry in the gosub screen's element list, as handed out by
+ *        func_80143C04.
+ *
+ * The first word packs several bitfields plus a top byte that the code always
+ * rewrites through the whole word (see SET_ELEM_CODE), so it is exposed as a
+ * union. The second word carries a flag and the y coordinate.
+ *
+ * @note Field meanings beyond x/y are unconfirmed; the `_N` suffixes record the
+ *       bit position each one starts at.
+ */
+typedef struct
+{
+    union
+    {
+        u32 word;
+        struct
+        {
+            u32 unk0_0 : 3;
+            u32 unk0_3 : 4;
+            u32 x : 9;
+            u32 unk0_16 : 8;
+        } f;
+    } attr;
+    u32 unk4_0 : 1;
+    u32 y : 8;
+    u32 unk4_9 : 23;
+    void* handler;
+} GosubElement;
+
+/**
+ * @brief Set the top byte of an element's attr word.
+ *
+ * Must go through the whole word rather than an 8-bit bitfield: a bitfield
+ * assignment narrows to `sb` at offset 3, which is not what the game does.
+ *
+ * @param e Element to update.
+ * @param c New top-byte value. TODO: meaning unknown; observed 0xE8 and 0x08.
+ */
+#define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
+
+extern GosubElement D_80170998;
+
+GosubElement* func_80143C04();
+
+/**
+ * @brief One row of the item list built by the gosub screen builders.
+ *
+ * The word at 0xC packs three signed bytes below a 4-bit row kind. The simple
+ * slot builders only ever write @c kind, but func_80141C3C uses all three
+ * bytes, so they are declared as byte-aligned 8-bit bitfields: writes narrow
+ * to @c sb and reads to @c lb, which is what the target does.
+ *
+ * @note Only the fields the builders touch are known; 0x10..0x1B is untouched
+ *       and left as unk10.
+ */
+typedef struct
+{
+    u8* name;
+    u8* desc;
+    s16 value;
+    u16 index;
+    s32 unkC : 8;
+    s32 unkD : 8;
+    s32 unkE : 8;
+    s32 kind : 4;
+    s32 unkC_28 : 4;
+    u32 unk10[3];
+    u32 unk1C;
+} GosubListEntry;
+
+extern GosubListEntry D_80170A58[];
+
+/**
+ * @brief Resolve one entry of a text archive block.
+ *
+ * D_8014F27C heads a 13-word table of block offsets, each relative to the
+ * table itself. A block begins with a u16 per entry giving that entry's offset
+ * from the same table base, so a lookup is base + block + block[idx].
+ *
+ * @param blk Block offset word, e.g. D_8014F280[0] or D_8014F27C[12].
+ * @param idx Entry index within the block.
+ * @return Pointer to the entry.
+ * @note The term order matters: writing the base first is what produces the
+ *       target's accumulate chain (see idioms.md [EXPAND-14]).
+ */
+#define ARCHIVE_ENTRY(blk, idx) \
+    ((u8*)D_8014F27C + (blk) + *(u16*)((u8*)D_8014F27C + (blk) + (idx) * 2))
+
+/**
+ * @brief Resolve a message-archive entry at byte offset @p off.
+ *
+ * The same lookup as ARCHIVE_ENTRY against block 8, but spelled through
+ * D_8014F29C (which is that block's offset word) because that is the
+ * relocation the game's code carries; do not fold it into ARCHIVE_ENTRY.
+ *
+ * @param off Byte offset of the u16 entry index within the resolved block.
+ * @return Pointer to the entry.
+ */
+#define GOSUB_MSG_PTR(off) \
+    ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
+
+/**
+ * @brief Resolve the message-archive entry at @p off and hand it to func_80145CEC.
+ *
+ * @param off Byte offset of the u16 entry index within the resolved block.
+ */
+#define GOSUB_MSG(off) func_80145CEC(GOSUB_MSG_PTR(off))
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/qM81L
@@ -98,4 +268,800 @@ void func_80140114(s32* arg0)
     D_8016B948 = 0;
     func_8014020C(D_80170968[D_8016B8DC], var_a1);
     func_80146DA8();
+}
+
+/**
+ * @brief Enter one of the 20 gosub sub-screens: reset the shared state, install
+ *        the screen's update/draw handlers, and queue its intro message.
+ *
+ * Every arm zeroes the common state block, runs the screen's own setup helper,
+ * publishes an update handler in D_8016B954 and a draw handler in D_8016B8F8,
+ * then calls the screen's enter routine. Unless that routine reported a failure
+ * (D_8016B8D4, or the save-slot count at D_8012271C[0x29D6] for arms 10 and 11)
+ * the arm finishes by submitting its message through GOSUB_MSG.
+ *
+ * @param arg0 Screen id, 0..19; anything else returns without touching state.
+ * @param arg1 Unused by this function; passed by func_80140114.
+ */
+void func_8014020C(s32 arg0, s32 arg1)
+{
+    D_8016B8E0 = 0;
+    D_80170990 = 0;
+    D_80170988 = 0;
+    D_8016B8D0 = 0;
+    D_8016B8E4 = 0;
+    D_8017097C = 0;
+    D_8016B8EC = 0;
+    D_8016B8F0 = 0;
+    D_8016B900 = 0;
+
+    switch (arg0)
+    {
+    case 0:
+        func_80143B64();
+        func_80141B28();
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_801411E8(1);
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(8);
+        }
+        break;
+
+    case 1:
+        func_80143B64();
+        func_80141A14();
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_801411E8(1);
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0xA);
+        }
+        break;
+
+    case 2:
+        func_80143B64();
+        func_80142C64(0);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141024();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(2);
+        }
+        break;
+
+    case 3:
+        func_80143B64();
+        func_80142C64(1);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141024();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(4);
+        }
+        break;
+
+    case 4:
+        func_80143B64();
+        func_80142C64(2);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141024();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(6);
+        }
+        break;
+
+    case 5:
+        func_80143B64();
+        func_80142C64(3);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141024();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0);
+        }
+        break;
+
+    case 6:
+    case 7:
+    case 8:
+        func_80143B64();
+        func_80143054(arg0 - 6);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_801411E8(1);
+        break;
+
+    case 9:
+        func_80143B64();
+        func_80142C64(4);
+        D_8016B8FD = 4;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142610;
+        D_8016B8F8 = (void*)&D_80142B18;
+        func_80140C18();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(-2);
+        }
+        break;
+
+    case 10:
+        func_80143B64();
+        func_80142C64(3);
+        D_8016B900 = 1;
+        D_8016B8D8 = 6;
+        D_80170980 = 0x10;
+        D_8016B958 = 0xE8;
+        D_8016B950 = 0x64;
+        D_8016B8E4 = 0;
+        D_8017097C = 0;
+        D_8016B8EC = 0;
+        D_8016B8FD = 2;
+        D_8016B8FC = 2;
+        D_8016B954 = (void*)func_80142400;
+        D_8016B8F8 = (void*)func_80142820;
+        D_80174A58 = (void*)func_8014289C;
+        func_80140DDC();
+        if (D_8012271C[0x29D6] >= 0x28)
+        {
+            func_80143B64();
+            GOSUB_MSG(-4);
+        }
+        break;
+
+    case 11:
+        func_80143B64();
+        func_80141C3C();
+        D_8016B8FD = 2;
+        D_8016B8FC = 2;
+        D_8016B954 = (void*)func_80142460;
+        D_8016B8F8 = (void*)func_80142B98;
+        D_8016B8F0 = 1;
+        func_801413C0();
+        if (D_8012271C[0x29D6] == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(-6);
+        }
+        break;
+
+    case 12:
+        func_80143B64();
+        func_80141ED8(0);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_8014229C;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141580();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0x32);
+        }
+        break;
+
+    case 13:
+        func_80143B64();
+        func_80141ED8(1);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_8014229C;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141580();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0x34);
+        }
+        break;
+
+    case 14:
+        func_80143B64();
+        func_80141ED8(2);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141580();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0x36);
+        }
+        break;
+
+    case 15:
+        func_80143B64();
+        func_801416E0();
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_801411E8(1);
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0x3E);
+        }
+        break;
+
+    case 16:
+        func_80143B64();
+        func_8014191C();
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_801411E8(0);
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0x3C);
+        }
+        break;
+
+    case 17:
+        func_80143B64();
+        func_80141ED8(0);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141580();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0x32);
+        }
+        break;
+
+    case 18:
+        func_80143B64();
+        func_80141ED8(1);
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_80141580();
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0x34);
+        }
+        break;
+
+    case 19:
+        func_80143B64();
+        func_80141808();
+        D_8016B8FD = 1;
+        D_8016B8FC = 1;
+        D_8016B954 = (void*)func_80142398;
+        D_8016B8F8 = (void*)func_80142B98;
+        func_801411E8(1);
+        if (D_8016B8D4 == 0)
+        {
+            func_80143B64();
+            GOSUB_MSG(0x4C);
+        }
+        break;
+    }
+}
+
+/**
+ * @brief Build the three elements of the gosub screen entered by arm 9.
+ *
+ * Each element is allocated by func_80143C04, given its draw handler, and
+ * positioned. The first is centred horizontally against the current window
+ * width in D_8016B958 and stacked vertically by D_80170980 * D_8016B8D8; the
+ * other two sit at a fixed x with only their attr byte differing.
+ */
+void func_80140C18(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x38;
+    p->unk4_0 = 0;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0xE8);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80145EA4;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801460D0;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0xB0;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the three elements of the gosub screen entered by arm 10.
+ *
+ * Same layout as func_80140C18 - the first element is centred against the
+ * window width in D_8016B958 and stacked by D_80170980 * D_8016B8D8, the other
+ * two sit at a fixed x - but with a different set of draw handlers and attr
+ * bytes.
+ */
+void func_80140DDC(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x48;
+    p->unk4_0 = 0;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0xE8);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80145DF8;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0xB0;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801452F0;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x20;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Configure the fixed element D_80170998 and clear D_8016B8E8.
+ *
+ * Unlike func_80140C18 / func_80140DDC this one does not allocate: it reuses a
+ * single statically allocated element, so it needs no frame. Its attr top byte
+ * is cleared rather than set to a handler code.
+ */
+void func_80140FA0(void)
+{
+    GosubElement* p;
+
+    p = &D_80170998;
+    p->handler = (void*)&D_80145F80;
+    D_8016B8E8 = 0;
+    p->attr.f.unk0_0 = 1;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x20;
+    p->attr.f.unk0_16 = 0x70;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 0);
+}
+
+/**
+ * @brief Build the three elements of the gosub screens entered by arms 2 to 5.
+ *
+ * Same layout as func_80140C18 and func_80140DDC, with its own handlers and
+ * attr bytes; the third element also sits higher up the screen than in the
+ * other two variants.
+ */
+void func_80141024(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x28;
+    p->unk4_0 = 0;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0xE8);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801460D0;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0xB0;
+    p->unk4_0 = 1;
+    p->y = 0x24;
+    SET_ELEM_CODE(p, 8);
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80146418;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the elements of the gosub screens entered by arms 0, 1, 6-8,
+ *        15, 16 and 19.
+ *
+ * Same layout as func_80141024, except the middle element is optional: callers
+ * pass zero to get just the header and footer elements.
+ *
+ * @param arg0 Non-zero to include the middle element, zero to skip it.
+ */
+void func_801411E8(s32 arg0)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x28;
+    p->unk4_0 = 0;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0xE8);
+    D_80170960 = 0;
+
+    if (arg0 != 0)
+    {
+        p = func_80143C04();
+        p->handler = (void*)&D_801460D0;
+        p->attr.f.unk0_3 = 1;
+        p->attr.f.x = 0x1C;
+        p->attr.f.unk0_16 = 0xB0;
+        p->unk4_0 = 1;
+        p->y = 0x14;
+        SET_ELEM_CODE(p, 8);
+    }
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80146418;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the three elements of the gosub screen entered by arm 11.
+ *
+ * Same layout as func_80141024, but the first element has its unk4_0 flag set
+ * rather than cleared and takes attr code 0x20 instead of 0xE8.
+ */
+void func_801413C0(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x28;
+    p->unk4_0 = 1;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0x20);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801460D0;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0xB0;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80146418;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the two elements of the gosub screens entered by arms 12-14 and
+ *        17-18.
+ *
+ * The shortest member of this family: no middle element, so only a header
+ * centred against D_8016B958 and a footer at a fixed x.
+ */
+void func_80141580(void)
+{
+    GosubElement* p;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_801448EC;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0xA0 - D_8016B958 / 2;
+    p->attr.f.unk0_16 = 0x30;
+    p->unk4_0 = 1;
+    p->y = D_80170980 * D_8016B8D8 + 4;
+    SET_ELEM_CODE(p, 0x18);
+    D_80170960 = 0;
+
+    p = func_80143C04();
+    p->handler = (void*)&D_80146418;
+    p->attr.f.unk0_3 = 1;
+    p->attr.f.x = 0x1C;
+    p->attr.f.unk0_16 = 0x10;
+    p->unk4_0 = 1;
+    p->y = 0x14;
+    SET_ELEM_CODE(p, 8);
+}
+
+/**
+ * @brief Build the item list for the gosub screen entered by arm 15.
+ *
+ * Walks the player's item slots at D_8012271C[0x25E0 + 0x60 .. 0x84] and emits
+ * one D_80170A58 row per non-empty slot, resolving the item's two archive
+ * strings, recording the slot's count and index, and tagging the row kind. The
+ * number of rows lands in D_8016B8D4, and the screen's title message pointer in
+ * D_80170994.
+ */
+void func_801416E0(void)
+{
+    s32 i;
+    s32 count;
+
+    count = 0;
+    for (i = 0x60; i < 0x85; i++)
+    {
+        if (*(D_8012271C + i + 0x25E0) != 0)
+        {
+            GosubListEntry* e = &D_80170A58[count];
+            e->name = ARCHIVE_ENTRY(D_8014F280[0], i);
+            e->desc = ARCHIVE_ENTRY(D_8014F27C[12], D_8016B5AC[i]);
+            e->value = *(D_8012271C + i + 0x25E0);
+            e->kind = 4;
+            e->index = i;
+            count++;
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 8;
+    D_80170980 = 0x10;
+    D_8016B958 = 0xE8;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x3A);
+}
+
+/**
+ * @brief Build the item list for the gosub screen entered by arm 19.
+ *
+ * Same row layout as func_801416E0, over the adjacent slot range
+ * D_8012271C[0x25E0 + 0x60 .. 0x8F]. Both archive strings for a row come from
+ * blocks indexed directly by the slot number, so no D_8016B5AC indirection is
+ * needed for the description. The row count lands in D_8016B8D4 and the
+ * screen's title message pointer in D_80170994.
+ */
+void func_80141808(void)
+{
+    s32 i;
+    s32 count;
+
+    count = 0;
+    for (i = 0x60; i < 0x90; i++)
+    {
+        if (*(D_8012271C + i + 0x25E0) != 0)
+        {
+            GosubListEntry* e = &D_80170A58[count];
+            e->name = ARCHIVE_ENTRY(D_8014F280[0], i);
+            e->desc = ARCHIVE_ENTRY(D_8014F27C[2], i);
+            e->value = *(D_8012271C + i + 0x25E0);
+            e->kind = 4;
+            e->index = i;
+            count++;
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 8;
+    D_80170980 = 0x10;
+    D_8016B958 = 0xE8;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x4A);
+}
+
+/**
+ * @brief Build the item list for the gosub screen entered by arm 16.
+ *
+ * Same row layout as func_801416E0 over slots D_8012271C[0x25E0 + 0x40 .. 0x4F],
+ * but these rows carry no description string: only the name, the slot's count,
+ * its index, and the row kind are written. The row count lands in D_8016B8D4
+ * and the screen's title message pointer in D_80170994.
+ */
+void func_8014191C(void)
+{
+    s32 i;
+    s32 count;
+
+    count = 0;
+    for (i = 0x40; i < 0x50; i++)
+    {
+        if (*(D_8012271C + i + 0x25E0) != 0)
+        {
+            GosubListEntry* e = &D_80170A58[count];
+            e->name = ARCHIVE_ENTRY(D_8014F280[0], i);
+            e->value = *(D_8012271C + i + 0x25E0);
+            e->kind = 4;
+            e->index = i;
+            count++;
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 8;
+    D_80170980 = 0x10;
+    D_8016B958 = 0xE8;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x38);
+}
+
+/**
+ * @brief Build the item list for the gosub screen entered by arm 1.
+ *
+ * Identical row layout and archive blocks to func_80141808, over the widest
+ * slot range in the family: D_8012271C[0x25E0 + 0x40 .. 0xFE]. The row count
+ * lands in D_8016B8D4 and the screen's title message pointer in D_80170994.
+ */
+void func_80141A14(void)
+{
+    s32 i;
+    s32 count;
+
+    count = 0;
+    for (i = 0x40; i < 0xFF; i++)
+    {
+        if (*(D_8012271C + i + 0x25E0) != 0)
+        {
+            GosubListEntry* e = &D_80170A58[count];
+            e->name = ARCHIVE_ENTRY(D_8014F280[0], i);
+            e->desc = ARCHIVE_ENTRY(D_8014F27C[2], i);
+            e->value = *(D_8012271C + i + 0x25E0);
+            e->kind = 4;
+            e->index = i;
+            count++;
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 8;
+    D_80170980 = 0x10;
+    D_8016B958 = 0xE8;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x14);
+}
+
+/**
+ * @brief Build the item list for the gosub screen entered by arm 0.
+ *
+ * Identical row layout and archive blocks to func_80141808, over the slot
+ * range D_8012271C[0x25E0 + 0x00 .. 0x3F] -- the block immediately below the
+ * one func_80141A14 walks. The row count lands in D_8016B8D4 and the screen's
+ * title message pointer in D_80170994.
+ */
+void func_80141B28(void)
+{
+    s32 i;
+    s32 count;
+
+    count = 0;
+    for (i = 0; i < 0x40; i++)
+    {
+        if (*(D_8012271C + i + 0x25E0) != 0)
+        {
+            GosubListEntry* e = &D_80170A58[count];
+            e->name = ARCHIVE_ENTRY(D_8014F280[0], i);
+            e->desc = ARCHIVE_ENTRY(D_8014F27C[2], i);
+            e->value = *(D_8012271C + i + 0x25E0);
+            e->kind = 4;
+            e->index = i;
+            count++;
+        }
+    }
+    D_8016B8D4 = count;
+    D_8016B8D8 = 8;
+    D_80170980 = 0x10;
+    D_8016B958 = 0xE8;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x12);
+}
+
+/**
+ * @brief Build the equipment list for the gosub screen entered by arm 17.
+ *
+ * Unlike the slot builders above, every record produces a row: the count comes
+ * from D_8012271C[0x29D6] and each record is a packed word at
+ * D_8012271C[0x29DC + i * 4]. Three fields are unpacked out of it into the
+ * row's byte fields, and the row's name is composed into its own 0x50-byte
+ * scratch buffer in D_8016B960 -- the archive string, then optionally a
+ * separator and the decimal form of the unkC field appended after it.
+ *
+ * @note Bit 2 of unk1C is cleared only for records that are both unflagged at
+ *       bit 16 and have both low bits set; every other record sets it.
+ */
+void func_80141C3C(void)
+{
+    s32 i;
+    u8* buf;
+    u8 tmp[32];
+
+    for (i = 0; i < *(D_8012271C + 0x29D6); i++)
+    {
+        D_80170A58[i].unkE = *(D_8012271C + (i << 2) + 0x29DC) >> 2;
+        D_80170A58[i].unkC = (*(u32*)(D_8012271C + (i << 2) + 0x29DC) >> 8) & 0xF;
+        buf = D_8016B960 + i * 0x50;
+        func_80146538(buf, ARCHIVE_ENTRY(D_8014F294[0], D_80170A58[i].unkE));
+        if (D_80170A58[i].unkC != 0)
+        {
+            func_80146468(buf, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
+            func_800A8B90(tmp, D_80170A58[i].unkC, 1);
+            func_80146468(buf, tmp);
+        }
+        D_80170A58[i].name = buf;
+        D_80170A58[i].desc = ARCHIVE_ENTRY(D_8014F27C[7], D_80170A58[i].unkE);
+        D_80170A58[i].value = -2;
+        D_80170A58[i].unkD = (*(u32*)(D_8012271C + (i << 2) + 0x29DC) >> 12) & 0xF;
+        if (((*(u32*)(D_8012271C + (i << 2) + 0x29DC) >> 16) & 1) != 0 ||
+            (*(u32*)(D_8012271C + (i << 2) + 0x29DC) & 3) != 3)
+        {
+            D_80170A58[i].unk1C |= 4;
+        }
+        else
+        {
+            D_80170A58[i].unk1C &= ~4;
+        }
+        D_80170A58[i].index = i;
+        D_80170A58[i].kind = 4;
+    }
+    D_8016B8D4 = *(D_8012271C + 0x29D6);
+    D_8016B8D8 = 4;
+    D_80170980 = 0x20;
+    D_8016B958 = 0x120;
+    D_8016B950 = 0x84;
+    D_80170994 = GOSUB_MSG_PTR(0x18);
 }
