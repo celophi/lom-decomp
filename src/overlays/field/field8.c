@@ -145,33 +145,18 @@ typedef struct
 } FieldTileRec;
 
 /**
- * @brief Build one field tile render record from its packed descriptor.
+ * @brief Build a compact sprite record from a packed field tile descriptor.
  *
- * Expands the packed UV, builds the texture-depth-specific CLUT ID, copies an
- * RGB/primitive-code word from scratchpad when it is not shared, and optionally
- * appends a GP0(E1h) draw-mode command. If the descriptor's presence bit is
- * clear, the record's first word is set to -1 as an absent-tile sentinel.
+ * Decodes the tile's UV and CLUT coordinates, copies its RGB/primitive-code
+ * word when it is not shared, and emits its PSX draw-mode command. An absent
+ * tile is represented by setting the record's first word to -1.
  *
- * @param desc  Packed 4-byte tile descriptor.
- * @param record Render record to fill in.
+ * @param desc Packed four-byte tile descriptor.
+ * @param record Destination sprite record.
  * @param texture_depth PSX texture depth: 0 = 4bpp, 1 = 8bpp, 2 = 15bpp.
- *              It selects the CLUT packing and supplies TPage bits 7-8.
- * @param record_flags FIELD_TILE_REC_SHARED_RGB_CODE omits the per-tile
- *              scratchpad word and moves the draw-mode word to offset 4;
- *              FIELD_TILE_REC_SHARED_TPAGE omits the latter entirely.
- *
- * @note The `switch (texture_depth)` is required to match: the equivalent nested `if`
- *       lays the blocks out as default/case1/case0 and scores 91.89%, and an
- *       `if/else if` chain scores lower still.
- * @note The canonical PsyQ getTPage() form is a 100% match. In the older
- *       hand-expanded form, named TPage/page temporaries were required because
- *       an inline `|` chain made gcc reassociate and CSE the wrong operand
- *       (94.59%).
- * @note `clut_ref` must be `u32`, not `u8`: with `u8` the final `or` in the case-0
- *       arm comes out operand-swapped (99.80%).
- * @note Measured non-factors, all still 100%: `u_cell * 0x10` vs `u_cell << 4`, the
- *       compound vs expanded form of the `u_cell -=` subtraction, and a redundant
- *       `(u32)` cast on the `>> 4`.
+ * @param record_flags Combination of FIELD_TILE_REC_SHARED_RGB_CODE and
+ *                     FIELD_TILE_REC_SHARED_TPAGE.
+ * @return Nothing.
  *
  * @see decomp.me (100%) TODO
  */
