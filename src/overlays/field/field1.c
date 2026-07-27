@@ -6,7 +6,8 @@ extern void DrawSync(s32);
 extern void ClearOTagR(void*, s32);
 extern void field_select_object(unsigned short, void*);
 extern void field_build_render_records(void*, unsigned short);
-extern void func_80054B1C(void);
+extern void field_size_work_buffer(void);
+extern void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode);
 extern u32* get_field_render_buffers(void);
 
 extern u8 g_cdAudioEnabled;
@@ -94,7 +95,7 @@ typedef struct
 } FieldScenePage;
 
 extern FieldSceneGlobals g_field_scene;
-extern void func_80056A04(void); /* extern */
+extern void field_update_scene_animations(void); /* extern */
 
 /**
  * @brief Initialize a field render context for a scene (no-FMV variant).
@@ -118,7 +119,7 @@ void field_init_ctx(void* arg0, unsigned short arg1)
     mem = (u32*)0x801ED000;
     mem[1] = mem[0];
     mem[0] = mem[0] + 0x60;
-    func_80054B1C();
+    field_size_work_buffer();
     *((u32*)(((char*)arg0) + 0x40B8)) = mem[3];
     *((u32*)(((char*)arg0) + 0xBD7C)) = mem[4];
 }
@@ -155,11 +156,11 @@ void field_draw_frame(s32 unused, s32 base, s32 arg2, s32 arg3)
     u8* struct_ptr;
     if (arg3 != 0)
     {
-        func_80054CA8(base + 0x40B8, base + 0x40, 2);
+        field_draw_scene_objects(base + 0x40B8, base + 0x40, 2);
     }
     else
     {
-        func_80054CA8(base + 0x40B8, base + 0x40, arg2);
+        field_draw_scene_objects(base + 0x40B8, base + 0x40, arg2);
     }
     struct_ptr = (u8*)0x801ED800;
     func_80059C44();
@@ -179,9 +180,9 @@ void field_draw_frame(s32 unused, s32 base, s32 arg2, s32 arg3)
  * @brief Zero the four per-node accumulators across the g_allocInfo list.
  *
  * Walks the linked list from g_allocInfo->unk8, clearing unk24/unk28/unk2C/unk30
- * on every node. When both arguments are zero, also calls func_80056A04.
+ * on every node. When both arguments are zero, also calls field_update_scene_animations.
  *
- * @param arg0 TODO: meaning unknown; both args zero triggers func_80056A04.
+ * @param arg0 TODO: meaning unknown; both args zero triggers field_update_scene_animations.
  * @param arg1 TODO: meaning unknown.
  * @see decomp.me (100%) https://decomp.me/scratch/KyLZb
  */
@@ -203,7 +204,7 @@ void field_clear_node_accumulators(s32 arg0, s32 arg1)
     }
     if ((arg0 == 0) && (arg1 == 0))
     {
-        func_80056A04();
+        field_update_scene_animations();
     }
 }
 
@@ -241,7 +242,7 @@ void field_init_with_fmv(void* unused, void* arg1)
     D_801ED004 = D_801ED000;
     D_801ED000 += 0x60;
 
-    func_80054B1C();
+    field_size_work_buffer();
 
     // Write to offsets 0x40B8 and 0xBD7C of the structure pointed by arg1
     *(s32*)((char*)arg1 + 0x40B8) = D_801ED00C;
@@ -275,7 +276,7 @@ void field_init_with_fmv_alloc(void)
     field_select_object(map_id & 0xFFFF, render_buffers);
     D_801ED004 = D_801ED000;
     D_801ED000 += 0x60;
-    func_80054B1C();
+    field_size_work_buffer();
 
     render_bytes = (char*)render_buffers;
     *(s32*)(render_bytes + 0x40B8) = D_801ED00C;

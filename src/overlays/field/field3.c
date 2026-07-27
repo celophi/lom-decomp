@@ -390,13 +390,13 @@ void field_validate_and_rasterize_quads(void* arg0, s32 arg1)
 }
 
 FieldAnimCel *func_8005B31C(void *);
-u8 *func_80059224(FieldAnimDef *, s32, u8 *);
-void func_80057E88(FieldAnimDef *, FieldAnim *, s32);
-void func_80057CA4(FieldAnimDef *, FieldAnim *, s32);
+u8 *field_find_count_table_span(FieldAnimDef *, s32, u8 *);
+void field_apply_animation_tween(FieldAnimDef *, FieldAnim *, s32);
+void field_blit_animation_frame(FieldAnimDef *, FieldAnim *, s32);
 void func_8005AC50(void *, u16, s32 *);
 void func_8005AD20(u8, u16, s8 *);
-void func_8005477C(s32 *, u8 *, s32, s32);
-void func_80054904(s32 *, u8 *, s32, s32);
+void field_build_sprite_tile_record(s32 *, u8 *, s32, s32);
+void field_build_quad_tile_record(s32 *, u8 *, s32, s32);
 
 /**
  * @brief Build the scene's animation node list from a definition chain.
@@ -405,7 +405,7 @@ void func_80054904(s32 *, u8 *, s32, s32);
  * FieldAnim out of the arena at @p arena and tail-appends it to the list at
  * @p tail. Each node is seeded from its definition: the play-mode flags at
  * FieldAnim::flags, the starting keyframe cursor, the loop counter, and the
- * keyframe length from func_80059224. The handler kind - the low three bits of
+ * keyframe length from field_find_count_table_span. The handler kind - the low three bits of
  * the word at FieldAnimDef::unk4, qualified by FieldAnimDef::unk7 - then selects
  * how the node's cel list is resolved (func_8005ABD8 or func_8005B31C) and what
  * extra setup runs.
@@ -414,7 +414,7 @@ void func_80054904(s32 *, u8 *, s32, s32);
  * table (func_8005AC50 / func_8005AD20) and the per-frame GPU primitives are
  * built into the arena: every frame walks the cel's bit plane row-major, and
  * each set bit inside the definition's sub-rectangle emits one primitive through
- * func_8005477C or func_80054904 depending on the cel's record format. The arena
+ * field_build_sprite_tile_record or field_build_quad_tile_record depending on the cel's record format. The arena
  * cursor is advanced past whatever each kind consumed before moving to the next
  * definition, and the list is null-terminated on the way out.
  *
@@ -441,7 +441,7 @@ void func_80054904(s32 *, u8 *, s32, s32);
  * @note The five @c flags masks must stay SEPARATE statements; fold-const
  *       collapses them into one @c and if written as a single expression.
  * @note Both @c cel->format switches need their empty @c case @c 1: / @c case
- *       @c 6: arms to emit the 7-entry jump tables, as in func_800584DC.
+ *       @c 6: arms to emit the 7-entry jump tables, as in field_retarget_cel_cluts.
  * @note The three @c & @c 7 handler switches read @c def->unk4 as a byte; the
  *       @c & @c 0xFF000007 and @c & @c 0x40 / @c & @c 0x20 tests read the whole
  *       word. Both views of the same field are required.
@@ -535,7 +535,7 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
             }
             else
             {
-                span = (FieldTweenSpan *) func_80059224(def, anim->flags.b.unk2, &span_off);
+                span = (FieldTweenSpan *) field_find_count_table_span(def, anim->flags.b.unk2, &span_off);
                 if (*(s32 *) &def->unk4 & 0x20)
                 {
                     anim->counter = span->unk2;
@@ -601,13 +601,13 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                     grid = (FieldTileGrid *) rec->unk10;
                     cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
                     anim->cels = cel;
-                    func_80057E88(def, anim, 0);
+                    field_apply_animation_tween(def, anim, 0);
                     break;
                 case 6:
                     cel = func_8005B31C(rec->unk10);
                     src = (FieldTintSrc *) cel;
                     anim->cels = cel;
-                    func_80057E88(def, anim, 0);
+                    field_apply_animation_tween(def, anim, 0);
                     break;
                 default:
                     grid = (FieldTileGrid *) rec->unk10;
@@ -767,7 +767,7 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                                                         case 0:
                                                             prim = cursor;
                                                             cursor += stride;
-                                                            func_8005477C(recp, prim, (grid->u.word >> 4) & 3, mode);
+                                                            field_build_sprite_tile_record(recp, prim, (grid->u.word >> 4) & 3, mode);
                                                             break;
                                                         case 2:
                                                         case 3:
@@ -775,7 +775,7 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                                                         case 5:
                                                             prim = cursor;
                                                             cursor += stride;
-                                                            func_80054904(recp, prim, (grid->u.word >> 4) & 3, mode);
+                                                            field_build_quad_tile_record(recp, prim, (grid->u.word >> 4) & 3, mode);
                                                             break;
                                                         case 1:
                                                         case 6:
@@ -813,12 +813,12 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                         {
                             if (*(u32 *) &def->unk4 & 0x20)
                             {
-                                func_80057CA4(def, anim, 0);
+                                field_blit_animation_frame(def, anim, 0);
                             }
                         }
                         else if (anim->flags.word & 0x40)
                         {
-                            func_80057CA4(def, anim, 0);
+                            field_blit_animation_frame(def, anim, 0);
                         }
                     }
                 }
