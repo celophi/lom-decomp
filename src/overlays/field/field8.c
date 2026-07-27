@@ -626,18 +626,25 @@ typedef struct
     u16 *unk4;
 } FieldTintPal;
 
+typedef struct FieldAnimCel FieldAnimCel;
+
 /**
  * @brief Colour source for the tile tint pass, hung off FieldAnim::unk10.
  *
  * The two halfword triples multiply component-wise into the three-word colour
  * func_8005AC50 expands into the scratchpad table at 0x1F800000.
+ *
+ * @note func_80058C00 reaches this record through FieldAnim::cels instead, and
+ *       walks the cel list at 0x08 rather than being handed a single cel.
  */
 typedef struct
 {
     u8 _pad0[4];
     /** 0x04 record holding the palette this tint is built from. */
     FieldTintPal *unk4;
-    u8 _pad1[0x10 - 8];
+    /** 0x08 head of the cel list this source tints (func_80058C00 only). */
+    FieldAnimCel *unk8;
+    u8 _pad1[0x10 - 0xC];
     u16 unk10; /* 0x10 red */
     u16 unk12; /* 0x12 green */
     u16 unk14; /* 0x14 blue */
@@ -646,7 +653,6 @@ typedef struct
     u16 unk1A; /* 0x1A blue scale */
 } FieldTintSrc;
 
-typedef struct FieldAnimCel FieldAnimCel;
 struct FieldAnimCel
 {
     FieldAnimCel *next; /* 0x00 */
@@ -2412,7 +2418,7 @@ void func_80058154(FieldAnimDef *, FieldAnim *);
 void func_800584DC(FieldAnimDef *, FieldAnimCel *, s32);
 u_long *func_8005866C(FieldAnimDef *, FieldAnim *);
 void func_800589F0(FieldAnimDef *, FieldAnimCel *, FieldTintSrc *, s32);
-void func_80058C00(FieldAnimDef *, FieldAnimCel *, s32);
+void func_80058C00(FieldAnimDef *, FieldTintSrc *, s32);
 void func_80058E28(FieldAnimDef *, FieldAnim *);
 void func_800591C4(FieldAnimDef *, FieldAnimCel *, s32);
 void func_80059294(FieldImageReq *);
@@ -2972,7 +2978,7 @@ void func_80056A04(void)
                         func_800589F0(def, anim->cels, (FieldTintSrc *) anim->unk10, anim->flags.b.state);
                         break;
                     case 1:
-                        func_80058C00(def, anim->cels, anim->flags.b.state);
+                        func_80058C00(def, (FieldTintSrc *) anim->cels, anim->flags.b.state);
                         break;
                     case 2:
                         break;
@@ -4326,5 +4332,153 @@ void func_800589F0(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc *src, s32 
             row++;
         }
         while (row != grid->u.b.rows);
+    }
+}
+
+/**
+ * @brief Tint every visible tile of a whole cel list from the scratchpad table.
+ *
+ * The list variant of func_800589F0: instead of being handed one cel, it takes
+ * the tint source itself and walks the cel list hanging off @c src->unk8.
+ * @p src 's colour is expanded once into the scratchpad table at 0x1F800000 (via
+ * func_8005AC50), then each cel's bit plane is walked row-major, consuming one
+ * tile record per set bit and copying the table entry selected by that tile's
+ * descriptor into the record's rgb/code word. @p shade offsets the table lookup,
+ * so successive frames step through the table's brightness ramp. Only tiles
+ * whose descriptor slot falls inside the definition's band (@c unkC for @c unkD
+ * entries) are tinted.
+ *
+ * When a cel carries a shared code word (@c unk1C) the colour belongs to the
+ * whole cel rather than to its individual records, so the first tile that
+ * resolves writes it there and the walk moves straight on to the next cel.
+ *
+ * @param def   Animation definition; supplies the first slot (@c unkC) and the
+ *              slot count (@c unkD) of the band these cels may tint.
+ * @param src   Colour source; its two halfword triples multiply into the
+ *              three-word colour handed to func_8005AC50, and its @c unk8 is the
+ *              head of the cel list to walk.
+ * @param shade Table offset in entries, i.e. the brightness step to sample.
+ *
+ * @note @c stride is deliberately initialised once, outside the cel loop. The
+ *       switch's empty `case 1:` / `case 6:` arms leave it at whatever the
+ *       previous cel computed, and the two `-= 4` adjustments accumulate across
+ *       the list.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
+{
+    FieldAnimCel *cel;
+    FieldTileGrid *grid;
+    FieldTileDesc *tile;
+    FieldTintColor *pal;
+    FieldTintColor *entry;
+    u8 *dst;
+    u16 *tab;
+    u32 *mask;
+    u32 word;
+    u32 bit;
+    s32 stride;
+    s32 row;
+    s32 col;
+    s32 first;
+    s32 last;
+    s32 slot;
+    s32 code;
+    s32 rgb[3];
+
+    rgb[0] = src->unk10 * src->unk16;
+    rgb[1] = src->unk12 * src->unk18;
+    rgb[2] = src->unk14 * src->unk1A;
+    stride = 0;
+    pal = (FieldTintColor *) 0x1F800000;
+    tab = src->unk4->unk4;
+    func_8005AC50(tab + 2, tab[0], rgb);
+    first = def->unkC;
+    last = first + def->unkD;
+    for (cel = src->unk8; cel != NULL; cel = cel->next)
+    {
+        dst = cel->tiles;
+        grid = cel->grid;
+        tile = grid->tiles;
+        switch (cel->format)
+        {
+        case 0:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+            stride = 12;
+            break;
+        case 1:
+        case 6:
+            break;
+        }
+        code = cel->unk1C;
+        if (code != 0)
+        {
+            stride -= 4;
+        }
+        if (cel->unk18 != 0)
+        {
+            stride -= 4;
+        }
+        bit = 1;
+        row = 0;
+        mask = cel->mask;
+        word = *mask++;
+        if (grid->u.b.rows != 0)
+        {
+            do
+            {
+                col = 0;
+                if (grid->u.b.cols != 0)
+                {
+                    do
+                    {
+                        if (word & bit)
+                        {
+                            if (tile->unk0 & 0x80)
+                            {
+                                slot = tile->unk3;
+                                if ((slot >= first) && (last >= slot))
+                                {
+                                    entry = &pal[slot] + shade;
+                                    if (code != 0)
+                                    {
+                                        ((FieldTintColor *) &cel->unk1C)->rg = entry->rg;
+                                        ((FieldTintColor *) &cel->unk1C)->b = entry->b;
+                                        goto next_cel;
+                                    }
+                                    ((FieldCellTint *) dst)->rg = entry->rg;
+                                    ((FieldCellTint *) dst)->b = entry->b;
+                                }
+                                else
+                                {
+                                    if (code != 0)
+                                    {
+                                        goto next_cel;
+                                    }
+                                }
+                            }
+                            dst += stride;
+                        }
+                        bit <<= 1;
+                        if (bit == 0)
+                        {
+                            word = *mask++;
+                            bit = 1;
+                        }
+                        tile++;
+                        col++;
+                    }
+                    while (col != grid->u.b.cols);
+                }
+                row++;
+            }
+            while (row != grid->u.b.rows);
+        }
+    next_cel:
+        ;
     }
 }
