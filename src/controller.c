@@ -158,13 +158,13 @@ void clear_controller_sample(ControllerSample* sample);
 
 extern void PadStartCom();
 extern void PadInitDirect(u8* port1_buffer, u8* port2_buffer);
-extern int PadGetState(int port);
-extern s32 PadInfoMode(int port, int info_mode, int index);
-extern int PadInfoAct(int port, int actuator, int property);
-extern int PadSetActAlign(int port, u8* alignment);
-extern int PadSetMainMode(int port, int mode, int lock);
-extern void PadSetAct(int port, u8* actuator_data, int length);
-extern int PadChkVsync(void);
+extern s32 PadGetState(s32 port);
+extern s32 PadInfoMode(s32 port, s32 info_mode, s32 index);
+extern s32 PadInfoAct(s32 port, s32 actuator, s32 property);
+extern s32 PadSetActAlign(s32 port, u8* alignment);
+extern s32 PadSetMainMode(s32 port, s32 mode, s32 lock);
+extern void PadSetAct(s32 port, u8* actuator_data, s32 length);
+extern s32 PadChkVsync(void);
 extern void PadStopCom(void);
 void controller_vsync_callback(void);
 void accumulate_controller_sample(ControllerPortState* port);
@@ -183,15 +183,15 @@ void initialize_controllers(s8 enable_actuators)
     ControllerPortState** current_port_pointer;
     ControllerPortState* current_port;
     ControllerPortState* status_port;
-    int continue_initializing;
+    s32 continue_initializing;
     u16 actuator_control;
     u16 actuator_status;
-    int port_countdown;
-    int countdown_end;
-    unsigned int disconnected_device_type;
-    int legacy_vibration_device_id;
-    int all_ports_ready;
-    int status_port_countdown;
+    s32 port_countdown;
+    s32 countdown_end;
+    u32 disconnected_device_type;
+    s32 legacy_vibration_device_id;
+    s32 all_ports_ready;
+    s32 status_port_countdown;
 
     /* Bind LIBPAD to the raw receive buffers and retain callback ownership. */
     PadInitDirect(CONTROLLER_PORT_1_RECEIVE_BUFFER, CONTROLLER_PORT_2_RECEIVE_BUFFER);
@@ -275,29 +275,29 @@ void initialize_controllers(s8 enable_actuators)
  */
 void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
 {
-    int repeat_timer_step;
+    s32 repeat_timer_step;
     ControllerState* controller_state;
     u32 pad_state;
     s32 counter;
-    int updated_actuator_config;
+    u32 updated_actuator_config;
     s32 mode_index;
-    unsigned int unsigned_value;
+    u32 unsigned_value;
     s32 remaining_actuators;
     s32 shifted_delta;
     s32 mode_loop_end;
-    int multitap_slot;
+    s32 multitap_slot;
     u8 disabled_actuator_index;
     s32 dualshock_controller_id;
     s32 fill_loop_end;
     u8 device_type;
-    int decoded_state;
+    s32 decoded_state;
     u8 initial_repeat_delay;
     s32 repeat_interval;
     u16 held_buttons;
     s32 delta;
     s32 new_analog_directions;
     u32 analog_directions;
-    int detected_actuator_count;
+    s32 detected_actuator_count;
     u8* pad_packet;
     controller_state = CONTROLLER_STATE;
     pad_state = PadGetState(port->port_id);
@@ -450,7 +450,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
             port->large_motor_power = 0;
             while (remaining_actuators != (-1))
             {
-                int actuator_supported = PadInfoAct(port->port_id, counter, InfoActFunc);
+                s32 actuator_supported = PadInfoAct(port->port_id, counter, InfoActFunc);
                 if (actuator_supported == 1)
                 {
                     switch (PadInfoAct(port->port_id, counter, InfoActSize))
@@ -942,7 +942,7 @@ void initialize_controller_vsync(void)
  * @param interval New boundary when it exceeds the current phase; otherwise the phase is reset.
  * @see decomp.me (100%) https://decomp.me/scratch/zw8m7
  */
-void set_controller_vsync_interval(unsigned long interval)
+void set_controller_vsync_interval(u32 interval)
 {
     ControllerState* controller_state = CONTROLLER_STATE;
     if (controller_state->vsync_accumulation_count >= interval)
