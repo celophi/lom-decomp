@@ -4728,13 +4728,32 @@ void func_800591C4(FieldAnimDef *def, FieldTintSrc *src, s32 state)
  * @param out   Receives the cumulative count consumed before the returned record.
  * @return Pointer to the record whose range contains @p index.
  *
- * @note @p out is taken as volatile and an otherwise-dead read of byte 7 of the
- *       header is preserved; both are required to reproduce the original codegen
- *       (the reload of *out and the stray load). The do/while(0) wrapper and the
- *       $v1 register pin on the dead load are likewise required to match GCC's
- *       basic-block ordering and register allocation - removing any of them
- *       drops the match.
- * @see decomp.me (100%) TODO
+ * @note NOT MATCHED - 99.82%, one row. The dead read of byte 7 lands in v0 where
+ *       the target uses v1. Both registers are dead at that point and gcc scans
+ *       hard regs in numeric order (MIPS defines no REG_ALLOC_ORDER), so it takes
+ *       v0; the original had v0 occupied by something this version lets die. A
+ *       `register u8 unused asm("$3")` pin closes the row and reaches 100%, but
+ *       register pins are not allowed in this tree, so the row stays open until
+ *       the natural shape that busies v0 is found.
+ * @note @p out must stay @c volatile and the otherwise-dead read of byte 7 must
+ *       be preserved; both are required for the original codegen (the reload of
+ *       @c *out and the stray load).
+ * @note The @c do/while(0) wrapper IS required - removing it costs 6 exact rows.
+ *       It emits loop notes, which lift REG_N_REFS for everything inside and
+ *       change the allocation order (see [ALLOC-23]). @c for(;;) and @c while(1)
+ *       measure identically, so any loop wrapper will do; a plain @c if with a
+ *       trailing @c return will not.
+ * @note The loop body's apparently redundant recompute of @c cand is genuine.
+ *       Folding it into the natural
+ *       `while (index >= (u8) (acc + (byte & 0x7F)))` form costs 9 exact rows and
+ *       one instruction.
+ * @note Measured inert, do not retry: every spelling of the dead read (bare
+ *       expression, @c (void) cast, assignment to @c byte / @c cand / @c count /
+ *       @c acc, @c s8 / @c s32 / @c u32 destination, array-index form, a
+ *       @c volatile @c u8 @c * probe pointer, the @c register keyword without
+ *       @c asm), and every declaration-order permutation of @c unused. All land
+ *       in v0.
+ * @see decomp.me (99.82%) TODO
  */
 u8 *func_80059224(u8 *data, s32 index, volatile s8 *out)
 {
@@ -4742,7 +4761,7 @@ u8 *func_80059224(u8 *data, s32 index, volatile s8 *out)
     u8 byte;
     u8 acc;
     u8 cand;
-    register u8 unused asm("$3");
+    u8 unused;
 
     *out = 0;
     count = *data & 0x7F;
