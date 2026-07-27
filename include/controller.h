@@ -3,6 +3,7 @@
 
 #include "common.h"
 extern void initialize_controllers(s8 enable_actuators);
+extern void shutdown_controllers(void);
 extern void initialize_controller_vsync(void);
 extern void set_controller_vsync_interval(unsigned long interval);
 extern void update_controllers(void);
