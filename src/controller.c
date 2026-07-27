@@ -2,7 +2,9 @@
 #include "psyq/libetc.h"
 #include "psyq/libpad.h"
 
-extern void (*g_previous_controller_vsync_callback)(void);
+typedef void (*VSyncCallbackFn)(void);
+
+extern VSyncCallbackFn g_previous_controller_vsync_callback;
 extern u8 g_controller_vsync_sample_count; /* Pending VSync samples at 0x801ED7A1. */
 extern u8 g_controller_vsync_counter;      /* Accumulation phase at 0x801ED7A2. */
 
@@ -143,7 +145,7 @@ typedef struct ControllerState
     u8 pending_sample_count;
     u8 vsync_accumulation_count;
     u8 vsync_accumulation_interval;
-    void (*previous_vsync_callback)(void);
+    VSyncCallbackFn previous_vsync_callback;
     u8 fast_button_repeat;
     u8 actuator_cycle;
     u8 sample_unavailable;
@@ -195,7 +197,7 @@ void initialize_controllers(s8 enable_actuators)
 
     /* Bind LIBPAD to the raw receive buffers and retain callback ownership. */
     PadInitDirect(CONTROLLER_PORT_1_RECEIVE_BUFFER, CONTROLLER_PORT_2_RECEIVE_BUFFER);
-    g_previous_controller_vsync_callback = (void (*)(void))VSyncCallback(0);
+    g_previous_controller_vsync_callback = (VSyncCallbackFn)VSyncCallback(0);
     controller_state = CONTROLLER_STATE;
 
     /* Published and live samples remain disconnected until the first valid poll. */
