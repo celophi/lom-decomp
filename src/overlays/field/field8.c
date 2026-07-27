@@ -27,277 +27,317 @@
  */
 #define HALF_TOWARD_ZERO(v) ((v) >= 0 ? ((v) >> 1) : (((v) + 1) >> 1))
 
+/*
+ * Packed tile descriptor and field texture-atlas constants.
+ *
+ * The field textures occupy two VRAM banks. Logical page slots 0-9 begin at
+ * (320, 256); slots 10-15 continue in the bank beginning at (512, 0).
+ * TPage X coordinates are stored in units of 64 VRAM halfwords.
+ */
+#define FIELD_TILE_PRESENT 0x80
+#define FIELD_TILE_CLUT_MASK 0x1F
+#define FIELD_TILE_CLUT_X_SLOT_MASK 0xF
+#define FIELD_TILE_TPAGE_SLOT_MASK 0xF
+#define FIELD_TILE_U_MASK 0xF
+#define FIELD_TILE_V_MASK 0xF0
+#define FIELD_TILE_SIZE 0x10
+#define FIELD_TILE_SEMITRANS 0x40
+#define FIELD_TILE_LOWER_BANK_SLOTS 0xA
+#define FIELD_TILE_UPPER_BANK_VRAM_X 0x200
+#define FIELD_TILE_UPPER_BANK_VRAM_X_BIAS 0x80
+#define FIELD_TILE_LOWER_BANK_VRAM_X 0x140
+#define FIELD_TILE_LOWER_BANK_VRAM_Y 0x100
+#define FIELD_TILE_CLUT_VRAM_Y 0x1D8
+#define FIELD_TILE_TPAGE_X_SHIFT 6
+#define FIELD_TILE_4BIT_U_PAGE_SHIFT 4
+#define FIELD_TILE_UPPER_BANK_U_CELLS_PER_SLOT 4
+#define FIELD_TEXTURE_4_BIT 0
+#define FIELD_TEXTURE_8_BIT 1
+
+/*
+ * A 4bpp CLUT contains 16 colors, so its low four reference bits select a
+ * 16-pixel X slot. Reference bit 4 selects VRAM row 472 or 473. An 8bpp CLUT
+ * consumes a complete 256-color row, so all five bits select its Y offset.
+ *
+ * Keep these as macros: their expansion preserves the matched mask/shift order.
+ */
+#define FIELD_TILE_4BIT_CLUT_X(ref) (((ref) & FIELD_TILE_CLUT_X_SLOT_MASK) << 4)
+#define FIELD_TILE_4BIT_CLUT_Y(ref) (FIELD_TILE_CLUT_VRAM_Y + (((ref) & FIELD_TILE_CLUT_MASK) >> 4))
+#define FIELD_TILE_8BIT_CLUT_Y(ref) (FIELD_TILE_CLUT_VRAM_Y + ((ref) & FIELD_TILE_CLUT_MASK))
+
+/*
+ * Texture-atlas address decoding. TPage X is measured in 64-halfword columns.
+ * In the sprite format, U is stored in 16-pixel cells; crossing to the upper
+ * bank rebases those cells onto the common TPage beginning at (512, 0).
+ */
+#define FIELD_TILE_ABR(attrs) ((attrs) >> 4)
+#define FIELD_TILE_LOWER_BANK_PAGE_X(slot) (FIELD_TILE_LOWER_BANK_VRAM_X + ((slot) << FIELD_TILE_TPAGE_X_SHIFT))
+#define FIELD_TILE_UPPER_BANK_PAGE_X(slot) ((s32)(((slot) << FIELD_TILE_TPAGE_X_SHIFT) - FIELD_TILE_UPPER_BANK_VRAM_X_BIAS))
+#define FIELD_TILE_TPAGE_COLUMN(slot, u_cell, depth) ((slot) + ((u_cell) >> (FIELD_TILE_4BIT_U_PAGE_SHIFT - (depth))))
+#define FIELD_TILE_UPPER_BANK_U_REBASE(slot) ((FIELD_TILE_LOWER_BANK_SLOTS - (slot)) * FIELD_TILE_UPPER_BANK_U_CELLS_PER_SLOT)
+
+/* Per-record fields which may instead be supplied once by the owning cel. */
+#define FIELD_TILE_REC_SHARED_RGB_CODE 1
+#define FIELD_TILE_REC_SHARED_TPAGE 2
+
+/* Scratchpad table containing complete RGB/primitive-code words. */
+#define FIELD_TILE_COLOR_WORDS ((s32*)0x1F800000)
+
 /**
- * @brief Packed 4-byte per-tile source descriptor consumed by func_8005477C.
+ * @brief Packed 4-byte per-tile source descriptor consumed by field_build_sprite_tile_record.
  */
 typedef struct
 {
-    /** Bit 7 = tile present; bits 0-4 feed the texture-page / CLUT word. */
-    u8 unk0;
-    /** Bit 6 = set flag 2 on the record; bits 0-3 = horizontal slot. */
-    u8 unk1;
-    /** High nibble is copied out verbatim; low nibble is the vertical slot. */
-    u8 unk2;
-    /** Index into the scratchpad word table at 0x1F800000. */
-    u8 unk3;
+    /**
+     * Bit 7 = tile present. Bits 0-4 encode the CLUT location: 4bpp splits
+     * them into X/16 and Y+0/1; 8bpp uses them as the CLUT Y offset.
+     */
+    u8 clut_slot;
+    /**
+     * Bits 0-3 = logical atlas page slot; bits 4-5 = TPage ABR blend mode;
+     * bit 6 enables semitransparency in the primitive code byte.
+     */
+    u8 texture_attrs;
+    /** Low nibble = U/16; high nibble = V, already aligned to 16 pixels. */
+    u8 packed_uv;
+    /** Index into the scratchpad RGB/primitive-code table at 0x1F800000. */
+    u8 color_index;
 } FieldTileDesc;
+
+/** Format-dependent final word of a compact tile record. */
+typedef union
+{
+    /** Sprite records store a complete GP0(E1h) command here. */
+    s32 draw_mode;
+    /** Quad records store their second UV and TPage tuple here. */
+    struct
+    {
+        s8 u;
+        s8 v;
+        s16 tpage;
+    } quad;
+} FieldTileTail;
 
 /**
  * @brief Render record built from a FieldTileDesc.
  *
- * unk0/unk1 are a texture coordinate pair and unk2 the CLUT/texture-page
- * halfword. The tail is used two ways: func_8005477C writes a single GPU
- * draw-mode word across unk8..unkA, while func_80054904 writes a second
- * coordinate pair plus its own texture-page halfword.
+ * u/v are a texture coordinate pair and clut is the CLUT halfword. The tail is
+ * used two ways: field_build_sprite_tile_record writes tail.draw_mode, while
+ * field_build_quad_tile_record writes tail.quad's second coordinate pair and
+ * texture-page halfword.
  *
  * @note When the descriptor is absent the whole first word is set to -1, so
- *       unk0/unk1/unk2 are also addressed as a single s32 (see the else arm).
+ *       u/v/clut are also addressed as a single s32 (see the else arm).
  * @note Both writers shift the tail down by 4 bytes when flags bit 0 is set,
  *       i.e. the record is 4 bytes shorter in that mode.
  */
 typedef struct
 {
-    s8 unk0;
-    s8 unk1;
-    s16 unk2;
-    s32 unk4;
-    s8 unk8;
-    s8 unk9;
-    s16 unkA;
+    s8 u;
+    s8 v;
+    s16 clut;
+    s32 rgb_code;
+    FieldTileTail tail;
 } FieldTileRec;
 
 /**
- * @brief Build one field tile render record from its packed descriptor.
+ * @brief Build a compact sprite record from a packed field tile descriptor.
  *
- * Writes the vertical slot, the texture-page/CLUT halfword (selected by
- * @p mode), an entry pulled from the scratchpad table at 0x1F800000, and a
- * GPU draw-mode word (0xE1000400 | attributes). If the descriptor's presence
- * bit is clear the record's first word is poisoned with -1 instead.
+ * Decodes the tile's UV and CLUT coordinates, copies its RGB/primitive-code
+ * word when it is not shared, and emits its PSX draw-mode command. An absent
+ * tile is represented by setting the record's first word to -1.
  *
- * @param desc  Packed 4-byte tile descriptor.
- * @param prim  Render record to fill in.
- * @param mode  Texture-page selection mode, 0-3. 0 and 1 pick different
- *              packings of desc->unk0; anything else zeroes the halfword.
- *              Also contributes bits 7-8 of the draw-mode attributes.
- * @param flags Bit 0: emit the draw-mode word at offset 4 and skip the
- *              scratchpad lookup. Bit 1: skip the draw-mode word entirely.
- *
- * @note The `switch (mode)` is required to match: the equivalent nested `if`
- *       lays the blocks out as default/case1/case0 and scores 91.89%, and an
- *       `if/else if` chain scores lower still.
- * @note The `base` and `tmp` temporaries are required to match. Written as one
- *       inline `|` chain gcc reassociates the operands and CSE-hoists
- *       `mode & 3` instead of `desc->unk1 * 2` (94.59%); merely parenthesizing
- *       without a named temp is not enough (97.81%).
- * @note `b0` must be `u32`, not `u8`: with `u8` the final `or` in the case-0
- *       arm comes out operand-swapped (99.80%).
- * @note Measured non-factors, all still 100%: `h * 0x10` vs `h << 4`, the
- *       compound vs expanded form of the `h -=` subtraction, and a redundant
- *       `(u32)` cast on the `>> 4`.
+ * @param desc Packed four-byte tile descriptor.
+ * @param record Destination sprite record.
+ * @param texture_depth PSX texture depth: 0 = 4bpp, 1 = 8bpp, 2 = 15bpp.
+ * @param record_flags Combination of FIELD_TILE_REC_SHARED_RGB_CODE and
+ *                     FIELD_TILE_REC_SHARED_TPAGE.
+ * @return Nothing.
  *
  * @see decomp.me (100%) TODO
  */
-void func_8005477C(FieldTileDesc *desc, FieldTileRec *prim, s32 mode, s32 flags)
+void field_build_sprite_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags)
 {
-    u32 h;
-    s32 attr;
-    s32 base;
-    s32 tmp;
-    u8 b1;
-    s32 lo;
+    u32 u_cell;
+    s32 tpage;
+    u8 texture_attrs;
+    s32 page_slot;
 
-    if (desc->unk0 & 0x80)
+    if (desc->clut_slot & FIELD_TILE_PRESENT)
     {
-        u8 b2 = desc->unk2;
+        u8 packed_uv = desc->packed_uv;
 
-        h = b2 & 0xF;
-        prim->unk1 = b2 & 0xF0;
-        switch (mode)
+        u_cell = packed_uv & FIELD_TILE_U_MASK;
+        record->v = packed_uv & FIELD_TILE_V_MASK;
+        switch (texture_depth)
         {
-        case 0:
-            {
-                u32 b0 = desc->unk0;
+        case FIELD_TEXTURE_4_BIT:
+        {
+            u32 clut_ref = desc->clut_slot;
 
-                prim->unk2 = ((((b0 & 0x1F) >> 4) + 0x1D8) << 6) | (b0 & 0xF);
-            }
-            break;
-        case 1:
-            prim->unk2 = (((desc->unk0 & 0x1F) + 0x1D8) << 6);
+            setClut(record, FIELD_TILE_4BIT_CLUT_X(clut_ref), FIELD_TILE_4BIT_CLUT_Y(clut_ref));
+        }
+        break;
+        case FIELD_TEXTURE_8_BIT:
+            setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
             break;
         default:
-            prim->unk2 = 0;
+            record->clut = 0;
             break;
         }
-        if (!(flags & 1))
+        if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
         {
-            prim->unk4 = ((s32 *) 0x1F800000)[desc->unk3];
-            if (desc->unk1 & 0x40)
+            record->rgb_code = FIELD_TILE_COLOR_WORDS[desc->color_index];
+            if (desc->texture_attrs & FIELD_TILE_SEMITRANS)
             {
-                *((u8 *) prim + 7) |= 2;
+                setSemiTrans(record, 1);
             }
         }
-        if (!(flags & 2))
+        if (!(record_flags & FIELD_TILE_REC_SHARED_TPAGE))
         {
-            b1 = desc->unk1;
-            lo = b1 & 0xF;
-            if ((u32) (lo + (h >> (4 - mode))) >= 0xAU)
+            texture_attrs = desc->texture_attrs;
+            page_slot = texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
+            if ((u32)FIELD_TILE_TPAGE_COLUMN(page_slot, u_cell, texture_depth) >= FIELD_TILE_LOWER_BANK_SLOTS)
             {
-                h -= (0xA - lo) * 4;
-                base = ((mode & 3) << 7) | ((b1 * 2) & 0x60);
-                attr = base | 8;
+                /*
+                 * U crossed the ten-slot lower bank. Rebase it onto the upper
+                 * bank's first TPage: getTPage(depth, abr, 512, 0).
+                 */
+                u_cell -= FIELD_TILE_UPPER_BANK_U_REBASE(page_slot);
+                tpage = getTPage(texture_depth, FIELD_TILE_ABR(texture_attrs), FIELD_TILE_UPPER_BANK_VRAM_X, 0);
             }
             else
             {
-                base = ((mode & 3) << 7) | ((b1 * 2) & 0x60);
-                tmp = (((u32) ((lo << 6) + 0x140)) >> 6) | 0x10;
-                attr = base | tmp;
+                tpage = getTPage(texture_depth, FIELD_TILE_ABR(texture_attrs), FIELD_TILE_LOWER_BANK_PAGE_X(page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
             }
-            if (!(flags & 1))
+            if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
             {
-                *(s32 *) &prim->unk8 = attr | 0xE1000400;
+                record->tail.draw_mode = _get_mode(1, 0, tpage);
             }
             else
             {
-                prim->unk4 = attr | 0xE1000400;
+                record->rgb_code = _get_mode(1, 0, tpage);
             }
         }
-        prim->unk0 = h * 0x10;
+        record->u = u_cell * FIELD_TILE_SIZE;
     }
     else
     {
-        *(s32 *) prim = -1;
+        *(s32*)record = -1;
     }
 }
 
 /**
  * @brief Build a two-coordinate field tile render record from its descriptor.
  *
- * Sibling of func_8005477C: same descriptor and the same CLUT/texture-page
+ * Sibling of field_build_sprite_tile_record: same descriptor and the same CLUT/texture-page
  * selection, but it emits a second texture coordinate pair (u + 15, v) and a
  * texture-page halfword at the record tail instead of a GPU draw-mode word.
  *
  * @param desc  Packed 4-byte tile descriptor.
- * @param prim  Render record to fill in.
- * @param mode  Texture-page selection mode, 0-3. 0 and 1 pick different
- *              packings of desc->unk0; anything else zeroes the halfword.
- *              Also contributes bits 7-8 of the texture-page attributes.
- * @param flags Bit 0: skip the scratchpad lookup and shift the tail down by
- *              4 bytes. Bit 1: skip the second coordinate pair entirely.
+ * @param record Render record to fill in.
+ * @param texture_depth PSX texture depth: 0 = 4bpp, 1 = 8bpp, 2 = 15bpp.
+ *              It selects the CLUT packing and supplies TPage bits 7-8.
+ * @param record_flags FIELD_TILE_REC_SHARED_RGB_CODE omits the per-tile
+ *              scratchpad word and shortens the record by four bytes;
+ *              FIELD_TILE_REC_SHARED_TPAGE omits the second UV/TPage tuple.
  *
- * @note The attribute word must be built by **accumulating in place** into one
- *       variable (`base = mode & 3; base = base << 7; base = base | ...;`).
- *       Writing it as a single `|` chain reassociates the operands and flips
- *       which subexpression is shared between the two arms: 99.14% with block 1
- *       inlined, 98.28% with both blocks inlined. Same mechanism as
- *       func_8005477C's `base`/`tmp` temporaries. See [CSE-05] in idioms.md.
- * @note `base = base | tmp; prim->unkA = base;` must stay split; folding it to
- *       `prim->unkA = base | tmp;` costs an instruction (98.77%).
- * @note The tail stores must be ordered unk8, unk9, unkA. The natural-looking
- *       unk8, unkA, unk9 order leaves the load-delay slot unfilled (98.21%).
- * @note `prev` must be a block-local declared inside the `flags & 1` arm.
+ * @note The canonical PsyQ getTPage() form is a 100% match. Its upper-bank X
+ *       argument must retain the `(s32)` cast: page slots are unsigned, and
+ *       without the cast gcc emits `srl` instead of the target's `sra` twice
+ *       (99.10%).
+ * @note Assigning the first TPage directly with setTPage() changes gcc's
+ *       expression ordering and adds one instruction (97.76%), so getTPage()
+ *       must produce the value before the common tail store.
+ * @note The tail stores must be ordered quad.u, quad.v, quad.tpage. Writing
+ *       quad.u, quad.tpage, quad.v leaves the load-delay slot unfilled (98.21%).
+ * @note `prev` must be a block-local declared inside the `record_flags & 1` arm.
  *       Hoisting it above the `if` as a function-scope variable colors it into
  *       the wrong register and flips the delay-slot fill (97.84%).
- * @note The `switch (mode)` and `u32 b0` requirements are as documented on
- *       func_8005477C; measured here too (94.07% and 99.85% respectively).
- * @note The `(s32)` cast inside the `>= 0xA` arm is required: it selects an
- *       arithmetic `sra` over a logical `srl` (99.55% without).
+ * @note The `switch (texture_depth)` and `u32 clut_ref` requirements are as documented on
+ *       field_build_sprite_tile_record; measured here too (94.07% and 99.85% respectively).
  *
  * @see decomp.me (100%) TODO
  */
-void func_80054904(FieldTileDesc *desc, FieldTileRec *prim, s32 mode, s32 flags)
+void field_build_quad_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags)
 {
-    s32 base;
-    s32 tmp;
-    s32 tmp2;
-    s32 attr;
-    u8 b1;
-    u32 lo;
+    s32 tpage;
+    s32 second_tpage;
+    u8 texture_attrs;
+    u32 page_slot;
 
-    if (desc->unk0 & 0x80)
+    if (desc->clut_slot & FIELD_TILE_PRESENT)
     {
-        prim->unk0 = (desc->unk2 & 0xF) * 0x10;
-        prim->unk1 = desc->unk2 & 0xF0;
-        switch (mode)
+        record->u = (desc->packed_uv & FIELD_TILE_U_MASK) * FIELD_TILE_SIZE;
+        record->v = desc->packed_uv & FIELD_TILE_V_MASK;
+        switch (texture_depth)
         {
-        case 0:
-            {
-                u32 b0 = desc->unk0;
+        case FIELD_TEXTURE_4_BIT:
+        {
+            u32 clut_ref = desc->clut_slot;
 
-                prim->unk2 = ((((b0 & 0x1F) >> 4) + 0x1D8) << 6) | (b0 & 0xF);
-            }
-            break;
-        case 1:
-            prim->unk2 = (((desc->unk0 & 0x1F) + 0x1D8) << 6);
+            setClut(record, FIELD_TILE_4BIT_CLUT_X(clut_ref), FIELD_TILE_4BIT_CLUT_Y(clut_ref));
+        }
+        break;
+        case FIELD_TEXTURE_8_BIT:
+            setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
             break;
         default:
-            prim->unk2 = 0;
+            record->clut = 0;
             break;
         }
-        if (!(flags & 1))
+        if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
         {
-            prim->unk4 = ((s32 *) 0x1F800000)[desc->unk3];
-            if (desc->unk1 & 0x40)
+            record->rgb_code = FIELD_TILE_COLOR_WORDS[desc->color_index];
+            if (desc->texture_attrs & FIELD_TILE_SEMITRANS)
             {
-                *((u8 *) prim + 7) |= 2;
+                setSemiTrans(record, 1);
             }
         }
-        b1 = desc->unk1;
-        lo = b1 & 0xF;
-        if (lo >= 0xAU)
+        texture_attrs = desc->texture_attrs;
+        page_slot = texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
+        if (page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
         {
-            base = mode & 3;
-            base = base << 7;
-            base = base | ((b1 * 2) & 0x60);
-            tmp = (s32) ((((s32) (lo << 6)) - 0x80) & 0x3FF) >> 6;
+            tpage = getTPage(texture_depth, FIELD_TILE_ABR(texture_attrs), FIELD_TILE_UPPER_BANK_PAGE_X(page_slot), 0);
         }
         else
         {
-            base = mode & 3;
-            base = base << 7;
-            base = base | ((b1 * 2) & 0x60);
-            tmp = (((lo << 6) + 0x140) >> 6) | 0x10;
+            tpage = getTPage(texture_depth, FIELD_TILE_ABR(texture_attrs), FIELD_TILE_LOWER_BANK_PAGE_X(page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
         }
-        base = base | tmp;
-        prim->unkA = base;
-        if (!(flags & 2))
+        record->tail.quad.tpage = tpage;
+        if (!(record_flags & FIELD_TILE_REC_SHARED_TPAGE))
         {
-            u8 c1 = desc->unk1;
-            u32 lo2 = c1 & 0xF;
+            u8 second_texture_attrs = desc->texture_attrs;
+            u32 second_page_slot = second_texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
 
-            if (lo2 >= 0xAU)
+            if (second_page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
             {
-                base = mode & 3;
-                base = base << 7;
-                base = base | ((c1 * 2) & 0x60);
-                tmp2 = (s32) ((((s32) (lo2 << 6)) - 0x80) & 0x3FF) >> 6;
+                second_tpage = getTPage(texture_depth, FIELD_TILE_ABR(second_texture_attrs), FIELD_TILE_UPPER_BANK_PAGE_X(second_page_slot), 0);
             }
             else
             {
-                base = mode & 3;
-                base = base << 7;
-                base = base | ((c1 * 2) & 0x60);
-                tmp2 = (((lo2 << 6) + 0x140) >> 6) | 0x10;
+                second_tpage =
+                    getTPage(texture_depth, FIELD_TILE_ABR(second_texture_attrs), FIELD_TILE_LOWER_BANK_PAGE_X(second_page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
             }
-            attr = base | tmp2;
-            if (!(flags & 1))
+            if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
             {
-                prim->unk8 = ((desc->unk2 & 0xF) * 0x10) + 0xF;
-                prim->unk9 = desc->unk2 & 0xF0;
-                prim->unkA = attr;
+                record->tail.quad.u = ((desc->packed_uv & FIELD_TILE_U_MASK) * FIELD_TILE_SIZE) + 0xF;
+                record->tail.quad.v = desc->packed_uv & FIELD_TILE_V_MASK;
+                record->tail.quad.tpage = second_tpage;
             }
             else
             {
-                FieldTileRec *prev = (FieldTileRec *) ((u8 *) prim - 4);
+                FieldTileRec* prev = (FieldTileRec*)((u8*)record - 4);
 
-                prev->unk8 = ((desc->unk2 & 0xF) * 0x10) + 0xF;
-                prev->unk9 = desc->unk2 & 0xF0;
-                prev->unkA = attr;
+                prev->tail.quad.u = ((desc->packed_uv & FIELD_TILE_U_MASK) * FIELD_TILE_SIZE) + 0xF;
+                prev->tail.quad.v = desc->packed_uv & FIELD_TILE_V_MASK;
+                prev->tail.quad.tpage = second_tpage;
             }
         }
     }
     else
     {
-        *(s32 *) prim = -1;
+        *(s32*)record = -1;
     }
 }
 
@@ -316,9 +356,9 @@ typedef union
         u8 unk0;
         u8 unk1;
         /** 0x0E drift magnitude; zero disables the per-frame drift. */
-        u8 unk2;
+        u8 drift_speed;
         /** 0x0F drift angle, scaled by 0x10 before rcos/rsin. */
-        u8 unk3;
+        u8 drift_angle;
     } b;
 } FieldObjFlags;
 
@@ -329,7 +369,7 @@ typedef struct
 {
     u8 _pad0[4];
     /** 0x04 shared-source handle; two defs with the same one are compatible. */
-    s32 unk4;
+    s32 shared_source;
     u8 _pad1[0xC - 8];
     /**
      * 0x0C bit 1 zeroes the offsets; bit 2 and bits 4-5 select the horizontal
@@ -339,36 +379,36 @@ typedef struct
     u32 flags;
     u8 _pad2[0x1C - 0x10];
     /** 0x1C horizontal scale; 0x10 means "unscaled", bit 7 negates. */
-    u8 unk1C;
+    u8 scroll_scale_x;
     /** 0x1D vertical scale; same encoding as unk1C. */
-    u8 unk1D;
+    u8 scroll_scale_y;
 } FieldObjDef;
 
 /**
  * @brief Definition record hanging off a part.
  *
- * The word at 0x08 is read whole (its bits 12-15 select func_80055D20's
+ * The word at 0x08 is read whole (its bits 12-15 select field_emit_rotated_sprite_grid's
  * placement mode) while bytes 0x0A and 0x0B are read separately as the cell
  * grid dimensions, so the two views have to share storage - same arrangement
  * as FieldObjFlags below.
  */
 typedef struct
 {
-    /** 0x00 identity key; func_80056824 matches parts on it. */
-    s32 unk0;
+    /** 0x00 identity key; field_find_shareable_part matches parts on it. */
+    s32 key;
     u8 _pad0[8 - 4];
     union
     {
         /** 0x08 whole word; bit 7 marks the part unshareable, bits 12-15
-            select func_80055D20's placement mode. */
+            select field_emit_rotated_sprite_grid's placement mode. */
         u32 word;
         struct
         {
             u8 _pad1[2];
             /** 0x0A grid width, in cells. */
-            u8 unkA;
+            u8 cols;
             /** 0x0B grid height, in cells. */
-            u8 unkB;
+            u8 rows;
         } b;
     } u;
 } FieldPartDef;
@@ -379,13 +419,13 @@ typedef struct
 typedef struct FieldPart FieldPart;
 struct FieldPart
 {
-    FieldPart *next;        /* 0x00 */
-    FieldPartDef *def;      /* 0x04 */
+    FieldPart* next;   /* 0x00 */
+    FieldPartDef* def; /* 0x04 */
     u8 _pad0[0xC - 8];
     /** 0x0C bit plane: one bit per grid cell, row-major, LSB first. */
-    s32 *bits;
+    s32* bits;
     /** 0x10 packed stream of FieldCellRec, one per set bit. */
-    u8 *records;
+    u8* records;
     u8 _pad1[0x18 - 0x14];
     /**
      * 0x18 texture-page word shared by every cell; when non-zero it is emitted
@@ -395,42 +435,42 @@ struct FieldPart
     /** 0x1C rgb/code word shared by every cell; same stride effect as tpage. */
     s32 code_word;
     /** 0x20 zero means the part is not drawn. */
-    u8 unk20;
+    u8 visible;
     /** 0x21 selects the per-part byte cost: 0x18, 0x1C, 0x28 or 0x34 units. */
     u8 kind;
-    /** 0x22 number of attached FieldNode instances func_80057A28 updates. */
+    /** 0x22 number of attached FieldNode instances field_update_part_sweep updates. */
     u8 node_count;
     u8 _pad2[0x26 - 0x23];
     /** 0x26 number of instances; zero means the part is skipped entirely. */
-    u16 count;
-    s32 unk28;              /* 0x28 x offset within the object */
-    s32 unk2C;              /* 0x2C y offset within the object */
-    s32 unk30;              /* 0x30 z offset within the object */
+    u16 instance_count;
+    s32 x; /* 0x28 x offset within the object */
+    s32 y; /* 0x2C y offset within the object */
+    s32 z; /* 0x30 z offset within the object */
     u8 _pad3[0x36 - 0x34];
     /** 0x36 reload period for the sweep phase at 0x38. */
     u16 sweep_period;
     /** 0x38 sweep phase; counts down each frame, reloads from 0x36 at zero. */
     u16 sweep_phase;
     /** 0x3A rotation angle applied to the vertical (row) step. */
-    u16 unk3A;
+    u16 row_angle;
     /** 0x3C rotation angle applied to the horizontal (column) step. */
-    u16 unk3C;
+    u16 column_angle;
     /** 0x3E rotation angle of the grid as a whole; feeds both rsin and rcos. */
-    u16 unk3E;
+    u16 rotation_angle;
     /** 0x40 horizontal scale, 8.8 fixed point. */
-    u16 unk40;
+    u16 scale_x;
     /** 0x42 vertical scale, 8.8 fixed point. */
-    u16 unk42;
+    u16 scale_y;
     /**
      * 0x44..0x4A the four corner CLUT ids, bilinearly interpolated across the
      * grid. Derived from the interpolation endpoints: the row weight resolves
      * to unk46 on the first (topmost) row and unk44 on the last, and the
      * column weight to the "left" pair on the first (leftmost) column.
      */
-    s16 clut_bl;            /* 0x44 bottom left */
-    s16 clut_tl;            /* 0x46 top left */
-    s16 clut_br;            /* 0x48 bottom right */
-    s16 clut_tr;            /* 0x4A top right */
+    s16 clut_bl; /* 0x44 bottom left */
+    s16 clut_tl; /* 0x46 top left */
+    s16 clut_br; /* 0x48 bottom right */
+    s16 clut_tr; /* 0x4A top right */
 };
 
 /**
@@ -439,35 +479,35 @@ struct FieldPart
 typedef struct FieldObj FieldObj;
 struct FieldObj
 {
-    FieldObj *next;         /* 0x00 */
-    FieldObjDef *def;       /* 0x04 */
-    FieldPart *parts;       /* 0x08 head of the part list */
-    FieldObjFlags flags;    /* 0x0C */
-    s32 unk10;              /* 0x10 compared when matching two objects */
-    u16 unk14;              /* 0x14 compared when matching two objects */
+    FieldObj* next;      /* 0x00 */
+    FieldObjDef* def;    /* 0x04 */
+    FieldPart* parts;    /* 0x08 head of the part list */
+    FieldObjFlags flags; /* 0x0C */
+    s32 unk10;           /* 0x10 compared when matching two objects */
+    u16 unk14;           /* 0x14 compared when matching two objects */
     u8 _pad0[0x1C - 0x16];
-    s32 unk1C;              /* 0x1C x offset */
-    s32 unk20;              /* 0x20 y offset */
-    s32 unk24;              /* 0x24 z offset */
-    s32 unk28;              /* 0x28 accumulated x drift */
-    s32 unk2C;              /* 0x2C accumulated y drift */
+    s32 x;       /* 0x1C x offset */
+    s32 y;       /* 0x20 y offset */
+    s32 z;       /* 0x24 z offset */
+    s32 drift_x; /* 0x28 accumulated x drift */
+    s32 drift_y; /* 0x2C accumulated y drift */
 };
 
 /**
- * @brief Header hanging off FieldScene offset 0.
+ * @brief Header hanging off FieldScene at offset 0.
  *
- * @note func_80054... reads only the 0x30 halfword; the streaming update in
- *       func_80056A04 also reads the strip pixel-source base at 0x04 and the
+ * @note field_draw_scene_objects reads only the 0x30 halfword; the streaming
+ *       update in field_update_scene_animations also reads the pixel-source base at 0x04 and the
  *       column stride at 0x28.
  */
 typedef struct
 {
     u8 _pad0[4];
-    u16 *unk4;             /* 0x04 strip pixel-source base */
+    u16* pixel_data; /* 0x04 strip pixel-source base */
     u8 _pad1[0x28 - 8];
-    u16 unk28;             /* 0x28 column stride, in halfwords */
+    u16 pixel_stride; /* 0x28 source stride, in halfwords */
     u8 _pad2[0x30 - 0x2A];
-    s16 unk30;             /* 0x30 */
+    s16 unk30; /* 0x30 */
 } FieldSceneHeader;
 
 /**
@@ -481,40 +521,40 @@ typedef struct
 {
     u8 _pad0[4];
     /** 0x04 first point, horizontal. */
-    u16 unk4;
+    u16 x0;
     /** 0x06 first point, vertical (halved before use). */
-    u16 unk6;
+    u16 y0;
     /** 0x08 second point, horizontal. */
-    u16 unk8;
+    u16 x1;
     /** 0x0A second point, vertical (halved before use). */
-    u16 unkA;
+    u16 y1;
     u8 _pad1[0x10 - 0xC];
     /** 0x10 depth bias added to the fixed 0xE0 vertical origin. */
-    s16 unk10;
+    s16 depth_bias;
     u8 _pad2[0x14 - 0x12];
     /** 0x14 value rendered as the marker's numeric label. */
-    u16 unk14;
+    u16 label;
 } FieldMarkerDef;
 
 /**
  * @brief Element of the scene's marker list (FieldScene offset 0x10).
  *
- * @note Only drawn when D_8003524C is set, so this is most likely a debug
+ * @note Only drawn when g_field_marker_overlay_enabled is set, so this is most likely a debug
  *       overlay rather than something the retail render path shows.
  */
 typedef struct FieldMarker FieldMarker;
 struct FieldMarker
 {
-    FieldMarker *next;      /* 0x00 */
-    FieldMarkerDef *def;    /* 0x04 */
+    FieldMarker* next;   /* 0x00 */
+    FieldMarkerDef* def; /* 0x04 */
     /** 0x08 third point, horizontal. */
-    u16 unk8;
+    u16 x2;
     /** 0x0A third point, vertical (halved before use). */
-    u16 unkA;
+    u16 y2;
     /** 0x0C fourth point, horizontal. */
-    u16 unkC;
+    u16 x3;
     /** 0x0E fourth point, vertical (halved before use). */
-    u16 unkE;
+    u16 y3;
 };
 
 /**
@@ -526,40 +566,40 @@ struct FieldMarker
 typedef struct FieldImageReq FieldImageReq;
 struct FieldImageReq
 {
-    FieldImageReq *next; /* 0x00 */
+    FieldImageReq* next; /* 0x00 */
     RECT rect;           /* 0x04 destination rectangle in VRAM */
-    u_long *data;        /* 0x0C source pixel data */
+    u_long* data;        /* 0x0C source pixel data */
 };
 
 /** @brief Definition record shared by the animation and sequence lists. */
 typedef struct
 {
-    u8 unk0;   /* 0x00 */
-    u8 unk1;   /* 0x01 */
-    u8 unk2;   /* 0x02 */
+    u8 unk0; /* 0x00 */
+    u8 unk1; /* 0x01 */
+    u8 unk2; /* 0x02 */
     u8 _pad0;
-    u8 unk4;   /* 0x04 low three bits select the handler */
-    u8 unk5;   /* 0x05 */
-    u8 unk6;   /* 0x06 */
+    u8 flags; /* 0x04 low three bits select the handler */
+    u8 unk5;  /* 0x05 */
+    u8 unk6;  /* 0x06 */
     /** 0x07 handler sub-kind; the high byte of the word read at 0x04. */
-    u8 unk7;
-    u16 unk8;  /* 0x08 */
-    u16 unkA;  /* 0x0A */
-    u8 unkC;   /* 0x0C */
-    u8 unkD;   /* 0x0D */
-    u8 unkE;   /* 0x0E */
-    u8 unkF;   /* 0x0F */
-    u8 unk10;  /* 0x10 */
+    u8 handler_group;
+    u16 unk8; /* 0x08 */
+    u16 unkA; /* 0x0A */
+    u8 unkC;  /* 0x0C */
+    u8 unkD;  /* 0x0D */
+    u8 unkE;  /* 0x0E */
+    u8 unkF;  /* 0x0F */
+    u8 unk10; /* 0x10 */
     u8 _pad2;
     u16 unk12; /* 0x12 */
-    u8 *unk14; /* 0x14 */
+    u8* data;  /* 0x14 handler-specific data */
 } FieldAnimDef;
 
 /**
  * @brief Tile grid referenced by a tile-blit animation definition.
  *
- * Reached two ways: through FieldTileAnimDef::grid (func_80057CA4) and through
- * FieldAnimCel::grid (func_800584DC). The word at 0x08 is read whole for its
+ * Reached two ways: through FieldTileAnimDef::grid (field_blit_animation_frame) and through
+ * FieldAnimCel::grid (field_retarget_cel_cluts). The word at 0x08 is read whole for its
  * packing-mode bits while bytes 0x0A and 0x0B are read separately as the grid
  * dimensions, so the two views have to share storage - same arrangement as
  * FieldPartDef.
@@ -571,7 +611,7 @@ typedef struct
 typedef struct
 {
     /** 0x00 packed tile descriptors, one 4-byte entry per grid cell. */
-    FieldTileDesc *tiles;
+    FieldTileDesc* tiles;
     u8 _pad0[8 - 4];
     union
     {
@@ -599,15 +639,15 @@ typedef struct
 typedef struct
 {
     u8 _pad0[0x10];
-    FieldTileGrid *grid; /* 0x10 */
+    FieldTileGrid* grid; /* 0x10 */
 } FieldTileAnimDef;
 
 /** @brief Element of an animation node's cel ring. */
 /**
  * @brief One 4-byte entry of the scratchpad colour table at 0x1F800000.
  *
- * func_8005477C copies the whole entry into a tile record's rgb/code word;
- * func_800589F0 rewrites only the colour bytes, so it needs the halves named.
+ * field_build_sprite_tile_record copies the whole entry into a tile record's rgb/code word;
+ * field_tint_animation_cel rewrites only the colour bytes, so it needs the halves named.
  */
 typedef struct
 {
@@ -619,12 +659,12 @@ typedef struct
     u8 code;
 } FieldTintColor;
 
-/** @brief Palette record reached through FieldTintSrc::unk4. */
+/** @brief Palette record reached through FieldTintSrc::palette. */
 typedef struct
 {
     u8 _pad0[4];
     /** 0x04 count halfword followed by the palette entries themselves. */
-    u16 *unk4;
+    u16* data;
 } FieldTintPal;
 
 typedef struct FieldAnimCel FieldAnimCel;
@@ -635,42 +675,42 @@ typedef struct FieldAnimCel FieldAnimCel;
  * The two halfword triples multiply component-wise into the three-word colour
  * func_8005AC50 expands into the scratchpad table at 0x1F800000.
  *
- * @note func_80058C00 reaches this record through FieldAnim::cels instead, and
+ * @note field_tint_animation_cel_list reaches this record through FieldAnim::cels instead, and
  *       walks the cel list at 0x08 rather than being handed a single cel.
  */
 typedef struct
 {
     u8 _pad0[4];
     /** 0x04 record holding the palette this tint is built from. */
-    FieldTintPal *unk4;
-    /** 0x08 head of the cel list this source tints (func_80058C00 only). */
-    FieldAnimCel *unk8;
+    FieldTintPal* palette;
+    /** 0x08 head of the cel list this source tints (field_tint_animation_cel_list only). */
+    FieldAnimCel* cels;
     u8 _pad1[0x10 - 0xC];
-    u16 unk10; /* 0x10 red */
-    u16 unk12; /* 0x12 green */
-    u16 unk14; /* 0x14 blue */
-    u16 unk16; /* 0x16 red scale */
-    u16 unk18; /* 0x18 green scale */
-    u16 unk1A; /* 0x1A blue scale */
+    u16 red;         /* 0x10 */
+    u16 green;       /* 0x12 */
+    u16 blue;        /* 0x14 */
+    u16 red_scale;   /* 0x16 */
+    u16 green_scale; /* 0x18 */
+    u16 blue_scale;  /* 0x1A */
 } FieldTintSrc;
 
 struct FieldAnimCel
 {
-    FieldAnimCel *next; /* 0x00 */
+    FieldAnimCel* next; /* 0x00 */
     /** 0x04 grid this cel's bit plane and tile records are laid out on. */
-    FieldTileGrid *grid;
+    FieldTileGrid* grid;
     u8 _pad0[0xC - 8];
     /** 0x0C tile-presence bitmap, one bit per grid cell, LSB first. */
-    u32 *mask;
+    u32* mask;
     /** 0x10 packed destination tile records, advanced past every present tile. */
-    u8 *tiles;
+    u8* tiles;
     u8 _pad1[0x18 - 0x14];
     /** 0x18 when set, the tile record is 4 bytes shorter. */
-    s32 unk18;
+    s32 tpage_word;
     /** 0x1C when set, the tile record is 4 bytes shorter. */
-    s32 unk1C;
-    u8 unk20; /* 0x20 */
-    /** 0x21 record-format selector, 0-6; see func_80057CA4. */
+    s32 code_word;
+    u8 active; /* 0x20 */
+    /** 0x21 record-format selector, 0-6; see field_blit_animation_frame. */
     u8 format;
 };
 
@@ -685,11 +725,11 @@ typedef union
     s32 word;
     struct
     {
-        u8 unk0;
+        u8 control;
         /** 0x25 current frame / cel index. */
         u8 state;
-        u8 unk2;
-        u8 unk3;
+        u8 keyframe;
+        u8 stop_keyframe;
     } b;
 } FieldAnimFlags;
 
@@ -697,39 +737,39 @@ typedef union
 typedef struct FieldAnim FieldAnim;
 struct FieldAnim
 {
-    FieldAnim *next;      /* 0x00 */
-    FieldAnimDef *def;    /* 0x04 */
+    FieldAnim* next;   /* 0x00 */
+    FieldAnimDef* def; /* 0x04 */
     u8 _pad0[0xC - 8];
-    FieldAnimCel *cels;   /* 0x0C */
-    s32 unk10;            /* 0x10 */
-    /** 0x14 last horizontal tween offset pushed to the target (see func_80057E88). */
-    s32 unk14;
+    FieldAnimCel* cels; /* 0x0C */
+    s32 unk10;          /* 0x10 */
+    /** 0x14 last horizontal tween offset pushed to the target (see field_apply_animation_tween). */
+    s32 tween_x;
     /** 0x18 last vertical tween offset pushed to the target. */
-    s32 unk18;
+    s32 tween_y;
     /** 0x1C last depth tween offset pushed to the target. */
-    s32 unk1C;
+    s32 tween_z;
     /** 0x20 base of the per-frame packed tile records. */
-    u8 *frames;
+    u8* frame_data;
     FieldAnimFlags flags; /* 0x24 */
     /** 0x28 remaining loop repeats; decremented each time the cel ring wraps. */
-    u8 unk28;
+    u8 repeat_count;
     u8 _pad2;
-    u16 counter;          /* 0x2A */
+    u16 timer; /* 0x2A */
     /** 0x2C tile records per frame, i.e. the stride from one frame to the next. */
-    u16 frame_tiles;
+    u16 frame_tile_count;
     u8 _pad3[0x30 - 0x2E];
-    FieldImageReq req;    /* 0x30 */
-    u16 buf40[0x10];      /* 0x40 */
-    u16 buf60[0xF0];      /* 0x60 */
-    u16 buf240[1];        /* 0x240 */
+    FieldImageReq req; /* 0x30 */
+    u16 buf40[0x10];   /* 0x40 */
+    u16 buf60[0xF0];   /* 0x60 */
+    u16 buf240[1];     /* 0x240 */
 };
 
 /** @brief Element of the scene's sequence list (0x14). */
 typedef struct FieldSeq FieldSeq;
 struct FieldSeq
 {
-    FieldSeq *next;    /* 0x00 */
-    FieldAnimDef *def; /* 0x04 */
+    FieldSeq* next;    /* 0x00 */
+    FieldAnimDef* def; /* 0x04 */
     s32 flags;         /* 0x08 */
     u16 unkC;          /* 0x0C */
 };
@@ -744,72 +784,72 @@ typedef struct
         u16 y;
         u16 w;
         u16 h;
-    } rects[3];        /* 0x20 */
+    } rects[3]; /* 0x20 */
     u8 _pad1[0x98 - 0x38];
-    u8 chunk_idx;      /* 0x98 */
+    u8 chunk_idx; /* 0x98 */
     u8 _pad2[0x9D - 0x99];
-    u8 frame_ready;    /* 0x9D */
+    u8 frame_ready; /* 0x9D */
     u8 _pad3;
-    u8 end_state;      /* 0x9F */
+    u8 end_state; /* 0x9F */
 } FieldMovieState;
 
 /**
  * @brief Definition record shared by a FieldNode.
  *
- * unkA/unkC index the signed angle table pointed to by D_8018001C; unk10/unk12
- * are the horizontal/vertical base offsets (each shifted left by 8).
+ * x_angle_index/y_angle_index select entries in g_field_node_angle_table;
+ * base_x/base_y are the horizontal/vertical base offsets (each shifted by 8).
  */
 typedef struct
 {
     u8 _pad0[0xA];
-    u16 unkA;  /* 0x0A angle-table index for the horizontal step */
-    u16 unkC;  /* 0x0C angle-table index for the vertical step */
+    u16 x_angle_index; /* 0x0A angle-table index for the horizontal step */
+    u16 y_angle_index; /* 0x0C angle-table index for the vertical step */
     u8 _pad1[0x10 - 0xE];
-    s16 unk10; /* 0x10 horizontal base offset (<< 8) */
-    s16 unk12; /* 0x12 vertical base offset (<< 8) */
+    s16 base_x; /* 0x10 horizontal base offset (<< 8) */
+    s16 base_y; /* 0x12 vertical base offset (<< 8) */
 } FieldNodeDef;
 
 /**
  * @brief Element of the scene's attached-node list (FieldScene offset 0x08).
  *
  * Each node hangs off a FieldPart and carries a swept 2D position that
- * func_80057A28 recomputes every frame. The same list is walked by
+ * field_update_part_sweep recomputes every frame. The same list is walked by
  * field_clear_node_accumulators in field1.c.
  */
 typedef struct FieldNode FieldNode;
 struct FieldNode
 {
-    FieldNode *next;   /* 0x00 */
-    FieldNodeDef *def; /* 0x04 */
+    FieldNode* next;   /* 0x00 */
+    FieldNodeDef* def; /* 0x04 */
     u8 _pad0[0xC - 8];
-    FieldPart *part;   /* 0x0C owning part */
+    FieldPart* part; /* 0x0C owning part */
     u8 _pad1[0x28 - 0x10];
-    s32 unk28;         /* 0x28 horizontal delta since the previous frame */
-    s32 unk2C;         /* 0x2C vertical delta since the previous frame */
+    s32 delta_x; /* 0x28 horizontal delta since the previous frame */
+    s32 delta_y; /* 0x2C vertical delta since the previous frame */
     u8 _pad2[0x38 - 0x30];
-    s32 unk38;         /* 0x38 current horizontal position */
-    s32 unk3C;         /* 0x3C current vertical position */
+    s32 x; /* 0x38 current horizontal position */
+    s32 y; /* 0x3C current vertical position */
 };
 
 typedef struct
 {
-    FieldSceneHeader *unk0; /* 0x00 */
-    FieldObj *head;         /* 0x04 head of the object list */
-    FieldNode *nodes;       /* 0x08 head of the attached-node list */
+    FieldSceneHeader* header; /* 0x00 */
+    FieldObj* objects;        /* 0x04 head of the object list */
+    FieldNode* nodes;         /* 0x08 head of the attached-node list */
     u8 _pad0[0x10 - 0xC];
-    FieldMarker *markers;   /* 0x10 head of the marker list */
-    FieldSeq *seqs;         /* 0x14 head of the sequence list */
-    FieldAnim *anims;       /* 0x18 head of the animation list */
-    FieldAnim *strips;      /* 0x1C head of the strip list */
-    FieldAnim *sprites;     /* 0x20 head of the sprite list */
-    FieldAnim *effects;     /* 0x24 head of the effect list */
+    FieldMarker* markers; /* 0x10 head of the marker list */
+    FieldSeq* seqs;       /* 0x14 head of the sequence list */
+    FieldAnim* anims;     /* 0x18 head of the animation list */
+    FieldAnim* strips;    /* 0x1C head of the strip list */
+    FieldAnim* sprites;   /* 0x20 head of the sprite list */
+    FieldAnim* effects;   /* 0x24 head of the effect list */
     u8 _pad1[0x34 - 0x28];
-    FieldImageReq *uploads; /* 0x34 head of the pending upload list */
+    FieldImageReq* uploads; /* 0x34 head of the pending upload list */
 } FieldScene;
 
 typedef struct
 {
-    FieldScene *scene;
+    FieldScene* scene;
 } FieldSceneGlobals;
 
 /**
@@ -818,39 +858,39 @@ typedef struct
 typedef struct
 {
     /** 0x00 top of the allocated region. */
-    u32 unk0;
+    u32 top;
     u8 _pad[0xC - 4];
     /** 0x0C base of the allocated region. */
-    u32 unkC;
+    u32 base;
     /** 0x10 end of the first half of the region. */
-    u32 unk10;
+    u32 midpoint;
 } FieldMemState;
 
 /**
  * @brief Camera / scroll state block at 0x801ED480.
  *
  * The individual words are also referenced as the standalone symbols
- * D_801ED484 / D_801ED488 / D_801ED48C; func_80054CA8 uses BOTH forms and the
+ * g_field_camera_x / g_field_camera_y / g_field_camera_z; field_draw_scene_objects uses BOTH forms and the
  * distinction is required to match, because it selects the addressing mode.
  */
 typedef struct
 {
     u8 _pad[4];
-    s32 unk4;               /* 0x04 == D_801ED484 */
-    s32 unk8;               /* 0x08 == D_801ED488 */
-    s32 unkC;               /* 0x0C == D_801ED48C */
+    s32 x; /* 0x04 == g_field_camera_x */
+    s32 y; /* 0x08 == g_field_camera_y */
+    s32 z; /* 0x0C == g_field_camera_z */
 } FieldCamera;
 
 extern FieldSceneGlobals g_field_scene;
-extern s32 D_8003524C;
-extern s32 D_801ED484;
-extern s32 D_801ED488;
-extern s32 D_801ED48C;
+extern s32 g_field_marker_overlay_enabled;
+extern s32 g_field_camera_x;
+extern s32 g_field_camera_y;
+extern s32 g_field_camera_z;
 
 s32 rcos(s32);
 s32 rsin(s32);
-void func_8005538C(u32 *, u32 *);
-void func_8005692C(FieldPart *, s32, s32 *, s32);
+void field_draw_marker_overlay(u32*, u32*);
+void field_draw_part(FieldPart*, s32, s32*, s32);
 
 /**
  * @brief Size the field working buffer from the current scene's object list.
@@ -862,8 +902,8 @@ void func_8005692C(FieldPart *, s32, s32 *, s32);
  * base / midpoint / top triple (the region is sized to twice the total).
  *
  * @note The four multipliers MUST be assigned to named locals inside the inner
- *       loop. Written inline as `part->count * (n * 0x18)`, gcc reassociates to
- *       `(part->count * 0x18) * n`, which is no longer loop-invariant, so
+ *       loop. Written inline as `part->instance_count * (n * 0x18)`, gcc reassociates to
+ *       `(part->instance_count * 0x18) * n`, which is no longer loop-invariant, so
  *       nothing gets hoisted into the preheader and the multiplies are
  *       strength-reduced inside the loop instead (74.75%). Declaring them in
  *       the loop body lets loop.c hoist all four. See [CSE-05] in idioms.md.
@@ -886,18 +926,18 @@ void func_8005692C(FieldPart *, s32, s32 *, s32);
  *
  * @see decomp.me (100%) TODO
  */
-void func_80054B1C(void)
+void field_size_work_buffer(void)
 {
-    FieldMemState *state = (FieldMemState *) 0x801ED000;
-    FieldObj *obj;
-    FieldPart *part;
+    FieldMemState* state = (FieldMemState*)0x801ED000;
+    FieldObj* obj;
+    FieldPart* part;
     s32 n;
     u32 total;
     u32 base;
     u32 lim;
 
     total = 0;
-    obj = g_field_scene.scene->head;
+    obj = g_field_scene.scene->objects;
     if (obj != 0)
     {
         do
@@ -927,14 +967,14 @@ void func_80054B1C(void)
                     s32 m28 = n * 0x28;
                     s32 m34 = n * 0x34;
 
-                    if (part->count != 0)
+                    if (part->instance_count != 0)
                     {
                         s32 kind = part->kind;
 
                         switch (kind)
                         {
                         case 0:
-                            total += part->count * m18;
+                            total += part->instance_count * m18;
                             break;
                         case 1:
                             total += m1C;
@@ -943,31 +983,29 @@ void func_80054B1C(void)
                         case 3:
                         case 4:
                         case 5:
-                            total += part->count * m28;
+                            total += part->instance_count * m28;
                             break;
                         default:
-                            total += part->count * m34;
+                            total += part->instance_count * m34;
                             break;
                         }
                     }
                     part = part->next;
-                }
-                while (part != 0);
+                } while (part != 0);
             }
             obj = obj->next;
-        }
-        while (obj != 0);
+        } while (obj != 0);
     }
     total = total + 0xA000;
-    base = state->unk0;
+    base = state->top;
     lim = 0x12000;
     if (total < lim)
     {
         total = 0x12000;
     }
-    state->unk10 = base + total;
-    state->unkC = base;
-    state->unk0 = base + total * 2;
+    state->midpoint = base + total;
+    state->base = base;
+    state->top = base + total * 2;
 }
 
 /**
@@ -977,14 +1015,14 @@ void func_80054B1C(void)
  * offset from the camera state (scaled per-axis by the object's definition,
  * optionally negated and wrapped to a power-of-two boundary), applies the
  * object's per-frame drift, then walks the object's part list and submits each
- * visible part to func_8005692C. Parts near a wrap boundary are submitted more
+ * visible part to field_draw_part. Parts near a wrap boundary are submitted more
  * than once so they appear on both sides of the seam.
  *
- * @param arg0 Render target / context handle, forwarded to func_8005692C and
- *             func_8005538C.
- * @param arg1 TODO: opaque, forwarded unchanged as the 4th arg of
- *             func_8005692C and 2nd of func_8005538C.
- * @param arg2 Mode selector: 0 advances the per-frame drift; 2 forces the
+ * @param cursor_ptr Address of the primitive-buffer cursor, forwarded to field_draw_part and
+ *             field_draw_marker_overlay.
+ * @param ot_base Ordering-table base, forwarded unchanged as the 4th arg of
+ *             field_draw_part and 2nd of field_draw_marker_overlay.
+ * @param update_mode Mode selector: 0 advances the per-frame drift; 2 forces the
  *             unscaled camera offsets.
  *
  * @warning **THIS FUNCTION IS NOT A MATCH (92.92%) AND MAY NOT BE FUNCTIONALLY
@@ -995,42 +1033,42 @@ void func_80054B1C(void)
  *
  * @note The signed divides come in TWO forms and the choice is per-site.
  *       `x / 256` yields the compact `bgez / addiu / sra` sequence, which is
- *       what the target uses inside the part loop and for D_801ED488 /
- *       D_801ED48C. The head divide of D_801ED484 and the px/py/pz divides use
+ *       what the target uses inside the part loop and for g_field_camera_y /
+ *       g_field_camera_z. The head divide of g_field_camera_x and the scroll_x_px/scroll_y_px/scroll_z_px divides use
  *       a two-block form that ONLY appears if the rounding is written out as a
  *       real `if/else`. Collapsing those to `/ 256` costs ~11 exact rows.
- * @note `params` is one 5-word array, not five locals: params[2..4] are written
+ * @note `viewport` is one 5-word array, not five locals: viewport[2..4] are written
  *       and never read here, and survive only because the array's address is
- *       passed to func_8005692C.
+ *       passed to field_draw_part.
  * @note `FieldObjDef.flags` must be `u32` (`srl`, not `sra`) - worth 6 rows.
- * @note The mask must be computed BEFORE loading obj->unk28 / obj->unk2C in the
+ * @note The mask must be computed BEFORE loading obj->drift_x / obj->drift_y in the
  *       two wrap blocks - worth 3 rows.
  * @note Measured and rejected, despite the target visibly doing it: writing
- *       `ox`/`oz` as accumulate-in-place (`ox = ox + obj->unk28`) scores 15-42
+ *       `scroll_x`/`scroll_z` as accumulate-in-place (`scroll_x = scroll_x + obj->drift_x`) scores 15-42
  *       exact rows WORSE. See status.md before retrying.
  *
  * @see decomp.me (92.92%) TODO
  */
-void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
+void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
 {
-    s32 params[5];
-    FieldObj *obj;
-    FieldObjDef *def;
-    FieldPart *part;
-    s32 ox;
-    s32 oy;
-    s32 oz;
-    s32 modX;
-    s32 modY;
-    s32 px;
-    s32 py;
-    s32 pz;
+    s32 viewport[5];
+    FieldObj* obj;
+    FieldObjDef* def;
+    FieldPart* part;
+    s32 scroll_x;
+    s32 scroll_y;
+    s32 scroll_z;
+    s32 wrap_size;
+    s32 wrap_height;
+    s32 scroll_x_px;
+    s32 scroll_y_px;
+    s32 scroll_z_px;
 
-    modX = 0;
-    modY = 0;
-    params[2] = g_field_scene.scene->unk0->unk30;
+    wrap_size = 0;
+    wrap_height = 0;
+    viewport[2] = g_field_scene.scene->header->unk30;
     {
-        s32 t = D_801ED484;
+        s32 t = g_field_camera_x;
         s32 q;
 
         if (t >= 0)
@@ -1041,10 +1079,10 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
         {
             q = (t + 0xFF) >> 8;
         }
-        params[3] = q;
+        viewport[3] = q;
     }
-    params[4] = (D_801ED488 / 256 - D_801ED48C / 512) + 0xE0;
-    obj = g_field_scene.scene->head;
+    viewport[4] = (g_field_camera_y / 256 - g_field_camera_z / 512) + 0xE0;
+    obj = g_field_scene.scene->objects;
     if (obj != 0)
     {
         do
@@ -1052,19 +1090,19 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
             if (obj->flags.word & 1)
             {
                 def = obj->def;
-                ox = 0;
+                scroll_x = 0;
                 if (def->flags & 2)
                 {
-                    oy = 0;
-                    oz = 0;
+                    scroll_y = 0;
+                    scroll_z = 0;
                 }
                 else
                 {
-                    u8 sx = def->unk1C;
+                    u8 sx = def->scroll_scale_x;
 
-                    if ((sx == 0x10) || (arg2 == 2))
+                    if ((sx == 0x10) || (update_mode == 2))
                     {
-                        ox = D_801ED484;
+                        scroll_x = g_field_camera_x;
                     }
                     else
                     {
@@ -1073,22 +1111,22 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
 
                         if (sx & 0x80)
                         {
-                            v = -D_801ED484;
+                            v = -g_field_camera_x;
                         }
                         else
                         {
-                            mag = def->unk1C;
-                            v = D_801ED484;
+                            mag = def->scroll_scale_x;
+                            v = g_field_camera_x;
                         }
-                        ox = (v * mag) / 16;
+                        scroll_x = (v * mag) / 16;
                     }
                     {
-                        u8 sy = def->unk1D;
+                        u8 sy = def->scroll_scale_y;
 
-                        if ((sy == 0x10) || (arg2 == 2))
+                        if ((sy == 0x10) || (update_mode == 2))
                         {
-                            oy = ((FieldCamera *) 0x801ED480)->unk8;
-                            oz = ((FieldCamera *) 0x801ED480)->unkC;
+                            scroll_y = ((FieldCamera*)0x801ED480)->y;
+                            scroll_z = ((FieldCamera*)0x801ED480)->z;
                         }
                         else
                         {
@@ -1097,85 +1135,85 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
 
                             if (sy & 0x80)
                             {
-                                oy = (-D_801ED488 * (sy & 0x7F)) / 16;
-                                a = -D_801ED48C;
-                                b = def->unk1D & 0x7F;
+                                scroll_y = (-g_field_camera_y * (sy & 0x7F)) / 16;
+                                a = -g_field_camera_z;
+                                b = def->scroll_scale_y & 0x7F;
                             }
                             else
                             {
-                                a = def->unk1D;
-                                oy = (D_801ED488 * a) / 16;
-                                b = D_801ED48C;
+                                a = def->scroll_scale_y;
+                                scroll_y = (g_field_camera_y * a) / 16;
+                                b = g_field_camera_z;
                             }
-                            oz = (b * a) / 16;
+                            scroll_z = (b * a) / 16;
                         }
                     }
                 }
-                if (obj->flags.b.unk2 != 0)
+                if (obj->flags.b.drift_speed != 0)
                 {
-                    if (arg2 == 0)
+                    if (update_mode == 0)
                     {
-                        obj->unk28 += (rcos(obj->flags.b.unk3 * 0x10) * obj->flags.b.unk2) / 256;
-                        obj->unk2C -= (rsin(obj->flags.b.unk3 * 0x10) * obj->flags.b.unk2) / 256;
+                        obj->drift_x += (rcos(obj->flags.b.drift_angle * 0x10) * obj->flags.b.drift_speed) / 256;
+                        obj->drift_y -= (rsin(obj->flags.b.drift_angle * 0x10) * obj->flags.b.drift_speed) / 256;
                     }
                     if (def->flags & 4)
                     {
                         s32 t;
 
-                        modX = 0x10000 << ((def->flags >> 4) & 3);
-                        t = obj->unk28;
+                        wrap_size = 0x10000 << ((def->flags >> 4) & 3);
+                        t = obj->drift_x;
                         if (t >= 0)
                         {
-                            obj->unk28 = t & (modX - 1);
+                            obj->drift_x = t & (wrap_size - 1);
                         }
                         else
                         {
-                            obj->unk28 = -(-t & (modX - 1));
+                            obj->drift_x = -(-t & (wrap_size - 1));
                         }
                     }
                     if (def->flags & 8)
                     {
                         s32 t;
 
-                        modX = 0x20000 << ((def->flags >> 6) & 3);
-                        t = obj->unk2C;
+                        wrap_size = 0x20000 << ((def->flags >> 6) & 3);
+                        t = obj->drift_y;
                         if (t >= 0)
                         {
-                            obj->unk2C = t & (modX - 1);
+                            obj->drift_y = t & (wrap_size - 1);
                         }
                         else
                         {
-                            obj->unk2C = -(-t & (modX - 1));
+                            obj->drift_y = -(-t & (wrap_size - 1));
                         }
                     }
                 }
                 {
-                    s32 tx = ox + obj->unk28;
-                    s32 tz = oz + obj->unk2C;
+                    s32 tx = scroll_x + obj->drift_x;
+                    s32 tz = scroll_z + obj->drift_y;
 
                     if (tx >= 0)
                     {
-                        px = tx >> 8;
+                        scroll_x_px = tx >> 8;
                     }
                     else
                     {
-                        px = (tx + 0xFF) >> 8;
+                        scroll_x_px = (tx + 0xFF) >> 8;
                     }
-                    if (oy >= 0)
+                    if (scroll_y >= 0)
                     {
-                        py = oy >> 8;
+                        scroll_y_px = scroll_y >> 8;
                     }
                     else
                     {
-                        py = (oy + 0xFF) >> 8;
+                        scroll_y_px = (scroll_y + 0xFF) >> 8;
                     }
                     if (tz >= 0)
                     {
-                        pz = tz >> 9;
+                        scroll_z_px = tz >> 9;
                     }
                     else
                     {
-                        pz = (tz + 0x1FF) >> 9;
+                        scroll_z_px = (tz + 0x1FF) >> 9;
                     }
                 }
                 part = obj->parts;
@@ -1183,101 +1221,99 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
                 {
                     do
                     {
-                        if ((part->unk20 != 0) && (part->count != 0))
+                        if ((part->visible != 0) && (part->instance_count != 0))
                         {
-                            params[0] = px + (obj->unk1C + part->unk28) / 256;
+                            viewport[0] = scroll_x_px + (obj->x + part->x) / 256;
                             {
-                                s32 a = (py - pz) + (obj->unk20 + part->unk2C) / 256;
-                                s32 d = part->def->u.b.unkB * 0x10 - 0xE0;
+                                s32 a = (scroll_y_px - scroll_z_px) + (obj->y + part->y) / 256;
+                                s32 d = part->def->u.b.rows * 0x10 - 0xE0;
 
-                                a = a - (obj->unk24 + part->unk30) / 512;
-                                params[1] = a - d;
+                                a = a - (obj->z + part->z) / 512;
+                                viewport[1] = a - d;
                             }
                             if (def->flags & 4)
                             {
-                                modX = 0x100 << ((def->flags >> 4) & 3);
-                                if (params[0] >= 0)
+                                wrap_size = 0x100 << ((def->flags >> 4) & 3);
+                                if (viewport[0] >= 0)
                                 {
-                                    params[0] = params[0] & (modX - 1);
+                                    viewport[0] = viewport[0] & (wrap_size - 1);
                                 }
                                 else
                                 {
-                                    params[0] = modX - (-params[0] & (modX - 1));
+                                    viewport[0] = wrap_size - (-viewport[0] & (wrap_size - 1));
                                 }
                             }
                             if (def->flags & 8)
                             {
-                                modY = 0x100 << ((def->flags >> 6) & 3);
-                                if (params[1] >= 0)
+                                wrap_height = 0x100 << ((def->flags >> 6) & 3);
+                                if (viewport[1] >= 0)
                                 {
-                                    params[1] = params[1] & (modY - 1);
+                                    viewport[1] = viewport[1] & (wrap_height - 1);
                                 }
                                 else
                                 {
-                                    params[1] = modY - (-params[1] & (modY - 1));
+                                    viewport[1] = wrap_height - (-viewport[1] & (wrap_height - 1));
                                 }
                             }
-                            func_8005692C(part, arg0, params, arg1);
+                            field_draw_part(part, cursor_ptr, viewport, ot_base);
                             if (def->flags & 4)
                             {
-                                if (params[0] > 0)
+                                if (viewport[0] > 0)
                                 {
-                                    params[0] -= modX;
-                                    func_8005692C(part, arg0, params, arg1);
-                                    params[0] += modX;
+                                    viewport[0] -= wrap_size;
+                                    field_draw_part(part, cursor_ptr, viewport, ot_base);
+                                    viewport[0] += wrap_size;
                                 }
                                 if (!(def->flags & 0x30))
                                 {
-                                    s32 t = params[0] + modX;
+                                    s32 t = viewport[0] + wrap_size;
 
                                     if (t < 0x140)
                                     {
-                                        params[0] = t;
-                                        func_8005692C(part, arg0, params, arg1);
-                                        params[0] -= modX;
+                                        viewport[0] = t;
+                                        field_draw_part(part, cursor_ptr, viewport, ot_base);
+                                        viewport[0] -= wrap_size;
                                     }
                                 }
                             }
                             if (def->flags & 8)
                             {
-                                if (params[1] > 0)
+                                if (viewport[1] > 0)
                                 {
-                                    params[1] -= modY;
-                                    func_8005692C(part, arg0, params, arg1);
+                                    viewport[1] -= wrap_height;
+                                    field_draw_part(part, cursor_ptr, viewport, ot_base);
                                 }
                                 if (def->flags & 4)
                                 {
-                                    if (params[0] > 0)
+                                    if (viewport[0] > 0)
                                     {
-                                        params[0] -= modX;
-                                        func_8005692C(part, arg0, params, arg1);
-                                        params[0] += modX;
+                                        viewport[0] -= wrap_size;
+                                        field_draw_part(part, cursor_ptr, viewport, ot_base);
+                                        viewport[0] += wrap_size;
                                     }
                                     if (!(def->flags & 0x30))
                                     {
-                                        s32 t = params[0] + modX;
+                                        s32 t = viewport[0] + wrap_size;
 
                                         if (t < 0x140)
                                         {
-                                            params[0] = t;
-                                            func_8005692C(part, arg0, params, arg1);
+                                            viewport[0] = t;
+                                            field_draw_part(part, cursor_ptr, viewport, ot_base);
                                         }
                                     }
                                 }
                             }
                         }
                         part = part->next;
-                    }
-                    while (part != 0);
+                    } while (part != 0);
                 }
             }
             obj = obj->next;
-        }
-        while (obj != 0);
+        } while (obj != 0);
     }
-    if (D_8003524C != 0)
+    if (g_field_marker_overlay_enabled != 0)
     {
-        func_8005538C((u32 *)arg0, (u32 *)arg1);
+        field_draw_marker_overlay((u32*)cursor_ptr, (u32*)ot_base);
     }
 }
 
@@ -1307,8 +1343,8 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
  * @note `depth` must be assigned BEFORE setLineF4/setRGB0, not after. That one
  *       move is worth 8 exact rows (82.49% -> 92.51%): it lets sched1 hoist the
  *       `lh` above the primitive stores.
- * @note `depth` must exist at all. Written inline as `sy + (def->unk10 + 0xE0)`
- *       GCC reassociates to `(sy + 0xE0) + def->unk10` and hoists the constant
+ * @note `depth` must exist at all. Written inline as `sy + (def->depth_bias + 0xE0)`
+ *       GCC reassociates to `(sy + 0xE0) + def->depth_bias` and hoists the constant
  *       add out of the loop; that costs 18 rows.
  * @note `scene` must be split out of the marker-list read: `g_field_scene.scene`
  *       and `scene->markers` are two statements straddling the scroll divides,
@@ -1331,14 +1367,14 @@ void func_80054CA8(s32 arg0, s32 arg1, s32 arg2)
  *
  * @see decomp.me (100%) TODO
  */
-void func_8005538C(u32 *cursor, u32 *ot)
+void field_draw_marker_overlay(u32* cursor, u32* ot)
 {
     s16 pos[2];
-    FieldScene *scene;
-    FieldMarker *marker;
-    FieldMarkerDef *def;
-    LINE_F4 *prim;
-    void *prev;
+    FieldScene* scene;
+    FieldMarker* marker;
+    FieldMarkerDef* def;
+    LINE_F4* prim;
+    void* prev;
     s32 sx;
     s32 sy;
     s32 cam_y;
@@ -1346,22 +1382,20 @@ void func_8005538C(u32 *cursor, u32 *ot)
     s32 depth;
     s32 value;
     s32 digits;
-    u32 *ot_entry;
+    u32* ot_entry;
 
-    prim = (LINE_F4 *)*cursor;
+    prim = (LINE_F4*)*cursor;
     prev = NULL;
     scene = g_field_scene.scene;
-    sx = D_801ED484 / 256;
+    sx = g_field_camera_x / 256;
     do
     {
-        cam_y = D_801ED488 / 256;
-    }
-    while (0);
+        cam_y = g_field_camera_y / 256;
+    } while (0);
     do
     {
-        sy = cam_y - D_801ED48C / 512;
-    }
-    while (0);
+        sy = cam_y - g_field_camera_z / 512;
+    } while (0);
     marker = scene->markers;
     if (marker != NULL)
     {
@@ -1369,49 +1403,48 @@ void func_8005538C(u32 *cursor, u32 *ot)
         do
         {
             def = marker->def;
-            depth = def->unk10 + 0xE0;
+            depth = def->depth_bias + 0xE0;
             setLineF4(prim);
             setRGB0(prim, 0xFF, 0, 0);
             base_y = sy + depth;
-            prim->x0 = def->unk4 + sx;
-            prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->unk6);
-            prim->x1 = def->unk8 + sx;
-            prim->y1 = base_y - HALF_TOWARD_ZERO((s16)def->unkA);
-            prim->x2 = marker->unkC + sx;
-            prim->y2 = base_y - HALF_TOWARD_ZERO((s16)marker->unkE);
-            prim->x3 = marker->unk8 + sx;
-            prim->y3 = base_y - HALF_TOWARD_ZERO((s16)marker->unkA);
+            prim->x0 = def->x0 + sx;
+            prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->y0);
+            prim->x1 = def->x1 + sx;
+            prim->y1 = base_y - HALF_TOWARD_ZERO((s16)def->y1);
+            prim->x2 = marker->x3 + sx;
+            prim->y2 = base_y - HALF_TOWARD_ZERO((s16)marker->y3);
+            prim->x3 = marker->x2 + sx;
+            prim->y3 = base_y - HALF_TOWARD_ZERO((s16)marker->y2);
             if (prev != NULL)
             {
                 setaddr(prev, prim);
             }
             prev = prim;
             prim = prim + 1;
-            setLineF2((LINE_F2 *)prim);
+            setLineF2((LINE_F2*)prim);
             setRGB0(prim, 0xFF, 0, 0);
-            prim->x0 = def->unk4 + sx;
-            prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->unk6);
-            prim->x1 = marker->unk8 + sx;
-            prim->y1 = base_y - HALF_TOWARD_ZERO((s16)marker->unkA);
+            prim->x0 = def->x0 + sx;
+            prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->y0);
+            prim->x1 = marker->x2 + sx;
+            prim->y1 = base_y - HALF_TOWARD_ZERO((s16)marker->y2);
             setaddr(prev, prim);
             prev = prim;
-            prim = (LINE_F4 *)((LINE_F2 *)prim + 1);
-            pos[0] = def->unk4 + sx;
-            pos[1] = base_y - HALF_TOWARD_ZERO((s16)def->unk6);
-            value = def->unk14;
+            prim = (LINE_F4*)((LINE_F2*)prim + 1);
+            pos[0] = def->x0 + sx;
+            pos[1] = base_y - HALF_TOWARD_ZERO((s16)def->y0);
+            value = def->label;
             digits = 2;
-            if (def->unk14 < 0xA)
+            if (def->label < 0xA)
             {
                 digits = 1;
             }
-            prim = (LINE_F4 *)func_800AD208(ot_entry, prim, value, digits, pos);
+            prim = (LINE_F4*)func_800AD208(ot_entry, prim, value, digits, pos);
             marker = marker->next;
-        }
-        while (marker != NULL);
+        } while (marker != NULL);
     }
     if (prev != NULL)
     {
-        addPrims(&ot[-1], (void *)*cursor, prev);
+        addPrims(&ot[-1], (void*)*cursor, prev);
         *cursor = (u32)prim;
     }
 }
@@ -1419,7 +1452,7 @@ void func_8005538C(u32 *cursor, u32 *ot)
 /**
  * @brief Screen-space placement of the grid being drawn.
  *
- * func_8005571C only needs the origin; func_80055D20 also reads unk8/unkC/unk10
+ * field_emit_sprite_grid only needs the origin; field_emit_rotated_sprite_grid also reads unk8/unkC/unk10
  * to derive the rotation centre for its non-default placement modes.
  */
 typedef struct
@@ -1432,7 +1465,7 @@ typedef struct
 } FieldViewport;
 
 /**
- * @brief GPU primitive as func_8005571C writes it: four raw words.
+ * @brief GPU primitive as field_emit_sprite_grid writes it: four raw words.
  *
  * Layout-compatible with SPRT_16 (tag / rgb+code / x0+y0 / u0+v0+clut) and,
  * for the 8-byte form, with DR_TPAGE. It is declared as plain words rather
@@ -1458,17 +1491,17 @@ typedef struct
 typedef struct
 {
     /** 0x00 uv pair plus CLUT id; -1 means the cell emits nothing. */
-    s32 unk0;
+    s32 uv_clut;
     /** 0x04 rgb/code word used when the part has no global code word. */
-    s32 unk4;
+    s32 rgb_code;
     /** 0x08 texture-page word tested against the running page code. */
-    s32 unk8;
+    s32 tpage;
 } FieldCellRec;
 
 /**
  * @brief Colour view of a FieldCellRec, used by the tint pass.
  *
- * Names the two halves of FieldCellRec::unk4 that func_800589F0 writes on their
+ * Names the two halves of FieldCellRec::rgb_code that field_tint_animation_cel writes on their
  * own: the rgb/code word's low halfword and its blue byte.
  */
 typedef struct
@@ -1492,7 +1525,7 @@ typedef struct
  * Rows and columns outside the 320x224 viewport are skipped by consuming their
  * bits without emitting.
  *
- * Sibling of func_80055D20; both are reached from the func_8005692C dispatch
+ * Sibling of field_emit_rotated_sprite_grid; both are reached from the field_draw_part dispatch
  * on FieldPart::kind.
  *
  * @param part Field part supplying the grid, the bit plane, the record stream
@@ -1533,7 +1566,7 @@ typedef struct
  *
  * @see decomp.me (100%) TODO
  */
-void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32 ot_base)
+void field_emit_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldViewport* origin, s32 ot_base)
 {
     s32 uv_word;
     s32 tpage_word;
@@ -1557,13 +1590,13 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     u32 clut_b;
     s16 val_a;
     s16 val_b;
-    FieldPrim *prim;
-    u8 *cursor;
-    u8 *chain;
-    u8 *recp;
-    s32 *bitp;
+    FieldPrim* prim;
+    u8* cursor;
+    u8* chain;
+    u8* recp;
+    s32* bitp;
     s32 width;
-    FieldPartDef *info;
+    FieldPartDef* info;
 
     last_code = 0;
     bits = 0;
@@ -1595,12 +1628,12 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     bitp = part->bits;
     recp = part->records;
     info = part->def;
-    cursor = (u8 *) *cursor_ptr;
+    cursor = (u8*)*cursor_ptr;
     y = origin->y;
-    height = info->u.b.unkB;
+    height = info->u.b.rows;
     row = height;
     row = row - 1;
-    width = info->u.b.unkA;
+    width = info->u.b.cols;
     chain = NULL;
     while (row != -1)
     {
@@ -1714,7 +1747,7 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
             }
             if ((bits & bit) != 0)
             {
-                uv_word = ((FieldCellRec *) recp)->unk0;
+                uv_word = ((FieldCellRec*)recp)->uv_clut;
                 if (uv_word != -1)
                 {
                     if (interp != 0)
@@ -1738,7 +1771,7 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
                         {
                             if (chain != NULL)
                             {
-                                addPrims((FieldPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+                                addPrims((FieldPrim*)((clut_cur * 8) + ot_base), chain, prim);
                                 chain = NULL;
                             }
                             clut_cur = clut;
@@ -1746,57 +1779,57 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
                     }
                     if (tpage_word != 0)
                     {
-                        prim = (FieldPrim *) cursor;
+                        prim = (FieldPrim*)cursor;
                         if (chain == NULL)
                         {
                             chain = cursor;
                             cursor += 8;
-                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x01000000;
                             prim->code = tpage_word;
-                            prim = (FieldPrim *) cursor;
+                            prim = (FieldPrim*)cursor;
                         }
                     }
                     else
                     {
-                        prim = (FieldPrim *) cursor;
+                        prim = (FieldPrim*)cursor;
                         if (chain == NULL)
                         {
                             chain = cursor;
                             cursor += 8;
-                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x01000000;
                             if (code_word != 0)
                             {
-                                last_code = (prim->code = ((FieldCellRec *) recp)->unk4);
+                                last_code = (prim->code = ((FieldCellRec*)recp)->rgb_code);
                             }
                             else
                             {
-                                last_code = (prim->code = ((FieldCellRec *) recp)->unk8);
+                                last_code = (prim->code = ((FieldCellRec*)recp)->tpage);
                             }
                         }
-                        else if (last_code != ((FieldCellRec *) recp)->unk8)
+                        else if (last_code != ((FieldCellRec*)recp)->tpage)
                         {
                             cursor += 8;
-                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x01000000;
                             if (code_word != 0)
                             {
-                                last_code = (prim->code = ((FieldCellRec *) recp)->unk4);
+                                last_code = (prim->code = ((FieldCellRec*)recp)->rgb_code);
                             }
                             else
                             {
-                                last_code = (prim->code = ((FieldCellRec *) recp)->unk8);
+                                last_code = (prim->code = ((FieldCellRec*)recp)->tpage);
                             }
                         }
-                        prim = (FieldPrim *) cursor;
+                        prim = (FieldPrim*)cursor;
                     }
                     cursor += 0x10;
-                    prim->tag = ((u32) cursor & 0xFFFFFF) | 0x03000000;
+                    prim->tag = ((u32)cursor & 0xFFFFFF) | 0x03000000;
                     if (code_word != 0)
                     {
                         prim->code = code_word;
                     }
                     else
                     {
-                        prim->code = ((FieldCellRec *) recp)->unk4;
+                        prim->code = ((FieldCellRec*)recp)->rgb_code;
                     }
                     prim->xy = (x & 0xFFFF) | (y << 16);
                     prim->uv = uv_word;
@@ -1812,9 +1845,9 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     }
     if (chain != NULL)
     {
-        addPrims((FieldPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+        addPrims((FieldPrim*)((clut_cur * 8) + ot_base), chain, prim);
     }
-    *cursor_ptr = (s32 *) cursor;
+    *cursor_ptr = (s32*)cursor;
 }
 
 /**
@@ -1824,7 +1857,7 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
  * times on purpose: gcc cannot CSE the two arms of the conditional across the
  * branch, so a nested use expands to the target's triplicated multiply chains.
  * Spelling these as `/ 256`, `/ 4096` and `/ 65536` instead gives a compact
- * two-branch expansion and loses 107 instructions in func_80055D20.
+ * two-branch expansion and loses 107 instructions in field_emit_rotated_sprite_grid.
  *
  * @param v Signed value to shift.
  * @param n Shift amount, i.e. divide by 1 << n.
@@ -1833,7 +1866,7 @@ void func_8005571C(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
 #define SHIFT_TOWARD_ZERO(v, n) ((v) >= 0 ? ((v) >> (n)) : (((v) + ((1 << (n)) - 1)) >> (n)))
 
 /**
- * @brief POLY_FT4 as func_80055D20 writes it: ten raw words.
+ * @brief POLY_FT4 as field_emit_rotated_sprite_grid writes it: ten raw words.
  *
  * Layout-compatible with Psy-Q's POLY_FT4 (tag / rgb+code / four x,y pairs each
  * followed by its u,v pair). It is declared as plain words rather than reusing
@@ -1888,7 +1921,7 @@ typedef union
 /**
  * @brief Emit rotated, scaled POLY_FT4 primitives for one bit-plane sprite grid.
  *
- * Rotated sibling of func_8005571C, reached from the same func_8005692C
+ * Rotated sibling of field_emit_sprite_grid, reached from the same field_draw_part
  * dispatch on FieldPart::kind. Walks @p part 's bit plane row-major and emits
  * one 40-byte POLY_FT4 per set bit, taking the quad's four corners from two
  * ping-pong row buffers of pre-rotated points.
@@ -1903,8 +1936,8 @@ typedef union
  * addPrims, both when the interpolated CLUT changes and once at the end.
  *
  * @param part Field part: def gives the grid size and the placement mode, bits
- *             the bit plane, records the record stream, unk3A/3C/3E the rotation
- *             angles, unk40/42 the scales, unk44..4A the four corner CLUT ids.
+ *             the bit plane, records the record stream, row_angle/column_angle/rotation_angle the rotation
+ *             angles, scale_x/scale_y the scales, unk44..4A the four corner CLUT ids.
  * @param cursor_ptr In/out primitive-buffer cursor; advanced past everything
  *                   emitted.
  * @param origin Screen-space placement; the mode selects which of its words
@@ -1927,7 +1960,7 @@ typedef union
  *       four calls and lands in s0 like the target (+26 exact rows).
  * @note The three point-fill loops reuse `col` rather than a separate index;
  *       the target allocates a2 for both them and the column loop.
- * @note Declaration order sets the spill-slot order (see func_8005571C's note):
+ * @note Declaration order sets the spill-slot order (see field_emit_sprite_grid's note):
  *       the locals are declared in the target's slot order, 0x10 recp through
  *       0x48 clut_right.
  * @note The visibility test is assigned to `visible` first rather than tested
@@ -1938,10 +1971,10 @@ typedef union
  * @see working/func_80055D20/status.md for the full match log and the residue.
  * @see decomp.me (92.08%) TODO
  */
-void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32 ot_base)
+void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldViewport* origin, s32 ot_base)
 {
-    u8 *recp;
-    s32 *bitp;
+    u8* recp;
+    s32* bitp;
     s32 tpage_word;
     s32 code_word;
     s32 bits;
@@ -1977,13 +2010,13 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     s32 uv_word;
     u32 clut;
     u32 clut_b;
-    FieldColStep *steps;
-    FieldPoint *pt;
-    FieldPoint *prev_row;
-    FieldPoint *this_row;
-    FieldPolyPrim *prim;
-    u8 *cursor;
-    u8 *chain;
+    FieldColStep* steps;
+    FieldPoint* pt;
+    FieldPoint* prev_row;
+    FieldPoint* this_row;
+    FieldPolyPrim* prim;
+    u8* cursor;
+    u8* chain;
 
     bits = 0;
     clut_left = 0;
@@ -2012,15 +2045,15 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     bit = 0;
     bitp = part->bits;
     recp = part->records;
-    cursor = (u8 *) *cursor_ptr;
+    cursor = (u8*)*cursor_ptr;
     prim = NULL;
     chain = NULL;
-    width = part->def->u.b.unkA;
-    height = part->def->u.b.unkB;
-    cos_a = rcos(part->unk3A);
-    cos_b = rcos(part->unk3C);
-    sin_c = rsin(part->unk3E);
-    cos_c = rcos(part->unk3E);
+    width = part->def->u.b.cols;
+    height = part->def->u.b.rows;
+    cos_a = rcos(part->row_angle);
+    cos_b = rcos(part->column_angle);
+    sin_c = rsin(part->rotation_angle);
+    cos_c = rcos(part->rotation_angle);
     hdiv = height;
     switch ((part->def->u.word >> 12) & 0xF)
     {
@@ -2051,21 +2084,21 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
         cy = origin->y + (height * 8);
         break;
     }
-    scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->unk42, 8) * cos_a, 12);
-    steps = (FieldColStep *) 0x1F800000;
+    scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
+    steps = (FieldColStep*)0x1F800000;
     for (col = width; col != -1; col--)
     {
-        scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(x_off * part->unk40, 8) * cos_b, 12);
+        scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(x_off * part->scale_x, 8) * cos_b, 12);
         x_off += 0x10;
         steps->sin_term = scaled * sin_c;
         steps->cos_term = scaled * cos_c;
         steps++;
     }
-    scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->unk42, 8) * cos_a, 12);
+    scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
     dx = scaled * sin_c;
     dy = scaled * cos_c;
-    steps = (FieldColStep *) 0x1F800000;
-    pt = (FieldPoint *) 0x1F800200;
+    steps = (FieldColStep*)0x1F800000;
+    pt = (FieldPoint*)0x1F800200;
     for (col = width; col != -1; col--)
     {
         pt->p.x = SHIFT_TOWARD_ZERO(steps->cos_term - dx, 16) + cx;
@@ -2100,21 +2133,21 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
             }
             if (flip == 0)
             {
-                prev_row = (FieldPoint *) 0x1F800200;
-                this_row = (FieldPoint *) 0x1F800300;
+                prev_row = (FieldPoint*)0x1F800200;
+                this_row = (FieldPoint*)0x1F800300;
                 flip = 1;
             }
             else
             {
-                prev_row = (FieldPoint *) 0x1F800300;
-                this_row = (FieldPoint *) 0x1F800200;
+                prev_row = (FieldPoint*)0x1F800300;
+                this_row = (FieldPoint*)0x1F800200;
                 flip = 0;
             }
             y_off += 0x10;
-            scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->unk42, 8) * cos_a, 12);
+            scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
             dx = scaled * sin_c;
             dy = scaled * cos_c;
-            steps = (FieldColStep *) 0x1F800000;
+            steps = (FieldColStep*)0x1F800000;
             pt = this_row;
             for (col = width; col != -1; col--)
             {
@@ -2132,13 +2165,13 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
                 }
                 if ((bits & bit) != 0)
                 {
-                    visible = ((prev_row[0].p.x >= 0) || (prev_row[1].p.x >= 0) || (this_row[0].p.x >= 0) || (this_row[1].p.x >= 0))
-                           && ((prev_row[0].p.y >= 0) || (prev_row[1].p.y >= 0) || (this_row[0].p.y >= 0) || (this_row[1].p.y >= 0))
-                           && ((prev_row[0].p.x < 0x140) || (prev_row[1].p.x < 0x140) || (this_row[0].p.x < 0x140) || (this_row[1].p.x < 0x140))
-                           && ((prev_row[0].p.y < 0xE0) || (prev_row[1].p.y < 0xE0) || (this_row[0].p.y < 0xE0) || (this_row[1].p.y < 0xE0));
+                    visible = ((prev_row[0].p.x >= 0) || (prev_row[1].p.x >= 0) || (this_row[0].p.x >= 0) || (this_row[1].p.x >= 0)) &&
+                              ((prev_row[0].p.y >= 0) || (prev_row[1].p.y >= 0) || (this_row[0].p.y >= 0) || (this_row[1].p.y >= 0)) &&
+                              ((prev_row[0].p.x < 0x140) || (prev_row[1].p.x < 0x140) || (this_row[0].p.x < 0x140) || (this_row[1].p.x < 0x140)) &&
+                              ((prev_row[0].p.y < 0xE0) || (prev_row[1].p.y < 0xE0) || (this_row[0].p.y < 0xE0) || (this_row[1].p.y < 0xE0));
                     if (visible != 0)
                     {
-                        uv_word = ((FieldCellRec *) recp)->unk0;
+                        uv_word = ((FieldCellRec*)recp)->uv_clut;
                         if (uv_word != -1)
                         {
                             if (interp != 0)
@@ -2161,26 +2194,26 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
                                 {
                                     if (chain != NULL)
                                     {
-                                        addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+                                        addPrims((FieldPolyPrim*)((clut_cur * 8) + ot_base), chain, prim);
                                         chain = NULL;
                                     }
                                     clut_cur = clut;
                                 }
                             }
-                            prim = (FieldPolyPrim *) cursor;
+                            prim = (FieldPolyPrim*)cursor;
                             if (chain == NULL)
                             {
                                 chain = cursor;
                             }
                             cursor += 0x28;
-                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x09000000;
+                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x09000000;
                             if (code_word != 0)
                             {
                                 prim->code = code_word;
                             }
                             else
                             {
-                                prim->code = ((FieldCellRec *) recp)->unk4;
+                                prim->code = ((FieldCellRec*)recp)->rgb_code;
                             }
                             if (tpage_word != 0)
                             {
@@ -2188,11 +2221,11 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
                             }
                             else if (code_word != 0)
                             {
-                                prim->uv1 = ((FieldCellRec *) recp)->unk4;
+                                prim->uv1 = ((FieldCellRec*)recp)->rgb_code;
                             }
                             else
                             {
-                                prim->uv1 = ((FieldCellRec *) recp)->unk8;
+                                prim->uv1 = ((FieldCellRec*)recp)->tpage;
                             }
                             prim->uv0 = uv_word;
                             prim->uv2 = (uv_word & 0xFFFF) + 0xF00;
@@ -2214,9 +2247,9 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
     }
     if (chain != NULL)
     {
-        addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+        addPrims((FieldPolyPrim*)((clut_cur * 8) + ot_base), chain, prim);
     }
-    *cursor_ptr = (s32 *) cursor;
+    *cursor_ptr = (s32*)cursor;
 }
 
 /**
@@ -2232,7 +2265,7 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
  * @param obj   Object the candidate must be interchangeable with.
  * @param part  Part being built; excluded from its own search, and skipped
  *              entirely when its definition is marked unshareable (bit 7).
- * @param key   Definition key to match on (FieldPartDef::unk0).
+ * @param key   Definition key to match on (FieldPartDef::key).
  * @return The matching FieldPart, or NULL if none qualifies - including when
  *         the only candidate found is @p part itself on @p obj.
  *
@@ -2246,27 +2279,27 @@ void func_80055D20(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32
  *       consecutive `if`s costs the shared tail (92.12%).
  * @note `obj->unk14` must be `u16`; `s16` turns the `lhu` pair into `lh`
  *       (98.18%).
- * @note Operand order is required on both equality tests: `key == p->def->unk0`
+ * @note Operand order is required on both equality tests: `key == p->def->key`
  *       (99.85% reversed) and `(obj == o) && (part == p)` (99.70% reversed).
  * @note Measured non-factor: the `want`/`have` temporaries are cosmetic -
  *       repeating `obj->def` and `o->def` inline is also 100%.
  *
  * @see decomp.me (100%) TODO
  */
-FieldPart *func_80056824(FieldScene *scene, FieldObj *obj, FieldPart *part, s32 key)
+FieldPart* field_find_shareable_part(FieldScene* scene, FieldObj* obj, FieldPart* part, s32 key)
 {
-    FieldObj *o;
-    FieldPart *p;
-    FieldObjDef *want;
-    FieldObjDef *have;
+    FieldObj* o;
+    FieldPart* p;
+    FieldObjDef* want;
+    FieldObjDef* have;
 
     if (!(part->def->u.word & 0x80))
     {
-        for (o = scene->head; o != NULL; o = o->next)
+        for (o = scene->objects; o != NULL; o = o->next)
         {
             for (p = o->parts; p != NULL; p = p->next)
             {
-                if (key == p->def->unk0)
+                if (key == p->def->key)
                 {
                     if ((obj == o) && (part == p))
                     {
@@ -2276,8 +2309,7 @@ FieldPart *func_80056824(FieldScene *scene, FieldObj *obj, FieldPart *part, s32 
                     {
                         want = obj->def;
                         have = o->def;
-                        if ((want == have)
-                         || ((want->unk4 == have->unk4) && (obj->unk10 == o->unk10) && (obj->unk14 == o->unk14)))
+                        if ((want == have) || ((want->shared_source == have->shared_source) && (obj->unk10 == o->unk10) && (obj->unk14 == o->unk14)))
                         {
                             return p;
                         }
@@ -2297,9 +2329,9 @@ FieldPart *func_80056824(FieldScene *scene, FieldObj *obj, FieldPart *part, s32 
  * verbatim.
  *
  * @param part Field part to draw; its kind byte selects the emitter.
- * @param arg1 Primitive-buffer cursor, forwarded as func_8005571C's 2nd param.
- * @param arg2 Screen-space placement, forwarded as the 3rd param.
- * @param arg3 Ordering-table head array base, forwarded as the 4th param.
+ * @param cursor_ptr Primitive-buffer cursor, forwarded as field_emit_sprite_grid's 2nd param.
+ * @param origin Screen-space placement, forwarded as the 3rd param.
+ * @param ot_base Ordering-table head array base, forwarded as the 4th param.
  *
  * @note **`case 1: break;` must be written out** even though it does nothing.
  *       gcc balances the switch's comparison tree around the median case node,
@@ -2313,17 +2345,17 @@ FieldPart *func_80056824(FieldScene *scene, FieldObj *obj, FieldPart *part, s32 
  * @note `kind` must stay `u8`; `s8` costs the zero-extend shape (97.78%).
  * @note Measured non-factor: adding `default:` alongside `case 1:` is also 100%.
  * @note The parameters keep the loose `(FieldPart *, s32, s32 *, s32)` shape of
- *       the forward declaration above, which func_80054CA8's six call sites are
+ *       the forward declaration above, which field_draw_scene_objects's six call sites are
  *       matched against; the casts at the two calls are free.
  *
  * @see decomp.me (100%) TODO
  */
-void func_8005692C(FieldPart *part, s32 arg1, s32 *arg2, s32 arg3)
+void field_draw_part(FieldPart* part, s32 cursor_ptr, s32* origin, s32 ot_base)
 {
     switch (part->kind)
     {
     case 0:
-        func_8005571C(part, (s32 **) arg1, (FieldViewport *) arg2, arg3);
+        field_emit_sprite_grid(part, (s32**)cursor_ptr, (FieldViewport*)origin, ot_base);
         break;
     case 1:
         break;
@@ -2331,7 +2363,7 @@ void func_8005692C(FieldPart *part, s32 arg1, s32 *arg2, s32 arg3)
     case 3:
     case 4:
     case 5:
-        func_80055D20(part, (s32 **) arg1, (FieldViewport *) arg2, arg3);
+        field_emit_rotated_sprite_grid(part, (s32**)cursor_ptr, (FieldViewport*)origin, ot_base);
         break;
     }
 }
@@ -2355,10 +2387,10 @@ void func_8005692C(FieldPart *part, s32 arg1, s32 *arg2, s32 arg3)
  *
  * @see decomp.me (100%) TODO
  */
-void func_80056998(void)
+void field_flush_vram_uploads(void)
 {
-    FieldScene *scene;
-    FieldImageReq *req;
+    FieldScene* scene;
+    FieldImageReq* req;
 
     scene = g_field_scene.scene;
     for (req = scene->uploads; req != NULL; req = req->next)
@@ -2398,35 +2430,35 @@ void func_800569FC(void)
 }
 
 /** @brief Movie/streaming control block at 0x801ED500. */
-#define FIELD_MOVIE ((volatile FieldMovieState *) 0x801ED500)
+#define FIELD_MOVIE_STATE ((volatile FieldMovieState*)0x801ED500)
 /** @brief Field CD/movie flag word at 0x801ED800. */
-#define FIELD_CD_FLAGS (*(volatile s32 *) 0x801ED800)
+#define FIELD_CD_FLAGS (*(volatile s32*)0x801ED800)
 
-extern u16 D_80140000;
-extern u16 D_80140002;
-/** @brief Pointer to the signed angle table indexed by FieldNodeDef::unkA/unkC. */
-extern s16 *D_8018001C;
+extern u16 g_field_movie_frame_width;
+extern u16 g_field_movie_frame_height;
+/** @brief Pointer to the signed angle table indexed by FieldNodeDef. */
+extern s16* g_field_node_angle_table;
 
 void func_800157B0(s32);
 s32 cdrom_process_state(void);
 void cdrom_reset(void);
-void cdrom_stream(s32, void *);
+void cdrom_stream(s32, void*);
 void cdrom_queue_seek(s32);
-void cdrom_queue_read(s32, void *);
+void cdrom_queue_read(s32, void*);
 s32 cdrom_can_queue_resource(s32);
-void func_80057A28(FieldPart *);
-void func_80057CA4(FieldAnimDef *, FieldAnim *, s32);
-void func_80057E88(FieldAnimDef *, FieldAnim *, s32);
-void func_80058154(FieldAnimDef *, FieldAnim *);
-void func_800584DC(FieldAnimDef *, FieldAnimCel *, s32);
-u_long *func_8005866C(FieldAnimDef *, FieldAnim *);
-void func_800589F0(FieldAnimDef *, FieldAnimCel *, FieldTintSrc *, s32);
-void func_80058C00(FieldAnimDef *, FieldTintSrc *, s32);
-void func_80058E28(FieldAnimDef *, FieldAnim *);
-void func_800591C4(FieldAnimDef *, FieldTintSrc *, s32);
-void func_80059294(FieldImageReq *);
+void field_update_part_sweep(FieldPart*);
+void field_blit_animation_frame(FieldAnimDef*, FieldAnim*, s32);
+void field_apply_animation_tween(FieldAnimDef*, FieldAnim*, s32);
+void field_update_animation_sfx(FieldAnimDef*, FieldAnim*);
+void field_retarget_cel_cluts(FieldAnimDef*, FieldAnimCel*, s32);
+u_long* field_blend_animation_frames(FieldAnimDef*, FieldAnim*);
+void field_tint_animation_cel(FieldAnimDef*, FieldAnimCel*, FieldTintSrc*, s32);
+void field_tint_animation_cel_list(FieldAnimDef*, FieldTintSrc*, s32);
+void field_advance_animation_keyframe(FieldAnimDef*, FieldAnim*);
+void field_retarget_cel_list_cluts(FieldAnimDef*, FieldTintSrc*, s32);
+void field_queue_vram_upload(FieldImageReq*);
 void func_80059F18(void);
-void func_8005A744(FieldSeq *, s32);
+void func_8005A744(FieldSeq*, s32);
 s32 func_8005A84C(s32, s32);
 void func_80084240(void);
 void func_80140358(s32, s32, s32, s32);
@@ -2438,10 +2470,10 @@ void func_80140D48(void);
  *        effect and sequence lists (plus the object/part walk).
  *
  * Walks the six lists hanging off @c g_field_scene.scene and advances each:
- * object parts get a per-part hook (func_80057A28); animation nodes drive a
+ * object parts get a per-part hook (field_update_part_sweep); animation nodes drive a
  * CD/MDEC movie state machine and per-handler dispatch; strip nodes copy their
- * pixel source out of the scene header (hdr->unk4) into per-node scratch buffers
- * and queue a VRAM upload (func_80059294); sprite/effect nodes tick their
+ * pixel source out of the scene header (hdr->pixel_data) into per-node scratch buffers
+ * and queue a VRAM upload (field_queue_vram_upload); sprite/effect nodes tick their
  * counters; sequence nodes advance a small state machine keyed on flags & 3.
  *
  * @note Match is 98.07% (1005/1058 exact rows). The residual is a cluster of
@@ -2462,23 +2494,23 @@ void func_80140D48(void);
  *
  * @see decomp.me (98.07%) TODO
  */
-void func_80056A04(void)
+void field_update_scene_animations(void)
 {
-    FieldScene *scene;
-    FieldSceneHeader *hdr;
-    FieldObj *obj;
-    FieldPart *part;
-    FieldAnim *anim;
-    FieldAnimDef *def;
-    FieldAnimDef *def2;
-    FieldAnimDef *def3;
-    FieldAnimCel *cel;
-    FieldImageReq *req;
-    FieldSeq *seq;
-    FieldSeq *walk;
-    FieldAnimDef *rec;
-    u16 *src;
-    u16 *dst;
+    FieldScene* scene;
+    FieldSceneHeader* hdr;
+    FieldObj* obj;
+    FieldPart* part;
+    FieldAnim* anim;
+    FieldAnimDef* def;
+    FieldAnimDef* def2;
+    FieldAnimDef* def3;
+    FieldAnimCel* cel;
+    FieldImageReq* req;
+    FieldSeq* seq;
+    FieldSeq* walk;
+    FieldAnimDef* rec;
+    u16* src;
+    u16* dst;
     s32 prev_state;
     s32 flags;
     s32 mode;
@@ -2493,7 +2525,7 @@ void func_80056A04(void)
 
     scene = g_field_scene.scene;
 
-    obj = scene->head;
+    obj = scene->objects;
     if (obj != NULL)
     {
         do
@@ -2508,7 +2540,7 @@ void func_80056A04(void)
                         mode = (part->def->u.word >> 12) & 0xF;
                         if ((mode != 0) && (mode < 5))
                         {
-                            func_80057A28(part);
+                            field_update_part_sweep(part);
                         }
                     }
                     part = part->next;
@@ -2519,7 +2551,7 @@ void func_80056A04(void)
     }
 
     anim = scene->anims;
-    hdr = scene->unk0;
+    hdr = scene->header;
     if (anim != NULL)
     {
         do
@@ -2529,21 +2561,21 @@ void func_80056A04(void)
             if (anim->flags.word & 0x20)
             {
                 req = &anim->req;
-                if ((*(s32 *) &def->unk4 & 7) == 3)
+                if ((*(s32*)&def->flags & 7) == 3)
                 {
                     req->rect.x = def->unkC * 4 + 0x140;
                     req->rect.y = def->unkD * 0x10 + 0x100;
                     req->rect.w = def->unkE * 4;
                     req->rect.h = def->unkF * 0x10;
-                    req->data = (u_long *) (def->unk14 + ((anim->flags.b.state * def->unkE * def->unkF) << 7));
-                    func_80059294(req);
+                    req->data = (u_long*)(def->data + ((anim->flags.b.state * def->unkE * def->unkF) << 7));
+                    field_queue_vram_upload(req);
                 }
                 anim->flags.word &= ~0x20;
             }
             if (anim->flags.word & 0x40)
             {
-                anim->counter--;
-                switch (def->unk4 & 7)
+                anim->timer--;
+                switch (def->flags & 7)
                 {
                 case 4:
                     switch (anim->flags.b.state)
@@ -2551,7 +2583,7 @@ void func_80056A04(void)
                     case 0:
                         if (cdrom_process_state() == 0)
                         {
-                            cdrom_stream(0xB, (void *) 0x80140000);
+                            cdrom_stream(0xB, (void*)0x80140000);
                             cdrom_queue_seek(def->unk1 * 2 + 0x16A6);
                             anim->flags.b.state = 1;
                             FIELD_CD_FLAGS |= 0x40;
@@ -2560,15 +2592,15 @@ void func_80056A04(void)
                     case 1:
                         if (cdrom_can_queue_resource(def->unk1 * 2 + 0x16A6) != 0)
                         {
-                            FIELD_MOVIE->rects[0].x = def2->unkC * 4 + 0x140;
-                            FIELD_MOVIE->rects[0].y = def2->unkD * 0x10 + 0x100;
-                            FIELD_MOVIE->rects[0].w = def2->unkE * 4;
-                            FIELD_MOVIE->rects[0].h = def2->unkF * 0x10;
+                            FIELD_MOVIE_STATE->rects[0].x = def2->unkC * 4 + 0x140;
+                            FIELD_MOVIE_STATE->rects[0].y = def2->unkD * 0x10 + 0x100;
+                            FIELD_MOVIE_STATE->rects[0].w = def2->unkE * 4;
+                            FIELD_MOVIE_STATE->rects[0].h = def2->unkF * 0x10;
                             FIELD_CD_FLAGS &= ~0x40;
                             cel = anim->cels;
                             if (def->unk1 < 2)
                             {
-                                func_80140358(def->unk1 * 2 + 0x16A6, 1, def->unk5 - 2, cel->unk20);
+                                func_80140358(def->unk1 * 2 + 0x16A6, 1, def->unk5 - 2, cel->active);
                             }
                             else
                             {
@@ -2576,12 +2608,12 @@ void func_80056A04(void)
                             }
                             anim->flags.b.state = 2;
                         }
-                        anim->counter = 1;
+                        anim->timer = 1;
                         break;
                     default:
-                        if (FIELD_MOVIE->end_state >= 3)
+                        if (FIELD_MOVIE_STATE->end_state >= 3)
                         {
-                            if (FIELD_MOVIE->end_state == 3)
+                            if (FIELD_MOVIE_STATE->end_state == 3)
                             {
                                 if (cdrom_can_queue_resource(def->unk1 * 2 + 0x16A7) != 0)
                                 {
@@ -2589,23 +2621,23 @@ void func_80056A04(void)
                                     if (def->unk1 < 2)
                                     {
                                         cel = anim->cels;
-                                        req->rect.x = FIELD_MOVIE->rects[cel->unk20].x;
-                                        req->rect.y = FIELD_MOVIE->rects[cel->unk20].y;
-                                        req->rect.w = FIELD_MOVIE->rects[cel->unk20].w;
-                                        req->rect.h = FIELD_MOVIE->rects[cel->unk20].h;
-                                        req->data = (u_long *) 0x80140000;
-                                        func_80059294(req);
-                                        if (cel->unk20 == 1)
+                                        req->rect.x = FIELD_MOVIE_STATE->rects[cel->active].x;
+                                        req->rect.y = FIELD_MOVIE_STATE->rects[cel->active].y;
+                                        req->rect.w = FIELD_MOVIE_STATE->rects[cel->active].w;
+                                        req->rect.h = FIELD_MOVIE_STATE->rects[cel->active].h;
+                                        req->data = (u_long*)0x80140000;
+                                        field_queue_vram_upload(req);
+                                        if (cel->active == 1)
                                         {
-                                            cel->unk20 = 0;
+                                            cel->active = 0;
                                             cel = cel->next;
-                                            cel->unk20 = 1;
+                                            cel->active = 1;
                                         }
                                         else
                                         {
-                                            cel->unk20 = 1;
+                                            cel->active = 1;
                                             cel = cel->next;
-                                            cel->unk20 = 0;
+                                            cel->active = 0;
                                         }
                                     }
                                     else
@@ -2613,17 +2645,17 @@ void func_80056A04(void)
                                         cel = anim->cels;
                                         req->rect.x = 0x140;
                                         req->rect.y = 0x100;
-                                        req->data = (u_long *) 0x80140004;
-                                        req->rect.w = D_80140000;
-                                        req->rect.h = D_80140002;
-                                        func_80059294(req);
-                                        cel->unk20 = 0;
+                                        req->data = (u_long*)0x80140004;
+                                        req->rect.w = g_field_movie_frame_width;
+                                        req->rect.h = g_field_movie_frame_height;
+                                        field_queue_vram_upload(req);
+                                        cel->active = 0;
                                         cel = cel->next;
-                                        cel->unk20 = 0;
+                                        cel->active = 0;
                                     }
-                                    FIELD_MOVIE->end_state = 4;
+                                    FIELD_MOVIE_STATE->end_state = 4;
                                 }
-                                anim->counter = 1;
+                                anim->timer = 1;
                             }
                             else
                             {
@@ -2632,7 +2664,7 @@ void func_80056A04(void)
                                     func_80059F18();
                                 }
                                 anim->flags.word &= ~0x40;
-                                anim->counter = 1;
+                                anim->timer = 1;
                                 func_80084240();
                             }
                         }
@@ -2644,50 +2676,50 @@ void func_80056A04(void)
                             }
                             func_801406E4();
                             func_80140D48();
-                            if (FIELD_MOVIE->frame_ready == 1)
+                            if (FIELD_MOVIE_STATE->frame_ready == 1)
                             {
                                 cel = anim->cels;
-                                if (FIELD_MOVIE->chunk_idx == 1)
+                                if (FIELD_MOVIE_STATE->chunk_idx == 1)
                                 {
-                                    cel->unk20 = 1;
+                                    cel->active = 1;
                                     cel = cel->next;
-                                    cel->unk20 = 0;
+                                    cel->active = 0;
                                 }
                                 else
                                 {
-                                    cel->unk20 = 0;
+                                    cel->active = 0;
                                     cel = cel->next;
-                                    cel->unk20 = 1;
+                                    cel->active = 1;
                                 }
-                                FIELD_MOVIE->frame_ready = 0;
+                                FIELD_MOVIE_STATE->frame_ready = 0;
                             }
-                            if (FIELD_MOVIE->end_state == 2)
+                            if (FIELD_MOVIE_STATE->end_state == 2)
                             {
                                 cdrom_reset();
-                                cdrom_queue_read(def->unk1 * 2 + 0x16A7, (void *) 0x80140000);
-                                FIELD_MOVIE->end_state = 3;
+                                cdrom_queue_read(def->unk1 * 2 + 0x16A7, (void*)0x80140000);
+                                FIELD_MOVIE_STATE->end_state = 3;
                             }
-                            anim->counter = 1;
+                            anim->timer = 1;
                         }
                         break;
                     }
                     break;
                 case 5:
                 case 6:
-                    func_80057E88(def, anim, 1);
+                    field_apply_animation_tween(def, anim, 1);
                     break;
                 }
             }
-            if (anim->counter == 0)
+            if (anim->timer == 0)
             {
                 prev_state = anim->flags.b.state;
-                func_80058E28(def, anim);
-                switch (def->unk4 & 7)
+                field_advance_animation_keyframe(def, anim);
+                switch (def->flags & 7)
                 {
                 case 0:
                     if (prev_state != anim->flags.b.state)
                     {
-                        func_80057CA4(def, anim, anim->flags.b.state);
+                        field_blit_animation_frame(def, anim, anim->flags.b.state);
                     }
                     break;
                 case 2:
@@ -2698,7 +2730,7 @@ void func_80056A04(void)
                         cel = cel->next;
                         i--;
                     }
-                    cel->unk20 = 0;
+                    cel->active = 0;
                     cel = anim->cels;
                     i = anim->flags.b.state;
                     i--;
@@ -2707,7 +2739,7 @@ void func_80056A04(void)
                         cel = cel->next;
                         i--;
                     }
-                    cel->unk20 = 1;
+                    cel->active = 1;
                     break;
                 case 3:
                     req = &anim->req;
@@ -2715,19 +2747,19 @@ void func_80056A04(void)
                     req->rect.y = def2->unkD * 0x10 + 0x100;
                     req->rect.w = def2->unkE * 4;
                     req->rect.h = def2->unkF * 0x10;
-                    req->data = (u_long *) (def2->unk14 + ((anim->flags.b.state * def2->unkE * def2->unkF) << 7));
-                    func_80059294(req);
+                    req->data = (u_long*)(def2->data + ((anim->flags.b.state * def2->unkE * def2->unkF) << 7));
+                    field_queue_vram_upload(req);
                     break;
                 case 5:
                 case 6:
-                    while (anim->counter == 0)
+                    while (anim->timer == 0)
                     {
-                        func_80057E88(def, anim, 1);
-                        func_80058E28(def, anim);
+                        field_apply_animation_tween(def, anim, 1);
+                        field_advance_animation_keyframe(def, anim);
                     }
                     break;
                 case 7:
-                    func_80058154(def, anim);
+                    field_update_animation_sfx(def, anim);
                     break;
                 }
             }
@@ -2747,7 +2779,7 @@ void func_80056A04(void)
             if (flags & 0x20)
             {
                 req = &anim->req;
-                switch (def->unk4 & 7)
+                switch (def->flags & 7)
                 {
                 case 2:
                     if (flags & 0x10)
@@ -2764,7 +2796,7 @@ void func_80056A04(void)
                         dst = anim->buf40;
                         anim->flags.word = flags | 0x10;
                     }
-                    req->data = (u_long *) dst;
+                    req->data = (u_long*)dst;
                     count2 = 0;
                     if (anim->flags.b.state != 0)
                     {
@@ -2786,11 +2818,11 @@ void func_80056A04(void)
                     }
                     if (def3->unkC == 0)
                     {
-                        src = (u16 *) ((u8 *) hdr->unk4 + (def3->unkE << 5) + def3->unkF * 2 + count2 * 2);
+                        src = (u16*)((u8*)hdr->pixel_data + (def3->unkE << 5) + def3->unkF * 2 + count2 * 2);
                     }
                     else
                     {
-                        src = (u16 *) ((u8 *) hdr->unk4 + (def3->unkE << 9) + def3->unkF * 2 + count2 * 2);
+                        src = (u16*)((u8*)hdr->pixel_data + (def3->unkE << 9) + def3->unkF * 2 + count2 * 2);
                     }
                     count--;
                     while (count != -1)
@@ -2802,11 +2834,11 @@ void func_80056A04(void)
                     {
                         if (def3->unkC == 0)
                         {
-                            src = (u16 *) ((u8 *) hdr->unk4 + (def3->unkE << 5) + def3->unkF * 2);
+                            src = (u16*)((u8*)hdr->pixel_data + (def3->unkE << 5) + def3->unkF * 2);
                         }
                         else
                         {
-                            src = (u16 *) ((u8 *) hdr->unk4 + (def3->unkE << 9) + def3->unkF * 2);
+                            src = (u16*)((u8*)hdr->pixel_data + (def3->unkE << 9) + def3->unkF * 2);
                         }
                         count = count2 - 1;
                         while (count != -1)
@@ -2828,7 +2860,7 @@ void func_80056A04(void)
                     req->rect.y = y + 0x1D8;
                     req->rect.h = one;
                     req->rect.w = def->unk5 + 1;
-                    func_80059294(req);
+                    field_queue_vram_upload(req);
                     break;
                 case 3:
                     if (def->unkC == 0)
@@ -2839,12 +2871,11 @@ void func_80056A04(void)
                         req->rect.h = one;
                         if (anim->flags.b.state == 0)
                         {
-                            req->data = (u_long *) ((u8 *) hdr->unk4 + (def->unkE << 5) + (def->unkF & 0xE) * 2);
+                            req->data = (u_long*)((u8*)hdr->pixel_data + (def->unkE << 5) + (def->unkF & 0xE) * 2);
                         }
                         else
                         {
-                            req->data = (u_long *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + def->unk12 * 2 +
-                                                    ((anim->flags.b.state - 1) * def->unk10) * 2);
+                            req->data = (u_long*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 + ((anim->flags.b.state - 1) * def->unk10) * 2);
                         }
                     }
                     else
@@ -2855,15 +2886,14 @@ void func_80056A04(void)
                         req->rect.h = one;
                         if (anim->flags.b.state == 0)
                         {
-                            req->data = (u_long *) ((u8 *) hdr->unk4 + (def->unkE << 9) + def->unkF * 2);
+                            req->data = (u_long*)((u8*)hdr->pixel_data + (def->unkE << 9) + def->unkF * 2);
                         }
                         else
                         {
-                            req->data = (u_long *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + def->unk12 * 2 +
-                                                    ((anim->flags.b.state - 1) * def->unk10) * 2);
+                            req->data = (u_long*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 + ((anim->flags.b.state - 1) * def->unk10) * 2);
                         }
                     }
-                    func_80059294(req);
+                    field_queue_vram_upload(req);
                     break;
                 case 4:
                     if (def->unkC == 0)
@@ -2880,12 +2910,12 @@ void func_80056A04(void)
                         req->rect.h = (def->unk10 + 0xF) / 0x10;
                         if (anim->flags.b.state == 0)
                         {
-                            req->data = (u_long *) ((u8 *) hdr->unk4 + (def->unkE << 5));
+                            req->data = (u_long*)((u8*)hdr->pixel_data + (def->unkE << 5));
                         }
                         else
                         {
-                            req->data = (u_long *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + def->unk12 * 2 +
-                                                    (((anim->flags.b.state - 1) * def->unk10) << 5));
+                            req->data =
+                                (u_long*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 + (((anim->flags.b.state - 1) * def->unk10) << 5));
                         }
                     }
                     else
@@ -2896,41 +2926,42 @@ void func_80056A04(void)
                         req->rect.h = def->unk10;
                         if (anim->flags.b.state == 0)
                         {
-                            req->data = (u_long *) ((u8 *) hdr->unk4 + (def->unkE << 9));
+                            req->data = (u_long*)((u8*)hdr->pixel_data + (def->unkE << 9));
                         }
                         else
                         {
-                            req->data = (u_long *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + def->unk12 * 2 +
-                                                    (((anim->flags.b.state - 1) * def->unk10) << 9));
+                            req->data =
+                                (u_long*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 + (((anim->flags.b.state - 1) * def->unk10) << 9));
                         }
                     }
-                    func_80059294(req);
+                    field_queue_vram_upload(req);
                     break;
                 case 5:
-                    req->data = func_8005866C(def, anim);
-                    do {
-                    if (def->unkC == 0)
+                    req->data = field_blend_animation_frames(def, anim);
+                    do
                     {
-                        req->rect.x = (def->unkE & 0xF) * 0x10;
-                        req->rect.y = (def->unkE >> 4) + 0x1D8;
-                        v = def->unk10 * 0x10;
-                        w = 0x100;
-                        if (v < 0x101)
+                        if (def->unkC == 0)
                         {
-                            w = v;
+                            req->rect.x = (def->unkE & 0xF) * 0x10;
+                            req->rect.y = (def->unkE >> 4) + 0x1D8;
+                            v = def->unk10 * 0x10;
+                            w = 0x100;
+                            if (v < 0x101)
+                            {
+                                w = v;
+                            }
+                            req->rect.w = w;
+                            v = (def->unk10 + 0xF) / 0x10;
                         }
-                        req->rect.w = w;
-                        v = (def->unk10 + 0xF) / 0x10;
-                    }
-                    else
-                    {
-                        req->rect.x = 0;
-                        req->rect.w = 0x100;
-                        req->rect.y = def->unkE + 0x1D8;
-                        v = def->unk10;
-                    }
-                    req->rect.h = v;
-                    func_80059294(req);
+                        else
+                        {
+                            req->rect.x = 0;
+                            req->rect.w = 0x100;
+                            req->rect.y = def->unkE + 0x1D8;
+                            v = def->unk10;
+                        }
+                        req->rect.h = v;
+                        field_queue_vram_upload(req);
                     } while (0);
                     break;
                 }
@@ -2938,21 +2969,21 @@ void func_80056A04(void)
             }
             if (anim->flags.word & 0x40)
             {
-                anim->counter--;
-                if ((*(s32 *) &def->unk4 & 7) == 5)
+                anim->timer--;
+                if ((*(s32*)&def->flags & 7) == 5)
                 {
                     anim->flags.word |= 0x20;
                 }
-                if (anim->counter == 0)
+                if (anim->timer == 0)
                 {
-                    func_80058E28(def, anim);
-                    switch (def->unk4 & 7)
+                    field_advance_animation_keyframe(def, anim);
+                    switch (def->flags & 7)
                     {
                     case 0:
-                        func_800584DC(def, anim->cels, anim->flags.b.state);
+                        field_retarget_cel_cluts(def, anim->cels, anim->flags.b.state);
                         break;
                     case 1:
-                        func_800591C4(def, (FieldTintSrc *) anim->cels, anim->flags.b.state);
+                        field_retarget_cel_list_cluts(def, (FieldTintSrc*)anim->cels, anim->flags.b.state);
                         break;
                     default:
                         anim->flags.word |= 0x20;
@@ -2972,16 +3003,16 @@ void func_80056A04(void)
             def = anim->def;
             if (anim->flags.word & 0x40)
             {
-                if (--anim->counter == 0)
+                if (--anim->timer == 0)
                 {
-                    func_80058E28(def, anim);
-                    switch (def->unk4 & 7)
+                    field_advance_animation_keyframe(def, anim);
+                    switch (def->flags & 7)
                     {
                     case 0:
-                        func_800589F0(def, anim->cels, (FieldTintSrc *) anim->unk10, anim->flags.b.state);
+                        field_tint_animation_cel(def, anim->cels, (FieldTintSrc*)anim->unk10, anim->flags.b.state);
                         break;
                     case 1:
-                        func_80058C00(def, (FieldTintSrc *) anim->cels, anim->flags.b.state);
+                        field_tint_animation_cel_list(def, (FieldTintSrc*)anim->cels, anim->flags.b.state);
                         break;
                     case 2:
                         break;
@@ -3000,10 +3031,10 @@ void func_80056A04(void)
             def = anim->def;
             if (anim->flags.word & 0x40)
             {
-                if (--anim->counter == 0)
+                if (--anim->timer == 0)
                 {
-                    func_80058E28(def, anim);
-                    func_80057CA4(def, anim, anim->flags.b.state);
+                    field_advance_animation_keyframe(def, anim);
+                    field_blit_animation_frame(def, anim, anim->flags.b.state);
                 }
             }
             anim = anim->next;
@@ -3030,7 +3061,7 @@ void func_80056A04(void)
                             walk = walk->next;
                             i--;
                         }
-                        func_8005A744(walk, ((u8 *) &seq->flags)[1]);
+                        func_8005A744(walk, ((u8*)&seq->flags)[1]);
                     }
                     if (func_8005A84C(rec->unk0, rec->unk2) == 2)
                     {
@@ -3055,7 +3086,7 @@ void func_80056A04(void)
                         walk = walk->next;
                         i--;
                     }
-                    func_8005A744(walk, ((u8 *) &seq->flags)[1]);
+                    func_8005A744(walk, ((u8*)&seq->flags)[1]);
                     if (walk != seq)
                     {
                         seq->flags &= ~3;
@@ -3108,19 +3139,19 @@ void func_80056A04(void)
  * @note The angle-table element is taken by address (`ep = &arr[i]`) so the base
  *       register leads the index in the address `addu` (target order); the plain
  *       subscript reverses the operands and costs one row per arm.
- * @note `arr = D_8018001C` is read at the top of the node block so its load fills
+ * @note `arr = g_field_node_angle_table` is read at the top of the node block so its load fills
  *       the load-delay slot after the mode reload and hoists above the base
  *       select, matching the target scheduling.
  * @note The `(s16)(u16)` cast on the halved unk30 read is a non-factor here: the
- *       plain `scene->unk0->unk30 / 2` (s16 field) also matches.
+ *       plain `scene->header->unk30 / 2` (s16 field) also matches.
  *
  * @see decomp.me (100%) TODO
  */
-void func_80057A28(FieldPart *part)
+void field_update_part_sweep(FieldPart* part)
 {
-    FieldScene *scene;
-    FieldNode *node;
-    FieldNodeDef *def;
+    FieldScene* scene;
+    FieldNode* node;
+    FieldNodeDef* def;
     s32 mode;
     u32 divisor;
     s32 sin_val;
@@ -3131,8 +3162,8 @@ void func_80057A28(FieldPart *part)
     s32 val;
     s32 y;
     s32 old;
-    s16 *arr;
-    s16 *ep;
+    s16* arr;
+    s16* ep;
 
     scene = g_field_scene.scene;
     part->sweep_phase = part->sweep_phase - 1;
@@ -3153,29 +3184,29 @@ void func_80057A28(FieldPart *part)
     sin_val = rsin((part->sweep_phase << 12) / part->sweep_period);
     if (sin_val >= 0)
     {
-        part->unk3E = sin_val / divisor;
+        part->rotation_angle = sin_val / divisor;
     }
     else
     {
-        part->unk3E = 0x1000 - ((u32) -sin_val / divisor);
+        part->rotation_angle = 0x1000 - ((u32)-sin_val / divisor);
     }
-    neg_sin = -rsin(part->unk3E);
+    neg_sin = -rsin(part->rotation_angle);
     if (part->node_count != 0)
     {
-        arr = D_8018001C;
+        arr = g_field_node_angle_table;
         mode = (part->def->u.word >> 12) & 0xF;
         switch (mode)
         {
         case 1:
         case 2:
-            base = scene->unk0->unk30 / 2;
+            base = scene->header->unk30 / 2;
             break;
         case 3:
             base = 0;
             break;
         case 4:
         default:
-            base = scene->unk0->unk30;
+            base = scene->header->unk30;
             break;
         }
         node = scene->nodes;
@@ -3188,37 +3219,37 @@ void func_80057A28(FieldPart *part)
                 {
                     val = base;
                     def = node->def;
-                    ep = &arr[def->unkA * 2];
+                    ep = &arr[def->x_angle_index * 2];
                     x = (*ep - val) * neg_sin;
                     val = x >> 4;
                     if (x < 0)
                     {
                         val = (x + 0xF) >> 4;
                     }
-                    y = def->unk10 << 8;
+                    y = def->base_x << 8;
                     if ((val + y) < 0)
                     {
                         val = -y;
                     }
-                    old = node->unk38;
-                    node->unk38 = val;
-                    node->unk28 = val - old;
-                    ep = &arr[def->unkC * 2];
+                    old = node->x;
+                    node->x = val;
+                    node->delta_x = val - old;
+                    ep = &arr[def->y_angle_index * 2];
                     x = (*ep - base) * neg_sin;
                     val = x >> 4;
                     if (x < 0)
                     {
                         val = (x + 0xF) >> 4;
                     }
-                    y = def->unk12 << 8;
+                    y = def->base_y << 8;
                     if ((val + y) < 0)
                     {
                         val = -y;
                     }
-                    old = node->unk3C;
+                    old = node->y;
                     count -= 1;
-                    node->unk3C = val;
-                    node->unk2C = val - old;
+                    node->y = val;
+                    node->delta_y = val - old;
                     if (count == 0)
                     {
                         break;
@@ -3250,17 +3281,17 @@ void func_80057A28(FieldPart *part)
  *
  * @param def   Animation definition; supplies the sub-rectangle and the grid.
  * @param anim  Animation node holding the frame data and the target cel.
- * @param state Frame index into FieldAnim::frames.
+ * @param frame Frame index into FieldAnim::frame_data.
  *
  * @note Built -G4 WITHOUT --expand-div, like the rest of field8.c.
  */
-void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
+void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
 {
-    FieldAnimCel *cel;
-    FieldTileGrid *grid;
-    u8 *dst;
-    u32 *src;
-    u32 *mask;
+    FieldAnimCel* cel;
+    FieldTileGrid* grid;
+    u8* dst;
+    u32* src;
+    u32* mask;
     u32 word;
     u32 bit;
     s32 stride;
@@ -3269,7 +3300,7 @@ void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
     s32 i;
 
     cel = anim->cels;
-    grid = ((FieldTileAnimDef *) def)->grid;
+    grid = ((FieldTileAnimDef*)def)->grid;
     dst = cel->tiles;
     stride = 0;
     switch (cel->format)
@@ -3285,15 +3316,15 @@ void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
     case 6:
         break;
     }
-    if (cel->unk1C != 0)
+    if (cel->code_word != 0)
     {
         stride -= 4;
     }
-    if (cel->unk18 != 0)
+    if (cel->tpage_word != 0)
     {
         stride -= 4;
     }
-    src = (u32 *) (anim->frames + anim->frame_tiles * stride * state);
+    src = (u32*)(anim->frame_data + anim->frame_tile_count * stride * frame);
     bit = 1;
     mask = cel->mask;
     word = *mask++;
@@ -3335,7 +3366,7 @@ void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
                         i--;
                         while (i != -1)
                         {
-                            *(u32 *) dst = *src++;
+                            *(u32*)dst = *src++;
                             dst += 4;
                             i--;
                         }
@@ -3357,7 +3388,7 @@ void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
 }
 
 /**
- * @brief One entry of an animation's keyframe table (FieldAnimDef::unk14).
+ * @brief One entry of an animation's keyframe table (FieldAnimDef::data).
  *
  * The three signed deltas are the horizontal / vertical / depth offsets the
  * keyframe ends on; they are scaled by the fraction of the keyframe elapsed so
@@ -3366,39 +3397,39 @@ void func_80057CA4(FieldAnimDef *def, FieldAnim *anim, s32 state)
 typedef struct
 {
     /** 0x00 horizontal end offset. */
-    s16 unk0;
+    s16 x;
     /** 0x02 vertical end offset. */
-    s16 unk2;
+    s16 y;
     /** 0x04 depth end offset. */
-    s16 unk4;
+    s16 z;
     /** 0x06 bit 15 is copied to the target's visibility flag. */
-    u16 unk6;
+    u16 visibility;
 } FieldTweenKey;
 
 /**
- * @brief Count-table record returned by func_80059224.
+ * @brief Count-table record returned by field_find_count_table_span.
  *
- * Only the duration is read here; func_80057CA4's caller uses the same halfword
- * to reload FieldAnim::counter.
+ * Only the duration is read here; field_blit_animation_frame's caller uses the same halfword
+ * to reload FieldAnim::timer.
  */
 typedef struct
 {
     u8 _pad0;
     /** 0x01 running total of the spans before this one, in frames. */
-    u8 unk1;
+    u8 range_start;
     /** 0x02 length of the keyframe this record covers, in frames. */
-    u16 unk2;
+    u16 duration;
 } FieldTweenSpan;
 
-u8 *func_80059224(u8 *, s32, volatile s8 *);
-void func_8005A984(FieldPart *, s32, s32);
-void func_8005AA68(FieldObj *, s32, s32);
+u8* field_find_count_table_span(u8*, s32, volatile s8*);
+void func_8005A984(FieldPart*, s32, s32);
+void func_8005AA68(FieldObj*, s32, s32);
 
 /**
  * @brief Apply the current keyframe's tweened offsets to an animation's target.
  *
  * Resolves the keyframe indexed by FieldAnim::flags.b.state and the keyframe's
- * duration (func_80059224), then interpolates each of the key's three offsets by
+ * duration (field_find_count_table_span), then interpolates each of the key's three offsets by
  * the fraction of the keyframe already elapsed: `(elapsed * end << 8) / duration`.
  *
  * The target is FieldAnim::cels reinterpreted according to the definition's
@@ -3408,7 +3439,7 @@ void func_8005AA68(FieldObj *, s32, s32);
  *
  * @param def    Animation definition; supplies the handler kind and keyframe table.
  * @param anim   Animation node holding the frame state, counter and target.
- * @param commit When zero the tweened values are only recorded on the node; when
+ * @param apply_to_target When zero the tweened values are only recorded; when
  *               non-zero the delta since the previous frame is also added to the
  *               target and pushed through func_8005A984 / func_8005AA68. The
  *               record is cleared instead of stored on the keyframe's last frame
@@ -3418,20 +3449,20 @@ void func_8005AA68(FieldObj *, s32, s32);
  *       the same pointer, but folding the access onto @c def costs the match.
  * @note @c obj and @c part must be cleared by two separate statements; the
  *       chained @c obj = part = NULL form does not match.
- * @note The handler kind is read as a whole word (@c *(s32 *) &def->unk4): the
- *       byte access gcc emits for @c def->unk4 is an @c lbu, the target an @c lw.
+ * @note The handler kind is read as a whole word (@c *(s32 *) &def->flags): the
+ *       byte access gcc emits for @c def->flags is an @c lbu, the target an @c lw.
  *       Repeating the test at each of the four sites is also required - hoisting
  *       it into a local reorders the blocks.
- * @note @c unk6 must stay unsigned so the visibility bit comes out as @c srl 15.
+ * @note @c visibility must stay unsigned so its bit comes out as @c srl 15.
  *
  * @see decomp.me (100%) TODO
  */
-void func_80057E88(FieldAnimDef *def, FieldAnim *anim, s32 commit)
+void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_to_target)
 {
-    FieldAnimDef *rec;
-    FieldObj *obj;
-    FieldPart *part;
-    FieldTweenKey *key;
+    FieldAnimDef* rec;
+    FieldObj* obj;
+    FieldPart* part;
+    FieldTweenKey* key;
     s32 duration;
     s32 elapsed;
     s32 value;
@@ -3441,112 +3472,112 @@ void func_80057E88(FieldAnimDef *def, FieldAnim *anim, s32 commit)
     rec = def;
     obj = NULL;
     part = NULL;
-    if ((*(s32 *) &def->unk4 & 7) == 5)
+    if ((*(s32*)&def->flags & 7) == 5)
     {
-        part = (FieldPart *) anim->cels;
+        part = (FieldPart*)anim->cels;
     }
     else
     {
-        obj = (FieldObj *) anim->cels;
+        obj = (FieldObj*)anim->cels;
     }
-    key = (FieldTweenKey *) (rec->unk14 + anim->flags.b.state * 8);
-    duration = ((FieldTweenSpan *) func_80059224((u8 *) def, anim->flags.b.unk2, &base))->unk2;
+    key = (FieldTweenKey*)(rec->data + anim->flags.b.state * 8);
+    duration = ((FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base))->duration;
     if (duration == 0)
     {
         duration = 1;
     }
-    elapsed = duration - anim->counter;
-    if ((*(s32 *) &def->unk4 & 7) == 5)
+    elapsed = duration - anim->timer;
+    if ((*(s32*)&def->flags & 7) == 5)
     {
-        part->unk20 = key->unk6 >> 15;
+        part->visible = key->visibility >> 15;
     }
     else
     {
-        obj->flags.word = (obj->flags.word & ~1) | (key->unk6 >> 15);
+        obj->flags.word = (obj->flags.word & ~1) | (key->visibility >> 15);
     }
 
-    value = ((elapsed * key->unk0) << 8) / duration;
-    if (commit != 0)
+    value = ((elapsed * key->x) << 8) / duration;
+    if (apply_to_target != 0)
     {
-        delta = value - anim->unk14;
-        if ((*(s32 *) &def->unk4 & 7) == 5)
+        delta = value - anim->tween_x;
+        if ((*(s32*)&def->flags & 7) == 5)
         {
-            part->unk28 += delta;
+            part->x += delta;
             func_8005A984(part, delta, 0);
         }
         else
         {
-            obj->unk1C += delta;
+            obj->x += delta;
             func_8005AA68(obj, delta, 0);
         }
-        if (anim->counter == 0)
+        if (anim->timer == 0)
         {
-            anim->unk14 = 0;
+            anim->tween_x = 0;
         }
         else
         {
-            anim->unk14 = value;
+            anim->tween_x = value;
         }
     }
     else
     {
-        anim->unk14 = value;
+        anim->tween_x = value;
     }
 
-    value = ((elapsed * key->unk2) << 8) / duration;
-    if (commit != 0)
+    value = ((elapsed * key->y) << 8) / duration;
+    if (apply_to_target != 0)
     {
-        delta = value - anim->unk18;
-        if ((*(s32 *) &def->unk4 & 7) == 5)
+        delta = value - anim->tween_y;
+        if ((*(s32*)&def->flags & 7) == 5)
         {
-            part->unk2C += delta;
+            part->y += delta;
             func_8005A984(part, delta, 1);
         }
         else
         {
-            obj->unk20 += delta;
+            obj->y += delta;
             func_8005AA68(obj, delta, 1);
         }
-        if (anim->counter == 0)
+        if (anim->timer == 0)
         {
-            anim->unk18 = 0;
+            anim->tween_y = 0;
         }
         else
         {
-            anim->unk18 = value;
+            anim->tween_y = value;
         }
     }
     else
     {
-        anim->unk18 = value;
+        anim->tween_y = value;
     }
 
-    value = ((elapsed * key->unk4) << 8) / duration;
-    if (commit != 0)
+    value = ((elapsed * key->z) << 8) / duration;
+    if (apply_to_target != 0)
     {
-        delta = value - anim->unk1C;
-        if ((*(s32 *) &def->unk4 & 7) == 5)
+        delta = value - anim->tween_z;
+        if ((*(s32*)&def->flags & 7) == 5)
         {
-            part->unk30 += delta;
+            part->z += delta;
             func_8005A984(part, delta, 2);
         }
         else
         {
-            obj->unk24 += delta;
+            obj->z += delta;
             func_8005AA68(obj, delta, 2);
         }
-        if (anim->counter == 0)
+        if (anim->timer == 0)
         {
-            anim->unk1C = 0;
+            anim->tween_z = 0;
         }
         else
         {
-            anim->unk1C = value;
+            anim->tween_z = value;
         }
     }
     else
     {
-        anim->unk1C = value;
+        anim->tween_z = value;
     }
 }
 
@@ -3568,7 +3599,7 @@ typedef union
 } FieldSfxWord;
 
 /**
- * @brief One entry of the sound keyframe table at FieldAnimDef::unk14.
+ * @brief One entry of the sound keyframe table at FieldAnimDef::data.
  *
  * Shares the 8-byte stride with FieldTweenKey; the low three bits of byte 0
  * say which of the two an entry is (1 = sound).
@@ -3577,18 +3608,18 @@ typedef struct
 {
     /**
      * 0x00 bits 0-2 entry kind (1 = sound); bits 8-12 a channel-slot number
-     * (zero means "use the sound id at unk4" instead); bit 14 clear selects
+     * (zero means "use sfx_id" instead); bit 14 clear selects
      * positional playback; bit 15 clear stops the channel.
      */
-    FieldSfxWord unk0;
+    FieldSfxWord control;
     /**
      * 0x02 low byte is the sound's bank/index, bits 8-14 its base attenuation
      * and bit 15 selects one-shot playback over the a1/a3 pair.
      */
-    FieldSfxWord unk2;
-    /** 0x04 bits 0-9 sound id, used when unk0 carries no channel slot. */
-    u16 unk4;
-    u16 unk6;  /* 0x06 */
+    FieldSfxWord sound;
+    /** 0x04 bits 0-9 sound id, used when control carries no channel slot. */
+    u16 sfx_id;
+    u16 unk6; /* 0x06 */
 } FieldSfxKey;
 
 void akao_play_sfx(s32, s32, s32, s32);
@@ -3600,7 +3631,7 @@ void akao_cmd_a3(s32, s32, s32, s32);
  * @brief Play or update the sound attached to an animation's current keyframe.
  *
  * Reads the keyframe indexed by FieldAnim::flags.b.state out of the table at
- * FieldAnimDef::unk14 and does nothing unless it is a sound entry (kind 1).
+ * FieldAnimDef::data and does nothing unless it is a sound entry (kind 1).
  * The entry names either a channel slot (1 << (slot - 1), sound id 0) or a
  * sound id, and its flag bits pick one of three actions: stop the channel
  * (akao_cmd_21), play without positioning, or position the sound in the scene
@@ -3645,11 +3676,11 @@ void akao_cmd_a3(s32, s32, s32, s32);
  *
  * @see decomp.me (95.20%) TODO
  */
-void func_80058154(FieldAnimDef *def, FieldAnim *anim)
+void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
 {
-    FieldPart *part;
-    FieldObj *obj;
-    FieldSfxKey *key;
+    FieldPart* part;
+    FieldObj* obj;
+    FieldSfxKey* key;
     s32 sfx_id;
     s32 chan_mask;
     s32 kind;
@@ -3665,37 +3696,37 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
     s32 row;
     s32 q;
 
-    part = (FieldPart *) anim->cels;
-    obj = (FieldObj *) anim->unk10;
-    kind = def->unk14[anim->flags.b.state * 8] & 7;
+    part = (FieldPart*)anim->cels;
+    obj = (FieldObj*)anim->unk10;
+    kind = def->data[anim->flags.b.state * 8] & 7;
     if (kind == 1)
     {
-        key = (FieldSfxKey *) (def->unk14 + anim->flags.b.state * 8);
-        if (key->unk0.word & 0x1F00)
+        key = (FieldSfxKey*)(def->data + anim->flags.b.state * 8);
+        if (key->control.word & 0x1F00)
         {
-            chan_mask = kind << (((key->unk0.word >> 8) & 0x1F) - 1);
+            chan_mask = kind << (((key->control.word >> 8) & 0x1F) - 1);
             sfx_id = 0;
         }
         else
         {
             chan_mask = 0;
-            sfx_id = key->unk4 & 0x3FF;
+            sfx_id = key->sfx_id & 0x3FF;
         }
-        if (key->unk0.word & 0x8000)
+        if (key->control.word & 0x8000)
         {
-            if (key->unk0.word & 0x4000)
+            if (key->control.word & 0x4000)
             {
-                if (key->unk2.word & 0x8000)
+                if (key->sound.word & 0x8000)
                 {
                     if (anim->flags.word & 8)
                     {
-                        akao_play_sfx(sfx_id, chan_mask, key->unk2.b.lo, (key->unk2.word >> 8) & 0x7F);
+                        akao_play_sfx(sfx_id, chan_mask, key->sound.b.lo, (key->sound.word >> 8) & 0x7F);
                         anim->flags.word &= ~8;
                     }
                 }
                 else
                 {
-                    akao_play_sfx(sfx_id, chan_mask, key->unk2.b.lo, (key->unk2.word >> 8) & 0x7F);
+                    akao_play_sfx(sfx_id, chan_mask, key->sound.b.lo, (key->sound.word >> 8) & 0x7F);
                 }
             }
             else
@@ -3708,9 +3739,9 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
                 }
                 else
                 {
-                    cam_x = ((FieldCamera *) 0x801ED480)->unk4;
-                    cam_y = ((FieldCamera *) 0x801ED480)->unk8;
-                    cam_z = ((FieldCamera *) 0x801ED480)->unkC;
+                    cam_x = ((FieldCamera*)0x801ED480)->x;
+                    cam_y = ((FieldCamera*)0x801ED480)->y;
+                    cam_z = ((FieldCamera*)0x801ED480)->z;
                 }
                 if (cam_x >= 0)
                 {
@@ -3738,10 +3769,10 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
                     q = (cam_z + 0x1FF) >> 9;
                 }
                 y = cam_y - q;
-                col = part->def->u.b.unkA * 8;
-                x = x + (obj->unk1C + part->unk28) / 256 + col;
-                row = part->def->u.b.unkB * 8;
-                y = y + ((obj->unk20 + part->unk2C) * 2 - (obj->unk24 + part->unk30)) / 512;
+                col = part->def->u.b.cols * 8;
+                x = x + (obj->x + part->x) / 256 + col;
+                row = part->def->u.b.rows * 8;
+                y = y + ((obj->y + part->y) * 2 - (obj->z + part->z)) / 512;
                 cam_z = row - 0xE0;
                 y = y - cam_z;
                 if (x < -0x20)
@@ -3776,7 +3807,7 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
                 if (y < -0x20)
                 {
                     att = (-0x20 - y) >> 2;
-                    tmp = (key->unk2.word >> 8) & 0x7F;
+                    tmp = (key->sound.word >> 8) & 0x7F;
                     if (att < tmp)
                     {
                         att = tmp - att;
@@ -3789,7 +3820,7 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
                 else if (y > 0x100)
                 {
                     att = (y - 0x100) >> 2;
-                    tmp = (key->unk2.word >> 8) & 0x7F;
+                    tmp = (key->sound.word >> 8) & 0x7F;
                     if (att < tmp)
                     {
                         att = tmp - att;
@@ -3801,9 +3832,9 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
                 }
                 else
                 {
-                    att = (key->unk2.word >> 8) & 0x7F;
+                    att = (key->sound.word >> 8) & 0x7F;
                 }
-                if (key->unk2.word & 0x8000)
+                if (key->sound.word & 0x8000)
                 {
                     if (anim->flags.word & 8)
                     {
@@ -3812,8 +3843,8 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
                     }
                     else
                     {
-                        akao_cmd_a1(sfx_id, chan_mask, anim->counter * 2, att);
-                        akao_cmd_a3(sfx_id, chan_mask, anim->counter * 2, vol);
+                        akao_cmd_a1(sfx_id, chan_mask, anim->timer * 2, att);
+                        akao_cmd_a3(sfx_id, chan_mask, anim->timer * 2, vol);
                     }
                 }
                 else
@@ -3834,7 +3865,7 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
  *
  * Walks @p cel 's bit plane row-major, consuming one tile record per set bit,
  * and rewrites the CLUT halfword at offset 2 of each record so it addresses the
- * band of VRAM holding frame @p state. Only tiles whose descriptor row falls
+ * band of VRAM holding frame @p frame. Only tiles whose descriptor row falls
  * inside the definition's sub-rectangle (@c unkE for @c unk10 rows) are
  * touched; the rest keep whatever CLUT they were built with. The whole call is
  * skipped unless the definition's packing mode agrees with the grid's.
@@ -3847,10 +3878,10 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
  *                 the first row of the sub-rectangle (@c unkE) and its height
  *                 (@c unk10), which doubles as the per-frame band stride.
  * @param cel      Cel whose bit plane, tile records and record format are used.
- * @param state    Frame index; scales the band stride to reach frame @p state.
+ * @param frame    Frame index; scales the band stride to reach that frame.
  *
  * @note @c def is a local copy of the parameter rather than the parameter
- *       itself. The extra reference is what pushes @p state out to s0 and keeps
+ *       itself. The extra reference is what pushes @p frame out to s0 and keeps
  *       the definition pointer in a0; using the parameter directly rotates
  *       def/last/mode through the wrong three registers (99.00%).
  * @note The switch needs the otherwise-empty `case 1:` and `case 6:`. They
@@ -3869,14 +3900,14 @@ void func_80058154(FieldAnimDef *def, FieldAnim *anim)
  *
  * @see decomp.me (100%) TODO
  */
-void func_800584DC(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 state)
+void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldAnimCel* cel, s32 frame)
 {
-    FieldAnimDef *def;
-    FieldTileGrid *grid;
-    FieldTileDesc *tile;
-    u8 *dst;
-    s16 *clut_ptr;
-    u32 *mask;
+    FieldAnimDef* def;
+    FieldTileGrid* grid;
+    FieldTileDesc* tile;
+    u8* dst;
+    s16* clut_ptr;
+    u32* mask;
     u32 word;
     u32 bit;
     s32 stride;
@@ -3909,12 +3940,12 @@ void func_800584DC(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 state)
         case 6:
             break;
         }
-        if (cel->unk1C != 0)
+        if (cel->code_word != 0)
         {
             stride -= 4;
         }
         bit = 1;
-        if (cel->unk18 != 0)
+        if (cel->tpage_word != 0)
         {
             stride -= 4;
         }
@@ -3931,19 +3962,19 @@ void func_800584DC(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 state)
                 col = 0;
                 if (grid->u.b.cols != 0)
                 {
-                    clut_ptr = (s16 *) (dst + 2);
+                    clut_ptr = (s16*)(dst + 2);
                     do
                     {
                         if (word & bit)
                         {
-                            u8 packed = tile->unk0;
+                            u8 packed = tile->clut_slot;
 
                             if (packed & 0x80)
                             {
                                 slot = packed & 0x1F;
                                 if ((slot >= first) && (slot < last))
                                 {
-                                    y = slot + (state * def->unk10);
+                                    y = slot + (frame * def->unk10);
                                     if (mode == 0)
                                     {
                                         clut = (((y >> 4) + 0x1D8) << 6) | (y & 0xF);
@@ -3955,7 +3986,7 @@ void func_800584DC(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 state)
                                     *clut_ptr = clut;
                                 }
                             }
-                            clut_ptr = (s16 *) ((u8 *) clut_ptr + stride);
+                            clut_ptr = (s16*)((u8*)clut_ptr + stride);
                             dst += stride;
                         }
                         bit <<= 1;
@@ -3966,12 +3997,10 @@ void func_800584DC(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 state)
                         }
                         tile++;
                         col++;
-                    }
-                    while (col != grid->u.b.cols);
+                    } while (col != grid->u.b.cols);
                 }
                 row++;
-            }
-            while (row != grid->u.b.rows);
+            } while (row != grid->u.b.rows);
         }
     }
 }
@@ -3996,7 +4025,7 @@ void func_800584DC(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 state)
  * @return Base of the half of the scratch buffer just written, ready to be
  *         handed to a FieldImageReq as its source data.
  *
- * @note @c rec is a local copy of @p def, as in func_80057E88: the extra
+ * @note @c rec is a local copy of @p def, as in field_apply_animation_tween: the extra
  *       reference is what keeps the definition pointer's allocno ahead of the
  *       argument registers. Reading everything through @p def costs 57 rows.
  * @note The @c do/while(0) around the countdown and flag reads is required. It
@@ -4025,14 +4054,14 @@ void func_800584DC(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 state)
  *
  * @see decomp.me (100%) TODO
  */
-u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
+u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
 {
-    FieldAnimDef *rec;
-    FieldSceneHeader *hdr;
-    u16 *cur;
-    u16 *prev;
-    u16 *dst;
-    u16 *out;
+    FieldAnimDef* rec;
+    FieldSceneHeader* hdr;
+    u16* cur;
+    u16* prev;
+    u16* dst;
+    u16* out;
     s32 total;
     s32 remain;
     s32 elapsed;
@@ -4046,15 +4075,14 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
     volatile u8 base;
 
     rec = def;
-    hdr = g_field_scene.scene->unk0;
-    total = ((FieldTweenSpan *) func_80059224((u8 *) rec, anim->flags.b.unk2, (volatile s8 *) &base))->unk2;
-    idx = anim->flags.b.unk2;
+    hdr = g_field_scene.scene->header;
+    total = ((FieldTweenSpan*)field_find_count_table_span((u8*)rec, anim->flags.b.keyframe, (volatile s8*)&base))->duration;
+    idx = anim->flags.b.keyframe;
     do
     {
-        remain = anim->counter;
+        remain = anim->timer;
         flags = anim->flags.word;
-    }
-    while (0);
+    } while (0);
     elapsed = total - remain;
     if (flags & 1)
     {
@@ -4089,9 +4117,9 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
             idx = idx + 1;
         }
     }
-    if (*(s32 *) &def->unk4 & 0x40)
+    if (*(s32*)&def->flags & 0x40)
     {
-        other = (((FieldTweenSpan *) func_80059224((u8 *) def, idx, (volatile s8 *) &base))->unk1 + idx) - base;
+        other = (((FieldTweenSpan*)field_find_count_table_span((u8*)def, idx, (volatile s8*)&base))->range_start + idx) - base;
     }
     else
     {
@@ -4102,21 +4130,19 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
         step = rec->unk10 * 0x10;
         if (anim->flags.b.state == 0)
         {
-            cur = (u16 *) ((u8 *) hdr->unk4 + (rec->unkE << 5));
+            cur = (u16*)((u8*)hdr->pixel_data + (rec->unkE << 5));
         }
         else
         {
-            cur = (u16 *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + rec->unk12 * 2 +
-                           ((anim->flags.b.state - 1) * step) * 2);
+            cur = (u16*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 + ((anim->flags.b.state - 1) * step) * 2);
         }
         if (other == 0)
         {
-            prev = (u16 *) ((u8 *) hdr->unk4 + (rec->unkE << 5));
+            prev = (u16*)((u8*)hdr->pixel_data + (rec->unkE << 5));
         }
         else
         {
-            prev = (u16 *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + rec->unk12 * 2 +
-                            ((other - 1) * step) * 2);
+            prev = (u16*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 + ((other - 1) * step) * 2);
         }
     }
     else
@@ -4124,21 +4150,19 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
         step = rec->unk10 << 8;
         if (anim->flags.b.state == 0)
         {
-            cur = (u16 *) ((u8 *) hdr->unk4 + (rec->unkE << 9));
+            cur = (u16*)((u8*)hdr->pixel_data + (rec->unkE << 9));
         }
         else
         {
-            cur = (u16 *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + rec->unk12 * 2 +
-                           ((anim->flags.b.state - 1) * step) * 2);
+            cur = (u16*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 + ((anim->flags.b.state - 1) * step) * 2);
         }
         if (other == 0)
         {
-            prev = (u16 *) ((u8 *) hdr->unk4 + (rec->unkE << 9));
+            prev = (u16*)((u8*)hdr->pixel_data + (rec->unkE << 9));
         }
         else
         {
-            prev = (u16 *) ((u8 *) hdr->unk4 + hdr->unk28 * 2 + rec->unk12 * 2 +
-                            ((other - 1) * step) * 2);
+            prev = (u16*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 + ((other - 1) * step) * 2);
         }
     }
     flags = anim->flags.word;
@@ -4165,15 +4189,14 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
         }
         else
         {
-            *dst = ((c | p) & 0x8000) |
-                   ((((c & 0x1F) * remain) + ((p & 0x1F) * elapsed)) / total) |
+            *dst = ((c | p) & 0x8000) | ((((c & 0x1F) * remain) + ((p & 0x1F) * elapsed)) / total) |
                    (((((c >> 5) & 0x1F) * remain) + (((p >> 5) & 0x1F) * elapsed)) / total) << 5 |
                    (((((c >> 10) & 0x1F) * remain) + (((p >> 10) & 0x1F) * elapsed)) / total) << 10;
         }
         step--;
         dst++;
     }
-    return (u_long *) out;
+    return (u_long*)out;
 }
 
 /**
@@ -4210,13 +4233,13 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
  * @note There is deliberately no cursor local for the record colour: writing
  *       through @c dst lets gcc build the induction variable itself and base it
  *       on the blue byte, matching the target's `sh -0x2(a1)` / `sb 0x0(a1)`
- *       pair. This is the opposite of func_800584DC, which needs an explicit
+ *       pair. This is the opposite of field_retarget_cel_cluts, which needs an explicit
  *       cursor. A `FieldCellTint *` cursor initialised from @c dst also
  *       measures 100%; one initialised from @c dst @c + @c 4 does not.
  * @note The switch needs the otherwise-empty `case 1:` and `case 6:` to emit a
- *       jump table rather than a compare tree (84.91%), as in func_800584DC.
+ *       jump table rather than a compare tree (84.91%), as in field_retarget_cel_cluts.
  * @note @c code must be read into a local before the loop; testing
- *       @c cel->unk1C at each of its three sites reloads it (94.89%).
+ *       @c cel->code_word at each of its three sites reloads it (94.89%).
  * @note @c entry must be one expression; splitting it into
  *       `entry = &pal[slot]; entry += shade;` costs the hoisted `shade * 4`
  *       (99.92%).
@@ -4227,15 +4250,15 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
  *
  * @see decomp.me (100%) TODO
  */
-void func_800589F0(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc *src, s32 shade)
+void field_tint_animation_cel(FieldAnimDef* def, FieldAnimCel* cel, FieldTintSrc* src, s32 shade)
 {
-    FieldTileGrid *grid;
-    FieldTileDesc *tile;
-    FieldTintColor *pal;
-    FieldTintColor *entry;
-    u8 *dst;
-    u16 *tab;
-    u32 *mask;
+    FieldTileGrid* grid;
+    FieldTileDesc* tile;
+    FieldTintColor* pal;
+    FieldTintColor* entry;
+    u8* dst;
+    u16* tab;
+    u32* mask;
     u32 word;
     u32 bit;
     s32 stride;
@@ -4247,12 +4270,12 @@ void func_800589F0(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc *src, s32 
     s32 code;
     s32 rgb[3];
 
-    rgb[0] = src->unk10 * src->unk16;
-    rgb[1] = src->unk12 * src->unk18;
-    rgb[2] = src->unk14 * src->unk1A;
+    rgb[0] = src->red * src->red_scale;
+    rgb[1] = src->green * src->green_scale;
+    rgb[2] = src->blue * src->blue_scale;
     stride = 0;
-    pal = (FieldTintColor *) 0x1F800000;
-    tab = src->unk4->unk4;
+    pal = (FieldTintColor*)0x1F800000;
+    tab = src->palette->data;
     func_8005AC50(tab + 2, tab[0], rgb);
     grid = cel->grid;
     dst = cel->tiles;
@@ -4270,12 +4293,12 @@ void func_800589F0(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc *src, s32 
     case 6:
         break;
     }
-    code = cel->unk1C;
+    code = cel->code_word;
     if (code != 0)
     {
         stride -= 4;
     }
-    if (cel->unk18 != 0)
+    if (cel->tpage_word != 0)
     {
         stride -= 4;
     }
@@ -4296,20 +4319,20 @@ void func_800589F0(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc *src, s32 
                 {
                     if (word & bit)
                     {
-                        if (tile->unk0 & 0x80)
+                        if (tile->clut_slot & 0x80)
                         {
-                            slot = tile->unk3;
+                            slot = tile->color_index;
                             if ((slot >= first) && (last >= slot))
                             {
                                 entry = &pal[slot] + shade;
                                 if (code != 0)
                                 {
-                                    ((FieldTintColor *) &cel->unk1C)->rg = entry->rg;
-                                    ((FieldTintColor *) &cel->unk1C)->b = entry->b;
+                                    ((FieldTintColor*)&cel->code_word)->rg = entry->rg;
+                                    ((FieldTintColor*)&cel->code_word)->b = entry->b;
                                     return;
                                 }
-                                ((FieldCellTint *) dst)->rg = entry->rg;
-                                ((FieldCellTint *) dst)->b = entry->b;
+                                ((FieldCellTint*)dst)->rg = entry->rg;
+                                ((FieldCellTint*)dst)->b = entry->b;
                             }
                             else
                             {
@@ -4329,20 +4352,18 @@ void func_800589F0(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc *src, s32 
                     }
                     tile++;
                     col++;
-                }
-                while (col != grid->u.b.cols);
+                } while (col != grid->u.b.cols);
             }
             row++;
-        }
-        while (row != grid->u.b.rows);
+        } while (row != grid->u.b.rows);
     }
 }
 
 /**
  * @brief Tint every visible tile of a whole cel list from the scratchpad table.
  *
- * The list variant of func_800589F0: instead of being handed one cel, it takes
- * the tint source itself and walks the cel list hanging off @c src->unk8.
+ * The list variant of field_tint_animation_cel: instead of being handed one cel, it takes
+ * the tint source itself and walks the cel list hanging off @c src->cels.
  * @p src 's colour is expanded once into the scratchpad table at 0x1F800000 (via
  * func_8005AC50), then each cel's bit plane is walked row-major, consuming one
  * tile record per set bit and copying the table entry selected by that tile's
@@ -4369,16 +4390,16 @@ void func_800589F0(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc *src, s32 
  *
  * @see decomp.me (100%) TODO
  */
-void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
+void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, s32 shade)
 {
-    FieldAnimCel *cel;
-    FieldTileGrid *grid;
-    FieldTileDesc *tile;
-    FieldTintColor *pal;
-    FieldTintColor *entry;
-    u8 *dst;
-    u16 *tab;
-    u32 *mask;
+    FieldAnimCel* cel;
+    FieldTileGrid* grid;
+    FieldTileDesc* tile;
+    FieldTintColor* pal;
+    FieldTintColor* entry;
+    u8* dst;
+    u16* tab;
+    u32* mask;
     u32 word;
     u32 bit;
     s32 stride;
@@ -4390,16 +4411,16 @@ void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
     s32 code;
     s32 rgb[3];
 
-    rgb[0] = src->unk10 * src->unk16;
-    rgb[1] = src->unk12 * src->unk18;
-    rgb[2] = src->unk14 * src->unk1A;
+    rgb[0] = src->red * src->red_scale;
+    rgb[1] = src->green * src->green_scale;
+    rgb[2] = src->blue * src->blue_scale;
     stride = 0;
-    pal = (FieldTintColor *) 0x1F800000;
-    tab = src->unk4->unk4;
+    pal = (FieldTintColor*)0x1F800000;
+    tab = src->palette->data;
     func_8005AC50(tab + 2, tab[0], rgb);
     first = def->unkC;
     last = first + def->unkD;
-    for (cel = src->unk8; cel != NULL; cel = cel->next)
+    for (cel = src->cels; cel != NULL; cel = cel->next)
     {
         dst = cel->tiles;
         grid = cel->grid;
@@ -4417,12 +4438,12 @@ void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
         case 6:
             break;
         }
-        code = cel->unk1C;
+        code = cel->code_word;
         if (code != 0)
         {
             stride -= 4;
         }
-        if (cel->unk18 != 0)
+        if (cel->tpage_word != 0)
         {
             stride -= 4;
         }
@@ -4441,20 +4462,20 @@ void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
                     {
                         if (word & bit)
                         {
-                            if (tile->unk0 & 0x80)
+                            if (tile->clut_slot & 0x80)
                             {
-                                slot = tile->unk3;
+                                slot = tile->color_index;
                                 if ((slot >= first) && (last >= slot))
                                 {
                                     entry = &pal[slot] + shade;
                                     if (code != 0)
                                     {
-                                        ((FieldTintColor *) &cel->unk1C)->rg = entry->rg;
-                                        ((FieldTintColor *) &cel->unk1C)->b = entry->b;
+                                        ((FieldTintColor*)&cel->code_word)->rg = entry->rg;
+                                        ((FieldTintColor*)&cel->code_word)->b = entry->b;
                                         goto next_cel;
                                     }
-                                    ((FieldCellTint *) dst)->rg = entry->rg;
-                                    ((FieldCellTint *) dst)->b = entry->b;
+                                    ((FieldCellTint*)dst)->rg = entry->rg;
+                                    ((FieldCellTint*)dst)->b = entry->b;
                                 }
                                 else
                                 {
@@ -4474,24 +4495,21 @@ void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
                         }
                         tile++;
                         col++;
-                    }
-                    while (col != grid->u.b.cols);
+                    } while (col != grid->u.b.cols);
                 }
                 row++;
-            }
-            while (row != grid->u.b.rows);
+            } while (row != grid->u.b.rows);
         }
-    next_cel:
-        ;
+    next_cel:;
     }
 }
 
 /**
  * @brief Step an animation node to its next keyframe and refresh its counter.
  *
- * Advances FieldAnim::flags.b.unk2 - the keyframe cursor - according to the
- * node's play mode, then resolves the new keyframe through func_80059224 and
- * reloads FieldAnim::counter with its length.
+ * Advances FieldAnim::flags.b.keyframe - the keyframe cursor - according to the
+ * node's play mode, then resolves the new keyframe through field_find_count_table_span and
+ * reloads FieldAnim::timer with its length.
  *
  * The mode comes from the low bits of the flags word. Bit 0 selects ping-pong
  * play, in which bit 2 records that the cursor is currently walking backwards:
@@ -4503,28 +4521,30 @@ void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
  * the cursor is left alone.
  *
  * Whether an end-of-range actually spends a repeat depends on the definition's
- * handler: bit 4 of the word at FieldAnimDef::unk4 exempts it entirely, and
- * otherwise only the @c unk7 / kind pairs 0/5, 0/6 and 1/5 are counted.
+ * handler: bit 4 of the word at FieldAnimDef::flags exempts it entirely, and
+ * otherwise only the @c handler_group / kind pairs 0/5, 0/6 and 1/5 are counted.
  *
  * The published frame index (FieldAnim::flags.b.state) is normally the cursor
  * itself; for handlers with bit 6 set it is instead the keyframe's running span
- * total plus the cursor, minus the offset func_80059224 reports.
+ * total plus the cursor, minus the offset field_find_count_table_span reports.
  *
  * @param def  Animation definition; supplies the handler kind (the word at
- *             @c unk4, plus @c unk7) and the last keyframe index (@c unk5).
+ *             @c flags, plus @c handler_group) and the last keyframe index
+ *             (@c unk5).
  * @param anim Animation node whose cursor, loop counter, flags and frame
  *             counter are updated in place.
  *
  * @note The four handler-kind tests read the definition as a whole word
- *       (@c *(s32 @c *) @c &def->unk4) and are repeated at each site, as in
- *       func_80057E88; hoisting the word into a local reorders the blocks.
+ *       (@c *(s32 @c *) @c &def->flags) and are repeated at each site, as in
+ *       field_apply_animation_tween; hoisting the word into a local reorders the blocks.
  * @note The two end-of-range predicates are spelled differently on purpose, and
  *       both spellings are required. Where the test is positive it uses the
  *       packed @c (kind @c & @c 0xFF000007) @c == @c 0x01000005 form; splitting
- *       that into @c unk7 @c == @c 1 @c && @c (kind @c & @c 7) @c == @c 5 costs
+ *       that into @c handler_group @c == @c 1 @c &&
+ *       @c (kind @c & @c 7) @c == @c 5 costs
  *       16 rows. Where it is negative it is written as a three-way OR ending in
- *       @c unk7 @c >= @c 2, which is what makes gcc emit the shared
- *       @c sltiu @c unk7, @c 2 tail; spelling it as the negation of the positive
+ *       @c handler_group @c >= @c 2, which is what makes gcc emit the shared
+ *       @c sltiu @c handler_group, @c 2 tail; spelling it as the negation of the positive
  *       form costs 19 rows.
  * @note The outer test is `if (!(flags & 8))` with the long body first and the
  *       bit-3 clear as the `else`. Writing it the other way round puts the clear
@@ -4543,9 +4563,9 @@ void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
  *
  * @see decomp.me (100%) TODO
  */
-void func_80058E28(FieldAnimDef *def, FieldAnim *anim)
+void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
 {
-    FieldTweenSpan *span;
+    FieldTweenSpan* span;
     s32 cur;
     s32 nxt;
     u8 idx;
@@ -4557,109 +4577,104 @@ void func_80058E28(FieldAnimDef *def, FieldAnim *anim)
         {
             if (anim->flags.word & 4)
             {
-                if (anim->flags.b.unk2 == 0)
+                if (anim->flags.b.keyframe == 0)
                 {
-                    if (*(s32 *) &def->unk4 & 0x10)
+                    if (*(s32*)&def->flags & 0x10)
                     {
-                        anim->flags.b.unk2 = anim->flags.b.unk2 + 1;
+                        anim->flags.b.keyframe = anim->flags.b.keyframe + 1;
                     }
-                    else if (((def->unk7 == 0) && ((u32) ((*(s32 *) &def->unk4 & 7) - 5) < 2)) ||
-                             ((*(s32 *) &def->unk4 & 0xFF000007) == 0x01000005))
+                    else if (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & 7) - 5) < 2)) || ((*(s32*)&def->flags & 0xFF000007) == 0x01000005))
                     {
-                        if (anim->unk28 == 0)
+                        if (anim->repeat_count == 0)
                         {
                             anim->flags.word &= ~0x40;
                         }
                         else
                         {
-                            anim->unk28--;
-                            anim->flags.b.unk2++;
+                            anim->repeat_count--;
+                            anim->flags.b.keyframe++;
                         }
                     }
                     anim->flags.word &= ~4;
                 }
                 else
                 {
-                    anim->flags.b.unk2 = anim->flags.b.unk2 - 1;
-                    if (!(*(s32 *) &def->unk4 & 0x10) && (anim->flags.b.unk2 == 0) &&
-                        (((def->unk7 == 0) && ((u32) ((*(s32 *) &def->unk4 & 7) - 5) >= 2)) ||
-                         ((def->unk7 == 1) && ((*(s32 *) &def->unk4 & 7) != 5)) ||
-                         (def->unk7 >= 2)))
+                    anim->flags.b.keyframe = anim->flags.b.keyframe - 1;
+                    if (!(*(s32*)&def->flags & 0x10) && (anim->flags.b.keyframe == 0) &&
+                        (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & 7) - 5) >= 2)) ||
+                         ((def->handler_group == 1) && ((*(s32*)&def->flags & 7) != 5)) || (def->handler_group >= 2)))
                     {
-                        if (anim->unk28 == 0)
+                        if (anim->repeat_count == 0)
                         {
                             anim->flags.word &= ~0x40;
                         }
                         else
                         {
-                            anim->unk28--;
+                            anim->repeat_count--;
                         }
                     }
                 }
             }
             else
             {
-                idx = anim->flags.b.unk2;
+                idx = anim->flags.b.keyframe;
                 if (idx == def->unk5)
                 {
-                    if (!(*(s32 *) &def->unk4 & 0x10) && (idx == 0))
+                    if (!(*(s32*)&def->flags & 0x10) && (idx == 0))
                     {
                         anim->flags.word &= ~0x40;
                     }
                     else
                     {
-                        anim->flags.b.unk2--;
+                        anim->flags.b.keyframe--;
                         anim->flags.word |= 4;
                     }
                 }
                 else
                 {
-                    anim->flags.b.unk2 = idx + 1;
+                    anim->flags.b.keyframe = idx + 1;
                 }
             }
         }
         else
         {
-            cur = anim->flags.b.unk2;
+            cur = anim->flags.b.keyframe;
             if (cur == def->unk5)
             {
-                if (!(*(s32 *) &def->unk4 & 0x10) &&
-                    (((def->unk7 == 0) && ((u32) ((*(s32 *) &def->unk4 & 7) - 5) < 2)) ||
-                     ((*(s32 *) &def->unk4 & 0xFF000007) == 0x01000005)))
+                if (!(*(s32*)&def->flags & 0x10) &&
+                    (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & 7) - 5) < 2)) || ((*(s32*)&def->flags & 0xFF000007) == 0x01000005)))
                 {
-                    if (anim->unk28 == 0)
+                    if (anim->repeat_count == 0)
                     {
                         anim->flags.word &= ~0x40;
                     }
                     else
                     {
-                        anim->unk28--;
+                        anim->repeat_count--;
                     }
                 }
-                anim->flags.b.unk2 = 0;
+                anim->flags.b.keyframe = 0;
             }
             else
             {
                 nxt = cur + 1;
-                anim->flags.b.unk2 = nxt;
-                if (!(*(s32 *) &def->unk4 & 0x10) && ((u8) nxt == def->unk5) &&
-                    (((def->unk7 == 0) && ((u32) ((*(s32 *) &def->unk4 & 7) - 5) >= 2)) ||
-                     ((def->unk7 == 1) && ((*(s32 *) &def->unk4 & 7) != 5)) ||
-                     (def->unk7 >= 2)))
+                anim->flags.b.keyframe = nxt;
+                if (!(*(s32*)&def->flags & 0x10) && ((u8)nxt == def->unk5) &&
+                    (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & 7) - 5) >= 2)) ||
+                     ((def->handler_group == 1) && ((*(s32*)&def->flags & 7) != 5)) || (def->handler_group >= 2)))
                 {
-                    if (anim->unk28 == 0)
+                    if (anim->repeat_count == 0)
                     {
                         anim->flags.word &= ~0x40;
                     }
                     else
                     {
-                        anim->unk28--;
+                        anim->repeat_count--;
                     }
                 }
             }
         }
-        if ((anim->flags.word & 0x40) && (anim->unk28 == 0) && (anim->flags.word & 2) &&
-            (anim->flags.b.unk3 == anim->flags.b.unk2))
+        if ((anim->flags.word & 0x40) && (anim->repeat_count == 0) && (anim->flags.word & 2) && (anim->flags.b.stop_keyframe == anim->flags.b.keyframe))
         {
             anim->flags.word &= ~0x40;
         }
@@ -4668,45 +4683,44 @@ void func_80058E28(FieldAnimDef *def, FieldAnim *anim)
     {
         anim->flags.word &= ~8;
     }
-    span = (FieldTweenSpan *) func_80059224((u8 *) def, anim->flags.b.unk2, &base);
-    anim->counter = span->unk2;
-    if (*(s32 *) &def->unk4 & 0x40)
+    span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
+    anim->timer = span->duration;
+    if (*(s32*)&def->flags & 0x40)
     {
-        anim->flags.b.state = (span->unk1 + anim->flags.b.unk2) - base;
+        anim->flags.b.state = (span->range_start + anim->flags.b.keyframe) - base;
     }
     else
     {
-        anim->flags.b.state = anim->flags.b.unk2;
+        anim->flags.b.state = anim->flags.b.keyframe;
     }
 }
 
 /**
  * @brief Re-point every cel of an animation node at the frame's VRAM band.
  *
- * Walks the cel list hanging off @p src and runs func_800584DC on each one, so
- * the whole node is retargeted at frame @p state in one call. Same list shape as
- * func_80058C00: the record reached through FieldAnim::cels carries its cels at
+ * Walks the cel list hanging off @p src and runs field_retarget_cel_cluts on each one, so
+ * the whole node is retargeted at frame @p frame in one call. Same list shape as
+ * field_tint_animation_cel_list: the record reached through FieldAnim::cels carries its cels at
  * offset 0x08.
  *
- * @param def   Animation definition, forwarded to func_800584DC unchanged.
+ * @param def   Animation definition, forwarded to field_retarget_cel_cluts unchanged.
  * @param src   Record whose @c unk8 is the head of the cel list to walk.
- * @param state Frame index, forwarded to func_800584DC unchanged.
+ * @param frame Frame index, forwarded to field_retarget_cel_cluts unchanged.
  *
  * @see decomp.me (100%) TODO
  */
-void func_800591C4(FieldAnimDef *def, FieldTintSrc *src, s32 state)
+void field_retarget_cel_list_cluts(FieldAnimDef* def, FieldTintSrc* src, s32 frame)
 {
-    FieldAnimCel *cel;
+    FieldAnimCel* cel;
 
-    cel = src->unk8;
+    cel = src->cels;
     if (cel != NULL)
     {
         do
         {
-            func_800584DC(def, cel, state);
+            field_retarget_cel_cluts(def, cel, frame);
             cel = cel->next;
-        }
-        while (cel != NULL);
+        } while (cel != NULL);
     }
 }
 
@@ -4715,18 +4729,20 @@ void func_800591C4(FieldAnimDef *def, FieldTintSrc *src, s32 state)
  *        given linear index, returning that record and the cumulative count
  *        consumed before it.
  *
- * The first byte of @p data holds a 7-bit count (high bit ignored). If @p index
- * is below that count the table does not reach @p index, so @p out is left 0 and
- * @p data is returned unchanged. Otherwise the leading count is committed to
- * @p out, the 0x18-byte header is skipped, and the function steps through the
+ * The first byte of @p table holds a 7-bit count (high bit ignored). If
+ * @p linear_index is below that count the table does not reach the requested
+ * index, so @p range_start_out is left 0 and @p table is returned unchanged.
+ * Otherwise the leading count is committed to @p range_start_out, the 0x18-byte
+ * header is skipped, and the function steps through the
  * following 4-byte records, accumulating each record's 7-bit count, until the
- * running total would exceed @p index. The pointer to that record is returned
- * and @p out holds the cumulative count of all preceding records.
+ * running total would exceed @p linear_index. The pointer to that record is
+ * returned and @p range_start_out holds the cumulative count of all preceding
+ * records.
  *
- * @param data  Pointer to the count table (RLE header followed by 4-byte records).
- * @param index Linear index to resolve; signed compare against each running total.
- * @param out   Receives the cumulative count consumed before the returned record.
- * @return Pointer to the record whose range contains @p index.
+ * @param table Pointer to the count table (RLE header followed by 4-byte records).
+ * @param linear_index Linear index to resolve against each running total.
+ * @param range_start_out Receives the count consumed before the returned record.
+ * @return Pointer to the record whose range contains @p linear_index.
  *
  * @note NOT MATCHED - 99.82%, one row. The dead read of byte 7 lands in v0 where
  *       the target uses v1. Both registers are dead at that point and gcc scans
@@ -4735,59 +4751,60 @@ void func_800591C4(FieldAnimDef *def, FieldTintSrc *src, s32 state)
  *       `register u8 unused asm("$3")` pin closes the row and reaches 100%, but
  *       register pins are not allowed in this tree, so the row stays open until
  *       the natural shape that busies v0 is found.
- * @note @p out must stay @c volatile and the otherwise-dead read of byte 7 must
+ * @note @p range_start_out must stay @c volatile and the otherwise-dead read of byte 7 must
  *       be preserved; both are required for the original codegen (the reload of
- *       @c *out and the stray load).
+ *       @c *range_start_out and the stray load).
  * @note The @c do/while(0) wrapper IS required - removing it costs 6 exact rows.
  *       It emits loop notes, which lift REG_N_REFS for everything inside and
  *       change the allocation order (see [ALLOC-23]). @c for(;;) and @c while(1)
  *       measure identically, so any loop wrapper will do; a plain @c if with a
  *       trailing @c return will not.
- * @note The loop body's apparently redundant recompute of @c cand is genuine.
+ * @note The loop body's apparently redundant recompute of @c range_end is genuine.
  *       Folding it into the natural
- *       `while (index >= (u8) (acc + (byte & 0x7F)))` form costs 9 exact rows and
+ *       `while (linear_index >= (u8) (range_start + (raw_count & 0x7F)))`
+ *       form costs 9 exact rows and
  *       one instruction.
  * @note Measured inert, do not retry: every spelling of the dead read (bare
- *       expression, @c (void) cast, assignment to @c byte / @c cand / @c count /
- *       @c acc, @c s8 / @c s32 / @c u32 destination, array-index form, a
+ *       expression, @c (void) cast, assignment to @c raw_count / @c range_end /
+ *       @c header_count / @c range_start, @c s8 / @c s32 / @c u32 destination,
+ *       array-index form, a
  *       @c volatile @c u8 @c * probe pointer, the @c register keyword without
  *       @c asm), and every declaration-order permutation of @c unused. All land
  *       in v0.
  * @see decomp.me (99.82%) TODO
  */
-u8 *func_80059224(u8 *data, s32 index, volatile s8 *out)
+u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_start_out)
 {
-    u8 count;
-    u8 byte;
-    u8 acc;
-    u8 cand;
+    u8 header_count;
+    u8 raw_count;
+    u8 range_start;
+    u8 range_end;
     u8 unused;
 
-    *out = 0;
-    count = *data & 0x7F;
+    *range_start_out = 0;
+    header_count = *table & 0x7F;
     do
     {
-        if (index >= count)
+        if (linear_index >= header_count)
         {
-            *out = count;
-            unused = *(volatile u8 *) (data + 7);
-            data += 0x18;
-            byte = *data;
-            acc = *out;
-            cand = acc + (byte & 0x7F);
-            while (index >= (u8) cand)
+            *range_start_out = header_count;
+            unused = *(volatile u8*)(table + 7);
+            table += 0x18;
+            raw_count = *table;
+            range_start = *range_start_out;
+            range_end = range_start + (raw_count & 0x7F);
+            while (linear_index >= (u8)range_end)
             {
-                data += 4;
-                cand = acc + (byte & 0x7F);
-                *out = cand;
-                byte = *data;
-                acc = cand;
-                cand = cand + (byte & 0x7F);
+                table += 4;
+                range_end = range_start + (raw_count & 0x7F);
+                *range_start_out = range_end;
+                raw_count = *table;
+                range_start = range_end;
+                range_end = range_end + (raw_count & 0x7F);
             }
         }
-        return data;
-    }
-    while (0);
+        return table;
+    } while (0);
 }
 
 /**
@@ -4798,11 +4815,11 @@ u8 *func_80059224(u8 *data, s32 index, volatile s8 *out)
  * @note NOT MATCHED - 98.75%.
  * @see decomp.me (98.75%) TODO
  */
-void func_80059294(FieldImageReq *req)
+void field_queue_vram_upload(FieldImageReq* req)
 {
-    FieldScene *scene;
+    FieldScene* scene;
 
     scene = g_field_scene.scene;
-    req->next = (FieldImageReq *) scene->uploads;
+    req->next = (FieldImageReq*)scene->uploads;
     scene->uploads = req;
 }

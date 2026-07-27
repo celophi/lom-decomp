@@ -208,9 +208,9 @@ extern void DecDCTReset(int mode);
 extern void DecDCTvlcBuild(u_short *table);
 void field_validate_and_rasterize_quads(s32, s32);
 void func_80053C7C(s32, Unk **, void *);
-void func_8005477C(s32, Unk *, s32, s32);
-void func_80054904(s32, Unk *, s32, s32);
-s32 func_80056824(void *, Unk *, Unk *, u8 *);
+void field_build_sprite_tile_record(s32, Unk *, s32, s32);
+void field_build_quad_tile_record(s32, Unk *, s32, s32);
+s32 field_find_shareable_part(void *, Unk *, Unk *, u8 *);
 void func_8005A744(void *, s32);
 void *func_8005AB4C(u8);
 void *func_8005AB80(u8, u8);
@@ -833,7 +833,7 @@ void field_build_render_records(ObjArg *arg0, u16 arg1)
             sp68 = var_t5;
             sp6C = new_var4;
             sp74 = var_t8;
-            temp_v0_5 = func_80056824(sp34, var_t0_2, temp_s2, var_fp);
+            temp_v0_5 = field_find_shareable_part(sp34, var_t0_2, temp_s2, var_fp);
             *((Unk **) (((u8 *) temp_s2) + 8)) = temp_v0_5;
             if (temp_v0_5 == 0)
             {
@@ -1121,7 +1121,7 @@ void field_build_render_records(ObjArg *arg0, u16 arg1)
                           new_var3 = new_var3;
                           sp58 = temp_t1;
                           sp5C = var_t2_4;
-                          func_8005477C(var_fp_2, temp_a1_5, (((u32) temp_s4_2->unk8) >> 4) & 3, var_s6_2);
+                          field_build_sprite_tile_record(var_fp_2, temp_a1_5, (((u32) temp_s4_2->unk8) >> 4) & 3, var_s6_2);
                           var_t1_4 = temp_t1;
                         }
                         var_s1_3 *= 2;
@@ -1207,7 +1207,7 @@ void field_build_render_records(ObjArg *arg0, u16 arg1)
                           sp58 = temp_t1_2;
                           sp5C = var_t2_4;
                           new_var8 = (((u32) temp_s4_2->unk8) >> 4) & 3;
-                          func_80054904(var_fp_2, temp_a1_6, new_var8, var_s6_3);
+                          field_build_quad_tile_record(var_fp_2, temp_a1_6, new_var8, var_s6_3);
                           var_t1_4 = temp_t1_2;
                         }
                         var_s1_4 *= 2;
