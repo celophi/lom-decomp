@@ -71,21 +71,17 @@
  * bank rebases those cells onto the common TPage beginning at (512, 0).
  */
 #define FIELD_TILE_ABR(attrs) ((attrs) >> 4)
-#define FIELD_TILE_LOWER_BANK_PAGE_X(slot) \
-    (FIELD_TILE_LOWER_BANK_VRAM_X + ((slot) << FIELD_TILE_TPAGE_X_SHIFT))
-#define FIELD_TILE_UPPER_BANK_PAGE_X(slot) \
-    ((s32) (((slot) << FIELD_TILE_TPAGE_X_SHIFT) - FIELD_TILE_UPPER_BANK_VRAM_X_BIAS))
-#define FIELD_TILE_TPAGE_COLUMN(slot, u_cell, depth) \
-    ((slot) + ((u_cell) >> (FIELD_TILE_4BIT_U_PAGE_SHIFT - (depth))))
-#define FIELD_TILE_UPPER_BANK_U_REBASE(slot) \
-    ((FIELD_TILE_LOWER_BANK_SLOTS - (slot)) * FIELD_TILE_UPPER_BANK_U_CELLS_PER_SLOT)
+#define FIELD_TILE_LOWER_BANK_PAGE_X(slot) (FIELD_TILE_LOWER_BANK_VRAM_X + ((slot) << FIELD_TILE_TPAGE_X_SHIFT))
+#define FIELD_TILE_UPPER_BANK_PAGE_X(slot) ((s32)(((slot) << FIELD_TILE_TPAGE_X_SHIFT) - FIELD_TILE_UPPER_BANK_VRAM_X_BIAS))
+#define FIELD_TILE_TPAGE_COLUMN(slot, u_cell, depth) ((slot) + ((u_cell) >> (FIELD_TILE_4BIT_U_PAGE_SHIFT - (depth))))
+#define FIELD_TILE_UPPER_BANK_U_REBASE(slot) ((FIELD_TILE_LOWER_BANK_SLOTS - (slot)) * FIELD_TILE_UPPER_BANK_U_CELLS_PER_SLOT)
 
 /* Per-record fields which may instead be supplied once by the owning cel. */
 #define FIELD_TILE_REC_SHARED_RGB_CODE 1
 #define FIELD_TILE_REC_SHARED_TPAGE 2
 
 /* Scratchpad table containing complete RGB/primitive-code words. */
-#define FIELD_TILE_COLOR_WORDS ((s32 *) 0x1F800000)
+#define FIELD_TILE_COLOR_WORDS ((s32*)0x1F800000)
 
 /**
  * @brief Packed 4-byte per-tile source descriptor consumed by field_build_sprite_tile_record.
@@ -160,7 +156,7 @@ typedef struct
  *
  * @see decomp.me (100%) TODO
  */
-void field_build_sprite_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32 texture_depth, s32 record_flags)
+void field_build_sprite_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags)
 {
     u32 u_cell;
     s32 tpage;
@@ -176,15 +172,12 @@ void field_build_sprite_tile_record(FieldTileDesc *desc, FieldTileRec *record, s
         switch (texture_depth)
         {
         case FIELD_TEXTURE_4_BIT:
-            {
-                u32 clut_ref = desc->clut_slot;
+        {
+            u32 clut_ref = desc->clut_slot;
 
-                setClut(
-                    record,
-                    FIELD_TILE_4BIT_CLUT_X(clut_ref),
-                    FIELD_TILE_4BIT_CLUT_Y(clut_ref));
-            }
-            break;
+            setClut(record, FIELD_TILE_4BIT_CLUT_X(clut_ref), FIELD_TILE_4BIT_CLUT_Y(clut_ref));
+        }
+        break;
         case FIELD_TEXTURE_8_BIT:
             setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
             break;
@@ -204,22 +197,18 @@ void field_build_sprite_tile_record(FieldTileDesc *desc, FieldTileRec *record, s
         {
             texture_attrs = desc->texture_attrs;
             page_slot = texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
-            if ((u32) FIELD_TILE_TPAGE_COLUMN(page_slot, u_cell, texture_depth) >= FIELD_TILE_LOWER_BANK_SLOTS)
+            if ((u32)FIELD_TILE_TPAGE_COLUMN(page_slot, u_cell, texture_depth) >= FIELD_TILE_LOWER_BANK_SLOTS)
             {
                 /*
                  * U crossed the ten-slot lower bank. Rebase it onto the upper
                  * bank's first TPage: getTPage(depth, abr, 512, 0).
                  */
                 u_cell -= FIELD_TILE_UPPER_BANK_U_REBASE(page_slot);
-                tpage = getTPage(
-                    texture_depth, FIELD_TILE_ABR(texture_attrs),
-                    FIELD_TILE_UPPER_BANK_VRAM_X, 0);
+                tpage = getTPage(texture_depth, FIELD_TILE_ABR(texture_attrs), FIELD_TILE_UPPER_BANK_VRAM_X, 0);
             }
             else
             {
-                tpage = getTPage(
-                    texture_depth, FIELD_TILE_ABR(texture_attrs),
-                    FIELD_TILE_LOWER_BANK_PAGE_X(page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
+                tpage = getTPage(texture_depth, FIELD_TILE_ABR(texture_attrs), FIELD_TILE_LOWER_BANK_PAGE_X(page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
             }
             if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
             {
@@ -234,7 +223,7 @@ void field_build_sprite_tile_record(FieldTileDesc *desc, FieldTileRec *record, s
     }
     else
     {
-        *(s32 *) record = -1;
+        *(s32*)record = -1;
     }
 }
 
@@ -270,7 +259,7 @@ void field_build_sprite_tile_record(FieldTileDesc *desc, FieldTileRec *record, s
  *
  * @see decomp.me (100%) TODO
  */
-void field_build_quad_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32 texture_depth, s32 record_flags)
+void field_build_quad_tile_record(FieldTileDesc* desc, FieldTileRec* record, s32 texture_depth, s32 record_flags)
 {
     s32 tpage;
     s32 second_tpage;
@@ -284,15 +273,12 @@ void field_build_quad_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32
         switch (texture_depth)
         {
         case FIELD_TEXTURE_4_BIT:
-            {
-                u32 clut_ref = desc->clut_slot;
+        {
+            u32 clut_ref = desc->clut_slot;
 
-                setClut(
-                    record,
-                    FIELD_TILE_4BIT_CLUT_X(clut_ref),
-                    FIELD_TILE_4BIT_CLUT_Y(clut_ref));
-            }
-            break;
+            setClut(record, FIELD_TILE_4BIT_CLUT_X(clut_ref), FIELD_TILE_4BIT_CLUT_Y(clut_ref));
+        }
+        break;
         case FIELD_TEXTURE_8_BIT:
             setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
             break;
@@ -312,15 +298,11 @@ void field_build_quad_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32
         page_slot = texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
         if (page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
         {
-            tpage = getTPage(
-                texture_depth, FIELD_TILE_ABR(texture_attrs),
-                FIELD_TILE_UPPER_BANK_PAGE_X(page_slot), 0);
+            tpage = getTPage(texture_depth, FIELD_TILE_ABR(texture_attrs), FIELD_TILE_UPPER_BANK_PAGE_X(page_slot), 0);
         }
         else
         {
-            tpage = getTPage(
-                texture_depth, FIELD_TILE_ABR(texture_attrs),
-                FIELD_TILE_LOWER_BANK_PAGE_X(page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
+            tpage = getTPage(texture_depth, FIELD_TILE_ABR(texture_attrs), FIELD_TILE_LOWER_BANK_PAGE_X(page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
         }
         record->tail.quad.tpage = tpage;
         if (!(record_flags & FIELD_TILE_REC_SHARED_TPAGE))
@@ -330,16 +312,12 @@ void field_build_quad_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32
 
             if (second_page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
             {
-                second_tpage = getTPage(
-                    texture_depth, FIELD_TILE_ABR(second_texture_attrs),
-                    FIELD_TILE_UPPER_BANK_PAGE_X(second_page_slot), 0);
+                second_tpage = getTPage(texture_depth, FIELD_TILE_ABR(second_texture_attrs), FIELD_TILE_UPPER_BANK_PAGE_X(second_page_slot), 0);
             }
             else
             {
-                second_tpage = getTPage(
-                    texture_depth, FIELD_TILE_ABR(second_texture_attrs),
-                    FIELD_TILE_LOWER_BANK_PAGE_X(second_page_slot),
-                    FIELD_TILE_LOWER_BANK_VRAM_Y);
+                second_tpage =
+                    getTPage(texture_depth, FIELD_TILE_ABR(second_texture_attrs), FIELD_TILE_LOWER_BANK_PAGE_X(second_page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
             }
             if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
             {
@@ -349,7 +327,7 @@ void field_build_quad_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32
             }
             else
             {
-                FieldTileRec *prev = (FieldTileRec *) ((u8 *) record - 4);
+                FieldTileRec* prev = (FieldTileRec*)((u8*)record - 4);
 
                 prev->tail.quad.u = ((desc->packed_uv & FIELD_TILE_U_MASK) * FIELD_TILE_SIZE) + 0xF;
                 prev->tail.quad.v = desc->packed_uv & FIELD_TILE_V_MASK;
@@ -359,7 +337,7 @@ void field_build_quad_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32
     }
     else
     {
-        *(s32 *) record = -1;
+        *(s32*)record = -1;
     }
 }
 
@@ -441,13 +419,13 @@ typedef struct
 typedef struct FieldPart FieldPart;
 struct FieldPart
 {
-    FieldPart *next;        /* 0x00 */
-    FieldPartDef *def;      /* 0x04 */
+    FieldPart* next;   /* 0x00 */
+    FieldPartDef* def; /* 0x04 */
     u8 _pad0[0xC - 8];
     /** 0x0C bit plane: one bit per grid cell, row-major, LSB first. */
-    s32 *bits;
+    s32* bits;
     /** 0x10 packed stream of FieldCellRec, one per set bit. */
-    u8 *records;
+    u8* records;
     u8 _pad1[0x18 - 0x14];
     /**
      * 0x18 texture-page word shared by every cell; when non-zero it is emitted
@@ -465,9 +443,9 @@ struct FieldPart
     u8 _pad2[0x26 - 0x23];
     /** 0x26 number of instances; zero means the part is skipped entirely. */
     u16 instance_count;
-    s32 x;                  /* 0x28 x offset within the object */
-    s32 y;                  /* 0x2C y offset within the object */
-    s32 z;                  /* 0x30 z offset within the object */
+    s32 x; /* 0x28 x offset within the object */
+    s32 y; /* 0x2C y offset within the object */
+    s32 z; /* 0x30 z offset within the object */
     u8 _pad3[0x36 - 0x34];
     /** 0x36 reload period for the sweep phase at 0x38. */
     u16 sweep_period;
@@ -489,10 +467,10 @@ struct FieldPart
      * to unk46 on the first (topmost) row and unk44 on the last, and the
      * column weight to the "left" pair on the first (leftmost) column.
      */
-    s16 clut_bl;            /* 0x44 bottom left */
-    s16 clut_tl;            /* 0x46 top left */
-    s16 clut_br;            /* 0x48 bottom right */
-    s16 clut_tr;            /* 0x4A top right */
+    s16 clut_bl; /* 0x44 bottom left */
+    s16 clut_tl; /* 0x46 top left */
+    s16 clut_br; /* 0x48 bottom right */
+    s16 clut_tr; /* 0x4A top right */
 };
 
 /**
@@ -501,18 +479,18 @@ struct FieldPart
 typedef struct FieldObj FieldObj;
 struct FieldObj
 {
-    FieldObj *next;         /* 0x00 */
-    FieldObjDef *def;       /* 0x04 */
-    FieldPart *parts;       /* 0x08 head of the part list */
-    FieldObjFlags flags;    /* 0x0C */
-    s32 unk10;              /* 0x10 compared when matching two objects */
-    u16 unk14;              /* 0x14 compared when matching two objects */
+    FieldObj* next;      /* 0x00 */
+    FieldObjDef* def;    /* 0x04 */
+    FieldPart* parts;    /* 0x08 head of the part list */
+    FieldObjFlags flags; /* 0x0C */
+    s32 unk10;           /* 0x10 compared when matching two objects */
+    u16 unk14;           /* 0x14 compared when matching two objects */
     u8 _pad0[0x1C - 0x16];
-    s32 x;                  /* 0x1C x offset */
-    s32 y;                  /* 0x20 y offset */
-    s32 z;                  /* 0x24 z offset */
-    s32 drift_x;            /* 0x28 accumulated x drift */
-    s32 drift_y;            /* 0x2C accumulated y drift */
+    s32 x;       /* 0x1C x offset */
+    s32 y;       /* 0x20 y offset */
+    s32 z;       /* 0x24 z offset */
+    s32 drift_x; /* 0x28 accumulated x drift */
+    s32 drift_y; /* 0x2C accumulated y drift */
 };
 
 /**
@@ -525,11 +503,11 @@ struct FieldObj
 typedef struct
 {
     u8 _pad0[4];
-    u16 *pixel_data;       /* 0x04 strip pixel-source base */
+    u16* pixel_data; /* 0x04 strip pixel-source base */
     u8 _pad1[0x28 - 8];
-    u16 pixel_stride;      /* 0x28 source stride, in halfwords */
+    u16 pixel_stride; /* 0x28 source stride, in halfwords */
     u8 _pad2[0x30 - 0x2A];
-    s16 unk30;             /* 0x30 */
+    s16 unk30; /* 0x30 */
 } FieldSceneHeader;
 
 /**
@@ -567,8 +545,8 @@ typedef struct
 typedef struct FieldMarker FieldMarker;
 struct FieldMarker
 {
-    FieldMarker *next;      /* 0x00 */
-    FieldMarkerDef *def;    /* 0x04 */
+    FieldMarker* next;   /* 0x00 */
+    FieldMarkerDef* def; /* 0x04 */
     /** 0x08 third point, horizontal. */
     u16 x2;
     /** 0x0A third point, vertical (halved before use). */
@@ -588,33 +566,33 @@ struct FieldMarker
 typedef struct FieldImageReq FieldImageReq;
 struct FieldImageReq
 {
-    FieldImageReq *next; /* 0x00 */
+    FieldImageReq* next; /* 0x00 */
     RECT rect;           /* 0x04 destination rectangle in VRAM */
-    u_long *data;        /* 0x0C source pixel data */
+    u_long* data;        /* 0x0C source pixel data */
 };
 
 /** @brief Definition record shared by the animation and sequence lists. */
 typedef struct
 {
-    u8 unk0;   /* 0x00 */
-    u8 unk1;   /* 0x01 */
-    u8 unk2;   /* 0x02 */
+    u8 unk0; /* 0x00 */
+    u8 unk1; /* 0x01 */
+    u8 unk2; /* 0x02 */
     u8 _pad0;
-    u8 flags;  /* 0x04 low three bits select the handler */
-    u8 unk5;   /* 0x05 */
-    u8 unk6;   /* 0x06 */
+    u8 flags; /* 0x04 low three bits select the handler */
+    u8 unk5;  /* 0x05 */
+    u8 unk6;  /* 0x06 */
     /** 0x07 handler sub-kind; the high byte of the word read at 0x04. */
     u8 handler_group;
-    u16 unk8;  /* 0x08 */
-    u16 unkA;  /* 0x0A */
-    u8 unkC;   /* 0x0C */
-    u8 unkD;   /* 0x0D */
-    u8 unkE;   /* 0x0E */
-    u8 unkF;   /* 0x0F */
-    u8 unk10;  /* 0x10 */
+    u16 unk8; /* 0x08 */
+    u16 unkA; /* 0x0A */
+    u8 unkC;  /* 0x0C */
+    u8 unkD;  /* 0x0D */
+    u8 unkE;  /* 0x0E */
+    u8 unkF;  /* 0x0F */
+    u8 unk10; /* 0x10 */
     u8 _pad2;
     u16 unk12; /* 0x12 */
-    u8 *data;  /* 0x14 handler-specific data */
+    u8* data;  /* 0x14 handler-specific data */
 } FieldAnimDef;
 
 /**
@@ -633,7 +611,7 @@ typedef struct
 typedef struct
 {
     /** 0x00 packed tile descriptors, one 4-byte entry per grid cell. */
-    FieldTileDesc *tiles;
+    FieldTileDesc* tiles;
     u8 _pad0[8 - 4];
     union
     {
@@ -661,7 +639,7 @@ typedef struct
 typedef struct
 {
     u8 _pad0[0x10];
-    FieldTileGrid *grid; /* 0x10 */
+    FieldTileGrid* grid; /* 0x10 */
 } FieldTileAnimDef;
 
 /** @brief Element of an animation node's cel ring. */
@@ -686,7 +664,7 @@ typedef struct
 {
     u8 _pad0[4];
     /** 0x04 count halfword followed by the palette entries themselves. */
-    u16 *data;
+    u16* data;
 } FieldTintPal;
 
 typedef struct FieldAnimCel FieldAnimCel;
@@ -704,9 +682,9 @@ typedef struct
 {
     u8 _pad0[4];
     /** 0x04 record holding the palette this tint is built from. */
-    FieldTintPal *palette;
+    FieldTintPal* palette;
     /** 0x08 head of the cel list this source tints (field_tint_animation_cel_list only). */
-    FieldAnimCel *cels;
+    FieldAnimCel* cels;
     u8 _pad1[0x10 - 0xC];
     u16 red;         /* 0x10 */
     u16 green;       /* 0x12 */
@@ -718,14 +696,14 @@ typedef struct
 
 struct FieldAnimCel
 {
-    FieldAnimCel *next; /* 0x00 */
+    FieldAnimCel* next; /* 0x00 */
     /** 0x04 grid this cel's bit plane and tile records are laid out on. */
-    FieldTileGrid *grid;
+    FieldTileGrid* grid;
     u8 _pad0[0xC - 8];
     /** 0x0C tile-presence bitmap, one bit per grid cell, LSB first. */
-    u32 *mask;
+    u32* mask;
     /** 0x10 packed destination tile records, advanced past every present tile. */
-    u8 *tiles;
+    u8* tiles;
     u8 _pad1[0x18 - 0x14];
     /** 0x18 when set, the tile record is 4 bytes shorter. */
     s32 tpage_word;
@@ -759,11 +737,11 @@ typedef union
 typedef struct FieldAnim FieldAnim;
 struct FieldAnim
 {
-    FieldAnim *next;      /* 0x00 */
-    FieldAnimDef *def;    /* 0x04 */
+    FieldAnim* next;   /* 0x00 */
+    FieldAnimDef* def; /* 0x04 */
     u8 _pad0[0xC - 8];
-    FieldAnimCel *cels;   /* 0x0C */
-    s32 unk10;            /* 0x10 */
+    FieldAnimCel* cels; /* 0x0C */
+    s32 unk10;          /* 0x10 */
     /** 0x14 last horizontal tween offset pushed to the target (see field_apply_animation_tween). */
     s32 tween_x;
     /** 0x18 last vertical tween offset pushed to the target. */
@@ -771,27 +749,27 @@ struct FieldAnim
     /** 0x1C last depth tween offset pushed to the target. */
     s32 tween_z;
     /** 0x20 base of the per-frame packed tile records. */
-    u8 *frame_data;
+    u8* frame_data;
     FieldAnimFlags flags; /* 0x24 */
     /** 0x28 remaining loop repeats; decremented each time the cel ring wraps. */
     u8 repeat_count;
     u8 _pad2;
-    u16 timer;            /* 0x2A */
+    u16 timer; /* 0x2A */
     /** 0x2C tile records per frame, i.e. the stride from one frame to the next. */
     u16 frame_tile_count;
     u8 _pad3[0x30 - 0x2E];
-    FieldImageReq req;    /* 0x30 */
-    u16 buf40[0x10];      /* 0x40 */
-    u16 buf60[0xF0];      /* 0x60 */
-    u16 buf240[1];        /* 0x240 */
+    FieldImageReq req; /* 0x30 */
+    u16 buf40[0x10];   /* 0x40 */
+    u16 buf60[0xF0];   /* 0x60 */
+    u16 buf240[1];     /* 0x240 */
 };
 
 /** @brief Element of the scene's sequence list (0x14). */
 typedef struct FieldSeq FieldSeq;
 struct FieldSeq
 {
-    FieldSeq *next;    /* 0x00 */
-    FieldAnimDef *def; /* 0x04 */
+    FieldSeq* next;    /* 0x00 */
+    FieldAnimDef* def; /* 0x04 */
     s32 flags;         /* 0x08 */
     u16 unkC;          /* 0x0C */
 };
@@ -806,13 +784,13 @@ typedef struct
         u16 y;
         u16 w;
         u16 h;
-    } rects[3];        /* 0x20 */
+    } rects[3]; /* 0x20 */
     u8 _pad1[0x98 - 0x38];
-    u8 chunk_idx;      /* 0x98 */
+    u8 chunk_idx; /* 0x98 */
     u8 _pad2[0x9D - 0x99];
-    u8 frame_ready;    /* 0x9D */
+    u8 frame_ready; /* 0x9D */
     u8 _pad3;
-    u8 end_state;      /* 0x9F */
+    u8 end_state; /* 0x9F */
 } FieldMovieState;
 
 /**
@@ -827,8 +805,8 @@ typedef struct
     u16 x_angle_index; /* 0x0A angle-table index for the horizontal step */
     u16 y_angle_index; /* 0x0C angle-table index for the vertical step */
     u8 _pad1[0x10 - 0xE];
-    s16 base_x;         /* 0x10 horizontal base offset (<< 8) */
-    s16 base_y;         /* 0x12 vertical base offset (<< 8) */
+    s16 base_x; /* 0x10 horizontal base offset (<< 8) */
+    s16 base_y; /* 0x12 vertical base offset (<< 8) */
 } FieldNodeDef;
 
 /**
@@ -841,37 +819,37 @@ typedef struct
 typedef struct FieldNode FieldNode;
 struct FieldNode
 {
-    FieldNode *next;   /* 0x00 */
-    FieldNodeDef *def; /* 0x04 */
+    FieldNode* next;   /* 0x00 */
+    FieldNodeDef* def; /* 0x04 */
     u8 _pad0[0xC - 8];
-    FieldPart *part;   /* 0x0C owning part */
+    FieldPart* part; /* 0x0C owning part */
     u8 _pad1[0x28 - 0x10];
-    s32 delta_x;       /* 0x28 horizontal delta since the previous frame */
-    s32 delta_y;       /* 0x2C vertical delta since the previous frame */
+    s32 delta_x; /* 0x28 horizontal delta since the previous frame */
+    s32 delta_y; /* 0x2C vertical delta since the previous frame */
     u8 _pad2[0x38 - 0x30];
-    s32 x;             /* 0x38 current horizontal position */
-    s32 y;             /* 0x3C current vertical position */
+    s32 x; /* 0x38 current horizontal position */
+    s32 y; /* 0x3C current vertical position */
 };
 
 typedef struct
 {
-    FieldSceneHeader *header; /* 0x00 */
-    FieldObj *objects;        /* 0x04 head of the object list */
-    FieldNode *nodes;       /* 0x08 head of the attached-node list */
+    FieldSceneHeader* header; /* 0x00 */
+    FieldObj* objects;        /* 0x04 head of the object list */
+    FieldNode* nodes;         /* 0x08 head of the attached-node list */
     u8 _pad0[0x10 - 0xC];
-    FieldMarker *markers;   /* 0x10 head of the marker list */
-    FieldSeq *seqs;         /* 0x14 head of the sequence list */
-    FieldAnim *anims;       /* 0x18 head of the animation list */
-    FieldAnim *strips;      /* 0x1C head of the strip list */
-    FieldAnim *sprites;     /* 0x20 head of the sprite list */
-    FieldAnim *effects;     /* 0x24 head of the effect list */
+    FieldMarker* markers; /* 0x10 head of the marker list */
+    FieldSeq* seqs;       /* 0x14 head of the sequence list */
+    FieldAnim* anims;     /* 0x18 head of the animation list */
+    FieldAnim* strips;    /* 0x1C head of the strip list */
+    FieldAnim* sprites;   /* 0x20 head of the sprite list */
+    FieldAnim* effects;   /* 0x24 head of the effect list */
     u8 _pad1[0x34 - 0x28];
-    FieldImageReq *uploads; /* 0x34 head of the pending upload list */
+    FieldImageReq* uploads; /* 0x34 head of the pending upload list */
 } FieldScene;
 
 typedef struct
 {
-    FieldScene *scene;
+    FieldScene* scene;
 } FieldSceneGlobals;
 
 /**
@@ -898,9 +876,9 @@ typedef struct
 typedef struct
 {
     u8 _pad[4];
-    s32 x;                  /* 0x04 == g_field_camera_x */
-    s32 y;                  /* 0x08 == g_field_camera_y */
-    s32 z;                  /* 0x0C == g_field_camera_z */
+    s32 x; /* 0x04 == g_field_camera_x */
+    s32 y; /* 0x08 == g_field_camera_y */
+    s32 z; /* 0x0C == g_field_camera_z */
 } FieldCamera;
 
 extern FieldSceneGlobals g_field_scene;
@@ -911,8 +889,8 @@ extern s32 g_field_camera_z;
 
 s32 rcos(s32);
 s32 rsin(s32);
-void field_draw_marker_overlay(u32 *, u32 *);
-void field_draw_part(FieldPart *, s32, s32 *, s32);
+void field_draw_marker_overlay(u32*, u32*);
+void field_draw_part(FieldPart*, s32, s32*, s32);
 
 /**
  * @brief Size the field working buffer from the current scene's object list.
@@ -950,9 +928,9 @@ void field_draw_part(FieldPart *, s32, s32 *, s32);
  */
 void field_size_work_buffer(void)
 {
-    FieldMemState *state = (FieldMemState *) 0x801ED000;
-    FieldObj *obj;
-    FieldPart *part;
+    FieldMemState* state = (FieldMemState*)0x801ED000;
+    FieldObj* obj;
+    FieldPart* part;
     s32 n;
     u32 total;
     u32 base;
@@ -1013,12 +991,10 @@ void field_size_work_buffer(void)
                         }
                     }
                     part = part->next;
-                }
-                while (part != 0);
+                } while (part != 0);
             }
             obj = obj->next;
-        }
-        while (obj != 0);
+        } while (obj != 0);
     }
     total = total + 0xA000;
     base = state->top;
@@ -1076,9 +1052,9 @@ void field_size_work_buffer(void)
 void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
 {
     s32 viewport[5];
-    FieldObj *obj;
-    FieldObjDef *def;
-    FieldPart *part;
+    FieldObj* obj;
+    FieldObjDef* def;
+    FieldPart* part;
     s32 scroll_x;
     s32 scroll_y;
     s32 scroll_z;
@@ -1149,8 +1125,8 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
 
                         if ((sy == 0x10) || (update_mode == 2))
                         {
-                            scroll_y = ((FieldCamera *) 0x801ED480)->y;
-                            scroll_z = ((FieldCamera *) 0x801ED480)->z;
+                            scroll_y = ((FieldCamera*)0x801ED480)->y;
+                            scroll_z = ((FieldCamera*)0x801ED480)->z;
                         }
                         else
                         {
@@ -1329,17 +1305,15 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
                             }
                         }
                         part = part->next;
-                    }
-                    while (part != 0);
+                    } while (part != 0);
                 }
             }
             obj = obj->next;
-        }
-        while (obj != 0);
+        } while (obj != 0);
     }
     if (g_field_marker_overlay_enabled != 0)
     {
-        field_draw_marker_overlay((u32 *)cursor_ptr, (u32 *)ot_base);
+        field_draw_marker_overlay((u32*)cursor_ptr, (u32*)ot_base);
     }
 }
 
@@ -1393,14 +1367,14 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
  *
  * @see decomp.me (100%) TODO
  */
-void field_draw_marker_overlay(u32 *cursor, u32 *ot)
+void field_draw_marker_overlay(u32* cursor, u32* ot)
 {
     s16 pos[2];
-    FieldScene *scene;
-    FieldMarker *marker;
-    FieldMarkerDef *def;
-    LINE_F4 *prim;
-    void *prev;
+    FieldScene* scene;
+    FieldMarker* marker;
+    FieldMarkerDef* def;
+    LINE_F4* prim;
+    void* prev;
     s32 sx;
     s32 sy;
     s32 cam_y;
@@ -1408,22 +1382,20 @@ void field_draw_marker_overlay(u32 *cursor, u32 *ot)
     s32 depth;
     s32 value;
     s32 digits;
-    u32 *ot_entry;
+    u32* ot_entry;
 
-    prim = (LINE_F4 *)*cursor;
+    prim = (LINE_F4*)*cursor;
     prev = NULL;
     scene = g_field_scene.scene;
     sx = g_field_camera_x / 256;
     do
     {
         cam_y = g_field_camera_y / 256;
-    }
-    while (0);
+    } while (0);
     do
     {
         sy = cam_y - g_field_camera_z / 512;
-    }
-    while (0);
+    } while (0);
     marker = scene->markers;
     if (marker != NULL)
     {
@@ -1449,7 +1421,7 @@ void field_draw_marker_overlay(u32 *cursor, u32 *ot)
             }
             prev = prim;
             prim = prim + 1;
-            setLineF2((LINE_F2 *)prim);
+            setLineF2((LINE_F2*)prim);
             setRGB0(prim, 0xFF, 0, 0);
             prim->x0 = def->x0 + sx;
             prim->y0 = base_y - HALF_TOWARD_ZERO((s16)def->y0);
@@ -1457,7 +1429,7 @@ void field_draw_marker_overlay(u32 *cursor, u32 *ot)
             prim->y1 = base_y - HALF_TOWARD_ZERO((s16)marker->y2);
             setaddr(prev, prim);
             prev = prim;
-            prim = (LINE_F4 *)((LINE_F2 *)prim + 1);
+            prim = (LINE_F4*)((LINE_F2*)prim + 1);
             pos[0] = def->x0 + sx;
             pos[1] = base_y - HALF_TOWARD_ZERO((s16)def->y0);
             value = def->label;
@@ -1466,14 +1438,13 @@ void field_draw_marker_overlay(u32 *cursor, u32 *ot)
             {
                 digits = 1;
             }
-            prim = (LINE_F4 *)func_800AD208(ot_entry, prim, value, digits, pos);
+            prim = (LINE_F4*)func_800AD208(ot_entry, prim, value, digits, pos);
             marker = marker->next;
-        }
-        while (marker != NULL);
+        } while (marker != NULL);
     }
     if (prev != NULL)
     {
-        addPrims(&ot[-1], (void *)*cursor, prev);
+        addPrims(&ot[-1], (void*)*cursor, prev);
         *cursor = (u32)prim;
     }
 }
@@ -1595,7 +1566,7 @@ typedef struct
  *
  * @see decomp.me (100%) TODO
  */
-void field_emit_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32 ot_base)
+void field_emit_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldViewport* origin, s32 ot_base)
 {
     s32 uv_word;
     s32 tpage_word;
@@ -1619,13 +1590,13 @@ void field_emit_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *or
     u32 clut_b;
     s16 val_a;
     s16 val_b;
-    FieldPrim *prim;
-    u8 *cursor;
-    u8 *chain;
-    u8 *recp;
-    s32 *bitp;
+    FieldPrim* prim;
+    u8* cursor;
+    u8* chain;
+    u8* recp;
+    s32* bitp;
     s32 width;
-    FieldPartDef *info;
+    FieldPartDef* info;
 
     last_code = 0;
     bits = 0;
@@ -1657,7 +1628,7 @@ void field_emit_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *or
     bitp = part->bits;
     recp = part->records;
     info = part->def;
-    cursor = (u8 *) *cursor_ptr;
+    cursor = (u8*)*cursor_ptr;
     y = origin->y;
     height = info->u.b.rows;
     row = height;
@@ -1776,7 +1747,7 @@ void field_emit_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *or
             }
             if ((bits & bit) != 0)
             {
-                uv_word = ((FieldCellRec *) recp)->uv_clut;
+                uv_word = ((FieldCellRec*)recp)->uv_clut;
                 if (uv_word != -1)
                 {
                     if (interp != 0)
@@ -1800,7 +1771,7 @@ void field_emit_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *or
                         {
                             if (chain != NULL)
                             {
-                                addPrims((FieldPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+                                addPrims((FieldPrim*)((clut_cur * 8) + ot_base), chain, prim);
                                 chain = NULL;
                             }
                             clut_cur = clut;
@@ -1808,57 +1779,57 @@ void field_emit_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *or
                     }
                     if (tpage_word != 0)
                     {
-                        prim = (FieldPrim *) cursor;
+                        prim = (FieldPrim*)cursor;
                         if (chain == NULL)
                         {
                             chain = cursor;
                             cursor += 8;
-                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x01000000;
                             prim->code = tpage_word;
-                            prim = (FieldPrim *) cursor;
+                            prim = (FieldPrim*)cursor;
                         }
                     }
                     else
                     {
-                        prim = (FieldPrim *) cursor;
+                        prim = (FieldPrim*)cursor;
                         if (chain == NULL)
                         {
                             chain = cursor;
                             cursor += 8;
-                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x01000000;
                             if (code_word != 0)
                             {
-                                last_code = (prim->code = ((FieldCellRec *) recp)->rgb_code);
+                                last_code = (prim->code = ((FieldCellRec*)recp)->rgb_code);
                             }
                             else
                             {
-                                last_code = (prim->code = ((FieldCellRec *) recp)->tpage);
+                                last_code = (prim->code = ((FieldCellRec*)recp)->tpage);
                             }
                         }
-                        else if (last_code != ((FieldCellRec *) recp)->tpage)
+                        else if (last_code != ((FieldCellRec*)recp)->tpage)
                         {
                             cursor += 8;
-                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x01000000;
+                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x01000000;
                             if (code_word != 0)
                             {
-                                last_code = (prim->code = ((FieldCellRec *) recp)->rgb_code);
+                                last_code = (prim->code = ((FieldCellRec*)recp)->rgb_code);
                             }
                             else
                             {
-                                last_code = (prim->code = ((FieldCellRec *) recp)->tpage);
+                                last_code = (prim->code = ((FieldCellRec*)recp)->tpage);
                             }
                         }
-                        prim = (FieldPrim *) cursor;
+                        prim = (FieldPrim*)cursor;
                     }
                     cursor += 0x10;
-                    prim->tag = ((u32) cursor & 0xFFFFFF) | 0x03000000;
+                    prim->tag = ((u32)cursor & 0xFFFFFF) | 0x03000000;
                     if (code_word != 0)
                     {
                         prim->code = code_word;
                     }
                     else
                     {
-                        prim->code = ((FieldCellRec *) recp)->rgb_code;
+                        prim->code = ((FieldCellRec*)recp)->rgb_code;
                     }
                     prim->xy = (x & 0xFFFF) | (y << 16);
                     prim->uv = uv_word;
@@ -1874,9 +1845,9 @@ void field_emit_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *or
     }
     if (chain != NULL)
     {
-        addPrims((FieldPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+        addPrims((FieldPrim*)((clut_cur * 8) + ot_base), chain, prim);
     }
-    *cursor_ptr = (s32 *) cursor;
+    *cursor_ptr = (s32*)cursor;
 }
 
 /**
@@ -2000,10 +1971,10 @@ typedef union
  * @see working/func_80055D20/status.md for the full match log and the residue.
  * @see decomp.me (92.08%) TODO
  */
-void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32 ot_base)
+void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldViewport* origin, s32 ot_base)
 {
-    u8 *recp;
-    s32 *bitp;
+    u8* recp;
+    s32* bitp;
     s32 tpage_word;
     s32 code_word;
     s32 bits;
@@ -2039,13 +2010,13 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
     s32 uv_word;
     u32 clut;
     u32 clut_b;
-    FieldColStep *steps;
-    FieldPoint *pt;
-    FieldPoint *prev_row;
-    FieldPoint *this_row;
-    FieldPolyPrim *prim;
-    u8 *cursor;
-    u8 *chain;
+    FieldColStep* steps;
+    FieldPoint* pt;
+    FieldPoint* prev_row;
+    FieldPoint* this_row;
+    FieldPolyPrim* prim;
+    u8* cursor;
+    u8* chain;
 
     bits = 0;
     clut_left = 0;
@@ -2074,7 +2045,7 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
     bit = 0;
     bitp = part->bits;
     recp = part->records;
-    cursor = (u8 *) *cursor_ptr;
+    cursor = (u8*)*cursor_ptr;
     prim = NULL;
     chain = NULL;
     width = part->def->u.b.cols;
@@ -2114,7 +2085,7 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
         break;
     }
     scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
-    steps = (FieldColStep *) 0x1F800000;
+    steps = (FieldColStep*)0x1F800000;
     for (col = width; col != -1; col--)
     {
         scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(x_off * part->scale_x, 8) * cos_b, 12);
@@ -2126,8 +2097,8 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
     scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
     dx = scaled * sin_c;
     dy = scaled * cos_c;
-    steps = (FieldColStep *) 0x1F800000;
-    pt = (FieldPoint *) 0x1F800200;
+    steps = (FieldColStep*)0x1F800000;
+    pt = (FieldPoint*)0x1F800200;
     for (col = width; col != -1; col--)
     {
         pt->p.x = SHIFT_TOWARD_ZERO(steps->cos_term - dx, 16) + cx;
@@ -2162,21 +2133,21 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
             }
             if (flip == 0)
             {
-                prev_row = (FieldPoint *) 0x1F800200;
-                this_row = (FieldPoint *) 0x1F800300;
+                prev_row = (FieldPoint*)0x1F800200;
+                this_row = (FieldPoint*)0x1F800300;
                 flip = 1;
             }
             else
             {
-                prev_row = (FieldPoint *) 0x1F800300;
-                this_row = (FieldPoint *) 0x1F800200;
+                prev_row = (FieldPoint*)0x1F800300;
+                this_row = (FieldPoint*)0x1F800200;
                 flip = 0;
             }
             y_off += 0x10;
             scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
             dx = scaled * sin_c;
             dy = scaled * cos_c;
-            steps = (FieldColStep *) 0x1F800000;
+            steps = (FieldColStep*)0x1F800000;
             pt = this_row;
             for (col = width; col != -1; col--)
             {
@@ -2194,13 +2165,13 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
                 }
                 if ((bits & bit) != 0)
                 {
-                    visible = ((prev_row[0].p.x >= 0) || (prev_row[1].p.x >= 0) || (this_row[0].p.x >= 0) || (this_row[1].p.x >= 0))
-                           && ((prev_row[0].p.y >= 0) || (prev_row[1].p.y >= 0) || (this_row[0].p.y >= 0) || (this_row[1].p.y >= 0))
-                           && ((prev_row[0].p.x < 0x140) || (prev_row[1].p.x < 0x140) || (this_row[0].p.x < 0x140) || (this_row[1].p.x < 0x140))
-                           && ((prev_row[0].p.y < 0xE0) || (prev_row[1].p.y < 0xE0) || (this_row[0].p.y < 0xE0) || (this_row[1].p.y < 0xE0));
+                    visible = ((prev_row[0].p.x >= 0) || (prev_row[1].p.x >= 0) || (this_row[0].p.x >= 0) || (this_row[1].p.x >= 0)) &&
+                              ((prev_row[0].p.y >= 0) || (prev_row[1].p.y >= 0) || (this_row[0].p.y >= 0) || (this_row[1].p.y >= 0)) &&
+                              ((prev_row[0].p.x < 0x140) || (prev_row[1].p.x < 0x140) || (this_row[0].p.x < 0x140) || (this_row[1].p.x < 0x140)) &&
+                              ((prev_row[0].p.y < 0xE0) || (prev_row[1].p.y < 0xE0) || (this_row[0].p.y < 0xE0) || (this_row[1].p.y < 0xE0));
                     if (visible != 0)
                     {
-                        uv_word = ((FieldCellRec *) recp)->uv_clut;
+                        uv_word = ((FieldCellRec*)recp)->uv_clut;
                         if (uv_word != -1)
                         {
                             if (interp != 0)
@@ -2223,26 +2194,26 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
                                 {
                                     if (chain != NULL)
                                     {
-                                        addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+                                        addPrims((FieldPolyPrim*)((clut_cur * 8) + ot_base), chain, prim);
                                         chain = NULL;
                                     }
                                     clut_cur = clut;
                                 }
                             }
-                            prim = (FieldPolyPrim *) cursor;
+                            prim = (FieldPolyPrim*)cursor;
                             if (chain == NULL)
                             {
                                 chain = cursor;
                             }
                             cursor += 0x28;
-                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x09000000;
+                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x09000000;
                             if (code_word != 0)
                             {
                                 prim->code = code_word;
                             }
                             else
                             {
-                                prim->code = ((FieldCellRec *) recp)->rgb_code;
+                                prim->code = ((FieldCellRec*)recp)->rgb_code;
                             }
                             if (tpage_word != 0)
                             {
@@ -2250,11 +2221,11 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
                             }
                             else if (code_word != 0)
                             {
-                                prim->uv1 = ((FieldCellRec *) recp)->rgb_code;
+                                prim->uv1 = ((FieldCellRec*)recp)->rgb_code;
                             }
                             else
                             {
-                                prim->uv1 = ((FieldCellRec *) recp)->tpage;
+                                prim->uv1 = ((FieldCellRec*)recp)->tpage;
                             }
                             prim->uv0 = uv_word;
                             prim->uv2 = (uv_word & 0xFFFF) + 0xF00;
@@ -2276,9 +2247,9 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
     }
     if (chain != NULL)
     {
-        addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
+        addPrims((FieldPolyPrim*)((clut_cur * 8) + ot_base), chain, prim);
     }
-    *cursor_ptr = (s32 *) cursor;
+    *cursor_ptr = (s32*)cursor;
 }
 
 /**
@@ -2315,12 +2286,12 @@ void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldView
  *
  * @see decomp.me (100%) TODO
  */
-FieldPart *field_find_shareable_part(FieldScene *scene, FieldObj *obj, FieldPart *part, s32 key)
+FieldPart* field_find_shareable_part(FieldScene* scene, FieldObj* obj, FieldPart* part, s32 key)
 {
-    FieldObj *o;
-    FieldPart *p;
-    FieldObjDef *want;
-    FieldObjDef *have;
+    FieldObj* o;
+    FieldPart* p;
+    FieldObjDef* want;
+    FieldObjDef* have;
 
     if (!(part->def->u.word & 0x80))
     {
@@ -2338,8 +2309,7 @@ FieldPart *field_find_shareable_part(FieldScene *scene, FieldObj *obj, FieldPart
                     {
                         want = obj->def;
                         have = o->def;
-                        if ((want == have)
-                         || ((want->shared_source == have->shared_source) && (obj->unk10 == o->unk10) && (obj->unk14 == o->unk14)))
+                        if ((want == have) || ((want->shared_source == have->shared_source) && (obj->unk10 == o->unk10) && (obj->unk14 == o->unk14)))
                         {
                             return p;
                         }
@@ -2380,12 +2350,12 @@ FieldPart *field_find_shareable_part(FieldScene *scene, FieldObj *obj, FieldPart
  *
  * @see decomp.me (100%) TODO
  */
-void field_draw_part(FieldPart *part, s32 cursor_ptr, s32 *origin, s32 ot_base)
+void field_draw_part(FieldPart* part, s32 cursor_ptr, s32* origin, s32 ot_base)
 {
     switch (part->kind)
     {
     case 0:
-        field_emit_sprite_grid(part, (s32 **) cursor_ptr, (FieldViewport *) origin, ot_base);
+        field_emit_sprite_grid(part, (s32**)cursor_ptr, (FieldViewport*)origin, ot_base);
         break;
     case 1:
         break;
@@ -2393,7 +2363,7 @@ void field_draw_part(FieldPart *part, s32 cursor_ptr, s32 *origin, s32 ot_base)
     case 3:
     case 4:
     case 5:
-        field_emit_rotated_sprite_grid(part, (s32 **) cursor_ptr, (FieldViewport *) origin, ot_base);
+        field_emit_rotated_sprite_grid(part, (s32**)cursor_ptr, (FieldViewport*)origin, ot_base);
         break;
     }
 }
@@ -2419,8 +2389,8 @@ void field_draw_part(FieldPart *part, s32 cursor_ptr, s32 *origin, s32 ot_base)
  */
 void field_flush_vram_uploads(void)
 {
-    FieldScene *scene;
-    FieldImageReq *req;
+    FieldScene* scene;
+    FieldImageReq* req;
 
     scene = g_field_scene.scene;
     for (req = scene->uploads; req != NULL; req = req->next)
@@ -2460,35 +2430,35 @@ void func_800569FC(void)
 }
 
 /** @brief Movie/streaming control block at 0x801ED500. */
-#define FIELD_MOVIE_STATE ((volatile FieldMovieState *) 0x801ED500)
+#define FIELD_MOVIE_STATE ((volatile FieldMovieState*)0x801ED500)
 /** @brief Field CD/movie flag word at 0x801ED800. */
-#define FIELD_CD_FLAGS (*(volatile s32 *) 0x801ED800)
+#define FIELD_CD_FLAGS (*(volatile s32*)0x801ED800)
 
 extern u16 g_field_movie_frame_width;
 extern u16 g_field_movie_frame_height;
 /** @brief Pointer to the signed angle table indexed by FieldNodeDef. */
-extern s16 *g_field_node_angle_table;
+extern s16* g_field_node_angle_table;
 
 void func_800157B0(s32);
 s32 cdrom_process_state(void);
 void cdrom_reset(void);
-void cdrom_stream(s32, void *);
+void cdrom_stream(s32, void*);
 void cdrom_queue_seek(s32);
-void cdrom_queue_read(s32, void *);
+void cdrom_queue_read(s32, void*);
 s32 cdrom_can_queue_resource(s32);
-void field_update_part_sweep(FieldPart *);
-void field_blit_animation_frame(FieldAnimDef *, FieldAnim *, s32);
-void field_apply_animation_tween(FieldAnimDef *, FieldAnim *, s32);
-void field_update_animation_sfx(FieldAnimDef *, FieldAnim *);
-void field_retarget_cel_cluts(FieldAnimDef *, FieldAnimCel *, s32);
-u_long *field_blend_animation_frames(FieldAnimDef *, FieldAnim *);
-void field_tint_animation_cel(FieldAnimDef *, FieldAnimCel *, FieldTintSrc *, s32);
-void field_tint_animation_cel_list(FieldAnimDef *, FieldTintSrc *, s32);
-void field_advance_animation_keyframe(FieldAnimDef *, FieldAnim *);
-void field_retarget_cel_list_cluts(FieldAnimDef *, FieldTintSrc *, s32);
-void field_queue_vram_upload(FieldImageReq *);
+void field_update_part_sweep(FieldPart*);
+void field_blit_animation_frame(FieldAnimDef*, FieldAnim*, s32);
+void field_apply_animation_tween(FieldAnimDef*, FieldAnim*, s32);
+void field_update_animation_sfx(FieldAnimDef*, FieldAnim*);
+void field_retarget_cel_cluts(FieldAnimDef*, FieldAnimCel*, s32);
+u_long* field_blend_animation_frames(FieldAnimDef*, FieldAnim*);
+void field_tint_animation_cel(FieldAnimDef*, FieldAnimCel*, FieldTintSrc*, s32);
+void field_tint_animation_cel_list(FieldAnimDef*, FieldTintSrc*, s32);
+void field_advance_animation_keyframe(FieldAnimDef*, FieldAnim*);
+void field_retarget_cel_list_cluts(FieldAnimDef*, FieldTintSrc*, s32);
+void field_queue_vram_upload(FieldImageReq*);
 void func_80059F18(void);
-void func_8005A744(FieldSeq *, s32);
+void func_8005A744(FieldSeq*, s32);
 s32 func_8005A84C(s32, s32);
 void func_80084240(void);
 void func_80140358(s32, s32, s32, s32);
@@ -2526,21 +2496,21 @@ void func_80140D48(void);
  */
 void field_update_scene_animations(void)
 {
-    FieldScene *scene;
-    FieldSceneHeader *hdr;
-    FieldObj *obj;
-    FieldPart *part;
-    FieldAnim *anim;
-    FieldAnimDef *def;
-    FieldAnimDef *def2;
-    FieldAnimDef *def3;
-    FieldAnimCel *cel;
-    FieldImageReq *req;
-    FieldSeq *seq;
-    FieldSeq *walk;
-    FieldAnimDef *rec;
-    u16 *src;
-    u16 *dst;
+    FieldScene* scene;
+    FieldSceneHeader* hdr;
+    FieldObj* obj;
+    FieldPart* part;
+    FieldAnim* anim;
+    FieldAnimDef* def;
+    FieldAnimDef* def2;
+    FieldAnimDef* def3;
+    FieldAnimCel* cel;
+    FieldImageReq* req;
+    FieldSeq* seq;
+    FieldSeq* walk;
+    FieldAnimDef* rec;
+    u16* src;
+    u16* dst;
     s32 prev_state;
     s32 flags;
     s32 mode;
@@ -2591,13 +2561,13 @@ void field_update_scene_animations(void)
             if (anim->flags.word & 0x20)
             {
                 req = &anim->req;
-                if ((*(s32 *) &def->flags & 7) == 3)
+                if ((*(s32*)&def->flags & 7) == 3)
                 {
                     req->rect.x = def->unkC * 4 + 0x140;
                     req->rect.y = def->unkD * 0x10 + 0x100;
                     req->rect.w = def->unkE * 4;
                     req->rect.h = def->unkF * 0x10;
-                    req->data = (u_long *) (def->data + ((anim->flags.b.state * def->unkE * def->unkF) << 7));
+                    req->data = (u_long*)(def->data + ((anim->flags.b.state * def->unkE * def->unkF) << 7));
                     field_queue_vram_upload(req);
                 }
                 anim->flags.word &= ~0x20;
@@ -2613,7 +2583,7 @@ void field_update_scene_animations(void)
                     case 0:
                         if (cdrom_process_state() == 0)
                         {
-                            cdrom_stream(0xB, (void *) 0x80140000);
+                            cdrom_stream(0xB, (void*)0x80140000);
                             cdrom_queue_seek(def->unk1 * 2 + 0x16A6);
                             anim->flags.b.state = 1;
                             FIELD_CD_FLAGS |= 0x40;
@@ -2655,7 +2625,7 @@ void field_update_scene_animations(void)
                                         req->rect.y = FIELD_MOVIE_STATE->rects[cel->active].y;
                                         req->rect.w = FIELD_MOVIE_STATE->rects[cel->active].w;
                                         req->rect.h = FIELD_MOVIE_STATE->rects[cel->active].h;
-                                        req->data = (u_long *) 0x80140000;
+                                        req->data = (u_long*)0x80140000;
                                         field_queue_vram_upload(req);
                                         if (cel->active == 1)
                                         {
@@ -2675,7 +2645,7 @@ void field_update_scene_animations(void)
                                         cel = anim->cels;
                                         req->rect.x = 0x140;
                                         req->rect.y = 0x100;
-                                        req->data = (u_long *) 0x80140004;
+                                        req->data = (u_long*)0x80140004;
                                         req->rect.w = g_field_movie_frame_width;
                                         req->rect.h = g_field_movie_frame_height;
                                         field_queue_vram_upload(req);
@@ -2726,7 +2696,7 @@ void field_update_scene_animations(void)
                             if (FIELD_MOVIE_STATE->end_state == 2)
                             {
                                 cdrom_reset();
-                                cdrom_queue_read(def->unk1 * 2 + 0x16A7, (void *) 0x80140000);
+                                cdrom_queue_read(def->unk1 * 2 + 0x16A7, (void*)0x80140000);
                                 FIELD_MOVIE_STATE->end_state = 3;
                             }
                             anim->timer = 1;
@@ -2777,7 +2747,7 @@ void field_update_scene_animations(void)
                     req->rect.y = def2->unkD * 0x10 + 0x100;
                     req->rect.w = def2->unkE * 4;
                     req->rect.h = def2->unkF * 0x10;
-                    req->data = (u_long *) (def2->data + ((anim->flags.b.state * def2->unkE * def2->unkF) << 7));
+                    req->data = (u_long*)(def2->data + ((anim->flags.b.state * def2->unkE * def2->unkF) << 7));
                     field_queue_vram_upload(req);
                     break;
                 case 5:
@@ -2826,7 +2796,7 @@ void field_update_scene_animations(void)
                         dst = anim->buf40;
                         anim->flags.word = flags | 0x10;
                     }
-                    req->data = (u_long *) dst;
+                    req->data = (u_long*)dst;
                     count2 = 0;
                     if (anim->flags.b.state != 0)
                     {
@@ -2848,11 +2818,11 @@ void field_update_scene_animations(void)
                     }
                     if (def3->unkC == 0)
                     {
-                        src = (u16 *) ((u8 *) hdr->pixel_data + (def3->unkE << 5) + def3->unkF * 2 + count2 * 2);
+                        src = (u16*)((u8*)hdr->pixel_data + (def3->unkE << 5) + def3->unkF * 2 + count2 * 2);
                     }
                     else
                     {
-                        src = (u16 *) ((u8 *) hdr->pixel_data + (def3->unkE << 9) + def3->unkF * 2 + count2 * 2);
+                        src = (u16*)((u8*)hdr->pixel_data + (def3->unkE << 9) + def3->unkF * 2 + count2 * 2);
                     }
                     count--;
                     while (count != -1)
@@ -2864,11 +2834,11 @@ void field_update_scene_animations(void)
                     {
                         if (def3->unkC == 0)
                         {
-                            src = (u16 *) ((u8 *) hdr->pixel_data + (def3->unkE << 5) + def3->unkF * 2);
+                            src = (u16*)((u8*)hdr->pixel_data + (def3->unkE << 5) + def3->unkF * 2);
                         }
                         else
                         {
-                            src = (u16 *) ((u8 *) hdr->pixel_data + (def3->unkE << 9) + def3->unkF * 2);
+                            src = (u16*)((u8*)hdr->pixel_data + (def3->unkE << 9) + def3->unkF * 2);
                         }
                         count = count2 - 1;
                         while (count != -1)
@@ -2901,12 +2871,11 @@ void field_update_scene_animations(void)
                         req->rect.h = one;
                         if (anim->flags.b.state == 0)
                         {
-                            req->data = (u_long *) ((u8 *) hdr->pixel_data + (def->unkE << 5) + (def->unkF & 0xE) * 2);
+                            req->data = (u_long*)((u8*)hdr->pixel_data + (def->unkE << 5) + (def->unkF & 0xE) * 2);
                         }
                         else
                         {
-                            req->data = (u_long *) ((u8 *) hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 +
-                                                    ((anim->flags.b.state - 1) * def->unk10) * 2);
+                            req->data = (u_long*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 + ((anim->flags.b.state - 1) * def->unk10) * 2);
                         }
                     }
                     else
@@ -2917,12 +2886,11 @@ void field_update_scene_animations(void)
                         req->rect.h = one;
                         if (anim->flags.b.state == 0)
                         {
-                            req->data = (u_long *) ((u8 *) hdr->pixel_data + (def->unkE << 9) + def->unkF * 2);
+                            req->data = (u_long*)((u8*)hdr->pixel_data + (def->unkE << 9) + def->unkF * 2);
                         }
                         else
                         {
-                            req->data = (u_long *) ((u8 *) hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 +
-                                                    ((anim->flags.b.state - 1) * def->unk10) * 2);
+                            req->data = (u_long*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 + ((anim->flags.b.state - 1) * def->unk10) * 2);
                         }
                     }
                     field_queue_vram_upload(req);
@@ -2942,12 +2910,12 @@ void field_update_scene_animations(void)
                         req->rect.h = (def->unk10 + 0xF) / 0x10;
                         if (anim->flags.b.state == 0)
                         {
-                            req->data = (u_long *) ((u8 *) hdr->pixel_data + (def->unkE << 5));
+                            req->data = (u_long*)((u8*)hdr->pixel_data + (def->unkE << 5));
                         }
                         else
                         {
-                            req->data = (u_long *) ((u8 *) hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 +
-                                                    (((anim->flags.b.state - 1) * def->unk10) << 5));
+                            req->data =
+                                (u_long*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 + (((anim->flags.b.state - 1) * def->unk10) << 5));
                         }
                     }
                     else
@@ -2958,41 +2926,42 @@ void field_update_scene_animations(void)
                         req->rect.h = def->unk10;
                         if (anim->flags.b.state == 0)
                         {
-                            req->data = (u_long *) ((u8 *) hdr->pixel_data + (def->unkE << 9));
+                            req->data = (u_long*)((u8*)hdr->pixel_data + (def->unkE << 9));
                         }
                         else
                         {
-                            req->data = (u_long *) ((u8 *) hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 +
-                                                    (((anim->flags.b.state - 1) * def->unk10) << 9));
+                            req->data =
+                                (u_long*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + def->unk12 * 2 + (((anim->flags.b.state - 1) * def->unk10) << 9));
                         }
                     }
                     field_queue_vram_upload(req);
                     break;
                 case 5:
                     req->data = field_blend_animation_frames(def, anim);
-                    do {
-                    if (def->unkC == 0)
+                    do
                     {
-                        req->rect.x = (def->unkE & 0xF) * 0x10;
-                        req->rect.y = (def->unkE >> 4) + 0x1D8;
-                        v = def->unk10 * 0x10;
-                        w = 0x100;
-                        if (v < 0x101)
+                        if (def->unkC == 0)
                         {
-                            w = v;
+                            req->rect.x = (def->unkE & 0xF) * 0x10;
+                            req->rect.y = (def->unkE >> 4) + 0x1D8;
+                            v = def->unk10 * 0x10;
+                            w = 0x100;
+                            if (v < 0x101)
+                            {
+                                w = v;
+                            }
+                            req->rect.w = w;
+                            v = (def->unk10 + 0xF) / 0x10;
                         }
-                        req->rect.w = w;
-                        v = (def->unk10 + 0xF) / 0x10;
-                    }
-                    else
-                    {
-                        req->rect.x = 0;
-                        req->rect.w = 0x100;
-                        req->rect.y = def->unkE + 0x1D8;
-                        v = def->unk10;
-                    }
-                    req->rect.h = v;
-                    field_queue_vram_upload(req);
+                        else
+                        {
+                            req->rect.x = 0;
+                            req->rect.w = 0x100;
+                            req->rect.y = def->unkE + 0x1D8;
+                            v = def->unk10;
+                        }
+                        req->rect.h = v;
+                        field_queue_vram_upload(req);
                     } while (0);
                     break;
                 }
@@ -3001,7 +2970,7 @@ void field_update_scene_animations(void)
             if (anim->flags.word & 0x40)
             {
                 anim->timer--;
-                if ((*(s32 *) &def->flags & 7) == 5)
+                if ((*(s32*)&def->flags & 7) == 5)
                 {
                     anim->flags.word |= 0x20;
                 }
@@ -3014,7 +2983,7 @@ void field_update_scene_animations(void)
                         field_retarget_cel_cluts(def, anim->cels, anim->flags.b.state);
                         break;
                     case 1:
-                        field_retarget_cel_list_cluts(def, (FieldTintSrc *) anim->cels, anim->flags.b.state);
+                        field_retarget_cel_list_cluts(def, (FieldTintSrc*)anim->cels, anim->flags.b.state);
                         break;
                     default:
                         anim->flags.word |= 0x20;
@@ -3040,10 +3009,10 @@ void field_update_scene_animations(void)
                     switch (def->flags & 7)
                     {
                     case 0:
-                        field_tint_animation_cel(def, anim->cels, (FieldTintSrc *) anim->unk10, anim->flags.b.state);
+                        field_tint_animation_cel(def, anim->cels, (FieldTintSrc*)anim->unk10, anim->flags.b.state);
                         break;
                     case 1:
-                        field_tint_animation_cel_list(def, (FieldTintSrc *) anim->cels, anim->flags.b.state);
+                        field_tint_animation_cel_list(def, (FieldTintSrc*)anim->cels, anim->flags.b.state);
                         break;
                     case 2:
                         break;
@@ -3092,7 +3061,7 @@ void field_update_scene_animations(void)
                             walk = walk->next;
                             i--;
                         }
-                        func_8005A744(walk, ((u8 *) &seq->flags)[1]);
+                        func_8005A744(walk, ((u8*)&seq->flags)[1]);
                     }
                     if (func_8005A84C(rec->unk0, rec->unk2) == 2)
                     {
@@ -3117,7 +3086,7 @@ void field_update_scene_animations(void)
                         walk = walk->next;
                         i--;
                     }
-                    func_8005A744(walk, ((u8 *) &seq->flags)[1]);
+                    func_8005A744(walk, ((u8*)&seq->flags)[1]);
                     if (walk != seq)
                     {
                         seq->flags &= ~3;
@@ -3178,11 +3147,11 @@ void field_update_scene_animations(void)
  *
  * @see decomp.me (100%) TODO
  */
-void field_update_part_sweep(FieldPart *part)
+void field_update_part_sweep(FieldPart* part)
 {
-    FieldScene *scene;
-    FieldNode *node;
-    FieldNodeDef *def;
+    FieldScene* scene;
+    FieldNode* node;
+    FieldNodeDef* def;
     s32 mode;
     u32 divisor;
     s32 sin_val;
@@ -3193,8 +3162,8 @@ void field_update_part_sweep(FieldPart *part)
     s32 val;
     s32 y;
     s32 old;
-    s16 *arr;
-    s16 *ep;
+    s16* arr;
+    s16* ep;
 
     scene = g_field_scene.scene;
     part->sweep_phase = part->sweep_phase - 1;
@@ -3219,7 +3188,7 @@ void field_update_part_sweep(FieldPart *part)
     }
     else
     {
-        part->rotation_angle = 0x1000 - ((u32) -sin_val / divisor);
+        part->rotation_angle = 0x1000 - ((u32)-sin_val / divisor);
     }
     neg_sin = -rsin(part->rotation_angle);
     if (part->node_count != 0)
@@ -3316,13 +3285,13 @@ void field_update_part_sweep(FieldPart *part)
  *
  * @note Built -G4 WITHOUT --expand-div, like the rest of field8.c.
  */
-void field_blit_animation_frame(FieldAnimDef *def, FieldAnim *anim, s32 frame)
+void field_blit_animation_frame(FieldAnimDef* def, FieldAnim* anim, s32 frame)
 {
-    FieldAnimCel *cel;
-    FieldTileGrid *grid;
-    u8 *dst;
-    u32 *src;
-    u32 *mask;
+    FieldAnimCel* cel;
+    FieldTileGrid* grid;
+    u8* dst;
+    u32* src;
+    u32* mask;
     u32 word;
     u32 bit;
     s32 stride;
@@ -3331,7 +3300,7 @@ void field_blit_animation_frame(FieldAnimDef *def, FieldAnim *anim, s32 frame)
     s32 i;
 
     cel = anim->cels;
-    grid = ((FieldTileAnimDef *) def)->grid;
+    grid = ((FieldTileAnimDef*)def)->grid;
     dst = cel->tiles;
     stride = 0;
     switch (cel->format)
@@ -3355,7 +3324,7 @@ void field_blit_animation_frame(FieldAnimDef *def, FieldAnim *anim, s32 frame)
     {
         stride -= 4;
     }
-    src = (u32 *) (anim->frame_data + anim->frame_tile_count * stride * frame);
+    src = (u32*)(anim->frame_data + anim->frame_tile_count * stride * frame);
     bit = 1;
     mask = cel->mask;
     word = *mask++;
@@ -3397,7 +3366,7 @@ void field_blit_animation_frame(FieldAnimDef *def, FieldAnim *anim, s32 frame)
                         i--;
                         while (i != -1)
                         {
-                            *(u32 *) dst = *src++;
+                            *(u32*)dst = *src++;
                             dst += 4;
                             i--;
                         }
@@ -3452,9 +3421,9 @@ typedef struct
     u16 duration;
 } FieldTweenSpan;
 
-u8 *field_find_count_table_span(u8 *, s32, volatile s8 *);
-void func_8005A984(FieldPart *, s32, s32);
-void func_8005AA68(FieldObj *, s32, s32);
+u8* field_find_count_table_span(u8*, s32, volatile s8*);
+void func_8005A984(FieldPart*, s32, s32);
+void func_8005AA68(FieldObj*, s32, s32);
 
 /**
  * @brief Apply the current keyframe's tweened offsets to an animation's target.
@@ -3488,12 +3457,12 @@ void func_8005AA68(FieldObj *, s32, s32);
  *
  * @see decomp.me (100%) TODO
  */
-void field_apply_animation_tween(FieldAnimDef *def, FieldAnim *anim, s32 apply_to_target)
+void field_apply_animation_tween(FieldAnimDef* def, FieldAnim* anim, s32 apply_to_target)
 {
-    FieldAnimDef *rec;
-    FieldObj *obj;
-    FieldPart *part;
-    FieldTweenKey *key;
+    FieldAnimDef* rec;
+    FieldObj* obj;
+    FieldPart* part;
+    FieldTweenKey* key;
     s32 duration;
     s32 elapsed;
     s32 value;
@@ -3503,22 +3472,22 @@ void field_apply_animation_tween(FieldAnimDef *def, FieldAnim *anim, s32 apply_t
     rec = def;
     obj = NULL;
     part = NULL;
-    if ((*(s32 *) &def->flags & 7) == 5)
+    if ((*(s32*)&def->flags & 7) == 5)
     {
-        part = (FieldPart *) anim->cels;
+        part = (FieldPart*)anim->cels;
     }
     else
     {
-        obj = (FieldObj *) anim->cels;
+        obj = (FieldObj*)anim->cels;
     }
-    key = (FieldTweenKey *) (rec->data + anim->flags.b.state * 8);
-    duration = ((FieldTweenSpan *) field_find_count_table_span((u8 *) def, anim->flags.b.keyframe, &base))->duration;
+    key = (FieldTweenKey*)(rec->data + anim->flags.b.state * 8);
+    duration = ((FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base))->duration;
     if (duration == 0)
     {
         duration = 1;
     }
     elapsed = duration - anim->timer;
-    if ((*(s32 *) &def->flags & 7) == 5)
+    if ((*(s32*)&def->flags & 7) == 5)
     {
         part->visible = key->visibility >> 15;
     }
@@ -3531,7 +3500,7 @@ void field_apply_animation_tween(FieldAnimDef *def, FieldAnim *anim, s32 apply_t
     if (apply_to_target != 0)
     {
         delta = value - anim->tween_x;
-        if ((*(s32 *) &def->flags & 7) == 5)
+        if ((*(s32*)&def->flags & 7) == 5)
         {
             part->x += delta;
             func_8005A984(part, delta, 0);
@@ -3559,7 +3528,7 @@ void field_apply_animation_tween(FieldAnimDef *def, FieldAnim *anim, s32 apply_t
     if (apply_to_target != 0)
     {
         delta = value - anim->tween_y;
-        if ((*(s32 *) &def->flags & 7) == 5)
+        if ((*(s32*)&def->flags & 7) == 5)
         {
             part->y += delta;
             func_8005A984(part, delta, 1);
@@ -3587,7 +3556,7 @@ void field_apply_animation_tween(FieldAnimDef *def, FieldAnim *anim, s32 apply_t
     if (apply_to_target != 0)
     {
         delta = value - anim->tween_z;
-        if ((*(s32 *) &def->flags & 7) == 5)
+        if ((*(s32*)&def->flags & 7) == 5)
         {
             part->z += delta;
             func_8005A984(part, delta, 2);
@@ -3650,7 +3619,7 @@ typedef struct
     FieldSfxWord sound;
     /** 0x04 bits 0-9 sound id, used when control carries no channel slot. */
     u16 sfx_id;
-    u16 unk6;  /* 0x06 */
+    u16 unk6; /* 0x06 */
 } FieldSfxKey;
 
 void akao_play_sfx(s32, s32, s32, s32);
@@ -3707,11 +3676,11 @@ void akao_cmd_a3(s32, s32, s32, s32);
  *
  * @see decomp.me (95.20%) TODO
  */
-void field_update_animation_sfx(FieldAnimDef *def, FieldAnim *anim)
+void field_update_animation_sfx(FieldAnimDef* def, FieldAnim* anim)
 {
-    FieldPart *part;
-    FieldObj *obj;
-    FieldSfxKey *key;
+    FieldPart* part;
+    FieldObj* obj;
+    FieldSfxKey* key;
     s32 sfx_id;
     s32 chan_mask;
     s32 kind;
@@ -3727,12 +3696,12 @@ void field_update_animation_sfx(FieldAnimDef *def, FieldAnim *anim)
     s32 row;
     s32 q;
 
-    part = (FieldPart *) anim->cels;
-    obj = (FieldObj *) anim->unk10;
+    part = (FieldPart*)anim->cels;
+    obj = (FieldObj*)anim->unk10;
     kind = def->data[anim->flags.b.state * 8] & 7;
     if (kind == 1)
     {
-        key = (FieldSfxKey *) (def->data + anim->flags.b.state * 8);
+        key = (FieldSfxKey*)(def->data + anim->flags.b.state * 8);
         if (key->control.word & 0x1F00)
         {
             chan_mask = kind << (((key->control.word >> 8) & 0x1F) - 1);
@@ -3770,9 +3739,9 @@ void field_update_animation_sfx(FieldAnimDef *def, FieldAnim *anim)
                 }
                 else
                 {
-                    cam_x = ((FieldCamera *) 0x801ED480)->x;
-                    cam_y = ((FieldCamera *) 0x801ED480)->y;
-                    cam_z = ((FieldCamera *) 0x801ED480)->z;
+                    cam_x = ((FieldCamera*)0x801ED480)->x;
+                    cam_y = ((FieldCamera*)0x801ED480)->y;
+                    cam_z = ((FieldCamera*)0x801ED480)->z;
                 }
                 if (cam_x >= 0)
                 {
@@ -3931,14 +3900,14 @@ void field_update_animation_sfx(FieldAnimDef *def, FieldAnim *anim)
  *
  * @see decomp.me (100%) TODO
  */
-void field_retarget_cel_cluts(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 frame)
+void field_retarget_cel_cluts(FieldAnimDef* anim_def, FieldAnimCel* cel, s32 frame)
 {
-    FieldAnimDef *def;
-    FieldTileGrid *grid;
-    FieldTileDesc *tile;
-    u8 *dst;
-    s16 *clut_ptr;
-    u32 *mask;
+    FieldAnimDef* def;
+    FieldTileGrid* grid;
+    FieldTileDesc* tile;
+    u8* dst;
+    s16* clut_ptr;
+    u32* mask;
     u32 word;
     u32 bit;
     s32 stride;
@@ -3993,7 +3962,7 @@ void field_retarget_cel_cluts(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 fra
                 col = 0;
                 if (grid->u.b.cols != 0)
                 {
-                    clut_ptr = (s16 *) (dst + 2);
+                    clut_ptr = (s16*)(dst + 2);
                     do
                     {
                         if (word & bit)
@@ -4017,7 +3986,7 @@ void field_retarget_cel_cluts(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 fra
                                     *clut_ptr = clut;
                                 }
                             }
-                            clut_ptr = (s16 *) ((u8 *) clut_ptr + stride);
+                            clut_ptr = (s16*)((u8*)clut_ptr + stride);
                             dst += stride;
                         }
                         bit <<= 1;
@@ -4028,12 +3997,10 @@ void field_retarget_cel_cluts(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 fra
                         }
                         tile++;
                         col++;
-                    }
-                    while (col != grid->u.b.cols);
+                    } while (col != grid->u.b.cols);
                 }
                 row++;
-            }
-            while (row != grid->u.b.rows);
+            } while (row != grid->u.b.rows);
         }
     }
 }
@@ -4087,14 +4054,14 @@ void field_retarget_cel_cluts(FieldAnimDef *anim_def, FieldAnimCel *cel, s32 fra
  *
  * @see decomp.me (100%) TODO
  */
-u_long *field_blend_animation_frames(FieldAnimDef *def, FieldAnim *anim)
+u_long* field_blend_animation_frames(FieldAnimDef* def, FieldAnim* anim)
 {
-    FieldAnimDef *rec;
-    FieldSceneHeader *hdr;
-    u16 *cur;
-    u16 *prev;
-    u16 *dst;
-    u16 *out;
+    FieldAnimDef* rec;
+    FieldSceneHeader* hdr;
+    u16* cur;
+    u16* prev;
+    u16* dst;
+    u16* out;
     s32 total;
     s32 remain;
     s32 elapsed;
@@ -4109,14 +4076,13 @@ u_long *field_blend_animation_frames(FieldAnimDef *def, FieldAnim *anim)
 
     rec = def;
     hdr = g_field_scene.scene->header;
-    total = ((FieldTweenSpan *) field_find_count_table_span((u8 *) rec, anim->flags.b.keyframe, (volatile s8 *) &base))->duration;
+    total = ((FieldTweenSpan*)field_find_count_table_span((u8*)rec, anim->flags.b.keyframe, (volatile s8*)&base))->duration;
     idx = anim->flags.b.keyframe;
     do
     {
         remain = anim->timer;
         flags = anim->flags.word;
-    }
-    while (0);
+    } while (0);
     elapsed = total - remain;
     if (flags & 1)
     {
@@ -4151,9 +4117,9 @@ u_long *field_blend_animation_frames(FieldAnimDef *def, FieldAnim *anim)
             idx = idx + 1;
         }
     }
-    if (*(s32 *) &def->flags & 0x40)
+    if (*(s32*)&def->flags & 0x40)
     {
-        other = (((FieldTweenSpan *) field_find_count_table_span((u8 *) def, idx, (volatile s8 *) &base))->range_start + idx) - base;
+        other = (((FieldTweenSpan*)field_find_count_table_span((u8*)def, idx, (volatile s8*)&base))->range_start + idx) - base;
     }
     else
     {
@@ -4164,21 +4130,19 @@ u_long *field_blend_animation_frames(FieldAnimDef *def, FieldAnim *anim)
         step = rec->unk10 * 0x10;
         if (anim->flags.b.state == 0)
         {
-            cur = (u16 *) ((u8 *) hdr->pixel_data + (rec->unkE << 5));
+            cur = (u16*)((u8*)hdr->pixel_data + (rec->unkE << 5));
         }
         else
         {
-            cur = (u16 *) ((u8 *) hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 +
-                           ((anim->flags.b.state - 1) * step) * 2);
+            cur = (u16*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 + ((anim->flags.b.state - 1) * step) * 2);
         }
         if (other == 0)
         {
-            prev = (u16 *) ((u8 *) hdr->pixel_data + (rec->unkE << 5));
+            prev = (u16*)((u8*)hdr->pixel_data + (rec->unkE << 5));
         }
         else
         {
-            prev = (u16 *) ((u8 *) hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 +
-                            ((other - 1) * step) * 2);
+            prev = (u16*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 + ((other - 1) * step) * 2);
         }
     }
     else
@@ -4186,21 +4150,19 @@ u_long *field_blend_animation_frames(FieldAnimDef *def, FieldAnim *anim)
         step = rec->unk10 << 8;
         if (anim->flags.b.state == 0)
         {
-            cur = (u16 *) ((u8 *) hdr->pixel_data + (rec->unkE << 9));
+            cur = (u16*)((u8*)hdr->pixel_data + (rec->unkE << 9));
         }
         else
         {
-            cur = (u16 *) ((u8 *) hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 +
-                           ((anim->flags.b.state - 1) * step) * 2);
+            cur = (u16*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 + ((anim->flags.b.state - 1) * step) * 2);
         }
         if (other == 0)
         {
-            prev = (u16 *) ((u8 *) hdr->pixel_data + (rec->unkE << 9));
+            prev = (u16*)((u8*)hdr->pixel_data + (rec->unkE << 9));
         }
         else
         {
-            prev = (u16 *) ((u8 *) hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 +
-                            ((other - 1) * step) * 2);
+            prev = (u16*)((u8*)hdr->pixel_data + hdr->pixel_stride * 2 + rec->unk12 * 2 + ((other - 1) * step) * 2);
         }
     }
     flags = anim->flags.word;
@@ -4227,15 +4189,14 @@ u_long *field_blend_animation_frames(FieldAnimDef *def, FieldAnim *anim)
         }
         else
         {
-            *dst = ((c | p) & 0x8000) |
-                   ((((c & 0x1F) * remain) + ((p & 0x1F) * elapsed)) / total) |
+            *dst = ((c | p) & 0x8000) | ((((c & 0x1F) * remain) + ((p & 0x1F) * elapsed)) / total) |
                    (((((c >> 5) & 0x1F) * remain) + (((p >> 5) & 0x1F) * elapsed)) / total) << 5 |
                    (((((c >> 10) & 0x1F) * remain) + (((p >> 10) & 0x1F) * elapsed)) / total) << 10;
         }
         step--;
         dst++;
     }
-    return (u_long *) out;
+    return (u_long*)out;
 }
 
 /**
@@ -4289,15 +4250,15 @@ u_long *field_blend_animation_frames(FieldAnimDef *def, FieldAnim *anim)
  *
  * @see decomp.me (100%) TODO
  */
-void field_tint_animation_cel(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc *src, s32 shade)
+void field_tint_animation_cel(FieldAnimDef* def, FieldAnimCel* cel, FieldTintSrc* src, s32 shade)
 {
-    FieldTileGrid *grid;
-    FieldTileDesc *tile;
-    FieldTintColor *pal;
-    FieldTintColor *entry;
-    u8 *dst;
-    u16 *tab;
-    u32 *mask;
+    FieldTileGrid* grid;
+    FieldTileDesc* tile;
+    FieldTintColor* pal;
+    FieldTintColor* entry;
+    u8* dst;
+    u16* tab;
+    u32* mask;
     u32 word;
     u32 bit;
     s32 stride;
@@ -4313,7 +4274,7 @@ void field_tint_animation_cel(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc
     rgb[1] = src->green * src->green_scale;
     rgb[2] = src->blue * src->blue_scale;
     stride = 0;
-    pal = (FieldTintColor *) 0x1F800000;
+    pal = (FieldTintColor*)0x1F800000;
     tab = src->palette->data;
     func_8005AC50(tab + 2, tab[0], rgb);
     grid = cel->grid;
@@ -4366,12 +4327,12 @@ void field_tint_animation_cel(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc
                                 entry = &pal[slot] + shade;
                                 if (code != 0)
                                 {
-                                    ((FieldTintColor *) &cel->code_word)->rg = entry->rg;
-                                    ((FieldTintColor *) &cel->code_word)->b = entry->b;
+                                    ((FieldTintColor*)&cel->code_word)->rg = entry->rg;
+                                    ((FieldTintColor*)&cel->code_word)->b = entry->b;
                                     return;
                                 }
-                                ((FieldCellTint *) dst)->rg = entry->rg;
-                                ((FieldCellTint *) dst)->b = entry->b;
+                                ((FieldCellTint*)dst)->rg = entry->rg;
+                                ((FieldCellTint*)dst)->b = entry->b;
                             }
                             else
                             {
@@ -4391,12 +4352,10 @@ void field_tint_animation_cel(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc
                     }
                     tile++;
                     col++;
-                }
-                while (col != grid->u.b.cols);
+                } while (col != grid->u.b.cols);
             }
             row++;
-        }
-        while (row != grid->u.b.rows);
+        } while (row != grid->u.b.rows);
     }
 }
 
@@ -4431,16 +4390,16 @@ void field_tint_animation_cel(FieldAnimDef *def, FieldAnimCel *cel, FieldTintSrc
  *
  * @see decomp.me (100%) TODO
  */
-void field_tint_animation_cel_list(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
+void field_tint_animation_cel_list(FieldAnimDef* def, FieldTintSrc* src, s32 shade)
 {
-    FieldAnimCel *cel;
-    FieldTileGrid *grid;
-    FieldTileDesc *tile;
-    FieldTintColor *pal;
-    FieldTintColor *entry;
-    u8 *dst;
-    u16 *tab;
-    u32 *mask;
+    FieldAnimCel* cel;
+    FieldTileGrid* grid;
+    FieldTileDesc* tile;
+    FieldTintColor* pal;
+    FieldTintColor* entry;
+    u8* dst;
+    u16* tab;
+    u32* mask;
     u32 word;
     u32 bit;
     s32 stride;
@@ -4456,7 +4415,7 @@ void field_tint_animation_cel_list(FieldAnimDef *def, FieldTintSrc *src, s32 sha
     rgb[1] = src->green * src->green_scale;
     rgb[2] = src->blue * src->blue_scale;
     stride = 0;
-    pal = (FieldTintColor *) 0x1F800000;
+    pal = (FieldTintColor*)0x1F800000;
     tab = src->palette->data;
     func_8005AC50(tab + 2, tab[0], rgb);
     first = def->unkC;
@@ -4511,12 +4470,12 @@ void field_tint_animation_cel_list(FieldAnimDef *def, FieldTintSrc *src, s32 sha
                                     entry = &pal[slot] + shade;
                                     if (code != 0)
                                     {
-                                        ((FieldTintColor *) &cel->code_word)->rg = entry->rg;
-                                        ((FieldTintColor *) &cel->code_word)->b = entry->b;
+                                        ((FieldTintColor*)&cel->code_word)->rg = entry->rg;
+                                        ((FieldTintColor*)&cel->code_word)->b = entry->b;
                                         goto next_cel;
                                     }
-                                    ((FieldCellTint *) dst)->rg = entry->rg;
-                                    ((FieldCellTint *) dst)->b = entry->b;
+                                    ((FieldCellTint*)dst)->rg = entry->rg;
+                                    ((FieldCellTint*)dst)->b = entry->b;
                                 }
                                 else
                                 {
@@ -4536,15 +4495,12 @@ void field_tint_animation_cel_list(FieldAnimDef *def, FieldTintSrc *src, s32 sha
                         }
                         tile++;
                         col++;
-                    }
-                    while (col != grid->u.b.cols);
+                    } while (col != grid->u.b.cols);
                 }
                 row++;
-            }
-            while (row != grid->u.b.rows);
+            } while (row != grid->u.b.rows);
         }
-    next_cel:
-        ;
+    next_cel:;
     }
 }
 
@@ -4607,9 +4563,9 @@ void field_tint_animation_cel_list(FieldAnimDef *def, FieldTintSrc *src, s32 sha
  *
  * @see decomp.me (100%) TODO
  */
-void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
+void field_advance_animation_keyframe(FieldAnimDef* def, FieldAnim* anim)
 {
-    FieldTweenSpan *span;
+    FieldTweenSpan* span;
     s32 cur;
     s32 nxt;
     u8 idx;
@@ -4623,12 +4579,11 @@ void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
             {
                 if (anim->flags.b.keyframe == 0)
                 {
-                    if (*(s32 *) &def->flags & 0x10)
+                    if (*(s32*)&def->flags & 0x10)
                     {
                         anim->flags.b.keyframe = anim->flags.b.keyframe + 1;
                     }
-                    else if (((def->handler_group == 0) && ((u32) ((*(s32 *) &def->flags & 7) - 5) < 2)) ||
-                             ((*(s32 *) &def->flags & 0xFF000007) == 0x01000005))
+                    else if (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & 7) - 5) < 2)) || ((*(s32*)&def->flags & 0xFF000007) == 0x01000005))
                     {
                         if (anim->repeat_count == 0)
                         {
@@ -4645,10 +4600,9 @@ void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
                 else
                 {
                     anim->flags.b.keyframe = anim->flags.b.keyframe - 1;
-                    if (!(*(s32 *) &def->flags & 0x10) && (anim->flags.b.keyframe == 0) &&
-                        (((def->handler_group == 0) && ((u32) ((*(s32 *) &def->flags & 7) - 5) >= 2)) ||
-                         ((def->handler_group == 1) && ((*(s32 *) &def->flags & 7) != 5)) ||
-                         (def->handler_group >= 2)))
+                    if (!(*(s32*)&def->flags & 0x10) && (anim->flags.b.keyframe == 0) &&
+                        (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & 7) - 5) >= 2)) ||
+                         ((def->handler_group == 1) && ((*(s32*)&def->flags & 7) != 5)) || (def->handler_group >= 2)))
                     {
                         if (anim->repeat_count == 0)
                         {
@@ -4666,7 +4620,7 @@ void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
                 idx = anim->flags.b.keyframe;
                 if (idx == def->unk5)
                 {
-                    if (!(*(s32 *) &def->flags & 0x10) && (idx == 0))
+                    if (!(*(s32*)&def->flags & 0x10) && (idx == 0))
                     {
                         anim->flags.word &= ~0x40;
                     }
@@ -4687,9 +4641,8 @@ void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
             cur = anim->flags.b.keyframe;
             if (cur == def->unk5)
             {
-                if (!(*(s32 *) &def->flags & 0x10) &&
-                    (((def->handler_group == 0) && ((u32) ((*(s32 *) &def->flags & 7) - 5) < 2)) ||
-                     ((*(s32 *) &def->flags & 0xFF000007) == 0x01000005)))
+                if (!(*(s32*)&def->flags & 0x10) &&
+                    (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & 7) - 5) < 2)) || ((*(s32*)&def->flags & 0xFF000007) == 0x01000005)))
                 {
                     if (anim->repeat_count == 0)
                     {
@@ -4706,10 +4659,9 @@ void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
             {
                 nxt = cur + 1;
                 anim->flags.b.keyframe = nxt;
-                if (!(*(s32 *) &def->flags & 0x10) && ((u8) nxt == def->unk5) &&
-                    (((def->handler_group == 0) && ((u32) ((*(s32 *) &def->flags & 7) - 5) >= 2)) ||
-                     ((def->handler_group == 1) && ((*(s32 *) &def->flags & 7) != 5)) ||
-                     (def->handler_group >= 2)))
+                if (!(*(s32*)&def->flags & 0x10) && ((u8)nxt == def->unk5) &&
+                    (((def->handler_group == 0) && ((u32)((*(s32*)&def->flags & 7) - 5) >= 2)) ||
+                     ((def->handler_group == 1) && ((*(s32*)&def->flags & 7) != 5)) || (def->handler_group >= 2)))
                 {
                     if (anim->repeat_count == 0)
                     {
@@ -4722,8 +4674,7 @@ void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
                 }
             }
         }
-        if ((anim->flags.word & 0x40) && (anim->repeat_count == 0) && (anim->flags.word & 2) &&
-            (anim->flags.b.stop_keyframe == anim->flags.b.keyframe))
+        if ((anim->flags.word & 0x40) && (anim->repeat_count == 0) && (anim->flags.word & 2) && (anim->flags.b.stop_keyframe == anim->flags.b.keyframe))
         {
             anim->flags.word &= ~0x40;
         }
@@ -4732,9 +4683,9 @@ void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
     {
         anim->flags.word &= ~8;
     }
-    span = (FieldTweenSpan *) field_find_count_table_span((u8 *) def, anim->flags.b.keyframe, &base);
+    span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
     anim->timer = span->duration;
-    if (*(s32 *) &def->flags & 0x40)
+    if (*(s32*)&def->flags & 0x40)
     {
         anim->flags.b.state = (span->range_start + anim->flags.b.keyframe) - base;
     }
@@ -4758,9 +4709,9 @@ void field_advance_animation_keyframe(FieldAnimDef *def, FieldAnim *anim)
  *
  * @see decomp.me (100%) TODO
  */
-void field_retarget_cel_list_cluts(FieldAnimDef *def, FieldTintSrc *src, s32 frame)
+void field_retarget_cel_list_cluts(FieldAnimDef* def, FieldTintSrc* src, s32 frame)
 {
-    FieldAnimCel *cel;
+    FieldAnimCel* cel;
 
     cel = src->cels;
     if (cel != NULL)
@@ -4769,8 +4720,7 @@ void field_retarget_cel_list_cluts(FieldAnimDef *def, FieldTintSrc *src, s32 fra
         {
             field_retarget_cel_cluts(def, cel, frame);
             cel = cel->next;
-        }
-        while (cel != NULL);
+        } while (cel != NULL);
     }
 }
 
@@ -4823,7 +4773,7 @@ void field_retarget_cel_list_cluts(FieldAnimDef *def, FieldTintSrc *src, s32 fra
  *       in v0.
  * @see decomp.me (99.82%) TODO
  */
-u8 *field_find_count_table_span(u8 *table, s32 linear_index, volatile s8 *range_start_out)
+u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_start_out)
 {
     u8 header_count;
     u8 raw_count;
@@ -4838,12 +4788,12 @@ u8 *field_find_count_table_span(u8 *table, s32 linear_index, volatile s8 *range_
         if (linear_index >= header_count)
         {
             *range_start_out = header_count;
-            unused = *(volatile u8 *) (table + 7);
+            unused = *(volatile u8*)(table + 7);
             table += 0x18;
             raw_count = *table;
             range_start = *range_start_out;
             range_end = range_start + (raw_count & 0x7F);
-            while (linear_index >= (u8) range_end)
+            while (linear_index >= (u8)range_end)
             {
                 table += 4;
                 range_end = range_start + (raw_count & 0x7F);
@@ -4854,8 +4804,7 @@ u8 *field_find_count_table_span(u8 *table, s32 linear_index, volatile s8 *range_
             }
         }
         return table;
-    }
-    while (0);
+    } while (0);
 }
 
 /**
@@ -4866,11 +4815,11 @@ u8 *field_find_count_table_span(u8 *table, s32 linear_index, volatile s8 *range_
  * @note NOT MATCHED - 98.75%.
  * @see decomp.me (98.75%) TODO
  */
-void field_queue_vram_upload(FieldImageReq *req)
+void field_queue_vram_upload(FieldImageReq* req)
 {
-    FieldScene *scene;
+    FieldScene* scene;
 
     scene = g_field_scene.scene;
-    req->next = (FieldImageReq *) scene->uploads;
+    req->next = (FieldImageReq*)scene->uploads;
     scene->uploads = req;
 }
