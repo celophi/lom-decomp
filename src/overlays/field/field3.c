@@ -55,7 +55,127 @@ typedef struct T
     u32 field_18;
     u32 field_1C;
 } T;
-extern T* func_8005ABD8(void* arg0, int arg1);
+typedef struct FieldAnimDef FieldAnimDef;
+typedef struct FieldAnim FieldAnim;
+typedef struct FieldAnimCel FieldAnimCel;
+
+typedef struct
+{
+    void *tiles; /* 0x00 */
+    u8 _pad0[8 - 4];
+    union
+    {
+        u32 word;
+        struct
+        {
+            u8 _pad1[2];
+            u8 cols; /* 0x0A */
+            u8 rows; /* 0x0B */
+        } b;
+    } u;
+} FieldTileGrid;
+
+struct FieldAnimDef
+{
+    u8 unk0;  /* 0x00 */
+    u8 unk1;  /* 0x01 */
+    u8 unk2;  /* 0x02 */
+    u8 _pad0;
+    u8 unk4;  /* 0x04 */
+    u8 unk5;  /* 0x05 */
+    u8 unk6;  /* 0x06 */
+    u8 unk7;  /* 0x07 */
+    FieldAnimDef *next; /* 0x08 */
+    u8 unkC;  /* 0x0C */
+    u8 unkD;  /* 0x0D */
+    u8 unkE;  /* 0x0E */
+    u8 unkF;  /* 0x0F */
+    void *unk10; /* 0x10 */
+    s32 *unk14;  /* 0x14 */
+};
+
+typedef union
+{
+    s32 word;
+    struct
+    {
+        u8 unk0;
+        u8 state; /* 0x25 */
+        u8 unk2;  /* 0x26 */
+        u8 unk3;  /* 0x27 */
+    } b;
+} FieldAnimFlags;
+
+struct FieldAnimCel
+{
+    FieldAnimCel *next;  /* 0x00 */
+    FieldTileGrid *grid; /* 0x04 */
+    u8 _pad0[0xC - 8];
+    u32 *mask;  /* 0x0C */
+    u8 *tiles;  /* 0x10 */
+    u8 _pad1[0x18 - 0x14];
+    s32 unk18;  /* 0x18 */
+    s32 unk1C;  /* 0x1C */
+    s8 unk20;   /* 0x20 */
+    u8 format;  /* 0x21 */
+};
+
+struct FieldAnim
+{
+    FieldAnim *next;      /* 0x00 */
+    FieldAnimDef *def;    /* 0x04 */
+    u8 _pad0[0xC - 8];
+    FieldAnimCel *cels;   /* 0x0C */
+    s32 unk10;            /* 0x10 */
+    u8 _pad1[0x20 - 0x14];
+    u8 *frames;           /* 0x20 */
+    FieldAnimFlags flags; /* 0x24 */
+    u8 unk28;             /* 0x28 */
+    u8 _pad2;
+    u16 counter;          /* 0x2A */
+    u16 frame_tiles;      /* 0x2C */
+    u8 _pad3[0x30 - 0x2E];
+};
+
+typedef struct
+{
+    u8 _pad0[4];
+    u16 *unk4; /* 0x04 */
+} FieldTintPal;
+
+typedef struct
+{
+    u8 _pad0[4];
+    FieldTintPal *unk4; /* 0x04 */
+    u8 _pad1[0x10 - 8];
+    u16 unk10; /* 0x10 */
+    u16 unk12; /* 0x12 */
+    u16 unk14; /* 0x14 */
+} FieldTintSrc;
+
+typedef struct
+{
+    u8 _pad0;
+    u8 unk1;  /* 0x01 */
+    u16 unk2; /* 0x02 */
+} FieldTweenSpan;
+
+typedef struct
+{
+    u8 unk0;  /* 0x00 */
+    u8 _pad0;
+    u16 unk2; /* 0x02 */
+} FieldAnimKey;
+
+typedef struct
+{
+    u8 _pad0[0x38];
+    s32 unk38; /* 0x38 */
+} FieldScene;
+
+extern FieldScene *g_field_scene;
+
+T *func_8005ABD8(void *, FieldTintSrc **);
 
 /**
  * decomp.me (95.80%) https://decomp.me/scratch/Kkiiv
@@ -269,521 +389,475 @@ void field_validate_and_rasterize_quads(void* arg0, s32 arg1)
     }
 }
 
-extern void *g_field_scene;
-void *func_80059224(void *, u8, u8 *);
-void func_80057E88(void *, void *, s32);
-void *func_8005B31C(void *);
+FieldAnimCel *func_8005B31C(void *);
+u8 *func_80059224(FieldAnimDef *, s32, u8 *);
+void func_80057E88(FieldAnimDef *, FieldAnim *, s32);
+void func_80057CA4(FieldAnimDef *, FieldAnim *, s32);
 void func_8005AC50(void *, u16, s32 *);
 void func_8005AD20(u8, u16, s8 *);
-void func_8005477C(s32, void *, s32, s32);
-void func_80054904(s32, void *, s32, s32);
-void func_80057CA4(void *, void *, s32);
-
-typedef struct Struct80053C7C_1
-{
-    u8 unk0;
-    u8 unk1;
-    u8 pad2[2];
-    u32 unk4;
-    u8 unk8;
-    u8 unk9;
-    u8 unkA;
-    u8 unkB;
-    u8 unkC;
-    u8 unkD;
-    u8 unkE;
-    u8 unkF;
-    void *unk10;
-    void *unk14;
-} Struct80053C7C_1;
-
-typedef struct
-{
-    u16 unk0;
-    u16 unk2;
-} Struct80053C7C_2;
+void func_8005477C(s32 *, u8 *, s32, s32);
+void func_80054904(s32 *, u8 *, s32, s32);
 
 /**
- * decomp.me (88.26%) https://decomp.me/scratch/0nNOC
+ * @brief Build the scene's animation node list from a definition chain.
+ *
+ * Walks @p def 's chain and, for each definition, bump-allocates a 0x30-byte
+ * FieldAnim out of the arena at @p arena and tail-appends it to the list at
+ * @p tail. Each node is seeded from its definition: the play-mode flags at
+ * FieldAnim::flags, the starting keyframe cursor, the loop counter, and the
+ * keyframe length from func_80059224. The handler kind - the low three bits of
+ * the word at FieldAnimDef::unk4, qualified by FieldAnimDef::unk7 - then selects
+ * how the node's cel list is resolved (func_8005ABD8 or func_8005B31C) and what
+ * extra setup runs.
+ *
+ * For the tinted kinds the definition's colour is expanded into the scratchpad
+ * table (func_8005AC50 / func_8005AD20) and the per-frame GPU primitives are
+ * built into the arena: every frame walks the cel's bit plane row-major, and
+ * each set bit inside the definition's sub-rectangle emits one primitive through
+ * func_8005477C or func_80054904 depending on the cel's record format. The arena
+ * cursor is advanced past whatever each kind consumed before moving to the next
+ * definition, and the list is null-terminated on the way out.
+ *
+ * @param def   Head of the animation definition chain; @c next links it.
+ * @param arena Bump-allocation cursor; advanced past every node and primitive.
+ * @param tail  Where to store the next node pointer; walked along the list and
+ *              finally cleared.
+ *
+ * @note NOT MATCHED - 89.12% (399/704 exact rows, 19 insns short, frame 0x88 vs
+ *       0x90). This replaces an earlier 89.01% version that was raw m2c output
+ *       and semantically broken (locals read before assignment, a switch with
+ *       statements before its first case, a fall-through case with no break).
+ *       The remaining gap is a single register-allocation flip: the target keeps
+ *       @p def in t0 and the cel cursor in t3 - both caller-saved - and spills
+ *       and reloads them around all 17 calls, while this version wins them
+ *       callee-saved registers and so emits no spill traffic. That missing
+ *       traffic is the whole 19-insn shortfall, the 8-byte frame difference and
+ *       every remaining structural row. @p def needs to drop from 94 to 91
+ *       weighted refs to lose s7 to the arena cursor. Raising pressure
+ *       artificially is worth +51 to +66 exact rows, so the natural construct
+ *       that does it is the only thing left to find. See
+ *       working/func_80053C7C/status.md for the full evidence and the list of
+ *       probe classes already retired.
+ * @note The five @c flags masks must stay SEPARATE statements; fold-const
+ *       collapses them into one @c and if written as a single expression.
+ * @note Both @c cel->format switches need their empty @c case @c 1: / @c case
+ *       @c 6: arms to emit the 7-entry jump tables, as in func_800584DC.
+ * @note The three @c & @c 7 handler switches read @c def->unk4 as a byte; the
+ *       @c & @c 0xFF000007 and @c & @c 0x40 / @c & @c 0x20 tests read the whole
+ *       word. Both views of the same field are required.
+ * @note @c rec is a local copy of @p def, needed twice - once in the @c unk7
+ *       @c == @c 0 arm and once before the record loop. It is what puts the
+ *       definition pointer in s4 and is worth 2.8%.
+ *
+ * @see decomp.me (89.12%) TODO
  */
-void func_80053C7C(Struct80053C7C_1 *arg0, void **arg1, void *arg2)
+void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
 {
-    s32 sp10[3];
-    u8 sp20;
-    void *sp24;
-    s8 sp28;
-    void *sp2C;
-    Struct80053C7C_1 *sp30;
-    u16 sp38;
-    s32 sp40;
-    u16 sp48;
-    s32 temp_s3;
-    s32 var_s0;
-    s32 *new_var5;
-    s32 var_s1;
-    s32 var_s3_2;
-    s32 var_s3_3;
-    s32 var_s6;
-    s32 var_s7;
-    int new_var6;
-    void *new_var;
-    s32 var_t1;
-    s32 var_t2;
-    short new_var7;
-    s32 var_t4;
-    s32 temp_flags;
-    Struct80053C7C_1 *new_var3;
-    s32 *temp_s2;
-    s32 *var_s2;
-    u16 temp_v1;
-    u16 var_v0;
-    u16 *temp_a0;
-    u8 temp_v0;
-    u8 temp_v0_5;
-    unsigned char temp_v1_2;
-    u8 temp_v1_6;
-    u8 temp_v1_7;
-    u8 temp_v1_8;
-    u8 temp_v1_9;
-    int var_s3;
-    Struct80053C7C_2 *temp_v1_5;
-    void **new_var4;
-    void *temp_a1;
-    void *temp_a1_2;
-    Struct80053C7C_1 *temp_s4_5;
-    void *temp_s5;
-    void *var_fp;
-    Struct80053C7C_1 *var_t0;
-    Struct80053C7C_2 *temp_v0_2;
-    int new_var2;
-    void *var_t3;
-    void *temp_v0_3;
-    void *temp_v0_4;
-    void *temp_v0_7;
-    var_t0 = arg0;
-    var_t3 = (void *) 0;
-    sp30 = (void *) 0;
-    sp40 = 0;
-    sp48 = 0;
-    sp38 = 1;
-    sp24 = (void *) 0;
-    sp2C = g_field_scene;
-    if (var_t0 != ((void *) 0))
+    s32 rgb[3];       /* sp10 */
+    u8 span_off;      /* sp20 */
+    FieldTintSrc *src;/* sp24 */
+    s8 code;          /* sp28 */
+    FieldScene *scene;/* sp2C */
+    FieldTileGrid *grid; /* sp30 */
+    u16 delay;        /* sp38 */
+    s32 stride;       /* sp40 */
+    u16 count;        /* sp48 */
+    FieldAnim *anim;
+    FieldAnimDef *rec;
+    FieldAnimCel *cel;
+    FieldAnimKey *key;
+    FieldTweenSpan *span;
+    u8 *cursor;
+    u8 *prim;
+    u16 *tab;
+    s32 *recp;
+    s32 *base;
+    u32 *maskp;
+    u32 word;
+    u32 bit;
+    s32 kind;
+    s32 flags;
+    s32 mode;
+    s32 frame;
+    s32 row;
+    s32 col;
+    u8 state;
+    u16 dur;
+    u16 slot;
+
+    cel = NULL;
+    grid = NULL;
+    stride = 0;
+    count = 0;
+    delay = 1;
+    src = NULL;
+    scene = g_field_scene;
+    if (def != NULL)
     {
         do
         {
-            temp_s5 = *arg1;
-            *arg1 = (void *) (((u8 *) temp_s5) + 0x30);
-            ((void **) arg2)[0] = temp_s5;
-            arg2 = temp_s5;
-            ((void **) temp_s5)[1] = var_t0;
-            if (!((*((u32 *) var_t0)) & 0x7F))
+            anim = (FieldAnim *) *arena;
+            *arena = (u8 *) anim + 0x30;
+            *tail = anim;
+            tail = &anim->next;
+            anim->def = def;
+            if (!(*(u32 *) &def->unk0 & 0x7F))
             {
-                ((s32 *) arg2)[9] = ((s32 *) arg2)[9] & (~0x40);
+                anim->flags.word &= ~0x40;
             }
             else
             {
-                ((s32 *) arg2)[9] = (((s32 *) arg2)[9] & (~0x40)) | ((((u8) var_t0->unk4) >> 7) << 6);
+                anim->flags.word = (anim->flags.word & ~0x40) | ((def->unk4 >> 7) << 6);
             }
-            ((u8 *) temp_s5)[0x28] = 0;
-            temp_flags = (((s32 *) temp_s5)[9] & (~1)) | ((var_t0->unk4 >> 3) & 1);
-            temp_flags &= ~2;
-            temp_flags &= ~4;
-            temp_flags &= ~8;
-            temp_flags &= ~0x10;
-            temp_flags &= ~0x20;
-            ((s32 *) temp_s5)[9] = temp_flags;
-            ((u8 *) temp_s5)[0x27] = 0;
-            if (var_t0->unk4 & 0x40)
+            anim->unk28 = 0;
+            flags = (anim->flags.word & ~1) | ((*(u32 *) &def->unk4 >> 3) & 1);
+            flags &= ~2;
+            flags &= ~4;
+            flags &= ~8;
+            flags &= ~0x10;
+            flags &= ~0x20;
+            anim->flags.word = flags;
+            anim->flags.b.unk3 = 0;
+            if (*(s32 *) &def->unk4 & 0x40)
             {
-                ((u8 *) temp_s5)[0x26] = 0;
-                ((u8 *) temp_s5)[0x25] = var_t0->unk1;
-            }
-            else
-            {
-                temp_v0 = var_t0->unk1;
-                ((u8 *) temp_s5)[0x25] = temp_v0;
-                ((u8 *) temp_s5)[0x26] = temp_v0;
-            }
-            if (((u8 *) var_t0)[7] == 3)
-            {
-                ((u16 *) temp_s5)[0x15] = 1;
+                anim->flags.b.unk2 = 0;
+                anim->flags.b.state = def->unk1;
             }
             else
             {
-                temp_v0_2 = func_80059224(var_t0, ((u8 *) temp_s5)[0x26], &sp20);
-                if (var_t0->unk4 & 0x20)
+                state = def->unk1;
+                anim->flags.b.state = state;
+                anim->flags.b.unk2 = state;
+            }
+            if (def->unk7 == 3)
+            {
+                anim->counter = 1;
+            }
+            else
+            {
+                span = (FieldTweenSpan *) func_80059224(def, anim->flags.b.unk2, &span_off);
+                if (*(s32 *) &def->unk4 & 0x20)
                 {
-                    ((u16 *) temp_s5)[0x15] = temp_v0_2->unk2;
+                    anim->counter = span->unk2;
                 }
                 else
                 {
-                    temp_v1 = temp_v0_2->unk2;
-                    if (temp_v1 < sp38)
+                    dur = span->unk2;
+                    if (dur < delay)
                     {
-                        ((u16 *) temp_s5)[0x15] = temp_v1;
-                        sp38 = 1;
+                        anim->counter = dur;
+                        delay = 1;
                     }
                     else
                     {
-                        var_v0 = sp38;
-                        sp38 = 1 + var_v0;
-                        ((u16 *) temp_s5)[0x15] = var_v0;
+                        slot = delay;
+                        delay = slot + 1;
+                        anim->counter = slot;
                     }
                 }
             }
-            temp_v1_2 = ((u8 *) var_t0)[7];
-            new_var4 = &var_t0->unk14;
-            switch (temp_v1_2)
+            switch (def->unk7)
             {
+            case 0:
+                rec = def;
+                switch (rec->unk4 & 7)
+                {
                 case 0:
-                    switch (((u8 *) var_t0)[4] & 7)
-                    {
-                        case 0:
-                            new_var2 = 0xFF;
-
-                        case 1:
-                            sp30 = (Struct80053C7C_1 *) var_t0->unk10;
-                            var_t3 = func_8005ABD8(var_t0->unk10, &sp24);
-                            ((void **) temp_s5)[3] = var_t3;
-                            break;
-
-                        case 2:
-                            sp30 = (Struct80053C7C_1 *) var_t0->unk10;
-                            var_t3 = func_8005ABD8(var_t0->unk10, &sp24);
-                            ((void **) temp_s5)[3] = var_t3;
-                            if ((((s32 *) temp_s5)[9] & 0x40) && ((sp20 = 0, var_s3 = ((u8 *) var_t0)[5], var_s3 != new_var2)))
-                            {
-                                do
-                                {
-                                    var_s3 -= 1;
-                                    ((s8 *) var_t3)[0x20] = sp20 == ((u8 *) temp_s5)[0x25];
-                                    var_t3 = *((void **) var_t3);
-                                    sp20 += 1;
-                                }
-                                while (var_s3 != 0xFF);
-                            }
-                            break;
-
-                        case 3:
-                            if ((((s32 *) temp_s5)[9] & 0x40) && (((u16 *) temp_s5)[0x15] != 1))
-                            {
-                                ((s32 *) temp_s5)[9] |= 0x20;
-                            }
-                            break;
-
-                        case 4:
-                            sp30 = (Struct80053C7C_1 *) var_t0->unk10;
-                            var_t3 = func_8005ABD8(var_t0->unk10, &sp24);
-                            ((void **) temp_s5)[3] = var_t3;
-                            ((s32 *) sp2C)[0xE] = 1;
-                            break;
-
-                        case 5:
-                            sp30 = (Struct80053C7C_1 *) var_t0->unk10;
-                            temp_v0_3 = func_8005ABD8(var_t0->unk10, &sp24);
-                            ((void **) temp_s5)[3] = temp_v0_3;
-                            func_80057E88(var_t0, temp_s5, 0);
-                            var_t3 = temp_v0_3;
-                            break;
-                            if ((var_t0 && var_t0) && var_t0)
-                            {
-                            }
-
-                        case 6:
-                            new_var3 = var_t0;
-                            temp_v0_4 = func_8005B31C(new_var3->unk10);
-                            sp24 = temp_v0_4;
-                            ((void **) temp_s5)[3] = temp_v0_4;
-                            func_80057E88(var_t0, temp_s5, 0);
-                            break;
-
-                        case 7:
-
-                        default:
-                            sp30 = (Struct80053C7C_1 *) new_var3->unk10;
-                            var_t3 = func_8005ABD8(var_t0->unk10, &sp24);
-                            ((void **) temp_s5)[3] = var_t3;
-                            ((void **) temp_s5)[4] = sp24;
-                            temp_v1_5 = (Struct80053C7C_2 *) (*new_var4);
-                            temp_v0_5 = temp_v1_5->unk0;
-                            if (((temp_v0_5 & 7) == 1) && (temp_v1_5->unk2 & 0x8000))
-                            {
-                                ((u16 *) temp_s5)[0x15] = 1;
-                                ((s32 *) temp_s5)[9] |= 8;
-                            }
-                            break;
-                    }
-                    break;
-
                 case 1:
-                    switch (((u8 *) new_var3)[4] & 7)
-                    {
-                        sp30 = (Struct80053C7C_1 *) (*new_var4);
-                        case 0:
-                            var_t3 = func_8005ABD8(*new_var4, &sp24);
-                            ((void **) temp_s5)[3] = var_t3;
-                            break;
-
-                        case 1:
-                            temp_v0_7 = func_8005B31C(*new_var4);
-                            sp24 = temp_v0_7;
-                            ((void **) temp_s5)[3] = temp_v0_7;
-                            break;
-                    }
+                    grid = (FieldTileGrid *) rec->unk10;
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    anim->cels = cel;
                     break;
-
                 case 2:
-                    var_s3 = new_var3->unk4;
-                    switch (var_s3 & 7)
-                    {
-                        case 0:
-                            sp30 = (Struct80053C7C_1 *) new_var3->unk10;
-                            var_t3 = func_8005ABD8(new_var = var_t0->unk10, &sp24);
-                            ((void **) temp_s5)[3] = var_t3;
-                            ((void **) temp_s5)[4] = sp24;
-                            break;
-
-                        case 1:
-                            temp_v0_7 = func_8005B31C(new_var3->unk10);
-                            sp24 = temp_v0_7;
-                            ((void **) temp_s5)[3] = temp_v0_7;
-                            break;
-                    }
-                    break;
-
-                default:
-                    sp30 = (Struct80053C7C_1 *) new_var3->unk10;
-                    var_t3 = func_8005ABD8(var_t0->unk10, &sp24);
-                    ((void **) temp_s5)[3] = var_t3;
-                    break;
-            }
-
-            if (((var_t0->unk4 & 0xFF000007) < 2) || (((u8 *) new_var3)[7] == 3))
-            {
-                sp10[0] = ((u16 *) sp24)[8] << 8;
-                sp10[1] = ((u16 *) sp24)[9] << 8;
-                sp10[2] = ((u16 *) sp24)[10] << 8;
-                temp_a0 = (u16 *) ((void **) (*((void **) (((u8 *) sp24) + 4))))[1];
-                func_8005AC50(temp_a0 + 2, temp_a0[0], sp10);
-                sp28 = 0;
-                func_8005AD20(((u8 *) var_t3)[0x21], *((u16 *) ((void **) (*((void **) (((u8 *) sp24) + 4))))[1]), &sp28);
-                ((void **) temp_s5)[8] = *arg1;
-                var_fp = *arg1;
-                temp_v1_6 = ((u8 *) var_t3)[0x21];
-                switch (temp_v1_6)
-                {
-                    case 0:
-                        sp40 = 0xC;
-                        break;
-
-                    case 1:
-                        break;
-
-                    case 2:
-
-                    case 3:
-
-                    case 4:
-
-                    case 5:
-                        sp40 = 0xC;
-                        break;
-
-                    case 6:
-                        break;
-                }
-
-                var_t2 = 1;
-                if (((s32 *) var_t3)[7] != 0)
-                {
-                    sp40 -= 4;
-                }
-                else
-                {
-                    var_t2 = 0;
-                }
-                if ((new_var5 = (s32 *) var_t3)[6] != 0)
-                {
-                    var_t2 |= 2;
-                    sp40 -= 4;
-                }
-                var_t4 = (s32) ((long) new_var3->unk14);
-                if ((var_t0->unk4 & 0xFF000007) == 1)
-                {
-                    ((void **) temp_s5)[4] = (void *) new_var5[4];
-                    temp_s3 = ((u8 *) var_t0)[6] - 1;
-                    if (temp_s3 != (-1))
-                    {
-                        var_s3_2 = temp_s3 - 1;
-                        new_var6 = 1;
-                        if (var_s3_2 != (-new_var6))
-                        {
-                            new_var7 = 1;
-                            do
-                            {
-                                var_s3_2 -= 1;
-                            }
-                            while (var_s3_2 != (-new_var7));
-                        }
-                    }
-                }
-                else
-                {
-                    sp48 = 0;
-                    temp_s4_5 = var_t0;
-                    var_s3_3 = ((u8 *) var_t0)[6] - 1;
-                    if (var_s3_3 != (-1))
+                    grid = (FieldTileGrid *) rec->unk10;
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    anim->cels = cel;
+                    if ((anim->flags.word & 0x40) &&
+                        (span_off = 0, frame = def->unk5, frame != -1))
                     {
                         do
                         {
-                            var_s7 = var_t4;
-                            var_s1 = 1;
-                            var_s6 = 0;
-                            temp_s2 = (s32 *) new_var5[3];
-                            var_t1 = *temp_s2;
-                            var_s2 = temp_s2 + 1;
-                            if (sp30->unkB != 0)
-                            {
-                                while (1)
-                                {
-                                    temp_v1_7 = temp_s4_5->unkD;
-                                    if (var_s6 < temp_v1_7)
-                                    {
-                                        var_s0 = 1;
-                                        var_s0 = sp30->unkA;
-                                        var_s0 = var_s0 - var_s0;
-                                        if (var_s0 != (-1))
-                                        {
-                                            do
-                                            {
-                                                var_s1 *= 2;
-                                                if (var_s1 == 0)
-                                                {
-                                                    var_t1 = *var_s2;
-                                                    var_s2 += 1;
-                                                    var_s1 = 1;
-                                                }
-                                                var_s0 -= 1;
-                                            }
-                                            while (var_s0 != (-1));
-                                        }
-                                    }
-                                    else if (var_s6 < (temp_v1_7 + temp_s4_5->unkF))
-                                    {
-                                        var_s0 = 0;
-                                        if (sp30->unkA != 0)
-                                        {
-                                            do
-                                            {
-                                                temp_v1_8 = temp_s4_5->unkC;
-                                                if ((var_s0 >= temp_v1_8) && (var_s0 < (temp_v1_8 + temp_s4_5->unkE)))
-                                                {
-                                                    if (var_t1 & var_s1)
-                                                    {
-                                                        temp_v1_9 = ((u8 *) var_t3)[0x21];
-                                                        switch (temp_v1_9)
-                                                        {
-                                                            case 0:
-                                                                temp_a1 = var_fp;
-                                                                var_fp = (void *) (((u8 *) var_fp) + (var_s3_3 = sp40));
-                                                                func_8005477C(var_s7, temp_a1, ((*((u32 *) (((u8 *) sp30) + 8))) >> 4) & 3, var_t2);
-                                                                break;
-
-                                                            case 1:
-                                                                break;
-
-                                                            case 2:
-
-                                                            case 3:
-
-                                                            case 4:
-
-                                                            case 5:
-                                                                temp_a1_2 = var_fp;
-                                                                var_fp = (void *) (((u8 *) var_fp) + sp40);
-                                                                func_80054904(var_s7, temp_a1_2, ((*((u32 *) (((u8 *) sp30) + 8))) >> 4) & 3, var_t2);
-                                                                break;
-
-                                                            case 6:
-                                                                break;
-                                                        }
-
-                                                        sp48 += 1;
-                                                    }
-                                                    var_s7 += 4;
-                                                }
-                                                var_s1 *= 2;
-                                                if (var_s1 == 0)
-                                                {
-                                                    var_t1 = *var_s2;
-                                                    var_s2 += 1;
-                                                    var_s1 = 1;
-                                                }
-                                                var_s0 += 1;
-                                            }
-                                            while (var_s0 != sp30->unkA);
-                                        }
-                                    }
-                                    var_s6 += 1;
-                                    if (var_s6 == sp30->unkB)
-                                    {
-                                        break;
-                                    }
-                                }
-                            }
-                            var_s3_3 -= 1;
-                            var_t4 += (temp_s4_5->unkE * temp_s4_5->unkF) * 4;
+                            frame -= 1;
+                            cel->unk20 = span_off == anim->flags.b.state;
+                            cel = cel->next;
+                            span_off += 1;
                         }
-                        while (var_s3_3 != (-1));
+                        while (frame != -1);
                     }
-                }
-                ((u16 *) temp_s5)[0x16] = sp48;
-                if (((u8 *) var_t0)[7] == 3)
-                {
-                    if (new_var3->unk4 & 0x20)
+                    break;
+                case 3:
+                    if ((anim->flags.word & 0x40) && (anim->counter != 1))
                     {
-                        func_80057CA4(var_t0, temp_s5, 0);
+                        anim->flags.word |= 0x20;
                     }
+                    break;
+                case 4:
+                    grid = (FieldTileGrid *) rec->unk10;
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    anim->cels = cel;
+                    scene->unk38 = 1;
+                    break;
+                case 5:
+                    grid = (FieldTileGrid *) rec->unk10;
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    anim->cels = cel;
+                    func_80057E88(def, anim, 0);
+                    break;
+                case 6:
+                    cel = func_8005B31C(rec->unk10);
+                    src = (FieldTintSrc *) cel;
+                    anim->cels = cel;
+                    func_80057E88(def, anim, 0);
+                    break;
+                default:
+                    grid = (FieldTileGrid *) rec->unk10;
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    anim->cels = cel;
+                    anim->unk10 = (s32) src;
+                    key = (FieldAnimKey *) rec->unk14;
+                    if (((key->unk0 & 7) == 1) && (key->unk2 & 0x8000))
+                    {
+                        anim->counter = 1;
+                        anim->flags.word |= 8;
+                    }
+                    break;
                 }
-                else if (((s32 *) temp_s5)[9] & 0x40)
+                break;
+            case 1:
+                switch (def->unk4 & 7)
                 {
-                    func_80057CA4(var_t0, temp_s5, 0);
+                case 0:
+                    grid = (FieldTileGrid *) def->unk14;
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    anim->cels = cel;
+                    break;
+                case 1:
+                    cel = func_8005B31C(def->unk14);
+                    src = (FieldTintSrc *) cel;
+                    anim->cels = cel;
+                    break;
                 }
-                *arg1 = var_fp;
+                break;
+            case 2:
+                switch (def->unk4 & 7)
+                {
+                case 0:
+                    grid = (FieldTileGrid *) def->unk10;
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    anim->cels = cel;
+                    anim->unk10 = (s32) src;
+                    break;
+                case 1:
+                    cel = func_8005B31C(def->unk10);
+                    src = (FieldTintSrc *) cel;
+                    anim->cels = cel;
+                    break;
+                }
+                break;
+            default:
+                grid = (FieldTileGrid *) def->unk10;
+                cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                anim->cels = cel;
+                break;
             }
-            if ((((var_t0->unk4 & 0xFF000007) - 3) < 2) || ((((u8 *) new_var3)[7] == 1) && ((var_t0->unk4 & 7) >= 2)))
+            if (((u32) (*(u32 *) &def->unk4 & 0xFF000007) < 2) || (def->unk7 == 3))
             {
-                if ((var_t0->unk4 & 0xFF000007) == 0x01000002)
+                rgb[0] = src->unk10 << 8;
+                rgb[1] = src->unk12 << 8;
+                rgb[2] = src->unk14 << 8;
+                tab = src->unk4->unk4;
+                func_8005AC50(tab + 2, tab[0], rgb);
+                code = 0;
+                func_8005AD20(cel->format, src->unk4->unk4[0], &code);
+                anim->frames = *arena;
+                cursor = *arena;
+                switch (cel->format)
                 {
-                    if (var_t0->unkC == 0)
-                    {
-                        *arg1 = (void *) (((u8 *) (*arg1)) + 0x50);
-                    }
-                    else
-                    {
-                        *arg1 = (void *) (((u8 *) (*arg1)) + 0x410);
-                    }
+                case 0:
+                    stride = 0xC;
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                    stride = 0xC;
+                    break;
+                case 1:
+                case 6:
+                    break;
                 }
-                else if ((var_t0->unk4 & 0xFF000007) == 0x01000005)
+                mode = 1;
+                if (cel->unk1C != 0)
                 {
-                    if (new_var3->unkC == 0)
+                    stride -= 4;
+                }
+                else
+                {
+                    mode = 0;
+                }
+                if (cel->unk18 != 0)
+                {
+                    mode |= 2;
+                    stride -= 4;
+                }
+                base = def->unk14;
+                rec = def;
+                if ((*(u32 *) &def->unk4 & 0xFF000007) == 1)
+                {
+                    anim->unk10 = (s32) cel->tiles;
+                    frame = def->unk6 - 1;
+                    if (frame != -1)
                     {
-                        *arg1 = (void *) ((((u8 *) (*arg1)) + (((s32) ((long) new_var3->unk10)) << 6)) + 0x10);
-                    }
-                    else
-                    {
-                        *arg1 = (void *) ((((u8 *) (*arg1)) + (((s32) ((long) new_var3->unk10)) << 0xA)) + 0x10);
+                        frame -= 1;
+                        do
+                        {
+                            frame -= 1;
+                        }
+                        while (frame != -1);
                     }
                 }
                 else
                 {
-                    *arg1 = (void *) (((u8 *) (*arg1)) + 0x10);
+                    frame = def->unk6 - 1;
+                    if (frame != -1)
+                    {
+                        do
+                        {
+                            recp = base;
+                            bit = 1;
+                            row = 0;
+                            count = 0;
+                            maskp = cel->mask;
+                            word = *maskp++;
+                            if (grid->u.b.rows != 0)
+                            {
+                                do
+                                {
+                                    if (row < rec->unkD)
+                                    {
+                                        col = grid->u.b.cols - 1;
+                                        if (col != -1)
+                                        {
+                                            do
+                                            {
+                                                bit *= 2;
+                                                if (bit == 0)
+                                                {
+                                                    word = *maskp++;
+                                                    bit = 1;
+                                                }
+                                                col -= 1;
+                                            }
+                                            while (col != -1);
+                                        }
+                                    }
+                                    else if (row < rec->unkD + rec->unkF)
+                                    {
+                                        col = 0;
+                                        if (grid->u.b.cols != 0)
+                                        {
+                                            do
+                                            {
+                                                if ((col >= rec->unkC) && (col < rec->unkC + rec->unkE))
+                                                {
+                                                    if (word & bit)
+                                                    {
+                                                        switch (cel->format)
+                                                        {
+                                                        case 0:
+                                                            prim = cursor;
+                                                            cursor += stride;
+                                                            func_8005477C(recp, prim, (grid->u.word >> 4) & 3, mode);
+                                                            break;
+                                                        case 2:
+                                                        case 3:
+                                                        case 4:
+                                                        case 5:
+                                                            prim = cursor;
+                                                            cursor += stride;
+                                                            func_80054904(recp, prim, (grid->u.word >> 4) & 3, mode);
+                                                            break;
+                                                        case 1:
+                                                        case 6:
+                                                            break;
+                                                        }
+                                                        count += 1;
+                                                    }
+                                                    recp += 1;
+                                                }
+                                                bit *= 2;
+                                                if (bit == 0)
+                                                {
+                                                    word = *maskp++;
+                                                    bit = 1;
+                                                }
+                                                col += 1;
+                                            }
+                                            while (col != grid->u.b.cols);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                    row += 1;
+                                }
+                                while (row != grid->u.b.rows);
+                            }
+                            frame -= 1;
+                            base += rec->unkE * rec->unkF;
+                        }
+                        while (frame != -1);
+                        anim->frame_tiles = count;
+                        if (def->unk7 == 3)
+                        {
+                            if (*(u32 *) &def->unk4 & 0x20)
+                            {
+                                func_80057CA4(def, anim, 0);
+                            }
+                        }
+                        else if (anim->flags.word & 0x40)
+                        {
+                            func_80057CA4(def, anim, 0);
+                        }
+                    }
+                }
+                *arena = cursor;
+            }
+            kind = *(u32 *) &def->unk4 & 0xFF000007;
+            if (((u32) (kind - 3) < 2) ||
+                ((def->unk7 == 1) && ((u32) (def->unk4 & 7) >= 2)))
+            {
+                if (kind == 0x01000002)
+                {
+                    if (def->unkC == 0)
+                    {
+                        *arena += 0x50;
+                    }
+                    else
+                    {
+                        *arena += 0x410;
+                    }
+                }
+                else if (kind == 0x01000005)
+                {
+                    if (def->unkC == 0)
+                    {
+                        *arena += (*(u8 *) &def->unk10 << 6) + 0x10;
+                    }
+                    else
+                    {
+                        *arena += (*(u8 *) &def->unk10 << 10) + 0x10;
+                    }
+                }
+                else
+                {
+                    *arena += 0x10;
                 }
             }
-            var_t0 = *((Struct80053C7C_1 **) (&var_t0->unk8));
+            def = def->next;
         }
-        while (var_t0 != ((void *) 0));
+        while (def != NULL);
     }
-    ((void **) arg2)[0] = (void *) 0;
+    *tail = NULL;
 }
