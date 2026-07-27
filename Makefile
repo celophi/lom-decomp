@@ -358,7 +358,7 @@ overlay_cload_gcc_srcs   := src/overlays/cload/unk1.c
 
 OVERLAYS += field
 overlay_field_gcc_srcs      := src/overlays/field/unk2.c
-overlay_field_gcc_g4_noexpand_srcs := src/overlays/field/field1.c src/overlays/field/field2.c src/overlays/field/field6.c src/overlays/field/field7.c src/overlays/field/field5.c src/overlays/field/func_80059294.c src/overlays/field/func_800591C4.c src/overlays/field/func_800674a8.c src/overlays/field/func_80067598.c src/overlays/field/func_80067b8c.c src/overlays/field/func_8005ab4c.c src/overlays/field/func_8006429c.c src/overlays/field/field8.c
+overlay_field_gcc_g4_noexpand_srcs := src/overlays/field/field1.c src/overlays/field/field2.c src/overlays/field/field3.c src/overlays/field/field6.c src/overlays/field/field7.c src/overlays/field/field5.c src/overlays/field/func_80059294.c src/overlays/field/func_800591C4.c src/overlays/field/func_800674a8.c src/overlays/field/func_80067598.c src/overlays/field/func_80067b8c.c src/overlays/field/func_8005ab4c.c src/overlays/field/func_8006429c.c src/overlays/field/field8.c
 
 OVERLAYS += gname
 

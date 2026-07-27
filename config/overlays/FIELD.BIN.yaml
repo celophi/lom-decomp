@@ -51,7 +51,7 @@ segments:
       - [0x285, .rodata, unk2]
       - [0x22B9, c, field1]       # gcc280_g4
       - [0x29B9, c, field2]       # gcc280_g4
-      - [0x3C11, c, field3]       # CDK (default)
+      - [0x3C11, c, field3]       # gcc280_g4
       - [0x4B0D, c, field8]      # gcc280_g4
       - [0x9555, c, func_800591C4] # gcc280_g4
       - [0x9625, c, func_80059294] # gcc280_g4
