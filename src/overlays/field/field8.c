@@ -27,28 +27,108 @@
  */
 #define HALF_TOWARD_ZERO(v) ((v) >= 0 ? ((v) >> 1) : (((v) + 1) >> 1))
 
+/*
+ * Packed tile descriptor and field texture-atlas constants.
+ *
+ * The field textures occupy two VRAM banks. Logical page slots 0-9 begin at
+ * (320, 256); slots 10-15 continue in the bank beginning at (512, 0).
+ * TPage X coordinates are stored in units of 64 VRAM halfwords.
+ */
+#define FIELD_TILE_PRESENT 0x80
+#define FIELD_TILE_CLUT_MASK 0x1F
+#define FIELD_TILE_CLUT_X_SLOT_MASK 0xF
+#define FIELD_TILE_TPAGE_SLOT_MASK 0xF
+#define FIELD_TILE_U_MASK 0xF
+#define FIELD_TILE_V_MASK 0xF0
+#define FIELD_TILE_SIZE 0x10
+#define FIELD_TILE_SEMITRANS 0x40
+#define FIELD_TILE_LOWER_BANK_SLOTS 0xA
+#define FIELD_TILE_UPPER_BANK_VRAM_X 0x200
+#define FIELD_TILE_UPPER_BANK_VRAM_X_BIAS 0x80
+#define FIELD_TILE_LOWER_BANK_VRAM_X 0x140
+#define FIELD_TILE_LOWER_BANK_VRAM_Y 0x100
+#define FIELD_TILE_CLUT_VRAM_Y 0x1D8
+#define FIELD_TILE_TPAGE_X_SHIFT 6
+#define FIELD_TILE_4BIT_U_PAGE_SHIFT 4
+#define FIELD_TILE_UPPER_BANK_U_CELLS_PER_SLOT 4
+#define FIELD_TEXTURE_4_BIT 0
+#define FIELD_TEXTURE_8_BIT 1
+
+/*
+ * A 4bpp CLUT contains 16 colors, so its low four reference bits select a
+ * 16-pixel X slot. Reference bit 4 selects VRAM row 472 or 473. An 8bpp CLUT
+ * consumes a complete 256-color row, so all five bits select its Y offset.
+ *
+ * Keep these as macros: their expansion preserves the matched mask/shift order.
+ */
+#define FIELD_TILE_4BIT_CLUT_X(ref) (((ref) & FIELD_TILE_CLUT_X_SLOT_MASK) << 4)
+#define FIELD_TILE_4BIT_CLUT_Y(ref) (FIELD_TILE_CLUT_VRAM_Y + (((ref) & FIELD_TILE_CLUT_MASK) >> 4))
+#define FIELD_TILE_8BIT_CLUT_Y(ref) (FIELD_TILE_CLUT_VRAM_Y + ((ref) & FIELD_TILE_CLUT_MASK))
+
+/*
+ * Texture-atlas address decoding. TPage X is measured in 64-halfword columns.
+ * In the sprite format, U is stored in 16-pixel cells; crossing to the upper
+ * bank rebases those cells onto the common TPage beginning at (512, 0).
+ */
+#define FIELD_TILE_ABR(attrs) ((attrs) >> 4)
+#define FIELD_TILE_LOWER_BANK_PAGE_X(slot) \
+    (FIELD_TILE_LOWER_BANK_VRAM_X + ((slot) << FIELD_TILE_TPAGE_X_SHIFT))
+#define FIELD_TILE_UPPER_BANK_PAGE_X(slot) \
+    ((s32) (((slot) << FIELD_TILE_TPAGE_X_SHIFT) - FIELD_TILE_UPPER_BANK_VRAM_X_BIAS))
+#define FIELD_TILE_TPAGE_COLUMN(slot, u_cell, depth) \
+    ((slot) + ((u_cell) >> (FIELD_TILE_4BIT_U_PAGE_SHIFT - (depth))))
+#define FIELD_TILE_UPPER_BANK_U_REBASE(slot) \
+    ((FIELD_TILE_LOWER_BANK_SLOTS - (slot)) * FIELD_TILE_UPPER_BANK_U_CELLS_PER_SLOT)
+
+/* Per-record fields which may instead be supplied once by the owning cel. */
+#define FIELD_TILE_REC_SHARED_RGB_CODE 1
+#define FIELD_TILE_REC_SHARED_TPAGE 2
+
+/* Scratchpad table containing complete RGB/primitive-code words. */
+#define FIELD_TILE_COLOR_WORDS ((s32 *) 0x1F800000)
+
 /**
  * @brief Packed 4-byte per-tile source descriptor consumed by field_build_sprite_tile_record.
  */
 typedef struct
 {
-    /** Bit 7 = tile present; bits 0-4 feed the texture-page / CLUT word. */
+    /**
+     * Bit 7 = tile present. Bits 0-4 encode the CLUT location: 4bpp splits
+     * them into X/16 and Y+0/1; 8bpp uses them as the CLUT Y offset.
+     */
     u8 clut_slot;
-    /** Bit 6 = set flag 2 on the record; bits 0-3 = horizontal slot. */
-    u8 tpage_attr;
-    /** High nibble is copied out verbatim; low nibble is the vertical slot. */
+    /**
+     * Bits 0-3 = logical atlas page slot; bits 4-5 = TPage ABR blend mode;
+     * bit 6 enables semitransparency in the primitive code byte.
+     */
+    u8 texture_attrs;
+    /** Low nibble = U/16; high nibble = V, already aligned to 16 pixels. */
     u8 packed_uv;
-    /** Index into the scratchpad word table at 0x1F800000. */
+    /** Index into the scratchpad RGB/primitive-code table at 0x1F800000. */
     u8 color_index;
 } FieldTileDesc;
+
+/** Format-dependent final word of a compact tile record. */
+typedef union
+{
+    /** Sprite records store a complete GP0(E1h) command here. */
+    s32 draw_mode;
+    /** Quad records store their second UV and TPage tuple here. */
+    struct
+    {
+        s8 u;
+        s8 v;
+        s16 tpage;
+    } quad;
+} FieldTileTail;
 
 /**
  * @brief Render record built from a FieldTileDesc.
  *
  * u/v are a texture coordinate pair and clut is the CLUT halfword. The tail is
- * used two ways: field_build_sprite_tile_record writes a single GPU draw-mode
- * word across u1..tpage, while field_build_quad_tile_record writes a second
- * coordinate pair plus its own texture-page halfword.
+ * used two ways: field_build_sprite_tile_record writes tail.draw_mode, while
+ * field_build_quad_tile_record writes tail.quad's second coordinate pair and
+ * texture-page halfword.
  *
  * @note When the descriptor is absent the whole first word is set to -1, so
  *       u/v/clut are also addressed as a single s32 (see the else arm).
@@ -61,107 +141,111 @@ typedef struct
     s8 v;
     s16 clut;
     s32 rgb_code;
-    s8 u1;
-    s8 v1;
-    s16 tpage;
+    FieldTileTail tail;
 } FieldTileRec;
 
 /**
  * @brief Build one field tile render record from its packed descriptor.
  *
- * Writes the vertical slot, the texture-page/CLUT halfword (selected by
- * @p clut_mode), an entry pulled from the scratchpad table at 0x1F800000, and a
- * GPU draw-mode word (0xE1000400 | attributes). If the descriptor's presence
- * bit is clear the record's first word is poisoned with -1 instead.
+ * Expands the packed UV, builds the texture-depth-specific CLUT ID, copies an
+ * RGB/primitive-code word from scratchpad when it is not shared, and optionally
+ * appends a GP0(E1h) draw-mode command. If the descriptor's presence bit is
+ * clear, the record's first word is set to -1 as an absent-tile sentinel.
  *
  * @param desc  Packed 4-byte tile descriptor.
  * @param record Render record to fill in.
- * @param clut_mode Texture-page selection mode, 0-3. 0 and 1 pick different
- *              packings of desc->clut_slot; anything else zeroes the halfword.
- *              Also contributes bits 7-8 of the draw-mode attributes.
- * @param record_flags Bit 0: emit the draw-mode word at offset 4 and skip the
- *              scratchpad lookup. Bit 1: skip the draw-mode word entirely.
+ * @param texture_depth PSX texture depth: 0 = 4bpp, 1 = 8bpp, 2 = 15bpp.
+ *              It selects the CLUT packing and supplies TPage bits 7-8.
+ * @param record_flags FIELD_TILE_REC_SHARED_RGB_CODE omits the per-tile
+ *              scratchpad word and moves the draw-mode word to offset 4;
+ *              FIELD_TILE_REC_SHARED_TPAGE omits the latter entirely.
  *
- * @note The `switch (clut_mode)` is required to match: the equivalent nested `if`
+ * @note The `switch (texture_depth)` is required to match: the equivalent nested `if`
  *       lays the blocks out as default/case1/case0 and scores 91.89%, and an
  *       `if/else if` chain scores lower still.
- * @note The `base` and `tmp` temporaries are required to match. Written as one
- *       inline `|` chain gcc reassociates the operands and CSE-hoists
- *       `clut_mode & 3` instead of `desc->tpage_attr * 2` (94.59%); merely parenthesizing
- *       without a named temp is not enough (97.81%).
- * @note `b0` must be `u32`, not `u8`: with `u8` the final `or` in the case-0
+ * @note The canonical PsyQ getTPage() form is a 100% match. In the older
+ *       hand-expanded form, named TPage/page temporaries were required because
+ *       an inline `|` chain made gcc reassociate and CSE the wrong operand
+ *       (94.59%).
+ * @note `clut_ref` must be `u32`, not `u8`: with `u8` the final `or` in the case-0
  *       arm comes out operand-swapped (99.80%).
- * @note Measured non-factors, all still 100%: `h * 0x10` vs `h << 4`, the
- *       compound vs expanded form of the `h -=` subtraction, and a redundant
+ * @note Measured non-factors, all still 100%: `u_cell * 0x10` vs `u_cell << 4`, the
+ *       compound vs expanded form of the `u_cell -=` subtraction, and a redundant
  *       `(u32)` cast on the `>> 4`.
  *
  * @see decomp.me (100%) TODO
  */
-void field_build_sprite_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32 clut_mode, s32 record_flags)
+void field_build_sprite_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32 texture_depth, s32 record_flags)
 {
-    u32 h;
-    s32 attr;
-    s32 base;
-    s32 tmp;
-    u8 b1;
-    s32 lo;
+    u32 u_cell;
+    s32 tpage;
+    u8 texture_attrs;
+    s32 page_slot;
 
-    if (desc->clut_slot & 0x80)
+    if (desc->clut_slot & FIELD_TILE_PRESENT)
     {
-        u8 b2 = desc->packed_uv;
+        u8 packed_uv = desc->packed_uv;
 
-        h = b2 & 0xF;
-        record->v = b2 & 0xF0;
-        switch (clut_mode)
+        u_cell = packed_uv & FIELD_TILE_U_MASK;
+        record->v = packed_uv & FIELD_TILE_V_MASK;
+        switch (texture_depth)
         {
-        case 0:
+        case FIELD_TEXTURE_4_BIT:
             {
-                u32 b0 = desc->clut_slot;
+                u32 clut_ref = desc->clut_slot;
 
-                record->clut = ((((b0 & 0x1F) >> 4) + 0x1D8) << 6) | (b0 & 0xF);
+                setClut(
+                    record,
+                    FIELD_TILE_4BIT_CLUT_X(clut_ref),
+                    FIELD_TILE_4BIT_CLUT_Y(clut_ref));
             }
             break;
-        case 1:
-            record->clut = (((desc->clut_slot & 0x1F) + 0x1D8) << 6);
+        case FIELD_TEXTURE_8_BIT:
+            setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
             break;
         default:
             record->clut = 0;
             break;
         }
-        if (!(record_flags & 1))
+        if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
         {
-            record->rgb_code = ((s32 *) 0x1F800000)[desc->color_index];
-            if (desc->tpage_attr & 0x40)
+            record->rgb_code = FIELD_TILE_COLOR_WORDS[desc->color_index];
+            if (desc->texture_attrs & FIELD_TILE_SEMITRANS)
             {
-                *((u8 *) record + 7) |= 2;
+                setSemiTrans(record, 1);
             }
         }
-        if (!(record_flags & 2))
+        if (!(record_flags & FIELD_TILE_REC_SHARED_TPAGE))
         {
-            b1 = desc->tpage_attr;
-            lo = b1 & 0xF;
-            if ((u32) (lo + (h >> (4 - clut_mode))) >= 0xAU)
+            texture_attrs = desc->texture_attrs;
+            page_slot = texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
+            if ((u32) FIELD_TILE_TPAGE_COLUMN(page_slot, u_cell, texture_depth) >= FIELD_TILE_LOWER_BANK_SLOTS)
             {
-                h -= (0xA - lo) * 4;
-                base = ((clut_mode & 3) << 7) | ((b1 * 2) & 0x60);
-                attr = base | 8;
+                /*
+                 * U crossed the ten-slot lower bank. Rebase it onto the upper
+                 * bank's first TPage: getTPage(depth, abr, 512, 0).
+                 */
+                u_cell -= FIELD_TILE_UPPER_BANK_U_REBASE(page_slot);
+                tpage = getTPage(
+                    texture_depth, FIELD_TILE_ABR(texture_attrs),
+                    FIELD_TILE_UPPER_BANK_VRAM_X, 0);
             }
             else
             {
-                base = ((clut_mode & 3) << 7) | ((b1 * 2) & 0x60);
-                tmp = (((u32) ((lo << 6) + 0x140)) >> 6) | 0x10;
-                attr = base | tmp;
+                tpage = getTPage(
+                    texture_depth, FIELD_TILE_ABR(texture_attrs),
+                    FIELD_TILE_LOWER_BANK_PAGE_X(page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
             }
-            if (!(record_flags & 1))
+            if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
             {
-                *(s32 *) &record->u1 = attr | 0xE1000400;
+                record->tail.draw_mode = _get_mode(1, 0, tpage);
             }
             else
             {
-                record->rgb_code = attr | 0xE1000400;
+                record->rgb_code = _get_mode(1, 0, tpage);
             }
         }
-        record->u = h * 0x10;
+        record->u = u_cell * FIELD_TILE_SIZE;
     }
     else
     {
@@ -178,120 +262,113 @@ void field_build_sprite_tile_record(FieldTileDesc *desc, FieldTileRec *record, s
  *
  * @param desc  Packed 4-byte tile descriptor.
  * @param record Render record to fill in.
- * @param clut_mode Texture-page selection mode, 0-3. 0 and 1 pick different
- *              packings of desc->clut_slot; anything else zeroes the halfword.
- *              Also contributes bits 7-8 of the texture-page attributes.
- * @param record_flags Bit 0: skip the scratchpad lookup and shift the tail down by
- *              4 bytes. Bit 1: skip the second coordinate pair entirely.
+ * @param texture_depth PSX texture depth: 0 = 4bpp, 1 = 8bpp, 2 = 15bpp.
+ *              It selects the CLUT packing and supplies TPage bits 7-8.
+ * @param record_flags FIELD_TILE_REC_SHARED_RGB_CODE omits the per-tile
+ *              scratchpad word and shortens the record by four bytes;
+ *              FIELD_TILE_REC_SHARED_TPAGE omits the second UV/TPage tuple.
  *
- * @note The attribute word must be built by **accumulating in place** into one
- *       variable (`base = clut_mode & 3; base = base << 7; base = base | ...;`).
- *       Writing it as a single `|` chain reassociates the operands and flips
- *       which subexpression is shared between the two arms: 99.14% with block 1
- *       inlined, 98.28% with both blocks inlined. Same mechanism as
- *       field_build_sprite_tile_record's `base`/`tmp` temporaries. See [CSE-05] in idioms.md.
- * @note `base = base | tmp; record->tpage = base;` must stay split; folding it to
- *       `record->tpage = base | tmp;` costs an instruction (98.77%).
- * @note The tail stores must be ordered u1, v1, tpage. The natural-looking
- *       u1, tpage, v1 order leaves the load-delay slot unfilled (98.21%).
+ * @note The canonical PsyQ getTPage() form is a 100% match. Its upper-bank X
+ *       argument must retain the `(s32)` cast: page slots are unsigned, and
+ *       without the cast gcc emits `srl` instead of the target's `sra` twice
+ *       (99.10%).
+ * @note Assigning the first TPage directly with setTPage() changes gcc's
+ *       expression ordering and adds one instruction (97.76%), so getTPage()
+ *       must produce the value before the common tail store.
+ * @note The tail stores must be ordered quad.u, quad.v, quad.tpage. Writing
+ *       quad.u, quad.tpage, quad.v leaves the load-delay slot unfilled (98.21%).
  * @note `prev` must be a block-local declared inside the `record_flags & 1` arm.
  *       Hoisting it above the `if` as a function-scope variable colors it into
  *       the wrong register and flips the delay-slot fill (97.84%).
- * @note The `switch (clut_mode)` and `u32 b0` requirements are as documented on
+ * @note The `switch (texture_depth)` and `u32 clut_ref` requirements are as documented on
  *       field_build_sprite_tile_record; measured here too (94.07% and 99.85% respectively).
- * @note The `(s32)` cast inside the `>= 0xA` arm is required: it selects an
- *       arithmetic `sra` over a logical `srl` (99.55% without).
  *
  * @see decomp.me (100%) TODO
  */
-void field_build_quad_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32 clut_mode, s32 record_flags)
+void field_build_quad_tile_record(FieldTileDesc *desc, FieldTileRec *record, s32 texture_depth, s32 record_flags)
 {
-    s32 base;
-    s32 tmp;
-    s32 tmp2;
-    s32 attr;
-    u8 b1;
-    u32 lo;
+    s32 tpage;
+    s32 second_tpage;
+    u8 texture_attrs;
+    u32 page_slot;
 
-    if (desc->clut_slot & 0x80)
+    if (desc->clut_slot & FIELD_TILE_PRESENT)
     {
-        record->u = (desc->packed_uv & 0xF) * 0x10;
-        record->v = desc->packed_uv & 0xF0;
-        switch (clut_mode)
+        record->u = (desc->packed_uv & FIELD_TILE_U_MASK) * FIELD_TILE_SIZE;
+        record->v = desc->packed_uv & FIELD_TILE_V_MASK;
+        switch (texture_depth)
         {
-        case 0:
+        case FIELD_TEXTURE_4_BIT:
             {
-                u32 b0 = desc->clut_slot;
+                u32 clut_ref = desc->clut_slot;
 
-                record->clut = ((((b0 & 0x1F) >> 4) + 0x1D8) << 6) | (b0 & 0xF);
+                setClut(
+                    record,
+                    FIELD_TILE_4BIT_CLUT_X(clut_ref),
+                    FIELD_TILE_4BIT_CLUT_Y(clut_ref));
             }
             break;
-        case 1:
-            record->clut = (((desc->clut_slot & 0x1F) + 0x1D8) << 6);
+        case FIELD_TEXTURE_8_BIT:
+            setClut(record, 0, FIELD_TILE_8BIT_CLUT_Y(desc->clut_slot));
             break;
         default:
             record->clut = 0;
             break;
         }
-        if (!(record_flags & 1))
+        if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
         {
-            record->rgb_code = ((s32 *) 0x1F800000)[desc->color_index];
-            if (desc->tpage_attr & 0x40)
+            record->rgb_code = FIELD_TILE_COLOR_WORDS[desc->color_index];
+            if (desc->texture_attrs & FIELD_TILE_SEMITRANS)
             {
-                *((u8 *) record + 7) |= 2;
+                setSemiTrans(record, 1);
             }
         }
-        b1 = desc->tpage_attr;
-        lo = b1 & 0xF;
-        if (lo >= 0xAU)
+        texture_attrs = desc->texture_attrs;
+        page_slot = texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
+        if (page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
         {
-            base = clut_mode & 3;
-            base = base << 7;
-            base = base | ((b1 * 2) & 0x60);
-            tmp = (s32) ((((s32) (lo << 6)) - 0x80) & 0x3FF) >> 6;
+            tpage = getTPage(
+                texture_depth, FIELD_TILE_ABR(texture_attrs),
+                FIELD_TILE_UPPER_BANK_PAGE_X(page_slot), 0);
         }
         else
         {
-            base = clut_mode & 3;
-            base = base << 7;
-            base = base | ((b1 * 2) & 0x60);
-            tmp = (((lo << 6) + 0x140) >> 6) | 0x10;
+            tpage = getTPage(
+                texture_depth, FIELD_TILE_ABR(texture_attrs),
+                FIELD_TILE_LOWER_BANK_PAGE_X(page_slot), FIELD_TILE_LOWER_BANK_VRAM_Y);
         }
-        base = base | tmp;
-        record->tpage = base;
-        if (!(record_flags & 2))
+        record->tail.quad.tpage = tpage;
+        if (!(record_flags & FIELD_TILE_REC_SHARED_TPAGE))
         {
-            u8 c1 = desc->tpage_attr;
-            u32 lo2 = c1 & 0xF;
+            u8 second_texture_attrs = desc->texture_attrs;
+            u32 second_page_slot = second_texture_attrs & FIELD_TILE_TPAGE_SLOT_MASK;
 
-            if (lo2 >= 0xAU)
+            if (second_page_slot >= FIELD_TILE_LOWER_BANK_SLOTS)
             {
-                base = clut_mode & 3;
-                base = base << 7;
-                base = base | ((c1 * 2) & 0x60);
-                tmp2 = (s32) ((((s32) (lo2 << 6)) - 0x80) & 0x3FF) >> 6;
+                second_tpage = getTPage(
+                    texture_depth, FIELD_TILE_ABR(second_texture_attrs),
+                    FIELD_TILE_UPPER_BANK_PAGE_X(second_page_slot), 0);
             }
             else
             {
-                base = clut_mode & 3;
-                base = base << 7;
-                base = base | ((c1 * 2) & 0x60);
-                tmp2 = (((lo2 << 6) + 0x140) >> 6) | 0x10;
+                second_tpage = getTPage(
+                    texture_depth, FIELD_TILE_ABR(second_texture_attrs),
+                    FIELD_TILE_LOWER_BANK_PAGE_X(second_page_slot),
+                    FIELD_TILE_LOWER_BANK_VRAM_Y);
             }
-            attr = base | tmp2;
-            if (!(record_flags & 1))
+            if (!(record_flags & FIELD_TILE_REC_SHARED_RGB_CODE))
             {
-                record->u1 = ((desc->packed_uv & 0xF) * 0x10) + 0xF;
-                record->v1 = desc->packed_uv & 0xF0;
-                record->tpage = attr;
+                record->tail.quad.u = ((desc->packed_uv & FIELD_TILE_U_MASK) * FIELD_TILE_SIZE) + 0xF;
+                record->tail.quad.v = desc->packed_uv & FIELD_TILE_V_MASK;
+                record->tail.quad.tpage = second_tpage;
             }
             else
             {
                 FieldTileRec *prev = (FieldTileRec *) ((u8 *) record - 4);
 
-                prev->u1 = ((desc->packed_uv & 0xF) * 0x10) + 0xF;
-                prev->v1 = desc->packed_uv & 0xF0;
-                prev->tpage = attr;
+                prev->tail.quad.u = ((desc->packed_uv & FIELD_TILE_U_MASK) * FIELD_TILE_SIZE) + 0xF;
+                prev->tail.quad.v = desc->packed_uv & FIELD_TILE_V_MASK;
+                prev->tail.quad.tpage = second_tpage;
             }
         }
     }
