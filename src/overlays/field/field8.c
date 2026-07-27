@@ -2423,7 +2423,7 @@ u_long *func_8005866C(FieldAnimDef *, FieldAnim *);
 void func_800589F0(FieldAnimDef *, FieldAnimCel *, FieldTintSrc *, s32);
 void func_80058C00(FieldAnimDef *, FieldTintSrc *, s32);
 void func_80058E28(FieldAnimDef *, FieldAnim *);
-void func_800591C4(FieldAnimDef *, FieldAnimCel *, s32);
+void func_800591C4(FieldAnimDef *, FieldTintSrc *, s32);
 void func_80059294(FieldImageReq *);
 void func_80059F18(void);
 void func_8005A744(FieldSeq *, s32);
@@ -2952,7 +2952,7 @@ void func_80056A04(void)
                         func_800584DC(def, anim->cels, anim->flags.b.state);
                         break;
                     case 1:
-                        func_800591C4(def, anim->cels, anim->flags.b.state);
+                        func_800591C4(def, (FieldTintSrc *) anim->cels, anim->flags.b.state);
                         break;
                     default:
                         anim->flags.word |= 0x20;
@@ -3390,7 +3390,7 @@ typedef struct
     u16 unk2;
 } FieldTweenSpan;
 
-u8 *func_80059224(FieldAnimDef *, s32, volatile s8 *);
+u8 *func_80059224(u8 *, s32, volatile s8 *);
 void func_8005A984(FieldPart *, s32, s32);
 void func_8005AA68(FieldObj *, s32, s32);
 
@@ -3450,7 +3450,7 @@ void func_80057E88(FieldAnimDef *def, FieldAnim *anim, s32 commit)
         obj = (FieldObj *) anim->cels;
     }
     key = (FieldTweenKey *) (rec->unk14 + anim->flags.b.state * 8);
-    duration = ((FieldTweenSpan *) func_80059224(def, anim->flags.b.unk2, &base))->unk2;
+    duration = ((FieldTweenSpan *) func_80059224((u8 *) def, anim->flags.b.unk2, &base))->unk2;
     if (duration == 0)
     {
         duration = 1;
@@ -4047,7 +4047,7 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
 
     rec = def;
     hdr = g_field_scene.scene->unk0;
-    total = ((FieldTweenSpan *) func_80059224(rec, anim->flags.b.unk2, (volatile s8 *) &base))->unk2;
+    total = ((FieldTweenSpan *) func_80059224((u8 *) rec, anim->flags.b.unk2, (volatile s8 *) &base))->unk2;
     idx = anim->flags.b.unk2;
     do
     {
@@ -4091,7 +4091,7 @@ u_long *func_8005866C(FieldAnimDef *def, FieldAnim *anim)
     }
     if (*(s32 *) &def->unk4 & 0x40)
     {
-        other = (((FieldTweenSpan *) func_80059224(def, idx, (volatile s8 *) &base))->unk1 + idx) - base;
+        other = (((FieldTweenSpan *) func_80059224((u8 *) def, idx, (volatile s8 *) &base))->unk1 + idx) - base;
     }
     else
     {
@@ -4668,7 +4668,7 @@ void func_80058E28(FieldAnimDef *def, FieldAnim *anim)
     {
         anim->flags.word &= ~8;
     }
-    span = (FieldTweenSpan *) func_80059224(def, anim->flags.b.unk2, &base);
+    span = (FieldTweenSpan *) func_80059224((u8 *) def, anim->flags.b.unk2, &base);
     anim->counter = span->unk2;
     if (*(s32 *) &def->unk4 & 0x40)
     {
@@ -4678,4 +4678,112 @@ void func_80058E28(FieldAnimDef *def, FieldAnim *anim)
     {
         anim->flags.b.state = anim->flags.b.unk2;
     }
+}
+
+/**
+ * @brief Re-point every cel of an animation node at the frame's VRAM band.
+ *
+ * Walks the cel list hanging off @p src and runs func_800584DC on each one, so
+ * the whole node is retargeted at frame @p state in one call. Same list shape as
+ * func_80058C00: the record reached through FieldAnim::cels carries its cels at
+ * offset 0x08.
+ *
+ * @param def   Animation definition, forwarded to func_800584DC unchanged.
+ * @param src   Record whose @c unk8 is the head of the cel list to walk.
+ * @param state Frame index, forwarded to func_800584DC unchanged.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_800591C4(FieldAnimDef *def, FieldTintSrc *src, s32 state)
+{
+    FieldAnimCel *cel;
+
+    cel = src->unk8;
+    if (cel != NULL)
+    {
+        do
+        {
+            func_800584DC(def, cel, state);
+            cel = cel->next;
+        }
+        while (cel != NULL);
+    }
+}
+
+/**
+ * @brief Walk a run-length-encoded count table to locate the record covering a
+ *        given linear index, returning that record and the cumulative count
+ *        consumed before it.
+ *
+ * The first byte of @p data holds a 7-bit count (high bit ignored). If @p index
+ * is below that count the table does not reach @p index, so @p out is left 0 and
+ * @p data is returned unchanged. Otherwise the leading count is committed to
+ * @p out, the 0x18-byte header is skipped, and the function steps through the
+ * following 4-byte records, accumulating each record's 7-bit count, until the
+ * running total would exceed @p index. The pointer to that record is returned
+ * and @p out holds the cumulative count of all preceding records.
+ *
+ * @param data  Pointer to the count table (RLE header followed by 4-byte records).
+ * @param index Linear index to resolve; signed compare against each running total.
+ * @param out   Receives the cumulative count consumed before the returned record.
+ * @return Pointer to the record whose range contains @p index.
+ *
+ * @note @p out is taken as volatile and an otherwise-dead read of byte 7 of the
+ *       header is preserved; both are required to reproduce the original codegen
+ *       (the reload of *out and the stray load). The do/while(0) wrapper and the
+ *       $v1 register pin on the dead load are likewise required to match GCC's
+ *       basic-block ordering and register allocation - removing any of them
+ *       drops the match.
+ * @see decomp.me (100%) TODO
+ */
+u8 *func_80059224(u8 *data, s32 index, volatile s8 *out)
+{
+    u8 count;
+    u8 byte;
+    u8 acc;
+    u8 cand;
+    register u8 unused asm("$3");
+
+    *out = 0;
+    count = *data & 0x7F;
+    do
+    {
+        if (index >= count)
+        {
+            *out = count;
+            unused = *(volatile u8 *) (data + 7);
+            data += 0x18;
+            byte = *data;
+            acc = *out;
+            cand = acc + (byte & 0x7F);
+            while (index >= (u8) cand)
+            {
+                data += 4;
+                cand = acc + (byte & 0x7F);
+                *out = cand;
+                byte = *data;
+                acc = cand;
+                cand = cand + (byte & 0x7F);
+            }
+        }
+        return data;
+    }
+    while (0);
+}
+
+/**
+ * @brief Push a VRAM upload request onto the scene's pending-upload list.
+ *
+ * @param req Request to link in; its next pointer takes the old list head.
+ *
+ * @note NOT MATCHED - 98.75%.
+ * @see decomp.me (98.75%) TODO
+ */
+void func_80059294(FieldImageReq *req)
+{
+    FieldScene *scene;
+
+    scene = g_field_scene.scene;
+    req->next = (FieldImageReq *) scene->uploads;
+    scene->uploads = req;
 }
