@@ -541,7 +541,8 @@ typedef struct
     u8 unk4;   /* 0x04 low three bits select the handler */
     u8 unk5;   /* 0x05 */
     u8 unk6;   /* 0x06 */
-    u8 _pad1;
+    /** 0x07 handler sub-kind; the high byte of the word read at 0x04. */
+    u8 unk7;
     u16 unk8;  /* 0x08 */
     u16 unkA;  /* 0x0A */
     u8 unkC;   /* 0x0C */
@@ -710,7 +711,9 @@ struct FieldAnim
     /** 0x20 base of the per-frame packed tile records. */
     u8 *frames;
     FieldAnimFlags flags; /* 0x24 */
-    u8 _pad2[0x2A - 0x28];
+    /** 0x28 remaining loop repeats; decremented each time the cel ring wraps. */
+    u8 unk28;
+    u8 _pad2;
     u16 counter;          /* 0x2A */
     /** 0x2C tile records per frame, i.e. the stride from one frame to the next. */
     u16 frame_tiles;
@@ -4480,5 +4483,199 @@ void func_80058C00(FieldAnimDef *def, FieldTintSrc *src, s32 shade)
         }
     next_cel:
         ;
+    }
+}
+
+/**
+ * @brief Step an animation node to its next keyframe and refresh its counter.
+ *
+ * Advances FieldAnim::flags.b.unk2 - the keyframe cursor - according to the
+ * node's play mode, then resolves the new keyframe through func_80059224 and
+ * reloads FieldAnim::counter with its length.
+ *
+ * The mode comes from the low bits of the flags word. Bit 0 selects ping-pong
+ * play, in which bit 2 records that the cursor is currently walking backwards:
+ * the cursor counts down to 0, turns around, counts up to FieldAnimDef::unk5,
+ * and turns around again. Without bit 0 the cursor simply counts up and wraps
+ * to 0. Either way, each time the cursor reaches an end of the range the loop
+ * counter @c unk28 is spent; when it runs out, bit 6 (keep playing) is cleared
+ * and the animation stops. Bit 3 is a one-shot skip request: it is consumed and
+ * the cursor is left alone.
+ *
+ * Whether an end-of-range actually spends a repeat depends on the definition's
+ * handler: bit 4 of the word at FieldAnimDef::unk4 exempts it entirely, and
+ * otherwise only the @c unk7 / kind pairs 0/5, 0/6 and 1/5 are counted.
+ *
+ * The published frame index (FieldAnim::flags.b.state) is normally the cursor
+ * itself; for handlers with bit 6 set it is instead the keyframe's running span
+ * total plus the cursor, minus the offset func_80059224 reports.
+ *
+ * @param def  Animation definition; supplies the handler kind (the word at
+ *             @c unk4, plus @c unk7) and the last keyframe index (@c unk5).
+ * @param anim Animation node whose cursor, loop counter, flags and frame
+ *             counter are updated in place.
+ *
+ * @note The four handler-kind tests read the definition as a whole word
+ *       (@c *(s32 @c *) @c &def->unk4) and are repeated at each site, as in
+ *       func_80057E88; hoisting the word into a local reorders the blocks.
+ * @note The two end-of-range predicates are spelled differently on purpose, and
+ *       both spellings are required. Where the test is positive it uses the
+ *       packed @c (kind @c & @c 0xFF000007) @c == @c 0x01000005 form; splitting
+ *       that into @c unk7 @c == @c 1 @c && @c (kind @c & @c 7) @c == @c 5 costs
+ *       16 rows. Where it is negative it is written as a three-way OR ending in
+ *       @c unk7 @c >= @c 2, which is what makes gcc emit the shared
+ *       @c sltiu @c unk7, @c 2 tail; spelling it as the negation of the positive
+ *       form costs 19 rows.
+ * @note The outer test is `if (!(flags & 8))` with the long body first and the
+ *       bit-3 clear as the `else`. Writing it the other way round puts the clear
+ *       inline and stops the two flag stores cross-jumping (97.12%).
+ * @note In the ping-pong arm the cursor is read straight from the field, with no
+ *       local; a local costs 19 rows. In the wrap arm the @c def->unk5 test
+ *       compares the cursor and the stepped value through two separate @c s32
+ *       locals, and the stepped one needs the @c (u8) cast (99.59% without).
+ * @note The forward arm tests `!(kind & 0x10) && cursor == 0` for the stop case
+ *       and takes the step-back in the `else`; the opposite arm order costs 23
+ *       rows.
+ * @note Measured non-factors, all still 100%: a @c u8 local for the cursor in
+ *       the forward arm, a local for the handler word in the ping-pong start
+ *       arm, @c base as plain @c s8 or @c volatile @c u8, the parenthesisation
+ *       of the published index, and `unk2++` vs `unk2 = unk2 + 1`.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_80058E28(FieldAnimDef *def, FieldAnim *anim)
+{
+    FieldTweenSpan *span;
+    s32 cur;
+    s32 nxt;
+    u8 idx;
+    volatile s8 base;
+
+    if (!(anim->flags.word & 8))
+    {
+        if (anim->flags.word & 1)
+        {
+            if (anim->flags.word & 4)
+            {
+                if (anim->flags.b.unk2 == 0)
+                {
+                    if (*(s32 *) &def->unk4 & 0x10)
+                    {
+                        anim->flags.b.unk2 = anim->flags.b.unk2 + 1;
+                    }
+                    else if (((def->unk7 == 0) && ((u32) ((*(s32 *) &def->unk4 & 7) - 5) < 2)) ||
+                             ((*(s32 *) &def->unk4 & 0xFF000007) == 0x01000005))
+                    {
+                        if (anim->unk28 == 0)
+                        {
+                            anim->flags.word &= ~0x40;
+                        }
+                        else
+                        {
+                            anim->unk28--;
+                            anim->flags.b.unk2++;
+                        }
+                    }
+                    anim->flags.word &= ~4;
+                }
+                else
+                {
+                    anim->flags.b.unk2 = anim->flags.b.unk2 - 1;
+                    if (!(*(s32 *) &def->unk4 & 0x10) && (anim->flags.b.unk2 == 0) &&
+                        (((def->unk7 == 0) && ((u32) ((*(s32 *) &def->unk4 & 7) - 5) >= 2)) ||
+                         ((def->unk7 == 1) && ((*(s32 *) &def->unk4 & 7) != 5)) ||
+                         (def->unk7 >= 2)))
+                    {
+                        if (anim->unk28 == 0)
+                        {
+                            anim->flags.word &= ~0x40;
+                        }
+                        else
+                        {
+                            anim->unk28--;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                idx = anim->flags.b.unk2;
+                if (idx == def->unk5)
+                {
+                    if (!(*(s32 *) &def->unk4 & 0x10) && (idx == 0))
+                    {
+                        anim->flags.word &= ~0x40;
+                    }
+                    else
+                    {
+                        anim->flags.b.unk2--;
+                        anim->flags.word |= 4;
+                    }
+                }
+                else
+                {
+                    anim->flags.b.unk2 = idx + 1;
+                }
+            }
+        }
+        else
+        {
+            cur = anim->flags.b.unk2;
+            if (cur == def->unk5)
+            {
+                if (!(*(s32 *) &def->unk4 & 0x10) &&
+                    (((def->unk7 == 0) && ((u32) ((*(s32 *) &def->unk4 & 7) - 5) < 2)) ||
+                     ((*(s32 *) &def->unk4 & 0xFF000007) == 0x01000005)))
+                {
+                    if (anim->unk28 == 0)
+                    {
+                        anim->flags.word &= ~0x40;
+                    }
+                    else
+                    {
+                        anim->unk28--;
+                    }
+                }
+                anim->flags.b.unk2 = 0;
+            }
+            else
+            {
+                nxt = cur + 1;
+                anim->flags.b.unk2 = nxt;
+                if (!(*(s32 *) &def->unk4 & 0x10) && ((u8) nxt == def->unk5) &&
+                    (((def->unk7 == 0) && ((u32) ((*(s32 *) &def->unk4 & 7) - 5) >= 2)) ||
+                     ((def->unk7 == 1) && ((*(s32 *) &def->unk4 & 7) != 5)) ||
+                     (def->unk7 >= 2)))
+                {
+                    if (anim->unk28 == 0)
+                    {
+                        anim->flags.word &= ~0x40;
+                    }
+                    else
+                    {
+                        anim->unk28--;
+                    }
+                }
+            }
+        }
+        if ((anim->flags.word & 0x40) && (anim->unk28 == 0) && (anim->flags.word & 2) &&
+            (anim->flags.b.unk3 == anim->flags.b.unk2))
+        {
+            anim->flags.word &= ~0x40;
+        }
+    }
+    else
+    {
+        anim->flags.word &= ~8;
+    }
+    span = (FieldTweenSpan *) func_80059224(def, anim->flags.b.unk2, &base);
+    anim->counter = span->unk2;
+    if (*(s32 *) &def->unk4 & 0x40)
+    {
+        anim->flags.b.state = (span->unk1 + anim->flags.b.unk2) - base;
+    }
+    else
+    {
+        anim->flags.b.state = anim->flags.b.unk2;
     }
 }
