@@ -28,6 +28,7 @@
 #define InfoActSub  2
 #define InfoActSize 3
 #define InfoActCurr 4
+#define InfoActSign 5
 
 /*
  * PadSetMainMode() lock values.

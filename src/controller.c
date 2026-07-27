@@ -37,6 +37,8 @@ enum
     CONTROLLER_ACTUATOR_SETUP_MODE = 0x200,
     CONTROLLER_ACTUATOR_SETUP_ACTIVE = 0x400,
     CONTROLLER_USE_DEFAULT_ANALOG_CENTER = 0x800,
+    CONTROLLER_ACTUATOR_RUNTIME_FLAGS_MASK = 0xF00,
+    CONTROLLER_LEGACY_VIBRATION_DEVICE_ID = 0x40,
     CONTROLLER_ANALOG_CENTER = 0x80,
     CONTROLLER_ANALOG_DEADZONE = 0x38,
     CONTROLLER_ANALOG_DEADZONE_WIDTH = 0x71,
@@ -48,8 +50,14 @@ enum
     CONTROLLER_FAST_REPEAT_INTERVAL = 3,
     CONTROLLER_NORMAL_REPEAT_DELAY = 0x16,
     CONTROLLER_NORMAL_REPEAT_INTERVAL = 6,
-    CONTROLLER_MAX_PENDING_SAMPLES = 3
+    CONTROLLER_MAX_PENDING_SAMPLES = 3,
+    CONTROLLER_ACTUATOR_SETUP_READY = 2
 };
+
+#define CONTROLLER_IS_DISCONNECTED(status) (((status) >> 8) & 1)
+#define CONTROLLER_ACTUATOR_SETUP_STATE(status) (((status) >> 9) & 3)
+#define CLEAR_CONTROLLER_ACTUATOR_RUNTIME_FLAGS(control) \
+    ((control) &= ~CONTROLLER_ACTUATOR_RUNTIME_FLAGS_MASK)
 
 /**
  * @brief One 16-byte processed controller sample.
@@ -101,7 +109,7 @@ typedef struct ControllerPortState
     u8 actuators_enabled;
     u8 small_motor_command;
     ControllerActuatorControl actuator_control;
-    u8 actuator_header;
+    u8 legacy_vibration_device_id;
     u8 small_motor_value;
     u8 large_motor_value;
     u8 actuator_value_2;
@@ -142,23 +150,20 @@ typedef struct ControllerState
 } ControllerState;
 
 #define CONTROLLER_STATE ((ControllerState*)0x801ED600)
+#define CONTROLLER_PORT_1_RECEIVE_BUFFER ((u8*)0x801ED75C)
+#define CONTROLLER_PORT_2_RECEIVE_BUFFER ((u8*)0x801ED77E)
 
 void controller_poll(void);
 void clear_controller_sample(ControllerSample* sample);
 
-/*
- * The old-style PadStartCom declaration is intentional. The matched call keeps
- * four otherwise-live values in argument registers even though LIBPAD ignores
- * them.
- */
 extern void PadStartCom();
 extern void PadInitDirect(u8* port1_buffer, u8* port2_buffer);
-extern u32 PadGetState(int port);
+extern int PadGetState(int port);
 extern s32 PadInfoMode(int port, int info_mode, int index);
 extern int PadInfoAct(int port, int actuator, int property);
 extern int PadSetActAlign(int port, u8* alignment);
 extern int PadSetMainMode(int port, int mode, int lock);
-extern int PadSetAct(int port, u8* actuator_data, int length);
+extern void PadSetAct(int port, u8* actuator_data, int length);
 extern int PadChkVsync(void);
 extern void PadStopCom(void);
 void controller_vsync_callback(void);
@@ -184,12 +189,16 @@ void initialize_controllers(s8 enable_actuators)
     int port_countdown;
     int countdown_end;
     unsigned int disconnected_device_type;
-    int actuator_header;
+    int legacy_vibration_device_id;
     int all_ports_ready;
     int status_port_countdown;
-    PadInitDirect((u8*)0x801ED75C, (u8*)0x801ED77E);
+
+    /* Bind LIBPAD to the raw receive buffers and retain callback ownership. */
+    PadInitDirect(CONTROLLER_PORT_1_RECEIVE_BUFFER, CONTROLLER_PORT_2_RECEIVE_BUFFER);
     g_previous_controller_vsync_callback = (void (*)(void))VSyncCallback(0);
     controller_state = CONTROLLER_STATE;
+
+    /* Published and live samples remain disconnected until the first valid poll. */
     controller_state->ports[0].port_id = 0;
     controller_state->ports[1].port_id = CONTROLLER_SECOND_PORT_FLAG;
     clear_controller_sample(&controller_state->ports[0].published_sample);
@@ -197,15 +206,17 @@ void initialize_controllers(s8 enable_actuators)
     clear_controller_sample((ControllerSample*)&controller_state->ports[0].device_type);
     clear_controller_sample((ControllerSample*)&controller_state->ports[1].device_type);
     port_countdown = 1;
-    actuator_header = 0x40;
+    legacy_vibration_device_id = CONTROLLER_LEGACY_VIBRATION_DEVICE_ID;
     disconnected_device_type = CONTROLLER_DEVICE_DISCONNECTED;
     countdown_end = -1;
     current_port = &controller_state->ports[1];
+
+    /* Reset per-port actuator state while preserving unrelated control bits. */
     do
     {
         actuator_control = (*(current_port_pointer = &current_port))->actuator_control.value;
         port_countdown--;
-        current_port->actuator_header = actuator_header;
+        current_port->legacy_vibration_device_id = legacy_vibration_device_id;
         current_port->actuator_value_2 = 0;
         current_port->large_motor_value = 0;
         current_port->small_motor_value = 0;
@@ -216,17 +227,21 @@ void initialize_controllers(s8 enable_actuators)
         current_port->large_motor_power = 0;
         current_port->device_type = disconnected_device_type;
         current_port->published_sample.device_type = disconnected_device_type;
-        actuator_control &= 0xF0FF;
+        CLEAR_CONTROLLER_ACTUATOR_RUNTIME_FLAGS(actuator_control);
         current_port->actuator_control.value = actuator_control;
         current_port->actuator_control.fields.large_motor_command = 0;
         current_port--;
     } while (continue_initializing = port_countdown != countdown_end);
+
+    /* Reset frame-level sampling, repeat timing, and actuator cadence. */
     controller_state->fast_button_repeat = 0;
     controller_state->actuator_cycle = 0;
     controller_state->published_sample_count = 0;
     controller_state->pending_sample_count = 0;
     controller_state->sample_unavailable = 0;
-    PadStartCom(disconnected_device_type, port_countdown, countdown_end, actuator_header);
+
+    /* Start communication and wait for every port to settle. */
+    PadStartCom(disconnected_device_type, port_countdown, countdown_end, legacy_vibration_device_id);
     do
     {
         VSync(0);
@@ -237,8 +252,8 @@ void initialize_controllers(s8 enable_actuators)
         do
         {
             actuator_status = (*(current_port_pointer = &status_port))->actuator_control.value;
-            /* A port is ready once it is disconnected or actuator setup reaches state 2. */
-            if ((!(((actuator_status >> 6) >> 2) & 1)) && (((actuator_status >> 9) & 3) != 2))
+            if ((!CONTROLLER_IS_DISCONNECTED(actuator_status)) &&
+                (CONTROLLER_ACTUATOR_SETUP_STATE(actuator_status) != CONTROLLER_ACTUATOR_SETUP_READY))
             {
                 all_ports_ready = 0;
             }
@@ -246,6 +261,8 @@ void initialize_controllers(s8 enable_actuators)
             status_port--;
         } while (status_port_countdown != (-1));
     } while (all_ports_ready == 0);
+
+    /* update_controllers() arms VSync accumulation when the frame begins. */
     controller_state->vsync_accumulation_count = 0;
     controller_state->vsync_accumulation_interval = 0;
 }
@@ -309,7 +326,8 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         return;
 
     case PadStateFindCTP1:
-        port->actuator_header = 0x40;
+        /* Legacy analog pads use a fixed device ID and one binary vibration byte. */
+        port->legacy_vibration_device_id = CONTROLLER_LEGACY_VIBRATION_DEVICE_ID;
         if (port->actuators_enabled != 0)
         {
             if (port->small_motor_command & 1)
@@ -337,7 +355,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         }
         if ((port->actuator_control.value & CONTROLLER_ACTUATOR_SETUP_MASK) != CONTROLLER_ACTUATOR_SETUP_ACTIVE)
         {
-            PadSetAct(port->port_id, &port->actuator_header, 2);
+            PadSetAct(port->port_id, &port->legacy_vibration_device_id, 2);
             port->small_motor_power = 10;
             port->actuator_control.value =
                 (port->actuator_control.value | CONTROLLER_ACTUATOR_SETUP_ACTIVE) & 0xF5FF;
@@ -345,6 +363,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         break;
 
     case PadStateStable:
+        /* Expanded-protocol pads expose independently aligned actuators. */
         if (port->actuators_enabled != 0)
         {
             u8 large_motor_command = port->actuator_control.fields.large_motor_command;
@@ -375,6 +394,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         switch ((port->actuator_control.value >> 9) & 3)
         {
         case 0:
+            /* Select DualShock mode before requesting actuator metadata. */
             port->actuator_control.value =
                 (port->actuator_control.value & 0xF9FF) | CONTROLLER_ACTUATOR_SETUP_MODE;
 
@@ -408,6 +428,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
             /* Fall through to discover and align the controller's actuators. */
 
         case 1:
+            /* Discover actuator capabilities and map them into the transmit buffer. */
             port->actuator_control.value = (port->actuator_control.value & 0xF9FF) | 0xC00;
             counter = 5;
             disabled_actuator_index = 0xFF;
@@ -469,6 +490,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         break;
     }
 
+    /* Select the receive packet for the physical port. */
     if (port->port_id & CONTROLLER_SECOND_PORT_FLAG)
     {
         pad_packet = controller_state->receive_buffers[1];
@@ -480,6 +502,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
     multitap_slot = port->port_id & CONTROLLER_MULTITAP_SLOT_MASK;
     if (multitap_slot != 0)
     {
+        /* Multi-tap slots follow a two-byte header in eight-byte records. */
         if ((*((u16*)pad_packet)) == CONTROLLER_PACKET_PRESENT)
         {
             pad_packet += (multitap_slot * 8) + 2;
@@ -496,6 +519,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
     }
     if (pad_packet[0] == 0)
     {
+        /* Decode the protocol ID into the game's three supported device classes. */
         u8 controller_id = pad_packet[1];
         u8 controller_class = controller_id >> 4;
         switch (controller_class)
@@ -556,6 +580,8 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                     port->device_type = device_type;
                 }
                 port->held_buttons = held_buttons;
+
+                /* Fast-repeat mode halves both the initial delay and interval. */
                 if (controller_state->fast_button_repeat != 0)
                 {
                     initial_repeat_delay = CONTROLLER_FAST_REPEAT_DELAY;
@@ -637,6 +663,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                 }
                 if (device_type != CONTROLLER_DEVICE_DIGITAL)
                 {
+                    /* Center, clamp, and scale raw axes into signed movement values. */
                     delta = pad_packet[4] - port->right_stick_center_x;
                     if (((u32)(delta + CONTROLLER_ANALOG_DEADZONE)) < CONTROLLER_ANALOG_DEADZONE_WIDTH)
                     {
@@ -746,6 +773,8 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                         analog_directions |= PADRdown;
                     }
                     delta = analog_directions & (analog_directions ^ ((port->analog_direction_bits & 0xF) * 0x10));
+
+                    /* Merge analog direction edges with their independent repeat timers. */
                     new_analog_directions = delta;
                     decoded_state = new_analog_directions | ((analog_directions & 0xFF) >> 4);
                     if (analog_directions & PADRup)
@@ -848,6 +877,7 @@ void controller_poll(void)
     s32 actuator_power_total;
     ControllerState* controller_state = CONTROLLER_STATE;
 
+    /* Only consume data from a completed LIBPAD transaction. */
     if (PadChkVsync() != 0)
     {
         actuator_power_total = 0;
@@ -857,6 +887,8 @@ void controller_poll(void)
         controller_state->sample_unavailable = 0;
         return;
     }
+
+    /* Prevent stale input from being mistaken for a fresh press. */
     clear_controller_sample((ControllerSample*)&controller_state->ports[0].device_type);
     clear_controller_sample((ControllerSample*)&controller_state->ports[1].device_type);
     controller_state->sample_unavailable = 1;
@@ -939,11 +971,15 @@ void update_controllers(void)
     s32 sample_loop_end;
     controller_poll();
     controller_base = (u8*)CONTROLLER_STATE;
+
+    /* A frame with no queued snapshots starts with a clean accumulator. */
     if (g_controller_vsync_sample_count == 0)
     {
         clear_controller_sample(&((ControllerState*)controller_base)->ports[0].accumulated_sample);
         clear_controller_sample(&((ControllerState*)controller_base)->ports[1].accumulated_sample);
     }
+
+    /* Publish the current frame from the accumulated and latest samples. */
     merge_latest_controller_sample(&((ControllerState*)controller_base)->ports[0]);
     merge_latest_controller_sample(&((ControllerState*)controller_base)->ports[1]);
     sample_index = ((ControllerState*)controller_base)->pending_sample_count;
@@ -972,6 +1008,8 @@ void update_controllers(void)
             port1_source_offset -= 0x10;
         } while (sample_index != sample_loop_end);
     }
+
+    /* Close the history batch and open a fresh accumulation window. */
     ((ControllerState*)controller_base)->pending_sample_count = 0;
     ((ControllerState*)controller_base)->vsync_accumulation_count = 1;
     ((ControllerState*)controller_base)->vsync_accumulation_interval = 0;
@@ -1003,6 +1041,7 @@ void controller_vsync_callback(void)
     {
         controller_poll();
 
+        /* Retain a bounded history of processed VSync snapshots for the next frame. */
         if (controller_state->pending_sample_count < CONTROLLER_MAX_PENDING_SAMPLES)
         {
             copy_controller_sample((ControllerSample*)&controller_state->ports[0].device_type,
@@ -1012,12 +1051,14 @@ void controller_vsync_callback(void)
             controller_state->pending_sample_count = controller_state->pending_sample_count + 1;
         }
 
+        /* The first sample in a window replaces the previous aggregate. */
         if (controller_state->vsync_accumulation_count == 1)
         {
             clear_controller_sample(&controller_state->ports[0].accumulated_sample);
             clear_controller_sample(&controller_state->ports[1].accumulated_sample);
         }
 
+        /* Subsequent VSyncs OR buttons and sum analog movement into the window. */
         accumulate_controller_sample(&controller_state->ports[0]);
         accumulate_controller_sample(&controller_state->ports[1]);
 
@@ -1035,7 +1076,7 @@ void controller_vsync_callback(void)
 
 /**
  * @brief Accumulate the latest sample into a port's interval aggregate.
- * @param port_state Base of the per-port controller state.
+ * @param port Per-port controller state whose latest sample is accumulated.
  * @see decomp.me (100%) https://decomp.me/scratch/aj1vL
  */
 void accumulate_controller_sample(ControllerPortState* port)
@@ -1067,7 +1108,7 @@ void accumulate_controller_sample(ControllerPortState* port)
 
 /**
  * @brief Merge the accumulated and latest samples into a port's published sample.
- * @param port_state Base of the per-port controller state.
+ * @param port Per-port controller state to publish.
  * @see decomp.me (100%) https://decomp.me/scratch/ORRFA
  */
 void merge_latest_controller_sample(ControllerPortState* port)
@@ -1078,7 +1119,7 @@ void merge_latest_controller_sample(ControllerPortState* port)
 
     if (device_type == 0)
     {
-        /* Empty branch forces a nop in the delay slot. */
+        /* Digital controllers publish buttons but no analog fields. */
     }
     else
     {
@@ -1115,21 +1156,21 @@ void copy_controller_sample(ControllerSample* source, ControllerSample* destinat
 
     clear_controller_sample(destination);
     destination->device_type = source->device_type;
-    device_type = (s32)source->device_type; /* second load for comparison */
+    device_type = (s32)source->device_type;
 
     if (device_type == 0)
     {
-        /* Empty branch forces a nop in the beqz delay slot. */
+        /* Digital controllers copy buttons but no analog fields. */
     }
     else
     {
         if (device_type < 0)
         {
-            return; /* bltz */
+            return;
         }
         if (device_type >= 3)
         {
-            return; /* slti + beqz with nop */
+            return;
         }
         destination->right_stick_x = source->right_stick_x;
         destination->right_stick_y = source->right_stick_y;
@@ -1138,7 +1179,7 @@ void copy_controller_sample(ControllerSample* source, ControllerSample* destinat
         destination->analog_direction_bits = source->analog_direction_bits;
     }
 
-    /* Button block - executed for device_type 0, 1, or 2. */
+    /* All supported controller classes share the button fields. */
     destination->held_buttons = source->held_buttons;
     destination->pressed_buttons = source->pressed_buttons;
     destination->repeat_buttons = source->repeat_buttons;
