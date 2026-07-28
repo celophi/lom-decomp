@@ -10,9 +10,7 @@
 #include "psyq/libgpu.h"
 #include "psyq/libetc.h"
 
-/**
- * @brief VRAM destinations for a TIM's pixel and palette data.
- */
+/** @brief VRAM destinations for a TIM's pixel and palette blocks. */
 typedef struct
 {
     u16 pixel_x;
@@ -21,7 +19,7 @@ typedef struct
     u16 clut_y;
 } TimUploadDestinations;
 
-/** Shared stack storage used first as a clear rectangle, then as TIM destinations. */
+/** @brief Stack storage reused for VRAM clearing and TIM upload destinations. */
 typedef union
 {
     RECT clear_rect;
@@ -29,10 +27,10 @@ typedef union
 } GoverVramTransfer;
 
 /**
- * @brief Holds SFX table data consumed by the AKAO audio driver.
+ * @brief Stores the active SFX offset table for the AKAO driver.
  *
- * @c active_table_offset identifies populated data and locates the active SFX
- * table in @c table_data.
+ * @c active_table_offset is zero when empty; otherwise it contains the byte
+ * offset from the buffer start to @c table_data.
  */
 typedef struct
 {
@@ -43,7 +41,7 @@ typedef struct
 } SfxTableBuffer;
 
 /**
- * @brief Self-relative table of resource offsets.
+ * @brief Describes a self-relative table of resource offsets.
  *
  * The first word gives the number of entries; each following word is a byte
  * offset from the start of this table.
@@ -58,7 +56,12 @@ typedef union
     u8 bytes[1];
 } ResourceOffsetTable;
 
-/** Locates the byte immediately following a variable-length offset table. */
+/**
+ * @brief Returns the address stored in the offset table's final entry.
+ *
+ * @note The commuted pointer addition preserves the original instruction
+ *       operand order.
+ */
 #define RESOURCE_TABLE_END(table) \
     ((table)->bytes + *(((table)->header.entry_count - 1) + (table)->header.entry_offsets))
 
@@ -69,10 +72,9 @@ typedef union
 #define GOVER_FRAME_COUNT 2
 
 /**
- * @brief One half of the Game Over screen's double-buffered frame.
+ * @brief Holds one Game Over display buffer and its GPU packet workspace.
  *
- * Each half owns its display environments, ordering table, and primitive
- * workspace. One half is displayed while the other is prepared.
+ * One frame is displayed while the other is prepared.
  */
 typedef struct GoverFrameHalf
 {
@@ -84,7 +86,7 @@ typedef struct GoverFrameHalf
     void* allocation_cursor;
 } GoverFrameHalf;
 
-/** Typed views over one position in the variable-sized GPU packet stream. */
+/** @brief Provides typed views over a position in the GPU packet stream. */
 typedef union
 {
     SPRT sprite;
@@ -92,14 +94,19 @@ typedef union
     u8 bytes[1];
 } GoverPrimitive;
 
-/** Advances a packet-stream cursor by the size of the packet just written. */
+/** @brief Advances a GPU packet cursor past a packet of @p type. */
 #define NEXT_GOVER_PRIMITIVE(primitive, type) \
     ((GoverPrimitive*)((primitive)->bytes + sizeof(type)))
 
 /* Audio helpers used while presenting the Game Over screen. */
-extern s32 func_800A368C(s32 music_index, s32 destination_index);                   /* Loads and registers a music sequence. */
-extern s32 func_800A380C(void);                                                     /* Starts the registered music sequence. */
-extern s32 func_800A39A8(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);    /* Plays a staged SFX. */
+/** @brief Loads and registers a music sequence. */
+extern void func_800A368C(s32 music_index, s32 destination_index);
+
+/** @brief Starts the registered music sequence. */
+extern void func_800A380C(void);
+
+/** @brief Plays an SFX from the staged bank. */
+extern void func_800A39A8(s32 sfx_index, s32 pan, s32 unused, s32 channel_group);
 
 /** @brief AKAO music volume applied by func_800A380C. */
 extern s32 g_akao_music_volume;
@@ -110,7 +117,7 @@ extern SfxTableBuffer g_sfx_table_buffer;
 extern void cdrom_queue_read(s32 resource_index, void* destination);
 
 /**
- * Byte offset of @c vram_rect within a Game Over frame.
+ * @brief Byte offset of @c vram_rect within a Game Over frame.
  *
  * The linker exposes @c g_gover_frame_tail beginning at that member of frame
  * zero, so show-screen setup uses this offset to recover the complete frames.
@@ -201,18 +208,17 @@ static void gover_build_otag(GoverFrameHalf* frame);
 static void gover_run(void);
 
 /**
- * @brief Loads and presents the Game Over screen.
+ * @brief Initializes and presents the Game Over screen.
  *
- * Initializes double-buffered rendering, uploads the screen artwork, starts
- * the requested audio, and runs the fade sequence.
+ * Configures double-buffered rendering, loads the artwork and optional audio,
+ * then runs the screen until fade-out completes.
  *
- * @param image_buffer         RAM staging buffer for the image resource.
- * @param image_index          Game Over image index.
- * @param music_index          Music index, or -1 to skip music.
- * @param sfx_bank_index       SFX bank index, -1 to skip playback, or -2 to
- *                             reuse the currently staged bank.
- * @return void No return value.
- * @see decomp.me (100%) https://decomp.me/scratch/1qYnn
+ * @param image_buffer Writable staging buffer for the TIM resource.
+ * @param image_index Image index relative to @c GOVER_IMAGE_RESOURCE_BASE.
+ * @param music_index Music index, or @c GOVER_MUSIC_DISABLED.
+ * @param sfx_bank_index SFX bank index, @c GOVER_SFX_DISABLED, or
+ *                       @c GOVER_SFX_BANK_REUSE.
+ * @see https://decomp.me/scratch/1qYnn (100% match)
  */
 void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 sfx_bank_index)
 {
@@ -229,6 +235,7 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     setRECT(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).vram_rect,
             0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
+    // The temporary preserves the original address calculation.
     back_vram_rect = &GOVER_FRAME_FROM_TAIL(frame_tail, 1).vram_rect;
     setRECT(back_vram_rect, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
 
@@ -285,20 +292,18 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
 }
 
 /**
- * @brief Runs the Game Over screen until its fade-out completes.
+ * @brief Runs the Game Over rendering and input loop.
  *
- * Builds and displays alternating frames while processing controller and CD
- * state. Dismissal begins the fade-out and returns control to the game state.
+ * Builds alternating frames until dismissal triggers a completed fade-out.
  *
- * @param void No parameters.
- * @return void No return value.
- * @see decomp.me (100%) https://decomp.me/scratch/IfwJm
+ * @see https://decomp.me/scratch/IfwJm (100% match)
  */
 static void gover_run(void)
 {
     GoverFrameHalf* current_frame;
     GoverFrameHalf* drawing_frame;
     GoverFrameHalf* next_frame;
+    // Required to preserve the original stack frame.
     u8 stack_padding[8];
 
     // Prime both ordering tables before enabling display output.
@@ -326,6 +331,7 @@ static void gover_run(void)
 
         if ((g_fade_level == GOVER_FADE_FULL) && (g_pad_input & GOVER_DISMISS_BUTTON_MASK))
         {
+            // Fade out the music while reversing the screen fade.
             akao_cmd_c1(0, GOVER_MUSIC_FADE_OUT_DURATION, 0);
             g_fade_step = -GOVER_FADE_STEP;
         }
@@ -363,14 +369,13 @@ static void gover_run(void)
 }
 
 /**
- * @brief Builds the textured primitives for one Game Over frame.
+ * @brief Builds the GPU packets for one Game Over frame.
  *
  * Splits the artwork across two texture pages and modulates both sprites with
  * the current fade level.
  *
- * @param frame Frame containing the ordering table and primitive pool.
- * @return void No return value.
- * @see decomp.me (100%) https://decomp.me/scratch/q3LKi
+ * @param frame Frame whose ordering table and packet workspace are populated.
+ * @see https://decomp.me/scratch/q3LKi (100% match)
  */
 static void gover_build_otag(GoverFrameHalf* frame)
 {
@@ -428,6 +433,7 @@ static void gover_build_otag(GoverFrameHalf* frame)
     cursor = NEXT_GOVER_PRIMITIVE(cursor, SPRT);
 
     setDrawTPage(&cursor->draw_tpage, 0, 0, getTPage(1, 1, GOVER_SECOND_TPAGE_X, 0));
+    // Separate assignments preserve the original register allocation.
     next_cursor = cursor;
     next_cursor = NEXT_GOVER_PRIMITIVE(next_cursor, DR_TPAGE);
 
@@ -437,16 +443,16 @@ static void gover_build_otag(GoverFrameHalf* frame)
 }
 
 /**
- * @brief Reads a CD image resource into RAM, then uploads it to VRAM.
+ * @brief Loads a TIM resource from CD and uploads it to VRAM.
  *
- * @param resource_index CD resource index.
- * @param destinations   VRAM destinations for the TIM blocks.
- * @param image_buffer   RAM staging buffer for the TIM resource.
- * @return void No return value.
- * @see decomp.me (100%) https://decomp.me/scratch/OafFK
+ * @param resource_index CD resource identifier.
+ * @param destinations VRAM destinations for the TIM blocks.
+ * @param image_buffer Writable staging buffer for the TIM resource.
+ * @see https://decomp.me/scratch/OafFK (100% match)
  */
 static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer)
 {
+    // Required to preserve the original stack frame.
     volatile u8 padding[8];
     u16 resource_id;
 
@@ -457,13 +463,13 @@ static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* 
 }
 
 /**
- * @brief Uploads a staged 8bpp TIM to VRAM.
+ * @brief Uploads the palette and pixel blocks of a staged 8bpp TIM.
  *
- * @param tim          Staged TIM resource.
+ * @param tim Staged TIM resource.
  * @param destinations VRAM destinations for the palette and pixel data.
  * @return Pixel-block width in 16-bit VRAM words, rounded up to a 64-word
  *         texture-page boundary.
- * @see decomp.me (100%) https://decomp.me/scratch/BEM7D
+ * @see https://decomp.me/scratch/BEM7D (100% match)
  */
 static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations)
 {
@@ -471,34 +477,35 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinati
     TimBlock* pixel_block;
     u32 clut_block_length = tim->clut_block.bnum;
 
-    upload_rect.x = destinations->clut_x;
-    upload_rect.y = destinations->clut_y;
-    upload_rect.w = tim->clut_block.w * tim->clut_block.h;
-    upload_rect.h = 1;
+    setRECT(&upload_rect,
+            destinations->clut_x,
+            destinations->clut_y,
+            tim->clut_block.w * tim->clut_block.h,
+            1);
     LoadImage(&upload_rect, tim->clut_data);
 
     // Locate the pixel block that follows the variable-length CLUT block.
     pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
 
-    upload_rect.x = destinations->pixel_x;
-    upload_rect.y = destinations->pixel_y;
-    upload_rect.w = pixel_block->w;
-    upload_rect.h = pixel_block->h;
+    setRECT(&upload_rect,
+            destinations->pixel_x,
+            destinations->pixel_y,
+            pixel_block->w,
+            pixel_block->h);
     LoadImage(&upload_rect, pixel_block + 1);
 
     return ALIGN64(pixel_block->w);
 }
 
 /**
- * @brief Loads and registers a Game Over SFX bank.
+ * @brief Loads and registers a Game Over SFX bank with the AKAO driver.
  *
- * Clears the staged bank, reads the selected resource, copies its SFX table,
- * and submits the accompanying AKAO program to the driver.
+ * Clears the previous table, copies the selected table into driver storage,
+ * and registers the accompanying AKAO program.
  *
- * @param sfx_bank_index Bank index, GOVER_SFX_DISABLED to clear the staged
- *                       bank, or GOVER_SFX_BANK_REUSE to leave it unchanged.
- * @return void No return value.
- * @see decomp.me (100%) https://decomp.me/scratch/G5r92
+ * @param sfx_bank_index Bank index, @c GOVER_SFX_DISABLED to clear the staged
+ *                       bank, or @c GOVER_SFX_BANK_REUSE to keep it unchanged.
+ * @see https://decomp.me/scratch/G5r92 (100% match)
  */
 static void gover_load_sfx_bank(s32 sfx_bank_index)
 {
