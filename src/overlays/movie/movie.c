@@ -125,6 +125,9 @@ typedef struct
 #define MDEC_STATE_ACTIVE 1
 #define MDEC_STATE_CHAINED 2
 
+/** @brief GPU transfer mode using DrawSync and LoadImage. */
+#define MOVIE_GPU_MODE_STANDARD 0
+
 /** @brief VLC decode and XA audio state used by @ref movie_update. */
 #define STANDARD_VLC_DECODE_SIZE 0x1000
 #define ALTERNATE_VLC_DECODE_SIZE 0x16AA
@@ -632,7 +635,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     {
         MOVIE_STATE->use_cd_audio = 0;
     }
-    if (MOVIE_STATE->gpu_mode == 0)
+    if (MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD)
     {
         /* Configure the fixed-buffer layout used by normal playback. */
         MOVIE_STATE->video_table_base = STANDARD_MOVIE_BUFFERS->video_table;
@@ -751,7 +754,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     ms = MOVIE_STATE;
 
     /* Prepare display memory and VLC tables for the standard GPU path. */
-    if (g_gpuMode == 0)
+    if (g_gpuMode == MOVIE_GPU_MODE_STANDARD)
     {
         VSync(0);
         SetDispMask(0);
@@ -782,7 +785,8 @@ void movie_update(void)
         if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) && (movie_state->frame_ready == 0))
         {
             MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
-            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == 0);
+            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
+                     MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD);
             {
                 s32 pixel_count =
                     MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
@@ -823,7 +827,7 @@ void movie_update(void)
 
             MOVIE_STATE->input_buf_idx = 1 - MOVIE_STATE->input_buf_idx;
 
-            if (MOVIE_STATE->gpu_mode == 0)
+            if (MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD)
             {
                 DecDCTvlcSize2(STANDARD_VLC_DECODE_SIZE);
                 MOVIE_STATE->vlc_retry_count = STANDARD_VLC_RETRY_COUNT;
@@ -859,7 +863,8 @@ void movie_update(void)
             (output_available = (MOVIE_STATE->frame_ready == 0)))
         {
             MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
-            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == 0);
+            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
+                     MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD);
             {
                 s32 pixel_count =
                     MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
@@ -927,7 +932,7 @@ void movie_mdec_out_callback(void)
     s32 inactive = 0;
 
     /* Queue a standard GPU upload or defer it while drawing is busy. */
-    if (g_gpuMode == 0)
+    if (g_gpuMode == MOVIE_GPU_MODE_STANDARD)
     {
         if (g_cdStatusByte3 == CD_STATUS_RECOVERY_PENDING)
         {
@@ -1030,93 +1035,80 @@ void movie_schedule_next_decode(void)
 }
 
 /**
- * @brief Service pending video output operations.
- *
- * Two flags gate the two halves:
- *   - pending_vram_upload: a decoded frame is ready; DMA it into VRAM
- *     (LoadImage) and kick off the MDEC decode of the next frame.
- *   - pending_mdec_decode: new BS bitstream data is staged; feed it to the
- *     MDEC (DecDCTout).
- *
- * gpu_mode selects the transfer path:
- *   - 0: wait for DrawSync then use LoadImage (standard DMA).
- *   - non-zero: interrupt the current draw via BreakDraw then use LoadImage2.
- *
+ * @brief Service deferred MDEC output and VRAM uploads.
  * @see https://decomp.me/scratch/JTTFr (100%)
  */
 void movie_service_video_ops(void)
 {
-    volatile MovieState* G = VOL_MOVIE_STATE;
-    s32 word_count;
-    u_long* break_draw_result;
-    if (!G->pending_vram_upload)
+    volatile MovieState* state = VOL_MOVIE_STATE;
+    MovieGpuResult break_draw_result;
+
+    if (!state->pending_vram_upload && !state->pending_mdec_decode)
     {
-        if (!G->pending_mdec_decode)
-        {
-            return;
-        }
+        return;
     }
-    if (VOL_MOVIE_STATE->gpu_mode == 0)
+
+    /* Service queued work through the synchronized GPU transfer path. */
+    if (VOL_MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD)
     {
-        if (DrawSync(1) >= 2)
+        if (DrawSync(DRAW_SYNC_MODE_POLL) >= DRAW_SYNC_DEFER_THRESHOLD)
         {
             return;
         }
         if (VOL_MOVIE_STATE->pending_vram_upload)
         {
-            MOVIE_STATE->busy = 1;
+            MOVIE_STATE->busy = TRUE;
+            /* Recheck the volatile request after claiming the shared busy flag. */
             if (VOL_MOVIE_STATE->pending_vram_upload)
             {
-
-                LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], G->mdec_output_buf[VOL_MOVIE_STATE->out_buf_idx]);
-                VOL_MOVIE_STATE->draw_sync_target = DrawSync(1) + 1;
-                VOL_MOVIE_STATE->pending_vram_upload = 0;
+                LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX],
+                          state->mdec_output_buf[VOL_MOVIE_STATE->out_buf_idx]);
+                VOL_MOVIE_STATE->draw_sync_target = DrawSync(DRAW_SYNC_MODE_POLL) + 1;
+                VOL_MOVIE_STATE->pending_vram_upload = FALSE;
                 movie_schedule_next_decode();
             }
-            VOL_MOVIE_STATE->busy = 0;
+            VOL_MOVIE_STATE->busy = FALSE;
         }
-        G = VOL_MOVIE_STATE;
-        if (G->pending_mdec_decode)
-        {
-            MOVIE_STATE->busy = 1;
-            if (G->pending_mdec_decode)
-            {
-                s32 temp;
+        state = VOL_MOVIE_STATE;
 
-                /* word count = (width * height) / 2, rounded toward zero for signed values */
-                temp = ((s32)G->rects[MDEC_OUTPUT_RECT_INDEX].w) * ((s32)G->rects[MDEC_OUTPUT_RECT_INDEX].h);
-                word_count = temp + (((u32)temp) >> 31);
-                DecDCTout(G->mdec_output_buf[G->out_buf_idx], word_count >> 1);
-                G->pending_mdec_decode = 0;
+        /* Submit a deferred MDEC output transfer. */
+        if (state->pending_mdec_decode)
+        {
+            MOVIE_STATE->busy = TRUE;
+            if (state->pending_mdec_decode)
+            {
+                s32 pixel_count;
+
+                pixel_count = state->rects[MDEC_OUTPUT_RECT_INDEX].w *
+                              state->rects[MDEC_OUTPUT_RECT_INDEX].h;
+                DecDCTout(state->mdec_output_buf[state->out_buf_idx], pixel_count / 2);
+                state->pending_mdec_decode = FALSE;
             }
-            MOVIE_STATE->busy = 0;
+            MOVIE_STATE->busy = FALSE;
         }
     }
     else
     {
-        /* BreakDraw path: interrupt the current draw primitive list to upload immediately */
-        if (G->pending_vram_upload)
+        /* Interrupt drawing to service a pending upload immediately. */
+        if (state->pending_vram_upload)
         {
-            MOVIE_STATE->busy = 1;
-            if (G->pending_vram_upload)
+            MOVIE_STATE->busy = TRUE;
+            if (state->pending_vram_upload)
             {
-                s32 bd;
-
-                break_draw_result = BreakDraw();
-                bd = (s32)break_draw_result;
-                if (bd != (-1))
+                break_draw_result.ordering_table = BreakDraw();
+                if (break_draw_result.address != BREAK_DRAW_FAILURE_ADDRESS)
                 {
-                    LoadImage2(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], G->mdec_output_buf[G->out_buf_idx]);
-                    if (bd != 0)
+                    LoadImage2(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX],
+                               state->mdec_output_buf[state->out_buf_idx]);
+                    if (break_draw_result.ordering_table != NULL)
                     {
-                        /* Resume the interrupted OTag list */
-                        DrawOTag((u_long*)bd);
+                        DrawOTag(break_draw_result.ordering_table);
                     }
                     movie_schedule_next_decode();
-                    G->pending_vram_upload = 0;
+                    state->pending_vram_upload = FALSE;
                 }
             }
-            g_busy = 0;
+            g_busy = FALSE;
         }
     }
 }
