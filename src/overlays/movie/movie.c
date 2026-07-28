@@ -108,6 +108,11 @@ typedef struct
 /** @brief Fixed configuration used by @ref movie_play. */
 #define MOVIE_DISPLAY_WIDTH 320
 #define MOVIE_DISPLAY_HEIGHT 240
+#define MOVIE_RGB24_VRAM_WIDTH ((MOVIE_DISPLAY_WIDTH * 3) / 2)
+#define STANDARD_DECODE_RECT_WIDTH 24
+#define ALTERNATE_DECODE_RECT_WIDTH 16
+#define ALTERNATE_RECT_WRAP_THRESHOLD 0x300
+#define ALTERNATE_RECT_WRAP_X 0x200
 #define MOVIE_UPDATE_POLL_LIMIT 0x2000
 #define CONTROLLER_VSYNC_INTERVAL_SINGLE 1
 #define MOVIE_FRAME_VSYNC_INTERVAL 4
@@ -143,6 +148,7 @@ typedef enum
 
 /** @brief Movie resource-table base, index representation, and initialization flag. */
 #define MOVIE_RESOURCE_BASE 0x16A0
+#define MOVIE_INIT_GPU_MODE_MASK 0x7F
 #define MOVIE_INIT_USE_CD_AUDIO 0x80
 #define MOVIE_INDEX_MASK 0xFFFF
 
@@ -155,6 +161,15 @@ typedef enum
 #define AUDIO_FADE_DISARMED (-1)
 #define AUDIO_FADE_INITIAL 0x70
 #define AUDIO_FADE_STEP 0x10
+
+/** @brief Movie initialization sentinels and audio parameters. */
+#define MOVIE_FRAME_NONE ((u32)-1)
+#define AKAO_CD_VOLUME_MAX 0x7F
+#define MOVIE_AKAO_C8_INIT_VALUE 0x7FFF
+#define MOVIE_NONSTREAMED_CD_MIX_VOLUME 0xA0
+
+/** @brief Encode a PSX RAM pointer in an AKAO command word. */
+#define AKAO_STREAM_ADDRESS(buffer) ((u32)(buffer))
 
 /** @brief sector_type values stamped in the CD-XA subheader. */
 #define SECTOR_TYPE_VIDEO 0x8001
@@ -189,10 +204,12 @@ typedef enum
  * Only @c alloc_base (the buffer base address) is used here; the leading
  * 0x38 bytes are owned by other subsystems.
  */
+typedef struct AlternateMovieDecodeBuffers AlternateMovieDecodeBuffers;
+
 typedef struct
 {
     u8 pad[0x38];
-    u8* alloc_base;
+    AlternateMovieDecodeBuffers* alloc_base;
 } AllocInfo;
 
 /**
@@ -253,6 +270,50 @@ typedef struct VideoVlcPayload
 {
     u8 data[2016];
 } VideoVlcPayload;
+
+/** @brief View the storage after a video-header table as VLC payload slots. */
+#define VIDEO_PAYLOADS_AFTER_TABLE(table, entry_count) \
+    ((VideoVlcPayload*)&(table)[entry_count])
+
+/** @brief Fixed RAM layout used by the standard movie path. */
+#define MOVIE_BUFFER_RAM_BASE 0x80147000
+#define MOVIE_VLC_TABLE_BYTES 0x11000
+#define STANDARD_VLC_INPUT_BYTES 0x14000
+#define STANDARD_MDEC_OUTPUT_BYTES 0x2D00
+
+typedef struct
+{
+    VideoSectorEntry video_table[STANDARD_VIDEO_RING_SLOTS];
+    VideoVlcPayload video_data[STANDARD_VIDEO_RING_SLOTS];
+    AudioSector audio_data[AUDIO_RING_SLOTS];
+    u8 vlc_table[MOVIE_VLC_TABLE_BYTES];
+    u8 vlc_input_buf[2][STANDARD_VLC_INPUT_BYTES];
+    u_long mdec_output_buf[2][STANDARD_MDEC_OUTPUT_BYTES / sizeof(u_long)];
+} StandardMovieBuffers;
+
+#define STANDARD_MOVIE_BUFFERS ((StandardMovieBuffers*)MOVIE_BUFFER_RAM_BASE)
+
+/** @brief Fixed RAM layout used by the alternate movie path. */
+#define ALTERNATE_VLC_INPUT_BYTES 0x11000
+
+typedef struct
+{
+    VideoSectorEntry video_table[ALTERNATE_VIDEO_RING_SLOTS];
+    VideoVlcPayload video_data[ALTERNATE_VIDEO_RING_SLOTS];
+    AudioSector audio_data[AUDIO_RING_SLOTS];
+    u8 vlc_input_buf[2][ALTERNATE_VLC_INPUT_BYTES];
+} AlternateMovieBuffers;
+
+#define ALTERNATE_MOVIE_BUFFERS ((AlternateMovieBuffers*)MOVIE_BUFFER_RAM_BASE)
+
+/** @brief Allocator-owned VLC and MDEC buffers used by the alternate path. */
+#define ALTERNATE_MDEC_OUTPUT_BYTES 0x1E00
+
+struct AlternateMovieDecodeBuffers
+{
+    u8 vlc_table[MOVIE_VLC_TABLE_BYTES];
+    u_long mdec_output_buf[2][ALTERNATE_MDEC_OUTPUT_BYTES / sizeof(u_long)];
+};
 
 /* g_cdAudioReady / g_cdStatusByte3 are also declared in cd.h; the MOVIE.BIN
  * overlay references them directly so we redeclare here to keep movie.c
@@ -504,51 +565,11 @@ void movie_play(s32 movie_index)
 }
 
 /**
- * @brief Stage a movie stream for playback into the global @ref MovieState.
- *
- * Allocates VRAM rectangles, sets up the VLC table / MDEC output buffers /
- * audio data buffer, registers the DecDCT-out and DrawSync callbacks, then
- * issues the initial CD read. Two layout paths exist depending on
- * @ref g_gpuMode (standard vs BreakDraw/dynamic-alloc_base).
- *
- * @param resource_index CD resource id of the BS stream (e.g. 0x16A0..0x16A4).
- * @param flags          Bits 0..6 select the GPU transfer path; bit 7 selects
- *                       CD/XA audio.
- * @param total_frames   Frame-count stop condition; set into MovieState.total_frames.
- * @param init_buffer_idx Initial active chunk index (0 or 1). Path B uses it to
- *                      seed rects[2] from rects[init_buffer_idx].
- *
- * @note `MovieState.gpu_mode` and the `g_gpuMode` global are *the same byte* at
- *       0x801ED590 (offset 0x90 in MovieState). The write at the top of this
- *       function and the `if (g_gpuMode == 0)` branch read the same storage.
- *
- * @note In shipped play, `movie_play` always passes flags = 0x80, so
- *       gpu_mode = 0 (path A taken every time) and use_cd_audio = 1.
- *       Path B is dead in production; preserved for matching, which is also why
- *       its read of an uninitialised rects[0].x (`>= 0x300` guard) is inert.
- *
- * @note Path-A memory map (RAM addresses are literals in this function):
- *           0x80147000  video_table_base   (50 x 32   = 0x640)
- *           0x80147640  video_data_base    (50 x 2016)
- *           0x80160000  audio_data_base    (16 x 2048 = 0x8000)
- *           0x80168000  vlc_table          (0x11000)
- *           0x80179000  vlc_input_buf[0]   (0x14000)
- *           0x8018D000  vlc_input_buf[1]   (0x14000)
- *           0x801A1000  mdec_output_buf[0] (0x2D00 = 24 x 240 x 2)
- *           0x801A3D00  mdec_output_buf[1] (0x2D00)
- *       Sizes match rects[2] = 24-wide x 240-tall macroblock decode column.
- *
- * @note Path-B memory map (fixed buffers plus AllocInfo::alloc_base):
- *           0x80147000             video_table_base   (30 x 32 = 0x3C0)
- *           video_table_base+0x3C0 video_data_base
- *           0x80156000             audio_data_base
- *           0x8015E000             vlc_input_buf[0]   (0x11000)
- *           0x8016F000             vlc_input_buf[1]
- *           alloc_base             vlc_table
- *           alloc_base+0x11000     mdec_output_buf[0] (0x1E00 = 16 x 240 x 2)
- *           alloc_base+0x12E00     mdec_output_buf[1]
- *       rects[2] is 16 wide here.
- *
+ * @brief Initialize movie buffers and streaming state.
+ * @param resource_index CD resource index for the movie stream.
+ * @param flags Lower seven bits select the GPU mode; bit 7 enables CD/XA audio.
+ * @param total_frames Number of frames in the stream.
+ * @param init_buffer_idx Initial buffer index (0 or 1) for the alternate layout.
  * @see https://decomp.me/scratch/g5PtA (100%)
  */
 void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer_idx)
@@ -556,8 +577,9 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     AllocInfo* alloc_info = g_allocInfo;
     MovieState* ms;
 
-    MOVIE_STATE->gpu_mode = flags & 0x7F;
-    if (flags & 0x80)
+    /* Decode the GPU and audio modes from the initialization flags. */
+    MOVIE_STATE->gpu_mode = flags & MOVIE_INIT_GPU_MODE_MASK;
+    if (flags & MOVIE_INIT_USE_CD_AUDIO)
     {
         MOVIE_STATE->use_cd_audio = 1;
     }
@@ -567,66 +589,67 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     }
     if (MOVIE_STATE->gpu_mode == 0)
     {
-
-        MOVIE_STATE->video_table_base = (VideoSectorEntry*)0x80147000;
-        MOVIE_STATE->audio_data_base = (AudioSector*)0x80160000;
-        MOVIE_STATE->vlc_table = (void*)0x80168000;
-        MOVIE_STATE->vlc_input_buf[0] = (void*)0x80179000;
-        MOVIE_STATE->vlc_input_buf[1] = (void*)0x8018D000;
-        MOVIE_STATE->mdec_output_buf[0] = (u_long*)0x801A1000;
-        MOVIE_STATE->mdec_output_buf[1] = (u_long*)0x801A3D00;
+        /* Configure the fixed-buffer layout used by normal playback. */
+        MOVIE_STATE->video_table_base = STANDARD_MOVIE_BUFFERS->video_table;
+        MOVIE_STATE->audio_data_base = STANDARD_MOVIE_BUFFERS->audio_data;
+        MOVIE_STATE->vlc_table = STANDARD_MOVIE_BUFFERS->vlc_table;
+        MOVIE_STATE->vlc_input_buf[0] = STANDARD_MOVIE_BUFFERS->vlc_input_buf[0];
+        MOVIE_STATE->vlc_input_buf[1] = STANDARD_MOVIE_BUFFERS->vlc_input_buf[1];
+        MOVIE_STATE->mdec_output_buf[0] = STANDARD_MOVIE_BUFFERS->mdec_output_buf[0];
+        MOVIE_STATE->mdec_output_buf[1] = STANDARD_MOVIE_BUFFERS->mdec_output_buf[1];
         MOVIE_STATE->rects[1].x = 0;
         MOVIE_STATE->rects[0].x = 0;
         MOVIE_STATE->rects[0].y = 0;
-        MOVIE_STATE->rects[1].y = 0xF0;
-        MOVIE_STATE->rects[2].h = 0xF0;
-        MOVIE_STATE->rects[1].w = 0x1E0;
-        MOVIE_STATE->rects[0].w = 0x1E0;
-        MOVIE_STATE->rects[2].w = 0x18;
+        MOVIE_STATE->rects[1].y = MOVIE_DISPLAY_HEIGHT;
+        MOVIE_STATE->rects[2].h = MOVIE_DISPLAY_HEIGHT;
+        MOVIE_STATE->rects[1].w = MOVIE_RGB24_VRAM_WIDTH;
+        MOVIE_STATE->rects[0].w = MOVIE_RGB24_VRAM_WIDTH;
+        MOVIE_STATE->rects[2].w = STANDARD_DECODE_RECT_WIDTH;
         MOVIE_STATE->video_ring_capacity = STANDARD_VIDEO_RING_SLOTS;
-        MOVIE_STATE->rects[1].h = 0xF0;
-        MOVIE_STATE->rects[0].h = 0xF0;
+        MOVIE_STATE->rects[1].h = MOVIE_DISPLAY_HEIGHT;
+        MOVIE_STATE->rects[0].h = MOVIE_DISPLAY_HEIGHT;
         MOVIE_STATE->rects[2].x = 0;
         MOVIE_STATE->rects[2].y = 0;
         MOVIE_STATE->audio_ring_capacity = AUDIO_RING_SLOTS;
-        MOVIE_STATE->video_data_base =
-            (VideoVlcPayload*)&MOVIE_STATE->video_table_base[STANDARD_VIDEO_RING_SLOTS];
+        MOVIE_STATE->video_data_base = STANDARD_MOVIE_BUFFERS->video_data;
         VOL_MOVIE_STATE->chunk_idx = 0;
     }
     else
     {
-        MOVIE_STATE->video_table_base = (VideoSectorEntry*)0x80147000;
-        MOVIE_STATE->audio_data_base = (AudioSector*)0x80156000;
-        MOVIE_STATE->vlc_table = alloc_info->alloc_base;
-        MOVIE_STATE->vlc_input_buf[0] = (void*)0x8015E000;
-        MOVIE_STATE->vlc_input_buf[1] = (void*)0x8016F000;
-        MOVIE_STATE->mdec_output_buf[0] = (u_long*)(alloc_info->alloc_base + 0x11000);
-        MOVIE_STATE->mdec_output_buf[1] = (u_long*)(alloc_info->alloc_base + 0x12E00);
-        if (((s16)MOVIE_STATE->rects[0].x) >= 0x300)
+        /* Configure the alternate layout around allocator-owned VLC storage. */
+        MOVIE_STATE->video_table_base = ALTERNATE_MOVIE_BUFFERS->video_table;
+        MOVIE_STATE->audio_data_base = ALTERNATE_MOVIE_BUFFERS->audio_data;
+        MOVIE_STATE->vlc_table = alloc_info->alloc_base->vlc_table;
+        MOVIE_STATE->vlc_input_buf[0] = ALTERNATE_MOVIE_BUFFERS->vlc_input_buf[0];
+        MOVIE_STATE->vlc_input_buf[1] = ALTERNATE_MOVIE_BUFFERS->vlc_input_buf[1];
+        MOVIE_STATE->mdec_output_buf[0] = alloc_info->alloc_base->mdec_output_buf[0];
+        MOVIE_STATE->mdec_output_buf[1] = alloc_info->alloc_base->mdec_output_buf[1];
+        if (MOVIE_STATE->rects[0].x >= ALTERNATE_RECT_WRAP_THRESHOLD)
         {
-            MOVIE_STATE->rects[1].x = 0x200;
+            MOVIE_STATE->rects[1].x = ALTERNATE_RECT_WRAP_X;
             MOVIE_STATE->rects[1].y = 0;
         }
         else
         {
-            MOVIE_STATE->rects[1].x = (u16)(MOVIE_STATE->rects[0].x + MOVIE_STATE->rects[0].w);
+            MOVIE_STATE->rects[1].x = MOVIE_STATE->rects[0].x + MOVIE_STATE->rects[0].w;
             MOVIE_STATE->rects[1].y = MOVIE_STATE->rects[0].y;
         }
         MOVIE_STATE->rects[1].w = MOVIE_STATE->rects[0].w;
         MOVIE_STATE->rects[1].h = MOVIE_STATE->rects[0].h;
         MOVIE_STATE->rects[2].h = MOVIE_STATE->rects[0].h;
         MOVIE_STATE->rects[2].x = MOVIE_STATE->rects[init_buffer_idx].x;
-        MOVIE_STATE->rects[2].y = (unsigned short)MOVIE_STATE->rects[init_buffer_idx].y;
-        MOVIE_STATE->rects[2].w = 0x10;
+        MOVIE_STATE->rects[2].y = MOVIE_STATE->rects[init_buffer_idx].y;
+        MOVIE_STATE->rects[2].w = ALTERNATE_DECODE_RECT_WIDTH;
         MOVIE_STATE->video_ring_capacity = ALTERNATE_VIDEO_RING_SLOTS;
         MOVIE_STATE->audio_ring_capacity = AUDIO_RING_SLOTS;
-        MOVIE_STATE->video_data_base =
-            (VideoVlcPayload*)&MOVIE_STATE->video_table_base[ALTERNATE_VIDEO_RING_SLOTS];
+        MOVIE_STATE->video_data_base = VIDEO_PAYLOADS_AFTER_TABLE(
+            MOVIE_STATE->video_table_base, ALTERNATE_VIDEO_RING_SLOTS);
         VOL_MOVIE_STATE->chunk_idx = init_buffer_idx;
     }
 
     ms = MOVIE_STATE;
 
+    /* Reset stream counters and pipeline state. */
     ms->resource_index = resource_index;
     ms->current_frame = 0;
     ms->total_frames = total_frames;
@@ -653,28 +676,36 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     ms->frame_number = 0;
     ms->continuation_type = 0;
     ms->sectors_remaining = 0;
-    ms->last_video_frame = (u32)(-1);
-    ms->last_consumed_video_frame = (u32)(-1);
-    ms->last_audio_frame = (u32)(-1);
-    ms->last_consumed_audio_frame = (u32)(-1);
+    ms->last_video_frame = MOVIE_FRAME_NONE;
+    ms->last_consumed_video_frame = MOVIE_FRAME_NONE;
+    ms->last_audio_frame = MOVIE_FRAME_NONE;
+    ms->last_consumed_audio_frame = MOVIE_FRAME_NONE;
+
+    /* Install movie callbacks and retain the previous handlers. */
     ms->dec_dct_out_callback.address = DecDCToutCallback(&movie_mdec_out_callback);
     ms->draw_sync_callback.address = DrawSyncCallback(&draw_sync_callback);
+
+    /* Configure audio for streamed or non-streamed playback. */
     if (ms->use_cd_audio != 0)
     {
-        akao_cmd_e8_start_xa_stream((u32)ms->audio_data_base, (u32)(ms->audio_ring_capacity << 0xB));
-        akao_cmd_e4_set_cd_volume(0x7F);
+        akao_cmd_e8_start_xa_stream(
+            AKAO_STREAM_ADDRESS(ms->audio_data_base),
+            ms->audio_ring_capacity * sizeof(AudioSector));
+        akao_cmd_e4_set_cd_volume(AKAO_CD_VOLUME_MAX);
     }
     else
     {
-        akao_cmd_c8(0x7FFF);
-        akao_xa_setup_panning(0xA0);
+        akao_cmd_c8(MOVIE_AKAO_C8_INIT_VALUE);
+        akao_xa_setup_panning(MOVIE_NONSTREAMED_CD_MIX_VOLUME);
     }
+
+    /* Queue the first streaming-sector read. */
     cdrom_wait_queue_empty();
     cdrom_queue_command(CdlReadS, (s16)resource_index, NULL, cd_sector_callback);
 
-    /* Re-establish the state base after queuing the CD callback. */
     ms = MOVIE_STATE;
 
+    /* Prepare display memory and VLC tables for the standard GPU path. */
     if (g_gpuMode == 0)
     {
         VSync(0);
