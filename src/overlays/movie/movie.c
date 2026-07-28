@@ -51,7 +51,7 @@ typedef union
 typedef struct
 {
     // ---- stream buffers ----
-    struct VideoSectorEntry* video_table_base; // array of 32-byte video sector headers
+    union VideoSectorEntry* video_table_base;  // array of 32-byte video sector headers
     union VideoVlcPayload* video_data_base;    // parallel array of 2016-byte VLC payloads
     struct AudioSector* audio_data_base;       // array of 2048-byte CD sectors
     void* vlc_table;                           // opaque VLC decode table
@@ -134,6 +134,7 @@ typedef struct
 #define STANDARD_VLC_RETRY_COUNT 3
 #define ALTERNATE_VLC_RETRY_COUNT 1
 #define AUDIO_STREAM_STATE_IDLE 0
+#define AUDIO_STREAM_STATE_SECTOR_READY 1
 #define AUDIO_STREAM_STATE_PRIMED 2
 #define AKAO_COMMAND_SELECTOR_9E 3
 #define AKAO_XA_POSITION_UNAVAILABLE (-1)
@@ -226,8 +227,11 @@ typedef enum
 #define AUDIO_RING_SLOTS 16
 
 /** @brief CD sector geometry consumed by @ref cd_sector_callback. */
-#define CD_HEADER_WORDS         8       /**< 32-byte sector header read with CdGetSector. */
-#define CD_PAYLOAD_WORDS        0x1F8   /**< 504 u32 = 2016-byte sector payload. */
+#define CD_SECTOR_BYTES 2048
+#define CD_HEADER_WORDS 8
+#define CD_HEADER_BYTES (CD_HEADER_WORDS * sizeof(u32))
+#define CD_PAYLOAD_BYTES (CD_SECTOR_BYTES - CD_HEADER_BYTES)
+#define CD_PAYLOAD_WORDS (CD_PAYLOAD_BYTES / sizeof(u32))
 
 /**
  * @brief Accessors for the fixed-address MovieState block at 0x801ED500.
@@ -267,24 +271,8 @@ typedef struct
     u16 sector_type;      /**< 0x2 - 0x8001 = video, 1 = audio */
     u16 chunk_sector_idx; /**< 0x4 - sector position within a multi-sector frame */
     u16 sector_count;     /**< 0x6 - sectors comprising this frame chunk */
-    s32 frame_number;     /**< 0x8 */
+    u32 frame_number;     /**< 0x8 */
 } SectorEntry;
-
-/**
- * @brief One PSX CD sector (2048 bytes) of audio ring data.
- *
- * Layout:
- *   - bytes 0x00..0x0B: SectorEntry header (sector_count, frame_number).
- *   - bytes 0x0C..0x1F: remaining 20 bytes of the CD-XA sector header
- *     (copied verbatim from the CD by cd_sector_callback).
- *   - bytes 0x20..0x7FF: XA audio payload (2016 bytes).
- */
-typedef struct AudioSector
-{
-    SectorEntry header;           /**< 12 bytes */
-    u8 _hdr_remainder[0x20 - 12]; /**< 20 bytes - rest of the 32-byte CD header */
-    u8 payload[2048 - 0x20];      /**< 2016 bytes XA */
-} AudioSector;
 
 /**
  * @brief One video-ring table entry: 32 bytes copied as 8 u32 words by
@@ -294,11 +282,22 @@ typedef struct AudioSector
  * sector metadata. The actual VLC payload lives in a parallel buffer
  * (video_data_base, 2016-byte stride).
  */
-typedef struct VideoSectorEntry
+typedef union VideoSectorEntry
 {
     SectorEntry header;
-    u8 _rest[32 - 12];
+    u32 words[CD_HEADER_WORDS];
 } VideoSectorEntry;
+
+/**
+ * @brief One PSX CD sector (2048 bytes) of audio ring data.
+ *
+ * The 32-byte header is followed by a 2016-byte XA payload.
+ */
+typedef struct AudioSector
+{
+    VideoSectorEntry header_block;
+    u8 payload[CD_PAYLOAD_BYTES];
+} AudioSector;
 
 /**
  * @brief One slot of the video VLC payload buffer: 2016 bytes of raw
@@ -309,13 +308,14 @@ typedef struct VideoSectorEntry
  */
 typedef union VideoVlcPayload
 {
-    u8 data[2016];
+    u8 data[CD_PAYLOAD_BYTES];
     u_long words[CD_PAYLOAD_WORDS];
 } VideoVlcPayload;
 
 /** @brief Typed views of the shared stream-entry pointer slot. */
 typedef union
 {
+    u8* payload;
     VideoVlcPayload* video_payload;
     VideoSectorEntry* video_header;
     AudioSector* audio_sector;
@@ -1114,51 +1114,43 @@ void movie_service_video_ops(void)
 }
 
 /**
- * @brief CD sector-arrival callback; invoked from the CD-ROM ISR per sector.
+ * @brief Buffer an arriving movie sector in the video or audio ring.
  *
- * Reads the 8-word (32-byte) sector header, classifies the sector as video
- * (type 0x8001) or audio, checks whether the corresponding ring buffer has
- * room, then copies the 504-word (2016-byte) payload into the buffer and
- * advances the write index. Multi-sector frames are handled via
- * @ref g_sectorsRemaining: when 0 the sector is the first (header) sector;
- * when non-zero we are reading continuation sectors for the same frame and
- * skip the ring-capacity check.
- *
- * @note The CD subsystem passes transfer counters to callbacks; this handler
- *       intentionally ignores them and returns a boolean continuation sentinel.
- *
- * @return 1 to keep streaming, 0 when the stream has ended or should pause.
- *
+ * Reads the 32-byte stream header and tracks multi-sector frame continuations.
+ * @return 1 while streaming should continue, otherwise 0.
  * @see https://decomp.me/scratch/5flHR (100%)
  */
 s32 cd_sector_callback(void)
 {
     VideoSectorEntry sector_header;
-    s32 audio_read_idx_l;
-    s32 has_room;
-    s32 has_more_frames;
-    u8* payload_dst;
-    SectorEntry* sector_hdr_ptr;
-    s32 audio_write_next;
-    s32 video_write_idx_l;
-    s32 video_read_idx_l;
+    s32 audio_read_idx;
+    s32 ring_has_room;
+    u32 has_more_frames;
+    u8* continuation_payload;
+    SectorEntry* continuation_header;
+    s32 next_audio_write_idx;
+    s32 video_write_idx;
+    s32 video_read_idx;
 
-    has_room = 0;
+    ring_has_room = FALSE;
 
+    /* Read and classify the first sector of a frame chunk. */
     if (MOVIE_STATE->sectors_remaining == 0)
     {
-        volatile MovieState* vms;
-        u32* hdr_words;
-        while (CdGetSector(&sector_header, CD_HEADER_WORDS) == 0);
-
-        vms = VOL_MOVIE_STATE;
-        if (((u32)sector_header.header.frame_number) > MOVIE_STATE->total_frames)
+        volatile MovieState* state;
+        u32* header_words;
+        while (CdGetSector(&sector_header, CD_HEADER_WORDS) == 0)
         {
-            VOL_MOVIE_STATE->end_of_stream = 1;
+        }
+
+        state = VOL_MOVIE_STATE;
+        if (sector_header.header.frame_number > MOVIE_STATE->total_frames)
+        {
+            VOL_MOVIE_STATE->end_of_stream = TRUE;
             return 0;
         }
 
-        vms->frame_number = sector_header.header.frame_number;
+        state->frame_number = sector_header.header.frame_number;
 
         if (sector_header.header.chunk_sector_idx != 0)
         {
@@ -1167,63 +1159,63 @@ s32 cd_sector_callback(void)
 
         if (sector_header.header.sector_type == SECTOR_TYPE_VIDEO)
         {
+            /* Reserve contiguous space in the video ring. */
+            video_write_idx = state->video_write_idx;
+            video_read_idx = state->video_read_idx;
 
-            video_write_idx_l = vms->video_write_idx;
-            video_read_idx_l = vms->video_read_idx;
-
-            if (((video_write_idx_l == video_read_idx_l) &&
-                 (vms->last_video_frame == vms->last_consumed_video_frame)) ||
-                ((video_write_idx_l != video_read_idx_l) && (video_read_idx_l < vms->video_write_idx)))
+            if (((video_write_idx == video_read_idx) &&
+                 (state->last_video_frame == state->last_consumed_video_frame)) ||
+                ((video_write_idx != video_read_idx) && (video_read_idx < state->video_write_idx)))
             {
-
-                if (vms->video_ring_capacity < (vms->video_write_idx + sector_header.header.sector_count))
+                if (state->video_ring_capacity < (state->video_write_idx + sector_header.header.sector_count))
                 {
-                    if (video_read_idx_l >= sector_header.header.sector_count)
+                    if (video_read_idx >= sector_header.header.sector_count)
                     {
-                        has_room = 1;
-                        vms->video_ring_size = vms->video_write_idx;
-                        vms->video_write_idx = 0;
+                        ring_has_room = TRUE;
+                        state->video_ring_size = state->video_write_idx;
+                        state->video_write_idx = 0;
                     }
                 }
                 else
                 {
-                    has_room = 1;
+                    ring_has_room = TRUE;
                 }
             }
-            else if (video_write_idx_l != video_read_idx_l)
+            else if (video_write_idx != video_read_idx)
             {
-                if (video_read_idx_l >= (vms->video_write_idx + sector_header.header.sector_count))
+                if (video_read_idx >= (state->video_write_idx + sector_header.header.sector_count))
                 {
-                    has_room = 1;
+                    ring_has_room = TRUE;
                 }
             }
 
-            if (has_room != 0)
+            if (ring_has_room)
             {
-
                 s32 write_index;
-                u8* sector_ptr;
+                MovieStreamEntryPointer sector;
 
-                sector_ptr = MOVIE_STATE->video_data_base[MOVIE_STATE->video_write_idx].data;
-                while (CdGetSector(sector_ptr, CD_PAYLOAD_WORDS) == 0);
+                /* Read the payload and retain its raw stream header. */
+                sector.video_payload = &MOVIE_STATE->video_data_base[MOVIE_STATE->video_write_idx];
+                while (CdGetSector(sector.video_payload->data, CD_PAYLOAD_WORDS) == 0)
+                {
+                }
 
-                /* Bulk-copy the raw 32-byte CD header as 8 u32 words. */
-                hdr_words = (u32*)&sector_header;
+                header_words = sector_header.words;
 
                 write_index = MOVIE_STATE->video_write_idx;
-                sector_ptr = (u8*)&MOVIE_STATE->video_table_base[write_index];
+                sector.video_header = &MOVIE_STATE->video_table_base[write_index];
 
-                ((u32*)sector_ptr)[0] = hdr_words[0];
-                ((u32*)sector_ptr)[1] = hdr_words[1];
-                ((u32*)sector_ptr)[2] = hdr_words[2];
-                ((u32*)sector_ptr)[3] = hdr_words[3];
-                ((u32*)sector_ptr)[4] = hdr_words[4];
-                ((u32*)sector_ptr)[5] = hdr_words[5];
-                ((u32*)sector_ptr)[6] = hdr_words[6];
-                ((u32*)sector_ptr)[7] = hdr_words[7];
+                sector.video_header->words[0] = header_words[0];
+                sector.video_header->words[1] = header_words[1];
+                sector.video_header->words[2] = header_words[2];
+                sector.video_header->words[3] = header_words[3];
+                sector.video_header->words[4] = header_words[4];
+                sector.video_header->words[5] = header_words[5];
+                sector.video_header->words[6] = header_words[6];
+                sector.video_header->words[7] = header_words[7];
 
                 MOVIE_STATE->sectors_remaining = sector_header.header.sector_count - 1;
-                if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
+                if (MOVIE_STATE->sectors_remaining == 0)
                 {
                     u32 total_frames;
 
@@ -1239,60 +1231,65 @@ s32 cd_sector_callback(void)
                 else
                 {
                     MOVIE_STATE->continuation_type = CONTINUATION_VIDEO;
-                    MOVIE_STATE->chunk_sector_idx = 1U;
+                    MOVIE_STATE->chunk_sector_idx = 1;
                 }
             }
         }
         else
         {
-            MovieState* ms;
-            s32 audio_write_idx_l;
-            audio_write_idx_l = vms->audio_write_idx;
-            audio_read_idx_l = vms->audio_read_idx;
+            MovieState* movie_state;
+            s32 audio_write_idx;
 
-            if (((audio_write_idx_l == audio_read_idx_l) &&
-                 (vms->last_audio_frame == vms->last_consumed_audio_frame)) ||
-                ((audio_write_idx_l != audio_read_idx_l) && (audio_read_idx_l < vms->audio_write_idx)))
+            /* Reserve contiguous space in the audio ring. */
+            audio_write_idx = state->audio_write_idx;
+            audio_read_idx = state->audio_read_idx;
+
+            if (((audio_write_idx == audio_read_idx) &&
+                 (state->last_audio_frame == state->last_consumed_audio_frame)) ||
+                ((audio_write_idx != audio_read_idx) && (audio_read_idx < state->audio_write_idx)))
             {
-                if (vms->audio_ring_capacity < (vms->audio_write_idx + sector_header.header.sector_count))
+                if (state->audio_ring_capacity < (state->audio_write_idx + sector_header.header.sector_count))
                 {
-                    if (audio_read_idx_l >= sector_header.header.sector_count)
+                    if (audio_read_idx >= sector_header.header.sector_count)
                     {
-                        has_room = 1;
-                        vms->audio_ring_size = vms->audio_write_idx;
-                        vms->audio_write_idx = 0;
+                        ring_has_room = TRUE;
+                        state->audio_ring_size = state->audio_write_idx;
+                        state->audio_write_idx = 0;
                     }
                 }
                 else
                 {
-                    has_room = 1;
+                    ring_has_room = TRUE;
                 }
             }
-            else if ((audio_write_idx_l != audio_read_idx_l) &&
-                     (audio_read_idx_l >= (vms->audio_write_idx + sector_header.header.sector_count)))
+            else if ((audio_write_idx != audio_read_idx) &&
+                     (audio_read_idx >= (state->audio_write_idx + sector_header.header.sector_count)))
             {
-                has_room = 1;
+                ring_has_room = TRUE;
             }
 
-            if (has_room != 0)
+            if (ring_has_room)
             {
-                u8* sector_ptr;
+                MovieStreamEntryPointer sector;
 
-                sector_ptr = MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx].payload;
-                while (CdGetSector(sector_ptr, CD_PAYLOAD_WORDS) == 0);
+                /* Read the payload and retain its raw stream header. */
+                sector.payload = MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx].payload;
+                while (CdGetSector(sector.payload, CD_PAYLOAD_WORDS) == 0)
+                {
+                }
 
-                hdr_words = (u32*)&sector_header;
-                sector_ptr = (u8*)&MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx];
-                ((u32*)sector_ptr)[0] = hdr_words[0];
-                ((u32*)sector_ptr)[1] = hdr_words[1];
-                ((u32*)sector_ptr)[2] = hdr_words[2];
-                ((u32*)sector_ptr)[3] = hdr_words[3];
-                ((u32*)sector_ptr)[4] = hdr_words[4];
-                ((u32*)sector_ptr)[5] = hdr_words[5];
-                ((u32*)sector_ptr)[6] = hdr_words[6];
-                ((u32*)sector_ptr)[7] = hdr_words[7];
+                header_words = sector_header.words;
+                sector.audio_sector = &MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx];
+                sector.audio_sector->header_block.words[0] = header_words[0];
+                sector.audio_sector->header_block.words[1] = header_words[1];
+                sector.audio_sector->header_block.words[2] = header_words[2];
+                sector.audio_sector->header_block.words[3] = header_words[3];
+                sector.audio_sector->header_block.words[4] = header_words[4];
+                sector.audio_sector->header_block.words[5] = header_words[5];
+                sector.audio_sector->header_block.words[6] = header_words[6];
+                sector.audio_sector->header_block.words[7] = header_words[7];
                 MOVIE_STATE->sectors_remaining = sector_header.header.sector_count - 1;
-                if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
+                if (MOVIE_STATE->sectors_remaining == 0)
                 {
                     VOL_MOVIE_STATE->audio_write_idx = VOL_MOVIE_STATE->audio_write_idx + 1;
                     VOL_MOVIE_STATE->last_audio_frame = VOL_MOVIE_STATE->frame_number;
@@ -1305,46 +1302,51 @@ s32 cd_sector_callback(void)
                 else
                 {
                     MOVIE_STATE->continuation_type = CONTINUATION_AUDIO;
-                    MOVIE_STATE->chunk_sector_idx = 1U;
+                    MOVIE_STATE->chunk_sector_idx = 1;
                 }
             }
-            ms = MOVIE_STATE;
-            if (g_audioStreamState == 1)
+            movie_state = MOVIE_STATE;
+            if (g_audioStreamState == AUDIO_STREAM_STATE_SECTOR_READY)
             {
-                ms->audio_stream_state = AUDIO_STREAM_STATE_PRIMED;
+                movie_state->audio_stream_state = AUDIO_STREAM_STATE_PRIMED;
             }
             return 1;
         }
     }
     else if (MOVIE_STATE->continuation_type == CONTINUATION_VIDEO)
     {
-        sector_hdr_ptr =
+        /* Validate and append a video continuation sector. */
+        continuation_header =
             &MOVIE_STATE->video_table_base[VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx].header;
-        while (CdGetSector(sector_hdr_ptr, CD_HEADER_WORDS) == 0);
-
-        if (((sector_hdr_ptr->sector_type == SECTOR_TYPE_VIDEO) &&
-             (sector_hdr_ptr->frame_number == MOVIE_STATE->frame_number)) &&
-            (sector_hdr_ptr->chunk_sector_idx == MOVIE_STATE->chunk_sector_idx))
+        while (CdGetSector(continuation_header, CD_HEADER_WORDS) == 0)
         {
-            payload_dst =
+        }
+
+        if (((continuation_header->sector_type == SECTOR_TYPE_VIDEO) &&
+             (continuation_header->frame_number == MOVIE_STATE->frame_number)) &&
+            (continuation_header->chunk_sector_idx == MOVIE_STATE->chunk_sector_idx))
+        {
+            continuation_payload =
                 MOVIE_STATE
-                    ->video_data_base[VOL_MOVIE_STATE->video_write_idx + (MOVIE_STATE->chunk_sector_idx & 0xFFFF)]
+                    ->video_data_base[VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx]
                     .data;
-            while (CdGetSector(payload_dst, CD_PAYLOAD_WORDS) == 0);
+            while (CdGetSector(continuation_payload, CD_PAYLOAD_WORDS) == 0)
+            {
+            }
 
             MOVIE_STATE->sectors_remaining = MOVIE_STATE->sectors_remaining - 1;
-            if (!(MOVIE_STATE->sectors_remaining))
+            if (MOVIE_STATE->sectors_remaining == 0)
             {
-                u32 offset;
+                s32 first_sector_count;
                 u32 total_frames;
                 total_frames = MOVIE_STATE->total_frames;
 
-                offset = 1;
+                first_sector_count = 1;
                 VOL_MOVIE_STATE->video_write_idx =
-                    (VOL_MOVIE_STATE->video_write_idx + offset) + MOVIE_STATE->chunk_sector_idx;
+                    (VOL_MOVIE_STATE->video_write_idx + first_sector_count) + MOVIE_STATE->chunk_sector_idx;
 
                 VOL_MOVIE_STATE->last_video_frame = VOL_MOVIE_STATE->frame_number;
-                has_more_frames = ((u32)sector_hdr_ptr->frame_number) < total_frames;
+                has_more_frames = continuation_header->frame_number < total_frames;
 
             check_end_of_stream:
                 if (has_more_frames == 0)
@@ -1352,72 +1354,77 @@ s32 cd_sector_callback(void)
                     return 0;
                 }
 
-                /* Dead store preserved for codegen match. */
-                has_more_frames = (u32)sector_hdr_ptr->frame_number;
+                has_more_frames = continuation_header->frame_number;
                 return 1;
             }
             else
             {
-                MOVIE_STATE->chunk_sector_idx = (u16)(MOVIE_STATE->chunk_sector_idx + 1);
+                MOVIE_STATE->chunk_sector_idx = MOVIE_STATE->chunk_sector_idx + 1;
             }
         }
         else
         {
-            MOVIE_STATE->frame_number = (u32)sector_hdr_ptr->frame_number;
+            MOVIE_STATE->frame_number = continuation_header->frame_number;
             MOVIE_STATE->sectors_remaining = 0U;
 
-            if (MOVIE_STATE->total_frames > ((u32)sector_hdr_ptr->frame_number))
+            if (MOVIE_STATE->total_frames > continuation_header->frame_number)
             {
                 return 1;
             }
 
-            VOL_MOVIE_STATE->end_of_stream = 1;
+            VOL_MOVIE_STATE->end_of_stream = TRUE;
             return 0;
         }
     }
     else
     {
-        sector_hdr_ptr =
-            &MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx].header;
-        while (CdGetSector(sector_hdr_ptr, CD_HEADER_WORDS) == 0);
-
-        if (((sector_hdr_ptr->sector_type == SECTOR_TYPE_AUDIO) &&
-             (sector_hdr_ptr->frame_number == MOVIE_STATE->frame_number)) &&
-            (sector_hdr_ptr->chunk_sector_idx == MOVIE_STATE->chunk_sector_idx))
+        /* Validate and append an audio continuation sector. */
+        continuation_header =
+            &MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx]
+                 .header_block.header;
+        while (CdGetSector(continuation_header, CD_HEADER_WORDS) == 0)
         {
-            payload_dst =
+        }
+
+        if (((continuation_header->sector_type == SECTOR_TYPE_AUDIO) &&
+             (continuation_header->frame_number == MOVIE_STATE->frame_number)) &&
+            (continuation_header->chunk_sector_idx == MOVIE_STATE->chunk_sector_idx))
+        {
+            continuation_payload =
                 MOVIE_STATE
-                    ->audio_data_base[VOL_MOVIE_STATE->audio_write_idx + (MOVIE_STATE->chunk_sector_idx & 0xFFFF)]
+                    ->audio_data_base[VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx]
                     .payload;
-            while (CdGetSector(payload_dst, CD_PAYLOAD_WORDS) == 0);
+            while (CdGetSector(continuation_payload, CD_PAYLOAD_WORDS) == 0)
+            {
+            }
 
             MOVIE_STATE->sectors_remaining = MOVIE_STATE->sectors_remaining - 1;
-            if (!(MOVIE_STATE->sectors_remaining & 0xFFFF))
+            if (MOVIE_STATE->sectors_remaining == 0)
             {
-                audio_write_next = VOL_MOVIE_STATE->audio_write_idx + 1;
-                VOL_MOVIE_STATE->audio_write_idx = audio_write_next + MOVIE_STATE->chunk_sector_idx;
+                next_audio_write_idx = VOL_MOVIE_STATE->audio_write_idx + 1;
+                VOL_MOVIE_STATE->audio_write_idx = next_audio_write_idx + MOVIE_STATE->chunk_sector_idx;
 
                 MOVIE_STATE->last_audio_frame = VOL_MOVIE_STATE->frame_number;
-                if (((u32)sector_hdr_ptr->frame_number) > MOVIE_STATE->total_frames)
+                if (continuation_header->frame_number > MOVIE_STATE->total_frames)
                 {
                     return 0;
                 }
             }
             else
             {
-                MOVIE_STATE->chunk_sector_idx = (u16)(MOVIE_STATE->chunk_sector_idx + 1);
+                MOVIE_STATE->chunk_sector_idx = MOVIE_STATE->chunk_sector_idx + 1;
             }
         }
         else
         {
-            MOVIE_STATE->frame_number = (u32)sector_hdr_ptr->frame_number;
+            MOVIE_STATE->frame_number = continuation_header->frame_number;
             MOVIE_STATE->sectors_remaining = 0U;
-            if (((u32)sector_hdr_ptr->frame_number) <= MOVIE_STATE->total_frames)
+            if (continuation_header->frame_number <= MOVIE_STATE->total_frames)
             {
                 return 1;
             }
 
-            VOL_MOVIE_STATE->end_of_stream = 1;
+            VOL_MOVIE_STATE->end_of_stream = TRUE;
             return 0;
         }
     }
@@ -1477,7 +1484,7 @@ s32 get_next_audio_entry(AudioSector** out_entry)
     }
 
     entry = &MOVIE_STATE->audio_data_base[next_idx];
-    MOVIE_STATE->audio_buffered_count += entry->header.sector_count;
+    MOVIE_STATE->audio_buffered_count += entry->header_block.header.sector_count;
     *out_entry = entry;
     return 1;
 }
@@ -1611,7 +1618,7 @@ void advance_audio_read(void)
     SectorEntry* entry;
     s32 next_index;
 
-    entry = &MOVIE_STATE->audio_data_base[MOVIE_STATE->audio_read_idx].header;
+    entry = &MOVIE_STATE->audio_data_base[MOVIE_STATE->audio_read_idx].header_block.header;
     next_index = MOVIE_STATE->audio_read_idx + entry->sector_count;
 
     MOVIE_STATE->audio_buffered_count = MOVIE_STATE->audio_buffered_count - entry->sector_count;
