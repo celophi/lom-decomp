@@ -3,6 +3,8 @@
 #include "decomp9.h"
 #include "psyq/libspu.h"
 
+void func_80028E34(int, volatile short, void*, int);
+
 /* "AKAO" in little-endian */
 #define AKAO_MAGIC 0x4F414B41
 

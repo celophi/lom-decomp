@@ -36,6 +36,22 @@ typedef struct
 } SfxTableBuffer;
 
 /**
+ * @brief Self-relative table of resource offsets.
+ *
+ * The first word gives the number of entries; each following word is a byte
+ * offset from the start of this table.
+ */
+typedef struct
+{
+    u32 entry_count;
+    u32 entry_offsets[1];
+} ResourceOffsetTable;
+
+/** Locates the byte immediately following a variable-length offset table. */
+#define RESOURCE_TABLE_END(table) \
+    ((u8*)(table) + *(((table)->entry_count - 1) + (table)->entry_offsets))
+
+/**
  * @brief One half of the Game Over screen's double-buffered frame.
  *
  * Each half owns its display environments, ordering table, and primitive
@@ -79,8 +95,11 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 /** Disables Game Over SFX playback. */
 #define GOVER_SFX_DISABLED (-1)
 
-/** RAM staging address used to load an SFX resource from CD. */
-#define GOVER_SFX_LOAD_ADDR 0x80180000
+/** RAM staging buffer used to load an SFX resource from CD. */
+#define GOVER_SFX_LOAD_BUFFER ((u8*)0x80180000)
+
+/** Offset from the SFX table-buffer header to its copied table data. */
+#define GOVER_SFX_TABLE_DATA_OFFSET 0xC
 
 /** Base CD resource for the Game Over image. */
 #define GOVER_IMAGE_RESOURCE_BASE 0xFFC
@@ -97,8 +116,12 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 /** Cross, Circle, and L3 dismiss the screen. */
 #define GOVER_DISMISS_BUTTON_MASK (PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_L3)
 
-/** Locates the SFX table within the staged resource. */
-#define GOVER_SFX_TABLE_OFFSET (*(u32*)(GOVER_SFX_LOAD_ADDR + 4))
+/** Locates the first nested offset table within the staged resource. */
+#define GOVER_SFX_TABLE_OFFSET (*(u32*)0x80180004)
+
+/** The SFX table in the resource currently held by the staging buffer. */
+#define GOVER_LOADED_SFX_TABLE \
+    ((ResourceOffsetTable*)(GOVER_SFX_LOAD_BUFFER + GOVER_SFX_TABLE_OFFSET))
 
 const s32 g_gover_overlay_id = 10;
 s32 D_80140704;
@@ -424,10 +447,10 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinati
  */
 static void gover_load_sfx_bank(s32 sfx_bank_index)
 {
-    AkaoSeqHeader* akao_program;
-    u8* table_destination;
-    u8* table_source;
-    s32* sfx_table;
+    ResourceOffsetTable* loaded_table;
+    u8* copy_destination;
+    u8* copy_source;
+    u8* akao_program;
 
     if (sfx_bank_index == GOVER_SFX_BANK_REUSE)
     {
@@ -444,20 +467,20 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     }
 
     // Load the resource and locate its first SFX table.
-    cdrom_queue_read((sfx_bank_index + GOVER_SFX_RESOURCE_BASE) & 0xFFFF, (void*)GOVER_SFX_LOAD_ADDR);
+    cdrom_queue_read((u16)(sfx_bank_index + GOVER_SFX_RESOURCE_BASE), GOVER_SFX_LOAD_BUFFER);
     cdrom_wait_queue_empty();
-    g_sfx_table_buffer.active_table_offset = 0xC;
+    g_sfx_table_buffer.active_table_offset = GOVER_SFX_TABLE_DATA_OFFSET;
 
-    table_source = (u8*)(GOVER_SFX_LOAD_ADDR + GOVER_SFX_TABLE_OFFSET);
-    sfx_table = (s32*)table_source;
-    akao_program = (AkaoSeqHeader*)(table_source + ((u32)sfx_table[*sfx_table]));
-    table_destination = g_sfx_table_buffer.table_data;
+    loaded_table = GOVER_LOADED_SFX_TABLE;
+    copy_source = (u8*)loaded_table;
+    akao_program = RESOURCE_TABLE_END(loaded_table);
+    copy_destination = g_sfx_table_buffer.table_data;
 
     // Preserve the SFX table that precedes the AKAO program.
-    while (table_source != (u8*)akao_program)
+    while (copy_source != akao_program)
     {
-        *(table_destination++) = *(table_source++);
+        *copy_destination++ = *copy_source++;
     }
 
-    akao_play_sequence_blocking(akao_program, 1);
+    akao_play_sequence_blocking((AkaoSeqHeader*)akao_program, 1);
 }
