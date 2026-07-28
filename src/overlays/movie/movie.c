@@ -1,5 +1,6 @@
 #include "movie.h"
 #include "pad.h"
+#include "controller.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
 #include "psyq/libpress.h"
@@ -104,15 +105,46 @@ typedef struct
 #define END_STATE_NEAR_END 1
 #define END_STATE_DONE 2
 
-/** @brief Skip-cinematic gating used by movie_play. */
-#define MOVIE_SKIPPABLE_MAX 2   /**< only movies with idx < this are skippable */
-#define MOVIE0_SKIP_MASK 0xFF0F /**< movie 0 (intro/logo): broad - any non-bit-4..7 button */
-#define MOVIE1_SKIP_MASK 0x400A /**< movie 1: narrow specific combination */
-#define SCD_DEVICE_STATE_OK 3   /**< device_type < this means the controller is usable */
+/** @brief Fixed configuration used by @ref movie_play. */
+#define MOVIE_DISPLAY_WIDTH 320
+#define MOVIE_DISPLAY_HEIGHT 240
+#define MOVIE_UPDATE_POLL_LIMIT 0x2000
+#define CONTROLLER_VSYNC_INTERVAL_SINGLE 1
+#define MOVIE_FRAME_VSYNC_INTERVAL 4
+#define CD_ERROR_STATUS_RETRIES_EXHAUSTED 5
 
-/** @brief Movie resource-table base and initialization flag. */
+/** @brief Per-stream frame totals used as the playback stop condition. */
+#define MOVIE_INTRO_TOTAL_FRAMES 2098
+#define MOVIE_ATTRACT_1_TOTAL_FRAMES 2473
+#define MOVIE_ATTRACT_2_PART_1_TOTAL_FRAMES 1318
+#define MOVIE_ATTRACT_2_PART_2_TOTAL_FRAMES 5368
+#define MOVIE_ATTRACT_2_PART_3_TOTAL_FRAMES 898
+
+/**
+ * @brief Cinematic indices selected by the main game-state dispatcher.
+ *
+ * GAME_STATE_ATTRACT_2 plays its three stream segments consecutively.
+ */
+typedef enum
+{
+    MOVIE_INDEX_INTRO = 0,
+    MOVIE_INDEX_ATTRACT_1 = 1,
+    MOVIE_INDEX_ATTRACT_2_PART_1 = 2,
+    MOVIE_INDEX_ATTRACT_2_PART_2 = 3,
+    MOVIE_INDEX_ATTRACT_2_PART_3 = 4
+} MovieIndex;
+
+/** @brief Skip-cinematic gating used by movie_play. */
+#define MOVIE_FIRST_UNSKIPPABLE_INDEX MOVIE_INDEX_ATTRACT_2_PART_1
+#define MOVIE_INTRO_SKIP_MASK \
+    ((u16)~(PAD_BTN_SQUARE | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_TRIANGLE))
+#define MOVIE_ATTRACT_1_SKIP_MASK (PAD_BTN_R2 | PAD_BTN_R1 | PAD_BTN_DOWN)
+#define SCD_VALID_DEVICE_TYPE_COUNT 3 /**< digital, analog joystick, analog controller */
+
+/** @brief Movie resource-table base, index representation, and initialization flag. */
 #define MOVIE_RESOURCE_BASE 0x16A0
 #define MOVIE_INIT_USE_CD_AUDIO 0x80
+#define MOVIE_INDEX_MASK 0xFFFF
 
 /**
  * @brief Audio fade-out ramp during a skip-triggered exit.
@@ -246,9 +278,6 @@ void cdrom_wait_queue_empty(void);
  * buffer-return prototype.
  */
 s32 cdrom_queue_command();
-void update_controllers(void);
-void set_controller_vsync_interval(u32 interval);
-void reset_controller_vsync_state(void);
 
 /* AKAO XA-streaming helpers (see config/symbols/shared_symbol_addrs.txt). */
 void akao_cmd_c8(u32 arg0);                                /* AKAO cmd 0xC8 (raw param) */
@@ -276,128 +305,108 @@ void advance_audio_read(void);
 void advance_video_read(void);
 
 /**
- * @brief Play one of five MDEC cinematics, selected by index.
- *
- * Drives the full playback loop: configures the dual-buffered DISPENV pair,
- * resolves the per-movie frame count, calls @ref movie_init to stage the
- * stream, then services @ref movie_update / @ref movie_service_video_ops
- * until the stream end-state is reached. Includes a CD error-recovery
- * inner loop and an optional audio fade-out.
- *
- * @param movie_index Cinematic to play (0..4). Indices outside this range
- *                   fall through to the case-4 default (898 frames).
- *
+ * @brief Play the selected MDEC cinematic.
+ * @param movie_index Cinematic index (0..4); other values use the final attract segment.
  * @see https://decomp.me/scratch/gkEWm (100%)
  */
 void movie_play(s32 movie_index)
 {
-    DISPENV env[2];
-    DISPENV* p_disp_env;
+    DISPENV display_envs[2];
+    DISPENV* display_env;
     volatile MovieState* state;
     s32 audio_fade_vol;
-    s32 retry_limit;
+    s32 retry_exhausted_status;
     s8 end_state_match;
     s32 error_status;
-    s32 timeout;
-    u16 movie_idx_u16;
+    s32 update_poll_budget;
+    u16 movie_index_low;
     u16 buttons;
     s32 frame_count;
-    u32 idx;
-    s32 resource_idx;
+    u32 movie_index_value;
+    s32 resource_index;
     s32 init_flags;
 
+    /* Refresh controller and CD state before honoring an intro skip. */
     VSync(0);
     update_controllers();
-    set_controller_vsync_interval(1);
+    set_controller_vsync_interval(CONTROLLER_VSYNC_INTERVAL_SINGLE);
     VSync(0);
     update_controllers();
     cdrom_process_state();
-    /* Pre-playback skip gate: if user is already holding a skip button on
-     * movie 0 when we get here, bail before staging the stream. */
-    if ((((movie_index & 0xFFFF) == 0) && ((SCD_REGS)->device_type < SCD_DEVICE_STATE_OK)) &&
-        (((SCD_REGS)->held_buttons & MOVIE0_SKIP_MASK) != 0))
+    if ((((movie_index & MOVIE_INDEX_MASK) == MOVIE_INDEX_INTRO) &&
+         ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT)) &&
+        (((SCD_REGS)->held_buttons & MOVIE_INTRO_SKIP_MASK) != 0))
     {
         return;
     }
 
+    /* Configure vertically stacked RGB24 display buffers. */
     reset_controller_vsync_state();
     DecDCTReset(0);
-    timeout = 0xF0;
-    SetDefDispEnv(&env[0], 0, 0, 320, timeout);
-    SetDefDispEnv(&env[1], 0, timeout, 320, timeout);
-    (env[1].isrgb24 = 1);
-    env[0].isrgb24 = 1;
+    SetDefDispEnv(&display_envs[0], 0, 0, MOVIE_DISPLAY_WIDTH, MOVIE_DISPLAY_HEIGHT);
+    SetDefDispEnv(&display_envs[1], 0, MOVIE_DISPLAY_HEIGHT, MOVIE_DISPLAY_WIDTH, MOVIE_DISPLAY_HEIGHT);
+    display_envs[1].isrgb24 = 1;
+    display_envs[0].isrgb24 = 1;
 
-    /*
-     * Five MDEC cinematics; movie_index selects one (0..4). The frame count
-     * matches each movie's BS stream length and is used by movie_init as the
-     * stop condition. The CD resource index is the per-movie BS file at base
-     * 0x16A0 (so resources 0x16A0..0x16A4).
-     *
-     *   index | resource | frames
-     *   ------+----------+--------
-     *     0   | 0x16A0   |  2098
-     *     1   | 0x16A1   |  2473
-     *     2   | 0x16A2   |  1318
-     *     3   | 0x16A3   |  5368
-     *     4   | 0x16A4   |   898   (shortest - also the default fallthrough)
-     */
-
-    switch ((u16)(movie_index & 0xFFFF))
+    /* Select the stream length; movie resources are contiguous by index. */
+    switch (movie_index & MOVIE_INDEX_MASK)
     {
-    case 0:
-        frame_count = 2098;
+    case MOVIE_INDEX_INTRO:
+        frame_count = MOVIE_INTRO_TOTAL_FRAMES;
         init_flags = MOVIE_INIT_USE_CD_AUDIO;
         break;
 
-    case 1:
-        frame_count = 2473;
+    case MOVIE_INDEX_ATTRACT_1:
+        frame_count = MOVIE_ATTRACT_1_TOTAL_FRAMES;
         init_flags = MOVIE_INIT_USE_CD_AUDIO;
         break;
 
-    case 2:
-        frame_count = 1318;
+    case MOVIE_INDEX_ATTRACT_2_PART_1:
+        frame_count = MOVIE_ATTRACT_2_PART_1_TOTAL_FRAMES;
         init_flags = MOVIE_INIT_USE_CD_AUDIO;
         break;
 
-    case 3:
-        frame_count = 5368;
+    case MOVIE_INDEX_ATTRACT_2_PART_2:
+        frame_count = MOVIE_ATTRACT_2_PART_2_TOTAL_FRAMES;
         init_flags = MOVIE_INIT_USE_CD_AUDIO;
         break;
 
-    case 4:
+    case MOVIE_INDEX_ATTRACT_2_PART_3:
 
     default:
-        frame_count = 898;
+        frame_count = MOVIE_ATTRACT_2_PART_3_TOTAL_FRAMES;
         init_flags = MOVIE_INIT_USE_CD_AUDIO;
         break;
     }
 
-    resource_idx = (movie_index & 0xFFFF) + MOVIE_RESOURCE_BASE;
-    movie_init(resource_idx, init_flags, frame_count, 0);
+    /* Stage the selected stream and initialize playback state. */
+    resource_index = (movie_index & MOVIE_INDEX_MASK) + MOVIE_RESOURCE_BASE;
+    movie_init(resource_index, init_flags, frame_count, 0);
     VSync(0);
     update_controllers();
     audio_fade_vol = AUDIO_FADE_DISARMED;
-    retry_limit = 5;
+    retry_exhausted_status = CD_ERROR_STATUS_RETRIES_EXHAUSTED;
     state = VOL_MOVIE_STATE;
     end_state_match = END_STATE_DONE;
 
     while (TRUE)
     {
+        /* Service transient CD errors before advancing playback. */
         error_status = cdrom_get_error_status();
 
-        while ((error_status != 0) && (error_status != retry_limit))
+        while ((error_status != 0) && (error_status != retry_exhausted_status))
         {
-            set_controller_vsync_interval(1);
+            set_controller_vsync_interval(CONTROLLER_VSYNC_INTERVAL_SINGLE);
             VSync(0);
             update_controllers();
             cdrom_process_state();
             error_status = cdrom_get_error_status();
         }
 
+        /* Pump the decoder until a frame is ready or the stream ends. */
         while (state->frame_ready == 0)
         {
-            timeout = 0x2000;
+            update_poll_budget = MOVIE_UPDATE_POLL_LIMIT;
 
             while (TRUE)
             {
@@ -420,37 +429,40 @@ void movie_play(s32 movie_index)
 
                 movie_service_video_ops();
 
-                if (--timeout == 0)
+                if (--update_poll_budget == 0)
                 {
                     break;
                 }
             };
 
-            if (timeout == 0)
+            if (update_poll_budget == 0)
             {
                 cdrom_process_state();
             }
         }
 
+        /* Present the completed buffer and process skip input. */
         state->frame_ready = 0;
-        set_controller_vsync_interval(4);
-        movie_idx_u16 = (u16)(movie_index & 0xFFFF);
+        set_controller_vsync_interval(MOVIE_FRAME_VSYNC_INTERVAL);
+        movie_index_low = movie_index & MOVIE_INDEX_MASK;
         VSync(0);
-        p_disp_env = &env[0];
+        display_env = &display_envs[0];
         if (state->chunk_idx == 0)
         {
-            p_disp_env = &env[1];
+            display_env = &display_envs[1];
         }
-        PutDispEnv(p_disp_env);
+        PutDispEnv(display_env);
         SetDispMask(1);
         update_controllers();
         cdrom_process_state();
 
-        idx = movie_idx_u16;
-        if ((idx < MOVIE_SKIPPABLE_MAX) && ((SCD_REGS)->device_type < SCD_DEVICE_STATE_OK))
+        movie_index_value = movie_index_low;
+        if ((movie_index_value < MOVIE_FIRST_UNSKIPPABLE_INDEX) &&
+            ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT))
         {
             buttons = (SCD_REGS)->pressed_buttons;
-            if (((idx != 0) ? ((buttons & MOVIE1_SKIP_MASK) != 0) : ((buttons & MOVIE0_SKIP_MASK) != 0)) != 0)
+            if (((movie_index_value != MOVIE_INDEX_INTRO) ? ((buttons & MOVIE_ATTRACT_1_SKIP_MASK) != 0)
+                                                         : ((buttons & MOVIE_INTRO_SKIP_MASK) != 0)) != 0)
             {
                 if (g_cdAudioReady == 0)
                 {
@@ -464,6 +476,7 @@ void movie_play(s32 movie_index)
             }
         }
 
+        /* Fade XA audio after a skip request. */
         if ((g_cdAudioReady != 0) && (audio_fade_vol != AUDIO_FADE_DISARMED))
         {
             akao_cmd_e4_set_cd_volume(audio_fade_vol);
@@ -482,6 +495,7 @@ void movie_play(s32 movie_index)
         }
     }
 
+    /* Stop playback and disable display output. */
     reset_controller_vsync_state();
     cdrom_reset();
     DrawSync(0);
