@@ -51,10 +51,10 @@ typedef union
 typedef struct
 {
     // ---- stream buffers ----
-    union VideoSectorEntry* video_table_base;  // array of 32-byte video sector headers
-    union VideoVlcPayload* video_data_base;    // parallel array of 2016-byte VLC payloads
-    struct AudioSector* audio_data_base;       // array of 2048-byte CD sectors
-    void* vlc_table;                           // opaque VLC decode table
+    union VideoSectorEntry* video_table_base; // array of 32-byte video sector headers
+    union VideoVlcPayload* video_data_base;   // parallel array of 2016-byte VLC payloads
+    struct AudioSector* audio_data_base;      // array of 2048-byte CD sectors
+    void* vlc_table;                          // opaque VLC decode table
     void* vlc_input_buf[2];
     u_long* mdec_output_buf[2];
 
@@ -111,8 +111,8 @@ typedef struct
     u8 pending_mdec_decode; // 0x9B - bitstream staged, needs DecDCTout kicked
     s8 mdec_busy;           // MDEC_STATE_* output pipeline state
     u8 frame_ready;         // a complete frame can be displayed
-    u8 end_of_stream; // 0x9E - set when frame_number >= total_frames
-    u8 end_state;     // 1 = near end, 2 = stream fully ended (END_STATE_*)
+    u8 end_of_stream;       // 0x9E - set when frame_number >= total_frames
+    u8 end_state;           // 1 = near end, 2 = stream fully ended (END_STATE_*)
 } MovieState;
 
 /** @brief MovieState::end_state sentinel values. */
@@ -145,7 +145,7 @@ typedef struct
 #define CD_STATUS_RECOVERY_PENDING 1
 #define DRAW_SYNC_MODE_POLL 1
 #define DRAW_SYNC_DEFER_THRESHOLD 2
-#define BREAK_DRAW_FAILURE_ADDRESS ((u_long)-1)
+#define BREAK_DRAW_FAILURE_ADDRESS ((u_long) - 1)
 
 /** @brief Fixed configuration used by @ref movie_play. */
 #define MOVIE_DISPLAY_WIDTH 320
@@ -183,8 +183,7 @@ typedef enum
 
 /** @brief Skip-cinematic gating used by movie_play. */
 #define MOVIE_FIRST_UNSKIPPABLE_INDEX MOVIE_INDEX_ATTRACT_2_PART_1
-#define MOVIE_INTRO_SKIP_MASK \
-    ((u16)~(PAD_BTN_SQUARE | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_TRIANGLE))
+#define MOVIE_INTRO_SKIP_MASK ((u16) ~(PAD_BTN_SQUARE | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_TRIANGLE))
 #define MOVIE_ATTRACT_1_SKIP_MASK (PAD_BTN_R2 | PAD_BTN_R1 | PAD_BTN_DOWN)
 #define SCD_VALID_DEVICE_TYPE_COUNT 3 /**< digital, analog joystick, analog controller */
 
@@ -205,7 +204,7 @@ typedef enum
 #define AUDIO_FADE_STEP 0x10
 
 /** @brief Movie initialization sentinels and audio parameters. */
-#define MOVIE_FRAME_NONE ((u32)-1)
+#define MOVIE_FRAME_NONE ((u32) - 1)
 #define AKAO_CD_VOLUME_MAX 0x7F
 #define MOVIE_AKAO_C8_INIT_VALUE 0x7FFF
 #define MOVIE_NONSTREAMED_CD_MIX_VOLUME 0xA0
@@ -322,8 +321,7 @@ typedef union
 } MovieStreamEntryPointer;
 
 /** @brief View the storage after a video-header table as VLC payload slots. */
-#define VIDEO_PAYLOADS_AFTER_TABLE(table, entry_count) \
-    ((VideoVlcPayload*)&(table)[entry_count])
+#define VIDEO_PAYLOADS_AFTER_TABLE(table, entry_count) ((VideoVlcPayload*)&(table)[entry_count])
 
 /** @brief Fixed RAM layout used by the standard movie path. */
 #define MOVIE_BUFFER_RAM_BASE 0x80147000
@@ -442,8 +440,7 @@ void movie_play(s32 movie_index)
     VSync(0);
     update_controllers();
     cdrom_process_state();
-    if ((((movie_index & MOVIE_INDEX_MASK) == MOVIE_INDEX_INTRO) &&
-         ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT)) &&
+    if ((((movie_index & MOVIE_INDEX_MASK) == MOVIE_INDEX_INTRO) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT)) &&
         (((SCD_REGS)->held_buttons & MOVIE_INTRO_SKIP_MASK) != 0))
     {
         return;
@@ -566,12 +563,10 @@ void movie_play(s32 movie_index)
         cdrom_process_state();
 
         movie_index_value = movie_index_low;
-        if ((movie_index_value < MOVIE_FIRST_UNSKIPPABLE_INDEX) &&
-            ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT))
+        if ((movie_index_value < MOVIE_FIRST_UNSKIPPABLE_INDEX) && ((SCD_REGS)->device_type < SCD_VALID_DEVICE_TYPE_COUNT))
         {
             buttons = (SCD_REGS)->pressed_buttons;
-            if (((movie_index_value != MOVIE_INDEX_INTRO) ? ((buttons & MOVIE_ATTRACT_1_SKIP_MASK) != 0)
-                                                         : ((buttons & MOVIE_INTRO_SKIP_MASK) != 0)) != 0)
+            if (((movie_index_value != MOVIE_INDEX_INTRO) ? ((buttons & MOVIE_ATTRACT_1_SKIP_MASK) != 0) : ((buttons & MOVIE_INTRO_SKIP_MASK) != 0)) != 0)
             {
                 if (g_cdAudioReady == 0)
                 {
@@ -690,8 +685,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w = ALTERNATE_DECODE_RECT_WIDTH;
         MOVIE_STATE->video_ring_capacity = ALTERNATE_VIDEO_RING_SLOTS;
         MOVIE_STATE->audio_ring_capacity = AUDIO_RING_SLOTS;
-        MOVIE_STATE->video_data_base = VIDEO_PAYLOADS_AFTER_TABLE(
-            MOVIE_STATE->video_table_base, ALTERNATE_VIDEO_RING_SLOTS);
+        MOVIE_STATE->video_data_base = VIDEO_PAYLOADS_AFTER_TABLE(MOVIE_STATE->video_table_base, ALTERNATE_VIDEO_RING_SLOTS);
         VOL_MOVIE_STATE->chunk_idx = init_buffer_idx;
     }
 
@@ -736,9 +730,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     /* Configure audio for streamed or non-streamed playback. */
     if (ms->use_cd_audio != 0)
     {
-        akao_cmd_e8_start_xa_stream(
-            AKAO_STREAM_ADDRESS(ms->audio_data_base),
-            ms->audio_ring_capacity * sizeof(AudioSector));
+        akao_cmd_e8_start_xa_stream(AKAO_STREAM_ADDRESS(ms->audio_data_base), ms->audio_ring_capacity * sizeof(AudioSector));
         akao_cmd_e4_set_cd_volume(AKAO_CD_VOLUME_MAX);
     }
     else
@@ -785,11 +777,9 @@ void movie_update(void)
         if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) && (movie_state->frame_ready == 0))
         {
             MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
-            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
-                     MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD);
+            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD);
             {
-                s32 pixel_count =
-                    MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
+                s32 pixel_count = MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
                 s32 word_count = pixel_count + SIGNED_HALF_ROUNDING(pixel_count);
                 DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], word_count >> 1);
             }
@@ -819,8 +809,7 @@ void movie_update(void)
         {
             MOVIE_STATE->current_frame = stream_header->header.frame_number;
 
-            if ((stream_header->header.frame_number >= MOVIE_STATE->total_frames) &&
-                (MOVIE_STATE->end_state == END_STATE_RUNNING))
+            if ((stream_header->header.frame_number >= MOVIE_STATE->total_frames) && (MOVIE_STATE->end_state == END_STATE_RUNNING))
             {
                 MOVIE_STATE->end_state = END_STATE_NEAR_END;
             }
@@ -837,9 +826,7 @@ void movie_update(void)
                 DecDCTvlcSize2(ALTERNATE_VLC_DECODE_SIZE);
                 MOVIE_STATE->vlc_retry_count = ALTERNATE_VLC_RETRY_COUNT;
             }
-            if (DecDCTvlc2(stream_entry.video_payload->words,
-                           MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
-                           MOVIE_STATE->vlc_table) == 0)
+            if (DecDCTvlc2(stream_entry.video_payload->words, MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->vlc_table) == 0)
             {
                 vlc_decode_complete = 1;
                 MOVIE_STATE->vlc_retry_count = 0;
@@ -859,18 +846,14 @@ void movie_update(void)
         /* Submit the decoded frame or defer it until the MDEC is idle. */
         advance_video_read();
 
-        if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) &&
-            (output_available = (MOVIE_STATE->frame_ready == 0)))
+        if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) && (output_available = (MOVIE_STATE->frame_ready == 0)))
         {
             MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
-            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx],
-                     MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD);
+            DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == MOVIE_GPU_MODE_STANDARD);
             {
-                s32 pixel_count =
-                    MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
+                s32 pixel_count = MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
                 rounding_adjustment = SIGNED_HALF_ROUNDING(pixel_count);
-                DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx],
-                          (pixel_count + rounding_adjustment) >> 1);
+                DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], (pixel_count + rounding_adjustment) >> 1);
             }
         }
         else
@@ -888,8 +871,7 @@ void movie_update(void)
             stream_header = stream_entry.video_header;
             movie_state->current_frame = stream_header->header.frame_number;
 
-            if ((stream_header->header.frame_number > movie_state->total_frames) &&
-                (movie_state->end_state < END_STATE_DONE))
+            if ((stream_header->header.frame_number > movie_state->total_frames) && (movie_state->end_state < END_STATE_DONE))
             {
                 movie_state->end_state = END_STATE_DONE;
             }
@@ -907,12 +889,10 @@ void movie_update(void)
             }
         }
 
-        if ((MOVIE_STATE->audio_write_idx != MOVIE_STATE->audio_read_idx) ||
-            (MOVIE_STATE->last_audio_frame != MOVIE_STATE->last_consumed_audio_frame))
+        if ((MOVIE_STATE->audio_write_idx != MOVIE_STATE->audio_read_idx) || (MOVIE_STATE->last_audio_frame != MOVIE_STATE->last_consumed_audio_frame))
         {
             s32 position = akao_xa_get_position();
-            if (((position != AKAO_XA_POSITION_UNAVAILABLE) &&
-                 (MOVIE_STATE->audio_buffered_count != 0)) &&
+            if (((position != AKAO_XA_POSITION_UNAVAILABLE) && (MOVIE_STATE->audio_buffered_count != 0)) &&
                 (MOVIE_STATE->audio_read_idx != (position * AUDIO_SECTORS_PER_XA_FRAME)))
             {
                 advance_audio_read();
@@ -1000,8 +980,7 @@ void movie_schedule_next_decode(void)
     signed_next_x = next_x.signed_value;
     VOL_MOVIE_STATE->out_buf_idx = next_output_buffer;
 
-    chunk_end_x =
-        MOVIE_STATE->rects[VOL_MOVIE_STATE->chunk_idx].x + MOVIE_STATE->rects[VOL_MOVIE_STATE->chunk_idx].w;
+    chunk_end_x = MOVIE_STATE->rects[VOL_MOVIE_STATE->chunk_idx].x + MOVIE_STATE->rects[VOL_MOVIE_STATE->chunk_idx].w;
 
     if (signed_next_x < chunk_end_x)
     {
@@ -1061,8 +1040,7 @@ void movie_service_video_ops(void)
             /* Recheck the volatile request after claiming the shared busy flag. */
             if (VOL_MOVIE_STATE->pending_vram_upload)
             {
-                LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX],
-                          state->mdec_output_buf[VOL_MOVIE_STATE->out_buf_idx]);
+                LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], state->mdec_output_buf[VOL_MOVIE_STATE->out_buf_idx]);
                 VOL_MOVIE_STATE->draw_sync_target = DrawSync(DRAW_SYNC_MODE_POLL) + 1;
                 VOL_MOVIE_STATE->pending_vram_upload = FALSE;
                 movie_schedule_next_decode();
@@ -1079,8 +1057,7 @@ void movie_service_video_ops(void)
             {
                 s32 pixel_count;
 
-                pixel_count = state->rects[MDEC_OUTPUT_RECT_INDEX].w *
-                              state->rects[MDEC_OUTPUT_RECT_INDEX].h;
+                pixel_count = state->rects[MDEC_OUTPUT_RECT_INDEX].w * state->rects[MDEC_OUTPUT_RECT_INDEX].h;
                 DecDCTout(state->mdec_output_buf[state->out_buf_idx], pixel_count / 2);
                 state->pending_mdec_decode = FALSE;
             }
@@ -1098,8 +1075,7 @@ void movie_service_video_ops(void)
                 break_draw_result.ordering_table = BreakDraw();
                 if (break_draw_result.address != BREAK_DRAW_FAILURE_ADDRESS)
                 {
-                    LoadImage2(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX],
-                               state->mdec_output_buf[state->out_buf_idx]);
+                    LoadImage2(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], state->mdec_output_buf[state->out_buf_idx]);
                     if (break_draw_result.ordering_table != NULL)
                     {
                         DrawOTag(break_draw_result.ordering_table);
@@ -1163,8 +1139,7 @@ s32 cd_sector_callback(void)
             video_write_idx = state->video_write_idx;
             video_read_idx = state->video_read_idx;
 
-            if (((video_write_idx == video_read_idx) &&
-                 (state->last_video_frame == state->last_consumed_video_frame)) ||
+            if (((video_write_idx == video_read_idx) && (state->last_video_frame == state->last_consumed_video_frame)) ||
                 ((video_write_idx != video_read_idx) && (video_read_idx < state->video_write_idx)))
             {
                 if (state->video_ring_capacity < (state->video_write_idx + sector_header.header.sector_count))
@@ -1244,8 +1219,7 @@ s32 cd_sector_callback(void)
             audio_write_idx = state->audio_write_idx;
             audio_read_idx = state->audio_read_idx;
 
-            if (((audio_write_idx == audio_read_idx) &&
-                 (state->last_audio_frame == state->last_consumed_audio_frame)) ||
+            if (((audio_write_idx == audio_read_idx) && (state->last_audio_frame == state->last_consumed_audio_frame)) ||
                 ((audio_write_idx != audio_read_idx) && (audio_read_idx < state->audio_write_idx)))
             {
                 if (state->audio_ring_capacity < (state->audio_write_idx + sector_header.header.sector_count))
@@ -1262,8 +1236,7 @@ s32 cd_sector_callback(void)
                     ring_has_room = TRUE;
                 }
             }
-            else if ((audio_write_idx != audio_read_idx) &&
-                     (audio_read_idx >= (state->audio_write_idx + sector_header.header.sector_count)))
+            else if ((audio_write_idx != audio_read_idx) && (audio_read_idx >= (state->audio_write_idx + sector_header.header.sector_count)))
             {
                 ring_has_room = TRUE;
             }
@@ -1316,20 +1289,15 @@ s32 cd_sector_callback(void)
     else if (MOVIE_STATE->continuation_type == CONTINUATION_VIDEO)
     {
         /* Validate and append a video continuation sector. */
-        continuation_header =
-            &MOVIE_STATE->video_table_base[VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx].header;
+        continuation_header = &MOVIE_STATE->video_table_base[VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx].header;
         while (CdGetSector(continuation_header, CD_HEADER_WORDS) == 0)
         {
         }
 
-        if (((continuation_header->sector_type == SECTOR_TYPE_VIDEO) &&
-             (continuation_header->frame_number == MOVIE_STATE->frame_number)) &&
+        if (((continuation_header->sector_type == SECTOR_TYPE_VIDEO) && (continuation_header->frame_number == MOVIE_STATE->frame_number)) &&
             (continuation_header->chunk_sector_idx == MOVIE_STATE->chunk_sector_idx))
         {
-            continuation_payload =
-                MOVIE_STATE
-                    ->video_data_base[VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx]
-                    .data;
+            continuation_payload = MOVIE_STATE->video_data_base[VOL_MOVIE_STATE->video_write_idx + MOVIE_STATE->chunk_sector_idx].data;
             while (CdGetSector(continuation_payload, CD_PAYLOAD_WORDS) == 0)
             {
             }
@@ -1342,8 +1310,7 @@ s32 cd_sector_callback(void)
                 total_frames = MOVIE_STATE->total_frames;
 
                 first_sector_count = 1;
-                VOL_MOVIE_STATE->video_write_idx =
-                    (VOL_MOVIE_STATE->video_write_idx + first_sector_count) + MOVIE_STATE->chunk_sector_idx;
+                VOL_MOVIE_STATE->video_write_idx = (VOL_MOVIE_STATE->video_write_idx + first_sector_count) + MOVIE_STATE->chunk_sector_idx;
 
                 VOL_MOVIE_STATE->last_video_frame = VOL_MOVIE_STATE->frame_number;
                 has_more_frames = continuation_header->frame_number < total_frames;
@@ -1379,21 +1346,15 @@ s32 cd_sector_callback(void)
     else
     {
         /* Validate and append an audio continuation sector. */
-        continuation_header =
-            &MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx]
-                 .header_block.header;
+        continuation_header = &MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx].header_block.header;
         while (CdGetSector(continuation_header, CD_HEADER_WORDS) == 0)
         {
         }
 
-        if (((continuation_header->sector_type == SECTOR_TYPE_AUDIO) &&
-             (continuation_header->frame_number == MOVIE_STATE->frame_number)) &&
+        if (((continuation_header->sector_type == SECTOR_TYPE_AUDIO) && (continuation_header->frame_number == MOVIE_STATE->frame_number)) &&
             (continuation_header->chunk_sector_idx == MOVIE_STATE->chunk_sector_idx))
         {
-            continuation_payload =
-                MOVIE_STATE
-                    ->audio_data_base[VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx]
-                    .payload;
+            continuation_payload = MOVIE_STATE->audio_data_base[VOL_MOVIE_STATE->audio_write_idx + MOVIE_STATE->chunk_sector_idx].payload;
             while (CdGetSector(continuation_payload, CD_PAYLOAD_WORDS) == 0)
             {
             }
@@ -1445,20 +1406,17 @@ s32 get_next_audio_entry(AudioSector** out_entry)
     AudioSector* next_entry;
 
     /* Stop when the producer and consumer identify the same completed frame. */
-    if ((MOVIE_STATE->audio_write_idx == MOVIE_STATE->audio_read_idx) &&
-        (MOVIE_STATE->last_audio_frame == MOVIE_STATE->last_consumed_audio_frame))
+    if ((MOVIE_STATE->audio_write_idx == MOVIE_STATE->audio_read_idx) && (MOVIE_STATE->last_audio_frame == MOVIE_STATE->last_consumed_audio_frame))
     {
         return 0;
     }
 
     /* Wrap the read cursor after consuming the previous contiguous segment. */
-    if ((VOL_MOVIE_STATE->audio_write_idx <= MOVIE_STATE->audio_read_idx) &&
-        (MOVIE_STATE->audio_read_idx == MOVIE_STATE->audio_ring_size))
+    if ((VOL_MOVIE_STATE->audio_write_idx <= MOVIE_STATE->audio_read_idx) && (MOVIE_STATE->audio_read_idx == MOVIE_STATE->audio_ring_size))
     {
         MOVIE_STATE->audio_read_idx = 0;
 
-        if (MOVIE_STATE->audio_write_idx == 0 &&
-            (MOVIE_STATE->last_audio_frame == MOVIE_STATE->last_consumed_audio_frame))
+        if (MOVIE_STATE->audio_write_idx == 0 && (MOVIE_STATE->last_audio_frame == MOVIE_STATE->last_consumed_audio_frame))
         {
             return 0;
         }
@@ -1467,8 +1425,7 @@ s32 get_next_audio_entry(AudioSector** out_entry)
     /* Skip entries already queued to the audio pipeline. */
     next_entry_idx = MOVIE_STATE->audio_read_idx + MOVIE_STATE->audio_buffered_count;
 
-    if ((MOVIE_STATE->audio_read_idx >= MOVIE_STATE->audio_write_idx) &&
-        (next_entry_idx >= VOL_MOVIE_STATE->audio_ring_size))
+    if ((MOVIE_STATE->audio_read_idx >= MOVIE_STATE->audio_write_idx) && (next_entry_idx >= VOL_MOVIE_STATE->audio_ring_size))
     {
         next_entry_idx -= MOVIE_STATE->audio_ring_size;
     }
@@ -1504,8 +1461,7 @@ void draw_sync_callback(void)
     /* Upload deferred MDEC output and advance the decode position. */
     if (state->pending_vram_upload)
     {
-        LoadImage(&state->rects[MDEC_OUTPUT_RECT_INDEX],
-                  state->mdec_output_buf[state->out_buf_idx]);
+        LoadImage(&state->rects[MDEC_OUTPUT_RECT_INDEX], state->mdec_output_buf[state->out_buf_idx]);
         movie_schedule_next_decode();
         state->pending_vram_upload = FALSE;
     }
@@ -1513,8 +1469,7 @@ void draw_sync_callback(void)
     /* Submit a deferred MDEC output transfer. */
     if (state->pending_mdec_decode)
     {
-        pixel_count =
-            state->rects[MDEC_OUTPUT_RECT_INDEX].w * state->rects[MDEC_OUTPUT_RECT_INDEX].h;
+        pixel_count = state->rects[MDEC_OUTPUT_RECT_INDEX].w * state->rects[MDEC_OUTPUT_RECT_INDEX].h;
         DecDCTout(state->mdec_output_buf[state->out_buf_idx], pixel_count / 2);
         state->pending_mdec_decode = FALSE;
     }
@@ -1534,8 +1489,7 @@ s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_
     s32 write_index;
 
     /* Stop when the producer and consumer identify the same completed frame. */
-    if ((MOVIE_STATE->video_write_idx == MOVIE_STATE->video_read_idx) &&
-        (MOVIE_STATE->last_video_frame == MOVIE_STATE->last_consumed_video_frame))
+    if ((MOVIE_STATE->video_write_idx == MOVIE_STATE->video_read_idx) && (MOVIE_STATE->last_video_frame == MOVIE_STATE->last_consumed_video_frame))
     {
         return 0;
     }
@@ -1548,8 +1502,7 @@ s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_
     {
         MOVIE_STATE->video_read_idx = 0;
 
-        if ((MOVIE_STATE->video_write_idx == 0) &&
-            (MOVIE_STATE->last_video_frame == MOVIE_STATE->last_consumed_video_frame))
+        if ((MOVIE_STATE->video_write_idx == 0) && (MOVIE_STATE->last_video_frame == MOVIE_STATE->last_consumed_video_frame))
         {
             return 0;
         }
@@ -1575,8 +1528,7 @@ void advance_video_read(void)
     next_read_index = MOVIE_STATE->video_read_idx + frame_header->sector_count;
 
     /* Wrap after consuming the older contiguous ring segment. */
-    if ((MOVIE_STATE->video_read_idx >= MOVIE_STATE->video_write_idx) &&
-        (next_read_index == MOVIE_STATE->video_ring_size))
+    if ((MOVIE_STATE->video_read_idx >= MOVIE_STATE->video_write_idx) && (next_read_index == MOVIE_STATE->video_ring_size))
     {
         next_read_index = 0;
     }
@@ -1601,8 +1553,7 @@ void advance_audio_read(void)
     MOVIE_STATE->audio_buffered_count -= frame_header->sector_count;
 
     /* This path uses the video ring's wrap point, unlike audio entry lookup. */
-    if ((MOVIE_STATE->audio_read_idx >= MOVIE_STATE->audio_write_idx) &&
-        (next_read_index == MOVIE_STATE->video_ring_size))
+    if ((MOVIE_STATE->audio_read_idx >= MOVIE_STATE->audio_write_idx) && (next_read_index == MOVIE_STATE->video_ring_size))
     {
         next_read_index = 0;
     }
