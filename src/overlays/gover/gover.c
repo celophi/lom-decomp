@@ -62,8 +62,7 @@ typedef union
  * @note The commuted pointer addition preserves the original instruction
  *       operand order.
  */
-#define RESOURCE_TABLE_END(table) \
-    ((table)->bytes + *(((table)->header.entry_count - 1) + (table)->header.entry_offsets))
+#define RESOURCE_TABLE_END(table) ((table)->bytes + *(((table)->header.entry_count - 1) + (table)->header.entry_offsets))
 
 /** Number of entries in each Game Over ordering table. */
 #define GOVER_OTAG_LENGTH 8
@@ -95,8 +94,7 @@ typedef union
 } GoverPrimitive;
 
 /** @brief Advances a GPU packet cursor past a packet of @p type. */
-#define NEXT_GOVER_PRIMITIVE(primitive, type) \
-    ((GoverPrimitive*)((primitive)->bytes + sizeof(type)))
+#define NEXT_GOVER_PRIMITIVE(primitive, type) ((GoverPrimitive*)((primitive)->bytes + sizeof(type)))
 
 /* Audio helpers used while presenting the Game Over screen. */
 /** @brief Loads and registers a music sequence. */
@@ -122,12 +120,10 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
  * The linker exposes @c g_gover_frame_tail beginning at that member of frame
  * zero, so show-screen setup uses this offset to recover the complete frames.
  */
-#define GOVER_FRAME_VRAM_RECT_OFFSET \
-    (sizeof(u_long[GOVER_OTAG_LENGTH]) + sizeof(DISPENV) + sizeof(DRAWENV))
+#define GOVER_FRAME_VRAM_RECT_OFFSET (sizeof(u_long[GOVER_OTAG_LENGTH]) + sizeof(DISPENV) + sizeof(DRAWENV))
 
 /** Accesses a complete frame through the linker-exposed frame-tail symbol. */
-#define GOVER_FRAME_FROM_TAIL(tail, index) \
-    (((GoverFrameHalf*)((tail) - GOVER_FRAME_VRAM_RECT_OFFSET))[index])
+#define GOVER_FRAME_FROM_TAIL(tail, index) (((GoverFrameHalf*)((tail) - GOVER_FRAME_VRAM_RECT_OFFSET))[index])
 
 /** VRAM Y-coordinate where the Game Over image's CLUT is uploaded and sampled from. */
 #define GOVER_CLUT_Y 480
@@ -184,18 +180,21 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 #define GOVER_SFX_TABLE_OFFSET (*(u32*)0x80180004)
 
 /** The SFX table in the resource currently held by the staging buffer. */
-#define GOVER_LOADED_SFX_TABLE \
-    ((ResourceOffsetTable*)(GOVER_SFX_LOAD_BUFFER + GOVER_SFX_TABLE_OFFSET))
+#define GOVER_LOADED_SFX_TABLE ((ResourceOffsetTable*)(GOVER_SFX_LOAD_BUFFER + GOVER_SFX_TABLE_OFFSET))
 
 const s32 g_gover_overlay_id = 10;
+
+/** Unreferenced BSS word retained for the original overlay layout. */
 s32 D_80140704;
+
 s32 g_fade_step;
+
+/** Unreferenced BSS word retained for the original overlay layout. */
 s32 D_8014070C;
 
 /* Linker-split storage for the Game Over screen's contiguous frame pair. */
 u8 g_gover_frame_header[GOVER_FRAME_VRAM_RECT_OFFSET];
-u8 g_gover_frame_tail[
-    sizeof(GoverFrameHalf) * GOVER_FRAME_COUNT - GOVER_FRAME_VRAM_RECT_OFFSET];
+u8 g_gover_frame_tail[sizeof(GoverFrameHalf) * GOVER_FRAME_COUNT - GOVER_FRAME_VRAM_RECT_OFFSET];
 s32 g_fade_level;
 
 /** Typed view of the contiguous Game Over frame buffers. */
@@ -232,8 +231,7 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     frame_tail = g_gover_frame_tail;
 
     // Place the display buffers in vertically adjacent VRAM regions.
-    setRECT(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).vram_rect,
-            0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    setRECT(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).vram_rect, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // The temporary preserves the original address calculation.
     back_vram_rect = &GOVER_FRAME_FROM_TAIL(frame_tail, 1).vram_rect;
@@ -244,14 +242,10 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     ClearImage(&vram_transfer.clear_rect, 0, 0, 0);
 
     // Configure alternating display and draw regions.
-    SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).display_environment,
-                  0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 1).display_environment,
-                  0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).draw_environment,
-                  0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 1).draw_environment,
-                  0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).display_environment, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 1).display_environment, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 0).draw_environment, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&GOVER_FRAME_FROM_TAIL(frame_tail, 1).draw_environment, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
     // Disable dithering for both frame buffers.
     frames = &GOVER_FRAME_FROM_TAIL(frame_tail, 0);
@@ -264,8 +258,7 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
     vram_transfer.upload_destinations.clut_x = 0;
     vram_transfer.upload_destinations.clut_y = GOVER_CLUT_Y;
 
-    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE,
-                             &vram_transfer.upload_destinations, image_buffer);
+    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE, &vram_transfer.upload_destinations, image_buffer);
 
     akao_cmd_f0();
     akao_cmd_f1();
@@ -477,21 +470,13 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinati
     TimBlock* pixel_block;
     u32 clut_block_length = tim->clut_block.bnum;
 
-    setRECT(&upload_rect,
-            destinations->clut_x,
-            destinations->clut_y,
-            tim->clut_block.w * tim->clut_block.h,
-            1);
+    setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, tim->clut_block.w * tim->clut_block.h, 1);
     LoadImage(&upload_rect, tim->clut_data);
 
     // Locate the pixel block that follows the variable-length CLUT block.
     pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
 
-    setRECT(&upload_rect,
-            destinations->pixel_x,
-            destinations->pixel_y,
-            pixel_block->w,
-            pixel_block->h);
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_block->w, pixel_block->h);
     LoadImage(&upload_rect, pixel_block + 1);
 
     return ALIGN64(pixel_block->w);
