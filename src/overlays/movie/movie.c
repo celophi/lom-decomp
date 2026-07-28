@@ -1433,31 +1433,25 @@ s32 cd_sector_callback(void)
 }
 
 /**
- * @brief Find the next unqueued audio ring entry and return its address.
+ * @brief Return the next audio-frame entry not yet queued for playback.
  *
- * Walks the audio ring forward from audio_read_idx skipping the
- * already-buffered entries, wrapping at the ring size. Charges the entry's
- * sector count to @ref MovieState::audio_buffered_count.
- *
- * @param out_entry Receives a pointer to the entry's 2048-byte CD sector
- *                 in @ref MovieState::audio_data_base. Untouched if no entry
- *                 is available.
- *
- * @return 1 if an entry was produced, 0 if the ring is empty or fully queued.
- *
+ * @param out_entry Receives the first sector of the next available audio frame.
+ * @return 1 if an entry is available, otherwise 0.
  * @see https://decomp.me/scratch/I2Ddr (100%)
  */
 s32 get_next_audio_entry(AudioSector** out_entry)
 {
-    s32 next_idx;
-    AudioSector* entry;
+    s32 next_entry_idx;
+    AudioSector* next_entry;
 
+    /* Stop when the producer and consumer identify the same completed frame. */
     if ((MOVIE_STATE->audio_write_idx == MOVIE_STATE->audio_read_idx) &&
         (MOVIE_STATE->last_audio_frame == MOVIE_STATE->last_consumed_audio_frame))
     {
         return 0;
     }
 
+    /* Wrap the read cursor after consuming the previous contiguous segment. */
     if ((VOL_MOVIE_STATE->audio_write_idx <= MOVIE_STATE->audio_read_idx) &&
         (MOVIE_STATE->audio_read_idx == MOVIE_STATE->audio_ring_size))
     {
@@ -1471,93 +1465,86 @@ s32 get_next_audio_entry(AudioSector** out_entry)
     }
 
     /* Skip entries already queued to the audio pipeline. */
-    next_idx = MOVIE_STATE->audio_read_idx + MOVIE_STATE->audio_buffered_count;
+    next_entry_idx = MOVIE_STATE->audio_read_idx + MOVIE_STATE->audio_buffered_count;
 
-    if ((MOVIE_STATE->audio_read_idx >= MOVIE_STATE->audio_write_idx) && (next_idx >= VOL_MOVIE_STATE->audio_ring_size))
+    if ((MOVIE_STATE->audio_read_idx >= MOVIE_STATE->audio_write_idx) &&
+        (next_entry_idx >= VOL_MOVIE_STATE->audio_ring_size))
     {
-        next_idx -= MOVIE_STATE->audio_ring_size;
+        next_entry_idx -= MOVIE_STATE->audio_ring_size;
     }
 
-    if ((next_idx == MOVIE_STATE->audio_write_idx) && (MOVIE_STATE->audio_buffered_count != 0))
+    if ((next_entry_idx == MOVIE_STATE->audio_write_idx) && (MOVIE_STATE->audio_buffered_count != 0))
     {
         return 0;
     }
 
-    entry = &MOVIE_STATE->audio_data_base[next_idx];
-    MOVIE_STATE->audio_buffered_count += entry->header_block.header.sector_count;
-    *out_entry = entry;
+    /* Account the returned frame's sectors as queued. */
+    next_entry = &MOVIE_STATE->audio_data_base[next_entry_idx];
+    MOVIE_STATE->audio_buffered_count += next_entry->header_block.header.sector_count;
+    *out_entry = next_entry;
     return 1;
 }
 
 /**
- * @brief DrawSync completion callback; flushes deferred VRAM upload / MDEC submit.
- *
- * If the GPU is idle (g_busy == 0), services @ref MovieState::pending_vram_upload
- * (LoadImage + schedule next decode) and @ref MovieState::pending_mdec_decode
- * (DecDCTout for the staged buffer).
- *
+ * @brief Complete deferred video work after GPU drawing becomes idle.
  * @see https://decomp.me/scratch/TApbR (100%)
  */
 void draw_sync_callback(void)
 {
-    s16 width;
-    s16 height;
-    volatile MovieState* movie_state = VOL_MOVIE_STATE;
+    s32 pixel_count;
+    volatile MovieState* state = VOL_MOVIE_STATE;
 
-    if (g_busy != 0)
+    if (g_busy)
     {
         return;
     }
 
-    movie_state->draw_sync_target = 0;
+    state->draw_sync_target = 0;
 
-    if (movie_state->pending_vram_upload != 0)
+    /* Upload deferred MDEC output and advance the decode position. */
+    if (state->pending_vram_upload)
     {
-
-        LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX],
-                  MOVIE_STATE->mdec_output_buf[movie_state->out_buf_idx]);
+        LoadImage(&state->rects[MDEC_OUTPUT_RECT_INDEX],
+                  state->mdec_output_buf[state->out_buf_idx]);
         movie_schedule_next_decode();
-        movie_state->pending_vram_upload = 0;
+        state->pending_vram_upload = FALSE;
     }
 
-    if (movie_state->pending_mdec_decode != 0)
+    /* Submit a deferred MDEC output transfer. */
+    if (state->pending_mdec_decode)
     {
-        width = movie_state->rects[MDEC_OUTPUT_RECT_INDEX].w;
-        height = movie_state->rects[MDEC_OUTPUT_RECT_INDEX].h;
-
-        DecDCTout(MOVIE_STATE->mdec_output_buf[movie_state->out_buf_idx], (width * height) / 2);
-        movie_state->pending_mdec_decode = 0;
+        pixel_count =
+            state->rects[MDEC_OUTPUT_RECT_INDEX].w * state->rects[MDEC_OUTPUT_RECT_INDEX].h;
+        DecDCTout(state->mdec_output_buf[state->out_buf_idx], pixel_count / 2);
+        state->pending_mdec_decode = FALSE;
     }
 }
 
 /**
- * @brief Resolve pointers to the next available video ring entry.
+ * @brief Return the payload and header for the next readable video frame.
  *
- * Wraps video_read_idx if it has reached video_ring_size. On success returns
- * pointers to the entry's VLC data buffer and 32-byte header.
- *
- * @param out_vlc_data     Receives the 2016-byte VLC data buffer pointer.
- * @param out_entry_header Receives the 32-byte entry header pointer.
- *
- * @return 1 if an entry is available, 0 otherwise (ring empty and last frame consumed).
- *
+ * @param out_vlc_data Receives the frame's VLC payload.
+ * @param out_entry_header Receives the frame's sector header.
+ * @return 1 if an entry is available, otherwise 0.
  * @see https://decomp.me/scratch/OJvsJ (100%)
  */
 s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_entry_header)
 {
-    s32 read_idx;
-    s32 write_idx;
+    s32 read_index;
+    s32 write_index;
 
+    /* Stop when the producer and consumer identify the same completed frame. */
     if ((MOVIE_STATE->video_write_idx == MOVIE_STATE->video_read_idx) &&
         (MOVIE_STATE->last_video_frame == MOVIE_STATE->last_consumed_video_frame))
     {
         return 0;
     }
 
-    write_idx = VOL_MOVIE_STATE->video_write_idx;
-    read_idx = VOL_MOVIE_STATE->video_read_idx;
+    write_index = VOL_MOVIE_STATE->video_write_idx;
+    read_index = VOL_MOVIE_STATE->video_read_idx;
 
-    if ((read_idx >= write_idx) && (read_idx == MOVIE_STATE->video_ring_size))
+    /* Wrap after consuming the previous contiguous ring segment. */
+    if ((read_index >= write_index) && (read_index == MOVIE_STATE->video_ring_size))
     {
         MOVIE_STATE->video_read_idx = 0;
 
@@ -1568,66 +1555,59 @@ s32 get_next_video_entry(VideoVlcPayload** out_vlc_data, VideoSectorEntry** out_
         }
     }
 
+    /* Resolve the parallel header and VLC payload slots. */
     *out_entry_header = &MOVIE_STATE->video_table_base[MOVIE_STATE->video_read_idx];
     *out_vlc_data = &MOVIE_STATE->video_data_base[MOVIE_STATE->video_read_idx];
     return 1;
 }
 
 /**
- * @brief Advance video_read_idx past the entry currently being consumed.
- *
- * Reads sector_count from the entry header to step the index, wraps to 0
- * when the new index hits video_ring_size, and records the consumed frame
- * number in @ref MovieState::last_consumed_video_frame.
- *
+ * @brief Advance the video ring past the current frame.
  * @see https://decomp.me/scratch/SUBK5 (100%)
  */
 void advance_video_read(void)
 {
-    SectorEntry* entry;
-    s32 next_index;
+    const SectorEntry* frame_header;
+    s32 next_read_index;
 
-    entry = &MOVIE_STATE->video_table_base[MOVIE_STATE->video_read_idx].header;
-    next_index = MOVIE_STATE->video_read_idx + entry->sector_count;
+    /* Advance by the number of sectors comprising the current frame. */
+    frame_header = &MOVIE_STATE->video_table_base[MOVIE_STATE->video_read_idx].header;
+    next_read_index = MOVIE_STATE->video_read_idx + frame_header->sector_count;
 
-    if ((MOVIE_STATE->video_read_idx >= MOVIE_STATE->video_write_idx) && (next_index == MOVIE_STATE->video_ring_size))
+    /* Wrap after consuming the older contiguous ring segment. */
+    if ((MOVIE_STATE->video_read_idx >= MOVIE_STATE->video_write_idx) &&
+        (next_read_index == MOVIE_STATE->video_ring_size))
     {
-        next_index = 0;
+        next_read_index = 0;
     }
 
-    MOVIE_STATE->last_consumed_video_frame = entry->frame_number;
-    MOVIE_STATE->video_read_idx = next_index;
+    /* Commit the completed frame and next consumer position. */
+    MOVIE_STATE->last_consumed_video_frame = frame_header->frame_number;
+    MOVIE_STATE->video_read_idx = next_read_index;
 }
 
 /**
- * @brief Advance audio_read_idx past the entry currently being consumed.
- *
- * Reads sector_count from the entry header to step the index, decrements
- * @ref MovieState::audio_buffered_count, wraps to 0 when the new index hits
- * video_ring_size (note: not audio_ring_size - see note below), and records
- * the consumed frame number in @ref MovieState::last_consumed_audio_frame.
- *
- * @note Comparing the audio next_index against video_ring_size (not
- *       audio_ring_size) appears to be an original-game bug; preserved
- *       verbatim to keep the asm matching.
- *
+ * @brief Advance the audio ring past the current frame.
  * @see https://decomp.me/scratch/6Xjsu (100%)
  */
 void advance_audio_read(void)
 {
-    SectorEntry* entry;
-    s32 next_index;
+    const SectorEntry* frame_header;
+    s32 next_read_index;
 
-    entry = &MOVIE_STATE->audio_data_base[MOVIE_STATE->audio_read_idx].header_block.header;
-    next_index = MOVIE_STATE->audio_read_idx + entry->sector_count;
+    /* Advance past the frame and release its queued sectors. */
+    frame_header = &MOVIE_STATE->audio_data_base[MOVIE_STATE->audio_read_idx].header_block.header;
+    next_read_index = MOVIE_STATE->audio_read_idx + frame_header->sector_count;
+    MOVIE_STATE->audio_buffered_count -= frame_header->sector_count;
 
-    MOVIE_STATE->audio_buffered_count = MOVIE_STATE->audio_buffered_count - entry->sector_count;
-
-    if ((MOVIE_STATE->audio_read_idx >= MOVIE_STATE->audio_write_idx) && (next_index == MOVIE_STATE->video_ring_size))
+    /* This path uses the video ring's wrap point, unlike audio entry lookup. */
+    if ((MOVIE_STATE->audio_read_idx >= MOVIE_STATE->audio_write_idx) &&
+        (next_read_index == MOVIE_STATE->video_ring_size))
     {
-        next_index = 0;
+        next_read_index = 0;
     }
 
-    MOVIE_STATE->last_consumed_audio_frame = entry->frame_number;
-    MOVIE_STATE->audio_read_idx = next_index;
+    /* Commit the completed frame and next consumer position. */
+    MOVIE_STATE->last_consumed_audio_frame = frame_header->frame_number;
+    MOVIE_STATE->audio_read_idx = next_read_index;
 }
