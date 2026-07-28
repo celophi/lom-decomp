@@ -25,6 +25,18 @@ typedef union
     u_long* ordering_table;
 } MovieGpuResult;
 
+/** @brief Unsigned storage and signed arithmetic views of a 16-bit value. */
+typedef union
+{
+    u16 raw;
+    s16 signed_value;
+} MovieHalfword;
+
+/** @brief Rectangle layout within MovieState. */
+#define MOVIE_DISPLAY_RECT_COUNT 2
+#define MDEC_OUTPUT_RECT_INDEX MOVIE_DISPLAY_RECT_COUNT
+#define MOVIE_RECT_COUNT (MDEC_OUTPUT_RECT_INDEX + 1)
+
 /**
  * @brief Movie playback control block; lives at fixed RAM address 0x801ED500.
  *
@@ -47,11 +59,8 @@ typedef struct
     u_long* mdec_output_buf[2];
 
     // ---- VRAM destination rectangles ----
-    // rects[0] : frame A, rects[1] : frame B, rects[2] : decode rect
-    RECT rects[3]; // offsets 32..55
-    // The third rectangle's width/height also serve as frame dimensions:
-    // s16 frame_width  = rects[2].w;   (offset 52)
-    // s16 frame_height = rects[2].h;   (offset 54)
+    // rects[0..1]: display areas; rects[MDEC_OUTPUT_RECT_INDEX]: current upload slice
+    RECT rects[MOVIE_RECT_COUNT]; // offsets 32..55
 
     // ---- callback handles ----
     MovieCallback dec_dct_out_callback;
@@ -100,7 +109,7 @@ typedef struct
     u8 out_buf_idx;         // which mdec_output_buf[] receives the next DecDCTout output (0 or 1)
     u8 pending_vram_upload; // 0x9A - decoded frame is ready, needs LoadImage to VRAM
     u8 pending_mdec_decode; // 0x9B - bitstream staged, needs DecDCTout kicked
-    s8 mdec_busy;           // non-zero while MDEC/DMA is in flight
+    s8 mdec_busy;           // MDEC_STATE_* output pipeline state
     u8 frame_ready;         // a complete frame can be displayed
     u8 end_of_stream; // 0x9E - set when frame_number >= total_frames
     u8 end_state;     // 1 = near end, 2 = stream fully ended (END_STATE_*)
@@ -110,6 +119,11 @@ typedef struct
 #define END_STATE_RUNNING 0
 #define END_STATE_NEAR_END 1
 #define END_STATE_DONE 2
+
+/** @brief MDEC output pipeline states. */
+#define MDEC_STATE_IDLE 0
+#define MDEC_STATE_ACTIVE 1
+#define MDEC_STATE_CHAINED 2
 
 /** @brief VLC decode and XA audio state used by @ref movie_update. */
 #define STANDARD_VLC_DECODE_SIZE 0x1000
@@ -632,15 +646,15 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         MOVIE_STATE->rects[0].x = 0;
         MOVIE_STATE->rects[0].y = 0;
         MOVIE_STATE->rects[1].y = MOVIE_DISPLAY_HEIGHT;
-        MOVIE_STATE->rects[2].h = MOVIE_DISPLAY_HEIGHT;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h = MOVIE_DISPLAY_HEIGHT;
         MOVIE_STATE->rects[1].w = MOVIE_RGB24_VRAM_WIDTH;
         MOVIE_STATE->rects[0].w = MOVIE_RGB24_VRAM_WIDTH;
-        MOVIE_STATE->rects[2].w = STANDARD_DECODE_RECT_WIDTH;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w = STANDARD_DECODE_RECT_WIDTH;
         MOVIE_STATE->video_ring_capacity = STANDARD_VIDEO_RING_SLOTS;
         MOVIE_STATE->rects[1].h = MOVIE_DISPLAY_HEIGHT;
         MOVIE_STATE->rects[0].h = MOVIE_DISPLAY_HEIGHT;
-        MOVIE_STATE->rects[2].x = 0;
-        MOVIE_STATE->rects[2].y = 0;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].x = 0;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].y = 0;
         MOVIE_STATE->audio_ring_capacity = AUDIO_RING_SLOTS;
         MOVIE_STATE->video_data_base = STANDARD_MOVIE_BUFFERS->video_data;
         VOL_MOVIE_STATE->chunk_idx = 0;
@@ -667,10 +681,10 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
         }
         MOVIE_STATE->rects[1].w = MOVIE_STATE->rects[0].w;
         MOVIE_STATE->rects[1].h = MOVIE_STATE->rects[0].h;
-        MOVIE_STATE->rects[2].h = MOVIE_STATE->rects[0].h;
-        MOVIE_STATE->rects[2].x = MOVIE_STATE->rects[init_buffer_idx].x;
-        MOVIE_STATE->rects[2].y = MOVIE_STATE->rects[init_buffer_idx].y;
-        MOVIE_STATE->rects[2].w = ALTERNATE_DECODE_RECT_WIDTH;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h = MOVIE_STATE->rects[0].h;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].x = MOVIE_STATE->rects[init_buffer_idx].x;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].y = MOVIE_STATE->rects[init_buffer_idx].y;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w = ALTERNATE_DECODE_RECT_WIDTH;
         MOVIE_STATE->video_ring_capacity = ALTERNATE_VIDEO_RING_SLOTS;
         MOVIE_STATE->audio_ring_capacity = AUDIO_RING_SLOTS;
         MOVIE_STATE->video_data_base = VIDEO_PAYLOADS_AFTER_TABLE(
@@ -692,7 +706,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     ms->out_buf_idx = 0;
     ms->pending_vram_upload = 0;
     ms->pending_mdec_decode = 0;
-    ms->mdec_busy = 0;
+    ms->mdec_busy = MDEC_STATE_IDLE;
     ms->frame_ready = 0;
     ms->end_of_stream = 0;
     ms->end_state = 0;
@@ -765,12 +779,13 @@ void movie_update(void)
     /* Retry a deferred MDEC submission when the decoder is idle. */
     if (g_mdecRetryPending != 0)
     {
-        if ((MOVIE_STATE->mdec_busy == 0) && (movie_state->frame_ready == 0))
+        if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) && (movie_state->frame_ready == 0))
         {
-            MOVIE_STATE->mdec_busy = 1;
+            MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
             DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == 0);
             {
-                s32 pixel_count = MOVIE_STATE->rects[2].w * MOVIE_STATE->rects[2].h;
+                s32 pixel_count =
+                    MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
                 s32 word_count = pixel_count + SIGNED_HALF_ROUNDING(pixel_count);
                 DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], word_count >> 1);
             }
@@ -826,7 +841,7 @@ void movie_update(void)
                 MOVIE_STATE->vlc_retry_count = 0;
             }
         }
-        else if ((MOVIE_STATE->end_of_stream != 0) && (MOVIE_STATE->mdec_busy == 0))
+        else if ((MOVIE_STATE->end_of_stream != 0) && (MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE))
         {
             MOVIE_STATE->end_state = END_STATE_DONE;
         }
@@ -840,13 +855,14 @@ void movie_update(void)
         /* Submit the decoded frame or defer it until the MDEC is idle. */
         advance_video_read();
 
-        if ((MOVIE_STATE->mdec_busy == 0) &&
+        if ((MOVIE_STATE->mdec_busy == MDEC_STATE_IDLE) &&
             (output_available = (MOVIE_STATE->frame_ready == 0)))
         {
-            MOVIE_STATE->mdec_busy = 1;
+            MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
             DecDCTin(MOVIE_STATE->vlc_input_buf[MOVIE_STATE->input_buf_idx], MOVIE_STATE->gpu_mode == 0);
             {
-                s32 pixel_count = MOVIE_STATE->rects[2].w * MOVIE_STATE->rects[2].h;
+                s32 pixel_count =
+                    MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
                 rounding_adjustment = SIGNED_HALF_ROUNDING(pixel_count);
                 DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx],
                           (pixel_count + rounding_adjustment) >> 1);
@@ -920,7 +936,7 @@ void movie_mdec_out_callback(void)
         gpu_result.sync_status = DrawSync(DRAW_SYNC_MODE_POLL);
         if (gpu_result.sync_status < DRAW_SYNC_DEFER_THRESHOLD)
         {
-            LoadImage(&MOVIE_STATE->rects[2], state->mdec_output_buf[state->out_buf_idx]);
+            LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], state->mdec_output_buf[state->out_buf_idx]);
             state->draw_sync_target = gpu_result.sync_status + 1;
         }
         else
@@ -934,7 +950,7 @@ void movie_mdec_out_callback(void)
         gpu_result.ordering_table = BreakDraw();
         if (gpu_result.address != BREAK_DRAW_FAILURE_ADDRESS)
         {
-            LoadImage2(&MOVIE_STATE->rects[2], state->mdec_output_buf[state->out_buf_idx]);
+            LoadImage2(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], state->mdec_output_buf[state->out_buf_idx]);
             if (gpu_result.address != inactive)
             {
                 DrawOTag(gpu_result.ordering_table);
@@ -942,7 +958,7 @@ void movie_mdec_out_callback(void)
         }
         else
         {
-            LoadImage(&MOVIE_STATE->rects[2], state->mdec_output_buf[state->out_buf_idx]);
+            LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], state->mdec_output_buf[state->out_buf_idx]);
         }
     }
 
@@ -952,69 +968,60 @@ void movie_mdec_out_callback(void)
         movie_schedule_next_decode();
         return;
     }
-    MOVIE_STATE->mdec_busy = 1;
+    MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
 }
 
 /**
- * @brief Advance the decode position and schedule the next MDEC decode.
- *
- * Steps the rect[2] frame position by its width. If still inside the current
- * chunk, kicks off DecDCTout immediately (or sets @ref MovieState::pending_mdec_decode
- * if the GPU is busy). Otherwise toggles to the other chunk, resets the frame
- * position, and signals @ref MovieState::frame_ready.
- *
+ * @brief Advance the output slice and schedule the next MDEC transfer.
  * @see https://decomp.me/scratch/E7XCZ (100%)
  */
 void movie_schedule_next_decode(void)
 {
-    u16 next_out_buf_idx;
-    u16 cur_frame_pos;
-    u16 frame_step;
-    u16 new_frame_pos;
-    s32 new_frame_pos_signed;
-    s32 chunk_end;
-    u32 decode_size;
+    u16 next_output_buffer;
+    u16 current_x;
+    MovieHalfword slice_width;
+    MovieHalfword next_x;
+    s32 signed_next_x;
+    s32 chunk_end_x;
+    s32 pixel_count;
     s32 decode_word_count;
 
-    next_out_buf_idx = 1 - MOVIE_STATE->out_buf_idx;
+    /* Advance horizontally and alternate the MDEC output buffer. */
+    next_output_buffer = 1 - MOVIE_STATE->out_buf_idx;
+    current_x = MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].x;
+    slice_width.raw = MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].w;
+    next_x.raw = current_x + slice_width.raw;
+    MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].x = next_x.raw;
+    signed_next_x = next_x.signed_value;
+    VOL_MOVIE_STATE->out_buf_idx = next_output_buffer;
 
-    cur_frame_pos = MOVIE_STATE->rects[2].x;
-    frame_step = MOVIE_STATE->rects[2].w;
+    chunk_end_x =
+        MOVIE_STATE->rects[VOL_MOVIE_STATE->chunk_idx].x + MOVIE_STATE->rects[VOL_MOVIE_STATE->chunk_idx].w;
 
-    new_frame_pos = cur_frame_pos + frame_step;
-
-    MOVIE_STATE->rects[2].x = new_frame_pos;
-
-    new_frame_pos_signed = (s16)new_frame_pos;
-
-    VOL_MOVIE_STATE->out_buf_idx = next_out_buf_idx;
-
-    chunk_end =
-        MOVIE_STATE->rects[(u8)VOL_MOVIE_STATE->chunk_idx].x + MOVIE_STATE->rects[(u8)VOL_MOVIE_STATE->chunk_idx].w;
-
-    if (new_frame_pos_signed < chunk_end)
+    if (signed_next_x < chunk_end_x)
     {
-        if (MOVIE_STATE->draw_sync_target < 2U)
+        /* Decode the next slice now, or defer until the GPU queue drains. */
+        if (MOVIE_STATE->draw_sync_target < DRAW_SYNC_DEFER_THRESHOLD)
         {
-            decode_size = ((s16)frame_step) * MOVIE_STATE->rects[2].h;
-            decode_word_count = ((int)(decode_size + (decode_size >> 31))) >> 1;
-            DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], decode_word_count);
-            VOL_MOVIE_STATE->mdec_busy = 2;
+            pixel_count = slice_width.signed_value * MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].h;
+            decode_word_count = pixel_count + SIGNED_HALF_ROUNDING(pixel_count);
+            DecDCTout(MOVIE_STATE->mdec_output_buf[MOVIE_STATE->out_buf_idx], decode_word_count >> 1);
+            VOL_MOVIE_STATE->mdec_busy = MDEC_STATE_CHAINED;
         }
         else
         {
-            MOVIE_STATE->mdec_busy = 1;
-            VOL_MOVIE_STATE->pending_mdec_decode = 1;
+            MOVIE_STATE->mdec_busy = MDEC_STATE_ACTIVE;
+            VOL_MOVIE_STATE->pending_mdec_decode = TRUE;
         }
     }
     else
     {
-        /* advance to the next chunk and reset the frame position */
+        /* Publish the completed chunk and reset to the alternate display area. */
         MOVIE_STATE->chunk_idx = 1 - MOVIE_STATE->chunk_idx;
-        MOVIE_STATE->rects[2].x = MOVIE_STATE->rects[(u8)VOL_MOVIE_STATE->chunk_idx].x;
-        MOVIE_STATE->rects[2].y = MOVIE_STATE->rects[(u8)VOL_MOVIE_STATE->chunk_idx].y;
-        VOL_MOVIE_STATE->frame_ready = 1;
-        VOL_MOVIE_STATE->mdec_busy = 0;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].x = MOVIE_STATE->rects[VOL_MOVIE_STATE->chunk_idx].x;
+        MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX].y = MOVIE_STATE->rects[VOL_MOVIE_STATE->chunk_idx].y;
+        VOL_MOVIE_STATE->frame_ready = TRUE;
+        VOL_MOVIE_STATE->mdec_busy = MDEC_STATE_IDLE;
         if (VOL_MOVIE_STATE->end_state == END_STATE_NEAR_END)
         {
             MOVIE_STATE->end_state = END_STATE_DONE;
@@ -1061,7 +1068,7 @@ void movie_service_video_ops(void)
             if (VOL_MOVIE_STATE->pending_vram_upload)
             {
 
-                LoadImage(&MOVIE_STATE->rects[2], G->mdec_output_buf[VOL_MOVIE_STATE->out_buf_idx]);
+                LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], G->mdec_output_buf[VOL_MOVIE_STATE->out_buf_idx]);
                 VOL_MOVIE_STATE->draw_sync_target = DrawSync(1) + 1;
                 VOL_MOVIE_STATE->pending_vram_upload = 0;
                 movie_schedule_next_decode();
@@ -1077,7 +1084,7 @@ void movie_service_video_ops(void)
                 s32 temp;
 
                 /* word count = (width * height) / 2, rounded toward zero for signed values */
-                temp = ((s32)G->rects[2].w) * ((s32)G->rects[2].h);
+                temp = ((s32)G->rects[MDEC_OUTPUT_RECT_INDEX].w) * ((s32)G->rects[MDEC_OUTPUT_RECT_INDEX].h);
                 word_count = temp + (((u32)temp) >> 31);
                 DecDCTout(G->mdec_output_buf[G->out_buf_idx], word_count >> 1);
                 G->pending_mdec_decode = 0;
@@ -1099,7 +1106,7 @@ void movie_service_video_ops(void)
                 bd = (s32)break_draw_result;
                 if (bd != (-1))
                 {
-                    LoadImage2(&MOVIE_STATE->rects[2], G->mdec_output_buf[G->out_buf_idx]);
+                    LoadImage2(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX], G->mdec_output_buf[G->out_buf_idx]);
                     if (bd != 0)
                     {
                         /* Resume the interrupted OTag list */
@@ -1508,15 +1515,16 @@ void draw_sync_callback(void)
     if (movie_state->pending_vram_upload != 0)
     {
 
-        LoadImage(&MOVIE_STATE->rects[2], MOVIE_STATE->mdec_output_buf[movie_state->out_buf_idx]);
+        LoadImage(&MOVIE_STATE->rects[MDEC_OUTPUT_RECT_INDEX],
+                  MOVIE_STATE->mdec_output_buf[movie_state->out_buf_idx]);
         movie_schedule_next_decode();
         movie_state->pending_vram_upload = 0;
     }
 
     if (movie_state->pending_mdec_decode != 0)
     {
-        width = movie_state->rects[2].w;
-        height = movie_state->rects[2].h;
+        width = movie_state->rects[MDEC_OUTPUT_RECT_INDEX].w;
+        height = movie_state->rects[MDEC_OUTPUT_RECT_INDEX].h;
 
         DecDCTout(MOVIE_STATE->mdec_output_buf[movie_state->out_buf_idx], (width * height) / 2);
         movie_state->pending_mdec_decode = 0;
