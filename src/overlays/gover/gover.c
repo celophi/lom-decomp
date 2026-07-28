@@ -139,7 +139,7 @@ s32 g_fade_level;
 
 static void gover_load_sfx_bank(s32 sfx_bank_index);
 static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinations);
-static void gover_load_image_from_cd(s32 cd_resource_index, TimUploadDestinations* destinations, u32 ram_buffer);
+static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer);
 static void gover_build_otag(unsigned char* frame_buffer);
 static void gover_run(void);
 
@@ -149,7 +149,7 @@ static void gover_run(void);
  * Initializes double-buffered rendering, uploads the screen artwork, starts
  * the requested audio, and runs the fade sequence.
  *
- * @param cd_load_address      RAM staging address for the image resource.
+ * @param image_buffer         RAM staging buffer for the image resource.
  * @param image_index          Game Over image index.
  * @param music_index          Music index, or -1 to skip music.
  * @param sfx_bank_index       SFX bank index, -1 to skip playback, or -2 to
@@ -157,7 +157,7 @@ static void gover_run(void);
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/1qYnn
  */
-void gover_show_screen(s32 cd_load_address, s32 image_index, s32 music_index, s32 sfx_bank_index)
+void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 sfx_bank_index)
 {
     RECT vram_rect;
     u8* frame_tail;
@@ -206,7 +206,8 @@ void gover_show_screen(s32 cd_load_address, s32 image_index, s32 music_index, s3
     vram_rect.w = 0;
     vram_rect.h = GOVER_CLUT_Y;
 
-    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE, (TimUploadDestinations*)(&vram_rect), cd_load_address);
+    gover_load_image_from_cd(image_index + GOVER_IMAGE_RESOURCE_BASE,
+                             (TimUploadDestinations*)(&vram_rect), image_buffer);
 
     akao_cmd_f0();
     akao_cmd_f1();
@@ -390,19 +391,21 @@ static void gover_build_otag(unsigned char* frame_buffer)
 /**
  * @brief Reads a CD image resource into RAM, then uploads it to VRAM.
  *
- * @param cd_resource_index CD resource index.
- * @param destinations      VRAM destinations for the TIM blocks.
- * @param ram_buffer        RAM staging address for the resource.
+ * @param resource_index CD resource index.
+ * @param destinations   VRAM destinations for the TIM blocks.
+ * @param image_buffer   RAM staging buffer for the TIM resource.
  * @return void No return value.
  * @see decomp.me (100%) https://decomp.me/scratch/OafFK
  */
-static void gover_load_image_from_cd(s32 cd_resource_index, TimUploadDestinations* destinations, u32 ram_buffer)
+static void gover_load_image_from_cd(s32 resource_index, TimUploadDestinations* destinations, Tim* image_buffer)
 {
     volatile u8 padding[8];
+    u16 resource_id;
 
-    cdrom_queue_read(cd_resource_index & 0xFFFF, (void*)ram_buffer);
+    resource_id = resource_index;
+    cdrom_queue_read(resource_id, image_buffer);
     cdrom_wait_queue_empty();
-    gover_upload_image_to_vram((Tim*)ram_buffer, destinations);
+    gover_upload_image_to_vram(image_buffer, destinations);
 }
 
 /**
@@ -475,8 +478,8 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     resource_index = sfx_bank_index + GOVER_SFX_RESOURCE_BASE;
     cdrom_queue_read(resource_index, GOVER_SFX_LOAD_BUFFER);
     cdrom_wait_queue_empty();
-    g_sfx_table_buffer.active_table_offset = GOVER_SFX_TABLE_DATA_OFFSET;
 
+    g_sfx_table_buffer.active_table_offset = GOVER_SFX_TABLE_DATA_OFFSET;
     loaded_table = GOVER_LOADED_SFX_TABLE;
     copy_source = loaded_table->bytes;
     akao_program = RESOURCE_TABLE_END(loaded_table);
