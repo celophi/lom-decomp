@@ -41,15 +41,19 @@ typedef struct
  * The first word gives the number of entries; each following word is a byte
  * offset from the start of this table.
  */
-typedef struct
+typedef union
 {
-    u32 entry_count;
-    u32 entry_offsets[1];
+    struct
+    {
+        u32 entry_count;
+        u32 entry_offsets[1];
+    } header;
+    u8 bytes[1];
 } ResourceOffsetTable;
 
 /** Locates the byte immediately following a variable-length offset table. */
 #define RESOURCE_TABLE_END(table) \
-    ((u8*)(table) + *(((table)->entry_count - 1) + (table)->entry_offsets))
+    ((table)->bytes + *(((table)->header.entry_count - 1) + (table)->header.entry_offsets))
 
 /**
  * @brief One half of the Game Over screen's double-buffered frame.
@@ -450,7 +454,8 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     ResourceOffsetTable* loaded_table;
     u8* copy_destination;
     u8* copy_source;
-    u8* akao_program;
+    void* akao_program;
+    u16 resource_index;
 
     if (sfx_bank_index == GOVER_SFX_BANK_REUSE)
     {
@@ -467,12 +472,13 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     }
 
     // Load the resource and locate its first SFX table.
-    cdrom_queue_read((u16)(sfx_bank_index + GOVER_SFX_RESOURCE_BASE), GOVER_SFX_LOAD_BUFFER);
+    resource_index = sfx_bank_index + GOVER_SFX_RESOURCE_BASE;
+    cdrom_queue_read(resource_index, GOVER_SFX_LOAD_BUFFER);
     cdrom_wait_queue_empty();
     g_sfx_table_buffer.active_table_offset = GOVER_SFX_TABLE_DATA_OFFSET;
 
     loaded_table = GOVER_LOADED_SFX_TABLE;
-    copy_source = (u8*)loaded_table;
+    copy_source = loaded_table->bytes;
     akao_program = RESOURCE_TABLE_END(loaded_table);
     copy_destination = g_sfx_table_buffer.table_data;
 
@@ -482,5 +488,5 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
         *copy_destination++ = *copy_source++;
     }
 
-    akao_play_sequence_blocking((AkaoSeqHeader*)akao_program, 1);
+    akao_play_sequence_blocking(akao_program, 1);
 }
