@@ -4,9 +4,10 @@
 
 typedef void (*VSyncCallbackFn)(void);
 
-extern VSyncCallbackFn g_previous_controller_vsync_callback;
-extern u8 g_controller_vsync_sample_count; /* Pending VSync samples at 0x801ED7A1. */
-extern u8 g_controller_vsync_counter;      /* Accumulation phase at 0x801ED7A2. */
+/* Linker symbols aliasing fields inside the fixed ControllerState allocation. */
+extern u8 g_controller_vsync_sample_count;                   /* pending_sample_count at 0x801ED7A1 */
+extern u8 g_controller_vsync_counter;                        /* vsync_accumulation_count at 0x801ED7A2 */
+extern VSyncCallbackFn g_previous_controller_vsync_callback; /* previous_vsync_callback at 0x801ED7A4 */
 
 /**
  * @brief Game-facing controller device categories.
@@ -33,18 +34,21 @@ typedef enum ControllerPacketType
 
 enum
 {
+    CONTROLLER_PORT_COUNT = 2,
     CONTROLLER_SECOND_PORT_FLAG = 0x10,
     CONTROLLER_MULTITAP_SLOT_MASK = 0xF,
+    CONTROLLER_MULTITAP_SLOT_COUNT = 4,
     CONTROLLER_MULTITAP_HEADER_SIZE = 2,
     CONTROLLER_MULTITAP_SLOT_STRIDE = 8,
-    CONTROLLER_PACKET_BUTTONS_OFFSET = 2,
-    CONTROLLER_PACKET_PRESENT = 0x8000,
+    CONTROLLER_RECEIVE_BUFFER_SIZE = CONTROLLER_MULTITAP_HEADER_SIZE + (CONTROLLER_MULTITAP_SLOT_COUNT * CONTROLLER_MULTITAP_SLOT_STRIDE),
+    CONTROLLER_MULTITAP_PACKET_ID = 0x8000,
     CONTROLLER_DISCONNECTED_FLAG = 0x100,
     CONTROLLER_ACTUATOR_SETUP_MASK = 0x600,
     CONTROLLER_ACTUATOR_SETUP_MODE = 0x200,
     CONTROLLER_ACTUATOR_SETUP_ACTIVE = 0x400,
     CONTROLLER_USE_DEFAULT_ANALOG_CENTER = 0x800,
     CONTROLLER_ACTUATOR_RUNTIME_FLAGS_MASK = 0xF00,
+    CONTROLLER_ACTUATOR_ALIGNMENT_COUNT = 6,
     CONTROLLER_ACTUATOR_UNMAPPED = 0xFF,
     CONTROLLER_LEGACY_VIBRATION_DEVICE_ID = 0x40,
     CONTROLLER_LEGACY_ACTUATOR_CURRENT = 10,
@@ -52,10 +56,10 @@ enum
     CONTROLLER_ANALOG_CENTER = 0x80,
     CONTROLLER_ANALOG_DEADZONE = 0x38,
     CONTROLLER_ANALOG_DEADZONE_WIDTH = (CONTROLLER_ANALOG_DEADZONE * 2) + 1,
-    CONTROLLER_ANALOG_MIN = -0x80,
-    CONTROLLER_ANALOG_MAX = 0x7F,
+    CONTROLLER_ANALOG_MIN = -CONTROLLER_ANALOG_CENTER,
+    CONTROLLER_ANALOG_MAX = CONTROLLER_ANALOG_CENTER - 1,
     CONTROLLER_ANALOG_SCALE_SHIFT = 4,
-    CONTROLLER_ANALOG_NEGATIVE_ROUNDING = 0xF,
+    CONTROLLER_ANALOG_NEGATIVE_ROUNDING = (1 << CONTROLLER_ANALOG_SCALE_SHIFT) - 1,
     CONTROLLER_ANALOG_DIRECTION_HELD_MASK = 0xF,
     CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT = 4,
     CONTROLLER_ACTUATOR_CYCLE_STEPS = 0x10,
@@ -70,8 +74,7 @@ enum
 
 #define CONTROLLER_IS_DISCONNECTED(status) (((status) >> 8) & 1)
 #define CONTROLLER_ACTUATOR_SETUP_STATE(status) (((status) >> 9) & 3)
-#define CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta) \
-    ((u32)((delta) + CONTROLLER_ANALOG_DEADZONE) < CONTROLLER_ANALOG_DEADZONE_WIDTH)
+#define CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta) ((u32)((delta) + CONTROLLER_ANALOG_DEADZONE) < CONTROLLER_ANALOG_DEADZONE_WIDTH)
 
 /**
  * @brief One 16-byte processed controller sample.
@@ -88,6 +91,40 @@ typedef struct ControllerSample
     s16 left_stick_x;
     s16 left_stick_y;
 } ControllerSample;
+
+/**
+ * @brief One eight-byte controller response embedded directly or in a multitap packet.
+ */
+typedef struct ControllerPacket
+{
+    u8 status;
+    u8 id;
+    u16 buttons;
+    u8 right_stick_x;
+    u8 right_stick_y;
+    u8 left_stick_x;
+    u8 left_stick_y;
+} ControllerPacket;
+
+/**
+ * @brief Multitap header followed by one fixed-size response per slot.
+ */
+typedef struct ControllerMultitapPacket
+{
+    u16 id;
+    ControllerPacket slots[CONTROLLER_MULTITAP_SLOT_COUNT];
+} ControllerMultitapPacket;
+
+/**
+ * @brief LIBPAD receive storage interpreted as either a direct or multitap response.
+ */
+typedef union ControllerReceiveBuffer
+{
+    u8 bytes[CONTROLLER_RECEIVE_BUFFER_SIZE];
+    u16 packet_id;
+    ControllerPacket direct;
+    ControllerMultitapPacket multitap;
+} ControllerReceiveBuffer;
 
 /**
  * @brief Packed large-motor command and actuator setup state.
@@ -110,8 +147,8 @@ typedef struct ControllerPortState
     ControllerSample published_sample;
     ControllerSample accumulated_sample;
     ControllerSample current_sample;
-    ControllerSample frame_samples[3];
-    ControllerSample vsync_samples[3];
+    ControllerSample frame_samples[CONTROLLER_MAX_PENDING_SAMPLES];
+    ControllerSample vsync_samples[CONTROLLER_MAX_PENDING_SAMPLES];
     u8 actuators_enabled;
     u8 small_motor_command;
     ControllerActuatorControl actuator_control;
@@ -119,7 +156,7 @@ typedef struct ControllerPortState
     u8 small_motor_value;
     u8 large_motor_value;
     u8 actuator_value_2;
-    u8 actuator_alignment[6];
+    u8 actuator_alignment[CONTROLLER_ACTUATOR_ALIGNMENT_COUNT];
     u8 face_repeat_timer_up;
     u8 face_repeat_timer_right;
     u8 face_repeat_timer_down;
@@ -133,8 +170,8 @@ typedef struct ControllerPortState
     u8 left_stick_center_x;
     u8 left_stick_center_y;
     u8 actuator_count;
-    u8 small_motor_power;
-    u8 large_motor_power;
+    u8 small_motor_current;
+    u8 large_motor_current;
     u8 port_id;
 } ControllerPortState;
 
@@ -143,8 +180,8 @@ typedef struct ControllerPortState
  */
 typedef struct ControllerState
 {
-    ControllerPortState ports[2];
-    u8 receive_buffers[2][0x22];
+    ControllerPortState ports[CONTROLLER_PORT_COUNT];
+    ControllerReceiveBuffer receive_buffers[CONTROLLER_PORT_COUNT];
     u8 published_sample_count;
     u8 pending_sample_count;
     u8 vsync_accumulation_count;
@@ -155,18 +192,14 @@ typedef struct ControllerState
     u8 sample_unavailable;
 } ControllerState;
 
-#define CONTROLLER_STATE_OFFSET(member) ((u32)&(((ControllerState*)0)->member))
+#define CONTROLLER_STATE_OFFSET(member) ((u32) & (((ControllerState*)0)->member))
 
 enum
 {
-    CONTROLLER_PORT_1_FRAME_SAMPLES_OFFSET =
-        CONTROLLER_STATE_OFFSET(ports[0].frame_samples),
-    CONTROLLER_PORT_1_VSYNC_SAMPLES_OFFSET =
-        CONTROLLER_STATE_OFFSET(ports[0].vsync_samples),
-    CONTROLLER_PORT_2_FRAME_SAMPLES_OFFSET =
-        CONTROLLER_STATE_OFFSET(ports[1].frame_samples),
-    CONTROLLER_PORT_2_VSYNC_SAMPLES_OFFSET =
-        CONTROLLER_STATE_OFFSET(ports[1].vsync_samples)
+    CONTROLLER_PORT_1_FRAME_SAMPLES_OFFSET = CONTROLLER_STATE_OFFSET(ports[0].frame_samples),
+    CONTROLLER_PORT_1_VSYNC_SAMPLES_OFFSET = CONTROLLER_STATE_OFFSET(ports[0].vsync_samples),
+    CONTROLLER_PORT_2_FRAME_SAMPLES_OFFSET = CONTROLLER_STATE_OFFSET(ports[1].frame_samples),
+    CONTROLLER_PORT_2_VSYNC_SAMPLES_OFFSET = CONTROLLER_STATE_OFFSET(ports[1].vsync_samples)
 };
 
 #undef CONTROLLER_STATE_OFFSET
@@ -174,8 +207,9 @@ enum
 #define CONTROLLER_STATE ((ControllerState*)0x801ED600)
 #define CONTROLLER_PORT_1_RECEIVE_BUFFER ((u8*)0x801ED75C)
 #define CONTROLLER_PORT_2_RECEIVE_BUFFER ((u8*)0x801ED77E)
-#define CONTROLLER_SAMPLE_AT_BYTE_OFFSET(state, offset) \
-    ((ControllerSample*)((u8*)(state) + (offset)))
+#define CONTROLLER_RECEIVE_PACKET_ID(packet) (((ControllerReceiveBuffer*)(packet))->packet_id)
+#define CONTROLLER_MULTITAP_SLOT(packet, slot) (&((ControllerReceiveBuffer*)(packet))->multitap.slots[(slot)])
+#define CONTROLLER_SAMPLE_AT_BYTE_OFFSET(state, offset) ((ControllerSample*)((u8*)(state) + (offset)))
 
 void controller_poll(void);
 void clear_controller_sample(ControllerSample* sample);
@@ -194,7 +228,7 @@ void controller_vsync_callback(void);
 void accumulate_controller_sample(ControllerPortState* port);
 void merge_latest_controller_sample(ControllerPortState* port);
 void copy_controller_sample(ControllerSample* source, ControllerSample* destination);
-void poll_controller_port(ControllerPortState* port, s32* actuator_power_total);
+void poll_controller_port(ControllerPortState* port, s32* actuator_current_total);
 
 /**
  * @brief Initialize LIBPAD, both controller-port records, and their receive buffers.
@@ -247,8 +281,8 @@ void initialize_controllers(s8 enable_actuators)
         current_port->actuators_enabled = enable_actuators;
         current_port->small_motor_command = 0;
         current_port->actuator_count = 0;
-        current_port->small_motor_power = 0;
-        current_port->large_motor_power = 0;
+        current_port->small_motor_current = 0;
+        current_port->large_motor_current = 0;
         current_port->current_sample.device_type = disconnected_device_type;
         current_port->published_sample.device_type = disconnected_device_type;
         actuator_control &= ~CONTROLLER_ACTUATOR_RUNTIME_FLAGS_MASK;
@@ -276,8 +310,7 @@ void initialize_controllers(s8 enable_actuators)
         do
         {
             actuator_status = (*(current_port_pointer = &status_port))->actuator_control.value;
-            if ((!CONTROLLER_IS_DISCONNECTED(actuator_status)) &&
-                (CONTROLLER_ACTUATOR_SETUP_STATE(actuator_status) != CONTROLLER_ACTUATOR_SETUP_READY))
+            if ((!CONTROLLER_IS_DISCONNECTED(actuator_status)) && (CONTROLLER_ACTUATOR_SETUP_STATE(actuator_status) != CONTROLLER_ACTUATOR_SETUP_READY))
             {
                 all_ports_ready = 0;
             }
@@ -294,10 +327,10 @@ void initialize_controllers(s8 enable_actuators)
 /**
  * @brief Poll one LIBPAD port and update buttons, analog axes, repeat state, and actuators.
  * @param port Per-port controller state to update.
- * @param actuator_power_total Accumulator for the active actuators' current draw.
+ * @param actuator_current_total Accumulator for the active actuators' current draw.
  * @see decomp.me (100%) https://decomp.me/scratch/rDO0T
  */
-void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
+void poll_controller_port(ControllerPortState* port, s32* actuator_current_total)
 {
     s32 repeat_timer_step;
     ControllerState* controller_state;
@@ -322,7 +355,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
     s32 new_analog_directions;
     u32 analog_directions;
     s32 detected_actuator_count;
-    u8* pad_packet;
+    ControllerPacket* pad_packet;
     controller_state = CONTROLLER_STATE;
 
     /* Reconcile LIBPAD connection state and actuator setup before decoding input. */
@@ -341,9 +374,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         if (port->actuator_control.value & CONTROLLER_ACTUATOR_SETUP_MASK)
         {
             port->actuator_control.value =
-                (port->actuator_control.value &
-                 ~(CONTROLLER_DISCONNECTED_FLAG | CONTROLLER_ACTUATOR_SETUP_MASK)) |
-                CONTROLLER_ACTUATOR_SETUP_MODE;
+                (port->actuator_control.value & ~(CONTROLLER_DISCONNECTED_FLAG | CONTROLLER_ACTUATOR_SETUP_MASK)) | CONTROLLER_ACTUATOR_SETUP_MODE;
         }
         /* Fall through while LIBPAD is negotiating the controller. */
 
@@ -363,17 +394,15 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
             if (port->small_motor_command & CONTROLLER_SMALL_MOTOR_ENABLE_FLAG)
             {
                 port->small_motor_value = port->small_motor_command;
-                *actuator_power_total += port->small_motor_power;
+                *actuator_current_total += port->small_motor_current;
             }
             else
             {
                 u8 large_motor_command = port->actuator_control.fields.large_motor_command;
-                if ((large_motor_command != 0) &&
-                    ((large_motor_command * CONTROLLER_ACTUATOR_CYCLE_STEPS) >=
-                     controller_state->actuator_cycle))
+                if ((large_motor_command != 0) && ((large_motor_command * CONTROLLER_ACTUATOR_CYCLE_STEPS) >= controller_state->actuator_cycle))
                 {
                     port->small_motor_value = CONTROLLER_SMALL_MOTOR_ENABLE_FLAG;
-                    *actuator_power_total += port->small_motor_power;
+                    *actuator_current_total += port->small_motor_current;
                 }
                 else
                 {
@@ -390,10 +419,9 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         if ((port->actuator_control.value & CONTROLLER_ACTUATOR_SETUP_MASK) != CONTROLLER_ACTUATOR_SETUP_ACTIVE)
         {
             PadSetAct(port->port_id, &port->legacy_vibration_device_id, 2);
-            port->small_motor_power = CONTROLLER_LEGACY_ACTUATOR_CURRENT;
+            port->small_motor_current = CONTROLLER_LEGACY_ACTUATOR_CURRENT;
             port->actuator_control.value =
-                (port->actuator_control.value | CONTROLLER_ACTUATOR_SETUP_ACTIVE) &
-                ~(CONTROLLER_ACTUATOR_SETUP_MODE | CONTROLLER_USE_DEFAULT_ANALOG_CENTER);
+                (port->actuator_control.value | CONTROLLER_ACTUATOR_SETUP_ACTIVE) & ~(CONTROLLER_ACTUATOR_SETUP_MODE | CONTROLLER_USE_DEFAULT_ANALOG_CENTER);
         }
         break;
 
@@ -405,7 +433,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
             if (large_motor_command != 0)
             {
                 port->large_motor_value = large_motor_command;
-                *actuator_power_total += port->large_motor_power;
+                *actuator_current_total += port->large_motor_current;
             }
             else
             {
@@ -414,7 +442,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
             if (port->small_motor_command & CONTROLLER_SMALL_MOTOR_ENABLE_FLAG)
             {
                 port->small_motor_value = CONTROLLER_SMALL_MOTOR_ENABLE_FLAG;
-                *actuator_power_total += port->small_motor_power;
+                *actuator_current_total += port->small_motor_current;
             }
             else
             {
@@ -432,9 +460,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         {
         case 0:
             /* Select DualShock mode before requesting actuator metadata. */
-            port->actuator_control.value =
-                (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) |
-                CONTROLLER_ACTUATOR_SETUP_MODE;
+            port->actuator_control.value = (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) | CONTROLLER_ACTUATOR_SETUP_MODE;
 
             counter = PadInfoMode(port->port_id, InfoModeIdTable, -1);
             mode_index = 0;
@@ -468,9 +494,8 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
         case 1:
             /* Discover actuator capabilities and map them into the transmit buffer. */
             port->actuator_control.value =
-                (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) |
-                CONTROLLER_ACTUATOR_SETUP_ACTIVE | CONTROLLER_USE_DEFAULT_ANALOG_CENTER;
-            counter = 5;
+                (port->actuator_control.value & ~CONTROLLER_ACTUATOR_SETUP_MASK) | CONTROLLER_ACTUATOR_SETUP_ACTIVE | CONTROLLER_USE_DEFAULT_ANALOG_CENTER;
+            counter = CONTROLLER_ACTUATOR_ALIGNMENT_COUNT - 1;
             disabled_actuator_index = CONTROLLER_ACTUATOR_UNMAPPED;
             fill_loop_end = -1;
             while (counter != fill_loop_end)
@@ -486,8 +511,8 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
             PadSetAct(port->port_id, &port->small_motor_value, remaining_actuators);
             counter = mode_index;
             remaining_actuators--;
-            port->small_motor_power = 0;
-            port->large_motor_power = 0;
+            port->small_motor_current = 0;
+            port->large_motor_current = 0;
             while (remaining_actuators != (-1))
             {
                 s32 actuator_supported = PadInfoAct(port->port_id, counter, InfoActFunc);
@@ -498,14 +523,14 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                     case 0:
                         if (port->actuator_alignment[0] == CONTROLLER_ACTUATOR_UNMAPPED)
                         {
-                            port->small_motor_power = PadInfoAct(port->port_id, counter, InfoActCurr);
+                            port->small_motor_current = PadInfoAct(port->port_id, counter, InfoActCurr);
                             port->actuator_alignment[0] = counter;
                         }
                         break;
                     case 1:
                         if (port->actuator_alignment[1] == CONTROLLER_ACTUATOR_UNMAPPED)
                         {
-                            port->large_motor_power = PadInfoAct(port->port_id, counter, InfoActCurr);
+                            port->large_motor_current = PadInfoAct(port->port_id, counter, InfoActCurr);
                             port->actuator_alignment[1] = counter;
                         }
                         break;
@@ -533,20 +558,19 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
     /* Select the physical-port buffer, then resolve an optional multitap slot. */
     if (port->port_id & CONTROLLER_SECOND_PORT_FLAG)
     {
-        pad_packet = controller_state->receive_buffers[1];
+        pad_packet = &controller_state->receive_buffers[1].direct;
     }
     else
     {
-        pad_packet = controller_state->receive_buffers[0];
+        pad_packet = &controller_state->receive_buffers[0].direct;
     }
     multitap_slot = port->port_id & CONTROLLER_MULTITAP_SLOT_MASK;
     if (multitap_slot != 0)
     {
         /* Multi-tap slots follow a two-byte header in eight-byte records. */
-        if ((*((u16*)pad_packet)) == CONTROLLER_PACKET_PRESENT)
+        if (CONTROLLER_RECEIVE_PACKET_ID(pad_packet) == CONTROLLER_MULTITAP_PACKET_ID)
         {
-            pad_packet += CONTROLLER_MULTITAP_HEADER_SIZE +
-                          (multitap_slot * CONTROLLER_MULTITAP_SLOT_STRIDE);
+            pad_packet = CONTROLLER_MULTITAP_SLOT(pad_packet, multitap_slot);
         }
         else
         {
@@ -554,15 +578,15 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
             return;
         }
     }
-    else if ((*((u16*)pad_packet)) == CONTROLLER_PACKET_PRESENT)
+    else if (CONTROLLER_RECEIVE_PACKET_ID(pad_packet) == CONTROLLER_MULTITAP_PACKET_ID)
     {
-        pad_packet += CONTROLLER_MULTITAP_HEADER_SIZE;
+        pad_packet = CONTROLLER_MULTITAP_SLOT(pad_packet, 0);
     }
     /* A zero status byte marks a successfully received controller packet. */
-    if (pad_packet[0] == 0)
+    if (pad_packet->status == 0)
     {
         /* Decode the protocol ID into the game's three supported device classes. */
-        u8 controller_id = pad_packet[1];
+        u8 controller_id = pad_packet->id;
         u8 controller_class = controller_id >> 4;
         switch (controller_class)
         {
@@ -585,34 +609,32 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
             if (decoded_state >= 0)
             {
                 /* Convert active-low buttons and derive edges from the prior sample. */
-                held_buttons = ~(*((u16*)(pad_packet + CONTROLLER_PACKET_BUTTONS_OFFSET)));
+                held_buttons = ~pad_packet->buttons;
                 if (port->current_sample.device_type == decoded_state)
                 {
                     port->current_sample.pressed_buttons =
-                        (port->current_sample.repeat_buttons =
-                             held_buttons & (port->current_sample.held_buttons ^ held_buttons));
+                        (port->current_sample.repeat_buttons = held_buttons & (port->current_sample.held_buttons ^ held_buttons));
                 }
                 else
                 {
                     /* A device-type change makes all held buttons newly pressed. */
-                    port->current_sample.pressed_buttons =
-                        (port->current_sample.repeat_buttons = held_buttons);
+                    port->current_sample.pressed_buttons = (port->current_sample.repeat_buttons = held_buttons);
                     if (decoded_state == CONTROLLER_DEVICE_ANALOG_JOYSTICK)
                     {
-                        port->right_stick_center_x = pad_packet[4];
-                        port->right_stick_center_y = pad_packet[5];
-                        port->left_stick_center_x = pad_packet[6];
-                        port->left_stick_center_y = pad_packet[7];
+                        port->right_stick_center_x = pad_packet->right_stick_x;
+                        port->right_stick_center_y = pad_packet->right_stick_y;
+                        port->left_stick_center_x = pad_packet->left_stick_x;
+                        port->left_stick_center_y = pad_packet->left_stick_y;
                         port->current_sample.analog_direction_bits = 0;
                     }
                     else if (decoded_state == CONTROLLER_DEVICE_ANALOG)
                     {
                         if (!(port->actuator_control.value & CONTROLLER_USE_DEFAULT_ANALOG_CENTER))
                         {
-                            port->right_stick_center_x = pad_packet[4];
-                            port->right_stick_center_y = pad_packet[5];
-                            port->left_stick_center_x = pad_packet[6];
-                            port->left_stick_center_y = pad_packet[7];
+                            port->right_stick_center_x = pad_packet->right_stick_x;
+                            port->right_stick_center_y = pad_packet->right_stick_y;
+                            port->left_stick_center_x = pad_packet->left_stick_x;
+                            port->left_stick_center_y = pad_packet->left_stick_y;
                             port->current_sample.analog_direction_bits = 0;
                         }
                         else
@@ -644,8 +666,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                 /* Apply independent auto-repeat timers to the four digital directions. */
                 if (held_buttons & PADRup)
                 {
-                    if ((port->current_sample.pressed_buttons & PADRup) &&
-                        (controller_state->sample_unavailable == 0))
+                    if ((port->current_sample.pressed_buttons & PADRup) && (controller_state->sample_unavailable == 0))
                     {
                         port->face_repeat_timer_up = initial_repeat_delay;
                     }
@@ -662,8 +683,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                 }
                 if (held_buttons & PADRright)
                 {
-                    if ((port->current_sample.pressed_buttons & PADRright) &&
-                        (controller_state->sample_unavailable == 0))
+                    if ((port->current_sample.pressed_buttons & PADRright) && (controller_state->sample_unavailable == 0))
                     {
                         port->face_repeat_timer_right = initial_repeat_delay;
                     }
@@ -680,8 +700,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                 }
                 if (held_buttons & PADRdown)
                 {
-                    if ((port->current_sample.pressed_buttons & PADRdown) &&
-                        (controller_state->sample_unavailable == 0))
+                    if ((port->current_sample.pressed_buttons & PADRdown) && (controller_state->sample_unavailable == 0))
                     {
                         port->face_repeat_timer_down = initial_repeat_delay;
                     }
@@ -698,8 +717,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                 }
                 if (held_buttons & PADRleft)
                 {
-                    if ((port->current_sample.pressed_buttons & PADRleft) &&
-                        (controller_state->sample_unavailable == 0))
+                    if ((port->current_sample.pressed_buttons & PADRleft) && (controller_state->sample_unavailable == 0))
                     {
                         port->face_repeat_timer_left = initial_repeat_delay;
                     }
@@ -717,7 +735,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                 if (device_type != CONTROLLER_DEVICE_DIGITAL)
                 {
                     /* Center, deadzone, clamp, and scale the two right-stick axes. */
-                    delta = pad_packet[4] - port->right_stick_center_x;
+                    delta = pad_packet->right_stick_x - port->right_stick_center_x;
                     if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
                     {
                         delta = 0;
@@ -733,14 +751,13 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                     shifted_delta = delta >> CONTROLLER_ANALOG_SCALE_SHIFT;
                     if (delta < 0)
                     {
-                        port->current_sample.right_stick_x =
-                            (delta + CONTROLLER_ANALOG_NEGATIVE_ROUNDING) >> CONTROLLER_ANALOG_SCALE_SHIFT;
+                        port->current_sample.right_stick_x = (delta + CONTROLLER_ANALOG_NEGATIVE_ROUNDING) >> CONTROLLER_ANALOG_SCALE_SHIFT;
                     }
                     else
                     {
                         port->current_sample.right_stick_x = shifted_delta;
                     }
-                    delta = pad_packet[5] - port->right_stick_center_y;
+                    delta = pad_packet->right_stick_y - port->right_stick_center_y;
                     if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
                     {
                         delta = 0;
@@ -756,8 +773,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                     unsigned_value = delta >> CONTROLLER_ANALOG_SCALE_SHIFT;
                     if (delta < 0)
                     {
-                        port->current_sample.right_stick_y =
-                            (delta + CONTROLLER_ANALOG_NEGATIVE_ROUNDING) >> CONTROLLER_ANALOG_SCALE_SHIFT;
+                        port->current_sample.right_stick_y = (delta + CONTROLLER_ANALOG_NEGATIVE_ROUNDING) >> CONTROLLER_ANALOG_SCALE_SHIFT;
                     }
                     else
                     {
@@ -765,7 +781,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                     }
 
                     /* Normalize the left stick and map its signs to virtual D-pad bits. */
-                    delta = pad_packet[6] - port->left_stick_center_x;
+                    delta = pad_packet->left_stick_x - port->left_stick_center_x;
                     if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
                     {
                         delta = 0;
@@ -781,8 +797,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                     shifted_delta = delta >> CONTROLLER_ANALOG_SCALE_SHIFT;
                     if (delta < 0)
                     {
-                        shifted_delta =
-                            (delta + CONTROLLER_ANALOG_NEGATIVE_ROUNDING) >> CONTROLLER_ANALOG_SCALE_SHIFT;
+                        shifted_delta = (delta + CONTROLLER_ANALOG_NEGATIVE_ROUNDING) >> CONTROLLER_ANALOG_SCALE_SHIFT;
                     }
                     delta = shifted_delta;
                     port->current_sample.left_stick_x = delta;
@@ -798,7 +813,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                             analog_directions = 0;
                         }
                     }
-                    delta = pad_packet[7] - port->left_stick_center_y;
+                    delta = pad_packet->left_stick_y - port->left_stick_center_y;
                     if (CONTROLLER_IS_WITHIN_ANALOG_DEADZONE(delta))
                     {
                         delta = 0;
@@ -814,8 +829,7 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                     shifted_delta = delta >> CONTROLLER_ANALOG_SCALE_SHIFT;
                     if (delta < 0)
                     {
-                        shifted_delta =
-                            (delta + CONTROLLER_ANALOG_NEGATIVE_ROUNDING) >> CONTROLLER_ANALOG_SCALE_SHIFT;
+                        shifted_delta = (delta + CONTROLLER_ANALOG_NEGATIVE_ROUNDING) >> CONTROLLER_ANALOG_SCALE_SHIFT;
                     }
                     delta = shifted_delta;
                     port->current_sample.left_stick_y = delta;
@@ -829,17 +843,12 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
                     }
 
                     /* Detect newly held directions against the previous low nibble. */
-                    delta = analog_directions &
-                            (analog_directions ^
-                             ((port->current_sample.analog_direction_bits &
-                               CONTROLLER_ANALOG_DIRECTION_HELD_MASK)
-                              << CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT));
+                    delta = analog_directions & (analog_directions ^ ((port->current_sample.analog_direction_bits & CONTROLLER_ANALOG_DIRECTION_HELD_MASK)
+                                                                      << CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT));
 
                     /* Pack held bits low and new/repeated direction events high. */
                     new_analog_directions = delta;
-                    decoded_state =
-                        new_analog_directions |
-                        ((u8)analog_directions >> CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT);
+                    decoded_state = new_analog_directions | ((u8)analog_directions >> CONTROLLER_ANALOG_DIRECTION_EVENT_SHIFT);
                     if (analog_directions & PADRup)
                     {
                         if ((new_analog_directions & PADRup) && (controller_state->sample_unavailable == 0))
@@ -938,17 +947,16 @@ void poll_controller_port(ControllerPortState* port, s32* actuator_power_total)
  */
 void controller_poll(void)
 {
-    s32 actuator_power_total;
+    s32 actuator_current_total;
     ControllerState* controller_state = CONTROLLER_STATE;
 
     /* Only consume data from a completed LIBPAD transaction. */
     if (PadChkVsync() != 0)
     {
-        actuator_power_total = 0;
-        controller_state->actuator_cycle =
-            (controller_state->actuator_cycle + 1) & CONTROLLER_ACTUATOR_CYCLE_MASK;
-        poll_controller_port(&controller_state->ports[0], &actuator_power_total);
-        poll_controller_port(&controller_state->ports[1], &actuator_power_total);
+        actuator_current_total = 0;
+        controller_state->actuator_cycle = (controller_state->actuator_cycle + 1) & CONTROLLER_ACTUATOR_CYCLE_MASK;
+        poll_controller_port(&controller_state->ports[0], &actuator_current_total);
+        poll_controller_port(&controller_state->ports[1], &actuator_current_total);
         controller_state->sample_unavailable = 0;
         return;
     }
@@ -1062,14 +1070,10 @@ void update_controllers(void)
         port1_dest_offset = CONTROLLER_PORT_1_FRAME_SAMPLES_OFFSET;
         do
         {
-            port2_source_sample =
-                CONTROLLER_SAMPLE_AT_BYTE_OFFSET(controller_state, port2_source_offset);
-            copy_controller_sample(
-                CONTROLLER_SAMPLE_AT_BYTE_OFFSET(controller_state, port1_source_offset),
-                CONTROLLER_SAMPLE_AT_BYTE_OFFSET(controller_state, port1_dest_offset));
-            copy_controller_sample(
-                port2_source_sample,
-                CONTROLLER_SAMPLE_AT_BYTE_OFFSET(controller_state, port2_dest_offset));
+            port2_source_sample = CONTROLLER_SAMPLE_AT_BYTE_OFFSET(controller_state, port2_source_offset);
+            copy_controller_sample(CONTROLLER_SAMPLE_AT_BYTE_OFFSET(controller_state, port1_source_offset),
+                                   CONTROLLER_SAMPLE_AT_BYTE_OFFSET(controller_state, port1_dest_offset));
+            copy_controller_sample(port2_source_sample, CONTROLLER_SAMPLE_AT_BYTE_OFFSET(controller_state, port2_dest_offset));
             port2_dest_offset += sizeof(ControllerSample);
             port1_dest_offset += sizeof(ControllerSample);
             port2_source_offset -= sizeof(ControllerSample);
@@ -1168,8 +1172,7 @@ void accumulate_controller_sample(ControllerPortState* port)
         port->accumulated_sample.right_stick_y += port->current_sample.right_stick_y;
         port->accumulated_sample.left_stick_x += port->current_sample.left_stick_x;
         port->accumulated_sample.left_stick_y += port->current_sample.left_stick_y;
-        port->accumulated_sample.analog_direction_bits |=
-            port->current_sample.analog_direction_bits;
+        port->accumulated_sample.analog_direction_bits |= port->current_sample.analog_direction_bits;
     }
     port->accumulated_sample.held_buttons |= port->current_sample.held_buttons;
     port->accumulated_sample.pressed_buttons |= port->current_sample.pressed_buttons;
@@ -1201,25 +1204,16 @@ void merge_latest_controller_sample(ControllerPortState* port)
         {
             return;
         }
-        port->published_sample.right_stick_x =
-            port->accumulated_sample.right_stick_x + port->current_sample.right_stick_x;
-        port->published_sample.right_stick_y =
-            port->accumulated_sample.right_stick_y + port->current_sample.right_stick_y;
-        port->published_sample.left_stick_x =
-            port->accumulated_sample.left_stick_x + port->current_sample.left_stick_x;
-        port->published_sample.left_stick_y =
-            port->accumulated_sample.left_stick_y + port->current_sample.left_stick_y;
-        port->published_sample.analog_direction_bits =
-            port->accumulated_sample.analog_direction_bits |
-            port->current_sample.analog_direction_bits;
+        port->published_sample.right_stick_x = port->accumulated_sample.right_stick_x + port->current_sample.right_stick_x;
+        port->published_sample.right_stick_y = port->accumulated_sample.right_stick_y + port->current_sample.right_stick_y;
+        port->published_sample.left_stick_x = port->accumulated_sample.left_stick_x + port->current_sample.left_stick_x;
+        port->published_sample.left_stick_y = port->accumulated_sample.left_stick_y + port->current_sample.left_stick_y;
+        port->published_sample.analog_direction_bits = port->accumulated_sample.analog_direction_bits | port->current_sample.analog_direction_bits;
     }
 
-    port->published_sample.held_buttons =
-        port->accumulated_sample.held_buttons | port->current_sample.held_buttons;
-    port->published_sample.pressed_buttons =
-        port->accumulated_sample.pressed_buttons | port->current_sample.pressed_buttons;
-    port->published_sample.repeat_buttons =
-        port->accumulated_sample.repeat_buttons | port->current_sample.repeat_buttons;
+    port->published_sample.held_buttons = port->accumulated_sample.held_buttons | port->current_sample.held_buttons;
+    port->published_sample.pressed_buttons = port->accumulated_sample.pressed_buttons | port->current_sample.pressed_buttons;
+    port->published_sample.repeat_buttons = port->accumulated_sample.repeat_buttons | port->current_sample.repeat_buttons;
 }
 
 /**

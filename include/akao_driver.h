@@ -98,7 +98,6 @@ extern s32 g_akao_bank_region_b;
 extern s32 g_akao_bank_region_c;
 
 extern s32 akao_check_magic(AkaoSeqHeader *hdr);
-extern void func_80028E34(int, volatile short, void *, int);
 extern void akao_irq_handler(void);
 
 // Fix the off() helper to accept any pointer type
