@@ -17,6 +17,14 @@ typedef union
     void (*handler)(void);
 } MovieCallback;
 
+/** @brief Integer and pointer views of a GPU transfer result. */
+typedef union
+{
+    s32 sync_status;
+    u_long address;
+    u_long* ordering_table;
+} MovieGpuResult;
+
 /**
  * @brief Movie playback control block; lives at fixed RAM address 0x801ED500.
  *
@@ -114,6 +122,12 @@ typedef struct
 #define AKAO_XA_POSITION_UNAVAILABLE (-1)
 #define AUDIO_SECTORS_PER_XA_FRAME 2
 #define SIGNED_HALF_ROUNDING(value) ((u32)(value) >> 31)
+
+/** @brief GPU and CD status values used by the MDEC output callback. */
+#define CD_STATUS_RECOVERY_PENDING 1
+#define DRAW_SYNC_MODE_POLL 1
+#define DRAW_SYNC_DEFER_THRESHOLD 2
+#define BREAK_DRAW_FAILURE_ADDRESS ((u_long)-1)
 
 /** @brief Fixed configuration used by @ref movie_play. */
 #define MOVIE_DISPLAY_WIDTH 320
@@ -334,11 +348,9 @@ struct AlternateMovieDecodeBuffers
     u_long mdec_output_buf[2][ALTERNATE_MDEC_OUTPUT_BYTES / sizeof(u_long)];
 };
 
-/* g_cdAudioReady / g_cdStatusByte3 are also declared in cd.h; the MOVIE.BIN
- * overlay references them directly so we redeclare here to keep movie.c
- * self-contained without pulling in the full CD header. */
+/* Shared CD subsystem state referenced directly by the movie overlay. */
 extern u_char g_cdAudioReady;
-extern s8 g_cdStatusByte3;
+extern u8 g_cdStatusByte3;
 
 extern AllocInfo* g_allocInfo; /* allocation descriptor used by movie_init's alternate buffer layout */
 extern u8 g_gpuMode;           /* 0=DrawSync/LoadImage path; non-zero=BreakDraw/LoadImage2 path (at 0x801ED590) */
@@ -889,55 +901,53 @@ void movie_update(void)
 }
 
 /**
- * @brief MDEC-output completion callback.
- *
- * Invoked when the MDEC finishes writing a decoded macroblock buffer.
- * Either uploads the result to VRAM immediately (LoadImage / LoadImage2)
- * or defers the upload by setting @ref MovieState::pending_vram_upload.
- *
+ * @brief Upload completed MDEC output and schedule the next decode.
  * @see https://decomp.me/scratch/HVkZ6 (100%)
  */
 void movie_mdec_out_callback(void)
 {
-    volatile MovieState* base = VOL_MOVIE_STATE;
-    s32 temp;
-    int zero_literal = 0; /* Required to keep zero live across both transfer paths. */
+    volatile MovieState* state = VOL_MOVIE_STATE;
+    MovieGpuResult gpu_result;
+    s32 inactive = 0;
 
+    /* Queue a standard GPU upload or defer it while drawing is busy. */
     if (g_gpuMode == 0)
     {
-        if (((u8)g_cdStatusByte3) == 1)
+        if (g_cdStatusByte3 == CD_STATUS_RECOVERY_PENDING)
         {
             cdrom_verify_recovery();
         }
-        temp = DrawSync(1);
-        if (temp < 2)
+        gpu_result.sync_status = DrawSync(DRAW_SYNC_MODE_POLL);
+        if (gpu_result.sync_status < DRAW_SYNC_DEFER_THRESHOLD)
         {
-            LoadImage(&MOVIE_STATE->rects[2], base->mdec_output_buf[base->out_buf_idx]);
-            base->draw_sync_target = temp + 1;
+            LoadImage(&MOVIE_STATE->rects[2], state->mdec_output_buf[state->out_buf_idx]);
+            state->draw_sync_target = gpu_result.sync_status + 1;
         }
         else
         {
-            base->pending_vram_upload = 1U;
+            state->pending_vram_upload = TRUE;
         }
     }
     else
     {
-        temp = (s32)BreakDraw();
-        if (temp != (-1))
+        /* Suspend drawing around the alternate transfer path. */
+        gpu_result.ordering_table = BreakDraw();
+        if (gpu_result.address != BREAK_DRAW_FAILURE_ADDRESS)
         {
-            LoadImage2(&MOVIE_STATE->rects[2], base->mdec_output_buf[base->out_buf_idx]);
-            if (temp != zero_literal)
+            LoadImage2(&MOVIE_STATE->rects[2], state->mdec_output_buf[state->out_buf_idx]);
+            if (gpu_result.address != inactive)
             {
-                DrawOTag((u_long*)temp);
+                DrawOTag(gpu_result.ordering_table);
             }
         }
         else
         {
-            LoadImage(&MOVIE_STATE->rects[2], base->mdec_output_buf[base->out_buf_idx]);
+            LoadImage(&MOVIE_STATE->rects[2], state->mdec_output_buf[state->out_buf_idx]);
         }
     }
 
-    if (MOVIE_STATE->pending_vram_upload == zero_literal)
+    /* Continue decoding unless the upload was deferred. */
+    if (MOVIE_STATE->pending_vram_upload == inactive)
     {
         movie_schedule_next_decode();
         return;
