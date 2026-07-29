@@ -57,8 +57,15 @@
 #define PRIM_BLOCK_VRAM_Y1 0x150   /* 336  - VRAM row for slots 1 and 2     */
 #define PRIM_BLOCK_W 0xC           /* 12 halfwords wide                     */
 #define PRIM_BLOCK_H 0x30          /* 48 scanlines tall                     */
-#define PRIM_SLOT_STRIDE 0x4A0     /* 1184 bytes per slot                   */
-#define PRIM_BLOCK_BUF_OFFSET 0x20 /* 32 bytes into each slot               */
+#define PRIM_SLOT_COUNT 3
+#define PRIM_STRIP_BYTE_SIZE (PRIM_STRIP_W * PRIM_STRIP_H * sizeof(u16))
+#define PRIM_BLOCK_BYTE_SIZE (PRIM_BLOCK_W * PRIM_BLOCK_H * sizeof(u16))
+#define PRIM_BLOCK_BUF_OFFSET PRIM_STRIP_BYTE_SIZE
+#define PRIM_SLOT_STRIDE (PRIM_STRIP_BYTE_SIZE + PRIM_BLOCK_BYTE_SIZE)
+/** Normalize a byte offset to the word boundary required by LoadImage. */
+#define PRIM_ALIGN_UPLOAD_OFFSET(offset) (((offset) >> 2) << 2)
+#define PRIM_UPLOAD_PTR(base, offset) \
+    ((u_long*)(PRIM_ALIGN_UPLOAD_OFFSET(offset) + (u32)(base)))
 
 /*
  * Node / scroll / layout constants
@@ -419,50 +426,40 @@ void menu_init(void)
 }
 
 /**
- * @brief Upload primitive-rectangle pixel data for the three menu window slots to VRAM.
- *
- * Iterates over three menu slots (0-2). For each slot, two @c LoadImage calls are made:
- *   1. A 16hword x 1-scanline cursor/highlight strip to a fixed VRAM row just above
- *      the CLUT region (y = @c PRIM_STRIP_VRAM_Y0 + slot).
- *   2. A 12hword x 48-scanline content block to a fixed VRAM page position that differs
- *      for the last slot (x = @c PRIM_BLOCK_VRAM_X2) vs the first two (x = @c PRIM_BLOCK_VRAM_X),
- *      and for the first slot (y = @c PRIM_BLOCK_VRAM_Y0) vs the later two (y = @c PRIM_BLOCK_VRAM_Y1).
- *
- * Source data is read from @c g_prim_rect_buf at slot-aligned offsets spaced
- * @c PRIM_SLOT_STRIDE bytes apart; the block data begins @c PRIM_BLOCK_BUF_OFFSET bytes
- * after the strip data within each slot.
+ * @brief Upload each menu slot's cursor strip and content block to VRAM.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/QnGCP
  */
 void menu_init_prim_rects(void)
 {
-    s32 i = 0;
-
-    u8* base = g_prim_rect_buf;
-
-    s32 block_offset = PRIM_BLOCK_BUF_OFFSET;
-    s32 strip_offset = 0;
+    s32 slot = 0;
+    u8* scratch = g_prim_rect_buf;
+    s32 block_byte_offset = PRIM_BLOCK_BUF_OFFSET;
+    s32 strip_byte_offset = 0;
     RECT rect;
+    u_long* upload_src;
 
-    for (i = 0; i < 3; i++)
+    for (; slot < PRIM_SLOT_COUNT; slot++)
     {
-        /* Upload the 1-scanline cursor strip for slot i. */
+        /* Upload the slot's cursor-highlight strip. */
         rect.x = PRIM_STRIP_VRAM_X;
-        rect.y = i + PRIM_STRIP_VRAM_Y0;
+        rect.y = slot + PRIM_STRIP_VRAM_Y0;
         rect.w = PRIM_STRIP_W;
         rect.h = PRIM_STRIP_H;
-        LoadImage(&rect, (u8*)((u32)((strip_offset >> 2) << 2) + (u32)base));
+        upload_src = PRIM_UPLOAD_PTR(scratch, strip_byte_offset);
+        LoadImage(&rect, upload_src);
 
-        /* Upload the 12x48 content block for slot i. */
-        rect.x = (i == 2) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X;
-        rect.y = (i == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1;
+        /* Upload the slot's content texture block. */
+        rect.x = (slot == PRIM_SLOT_COUNT - 1) ? PRIM_BLOCK_VRAM_X2 : PRIM_BLOCK_VRAM_X;
+        rect.y = (slot == 0) ? PRIM_BLOCK_VRAM_Y0 : PRIM_BLOCK_VRAM_Y1;
         rect.w = PRIM_BLOCK_W;
         rect.h = PRIM_BLOCK_H;
-        LoadImage(&rect, (u8*)((u32)((block_offset >> 2) << 2) + (u32)base));
+        upload_src = PRIM_UPLOAD_PTR(scratch, block_byte_offset);
+        LoadImage(&rect, upload_src);
 
-        block_offset += PRIM_SLOT_STRIDE;
-        strip_offset += PRIM_SLOT_STRIDE;
-    };
+        block_byte_offset += PRIM_SLOT_STRIDE;
+        strip_byte_offset += PRIM_SLOT_STRIDE;
+    }
 }
 
 /**
