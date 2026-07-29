@@ -1745,39 +1745,21 @@ extern u8 g_card_save_title_sjis[];
 extern u8 g_card_header[];
 extern u8 g_card_header_block_count;
 
+#define MEMORY_CARD_HEADER_TYPE_THREE_ICONS 0x13
+#define MEMORY_CARD_HEADER_TITLE_OFFSET 0x04
+#define MEMORY_CARD_SAVE_TITLE_SIZE 0x11
+#define MEMORY_CARD_HEADER_PADDING_OFFSET 0x44
+#define MEMORY_CARD_HEADER_PADDING_SIZE 0x1C
+#define MEMORY_CARD_FILE_HEADER_SIZE 0x200
+#define MEMORY_CARD_OPEN_BLOCK_COUNT_SHIFT 16
+#define MEMORY_CARD_OPEN_CREATE_FLAG 0x200
+#define MEMORY_CARD_OPEN_WRITE_FLAG 0x02
+
 /**
- * @brief Create a memory-card save file and write one block of save data to it.
- *
- * Fills the 0x200-byte card header at g_card_header - the "SC" magic, icon/display
- * byte 0x13, the block count, and the Shift-JIS title "\x90\xB9\x8C\x95\x83Z\x81[\x83u\x83f\x81[\x83^"
- * ("Seiken save data") - zeroes the reserved tail, then stamps that header over
- * the front of the caller's buffer. The file is created with open(), closed,
- * reopened for writing, and the whole 8 KB block is written.
- *
- * @param name Card path to create, e.g. the "bu00:HAND" string at g_card_save_path.
- * @param buf  Caller's 8 KB save buffer; its first 0x200 bytes are overwritten
- *             with the header before the write.
- * @return 1 if the file was created and fully written, 0 if either open failed
- *         or the write was short.
- * @note The create flags are (blocks << 16) | 0x200 - the PS1 BIOS takes the
- *       file's block count in the upper half of open()'s mode argument.
- * @note @c blocks must be a SHARED local feeding both the header byte and the
- *       write size (`blocks << 13`). The target keeps the constant 1 in s3 and
- *       derives 0x2000 from it; writing the two constants independently scores
- *       93.59%. Measured non-factors: `blocks * 0x2000` for the shift, and
- *       inlining the size into the write/compare (both 100%).
- * @note The header byte at +3 is written through the g_card_header array but read
- *       back through the separate symbol g_card_header_block_count. That asymmetry is required:
- *       routing the store through g_card_header_block_count too costs an insn and scores
- *       94.17%, and reading via g_card_header[3] emits a `+0x3` relocation instead
- *       of the target's own symbol (99.88%).
- * @note Both copies are gcc's inlined memcpy on byte-aligned char pointers -
- *       hence the lwl/lwr pairs and, for the 0x200 copy into a pointer
- *       parameter, the runtime (src|dst)&3 alignment test with two loop bodies.
- *       m2c cannot reconstruct these and reports M2C_ERROR on every lwr.
- * @note Statement order matters: swapping the bzero and the 0x200 memcpy scores
- *       88.71%.
- * @see decomp.me (100%)
+ * @brief Create a one-block memory-card save file and write its data.
+ * @param name Memory-card file path to create.
+ * @param buf 8 KiB save buffer; the generated header replaces its first 512 bytes.
+ * @return 1 if the complete file is written; otherwise 0.
  */
 s32 memory_card_create_save_file(char* name, void* buf)
 {
@@ -1785,25 +1767,32 @@ s32 memory_card_create_save_file(char* name, void* buf)
     s32 fd;
     s32 size;
 
+    /* Build the 512-byte memory-card file header. */
     g_card_header[0] = 'S';
     g_card_header[1] = 'C';
-    g_card_header[2] = 0x13;
+    g_card_header[2] = MEMORY_CARD_HEADER_TYPE_THREE_ICONS;
     blocks = 1;
     g_card_header[3] = blocks;
-    memcpy(&g_card_header[4], g_card_save_title_sjis, 0x11);
-    bzero(&g_card_header[0x44], 0x1C);
-    memcpy(buf, g_card_header, 0x200);
-    fd = open(name, (g_card_header_block_count << 16) | 0x200);
+    memcpy(&g_card_header[MEMORY_CARD_HEADER_TITLE_OFFSET], g_card_save_title_sjis, MEMORY_CARD_SAVE_TITLE_SIZE);
+    bzero(&g_card_header[MEMORY_CARD_HEADER_PADDING_OFFSET], MEMORY_CARD_HEADER_PADDING_SIZE);
+    memcpy(buf, g_card_header, MEMORY_CARD_FILE_HEADER_SIZE);
+
+    /* Allocate one card block, then reopen the file for writing. */
+    fd = open(
+        name,
+        (g_card_header_block_count << MEMORY_CARD_OPEN_BLOCK_COUNT_SHIFT) | MEMORY_CARD_OPEN_CREATE_FLAG);
     if (fd == -1)
     {
         return 0;
     }
     close(fd);
-    fd = open(name, 2);
+    fd = open(name, MEMORY_CARD_OPEN_WRITE_FLAG);
     if (fd == -1)
     {
         return 0;
     }
+
+    /* Each memory-card block contains 8 KiB. */
     size = blocks << 13;
     if (write(fd, buf, size) != size)
     {
@@ -1817,24 +1806,8 @@ s32 memory_card_create_save_file(char* name, void* buf)
 extern u8 g_card_test_payload[];
 
 /**
- * @brief Fill the card work buffer with placeholder save contents.
- *
- * Copies the 5-byte string "TEST" (including its terminator) from g_card_test_payload to
- * the front of @p buf. Paired with memory_card_create_save_file by memory_card_write_test_save, which fills
- * the buffer here and then commits it to the card.
- *
- * @param buf Card work buffer to fill; only the first 5 bytes are touched.
- * @note This is placeholder/debug content - the shipped save path writes the
- *       literal text "TEST" as its payload, with the real header supplied
- *       separately by memory_card_create_save_file.
- * @note The source string must be the rodata symbol, not a literal: a "TEST"
- *       literal emits a fresh local label and scores 99.00%. It must also be
- *       memcpy and not strcpy (strcpy emits a real call, 0.00%). Measured
- *       non-factor: declaring @p buf as u8* instead of void* is also 100%.
- * @note gcc inlines the 5-byte copy as an lwl/lwr + lb pair, with no runtime
- *       alignment test - unlike the 0x200 copy in memory_card_create_save_file, which is large
- *       enough to get the (src|dst)&3 check and two loop bodies.
- * @see decomp.me (100%)
+ * @brief Copy the five-byte test payload into a save buffer.
+ * @param buf Destination buffer with space for at least five bytes.
  */
 void memory_card_fill_test_data(void* buf)
 {
