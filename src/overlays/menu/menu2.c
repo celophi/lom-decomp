@@ -39,20 +39,21 @@ void func_800A8F8C();
 void func_800A8FB4();
 s32 func_800A9060();
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode);
-void func_8014F210(s32 sound_id, s32 volume);
-void* func_8014F060(void);
-void func_8014E3C4(u32 content_id);
+void menu_play_se(s32 sound_id, s32 volume);
+void* menu_find_best_equipment_for_active_slot(void);
+void menu_open_content_page(u32 content_id);
 
 extern s32 g_menu_draw_early_out;
 extern s32 g_menu_item_nav_entries[];
-extern s32 D_80169414;
+/** @brief Active item-list category selected by content pages 0-5. */
+extern s32 g_menu_active_item_category;
 extern s32 g_menu_pending_item_row;
 
 void* menu_slot_alloc(s32 arg0, void* rect);
 s32 func_8014551C(s32 arg0);
-s32 func_8014E8B8(void);
-s32 func_8014E9A0(void);
-s32 func_8014EA78(void);
+s32 menu_build_equipment_nav_entries(void);
+s32 menu_build_key_item_nav_entries(void);
+s32 menu_build_ability_nav_entries(void);
 s32* func_8014A3A4();
 s32* func_8014BA58();
 s32* func_8014BD48();
@@ -127,7 +128,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
-        func_8014F210(0x7F, 0x80);
+        menu_play_se(0x7F, 0x80);
         state->unk0 = 3;
         return prim;
     }
@@ -200,7 +201,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
                             n -= 1;
                             slot -= 0x24;
                         } while (n >= 0);
-                        func_8014E3C4(6);
+                        menu_open_content_page(6);
                         return prim;
                     }
                 }
@@ -208,12 +209,12 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
             ctx = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
             ctx += g_menu_active_subtype;
             *(ctx + 0x609) = found % 24;
-            func_8014F210(0x7E, 0x80);
+            menu_play_se(0x7E, 0x80);
             state->unk0 = 3;
         }
         else
         {
-            func_8014F210(0x78, 0x80);
+            menu_play_se(0x78, 0x80);
         }
     }
 
@@ -279,14 +280,15 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
 /**
  * @brief Open the menu content window for the given content page id.
  *
- * Sets g_menu_pending_item_row (pending item row) to 0xFF, then for ids 0-7 allocates a
- * MenuSlot window and installs its content callback:
+ * Sets g_menu_pending_item_row to 0xFF, then for ids 0-7 allocates a MenuSlot
+ * window and installs its content callback:
  * - 0/1/2: 0xF0 x 0x60 window at (0x40, 0x60), callback func_8014A3A4; sets
- *   D_80169414 (active category) to the id and packs func_8014551C(id) into
- *   flags bits 24:16.
+ *   g_menu_active_item_category to the id and packs func_8014551C(id) into flags
+ *   bits 24:16.
  * - 3/4/5: 0xE8 x 0x90/0x80/0x90 window at (0x40, 0x2C), callbacks
- *   func_8014BA58 / func_8014BD48 / func_8014BF68; sets D_80169414 = 3 and
- *   packs func_8014E8B8 / func_8014E9A0 / func_8014EA78 into flags bits 24:16.
+ *   func_8014BA58 / func_8014BD48 / func_8014BF68; sets
+ *   g_menu_active_item_category = 3 and packs the corresponding navigation-list
+ *   builder result into flags bits 24:16.
  * - 6/7: 0x120 x 0x20/0x30 window at (0x10, 0x60), callbacks func_8014C820 /
  *   func_8014C8C8, flags bits 24:16 = 1; rebuilds g_menu_item_nav_entries as a 1-entry
  *   circular nav list and sets g_menu_draw_early_out.
@@ -301,7 +303,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
  *       cross-jumping merges the case 1-5 tails at one label.
  * @see decomp.me (100%)
  */
-void func_8014E3C4(u32 arg0)
+void menu_open_content_page(u32 content_id)
 {
     u16 rect[4];
     MenuSlot* slot;
@@ -315,7 +317,7 @@ void func_8014E3C4(u32 arg0)
     s32 word_prev;
 
     g_menu_pending_item_row = 0xFF;
-    switch (arg0)
+    switch (content_id)
     {
     case 0:
         rect[0] = 0x40;
@@ -328,7 +330,7 @@ void func_8014E3C4(u32 arg0)
         slot->anim_frame = 5;
         slot->active = 2;
         v0 = func_8014551C(0);
-        D_80169414 = 0;
+        g_menu_active_item_category = 0;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
@@ -343,7 +345,7 @@ void func_8014E3C4(u32 arg0)
         slot->anim_frame = 5;
         slot->active = 2;
         v0 = func_8014551C(1);
-        D_80169414 = 1;
+        g_menu_active_item_category = 1;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
@@ -358,7 +360,7 @@ void func_8014E3C4(u32 arg0)
         slot->anim_frame = 5;
         slot->active = 2;
         v0 = func_8014551C(2);
-        D_80169414 = 2;
+        g_menu_active_item_category = 2;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
@@ -372,8 +374,8 @@ void func_8014E3C4(u32 arg0)
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
-        v0 = func_8014E8B8();
-        D_80169414 = 3;
+        v0 = menu_build_equipment_nav_entries();
+        g_menu_active_item_category = 3;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
@@ -387,8 +389,8 @@ void func_8014E3C4(u32 arg0)
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
-        v0 = func_8014E9A0();
-        D_80169414 = 3;
+        v0 = menu_build_key_item_nav_entries();
+        g_menu_active_item_category = 3;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
@@ -402,8 +404,8 @@ void func_8014E3C4(u32 arg0)
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
-        v0 = func_8014EA78();
-        D_80169414 = 3;
+        v0 = menu_build_ability_nav_entries();
+        g_menu_active_item_category = 3;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
 
@@ -512,7 +514,7 @@ void func_8014E3C4(u32 arg0)
  *       pseudos so the allocator reproduces the target's a0/a1/a2 coloring.
  * @see decomp.me (100%)
  */
-s32 func_8014E8B8(void)
+s32 menu_build_equipment_nav_entries(void)
 {
     s32 temp_a1;
     s32 temp_a3;
@@ -598,15 +600,16 @@ s32 func_8014E8B8(void)
  *        the g_menu_scroll_nav_entries circular nav list to that size.
  *
  * Clears the byte at g_pad_ctx + 0x26DF, then scans the 0x100 bytes at
- * g_pad_ctx + 0x25E0 counting non-zero entries. Clears g_menu_scroll_nav_entries[0] and packs
- * each of the count entries with the same three bit-fields as
- * menu_init_item_nav_entries
+ * g_pad_ctx + 0x25E0 counting non-zero entries. Clears
+ * g_menu_scroll_nav_entries[0] and packs each counted entry with the same three
+ * bit-fields as menu_init_item_nav_entries
  * (bits 13:0 = i * 0x10, bits 22:14 = circular prev, bits 30:23 = circular
- * next). Sibling of func_8014E8B8 (case 4 vs case 3 of func_8014E3C4).
+ * next). This is the content-page 4 sibling of
+ * menu_build_equipment_nav_entries.
  *
  * @return Number of entries counted (also the nav-list length).
- * @note Shapes required to match: unlike func_8014E8B8 this one keeps the
- *       menu_init_item_nav_entries next/copy pair
+ * @note Shapes required to match: unlike menu_build_equipment_nav_entries this
+ *       one keeps the menu_init_item_nav_entries next/copy pair
  *       (temp_a1 = j + 1; ...; j = temp_a1) and
  *       the byte scan is a plain pointer walk (gcc's countdown reversal IS the
  *       target here). The link loop must sit inside a do { } while (0) block -
@@ -614,7 +617,7 @@ s32 func_8014E8B8(void)
  *       address temp and takes a3, cascading t0/t5/t4/t3/t2 into place.
  * @see decomp.me (100%)
  */
-s32 func_8014E9A0(void)
+s32 menu_build_key_item_nav_entries(void)
 {
     s32 temp_a1;
     s32 temp_a3;
@@ -697,20 +700,20 @@ s32 func_8014E9A0(void)
  *        rebuild the g_menu_scroll_nav_entries circular nav list to that size.
  *
  * Scans 0x40 records of stride 0xC at g_pad_ctx + 0x2F0, counting those whose
- * first byte has bit 0 set. Clears g_menu_scroll_nav_entries[0] and packs each of the count
- * entries with the same three bit-fields as menu_init_item_nav_entries
+ * first byte has bit 0 set. Clears g_menu_scroll_nav_entries[0] and packs each
+ * counted entry with the same three bit-fields as menu_init_item_nav_entries
  * (bits 13:0 = i * 0x10,
- * bits 22:14 = circular prev, bits 30:23 = circular next). Third sibling of
- * func_8014E8B8 / func_8014E9A0 (case 5 of func_8014E3C4).
+ * bits 22:14 = circular prev, bits 30:23 = circular next). This is the
+ * content-page 5 sibling of the equipment and key-item list builders.
  *
  * @return Number of entries counted (also the nav-list length).
- * @note Same shapes as func_8014E9A0: pointer-walk countdown scan, the
- *       menu_init_item_nav_entries next/copy pair, and the do { } while (0)
- *       wrapper around
- *       the link loop that recolors the j / temp_t0 allocation race.
+ * @note Same shapes as menu_build_key_item_nav_entries: pointer-walk countdown
+ *       scan, the menu_init_item_nav_entries next/copy pair, and the
+ *       do { } while (0) wrapper around the link loop that recolors the j /
+ *       temp_t0 allocation race.
  * @see decomp.me (100%)
  */
-s32 func_8014EA78(void)
+s32 menu_build_ability_nav_entries(void)
 {
     s32 temp_a1;
     s32 temp_a3;
@@ -811,15 +814,17 @@ extern u8 D_800F0BF8[];
  * @brief Try to commit the pending item into the active character's slot
  *        buffer at g_pad_ctx + char_slot * 0x250 + 0x640.
  *
- * func_8014ECA4 supplies the candidate 0x40-byte record (returns 0 on failure,
- * which aborts with return 0). If the slot buffer still equals the template at
+ * menu_find_best_equipment_for_slot0 supplies the candidate 0x40-byte record
+ * (returns 0 on failure, which aborts with return 0). If the slot buffer still
+ * equals the template at
  * D_800F0BF8 (byte-wise), the candidate is copied in, its first byte is
  * cleared, and g_item_slot_data.slot0 is zeroed. Otherwise the slot and the
  * candidate are exchanged through a stack buffer (three func_800A8F8C copies,
  * same pattern as menu_swap_item_records) and g_item_slot_data.slot0 points at the
  * candidate. Either way g_item_slot_flags.slot0 is set.
  *
- * @return 1 if a record was committed/exchanged, 0 if func_8014ECA4 failed.
+ * @return 1 if a record was committed/exchanged, 0 if
+ *         menu_find_best_equipment_for_slot0 failed.
  * @note Shapes required to match: the equality scan must use the
  *       mismatch-goto shape (every break/flag rewrite loses rows). buf must be
  *       the FIRST local so its address is virtual-stack-vars + 0 and reload
@@ -833,7 +838,7 @@ extern u8 D_800F0BF8[];
  *       working/func_8014EB4C/status.md).
  * @see decomp.me (96.92%)
  */
-s32 func_8014EB4C(void)
+s32 menu_stage_best_equipment_for_slot0(void)
 {
     u8 buf[0x40];
     u8* entry;
@@ -847,7 +852,7 @@ s32 func_8014EB4C(void)
     {
         func_800A8F8C(0, 0, 0, 0, 0, 0);
     }
-    entry = (u8*)func_8014ECA4();
+    entry = (u8*)menu_find_best_equipment_for_slot0();
     if (entry != 0)
     {
         t = D_800F0BF8;
@@ -900,7 +905,7 @@ done:
  *       working/func_8014ECA4/.
  * @see decomp.me (98.84%)
  */
-void* func_8014ECA4(void)
+void* menu_find_best_equipment_for_slot0(void)
 {
     s32 var_a0;
     s32 var_a0_2;
@@ -968,34 +973,45 @@ void* func_8014ECA4(void)
     return var_t0;
 }
 
-/** @brief Slot-data pointer table indexed by menu subtype; @ref g_item_slot_data is its entry 7. */
-extern u32 D_8016951C[];
-/** @brief Slot-occupied flag table indexed by menu subtype; @ref g_item_slot_flags is its entry 7. */
-extern u8 D_80168C15[];
+/**
+ * @brief Slot-data pointer table indexed by equipment subtype.
+ *
+ * @ref g_item_slot_data is the four-entry view beginning at subtype 7.
+ */
+extern u32 g_item_slot_data_by_subtype[];
+/**
+ * @brief Slot-occupied flag table indexed by equipment subtype.
+ *
+ * @ref g_item_slot_flags is the four-entry view beginning at subtype 7.
+ */
+extern u8 g_item_slot_flags_by_subtype[];
 
 /**
  * @brief Commit the pending item into the active character's slot buffer for the
  *        CURRENT menu subtype (@ref g_menu_active_subtype).
  *
- * The subtype-indexed sibling of @ref func_8014EB4C, which handles subtype 7
- * (slot 0) only. func_8014F060 supplies the candidate 0x40-byte record; a NULL
- * return aborts with 0. Any of comparison slots 1..3 that still points at this
- * subtype's slot buffer is re-pointed at it first.
+ * The subtype-indexed sibling of @ref menu_stage_best_equipment_for_slot0,
+ * which handles subtype 7 (slot 0) only.
+ * menu_find_best_equipment_for_active_slot supplies the candidate 0x40-byte
+ * record; a NULL return aborts with 0. Any comparison slot 1..3 that still
+ * points at this subtype's slot buffer is re-pointed at it first.
  *
  * If the slot buffer is empty (its first byte is 0) the candidate is copied in,
  * its own first byte cleared, and the subtype's slot-data entry zeroed.
  * Otherwise the slot and the candidate are exchanged through a stack buffer
- * (three func_800A8F8C copies, same pattern as func_8014EB4C / menu_swap_item_records)
- * and the subtype's slot-data entry points at the candidate. Either way the
- * subtype's slot-occupied flag is set.
+ * (three func_800A8F8C copies, the same pattern as
+ * menu_stage_best_equipment_for_slot0 and menu_swap_item_records), and the
+ * subtype's slot-data entry points at the candidate. Either way the subtype's
+ * slot-occupied flag is set.
  *
- * @return 1 if a record was committed or exchanged, 0 if func_8014F060 failed.
+ * @return 1 if a record was committed or exchanged, 0 if
+ *         menu_find_best_equipment_for_active_slot failed.
  *
- * @note D_8016951C and D_80168C15 are the bases of the subtype-indexed tables
- *       that @ref g_item_slot_data (0x80169538 = D_8016951C + 7*4) and
- *       @ref g_item_slot_flags (0x80168C1C = D_80168C15 + 7) sit inside. The
- *       relocation must name these bases, not `&g_item_slot_data - 0x1C`:
- *       the addresses are equal but the emitted symbol is not.
+ * @note g_item_slot_data_by_subtype and g_item_slot_flags_by_subtype are the
+ *       bases of the subtype-indexed tables containing @ref g_item_slot_data
+ *       (base + 7*4) and @ref g_item_slot_flags (base + 7). The relocation must
+ *       name these bases, not `&g_item_slot_data - 0x1C`: the addresses are
+ *       equal but the emitted symbol is not.
  *
  * @note Shapes required to match:
  *       - The two found-store blocks are OUT OF LINE. gcc 2.7.2 has no
@@ -1025,11 +1041,12 @@ extern u8 D_80168C15[];
  *         operand order and gives the target's `addu a0, a0, v0`. Every
  *         plain-`+` spelling tried tops out at 99.87%.
  *       - The `if (0)` six-arg call sizes the outgoing-argument area to 0x18 so
- *         `buf` lands at sp+0x18; see func_8014EB4C. `&buf` must never be
- *         cached in a named local - it has to rematerialize at each call.
+ *         `buf` lands at sp+0x18; see
+ *         menu_stage_best_equipment_for_slot0. `&buf` must never be cached in a
+ *         named local - it has to rematerialize at each call.
  * @see decomp.me (100%)
  */
-s32 func_8014EDEC(void)
+s32 menu_stage_best_equipment_for_active_slot(void)
 {
     u8 buf[0x40];
     u8* entry;
@@ -1044,7 +1061,7 @@ s32 func_8014EDEC(void)
     {
         func_800A8F8C(0, 0, 0, 0, 0, 0);
     }
-    entry = (u8*)func_8014F060();
+    entry = (u8*)menu_find_best_equipment_for_active_slot();
     if (entry != 0)
     {
         i = 1;
@@ -1064,7 +1081,7 @@ s32 func_8014EDEC(void)
 done_a:
             func_800A8F8C((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170), entry);
             *entry = 0;
-            D_8016951C[g_menu_active_subtype] = 0;
+            g_item_slot_data_by_subtype[g_menu_active_subtype] = 0;
             goto tail;
 found_a:
             slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
@@ -1091,11 +1108,11 @@ done_b:
             func_800A8F8C(buf, slot_buf);
             func_800A8F8C(slot_buf, entry);
             func_800A8F8C(entry, buf);
-            D_8016951C[g_menu_active_subtype] = (u32)entry;
+            g_item_slot_data_by_subtype[g_menu_active_subtype] = (u32)entry;
         }
         ret = 1;
 tail:
-        D_80168C15[g_menu_active_subtype] = ret;
+        g_item_slot_flags_by_subtype[g_menu_active_subtype] = ret;
         return 1;
     }
     return 0;
@@ -1104,10 +1121,11 @@ tail:
 /**
  * @brief Pick the highest-valued eligible item record for the CURRENT menu subtype.
  *
- * The subtype-generic sibling of @ref func_8014ECA4 (which handles subtype 7 only).
- * The active character's slot buffer for @ref g_menu_active_subtype supplies the
- * score to beat: the sum of its four halfwords at 0x24/0x26/0x28/0x2A, or 0 when
- * the slot is empty. An exclusion mask is then built from the other three
+ * This is the subtype-generic sibling of
+ * @ref menu_find_best_equipment_for_slot0, which handles subtype 7 only. The
+ * active character's slot buffer for @ref g_menu_active_subtype supplies the
+ * score to beat: the sum of its four halfwords at 0x24/0x26/0x28/0x2A, or 0
+ * when the slot is empty. An exclusion mask is then built from the other three
  * comparison slots at D_801693FC, and the 100 records at g_pad_ctx + 0xCE0 are
  * scanned for the best record that is not excluded.
  *
@@ -1135,14 +1153,15 @@ tail:
  *         allocation priority (pri = floor_log2(refs)*refs/live_len) above the
  *         mask carrier's and swaps a3/t0.
  * @note Measured NON-factors (probed at the 100% base, all still 100%): the
- *       `- (-(offset))` minus routing that @ref func_8014EDEC needs is NOT
- *       needed here, and neither is splitting `char_base` out of the `best`
- *       expression. Plain `+` is used because it is the readable form and it
- *       matches; do not reintroduce the minus spelling on the assumption that
- *       a sibling's requirement transfers.
+ *       `- (-(offset))` minus routing required by
+ *       @ref menu_stage_best_equipment_for_active_slot is NOT needed here, and
+ *       neither is splitting `char_base` out of the `best` expression. Plain
+ *       `+` is used because it is the readable form and it matches; do not
+ *       reintroduce the minus spelling on the assumption that a sibling's
+ *       requirement transfers.
  * @see decomp.me (100%)
  */
-void* func_8014F060(void)
+void* menu_find_best_equipment_for_active_slot(void)
 {
     s32 slot_idx;
     s32 rec_idx;
@@ -1228,7 +1247,7 @@ void* func_8014F060(void)
  *       gives 100%.
  * @see decomp.me (100%)
  */
-void func_8014F210(s32 sound_id, s32 volume)
+void menu_play_se(s32 sound_id, s32 volume)
 {
     if (g_active_script == 0)
     {
@@ -1240,7 +1259,8 @@ void func_8014F210(s32 sound_id, s32 volume)
  * @brief Count the in-use entries in the 100-slot record table at g_pad_ctx+0xCE0.
  * @return Index of the first empty (zero first byte) record, i.e. the number of
  *         occupied records; 0x64 if the table is full.
- * @note Records are 0x40 bytes apart; the same table is walked by func_8014F060.
+ * @note Records are 0x40 bytes apart; the same table is walked by
+ *       menu_find_best_equipment_for_active_slot.
  * @note The `for` loop with a `break` on the empty slot is required to match: the
  *       equivalent `do { if (!*rec) break; ... } while (count < 0x64)` scores
  *       39.43% (gcc rotates and peels the loop) and the `while (*rec != 0)` form
@@ -1248,7 +1268,7 @@ void func_8014F210(s32 sound_id, s32 volume)
  *       this same shape also reaches 100%.
  * @see decomp.me (100%)
  */
-s32 func_8014F23C(void)
+s32 menu_count_inventory_items(void)
 {
     s32 count;
     u8* rec;
@@ -1280,7 +1300,7 @@ s32 func_8014F23C(void)
  *       separate local instead of the parameter.
  * @see decomp.me (100%)
  */
-void func_8014F274(s32 prim, s32 cursor, s32 value, s32 arg3, Vec2s* origin, s32 color)
+void menu_draw_clamped_number(s32 prim, s32 cursor, s32 value, s32 arg3, Vec2s* origin, s32 color)
 {
     if (value >= 0x64)
     {
@@ -1289,22 +1309,30 @@ void func_8014F274(s32 prim, s32 cursor, s32 value, s32 arg3, Vec2s* origin, s32
     func_800A8A78(prim, cursor, value, arg3, origin, color);
 }
 
-extern s32 D_8016B760;
-extern s32 D_8016B764;
-extern s32 D_8016B768;
-extern s32 D_8016B76C;
-extern s32 D_8016B770;
-extern s32 D_8016B774;
-extern s32 D_8016B778;
-extern s32 D_8016B77C;
+/** @brief SwCARD completion-event descriptor. */
+extern s32 g_card_sw_io_event;
+/** @brief SwCARD error-event descriptor. */
+extern s32 g_card_sw_error_event;
+/** @brief SwCARD timeout-event descriptor. */
+extern s32 g_card_sw_timeout_event;
+/** @brief SwCARD new-card event descriptor. */
+extern s32 g_card_sw_new_event;
+/** @brief HwCARD completion-event descriptor. */
+extern s32 g_card_hw_io_event;
+/** @brief HwCARD error-event descriptor. */
+extern s32 g_card_hw_error_event;
+/** @brief HwCARD timeout-event descriptor. */
+extern s32 g_card_hw_timeout_event;
+/** @brief HwCARD new-card event descriptor. */
+extern s32 g_card_hw_new_event;
 
 /**
  * @brief Open and enable the eight memory-card events used by the save/load menu.
  *
  * Opens the four standard card event specs (end-of-IO, error, timeout, new
  * device) against both the BIOS card driver (@c SwCARD) and the card hardware
- * (@c HwCARD), stashes the eight descriptors in D_8016B760..D_8016B77C, then
- * enables all eight. The whole sequence runs inside a critical section.
+ * (@c HwCARD), stashes the eight descriptors in their corresponding globals,
+ * then enables all eight. The whole sequence runs inside a critical section.
  *
  * @note All eight events use @c EvMdNOINTR with a NULL handler, i.e. they are
  *       polled via TestEvent rather than delivering callbacks.
@@ -1316,92 +1344,95 @@ extern s32 D_8016B77C;
  *       non-factor: the raw hex form (0xF4000001, 4, 0x2000, 0) is also 100%.
  * @see decomp.me (100%)
  */
-void func_8014F2B0(void)
+void memory_card_open_events(void)
 {
     reset_controller_vsync_state();
     EnterCriticalSection();
-    D_8016B760 = OpenEvent(SwCARD, EvSpIOE, EvMdNOINTR, NULL);
-    D_8016B764 = OpenEvent(SwCARD, EvSpERROR, EvMdNOINTR, NULL);
-    D_8016B768 = OpenEvent(SwCARD, EvSpTIMOUT, EvMdNOINTR, NULL);
-    D_8016B76C = OpenEvent(SwCARD, EvSpNEW, EvMdNOINTR, NULL);
-    D_8016B770 = OpenEvent(HwCARD, EvSpIOE, EvMdNOINTR, NULL);
-    D_8016B774 = OpenEvent(HwCARD, EvSpERROR, EvMdNOINTR, NULL);
-    D_8016B778 = OpenEvent(HwCARD, EvSpTIMOUT, EvMdNOINTR, NULL);
-    D_8016B77C = OpenEvent(HwCARD, EvSpNEW, EvMdNOINTR, NULL);
-    EnableEvent(D_8016B760);
-    EnableEvent(D_8016B764);
-    EnableEvent(D_8016B768);
-    EnableEvent(D_8016B76C);
-    EnableEvent(D_8016B770);
-    EnableEvent(D_8016B774);
-    EnableEvent(D_8016B778);
-    EnableEvent(D_8016B77C);
+    g_card_sw_io_event = OpenEvent(SwCARD, EvSpIOE, EvMdNOINTR, NULL);
+    g_card_sw_error_event = OpenEvent(SwCARD, EvSpERROR, EvMdNOINTR, NULL);
+    g_card_sw_timeout_event = OpenEvent(SwCARD, EvSpTIMOUT, EvMdNOINTR, NULL);
+    g_card_sw_new_event = OpenEvent(SwCARD, EvSpNEW, EvMdNOINTR, NULL);
+    g_card_hw_io_event = OpenEvent(HwCARD, EvSpIOE, EvMdNOINTR, NULL);
+    g_card_hw_error_event = OpenEvent(HwCARD, EvSpERROR, EvMdNOINTR, NULL);
+    g_card_hw_timeout_event = OpenEvent(HwCARD, EvSpTIMOUT, EvMdNOINTR, NULL);
+    g_card_hw_new_event = OpenEvent(HwCARD, EvSpNEW, EvMdNOINTR, NULL);
+    EnableEvent(g_card_sw_io_event);
+    EnableEvent(g_card_sw_error_event);
+    EnableEvent(g_card_sw_timeout_event);
+    EnableEvent(g_card_sw_new_event);
+    EnableEvent(g_card_hw_io_event);
+    EnableEvent(g_card_hw_error_event);
+    EnableEvent(g_card_hw_timeout_event);
+    EnableEvent(g_card_hw_new_event);
     ExitCriticalSection();
 }
 
 /**
- * @brief Close the eight memory-card events opened by func_8014F2B0.
- * @note Teardown counterpart to func_8014F2B0; same critical-section wrapper and
- *       the same D_8016B760..D_8016B77C descriptor order.
+ * @brief Close the eight memory-card events opened by memory_card_open_events.
+ * @note Teardown counterpart to memory_card_open_events; same critical-section
+ *       wrapper and descriptor order.
  * @note The descriptors are not cleared afterwards, so the globals hold stale
- *       handles until the next func_8014F2B0 call overwrites them.
+ *       handles until the next memory_card_open_events call overwrites them.
  * @see decomp.me (100%)
  */
-void func_8014F46C(void)
+void memory_card_close_events(void)
 {
     reset_controller_vsync_state();
     EnterCriticalSection();
-    CloseEvent(D_8016B760);
-    CloseEvent(D_8016B764);
-    CloseEvent(D_8016B768);
-    CloseEvent(D_8016B76C);
-    CloseEvent(D_8016B770);
-    CloseEvent(D_8016B774);
-    CloseEvent(D_8016B778);
-    CloseEvent(D_8016B77C);
+    CloseEvent(g_card_sw_io_event);
+    CloseEvent(g_card_sw_error_event);
+    CloseEvent(g_card_sw_timeout_event);
+    CloseEvent(g_card_sw_new_event);
+    CloseEvent(g_card_hw_io_event);
+    CloseEvent(g_card_hw_error_event);
+    CloseEvent(g_card_hw_timeout_event);
+    CloseEvent(g_card_hw_new_event);
     ExitCriticalSection();
 }
 
-extern char D_8014057C[];
-extern struct DIRENTRY D_8016B780[];
-extern s32 D_8016B9D8;
+/** @brief Memory-card slot 1 device path, "bu00:". */
+extern char g_card_slot1_path[];
+/** @brief Directory entries filled while scanning memory-card slot 1. */
+extern struct DIRENTRY g_card_dir_entries[];
+/** @brief Number of directory entries found in memory-card slot 1. */
+extern s32 g_card_file_count;
 
 /**
  * @brief Scan memory card slot 1 and record how many save files it holds.
  *
- * Delegates to func_8014F824, which globs "bu00:" + a wildcard through
- * firstfile/nextfile and fills the D_8016B780 directory-entry table. The
- * resulting file count is cached in D_8016B9D8.
+ * Delegates to memory_card_scan_files, which globs "bu00:" + a wildcard through
+ * firstfile/nextfile and fills the g_card_dir_entries directory-entry table. The
+ * resulting file count is cached in g_card_file_count.
  *
- * @note The redundant-looking @c D_8016B9D8=0 before the call is required to
+ * @note The redundant-looking @c g_card_file_count=0 before the call is required to
  *       match: the target stores $zero in the jal delay slot, and dropping the
  *       statement scores 32.06%. It also leaves the count at 0 if the callee
  *       never returns (card removed mid-scan).
  * @note The "bu00:" path must be referenced as the pre-split rodata symbol
- *       D_8014057C, not as a string literal: a literal emits a fresh local
+ *       g_card_slot1_path, not as a string literal: a literal emits a fresh local
  *       rodata label and scores 99.38% (2 relocation rows).
  * @see decomp.me (100%)
  */
-void func_8014F51C(void)
+void memory_card_scan_slot1_files(void)
 {
-    D_8016B9D8 = 0;
-    D_8016B9D8 = func_8014F824(D_8014057C, D_8016B780);
+    g_card_file_count = 0;
+    g_card_file_count = memory_card_scan_files(g_card_slot1_path, g_card_dir_entries);
 }
 
 /**
  * @brief Bring memory card slot 1 up to a usable state, formatting it if needed.
  *
- * Queries the card, then dispatches on the func_8014F63C status code: an error
- * (1) or timeout (2) aborts immediately, and a newly inserted card (3) triggers
- * a reset/clear cycle before the load. After _card_load the status is polled
- * again; a 3 at that point means the card is unformatted, so _card_format is
- * attempted.
+ * Queries the card, then dispatches on the memory_card_wait_software_event
+ * status code: an error (1) or timeout (2) aborts immediately, and a newly
+ * inserted card (3) triggers a reset/clear cycle before the load. After
+ * _card_load the status is polled again; a 3 at that point means the card is
+ * unformatted, so _card_format is attempted.
  *
  * @return 1 if the card is ready for use, 0 if it was rejected up front or the
  *         format attempt failed.
- * @note The status codes come from func_8014F63C, which maps them to the SwCARD
- *       events opened by func_8014F2B0: 0 EvSpIOE, 1 EvSpERROR, 2 EvSpTIMOUT,
- *       3 EvSpNEW.
+ * @note The status codes come from memory_card_wait_software_event, which maps
+ *       the SwCARD events opened by memory_card_open_events: 0 EvSpIOE,
+ *       1 EvSpERROR, 2 EvSpTIMOUT, 3 EvSpNEW.
  * @note Testing 1 and 2 in ONE @c || condition is required to match: gcc folds
  *       the pair into the target's @c addiu/sltiu range check, and splitting
  *       them into two separate @c if statements scores 86.85%. Writing the
@@ -1411,25 +1442,25 @@ void func_8014F51C(void)
  *       single @c && condition is also 100%.
  * @see decomp.me (100%)
  */
-s32 func_8014F55C(void)
+s32 memory_card_prepare_slot1(void)
 {
     s32 status;
 
     _card_info(0);
-    status = func_8014F63C();
+    status = memory_card_wait_software_event();
     if ((status == 1) || (status == 2))
     {
         return 0;
     }
     if (status == 3)
     {
-        func_8014F7CC();
+        memory_card_clear_hardware_events();
         _card_clear(0);
-        func_8014F730();
+        memory_card_wait_hardware_event();
     }
-    func_8014F6D8();
+    memory_card_clear_software_events();
     _card_load(0);
-    if (func_8014F63C() == 3)
+    if (memory_card_wait_software_event() == 3)
     {
         if (_card_format(0) == 0)
         {
@@ -1439,28 +1470,31 @@ s32 func_8014F55C(void)
     return 1;
 }
 
-extern char D_80140584[];
-extern u8 D_80169760[];
+/** @brief Test-save path, "bu00:HAND". */
+extern char g_card_save_path[];
+/** @brief Shared buffer used to assemble and write a memory-card save block. */
+extern u8 g_card_work_buffer[];
 
 /**
- * @brief Populate the card work buffer and write it out under the "bu00:HAND" name.
- * @note D_80140584 is the pre-split rodata string "bu00:HAND"; like the "bu00:"
- *       path in func_8014F51C it must be referenced as the symbol rather than a
- *       literal so the relocation targets the existing rodata.
- * @note D_80169760 is the shared card work buffer; func_8014FBCC fills it and
- *       func_8014F9EC commits it. Its size and layout are not yet known.
+ * @brief Populate the card work buffer and write it as "bu00:HAND".
+ * @note g_card_save_path is the pre-split rodata string "bu00:HAND"; like the
+ *       "bu00:" path in memory_card_scan_slot1_files it must be referenced as
+ *       the symbol rather than a literal so the relocation targets the existing
+ *       rodata.
+ * @note memory_card_fill_test_data fills g_card_work_buffer and
+ *       memory_card_create_save_file commits it.
  * @see decomp.me (100%)
  */
-void func_8014F5FC(void)
+void memory_card_write_test_save(void)
 {
-    func_8014FBCC(D_80169760);
-    func_8014F9EC(D_80140584, D_80169760);
+    memory_card_fill_test_data(g_card_work_buffer);
+    memory_card_create_save_file(g_card_save_path, g_card_work_buffer);
 }
 
 /**
  * @brief Block until one of the four SwCARD events fires and report which.
  *
- * Spins over the first four descriptors opened by func_8014F2B0, in the order
+ * Spins over the first four descriptors opened by memory_card_open_events, in the order
  * they were opened, and returns as soon as TestEvent reports one ready. Events
  * that are not ready leave the loop running, so this busy-waits until the card
  * driver signals something.
@@ -1475,23 +1509,23 @@ void func_8014F5FC(void)
  * @note Measured non-factor: @c while(1) instead of @c for(;;) is also 100%.
  * @see decomp.me (100%)
  */
-s32 func_8014F63C(void)
+s32 memory_card_wait_software_event(void)
 {
     for (;;)
     {
-        if (TestEvent(D_8016B760) == 1)
+        if (TestEvent(g_card_sw_io_event) == 1)
         {
             return 0;
         }
-        if (TestEvent(D_8016B764) == 1)
+        if (TestEvent(g_card_sw_error_event) == 1)
         {
             return 1;
         }
-        if (TestEvent(D_8016B768) == 1)
+        if (TestEvent(g_card_sw_timeout_event) == 1)
         {
             return 2;
         }
-        if (TestEvent(D_8016B76C) == 1)
+        if (TestEvent(g_card_sw_new_event) == 1)
         {
             return 3;
         }
@@ -1503,55 +1537,55 @@ s32 func_8014F63C(void)
  *
  * TestEvent clears an event's ready flag as a side effect, so calling it on all
  * four descriptors and discarding the results leaves them in a known-clear state.
- * func_8014F55C runs this immediately before _card_load so the status poll that
+ * memory_card_prepare_slot1 runs this immediately before _card_load so the status poll that
  * follows can only observe events raised by that load.
  *
- * @note Same descriptor order as func_8014F2B0 and func_8014F63C: EvSpIOE,
+ * @note Same descriptor order as memory_card_open_events and memory_card_wait_software_event: EvSpIOE,
  *       EvSpERROR, EvSpTIMOUT, EvSpNEW.
  * @see decomp.me (100%)
  */
-void func_8014F6D8(void)
+void memory_card_clear_software_events(void)
 {
-    TestEvent(D_8016B760);
-    TestEvent(D_8016B764);
-    TestEvent(D_8016B768);
-    TestEvent(D_8016B76C);
+    TestEvent(g_card_sw_io_event);
+    TestEvent(g_card_sw_error_event);
+    TestEvent(g_card_sw_timeout_event);
+    TestEvent(g_card_sw_new_event);
 }
 
 /**
  * @brief Block until one of the four HwCARD events fires and report which.
  *
- * Hardware-side twin of func_8014F63C: identical polling loop and identical
+ * Hardware-side twin of memory_card_wait_software_event: identical polling loop and identical
  * return mapping, but over the second group of descriptors opened by
- * func_8014F2B0 (HwCARD rather than SwCARD).
+ * memory_card_open_events (HwCARD rather than SwCARD).
  *
  * @return 0 for EvSpIOE (operation completed), 1 for EvSpERROR, 2 for
  *         EvSpTIMOUT, 3 for EvSpNEW (card newly inserted / unformatted).
- * @note func_8014F55C calls this for its blocking side effect only, discarding
+ * @note memory_card_prepare_slot1 calls this for its blocking side effect only, discarding
  *       the result, to let the hardware settle after _card_clear.
- * @note Re-measured on this function rather than inherited from func_8014F63C:
+ * @note Re-measured on this function rather than inherited from memory_card_wait_software_event:
  *       the explicit @c ==1 compare is required (@c !=0 scores 59.74%), and the
  *       four symmetric @c if blocks are required (m2c's inverted-third-test
  *       shape scores 75.18%). Same figures as the SwCARD twin.
  * @see decomp.me (100%)
  */
-s32 func_8014F730(void)
+s32 memory_card_wait_hardware_event(void)
 {
     for (;;)
     {
-        if (TestEvent(D_8016B770) == 1)
+        if (TestEvent(g_card_hw_io_event) == 1)
         {
             return 0;
         }
-        if (TestEvent(D_8016B774) == 1)
+        if (TestEvent(g_card_hw_error_event) == 1)
         {
             return 1;
         }
-        if (TestEvent(D_8016B778) == 1)
+        if (TestEvent(g_card_hw_timeout_event) == 1)
         {
             return 2;
         }
-        if (TestEvent(D_8016B77C) == 1)
+        if (TestEvent(g_card_hw_new_event) == 1)
         {
             return 3;
         }
@@ -1561,23 +1595,23 @@ s32 func_8014F730(void)
 /**
  * @brief Drain the four HwCARD events by testing each one once.
  *
- * Hardware-side twin of func_8014F6D8. func_8014F55C runs this first in its
+ * Hardware-side twin of memory_card_clear_software_events. memory_card_prepare_slot1 runs this first in its
  * status-3 path, so the _card_clear that follows starts from a clean slate and
- * the func_8014F730 poll after it can only see events that clear raised.
+ * the memory_card_wait_hardware_event poll after it can only see events that clear raised.
  *
- * @note Same descriptor order as func_8014F2B0 and func_8014F730: EvSpIOE,
+ * @note Same descriptor order as memory_card_open_events and memory_card_wait_hardware_event: EvSpIOE,
  *       EvSpERROR, EvSpTIMOUT, EvSpNEW.
  * @see decomp.me (100%)
  */
-void func_8014F7CC(void)
+void memory_card_clear_hardware_events(void)
 {
-    TestEvent(D_8016B770);
-    TestEvent(D_8016B774);
-    TestEvent(D_8016B778);
-    TestEvent(D_8016B77C);
+    TestEvent(g_card_hw_io_event);
+    TestEvent(g_card_hw_error_event);
+    TestEvent(g_card_hw_timeout_event);
+    TestEvent(g_card_hw_new_event);
 }
 
-extern char D_80140590[];
+extern char g_card_wildcard[];
 
 /**
  * @brief Count the files on a memory card matching a path prefix.
@@ -1587,11 +1621,11 @@ extern char D_80140590[];
  * entry pointer they were given on success and NULL when the enumeration ends,
  * so the loop compares the result against the pointer rather than testing NULL.
  *
- * @param path Device path prefix, e.g. the "bu00:" string at D_8014057C.
+ * @param path Device path prefix, e.g. the "bu00:" string at g_card_slot1_path.
  * @param entry Start of the caller's directory-entry table; one struct DIRENTRY
  *              is filled per file found, so it must have room for every match.
  * @return Number of files found; 0 if the card holds no match at all.
- * @note D_80140590 is the pre-split rodata string "*" (the wildcard suffix).
+ * @note g_card_wildcard is the pre-split rodata string "*" (the wildcard suffix).
  * @note Inside the do/while, @c count must be incremented BEFORE @c entry:
  *       the reverse order scores 98.67%.
  * @note The target's trailing @c addiu s1,s1,-0x1 is NOT in the source. gcc
@@ -1601,13 +1635,13 @@ extern char D_80140590[];
  *       shape is only 93.12%, and the clean loop below is 100%.
  * @see decomp.me (100%)
  */
-s32 func_8014F824(char* path, struct DIRENTRY* entry)
+s32 memory_card_scan_files(char* path, struct DIRENTRY* entry)
 {
     char pattern[0x80];
     s32 count;
 
     strcpy(pattern, path);
-    strcat(pattern, D_80140590);
+    strcat(pattern, g_card_wildcard);
     count = 0;
     if (firstfile(pattern, entry) == entry)
     {
@@ -1625,7 +1659,7 @@ s32 func_8014F824(char* path, struct DIRENTRY* entry)
  *
  * Drains the four HwCARD events, forces a re-detect with _new_card(), reads the
  * first block into a local buffer, then runs the same four-way event poll as
- * func_8014F730 with the outcome in @c status. A non-zero status (error,
+ * memory_card_wait_hardware_event with the outcome in @c status. A non-zero status (error,
  * timeout, or newly inserted card) aborts. Otherwise the block is checked for
  * the "MC" signature that starts every formatted PlayStation card.
  *
@@ -1634,10 +1668,10 @@ s32 func_8014F824(char* path, struct DIRENTRY* entry)
  *         event poll reported anything other than completion.
  * @note NOT A MATCH - 97.54%. 80 insns vs the target's 81: the ONE missing
  *       instruction is `addu s4, v0, zero` at 0x38, the loop-base copy for
- *       D_8016B770. Everything else is a saved-register permutation that
+ *       g_card_hw_io_event. Everything else is a saved-register permutation that
  *       cascades from that copy not existing. Target map (m2c --reg-vars):
- *       status s0, chan s1, constant-1 s2, &D_8016B774 s3, &D_8016B770 s4;
- *       this build gets status s3, chan s2, constant-1 s0, &D_8016B774 s1.
+ *       status s0, chan s1, constant-1 s2, &g_card_hw_error_event s3, &g_card_hw_io_event s4;
+ *       this build gets status s3, chan s2, constant-1 s0, &g_card_hw_error_event s1.
  * @note @c new_var is required to match: assigning 0 to a local and returning
  *       it (instead of a bare `return 0`) is worth +5 exact rows and removes
  *       the spurious instruction the bare form emits. Reverting it scores
@@ -1655,39 +1689,39 @@ s32 func_8014F824(char* path, struct DIRENTRY* entry)
  *       working/func_8014F8A8/status.md for the full probe log.
  * @see decomp.me (97.54%)
  */
-s32 func_8014F8A8(s32 chan)
+s32 memory_card_check_formatted(s32 chan)
 {
     u8 header[0x80];
     s32 status;
     s32 new_var;
 
     bzero(header, 0x80);
-    TestEvent(D_8016B770);
-    TestEvent(D_8016B774);
-    TestEvent(D_8016B778);
-    TestEvent(D_8016B77C);
+    TestEvent(g_card_hw_io_event);
+    TestEvent(g_card_hw_error_event);
+    TestEvent(g_card_hw_timeout_event);
+    TestEvent(g_card_hw_new_event);
     status = 3;
     _new_card();
     new_var = 0;
     _card_read(chan, 0, header);
     while (1)
     {
-        if (TestEvent(D_8016B770) == 1)
+        if (TestEvent(g_card_hw_io_event) == 1)
         {
             status = 0;
             break;
         }
-        if (TestEvent(D_8016B774) == 1)
+        if (TestEvent(g_card_hw_error_event) == 1)
         {
             status = 1;
             break;
         }
-        if (TestEvent(D_8016B778) == 1)
+        if (TestEvent(g_card_hw_timeout_event) == 1)
         {
             status = 2;
             break;
         }
-        if (TestEvent(D_8016B77C) == 1)
+        if (TestEvent(g_card_hw_new_event) == 1)
         {
             break;
         }
@@ -1707,69 +1741,59 @@ s32 func_8014F8A8(s32 chan)
     return new_var;
 }
 
-extern u8 D_80140594[];
-extern u8 D_80169560[];
-extern u8 D_80169563;
+extern u8 g_card_save_title_sjis[];
+extern u8 g_card_header[];
+extern u8 g_card_header_block_count;
+
+#define MEMORY_CARD_HEADER_TYPE_THREE_ICONS 0x13
+#define MEMORY_CARD_HEADER_TITLE_OFFSET 0x04
+#define MEMORY_CARD_SAVE_TITLE_SIZE 0x11
+#define MEMORY_CARD_HEADER_PADDING_OFFSET 0x44
+#define MEMORY_CARD_HEADER_PADDING_SIZE 0x1C
+#define MEMORY_CARD_FILE_HEADER_SIZE 0x200
+#define MEMORY_CARD_OPEN_BLOCK_COUNT_SHIFT 16
+#define MEMORY_CARD_OPEN_CREATE_FLAG 0x200
+#define MEMORY_CARD_OPEN_WRITE_FLAG 0x02
 
 /**
- * @brief Create a memory-card save file and write one block of save data to it.
- *
- * Fills the 0x200-byte card header at D_80169560 - the "SC" magic, icon/display
- * byte 0x13, the block count, and the Shift-JIS title "\x90\xB9\x8C\x95\x83Z\x81[\x83u\x83f\x81[\x83^"
- * ("Seiken save data") - zeroes the reserved tail, then stamps that header over
- * the front of the caller's buffer. The file is created with open(), closed,
- * reopened for writing, and the whole 8 KB block is written.
- *
- * @param name Card path to create, e.g. the "bu00:HAND" string at D_80140584.
- * @param buf  Caller's 8 KB save buffer; its first 0x200 bytes are overwritten
- *             with the header before the write.
- * @return 1 if the file was created and fully written, 0 if either open failed
- *         or the write was short.
- * @note The create flags are (blocks << 16) | 0x200 - the PS1 BIOS takes the
- *       file's block count in the upper half of open()'s mode argument.
- * @note @c blocks must be a SHARED local feeding both the header byte and the
- *       write size (`blocks << 13`). The target keeps the constant 1 in s3 and
- *       derives 0x2000 from it; writing the two constants independently scores
- *       93.59%. Measured non-factors: `blocks * 0x2000` for the shift, and
- *       inlining the size into the write/compare (both 100%).
- * @note The header byte at +3 is written through the D_80169560 array but read
- *       back through the separate symbol D_80169563. That asymmetry is required:
- *       routing the store through D_80169563 too costs an insn and scores
- *       94.17%, and reading via D_80169560[3] emits a `+0x3` relocation instead
- *       of the target's own symbol (99.88%).
- * @note Both copies are gcc's inlined memcpy on byte-aligned char pointers -
- *       hence the lwl/lwr pairs and, for the 0x200 copy into a pointer
- *       parameter, the runtime (src|dst)&3 alignment test with two loop bodies.
- *       m2c cannot reconstruct these and reports M2C_ERROR on every lwr.
- * @note Statement order matters: swapping the bzero and the 0x200 memcpy scores
- *       88.71%.
- * @see decomp.me (100%)
+ * @brief Create a one-block memory-card save file and write its data.
+ * @param name Memory-card file path to create.
+ * @param buf 8 KiB save buffer; the generated header replaces its first 512 bytes.
+ * @return 1 if the complete file is written; otherwise 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/ljqxf
  */
-s32 func_8014F9EC(char* name, void* buf)
+s32 memory_card_create_save_file(char* name, void* buf)
 {
     s32 blocks;
     s32 fd;
     s32 size;
 
-    D_80169560[0] = 'S';
-    D_80169560[1] = 'C';
-    D_80169560[2] = 0x13;
+    /* Build the 512-byte memory-card file header. */
+    g_card_header[0] = 'S';
+    g_card_header[1] = 'C';
+    g_card_header[2] = MEMORY_CARD_HEADER_TYPE_THREE_ICONS;
     blocks = 1;
-    D_80169560[3] = blocks;
-    memcpy(&D_80169560[4], D_80140594, 0x11);
-    bzero(&D_80169560[0x44], 0x1C);
-    memcpy(buf, D_80169560, 0x200);
-    fd = open(name, (D_80169563 << 16) | 0x200);
+    g_card_header[3] = blocks;
+    memcpy(&g_card_header[MEMORY_CARD_HEADER_TITLE_OFFSET], g_card_save_title_sjis, MEMORY_CARD_SAVE_TITLE_SIZE);
+    bzero(&g_card_header[MEMORY_CARD_HEADER_PADDING_OFFSET], MEMORY_CARD_HEADER_PADDING_SIZE);
+    memcpy(buf, g_card_header, MEMORY_CARD_FILE_HEADER_SIZE);
+
+    /* Allocate one card block, then reopen the file for writing. */
+    fd = open(
+        name,
+        (g_card_header_block_count << MEMORY_CARD_OPEN_BLOCK_COUNT_SHIFT) | MEMORY_CARD_OPEN_CREATE_FLAG);
     if (fd == -1)
     {
         return 0;
     }
     close(fd);
-    fd = open(name, 2);
+    fd = open(name, MEMORY_CARD_OPEN_WRITE_FLAG);
     if (fd == -1)
     {
         return 0;
     }
+
+    /* Each memory-card block contains 8 KiB. */
     size = blocks << 13;
     if (write(fd, buf, size) != size)
     {
@@ -1780,29 +1804,14 @@ s32 func_8014F9EC(char* name, void* buf)
     return 1;
 }
 
-extern u8 D_801405A8[];
+extern u8 g_card_test_payload[];
 
 /**
- * @brief Fill the card work buffer with placeholder save contents.
- *
- * Copies the 5-byte string "TEST" (including its terminator) from D_801405A8 to
- * the front of @p buf. Paired with func_8014F9EC by func_8014F5FC, which fills
- * the buffer here and then commits it to the card.
- *
- * @param buf Card work buffer to fill; only the first 5 bytes are touched.
- * @note This is placeholder/debug content - the shipped save path writes the
- *       literal text "TEST" as its payload, with the real header supplied
- *       separately by func_8014F9EC.
- * @note The source string must be the rodata symbol, not a literal: a "TEST"
- *       literal emits a fresh local label and scores 99.00%. It must also be
- *       memcpy and not strcpy (strcpy emits a real call, 0.00%). Measured
- *       non-factor: declaring @p buf as u8* instead of void* is also 100%.
- * @note gcc inlines the 5-byte copy as an lwl/lwr + lb pair, with no runtime
- *       alignment test - unlike the 0x200 copy in func_8014F9EC, which is large
- *       enough to get the (src|dst)&3 check and two loop bodies.
+ * @brief Copy the five-byte test payload into a save buffer.
+ * @param buf Destination buffer with space for at least five bytes.
  * @see decomp.me (100%)
  */
-void func_8014FBCC(void* buf)
+void memory_card_fill_test_data(void* buf)
 {
-    memcpy(buf, D_801405A8, 5);
+    memcpy(buf, g_card_test_payload, 5);
 }
