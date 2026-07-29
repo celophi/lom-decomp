@@ -104,6 +104,10 @@
 #define MENU_REDRAW_NAVIGATE 6
 /** @brief g_menu_redraw_state: layout pass completed (position change or first run). */
 #define MENU_REDRAW_LAYOUT 8
+/** @brief g_pad_ctx->inject_flags bit enabling injected menu input. */
+#define MENU_PAD_INJECT_ENABLED 0x80
+/** @brief Ordering-table entry used as the menu frame's list head. */
+#define MENU_FRAME_OT_INDEX 13
 
 /*
  * Sound effect IDs -- passed as first arg to func_8014F210 (menu_play_se).
@@ -119,16 +123,6 @@
 #define MENU_SE_VOLUME 0x80
 
 /* ----- Types ----- */
-
-typedef struct MenuFrameCtx
-{
-    u8 pad0[0x34];
-    u8 ot_base;       /* 0x0034 - start of the ordering-table buffer */
-    u8 pad35[0x400B]; /* padding to 0x4040 */
-    s32 prim_cursor;  /* 0x4040 - current primitive write cursor (pointer stored as s32) */
-    u8 pad4044[8];    /* padding to 0x404C */
-    s32 draw_buf_idx; /* 0x404C - display buffer page index (0 or 1, used for double-buffer flip) */
-} MenuFrameCtx;
 
 typedef struct
 {
@@ -325,6 +319,9 @@ typedef struct
  * argument and relies on register a0 (the caller's first parameter) being
  * live. Keep the empty parameter list to preserve that codegen exactly. */
 void menu_build_grid();
+void menu_update_slots(RenderContext* render_ctx);
+u_char* menu_draw_frame(void* prim_cursor, u_int* ot, int draw_page, int handle_input);
+u32 menu_step_item_selection(s32 step);
 
 /* ----- Extern globals ----- */
 
@@ -463,87 +460,91 @@ void menu_init_prim_rects(void)
 }
 
 /**
- * @brief Per-frame menu update: emit the grid, advance counters, and run
- *        the scripted-input player.
+ * @brief Process input and render one menu frame.
  *
- * @param gpu_work Per-frame render context; its @c prim_cursor is saved on
- *                 entry and restored before @ref menu_update_slots runs.
+ * Builds the menu grid, applies live or scripted input, then updates the
+ * active menu slots.
+ *
+ * @param render_ctx Render context receiving the menu primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/kgN9O
  */
-void menu_tick(RenderContext* gpu_work)
+void menu_tick(RenderContext* render_ctx)
 {
-    s32 v0;
-    s32 v1;
-    s32 saved_prim_cursor;
-    s32 var_s0;
-    u16 temp_v1;
-    s32 padding[2];
+    s32 menu_frame;
+    s32 frame_counter;
+    s32 input_mask;
+    void* saved_prim_cursor;
+    s32 repeat_index;
+    u16 script_input;
+    s32 stack_padding[2];
 
-    menu_build_grid(gpu_work);
-    v0 = g_menu_frame;
-    v1 = g_frame_counter;
-    /* RenderContext.prim_cursor - kept as a raw offset load to preserve codegen.
-     * Tried gpu_work->prim_cursor (both with and without changing saved_prim_cursor
-     * to void*); both broke the match by shifting v0/v1 allocation for the
-     * surrounding g_menu_frame/g_frame_counter loads. */
-    saved_prim_cursor = *((s32*)(((u8*)gpu_work) + 0x4040));
-    g_menu_frame = v0 + 1;
-    g_frame_counter = v1 + 1;
+    menu_build_grid(render_ctx);
+    menu_frame = g_menu_frame;
+    frame_counter = g_frame_counter;
+    /* Preserve the packet cursor established by the grid pass. */
+    saved_prim_cursor = render_ctx->prim_cursor;
+    g_menu_frame = menu_frame + 1;
+    g_frame_counter = frame_counter + 1;
     func_800A9E78();
 
-    if ((g_pad_ctx->inject_flags & 0x80) && (g_pad_ctx->inject_enable != 0))
+    /* Merge externally injected input when enabled by the pad context. */
+    if ((g_pad_ctx->inject_flags & MENU_PAD_INJECT_ENABLED) && g_pad_ctx->inject_enable)
     {
         g_pad_input |= g_pad_input_inject;
     }
 
-    v0 = g_pad_input & MENU_PAD_CONFIRM_CANCEL;
-    if (v0)
+    /* Keep only the highest-priority active button group. */
+    input_mask = g_pad_input & MENU_PAD_CONFIRM_CANCEL;
+    if (input_mask)
     {
-        g_pad_input = v0;
+        g_pad_input = input_mask;
     }
-    v0 = g_pad_input & MENU_PAD_FACE_BUTTONS;
-    if (v0)
+    input_mask = g_pad_input & MENU_PAD_FACE_BUTTONS;
+    if (input_mask)
     {
-        g_pad_input = v0;
+        g_pad_input = input_mask;
     }
-    v0 = g_pad_input & MENU_PAD_SHOULDERS;
-    if (v0)
+    input_mask = g_pad_input & MENU_PAD_SHOULDERS;
+    if (input_mask)
     {
-        g_pad_input = v0;
+        g_pad_input = input_mask;
     }
 
+    /* Prevent input from being accepted on consecutive frames. */
     if (g_pad_input_latched != 0)
     {
         g_pad_input = 0;
     }
     g_pad_input_latched = g_pad_input;
 
+    /* Replace live input with the active scripted input sequence. */
     if (g_active_script != 0)
     {
-        u32 base = (u32)g_script_table;
-        u32 off = g_active_script * 48; // Or sizeof(MenuScript), forces 'sll, addu, sll' internally
-        s32 idx;
+        u8* script_table = (u8*)g_script_table;
+        u32 script_row_addr = g_active_script * sizeof(MenuScript);
+        MenuScript* script_row;
+        s32 cursor;
 
-        off += base;           // Accumulates to v1 matching Target 120
-        idx = g_script_cursor; // Scheduled perfectly between pointer math
+        script_row_addr += (u32)script_table;
+        script_row = (MenuScript*)script_row_addr;
+        cursor = g_script_cursor;
 
         g_pad_input = 0;
 
-        // Ensure idx is the LHS of addition, emitting 'sll v0' then 'addu v0, v0, v1'
-        temp_v1 = *(u16*)(idx * 2 + off);
+        script_input = script_row->inputs[cursor];
 
-        if (temp_v1 == (v0 = MENU_SCRIPT_END))
+        if (script_input == MENU_SCRIPT_END)
         {
             if (g_active_script < 4)
             {
-                var_s0 = 0;
+                repeat_index = 0;
                 if (g_script_repeat_count > 0)
                 {
                     do
                     {
-                        func_8014B69C(1);
-                        var_s0++;
-                    } while (var_s0 < g_script_repeat_count);
+                        menu_step_item_selection(1);
+                        repeat_index++;
+                    } while (repeat_index < g_script_repeat_count);
                 }
                 g_script_repeat_last = g_script_repeat_count;
             }
@@ -551,13 +552,14 @@ void menu_tick(RenderContext* gpu_work)
         }
         else
         {
-            g_pad_input = (s32)temp_v1;
-            g_script_cursor = idx + 1;
+            g_pad_input = script_input;
+            g_script_cursor = cursor + 1;
         }
     }
 
-    *((s32*)(((u8*)gpu_work) + 0x4040)) = saved_prim_cursor;
-    menu_update_slots((MenuFrameCtx*)gpu_work);
+    /* Render slots from the grid pass's packet cursor. */
+    render_ctx->prim_cursor = saved_prim_cursor;
+    menu_update_slots(render_ctx);
 }
 
 /**
@@ -932,10 +934,10 @@ void menu_reset_slots(void)
  * callback runs after its draw. Finally composites the frame and, when
  * @c g_menu_pending_overlay is set, emits an overlay element via @ref func_800A88A0.
  *
- * @param gpu_work Per-frame render context (layout matches @ref RenderContext).
- * @see decomp.me (77.68%) https://decomp.me/scratch/BlGK5
+ * @param render_ctx Per-frame render context.
+ * @see decomp.me (84.64%) https://decomp.me/scratch/BlGK5
  */
-void menu_update_slots(MenuFrameCtx* gpu_work)
+void menu_update_slots(RenderContext* render_ctx)
 {
     s16 sp_pair[2];
     void (*temp_v0_2)(MenuSlot*);
@@ -995,7 +997,7 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
                 goto branch_11C;
             }
 
-            menu_draw_window_transition(gpu_work, var_s0, g_menu_cursor_enable != 0);
+            menu_draw_window_transition(render_ctx, var_s0, g_menu_cursor_enable != 0);
             temp_a0 = var_s0->anim_frame;
             temp_v0 = temp_a0 + 1;
             var_s0->anim_frame = temp_v0;
@@ -1010,7 +1012,7 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
 
             sp_pair[1] = 0;
             sp_pair[0] = 0;
-            menu_draw_window(var_s0, gpu_work, var_s2, sp_pair, g_menu_cursor_enable != 0);
+            menu_draw_window(var_s0, render_ctx, var_s2, sp_pair, g_menu_cursor_enable != 0);
         }
 
         var_a0 = 1;
@@ -1032,7 +1034,7 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
         continue;
 
     branch_11C:
-        menu_draw_window_transition(gpu_work, var_s0, g_menu_cursor_enable != 0);
+        menu_draw_window_transition(render_ctx, var_s0, g_menu_cursor_enable != 0);
         temp_v0 = var_s0->anim_frame - 1;
         var_s0->anim_frame = temp_v0;
         var_a0 = 1;
@@ -1063,11 +1065,14 @@ void menu_update_slots(MenuFrameCtx* gpu_work)
         var_a3 = 1;
     }
 
-    gpu_work->prim_cursor = menu_draw_frame(gpu_work->prim_cursor, &gpu_work->ot_base, gpu_work->draw_buf_idx, var_a3);
+    render_ctx->prim_cursor =
+        menu_draw_frame(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX], render_ctx->frame_parity, var_a3);
 
     if (g_menu_pending_overlay != 0)
     {
-        gpu_work->prim_cursor = func_800A88A0(gpu_work->prim_cursor, &gpu_work->ot_base, g_menu_pending_overlay, 1, 0xA0, 0xCA, 2);
+        render_ctx->prim_cursor =
+            (void*)func_800A88A0(render_ctx->prim_cursor, &render_ctx->ot[MENU_FRAME_OT_INDEX],
+                                g_menu_pending_overlay, 1, 0xA0, 0xCA, 2);
     }
 }
 
@@ -2121,14 +2126,14 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
 
 /**
  * @brief Draw the menu frame layers and optionally dispatch navigation input.
- * @param prim_cursor_id Prim-buffer ID passed to the initial buffer setup call.
+ * @param prim_cursor Primitive-buffer cursor passed to the initial buffer setup call.
  * @param ot Pointer into the ordering table used for addPrim calls.
  * @param draw_page 0 = first display page (Y near 0); nonzero = second page (Y+240).
  * @param handle_input When nonzero and cursor is disabled, calls menu_handle_node_input.
  * @return Updated prim-buffer write cursor after all primitives are emitted.
  * @see decomp.me (100%) https://decomp.me/scratch/x8WyZ
  */
-u_char* menu_draw_frame(int prim_cursor_id, u_int* ot, int draw_page, int handle_input)
+u_char* menu_draw_frame(void* prim_cursor, u_int* ot, int draw_page, int handle_input)
 {
     DRAWENV stack_drawenv;
     u_char* s1;
@@ -2141,7 +2146,7 @@ u_char* menu_draw_frame(int prim_cursor_id, u_int* ot, int draw_page, int handle
     scd_base = (u8*)0x801ed600;
 
     /* 30: jal func_80145608 */
-    s1 = (u_char*)func_80145608(prim_cursor_id);
+    s1 = (u_char*)func_80145608(prim_cursor);
 
     /* 3c: ternary generating the conditional branch at 48 */
     var_a2 = draw_page ? 0xf0 : 8;
@@ -2722,7 +2727,7 @@ void func_80143964(s32 arg0)
                 {
                     if (g_pad_input & 1)
                     {
-                        func_8014B69C(-1);
+                        menu_step_item_selection(-1);
                         if (g_script_repeat_last == 0)
                         {
                             g_script_repeat_last = g_menu_page_count - 1;
@@ -2734,7 +2739,7 @@ void func_80143964(s32 arg0)
                     }
                     else if (g_pad_input & 2)
                     {
-                        func_8014B69C(1);
+                        menu_step_item_selection(1);
                         if (g_script_repeat_last == (g_menu_page_count - 1))
                         {
                             g_script_repeat_last = 0;
@@ -7204,7 +7209,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
     {
         if ((u32)st->sel_idx >= (u32)((LIST_WORD(st) >> 0x10) & 0x1FF))
         {
-            func_8014B69C(-1);
+            menu_step_item_selection(-1);
             st->sel_idx = (u16)((st->item_count & 0x1FF) - 1);
             if (((st->sel_idx * 0x10) - scroll_y) < (st->viewport_h - 0x10))
             {
@@ -7452,15 +7457,14 @@ typedef struct
  * scan recurses once so the search continues from the other side.
  *
  * @param step Direction/stride to walk the table (1 = forward, -1 = backward).
- * @return Index of the matching entry, or the value of g_menu_item_ptr from the
- *         recursive wrap-around scan.
+ * @return Selected item-table index.
  * @note Not yet matching. The residual gap is register allocation around the two
  *       induction variables (the item address and the byte offset used for
  *       g_menu_item_ptr); the loop structure, strength reduction and instruction
  *       count (80) already agree with the target.
  * @see decomp.me (85.62%)
  */
-u32 func_8014B69C(s32 step)
+u32 menu_step_item_selection(s32 step)
 {
     MenuItemEntry* items;
     u32 index;
@@ -7511,7 +7515,7 @@ u32 func_8014B69C(s32 step)
         {
             D_801690F0 = 0x64;
         }
-        result = func_8014B69C(step);
+        result = menu_step_item_selection(step);
     }
     return result;
 }

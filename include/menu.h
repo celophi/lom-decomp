@@ -86,13 +86,15 @@ extern MenuSlot g_menu_slots[];
  * The script subsystem (see @ref menu_tick) replays scripted controller input:
  * @c g_active_script selects a row, @c g_script_cursor walks @c inputs, and
  * each value is fed into @c g_pad_input for that frame. A value of @c 0xFFFF
- * terminates the row; on termination the row may repeat @c g_script_repeat_count
- * times. Row stride is 0x30 bytes (24 halfwords).
- *
- * @note @c menu_tick indexes this table with hand-written shift arithmetic
- *       (@c off*3 then @c <<4) to reproduce the original codegen, so it casts
- *       @c g_script_table back to @c u8* rather than using @c inputs directly.
+ * terminates the row. Row stride is 0x30 bytes (24 halfwords).
  */
+typedef struct
+{
+    u16 inputs[24]; /* 0x00 - pad-input masks; MENU_SCRIPT_END terminates */
+} MenuScript;
+
+extern MenuScript g_script_table[];
+
 /** @brief Terminator value in a @ref MenuScript @c inputs row. */
 #define MENU_SCRIPT_END 0xFFFF
 
@@ -111,12 +113,5 @@ extern MenuSlot g_menu_slots[];
 #define MENU_PAD_FACE_BUTTONS   (PADLup | PADLright | PADLdown | PADLleft) /* 0xF000: all four face buttons */
 #define MENU_PAD_SHOULDERS      (PADL1  | PADL2    | PADR1  | PADR2)      /* 0x000F: L1 | L2 | R1 | R2 */
 /** @} */
-
-typedef struct
-{
-    u16 inputs[24]; /* 0x00 - pad-input masks; MENU_SCRIPT_END terminates */
-} MenuScript;
-
-extern MenuScript g_script_table[];
 
 #endif
