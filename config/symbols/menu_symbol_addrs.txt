@@ -26,15 +26,43 @@ menu_update_layout     = 0x80142D54;
 menu_layout_node       = 0x80142E40;
 menu_draw_frame        = 0x80142F10;
 menu_handle_node_input = 0x80143190;
+menu_focus_active_content_item = 0x80143640;
+menu_handle_input      = 0x80143964;
 menu_snap_view_to_cursor = 0x80144FB8;
 menu_item_has_action   = 0x80145034;
+menu_reset_content_view = 0x8014519C;
+menu_init_item_nav_entries = 0x80145278;
+menu_build_special_technique_nav_entries = 0x801453F0;
+menu_emit_draw_mode_primitive = 0x801482D0;
+menu_concat_encoded_text = 0x80148324;
+menu_lookup_item_nibble = 0x801483C4;
+menu_find_active_content_item = 0x8014847C;
+menu_find_nav_node_index = 0x8014852C;
+menu_emit_slot_scroll_arrows = 0x80148578;
+menu_emit_tree_scroll_arrows = 0x8014874C;
+menu_draw_active_node_cursor = 0x80148900;
+menu_draw_node_tree    = 0x80149828;
+menu_draw_node_recursive = 0x80149948;
+menu_emit_icon_sprite = 0x80149BB4;
+menu_emit_sort_marker = 0x80149D90;
 scroll_list_draw = 0x80149E10;
+scroll_list_update_target = 0x8014A044;
+menu_emit_cursor       = 0x8014A10C;
+menu_clear_pending_status = 0x8014B628;
 menu_step_item_selection = 0x8014B69C;
+menu_item_is_nondefault = 0x8014DE1C;
+menu_swap_item_records = 0x8014DE5C;
+menu_update_active_slot = 0x8014DEB0;
+menu_special_technique_list_callback = 0x8014DEEC;
 
 // Data
 g_menu_frame           = 0x801690AC;
+g_party_sort_marker    = 0x801690B0;
+g_menu_item_nav_entries = 0x801690B8;
+g_menu_message_line2   = 0x801690E0;
 g_menu_unk_e8          = 0x801690E8;
 g_active_slot          = 0x801690F4;
+g_menu_ability_mask    = 0x801690F9;
 g_menu_state_ptr       = 0x80169108;
 g_menu_tim_dy          = 0x8016910C;
 g_script_repeat_last   = 0x80169100;
@@ -44,6 +72,7 @@ g_script_table         = 0x80168778;
 g_menu_glyph_src       = 0x80168AA8;
 g_menu_tim             = 0x80160260;
 g_menu_slots           = 0x80169420;
+g_menu_pending_item_row = 0x80169558;
 
 
 g_menu_label_key_a     = 0x800EC3DA;
@@ -51,6 +80,8 @@ g_menu_label_key_b     = 0x800EC3E4;
 
 // Unnamed globals (named during decomp)
 g_menu_pending_overlay = 0x80169124;
+g_menu_scroll_nav_entries = 0x80168C70;
+g_menu_message_line1   = 0x801690A8;
 g_menu_cursor_enable   = 0x80169130;
 g_menu_draw_early_out  = 0x80168C18;
 g_draw_buf_base        = 0x80168C0C;

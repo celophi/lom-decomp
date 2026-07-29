@@ -28,8 +28,8 @@ typedef struct
 extern s32 g_menu_pending_overlay;
 extern s32 g_menu_char_slot;
 extern s32 g_menu_active_subtype;
-extern void* D_80168C70;
-extern void* D_801690A8;
+extern void* g_menu_scroll_nav_entries;
+extern void* g_menu_message_line1;
 extern void* D_801693FC;
 extern u8 D_800F0BE0[];
 extern u8 D_800F0BEC[];
@@ -44,9 +44,9 @@ void* func_8014F060(void);
 void func_8014E3C4(u32 content_id);
 
 extern s32 g_menu_draw_early_out;
-extern s32 D_801690B8[];
+extern s32 g_menu_item_nav_entries[];
 extern s32 D_80169414;
-extern s32 D_80169558;
+extern s32 g_menu_pending_item_row;
 
 void* menu_slot_alloc(s32 arg0, void* rect);
 s32 func_8014551C(s32 arg0);
@@ -61,19 +61,34 @@ s32* func_8014C820();
 s32* func_8014C8C8();
 
 /**
- * @brief Scroll-list content callback for the item/technique list page.
+ * @brief Draw the learned Special Technique list and handle technique assignment.
  *
- * Circle (0x40) closes the page (SE 0x7F, state->unk0 = 3). Otherwise scans the
- * 11-word x 24-bit availability bitmask at g_pad_ctx + 0x34 to find the absolute
- * bit index of the sel_idx'th set bit. On confirm (0x220), if that entry's row
- * matches the active category ((D_801693FC->unk14 >> 10) & 0x3F), the per-char
- * slot byte at g_pad_ctx + slot * 0x250 + subtype + 0x609 is read: 0xFF or
- * 0x80-clear assigns the entry there (SE 0x7E); 0x80-set tries the
- * func_800A9060 / func_800A8F8C swap path, clearing all four g_menu_slots and
- * loading content 6 on failure. A wrong category plays SE 0x78. The draw pass
- * renders the list chrome via scroll_list_draw, then draws each set bit's glyph
- * string (func_800A88A0, color 1 on the active category's row) and finally
- * points g_menu_pending_overlay at the found entry's description.
+ * The 11 words at g_pad_ctx + 0x34 are learned-technique masks, one for each
+ * weapon type and with 24 technique bits per word. The function flattens their
+ * set bits into a scroll list, draws each learned technique's name, and exposes
+ * the selected technique's description through g_menu_pending_overlay.
+ *
+ * Circle (0x40) closes the page (SE 0x7F, state->unk0 = 3). On confirm (0x220),
+ * the selected technique is accepted only when its weapon type matches bits
+ * 15:10 of the active item record at D_801693FC. The technique index within
+ * that weapon type is then written to the active character's technique slot at
+ * g_pad_ctx + character * 0x250 + subtype + 0x609. An existing slot value with
+ * bit 0x80 set first tries the func_800A9060 / func_800A8F8C swap path.
+ * Failure clears the menu windows and opens content page 6. A weapon-type
+ * mismatch plays SE 0x78.
+ *
+ * The draw pass uses the string table at g_menu_state_ptr + 0x20 for technique
+ * names and the table at +0x1C for descriptions. Techniques belonging to the
+ * active weapon type use color 1; all others use color 3.
+ *
+ * @note The original game manual confirms the terms "Special Techniques" and
+ *       11 weapon types; the 24-technique capacity per type comes from this
+ *       function's bitset layout.
+ *
+ * @note Previously described generically as an item/technique list. The
+ *       11-by-24 learned bitset, weapon-type validation, per-technique index
+ *       write, and paired name/description tables identify this specifically
+ *       as the Special Technique assignment list.
  *
  * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
  * @param arg1        Scroll-list state for this page (aliased into @c state).
@@ -94,7 +109,7 @@ s32* func_8014C8C8();
  *       assignment.
  * @see decomp.me (100%)
  */
-s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, s32 active)
+s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, s32 active)
 {
     ScrollListState* state = arg1;
     s32 prim = arg2;
@@ -178,7 +193,7 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
                         b = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 8);
                         pool = g_menu_slots;
                         slot = (s8*)pool + 0x6C;
-                        D_801690A8 = b + *(u16*)(b + 0xAC);
+                        g_menu_message_line1 = b + *(u16*)(b + 0xAC);
                         do
                         {
                             *slot = 0;
@@ -202,7 +217,7 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
         }
     }
 
-    prim = scroll_list_draw(prim, ot, state, (u32*)&D_80168C70, view_origin, active);
+    prim = scroll_list_draw(prim, ot, state, (u32*)&g_menu_scroll_nav_entries, view_origin, active);
 
     found = -1;
     count = 0;
@@ -264,7 +279,7 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
 /**
  * @brief Open the menu content window for the given content page id.
  *
- * Sets D_80169558 (pending item row) to 0xFF, then for ids 0-7 allocates a
+ * Sets g_menu_pending_item_row (pending item row) to 0xFF, then for ids 0-7 allocates a
  * MenuSlot window and installs its content callback:
  * - 0/1/2: 0xF0 x 0x60 window at (0x40, 0x60), callback func_8014A3A4; sets
  *   D_80169414 (active category) to the id and packs func_8014551C(id) into
@@ -273,12 +288,12 @@ s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, 
  *   func_8014BA58 / func_8014BD48 / func_8014BF68; sets D_80169414 = 3 and
  *   packs func_8014E8B8 / func_8014E9A0 / func_8014EA78 into flags bits 24:16.
  * - 6/7: 0x120 x 0x20/0x30 window at (0x10, 0x60), callbacks func_8014C820 /
- *   func_8014C8C8, flags bits 24:16 = 1; rebuilds D_801690B8 as a 1-entry
+ *   func_8014C8C8, flags bits 24:16 = 1; rebuilds g_menu_item_nav_entries as a 1-entry
  *   circular nav list and sets g_menu_draw_early_out.
- * Ids >= 8 only reset D_80169558.
+ * Ids >= 8 only reset g_menu_pending_item_row.
  *
  * @param content_id Content page id (0-7); out of range is a no-op beyond the
- *        D_80169558 reset.
+ *        g_menu_pending_item_row reset.
  * @note Shapes required to match: the rect must be a single u16 rect[4] array
  *       (separate locals get their stores dead-eliminated since only the first
  *       address escapes), and the raw callee result must be held in @c v0 with
@@ -299,7 +314,7 @@ void func_8014E3C4(u32 arg0)
     s32 word_self;
     s32 word_prev;
 
-    D_80169558 = 0xFF;
+    g_menu_pending_item_row = 0xFF;
     switch (arg0)
     {
     case 0:
@@ -406,20 +421,20 @@ void func_8014E3C4(u32 arg0)
         j = 0;
         do
         {
-            s32 cur = D_801690B8[j];
+            s32 cur = g_menu_item_nav_entries[j];
 
             prev = 0;
             link = cur & ~0x3FFF;
             link = link | ((j * 0x10) & 0x3FFF);
             word_self = link;
-            D_801690B8[j] = word_self;
+            g_menu_item_nav_entries[j] = word_self;
             if ((j - 1) >= 0)
             {
                 prev = j - 1;
             }
             word_prev = word_self & 0xFF803FFF;
             word_prev = word_prev | ((prev & 0x1FF) << 14);
-            D_801690B8[j] = word_prev;
+            g_menu_item_nav_entries[j] = word_prev;
             next = j + 1;
             more = next < 1;
             link = 0;
@@ -427,7 +442,7 @@ void func_8014E3C4(u32 arg0)
             {
                 link = next;
             }
-            D_801690B8[j] = (word_prev & 0x7FFFFF) | (link << 23);
+            g_menu_item_nav_entries[j] = (word_prev & 0x7FFFFF) | (link << 23);
             j = next;
         } while (more != 0);
         g_menu_draw_early_out = 1;
@@ -447,20 +462,20 @@ void func_8014E3C4(u32 arg0)
         j = 0;
         do
         {
-            s32 cur = D_801690B8[j];
+            s32 cur = g_menu_item_nav_entries[j];
 
             prev = 0;
             link = cur & ~0x3FFF;
             link = link | ((j * 0x10) & 0x3FFF);
             word_self = link;
-            D_801690B8[j] = word_self;
+            g_menu_item_nav_entries[j] = word_self;
             if ((j - 1) >= 0)
             {
                 prev = j - 1;
             }
             word_prev = word_self & 0xFF803FFF;
             word_prev = word_prev | ((prev & 0x1FF) << 14);
-            D_801690B8[j] = word_prev;
+            g_menu_item_nav_entries[j] = word_prev;
             next = j + 1;
             more = next < 1;
             link = 0;
@@ -468,7 +483,7 @@ void func_8014E3C4(u32 arg0)
             {
                 link = next;
             }
-            D_801690B8[j] = (word_prev & 0x7FFFFF) | (link << 23);
+            g_menu_item_nav_entries[j] = (word_prev & 0x7FFFFF) | (link << 23);
             j = next;
         } while (more != 0);
         g_menu_draw_early_out = 1;
@@ -478,11 +493,12 @@ void func_8014E3C4(u32 arg0)
 
 /**
  * @brief Count usable 4-bit entries in the pad-ctx table at +0x104 and rebuild
- *        the D_80168C70 circular nav list to that size.
+ *        the g_menu_scroll_nav_entries circular nav list to that size.
  *
  * Scans 16 words (128 nibbles) at g_pad_ctx + 0x104; every nibble with value
- * >= 2 adds one entry. Clears D_80168C70[0], then packs each of the count
- * entries with the same three bit-fields as func_80145278 (bits 13:0 = i * 0x10,
+ * >= 2 adds one entry. Clears g_menu_scroll_nav_entries[0], then packs each of the count
+ * entries with the same three bit-fields as menu_init_item_nav_entries
+ * (bits 13:0 = i * 0x10,
  * bits 22:14 = circular prev, bits 30:23 = circular next).
  *
  * @return Number of entries counted (also the nav-list length).
@@ -534,13 +550,13 @@ s32 func_8014E8B8(void)
         i += 1;
     } while (i < 0x10);
 
-    D_80168C70 = 0;
+    g_menu_scroll_nav_entries = 0;
     j = 0;
     if (count > 0)
     {
         do
         {
-            temp_t0 = (j) + (s32*)&D_80168C70;
+            temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
 
             tmp = *temp_t0;
             var_a2 = j - 1;
@@ -579,17 +595,19 @@ s32 func_8014E8B8(void)
 
 /**
  * @brief Count active byte entries in the pad-ctx table at +0x25E0 and rebuild
- *        the D_80168C70 circular nav list to that size.
+ *        the g_menu_scroll_nav_entries circular nav list to that size.
  *
  * Clears the byte at g_pad_ctx + 0x26DF, then scans the 0x100 bytes at
- * g_pad_ctx + 0x25E0 counting non-zero entries. Clears D_80168C70[0] and packs
- * each of the count entries with the same three bit-fields as func_80145278
+ * g_pad_ctx + 0x25E0 counting non-zero entries. Clears g_menu_scroll_nav_entries[0] and packs
+ * each of the count entries with the same three bit-fields as
+ * menu_init_item_nav_entries
  * (bits 13:0 = i * 0x10, bits 22:14 = circular prev, bits 30:23 = circular
  * next). Sibling of func_8014E8B8 (case 4 vs case 3 of func_8014E3C4).
  *
  * @return Number of entries counted (also the nav-list length).
  * @note Shapes required to match: unlike func_8014E8B8 this one keeps the
- *       func_80145278 next/copy pair (temp_a1 = j + 1; ...; j = temp_a1) and
+ *       menu_init_item_nav_entries next/copy pair
+ *       (temp_a1 = j + 1; ...; j = temp_a1) and
  *       the byte scan is a plain pointer walk (gcc's countdown reversal IS the
  *       target here). The link loop must sit inside a do { } while (0) block -
  *       its block notes shorten the live ranges so j outranks the temp_t0
@@ -628,7 +646,7 @@ s32 func_8014E9A0(void)
         p += 1;
     } while (i >= 0);
 
-    D_80168C70 = 0;
+    g_menu_scroll_nav_entries = 0;
     j = 0;
     if (count > 0)
     {
@@ -636,7 +654,7 @@ s32 func_8014E9A0(void)
         {
         do
         {
-            temp_t0 = (j) + (s32*)&D_80168C70;
+            temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
 
             tmp = *temp_t0;
             var_a2 = j - 1;
@@ -676,17 +694,19 @@ s32 func_8014E9A0(void)
 
 /**
  * @brief Count entries with bit 0 set in the pad-ctx table at +0x2F0 and
- *        rebuild the D_80168C70 circular nav list to that size.
+ *        rebuild the g_menu_scroll_nav_entries circular nav list to that size.
  *
  * Scans 0x40 records of stride 0xC at g_pad_ctx + 0x2F0, counting those whose
- * first byte has bit 0 set. Clears D_80168C70[0] and packs each of the count
- * entries with the same three bit-fields as func_80145278 (bits 13:0 = i * 0x10,
+ * first byte has bit 0 set. Clears g_menu_scroll_nav_entries[0] and packs each of the count
+ * entries with the same three bit-fields as menu_init_item_nav_entries
+ * (bits 13:0 = i * 0x10,
  * bits 22:14 = circular prev, bits 30:23 = circular next). Third sibling of
  * func_8014E8B8 / func_8014E9A0 (case 5 of func_8014E3C4).
  *
  * @return Number of entries counted (also the nav-list length).
  * @note Same shapes as func_8014E9A0: pointer-walk countdown scan, the
- *       func_80145278 next/copy pair, and the do { } while (0) wrapper around
+ *       menu_init_item_nav_entries next/copy pair, and the do { } while (0)
+ *       wrapper around
  *       the link loop that recolors the j / temp_t0 allocation race.
  * @see decomp.me (100%)
  */
@@ -721,7 +741,7 @@ s32 func_8014EA78(void)
         p += 0xC;
     } while (i >= 0);
 
-    D_80168C70 = 0;
+    g_menu_scroll_nav_entries = 0;
     j = 0;
     if (count > 0)
     {
@@ -729,7 +749,7 @@ s32 func_8014EA78(void)
         {
         do
         {
-            temp_t0 = (j) + (s32*)&D_80168C70;
+            temp_t0 = (j) + (s32*)&g_menu_scroll_nav_entries;
 
             tmp = *temp_t0;
             var_a2 = j - 1;
@@ -769,10 +789,10 @@ s32 func_8014EA78(void)
 
 typedef struct
 {
-    u32 unk0; /* Slot 0 data pointer. */
-    u32 unk4; /* Slot 1 data pointer. */
-    u32 unk8; /* Slot 2 data pointer. */
-    u32 unkC; /* Slot 3 data pointer. */
+    u32 slot0; /* Slot 0 data pointer. */
+    u32 slot1; /* Slot 1 data pointer. */
+    u32 slot2; /* Slot 2 data pointer. */
+    u32 slot3; /* Slot 3 data pointer. */
 } ItemSlotData;
 
 typedef struct
@@ -794,9 +814,9 @@ extern u8 D_800F0BF8[];
  * func_8014ECA4 supplies the candidate 0x40-byte record (returns 0 on failure,
  * which aborts with return 0). If the slot buffer still equals the template at
  * D_800F0BF8 (byte-wise), the candidate is copied in, its first byte is
- * cleared, and g_item_slot_data.unk0 is zeroed. Otherwise the slot and the
+ * cleared, and g_item_slot_data.slot0 is zeroed. Otherwise the slot and the
  * candidate are exchanged through a stack buffer (three func_800A8F8C copies,
- * same pattern as func_8014DE5C) and g_item_slot_data.unk0 points at the
+ * same pattern as menu_swap_item_records) and g_item_slot_data.slot0 points at the
  * candidate. Either way g_item_slot_flags.slot0 is set.
  *
  * @return 1 if a record was committed/exchanged, 0 if func_8014ECA4 failed.
@@ -850,7 +870,7 @@ done:
         {
             func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, entry);
             *entry = 0;
-            g_item_slot_data.unk0 = 0;
+            g_item_slot_data.slot0 = 0;
         }
         else
         {
@@ -858,7 +878,7 @@ done:
             func_800A8F8C(buf, slot_buf);
             func_800A8F8C(slot_buf, entry);
             func_800A8F8C(entry, buf);
-            g_item_slot_data.unk0 = (u32)entry;
+            g_item_slot_data.slot0 = (u32)entry;
         }
         g_item_slot_flags.slot0 = 1;
         return 1;
@@ -965,7 +985,7 @@ extern u8 D_80168C15[];
  * If the slot buffer is empty (its first byte is 0) the candidate is copied in,
  * its own first byte cleared, and the subtype's slot-data entry zeroed.
  * Otherwise the slot and the candidate are exchanged through a stack buffer
- * (three func_800A8F8C copies, same pattern as func_8014EB4C / func_8014DE5C)
+ * (three func_800A8F8C copies, same pattern as func_8014EB4C / menu_swap_item_records)
  * and the subtype's slot-data entry points at the candidate. Either way the
  * subtype's slot-occupied flag is set.
  *
@@ -988,7 +1008,7 @@ extern u8 D_80168C15[];
  *         address expression becomes loop-invariant, loop.c hoists it to the
  *         preheader, and CSE then shares it with the following call argument
  *         instead of recomputing it.
- *       - `slots[i]` indexing (not a `p = &g_item_slot_data.unk4` pointer walk)
+ *       - `slots[i]` indexing (not a `p = &g_item_slot_data.slot1` pointer walk)
  *         is what makes loop.c strength-reduce to the target's two-step
  *         `addiu v0, v0, %lo(g_item_slot_data)` + `addiu a1, v0, 0x4`.
  *       - `slots` must be assigned separately inside each arm; hoisting it
@@ -1032,7 +1052,7 @@ s32 func_8014EDEC(void)
         pad = (u8*)g_pad_ctx;
         if (*(pad - (-((off << 6) + (g_menu_char_slot * 0x250))) + 0x640) == 0)
         {
-            slots = &g_item_slot_data.unk0;
+            slots = &g_item_slot_data.slot0;
             do
             {
                 if ((u32)entry == slots[i])
@@ -1057,7 +1077,7 @@ found_b:
             slots[i] = (u32)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((g_menu_active_subtype << 6) - 0x170));
             goto done_b;
 scan_b:
-            slots = &g_item_slot_data.unk0;
+            slots = &g_item_slot_data.slot0;
             do
             {
                 if ((u32)entry == slots[i])
