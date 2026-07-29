@@ -29,6 +29,7 @@ menu_handle_node_input = 0x80143190;
 menu_snap_view_to_cursor = 0x80144FB8;
 menu_item_has_action   = 0x80145034;
 scroll_list_draw = 0x80149E10;
+menu_step_item_selection = 0x8014B69C;
 
 // Data
 g_menu_frame           = 0x801690AC;

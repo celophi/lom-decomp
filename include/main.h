@@ -112,7 +112,7 @@ typedef struct
 /** @brief Pointer to the controller/pad context object. */
 extern PadContext* g_pad_ctx;
 
-/** @brief Number of times the active script repeats on reaching its terminator. */
+/** @brief Forward selection steps applied when menu scripts 1-3 terminate. */
 extern s32 g_script_repeat_count;
 
 /** @brief Active script id; selects a row of @c g_script_table (0 = none). */
