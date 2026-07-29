@@ -1760,6 +1760,7 @@ extern u8 g_card_header_block_count;
  * @param name Memory-card file path to create.
  * @param buf 8 KiB save buffer; the generated header replaces its first 512 bytes.
  * @return 1 if the complete file is written; otherwise 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/ljqxf
  */
 s32 memory_card_create_save_file(char* name, void* buf)
 {
@@ -1808,6 +1809,7 @@ extern u8 g_card_test_payload[];
 /**
  * @brief Copy the five-byte test payload into a save buffer.
  * @param buf Destination buffer with space for at least five bytes.
+ * @see decomp.me (100%)
  */
 void memory_card_fill_test_data(void* buf)
 {
