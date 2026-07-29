@@ -61,19 +61,34 @@ s32* func_8014C820();
 s32* func_8014C8C8();
 
 /**
- * @brief Scroll-list content callback for the item/technique list page.
+ * @brief Draw the learned Special Technique list and handle technique assignment.
  *
- * Circle (0x40) closes the page (SE 0x7F, state->unk0 = 3). Otherwise scans the
- * 11-word x 24-bit availability bitmask at g_pad_ctx + 0x34 to find the absolute
- * bit index of the sel_idx'th set bit. On confirm (0x220), if that entry's row
- * matches the active category ((D_801693FC->unk14 >> 10) & 0x3F), the per-char
- * slot byte at g_pad_ctx + slot * 0x250 + subtype + 0x609 is read: 0xFF or
- * 0x80-clear assigns the entry there (SE 0x7E); 0x80-set tries the
- * func_800A9060 / func_800A8F8C swap path, clearing all four g_menu_slots and
- * loading content 6 on failure. A wrong category plays SE 0x78. The draw pass
- * renders the list chrome via scroll_list_draw, then draws each set bit's glyph
- * string (func_800A88A0, color 1 on the active category's row) and finally
- * points g_menu_pending_overlay at the found entry's description.
+ * The 11 words at g_pad_ctx + 0x34 are learned-technique masks, one for each
+ * weapon type and with 24 technique bits per word. The function flattens their
+ * set bits into a scroll list, draws each learned technique's name, and exposes
+ * the selected technique's description through g_menu_pending_overlay.
+ *
+ * Circle (0x40) closes the page (SE 0x7F, state->unk0 = 3). On confirm (0x220),
+ * the selected technique is accepted only when its weapon type matches bits
+ * 15:10 of the active item record at D_801693FC. The technique index within
+ * that weapon type is then written to the active character's technique slot at
+ * g_pad_ctx + character * 0x250 + subtype + 0x609. An existing slot value with
+ * bit 0x80 set first tries the func_800A9060 / func_800A8F8C swap path.
+ * Failure clears the menu windows and opens content page 6. A weapon-type
+ * mismatch plays SE 0x78.
+ *
+ * The draw pass uses the string table at g_menu_state_ptr + 0x20 for technique
+ * names and the table at +0x1C for descriptions. Techniques belonging to the
+ * active weapon type use color 1; all others use color 3.
+ *
+ * @note The original game manual confirms the terms "Special Techniques" and
+ *       11 weapon types; the 24-technique capacity per type comes from this
+ *       function's bitset layout.
+ *
+ * @note Previously described generically as an item/technique list. The
+ *       11-by-24 learned bitset, weapon-type validation, per-technique index
+ *       write, and paired name/description tables identify this specifically
+ *       as the Special Technique assignment list.
  *
  * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
  * @param arg1        Scroll-list state for this page (aliased into @c state).
@@ -94,7 +109,7 @@ s32* func_8014C8C8();
  *       assignment.
  * @see decomp.me (100%)
  */
-s32 func_8014DEEC(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, s32 active)
+s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, s32 active)
 {
     ScrollListState* state = arg1;
     s32 prim = arg2;

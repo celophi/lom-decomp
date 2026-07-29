@@ -32,6 +32,7 @@ menu_snap_view_to_cursor = 0x80144FB8;
 menu_item_has_action   = 0x80145034;
 menu_reset_content_view = 0x8014519C;
 menu_init_item_nav_entries = 0x80145278;
+menu_build_special_technique_nav_entries = 0x801453F0;
 menu_emit_draw_mode_primitive = 0x801482D0;
 menu_concat_encoded_text = 0x80148324;
 menu_lookup_item_nibble = 0x801483C4;
@@ -52,6 +53,7 @@ menu_step_item_selection = 0x8014B69C;
 menu_item_is_nondefault = 0x8014DE1C;
 menu_swap_item_records = 0x8014DE5C;
 menu_update_active_slot = 0x8014DEB0;
+menu_special_technique_list_callback = 0x8014DEEC;
 
 // Data
 g_menu_frame           = 0x801690AC;

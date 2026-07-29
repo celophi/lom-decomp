@@ -3691,9 +3691,12 @@ s32 func_80145310(void)
 }
 
 /**
- * @brief Scan g_pad_ctx->save_slot_data for set bits, find the first match against
- *        a 6-bit field in D_801693FC, then initialize g_menu_scroll_nav_entries as a circular
- *        packed linked list of the set-bit entries.
+ * @brief Build navigation entries for the learned Special Technique list.
+ *
+ * Scans the 11 weapon-type masks at g_pad_ctx + 0x34, counts their 24
+ * learned-technique bits, and finds the first visible row belonging to the
+ * active item's weapon type.
+ *
  * @return Low 16 bits: total set-bit count. High 16 bits: index of the first
  *         entry whose bit position matches bits 15:10 of D_801693FC->unk14,
  *         or 0 if no match was found.
@@ -3714,7 +3717,7 @@ s32 func_80145310(void)
  *          split `x = a & M; x = x | b;` pairs and the copy through `link`.
  * @see decomp.me (100%) TODO
  */
-s32 func_801453F0(void)
+s32 menu_build_special_technique_nav_entries(void)
 {
     s32 i;
     s32 j;
@@ -6947,7 +6950,7 @@ void func_800A8FB4();
 /** @note Empty parameter list (K&R) is intentional: func_8014C200 passes the subtype,
  *        func_8014CC08 relies on a0 already holding it. */
 s32 func_800A9060();
-void func_8014DEEC(void);
+void menu_special_technique_list_callback(void);
 void menu_swap_item_records(s32, s32);
 
 /**
@@ -7973,8 +7976,8 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
  * On cancel (pad bit 0x40) it plays a sound and requests a state change. On confirm
  * (pad bits 0x220) it plays a sound and dispatches:
  * - sub-view 0: opens a 0xF0 x 0x60 window at (0x40, 0x60) via @ref menu_slot_alloc,
- *   wires @ref func_8014DEEC as its content callback, and seeds the window's lerp from
- *   @ref func_801453F0.
+ *   wires @ref menu_special_technique_list_callback as its content callback, and
+ *   seeds the window's lerp from @ref menu_build_special_technique_nav_entries.
  * - sub-view 1: clears the slot pool, points the character's node at content 0x29, and
  *   reloads its content via @ref func_8014E3C4.
  * - sub-view 2: reads the equipped-item byte at g_pad_ctx + slot * 0x250 + subtype +
@@ -8045,8 +8048,8 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             rect[2] = 0xF0;
             rect[3] = 0x60;
             slot = (MenuSlot*)menu_slot_alloc(3, rect);
-            slot->content_cb = (s32 * (*)()) & func_8014DEEC;
-            packed = func_801453F0();
+            slot->content_cb = (s32 * (*)()) & menu_special_technique_list_callback;
+            packed = menu_build_special_technique_nav_entries();
             hi = packed >> 0x10;
             slot->lerp_target_b = hi * 0x10;
             slot->lerp_cur_b = hi * 0x10;
