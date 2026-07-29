@@ -8356,22 +8356,38 @@ s32 func_8014EDEC();
  * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
  * @param active      Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note NOT a byte-for-byte match yet (893/912 instructions exact; the instruction
- *       count itself matches). Shapes already proven necessary: the subtype cascades are
- *       @c switch statements (an if-chain folds the 7..0xA range into one @c sltiu);
- *       @c list doubles as the @ref menu_slot_alloc result (the original shares s1); each
- *       of the three nav-link loops needs its OWN locals, while the two sub-view-0 arms
- *       must SHARE theirs; the case-4 "found" body must precede the zero-handle body in
- *       source order; @c buf aliases @c prim_buf to fix the entry-copy order; the nine
- *       slot-pool clears are INDEXED loops over @c g_menu_slots (gcc strength-reduces
- *       them to the pointer walk itself); and the sub-view-0 arms share one tail so
- *       @c flag_ptr keeps three references.
- * @note Remaining gap: (a) @c arg has to be assigned above the mask loop to win the
- *       mask/idx allocation race, which costs two copies the original does not have;
- *       (b) in sub-view 4 / subtype 7 the original re-adds @c ctx + @c slot_off before
- *       each @ref func_800A8F8C call and keeps @c &D_800F0BF8 in its own register, where
- *       GCC common-subexpressions both away here. See working/func_8014CC08/status.md.
- * @see decomp.me (98.68%) TODO
+ * @note NOT a byte-for-byte match yet (902/912 instructions exact). Shapes already
+ *       proven necessary: the subtype cascades are @c switch statements (an if-chain
+ *       folds the 7..0xA range into one @c sltiu); @c list doubles as the
+ *       @ref menu_slot_alloc result (the original shares s1); each of the three nav-link
+ *       loops needs its OWN locals, while the two sub-view-0 arms must SHARE theirs; the
+ *       case-4 "found" body must precede the zero-handle body in source order; @c buf
+ *       aliases @c prim_buf to fix the entry-copy order; the nine slot-pool clears are
+ *       INDEXED loops over @c g_menu_slots (gcc strength-reduces them to the pointer walk
+ *       itself); and the sub-view-0 arms share one tail so @c flag_ptr keeps three
+ *       references.
+ * @note The sub-view-4 / subtype-7 compare needs four coupled shapes, none of which
+ *       measures at all on its own: @c cmp_tbl must be assigned at its FIRST USE inside
+ *       the condition (assigning it as a preceding statement lets the scheduler hoist
+ *       @c &D_800F0BF8 to the top of the block); it must be passed as the second argument
+ *       to BOTH @ref func_800A8F8C calls (that second reference is what stops GCC folding
+ *       the address into @c lw @c %lo(D_800F0BF8+0x14)); the call addresses must be
+ *       written in integer form with @c slot_off first, because the first operand of the
+ *       @c addu is what coalesces with the a0 argument register; and the compare address
+ *       must be spelled so CSE cannot unify it with the call addresses.
+ * @note TODO: that last shape is currently written @c ctx @c - @c (-slot_off), which is
+ *       semantically identical to @c ctx @c + @c slot_off and compiles to the same single
+ *       @c addu (the double negation survives to RTL, defeats @c cse.c:exp_equiv_p, and
+ *       @c combine then removes it). It is an unnatural spelling standing in for whatever
+ *       the original really wrote; replace it when a natural equivalent is found.
+ *       Operand order cannot substitute for it - gcc 2.7.2 @c exp_equiv_p explicitly
+ *       checks both orders for @c PLUS.
+ * @note Remaining gap (16 rows): @c arg has to be assigned above the mask loop to win the
+ *       mask/idx allocation race, costing two copies the original does not have; the
+ *       confirm-block @c addu lands in v0 where the original uses v1; and the sub-view-4 /
+ *       subtype-8..0xA tail colours @c ctx2 into v0, which costs a load-delay nop.
+ *       See working/func_8014CC08/status.md.
+ * @see decomp.me (98.90%) TODO
  */
 s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
@@ -8745,18 +8761,17 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             switch (g_menu_active_subtype)
             {
             case 7:
-                cmp_tbl = D_800F0BF8;
                 D_8016911C = 0;
                 D_80169554 = 0;
                 slot_off = g_menu_char_slot * 0x250;
                 ctx = (u8*)g_pad_ctx;
-                if ((((*(u32*)(ctx + slot_off + 0x654)) >> 10) & 0x3F)
-                    == (((*(u32*)(cmp_tbl + 0x14)) >> 10) & 0x3F))
+                if ((((*(u32*)(ctx - (-slot_off) + 0x654)) >> 10) & 0x3F)
+                    == (((*(u32*)((cmp_tbl = D_800F0BF8) + 0x14)) >> 10) & 0x3F))
                 {
-                    func_800A8F8C((s32)(ctx + slot_off + 0x640));
+                    func_800A8F8C((slot_off + (s32)ctx) + 0x640, cmp_tbl);
                     break;
                 }
-                func_800A8F8C((s32)(ctx + slot_off + 0x640));
+                func_800A8F8C((slot_off + (s32)ctx) + 0x640, cmp_tbl);
 
                 i9 = 1;
                 do
