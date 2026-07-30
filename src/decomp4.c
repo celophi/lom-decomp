@@ -3311,3 +3311,24 @@ void func_8002C9A4(void)
 {
     g_akao_seq_channel0->unk38 = 0;
 }
+
+typedef struct {
+    u32 unk0; 
+    u32 unk4[4];          
+    u8  pad_14[0x72 - 0x14];
+    u16 unk72;              
+    u16 unk74[4];           
+    u16 unk7C[4];          
+    u8  pad_84[0xD8 - 0x84];
+    u16 unkD8;             
+} Struct_8002C9B4;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/pTtu4
+ */
+void func_8002C9B4(Struct_8002C9B4* arg0) {
+    arg0->unkD8 = (arg0->unkD8 + 1) & 3;
+    arg0->unk4[arg0->unkD8] = arg0->unk0;
+    arg0->unk74[arg0->unkD8] = 0;
+    arg0->unk7C[arg0->unkD8] = arg0->unk72;
+}
