@@ -3521,3 +3521,16 @@ void func_8002CC7C(s_8002CC44* arg0)
     arg0->unk112 = 0;
     arg0->unk34 = (s32)(arg0->unk34 & ~8);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/wuYt5
+ */
+void func_8002CC94(u8** arg0)
+{
+    AkaoChannelState* ch = g_akao_seq_channel0;
+
+    ch->unk68 = *(*arg0)++;
+    ch->unk64 = *(*arg0)++;
+    ch->unk6A = 0;
+    ch->unk66 = 0;
+}
