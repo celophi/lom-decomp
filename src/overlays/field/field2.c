@@ -206,8 +206,8 @@ typedef struct
 extern Unk *g_field_scene;
 extern void DecDCTReset(int mode);
 extern void DecDCTvlcBuild(u_short *table);
-void field_validate_and_rasterize_quads(s32, s32);
-void func_80053C7C(s32, Unk **, void *);
+void field_prepare_animation_definitions(s32, s32);
+void field_build_animation_list(s32, Unk **, void *);
 void field_build_sprite_tile_record(s32, Unk *, s32, s32);
 void field_build_quad_tile_record(s32, Unk *, s32, s32);
 s32 field_find_shareable_part(void *, Unk *, Unk *, u8 *);
@@ -988,10 +988,10 @@ void field_build_render_records(ObjArg *arg0, u16 arg1)
     }
     while (var_s1_2 != 0);
   }
-  field_validate_and_rasterize_quads((0, arg0->unk14), 0);
-  field_validate_and_rasterize_quads(arg0->unk18, 1);
-  field_validate_and_rasterize_quads(arg0->unk1C, 2);
-  field_validate_and_rasterize_quads(arg0->unk20, 3);
+  field_prepare_animation_definitions((0, arg0->unk14), 0);
+  field_prepare_animation_definitions(arg0->unk18, 1);
+  field_prepare_animation_definitions(arg0->unk1C, 2);
+  field_prepare_animation_definitions(arg0->unk20, 3);
   var_t0_3 = *((Node30 **) (((u8 *) sp34) + 4));
   if (var_t0_3 != 0)
   {
@@ -1249,10 +1249,10 @@ void field_build_render_records(ObjArg *arg0, u16 arg1)
   }
   *((void **) (((u8 *) sp34) + 0x38)) = 0;
   *((s32 *) (((u8 *) sp34) + 0x3C)) = 0;
-  func_80053C7C(arg0->unk14, &sp24, ((u8 *) sp34) + 0x18);
-  func_80053C7C(arg0->unk18, &sp24, ((u8 *) sp34) + 0x1C);
-  func_80053C7C(arg0->unk1C, &sp24, ((u8 *) sp34) + 0x20);
-  func_80053C7C(arg0->unk20, &sp24, ((u8 *) sp34) + 0x24);
+  field_build_animation_list(arg0->unk14, &sp24, ((u8 *) sp34) + 0x18);
+  field_build_animation_list(arg0->unk18, &sp24, ((u8 *) sp34) + 0x1C);
+  field_build_animation_list(arg0->unk1C, &sp24, ((u8 *) sp34) + 0x20);
+  field_build_animation_list(arg0->unk20, &sp24, ((u8 *) sp34) + 0x24);
   var_v1_8 = *((s32 *) (((u8 *) (&g_field_dyn_count)) + 8));
   var_s0_7 = g_field_dyn_count - 1;
   new_var3 = new_var;

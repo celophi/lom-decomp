@@ -18,39 +18,39 @@ typedef struct
     u16 unk236;     /* 0x236 */
     u16 unk238;     /* 0x238 */
     u8 unk23A;      /* 0x23A */
-} MainStruct2;
+} FieldActorTrackState;
 
 typedef struct
 {
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
-    s16 unk6;
-} Struct_D_800F2268;
+    s16 red;
+    s16 green;
+    s16 blue;
+    s16 duration;
+} FieldFadeTarget;
 
 typedef struct
 {
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
+    s16 red;
+    s16 green;
+    s16 blue;
     s16 unk6;
-} Struct_D_800F2270;
+} FieldFadeRestoreColor;
 
 typedef struct
 {
     u8 pad[0x1EC];
-    u16 unk1EC;
-} Struct_1EC;
+    u16 track_frame;
+} FieldTrackCounterView;
 
 typedef struct
 {
     char pad_00[0x32];
     u8 unk32;
     char pad_33[0x48 - 0x33];
-} SubStruct;
+} FieldActorPartState;
 typedef struct
 {
-    SubStruct* sub_array;
+    FieldActorPartState* parts;
     char pad_04[0x21];
     u8 unk25;
     char pad_26[0x5];
@@ -63,31 +63,31 @@ typedef struct
     char pad_1FE[0x36];
     u16 unk234;
     u16 unk236;
-} MainStruct;
+} FieldActorResetState;
 
 typedef struct
 {
-    u8 pad0[2];  // 0x00 - 0x01
-    u16 unk2;    // 0x02 - 0x03
-    u8 pad1[6];  // 0x04 - 0x09
-    u16 unkA;    // 0x0A - 0x0B
-    u8 pad2[11]; // 0x0C - 0x16
-    u8 unk17;    // 0x17
-    u8 pad3[3];  // 0x18 - 0x1A
-    u8 unk1B;    // 0x1B
-    u8 pad4[8];  // 0x1C - 0x23
-    u16 unk24;   // 0x24 - 0x25
-    u8 pad5[6];  // 0x26 - 0x2B
-    u16 unk2C;   // 0x2C - 0x2D
-    u8 pad6[11]; // 0x2E - 0x38
-    u8 unk39;    // 0x39
-    u8 pad7[3];  // 0x3A - 0x3C
-    u8 unk3D;    // 0x3D
-} D_8010AE88_t;
+    u8 pad0[2];                    /* 0x00 - 0x01 */
+    u16 map0_action1_animation_id; /* 0x02 - 0x03 */
+    u8 pad1[6];                    /* 0x04 - 0x09 */
+    u16 map0_action5_animation_id; /* 0x0A - 0x0B */
+    u8 pad2[11];                   /* 0x0C - 0x16 */
+    u8 map0_action1_disabled;      /* 0x17 */
+    u8 pad3[3];                    /* 0x18 - 0x1A */
+    u8 map0_action5_disabled;      /* 0x1B */
+    u8 pad4[8];                    /* 0x1C - 0x23 */
+    u16 map1_action1_animation_id; /* 0x24 - 0x25 */
+    u8 pad5[6];                    /* 0x26 - 0x2B */
+    u16 map1_action5_animation_id; /* 0x2C - 0x2D */
+    u8 pad6[11];                   /* 0x2E - 0x38 */
+    u8 map1_action1_disabled;      /* 0x39 */
+    u8 pad7[3];                    /* 0x3A - 0x3C */
+    u8 map1_action5_disabled;      /* 0x3D */
+} FieldActionAnimationMaps;
 
-extern D_8010AE88_t D_8010AE88;
+extern FieldActionAnimationMaps g_field_action_animation_maps;
 
-typedef struct Struct_C
+typedef struct FieldActorAnimationDef
 {
     u8 unk0[2];
     u8 pad2[0xC - 2];
@@ -99,8 +99,8 @@ typedef struct Struct_C
     u8 unk15;
     u8 pad16[0x18 - 0x16];
     u16 unk18;
-} Struct_C;
-typedef struct Struct_D
+} FieldActorAnimationDef;
+typedef struct FieldActorPartDef
 {
     u8 pad0[0xD];
     u8 unkD;
@@ -110,7 +110,7 @@ typedef struct Struct_D
     u8 pad33[1];
     u32 unk34;
     u8 pad38[0x48 - 0x38];
-} Struct_D;
+} FieldActorPartDef;
 
 typedef struct
 {
@@ -140,10 +140,10 @@ typedef struct
         struct
         {
             u16 lo;
-            u16 unk1FE;
+            u16 animation_id;
         } h;
     } u1FC;
-    u8 unk200;
+    u8 owner_object_index;
     u8 unk201[9];
     u8 unk20A;
     u8 unk20B;
@@ -157,9 +157,9 @@ typedef struct
 
 typedef struct
 {
-    Struct_D* unk0;
+    FieldActorPartDef* unk0;
     u8 pad4[0xC - 4];
-    Struct_C* unkC;
+    FieldActorAnimationDef* unkC;
     u8 pad10[0x24 - 0x10];
     u8 unk24;
     u8 unk25;
@@ -181,10 +181,10 @@ typedef struct
         struct
         {
             u16 lo;
-            u16 unk226;
+            u16 animation_id;
         } h;
     } u224;
-    u8 unk228;
+    u8 owner_object_index;
     u8 unk229[9];
     u8 unk232;
     u8 unk233;
@@ -194,7 +194,7 @@ typedef struct
     u8 unk23A;
     u8 unk23B;
     u8 pad23C[0x244 - 0x23C];
-} func_80068970_Arg0;
+} FieldActorState;
 
 typedef struct
 {
@@ -230,31 +230,31 @@ typedef struct
 
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
-    s16 unk2;
-    s16 unk4;
-} TableEntry;
+    u8 segment_count_flags;
+    u8 segment_offset;
+    s16 end_value;
+    s16 start_value;
+} FieldParameterCurve;
 
 typedef struct
 {
     u8 pad[4];
-    TableEntry* unk4;
-    u16* unk8;
-} DataStruct;
+    FieldParameterCurve* curves;
+    u16* segments;
+} FieldAnimationData;
 
 typedef struct
 {
-    Struct_D* unk0;
+    FieldActorPartDef* unk0;
     u8 pad4[0xC - 4];
-    Struct_C* unkC;
+    FieldActorAnimationDef* unkC;
     u8 pad10[0x24 - 0x10];
     u8 unk24;
     u8 unk25;
     u8 unk26;
     u8 unk27;
     Struct_Unk28 unk28;
-} func_80068970_Arg2;
+} FieldActorStateWithTracks;
 
 typedef struct
 {
@@ -264,7 +264,7 @@ typedef struct
     u16 unk238;
     u8 unk23A;
     u8 unk23B;
-} ContextStruct;
+} FieldActorTrackMaskState;
 
 typedef struct
 {
@@ -272,18 +272,18 @@ typedef struct
     u32 unk40;
     u8 pad44[0x40B8 - 0x44];
     void* unk40B8;
-} Struct_Arg4;
+} FieldRenderContext;
 
 typedef union
 {
     struct
     {
-        s16 unk0; /* offset 0 */
-        s16 unk2; /* offset 2 */
-        s16 unk4; /* offset 4 */
+        s16 red;   /* offset 0 */
+        s16 green; /* offset 2 */
+        s16 blue;  /* offset 4 */
     } s;
-    u32 w; /* covers unk0 and unk2 as a 32‑bit word */
-} D_800FD808_t;
+    u32 w; /* covers red and green as a 32-bit word */
+} FieldColorScale;
 
 /*
  * Per-element structure (stride 0x268). D_800FD818 is a 3-element array; the
@@ -309,26 +309,26 @@ typedef struct
 
 extern D_800FD818_type D_800FD818[];
 
-extern D_800FD808_t D_800FD808;
-extern s8 D_800FD810;
+extern FieldColorScale g_field_color_scale;
+extern s8 g_field_color_scale_active;
 
 extern s32 D_801227C8;
 extern s32 D_800F22B8;
 extern s32 D_800F22BC;
 extern s32 D_800F22C0;
 extern s32 D_800F22C4;
-extern s32 D_800F2284;
-extern s32 D_800F22B4;
+extern s32 g_field_return_to_title_prompt_delay;
+extern s32 g_field_return_to_title_prompt_state;
 extern s32 D_8012291C;
 extern s32 g_field_audio_timer;
-extern s32 D_80105788;
+extern s32 g_field_track_index;
 extern s32 D_8011588C;
-extern Struct_D_800F2268 D_800F2268;
-extern Struct_D_800F2270 D_800F2270;
+extern FieldFadeTarget g_field_fade_target;
+extern FieldFadeRestoreColor g_field_fade_restore_color;
 extern s32 D_800F2278;
 extern s32 D_800F227C;
 extern s32 D_800F2280;
-extern func_80068970_Arg0 D_800F22C8[80];
+extern FieldActorState g_field_actor_slots[80];
 extern Struct_D800FDF58 D_800FDF58[];
 extern Struct_D80105AE0 D_80105AE0[];
 extern u8 D_800FF59C;
@@ -336,7 +336,7 @@ extern u8 D_800FF59C;
 /**
  * decomp.me (100%) https://decomp.me/scratch/9Ady0
  */
-void field_func_8006828C(void)
+void field_update_gover_load(void)
 {
     Struct_801ED600* ptr = (Struct_801ED600*)0x801ED600;
 
@@ -359,34 +359,36 @@ void field_func_8006828C(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/Kws0l
+ * @brief Update and render the modal return-to-title confirmation prompt.
+ * @param render_ctx Current field render context passed to the prompt renderer.
+ * @see decomp.me (100%) https://decomp.me/scratch/Kws0l
  */
-void func_80068310(s32 arg0)
+void field_update_return_to_title_prompt(s32 render_ctx)
 {
 
-    if (D_800F22B4 != 0)
+    if (g_field_return_to_title_prompt_state != 0)
     {
 
-        if (D_800F2284 != 0)
+        if (g_field_return_to_title_prompt_delay != 0)
         {
-            D_800F2284--;
-            if (D_800F2284 == 0)
+            g_field_return_to_title_prompt_delay--;
+            if (g_field_return_to_title_prompt_delay == 0)
             {
-                D_800F2268.unk0 = 0xC0;
-                D_800F2268.unk2 = 0xC0;
-                D_800F2268.unk4 = 0xC0;
-                D_800F2268.unk6 = 5;
+                g_field_fade_target.red = 0xC0;
+                g_field_fade_target.green = 0xC0;
+                g_field_fade_target.blue = 0xC0;
+                g_field_fade_target.duration = 5;
             }
         }
         else
         {
             func_800A6F1C();
-            if (D_800F22B4 != 0)
+            if (g_field_return_to_title_prompt_state != 0)
             {
                 func_8006441C();
-                if (D_800F22B4 != 0)
+                if (g_field_return_to_title_prompt_state != 0)
                 {
-                    func_800A8880(arg0);
+                    func_800A8880(render_ctx);
                 }
                 func_80063194();
             }
@@ -395,26 +397,28 @@ void func_80068310(s32 arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/doJjR
+ * @brief Initialize and open the return-to-title confirmation prompt.
+ * @see decomp.me (100%) https://decomp.me/scratch/doJjR
  */
-void func_800683C8(void)
+void field_open_return_to_title_prompt(void)
 {
     func_800AA02C();
     func_800A74E8();
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/b8yys
+ * @brief Begin closing the return-to-title prompt and reset its field effects.
+ * @see decomp.me (100%) https://decomp.me/scratch/b8yys
  */
-void func_800683F0(void)
+void field_begin_return_to_title_prompt_close(void)
 {
-    D_800F2268.unk0 = 0;
-    D_800F2270.unk0 = 0;
-    D_800F2268.unk2 = 0;
-    D_800F2270.unk2 = 0;
-    D_800F2268.unk4 = 0;
-    D_800F2270.unk4 = 0;
-    D_800F2268.unk6 = 8;
+    g_field_fade_target.red = 0;
+    g_field_fade_restore_color.red = 0;
+    g_field_fade_target.green = 0;
+    g_field_fade_restore_color.green = 0;
+    g_field_fade_target.blue = 0;
+    g_field_fade_restore_color.blue = 0;
+    g_field_fade_target.duration = 8;
     func_800643E0();
     D_8012291C = 0;
 }
@@ -422,7 +426,7 @@ void func_800683F0(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/KDXt0
  */
-void func_80068440(void)
+void field_update_audio_timer(void)
 {
     s32 temp_v0;
 
@@ -442,32 +446,32 @@ void func_80068440(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/Xn30r
  */
-s32 func_80068494(s32 arg0, s32 arg1)
+s32 field_get_track_counter_modulo(s32 animation_data, s32 divisor)
 {
-    return ((Struct_1EC*)((u8*)arg0 + D_80105788 * 2))->unk1EC % arg1;
+    return ((FieldTrackCounterView*)((u8*)animation_data + g_field_track_index * 2))->track_frame % divisor;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/X9uyL
  */
-void func_800684E4(DataStruct* arg0, s32 arg1, s32 arg2, s16* arg3)
+void field_interpolate_palette_track(FieldAnimationData* animation_data, s32 palette_sequence, s32 palette_table, s16* output)
 {
     s32 var_t9 = 0;
     s32 var_t1 = 4;
     s16* var_t7;
     s32 var_t6;
     s32 new_var;
-    TableEntry* temp_v0;
-    s32 var_t0 = (&arg0->unk4[arg1 & 0xF])->unk0 & 0x7F;
-    u16* var_t5 = &arg0->unk8[(&arg0->unk4[arg1 & 0xF])->unk1];
-    new_var = arg1;
+    FieldParameterCurve* temp_v0;
+    s32 var_t0 = (&animation_data->curves[palette_sequence & 0xF])->segment_count_flags & 0x7F;
+    u16* var_t5 = &animation_data->segments[(&animation_data->curves[palette_sequence & 0xF])->segment_offset];
+    new_var = palette_sequence;
     if (var_t0 != 0)
     {
         do
         {
             u16 temp = *var_t5;
             s32 temp_v1 = var_t9 + (temp & 0x3FF);
-            if (((Struct_1EC*)(((u8*)arg0) + (D_80105788 * 2)))->unk1EC < temp_v1)
+            if (((FieldTrackCounterView*)(((u8*)animation_data) + (g_field_track_index * 2)))->track_frame < temp_v1)
             {
                 break;
             }
@@ -484,18 +488,18 @@ void func_800684E4(DataStruct* arg0, s32 arg1, s32 arg2, s16* arg3)
     if (var_t0 != 0)
     {
         s32 temp_a1 = new_var & 0xFFFF;
-        u16* var_t8 = (u16*)(arg2 + (((temp_a1 >> var_t1) & 0xF) << 5));
+        u16* var_t8 = (u16*)(palette_table + (((temp_a1 >> var_t1) & 0xF) << 5));
         u16* var_t4;
         s32 temp_v1_2;
         if ((var_t1 + 4) != 16)
         {
-            var_t4 = (u16*)(arg2 + (((temp_a1 >> (var_t1 + 4)) & 0xF) << 5));
+            var_t4 = (u16*)(palette_table + (((temp_a1 >> (var_t1 + 4)) & 0xF) << 5));
         }
         else
         {
-            var_t4 = (u16*)(arg2 + ((temp_a1 << 1) & 0x1E0));
+            var_t4 = (u16*)(palette_table + ((temp_a1 << 1) & 0x1E0));
         }
-        var_t7 = arg3;
+        var_t7 = output;
         var_t6 = 0;
         do
         {
@@ -504,7 +508,7 @@ void func_800684E4(DataStruct* arg0, s32 arg1, s32 arg2, s16* arg3)
             s32 low_a = a & 0x1F;
             s32 low_b = b & 0x1F;
             s32 diff0 = low_b - low_a;
-            s32 temp_t0 = ((Struct_1EC*)(((u8*)arg0) + (D_80105788 * 2)))->unk1EC - var_t9;
+            s32 temp_t0 = ((FieldTrackCounterView*)(((u8*)animation_data) + (g_field_track_index * 2)))->track_frame - var_t9;
             s32 temp_a1_2 = (*var_t5) & 0x3FF;
             s32 temp_t3 = (diff0 * temp_t0) / temp_a1_2;
             s32 mid_a = (a >> 5) & 0x1F;
@@ -527,10 +531,10 @@ void func_800684E4(DataStruct* arg0, s32 arg1, s32 arg2, s16* arg3)
 /**
  * decomp.me (100%) https://decomp.me/scratch/t5bIj
  */
-s32 func_80068734(DataStruct* arg0, s32 arg1, u16 arg2)
+s32 field_evaluate_parameter_track(FieldAnimationData* animation_data, s32 curve_index, u16 unused)
 {
     s32 var_s4;
-    TableEntry* temp_s3;
+    FieldParameterCurve* temp_s3;
     s32 var_s2;
     s32 temp_s1;
     u16* var_s0;
@@ -541,16 +545,16 @@ s32 func_80068734(DataStruct* arg0, s32 arg1, u16 arg2)
     u16 temp_v1_3;
     s32 rand_val;
     var_s4 = 0;
-    temp_s3 = arg0->unk4 + arg1;
+    temp_s3 = animation_data->curves + curve_index;
     var_s2 = var_s4;
-    var_a1 = temp_s3->unk0 & 0x7F;
-    var_s0 = arg0->unk8 + temp_s3->unk1;
+    var_a1 = temp_s3->segment_count_flags & 0x7F;
+    var_s0 = animation_data->segments + temp_s3->segment_offset;
     if (var_a1 != 0)
     {
-        var_a2 = *((u16*)((((u8*)arg0) + (D_80105788 * 2)) + 0x1EC));
+        var_a2 = *((u16*)((((u8*)animation_data) + (g_field_track_index * 2)) + 0x1EC));
         do
         {
-            if (!arg0)
+            if (!animation_data)
             {
             }
             temp_a0 = *var_s0;
@@ -565,17 +569,17 @@ s32 func_80068734(DataStruct* arg0, s32 arg1, u16 arg2)
             var_s0++;
         } while (var_a1 != 0);
     }
-    temp_s1 = temp_s3->unk2 - temp_s3->unk4;
+    temp_s1 = temp_s3->end_value - temp_s3->start_value;
     var_s2 = (temp_s1 * var_s2) >> 5;
     if (var_a1 == 0)
     {
-        return temp_s3->unk4;
+        return temp_s3->start_value;
     }
     if (((*((u16*)temp_s3)) & 0x80) && (D_801227C8 == 0))
     {
         rand_val = rand();
-        return temp_s3->unk4 +
-               (((var_s2 + (((((temp_s1 * ((*var_s0) >> 10)) >> 5) - var_s2) * ((*((u16*)((((u8*)arg0) + (D_80105788 * 2)) + 0x1EC))) - var_s4)) /
+        return temp_s3->start_value +
+               (((var_s2 + (((((temp_s1 * ((*var_s0) >> 10)) >> 5) - var_s2) * ((*((u16*)((((u8*)animation_data) + (g_field_track_index * 2)) + 0x1EC))) - var_s4)) /
                             ((*var_s0) & 0x3FF))) *
                  rand_val) >>
                 15);
@@ -583,78 +587,78 @@ s32 func_80068734(DataStruct* arg0, s32 arg1, u16 arg2)
     else
     {
         temp_v1_3 = *var_s0;
-        return (temp_s3->unk4 + var_s2) +
-               (((((temp_s1 * (temp_v1_3 >> 10)) >> 5) - var_s2) * ((*((u16*)((((u8*)arg0) + (D_80105788 * 2)) + 0x1EC))) - var_s4)) / (temp_v1_3 & 0x3FF));
+        return (temp_s3->start_value + var_s2) +
+               (((((temp_s1 * (temp_v1_3 >> 10)) >> 5) - var_s2) * ((*((u16*)((((u8*)animation_data) + (g_field_track_index * 2)) + 0x1EC))) - var_s4)) / (temp_v1_3 & 0x3FF));
     }
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/MCyYP
  */
-s32 func_80068970(func_80068970_Arg0* arg0)
+s32 field_finalize_actor_animation(FieldActorState* actor)
 {
     s32 found;
     u8 temp_a0;
     s32 i;
-    func_80068970_Arg0* var;
+    FieldActorState* var;
     s16 temp_v1;
-    if (arg0->unk222 == arg0->unk1EC[0])
+    if (actor->unk222 == actor->unk1EC[0])
     {
-        if (arg0->unkC->unk18 & 0x20)
+        if (actor->unkC->unk18 & 0x20)
         {
             for (i = 8; i >= 0; i--)
             {
-                arg0->unk1EC[i] = 0;
+                actor->unk1EC[i] = 0;
             }
 
             return 0;
         }
-        arg0->unk23A = 0;
+        actor->unk23A = 0;
     }
-    if (arg0->unk23A == 0)
+    if (actor->unk23A == 0)
     {
-        arg0->unk23B = 0;
-        if (arg0->unkC->unk18 & 2)
+        actor->unk23B = 0;
+        if (actor->unkC->unk18 & 2)
         {
-            if (D_80105AE0[arg0->unk228].u.b.unk17A == arg0->unk233)
+            if (D_80105AE0[actor->owner_object_index].u.b.unk17A == actor->unk233)
             {
-                temp_v1 = D_800FDF58[arg0->unk228].unk2A;
-                if (((temp_v1 != 0x90) && (temp_v1 != 0x94)) || (D_80105AE0[arg0->unk228].unkC & 0x200))
+                temp_v1 = D_800FDF58[actor->owner_object_index].unk2A;
+                if (((temp_v1 != 0x90) && (temp_v1 != 0x94)) || (D_80105AE0[actor->owner_object_index].unkC & 0x200))
                 {
-                    D_800FDF58[arg0->unk228].unk25 = 0;
+                    D_800FDF58[actor->owner_object_index].unk25 = 0;
                 }
-                D_80105AE0[arg0->unk228].u.unk178 &= ~1;
+                D_80105AE0[actor->owner_object_index].u.unk178 &= ~1;
             }
         }
-        if (arg0->unkC->unk18 & 4)
+        if (actor->unkC->unk18 & 4)
         {
-            for (found = 0; found < ((s32)arg0->unk232); found++)
+            for (found = 0; found < ((s32)actor->unk232); found++)
             {
-                if (arg0->unk229[found] != 0xFF)
+                if (actor->unk229[found] != 0xFF)
                 {
-                    temp_a0 = D_80105AE0[arg0->unk229[found]].u.unk178;
-                    if ((temp_a0 & 1) && (D_80105AE0[arg0->unk229[found]].u.b.unk17A == arg0->unk233))
+                    temp_a0 = D_80105AE0[actor->unk229[found]].u.unk178;
+                    if ((temp_a0 & 1) && (D_80105AE0[actor->unk229[found]].u.b.unk17A == actor->unk233))
                     {
-                        D_800FDF58[arg0->unk229[found]].unk25 = 0;
-                        D_80105AE0[arg0->unk229[found]].u.unk178 &= ~1;
+                        D_800FDF58[actor->unk229[found]].unk25 = 0;
+                        D_80105AE0[actor->unk229[found]].u.unk178 &= ~1;
                     }
                 }
             }
         }
-        if (arg0->unkC->unkC & 0x1000)
+        if (actor->unkC->unkC & 0x1000)
         {
             D_800F2280 = 0;
             D_800F227C = 0;
             D_800F2278 = 0;
         }
-        if ((arg0->unkC->unkC >> 8) & 4)
+        if ((actor->unkC->unkC >> 8) & 4)
         {
             s32 j;
-            var = D_800F22C8;
+            var = g_field_actor_slots;
             for (j = 0; j < 80; j++, var++)
             {
                 found = 0;
-                if (((arg0 != var) && (var->unk24 != 0)) && ((var->unkC->unkC >> 8) & 4))
+                if (((actor != var) && (var->unk24 != 0)) && ((var->unkC->unkC >> 8) & 4))
                 {
                     found = 1;
                     break;
@@ -663,44 +667,45 @@ s32 func_80068970(func_80068970_Arg0* arg0)
 
             if (found == 0)
             {
-                func_8006A240(0x100, 0x100, 0x100);
+                field_set_global_color_scale(0x100, 0x100, 0x100);
             }
         }
-        if ((*(u32*)&arg0->u224.unk224 & 0xFFFF0001) != 0xC0000)
+        if ((*(u32*)&actor->u224.unk224 & 0xFFFF0001) != 0xC0000)
         {
-            func_8006D21C(arg0);
+            func_8006D21C(actor);
         }
-        if (!(arg0->unkC->unkC & 0x800))
+        if (!(actor->unkC->unkC & 0x800))
         {
-            arg0->unk222 = 0;
-            arg0->unk24 = 0;
-            if (*(u32*)(&arg0->u224.unk224) & 1)
+            actor->unk222 = 0;
+            actor->unk24 = 0;
+            if (*(u32*)(&actor->u224.unk224) & 1)
             {
-                func_80084424(arg0->unk228);
+                func_80084424(actor->owner_object_index);
             }
             return 1;
         }
-        temp_a0 = arg0->unk2A;
+        temp_a0 = actor->unk2A;
         if (temp_a0 != 0)
         {
-            arg0->unk222 = 0;
-            arg0->unk24 = 0;
-            func_80084424(arg0->unk228);
+            actor->unk222 = 0;
+            actor->unk24 = 0;
+            func_80084424(actor->owner_object_index);
             for (i = 0; i < 80; i++)
             {
-                if (((D_800F22C8[i].unk24 != 0) && (D_800F22C8[i].unk228 == arg0->unk228)) && ((temp_a0 = D_800F22C8[i].u224.unk224) & 1))
+                if (((g_field_actor_slots[i].unk24 != 0) && (g_field_actor_slots[i].owner_object_index == actor->owner_object_index)) &&
+                    ((temp_a0 = g_field_actor_slots[i].u224.unk224) & 1))
                 {
-                    D_800F22C8[i].unk23A = 0;
-                    func_80068970(&D_800F22C8[i]);
+                    g_field_actor_slots[i].unk23A = 0;
+                    field_finalize_actor_animation(&g_field_actor_slots[i]);
                 }
             }
 
-            arg0->unk2A = 0;
+            actor->unk2A = 0;
         }
         else
         {
-            arg0->unk222 = 0;
-            arg0->unk24 = 0;
+            actor->unk222 = 0;
+            actor->unk24 = 0;
         }
         return 1;
     }
@@ -710,9 +715,9 @@ s32 func_80068970(func_80068970_Arg0* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/7d7kv
  */
-unsigned int func_80068DA8(DataStruct* arg0, s32 arg1, s32 arg2)
+unsigned int field_evaluate_parameter_track_at_time(FieldAnimationData* animation_data, s32 curve_index, s32 frame)
 {
-    TableEntry* entry;
+    FieldParameterCurve* entry;
     int new_var2;
     u16* data_ptr;
     s32 count;
@@ -728,11 +733,11 @@ unsigned int func_80068DA8(DataStruct* arg0, s32 arg1, s32 arg2)
 
     accumulated_val = 0;
     v1_reg = 0;
-    local_arg2 = arg2;
-    entry = &arg0->unk4[arg1];
+    local_arg2 = frame;
+    entry = &animation_data->curves[curve_index];
 
-    count = entry->unk0 & 0x7F;
-    data_ptr = &arg0->unk8[entry->unk1];
+    count = entry->segment_count_flags & 0x7F;
+    data_ptr = &animation_data->segments[entry->segment_offset];
 
     if (count != 0)
     {
@@ -752,14 +757,14 @@ unsigned int func_80068DA8(DataStruct* arg0, s32 arg1, s32 arg2)
         } while ((--count) != 0);
     }
 
-    diff = entry->unk2 - entry->unk4;
+    diff = entry->end_value - entry->start_value;
     new_var2 = 0x3FF;
     v1_reg = (diff * v1_reg) >> 5;
     new_var = new_var2;
 
     if (count == 0)
     {
-        return entry->unk4;
+        return entry->start_value;
     }
 
     if (((*((u16*)entry)) & 0x80) && (D_801227C8 == 0))
@@ -767,7 +772,7 @@ unsigned int func_80068DA8(DataStruct* arg0, s32 arg1, s32 arg2)
         s32 rand_val = rand();
         val = *data_ptr;
         fraction = ((((diff * (val >> 10)) >> 5) - v1_reg) * (local_arg2 - accumulated_val)) / (val & new_var);
-        new_var3 = entry->unk4 + (((v1_reg + fraction) * rand_val) >> 15);
+        new_var3 = entry->start_value + (((v1_reg + fraction) * rand_val) >> 15);
         result = ((v1_reg + fraction) * rand_val) >> 15;
         return new_var3;
     }
@@ -776,14 +781,14 @@ unsigned int func_80068DA8(DataStruct* arg0, s32 arg1, s32 arg2)
         val = *data_ptr;
         fraction = ((((diff * (val >> 10)) >> 5) - v1_reg) * (local_arg2 - accumulated_val)) / (val & new_var2);
         result = fraction;
-        return (entry->unk4 + v1_reg) + result;
+        return (entry->start_value + v1_reg) + result;
     }
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/eRVUu
  */
-void func_80068F94(MainStruct* arg0)
+void field_reset_actor_track_state(FieldActorResetState* actor)
 {
     s32 i;
     s32 j;
@@ -792,18 +797,18 @@ void func_80068F94(MainStruct* arg0)
     /* which forces 'i' to take register a3 later on.     */
     for (j = 8; j >= 0; j--)
     {
-        arg0->unk1EC[j] = 0;
+        actor->unk1EC[j] = 0;
     }
 
-    arg0->unk236 = 0;
-    arg0->unk234 = 0;
+    actor->unk236 = 0;
+    actor->unk234 = 0;
 
-    for (i = 0; i < arg0->unk25; i++)
+    for (i = 0; i < actor->unk25; i++)
     {
-        arg0->sub_array[i].unk32 = i;
+        actor->parts[i].unk32 = i;
         for (j = 0; j < 9; j++)
         {
-            arg0->unk2B[i] = (arg0->inner2[j][i] = (arg0->inner1[j][i] = 0));
+            actor->unk2B[i] = (actor->inner2[j][i] = (actor->inner1[j][i] = 0));
         }
     }
 }
@@ -811,32 +816,32 @@ void func_80068F94(MainStruct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/PjqLA
  */
-void func_80069028(MainStruct2* arg0)
+void field_advance_actor_tracks(FieldActorTrackState* actor)
 {
     s32 var_a0;
 
-    if (func_80068970() == 0)
+    if (field_finalize_actor_animation() == 0)
     {
-        /* Removed the redundant 'if (arg0->unk232 != 0)' wrapper */
-        for (var_a0 = 0; var_a0 < arg0->unk232; var_a0++)
+        /* Removed the redundant track-count wrapper. */
+        for (var_a0 = 0; var_a0 < actor->unk232; var_a0++)
         {
-            if (((s32)arg0->unk23A >> var_a0) & 1)
+            if (((s32)actor->unk23A >> var_a0) & 1)
             {
-                arg0->unk1EC[var_a0]++;
+                actor->unk1EC[var_a0]++;
             }
         }
 
         /* Incremented before checking conditions to match delay slot scheduling */
-        arg0->unk236++;
+        actor->unk236++;
 
-        if (arg0->unk238 != 0 && arg0->unk232 != 0)
+        if (actor->unk238 != 0 && actor->unk232 != 0)
         {
-            if ((arg0->unk236 % arg0->unk238) == 0)
+            if ((actor->unk236 % actor->unk238) == 0)
             {
-                s32 temp_a0 = arg0->unk236 / arg0->unk238;
-                if (temp_a0 < arg0->unk232)
+                s32 temp_a0 = actor->unk236 / actor->unk238;
+                if (temp_a0 < actor->unk232)
                 {
-                    arg0->unk23A |= (1 << temp_a0);
+                    actor->unk23A |= (1 << temp_a0);
                 }
             }
         }
@@ -846,11 +851,11 @@ void func_80069028(MainStruct2* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/3KrRM
  */
-void func_8006911C(void)
+void field_initialize_actor_slots(void)
 {
     s32 var_a0;
     s32 var_a0_2;
-    func_80068970_Arg0* new_var;
+    FieldActorState* new_var;
     volatile u8* var_v1_2;
     var_a0 = 0;
     do
@@ -859,7 +864,7 @@ void func_8006911C(void)
         var_a0++;
     } while (var_a0 < 0xD);
     var_a0_2 = 0;
-    new_var = D_800F22C8;
+    new_var = g_field_actor_slots;
     var_v1_2 = ((u8*)new_var) + 0x238;
     do
     {
@@ -876,10 +881,10 @@ void func_8006911C(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/0JqYo
  */
-void func_80069184(void)
+void field_clear_actor_slots(void)
 {
     s32 var_a0 = 0;
-    func_80068970_Arg0* var_v1 = D_800F22C8;
+    FieldActorState* var_v1 = g_field_actor_slots;
 
     do
     {
@@ -897,16 +902,16 @@ void func_80069184(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/BUS6C
  */
-void func_800691C4(s32 arg0, int arg1, u8* arg2)
+void field_start_actor_animation(s32 slot_index, int target_count, u8* targets)
 {
     s32 i;
     s32 k;
     s32 j;
     s32 m;
-    func_80068970_Arg0* temp_s0;
+    FieldActorState* temp_s0;
     u8* src;
-    m = arg0;
-    temp_s0 = &D_800F22C8[m];
+    m = slot_index;
+    temp_s0 = &g_field_actor_slots[m];
     temp_s0->unk28 = 0;
     temp_s0->unk27 = 0;
     if (temp_s0->unk25 == 0)
@@ -917,14 +922,14 @@ void func_800691C4(s32 arg0, int arg1, u8* arg2)
     temp_s0->unk23A = 0;
     temp_s0->unk23B = 1;
     temp_s0->unk229[0] = 0;
-    temp_s0->unk232 = arg1;
+    temp_s0->unk232 = target_count;
     ((u8*)&temp_s0->u224.h.lo)[1] = 0;
-    if (arg1 != 0)
+    if (target_count != 0)
     {
-        src = arg2;
+        src = targets;
         j = 0;
         i = 0;
-        if (arg1 > 0)
+        if (target_count > 0)
         {
             do
             {
@@ -932,7 +937,7 @@ void func_800691C4(s32 arg0, int arg1, u8* arg2)
                 j++;
                 src += 4;
                 i++;
-            } while (i < arg1);
+            } while (i < target_count);
         }
         if (j != 0)
         {
@@ -940,7 +945,7 @@ void func_800691C4(s32 arg0, int arg1, u8* arg2)
         }
         else
         {
-            func_80068970(temp_s0);
+            field_finalize_actor_animation(temp_s0);
             return;
         }
     }
@@ -966,7 +971,7 @@ void func_800691C4(s32 arg0, int arg1, u8* arg2)
         }
     }
 
-    func_800693B4(temp_s0, 1, 0);
+    field_dispatch_actor_audio_event(temp_s0, 1, 0);
     for (i = 0; i < temp_s0->unk25; i++)
     {
         temp_s0->unk0[i].unk32 = i;
@@ -980,7 +985,7 @@ void func_800691C4(s32 arg0, int arg1, u8* arg2)
 /**
  * decomp.me (100%) https://decomp.me/scratch/XDOcQ
  */
-void func_800693B4(void* arg0, s32 arg1, s32 arg2)
+void field_dispatch_actor_audio_event(void* actor, s32 event_type, s32 event_subtype)
 {
     u8* ptr;
     Struct_D800FDF58* global_table;
@@ -995,22 +1000,22 @@ void func_800693B4(void* arg0, s32 arg1, s32 arg2)
 
     for (i = 0; i < 2; i++)
     {
-        ptr = (u8*)arg0 + i;
+        ptr = (u8*)actor + i;
         idx = i << 1;
         if (ptr[0x27] == 0)
         {
-            table = *((u8**)((u8*)arg0 + 0x0C));
-            if ((*((u16*)(idx + (u32)table + 4))) == arg1)
+            table = *((u8**)((u8*)actor + 0x0C));
+            if ((*((u16*)(idx + (u32)table + 4))) == event_type)
             {
-                if (arg1 != 1)
+                if (event_type != 1)
                 {
-                    if ((*((table + i) + 2)) != arg2)
+                    if ((*((table + i) + 2)) != event_subtype)
                     {
                         continue;
                     }
                 }
-                temp = func_8006CE70(((u8*)arg0)[0x228]);
-                table = (new_var = *((u8**)((u8*)arg0 + 0x0C)));
+                temp = func_8006CE70(((u8*)actor)[0x228]);
+                table = (new_var = *((u8**)((u8*)actor + 0x0C)));
                 val = *((u16*)((table + idx) + 8));
                 switch (val >> 10)
                 {
@@ -1019,24 +1024,24 @@ void func_800693B4(void* arg0, s32 arg1, s32 arg2)
                     break;
 
                 case 1:
-                    if (((u8*)arg0)[0x228] < 2)
+                    if (((u8*)actor)[0x228] < 2)
                     {
-                        func_800A3A90(val & 0x3FF, temp, ((u8*)arg0)[0x228]);
+                        func_800A3A90(val & 0x3FF, temp, ((u8*)actor)[0x228]);
                     }
                     else
                     {
                         global_table = D_800FDF58;
-                        entry = &global_table[((u8*)arg0)[0x228]];
+                        entry = &global_table[((u8*)actor)[0x228]];
                         d = entry->pad2C[0xF];
                         if (((u32)(d - 3)) < 3)
                         {
                             if (D_800FF59C != 0)
                             {
-                                func_800A39A8(val & 0x3FF, temp, 0, ((u8*)arg0)[0x228]);
+                                func_800A39A8(val & 0x3FF, temp, 0, ((u8*)actor)[0x228]);
                             }
                             else
                             {
-                                func_800A39A8(val & 0x3FF, temp, entry->pad2C[0xF] - 3, ((u8*)arg0)[0x228]);
+                                func_800A39A8(val & 0x3FF, temp, entry->pad2C[0xF] - 3, ((u8*)actor)[0x228]);
                             }
                         }
                     }
@@ -1045,17 +1050,17 @@ void func_800693B4(void* arg0, s32 arg1, s32 arg2)
                 case 2:
                     if ((val & 0x3FF) < 2)
                     {
-                        s32* field = (s32*)(((val & 0x3FF) << 2) + (u32)arg0 + 0x1C);
-                        func_800A3E10(*field, temp, ((u8*)arg0)[0x228]);
+                        s32* field = (s32*)(((val & 0x3FF) << 2) + (u32)actor + 0x1C);
+                        func_800A3E10(*field, temp, ((u8*)actor)[0x228]);
                     }
                     break;
                 }
 
-                if (arg1 == 5)
+                if (event_type == 5)
                 {
                     ptr[0x27] |= 0x80;
                 }
-                ((u8*)arg0 + i)[0x27] |= 1;
+                ((u8*)actor + i)[0x27] |= 1;
             }
         }
     }
@@ -1064,39 +1069,46 @@ void func_800693B4(void* arg0, s32 arg1, s32 arg2)
 /**
  * decomp.me (100%) https://decomp.me/scratch/tXpD1
  */
-s32 func_800695D4(s32 arg0)
+s32 field_is_actor_animation_active(s32 slot_index)
 {
-    func_80068970_Arg0* temp_v1;
+    FieldActorState* temp_v1;
 
-    temp_v1 = &D_800F22C8[arg0];
+    temp_v1 = &g_field_actor_slots[slot_index];
     return (temp_v1->unk23A | temp_v1->unk23B) != 0;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/8lvHC
+ * @brief Find an active actor using a special-attack animation.
+ *
+ * Scans active actor slots whose low status bit is clear for animation IDs
+ * 0x1F through 0x23. These IDs form a combat-animation family with dedicated
+ * hit and collision handling.
+ *
+ * @return The owning field-object index ORed with 0x200, or zero if none.
+ * @see decomp.me (100%) https://decomp.me/scratch/8lvHC
  */
-s32 func_8006960C(void)
+s32 field_find_active_special_attack_actor(void)
 {
-    int new_var3;
-    func_80068970_Arg0* ptr;
-    s32 i;
-    int new_var2;
-    u16 tmp;
-    ptr = D_800F22C8;
-    for (i = 0; i < 80; i++)
+    int animation_id_limit;
+    FieldActorState* actor;
+    s32 slot_index;
+    int first_animation_id;
+    u16 animation_id;
+    actor = g_field_actor_slots;
+    for (slot_index = 0; slot_index < 80; slot_index++)
     {
-        new_var2 = 0x1F;
-        if ((ptr->unk24 != 0) && (!(ptr->u224.unk224 & 1)))
+        first_animation_id = 0x1F;
+        if ((actor->unk24 != 0) && (!(actor->u224.unk224 & 1)))
         {
-            tmp = tmp >> 16;
-            new_var3 = 0x24;
-            tmp = ptr->u224.h.unk226;
-            if ((tmp < new_var3) && (tmp >= new_var2))
+            animation_id = animation_id >> 16;
+            animation_id_limit = 0x24;
+            animation_id = actor->u224.h.animation_id;
+            if ((animation_id < animation_id_limit) && (animation_id >= first_animation_id))
             {
-                return ptr->unk228 | 0x200;
+                return actor->owner_object_index | 0x200;
             }
         }
-        ptr++;
+        actor++;
     }
 
     return 0;
@@ -1105,12 +1117,12 @@ s32 func_8006960C(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/etUW8
  */
-void func_80069684(void)
+void field_update_actor_animations(void)
 {
     Struct_801ED600* ptr_801ED600 = (Struct_801ED600*)0x801ED600;
-    func_80068970_Arg2* var_s3;
+    FieldActorStateWithTracks* var_s3;
     Struct_Unk28* var_s1;
-    Struct_C* temp_v1_3;
+    FieldActorAnimationDef* temp_v1_3;
     s32 var_s0;
     s32 var_s6;
     u8* new_var;
@@ -1119,7 +1131,7 @@ void func_80069684(void)
     u16 temp_a0_4;
     u32 div_num;
     u32 div_den;
-    var_s3 = D_800F22C8;
+    var_s3 = g_field_actor_slots;
     var_s6 = 0;
     ptr_801ED600->unk140 = 0U;
     ptr_801ED600->unk92 = 0U;
@@ -1130,7 +1142,7 @@ void func_80069684(void)
         {
             if ((&var_s3->unk28)->unk213 != 0)
             {
-                func_80069AF8(var_s3);
+                field_reset_actor_track_mask(var_s3);
             }
             if ((&var_s3->unk28)->unk212 != (var_s3->unkC->unk15 * 0))
             {
@@ -1146,7 +1158,7 @@ void func_80069684(void)
                             if (((&var_s3->unk0[var_s3->unkC->unk15])->unk31 < unk1ec) &&
                                 ((&var_s3->unk28)->unk1C4[var_s0] < ((&var_s3->unk0[var_s3->unkC->unk15])->unk31 + (&var_s3->unk0[var_s3->unkC->unk15])->unkD)))
                             {
-                                D_80105788 = var_s0;
+                                g_field_track_index = var_s0;
                                 func_80099A48(var_s3, &var_s3->unk0[var_s3->unkC->unk15]);
                             }
                         }
@@ -1157,7 +1169,7 @@ void func_80069684(void)
                         {
                             if ((&var_s3->unk0[var_s3->unkC->unk15])->unkD > (&var_s3->unk28)->unk1C4[var_s0])
                             {
-                                D_80105788 = var_s0;
+                                g_field_track_index = var_s0;
                                 func_80099A48(var_s3, &var_s3->unk0[var_s3->unkC->unk15]);
                             }
                         }
@@ -1165,7 +1177,7 @@ void func_80069684(void)
                     else if (((&var_s3->unk0[var_s3->unkC->unk15])->unk31 < (&var_s3->unk28)->unk1C4[0]) &&
                              ((&var_s3->unk28)->unk1C4[0] < ((&var_s3->unk0[var_s3->unkC->unk15])->unk31 + (&var_s3->unk0[var_s3->unkC->unk15])->unkD)))
                     {
-                        D_80105788 = 0;
+                        g_field_track_index = 0;
                         func_80099A48(var_s3, &var_s3->unk0[var_s3->unkC->unk15]);
                     }
                 }
@@ -1176,7 +1188,7 @@ void func_80069684(void)
                     func_8005A67C((temp_a0_4 >> 8) & 0x7F, 0);
                 }
                 func_8006D270(var_s3);
-                if (func_80068970(var_s3) == 0)
+                if (field_finalize_actor_animation(var_s3) == 0)
                 {
                     for (i = 0; i < (&var_s3->unk28)->unk20A; i++)
                     {
@@ -1201,7 +1213,7 @@ void func_80069684(void)
                         }
                     }
                 }
-                D_80105788 = 0;
+                g_field_track_index = 0;
                 for (var_s0 = 0; var_s0 < 2; var_s0++)
                 {
                     u8 temp_a1 = (new_var = var_s3->unkC->unk0)[var_s0];
@@ -1209,13 +1221,13 @@ void func_80069684(void)
                     {
                         if (var_s0 != 0)
                         {
-                            u8 temp_v1_6 = func_80068734((DataStruct*)var_s3, temp_a1 & 0xF) | ptr_801ED600->unk92;
+                            u8 temp_v1_6 = field_evaluate_parameter_track((FieldAnimationData*)var_s3, temp_a1 & 0xF) | ptr_801ED600->unk92;
                             ptr_801ED600->unk92 = temp_v1_6;
                             ptr_801ED600->unk140 = temp_v1_6;
                         }
                         else
                         {
-                            u8 temp_v0_2 = func_80068734((DataStruct*)var_s3, (tmp = new_var[0]) & 0xF);
+                            u8 temp_v0_2 = field_evaluate_parameter_track((FieldAnimationData*)var_s3, (tmp = new_var[0]) & 0xF);
                             ptr_801ED600->unk91 = (ptr_801ED600->unk13F = temp_v0_2);
                         }
                     }
@@ -1232,47 +1244,47 @@ void func_80069684(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/VZWgF
  */
-void func_80069AF8(ContextStruct* arg0)
+void field_reset_actor_track_mask(FieldActorTrackMaskState* actor)
 {
     s32 i;
-    u16 check238 = arg0->unk238;
+    u16 check238 = actor->unk238;
 
     // hack
     check238++;
     check238--;
 
-    arg0->unk23A = 1;
+    actor->unk23A = 1;
     if (check238 == 0)
     {
-        arg0->unk23A = 0;
-        for (i = 0; i < arg0->unk232; i++)
+        actor->unk23A = 0;
+        for (i = 0; i < actor->unk232; i++)
         {
-            arg0->unk23A |= 1 << i;
+            actor->unk23A |= 1 << i;
         }
     }
-    arg0->unk23B = 0;
+    actor->unk23B = 0;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/hvTSS
  */
-void func_80069B44(s32 arg0, s32 arg1)
+void field_prepare_actor_render_commands(s32 render_context, s32 unused)
 {
     func_80074D7C();
-    func_80069B84(arg0, arg1);
+    field_build_actor_render_commands(render_context, unused);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/Sgd61
  */
-void func_80069B84(void* arg0)
+void field_build_actor_render_commands(void* render_context)
 {
     u32 new_var;
-    Struct_Arg4* arg0_1 = (Struct_Arg4*)arg0;
+    FieldRenderContext* arg0_1 = (FieldRenderContext*)render_context;
     s32 new_var4;
     u32* var_s7 = &arg0_1->unk40;
     u32* p_s4 = (u32*)arg0_1->unk40B8;
-    func_80068970_Arg0* var_s2 = D_800F22C8;
+    FieldActorState* var_s2 = g_field_actor_slots;
     s32 var_s5 = 0;
     u32 sp_arr_word;
     int new_var6;
@@ -1288,8 +1300,8 @@ void func_80069B84(void* arg0)
             {
                 u8 var_a1;
                 s32 cond;
-                D_80105788 = 0;
-                cond = func_80068734(var_s2, (var_s2->unkC->unk18 >> 8) & 0xF);
+                g_field_track_index = 0;
+                cond = field_evaluate_parameter_track(var_s2, (var_s2->unkC->unk18 >> 8) & 0xF);
                 var_a1 = 0;
                 if (cond != 0)
                 {
@@ -1297,24 +1309,24 @@ void func_80069B84(void* arg0)
                 }
                 if (var_a1 != 0)
                 {
-                    D_800FDF58[var_s2->unk228].unk25 = var_a1;
-                    D_80105AE0[var_s2->unk228].u.unk178 |= 1;
-                    D_80105AE0[var_s2->unk228].u.b.unk17A = var_s2->unk233;
+                    D_800FDF58[var_s2->owner_object_index].unk25 = var_a1;
+                    D_80105AE0[var_s2->owner_object_index].u.unk178 |= 1;
+                    D_80105AE0[var_s2->owner_object_index].u.b.unk17A = var_s2->unk233;
                 }
                 else
                 {
-                    u8 temp_v1_2 = var_s2->unk228;
+                    u8 temp_v1_2 = var_s2->owner_object_index;
                     s16 temp_a0 = D_800FDF58[temp_v1_2].unk2A;
                     if ((temp_a0 == 0x90) || (temp_a0 == 0x94))
                     {
                         if (D_80105AE0[temp_v1_2].unkC & 0x200)
                         {
-                            D_800FDF58[var_s2->unk228].unk25 = var_a1;
+                            D_800FDF58[var_s2->owner_object_index].unk25 = var_a1;
                         }
                     }
                     else
                     {
-                        D_800FDF58[var_s2->unk228].unk25 = var_a1;
+                        D_800FDF58[var_s2->owner_object_index].unk25 = var_a1;
                     }
                 }
             }
@@ -1328,8 +1340,8 @@ void func_80069B84(void* arg0)
                     {
                         u8 var_a1_2;
                         s32 cond2;
-                        D_80105788 = var_s1;
-                        cond2 = func_80068734(var_s2, var_s2->unkC->unk18 >> 0xC);
+                        g_field_track_index = var_s1;
+                        cond2 = field_evaluate_parameter_track(var_s2, var_s2->unkC->unk18 >> 0xC);
                         var_a1_2 = 0;
                         if (cond2 != 0)
                         {
@@ -1361,34 +1373,34 @@ void func_80069B84(void* arg0)
         var_s5++;
         var_s2++;
     } while (var_s5 < 0x50);
-    D_80105788 = 0;
-    var_s2 = D_800F22C8;
+    g_field_track_index = 0;
+    var_s2 = g_field_actor_slots;
     var_s5 = 0;
     do
     {
         if (var_s2->unk23A != 0)
         {
-            Struct_C* temp_a0_2 = var_s2->unkC;
+            FieldActorAnimationDef* temp_a0_2 = var_s2->unkC;
             if (temp_a0_2->unkC & 0x1000)
             {
                 s32 new_var33 = temp_a0_2->unkC >> 0xD;
                 switch (new_var33 & 3)
                 {
                 case 0:
-                    D_800F2278 = func_80068734(var_s2, temp_a0_2->unk10 >> 0xC);
+                    D_800F2278 = field_evaluate_parameter_track(var_s2, temp_a0_2->unk10 >> 0xC);
                     break;
 
                 case 1:
-                    D_800F227C = func_80068734(var_s2, temp_a0_2->unk10 >> 0xC);
+                    D_800F227C = field_evaluate_parameter_track(var_s2, temp_a0_2->unk10 >> 0xC);
                     break;
 
                 case 2:
-                    D_800F227C = (D_800F2278 = func_80068734(var_s2, temp_a0_2->unk10 >> 0xC));
+                    D_800F227C = (D_800F2278 = field_evaluate_parameter_track(var_s2, temp_a0_2->unk10 >> 0xC));
                     break;
 
                 case 3:
-                    D_800F2278 = func_80068734(var_s2, temp_a0_2->unk10 >> 0xC);
-                    D_800F227C = func_80068734(var_s2, ((var_s2->unkC->unk10 >> 0xC) + 1) & 0xF);
+                    D_800F2278 = field_evaluate_parameter_track(var_s2, temp_a0_2->unk10 >> 0xC);
+                    D_800F227C = field_evaluate_parameter_track(var_s2, ((var_s2->unkC->unk10 >> 0xC) + 1) & 0xF);
                     break;
                 }
             }
@@ -1396,14 +1408,14 @@ void func_80069B84(void* arg0)
         var_s5++;
         var_s2++;
     } while (var_s5 < 0x50);
-    var_s2 = D_800F22C8;
+    var_s2 = g_field_actor_slots;
     var_s5 = 0;
     do
     {
         new_var3 = 0x00FFFFFF;
         if ((var_s2->unk23A != 0) && (var_s2->unk24 != 0))
         {
-            Struct_C* temp_v1_7 = var_s2->unkC;
+            FieldActorAnimationDef* temp_v1_7 = var_s2->unkC;
             u8 temp_a1 = (u8)temp_v1_7->unkC;
             if (((u8)temp_v1_7->unkC) < 0x10)
             {
@@ -1411,18 +1423,18 @@ void func_80069B84(void* arg0)
                 {
                     do
                     {
-                        ((u8*)(&sp_arr_word))[0] = func_80068734(var_s2, (u8)temp_v1_7->unkC);
+                        ((u8*)(&sp_arr_word))[0] = field_evaluate_parameter_track(var_s2, (u8)temp_v1_7->unkC);
                     } while (0);
-                    ((u8*)(&sp_arr_word))[1] = func_80068734(var_s2, (((u8)var_s2->unkC->unkC) + 1) & 0xF);
-                    ((u8*)(&sp_arr_word))[2] = func_80068734(var_s2, (((u8)var_s2->unkC->unkC) + 2) & 0xF);
+                    ((u8*)(&sp_arr_word))[1] = field_evaluate_parameter_track(var_s2, (((u8)var_s2->unkC->unkC) + 1) & 0xF);
+                    ((u8*)(&sp_arr_word))[2] = field_evaluate_parameter_track(var_s2, (((u8)var_s2->unkC->unkC) + 2) & 0xF);
                 }
                 else
                 {
-                    ((u8*)(&sp_arr_word))[0] = (((u8*)(&sp_arr_word))[1] = (((u8*)(&sp_arr_word))[2] = func_80068734(var_s2, temp_a1 & 0xF)));
+                    ((u8*)(&sp_arr_word))[0] = (((u8*)(&sp_arr_word))[1] = (((u8*)(&sp_arr_word))[2] = field_evaluate_parameter_track(var_s2, temp_a1 & 0xF)));
                 }
                 if ((var_s2->unkC->unkC >> 8) & 4)
                 {
-                    func_8006A240(((u8*)(&sp_arr_word))[0] * 2, ((u8*)(&sp_arr_word))[1] * 2, ((u8*)(&sp_arr_word))[2] * 2);
+                    field_set_global_color_scale(((u8*)(&sp_arr_word))[0] * 2, ((u8*)(&sp_arr_word))[1] * 2, ((u8*)(&sp_arr_word))[2] * 2);
                 }
                 else
                 {
@@ -1477,53 +1489,53 @@ void func_80069B84(void* arg0)
 
         var_s2++;
     } while (var_s5 < 0x50);
-    func_8006A258();
+    field_apply_global_color_scale();
     arg0_1->unk40B8 = p_s4;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/kl6PF
  */
-void func_8006A21C(void)
+void field_reset_global_color_scale(void)
 {
-    D_800FD808.s.unk0 = 0x100;
-    D_800FD808.s.unk2 = 0x100;
-    D_800FD808.s.unk4 = 0x100;
-    D_800FD810 = 0;
+    g_field_color_scale.s.red = 0x100;
+    g_field_color_scale.s.green = 0x100;
+    g_field_color_scale.s.blue = 0x100;
+    g_field_color_scale_active = 0;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/iwb2J
  */
-void func_8006A240(s16 arg0, s16 arg1, s16 arg2)
+void field_set_global_color_scale(s16 red, s16 green, s16 blue)
 {
-    D_800FD808.s.unk0 = arg0;
-    D_800FD808.s.unk2 = arg1;
-    D_800FD808.s.unk4 = arg2;
+    g_field_color_scale.s.red = red;
+    g_field_color_scale.s.green = green;
+    g_field_color_scale.s.blue = blue;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/eDBPu
  */
-void func_8006A258(void)
+void field_apply_global_color_scale(void)
 {
-    u8* q = &D_800FD810;
+    u8* active = &g_field_color_scale_active;
 
-    if (*q != 0)
+    if (*active != 0)
     {
-        func_8005A0D0(-1, D_800FD808.s.unk0, D_800FD808.s.unk2, D_800FD808.s.unk4);
-        if (D_800FD808.w == 0x1000100UL && D_800FD808.s.unk4 == 0x100)
+        func_8005A0D0(-1, g_field_color_scale.s.red, g_field_color_scale.s.green, g_field_color_scale.s.blue);
+        if (g_field_color_scale.w == 0x1000100UL && g_field_color_scale.s.blue == 0x100)
         {
-            *q = 0;
+            *active = 0;
         }
     }
     else
     {
-        D_800FD808_t* p = &D_800FD808; /* forces s0/s1 registers in else branch */
-        if (p->w != 0x1000100UL || p->s.unk4 != 0x100)
+        FieldColorScale* p = &g_field_color_scale; /* forces s0/s1 registers in else branch */
+        if (p->w != 0x1000100UL || p->s.blue != 0x100)
         {
-            func_8005A0D0(-1, p->s.unk0, p->s.unk2, p->s.unk4);
-            *q = 1;
+            func_8005A0D0(-1, p->s.red, p->s.green, p->s.blue);
+            *active = 1;
         }
     }
 }
@@ -1550,13 +1562,13 @@ extern void* bcopy(const void*, void*, int);
 
 typedef struct
 {
-    u8* unk0; /* 0x00 */
-    u8* unk4; /* 0x04 */
+    u8* start; /* 0x00 */
+    u8* end;   /* 0x04 */
     u8 pad8[1];
-    u8 unk9; /* 0x09 */
+    u8 slot_index; /* 0x09 */
     u8 padA[6];
-    u32 unk10; /* 0x10 */
-} Struct_FF558;
+    u32 flags; /* 0x10 */
+} FieldResourceEntry;
 
 typedef struct
 {
@@ -1570,18 +1582,18 @@ typedef struct
 
 extern PadContext* g_pad_ctx;
 
-extern u8 D_800CBF84[];
+extern u8 g_field_resource_buffer[];
 extern u16 D_800FDA80;
-extern Struct_D D_800FE3A0[];
-extern Struct_C D_800FE758;
+extern FieldActorPartDef D_800FE3A0[];
+extern FieldActorAnimationDef D_800FE758;
 extern s32 D_800FE774;
-extern Struct_FF558 D_800FF558[];
-extern void* D_800FF60C;
+extern FieldResourceEntry g_field_resource_entries[];
+extern void* g_field_resource_cursor;
 extern s32 D_801158A0;
 
-void func_8006A780(s32);
+void field_relocate_resource_buffer(s32);
 void func_8006C3FC(Struct_D800FDF58*, void*);
-void func_8006A858(s32);
+void field_restore_default_action_animation_mappings(s32);
 s32 func_8006A88C(s32, D_800FD818_type*, s32);
 void func_8006A9A4(s32, s32, s32, s32);
 void func_8006B4D0(s32, s32);
@@ -1596,18 +1608,18 @@ void func_800A3D44(s32, u8);
  *        ordering in the final loops are load-bearing for codegen.
  * @see decomp.me (100%) https://decomp.me/scratch/0wUsT
  */
-void func_8006A370(void)
+void field_initialize_actor_system(void)
 {
     s32 i;
     s32 j;
     unsigned int new_var4;
     int new_var2;
     u8* new_var;
-    Struct_C* new_var3;
+    FieldActorAnimationDef* new_var3;
     int new_var5;
-    Struct_D* ptr_D;
+    FieldActorPartDef* ptr_D;
     u8* new_var7;
-    func_80068970_Arg0* arg0_ptr;
+    FieldActorState* arg0_ptr;
     u8* ptr_a0;
     u8* ptr_a1;
     int new_var8;
@@ -1631,13 +1643,13 @@ void func_8006A370(void)
         D_800FDF58[i].unk8 = 0;
     }
 
-    bcopy(D_800CBF84, (void*)0x80180000, 0x10000);
+    bcopy(g_field_resource_buffer, (void*)0x80180000, 0x10000);
     D_800FE774 = 0;
-    D_800FF60C = D_800CBF84;
+    g_field_resource_cursor = g_field_resource_buffer;
 
     for (i = 0; i < 9; i++)
     {
-        D_800FF558[i].unk10 &= ~2;
+        g_field_resource_entries[i].flags &= ~2;
     }
 
     if (D_801158A0 != 0)
@@ -1670,11 +1682,11 @@ void func_8006A370(void)
                 }
                 else
                 {
-                    func_8006A780(j);
+                    field_relocate_resource_buffer(j);
                     new_var2 = 2;
                     if (j == new_var2)
                     {
-                        D_800FF558[new_var2].unk10 = D_800FF558[new_var2].unk10 | 1;
+                        g_field_resource_entries[new_var2].flags = g_field_resource_entries[new_var2].flags | 1;
                     }
                 }
                 func_8006B4D0(j, j);
@@ -1706,7 +1718,7 @@ void func_8006A370(void)
                 }
                 else
                 {
-                    func_8006A780(j);
+                    field_relocate_resource_buffer(j);
                 }
                 func_8006B4D0(j, j);
 
@@ -1726,14 +1738,14 @@ void func_8006A370(void)
 
     D_800FE758.unk14 = 0;
     i = 0;
-    new_var = (u8*)D_800F22C8;
+    new_var = (u8*)g_field_actor_slots;
     new_var3 = &D_800FE758;
     ptr_D = D_800FE3A0;
     j = 0x6CC0;
 
     for (; i < 0xD; i++)
     {
-        arg0_ptr = (func_80068970_Arg0*)(((u32)j) + ((u32)new_var));
+        arg0_ptr = (FieldActorState*)(((u32)j) + ((u32)new_var));
         arg0_ptr->unk0 = ptr_D;
         arg0_ptr->unkC = new_var3;
         func_8006B7A0(i, 0);
@@ -1741,18 +1753,18 @@ void func_8006A370(void)
         j += 0x244;
     }
 
-    func_8006A858(new_var5 = 0);
+    field_restore_default_action_animation_mappings(new_var5 = 0);
 
     for (i = 0; i < 0x10; i++)
     {
         j = 0;
-        new_var7 = ((u8*)D_800F22C8) + i;
+        new_var7 = ((u8*)g_field_actor_slots) + i;
         ptr_a3 = new_var7 + 0xB327;
         temp_a2 = i * 2;
         new_var4 = 0xB3C8;
 
         {
-            u8* base = (u8*)D_800F22C8;
+            u8* base = (u8*)g_field_actor_slots;
             new_var10 = base;
             new_var6 = new_var10;
             ptr_a0 = new_var6;
@@ -1778,47 +1790,55 @@ void func_8006A370(void)
 /**
  * @brief TODO: relocate field entry buffer into the streaming window.
  *
- * Copies the entry's payload into the rolling destination at D_800FF60C,
+ * Copies the entry's payload into the rolling destination at
+ * g_field_resource_cursor,
  * repoints the entry's begin/end pointers at the new location, updates its
  * state flags, and hands the previous buffer to func_8006C3FC.
  *
- * @param arg0 Index into D_800FF558 / D_800FDF58.
+ * @param resource_index Index into g_field_resource_entries / D_800FDF58.
  * @see decomp.me (98.98%) https://decomp.me/scratch/iTv8i
  */
-void func_8006A780(s32 arg0)
+void field_relocate_resource_buffer(s32 resource_index)
 {
     u32 new_var4;
     u32 new_var2;
     Struct_D800FDF58* new_var;
-    u8* old_unk0;
+    u8* old_start;
 
     new_var2 = (u32)0x80180000;
-    D_800FF60C += 0;
-    new_var4 = (u32)D_800CBF84;
-    bcopy((void*)((new_var2 - new_var4) + ((u32)D_800FF558[arg0].unk0)), D_800FF60C, D_800FF558[arg0].unk4 - D_800FF558[arg0].unk0);
-    new_var4 = D_800FF558[arg0].unk4 - D_800FF558[arg0].unk0;
-    old_unk0 = D_800FF558[arg0].unk0;
-    D_800FF558[arg0].unk0 = (u8*)D_800FF60C;
-    D_800FF558[arg0].unk4 = ((u8*)D_800FF60C) + new_var4;
-    D_800FF558[arg0].unk10 &= ~1;
-    D_800FF558[arg0].unk9 = arg0;
-    D_800FF558[arg0].unk10 |= 2;
-    D_800FF60C = D_800FF558[arg0].unk4;
-    new_var = &D_800FDF58[arg0];
-    func_8006C3FC(new_var, old_unk0);
+    g_field_resource_cursor += 0;
+    new_var4 = (u32)g_field_resource_buffer;
+    bcopy((void*)((new_var2 - new_var4) + ((u32)g_field_resource_entries[resource_index].start)), g_field_resource_cursor,
+          g_field_resource_entries[resource_index].end - g_field_resource_entries[resource_index].start);
+    new_var4 = g_field_resource_entries[resource_index].end - g_field_resource_entries[resource_index].start;
+    old_start = g_field_resource_entries[resource_index].start;
+    g_field_resource_entries[resource_index].start = (u8*)g_field_resource_cursor;
+    g_field_resource_entries[resource_index].end = ((u8*)g_field_resource_cursor) + new_var4;
+    g_field_resource_entries[resource_index].flags &= ~1;
+    g_field_resource_entries[resource_index].slot_index = resource_index;
+    g_field_resource_entries[resource_index].flags |= 2;
+    g_field_resource_cursor = g_field_resource_entries[resource_index].end;
+    new_var = &D_800FDF58[resource_index];
+    func_8006C3FC(new_var, old_start);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/oaoFZ
+ * @brief Restore the default animation IDs for action mappings 1 and 5.
+ *
+ * The two 0x22-byte maps are selected by the input/action resolver. Each map
+ * contains eleven animation IDs followed by per-action disable bytes. This
+ * restores mappings 1 and 5 in both maps and makes those mappings available.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/oaoFZ
  */
-void func_8006A858(void)
+void field_restore_default_action_animation_mappings(void)
 {
-    D_8010AE88.unk2 = 0x185;
-    D_8010AE88.unk24 = 0x185;
-    D_8010AE88.unk17 = 0;
-    D_8010AE88.unk39 = 0;
-    D_8010AE88.unk1B = 0;
-    D_8010AE88.unkA = 0x585;
-    D_8010AE88.unk3D = 0;
-    D_8010AE88.unk2C = 0x585;
+    g_field_action_animation_maps.map0_action1_animation_id = 0x185;
+    g_field_action_animation_maps.map1_action1_animation_id = 0x185;
+    g_field_action_animation_maps.map0_action1_disabled = 0;
+    g_field_action_animation_maps.map1_action1_disabled = 0;
+    g_field_action_animation_maps.map0_action5_disabled = 0;
+    g_field_action_animation_maps.map0_action5_animation_id = 0x585;
+    g_field_action_animation_maps.map1_action5_disabled = 0;
+    g_field_action_animation_maps.map1_action5_animation_id = 0x585;
 }

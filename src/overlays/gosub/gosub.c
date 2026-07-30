@@ -15,7 +15,7 @@ typedef signed char s8;
 typedef unsigned short u16;
 typedef signed short s16;
 
-void func_80067F8C();    /* extern */
+void field_set_default_fade_target(); /* extern */
 void func_800A8B90();    /* extern */
 void func_800AA02C();    /* extern */
 void func_80140114(s32*); /* extern */
@@ -231,7 +231,7 @@ extern GosubListEntry D_80170A58[];
  */
 void func_80140080(s32 arg1, s32 arg2)
 {
-    func_80067F8C();
+    field_set_default_fade_target();
     D_8016B8C8 = 0;
     D_8016B8CC = 0;
     func_800AA02C();
