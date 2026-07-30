@@ -13,8 +13,8 @@ struct AkaoChannelEffects
     AkaoLfoSample* volume_lfo_cursor;
     AkaoLfoSample* pan_lfo_cursor;
     u8 pad28[4];
-    s32 unk2C;
-    s32 unk30;
+    s32 base_pitch;
+    s32 pitch_bend_accum;
     u8 pad34[20];
     union
     {
@@ -26,17 +26,17 @@ struct AkaoChannelEffects
         } inner;
     } a;
     s32 unk4C;
-    s32 unk50;
+    s32 pitch_bend_step;
     u8 pad54[48];
-    u16 unk84;
-    u16 unk86;
+    u16 volume_accum;
+    u16 volume_fade_ticks;
     u16 unk88;
     u16 unk8A;
     u16 unk8C;
     u16 unk8E;
-    u16 unk90;
-    u16 unk92;
-    u16 unk94;
+    u16 pan_accum;
+    u16 pan_fade_ticks;
+    u16 pitch_bend_fade_ticks;
     u8 pad96[14];
     u16 unkA4;
     u16 unkA6;
@@ -60,20 +60,20 @@ struct AkaoChannelEffects
     u16 unkCE;
     u16 unkD0;
     u16 unkD2;
-    u16 unkD4;
-    u16 unkD6;
+    u16 reverb_toggle_ticks;
+    u16 pitch_mod_toggle_ticks;
     u8 padD8[8];
-    s16 unkE0;
+    s16 volume_step;
     s16 unkE2;
     s32 unkE4;
-    s16 unkE8;
+    s16 pan_step;
     u8 padEA[10];
-    s16 unkF4;
-    s16 unkF6;
-    s16 unkF8;
+    s16 pitch_lfo_value;
+    s16 volume_lfo_value;
+    s16 pan_lfo_value;
     u8 padFA[2];
     s32 unkFC;
-    s32 unk100;
+    s32 update_flags;
 };
 
 /**
@@ -501,12 +501,12 @@ void spu_apply_voice_updates(s32 voice, SpuVoiceParams* params)
  * @brief Advance the per-channel volume, pan, pitch-bend, and LFO/envelope
  *        effects for one AKAO tick.
  *
- * @param arg0 Channel whose effect accumulators are advanced.
- * @param arg1 Bit for this channel in the sequence/SFX control bitmaps.
- * @param arg2 Nonzero for an SFX channel; zero for a sequence channel.
+ * @param channel Channel whose effect accumulators are advanced.
+ * @param channel_bit Bit for this channel in the sequence/SFX control bitmaps.
+ * @param is_sfx Nonzero for an SFX channel; zero for a sequence channel.
  * @see decomp.me (99.44%) https://decomp.me/scratch/0WomW
  */
-void akao_tick_channel_effects(AkaoChannelEffects* arg0, s32 arg1, s32 arg2)
+void akao_tick_channel_effects(AkaoChannelEffects* channel, s32 channel_bit, s32 is_sfx)
 {
     AkaoLfoSample* var_a0;
     AkaoLfoSample* var_a0_2;
@@ -536,179 +536,177 @@ void akao_tick_channel_effects(AkaoChannelEffects* arg0, s32 arg1, s32 arg2)
     u16 temp_v1_4;
     u32 temp_a0;
     u32 var_lo;
-    if (arg2 == 0)
+    if (is_sfx == 0)
     {
-        if (arg0->unk86 != 0)
+        if (channel->volume_fade_ticks != 0)
         {
-            arg0->unk86 = (u16)(arg0->unk86 - 1);
-            temp_a3 = arg0->unk84 + arg0->unkE0;
-            if ((temp_a3 & 0x7F00) != (arg0->unk84 & 0x7F00))
+            channel->volume_fade_ticks = (u16)(channel->volume_fade_ticks - 1);
+            temp_a3 = channel->volume_accum + channel->volume_step;
+            if ((temp_a3 & 0x7F00) != (channel->volume_accum & 0x7F00))
             {
-                arg0->unk100 = (s32)(arg0->unk100 | 3);
+                channel->update_flags = (s32)(channel->update_flags | 3);
             }
-            arg0->unk84 = temp_a3;
+            channel->volume_accum = temp_a3;
         }
     }
-    temp_v0_2 = arg0->unk8A;
+    temp_v0_2 = channel->unk8A;
     if (temp_v0_2 != 0)
     {
-        temp_v1_2 = arg0->a.unk48;
-        arg0->unk8A = (u16)(temp_v0_2 - 1);
-        temp_a3_2 = temp_v1_2 + arg0->unk4C;
+        temp_v1_2 = channel->a.unk48;
+        channel->unk8A = (u16)(temp_v0_2 - 1);
+        temp_a3_2 = temp_v1_2 + channel->unk4C;
         if ((temp_a3_2 & 0xFFE00000) != (temp_v1_2 & 0xFFE00000))
         {
-            arg0->unk100 = (s32)(arg0->unk100 | 3);
+            channel->update_flags = (s32)(channel->update_flags | 3);
         }
-        arg0->a.unk48 = temp_a3_2;
+        channel->a.unk48 = temp_a3_2;
     }
-    temp_v0_3 = arg0->unk92;
+    temp_v0_3 = channel->pan_fade_ticks;
     if (temp_v0_3 != 0)
     {
-        temp_v1_3 = arg0->unk90;
-        arg0->unk92 = (u16)(temp_v0_3 - 1);
-        temp_a3_3 = temp_v1_3 + arg0->unkE8;
+        temp_v1_3 = channel->pan_accum;
+        channel->pan_fade_ticks = (u16)(temp_v0_3 - 1);
+        temp_a3_3 = temp_v1_3 + channel->pan_step;
         if ((temp_a3_3 & 0xFF00) != (temp_v1_3 & 0xFF00))
         {
-            arg0->unk100 = (s32)(arg0->unk100 | 3);
+            channel->update_flags = (s32)(channel->update_flags | 3);
         }
-        arg0->unk90 = temp_a3_3;
+        channel->pan_accum = temp_a3_3;
     }
-    temp_v0_4 = arg0->unkA4;
+    temp_v0_4 = channel->unkA4;
     if (temp_v0_4 != 0)
     {
-        arg0->unkA4 = (u16)(temp_v0_4 - 1);
+        channel->unkA4 = (u16)(temp_v0_4 - 1);
     }
-    temp_v0_5 = arg0->unkB8;
+    temp_v0_5 = channel->unkB8;
     if (temp_v0_5 != 0)
     {
-        arg0->unkB8 = (u16)(temp_v0_5 - 1);
+        channel->unkB8 = (u16)(temp_v0_5 - 1);
     }
-    temp_v0_6 = arg0->unkD4;
+    temp_v0_6 = channel->reverb_toggle_ticks;
     if (temp_v0_6 != 0)
     {
         temp_v0_7 = temp_v0_6 - 1;
-        arg0->unkD4 = temp_v0_7;
+        channel->reverb_toggle_ticks = temp_v0_7;
         if (!(temp_v0_7 & 0xFFFF))
         {
-            if (arg2 == 0)
+            if (is_sfx == 0)
             {
-                g_akao_seq_channel0->reverb_mask ^= arg1;
+                g_akao_seq_channel0->reverb_mask ^= channel_bit;
             }
             else
             {
-                g_akao_sfx_control.reverb_mask ^= arg1;
+                g_akao_sfx_control.reverb_mask ^= channel_bit;
             }
             g_akao_driver_flags.unk8 |= 0x110;
         }
     }
-    temp_v0_8 = arg0->unkD6;
+    temp_v0_8 = channel->pitch_mod_toggle_ticks;
     if (temp_v0_8 != 0)
     {
         temp_v0_9 = temp_v0_8 - 1;
-        arg0->unkD6 = temp_v0_9;
+        channel->pitch_mod_toggle_ticks = temp_v0_9;
         if (!(temp_v0_9 & 0xFFFF))
         {
-            if (arg2 == 0)
+            if (is_sfx == 0)
             {
-                g_akao_seq_channel0->pitch_mod_mask ^= arg1;
+                g_akao_seq_channel0->pitch_mod_mask ^= channel_bit;
             }
             else
             {
-                g_akao_sfx_control.pitch_mod_mask ^= arg1;
+                g_akao_sfx_control.pitch_mod_mask ^= channel_bit;
             }
             g_akao_driver_flags.unk8 |= 0x100;
         }
     }
-    temp_v1_4 = arg0->unkB0;
+    temp_v1_4 = channel->unkB0;
     if (temp_v1_4 != 0)
     {
-        arg0->unkB0 = (u16)(temp_v1_4 - 1);
-        temp_v0_10 = arg0->unkAE + arg0->unkB2;
-        arg0->unkAE = temp_v0_10;
+        channel->unkB0 = (u16)(temp_v1_4 - 1);
+        temp_v0_10 = channel->unkAE + channel->unkB2;
+        channel->unkAE = temp_v0_10;
         temp_a0 = ((u32)(temp_v0_10 & 0x7F00)) >> 8;
         if (temp_v0_10 & 0x8000)
         {
-            var_lo = (temp_a0 * arg0->unk2C) >> 7;
+            var_lo = (temp_a0 * channel->base_pitch) >> 7;
         }
         else
         {
-            var_lo = (temp_a0 * (((u32)(arg0->unk2C * 0xF)) >> 8)) >> 7;
+            var_lo = (temp_a0 * (((u32)(channel->base_pitch * 0xF)) >> 8)) >> 7;
         }
-        arg0->unkAC = (u16)var_lo;
-        if ((arg0->unkA4 == 0) && (arg0->unkA8 != 1))
+        channel->unkAC = (u16)var_lo;
+        if ((channel->unkA4 == 0) && (channel->unkA8 != 1))
         {
-            var_a0 = arg0->pitch_lfo_cursor;
+            var_a0 = channel->pitch_lfo_cursor;
             if ((var_a0->value == 0) && (var_a0->unk2 == 0))
             {
                 var_a0 = (AkaoLfoSample*)(((u8*)var_a0) + (var_a0->relative_offset * 2));
             }
-            temp_a3_4 = ((s32)(arg0->unkAC * var_a0->value)) >> 0x10;
-            if (temp_a3_4 != arg0->unkF4)
+            temp_a3_4 = ((s32)(channel->unkAC * var_a0->value)) >> 0x10;
+            if (temp_a3_4 != channel->pitch_lfo_value)
             {
-                arg0->unkF4 = (s16)temp_a3_4;
-                arg0->unk100 = (s32)(arg0->unk100 | 0x10);
+                channel->pitch_lfo_value = (s16)temp_a3_4;
+                channel->update_flags = (s32)(channel->update_flags | 0x10);
                 if (temp_a3_4 >= 0)
                 {
-                    arg0->unkF4 = (s16)(temp_a3_4 * 2);
+                    channel->pitch_lfo_value = (s16)(temp_a3_4 * 2);
                 }
             }
         }
     }
-    temp_v0_11 = arg0->unkC2;
+    temp_v0_11 = channel->unkC2;
     if (temp_v0_11 != 0)
     {
         s32 inter;
-        arg0->unkC2 = (u16)(temp_v0_11 - 1);
-        arg0->unkC0 = (u16)(arg0->unkC0 + arg0->unkC4);
-        if ((arg0->unkB8 == 0) && (arg0->unkBC != 1))
+        channel->unkC2 = (u16)(temp_v0_11 - 1);
+        channel->unkC0 = (u16)(channel->unkC0 + channel->unkC4);
+        if ((channel->unkB8 == 0) && (channel->unkBC != 1))
         {
-            var_a0_2 = arg0->volume_lfo_cursor;
+            var_a0_2 = channel->volume_lfo_cursor;
             if ((var_a0_2->value == 0) && (var_a0_2->unk2 == 0))
             {
                 var_a0_2 = (AkaoLfoSample*)(((u8*)var_a0_2) + (var_a0_2->relative_offset * 2));
             }
-            inter = (s32)(((s32)(((s32)(arg0->a.inner.unk4A * (arg0->unk84 >> 8)) >> 7) * (arg0->unkC0 >> 8)) << 9) >> 16);
+            inter = (s32)(((s32)(((s32)(channel->a.inner.unk4A * (channel->volume_accum >> 8)) >> 7) * (channel->unkC0 >> 8)) << 9) >> 16);
             temp_a3_5 = (s32)(inter * var_a0_2->value) >> 0xF;
-            // temp_a3_5 = ((s32) ((((s32) (((((s32) (arg0->a.inner.unk4A * (((u16) arg0->unk84) >> 8))) >> 7) * (((u16) arg0->unkC0) >> 8)) << 9)) >> 0x10) *
-            // var_a0_2->unk0)) >> 0xF;
-            if (temp_a3_5 != arg0->unkF6)
+            if (temp_a3_5 != channel->volume_lfo_value)
             {
-                arg0->unkF6 = (s16)temp_a3_5;
-                arg0->unk100 = (s32)(arg0->unk100 | 3);
+                channel->volume_lfo_value = (s16)temp_a3_5;
+                channel->update_flags = (s32)(channel->update_flags | 3);
             }
         }
     }
-    temp_v0_12 = arg0->unkD0;
+    temp_v0_12 = channel->unkD0;
     if (temp_v0_12 != 0)
     {
-        arg0->unkD0 = (u16)(temp_v0_12 - 1);
-        arg0->unkCE = (u16)(arg0->unkCE + arg0->unkD2);
-        if (arg0->unkCA != 1)
+        channel->unkD0 = (u16)(temp_v0_12 - 1);
+        channel->unkCE = (u16)(channel->unkCE + channel->unkD2);
+        if (channel->unkCA != 1)
         {
-            var_a0_3 = arg0->pan_lfo_cursor;
+            var_a0_3 = channel->pan_lfo_cursor;
             if ((var_a0_3->value == 0) && (var_a0_3->unk2 == 0))
             {
                 var_a0_3 = (AkaoLfoSample*)(((u8*)var_a0_3) + (var_a0_3->relative_offset * 2));
             }
-            temp_a3_6 = ((s32)((((u16)arg0->unkCE) >> 8) * var_a0_3->value)) >> 0xF;
-            temp_a3_2 = temp_a3_6 != arg0->unkF8;
+            temp_a3_6 = ((s32)((((u16)channel->unkCE) >> 8) * var_a0_3->value)) >> 0xF;
+            temp_a3_2 = temp_a3_6 != channel->pan_lfo_value;
             if (temp_a3_2)
             {
-                arg0->unkF8 = (s16)temp_a3_6;
-                arg0->unk100 = (s32)(arg0->unk100 | 3);
+                channel->pan_lfo_value = (s16)temp_a3_6;
+                channel->update_flags = (s32)(channel->update_flags | 3);
             }
         }
     }
-    temp_v0_13 = arg0->unk94;
+    temp_v0_13 = channel->pitch_bend_fade_ticks;
     if (temp_v0_13 != 0)
     {
-        temp_v1_5 = arg0->unk30;
-        arg0->unk94 = (u16)(temp_v0_13 - 1);
-        temp_a3_7 = temp_v1_5 + arg0->unk50;
+        temp_v1_5 = channel->pitch_bend_accum;
+        channel->pitch_bend_fade_ticks = (u16)(temp_v0_13 - 1);
+        temp_a3_7 = temp_v1_5 + channel->pitch_bend_step;
         if ((temp_a3_7 & 0xFFFF0000) != (temp_v1_5 & 0xFFFF0000))
         {
-            arg0->unk100 = (s32)(arg0->unk100 | 0x10);
+            channel->update_flags = (s32)(channel->update_flags | 0x10);
         }
-        arg0->unk30 = temp_a3_7;
+        channel->pitch_bend_accum = temp_a3_7;
     }
 }

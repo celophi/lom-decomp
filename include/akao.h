@@ -291,14 +291,16 @@ typedef struct AkaoChannelState
     u16 unkF4;       /* 0xF4 */
     u16 unkF6;       /* 0xF6 */
     u8 _padF8[4];    /* 0xF8 - 0xFB */
-    u32 unkFC;       /* 0xFC */
-    s32 unk100;      /* 0x100 */
+    u32 unkFC;       /* 0xFC - assigned SPU voice index (0x18 = none) */
+    s32 unk100;      /* 0x100 - pending SPU register update flags */
     s32 spu_sample_addr; /* 0x104 - SPU sample start (from AkaoArticulation.sample_addr) */
     s32 spu_loop_addr;   /* 0x108 - SPU loop point (from AkaoArticulation.loop_addr) */
-    u8 _pad10C[2];   /* 0x10C - 0x10D */
-    u16 unk10E;      /* 0x10E */
-    u16 unk110;      /* 0x110 */
-    u8 _pad112[6];   /* 0x112 - 0x117 */
+    u16 spu_pitch;   /* 0x10C - SPU pitch/sample-rate register image */
+    u16 unk10E;      /* 0x10E - SPU ADSR low halfword */
+    u16 unk110;      /* 0x110 - SPU ADSR high halfword */
+    u16 spu_volume_scale; /* 0x112 - optional Q7 scale */
+    s16 spu_volume_left;  /* 0x114 */
+    s16 spu_volume_right; /* 0x116 */
 } AkaoChannelState; /* total = 0x118 */
 
 #endif

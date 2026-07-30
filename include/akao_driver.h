@@ -9,7 +9,7 @@ typedef struct
 {
     u32 unk0; /* 0x00 */
     u32 unk4; /* 0x04 */
-    u32 unk8; /* 0x08 */
+    u32 unk8; /* 0x08 - pending driver/SPU hardware update flags */
 } AkaoDriverFlags;
 
 /** @brief SFX channel control bitfields (size 0x28). */

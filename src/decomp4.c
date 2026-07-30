@@ -3470,3 +3470,30 @@ void func_8002CBD4(Struct_8002CBD4* arg0)
     arg0->unk66 = temp_v1;
     arg0->unkDC = temp_v1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/PBFzu
+ */
+void func_8002CBFC(Struct_8002CBD4* arg0)
+{
+    s32 var_v1;
+
+    var_v1 = (s8)*arg0->unk0;
+    arg0->unk0++;
+
+    if (var_v1 != 0)
+    {
+        var_v1 += arg0->unkDC;
+
+        if (var_v1 <= 0)
+        {
+            var_v1 = 1;
+        }
+        else if (var_v1 >= 256)
+        {
+            var_v1 = 255; // 0xFF
+        }
+    }
+
+    arg0->unkDE = var_v1;
+}
