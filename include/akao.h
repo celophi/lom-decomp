@@ -232,7 +232,7 @@ typedef struct AkaoChannelState
     s32 pitch;       /* 0x2C - current SPU pitch (akao_compute_pitch result) */
     s32 unk30;       /* 0x30 */
     u8* unk34;       /* 0x34 */
-    u8 _pad38[4];    /* 0x38 - 0x3B */
+    s32 unk38;
     u32 unk3C;       /* 0x3C */
     u32 unk40;       /* 0x40 */
     u32 unk44;       /* 0x44 */

@@ -3291,3 +3291,15 @@ void func_8002C940(s_8002C940* arg0)
 
     arg0->unk100 = (s32)(arg0->unk100 | 0x400);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/rLRQL
+ */
+void func_8002C984(u8** arg0)
+{
+    u8* temp_v0;
+
+    temp_v0 = *arg0;
+    g_akao_seq_channel0->unk38 = (s32)*temp_v0;
+    *arg0 = temp_v0 + 1;
+}
