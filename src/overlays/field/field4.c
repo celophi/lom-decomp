@@ -67,25 +67,25 @@ typedef struct
 
 typedef struct
 {
-    u8 pad0[2];  // 0x00 - 0x01
-    u16 unk2;    // 0x02 - 0x03
-    u8 pad1[6];  // 0x04 - 0x09
-    u16 unkA;    // 0x0A - 0x0B
-    u8 pad2[11]; // 0x0C - 0x16
-    u8 unk17;    // 0x17
-    u8 pad3[3];  // 0x18 - 0x1A
-    u8 unk1B;    // 0x1B
-    u8 pad4[8];  // 0x1C - 0x23
-    u16 unk24;   // 0x24 - 0x25
-    u8 pad5[6];  // 0x26 - 0x2B
-    u16 unk2C;   // 0x2C - 0x2D
-    u8 pad6[11]; // 0x2E - 0x38
-    u8 unk39;    // 0x39
-    u8 pad7[3];  // 0x3A - 0x3C
-    u8 unk3D;    // 0x3D
-} D_8010AE88_t;
+    u8 pad0[2];                    /* 0x00 - 0x01 */
+    u16 map0_action1_animation_id; /* 0x02 - 0x03 */
+    u8 pad1[6];                    /* 0x04 - 0x09 */
+    u16 map0_action5_animation_id; /* 0x0A - 0x0B */
+    u8 pad2[11];                   /* 0x0C - 0x16 */
+    u8 map0_action1_disabled;      /* 0x17 */
+    u8 pad3[3];                    /* 0x18 - 0x1A */
+    u8 map0_action5_disabled;      /* 0x1B */
+    u8 pad4[8];                    /* 0x1C - 0x23 */
+    u16 map1_action1_animation_id; /* 0x24 - 0x25 */
+    u8 pad5[6];                    /* 0x26 - 0x2B */
+    u16 map1_action5_animation_id; /* 0x2C - 0x2D */
+    u8 pad6[11];                   /* 0x2E - 0x38 */
+    u8 map1_action1_disabled;      /* 0x39 */
+    u8 pad7[3];                    /* 0x3A - 0x3C */
+    u8 map1_action5_disabled;      /* 0x3D */
+} FieldActionAnimationMaps;
 
-extern D_8010AE88_t D_8010AE88;
+extern FieldActionAnimationMaps g_field_action_animation_maps;
 
 typedef struct FieldActorAnimationDef
 {
@@ -1581,7 +1581,7 @@ extern s32 D_801158A0;
 
 void field_relocate_resource_buffer(s32);
 void func_8006C3FC(Struct_D800FDF58*, void*);
-void func_8006A858(s32);
+void field_restore_default_action_animation_mappings(s32);
 s32 func_8006A88C(s32, D_800FD818_type*, s32);
 void func_8006A9A4(s32, s32, s32, s32);
 void func_8006B4D0(s32, s32);
@@ -1741,7 +1741,7 @@ void field_initialize_actor_system(void)
         j += 0x244;
     }
 
-    func_8006A858(new_var5 = 0);
+    field_restore_default_action_animation_mappings(new_var5 = 0);
 
     for (i = 0; i < 0x10; i++)
     {
@@ -1811,16 +1811,22 @@ void field_relocate_resource_buffer(s32 resource_index)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/oaoFZ
+ * @brief Restore the default animation IDs for action mappings 1 and 5.
+ *
+ * The two 0x22-byte maps are selected by the input/action resolver. Each map
+ * contains eleven animation IDs followed by per-action disable bytes. This
+ * restores mappings 1 and 5 in both maps and makes those mappings available.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/oaoFZ
  */
-void func_8006A858(void)
+void field_restore_default_action_animation_mappings(void)
 {
-    D_8010AE88.unk2 = 0x185;
-    D_8010AE88.unk24 = 0x185;
-    D_8010AE88.unk17 = 0;
-    D_8010AE88.unk39 = 0;
-    D_8010AE88.unk1B = 0;
-    D_8010AE88.unkA = 0x585;
-    D_8010AE88.unk3D = 0;
-    D_8010AE88.unk2C = 0x585;
+    g_field_action_animation_maps.map0_action1_animation_id = 0x185;
+    g_field_action_animation_maps.map1_action1_animation_id = 0x185;
+    g_field_action_animation_maps.map0_action1_disabled = 0;
+    g_field_action_animation_maps.map1_action1_disabled = 0;
+    g_field_action_animation_maps.map0_action5_disabled = 0;
+    g_field_action_animation_maps.map0_action5_animation_id = 0x585;
+    g_field_action_animation_maps.map1_action5_disabled = 0;
+    g_field_action_animation_maps.map1_action5_animation_id = 0x585;
 }
