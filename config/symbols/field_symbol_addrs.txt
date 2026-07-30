@@ -44,7 +44,37 @@ field_restore_entry_music               = 0x800A3534;
 field_stop_song                         = 0x800A379C;
 g_field_scene_request_pending           = 0x801158A4;
 
-field_func_8006828C                   = 0x8006828C;
+field_update_gover_load               = 0x8006828C;
+field_update_audio_timer              = 0x80068440;
+field_get_track_counter_modulo        = 0x80068494;
+field_interpolate_palette_track       = 0x800684E4;
+field_evaluate_parameter_track        = 0x80068734;
+field_finalize_actor_animation        = 0x80068970;
+field_evaluate_parameter_track_at_time = 0x80068DA8;
+field_reset_actor_track_state         = 0x80068F94;
+field_advance_actor_tracks            = 0x80069028;
+field_initialize_actor_slots          = 0x8006911C;
+field_clear_actor_slots               = 0x80069184;
+field_start_actor_animation           = 0x800691C4;
+field_dispatch_actor_audio_event      = 0x800693B4;
+field_is_actor_animation_active       = 0x800695D4;
+field_update_actor_animations         = 0x80069684;
+field_reset_actor_track_mask          = 0x80069AF8;
+field_prepare_actor_render_commands   = 0x80069B44;
+field_build_actor_render_commands     = 0x80069B84;
+field_reset_global_color_scale        = 0x8006A21C;
+field_set_global_color_scale          = 0x8006A240;
+field_apply_global_color_scale        = 0x8006A258;
+field_initialize_actor_system         = 0x8006A370;
+field_relocate_resource_buffer        = 0x8006A780;
+
+g_field_resource_buffer               = 0x800CBF84;
+g_field_actor_slots                   = 0x800F22C8;
+g_field_resource_entries              = 0x800FF558;
+g_field_resource_cursor               = 0x800FF60C;
+g_field_color_scale                   = 0x800FD808;
+g_field_color_scale_active            = 0x800FD810;
+g_field_track_index                   = 0x80105788;
 
 // Standalone rodata referenced by still-unmatched (INCLUDE_ASM) unk2.c functions;
 // keep as named symbols rather than folding into unk2's .rodata linked subsegment.
