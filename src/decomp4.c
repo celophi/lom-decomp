@@ -3436,3 +3436,37 @@ void func_8002CB80(Struct_8002C9B4* arg0)
     arg0->unk0 = arg0->unk4[arg0->unkD8];
     arg0->unk72 = arg0->unk7C[arg0->unkD8];
 }
+
+typedef struct
+{
+    u8* unk0;               // 0x00
+    u8* unk4[4];            // 0x04
+    u8 pad_14[0x66 - 0x14]; // 0x14
+    s16 unk66;              // 0x66
+    s16 unk68;              // 0x68
+    u8 pad_6A[0x72 - 0x6A]; // 0x6A
+    u16 unk72;              // 0x72
+    u16 unk74[4];           // 0x74
+    u16 unk7C[4];           // 0x7C
+    u8 pad_84[0xD8 - 0x84]; // 0x84
+    u16 unkD8;              // 0xD8
+    u8 pad_DA[0xDC - 0xDA]; // 0xDA
+    s16 unkDC;              // 0xDC
+    u16 unkDE;              // 0xDE
+} Struct_8002CBD4;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FnAXw
+ */
+void func_8002CBD4(Struct_8002CBD4* arg0)
+{
+    s32 temp_v1;
+
+    temp_v1 = *arg0->unk0;
+    arg0->unk0++;
+
+    arg0->unkDE = 0;
+    arg0->unk68 = temp_v1;
+    arg0->unk66 = temp_v1;
+    arg0->unkDC = temp_v1;
+}
