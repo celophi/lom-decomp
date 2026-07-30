@@ -3398,3 +3398,31 @@ void func_8002CA98(Struct_8002C9B4* arg0)
 
     arg0->unk0 = temp_a1 + (s16)(temp_a1[0] | (temp_a1[1] << 8));
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Gx2w7
+ */
+void func_8002CB04(Struct_8002C9B4* arg0)
+{
+    u8* temp_a1;
+    u32 var_v1;
+
+    temp_a1 = arg0->unk0;
+    var_v1 = *temp_a1;
+    temp_a1++;
+    arg0->unk0 = temp_a1;
+
+    if (var_v1 == 0)
+    {
+        var_v1 = 0x100;
+    }
+
+    if (arg0->unk74[arg0->unkD8] + 1 != var_v1)
+    {
+        arg0->unk0 = temp_a1 + 2;
+        return;
+    }
+
+    arg0->unk0 = temp_a1 + (s16)(temp_a1[0] | (temp_a1[1] << 8));
+    arg0->unkD8 = (arg0->unkD8 - 1) & 3;
+}
