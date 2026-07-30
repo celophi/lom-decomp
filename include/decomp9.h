@@ -48,11 +48,11 @@ void spu_set_pitch_modulation_enable(u32 voice_mask);
 /* ---- Per-voice SPU register writers ---- */
 
 void spu_set_voice_volume(s32 voice, u32 vol_l, u32 vol_r, s32 scale);
-void spu_set_voice_pitch(s32 voice, s16 pitch);
+void spu_set_voice_pitch(s32 voice, u16 pitch);
 void spu_set_voice_start_addr(s32 voice, u32 addr);
 void spu_set_voice_repeat_addr(s32 voice, u32 addr);
-void spu_set_voice_adsr_low(s32 voice, s16 adsr_low);
-void spu_set_voice_adsr_high(s32 voice, s16 adsr_high);
+void spu_set_voice_adsr_low(s32 voice, u16 adsr_low);
+void spu_set_voice_adsr_high(s32 voice, u16 adsr_high);
 void spu_set_voice_attack(s32 voice, s32 attack_shift, u32 mode_bits);
 void spu_set_voice_decay_shift(s32 voice, s32 decay_shift);
 void spu_set_voice_sustain_level(s32 voice, s32 sustain_level);

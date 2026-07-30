@@ -3426,3 +3426,13 @@ void func_8002CB04(Struct_8002C9B4* arg0)
     arg0->unk0 = temp_a1 + (s16)(temp_a1[0] | (temp_a1[1] << 8));
     arg0->unkD8 = (arg0->unkD8 - 1) & 3;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Eytqk
+ */
+void func_8002CB80(Struct_8002C9B4* arg0)
+{
+    arg0->unk74[arg0->unkD8]++;
+    arg0->unk0 = arg0->unk4[arg0->unkD8];
+    arg0->unk72 = arg0->unk7C[arg0->unkD8];
+}
