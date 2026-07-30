@@ -12,8 +12,8 @@ extern s32 D_8003EC18;
 /** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
 extern u32 g_akao_pitch_table[];
 
-/** @brief Pointer table in the initialized data segment, indexed by field 0xAA in func_8002BFAC. */
-extern s32 D_8003DD80[];
+/** @brief 16-entry table of pitch, volume, and pan LFO waveform streams. */
+extern s32 g_akao_lfo_waveforms[];
 
 /**
  * @brief One 8-byte note slot in the per-channel note table at
@@ -24,15 +24,15 @@ extern s32 D_8003DD80[];
  */
 typedef struct
 {
-    u8 unk0;
-    u8 unk1;
-    u8 unk2;
-    u8 unk3;
-    u8 unk4;
-    u8 unk5;
-    u8 unk6;
-    u8 unk7;
-} SmallSlot;
+    u8 articulation;
+    u8 key;
+    u8 attack_rate;
+    u8 sustain_rate;
+    u8 sustain_mode;
+    u8 release_rate;
+    u8 volume_scale;
+    u8 pan_and_noise;
+} AkaoNoteArticulationSlot;
 
 typedef struct
 {
@@ -1355,7 +1355,7 @@ s32 akao_compute_pitch(AkaoArticulation* arg0, s32 arg1, s32 arg2, s32* arg3)
  */
 s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
 {
-    SmallSlot* slot;
+    AkaoNoteArticulationSlot* slot;
     AkaoArticulation* art;
     u32 temp_a1;
     u16 tmp;
@@ -1364,7 +1364,7 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
 
     u8* base_ptr = g_akao_seq_channel0->unk34;
     u32 chan_unk10 = g_akao_seq_channel0->unk10;
-    slot = (SmallSlot*)(base_ptr + (slot_idx << 3));
+    slot = (AkaoNoteArticulationSlot*)(base_ptr + (slot_idx << 3));
     base_ptr = (u8*)channel;
     ret = chan_unk10 | channel_mask;
     v1_idx = g_akao_seq_channel0->unk14 & channel_mask;
@@ -1373,7 +1373,7 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
     {
         g_akao_seq_channel0->unk18 |= channel_mask;
     }
-    v1_idx = slot->unk0;
+    v1_idx = slot->articulation;
     temp_a1 = *((u32*)(((u8*)channel) + 0x34));
     *((s16*)(((u8*)channel) + 0x6A)) = (s16)v1_idx;
     art = (AkaoArticulation*)(g_akao_articulation_slots + v1_idx * 0x10);
@@ -1381,26 +1381,26 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
     *((u32*)(((u8*)channel) + 0x108)) = art->loop_addr;
     if (!(temp_a1 & 0x01000000))
     {
-        tmp = (u16)(slot->unk2 << 8);
+        tmp = (u16)(slot->attack_rate << 8);
     }
     else
     {
         tmp = (*((u16*)(((u8*)channel) + 0x10E))) & 0x7F00;
     }
     *((u16*)(((u8*)channel) + 0x10E)) = tmp;
-    tmp = (u16)(slot->unk2 << 8);
+    tmp = (u16)(slot->attack_rate << 8);
     *((u16*)(base_ptr + 0x10E)) |= art->pitch_misc.half.lo & 0x80FF;
     if (!(temp_a1 & 0x08000000))
     {
         tmp = (*((u16*)(((u8*)channel) + 0x110))) & 0x201F;
         *((u16*)(((u8*)channel) + 0x110)) = tmp;
-        *((u16*)(((u8*)channel) + 0x110)) |= slot->unk3 << 6;
+        *((u16*)(((u8*)channel) + 0x110)) |= slot->sustain_rate << 6;
     }
     else
     {
         *((u16*)(((u8*)channel) + 0x110)) &= 0x3FDF;
     }
-    switch (slot->unk4)
+    switch (slot->sustain_mode)
     {
     case 3:
         *((u16*)(((u8*)channel) + 0x110)) |= 0x4000;
@@ -1416,13 +1416,13 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
     {
         tmp = (*((u16*)(((u8*)channel) + 0x110))) & 0xFFE0;
         *((u16*)(((u8*)channel) + 0x110)) = tmp;
-        *((u16*)(((u8*)channel) + 0x110)) |= slot->unk5;
+        *((u16*)(((u8*)channel) + 0x110)) |= slot->release_rate;
     }
     *((u16*)(((u8*)channel) + 0x110)) |= art->pitch_misc.half.hi & 0x20;
-    ret = akao_compute_pitch(art, slot->unk1, *((s16*)(((u8*)channel) + 0xEC)), &((AkaoChannelState*)channel)->unk54);
-    *((s16*)(((u8*)channel) + 0x112)) = (s16)slot->unk6;
-    *((s16*)(((u8*)channel) + 0x90)) = (s16)(((slot->unk7 & 0x7F) + 0x40) << 8);
-    if (slot->unk7 & 0x80)
+    ret = akao_compute_pitch(art, slot->key, *((s16*)(((u8*)channel) + 0xEC)), &((AkaoChannelState*)channel)->unk54);
+    *((s16*)(((u8*)channel) + 0x112)) = (s16)slot->volume_scale;
+    *((s16*)(((u8*)channel) + 0x90)) = (s16)(((slot->pan_and_noise & 0x7F) + 0x40) << 8);
+    if (slot->pan_and_noise & 0x80)
     {
         g_akao_seq_channel0->noise_mask |= channel_mask;
     }
@@ -1442,7 +1442,7 @@ extern void (*g_akao_opcode_handlers_ext[])(AkaoChannelState*, s32);
 /** @brief Default note-duration (gate-time) table indexed by opcode % 11. */
 extern u16 g_akao_note_duration_table[];
 extern u8 D_8003D27C[];
-extern s32 D_8003DD80[];
+extern s32 g_akao_lfo_waveforms[];
 
 /**
  * decomp.me (89.58%) https://decomp.me/scratch/P4H6n
@@ -1673,7 +1673,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
                 if (!(arg0->unk9E & 2))
                 {
                     temp_v0_3 = arg0->unkA2;
-                    arg0->unk1C = D_8003DD80[arg0->unkAA];
+                    arg0->unk1C = g_akao_lfo_waveforms[arg0->unkAA];
                     arg0->unkA8 = 1;
                     arg0->unkA4 = temp_v0_3;
                 }
@@ -1682,7 +1682,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
             if ((var_v0_3 != 0) && !(arg0->unk9E & 2))
             {
                 temp_v0_3 = arg0->unkB6;
-                arg0->unk20 = D_8003DD80[arg0->unkBE];
+                arg0->unk20 = g_akao_lfo_waveforms[arg0->unkBE];
                 arg0->unkBC = 1;
                 arg0->unkB8 = temp_v0_3;
             }
@@ -1769,9 +1769,10 @@ void akao_sfx_release_channels(void* channel, u32 release_mask)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/oTcsG
+ * @brief Remap an SFX articulation index into the selected 16-entry bank.
+ * @see decomp.me (100%) https://decomp.me/scratch/oTcsG
  */
-s32 func_8002B540(s32 arg0, s32 arg1)
+s32 akao_remap_sfx_articulation(s32 arg0, s32 arg1)
 {
     if (arg0 != 0)
     {
@@ -1893,9 +1894,10 @@ void akao_seq_op_slide_tempo(u8** arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/Og38F
+ * @brief Set the sequence-wide stereo master volume from a signed 12-bit operand.
+ * @see decomp.me (100%) https://decomp.me/scratch/Og38F
  */
-void func_8002B750(u8** arg0)
+void akao_seq_op_set_master_volume(u8** arg0)
 {
     s32 val1;
     s32 val0;
@@ -1914,9 +1916,10 @@ void func_8002B750(u8** arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/w18Xw
+ * @brief Slide the sequence-wide stereo master volume to a signed 12-bit target.
+ * @see decomp.me (100%) https://decomp.me/scratch/w18Xw
  */
-void func_8002B798(u8** arg0)
+void akao_seq_op_slide_master_volume(u8** arg0)
 {
     AkaoChannelState* new_var2;
     AkaoChannelState* ch;
@@ -2029,9 +2032,10 @@ void akao_seq_op_return(s32* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/BN6jO
+ * @brief Set the channel volume directly.
+ * @see decomp.me (100%) https://decomp.me/scratch/BN6jO
  */
-void func_8002B90C(a_struct* arg0)
+void akao_seq_op_set_volume(a_struct* arg0)
 {
     u8* temp_v0;
     s16 tmp;
@@ -2044,9 +2048,10 @@ void func_8002B90C(a_struct* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/CjVYW
+ * @brief Slide the channel volume to a target over a specified tick count.
+ * @see decomp.me (100%) https://decomp.me/scratch/CjVYW
  */
-void func_8002B934(b_struct* arg0)
+void akao_seq_op_slide_volume(b_struct* arg0)
 {
     u16 temp_a0;
     u16 temp_v1;
@@ -2076,9 +2081,10 @@ void func_8002B934(b_struct* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/hGVxk
+ * @brief Set the channel expression multiplier directly.
+ * @see decomp.me (100%) https://decomp.me/scratch/hGVxk
  */
-void func_8002B9B8(c_struct* arg0)
+void akao_seq_op_set_expression(c_struct* arg0)
 {
     s8* temp_v0;
 
@@ -2091,9 +2097,10 @@ void func_8002B9B8(c_struct* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/jLHGo
+ * @brief Slide the channel expression multiplier to a target.
+ * @see decomp.me (100%) https://decomp.me/scratch/jLHGo
  */
-void func_8002B9E8(d_struct* arg0)
+void akao_seq_op_slide_expression(d_struct* arg0)
 {
     s32 temp_a0;
     s32 temp_v1;
@@ -2124,9 +2131,10 @@ void func_8002B9E8(d_struct* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/aOcaK
+ * @brief Configure the expression ramp that is restarted by the next note.
+ * @see decomp.me (100%) https://decomp.me/scratch/aOcaK
  */
-void func_8002BA74(e_struct* arg0)
+void akao_seq_op_set_note_expression_envelope(e_struct* arg0)
 {
     s32 temp_v1;
     u8* temp_a0;
@@ -2158,17 +2166,19 @@ void func_8002BA74(e_struct* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/cNPss
+ * @brief Give sequence notes their full duration instead of an early key-off.
+ * @see decomp.me (100%) https://decomp.me/scratch/cNPss
  */
-void func_8002BB04(ee_struct* arg0)
+void akao_seq_op_enable_full_gate(ee_struct* arg0)
 {
     arg0->unk34 = (s32)(arg0->unk34 | 0x40);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/ryS0d
+ * @brief Restore the normal early-key-off gate duration.
+ * @see decomp.me (100%) https://decomp.me/scratch/ryS0d
  */
-void func_8002BB18(ff_struct* arg0)
+void akao_seq_op_disable_full_gate(ff_struct* arg0)
 {
     arg0->unk34 = (s32)(arg0->unk34 & ~0x40);
 }
@@ -2176,7 +2186,7 @@ void func_8002BB18(ff_struct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ZUdZO
  */
-void func_8002BB2C(f_struct* arg0)
+void akao_seq_op_set_pan(f_struct* arg0)
 {
     u8* temp_v0;
 
@@ -2190,7 +2200,7 @@ void func_8002BB2C(f_struct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/MjjmM
  */
-void func_8002BB60(g_struct* arg0)
+void akao_seq_op_slide_pan(g_struct* arg0)
 {
     u16 temp_a0;
     s32 temp_v1;
@@ -2216,7 +2226,7 @@ void func_8002BB60(g_struct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/FRzyk
  */
-void func_8002BBEC(h_struct* arg0)
+void akao_seq_op_set_octave(h_struct* arg0)
 {
     u8* temp_v0;
 
@@ -2228,7 +2238,7 @@ void func_8002BBEC(h_struct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/2bdR3
  */
-void func_8002BC08(i_struct* arg0)
+void akao_seq_op_increment_octave(i_struct* arg0)
 {
     arg0->unk96 = (u16)((arg0->unk96 + 1) & 0xF);
 }
@@ -2236,7 +2246,7 @@ void func_8002BC08(i_struct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/SJfbQ
  */
-void func_8002BC20(j_struct* arg0)
+void akao_seq_op_decrement_octave(j_struct* arg0)
 {
     arg0->unk96 = (u16)((arg0->unk96 - 1) & 0xF);
 }
@@ -2244,7 +2254,7 @@ void func_8002BC20(j_struct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/1MXGr
  */
-void func_8002BC38(k_struct* arg0)
+void akao_seq_op_set_mapped_articulation(k_struct* arg0)
 {
     s32* temp_a1_2;
     s32 temp_a1;
@@ -2260,7 +2270,7 @@ void func_8002BC38(k_struct* arg0)
     }
     else
     {
-        var_s1 = func_8002B540(arg0->unk38, temp_a1);
+        var_s1 = akao_remap_sfx_articulation(arg0->unk38, temp_a1);
     }
 
     temp_a1_2 = (var_s1 * 0x10) + g_akao_articulation_slots;
@@ -2273,7 +2283,7 @@ void func_8002BC38(k_struct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/GAl01
  */
-void func_8002BCC8(l_struct* arg0)
+void akao_seq_op_set_articulation(l_struct* arg0)
 {
     s32 temp_s1;
     u8* temp_v0;
@@ -2288,11 +2298,11 @@ void func_8002BCC8(l_struct* arg0)
 }
 
 /**
- * @brief Handles AKAO extended sequence opcode 0x14.
+ * @brief Select a key-to-articulation map from the current sequence bank.
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void func_8002BD34(m_struct* arg0)
+void akao_seq_op_select_articulation_map(m_struct* arg0)
 {
     s32 base;
     u16* entry;
@@ -2323,7 +2333,7 @@ void func_8002BD34(m_struct* arg0)
  * @param arg0 Channel state to update.
  * @see decomp.me (100%)
  */
-void func_8002BDC8(n_struct* arg0)
+void akao_seq_op_refresh_envelope(n_struct* arg0)
 {
     AkaoArticulation* articulation;
     u16 tmp_c;
@@ -2348,7 +2358,7 @@ void func_8002BDC8(n_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void func_8002BE10(o_struct* arg0)
+void akao_seq_op_set_transpose(o_struct* arg0)
 {
     u8* temp_v0;
     s8 val;
@@ -2365,7 +2375,7 @@ void func_8002BE10(o_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void func_8002BE34(o_struct* arg0)
+void akao_seq_op_add_transpose(o_struct* arg0)
 {
     u8* temp_v0;
     s8 val;
@@ -2377,12 +2387,11 @@ void func_8002BE34(o_struct* arg0)
 }
 
 /**
- * @brief Reads a byte for field 0x98 (defaulting 0 to 0x100), then a signed
- *        byte stored at field 0xF0.
+ * @brief Configure a one-shot pitch slide duration and semitone delta.
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void func_8002BE60(p_struct* arg0)
+void akao_seq_op_set_pitch_slide(p_struct* arg0)
 {
     u8* temp_v0;
     u8* temp_v0_2;
@@ -2404,12 +2413,11 @@ void func_8002BE60(p_struct* arg0)
 }
 
 /**
- * @brief Reads one byte for field 0x9C (defaulting 0 to 0x100) and resets the
- *        related state fields 0x9A/0x9E/0xF2.
+ * @brief Enable automatic portamento between successive notes.
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void func_8002BEA8(q_struct* arg0)
+void akao_seq_op_enable_portamento(q_struct* arg0)
 {
     u8* temp_v0;
     s32 b;
@@ -2428,22 +2436,21 @@ void func_8002BEA8(q_struct* arg0)
 }
 
 /**
- * @brief Clears field 0x9C.
+ * @brief Disable automatic portamento between notes.
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void func_8002BEE0(q_struct* arg0)
+void akao_seq_op_disable_portamento(q_struct* arg0)
 {
     arg0->unk9C = 0;
 }
 
 /**
- * @brief Reads a signed byte scale factor into field 0xEC and computes the
- *        scaled result stored at field 0x54, then sets flag 0x10 in field 0x100.
+ * @brief Set fine pitch detune and recompute its pitch-register delta.
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void func_8002BEE8(r_struct* arg0)
+void akao_seq_op_set_detune(r_struct* arg0)
 {
     s32 scale;
     u8* next;
@@ -2471,12 +2478,11 @@ void func_8002BEE8(r_struct* arg0)
 }
 
 /**
- * @brief Adds a signed byte to field 0xEC, then recomputes the scaled result
- *        at field 0x54 and sets flag 0x10 in field 0x100.
+ * @brief Add to fine pitch detune and recompute its pitch-register delta.
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void func_8002BF48(r_struct* arg0)
+void akao_seq_op_add_detune(r_struct* arg0)
 {
     s32 scale;
     u8* temp_v0;
@@ -2502,15 +2508,14 @@ void func_8002BF48(r_struct* arg0)
 }
 
 /**
- * @brief AKAO opcode handler that reads several bytecode bytes into the
- *        channel's portamento/pitch state (0xA2..0xAE), computes the scaled
- *        slide value at 0xAC, and looks up a table entry into 0x1C.
+ * @brief Start the channel pitch LFO, selecting its delay, period, waveform,
+ *        and scaled depth.
  * @param arg0 Channel state whose bytecode cursor is advanced.
  * @note @c temp_a0 must be widened past u16 so gcc keeps the second mult
  *       operand order (@c hi first) matching the other branch.
  * @see decomp.me (100%)
  */
-void func_8002BFAC(s_struct* arg0)
+void akao_seq_op_start_pitch_lfo(s_struct* arg0)
 {
     s_struct* p;
     u32 temp_a0;
@@ -2568,20 +2573,19 @@ void func_8002BFAC(s_struct* arg0)
         var_lo = hi * temp_a0;
     }
     p->unkAC = var_lo >> 7;
-    p->unk1C = D_8003DD80[p->unkAA];
+    p->unk1C = g_akao_lfo_waveforms[p->unkAA];
     p->unkA4 = p->unkA2;
     p->unkA8 = 1;
 }
 
 /**
- * @brief AKAO opcode handler: reads one bytecode byte, stores it shifted at
- *        field 0xAE, and computes a scaled slide value into field 0xAC.
+ * @brief Set the active pitch-LFO depth and recompute its scaled depth.
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @note The @c flags re-read of 0xAE is required to keep the base pointer in
  *       a1 to match; it leaves one residual @c andi (see status).
  * @see decomp.me (90.96%)
  */
-void func_8002C0A4(t_struct* arg0)
+void akao_seq_op_set_pitch_lfo_depth(t_struct* arg0)
 {
     t_struct* p;
     s32 scale;
@@ -2611,12 +2615,11 @@ void func_8002C0A4(t_struct* arg0)
 }
 
 /**
- * @brief AKAO opcode handler: reads a divisor byte (0 defaults to 0x100) and a
- *        target byte, storing the divisor at 0xB0 and the scaled quotient at 0xB2.
+ * @brief Slide the pitch-LFO depth to a target over a tick count.
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void func_8002C104(u_struct* arg0)
+void akao_seq_op_slide_pitch_lfo_depth(u_struct* arg0)
 {
     u8* temp_a1;
     s32 divisor;
@@ -2642,7 +2645,7 @@ void func_8002C104(u_struct* arg0)
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void func_8002C170(v_struct* arg0)
+void akao_seq_op_stop_pitch_lfo(v_struct* arg0)
 {
     arg0->unkF4 = 0;
     arg0->unk34 = arg0->unk34 & ~1;
@@ -2650,13 +2653,12 @@ void func_8002C170(v_struct* arg0)
 }
 
 /**
- * @brief AKAO opcode handler: reads three bytecode bytes into the channel's
- *        portamento state (0xB6..0xC0), defaults 0xBA when zero, and looks up a
- *        table entry into field 0x20.
+ * @brief Start the channel volume LFO, selecting its delay, period, waveform,
+ *        and depth.
  * @param arg0 Channel state whose bytecode cursor is advanced by three bytes.
  * @see decomp.me (100%)
  */
-void func_8002C194(w_struct* arg0)
+void akao_seq_op_start_volume_lfo(w_struct* arg0)
 {
     w_struct* p;
     u8* temp_v0;
@@ -2695,18 +2697,17 @@ void func_8002C194(w_struct* arg0)
     raw = *temp_v0_2;
     p->unk0 = (u8*)(temp_v0_2 + 1);
     p->unkBE = raw;
-    p->unk20 = D_8003DD80[p->unkBE];
+    p->unk20 = g_akao_lfo_waveforms[p->unkBE];
     p->unkB8 = p->unkB6;
     p->unkBC = 1;
 }
 
 /**
- * @brief AKAO opcode handler: reads a byte, masks it to 7 bits and shifts it
- *        left 8, storing the result at field 0xC0.
+ * @brief Set the active volume-LFO depth.
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void func_8002C244(x_struct* arg0)
+void akao_seq_op_set_volume_lfo_depth(x_struct* arg0)
 {
     u8* temp_v0;
     s32 b;
@@ -2718,12 +2719,11 @@ void func_8002C244(x_struct* arg0)
 }
 
 /**
- * @brief AKAO opcode handler: reads a divisor byte (0 defaults to 0x100) and a
- *        target byte, storing the divisor at 0xC2 and the scaled quotient at 0xC4.
+ * @brief Slide the volume-LFO depth to a target over a tick count.
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void func_8002C268(y_struct* arg0)
+void akao_seq_op_slide_volume_lfo_depth(y_struct* arg0)
 {
     u8* temp_a1;
     s32 divisor;
@@ -2749,7 +2749,7 @@ void func_8002C268(y_struct* arg0)
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void func_8002C2D8(z_struct* arg0)
+void akao_seq_op_stop_volume_lfo(z_struct* arg0)
 {
     arg0->unkF6 = 0;
     arg0->unk34 = arg0->unk34 & ~2;
@@ -2757,13 +2757,11 @@ void func_8002C2D8(z_struct* arg0)
 }
 
 /**
- * @brief AKAO opcode handler: sets flag 0x4 at 0x34, reads a byte (0 defaults
- *        to 0x100) into 0xC8, reads an index byte into 0xCC, sets 0xCA, and
- *        looks up a table entry into field 0x24.
+ * @brief Start the channel pan LFO, selecting its period and waveform.
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void func_8002C2FC(aa_struct* arg0)
+void akao_seq_op_start_pan_lfo(aa_struct* arg0)
 {
     u8* temp_v0;
     u8* temp_v0_2;
@@ -2783,17 +2781,16 @@ void func_8002C2FC(aa_struct* arg0)
     raw = *temp_v0_2;
     arg0->unk0 = (u8*)(temp_v0_2 + 1);
     arg0->unkCC = raw;
-    arg0->unk24 = D_8003DD80[arg0->unkCC];
+    arg0->unk24 = g_akao_lfo_waveforms[arg0->unkCC];
     arg0->unkCA = 1;
 }
 
 /**
- * @brief AKAO opcode handler: reads a byte, shifts it left 7, and stores the
- *        result at field 0xCE.
+ * @brief Set the active pan-LFO depth.
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void func_8002C368(ab_struct* arg0)
+void akao_seq_op_set_pan_lfo_depth(ab_struct* arg0)
 {
     u8* temp_v0;
     s32 b;
@@ -2805,12 +2802,11 @@ void func_8002C368(ab_struct* arg0)
 }
 
 /**
- * @brief AKAO opcode handler: reads a divisor byte (0 defaults to 0x100) and a
- *        target byte, storing the divisor at 0xD0 and the scaled quotient at 0xD2.
+ * @brief Slide the pan-LFO depth to a target over a tick count.
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void func_8002C388(ac_struct* arg0)
+void akao_seq_op_slide_pan_lfo_depth(ac_struct* arg0)
 {
     u8* temp_a1;
     s32 divisor;
@@ -2836,7 +2832,7 @@ void func_8002C388(ac_struct* arg0)
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void func_8002C3F4(ad_struct* arg0)
+void akao_seq_op_stop_pan_lfo(ad_struct* arg0)
 {
     arg0->unkF8 = 0;
     arg0->unk34 = arg0->unk34 & ~4;
@@ -2853,7 +2849,7 @@ void func_8002C3F4(ad_struct* arg0)
  *       register), a gcc 2.8 coloring tie-break the permuter cannot move.
  * @see decomp.me (99.58%)
  */
-void func_8002C418(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_enable_reverb(AkaoChannelState* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
@@ -2874,10 +2870,10 @@ void func_8002C418(AkaoChannelState* arg0, s32 arg1)
  * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
  * @note Residual: the seq-channel path register coloring differs (5 rows), a
  *       gcc 2.8 coloring tie-break the permuter cannot move (shared with
- *       func_8002C418).
+ *       akao_seq_op_enable_reverb).
  * @see decomp.me (98.27%)
  */
-void func_8002C478(ae_struct* arg0, s32 arg1)
+void akao_seq_op_disable_reverb(ae_struct* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
@@ -2899,10 +2895,10 @@ void func_8002C478(ae_struct* arg0, s32 arg1)
  * @param arg0 Channel state; @c unk64 selects sequence routing, @c unk34 gates SFX.
  * @param arg1 Flag bitmask to OR in.
  * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
- *       register), a gcc 2.8 coloring tie-break shared with func_8002C418.
+ *       register), a gcc 2.8 coloring tie-break shared with akao_seq_op_enable_reverb.
  * @see decomp.me (99.66%)
  */
-void func_8002C4E0(af_struct* arg0, s32 arg1)
+void akao_seq_op_enable_pitch_modulation(af_struct* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
@@ -2922,10 +2918,10 @@ void func_8002C4E0(af_struct* arg0, s32 arg1)
  * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
  * @note Residual: the seq-channel path register coloring differs (5 rows), a
- *       gcc 2.8 coloring tie-break shared with func_8002C418/C478.
+ *       gcc 2.8 coloring tie-break shared with the reverb handlers.
  * @see decomp.me (98.27%)
  */
-void func_8002C554(ag_struct* arg0, s32 arg1)
+void akao_seq_op_disable_pitch_modulation(ag_struct* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
@@ -2946,10 +2942,10 @@ void func_8002C554(ag_struct* arg0, s32 arg1)
  * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to OR in.
  * @note Residual: the g_akao_seq_channel0 %hi coloring tie-break shared with
- *       func_8002C418.
+ *       akao_seq_op_enable_reverb.
  * @see decomp.me (99.58%)
  */
-void func_8002C5BC(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_enable_noise(AkaoChannelState* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
@@ -2969,10 +2965,10 @@ void func_8002C5BC(AkaoChannelState* arg0, s32 arg1)
  * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
  * @note Residual: the seq-channel path register coloring differs (5 rows), a
- *       gcc 2.8 coloring tie-break shared with func_8002C418/C478.
+ *       gcc 2.8 coloring tie-break shared with the reverb handlers.
  * @see decomp.me (98.13%)
  */
-void func_8002C61C(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_disable_noise(AkaoChannelState* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
@@ -2986,29 +2982,29 @@ void func_8002C61C(AkaoChannelState* arg0, s32 arg1)
 }
 
 /**
- * @brief AKAO opcode handler: sets field 0x9E to 1.
+ * @brief Enable tied notes; subsequent notes change pitch without retriggering.
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void func_8002C67C(ah_struct* arg0)
+void akao_seq_op_enable_note_tie(ah_struct* arg0)
 {
     arg0->unk9E = 1;
 }
 
 /**
- * @brief AKAO opcode handler stub: no operation.
+ * @brief No-op handler for primary opcode 0xCD.
  * @see decomp.me (100%)
  */
-void func_8002C688(void)
+void akao_seq_op_nop_cd(void)
 {
 }
 
 /**
- * @brief AKAO opcode handler: sets field 0x9E to 4 when the channel is active.
+ * @brief Give SFX notes their full duration instead of an early key-off.
  * @param arg0 Channel state; @c unk64 selects whether the store happens.
  * @see decomp.me (100%)
  */
-void func_8002C690(ai_struct* arg0)
+void akao_seq_op_enable_sfx_full_gate(ai_struct* arg0)
 {
     if (arg0->unk64 != 0)
     {
@@ -3017,17 +3013,17 @@ void func_8002C690(ai_struct* arg0)
 }
 
 /**
- * @brief AKAO opcode handler stub: no operation.
+ * @brief No-op handler for primary opcode 0xD1.
  * @see decomp.me (100%)
  */
-void func_8002C6AC(void)
+void akao_seq_op_nop_d1(void)
 {
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/Get0N
  */
-void func_8002C6B4(argst1* arg0)
+void akao_seq_op_set_noise_frequency(argst1* arg0)
 {
     s16 temp_a1;
     u8* temp_v0;
@@ -3060,7 +3056,7 @@ void func_8002C6B4(argst1* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/gwBIb
  */
-void func_8002C758(SomeStruct* arg0)
+void akao_seq_op_set_adsr_attack(SomeStruct* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3086,7 +3082,7 @@ void func_8002C758(SomeStruct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ID5s7
  */
-void func_8002C79C(s_8002C79C* arg0)
+void akao_seq_op_set_adsr_decay(s_8002C79C* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3107,7 +3103,7 @@ void func_8002C79C(s_8002C79C* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ZOmaE
  */
-void func_8002C7D0(s_8002C79C* arg0)
+void akao_seq_op_set_adsr_sustain_level(s_8002C79C* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3137,7 +3133,7 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/Tun26
  */
-void func_8002C800(s_8002C800* arg0)
+void akao_seq_op_set_adsr_sustain_rate(s_8002C800* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3161,7 +3157,7 @@ void func_8002C800(s_8002C800* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/DR9uQ
  */
-void func_8002C844(s_8002C800* arg0)
+void akao_seq_op_set_adsr_release_rate(s_8002C800* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3194,7 +3190,7 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/dP97Y
  */
-void func_8002C884(s_8002C884* arg0)
+void akao_seq_op_set_adsr_attack_mode(s_8002C884* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3227,7 +3223,7 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/8od0h
  */
-void func_8002C8C8(Struct_8002C8C8* arg0)
+void akao_seq_op_set_adsr_sustain_mode(Struct_8002C8C8* arg0)
 {
     s32 temp_a0;
     u16 temp_v1;
@@ -3269,7 +3265,7 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/1Pqa0
  */
-void func_8002C940(s_8002C940* arg0)
+void akao_seq_op_set_adsr_release_mode(s_8002C940* arg0)
 {
 
     u8* temp_v0;
@@ -3327,7 +3323,7 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/pTtu4
  */
-void func_8002C9B4(Struct_8002C9B4* arg0)
+void akao_seq_op_loop_start(Struct_8002C9B4* arg0)
 {
     arg0->unkD8 = (arg0->unkD8 + 1) & 3;
     arg0->unk4[arg0->unkD8] = arg0->unk0;
@@ -3350,7 +3346,7 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/xSadm
  */
-void func_8002CA04(Struct_8002C9B4* arg0)
+void akao_seq_op_loop_end(Struct_8002C9B4* arg0)
 {
     u32 var_a1;
 
@@ -3375,7 +3371,7 @@ void func_8002CA04(Struct_8002C9B4* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/XFsED
  */
-void func_8002CA98(Struct_8002C9B4* arg0)
+void akao_seq_op_branch_on_loop_last(Struct_8002C9B4* arg0)
 {
     u8* temp_a1;
     u32 var_v1;
@@ -3402,7 +3398,7 @@ void func_8002CA98(Struct_8002C9B4* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/Gx2w7
  */
-void func_8002CB04(Struct_8002C9B4* arg0)
+void akao_seq_op_branch_and_end_loop(Struct_8002C9B4* arg0)
 {
     u8* temp_a1;
     u32 var_v1;
@@ -3430,7 +3426,7 @@ void func_8002CB04(Struct_8002C9B4* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/Eytqk
  */
-void func_8002CB80(Struct_8002C9B4* arg0)
+void akao_seq_op_repeat_loop(Struct_8002C9B4* arg0)
 {
     arg0->unk74[arg0->unkD8]++;
     arg0->unk0 = arg0->unk4[arg0->unkD8];
@@ -3458,7 +3454,7 @@ typedef struct
 /**
  * decomp.me (100%) https://decomp.me/scratch/FnAXw
  */
-void func_8002CBD4(Struct_8002CBD4* arg0)
+void akao_seq_op_set_note_duration(Struct_8002CBD4* arg0)
 {
     s32 temp_v1;
 
@@ -3474,7 +3470,7 @@ void func_8002CBD4(Struct_8002CBD4* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/PBFzu
  */
-void func_8002CBFC(Struct_8002CBD4* arg0)
+void akao_seq_op_adjust_note_duration(Struct_8002CBD4* arg0)
 {
     s32 var_v1;
 
