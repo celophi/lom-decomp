@@ -3493,3 +3493,20 @@ void akao_seq_op_adjust_note_duration(Struct_8002CBD4* arg0)
 
     arg0->unkDE = var_v1;
 }
+
+typedef struct
+{
+    u8 pad1[0x34];
+    s32 unk34;
+} s_8002CC44;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/CB7Yy
+ */
+void func_8002CC44(s_8002CC44* arg0)
+{
+    if (g_akao_seq_channel0->unk34 != 0)
+    {
+        arg0->unk34 = (s32)((arg0->unk34 & 0xE6FFEFF7) | 8);
+    }
+}
