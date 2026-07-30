@@ -3303,3 +3303,11 @@ void func_8002C984(u8** arg0)
     g_akao_seq_channel0->unk38 = (s32)*temp_v0;
     *arg0 = temp_v0 + 1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/9FX05
+ */
+void func_8002C9A4(void)
+{
+    g_akao_seq_channel0->unk38 = 0;
+}
