@@ -22,19 +22,19 @@ typedef struct
 
 typedef struct
 {
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
-    s16 unk6;
-} Struct_D_800F2268;
+    s16 red;
+    s16 green;
+    s16 blue;
+    s16 duration;
+} FieldFadeTarget;
 
 typedef struct
 {
-    s16 unk0;
-    s16 unk2;
-    s16 unk4;
+    s16 red;
+    s16 green;
+    s16 blue;
     s16 unk6;
-} Struct_D_800F2270;
+} FieldFadeRestoreColor;
 
 typedef struct
 {
@@ -323,8 +323,8 @@ extern s32 D_8012291C;
 extern s32 g_field_audio_timer;
 extern s32 g_field_track_index;
 extern s32 D_8011588C;
-extern Struct_D_800F2268 D_800F2268;
-extern Struct_D_800F2270 D_800F2270;
+extern FieldFadeTarget g_field_fade_target;
+extern FieldFadeRestoreColor g_field_fade_restore_color;
 extern s32 D_800F2278;
 extern s32 D_800F227C;
 extern s32 D_800F2280;
@@ -374,10 +374,10 @@ void field_update_return_to_title_prompt(s32 render_ctx)
             g_field_return_to_title_prompt_delay--;
             if (g_field_return_to_title_prompt_delay == 0)
             {
-                D_800F2268.unk0 = 0xC0;
-                D_800F2268.unk2 = 0xC0;
-                D_800F2268.unk4 = 0xC0;
-                D_800F2268.unk6 = 5;
+                g_field_fade_target.red = 0xC0;
+                g_field_fade_target.green = 0xC0;
+                g_field_fade_target.blue = 0xC0;
+                g_field_fade_target.duration = 5;
             }
         }
         else
@@ -412,13 +412,13 @@ void field_open_return_to_title_prompt(void)
  */
 void field_begin_return_to_title_prompt_close(void)
 {
-    D_800F2268.unk0 = 0;
-    D_800F2270.unk0 = 0;
-    D_800F2268.unk2 = 0;
-    D_800F2270.unk2 = 0;
-    D_800F2268.unk4 = 0;
-    D_800F2270.unk4 = 0;
-    D_800F2268.unk6 = 8;
+    g_field_fade_target.red = 0;
+    g_field_fade_restore_color.red = 0;
+    g_field_fade_target.green = 0;
+    g_field_fade_restore_color.green = 0;
+    g_field_fade_target.blue = 0;
+    g_field_fade_restore_color.blue = 0;
+    g_field_fade_target.duration = 8;
     func_800643E0();
     D_8012291C = 0;
 }
