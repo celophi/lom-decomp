@@ -3123,7 +3123,8 @@ void func_8002C7D0(s_8002C79C* arg0)
     arg0->unk10E = new_unk10E;
 }
 
-typedef struct {
+typedef struct
+{
     u8* unk0;
     u8 pad1[0x34 - 0x4];
     s32 unk34;
@@ -3151,6 +3152,30 @@ void func_8002C800(s_8002C800* arg0)
     new_unk100 = arg0->unk100 | 0x2200;
     new_unk34 = arg0->unk34 | 0x08000000;
     new_unk110 = (arg0->unk110 & 0xE03F) | (byte_val << 6);
+
+    arg0->unk100 = new_unk100;
+    arg0->unk34 = new_unk34;
+    arg0->unk110 = new_unk110;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/DR9uQ
+ */
+void func_8002C844(s_8002C800* arg0)
+{
+    u8* ptr;
+    u32 byte_val;
+    u32 new_unk100;
+    u32 new_unk34;
+    u16 new_unk110;
+
+    ptr = arg0->unk0;
+    byte_val = *ptr;
+    arg0->unk0 = ptr + 1;
+
+    new_unk100 = arg0->unk100 | 0x4400;
+    new_unk34 = arg0->unk34 | 0x10000000;
+    new_unk110 = (arg0->unk110 & 0xFFE0) | byte_val;
 
     arg0->unk100 = new_unk100;
     arg0->unk34 = new_unk34;
