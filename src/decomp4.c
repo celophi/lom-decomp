@@ -3312,56 +3312,89 @@ void func_8002C9A4(void)
     g_akao_seq_channel0->unk38 = 0;
 }
 
-typedef struct {
-    u32 unk0; 
-    u32 unk4[4];          
-    u8  pad_14[0x72 - 0x14];
-    u16 unk72;              
-    u16 unk74[4];           
-    u16 unk7C[4];          
-    u8  pad_84[0xD8 - 0x84];
-    u16 unkD8;             
+typedef struct
+{
+    u32 unk0;
+    u32 unk4[4];
+    u8 pad_14[0x72 - 0x14];
+    u16 unk72;
+    u16 unk74[4];
+    u16 unk7C[4];
+    u8 pad_84[0xD8 - 0x84];
+    u16 unkD8;
 } Struct_8002C9B4;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/pTtu4
  */
-void func_8002C9B4(Struct_8002C9B4* arg0) {
+void func_8002C9B4(Struct_8002C9B4* arg0)
+{
     arg0->unkD8 = (arg0->unkD8 + 1) & 3;
     arg0->unk4[arg0->unkD8] = arg0->unk0;
     arg0->unk74[arg0->unkD8] = 0;
     arg0->unk7C[arg0->unkD8] = arg0->unk72;
 }
 
-typedef struct {
-    u8* unk0; 
-    u8* unk4[4];          
-    u8  pad_14[0x72 - 0x14];
-    u16 unk72;              
-    u16 unk74[4];           
-    u16 unk7C[4];          
-    u8  pad_84[0xD8 - 0x84];
-    u16 unkD8;             
+typedef struct
+{
+    u8* unk0;
+    u8* unk4[4];
+    u8 pad_14[0x72 - 0x14];
+    u16 unk72;
+    u16 unk74[4];
+    u16 unk7C[4];
+    u8 pad_84[0xD8 - 0x84];
+    u16 unkD8;
 } Struct_8002C9B4;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/xSadm
  */
-void func_8002CA04(Struct_8002C9B4* arg0) {
+void func_8002CA04(Struct_8002C9B4* arg0)
+{
     u32 var_a1;
 
     var_a1 = *arg0->unk0;
     arg0->unk0++;
 
-    if (var_a1 == 0) {
+    if (var_a1 == 0)
+    {
         var_a1 = 0x100;
     }
 
-    if (++arg0->unk74[arg0->unkD8] != var_a1) {
+    if (++arg0->unk74[arg0->unkD8] != var_a1)
+    {
         arg0->unk0 = arg0->unk4[arg0->unkD8];
         arg0->unk72 = arg0->unk7C[arg0->unkD8];
         return;
     }
 
     arg0->unkD8 = (arg0->unkD8 - 1) & 3;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/XFsED
+ */
+void func_8002CA98(Struct_8002C9B4* arg0)
+{
+    u8* temp_a1;
+    u32 var_v1;
+
+    temp_a1 = arg0->unk0;
+    var_v1 = *temp_a1;
+    temp_a1++;
+    arg0->unk0 = temp_a1;
+
+    if (var_v1 == 0)
+    {
+        var_v1 = 0x100;
+    }
+
+    if (arg0->unk74[arg0->unkD8] + 1 != var_v1)
+    {
+        arg0->unk0 = temp_a1 + 2;
+        return;
+    }
+
+    arg0->unk0 = temp_a1 + (s16)(temp_a1[0] | (temp_a1[1] << 8));
 }
