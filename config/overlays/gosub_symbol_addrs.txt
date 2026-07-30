@@ -1,0 +1,54 @@
+// GOSUB.BIN
+
+// Overlay entry points
+gosub_open_screen_sequence               = 0x80140080;
+gosub_update_frame                       = 0x801400C4;
+gosub_load_screen_sequence               = 0x80140114;
+gosub_enter_screen                       = 0x8014020C;
+
+// Element builders
+gosub_build_screen_9_elements            = 0x80140C18;
+gosub_build_screen_10_elements           = 0x80140DDC;
+gosub_initialize_fixed_element           = 0x80140FA0;
+gosub_build_category_screen_elements     = 0x80141024;
+gosub_build_list_screen_elements         = 0x801411E8;
+gosub_build_screen_11_elements           = 0x801413C0;
+gosub_build_compact_list_elements        = 0x80141580;
+
+// Row-list builders
+gosub_build_screen_15_item_list          = 0x801416E0;
+gosub_build_screen_19_item_list          = 0x80141808;
+gosub_build_screen_16_item_list          = 0x8014191C;
+gosub_build_screen_1_item_list           = 0x80141A14;
+gosub_build_screen_0_item_list           = 0x80141B28;
+gosub_build_packed_record_list           = 0x80141C3C;
+gosub_build_roster_list                  = 0x80141ED8;
+
+// Selection callbacks
+gosub_select_row_with_validation         = 0x8014229C;
+gosub_select_row                         = 0x80142398;
+gosub_validate_pending_pair_selection    = 0x80142400;
+gosub_commit_row_reorder                 = 0x80142460;
+gosub_update_group_selection             = 0x80142610;
+gosub_publish_two_row_selection          = 0x80142820;
+
+// Overlay state
+g_gosub_frame_parity                     = 0x8016B8C8;
+g_gosub_finished                         = 0x8016B8CC;
+g_gosub_cursor_row                       = 0x8016B8D0;
+g_gosub_row_count                        = 0x8016B8D4;
+g_gosub_visible_row_count                = 0x8016B8D8;
+g_gosub_screen_sequence_index            = 0x8016B8DC;
+g_gosub_finish_handler                   = 0x8016B8F8;
+g_gosub_required_selection_count         = 0x8016B8FD;
+g_gosub_result_rows                      = 0x8016B908;
+g_gosub_selected_rows                    = 0x8016B94C;
+g_gosub_window_height                    = 0x8016B950;
+g_gosub_select_handler                   = 0x8016B954;
+g_gosub_window_width                     = 0x8016B958;
+g_gosub_selection_count                  = 0x80170960;
+g_gosub_screen_sequence                  = 0x80170968;
+g_gosub_row_height                       = 0x80170980;
+g_gosub_title_text                       = 0x80170994;
+g_gosub_fixed_element                    = 0x80170998;
+g_gosub_rows                             = 0x80170A58;

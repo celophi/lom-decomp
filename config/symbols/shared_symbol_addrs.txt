@@ -899,7 +899,9 @@ g_prim_rect_buf                     = 0x800FE778;
 g_pad_ctx                           = 0x8012271C;
 g_script_repeat_count               = 0x80122730;
 g_active_script                     = 0x801228C8;
+g_gosub_result_count                = 0x801228F0;
 g_pad_input                         = 0x80122988;
+g_gosub_result_values               = 0x801229B0;
 g_pad_input_inject                  = 0x801229FC;
 
 // Controller subsystem globals
