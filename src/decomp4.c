@@ -3215,18 +3215,20 @@ void func_8002C884(s_8002C884* arg0)
     arg0->unk100 = arg0->unk100 | 0x100;
 }
 
-typedef struct {
+typedef struct
+{
     u8* unk0;               /* 0x00 */
-    u8  pad1[0x100 - 0x4];  /* 0x04 */
+    u8 pad1[0x100 - 0x4];   /* 0x04 */
     s32 unk100;             /* 0x100 */
-    u8  pad2[0x110 - 0x104];/* 0x104 */
+    u8 pad2[0x110 - 0x104]; /* 0x104 */
     u16 unk110;             /* 0x110 */
 } Struct_8002C8C8;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/8od0h
  */
-void func_8002C8C8(Struct_8002C8C8* arg0) {
+void func_8002C8C8(Struct_8002C8C8* arg0)
+{
     s32 temp_a0;
     u16 temp_v1;
     u8* temp_v0;
@@ -3238,18 +3240,54 @@ void func_8002C8C8(Struct_8002C8C8* arg0) {
     arg0->unk0 = (u8*)(temp_v0 + 1);
     temp_a0 = byte_val & 0xFFFF;
     arg0->unk110 = temp_v1;
-    
-    switch (temp_a0) {
-        case 3:
-            arg0->unk110 = temp_v1 | 0x4000;
-            break;
-        case 5:
-            arg0->unk110 = temp_v1 | 0x8000;
-            break;
-        case 7:
-            arg0->unk110 = temp_v1 | 0xC000;
-            break;
+
+    switch (temp_a0)
+    {
+    case 3:
+        arg0->unk110 = temp_v1 | 0x4000;
+        break;
+    case 5:
+        arg0->unk110 = temp_v1 | 0x8000;
+        break;
+    case 7:
+        arg0->unk110 = temp_v1 | 0xC000;
+        break;
     }
-    
+
     arg0->unk100 = (s32)(arg0->unk100 | 0x200);
+}
+
+typedef struct
+{
+    u8* unk0;               /* 0x00 */
+    u8 pad1[0x100 - 0x4];   /* 0x04 */
+    s32 unk100;             /* 0x100 */
+    u8 pad2[0x110 - 0x104]; /* 0x104 */
+    u16 unk110;             /* 0x10E */
+} s_8002C940;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/1Pqa0
+ */
+void func_8002C940(s_8002C940* arg0)
+{
+
+    u8* temp_v0;
+    u16 new_unk110;
+    u32 byte_val;
+
+    temp_v0 = arg0->unk0;
+    byte_val = *temp_v0;
+    arg0->unk0 = (u8*)(temp_v0 + 1);
+
+    new_unk110 = arg0->unk110 & 0xFFDF;
+    arg0->unk110 = new_unk110;
+
+    if (byte_val == 7)
+    {
+        new_unk110 = (u16)(new_unk110 | 0x20);
+        arg0->unk110 = new_unk110;
+    }
+
+    arg0->unk100 = (s32)(arg0->unk100 | 0x400);
 }
