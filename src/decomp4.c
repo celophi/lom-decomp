@@ -3498,6 +3498,8 @@ typedef struct
 {
     u8 pad1[0x34];
     s32 unk34;
+    u8 pad2[0x112 - 0x38];
+    s16 unk112;
 } s_8002CC44;
 
 /**
@@ -3509,4 +3511,13 @@ void func_8002CC44(s_8002CC44* arg0)
     {
         arg0->unk34 = (s32)((arg0->unk34 & 0xE6FFEFF7) | 8);
     }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FnMZ3
+ */
+void func_8002CC7C(s_8002CC44* arg0)
+{
+    arg0->unk112 = 0;
+    arg0->unk34 = (s32)(arg0->unk34 & ~8);
 }
