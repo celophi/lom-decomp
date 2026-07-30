@@ -140,10 +140,10 @@ typedef struct
         struct
         {
             u16 lo;
-            u16 unk1FE;
+            u16 animation_id;
         } h;
     } u1FC;
-    u8 unk200;
+    u8 owner_object_index;
     u8 unk201[9];
     u8 unk20A;
     u8 unk20B;
@@ -181,10 +181,10 @@ typedef struct
         struct
         {
             u16 lo;
-            u16 unk226;
+            u16 animation_id;
         } h;
     } u224;
-    u8 unk228;
+    u8 owner_object_index;
     u8 unk229[9];
     u8 unk232;
     u8 unk233;
@@ -317,8 +317,8 @@ extern s32 D_800F22B8;
 extern s32 D_800F22BC;
 extern s32 D_800F22C0;
 extern s32 D_800F22C4;
-extern s32 D_800F2284;
-extern s32 D_800F22B4;
+extern s32 g_field_return_to_title_prompt_delay;
+extern s32 g_field_return_to_title_prompt_state;
 extern s32 D_8012291C;
 extern s32 g_field_audio_timer;
 extern s32 g_field_track_index;
@@ -359,18 +359,20 @@ void field_update_gover_load(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/Kws0l
+ * @brief Update and render the modal return-to-title confirmation prompt.
+ * @param render_ctx Current field render context passed to the prompt renderer.
+ * @see decomp.me (100%) https://decomp.me/scratch/Kws0l
  */
-void func_80068310(s32 arg0)
+void field_update_return_to_title_prompt(s32 render_ctx)
 {
 
-    if (D_800F22B4 != 0)
+    if (g_field_return_to_title_prompt_state != 0)
     {
 
-        if (D_800F2284 != 0)
+        if (g_field_return_to_title_prompt_delay != 0)
         {
-            D_800F2284--;
-            if (D_800F2284 == 0)
+            g_field_return_to_title_prompt_delay--;
+            if (g_field_return_to_title_prompt_delay == 0)
             {
                 D_800F2268.unk0 = 0xC0;
                 D_800F2268.unk2 = 0xC0;
@@ -381,12 +383,12 @@ void func_80068310(s32 arg0)
         else
         {
             func_800A6F1C();
-            if (D_800F22B4 != 0)
+            if (g_field_return_to_title_prompt_state != 0)
             {
                 func_8006441C();
-                if (D_800F22B4 != 0)
+                if (g_field_return_to_title_prompt_state != 0)
                 {
-                    func_800A8880(arg0);
+                    func_800A8880(render_ctx);
                 }
                 func_80063194();
             }
@@ -395,18 +397,20 @@ void func_80068310(s32 arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/doJjR
+ * @brief Initialize and open the return-to-title confirmation prompt.
+ * @see decomp.me (100%) https://decomp.me/scratch/doJjR
  */
-void func_800683C8(void)
+void field_open_return_to_title_prompt(void)
 {
     func_800AA02C();
     func_800A74E8();
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/b8yys
+ * @brief Begin closing the return-to-title prompt and reset its field effects.
+ * @see decomp.me (100%) https://decomp.me/scratch/b8yys
  */
-void func_800683F0(void)
+void field_begin_return_to_title_prompt_close(void)
 {
     D_800F2268.unk0 = 0;
     D_800F2270.unk0 = 0;
@@ -616,14 +620,14 @@ s32 field_finalize_actor_animation(FieldActorState* actor)
         actor->unk23B = 0;
         if (actor->unkC->unk18 & 2)
         {
-            if (D_80105AE0[actor->unk228].u.b.unk17A == actor->unk233)
+            if (D_80105AE0[actor->owner_object_index].u.b.unk17A == actor->unk233)
             {
-                temp_v1 = D_800FDF58[actor->unk228].unk2A;
-                if (((temp_v1 != 0x90) && (temp_v1 != 0x94)) || (D_80105AE0[actor->unk228].unkC & 0x200))
+                temp_v1 = D_800FDF58[actor->owner_object_index].unk2A;
+                if (((temp_v1 != 0x90) && (temp_v1 != 0x94)) || (D_80105AE0[actor->owner_object_index].unkC & 0x200))
                 {
-                    D_800FDF58[actor->unk228].unk25 = 0;
+                    D_800FDF58[actor->owner_object_index].unk25 = 0;
                 }
-                D_80105AE0[actor->unk228].u.unk178 &= ~1;
+                D_80105AE0[actor->owner_object_index].u.unk178 &= ~1;
             }
         }
         if (actor->unkC->unk18 & 4)
@@ -676,7 +680,7 @@ s32 field_finalize_actor_animation(FieldActorState* actor)
             actor->unk24 = 0;
             if (*(u32*)(&actor->u224.unk224) & 1)
             {
-                func_80084424(actor->unk228);
+                func_80084424(actor->owner_object_index);
             }
             return 1;
         }
@@ -685,10 +689,11 @@ s32 field_finalize_actor_animation(FieldActorState* actor)
         {
             actor->unk222 = 0;
             actor->unk24 = 0;
-            func_80084424(actor->unk228);
+            func_80084424(actor->owner_object_index);
             for (i = 0; i < 80; i++)
             {
-                if (((g_field_actor_slots[i].unk24 != 0) && (g_field_actor_slots[i].unk228 == actor->unk228)) && ((temp_a0 = g_field_actor_slots[i].u224.unk224) & 1))
+                if (((g_field_actor_slots[i].unk24 != 0) && (g_field_actor_slots[i].owner_object_index == actor->owner_object_index)) &&
+                    ((temp_a0 = g_field_actor_slots[i].u224.unk224) & 1))
                 {
                     g_field_actor_slots[i].unk23A = 0;
                     field_finalize_actor_animation(&g_field_actor_slots[i]);
@@ -1073,30 +1078,37 @@ s32 field_is_actor_animation_active(s32 slot_index)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/8lvHC
+ * @brief Find an active actor using a special-attack animation.
+ *
+ * Scans active actor slots whose low status bit is clear for animation IDs
+ * 0x1F through 0x23. These IDs form a combat-animation family with dedicated
+ * hit and collision handling.
+ *
+ * @return The owning field-object index ORed with 0x200, or zero if none.
+ * @see decomp.me (100%) https://decomp.me/scratch/8lvHC
  */
-s32 func_8006960C(void)
+s32 field_find_active_special_attack_actor(void)
 {
-    int new_var3;
-    FieldActorState* ptr;
-    s32 i;
-    int new_var2;
-    u16 tmp;
-    ptr = g_field_actor_slots;
-    for (i = 0; i < 80; i++)
+    int animation_id_limit;
+    FieldActorState* actor;
+    s32 slot_index;
+    int first_animation_id;
+    u16 animation_id;
+    actor = g_field_actor_slots;
+    for (slot_index = 0; slot_index < 80; slot_index++)
     {
-        new_var2 = 0x1F;
-        if ((ptr->unk24 != 0) && (!(ptr->u224.unk224 & 1)))
+        first_animation_id = 0x1F;
+        if ((actor->unk24 != 0) && (!(actor->u224.unk224 & 1)))
         {
-            tmp = tmp >> 16;
-            new_var3 = 0x24;
-            tmp = ptr->u224.h.unk226;
-            if ((tmp < new_var3) && (tmp >= new_var2))
+            animation_id = animation_id >> 16;
+            animation_id_limit = 0x24;
+            animation_id = actor->u224.h.animation_id;
+            if ((animation_id < animation_id_limit) && (animation_id >= first_animation_id))
             {
-                return ptr->unk228 | 0x200;
+                return actor->owner_object_index | 0x200;
             }
         }
-        ptr++;
+        actor++;
     }
 
     return 0;
@@ -1297,24 +1309,24 @@ void field_build_actor_render_commands(void* render_context)
                 }
                 if (var_a1 != 0)
                 {
-                    D_800FDF58[var_s2->unk228].unk25 = var_a1;
-                    D_80105AE0[var_s2->unk228].u.unk178 |= 1;
-                    D_80105AE0[var_s2->unk228].u.b.unk17A = var_s2->unk233;
+                    D_800FDF58[var_s2->owner_object_index].unk25 = var_a1;
+                    D_80105AE0[var_s2->owner_object_index].u.unk178 |= 1;
+                    D_80105AE0[var_s2->owner_object_index].u.b.unk17A = var_s2->unk233;
                 }
                 else
                 {
-                    u8 temp_v1_2 = var_s2->unk228;
+                    u8 temp_v1_2 = var_s2->owner_object_index;
                     s16 temp_a0 = D_800FDF58[temp_v1_2].unk2A;
                     if ((temp_a0 == 0x90) || (temp_a0 == 0x94))
                     {
                         if (D_80105AE0[temp_v1_2].unkC & 0x200)
                         {
-                            D_800FDF58[var_s2->unk228].unk25 = var_a1;
+                            D_800FDF58[var_s2->owner_object_index].unk25 = var_a1;
                         }
                     }
                     else
                     {
-                        D_800FDF58[var_s2->unk228].unk25 = var_a1;
+                        D_800FDF58[var_s2->owner_object_index].unk25 = var_a1;
                     }
                 }
             }

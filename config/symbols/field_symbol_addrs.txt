@@ -45,6 +45,9 @@ field_stop_song                         = 0x800A379C;
 g_field_scene_request_pending           = 0x801158A4;
 
 field_update_gover_load               = 0x8006828C;
+field_update_return_to_title_prompt   = 0x80068310;
+field_open_return_to_title_prompt     = 0x800683C8;
+field_begin_return_to_title_prompt_close = 0x800683F0;
 field_update_audio_timer              = 0x80068440;
 field_get_track_counter_modulo        = 0x80068494;
 field_interpolate_palette_track       = 0x800684E4;
@@ -58,6 +61,7 @@ field_clear_actor_slots               = 0x80069184;
 field_start_actor_animation           = 0x800691C4;
 field_dispatch_actor_audio_event      = 0x800693B4;
 field_is_actor_animation_active       = 0x800695D4;
+field_find_active_special_attack_actor = 0x8006960C;
 field_update_actor_animations         = 0x80069684;
 field_reset_actor_track_mask          = 0x80069AF8;
 field_prepare_actor_render_commands   = 0x80069B44;
@@ -70,6 +74,8 @@ field_relocate_resource_buffer        = 0x8006A780;
 field_restore_default_action_animation_mappings = 0x8006A858;
 
 g_field_resource_buffer               = 0x800CBF84;
+g_field_return_to_title_prompt_delay  = 0x800F2284;
+g_field_return_to_title_prompt_state  = 0x800F22B4;
 g_field_actor_slots                   = 0x800F22C8;
 g_field_resource_entries              = 0x800FF558;
 g_field_resource_cursor               = 0x800FF60C;
