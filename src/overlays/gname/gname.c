@@ -747,7 +747,7 @@ void set_controller_vsync_interval(unsigned long interval);
 void update_controllers(void);
 void func_80063194(void);
 void func_8006441C(void);
-void func_80068440(void);
+void field_update_audio_timer(void);
 void func_800A9E78(void);
 void func_800AA02C(void);
 
@@ -844,7 +844,7 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
             break;
         }
 
-        func_80068440();
+        field_update_audio_timer();
         DrawSync(0);
         set_controller_vsync_interval(2U);
         VSync(2);

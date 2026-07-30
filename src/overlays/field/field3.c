@@ -1,10 +1,14 @@
 #include "common.h"
 
-struct S1;
-struct S2;
-struct Block;
-struct T;
-typedef struct S1
+struct FieldAnimDefRasterView;
+struct FieldPartDef;
+struct FieldTileDesc;
+struct FieldPart;
+
+/**
+ * @brief Animation-definition view used while preparing tile masks.
+ */
+typedef struct FieldAnimDefRasterView
 {
     u8 pad_00[4];
     union
@@ -13,19 +17,23 @@ typedef struct S1
         struct
         {
             u8 pad_04[2];
-            u8 field_06;
-            u8 field_07;
+            u8 frame_count;
+            u8 handler_group;
         } bytes;
-    } u;
-    struct S1* next;
-    u8 field_0C;
-    u8 field_0D;
-    u8 field_0E;
-    u8 field_0F;
-    struct S2* ptr_s2;
-    struct Block* blocks;
-} S1;
-typedef struct S2
+    } flags;
+    struct FieldAnimDefRasterView* next;
+    u8 rect_x;
+    u8 rect_y;
+    u8 rect_width;
+    u8 rect_height;
+    struct FieldPartDef* part_def;
+    struct FieldTileDesc* frame_tiles;
+} FieldAnimDefRasterView;
+
+/**
+ * @brief Tile-grid definition referenced by a runtime field part.
+ */
+typedef struct FieldPartDef
 {
     u8 pad_00[8];
     union
@@ -34,27 +42,35 @@ typedef struct S2
         struct
         {
             u8 pad_08[2];
-            u8 field_0A;
-            u8 field_0B;
+            u8 cols;
+            u8 rows;
         } bytes;
-    } u;
-} S2;
-typedef struct Block
+    } flags;
+} FieldPartDef;
+
+/**
+ * @brief Packed four-byte source descriptor for one field tile.
+ */
+typedef struct FieldTileDesc
 {
-    u8 b0;
-    u8 b1;
-    u8 b2;
-    u8 b3;
-} Block;
-typedef struct T
+    u8 clut_slot;
+    u8 texture_attrs;
+    u8 packed_uv;
+    u8 color_index;
+} FieldTileDesc;
+
+/**
+ * @brief Runtime field-part view used while validating shared tile attributes.
+ */
+typedef struct FieldPart
 {
     u8 pad_00[8];
-    struct T* next;
-    s32* data;
+    struct FieldPart* linked_part;
+    s32* bits;
     u8 pad_10[8];
-    u32 field_18;
-    u32 field_1C;
-} T;
+    u32 tpage_word;
+    u32 code_word;
+} FieldPart;
 typedef struct FieldAnimDef FieldAnimDef;
 typedef struct FieldAnim FieldAnim;
 typedef struct FieldAnimCel FieldAnimCel;
@@ -81,17 +97,17 @@ struct FieldAnimDef
     u8 unk1;  /* 0x01 */
     u8 unk2;  /* 0x02 */
     u8 _pad0;
-    u8 unk4;  /* 0x04 */
+    u8 flags; /* 0x04 */
     u8 unk5;  /* 0x05 */
     u8 unk6;  /* 0x06 */
-    u8 unk7;  /* 0x07 */
+    u8 handler_group; /* 0x07 */
     FieldAnimDef *next; /* 0x08 */
     u8 unkC;  /* 0x0C */
     u8 unkD;  /* 0x0D */
     u8 unkE;  /* 0x0E */
     u8 unkF;  /* 0x0F */
     void *unk10; /* 0x10 */
-    s32 *unk14;  /* 0x14 */
+    s32 *data;  /* 0x14 */
 };
 
 typedef union
@@ -101,8 +117,8 @@ typedef union
     {
         u8 unk0;
         u8 state; /* 0x25 */
-        u8 unk2;  /* 0x26 */
-        u8 unk3;  /* 0x27 */
+        u8 keyframe;      /* 0x26 */
+        u8 stop_keyframe; /* 0x27 */
     } b;
 } FieldAnimFlags;
 
@@ -114,9 +130,9 @@ struct FieldAnimCel
     u32 *mask;  /* 0x0C */
     u8 *tiles;  /* 0x10 */
     u8 _pad1[0x18 - 0x14];
-    s32 unk18;  /* 0x18 */
-    s32 unk1C;  /* 0x1C */
-    s8 unk20;   /* 0x20 */
+    s32 tpage_word; /* 0x18 */
+    s32 code_word;  /* 0x1C */
+    s8 active;      /* 0x20 */
     u8 format;  /* 0x21 */
 };
 
@@ -128,44 +144,45 @@ struct FieldAnim
     FieldAnimCel *cels;   /* 0x0C */
     s32 unk10;            /* 0x10 */
     u8 _pad1[0x20 - 0x14];
-    u8 *frames;           /* 0x20 */
+    u8 *frame_data;       /* 0x20 */
     FieldAnimFlags flags; /* 0x24 */
-    u8 unk28;             /* 0x28 */
+    u8 repeat_count;      /* 0x28 */
     u8 _pad2;
-    u16 counter;          /* 0x2A */
-    u16 frame_tiles;      /* 0x2C */
+    u16 timer;            /* 0x2A */
+    u16 frame_tile_count; /* 0x2C */
     u8 _pad3[0x30 - 0x2E];
 };
 
 typedef struct
 {
     u8 _pad0[4];
-    u16 *unk4; /* 0x04 */
+    u16 *data; /* 0x04 */
 } FieldTintPal;
 
 typedef struct
 {
     u8 _pad0[4];
-    FieldTintPal *unk4; /* 0x04 */
+    FieldTintPal *palette; /* 0x04 */
     u8 _pad1[0x10 - 8];
-    u16 unk10; /* 0x10 */
-    u16 unk12; /* 0x12 */
-    u16 unk14; /* 0x14 */
+    u16 red;   /* 0x10 */
+    u16 green; /* 0x12 */
+    u16 blue;  /* 0x14 */
 } FieldTintSrc;
 
 typedef struct
 {
     u8 _pad0;
-    u8 unk1;  /* 0x01 */
-    u16 unk2; /* 0x02 */
+    u8 range_start; /* 0x01 */
+    u16 duration;   /* 0x02 */
 } FieldTweenSpan;
 
+/** @brief Minimal view of one sound keyframe entry. */
 typedef struct
 {
-    u8 unk0;  /* 0x00 */
+    u8 kind;  /* 0x00 */
     u8 _pad0;
-    u16 unk2; /* 0x02 */
-} FieldAnimKey;
+    u16 sound_flags; /* 0x02 */
+} FieldSfxKey;
 
 typedef struct
 {
@@ -175,226 +192,246 @@ typedef struct
 
 extern FieldScene *g_field_scene;
 
-T *func_8005ABD8(void *, FieldTintSrc **);
+/**
+ * @brief Find the runtime part whose definition pointer matches @p part_def.
+ *
+ * @param part_def Part definition to find in the scene object lists.
+ * @param owner_out Optional output for the part's owning object/tint-source view.
+ * @return Matching runtime part, or NULL when the definition is not in use.
+ */
+FieldPart *func_8005ABD8(void *part_def, FieldTintSrc **owner_out);
 
 /**
- * decomp.me (95.80%) https://decomp.me/scratch/Kkiiv
+ * @brief Prepare tile-animation definitions and their runtime presence masks.
+ *
+ * Assigns @p handler_group to every definition. For tile handlers in groups
+ * zero and three, it verifies that the runtime part's shared TPage and
+ * RGB/code words agree with every present source tile, clearing either shared
+ * word when the descriptors disagree. It also rasterizes the definition's
+ * source rectangle into the runtime part's row-major presence bitmap.
+ *
+ * @param head Head of the linked animation-definition list.
+ * @param handler_group Scene animation-list group, in the range 0 through 3.
+ *
+ * @see decomp.me (95.80%) https://decomp.me/scratch/Kkiiv
  */
-void field_validate_and_rasterize_quads(void* arg0, s32 arg1)
+void field_prepare_animation_definitions(void* head, s32 handler_group)
 {
-    S1* s1 = (S1*)arg0;
-    u32 var_t6 = 0;
-    u32 var_s7 = 0;
-    u32 var_s8 = 0;
-    u32 var_s6 = 0;
-    s32 flag_a3;
-    s32 flag_a2;
-    int new_var;
-    S1* s0;
-    S2* temp_s2;
-    T* var_t4;
-    Block* var_t3;
-    Block* var_t2;
-    s32 var_t1;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32* var_a2;
-    s32 var_t0;
-    s32 var_a0;
-    s32 var_a3_val;
-    if (s1 != 0)
+    FieldAnimDefRasterView* def = (FieldAnimDefRasterView*)head;
+    u32 shared_page_slot = 0;
+    u32 shared_color_index = 0;
+    u32 shared_semitrans = 0;
+    u32 shared_blend_mode = 0;
+    s32 tpage_status;
+    s32 code_status;
+    int minus_one;
+    FieldAnimDefRasterView* rec;
+    FieldPartDef* part_def;
+    FieldPart* part;
+    FieldTileDesc* tile;
+    FieldTileDesc* mask_tile;
+    s32 frame;
+    s32 tile_index;
+    s32 mask_bit;
+    s32* mask;
+    s32 row;
+    s32 col;
+    s32 mask_word;
+    if (def != 0)
     {
         do
         {
-            s1->u.bytes.field_07 = arg1;
-            if (((arg1 == 0) && ((s1->u.word & 7U) < 2U)) || (arg1 == 3))
+            def->flags.bytes.handler_group = handler_group;
+            if (((handler_group == 0) && ((def->flags.word & 7U) < 2U)) || (handler_group == 3))
             {
-                s0 = s1;
+                rec = def;
 
-                temp_s2 = s1->ptr_s2;
-                var_t4 = func_8005ABD8(temp_s2, 0);
-                if (var_t4->next != 0)
+                part_def = def->part_def;
+                part = func_8005ABD8(part_def, 0);
+                if (part->linked_part != 0)
                 {
-                    var_t4 = var_t4->next;
+                    part = part->linked_part;
                 }
-                if ((s1->u.word & 7U) == 1)
+                if ((def->flags.word & 7U) == 1)
                 {
-                    if ((temp_s2->u.word & 0xF00U) == 0x100U)
+                    if ((part_def->flags.word & 0xF00U) == 0x100U)
                     {
-                        s1->field_0E = 1;
-                        s1->field_0F = 1;
+                        def->rect_width = 1;
+                        def->rect_height = 1;
                     }
                     else
                     {
-                        s1->field_0E = temp_s2->u.bytes.field_0A;
-                        s1->field_0F = temp_s2->u.bytes.field_0B;
+                        def->rect_width = part_def->flags.bytes.cols;
+                        def->rect_height = part_def->flags.bytes.rows;
                     }
                 }
-                if (var_t4->field_18 != 0)
+                if (part->tpage_word != 0)
                 {
-                    u32 temp = var_t4->field_18 - 1;
-                    flag_a3 = 1;
-                    var_s6 = temp >> 4;
-                    var_t6 = temp & 0xF;
+                    u32 temp = part->tpage_word - 1;
+                    tpage_status = 1;
+                    shared_blend_mode = temp >> 4;
+                    shared_page_slot = temp & 0xF;
                 }
                 else
                 {
-                    flag_a3 = 0;
+                    tpage_status = 0;
                 }
-                if (var_t4->field_1C != 0)
+                if (part->code_word != 0)
                 {
-                    u32 temp = var_t4->field_1C - 1;
-                    flag_a2 = 1;
-                    var_s8 = temp >> 9;
-                    var_s7 = temp & 0xFF;
+                    u32 temp = part->code_word - 1;
+                    code_status = 1;
+                    shared_semitrans = temp >> 9;
+                    shared_color_index = temp & 0xFF;
                 }
                 else
                 {
-                    flag_a2 = 0;
+                    code_status = 0;
                 }
-                if ((flag_a3 != 0) || (flag_a2 != 0))
+                if ((tpage_status != 0) || (code_status != 0))
                 {
-                    var_t1 = s1->u.bytes.field_06 - 1;
-                    var_t3 = s0->blocks;
-                    if (var_t1 != (-1))
+                    frame = def->flags.bytes.frame_count - 1;
+                    tile = rec->frame_tiles;
+                    if (frame != (-1))
                     {
                         do
                         {
-                            var_a1 = ((var_t1 = s0->field_0E) * s0->field_0F) - 1;
-                            if (var_a1 != (-1))
+                            tile_index = ((frame = rec->rect_width) * rec->rect_height) - 1;
+                            if (tile_index != (-1))
                             {
                                 do
                                 {
-                                    if (var_t3->b0 & 0x80)
+                                    if (tile->clut_slot & 0x80)
                                     {
-                                        if (flag_a3 == 1)
+                                        if (tpage_status == 1)
                                         {
-                                            u8 b1_val = var_t3->b1;
-                                            if ((var_t6 != (b1_val & 0xF)) || (var_s6 != ((b1_val >> 4) & 3)))
+                                            u8 texture_attrs = tile->texture_attrs;
+                                            if ((shared_page_slot != (texture_attrs & 0xF)) ||
+                                                (shared_blend_mode != ((texture_attrs >> 4) & 3)))
                                             {
-                                                flag_a3 = 2;
+                                                tpage_status = 2;
                                             }
                                         }
-                                        if (flag_a2 == 1)
+                                        if (code_status == 1)
                                         {
-                                            u8 b3_val = var_t3->b3;
-                                            u8 b1_val = var_t3->b1;
-                                            if ((var_s7 != b3_val) || (var_s8 != ((b1_val >> 6) & 1)))
+                                            u8 color_index = tile->color_index;
+                                            u8 texture_attrs = tile->texture_attrs;
+                                            if ((shared_color_index != color_index) ||
+                                                (shared_semitrans != ((texture_attrs >> 6) & 1)))
                                             {
-                                                flag_a2 = 2;
+                                                code_status = 2;
                                             }
                                         }
                                     }
-                                    var_t3++;
-                                    var_a1--;
-                                } while (var_a1 != (-1));
+                                    tile++;
+                                    tile_index--;
+                                } while (tile_index != (-1));
                             }
-                            var_t1--;
-                        } while (var_t1 != (-1));
+                            frame--;
+                        } while (frame != (-1));
                     }
-                    if (flag_a3 != 1)
+                    if (tpage_status != 1)
                     {
-                        var_t4->field_18 = 0;
+                        part->tpage_word = 0;
                     }
-                    if (flag_a2 != 1)
+                    if (code_status != 1)
                     {
-                        var_t4->field_1C = 0;
+                        part->code_word = 0;
                     }
                 }
 
-                if (((arg1 == 0) && ((s1->u.word & 7U) == 0)) || (arg1 == 3))
+                if (((handler_group == 0) && ((def->flags.word & 7U) == 0)) || (handler_group == 3))
                 {
-                    var_t1 = s1->u.bytes.field_06 - 1;
-                    var_t3 = s0->blocks;
-                    if (var_t1 != (-1))
+                    frame = def->flags.bytes.frame_count - 1;
+                    tile = rec->frame_tiles;
+                    if (frame != (-1))
                     {
                         do
                         {
-                            var_t2 = var_t3;
-                            var_a1_2 = 1;
-                            var_a2 = var_t4->data;
-                            var_a3_val = *var_a2;
-                            if (temp_s2->u.bytes.field_0B != 0)
+                            mask_tile = tile;
+                            mask_bit = 1;
+                            mask = part->bits;
+                            mask_word = *mask;
+                            if (part_def->flags.bytes.rows != 0)
                             {
-                                var_t0 = 0;
+                                row = 0;
                                 do
                                 {
-                                    if (var_t0 < s0->field_0D)
+                                    if (row < rec->rect_y)
                                     {
-                                        new_var = -1;
-                                        var_a0 = temp_s2->u.bytes.field_0A - 1;
-                                        if (var_a0 != new_var)
+                                        minus_one = -1;
+                                        col = part_def->flags.bytes.cols - 1;
+                                        if (col != minus_one)
                                         {
                                             do
                                             {
-                                                var_a1_2 <<= 1;
-                                                if (var_a1_2 == 0)
+                                                mask_bit <<= 1;
+                                                if (mask_bit == 0)
                                                 {
-                                                    *var_a2 = var_a3_val;
-                                                    var_a2++;
-                                                    var_a1_2 = 1;
-                                                    var_a3_val = *var_a2;
+                                                    *mask = mask_word;
+                                                    mask++;
+                                                    mask_bit = 1;
+                                                    mask_word = *mask;
                                                 }
-                                                var_a0--;
-                                            } while (var_a0 != (-1));
+                                                col--;
+                                            } while (col != (-1));
                                         }
                                     }
-                                    else if (var_t0 < (s0->field_0D + s0->field_0F))
+                                    else if (row < (rec->rect_y + rec->rect_height))
                                     {
-                                        if (temp_s2->u.bytes.field_0A != 0)
+                                        if (part_def->flags.bytes.cols != 0)
                                         {
-                                            var_a0 = 0;
+                                            col = 0;
                                             do
                                             {
-                                                if ((var_a0 >= s0->field_0C) &&
-                                                    (var_a0 < (s0->field_0C + s0->field_0E)))
+                                                if ((col >= rec->rect_x) &&
+                                                    (col < (rec->rect_x + rec->rect_width)))
                                                 {
-                                                    if (var_t2->b0 & 0x80)
+                                                    if (mask_tile->clut_slot & 0x80)
                                                     {
-                                                        var_a3_val |= var_a1_2;
+                                                        mask_word |= mask_bit;
                                                     }
-                                                    var_t2++;
+                                                    mask_tile++;
                                                 }
-                                                var_a1_2 <<= 1;
-                                                if (var_a1_2 == 0)
+                                                mask_bit <<= 1;
+                                                if (mask_bit == 0)
                                                 {
-                                                    *var_a2 = var_a3_val;
-                                                    var_a2++;
-                                                    var_a1_2 = 1;
-                                                    var_a3_val = *var_a2;
+                                                    *mask = mask_word;
+                                                    mask++;
+                                                    mask_bit = 1;
+                                                    mask_word = *mask;
                                                 }
-                                                var_a0++;
-                                            } while (var_a0 != temp_s2->u.bytes.field_0A);
+                                                col++;
+                                            } while (col != part_def->flags.bytes.cols);
                                         }
                                     }
                                     else
                                     {
                                         break;
                                     }
-                                    var_t0++;
-                                } while (var_t0 != temp_s2->u.bytes.field_0B);
+                                    row++;
+                                } while (row != part_def->flags.bytes.rows);
                             }
-                            if (var_a1_2 != 1)
+                            if (mask_bit != 1)
                             {
-                                *var_a2 = var_a3_val;
+                                *mask = mask_word;
                             }
-                            var_t1--;
-                            var_t3 += s0->field_0E * s0->field_0F;
-                        } while (var_t1 != (-1));
+                            frame--;
+                            tile += rec->rect_width * rec->rect_height;
+                        } while (frame != (-1));
                     }
                 }
             }
-            s1 = s1->next;
-        } while (s1 != 0);
+            def = def->next;
+        } while (def != 0);
     }
 }
 
-FieldAnimCel *func_8005B31C(void *);
+FieldAnimCel *field_find_object_by_definition(void *definition);
 u8 *field_find_count_table_span(FieldAnimDef *, s32, u8 *);
 void field_apply_animation_tween(FieldAnimDef *, FieldAnim *, s32);
 void field_blit_animation_frame(FieldAnimDef *, FieldAnim *, s32);
-void func_8005AC50(void *, u16, s32 *);
-void func_8005AD20(u8, u16, s8 *);
+void func_8005AC50(void *colors, u16 color_count, s32 *rgb_scale);
+void func_8005AD20(u8 format, u16 color_count, s8 *primitive_code);
 void field_build_sprite_tile_record(s32 *, u8 *, s32, s32);
 void field_build_quad_tile_record(s32 *, u8 *, s32, s32);
 
@@ -406,8 +443,9 @@ void field_build_quad_tile_record(s32 *, u8 *, s32, s32);
  * @p tail. Each node is seeded from its definition: the play-mode flags at
  * FieldAnim::flags, the starting keyframe cursor, the loop counter, and the
  * keyframe length from field_find_count_table_span. The handler kind - the low three bits of
- * the word at FieldAnimDef::unk4, qualified by FieldAnimDef::unk7 - then selects
- * how the node's cel list is resolved (func_8005ABD8 or func_8005B31C) and what
+ * the word at FieldAnimDef::flags, qualified by
+ * FieldAnimDef::handler_group - then selects how the node's cel list is
+ * resolved (func_8005ABD8 or field_find_object_by_definition) and what
  * extra setup runs.
  *
  * For the tinted kinds the definition's colour is expanded into the scratchpad
@@ -442,55 +480,56 @@ void field_build_quad_tile_record(s32 *, u8 *, s32, s32);
  *       collapses them into one @c and if written as a single expression.
  * @note Both @c cel->format switches need their empty @c case @c 1: / @c case
  *       @c 6: arms to emit the 7-entry jump tables, as in field_retarget_cel_cluts.
- * @note The three @c & @c 7 handler switches read @c def->unk4 as a byte; the
+ * @note The three @c & @c 7 handler switches read @c def->flags as a byte; the
  *       @c & @c 0xFF000007 and @c & @c 0x40 / @c & @c 0x20 tests read the whole
  *       word. Both views of the same field are required.
- * @note @c rec is a local copy of @p def, needed twice - once in the @c unk7
+ * @note @c rec is a local copy of @p def, needed twice - once in the
+ *       @c handler_group
  *       @c == @c 0 arm and once before the record loop. It is what puts the
  *       definition pointer in s4 and is worth 2.8%.
  *
  * @see decomp.me (89.12%) TODO
  */
-void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
+void field_build_animation_list(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
 {
     s32 rgb[3];       /* sp10 */
-    u8 span_off;      /* sp20 */
-    FieldTintSrc *src;/* sp24 */
-    s8 code;          /* sp28 */
+    u8 range_start;      /* sp20 */
+    FieldTintSrc *tint_src;/* sp24 */
+    s8 primitive_code;   /* sp28 */
     FieldScene *scene;/* sp2C */
     FieldTileGrid *grid; /* sp30 */
-    u16 delay;        /* sp38 */
-    s32 stride;       /* sp40 */
-    u16 count;        /* sp48 */
+    u16 stagger_timer;   /* sp38 */
+    s32 record_stride;   /* sp40 */
+    u16 tile_count;      /* sp48 */
     FieldAnim *anim;
     FieldAnimDef *rec;
     FieldAnimCel *cel;
-    FieldAnimKey *key;
+    FieldSfxKey *key;
     FieldTweenSpan *span;
-    u8 *cursor;
-    u8 *prim;
-    u16 *tab;
-    s32 *recp;
-    s32 *base;
-    u32 *maskp;
-    u32 word;
-    u32 bit;
-    s32 kind;
-    s32 flags;
-    s32 mode;
+    u8 *arena_cursor;
+    u8 *tile_record;
+    u16 *palette_data;
+    s32 *tile_data;
+    s32 *frame_descs;
+    u32 *mask;
+    u32 mask_word;
+    u32 mask_bit;
+    s32 handler_kind;
+    s32 control_flags;
+    s32 record_flags;
     s32 frame;
     s32 row;
     s32 col;
-    u8 state;
-    u16 dur;
-    u16 slot;
+    u8 initial_state;
+    u16 duration;
+    u16 timer;
 
     cel = NULL;
     grid = NULL;
-    stride = 0;
-    count = 0;
-    delay = 1;
-    src = NULL;
+    record_stride = 0;
+    tile_count = 0;
+    stagger_timer = 1;
+    tint_src = NULL;
     scene = g_field_scene;
     if (def != NULL)
     {
@@ -507,202 +546,202 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
             }
             else
             {
-                anim->flags.word = (anim->flags.word & ~0x40) | ((def->unk4 >> 7) << 6);
+                anim->flags.word = (anim->flags.word & ~0x40) | ((def->flags >> 7) << 6);
             }
-            anim->unk28 = 0;
-            flags = (anim->flags.word & ~1) | ((*(u32 *) &def->unk4 >> 3) & 1);
-            flags &= ~2;
-            flags &= ~4;
-            flags &= ~8;
-            flags &= ~0x10;
-            flags &= ~0x20;
-            anim->flags.word = flags;
-            anim->flags.b.unk3 = 0;
-            if (*(s32 *) &def->unk4 & 0x40)
+            anim->repeat_count = 0;
+            control_flags = (anim->flags.word & ~1) | ((*(u32 *) &def->flags >> 3) & 1);
+            control_flags &= ~2;
+            control_flags &= ~4;
+            control_flags &= ~8;
+            control_flags &= ~0x10;
+            control_flags &= ~0x20;
+            anim->flags.word = control_flags;
+            anim->flags.b.stop_keyframe = 0;
+            if (*(s32 *) &def->flags & 0x40)
             {
-                anim->flags.b.unk2 = 0;
+                anim->flags.b.keyframe = 0;
                 anim->flags.b.state = def->unk1;
             }
             else
             {
-                state = def->unk1;
-                anim->flags.b.state = state;
-                anim->flags.b.unk2 = state;
+                initial_state = def->unk1;
+                anim->flags.b.state = initial_state;
+                anim->flags.b.keyframe = initial_state;
             }
-            if (def->unk7 == 3)
+            if (def->handler_group == 3)
             {
-                anim->counter = 1;
+                anim->timer = 1;
             }
             else
             {
-                span = (FieldTweenSpan *) field_find_count_table_span(def, anim->flags.b.unk2, &span_off);
-                if (*(s32 *) &def->unk4 & 0x20)
+                span = (FieldTweenSpan *) field_find_count_table_span(def, anim->flags.b.keyframe, &range_start);
+                if (*(s32 *) &def->flags & 0x20)
                 {
-                    anim->counter = span->unk2;
+                    anim->timer = span->duration;
                 }
                 else
                 {
-                    dur = span->unk2;
-                    if (dur < delay)
+                    duration = span->duration;
+                    if (duration < stagger_timer)
                     {
-                        anim->counter = dur;
-                        delay = 1;
+                        anim->timer = duration;
+                        stagger_timer = 1;
                     }
                     else
                     {
-                        slot = delay;
-                        delay = slot + 1;
-                        anim->counter = slot;
+                        timer = stagger_timer;
+                        stagger_timer = timer + 1;
+                        anim->timer = timer;
                     }
                 }
             }
-            switch (def->unk7)
+            switch (def->handler_group)
             {
             case 0:
                 rec = def;
-                switch (rec->unk4 & 7)
+                switch (rec->flags & 7)
                 {
                 case 0:
                 case 1:
                     grid = (FieldTileGrid *) rec->unk10;
-                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &tint_src);
                     anim->cels = cel;
                     break;
                 case 2:
                     grid = (FieldTileGrid *) rec->unk10;
-                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &tint_src);
                     anim->cels = cel;
                     if ((anim->flags.word & 0x40) &&
-                        (span_off = 0, frame = def->unk5, frame != -1))
+                        (range_start = 0, frame = def->unk5, frame != -1))
                     {
                         do
                         {
                             frame -= 1;
-                            cel->unk20 = span_off == anim->flags.b.state;
+                            cel->active = range_start == anim->flags.b.state;
                             cel = cel->next;
-                            span_off += 1;
+                            range_start += 1;
                         }
                         while (frame != -1);
                     }
                     break;
                 case 3:
-                    if ((anim->flags.word & 0x40) && (anim->counter != 1))
+                    if ((anim->flags.word & 0x40) && (anim->timer != 1))
                     {
                         anim->flags.word |= 0x20;
                     }
                     break;
                 case 4:
                     grid = (FieldTileGrid *) rec->unk10;
-                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &tint_src);
                     anim->cels = cel;
                     scene->unk38 = 1;
                     break;
                 case 5:
                     grid = (FieldTileGrid *) rec->unk10;
-                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &tint_src);
                     anim->cels = cel;
                     field_apply_animation_tween(def, anim, 0);
                     break;
                 case 6:
-                    cel = func_8005B31C(rec->unk10);
-                    src = (FieldTintSrc *) cel;
+                    cel = field_find_object_by_definition(rec->unk10);
+                    tint_src = (FieldTintSrc *) cel;
                     anim->cels = cel;
                     field_apply_animation_tween(def, anim, 0);
                     break;
                 default:
                     grid = (FieldTileGrid *) rec->unk10;
-                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &tint_src);
                     anim->cels = cel;
-                    anim->unk10 = (s32) src;
-                    key = (FieldAnimKey *) rec->unk14;
-                    if (((key->unk0 & 7) == 1) && (key->unk2 & 0x8000))
+                    anim->unk10 = (s32) tint_src;
+                    key = (FieldSfxKey *) rec->data;
+                    if (((key->kind & 7) == 1) && (key->sound_flags & 0x8000))
                     {
-                        anim->counter = 1;
+                        anim->timer = 1;
                         anim->flags.word |= 8;
                     }
                     break;
                 }
                 break;
             case 1:
-                switch (def->unk4 & 7)
+                switch (def->flags & 7)
                 {
                 case 0:
-                    grid = (FieldTileGrid *) def->unk14;
-                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    grid = (FieldTileGrid *) def->data;
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &tint_src);
                     anim->cels = cel;
                     break;
                 case 1:
-                    cel = func_8005B31C(def->unk14);
-                    src = (FieldTintSrc *) cel;
+                    cel = field_find_object_by_definition(def->data);
+                    tint_src = (FieldTintSrc *) cel;
                     anim->cels = cel;
                     break;
                 }
                 break;
             case 2:
-                switch (def->unk4 & 7)
+                switch (def->flags & 7)
                 {
                 case 0:
                     grid = (FieldTileGrid *) def->unk10;
-                    cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                    cel = (FieldAnimCel *) func_8005ABD8(grid, &tint_src);
                     anim->cels = cel;
-                    anim->unk10 = (s32) src;
+                    anim->unk10 = (s32) tint_src;
                     break;
                 case 1:
-                    cel = func_8005B31C(def->unk10);
-                    src = (FieldTintSrc *) cel;
+                    cel = field_find_object_by_definition(def->unk10);
+                    tint_src = (FieldTintSrc *) cel;
                     anim->cels = cel;
                     break;
                 }
                 break;
             default:
                 grid = (FieldTileGrid *) def->unk10;
-                cel = (FieldAnimCel *) func_8005ABD8(grid, &src);
+                cel = (FieldAnimCel *) func_8005ABD8(grid, &tint_src);
                 anim->cels = cel;
                 break;
             }
-            if (((u32) (*(u32 *) &def->unk4 & 0xFF000007) < 2) || (def->unk7 == 3))
+            if (((u32) (*(u32 *) &def->flags & 0xFF000007) < 2) || (def->handler_group == 3))
             {
-                rgb[0] = src->unk10 << 8;
-                rgb[1] = src->unk12 << 8;
-                rgb[2] = src->unk14 << 8;
-                tab = src->unk4->unk4;
-                func_8005AC50(tab + 2, tab[0], rgb);
-                code = 0;
-                func_8005AD20(cel->format, src->unk4->unk4[0], &code);
-                anim->frames = *arena;
-                cursor = *arena;
+                rgb[0] = tint_src->red << 8;
+                rgb[1] = tint_src->green << 8;
+                rgb[2] = tint_src->blue << 8;
+                palette_data = tint_src->palette->data;
+                func_8005AC50(palette_data + 2, palette_data[0], rgb);
+                primitive_code = 0;
+                func_8005AD20(cel->format, tint_src->palette->data[0], &primitive_code);
+                anim->frame_data = *arena;
+                arena_cursor = *arena;
                 switch (cel->format)
                 {
                 case 0:
-                    stride = 0xC;
+                    record_stride = 0xC;
                     break;
                 case 2:
                 case 3:
                 case 4:
                 case 5:
-                    stride = 0xC;
+                    record_stride = 0xC;
                     break;
                 case 1:
                 case 6:
                     break;
                 }
-                mode = 1;
-                if (cel->unk1C != 0)
+                record_flags = 1;
+                if (cel->code_word != 0)
                 {
-                    stride -= 4;
+                    record_stride -= 4;
                 }
                 else
                 {
-                    mode = 0;
+                    record_flags = 0;
                 }
-                if (cel->unk18 != 0)
+                if (cel->tpage_word != 0)
                 {
-                    mode |= 2;
-                    stride -= 4;
+                    record_flags |= 2;
+                    record_stride -= 4;
                 }
-                base = def->unk14;
+                frame_descs = def->data;
                 rec = def;
-                if ((*(u32 *) &def->unk4 & 0xFF000007) == 1)
+                if ((*(u32 *) &def->flags & 0xFF000007) == 1)
                 {
                     anim->unk10 = (s32) cel->tiles;
                     frame = def->unk6 - 1;
@@ -723,12 +762,12 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                     {
                         do
                         {
-                            recp = base;
-                            bit = 1;
+                            tile_data = frame_descs;
+                            mask_bit = 1;
                             row = 0;
-                            count = 0;
-                            maskp = cel->mask;
-                            word = *maskp++;
+                            tile_count = 0;
+                            mask = cel->mask;
+                            mask_word = *mask++;
                             if (grid->u.b.rows != 0)
                             {
                                 do
@@ -740,11 +779,11 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                                         {
                                             do
                                             {
-                                                bit *= 2;
-                                                if (bit == 0)
+                                                mask_bit *= 2;
+                                                if (mask_bit == 0)
                                                 {
-                                                    word = *maskp++;
-                                                    bit = 1;
+                                                    mask_word = *mask++;
+                                                    mask_bit = 1;
                                                 }
                                                 col -= 1;
                                             }
@@ -760,36 +799,38 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                                             {
                                                 if ((col >= rec->unkC) && (col < rec->unkC + rec->unkE))
                                                 {
-                                                    if (word & bit)
+                                                    if (mask_word & mask_bit)
                                                     {
                                                         switch (cel->format)
                                                         {
                                                         case 0:
-                                                            prim = cursor;
-                                                            cursor += stride;
-                                                            field_build_sprite_tile_record(recp, prim, (grid->u.word >> 4) & 3, mode);
+                                                            tile_record = arena_cursor;
+                                                            arena_cursor += record_stride;
+                                                            field_build_sprite_tile_record(tile_data, tile_record,
+                                                                                           (grid->u.word >> 4) & 3, record_flags);
                                                             break;
                                                         case 2:
                                                         case 3:
                                                         case 4:
                                                         case 5:
-                                                            prim = cursor;
-                                                            cursor += stride;
-                                                            field_build_quad_tile_record(recp, prim, (grid->u.word >> 4) & 3, mode);
+                                                            tile_record = arena_cursor;
+                                                            arena_cursor += record_stride;
+                                                            field_build_quad_tile_record(tile_data, tile_record,
+                                                                                         (grid->u.word >> 4) & 3, record_flags);
                                                             break;
                                                         case 1:
                                                         case 6:
                                                             break;
                                                         }
-                                                        count += 1;
+                                                        tile_count += 1;
                                                     }
-                                                    recp += 1;
+                                                    tile_data += 1;
                                                 }
-                                                bit *= 2;
-                                                if (bit == 0)
+                                                mask_bit *= 2;
+                                                if (mask_bit == 0)
                                                 {
-                                                    word = *maskp++;
-                                                    bit = 1;
+                                                    mask_word = *mask++;
+                                                    mask_bit = 1;
                                                 }
                                                 col += 1;
                                             }
@@ -805,13 +846,13 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                                 while (row != grid->u.b.rows);
                             }
                             frame -= 1;
-                            base += rec->unkE * rec->unkF;
+                            frame_descs += rec->unkE * rec->unkF;
                         }
                         while (frame != -1);
-                        anim->frame_tiles = count;
-                        if (def->unk7 == 3)
+                        anim->frame_tile_count = tile_count;
+                        if (def->handler_group == 3)
                         {
-                            if (*(u32 *) &def->unk4 & 0x20)
+                            if (*(u32 *) &def->flags & 0x20)
                             {
                                 field_blit_animation_frame(def, anim, 0);
                             }
@@ -822,13 +863,13 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                         }
                     }
                 }
-                *arena = cursor;
+                *arena = arena_cursor;
             }
-            kind = *(u32 *) &def->unk4 & 0xFF000007;
-            if (((u32) (kind - 3) < 2) ||
-                ((def->unk7 == 1) && ((u32) (def->unk4 & 7) >= 2)))
+            handler_kind = *(u32 *) &def->flags & 0xFF000007;
+            if (((u32) (handler_kind - 3) < 2) ||
+                ((def->handler_group == 1) && ((u32) (def->flags & 7) >= 2)))
             {
-                if (kind == 0x01000002)
+                if (handler_kind == 0x01000002)
                 {
                     if (def->unkC == 0)
                     {
@@ -839,7 +880,7 @@ void func_80053C7C(FieldAnimDef *def, u8 **arena, FieldAnim **tail)
                         *arena += 0x410;
                     }
                 }
-                else if (kind == 0x01000005)
+                else if (handler_kind == 0x01000005)
                 {
                     if (def->unkC == 0)
                     {

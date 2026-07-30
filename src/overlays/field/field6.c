@@ -9,7 +9,7 @@ typedef struct {
 typedef struct Node
 {
     struct Node *unk0;   /* 0x00 next pointer */
-    s32 key;             /* 0x04 compared by func_8005B31C */
+    s32 definition;      /* 0x04 compared by field_find_object_by_definition */
     u8 _pad[0x10];       /* 0x08-0x17 */
     s8 unk18;            /* 0x18 byte written by func_8005B228 */
 } Node;
@@ -19,7 +19,7 @@ struct CollNode;
 typedef struct
 {
     u8 _pad0[4];           /* 0x00-0x03 */
-    Node *head;             /* 0x04 head of list searched by func_8005B31C */
+    Node *objects;          /* 0x04 head of the scene object list */
     Node *unk8;             /* 0x08 head of the node list */
     u8 _pad1[0x10 - 0xC];   /* 0x0C-0x0F */
     struct CollNode *coll_list; /* 0x10 collision-node list traversed by func_8005B368 */
@@ -160,27 +160,27 @@ void field_apply_pixel_lookup(u16* pixels, s32 pixel_count, s32 table_index, voi
 }
 
 /**
- * @brief Find a node in the field scene's linked list by key.
+ * @brief Find a field object by its definition pointer.
  *
- * Walks the linked list starting at g_field_scene->head, returning the first
- * node whose key field matches @p arg0.
+ * Walks the scene object list and returns the first object whose definition
+ * pointer matches @p definition.
  *
- * @param arg0 Key to search for (compared against node->key at offset 0x4).
- * @return Pointer to the matching Node, or NULL if not found.
+ * @param definition Definition pointer to compare at object offset 0x04.
+ * @return Pointer to the matching field object, or NULL if not found.
  *
  * @note Matches 100% with gcc280_g4 and gcc272_cdk.
  * @see decomp.me (100%) https://decomp.me/scratch/FThyS
  */
-void* func_8005B31C(s32 arg0)
+void* field_find_object_by_definition(s32 definition)
 {
     Node* node;
 
-    node = g_field_scene.scene->head;
+    node = g_field_scene.scene->objects;
     if (node != 0)
     {
         do
         {
-            if (arg0 == node->key)
+            if (definition == node->definition)
             {
                 return node;
             }
