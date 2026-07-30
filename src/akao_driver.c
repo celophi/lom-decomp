@@ -465,6 +465,6 @@ void akao_driver_shutdown(void)
     while (DisableEvent(g_akao_rcnt2_event) == 0);
     while (CloseEvent(g_akao_rcnt2_event) == 0);
 
-    spu_set_voice_mode(0xFFFFFF);
+    spu_set_key_off(0xFFFFFF);
     SpuQuit();
 }

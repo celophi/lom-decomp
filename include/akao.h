@@ -233,9 +233,9 @@ typedef struct AkaoChannelState
     s32 unk30;       /* 0x30 */
     u8* unk34;       /* 0x34 */
     s32 unk38;
-    u32 unk3C;       /* 0x3C */
-    u32 unk40;       /* 0x40 */
-    u32 unk44;       /* 0x44 */
+    u32 reverb_mask; /* 0x3C - channels enabled in SPU reverb bitmap */
+    u32 noise_mask;  /* 0x40 - channels enabled in SPU noise bitmap */
+    u32 pitch_mod_mask; /* 0x44 - channels enabled in SPU pitch-mod bitmap */
     u32 unk48;       /* 0x48 */
     u32 unk4C;       /* 0x4C */
     s32 unk50;       /* 0x50 */

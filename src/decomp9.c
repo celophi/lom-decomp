@@ -2,137 +2,16 @@
 
 typedef struct
 {
-  u32 unk0;
-  u32 unk4;
-  u32 unk8;
-} AkaoDriverFlags;
-typedef struct AkaoChannelState
-{
-  u32 flags;
-  u32 unk4;
-  u32 unk8;
-  u32 unkC;
-  u32 unk10;
-  u32 unk14;
-  u32 unk18;
-  u32 unk1C;
-  u32 unk20;
-  u32 unk24;
-  u32 unk28;
-  s32 pitch;
-  s32 unk30;
-  u8 *unk34;
-  u8 _pad38[4];
-  u32 unk3C;
-  u32 unk40;
-  u32 unk44;
-  u32 unk48;
-  u32 unk4C;
-  s32 unk50;
-  s32 unk54;
-  u16 unk58;
-  s16 unk5A;
-  u16 unk5C;
-  u16 unk5E;
-  u32 unk60;
-  u16 unk64;
-  u16 unk66;
-  u16 unk68;
-  u16 unk6A;
-  u16 unk6C;
-  u8 _pad6E[4];
-  u16 unk72;
-  u16 unk74[11];
-  u16 unk8A;
-  u16 unk8C;
-  u8 _pad8E[6];
-  u16 unk94;
-  u16 unk96;
-  u16 unk98;
-  u16 unk9A;
-  u16 unk9C;
-  u16 unk9E;
-  u8 _padA0[2];
-  u16 unkA2;
-  u16 unkA4;
-  u8 _padA6[2];
-  u16 unkA8;
-  u16 unkAA;
-  s16 unkAC;
-  u16 unkAE;
-  u8 _padB0[6];
-  u16 unkB6;
-  u16 unkB8;
-  u8 _padBA[2];
-  u16 unkBC;
-  u16 unkBE;
-  u8 _padC0[24];
-  u16 unkD8;
-  u16 unkDA;
-  u16 unkDC;
-  u16 unkDE;
-  u8 _padE0[10];
-  u16 unkEA;
-  s16 unkEC;
-  u16 unkEE;
-  u16 unkF0;
-  s16 unkF2;
-  u16 unkF4;
-  u16 unkF6;
-  u8 _padF8[4];
-  u32 unkFC;
-  s32 unk100;
-  s32 spu_sample_addr;
-  s32 spu_loop_addr;
-  u8 _pad10C[2];
-  u16 unk10E;
-  u16 unk110;
-  u8 _pad112[6];
-} AkaoChannelState;
-typedef struct
-{
-  u32 unk0;
-  s32 unk4;
-  u32 unk8;
-  u32 unkC;
-  u32 unk10;
-  u8 _pad14[2];
-  u16 unk16;
-  u32 unk18;
-  u32 unk1C;
-  u32 unk20;
-  u32 unk24;
-} SfxControl;
-extern AkaoDriverFlags g_akao_driver_flags;
-extern AkaoChannelState *g_akao_seq_channel0;
-extern SfxControl g_akao_sfx_control;
-
-typedef struct {
-    s32 unk0;
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-    u16 unk10;
-    s16 unk12;
-    s16 unk14;
-    u16 unk16;
-    s16 unk18;
-    s16 unk1A;
-} s_struct;
-
-
-typedef struct
-{
-    s16 unk0;
+    s16 value;
     s16 unk2;
-    s16 unk4;
-} tiny_s;
-typedef struct
+    s16 relative_offset;
+} AkaoLfoSample;
+struct AkaoChannelEffects
 {
     u8 pad0[0x1C];
-    tiny_s* unk1C;
-    tiny_s* unk20;
-    tiny_s* unk24;
+    AkaoLfoSample* pitch_lfo_cursor;
+    AkaoLfoSample* volume_lfo_cursor;
+    AkaoLfoSample* pan_lfo_cursor;
     u8 pad28[4];
     s32 unk2C;
     s32 unk30;
@@ -195,80 +74,72 @@ typedef struct
     u8 padFA[2];
     s32 unkFC;
     s32 unk100;
-} arg0_struct;
+};
 
 /**
- * @brief Write the SPU Key ON / Key OFF registers.
+ * @brief Write the SPU key-on voice bitmap.
  *
- * Low 16 bits of @p key_mask set voices to key-on; high 16 bits set voices
- * to key-off.  Both are written atomically.
+ * The low halfword selects voices 0-15 and the high halfword selects voices
+ * 16-23. Bits 24-31 are unused.
  *
- * @param key_mask Bitmask: bits 0-23 = key-on, bits 16-39 = key-off.
+ * @param voice_mask Voices to key on.
  * @see decomp.me (100%) https://decomp.me/scratch/lKkom
  */
-void spu_set_key(u32 key_mask)
+void spu_set_key_on(u32 voice_mask)
 {
-    *(u16*)0x1F801D88 = key_mask;
-    *(u16*)0x1F801D8A = key_mask >> 0x10;
+    *(u16*)0x1F801D88 = voice_mask;
+    *(u16*)0x1F801D8A = voice_mask >> 0x10;
 }
 
 /**
- * @brief Write the SPU Channel FM Mode and Noise Mode registers.
+ * @brief Write the SPU key-off voice bitmap.
  *
- * Low 16 bits of @p mode_mask go to FM Mode (0x1F801D8C), high 16 bits to
- * Noise Mode (0x1F801D8E).  Each bit enables the corresponding mode for
- * that voice.
+ * The low halfword selects voices 0-15 and the high halfword selects voices
+ * 16-23. Bits 24-31 are unused.
  *
- * @param mode_mask Bitmask: low 16 = FM mode, high 16 = Noise mode.
+ * @param voice_mask Voices to key off.
  * @see decomp.me (100%) https://decomp.me/scratch/957fv
  */
-void spu_set_voice_mode(u32 mode_mask)
+void spu_set_key_off(u32 voice_mask)
 {
-    *(u16*)0x1F801D8C = mode_mask;
-    *(s16*)0x1F801D8E = (s16)(mode_mask >> 0x10);
+    *(u16*)0x1F801D8C = voice_mask;
+    *(s16*)0x1F801D8E = (s16)(voice_mask >> 0x10);
 }
 
 /**
- * @brief Write the SPU Reverb Work Area Start Address and IRQ Address.
+ * @brief Write the SPU per-voice reverb-enable bitmap.
  *
- * Low 16 bits go to the reverb work area base (0x1F801D98), high 16 bits
- * to the IRQ address (0x1F801D9A).  Both are in 8-word units.
- *
- * @param addrs Packed address pair.
+ * @param voice_mask Reverb-enabled voices 0-23.
  * @see decomp.me (100%) https://decomp.me/scratch/3KFgT
  */
-void spu_set_reverb_addrs(u32 addrs)
+void spu_set_reverb_enable(u32 voice_mask)
 {
-    *(u16*)0x1F801D98 = addrs;
-    *(s16*)0x1F801D9A = (s16)(addrs >> 0x10);
+    *(u16*)0x1F801D98 = voice_mask;
+    *(s16*)0x1F801D9A = (s16)(voice_mask >> 0x10);
 }
 
 /**
- * @brief Write two adjacent SPU reverb control registers (0x1F801D94 /
- *        0x1F801D96).
+ * @brief Write the SPU per-voice noise-enable bitmap.
  *
- * @param val Packed value; low 16 bits to 0x1F801D94, high 16 bits to
- *            0x1F801D96.
+ * @param voice_mask Noise-enabled voices 0-23.
  * @see decomp.me (100%) https://decomp.me/scratch/HFDSO
  */
-void spu_set_reverb_control(u32 val)
+void spu_set_noise_enable(u32 voice_mask)
 {
-    *(u16*)0x1F801D94 = val;
-    *(s16*)0x1F801D96 = (s16)(val >> 0x10);
+    *(u16*)0x1F801D94 = voice_mask;
+    *(s16*)0x1F801D96 = (s16)(voice_mask >> 0x10);
 }
 
 /**
- * @brief Write the SPU Channel Reverb Mode registers (0x1F801D90 /
- *        0x1F801D92).
+ * @brief Write the SPU per-voice pitch-modulation-enable bitmap.
  *
- * @param mode_mask Packed bitmask; low 16 bits to Reverb Mode, high 16
- *                  bits to the paired status/mode register.
+ * @param voice_mask Pitch-modulated voices 0-23.
  * @see decomp.me (100%) https://decomp.me/scratch/ZyBKt
  */
-void spu_set_reverb_mode(u32 mode_mask)
+void spu_set_pitch_modulation_enable(u32 voice_mask)
 {
-    *(u16*)0x1F801D90 = mode_mask;
-    *(s16*)0x1F801D92 = (s16)(mode_mask >> 0x10);
+    *(u16*)0x1F801D90 = voice_mask;
+    *(s16*)0x1F801D92 = (s16)(voice_mask >> 0x10);
 }
 
 /**
@@ -340,7 +211,7 @@ void spu_set_voice_start_addr(s32 voice, u32 addr)
 }
 
 /**
- * @brief Set the loop/repeat address (RADDR) for a single SPU voice.
+ * @brief Set the repeat address (RADDR) for a single SPU voice.
  *
  * The address is right-shifted by 3 (SPU addresses are in 8-byte units).
  *
@@ -348,7 +219,7 @@ void spu_set_voice_start_addr(s32 voice, u32 addr)
  * @param addr Loop start address in SPU RAM (byte address; will be >> 3).
  * @see decomp.me (100%) https://decomp.me/scratch/UI7qr
  */
-void spu_set_voice_loop_addr(s32 voice, u32 addr)
+void spu_set_voice_repeat_addr(s32 voice, u32 addr)
 {
     s32 ptr = (s32)0x1F801C0E;
     voice = voice << 4;
@@ -356,82 +227,81 @@ void spu_set_voice_loop_addr(s32 voice, u32 addr)
 }
 
 /**
- * @brief Set the full ADSR1 register for a single SPU voice.
+ * @brief Set the low ADSR register for a single SPU voice.
  *
- * ADSR1 fields: Attack Rate (bits 12-15), Decay Rate (bits 8-11),
- * Sustain Level (bits 4-7), Sustain Rate (bits 0-3).
+ * Fields are sustain level (bits 0-3), decay shift (bits 4-7),
+ * attack shift (bits 8-14), and attack mode (bit 15).
  *
  * @param voice Voice index (0-23).
- * @param adsr1 Raw 16-bit ADSR1 value.
+ * @param adsr_low Raw 16-bit ADSR low value.
  * @see decomp.me (100%) https://decomp.me/scratch/ghHQZ
  */
-void spu_set_voice_adsr1(s32 voice, u16 adsr1)
+void spu_set_voice_adsr_low(s32 voice, u16 adsr_low)
 {
     s32 ptr = (s32)0x1F801C08;
     voice = voice << 4;
-    *(s16*)(ptr + voice) = adsr1;
+    *(s16*)(ptr + voice) = adsr_low;
 }
 
 /**
- * @brief Set the full ADSR2 register for a single SPU voice.
+ * @brief Set the high ADSR register for a single SPU voice.
  *
  * ADSR2 fields: Sustain Rate direction/mode, Release Mode, Release Rate
  * (bits 0-5).
  *
  * @param voice Voice index (0-23).
- * @param adsr2 Raw 16-bit ADSR2 value.
+ * @param adsr_high Raw 16-bit ADSR high value.
  * @see decomp.me (100%) https://decomp.me/scratch/aDnJj
  */
-void spu_set_voice_adsr2(s32 voice, u16 adsr2)
+void spu_set_voice_adsr_high(s32 voice, u16 adsr_high)
 {
     s32 ptr = (s32)0x1F801C0A;
     voice = voice << 4;
-    *(s16*)(ptr + voice) = adsr2;
+    *(s16*)(ptr + voice) = adsr_high;
 }
 
 /**
- * @brief Set the Attack Rate and Decay Rate fields of ADSR1 for a single
- *        SPU voice, preserving the low byte (Sustain Level / Sustain Rate).
+ * @brief Set the attack mode and attack-shift fields in the low ADSR
+ *        register, preserving its low byte.
  *
  * The high byte of ADSR1 is built from:
- *   - @p attack_decay shifted left 8 (Attack Rate in bits 12-15,
- *     Decay Rate in bits 8-11)
+ *   - @p attack_shift shifted left 8
  *   - @p mode_bits right-shifted 2 then placed at bit 15 (Attack Rate Mode).
  *
  * @param voice Voice index (0-23).
- * @param attack_decay Packed Attack/Decay rate nybbles.
+ * @param attack_shift Attack shift/rate field.
  * @param mode_bits Mode flags; bit 2 maps to ADSR1 bit 15 (Attack Mode).
  * @see decomp.me (100%) https://decomp.me/scratch/Ua4UK
  */
-void spu_set_voice_attack_decay(s32 voice, s32 attack_decay, u32 mode_bits)
+void spu_set_voice_attack(s32 voice, s32 attack_shift, u32 mode_bits)
 {
     s32 temp_a0;
     s32 ptr = (s32)0x1F801C08;
 
     voice = voice << 4;
 
-    *(s16*)(ptr + voice) = (*(u8*)(ptr + voice)) | (((mode_bits >> 2) << 0xF) | (attack_decay << 8));
+    *(s16*)(ptr + voice) = (*(u8*)(ptr + voice)) | (((mode_bits >> 2) << 0xF) | (attack_shift << 8));
 }
 
 /**
- * @brief Set only the Sustain Rate field of ADSR1 for a single SPU voice.
+ * @brief Set only the decay-shift field of the low ADSR register.
  *
- * Preserves Attack/Decay (bits 8-15) and Sustain Level (bits 0-3); sets
- * Sustain Rate in bits 4-7 from @p sustain_rate << 4.
+ * Preserves attack (bits 8-15) and sustain level (bits 0-3); sets
+ * decay shift in bits 4-7 from @p decay_shift << 4.
  *
  * @param voice Voice index (0-23).
- * @param sustain_rate Sustain Rate nybble (0-15).
+ * @param decay_shift Decay shift value (0-15).
  * @see decomp.me (100%) https://decomp.me/scratch/ymuym
  */
-void spu_set_voice_sustain_rate(s32 voice, s32 sustain_rate)
+void spu_set_voice_decay_shift(s32 voice, s32 decay_shift)
 {
     s32 temp_a0;
     s32 ptr = (s32)0x1F801C08;
 
     voice = voice << 4;
-    sustain_rate = sustain_rate << 4;
+    decay_shift = decay_shift << 4;
 
-    *(s16*)(ptr + voice) = ((*(s16*)(ptr + voice)) & 0xFF0F) | (sustain_rate);
+    *(s16*)(ptr + voice) = ((*(s16*)(ptr + voice)) & 0xFF0F) | (decay_shift);
 }
 
 /**
@@ -455,57 +325,57 @@ void spu_set_voice_sustain_level(s32 voice, s32 sustain_level)
 }
 
 /**
- * @brief Set the upper fields of ADSR2 (Sustain Rate mode / Release Mode)
- *        for a single SPU voice, preserving the Release Rate (bits 0-5).
+ * @brief Set the sustain fields of the high ADSR register, preserving the
+ *        release fields (bits 0-5).
  *
  * @param voice Voice index (0-23).
- * @param sr_bits Sustain Rate / Release mode bits, placed at bit 6.
- * @param mode_bits Mode flags; bit 1 maps to ADSR2 bit 14.
+ * @param sustain_bits Sustain shift/mode bits, placed at bit 6.
+ * @param mode_bits Additional sustain mode flags; bit 1 maps to bit 14.
  * @see decomp.me (100%) https://decomp.me/scratch/ZWKKM
  */
-void spu_set_voice_sr_mode(s32 voice, s32 sr_bits, u32 mode_bits)
+void spu_set_voice_sustain_mode(s32 voice, s32 sustain_bits, u32 mode_bits)
 {
     s32 temp_a0;
     s32 ptr = (s32)0x1F801C0A;
 
     voice = voice << 4;
 
-    *(s16*)(ptr + voice) = ((*(s16*)(ptr + voice)) & 0x3F) | (((mode_bits >> 1) << 0xE) | (sr_bits << 6));
+    *(s16*)(ptr + voice) = ((*(s16*)(ptr + voice)) & 0x3F) | (((mode_bits >> 1) << 0xE) | (sustain_bits << 6));
 }
 
 /**
- * @brief Set only the Release Rate field of ADSR2 for a single SPU voice,
- *        preserving the upper bits (Sustain/Release mode).
+ * @brief Set the release shift and mode fields of the high ADSR register,
+ *        preserving its sustain fields.
  *
  * @param voice Voice index (0-23).
- * @param release_rate Release Rate value (placed in bits 0-5).
- * @param mode_bit Extra mode bit; bit 2 maps to ADSR2 bit 5.
+ * @param release_shift Release shift value (placed in bits 0-4).
+ * @param mode_bit Release mode flags; bit 2 maps to bit 5.
  * @see decomp.me (100%) https://decomp.me/scratch/cztam
  */
-void spu_set_voice_release_rate(s32 voice, s32 release_rate, u32 mode_bit)
+void spu_set_voice_release_mode(s32 voice, s32 release_shift, u32 mode_bit)
 {
     s32 temp_a0;
     s32 ptr = (s32)0x1F801C0A;
 
     voice = voice << 4;
 
-    *(s16*)(ptr + voice) = ((*(s16*)(ptr + voice)) & 0xFFC0) | (((mode_bit >> 2) << 0x5) | (release_rate));
+    *(s16*)(ptr + voice) = ((*(s16*)(ptr + voice)) & 0xFFC0) | (((mode_bit >> 2) << 0x5) | (release_shift));
 }
 
 /**
- * @brief Bulk-configure a single SPU voice from a @ref SpuVoiceSetup struct.
+ * @brief Write the complete SPU register image for one AKAO voice.
  *
  * Writes VOLL, VOLR, PITCH, ADDR (start), ADSR1, ADSR2, and RADDR (loop)
- * in one shot.  First clears @c attr->status to 0.  If @p scale is
+ * in one shot. First clears @c params->update_flags. If @p scale is
  * non-zero, the volume fields are multiplied by @p scale then shifted
  * right by 7 (fixed-point scaling).
  *
  * @param voice Voice index (0-23).
- * @param attr  Pointer to packed voice configuration.
+ * @param params Pointer to AKAO's packed voice-register image.
  * @param scale If non-zero, fixed-point volume scale factor.
  * @see decomp.me (100%) https://decomp.me/scratch/MkQTS
  */
-void spu_set_voice_attr(s32 voice, SpuVoiceSetup* attr, s32 scale)
+void spu_write_voice_params(s32 voice, SpuVoiceParams* params, s32 scale)
 {
     s32 scaled_r;
     s32 scaled_l;
@@ -517,21 +387,21 @@ void spu_set_voice_attr(s32 voice, SpuVoiceSetup* attr, s32 scale)
     u8* temp_a0_6;
     s32 ptr;
 
-    attr->status = 0;
+    params->update_flags = 0;
     ptr = (s32)0x1F801C00;
     voice = voice << 4;
     voice = (voice + ptr);
 
     if (scale == 0)
     {
-        scaled_l = attr->vol_l;
-        scaled_r = attr->vol_r;
+        scaled_l = params->volume_left;
+        scaled_r = params->volume_right;
     }
     else
     {
-        scaled_l = (attr->vol_l * scale);
+        scaled_l = (params->volume_left * scale);
         scaled_l = scaled_l >> 7;
-        scaled_r = (attr->vol_r * scale);
+        scaled_r = (params->volume_right * scale);
         scaled_r = scaled_r >> 7;
     }
 
@@ -543,42 +413,42 @@ void spu_set_voice_attr(s32 voice, SpuVoiceSetup* attr, s32 scale)
 
     voice += 2;
     temp_a0_4 = temp_a0_3 + 2;
-    *(s16*)(voice) = (u16)attr->pitch;
+    *(s16*)(voice) = (u16)params->pitch;
 
     voice += 2;
     temp_a0_5 = temp_a0_4 + 2;
-    *(s16*)(voice) = (s16)((u32)attr->start_addr >> 3);
+    *(s16*)(voice) = (s16)((u32)params->sample_start_addr >> 3);
 
     voice += 2;
     temp_a0_6 = temp_a0_5 + 2;
-    *(s16*)(voice) = (u16)attr->adsr1;
+    *(s16*)(voice) = (u16)params->adsr_low;
 
     voice += 2;
-    *(s16*)(voice) = (u16)attr->adsr2;
+    *(s16*)(voice) = (u16)params->adsr_high;
 
     voice += 4;
-    *(s16*)(voice) = (s16)((u32)attr->loop_addr >> 3);
+    *(s16*)(voice) = (s16)((u32)params->sample_repeat_addr >> 3);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/ORS8e
  */
-void func_80024544(s32 arg0, s_struct* arg1)
+void spu_apply_voice_updates(s32 voice, SpuVoiceParams* params)
 {
-    s32 var_s0 = arg1->unk4;
+    s32 var_s0 = params->update_flags;
 
     if (var_s0 == 0)
     {
         return;
     }
 
-    arg1->unk4 = 0;
+    params->update_flags = 0;
 
     // Handle Pitch (0x10)
     if (var_s0 & 0x10)
     {
         var_s0 &= ~0x10;
-        spu_set_voice_pitch(arg0, arg1->unk10);
+        spu_set_voice_pitch(voice, params->pitch);
         if (var_s0 == 0)
             return;
     }
@@ -587,7 +457,7 @@ void func_80024544(s32 arg0, s_struct* arg1)
     if (var_s0 & 3)
     {
         var_s0 &= ~3;
-        spu_set_voice_volume(arg0, (u32)arg1->unk18, (u32)arg1->unk1A, (s32)arg1->unk16);
+        spu_set_voice_volume(voice, (u32)params->volume_left, (u32)params->volume_right, (s32)params->volume_scale);
         if (var_s0 == 0)
             return;
     }
@@ -596,7 +466,7 @@ void func_80024544(s32 arg0, s_struct* arg1)
     if (var_s0 & 0x80)
     {
         var_s0 &= ~0x80;
-        spu_set_voice_start_addr(arg0, arg1->unk8);
+        spu_set_voice_start_addr(voice, params->sample_start_addr);
         if (var_s0 == 0)
             return;
     }
@@ -605,7 +475,7 @@ void func_80024544(s32 arg0, s_struct* arg1)
     if (var_s0 & 0x10000)
     {
         var_s0 &= 0xFFFEFFFF;
-        spu_set_voice_loop_addr(arg0, arg1->unkC);
+        spu_set_voice_repeat_addr(voice, params->sample_repeat_addr);
         if (var_s0 == 0)
             return;
     }
@@ -614,7 +484,7 @@ void func_80024544(s32 arg0, s_struct* arg1)
     if (var_s0 & 0x6600)
     {
         var_s0 &= ~0x6600;
-        spu_set_voice_adsr2(arg0, (s16)arg1->unk14);
+        spu_set_voice_adsr_high(voice, (s16)params->adsr_high);
         if (var_s0 == 0)
             return;
     }
@@ -622,19 +492,25 @@ void func_80024544(s32 arg0, s_struct* arg1)
     // Handle ADSR1 (0x9900)
     if (var_s0 & 0x9900)
     {
-        spu_set_voice_adsr1(arg0, (s16)arg1->unk12);
+        spu_set_voice_adsr_low(voice, (s16)params->adsr_low);
     }
 }
 
 
 /**
- * decomp.me (99.44%) https://decomp.me/scratch/0WomW
+ * @brief Advance the per-channel volume, pan, pitch-bend, and LFO/envelope
+ *        effects for one AKAO tick.
+ *
+ * @param arg0 Channel whose effect accumulators are advanced.
+ * @param arg1 Bit for this channel in the sequence/SFX control bitmaps.
+ * @param arg2 Nonzero for an SFX channel; zero for a sequence channel.
+ * @see decomp.me (99.44%) https://decomp.me/scratch/0WomW
  */
-void func_80024660(arg0_struct* arg0, s32 arg1, s32 arg2)
+void akao_tick_channel_effects(AkaoChannelEffects* arg0, s32 arg1, s32 arg2)
 {
-    tiny_s* var_a0;
-    tiny_s* var_a0_2;
-    tiny_s* var_a0_3;
+    AkaoLfoSample* var_a0;
+    AkaoLfoSample* var_a0_2;
+    AkaoLfoSample* var_a0_3;
     s32 temp_a3_2;
     s32 temp_a3_4;
     s32 temp_a3_5;
@@ -716,11 +592,11 @@ void func_80024660(arg0_struct* arg0, s32 arg1, s32 arg2)
         {
             if (arg2 == 0)
             {
-                g_akao_seq_channel0->unk3C ^= arg1;
+                g_akao_seq_channel0->reverb_mask ^= arg1;
             }
             else
             {
-                g_akao_sfx_control.unk1C ^= arg1;
+                g_akao_sfx_control.reverb_mask ^= arg1;
             }
             g_akao_driver_flags.unk8 |= 0x110;
         }
@@ -734,11 +610,11 @@ void func_80024660(arg0_struct* arg0, s32 arg1, s32 arg2)
         {
             if (arg2 == 0)
             {
-                g_akao_seq_channel0->unk44 ^= arg1;
+                g_akao_seq_channel0->pitch_mod_mask ^= arg1;
             }
             else
             {
-                g_akao_sfx_control.unk24 ^= arg1;
+                g_akao_sfx_control.pitch_mod_mask ^= arg1;
             }
             g_akao_driver_flags.unk8 |= 0x100;
         }
@@ -761,12 +637,12 @@ void func_80024660(arg0_struct* arg0, s32 arg1, s32 arg2)
         arg0->unkAC = (u16)var_lo;
         if ((arg0->unkA4 == 0) && (arg0->unkA8 != 1))
         {
-            var_a0 = arg0->unk1C;
-            if ((var_a0->unk0 == 0) && (var_a0->unk2 == 0))
+            var_a0 = arg0->pitch_lfo_cursor;
+            if ((var_a0->value == 0) && (var_a0->unk2 == 0))
             {
-                var_a0 = (tiny_s*)(((u8*)var_a0) + (var_a0->unk4 * 2));
+                var_a0 = (AkaoLfoSample*)(((u8*)var_a0) + (var_a0->relative_offset * 2));
             }
-            temp_a3_4 = ((s32)(arg0->unkAC * var_a0->unk0)) >> 0x10;
+            temp_a3_4 = ((s32)(arg0->unkAC * var_a0->value)) >> 0x10;
             if (temp_a3_4 != arg0->unkF4)
             {
                 arg0->unkF4 = (s16)temp_a3_4;
@@ -786,13 +662,13 @@ void func_80024660(arg0_struct* arg0, s32 arg1, s32 arg2)
         arg0->unkC0 = (u16)(arg0->unkC0 + arg0->unkC4);
         if ((arg0->unkB8 == 0) && (arg0->unkBC != 1))
         {
-            var_a0_2 = arg0->unk20;
-            if ((var_a0_2->unk0 == 0) && (var_a0_2->unk2 == 0))
+            var_a0_2 = arg0->volume_lfo_cursor;
+            if ((var_a0_2->value == 0) && (var_a0_2->unk2 == 0))
             {
-                var_a0_2 = (tiny_s*)(((u8*)var_a0_2) + (var_a0_2->unk4 * 2));
+                var_a0_2 = (AkaoLfoSample*)(((u8*)var_a0_2) + (var_a0_2->relative_offset * 2));
             }
             inter = (s32)(((s32)(((s32)(arg0->a.inner.unk4A * (arg0->unk84 >> 8)) >> 7) * (arg0->unkC0 >> 8)) << 9) >> 16);
-            temp_a3_5 = (s32)(inter * var_a0_2->unk0) >> 0xF;
+            temp_a3_5 = (s32)(inter * var_a0_2->value) >> 0xF;
             // temp_a3_5 = ((s32) ((((s32) (((((s32) (arg0->a.inner.unk4A * (((u16) arg0->unk84) >> 8))) >> 7) * (((u16) arg0->unkC0) >> 8)) << 9)) >> 0x10) *
             // var_a0_2->unk0)) >> 0xF;
             if (temp_a3_5 != arg0->unkF6)
@@ -809,12 +685,12 @@ void func_80024660(arg0_struct* arg0, s32 arg1, s32 arg2)
         arg0->unkCE = (u16)(arg0->unkCE + arg0->unkD2);
         if (arg0->unkCA != 1)
         {
-            var_a0_3 = arg0->unk24;
-            if ((var_a0_3->unk0 == 0) && (var_a0_3->unk2 == 0))
+            var_a0_3 = arg0->pan_lfo_cursor;
+            if ((var_a0_3->value == 0) && (var_a0_3->unk2 == 0))
             {
-                var_a0_3 = (tiny_s*)(((u8*)var_a0_3) + (var_a0_3->unk4 * 2));
+                var_a0_3 = (AkaoLfoSample*)(((u8*)var_a0_3) + (var_a0_3->relative_offset * 2));
             }
-            temp_a3_6 = ((s32)((((u16)arg0->unkCE) >> 8) * var_a0_3->unk0)) >> 0xF;
+            temp_a3_6 = ((s32)((((u16)arg0->unkCE) >> 8) * var_a0_3->value)) >> 0xF;
             temp_a3_2 = temp_a3_6 != arg0->unkF8;
             if (temp_a3_2)
             {

@@ -23,9 +23,9 @@ typedef struct
     u8 _pad14[2];  /* 0x14 - 0x15 */
     u16 unk16;     /* 0x16 -- tick step */
     u32 unk18;     /* 0x18 -- tick accumulator */
-    u32 unk1C;     /* 0x1C */
-    u32 unk20;     /* 0x20 */
-    u32 unk24;     /* 0x24 */
+    u32 reverb_mask;    /* 0x1C */
+    u32 noise_mask;     /* 0x20 */
+    u32 pitch_mod_mask; /* 0x24 */
     u16 unk28;
 } SfxControl;
 

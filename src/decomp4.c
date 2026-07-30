@@ -714,7 +714,7 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
                         g_akao_seq_channel0->unk18 = (s32)(g_akao_seq_channel0->unk18 | var_s1);
                     }
 
-                    func_80024660(var_s2, var_s1, 0);
+                    akao_tick_channel_effects((AkaoChannelEffects*)var_s2, var_s1, 0);
                     var_s3 &= ~var_s1;
                 }
 
@@ -902,7 +902,7 @@ void akao_irq_handler(void)
                                 g_akao_sfx_control.unkC |= bitMask;
                                 g_akao_sfx_control.unk8 &= ~bitMask;
                             }
-                            func_80024660(channel, bitMask, 1);
+                            akao_tick_channel_effects((AkaoChannelEffects*)channel, bitMask, 1);
                         }
                         var_s3 ^= bitMask;
                     }
@@ -1424,12 +1424,12 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
     *((s16*)(((u8*)channel) + 0x90)) = (s16)(((slot->unk7 & 0x7F) + 0x40) << 8);
     if (slot->unk7 & 0x80)
     {
-        g_akao_seq_channel0->unk40 |= channel_mask;
+        g_akao_seq_channel0->noise_mask |= channel_mask;
     }
     else
     {
-        u32 target_val = g_akao_seq_channel0->unk40;
-        g_akao_seq_channel0->unk40 = target_val & (~channel_mask);
+        u32 target_val = g_akao_seq_channel0->noise_mask;
+        g_akao_seq_channel0->noise_mask = target_val & (~channel_mask);
     }
     g_akao_driver_flags.unk8 |= 0x100;
     return ret;
@@ -1757,9 +1757,9 @@ void akao_sfx_release_channels(void* channel, u32 release_mask)
     /* Clear bits in the specified fields of g_akao_sfx_control */
     g_akao_sfx_control.unk0 &= mask;
     g_akao_sfx_control.unk10 &= mask;
-    g_akao_sfx_control.unk1C &= mask;
-    g_akao_sfx_control.unk20 &= mask;
-    g_akao_sfx_control.unk24 &= mask;
+    g_akao_sfx_control.reverb_mask &= mask;
+    g_akao_sfx_control.noise_mask &= mask;
+    g_akao_sfx_control.pitch_mod_mask &= mask;
     g_akao_sfx_control.unk4 &= mask;
     g_akao_sfx_control.unk8 &= mask;
 
@@ -1820,9 +1820,9 @@ void akao_release_channels(AkaoSFXState* channel, u32 release_mask)
         g_akao_seq_channel0->unk14 &= tmp;
         g_akao_seq_channel0->unk8 &= tmp;
         g_akao_seq_channel0->unkC &= tmp;
-        g_akao_seq_channel0->unk3C &= tmp;
-        g_akao_seq_channel0->unk40 &= tmp;
-        g_akao_seq_channel0->unk44 &= tmp;
+        g_akao_seq_channel0->reverb_mask &= tmp;
+        g_akao_seq_channel0->noise_mask &= tmp;
+        g_akao_seq_channel0->pitch_mod_mask &= tmp;
     }
     else
     {
@@ -2857,11 +2857,11 @@ void func_8002C418(AkaoChannelState* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
-        g_akao_seq_channel0->unk3C |= arg1;
+        g_akao_seq_channel0->reverb_mask |= arg1;
     }
     else
     {
-        g_akao_sfx_control.unk1C |= arg1;
+        g_akao_sfx_control.reverb_mask |= arg1;
     }
     g_akao_driver_flags.unk8 |= 0x110;
 }
@@ -2881,11 +2881,11 @@ void func_8002C478(ae_struct* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
-        g_akao_seq_channel0->unk3C &= ~arg1;
+        g_akao_seq_channel0->reverb_mask &= ~arg1;
     }
     else
     {
-        g_akao_sfx_control.unk1C &= ~arg1;
+        g_akao_sfx_control.reverb_mask &= ~arg1;
     }
     g_akao_driver_flags.unk8 |= 0x110;
     arg0->unkD4 = 0;
@@ -2906,11 +2906,11 @@ void func_8002C4E0(af_struct* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
-        g_akao_seq_channel0->unk44 |= arg1;
+        g_akao_seq_channel0->pitch_mod_mask |= arg1;
     }
     else if (arg0->unk34 & 0x10000)
     {
-        g_akao_sfx_control.unk24 |= arg1;
+        g_akao_sfx_control.pitch_mod_mask |= arg1;
     }
     g_akao_driver_flags.unk8 |= 0x100;
 }
@@ -2929,11 +2929,11 @@ void func_8002C554(ag_struct* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
-        g_akao_seq_channel0->unk44 &= ~arg1;
+        g_akao_seq_channel0->pitch_mod_mask &= ~arg1;
     }
     else
     {
-        g_akao_sfx_control.unk24 &= ~arg1;
+        g_akao_sfx_control.pitch_mod_mask &= ~arg1;
     }
     g_akao_driver_flags.unk8 |= 0x100;
     arg0->unkD6 = 0;
@@ -2953,11 +2953,11 @@ void func_8002C5BC(AkaoChannelState* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
-        g_akao_seq_channel0->unk40 |= arg1;
+        g_akao_seq_channel0->noise_mask |= arg1;
     }
     else
     {
-        g_akao_sfx_control.unk20 |= arg1;
+        g_akao_sfx_control.noise_mask |= arg1;
     }
     g_akao_driver_flags.unk8 |= 0x100;
 }
@@ -2976,11 +2976,11 @@ void func_8002C61C(AkaoChannelState* arg0, s32 arg1)
 {
     if (arg0->unk64 == 0)
     {
-        g_akao_seq_channel0->unk40 &= ~arg1;
+        g_akao_seq_channel0->noise_mask &= ~arg1;
     }
     else
     {
-        g_akao_sfx_control.unk20 &= ~arg1;
+        g_akao_sfx_control.noise_mask &= ~arg1;
     }
     g_akao_driver_flags.unk8 |= 0x100;
 }
@@ -3331,4 +3331,37 @@ void func_8002C9B4(Struct_8002C9B4* arg0) {
     arg0->unk4[arg0->unkD8] = arg0->unk0;
     arg0->unk74[arg0->unkD8] = 0;
     arg0->unk7C[arg0->unkD8] = arg0->unk72;
+}
+
+typedef struct {
+    u8* unk0; 
+    u8* unk4[4];          
+    u8  pad_14[0x72 - 0x14];
+    u16 unk72;              
+    u16 unk74[4];           
+    u16 unk7C[4];          
+    u8  pad_84[0xD8 - 0x84];
+    u16 unkD8;             
+} Struct_8002C9B4;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/xSadm
+ */
+void func_8002CA04(Struct_8002C9B4* arg0) {
+    u32 var_a1;
+
+    var_a1 = *arg0->unk0;
+    arg0->unk0++;
+
+    if (var_a1 == 0) {
+        var_a1 = 0x100;
+    }
+
+    if (++arg0->unk74[arg0->unkD8] != var_a1) {
+        arg0->unk0 = arg0->unk4[arg0->unkD8];
+        arg0->unk72 = arg0->unk7C[arg0->unkD8];
+        return;
+    }
+
+    arg0->unkD8 = (arg0->unkD8 - 1) & 3;
 }

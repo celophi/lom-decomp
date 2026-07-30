@@ -741,23 +741,25 @@ SpuSetTransferMode                  = 0x80024200;
 SpuSetTransferCallback              = 0x80024230;
 
 // src/decomp9.c
-spu_set_key                         = 0x80024260;
-spu_set_voice_mode                  = 0x8002427C;
-spu_set_reverb_addrs                = 0x80024298;
-spu_set_reverb_control              = 0x800242B4;
-spu_set_reverb_mode                 = 0x800242D0;
+spu_set_key_on                      = 0x80024260;
+spu_set_key_off                     = 0x8002427C;
+spu_set_reverb_enable               = 0x80024298;
+spu_set_noise_enable                = 0x800242B4;
+spu_set_pitch_modulation_enable     = 0x800242D0;
 spu_set_voice_volume                = 0x800242EC;
 spu_set_voice_pitch                 = 0x80024334;
 spu_set_voice_start_addr            = 0x8002434C;
-spu_set_voice_loop_addr             = 0x80024368;
-spu_set_voice_adsr1                 = 0x80024384;
-spu_set_voice_adsr2                 = 0x8002439C;
-spu_set_voice_attack_decay          = 0x800243B4;
-spu_set_voice_sustain_rate          = 0x800243E4;
+spu_set_voice_repeat_addr           = 0x80024368;
+spu_set_voice_adsr_low              = 0x80024384;
+spu_set_voice_adsr_high             = 0x8002439C;
+spu_set_voice_attack                = 0x800243B4;
+spu_set_voice_decay_shift           = 0x800243E4;
 spu_set_voice_sustain_level         = 0x8002440C;
-spu_set_voice_sr_mode               = 0x80024434;
-spu_set_voice_release_rate          = 0x80024468;
-spu_set_voice_attr                  = 0x80024498;
+spu_set_voice_sustain_mode          = 0x80024434;
+spu_set_voice_release_mode          = 0x80024468;
+spu_write_voice_params              = 0x80024498;
+spu_apply_voice_updates             = 0x80024544;
+akao_tick_channel_effects           = 0x80024660;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;
