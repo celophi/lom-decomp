@@ -854,16 +854,29 @@ typedef struct
 
 /**
  * @brief Field memory-allocator state block at 0x801ED000.
+ *
+ * The scene-transition fade shares the block: func_8005B1EC arms it by setting
+ * @c fade_mode to 1 and @c fade_level to 0x100, and field_update_scene_fade
+ * ticks it from there.
  */
 typedef struct
 {
     /** 0x00 top of the allocated region. */
     u32 top;
-    u8 _pad[0xC - 4];
+    u8 _pad0[0xC - 4];
     /** 0x0C base of the allocated region. */
     u32 base;
     /** 0x10 end of the first half of the region. */
     u32 midpoint;
+    u8 _pad1[0x2C - 0x14];
+    /**
+     * 0x2C fade state: 1 fading out, 2 held out, 3 fading in, 0 idle. Also
+     * reachable as the standalone symbol D_801ED02C, and the two spellings are
+     * not interchangeable - see field_update_scene_fade.
+     */
+    s32 fade_mode;
+    /** 0x30 fade level, 0x100 is fully lit; stepped by 8 per frame. */
+    s32 fade_level;
 } FieldMemState;
 
 /**
@@ -5374,6 +5387,130 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
             anim->timer = 1;
             anim->flags.word |= 0x42;
             anim->flags.b.stop_keyframe = keyframe;
+        }
+        break;
+    }
+}
+
+extern s32 D_801ED02C;
+
+void func_8005A0D0(s32, s32, s32, s32);
+
+/**
+ * @brief Advance the scene-transition fade by one frame.
+ *
+ * Does nothing unless FieldMemState::fade_mode is 1 (fading out) or 3 (fading
+ * in). Either way the level moves 8 towards its endpoint and is pushed to the
+ * global colour scale through func_8005A0D0, which takes the level for all
+ * three channels.
+ *
+ * Fading out finishes at level 0, and that is where the scene is torn down:
+ * the first object is marked done and its first two parts hidden, then every
+ * remaining object, all four animation lists and the sequence list have their
+ * active bits SAVED one position up and then cleared - bit 0 to bit 1 for
+ * objects, bit 6 to bit 7 for animations, bits 0-1 to bits 2-3 for sequences -
+ * so the state can be restored when the next scene fades in. All animations are
+ * then stopped through field_control_animation, the fade moves to mode 2, and
+ * the colour scale is restored to full.
+ *
+ * Fading in finishes at level 0x100 and simply clears the mode.
+ *
+ * @note @c fade_mode is written two different ways on purpose and neither is
+ *       interchangeable: the mode-2 store at the end of the fade-out uses the
+ *       standalone symbol @c D_801ED02C (costs 2 rows written through
+ *       @c state), while the mode-0 store at the end of the fade-in goes
+ *       through @c state (costs 1 row written as @c D_801ED02C). Same address,
+ *       different addressing mode - the same split FieldCamera has.
+ * @note @c state and @c scene are both locals, and @c scene has to be read at
+ *       the very top, before the switch: reading it where it is first used
+ *       instead costs 36 rows.
+ * @note The object loop reads the flag bit as a BYTE
+ *       (@c obj->flags.b.unk0 @c & @c 1) while the animation loops shift the
+ *       whole WORD (@c anim->flags.word @c << @c 1). Swapping either spelling
+ *       for the other costs 7 rows.
+ * @note Measured non-factors, both still 100%: spelling the level read as a
+ *       @c u16 union member instead of @c (u16) on the word, and using an early
+ *       @c return for the already-done object instead of the nested @c if.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void field_update_scene_fade(void)
+{
+    FieldMemState* state;
+    FieldScene* scene;
+    FieldObj* obj;
+    FieldPart* part;
+    FieldAnim* anim;
+    FieldSeq* seq;
+    s32 level;
+
+    state = (FieldMemState*)0x801ED000;
+    scene = g_field_scene.scene;
+    switch (state->fade_mode)
+    {
+    case 1:
+        state->fade_level -= 8;
+        level = (u16)state->fade_level;
+        func_8005A0D0(-1, level, level, level);
+        if (state->fade_level == 0)
+        {
+            obj = scene->objects;
+            if ((obj->flags.word & 1) == 0)
+            {
+                obj->flags.word |= 1;
+                part = obj->parts;
+                part->visible = 0;
+                part = part->next;
+                part->visible = 0;
+                obj = obj->next;
+                while (obj != NULL)
+                {
+                    obj->flags.word = ((obj->flags.word & ~2) | ((obj->flags.b.unk0 & 1) << 1)) & ~1;
+                    obj = obj->next;
+                }
+                anim = scene->anims;
+                while (anim != NULL)
+                {
+                    anim->flags.word = ((anim->flags.word & ~0x80) | ((anim->flags.word << 1) & 0x80)) & ~0x40;
+                    anim = anim->next;
+                }
+                anim = scene->strips;
+                while (anim != NULL)
+                {
+                    anim->flags.word = ((anim->flags.word & ~0x80) | ((anim->flags.word << 1) & 0x80)) & ~0x40;
+                    anim = anim->next;
+                }
+                anim = scene->sprites;
+                while (anim != NULL)
+                {
+                    anim->flags.word = ((anim->flags.word & ~0x80) | ((anim->flags.word << 1) & 0x80)) & ~0x40;
+                    anim = anim->next;
+                }
+                anim = scene->effects;
+                while (anim != NULL)
+                {
+                    anim->flags.word = ((anim->flags.word & ~0x80) | ((anim->flags.word << 1) & 0x80)) & ~0x40;
+                    anim = anim->next;
+                }
+                seq = scene->seqs;
+                while (seq != NULL)
+                {
+                    seq->flags = ((seq->flags & ~0xC) | ((((u8*)&seq->flags)[0] & 3) << 2)) & ~3;
+                    seq = seq->next;
+                }
+                field_control_animation(0, 0, 0, 0);
+                D_801ED02C = 2;
+                func_8005A0D0(0, 0x100, 0x100, 0x100);
+            }
+        }
+        break;
+    case 3:
+        state->fade_level += 8;
+        level = (u16)state->fade_level;
+        func_8005A0D0(-1, level, level, level);
+        if (state->fade_level == 0x100)
+        {
+            state->fade_mode = 0;
         }
         break;
     }
