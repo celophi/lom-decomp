@@ -3688,7 +3688,7 @@ void func_8002CEBC(AkaoChannelState* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/p5dcS
  */
-void func_8002CEBC(AkaoChannelState* arg0)
+void func_8002CED0(AkaoChannelState* arg0)
 {
     arg0->unk34 = (u8*)((u32)arg0->unk34 & ~0x20);
 }
