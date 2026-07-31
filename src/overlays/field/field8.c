@@ -354,7 +354,9 @@ typedef union
     struct
     {
         u8 unk0;
-        u8 unk1;
+        /** 0x0D number of attached FieldNode instances, the object-level
+            counterpart of FieldPart::node_count. */
+        u8 node_count;
         /** 0x0E drift magnitude; zero disables the per-frame drift. */
         u8 drift_speed;
         /** 0x0F drift angle, scaled by 0x10 before rcos/rsin. */
@@ -826,14 +828,25 @@ struct FieldNode
 {
     FieldNode* next;   /* 0x00 */
     FieldNodeDef* def; /* 0x04 */
-    u8 _pad0[0xC - 8];
+    /** 0x08 owning object; set instead of @c part when the node hangs off an
+        object rather than one of its parts. func_8005AA68 matches on this one,
+        func_8005A984 on @c part. */
+    FieldObj* obj;
     FieldPart* part; /* 0x0C owning part */
-    u8 _pad1[0x28 - 0x10];
+    u8 _pad1[0x24 - 0x10];
+    /** 0x24 horizontal offset accumulator; the axis-0 half of the pair the two
+        node shift helpers move. */
+    s32 unk24;
     s32 delta_x; /* 0x28 horizontal delta since the previous frame */
     s32 delta_y; /* 0x2C vertical delta since the previous frame */
-    u8 _pad2[0x38 - 0x30];
+    /** 0x30 depth offset accumulator, the axis-2 counterpart of unk24. */
+    s32 unk30;
+    /** 0x34 second bank of unk24; every shift writes both banks. */
+    s32 unk34;
     s32 x; /* 0x38 current horizontal position */
     s32 y; /* 0x3C current vertical position */
+    /** 0x40 second bank of unk30. */
+    s32 unk40;
 };
 
 typedef struct
@@ -4925,7 +4938,7 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
             zpos = pos->z;
             delta = (s16)(obj->z / 256) - zpos;
         }
-        if (obj->flags.b.unk1 != 0)
+        if (obj->flags.b.node_count != 0)
         {
             func_8005AA68(obj, (pos->x << 8) - obj->x, 0);
             func_8005AA68(obj, (pos->y << 8) - obj->y, 1);
@@ -6189,4 +6202,173 @@ s32 func_8005A84C(s32 list_kind, s32 index)
         return 0;
     }
     return 2;
+}
+
+/**
+ * @brief Shift every FieldNode attached to a part along one axis.
+ *
+ * Walks the scene's node list for the ones owned by @p part and adds @p delta
+ * to the pair of accumulators @p axis selects: axis 0 moves @c unk24 and
+ * @c unk34, axis 1 moves both delta and position pairs, and anything else
+ * moves @c unk30 and @c unk40. The walk stops as soon as the part's
+ * @c node_count nodes have been found.
+ *
+ * @param part Part whose attached nodes to move.
+ * @param delta Amount to add; zero returns immediately.
+ * @param axis Which accumulator pair to move; see above.
+ *
+ * @note func_8005AA68 is the same routine keyed on the owning OBJECT instead,
+ *       and it SUBTRACTS on axis 1 where this one adds. Keep the two in sync.
+
+ * @note The @c case @c 2 label is required even though it shares the
+ *       @c default arm and 2 already reached it. stmt.c's
+ *       @c balance_case_nodes only bisects the case list when it holds more
+ *       than two nodes, so two cases plus a default emit a flat ascending
+ *       compare chain while three emit the balanced tree the target has -
+ *       equality against the middle value first, then a bound test. Dropping
+ *       it costs 6 rows; giving @c case @c 2 its own body instead costs more.
+ *       See [JUMP-17] in idioms.md.
+ * @note The scene pointer must be read at the top, before both guards, even
+ *       though it is not used until after them. Reading it where the node list
+ *       is taken instead costs 3 rows.
+ * @note @c count must be a @c s32. As a @c u8 the decrement needs a mask and
+ *       it costs a row.
+ * @note Measured non-factors, all still 100%: joining the two guards with
+ *       @c &&, a plain @c while instead of the guarded @c do/while, and
+ *       @c if @c (--count @c == @c 0) instead of a separate decrement.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A984(FieldPart* part, s32 delta, s32 axis)
+{
+    FieldScene* scene;
+    FieldNode* node;
+    s32 count;
+
+    count = part->node_count;
+    scene = g_field_scene.scene;
+    if (count != 0)
+    {
+        if (delta != 0)
+        {
+            node = scene->nodes;
+            if (node != NULL)
+            {
+                do
+                {
+                    if (node->part == part)
+                    {
+                        switch (axis)
+                        {
+                        case 0:
+                            node->unk24 += delta;
+                            node->unk34 += delta;
+                            break;
+                        case 1:
+                            node->delta_x += delta;
+                            node->delta_y += delta;
+                            node->x += delta;
+                            node->y += delta;
+                            break;
+                        case 2:
+                        default:
+                            node->unk30 += delta;
+                            node->unk40 += delta;
+                            break;
+                        }
+                        count--;
+                        if (count == 0)
+                        {
+                            break;
+                        }
+                    }
+                    node = node->next;
+                } while (node != NULL);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Shift every FieldNode attached to an object along one axis.
+ *
+ * The object-level counterpart of func_8005A984: same walk and the same
+ * accumulator pairs, but it matches nodes on FieldNode::obj and takes its
+ * budget from FieldObjFlags::node_count.
+ *
+ * @param obj Object whose attached nodes to move.
+ * @param delta Amount to add; zero returns immediately.
+ * @param axis Which accumulator pair to move.
+ *
+ * @note Axis 1 SUBTRACTS @p delta here where func_8005A984 adds it. That is
+ *       what the target does and it is the only behavioural difference
+ *       between the two.
+
+ * @note The @c case @c 2 label is required even though it shares the
+ *       @c default arm and 2 already reached it. stmt.c's
+ *       @c balance_case_nodes only bisects the case list when it holds more
+ *       than two nodes, so two cases plus a default emit a flat ascending
+ *       compare chain while three emit the balanced tree the target has -
+ *       equality against the middle value first, then a bound test. Dropping
+ *       it costs 6 rows; giving @c case @c 2 its own body instead costs more.
+ *       See [JUMP-17] in idioms.md.
+ * @note The scene pointer must be read at the top, before both guards, even
+ *       though it is not used until after them. Reading it where the node list
+ *       is taken instead costs 3 rows.
+ * @note @c count must be a @c s32. As a @c u8 the decrement needs a mask and
+ *       it costs a row.
+ * @note Measured non-factors, all still 100%: joining the two guards with
+ *       @c &&, a plain @c while instead of the guarded @c do/while, and
+ *       @c if @c (--count @c == @c 0) instead of a separate decrement.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AA68(FieldObj* obj, s32 delta, s32 axis)
+{
+    FieldScene* scene;
+    FieldNode* node;
+    s32 count;
+
+    count = obj->flags.b.node_count;
+    scene = g_field_scene.scene;
+    if (count != 0)
+    {
+        if (delta != 0)
+        {
+            node = scene->nodes;
+            if (node != NULL)
+            {
+                do
+                {
+                    if (node->obj == obj)
+                    {
+                        switch (axis)
+                        {
+                        case 0:
+                            node->unk24 += delta;
+                            node->unk34 += delta;
+                            break;
+                        case 1:
+                            node->delta_x -= delta;
+                            node->delta_y -= delta;
+                            node->x -= delta;
+                            node->y -= delta;
+                            break;
+                        case 2:
+                        default:
+                            node->unk30 += delta;
+                            node->unk40 += delta;
+                            break;
+                        }
+                        count--;
+                        if (count == 0)
+                        {
+                            break;
+                        }
+                    }
+                    node = node->next;
+                } while (node != NULL);
+            }
+        }
+    }
 }
