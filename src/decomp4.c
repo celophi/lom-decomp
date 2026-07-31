@@ -3693,7 +3693,8 @@ void func_8002CED0(AkaoChannelState* arg0)
     arg0->unk34 = (u8*)((u32)arg0->unk34 & ~0x20);
 }
 
-typedef struct {
+typedef struct
+{
     u32 unk0;
     u32 unk4;
     u32 unk8;
@@ -3701,6 +3702,7 @@ typedef struct {
 } Struct_D_8004D3A0;
 
 extern Struct_D_8004D3A0 D_8004D3A0;
+void func_80026C14(Struct_D_8004D3A0* arg0, void* arg1, void* arg2, s32 arg3);
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/nwIop
