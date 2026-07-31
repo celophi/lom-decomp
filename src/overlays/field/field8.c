@@ -354,7 +354,9 @@ typedef union
     struct
     {
         u8 unk0;
-        u8 unk1;
+        /** 0x0D number of attached FieldNode instances, the object-level
+            counterpart of FieldPart::node_count. */
+        u8 node_count;
         /** 0x0E drift magnitude; zero disables the per-frame drift. */
         u8 drift_speed;
         /** 0x0F drift angle, scaled by 0x10 before rcos/rsin. */
@@ -421,7 +423,8 @@ struct FieldPart
 {
     FieldPart* next;   /* 0x00 */
     FieldPartDef* def; /* 0x04 */
-    u8 _pad0[0xC - 8];
+    /** 0x08 when zero the part still needs its tint records rebuilt; see func_8005A0D0. */
+    s32 unk8;
     /** 0x0C bit plane: one bit per grid cell, row-major, LSB first. */
     s32* bits;
     /** 0x10 packed stream of FieldCellRec, one per set bit. */
@@ -677,10 +680,14 @@ typedef struct FieldAnimCel FieldAnimCel;
  *
  * @note field_tint_animation_cel_list reaches this record through FieldAnim::cels instead, and
  *       walks the cel list at 0x08 rather than being handed a single cel.
+ * @note The scene's object list is a list of these: func_8005A0D0 walks it
+ *       through @c next and treats the list at 0x08 as the object's parts.
  */
-typedef struct
+typedef struct FieldTintSrc FieldTintSrc;
+struct FieldTintSrc
 {
-    u8 _pad0[4];
+    /** 0x00 next tint source when this record is an element of the object list. */
+    FieldTintSrc* next;
     /** 0x04 record holding the palette this tint is built from. */
     FieldTintPal* palette;
     /** 0x08 head of the cel list this source tints (field_tint_animation_cel_list only). */
@@ -692,7 +699,7 @@ typedef struct
     u16 red_scale;   /* 0x16 */
     u16 green_scale; /* 0x18 */
     u16 blue_scale;  /* 0x1A */
-} FieldTintSrc;
+};
 
 struct FieldAnimCel
 {
@@ -821,14 +828,25 @@ struct FieldNode
 {
     FieldNode* next;   /* 0x00 */
     FieldNodeDef* def; /* 0x04 */
-    u8 _pad0[0xC - 8];
+    /** 0x08 owning object; set instead of @c part when the node hangs off an
+        object rather than one of its parts. func_8005AA68 matches on this one,
+        func_8005A984 on @c part. */
+    FieldObj* obj;
     FieldPart* part; /* 0x0C owning part */
-    u8 _pad1[0x28 - 0x10];
+    u8 _pad1[0x24 - 0x10];
+    /** 0x24 horizontal offset accumulator; the axis-0 half of the pair the two
+        node shift helpers move. */
+    s32 unk24;
     s32 delta_x; /* 0x28 horizontal delta since the previous frame */
     s32 delta_y; /* 0x2C vertical delta since the previous frame */
-    u8 _pad2[0x38 - 0x30];
+    /** 0x30 depth offset accumulator, the axis-2 counterpart of unk24. */
+    s32 unk30;
+    /** 0x34 second bank of unk24; every shift writes both banks. */
+    s32 unk34;
     s32 x; /* 0x38 current horizontal position */
     s32 y; /* 0x3C current vertical position */
+    /** 0x40 second bank of unk30. */
+    s32 unk40;
 };
 
 typedef struct
@@ -2471,7 +2489,7 @@ void field_advance_animation_keyframe(FieldAnimDef*, FieldAnim*);
 void field_retarget_cel_list_cluts(FieldAnimDef*, FieldTintSrc*, s32);
 void field_queue_vram_upload(FieldImageReq*);
 void func_80059F18(void);
-void func_8005A744(FieldSeq*, s32);
+void func_8005A744(FieldSeq*, u8);
 s32 func_8005A84C(s32, s32);
 void func_80084240(void);
 void func_80140358(s32, s32, s32, s32);
@@ -4920,7 +4938,7 @@ void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32
             zpos = pos->z;
             delta = (s16)(obj->z / 256) - zpos;
         }
-        if (obj->flags.b.unk1 != 0)
+        if (obj->flags.b.node_count != 0)
         {
             func_8005AA68(obj, (pos->x << 8) - obj->x, 0);
             func_8005AA68(obj, (pos->y << 8) - obj->y, 1);
@@ -5172,16 +5190,13 @@ void field_start_animation(FieldSeq* seq)
  * @param keyframe  Stop/seek keyframe, or -1 to mean "no keyframe" for op 1.
  * @param op        Operation selector; see above.
  *
- * @note NOT MATCHED - 97.72% (270/292 exact rows). The residue is five
- *       instructions, all in the list_kind 3 arm, and they have a single
- *       cause: the target cse value table does not reach that arm, so it
- *       reloads @c g_field_scene (3 insns) and re-materialises the constant 1
- *       for the @c op test as @c xori (2 insns). Here cse folds both into the
- *       entry block values. A @c volatile read forces the reload and is worth
- *       +9 exact rows, which proves the target wants it, but no natural
- *       spelling found so far reproduces it. The running analysis, including
- *       four measured-and-retired probe classes, is in
- *       working/func_800597B4/status.md.
+ * @note NOT MATCHED - 99.08% (281/291 exact rows). The @c g_field_scene
+ *       reload in the list_kind 3 arm is solved: the unreachable
+ *       @c do/while(0) above @c case @c 3 stops cse following the dispatch
+ *       branch into it, worth +11 exact rows ([CSE-11] in idioms.md). What
+ *       remains is the constant 1 for the @c op test, which the target
+ *       re-materialises as @c xori where cse folds it into an entry-block
+ *       value. The running analysis is in working/func_800597B4/status.md.
  * @note TODO: the .rodata for this jump table is NOT wired. The @c unk1_e
  *       .rodata subsegment at 0x115 is exactly this table, so it now has two
  *       producers: the splat-generated bytes and gcc own copy in field8.o.
@@ -5196,7 +5211,7 @@ void field_start_animation(FieldSeq* seq)
  * @note Case 2 falls through into case 0 on purpose - that is what the target
  *       does, and it is why case 0 re-reads @c anim->def.
  *
- * @see decomp.me (97.72%) TODO
+ * @see decomp.me (99.08%) TODO
  */
 void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
 {
@@ -5223,6 +5238,13 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
     case 1:
         anim = scene->strips;
         break;
+        /*
+         * Unreachable, and required to match; see [CSE-11] in idioms.md and
+         * the same construct in func_8005A84C.
+         */
+        do
+        {
+        } while (0);
     case 3:
         seq = g_field_scene.scene->seqs;
         if (op != 1)
@@ -5394,7 +5416,13 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
 
 extern s32 D_801ED02C;
 
-void func_8005A0D0(s32, s32, s32, s32);
+/*
+ * func_8005A0D0 is deliberately left undeclared here. It is defined at the end
+ * of this file taking a s16 and three u16, and a prototype in scope would make
+ * the call sites below narrow their arguments, which costs 2 rows in
+ * field_update_scene_fade. The implicit declaration passes them as ints, which
+ * is what the callee expects.
+ */
 
 /**
  * @brief Advance the scene-transition fade by one frame.
@@ -5599,5 +5627,748 @@ void field_begin_scene_fade_in(void)
     {
         seq->flags = (seq->flags & ~3) | (((u32)seq->flags >> 2) & 3);
         seq = seq->next;
+    }
+}
+
+void func_8005A428(FieldPart*);
+FieldAnimCel* func_8005ABD8(FieldTileGrid*, FieldTintSrc**);
+void func_8005ADA8(FieldAnimCel*, FieldAnim*);
+
+/**
+ * @brief Push a new colour scale onto the scene's tint sources and rebuild the
+ *        affected tile records.
+ *
+ * The scene's object list is walked as a list of FieldTintSrc records. An
+ * object is retinted only when @p index is -1 (meaning "every object") or when
+ * it matches the object's position in the list, and only when the scale it
+ * already carries differs from the one being pushed. Retinting multiplies the
+ * record's own colour triple by the new scale into a three-word colour, stores
+ * the new scale, and expands the colour into the scratchpad table through
+ * func_8005AC50; every part of the object that holds instances is then rebuilt
+ * by func_8005A428, except for parts that carry neither a shared rgb/code word
+ * nor an empty @c unk8.
+ *
+ * When @p index is -1 the scene's animation and effect lists are rescaled as
+ * well. Each node's runtime record is resolved with func_8005ABD8, which also
+ * hands back the tint source behind it; that source is rescaled the same way
+ * and, unless the resolved record carries a shared rgb/code word, handed to
+ * func_8005ADA8 together with its node. Animations are skipped unless their
+ * definition selects handler kind 0 or 1; effects are always rescaled.
+ *
+ * @param index Object index to retint, or -1 for every object plus the
+ *              animation and effect lists.
+ * @param red_scale   Red scale, 0x100 is unattenuated.
+ * @param green_scale Green scale.
+ * @param blue_scale  Blue scale.
+ *
+ * @note @p index must be a @c s16 and the three scales @c u16: widening them to
+ *       @c s32 costs 52 and 84 rows respectively. The scales arrive
+ *       sign-extended, so every use masks them, while the three writebacks
+ *       store the raw parameter.
+ * @note @c tint must be a separate local assigned BEFORE the three @c rgb
+ *       products. Assigning it after them, or reading @c owner->palette->data
+ *       in one go where @c pal is set, leaves the palette load stuck below the
+ *       @c rgb stores and costs 8 rows.
+ * @note The handler-kind test reads the whole word at FieldAnimDef::flags as
+ *       @c u32; as @c s32 the range check compares signed and costs a row.
+ * @note Measured non-factors, all still 100%: @c i as @c u16 or as @c s32 with
+ *       a @c (u16) cast on the compare, nesting the index and colour tests
+ *       instead of joining them with @c &&, @c &pal[2] instead of @c pal @c +
+ *       @c 2, and prototyping the four callees instead of leaving them
+ *       implicit.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
+{
+    FieldScene* scene;
+    FieldTintSrc* owner;
+    FieldTintPal* tint;
+    FieldPart* part;
+    FieldAnim* anim;
+    FieldAnimCel* cel;
+    u16* pal;
+    u16 i;
+    s32 rgb[3];
+
+    i = 0;
+    scene = g_field_scene.scene;
+    owner = (FieldTintSrc*)scene->objects;
+    while (owner != NULL)
+    {
+        if ((index == -1 || index == i) &&
+            (owner->red_scale != red_scale || owner->green_scale != green_scale ||
+             owner->blue_scale != blue_scale))
+        {
+            tint = owner->palette;
+            rgb[0] = owner->red * red_scale;
+            rgb[1] = owner->green * green_scale;
+            rgb[2] = owner->blue * blue_scale;
+            owner->red_scale = red_scale;
+            owner->green_scale = green_scale;
+            owner->blue_scale = blue_scale;
+            pal = tint->data;
+            func_8005AC50(pal + 2, pal[0], rgb);
+            part = (FieldPart*)owner->cels;
+            while (part != NULL)
+            {
+                if (part->instance_count != 0 && (part->code_word != 0 || part->unk8 == 0))
+                {
+                    func_8005A428(part);
+                }
+                part = part->next;
+            }
+        }
+        owner = owner->next;
+        i++;
+    }
+    if (index == -1)
+    {
+        anim = scene->anims;
+        while (anim != NULL)
+        {
+            if ((*(u32*)&anim->def->flags & 7) < 2)
+            {
+                cel = func_8005ABD8(((FieldTileAnimDef*)anim->def)->grid, &owner);
+                tint = owner->palette;
+                rgb[0] = owner->red * red_scale;
+                rgb[1] = owner->green * green_scale;
+                rgb[2] = owner->blue * blue_scale;
+                pal = tint->data;
+                func_8005AC50(pal + 2, pal[0], rgb);
+                if (cel->code_word == 0)
+                {
+                    func_8005ADA8(cel, anim);
+                }
+            }
+            anim = anim->next;
+        }
+        anim = scene->effects;
+        while (anim != NULL)
+        {
+            cel = func_8005ABD8(((FieldTileAnimDef*)anim->def)->grid, &owner);
+            tint = owner->palette;
+            rgb[0] = owner->red * red_scale;
+            rgb[1] = owner->green * green_scale;
+            rgb[2] = owner->blue * blue_scale;
+            pal = tint->data;
+            func_8005AC50(pal + 2, pal[0], rgb);
+            if (cel->code_word == 0)
+            {
+                func_8005ADA8(cel, anim);
+            }
+            anim = anim->next;
+        }
+    }
+}
+
+/**
+ * @brief Re-tint one part's cell records from the scratchpad colour table.
+ *
+ * Walks @p part 's bit plane, consuming one packed tile descriptor per grid
+ * cell and one record per SET bit. Each resolved cell copies the rgb/code entry
+ * its descriptor selects out of the scratchpad table at 0x1F800000 into the
+ * record's colour halves. Absent cells still advance the descriptor cursor but
+ * not the record cursor, and the record stride shrinks by 4 for each of the two
+ * words the part shares (rgb/code and texture page).
+ *
+ * When the part carries a SHARED rgb/code word the colour belongs to the whole
+ * part rather than to individual records, so the first present cell whose
+ * descriptor resolves writes it into @c code_word and the byte after it, then
+ * the function returns immediately.
+ *
+ * Only part kinds 0 and 2 through 5 are tinted; kind 1 and anything from 6 up
+ * return untouched.
+ *
+ * @param part Runtime part to re-tint.
+ *
+ * @note @c part->def is addressed as a FieldTileGrid: its identity key at 0x00
+ *       doubles as the tile-descriptor array, which is exactly why two parts
+ *       sharing that word are interchangeable.
+ * @note The two case arms are the SAME block written out twice, which is what
+ *       the original did: giving @c case @c 0 and @c case @c 2..5 one shared
+ *       body compiles to a single loop, 63 insns short of the target (57.31%).
+ *       gcc cross-jumps only the shared-word tail the two copies end in.
+ * @note The counter must be the multiply result decremented IN PLACE
+ *       (@c count @c = @c rows @c * @c cols, then @c while @c (--count @c !=
+ *       @c -1)). Spelled as @c rows @c * @c cols @c - @c 1 with the decrement
+ *       at the loop bottom, combine folds the entry guard's @c (n-1) @c ==
+ *       @c -1 into @c n @c == @c 0 and the preheader loses 2 insns (89.50%).
+ * @note @c dst must be read at the TOP of the arm, before the stride
+ *       computation; after it, the load will not schedule up next to the
+ *       @c code_word read and it costs 6 rows.
+ * @note @c word must be cleared once before the switch. Clearing it at the head
+ *       of each arm instead costs 22 rows.
+ * @note The empty @c case @c 1 is required: without it gcc builds a different
+ *       decision tree and the dispatch costs 13 rows.
+ * @note Measured non-factors, all still 100%: switching on a @c s32 @c kind
+ *       local instead of the @c u8 field directly, @c stride @c = @c 8 instead
+ *       of @c stride @c -= @c 4 for the shared rgb/code word, nesting the
+ *       present test instead of joining it with @c &&, and @c bit as @c s32.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A428(FieldPart* part)
+{
+    FieldTileGrid* grid;
+    FieldTileDesc* tile;
+    FieldTintColor* pal;
+    FieldTintColor* entry;
+    u8* dst;
+    u32* mask;
+    u32 word;
+    u32 bit;
+    s32 stride;
+    s32 count;
+
+    word = 0;
+    grid = (FieldTileGrid*)part->def;
+    tile = grid->tiles;
+    pal = (FieldTintColor*)0x1F800000;
+    switch (part->kind)
+    {
+    case 0:
+        dst = part->records;
+        stride = 12;
+        if (part->code_word != 0)
+        {
+            stride -= 4;
+        }
+        if (part->tpage_word != 0)
+        {
+            stride -= 4;
+        }
+        mask = (u32*)part->bits;
+        count = grid->u.b.rows * grid->u.b.cols;
+        bit = 0;
+        while (--count != -1)
+        {
+            if (bit == 0)
+            {
+                word = *mask++;
+                bit = 1;
+            }
+            if (part->code_word != 0)
+            {
+                if ((word & bit) && (tile->clut_slot & 0x80))
+                {
+                    entry = &pal[tile->color_index];
+                    ((FieldTintColor*)&part->code_word)->rg = entry->rg;
+                    ((FieldTintColor*)&part->code_word)->b = entry->b;
+                    return;
+                }
+            }
+            else if (word & bit)
+            {
+                entry = &pal[tile->color_index];
+                ((FieldCellTint*)dst)->rg = entry->rg;
+                ((FieldCellTint*)dst)->b = entry->b;
+                dst += stride;
+            }
+            bit <<= 1;
+            tile++;
+        }
+        break;
+    case 1:
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        dst = part->records;
+        stride = 12;
+        if (part->code_word != 0)
+        {
+            stride -= 4;
+        }
+        if (part->tpage_word != 0)
+        {
+            stride -= 4;
+        }
+        mask = (u32*)part->bits;
+        count = grid->u.b.rows * grid->u.b.cols;
+        bit = 0;
+        while (--count != -1)
+        {
+            if (bit == 0)
+            {
+                word = *mask++;
+                bit = 1;
+            }
+            if (part->code_word != 0)
+            {
+                if ((word & bit) && (tile->clut_slot & 0x80))
+                {
+                    entry = &pal[tile->color_index];
+                    ((FieldTintColor*)&part->code_word)->rg = entry->rg;
+                    ((FieldTintColor*)&part->code_word)->b = entry->b;
+                    return;
+                }
+            }
+            else if (word & bit)
+            {
+                entry = &pal[tile->color_index];
+                ((FieldCellTint*)dst)->rg = entry->rg;
+                ((FieldCellTint*)dst)->b = entry->b;
+                dst += stride;
+            }
+            bit <<= 1;
+            tile++;
+        }
+        break;
+    }
+}
+
+/**
+ * @brief Restart one sequence by index, or clear every armed sequence's state.
+ *
+ * With @p op zero the scene's sequence list is walked to the entry at
+ * @p index and that one entry is handed to func_8005A744, which restarts it.
+ * Otherwise every sequence whose low two state bits are set has those bits
+ * cleared (but only when its own stored index matches @p index) and is then
+ * pushed through field_control_animation as a stop.
+ *
+ * @param index Sequence index; also the value each entry's stored index at
+ *              byte 1 of FieldSeq::flags is matched against.
+ * @param op Zero selects the single-sequence restart, anything else the
+ *           clear-all walk.
+ *
+ * @note This is the same body field_control_animation runs inline for
+ *       @c list_kind @c 3; the two are kept in sync deliberately.
+ * @note The list head must be read ONCE before the @p op test. Reading it
+ *       separately in each arm costs 8 rows and 6 insns.
+ * @note The walk to @p index must count DOWN. Written as
+ *       @c for @c (i @c = @c 0; @c i @c < @c index; @c i++) it costs 5 rows.
+ * @note Measured non-factors, all still 100%: hoisting @c i @c = @c index @c -
+ *       @c 1 above the @c index @c != @c 0 guard or leaving it inside,
+ *       spelling the countdown as @c while @c (--i @c != @c -1), @c (u8)index
+ *       instead of @c index @c & @c 0xFF, an @c if/goto instead of the early
+ *       @c return, a union byte member instead of the @c ((u8*)&flags)[1]
+ *       cast, dropping the @c cmd temp, and a guarded @c do/while for the
+ *       outer walk.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A67C(s32 index, s32 op)
+{
+    FieldAnimDef* cmd;
+    FieldSeq* seq;
+    s32 i;
+
+    seq = g_field_scene.scene->seqs;
+    if (op == 0)
+    {
+        i = index - 1;
+        if (index != 0)
+        {
+            do
+            {
+                seq = seq->next;
+                i--;
+            } while (i != -1);
+        }
+        func_8005A744(seq, index & 0xFF);
+        return;
+    }
+    while (seq != NULL)
+    {
+        if ((seq->flags & 3) != 0)
+        {
+            if (((u8*)&seq->flags)[1] == index)
+            {
+                seq->flags &= ~3;
+            }
+            cmd = seq->def;
+            field_control_animation(cmd->unk0, cmd->unk2, -1, 1);
+        }
+        seq = seq->next;
+    }
+}
+
+/**
+ * @brief Arm a sequence and start its animation, then chain to the sequence
+ *        its definition points at.
+ *
+ * Sets the sequence's countdown to 1, replaces its low two state bits with 1,
+ * records @p index in byte 1 of FieldSeq::flags, and hands the node to
+ * field_start_animation. If the definition names a follow-on sequence
+ * (FieldAnimDef::unk5 is not 0xFF) and carries no delay (FieldAnimDef::unk8 is
+ * zero), that sequence is located by walking the scene list to its index and
+ * armed the same way, recursively.
+ *
+ * @param seq Sequence node to arm.
+ * @param index Sequence index, stored into byte 1 of FieldSeq::flags and
+ *              carried through the whole chain unchanged.
+ *
+ * @note @p index must be a @c u8. As a @c s32 with an explicit
+ *       @c index @c & @c 0xFF on the recursive call the instructions are all
+ *       right but @p index and @c scene swap saved registers (89.48%): the
+ *       @c u8 spelling puts the mask in a zero-extend of its own, which raises
+ *       the parameter's allocation priority above the scene pointer's. An
+ *       explicit @c (u8) cast on the argument is NOT equivalent.
+ * @note The follow-on index must count DOWN in place -
+ *       @c i @c = @c def->unk5 then @c while @c (--i @c != @c -1). Reading
+ *       @c unk5 twice and initialising @c i @c = @c def->unk5 @c - @c 1 leaves
+ *       the pre-decrement value live, so combine folds the entry guard into
+ *       @c unk5 @c != @c 0 and 3 rows go (see [EXPAND-22] in idioms.md).
+ * @note @c scene must be read at the top, before the field_start_animation
+ *       call, even though it is not used until after it. Reading it later
+ *       costs 9 rows, and it cannot be sunk into the @c if because the call
+ *       sits in between.
+ * @note Measured non-factors, all still 100%: nesting the two guard tests
+ *       instead of joining them with @c &&, ordering @c def @c = @c seq->def
+ *       before the @c scene read, and moving the byte store above it.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A744(FieldSeq* seq, u8 index)
+{
+    FieldAnimDef* def;
+    FieldScene* scene;
+    FieldSeq* walk;
+    s32 i;
+
+    scene = g_field_scene.scene;
+    seq->unkC = 1;
+    seq->flags = (seq->flags & ~3) | 1;
+    def = seq->def;
+    ((u8*)&seq->flags)[1] = index;
+    field_start_animation(seq);
+    i = def->unk5;
+    if (i != 0xFF && def->unk8 == 0)
+    {
+        walk = scene->seqs;
+        while (--i != -1)
+        {
+            walk = walk->next;
+        }
+        func_8005A744(walk, index);
+    }
+}
+
+/**
+ * @brief Report whether no armed sequence currently carries a given index.
+ *
+ * Walks the scene's sequence list looking for an entry whose low two state bits
+ * are set and whose stored index at byte 1 of FieldSeq::flags equals @p index.
+ * That is the same pair of tests func_8005A67C uses to decide which sequences
+ * to stop, so this is the query form of it.
+ *
+ * @param index Sequence index to look for.
+ * @return 0 as soon as a match is found, 1 when the whole list is walked
+ *         without one.
+ *
+ * @note @p index must be a @c s32. As a @c u8 the compare needs its own mask
+ *       and it costs a row.
+ * @note The early @c return @c 0 is required. Setting a found flag, breaking
+ *       out and returning at the bottom costs 11 rows.
+ * @note Measured non-factors, all still 100%: joining the two tests with
+ *       @c && instead of nesting them, a guarded @c do/while for the walk,
+ *       and a union byte member instead of the @c ((u8*)&flags)[1] cast.
+ *
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8005A7EC(s32 index)
+{
+    FieldSeq* seq;
+
+    seq = g_field_scene.scene->seqs;
+    while (seq != NULL)
+    {
+        if ((seq->flags & 3) != 0)
+        {
+            if (((u8*)&seq->flags)[1] == index)
+            {
+                return 0;
+            }
+        }
+        seq = seq->next;
+    }
+    return 1;
+}
+
+/**
+ * @brief Report the play state of one animation or sequence.
+ *
+ * @p list_kind picks the list the same way field_control_animation does - 0
+ * anims, 1 strips, 3 sequences, anything else sprites - and @p index selects
+ * the entry within it.
+ *
+ * For the sequence list the answer is just whether an armed sequence carries
+ * @p index: 0 when one does, 2 when none does. For the three animation lists
+ * the node at @p index is inspected: 2 when it has never been started, 1 when
+ * it is held, 3 when it is an anim-list node whose definition selects handler
+ * kind 4 and which is still on one of its first two frames, and 0 otherwise.
+ *
+ * @param list_kind Which list to walk; see above.
+ * @param index Entry index within that list.
+ * @return 0, 1, 2 or 3 as described above.
+ *
+ * @note The unreachable @c do/while(0) between the @c case @c 1 and @c case
+ *       @c 3 arms is required to match, and is not a placeholder for deleted
+ *       code - it is there for the NOTE_INSN_LOOP_END it leaves in front of the
+ *       @c case @c 3 label. Without it cse follows the dispatch branch into
+ *       that arm with its value table intact and folds the second
+ *       @c g_field_scene read into the one above the switch, costing 4 rows.
+ *       See [CSE-11] in idioms.md; field_control_animation needs the same
+ *       thing for the same reason.
+ * @note The tail must be written as @c if @c (flags @c & @c 0x40) @c { @c ...
+ *       @c return @c 0; @c } @c return @c 2; - putting the @c return @c 2
+ *       first as an early exit emits it inline instead of at the end and costs
+ *       8 rows.
+ * @note The sequence arm must set @c status @c = @c 1 AFTER its loop and reach
+ *       the shared @c return through a @c goto. Seeding @c status @c = @c 1
+ *       before the loop and breaking out costs 5 rows, because the constant
+ *       then lives in a register across the loop instead of being
+ *       rematerialised in the two exit branches' delay slots.
+ * @note Measured non-factors, all still 100%: @c status @c << @c 1 instead of
+ *       @c * @c 2, @c u32 instead of @c s32 on the definition-flags cast,
+ *       dropping the @c def temp, an explicit @c (s32) on the state compare,
+ *       and joining the last two tests with @c && instead of nesting them.
+ *
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8005A84C(s32 list_kind, s32 index)
+{
+    FieldAnim* anim;
+    FieldAnimDef* def;
+    FieldScene* scene;
+    FieldSeq* seq;
+    s32 status;
+
+    scene = g_field_scene.scene;
+    switch (list_kind)
+    {
+    case 0:
+        anim = scene->anims;
+        break;
+    case 1:
+        anim = scene->strips;
+        break;
+        /*
+         * Unreachable, and required to match: the NOTE_INSN_LOOP_END this
+         * leaves between the case 1 arm's barrier and the case 3 label is what
+         * stops cse_end_of_basic_block from following the dispatch branch into
+         * the case 3 block, so g_field_scene is re-read there instead of being
+         * folded into the load above the switch. See [CSE-11] in idioms.md.
+         */
+        do
+        {
+        } while (0);
+    case 3:
+        seq = g_field_scene.scene->seqs;
+        while (seq != NULL)
+        {
+            if ((seq->flags & 3) != 0)
+            {
+                if (((u8*)&seq->flags)[1] == index)
+                {
+                    status = 0;
+                    goto done;
+                }
+            }
+            seq = seq->next;
+        }
+        status = 1;
+    done:
+        return status * 2;
+    default:
+        anim = scene->sprites;
+        break;
+    }
+    index--;
+    while (index != -1)
+    {
+        anim = anim->next;
+        index--;
+    }
+    if (anim->flags.word & 0x40)
+    {
+        if ((anim->flags.word & 2) != 0)
+        {
+            return 1;
+        }
+        if (list_kind == 0)
+        {
+            def = anim->def;
+            if ((*(s32*)&def->flags & 7) == 4)
+            {
+                if (anim->flags.b.state < 2)
+                {
+                    return 3;
+                }
+            }
+        }
+        return 0;
+    }
+    return 2;
+}
+
+/**
+ * @brief Shift every FieldNode attached to a part along one axis.
+ *
+ * Walks the scene's node list for the ones owned by @p part and adds @p delta
+ * to the pair of accumulators @p axis selects: axis 0 moves @c unk24 and
+ * @c unk34, axis 1 moves both delta and position pairs, and anything else
+ * moves @c unk30 and @c unk40. The walk stops as soon as the part's
+ * @c node_count nodes have been found.
+ *
+ * @param part Part whose attached nodes to move.
+ * @param delta Amount to add; zero returns immediately.
+ * @param axis Which accumulator pair to move; see above.
+ *
+ * @note func_8005AA68 is the same routine keyed on the owning OBJECT instead,
+ *       and it SUBTRACTS on axis 1 where this one adds. Keep the two in sync.
+
+ * @note The @c case @c 2 label is required even though it shares the
+ *       @c default arm and 2 already reached it. stmt.c's
+ *       @c balance_case_nodes only bisects the case list when it holds more
+ *       than two nodes, so two cases plus a default emit a flat ascending
+ *       compare chain while three emit the balanced tree the target has -
+ *       equality against the middle value first, then a bound test. Dropping
+ *       it costs 6 rows; giving @c case @c 2 its own body instead costs more.
+ *       See [JUMP-17] in idioms.md.
+ * @note The scene pointer must be read at the top, before both guards, even
+ *       though it is not used until after them. Reading it where the node list
+ *       is taken instead costs 3 rows.
+ * @note @c count must be a @c s32. As a @c u8 the decrement needs a mask and
+ *       it costs a row.
+ * @note Measured non-factors, all still 100%: joining the two guards with
+ *       @c &&, a plain @c while instead of the guarded @c do/while, and
+ *       @c if @c (--count @c == @c 0) instead of a separate decrement.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A984(FieldPart* part, s32 delta, s32 axis)
+{
+    FieldScene* scene;
+    FieldNode* node;
+    s32 count;
+
+    count = part->node_count;
+    scene = g_field_scene.scene;
+    if (count != 0)
+    {
+        if (delta != 0)
+        {
+            node = scene->nodes;
+            if (node != NULL)
+            {
+                do
+                {
+                    if (node->part == part)
+                    {
+                        switch (axis)
+                        {
+                        case 0:
+                            node->unk24 += delta;
+                            node->unk34 += delta;
+                            break;
+                        case 1:
+                            node->delta_x += delta;
+                            node->delta_y += delta;
+                            node->x += delta;
+                            node->y += delta;
+                            break;
+                        case 2:
+                        default:
+                            node->unk30 += delta;
+                            node->unk40 += delta;
+                            break;
+                        }
+                        count--;
+                        if (count == 0)
+                        {
+                            break;
+                        }
+                    }
+                    node = node->next;
+                } while (node != NULL);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Shift every FieldNode attached to an object along one axis.
+ *
+ * The object-level counterpart of func_8005A984: same walk and the same
+ * accumulator pairs, but it matches nodes on FieldNode::obj and takes its
+ * budget from FieldObjFlags::node_count.
+ *
+ * @param obj Object whose attached nodes to move.
+ * @param delta Amount to add; zero returns immediately.
+ * @param axis Which accumulator pair to move.
+ *
+ * @note Axis 1 SUBTRACTS @p delta here where func_8005A984 adds it. That is
+ *       what the target does and it is the only behavioural difference
+ *       between the two.
+
+ * @note The @c case @c 2 label is required even though it shares the
+ *       @c default arm and 2 already reached it. stmt.c's
+ *       @c balance_case_nodes only bisects the case list when it holds more
+ *       than two nodes, so two cases plus a default emit a flat ascending
+ *       compare chain while three emit the balanced tree the target has -
+ *       equality against the middle value first, then a bound test. Dropping
+ *       it costs 6 rows; giving @c case @c 2 its own body instead costs more.
+ *       See [JUMP-17] in idioms.md.
+ * @note The scene pointer must be read at the top, before both guards, even
+ *       though it is not used until after them. Reading it where the node list
+ *       is taken instead costs 3 rows.
+ * @note @c count must be a @c s32. As a @c u8 the decrement needs a mask and
+ *       it costs a row.
+ * @note Measured non-factors, all still 100%: joining the two guards with
+ *       @c &&, a plain @c while instead of the guarded @c do/while, and
+ *       @c if @c (--count @c == @c 0) instead of a separate decrement.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AA68(FieldObj* obj, s32 delta, s32 axis)
+{
+    FieldScene* scene;
+    FieldNode* node;
+    s32 count;
+
+    count = obj->flags.b.node_count;
+    scene = g_field_scene.scene;
+    if (count != 0)
+    {
+        if (delta != 0)
+        {
+            node = scene->nodes;
+            if (node != NULL)
+            {
+                do
+                {
+                    if (node->obj == obj)
+                    {
+                        switch (axis)
+                        {
+                        case 0:
+                            node->unk24 += delta;
+                            node->unk34 += delta;
+                            break;
+                        case 1:
+                            node->delta_x -= delta;
+                            node->delta_y -= delta;
+                            node->x -= delta;
+                            node->y -= delta;
+                            break;
+                        case 2:
+                        default:
+                            node->unk30 += delta;
+                            node->unk40 += delta;
+                            break;
+                        }
+                        count--;
+                        if (count == 0)
+                        {
+                            break;
+                        }
+                    }
+                    node = node->next;
+                } while (node != NULL);
+            }
+        }
     }
 }
