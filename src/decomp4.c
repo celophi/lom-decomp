@@ -3082,7 +3082,7 @@ void akao_seq_op_set_adsr_attack(SomeStruct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ID5s7
  */
-void akao_seq_op_set_adsr_decay(s_8002C79C* arg0)
+void akao_seq_op_set_adsr_decay(s_8002C79C* arg0, s_8002C79C* arg1)
 {
     u8* ptr;
     u32 byte_val;
@@ -3103,7 +3103,7 @@ void akao_seq_op_set_adsr_decay(s_8002C79C* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ZOmaE
  */
-void akao_seq_op_set_adsr_sustain_level(s_8002C79C* arg0)
+void akao_seq_op_set_adsr_sustain_level(s_8002C79C* arg0, s_8002C79C* arg1)
 {
     u8* ptr;
     u32 byte_val;
@@ -3544,4 +3544,12 @@ void func_8002CCCC(u8** arg0)
 
     channel->unk6C = *(*arg0)++;
     channel->unk6C |= (*(*arg0)++ << 8);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/XqM1L
+ */
+void func_8002CD08(s_8002C79C* arg0, s_8002C79C* arg1) {
+    akao_seq_op_set_adsr_decay(arg0, arg1);
+    akao_seq_op_set_adsr_sustain_level(arg0, arg1);
 }
