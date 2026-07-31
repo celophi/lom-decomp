@@ -3692,3 +3692,57 @@ void func_8002CEBC(AkaoChannelState* arg0)
 {
     arg0->unk34 = (u8*)((u32)arg0->unk34 & ~0x20);
 }
+
+typedef struct {
+    u32 unk0;
+    u32 unk4;
+    u32 unk8;
+    s32 unkC;
+} Struct_D_8004D3A0;
+
+extern Struct_D_8004D3A0 D_8004D3A0;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/nwIop
+ */
+void func_8002CEE4(AkaoChannelState* arg0)
+{
+    u8* temp_a0;
+    s32 temp_v0;
+    void* var_a1;
+    void* var_a2;
+
+    temp_a0 = *(u8**)arg0;
+
+    temp_v0 = (temp_a0[1] << 8) | temp_a0[0];
+
+    if (temp_v0 != 0)
+    {
+        var_a1 = temp_a0 + temp_v0 + 2;
+    }
+    else
+    {
+        var_a1 = 0;
+    }
+
+    temp_a0 += 2;
+
+    temp_v0 = (temp_a0[1] << 8) | temp_a0[0];
+    if (temp_v0 != 0)
+    {
+        var_a2 = temp_a0 + temp_v0 + 2;
+    }
+    else
+    {
+        var_a2 = 0;
+    }
+
+    D_8004D3A0.unk0 = 0;
+    D_8004D3A0.unk4 = 0;
+    D_8004D3A0.unk8 = *(u16*)((u8*)arg0 + 0x90) >> 8;
+    D_8004D3A0.unkC = (s32)arg0->unk48 >> 23;
+
+    func_80026C14(&D_8004D3A0, var_a1, var_a2, 0);
+
+    *(u8**)arg0 = *(u8**)arg0 + 4;
+}
