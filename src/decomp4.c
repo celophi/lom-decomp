@@ -3631,3 +3631,26 @@ void func_8002CDB8(void* arg0, s32 arg1)
     *(s16*)((u8*)arg0 + 0xD6) = var_v0;
     akao_seq_op_enable_pitch_modulation(arg0, arg1);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/3922q
+ */
+void func_8002CDFC(void* arg0)
+{
+    u8* temp_v0;
+    s32 temp_v1;
+
+    temp_v0 = *(u8**)arg0;
+    temp_v1 = *temp_v0;
+
+    *(u8**)arg0 = temp_v0 + 1;
+
+    if (temp_v1 != 0)
+    {
+        *(s16*)((u8*)arg0 + 0xD6) = temp_v1 + 1;
+    }
+    else
+    {
+        *(s16*)((u8*)arg0 + 0xD6) = 0x101;
+    }
+}
