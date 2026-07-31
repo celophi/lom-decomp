@@ -3549,7 +3549,35 @@ void func_8002CCCC(u8** arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/XqM1L
  */
-void func_8002CD08(s_8002C79C* arg0, s_8002C79C* arg1) {
+void func_8002CD08(s_8002C79C* arg0, s_8002C79C* arg1)
+{
     akao_seq_op_set_adsr_decay(arg0, arg1);
     akao_seq_op_set_adsr_sustain_level(arg0, arg1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/cAsju
+ */
+void func_8002CD44(AkaoChannelState* arg0, s32 arg1)
+{
+    u8* temp_v0;
+    s32 temp_v1;
+    s16 var_v0;
+
+    temp_v0 = *(u8**)arg0;
+    temp_v1 = *temp_v0;
+
+    *(u8**)arg0 = temp_v0 + 1;
+
+    if (temp_v1 != 0)
+    {
+        var_v0 = temp_v1 + 1;
+    }
+    else
+    {
+        var_v0 = 0x101;
+    }
+
+    *(s16*)((u8*)arg0 + 0xD4) = var_v0;
+    akao_seq_op_enable_reverb(arg0, arg1);
 }
