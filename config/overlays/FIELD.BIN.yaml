@@ -53,7 +53,7 @@ segments:
       - [0x29B9, c, field2]       # gcc280_g4
       - [0x3C11, c, field3]       # gcc280_g4
       - [0x4B0D, c, field8]      # gcc280_g4
-      - [0xA7B9, c, unk1_e]
+      - [0xAAD5, c, unk1_e]
       - [0xAEDD, c, func_8005ab4c] # gcc280_g4
       - [0xAF11, c, unk1_e_tail]
       - [0xB57D, c, field6] # gcc280_g4

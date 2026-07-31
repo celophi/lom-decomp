@@ -5744,3 +5744,226 @@ void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
         }
     }
 }
+
+/**
+ * @brief Re-tint one part's cell records from the scratchpad colour table.
+ *
+ * Walks @p part 's bit plane, consuming one packed tile descriptor per grid
+ * cell and one record per SET bit. Each resolved cell copies the rgb/code entry
+ * its descriptor selects out of the scratchpad table at 0x1F800000 into the
+ * record's colour halves. Absent cells still advance the descriptor cursor but
+ * not the record cursor, and the record stride shrinks by 4 for each of the two
+ * words the part shares (rgb/code and texture page).
+ *
+ * When the part carries a SHARED rgb/code word the colour belongs to the whole
+ * part rather than to individual records, so the first present cell whose
+ * descriptor resolves writes it into @c code_word and the byte after it, then
+ * the function returns immediately.
+ *
+ * Only part kinds 0 and 2 through 5 are tinted; kind 1 and anything from 6 up
+ * return untouched.
+ *
+ * @param part Runtime part to re-tint.
+ *
+ * @note @c part->def is addressed as a FieldTileGrid: its identity key at 0x00
+ *       doubles as the tile-descriptor array, which is exactly why two parts
+ *       sharing that word are interchangeable.
+ * @note The two case arms are the SAME block written out twice, which is what
+ *       the original did: giving @c case @c 0 and @c case @c 2..5 one shared
+ *       body compiles to a single loop, 63 insns short of the target (57.31%).
+ *       gcc cross-jumps only the shared-word tail the two copies end in.
+ * @note The counter must be the multiply result decremented IN PLACE
+ *       (@c count @c = @c rows @c * @c cols, then @c while @c (--count @c !=
+ *       @c -1)). Spelled as @c rows @c * @c cols @c - @c 1 with the decrement
+ *       at the loop bottom, combine folds the entry guard's @c (n-1) @c ==
+ *       @c -1 into @c n @c == @c 0 and the preheader loses 2 insns (89.50%).
+ * @note @c dst must be read at the TOP of the arm, before the stride
+ *       computation; after it, the load will not schedule up next to the
+ *       @c code_word read and it costs 6 rows.
+ * @note @c word must be cleared once before the switch. Clearing it at the head
+ *       of each arm instead costs 22 rows.
+ * @note The empty @c case @c 1 is required: without it gcc builds a different
+ *       decision tree and the dispatch costs 13 rows.
+ * @note Measured non-factors, all still 100%: switching on a @c s32 @c kind
+ *       local instead of the @c u8 field directly, @c stride @c = @c 8 instead
+ *       of @c stride @c -= @c 4 for the shared rgb/code word, nesting the
+ *       present test instead of joining it with @c &&, and @c bit as @c s32.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A428(FieldPart* part)
+{
+    FieldTileGrid* grid;
+    FieldTileDesc* tile;
+    FieldTintColor* pal;
+    FieldTintColor* entry;
+    u8* dst;
+    u32* mask;
+    u32 word;
+    u32 bit;
+    s32 stride;
+    s32 count;
+
+    word = 0;
+    grid = (FieldTileGrid*)part->def;
+    tile = grid->tiles;
+    pal = (FieldTintColor*)0x1F800000;
+    switch (part->kind)
+    {
+    case 0:
+        dst = part->records;
+        stride = 12;
+        if (part->code_word != 0)
+        {
+            stride -= 4;
+        }
+        if (part->tpage_word != 0)
+        {
+            stride -= 4;
+        }
+        mask = (u32*)part->bits;
+        count = grid->u.b.rows * grid->u.b.cols;
+        bit = 0;
+        while (--count != -1)
+        {
+            if (bit == 0)
+            {
+                word = *mask++;
+                bit = 1;
+            }
+            if (part->code_word != 0)
+            {
+                if ((word & bit) && (tile->clut_slot & 0x80))
+                {
+                    entry = &pal[tile->color_index];
+                    ((FieldTintColor*)&part->code_word)->rg = entry->rg;
+                    ((FieldTintColor*)&part->code_word)->b = entry->b;
+                    return;
+                }
+            }
+            else if (word & bit)
+            {
+                entry = &pal[tile->color_index];
+                ((FieldCellTint*)dst)->rg = entry->rg;
+                ((FieldCellTint*)dst)->b = entry->b;
+                dst += stride;
+            }
+            bit <<= 1;
+            tile++;
+        }
+        break;
+    case 1:
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        dst = part->records;
+        stride = 12;
+        if (part->code_word != 0)
+        {
+            stride -= 4;
+        }
+        if (part->tpage_word != 0)
+        {
+            stride -= 4;
+        }
+        mask = (u32*)part->bits;
+        count = grid->u.b.rows * grid->u.b.cols;
+        bit = 0;
+        while (--count != -1)
+        {
+            if (bit == 0)
+            {
+                word = *mask++;
+                bit = 1;
+            }
+            if (part->code_word != 0)
+            {
+                if ((word & bit) && (tile->clut_slot & 0x80))
+                {
+                    entry = &pal[tile->color_index];
+                    ((FieldTintColor*)&part->code_word)->rg = entry->rg;
+                    ((FieldTintColor*)&part->code_word)->b = entry->b;
+                    return;
+                }
+            }
+            else if (word & bit)
+            {
+                entry = &pal[tile->color_index];
+                ((FieldCellTint*)dst)->rg = entry->rg;
+                ((FieldCellTint*)dst)->b = entry->b;
+                dst += stride;
+            }
+            bit <<= 1;
+            tile++;
+        }
+        break;
+    }
+}
+
+/**
+ * @brief Restart one sequence by index, or clear every armed sequence's state.
+ *
+ * With @p op zero the scene's sequence list is walked to the entry at
+ * @p index and that one entry is handed to func_8005A744, which restarts it.
+ * Otherwise every sequence whose low two state bits are set has those bits
+ * cleared (but only when its own stored index matches @p index) and is then
+ * pushed through field_control_animation as a stop.
+ *
+ * @param index Sequence index; also the value each entry's stored index at
+ *              byte 1 of FieldSeq::flags is matched against.
+ * @param op Zero selects the single-sequence restart, anything else the
+ *           clear-all walk.
+ *
+ * @note This is the same body field_control_animation runs inline for
+ *       @c list_kind @c 3; the two are kept in sync deliberately.
+ * @note The list head must be read ONCE before the @p op test. Reading it
+ *       separately in each arm costs 8 rows and 6 insns.
+ * @note The walk to @p index must count DOWN. Written as
+ *       @c for @c (i @c = @c 0; @c i @c < @c index; @c i++) it costs 5 rows.
+ * @note Measured non-factors, all still 100%: hoisting @c i @c = @c index @c -
+ *       @c 1 above the @c index @c != @c 0 guard or leaving it inside,
+ *       spelling the countdown as @c while @c (--i @c != @c -1), @c (u8)index
+ *       instead of @c index @c & @c 0xFF, an @c if/goto instead of the early
+ *       @c return, a union byte member instead of the @c ((u8*)&flags)[1]
+ *       cast, dropping the @c cmd temp, and a guarded @c do/while for the
+ *       outer walk.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A67C(s32 index, s32 op)
+{
+    FieldAnimDef* cmd;
+    FieldSeq* seq;
+    s32 i;
+
+    seq = g_field_scene.scene->seqs;
+    if (op == 0)
+    {
+        i = index - 1;
+        if (index != 0)
+        {
+            do
+            {
+                seq = seq->next;
+                i--;
+            } while (i != -1);
+        }
+        func_8005A744(seq, index & 0xFF);
+        return;
+    }
+    while (seq != NULL)
+    {
+        if ((seq->flags & 3) != 0)
+        {
+            if (((u8*)&seq->flags)[1] == index)
+            {
+                seq->flags &= ~3;
+            }
+            cmd = seq->def;
+            field_control_animation(cmd->unk0, cmd->unk2, -1, 1);
+        }
+        seq = seq->next;
+    }
+}
