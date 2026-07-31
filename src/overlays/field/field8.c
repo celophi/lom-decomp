@@ -577,7 +577,7 @@ typedef struct
     u8 unk0; /* 0x00 */
     u8 unk1; /* 0x01 */
     u8 unk2; /* 0x02 */
-    u8 _pad0;
+    u8 unk3; /* 0x03 */
     u8 flags; /* 0x04 low three bits select the handler */
     u8 unk5;  /* 0x05 */
     u8 unk6;  /* 0x06 */
@@ -4811,9 +4811,7 @@ u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_
  * @brief Push a VRAM upload request onto the scene's pending-upload list.
  *
  * @param req Request to link in; its next pointer takes the old list head.
- *
- * @note NOT MATCHED - 98.75%.
- * @see decomp.me (98.75%) TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/kYAFh
  */
 void field_queue_vram_upload(FieldImageReq* req)
 {
@@ -4822,4 +4820,307 @@ void field_queue_vram_upload(FieldImageReq* req)
     scene = g_field_scene.scene;
     req->next = (FieldImageReq*)scene->uploads;
     scene->uploads = req;
+}
+
+/**
+ * @brief World position of a field object or part, in whole pixels.
+ *
+ * The stored offsets on FieldObj / FieldPart are the same three values shifted
+ * left by 8, so a coordinate here is worth 256 of theirs.
+ */
+typedef struct
+{
+    /** 0x00 horizontal position. */
+    s16 x;
+    /** 0x02 vertical position. */
+    s16 y;
+    /** 0x04 depth. */
+    s16 z;
+} FieldPos;
+
+FieldObj* func_8005AB4C(s32);
+FieldPart* func_8005AB80(s32, s32);
+
+/**
+ * @brief Move a scene object - or a single one of its parts - to a new
+ *        position, and rebias the affected parts' CLUT ids by the depth change.
+ *
+ * The target is resolved by walking the scene's object list: @p part_index of
+ * -1 selects the whole object (func_8005AB4C), any other value selects that
+ * part of it (func_8005AB80). The object/part offsets are stored 8.8 fixed
+ * point, so each component of @p pos is shifted left by 8 on the way in.
+ *
+ * When @p rebias_cluts is set the routine first records the depth the target is
+ * moving by, @c old_z/256 - @c pos->z, then - after the position has been
+ * written - adds it to every corner CLUT id of the affected parts, clamped to
+ * 0..0x7FF. For the whole-object case that walk covers the resolved object and
+ * every object after it in the list; for the single-part case it touches only
+ * that part.
+ *
+ * Objects whose FieldObjFlags::unk1 (parts whose FieldPart::node_count) is
+ * non-zero also get the per-axis movement pushed through func_8005AA68 /
+ * func_8005A984 before the new position lands, one call per axis.
+ *
+ * @param obj_index     Index of the object in the scene's object list.
+ * @param part_index    Index of the part within that object, or -1 for the
+ *                      object itself.
+ * @param pos           New position, in whole pixels.
+ * @param rebias_cluts  Zero to only reposition; non-zero to also push the
+ *                      per-axis movement through the notifier and rebias the
+ *                      parts' CLUT ids by the depth change.
+ *
+ * @note NOT MATCHED - 97.47%. Two residues remain, both in the CLUT walk:
+ *       - the delay slot of the `part == NULL` guard is filled here with the
+ *         hoisted `(s16)delta` sign-extension, but is a `nop` in the target;
+ *       - the fourth (clut_tr) clamp keeps its result in @c v1 and stores from
+ *         it, where the target moves it into @c v0 through two extra copies.
+ *       Everything else, including all four clamp blocks and both call
+ *       sequences, is exact. See working/func_800592B4/status.md.
+ * @note TODO: this function is IN the build but does not byte-match, so the
+ *       field8 segment will not either until the two residues above are
+ *       closed.
+ * @note @c delta must be @c s32 with an explicit @c (s16) cast at each of the
+ *       four uses. Declaring it @c s16 lets gcc drop the truncation of the
+ *       @c /256 result and weakens the @c pos->z load to @c lhu (-4 exact
+ *       rows).
+ * @note @c zpos must be read into a local before the subtraction; folding it
+ *       back into the expression evaluates the divide first and schedules the
+ *       @c lh out of the load-delay slot (-2 exact rows).
+ * @see decomp.me (97.47%) TODO
+ */
+void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32 rebias_cluts)
+{
+    FieldObj* obj;
+    FieldPart* part;
+    s32 delta;
+    s32 sum;
+    s32 value;
+    s32 zpos;
+
+    part = NULL;
+    delta = 0;
+    if (part_index == -1)
+    {
+        obj = func_8005AB4C(obj_index);
+        if (rebias_cluts != 0)
+        {
+            zpos = pos->z;
+            delta = (s16)(obj->z / 256) - zpos;
+        }
+        if (obj->flags.b.unk1 != 0)
+        {
+            func_8005AA68(obj, (pos->x << 8) - obj->x, 0);
+            func_8005AA68(obj, (pos->y << 8) - obj->y, 1);
+            func_8005AA68(obj, (pos->z << 8) - obj->z, 2);
+        }
+        obj->x = pos->x << 8;
+        obj->y = pos->y << 8;
+        obj->z = pos->z << 8;
+    }
+    else
+    {
+        part = func_8005AB80(obj_index, part_index);
+        if (rebias_cluts != 0)
+        {
+            zpos = pos->z;
+            delta = (s16)(part->z / 256) - zpos;
+        }
+        if (part->node_count != 0)
+        {
+            func_8005A984(part, (pos->x << 8) - part->x, 0);
+            func_8005A984(part, (pos->y << 8) - part->y, 1);
+            func_8005A984(part, (pos->z << 8) - part->z, 2);
+        }
+        part->x = pos->x << 8;
+        part->y = pos->y << 8;
+        part->z = pos->z << 8;
+        obj = NULL;
+    }
+    if (rebias_cluts != 0)
+    {
+        do
+        {
+            if (obj != NULL)
+            {
+                part = obj->parts;
+            }
+            while (part != NULL)
+            {
+                sum = part->clut_bl + (s16)delta;
+                if (sum > 0)
+                {
+                    value = sum;
+                    if (value >= 0x800)
+                    {
+                        value = 0x7FF;
+                    }
+                }
+                else
+                {
+                    value = 0;
+                }
+                part->clut_bl = value;
+
+                sum = part->clut_tl + (s16)delta;
+                if (sum > 0)
+                {
+                    value = sum;
+                    if (value >= 0x800)
+                    {
+                        value = 0x7FF;
+                    }
+                }
+                else
+                {
+                    value = 0;
+                }
+                part->clut_tl = value;
+
+                sum = part->clut_br + (s16)delta;
+                if (sum > 0)
+                {
+                    value = sum;
+                    if (value >= 0x800)
+                    {
+                        value = 0x7FF;
+                    }
+                }
+                else
+                {
+                    value = 0;
+                }
+                part->clut_br = value;
+
+                sum = part->clut_tr + (s16)delta;
+                if (sum > 0)
+                {
+                    value = sum;
+                    if (value >= 0x800)
+                    {
+                        value = 0x7FF;
+                    }
+                }
+                else
+                {
+                    value = 0;
+                }
+                part->clut_tr = value;
+
+                if (obj == NULL)
+                {
+                    return;
+                }
+                part = part->next;
+            }
+            obj = obj->next;
+        } while (obj != NULL);
+    }
+}
+
+/**
+ * @brief Arm the animation node a sequence command refers to.
+ *
+ * The command record is the sequence's own FieldAnimDef, read here with its
+ * sequence-command meanings: FieldAnimDef::unk0 picks which of the scene's
+ * three animation lists to walk, FieldAnimDef::unk2 is the index within it,
+ * FieldAnimDef::unk3 is the repeat count and FieldAnimDef::flags doubles as the
+ * stop keyframe (0xFF meaning "no stop").
+ *
+ * Once the node is located its own definition drives a reset: the frame and
+ * keyframe indices are seeded from FieldAnimDef::unk1, the timer from the
+ * keyframe's span duration (or 1 when the definition does not use spans), and
+ * the tween handlers get an initial pass. The last write sets bit 0x40, which
+ * is what field_update_scene_animations tests before ticking the node, so the
+ * animation only starts running here.
+ *
+ * @param seq Sequence node whose definition carries the command.
+ *
+ * @note The handler kind is the word at FieldAnimDef::flags masked with
+ *       0xFF000007 - the low three bits of byte 0x04 plus the sub-kind byte at
+ *       0x07 - so it is read as @c *(s32 *) &def->flags, the same spelling
+ *       field_apply_animation_tween uses. Kind 4 skips the whole reset; kinds 5
+ *       and 6 additionally get a tween pass.
+ * @note FieldAnimDef::unk1 is read into @p frame before either store, because
+ *       the stores are through FieldAnim and gcc cannot rule out an alias.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void field_start_animation(FieldSeq* seq)
+{
+    FieldAnimDef* cmd;
+    FieldAnimDef* def;
+    FieldAnim* anim;
+    FieldScene* scene;
+    FieldTweenSpan* span;
+    s32 i;
+    u8 frame;
+    volatile s8 base;
+
+    cmd = seq->def;
+    scene = g_field_scene.scene;
+    switch (cmd->unk0)
+    {
+    case 0:
+        anim = scene->anims;
+        break;
+    case 1:
+        anim = scene->strips;
+        break;
+    default:
+        anim = scene->sprites;
+        break;
+    }
+    i = cmd->unk2;
+    i--;
+    while (i != -1)
+    {
+        anim = anim->next;
+        i--;
+    }
+    def = anim->def;
+    if ((*(s32*)&def->flags & 0xFF000007) != 4)
+    {
+        anim->flags.word &= ~4;
+        if (*(s32*)&def->flags & 0x40)
+        {
+            frame = def->unk1;
+            anim->flags.b.keyframe = 0;
+            anim->flags.b.state = frame;
+        }
+        else
+        {
+            frame = def->unk1;
+            anim->flags.b.state = frame;
+            anim->flags.b.keyframe = frame;
+        }
+        span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
+        if (*(s32*)&def->flags & 0x20)
+        {
+            anim->timer = span->duration;
+        }
+        else
+        {
+            anim->timer = 1;
+        }
+        if (((*(s32*)&def->flags & 0xFF000007) == 3) ||
+            ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
+        {
+            anim->flags.word |= 0x20;
+        }
+        if ((u32)((*(s32*)&def->flags & 0xFF000007) - 5) < 2)
+        {
+            field_apply_animation_tween(def, anim, 0);
+        }
+    }
+    anim->repeat_count = cmd->unk3;
+    if (cmd->flags == 0xFF)
+    {
+        anim->flags.word &= ~2;
+    }
+    else
+    {
+        anim->flags.b.stop_keyframe = cmd->flags;
+        anim->flags.word |= 2;
+    }
+    anim->flags.word = (anim->flags.word & ~1) | ((*(u32*)&def->flags >> 3) & 1) | 0x40;
 }
