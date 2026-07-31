@@ -3082,7 +3082,7 @@ void akao_seq_op_set_adsr_attack(SomeStruct* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ID5s7
  */
-void akao_seq_op_set_adsr_decay(s_8002C79C* arg0)
+void akao_seq_op_set_adsr_decay(s_8002C79C* arg0, s_8002C79C* arg1)
 {
     u8* ptr;
     u32 byte_val;
@@ -3103,7 +3103,7 @@ void akao_seq_op_set_adsr_decay(s_8002C79C* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/ZOmaE
  */
-void akao_seq_op_set_adsr_sustain_level(s_8002C79C* arg0)
+void akao_seq_op_set_adsr_sustain_level(s_8002C79C* arg0, s_8002C79C* arg1)
 {
     u8* ptr;
     u32 byte_val;
@@ -3310,8 +3310,8 @@ void func_8002C9A4(void)
 
 typedef struct
 {
-    u32 unk0;
-    u32 unk4[4];
+    u8* unk0;
+    u8* unk4[4];
     u8 pad_14[0x72 - 0x14];
     u16 unk72;
     u16 unk74[4];
@@ -3330,18 +3330,6 @@ void akao_seq_op_loop_start(Struct_8002C9B4* arg0)
     arg0->unk74[arg0->unkD8] = 0;
     arg0->unk7C[arg0->unkD8] = arg0->unk72;
 }
-
-typedef struct
-{
-    u8* unk0;
-    u8* unk4[4];
-    u8 pad_14[0x72 - 0x14];
-    u16 unk72;
-    u16 unk74[4];
-    u16 unk7C[4];
-    u8 pad_84[0xD8 - 0x84];
-    u16 unkD8;
-} Struct_8002C9B4;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/xSadm
@@ -3492,4 +3480,267 @@ void akao_seq_op_adjust_note_duration(Struct_8002CBD4* arg0)
     }
 
     arg0->unkDE = var_v1;
+}
+
+typedef struct
+{
+    u8 pad1[0x34];
+    s32 unk34;
+    u8 pad2[0x112 - 0x38];
+    s16 unk112;
+} s_8002CC44;
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/CB7Yy
+ */
+void func_8002CC44(s_8002CC44* arg0)
+{
+    if (g_akao_seq_channel0->unk34 != 0)
+    {
+        arg0->unk34 = (s32)((arg0->unk34 & 0xE6FFEFF7) | 8);
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FnMZ3
+ */
+void func_8002CC7C(s_8002CC44* arg0)
+{
+    arg0->unk112 = 0;
+    arg0->unk34 = (s32)(arg0->unk34 & ~8);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/wuYt5
+ */
+void func_8002CC94(u8** arg0)
+{
+    AkaoChannelState* ch = g_akao_seq_channel0;
+
+    ch->unk68 = *(*arg0)++;
+    ch->unk64 = *(*arg0)++;
+    ch->unk6A = 0;
+    ch->unk66 = 0;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FcDgE
+ */
+void func_8002CCCC(u8** arg0)
+{
+    AkaoChannelState* channel = g_akao_seq_channel0;
+
+    channel->unk6C = *(*arg0)++;
+    channel->unk6C |= (*(*arg0)++ << 8);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/XqM1L
+ */
+void func_8002CD08(s_8002C79C* arg0, s_8002C79C* arg1)
+{
+    akao_seq_op_set_adsr_decay(arg0, arg1);
+    akao_seq_op_set_adsr_sustain_level(arg0, arg1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/cAsju
+ */
+void func_8002CD44(AkaoChannelState* arg0, s32 arg1)
+{
+    u8* temp_v0;
+    s32 temp_v1;
+    s16 var_v0;
+
+    temp_v0 = *(u8**)arg0;
+    temp_v1 = *temp_v0;
+
+    *(u8**)arg0 = temp_v0 + 1;
+
+    if (temp_v1 != 0)
+    {
+        var_v0 = temp_v1 + 1;
+    }
+    else
+    {
+        var_v0 = 0x101;
+    }
+
+    *(s16*)((u8*)arg0 + 0xD4) = var_v0;
+    akao_seq_op_enable_reverb(arg0, arg1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Basyw
+ */
+void func_8002CD88(AkaoChannelState* arg0)
+{
+    u8* temp_v0;
+    s32 temp_v1;
+
+    temp_v0 = *(u8**)arg0;
+    temp_v1 = *temp_v0;
+
+    *(u8**)arg0 = temp_v0 + 1;
+
+    if (temp_v1 != 0)
+    {
+        *(s16*)((u8*)arg0 + 0xD4) = temp_v1 + 1;
+    }
+    else
+    {
+        *(s16*)((u8*)arg0 + 0xD4) = 0x101;
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/j1qFh
+ */
+void func_8002CDB8(void* arg0, s32 arg1)
+{
+    u8* temp_v0;
+    s32 temp_v1;
+    s16 var_v0;
+
+    temp_v0 = *(u8**)arg0;
+    temp_v1 = *temp_v0;
+
+    *(u8**)arg0 = temp_v0 + 1;
+
+    if (temp_v1 != 0)
+    {
+        var_v0 = temp_v1 + 1;
+    }
+    else
+    {
+        var_v0 = 0x101;
+    }
+
+    *(s16*)((u8*)arg0 + 0xD6) = var_v0;
+    akao_seq_op_enable_pitch_modulation(arg0, arg1);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/3922q
+ */
+void func_8002CDFC(void* arg0)
+{
+    u8* temp_v0;
+    s32 temp_v1;
+
+    temp_v0 = *(u8**)arg0;
+    temp_v1 = *temp_v0;
+
+    *(u8**)arg0 = temp_v0 + 1;
+
+    if (temp_v1 != 0)
+    {
+        *(s16*)((u8*)arg0 + 0xD6) = temp_v1 + 1;
+    }
+    else
+    {
+        *(s16*)((u8*)arg0 + 0xD6) = 0x101;
+    }
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/LEJvC
+ */
+void func_8002CE2C(AkaoChannelState* arg0, s32 arg1)
+{
+    arg0->unk34 = (u8*)((u32)arg0->unk34 & ~0x37);
+
+    akao_seq_op_disable_reverb((ae_struct*)arg0, arg1);
+    akao_seq_op_disable_pitch_modulation((ag_struct*)arg0, arg1);
+    akao_seq_op_disable_noise(arg0, arg1);
+
+    arg0->unk9E = arg0->unk9E & 0xFFFA;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/8l07k
+ */
+void func_8002CE94(AkaoChannelState* arg0)
+{
+    arg0->unk34 = (u8*)((u32)arg0->unk34 | 0x10);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/YSIzI
+ */
+void func_8002CEA8(AkaoChannelState* arg0)
+{
+    arg0->unk34 = (u8*)((u32)arg0->unk34 & ~0x10);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/iCXHA
+ */
+void func_8002CEBC(AkaoChannelState* arg0)
+{
+    arg0->unk34 = (u8*)((u32)arg0->unk34 | 0x20);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/p5dcS
+ */
+void func_8002CED0(AkaoChannelState* arg0)
+{
+    arg0->unk34 = (u8*)((u32)arg0->unk34 & ~0x20);
+}
+
+typedef struct
+{
+    u32 unk0;
+    u32 unk4;
+    u32 unk8;
+    s32 unkC;
+} Struct_D_8004D3A0;
+
+extern Struct_D_8004D3A0 D_8004D3A0;
+void func_80026C14(Struct_D_8004D3A0* arg0, void* arg1, void* arg2, s32 arg3);
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/nwIop
+ */
+void func_8002CEE4(AkaoChannelState* arg0)
+{
+    u8* temp_a0;
+    s32 temp_v0;
+    void* var_a1;
+    void* var_a2;
+
+    temp_a0 = *(u8**)arg0;
+
+    temp_v0 = (temp_a0[1] << 8) | temp_a0[0];
+
+    if (temp_v0 != 0)
+    {
+        var_a1 = temp_a0 + temp_v0 + 2;
+    }
+    else
+    {
+        var_a1 = 0;
+    }
+
+    temp_a0 += 2;
+
+    temp_v0 = (temp_a0[1] << 8) | temp_a0[0];
+    if (temp_v0 != 0)
+    {
+        var_a2 = temp_a0 + temp_v0 + 2;
+    }
+    else
+    {
+        var_a2 = 0;
+    }
+
+    D_8004D3A0.unk0 = 0;
+    D_8004D3A0.unk4 = 0;
+    D_8004D3A0.unk8 = *(u16*)((u8*)arg0 + 0x90) >> 8;
+    D_8004D3A0.unkC = (s32)arg0->unk48 >> 23;
+
+    func_80026C14(&D_8004D3A0, var_a1, var_a2, 0);
+
+    *(u8**)arg0 = *(u8**)arg0 + 4;
 }
