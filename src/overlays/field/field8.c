@@ -5515,3 +5515,89 @@ void field_update_scene_fade(void)
         break;
     }
 }
+
+/**
+ * @brief Reactivate the scene and start the fade back in.
+ *
+ * The exact counterpart to the teardown half of field_update_scene_fade: that
+ * one SAVED every list's active bits one position up and cleared them, this one
+ * shifts them back down. Objects restore bit 1 into bit 0, animations bit 7 into
+ * bit 6, and sequences bits 2-3 into bits 0-1.
+ *
+ * The first object is handled separately, as it is there: its done bit is
+ * cleared outright and its first two parts are hidden. The fade mode then goes
+ * to 3, which is what makes field_update_scene_fade step the level back up to
+ * 0x100 on the following frames.
+ *
+ * @note @c list exists to make @c scene->objects address-taken. Without it gcc
+ *       can prove the @c D_801ED02C store does not alias the load and hoists
+ *       the load above it, which the target does not do (2 rows). The inline
+ *       spelling @c *(&scene->objects) does NOT work - gcc folds the @c *&
+ *       pair before aliasing is computed, so the pointer has to be a real named
+ *       local. See idiom [SCHED-10].
+ * @note All three restore shifts need the @c (u32) cast, otherwise the shift
+ *       comes out as @c sra rather than @c srl (1 row each). Unlike the
+ *       teardown, the object loop here reads the WHOLE WORD - taking the bit
+ *       from the byte view instead costs 3 rows.
+ * @note @c part must be re-assigned as its own statement rather than chained as
+ *       @c part->next->visible - the chained form costs 8 rows.
+ * @note Measured non-factor, still 100%: writing @c D_801ED02C before rather
+ *       than after the @c scene read.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void field_begin_scene_fade_in(void)
+{
+    FieldScene* scene;
+    FieldObj* obj;
+    FieldObj** list;
+    FieldPart* part;
+    FieldAnim* anim;
+    FieldSeq* seq;
+
+    scene = g_field_scene.scene;
+    D_801ED02C = 3;
+    list = &scene->objects;
+    obj = *list;
+    obj->flags.word &= ~1;
+    part = obj->parts;
+    part->visible = 0;
+    part = part->next;
+    part->visible = 0;
+    obj = obj->next;
+    while (obj != NULL)
+    {
+        obj->flags.word = (obj->flags.word & ~1) | (((u32)obj->flags.word >> 1) & 1);
+        obj = obj->next;
+    }
+    anim = scene->anims;
+    while (anim != NULL)
+    {
+        anim->flags.word = (anim->flags.word & ~0x40) | (((u32)anim->flags.word >> 1) & 0x40);
+        anim = anim->next;
+    }
+    anim = scene->strips;
+    while (anim != NULL)
+    {
+        anim->flags.word = (anim->flags.word & ~0x40) | (((u32)anim->flags.word >> 1) & 0x40);
+        anim = anim->next;
+    }
+    anim = scene->sprites;
+    while (anim != NULL)
+    {
+        anim->flags.word = (anim->flags.word & ~0x40) | (((u32)anim->flags.word >> 1) & 0x40);
+        anim = anim->next;
+    }
+    anim = scene->effects;
+    while (anim != NULL)
+    {
+        anim->flags.word = (anim->flags.word & ~0x40) | (((u32)anim->flags.word >> 1) & 0x40);
+        anim = anim->next;
+    }
+    seq = scene->seqs;
+    while (seq != NULL)
+    {
+        seq->flags = (seq->flags & ~3) | (((u32)seq->flags >> 2) & 3);
+        seq = seq->next;
+    }
+}
