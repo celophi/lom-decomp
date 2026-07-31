@@ -577,7 +577,7 @@ typedef struct
     u8 unk0; /* 0x00 */
     u8 unk1; /* 0x01 */
     u8 unk2; /* 0x02 */
-    u8 _pad0;
+    u8 unk3; /* 0x03 */
     u8 flags; /* 0x04 low three bits select the handler */
     u8 unk5;  /* 0x05 */
     u8 unk6;  /* 0x06 */
@@ -854,16 +854,29 @@ typedef struct
 
 /**
  * @brief Field memory-allocator state block at 0x801ED000.
+ *
+ * The scene-transition fade shares the block: func_8005B1EC arms it by setting
+ * @c fade_mode to 1 and @c fade_level to 0x100, and field_update_scene_fade
+ * ticks it from there.
  */
 typedef struct
 {
     /** 0x00 top of the allocated region. */
     u32 top;
-    u8 _pad[0xC - 4];
+    u8 _pad0[0xC - 4];
     /** 0x0C base of the allocated region. */
     u32 base;
     /** 0x10 end of the first half of the region. */
     u32 midpoint;
+    u8 _pad1[0x2C - 0x14];
+    /**
+     * 0x2C fade state: 1 fading out, 2 held out, 3 fading in, 0 idle. Also
+     * reachable as the standalone symbol D_801ED02C, and the two spellings are
+     * not interchangeable - see field_update_scene_fade.
+     */
+    s32 fade_mode;
+    /** 0x30 fade level, 0x100 is fully lit; stepped by 8 per frame. */
+    s32 fade_level;
 } FieldMemState;
 
 /**
@@ -4811,9 +4824,7 @@ u8* field_find_count_table_span(u8* table, s32 linear_index, volatile s8* range_
  * @brief Push a VRAM upload request onto the scene's pending-upload list.
  *
  * @param req Request to link in; its next pointer takes the old list head.
- *
- * @note NOT MATCHED - 98.75%.
- * @see decomp.me (98.75%) TODO
+ * @see decomp.me (100%) https://decomp.me/scratch/kYAFh
  */
 void field_queue_vram_upload(FieldImageReq* req)
 {
@@ -4822,4 +4833,771 @@ void field_queue_vram_upload(FieldImageReq* req)
     scene = g_field_scene.scene;
     req->next = (FieldImageReq*)scene->uploads;
     scene->uploads = req;
+}
+
+/**
+ * @brief World position of a field object or part, in whole pixels.
+ *
+ * The stored offsets on FieldObj / FieldPart are the same three values shifted
+ * left by 8, so a coordinate here is worth 256 of theirs.
+ */
+typedef struct
+{
+    /** 0x00 horizontal position. */
+    s16 x;
+    /** 0x02 vertical position. */
+    s16 y;
+    /** 0x04 depth. */
+    s16 z;
+} FieldPos;
+
+FieldObj* func_8005AB4C(s32);
+FieldPart* func_8005AB80(s32, s32);
+
+/**
+ * @brief Move a scene object - or a single one of its parts - to a new
+ *        position, and rebias the affected parts' CLUT ids by the depth change.
+ *
+ * The target is resolved by walking the scene's object list: @p part_index of
+ * -1 selects the whole object (func_8005AB4C), any other value selects that
+ * part of it (func_8005AB80). The object/part offsets are stored 8.8 fixed
+ * point, so each component of @p pos is shifted left by 8 on the way in.
+ *
+ * When @p rebias_cluts is set the routine first records the depth the target is
+ * moving by, @c old_z/256 - @c pos->z, then - after the position has been
+ * written - adds it to every corner CLUT id of the affected parts, clamped to
+ * 0..0x7FF. For the whole-object case that walk covers the resolved object and
+ * every object after it in the list; for the single-part case it touches only
+ * that part.
+ *
+ * Objects whose FieldObjFlags::unk1 (parts whose FieldPart::node_count) is
+ * non-zero also get the per-axis movement pushed through func_8005AA68 /
+ * func_8005A984 before the new position lands, one call per axis.
+ *
+ * @param obj_index     Index of the object in the scene's object list.
+ * @param part_index    Index of the part within that object, or -1 for the
+ *                      object itself.
+ * @param pos           New position, in whole pixels.
+ * @param rebias_cluts  Zero to only reposition; non-zero to also push the
+ *                      per-axis movement through the notifier and rebias the
+ *                      parts' CLUT ids by the depth change.
+ *
+ * @note NOT MATCHED - 97.47%. Two residues remain, both in the CLUT walk:
+ *       - the delay slot of the `part == NULL` guard is filled here with the
+ *         hoisted `(s16)delta` sign-extension, but is a `nop` in the target;
+ *       - the fourth (clut_tr) clamp keeps its result in @c v1 and stores from
+ *         it, where the target moves it into @c v0 through two extra copies.
+ *       Everything else, including all four clamp blocks and both call
+ *       sequences, is exact. See working/func_800592B4/status.md.
+ * @note TODO: this function is IN the build but does not byte-match, so the
+ *       field8 segment will not either until the two residues above are
+ *       closed.
+ * @note @c delta must be @c s32 with an explicit @c (s16) cast at each of the
+ *       four uses. Declaring it @c s16 lets gcc drop the truncation of the
+ *       @c /256 result and weakens the @c pos->z load to @c lhu (-4 exact
+ *       rows).
+ * @note @c zpos must be read into a local before the subtraction; folding it
+ *       back into the expression evaluates the divide first and schedules the
+ *       @c lh out of the load-delay slot (-2 exact rows).
+ * @see decomp.me (97.47%) TODO
+ */
+void field_set_object_position(s32 obj_index, s32 part_index, FieldPos* pos, s32 rebias_cluts)
+{
+    FieldObj* obj;
+    FieldPart* part;
+    s32 delta;
+    s32 sum;
+    s32 value;
+    s32 zpos;
+
+    part = NULL;
+    delta = 0;
+    if (part_index == -1)
+    {
+        obj = func_8005AB4C(obj_index);
+        if (rebias_cluts != 0)
+        {
+            zpos = pos->z;
+            delta = (s16)(obj->z / 256) - zpos;
+        }
+        if (obj->flags.b.unk1 != 0)
+        {
+            func_8005AA68(obj, (pos->x << 8) - obj->x, 0);
+            func_8005AA68(obj, (pos->y << 8) - obj->y, 1);
+            func_8005AA68(obj, (pos->z << 8) - obj->z, 2);
+        }
+        obj->x = pos->x << 8;
+        obj->y = pos->y << 8;
+        obj->z = pos->z << 8;
+    }
+    else
+    {
+        part = func_8005AB80(obj_index, part_index);
+        if (rebias_cluts != 0)
+        {
+            zpos = pos->z;
+            delta = (s16)(part->z / 256) - zpos;
+        }
+        if (part->node_count != 0)
+        {
+            func_8005A984(part, (pos->x << 8) - part->x, 0);
+            func_8005A984(part, (pos->y << 8) - part->y, 1);
+            func_8005A984(part, (pos->z << 8) - part->z, 2);
+        }
+        part->x = pos->x << 8;
+        part->y = pos->y << 8;
+        part->z = pos->z << 8;
+        obj = NULL;
+    }
+    if (rebias_cluts != 0)
+    {
+        do
+        {
+            if (obj != NULL)
+            {
+                part = obj->parts;
+            }
+            while (part != NULL)
+            {
+                sum = part->clut_bl + (s16)delta;
+                if (sum > 0)
+                {
+                    value = sum;
+                    if (value >= 0x800)
+                    {
+                        value = 0x7FF;
+                    }
+                }
+                else
+                {
+                    value = 0;
+                }
+                part->clut_bl = value;
+
+                sum = part->clut_tl + (s16)delta;
+                if (sum > 0)
+                {
+                    value = sum;
+                    if (value >= 0x800)
+                    {
+                        value = 0x7FF;
+                    }
+                }
+                else
+                {
+                    value = 0;
+                }
+                part->clut_tl = value;
+
+                sum = part->clut_br + (s16)delta;
+                if (sum > 0)
+                {
+                    value = sum;
+                    if (value >= 0x800)
+                    {
+                        value = 0x7FF;
+                    }
+                }
+                else
+                {
+                    value = 0;
+                }
+                part->clut_br = value;
+
+                sum = part->clut_tr + (s16)delta;
+                if (sum > 0)
+                {
+                    value = sum;
+                    if (value >= 0x800)
+                    {
+                        value = 0x7FF;
+                    }
+                }
+                else
+                {
+                    value = 0;
+                }
+                part->clut_tr = value;
+
+                if (obj == NULL)
+                {
+                    return;
+                }
+                part = part->next;
+            }
+            obj = obj->next;
+        } while (obj != NULL);
+    }
+}
+
+/**
+ * @brief Arm the animation node a sequence command refers to.
+ *
+ * The command record is the sequence's own FieldAnimDef, read here with its
+ * sequence-command meanings: FieldAnimDef::unk0 picks which of the scene's
+ * three animation lists to walk, FieldAnimDef::unk2 is the index within it,
+ * FieldAnimDef::unk3 is the repeat count and FieldAnimDef::flags doubles as the
+ * stop keyframe (0xFF meaning "no stop").
+ *
+ * Once the node is located its own definition drives a reset: the frame and
+ * keyframe indices are seeded from FieldAnimDef::unk1, the timer from the
+ * keyframe's span duration (or 1 when the definition does not use spans), and
+ * the tween handlers get an initial pass. The last write sets bit 0x40, which
+ * is what field_update_scene_animations tests before ticking the node, so the
+ * animation only starts running here.
+ *
+ * @param seq Sequence node whose definition carries the command.
+ *
+ * @note The handler kind is the word at FieldAnimDef::flags masked with
+ *       0xFF000007 - the low three bits of byte 0x04 plus the sub-kind byte at
+ *       0x07 - so it is read as @c *(s32 *) &def->flags, the same spelling
+ *       field_apply_animation_tween uses. Kind 4 skips the whole reset; kinds 5
+ *       and 6 additionally get a tween pass.
+ * @note FieldAnimDef::unk1 is read into @p frame before either store, because
+ *       the stores are through FieldAnim and gcc cannot rule out an alias.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void field_start_animation(FieldSeq* seq)
+{
+    FieldAnimDef* cmd;
+    FieldAnimDef* def;
+    FieldAnim* anim;
+    FieldScene* scene;
+    FieldTweenSpan* span;
+    s32 i;
+    u8 frame;
+    volatile s8 base;
+
+    cmd = seq->def;
+    scene = g_field_scene.scene;
+    switch (cmd->unk0)
+    {
+    case 0:
+        anim = scene->anims;
+        break;
+    case 1:
+        anim = scene->strips;
+        break;
+    default:
+        anim = scene->sprites;
+        break;
+    }
+    i = cmd->unk2;
+    i--;
+    while (i != -1)
+    {
+        anim = anim->next;
+        i--;
+    }
+    def = anim->def;
+    if ((*(s32*)&def->flags & 0xFF000007) != 4)
+    {
+        anim->flags.word &= ~4;
+        if (*(s32*)&def->flags & 0x40)
+        {
+            frame = def->unk1;
+            anim->flags.b.keyframe = 0;
+            anim->flags.b.state = frame;
+        }
+        else
+        {
+            frame = def->unk1;
+            anim->flags.b.state = frame;
+            anim->flags.b.keyframe = frame;
+        }
+        span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
+        if (*(s32*)&def->flags & 0x20)
+        {
+            anim->timer = span->duration;
+        }
+        else
+        {
+            anim->timer = 1;
+        }
+        if (((*(s32*)&def->flags & 0xFF000007) == 3) ||
+            ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
+        {
+            anim->flags.word |= 0x20;
+        }
+        if ((u32)((*(s32*)&def->flags & 0xFF000007) - 5) < 2)
+        {
+            field_apply_animation_tween(def, anim, 0);
+        }
+    }
+    anim->repeat_count = cmd->unk3;
+    if (cmd->flags == 0xFF)
+    {
+        anim->flags.word &= ~2;
+    }
+    else
+    {
+        anim->flags.b.stop_keyframe = cmd->flags;
+        anim->flags.word |= 2;
+    }
+    anim->flags.word = (anim->flags.word & ~1) | ((*(u32*)&def->flags >> 3) & 1) | 0x40;
+}
+
+/**
+ * @brief Apply a control operation to one animation node, or restart a whole
+ *        sequence list.
+ *
+ * @p list_kind picks the scene list to index into: 0 the animation list, 1 the
+ * strip list, 3 the sequence list, anything else the sprite list. For the three
+ * animation lists the node at @p index is located and @p op applied to it:
+ *
+ * - op 0 clears the stop request and marks the node running (bit 0x40). When
+ *   the caller asked for the animation list and the node handler kind is 4, the
+ *   node is only started if it was not already running, and its frame index is
+ *   reset.
+ * - op 1 stops the node. With @p keyframe of -1 the run bit is cleared, and a
+ *   handler-kind-7 node on the animation list first has its sound silenced
+ *   through akao_cmd_21. Any other @p keyframe instead records a stop keyframe.
+ * - op 2 re-seeds the node the way field_start_animation does - frame and
+ *   keyframe from the definition, timer from the keyframe span, an initial
+ *   tween pass - and then falls through into op 0 to start it.
+ * - op 4 takes the stop keyframe from the definition rather than the caller.
+ * - op 3 and anything else seek the node to @p keyframe, setting bit 4 to
+ *   record whether the seek runs backwards.
+ *
+ * @p list_kind 3 is the odd one out: it does not index an animation at all.
+ * With @p op of 1 it walks the whole sequence list, clears the active bits of
+ * every sequence whose byte at flags+1 matches @p index, and recursively
+ * re-applies itself to each sequence definition; with any other @p op it hands
+ * the sequence at @p index to func_8005A744.
+ *
+ * @param list_kind Which scene list to work on (0 anims, 1 strips, 3 seqs,
+ *                  otherwise sprites).
+ * @param index     Index of the node within that list.
+ * @param keyframe  Stop/seek keyframe, or -1 to mean "no keyframe" for op 1.
+ * @param op        Operation selector; see above.
+ *
+ * @note NOT MATCHED - 97.72% (270/292 exact rows). The residue is five
+ *       instructions, all in the list_kind 3 arm, and they have a single
+ *       cause: the target cse value table does not reach that arm, so it
+ *       reloads @c g_field_scene (3 insns) and re-materialises the constant 1
+ *       for the @c op test as @c xori (2 insns). Here cse folds both into the
+ *       entry block values. A @c volatile read forces the reload and is worth
+ *       +9 exact rows, which proves the target wants it, but no natural
+ *       spelling found so far reproduces it. The running analysis, including
+ *       four measured-and-retired probe classes, is in
+ *       working/func_800597B4/status.md.
+ * @note TODO: the .rodata for this jump table is NOT wired. The @c unk1_e
+ *       .rodata subsegment at 0x115 is exactly this table, so it now has two
+ *       producers: the splat-generated bytes and gcc own copy in field8.o.
+ *       Reassigning or dropping that subsegment is the outstanding config
+ *       step, on top of the jump-table alignment problem already described at
+ *       the top of this file.
+ * @note The three per-case definition pointers are deliberately separate
+ *       locals. Sharing one @c def across the op 2/0/4 bodies, the op 1 body
+ *       and the list_kind 3 loop unions their live ranges into a single pseudo
+ *       that has to survive the recursive call, which costs a fourth saved
+ *       register and 39 exact rows.
+ * @note Case 2 falls through into case 0 on purpose - that is what the target
+ *       does, and it is why case 0 re-reads @c anim->def.
+ *
+ * @see decomp.me (97.72%) TODO
+ */
+void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
+{
+    FieldAnim* anim;
+    FieldAnimDef* def;
+    FieldAnimDef* cmd;
+    FieldAnimDef* sfx_def;
+    FieldScene* scene;
+    FieldSeq* seq;
+    FieldSfxKey* key;
+    FieldTweenSpan* span;
+    s32 chan_mask;
+    s32 sfx_id;
+    s32 i;
+    u8 frame;
+    volatile s8 base;
+
+    scene = g_field_scene.scene;
+    switch (list_kind)
+    {
+    case 0:
+        anim = scene->anims;
+        break;
+    case 1:
+        anim = scene->strips;
+        break;
+    case 3:
+        seq = g_field_scene.scene->seqs;
+        if (op != 1)
+        {
+            i = index - 1;
+            if (index != 0)
+            {
+                do
+                {
+                    seq = seq->next;
+                    i--;
+                } while (i != -1);
+            }
+            func_8005A744(seq, index & 0xFF);
+            return;
+        }
+        while (seq != NULL)
+        {
+            if ((seq->flags & 3) != 0)
+            {
+                if (((u8*)&seq->flags)[1] == index)
+                {
+                    seq->flags &= ~3;
+                }
+                cmd = seq->def;
+                field_control_animation(cmd->unk0, cmd->unk2, -1, 1);
+            }
+            seq = seq->next;
+        }
+        return;
+    default:
+        anim = scene->sprites;
+        break;
+    }
+    index--;
+    while (index != -1)
+    {
+        anim = anim->next;
+        index--;
+    }
+    switch (op)
+    {
+    case 2:
+        def = anim->def;
+        if ((*(s32*)&def->flags & 0xFF000007) != 4)
+        {
+            anim->flags.word &= ~4;
+            if (*(s32*)&def->flags & 0x40)
+            {
+                frame = def->unk1;
+                anim->flags.b.keyframe = 0;
+                anim->flags.b.state = frame;
+            }
+            else
+            {
+                frame = def->unk1;
+                anim->flags.b.state = frame;
+                anim->flags.b.keyframe = frame;
+            }
+            span = (FieldTweenSpan*)field_find_count_table_span((u8*)def, anim->flags.b.keyframe, &base);
+            if (*(s32*)&def->flags & 0x20)
+            {
+                anim->timer = span->duration;
+            }
+            else
+            {
+                anim->timer = 1;
+            }
+            if (((*(s32*)&def->flags & 0xFF000007) == 3) ||
+                ((def->handler_group == 1) && ((def->flags & 7) >= 2)))
+            {
+                anim->flags.word |= 0x20;
+            }
+            if ((u32)((*(s32*)&def->flags & 0xFF000007) - 5) < 2)
+            {
+                field_apply_animation_tween(def, anim, 0);
+            }
+        }
+        /* fallthrough */
+    case 0:
+        def = anim->def;
+        anim->repeat_count = 0;
+        anim->flags.word &= ~2;
+        anim->flags.word = (anim->flags.word & ~1) | ((*(u32*)&def->flags >> 3) & 1);
+        if ((list_kind == 0) && ((*(s32*)&def->flags & 7) == 4))
+        {
+            if ((anim->flags.word & 0x40) == 0)
+            {
+                anim->flags.word |= 0x40;
+                anim->flags.b.state = 0;
+            }
+        }
+        else
+        {
+            anim->flags.word |= 0x40;
+        }
+        break;
+    case 1:
+        if (keyframe == -1)
+        {
+            if ((list_kind == 0) && (anim->flags.word & 0x40))
+            {
+                sfx_def = anim->def;
+                if ((*(s32*)&sfx_def->flags & 7) == 7)
+                {
+                    key = (FieldSfxKey*)sfx_def->data;
+                    if (key->sound.word & 0x8000)
+                    {
+                        if (key->control.word & 0x1F00)
+                        {
+                            chan_mask = 1 << (((key->control.word >> 8) & 0x1F) - 1);
+                            sfx_id = 0;
+                        }
+                        else
+                        {
+                            chan_mask = 0;
+                            sfx_id = key->sfx_id & 0x3FF;
+                        }
+                        akao_cmd_21(sfx_id, chan_mask);
+                    }
+                }
+            }
+            anim->flags.word &= ~0x40;
+        }
+        else
+        {
+            anim->flags.word |= 2;
+            anim->flags.b.stop_keyframe = keyframe;
+        }
+        anim->repeat_count = 0;
+        break;
+    case 4:
+        def = anim->def;
+        if (*(s32*)&def->flags & 0x10)
+        {
+            if (*(s32*)&def->flags & 8)
+            {
+                anim->flags.b.stop_keyframe = 0;
+            }
+            else
+            {
+                anim->flags.b.stop_keyframe = def->unk5;
+            }
+            anim->repeat_count = 0;
+            anim->flags.word |= 2;
+        }
+        break;
+    case 3:
+    default:
+        if (anim->flags.b.keyframe != keyframe)
+        {
+            anim->flags.word |= 1;
+            if (anim->flags.b.keyframe < keyframe)
+            {
+                anim->flags.word &= ~4;
+            }
+            else
+            {
+                anim->flags.word |= 4;
+            }
+            anim->repeat_count = 0;
+            anim->timer = 1;
+            anim->flags.word |= 0x42;
+            anim->flags.b.stop_keyframe = keyframe;
+        }
+        break;
+    }
+}
+
+extern s32 D_801ED02C;
+
+void func_8005A0D0(s32, s32, s32, s32);
+
+/**
+ * @brief Advance the scene-transition fade by one frame.
+ *
+ * Does nothing unless FieldMemState::fade_mode is 1 (fading out) or 3 (fading
+ * in). Either way the level moves 8 towards its endpoint and is pushed to the
+ * global colour scale through func_8005A0D0, which takes the level for all
+ * three channels.
+ *
+ * Fading out finishes at level 0, and that is where the scene is torn down:
+ * the first object is marked done and its first two parts hidden, then every
+ * remaining object, all four animation lists and the sequence list have their
+ * active bits SAVED one position up and then cleared - bit 0 to bit 1 for
+ * objects, bit 6 to bit 7 for animations, bits 0-1 to bits 2-3 for sequences -
+ * so the state can be restored when the next scene fades in. All animations are
+ * then stopped through field_control_animation, the fade moves to mode 2, and
+ * the colour scale is restored to full.
+ *
+ * Fading in finishes at level 0x100 and simply clears the mode.
+ *
+ * @note @c fade_mode is written two different ways on purpose and neither is
+ *       interchangeable: the mode-2 store at the end of the fade-out uses the
+ *       standalone symbol @c D_801ED02C (costs 2 rows written through
+ *       @c state), while the mode-0 store at the end of the fade-in goes
+ *       through @c state (costs 1 row written as @c D_801ED02C). Same address,
+ *       different addressing mode - the same split FieldCamera has.
+ * @note @c state and @c scene are both locals, and @c scene has to be read at
+ *       the very top, before the switch: reading it where it is first used
+ *       instead costs 36 rows.
+ * @note The object loop reads the flag bit as a BYTE
+ *       (@c obj->flags.b.unk0 @c & @c 1) while the animation loops shift the
+ *       whole WORD (@c anim->flags.word @c << @c 1). Swapping either spelling
+ *       for the other costs 7 rows.
+ * @note Measured non-factors, both still 100%: spelling the level read as a
+ *       @c u16 union member instead of @c (u16) on the word, and using an early
+ *       @c return for the already-done object instead of the nested @c if.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void field_update_scene_fade(void)
+{
+    FieldMemState* state;
+    FieldScene* scene;
+    FieldObj* obj;
+    FieldPart* part;
+    FieldAnim* anim;
+    FieldSeq* seq;
+    s32 level;
+
+    state = (FieldMemState*)0x801ED000;
+    scene = g_field_scene.scene;
+    switch (state->fade_mode)
+    {
+    case 1:
+        state->fade_level -= 8;
+        level = (u16)state->fade_level;
+        func_8005A0D0(-1, level, level, level);
+        if (state->fade_level == 0)
+        {
+            obj = scene->objects;
+            if ((obj->flags.word & 1) == 0)
+            {
+                obj->flags.word |= 1;
+                part = obj->parts;
+                part->visible = 0;
+                part = part->next;
+                part->visible = 0;
+                obj = obj->next;
+                while (obj != NULL)
+                {
+                    obj->flags.word = ((obj->flags.word & ~2) | ((obj->flags.b.unk0 & 1) << 1)) & ~1;
+                    obj = obj->next;
+                }
+                anim = scene->anims;
+                while (anim != NULL)
+                {
+                    anim->flags.word = ((anim->flags.word & ~0x80) | ((anim->flags.word << 1) & 0x80)) & ~0x40;
+                    anim = anim->next;
+                }
+                anim = scene->strips;
+                while (anim != NULL)
+                {
+                    anim->flags.word = ((anim->flags.word & ~0x80) | ((anim->flags.word << 1) & 0x80)) & ~0x40;
+                    anim = anim->next;
+                }
+                anim = scene->sprites;
+                while (anim != NULL)
+                {
+                    anim->flags.word = ((anim->flags.word & ~0x80) | ((anim->flags.word << 1) & 0x80)) & ~0x40;
+                    anim = anim->next;
+                }
+                anim = scene->effects;
+                while (anim != NULL)
+                {
+                    anim->flags.word = ((anim->flags.word & ~0x80) | ((anim->flags.word << 1) & 0x80)) & ~0x40;
+                    anim = anim->next;
+                }
+                seq = scene->seqs;
+                while (seq != NULL)
+                {
+                    seq->flags = ((seq->flags & ~0xC) | ((((u8*)&seq->flags)[0] & 3) << 2)) & ~3;
+                    seq = seq->next;
+                }
+                field_control_animation(0, 0, 0, 0);
+                D_801ED02C = 2;
+                func_8005A0D0(0, 0x100, 0x100, 0x100);
+            }
+        }
+        break;
+    case 3:
+        state->fade_level += 8;
+        level = (u16)state->fade_level;
+        func_8005A0D0(-1, level, level, level);
+        if (state->fade_level == 0x100)
+        {
+            state->fade_mode = 0;
+        }
+        break;
+    }
+}
+
+/**
+ * @brief Reactivate the scene and start the fade back in.
+ *
+ * The exact counterpart to the teardown half of field_update_scene_fade: that
+ * one SAVED every list's active bits one position up and cleared them, this one
+ * shifts them back down. Objects restore bit 1 into bit 0, animations bit 7 into
+ * bit 6, and sequences bits 2-3 into bits 0-1.
+ *
+ * The first object is handled separately, as it is there: its done bit is
+ * cleared outright and its first two parts are hidden. The fade mode then goes
+ * to 3, which is what makes field_update_scene_fade step the level back up to
+ * 0x100 on the following frames.
+ *
+ * @note @c list exists to make @c scene->objects address-taken. Without it gcc
+ *       can prove the @c D_801ED02C store does not alias the load and hoists
+ *       the load above it, which the target does not do (2 rows). The inline
+ *       spelling @c *(&scene->objects) does NOT work - gcc folds the @c *&
+ *       pair before aliasing is computed, so the pointer has to be a real named
+ *       local. See idiom [SCHED-10].
+ * @note All three restore shifts need the @c (u32) cast, otherwise the shift
+ *       comes out as @c sra rather than @c srl (1 row each). Unlike the
+ *       teardown, the object loop here reads the WHOLE WORD - taking the bit
+ *       from the byte view instead costs 3 rows.
+ * @note @c part must be re-assigned as its own statement rather than chained as
+ *       @c part->next->visible - the chained form costs 8 rows.
+ * @note Measured non-factor, still 100%: writing @c D_801ED02C before rather
+ *       than after the @c scene read.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void field_begin_scene_fade_in(void)
+{
+    FieldScene* scene;
+    FieldObj* obj;
+    FieldObj** list;
+    FieldPart* part;
+    FieldAnim* anim;
+    FieldSeq* seq;
+
+    scene = g_field_scene.scene;
+    D_801ED02C = 3;
+    list = &scene->objects;
+    obj = *list;
+    obj->flags.word &= ~1;
+    part = obj->parts;
+    part->visible = 0;
+    part = part->next;
+    part->visible = 0;
+    obj = obj->next;
+    while (obj != NULL)
+    {
+        obj->flags.word = (obj->flags.word & ~1) | (((u32)obj->flags.word >> 1) & 1);
+        obj = obj->next;
+    }
+    anim = scene->anims;
+    while (anim != NULL)
+    {
+        anim->flags.word = (anim->flags.word & ~0x40) | (((u32)anim->flags.word >> 1) & 0x40);
+        anim = anim->next;
+    }
+    anim = scene->strips;
+    while (anim != NULL)
+    {
+        anim->flags.word = (anim->flags.word & ~0x40) | (((u32)anim->flags.word >> 1) & 0x40);
+        anim = anim->next;
+    }
+    anim = scene->sprites;
+    while (anim != NULL)
+    {
+        anim->flags.word = (anim->flags.word & ~0x40) | (((u32)anim->flags.word >> 1) & 0x40);
+        anim = anim->next;
+    }
+    anim = scene->effects;
+    while (anim != NULL)
+    {
+        anim->flags.word = (anim->flags.word & ~0x40) | (((u32)anim->flags.word >> 1) & 0x40);
+        anim = anim->next;
+    }
+    seq = scene->seqs;
+    while (seq != NULL)
+    {
+        seq->flags = (seq->flags & ~3) | (((u32)seq->flags >> 2) & 3);
+        seq = seq->next;
+    }
 }
