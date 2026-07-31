@@ -6028,3 +6028,44 @@ void func_8005A744(FieldSeq* seq, u8 index)
         func_8005A744(walk, index);
     }
 }
+
+/**
+ * @brief Report whether no armed sequence currently carries a given index.
+ *
+ * Walks the scene's sequence list looking for an entry whose low two state bits
+ * are set and whose stored index at byte 1 of FieldSeq::flags equals @p index.
+ * That is the same pair of tests func_8005A67C uses to decide which sequences
+ * to stop, so this is the query form of it.
+ *
+ * @param index Sequence index to look for.
+ * @return 0 as soon as a match is found, 1 when the whole list is walked
+ *         without one.
+ *
+ * @note @p index must be a @c s32. As a @c u8 the compare needs its own mask
+ *       and it costs a row.
+ * @note The early @c return @c 0 is required. Setting a found flag, breaking
+ *       out and returning at the bottom costs 11 rows.
+ * @note Measured non-factors, all still 100%: joining the two tests with
+ *       @c && instead of nesting them, a guarded @c do/while for the walk,
+ *       and a union byte member instead of the @c ((u8*)&flags)[1] cast.
+ *
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8005A7EC(s32 index)
+{
+    FieldSeq* seq;
+
+    seq = g_field_scene.scene->seqs;
+    while (seq != NULL)
+    {
+        if ((seq->flags & 3) != 0)
+        {
+            if (((u8*)&seq->flags)[1] == index)
+            {
+                return 0;
+            }
+        }
+        seq = seq->next;
+    }
+    return 1;
+}
