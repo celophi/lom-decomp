@@ -3310,8 +3310,8 @@ void func_8002C9A4(void)
 
 typedef struct
 {
-    u32 unk0;
-    u32 unk4[4];
+    u8* unk0;
+    u8* unk4[4];
     u8 pad_14[0x72 - 0x14];
     u16 unk72;
     u16 unk74[4];
@@ -3330,18 +3330,6 @@ void akao_seq_op_loop_start(Struct_8002C9B4* arg0)
     arg0->unk74[arg0->unkD8] = 0;
     arg0->unk7C[arg0->unkD8] = arg0->unk72;
 }
-
-typedef struct
-{
-    u8* unk0;
-    u8* unk4[4];
-    u8 pad_14[0x72 - 0x14];
-    u16 unk72;
-    u16 unk74[4];
-    u16 unk7C[4];
-    u8 pad_84[0xD8 - 0x84];
-    u16 unkD8;
-} Struct_8002C9B4;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/xSadm
