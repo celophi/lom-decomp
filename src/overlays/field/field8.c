@@ -421,7 +421,8 @@ struct FieldPart
 {
     FieldPart* next;   /* 0x00 */
     FieldPartDef* def; /* 0x04 */
-    u8 _pad0[0xC - 8];
+    /** 0x08 when zero the part still needs its tint records rebuilt; see func_8005A0D0. */
+    s32 unk8;
     /** 0x0C bit plane: one bit per grid cell, row-major, LSB first. */
     s32* bits;
     /** 0x10 packed stream of FieldCellRec, one per set bit. */
@@ -677,10 +678,14 @@ typedef struct FieldAnimCel FieldAnimCel;
  *
  * @note field_tint_animation_cel_list reaches this record through FieldAnim::cels instead, and
  *       walks the cel list at 0x08 rather than being handed a single cel.
+ * @note The scene's object list is a list of these: func_8005A0D0 walks it
+ *       through @c next and treats the list at 0x08 as the object's parts.
  */
-typedef struct
+typedef struct FieldTintSrc FieldTintSrc;
+struct FieldTintSrc
 {
-    u8 _pad0[4];
+    /** 0x00 next tint source when this record is an element of the object list. */
+    FieldTintSrc* next;
     /** 0x04 record holding the palette this tint is built from. */
     FieldTintPal* palette;
     /** 0x08 head of the cel list this source tints (field_tint_animation_cel_list only). */
@@ -692,7 +697,7 @@ typedef struct
     u16 red_scale;   /* 0x16 */
     u16 green_scale; /* 0x18 */
     u16 blue_scale;  /* 0x1A */
-} FieldTintSrc;
+};
 
 struct FieldAnimCel
 {
@@ -5394,7 +5399,13 @@ void field_control_animation(s32 list_kind, s32 index, s32 keyframe, s32 op)
 
 extern s32 D_801ED02C;
 
-void func_8005A0D0(s32, s32, s32, s32);
+/*
+ * func_8005A0D0 is deliberately left undeclared here. It is defined at the end
+ * of this file taking a s16 and three u16, and a prototype in scope would make
+ * the call sites below narrow their arguments, which costs 2 rows in
+ * field_update_scene_fade. The implicit declaration passes them as ints, which
+ * is what the callee expects.
+ */
 
 /**
  * @brief Advance the scene-transition fade by one frame.
@@ -5599,5 +5610,137 @@ void field_begin_scene_fade_in(void)
     {
         seq->flags = (seq->flags & ~3) | (((u32)seq->flags >> 2) & 3);
         seq = seq->next;
+    }
+}
+
+void func_8005A428(FieldPart*);
+FieldAnimCel* func_8005ABD8(FieldTileGrid*, FieldTintSrc**);
+void func_8005ADA8(FieldAnimCel*, FieldAnim*);
+
+/**
+ * @brief Push a new colour scale onto the scene's tint sources and rebuild the
+ *        affected tile records.
+ *
+ * The scene's object list is walked as a list of FieldTintSrc records. An
+ * object is retinted only when @p index is -1 (meaning "every object") or when
+ * it matches the object's position in the list, and only when the scale it
+ * already carries differs from the one being pushed. Retinting multiplies the
+ * record's own colour triple by the new scale into a three-word colour, stores
+ * the new scale, and expands the colour into the scratchpad table through
+ * func_8005AC50; every part of the object that holds instances is then rebuilt
+ * by func_8005A428, except for parts that carry neither a shared rgb/code word
+ * nor an empty @c unk8.
+ *
+ * When @p index is -1 the scene's animation and effect lists are rescaled as
+ * well. Each node's runtime record is resolved with func_8005ABD8, which also
+ * hands back the tint source behind it; that source is rescaled the same way
+ * and, unless the resolved record carries a shared rgb/code word, handed to
+ * func_8005ADA8 together with its node. Animations are skipped unless their
+ * definition selects handler kind 0 or 1; effects are always rescaled.
+ *
+ * @param index Object index to retint, or -1 for every object plus the
+ *              animation and effect lists.
+ * @param red_scale   Red scale, 0x100 is unattenuated.
+ * @param green_scale Green scale.
+ * @param blue_scale  Blue scale.
+ *
+ * @note @p index must be a @c s16 and the three scales @c u16: widening them to
+ *       @c s32 costs 52 and 84 rows respectively. The scales arrive
+ *       sign-extended, so every use masks them, while the three writebacks
+ *       store the raw parameter.
+ * @note @c tint must be a separate local assigned BEFORE the three @c rgb
+ *       products. Assigning it after them, or reading @c owner->palette->data
+ *       in one go where @c pal is set, leaves the palette load stuck below the
+ *       @c rgb stores and costs 8 rows.
+ * @note The handler-kind test reads the whole word at FieldAnimDef::flags as
+ *       @c u32; as @c s32 the range check compares signed and costs a row.
+ * @note Measured non-factors, all still 100%: @c i as @c u16 or as @c s32 with
+ *       a @c (u16) cast on the compare, nesting the index and colour tests
+ *       instead of joining them with @c &&, @c &pal[2] instead of @c pal @c +
+ *       @c 2, and prototyping the four callees instead of leaving them
+ *       implicit.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A0D0(s16 index, u16 red_scale, u16 green_scale, u16 blue_scale)
+{
+    FieldScene* scene;
+    FieldTintSrc* owner;
+    FieldTintPal* tint;
+    FieldPart* part;
+    FieldAnim* anim;
+    FieldAnimCel* cel;
+    u16* pal;
+    u16 i;
+    s32 rgb[3];
+
+    i = 0;
+    scene = g_field_scene.scene;
+    owner = (FieldTintSrc*)scene->objects;
+    while (owner != NULL)
+    {
+        if ((index == -1 || index == i) &&
+            (owner->red_scale != red_scale || owner->green_scale != green_scale ||
+             owner->blue_scale != blue_scale))
+        {
+            tint = owner->palette;
+            rgb[0] = owner->red * red_scale;
+            rgb[1] = owner->green * green_scale;
+            rgb[2] = owner->blue * blue_scale;
+            owner->red_scale = red_scale;
+            owner->green_scale = green_scale;
+            owner->blue_scale = blue_scale;
+            pal = tint->data;
+            func_8005AC50(pal + 2, pal[0], rgb);
+            part = (FieldPart*)owner->cels;
+            while (part != NULL)
+            {
+                if (part->instance_count != 0 && (part->code_word != 0 || part->unk8 == 0))
+                {
+                    func_8005A428(part);
+                }
+                part = part->next;
+            }
+        }
+        owner = owner->next;
+        i++;
+    }
+    if (index == -1)
+    {
+        anim = scene->anims;
+        while (anim != NULL)
+        {
+            if ((*(u32*)&anim->def->flags & 7) < 2)
+            {
+                cel = func_8005ABD8(((FieldTileAnimDef*)anim->def)->grid, &owner);
+                tint = owner->palette;
+                rgb[0] = owner->red * red_scale;
+                rgb[1] = owner->green * green_scale;
+                rgb[2] = owner->blue * blue_scale;
+                pal = tint->data;
+                func_8005AC50(pal + 2, pal[0], rgb);
+                if (cel->code_word == 0)
+                {
+                    func_8005ADA8(cel, anim);
+                }
+            }
+            anim = anim->next;
+        }
+        anim = scene->effects;
+        while (anim != NULL)
+        {
+            cel = func_8005ABD8(((FieldTileAnimDef*)anim->def)->grid, &owner);
+            tint = owner->palette;
+            rgb[0] = owner->red * red_scale;
+            rgb[1] = owner->green * green_scale;
+            rgb[2] = owner->blue * blue_scale;
+            pal = tint->data;
+            func_8005AC50(pal + 2, pal[0], rgb);
+            if (cel->code_word == 0)
+            {
+                func_8005ADA8(cel, anim);
+            }
+            anim = anim->next;
+        }
     }
 }
