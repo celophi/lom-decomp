@@ -3581,3 +3581,26 @@ void func_8002CD44(AkaoChannelState* arg0, s32 arg1)
     *(s16*)((u8*)arg0 + 0xD4) = var_v0;
     akao_seq_op_enable_reverb(arg0, arg1);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/Basyw
+ */
+void func_8002CD88(AkaoChannelState* arg0)
+{
+    u8* temp_v0;
+    s32 temp_v1;
+
+    temp_v0 = *(u8**)arg0;
+    temp_v1 = *temp_v0;
+
+    *(u8**)arg0 = temp_v0 + 1;
+
+    if (temp_v1 != 0)
+    {
+        *(s16*)((u8*)arg0 + 0xD4) = temp_v1 + 1;
+    }
+    else
+    {
+        *(s16*)((u8*)arg0 + 0xD4) = 0x101;
+    }
+}
