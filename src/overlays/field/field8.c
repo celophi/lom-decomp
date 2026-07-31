@@ -2476,7 +2476,7 @@ void field_advance_animation_keyframe(FieldAnimDef*, FieldAnim*);
 void field_retarget_cel_list_cluts(FieldAnimDef*, FieldTintSrc*, s32);
 void field_queue_vram_upload(FieldImageReq*);
 void func_80059F18(void);
-void func_8005A744(FieldSeq*, s32);
+void func_8005A744(FieldSeq*, u8);
 s32 func_8005A84C(s32, s32);
 void func_80084240(void);
 void func_80140358(s32, s32, s32, s32);
@@ -5965,5 +5965,66 @@ void func_8005A67C(s32 index, s32 op)
             field_control_animation(cmd->unk0, cmd->unk2, -1, 1);
         }
         seq = seq->next;
+    }
+}
+
+/**
+ * @brief Arm a sequence and start its animation, then chain to the sequence
+ *        its definition points at.
+ *
+ * Sets the sequence's countdown to 1, replaces its low two state bits with 1,
+ * records @p index in byte 1 of FieldSeq::flags, and hands the node to
+ * field_start_animation. If the definition names a follow-on sequence
+ * (FieldAnimDef::unk5 is not 0xFF) and carries no delay (FieldAnimDef::unk8 is
+ * zero), that sequence is located by walking the scene list to its index and
+ * armed the same way, recursively.
+ *
+ * @param seq Sequence node to arm.
+ * @param index Sequence index, stored into byte 1 of FieldSeq::flags and
+ *              carried through the whole chain unchanged.
+ *
+ * @note @p index must be a @c u8. As a @c s32 with an explicit
+ *       @c index @c & @c 0xFF on the recursive call the instructions are all
+ *       right but @p index and @c scene swap saved registers (89.48%): the
+ *       @c u8 spelling puts the mask in a zero-extend of its own, which raises
+ *       the parameter's allocation priority above the scene pointer's. An
+ *       explicit @c (u8) cast on the argument is NOT equivalent.
+ * @note The follow-on index must count DOWN in place -
+ *       @c i @c = @c def->unk5 then @c while @c (--i @c != @c -1). Reading
+ *       @c unk5 twice and initialising @c i @c = @c def->unk5 @c - @c 1 leaves
+ *       the pre-decrement value live, so combine folds the entry guard into
+ *       @c unk5 @c != @c 0 and 3 rows go (see [EXPAND-22] in idioms.md).
+ * @note @c scene must be read at the top, before the field_start_animation
+ *       call, even though it is not used until after it. Reading it later
+ *       costs 9 rows, and it cannot be sunk into the @c if because the call
+ *       sits in between.
+ * @note Measured non-factors, all still 100%: nesting the two guard tests
+ *       instead of joining them with @c &&, ordering @c def @c = @c seq->def
+ *       before the @c scene read, and moving the byte store above it.
+ *
+ * @see decomp.me (100%) TODO
+ */
+void func_8005A744(FieldSeq* seq, u8 index)
+{
+    FieldAnimDef* def;
+    FieldScene* scene;
+    FieldSeq* walk;
+    s32 i;
+
+    scene = g_field_scene.scene;
+    seq->unkC = 1;
+    seq->flags = (seq->flags & ~3) | 1;
+    def = seq->def;
+    ((u8*)&seq->flags)[1] = index;
+    field_start_animation(seq);
+    i = def->unk5;
+    if (i != 0xFF && def->unk8 == 0)
+    {
+        walk = scene->seqs;
+        while (--i != -1)
+        {
+            walk = walk->next;
+        }
+        func_8005A744(walk, index);
     }
 }
