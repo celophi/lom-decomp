@@ -3654,3 +3654,17 @@ void func_8002CDFC(void* arg0)
         *(s16*)((u8*)arg0 + 0xD6) = 0x101;
     }
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/LEJvC
+ */
+void func_8002CE2C(AkaoChannelState* arg0, s32 arg1)
+{
+    arg0->unk34 = (u8*)((u32)arg0->unk34 & ~0x37);
+
+    akao_seq_op_disable_reverb((ae_struct*)arg0, arg1);
+    akao_seq_op_disable_pitch_modulation((ag_struct*)arg0, arg1);
+    akao_seq_op_disable_noise(arg0, arg1);
+
+    arg0->unk9E = arg0->unk9E & 0xFFFA;
+}
