@@ -3534,3 +3534,14 @@ void func_8002CC94(u8** arg0)
     ch->unk6A = 0;
     ch->unk66 = 0;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FcDgE
+ */
+void func_8002CCCC(u8** arg0)
+{
+    AkaoChannelState* channel = g_akao_seq_channel0;
+
+    channel->unk6C = *(*arg0)++;
+    channel->unk6C |= (*(*arg0)++ << 8);
+}
