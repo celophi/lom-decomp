@@ -6484,3 +6484,85 @@ FieldAnimCel* func_8005ABD8(FieldTileGrid* grid, FieldTintSrc** out_src)
     }
     return NULL;
 }
+
+/**
+ * @brief Expand a palette into the scratchpad colour table, scaling each
+ *        component and clamping it to 8 bits.
+ *
+ * Each 4-byte source entry contributes three components, which are multiplied
+ * by the matching entry of @p rgb_scale and taken from the high half of the
+ * 24.8-ish product (@c >>16). Any product above 0xFEFFFF - the largest value
+ * whose high byte is still 0xFE - saturates to 0xFF instead of wrapping. The
+ * fourth byte of each entry (the primitive code) is left untouched, so the
+ * table can be copied into a tile record whole.
+ *
+ * @param colors Source palette, 4 bytes per entry.
+ * @param count Number of entries to expand.
+ * @param rgb_scale Three scale factors, one per component; 0x100 is
+ *                  unattenuated.
+ * @note @p colors and @p src walk the same array. Both are needed: gcc gives
+ *       the parameter to the cursor read at +1/+2 and a copy to the one read at
+ *       +0, which is the entry @c addu @c t1, @c a0, @c zero. Folding them into
+ *       one cursor costs 12 rows.
+ * @note @c count is an @c s32 even though field2.c and field3.c both declare
+ *       this function with a @c u16 second parameter. As a @c u16 the entry
+ *       needs an @c andi mask and the function grows two instructions.
+ * @note @c v must be unsigned: the compare is @c sltu and the shift @c srl,
+ *       and a signed @c v turns both into their signed forms (6 rows).
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AC50(u8* colors, s32 count, s32* rgb_scale)
+{
+    u8* src;
+    u8* dst;
+    s32 red;
+    s32 green;
+    s32 blue;
+    s32 remaining;
+    u32 v;
+
+    src = colors;
+    dst = (u8*)0x1F800000;
+    red = rgb_scale[0];
+    green = rgb_scale[1];
+    blue = rgb_scale[2];
+    remaining = count;
+    remaining -= 1;
+    if (count != 0)
+    {
+        do
+        {
+            v = src[0] * red;
+            if (v > 0xFEFFFF)
+            {
+                dst[0] = 0xFF;
+            }
+            else
+            {
+                dst[0] = v >> 16;
+            }
+            v = colors[1] * green;
+            if (v > 0xFEFFFF)
+            {
+                dst[1] = 0xFF;
+            }
+            else
+            {
+                dst[1] = v >> 16;
+            }
+            v = colors[2] * blue;
+            if (v > 0xFEFFFF)
+            {
+                dst[2] = 0xFF;
+            }
+            else
+            {
+                dst[2] = v >> 16;
+            }
+            colors += 4;
+            src += 4;
+            dst += 4;
+            remaining -= 1;
+        } while (remaining != -1);
+    }
+}
