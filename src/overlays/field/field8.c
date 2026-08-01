@@ -6444,3 +6444,43 @@ FieldPart* func_8005AB80(s32 obj_index, s32 part_index)
     }
     return part;
 }
+
+/**
+ * @brief Find the cel laid out on a given grid anywhere in the current scene.
+ *
+ * Walks the scene's object list as a list of FieldTintSrc records - the same
+ * view func_8005A0D0 takes of it - and within each record its cel list, for the
+ * first cel whose @c grid is @p grid. The tint source behind the match is
+ * reported through @p out_src when the caller wants it.
+ *
+ * @param grid Grid to search for; compared by pointer identity.
+ * @param out_src Optional out-parameter receiving the tint source owning the
+ *                match. Pass NULL when only the cel is needed.
+ * @return The matching cel, or NULL when no record in the scene holds one.
+ * @see decomp.me (100%) TODO
+ */
+FieldAnimCel* func_8005ABD8(FieldTileGrid* grid, FieldTintSrc** out_src)
+{
+    FieldTintSrc* src;
+    FieldAnimCel* cel;
+
+    src = (FieldTintSrc*)g_field_scene.scene->objects;
+    while (src != NULL)
+    {
+        cel = src->cels;
+        while (cel != NULL)
+        {
+            if (grid == cel->grid)
+            {
+                if (out_src != NULL)
+                {
+                    *out_src = src;
+                }
+                return cel;
+            }
+            cel = cel->next;
+        }
+        src = src->next;
+    }
+    return NULL;
+}
