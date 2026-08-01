@@ -6874,3 +6874,70 @@ void func_8005B094(s32 obj_index, s32 part_index, FieldPartTransform* xf)
     xf->column_angle = part->column_angle;
     xf->rotation_angle = part->rotation_angle;
 }
+
+/**
+ * @brief Retrigger one effect node in the scene's effect list.
+ *
+ * Walks @p index steps into the effect list and nudges that node's animation
+ * state. Which nudge depends on the node's definition: a definition carrying
+ * flag 0x20 (and only when @p from_keyframe is zero) restarts a node that
+ * already holds a keyframe, setting control bits 0x45; otherwise the node is
+ * rearmed whenever its keyframe differs from the definition's, taking bit 0x40
+ * and dropping bits 4 and 1. In that second case a node that is not
+ * flag-0x20 driven and holds no keyframe additionally takes bit 8.
+ *
+ * Both the walk and the body give up quietly if the list is shorter than
+ * @p index.
+ *
+ * @param index Position in the scene's effect list.
+ * @param from_keyframe Non-zero to suppress the keyframe-restart path.
+ * @note @c anim->timer must be assigned AFTER the three flag operations. Moved
+ *       ahead of them it splits the read-modify-write in two and keeps the
+ *       flags word live, which also costs the reload before the @c 8 bit.
+ * @note The two clears have to stay separate statements. As a single
+ *       @c &= @c ~5 they fold into one @c and and the function loses two
+ *       instructions - neither constant fits @c andi, so each needs its own
+ *       register load.
+ * @note The definition flags are read as a WORD through the byte field's
+ *       address, the same spelling field_rescale_scene_tints uses; a plain
+ *       @c def->flags byte read costs a row at each of the two sites.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005B0F4(s32 index, s32 from_keyframe)
+{
+    FieldAnim* anim;
+    FieldAnimDef* def;
+
+    anim = g_field_scene.scene->effects;
+    if (anim != NULL)
+    {
+        while (--index != -1)
+        {
+            anim = anim->next;
+            if (anim == NULL)
+            {
+                return;
+            }
+        }
+        def = anim->def;
+        if (((*(u32*)&def->flags & 0x20) != 0) && (from_keyframe == 0))
+        {
+            if (anim->flags.b.keyframe != 0)
+            {
+                anim->timer = 1;
+                anim->flags.word |= 0x45;
+            }
+        }
+        else if (anim->flags.b.keyframe != def->unk5)
+        {
+            anim->flags.word |= 0x40;
+            anim->flags.word &= ~4;
+            anim->flags.word &= ~1;
+            anim->timer = 1;
+            if (((*(u32*)&def->flags & 0x20) == 0) && (anim->flags.b.keyframe == 0))
+            {
+                anim->flags.word |= 8;
+            }
+        }
+    }
+}
