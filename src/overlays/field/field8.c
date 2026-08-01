@@ -6849,3 +6849,28 @@ void func_8005B034(s32 obj_index, s32 part_index, FieldPartTransform* xf)
     part->column_angle = xf->column_angle;
     part->rotation_angle = xf->rotation_angle;
 }
+
+/**
+ * @brief Read back a part's rotation and scale into a transform record.
+ *
+ * The exact inverse of func_8005B034: same five fields, same record order.
+ *
+ * @param obj_index Index of the object in the scene's object list.
+ * @param part_index Index of the part within that object.
+ * @param xf Receives the part's current rotation and scale.
+ * @note The two scales must be copied before the three angles, as in
+ *       func_8005B034. A whole-struct copy does not match either - the fields
+ *       move one at a time.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005B094(s32 obj_index, s32 part_index, FieldPartTransform* xf)
+{
+    FieldPart* part;
+
+    part = func_8005AB80(obj_index, part_index);
+    xf->scale_x = part->scale_x;
+    xf->scale_y = part->scale_y;
+    xf->row_angle = part->row_angle;
+    xf->column_angle = part->column_angle;
+    xf->rotation_angle = part->rotation_angle;
+}
