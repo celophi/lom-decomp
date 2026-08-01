@@ -6401,3 +6401,46 @@ FieldObj* func_8005AB4C(s32 index)
     }
     return obj;
 }
+
+/**
+ * @brief Resolve a (object, part) index pair to a part in the current scene.
+ *
+ * Walks the scene's object list @p obj_index steps, then walks that object's
+ * part list @p part_index steps. Neither walk is bounds-checked; both indices
+ * are assumed to be in range for the scene.
+ *
+ * @param obj_index Number of @c next hops along the object list. 0 selects the
+ *                  list head.
+ * @param part_index Number of @c next hops along the chosen object's part list.
+ *                   0 selects that object's first part.
+ * @return The selected part.
+ * @see decomp.me (100%) TODO
+ */
+FieldPart* func_8005AB80(s32 obj_index, s32 part_index)
+{
+    FieldObj* obj;
+    FieldPart* part;
+    s32 remaining;
+
+    obj = g_field_scene.scene->objects;
+    remaining = obj_index - 1;
+    if (obj_index != 0)
+    {
+        do
+        {
+            obj = obj->next;
+            remaining -= 1;
+        } while (remaining != -1);
+    }
+    part = obj->parts;
+    part_index -= 1;
+    if (part_index != -1)
+    {
+        do
+        {
+            part = part->next;
+            part_index -= 1;
+        } while (part_index != -1);
+    }
+    return part;
+}
