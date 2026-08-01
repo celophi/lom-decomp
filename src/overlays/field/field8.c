@@ -4869,6 +4869,26 @@ typedef struct
     s16 z;
 } FieldPos;
 
+/**
+ * @brief Rotation and scale record handed to func_8005B034.
+ *
+ * Holds the same five halfwords FieldPart carries at 0x3A..0x43, but in its own
+ * order: the two scales first, then the three angles.
+ */
+typedef struct
+{
+    /** 0x00 horizontal scale, 8.8 fixed point. */
+    u16 scale_x;
+    /** 0x02 vertical scale, 8.8 fixed point. */
+    u16 scale_y;
+    /** 0x04 rotation applied to the vertical (row) step. */
+    u16 row_angle;
+    /** 0x06 rotation applied to the horizontal (column) step. */
+    u16 column_angle;
+    /** 0x08 rotation of the grid as a whole. */
+    u16 rotation_angle;
+} FieldPartTransform;
+
 FieldObj* func_8005AB4C(s32);
 FieldPart* func_8005AB80(s32, s32);
 
@@ -6368,6 +6388,555 @@ void func_8005AA68(FieldObj* obj, s32 delta, s32 axis)
                     }
                     node = node->next;
                 } while (node != NULL);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Walk the scene's object list @p index steps from the head.
+ *
+ * The counter is pre-decremented and compared against -1 rather than counting
+ * down to 0; writing it as a plain @c index-step loop changes the compare and
+ * costs the tail rows.
+ *
+ * @param index Number of @c next hops to take. 0 returns the list head.
+ * @return The object @p index steps into the list.
+ * @see decomp.me (100%) TODO
+ */
+FieldObj* func_8005AB4C(s32 index)
+{
+    FieldObj* obj;
+    s32 remaining;
+
+    obj = g_field_scene.scene->objects;
+    remaining = index - 1;
+    if (index != 0)
+    {
+        do
+        {
+            obj = obj->next;
+            remaining -= 1;
+        } while (remaining != -1);
+    }
+    return obj;
+}
+
+/**
+ * @brief Resolve a (object, part) index pair to a part in the current scene.
+ *
+ * Walks the scene's object list @p obj_index steps, then walks that object's
+ * part list @p part_index steps. Neither walk is bounds-checked; both indices
+ * are assumed to be in range for the scene.
+ *
+ * @param obj_index Number of @c next hops along the object list. 0 selects the
+ *                  list head.
+ * @param part_index Number of @c next hops along the chosen object's part list.
+ *                   0 selects that object's first part.
+ * @return The selected part.
+ * @see decomp.me (100%) TODO
+ */
+FieldPart* func_8005AB80(s32 obj_index, s32 part_index)
+{
+    FieldObj* obj;
+    FieldPart* part;
+    s32 remaining;
+
+    obj = g_field_scene.scene->objects;
+    remaining = obj_index - 1;
+    if (obj_index != 0)
+    {
+        do
+        {
+            obj = obj->next;
+            remaining -= 1;
+        } while (remaining != -1);
+    }
+    part = obj->parts;
+    part_index -= 1;
+    if (part_index != -1)
+    {
+        do
+        {
+            part = part->next;
+            part_index -= 1;
+        } while (part_index != -1);
+    }
+    return part;
+}
+
+/**
+ * @brief Find the cel laid out on a given grid anywhere in the current scene.
+ *
+ * Walks the scene's object list as a list of FieldTintSrc records - the same
+ * view func_8005A0D0 takes of it - and within each record its cel list, for the
+ * first cel whose @c grid is @p grid. The tint source behind the match is
+ * reported through @p out_src when the caller wants it.
+ *
+ * @param grid Grid to search for; compared by pointer identity.
+ * @param out_src Optional out-parameter receiving the tint source owning the
+ *                match. Pass NULL when only the cel is needed.
+ * @return The matching cel, or NULL when no record in the scene holds one.
+ * @see decomp.me (100%) TODO
+ */
+FieldAnimCel* func_8005ABD8(FieldTileGrid* grid, FieldTintSrc** out_src)
+{
+    FieldTintSrc* src;
+    FieldAnimCel* cel;
+
+    src = (FieldTintSrc*)g_field_scene.scene->objects;
+    while (src != NULL)
+    {
+        cel = src->cels;
+        while (cel != NULL)
+        {
+            if (grid == cel->grid)
+            {
+                if (out_src != NULL)
+                {
+                    *out_src = src;
+                }
+                return cel;
+            }
+            cel = cel->next;
+        }
+        src = src->next;
+    }
+    return NULL;
+}
+
+/**
+ * @brief Expand a palette into the scratchpad colour table, scaling each
+ *        component and clamping it to 8 bits.
+ *
+ * Each 4-byte source entry contributes three components, which are multiplied
+ * by the matching entry of @p rgb_scale and taken from the high half of the
+ * 24.8-ish product (@c >>16). Any product above 0xFEFFFF - the largest value
+ * whose high byte is still 0xFE - saturates to 0xFF instead of wrapping. The
+ * fourth byte of each entry (the primitive code) is left untouched, so the
+ * table can be copied into a tile record whole.
+ *
+ * @param colors Source palette, 4 bytes per entry.
+ * @param count Number of entries to expand.
+ * @param rgb_scale Three scale factors, one per component; 0x100 is
+ *                  unattenuated.
+ * @note @p colors and @p src walk the same array. Both are needed: gcc gives
+ *       the parameter to the cursor read at +1/+2 and a copy to the one read at
+ *       +0, which is the entry @c addu @c t1, @c a0, @c zero. Folding them into
+ *       one cursor costs 12 rows.
+ * @note @c count is an @c s32 even though field2.c and field3.c both declare
+ *       this function with a @c u16 second parameter. As a @c u16 the entry
+ *       needs an @c andi mask and the function grows two instructions.
+ * @note @c v must be unsigned: the compare is @c sltu and the shift @c srl,
+ *       and a signed @c v turns both into their signed forms (6 rows).
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AC50(u8* colors, s32 count, s32* rgb_scale)
+{
+    u8* src;
+    u8* dst;
+    s32 red;
+    s32 green;
+    s32 blue;
+    s32 remaining;
+    u32 v;
+
+    src = colors;
+    dst = (u8*)0x1F800000;
+    red = rgb_scale[0];
+    green = rgb_scale[1];
+    blue = rgb_scale[2];
+    remaining = count;
+    remaining -= 1;
+    if (count != 0)
+    {
+        do
+        {
+            v = src[0] * red;
+            if (v > 0xFEFFFF)
+            {
+                dst[0] = 0xFF;
+            }
+            else
+            {
+                dst[0] = v >> 16;
+            }
+            v = colors[1] * green;
+            if (v > 0xFEFFFF)
+            {
+                dst[1] = 0xFF;
+            }
+            else
+            {
+                dst[1] = v >> 16;
+            }
+            v = colors[2] * blue;
+            if (v > 0xFEFFFF)
+            {
+                dst[2] = 0xFF;
+            }
+            else
+            {
+                dst[2] = v >> 16;
+            }
+            colors += 4;
+            src += 4;
+            dst += 4;
+            remaining -= 1;
+        } while (remaining != -1);
+    }
+}
+
+/**
+ * @brief Stamp the GPU primitive code for a texture format across the whole
+ *        scratchpad colour table.
+ *
+ * Maps @p format to a primitive code and writes it into the @c code byte of
+ * every entry of the table at 0x1F800000 (offset 3 of each FieldTintColor, so
+ * the walk strides 4). @p primitive_code caches the code the table currently
+ * carries; when it already matches, the whole pass is skipped.
+ *
+ * The codes are the standard GPU primitive tags: 0x7C SPRT_16, 0x64 SPRT,
+ * 0x2C POLY_FT4 and 0x3C POLY_GT4 for anything else.
+ *
+ * @param format Texture format selector taken from FieldAnimCel.
+ * @param count Number of table entries to stamp.
+ * @param primitive_code In/out cache of the code already in the table; updated
+ *                       once the table has been rewritten.
+ * @note @c format is a @c u8 (it needs the entry @c andi) but @c count is an
+ *       @c s32, even though field2.c and field3.c declare the second parameter
+ *       @c u16; as a @c u16 the in-place decrement needs masking and the
+ *       function loses five instructions (16 rows).
+ * @note @p primitive_code is @c u8*, not the @c s8* those two files declare -
+ *       the target reads it with @c lbu (1 row).
+ * @note Cases 2-5 must share ONE arm. Giving each its own arm with a duplicate
+ *       body takes gcc's case list from three nodes to six, which rebuilds the
+ *       whole comparison tree (15 rows); see idiom [EXPAND-13]. An equivalent
+ *       if/else-if chain costs 21 rows.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AD20(u8 format, s32 count, u8* primitive_code)
+{
+    s32 code;
+    u8* p;
+
+    switch (format)
+    {
+    case 0:
+        code = 0x7C;
+        break;
+    case 1:
+        code = 0x64;
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        code = 0x2C;
+        break;
+    default:
+        code = 0x3C;
+        break;
+    }
+    if (code != *primitive_code)
+    {
+        p = (u8*)0x1F800003;
+        while (--count != -1)
+        {
+            *p = code;
+            p += 4;
+        }
+        *primitive_code = code;
+    }
+}
+
+/**
+ * @brief Re-tint an animation's built per-frame tile records from the
+ *        scratchpad colour table.
+ *
+ * Every record in @p anim 's frame data carries a palette index in its byte 3.
+ * That index selects an entry of the table at 0x1F800000, whose colour halves
+ * are written back over the record's own rgb/code word, so a tint pushed into
+ * the table by func_8005AC50 reaches primitives that were already emitted.
+ *
+ * The record stride follows the cel's format the same way field_tint_animation_cel
+ * derives it: twelve bytes, less four when the cel carries a shared rgb/code
+ * word and four more when it carries a shared texture-page word. Formats 1 and
+ * 6-and-up are not record formats and are skipped.
+ *
+ * @param cel Cel whose format and shared-word flags set the record stride.
+ * @param anim Animation holding the frame data to rewrite.
+ * @note The two arms are deliberately identical. The original emits the body
+ *       twice, once for format 0 and once for formats 2-5; collapsing them onto
+ *       a shared arm emits it once and does not match.
+ * @note @c case @c 1 must be present and empty, as in field_tint_animation_cel -
+ *       it is what shapes gcc's comparison tree. See idiom [EXPAND-13].
+ * @note @c pal has to be materialised above the switch, not inside each arm.
+ * @note @c dst must be read before the two stride tests so it lands in the
+ *       first block, and the FieldCellTint cursor must be initialised from
+ *       @c dst itself rather than @c dst @c + @c 4 - the same pairing
+ *       field_tint_animation_cel documents.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
+{
+    FieldAnimDef* def;
+    FieldTintColor* pal;
+    FieldTintColor* entry;
+    u8* src;
+    u8* dst;
+    s32 stride;
+    s32 n;
+
+    pal = (FieldTintColor*)0x1F800000;
+    def = anim->def;
+    switch (cel->format)
+    {
+    case 0:
+        stride = 12;
+        dst = anim->frame_data;
+        if (cel->code_word != 0)
+        {
+            stride -= 4;
+        }
+        if (cel->tpage_word != 0)
+        {
+            stride -= 4;
+        }
+        src = def->data;
+        n = anim->frame_tile_count * def->unk6;
+        while (--n != -1)
+        {
+            entry = &pal[src[3]];
+            ((FieldCellTint*)dst)->rg = entry->rg;
+            src += 4;
+            ((FieldCellTint*)dst)->b = entry->b;
+            dst += stride;
+        }
+        break;
+    case 1:
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        stride = 12;
+        dst = anim->frame_data;
+        if (cel->code_word != 0)
+        {
+            stride -= 4;
+        }
+        if (cel->tpage_word != 0)
+        {
+            stride -= 4;
+        }
+        src = def->data;
+        n = anim->frame_tile_count * def->unk6;
+        while (--n != -1)
+        {
+            entry = &pal[src[3]];
+            ((FieldCellTint*)dst)->rg = entry->rg;
+            src += 4;
+            ((FieldCellTint*)dst)->b = entry->b;
+            dst += stride;
+        }
+        break;
+    }
+}
+
+/**
+ * @brief Show or hide a scene object, or one of its parts.
+ *
+ * Resolves the target the same way the move helper does: @p part_index of -1
+ * selects the whole object, and its active bit (bit 0 of the flags word at
+ * 0x0C) takes the new state; any other value selects that part of the object
+ * and sets its @c visible byte instead.
+ *
+ * @param obj_index Index of the object in the scene's object list.
+ * @param part_index Index of the part within that object, or -1 for the object
+ *                   as a whole.
+ * @param visible Non-zero to show, zero to hide. Only bit 0 reaches the object
+ *                flags word.
+ * @note The @c & @c 1 on @p visible is not redundant - without it the flags
+ *       word is or-ed with the whole value.
+ * @note The @c -1 case has to be the @c if and the part case the @c else;
+ *       swapping them inverts the branch and reorders both blocks.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AF04(s32 obj_index, s32 part_index, s32 visible)
+{
+    FieldObj* obj;
+    FieldPart* part;
+
+    if (part_index == -1)
+    {
+        obj = func_8005AB4C(obj_index);
+        obj->flags.word = (obj->flags.word & ~1) | (visible & 1);
+    }
+    else
+    {
+        part = func_8005AB80(obj_index, part_index);
+        part->visible = visible;
+    }
+}
+
+/**
+ * @brief Read back the whole-unit position of a scene object, or of one of its
+ *        parts.
+ *
+ * Resolves the target the same way the show/hide helper does - @p part_index of
+ * -1 selects the object itself, anything else selects that part - and converts
+ * its three 24.8 fixed-point coordinates to whole units.
+ *
+ * @param obj_index Index of the object in the scene's object list.
+ * @param part_index Index of the part within that object, or -1 for the object
+ *                   as a whole.
+ * @param out Receives the position in whole units.
+ * @note The @c -1 case has to be the @c if and the part case the @c else, as in
+ *       func_8005AF04; swapping them reorders both blocks.
+ * @note gcc emits the depth conversion and store ONCE and jumps the object arm
+ *       into the part arm's tail. Both arms are still written out in full here;
+ *       the sharing is the compiler's, not the source's.
+ * @note The shift must go through SHIFT_TOWARD_ZERO rather than `/ 256`: gcc
+ *       does emit the branchy expansion for this divisor, but finishes it with
+ *       `sra` where the target has `srl`. See idiom [EXPAND-23].
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out)
+{
+    FieldObj* obj;
+    FieldPart* part;
+
+    if (part_index == -1)
+    {
+        obj = func_8005AB4C(obj_index);
+        out->x = SHIFT_TOWARD_ZERO(obj->x, 8);
+        out->y = SHIFT_TOWARD_ZERO(obj->y, 8);
+        out->z = SHIFT_TOWARD_ZERO(obj->z, 8);
+    }
+    else
+    {
+        part = func_8005AB80(obj_index, part_index);
+        out->x = SHIFT_TOWARD_ZERO(part->x, 8);
+        out->y = SHIFT_TOWARD_ZERO(part->y, 8);
+        out->z = SHIFT_TOWARD_ZERO(part->z, 8);
+    }
+}
+
+/**
+ * @brief Apply a rotation and scale record to one part of a scene object.
+ *
+ * Copies the five halfwords of @p xf into the part's own rotation and scale
+ * fields. Unlike the position and visibility helpers this one has no
+ * object-level case; @p part_index always selects a part.
+ *
+ * @param obj_index Index of the object in the scene's object list.
+ * @param part_index Index of the part within that object.
+ * @param xf Source record; see FieldPartTransform.
+ * @note The two scales must be stored before the three angles. Writing them in
+ *       FieldPart's own field order instead costs ten rows - the source order
+ *       is the record's, not the destination's.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005B034(s32 obj_index, s32 part_index, FieldPartTransform* xf)
+{
+    FieldPart* part;
+
+    part = func_8005AB80(obj_index, part_index);
+    part->scale_x = xf->scale_x;
+    part->scale_y = xf->scale_y;
+    part->row_angle = xf->row_angle;
+    part->column_angle = xf->column_angle;
+    part->rotation_angle = xf->rotation_angle;
+}
+
+/**
+ * @brief Read back a part's rotation and scale into a transform record.
+ *
+ * The exact inverse of func_8005B034: same five fields, same record order.
+ *
+ * @param obj_index Index of the object in the scene's object list.
+ * @param part_index Index of the part within that object.
+ * @param xf Receives the part's current rotation and scale.
+ * @note The two scales must be copied before the three angles, as in
+ *       func_8005B034. A whole-struct copy does not match either - the fields
+ *       move one at a time.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005B094(s32 obj_index, s32 part_index, FieldPartTransform* xf)
+{
+    FieldPart* part;
+
+    part = func_8005AB80(obj_index, part_index);
+    xf->scale_x = part->scale_x;
+    xf->scale_y = part->scale_y;
+    xf->row_angle = part->row_angle;
+    xf->column_angle = part->column_angle;
+    xf->rotation_angle = part->rotation_angle;
+}
+
+/**
+ * @brief Retrigger one effect node in the scene's effect list.
+ *
+ * Walks @p index steps into the effect list and nudges that node's animation
+ * state. Which nudge depends on the node's definition: a definition carrying
+ * flag 0x20 (and only when @p from_keyframe is zero) restarts a node that
+ * already holds a keyframe, setting control bits 0x45; otherwise the node is
+ * rearmed whenever its keyframe differs from the definition's, taking bit 0x40
+ * and dropping bits 4 and 1. In that second case a node that is not
+ * flag-0x20 driven and holds no keyframe additionally takes bit 8.
+ *
+ * Both the walk and the body give up quietly if the list is shorter than
+ * @p index.
+ *
+ * @param index Position in the scene's effect list.
+ * @param from_keyframe Non-zero to suppress the keyframe-restart path.
+ * @note @c anim->timer must be assigned AFTER the three flag operations. Moved
+ *       ahead of them it splits the read-modify-write in two and keeps the
+ *       flags word live, which also costs the reload before the @c 8 bit.
+ * @note The two clears have to stay separate statements. As a single
+ *       @c &= @c ~5 they fold into one @c and and the function loses two
+ *       instructions - neither constant fits @c andi, so each needs its own
+ *       register load.
+ * @note The definition flags are read as a WORD through the byte field's
+ *       address, the same spelling field_rescale_scene_tints uses; a plain
+ *       @c def->flags byte read costs a row at each of the two sites.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005B0F4(s32 index, s32 from_keyframe)
+{
+    FieldAnim* anim;
+    FieldAnimDef* def;
+
+    anim = g_field_scene.scene->effects;
+    if (anim != NULL)
+    {
+        while (--index != -1)
+        {
+            anim = anim->next;
+            if (anim == NULL)
+            {
+                return;
+            }
+        }
+        def = anim->def;
+        if (((*(u32*)&def->flags & 0x20) != 0) && (from_keyframe == 0))
+        {
+            if (anim->flags.b.keyframe != 0)
+            {
+                anim->timer = 1;
+                anim->flags.word |= 0x45;
+            }
+        }
+        else if (anim->flags.b.keyframe != def->unk5)
+        {
+            anim->flags.word |= 0x40;
+            anim->flags.word &= ~4;
+            anim->flags.word &= ~1;
+            anim->timer = 1;
+            if (((*(u32*)&def->flags & 0x20) == 0) && (anim->flags.b.keyframe == 0))
+            {
+                anim->flags.word |= 8;
             }
         }
     }
