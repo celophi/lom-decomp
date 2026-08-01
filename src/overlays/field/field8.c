@@ -6629,3 +6629,97 @@ void func_8005AD20(u8 format, s32 count, u8* primitive_code)
         *primitive_code = code;
     }
 }
+
+/**
+ * @brief Re-tint an animation's built per-frame tile records from the
+ *        scratchpad colour table.
+ *
+ * Every record in @p anim 's frame data carries a palette index in its byte 3.
+ * That index selects an entry of the table at 0x1F800000, whose colour halves
+ * are written back over the record's own rgb/code word, so a tint pushed into
+ * the table by func_8005AC50 reaches primitives that were already emitted.
+ *
+ * The record stride follows the cel's format the same way field_tint_animation_cel
+ * derives it: twelve bytes, less four when the cel carries a shared rgb/code
+ * word and four more when it carries a shared texture-page word. Formats 1 and
+ * 6-and-up are not record formats and are skipped.
+ *
+ * @param cel Cel whose format and shared-word flags set the record stride.
+ * @param anim Animation holding the frame data to rewrite.
+ * @note The two arms are deliberately identical. The original emits the body
+ *       twice, once for format 0 and once for formats 2-5; collapsing them onto
+ *       a shared arm emits it once and does not match.
+ * @note @c case @c 1 must be present and empty, as in field_tint_animation_cel -
+ *       it is what shapes gcc's comparison tree. See idiom [EXPAND-13].
+ * @note @c pal has to be materialised above the switch, not inside each arm.
+ * @note @c dst must be read before the two stride tests so it lands in the
+ *       first block, and the FieldCellTint cursor must be initialised from
+ *       @c dst itself rather than @c dst @c + @c 4 - the same pairing
+ *       field_tint_animation_cel documents.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
+{
+    FieldAnimDef* def;
+    FieldTintColor* pal;
+    FieldTintColor* entry;
+    u8* src;
+    u8* dst;
+    s32 stride;
+    s32 n;
+
+    pal = (FieldTintColor*)0x1F800000;
+    def = anim->def;
+    switch (cel->format)
+    {
+    case 0:
+        stride = 12;
+        dst = anim->frame_data;
+        if (cel->code_word != 0)
+        {
+            stride -= 4;
+        }
+        if (cel->tpage_word != 0)
+        {
+            stride -= 4;
+        }
+        src = def->data;
+        n = anim->frame_tile_count * def->unk6;
+        while (--n != -1)
+        {
+            entry = &pal[src[3]];
+            ((FieldCellTint*)dst)->rg = entry->rg;
+            src += 4;
+            ((FieldCellTint*)dst)->b = entry->b;
+            dst += stride;
+        }
+        break;
+    case 1:
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        stride = 12;
+        dst = anim->frame_data;
+        if (cel->code_word != 0)
+        {
+            stride -= 4;
+        }
+        if (cel->tpage_word != 0)
+        {
+            stride -= 4;
+        }
+        src = def->data;
+        n = anim->frame_tile_count * def->unk6;
+        while (--n != -1)
+        {
+            entry = &pal[src[3]];
+            ((FieldCellTint*)dst)->rg = entry->rg;
+            src += 4;
+            ((FieldCellTint*)dst)->b = entry->b;
+            dst += stride;
+        }
+        break;
+    }
+}
