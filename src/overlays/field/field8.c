@@ -6723,3 +6723,39 @@ void func_8005ADA8(FieldAnimCel* cel, FieldAnim* anim)
         break;
     }
 }
+
+/**
+ * @brief Show or hide a scene object, or one of its parts.
+ *
+ * Resolves the target the same way the move helper does: @p part_index of -1
+ * selects the whole object, and its active bit (bit 0 of the flags word at
+ * 0x0C) takes the new state; any other value selects that part of the object
+ * and sets its @c visible byte instead.
+ *
+ * @param obj_index Index of the object in the scene's object list.
+ * @param part_index Index of the part within that object, or -1 for the object
+ *                   as a whole.
+ * @param visible Non-zero to show, zero to hide. Only bit 0 reaches the object
+ *                flags word.
+ * @note The @c & @c 1 on @p visible is not redundant - without it the flags
+ *       word is or-ed with the whole value.
+ * @note The @c -1 case has to be the @c if and the part case the @c else;
+ *       swapping them inverts the branch and reorders both blocks.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AF04(s32 obj_index, s32 part_index, s32 visible)
+{
+    FieldObj* obj;
+    FieldPart* part;
+
+    if (part_index == -1)
+    {
+        obj = func_8005AB4C(obj_index);
+        obj->flags.word = (obj->flags.word & ~1) | (visible & 1);
+    }
+    else
+    {
+        part = func_8005AB80(obj_index, part_index);
+        part->visible = visible;
+    }
+}
