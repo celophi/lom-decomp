@@ -27,6 +27,21 @@
  */
 #define HALF_TOWARD_ZERO(v) ((v) >= 0 ? ((v) >> 1) : (((v) + 1) >> 1))
 
+/**
+ * @brief Truncating divide by 256, spelled out for the same reason as
+ *        HALF_TOWARD_ZERO.
+ *
+ * Converts one of the 24.8 fixed-point object/part coordinates to whole units.
+ * Unlike the halving case gcc 2.8 does emit a branchy expansion for `/ 256`,
+ * but it finishes with `sra`; the target uses `srl`, which only comes out when
+ * the rounding is written by hand. Reverting this to `/ 256` costs one row per
+ * use site.
+ *
+ * @param v Signed 24.8 fixed-point value.
+ * @return @p v divided by 256, rounded toward zero.
+ */
+#define DIV_256_TOWARD_ZERO(v) ((v) >= 0 ? ((v) >> 8) : (((v) + 0xFF) >> 8))
+
 /*
  * Packed tile descriptor and field texture-atlas constants.
  *
@@ -6757,5 +6772,45 @@ void func_8005AF04(s32 obj_index, s32 part_index, s32 visible)
     {
         part = func_8005AB80(obj_index, part_index);
         part->visible = visible;
+    }
+}
+
+/**
+ * @brief Read back the whole-unit position of a scene object, or of one of its
+ *        parts.
+ *
+ * Resolves the target the same way the show/hide helper does - @p part_index of
+ * -1 selects the object itself, anything else selects that part - and converts
+ * its three 24.8 fixed-point coordinates to whole units.
+ *
+ * @param obj_index Index of the object in the scene's object list.
+ * @param part_index Index of the part within that object, or -1 for the object
+ *                   as a whole.
+ * @param out Receives the position in whole units.
+ * @note The @c -1 case has to be the @c if and the part case the @c else, as in
+ *       func_8005AF04; swapping them reorders both blocks.
+ * @note gcc emits the depth conversion and store ONCE and jumps the object arm
+ *       into the part arm's tail. Both arms are still written out in full here;
+ *       the sharing is the compiler's, not the source's.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out)
+{
+    FieldObj* obj;
+    FieldPart* part;
+
+    if (part_index == -1)
+    {
+        obj = func_8005AB4C(obj_index);
+        out->x = DIV_256_TOWARD_ZERO(obj->x);
+        out->y = DIV_256_TOWARD_ZERO(obj->y);
+        out->z = DIV_256_TOWARD_ZERO(obj->z);
+    }
+    else
+    {
+        part = func_8005AB80(obj_index, part_index);
+        out->x = DIV_256_TOWARD_ZERO(part->x);
+        out->y = DIV_256_TOWARD_ZERO(part->y);
+        out->z = DIV_256_TOWARD_ZERO(part->z);
     }
 }
