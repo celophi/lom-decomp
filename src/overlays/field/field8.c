@@ -27,21 +27,6 @@
  */
 #define HALF_TOWARD_ZERO(v) ((v) >= 0 ? ((v) >> 1) : (((v) + 1) >> 1))
 
-/**
- * @brief Truncating divide by 256, spelled out for the same reason as
- *        HALF_TOWARD_ZERO.
- *
- * Converts one of the 24.8 fixed-point object/part coordinates to whole units.
- * Unlike the halving case gcc 2.8 does emit a branchy expansion for `/ 256`,
- * but it finishes with `sra`; the target uses `srl`, which only comes out when
- * the rounding is written by hand. Reverting this to `/ 256` costs one row per
- * use site.
- *
- * @param v Signed 24.8 fixed-point value.
- * @return @p v divided by 256, rounded toward zero.
- */
-#define DIV_256_TOWARD_ZERO(v) ((v) >= 0 ? ((v) >> 8) : (((v) + 0xFF) >> 8))
-
 /*
  * Packed tile descriptor and field texture-atlas constants.
  *
@@ -4884,6 +4869,26 @@ typedef struct
     s16 z;
 } FieldPos;
 
+/**
+ * @brief Rotation and scale record handed to func_8005B034.
+ *
+ * Holds the same five halfwords FieldPart carries at 0x3A..0x43, but in its own
+ * order: the two scales first, then the three angles.
+ */
+typedef struct
+{
+    /** 0x00 horizontal scale, 8.8 fixed point. */
+    u16 scale_x;
+    /** 0x02 vertical scale, 8.8 fixed point. */
+    u16 scale_y;
+    /** 0x04 rotation applied to the vertical (row) step. */
+    u16 row_angle;
+    /** 0x06 rotation applied to the horizontal (column) step. */
+    u16 column_angle;
+    /** 0x08 rotation of the grid as a whole. */
+    u16 rotation_angle;
+} FieldPartTransform;
+
 FieldObj* func_8005AB4C(s32);
 FieldPart* func_8005AB80(s32, s32);
 
@@ -6792,6 +6797,9 @@ void func_8005AF04(s32 obj_index, s32 part_index, s32 visible)
  * @note gcc emits the depth conversion and store ONCE and jumps the object arm
  *       into the part arm's tail. Both arms are still written out in full here;
  *       the sharing is the compiler's, not the source's.
+ * @note The shift must go through SHIFT_TOWARD_ZERO rather than `/ 256`: gcc
+ *       does emit the branchy expansion for this divisor, but finishes it with
+ *       `sra` where the target has `srl`. See idiom [EXPAND-23].
  * @see decomp.me (100%) TODO
  */
 void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out)
@@ -6802,15 +6810,42 @@ void func_8005AF5C(s32 obj_index, s32 part_index, FieldPos* out)
     if (part_index == -1)
     {
         obj = func_8005AB4C(obj_index);
-        out->x = DIV_256_TOWARD_ZERO(obj->x);
-        out->y = DIV_256_TOWARD_ZERO(obj->y);
-        out->z = DIV_256_TOWARD_ZERO(obj->z);
+        out->x = SHIFT_TOWARD_ZERO(obj->x, 8);
+        out->y = SHIFT_TOWARD_ZERO(obj->y, 8);
+        out->z = SHIFT_TOWARD_ZERO(obj->z, 8);
     }
     else
     {
         part = func_8005AB80(obj_index, part_index);
-        out->x = DIV_256_TOWARD_ZERO(part->x);
-        out->y = DIV_256_TOWARD_ZERO(part->y);
-        out->z = DIV_256_TOWARD_ZERO(part->z);
+        out->x = SHIFT_TOWARD_ZERO(part->x, 8);
+        out->y = SHIFT_TOWARD_ZERO(part->y, 8);
+        out->z = SHIFT_TOWARD_ZERO(part->z, 8);
     }
+}
+
+/**
+ * @brief Apply a rotation and scale record to one part of a scene object.
+ *
+ * Copies the five halfwords of @p xf into the part's own rotation and scale
+ * fields. Unlike the position and visibility helpers this one has no
+ * object-level case; @p part_index always selects a part.
+ *
+ * @param obj_index Index of the object in the scene's object list.
+ * @param part_index Index of the part within that object.
+ * @param xf Source record; see FieldPartTransform.
+ * @note The two scales must be stored before the three angles. Writing them in
+ *       FieldPart's own field order instead costs ten rows - the source order
+ *       is the record's, not the destination's.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005B034(s32 obj_index, s32 part_index, FieldPartTransform* xf)
+{
+    FieldPart* part;
+
+    part = func_8005AB80(obj_index, part_index);
+    part->scale_x = xf->scale_x;
+    part->scale_y = xf->scale_y;
+    part->row_angle = xf->row_angle;
+    part->column_angle = xf->column_angle;
+    part->rotation_angle = xf->rotation_angle;
 }
