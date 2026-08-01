@@ -21,7 +21,7 @@ extern int rsin(int a);
 
 #define NULL 0
 
-s16 func_8005DFAC(void*, s32*, s32, s32);           /* extern */
+s16 func_8005DFAC(void*, s32*);                     /* extern */
 s32 func_8005E1A8(void*, s32, s32, s32);            /* extern */
 extern long SquareRoot0(long a);
 
@@ -117,7 +117,6 @@ typedef struct {
 
 extern FieldScene *g_field_scene;
 
-void func_8005DA7C(void**, void*, s32*, s32*);          /* extern */
 void func_80062F48(void*, s32*);                        /* extern */
 
 typedef struct Probe {
@@ -127,6 +126,8 @@ typedef struct Probe {
     s16 w;
     s16 h;
 } Probe;
+
+void func_8005DA7C(Probe*, UnkNode1*, s32*, s32*);
 
 /**
  * @see decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
@@ -456,7 +457,7 @@ s32 func_8005B6AC(Mover* a0) {
                                     break;
                                 case 1:             /* switch 1 */
                                     if ((((UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
-                                        temp_s0 = func_8005DFAC(var_fp, &probe.x, temp_v0, var_a3);
+                                        temp_s0 = func_8005DFAC(var_fp, &probe.x);
                                         if (var_a3 != 0) {
                                             var_a3 = 1;
                                             if (var_s2 < temp_s0) {
@@ -528,7 +529,7 @@ s32 func_8005B6AC(Mover* a0) {
                             var_v0_9 += 0xFF;
                         }
                         probe.y = var_v0_9 >> 8;
-                        a0->unk10 = (s32) (-((s32) (func_8005DFAC(temp_a0_3, &probe.x, 0, 0) << 0x10) >> 8) - a0->unk4);
+                        a0->unk10 = (s32) (-((s32) (func_8005DFAC(temp_a0_3, &probe.x) << 0x10) >> 8) - a0->unk4);
                     } else {
                         a0->unk10 = (s32) (temp_s2 + ((UnkNode1*)temp_a0_3)->unk28);
                     }
@@ -555,9 +556,9 @@ s32 func_8005B6AC(Mover* a0) {
                             var_v0_11 += 0xFF;
                         }
                         probe.y = var_v0_11 >> 8;
-                        temp_s0_2 = func_8005DFAC(temp_s3, &probe.x, 0, 0) - ((UnkNode2*)((UnkNode1*)temp_s3)->unk4)->unk10;
+                        temp_s0_2 = func_8005DFAC(temp_s3, &probe.x) - ((UnkNode2*)((UnkNode1*)temp_s3)->unk4)->unk10;
                         if ((((UnkNode2*)temp_s6_2)->unk4 & 3) == 1) {
-                            a0->unk10 = (s32) (-((temp_s0_2 + func_8005DFAC(temp_a0_3, &probe.x, 0, 0)) << 8) - a0->unk4);
+                            a0->unk10 = (s32) (-((temp_s0_2 + func_8005DFAC(temp_a0_3, &probe.x)) << 8) - a0->unk4);
                         } else {
                             a0->unk10 = (s32) (a0->unk10 + (((UnkNode1*)temp_a0_3)->unk28 - (temp_s0_2 << 8)));
                         }
@@ -596,9 +597,9 @@ s32 func_8005B6AC(Mover* a0) {
                         }
                         probe.y = var_v0_14 >> 8;
                         temp_s3_2 = sp28->unkC;
-                        var_s0_3 = func_8005DFAC(temp_a0_5, &probe.x, 0, 0);
+                        var_s0_3 = func_8005DFAC(temp_a0_5, &probe.x);
                         if ((temp_s3_2 != NULL) && (temp_s3_2 != temp_a0_5)) {
-                            var_s0_3 += func_8005DFAC(temp_s3_2, &probe.x, 0, 0) - ((UnkNode2*)((UnkNode1*)temp_s3_2)->unk4)->unk10;
+                            var_s0_3 += func_8005DFAC(temp_s3_2, &probe.x) - ((UnkNode2*)((UnkNode1*)temp_s3_2)->unk4)->unk10;
                         }
                         var_v0_12 = var_s0_3 << 8;
                         a0->unk18 = (s32) -var_v0_12;
@@ -656,7 +657,7 @@ s32 func_8005B6AC(Mover* a0) {
                 var_v0_18 += 0xFF;
             }
             probe.y = var_v0_18 >> 8;
-            func_8005DA7C((void**)&probe, sp2C, &sp20, &sp24);
+            func_8005DA7C(&probe, sp2C, &sp20, &sp24);
         } else {
             sp54 = 0;
             do {
@@ -672,7 +673,7 @@ s32 func_8005B6AC(Mover* a0) {
                     var_v0_20 += 0xFF;
                 }
                 probe.y = var_v0_20 >> 8;
-                func_8005DA7C((void**)&probe, sp2C, &sp20, &sp24);
+                func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             } while ((var_t9 != sp54) && (sp20 == 0));
         }
         var_t8 = 0;
@@ -1144,7 +1145,7 @@ s32 func_8005B6AC(Mover* a0) {
                 var_v0_29 += 0xFF;
             }
             probe.y = var_v0_29 >> 8;
-            func_8005DA7C((void**)&probe, sp2C, &sp20, &sp24);
+            func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             var_t8 = 0;
             if (sp20 == 0) {
                 temp_a2_3 = sp28->unk0;
@@ -1167,7 +1168,7 @@ s32 func_8005B6AC(Mover* a0) {
                     var_v0_31 += 0xFF;
                 }
                 probe.y = var_v0_31 >> 8;
-                func_8005DA7C((void**)&probe, sp2C, &sp20, &sp24);
+                func_8005DA7C(&probe, sp2C, &sp20, &sp24);
                 sp50 |= 3;
             }
         } else {
@@ -1181,7 +1182,7 @@ s32 func_8005B6AC(Mover* a0) {
                 var_v0_33 += 0xFF;
             }
             probe.y = var_v0_33 >> 8;
-            func_8005DA7C((void**)&probe, sp2C, &sp20, &sp24);
+            func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             sp50 |= 3;
         }
         }
@@ -1291,7 +1292,7 @@ s32 func_8005B6AC(Mover* a0) {
                 case 1:                             /* switch 3 */
                     var_v1_4 = ((UnkNode2*)temp_s6_6)->unk14 + (s16) temp_v1_25;
                     if (var_v1_4 < var_t1_3) {
-                        temp_s0_6 = func_8005DFAC(sp2C, &probe.x, temp_v1_25, var_a3);
+                        temp_s0_6 = func_8005DFAC(sp2C, &probe.x);
                         if (var_t8 != 0) {
                             temp_v1_27 = -(temp_s0_6 << 8);
                             if (temp_v1_27 < a0->unk18) {
@@ -1374,5 +1375,294 @@ s32 func_8005B6AC(Mover* a0) {
         }
         var_v0 = sp50;
         return var_v0;
+    }
+}
+
+/**
+ * @brief Classify a linked list of collision nodes against a probe box.
+ *
+ * Walks @p node's `unk0` chain and tests each node's tile span against the
+ * probe rectangle. Nodes that block movement are appended to the array at
+ * 0x801E1000 and counted in @p out_hit; nodes that are merely touched are
+ * appended to the array at 0x801E1100 and counted in @p out_touch. A node can
+ * be both.
+ *
+ * Per node the span [row_top, row_bot] is clipped to the probe's vertical
+ * extent, then a run of `UnkS16` edge pairs (`node->unk10`) is scanned for
+ * horizontal overlap. `obj->unk4 & 8` selects a variant that also consults the
+ * per-edge flag bytes at `node->unk14`; otherwise a cheaper scan runs, with a
+ * separate path when the node has a horizontal offset (`dx`). `((u8*)obj)[4] &
+ * 3` then selects the height test: case 0 compares against the node's own
+ * height, case 1 asks func_8005DFAC for the interpolated ground height.
+ *
+ * @param node      Head of the collision node chain; walked directly (the
+ *                  parameter is the loop variable).
+ * @param probe     Probe box: owning Mover plus centre x/y and half extents.
+ * @param out_hit   Receives the number of blocking nodes written to 0x801E1000.
+ * @param out_touch Receives the number of touching nodes written to 0x801E1100.
+ *
+ * @note `result` bit 1 = touching, bit 2 = blocking.
+ * @note `obj->unk4` is read as a word for the `& 8` and `& 4` tests but as a
+ *       byte for the `& 3` dispatch, matching the original's access widths.
+ * @note The flag bytes are read both signed and unsigned from the same address
+ *       (`(s8)fl[n] >= 0` versus `fl[n] == 0x7F`); these are deliberately
+ *       distinct reads and must not be collapsed into one.
+ * @note NOT YET MATCHED - 99.67% (329/332 exact rows, frame and all sp slots
+ *       match, instruction count is one short). The single remaining defect is
+ *       at +0xE8: the original emits `sra v0,v0,8 / addu t8,v0,zero /
+ *       sll v0,v0,16`, keeping `dz` in a separate register from the temporary
+ *       the sign-extension reads, while this source fuses them into
+ *       `sra t8,v0,8 / sll v0,t8,16`. Declaring `dz` as `s16` does reproduce
+ *       the copy but costs rows elsewhere. See working/func_8005DA7C/status.md
+ *       for the full probe log and the retired hypothesis classes.
+ * @note No decomp.me scratch exists for this function yet.
+ */
+void func_8005DA7C(Probe* probe, UnkNode1* node, s32* out_hit, s32* out_touch)
+{
+    UnkNode1** hit_list;
+    UnkNode1** touch_list;
+    UnkNode2* obj;
+    Mover* m;
+    UnkS16* pt;
+    u8* fl;
+    s16 w;
+    s16 h;
+    s16 y0;
+    s16 y1;
+    s16 x0;
+    s16 x1;
+    s32 row_top;
+    s32 row_clip;
+    s32 row_bot;
+    s32 row_lim;
+    s32 dx;
+    s32 dy;
+    s32 dz;
+    s32 zc;
+    s32 off;
+    s32 count;
+    s32 result;
+    s8 over;
+    s32 gnd;
+    s8 f0;
+    s32 y0v;
+    u8 stride;
+    u16 sy;
+    u16 sx;
+
+    *out_hit = 0;
+    *out_touch = 0;
+    if (node != NULL)
+    {
+        hit_list = (UnkNode1**)0x801E1000;
+        touch_list = (UnkNode1**)0x801E1100;
+        h = probe->h;
+        m = probe->m;
+        w = probe->w;
+        sy = m->unk28;
+        y0 = probe->y - (s16)sy / 2;
+        y1 = y0 + sy;
+        sx = m->unk24;
+        x0 = probe->x - (s16)sx / 2;
+        x1 = x0 + sx;
+        do
+        {
+            obj = node->unk4;
+            if (node->unk18 != 0)
+            {
+                dz = (s32)node->unk38 >> 8;
+                zc = obj->unk14 + (s16)dz;
+                if ((zc == 0) || (zc < w + m->unk26) || (zc < h))
+                {
+                    dy = (s32)node->unk40 >> 8;
+                    dx = (s32)(node->unk34 << 8) >> 16;
+                    if (((node->unk1C + dx) < x1) && ((node->unk1E + dx) >= x0))
+                    {
+                        row_lim = y1;
+                        row_top = node->unk22 + (s16)dy;
+                        if (row_top < row_lim)
+                        {
+                            y0v = y0;
+                            row_bot = node->unk20 + (s16)dy;
+                            if (row_bot >= y0v)
+                            {
+                                count = row_bot;
+                                if ((row_lim - 1) < count)
+                                {
+                                    count = row_lim - 1;
+                                }
+                                if (row_top < y0v)
+                                {
+                                    row_clip = y0v;
+                                }
+                                else
+                                {
+                                    row_clip = row_top;
+                                }
+                                stride = ((u8*)obj)[6];
+                                off = (row_clip - row_top) * stride;
+                                count = ((count - row_clip) + 1) * stride;
+                                result = 0;
+                                pt = (UnkS16*)node->unk10 + off;
+                                if (obj->unk4 & 8)
+                                {
+                                    fl = (u8*)node->unk14 + off * 2;
+                                    while (--count != -1)
+                                    {
+                                        if ((pt->unk0 < x1) && (pt->unk2 >= x0))
+                                        {
+                                            f0 = (s8)fl[0];
+                                            if ((f0 >= 0) && (x0 < pt->unk0))
+                                            {
+                                                result = 2;
+                                                break;
+                                            }
+                                            if (((s8)fl[1] >= 0) && (pt->unk2 < x1 - 1))
+                                            {
+                                                result = 2;
+                                                break;
+                                            }
+                                            if ((f0 >= 0) && ((s8)fl[1] >= 0))
+                                            {
+                                                result = 2;
+                                                if (fl[0] == 0x7F)
+                                                {
+                                                    break;
+                                                }
+                                                if (fl[1] == 0x7F)
+                                                {
+                                                    break;
+                                                }
+                                            }
+                                            result = 1;
+                                        }
+                                        pt++;
+                                        fl += 2;
+                                    }
+                                }
+                                else if (dx != 0)
+                                {
+                                    while (--count != -1)
+                                    {
+                                        zc = dx;
+                                        if (((pt->unk0 + zc) < x1) && ((pt->unk2 + zc) >= x0))
+                                        {
+                                            result = 1;
+                                            break;
+                                        }
+                                        pt++;
+                                    }
+                                }
+                                else
+                                {
+                                    while (--count != -1)
+                                    {
+                                        if ((pt->unk0 < x1) && (pt->unk2 >= x0))
+                                        {
+                                            result = 1;
+                                            break;
+                                        }
+                                        pt++;
+                                    }
+                                }
+                                if (result != 0)
+                                {
+                                    switch (((u8*)obj)[4] & 3)
+                                    {
+                                    case 0:
+                                        if ((obj->unk14 + (s16)dz) < h)
+                                        {
+                                            if (obj->unk4 & 4)
+                                            {
+                                                result = 2;
+                                            }
+                                            else
+                                            {
+                                                if (m->unk28 & 0x30000)
+                                                {
+                                                    over = w < (obj->unk10 + (s16)dz);
+                                                    if (over != 0)
+                                                    {
+                                                        result = 2;
+                                                    }
+                                                    else
+                                                    {
+                                                        result |= 1;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    over = (w + 0x10) < (obj->unk10 + (s16)dz);
+                                                    if (over != 0)
+                                                    {
+                                                        result = 2;
+                                                    }
+                                                    else
+                                                    {
+                                                        result |= 1;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            result = 1;
+                                        }
+                                        break;
+                                    case 1:
+                                        if ((obj->unk14 + (s16)dz) < h)
+                                        {
+                                            gnd = func_8005DFAC(node, &probe->x);
+                                            if (m->unk28 & 0x30000)
+                                            {
+                                                over = w < gnd;
+                                                if (over != 0)
+                                                {
+                                                    result = 2;
+                                                }
+                                                else
+                                                {
+                                                    result |= 1;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                over = (w + 0x10) < gnd;
+                                                if (over != 0)
+                                                {
+                                                    result = 2;
+                                                }
+                                                else
+                                                {
+                                                    result |= 1;
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            result = 1;
+                                        }
+                                        break;
+                                    }
+                                    if (result & 2)
+                                    {
+                                        *hit_list = node;
+                                        hit_list++;
+                                        *out_hit += 1;
+                                    }
+                                    if (result & 1)
+                                    {
+                                        *touch_list = node;
+                                        touch_list++;
+                                        *out_touch += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            node = node->unk0;
+        } while (node != NULL);
     }
 }
