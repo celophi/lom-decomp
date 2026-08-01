@@ -6372,3 +6372,32 @@ void func_8005AA68(FieldObj* obj, s32 delta, s32 axis)
         }
     }
 }
+
+/**
+ * @brief Walk the scene's object list @p index steps from the head.
+ *
+ * The counter is pre-decremented and compared against -1 rather than counting
+ * down to 0; writing it as a plain @c index-step loop changes the compare and
+ * costs the tail rows.
+ *
+ * @param index Number of @c next hops to take. 0 returns the list head.
+ * @return The object @p index steps into the list.
+ * @see decomp.me (100%) TODO
+ */
+FieldObj* func_8005AB4C(s32 index)
+{
+    FieldObj* obj;
+    s32 remaining;
+
+    obj = g_field_scene.scene->objects;
+    remaining = index - 1;
+    if (index != 0)
+    {
+        do
+        {
+            obj = obj->next;
+            remaining -= 1;
+        } while (remaining != -1);
+    }
+    return obj;
+}
