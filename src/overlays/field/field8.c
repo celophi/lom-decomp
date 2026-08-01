@@ -6566,3 +6566,66 @@ void func_8005AC50(u8* colors, s32 count, s32* rgb_scale)
         } while (remaining != -1);
     }
 }
+
+/**
+ * @brief Stamp the GPU primitive code for a texture format across the whole
+ *        scratchpad colour table.
+ *
+ * Maps @p format to a primitive code and writes it into the @c code byte of
+ * every entry of the table at 0x1F800000 (offset 3 of each FieldTintColor, so
+ * the walk strides 4). @p primitive_code caches the code the table currently
+ * carries; when it already matches, the whole pass is skipped.
+ *
+ * The codes are the standard GPU primitive tags: 0x7C SPRT_16, 0x64 SPRT,
+ * 0x2C POLY_FT4 and 0x3C POLY_GT4 for anything else.
+ *
+ * @param format Texture format selector taken from FieldAnimCel.
+ * @param count Number of table entries to stamp.
+ * @param primitive_code In/out cache of the code already in the table; updated
+ *                       once the table has been rewritten.
+ * @note @c format is a @c u8 (it needs the entry @c andi) but @c count is an
+ *       @c s32, even though field2.c and field3.c declare the second parameter
+ *       @c u16; as a @c u16 the in-place decrement needs masking and the
+ *       function loses five instructions (16 rows).
+ * @note @p primitive_code is @c u8*, not the @c s8* those two files declare -
+ *       the target reads it with @c lbu (1 row).
+ * @note Cases 2-5 must share ONE arm. Giving each its own arm with a duplicate
+ *       body takes gcc's case list from three nodes to six, which rebuilds the
+ *       whole comparison tree (15 rows); see idiom [EXPAND-13]. An equivalent
+ *       if/else-if chain costs 21 rows.
+ * @see decomp.me (100%) TODO
+ */
+void func_8005AD20(u8 format, s32 count, u8* primitive_code)
+{
+    s32 code;
+    u8* p;
+
+    switch (format)
+    {
+    case 0:
+        code = 0x7C;
+        break;
+    case 1:
+        code = 0x64;
+        break;
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+        code = 0x2C;
+        break;
+    default:
+        code = 0x3C;
+        break;
+    }
+    if (code != *primitive_code)
+    {
+        p = (u8*)0x1F800003;
+        while (--count != -1)
+        {
+            *p = code;
+            p += 4;
+        }
+        *primitive_code = code;
+    }
+}
