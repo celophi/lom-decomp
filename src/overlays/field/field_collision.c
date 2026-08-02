@@ -1,19 +1,277 @@
-typedef unsigned char   u_char;
-typedef unsigned short  u_short;
-typedef unsigned int    u_int;
-typedef unsigned long   u_long;
+#include "common.h"
 
-typedef unsigned char   undefined;
-typedef unsigned char   undefined1;
-typedef unsigned short  undefined2;
-typedef unsigned int    undefined4;
+typedef struct {
+    u8 _pad[0x2C];
+    s32 unk2C;
+    s32 unk30;
+} FieldState;
 
-typedef int             s32;
-typedef unsigned int    u32;
-typedef unsigned char   u8;
-typedef signed char     s8;
-typedef unsigned short  u16;
-typedef signed short    s16;
+typedef struct Node
+{
+    struct Node *unk0;   /* 0x00 next pointer */
+    s32 definition;      /* 0x04 compared by field_find_object_by_definition */
+    u8 _pad[0x10];       /* 0x08-0x17 */
+    s8 unk18;            /* 0x18 byte written by func_8005B228 */
+} Node;
+
+struct CollNode;
+
+typedef struct
+{
+    u8 _pad0[4];           /* 0x00-0x03 */
+    Node *objects;          /* 0x04 head of the scene object list */
+    Node *unk8;             /* 0x08 head of the node list */
+    u8 _pad1[0x10 - 0xC];   /* 0x0C-0x0F */
+    struct CollNode *coll_list; /* 0x10 collision-node list traversed by func_8005B368 */
+    u8 _pad2[0x28 - 0x14];  /* 0x14-0x27 */
+    s32 unk28;              /* 0x28 flag gating the func_8005F5BC call */
+} FieldScene;
+
+typedef struct
+{
+    FieldScene *scene;
+} FieldSceneGlobals;
+
+extern unsigned int D_801ED02C;
+extern FieldSceneGlobals g_field_scene;
+extern u8 D_800CBF44[];
+extern volatile s32 D_801ED490;
+
+void func_8005F5BC(s32, Node*, FieldScene*, s32);
+
+
+/**
+ * @brief Probe position and footprint passed to func_8005B368.
+ *
+ * Carries the world-space probe position (x, y, z) plus the footprint
+ * extents (unkC = width along x, unk10 = depth along z) and a height
+ * tolerance (unkE).
+ */
+typedef struct
+{
+    s32 x;
+    s32 y;
+    s32 z;
+    u16 unkC;
+    s16 unkE;
+    u16 unk10;
+} Query;
+
+/**
+ * @brief Collision object referenced by a CollNode.
+ * @note unk10/unk12 are the vertical band the object occupies; unk14 is the
+ *       value returned to the caller on a successful hit.
+ */
+typedef struct
+{
+    u8 pad[0x10];
+    s16 unk10;
+    s16 unk12;
+    s16 unk14;
+} Object;
+
+/**
+ * @brief One entry in the field scene's collision-node list (scene+0x10).
+ *
+ * @note right/left/bottom/top form the node's axis-aligned bounding box.
+ *       Each of the two (denom, mult, max, min) groups describes a sloped
+ *       edge: when denom != 0 the edge is diagonal and the probe is tested
+ *       against mult*coord/denom; when denom == 0 the edge is axis-aligned
+ *       and only max/min are used.
+ */
+typedef struct CollNode
+{
+    struct CollNode *next;
+    Object *obj;
+    u8 pad[8];
+    s16 right;
+    s16 left;
+    s16 bottom;
+    s16 top;
+    s32 denom1;
+    s32 mult1;
+    s32 denom2;
+    s32 mult2;
+    s32 max1;
+    s32 min1;
+    s32 max2;
+    s32 min2;
+} CollNode;
+
+/**
+ * @brief Hit-test a probe against the field scene's collision-node list.
+ *
+ * Converts the query position from world units to grid cells (signed divide
+ * by 256, i.e. a >> 8 with a round-toward-zero bias for negatives) and
+ * centres the footprint by subtracting half the extent. Each node is
+ * rejected by its bounding box first; survivors are tested against the
+ * node's two sloped/axis-aligned edges. The first node that passes returns
+ * its object's unk14.
+ *
+ * @param q Probe query (position, footprint extents, height tolerance).
+ * @return obj->unk14 of the first node hit, or -1 if nothing is hit.
+ *
+ * @note Matches 98.85% under gcc280_g4 (no expand-div) and is functionally
+ *       faithful to the target. The residual diff is register-allocation
+ *       noise in three tightly-coupled clusters (the start-x/start-z setup
+ *       seeded by the uninitialised reads, the denom1 division ordering, and
+ *       the denom2 ty/max2 coloring); every source rearrangement tried so
+ *       far - including decomp-permuter - regresses it.
+ * @see decomp.me (98.85%) https://decomp.me/scratch/ElbpA
+ */
+s16 func_8005B368(Query *q)
+{
+    s32 sx;
+    s32 ex;
+    unsigned long new_var;
+    Query *q_dup;
+    s32 sz;
+    FieldScene *scene;
+    s32 ez;
+    s32 sy;
+    s32 half_x;
+    s32 start_z;
+    s32 half_z;
+    s32 temp;
+    CollNode *node;
+    s32 hit;
+
+    /* half_x = (s16)unkC / 2: sign-extend, add the sign bit, then arithmetic
+     * shift right by one. The two-step (ez then >>1) and the redundant q_dup
+     * copy are kept verbatim because they are required to match. */
+    temp = q->unkC;
+    half_x = ((s16) temp) + (((u32) (temp << 16)) >> 31);
+    q_dup = q;
+    scene = g_field_scene.scene;
+    ez = half_x;
+    half_x = ((s32) ez) >> 1;
+
+    /* sx reads q->x: the explicit "sx = q->x" load is omitted so the compiler
+     * keeps q->x in sx's register (an m2c artifact, but required to match).
+     * The +0xFF before >>8 biases negative values toward zero (signed /256). */
+    if (q->x < 0)
+    {
+        sx += 0xFF;
+    }
+    sx = (sx >> 8) - half_x;
+    temp = q_dup->unk10;
+    ex = sx + ((s16) q->unkC);
+    half_z = ((s32) (((s16) temp) + (((u32) (temp << 16)) >> 31))) >> 1;
+
+    /* sz reads q->z (same omitted-load artifact as sx). The "^ 0" is a no-op
+     * kept to match. */
+    if (q->z >= 0)
+    {
+        sz = (sz ^ 0) >> 8;
+    }
+    else
+    {
+        sz = (sz + 0xFF) >> 8;
+    }
+    sz -= half_z;
+    start_z = sz;
+    ez = start_z + ((s16) q->unk10);
+    if (q->y >= 0)
+    {
+        sy = sy >> 8;
+    }
+    else
+    {
+        sy = (sy + 0xFF) >> 8;
+    }
+
+    for (node = scene->coll_list; node != 0; node = node->next)
+    {
+        Object *obj;
+        s16 val;
+        obj = node->obj;
+        val = obj->unk10;
+
+        /* Reject by vertical band and bounding box. */
+        if ((sy - q->unkE) >= val)
+        {
+            continue;
+        }
+        if ((obj->unk12 != 1) && ((val + obj->unk12) >= sy))
+        {
+            continue;
+        }
+        if (node->top >= ez)
+        {
+            continue;
+        }
+        if (start_z >= node->bottom)
+        {
+            continue;
+        }
+        if (node->left >= ex)
+        {
+            continue;
+        }
+        if (sx >= node->right)
+        {
+            continue;
+        }
+
+        hit = 0;
+        if (node->denom1 != 0)
+        {
+            s32 tx;
+            s32 ty;
+            new_var = (node->mult1 * ex) / node->denom1;
+            tx = (node->mult1 * sx) / node->denom1;
+            ty = new_var;
+            if (((((start_z - tx) >= node->max1) || ((ez - tx) >= node->max1)) || ((start_z - ty) >= node->max1)) || ((ez - ty) >= node->max1))
+            {
+                if ((((node->min1 >= (start_z - tx)) || (node->min1 >= (ez - tx))) || (node->min1 >= (start_z - ty))) || (node->min1 >= (ez - ty)))
+                {
+                    hit = 1;
+                }
+            }
+        }
+        else
+            if (ex >= node->max1)
+        {
+            if (node->min1 >= (sx ^ 0))
+            {
+                hit = 1;
+            }
+        }
+
+        if (hit)
+        {
+            if (node->denom2 != 0)
+            {
+                s32 tx;
+                s32 ty;
+                tx = (node->mult2 * sx) / node->denom2;
+                ty = (node->mult2 * ex) / node->denom2;
+                /* half_x is reused here as a scratch for ty; required to match. */
+                half_x = ty;
+                if (((((start_z - tx) >= node->max2) || ((ez - tx) >= node->max2)) || ((start_z - half_x) >= node->max2)) || ((ez - half_x) >= node->max2))
+                {
+                    if ((((node->min2 < (start_z - tx)) && (node->min2 < (ez - tx))) && (node->min2 < (start_z - half_x))) && (node->min2 < (ez - half_x)))
+                    {
+                    }
+                    else
+                    {
+                        return obj->unk14;
+                    }
+                }
+            }
+            else
+                if (ex >= node->max2)
+            {
+                if (node->min2 >= sx)
+                {
+                    return obj->unk14;
+                }
+            }
+        }
+    }
+
+    return -1;
+}
 
 extern long ratan2(long y, long x);
 extern int rcos(int a);
@@ -25,23 +283,23 @@ s16 func_8005DFAC(void*, s32*);                     /* extern */
 s32 func_8005E1A8(void*, s32, s32, s32);            /* extern */
 extern long SquareRoot0(long a);
 
-typedef struct UnkS16 {
+typedef struct Move_UnkS16 {
     s16 unk0;
     s16 unk2;
-} UnkS16;
+} Move_UnkS16;
 
-typedef struct UnkNode2 {
+typedef struct Move_UnkNode2 {
     u8 pad0[4];
     s32 unk4;
     u8 pad8[8];
     s16 unk10;
     s16 unk12;
     s16 unk14;
-} UnkNode2;
+} Move_UnkNode2;
 
-typedef struct UnkNode1 {
-    struct UnkNode1* unk0;
-    UnkNode2* unk4;
+typedef struct Move_UnkNode1 {
+    struct Move_UnkNode1* unk0;
+    Move_UnkNode2* unk4;
     u8 pad8[8];
     void* unk10;
     void* unk14;
@@ -59,22 +317,22 @@ typedef struct UnkNode1 {
     s32 unk38;
     u8 pad3C[4];
     s32 unk40;
-} UnkNode1;
+} Move_UnkNode1;
 
-typedef struct UnkNode3 {
+typedef struct Move_UnkNode3 {
     u8 pad0[0x2C];
     s32 unk2C;
     s16 unk30;
     s16 unk32;
-} UnkNode3;
+} Move_UnkNode3;
 
 /**
  * @brief Actor/mover state resolved by func_8005B6AC.
- * @note Distinct from field6.c's smaller `Query` probe struct (which has u16
+ * @note Distinct from the smaller `Query` probe struct above (which has u16
  *       unkC/unk10). Prologue asm proves word loads at 0x4/0x10 and an s16 load
  *       at 0x26, so every field here is its asm-confirmed width.
  */
-typedef struct Mover {
+typedef struct Move_Mover {
     s32 unk0;       /* 0x00 world X (fixed-point, >>8 to screen) */
     s32 unk4;       /* 0x04 world Z/height accumulator */
     s32 unk8;       /* 0x08 world Y */
@@ -87,10 +345,10 @@ typedef struct Mover {
     u16 unk24;      /* 0x24 footprint width */
     s16 unk26;      /* 0x26 height bias */
     s32 unk28;      /* 0x28 mode flags (0x30000 gate, low s16 = step size) */
-} Mover;
+} Move_Mover;
 
-typedef struct Node {
-  struct Node *next;
+typedef struct Move_Node {
+  struct Move_Node *next;
   void *obj;
   u8 pad[8];
   s16 right;
@@ -105,40 +363,40 @@ typedef struct Node {
   s32 min1;
   s32 max2;
   s32 min2;
-} Node;
+} Move_Node;
 
 typedef struct {
-  UnkNode3* unk0;
+  Move_UnkNode3* unk0;
   u8 pad4[4];
-  UnkNode1* unk8;
-  UnkNode1* unkC;
-  Node *list;
-} FieldScene;
+  Move_UnkNode1* unk8;
+  Move_UnkNode1* unkC;
+  Move_Node *list;
+} Move_FieldScene;
 
-extern FieldScene *g_field_scene;
+extern Move_FieldScene *g_field_scene_move __asm__("g_field_scene");
 
 void func_80062F48(void*, s32*);                        /* extern */
 
-typedef struct Probe {
-    Mover* m;
+typedef struct Move_Probe {
+    Move_Mover* m;
     s32 x;
     s32 y;
     s16 w;
     s16 h;
-} Probe;
+} Move_Probe;
 
-void func_8005DA7C(Probe*, UnkNode1*, s32*, s32*);
+void func_8005DA7C(Move_Probe*, Move_UnkNode1*, s32*, s32*);
 
 /**
  * @see decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
  * @note local objdiff 80.21% (gcc280_g4_noexpanddiv), 2026-07-02 - active
  *       matching scratch is working/func_8005B6AC.c.
  */
-s32 func_8005B6AC(Mover* a0) {
-    Probe probe;
+s32 func_8005B6AC(Move_Mover* a0) {
+    Move_Probe probe;
     s32 sp20;
     s32 sp24;
-    FieldScene* sp28;
+    Move_FieldScene* sp28;
     void* sp2C;
     u16 sp30;
     u16 sp38;
@@ -368,7 +626,7 @@ s32 func_8005B6AC(Mover* a0) {
     sp48 = 0;
     sp4C = 0;
     sp50 = 0;
-    sp28 = g_field_scene;
+    sp28 = g_field_scene_move;
     a0->unk18 = 0;
     var_v0_2 = -a0->unk4 - a0->unk10;
     if (var_v0_2 < 0) {
@@ -402,19 +660,19 @@ s32 func_8005B6AC(Mover* a0) {
             uy = (u16) probe.y;
             var_t8 = 0;
             while (var_fp != NULL) {
-                    temp_s6 = ((UnkNode1*)var_fp)->unk4;
-                    if ((((UnkNode1*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((UnkNode1*)sp2C)->unk38 >> 8, temp_v1 = ((UnkNode2*)temp_s6)->unk14 + (s16) temp_v0, (temp_v1 == 0)) || (temp_v1 < ((s16) sp30 + a0->unk26)) || (temp_v1 < (s16) sp38))) {
-                        temp_a1 = (s32) ((UnkNode1*)sp2C)->unk34 >> 8;
-                        temp_a0 = (s32) (((UnkNode1*)sp2C)->unk40 << 8) >> 0x10;
-                        temp_v1_2 = ((UnkNode1*)var_fp)->unk22 + temp_a0;
-                        if (((s16) uy >= temp_v1_2) && ((((UnkNode1*)var_fp)->unk20 + temp_a0) >= (s16) uy)) {
+                    temp_s6 = ((Move_UnkNode1*)var_fp)->unk4;
+                    if ((((Move_UnkNode1*)var_fp)->unk18 != 0) && ((temp_v0 = (s32) ((Move_UnkNode1*)sp2C)->unk38 >> 8, temp_v1 = ((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v0, (temp_v1 == 0)) || (temp_v1 < ((s16) sp30 + a0->unk26)) || (temp_v1 < (s16) sp38))) {
+                        temp_a1 = (s32) ((Move_UnkNode1*)sp2C)->unk34 >> 8;
+                        temp_a0 = (s32) (((Move_UnkNode1*)sp2C)->unk40 << 8) >> 0x10;
+                        temp_v1_2 = ((Move_UnkNode1*)var_fp)->unk22 + temp_a0;
+                        if (((s16) uy >= temp_v1_2) && ((((Move_UnkNode1*)var_fp)->unk20 + temp_a0) >= (s16) uy)) {
                             temp_a0_2 = ((u8*)temp_s6)[6];
-                            var_s1 = (u8*)((UnkNode1*)var_fp)->unk10 + (((s16) uy - temp_v1_2) * temp_a0_2 * 4);
+                            var_s1 = (u8*)((Move_UnkNode1*)var_fp)->unk10 + (((s16) uy - temp_v1_2) * temp_a0_2 * 4);
                             if ((s16) temp_a1 != 0) {
                                 var_s0 = temp_a0_2 - 1;
                                 if (temp_a0_2 != 0) {
                                     do {
-                                        if (((s16) ux < (((UnkS16*)var_s1)->unk0 + (s16) temp_a1)) || ((((UnkS16*)var_s1)->unk2 + (s16) temp_a1) < (s16) ux)) {
+                                        if (((s16) ux < (((Move_UnkS16*)var_s1)->unk0 + (s16) temp_a1)) || ((((Move_UnkS16*)var_s1)->unk2 + (s16) temp_a1) < (s16) ux)) {
                                             var_s1 += 4;
                                         } else {
                                             var_t8 = 1;
@@ -426,7 +684,7 @@ s32 func_8005B6AC(Mover* a0) {
                                 var_s0_2 = temp_a0_2 - 1;
                                 if (temp_a0_2 != 0) {
                                     do {
-                                        if (((s16) ux < ((UnkS16*)var_s1)->unk0) || (((UnkS16*)var_s1)->unk2 < (s16) ux)) {
+                                        if (((s16) ux < ((Move_UnkS16*)var_s1)->unk0) || (((Move_UnkS16*)var_s1)->unk2 < (s16) ux)) {
                                             var_s1 += 4;
                                         } else {
                                             var_t8 = 1;
@@ -436,18 +694,18 @@ s32 func_8005B6AC(Mover* a0) {
                                 }
                             }
                             if (var_t8 != 0) {
-                                temp_v1_3 = ((UnkNode2*)temp_s6)->unk4 & 3;
+                                temp_v1_3 = ((Move_UnkNode2*)temp_s6)->unk4 & 3;
                                 switch (temp_v1_3) { /* switch 1; irregular */
                                 case 0:             /* switch 1 */
-                                    if ((((UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
+                                    if ((((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
                                         if (var_a3 != 0) {
-                                            temp_v1_4 = ((UnkNode2*)temp_s6)->unk10 + (s16) temp_v0;
+                                            temp_v1_4 = ((Move_UnkNode2*)temp_s6)->unk10 + (s16) temp_v0;
                                             if ((var_s2 + 0x14) < temp_v1_4) {
                                                 var_s2 = temp_v1_4;
                                                 a0->unk1C = var_fp;
                                             }
                                         } else {
-                                            temp_v1_5 = ((UnkNode2*)temp_s6)->unk10 + (s16) temp_v0;
+                                            temp_v1_5 = ((Move_UnkNode2*)temp_s6)->unk10 + (s16) temp_v0;
                                             if (temp_v1_5 >= var_s2) {
                                                 var_s2 = temp_v1_5;
                                                 a0->unk1C = var_fp;
@@ -456,7 +714,7 @@ s32 func_8005B6AC(Mover* a0) {
                                     }
                                     break;
                                 case 1:             /* switch 1 */
-                                    if ((((UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
+                                    if ((((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
                                         temp_s0 = func_8005DFAC(var_fp, &probe.x);
                                         if (var_a3 != 0) {
                                             var_a3 = 1;
@@ -477,14 +735,14 @@ s32 func_8005B6AC(Mover* a0) {
                             }
                         }
                     }
-                    var_fp = ((UnkNode1*)var_fp)->unk0;
+                    var_fp = ((Move_UnkNode1*)var_fp)->unk0;
             }
         }
         temp_a0_3 = a0->unk1C;
         if ((temp_a0_3 != NULL) && (temp_a0_3 != (void* )-2)) {
-            temp_s6_2 = ((UnkNode1*)temp_a0_3)->unk4;
-            if (((UnkNode1*)temp_a0_3)->unk18 != 0) {
-                if (((((UnkNode2*)temp_s6_2)->unk4 & 3) == 1) && (((UnkNode2*)temp_s6_2)->unk10 != ((UnkNode2*)temp_s6_2)->unk12)) {
+            temp_s6_2 = ((Move_UnkNode1*)temp_a0_3)->unk4;
+            if (((Move_UnkNode1*)temp_a0_3)->unk18 != 0) {
+                if (((((Move_UnkNode2*)temp_s6_2)->unk4 & 3) == 1) && (((Move_UnkNode2*)temp_s6_2)->unk10 != ((Move_UnkNode2*)temp_s6_2)->unk12)) {
                     probe.x = a0->unkC;
                     probe.y = a0->unk14;
                     func_80062F48(temp_s6_2, &probe.x);
@@ -492,7 +750,7 @@ s32 func_8005B6AC(Mover* a0) {
                     sp50 |= 4;
                     a0->unk14 = probe.y;
                 }
-                if (((UnkNode2*)temp_s6_2)->unk4 & 0x10) {
+                if (((Move_UnkNode2*)temp_s6_2)->unk4 & 0x10) {
                     temp_t5 = a0->unkC;
                     sp5C = temp_t5;
                     if (temp_t5 >= 0) {
@@ -511,14 +769,14 @@ s32 func_8005B6AC(Mover* a0) {
                     a0->unk14 = var_v0_7;
                     sp50 |= 4;
                 }
-                if (((UnkNode2*)temp_s6_2)->unk4 & 0x40) {
+                if (((Move_UnkNode2*)temp_s6_2)->unk4 & 0x40) {
                     sp50 |= 0x10;
                 }
-                if (!(a0->unk28 & 0x30000) && ((((UnkNode1*)temp_a0_3)->unk24 != 0) || (((UnkNode1*)temp_a0_3)->unk28 != 0) || (((UnkNode1*)temp_a0_3)->unk2C != 0) || (((UnkNode1*)temp_a0_3)->unk30 != 0))) {
-                    a0->unkC = (s32) (a0->unkC + ((UnkNode1*)temp_a0_3)->unk24);
+                if (!(a0->unk28 & 0x30000) && ((((Move_UnkNode1*)temp_a0_3)->unk24 != 0) || (((Move_UnkNode1*)temp_a0_3)->unk28 != 0) || (((Move_UnkNode1*)temp_a0_3)->unk2C != 0) || (((Move_UnkNode1*)temp_a0_3)->unk30 != 0))) {
+                    a0->unkC = (s32) (a0->unkC + ((Move_UnkNode1*)temp_a0_3)->unk24);
                     temp_s2 = a0->unk10;
-                    a0->unk14 = (s32) (a0->unk14 + ((UnkNode1*)temp_a0_3)->unk30);
-                    if ((((UnkNode2*)temp_s6_2)->unk4 & 3) == 1) {
+                    a0->unk14 = (s32) (a0->unk14 + ((Move_UnkNode1*)temp_a0_3)->unk30);
+                    if ((((Move_UnkNode2*)temp_s6_2)->unk4 & 3) == 1) {
                         var_v0_8 = a0->unk0;
                         if (var_v0_8 < 0) {
                             var_v0_8 += 0xFF;
@@ -531,20 +789,20 @@ s32 func_8005B6AC(Mover* a0) {
                         probe.y = var_v0_9 >> 8;
                         a0->unk10 = (s32) (-((s32) (func_8005DFAC(temp_a0_3, &probe.x) << 0x10) >> 8) - a0->unk4);
                     } else {
-                        a0->unk10 = (s32) (temp_s2 + ((UnkNode1*)temp_a0_3)->unk28);
+                        a0->unk10 = (s32) (temp_s2 + ((Move_UnkNode1*)temp_a0_3)->unk28);
                     }
                     if (temp_s2 != a0->unk10) {
                         sp50 |= 0x30;
-                    } else if ((((UnkNode1*)temp_a0_3)->unk24 != 0) || (((UnkNode1*)temp_a0_3)->unk30 != 0)) {
+                    } else if ((((Move_UnkNode1*)temp_a0_3)->unk24 != 0) || (((Move_UnkNode1*)temp_a0_3)->unk30 != 0)) {
                         sp50 |= 0x10;
                     }
                 } else {
                     temp_s3 = sp28->unkC;
-                    if ((temp_s3 != NULL) && (temp_s3 != temp_a0_3) && ((((UnkNode1*)temp_s3)->unk24 != 0) || (((UnkNode1*)temp_s3)->unk28 != 0) || (((UnkNode1*)temp_s3)->unk2C != 0) || (((UnkNode1*)temp_s3)->unk30 != 0))) {
+                    if ((temp_s3 != NULL) && (temp_s3 != temp_a0_3) && ((((Move_UnkNode1*)temp_s3)->unk24 != 0) || (((Move_UnkNode1*)temp_s3)->unk28 != 0) || (((Move_UnkNode1*)temp_s3)->unk2C != 0) || (((Move_UnkNode1*)temp_s3)->unk30 != 0))) {
                         temp_s2_2 = a0->unk10;
-                        a0->unkC = (s32) (a0->unkC + ((UnkNode1*)temp_s3)->unk24);
+                        a0->unkC = (s32) (a0->unkC + ((Move_UnkNode1*)temp_s3)->unk24);
                         temp_a0_4 = a0->unk0;
-                        a0->unk14 = (s32) (a0->unk14 + ((UnkNode1*)temp_s3)->unk30);
+                        a0->unk14 = (s32) (a0->unk14 + ((Move_UnkNode1*)temp_s3)->unk30);
                         if (temp_a0_4 >= 0) {
                             var_v0_10 = temp_a0_4 >> 8;
                         } else {
@@ -556,15 +814,15 @@ s32 func_8005B6AC(Mover* a0) {
                             var_v0_11 += 0xFF;
                         }
                         probe.y = var_v0_11 >> 8;
-                        temp_s0_2 = func_8005DFAC(temp_s3, &probe.x) - ((UnkNode2*)((UnkNode1*)temp_s3)->unk4)->unk10;
-                        if ((((UnkNode2*)temp_s6_2)->unk4 & 3) == 1) {
+                        temp_s0_2 = func_8005DFAC(temp_s3, &probe.x) - ((Move_UnkNode2*)((Move_UnkNode1*)temp_s3)->unk4)->unk10;
+                        if ((((Move_UnkNode2*)temp_s6_2)->unk4 & 3) == 1) {
                             a0->unk10 = (s32) (-((temp_s0_2 + func_8005DFAC(temp_a0_3, &probe.x)) << 8) - a0->unk4);
                         } else {
-                            a0->unk10 = (s32) (a0->unk10 + (((UnkNode1*)temp_a0_3)->unk28 - (temp_s0_2 << 8)));
+                            a0->unk10 = (s32) (a0->unk10 + (((Move_UnkNode1*)temp_a0_3)->unk28 - (temp_s0_2 << 8)));
                         }
                         if (temp_s2_2 != a0->unk10) {
                             sp50 |= 0x30;
-                        } else if ((((UnkNode1*)temp_a0_3)->unk24 != 0) || (((UnkNode1*)temp_a0_3)->unk30 != 0)) {
+                        } else if ((((Move_UnkNode1*)temp_a0_3)->unk24 != 0) || (((Move_UnkNode1*)temp_a0_3)->unk30 != 0)) {
                             sp50 |= 0x10;
                         }
                     }
@@ -578,11 +836,11 @@ s32 func_8005B6AC(Mover* a0) {
             if ((a0->unk20 & 1) && (temp_a0_5 = a0->unk1C, (temp_a0_5 != (void* )-2))) {
                 var_v0 = 0;
                 if (temp_a0_5 != NULL) {
-                    temp_s6_3 = ((UnkNode1*)temp_a0_5)->unk4;
-                    temp_v1_6 = ((UnkNode2*)temp_s6_3)->unk4 & 3;
+                    temp_s6_3 = ((Move_UnkNode1*)temp_a0_5)->unk4;
+                    temp_v1_6 = ((Move_UnkNode2*)temp_s6_3)->unk4 & 3;
                     switch (temp_v1_6) {            /* switch 2; irregular */
                     case 0:                         /* switch 2 */
-                        var_v0_12 = ((UnkNode1*)temp_a0_5)->unk38 + (((UnkNode2*)temp_s6_3)->unk10 << 8);
+                        var_v0_12 = ((Move_UnkNode1*)temp_a0_5)->unk38 + (((Move_UnkNode2*)temp_s6_3)->unk10 << 8);
                         a0->unk18 = (s32) -var_v0_12;
                         return 0;
                     case 1:                         /* switch 2 */
@@ -599,7 +857,7 @@ s32 func_8005B6AC(Mover* a0) {
                         temp_s3_2 = sp28->unkC;
                         var_s0_3 = func_8005DFAC(temp_a0_5, &probe.x);
                         if ((temp_s3_2 != NULL) && (temp_s3_2 != temp_a0_5)) {
-                            var_s0_3 += func_8005DFAC(temp_s3_2, &probe.x) - ((UnkNode2*)((UnkNode1*)temp_s3_2)->unk4)->unk10;
+                            var_s0_3 += func_8005DFAC(temp_s3_2, &probe.x) - ((Move_UnkNode2*)((Move_UnkNode1*)temp_s3_2)->unk4)->unk10;
                         }
                         var_v0_12 = var_s0_3 << 8;
                         a0->unk18 = (s32) -var_v0_12;
@@ -679,7 +937,7 @@ s32 func_8005B6AC(Mover* a0) {
         var_t8 = 0;
         if (sp20 == 0) {
             temp_a2 = sp28->unk0;
-            if ((((UnkNode3*)temp_a2)->unk2C & 2) && ((temp_a0_6 = (u16) a0->unk24, temp_a1_2 = (u16) a0->unk28, temp_a3 = (u16) probe.x - ((s32) ((s16) temp_a0_6 + ((u32) (temp_a0_6 << 0x10) >> 0x1F)) >> 1), temp_v0_5 = (u16) probe.y - ((s32) ((s16) temp_a1_2 + ((u32) (temp_a1_2 << 0x10) >> 0x1F)) >> 1), (temp_v0_5 & 0x8000)) || ((s16) (temp_v0_5 + temp_a1_2) >= ((UnkNode3*)temp_a2)->unk32) || (temp_a3 & 0x8000) || ((s16) (temp_a3 + temp_a0_6) >= ((UnkNode3*)temp_a2)->unk30))) {
+            if ((((Move_UnkNode3*)temp_a2)->unk2C & 2) && ((temp_a0_6 = (u16) a0->unk24, temp_a1_2 = (u16) a0->unk28, temp_a3 = (u16) probe.x - ((s32) ((s16) temp_a0_6 + ((u32) (temp_a0_6 << 0x10) >> 0x1F)) >> 1), temp_v0_5 = (u16) probe.y - ((s32) ((s16) temp_a1_2 + ((u32) (temp_a1_2 << 0x10) >> 0x1F)) >> 1), (temp_v0_5 & 0x8000)) || ((s16) (temp_v0_5 + temp_a1_2) >= ((Move_UnkNode3*)temp_a2)->unk32) || (temp_a3 & 0x8000) || ((s16) (temp_a3 + temp_a0_6) >= ((Move_UnkNode3*)temp_a2)->unk30))) {
                 var_t8 = 1;
             }
         }
@@ -734,11 +992,11 @@ s32 func_8005B6AC(Mover* a0) {
             temp_s0_3 = (var_v0_22 >> 8) - ((s32) ((s16) temp_v0_8 + ((u32) (temp_v0_8 << 0x10) >> 0x1F)) >> 1);
             temp_a0_7 = sp28->unk0;
             temp_v1_9 = temp_s0_3 + (u16) a0->unk28;
-            if (((UnkNode3*)temp_a0_7)->unk2C & 2) {
-                if ((temp_s0_3 < 0) || (temp_v1_9 >= ((UnkNode3*)temp_a0_7)->unk32)) {
+            if (((Move_UnkNode3*)temp_a0_7)->unk2C & 2) {
+                if ((temp_s0_3 < 0) || (temp_v1_9 >= ((Move_UnkNode3*)temp_a0_7)->unk32)) {
                     var_s5 = func_8005E1A8(NULL, 0x7F, sp58, var_s5);
                 }
-                if ((temp_s1 < 0) || (temp_s2_3 >= ((UnkNode3*)sp28->unk0)->unk30)) {
+                if ((temp_s1 < 0) || (temp_s2_3 >= ((Move_UnkNode3*)sp28->unk0)->unk30)) {
                     var_s5 = func_8005E1A8(NULL, 0x7E, sp58, var_s5);
                 }
             }
@@ -756,13 +1014,13 @@ s32 func_8005B6AC(Mover* a0) {
                 do {
                     var_fp = *sp64;
                     sp64 += 1;
-                    temp_a0_8 = (s32) ((UnkNode1*)sp2C)->unk40 >> 8;
-                    temp_a2_2 = (s32) (((UnkNode1*)sp2C)->unk34 << 8) >> 0x10;
-                    temp_s6_4 = ((UnkNode1*)var_fp)->unk4;
-                    if (((((UnkNode1*)var_fp)->unk1C + temp_a2_2) < sp6C) && (((((UnkNode1*)var_fp)->unk1E + temp_a2_2) >= e_x_min))) {
-                        temp_a1_4 = ((UnkNode1*)var_fp)->unk22 + (s16) temp_a0_8;
+                    temp_a0_8 = (s32) ((Move_UnkNode1*)sp2C)->unk40 >> 8;
+                    temp_a2_2 = (s32) (((Move_UnkNode1*)sp2C)->unk34 << 8) >> 0x10;
+                    temp_s6_4 = ((Move_UnkNode1*)var_fp)->unk4;
+                    if (((((Move_UnkNode1*)var_fp)->unk1C + temp_a2_2) < sp6C) && (((((Move_UnkNode1*)var_fp)->unk1E + temp_a2_2) >= e_x_min))) {
+                        temp_a1_4 = ((Move_UnkNode1*)var_fp)->unk22 + (s16) temp_a0_8;
                         if (temp_a1_4 < sp70) {
-                            temp_v1_10 = ((UnkNode1*)var_fp)->unk20 + (s16) temp_a0_8;
+                            temp_v1_10 = ((Move_UnkNode1*)var_fp)->unk20 + (s16) temp_a0_8;
                             if (temp_v1_10 >= sp74) {
                                 var_s0_4 = temp_v1_10;
                                 var_t1 = temp_a1_4;
@@ -776,9 +1034,9 @@ s32 func_8005B6AC(Mover* a0) {
                                 temp_lo = (var_t1 - temp_a1_4) * temp_a0_9;
                                 temp_lo_2 = ((var_s0_4 - var_t1) + 1) * temp_a0_9;
                                 var_t8 = 0;
-                                var_s1_2 = (u8*)((UnkNode1*)var_fp)->unk10 + (temp_lo * 4);
-                                var_s4 = (s8*)((UnkNode1*)var_fp)->unk14 + (temp_lo * 2);
-                                if (((UnkNode2*)temp_s6_4)->unk4 & 8) {
+                                var_s1_2 = (u8*)((Move_UnkNode1*)var_fp)->unk10 + (temp_lo * 4);
+                                var_s4 = (s8*)((Move_UnkNode1*)var_fp)->unk14 + (temp_lo * 2);
+                                if (((Move_UnkNode2*)temp_s6_4)->unk4 & 8) {
                                     var_s0_5 = temp_lo_2 - 1;
                                     var_s3 = var_s4 + 1;
                                     if (var_s0_5 != -1) {
@@ -917,12 +1175,12 @@ s32 func_8005B6AC(Mover* a0) {
             sp68 = (void** )0x801E1100;
             temp_a0_11 = sp28->unk0;
             temp_v1_15 = temp_s0_5 + (u16) a0->unk28;
-            if (((UnkNode3*)temp_a0_11)->unk2C & 2) {
+            if (((Move_UnkNode3*)temp_a0_11)->unk2C & 2) {
                 if (temp_s0_5 < 0) {
                     var_a3_2 = -temp_s0_5;
                     var_t8 = 1;
                 } else {
-                    temp_a0_12 = ((UnkNode3*)temp_a0_11)->unk32;
+                    temp_a0_12 = ((Move_UnkNode3*)temp_a0_11)->unk32;
                     if (temp_v1_15 >= temp_a0_12) {
                         var_a3_2 = (temp_a0_12 - temp_v1_15) - 1;
                         var_t8 = 1;
@@ -932,7 +1190,7 @@ s32 func_8005B6AC(Mover* a0) {
                     var_t0 = -var_s1_3;
                     var_t8 = 1;
                 } else {
-                    temp_a0_13 = ((UnkNode3*)sp28->unk0)->unk30;
+                    temp_a0_13 = ((Move_UnkNode3*)sp28->unk0)->unk30;
                     if (temp_s2_4 >= temp_a0_13) {
                         var_t0 = (temp_a0_13 - temp_s2_4) - 1;
                         var_t8 = 1;
@@ -946,18 +1204,18 @@ s32 func_8005B6AC(Mover* a0) {
                 f_y_min = temp_s0_5;
                 f_y_max = temp_v1_15;
                 sp8C = f_y_max - 1;
-                temp_v1_16 = (s32) ((UnkNode1*)sp2C)->unk34 >> 8;
+                temp_v1_16 = (s32) ((Move_UnkNode1*)sp2C)->unk34 >> 8;
                 sp40 = (u16) temp_v1_16;
                 sp84 = (s32) (s16) temp_v1_16;
-                sp88 = (s32) (((UnkNode1*)sp2C)->unk40 << 8) >> 0x10;
+                sp88 = (s32) (((Move_UnkNode1*)sp2C)->unk40 << 8) >> 0x10;
                 do {
                     var_fp = *sp68;
                     sp68 += 1;
-                    temp_s6_5 = ((UnkNode1*)var_fp)->unk4;
-                    if (((((UnkNode1*)var_fp)->unk1C + sp84) < f_x_max) && (((((UnkNode1*)var_fp)->unk1E + sp84) >= f_x_min))) {
-                        temp_a0_14 = ((UnkNode1*)var_fp)->unk22 + sp88;
+                    temp_s6_5 = ((Move_UnkNode1*)var_fp)->unk4;
+                    if (((((Move_UnkNode1*)var_fp)->unk1C + sp84) < f_x_max) && (((((Move_UnkNode1*)var_fp)->unk1E + sp84) >= f_x_min))) {
+                        temp_a0_14 = ((Move_UnkNode1*)var_fp)->unk22 + sp88;
                         if (temp_a0_14 < f_y_max) {
-                            temp_v1_17 = ((UnkNode1*)var_fp)->unk20 + sp88;
+                            temp_v1_17 = ((Move_UnkNode1*)var_fp)->unk20 + sp88;
                             if (temp_v1_17 >= f_y_min) {
                                 var_s0_8 = temp_v1_17;
                                 var_t1_2 = temp_a0_14;
@@ -969,8 +1227,8 @@ s32 func_8005B6AC(Mover* a0) {
                                 }
                                 temp_lo_4 = (var_t1_2 - temp_a0_14) * ((u8*)temp_s6_5)[6];
                                 var_s0_9 = var_s0_8 - var_t1_2;
-                                var_s1_4 = (u8*)((UnkNode1*)var_fp)->unk10 + (temp_lo_4 * 4);
-                                var_s4_2 = (u8*)((UnkNode1*)var_fp)->unk14 + (temp_lo_4 * 2);
+                                var_s1_4 = (u8*)((Move_UnkNode1*)var_fp)->unk10 + (temp_lo_4 * 4);
+                                var_s4_2 = (u8*)((Move_UnkNode1*)var_fp)->unk14 + (temp_lo_4 * 2);
                                 if (var_s0_9 != -1) {
                                     temp_s7 = f_x_max - 1;
                                     do {
@@ -986,7 +1244,7 @@ s32 func_8005B6AC(Mover* a0) {
                                                     temp_a1_5 = *(s16*)var_t3;
                                                     if (temp_a1_5 >= f_x_min) {
                                                         var_a2 = 0;
-                                                        if (((UnkNode2*)temp_s6_5)->unk4 & 8) {
+                                                        if (((Move_UnkNode2*)temp_s6_5)->unk4 & 8) {
                                                             var_a0 = 0;
                                                             if ((f_x_min < temp_v1_18) && !(*var_s4_2 & 0x80)) {
                                                                 var_a2 = 1;
@@ -1149,7 +1407,7 @@ s32 func_8005B6AC(Mover* a0) {
             var_t8 = 0;
             if (sp20 == 0) {
                 temp_a2_3 = sp28->unk0;
-                if ((((UnkNode3*)temp_a2_3)->unk2C & 2) && ((temp_a0_16 = (u16) a0->unk24, temp_a1_7 = (u16) a0->unk28, temp_a3_2 = (u16) probe.x - ((s32) ((s16) temp_a0_16 + ((u32) (temp_a0_16 << 0x10) >> 0x1F)) >> 1), temp_v0_14 = (u16) probe.y - ((s32) ((s16) temp_a1_7 + ((u32) (temp_a1_7 << 0x10) >> 0x1F)) >> 1), (temp_v0_14 & 0x8000)) || ((s16) (temp_v0_14 + temp_a1_7) >= ((UnkNode3*)temp_a2_3)->unk32) || (temp_a3_2 & 0x8000) || ((s16) (temp_a3_2 + temp_a0_16) >= ((UnkNode3*)temp_a2_3)->unk30))) {
+                if ((((Move_UnkNode3*)temp_a2_3)->unk2C & 2) && ((temp_a0_16 = (u16) a0->unk24, temp_a1_7 = (u16) a0->unk28, temp_a3_2 = (u16) probe.x - ((s32) ((s16) temp_a0_16 + ((u32) (temp_a0_16 << 0x10) >> 0x1F)) >> 1), temp_v0_14 = (u16) probe.y - ((s32) ((s16) temp_a1_7 + ((u32) (temp_a1_7 << 0x10) >> 0x1F)) >> 1), (temp_v0_14 & 0x8000)) || ((s16) (temp_v0_14 + temp_a1_7) >= ((Move_UnkNode3*)temp_a2_3)->unk32) || (temp_a3_2 & 0x8000) || ((s16) (temp_a3_2 + temp_a0_16) >= ((Move_UnkNode3*)temp_a2_3)->unk30))) {
                     var_t8 = 1;
                 }
             }
@@ -1215,19 +1473,19 @@ s32 func_8005B6AC(Mover* a0) {
                 temp_t5_4 = *sp68;
                 sp68 += 1;
                 sp2C = temp_t5_4;
-                temp_s6_6 = ((UnkNode1*)temp_t5_4)->unk4;
-                temp_a1_8 = (s32) ((UnkNode1*)temp_t5_4)->unk34 >> 8;
-                temp_a0_17 = (s32) (((UnkNode1*)temp_t5_4)->unk40 << 8) >> 0x10;
-                temp_v1_24 = ((UnkNode1*)temp_t5_4)->unk22 + temp_a0_17;
+                temp_s6_6 = ((Move_UnkNode1*)temp_t5_4)->unk4;
+                temp_a1_8 = (s32) ((Move_UnkNode1*)temp_t5_4)->unk34 >> 8;
+                temp_a0_17 = (s32) (((Move_UnkNode1*)temp_t5_4)->unk40 << 8) >> 0x10;
+                temp_v1_24 = ((Move_UnkNode1*)temp_t5_4)->unk22 + temp_a0_17;
                 var_t8 = 0;
-                if ((var_t0_2 >= temp_v1_24) && (((((UnkNode1*)temp_t5_4)->unk20 + temp_a0_17) >= var_t0_2))) {
+                if ((var_t0_2 >= temp_v1_24) && (((((Move_UnkNode1*)temp_t5_4)->unk20 + temp_a0_17) >= var_t0_2))) {
                     temp_a0_18 = ((u8*)temp_s6_6)[6];
-                    var_s1_5 = (u8*)((UnkNode1*)temp_t5_4)->unk10 + ((var_t0_2 - temp_v1_24) * temp_a0_18 * 4);
+                    var_s1_5 = (u8*)((Move_UnkNode1*)temp_t5_4)->unk10 + ((var_t0_2 - temp_v1_24) * temp_a0_18 * 4);
                     if ((s16) temp_a1_8 != 0) {
                         var_s0_10 = temp_a0_18 - 1;
                         if (temp_a0_18 != 0) {
                             do {
-                                if (((s16) ux < (((UnkS16*)var_s1_5)->unk0 + (s16) temp_a1_8)) || ((((UnkS16*)var_s1_5)->unk2 + (s16) temp_a1_8) < (s16) ux)) {
+                                if (((s16) ux < (((Move_UnkS16*)var_s1_5)->unk0 + (s16) temp_a1_8)) || ((((Move_UnkS16*)var_s1_5)->unk2 + (s16) temp_a1_8) < (s16) ux)) {
                                     var_s1_5 += 4;
                                 } else {
                                     var_t8 = 1;
@@ -1239,7 +1497,7 @@ s32 func_8005B6AC(Mover* a0) {
                         var_s0_11 = temp_a0_18 - 1;
                         if (temp_a0_18 != 0) {
                             do {
-                                if (((s16) ux < ((UnkS16*)var_s1_5)->unk0) || (((UnkS16*)var_s1_5)->unk2 < (s16) ux)) {
+                                if (((s16) ux < ((Move_UnkS16*)var_s1_5)->unk0) || (((Move_UnkS16*)var_s1_5)->unk2 < (s16) ux)) {
                                     var_s1_5 += 4;
                                 } else {
                                     var_t8 = 1;
@@ -1249,35 +1507,35 @@ s32 func_8005B6AC(Mover* a0) {
                         }
                     }
                 }
-                temp_a1_9 = ((UnkNode1*)sp2C)->unk38;
-                temp_a0_19 = ((UnkNode2*)temp_s6_6)->unk4 & 3;
+                temp_a1_9 = ((Move_UnkNode1*)sp2C)->unk38;
+                temp_a0_19 = ((Move_UnkNode2*)temp_s6_6)->unk4 & 3;
                 temp_v1_25 = temp_a1_9 >> 8;
                 switch (temp_a0_19) {               /* switch 3; irregular */
                 case 0:                             /* switch 3 */
-                    var_v1_4 = ((UnkNode2*)temp_s6_6)->unk14 + (s16) temp_v1_25;
+                    var_v1_4 = ((Move_UnkNode2*)temp_s6_6)->unk14 + (s16) temp_v1_25;
                     var_v0_36 = var_v1_4 < var_s7;
                     if (var_v1_4 < var_t1_3) {
                         if (var_t8 != 0) {
-                            temp_v0_16 = -(temp_a1_9 + (((UnkNode2*)temp_s6_6)->unk10 << 8));
+                            temp_v0_16 = -(temp_a1_9 + (((Move_UnkNode2*)temp_s6_6)->unk10 << 8));
                             if (temp_v0_16 < a0->unk18) {
                                 a0->unk18 = temp_v0_16;
                                 var_fp = sp2C;
                             }
                         }
                         if (var_a3 != 0) {
-                            temp_v0_17 = ((UnkNode2*)temp_s6_6)->unk10 + (s16) temp_v1_25;
+                            temp_v0_17 = ((Move_UnkNode2*)temp_s6_6)->unk10 + (s16) temp_v1_25;
                             if ((var_s2 + 0x14) < temp_v0_17) {
                                 var_s2 = temp_v0_17;
-                                var_s4_3 = ((UnkNode1*)sp2C)->unk38 + (((UnkNode2*)temp_s6_6)->unk10 << 8);
+                                var_s4_3 = ((Move_UnkNode1*)sp2C)->unk38 + (((Move_UnkNode2*)temp_s6_6)->unk10 << 8);
                                 if (var_t8 != 0) {
                                     a0->unk1C = sp2C;
                                 }
                             }
                         } else {
-                            temp_v1_26 = ((UnkNode2*)temp_s6_6)->unk10 + (s16) temp_v1_25;
+                            temp_v1_26 = ((Move_UnkNode2*)temp_s6_6)->unk10 + (s16) temp_v1_25;
                             if (temp_v1_26 >= var_s2) {
                                 var_s2 = temp_v1_26;
-                                var_s4_3 = ((UnkNode1*)sp2C)->unk38 + (((UnkNode2*)temp_s6_6)->unk10 << 8);
+                                var_s4_3 = ((Move_UnkNode1*)sp2C)->unk38 + (((Move_UnkNode2*)temp_s6_6)->unk10 << 8);
                                 if (var_t8 != 0) {
                                     a0->unk1C = sp2C;
                                 }
@@ -1290,7 +1548,7 @@ s32 func_8005B6AC(Mover* a0) {
                     }
                     break;
                 case 1:                             /* switch 3 */
-                    var_v1_4 = ((UnkNode2*)temp_s6_6)->unk14 + (s16) temp_v1_25;
+                    var_v1_4 = ((Move_UnkNode2*)temp_s6_6)->unk14 + (s16) temp_v1_25;
                     if (var_v1_4 < var_t1_3) {
                         temp_s0_6 = func_8005DFAC(sp2C, &probe.x);
                         if (var_t8 != 0) {
@@ -1304,11 +1562,11 @@ s32 func_8005B6AC(Mover* a0) {
                             var_v0_37 = var_s2 < temp_s0_6;
                             if (temp_s3_3 != NULL) {
                                 if (temp_s3_3 == sp2C) {
-                                    temp_v0_18 = temp_s0_6 - ((UnkNode2*)((UnkNode1*)sp2C)->unk4)->unk10;
+                                    temp_v0_18 = temp_s0_6 - ((Move_UnkNode2*)((Move_UnkNode1*)sp2C)->unk4)->unk10;
                                     var_s2 += temp_v0_18;
                                     var_s4_3 += temp_v0_18 << 8;
                                 } else {
-                                    var_s2 = (temp_s0_6 + var_s2) - ((UnkNode2*)((UnkNode1*)temp_s3_3)->unk4)->unk10;
+                                    var_s2 = (temp_s0_6 + var_s2) - ((Move_UnkNode2*)((Move_UnkNode1*)temp_s3_3)->unk4)->unk10;
                                     var_s4_3 = var_s2 << 8;
                                     if (var_t8 != 0) {
                                         a0->unk1C = sp2C;
@@ -1388,7 +1646,7 @@ s32 func_8005B6AC(Mover* a0) {
  * be both.
  *
  * Per node the span [row_top, row_bot] is clipped to the probe's vertical
- * extent, then a run of `UnkS16` edge pairs (`node->unk10`) is scanned for
+ * extent, then a run of `Move_UnkS16` edge pairs (`node->unk10`) is scanned for
  * horizontal overlap. `obj->unk4 & 8` selects a variant that also consults the
  * per-edge flag bytes at `node->unk14`; otherwise a cheaper scan runs, with a
  * separate path when the node has a horizontal offset (`dx`). `((u8*)obj)[4] &
@@ -1397,7 +1655,7 @@ s32 func_8005B6AC(Mover* a0) {
  *
  * @param node      Head of the collision node chain; walked directly (the
  *                  parameter is the loop variable).
- * @param probe     Probe box: owning Mover plus centre x/y and half extents.
+ * @param probe     Move_Probe box: owning Move_Mover plus centre x/y and half extents.
  * @param out_hit   Receives the number of blocking nodes written to 0x801E1000.
  * @param out_touch Receives the number of touching nodes written to 0x801E1100.
  *
@@ -1417,13 +1675,13 @@ s32 func_8005B6AC(Mover* a0) {
  *       for the full probe log and the retired hypothesis classes.
  * @note No decomp.me scratch exists for this function yet.
  */
-void func_8005DA7C(Probe* probe, UnkNode1* node, s32* out_hit, s32* out_touch)
+void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* out_touch)
 {
-    UnkNode1** hit_list;
-    UnkNode1** touch_list;
-    UnkNode2* obj;
-    Mover* m;
-    UnkS16* pt;
+    Move_UnkNode1** hit_list;
+    Move_UnkNode1** touch_list;
+    Move_UnkNode2* obj;
+    Move_Mover* m;
+    Move_UnkS16* pt;
     u8* fl;
     s16 w;
     s16 h;
@@ -1454,8 +1712,8 @@ void func_8005DA7C(Probe* probe, UnkNode1* node, s32* out_hit, s32* out_touch)
     *out_touch = 0;
     if (node != NULL)
     {
-        hit_list = (UnkNode1**)0x801E1000;
-        touch_list = (UnkNode1**)0x801E1100;
+        hit_list = (Move_UnkNode1**)0x801E1000;
+        touch_list = (Move_UnkNode1**)0x801E1100;
         h = probe->h;
         m = probe->m;
         w = probe->w;
@@ -1503,7 +1761,7 @@ void func_8005DA7C(Probe* probe, UnkNode1* node, s32* out_hit, s32* out_touch)
                                 off = (row_clip - row_top) * stride;
                                 count = ((count - row_clip) + 1) * stride;
                                 result = 0;
-                                pt = (UnkS16*)node->unk10 + off;
+                                pt = (Move_UnkS16*)node->unk10 + off;
                                 if (obj->unk4 & 8)
                                 {
                                     fl = (u8*)node->unk14 + off * 2;

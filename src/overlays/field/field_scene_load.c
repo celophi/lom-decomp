@@ -8,6 +8,7 @@ extern void field_select_object(unsigned short, void*);
 extern void field_build_render_records(void*, unsigned short);
 extern void field_size_work_buffer(void);
 extern void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode);
+extern void field_update_scene_fade(void);
 extern u32* get_field_render_buffers(void);
 
 extern u8 g_cdAudioEnabled;
@@ -163,7 +164,7 @@ void field_draw_frame(s32 unused, s32 base, s32 arg2, s32 arg3)
         field_draw_scene_objects(base + 0x40B8, base + 0x40, arg2);
     }
     struct_ptr = (u8*)0x801ED800;
-    func_80059C44();
+    field_update_scene_fade();
     if (g_cdAudioEnabled != 0)
     {
 
