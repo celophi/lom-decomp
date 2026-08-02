@@ -241,7 +241,6 @@ extern long ratan2(long y, long x);
 extern int rcos(int a);
 extern int rsin(int a);
 
-s16 func_8005DFAC(void*, s32*);                     /* extern */
 s32 func_8005E1A8(void*, s32, s32, s32);            /* extern */
 extern long SquareRoot0(long a);
 
@@ -253,7 +252,13 @@ typedef struct Move_UnkS16 {
 typedef struct Move_UnkNode2 {
     u8 pad0[4];
     s32 unk4;
-    u8 pad8[8];
+    u8 pad8[2];
+    /** 0x0A index of the node's third boundary point in g_field_node_angle_table. */
+    u16 unkA;
+    /** 0x0C index of the node's second boundary point. */
+    u16 unkC;
+    /** 0x0E index of the node's first boundary point. */
+    u16 unkE;
     s16 unk10;
     s16 unk12;
     s16 unk14;
@@ -277,9 +282,11 @@ typedef struct Move_UnkNode1 {
     s32 unk30;
     s32 unk34;
     s32 unk38;
-    u8 pad3C[4];
+    s32 unk3C;
     s32 unk40;
 } Move_UnkNode1;
+
+s16 func_8005DFAC(Move_UnkNode1*, s32*);
 
 typedef struct Move_UnkNode3 {
     u8 pad0[0x2C];
@@ -1857,4 +1864,134 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
             node = node->unk0;
         } while (node != NULL);
     }
+}
+
+/**
+ * @brief Sample a collision node's surface height at a probe position.
+ *
+ * The node's definition names three boundary points by index into
+ * g_field_node_angle_table (0x0E, 0x0C and 0x0A, called A, B and C here); each
+ * table entry is an x/y pair. The node's swept offsets at 0x34 and 0x40, both
+ * divided by 256, translate B and C into world space.
+ *
+ * The height is found by intersecting the C->B edge with the line that runs
+ * through @p pt parallel to A->B: `hit_x` is that intersection's x coordinate,
+ * `along` its distance from C along the edge, and `along / dx_bc` the fraction
+ * used to blend the node's two height endpoints h0 (at C) and h1 (at B).
+ *
+ * The fraction is normally taken from the x axis. When the intersection lands
+ * exactly on B's x coordinate that axis carries no usable span, so the y axis
+ * is used instead; if the intersection is B itself the answer is h1 directly.
+ * The blend is finally clamped back into [min(h0, h1), max(h0, h1)], which is
+ * spelled twice because which endpoint is the upper bound depends on their
+ * order.
+ *
+ * @param node Collision node whose surface is being sampled.
+ * @param pt Probe position in grid cells: pt[0] is x and pt[1] is y.
+ * @return Interpolated surface height, clamped between the node's endpoints.
+ *
+ * @note Both endpoints are clamped up to zero before use, so a node whose
+ *       endpoint resolves below the origin behaves as if it sat on it.
+ * @see decomp.me (100%) TODO
+ */
+s16 func_8005DFAC(Move_UnkNode1* node, s32* pt)
+{
+    Move_UnkNode2* def;
+    s16* tbl;
+    s16* vert;
+    s16* vert_b;
+    s32 h0;
+    s32 h1;
+    s32 ox;
+    s32 oy;
+    s32 ax;
+    s32 ay;
+    s32 bx;
+    s32 by;
+    s32 cx;
+    s32 cy;
+    s32 dx_ab;
+    s32 dy_bc;
+    s32 dx_bc;
+    s32 cross_xy;
+    s32 cross_yx;
+    s32 cx_world;
+    s32 cy_world;
+    s32 hit_x;
+    s32 along;
+    s32 hit_y;
+    s16 height;
+
+    def = node->unk4;
+    tbl = g_field_node_angle_table;
+    vert = &tbl[def->unkE * 2];
+    h0 = (node->unk38 >> 8) + def->unk10;
+    h1 = (node->unk3C >> 8) + def->unk12;
+    vert_b = &tbl[def->unkC * 2];
+    ox = node->unk34 >> 8;
+    if (h0 < 0)
+    {
+        h0 = 0;
+    }
+    if (h1 < 0)
+    {
+        h1 = 0;
+    }
+    ax = vert[0];
+    ay = vert[1];
+    bx = vert_b[0];
+    by = vert_b[1];
+    vert = &tbl[def->unkA * 2];
+    cy = vert[1];
+    dx_ab = ax - bx;
+    dy_bc = by - cy;
+    cross_xy = dx_ab * dy_bc;
+    oy = node->unk40 >> 8;
+    cy_world = cy + oy;
+    cx = vert[0];
+    dx_bc = bx - cx;
+    cross_yx = (ay - by) * dx_bc;
+    cx_world = cx + ox;
+    hit_x = ((((pt[1] - cy_world) * dx_ab) * dx_bc) + (cross_xy * cx_world) - (pt[0] * cross_yx)) / (cross_xy - cross_yx);
+    along = hit_x - cx_world;
+    hit_y = ((along * dy_bc) / dx_bc) + cy_world;
+    if (hit_x == (bx + ox))
+    {
+        if (hit_y == (by + oy))
+        {
+            height = h1;
+        }
+        else
+        {
+            height = (((hit_y - cy_world) * (h1 - h0)) / dy_bc) + h0;
+        }
+    }
+    else
+    {
+        height = ((along * (h1 - h0)) / dx_bc) + h0;
+    }
+
+    if (h0 < h1)
+    {
+        if (height > h1)
+        {
+            height = h1;
+        }
+        else if (height < h0)
+        {
+            height = h0;
+        }
+    }
+    else
+    {
+        if (height > h0)
+        {
+            height = h0;
+        }
+        else if (height < h1)
+        {
+            height = h1;
+        }
+    }
+    return height;
 }
