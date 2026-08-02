@@ -667,12 +667,9 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
 /**
  * @brief Builds and queues the GPU packet sequence for the menu grid.
  *
- * Emits one sprite for each packed grid definition and brackets the sprite
- * batch with texture-window state. The final packet selects the grid texture page.
- *
  * @param render_ctx Render context providing the packet buffer and ordering table;
- *                   @c prim_cursor is advanced to the first unused packet.
- * @see MenuGridSpriteDef for the packed source record layout.
+ * 
+ * @see decomp.me (100%) https://decomp.me/scratch/ZtHxG
  */
 void menu_build_grid(RenderContext* render_ctx)
 {
