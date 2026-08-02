@@ -147,8 +147,8 @@ template instantiation:
 $(STAGING)/build/overlays/checkps/target/data.o: $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && cat asm/overlays/checkps/data/data.rodata.s | \
-		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o build/overlays/checkps/target/data.o
+		$(MASPSX) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o build/overlays/checkps/target/data.o
 
 checkps-target-objects: $(STAGING)/build/overlays/checkps/target/data.o
 ```
