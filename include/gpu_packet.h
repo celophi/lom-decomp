@@ -69,6 +69,20 @@
 /* --- SPRT-specific packed setters (single store) --- */
 
 /*
+ * Store a pre-packed x0/y0 pair (shorts at offset 0x08 / 0x0A) with a
+ * single word write.
+ */
+#define SET_SPRT_XY0_WORD(p, _xy) \
+    (*(u32*)((u8*)(p) + 0x08) = (u32)(_xy))
+
+/*
+ * Store a pre-packed width/height pair (shorts at offset 0x10 / 0x12) with a
+ * single word write.
+ */
+#define SET_SPRT_WH_WORD(p, _wh) \
+    (*(u32*)((u8*)(p) + 0x10) = (u32)(_wh))
+
+/*
  * Set an SPRT's width and height (shorts at offset 0x10 / 0x12) with a single
  * word store, matching `*(u32*)(p + 0x10) = 0x00hh00ww;`. libgpu's setWH
  * emits two short stores.
