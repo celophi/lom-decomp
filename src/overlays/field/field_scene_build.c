@@ -185,14 +185,6 @@ typedef struct
     u16 sound_flags; /* 0x02 */
 } Build_FieldSfxKey;
 
-typedef struct
-{
-    u8 _pad0[0x38];
-    s32 unk38; /* 0x38 */
-} Build_FieldScene;
-
-extern Build_FieldScene *g_field_scene_build __asm__("g_field_scene");
-
 /**
  * @brief Find the runtime part whose definition pointer matches @p part_def.
  *
@@ -416,12 +408,6 @@ typedef struct Records_Node
   u32 unk2C;
   u32 unk30;
 } Records_Node;
-typedef struct
-{
-  u8 padding[8];
-  Records_Node *unk8;
-} Records_FieldScene;
-extern Records_Unk *g_field_scene_records __asm__("g_field_scene");
 extern void DecDCTReset(int mode);
 extern void DecDCTvlcBuild(u_short *table);
 void field_prepare_animation_definitions(void *, s32);
@@ -624,14 +610,14 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   while (0);
   sp3C = 0;
   sp24 = 0;
-  sp34 = g_field_scene_records;
-  g_field_scene_records->unk0 = arg0;
-  *((s32 *) (((u8 *) g_field_scene_records) + 0xC)) = 0;
+  sp34 = (Records_Unk *) g_field_scene.scene;
+  sp34->unk0 = arg0;
+  *((s32 *) (((u8 *) sp34) + 0xC)) = 0;
   var_a3 = arg0->unk8;
-  sp24 = (Records_Unk *) (((u8 *) g_field_scene_records) + 0x74);
+  sp24 = (Records_Unk *) (((u8 *) sp34) + 0x74);
   sp28 = arg1;
-  var_t1 = (Records_Node44 *) (((u8 *) g_field_scene_records) + 8);
-  var_t5_2 = *((s16 **) (((u8 *) (&g_field_scene_records)) + 8));
+  var_t1 = (Records_Node44 *) (((u8 *) sp34) + 8);
+  var_t5_2 = g_field_node_angle_table;
   if (arg0->unk8 != (0 * 0))
   {
     do
@@ -1808,7 +1794,7 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
     u8 range_start;      /* sp20 */
     Build_FieldTintSrc *tint_src;/* sp24 */
     s8 primitive_code;   /* sp28 */
-    Build_FieldScene *scene;/* sp2C */
+    FieldScene *scene;/* sp2C */
     Build_FieldTileGrid *grid; /* sp30 */
     u16 stagger_timer;   /* sp38 */
     s32 record_stride;   /* sp40 */
@@ -1842,7 +1828,7 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
     tile_count = 0;
     stagger_timer = 1;
     tint_src = NULL;
-    scene = g_field_scene_build;
+    scene = g_field_scene.scene;
     if (def != NULL)
     {
         do

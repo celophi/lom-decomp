@@ -7,8 +7,6 @@
 
 extern u16 g_field_movie_frame_width;
 extern u16 g_field_movie_frame_height;
-/** @brief Pointer to the signed angle table indexed by FieldNodeDef. */
-extern s16* g_field_node_angle_table;
 
 void func_800157B0(s32);
 s32 cdrom_process_state(void);

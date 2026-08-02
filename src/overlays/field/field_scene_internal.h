@@ -699,7 +699,8 @@ typedef struct
     FieldSceneHeader* header; /* 0x00 */
     FieldObj* objects;        /* 0x04 head of the object list */
     FieldNode* nodes;         /* 0x08 head of the attached-node list */
-    u8 _pad0[0x10 - 0xC];
+    /** 0x0C secondary node chain consulted by the collision resolver. */
+    FieldNode* secondary_nodes;
     FieldMarker* markers; /* 0x10 head of the marker list */
     FieldSeq* seqs;       /* 0x14 head of the sequence list */
     FieldAnim* anims;     /* 0x18 head of the animation list */
@@ -708,6 +709,7 @@ typedef struct
     FieldAnim* effects;   /* 0x24 head of the effect list */
     u8 _pad1[0x34 - 0x28];
     FieldImageReq* uploads; /* 0x34 head of the pending upload list */
+    s32 unk38; /* 0x38 scene-build state */
 } FieldScene;
 
 typedef struct
@@ -762,6 +764,7 @@ extern s32 g_field_marker_overlay_enabled;
 extern s32 g_field_camera_x;
 extern s32 g_field_camera_y;
 extern s32 g_field_camera_z;
+extern s16* g_field_node_angle_table;
 
 s32 rcos(s32);
 s32 rsin(s32);
