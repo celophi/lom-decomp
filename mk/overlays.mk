@@ -33,18 +33,18 @@
 # Return every word that occurs more than once in a list.
 duplicate-words = $(sort $(foreach item,$(1),$(if $(word 2,$(filter $(item),$(1))),$(item))))
 
-# Validate the registry itself before generating any overlay rules.
-DUPLICATE_OVERLAYS := $(call duplicate-words,$(OVERLAYS))
-OVERLAY_REQUIRED_DIRS := $(foreach name,$(OVERLAYS),\
+# Registry validation is deferred until an overlay build requests it. This lets
+# `make splat` parse in a clean checkout before generated directories exist.
+DUPLICATE_OVERLAYS = $(call duplicate-words,$(OVERLAYS))
+OVERLAY_REQUIRED_DIRS = $(foreach name,$(OVERLAYS),\
 	src/overlays/$(name) asm/overlays/$(name) linker/overlays/$(name))
-MISSING_OVERLAY_DIRS := $(filter-out $(wildcard $(OVERLAY_REQUIRED_DIRS)),$(OVERLAY_REQUIRED_DIRS))
+MISSING_OVERLAY_DIRS = $(filter-out $(wildcard $(OVERLAY_REQUIRED_DIRS)),$(OVERLAY_REQUIRED_DIRS))
 
-ifneq ($(DUPLICATE_OVERLAYS),)
-$(error Overlays registered more than once: $(DUPLICATE_OVERLAYS))
-endif
-ifneq ($(MISSING_OVERLAY_DIRS),)
-$(error Registered overlay directories not found: $(MISSING_OVERLAY_DIRS))
-endif
+.PHONY: validate-overlay-registry
+validate-overlay-registry:
+	$(if $(DUPLICATE_OVERLAYS),$(error Overlays registered more than once: $(DUPLICATE_OVERLAYS)))
+	$(if $(MISSING_OVERLAY_DIRS),$(error Registered overlay directories not found: $(MISSING_OVERLAY_DIRS)))
+	@:
 
 define overlay-rules
 
@@ -60,19 +60,23 @@ $(1)_LINKER_SCRIPTS := \
 	$(STAGING)/$$($(1)_LINK_DIR)/undefined_syms_auto.txt
 
 # ── Discover and validate source routing ──
-$(1)_C_SRCS := $$(wildcard $$($(1)_SRC_DIR)/*.c)
+$(1)_C_SRCS = $$(wildcard $$($(1)_SRC_DIR)/*.c)
 $(1)_GCC_272_CDK_G0_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_srcs)
 $(1)_GCC_272_GNU_G0_SRCS := $$(overlay_$(1)_gcc_272_gnu_g0_srcs)
 $(1)_GCC_280_G0_SRCS := $$(overlay_$(1)_gcc_280_g0_srcs)
 $(1)_GCC_280_G4_SRCS := $$(overlay_$(1)_gcc_280_g4_srcs)
 $(1)_GCC_280_G4_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_280_g4_noexpand_srcs)
-$(1)_ROUTED_SRCS := $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
-$(1)_UNROUTED_SRCS := $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
-$(1)_UNKNOWN_ROUTED_SRCS := $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))
-$(1)_DUPLICATE_ROUTED_SRCS := $$(call duplicate-words,$$($(1)_ROUTED_SRCS))
-$$(if $$($(1)_UNROUTED_SRCS),$$(error Overlay $(1) has unrouted source(s): $$($(1)_UNROUTED_SRCS)))
-$$(if $$($(1)_UNKNOWN_ROUTED_SRCS),$$(error Overlay $(1) routes unknown source(s): $$($(1)_UNKNOWN_ROUTED_SRCS)))
-$$(if $$($(1)_DUPLICATE_ROUTED_SRCS),$$(error Overlay $(1) routes source(s) more than once: $$($(1)_DUPLICATE_ROUTED_SRCS)))
+$(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
+$(1)_UNROUTED_SRCS = $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
+$(1)_UNKNOWN_ROUTED_SRCS = $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))
+$(1)_DUPLICATE_ROUTED_SRCS = $$(call duplicate-words,$$($(1)_ROUTED_SRCS))
+
+.PHONY: $(1)-validate
+$(1)-validate: validate-overlay-registry
+	$$(if $$($(1)_UNROUTED_SRCS),$$(error Overlay $(1) has unrouted source(s): $$($(1)_UNROUTED_SRCS)))
+	$$(if $$($(1)_UNKNOWN_ROUTED_SRCS),$$(error Overlay $(1) routes unknown source(s): $$($(1)_UNKNOWN_ROUTED_SRCS)))
+	$$(if $$($(1)_DUPLICATE_ROUTED_SRCS),$$(error Overlay $(1) routes source(s) more than once: $$($(1)_DUPLICATE_ROUTED_SRCS)))
+	@:
 
 $(1)_GCC_280_G4_ALL_SRCS := $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
 
@@ -101,47 +105,48 @@ $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 $(1)_DATA_ASM  := $$(wildcard $$($(1)_ASM_DIR)/data/*.s)
 $(1)_DATA_OBJS := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o,$$($(1)_DATA_ASM))
 
-$$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL)
+$$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o
 
-# Rule: compile matched C files with GCC 2.7.2 CDK G0 + maspsx
-$$($(1)_GCC_272_CDK_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+# Rule: compile C files with GCC 2.7.2 CDK G0 + maspsx.
+$$($(1)_GCC_272_CDK_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_CDK) $(CFLAGS_272_CDK_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile non-matching C files with GCC 2.8.0 G0 + maspsx.
-$$($(1)_GCC_280_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+# Rule: compile C files with GCC 2.8.0 G0 + maspsx.
+$$($(1)_GCC_280_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with GCC 2.8.0 G4 + maspsx.
-$$($(1)_GCC_280_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+$$($(1)_GCC_280_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $$(MASPSX_FLAGS_G4) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with GCC 2.7.2 GNU G0 + its own assembler.
-$$($(1)_GCC_272_GNU_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+$$($(1)_GCC_272_GNU_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_GNU) $(CFLAGS_272_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o - | \
 		$(AS_272_GNU) $(ASFLAGS_272_GNU) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
-$$($(1)_ASSET_OBJ): $(STAGING)/$$($(1)_ASSET_SRC)
+$$($(1)_ASSET_OBJ): $(STAGING)/$$($(1)_ASSET_SRC) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(OBJCOPY) -I binary -O elf32-tradlittlemips -B mips \
 		$$($(1)_ASSET_SRC) $$($(1)_BUILD_DIR)/assets/$(1).o
 endif
 
 # Rule: link the overlay ELF
-# Dependencies include the asset object only if the overlay has an asset.
-$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $$($(1)_LINKER_SCRIPTS)
+# Track every object and linker script consumed by the link command.
+# The standalone asset object is included only when asset_src is configured.
+$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $$($(1)_LINKER_SCRIPTS) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(LD) -o $$($(1)_BUILD_DIR)/$(1).elf \
 		-T $$($(1)_LINK_DIR)/$(1).ld \
@@ -156,7 +161,7 @@ $(1)_ALL_ASM    := $$(call rwildcard,$$($(1)_ASM_DIR),*.s)
 $(1)_TGT_ASM   := $$(filter-out $$($(1)_ASM_DIR)/nonmatchings/% $$($(1)_ASM_DIR)/data/%,$$($(1)_ALL_ASM))
 $(1)_TGT_OBJS  := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/target/%.o,$$($(1)_TGT_ASM))
 
-$$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL)
+$$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
@@ -165,18 +170,18 @@ $$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.
 # ── Phony convenience targets ──
 .PHONY: $(1) $(1)-target-objects $(1)-base-objects $(1)-objdiff
 
-$(1): $$($(1)_TARGET)
+$(1): $(1)-validate $$($(1)_TARGET)
 	@mkdir -p $$($(1)_BUILD_DIR)
 	@cp -a "$(STAGING)/$$($(1)_BUILD_DIR)/." "$$($(1)_BUILD_DIR)/"
 	@echo "Overlay $(1) build complete."
 
-$(1)-target-objects: $(COPY_SENTINEL) $$($(1)_TGT_OBJS)
+$(1)-target-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_TGT_OBJS)
 	@mkdir -p $$($(1)_BUILD_DIR)/target
 	@if [ -n "$$(strip $$($(1)_TGT_OBJS))" ]; then \
 		cp -a "$(STAGING)/$$($(1)_BUILD_DIR)/target/." "$$($(1)_BUILD_DIR)/target/"; \
 	fi
 
-$(1)-base-objects: $(COPY_SENTINEL) $$($(1)_C_OBJS)
+$(1)-base-objects: $(1)-validate $(COPY_SENTINEL) $$($(1)_C_OBJS)
 	@mkdir -p $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)
 	@cp -a "$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/." \
 		"$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/"
@@ -191,7 +196,9 @@ endef
 $(foreach ov,$(OVERLAYS),$(eval $(call overlay-rules,$(ov))))
 
 # ── Aggregate overlay targets ──
-.PHONY: overlays everything
+.PHONY: validate-overlays overlays everything
+
+validate-overlays: $(addsuffix -validate,$(OVERLAYS))
 
 overlays: $(OVERLAYS)
 	@echo "All overlays built."
