@@ -60,13 +60,17 @@ $(1)_LINKER_SCRIPTS := \
 	$(STAGING)/$$($(1)_LINK_DIR)/undefined_syms_auto.txt
 
 # ── Discover and validate source routing ──
-$(1)_C_SRCS = $$(wildcard $$($(1)_SRC_DIR)/*.c)
 $(1)_GCC_272_CDK_G0_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_srcs)
 $(1)_GCC_272_GNU_G0_SRCS := $$(overlay_$(1)_gcc_272_gnu_g0_srcs)
 $(1)_GCC_280_G0_SRCS := $$(overlay_$(1)_gcc_280_g0_srcs)
 $(1)_GCC_280_G4_SRCS := $$(overlay_$(1)_gcc_280_g4_srcs)
 $(1)_GCC_280_G4_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_280_g4_noexpand_srcs)
 $(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
+# Generated unk*.c files are gitignored and splat does not remove outputs from
+# older configurations. Treat tracked C files and explicitly routed generated
+# files as build inputs so stale ignored files cannot enter the build by accident.
+$(1)_TRACKED_C_SRCS := $$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null)
+$(1)_C_SRCS = $$(sort $$($(1)_TRACKED_C_SRCS) $$(filter $$($(1)_ROUTED_SRCS),$$(wildcard $$($(1)_SRC_DIR)/*.c)))
 $(1)_UNROUTED_SRCS = $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
 $(1)_UNKNOWN_ROUTED_SRCS = $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))
 $(1)_DUPLICATE_ROUTED_SRCS = $$(call duplicate-words,$$($(1)_ROUTED_SRCS))
