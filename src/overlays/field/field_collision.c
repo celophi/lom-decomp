@@ -1,44 +1,4 @@
-#include "common.h"
-
-typedef struct {
-    u8 _pad[0x2C];
-    s32 unk2C;
-    s32 unk30;
-} FieldState;
-
-typedef struct Node
-{
-    struct Node *unk0;   /* 0x00 next pointer */
-    s32 definition;      /* 0x04 compared by field_find_object_by_definition */
-    u8 _pad[0x10];       /* 0x08-0x17 */
-    s8 unk18;            /* 0x18 byte written by func_8005B228 */
-} Node;
-
-struct CollNode;
-
-typedef struct
-{
-    u8 _pad0[4];           /* 0x00-0x03 */
-    Node *objects;          /* 0x04 head of the scene object list */
-    Node *unk8;             /* 0x08 head of the node list */
-    u8 _pad1[0x10 - 0xC];   /* 0x0C-0x0F */
-    struct CollNode *coll_list; /* 0x10 collision-node list traversed by func_8005B368 */
-    u8 _pad2[0x28 - 0x14];  /* 0x14-0x27 */
-    s32 unk28;              /* 0x28 flag gating the func_8005F5BC call */
-} FieldScene;
-
-typedef struct
-{
-    FieldScene *scene;
-} FieldSceneGlobals;
-
-extern unsigned int D_801ED02C;
-extern FieldSceneGlobals g_field_scene;
-extern u8 D_800CBF44[];
-extern volatile s32 D_801ED490;
-
-void func_8005F5BC(s32, Node*, FieldScene*, s32);
-
+#include "field_scene_internal.h"
 
 /**
  * @brief Probe position and footprint passed to func_8005B368.
@@ -180,7 +140,11 @@ s16 func_8005B368(Query *q)
         sy = (sy + 0xFF) >> 8;
     }
 
-    for (node = scene->coll_list; node != 0; node = node->next)
+    /*
+     * The debug marker renderer and collision code are two interpretations of
+     * the same spatial-node chain at FieldScene+0x10.
+     */
+    for (node = (CollNode*)scene->markers; node != 0; node = node->next)
     {
         Object *obj;
         s16 val;
@@ -345,34 +309,6 @@ typedef struct Move_Mover {
     s32 unk28;      /* 0x28 mode flags (0x30000 gate, low s16 = step size) */
 } Move_Mover;
 
-typedef struct Move_Node {
-  struct Move_Node *next;
-  void *obj;
-  u8 pad[8];
-  s16 right;
-  s16 left;
-  s16 bottom;
-  s16 top;
-  s32 denom1;
-  s32 mult1;
-  s32 denom2;
-  s32 mult2;
-  s32 max1;
-  s32 min1;
-  s32 max2;
-  s32 min2;
-} Move_Node;
-
-typedef struct {
-  Move_UnkNode3* unk0;
-  u8 pad4[4];
-  Move_UnkNode1* unk8;
-  Move_UnkNode1* unkC;
-  Move_Node *list;
-} Move_FieldScene;
-
-extern Move_FieldScene *g_field_scene_move __asm__("g_field_scene");
-
 void func_80062F48(void*, s32*);                        /* extern */
 
 typedef struct Move_Probe {
@@ -394,7 +330,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
     Move_Probe probe;
     s32 sp20;
     s32 sp24;
-    Move_FieldScene* sp28;
+    FieldScene* sp28;
     void* sp2C;
     u16 sp30;
     u16 sp38;
@@ -624,7 +560,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
     sp48 = 0;
     sp4C = 0;
     sp50 = 0;
-    sp28 = g_field_scene_move;
+    sp28 = g_field_scene.scene;
     a0->unk18 = 0;
     var_v0_2 = -a0->unk4 - a0->unk10;
     if (var_v0_2 < 0) {
@@ -636,7 +572,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
         var_v0_3 += 0xFF;
     }
     sp38 = (var_v0_3 >> 8) + a0->unk26;
-    temp_t6 = sp28->unk8;
+    temp_t6 = sp28->nodes;
     sp2C = temp_t6;
     if (temp_t6 != NULL) {
         if (a0->unk1C == (void* )-1) {
@@ -795,7 +731,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
                         sp50 |= 0x10;
                     }
                 } else {
-                    temp_s3 = sp28->unkC;
+                    temp_s3 = sp28->secondary_nodes;
                     if ((temp_s3 != NULL) && (temp_s3 != temp_a0_3) && ((((Move_UnkNode1*)temp_s3)->unk24 != 0) || (((Move_UnkNode1*)temp_s3)->unk28 != 0) || (((Move_UnkNode1*)temp_s3)->unk2C != 0) || (((Move_UnkNode1*)temp_s3)->unk30 != 0))) {
                         temp_s2_2 = a0->unk10;
                         a0->unkC = (s32) (a0->unkC + ((Move_UnkNode1*)temp_s3)->unk24);
@@ -852,7 +788,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
                             var_v0_14 += 0xFF;
                         }
                         probe.y = var_v0_14 >> 8;
-                        temp_s3_2 = sp28->unkC;
+                        temp_s3_2 = sp28->secondary_nodes;
                         var_s0_3 = func_8005DFAC(temp_a0_5, &probe.x);
                         if ((temp_s3_2 != NULL) && (temp_s3_2 != temp_a0_5)) {
                             var_s0_3 += func_8005DFAC(temp_s3_2, &probe.x) - ((Move_UnkNode2*)((Move_UnkNode1*)temp_s3_2)->unk4)->unk10;
@@ -934,7 +870,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
         }
         var_t8 = 0;
         if (sp20 == 0) {
-            temp_a2 = sp28->unk0;
+            temp_a2 = sp28->header;
             if ((((Move_UnkNode3*)temp_a2)->unk2C & 2) && ((temp_a0_6 = (u16) a0->unk24, temp_a1_2 = (u16) a0->unk28, temp_a3 = (u16) probe.x - ((s32) ((s16) temp_a0_6 + ((u32) (temp_a0_6 << 0x10) >> 0x1F)) >> 1), temp_v0_5 = (u16) probe.y - ((s32) ((s16) temp_a1_2 + ((u32) (temp_a1_2 << 0x10) >> 0x1F)) >> 1), (temp_v0_5 & 0x8000)) || ((s16) (temp_v0_5 + temp_a1_2) >= ((Move_UnkNode3*)temp_a2)->unk32) || (temp_a3 & 0x8000) || ((s16) (temp_a3 + temp_a0_6) >= ((Move_UnkNode3*)temp_a2)->unk30))) {
                 var_t8 = 1;
             }
@@ -988,13 +924,13 @@ s32 func_8005B6AC(Move_Mover* a0) {
                 var_v0_22 += 0xFF;
             }
             temp_s0_3 = (var_v0_22 >> 8) - ((s32) ((s16) temp_v0_8 + ((u32) (temp_v0_8 << 0x10) >> 0x1F)) >> 1);
-            temp_a0_7 = sp28->unk0;
+            temp_a0_7 = sp28->header;
             temp_v1_9 = temp_s0_3 + (u16) a0->unk28;
             if (((Move_UnkNode3*)temp_a0_7)->unk2C & 2) {
                 if ((temp_s0_3 < 0) || (temp_v1_9 >= ((Move_UnkNode3*)temp_a0_7)->unk32)) {
                     var_s5 = func_8005E1A8(NULL, 0x7F, sp58, var_s5);
                 }
-                if ((temp_s1 < 0) || (temp_s2_3 >= ((Move_UnkNode3*)sp28->unk0)->unk30)) {
+                if ((temp_s1 < 0) || (temp_s2_3 >= ((Move_UnkNode3*)sp28->header)->unk30)) {
                     var_s5 = func_8005E1A8(NULL, 0x7E, sp58, var_s5);
                 }
             }
@@ -1171,7 +1107,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
             var_t0 = 0;
             var_a3_2 = 0;
             sp68 = (void** )0x801E1100;
-            temp_a0_11 = sp28->unk0;
+            temp_a0_11 = sp28->header;
             temp_v1_15 = temp_s0_5 + (u16) a0->unk28;
             if (((Move_UnkNode3*)temp_a0_11)->unk2C & 2) {
                 if (temp_s0_5 < 0) {
@@ -1188,7 +1124,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
                     var_t0 = -var_s1_3;
                     var_t8 = 1;
                 } else {
-                    temp_a0_13 = ((Move_UnkNode3*)sp28->unk0)->unk30;
+                    temp_a0_13 = ((Move_UnkNode3*)sp28->header)->unk30;
                     if (temp_s2_4 >= temp_a0_13) {
                         var_t0 = (temp_a0_13 - temp_s2_4) - 1;
                         var_t8 = 1;
@@ -1404,7 +1340,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             var_t8 = 0;
             if (sp20 == 0) {
-                temp_a2_3 = sp28->unk0;
+                temp_a2_3 = sp28->header;
                 if ((((Move_UnkNode3*)temp_a2_3)->unk2C & 2) && ((temp_a0_16 = (u16) a0->unk24, temp_a1_7 = (u16) a0->unk28, temp_a3_2 = (u16) probe.x - ((s32) ((s16) temp_a0_16 + ((u32) (temp_a0_16 << 0x10) >> 0x1F)) >> 1), temp_v0_14 = (u16) probe.y - ((s32) ((s16) temp_a1_7 + ((u32) (temp_a1_7 << 0x10) >> 0x1F)) >> 1), (temp_v0_14 & 0x8000)) || ((s16) (temp_v0_14 + temp_a1_7) >= ((Move_UnkNode3*)temp_a2_3)->unk32) || (temp_a3_2 & 0x8000) || ((s16) (temp_a3_2 + temp_a0_16) >= ((Move_UnkNode3*)temp_a2_3)->unk30))) {
                     var_t8 = 1;
                 }
@@ -1461,7 +1397,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
         ux = (u16) probe.x;
         uy = (u16) probe.y;
         sp68 = (void** )0x801E1100;
-        temp_s3_3 = sp28->unkC;
+        temp_s3_3 = sp28->secondary_nodes;
         temp_v0_15 = sp24 - 1;
         sp24 = temp_v0_15;
         if (temp_v0_15 != -1) {
