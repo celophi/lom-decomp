@@ -834,21 +834,6 @@ void field_emit_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldViewport* or
 }
 
 /**
- * @brief Arithmetic right shift that rounds toward zero instead of down.
- *
- * The generalisation of HALF_TOWARD_ZERO above. It names its argument three
- * times on purpose: gcc cannot CSE the two arms of the conditional across the
- * branch, so a nested use expands to the target's triplicated multiply chains.
- * Spelling these as `/ 256`, `/ 4096` and `/ 65536` instead gives a compact
- * two-branch expansion and loses 107 instructions in field_emit_rotated_sprite_grid.
- *
- * @param v Signed value to shift.
- * @param n Shift amount, i.e. divide by 1 << n.
- * @return @p v divided by `1 << n`, rounded toward zero.
- */
-#define SHIFT_TOWARD_ZERO(v, n) ((v) >= 0 ? ((v) >> (n)) : (((v) + ((1 << (n)) - 1)) >> (n)))
-
-/**
  * @brief POLY_FT4 as field_emit_rotated_sprite_grid writes it: ten raw words.
  *
  * Layout-compatible with Psy-Q's POLY_FT4 (tag / rgb+code / four x,y pairs each

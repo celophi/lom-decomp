@@ -30,6 +30,19 @@
  */
 #define HALF_TOWARD_ZERO(v) ((v) >= 0 ? ((v) >> 1) : (((v) + 1) >> 1))
 
+/**
+ * @brief Arithmetic right shift that rounds toward zero instead of down.
+ *
+ * The generalisation of HALF_TOWARD_ZERO above. It names its argument three
+ * times on purpose: gcc cannot CSE the two arms of the conditional across the
+ * branch, so a nested use expands to the target's triplicated multiply chains.
+ *
+ * @param v Signed value to shift.
+ * @param n Shift amount, i.e. divide by 1 << n.
+ * @return @p v divided by `1 << n`, rounded toward zero.
+ */
+#define SHIFT_TOWARD_ZERO(v, n) ((v) >= 0 ? ((v) >> (n)) : (((v) + ((1 << (n)) - 1)) >> (n)))
+
 /*
  * Packed tile descriptor and field texture-atlas constants.
  *
