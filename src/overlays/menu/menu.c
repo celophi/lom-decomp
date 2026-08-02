@@ -666,35 +666,36 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
 }
 
 /**
- * @brief Emit the menu grid: a texture-window delimiter, 0x1D glyph sprites,
- *        and a trailing texture-window + draw-tpage primitive.
+ * @brief Builds and queues the GPU packet sequence for the menu grid.
  *
- * @param gpu_work Per-frame render context; primitives are appended to its
- *                 OT chain and @c prim_cursor is advanced past the emitted block.
- * @note Each packed source record supplies the sprite's UV, XY, and WH fields.
- *       XY and WH are copied as words because each pair is pre-packed.
- * @see decomp.me (100%) https://decomp.me/scratch/ZtHxG
+ * Emits one sprite for each packed grid definition and brackets the sprite
+ * batch with texture-window state. The final packet selects the grid texture page.
+ *
+ * @param render_ctx Render context providing the packet buffer and ordering table;
+ *                   @c prim_cursor is advanced to the first unused packet.
+ * @see MenuGridSpriteDef for the packed source record layout.
  */
-void menu_build_grid(RenderContext* gpu_work)
+void menu_build_grid(RenderContext* render_ctx)
 {
     RECT texture_window;
     s32 sprite_index;
     SPRT* sprite;
     const MenuGridSpriteDef* sprite_def;
     u_long* packet_cursor;
-    RenderContext* first_ctx = gpu_work;
+    RenderContext* first_ctx = render_ctx;
     RenderContext* ot_ctx = first_ctx;
 
+    /* Disable texture-window masking for the grid sprite batch. */
     packet_cursor = first_ctx->prim_cursor;
     texture_window.h = MENU_GRID_TEXTURE_WINDOW_SIZE;
     texture_window.w = MENU_GRID_TEXTURE_WINDOW_SIZE;
     texture_window.y = 0;
     texture_window.x = 0;
 
-    /* DR_AREA / texture-window primitive (GP0 0xE2) - leading delimiter */
     setTexWindow((DR_TWIN*)packet_cursor, &texture_window);
     addPrim(&first_ctx->ot[MENU_GRID_OT_INDEX], packet_cursor);
 
+    /* Expand each packed grid definition into one SPRT packet. */
     sprite_def = (const MenuGridSpriteDef*)g_menu_glyph_src;
     sprite_index = 0;
     packet_cursor += PRIM_WORDS(DR_TWIN);
@@ -705,9 +706,12 @@ void menu_build_grid(RenderContext* gpu_work)
         SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
         setSprt(sprite);
         SET_SPRT_UV0_PACKED(sprite, sprite_def->uv);
-        *(u32*)&sprite->x0 = sprite_def->packed_xy;
-        *(u32*)&sprite->w = sprite_def->packed_wh;
 
+        /* Copy the packed coordinate and size pairs as words. */
+        SET_SPRT_XY0_WORD(sprite, sprite_def->packed_xy);
+        SET_SPRT_WH_WORD(sprite, sprite_def->packed_wh);
+
+        /* The final sprite group uses the alternate grid palette. */
         if (sprite_index >= MENU_GRID_ALT_CLUT_START)
         {
             SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
@@ -725,21 +729,21 @@ void menu_build_grid(RenderContext* gpu_work)
 
     packet_cursor = (u_long*)sprite;
 
+    /* Close the batch with texture-window and texture-page state packets. */
     texture_window.w = MENU_GRID_TEXTURE_WINDOW_SIZE;
     texture_window.h = MENU_GRID_TEXTURE_WINDOW_SIZE;
     texture_window.x = 0;
     texture_window.y = 0;
 
-    /* DR_AREA / texture-window primitive (GP0 0xE2) - trailing delimiter */
     setTexWindow((DR_TWIN*)packet_cursor, &texture_window);
     addPrim(&ot_ctx->ot[MENU_GRID_OT_INDEX], packet_cursor);
 
     packet_cursor += PRIM_WORDS(DR_TWIN);
-    /* DR_TPAGE primitive (tpage=5) */
     setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, MENU_GRID_TPAGE);
     addPrim(&ot_ctx->ot[MENU_GRID_OT_INDEX], packet_cursor);
 
-    gpu_work->prim_cursor = packet_cursor + PRIM_WORDS(DR_TPAGE);
+    /* Publish the first unused packet word for subsequent builders. */
+    render_ctx->prim_cursor = packet_cursor + PRIM_WORDS(DR_TPAGE);
 }
 
 /**
