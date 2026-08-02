@@ -12,10 +12,12 @@
 #   overlay_<name>_gcc_280_g4_srcs
 #   overlay_<name>_gcc_280_g4_noexpand_srcs
 #
-# overlays.mk rejects missing, unknown, or multiply routed sources. An overlay
-# may also define:
+# overlays.mk rejects missing, unknown, or multiply routed sources. If a linker
+# script expects a standalone assets/<name>.o, define:
 #
 #   overlay_<name>_asset_src := assets/<name>.bin
+#
+# Splat databin assets referenced through .incbin do not use this setting.
 
 OVERLAYS += addhero
 overlay_addhero_gcc_280_g0_srcs := src/overlays/addhero/unk1.c
