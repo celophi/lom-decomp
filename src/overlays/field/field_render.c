@@ -496,15 +496,6 @@ typedef struct
  * Names the two halves of FieldCellRec::rgb_code that field_tint_animation_cel writes on their
  * own: the rgb/code word's low halfword and its blue byte.
  */
-typedef struct
-{
-    u8 _pad0[4];
-    /** 0x04 red and green. */
-    u16 rg;
-    /** 0x06 blue. */
-    u8 b;
-} FieldCellTint;
-
 /**
  * @brief Emit GPU primitives for one bit-plane driven 16x16 sprite grid.
  *

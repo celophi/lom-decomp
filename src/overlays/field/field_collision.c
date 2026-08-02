@@ -277,8 +277,6 @@ extern long ratan2(long y, long x);
 extern int rcos(int a);
 extern int rsin(int a);
 
-#define NULL 0
-
 s16 func_8005DFAC(void*, s32*);                     /* extern */
 s32 func_8005E1A8(void*, s32, s32, s32);            /* extern */
 extern long SquareRoot0(long a);

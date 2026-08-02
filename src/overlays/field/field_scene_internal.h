@@ -481,6 +481,19 @@ typedef struct
     u8 code;
 } FieldTintColor;
 
+/**
+ * @brief Colour bytes embedded in a rendered cell record.
+ *
+ * The record prefix occupies the first four bytes; tinting updates the
+ * following red/green halfword and blue byte in place.
+ */
+typedef struct
+{
+    u8 _pad0[4];
+    u16 rg;
+    u8 b;
+} FieldCellTint;
+
 /** @brief Palette record reached through FieldTintSrc::palette. */
 typedef struct
 {
