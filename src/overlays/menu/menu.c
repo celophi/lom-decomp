@@ -659,35 +659,30 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
  *       primitives (offset 0x4 @c rgbc, 0x8 @c (x0,y0), 0xC @c (u0,v0),
  *       0xE @c clut, 0x10 @c (w,h)). They are written via raw offsets to
  *       preserve the matched codegen.
- * @see decomp.me (94.19%) https://decomp.me/scratch/ZtHxG
+ * @see decomp.me (100%) https://decomp.me/scratch/ZtHxG
  */
 void menu_build_grid(RenderContext* gpu_work)
 {
-    volatile u8 sp0;
-    volatile u16 sp2;
-    volatile u16 sp4;
-    volatile u16 sp6;
+    RECT texture_window;
     s32 var_t2;
     u8* var_a2;
-    u8* var_t0;
     u8* var_t3;
     u8* temp_t1;
     RenderContext* t7 = gpu_work;
     RenderContext* t4 = t7;
 
-    var_t3 = (u8*)g_menu_glyph_src;
-    var_t2 = 0;
     temp_t1 = t7->prim_cursor;
-    sp6 = 0xFF;
-    sp4 = 0xFF;
-    var_t0 = var_t3 + 8;
-    sp2 = 0;
-    *(u16*)&sp0 = 0;
+    texture_window.h = 0xFF;
+    texture_window.w = 0xFF;
+    texture_window.y = 0;
+    texture_window.x = 0;
 
     /* DR_AREA / texture-window primitive (GP0 0xE2) - leading delimiter */
-    setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
-    addPrim(&t4->ot[0x0F], temp_t1);
+    setTexWindow((DR_TWIN*)temp_t1, &texture_window);
+    addPrim(&t7->ot[0x0F], temp_t1);
 
+    var_t3 = (u8*)g_menu_glyph_src;
+    var_t2 = 0;
     temp_t1 += 0xC;
     var_a2 = temp_t1;
 
@@ -698,8 +693,8 @@ void menu_build_grid(RenderContext* gpu_work)
         *(u8*)(var_a2 + 3) = 4;
         *(u8*)(var_a2 + 7) = 0x64;
         *(u16*)(var_a2 + 0xC) = *(u16*)var_t3;
-        *(u32*)(var_a2 + 8) = *(u32*)(var_t0 - 4);
-        *(u32*)(var_a2 + 0x10) = *(u32*)var_t0;
+        *(u32*)(var_a2 + 8) = *(u32*)((var_t3 + 8) - 4);
+        *(u32*)(var_a2 + 0x10) = *(u32*)(var_t3 + 8);
 
         if (var_t2 >= 0x11)
         {
@@ -711,22 +706,20 @@ void menu_build_grid(RenderContext* gpu_work)
         }
 
         var_t2++;
-        var_t0 += 0xC;
-        var_t3 += 0xC;
-
         addPrim(&t4->ot[0x0F], var_a2);
         var_a2 += 0x14;
+        var_t3 += 0xC;
     } while (var_t2 < 0x1D);
 
     temp_t1 = var_a2;
 
-    sp4 = 0xFF;
-    sp6 = 0xFF;
-    *(u16*)&sp0 = 0;
-    sp2 = 0;
+    texture_window.w = 0xFF;
+    texture_window.h = 0xFF;
+    texture_window.x = 0;
+    texture_window.y = 0;
 
     /* DR_AREA / texture-window primitive (GP0 0xE2) - trailing delimiter */
-    setTexWindow((DR_TWIN*)temp_t1, (RECT*)&sp0);
+    setTexWindow((DR_TWIN*)temp_t1, &texture_window);
     addPrim(&t4->ot[0x0F], temp_t1);
 
     temp_t1 += 0xC;
@@ -734,7 +727,7 @@ void menu_build_grid(RenderContext* gpu_work)
     setDrawTPage((DR_TPAGE*)temp_t1, 0, 0, 5);
     addPrim(&t4->ot[0x0F], temp_t1);
 
-    t7->prim_cursor = temp_t1 + 8;
+    gpu_work->prim_cursor = temp_t1 + 8;
 }
 
 /**
