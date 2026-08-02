@@ -9,7 +9,6 @@
 # Run this after a build to get compiler output for the find_idioms.py tool.
 #   make dump-objs
 # The .s files end up at e.g. build/src/cdrom.s, build/overlays/gname/gname.s etc.
-OBJDUMP := $(CROSS)objdump
 dump-objs:
 	@find build -name '*.o' | while read f; do \
 		out="$${f%.o}.s"; \
@@ -34,8 +33,8 @@ TARGET_OBJ := $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(TARGET
 $(TARGET_OBJ): $(STAGING)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
-		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
+		$(MASPSX) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o build/$(ASM_DIR)/$*.o
 
 target-objects: $(COPY_SENTINEL) $(TARGET_OBJ)
 	@mkdir -p build/asm

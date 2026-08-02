@@ -84,32 +84,32 @@ $(1)_DATA_OBJS := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)
 $$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
-		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o
+		$(MASPSX) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o
 
 # Rule: compile matched C files with CDK GCC 2.7.2 + maspsx
 $$($(1)_CDK_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CC_CDK) $(CFLAGS_CDK_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+	cd $(STAGING) && $(CC_272_CDK) $(CFLAGS_272_CDK_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile non-matching C files with GCC+maspsx (handles GNU asm syntax in INCLUDE_ASM)
 $$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with GCC 2.8.0 + maspsx -G4 (e.g. movie.c)
 $$($(1)_GCC_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) -no-pad-sections --aspsx-version=2.77 $$(MASPSX_DIV_FLAG_G4) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $$(MASPSX_FLAGS_G4) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with PSX GNU GCC 2.7.2 + its own assembler (no maspsx)
 $$($(1)_GNU_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CC_GNU) $(CFLAGS_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o /tmp/$$*.s && \
-		$(AS_GNU) $(AS_GNU_FLAGS) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o /tmp/$$*.s
+	cd $(STAGING) && $(CC_272_GNU) $(CFLAGS_272_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o /tmp/$$*.s && \
+		$(AS_272_GNU) $(ASFLAGS_272_GNU) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o /tmp/$$*.s
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
@@ -139,8 +139,8 @@ $(1)_TGT_OBJS  := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)
 $$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
-		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o $$($(1)_BUILD_DIR)/target/$$*.o
+		$(MASPSX) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/target/$$*.o
 
 # ── Phony convenience targets ──
 .PHONY: $(1) $(1)-target-objects $(1)-base-objects $(1)-objdiff

@@ -5,8 +5,8 @@
 
 # ─── Source Files ──────────────────────────────────────────────────────────────
 #
-# C files are split by compiler flags. Most use CFLAGS_G0; only cdrom.c uses G4.
-# If a future file needs different flags, add it to the appropriate list.
+# C files are grouped by compiler and flags. Most use the default GCC 2.8.0
+# G0 configuration; add exceptions to the matching toolchain list.
 #
 # "Non-matching" .s files (asm/nonmatchings/) are NOT listed here — they get
 # pulled in automatically via the INCLUDE_ASM() macro inside C source files.
@@ -224,34 +224,29 @@ OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_GCC_260_G0) $(OBJS_ASM)
 #   gcc -S -o -     → write asm to stdout
 #   | maspsx.py ... → translate to ASPSX syntax and assemble into .o
 
-# ── C files compiled with -G0 (most files) ──
+# ── GCC 2.8.0, G0 (default) ──
 $(OBJS_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(SRC_DIR)/$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o build/$(SRC_DIR)/$*.o
 
-# ── C files compiled with -G4 (cdrom.c) ──
+# ── GCC 2.8.0, G4 ──
 $(OBJS_G4): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_G4) -o build/$(SRC_DIR)/$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_G4) -o build/$(SRC_DIR)/$*.o
 
-# ── C files compiled with CDK GCC 2.7.2 + maspsx -G0 (checkps overlay) ──
+# ── GCC 2.7.2 CDK, G0 ──
 $(OBJS_CDK_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(STAGING) && $(CC_CDK) $(CFLAGS_CDK_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_CDK) -o build/$(SRC_DIR)/$*.o
+	cd $(STAGING) && $(CC_272_CDK) $(CFLAGS_272_CDK_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o build/$(SRC_DIR)/$*.o
 
-# ── C files compiled with GCC 2.7.2 + maspsx -G0 (new overlay) ──
-$(OBJS_GNU_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
-	@mkdir -p $(@D)
-	cd $(STAGING) && $(CC_GNU) $(CFLAGS_GNU_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(AS_GNU) $(AS_GNU_FLAGS) -o build/$(SRC_DIR)/$*.o
-
+# ── GCC 2.6.0, G0 ──
 $(OBJS_GCC_260_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $(@D)
-	cd $(STAGING) && $(CC_260_PSX) $(CFLAGS_260_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS_260) -o build/$(SRC_DIR)/$*.o
+	cd $(STAGING) && $(CC_260) $(CFLAGS_260_G0) $(INCLUDE_FLAGS) -c $(SRC_DIR)/$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_260) -o build/$(SRC_DIR)/$*.o
 
 # ── Hand-written assembly (header, data sections) ──
 # These use --macro-inc because they contain ASPSX directives (dlabel, etc.)
@@ -259,8 +254,8 @@ $(OBJS_GCC_260_G0): $(STAGING)/build/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(COPY_SENTI
 $(OBJS_ASM): $(STAGING)/build/$(ASM_DIR)/%.o: $(ASM_DIR)/%.s $(COPY_SENTINEL)
 	@mkdir -p $(@D)
 	cd $(STAGING) && cat $(ASM_DIR)/$*.s | \
-		$(MASPSX_PP) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_AS_FLAGS) -o build/$(ASM_DIR)/$*.o
+		$(MASPSX) $(MASPSX_PP_FLAGS) | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o build/$(ASM_DIR)/$*.o
 
 
 # ============================================================================
