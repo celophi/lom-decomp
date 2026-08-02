@@ -15,10 +15,10 @@
 #
 #   1. Create config/overlays/<NAME>.yaml  (follow CHECKPS.BIN.yaml as a template)
 #   2. Run: splat split config/overlays/<NAME>.yaml
-#   3. Register it in the "Overlay Registry" section near the top of this file:
+#   3. Register it in mk/overlay-registry.mk:
 #
 #        OVERLAYS += myoverlay
-#        overlay_myoverlay_asset := assets/myoverlay.bin   # only if it has one
+#        overlay_myoverlay_asset_src := assets/myoverlay.bin  # if needed
 #
 #      That's it. All build rules are generated automatically.
 #
@@ -33,9 +33,22 @@
 # Inside the template:
 #   $(1)  = overlay name (e.g. "checkps")
 #   $$    = escaped $ (needed because eval expands variables twice)
-#
-# The $$(or ...) pattern provides a default value: if overlay_<name>_cflags
-# isn't set, it falls back to CFLAGS_G0.
+
+# Return every word that occurs more than once in a list.
+duplicate-words = $(sort $(foreach item,$(1),$(if $(word 2,$(filter $(item),$(1))),$(item))))
+
+# Validate the registry itself before generating any overlay rules.
+DUPLICATE_OVERLAYS := $(call duplicate-words,$(OVERLAYS))
+OVERLAY_REQUIRED_DIRS := $(foreach name,$(OVERLAYS),\
+	src/overlays/$(name) asm/overlays/$(name) linker/overlays/$(name))
+MISSING_OVERLAY_DIRS := $(filter-out $(wildcard $(OVERLAY_REQUIRED_DIRS)),$(OVERLAY_REQUIRED_DIRS))
+
+ifneq ($(DUPLICATE_OVERLAYS),)
+$(error Overlays registered more than once: $(DUPLICATE_OVERLAYS))
+endif
+ifneq ($(MISSING_OVERLAY_DIRS),)
+$(error Registered overlay directories not found: $(MISSING_OVERLAY_DIRS))
+endif
 
 define overlay-rules
 
@@ -44,33 +57,37 @@ $(1)_SRC_DIR   := src/overlays/$(1)
 $(1)_ASM_DIR   := asm/overlays/$(1)
 $(1)_LINK_DIR  := linker/overlays/$(1)
 $(1)_BUILD_DIR := build/overlays/$(1)
-$(1)_CFLAGS    := $$(or $$(overlay_$(1)_cflags),$(CFLAGS_G0))
 $(1)_TARGET    := $(STAGING)/$$($(1)_BUILD_DIR)/$(1).elf
 
-# ── Discover source files ──
-# Split into CDK (matched), GCC+maspsx (non-matching), and GNU gcc 2.7.2 groups.
-# Files listed in overlay_<name>_gcc_srcs use GCC+maspsx; overlay_<name>_gnu_srcs
-# use PSX GNU GCC 2.7.2 + its own assembler; everything else uses CDK gcc+maspsx.
-$(1)_C_SRCS      := $$(wildcard $$($(1)_SRC_DIR)/*.c)
-$(1)_GCC_SRCS    := $$(overlay_$(1)_gcc_srcs)
-$(1)_GNU_SRCS    := $$(overlay_$(1)_gnu_srcs)
-# G4 sources: the normal (--expand-div) set plus the no-expand subset. Files in
-# overlay_<name>_gcc_g4_noexpand_srcs build -G4 but WITHOUT --expand-div (bare
-# `div $zero,...`); list them only there, not in overlay_<name>_gcc_g4_srcs.
-$(1)_GCC_G4_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_g4_noexpand_srcs)
-$(1)_GCC_G4_SRCS := $$(overlay_$(1)_gcc_g4_srcs) $$($(1)_GCC_G4_NOEXPAND_SRCS)
-$(1)_CDK_SRCS    := $$(filter-out $$($(1)_GCC_SRCS) $$($(1)_GNU_SRCS) $$($(1)_GCC_G4_SRCS),$$($(1)_C_SRCS))
-$(1)_GCC_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_SRCS))
-$(1)_GNU_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GNU_SRCS))
-$(1)_GCC_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_G4_SRCS))
-$(1)_GCC_G4_NOEXPAND_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_G4_NOEXPAND_SRCS))
-# Clear the div-expansion flag for the no-expand subset (target-specific var).
-$$($(1)_GCC_G4_NOEXPAND_OBJS): MASPSX_DIV_FLAG_G4 :=
-$(1)_CDK_OBJS    := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_CDK_SRCS))
-$(1)_C_OBJS      := $$($(1)_CDK_OBJS) $$($(1)_GCC_OBJS) $$($(1)_GNU_OBJS) $$($(1)_GCC_G4_OBJS)
+# ── Discover and validate source routing ──
+$(1)_C_SRCS := $$(wildcard $$($(1)_SRC_DIR)/*.c)
+$(1)_GCC_272_CDK_G0_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_srcs)
+$(1)_GCC_272_GNU_G0_SRCS := $$(overlay_$(1)_gcc_272_gnu_g0_srcs)
+$(1)_GCC_280_G0_SRCS := $$(overlay_$(1)_gcc_280_g0_srcs)
+$(1)_GCC_280_G4_SRCS := $$(overlay_$(1)_gcc_280_g4_srcs)
+$(1)_GCC_280_G4_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_280_g4_noexpand_srcs)
+$(1)_ROUTED_SRCS := $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
+$(1)_UNROUTED_SRCS := $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
+$(1)_UNKNOWN_ROUTED_SRCS := $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))
+$(1)_DUPLICATE_ROUTED_SRCS := $$(call duplicate-words,$$($(1)_ROUTED_SRCS))
+$$(if $$($(1)_UNROUTED_SRCS),$$(error Overlay $(1) has unrouted source(s): $$($(1)_UNROUTED_SRCS)))
+$$(if $$($(1)_UNKNOWN_ROUTED_SRCS),$$(error Overlay $(1) routes unknown source(s): $$($(1)_UNKNOWN_ROUTED_SRCS)))
+$$(if $$($(1)_DUPLICATE_ROUTED_SRCS),$$(error Overlay $(1) routes source(s) more than once: $$($(1)_DUPLICATE_ROUTED_SRCS)))
 
-# ── Binary asset (only if overlay_<name>_asset is defined) ──
-$(1)_ASSET_SRC := $$(overlay_$(1)_asset)
+$(1)_GCC_280_G4_ALL_SRCS := $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
+
+# ── Derive object paths ──
+$(1)_GCC_280_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G0_SRCS))
+$(1)_GCC_280_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_ALL_SRCS))
+$(1)_GCC_280_G4_NOEXPAND_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_NOEXPAND_SRCS))
+$(1)_GCC_272_GNU_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_GNU_G0_SRCS))
+$(1)_GCC_272_CDK_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_CDK_G0_SRCS))
+# Clear the div-expansion flag for the no-expand subset (target-specific var).
+$$($(1)_GCC_280_G4_NOEXPAND_OBJS): MASPSX_DIV_FLAG_G4 :=
+$(1)_C_OBJS := $$($(1)_GCC_272_CDK_G0_OBJS) $$($(1)_GCC_280_G0_OBJS) $$($(1)_GCC_272_GNU_G0_OBJS) $$($(1)_GCC_280_G4_OBJS)
+
+# ── Binary asset (only if overlay_<name>_asset_src is defined) ──
+$(1)_ASSET_SRC := $$(overlay_$(1)_asset_src)
 $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 
 # ── Hand-written/unmatched data asm (e.g. data/rodata.rodata.s) ──
@@ -87,26 +104,26 @@ $$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/$$*.o
 
-# Rule: compile matched C files with CDK GCC 2.7.2 + maspsx
-$$($(1)_CDK_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+# Rule: compile matched C files with GCC 2.7.2 CDK G0 + maspsx
+$$($(1)_GCC_272_CDK_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_CDK) $(CFLAGS_272_CDK_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile non-matching C files with GCC+maspsx (handles GNU asm syntax in INCLUDE_ASM)
-$$($(1)_GCC_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+# Rule: compile non-matching C files with GCC 2.8.0 G0 + maspsx.
+$$($(1)_GCC_280_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CC) $$($(1)_CFLAGS) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+	cd $(STAGING) && $(CC) $(CFLAGS_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile C files with GCC 2.8.0 + maspsx -G4 (e.g. movie.c)
-$$($(1)_GCC_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+# Rule: compile C files with GCC 2.8.0 G4 + maspsx.
+$$($(1)_GCC_280_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC) $(CFLAGS_G4) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
 		$(MASPSX_AS) $(INCLUDE_FLAGS) $$(MASPSX_FLAGS_G4) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
-# Rule: compile C files with PSX GNU GCC 2.7.2 + its own assembler (no maspsx)
-$$($(1)_GNU_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
+# Rule: compile C files with GCC 2.7.2 GNU G0 + its own assembler.
+$$($(1)_GCC_272_GNU_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL)
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_GNU) $(CFLAGS_272_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o /tmp/$$*.s && \
 		$(AS_272_GNU) $(ASFLAGS_272_GNU) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o /tmp/$$*.s
