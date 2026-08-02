@@ -15,6 +15,11 @@
 #define MENU_CLUT_GRID_BASE 0x7C80
 #define MENU_CLUT_GRID_ALT 0x7C81
 #define MENU_CLUT_CORNER 0x7CCA
+#define MENU_GRID_OT_INDEX 0x0F
+#define MENU_GRID_ALT_CLUT_START 0x11
+#define MENU_GRID_SPRITE_COUNT 0x1D
+#define MENU_GRID_TEXTURE_WINDOW_SIZE 0xFF
+#define MENU_GRID_TPAGE 5
 
 /*
  * Packed texture-window / UV origin constants for the menu window chrome.
@@ -318,6 +323,17 @@ typedef struct
     u8 y;         /**< Y position; caller subtracts 8 when using as display offset. */
     u8 pad[5];
 } MenuContentItem;
+
+/**
+ * @brief Packed source fields for one sprite emitted by @ref menu_build_grid.
+ */
+typedef struct
+{
+    u16 uv;        /**< Packed texture coordinates: low byte U, high byte V. */
+    u16 _pad2;
+    u32 packed_xy; /**< Packed signed screen coordinates: low half X, high half Y. */
+    u32 packed_wh; /**< Packed signed dimensions: low half width, high half height. */
+} MenuGridSpriteDef;
 
 /* ----- Forward declarations ----- */
 
@@ -655,79 +671,75 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
  *
  * @param gpu_work Per-frame render context; primitives are appended to its
  *                 OT chain and @c prim_cursor is advanced past the emitted block.
- * @note The 0x14-byte records written in the loop are libgpu @c SPRT
- *       primitives (offset 0x4 @c rgbc, 0x8 @c (x0,y0), 0xC @c (u0,v0),
- *       0xE @c clut, 0x10 @c (w,h)). They are written via raw offsets to
- *       preserve the matched codegen.
+ * @note Each packed source record supplies the sprite's UV, XY, and WH fields.
+ *       XY and WH are copied as words because each pair is pre-packed.
  * @see decomp.me (100%) https://decomp.me/scratch/ZtHxG
  */
 void menu_build_grid(RenderContext* gpu_work)
 {
     RECT texture_window;
-    s32 var_t2;
-    u8* var_a2;
-    u8* var_t3;
-    u8* temp_t1;
-    RenderContext* t7 = gpu_work;
-    RenderContext* t4 = t7;
+    s32 sprite_index;
+    SPRT* sprite;
+    const MenuGridSpriteDef* sprite_def;
+    u_long* packet_cursor;
+    RenderContext* first_ctx = gpu_work;
+    RenderContext* ot_ctx = first_ctx;
 
-    temp_t1 = t7->prim_cursor;
-    texture_window.h = 0xFF;
-    texture_window.w = 0xFF;
+    packet_cursor = first_ctx->prim_cursor;
+    texture_window.h = MENU_GRID_TEXTURE_WINDOW_SIZE;
+    texture_window.w = MENU_GRID_TEXTURE_WINDOW_SIZE;
     texture_window.y = 0;
     texture_window.x = 0;
 
     /* DR_AREA / texture-window primitive (GP0 0xE2) - leading delimiter */
-    setTexWindow((DR_TWIN*)temp_t1, &texture_window);
-    addPrim(&t7->ot[0x0F], temp_t1);
+    setTexWindow((DR_TWIN*)packet_cursor, &texture_window);
+    addPrim(&first_ctx->ot[MENU_GRID_OT_INDEX], packet_cursor);
 
-    var_t3 = (u8*)g_menu_glyph_src;
-    var_t2 = 0;
-    temp_t1 += 0xC;
-    var_a2 = temp_t1;
+    sprite_def = (const MenuGridSpriteDef*)g_menu_glyph_src;
+    sprite_index = 0;
+    packet_cursor += PRIM_WORDS(DR_TWIN);
+    sprite = (SPRT*)packet_cursor;
 
     do
     {
-        /* SPRT primitive: white tint, len=4, code=0x64 */
-        SET_BGR0_PACKED(var_a2, GPU_TINT_NEUTRAL);
-        *(u8*)(var_a2 + 3) = 4;
-        *(u8*)(var_a2 + 7) = 0x64;
-        *(u16*)(var_a2 + 0xC) = *(u16*)var_t3;
-        *(u32*)(var_a2 + 8) = *(u32*)((var_t3 + 8) - 4);
-        *(u32*)(var_a2 + 0x10) = *(u32*)(var_t3 + 8);
+        SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+        setSprt(sprite);
+        SET_SPRT_UV0_PACKED(sprite, sprite_def->uv);
+        *(u32*)&sprite->x0 = sprite_def->packed_xy;
+        *(u32*)&sprite->w = sprite_def->packed_wh;
 
-        if (var_t2 >= 0x11)
+        if (sprite_index >= MENU_GRID_ALT_CLUT_START)
         {
-            *(u16*)(var_a2 + 0xE) = MENU_CLUT_GRID_ALT;
+            SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
         }
         else
         {
-            *(u16*)(var_a2 + 0xE) = MENU_CLUT_GRID_BASE;
+            SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_BASE);
         }
 
-        var_t2++;
-        addPrim(&t4->ot[0x0F], var_a2);
-        var_a2 += 0x14;
-        var_t3 += 0xC;
-    } while (var_t2 < 0x1D);
+        sprite_index++;
+        addPrim(&ot_ctx->ot[MENU_GRID_OT_INDEX], sprite);
+        sprite++;
+        sprite_def++;
+    } while (sprite_index < MENU_GRID_SPRITE_COUNT);
 
-    temp_t1 = var_a2;
+    packet_cursor = (u_long*)sprite;
 
-    texture_window.w = 0xFF;
-    texture_window.h = 0xFF;
+    texture_window.w = MENU_GRID_TEXTURE_WINDOW_SIZE;
+    texture_window.h = MENU_GRID_TEXTURE_WINDOW_SIZE;
     texture_window.x = 0;
     texture_window.y = 0;
 
     /* DR_AREA / texture-window primitive (GP0 0xE2) - trailing delimiter */
-    setTexWindow((DR_TWIN*)temp_t1, &texture_window);
-    addPrim(&t4->ot[0x0F], temp_t1);
+    setTexWindow((DR_TWIN*)packet_cursor, &texture_window);
+    addPrim(&ot_ctx->ot[MENU_GRID_OT_INDEX], packet_cursor);
 
-    temp_t1 += 0xC;
+    packet_cursor += PRIM_WORDS(DR_TWIN);
     /* DR_TPAGE primitive (tpage=5) */
-    setDrawTPage((DR_TPAGE*)temp_t1, 0, 0, 5);
-    addPrim(&t4->ot[0x0F], temp_t1);
+    setDrawTPage((DR_TPAGE*)packet_cursor, 0, 0, MENU_GRID_TPAGE);
+    addPrim(&ot_ctx->ot[MENU_GRID_OT_INDEX], packet_cursor);
 
-    gpu_work->prim_cursor = temp_t1 + 8;
+    gpu_work->prim_cursor = packet_cursor + PRIM_WORDS(DR_TPAGE);
 }
 
 /**
