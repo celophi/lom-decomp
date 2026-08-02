@@ -61,6 +61,10 @@ STAGE_DIRS := src asm include linker tools assets
 # Configuration shared by build, analysis, and verification pipelines.
 SPLAT_CONFIGS := config/$(GAME).yaml $(wildcard config/overlays/*.yaml)
 
+# Use every processor available to the current host/container by default.
+# SPLAT_JOBS remains overridable for constrained environments.
+SPLAT_JOBS ?= $(shell nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
+
 # Original ROM overlay BINs live here in CI (copied from the container's /rom/BIN).
 ROM_BIN_DIR       := disc/BIN
 
@@ -88,7 +92,7 @@ recopy:
 	$(MAKE) $(COPY_SENTINEL)
 
 splat:
-	@for cfg in $(SPLAT_CONFIGS); do splat split $$cfg || exit 1; done
+	@printf '%s\n' $(SPLAT_CONFIGS) | xargs -n 1 -P $(SPLAT_JOBS) splat split
 
 # ============================================================================
 #  Staging (copy sources into /staging)
