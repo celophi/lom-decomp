@@ -50,13 +50,25 @@ ASM_DIR      := asm
 
 # ─── Staging Sentinel ──────────────────────────────────────────────────────────
 #
-# A sentinel file tracks whether we've already copied sources to /staging.
-# If it exists, Make skips the copy step. Run `make recopy` to force a refresh.
+# A sentinel file tracks the last successful staging operation. Its
+# prerequisites include every staged input, so host edits/additions/deletions
+# automatically refresh /staging. Run `make recopy` to force a refresh.
 
 COPY_SENTINEL := $(STAGING)/.sources_copied
 
-# Directories to mirror into /staging (add new ones here as needed)
-STAGE_DIRS := src asm include linker tools assets
+# Project inputs needed by the Make build.
+STAGE_PATHS := \
+	src \
+	asm \
+	include \
+	linker \
+	assets \
+	tools/maspsx
+
+# These paths are wholly managed by the Makefile. Replacing them removes files
+# deleted on the host while preserving /staging/build, /staging/mcp-work, and
+# any tool-specific staging owned by developer tooling.
+STAGE_MANAGED_PATHS := src asm include linker assets tools/maspsx
 
 # Configuration shared by build, analysis, and verification pipelines.
 SPLAT_CONFIGS := config/$(GAME).yaml $(wildcard config/overlays/*.yaml)
@@ -75,6 +87,12 @@ COMPLETE_MANIFEST := build/complete_overlays.txt
 # Recursive wildcard helper used while overlay rules are expanded.
 rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
             $(filter $(subst *,%,$2),$1)
+
+# A single find traversal is substantially faster on the Windows bind mount
+# than recursively expanding one Make wildcard per directory. Directories are
+# included so adding or deleting a staged file invalidates the sentinel.
+STAGE_INPUTS := Makefile $(STAGE_PATHS) \
+	$(shell find $(STAGE_PATHS) -print 2>/dev/null)
 
 include mk/toolchains.mk
 include mk/main.mk
@@ -98,19 +116,37 @@ splat:
 #  Staging (copy sources into /staging)
 # ============================================================================
 #
-# Mirrors each directory listed in STAGE_DIRS from /lom/ → /staging/.
-# The sentinel file prevents re-copying on every build.
+# Replaces the managed roots with the paths listed above, then normalizes every
+# compiler/linker/shell input to LF. The sentinel is only written after every
+# copy and conversion succeeds.
 
-$(COPY_SENTINEL):
+$(COPY_SENTINEL): $(STAGE_INPUTS)
 	@echo "Staging source files to $(STAGING)..."
-	@mkdir -p $(STAGING)
-	@$(foreach dir,$(STAGE_DIRS), \
-		if [ -d "$(dir)" ]; then \
-			mkdir -p $(STAGING)/$(dir) && \
-			cp -r $(dir)/* $(STAGING)/$(dir)/ 2>/dev/null || true; \
+	@set -eu; \
+		mkdir -p "$(STAGING)"; \
+		staging_abs=$$(readlink -f "$(STAGING)"); \
+		if [ -z "$$staging_abs" ] || [ "$$staging_abs" = "/" ]; then \
+			echo "Refusing unsafe staging path: '$(STAGING)'" >&2; \
+			exit 1; \
 		fi; \
-	)
-	@# Normalize all overlay .s files to LF.
-	@find $(STAGING)/asm/overlays -name '*.s' -exec dos2unix {} + 2>/dev/null || true
+		rm -f "$$staging_abs/.sources_copied"; \
+		for path in $(STAGE_PATHS); do \
+			if [ ! -e "$$path" ]; then \
+				echo "Missing required staging input: $$path" >&2; \
+				exit 1; \
+			fi; \
+		done; \
+		for path in $(STAGE_MANAGED_PATHS); do \
+			rm -rf "$$staging_abs/$$path"; \
+		done; \
+		for path in $(STAGE_PATHS); do \
+			mkdir -p "$$staging_abs/$$(dirname "$$path")"; \
+			cp -a "$$path" "$$staging_abs/$$path"; \
+		done
+	@find $(addprefix $(STAGING)/,$(STAGE_MANAGED_PATHS)) -type f \
+		\( -name '*.c' -o -name '*.h' -o -name '*.s' -o \
+		   -name '*.inc' -o -name '*.ld' -o -name '*.txt' -o \
+		   -name '*.sh' \) \
+		-exec dos2unix -q {} +
 	@touch $@
 	@echo "Staging complete."
