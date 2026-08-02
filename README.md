@@ -268,7 +268,7 @@ When you compile a `.c` file, four things happen in order:
 
 Overlays follow the same pipeline but may use a different compiler. For example, matched functions in the CHECKPS overlay use **gcc 2.7.2-cdk** (Cygnus CDK) with slightly different maspsx settings (`--aspsx-version=2.67 --expand-div`). Non-matching stubs fall back to gcc 2.8.0-psx or gcc 2.6.0-psx (GNU).
 
-Source files are compiled from a `/staging` directory (a native Linux path inside the container) rather than directly from the `/lom` mount, because GCC 2.8.0 cannot write to mounted Windows filesystems.
+Source files are compiled from `/staging`, a native Linux path inside the container, rather than directly from the Windows-backed `/lom` mount. The legacy 32-bit PSX compiler/preprocessor cannot represent the bind mount's inode metadata and fails with `Value too large for defined data type`. Staging also normalizes CRLF text inputs to LF without changing the host files.
 
 ### Overlays
 
@@ -314,7 +314,7 @@ I'm open to any other ideas or improvements you might have. Feel free to open an
 
 **Path expansion** - The `${PWD}` variable should automatically expand to your current directory path.
 
-**GCC can't write files** - This is expected when running GCC directly on the `/lom` mount. Always compile from inside the container where the `/staging` copy is used.
+**GCC reports `Value too large for defined data type`** - The legacy 32-bit compiler/preprocessor cannot `stat()` files on the Windows-backed `/lom` mount. Use the normal Make targets, which compile from the native Linux `/staging` copy.
 
 **Making an ELF fails** - Most likely reason is because overlapping regions caused by non-matching functions.
 

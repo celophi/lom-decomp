@@ -5727,7 +5727,7 @@ s32 menu_find_active_content_item(void)
  *         or -1 if not found or the list is empty.
  * @note The navigation list is a flat s32 array beginning at g_menu_nav_first with g_menu_nav_count
  *       entries; each element is one node ID.
- * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte 
  */
 s32 menu_find_nav_node_index(s32 node_id)
 {
@@ -5767,7 +5767,7 @@ s32 menu_find_nav_node_index(s32 node_id)
  *       (content hidden below); it hangs at y+h-8. If either arrow was emitted, a
  *       one-word DR_MODE (0xE1000005) restores the draw mode. Arrows are 16x16 SPRTs,
  *       CLUT 0x7C86, neutral tint.
- * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
+ * @see decomp.me (100%) TODO: no scratch yet; 
  */
 void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
 {
@@ -5827,7 +5827,7 @@ void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
  *       (content extends below viewport). Both use fixed X=0x20, code=0x64, color=0x808080.
  *       If either arrow was emitted, appends a one-word DR_MODE (0xE1000005). Mirrors the
  *       pattern of menu_emit_slot_scroll_arrows but reads from globals rather than a state struct.
- * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte
  */
 void* menu_emit_tree_scroll_arrows(SPRT* buf, s32* ot)
 {
@@ -5882,7 +5882,7 @@ s32 menu_emit_cursor(s32, s32*, s32, s32, s32);
  *       (g_menu_content_height - 0xC), clamped to [0xC, 0xA2].
  *       Label pointer: base = (u8*)g_menu_state_ptr + *(s32*)(state + 4);
  *                      text = base + *(u16*)(base + node->label_id * 2).
- * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte via lom-dev-mcp diff.
+ * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte
  */
 s32 menu_draw_active_node_cursor(s32 buf, s32* ot, s32 label)
 {
