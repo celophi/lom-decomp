@@ -507,6 +507,7 @@ extern s32 D_801694B0;
 /** @brief Packed circular navigation entries for item sub-pages. */
 extern s32 g_menu_item_nav_entries[];
 extern void* D_801693FC;
+/** @brief Current interpolated vertical scroll position of the node tree. */
 extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
