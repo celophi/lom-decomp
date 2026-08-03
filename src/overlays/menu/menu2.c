@@ -49,7 +49,6 @@ extern s32 g_menu_item_nav_entries[];
 extern s32 g_menu_active_item_category;
 extern s32 g_menu_pending_item_row;
 
-void* menu_slot_alloc(s32 arg0, void* rect);
 s32 func_8014551C(s32 arg0);
 s32 menu_build_equipment_nav_entries(void);
 s32 menu_build_key_item_nav_entries(void);
@@ -296,7 +295,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
  *
  * @param content_id Content page id (0-7); out of range is a no-op beyond the
  *        g_menu_pending_item_row reset.
- * @note Shapes required to match: the rect must be a single u16 rect[4] array
+ * @note Shapes required to match: the rect must be a single aggregate
  *       (separate locals get their stores dead-eliminated since only the first
  *       address escapes), and the raw callee result must be held in @c v0 with
  *       the (& 0x1FF) << 16 done inside the flags assignment so gcc 2.7.2
@@ -305,7 +304,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
  */
 void menu_open_content_page(u32 content_id)
 {
-    u16 rect[4];
+    MenuSlotRect rect;
     MenuSlot* slot;
     s32 v0;
     s32 j;
@@ -320,11 +319,11 @@ void menu_open_content_page(u32 content_id)
     switch (content_id)
     {
     case 0:
-        rect[0] = 0x40;
-        rect[1] = 0x60;
-        rect[2] = 0xF0;
-        rect[3] = 0x60;
-        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        rect.x = 0x40;
+        rect.y = 0x60;
+        rect.w = 0xF0;
+        rect.h = 0x60;
+        slot = menu_slot_alloc(3, &rect);
         slot->content_cb = (s32 * (*)()) & func_8014A3A4;
         slot->has_title = 1;
         slot->anim_frame = 5;
@@ -335,11 +334,11 @@ void menu_open_content_page(u32 content_id)
         break;
 
     case 1:
-        rect[0] = 0x40;
-        rect[1] = 0x60;
-        rect[2] = 0xF0;
-        rect[3] = 0x60;
-        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        rect.x = 0x40;
+        rect.y = 0x60;
+        rect.w = 0xF0;
+        rect.h = 0x60;
+        slot = menu_slot_alloc(3, &rect);
         slot->content_cb = (s32 * (*)()) & func_8014A3A4;
         slot->has_title = 1;
         slot->anim_frame = 5;
@@ -350,11 +349,11 @@ void menu_open_content_page(u32 content_id)
         break;
 
     case 2:
-        rect[0] = 0x40;
-        rect[1] = 0x60;
-        rect[2] = 0xF0;
-        rect[3] = 0x60;
-        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        rect.x = 0x40;
+        rect.y = 0x60;
+        rect.w = 0xF0;
+        rect.h = 0x60;
+        slot = menu_slot_alloc(3, &rect);
         slot->content_cb = (s32 * (*)()) & func_8014A3A4;
         slot->has_title = 1;
         slot->anim_frame = 5;
@@ -365,11 +364,11 @@ void menu_open_content_page(u32 content_id)
         break;
 
     case 3:
-        rect[0] = 0x40;
-        rect[1] = 0x2C;
-        rect[2] = 0xE8;
-        rect[3] = 0x90;
-        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        rect.x = 0x40;
+        rect.y = 0x2C;
+        rect.w = 0xE8;
+        rect.h = 0x90;
+        slot = menu_slot_alloc(3, &rect);
         slot->content_cb = (s32 * (*)()) & func_8014BA58;
         slot->has_title = 1;
         slot->anim_frame = 5;
@@ -380,11 +379,11 @@ void menu_open_content_page(u32 content_id)
         break;
 
     case 4:
-        rect[0] = 0x40;
-        rect[1] = 0x2C;
-        rect[2] = 0xE8;
-        rect[3] = 0x80;
-        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        rect.x = 0x40;
+        rect.y = 0x2C;
+        rect.w = 0xE8;
+        rect.h = 0x80;
+        slot = menu_slot_alloc(3, &rect);
         slot->content_cb = (s32 * (*)()) & func_8014BD48;
         slot->has_title = 1;
         slot->anim_frame = 5;
@@ -395,11 +394,11 @@ void menu_open_content_page(u32 content_id)
         break;
 
     case 5:
-        rect[0] = 0x40;
-        rect[1] = 0x2C;
-        rect[2] = 0xE8;
-        rect[3] = 0x90;
-        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        rect.x = 0x40;
+        rect.y = 0x2C;
+        rect.w = 0xE8;
+        rect.h = 0x90;
+        slot = menu_slot_alloc(3, &rect);
         slot->content_cb = (s32 * (*)()) & func_8014BF68;
         slot->has_title = 1;
         slot->anim_frame = 5;
@@ -410,11 +409,11 @@ void menu_open_content_page(u32 content_id)
         break;
 
     case 6:
-        rect[0] = 0x10;
-        rect[1] = 0x60;
-        rect[2] = 0x120;
-        rect[3] = 0x20;
-        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        rect.x = 0x10;
+        rect.y = 0x60;
+        rect.w = 0x120;
+        rect.h = 0x20;
+        slot = menu_slot_alloc(3, &rect);
         slot->content_cb = (s32 * (*)()) & func_8014C820;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -451,11 +450,11 @@ void menu_open_content_page(u32 content_id)
         break;
 
     case 7:
-        rect[0] = 0x10;
-        rect[1] = 0x60;
-        rect[2] = 0x120;
-        rect[3] = 0x30;
-        slot = (MenuSlot*)menu_slot_alloc(3, rect);
+        rect.x = 0x10;
+        rect.y = 0x60;
+        rect.w = 0x120;
+        rect.h = 0x30;
+        slot = menu_slot_alloc(3, &rect);
         slot->content_cb = (s32 * (*)()) & func_8014C8C8;
         slot->anim_frame = 5;
         slot->active = 2;
