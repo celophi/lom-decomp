@@ -125,6 +125,18 @@
 #define MENU_ROW_HEIGHT 0x13
 /** @brief Full visible scroll-viewport height: 9 rows * MENU_ROW_HEIGHT (171 px). */
 #define MENU_VIEW_HEIGHT 0xAB
+/** @brief Vertical spacing encoded in each packed item-navigation entry. */
+#define MENU_ITEM_NAV_POSITION_STRIDE 0x10
+/** @brief Bits [13:0] containing an item's vertical navigation position. */
+#define MENU_ITEM_NAV_POSITION_MASK 0x3FFF
+/** @brief Nine-bit mask for packed previous and next item indices. */
+#define MENU_ITEM_NAV_INDEX_MASK 0x1FF
+#define MENU_ITEM_NAV_PREVIOUS_SHIFT 14
+#define MENU_ITEM_NAV_NEXT_SHIFT 23
+/** @brief Clears the packed previous-index field while preserving all other bits. */
+#define MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK 0xFF803FFF
+/** @brief Clears the packed next-index field while preserving all other bits. */
+#define MENU_ITEM_NAV_NEXT_CLEAR_MASK 0x007FFFFF
 /** @brief Minimum Y for g_content_cursor_y within the content sub-window (12 px). */
 #define MENU_CURSOR_Y_MIN 0x0C
 /** @brief Maximum Y for g_content_cursor_y within the content sub-window (163 px). */
@@ -3626,67 +3638,63 @@ void menu_reset_content_view(void)
 }
 
 /**
- * @brief Initialize packed circular links in g_menu_item_nav_entries.
+ * @brief Initialize packed positions and circular links for item navigation.
+ *
+ * Each entry stores a 14-bit vertical position and nine-bit previous and next
+ * indices.
+ *
  * @param count Number of entries to initialize (no-op if <= 0).
- * @note  Each s32 element of g_menu_item_nav_entries holds three packed bit-fields:
- *        bits 13:0  -- (i * 0x10) & 0x3FFF (slot identity / stride field),
- *        bits 22:14 -- previous circular index (wraps: entry 0's prev = count - 1),
- *        bits 30:23 -- next circular index (wraps: last entry's next = 0).
  * @see decomp.me (100%) https://decomp.me/scratch/x87Jm
  */
 void menu_init_item_nav_entries(s32 count)
 {
-    s32 temp_a1;
-    s32 temp_a2;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a2;
-    s32 var_t1;
-    s32 var_v1;
-    s32* temp_t0;
+    s32 next_index;
+    s32 has_next;
+    s32 entry_with_position;
+    s32 previous_index;
+    s32 entry_index;
+    s32 wrapped_next_index;
+    s32* entry;
+    s32 packed_entry;
+    s32 position;
+    s32 entry_with_previous;
 
-    s32 tmp;
-    s32 tmp2;
-    s32 tmp3;
-
-    var_t1 = 0;
+    entry_index = 0;
     if (count > 0)
     {
         do
         {
-            temp_t0 = (var_t1) + g_menu_item_nav_entries;
+            entry = entry_index + g_menu_item_nav_entries;
+            packed_entry = *entry;
+            previous_index = entry_index - 1;
 
-            tmp = *temp_t0;
-            var_a2 = var_t1 - 1;
+            entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+            position = entry_index * MENU_ITEM_NAV_POSITION_STRIDE;
+            position = position & MENU_ITEM_NAV_POSITION_MASK;
+            entry_with_position = entry_with_position | position;
+            *entry = entry_with_position;
 
-            temp_v1 = (tmp & ~0x3FFF);
-
-            tmp2 = (var_t1 * 0x10);
-            tmp2 = tmp2 & 0x3FFF;
-
-            temp_v1 = temp_v1 | tmp2;
-            *temp_t0 = temp_v1;
-
-            if (var_a2 < 0)
+            if (previous_index < 0)
             {
-                var_a2 = count - 1;
+                previous_index = count - 1;
             }
 
-            tmp3 = (temp_v1 & 0xFF803FFF);
+            entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+            entry_with_previous =
+                entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+            *entry = entry_with_previous;
 
-            tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
-
-            *temp_t0 = tmp3;
-            temp_a2 = var_t1 + 1;
-            temp_a3 = temp_a2 < count;
-            var_v1 = 0;
-            if (temp_a3 != 0)
+            next_index = entry_index + 1;
+            has_next = next_index < count;
+            wrapped_next_index = 0;
+            if (has_next != 0)
             {
-                var_v1 = temp_a2;
+                wrapped_next_index = next_index;
             }
-            *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
-            var_t1 = temp_a2;
-        } while (temp_a3 != 0);
+            *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) |
+                     (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
+            entry_index = next_index;
+        } while (has_next != 0);
     }
 }
 
