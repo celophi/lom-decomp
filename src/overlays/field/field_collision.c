@@ -241,8 +241,6 @@ extern long ratan2(long y, long x);
 extern int rcos(int a);
 extern int rsin(int a);
 
-s16 func_8005DFAC(void*, s32*);                     /* extern */
-s32 func_8005E1A8(void*, s32, s32, s32);            /* extern */
 extern long SquareRoot0(long a);
 
 typedef struct Move_UnkS16 {
@@ -250,14 +248,40 @@ typedef struct Move_UnkS16 {
     s16 unk2;
 } Move_UnkS16;
 
+/**
+ * @brief One run of consecutive boundary points in a node's edge list.
+ *
+ * The list lives at Move_UnkNode2+0x18 and is terminated by a record whose
+ * count is zero. A run's points are consecutive entries of
+ * g_field_node_angle_table starting at @c index, so only the first index is
+ * stored.
+ */
+typedef struct Move_EdgeRun {
+    /** 0x00 number of points in this run; only the low 15 bits are the count. */
+    u16 count;
+    /** 0x02 angle-table index of the run's first point. */
+    u16 index;
+} Move_EdgeRun;
+
 typedef struct Move_UnkNode2 {
     u8 pad0[4];
     s32 unk4;
-    u8 pad8[8];
+    u8 pad8[2];
+    /** 0x0A index of the node's third boundary point in g_field_node_angle_table. */
+    u16 unkA;
+    /** 0x0C index of the node's second boundary point. */
+    u16 unkC;
+    /** 0x0E index of the node's first boundary point. */
+    u16 unkE;
     s16 unk10;
     s16 unk12;
     s16 unk14;
+    u8 pad16[2];
+    /** 0x18 edge-run list; @c runs[0].index doubles as the closing point. */
+    Move_EdgeRun runs[1];
 } Move_UnkNode2;
+
+s32 func_8005E1A8(Move_UnkNode2*, s32, s32, s32);
 
 typedef struct Move_UnkNode1 {
     struct Move_UnkNode1* unk0;
@@ -277,9 +301,11 @@ typedef struct Move_UnkNode1 {
     s32 unk30;
     s32 unk34;
     s32 unk38;
-    u8 pad3C[4];
+    s32 unk3C;
     s32 unk40;
 } Move_UnkNode1;
+
+s16 func_8005DFAC(Move_UnkNode1*, s32*);
 
 typedef struct Move_UnkNode3 {
     u8 pad0[0x2C];
@@ -1857,4 +1883,307 @@ void func_8005DA7C(Move_Probe* probe, Move_UnkNode1* node, s32* out_hit, s32* ou
             node = node->unk0;
         } while (node != NULL);
     }
+}
+
+/**
+ * @brief Sample a collision node's surface height at a probe position.
+ *
+ * The node's definition names three boundary points by index into
+ * g_field_node_angle_table (0x0E, 0x0C and 0x0A, called A, B and C here); each
+ * table entry is an x/y pair. The node's swept offsets at 0x34 and 0x40, both
+ * divided by 256, translate B and C into world space.
+ *
+ * The height is found by intersecting the C->B edge with the line that runs
+ * through @p pt parallel to A->B: `hit_x` is that intersection's x coordinate,
+ * `along` its distance from C along the edge, and `along / dx_bc` the fraction
+ * used to blend the node's two height endpoints h0 (at C) and h1 (at B).
+ *
+ * The fraction is normally taken from the x axis. When the intersection lands
+ * exactly on B's x coordinate that axis carries no usable span, so the y axis
+ * is used instead; if the intersection is B itself the answer is h1 directly.
+ * The blend is finally clamped back into [min(h0, h1), max(h0, h1)], which is
+ * spelled twice because which endpoint is the upper bound depends on their
+ * order.
+ *
+ * @param node Collision node whose surface is being sampled.
+ * @param pt Probe position in grid cells: pt[0] is x and pt[1] is y.
+ * @return Interpolated surface height, clamped between the node's endpoints.
+ *
+ * @note Both endpoints are clamped up to zero before use, so a node whose
+ *       endpoint resolves below the origin behaves as if it sat on it.
+ * @see decomp.me (100%) TODO
+ */
+s16 func_8005DFAC(Move_UnkNode1* node, s32* pt)
+{
+    Move_UnkNode2* def;
+    s16* tbl;
+    s16* vert;
+    s16* vert_b;
+    s32 h0;
+    s32 h1;
+    s32 ox;
+    s32 oy;
+    s32 ax;
+    s32 ay;
+    s32 bx;
+    s32 by;
+    s32 cx;
+    s32 cy;
+    s32 dx_ab;
+    s32 dy_bc;
+    s32 dx_bc;
+    s32 cross_xy;
+    s32 cross_yx;
+    s32 cx_world;
+    s32 cy_world;
+    s32 hit_x;
+    s32 along;
+    s32 hit_y;
+    s16 height;
+
+    def = node->unk4;
+    tbl = g_field_node_angle_table;
+    vert = &tbl[def->unkE * 2];
+    h0 = (node->unk38 >> 8) + def->unk10;
+    h1 = (node->unk3C >> 8) + def->unk12;
+    vert_b = &tbl[def->unkC * 2];
+    ox = node->unk34 >> 8;
+    if (h0 < 0)
+    {
+        h0 = 0;
+    }
+    if (h1 < 0)
+    {
+        h1 = 0;
+    }
+    ax = vert[0];
+    ay = vert[1];
+    bx = vert_b[0];
+    by = vert_b[1];
+    vert = &tbl[def->unkA * 2];
+    cy = vert[1];
+    dx_ab = ax - bx;
+    dy_bc = by - cy;
+    cross_xy = dx_ab * dy_bc;
+    oy = node->unk40 >> 8;
+    cy_world = cy + oy;
+    cx = vert[0];
+    dx_bc = bx - cx;
+    cross_yx = (ay - by) * dx_bc;
+    cx_world = cx + ox;
+    hit_x = ((((pt[1] - cy_world) * dx_ab) * dx_bc) + (cross_xy * cx_world) - (pt[0] * cross_yx)) / (cross_xy - cross_yx);
+    along = hit_x - cx_world;
+    hit_y = ((along * dy_bc) / dx_bc) + cy_world;
+    if (hit_x == (bx + ox))
+    {
+        if (hit_y == (by + oy))
+        {
+            height = h1;
+        }
+        else
+        {
+            height = (((hit_y - cy_world) * (h1 - h0)) / dy_bc) + h0;
+        }
+    }
+    else
+    {
+        height = ((along * (h1 - h0)) / dx_bc) + h0;
+    }
+
+    if (h0 < h1)
+    {
+        if (height > h1)
+        {
+            height = h1;
+        }
+        else if (height < h0)
+        {
+            height = h0;
+        }
+    }
+    else
+    {
+        if (height > h0)
+        {
+            height = h0;
+        }
+        else if (height < h1)
+        {
+            height = h1;
+        }
+    }
+    return height;
+}
+
+/**
+ * @brief Resolve the slide direction along one collision edge.
+ *
+ * Locates boundary edge number @p edge in the node's edge-run list, takes the
+ * two angle-table points bounding it, and turns them into a wall angle with
+ * ratan2. Indices 0x7E and 0x7F skip the walk entirely and stand for the two
+ * screen-aligned world edges, giving a fixed angle of 0x400 and 0 respectively.
+ *
+ * The wall can be slid along in either direction, so the side whose angle sits
+ * nearer @p dir is chosen; a tie means the movement runs straight into the wall
+ * and nothing can be resolved. The chosen angle is then merged with the running
+ * best @p best: when both deviate from @p dir the same way the larger deviation
+ * wins, and a deviation of 0x472 or more (about 100 degrees of the 0x1000-unit
+ * circle) counts as blocked.
+ *
+ * @param def Node definition owning the edge list, or NULL when @p edge is
+ *            0x7E or 0x7F.
+ * @param edge Edge index within the node, or 0x7E / 0x7F for a world edge.
+ * @param dir Desired movement direction, in 0x1000 units per revolution.
+ * @param best Slide direction resolved so far: -2 means none yet and -1 means
+ *             an earlier edge already blocked the movement.
+ * @return The resolved slide direction, @p best when the earlier one still
+ *         wins, or -1 when the movement is blocked.
+ * @see decomp.me (97.50%, 126/130 exact) TODO
+ */
+s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
+{
+    s16* tbl;
+    s16* prev;
+    s16* ep;
+    Move_EdgeRun* run;
+    s32 scratch;
+    s32 angle;
+    s32 dx;
+    s32 dy;
+    s32 d2;
+    s32 mid;
+    s32 wrap;
+    s32 e1;
+    s32 e2;
+
+    if (best == -1)
+    {
+        return -1;
+    }
+    prev = NULL;
+    if (edge < 0x7E)
+    {
+        tbl = g_field_node_angle_table;
+        for (run = def->runs; (scratch = run->count & 0x7FFF) != 0; run++)
+        {
+            ep = &tbl[run->index * 2];
+            while (--scratch != -1)
+            {
+                if (prev != NULL)
+                {
+                    if (edge == 0)
+                    {
+                        goto found;
+                    }
+                    edge--;
+                }
+                prev = ep;
+                ep += 2;
+            }
+        }
+        ep = &tbl[def->runs[0].index * 2];
+    found:
+        dx = ep[0] - prev[0];
+        dy = ep[1] - prev[1];
+        if (dx == 0)
+        {
+            angle = 0x400;
+        }
+        else
+        {
+            angle = ratan2(dy, dx) & 0x7FF;
+        }
+    }
+    else
+    {
+        angle = (edge == 0x7E) << 10;
+    }
+
+    if (dir < angle)
+    {
+        scratch = angle - dir;
+    }
+    else
+    {
+        scratch = dir - angle;
+        if (scratch > 0x800)
+        {
+            wrap = dir - 0x1000;
+            scratch = angle - wrap;
+        }
+    }
+    mid = angle + 0x800;
+    if (dir < mid)
+    {
+        d2 = mid - dir;
+        if (d2 > 0x800)
+        {
+            wrap = angle - 0x800;
+            d2 = dir - wrap;
+        }
+    }
+    else
+    {
+        d2 = dir - mid;
+    }
+    if (scratch == d2)
+    {
+        return -1;
+    }
+    if (d2 < scratch)
+    {
+        angle += 0x800;
+    }
+    if (best == -2)
+    {
+        return angle;
+    }
+
+    e2 = best - dir;
+    e1 = angle - dir;
+    if (e1 > 0x800)
+    {
+        e1 -= 0x1000;
+    }
+    else if (e1 < -0x800)
+    {
+        e1 += 0x1000;
+    }
+    if (e2 > 0x800)
+    {
+        e2 -= 0x1000;
+    }
+    else if (e2 < -0x800)
+    {
+        e2 += 0x1000;
+    }
+
+    if ((e1 >= 0) && (e2 >= 0))
+    {
+        if (e1 < e2)
+        {
+            angle = best;
+        }
+        else if (e1 >= 0x472)
+        {
+            angle = -1;
+        }
+    }
+    else if ((e1 <= 0) && (e2 <= 0))
+    {
+        scratch = e1;
+        if (e2 < e1)
+        {
+            angle = best;
+        }
+        else if (scratch < -0x471)
+        {
+            angle = -1;
+        }
+    }
+    else
+    {
+        angle = -1;
+    }
+    return angle;
 }
