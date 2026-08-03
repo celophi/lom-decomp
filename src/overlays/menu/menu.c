@@ -103,6 +103,8 @@
 #define MENU_NODE_FLAG_EXPANDED 0x02
 /** @brief Bits [14:8] of idx_nav.nav_x_packed: the 7-bit column (nav_x) field. */
 #define MENU_NAV_X_MASK 0x7F00
+/** @brief Extracts the 7-bit navigation X coordinate from its packed field. */
+#define MENU_NAV_X(packed) (((u16)(packed) >> 8) & (MENU_NAV_X_MASK >> 8))
 /** @brief Clears bits [14:8] of idx_nav.nav_x_packed (inverse of MENU_NAV_X_MASK). */
 #define MENU_NAV_X_CLEAR 0x80FF
 /** @brief Bit 15 of idx_nav.nav_x_packed: bit 0 of the 9-bit nav cursor Y. */
@@ -127,8 +129,14 @@
 #define MENU_CURSOR_Y_MIN 0x0C
 /** @brief Maximum Y for g_content_cursor_y within the content sub-window (163 px). */
 #define MENU_CURSOR_Y_MAX 0xA3
+/** @brief Horizontal inset from a node's navigation column to the content cursor. */
+#define MENU_CONTENT_CURSOR_X_OFFSET 8
 /** @brief Frames to suppress cursor highlight after opening a content view. */
 #define MENU_CURSOR_REVEAL_DELAY 5
+/** @brief Extracts the 9-bit screen X coordinate from MenuContentItem::packed_x. */
+#define MENU_CONTENT_X_MASK 0x1FF
+/** @brief Converts a content item's Y coordinate to the viewport origin. */
+#define MENU_CONTENT_VIEW_Y_OFFSET 8
 /** @brief g_menu_redraw_state: navigation key pressed, scroll position adjusted. */
 #define MENU_REDRAW_NAVIGATE 6
 /** @brief g_menu_redraw_state: layout pass completed (position change or first run). */
@@ -2558,26 +2566,29 @@ unsigned int menu_handle_node_input(void)
 }
 
 /**
- * @brief Focus the active content-table item and update the content viewport.
- * @return 1 when an active item was found; 0 otherwise.
+ * @brief Focus the active content item and snap the viewport to its position.
+ *
+ * @return 1 if an active item was found; otherwise 0.
  * @see decomp.me (100%) https://decomp.me/scratch/q39Ou
  */
 s32 menu_focus_active_content_item(void)
 {
-    MenuContentItem* base;
-    MenuContentItem* item;
-    int view_y;
+    MenuContentItem* content_items;
+    MenuContentItem* active_item;
+    s32 view_y;
+
     g_menu_hit_item_idx = menu_find_active_content_item();
     if (g_menu_hit_item_idx != (-1))
     {
         MenuNode* nodes = g_menu_nodes;
-        u8 self_idx = (nodes + g_menu_scene_type)->idx_nav.s.self_idx;
-        base = g_menu_content_table[self_idx];
-        item = base - (-g_menu_hit_item_idx);
-        g_content_view_x = item->packed_x & 0x1FF;
-        view_y = item->y - 8;
-        g_menu_suppress_cursor = 5;
-        g_menu_cursor_enable = 1;
+        u8 content_table_idx = (nodes + g_menu_scene_type)->idx_nav.s.self_idx;
+
+        content_items = g_menu_content_table[content_table_idx];
+        active_item = content_items - (-g_menu_hit_item_idx);
+        g_content_view_x = active_item->packed_x & MENU_CONTENT_X_MASK;
+        view_y = active_item->y - MENU_CONTENT_VIEW_Y_OFFSET;
+        g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
+        g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
         g_content_view_y = view_y;
         return 1;
     }
@@ -3462,25 +3473,25 @@ after_do_while:
 }
 
 /**
- * @brief Clamp the content cursor Y to the valid viewport range and snap both view
- *        axes to the current cursor position.
- * @note Called when the cursor is disabled (g_menu_cursor_enable == 0) after a node
- *       switch, so the viewport re-homes to wherever the cursor was left.  The X
- *       coordinate is derived from the active node's nav_x field (idx_nav.nav_x_packed bits 14:8).
+ * @brief Clamp the content cursor and snap the viewport to its position.
+ *
  * @see decomp.me (100%) https://decomp.me/scratch/wBlQo
  */
 void menu_snap_view_to_cursor(void)
 {
-    if (g_content_cursor_y < 12)
+    if (g_content_cursor_y < MENU_CURSOR_Y_MIN)
     {
-        g_content_cursor_y = 12;
+        g_content_cursor_y = MENU_CURSOR_Y_MIN;
     }
-    if (g_content_cursor_y >= 163)
+    if (g_content_cursor_y >= MENU_CURSOR_Y_MAX)
     {
-        g_content_cursor_y = 163;
+        g_content_cursor_y = MENU_CURSOR_Y_MAX;
     }
     g_content_view_y = g_content_cursor_y;
-    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
+
+    /* Restore X from the active node's packed navigation column. */
+    g_content_cursor_x =
+        MENU_NAV_X(g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed) + MENU_CONTENT_CURSOR_X_OFFSET;
     g_content_view_x = g_content_cursor_x;
 }
 
@@ -3570,55 +3581,47 @@ int menu_item_has_action(void)
 }
 
 /**
- * @brief Reset content viewport and cursor to the active node's navigation position.
- * @note  Copies g_menu_default_view_pos into g_content_cursor_x/y when the scene node
- *        has content (content_id != MENU_NONE). Then reconstructs the 9-bit nav cursor Y
- *        from the active node's packed nav fields, writes it to g_content_view_y (clamped
- *        to [12, 0xA3]), and sets g_content_view_x from the 7-bit nav_x column.
- * @note  Four shapes are required to match:
- *        - `view_top` must be its own statement. Written inline as
- *          `nav_y - (g_menu_content_height - 12)`, fold-const rewrites it as
- *          `(nav_y + 12) - height` and emits `addiu 0xc` instead of `addiu -0xc`.
- *        - `view_y` aliases &g_content_view_y. Accessing the global directly gives its
- *          %hi a short live range, so it shares a register with the lbu temp and the
- *          scheduler cannot hoist the lui; the alias gives it a dedicated register (a2)
- *          held across all four accesses, as in the original.
- *        - `view_y` must be assigned BEFORE `active_node` (this is what lets the
- *          cursor_enable store schedule ahead of the two luis).
- *        - `nav_hi` is split out so the lhu is emitted before the lbu, while the `or`
- *          still takes the shifted nav_y_hi as its first operand.
+ * @brief Exit content focus and restore the node-tree viewport to the active node.
+ *
+ * Resets the content cursor when the current scene has content, then restores
+ * the viewport from the active node's packed navigation coordinates.
+ *
  * @see decomp.me (100%) TODO
  */
 void menu_reset_content_view(void)
 {
     MenuNode* active_node;
-    s32 nav_y;
-    s32 nav_hi;
-    s32 view_top;
-    s32* view_y;
+    s32 node_y;
+    s32 node_y_low_bit;
+    s32 scroll_offset;
+    s32* view_y_ptr;
 
     if (g_menu_nodes[g_menu_scene_type].content_id != MENU_NONE)
     {
         g_content_cursor_x = g_menu_default_view_pos.x;
         g_content_cursor_y = g_menu_default_view_pos.y;
     }
-    g_menu_cursor_enable = 2;
-    view_y = &g_content_view_y;
+
+    g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT_EXIT;
+    view_y_ptr = &g_content_view_y;
     active_node = &g_menu_nodes[g_menu_active_node];
-    nav_hi = active_node->idx_nav.nav_x_packed >> 15;
-    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | nav_hi;
-    view_top = g_menu_content_height - 12;
-    *view_y = nav_y - view_top;
-    if (*view_y < 12)
+    node_y_low_bit = active_node->idx_nav.nav_x_packed >> 15;
+    node_y = (active_node->u8_u.s.nav_y_hi << 1) | node_y_low_bit;
+
+    /* Convert the node's layout position into the scrolled viewport. */
+    scroll_offset = g_menu_content_height - MENU_CURSOR_Y_MIN;
+    *view_y_ptr = node_y - scroll_offset;
+    if (*view_y_ptr < MENU_CURSOR_Y_MIN)
     {
-        *view_y = 12;
+        *view_y_ptr = MENU_CURSOR_Y_MIN;
     }
-    if (*view_y >= 0xA3)
+    if (*view_y_ptr >= MENU_CURSOR_Y_MAX)
     {
-        *view_y = 0xA3;
+        *view_y_ptr = MENU_CURSOR_Y_MAX;
     }
-    g_menu_suppress_cursor = 5;
-    g_content_view_x = (((u16)active_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
+
+    g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
+    g_content_view_x = MENU_NAV_X(active_node->idx_nav.nav_x_packed) + MENU_CONTENT_CURSOR_X_OFFSET;
 }
 
 /**
