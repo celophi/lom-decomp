@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "display.h"
 
 /* ----- Macros ----- */
 
@@ -21,6 +22,21 @@
 #define MENU_GRID_TEXTURE_WINDOW_SIZE 0xFF
 #define MENU_GRID_TPAGE 5
 
+#define MENU_SLOT_COUNT 4
+#define MENU_SLOT_OT_INDEX_SHIFT 25
+#define MENU_SLOT_OT_INDEX_CLEAR_MASK 0x01FFFFFF
+#define MENU_WINDOW_TRANSITION_STEPS 12
+#define MENU_WINDOW_MIN_WIDTH 0x20
+#define MENU_WINDOW_MIN_HEIGHT 0x10
+/** Per-edge inset for the given opening or closing animation frame. */
+#define MENU_WINDOW_EDGE_INSET(size, frame) \
+    (((size) >> 1) - ((s16)((size) / MENU_WINDOW_TRANSITION_STEPS) * (frame)))
+
+/** Size of the embedded TIM image block, including its block header. */
+#define MENU_TIM_IMAGE_BLOCK_SIZE 0x800C
+/** Read two adjacent CLUT colors as one packed 32-bit word. */
+#define MENU_TIM_CLUT_WORD(tim, index) (((u32*)(tim)->clut_data)[index])
+
 /*
  * Packed texture-window / UV origin constants for the menu window chrome.
  * Format: bits 15..8 = VRAM v (y), bits 7..0 = VRAM u (x).
@@ -42,6 +58,11 @@
 #define MENU_TW_EDGE_LEFT 0x90D0
 #define MENU_TW_EDGE_RIGHT 0x90D8
 #define MENU_TW_FILL 0xA0A0
+#define MENU_WINDOW_CORNER_SIZE 8
+#define MENU_WINDOW_FILL_TILE_SIZE 0x60
+#define MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE 16
+#define MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE 8
+#define MENU_LABEL_BUFFER_SIZE 16
 
 /*
  * VRAM layout for the three menu window slots' primitive data.
@@ -76,8 +97,14 @@
  */
 /** @brief Total number of nodes in g_menu_nodes[]. */
 #define MENU_NODE_COUNT 0x2C
+/** @brief MenuNode::u2 flag indicating that the node participates in layout. */
+#define MENU_NODE_FLAG_ACTIVE 0x01
+/** @brief MenuNode::u2 flag indicating that the node's children are visible. */
+#define MENU_NODE_FLAG_EXPANDED 0x02
 /** @brief Bits [14:8] of idx_nav.nav_x_packed: the 7-bit column (nav_x) field. */
 #define MENU_NAV_X_MASK 0x7F00
+/** @brief Extracts the 7-bit navigation X coordinate from its packed field. */
+#define MENU_NAV_X(packed) (((u16)(packed) >> 8) & (MENU_NAV_X_MASK >> 8))
 /** @brief Clears bits [14:8] of idx_nav.nav_x_packed (inverse of MENU_NAV_X_MASK). */
 #define MENU_NAV_X_CLEAR 0x80FF
 /** @brief Bit 15 of idx_nav.nav_x_packed: bit 0 of the 9-bit nav cursor Y. */
@@ -98,12 +125,34 @@
 #define MENU_ROW_HEIGHT 0x13
 /** @brief Full visible scroll-viewport height: 9 rows * MENU_ROW_HEIGHT (171 px). */
 #define MENU_VIEW_HEIGHT 0xAB
+/** @brief Vertical spacing encoded in each packed item-navigation entry. */
+#define MENU_ITEM_NAV_POSITION_STRIDE 0x10
+/** @brief Bits [13:0] containing an item's vertical navigation position. */
+#define MENU_ITEM_NAV_POSITION_MASK 0x3FFF
+/** @brief Nine-bit mask for packed previous and next item indices. */
+#define MENU_ITEM_NAV_INDEX_MASK 0x1FF
+#define MENU_ITEM_NAV_PREVIOUS_SHIFT 14
+#define MENU_ITEM_NAV_NEXT_SHIFT 23
+/** @brief Clears the packed previous-index field while preserving all other bits. */
+#define MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK 0xFF803FFF
+/** @brief Clears the packed next-index field while preserving all other bits. */
+#define MENU_ITEM_NAV_NEXT_CLEAR_MASK 0x007FFFFF
+/** @brief Offset of the 12-row spell-presence bitmap in g_pad_ctx. */
+#define MENU_SPELL_GRID_OFFSET 0x60
+#define MENU_SPELL_GRID_ROW_COUNT 12
+#define MENU_SPELL_GRID_COLUMN_COUNT 8
 /** @brief Minimum Y for g_content_cursor_y within the content sub-window (12 px). */
 #define MENU_CURSOR_Y_MIN 0x0C
 /** @brief Maximum Y for g_content_cursor_y within the content sub-window (163 px). */
 #define MENU_CURSOR_Y_MAX 0xA3
+/** @brief Horizontal inset from a node's navigation column to the content cursor. */
+#define MENU_CONTENT_CURSOR_X_OFFSET 8
 /** @brief Frames to suppress cursor highlight after opening a content view. */
 #define MENU_CURSOR_REVEAL_DELAY 5
+/** @brief Extracts the 9-bit screen X coordinate from MenuContentItem::packed_x. */
+#define MENU_CONTENT_X_MASK 0x1FF
+/** @brief Converts a content item's Y coordinate to the viewport origin. */
+#define MENU_CONTENT_VIEW_Y_OFFSET 8
 /** @brief g_menu_redraw_state: navigation key pressed, scroll position adjusted. */
 #define MENU_REDRAW_NAVIGATE 6
 /** @brief g_menu_redraw_state: layout pass completed (position change or first run). */
@@ -112,6 +161,11 @@
 #define MENU_PAD_INJECT_ENABLED 0x80
 /** @brief Ordering-table entry used as the menu frame's list head. */
 #define MENU_FRAME_OT_INDEX 13
+/** @brief Vertical offset of the node-tree clipping region within a draw page. */
+#define MENU_TREE_DRAW_Y_OFFSET 12
+#define MENU_TREE_DRAW_X 15
+#define MENU_TREE_DRAW_WIDTH 36
+#define MENU_TREE_DRAW_HEIGHT 170
 
 /*
  * Sound effect IDs -- passed as the first argument to menu_play_se.
@@ -127,6 +181,47 @@
 #define MENU_SE_VOLUME 0x80
 
 /* ----- Types ----- */
+
+/** VRAM destinations for the image and CLUT blocks in the menu TIM asset. */
+typedef struct
+{
+    s16 texture_x;
+    s16 texture_y;
+    s16 clut_x;
+    s16 clut_y;
+} MenuTimVramLayout;
+
+/** Halfword view of MenuSlot.flags for width-accurate field initialization. */
+typedef union
+{
+    u32 value;
+    struct
+    {
+        u16 low;
+        u16 high;
+    } half;
+} MenuSlotFlagsView;
+
+#define MENU_SLOT_FLAGS_VIEW(slot) (*(MenuSlotFlagsView*)&(slot)->flags)
+
+/**
+ * @brief Container holding the menu TIM and its additional CLUT.
+ *
+ * The two offsets are stored in the asset header; the embedded TIM begins
+ * immediately after the header, and its variable-sized image block follows
+ * the first CLUT.
+ */
+typedef struct
+{
+    u32 entry_count;
+    u32 tim_offset;
+    u32 second_clut_offset;
+    Tim tim;
+    u8 image_block[MENU_TIM_IMAGE_BLOCK_SIZE];
+    u16 second_clut[CLUT_ENTRY_COUNT];
+} MenuTimAsset;
+
+void menu_upload_tim(const MenuTimVramLayout* layout);
 
 /**
  * @brief Animation-facing view of a menu window slot.
@@ -218,8 +313,16 @@ typedef struct
     s16 y; /**< Screen Y. */
 } ScreenPos;
 
+/** Stack layout used while drawing an opening or closing menu window. */
+typedef struct
+{
+    MenuRect rect;
+    ScreenPos view_origin;
+    s16 padding[2];
+} MenuWindowTransitionFrame;
+
 /**
- * @brief Pair of (u8) indices into a packed text-lookup table.
+ * @brief Two-byte offset into a paged string table.
  *
  * @c entry is the character/entry index within the page; @c page is the page
  * index. Together they form a string pointer via
@@ -229,7 +332,26 @@ typedef struct
 {
     u8 entry; /**< Entry index within the page. */
     u8 page;  /**< Page index. */
-} StringTableKey;
+} StringTableOffset;
+
+/**
+ * @brief Known prefix of the shared menu string-table layout.
+ *
+ * The two sign-dependent label offsets are embedded within the table data.
+ */
+typedef struct
+{
+    u8 prefix[0x16];
+    StringTableOffset nonnegative_label;
+    u8 between_labels[8];
+    StringTableOffset negative_label;
+} MenuStringTableLayout;
+
+/** Recover the enclosing string-table base from one of its embedded offsets. */
+#define MENU_STRING_TABLE_MEMBER_OFFSET(member) \
+    ((u32)&((MenuStringTableLayout*)0)->member)
+#define MENU_STRING_TABLE_BASE(key, member) \
+    ((u8*)&(key) - MENU_STRING_TABLE_MEMBER_OFFSET(member))
 
 /**
  * @brief One node in the hierarchical menu navigation tree.
@@ -334,6 +456,29 @@ typedef struct
     u32 packed_wh; /**< Packed signed dimensions: low half width, high half height. */
 } MenuGridSpriteDef;
 
+/** Partial view of one controller port through its large-motor command. */
+typedef struct
+{
+    u8 padding0[0x92];
+    u8 large_motor_command;
+    u8 padding93[0x1B];
+} MenuControllerActuatorPort;
+
+/** Fixed two-port controller state at 0x801ED600. */
+typedef struct
+{
+    MenuControllerActuatorPort ports[2];
+} MenuControllerActuatorState;
+
+#define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)0x801ED600)
+
+typedef enum
+{
+    MENU_CURSOR_MODE_NODE_TREE = 0,
+    MENU_CURSOR_MODE_CONTENT = 1,
+    MENU_CURSOR_MODE_CONTENT_EXIT = 2,
+} MenuCursorMode;
+
 /* ----- Forward declarations ----- */
 
 /* K&R-style declaration: original call site in menu_tick passes no explicit
@@ -341,14 +486,14 @@ typedef struct
  * live. Keep the empty parameter list to preserve that codegen exactly. */
 void menu_build_grid();
 void menu_update_slots(RenderContext* render_ctx);
-u_char* menu_draw_frame(void* prim_cursor, u_int* ot, int draw_page, int handle_input);
+u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input);
 u32 menu_step_item_selection(s32 step);
 
 /* ----- Extern globals ----- */
 
 /** @brief Pending overlay element to emit at end of @ref menu_update_slots (0 = none). */
 extern s32 g_menu_pending_overlay;
-/** @brief When non-zero, cursor highlight is enabled for the active slot. */
+/** @brief Selects node-tree, content, or content-exit cursor handling. */
 extern s32 g_menu_cursor_enable;
 /** @brief Set non-zero by a content callback to abort @ref menu_draw_window early. */
 extern s32 g_menu_draw_early_out;
@@ -378,6 +523,7 @@ extern s32 D_801694B0;
 /** @brief Packed circular navigation entries for item sub-pages. */
 extern s32 g_menu_item_nav_entries[];
 extern void* D_801693FC;
+/** @brief Current interpolated vertical scroll position of the node tree. */
 extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
 extern s32 g_menu_redraw_state;
@@ -394,8 +540,10 @@ extern s8 g_menu_ability_mask;
 /** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
 extern s8 g_menu_companion_node;
 
-extern StringTableKey g_menu_label_key_a; /* 0x800EC3DA: offset +0x16 into shared text table at 0x800EC3C4 */
-extern StringTableKey g_menu_label_key_b; /* 0x800EC3E4: offset +0x20 into shared text table at 0x800EC3C4 */
+/** @brief Nonnegative-label offset embedded in MenuStringTableLayout. */
+extern StringTableOffset g_menu_label_key_a;
+/** @brief Negative-label offset embedded in MenuStringTableLayout. */
+extern StringTableOffset g_menu_label_key_b;
 
 /** @brief Number of nodes in the linear navigation list. */
 extern s32 g_menu_nav_count;
@@ -432,7 +580,7 @@ extern s32 g_menu_layout_end;
 void menu_init(void)
 {
     volatile u8 padding;
-    menu_clear_vram();
+    menu_upload_graphics();
     menu_state_init();
     menu_reset_slots();
     g_active_slot = -1;
@@ -584,84 +732,94 @@ void menu_tick(RenderContext* render_ctx)
     menu_update_slots(render_ctx);
 }
 
+typedef enum
+{
+    MENU_TEXT_ALIGN_LEFT = 0,
+    MENU_TEXT_ALIGN_RIGHT = 1,
+    MENU_TEXT_ALIGN_CENTER = 2,
+} MenuTextAlignment;
+
 /**
- * @brief Lay out a run of glyph sprites and link them into an OT chain.
+ * @brief Build and queue a horizontally aligned run of glyph sprites.
  *
- * @param sprites Primitive write cursor: the glyph @c SPRT records are built
- *                here, and the cursor is advanced past the run.
- * @param ot      Ordering-table head the glyphs are linked into via @c addPrim.
- * @param src     Source text copied into the local glyph buffer.
- * @param arg3    TODO: unknown - passed to @ref func_800644FC.
- * @param x       Starting X of the run; shifted left by the total glyph width
- *                when @p mode is 1 or 2 (centering).
- * @param y       Y coordinate of the run.
- * @param len     Source length: byte count for the buffer fill and the index
- *                at which the buffer is null-terminated.
- * @param mode    Centering: 1 = subtract each glyph's full width,
- *                2 = subtract half of it; other = no adjustment.
- * @return Pointer just past the trailing @c DR_TPAGE's tag+code words.
+ * @param sprite_cursor Start of the primitive-buffer region for the glyph sprites.
+ * @param ot Ordering-table entry that receives the emitted packets.
+ * @param src Address of the source text.
+ * @param text_color Text-color index in the range 0–15.
+ * @param x Horizontal anchor selected by @p alignment.
+ * @param y Y coordinate applied to every glyph.
+ * @param len Source byte length; must not exceed 0x7F.
+ * @param alignment Horizontal alignment of the run relative to @p x.
+ * @return Next free primitive-buffer address, immediately after the draw-mode packet.
  *
- * @note @ref func_800644FC fills the SPRT records (uv, clut, w, h) from the
- *       text and returns the glyph count; this function only positions them,
- *       tints them, and links them.
+ * @see func_800644FC
  * @see decomp.me (100%) https://decomp.me/scratch/AW5Sa
  */
-s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
+void* menu_build_text_run(
+    SPRT* sprite_cursor, s32* ot, s32 src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
 {
     char buf[0x80];
     s32 count, i, acc;
-    SPRT* sprt;
+    SPRT* sprite;
+    DR_TPAGE* tpage;
 
+    /* Prepare a null-terminated slice for the glyph decoder. */
     strncpy(buf, (char*)src, len);
     buf[len] = 0;
 
-    count = func_800644FC(sprites, buf, arg3);
+    /* Populate one SPRT per decoded glyph. */
+    count = func_800644FC(sprite_cursor, buf, text_color);
 
-    if (mode != 1)
+    /* Convert the requested anchor into the run's left edge. */
+    if (alignment != MENU_TEXT_ALIGN_RIGHT)
     {
-        if (mode == 2)
+        if (alignment == MENU_TEXT_ALIGN_CENTER)
         {
-            sprt = (SPRT*)sprites;
+            sprite = sprite_cursor;
             for (i = 0; i < count; i++)
             {
-                u16 w = (u16)sprt[i].w;
-                x -= (s16)w >> 1;
+                x -= sprite[i].w >> 1;
             }
         }
     }
     else
     {
-        sprt = (SPRT*)sprites;
+        sprite = sprite_cursor;
         for (i = 0; i < count; i++)
         {
-            x -= sprt[i].w;
+            x -= sprite[i].w;
         }
     }
 
+    /* Finish and link the prebuilt sprites using a running x offset. */
     acc = 0;
 
     if (count != 0)
     {
         do
         {
-            sprt = (SPRT*)sprites;
-            SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-            setSprt(sprt);
+            sprite = sprite_cursor;
+            SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+            setSprt(sprite);
 
-            /* x0/y0 are written as one word: acc is the running pen X. */
-            *(s32*)&sprt->x0 = (x + (y << 16)) + acc;
-            acc += sprt->w;
+            SET_SPRT_XY0_WORD(sprite, PACK_U16_PAIR(x, y) + acc);
+            acc += sprite->w;
 
-            addPrim(ot, sprt);
-            sprites = (s32*)((u8*)sprites + sizeof(SPRT));
+            addPrim(ot, sprite);
+            sprite_cursor++;
             count--;
         } while (count != 0);
     }
 
-    setDrawTPage((DR_TPAGE*)sprites, 0, 0, 0x1F);
-    addPrim(ot, sprites);
+    /*
+     * addPrim prepends packets, so linking this draw mode last makes the GPU
+     * select the glyph texture page before it processes the sprites.
+     */
+    tpage = (DR_TPAGE*)sprite_cursor;
+    setDrawTPage(tpage, 0, 0, 0x1F);
+    addPrim(ot, tpage);
 
-    return (s32*)((u8*)sprites + 8);
+    return tpage + 1;
 }
 
 /**
@@ -739,21 +897,32 @@ void menu_build_grid(RenderContext* render_ctx)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/CKNIH
+ * @brief Upload the menu texture and CLUTs to their reserved VRAM regions.
+ *
+ * The texture begins at the right edge of the display buffer, while its two
+ * CLUT rows occupy the shared palette region at the bottom of VRAM.
+ *
+ * @see menu_upload_tim
+ * @see decomp.me (100%) https://decomp.me/scratch/CKNIH
  */
-void menu_clear_vram(void)
+void menu_upload_graphics(void)
 {
-    RECT rect;
+    MenuTimVramLayout layout;
 
-    rect.x = 0x140;
-    rect.y = 0;
-    rect.w = 0;
-    rect.h = 0x1F2;
-    menu_upload_tim(&rect);
+    layout.texture_x = SCREEN_WIDTH;
+    layout.texture_y = 0;
+    layout.clut_x = 0;
+    layout.clut_y = VRAM_CLUT_Y;
+    menu_upload_tim(&layout);
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/A1YTp
+ * @brief Initialize the base pointer for the menu's resource tables.
+ *
+ * Menu text and lookup tables are addressed through offsets relative to this
+ * resident data block.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/A1YTp
  */
 void menu_state_init(void)
 {
@@ -761,173 +930,154 @@ void menu_state_init(void)
 }
 
 /**
- * @brief Upload the packed menu texture asset (@c g_menu_tim) to VRAM.
+ * @brief Upload the menu texture and its two CLUTs to VRAM.
  *
- * The asset is a TIM-style blob holding two 256-entry CLUTs and one texture
- * image. It is committed to VRAM as three transfers via @ref func_80019A34:
- *   1. CLUT 0 (256x1) to @c (rect->w, rect->h).
- *   2. The texture image to @c (rect->x, rect->y); its width/height are read
- *      from the image block, whose position is a self-relative offset stored
- *      inside the asset.
- *   3. CLUT 1 (256x1) to @c (rect->w, rect->h + 1).
- * Before each CLUT upload, the semi-transparency flag (STP, bit 0x8000) is
- * set on every non-zero palette entry.
+ * Nonzero CLUT entries are marked semi-transparent before upload.
  *
- * @param rect Destination coordinates: @c (w,h) position the CLUT bands,
- *             @c (x,y) position the texture image.
- * @note The image block is typed as a @ref TimBlock. The two CLUT regions are
- *       left as raw offsets because the matched code reaches them through two
- *       different base pointers (@c tim for the STP-bit loops, @c tim_body for
- *       the upload calls) - a deliberate register-allocation detail.
+ * @param layout VRAM destinations for the texture and first CLUT; the second
+ *               CLUT is placed on the following row.
  * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
-void menu_upload_tim(Rect16* rect)
+void menu_upload_tim(const MenuTimVramLayout* layout)
 {
-    u8* tim = g_menu_tim;
-    u8* tim_body = tim + 0xC;
-    s32 clut_block_len = *(s32*)(tim_body + 8); /* TIM CLUT block length (bnum) */
-    Rect16 vram_rect;
+    MenuTimAsset* asset = (MenuTimAsset*)g_menu_tim;
+    Tim* tim = &asset->tim;
+    s32 clut_block_len = tim->clut_block.bnum;
+    RECT vram_rect;
     u16* clut_color;
-    int i;
+    s32 i;
 
-    g_menu_tim_dy = *(s32*)(tim_body + 0x14);
+    /* Preserve the first color pair before modifying the palette in place. */
+    g_menu_initial_clut_pair = MENU_TIM_CLUT_WORD(tim, 0);
 
-    /* Upload CLUT 0. */
-    vram_rect.x = rect->w;
-    vram_rect.y = rect->h;
-    vram_rect.w = 0x100;
+    /* Enable STP on nonzero colors, then upload the first CLUT. */
+    vram_rect.x = layout->clut_x;
+    vram_rect.y = layout->clut_y;
+    vram_rect.w = CLUT_ENTRY_COUNT;
     vram_rect.h = 1;
 
-    clut_color = (u16*)(tim + 0x20);
-    for (i = 0; i < 0x100; i++)
+    clut_color = asset->tim.clut_data;
+    for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
         if (*clut_color != 0)
         {
-            *clut_color |= 0x8000;
+            *clut_color |= GPU_STP_BIT;
         }
 
         clut_color++;
     }
-    LoadImage(&vram_rect, tim_body + 0x14);
+    LoadImage(&vram_rect, tim->clut_data);
 
-    /* Upload the texture image. */
-    vram_rect.x = rect->x;
-    vram_rect.y = rect->y;
+    /* Upload the image block following the variable-length first CLUT. */
+    vram_rect.x = layout->texture_x;
+    vram_rect.y = layout->texture_y;
     {
-        /* The CLUT block starts at tim_body+8, so the image block that
-           follows it is at tim_body + 8 + clut_block_len. The parenthesization
-           `(clut_block_len + 8)` is load-bearing: it must compile to an addiu
-           (len + 8) then an addu (+ base). Do not fold it to `... + 8`. */
-        TimBlock* image_block = (TimBlock*)(tim_body + (clut_block_len + 8));
+        TimBlock* image_block = TIM_PIXEL_BLOCK(tim, clut_block_len);
         vram_rect.w = image_block->w;
         vram_rect.h = image_block->h;
-        LoadImage(&vram_rect, image_block + 1); /* payload follows header */
+        LoadImage(&vram_rect, image_block + 1); /* Pixel data follows the block header. */
     }
 
-    /* Upload CLUT 1. */
-    vram_rect.x = rect->w;
-    vram_rect.y = rect->h + 1;
-    vram_rect.w = 0x100;
+    /* Apply the same STP treatment to the second CLUT. */
+    vram_rect.x = layout->clut_x;
+    vram_rect.y = layout->clut_y + 1;
+    vram_rect.w = CLUT_ENTRY_COUNT;
     vram_rect.h = 1;
 
-    clut_color = (u16*)(tim + 0x822C);
-    for (i = 0; i < 0x100; i++)
+    clut_color = asset->second_clut;
+    for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
         if (*clut_color != 0)
         {
-            *clut_color |= 0x8000;
+            *clut_color |= GPU_STP_BIT;
         }
 
         clut_color++;
     }
-    LoadImage(&vram_rect, tim + 0x822C);
+    LoadImage(&vram_rect, asset->second_clut);
 }
 
 /**
- * @brief Allocate a HUD/menu slot from the @c g_menu_slots pool.
+ * @brief Allocate and initialize the first available menu window slot.
  *
- * Scans for the first free slot (@c active == 0), initialises it, and stores
- * the slot's rectangle from @p rect.
- *
- * @param arg0 Value packed into @c MenuSlot.flags bits 31..25 (@c arg0 << 25).
- *             TODO: meaning unknown.
- * @param rect Pointer to four @c u16 values - the slot's x, y, w, h.
- * @return Pointer to the newly allocated @c MenuSlot.
+ * @param ot_index Ordering-table entry used to link the slot's primitives.
+ * @param rect Initial window position and dimensions.
+ * @return Initialized menu slot.
  * @see decomp.me (100%) https://decomp.me/scratch/Xng7v
  */
-void* menu_slot_alloc(s32 arg0, void* rect)
+MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect)
 {
-    s32 var_a2;
-    MenuSlot* entry;
-    u8* cur;
-    u8* ptr;
-    u32 temp;
-    u32 mask;
-    u16* src = (u16*)rect;
-    var_a2 = 0;
-    ptr = (u8*)&g_menu_slots[0];
-    cur = (u8*)&g_menu_slots[0];
-    while (var_a2 < 4)
+    s32 slot_index;
+    MenuSlot* slot;
+    MenuSlot* slot_cursor;
+    MenuSlot* slot_pool;
+    u32 slot_flags;
+    u32 ot_index_clear_mask;
+
+    /* Find the first slot whose active state is clear. */
+    slot_index = 0;
+    slot_pool = &g_menu_slots[0];
+    slot_cursor = &g_menu_slots[0];
+    while (slot_index < MENU_SLOT_COUNT)
     {
-        if ((*cur) == 0)
+        if (slot_cursor->active == 0)
         {
             break;
         }
-        var_a2++;
-        cur += 0x24;
+        slot_index++;
+        slot_cursor++;
     }
 
-    if (var_a2 < 0)
+    /* The original negative-index guard does not catch a full pool (index 4). */
+    if (slot_index < 0)
     {
-        return (void*)(-1);
+        return (MenuSlot*)(-1);
     }
-    entry = (MenuSlot*)((var_a2 * 0x24) + (u32)ptr);
-    *((u16*)(((u8*)entry) + 4)) = 0;
-    temp = entry->flags;
-    entry->active = 1;
-    entry->content_cb = 0;
-    entry->index = (u8)var_a2;
-    entry->tick_cb = 0;
-    entry->anim_frame = 0;
-    mask = 0x1FFFFFF;
-    temp = temp & mask;
-    temp = temp | (((u32)arg0) << 25);
-    entry->flags = temp;
-    entry->x = src[0];
-    entry->y = src[1];
-    entry->w = src[2];
-    entry->h = src[3];
-    entry->lerp_cur_a = 0;
-    entry->lerp_cur_b = 0;
-    entry->lerp_target_a = 0;
-    entry->lerp_target_b = 0;
-    entry->lerp_steps = 0;
-    entry->has_title = 0;
-    g_active_slot = var_a2;
-    return (void*)entry;
+    slot = (MenuSlot*)((slot_index * sizeof(MenuSlot)) + (u32)slot_pool);
+
+    /* Clear low flags while retaining the slot's previous bits 24:16. */
+    MENU_SLOT_FLAGS_VIEW(slot).half.low = 0;
+    slot_flags = slot->flags;
+    slot->active = 1;
+    slot->content_cb = 0;
+    slot->index = (u8)slot_index;
+    slot->tick_cb = 0;
+    slot->anim_frame = 0;
+    ot_index_clear_mask = MENU_SLOT_OT_INDEX_CLEAR_MASK;
+    slot_flags = slot_flags & ot_index_clear_mask;
+    slot_flags = slot_flags | (((u32)ot_index) << MENU_SLOT_OT_INDEX_SHIFT);
+    slot->flags = slot_flags;
+    slot->x = rect->x;
+    slot->y = rect->y;
+    slot->w = rect->w;
+    slot->h = rect->h;
+    slot->lerp_cur_a = 0;
+    slot->lerp_cur_b = 0;
+    slot->lerp_target_a = 0;
+    slot->lerp_target_b = 0;
+    slot->lerp_steps = 0;
+    slot->has_title = 0;
+    g_active_slot = slot_index;
+    return slot;
 }
 
 /**
- * @brief Free all menu slots by clearing each slot's @c active byte.
+ * @brief Mark every menu window slot as free.
  *
- * Walks @c g_menu_slots from index 3 down to 0 (stride 0x24) and zeroes the
- * leading @c active field, marking every slot as free. Called from
- * @ref menu_init.
  * @see decomp.me (100%) https://decomp.me/scratch/D9BI9
  */
 void menu_reset_slots(void)
 {
-    s32 var_v1;
-    s8* var_v0;
+    s32 slot_index;
+    MenuSlot* slot;
 
-    var_v1 = 3;
-    var_v0 = (s8*)g_menu_slots;
-    var_v0 += 0x6C;
-    while (var_v1 >= 0)
+    slot_index = MENU_SLOT_COUNT - 1;
+    slot = &g_menu_slots[slot_index];
+    while (slot_index >= 0)
     {
-        *var_v0 = 0;
-        var_v1--;
-        var_v0 -= 0x24;
+        slot->active = 0;
+        slot_index--;
+        slot--;
     }
 }
 
@@ -1082,63 +1232,50 @@ void menu_update_slots(RenderContext* render_ctx)
 }
 
 /**
- * @brief Draw a menu window mid-open/close animation at an interpolated inset.
+ * @brief Draw one frame of a menu window's opening or closing transition.
  *
- * Computes a per-frame shrink amount from the slot's target size
- * (@c unkC / @c unkE divided by 12, scaled by the frame counter @c unk2) and,
- * while both axes are still positive, draws the window via @ref menu_draw_window
- * at the inset rectangle. Used for slot @c active states 1 (opening) and 3
- * (closing) by @ref menu_update_slots.
- *
- * @param gpu_work     Per-frame render context (passed through to @ref menu_draw_window).
- * @param slot         Slot whose animated rectangle is drawn.
- * @param cursor_enable Cursor-highlight enable (forwarded as the draw's @p cursor_enable).
+ * @param render_ctx Per-frame menu rendering context.
+ * @param slot Window slot being animated.
+ * @param cursor_enable Nonzero to allow the active-slot cursor highlight.
  * @see decomp.me (100%) https://decomp.me/scratch/luaLZ
  */
-void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_enable)
+void menu_draw_window_transition(MenuRenderCtx* render_ctx, MenuSlotAnim* slot, s32 cursor_enable)
 {
-    s16 sp[8];
-    s32 temp_a3;
-    s32 temp_a1;
-    s32 clampC;
-    s32 clampE;
+    MenuWindowTransitionFrame frame;
+    s32 inset_x;
+    s32 inset_y;
+    s32 width;
+    s32 height;
 
-    /* First computation */
-    temp_a3 = ((s32)((u16)slot->w << 0x10) >> 0x11) - ((s16)(slot->w / 12) * slot->anim_frame);
-    sp[4] = (s16)temp_a3;
+    /* Expand from the center as anim_frame advances; closing runs it in reverse. */
+    inset_x = MENU_WINDOW_EDGE_INSET(slot->w, slot->anim_frame);
+    frame.view_origin.x = inset_x;
 
-    /* Second computation */
-    temp_a1 = ((s32)((u16)slot->h << 0x10) >> 0x11) - ((s16)(slot->h / 12) * slot->anim_frame);
+    inset_y = MENU_WINDOW_EDGE_INSET(slot->h, slot->anim_frame);
+    frame.view_origin.y = inset_y;
 
-    /* First branch logic block */
-
-    sp[5] = (s16)temp_a1;
-
-    /* Second branch logic block */
-    if (temp_a3 > 0)
+    if (inset_x > 0)
     {
-
-        if (temp_a1 > 0)
+        if (inset_y > 0)
         {
-
-            clampC = slot->w - (temp_a3 * 2);
-            if (clampC < 0x20)
+            width = slot->w - (inset_x * 2);
+            if (width < MENU_WINDOW_MIN_WIDTH)
             {
-                clampC = 0x20;
+                width = MENU_WINDOW_MIN_WIDTH;
             }
 
-            clampE = slot->h - (temp_a1 * 2);
-            if (clampE < 0x10)
+            height = slot->h - (inset_y * 2);
+            if (height < MENU_WINDOW_MIN_HEIGHT)
             {
-                clampE = 0x10;
+                height = MENU_WINDOW_MIN_HEIGHT;
             }
 
-            sp[0] = slot->x + temp_a3;
-            sp[1] = slot->y + temp_a1;
-            sp[2] = clampC;
-            sp[3] = clampE;
+            frame.rect.x = slot->x + inset_x;
+            frame.rect.y = slot->y + inset_y;
+            frame.rect.w = width;
+            frame.rect.h = height;
 
-            menu_draw_window(slot, gpu_work, &sp[0], &sp[4], cursor_enable);
+            menu_draw_window(slot, render_ctx, &frame.rect, &frame.view_origin, cursor_enable);
         }
     }
 }
@@ -1155,11 +1292,11 @@ void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_en
  * @param slot          Slot descriptor (geometry, flags, content callback).
  * @param gpu_work      Per-frame render context (layout matches @ref RenderContext).
  * @param rect          Window rectangle: x, y, w, h halfwords.
- * @param arg3          TODO: forwarded to the content callback and edge builders.
+ * @param view_origin   View-origin offset forwarded to the content callback.
  * @param cursor_enable Cursor-highlight enable for the active slot.
  * @see decomp.me (99.73%) https://decomp.me/scratch/5k4SF
  */
-void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, s32 arg3, s32 cursor_enable)
+void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
 {
     MenuRectU16 sp18;
     DRAWENV sp20;
@@ -1217,7 +1354,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                         var_a3 = slot->active == 2;
                     }
                 }
-                temp_s1 = slot->content_cb(temp_s2, slot, var_s1, arg3, var_a3);
+                temp_s1 = slot->content_cb(temp_s2, slot, var_s1, view_origin, var_a3);
                 if (g_menu_draw_early_out != 0)
                 {
                     gpu_work->prim_cursor = temp_s1;
@@ -1337,263 +1474,252 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     gpu_work->prim_cursor = (s32*)((char*)prim_cur + 8);
 }
 /**
- * @brief Emit one 8x8 textured corner sprite and splice it into a prim chain.
+ * @brief Emit one textured window-corner sprite.
  *
- * Writes a libgpu @c SPRT (code 0x64, white tint 0x808080, fixed 8x8 size,
- * fixed CLUT @c MENU_CLUT_CORNER) at screen @p x / @p y with texture origin @p uv, links it
- * into the chain headed at @p ot, and returns the next primitive slot.
- * Called four times by @ref menu_draw_window, once per window corner.
- *
- * @param prim Primitive write cursor (the @c SPRT is built here).
- * @param ot   Ordering-table head the sprite is linked into.
- * @param x    Sprite screen X (@c x0).
- * @param y    Sprite screen Y (@c y0).
- * @param uv   Packed texture origin written to @c u0 / @c v0 (offset 0xC).
- * @return Pointer to the next primitive slot (@p prim + 0x14).
+ * @param sprite   Primitive buffer location for the sprite.
+ * @param ot_entry Ordering-table entry to link the sprite into.
+ * @param x        Screen X coordinate.
+ * @param y        Screen Y coordinate.
+ * @param uv       Packed texture coordinates: U in bits 7:0, V in bits 15:8.
+ * @return Primitive buffer location immediately after the sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/GcWsA
  */
-void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
+SPRT* menu_emit_corner(SPRT* sprite, u_long* ot_entry, s16 x, s16 y, u16 uv)
 {
-    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
 
-    setSprt(prim);
+    setSprt(sprite);
 
-    SET_SPRT_WH_PACKED(prim, 8, 8);
+    SET_SPRT_WH_PACKED(sprite, MENU_WINDOW_CORNER_SIZE, MENU_WINDOW_CORNER_SIZE);
 
-    setXY0(prim, x, y);
+    setXY0(sprite, x, y);
 
-    SET_SPRT_CLUT(prim, MENU_CLUT_CORNER);
-    SET_SPRT_UV0_PACKED(prim, uv);
+    SET_SPRT_CLUT(sprite, MENU_CLUT_CORNER);
+    SET_SPRT_UV0_PACKED(sprite, uv);
 
-    addPrim(ot, prim);
+    addPrim(ot_entry, sprite);
 
-    return prim + 1;
+    return sprite + 1;
 }
 
 /**
- * @brief Tile the interior of a window with 0x60x0x60 textured sprites.
+ * @brief Tile a window interior with textured sprites.
  *
- * Walks @p rect in 0x60-pixel steps on both axes, emitting one @c SPRT per
- * tile (code 0x64, tint @c GPU_TINT_NEUTRAL, CLUT @c MENU_CLUT_GRID_ALT)
- * clamped to the region edges, and links each into the chain headed at @p ot.
- *
- * @param prim  Primitive write cursor (advanced past every emitted tile).
- * @param ot    Ordering-table head the tiles are linked into.
- * @param rect  Region to fill: x, y (screen origin), w, h (pixel size).
- * @param uv    Packed texture origin written to each tile's @c u0 / @c v0.
- * @return Primitive write cursor just past the last tile emitted.
- * @note @c pad is an unused stack local: the original allocates an 8-byte
- *       frame it never touches, and forcing one local to memory reproduces it.
- *       The @c tile_x / @c rect_y u16 temporaries are required to match.
+ * @param sprite   Primitive buffer location for the first tile.
+ * @param ot_entry Ordering-table entry to link the tiles into.
+ * @param rect     Screen-space region to fill.
+ * @param uv       Packed texture coordinates: U in bits 7:0, V in bits 15:8.
+ * @return Primitive buffer location immediately after the emitted tiles.
  * @see decomp.me (100%) https://decomp.me/scratch/R9mdk
  */
-s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
+SPRT* menu_fill_window_interior(SPRT* sprite, u_long* ot_entry, const MenuRectU16* rect, u16 uv)
 {
-    u16 tile_x;
-    volatile s32 pad;
-    u16 rect_y;
-    s32 y = 0;
+    u16 screen_x;
+    volatile s32 stack_pad;
+    u16 origin_y;
+    s32 tile_y = 0;
+
     if (rect->h > 0)
     {
         do
         {
-            s32 x = 0;
+            s32 tile_x = 0;
+
             if (rect->w > 0)
             {
-                s32 y_plus_60 = y + 0x60;
+                s32 tile_bottom = tile_y + MENU_WINDOW_FILL_TILE_SIZE;
+
                 do
                 {
-                    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
-                    setlen((SPRT*)prim, 4);
-                    setcode((SPRT*)prim, 0x64);
-                    SET_SPRT_UV0_PACKED(prim, uv);
-                    if (rect->w < (x + 0x60))
+                    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+                    setSprt(sprite);
+                    SET_SPRT_UV0_PACKED(sprite, uv);
+
+                    /* Clamp the final tile in each row and column to the region. */
+                    if (rect->w < (tile_x + MENU_WINDOW_FILL_TILE_SIZE))
                     {
-                        ((SPRT*)prim)->w = (u16)((u16)rect->w - (u16)x);
+                        sprite->w = rect->w - tile_x;
                     }
                     else
                     {
-                        ((SPRT*)prim)->w = 0x60;
+                        sprite->w = MENU_WINDOW_FILL_TILE_SIZE;
                     }
-                    if ((rect->h < y_plus_60) != 0)
+
+                    if (rect->h < tile_bottom)
                     {
-                        ((SPRT*)prim)->h = (u16)((u16)rect->h - (u16)y);
+                        sprite->h = rect->h - tile_y;
                     }
                     else
                     {
-                        ((SPRT*)prim)->h = 0x60;
+                        sprite->h = MENU_WINDOW_FILL_TILE_SIZE;
                     }
-                    tile_x = (u16)(rect->x + (u16)x);
-                    ((SPRT*)prim)->x0 = tile_x;
-                    rect_y = rect->y;
-                    x += 0x60;
-                    ((SPRT*)prim)->y0 = (u16)(rect_y + (u16)y);
-                    SET_SPRT_CLUT(prim, MENU_CLUT_GRID_ALT);
-                    addPrim(ot, (SPRT*)prim);
-                    prim = (s32*)((SPRT*)prim + 1);
-                } while (x < rect->w);
+
+                    screen_x = rect->x + tile_x;
+                    sprite->x0 = screen_x;
+                    origin_y = rect->y;
+                    tile_x += MENU_WINDOW_FILL_TILE_SIZE;
+                    sprite->y0 = origin_y + tile_y;
+                    SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
+                    addPrim(ot_entry, sprite);
+                    sprite++;
+                } while (tile_x < rect->w);
             }
-            y += 0x60;
-        } while (y < rect->h);
+
+            tile_y += MENU_WINDOW_FILL_TILE_SIZE;
+        } while (tile_y < rect->h);
     }
-    return prim;
+
+    return sprite;
 }
 
 /**
- * @brief Build a horizontal border strip: one @c SPRT + one @c DR_TWIN primitive.
+ * @brief Emit a textured top or bottom window edge.
  *
- * Emits a single textured sprite covering the input rectangle, then a
- * texture-window primitive (GP0 0xE2) with a 16x8 region derived from
- * @p tw_uv. Used for the top and bottom edges of a menu window.
- *
- * @param ot      Primitive write cursor (SPRT is built here).
- * @param ot_ptr  Ordering-table head the primitives are linked into.
- * @param rect    Edge rectangle: x, y (screen position), w, h (pixel size).
- * @param tw_uv   Packed texture-window origin: bits 7..0 = u (x), bits 15..8 = v (y).
- * @return Pointer to the byte immediately after the emitted DR_TWIN.
+ * @param packet_cursor  Primitive buffer location for the edge.
+ * @param ot_entry       Ordering-table entry to link the primitives into.
+ * @param rect           Screen-space edge rectangle.
+ * @param texture_origin Packed texture origin: U in bits 7:0, V in bits 15:8.
+ * @return Primitive buffer location immediately after the emitted primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/u17Fi
  */
-u_long* menu_build_h_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv)
+u_long* menu_build_h_edge(
+    u_long* packet_cursor,
+    u_long* ot_entry,
+    const MenuRectU16* rect,
+    s32 texture_origin)
 {
-    RECT tw;
-    SPRT* sprt;
-    DR_TWIN* twin;
+    RECT texture_window;
+    SPRT* sprite;
+    DR_TWIN* texture_window_primitive;
 
     if (rect->w <= 0)
     {
-        return ot;
+        return packet_cursor;
     }
 
     if (rect->h > 0)
     {
-        sprt = (SPRT*)ot;
-        SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-        setSprt(sprt);
-        SET_SPRT_UV0_PACKED(sprt, 0);
-        sprt->w = rect->w;
-        sprt->h = rect->h;
-        sprt->x0 = rect->x;
-        sprt->y0 = rect->y;
-        sprt->clut = MENU_CLUT_CORNER;
-        addPrim(ot_ptr, sprt);
-        ot += PRIM_WORDS(SPRT);
+        sprite = (SPRT*)packet_cursor;
+        SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+        setSprt(sprite);
+        SET_SPRT_UV0_PACKED(sprite, 0);
+        sprite->w = rect->w;
+        sprite->h = rect->h;
+        sprite->x0 = rect->x;
+        sprite->y0 = rect->y;
+        sprite->clut = MENU_CLUT_CORNER;
+        addPrim(ot_entry, sprite);
+        packet_cursor += PRIM_WORDS(SPRT);
 
-        twin = (DR_TWIN*)ot;
-        tw.x = tw_uv & 0xFF;
-        tw.y = tw_uv >> 8;
-        tw.w = 16;
-        tw.h = 8;
-        setTexWindow(twin, &tw);
-        addPrim(ot_ptr, twin);
-        ot += PRIM_WORDS(DR_TWIN);
+        /* Repeat the 16x8 edge texture across the sprite. */
+        texture_window_primitive = (DR_TWIN*)packet_cursor;
+        texture_window.x = texture_origin & 0xFF;
+        texture_window.y = texture_origin >> 8;
+        texture_window.w = MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE;
+        texture_window.h = MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE;
+        setTexWindow(texture_window_primitive, &texture_window);
+        addPrim(ot_entry, texture_window_primitive);
+        packet_cursor += PRIM_WORDS(DR_TWIN);
     }
 
-    return ot;
+    return packet_cursor;
 }
 
 /**
- * @brief Build a vertical border strip: one @c SPRT + one @c DR_TWIN primitive.
+ * @brief Emit a textured left or right window edge.
  *
- * Mirror of @ref menu_build_h_edge for vertical (left/right) window edges.
- * The texture-window region is 8x16 instead of 16x8.
- *
- * @param ot      Primitive write cursor (SPRT is built here).
- * @param ot_ptr  Ordering-table head the primitives are linked into.
- * @param rect    Edge rectangle: x, y (screen position), w, h (pixel size).
- * @param tw_uv   Packed texture-window origin: bits 7..0 = u (x), bits 15..8 = v (y).
- * @return Pointer to the byte immediately after the emitted DR_TWIN.
+ * @param packet_cursor  Primitive buffer location for the edge.
+ * @param ot_entry       Ordering-table entry to link the primitives into.
+ * @param rect           Screen-space edge rectangle.
+ * @param texture_origin Packed texture origin: U in bits 7:0, V in bits 15:8.
+ * @return Primitive buffer location immediately after the emitted primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/19jr7
  */
-void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv)
+u_long* menu_build_v_edge(
+    u_long* packet_cursor,
+    u_long* ot_entry,
+    const MenuRectU16* rect,
+    s32 texture_origin)
 {
-    RECT tw;
-    SPRT* sprt;
-    DR_TWIN* twin;
+    RECT texture_window;
+    SPRT* sprite;
+    DR_TWIN* texture_window_primitive;
 
     if (rect->w <= 0)
     {
-        return ot;
+        return packet_cursor;
     }
 
     if (rect->h > 0)
     {
-        sprt = (SPRT*)ot;
-        SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-        setSprt(sprt);
-        SET_SPRT_UV0_PACKED(sprt, 0);
-        sprt->w = rect->w;
-        sprt->h = rect->h;
-        sprt->x0 = rect->x;
-        sprt->y0 = rect->y;
-        sprt->clut = MENU_CLUT_CORNER;
-        addPrim(ot_ptr, sprt);
-        ot += PRIM_WORDS(SPRT);
+        sprite = (SPRT*)packet_cursor;
+        SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+        setSprt(sprite);
+        SET_SPRT_UV0_PACKED(sprite, 0);
+        sprite->w = rect->w;
+        sprite->h = rect->h;
+        sprite->x0 = rect->x;
+        sprite->y0 = rect->y;
+        sprite->clut = MENU_CLUT_CORNER;
+        addPrim(ot_entry, sprite);
+        packet_cursor += PRIM_WORDS(SPRT);
 
-        twin = (DR_TWIN*)ot;
-        tw.x = tw_uv & 0xFF;
-        tw.y = tw_uv >> 8;
-        tw.w = 8;
-        tw.h = 0x10;
-        setTexWindow(twin, &tw);
-        addPrim(ot_ptr, twin);
-        ot += PRIM_WORDS(DR_TWIN);
+        /* Repeat the 8x16 edge texture across the sprite. */
+        texture_window_primitive = (DR_TWIN*)packet_cursor;
+        texture_window.x = texture_origin & 0xFF;
+        texture_window.y = texture_origin >> 8;
+        texture_window.w = MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE;
+        texture_window.h = MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE;
+        setTexWindow(texture_window_primitive, &texture_window);
+        addPrim(ot_entry, texture_window_primitive);
+        packet_cursor += PRIM_WORDS(DR_TWIN);
     }
 
-    return ot;
+    return packet_cursor;
 }
 
 /**
- * @brief Render a text label from a packed string table at the given screen position.
+ * @brief Draw a sign-dependent label at a screen position.
  *
- * Resolves one of two embedded @c StringTableKey entries in the shared string
- * table (base 0x800EC3C4) using @p label_id's sign, copies the packed glyph
- * string into a local buffer, then calls the glyph renderer.
- *
- * Both branches compute the same table base via pointer arithmetic from
- * whichever key they select: @c &g_menu_label_key_a-0x16 == @c &g_menu_label_key_b-0x20 ==
- * 0x800EC3C4.
- *
- * @param ot        Ordering-table head (@c u_long*; passed as arg1 to the glyph renderer).
- * @param prim      Primitive write cursor (@c u_long*; passed as arg0 to the glyph renderer).
- * @param pos       Screen position (x, y) to draw at.
- * @param label_id  >= 0: draw string keyed by g_menu_label_key_a; < 0: keyed by g_menu_label_key_b.
- * @return The advanced primitive write cursor returned by the glyph renderer.
- * @note The glyph-copy call is written once per arm on purpose: the target's arms each
- *       carry their own `addu a0, s1, zero`, the leftover of a cross-jumped common tail.
- *       Hoisting the call below the if/else drops the match to 92.42%.
- * @note @c sum is scoped to each arm and the address math is done in @c s32 (not pointer)
- *       space. Both are required to match: integer arithmetic keeps the operand order
- *       (@c entry first), and the arm-local scope is what makes gcc color the page byte
- *       into v0 and the key address into v1 rather than the reverse.
- * @see decomp.me (94.94%) https://decomp.me/scratch/ozwB7
- * @see local match 100% (working/menu_draw_label/code_v18.c)
+ * @param ot_entry      Ordering-table entry for the label primitives.
+ * @param packet_cursor Primitive buffer location for the label.
+ * @param position      Label screen position.
+ * @param value         Selects the nonnegative or negative label.
+ * @return Updated primitive buffer location.
+ * @see decomp.me https://decomp.me/scratch/ozwB7
  */
-u_long* menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
+u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos* position, s32 value)
 {
-    u8 sp20[16];
-    u8* ptr = sp20;
-    u8* str_ptr;
+    u8 label_buffer[MENU_LABEL_BUFFER_SIZE];
+    u8* write_cursor = label_buffer;
+    u8* source;
 
-    if (label_id >= 0)
+    /* Recover the shared table base from each key's table-relative address. */
+    if (value >= 0)
     {
-        s32 sum = (g_menu_label_key_a.page << 8) + (s32)((u8*)&g_menu_label_key_a - 0x16);
-        str_ptr = (u8*)(g_menu_label_key_a.entry + sum);
-        func_800A8E28(ptr, str_ptr);
+        s32 string_page_base =
+            (g_menu_label_key_a.page << 8) +
+            (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+        func_800A8E28(write_cursor, source);
     }
     else
     {
-        s32 sum = (g_menu_label_key_b.page << 8) + (s32)((u8*)&g_menu_label_key_b - 0x20);
-        str_ptr = (u8*)(g_menu_label_key_b.entry + sum);
-        func_800A8E28(ptr, str_ptr);
+        s32 string_page_base =
+            (g_menu_label_key_b.page << 8) +
+            (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+        func_800A8E28(write_cursor, source);
     }
 
-    ptr += func_800A8DDC(str_ptr);
+    write_cursor += func_800A8DDC(source);
 
-    *ptr = 0;
+    *write_cursor = 0;
 
-    prim = (u_long*)func_800A88A0(prim, ot, sp20, 1, pos->x, pos->y, 0);
+    packet_cursor =
+        (u_long*)func_800A88A0(packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
 
-    return prim;
+    return packet_cursor;
 }
 
 /**
@@ -2009,57 +2135,63 @@ void menu_node_tree_init(void)
 }
 
 /**
- * @brief Clears the expand flag (bit 1 of u2.s.flags) for all menu nodes.
- * @note Called before menu_update_layout to ensure no node recurses into children.
+ * @brief Collapse every menu node while preserving its other state flags.
+ *
  * @see decomp.me (100%) https://decomp.me/scratch/hyDM7
  */
 void menu_collapse_all(void)
 {
-    s32 i;
-    for (i = 0; i < MENU_NODE_COUNT; i++)
+    s32 node_index;
+
+    for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
     {
-        g_menu_nodes[i].u2.unk2 &= 0xFFFD;
+        g_menu_nodes[node_index].u2.unk2 &= ~MENU_NODE_FLAG_EXPANDED;
     }
 }
 
 /**
- * @brief Assigns layout positions to all active root menu nodes and stores the final position count.
- * @note Sets g_menu_scroll_pos and g_menu_redraw_state to signal scroll state after layout.
+ * @brief Rebuild the visible node layout and update its scroll state.
+ *
+ * Active root nodes and their expanded descendants are assigned consecutive
+ * rows. The resulting layout extent is stored in @c g_menu_layout_end.
+ *
  * @see decomp.me (100%) https://decomp.me/scratch/YhGni
  */
 void menu_update_layout(void)
 {
-    s32 changed = 0;
-    s32 pos = changed;
-    s32 i = pos;
+    s32 has_visible_children = 0;
+    s32 layout_end = has_visible_children;
+    s32 node_index = layout_end;
 
     do
     {
-        if (g_menu_nodes[i].u2.s.parent_idx == MENU_NONE)
+        if (g_menu_nodes[node_index].u2.s.parent_idx == MENU_NONE)
         {
-            s32 prev_pos = pos;
-            pos++;
-            pos--;
+            s32 root_y = layout_end;
+            layout_end++;
+            layout_end--;
 
-            if (g_menu_nodes[i].u2.s.flags & 1)
+            if (g_menu_nodes[node_index].u2.s.flags & MENU_NODE_FLAG_ACTIVE)
             {
-                pos = menu_layout_node(i, prev_pos);
-                if (prev_pos != (pos - MENU_ROW_HEIGHT))
+                layout_end = menu_layout_node(node_index, root_y);
+
+                /* A root that contributes multiple rows has visible descendants. */
+                if (root_y != (layout_end - MENU_ROW_HEIGHT))
                 {
-                    changed = 1;
-                    if (pos >= (MENU_VIEW_HEIGHT + 1))
+                    has_visible_children = 1;
+                    if (layout_end > MENU_VIEW_HEIGHT)
                     {
-                        g_menu_scroll_pos = pos - MENU_VIEW_HEIGHT;
+                        g_menu_scroll_pos = layout_end - MENU_VIEW_HEIGHT;
                         g_menu_redraw_state = MENU_REDRAW_LAYOUT;
                     }
                 }
             }
         }
-        i += 1;
-    } while (i < MENU_NODE_COUNT);
+        node_index += 1;
+    } while (node_index < MENU_NODE_COUNT);
 
-    g_menu_layout_end = pos;
-    if (changed == 0)
+    g_menu_layout_end = layout_end;
+    if (has_visible_children == 0)
     {
         g_menu_scroll_pos = 0;
         g_menu_redraw_state = MENU_REDRAW_LAYOUT;
@@ -2131,77 +2263,70 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
 
 /**
  * @brief Draw the menu frame layers and optionally dispatch navigation input.
- * @param prim_cursor Primitive-buffer cursor passed to the initial buffer setup call.
- * @param ot Pointer into the ordering table used for addPrim calls.
- * @param draw_page 0 = first display page (Y near 0); nonzero = second page (Y+240).
- * @param handle_input When nonzero and cursor is disabled, calls menu_handle_node_input.
- * @return Updated prim-buffer write cursor after all primitives are emitted.
+ *
+ * @param packet_cursor Primitive buffer location for the frame.
+ * @param ot_entry      Ordering-table entry for the frame primitives.
+ * @param frame_parity  Selects the active double-buffered VRAM page.
+ * @param allow_input   Nonzero to dispatch navigation input.
+ * @return Primitive buffer location immediately after the frame.
  * @see decomp.me (100%) https://decomp.me/scratch/x8WyZ
  */
-u_char* menu_draw_frame(void* prim_cursor, u_int* ot, int draw_page, int handle_input)
+u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input)
 {
-    DRAWENV stack_drawenv;
-    u_char* s1;
-    u_char* s0;
-    int var_a2;
-    int v0_190;
-    u8* scd_base;
-    u_char* prim_end;
+    DRAWENV draw_env;
+    u8* draw_env_packet;
+    DR_TPAGE* draw_mode;
+    u8* frame_cursor;
+    s32 draw_y;
+    s32 node_tree_end;
+    MenuControllerActuatorState* actuator_state;
+    u8* frame_end;
 
-    scd_base = (u8*)0x801ed600;
+    actuator_state = MENU_CONTROLLER_ACTUATORS;
 
-    /* 30: jal func_80145608 */
-    s1 = (u_char*)func_80145608(prim_cursor);
+    /* Emit the full-screen draw environment before the menu layers. */
+    draw_env_packet = (u8*)func_80145608(packet_cursor);
+    draw_y = frame_parity ? SCREEN_HEIGHT : VRAM_BACK_DRAW_Y;
+    SetDefDrawEnv(&draw_env, 0, draw_y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDrawEnv(draw_env_packet, &draw_env);
+    addPrim(ot_entry, draw_env_packet);
 
-    /* 3c: ternary generating the conditional branch at 48 */
-    var_a2 = draw_page ? 0xf0 : 8;
+    draw_env_packet += sizeof(DR_ENV);
+    frame_cursor = draw_env_packet;
 
-    /* 58: SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0) */
-    SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0);
-
-    /* 64: SetDrawEnv(s1) passing &stack_drawenv as side argument */
-    SetDrawEnv(s1, &stack_drawenv);
-
-    /* 78 - 94: First OT link operation */
-    addPrim(ot, s1);
-
-    /* 98: Advance the structural pointer by 0x40 bytes */
-    s1 += 0x40;
-    s0 = s1;
-
-    /* a8 - c0: Decrement tracker logic */
-    if (scd_base[0x92] != 0)
+    /* Fade the large-motor command and mirror it to the second port. */
+    if (actuator_state->ports[0].large_motor_command != 0)
     {
-        u8 val = scd_base[0x92] - 1;
-        scd_base[0x140] = val;
-        scd_base[0x92] = val;
+        u8 motor_command = actuator_state->ports[0].large_motor_command - 1;
+        actuator_state->ports[1].large_motor_command = motor_command;
+        actuator_state->ports[0].large_motor_command = motor_command;
     }
 
-    /* c4: Explicit switch structure to enforce the exact MIPS jump table/branch sequence */
+    /* Render and update the active node or content cursor mode. */
     switch (g_menu_cursor_enable)
     {
-    case 0:
-        s0 = (u_char*)menu_draw_active_node_cursor(s1, ot - 1, handle_input);
+    case MENU_CURSOR_MODE_NODE_TREE:
+        frame_cursor = (u8*)menu_draw_active_node_cursor(draw_env_packet, ot_entry - 1, allow_input);
         menu_handle_input(0);
-        if (handle_input != 0)
+        if (allow_input != 0)
         {
             menu_handle_node_input();
         }
         break;
 
-    case 1:
-        s0 = (u_char*)func_80148A20(s1, ot - 1, handle_input);
+    case MENU_CURSOR_MODE_CONTENT:
+        frame_cursor = (u8*)func_80148A20(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
-            menu_handle_input(handle_input);
+            menu_handle_input(allow_input);
         }
         break;
 
-    case 2:
-        s0 = (u_char*)func_80148A20(s1, ot - 1, handle_input);
+    case MENU_CURSOR_MODE_CONTENT_EXIT:
+        frame_cursor = (u8*)func_80148A20(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
-            g_menu_cursor_enable = 0;
+            g_menu_cursor_enable = MENU_CURSOR_MODE_NODE_TREE;
         }
         break;
 
@@ -2209,35 +2334,24 @@ u_char* menu_draw_frame(void* prim_cursor, u_int* ot, int draw_page, int handle_
         break;
     }
 
-    /* 190: jal menu_draw_node_tree */
-    v0_190 = menu_draw_node_tree(s0, ot);
+    /* Draw the node tree and its scroll indicators. */
+    node_tree_end = menu_draw_node_tree(frame_cursor, ot_entry);
+    frame_cursor = (u8*)menu_emit_tree_scroll_arrows(node_tree_end, ot_entry - 1);
 
-    /* 19c: jal menu_emit_tree_scroll_arrows */
-    s0 = (u_char*)menu_emit_tree_scroll_arrows(v0_190, ot - 1);
+    draw_mode = (DR_TPAGE*)frame_cursor;
+    setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
+    addPrim(ot_entry, draw_mode);
+    draw_env_packet = (u8*)(draw_mode + 1);
 
-    /* 1a8 - 1cc: Inline primitive data initialization */
-    *(u8*)(s0 + 3) = 1;
-    *(u_int*)(s0 + 4) = 0xe1000005;
+    /* Restrict the final draw environment to the node-tree viewport. */
+    draw_y = frame_parity ? SCREEN_HEIGHT + MENU_TREE_DRAW_Y_OFFSET
+                          : VRAM_BACK_DRAW_Y + MENU_TREE_DRAW_Y_OFFSET;
+    frame_end = draw_env_packet + sizeof(DR_ENV);
+    SetDefDrawEnv(&draw_env, MENU_TREE_DRAW_X, draw_y, MENU_TREE_DRAW_WIDTH, MENU_TREE_DRAW_HEIGHT);
+    SetDrawEnv(draw_env_packet, &draw_env);
+    addPrim(ot_entry, draw_env_packet);
 
-    /* 1d0 - 1fc: Second OT link operation */
-    addPrim(ot, s0);
-    s1 = s0 + 8;
-
-    /* 1f8: Second conditional ternary logic blocks */
-    var_a2 = draw_page ? 0xfc : 0x14;
-
-    /* 214: SetDefDrawEnv */
-    prim_end = s0 + 0x48;
-    SetDefDrawEnv(&stack_drawenv, 0xf, var_a2, 0x24, 0xaa);
-
-    /* 220: SetDrawEnv with s1 advanced to s0 + 8 */
-    SetDrawEnv(s1, &stack_drawenv);
-
-    /* 22c - 254: Third OT link operation */
-    addPrim(ot, s1);
-
-    /* 248: Evaluates to `addiu v0, s0, 0x48` as the function's return statement */
-    return prim_end;
+    return frame_end;
 }
 
 /**
@@ -2469,26 +2583,29 @@ unsigned int menu_handle_node_input(void)
 }
 
 /**
- * @brief Focus the active content-table item and update the content viewport.
- * @return 1 when an active item was found; 0 otherwise.
+ * @brief Focus the active content item and snap the viewport to its position.
+ *
+ * @return 1 if an active item was found; otherwise 0.
  * @see decomp.me (100%) https://decomp.me/scratch/q39Ou
  */
 s32 menu_focus_active_content_item(void)
 {
-    MenuContentItem* base;
-    MenuContentItem* item;
-    int view_y;
+    MenuContentItem* content_items;
+    MenuContentItem* active_item;
+    s32 view_y;
+
     g_menu_hit_item_idx = menu_find_active_content_item();
     if (g_menu_hit_item_idx != (-1))
     {
         MenuNode* nodes = g_menu_nodes;
-        u8 self_idx = (nodes + g_menu_scene_type)->idx_nav.s.self_idx;
-        base = g_menu_content_table[self_idx];
-        item = base - (-g_menu_hit_item_idx);
-        g_content_view_x = item->packed_x & 0x1FF;
-        view_y = item->y - 8;
-        g_menu_suppress_cursor = 5;
-        g_menu_cursor_enable = 1;
+        u8 content_table_idx = (nodes + g_menu_scene_type)->idx_nav.s.self_idx;
+
+        content_items = g_menu_content_table[content_table_idx];
+        active_item = content_items - (-g_menu_hit_item_idx);
+        g_content_view_x = active_item->packed_x & MENU_CONTENT_X_MASK;
+        view_y = active_item->y - MENU_CONTENT_VIEW_Y_OFFSET;
+        g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
+        g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT;
         g_content_view_y = view_y;
         return 1;
     }
@@ -2622,7 +2739,7 @@ extern s32 g_menu_page_count;
 extern s32 g_menu_active_subtype;
 extern s8 D_801226F0;
 /** @brief Storage for packed circular navigation entries used by scroll-list pages. */
-extern void* g_menu_scroll_nav_entries;
+extern u32 g_menu_scroll_nav_entries[];
 extern s8 D_801226B8;
 extern s32 D_801229F4;
 extern s32 D_8011F424;
@@ -2728,7 +2845,7 @@ void menu_handle_input(s32 process_actions)
     s8 companion;
     s32 sort_off;
     u8* sort_base;
-    MenuRect rect;
+    MenuSlotRect rect;
     s8 sp18[0x40];
 
     if ((u32)(g_menu_scene_type - 0x14) < 2 || g_menu_scene_type == 0x17 || g_menu_scene_type == 0x18 || g_menu_scene_type == 0x1A || g_menu_scene_type == 0x1B)
@@ -3032,9 +3149,10 @@ after_do_while:
                         rect.y = 0x60;
                         rect.w = 0xF0;
                         rect.h = 0x60;
-                        var_a3 = (MenuSlot*)menu_slot_alloc(3, &rect);
+                        var_a3 = menu_slot_alloc(3, &rect);
                         var_a3->content_cb = (s32 * (*)()) & func_8014B7DC;
-                        var_a3->flags = (var_a3->flags & 0xFE00FFFF) | ((func_80145310() & 0x1FF) << 16);
+                        var_a3->flags =
+                            (var_a3->flags & 0xFE00FFFF) | ((menu_build_spell_nav_entries() & 0x1FF) << 16);
                         var_a3->has_title = 1;
                         menu_play_se(0x7D, 0x80);
                     }
@@ -3063,7 +3181,7 @@ after_do_while:
                             rect.w = 0x70;
                             rect.h = 0x40;
                         }
-                        var_a3 = (MenuSlot*)menu_slot_alloc(3, &rect);
+                        var_a3 = menu_slot_alloc(3, &rect);
                         var_a3->content_cb = (s32 * (*)()) & func_8014C200;
                         flag = ((u8*)g_pad_ctx)[(g_menu_char_slot * 0x250) + 0x609 + content_type];
                         if ((flag != 0xFF) && (flag & 0x80))
@@ -3076,7 +3194,7 @@ after_do_while:
                             var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x30000;
                             menu_init_item_nav_entries(3);
                         }
-                        scroll_list_update_target(var_a3, &g_menu_scroll_nav_entries);
+                        scroll_list_update_target(var_a3, g_menu_scroll_nav_entries);
                         new_var7 = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90));
                         g_menu_item_ptr = new_var7;
                         D_80169554 = g_menu_item_ptr;
@@ -3102,7 +3220,7 @@ after_do_while:
                         rect.y = 0x30;
                         rect.w = 0x70;
                         rect.h = 0x60;
-                        var_a3 = (MenuSlot*)menu_slot_alloc(3, &rect);
+                        var_a3 = menu_slot_alloc(3, &rect);
                         var_a3->content_cb = (s32 * (*)()) & func_8014CC08;
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x50000;
                         menu_init_item_nav_entries(5);
@@ -3373,25 +3491,25 @@ after_do_while:
 }
 
 /**
- * @brief Clamp the content cursor Y to the valid viewport range and snap both view
- *        axes to the current cursor position.
- * @note Called when the cursor is disabled (g_menu_cursor_enable == 0) after a node
- *       switch, so the viewport re-homes to wherever the cursor was left.  The X
- *       coordinate is derived from the active node's nav_x field (idx_nav.nav_x_packed bits 14:8).
+ * @brief Clamp the content cursor and snap the viewport to its position.
+ *
  * @see decomp.me (100%) https://decomp.me/scratch/wBlQo
  */
 void menu_snap_view_to_cursor(void)
 {
-    if (g_content_cursor_y < 12)
+    if (g_content_cursor_y < MENU_CURSOR_Y_MIN)
     {
-        g_content_cursor_y = 12;
+        g_content_cursor_y = MENU_CURSOR_Y_MIN;
     }
-    if (g_content_cursor_y >= 163)
+    if (g_content_cursor_y >= MENU_CURSOR_Y_MAX)
     {
-        g_content_cursor_y = 163;
+        g_content_cursor_y = MENU_CURSOR_Y_MAX;
     }
     g_content_view_y = g_content_cursor_y;
-    g_content_cursor_x = (((u16)g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
+
+    /* Restore X from the active node's packed navigation column. */
+    g_content_cursor_x =
+        MENU_NAV_X(g_menu_nodes[g_menu_active_node].idx_nav.nav_x_packed) + MENU_CONTENT_CURSOR_X_OFFSET;
     g_content_view_x = g_content_cursor_x;
 }
 
@@ -3481,213 +3599,197 @@ int menu_item_has_action(void)
 }
 
 /**
- * @brief Reset content viewport and cursor to the active node's navigation position.
- * @note  Copies g_menu_default_view_pos into g_content_cursor_x/y when the scene node
- *        has content (content_id != MENU_NONE). Then reconstructs the 9-bit nav cursor Y
- *        from the active node's packed nav fields, writes it to g_content_view_y (clamped
- *        to [12, 0xA3]), and sets g_content_view_x from the 7-bit nav_x column.
- * @note  Four shapes are required to match:
- *        - `view_top` must be its own statement. Written inline as
- *          `nav_y - (g_menu_content_height - 12)`, fold-const rewrites it as
- *          `(nav_y + 12) - height` and emits `addiu 0xc` instead of `addiu -0xc`.
- *        - `view_y` aliases &g_content_view_y. Accessing the global directly gives its
- *          %hi a short live range, so it shares a register with the lbu temp and the
- *          scheduler cannot hoist the lui; the alias gives it a dedicated register (a2)
- *          held across all four accesses, as in the original.
- *        - `view_y` must be assigned BEFORE `active_node` (this is what lets the
- *          cursor_enable store schedule ahead of the two luis).
- *        - `nav_hi` is split out so the lhu is emitted before the lbu, while the `or`
- *          still takes the shifted nav_y_hi as its first operand.
+ * @brief Exit content focus and restore the node-tree viewport to the active node.
+ *
+ * Resets the content cursor when the current scene has content, then restores
+ * the viewport from the active node's packed navigation coordinates.
+ *
  * @see decomp.me (100%) TODO
  */
 void menu_reset_content_view(void)
 {
     MenuNode* active_node;
-    s32 nav_y;
-    s32 nav_hi;
-    s32 view_top;
-    s32* view_y;
+    s32 node_y;
+    s32 node_y_low_bit;
+    s32 scroll_offset;
+    s32* view_y_ptr;
 
     if (g_menu_nodes[g_menu_scene_type].content_id != MENU_NONE)
     {
         g_content_cursor_x = g_menu_default_view_pos.x;
         g_content_cursor_y = g_menu_default_view_pos.y;
     }
-    g_menu_cursor_enable = 2;
-    view_y = &g_content_view_y;
+
+    g_menu_cursor_enable = MENU_CURSOR_MODE_CONTENT_EXIT;
+    view_y_ptr = &g_content_view_y;
     active_node = &g_menu_nodes[g_menu_active_node];
-    nav_hi = active_node->idx_nav.nav_x_packed >> 15;
-    nav_y = (active_node->u8_u.s.nav_y_hi << 1) | nav_hi;
-    view_top = g_menu_content_height - 12;
-    *view_y = nav_y - view_top;
-    if (*view_y < 12)
+    node_y_low_bit = active_node->idx_nav.nav_x_packed >> 15;
+    node_y = (active_node->u8_u.s.nav_y_hi << 1) | node_y_low_bit;
+
+    /* Convert the node's layout position into the scrolled viewport. */
+    scroll_offset = g_menu_content_height - MENU_CURSOR_Y_MIN;
+    *view_y_ptr = node_y - scroll_offset;
+    if (*view_y_ptr < MENU_CURSOR_Y_MIN)
     {
-        *view_y = 12;
+        *view_y_ptr = MENU_CURSOR_Y_MIN;
     }
-    if (*view_y >= 0xA3)
+    if (*view_y_ptr >= MENU_CURSOR_Y_MAX)
     {
-        *view_y = 0xA3;
+        *view_y_ptr = MENU_CURSOR_Y_MAX;
     }
-    g_menu_suppress_cursor = 5;
-    g_content_view_x = (((u16)active_node->idx_nav.nav_x_packed >> 8) & 0x7F) + 8;
+
+    g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
+    g_content_view_x = MENU_NAV_X(active_node->idx_nav.nav_x_packed) + MENU_CONTENT_CURSOR_X_OFFSET;
 }
 
 /**
- * @brief Initialize packed circular links in g_menu_item_nav_entries.
+ * @brief Initialize packed positions and circular links for item navigation.
+ *
+ * Each entry stores a 14-bit vertical position and nine-bit previous and next
+ * indices.
+ *
  * @param count Number of entries to initialize (no-op if <= 0).
- * @note  Each s32 element of g_menu_item_nav_entries holds three packed bit-fields:
- *        bits 13:0  -- (i * 0x10) & 0x3FFF (slot identity / stride field),
- *        bits 22:14 -- previous circular index (wraps: entry 0's prev = count - 1),
- *        bits 30:23 -- next circular index (wraps: last entry's next = 0).
  * @see decomp.me (100%) https://decomp.me/scratch/x87Jm
  */
 void menu_init_item_nav_entries(s32 count)
 {
-    s32 temp_a1;
-    s32 temp_a2;
-    s32 temp_a3;
-    s32 temp_v1;
-    s32 var_a2;
-    s32 var_t1;
-    s32 var_v1;
-    s32* temp_t0;
+    s32 next_index;
+    s32 has_next;
+    s32 entry_with_position;
+    s32 previous_index;
+    s32 entry_index;
+    s32 wrapped_next_index;
+    s32* entry;
+    s32 packed_entry;
+    s32 position;
+    s32 entry_with_previous;
 
-    s32 tmp;
-    s32 tmp2;
-    s32 tmp3;
-
-    var_t1 = 0;
+    entry_index = 0;
     if (count > 0)
     {
         do
         {
-            temp_t0 = (var_t1) + g_menu_item_nav_entries;
+            entry = entry_index + g_menu_item_nav_entries;
+            packed_entry = *entry;
+            previous_index = entry_index - 1;
 
-            tmp = *temp_t0;
-            var_a2 = var_t1 - 1;
+            entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+            position = entry_index * MENU_ITEM_NAV_POSITION_STRIDE;
+            position = position & MENU_ITEM_NAV_POSITION_MASK;
+            entry_with_position = entry_with_position | position;
+            *entry = entry_with_position;
 
-            temp_v1 = (tmp & ~0x3FFF);
-
-            tmp2 = (var_t1 * 0x10);
-            tmp2 = tmp2 & 0x3FFF;
-
-            temp_v1 = temp_v1 | tmp2;
-            *temp_t0 = temp_v1;
-
-            if (var_a2 < 0)
+            if (previous_index < 0)
             {
-                var_a2 = count - 1;
+                previous_index = count - 1;
             }
 
-            tmp3 = (temp_v1 & 0xFF803FFF);
+            entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+            entry_with_previous =
+                entry_with_previous | ((previous_index & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+            *entry = entry_with_previous;
 
-            tmp3 = tmp3 | ((var_a2 & 0x1FF) << 0xE);
-
-            *temp_t0 = tmp3;
-            temp_a2 = var_t1 + 1;
-            temp_a3 = temp_a2 < count;
-            var_v1 = 0;
-            if (temp_a3 != 0)
+            next_index = entry_index + 1;
+            has_next = next_index < count;
+            wrapped_next_index = 0;
+            if (has_next != 0)
             {
-                var_v1 = temp_a2;
+                wrapped_next_index = next_index;
             }
-            *temp_t0 = (tmp3 & 0x7FFFFF) | (var_v1 << 0x17);
-            var_t1 = temp_a2;
-        } while (temp_a3 != 0);
+            *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) |
+                     (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
+            entry_index = next_index;
+        } while (has_next != 0);
     }
 }
 
 /**
- * @brief Count set bits across 12 bytes of g_pad_ctx at offset 0x60, then
- *        initialize g_menu_scroll_nav_entries as a circular packed linked list of that many entries.
- * @return Number of set bits found (i.e. number of list entries initialized).
- * @note  The bit scan covers bytes [0x60, 0x6B] of g_pad_ctx (12 bytes, 96 bits).
- *        Each s32 word of g_menu_scroll_nav_entries[] gets the same three packed fields as
- *        menu_init_item_nav_entries: bits 13:0 = slot field, bits 22:14 = prev
- *        index, bits 30:23 = next.
+ * @brief Build circular navigation entries for the spell grid.
+ *
+ * Scans the 12x8 presence bitmap in g_pad_ctx and creates one vertically
+ * spaced navigation entry for each set bit.
+ *
+ * @return Number of present grid cells.
  * @see decomp.me (100%) https://decomp.me/scratch/VjQt5
  */
-
-s32 func_80145310(void)
+s32 menu_build_spell_nav_entries(void)
 {
-    s32 temp_a0;
-    s32 temp_a2;
-    s32 temp_v1;
-    s32 var_a1;
-    s32 new_var;
-    s32 var_a2_2;
-    s32 var_a3;
-    s32 var_t0;
-    s32 var_v1;
-    s32 var_v1_2;
-    s32* temp_a3;
-    u8* var_a2;
-    s32 tmp;
-    s32 tmp2;
-    s32 tmp3;
+    s32 row_bits;
+    s32 has_next;
+    u32 entry_with_position;
+    s32 index;
+    s32 previous_index;
+    s32 row;
+    s32 item_count;
+    s32 working_value;
+    s32 wrapped_next_index;
+    u32* entry;
+    u8* presence_rows;
+    u32 packed_entry;
+    s32 position;
+    u32 entry_with_previous;
 
-    var_t0 = 0;
+    item_count = 0;
+    presence_rows = (u8*)g_pad_ctx + MENU_SPELL_GRID_OFFSET;
 
-    var_a2 = (u8*)g_pad_ctx + 0x60;
-
-    for (var_a3 = 0xB; var_a3 >= 0; var_a3--)
+    for (row = MENU_SPELL_GRID_ROW_COUNT - 1; row >= 0; row--)
     {
-        var_v1 = 1;
-        temp_a0 = *var_a2;
-        for (var_a1 = 7; var_a1 >= 0; var_a1--)
+        working_value = 1;
+        row_bits = *presence_rows;
+        for (index = MENU_SPELL_GRID_COLUMN_COUNT - 1; index >= 0; index--)
         {
-            if (temp_a0 & var_v1)
+            if (row_bits & working_value)
             {
-                var_t0++;
+                item_count++;
             }
-            var_v1 *= 2;
+            working_value *= 2;
         }
 
-        var_a2 += 1;
+        presence_rows += 1;
     }
 
-    g_menu_scroll_nav_entries = 0;
-    var_a1 = 0;
-    if (((var_t0 - 1) + 1) <= ((0 - 1) + 1))
+    g_menu_scroll_nav_entries[0] = 0;
+    index = 0;
+    if (item_count <= 0)
     {
-        return var_t0;
+        return item_count;
     }
 
     do
     {
-        temp_a3 = &(&g_menu_scroll_nav_entries)[var_a1];
-        tmp = *temp_a3;
-        var_a2_2 = var_a1 - 1;
-        temp_v1 = tmp & (~0x3FFF);
-        tmp2 = (new_var = var_a1) * 0x10;
-        tmp2 = tmp2 & 0x3FFF;
-        temp_v1 = temp_v1 | tmp2;
-        *temp_a3 = temp_v1;
+        entry = g_menu_scroll_nav_entries + index;
+        packed_entry = *entry;
+        previous_index = index - 1;
+        entry_with_position = packed_entry & ~MENU_ITEM_NAV_POSITION_MASK;
+        position = index * MENU_ITEM_NAV_POSITION_STRIDE;
+        position = position & MENU_ITEM_NAV_POSITION_MASK;
+        entry_with_position = entry_with_position | position;
+        *entry = entry_with_position;
 
-        if (var_a2_2 < 0)
+        if (previous_index < 0)
         {
-            var_a2_2 = var_t0 - 1;
+            previous_index = item_count - 1;
         }
 
-        var_v1 = var_a2_2;
-        tmp3 = temp_v1;
-        tmp3 = tmp3 & 0xFF803FFF;
-        tmp3 = tmp3 | ((var_v1 & 0x1FF) << 0xE);
-        *temp_a3 = tmp3;
-        var_a1 += 1;
-        temp_a2 = var_a1 < var_t0;
-        var_v1_2 = 0;
+        working_value = previous_index;
+        entry_with_previous = entry_with_position & MENU_ITEM_NAV_PREVIOUS_CLEAR_MASK;
+        entry_with_previous =
+            entry_with_previous | ((working_value & MENU_ITEM_NAV_INDEX_MASK) << MENU_ITEM_NAV_PREVIOUS_SHIFT);
+        *entry = entry_with_previous;
 
-        if (temp_a2 != 0)
+        index += 1;
+        has_next = index < item_count;
+        wrapped_next_index = 0;
+        if (has_next != 0)
         {
-            var_v1_2 = var_a1;
+            wrapped_next_index = index;
         }
 
-        new_var = tmp3;
-        *temp_a3 = (new_var & 0x7FFFFF) | (var_v1_2 << 0x17);
-    } while (temp_a2 != 0);
+        *entry = (entry_with_previous & MENU_ITEM_NAV_NEXT_CLEAR_MASK) |
+                 (wrapped_next_index << MENU_ITEM_NAV_NEXT_SHIFT);
+    } while (has_next != 0);
 
-    return var_t0;
+    return item_count;
 }
 
 /**
@@ -3766,14 +3868,14 @@ s32 menu_build_special_technique_nav_entries(void)
         found = 0;
     }
 
-    g_menu_scroll_nav_entries = (void*)0;
+    g_menu_scroll_nav_entries[0] = 0;
 
     j = 0;
     if (count > 0)
     {
         do
         {
-            s32* slot = (s32*)&g_menu_scroll_nav_entries + j;
+            s32* slot = (s32*)g_menu_scroll_nav_entries + j;
             s32 cur = *slot;
             s32 word_self;
 
@@ -3858,14 +3960,14 @@ s32 func_8014551C(s32 arg0)
         entry += 0x40;
     } while (i < 0x64);
 
-    g_menu_scroll_nav_entries = (void*)0;
+    g_menu_scroll_nav_entries[0] = 0;
 
     i = 0;
     if (count > 0)
     {
         do
         {
-            s32* slot = (s32*)&g_menu_scroll_nav_entries + i;
+            s32* slot = (s32*)g_menu_scroll_nav_entries + i;
             s32 cur = *slot;
             s32 word_self;
 
@@ -6996,7 +7098,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
     s32 off;
     u8* item;
     u8 ch;
-    Rect16 rect;
+    MenuSlotRect rect;
     u8 sp30[0x40];
 
     if ((g_pad_input & 0x10) && (active != 0))
@@ -7071,7 +7173,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
         }
     }
 
-    buf = scroll_list_draw(prim_buf, ot, st, &g_menu_scroll_nav_entries, view_origin, active);
+    buf = scroll_list_draw(prim_buf, ot, st, g_menu_scroll_nav_entries, view_origin, active);
 
     if (g_menu_scene_type < 0x13 && (g_pad_input & 0x8000))
     {
@@ -7386,7 +7488,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         rect.y = 0x40;
                         rect.w = 0x70;
                         rect.h = 0x30;
-                        ns = (MenuSlot*)menu_slot_alloc(0, &rect);
+                        ns = menu_slot_alloc(0, &rect);
                         ns->content_cb = (s32 * (*)()) & func_8014DA48;
                         g_menu_unk_e8 = 1;
                         ns->flags = (ns->flags & 0xFE00FFFF) | 0x20000;
@@ -7426,7 +7528,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         rect.y = 0x60;
                         rect.w = 0x70;
                         rect.h = 0x30;
-                        ns = (MenuSlot*)menu_slot_alloc(0, &rect);
+                        ns = menu_slot_alloc(0, &rect);
                         ns->content_cb = (s32 * (*)()) & func_8014C9B0;
                         ns->flags = (ns->flags & 0xFE00FFFF) | 0x20000;
                         MENU_RELINK();
@@ -7606,7 +7708,7 @@ s32 func_8014B7DC(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
         g_pad_input = 0;
     }
 
-    prim_buf = scroll_list_draw(prim_buf, ot, list, &g_menu_scroll_nav_entries, view_origin, active);
+    prim_buf = scroll_list_draw(prim_buf, ot, list, g_menu_scroll_nav_entries, view_origin, active);
 
     y = 0;
     sel = -1;
@@ -7706,7 +7808,7 @@ s32 func_8014BA58(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
     list = state;
 
-    prim_buf = scroll_list_draw(prim_buf, ot, list, &g_menu_scroll_nav_entries, view_origin, active);
+    prim_buf = scroll_list_draw(prim_buf, ot, list, g_menu_scroll_nav_entries, view_origin, active);
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
@@ -7816,7 +7918,7 @@ s32 func_8014BD48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
     list = state;
 
-    prim_buf = scroll_list_draw(prim_buf, ot, list, &g_menu_scroll_nav_entries, view_origin, active);
+    prim_buf = scroll_list_draw(prim_buf, ot, list, g_menu_scroll_nav_entries, view_origin, active);
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
@@ -7910,7 +8012,7 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
     list = state;
 
-    prim_buf = scroll_list_draw(prim_buf, ot, list, &g_menu_scroll_nav_entries, view_origin, active);
+    prim_buf = scroll_list_draw(prim_buf, ot, list, g_menu_scroll_nav_entries, view_origin, active);
 
     if ((g_pad_input & 0x40) && (active != 0))
     {
@@ -8014,7 +8116,7 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
  */
 s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
-    u16 rect[4];
+    MenuSlotRect rect;
     MenuSlot* slot;
     s32 packed;
     s32 hi;
@@ -8045,11 +8147,11 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
         case 0:
             list->unk2 = 0;
             list->unk0 = 0;
-            rect[0] = 0x40;
-            rect[1] = 0x60;
-            rect[2] = 0xF0;
-            rect[3] = 0x60;
-            slot = (MenuSlot*)menu_slot_alloc(3, rect);
+            rect.x = 0x40;
+            rect.y = 0x60;
+            rect.w = 0xF0;
+            rect.h = 0x60;
+            slot = menu_slot_alloc(3, &rect);
             slot->content_cb = (s32 * (*)()) & menu_special_technique_list_callback;
             packed = menu_build_special_technique_nav_entries();
             hi = packed >> 0x10;
@@ -8405,7 +8507,7 @@ s32 menu_stage_best_equipment_for_active_slot();
  */
 s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
-    u16 rect[4];
+    MenuSlotRect rect;
     ScrollListState* list;
     MenuContentItem* item;
     MenuContentItem* tbl;
@@ -8567,11 +8669,11 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                     g_menu_slots[i2].active = 0;
                     i2--;
                 }
-                rect[0] = 0xB0;
-                rect[1] = 0x40;
-                rect[2] = 0x70;
-                rect[3] = 0x30;
-                list = (ScrollListState*)menu_slot_alloc(0, rect);
+                rect.x = 0xB0;
+                rect.y = 0x40;
+                rect.w = 0x70;
+                rect.h = 0x30;
+                list = (ScrollListState*)menu_slot_alloc(0, &rect);
                 ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
                 g_menu_unk_e8 = 1;
                 ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
@@ -8619,11 +8721,11 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                 g_menu_slots[i3].active = 0;
                 i3--;
             }
-            rect[0] = 0xB0;
-            rect[1] = 0x40;
-            rect[2] = 0x70;
-            rect[3] = 0x30;
-            list = (ScrollListState*)menu_slot_alloc(0, rect);
+            rect.x = 0xB0;
+            rect.y = 0x40;
+            rect.w = 0x70;
+            rect.h = 0x30;
+            list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
             g_menu_unk_e8 = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
@@ -8676,11 +8778,11 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                 g_menu_slots[i4].active = 0;
                 i4--;
             }
-            rect[0] = 0xB0;
-            rect[1] = 0x40;
-            rect[2] = 0x70;
-            rect[3] = 0x30;
-            list = (ScrollListState*)menu_slot_alloc(0, rect);
+            rect.x = 0xB0;
+            rect.y = 0x40;
+            rect.w = 0x70;
+            rect.h = 0x30;
+            list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
             g_menu_unk_e8 = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
