@@ -584,83 +584,94 @@ void menu_tick(RenderContext* render_ctx)
     menu_update_slots(render_ctx);
 }
 
+typedef enum
+{
+    MENU_TEXT_ALIGN_LEFT = 0,
+    MENU_TEXT_ALIGN_RIGHT = 1,
+    MENU_TEXT_ALIGN_CENTER = 2,
+} MenuTextAlignment;
+
 /**
- * @brief Lay out a run of glyph sprites and link them into an OT chain.
+ * @brief Build and queue a horizontally aligned run of glyph sprites.
  *
- * @param sprites Primitive write cursor: the glyph @c SPRT records are built
- *                here, and the cursor is advanced past the run.
- * @param ot      Ordering-table head the glyphs are linked into via @c addPrim.
- * @param src     Source text copied into the local glyph buffer.
- * @param arg3    TODO: unknown - passed to @ref func_800644FC.
- * @param x       Starting X of the run; shifted left by the total glyph width
- *                when @p mode is 1 or 2 (centering).
- * @param y       Y coordinate of the run.
- * @param len     Source length: byte count for the buffer fill and the index
- *                at which the buffer is null-terminated.
- * @param mode    Centering: 1 = subtract each glyph's full width,
- *                2 = subtract half of it; other = no adjustment.
- * @return Pointer just past the trailing @c DR_TPAGE's tag+code words.
+ * @param sprite_cursor Start of the primitive-buffer region for the glyph sprites.
+ * @param ot Ordering-table entry that receives the emitted packets.
+ * @param src Address of the source text.
+ * @param text_color Text-color index in the range 0–15.
+ * @param x Horizontal anchor selected by @p alignment.
+ * @param y Y coordinate applied to every glyph.
+ * @param len Source byte length; must not exceed 0x7F.
+ * @param alignment Horizontal alignment of the run relative to @p x.
+ * @return Next free primitive-buffer address, immediately after the draw-mode packet.
  *
- * @note @ref func_800644FC fills the SPRT records (uv, clut, w, h) from the
- *       text and returns the glyph count; this function only positions them,
- *       tints them, and links them.
+ * @see func_800644FC
  * @see decomp.me (100%) https://decomp.me/scratch/AW5Sa
  */
-s32* menu_build_text_run(SPRT* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
+void* menu_build_text_run(
+    SPRT* sprite_cursor, s32* ot, s32 src, s32 text_color, s32 x, s32 y, s32 len, MenuTextAlignment alignment)
 {
     char buf[0x80];
     s32 count, i, acc;
-    SPRT* sprt;
+    SPRT* sprite;
+    DR_TPAGE* tpage;
 
+    /* Prepare a null-terminated slice for the glyph decoder. */
     strncpy(buf, (char*)src, len);
     buf[len] = 0;
 
-    count = func_800644FC(sprites, buf, arg3);
+    /* Populate one SPRT per decoded glyph. */
+    count = func_800644FC(sprite_cursor, buf, text_color);
 
-    if (mode != 1)
+    /* Convert the requested anchor into the run's left edge. */
+    if (alignment != MENU_TEXT_ALIGN_RIGHT)
     {
-        if (mode == 2)
+        if (alignment == MENU_TEXT_ALIGN_CENTER)
         {
-            sprt = sprites;
+            sprite = sprite_cursor;
             for (i = 0; i < count; i++)
             {
-                x -= sprt[i].w >> 1;
+                x -= sprite[i].w >> 1;
             }
         }
     }
     else
     {
-        sprt = sprites;
+        sprite = sprite_cursor;
         for (i = 0; i < count; i++)
         {
-            x -= sprt[i].w;
+            x -= sprite[i].w;
         }
     }
 
+    /* Finish and link the prebuilt sprites using a running x offset. */
     acc = 0;
 
     if (count != 0)
     {
         do
         {
-            sprt = sprites;
-            SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-            setSprt(sprt);
+            sprite = sprite_cursor;
+            SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+            setSprt(sprite);
 
-            /* x0/y0 are written as one word: acc is the running pen X. */
-            *(s32*)&sprt->x0 = (x + (y << 16)) + acc;
-            acc += sprt->w;
+            SET_SPRT_XY0_WORD(sprite, PACK_U16_PAIR(x, y) + acc);
+            acc += sprite->w;
 
-            addPrim(ot, sprt);
-            sprites++;
+            addPrim(ot, sprite);
+            sprite_cursor++;
             count--;
         } while (count != 0);
     }
 
-    setDrawTPage((DR_TPAGE*)sprites, 0, 0, 0x1F);
-    addPrim(ot, sprites);
+    /*
+     * addPrim prepends packets, so linking this draw mode last makes the GPU
+     * select the glyph texture page before it processes the sprites.
+     */
+    tpage = (DR_TPAGE*)sprite_cursor;
+    setDrawTPage(tpage, 0, 0, 0x1F);
+    addPrim(ot, tpage);
 
-    return (s32*)((u8*)sprites + 8);
+    return tpage + 1;
 }
 
 /**
