@@ -97,6 +97,8 @@
  */
 /** @brief Total number of nodes in g_menu_nodes[]. */
 #define MENU_NODE_COUNT 0x2C
+/** @brief MenuNode::u2 flag indicating that the node participates in layout. */
+#define MENU_NODE_FLAG_ACTIVE 0x01
 /** @brief MenuNode::u2 flag indicating that the node's children are visible. */
 #define MENU_NODE_FLAG_EXPANDED 0x02
 /** @brief Bits [14:8] of idx_nav.nav_x_packed: the 7-bit column (nav_x) field. */
@@ -2095,43 +2097,48 @@ void menu_collapse_all(void)
 }
 
 /**
- * @brief Assigns layout positions to all active root menu nodes and stores the final position count.
- * @note Sets g_menu_scroll_pos and g_menu_redraw_state to signal scroll state after layout.
+ * @brief Rebuild the visible node layout and update its scroll state.
+ *
+ * Active root nodes and their expanded descendants are assigned consecutive
+ * rows. The resulting layout extent is stored in @c g_menu_layout_end.
+ *
  * @see decomp.me (100%) https://decomp.me/scratch/YhGni
  */
 void menu_update_layout(void)
 {
-    s32 changed = 0;
-    s32 pos = changed;
-    s32 i = pos;
+    s32 has_visible_children = 0;
+    s32 layout_end = has_visible_children;
+    s32 node_index = layout_end;
 
     do
     {
-        if (g_menu_nodes[i].u2.s.parent_idx == MENU_NONE)
+        if (g_menu_nodes[node_index].u2.s.parent_idx == MENU_NONE)
         {
-            s32 prev_pos = pos;
-            pos++;
-            pos--;
+            s32 root_y = layout_end;
+            layout_end++;
+            layout_end--;
 
-            if (g_menu_nodes[i].u2.s.flags & 1)
+            if (g_menu_nodes[node_index].u2.s.flags & MENU_NODE_FLAG_ACTIVE)
             {
-                pos = menu_layout_node(i, prev_pos);
-                if (prev_pos != (pos - MENU_ROW_HEIGHT))
+                layout_end = menu_layout_node(node_index, root_y);
+
+                /* A root that contributes multiple rows has visible descendants. */
+                if (root_y != (layout_end - MENU_ROW_HEIGHT))
                 {
-                    changed = 1;
-                    if (pos >= (MENU_VIEW_HEIGHT + 1))
+                    has_visible_children = 1;
+                    if (layout_end > MENU_VIEW_HEIGHT)
                     {
-                        g_menu_scroll_pos = pos - MENU_VIEW_HEIGHT;
+                        g_menu_scroll_pos = layout_end - MENU_VIEW_HEIGHT;
                         g_menu_redraw_state = MENU_REDRAW_LAYOUT;
                     }
                 }
             }
         }
-        i += 1;
-    } while (i < MENU_NODE_COUNT);
+        node_index += 1;
+    } while (node_index < MENU_NODE_COUNT);
 
-    g_menu_layout_end = pos;
-    if (changed == 0)
+    g_menu_layout_end = layout_end;
+    if (has_visible_children == 0)
     {
         g_menu_scroll_pos = 0;
         g_menu_redraw_state = MENU_REDRAW_LAYOUT;
