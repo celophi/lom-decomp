@@ -62,6 +62,7 @@
 #define MENU_WINDOW_FILL_TILE_SIZE 0x60
 #define MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE 16
 #define MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE 8
+#define MENU_LABEL_BUFFER_SIZE 16
 
 /*
  * VRAM layout for the three menu window slots' primitive data.
@@ -288,7 +289,7 @@ typedef struct
 } MenuWindowTransitionFrame;
 
 /**
- * @brief Pair of (u8) indices into a packed text-lookup table.
+ * @brief Two-byte offset into a paged string table.
  *
  * @c entry is the character/entry index within the page; @c page is the page
  * index. Together they form a string pointer via
@@ -298,7 +299,26 @@ typedef struct
 {
     u8 entry; /**< Entry index within the page. */
     u8 page;  /**< Page index. */
-} StringTableKey;
+} StringTableOffset;
+
+/**
+ * @brief Known prefix of the shared menu string-table layout.
+ *
+ * The two sign-dependent label offsets are embedded within the table data.
+ */
+typedef struct
+{
+    u8 prefix[0x16];
+    StringTableOffset nonnegative_label;
+    u8 between_labels[8];
+    StringTableOffset negative_label;
+} MenuStringTableLayout;
+
+/** Recover the enclosing string-table base from one of its embedded offsets. */
+#define MENU_STRING_TABLE_MEMBER_OFFSET(member) \
+    ((u32)&((MenuStringTableLayout*)0)->member)
+#define MENU_STRING_TABLE_BASE(key, member) \
+    ((u8*)&(key) - MENU_STRING_TABLE_MEMBER_OFFSET(member))
 
 /**
  * @brief One node in the hierarchical menu navigation tree.
@@ -463,8 +483,10 @@ extern s8 g_menu_ability_mask;
 /** @brief Node index for the companion character's stat page (0x2B = companion present, 0xFF = none). */
 extern s8 g_menu_companion_node;
 
-extern StringTableKey g_menu_label_key_a; /* 0x800EC3DA: offset +0x16 into shared text table at 0x800EC3C4 */
-extern StringTableKey g_menu_label_key_b; /* 0x800EC3E4: offset +0x20 into shared text table at 0x800EC3C4 */
+/** @brief Nonnegative-label offset embedded in MenuStringTableLayout. */
+extern StringTableOffset g_menu_label_key_a;
+/** @brief Negative-label offset embedded in MenuStringTableLayout. */
+extern StringTableOffset g_menu_label_key_b;
 
 /** @brief Number of nodes in the linear navigation list. */
 extern s32 g_menu_nav_count;
@@ -1600,57 +1622,47 @@ u_long* menu_build_v_edge(
 }
 
 /**
- * @brief Render a text label from a packed string table at the given screen position.
+ * @brief Draw a sign-dependent label at a screen position.
  *
- * Resolves one of two embedded @c StringTableKey entries in the shared string
- * table (base 0x800EC3C4) using @p label_id's sign, copies the packed glyph
- * string into a local buffer, then calls the glyph renderer.
- *
- * Both branches compute the same table base via pointer arithmetic from
- * whichever key they select: @c &g_menu_label_key_a-0x16 == @c &g_menu_label_key_b-0x20 ==
- * 0x800EC3C4.
- *
- * @param ot        Ordering-table head (@c u_long*; passed as arg1 to the glyph renderer).
- * @param prim      Primitive write cursor (@c u_long*; passed as arg0 to the glyph renderer).
- * @param pos       Screen position (x, y) to draw at.
- * @param label_id  >= 0: draw string keyed by g_menu_label_key_a; < 0: keyed by g_menu_label_key_b.
- * @return The advanced primitive write cursor returned by the glyph renderer.
- * @note The glyph-copy call is written once per arm on purpose: the target's arms each
- *       carry their own `addu a0, s1, zero`, the leftover of a cross-jumped common tail.
- *       Hoisting the call below the if/else drops the match to 92.42%.
- * @note @c sum is scoped to each arm and the address math is done in @c s32 (not pointer)
- *       space. Both are required to match: integer arithmetic keeps the operand order
- *       (@c entry first), and the arm-local scope is what makes gcc color the page byte
- *       into v0 and the key address into v1 rather than the reverse.
- * @see decomp.me (94.94%) https://decomp.me/scratch/ozwB7
- * @see local match 100% (working/menu_draw_label/code_v18.c)
+ * @param ot_entry      Ordering-table entry for the label primitives.
+ * @param packet_cursor Primitive buffer location for the label.
+ * @param position      Label screen position.
+ * @param value         Selects the nonnegative or negative label.
+ * @return Updated primitive buffer location.
+ * @see decomp.me https://decomp.me/scratch/ozwB7
  */
-u_long* menu_draw_label(u_long* ot, u_long* prim, ScreenPos* pos, s32 label_id)
+u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos* position, s32 value)
 {
-    u8 sp20[16];
-    u8* ptr = sp20;
-    u8* str_ptr;
+    u8 label_buffer[MENU_LABEL_BUFFER_SIZE];
+    u8* write_cursor = label_buffer;
+    u8* source;
 
-    if (label_id >= 0)
+    /* Recover the shared table base from each key's table-relative address. */
+    if (value >= 0)
     {
-        s32 sum = (g_menu_label_key_a.page << 8) + (s32)((u8*)&g_menu_label_key_a - 0x16);
-        str_ptr = (u8*)(g_menu_label_key_a.entry + sum);
-        func_800A8E28(ptr, str_ptr);
+        s32 string_page_base =
+            (g_menu_label_key_a.page << 8) +
+            (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_a, nonnegative_label);
+        source = (u8*)(g_menu_label_key_a.entry + string_page_base);
+        func_800A8E28(write_cursor, source);
     }
     else
     {
-        s32 sum = (g_menu_label_key_b.page << 8) + (s32)((u8*)&g_menu_label_key_b - 0x20);
-        str_ptr = (u8*)(g_menu_label_key_b.entry + sum);
-        func_800A8E28(ptr, str_ptr);
+        s32 string_page_base =
+            (g_menu_label_key_b.page << 8) +
+            (s32)MENU_STRING_TABLE_BASE(g_menu_label_key_b, negative_label);
+        source = (u8*)(g_menu_label_key_b.entry + string_page_base);
+        func_800A8E28(write_cursor, source);
     }
 
-    ptr += func_800A8DDC(str_ptr);
+    write_cursor += func_800A8DDC(source);
 
-    *ptr = 0;
+    *write_cursor = 0;
 
-    prim = (u_long*)func_800A88A0(prim, ot, sp20, 1, pos->x, pos->y, 0);
+    packet_cursor =
+        (u_long*)func_800A88A0(packet_cursor, ot_entry, label_buffer, 1, position->x, position->y, 0);
 
-    return prim;
+    return packet_cursor;
 }
 
 /**
