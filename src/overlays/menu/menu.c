@@ -58,6 +58,7 @@
 #define MENU_TW_EDGE_LEFT 0x90D0
 #define MENU_TW_EDGE_RIGHT 0x90D8
 #define MENU_TW_FILL 0xA0A0
+#define MENU_WINDOW_CORNER_SIZE 8
 
 /*
  * VRAM layout for the three menu window slots' primitive data.
@@ -1391,37 +1392,32 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     gpu_work->prim_cursor = (s32*)((char*)prim_cur + 8);
 }
 /**
- * @brief Emit one 8x8 textured corner sprite and splice it into a prim chain.
+ * @brief Emit one textured window-corner sprite.
  *
- * Writes a libgpu @c SPRT (code 0x64, white tint 0x808080, fixed 8x8 size,
- * fixed CLUT @c MENU_CLUT_CORNER) at screen @p x / @p y with texture origin @p uv, links it
- * into the chain headed at @p ot, and returns the next primitive slot.
- * Called four times by @ref menu_draw_window, once per window corner.
- *
- * @param prim Primitive write cursor (the @c SPRT is built here).
- * @param ot   Ordering-table head the sprite is linked into.
- * @param x    Sprite screen X (@c x0).
- * @param y    Sprite screen Y (@c y0).
- * @param uv   Packed texture origin written to @c u0 / @c v0 (offset 0xC).
- * @return Pointer to the next primitive slot (@p prim + 0x14).
+ * @param sprite   Primitive buffer location for the sprite.
+ * @param ot_entry Ordering-table entry to link the sprite into.
+ * @param x        Screen X coordinate.
+ * @param y        Screen Y coordinate.
+ * @param uv       Packed texture coordinates: U in bits 7:0, V in bits 15:8.
+ * @return Primitive buffer location immediately after the sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/GcWsA
  */
-void* menu_emit_corner(SPRT* prim, s32* ot, s16 x, s16 y, s32 uv)
+SPRT* menu_emit_corner(SPRT* sprite, u_long* ot_entry, s16 x, s16 y, u16 uv)
 {
-    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
+    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
 
-    setSprt(prim);
+    setSprt(sprite);
 
-    SET_SPRT_WH_PACKED(prim, 8, 8);
+    SET_SPRT_WH_PACKED(sprite, MENU_WINDOW_CORNER_SIZE, MENU_WINDOW_CORNER_SIZE);
 
-    setXY0(prim, x, y);
+    setXY0(sprite, x, y);
 
-    SET_SPRT_CLUT(prim, MENU_CLUT_CORNER);
-    SET_SPRT_UV0_PACKED(prim, uv);
+    SET_SPRT_CLUT(sprite, MENU_CLUT_CORNER);
+    SET_SPRT_UV0_PACKED(sprite, uv);
 
-    addPrim(ot, prim);
+    addPrim(ot_entry, sprite);
 
-    return prim + 1;
+    return sprite + 1;
 }
 
 /**
