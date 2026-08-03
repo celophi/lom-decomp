@@ -32,6 +32,7 @@ menu_snap_view_to_cursor = 0x80144FB8;
 menu_item_has_action   = 0x80145034;
 menu_reset_content_view = 0x8014519C;
 menu_init_item_nav_entries = 0x80145278;
+menu_build_spell_nav_entries = 0x80145310;
 menu_build_special_technique_nav_entries = 0x801453F0;
 menu_emit_draw_mode_primitive = 0x801482D0;
 menu_concat_encoded_text = 0x80148324;
