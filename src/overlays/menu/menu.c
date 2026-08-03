@@ -25,6 +25,12 @@
 #define MENU_SLOT_COUNT 4
 #define MENU_SLOT_OT_INDEX_SHIFT 25
 #define MENU_SLOT_OT_INDEX_CLEAR_MASK 0x01FFFFFF
+#define MENU_WINDOW_TRANSITION_STEPS 12
+#define MENU_WINDOW_MIN_WIDTH 0x20
+#define MENU_WINDOW_MIN_HEIGHT 0x10
+/** Per-edge inset for the given opening or closing animation frame. */
+#define MENU_WINDOW_EDGE_INSET(size, frame) \
+    (((size) >> 1) - ((s16)((size) / MENU_WINDOW_TRANSITION_STEPS) * (frame)))
 
 /** Size of the embedded TIM image block, including its block header. */
 #define MENU_TIM_IMAGE_BLOCK_SIZE 0x800C
@@ -268,6 +274,14 @@ typedef struct
     s16 x; /**< Screen X. */
     s16 y; /**< Screen Y. */
 } ScreenPos;
+
+/** Stack layout used while drawing an opening or closing menu window. */
+typedef struct
+{
+    MenuRect rect;
+    ScreenPos view_origin;
+    s16 padding[2];
+} MenuWindowTransitionFrame;
 
 /**
  * @brief Pair of (u8) indices into a packed text-lookup table.
@@ -1135,63 +1149,50 @@ void menu_update_slots(RenderContext* render_ctx)
 }
 
 /**
- * @brief Draw a menu window mid-open/close animation at an interpolated inset.
+ * @brief Draw one frame of a menu window's opening or closing transition.
  *
- * Computes a per-frame shrink amount from the slot's target size
- * (@c unkC / @c unkE divided by 12, scaled by the frame counter @c unk2) and,
- * while both axes are still positive, draws the window via @ref menu_draw_window
- * at the inset rectangle. Used for slot @c active states 1 (opening) and 3
- * (closing) by @ref menu_update_slots.
- *
- * @param gpu_work     Per-frame render context (passed through to @ref menu_draw_window).
- * @param slot         Slot whose animated rectangle is drawn.
- * @param cursor_enable Cursor-highlight enable (forwarded as the draw's @p cursor_enable).
+ * @param render_ctx Per-frame menu rendering context.
+ * @param slot Window slot being animated.
+ * @param cursor_enable Nonzero to allow the active-slot cursor highlight.
  * @see decomp.me (100%) https://decomp.me/scratch/luaLZ
  */
-void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_enable)
+void menu_draw_window_transition(MenuRenderCtx* render_ctx, MenuSlotAnim* slot, s32 cursor_enable)
 {
-    s16 sp[8];
-    s32 temp_a3;
-    s32 temp_a1;
-    s32 clampC;
-    s32 clampE;
+    MenuWindowTransitionFrame frame;
+    s32 inset_x;
+    s32 inset_y;
+    s32 width;
+    s32 height;
 
-    /* First computation */
-    temp_a3 = ((s32)((u16)slot->w << 0x10) >> 0x11) - ((s16)(slot->w / 12) * slot->anim_frame);
-    sp[4] = (s16)temp_a3;
+    /* Expand from the center as anim_frame advances; closing runs it in reverse. */
+    inset_x = MENU_WINDOW_EDGE_INSET(slot->w, slot->anim_frame);
+    frame.view_origin.x = inset_x;
 
-    /* Second computation */
-    temp_a1 = ((s32)((u16)slot->h << 0x10) >> 0x11) - ((s16)(slot->h / 12) * slot->anim_frame);
+    inset_y = MENU_WINDOW_EDGE_INSET(slot->h, slot->anim_frame);
+    frame.view_origin.y = inset_y;
 
-    /* First branch logic block */
-
-    sp[5] = (s16)temp_a1;
-
-    /* Second branch logic block */
-    if (temp_a3 > 0)
+    if (inset_x > 0)
     {
-
-        if (temp_a1 > 0)
+        if (inset_y > 0)
         {
-
-            clampC = slot->w - (temp_a3 * 2);
-            if (clampC < 0x20)
+            width = slot->w - (inset_x * 2);
+            if (width < MENU_WINDOW_MIN_WIDTH)
             {
-                clampC = 0x20;
+                width = MENU_WINDOW_MIN_WIDTH;
             }
 
-            clampE = slot->h - (temp_a1 * 2);
-            if (clampE < 0x10)
+            height = slot->h - (inset_y * 2);
+            if (height < MENU_WINDOW_MIN_HEIGHT)
             {
-                clampE = 0x10;
+                height = MENU_WINDOW_MIN_HEIGHT;
             }
 
-            sp[0] = slot->x + temp_a3;
-            sp[1] = slot->y + temp_a1;
-            sp[2] = clampC;
-            sp[3] = clampE;
+            frame.rect.x = slot->x + inset_x;
+            frame.rect.y = slot->y + inset_y;
+            frame.rect.w = width;
+            frame.rect.h = height;
 
-            menu_draw_window(slot, gpu_work, &sp[0], &sp[4], cursor_enable);
+            menu_draw_window(slot, render_ctx, &frame.rect, &frame.view_origin, cursor_enable);
         }
     }
 }
@@ -1208,11 +1209,11 @@ void menu_draw_window_transition(s32 gpu_work, MenuSlotAnim* slot, s32 cursor_en
  * @param slot          Slot descriptor (geometry, flags, content callback).
  * @param gpu_work      Per-frame render context (layout matches @ref RenderContext).
  * @param rect          Window rectangle: x, y, w, h halfwords.
- * @param arg3          TODO: forwarded to the content callback and edge builders.
+ * @param view_origin   View-origin offset forwarded to the content callback.
  * @param cursor_enable Cursor-highlight enable for the active slot.
  * @see decomp.me (99.73%) https://decomp.me/scratch/5k4SF
  */
-void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, s32 arg3, s32 cursor_enable)
+void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
 {
     MenuRectU16 sp18;
     DRAWENV sp20;
@@ -1270,7 +1271,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                         var_a3 = slot->active == 2;
                     }
                 }
-                temp_s1 = slot->content_cb(temp_s2, slot, var_s1, arg3, var_a3);
+                temp_s1 = slot->content_cb(temp_s2, slot, var_s1, view_origin, var_a3);
                 if (g_menu_draw_early_out != 0)
                 {
                     gpu_work->prim_cursor = temp_s1;
