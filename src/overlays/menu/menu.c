@@ -59,6 +59,7 @@
 #define MENU_TW_EDGE_RIGHT 0x90D8
 #define MENU_TW_FILL 0xA0A0
 #define MENU_WINDOW_CORNER_SIZE 8
+#define MENU_WINDOW_FILL_TILE_SIZE 0x60
 
 /*
  * VRAM layout for the three menu window slots' primitive data.
@@ -1421,72 +1422,73 @@ SPRT* menu_emit_corner(SPRT* sprite, u_long* ot_entry, s16 x, s16 y, u16 uv)
 }
 
 /**
- * @brief Tile the interior of a window with 0x60x0x60 textured sprites.
+ * @brief Tile a window interior with textured sprites.
  *
- * Walks @p rect in 0x60-pixel steps on both axes, emitting one @c SPRT per
- * tile (code 0x64, tint @c GPU_TINT_NEUTRAL, CLUT @c MENU_CLUT_GRID_ALT)
- * clamped to the region edges, and links each into the chain headed at @p ot.
- *
- * @param prim  Primitive write cursor (advanced past every emitted tile).
- * @param ot    Ordering-table head the tiles are linked into.
- * @param rect  Region to fill: x, y (screen origin), w, h (pixel size).
- * @param uv    Packed texture origin written to each tile's @c u0 / @c v0.
- * @return Primitive write cursor just past the last tile emitted.
- * @note @c pad is an unused stack local: the original allocates an 8-byte
- *       frame it never touches, and forcing one local to memory reproduces it.
- *       The @c tile_x / @c rect_y u16 temporaries are required to match.
+ * @param sprite   Primitive buffer location for the first tile.
+ * @param ot_entry Ordering-table entry to link the tiles into.
+ * @param rect     Screen-space region to fill.
+ * @param uv       Packed texture coordinates: U in bits 7:0, V in bits 15:8.
+ * @return Primitive buffer location immediately after the emitted tiles.
  * @see decomp.me (100%) https://decomp.me/scratch/R9mdk
  */
-s32* menu_fill_window_interior(s32* prim, s32* ot, MenuRectU16* rect, s16 uv)
+SPRT* menu_fill_window_interior(SPRT* sprite, u_long* ot_entry, const MenuRectU16* rect, u16 uv)
 {
-    u16 tile_x;
-    volatile s32 pad;
-    u16 rect_y;
-    s32 y = 0;
+    u16 screen_x;
+    volatile s32 stack_pad;
+    u16 origin_y;
+    s32 tile_y = 0;
+
     if (rect->h > 0)
     {
         do
         {
-            s32 x = 0;
+            s32 tile_x = 0;
+
             if (rect->w > 0)
             {
-                s32 y_plus_60 = y + 0x60;
+                s32 tile_bottom = tile_y + MENU_WINDOW_FILL_TILE_SIZE;
+
                 do
                 {
-                    SET_BGR0_PACKED(prim, GPU_TINT_NEUTRAL);
-                    setlen((SPRT*)prim, 4);
-                    setcode((SPRT*)prim, 0x64);
-                    SET_SPRT_UV0_PACKED(prim, uv);
-                    if (rect->w < (x + 0x60))
+                    SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+                    setSprt(sprite);
+                    SET_SPRT_UV0_PACKED(sprite, uv);
+
+                    /* Clamp the final tile in each row and column to the region. */
+                    if (rect->w < (tile_x + MENU_WINDOW_FILL_TILE_SIZE))
                     {
-                        ((SPRT*)prim)->w = (u16)((u16)rect->w - (u16)x);
+                        sprite->w = rect->w - tile_x;
                     }
                     else
                     {
-                        ((SPRT*)prim)->w = 0x60;
+                        sprite->w = MENU_WINDOW_FILL_TILE_SIZE;
                     }
-                    if ((rect->h < y_plus_60) != 0)
+
+                    if (rect->h < tile_bottom)
                     {
-                        ((SPRT*)prim)->h = (u16)((u16)rect->h - (u16)y);
+                        sprite->h = rect->h - tile_y;
                     }
                     else
                     {
-                        ((SPRT*)prim)->h = 0x60;
+                        sprite->h = MENU_WINDOW_FILL_TILE_SIZE;
                     }
-                    tile_x = (u16)(rect->x + (u16)x);
-                    ((SPRT*)prim)->x0 = tile_x;
-                    rect_y = rect->y;
-                    x += 0x60;
-                    ((SPRT*)prim)->y0 = (u16)(rect_y + (u16)y);
-                    SET_SPRT_CLUT(prim, MENU_CLUT_GRID_ALT);
-                    addPrim(ot, (SPRT*)prim);
-                    prim = (s32*)((SPRT*)prim + 1);
-                } while (x < rect->w);
+
+                    screen_x = rect->x + tile_x;
+                    sprite->x0 = screen_x;
+                    origin_y = rect->y;
+                    tile_x += MENU_WINDOW_FILL_TILE_SIZE;
+                    sprite->y0 = origin_y + tile_y;
+                    SET_SPRT_CLUT(sprite, MENU_CLUT_GRID_ALT);
+                    addPrim(ot_entry, sprite);
+                    sprite++;
+                } while (tile_x < rect->w);
             }
-            y += 0x60;
-        } while (y < rect->h);
+
+            tile_y += MENU_WINDOW_FILL_TILE_SIZE;
+        } while (tile_y < rect->h);
     }
-    return prim;
+
+    return sprite;
 }
 
 /**
