@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "display.h"
 
 /* ----- Macros ----- */
 
@@ -432,7 +433,7 @@ extern s32 g_menu_layout_end;
 void menu_init(void)
 {
     volatile u8 padding;
-    menu_clear_vram();
+    menu_upload_graphics();
     menu_state_init();
     menu_reset_slots();
     g_active_slot = -1;
@@ -749,16 +750,22 @@ void menu_build_grid(RenderContext* render_ctx)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/CKNIH
+ * @brief Upload the menu texture and CLUTs to their reserved VRAM regions.
+ *
+ * The texture begins at the right edge of the display buffer, while its two
+ * CLUT rows occupy the shared palette region at the bottom of VRAM.
+ *
+ * @see menu_upload_tim
+ * @see decomp.me (100%) https://decomp.me/scratch/CKNIH
  */
-void menu_clear_vram(void)
+void menu_upload_graphics(void)
 {
     RECT rect;
 
-    rect.x = 0x140;
+    rect.x = SCREEN_WIDTH;
     rect.y = 0;
     rect.w = 0;
-    rect.h = 0x1F2;
+    rect.h = VRAM_CLUT_Y;
     menu_upload_tim(&rect);
 }
 
