@@ -343,6 +343,9 @@ typedef struct
     u16 pixel_stride; /* 0x28 source stride, in halfwords */
     u8 _pad2[0x30 - 0x2A];
     s16 unk30; /* 0x30 */
+    /** 0x32 counterpart of unk30; func_8005F158 uses the pair as the scene's
+        pixel extent when sizing its tile budget. */
+    s16 unk32;
 } FieldSceneHeader;
 
 /**
@@ -653,7 +656,13 @@ typedef struct
  */
 typedef struct
 {
-    u8 _pad0[0xA];
+    u8 _pad0[4];
+    /** 0x04 flag word. Bit 2 excludes the node from the group scan; the low
+        two bits select the group mode (0 = single, 1 = pair). func_8005F158
+        reads the whole word for the bit-2 test and only the low byte for the
+        mode, which is why both a word and a byte access appear. */
+    s32 flags;
+    u8 _pad0b[0xA - 8];
     u16 x_angle_index; /* 0x0A angle-table index for the horizontal step */
     u16 y_angle_index; /* 0x0C angle-table index for the vertical step */
     u8 _pad1[0x10 - 0xE];
@@ -678,7 +687,10 @@ struct FieldNode
         func_8005A984 on @c part. */
     FieldObj* obj;
     FieldPart* part; /* 0x0C owning part */
-    u8 _pad1[0x24 - 0x10];
+    u8 _pad1[0x18 - 0x10];
+    /** 0x18 when zero the node is skipped by the group scan in func_8005F158. */
+    u8 unk18;
+    u8 _pad2[0x24 - 0x19];
     /** 0x24 horizontal offset accumulator; the axis-0 half of the pair the two
         node shift helpers move. */
     s32 unk24;
@@ -707,9 +719,32 @@ typedef struct
     FieldAnim* strips;    /* 0x1C head of the strip list */
     FieldAnim* sprites;   /* 0x20 head of the sprite list */
     FieldAnim* effects;   /* 0x24 head of the effect list */
-    u8 _pad1[0x34 - 0x28];
+    /** 0x28 base of the per-group work area, or 0 when no groups are active;
+        func_8005B228 gates its func_8005F5BC call on this. */
+    s32 unk28;
+    /** 0x2C base of the per-group tile area. */
+    s32 unk2C;
+    /** 0x30 end of the per-group work area. */
+    s32 unk30;
     FieldImageReq* uploads; /* 0x34 head of the pending upload list */
     s32 unk38; /* 0x38 scene-build state */
+    u8 _pad2[0x40 - 0x3C];
+    /** 0x40 tile edge in pixels, 4 or 8. */
+    u8 unk40;
+    /** 0x41 number of active groups; 0 or 1 when the scan found nothing. */
+    u8 unk41;
+    /** 0x42 per-group stride of the work area. */
+    s16 unk42;
+    /** 0x44 tiles per group (unk46 * unk48). */
+    s16 unk44;
+    /** 0x46 tile columns. */
+    s16 unk46;
+    /** 0x48 tile rows. */
+    s16 unk48;
+    /** 0x4A group ids, sorted descending by func_8005F158. */
+    s16 unk4A[10];
+    /** 0x5E per-group counters, zeroed alongside unk4A. */
+    s16 unk5E[10];
 } FieldScene;
 
 typedef struct

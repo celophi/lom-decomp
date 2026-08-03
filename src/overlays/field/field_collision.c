@@ -2187,3 +2187,938 @@ s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
     }
     return angle;
 }
+
+
+/**
+ * @brief One boundary point of a collision node, as stored in
+ *        g_field_node_angle_table.
+ * @note Both fields are loaded unsigned by func_8005E3B0 (the asm uses lhu),
+ *       which is why this is not the signed Move_UnkS16 pair used for the
+ *       min/max edge records at Move_UnkNode1::unk10.
+ */
+typedef struct Move_EdgePoint {
+    /** 0x00 x coordinate. */
+    u16 x;
+    /** 0x02 y coordinate (scanline before node->unk22 is subtracted). */
+    u16 y;
+} Move_EdgePoint;
+
+/**
+ * @brief One horizontal span on a scanline: the inclusive x range it covers.
+ * @note Declared as a union so the struct is 4-byte aligned. A plain
+ *       two-s16 struct assignment compiles to lwl/lwr; the original uses
+ *       lw/sw, so the whole-span copies in the bubble sort go through
+ *       @c word.
+ */
+typedef union Move_Span {
+    struct {
+        s16 x0;
+        s16 x1;
+    } x;
+    s32 word;
+} Move_Span;
+
+/**
+ * @brief Edge attributes for the two ends of the span at the same index.
+ * @note Union for the same alignment reason as Move_Span; @c half carries
+ *       the 0xFFFF padding value written to unused entries.
+ */
+typedef union Move_SpanFlags {
+    struct {
+        /** Attribute of the span's left (x0) end. */
+        u8 f0;
+        /** Attribute of the span's right (x1) end. */
+        u8 f1;
+    } f;
+    u16 half;
+} Move_SpanFlags;
+
+/**
+ * @brief Rasterise a collision node's outline into per-scanline span lists.
+ *
+ * Phase 1 walks the node's edge-run list at @c def->runs and draws every
+ * polygon edge with a Bresenham line, appending one Move_Span per scanline
+ * touched. Consecutive edges that continue in the same vertical direction are
+ * merged into the span the previous edge left on that row rather than starting
+ * a new one. The whole edge body then runs once more for the closing edge back
+ * to @c runs[0].index; that copy additionally merges against the very first
+ * span of a row, so the outline joins up cleanly.
+ *
+ * Phase 2 bubble-sorts each row's spans by x0, merges them in pairs into the
+ * final interior runs, pads the row out to its capacity with 0x80007F00 /
+ * 0xFFFF, and finally word-copies the flag array to @c node->unk14.
+ *
+ * @param node Collision node being prepared. @c unk20 / @c unk22 are the
+ *             bottom and top scanlines; the span list is stored to @c unk10
+ *             and the flag list to @c unk14.
+ * @param alloc In/out bump allocator. On entry it points at the free block
+ *              used for both lists; on exit it is advanced past them,
+ *              rounded up to a multiple of 4.
+ *
+ * @note The scratchpad at 0x1F800000 holds one span-count byte per scanline.
+ * @note @c w is the per-row span capacity, twice the byte at offset 6 of the
+ *       node definition. That byte overlaps Move_UnkNode2::unk4, which other
+ *       functions read as a word, so it is taken by cast rather than by
+ *       resplitting a field they depend on.
+ *
+ * @note UNMATCHED. The residual is a single register rotation, not a
+ *       structural difference: 650 of 874 rows are exact, 206 differ only in
+ *       register names, and no structural run is longer than 3 rows. The
+ *       target holds @c i in t8 and @c row in t9 where this source gets a3
+ *       and a0; because @c i occupies a3, phase 2 cannot use a3 for the
+ *       row-stride invariant, which flips the s4/s5 reload pairing in the
+ *       epilogue and costs the two extra instructions (a reload of @c node
+ *       plus its load-delay nop). Fixing @c i is expected to resolve the rest.
+ * @note Measured dead ends, so they are not retried: widening any of the s16
+ *       scalars; splitting the merged @c i / @c j / @c n counters; a separate
+ *       capacity variable for the pointer arithmetic; removing @c attr2 (-59
+ *       exact rows); reordering the epilogue statements; a row carrier in the
+ *       closing edge; and swapping the @c dy / @c row statements (-193).
+ * @see decomp.me (94.98%, 650/874 exact) TODO
+ */
+void func_8005E3B0(Move_UnkNode1* node, u8** alloc)
+{
+    Move_UnkNode2* def;
+    s16* table;
+    Move_Span* spans;
+    Move_SpanFlags* flags;
+    u8* counts;
+    s32 first_dir;
+    s32 edge;
+    Move_EdgeRun* run;
+    Move_EdgePoint* pt;
+    Move_EdgePoint* prev;
+    Move_Span* sp_row;
+    Move_Span* out_span;
+    Move_Span* p;
+    Move_Span* a;
+    Move_SpanFlags* fl_row;
+    Move_SpanFlags* out_flag;
+    Move_SpanFlags* save_flags;
+    Move_SpanFlags* q;
+    Move_SpanFlags* b;
+    Move_Span tmp_span;
+    Move_SpanFlags tmp_flag;
+    s32* src;
+    u8* cp;
+    s32 rows;
+    s32 i;
+    s32 j;
+    s32 n;
+    s32 count;
+    s32 last_dir;
+    s32 attr;
+    s32 attr2;
+    u16 nbytes;
+    s32 hi;
+    u32 prev_hi;
+    u16 w;
+    u16 y0;
+    u16 y1;
+    u16 ybase;
+    s16 dx;
+    s16 dy;
+    s16 x;
+    s16 sgn;
+    s16 ystep;
+    s16 row;
+    s16 err;
+    s16 merge_row;
+    s16 merge_row2;
+
+    def = node->unk4;
+    rows = node->unk20;
+    rows = rows - node->unk22;
+    w = ((u8*)def)[6] * 2;
+    counts = (u8*)0x1F800000;
+    spans = (Move_Span*)*alloc;
+    node->unk10 = *alloc;
+    nbytes = (rows + 1) * (w * 2);
+    node->unk14 = *alloc + nbytes;
+    flags = (Move_SpanFlags*)(*alloc + ((rows + 1) * (w * 4)));
+    *alloc = *alloc + ((((rows + 1) * (w * 3)) + 2) & ~3);
+
+    cp = counts;
+    for (i = rows; i != -1; i--)
+    {
+        *cp = 0;
+        cp++;
+    }
+
+    last_dir = 0;
+    prev = NULL;
+    prev_hi = 0;
+    first_dir = 0;
+    edge = 0;
+    run = def->runs;
+    table = g_field_node_angle_table;
+    i = run->count & 0x7FFF;
+    while (i != 0)
+    {
+        pt = (Move_EdgePoint*)&table[run->index * 2];
+        for (i = i - 1; i != -1; i--)
+        {
+            if (prev != NULL)
+            {
+                hi = 0;
+                if (run->count & 0x8000)
+                {
+                    hi = prev_hi << 7;
+                }
+                attr = edge | hi;
+                x = pt->x;
+                dx = x - prev->x;
+                if (dx >= 0)
+                {
+                    x = prev->x;
+                    y0 = prev->y;
+                    dy = pt->y;
+                    ybase = node->unk22;
+                    sgn = 1;
+                }
+                else
+                {
+                    dx = -dx;
+                    x = pt->x;
+                    sgn = -1;
+                    y0 = pt->y;
+                    dy = prev->y;
+                    ybase = node->unk22;
+                }
+                dy = dy - y0;
+                row = y0 - ybase;
+                cp = &counts[row];
+                sp_row = &spans[row * w];
+                fl_row = &flags[row * w];
+                if (dy != 0)
+                {
+                    ystep = 1;
+                    if (dy < 0)
+                    {
+                        dy = -dy;
+                        ystep = -1;
+                    }
+                    attr2 = attr;
+                    if ((last_dir == 2) || (((ystep * sgn) + 2) == last_dir))
+                    {
+                        merge_row = prev->y - node->unk22;
+                    }
+                    else
+                    {
+                        merge_row = -1;
+                    }
+                    last_dir = (ystep * sgn) + 2;
+                    if ((first_dir == 0) || (first_dir == 2))
+                    {
+                        first_dir = last_dir;
+                    }
+                    count = dx + 1;
+                    if (dy < dx)
+                    {
+                        err = -dx;
+                        while (count > 0)
+                        {
+                            n = *cp;
+                            if (row == merge_row)
+                            {
+                                if (sp_row[n - 1].x.x0 > x)
+                                {
+                                    sp_row[n - 1].x.x0 = x;
+                                    fl_row[n - 1].f.f0 = attr2;
+                                }
+                            }
+                            else
+                            {
+                                sp_row[n].x.x0 = x;
+                                fl_row[n].f.f1 = attr;
+                                fl_row[n].f.f0 = attr;
+                            }
+                            do
+                            {
+                                x++;
+                                err += dy * 2;
+                                count--;
+                            } while ((err < 0) && (count > 0));
+                            if (row == merge_row)
+                            {
+                                if (sp_row[n - 1].x.x1 < x)
+                                {
+                                    sp_row[n - 1].x.x1 = x;
+                                    fl_row[n - 1].f.f1 = attr;
+                                }
+                            }
+                            else
+                            {
+                                sp_row[n].x.x1 = x - 1;
+                                *cp = n + 1;
+                            }
+                            cp += ystep;
+                            row += ystep;
+                            err -= dx * 2;
+                            sp_row += ystep * w;
+                            fl_row += ystep * w;
+                        }
+                    }
+                    else
+                    {
+                        err = -dy;
+                        for (j = dy; j != -1; j--)
+                        {
+                            n = *cp;
+                            prev_hi = merge_row;
+                            if (row == prev_hi)
+                            {
+                                if (x < sp_row[n - 1].x.x0)
+                                {
+                                    sp_row[n - 1].x.x0 = x;
+                                    fl_row[n - 1].f.f0 = attr;
+                                }
+                                if (sp_row[n - 1].x.x1 < x)
+                                {
+                                    sp_row[n - 1].x.x1 = x;
+                                    fl_row[n - 1].f.f1 = attr;
+                                }
+                            }
+                            else
+                            {
+                                sp_row[n].x.x1 = x;
+                                sp_row[n].x.x0 = x;
+                                fl_row[n].f.f1 = attr2;
+                                fl_row[n].f.f0 = attr2;
+                                *cp = n + 1;
+                            }
+                            sp_row += ystep * w;
+                            fl_row += ystep * w;
+                            cp += ystep;
+                            row += ystep;
+                            err += dx * 2;
+                            if (err >= 0)
+                            {
+                                x++;
+                                err -= dy * 2;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    n = *cp;
+                    if (n != 0)
+                    {
+                        if (sp_row[n - 1].x.x0 >= x)
+                        {
+                            sp_row[n - 1].x.x0 = x;
+                            fl_row[n - 1].f.f0 = attr | 0x7F;
+                        }
+                        if (sp_row[n - 1].x.x1 <= (s16)(x + dx))
+                        {
+                            sp_row[n - 1].x.x1 = x + dx;
+                            fl_row[n - 1].f.f1 = attr | 0x7F;
+                        }
+                    }
+                    else
+                    {
+                        last_dir = 2;
+                        sp_row[0].x.x1 = x + dx;
+                        sp_row[0].x.x0 = x;
+                        fl_row[0].f.f1 = attr | 0x7F;
+                        fl_row[0].f.f0 = attr | 0x7F;
+                        *cp = 1;
+                    }
+                    if (first_dir == 0)
+                    {
+                        first_dir = 2;
+                    }
+                }
+                edge++;
+            }
+            prev = pt;
+            pt++;
+            prev_hi = run->count >> 15;
+        }
+        run++;
+        i = run->count & 0x7FFF;
+    }
+
+    /* closing edge: back to the first run's first point */
+    hi = 0;
+    run = def->runs;
+    if (run->count & 0x8000)
+    {
+        hi = prev_hi << 7;
+    }
+    pt = (Move_EdgePoint*)&table[run->index * 2];
+    attr = edge | hi;
+    x = pt->x;
+    dx = x - prev->x;
+    if (dx >= 0)
+    {
+        x = prev->x;
+        y0 = prev->y;
+        y1 = pt->y;
+        ybase = node->unk22;
+        sgn = 1;
+    }
+    else
+    {
+        dx = -dx;
+        x = pt->x;
+        sgn = -1;
+        y0 = pt->y;
+        y1 = prev->y;
+        ybase = node->unk22;
+    }
+    dy = y1 - y0;
+    row = y0 - ybase;
+    cp = &counts[row];
+    sp_row = &spans[row * w];
+    fl_row = &flags[row * w];
+    if (dy != 0)
+    {
+        ystep = 1;
+        if (dy < 0)
+        {
+            dy = -dy;
+            ystep = -1;
+        }
+        if ((last_dir == 2) || (((ystep * sgn) + 2) == last_dir))
+        {
+            merge_row = prev->y - node->unk22;
+        }
+        else
+        {
+            merge_row = -1;
+        }
+        if (((ystep * sgn) + 2) == first_dir)
+        {
+            merge_row2 = pt->y - node->unk22;
+        }
+        else
+        {
+            merge_row2 = -1;
+        }
+        count = dx + 1;
+        if (dy < dx)
+        {
+            err = -dx;
+            while (count > 0)
+            {
+                n = *cp;
+                if (row == merge_row)
+                {
+                    if (sp_row[n - 1].x.x0 > x)
+                    {
+                        sp_row[n - 1].x.x0 = x;
+                        fl_row[n - 1].f.f0 = attr;
+                    }
+                }
+                else if (row == merge_row2)
+                {
+                    if (sp_row[0].x.x0 > x)
+                    {
+                        sp_row[0].x.x0 = x;
+                        fl_row[0].f.f0 = attr;
+                    }
+                }
+                else
+                {
+                    sp_row[n].x.x0 = x;
+                    fl_row[n].f.f1 = attr;
+                    fl_row[n].f.f0 = attr;
+                }
+                do
+                {
+                    x++;
+                    err += dy * 2;
+                    count--;
+                } while ((err < 0) && (count > 0));
+                if (row == merge_row)
+                {
+                    if (sp_row[n - 1].x.x1 < x)
+                    {
+                        sp_row[n - 1].x.x1 = x;
+                        fl_row[n - 1].f.f1 = attr;
+                    }
+                }
+                else if (row == merge_row2)
+                {
+                    if (sp_row[0].x.x1 < x)
+                    {
+                        sp_row[0].x.x1 = x;
+                        fl_row[0].f.f1 = attr;
+                    }
+                }
+                else
+                {
+                    sp_row[n].x.x1 = x - 1;
+                    *cp = n + 1;
+                }
+                row += ystep;
+                cp += ystep;
+                err -= dx * 2;
+                sp_row += ystep * w;
+                fl_row += ystep * w;
+            }
+        }
+        else
+        {
+            err = -dy;
+            for (j = dy; j != -1; j--)
+            {
+                n = *cp;
+                if (row == merge_row)
+                {
+                    if (sp_row[n - 1].x.x0 > x)
+                    {
+                        sp_row[n - 1].x.x0 = x;
+                        fl_row[n - 1].f.f0 = attr;
+                    }
+                    if (sp_row[n - 1].x.x1 < x)
+                    {
+                        sp_row[n - 1].x.x1 = x;
+                        fl_row[n - 1].f.f1 = attr;
+                    }
+                }
+                else if (row == merge_row2)
+                {
+                    if (sp_row[0].x.x0 > x)
+                    {
+                        sp_row[0].x.x0 = x;
+                        fl_row[0].f.f0 = attr;
+                    }
+                    if (sp_row[0].x.x1 < x)
+                    {
+                        sp_row[0].x.x1 = x;
+                        fl_row[0].f.f1 = attr;
+                    }
+                }
+                else
+                {
+                    sp_row[n].x.x0 = x;
+                    sp_row[n].x.x1 = x;
+                    fl_row[n].f.f1 = attr;
+                    fl_row[n].f.f0 = attr;
+                    *cp = n + 1;
+                }
+                sp_row += ystep * w;
+                fl_row += ystep * w;
+                cp += ystep;
+                row += ystep;
+                err += dx * 2;
+                if (err >= 0)
+                {
+                    x++;
+                    err -= dy * 2;
+                }
+            }
+        }
+    }
+    else
+    {
+        n = *cp;
+        if (first_dir == 2)
+        {
+            sp_row[n].x.x0 = x;
+            sp_row[n].x.x1 = x;
+            fl_row[n].f.f1 = attr | 0x7F;
+            fl_row[n].f.f0 = attr | 0x7F;
+            *cp = n + 1;
+        }
+        else
+        {
+            if (sp_row[n - 1].x.x0 >= x)
+            {
+                sp_row[n - 1].x.x0 = x;
+                fl_row[n - 1].f.f0 = attr | 0x7F;
+            }
+            if ((s16)(x + dx) >= sp_row[n - 1].x.x1)
+            {
+                sp_row[n - 1].x.x1 = x + dx;
+                fl_row[n - 1].f.f1 = attr | 0x7F;
+            }
+        }
+    }
+
+    out_flag = flags;
+    out_span = spans;
+    save_flags = flags;
+    for (i = node->unk20 - node->unk22; i != -1; i--)
+    {
+        p = spans;
+        q = flags;
+        for (j = *counts - 2; j != -1; j--)
+        {
+            n = j + 1;
+            a = &p[n];
+            b = &q[n];
+            for (n = j; n != -1; n--)
+            {
+                if (p->x.x0 > a->x.x0)
+                {
+                    tmp_span = *p;
+                    *p = *a;
+                    *a = tmp_span;
+                    tmp_flag = *q;
+                    *q = *b;
+                    *b = tmp_flag;
+                }
+                a--;
+                b--;
+            }
+            p++;
+            q++;
+        }
+
+        p = spans;
+        q = flags;
+        for (j = (*counts >> 1) - 1; j != -1; j--)
+        {
+            if (p[0].x.x1 < p[1].x.x1)
+            {
+                out_span->x.x0 = p[0].x.x0;
+                out_span->x.x1 = p[1].x.x1;
+                out_flag->f.f0 = q[0].f.f0;
+                out_flag->f.f1 = q[1].f.f1;
+            }
+            else
+            {
+                *out_span = p[0];
+                *out_flag = q[0];
+            }
+            out_span++;
+            p += 2;
+            out_flag++;
+            q += 2;
+        }
+
+        for (j = ((w - *counts) / 2) - 1; j != -1; j--)
+        {
+            out_span->word = 0x80007F00;
+            out_span++;
+        }
+        for (j = ((w - *counts) / 2) - 1; j != -1; j--)
+        {
+            out_flag->half = 0xFFFF;
+            out_flag++;
+        }
+
+        spans += w;
+        flags += w;
+        counts++;
+    }
+
+    i = w * (((node->unk20 - node->unk22) + 2) / 2);
+    src = (s32*)save_flags;
+    flags = (Move_SpanFlags*)node->unk14;
+    for (i = i - 1; i != -1; i--)
+    {
+        *(s32*)flags = *src;
+        src++;
+        flags += 2;
+    }
+}
+
+
+/**
+ * @brief One entry of func_8005F158's group-collection scratch list.
+ *
+ * @note @c seen accumulates which node modes referenced the id: bit 0 from a
+ *       mode-0 node, bit 1 from a mode-1 node. A pair-mode scene keeps only
+ *       the entries that ended up with both bits set.
+ */
+typedef struct
+{
+    /** Group id, taken from FieldNodeDef::base_x or base_y. */
+    s16 id;
+    /** Bitmask of the modes that referenced this id; 3 means both. */
+    s16 seen;
+} FieldGroupEntry;
+
+/**
+ * @brief Collect the scene's distinct node groups and size their tile budget.
+ *
+ * Walks the attached-node list and builds a list of the distinct group ids
+ * carried by each node's definition, skipping nodes that are inactive
+ * (@c unk18 == 0) or opted out (@c flags bit 2). A mode-0 node contributes one
+ * id, a mode-1 node contributes two (@c base_x and @c base_y); an id already
+ * present just gets its @c seen mask widened. Ids that are zero are recorded
+ * with a @c seen value of 3 so they survive the pair filter unconditionally.
+ *
+ * If any mode-1 node was seen, the list is then compacted down to the entries
+ * whose @c seen is 3. The surviving ids are sorted into descending order in
+ * @c scene->unk4A and the matching @c scene->unk5E counters are cleared.
+ *
+ * Finally the per-group tile budget is computed from the scene's pixel extent:
+ * 4-pixel tiles normally, 8-pixel tiles once the estimated tile count would
+ * exceed 0x4000. Two blocks are carved off @p alloc - the tile area
+ * (@c unk2C) and the work area (@c unk28 .. @c unk30) - and func_8005F5BC is
+ * handed the work-area geometry.
+ *
+ * @param alloc In/out bump allocator; advanced past both blocks on success.
+ *
+ * @note Bails out with @c unk28 = 0 and @c unk41 = 1 if more than 20 groups
+ *       are found during the scan, or more than 10 survive the pair filter.
+ *       The empty-scene path leaves @c unk41 = 0 instead, which is how callers
+ *       tell "no nodes" from "too many groups".
+ *
+ * @note UNMATCHED. Instruction count (281), frame (-0x68) and every stack slot
+ *       match; the residual is one register rotation plus a scheduling gap in
+ *       the arithmetic tail. The target holds the scan index in a2, the write
+ *       cursor in a0 and the scene pointer in t5, where this source gets a0, a2
+ *       and t4. The scan index is the highest-priority allocno here, so GCC 2.8
+ *       global.c hands it a0 first; the target instead has a0 held by the write
+ *       cursor. See working/func_8005F158/status.md for the measured dead ends
+ *       - in particular do NOT reorder `*alloc += total` past
+ *       `scene->unk30 = *alloc`, which scores well but is semantically wrong
+ *       (the target stores the post-increment value).
+ * @see decomp.me (90.87%, 173/281 exact) TODO
+ */
+void func_8005F158(s32* alloc)
+{
+    FieldGroupEntry list[20];
+    FieldScene* scene;
+    FieldNode* node;
+    FieldNodeDef* def;
+    FieldGroupEntry* out;
+    FieldGroupEntry* w2;
+    FieldGroupEntry* p;
+    FieldSceneHeader* header;
+    s32 i;
+    s32 j;
+    s32 fresh;
+    s32 has_pair;
+    s32 kind;
+    s32 k;
+    s32 width;
+    s32 height;
+    s32 unit;
+    s32 shift;
+    s32 tw;
+    s32 th;
+    s32 cols;
+    s32 rows;
+    s32 area;
+    s32 stride;
+    s32 total;
+    u16 key;
+    u16 tmp;
+    u32 count;
+
+    scene = g_field_scene.scene;
+    count = 0;
+    node = scene->nodes;
+    if (node == NULL)
+    {
+        scene->unk28 = 0;
+        scene->unk41 = 0;
+        return;
+    }
+
+    has_pair = 0;
+    out = list;
+    do
+    {
+        def = node->def;
+        if ((node->unk18 != 0) && !(def->flags & 4))
+        {
+            i = count - 1;
+            switch ((u8)def->flags & 3)
+            {
+            case 0:
+                fresh = 1;
+                for (; i != -1; i--)
+                {
+                    if (list[i].id == def->base_x)
+                    {
+                        fresh = 0;
+                        list[i].seen |= 1;
+                        break;
+                    }
+                }
+                if (fresh != 0)
+                {
+                    out->seen = 1;
+                    out->id = def->base_x;
+                    out++;
+                    if (count >= 20)
+                    {
+                        goto overflow;
+                    }
+                    count++;
+                }
+                break;
+
+            case 1:
+                has_pair = 1;
+                fresh = 1;
+                for (; i != -1; i--)
+                {
+                    if (list[i].id == def->base_x)
+                    {
+                        fresh = 0;
+                        list[i].seen |= 2;
+                        break;
+                    }
+                }
+                if (fresh != 0)
+                {
+                    kind = 2;
+                    if (def->base_x != 0)
+                    {
+                        out->id = def->base_x;
+                    }
+                    else
+                    {
+                        kind = 3;
+                        out->id = 0;
+                    }
+                    out->seen = kind;
+                    out++;
+                    if (count >= 20)
+                    {
+                        goto overflow;
+                    }
+                    count++;
+                }
+
+                fresh = 1;
+                for (i = count - 1; i != -1; i--)
+                {
+                    if (list[i].id == def->base_y)
+                    {
+                        fresh = 0;
+                        list[i].seen |= 2;
+                        break;
+                    }
+                }
+                if (fresh != 0)
+                {
+                    kind = 2;
+                    if (def->base_y != 0)
+                    {
+                        out->id = def->base_y;
+                    }
+                    else
+                    {
+                        kind = 3;
+                        out->id = 0;
+                    }
+                    out->seen = kind;
+                    out++;
+                    if (count >= 20)
+                    {
+                        goto overflow;
+                    }
+                    count++;
+                }
+                break;
+            }
+        }
+        node = node->next;
+    } while (node != NULL);
+
+    if (has_pair != 0)
+    {
+        j = 0;
+        i = count - 1;
+        count = 0;
+        if (i != -1)
+        {
+            p = list;
+            w2 = list;
+            do
+            {
+                if (p->seen == 3)
+                {
+                    if (j != count)
+                    {
+                        w2->id = p->id;
+                    }
+                    w2++;
+                    count++;
+                }
+                p++;
+                i--;
+                j++;
+            } while (i != -1);
+        }
+    }
+
+    if (count == 0)
+    {
+        list[0].id = 0;
+        count = 1;
+    }
+    else if (count >= 11)
+    {
+        goto overflow;
+    }
+
+    k = count - 1;
+    if (k != 0)
+    {
+        do
+        {
+            key = list[k].id;
+            for (j = k - 1; j != -1; j--)
+            {
+                if ((s16)key < list[j].id)
+                {
+                    tmp = list[j].id;
+                    list[j].id = key;
+                    key = tmp;
+                    list[k].id = tmp;
+                }
+            }
+            scene->unk4A[k] = key;
+            k--;
+        } while (k != 0);
+    }
+
+    i = count - 1;
+    scene->unk4A[0] = list[0].id;
+    if (count != 0)
+    {
+        do
+        {
+            scene->unk5E[i] = 0;
+            i--;
+        } while (i != -1);
+    }
+
+    header = scene->header;
+    width = header->unk30;
+    height = header->unk32;
+    unit = 4;
+    shift = 2;
+    if ((((width + 3) >> 2) * ((height + 7) >> 3) * (s32)count) >= 0x4001)
+    {
+        unit = 8;
+        shift = 3;
+    }
+    tw = ((width + unit) - 1) >> shift;
+    cols = tw + 4;
+    th = ((height + (unit * 2)) - 1) >> (shift + 1);
+    rows = th + 4;
+    area = cols * rows;
+    scene->unk44 = area;
+    scene->unk40 = unit;
+    scene->unk41 = count;
+    scene->unk46 = cols;
+    scene->unk48 = rows;
+    scene->unk2C = *alloc;
+    stride = ((u32)(tw + 0x23) >> 5) * th;
+    *alloc += ((area * count) + 3) & ~3;
+    stride = stride * 2;
+    scene->unk42 = stride;
+    scene->unk28 = *alloc;
+    total = stride * (count * 4);
+    *alloc += total;
+    scene->unk30 = *alloc;
+    func_8005F5BC(alloc, 0, stride, total);
+    return;
+
+overflow:
+    scene->unk28 = 0;
+    scene->unk41 = 1;
+}
