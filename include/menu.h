@@ -31,20 +31,6 @@ extern u8* g_menu_state_ptr;
 extern u8 D_80151EBC;
 
 /**
- * @brief Rectangle parameter block passed to the VRAM upload primitive.
- *
- * Same shape as PSX libgpu @c RECT but distinct here because some call sites
- * use it as a generic 4-halfword parameter rather than a true VRAM rect.
- */
-typedef struct
-{
-    u16 x;
-    u16 y;
-    u16 w;
-    u16 h;
-} Rect16;
-
-/**
  * @brief HUD/menu entry slot allocated from the @c g_menu_slots pool.
  *
  * @note Stride is 0x24 bytes; @c active == 0 marks a free slot.

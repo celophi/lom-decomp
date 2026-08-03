@@ -22,6 +22,9 @@
 #define MENU_GRID_TEXTURE_WINDOW_SIZE 0xFF
 #define MENU_GRID_TPAGE 5
 
+/** Offset of the second CLUT payload within @c g_menu_tim. */
+#define MENU_TIM_CLUT1_OFFSET 0x822C
+
 /*
  * Packed texture-window / UV origin constants for the menu window chrome.
  * Format: bits 15..8 = VRAM v (y), bits 7..0 = VRAM u (x).
@@ -128,6 +131,32 @@
 #define MENU_SE_VOLUME 0x80
 
 /* ----- Types ----- */
+
+/** VRAM destinations for the image and CLUT blocks in the menu TIM asset. */
+typedef struct
+{
+    s16 texture_x;
+    s16 texture_y;
+    s16 clut_x;
+    s16 clut_y;
+} MenuTimVramLayout;
+
+/**
+ * @brief Container holding the menu TIM and its additional CLUT.
+ *
+ * The two offsets are stored in the asset header; the embedded TIM begins
+ * immediately after the header, and its variable-sized image block follows
+ * the first CLUT.
+ */
+typedef struct
+{
+    u32 entry_count;
+    u32 tim_offset;
+    u32 second_clut_offset;
+    Tim tim;
+} MenuTimAsset;
+
+void menu_upload_tim(const MenuTimVramLayout* layout);
 
 /**
  * @brief Animation-facing view of a menu window slot.
@@ -760,13 +789,13 @@ void menu_build_grid(RenderContext* render_ctx)
  */
 void menu_upload_graphics(void)
 {
-    RECT rect;
+    MenuTimVramLayout layout;
 
-    rect.x = SCREEN_WIDTH;
-    rect.y = 0;
-    rect.w = 0;
-    rect.h = VRAM_CLUT_Y;
-    menu_upload_tim(&rect);
+    layout.texture_x = SCREEN_WIDTH;
+    layout.texture_y = 0;
+    layout.clut_x = 0;
+    layout.clut_y = VRAM_CLUT_Y;
+    menu_upload_tim(&layout);
 }
 
 /**
@@ -787,82 +816,76 @@ void menu_state_init(void)
  *
  * The asset is a TIM-style blob holding two 256-entry CLUTs and one texture
  * image. It is committed to VRAM as three transfers via @ref func_80019A34:
- *   1. CLUT 0 (256x1) to @c (rect->w, rect->h).
- *   2. The texture image to @c (rect->x, rect->y); its width/height are read
- *      from the image block, whose position is a self-relative offset stored
- *      inside the asset.
- *   3. CLUT 1 (256x1) to @c (rect->w, rect->h + 1).
+ *   1. CLUT 0 (256x1) to @c (layout->clut_x, layout->clut_y).
+ *   2. The texture image to @c (layout->texture_x, layout->texture_y); its
+ *      dimensions are read from the image block, whose position is stored as
+ *      a self-relative offset inside the asset.
+ *   3. CLUT 1 (256x1) immediately below CLUT 0.
  * Before each CLUT upload, the semi-transparency flag (STP, bit 0x8000) is
  * set on every non-zero palette entry.
  *
- * @param rect Destination coordinates: @c (w,h) position the CLUT bands,
- *             @c (x,y) position the texture image.
- * @note The image block is typed as a @ref TimBlock. The two CLUT regions are
- *       left as raw offsets because the matched code reaches them through two
- *       different base pointers (@c tim for the STP-bit loops, @c tim_body for
- *       the upload calls) - a deliberate register-allocation detail.
+ * @param layout VRAM destinations for the texture image and CLUT rows.
+ * @note The second CLUT uses its fixed container offset instead of loading
+ *       @c second_clut_offset so the original immediate-address codegen is
+ *       preserved.
  * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
-void menu_upload_tim(Rect16* rect)
+void menu_upload_tim(const MenuTimVramLayout* layout)
 {
-    u8* tim = g_menu_tim;
-    u8* tim_body = tim + 0xC;
-    s32 clut_block_len = *(s32*)(tim_body + 8); /* TIM CLUT block length (bnum) */
-    Rect16 vram_rect;
+    MenuTimAsset* asset = (MenuTimAsset*)g_menu_tim;
+    Tim* tim = &asset->tim;
+    s32 clut_block_len = tim->clut_block.bnum;
+    RECT vram_rect;
     u16* clut_color;
     int i;
 
-    g_menu_tim_dy = *(s32*)(tim_body + 0x14);
+    g_menu_tim_dy = *(s32*)tim->clut_data;
 
     /* Upload CLUT 0. */
-    vram_rect.x = rect->w;
-    vram_rect.y = rect->h;
-    vram_rect.w = 0x100;
+    vram_rect.x = layout->clut_x;
+    vram_rect.y = layout->clut_y;
+    vram_rect.w = CLUT_ENTRY_COUNT;
     vram_rect.h = 1;
 
-    clut_color = (u16*)(tim + 0x20);
-    for (i = 0; i < 0x100; i++)
+    clut_color = asset->tim.clut_data;
+    for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
         if (*clut_color != 0)
         {
-            *clut_color |= 0x8000;
+            *clut_color |= GPU_STP_BIT;
         }
 
         clut_color++;
     }
-    LoadImage(&vram_rect, tim_body + 0x14);
+    LoadImage(&vram_rect, tim->clut_data);
 
     /* Upload the texture image. */
-    vram_rect.x = rect->x;
-    vram_rect.y = rect->y;
+    vram_rect.x = layout->texture_x;
+    vram_rect.y = layout->texture_y;
     {
-        /* The CLUT block starts at tim_body+8, so the image block that
-           follows it is at tim_body + 8 + clut_block_len. The parenthesization
-           `(clut_block_len + 8)` is load-bearing: it must compile to an addiu
-           (len + 8) then an addu (+ base). Do not fold it to `... + 8`. */
-        TimBlock* image_block = (TimBlock*)(tim_body + (clut_block_len + 8));
+        TimBlock* image_block = TIM_PIXEL_BLOCK(tim, clut_block_len);
         vram_rect.w = image_block->w;
         vram_rect.h = image_block->h;
         LoadImage(&vram_rect, image_block + 1); /* payload follows header */
     }
 
     /* Upload CLUT 1. */
-    vram_rect.x = rect->w;
-    vram_rect.y = rect->h + 1;
-    vram_rect.w = 0x100;
+    vram_rect.x = layout->clut_x;
+    vram_rect.y = layout->clut_y + 1;
+    vram_rect.w = CLUT_ENTRY_COUNT;
     vram_rect.h = 1;
 
-    clut_color = (u16*)(tim + 0x822C);
-    for (i = 0; i < 0x100; i++)
+    clut_color = (u16*)((u8*)asset + MENU_TIM_CLUT1_OFFSET);
+    for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
         if (*clut_color != 0)
         {
-            *clut_color |= 0x8000;
+            *clut_color |= GPU_STP_BIT;
         }
 
         clut_color++;
     }
-    LoadImage(&vram_rect, tim + 0x822C);
+    LoadImage(&vram_rect, (u8*)asset + MENU_TIM_CLUT1_OFFSET);
 }
 
 /**
@@ -7018,7 +7041,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
     s32 off;
     u8* item;
     u8 ch;
-    Rect16 rect;
+    RECT rect;
     u8 sp30[0x40];
 
     if ((g_pad_input & 0x10) && (active != 0))
