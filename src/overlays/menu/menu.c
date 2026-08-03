@@ -97,6 +97,8 @@
  */
 /** @brief Total number of nodes in g_menu_nodes[]. */
 #define MENU_NODE_COUNT 0x2C
+/** @brief MenuNode::u2 flag indicating that the node's children are visible. */
+#define MENU_NODE_FLAG_EXPANDED 0x02
 /** @brief Bits [14:8] of idx_nav.nav_x_packed: the 7-bit column (nav_x) field. */
 #define MENU_NAV_X_MASK 0x7F00
 /** @brief Clears bits [14:8] of idx_nav.nav_x_packed (inverse of MENU_NAV_X_MASK). */
@@ -2078,16 +2080,17 @@ void menu_node_tree_init(void)
 }
 
 /**
- * @brief Clears the expand flag (bit 1 of u2.s.flags) for all menu nodes.
- * @note Called before menu_update_layout to ensure no node recurses into children.
+ * @brief Collapse every menu node while preserving its other state flags.
+ *
  * @see decomp.me (100%) https://decomp.me/scratch/hyDM7
  */
 void menu_collapse_all(void)
 {
-    s32 i;
-    for (i = 0; i < MENU_NODE_COUNT; i++)
+    s32 node_index;
+
+    for (node_index = 0; node_index < MENU_NODE_COUNT; node_index++)
     {
-        g_menu_nodes[i].u2.unk2 &= 0xFFFD;
+        g_menu_nodes[node_index].u2.unk2 &= ~MENU_NODE_FLAG_EXPANDED;
     }
 }
 
