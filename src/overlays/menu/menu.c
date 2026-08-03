@@ -22,8 +22,10 @@
 #define MENU_GRID_TEXTURE_WINDOW_SIZE 0xFF
 #define MENU_GRID_TPAGE 5
 
-/** Offset of the second CLUT payload within @c g_menu_tim. */
-#define MENU_TIM_CLUT1_OFFSET 0x822C
+/** Size of the embedded TIM image block, including its block header. */
+#define MENU_TIM_IMAGE_BLOCK_SIZE 0x800C
+/** Read two adjacent CLUT colors as one packed 32-bit word. */
+#define MENU_TIM_CLUT_WORD(tim, index) (((u32*)(tim)->clut_data)[index])
 
 /*
  * Packed texture-window / UV origin constants for the menu window chrome.
@@ -154,6 +156,8 @@ typedef struct
     u32 tim_offset;
     u32 second_clut_offset;
     Tim tim;
+    u8 image_block[MENU_TIM_IMAGE_BLOCK_SIZE];
+    u16 second_clut[CLUT_ENTRY_COUNT];
 } MenuTimAsset;
 
 void menu_upload_tim(const MenuTimVramLayout* layout);
@@ -812,22 +816,12 @@ void menu_state_init(void)
 }
 
 /**
- * @brief Upload the packed menu texture asset (@c g_menu_tim) to VRAM.
+ * @brief Upload the menu texture and its two CLUTs to VRAM.
  *
- * The asset is a TIM-style blob holding two 256-entry CLUTs and one texture
- * image. It is committed to VRAM as three transfers via @ref func_80019A34:
- *   1. CLUT 0 (256x1) to @c (layout->clut_x, layout->clut_y).
- *   2. The texture image to @c (layout->texture_x, layout->texture_y); its
- *      dimensions are read from the image block, whose position is stored as
- *      a self-relative offset inside the asset.
- *   3. CLUT 1 (256x1) immediately below CLUT 0.
- * Before each CLUT upload, the semi-transparency flag (STP, bit 0x8000) is
- * set on every non-zero palette entry.
+ * Nonzero CLUT entries are marked semi-transparent before upload.
  *
- * @param layout VRAM destinations for the texture image and CLUT rows.
- * @note The second CLUT uses its fixed container offset instead of loading
- *       @c second_clut_offset so the original immediate-address codegen is
- *       preserved.
+ * @param layout VRAM destinations for the texture and first CLUT; the second
+ *               CLUT is placed on the following row.
  * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
 void menu_upload_tim(const MenuTimVramLayout* layout)
@@ -837,11 +831,12 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
     s32 clut_block_len = tim->clut_block.bnum;
     RECT vram_rect;
     u16* clut_color;
-    int i;
+    s32 i;
 
-    g_menu_tim_dy = *(s32*)tim->clut_data;
+    /* Preserve the first color pair before modifying the palette in place. */
+    g_menu_initial_clut_pair = MENU_TIM_CLUT_WORD(tim, 0);
 
-    /* Upload CLUT 0. */
+    /* Enable STP on nonzero colors, then upload the first CLUT. */
     vram_rect.x = layout->clut_x;
     vram_rect.y = layout->clut_y;
     vram_rect.w = CLUT_ENTRY_COUNT;
@@ -859,23 +854,23 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
     }
     LoadImage(&vram_rect, tim->clut_data);
 
-    /* Upload the texture image. */
+    /* Upload the image block following the variable-length first CLUT. */
     vram_rect.x = layout->texture_x;
     vram_rect.y = layout->texture_y;
     {
         TimBlock* image_block = TIM_PIXEL_BLOCK(tim, clut_block_len);
         vram_rect.w = image_block->w;
         vram_rect.h = image_block->h;
-        LoadImage(&vram_rect, image_block + 1); /* payload follows header */
+        LoadImage(&vram_rect, image_block + 1); /* Pixel data follows the block header. */
     }
 
-    /* Upload CLUT 1. */
+    /* Apply the same STP treatment to the second CLUT. */
     vram_rect.x = layout->clut_x;
     vram_rect.y = layout->clut_y + 1;
     vram_rect.w = CLUT_ENTRY_COUNT;
     vram_rect.h = 1;
 
-    clut_color = (u16*)((u8*)asset + MENU_TIM_CLUT1_OFFSET);
+    clut_color = asset->second_clut;
     for (i = 0; i < CLUT_ENTRY_COUNT; i++)
     {
         if (*clut_color != 0)
@@ -885,7 +880,7 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
 
         clut_color++;
     }
-    LoadImage(&vram_rect, (u8*)asset + MENU_TIM_CLUT1_OFFSET);
+    LoadImage(&vram_rect, asset->second_clut);
 }
 
 /**

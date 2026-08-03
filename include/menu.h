@@ -25,7 +25,7 @@ extern s32 g_script_cursor;
 extern s32 g_pad_input_latched;
 extern s32 g_script_repeat_last;
 extern u8 g_menu_tim[];
-extern s32 g_menu_tim_dy;
+extern u32 g_menu_initial_clut_pair;
 extern u16 g_menu_glyph_src[];
 extern u8* g_menu_state_ptr;
 extern u8 D_80151EBC;
