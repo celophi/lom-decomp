@@ -606,7 +606,7 @@ void menu_tick(RenderContext* render_ctx)
  *       tints them, and links them.
  * @see decomp.me (100%) https://decomp.me/scratch/AW5Sa
  */
-s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
+s32* menu_build_text_run(SPRT* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y, s32 len, s32 mode)
 {
     char buf[0x80];
     s32 count, i, acc;
@@ -621,17 +621,16 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
     {
         if (mode == 2)
         {
-            sprt = (SPRT*)sprites;
+            sprt = sprites;
             for (i = 0; i < count; i++)
             {
-                u16 w = (u16)sprt[i].w;
-                x -= (s16)w >> 1;
+                x -= sprt[i].w >> 1;
             }
         }
     }
     else
     {
-        sprt = (SPRT*)sprites;
+        sprt = sprites;
         for (i = 0; i < count; i++)
         {
             x -= sprt[i].w;
@@ -644,7 +643,7 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
     {
         do
         {
-            sprt = (SPRT*)sprites;
+            sprt = sprites;
             SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
             setSprt(sprt);
 
@@ -653,7 +652,7 @@ s32* menu_build_text_run(s32* sprites, s32* ot, s32 src, s32 arg3, s32 x, s32 y,
             acc += sprt->w;
 
             addPrim(ot, sprt);
-            sprites = (s32*)((u8*)sprites + sizeof(SPRT));
+            sprites++;
             count--;
         } while (count != 0);
     }
