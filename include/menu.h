@@ -30,6 +30,15 @@ extern u16 g_menu_glyph_src[];
 extern u8* g_menu_state_ptr;
 extern u8 D_80151EBC;
 
+/** Unsigned screen rectangle used to initialize a menu window slot. */
+typedef struct
+{
+    u16 x;
+    u16 y;
+    u16 w;
+    u16 h;
+} MenuSlotRect;
+
 /**
  * @brief HUD/menu entry slot allocated from the @c g_menu_slots pool.
  *
@@ -41,7 +50,7 @@ typedef struct MenuSlot_s
     u8 index;      /* 0x01 - slot index within the pool */
     u8 anim_frame; /* 0x02 - animation frame counter: counts up to 6 on open, down to 0 on close */
     u8 has_title;  /* 0x03 - non-zero to draw the title/decoration bar above the window */
-    u32 flags;     /* 0x04 - top 7 bits sourced from the caller (arg0 << 25) */
+    u32 flags;     /* 0x04 - bits 31:25 select the ordering-table entry */
     u16 x;         /* 0x08 */
     u16 y;         /* 0x0A */
     u16 w;         /* 0x0C */
@@ -63,6 +72,8 @@ typedef struct MenuSlot_s
     s32* (*content_cb)();                            /* 0x1C */
     void (*tick_cb)(struct MenuSlot_s* /* self */);  /* 0x20 - per-frame callback while slot is active */
 } MenuSlot;
+
+MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect);
 
 extern MenuSlot g_menu_slots[];
 

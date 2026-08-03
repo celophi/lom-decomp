@@ -22,6 +22,10 @@
 #define MENU_GRID_TEXTURE_WINDOW_SIZE 0xFF
 #define MENU_GRID_TPAGE 5
 
+#define MENU_SLOT_COUNT 4
+#define MENU_SLOT_OT_INDEX_SHIFT 25
+#define MENU_SLOT_OT_INDEX_CLEAR_MASK 0x01FFFFFF
+
 /** Size of the embedded TIM image block, including its block header. */
 #define MENU_TIM_IMAGE_BLOCK_SIZE 0x800C
 /** Read two adjacent CLUT colors as one packed 32-bit word. */
@@ -142,6 +146,19 @@ typedef struct
     s16 clut_x;
     s16 clut_y;
 } MenuTimVramLayout;
+
+/** Halfword view of MenuSlot.flags for width-accurate field initialization. */
+typedef union
+{
+    u32 value;
+    struct
+    {
+        u16 low;
+        u16 high;
+    } half;
+} MenuSlotFlagsView;
+
+#define MENU_SLOT_FLAGS_VIEW(slot) (*(MenuSlotFlagsView*)&(slot)->flags)
 
 /**
  * @brief Container holding the menu TIM and its additional CLUT.
@@ -884,90 +901,86 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
 }
 
 /**
- * @brief Allocate a HUD/menu slot from the @c g_menu_slots pool.
+ * @brief Allocate and initialize the first available menu window slot.
  *
- * Scans for the first free slot (@c active == 0), initialises it, and stores
- * the slot's rectangle from @p rect.
- *
- * @param arg0 Value packed into @c MenuSlot.flags bits 31..25 (@c arg0 << 25).
- *             TODO: meaning unknown.
- * @param rect Pointer to four @c u16 values - the slot's x, y, w, h.
- * @return Pointer to the newly allocated @c MenuSlot.
+ * @param ot_index Ordering-table entry used to link the slot's primitives.
+ * @param rect Initial window position and dimensions.
+ * @return Initialized menu slot.
  * @see decomp.me (100%) https://decomp.me/scratch/Xng7v
  */
-void* menu_slot_alloc(s32 arg0, void* rect)
+MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect)
 {
-    s32 var_a2;
-    MenuSlot* entry;
-    u8* cur;
-    u8* ptr;
-    u32 temp;
-    u32 mask;
-    u16* src = (u16*)rect;
-    var_a2 = 0;
-    ptr = (u8*)&g_menu_slots[0];
-    cur = (u8*)&g_menu_slots[0];
-    while (var_a2 < 4)
+    s32 slot_index;
+    MenuSlot* slot;
+    MenuSlot* slot_cursor;
+    MenuSlot* slot_pool;
+    u32 slot_flags;
+    u32 ot_index_clear_mask;
+
+    /* Find the first slot whose active state is clear. */
+    slot_index = 0;
+    slot_pool = &g_menu_slots[0];
+    slot_cursor = &g_menu_slots[0];
+    while (slot_index < MENU_SLOT_COUNT)
     {
-        if ((*cur) == 0)
+        if (slot_cursor->active == 0)
         {
             break;
         }
-        var_a2++;
-        cur += 0x24;
+        slot_index++;
+        slot_cursor++;
     }
 
-    if (var_a2 < 0)
+    /* The original negative-index guard does not catch a full pool (index 4). */
+    if (slot_index < 0)
     {
-        return (void*)(-1);
+        return (MenuSlot*)(-1);
     }
-    entry = (MenuSlot*)((var_a2 * 0x24) + (u32)ptr);
-    *((u16*)(((u8*)entry) + 4)) = 0;
-    temp = entry->flags;
-    entry->active = 1;
-    entry->content_cb = 0;
-    entry->index = (u8)var_a2;
-    entry->tick_cb = 0;
-    entry->anim_frame = 0;
-    mask = 0x1FFFFFF;
-    temp = temp & mask;
-    temp = temp | (((u32)arg0) << 25);
-    entry->flags = temp;
-    entry->x = src[0];
-    entry->y = src[1];
-    entry->w = src[2];
-    entry->h = src[3];
-    entry->lerp_cur_a = 0;
-    entry->lerp_cur_b = 0;
-    entry->lerp_target_a = 0;
-    entry->lerp_target_b = 0;
-    entry->lerp_steps = 0;
-    entry->has_title = 0;
-    g_active_slot = var_a2;
-    return (void*)entry;
+    slot = (MenuSlot*)((slot_index * sizeof(MenuSlot)) + (u32)slot_pool);
+
+    /* Clear low flags while retaining the slot's previous bits 24:16. */
+    MENU_SLOT_FLAGS_VIEW(slot).half.low = 0;
+    slot_flags = slot->flags;
+    slot->active = 1;
+    slot->content_cb = 0;
+    slot->index = (u8)slot_index;
+    slot->tick_cb = 0;
+    slot->anim_frame = 0;
+    ot_index_clear_mask = MENU_SLOT_OT_INDEX_CLEAR_MASK;
+    slot_flags = slot_flags & ot_index_clear_mask;
+    slot_flags = slot_flags | (((u32)ot_index) << MENU_SLOT_OT_INDEX_SHIFT);
+    slot->flags = slot_flags;
+    slot->x = rect->x;
+    slot->y = rect->y;
+    slot->w = rect->w;
+    slot->h = rect->h;
+    slot->lerp_cur_a = 0;
+    slot->lerp_cur_b = 0;
+    slot->lerp_target_a = 0;
+    slot->lerp_target_b = 0;
+    slot->lerp_steps = 0;
+    slot->has_title = 0;
+    g_active_slot = slot_index;
+    return slot;
 }
 
 /**
- * @brief Free all menu slots by clearing each slot's @c active byte.
+ * @brief Mark every menu window slot as free.
  *
- * Walks @c g_menu_slots from index 3 down to 0 (stride 0x24) and zeroes the
- * leading @c active field, marking every slot as free. Called from
- * @ref menu_init.
  * @see decomp.me (100%) https://decomp.me/scratch/D9BI9
  */
 void menu_reset_slots(void)
 {
-    s32 var_v1;
-    s8* var_v0;
+    s32 slot_index;
+    MenuSlot* slot;
 
-    var_v1 = 3;
-    var_v0 = (s8*)g_menu_slots;
-    var_v0 += 0x6C;
-    while (var_v1 >= 0)
+    slot_index = MENU_SLOT_COUNT - 1;
+    slot = &g_menu_slots[slot_index];
+    while (slot_index >= 0)
     {
-        *var_v0 = 0;
-        var_v1--;
-        var_v0 -= 0x24;
+        slot->active = 0;
+        slot_index--;
+        slot--;
     }
 }
 
@@ -2768,7 +2781,7 @@ void menu_handle_input(s32 process_actions)
     s8 companion;
     s32 sort_off;
     u8* sort_base;
-    MenuRect rect;
+    MenuSlotRect rect;
     s8 sp18[0x40];
 
     if ((u32)(g_menu_scene_type - 0x14) < 2 || g_menu_scene_type == 0x17 || g_menu_scene_type == 0x18 || g_menu_scene_type == 0x1A || g_menu_scene_type == 0x1B)
@@ -3072,7 +3085,7 @@ after_do_while:
                         rect.y = 0x60;
                         rect.w = 0xF0;
                         rect.h = 0x60;
-                        var_a3 = (MenuSlot*)menu_slot_alloc(3, &rect);
+                        var_a3 = menu_slot_alloc(3, &rect);
                         var_a3->content_cb = (s32 * (*)()) & func_8014B7DC;
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | ((func_80145310() & 0x1FF) << 16);
                         var_a3->has_title = 1;
@@ -3103,7 +3116,7 @@ after_do_while:
                             rect.w = 0x70;
                             rect.h = 0x40;
                         }
-                        var_a3 = (MenuSlot*)menu_slot_alloc(3, &rect);
+                        var_a3 = menu_slot_alloc(3, &rect);
                         var_a3->content_cb = (s32 * (*)()) & func_8014C200;
                         flag = ((u8*)g_pad_ctx)[(g_menu_char_slot * 0x250) + 0x609 + content_type];
                         if ((flag != 0xFF) && (flag & 0x80))
@@ -3142,7 +3155,7 @@ after_do_while:
                         rect.y = 0x30;
                         rect.w = 0x70;
                         rect.h = 0x60;
-                        var_a3 = (MenuSlot*)menu_slot_alloc(3, &rect);
+                        var_a3 = menu_slot_alloc(3, &rect);
                         var_a3->content_cb = (s32 * (*)()) & func_8014CC08;
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x50000;
                         menu_init_item_nav_entries(5);
@@ -7036,7 +7049,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
     s32 off;
     u8* item;
     u8 ch;
-    RECT rect;
+    MenuSlotRect rect;
     u8 sp30[0x40];
 
     if ((g_pad_input & 0x10) && (active != 0))
@@ -7426,7 +7439,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         rect.y = 0x40;
                         rect.w = 0x70;
                         rect.h = 0x30;
-                        ns = (MenuSlot*)menu_slot_alloc(0, &rect);
+                        ns = menu_slot_alloc(0, &rect);
                         ns->content_cb = (s32 * (*)()) & func_8014DA48;
                         g_menu_unk_e8 = 1;
                         ns->flags = (ns->flags & 0xFE00FFFF) | 0x20000;
@@ -7466,7 +7479,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         rect.y = 0x60;
                         rect.w = 0x70;
                         rect.h = 0x30;
-                        ns = (MenuSlot*)menu_slot_alloc(0, &rect);
+                        ns = menu_slot_alloc(0, &rect);
                         ns->content_cb = (s32 * (*)()) & func_8014C9B0;
                         ns->flags = (ns->flags & 0xFE00FFFF) | 0x20000;
                         MENU_RELINK();
@@ -8054,7 +8067,7 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
  */
 s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
-    u16 rect[4];
+    MenuSlotRect rect;
     MenuSlot* slot;
     s32 packed;
     s32 hi;
@@ -8085,11 +8098,11 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
         case 0:
             list->unk2 = 0;
             list->unk0 = 0;
-            rect[0] = 0x40;
-            rect[1] = 0x60;
-            rect[2] = 0xF0;
-            rect[3] = 0x60;
-            slot = (MenuSlot*)menu_slot_alloc(3, rect);
+            rect.x = 0x40;
+            rect.y = 0x60;
+            rect.w = 0xF0;
+            rect.h = 0x60;
+            slot = menu_slot_alloc(3, &rect);
             slot->content_cb = (s32 * (*)()) & menu_special_technique_list_callback;
             packed = menu_build_special_technique_nav_entries();
             hi = packed >> 0x10;
@@ -8445,7 +8458,7 @@ s32 menu_stage_best_equipment_for_active_slot();
  */
 s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
-    u16 rect[4];
+    MenuSlotRect rect;
     ScrollListState* list;
     MenuContentItem* item;
     MenuContentItem* tbl;
@@ -8607,11 +8620,11 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                     g_menu_slots[i2].active = 0;
                     i2--;
                 }
-                rect[0] = 0xB0;
-                rect[1] = 0x40;
-                rect[2] = 0x70;
-                rect[3] = 0x30;
-                list = (ScrollListState*)menu_slot_alloc(0, rect);
+                rect.x = 0xB0;
+                rect.y = 0x40;
+                rect.w = 0x70;
+                rect.h = 0x30;
+                list = (ScrollListState*)menu_slot_alloc(0, &rect);
                 ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
                 g_menu_unk_e8 = 1;
                 ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
@@ -8659,11 +8672,11 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                 g_menu_slots[i3].active = 0;
                 i3--;
             }
-            rect[0] = 0xB0;
-            rect[1] = 0x40;
-            rect[2] = 0x70;
-            rect[3] = 0x30;
-            list = (ScrollListState*)menu_slot_alloc(0, rect);
+            rect.x = 0xB0;
+            rect.y = 0x40;
+            rect.w = 0x70;
+            rect.h = 0x30;
+            list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
             g_menu_unk_e8 = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
@@ -8716,11 +8729,11 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                 g_menu_slots[i4].active = 0;
                 i4--;
             }
-            rect[0] = 0xB0;
-            rect[1] = 0x40;
-            rect[2] = 0x70;
-            rect[3] = 0x30;
-            list = (ScrollListState*)menu_slot_alloc(0, rect);
+            rect.x = 0xB0;
+            rect.y = 0x40;
+            rect.w = 0x70;
+            rect.h = 0x30;
+            list = (ScrollListState*)menu_slot_alloc(0, &rect);
             ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
             g_menu_unk_e8 = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
