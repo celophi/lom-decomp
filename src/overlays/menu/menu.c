@@ -770,7 +770,12 @@ void menu_upload_graphics(void)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/A1YTp
+ * @brief Initialize the base pointer for the menu's resource tables.
+ *
+ * Menu text and lookup tables are addressed through offsets relative to this
+ * resident data block.
+ *
+ * @see decomp.me (100%) https://decomp.me/scratch/A1YTp
  */
 void menu_state_init(void)
 {
