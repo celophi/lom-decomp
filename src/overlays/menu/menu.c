@@ -60,8 +60,8 @@
 #define MENU_TW_FILL 0xA0A0
 #define MENU_WINDOW_CORNER_SIZE 8
 #define MENU_WINDOW_FILL_TILE_SIZE 0x60
-#define MENU_WINDOW_H_EDGE_TEXTURE_WIDTH 16
-#define MENU_WINDOW_H_EDGE_TEXTURE_HEIGHT 8
+#define MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE 16
+#define MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE 8
 
 /*
  * VRAM layout for the three menu window slots' primitive data.
@@ -1536,8 +1536,8 @@ u_long* menu_build_h_edge(
         texture_window_primitive = (DR_TWIN*)packet_cursor;
         texture_window.x = texture_origin & 0xFF;
         texture_window.y = texture_origin >> 8;
-        texture_window.w = MENU_WINDOW_H_EDGE_TEXTURE_WIDTH;
-        texture_window.h = MENU_WINDOW_H_EDGE_TEXTURE_HEIGHT;
+        texture_window.w = MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE;
+        texture_window.h = MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE;
         setTexWindow(texture_window_primitive, &texture_window);
         addPrim(ot_entry, texture_window_primitive);
         packet_cursor += PRIM_WORDS(DR_TWIN);
@@ -1547,54 +1547,56 @@ u_long* menu_build_h_edge(
 }
 
 /**
- * @brief Build a vertical border strip: one @c SPRT + one @c DR_TWIN primitive.
+ * @brief Emit a textured left or right window edge.
  *
- * Mirror of @ref menu_build_h_edge for vertical (left/right) window edges.
- * The texture-window region is 8x16 instead of 16x8.
- *
- * @param ot      Primitive write cursor (SPRT is built here).
- * @param ot_ptr  Ordering-table head the primitives are linked into.
- * @param rect    Edge rectangle: x, y (screen position), w, h (pixel size).
- * @param tw_uv   Packed texture-window origin: bits 7..0 = u (x), bits 15..8 = v (y).
- * @return Pointer to the byte immediately after the emitted DR_TWIN.
+ * @param packet_cursor  Primitive buffer location for the edge.
+ * @param ot_entry       Ordering-table entry to link the primitives into.
+ * @param rect           Screen-space edge rectangle.
+ * @param texture_origin Packed texture origin: U in bits 7:0, V in bits 15:8.
+ * @return Primitive buffer location immediately after the emitted primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/19jr7
  */
-void* menu_build_v_edge(u_long* ot, u_long* ot_ptr, MenuRectU16* rect, s32 tw_uv)
+u_long* menu_build_v_edge(
+    u_long* packet_cursor,
+    u_long* ot_entry,
+    const MenuRectU16* rect,
+    s32 texture_origin)
 {
-    RECT tw;
-    SPRT* sprt;
-    DR_TWIN* twin;
+    RECT texture_window;
+    SPRT* sprite;
+    DR_TWIN* texture_window_primitive;
 
     if (rect->w <= 0)
     {
-        return ot;
+        return packet_cursor;
     }
 
     if (rect->h > 0)
     {
-        sprt = (SPRT*)ot;
-        SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-        setSprt(sprt);
-        SET_SPRT_UV0_PACKED(sprt, 0);
-        sprt->w = rect->w;
-        sprt->h = rect->h;
-        sprt->x0 = rect->x;
-        sprt->y0 = rect->y;
-        sprt->clut = MENU_CLUT_CORNER;
-        addPrim(ot_ptr, sprt);
-        ot += PRIM_WORDS(SPRT);
+        sprite = (SPRT*)packet_cursor;
+        SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+        setSprt(sprite);
+        SET_SPRT_UV0_PACKED(sprite, 0);
+        sprite->w = rect->w;
+        sprite->h = rect->h;
+        sprite->x0 = rect->x;
+        sprite->y0 = rect->y;
+        sprite->clut = MENU_CLUT_CORNER;
+        addPrim(ot_entry, sprite);
+        packet_cursor += PRIM_WORDS(SPRT);
 
-        twin = (DR_TWIN*)ot;
-        tw.x = tw_uv & 0xFF;
-        tw.y = tw_uv >> 8;
-        tw.w = 8;
-        tw.h = 0x10;
-        setTexWindow(twin, &tw);
-        addPrim(ot_ptr, twin);
-        ot += PRIM_WORDS(DR_TWIN);
+        /* Repeat the 8x16 edge texture across the sprite. */
+        texture_window_primitive = (DR_TWIN*)packet_cursor;
+        texture_window.x = texture_origin & 0xFF;
+        texture_window.y = texture_origin >> 8;
+        texture_window.w = MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE;
+        texture_window.h = MENU_WINDOW_EDGE_TEXTURE_LONG_SIDE;
+        setTexWindow(texture_window_primitive, &texture_window);
+        addPrim(ot_entry, texture_window_primitive);
+        packet_cursor += PRIM_WORDS(DR_TWIN);
     }
 
-    return ot;
+    return packet_cursor;
 }
 
 /**
