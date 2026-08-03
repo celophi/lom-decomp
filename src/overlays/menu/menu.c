@@ -137,6 +137,11 @@
 #define MENU_PAD_INJECT_ENABLED 0x80
 /** @brief Ordering-table entry used as the menu frame's list head. */
 #define MENU_FRAME_OT_INDEX 13
+/** @brief Vertical offset of the node-tree clipping region within a draw page. */
+#define MENU_TREE_DRAW_Y_OFFSET 12
+#define MENU_TREE_DRAW_X 15
+#define MENU_TREE_DRAW_WIDTH 36
+#define MENU_TREE_DRAW_HEIGHT 170
 
 /*
  * Sound effect IDs -- passed as the first argument to menu_play_se.
@@ -427,6 +432,29 @@ typedef struct
     u32 packed_wh; /**< Packed signed dimensions: low half width, high half height. */
 } MenuGridSpriteDef;
 
+/** Partial view of one controller port through its large-motor command. */
+typedef struct
+{
+    u8 padding0[0x92];
+    u8 large_motor_command;
+    u8 padding93[0x1B];
+} MenuControllerActuatorPort;
+
+/** Fixed two-port controller state at 0x801ED600. */
+typedef struct
+{
+    MenuControllerActuatorPort ports[2];
+} MenuControllerActuatorState;
+
+#define MENU_CONTROLLER_ACTUATORS ((MenuControllerActuatorState*)0x801ED600)
+
+typedef enum
+{
+    MENU_CURSOR_MODE_NODE_TREE = 0,
+    MENU_CURSOR_MODE_CONTENT = 1,
+    MENU_CURSOR_MODE_CONTENT_EXIT = 2,
+} MenuCursorMode;
+
 /* ----- Forward declarations ----- */
 
 /* K&R-style declaration: original call site in menu_tick passes no explicit
@@ -434,14 +462,14 @@ typedef struct
  * live. Keep the empty parameter list to preserve that codegen exactly. */
 void menu_build_grid();
 void menu_update_slots(RenderContext* render_ctx);
-u_char* menu_draw_frame(void* prim_cursor, u_int* ot, int draw_page, int handle_input);
+u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input);
 u32 menu_step_item_selection(s32 step);
 
 /* ----- Extern globals ----- */
 
 /** @brief Pending overlay element to emit at end of @ref menu_update_slots (0 = none). */
 extern s32 g_menu_pending_overlay;
-/** @brief When non-zero, cursor highlight is enabled for the active slot. */
+/** @brief Selects node-tree, content, or content-exit cursor handling. */
 extern s32 g_menu_cursor_enable;
 /** @brief Set non-zero by a content callback to abort @ref menu_draw_window early. */
 extern s32 g_menu_draw_early_out;
@@ -2210,77 +2238,70 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
 
 /**
  * @brief Draw the menu frame layers and optionally dispatch navigation input.
- * @param prim_cursor Primitive-buffer cursor passed to the initial buffer setup call.
- * @param ot Pointer into the ordering table used for addPrim calls.
- * @param draw_page 0 = first display page (Y near 0); nonzero = second page (Y+240).
- * @param handle_input When nonzero and cursor is disabled, calls menu_handle_node_input.
- * @return Updated prim-buffer write cursor after all primitives are emitted.
+ *
+ * @param packet_cursor Primitive buffer location for the frame.
+ * @param ot_entry      Ordering-table entry for the frame primitives.
+ * @param frame_parity  Selects the active double-buffered VRAM page.
+ * @param allow_input   Nonzero to dispatch navigation input.
+ * @return Primitive buffer location immediately after the frame.
  * @see decomp.me (100%) https://decomp.me/scratch/x8WyZ
  */
-u_char* menu_draw_frame(void* prim_cursor, u_int* ot, int draw_page, int handle_input)
+u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input)
 {
-    DRAWENV stack_drawenv;
-    u_char* s1;
-    u_char* s0;
-    int var_a2;
-    int v0_190;
-    u8* scd_base;
-    u_char* prim_end;
+    DRAWENV draw_env;
+    u8* draw_env_packet;
+    DR_TPAGE* draw_mode;
+    u8* frame_cursor;
+    s32 draw_y;
+    s32 node_tree_end;
+    MenuControllerActuatorState* actuator_state;
+    u8* frame_end;
 
-    scd_base = (u8*)0x801ed600;
+    actuator_state = MENU_CONTROLLER_ACTUATORS;
 
-    /* 30: jal func_80145608 */
-    s1 = (u_char*)func_80145608(prim_cursor);
+    /* Emit the full-screen draw environment before the menu layers. */
+    draw_env_packet = (u8*)func_80145608(packet_cursor);
+    draw_y = frame_parity ? SCREEN_HEIGHT : VRAM_BACK_DRAW_Y;
+    SetDefDrawEnv(&draw_env, 0, draw_y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDrawEnv(draw_env_packet, &draw_env);
+    addPrim(ot_entry, draw_env_packet);
 
-    /* 3c: ternary generating the conditional branch at 48 */
-    var_a2 = draw_page ? 0xf0 : 8;
+    draw_env_packet += sizeof(DR_ENV);
+    frame_cursor = draw_env_packet;
 
-    /* 58: SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0) */
-    SetDefDrawEnv(&stack_drawenv, 0, var_a2, 0x140, 0xe0);
-
-    /* 64: SetDrawEnv(s1) passing &stack_drawenv as side argument */
-    SetDrawEnv(s1, &stack_drawenv);
-
-    /* 78 - 94: First OT link operation */
-    addPrim(ot, s1);
-
-    /* 98: Advance the structural pointer by 0x40 bytes */
-    s1 += 0x40;
-    s0 = s1;
-
-    /* a8 - c0: Decrement tracker logic */
-    if (scd_base[0x92] != 0)
+    /* Fade the large-motor command and mirror it to the second port. */
+    if (actuator_state->ports[0].large_motor_command != 0)
     {
-        u8 val = scd_base[0x92] - 1;
-        scd_base[0x140] = val;
-        scd_base[0x92] = val;
+        u8 motor_command = actuator_state->ports[0].large_motor_command - 1;
+        actuator_state->ports[1].large_motor_command = motor_command;
+        actuator_state->ports[0].large_motor_command = motor_command;
     }
 
-    /* c4: Explicit switch structure to enforce the exact MIPS jump table/branch sequence */
+    /* Render and update the active node or content cursor mode. */
     switch (g_menu_cursor_enable)
     {
-    case 0:
-        s0 = (u_char*)menu_draw_active_node_cursor(s1, ot - 1, handle_input);
+    case MENU_CURSOR_MODE_NODE_TREE:
+        frame_cursor = (u8*)menu_draw_active_node_cursor(draw_env_packet, ot_entry - 1, allow_input);
         menu_handle_input(0);
-        if (handle_input != 0)
+        if (allow_input != 0)
         {
             menu_handle_node_input();
         }
         break;
 
-    case 1:
-        s0 = (u_char*)func_80148A20(s1, ot - 1, handle_input);
+    case MENU_CURSOR_MODE_CONTENT:
+        frame_cursor = (u8*)func_80148A20(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
-            menu_handle_input(handle_input);
+            menu_handle_input(allow_input);
         }
         break;
 
-    case 2:
-        s0 = (u_char*)func_80148A20(s1, ot - 1, handle_input);
+    case MENU_CURSOR_MODE_CONTENT_EXIT:
+        frame_cursor = (u8*)func_80148A20(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
-            g_menu_cursor_enable = 0;
+            g_menu_cursor_enable = MENU_CURSOR_MODE_NODE_TREE;
         }
         break;
 
@@ -2288,35 +2309,24 @@ u_char* menu_draw_frame(void* prim_cursor, u_int* ot, int draw_page, int handle_
         break;
     }
 
-    /* 190: jal menu_draw_node_tree */
-    v0_190 = menu_draw_node_tree(s0, ot);
+    /* Draw the node tree and its scroll indicators. */
+    node_tree_end = menu_draw_node_tree(frame_cursor, ot_entry);
+    frame_cursor = (u8*)menu_emit_tree_scroll_arrows(node_tree_end, ot_entry - 1);
 
-    /* 19c: jal menu_emit_tree_scroll_arrows */
-    s0 = (u_char*)menu_emit_tree_scroll_arrows(v0_190, ot - 1);
+    draw_mode = (DR_TPAGE*)frame_cursor;
+    setDrawTPage(draw_mode, 0, 0, MENU_GRID_TPAGE);
+    addPrim(ot_entry, draw_mode);
+    draw_env_packet = (u8*)(draw_mode + 1);
 
-    /* 1a8 - 1cc: Inline primitive data initialization */
-    *(u8*)(s0 + 3) = 1;
-    *(u_int*)(s0 + 4) = 0xe1000005;
+    /* Restrict the final draw environment to the node-tree viewport. */
+    draw_y = frame_parity ? SCREEN_HEIGHT + MENU_TREE_DRAW_Y_OFFSET
+                          : VRAM_BACK_DRAW_Y + MENU_TREE_DRAW_Y_OFFSET;
+    frame_end = draw_env_packet + sizeof(DR_ENV);
+    SetDefDrawEnv(&draw_env, MENU_TREE_DRAW_X, draw_y, MENU_TREE_DRAW_WIDTH, MENU_TREE_DRAW_HEIGHT);
+    SetDrawEnv(draw_env_packet, &draw_env);
+    addPrim(ot_entry, draw_env_packet);
 
-    /* 1d0 - 1fc: Second OT link operation */
-    addPrim(ot, s0);
-    s1 = s0 + 8;
-
-    /* 1f8: Second conditional ternary logic blocks */
-    var_a2 = draw_page ? 0xfc : 0x14;
-
-    /* 214: SetDefDrawEnv */
-    prim_end = s0 + 0x48;
-    SetDefDrawEnv(&stack_drawenv, 0xf, var_a2, 0x24, 0xaa);
-
-    /* 220: SetDrawEnv with s1 advanced to s0 + 8 */
-    SetDrawEnv(s1, &stack_drawenv);
-
-    /* 22c - 254: Third OT link operation */
-    addPrim(ot, s1);
-
-    /* 248: Evaluates to `addiu v0, s0, 0x48` as the function's return statement */
-    return prim_end;
+    return frame_end;
 }
 
 /**
