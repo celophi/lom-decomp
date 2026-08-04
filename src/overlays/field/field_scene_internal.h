@@ -668,7 +668,20 @@ typedef struct
     u8 _pad1[0x10 - 0xE];
     s16 base_x; /* 0x10 horizontal base offset (<< 8) */
     s16 base_y; /* 0x12 vertical base offset (<< 8) */
+    /** 0x14 lowest group id this definition applies to; func_8005F5BC skips
+        the node when the group id being rasterised is below it. */
+    s16 id_min;
 } FieldNodeDef;
+
+/**
+ * @brief Span-pair count per row, stored in byte 2 of FieldNodeDef::flags.
+ *
+ * @c flags is read as a whole word for the bit-2 / mode tests, but
+ * func_8005F5BC also reads offset 0x06 as an @c lbu - the two accesses
+ * genuinely overlap in the original. Mirrors the @c *(s32*)&def->flags idiom
+ * field_animation.c uses for the same struct.
+ */
+#define FIELD_NODE_DEF_ROWS(d) (((u8*)&(d)->flags)[2])
 
 /**
  * @brief Element of the scene's attached-node list (FieldScene offset 0x08).
@@ -687,10 +700,19 @@ struct FieldNode
         func_8005A984 on @c part. */
     FieldObj* obj;
     FieldPart* part; /* 0x0C owning part */
-    u8 _pad1[0x18 - 0x10];
+    /** 0x10 base of the node's span table: for each row, @c
+        FIELD_NODE_DEF_ROWS(def) pairs of (x0, x1) shorts. Walked by
+        func_8005F5BC. */
+    u16* spans;
+    u8 _pad1[0x18 - 0x14];
     /** 0x18 when zero the node is skipped by the group scan in func_8005F158. */
     u8 unk18;
-    u8 _pad2[0x24 - 0x19];
+    u8 _pad2[0x20 - 0x19];
+    /** 0x20 last tile row this node covers (inclusive). */
+    s16 row_end;
+    /** 0x22 first tile row this node covers; also the sort key
+        func_8005F5BC orders the scratch node list by. */
+    s16 row_start;
     /** 0x24 horizontal offset accumulator; the axis-0 half of the pair the two
         node shift helpers move. */
     s32 unk24;
