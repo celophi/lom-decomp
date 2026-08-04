@@ -1089,7 +1089,7 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
  * @details
  * Inspects statusFlags to choose one of three branches:
  *
- * **Branch 1 — Error/init recovery (statusFlags bits 0-2 set):**
+ * **Branch 1 -- Error/init recovery (statusFlags bits 0-2 set):**
  * Runs a multi-state recovery state machine (states 1-8, 32):
  *   1. Polls drive status via CdlNop every 30 VSync frames
  *   2. Progresses through GetStat, DiskReady, DiskType detection
@@ -1097,12 +1097,12 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
  *   4. Issues CdlReadN to resume reading, with 270-frame timeout retries
  *   5. On persistent errors, pauses the drive and resets to state 1
  *
- * **Branch 2 — Active command (currentCommand or initCommand != 0):**
+ * **Branch 2 -- Active command (currentCommand or initCommand != 0):**
  *   - Polls syncComplete flag set by the sync callback
  *   - Updates currentResourceIndex and currentDataSize from the queue head
  *   - On 240-frame timeout, re-installs callbacks and retries via CdlNop
  *
- * **Branch 3 — Idle with queued commands:**
+ * **Branch 3 -- Idle with queued commands:**
  *   - Sets currentCommand to 1, marks busy flag (bit 4)
  *   - Installs cdrom_complete_command and sends CdlNop to start processing
  *   - If the queue is empty, performs periodic 30-frame status polls via CdlNop
@@ -1113,28 +1113,23 @@ s32 cdrom_queue_command(u8 command, u16 resourceIndex, void* dstBuffer, CdComman
  * @warning Must be called every frame. Not interrupt-safe.
  *          The 30/240/270-frame timeouts assume NTSC (60 Hz).
  *
- * @see decomp.me: (96.81%) https://decomp.me/scratch/xxcgW
+ * @see decomp.me (100%) https://decomp.me/scratch/xxcgW
  */
 u32 cdrom_process_state(void)
 {
     s32 controlResult;
-    s32 checkDiskResult;
-    s32 diskReadyResult;
-    s32 diskType;
-
     s32 syncCompleteFlag;
     s32 indexDiff;
-    
     u8 currentCommand;
     u8 cdCommand;
     u8* cdCommandParams;
     u32 readIndex;
     s32 initCommand;
-       
     u8 initState;
+    u32 flagsTmp;
+    CdSystem* cdSystem;
 
-
-    // Fast-path out. This natively generates the `bnez v0, 870; move v0, zero`
+    /* Recovery in progress (statusFlags bit 3): nothing to drain this frame. */
     if (CD_SYSTEM.statusFlags.word & 8)
     {
         return 0;
@@ -1206,8 +1201,8 @@ u32 cdrom_process_state(void)
                         /* fallthrough */
 
                     case 2:
-                        checkDiskResult = CdControlB(0x13, 0, (u8*)0x801ED960);
-                        if ((CD_SYSTEM.statusByte & 2) && (checkDiskResult != 0))
+                        controlResult = CdControlB(0x13, 0, (u8*)0x801ED960);
+                        if ((CD_SYSTEM.statusByte & 2) && (controlResult != 0))
                         {
                             CD_SYSTEM.initState = 3;
                             CD_SYSTEM.retryCounter = 0;
@@ -1221,11 +1216,9 @@ u32 cdrom_process_state(void)
                         }
                         else
                         {
-                            u32 counter = CD_SYSTEM.retryCounter;
-                            u32 limit_check;
+                            u8 counter = CD_SYSTEM.retryCounter + 1;
                             CD_SYSTEM.retryCounter = counter + 1;
-                            limit_check  = (counter + 2) & 0xFF;
-                            if (limit_check >= 13)
+                            if (counter >= 13)
                             {
                                 CD_SYSTEM.initState = 4;
                             }
@@ -1233,10 +1226,10 @@ u32 cdrom_process_state(void)
                         break;
 
                     case 4:
-                        diskReadyResult = CdDiskReady(0);
-                        if (diskReadyResult != 2)
+                        controlResult = CdDiskReady(0);
+                        if (controlResult != 2)
                         {
-                            if (diskReadyResult == 0x10)
+                            if (controlResult == 0x10)
                             {
                                 g_initState = 1;
                             }
@@ -1253,8 +1246,8 @@ u32 cdrom_process_state(void)
                         break;
 
                     case 5:
-                        diskType = CdGetDiskType();
-                        switch (diskType)
+                        controlResult = CdGetDiskType();
+                        switch (controlResult)
                         {
                         case 0:
                             CD_SYSTEM.initState = 0x20;
@@ -1297,14 +1290,14 @@ u32 cdrom_process_state(void)
                         break;
 
                     case 8:
-                        if (CD_SYSTEM.syncComplete == 1)
+                        if (CD_SYSTEM_V.syncComplete == 1)
                         {
                             CD_SYSTEM.vsyncTimestamp = VSync(-1);
-                            CD_SYSTEM.syncComplete = 0;
+                            CD_SYSTEM_V.syncComplete = 0;
                         }
                         else if (VSync(-1) >= ((s32)CD_SYSTEM.vsyncTimestamp + 270))
                         {
-                            initCommand = CD_SYSTEM.initCommand & 0xFF;
+                            initCommand = CD_SYSTEM_V.initCommand & 0xFF;
 
                             if (initCommand == 0x22)
                             {
@@ -1361,16 +1354,18 @@ u32 cdrom_process_state(void)
             else
             {
             ErrorRecovery:
+                cdSystem = &CD_SYSTEM;
                 if (g_initState >= 6)
                 {
-                    CD_SYSTEM.statusFlags.word &= ~0x10;
+                    cdSystem->statusFlags.word &= ~0x10;
                     CdSyncCallback(NULL);
                     CdReadyCallback(NULL);
                     while (CdControlB(CdlPause, 0, NULL) == 0);
                     CD_SYSTEM_V.initCommand = 0;
                 }
                 CD_SYSTEM.initState = 1;
-                CD_SYSTEM.statusFlags.word = ((CD_SYSTEM.statusFlags.word | 1) & ~2) & ~4;
+                flagsTmp = (CD_SYSTEM.statusFlags.word | 1) & ~2;
+                CD_SYSTEM.statusFlags.word = flagsTmp & ~4;
             }
         }
     }
@@ -1383,15 +1378,14 @@ u32 cdrom_process_state(void)
         {
             while (1)
             {
-                u32 qri;
-                if (CD_SYSTEM.syncComplete == 1)
+                if (CD_SYSTEM_V.syncComplete == 1)
                 {
                     syncCompleteFlag = 1;
                     CD_SYSTEM.syncComplete = 0;
                 }
-                qri = CD_SYSTEM.queueReadIndex;
+                readIndex = CD_SYSTEM.queueReadIndex;
                 
-                indexDiff = (CD_SYSTEM.queueWriteIndex - qri) & 0xF;
+                indexDiff = (CD_SYSTEM.queueWriteIndex - readIndex) & 0xF;
 
                 if (indexDiff != 0)
                 {
