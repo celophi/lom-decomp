@@ -3122,3 +3122,788 @@ overflow:
     scene->unk28 = 0;
     scene->unk41 = 1;
 }
+
+/**
+ * @brief One entry of func_8005F5BC's scratch list of active nodes.
+ */
+typedef struct
+{
+    FieldNode* node;
+    /** Sort key: the node's @c row_start, ascending. */
+    s16 key;
+    s16 pad;
+} NodeEnt;
+
+/**
+ * @brief A horizontal span (inclusive x range) in tile columns.
+ */
+typedef struct
+{
+    s16 x0;
+    s16 x1;
+} Span;
+
+/**
+ * @brief One node's in-progress walk over its span table.
+ *
+ * @note 12 bytes; @c skip counts sub-rows before the node starts contributing.
+ */
+typedef struct
+{
+    u16* src;   /* 0x00 cursor into FieldNode::spans */
+    s16 count;  /* 0x04 sub-rows remaining */
+    s16 step;   /* 0x06 span pairs per sub-row */
+    s16 skip;   /* 0x08 sub-rows still to skip */
+    s16 pad;
+} Run;
+
+/**
+ * @brief Rasterise the active nodes of every group into the scene work area.
+ *
+ * For each group id in @c scene->unk4A, walks the scene's attached-node list
+ * (pre-sorted by @c row_start) and converts each node's span table into a
+ * bitmask of covered tile columns, written as two interleaved planes of
+ * @c words 32-bit words per tile row.
+ *
+ * Per tile row the active nodes are collected into @c runs, then each of the
+ * @c tile2 sub-rows accumulates its spans into @c cur, merges overlapping
+ * spans, and folds the result two ways: an intersection against the previous
+ * sub-row (ping-ponged between the two halves of the PSX scratchpad at
+ * 0x1F800000 / 0x1F800200) and a union in @c acc. The intersection drives
+ * plane 0 and the union drives plane 1 of the output words.
+ *
+ * @param arg0 Unused; the target never reads a0.
+ * @param clip Optional clipping node. When NULL every tile row of the group is
+ *             emitted; otherwise only the rows the node covers are, and its
+ *             definition is tested against the group id first.
+ *
+ * @note UNMATCHED (85.92%, 414/874 exact). Structure and semantics are
+ *       believed correct; the residual is a register-allocation cascade. The
+ *       target keeps @c base in @c s5 and needs no reload temps, giving a
+ *       -0x850 frame; this source spills @c base to 0x820 plus six reload
+ *       temps, giving -0x868. Every sp offset is therefore shifted, which is
+ *       what most of the 403 argdiff rows are. The 14 named stack slots
+ *       already match the target's order exactly - do NOT reorder the
+ *       declarations. See working/func_8005F5BC/status.md for the measured
+ *       dead ends (volatile counters, shared-tail goto in the clip test, rp
+ *       address-computation spellings, base as s32/u16 - all measured
+ *       negative or inert).
+ * @note @c zero_v is required to match: sourcing @c nrun's zero from a
+ *       function-scope variable is worth +47 exact rows over a literal 0.
+ * @see decomp.me (85.92%) TODO
+ */
+void func_8005F5BC(s32 arg0, FieldNode* clip)
+{
+    Span cur[128];
+    Span acc[128];
+    NodeEnt list[50];
+    Run runs[50];
+    FieldScene* scene;
+    u32* saved;
+    s32 words;
+    s32 rows;
+    s32 tile;
+    s32 tile2;
+    s32 shift0;
+    s32 shift1;
+    s32 group;
+    u32 node_count;
+    u32 j;
+    s32 n_sp;
+    Run* runs_base;
+    u32* out;
+    u32 ncur;
+    u32 nacc;
+    u32 nout;
+    s32 nrun;
+    FieldNode* nd;
+    FieldNode* ent;
+    FieldNodeDef* def;
+    NodeEnt* p;
+    NodeEnt* p2;
+    Run* rp;
+    Run* rq;
+    Span* sp1;
+    Span* sp2;
+    Span* sc0;
+    Span* sc1;
+    Span* prev;
+    Span* dst;
+    u32* wp;
+    u32* wq;
+    u16* src;
+    s32 i;
+    s32 k;
+    s32 n;
+    s32 hit;
+    s32 fresh;
+    s32 lo;
+    s32 hi;
+    s32 lo2;
+    s32 hi2;
+    s32 w0;
+    s32 w1;
+    s32 word;
+    s32 zero_v;
+    s32 sbase;
+    s32 m0;
+    s32 m1;
+    s32 lead;
+    s32 tail;
+    s32 wlead;
+    s32 wtail;
+    s16 base;
+    s16 key;
+    u16 id;
+    u16 tmp;
+    u16 x0;
+    u16 x1;
+    FieldNode* swap;
+
+    zero_v = 0;
+    saved = NULL;
+    nacc = 0;
+    scene = g_field_scene.scene;
+    out = (u32*)scene->unk28;
+    n_sp = 0;
+    if (out == NULL)
+    {
+        return;
+    }
+
+    nd = scene->nodes;
+    node_count = 0;
+    if (nd != NULL)
+    {
+        p = list;
+        do
+        {
+            if (nd->unk18 != 0)
+            {
+                if (node_count >= 50)
+                {
+                    scene->unk28 = 0;
+                    scene->unk41 = 2;
+                    return;
+                }
+                p->node = nd;
+                node_count++;
+                p->key = nd->row_start;
+                p++;
+            }
+            nd = nd->next;
+        } while (nd != NULL);
+    }
+
+    if (node_count != 0)
+    {
+        i = node_count - 1;
+        if (i != 0)
+        {
+            do
+            {
+                key = list[i].key;
+                for (k = i - 1; k != -1; k--)
+                {
+                    if ((s16)key < list[k].key)
+                    {
+                        tmp = list[k].key;
+                        list[k].key = key;
+                        key = tmp;
+                        list[i].key = tmp;
+                        swap = list[k].node;
+                        list[k].node = list[i].node;
+                        list[i].node = swap;
+                    }
+                }
+                i--;
+            } while (i != 0);
+        }
+    }
+
+    tile = scene->unk40;
+    if (tile == 4)
+    {
+        shift1 = 3;
+        shift0 = 2;
+    }
+    else
+    {
+        shift0 = 3;
+        shift1 = 4;
+    }
+    group = 0;
+    tile2 = tile * 2;
+    words = (scene->unk46 + 0x1F) >> 5;
+    if (scene->unk41 == 0)
+    {
+        return;
+    }
+
+    runs_base = runs;
+    do
+    {
+        id = scene->unk4A[group];
+        base = 0;
+        if (clip == NULL)
+        {
+            rows = scene->unk48 - 4;
+        }
+        else
+        {
+            def = clip->def;
+            saved = out + (words * ((scene->unk48 - 4) * 2));
+            hit = 0;
+            if (def->flags & 4)
+            {
+                hit = (s16)id >= def->id_min;
+            }
+            else if ((def->flags & 3) == 1)
+            {
+                lo = def->base_x;
+                hi = def->base_y;
+                if (lo < hi)
+                {
+                    if ((s16)id < lo)
+                    {
+                        if (((s16)id < def->id_min) == 0)
+                        {
+                            hit = 1;
+                        }
+                    }
+                }
+                else if ((s16)id < hi)
+                {
+                    if (((s16)id < def->id_min) == 0)
+                    {
+                        hit = 1;
+                    }
+                }
+            }
+            else
+            {
+                lo2 = def->base_x;
+                if ((s16)id < lo2)
+                {
+                    if (((s16)id < def->id_min) == 0)
+                    {
+                        hit = 1;
+                    }
+                }
+            }
+
+            if (hit != 0)
+            {
+                base = 0;
+                if (clip->row_start >= 0)
+                {
+                    base = (u16)clip->row_start & -tile2;
+                    n = scene->unk48;
+                    k = clip->row_end >> shift1;
+                    if (k >= (n - 4))
+                    {
+                        rows = n - (((s16)base >> shift1) + 4);
+                    }
+                    else
+                    {
+                        rows = (k - ((s16)base >> shift1)) + 1;
+                    }
+                }
+                else
+                {
+                    k = clip->row_end >> shift1;
+                    rows = scene->unk48 - 4;
+                    if (k < rows)
+                    {
+                        rows = k + 1;
+                    }
+                }
+                out = out + (words * (((s16)base >> shift1) * 2));
+            }
+            else
+            {
+                group++;
+                out = saved;
+                continue;
+            }
+        }
+
+        nrun = zero_v;
+        j = 0;
+        rows = rows - 1;
+        if (rows != -1)
+        {
+            p2 = list;
+            do
+            {
+                if (j < node_count)
+                {
+                    sbase = (s16)base;
+                    n = sbase + tile2;
+                    if (p2->key < n)
+                    {
+                        rp = &runs_base[nrun];
+                        do
+                        {
+                            ent = p2->node;
+                            def = ent->def;
+                            hit = 0;
+                            if (def->flags & 4)
+                            {
+                                hit = (s16)id >= def->id_min;
+                            }
+                            else
+                            {
+                                if ((def->flags & 3) == 1)
+                                {
+                                    lo2 = def->base_x;
+                                    hi2 = def->base_y;
+                                    fresh = (s16)id < lo2;
+                                    if (lo2 >= hi2)
+                                    {
+                                        fresh = (s16)id < hi2;
+                                    }
+                                }
+                                else
+                                {
+                                    fresh = (s16)id < def->base_x;
+                                }
+                                if ((fresh != 0) && ((s16)id >= def->id_min))
+                                {
+                                    hit = 1;
+                                }
+                            }
+                            if ((hit != 0) && (ent->row_end >= sbase))
+                            {
+                                k = ent->row_start;
+                                if (sbase >= k)
+                                {
+                                    rp->src = ent->spans + ((sbase - k) * FIELD_NODE_DEF_ROWS(ent->def) * 2);
+                                    rp->skip = 0;
+                                    rp->count = ((u16)ent->row_end - (s16)base) + 1;
+                                }
+                                else
+                                {
+                                    rp->src = ent->spans;
+                                    rp->count = ((u16)ent->row_end - (u16)ent->row_start) + 1;
+                                    rp->skip = (u16)ent->row_start - (s16)base;
+                                }
+                                nrun++;
+                                rp->step = FIELD_NODE_DEF_ROWS(ent->def);
+                                rp++;
+                            }
+                            p2++;
+                            j++;
+                        } while ((j < node_count) && (list[j].key < n));
+                    }
+                }
+
+                wp = out;
+                wp[1] = 3;
+                i = words - 2;
+                out[0] = 3;
+                if (i != -1)
+                {
+                    do
+                    {
+                        wp += 2;
+                        i--;
+                        wp[1] = 0;
+                        wp[0] = 0;
+                    } while (i != -1);
+                }
+
+                k = (scene->unk46 - 1) & 0x1F;
+                if (k == 0)
+                {
+                    w0 = wp[-2] | 0x80000000;
+                    w1 = wp[0] | 1;
+                    wp[-1] = w0;
+                    wp[-2] = w0;
+                    wp[1] = w1;
+                    wp[0] = w1;
+                }
+                else
+                {
+                    m0 = 1 << k;
+                    w0 = wp[0] | m0 | (m0 >> 1);
+                    wp[1] = w0;
+                    wp[0] = w0;
+                }
+
+                if (nrun != 0)
+                {
+                    i = tile2 - 1;
+                    if (i != -1)
+                    {
+                        do
+                        {
+                            k = nrun - 1;
+                            ncur = 0;
+                            if (k != -1)
+                            {
+                                rq = &runs_base[k];
+                                rp = &runs_base[nrun];
+                                do
+                                {
+                                    if (rq->skip == 0)
+                                    {
+                                        src = rq->src;
+                                        n = rq->step - 1;
+                                        rq->count = rq->count - 1;
+                                        if (n != -1)
+                                        {
+                                            do
+                                            {
+                                                x0 = src[0];
+                                                x1 = src[1];
+                                                src += 2;
+                                                if ((s16)x1 >= (s16)x0)
+                                                {
+                                                    sp1 = cur;
+                                                    m0 = ncur - 1;
+                                                    fresh = 1;
+                                                    if (m0 != -1)
+                                                    {
+                                                        do
+                                                        {
+                                                            if ((((s16)x1 + 1) >= sp1->x0) && ((sp1->x1 + 1) >= (s16)x0))
+                                                            {
+                                                                if ((s16)x0 < sp1->x0)
+                                                                {
+                                                                    sp1->x0 = x0;
+                                                                }
+                                                                fresh = 0;
+                                                                if (sp1->x1 < (s16)x1)
+                                                                {
+                                                                    sp1->x1 = x1;
+                                                                }
+                                                                break;
+                                                            }
+                                                            sp1++;
+                                                            m0--;
+                                                        } while (m0 != -1);
+                                                    }
+                                                    if (fresh != 0)
+                                                    {
+                                                        if (ncur >= 0x80)
+                                                        {
+                                                            scene->unk28 = 0;
+                                                            scene->unk41 = 3;
+                                                            return;
+                                                        }
+                                                        ncur++;
+                                                        sp1->x0 = x0;
+                                                        sp1->x1 = x1;
+                                                    }
+                                                }
+                                                n--;
+                                            } while (n != -1);
+                                        }
+                                        if (rq->count == 0)
+                                        {
+                                            nrun--;
+                                            rp--;
+                                            if (k != nrun)
+                                            {
+                                                rq->src = rp->src;
+                                                rq->count = rp->count;
+                                                rq->step = rp->step;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            rq->src = src;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        rq->skip = rq->skip - 1;
+                                    }
+                                    k--;
+                                    rq--;
+                                } while (k != -1);
+                            }
+
+                            k = ncur - 1;
+                            sp1 = cur;
+                            if (k != -1)
+                            {
+                                do
+                                {
+                                    n = k - 1;
+                                    x0 = sp1->x0;
+                                    x1 = sp1->x1;
+                                    sp2 = sp1 + 1;
+                                    if (n != -1)
+                                    {
+                                        do
+                                        {
+                                            if ((((s16)x1 + 1) >= sp2->x0) && ((sp2->x1 + 1) >= (s16)x0))
+                                            {
+                                                ncur--;
+                                                k--;
+                                                if (sp2->x0 >= (s16)x0)
+                                                {
+                                                    if ((s16)x1 < sp2->x1)
+                                                    {
+                                                        goto grow;
+                                                    }
+                                                    if (n != 0)
+                                                    {
+                                                        *(s32*)sp2 = *(s32*)&sp2[n];
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    x0 = sp2->x0;
+                                                grow:
+                                                    n_sp = (s16)x1 < sp2->x1;
+                                                    if (n_sp)
+                                                    {
+                                                        x1 = sp2->x1;
+                                                    }
+                                                    sp1->x0 = x0;
+                                                    sp1->x1 = x1;
+                                                    if (n != 0)
+                                                    {
+                                                        *(s32*)sp2 = *(s32*)&sp2[n];
+                                                    }
+                                                    n = k;
+                                                    sp2 = sp1 + 1;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                sp2++;
+                                            }
+                                            n--;
+                                        } while (n != -1);
+                                    }
+                                    k--;
+                                    sp1++;
+                                } while (k != -1);
+                            }
+
+                            if (i == (tile2 - 1))
+                            {
+                                sc0 = cur;
+                                sc1 = acc;
+                                dst = (Span*)0x1F800000;
+                                nacc = ncur;
+                                n_sp = nacc;
+                                n = nacc - 1;
+                                if (n != -1)
+                                {
+                                    do
+                                    {
+                                        word = *(s32*)sc0;
+                                        sc0++;
+                                        n--;
+                                        *(s32*)sc1 = word;
+                                        sc1++;
+                                        *(s32*)dst = word;
+                                        dst++;
+                                    } while (n != -1);
+                                }
+                            }
+                            else
+                            {
+                                sc0 = cur;
+                                if (!(i & 1))
+                                {
+                                    prev = (Span*)0x1F800000;
+                                    dst = (Span*)0x1F800200;
+                                }
+                                else
+                                {
+                                    prev = (Span*)0x1F800200;
+                                    dst = (Span*)0x1F800000;
+                                }
+                                k = ncur - 1;
+                                nout = 0;
+                                if (k != -1)
+                                {
+                                    do
+                                    {
+                                        x0 = sc0->x0;
+                                        x1 = sc0->x1;
+                                        n = n_sp - 1;
+                                        sp2 = prev;
+                                        if (n != -1)
+                                        {
+                                            do
+                                            {
+                                                if (((s16)x1 >= sp2->x0) && (sp2->x1 >= (s16)x0))
+                                                {
+                                                    if (nout >= 0x80)
+                                                    {
+                                                        scene->unk28 = 0;
+                                                        scene->unk41 = 4;
+                                                        return;
+                                                    }
+                                                    if ((s16)x0 < sp2->x0)
+                                                    {
+                                                        dst->x0 = sp2->x0;
+                                                    }
+                                                    else
+                                                    {
+                                                        dst->x0 = x0;
+                                                    }
+                                                    w1 = sp2->x1 < (s16)x1;
+                                                    if (w1)
+                                                    {
+                                                        dst->x1 = sp2->x1;
+                                                    }
+                                                    else
+                                                    {
+                                                        dst->x1 = x1;
+                                                    }
+                                                    nout++;
+                                                    dst++;
+                                                }
+                                                n--;
+                                                sp2++;
+                                            } while (n != -1);
+                                        }
+
+                                        wtail = 0;
+                                        sp1 = acc;
+                                        n = nacc - 1;
+                                        fresh = 1;
+                                        if (n != -1)
+                                        {
+                                            do
+                                            {
+                                                if ((((s16)x1 + 1) >= sp1->x0) && ((sp1->x1 + 1) >= (s16)x0))
+                                                {
+                                                    if ((s16)x0 < sp1->x0)
+                                                    {
+                                                        sp1->x0 = x0;
+                                                    }
+                                                    fresh = wtail;
+                                                    if (sp1->x1 < (s16)x1)
+                                                    {
+                                                        sp1->x1 = x1;
+                                                    }
+                                                    break;
+                                                }
+                                                sp1++;
+                                                n--;
+                                            } while (n != -1);
+                                        }
+                                        if (fresh != 0)
+                                        {
+                                            if (nacc >= 0x80)
+                                            {
+                                                scene->unk28 = 0;
+                                                scene->unk41 = 5;
+                                                return;
+                                            }
+                                            nacc++;
+                                            sp1->x0 = x0;
+                                            sp1->x1 = x1;
+                                        }
+                                        k--;
+                                        sc0++;
+                                    } while (k != -1);
+                                }
+                                n_sp = nout;
+                            }
+                            i--;
+                        } while (i != -1);
+                    }
+
+                    k = n_sp - 1;
+                    sp2 = (Span*)0x1F800200;
+                    if (k != -1)
+                    {
+                        do
+                        {
+                            lead = (((sp2->x0 + tile) - 1) >> shift0) + 2;
+                            tail = ((sp2->x1 + 1) >> shift0) + 1;
+                            wlead = lead >> 5;
+                            if (tail >= lead)
+                            {
+                                wtail = tail >> 5;
+                                wq = out + (wlead * 2);
+                                m0 = -1 << (lead & 0x1F);
+                                m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
+                                if (wlead != wtail)
+                                {
+                                    n = (wtail - wlead) - 2;
+                                    wq[0] |= m0;
+                                    wq += 2;
+                                    if (n != -1)
+                                    {
+                                        do
+                                        {
+                                            wq[0] = -1;
+                                            n--;
+                                            wq += 2;
+                                        } while (n != -1);
+                                    }
+                                    wq[0] |= m1;
+                                }
+                                else
+                                {
+                                    wq[0] |= m0 & m1;
+                                }
+                            }
+                            k--;
+                            sp2++;
+                        } while (k != -1);
+                    }
+
+                    k = nacc - 1;
+                    sp1 = acc;
+                    if (k != -1)
+                    {
+                        do
+                        {
+                            lead = (sp1->x0 >> shift0) + 2;
+                            tail = (sp1->x1 >> shift0) + 2;
+                            wlead = lead >> 5;
+                            wtail = tail >> 5;
+                            m0 = -1 << (lead & 0x1F);
+                            m1 = (u32)-1 >> (0x1F - (tail & 0x1F));
+                            wq = out + (wlead * 2);
+                            if (wlead != wtail)
+                            {
+                                wp = wq + 3;
+                                n = (wtail - wlead) - 2;
+                                wq[1] |= m0;
+                                if (n != -1)
+                                {
+                                    do
+                                    {
+                                        wp[0] = -1;
+                                        n--;
+                                        wp += 2;
+                                    } while (n != -1);
+                                }
+                                wp[0] |= m1;
+                            }
+                            else
+                            {
+                                wq[1] |= m0 & m1;
+                            }
+                            k--;
+                            sp1++;
+                        } while (k != -1);
+                    }
+                }
+
+                out += words * 2;
+                base += tile2;
+                rows--;
+            } while (rows != -1);
+        }
+
+        if (clip != NULL)
+        {
+            out = saved;
+        }
+        group++;
+    } while (group != scene->unk41);
+}
