@@ -162,7 +162,7 @@ extern u8 D_801ED590;
 #define QUEUE_ITEM_BASE(idx) ((void*)(((idx) * 0x10) + (u8*)&CD_SYSTEM))
 #define QUEUE_ITEM_DST_BUFFER(ptr) (*((u32*)(ptr) + 0x12))
 #define QUEUE_ITEM_CALLBACK(ptr) (*((CdCommandCallback*)(ptr) + 0x13))
-#define VCD (*(volatile CdSystem*) 0x801ED800)
+#define VCD (*(volatile CdSystem*)0x801ED800)
 
 int cdrom_recover(void);
 void cdrom_complete_command(u_char intr, u_char* result);
@@ -628,9 +628,9 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     s32 stagingBytesProduced; // Bytes written into staging by decompress; reused in the wrap tail // s0
     s32 alignRemainder;
     s32 copySize;
-    s32 negOne;    // Per-loop -1 terminator for the copy-out do-while loops // a0
+    s32 negOne; // Per-loop -1 terminator for the copy-out do-while loops // a0
     s32 relocDstAddr;
-    s32 prevReadPtr;          // Also reused as the relocation source cursor // a2
+    s32 prevReadPtr; // Also reused as the relocation source cursor // a2
     u32 wrapOverflow;
     CdStreamState* scratchpad;
     CdStreamState* streamState;
@@ -669,8 +669,8 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
 
     // Staging buffer lives in main RAM. Decompressor fills this; we copy out to caller chunks.
     srcPtr = (u8*)0x801da000;
-    stagingWritePtr = srcPtr;          // Start of staging buffer
-    stagingEnd = (u8*)0x801dbbe8;      // End of staging buffer
+    stagingWritePtr = srcPtr;     // Start of staging buffer
+    stagingEnd = (u8*)0x801dbbe8; // End of staging buffer
 
     timestamp = VSync(-1);
     streamState = &CD_STREAM_STATE;
@@ -1812,7 +1812,7 @@ void cdrom_verify_recovery(void)
  *
  * @warning Runs in interrupt context; must not call blocking functions.
  *
- * @see decomp.me: (94.06%) https://decomp.me/scratch/4W0j5
+ * @see decomp.me: (100%) https://decomp.me/scratch/BXisc
  */
 void cdrom_complete_command(u_char intr, u_char* result)
 {
@@ -1913,9 +1913,9 @@ void cdrom_complete_command(u_char intr, u_char* result)
             if (readIndex == cd_sys->queueWriteIndex)
             {
                 CdSyncCallback(NULL);
-                cd_sys->currentCommand = 0;
+                VCD.currentCommand = 0;
+                VCD.initCommand = 0;
                 cd_sys->retryCounter = 0;
-                cd_sys->initCommand = 0;
                 cd_sys->statusFlags.word &= ~0x10;
                 cd_sys->vsyncTimestamp = VSync(-1);
                 return;
@@ -1943,7 +1943,6 @@ void cdrom_complete_command(u_char intr, u_char* result)
             }
             nextCommand = CdlReadN;
         }
-        cdrom_run_command(nextCommand, 0, 0);
     }
     else
     {
@@ -1958,11 +1957,8 @@ void cdrom_complete_command(u_char intr, u_char* result)
             return;
         }
         nextCommand = CD_SYSTEM.commandQueue.items[CD_SYSTEM.queueReadIndex].command;
-        do
-        {
-            cdrom_run_command(nextCommand, 0, 0);
-        } while (0);
     }
+    cdrom_run_command(nextCommand, 0, 0);
 }
 
 /**
