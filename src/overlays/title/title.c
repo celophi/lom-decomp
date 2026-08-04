@@ -1763,335 +1763,317 @@ typedef struct
  *                 onto via addPrim.
  * @return Pointer to the byte just past the last primitive emitted.
  *
- * @note @p hdr and @p p are two separate cursors over the same table, both
- *       advanced by sizeof(SaveLayoutEntry). @p hdr is only ever used to read
- *       the entry's leading flags word, while @p p (which starts at entry + 2)
- *       reads every other field. gcc 2.7 keeps them in two registers and the
- *       split is required to match; merging them into one cursor with a
- *       negative offset shifts the whole allocation.
+ * @note WORK IN PROGRESS - 91.64% under objdiff (332/474 exact rows, frame and
+ *       sp-slot traffic both match). The residue is register allocation and
+ *       scheduling only; see the "required to match" notes below before
+ *       touching any of the shapes they describe.
  *
- * @note The two scratches below hold the previous m2c-derived base, NOT this
- *       source. That base scored higher but was not functionally equivalent:
- *       it reused the loop counter as a scratch temp
- *       (@c s2 @c = @c flags @c & @c 1), which the target never does. This
- *       rewrite is correct and structurally clean, and currently measures
- *       83.15% under objdiff. The residual gap is register allocation: gcc's
- *       loop.c combine_movables merges the duplicated constants (0x808080,
- *       used in three branches, and 0x2C, emitted once by setPolyFT4 and once
- *       by the else arm below), summing their savings and lifetimes until they
- *       clear the move_movables hoist threshold. They land in callee-saved
- *       registers that the original re-materializes inline, so the frame is
- *       -0x20 where the target's is -0x18.
+ * @note @p e is the ONLY table cursor. The target's second pointer (entry + 2,
+ *       carrying every field access at -1..+0x10) is a compiler-generated giv
+ *       that gcc builds from @p e by strength reduction. Writing two source
+ *       cursors makes gcc emit a THIRD pointer and costs ~25 rows.
+ *
+ * @note @c idx is deliberately reused to carry the 0x808080 tint word. That
+ *       gives the pseudo three assignments in the loop, which disqualifies it
+ *       from loop.c's movable list; otherwise the three identical 0x808080
+ *       stores combine (savings 3, lifetime 3) and clear move_movables'
+ *       threshold, hoisting the constant into a callee-saved register and
+ *       growing the frame to -0x20. The type-4 and glyph arms keep the plain
+ *       literal, which then combines only two-way and stays inline.
+ *
+ * @note @c tex and @c tex2 are two single-assignment variables holding the same
+ *       address. One variable assigned twice cannot be coalesced with either
+ *       source temp, so the `addu` lands in a fresh register instead of
+ *       overwriting the shifted index in place. Worth 21 rows.
+ *
+ * @note The empty @c do/while(0) and the nested @c if(type==2) block are a
+ *       basic-block note pair. They only pay off together with @c tp_len (the
+ *       hoisted DR_TPAGE length); either one alone is a regression.
+ *
+ * @note `(uv->ox - 4) * 8` rather than `(uv->ox * 8) - 0x20`: the second form
+ *       lets fold-const reassociate the constant out into the enclosing
+ *       expression (`addiu +0x20` before the `subu`). This form keeps the
+ *       offset in its own subtree. The target's exact insn order
+ *       (`sll 3 / addiu -0x20`) is still not reproduced - 8 rows.
+ *
+ * @note `setSemiTrans(poly, flags & 2)` reproduces the target's merged code
+ *       store at the branch join. The type-4 and glyph arms are NOT
+ *       setSemiTrans - they are a bare `if (flags & 2) setcode(..., 0x66)`.
  *
  * @see decomp.me (87.28%) https://decomp.me/scratch/UVLSm (old m2c base)
  * @see decomp.me (91.76%) https://decomp.me/scratch/P2gt5 (old m2c base,
- *      not functionally equivalent)
+ *      not functionally equivalent - it reused the loop counter as a scratch)
  */
-inline u16 inline_fn(unsigned char* arg0)
+void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
 {
-    return *((u16*)arg0);
-}
+    u8* ptr = (u8*)prim_buf;
+    u_long* ot = ot_tag;
+    u8* e = (u8*)g_saveLayoutTable;
+    s32 i = 0;
+    s32 sprt_code = 0x64;
 
-void* RenderSaveLayoutPrims(void* arg0, u_long* arg1)
-{
-    unsigned char* t0;
-    unsigned char* new_var;
-    unsigned int new_var8;
-    s32* t6;
-    s32 s2;
-    s32 s5;
-    s32 new_var6;
-    unsigned char* new_var4;
-    s32 s4;
-    s32 s3;
-    unsigned char* s0;
-    u32 t4;
-    s32 s1;
-    unsigned char* t2;
-    int new_var3;
-    unsigned char* a3;
-    u32* new_var10;
-    unsigned char* a1;
-    unsigned char* a2;
-    unsigned char* new_var7;
-    s32 t1;
-    s32 t3;
-    u16 t5;
-    unsigned char new_var2;
-    u16 a3_16;
-    s32 a1_16;
-    s32 t9_16;
-    int new_var5;
-    u8 v0_8;
-    int new_var9;
-    u16 a2_16;
-    unsigned long temp_ul;
-    s32 v0;
-    s32 v1;
-    t0 = arg0;
-    t6 = arg1;
-    t2 = g_saveLayoutTable + 2;
-    s2 = 0;
-    s5 = 3;
-    s4 = &g_slotSlideXLerped;
-    s3 = (s32)(&g_slotSlideYLerped);
-    s0 = g_saveLayoutTexTable;
-    t4 = 0x00FFFFFF;
     do
     {
-        if (1)
+        s32 type = e[1];
+
+        if (type == 3)
         {
-            s1 = 0x64;
-        }
-        v0 = t2[-1];
-        if (v0 == s5)
-        {
+            /* Slot panel background: a single textured quad. */
+            POLY_FT4* poly;
+            SlotUvRect* uv;
+            u8* tex;
+            u8* tex2;
+            s32 idx;
+
             if (g_slotSlideX > 0)
             {
-                a3 = (unsigned char*)(g_slotSelectedIndex + 1);
+                idx = g_slotSelectedIndex + 1;
             }
             else
             {
-                a3 = 0;
+                idx = 0;
             }
-            a1 = (unsigned char*)(((unsigned long)D_800F98AC) + (((unsigned long)a3) * 6));
-            *((u32*)(t0 + 4)) = 0x808080;
-            new_var9 = 0;
-            t0[3] = 9;
-            a3 = t0;
-            if (((new_var9, *((u32*)(t2 - 2)))) & 2)
-            {
-                a3[7] = 0x2E;
-            }
-            else
-            {
-                a3[7] = 0x2C;
-            }
-            v0 = 0x20;
-            v0 = (*((u16*)(a3 + 8)) = (inline_fn(t2 + 2) + g_slotSlideXLerped) - ((a1[4] * 8) - v0));
-            *((u16*)(a3 + 0x18)) = v0;
-            v0 = (*((u16*)(a3 + 10)) = (inline_fn(t2 + 4) + g_slotSlideYLerped) - ((a1[5] * 8) - 0x28));
-            *((u16*)(a3 + 0x12)) = v0;
-            new_var5 = (inline_fn(a3 + 8) + (a1[2] * 8)) - 1;
-            *((u16*)(a3 + 0x20)) = new_var5;
-            *((u16*)(a3 + 0x10)) = new_var5;
-            *((u16*)(a3 + 0x22)) = (v0 = (inline_fn(a3 + 10) + (a1[3] * 8)) - 1);
-            *((u16*)(a3 + 0x1A)) = v0;
-            v0_8 = a1[0] * 8;
-            a3[0x14] = v0_8;
-            a3[0x24] = v0_8;
-            v0_8 = (new_var2 = a1[1]) * 8;
-            a3[0x0D] = v0_8;
-            a3[0x15] = v0_8;
-            t3 = a3[0x14];
-            v0 = (a3[0x1C] = (t3 + (a1[2] * 8)) - 1);
-            a3[0x0C] = v0;
-            v0 = (a3[0x25] = (a3[0x0D] + (a1[3] * 8)) - 1);
-            a3[0x1D] = v0;
-            t0 = a3 + 0x28;
-            a3 = (unsigned char*)((t2[0] * 0x10) + ((unsigned long)s0));
-            v0 = (inline_fn(a3 + 6) << 6) | ((inline_fn(a3 + 4) >> 4) & 0x3F);
-            a2 = t2;
-            new_var3 = 6;
-            *((u16*)((t0 - 0x28) + 0x0E)) = v0;
-            a1 = (unsigned char*)((a2[0] * 0x10) + ((unsigned long)s0));
-            a2_16 = inline_fn(a1 + 2);
-            v0 = ((((((*((u32*)(t2 - 2))) << 3) & 0x60) | ((a1[0x0C] & 3) << 7)) | ((a2_16 & 0x100) >> 4)) | ((inline_fn(a1) & 0x3FF) >> new_var3)) |
-                 ((a2_16 & 0x200) * 4);
-            *((u16*)((t0 - 0x28) + 0x16)) = v0;
-            ;
-            ;
-            *((u32*)((t0 + (-0x28)) + 0)) = ((*((u32*)((t0 - 0x28) + 0))) & 0xFF000000) | ((*t6) & t4);
-            v1 = (*t6) & 0xFF000000;
-            v0 = ((unsigned long)(t0 - 0x28)) & t4;
-            *t6 = v1 | v0;
+
+            /* (offset) + (base) so gcc emits `addu v1,v1,v0`, not the reverse. */
+            uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98AC);
+
+            poly = (POLY_FT4*)ptr;
+            idx = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
+            *(u32*)(ptr + 4) = idx;
+            setPolyFT4(poly);
+
+            setSemiTrans(poly, *(u32*)e & 2);
+
+            /* Chained assignment: the value propagated to x2/y1 is the *short*
+               result of the store, so gcc sinks the 16-bit truncation into the
+               add and loads the lerp global with lhu rather than lw. */
+            poly->x2 = poly->x0 = (*(u16*)(e + 4) + g_slotSlideXLerped) - ((uv->ox - 4) * 8);
+            poly->y1 = poly->y0 = (*(u16*)(e + 6) + g_slotSlideYLerped) - ((uv->oy - 5) * 8);
+
+            poly->x1 = poly->x3 = (poly->x0 + (uv->w * 8)) - 1;
+            poly->y2 = poly->y3 = (poly->y0 + (uv->h * 8)) - 1;
+
+            poly->u3 = poly->u1 = uv->u * 8;
+            poly->v1 = poly->v0 = uv->v * 8;
+
+            poly->u0 = poly->u2 = (poly->u1 + (uv->w * 8)) - 1;
+            poly->v2 = poly->v3 = (poly->v0 + (uv->h * 8)) - 1;
+
+            ptr = (u8*)poly + sizeof(POLY_FT4);
+
+            tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+            poly->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
+
+            tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+            poly->tpage = TPAGE_WORD(*(u32*)e, tex2[0x0C] & 3, *(u16*)tex2, *(u16*)(tex2 + 2));
+
+            addPrim(ot, poly);
         }
-        else if (v0 == 4)
+        else if (type == 4)
         {
+            /* Slot cursor / decoration: one free-size sprite. */
+            SlotUvRect* uv;
+            u8* tex;
+            u8* tex2;
+            s32 idx;
+            SPRT* sprt;
+            DR_TPAGE* tp;
+
             if (g_slotSlideX < 0)
             {
-                a3 = (unsigned char*)(g_slotSelectedIndex + 1);
+                idx = g_slotSelectedIndex + 1;
             }
             else
             {
-                a3 = 0;
+                idx = 0;
             }
-            *((u32*)(t0 + 4)) = 0x808080;
-            t0[3] = 4;
-            t0[7] = s1;
-            a1 = (unsigned char*)(((unsigned long)D_800F98F4) + (((unsigned long)a3) * 6));
-            if ((*((u32*)(t2 - 2))) & 2)
+
+            sprt = (SPRT*)ptr;
+            *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
+            setlen(sprt, 4);
+            setcode(sprt, sprt_code);
+
+            uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
+
+            if (*(u32*)e & 2)
             {
-                t0[7] = 0x66;
+                setcode(sprt, 0x66);
             }
-            v1 = ((unsigned long)t0) & t4;
-            *((u16*)(t0 + 8)) = (inline_fn(t2 - (-2)) + g_slotSlideXLerped) - ((a1[4] * 8) - 0x20);
-            *((u16*)(t0 + 10)) = (inline_fn(t2 + 4) + g_slotSlideYLerped) - ((a1[5] * 8) - 0x28);
-            t0[12] = a1[0] * 8;
-            t0[13] = a1[1] * 8;
-            *((u16*)(t0 + 0x10)) = a1[2] * 8;
-            *((u16*)(t0 + 0x12)) = a1[3] * 8;
-            a3 = s0 + ((t2[0] * 8) * 2);
-            v0 = (inline_fn(a3 + 6) << 6) | ((inline_fn(a3 - (-4)) >> 4) & 0x3F);
-            *((u16*)(t0 + 0x0E)) = v0;
-            v1 = (*((u32*)t0)) & 0xFF000000;
-            ;
-            *((u32*)t0) = v1 | ((*t6) & t4);
-            v1 = ((unsigned long)t0) & t4;
-            t0 += 0x14;
-            v0 = (*t6) & 0xFF000000;
-            *t6 = v0 | v1;
-            t0[3] = 1;
-            a1 = s0 + (t2[0] * 0x10);
-            a2_16 = inline_fn(a1 + 2);
-            new_var6 = (*((u32*)(t2 - 2))) << 3;
-            ;
-            *((u32*)(t0 + 4)) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | (new_var6 & 0x60)) | ((a2_16 & 0x100) >> 4)) | ((inline_fn(a1) & 0x3FF) >> 6)) |
-                                 ((a2_16 & 0x200) * 4)) |
-                                0xE1000000;
-            v1 = (*((u32*)t0)) & 0xFF000000;
-            ;
-            new_var8 = v1 | ((*t6) & t4);
-            *((u32*)t0) = new_var8;
-            t0 += 8;
-            v0 = (*t6) & 0xFF000000;
-            // FIX: use the old address of t0 (before the +8) instead of the old value
-            *t6 = v0 | ((unsigned long)(t0 - 8) & t4);
-        }
-        else if (v0 == 2)
-        {
-            new_var10 = (u32*)t0;
-            *((u32*)(t0 + 4)) = 0x40;
-            v1 = ((unsigned long)t0) & t4;
-            t0[3] = s5;
-            t0[7] = 0x62;
-            *((u16*)(t0 + 8)) = inline_fn(t2 + 6) + g_slotSlideXLerped;
-            do
-            {
-                *((u16*)(t0 + 10)) = inline_fn(t2 + 8) + g_slotSlideYLerped;
-                *((u16*)(t0 + 12)) = inline_fn(t2 + 14);
-                *((u16*)(t0 + 14)) = inline_fn(t2 + 16);
-                v1 = 0xFF000000;
-                v1 = (*((u32*)t0)) & v1;
-                v0 = (*t6) & t4;
-                *new_var10 = v1 | v0;
-                v1 = (*t6) & 0xFF000000;
-                v0 = ((unsigned long)t0) & t4;
-                *t6 = v1 | v0;
-                a2 = t0 + 0x10;
-                a2[3] = 1;
-                *((u32*)(a2 + 4)) = 0xE1000025;
-                v1 = (*((u32*)(t0 + 0x10))) & 0xFF000000;
-                v0 = (*t6) & t4;
-                *((u32*)(t0 + 0x10)) = v1 | v0;
-                // FIX: Use the address of the second sprite, not the lower bits of *t6
-                *t6 = ((*t6) & 0xFF000000) | ((unsigned long)a2 & t4);
-                t0 += 0x18;
-            } while (0);
+
+            sprt->x0 = (*(u16*)(e + 4) + g_slotSlideXLerped) - ((uv->ox - 4) * 8);
+            sprt->y0 = (*(u16*)(e + 6) + g_slotSlideYLerped) - ((uv->oy - 5) * 8);
+            sprt->u0 = uv->u * 8;
+            sprt->v0 = uv->v * 8;
+            sprt->w = uv->w * 8;
+            sprt->h = uv->h * 8;
+
+            tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+            sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
+
+            addPrim(ot, sprt);
+            ptr += sizeof(SPRT);
+
+            tp = (DR_TPAGE*)ptr;
+            setlen(tp, 1);
+
+            tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+            tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, *(u16*)tex2, *(u16*)(tex2 + 2)) | 0xE1000000;
+
+            addPrim(ot, tp);
+            ptr += sizeof(DR_TPAGE);
         }
         else
         {
-            new_var = t0;
-            if (v0 != 0)
+            /* Block-note pair: required to match, see the docblock. */
+            do
             {
-                t3 = inline_fn(t2 + 14);
-                t5 = inline_fn(t2 + 10);
-                a1 = s0 + (t2[0] * 0x10);
-                a3_16 = inline_fn(a1);
-                v0 = (*((u32*)(t2 - 2))) & 1;
-                if (v0)
+            } while (0);
+
+            if (type == 2)
+            {
+                /* Dimmed backdrop behind the slot list: one solid tile. */
+                TILE* tile = (TILE*)ptr;
+                DR_TPAGE* tp;
+
+                *(u32*)(ptr + 4) = 0x40; /* solid dark-blue fill; code byte set below */
+                setlen(tile, 3);
+                setcode(tile, 0x62);
+
+                tile->x0 = *(u16*)(e + 8) + g_slotSlideXLerped;
+                tile->y0 = *(u16*)(e + 10) + g_slotSlideYLerped;
+                tile->w = *(u16*)(e + 16);
+                tile->h = *(u16*)(e + 18);
+
+                addPrim(ot, tile);
+
+                tp = (DR_TPAGE*)(ptr + sizeof(TILE));
+                setlen(tp, 1);
+                tp->code[0] = 0xE1000025;
+                addPrim(ot, tp);
+
+                ptr += sizeof(TILE) + sizeof(DR_TPAGE);
+            }
+            else if (type != 0)
+            {
+                /* Glyph strip: one SPRT + DR_TPAGE per GLYPH_CHUNK_WIDTH pixels. */
+                s32 remaining = *(u16*)(e + 16);
+                u16 u0 = *(u16*)(e + 12);
+                u8* tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+                /* Signed: gcc cannot prove this stays non-negative once the chunk
+                   loop accumulates += 0x20/0x40 into it, so getTPage's
+                   `(x & 0x3ff) >> 6` becomes an arithmetic shift (sra), as in the
+                   target. A u16 here folds to srl. */
+                s32 tex_x = *(u16*)tex;
+                s32 x;
+                s32 y;
+                s32 chunk;
+                u8 tp_len;
+                u8* tex2;
+                u8* cur;
+
+                if (*(u32*)e & 1)
                 {
-                    do
-                    {
-                        a1_16 = (*((s16*)(t2 + 2))) + g_slotSlideXLerped;
-                        t9_16 = (*((s16*)(t2 + 4))) + g_slotSlideYLerped;
-                    } while (0);
+                    x = *(s16*)(e + 4) + g_slotSlideXLerped;
+                    y = *(s16*)(e + 6) + g_slotSlideYLerped;
                 }
                 else
                 {
-                    a1_16 = *((s16*)(t2 + 2));
-                    t9_16 = *((s16*)(t2 + 4));
+                    x = *(s16*)(e + 4);
+                    y = *(s16*)(e + 6);
                 }
-                t1 = 0x80;
-                if (((t3 + 1) - 1) < 0x81)
+
+                /* Hoisted out of the chunk loop on purpose; see the docblock. */
+                tp_len = 1;
+
+                chunk = GLYPH_CHUNK_WIDTH;
+                if (remaining < GLYPH_CHUNK_WIDTH + 1)
                 {
-                    t1 = t3;
+                    chunk = remaining;
                 }
-                a2 = new_var + 4;
+
+                /* cur runs one primitive ahead of ptr: it points at the colour
+                   word (prim + 4) of the primitive currently being filled in,
+                   while ptr stays at the primitive's tag for addPrim. */
+                cur = ptr + 4;
                 while (1)
                 {
-                    *((u32*)(a2 + 0)) = 0x808080;
-                    a2[-1] = 4;
-                    a2[3] = 0x64;
-                    if ((*((u32*)(t2 - 2))) & 2)
+                    SPRT* sprt = (SPRT*)(cur - 4);
+                    DR_TPAGE* tp;
+
+                    *(u32*)cur = 0x808080; /* cur is prim + 4: the packed colour word */
+                    setlen(sprt, 4);
+                    setcode(sprt, sprt_code);
+
+                    if (*(u32*)e & 2)
                     {
-                        a2[3] = 0x66;
+                        setcode(sprt, 0x66);
                     }
-                    *((s16*)(a2 + 4)) = a1_16;
-                    *((s16*)(a2 + 6)) = t9_16;
-                    a2[8] = t5;
-                    new_var7 = a2 + 14;
-                    *((u16*)(a2 + 12)) = t1;
-                    a2[9] = t2[12];
-                    *((u16*)new_var7) = inline_fn(t2 + 16);
-                    t3 -= t1;
-                    a1 = s0 + (t2[0] * 0x10);
-                    v0 = (inline_fn(a1 + 6) << 6) | ((inline_fn(a1 + 4) >> 4) & 0x3F);
-                    *((u16*)(a2 + 10)) = v0;
 
-                    a2 += 0x14;
+                    sprt->x0 = x;
+                    sprt->y0 = y;
+                    sprt->u0 = u0;
+                    sprt->w = chunk;
+                    sprt->v0 = e[14];
+                    sprt->h = *(u16*)(e + 18);
 
-                    v1 = (*((u32*)t0)) & 0xFF000000;
-                    v0 = (*t6) & t4;
-                    *((u32*)t0) = v1 | v0;
-                    v1 = ((unsigned long)t0) & t4;
-                    t0 += 0x14;
-                    v0 = (*t6) & 0xFF000000;
-                    *t6 = v0 | v1;
-                    a2[-1] = 1;
-                    a1 = s0 + (t2[0] * 0x10);
-                    a2_16 = inline_fn(a1 + 2);
-                    t9_16 = ((*((u32*)(t2 - 2))) << 3) & 0x60;
-                    *((u32*)a2) = (((((((*((u32*)(a1 + 0x0C))) & 3) << 7) | t9_16) | ((a2_16 & 0x100) >> 4)) | (((s32)(a3_16 & 0x3FF)) >> 6)) |
-                                   ((0, (a2_16 & 0x200) * 4))) |
-                                  0xE1000000;
-                    a2 += 8;
-                    v1 = (*((u32*)t0)) & 0xFF000000;
-                    v0 = ((0, *t6)) & t4;
-                    *((u32*)t0) = v1 | v0;
-                    v1 = ((unsigned long)t0) & t4;
-                    t0 += 8;
-                    t9_16 = (*t6) & 0xFF000000;
-                    v0 = t9_16;
-                    *t6 = v0 | v1;
-                    if (t3 == 0)
+                    remaining -= chunk;
+
+                    tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+                    sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
+
+                    cur += sizeof(SPRT);
+
+                    addPrim(ot, ptr);
+                    ptr += sizeof(SPRT);
+
+                    tp = (DR_TPAGE*)(cur - 4);
+                    setlen(tp, tp_len);
+
+                    tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+                    tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, tex_x, *(u16*)(tex2 + 2)) | 0xE1000000;
+
+                    cur += sizeof(DR_TPAGE);
+
+                    addPrim(ot, ptr);
+                    ptr += sizeof(DR_TPAGE);
+
+                    if (remaining == 0)
                     {
                         break;
                     }
-                    t5 ^= 0x80;
-                    a1 = (new_var4 = s0 + (t2[0] * 0x10));
-                    if (!((*((u32*)(a1 + 0x0C))) & 7))
+
+                    /* Next chunk: flip to the other half of the texture page, or
+                       step the page origin on when the mode bits say the strip
+                       spans pages. */
+                    u0 ^= 0x80;
+                    tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+
+                    if (!(*(u32*)(tex + 0x0C) & 7))
                     {
-                        a3_16 += 0x20;
+                        tex_x += 0x20;
                     }
                     else
                     {
-                        a3_16 += 0x40;
-                        t5 = 0;
+                        tex_x += 0x40;
+                        u0 = 0;
                     }
-                    t1 = 0x80;
-                    if (t3 < 0x81)
+
+                    chunk = GLYPH_CHUNK_WIDTH;
+                    if (remaining < GLYPH_CHUNK_WIDTH + 1)
                     {
-                        t1 = t3;
+                        chunk = remaining;
                     }
-                    a1_16 += 0x80;
+
+                    x += GLYPH_CHUNK_WIDTH;
                 }
             }
         }
-        s2++;
-        t2 += 0x18;
-    } while (s2 < 0x1B);
-    return t0;
+
+        i++;
+        e += sizeof(SaveLayoutEntry);
+    } while (i < SAVE_LAYOUT_ENTRIES);
+
+    return ptr;
 }
 
 /**
