@@ -1121,13 +1121,13 @@ u32 cdrom_process_state(void)
 
     s32 syncCompleteFlag;
     s32 indexDiff;
-    
+
     u8 currentCommand;
     u8 cdCommand;
     u8* cdCommandParams;
     u32 readIndex;
     s32 initCommand;
-       
+
     u8 initState;
     u32 flagsTmp;
     CdSystem* cdSystem;
@@ -1138,12 +1138,12 @@ u32 cdrom_process_state(void)
     {
         return 0;
     }
-    
+
     initState = 1;
-    
+
     if (CD_SYSTEM.statusFlags.word & 7)
     {
-        
+
         readIndex = CD_SYSTEM.queueReadIndex;
         indexDiff = (CD_SYSTEM.queueWriteIndex - readIndex) & 0xF;
 
@@ -1151,7 +1151,7 @@ u32 cdrom_process_state(void)
 
         if (CD_SYSTEM.initState == 0)
         {
-            
+
             CD_SYSTEM.initState = initState;
 
             if (indexDiff != 0)
@@ -1185,7 +1185,7 @@ u32 cdrom_process_state(void)
 
         if (VSync(-1) >= ((s32)CD_SYSTEM.vsyncTimestamp + 30))
         {
-            
+
             if (CD_SYSTEM.initState != 8)
             {
                 CD_SYSTEM.vsyncTimestamp = VSync(-1);
@@ -1297,35 +1297,32 @@ u32 cdrom_process_state(void)
                     {
                         initCommand = CD_SYSTEM_V.initCommand & 0xFF;
 
-                        if (initCommand == 0x22)
+                        if (initCommand != 0x22)
                         {
-                            goto RetryPause;
-                        }
-
-                        if (initCommand >= 0x23)
-                        {
-                            if (initCommand == 0x23)
+                            if (initCommand >= 0x23)
                             {
-                                goto RetrySetmode;
+                                if (initCommand == 0x23)
+                                {
+                                    goto RetrySetmode;
+                                }
                             }
+
+                            CdSyncCallback(cdrom_handle_recovery_sync);
+                            CdReadyCallback((void (*)(u8, u8*))cdrom_verify_disc);
+                            CD_SYSTEM.initCommand = 0x21;
+                            cdCommand = CdlReadN;
+                            cdCommandParams = (u8*)0x801ED95C;
                         }
-
-                        CdSyncCallback(cdrom_handle_recovery_sync);
-                        CdReadyCallback((void (*)(u8, u8*))cdrom_verify_disc);
-                        CD_SYSTEM.initCommand = 0x21;
-                        cdCommand = CdlReadN;
-                        cdCommandParams = (u8*)0x801ED95C;
-                        goto ExecuteCommand;
-
-                    RetryPause:
-                        CdSyncCallback(cdrom_handle_recovery_sync);
-                        cdCommand = CdlPause;
-                        cdCommandParams = NULL;
+                        else
+                        {
+                            CdSyncCallback(cdrom_handle_recovery_sync);
+                            cdCommand = CdlPause;
+                            cdCommandParams = NULL;
+                        }
                         goto ExecuteCommand;
 
                     RetrySetmode:
                         CdSyncCallback(cdrom_handle_recovery_sync);
-                        
                         cdCommand = CdlSetmode;
                         cdCommandParams = (u8*)0x801ED950;
 
@@ -1373,7 +1370,7 @@ u32 cdrom_process_state(void)
                     CD_SYSTEM.syncComplete = 0;
                 }
                 readIndex = CD_SYSTEM.queueReadIndex;
-                
+
                 indexDiff = (CD_SYSTEM.queueWriteIndex - readIndex) & 0xF;
 
                 if (indexDiff != 0)
