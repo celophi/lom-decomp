@@ -601,15 +601,13 @@ s32 cdrom_stream(s32 resourceIndex, u32 destination)
  *                          Called when each chunk is filled and once at end-of-stream.
  *
  * @see decomp.me (93.03% scratch) https://decomp.me/scratch/4WZBs
- * @note Local best 98.04% (objdiff, 2026-08-04). Remaining diff is a 3-way
- *       argument-register rotation -- target has loopCount in a1,
- *       relocDstAddr in a0, prevReadPtr in a2; this build has them in
- *       a2/a1/a0 -- plus one scheduling nit, the
- *       %lo(cdrom_handle_stream_data) addiu belonging in the
- *       cdrom_queue_command delay slot. loopCount is arg 3 of
- *       cdrom_decompress_data, so it conflicts with hard regs a0/a1 and
- *       global alloc cannot place it in a1; resolving that contradiction is
- *       the next step. See working/cdrom_stream_chunked/status.md.
+ * @note Local best 99.78% (objdiff, 2026-08-04): 290/299 rows exact, no
+ *       structural or instruction-count difference. The 9 remaining rows are
+ *       all register names in the ring-buffer wrap block: the 0x801DC118
+ *       constant carrier wants a0 (we get a1), the `4 - alignRemainder` temp
+ *       wants v0 (we get a0), copySize wants a1 (v1), and prevReadPtr wants
+ *       a2 (a1). Statement order already matches exactly, so this is pure
+ *       register allocation. See working/cdrom_stream_chunked/status.md.
  */
 void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pfnChunkDone)
 {
@@ -618,6 +616,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     int decompressResult; // Return from cdrom_decompress_data: 0 = end-of-stream, 1 = output full
     u32 srcWord;
     int loopCount;
+    int decompressEnd;          // Compressed-source end guard passed to cdrom_decompress_data // a2
     u32 alignCheck;
     u8* srcPtr;               // Read cursor into the staging buffer during the copy-out phase // s1
     int totalBytesDelivered;  // Total decompressed bytes given to caller so far // s5
@@ -637,7 +636,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
     s32 relocDstAddr;
     s32 prevReadPtr; // Also reused as the relocation source cursor // a2
     u32 wrapOverflow;
-    CdStreamState* scratchpad;
+    volatile CdStreamState* scratchpad;
     CdStreamState* streamState;
     s32 sentinel;          // Always -1; compared against only in loop GUARDS // s8
     u8** pDestination;     // Pointer-to-pointer to `destination`; kept in register for copy loops // s2
@@ -703,23 +702,23 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                 // to avoid consuming an incomplete sector boundary.
                 if (bytesBuffered < remainingDataSize)
                 {
-                    loopCount = (streamState->readPtr + bytesBuffered) - 280;
+                    decompressEnd = (streamState->readPtr + bytesBuffered) - 280;
                 }
                 else
                 {
-                    loopCount = streamState->readPtr + remainingDataSize;
+                    decompressEnd = streamState->readPtr + remainingDataSize;
                 }
 
                 // --- Direct mode: decompress straight into the caller's destination ---
                 if (isDirectMode != 0 && destination < dstEnd)
                 {
-                    cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&destination, loopCount, (u32)dstEnd);
+                    cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&destination, decompressEnd, (u32)dstEnd);
                     continue; // Loop back; decompressResult check happens below on exit
                 }
 
                 // --- Chunked mode: decompress into staging buffer, then copy to caller ---
                 srcPtr = stagingWritePtr; // Remember staging write position before this call
-                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr, loopCount, (u32)stagingEnd);
+                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr, decompressEnd, (u32)stagingEnd);
 
                 // How many bytes did the decompressor write to the staging buffer this pass?
                 stagingBytesProduced = (int)stagingWritePtr - (int)srcPtr;
@@ -753,7 +752,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                                     *dest = srcByte;
                                     *pDestination = dest + 1;
                                     loopCount--;
-                                } while (negOne != loopCount);
+                                } while (loopCount != negOne);
                             }
                         }
 
@@ -776,7 +775,7 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                                     *dest = srcWord;
                                     *pDestination = (u8*)(dest + 1);
                                     loopCount--;
-                                } while (negOne != loopCount);
+                                } while (loopCount != negOne);
                             }
                         }
 
@@ -823,7 +822,8 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                     // but only if there's still data to copy or the decompressor has more pending.
                     if (stagingBytesProduced > 0 || decompressResult != 0)
                     {
-                        pfnChunkDone(chunkIndex++); // Chunk complete
+                        negOne = chunkIndex++;
+                        pfnChunkDone(negOne); // Chunk complete
                         destination = pfnGetBuffer(totalBytesDelivered, &chunkBytesRemaining); // Next chunk
                     }
                 }
@@ -894,7 +894,8 @@ void cdrom_stream_chunked(undefined2 resourceIndex, codeA pfnGetBuffer, codeB pf
                 alignRemainder = (stagingBytesProduced & 3);
                 relocDstAddr = 4 - alignRemainder;
                 copySize = relocDstAddr & 3;
-                relocDstAddr = 0x801dc118 - stagingBytesProduced;
+                loopCount = 0x801dc118;
+                relocDstAddr = loopCount - stagingBytesProduced;
                 prevReadPtr = (prevReadPtr + bytesBuffered) - copySize;
 
                 streamState->writePtr = relocDstAddr;
