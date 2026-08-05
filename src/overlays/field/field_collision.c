@@ -4508,3 +4508,191 @@ loop_107:
         } while (temp_s6_4 != -1);
     }
 }
+
+typedef struct
+{
+    u8 pad0[0xC];
+    s16 unkC;
+    u8 pad1[0x10 - 0xE];
+    s16 unk10;
+} Margin;
+
+s32 func_80060CB0(Margin *m, Query *q)
+{
+    FieldScene *scene;
+    s32 count;
+    s32 group;
+    s32 i;
+    s32 v;
+    s32 g;
+    s32 gy;
+    s32 half;
+    s32 half2;
+    s32 ext_z;
+    s32 margin;
+    s32 tile;
+    s32 shift;
+    s32 shift2;
+    s32 mask;
+    s32 mask2;
+    s32 tx;
+    s32 tz;
+    s32 col_start;
+    s32 row_start;
+    s32 ncol;
+    s32 nrow;
+    s32 cols;
+    s32 rows;
+    s32 col;
+    s32 n;
+    u8 *base;
+    u8 *p;
+
+    scene = g_field_scene.scene;
+    if (scene->unk28 == 0)
+    {
+        if (scene->unk41 == 0)
+        {
+            return 0;
+        }
+        return -1;
+    }
+
+    v = q->y;
+    gy = v >> 8;
+    if (v < 0)
+    {
+        gy = (v + 0xFF) >> 8;
+    }
+
+    count = scene->unk41;
+    group = count - 1;
+    i = 0;
+    if (count != 0)
+    {
+        half = count;
+        for (; i != half; i++)
+        {
+            s32 gid = scene->unk4A[i];
+
+            if (gy < gid)
+            {
+                if (i != 0)
+                {
+                    i -= 1;
+                }
+                group = i;
+                break;
+            }
+            else if (gid == gy)
+            {
+                group = i;
+                break;
+            }
+        }
+    }
+
+    tx = q->unkC;
+    ext_z = q->unk10;
+    tile = scene->unk40;
+    shift = 3;
+    if (tile == 4)
+    {
+        shift = 2;
+    }
+
+    half = ((s16) tx) >> 1;
+    margin = m->unkC;
+    margin = margin - 1;
+    v = q->x;
+    if (v >= 0)
+    {
+        g = v >> 8;
+    }
+    else
+    {
+        g = (v + 0xFF) >> 8;
+    }
+    tx = (g - half) - margin;
+
+    tz = ext_z;
+    half2 = ((s16) tz) >> 1;
+    margin = m->unk10;
+    margin = margin - 1;
+    v = q->z;
+    if (v >= 0)
+    {
+        g = v >> 8;
+    }
+    else
+    {
+        g = (v + 0xFF) >> 8;
+    }
+    tz = (g - half2) - margin;
+
+    col_start = (tx >> shift) + 2;
+    shift2 = shift + 1;
+    row_start = (tz >> shift2) + 2;
+    mask = tile - 1;
+    ncol = (((tx & mask) + m->unkC + ((s16) q->unkC) + mask) - 1) >> shift;
+    mask2 = (tile * 2) - 1;
+    nrow = (((tz & mask2) + m->unk10 + ((s16) q->unk10) + mask2) - 1) >> shift2;
+    cols = (u16) scene->unk46;
+    rows = (u16) scene->unk48;
+
+    if (col_start <= 0)
+    {
+        g = ncol - 1;
+        g = g + col_start;
+        if (g <= 0)
+        {
+            return -2;
+        }
+        ncol = g;
+        col_start = 1;
+    }
+    if (row_start <= 0)
+    {
+        if ((nrow + (row_start - 1)) <= 0)
+        {
+            return -2;
+        }
+        ncol += col_start - 1;
+        col_start = 1;
+    }
+    if (col_start >= cols - 1)
+    {
+        return -2;
+    }
+    if (row_start >= rows - 1)
+    {
+        return -2;
+    }
+
+    tz = (u16) scene->unk44;
+    base = (u8 *) (scene->unk2C + (tz * group) + (cols * row_start) + col_start);
+    for (nrow -= 1; nrow != -1; nrow--)
+    {
+        p = base;
+        if (row_start >= rows - 1)
+        {
+            break;
+        }
+        col = col_start;
+        for (n = ncol - 1; n != -1; n--)
+        {
+            if (col >= cols - 1)
+            {
+                break;
+            }
+            if (*p != 0xFF)
+            {
+                *p = 0xFE;
+            }
+            p += 1;
+            col += 1;
+        }
+        row_start += 1;
+    }
+    return 0;
+}
