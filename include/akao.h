@@ -284,7 +284,11 @@ typedef struct AkaoChannelState
     u16 unkDA;       /* 0xDA */
     u16 unkDC;       /* 0xDC */
     u16 unkDE;       /* 0xDE */
-    u8 _padE0[10];   /* 0xE0 - 0xE9 */
+    u16 unkE0;       /* 0xE0 */
+    s16 unkE2;       /* 0xE2 */
+    u16 unkE4;       /* 0xE4 */
+    u16 unkE6;       /* 0xE6 */
+    u16 unkE8;       /* 0xE8 */
     u16 unkEA;       /* 0xEA */
     s16 unkEC;       /* 0xEC */
     u16 unkEE;       /* 0xEE */

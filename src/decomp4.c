@@ -3764,3 +3764,34 @@ void func_8002CF9C(AkaoChannelState* arg0, s32 arg1)
 
     akao_seq_op_enable_noise(arg0, arg1, temp_a2);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/fM3EA
+ */
+void func_8002CFE0(AkaoChannelState* arg0, s32 arg1)
+{
+    u8* temp_a1;
+    u16 temp_a0;
+    u32 temp_v1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->flags;
+    temp_v1 = *temp_v0;
+    arg0->flags = temp_v0 + 1;
+
+    arg0->unk70 = temp_v1;
+    if (temp_v1 == 0)
+    {
+        arg0->unk70 = 0x100;
+    }
+
+    temp_a0 = arg0->unk6E & 0xFF00;
+    temp_a1 = arg0->flags;
+
+    arg0->unkE2 = ((s16)(*temp_a1 << 8) - temp_a0) / arg0->unk70;
+    arg0->unk6E = temp_a0;
+    arg0->flags = temp_a1 + 1;
+    arg0->unk34 |= 0x800;
+
+    akao_seq_op_enable_noise(arg0, arg1, arg0);
+}
