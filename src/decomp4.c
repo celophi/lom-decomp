@@ -3803,3 +3803,11 @@ void func_8002D094(AkaoChannelState* arg0)
 {
     arg0->unk34 = (s32)(arg0->unk34 | 0x100000);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ySVnh
+ */
+void func_8002D0A8(AkaoChannelState* arg0)
+{
+    arg0->flags += 1;
+}
