@@ -3795,3 +3795,11 @@ void func_8002CFE0(AkaoChannelState* arg0, s32 arg1)
 
     akao_seq_op_enable_noise(arg0, arg1, arg0);
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ws5Yw
+ */
+void func_8002D094(AkaoChannelState* arg0)
+{
+    arg0->unk34 = (s32)(arg0->unk34 | 0x100000);
+}
