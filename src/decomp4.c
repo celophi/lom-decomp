@@ -3811,3 +3811,11 @@ void func_8002D0A8(AkaoChannelState* arg0)
 {
     arg0->flags += 1;
 }
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/q71gK
+ */
+void func_8002D0BC(s32 arg1, s32 arg2)
+{
+    g_akao_seq_channel0->unk8 = (s32)(g_akao_seq_channel0->unk8 | arg2);
+}
