@@ -2945,7 +2945,7 @@ void akao_seq_op_disable_pitch_modulation(ag_struct* arg0, s32 arg1)
  *       akao_seq_op_enable_reverb.
  * @see decomp.me (99.58%)
  */
-void akao_seq_op_enable_noise(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_enable_noise(AkaoChannelState* arg0, s32 arg1, s32 arg2)
 {
     if (arg0->unk64 == 0)
     {
@@ -3743,4 +3743,24 @@ void func_8002CEE4(AkaoChannelState* arg0)
     func_80026C14(&D_8004D3A0, var_a1, var_a2, 0);
 
     *(u8**)arg0 = *(u8**)arg0 + 4;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/B5HO1
+ */
+void func_8002CF9C(AkaoChannelState* arg0, s32 arg1)
+{
+    s32 temp_byte;
+    s32 temp_a2;
+
+    temp_byte = *(u8*)arg0->flags;
+    arg0->flags++;
+
+    arg0->unk70 = 0;
+    arg0->unk34 |= 0x800;
+
+    temp_a2 = temp_byte << 8;
+    arg0->unk6E = temp_a2;
+
+    akao_seq_op_enable_noise(arg0, arg1, temp_a2);
 }
