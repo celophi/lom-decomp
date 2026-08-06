@@ -17,7 +17,7 @@ extern s32 g_akao_lfo_waveforms[];
 
 /**
  * @brief One 8-byte note slot in the per-channel note table at
- *        @c channel->unk34. Each entry encodes the articulation index plus
+ *        @c channel->flags (the song-role note table). Each entry encodes
  *        a packed set of per-note SPU voice parameters used by
  *        @c akao_channel_start_note. Local to this file because it is the
  *        only consumer.
@@ -1355,7 +1355,7 @@ s32 akao_compute_pitch(AkaoArticulation* arg0, s32 arg1, s32 arg2, s32* arg3)
  * @param channel Pointer to the channel state block (void* to match codegen).
  * @param channel_mask Channel bit-mask used to update the active-channel bitmask.
  * @param slot_idx Slot index into the small-slot table (base pointer from
- *             @c g_akao_seq_channel0->unk34).
+ *             @c g_akao_seq_channel0->flags, the song-role note table).
  * @return Pitch result from @c akao_compute_pitch.
  * @see decomp.me (98.76%) https://decomp.me/scratch/9dRLX
  */
@@ -1800,11 +1800,11 @@ s32 akao_remap_sfx_articulation(s32 arg0, s32 arg1)
 
 /**
  * @brief Release sequencer or SFX channels depending on mode.
- *        When channel->unk64 is zero, clears release_mask bits from the
+ *        When channel->is_sfx_channel is zero, clears release_mask bits from the
  *        seq-channel bitmasks in g_akao_seq_channel0.  If all active bits are
  *        cleared, also zeros g_akao_seq_pending_ticks, unk5E, and seq_cursor.  When
- *        channel->unk64 is non-zero, delegates to akao_sfx_release_channels.
- *        In both paths, channel->unk34 is cleared and the driver dirty flag
+ *        channel->is_sfx_channel is non-zero, delegates to akao_sfx_release_channels.
+ *        In both paths, channel->flags is cleared and the driver dirty flag
  *        (unk8) is OR'd with 0x110.
  * @param channel Pointer to the shared channel header.
  * @param release_mask Bit-mask of channels to release.
@@ -1814,7 +1814,7 @@ void akao_release_channels(AkaoSFXState* channel, u32 release_mask)
 {
     s32 temp_v0;
 
-    if (channel->unk64 == 0)
+    if (channel->is_sfx_channel == 0)
     {
         u32 tmp = ~release_mask;
 
@@ -1840,7 +1840,7 @@ void akao_release_channels(AkaoSFXState* channel, u32 release_mask)
         akao_sfx_release_channels(channel, release_mask);
     }
 
-    channel->unk34 = 0;
+    channel->flags = 0;
     g_akao_driver_flags.unk8 |= 0x110;
 }
 
@@ -1848,9 +1848,9 @@ void akao_release_channels(AkaoSFXState* channel, u32 release_mask)
  * @brief Opcode handler: set the master tempo directly.
  *
  * Reads a 16-bit value from the sequence stream into the high half of
- * @c g_akao_seq_channel0->unk20 (the per-tick rate added to the unk28
+ * @c g_akao_seq_channel0->tempo (the per-tick rate added to the tempo_acc
  * accumulator in akao_seq_tick_channels) and clears the tempo-slide
- * countdown @c unk5C.
+ * countdown @c tempo_fade_ticks.
  *
  * @param arg0 Pointer to the channel's stream cursor; advanced by 2.
  * @see decomp.me (100%) https://decomp.me/scratch/GHtCl
@@ -1870,10 +1870,10 @@ void akao_seq_op_set_tempo(u8** arg0)
 /**
  * @brief Opcode handler: slide (ramp) the master tempo to a target.
  *
- * Reads a tick count into @c unk5C (defaulting to 0x100 when zero) and a
- * 16-bit target tempo, then computes the per-tick step @c unk24 =
- * (target - current) / count so akao_seq_tick_channels ramps @c unk20 to
- * the target over @c unk5C ticks.
+ * Reads a tick count into @c tempo_fade_ticks (defaulting to 0x100 when zero)
+ * and a 16-bit target tempo, then computes the per-tick step @c tempo_step =
+ * (target - current) / count so akao_seq_tick_channels ramps @c tempo to the
+ * target over @c tempo_fade_ticks ticks.
  *
  * @param arg0 Pointer to the channel's stream cursor; advanced past the
  *             count byte and the 2 target bytes.
@@ -2853,7 +2853,7 @@ void akao_seq_op_stop_pan_lfo(ad_struct* arg0)
  * @brief AKAO opcode handler: OR-sets a caller-supplied flag mask into either
  *        the SFX control block or the primary sequence channel (depending on
  *        whether this channel is an SFX channel), then raises driver flags 0x110.
- * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg0 Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to OR in.
  * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
  *       register), a gcc 2.8 coloring tie-break the permuter cannot move.
@@ -2876,7 +2876,7 @@ void akao_seq_op_enable_reverb(AkaoChannelState* arg0, s32 arg1)
  * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
  *        the SFX control block or the primary sequence channel, raises driver
  *        flags 0x110, and clears channel field 0xD4.
- * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg0 Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
  * @note Residual: the seq-channel path register coloring differs (5 rows), a
  *       gcc 2.8 coloring tie-break the permuter cannot move (shared with
@@ -2902,7 +2902,7 @@ void akao_seq_op_disable_reverb(ae_struct* arg0, s32 arg1)
  *        sequence channel (0x44) when this channel is a sequence channel, or
  *        into the SFX control block (0x24) when SFX flag 0x10000 is set, then
  *        raises driver flags 0x100.
- * @param arg0 Channel state; @c unk64 selects sequence routing, @c unk34 gates SFX.
+ * @param arg0 Channel state; @c is_sfx_channel selects sequence routing, @c flags gates SFX.
  * @param arg1 Flag bitmask to OR in.
  * @note Residual: the g_akao_seq_channel0 %hi colors to v0 not v1 (one lui
  *       register), a gcc 2.8 coloring tie-break shared with akao_seq_op_enable_reverb.
@@ -2925,7 +2925,7 @@ void akao_seq_op_enable_pitch_modulation(af_struct* arg0, s32 arg1)
  * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
  *        the sequence channel (0x44) or the SFX control block (0x24), raises
  *        driver flags 0x100, and clears channel field 0xD6.
- * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg0 Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
  * @note Residual: the seq-channel path register coloring differs (5 rows), a
  *       gcc 2.8 coloring tie-break shared with the reverb handlers.
@@ -2949,7 +2949,7 @@ void akao_seq_op_disable_pitch_modulation(ag_struct* arg0, s32 arg1)
  * @brief AKAO opcode handler: OR-sets a caller-supplied flag mask into either
  *        the sequence channel (0x40) or the SFX control block (0x20), then
  *        raises driver flags 0x100.
- * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg0 Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to OR in.
  * @note Residual: the g_akao_seq_channel0 %hi coloring tie-break shared with
  *       akao_seq_op_enable_reverb.
@@ -2972,7 +2972,7 @@ void akao_seq_op_enable_noise(AkaoChannelState* arg0, s32 arg1, s32 arg2)
  * @brief AKAO opcode handler: AND-clears a caller-supplied flag mask from either
  *        the sequence channel (0x40) or the SFX control block (0x20), then
  *        raises driver flags 0x100.
- * @param arg0 Channel state; @c unk64 selects SFX vs sequence routing.
+ * @param arg0 Channel state; @c is_sfx_channel selects SFX vs sequence routing.
  * @param arg1 Flag bitmask to clear (applied as @c &= ~arg1).
  * @note Residual: the seq-channel path register coloring differs (5 rows), a
  *       gcc 2.8 coloring tie-break shared with the reverb handlers.
@@ -3011,7 +3011,7 @@ void akao_seq_op_nop_cd(void)
 
 /**
  * @brief Give SFX notes their full duration instead of an early key-off.
- * @param arg0 Channel state; @c unk64 selects whether the store happens.
+ * @param arg0 Channel state; @c is_sfx_channel selects whether the store happens.
  * @see decomp.me (100%)
  */
 void akao_seq_op_enable_sfx_full_gate(ai_struct* arg0)

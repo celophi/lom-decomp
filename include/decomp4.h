@@ -34,15 +34,16 @@ typedef struct
 
 /**
  * @brief Shared channel header accessed by akao_release_channels.
- *        Offset 0x64 selects seq-channel mode (0) vs SFX-channel mode (non-0).
- *        Offset 0x34 is cleared unconditionally at the end of that function.
+ *        @c is_sfx_channel selects seq-channel mode (0) vs SFX-channel mode
+ *        (non-0). @c flags is cleared unconditionally at the end of that
+ *        function.
  */
 typedef struct AkaoSFXState
 {
     u8  _pad00[0x34]; /* 0x00 - 0x33 */
-    u32 unk34;        /* 0x34 */
+    u32 flags;        /* 0x34 - same flag word as AkaoChannelState::flags */
     u8  _pad38[0x2C]; /* 0x38 - 0x63 */
-    u16 unk64;        /* 0x64 */
+    u16 is_sfx_channel; /* 0x64 - same field as AkaoChannelState::is_sfx_channel */
 } AkaoSFXState;
 
 /** @brief 4-sample ring buffer of timer deltas used for profiling. */
