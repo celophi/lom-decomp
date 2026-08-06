@@ -1358,7 +1358,7 @@ s32 akao_upload_xa_program(void* arg0, s32 arg1)
         }
         /* A song is loaded (running or suspended) AND its 0x40 state bit is set.
          * seq_cursor is the song-role flag word here, not a bytecode cursor. */
-        if (((AKAO_CHANNEL_STATE->active_mask | AKAO_CHANNEL_STATE->unk1C) != 0) && (AKAO_CHANNEL_STATE->seq_cursor & 0x40))
+        if (((AKAO_CHANNEL_STATE->w04.song.active_mask | AKAO_CHANNEL_STATE->unk1C) != 0) && ((u32)AKAO_CHANNEL_STATE->seq_cursor & 0x40))
         {
             var_s2 += 0xFFFD0000;
             var1 = (s32)arg0;
@@ -1419,7 +1419,7 @@ void akao_cmd_ec(void* buf, s32 arg1, s32 upper_slot, s32 arg3)
 
     spu_base = upper_slot == 0 ? 0x43100 : 0x50900;
 
-    if (((AKAO_CHANNEL_STATE->active_mask | AKAO_CHANNEL_STATE->unk1C) != 0) && (AKAO_CHANNEL_STATE->seq_cursor & 0x40))
+    if (((AKAO_CHANNEL_STATE->w04.song.active_mask | AKAO_CHANNEL_STATE->unk1C) != 0) && ((u32)AKAO_CHANNEL_STATE->seq_cursor & 0x40))
     {
         spu_base += 0xFFFD0000;
     }

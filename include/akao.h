@@ -231,17 +231,24 @@ typedef struct AkaoArticulation
  * obvious cleanup; it is not done yet because it touches every matched
  * function in decomp4.c.
  *
- * @note decomp9.c declares @c AkaoChannelEffects over the same 0x118 bytes
- *       with its own (channel-role) names; decomp4.c additionally carries a
- *       set of per-opcode ad-hoc structs (@c a_struct, @c b_struct, ...) over
- *       the same layout. All of them should eventually collapse into this one.
+ * @note This is now the single type for the block. It replaced 47 per-opcode
+ *       ad-hoc structs in decomp4.c, @c SfxChannel and @c AkaoSFXState in
+ *       decomp4.h, and @c AkaoChannelEffects in decomp9.c.
+ *
+ * @note Where the two roles disagree on a field's width or signedness the
+ *       declaration follows whichever role reads the field, and the other
+ *       role's site carries an explicit cast with a comment. The known cases
+ *       are 0x2C (read as a halfword by the pitch-LFO op), 0x5C/0x60 (an s32
+ *       expression envelope overlapping two song halfwords), 0x58 (a u32 SFX
+ *       tick counter overlapping a song halfword) and 0x1C/0x20/0x24 (LFO
+ *       waveform cursors overlapping the tempo words).
  */
 
 typedef struct AkaoChannelState
 {
     /* --- 0x00..0x6F: meaning depends on the role (see the docblock) ------- */
 
-    u32 seq_cursor;  /* 0x00 channel: bytecode cursor (a u8*, read via a cast)
+    u8* seq_cursor;  /* 0x00 channel: bytecode cursor (a u8*, read via a cast)
                              song:    flag word. func_80026254 clears 0x63 and
                                       then sets 0x20 or 0x40 depending on the
                                       song descriptor; bit 0x40 gates the
@@ -250,34 +257,43 @@ typedef struct AkaoChannelState
                                       allocator comes up empty. The whole word
                                       is zeroed when the last channel is
                                       released. */
-    u32 active_mask; /* 0x04 song:    channels currently being ticked; drives
-                                      the loop in akao_seq_tick_channels, and
-                                      reaching 0 ends the song
-                             channel: loop-start cursor stack slot 0. The stack
-                                      spans 0x04..0x10 and is only ever reached
-                                      through (u8**)&active_mask. */
-    u32 voice_alloc_low_mask;
-                     /* 0x08 song:    channels exempt from the reserved voice
-                                      floor. Seeded from song descriptor +0x24,
-                                      set by ext opcode FE 1D
-                                      (akao_seq_op_ignore_voice_reserve),
-                                      cleared by FE 1E. func_80025500 passes
-                                      (mask & bit) to func_80025498, which then
-                                      scans for a free voice from 0 instead of
-                                      from voice_alloc_base.
-                             channel: loop-start cursor stack slot 1 */
-    u32 static_voice_mask;
-                     /* 0x0C song:    channels that skip voice allocation and
-                                      always play on the SPU voice matching
-                                      their own channel index. Seeded from song
-                                      descriptor +0x28; honoured by
-                                      func_80025500 only while that voice is
-                                      not held by SFX or XA.
-                             channel: loop-start cursor stack slot 2 */
-    u32 key_on_mask; /* 0x10 song:    channels whose note still needs a voice
-                                      keyed on; consumed and cleared by the
-                                      key-on pass in func_800258B8
-                             channel: loop-start cursor stack slot 3 */
+    union
+    {
+        /* channel: the loop-start cursor stack, one entry per nesting level.
+         * Declared as a real array member so that a variable-index access
+         * builds the same address expression as the original code. */
+        u8* loop_cursor[4];
+
+        /* song: four independent per-channel bitmasks. */
+        struct
+        {
+            u32 active_mask;          /* 0x04 channels currently being ticked;
+                                              drives the loop in
+                                              akao_seq_tick_channels, and
+                                              reaching 0 ends the song */
+            u32 voice_alloc_low_mask; /* 0x08 channels exempt from the reserved
+                                              voice floor. Seeded from song
+                                              descriptor +0x24, set by ext
+                                              opcode FE 1D
+                                              (akao_seq_op_ignore_voice_reserve),
+                                              cleared by FE 1E. func_80025500
+                                              passes (mask & bit) to
+                                              func_80025498, which then scans
+                                              for a free voice from 0 instead
+                                              of from voice_alloc_base. */
+            u32 static_voice_mask;    /* 0x0C channels that skip voice
+                                              allocation and always play on the
+                                              SPU voice matching their own
+                                              channel index. Seeded from song
+                                              descriptor +0x28; honoured by
+                                              func_80025500 only while that
+                                              voice is not held by SFX or XA. */
+            u32 key_on_mask;          /* 0x10 channels whose note still needs a
+                                              voice keyed on; consumed and
+                                              cleared by the key-on pass in
+                                              func_800258B8 */
+        } song;
+    } w04;               /* 0x04 - 0x13 */
     u32 note_on_mask;/* 0x14 song:    channels with a note currently sounding;
                                       set once the pitch is computed, cleared
                                       at note-off
@@ -287,7 +303,7 @@ typedef struct AkaoChannelState
                                       which folds them into spu_set_key_off
                              channel: pointer to the selected key-to-articulation
                                       map (ext FE 14) */
-    u32 unk1C;       /* 0x1C song:    parked copy of active_mask. When
+    s32 unk1C;       /* 0x1C song:    parked copy of active_mask. When
                                       g_akao_driver_mode_flags bit 0 is set the
                                       song's channels are moved here and
                                       active_mask is zeroed, so the song stops
@@ -300,7 +316,7 @@ typedef struct AkaoChannelState
     u32 tempo;       /* 0x20 song:    tempo, Q16; the high half is added to
                                       tempo_acc once per driver tick
                              channel: volume-LFO waveform cursor */
-    u32 tempo_step;  /* 0x24 song:    tempo-slide step per tick
+    s32 tempo_step;  /* 0x24 song:    tempo-slide step per tick
                              channel: pan-LFO waveform cursor */
     u32 tempo_acc;   /* 0x28 song:    tempo accumulator; a carry out of the low
                                       16 bits advances one musical tick
@@ -312,7 +328,7 @@ typedef struct AkaoChannelState
     s32 unk30;       /* 0x30 channel: pitch-bend accumulator
                              song:    base of the articulation-map table used
                                       by ext FE 14 */
-    u32 flags;       /* 0x34 song:    pointer to the note/articulation table
+    s32 flags;       /* 0x34 song:    pointer to the note/articulation table
                                       used by akao_channel_start_note; only
                                       tested for non-zero elsewhere
                              channel: main flag word. Known bits:
@@ -334,9 +350,9 @@ typedef struct AkaoChannelState
     u32 reverb_mask; /* 0x3C song: channels enabled in the SPU reverb bitmap */
     u32 noise_mask;  /* 0x40 song: channels enabled in the SPU noise bitmap */
     u32 pitch_mod_mask; /* 0x44 song: channels enabled in the SPU pitch-mod bitmap */
-    u32 unk48;       /* 0x48 channel: expression accumulator (value << 23)
+    s32 unk48;       /* 0x48 channel: expression accumulator (value << 23)
                              song:    master-volume accumulator */
-    u32 unk4C;       /* 0x4C channel: expression slide step
+    s32 unk4C;       /* 0x4C channel: expression slide step
                              song:    master-volume slide step */
     s32 pitch_slide_step; /* 0x50 channel: pitch-slide (portamento) step */
     s32 detune_pitch_delta; /* 0x54 channel: detune contribution to the SPU pitch */
@@ -390,17 +406,17 @@ typedef struct AkaoChannelState
     u16 unkA0;       /* 0xA0 */
     u16 pitch_lfo_delay; /* 0xA2 pitch-LFO delay */
     u16 pitch_lfo_delay_ticks; /* 0xA4 pitch-LFO delay countdown */
-    u16 pitch_lfo_period; /* 0xA6 pitch-LFO period */
+    s16 pitch_lfo_period; /* 0xA6 pitch-LFO period */
     u16 pitch_lfo_restart; /* 0xA8 pitch-LFO restart flag (1 = waveform not started) */
     u16 pitch_lfo_waveform; /* 0xAA pitch-LFO waveform index into g_akao_lfo_waveforms */
-    s16 pitch_lfo_depth_scaled; /* 0xAC pitch-LFO depth scaled by the current pitch */
+    u16 pitch_lfo_depth_scaled; /* 0xAC pitch-LFO depth scaled by the current pitch */
     u16 pitch_lfo_depth; /* 0xAE pitch-LFO raw depth; bit 15 selects the scaling mode */
     u16 pitch_lfo_depth_fade_ticks; /* 0xB0 pitch-LFO depth-slide tick countdown */
     u16 pitch_lfo_depth_step; /* 0xB2 pitch-LFO depth-slide step */
     u16 unkB4;       /* 0xB4 */
     u16 volume_lfo_delay; /* 0xB6 volume-LFO delay */
     u16 volume_lfo_delay_ticks; /* 0xB8 volume-LFO delay countdown */
-    u16 volume_lfo_period; /* 0xBA volume-LFO period */
+    s16 volume_lfo_period; /* 0xBA volume-LFO period */
     u16 volume_lfo_restart; /* 0xBC volume-LFO restart flag */
     u16 volume_lfo_waveform; /* 0xBE volume-LFO waveform index */
     u16 volume_lfo_depth; /* 0xC0 volume-LFO depth */
@@ -417,20 +433,20 @@ typedef struct AkaoChannelState
     u16 pitch_mod_toggle_ticks; /* 0xD6 ticks until the pitch-mod enable bit is toggled back */
     u16 loop_depth;  /* 0xD8 loop-stack index (0..3, wraps) */
     u16 pitch_scale; /* 0xDA pitch scalar applied to the computed pitch (Q8) */
-    u16 note_duration; /* 0xDC last note duration set by opcode 0xA2 */
+    s16 note_duration; /* 0xDC last note duration set by opcode 0xA2 */
     u16 note_duration_adjust; /* 0xDE note-duration adjustment (opcode 0xDC) */
-    u16 volume_step; /* 0xE0 volume slide step */
+    s16 volume_step; /* 0xE0 volume slide step */
     s16 pan_bias_step; /* 0xE2 pan-bias slide step */
     u16 volume_scale; /* 0xE4 extra volume scale; high byte is a signed Q7 factor */
     u16 unkE6;       /* 0xE6 */
-    u16 pan_step;    /* 0xE8 pan slide step */
+    s16 pan_step;    /* 0xE8 pan slide step */
     u16 transpose;   /* 0xEA transpose in semitones (opcodes 0xC0/0xC1) */
     s16 detune;      /* 0xEC fine detune (opcodes 0xD8/0xD9) */
     u16 note_key;    /* 0xEE key of the note currently sounding */
     u16 pitch_slide_delta; /* 0xF0 pending pitch-slide delta in semitones */
     s16 prev_transpose; /* 0xF2 transpose in effect for the previous note */
-    u16 pitch_lfo_value; /* 0xF4 current pitch-LFO output */
-    u16 volume_lfo_value; /* 0xF6 current volume-LFO output */
+    s16 pitch_lfo_value; /* 0xF4 current pitch-LFO output */
+    s16 volume_lfo_value; /* 0xF6 current volume-LFO output */
     s16 pan_lfo_value; /* 0xF8 current pan-LFO output */
     u16 unkFA;       /* 0xFA */
     u32 voice;       /* 0xFC assigned SPU voice index (0x18 = none) */

@@ -1,6 +1,7 @@
 #include "decomp4.h"
 #include "decomp9.h"
 
+
 /* Defined in the sdata segment (asm/data/sdata.data.s) at their gp-relative
  * addresses near gp_value 0x8003EC14; declared extern here so decomp4 does not
  * emit a second (.bss) definition. */
@@ -34,398 +35,45 @@ typedef struct
     u8 pan_and_noise;
 } AkaoNoteArticulationSlot;
 
-typedef struct
-{
-    s32 unk0;
-    char pad_1[0x80];
-    s16 unk84;
-    char pad_2[0x100 - 0x88];
-    s32 unk100;
-} a_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad4[0x80];
-    u16 unk84;
-    u16 unk86;
-    char pad88[0xE0 - 0x88];
-    s16 unkE0;
-} b_struct;
 
-typedef struct
-{
-    s8* unk0;
-    char pad_1[0x48 - 0x4];
-    s32 unk48;
-    char pad_2[0x8A - 0x4C];
-    s16 unk8A;
-    s16 unk8C;
-    char pad_3[0x100 - 0x90];
-    s32 unk100;
-} c_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x48 - 4];
-    s32 unk48;
-    s32 unk4C;
-    char pad2[0x8A - 0x50];
-    u16 unk8A;
-    s16 unk8C;
-} d_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x5C - 4];
-    s32 unk5C;
-    s32 unk60;
-    char pad2[0x8C - 0x64];
-    u16 unk8C;
-} e_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x90 - 0x4];
-    s16 unk90;
-    s16 unk92;
-    char pad2[0x100 - 0x94];
-    s32 unk100;
-} f_struct;
 
-typedef struct
-{
-    char pad1[0x34];
-    s32 unk34;
-} ee_struct;
 
-typedef struct
-{
-    char pad1[0x34];
-    s32 unk34;
-} ff_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x90 - 0x4];
-    u16 unk90;
-    u16 unk92;
-    char pad2[0xE8 - 0x94];
-    s16 unkE8;
-} g_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x96 - 0x4];
-    s16 unk96;
-} h_struct;
 
-typedef struct
-{
-    char pad1[0x96];
-    u16 unk96;
-} i_struct;
 
-typedef struct
-{
-    char pad1[0x96];
-    u16 unk96;
-} j_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x34 - 0x4];
-    s32 unk34;
-    s32 unk38;
-    char pad2[0x64 - 0x3C];
-    u16 unk64;
-    s16 unk66;
-    s16 unk68;
-    s16 unk6A;
-    char pad3[0x112 - 0x6C];
-    s16 unk112;
-} k_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x34 - 0x4];
-    s32 unk34;
-    char pad2[0x6A - 0x38];
-    s16 unk6A;
-    char pad3[0x112 - 0x6C];
-    s16 unk112;
-} l_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x18 - 0x4];
-    u32 unk18;
-    char pad2[0x34 - 0x1C];
-    s32 unk34;
-    char pad3[0xEE - 0x38];
-    u16 unkEE;
-    char pad4[0x112 - 0xF0];
-    s16 unk112;
-} m_struct;
 
-typedef struct
-{
-    char pad0[0x34];
-    s32 unk34;
-    char pad1[0x6A - 0x38];
-    u16 unk6A;
-    char pad2[0x100 - 0x6C];
-    s32 unk100;
-    char pad3[0x10E - 0x104];
-    u16 unk10E;
-    u16 unk110;
-} n_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0xEA - 0x4];
-    s16 unkEA;
-} o_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x98 - 0x4];
-    u16 unk98;
-    char pad2[0xF0 - 0x9A];
-    s16 unkF0;
-} p_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x9A - 0x4];
-    u16 unk9A;
-    u16 unk9C;
-    u16 unk9E;
-    char pad2[0xF2 - 0xA0];
-    u16 unkF2;
-} q_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x2C - 0x4];
-    s32 unk2C;
-    char pad2[0x54 - 0x30];
-    s32 unk54;
-    char pad3[0xEC - 0x58];
-    s16 unkEC;
-    char pad4[0x100 - 0xEE];
-    s32 unk100;
-} r_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x1C - 0x4];
-    s32 unk1C;
-    char pad2[0x2C - 0x20];
-    u16 unk2C;
-    char pad3[0x34 - 0x2E];
-    s32 unk34;
-    char pad4[0x64 - 0x38];
-    u16 unk64;
-    char pad5[0xA2 - 0x66];
-    u16 unkA2;
-    u16 unkA4;
-    s16 unkA6;
-    u16 unkA8;
-    u16 unkAA;
-    s16 unkAC;
-    u16 unkAE;
-} s_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x2C - 0x4];
-    s32 unk2C;
-    char pad2[0xAC - 0x30];
-    s16 unkAC;
-    u16 unkAE;
-} t_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0xAE - 0x4];
-    u16 unkAE;
-    s16 unkB0;
-    s16 unkB2;
-} u_struct;
 
-typedef struct
-{
-    char pad0[0x34];
-    s32 unk34;
-    char pad1[0xF4 - 0x38];
-    u16 unkF4;
-    char pad2[0x100 - 0xF6];
-    s32 unk100;
-} v_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x20 - 0x4];
-    s32 unk20;
-    char pad2[0x34 - 0x24];
-    s32 unk34;
-    char pad3[0x64 - 0x38];
-    u16 unk64;
-    char pad4[0xB6 - 0x66];
-    u16 unkB6;
-    u16 unkB8;
-    s16 unkBA;
-    u16 unkBC;
-    u16 unkBE;
-    s16 unkC0;
-} w_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0xC0 - 0x4];
-    s16 unkC0;
-} x_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0xC0 - 0x4];
-    u16 unkC0;
-    s16 unkC2;
-    s16 unkC4;
-} y_struct;
 
-typedef struct
-{
-    char pad0[0x34];
-    s32 unk34;
-    char pad1[0xF6 - 0x38];
-    u16 unkF6;
-    char pad2[0x100 - 0xF8];
-    s32 unk100;
-} z_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0x24 - 0x4];
-    s32 unk24;
-    char pad2[0x34 - 0x28];
-    s32 unk34;
-    char pad3[0xC8 - 0x38];
-    u16 unkC8;
-    s16 unkCA;
-    u16 unkCC;
-} aa_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0xCE - 0x4];
-    s16 unkCE;
-} ab_struct;
 
-typedef struct
-{
-    u8* unk0;
-    char pad1[0xCE - 0x4];
-    u16 unkCE;
-    s16 unkD0;
-    s16 unkD2;
-} ac_struct;
 
-typedef struct
-{
-    char pad0[0x34];
-    s32 unk34;
-    char pad1[0xF8 - 0x38];
-    u16 unkF8;
-    char pad2[0x100 - 0xFA];
-    s32 unk100;
-} ad_struct;
 
-typedef struct
-{
-    char pad0[0x64];
-    u16 unk64;
-    char pad1[0xD4 - 0x66];
-    u16 unkD4;
-} ae_struct;
 
-typedef struct
-{
-    char pad0[0x34];
-    s32 unk34;
-    char pad1[0x64 - 0x38];
-    u16 unk64;
-} af_struct;
 
-typedef struct
-{
-    char pad0[0x64];
-    u16 unk64;
-    char pad1[0xD6 - 0x66];
-    u16 unkD6;
-} ag_struct;
 
-typedef struct
-{
-    char pad0[0x9E];
-    u16 unk9E;
-} ah_struct;
 
-typedef struct
-{
-    char pad0[0x64];
-    u16 unk64;
-    char pad1[0x9E - 0x66];
-    u16 unk9E;
-} ai_struct;
 
-typedef struct
-{
-    u8* unk0;
-    u8 pad1[0x64 - 0x4];
-    u16 unk64;
-} argst1;
 
-typedef struct
-{
-    u8* unk0;                  /* 0x00 */
-    u8 pad_04[0x30];           /* 0x04 - 0x33 */
-    u32 unk34;                 /* 0x34 */
-    u8 pad_38[0x100 - 0x38];   /* 0x38 - 0xFF */
-    u32 unk100;                /* 0x100 */
-    u8 pad_104[0x10E - 0x104]; /* 0x104 - 0x10D */
-    u16 unk10E;                /* 0x10E */
-} SomeStruct;
 
-typedef struct
-{
-    u8* unk0;
-    u8 pad1[0x100 - 0x4];
-    s32 unk100;
-    u8 pad2[0x10E - 0x104];
-    u16 unk10E;
-} s_8002C79C;
 
 extern s16 D_8004D428[];
 
@@ -654,7 +302,7 @@ void akao_tick_fades(void)
  *        g_akao_seq_channels or the pending/secondary set).
  * @param is_secondary 0 for the primary sequence pass (updates pending-tick
  *        and driver-dirty state), non-zero for the secondary channel1 pass.
- * @return The active-channel bitmask (g_akao_seq_channel0->active_mask).
+ * @return The active-channel bitmask (g_akao_seq_channel0->w04.song.active_mask).
  * @see decomp.me (84.65%) https://decomp.me/scratch/XMCUh
  */
 s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
@@ -695,7 +343,7 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
         do
         {
             var_s1 = 1;
-            var_s3 = g_akao_seq_channel0->active_mask;
+            var_s3 = g_akao_seq_channel0->w04.song.active_mask;
 
             do
             {
@@ -714,7 +362,7 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
                         g_akao_seq_channel0->key_off_mask = (s32)(g_akao_seq_channel0->key_off_mask | var_s1);
                     }
 
-                    akao_tick_channel_effects((AkaoChannelEffects*)var_s2, var_s1, 0);
+                    akao_tick_channel_effects((AkaoChannelState*)var_s2, var_s1, 0);
                     var_s3 &= ~var_s1;
                 }
 
@@ -775,7 +423,7 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
         } while (1);
     }
 
-    return g_akao_seq_channel0->active_mask;
+    return g_akao_seq_channel0->w04.song.active_mask;
 }
 
 /**
@@ -789,7 +437,7 @@ void akao_irq_handler(void)
     s32 temp_v1_3;
     u16 temp_v0_2;
     u16 temp_v1_2;
-    SfxChannel* channel;
+    AkaoChannelState* channel;
     u32 bitMask;
     AkaoChannelState* new_var;
 
@@ -828,11 +476,11 @@ void akao_irq_handler(void)
         AkaoChannelState* ch28 = g_akao_seq_channel1;
         if (ch28 != 0)
         {
-            if (ch28->active_mask == 0)
+            if (ch28->w04.song.active_mask == 0)
             {
                 g_akao_seq_channel1 = 0;
             }
-            else if ((g_akao_seq_channel0->active_mask | g_akao_seq_channel0->unk1C) == 0)
+            else if ((g_akao_seq_channel0->w04.song.active_mask | g_akao_seq_channel0->unk1C) == 0)
             {
                 akao_copy_bytes((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
                 akao_copy_bytes((s32*)g_akao_pending_channels, &g_akao_seq_channels, 0x2300);
@@ -840,7 +488,7 @@ void akao_irq_handler(void)
                     AkaoChannelState* tmp = g_akao_seq_channel1;
                     g_akao_seq_channel1 = 0;
                     tmp->unk5E = 0;
-                    tmp->active_mask = 0;
+                    tmp->w04.song.active_mask = 0;
                 }
             }
         }
@@ -855,13 +503,13 @@ void akao_irq_handler(void)
     }
 
     /* Fourth conditional */
-    if (g_akao_seq_channel0->active_mask != 0)
+    if (g_akao_seq_channel0->w04.song.active_mask != 0)
     {
         akao_seq_tick_channels(&g_akao_seq_channels, 0);
     }
 
     /* Fifth conditional */
-    if ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->active_mask != 0))
+    if ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->w04.song.active_mask != 0))
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
         akao_seq_tick_channels(g_akao_pending_channels, 1);
@@ -880,20 +528,20 @@ void akao_irq_handler(void)
                 g_akao_sfx_control.unk18 = sum & 0xFFFF;
 
                 bitMask = 0x1000;
-                channel = &g_sfx_channels[0];
+                channel = (AkaoChannelState*)&g_sfx_channels[0];
 
                 do
                 {
                     if (var_s3 & bitMask)
                     {
-                        if (!(g_akao_driver_mode_flags & 2) || (channel->field_28 & 0x02000000))
+                        if (!(g_akao_driver_mode_flags & 2) || (channel->tempo_acc & 0x02000000))
                         {
-                            channel->field_58++;
+                            (*(u32*)&channel->unk58)++;
 
-                            temp_v1_2 = channel->field_66 - 1;
-                            channel->field_66 = temp_v1_2;
-                            temp_v0_2 = channel->field_68 - 1;
-                            channel->field_68 = temp_v0_2;
+                            temp_v1_2 = channel->unk66 - 1;
+                            channel->unk66 = temp_v1_2;
+                            temp_v0_2 = channel->unk68 - 1;
+                            channel->unk68 = temp_v0_2;
 
                             if (temp_v1_2 == 0)
                             {
@@ -904,7 +552,7 @@ void akao_irq_handler(void)
                                 g_akao_sfx_control.unkC |= bitMask;
                                 g_akao_sfx_control.unk8 &= ~bitMask;
                             }
-                            akao_tick_channel_effects((AkaoChannelEffects*)channel, bitMask, 1);
+                            akao_tick_channel_effects(channel, bitMask, 1);
                         }
                         var_s3 ^= bitMask;
                     }
@@ -1117,7 +765,10 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
             else
             {
                 /* 0x04..0x10 in the channel role is the loop-start cursor stack. */
-                var_a1 = ((u8**)&arg0->active_mask)[var_a2];
+/* The original reaches the loop stack through a pointer here, not
+                 * as an array member as the loop opcodes do - the two spellings
+                 * produce a different addu operand order. */
+                var_a1 = ((u8**)&arg0->w04.song.active_mask)[var_a2];
             }
             continue;
         L_CB_common:
@@ -1129,7 +780,10 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
             if (!((u32)arg0->flags & 0x200000))
             {
                 /* 0x04..0x10 in the channel role is the loop-start cursor stack. */
-                var_a1 = ((u8**)&arg0->active_mask)[var_a2];
+/* The original reaches the loop stack through a pointer here, not
+                 * as an array member as the loop opcodes do - the two spellings
+                 * produce a different addu operand order. */
+                var_a1 = ((u8**)&arg0->w04.song.active_mask)[var_a2];
                 continue;
             }
 
@@ -1370,12 +1024,12 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
 
     /* Song role: 0x34 holds the note/articulation table pointer. */
     u8* base_ptr = g_akao_seq_channel0->flags;
-    u32 chan_unk10 = g_akao_seq_channel0->key_on_mask;
+    u32 chan_unk10 = g_akao_seq_channel0->w04.song.key_on_mask;
     slot = (AkaoNoteArticulationSlot*)(base_ptr + (slot_idx << 3));
     base_ptr = (u8*)channel;
     ret = chan_unk10 | channel_mask;
     v1_idx = g_akao_seq_channel0->note_on_mask & channel_mask;
-    g_akao_seq_channel0->key_on_mask = ret;
+    g_akao_seq_channel0->w04.song.key_on_mask = ret;
     if (v1_idx)
     {
         g_akao_seq_channel0->key_off_mask |= channel_mask;
@@ -1596,7 +1250,7 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
                         {
                             akao_bind_articulation_for_key(arg0, temp_s1, temp_a2);
                         }
-                        g_akao_seq_channel0->key_on_mask |= arg1;
+                        g_akao_seq_channel0->w04.song.key_on_mask |= arg1;
                         if ((g_akao_seq_channel0->note_on_mask & arg1) && (*(volatile u32*)&arg0->voice < 0x18U))
                         {
                             g_akao_seq_channel0->key_off_mask |= arg1;
@@ -1810,7 +1464,7 @@ s32 akao_remap_sfx_articulation(s32 arg0, s32 arg1)
  * @param release_mask Bit-mask of channels to release.
  * @see decomp.me (100%) https://decomp.me/scratch/vxrwL
  */
-void akao_release_channels(AkaoSFXState* channel, u32 release_mask)
+void akao_release_channels(AkaoChannelState* channel, u32 release_mask)
 {
     s32 temp_v0;
 
@@ -1818,8 +1472,8 @@ void akao_release_channels(AkaoSFXState* channel, u32 release_mask)
     {
         u32 tmp = ~release_mask;
 
-        temp_v0 = g_akao_seq_channel0->active_mask & tmp;
-        g_akao_seq_channel0->active_mask = temp_v0;
+        temp_v0 = g_akao_seq_channel0->w04.song.active_mask & tmp;
+        g_akao_seq_channel0->w04.song.active_mask = temp_v0;
 
         if (temp_v0 == 0)
         {
@@ -1829,8 +1483,8 @@ void akao_release_channels(AkaoSFXState* channel, u32 release_mask)
         }
 
         g_akao_seq_channel0->note_on_mask &= tmp;
-        g_akao_seq_channel0->voice_alloc_low_mask &= tmp;
-        g_akao_seq_channel0->static_voice_mask &= tmp;
+        g_akao_seq_channel0->w04.song.voice_alloc_low_mask &= tmp;
+        g_akao_seq_channel0->w04.song.static_voice_mask &= tmp;
         g_akao_seq_channel0->reverb_mask &= tmp;
         g_akao_seq_channel0->noise_mask &= tmp;
         g_akao_seq_channel0->pitch_mod_mask &= tmp;
@@ -2045,72 +1699,72 @@ void akao_seq_op_return(s32* arg0)
  * @brief Set the channel volume directly.
  * @see decomp.me (100%) https://decomp.me/scratch/BN6jO
  */
-void akao_seq_op_set_volume(a_struct* arg0)
+void akao_seq_op_set_volume(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     s16 tmp;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     tmp = (s16)(*temp_v0 << 8);
-    arg0->unk0 = (s32)(u8*)(temp_v0 + 1);
-    arg0->unk100 = (s32)(arg0->unk100 | 3);
-    arg0->unk84 = tmp;
+    arg0->seq_cursor = (s32)(u8*)(temp_v0 + 1);
+    arg0->update_flags = (s32)(arg0->update_flags | 3);
+    arg0->volume = tmp;
 }
 
 /**
  * @brief Slide the channel volume to a target over a specified tick count.
  * @see decomp.me (100%) https://decomp.me/scratch/CjVYW
  */
-void akao_seq_op_slide_volume(b_struct* arg0)
+void akao_seq_op_slide_volume(AkaoChannelState* arg0)
 {
     u16 temp_a0;
     u16 temp_v1;
     u8* temp_a1;
     u8* temp_v0;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     temp_v1 = *temp_v0;
 
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unk86 = temp_v1;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->volume_fade_ticks = temp_v1;
 
     if (temp_v1 == 0)
     {
-        arg0->unk86 = 0x100U;
+        arg0->volume_fade_ticks = 0x100U;
     }
 
-    temp_a1 = arg0->unk0;
-    temp_a0 = arg0->unk84;
+    temp_a1 = arg0->seq_cursor;
+    temp_a0 = arg0->volume;
     temp_a0 &= 0x7F00;
 
-    temp_v1 = (s16)(((s32)(((*(arg0->unk0++)) << 8) - temp_a0)) / ((s32)arg0->unk86));
-    arg0->unkE0 = temp_v1;
+    temp_v1 = (s16)(((s32)(((*(arg0->seq_cursor++)) << 8) - temp_a0)) / ((s32)arg0->volume_fade_ticks));
+    arg0->volume_step = temp_v1;
 
-    arg0->unk0 = (u8*)(temp_a1 + 1);
-    arg0->unk84 = temp_a0;
+    arg0->seq_cursor = (u8*)(temp_a1 + 1);
+    arg0->volume = temp_a0;
 }
 
 /**
  * @brief Set the channel expression multiplier directly.
  * @see decomp.me (100%) https://decomp.me/scratch/hGVxk
  */
-void akao_seq_op_set_expression(c_struct* arg0)
+void akao_seq_op_set_expression(AkaoChannelState* arg0)
 {
     s8* temp_v0;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = (s8*)arg0->seq_cursor;
     arg0->unk48 = (s32)(*temp_v0 << 0x17);
-    arg0->unk0 = (s8*)(temp_v0 + 1);
-    arg0->unk8A = 0;
-    arg0->unk100 = (s32)(arg0->unk100 | 3);
-    arg0->unk8C = 0;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->expression_fade_ticks = 0;
+    arg0->update_flags = (s32)(arg0->update_flags | 3);
+    arg0->note_expression_ticks = 0;
 }
 
 /**
  * @brief Slide the channel expression multiplier to a target.
  * @see decomp.me (100%) https://decomp.me/scratch/jLHGo
  */
-void akao_seq_op_slide_expression(d_struct* arg0)
+void akao_seq_op_slide_expression(AkaoChannelState* arg0)
 {
     s32 temp_a0;
     s32 temp_v1;
@@ -2119,32 +1773,32 @@ void akao_seq_op_slide_expression(d_struct* arg0)
     s32 tmp;
     s32 new_var;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
 
     temp_v1 = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unk8A = (u16)temp_v1;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->expression_fade_ticks = (u16)temp_v1;
     if (temp_v1 == 0)
     {
-        arg0->unk8A = 0x100U;
+        arg0->expression_fade_ticks = 0x100U;
     }
-    temp_a1 = arg0->unk0;
+    temp_a1 = arg0->seq_cursor;
     new_var = arg0->unk48;
     temp_a0 = new_var;
     temp_a0 &= 0xFFFF0000;
 
-    tmp = (s32)((s32)(((s8)*temp_a1++ << 0x17) - temp_a0) / (s32)arg0->unk8A);
+    tmp = (s32)((s32)(((s8)*temp_a1++ << 0x17) - temp_a0) / (s32)arg0->expression_fade_ticks);
     arg0->unk4C = tmp;
-    arg0->unk0 = (u8*)(temp_a1);
+    arg0->seq_cursor = (u8*)(temp_a1);
     arg0->unk48 = temp_a0;
-    arg0->unk8C = 0;
+    arg0->note_expression_ticks = 0;
 }
 
 /**
  * @brief Configure the expression ramp that is restarted by the next note.
  * @see decomp.me (100%) https://decomp.me/scratch/aOcaK
  */
-void akao_seq_op_set_note_expression_envelope(e_struct* arg0)
+void akao_seq_op_set_note_expression_envelope(AkaoChannelState* arg0)
 {
     s32 temp_v1;
     u8* temp_a0;
@@ -2152,159 +1806,161 @@ void akao_seq_op_set_note_expression_envelope(e_struct* arg0)
 
     u32 tmp;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
 
     tmp = *temp_v0;
     temp_v0++;
 
-    arg0->unk0 = temp_v0;
-    arg0->unk5C = (s32)(tmp << 0x17);
+    arg0->seq_cursor = temp_v0;
+    /* Channel role: 0x5C/0x60 are s32 and overlap the song-role u16s. */
+    *(s32*)&arg0->tempo_fade_ticks = (s32)(tmp << 0x17);
     temp_v1 = *(u8*)temp_v0;
     temp_v0++;
-    arg0->unk0 = (void*)((u8*)temp_v0);
-    arg0->unk8C = (u16)temp_v1;
+    arg0->seq_cursor = (void*)((u8*)temp_v0);
+    arg0->note_expression_ticks = (u16)temp_v1;
 
     if (temp_v1 == 0)
     {
-        arg0->unk8C = 0x100U;
+        arg0->note_expression_ticks = 0x100U;
     }
 
-    temp_a0 = arg0->unk0;
+    temp_a0 = arg0->seq_cursor;
 
-    arg0->unk60 = (s32)((s32)((*(s8*)temp_a0 << 0x17) - arg0->unk5C) / (s32)arg0->unk8C);
-    arg0->unk0 = (void*)((u8*)temp_a0 + 1);
+    *(s32*)&arg0->unk60 =
+        (s32)((s32)((*(s8*)temp_a0 << 0x17) - *(s32*)&arg0->tempo_fade_ticks) / (s32)arg0->note_expression_ticks);
+    arg0->seq_cursor = (void*)((u8*)temp_a0 + 1);
 }
 
 /**
  * @brief Give sequence notes their full duration instead of an early key-off.
  * @see decomp.me (100%) https://decomp.me/scratch/cNPss
  */
-void akao_seq_op_enable_full_gate(ee_struct* arg0)
+void akao_seq_op_enable_full_gate(AkaoChannelState* arg0)
 {
-    arg0->unk34 = (s32)(arg0->unk34 | 0x40);
+    arg0->flags = (s32)(arg0->flags | 0x40);
 }
 
 /**
  * @brief Restore the normal early-key-off gate duration.
  * @see decomp.me (100%) https://decomp.me/scratch/ryS0d
  */
-void akao_seq_op_disable_full_gate(ff_struct* arg0)
+void akao_seq_op_disable_full_gate(AkaoChannelState* arg0)
 {
-    arg0->unk34 = (s32)(arg0->unk34 & ~0x40);
+    arg0->flags = (s32)(arg0->flags & ~0x40);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/ZUdZO
  */
-void akao_seq_op_set_pan(f_struct* arg0)
+void akao_seq_op_set_pan(AkaoChannelState* arg0)
 {
     u8* temp_v0;
 
-    temp_v0 = arg0->unk0;
-    arg0->unk90 = (s16)(((*temp_v0 + 0x40) & 0xFF) << 8);
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unk92 = 0;
-    arg0->unk100 = (s32)(arg0->unk100 | 3);
+    temp_v0 = arg0->seq_cursor;
+    arg0->pan = (s16)(((*temp_v0 + 0x40) & 0xFF) << 8);
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->pan_fade_ticks = 0;
+    arg0->update_flags = (s32)(arg0->update_flags | 3);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/MjjmM
  */
-void akao_seq_op_slide_pan(g_struct* arg0)
+void akao_seq_op_slide_pan(AkaoChannelState* arg0)
 {
     u16 temp_a0;
     s32 temp_v1;
     u8* temp_a1;
     u8* temp_v0;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     temp_v1 = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unk92 = (u16)temp_v1;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->pan_fade_ticks = (u16)temp_v1;
     if (temp_v1 == 0)
     {
-        arg0->unk92 = 0x100U;
+        arg0->pan_fade_ticks = 0x100U;
     }
-    temp_a1 = arg0->unk0;
-    temp_a0 = arg0->unk90;
+    temp_a1 = arg0->seq_cursor;
+    temp_a0 = arg0->pan;
     temp_a0 &= 0xFF00;
-    arg0->unkE8 = (s16)((s32)((((*temp_a1 + 0x40) & 0xFF) << 8) - temp_a0) / (s32)arg0->unk92);
-    arg0->unk0 = (u8*)(temp_a1 + 1);
-    arg0->unk90 = temp_a0;
+    arg0->pan_step = (s16)((s32)((((*temp_a1 + 0x40) & 0xFF) << 8) - temp_a0) / (s32)arg0->pan_fade_ticks);
+    arg0->seq_cursor = (u8*)(temp_a1 + 1);
+    arg0->pan = temp_a0;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/FRzyk
  */
-void akao_seq_op_set_octave(h_struct* arg0)
+void akao_seq_op_set_octave(AkaoChannelState* arg0)
 {
     u8* temp_v0;
 
-    temp_v0 = arg0->unk0;
-    arg0->unk96 = (s16)*temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
+    temp_v0 = arg0->seq_cursor;
+    arg0->octave = (s16)*temp_v0;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/2bdR3
  */
-void akao_seq_op_increment_octave(i_struct* arg0)
+void akao_seq_op_increment_octave(AkaoChannelState* arg0)
 {
-    arg0->unk96 = (u16)((arg0->unk96 + 1) & 0xF);
+    arg0->octave = (u16)((arg0->octave + 1) & 0xF);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/SJfbQ
  */
-void akao_seq_op_decrement_octave(j_struct* arg0)
+void akao_seq_op_decrement_octave(AkaoChannelState* arg0)
 {
-    arg0->unk96 = (u16)((arg0->unk96 - 1) & 0xF);
+    arg0->octave = (u16)((arg0->octave - 1) & 0xF);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/1MXGr
  */
-void akao_seq_op_set_mapped_articulation(k_struct* arg0)
+void akao_seq_op_set_mapped_articulation(AkaoChannelState* arg0)
 {
     s32* temp_a1_2;
     s32 temp_a1;
     s32 var_s1;
     u8* temp_v0;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     temp_a1 = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    if (arg0->unk64 == 0)
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    if (arg0->is_sfx_channel == 0)
     {
         var_s1 = temp_a1;
     }
     else
     {
-        var_s1 = akao_remap_sfx_articulation(arg0->unk38, temp_a1);
+        var_s1 = akao_remap_sfx_articulation(arg0->voice_alloc_base, temp_a1);
     }
 
     temp_a1_2 = (var_s1 * 0x10) + g_akao_articulation_slots;
     akao_channel_load_articulation_fields(arg0, temp_a1_2, *temp_a1_2);
     arg0->unk6A = (s16)var_s1;
-    arg0->unk112 = 0;
-    arg0->unk34 = (s32)(arg0->unk34 & 0xE6FFEFF7);
+    arg0->spu_volume_scale = 0;
+    arg0->flags = (s32)(arg0->flags & 0xE6FFEFF7);
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/GAl01
  */
-void akao_seq_op_set_articulation(l_struct* arg0)
+void akao_seq_op_set_articulation(AkaoChannelState* arg0)
 {
     s32 temp_s1;
     u8* temp_v0;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     temp_s1 = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
     akao_channel_load_articulation_fields(arg0, (temp_s1 * 0x10) + g_akao_articulation_slots, 0x1010);
     arg0->unk6A = (s16)temp_s1;
-    arg0->unk112 = 0;
-    arg0->unk34 = (s32)(arg0->unk34 & 0xE6FFEFF7);
+    arg0->spu_volume_scale = 0;
+    arg0->flags = (s32)(arg0->flags & 0xE6FFEFF7);
 }
 
 /**
@@ -2312,29 +1968,29 @@ void akao_seq_op_set_articulation(l_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void akao_seq_op_select_articulation_map(m_struct* arg0)
+void akao_seq_op_select_articulation_map(AkaoChannelState* arg0)
 {
     s32 base;
     u16* entry;
     u8* temp_v0;
     u8 opcode;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     opcode = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
     base = g_akao_seq_channel0->unk30;
     if (base != 0)
     {
         entry = (u16*)((opcode & 0xFF) * 2 + base);
         if ((u16)*entry > 0x8000U)
         {
-            arg0->unk112 = 0;
-            arg0->unk34 = (s32)(arg0->unk34 & ~0x1000);
+            arg0->spu_volume_scale = 0;
+            arg0->flags = (s32)(arg0->flags & ~0x1000);
             return;
         }
-        arg0->unk18 = (s32)(base + *entry + 0x20);
-        arg0->unkEE = 0xFF;
-        arg0->unk34 = (s32)((arg0->unk34 & 0xE6FFEFF7) | 0x1000);
+        arg0->key_off_mask = (s32)(base + *entry + 0x20);
+        arg0->note_key = 0xFF;
+        arg0->flags = (s32)((arg0->flags & 0xE6FFEFF7) | 0x1000);
     }
 }
 
@@ -2343,7 +1999,7 @@ void akao_seq_op_select_articulation_map(m_struct* arg0)
  * @param arg0 Channel state to update.
  * @see decomp.me (100%)
  */
-void akao_seq_op_refresh_envelope(n_struct* arg0)
+void akao_seq_op_refresh_envelope(AkaoChannelState* arg0)
 {
     AkaoArticulation* articulation;
     u16 tmp_c;
@@ -2353,13 +2009,13 @@ void akao_seq_op_refresh_envelope(n_struct* arg0)
 
     articulation = (AkaoArticulation*)(g_akao_articulation_slots + (arg0->unk6A * 0x10));
     tmp_c = articulation->pitch_misc.half.lo;
-    arg0->unk10E = tmp_c;
+    arg0->spu_adsr_low = tmp_c;
     tmp_e = articulation->pitch_misc.half.hi;
-    old_value = arg0->unk100;
-    flags = arg0->unk34;
-    arg0->unk100 = old_value | 0xFF00;
-    arg0->unk34 = flags & 0xE6FFFFFF;
-    arg0->unk110 = tmp_e;
+    old_value = arg0->update_flags;
+    flags = arg0->flags;
+    arg0->update_flags = old_value | 0xFF00;
+    arg0->flags = flags & 0xE6FFFFFF;
+    arg0->spu_adsr_high = tmp_e;
 }
 
 /**
@@ -2368,15 +2024,15 @@ void akao_seq_op_refresh_envelope(n_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void akao_seq_op_set_transpose(o_struct* arg0)
+void akao_seq_op_set_transpose(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     s8 val;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     val = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unkEA = val;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->transpose = val;
 }
 
 /**
@@ -2385,15 +2041,15 @@ void akao_seq_op_set_transpose(o_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void akao_seq_op_add_transpose(o_struct* arg0)
+void akao_seq_op_add_transpose(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     s8 val;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     val = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unkEA += val;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->transpose += val;
 }
 
 /**
@@ -2401,25 +2057,25 @@ void akao_seq_op_add_transpose(o_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void akao_seq_op_set_pitch_slide(p_struct* arg0)
+void akao_seq_op_set_pitch_slide(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     u8* temp_v0_2;
     s32 b;
     s8 b2;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     b = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unk98 = b;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->pitch_slide_duration = b;
     if (b == 0)
     {
-        arg0->unk98 = 0x100;
+        arg0->pitch_slide_duration = 0x100;
     }
-    temp_v0_2 = arg0->unk0;
+    temp_v0_2 = arg0->seq_cursor;
     b2 = *temp_v0_2;
-    arg0->unk0 = (u8*)(temp_v0_2 + 1);
-    arg0->unkF0 = b2;
+    arg0->seq_cursor = (u8*)(temp_v0_2 + 1);
+    arg0->pitch_slide_delta = b2;
 }
 
 /**
@@ -2427,22 +2083,22 @@ void akao_seq_op_set_pitch_slide(p_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void akao_seq_op_enable_portamento(q_struct* arg0)
+void akao_seq_op_enable_portamento(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     s32 b;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     b = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unk9C = b;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->portamento_speed = b;
     if (b == 0)
     {
-        arg0->unk9C = 0x100;
+        arg0->portamento_speed = 0x100;
     }
-    arg0->unkF2 = 0;
-    arg0->unk9A = 0;
-    arg0->unk9E = 1;
+    arg0->prev_transpose = 0;
+    arg0->prev_key = 0;
+    arg0->note_flags = 1;
 }
 
 /**
@@ -2450,9 +2106,9 @@ void akao_seq_op_enable_portamento(q_struct* arg0)
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void akao_seq_op_disable_portamento(q_struct* arg0)
+void akao_seq_op_disable_portamento(AkaoChannelState* arg0)
 {
-    arg0->unk9C = 0;
+    arg0->portamento_speed = 0;
 }
 
 /**
@@ -2460,7 +2116,7 @@ void akao_seq_op_disable_portamento(q_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void akao_seq_op_set_detune(r_struct* arg0)
+void akao_seq_op_set_detune(AkaoChannelState* arg0)
 {
     s32 scale;
     u8* next;
@@ -2468,14 +2124,14 @@ void akao_seq_op_set_detune(r_struct* arg0)
     u32 result;
     u8* temp_v0;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     next = (u8*)(temp_v0 + 1);
-    arg0->unkEC = (s16)(s8)*temp_v0;
-    result = (u8)arg0->unkEC;
-    scale = arg0->unk2C;
+    arg0->detune = (s16)(s8)*temp_v0;
+    result = (u8)arg0->detune;
+    scale = arg0->pitch;
     prod = scale * result;
-    arg0->unk0 = next;
-    if (arg0->unkEC < 0)
+    arg0->seq_cursor = next;
+    if (arg0->detune < 0)
     {
         result = (prod >> 8) - scale;
     }
@@ -2483,8 +2139,8 @@ void akao_seq_op_set_detune(r_struct* arg0)
     {
         result = prod >> 7;
     }
-    arg0->unk54 = result;
-    arg0->unk100 = (s32)(arg0->unk100 | 0x10);
+    arg0->detune_pitch_delta = result;
+    arg0->update_flags = (s32)(arg0->update_flags | 0x10);
 }
 
 /**
@@ -2492,20 +2148,20 @@ void akao_seq_op_set_detune(r_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void akao_seq_op_add_detune(r_struct* arg0)
+void akao_seq_op_add_detune(AkaoChannelState* arg0)
 {
     s32 scale;
     u8* temp_v0;
     u32 prod;
     u32 result;
 
-    temp_v0 = arg0->unk0;
-    scale = arg0->unk2C;
-    arg0->unkEC += (s8)*temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    result = (u8)arg0->unkEC;
+    temp_v0 = arg0->seq_cursor;
+    scale = arg0->pitch;
+    arg0->detune += (s8)*temp_v0;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    result = (u8)arg0->detune;
     prod = scale * result;
-    if (arg0->unkEC < 0)
+    if (arg0->detune < 0)
     {
         result = (prod >> 8) - scale;
     }
@@ -2513,8 +2169,8 @@ void akao_seq_op_add_detune(r_struct* arg0)
     {
         result = prod >> 7;
     }
-    arg0->unk54 = result;
-    arg0->unk100 = (s32)(arg0->unk100 | 0x10);
+    arg0->detune_pitch_delta = result;
+    arg0->update_flags = (s32)(arg0->update_flags | 0x10);
 }
 
 /**
@@ -2525,9 +2181,9 @@ void akao_seq_op_add_detune(r_struct* arg0)
  *       operand order (@c hi first) matching the other branch.
  * @see decomp.me (100%)
  */
-void akao_seq_op_start_pitch_lfo(s_struct* arg0)
+void akao_seq_op_start_pitch_lfo(AkaoChannelState* arg0)
 {
-    s_struct* p;
+    AkaoChannelState* p;
     u32 temp_a0;
     u32 raw;
     u16 flags;
@@ -2541,38 +2197,39 @@ void akao_seq_op_start_pitch_lfo(s_struct* arg0)
     s32 temp_v1_2;
 
     p = arg0;
-    p->unk34 = (s32)(p->unk34 | 1);
-    if (p->unk64 != 0)
+    p->flags = (s32)(p->flags | 1);
+    if (p->is_sfx_channel != 0)
     {
-        temp_v0 = p->unk0;
-        p->unkA2 = 0;
+        temp_v0 = p->seq_cursor;
+        p->pitch_lfo_delay = 0;
         temp_v1 = *temp_v0;
-        p->unk0 = (u8*)(temp_v0 + 1);
+        p->seq_cursor = (u8*)(temp_v0 + 1);
         if (temp_v1 != 0)
         {
-            p->unkAE = temp_v1 << 8;
+            p->pitch_lfo_depth = temp_v1 << 8;
         }
     }
     else
     {
-        temp_v0_2 = p->unk0;
-        p->unkA2 = *temp_v0_2;
-        p->unk0 = (u8*)(temp_v0_2 + 1);
+        temp_v0_2 = p->seq_cursor;
+        p->pitch_lfo_delay = *temp_v0_2;
+        p->seq_cursor = (u8*)(temp_v0_2 + 1);
     }
-    temp_v0_3 = p->unk0;
+    temp_v0_3 = p->seq_cursor;
     temp_v1_2 = *temp_v0_3;
-    p->unk0 = (u8*)(temp_v0_3 + 1);
-    p->unkA6 = temp_v1_2;
+    p->seq_cursor = (u8*)(temp_v0_3 + 1);
+    p->pitch_lfo_period = temp_v1_2;
     if (temp_v1_2 == 0)
     {
-        p->unkA6 = 0x100;
+        p->pitch_lfo_period = 0x100;
     }
-    temp_v0_4 = p->unk0;
-    flags = p->unkAE;
+    temp_v0_4 = p->seq_cursor;
+    flags = p->pitch_lfo_depth;
     raw = *temp_v0_4;
-    p->unk0 = (u8*)(temp_v0_4 + 1);
-    p->unkAA = raw;
-    temp_a0 = p->unk2C;
+    p->seq_cursor = (u8*)(temp_v0_4 + 1);
+    p->pitch_lfo_waveform = raw;
+    /* This op reads only the low halfword of the 0x2C pitch word (lhu). */
+    temp_a0 = *(u16*)&p->pitch;
     hi = (u32)(flags & 0x7F00) >> 8;
     if (!(flags & 0x8000))
     {
@@ -2582,10 +2239,10 @@ void akao_seq_op_start_pitch_lfo(s_struct* arg0)
     {
         var_lo = hi * temp_a0;
     }
-    p->unkAC = var_lo >> 7;
-    p->unk1C = g_akao_lfo_waveforms[p->unkAA];
-    p->unkA4 = p->unkA2;
-    p->unkA8 = 1;
+    p->pitch_lfo_depth_scaled = var_lo >> 7;
+    p->unk1C = g_akao_lfo_waveforms[p->pitch_lfo_waveform];
+    p->pitch_lfo_delay_ticks = p->pitch_lfo_delay;
+    p->pitch_lfo_restart = 1;
 }
 
 /**
@@ -2595,9 +2252,9 @@ void akao_seq_op_start_pitch_lfo(s_struct* arg0)
  *       a1 to match; it leaves one residual @c andi (see status).
  * @see decomp.me (90.96%)
  */
-void akao_seq_op_set_pitch_lfo_depth(t_struct* arg0)
+void akao_seq_op_set_pitch_lfo_depth(AkaoChannelState* arg0)
 {
-    t_struct* p;
+    AkaoChannelState* p;
     s32 scale;
     u8* temp_v0;
     u32 shifted;
@@ -2606,12 +2263,12 @@ void akao_seq_op_set_pitch_lfo_depth(t_struct* arg0)
     u32 var_lo;
 
     p = arg0;
-    temp_v0 = p->unk0;
+    temp_v0 = p->seq_cursor;
     shifted = *temp_v0 << 8;
-    p->unk0 = (u8*)(temp_v0 + 1);
-    scale = p->unk2C;
-    p->unkAE = shifted;
-    flags = p->unkAE;
+    p->seq_cursor = (u8*)(temp_v0 + 1);
+    scale = p->pitch;
+    p->pitch_lfo_depth = shifted;
+    flags = p->pitch_lfo_depth;
     hi = (u32)(flags & 0x7F00) >> 8;
     if (!(flags & 0x8000))
     {
@@ -2621,7 +2278,7 @@ void akao_seq_op_set_pitch_lfo_depth(t_struct* arg0)
     {
         var_lo = hi * scale;
     }
-    p->unkAC = var_lo >> 7;
+    p->pitch_lfo_depth_scaled = var_lo >> 7;
 }
 
 /**
@@ -2629,24 +2286,24 @@ void akao_seq_op_set_pitch_lfo_depth(t_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void akao_seq_op_slide_pitch_lfo_depth(u_struct* arg0)
+void akao_seq_op_slide_pitch_lfo_depth(AkaoChannelState* arg0)
 {
     u8* temp_a1;
     s32 divisor;
     s32 result;
 
-    temp_a1 = arg0->unk0;
+    temp_a1 = arg0->seq_cursor;
     divisor = *temp_a1;
     temp_a1 += 1;
-    arg0->unk0 = temp_a1;
+    arg0->seq_cursor = temp_a1;
     if (divisor == 0)
     {
         divisor = 0x100;
     }
-    result = ((s32)(*temp_a1 << 8) - arg0->unkAE) / divisor;
-    arg0->unk0 = (u8*)(temp_a1 + 1);
-    arg0->unkB0 = divisor;
-    arg0->unkB2 = result;
+    result = ((s32)(*temp_a1 << 8) - arg0->pitch_lfo_depth) / divisor;
+    arg0->seq_cursor = (u8*)(temp_a1 + 1);
+    arg0->pitch_lfo_depth_fade_ticks = divisor;
+    arg0->pitch_lfo_depth_step = result;
 }
 
 /**
@@ -2655,11 +2312,11 @@ void akao_seq_op_slide_pitch_lfo_depth(u_struct* arg0)
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void akao_seq_op_stop_pitch_lfo(v_struct* arg0)
+void akao_seq_op_stop_pitch_lfo(AkaoChannelState* arg0)
 {
-    arg0->unkF4 = 0;
-    arg0->unk34 = arg0->unk34 & ~1;
-    arg0->unk100 = arg0->unk100 | 0x10;
+    arg0->pitch_lfo_value = 0;
+    arg0->flags = arg0->flags & ~1;
+    arg0->update_flags = arg0->update_flags | 0x10;
 }
 
 /**
@@ -2668,9 +2325,9 @@ void akao_seq_op_stop_pitch_lfo(v_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by three bytes.
  * @see decomp.me (100%)
  */
-void akao_seq_op_start_volume_lfo(w_struct* arg0)
+void akao_seq_op_start_volume_lfo(AkaoChannelState* arg0)
 {
-    w_struct* p;
+    AkaoChannelState* p;
     u8* temp_v0;
     u8* temp_v0_2;
     u8* temp_v1;
@@ -2679,37 +2336,37 @@ void akao_seq_op_start_volume_lfo(w_struct* arg0)
     u32 raw;
 
     p = arg0;
-    temp_v1 = p->unk0;
-    p->unk34 = (s32)(p->unk34 | 2);
+    temp_v1 = p->seq_cursor;
+    p->flags = (s32)(p->flags | 2);
     temp_a0 = *temp_v1;
-    p->unk0 = (u8*)(temp_v1 + 1);
-    if (p->unk64 != 0)
+    p->seq_cursor = (u8*)(temp_v1 + 1);
+    if (p->is_sfx_channel != 0)
     {
-        p->unkB6 = 0;
+        p->volume_lfo_delay = 0;
         if (temp_a0 != 0)
         {
-            p->unkC0 = (temp_a0 & 0x7F) << 8;
+            p->volume_lfo_depth = (temp_a0 & 0x7F) << 8;
         }
     }
     else
     {
-        p->unkB6 = temp_a0;
+        p->volume_lfo_delay = temp_a0;
     }
-    temp_v0 = p->unk0;
+    temp_v0 = p->seq_cursor;
     temp_v1_2 = *temp_v0;
-    p->unk0 = (u8*)(temp_v0 + 1);
-    p->unkBA = temp_v1_2;
+    p->seq_cursor = (u8*)(temp_v0 + 1);
+    p->volume_lfo_period = temp_v1_2;
     if (temp_v1_2 == 0)
     {
-        p->unkBA = 0x100;
+        p->volume_lfo_period = 0x100;
     }
-    temp_v0_2 = p->unk0;
+    temp_v0_2 = p->seq_cursor;
     raw = *temp_v0_2;
-    p->unk0 = (u8*)(temp_v0_2 + 1);
-    p->unkBE = raw;
-    p->unk20 = g_akao_lfo_waveforms[p->unkBE];
-    p->unkB8 = p->unkB6;
-    p->unkBC = 1;
+    p->seq_cursor = (u8*)(temp_v0_2 + 1);
+    p->volume_lfo_waveform = raw;
+    p->tempo = g_akao_lfo_waveforms[p->volume_lfo_waveform];
+    p->volume_lfo_delay_ticks = p->volume_lfo_delay;
+    p->volume_lfo_restart = 1;
 }
 
 /**
@@ -2717,15 +2374,15 @@ void akao_seq_op_start_volume_lfo(w_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void akao_seq_op_set_volume_lfo_depth(x_struct* arg0)
+void akao_seq_op_set_volume_lfo_depth(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     s32 b;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     b = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unkC0 = (b & 0x7F) << 8;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->volume_lfo_depth = (b & 0x7F) << 8;
 }
 
 /**
@@ -2733,24 +2390,24 @@ void akao_seq_op_set_volume_lfo_depth(x_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void akao_seq_op_slide_volume_lfo_depth(y_struct* arg0)
+void akao_seq_op_slide_volume_lfo_depth(AkaoChannelState* arg0)
 {
     u8* temp_a1;
     s32 divisor;
     s32 result;
 
-    temp_a1 = arg0->unk0;
+    temp_a1 = arg0->seq_cursor;
     divisor = *temp_a1;
     temp_a1 += 1;
-    arg0->unk0 = temp_a1;
+    arg0->seq_cursor = temp_a1;
     if (divisor == 0)
     {
         divisor = 0x100;
     }
-    result = (((s32)(*temp_a1 & 0x7F) << 8) - arg0->unkC0) / divisor;
-    arg0->unk0 = (u8*)(temp_a1 + 1);
-    arg0->unkC2 = divisor;
-    arg0->unkC4 = result;
+    result = (((s32)(*temp_a1 & 0x7F) << 8) - arg0->volume_lfo_depth) / divisor;
+    arg0->seq_cursor = (u8*)(temp_a1 + 1);
+    arg0->volume_lfo_depth_fade_ticks = divisor;
+    arg0->volume_lfo_depth_step = result;
 }
 
 /**
@@ -2759,11 +2416,11 @@ void akao_seq_op_slide_volume_lfo_depth(y_struct* arg0)
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void akao_seq_op_stop_volume_lfo(z_struct* arg0)
+void akao_seq_op_stop_volume_lfo(AkaoChannelState* arg0)
 {
-    arg0->unkF6 = 0;
-    arg0->unk34 = arg0->unk34 & ~2;
-    arg0->unk100 = arg0->unk100 | 3;
+    arg0->volume_lfo_value = 0;
+    arg0->flags = arg0->flags & ~2;
+    arg0->update_flags = arg0->update_flags | 3;
 }
 
 /**
@@ -2771,28 +2428,28 @@ void akao_seq_op_stop_volume_lfo(z_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void akao_seq_op_start_pan_lfo(aa_struct* arg0)
+void akao_seq_op_start_pan_lfo(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     u8* temp_v0_2;
     s32 b1;
     u32 raw;
 
-    arg0->unk34 = (s32)(arg0->unk34 | 4);
-    temp_v0 = arg0->unk0;
+    arg0->flags = (s32)(arg0->flags | 4);
+    temp_v0 = arg0->seq_cursor;
     b1 = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unkC8 = b1;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->pan_lfo_period = b1;
     if (b1 == 0)
     {
-        arg0->unkC8 = 0x100;
+        arg0->pan_lfo_period = 0x100;
     }
-    temp_v0_2 = arg0->unk0;
+    temp_v0_2 = arg0->seq_cursor;
     raw = *temp_v0_2;
-    arg0->unk0 = (u8*)(temp_v0_2 + 1);
-    arg0->unkCC = raw;
-    arg0->unk24 = g_akao_lfo_waveforms[arg0->unkCC];
-    arg0->unkCA = 1;
+    arg0->seq_cursor = (u8*)(temp_v0_2 + 1);
+    arg0->pan_lfo_waveform = raw;
+    arg0->tempo_step = g_akao_lfo_waveforms[arg0->pan_lfo_waveform];
+    arg0->pan_lfo_restart = 1;
 }
 
 /**
@@ -2800,15 +2457,15 @@ void akao_seq_op_start_pan_lfo(aa_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @see decomp.me (100%)
  */
-void akao_seq_op_set_pan_lfo_depth(ab_struct* arg0)
+void akao_seq_op_set_pan_lfo_depth(AkaoChannelState* arg0)
 {
     u8* temp_v0;
     s32 b;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     b = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    arg0->unkCE = b << 7;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    arg0->pan_lfo_depth = b << 7;
 }
 
 /**
@@ -2816,24 +2473,24 @@ void akao_seq_op_set_pan_lfo_depth(ab_struct* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by two bytes.
  * @see decomp.me (100%)
  */
-void akao_seq_op_slide_pan_lfo_depth(ac_struct* arg0)
+void akao_seq_op_slide_pan_lfo_depth(AkaoChannelState* arg0)
 {
     u8* temp_a1;
     s32 divisor;
     s32 result;
 
-    temp_a1 = arg0->unk0;
+    temp_a1 = arg0->seq_cursor;
     divisor = *temp_a1;
     temp_a1 += 1;
-    arg0->unk0 = temp_a1;
+    arg0->seq_cursor = temp_a1;
     if (divisor == 0)
     {
         divisor = 0x100;
     }
-    result = (((s32)*temp_a1 << 7) - arg0->unkCE) / divisor;
-    arg0->unk0 = (u8*)(temp_a1 + 1);
-    arg0->unkD0 = divisor;
-    arg0->unkD2 = result;
+    result = (((s32)*temp_a1 << 7) - arg0->pan_lfo_depth) / divisor;
+    arg0->seq_cursor = (u8*)(temp_a1 + 1);
+    arg0->pan_lfo_depth_fade_ticks = divisor;
+    arg0->pan_lfo_depth_step = result;
 }
 
 /**
@@ -2842,11 +2499,11 @@ void akao_seq_op_slide_pan_lfo_depth(ac_struct* arg0)
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void akao_seq_op_stop_pan_lfo(ad_struct* arg0)
+void akao_seq_op_stop_pan_lfo(AkaoChannelState* arg0)
 {
-    arg0->unkF8 = 0;
-    arg0->unk34 = arg0->unk34 & ~4;
-    arg0->unk100 = arg0->unk100 | 3;
+    arg0->pan_lfo_value = 0;
+    arg0->flags = arg0->flags & ~4;
+    arg0->update_flags = arg0->update_flags | 3;
 }
 
 /**
@@ -2883,9 +2540,9 @@ void akao_seq_op_enable_reverb(AkaoChannelState* arg0, s32 arg1)
  *       akao_seq_op_enable_reverb).
  * @see decomp.me (98.27%)
  */
-void akao_seq_op_disable_reverb(ae_struct* arg0, s32 arg1)
+void akao_seq_op_disable_reverb(AkaoChannelState* arg0, s32 arg1)
 {
-    if (arg0->unk64 == 0)
+    if (arg0->is_sfx_channel == 0)
     {
         g_akao_seq_channel0->reverb_mask &= ~arg1;
     }
@@ -2894,7 +2551,7 @@ void akao_seq_op_disable_reverb(ae_struct* arg0, s32 arg1)
         g_akao_sfx_control.reverb_mask &= ~arg1;
     }
     g_akao_driver_flags.unk8 |= 0x110;
-    arg0->unkD4 = 0;
+    arg0->reverb_toggle_ticks = 0;
 }
 
 /**
@@ -2908,13 +2565,13 @@ void akao_seq_op_disable_reverb(ae_struct* arg0, s32 arg1)
  *       register), a gcc 2.8 coloring tie-break shared with akao_seq_op_enable_reverb.
  * @see decomp.me (99.66%)
  */
-void akao_seq_op_enable_pitch_modulation(af_struct* arg0, s32 arg1)
+void akao_seq_op_enable_pitch_modulation(AkaoChannelState* arg0, s32 arg1)
 {
-    if (arg0->unk64 == 0)
+    if (arg0->is_sfx_channel == 0)
     {
         g_akao_seq_channel0->pitch_mod_mask |= arg1;
     }
-    else if (arg0->unk34 & 0x10000)
+    else if (arg0->flags & 0x10000)
     {
         g_akao_sfx_control.pitch_mod_mask |= arg1;
     }
@@ -2931,9 +2588,9 @@ void akao_seq_op_enable_pitch_modulation(af_struct* arg0, s32 arg1)
  *       gcc 2.8 coloring tie-break shared with the reverb handlers.
  * @see decomp.me (98.27%)
  */
-void akao_seq_op_disable_pitch_modulation(ag_struct* arg0, s32 arg1)
+void akao_seq_op_disable_pitch_modulation(AkaoChannelState* arg0, s32 arg1)
 {
-    if (arg0->unk64 == 0)
+    if (arg0->is_sfx_channel == 0)
     {
         g_akao_seq_channel0->pitch_mod_mask &= ~arg1;
     }
@@ -2942,7 +2599,7 @@ void akao_seq_op_disable_pitch_modulation(ag_struct* arg0, s32 arg1)
         g_akao_sfx_control.pitch_mod_mask &= ~arg1;
     }
     g_akao_driver_flags.unk8 |= 0x100;
-    arg0->unkD6 = 0;
+    arg0->pitch_mod_toggle_ticks = 0;
 }
 
 /**
@@ -2996,9 +2653,9 @@ void akao_seq_op_disable_noise(AkaoChannelState* arg0, s32 arg1)
  * @param arg0 Channel state.
  * @see decomp.me (100%)
  */
-void akao_seq_op_enable_note_tie(ah_struct* arg0)
+void akao_seq_op_enable_note_tie(AkaoChannelState* arg0)
 {
-    arg0->unk9E = 1;
+    arg0->note_flags = 1;
 }
 
 /**
@@ -3014,11 +2671,11 @@ void akao_seq_op_nop_cd(void)
  * @param arg0 Channel state; @c is_sfx_channel selects whether the store happens.
  * @see decomp.me (100%)
  */
-void akao_seq_op_enable_sfx_full_gate(ai_struct* arg0)
+void akao_seq_op_enable_sfx_full_gate(AkaoChannelState* arg0)
 {
-    if (arg0->unk64 != 0)
+    if (arg0->is_sfx_channel != 0)
     {
-        arg0->unk9E = 4;
+        arg0->note_flags = 4;
     }
 }
 
@@ -3033,15 +2690,15 @@ void akao_seq_op_nop_d1(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/Get0N
  */
-void akao_seq_op_set_noise_frequency(argst1* arg0)
+void akao_seq_op_set_noise_frequency(AkaoChannelState* arg0)
 {
     s16 temp_a1;
     u8* temp_v0;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     temp_a1 = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
-    if (arg0->unk64 == 0)
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
+    if (arg0->is_sfx_channel == 0)
     {
         if (temp_a1 & 0xC0)
         {
@@ -3066,7 +2723,7 @@ void akao_seq_op_set_noise_frequency(argst1* arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/gwBIb
  */
-void akao_seq_op_set_adsr_attack(SomeStruct* arg0)
+void akao_seq_op_set_adsr_attack(AkaoChannelState* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3074,76 +2731,66 @@ void akao_seq_op_set_adsr_attack(SomeStruct* arg0)
     u32 new_unk34;
     u16 new_unk10E;
 
-    ptr = arg0->unk0;
+    ptr = arg0->seq_cursor;
     byte_val = *ptr;
-    arg0->unk0 = ptr + 1;
+    arg0->seq_cursor = ptr + 1;
 
-    new_unk100 = arg0->unk100 | 0x900;
-    arg0->unk100 = new_unk100;
+    new_unk100 = arg0->update_flags | 0x900;
+    arg0->update_flags = new_unk100;
 
-    new_unk34 = arg0->unk34 | 0x01000000;
+    new_unk34 = arg0->flags | 0x01000000;
 
-    new_unk10E = (arg0->unk10E & 0x80FF) | ((u16)byte_val << 8);
+    new_unk10E = (arg0->spu_adsr_low & 0x80FF) | ((u16)byte_val << 8);
 
-    arg0->unk34 = new_unk34;
-    arg0->unk10E = new_unk10E;
+    arg0->flags = new_unk34;
+    arg0->spu_adsr_low = new_unk10E;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/ID5s7
  */
-void akao_seq_op_set_adsr_decay(s_8002C79C* arg0, s_8002C79C* arg1)
+void akao_seq_op_set_adsr_decay(AkaoChannelState* arg0, AkaoChannelState* arg1)
 {
     u8* ptr;
     u32 byte_val;
     u32 new_unk100;
     u16 new_unk10E;
 
-    ptr = arg0->unk0;
+    ptr = arg0->seq_cursor;
     byte_val = *ptr;
-    arg0->unk0 = ptr + 1;
+    arg0->seq_cursor = ptr + 1;
 
-    new_unk100 = arg0->unk100 | 0x1000;
-    new_unk10E = ((arg0->unk10E & 0xFF0F) | (byte_val * 0x10));
+    new_unk100 = arg0->update_flags | 0x1000;
+    new_unk10E = ((arg0->spu_adsr_low & 0xFF0F) | (byte_val * 0x10));
 
-    arg0->unk100 = new_unk100;
-    arg0->unk10E = new_unk10E;
+    arg0->update_flags = new_unk100;
+    arg0->spu_adsr_low = new_unk10E;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/ZOmaE
  */
-void akao_seq_op_set_adsr_sustain_level(s_8002C79C* arg0, s_8002C79C* arg1)
+void akao_seq_op_set_adsr_sustain_level(AkaoChannelState* arg0, AkaoChannelState* arg1)
 {
     u8* ptr;
     u32 byte_val;
     u32 new_unk100;
     u16 new_unk10E;
 
-    ptr = arg0->unk0;
+    ptr = arg0->seq_cursor;
     byte_val = *ptr;
-    arg0->unk0 = ptr + 1;
-    new_unk100 = arg0->unk100 | 0x8000;
-    new_unk10E = (arg0->unk10E & 0xFFF0) | byte_val;
-    arg0->unk100 = new_unk100;
-    arg0->unk10E = new_unk10E;
+    arg0->seq_cursor = ptr + 1;
+    new_unk100 = arg0->update_flags | 0x8000;
+    new_unk10E = (arg0->spu_adsr_low & 0xFFF0) | byte_val;
+    arg0->update_flags = new_unk100;
+    arg0->spu_adsr_low = new_unk10E;
 }
 
-typedef struct
-{
-    u8* unk0;
-    u8 pad1[0x34 - 0x4];
-    s32 unk34;
-    u8 pad2[0x100 - 0x38];
-    s32 unk100;
-    u8 pad3[0x110 - 0x104];
-    u16 unk110;
-} s_8002C800;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/Tun26
  */
-void akao_seq_op_set_adsr_sustain_rate(s_8002C800* arg0)
+void akao_seq_op_set_adsr_sustain_rate(AkaoChannelState* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3151,23 +2798,23 @@ void akao_seq_op_set_adsr_sustain_rate(s_8002C800* arg0)
     u32 new_unk34;
     u16 new_unk110;
 
-    ptr = arg0->unk0;
+    ptr = arg0->seq_cursor;
     byte_val = *ptr;
-    arg0->unk0 = ptr + 1;
+    arg0->seq_cursor = ptr + 1;
 
-    new_unk100 = arg0->unk100 | 0x2200;
-    new_unk34 = arg0->unk34 | 0x08000000;
-    new_unk110 = (arg0->unk110 & 0xE03F) | (byte_val << 6);
+    new_unk100 = arg0->update_flags | 0x2200;
+    new_unk34 = arg0->flags | 0x08000000;
+    new_unk110 = (arg0->spu_adsr_high & 0xE03F) | (byte_val << 6);
 
-    arg0->unk100 = new_unk100;
-    arg0->unk34 = new_unk34;
-    arg0->unk110 = new_unk110;
+    arg0->update_flags = new_unk100;
+    arg0->flags = new_unk34;
+    arg0->spu_adsr_high = new_unk110;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/DR9uQ
  */
-void akao_seq_op_set_adsr_release_rate(s_8002C800* arg0)
+void akao_seq_op_set_adsr_release_rate(AkaoChannelState* arg0)
 {
     u8* ptr;
     u32 byte_val;
@@ -3175,127 +2822,103 @@ void akao_seq_op_set_adsr_release_rate(s_8002C800* arg0)
     u32 new_unk34;
     u16 new_unk110;
 
-    ptr = arg0->unk0;
+    ptr = arg0->seq_cursor;
     byte_val = *ptr;
-    arg0->unk0 = ptr + 1;
+    arg0->seq_cursor = ptr + 1;
 
-    new_unk100 = arg0->unk100 | 0x4400;
-    new_unk34 = arg0->unk34 | 0x10000000;
-    new_unk110 = (arg0->unk110 & 0xFFE0) | byte_val;
+    new_unk100 = arg0->update_flags | 0x4400;
+    new_unk34 = arg0->flags | 0x10000000;
+    new_unk110 = (arg0->spu_adsr_high & 0xFFE0) | byte_val;
 
-    arg0->unk100 = new_unk100;
-    arg0->unk34 = new_unk34;
-    arg0->unk110 = new_unk110;
+    arg0->update_flags = new_unk100;
+    arg0->flags = new_unk34;
+    arg0->spu_adsr_high = new_unk110;
 }
 
-typedef struct
-{
-    u8* unk0;               /* 0x00 */
-    u8 pad1[0x100 - 0x4];   /* 0x04 */
-    s32 unk100;             /* 0x100 */
-    u8 pad2[0x10E - 0x104]; /* 0x104 */
-    u16 unk10E;             /* 0x10E */
-} s_8002C884;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/dP97Y
  */
-void akao_seq_op_set_adsr_attack_mode(s_8002C884* arg0)
+void akao_seq_op_set_adsr_attack_mode(AkaoChannelState* arg0)
 {
     u8* ptr;
     u32 byte_val;
     u16 new_unk10E;
 
-    ptr = arg0->unk0;
+    ptr = arg0->seq_cursor;
     byte_val = *ptr;
-    arg0->unk0 = ptr + 1;
+    arg0->seq_cursor = ptr + 1;
 
-    new_unk10E = arg0->unk10E & 0x7FFF;
-    arg0->unk10E = new_unk10E;
+    new_unk10E = arg0->spu_adsr_low & 0x7FFF;
+    arg0->spu_adsr_low = new_unk10E;
     if (byte_val == 5)
     {
         new_unk10E |= 0x8000;
-        arg0->unk10E = new_unk10E;
+        arg0->spu_adsr_low = new_unk10E;
     }
 
-    arg0->unk100 = arg0->unk100 | 0x100;
+    arg0->update_flags = arg0->update_flags | 0x100;
 }
 
-typedef struct
-{
-    u8* unk0;               /* 0x00 */
-    u8 pad1[0x100 - 0x4];   /* 0x04 */
-    s32 unk100;             /* 0x100 */
-    u8 pad2[0x110 - 0x104]; /* 0x104 */
-    u16 unk110;             /* 0x110 */
-} Struct_8002C8C8;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/8od0h
  */
-void akao_seq_op_set_adsr_sustain_mode(Struct_8002C8C8* arg0)
+void akao_seq_op_set_adsr_sustain_mode(AkaoChannelState* arg0)
 {
     s32 temp_a0;
     u16 temp_v1;
     u8* temp_v0;
     u32 byte_val;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     byte_val = *temp_v0;
-    temp_v1 = arg0->unk110 & 0x3FFF;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
+    temp_v1 = arg0->spu_adsr_high & 0x3FFF;
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
     temp_a0 = byte_val & 0xFFFF;
-    arg0->unk110 = temp_v1;
+    arg0->spu_adsr_high = temp_v1;
 
     switch (temp_a0)
     {
     case 3:
-        arg0->unk110 = temp_v1 | 0x4000;
+        arg0->spu_adsr_high = temp_v1 | 0x4000;
         break;
     case 5:
-        arg0->unk110 = temp_v1 | 0x8000;
+        arg0->spu_adsr_high = temp_v1 | 0x8000;
         break;
     case 7:
-        arg0->unk110 = temp_v1 | 0xC000;
+        arg0->spu_adsr_high = temp_v1 | 0xC000;
         break;
     }
 
-    arg0->unk100 = (s32)(arg0->unk100 | 0x200);
+    arg0->update_flags = (s32)(arg0->update_flags | 0x200);
 }
 
-typedef struct
-{
-    u8* unk0;               /* 0x00 */
-    u8 pad1[0x100 - 0x4];   /* 0x04 */
-    s32 unk100;             /* 0x100 */
-    u8 pad2[0x110 - 0x104]; /* 0x104 */
-    u16 unk110;             /* 0x10E */
-} s_8002C940;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/1Pqa0
  */
-void akao_seq_op_set_adsr_release_mode(s_8002C940* arg0)
+void akao_seq_op_set_adsr_release_mode(AkaoChannelState* arg0)
 {
 
     u8* temp_v0;
     u16 new_unk110;
     u32 byte_val;
 
-    temp_v0 = arg0->unk0;
+    temp_v0 = arg0->seq_cursor;
     byte_val = *temp_v0;
-    arg0->unk0 = (u8*)(temp_v0 + 1);
+    arg0->seq_cursor = (u8*)(temp_v0 + 1);
 
-    new_unk110 = arg0->unk110 & 0xFFDF;
-    arg0->unk110 = new_unk110;
+    new_unk110 = arg0->spu_adsr_high & 0xFFDF;
+    arg0->spu_adsr_high = new_unk110;
 
     if (byte_val == 7)
     {
         new_unk110 = (u16)(new_unk110 | 0x20);
-        arg0->unk110 = new_unk110;
+        arg0->spu_adsr_high = new_unk110;
     }
 
-    arg0->unk100 = (s32)(arg0->unk100 | 0x400);
+    arg0->update_flags = (s32)(arg0->update_flags | 0x400);
 }
 
 /**
@@ -3318,166 +2941,138 @@ void func_8002C9A4(void)
     g_akao_seq_channel0->voice_alloc_base = 0;
 }
 
-typedef struct
-{
-    u8* unk0;
-    u8* unk4[4];
-    u8 pad_14[0x72 - 0x14];
-    u16 unk72;
-    u16 unk74[4];
-    u16 unk7C[4];
-    u8 pad_84[0xD8 - 0x84];
-    u16 unkD8;
-} Struct_8002C9B4;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/pTtu4
  */
-void akao_seq_op_loop_start(Struct_8002C9B4* arg0)
+void akao_seq_op_loop_start(AkaoChannelState* arg0)
 {
-    arg0->unkD8 = (arg0->unkD8 + 1) & 3;
-    arg0->unk4[arg0->unkD8] = arg0->unk0;
-    arg0->unk74[arg0->unkD8] = 0;
-    arg0->unk7C[arg0->unkD8] = arg0->unk72;
+    arg0->loop_depth = (arg0->loop_depth + 1) & 3;
+    arg0->w04.loop_cursor[arg0->loop_depth] = arg0->seq_cursor;
+    arg0->loop_count[arg0->loop_depth] = 0;
+    arg0->loop_opcode_count[arg0->loop_depth] = arg0->opcode_count;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/xSadm
  */
-void akao_seq_op_loop_end(Struct_8002C9B4* arg0)
+void akao_seq_op_loop_end(AkaoChannelState* arg0)
 {
     u32 var_a1;
 
-    var_a1 = *arg0->unk0;
-    arg0->unk0++;
+    var_a1 = *arg0->seq_cursor;
+    arg0->seq_cursor++;
 
     if (var_a1 == 0)
     {
         var_a1 = 0x100;
     }
 
-    if (++arg0->unk74[arg0->unkD8] != var_a1)
+    if (++arg0->loop_count[arg0->loop_depth] != var_a1)
     {
-        arg0->unk0 = arg0->unk4[arg0->unkD8];
-        arg0->unk72 = arg0->unk7C[arg0->unkD8];
+        arg0->seq_cursor = arg0->w04.loop_cursor[arg0->loop_depth];
+        arg0->opcode_count = arg0->loop_opcode_count[arg0->loop_depth];
         return;
     }
 
-    arg0->unkD8 = (arg0->unkD8 - 1) & 3;
+    arg0->loop_depth = (arg0->loop_depth - 1) & 3;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/XFsED
  */
-void akao_seq_op_branch_on_loop_last(Struct_8002C9B4* arg0)
+void akao_seq_op_branch_on_loop_last(AkaoChannelState* arg0)
 {
     u8* temp_a1;
     u32 var_v1;
 
-    temp_a1 = arg0->unk0;
+    temp_a1 = arg0->seq_cursor;
     var_v1 = *temp_a1;
     temp_a1++;
-    arg0->unk0 = temp_a1;
+    arg0->seq_cursor = temp_a1;
 
     if (var_v1 == 0)
     {
         var_v1 = 0x100;
     }
 
-    if (arg0->unk74[arg0->unkD8] + 1 != var_v1)
+    if (arg0->loop_count[arg0->loop_depth] + 1 != var_v1)
     {
-        arg0->unk0 = temp_a1 + 2;
+        arg0->seq_cursor = temp_a1 + 2;
         return;
     }
 
-    arg0->unk0 = temp_a1 + (s16)(temp_a1[0] | (temp_a1[1] << 8));
+    arg0->seq_cursor = temp_a1 + (s16)(temp_a1[0] | (temp_a1[1] << 8));
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/Gx2w7
  */
-void akao_seq_op_branch_and_end_loop(Struct_8002C9B4* arg0)
+void akao_seq_op_branch_and_end_loop(AkaoChannelState* arg0)
 {
     u8* temp_a1;
     u32 var_v1;
 
-    temp_a1 = arg0->unk0;
+    temp_a1 = arg0->seq_cursor;
     var_v1 = *temp_a1;
     temp_a1++;
-    arg0->unk0 = temp_a1;
+    arg0->seq_cursor = temp_a1;
 
     if (var_v1 == 0)
     {
         var_v1 = 0x100;
     }
 
-    if (arg0->unk74[arg0->unkD8] + 1 != var_v1)
+    if (arg0->loop_count[arg0->loop_depth] + 1 != var_v1)
     {
-        arg0->unk0 = temp_a1 + 2;
+        arg0->seq_cursor = temp_a1 + 2;
         return;
     }
 
-    arg0->unk0 = temp_a1 + (s16)(temp_a1[0] | (temp_a1[1] << 8));
-    arg0->unkD8 = (arg0->unkD8 - 1) & 3;
+    arg0->seq_cursor = temp_a1 + (s16)(temp_a1[0] | (temp_a1[1] << 8));
+    arg0->loop_depth = (arg0->loop_depth - 1) & 3;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/Eytqk
  */
-void akao_seq_op_repeat_loop(Struct_8002C9B4* arg0)
+void akao_seq_op_repeat_loop(AkaoChannelState* arg0)
 {
-    arg0->unk74[arg0->unkD8]++;
-    arg0->unk0 = arg0->unk4[arg0->unkD8];
-    arg0->unk72 = arg0->unk7C[arg0->unkD8];
+    arg0->loop_count[arg0->loop_depth]++;
+    arg0->seq_cursor = arg0->w04.loop_cursor[arg0->loop_depth];
+    arg0->opcode_count = arg0->loop_opcode_count[arg0->loop_depth];
 }
 
-typedef struct
-{
-    u8* unk0;               // 0x00
-    u8* unk4[4];            // 0x04
-    u8 pad_14[0x66 - 0x14]; // 0x14
-    s16 unk66;              // 0x66
-    s16 unk68;              // 0x68
-    u8 pad_6A[0x72 - 0x6A]; // 0x6A
-    u16 unk72;              // 0x72
-    u16 unk74[4];           // 0x74
-    u16 unk7C[4];           // 0x7C
-    u8 pad_84[0xD8 - 0x84]; // 0x84
-    u16 unkD8;              // 0xD8
-    u8 pad_DA[0xDC - 0xDA]; // 0xDA
-    s16 unkDC;              // 0xDC
-    u16 unkDE;              // 0xDE
-} Struct_8002CBD4;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/FnAXw
  */
-void akao_seq_op_set_note_duration(Struct_8002CBD4* arg0)
+void akao_seq_op_set_note_duration(AkaoChannelState* arg0)
 {
     s32 temp_v1;
 
-    temp_v1 = *arg0->unk0;
-    arg0->unk0++;
+    temp_v1 = *arg0->seq_cursor;
+    arg0->seq_cursor++;
 
-    arg0->unkDE = 0;
+    arg0->note_duration_adjust = 0;
     arg0->unk68 = temp_v1;
     arg0->unk66 = temp_v1;
-    arg0->unkDC = temp_v1;
+    arg0->note_duration = temp_v1;
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/PBFzu
  */
-void akao_seq_op_adjust_note_duration(Struct_8002CBD4* arg0)
+void akao_seq_op_adjust_note_duration(AkaoChannelState* arg0)
 {
     s32 var_v1;
 
-    var_v1 = (s8)*arg0->unk0;
-    arg0->unk0++;
+    var_v1 = (s8)*arg0->seq_cursor;
+    arg0->seq_cursor++;
 
     if (var_v1 != 0)
     {
-        var_v1 += arg0->unkDC;
+        var_v1 += arg0->note_duration;
 
         if (var_v1 <= 0)
         {
@@ -3489,36 +3084,29 @@ void akao_seq_op_adjust_note_duration(Struct_8002CBD4* arg0)
         }
     }
 
-    arg0->unkDE = var_v1;
+    arg0->note_duration_adjust = var_v1;
 }
 
-typedef struct
-{
-    u8 pad1[0x34];
-    s32 unk34;
-    u8 pad2[0x112 - 0x38];
-    s16 unk112;
-} s_8002CC44;
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/CB7Yy
  */
-void func_8002CC44(s_8002CC44* arg0)
+void func_8002CC44(AkaoChannelState* arg0)
 {
     /* Song role: 0x34 is the note-table pointer, tested for presence. */
     if (g_akao_seq_channel0->flags != 0)
     {
-        arg0->unk34 = (s32)((arg0->unk34 & 0xE6FFEFF7) | 8);
+        arg0->flags = (s32)((arg0->flags & 0xE6FFEFF7) | 8);
     }
 }
 
 /**
  * decomp.me (100%) https://decomp.me/scratch/FnMZ3
  */
-void func_8002CC7C(s_8002CC44* arg0)
+void func_8002CC7C(AkaoChannelState* arg0)
 {
-    arg0->unk112 = 0;
-    arg0->unk34 = (s32)(arg0->unk34 & ~8);
+    arg0->spu_volume_scale = 0;
+    arg0->flags = (s32)(arg0->flags & ~8);
 }
 
 /**
@@ -3550,7 +3138,7 @@ void func_8002CCCC(u8** arg0)
 /**
  * decomp.me (100%) https://decomp.me/scratch/XqM1L
  */
-void func_8002CD08(s_8002C79C* arg0, s_8002C79C* arg1)
+void func_8002CD08(AkaoChannelState* arg0, AkaoChannelState* arg1)
 {
     akao_seq_op_set_adsr_decay(arg0, arg1);
     akao_seq_op_set_adsr_sustain_level(arg0, arg1);
@@ -3663,8 +3251,8 @@ void func_8002CE2C(AkaoChannelState* arg0, s32 arg1)
 {
     arg0->flags = (u8*)((u32)arg0->flags & ~0x37);
 
-    akao_seq_op_disable_reverb((ae_struct*)arg0, arg1);
-    akao_seq_op_disable_pitch_modulation((ag_struct*)arg0, arg1);
+    akao_seq_op_disable_reverb((AkaoChannelState*)arg0, arg1);
+    akao_seq_op_disable_pitch_modulation((AkaoChannelState*)arg0, arg1);
     akao_seq_op_disable_noise(arg0, arg1);
 
     arg0->note_flags = arg0->note_flags & 0xFFFA;
@@ -3838,7 +3426,7 @@ void akao_seq_op_skip_operand_byte(AkaoChannelState* arg0)
  *        voice 0, ignoring the reserved voice base.
  *
  * Sets the channel's bit in the song-state mask at offset 0x08. When
- * func_80025500 keys a note on, it passes @c (song->voice_alloc_low_mask & channel_mask) to the
+ * func_80025500 keys a note on, it passes @c (song->w04.song.voice_alloc_low_mask & channel_mask) to the
  * voice allocator func_80025498: a set bit makes the free-voice search start at
  * voice 0 instead of at @c song->unk38, the reserved base installed by extended
  * opcode FE 10 and cleared by FE 11. func_8002D0DC (FE 1E) clears the same bit,
@@ -3852,5 +3440,5 @@ void akao_seq_op_skip_operand_byte(AkaoChannelState* arg0)
  */
 void akao_seq_op_ignore_voice_reserve(AkaoChannelState* channel, s32 channel_mask)
 {
-    g_akao_seq_channel0->voice_alloc_low_mask = (s32)(g_akao_seq_channel0->voice_alloc_low_mask | channel_mask);
+    g_akao_seq_channel0->w04.song.voice_alloc_low_mask = (s32)(g_akao_seq_channel0->w04.song.voice_alloc_low_mask | channel_mask);
 }
