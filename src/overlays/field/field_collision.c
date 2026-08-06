@@ -335,7 +335,7 @@ typedef struct Move_Mover {
     s32 unk28;      /* 0x28 mode flags (0x30000 gate, low s16 = step size) */
 } Move_Mover;
 
-void func_80062F48(void*, s32*);                        /* extern */
+void func_80062F48(Move_UnkNode2*, s32*);
 
 typedef struct Move_Probe {
     Move_Mover* m;
@@ -6630,4 +6630,83 @@ s32 func_80062820(Req *req)
         }
     }
     return 1;
+}
+
+/**
+ * @brief Scale a movement vector down to account for a node edge's slope.
+ *
+ * The node's C->B edge runs between the boundary points named by unkA and
+ * unkC in g_field_node_angle_table and rises by unk12 - unk10 over that span.
+ * Moving along the edge covers its full 3D length while only advancing by the
+ * horizontal run, so @p vec is multiplied by run / slope to hold the ground
+ * speed constant. The run is first shortened by a further 1/16, a flat penalty
+ * for travelling on a slope at all.
+ *
+ * @param def Collision node definition supplying the edge and its heights.
+ * @param vec Movement vector rescaled in place; vec[0] is x, vec[1] is y.
+ *
+ * @note dx and dz are each reused to hold their own square once the raw delta
+ *       is no longer needed.
+ * @see decomp.me (100%) TODO
+ */
+void func_80062F48(Move_UnkNode2* def, s32* vec)
+{
+    s16* tbl;
+    s16* pt_c;
+    s16* pt_b;
+    s32 dx;
+    s32 dy;
+    s32 dz;
+    s32 run;
+    s32 slope;
+
+    tbl = g_field_node_angle_table;
+    pt_c = &tbl[def->unkA * 2];
+    pt_b = &tbl[def->unkC * 2];
+    dx = pt_b[0] - pt_c[0];
+    dy = pt_b[1] - pt_c[1];
+    dz = def->unk12 - def->unk10;
+    dx = dx * dx + dy * dy;
+    dz = dz * dz;
+    run = SquareRoot0(dx);
+    slope = SquareRoot0(dx + dz);
+    run -= run >> 4;
+    vec[0] = vec[0] * run / slope;
+    vec[1] = vec[1] * run / slope;
+}
+
+/**
+ * @brief Convert a probe's footprint to whole tiles and stencil it.
+ *
+ * scene->unk40 is the tile edge in pixels, either 4 or 8, and @c shift is its
+ * base-2 log. The footprint width (unkC) is rounded up to a whole number of
+ * tiles and the depth (unk10) to a whole number of double-height tiles, since
+ * the depth axis is stored at half the horizontal resolution. The rounding is
+ * the usual `(v + n - 1) >> log2(n)` ceiling divide.
+ *
+ * Does nothing when no per-group work area is allocated.
+ *
+ * @param q Probe query supplying the footprint extents.
+ *
+ * @note The extents are read as signed even though Query declares them u16.
+ * @see decomp.me (100%) TODO
+ */
+void func_8006304C(Query* q)
+{
+    FieldScene* scene;
+    s32 shift;
+    s32 edge;
+
+    scene = g_field_scene.scene;
+    if (scene->unk28 != 0)
+    {
+        edge = scene->unk40;
+        shift = 3;
+        if (edge == 4)
+        {
+            shift = 2;
+        }
+        func_80060364(((s16) q->unkC + edge - 1) >> shift,
+                      ((s16) q->unk10 + edge * 2 - 1) >> (shift + 1));
+    }
 }
