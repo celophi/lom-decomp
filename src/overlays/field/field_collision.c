@@ -6105,3 +6105,529 @@ block_351:
 block_25:
     return -2;
 }
+
+/**
+ * @brief Walk a rectangular tile footprint along a straight line and stamp it
+ *        into the group tile map.
+ *
+ * Bresenham DDA over the field group tile grid. The footprint is @c unk18 by
+ * @c unk1C tiles anchored at (@c unk8, @c unkC) and is stepped one tile at a
+ * time towards (@c unk10, @c unk14). @c state records which edge of the
+ * footprint moved on the last step so only the newly covered tiles are
+ * re-tested: 1 = a new column, 2 = a new row, 3 = the whole rectangle (the
+ * first iteration and both edges crossing at once). Every visited tile must be
+ * below 0xFD and must not be 1; anything else aborts the walk.
+ *
+ * Tiles that pass the test are stamped with @c unk2C, and the stamp value is
+ * bumped after each step unless it is 0 or 0xFC. The store happens before the
+ * @c unk28 check, so a tile is written even when @c unk28 is not 2 - only the
+ * goal comparison is gated on it.
+ *
+ * @param req Walk request, laid out as @c Req above. @c unk0 is the tile the
+ *            walk starts on, @c unk4 the goal tile, @c unk20 the group's tile
+ *            pitch (the vertical cell masks use twice that value), and @c unk24
+ *            is unused here.
+ * @return 1 when the walk ran to completion or reached @c unk4, 0 when a
+ *         blocked tile stopped it.
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80062820(Req *req)
+{
+    FieldScene *scene;
+    u8 *base;
+    u8 *goal;
+    u8 *p;
+    u8 *q;
+    s32 w;
+    s32 h;
+    s32 dx;
+    s32 dy;
+    s32 step_x;
+    s32 step_y;
+    s32 cell;
+    s32 mask_x;
+    s32 mask_y;
+    s32 x_cell;
+    s32 y_cell;
+    s32 x_end;
+    s32 y_end;
+    s32 wm1;
+    s32 hm1;
+    s32 col_hi;
+    s32 row_hi;
+    s32 x_span;
+    s32 row_span;
+    s32 stride;
+    s32 kind;
+    s32 state;
+    s32 err;
+    s32 i;
+    s32 n;
+    s32 m;
+    u32 tile;
+    u8 mark;
+
+    base = (u8 *)req->unk0;
+    x_cell = req->unk8;
+    dx = req->unk10 - x_cell;
+    y_cell = req->unkC;
+    dy = req->unk14 - y_cell;
+    cell = req->unk20;
+    mask_x = cell - 1;
+    x_cell &= mask_x;
+    w = req->unk18;
+    goal = (u8 *)req->unk4;
+    wm1 = w - 1;
+    x_end = x_cell + wm1;
+    col_hi = x_end & mask_x;
+    x_span = x_end >= ((w + mask_x) & ~mask_x);
+    h = req->unk1C;
+    hm1 = h - 1;
+    mask_y = (cell * 2) - 1;
+    y_cell &= mask_y;
+    y_end = y_cell + hm1;
+    row_hi = y_end & mask_y;
+    scene = g_field_scene.scene;
+    stride = (u16)scene->unk46;
+    row_span = 0;
+    if (y_end >= ((h + mask_y) & ~mask_y))
+    {
+        row_span = stride;
+    }
+    mark = req->unk2C;
+    kind = req->unk28;
+
+    if (dx >= 0)
+    {
+        step_x = 1;
+    }
+    else
+    {
+        dx = -dx;
+        step_x = -1;
+    }
+    if (dy >= 0)
+    {
+        step_y = stride;
+    }
+    else
+    {
+        dy = -dy;
+        step_y = -stride;
+    }
+
+    state = 3;
+    if (dx >= dy)
+    {
+        err = -dx;
+        for (i = dx; i != -1; i--)
+        {
+            if (state != 0)
+            {
+                switch (state)
+                {
+                case 1:
+                    p = base;
+                    if (step_x > 0)
+                    {
+                        p = base + x_span;
+                    }
+                    n = row_span;
+                    for (;;)
+                    {
+                        tile = *p;
+                        if (tile >= 0xFD || tile == 1)
+                        {
+                            return 0;
+                        }
+                        if (mark != 0 && tile != 0xFB)
+                        {
+                            *p = mark;
+                            if (kind == 2 && p == goal)
+                            {
+                                return 1;
+                            }
+                        }
+                        if (n == 0)
+                        {
+                            break;
+                        }
+                        p += stride;
+                        n -= stride;
+                    }
+                    break;
+                case 2:
+                    p = base;
+                    if (step_y > 0)
+                    {
+                        p = base + row_span;
+                    }
+                    n = x_span;
+                    do
+                    {
+                        tile = *p;
+                        if (tile >= 0xFD || tile == 1)
+                        {
+                            return 0;
+                        }
+                        if (mark != 0 && tile != 0xFB)
+                        {
+                            *p = mark;
+                            if (kind == 2 && p == goal)
+                            {
+                                return 1;
+                            }
+                        }
+                        p++;
+                    } while (--n != -1);
+                    break;
+                case 3:
+                    p = base;
+                    n = row_span;
+                    for (;;)
+                    {
+                        q = p;
+                        m = x_span;
+                        do
+                        {
+                            tile = *q;
+                            if (tile >= 0xFD || tile == 1)
+                            {
+                                return 0;
+                            }
+                            if (mark != 0 && tile != 0xFB)
+                            {
+                                *q = mark;
+                                if (kind == 2 && q == goal)
+                                {
+                                    return 1;
+                                }
+                            }
+                            q++;
+                        } while (--m != -1);
+                        if (n == 0)
+                        {
+                            break;
+                        }
+                        p += stride;
+                        n -= stride;
+                    }
+                    break;
+                }
+                if (mark != 0 && mark != 0xFC)
+                {
+                    mark++;
+                }
+            }
+            if (i == 0)
+            {
+                return 1;
+            }
+            state = 0;
+            if (step_x > 0)
+            {
+                if (x_cell == mask_x)
+                {
+                    x_cell = 0;
+                    x_span--;
+                    base++;
+                }
+                else
+                {
+                    x_cell++;
+                }
+                if (col_hi == mask_x)
+                {
+                    col_hi = 0;
+                    x_span++;
+                    state = 1;
+                }
+                else
+                {
+                    col_hi++;
+                }
+            }
+            else
+            {
+                if (x_cell == 0)
+                {
+                    x_cell = mask_x;
+                    x_span++;
+                    base--;
+                    state = 1;
+                }
+                else
+                {
+                    x_cell--;
+                }
+                if (col_hi == 0)
+                {
+                    col_hi = mask_x;
+                    x_span--;
+                }
+                else
+                {
+                    col_hi--;
+                }
+            }
+            err += dy * 2;
+            if (err >= 0)
+            {
+                if (step_y > 0)
+                {
+                    if (y_cell == mask_y)
+                    {
+                        y_cell = 0;
+                        row_span -= stride;
+                        base += stride;
+                    }
+                    else
+                    {
+                        y_cell++;
+                    }
+                    if (row_hi == mask_y)
+                    {
+                        row_hi = 0;
+                        row_span += stride;
+                        state |= 2;
+                    }
+                    else
+                    {
+                        row_hi++;
+                    }
+                }
+                else
+                {
+                    if (y_cell == 0)
+                    {
+                        y_cell = mask_y;
+                        row_span += stride;
+                        base -= stride;
+                        state |= 2;
+                    }
+                    else
+                    {
+                        y_cell--;
+                    }
+                    if (row_hi == 0)
+                    {
+                        row_hi = mask_y;
+                        row_span -= stride;
+                    }
+                    else
+                    {
+                        row_hi--;
+                    }
+                }
+                err -= dx * 2;
+            }
+        }
+    }
+    else
+    {
+        err = -dy;
+        for (i = dy; i != -1; i--)
+        {
+            if (state != 0)
+            {
+                switch (state)
+                {
+                case 1:
+                    p = base;
+                    if (step_x > 0)
+                    {
+                        p = base + x_span;
+                    }
+                    n = row_span;
+                    for (;;)
+                    {
+                        tile = *p;
+                        if (tile >= 0xFD || tile == 1)
+                        {
+                            return 0;
+                        }
+                        if (mark != 0 && tile != 0xFB)
+                        {
+                            *p = mark;
+                            if (kind == 2 && p == goal)
+                            {
+                                return 1;
+                            }
+                        }
+                        if (n == 0)
+                        {
+                            break;
+                        }
+                        p += stride;
+                        n -= stride;
+                    }
+                    break;
+                case 2:
+                    p = base;
+                    if (step_y > 0)
+                    {
+                        p = base + row_span;
+                    }
+                    n = x_span;
+                    do
+                    {
+                        tile = *p;
+                        if (tile >= 0xFD || tile == 1)
+                        {
+                            return 0;
+                        }
+                        if (mark != 0 && tile != 0xFB)
+                        {
+                            *p = mark;
+                            if (kind == 2 && p == goal)
+                            {
+                                return 1;
+                            }
+                        }
+                        p++;
+                    } while (--n != -1);
+                    break;
+                case 3:
+                    p = base;
+                    n = row_span;
+                    for (;;)
+                    {
+                        q = p;
+                        m = x_span;
+                        do
+                        {
+                            tile = *q;
+                            if (tile >= 0xFD || tile == 1)
+                            {
+                                return 0;
+                            }
+                            if (mark != 0 && tile != 0xFB)
+                            {
+                                *q = mark;
+                                if (kind == 2 && q == goal)
+                                {
+                                    return 1;
+                                }
+                            }
+                            q++;
+                        } while (--m != -1);
+                        if (n == 0)
+                        {
+                            break;
+                        }
+                        p += stride;
+                        n -= stride;
+                    }
+                    break;
+                }
+                if (mark != 0 && mark != 0xFC)
+                {
+                    mark++;
+                }
+            }
+            if (i == 0)
+            {
+                return 1;
+            }
+            state = 0;
+            if (step_y > 0)
+            {
+                if (y_cell == mask_y)
+                {
+                    y_cell = 0;
+                    row_span -= stride;
+                    base += stride;
+                }
+                else
+                {
+                    y_cell++;
+                }
+                if (row_hi == mask_y)
+                {
+                    row_hi = 0;
+                    row_span += stride;
+                    state = 2;
+                }
+                else
+                {
+                    row_hi++;
+                }
+            }
+            else
+            {
+                if (y_cell == 0)
+                {
+                    y_cell = mask_y;
+                    row_span += stride;
+                    base -= stride;
+                    state = 2;
+                }
+                else
+                {
+                    y_cell--;
+                }
+                if (row_hi == 0)
+                {
+                    row_hi = mask_y;
+                    row_span -= stride;
+                }
+                else
+                {
+                    row_hi--;
+                }
+            }
+            err += dx * 2;
+            if (err >= 0)
+            {
+                if (step_x > 0)
+                {
+                    if (x_cell == mask_x)
+                    {
+                        x_cell = 0;
+                        x_span--;
+                        base++;
+                    }
+                    else
+                    {
+                        x_cell++;
+                    }
+                    if (col_hi == mask_x)
+                    {
+                        col_hi = 0;
+                        x_span++;
+                        state |= 1;
+                    }
+                    else
+                    {
+                        col_hi++;
+                    }
+                }
+                else
+                {
+                    if (x_cell == 0)
+                    {
+                        x_cell = mask_x;
+                        x_span++;
+                        base--;
+                        state |= 1;
+                    }
+                    else
+                    {
+                        x_cell--;
+                    }
+                    if (col_hi == 0)
+                    {
+                        col_hi = mask_x;
+                        x_span--;
+                    }
+                    else
+                    {
+                        col_hi--;
+                    }
+                }
+                err -= dy * 2;
+            }
+        }
+    }
+    return 1;
+}

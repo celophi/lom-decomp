@@ -2945,7 +2945,7 @@ void akao_seq_op_disable_pitch_modulation(ag_struct* arg0, s32 arg1)
  *       akao_seq_op_enable_reverb.
  * @see decomp.me (99.58%)
  */
-void akao_seq_op_enable_noise(AkaoChannelState* arg0, s32 arg1)
+void akao_seq_op_enable_noise(AkaoChannelState* arg0, s32 arg1, s32 arg2)
 {
     if (arg0->unk64 == 0)
     {
@@ -3743,4 +3743,79 @@ void func_8002CEE4(AkaoChannelState* arg0)
     func_80026C14(&D_8004D3A0, var_a1, var_a2, 0);
 
     *(u8**)arg0 = *(u8**)arg0 + 4;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/B5HO1
+ */
+void func_8002CF9C(AkaoChannelState* arg0, s32 arg1)
+{
+    s32 temp_byte;
+    s32 temp_a2;
+
+    temp_byte = *(u8*)arg0->flags;
+    arg0->flags++;
+
+    arg0->unk70 = 0;
+    arg0->unk34 |= 0x800;
+
+    temp_a2 = temp_byte << 8;
+    arg0->unk6E = temp_a2;
+
+    akao_seq_op_enable_noise(arg0, arg1, temp_a2);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/fM3EA
+ */
+void func_8002CFE0(AkaoChannelState* arg0, s32 arg1)
+{
+    u8* temp_a1;
+    u16 temp_a0;
+    u32 temp_v1;
+    u8* temp_v0;
+
+    temp_v0 = arg0->flags;
+    temp_v1 = *temp_v0;
+    arg0->flags = temp_v0 + 1;
+
+    arg0->unk70 = temp_v1;
+    if (temp_v1 == 0)
+    {
+        arg0->unk70 = 0x100;
+    }
+
+    temp_a0 = arg0->unk6E & 0xFF00;
+    temp_a1 = arg0->flags;
+
+    arg0->unkE2 = ((s16)(*temp_a1 << 8) - temp_a0) / arg0->unk70;
+    arg0->unk6E = temp_a0;
+    arg0->flags = temp_a1 + 1;
+    arg0->unk34 |= 0x800;
+
+    akao_seq_op_enable_noise(arg0, arg1, arg0);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ws5Yw
+ */
+void func_8002D094(AkaoChannelState* arg0)
+{
+    arg0->unk34 = (s32)(arg0->unk34 | 0x100000);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/ySVnh
+ */
+void func_8002D0A8(AkaoChannelState* arg0)
+{
+    arg0->flags += 1;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/q71gK
+ */
+void func_8002D0BC(s32 arg1, s32 arg2)
+{
+    g_akao_seq_channel0->unk8 = (s32)(g_akao_seq_channel0->unk8 | arg2);
 }
