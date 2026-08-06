@@ -3805,17 +3805,39 @@ void func_8002D094(AkaoChannelState* arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/ySVnh
+ * @brief Extended opcode FE 1C: consume one operand byte and do nothing else.
+ *
+ * The operand-length table @c g_akao_opcode_len_table_ext gives this opcode a
+ * length of 2 (sub-opcode plus one operand), and the handler only advances the
+ * bytecode cursor past that operand, so the command is inert in this driver
+ * build. Its meaning in the authoring tool is unknown.
+ *
+ * @param arg0 Channel whose bytecode cursor is advanced by one byte.
+ * @see decomp.me (100%) https://decomp.me/scratch/ySVnh
  */
-void func_8002D0A8(AkaoChannelState* arg0)
+void akao_seq_op_skip_operand_byte(AkaoChannelState* arg0)
 {
     arg0->flags += 1;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/q71gK
+ * @brief Extended opcode FE 1D: let this channel allocate SPU voices from
+ *        voice 0, ignoring the reserved voice base.
+ *
+ * Sets the channel's bit in the song-state mask at offset 0x08. When
+ * func_80025500 keys a note on, it passes @c (song->unk8 & channel_mask) to the
+ * voice allocator func_80025498: a set bit makes the free-voice search start at
+ * voice 0 instead of at @c song->unk38, the reserved base installed by extended
+ * opcode FE 10 and cleared by FE 11. func_8002D0DC (FE 1E) clears the same bit,
+ * and akao_release_channels clears it for every released channel.
+ *
+ * @param channel Channel state; unused, but required to match because the
+ *                handler is called through the opcode-table signature.
+ * @param channel_mask Bit of the channel being stepped, as passed by
+ *                     akao_seq_step_opcode.
+ * @see decomp.me (100%) https://decomp.me/scratch/q71gK
  */
-void func_8002D0BC(s32 arg1, s32 arg2)
+void akao_seq_op_ignore_voice_reserve(AkaoChannelState* channel, s32 channel_mask)
 {
-    g_akao_seq_channel0->unk8 = (s32)(g_akao_seq_channel0->unk8 | arg2);
+    g_akao_seq_channel0->unk8 = (s32)(g_akao_seq_channel0->unk8 | channel_mask);
 }

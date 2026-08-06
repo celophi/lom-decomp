@@ -207,106 +207,201 @@ typedef struct AkaoArticulation
 } AkaoArticulation; /* sizeof = 0x10 */
 
 /**
- * @brief Per-channel runtime state for the AKAO driver.
+ * @brief One 0x118-byte AKAO driver state slot.
  *
- * Used for the song channel at @c g_akao_seq_channel0, the secondary slot at
- * @c g_akao_seq_channel1, the backing storage at @c g_akao_seq_master_state,
- * each entry of the per-channel array @c g_akao_seq_channels, and each entry
- * of @c g_sfx_channels. Each slot is 0x118 bytes wide. @c g_akao_seq_channel0
- * is set in akao_driver_init_state to alias the master-state slot and is
- * swapped to @c g_akao_seq_channel1 during per-frame seq processing.
+ * This type is currently used for two structurally different blocks, which is
+ * why so many fields are still @c unkNN:
+ *
+ * - <b>Channel role</b>: each entry of @c g_akao_seq_channels, each entry of
+ *   the pending set at @c g_akao_pending_channels, and each entry of
+ *   @c g_sfx_channels. This is a sequencer track: bytecode cursor, loop stack,
+ *   volume/pan/expression envelopes, three LFOs, and the pending SPU voice
+ *   register image.
+ * - <b>Song role</b>: the block reached through @c g_akao_seq_channel0 (which
+ *   aliases @c g_akao_seq_master_state, or @c g_akao_seq_channel1 while the
+ *   secondary set is being ticked). This is the per-song master state: tempo,
+ *   master volume, bar/beat counters and the driver's per-channel bitmasks.
+ *   Only the first 0x70 bytes are meaningful - akao_irq_handler promotes the
+ *   pending song with @c akao_copy_bytes(ch1, ch0, 0x70).
+ *
+ * The two roles assign completely different meanings to 0x00..0x6F, so those
+ * fields deliberately keep neutral @c unkNN names and both meanings are listed
+ * in the comment. Everything from 0x6E up is channel-only and unambiguous.
+ * Splitting this into @c AkaoChannelState and an @c AkaoSongState is the
+ * obvious cleanup; it is not done yet because it touches every matched
+ * function in decomp4.c.
+ *
+ * @note decomp9.c declares @c AkaoChannelEffects over the same 0x118 bytes
+ *       with its own (channel-role) names; decomp4.c additionally carries a
+ *       set of per-opcode ad-hoc structs (@c a_struct, @c b_struct, ...) over
+ *       the same layout. All of them should eventually collapse into this one.
  */
 
 typedef struct AkaoChannelState
 {
-    u32 flags;       /* 0x00 */
-    u32 unk4;        /* 0x04 */
-    u32 unk8;        /* 0x08 */
-    u32 unkC;        /* 0x0C */
-    u32 unk10;       /* 0x10 */
-    u32 unk14;       /* 0x14 */
-    u32 unk18;       /* 0x18 */
-    u32 unk1C;       /* 0x1C */
-    u32 unk20;       /* 0x20 */
-    u32 unk24;       /* 0x24 */
-    u32 unk28;       /* 0x28 */
-    s32 pitch;       /* 0x2C - current SPU pitch (akao_compute_pitch result) */
-    s32 unk30;       /* 0x30 */
-    u32 unk34;       /* 0x34 */
-    s32 unk38;
-    u32 reverb_mask; /* 0x3C - channels enabled in SPU reverb bitmap */
-    u32 noise_mask;  /* 0x40 - channels enabled in SPU noise bitmap */
-    u32 pitch_mod_mask; /* 0x44 - channels enabled in SPU pitch-mod bitmap */
-    u32 unk48;       /* 0x48 */
-    u32 unk4C;       /* 0x4C */
-    s32 unk50;       /* 0x50 */
-    s32 unk54;       /* 0x54 - pan-envelope step; also reused as a scratch pitch-delta pointer target */
-    u16 unk58;       /* 0x58 - pan-envelope fade-tick countdown */
-    s16 unk5A;       /* 0x5A */
-    u16 unk5C;       /* 0x5C */
-    u16 unk5E;       /* 0x5E */
-    u16 unk60;       /* 0x60 */
-    u16 unk62;
-    u16 unk64;       /* 0x64 */
-    u16 unk66;       /* 0x66 */
-    u16 unk68;       /* 0x68 */
-    u16 unk6A;       /* 0x6A */
-    u16 unk6C;       /* 0x6C */
-    u16 unk6E;
-    u16 unk70;       /* 0x70 */
-    u16 unk72;       /* 0x72 */
-    u16 unk74[11];   /* 0x74 - 0x89 */
-    u16 unk8A;       /* 0x8A */
-    u16 unk8C;       /* 0x8C */
-    u8 _pad8E[6];    /* 0x8E - 0x93 */
-    u16 unk94;       /* 0x94 */
-    u16 unk96;       /* 0x96 */
-    u16 unk98;       /* 0x98 */
-    u16 unk9A;       /* 0x9A */
-    u16 unk9C;       /* 0x9C */
-    u16 unk9E;       /* 0x9E */
-    u8 _padA0[2];    /* 0xA0 - 0xA1 */
-    u16 unkA2;       /* 0xA2 */
-    u16 unkA4;       /* 0xA4 */
-    u8 _padA6[2];    /* 0xA6 - 0xA7 */
-    u16 unkA8;       /* 0xA8 */
-    u16 unkAA;       /* 0xAA */
-    s16 unkAC;       /* 0xAC */
-    u16 unkAE;       /* 0xAE */
-    u8 _padB0[6];    /* 0xB0 - 0xB5 */
-    u16 unkB6;       /* 0xB6 */
-    u16 unkB8;       /* 0xB8 */
-    u8 _padBA[2];    /* 0xBA - 0xBB */
-    u16 unkBC;       /* 0xBC */
-    u16 unkBE;       /* 0xBE */
-    u8 _padC0[24];   /* 0xC0 - 0xD7 */
-    u16 unkD8;       /* 0xD8 */
-    u16 unkDA;       /* 0xDA */
-    u16 unkDC;       /* 0xDC */
-    u16 unkDE;       /* 0xDE */
-    u16 unkE0;       /* 0xE0 */
-    s16 unkE2;       /* 0xE2 */
-    u16 unkE4;       /* 0xE4 */
+    /* --- 0x00..0x6F: meaning depends on the role (see the docblock) ------- */
+
+    u32 flags;       /* 0x00 channel: bytecode cursor (u8*, read via a cast)
+                             song:    flag word; bit 0x40 gates the akao_cmd.c
+                                      "song is running" tests, cleared when the
+                                      last channel is released */
+    u32 unk4;        /* 0x04 channel: loop-start cursor slot 0
+                             song:    active-channel bitmask (drives the tick
+                                      loop in akao_seq_tick_channels) */
+    u32 unk8;        /* 0x08 channel: loop-start cursor slot 1
+                             song:    "allocate SPU voices from voice 0"
+                                      channel mask - set by ext opcode FE 1D,
+                                      cleared by FE 1E. func_80025500 passes
+                                      (unk8 & bit) to the voice allocator,
+                                      which then ignores unk38 (below). */
+    u32 unkC;        /* 0x0C channel: loop-start cursor slot 2
+                             song:    channel mask masked against the busy
+                                      voices in the key-on path (func_800258B8) */
+    u32 unk10;       /* 0x10 channel: loop-start cursor slot 3
+                             song:    key-on request mask */
+    u32 unk14;       /* 0x14 channel: subroutine return cursor (ext FE 0E/0F)
+                             song:    sounding-channel mask */
+    u32 unk18;       /* 0x18 channel: pointer to the selected key->articulation
+                                      map (ext FE 14)
+                             song:    key-off request mask, consumed and
+                                      cleared by func_80025D98 */
+    u32 unk1C;       /* 0x1C channel: pitch-LFO waveform cursor
+                             song:    OR'd with unk4 as a "song still busy" test */
+    u32 unk20;       /* 0x20 channel: volume-LFO waveform cursor
+                             song:    tempo, Q16 (high half is the per-tick rate) */
+    u32 unk24;       /* 0x24 channel: pan-LFO waveform cursor
+                             song:    tempo-slide step per tick */
+    u32 unk28;       /* 0x28 channel: secondary flag word; bit 0x02000000
+                                      suppresses the pan-bias / volume-scale
+                                      math in func_80024F60 and the SFX gate in
+                                      akao_irq_handler
+                             song:    tempo accumulator (wraps every 0x10000) */
+    s32 pitch;       /* 0x2C channel: current SPU pitch (akao_compute_pitch result) */
+    s32 unk30;       /* 0x30 channel: pitch-bend accumulator
+                             song:    base of the articulation-map table used
+                                      by ext FE 14 */
+    u32 unk34;       /* 0x34 channel: main flag word. Known bits:
+                                      0x01 pitch LFO on, 0x02 volume LFO on,
+                                      0x04 pan LFO on, 0x08 drum/note-table mode,
+                                      0x10/0x20 set by ops 0xD4..0xD7,
+                                      0x40 full gate time, 0x800 pan bias active,
+                                      0x1000 articulation map active,
+                                      0x10000 SFX pitch-mod allowed,
+                                      0x100000 set by op 0xE0,
+                                      0x200000 "loop breaks on 0xCA",
+                                      0x01000000 explicit ADSR attack */
+    s32 unk38;       /* 0x38 channel: SFX articulation bank index (see
+                                      akao_remap_sfx_articulation)
+                             song:    first SPU voice the sequencer may
+                                      allocate; set by ext FE 10, cleared by
+                                      FE 11, read by func_80025498 */
+    u32 reverb_mask; /* 0x3C song: channels enabled in the SPU reverb bitmap */
+    u32 noise_mask;  /* 0x40 song: channels enabled in the SPU noise bitmap */
+    u32 pitch_mod_mask; /* 0x44 song: channels enabled in the SPU pitch-mod bitmap */
+    u32 unk48;       /* 0x48 channel: expression accumulator (value << 23)
+                             song:    master-volume accumulator */
+    u32 unk4C;       /* 0x4C channel: expression slide step
+                             song:    master-volume slide step */
+    s32 unk50;       /* 0x50 channel: pitch-slide (portamento) step */
+    s32 unk54;       /* 0x54 channel: detune contribution to the SPU pitch */
+    u16 unk58;       /* 0x58 channel: SFX tick counter - accessed as a u32 by
+                                      the SFX path in akao_irq_handler */
+    s16 unk5A;       /* 0x5A song: master-volume fade-tick countdown */
+    u16 unk5C;       /* 0x5C channel: note-start expression preset, s32 at 0x5C
+                             song:    tempo-slide fade-tick countdown */
+    u16 unk5E;       /* 0x5E song: cleared when the last channel is released */
+    u16 unk60;       /* 0x60 channel: note-start expression step, s32 at 0x60
+                             song:    variable compared by the conditional jump
+                                      opcode FE 07 */
+    u16 unk62;       /* 0x62 song: SPU noise frequency (6 bits) */
+    u16 unk64;       /* 0x64 channel: non-zero marks this slot as an SFX channel
+                             song:    beats per measure (ext FE 15) */
+    u16 unk66;       /* 0x66 channel: ticks left in the current note
+                             song:    beat-within-measure counter */
+    u16 unk68;       /* 0x68 channel: ticks left before the early key-off
+                             song:    ticks per beat (ext FE 15) */
+    u16 unk6A;       /* 0x6A channel: current articulation index
+                             song:    tick-within-beat counter */
+    u16 unk6C;       /* 0x6C song: measure counter (ext FE 16) */
+
+    /* --- 0x6E..0x117: channel role only ----------------------------------- */
+
+    u16 unk6E;       /* 0x6E pan bias added to the pan accumulator (ext FE 17/18) */
+    u16 unk70;       /* 0x70 pan-bias fade-tick countdown */
+    u16 unk72;       /* 0x72 opcodes executed; saved/restored by the loop ops */
+    u16 unk74[4];    /* 0x74 iteration counter per loop-stack level */
+    u16 unk7C[4];    /* 0x7C saved unk72 per loop-stack level */
+    u16 unk84;       /* 0x84 channel volume accumulator (high byte is the level) */
+    u16 unk86;       /* 0x86 volume fade-tick countdown */
+    u16 unk88;       /* 0x88 zeroed when an SFX channel starts */
+    u16 unk8A;       /* 0x8A expression fade-tick countdown */
+    u16 unk8C;       /* 0x8C note-start expression fade length (ext FE 19) */
+    u16 unk8E;       /* 0x8E zeroed when an SFX channel starts */
+    u16 unk90;       /* 0x90 pan accumulator (high byte is the pan) */
+    u16 unk92;       /* 0x92 pan fade-tick countdown */
+    u16 unk94;       /* 0x94 pitch-slide ticks remaining */
+    u16 unk96;       /* 0x96 current octave */
+    u16 unk98;       /* 0x98 pitch-slide duration in ticks */
+    u16 unk9A;       /* 0x9A previous note key (portamento source) */
+    u16 unk9C;       /* 0x9C portamento speed; 0 disables portamento */
+    u16 unk9E;       /* 0x9E note flags: 0x1 tie armed, 0x2 note is tied,
+                             0x4 SFX full gate time */
+    u16 unkA0;       /* 0xA0 */
+    u16 unkA2;       /* 0xA2 pitch-LFO delay */
+    u16 unkA4;       /* 0xA4 pitch-LFO delay countdown */
+    u16 unkA6;       /* 0xA6 pitch-LFO period */
+    u16 unkA8;       /* 0xA8 pitch-LFO restart flag (1 = waveform not started) */
+    u16 unkAA;       /* 0xAA pitch-LFO waveform index into g_akao_lfo_waveforms */
+    s16 unkAC;       /* 0xAC pitch-LFO depth scaled by the current pitch */
+    u16 unkAE;       /* 0xAE pitch-LFO raw depth; bit 15 selects the scaling mode */
+    u16 unkB0;       /* 0xB0 pitch-LFO depth-slide tick countdown */
+    u16 unkB2;       /* 0xB2 pitch-LFO depth-slide step */
+    u16 unkB4;       /* 0xB4 */
+    u16 unkB6;       /* 0xB6 volume-LFO delay */
+    u16 unkB8;       /* 0xB8 volume-LFO delay countdown */
+    u16 unkBA;       /* 0xBA volume-LFO period */
+    u16 unkBC;       /* 0xBC volume-LFO restart flag */
+    u16 unkBE;       /* 0xBE volume-LFO waveform index */
+    u16 unkC0;       /* 0xC0 volume-LFO depth */
+    u16 unkC2;       /* 0xC2 volume-LFO depth-slide tick countdown */
+    u16 unkC4;       /* 0xC4 volume-LFO depth-slide step */
+    u16 unkC6;       /* 0xC6 */
+    u16 unkC8;       /* 0xC8 pan-LFO period */
+    u16 unkCA;       /* 0xCA pan-LFO restart flag */
+    u16 unkCC;       /* 0xCC pan-LFO waveform index */
+    u16 unkCE;       /* 0xCE pan-LFO depth */
+    u16 unkD0;       /* 0xD0 pan-LFO depth-slide tick countdown */
+    u16 unkD2;       /* 0xD2 pan-LFO depth-slide step */
+    u16 unkD4;       /* 0xD4 ticks until the reverb enable bit is toggled back */
+    u16 unkD6;       /* 0xD6 ticks until the pitch-mod enable bit is toggled back */
+    u16 unkD8;       /* 0xD8 loop-stack index (0..3, wraps) */
+    u16 unkDA;       /* 0xDA pitch scalar applied to the computed pitch (Q8) */
+    u16 unkDC;       /* 0xDC last note duration set by opcode 0xA2 */
+    u16 unkDE;       /* 0xDE note-duration adjustment (opcode 0xDC) */
+    u16 unkE0;       /* 0xE0 volume slide step */
+    s16 unkE2;       /* 0xE2 pan-bias slide step */
+    u16 unkE4;       /* 0xE4 extra volume scale; high byte is a signed Q7 factor */
     u16 unkE6;       /* 0xE6 */
-    u16 unkE8;       /* 0xE8 */
-    u16 unkEA;       /* 0xEA */
-    s16 unkEC;       /* 0xEC */
-    u16 unkEE;       /* 0xEE */
-    u16 unkF0;       /* 0xF0 */
-    s16 unkF2;       /* 0xF2 */
-    u16 unkF4;       /* 0xF4 */
-    u16 unkF6;       /* 0xF6 */
-    u8 _padF8[4];    /* 0xF8 - 0xFB */
-    u32 unkFC;       /* 0xFC - assigned SPU voice index (0x18 = none) */
-    s32 unk100;      /* 0x100 - pending SPU register update flags */
-    s32 spu_sample_addr; /* 0x104 - SPU sample start */
-    s32 spu_loop_addr;   /* 0x108 - SPU loop point */
-    u16 spu_pitch;   /* 0x10C - SPU pitch/sample-rate register image */
-    u16 unk10E;      /* 0x10E - SPU ADSR low halfword */
-    u16 unk110;      /* 0x110 - SPU ADSR high halfword */
-    u16 spu_volume_scale; /* 0x112 - optional Q7 scale */
+    u16 unkE8;       /* 0xE8 pan slide step */
+    u16 unkEA;       /* 0xEA transpose in semitones (opcodes 0xC0/0xC1) */
+    s16 unkEC;       /* 0xEC fine detune (opcodes 0xD8/0xD9) */
+    u16 unkEE;       /* 0xEE key of the note currently sounding */
+    u16 unkF0;       /* 0xF0 pending pitch-slide delta in semitones */
+    s16 unkF2;       /* 0xF2 transpose in effect for the previous note */
+    u16 unkF4;       /* 0xF4 current pitch-LFO output */
+    u16 unkF6;       /* 0xF6 current volume-LFO output */
+    s16 unkF8;       /* 0xF8 current pan-LFO output */
+    u16 unkFA;       /* 0xFA */
+    u32 unkFC;       /* 0xFC assigned SPU voice index (0x18 = none) */
+    s32 unk100;      /* 0x100 pending SPU register update flags */
+    s32 spu_sample_addr; /* 0x104 SPU sample start */
+    s32 spu_loop_addr;   /* 0x108 SPU loop point */
+    u16 spu_pitch;   /* 0x10C SPU pitch/sample-rate register image */
+    u16 unk10E;      /* 0x10E SPU ADSR low halfword */
+    u16 unk110;      /* 0x110 SPU ADSR high halfword */
+    u16 spu_volume_scale; /* 0x112 optional Q7 scale */
     s16 spu_volume_left;  /* 0x114 */
     s16 spu_volume_right; /* 0x116 */
-} AkaoChannelState; 
+} AkaoChannelState; /* sizeof = 0x118 */
 
 #endif
