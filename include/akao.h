@@ -216,6 +216,7 @@ typedef struct AkaoArticulation
  * is set in akao_driver_init_state to alias the master-state slot and is
  * swapped to @c g_akao_seq_channel1 during per-frame seq processing.
  */
+
 typedef struct AkaoChannelState
 {
     u32 flags;       /* 0x00 */
@@ -231,7 +232,7 @@ typedef struct AkaoChannelState
     u32 unk28;       /* 0x28 */
     s32 pitch;       /* 0x2C - current SPU pitch (akao_compute_pitch result) */
     s32 unk30;       /* 0x30 */
-    u8* unk34;       /* 0x34 */
+    u32 unk34;       /* 0x34 */
     s32 unk38;
     u32 reverb_mask; /* 0x3C - channels enabled in SPU reverb bitmap */
     u32 noise_mask;  /* 0x40 - channels enabled in SPU noise bitmap */
@@ -251,7 +252,8 @@ typedef struct AkaoChannelState
     u16 unk68;       /* 0x68 */
     u16 unk6A;       /* 0x6A */
     u16 unk6C;       /* 0x6C */
-    u8 _pad6E[4];    /* 0x6E - 0x71 */
+    u16 unk6E;
+    u16 unk70;       /* 0x70 */
     u16 unk72;       /* 0x72 */
     u16 unk74[11];   /* 0x74 - 0x89 */
     u16 unk8A;       /* 0x8A */
@@ -282,7 +284,11 @@ typedef struct AkaoChannelState
     u16 unkDA;       /* 0xDA */
     u16 unkDC;       /* 0xDC */
     u16 unkDE;       /* 0xDE */
-    u8 _padE0[10];   /* 0xE0 - 0xE9 */
+    u16 unkE0;       /* 0xE0 */
+    s16 unkE2;       /* 0xE2 */
+    u16 unkE4;       /* 0xE4 */
+    u16 unkE6;       /* 0xE6 */
+    u16 unkE8;       /* 0xE8 */
     u16 unkEA;       /* 0xEA */
     s16 unkEC;       /* 0xEC */
     u16 unkEE;       /* 0xEE */
@@ -293,14 +299,14 @@ typedef struct AkaoChannelState
     u8 _padF8[4];    /* 0xF8 - 0xFB */
     u32 unkFC;       /* 0xFC - assigned SPU voice index (0x18 = none) */
     s32 unk100;      /* 0x100 - pending SPU register update flags */
-    s32 spu_sample_addr; /* 0x104 - SPU sample start (from AkaoArticulation.sample_addr) */
-    s32 spu_loop_addr;   /* 0x108 - SPU loop point (from AkaoArticulation.loop_addr) */
+    s32 spu_sample_addr; /* 0x104 - SPU sample start */
+    s32 spu_loop_addr;   /* 0x108 - SPU loop point */
     u16 spu_pitch;   /* 0x10C - SPU pitch/sample-rate register image */
     u16 unk10E;      /* 0x10E - SPU ADSR low halfword */
     u16 unk110;      /* 0x110 - SPU ADSR high halfword */
     u16 spu_volume_scale; /* 0x112 - optional Q7 scale */
     s16 spu_volume_left;  /* 0x114 */
     s16 spu_volume_right; /* 0x116 */
-} AkaoChannelState; /* total = 0x118 */
+} AkaoChannelState; 
 
 #endif
