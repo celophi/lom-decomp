@@ -10,9 +10,9 @@ typedef signed char s8;
 typedef unsigned short u16;
 typedef signed short s16;
 
-void func_80142C64();    /* extern */
-void func_80143B64();    /* extern */
-void func_80145CEC();    /* extern */
+void func_80142C64(); /* extern */
+void func_80143B64(); /* extern */
+void func_80145CEC(); /* extern */
 
 typedef struct
 {
@@ -62,9 +62,8 @@ extern s32 g_gosub_row_height;
 extern s32 D_80170988;
 extern s32 D_80170990;
 
-
-
-typedef struct {
+typedef struct
+{
     u8 pad0[0xA];
     s16 unkA;
     u8 padC[0x14];
@@ -74,8 +73,7 @@ extern s32 D_801228F0;
 extern GosubRow g_gosub_rows[];
 extern u8 g_gosub_selected_rows[];
 
-#define GOSUB_MSG_PTR(off) \
-    ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
+#define GOSUB_MSG_PTR(off) ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
 
 #define GOSUB_MSG(off) func_80145CEC(GOSUB_MSG_PTR(off))
 
@@ -156,31 +154,54 @@ s32 func_8014289C(s32 arg0)
 /**
  * decomp.me (95%) https://decomp.me/scratch/pOY6i
  */
-s32 func_80142B18(void) {
+s32 func_80142B18(void)
+{
     s32 count;
     s32 var_v1;
     s32* var_a0;
     s16 temp_v0;
 
-    if (g_gosub_selection_count == 0) {
+    if (g_gosub_selection_count == 0)
+    {
         return 0;
     }
 
     var_v1 = 0;
-    
+
     count = g_gosub_selection_count;
-    D_801228F0 = count; 
-    
-    if (count != 0) {
+    D_801228F0 = count;
+
+    if (count != 0)
+    {
         var_a0 = &D_801229B0[0];
-        
-        do {
+
+        do
+        {
             temp_v0 = g_gosub_rows[g_gosub_selected_rows[var_v1]].unkA;
             var_v1 += 1;
-            *var_a0 = (s32) temp_v0;
-            var_a0 += 1; 
+            *var_a0 = (s32)temp_v0;
+            var_a0 += 1;
         } while (var_v1 < count);
     }
-    
+
+    return 1;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/lBIH9
+ */
+s32 func_80142C18(s32 arg0)
+{
+    s32 i;
+    s32 count = g_gosub_selection_count;
+
+    for (i = 0; i < count; i++)
+    {
+        if (g_gosub_selected_rows[i] == arg0)
+        {
+            return 0;
+        }
+    }
+
     return 1;
 }
