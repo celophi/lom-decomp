@@ -4706,7 +4706,7 @@ typedef struct
 } Req;
 
 /**
- * @see decomp.me (75.63%, 493/1586 exact) TODO
+ * @see decomp.me (75.62%, 489/1586 exact) TODO
  */
 s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
 {
