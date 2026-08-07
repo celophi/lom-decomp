@@ -42,6 +42,7 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0x81, c, gosub]       # CDK (default)
-      - [0x289D, c, unk1]
+      - [0x289D, c, gosub2]
+      - [0x2C65, c, unk1]
       - [0x7059, data, data]
   - [0x34A5D]
