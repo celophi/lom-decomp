@@ -6815,7 +6815,9 @@ typedef struct
     u8 unk19;
     u8 unk1A;
     u8 unk1B;
-    u8 _pad1C[2];
+    /** 0x1C set to 0x10 when the text has run out of room and the step ends. */
+    u8 unk1C;
+    u8 _pad1D;
     u8 unk1E;
     u8 unk1F;
     /** 0x20 inline string buffer, pushed as an expansion by control code 15. */
@@ -6828,18 +6830,30 @@ typedef struct
     u16 unk4C;
     u8 _pad4E[4];
     u16 unk52;
-    u8 _pad54[4];
+    u8 _pad54[2];
+    /** 0x56 horizontal advance applied when starting a new line. */
+    u16 unk56;
     u16 unk58;
     /** 0x5A space left on the current line, in the same units as the glyph
         widths from D_801E26E0. */
     u16 unk5A;
     u16 unk5C;
     u16 unk5E;
-    u8 _pad60[8];
+    /** 0x60 left edge of the live text region, in quarter-pixel units. */
+    u16 unk60;
+    /** 0x62 top row of the live text region, in staging-buffer rows. */
+    u16 unk62;
+    /** 0x64 width of the last row of the live text region. */
+    u16 unk64;
+    /** 0x66 bottom row of the live text region. */
+    u16 unk66;
     s16 unk68;
     s16 unk6A;
     s16 unk6C;
     s16 unk6E;
+    /** 0x70 per-row carry buffer: the halfword of each glyph row that spilled
+        past the right edge of the previous staging block, one entry per row. */
+    u16 unk70[16];
 } FieldTextState;
 
 extern FieldTextMacro D_80122B80[];
@@ -7508,4 +7522,445 @@ store_and_return:
         return;
     }
     st->unk0 = cur;
+}
+
+/**
+ * @brief Blit one glyph into the text window's 4bpp staging buffer.
+ *
+ * Expands the 1bpp font bitmap for @p code (0x18 bytes per character at
+ * 0x801E1200, one halfword per row) into 4bpp pixels, applying a drop shadow,
+ * and merges the result into the 64-halfword-wide staging image at 0x801DE000
+ * that func_80063194 later uploads to VRAM.
+ *
+ * The expansion runs through a small staging area in the PSX scratchpad at
+ * 0x1F800000, laid out as one 10-byte (5 halfword) row per glyph row. Each row
+ * is primed from FieldTextState::unk70, the carry left over from the previous
+ * glyph, then filled nibble by nibble; @c st->unk52 - @c st->unk5A gives the
+ * sub-block pixel offset, so a glyph may straddle two 64-wide blocks. What
+ * runs past the right edge is written back to unk70 for the next call.
+ *
+ * Two colour indices are used per glyph: an even "fill" index and the odd
+ * index above it for the shadow, selected from @c st->unk1B (or forced to 6/7
+ * when @c st->unk10 has the 0xC0 field equal to 0x40, which also widens the
+ * glyph by one nibble and takes a heavier two-tap shadow).
+ *
+ * @param st    text-window state block (live at 0x801ED0CC).
+ * @param code  character code to draw; the font table is indexed from 0x20.
+ * @param width advance width of this glyph, in quarter-pixel units.
+ *
+ * @see decomp.me (95.46%) scratch not yet published
+ */
+void func_80063B6C(FieldTextState* st, s32 code, u16 width)
+{
+    u16* scratch;
+    u16* carry;
+    u16* glyph;
+    u8* line;
+    u16* dst;
+    u16* row_src;
+    u16* row_dst;
+    u8* px;
+    s32 rows;
+    s32 y;
+    s32 shift;
+    s32 i;
+    s32 j;
+    s32 r;
+    s32 f;
+    s32 m;
+    s32 count;
+    s32 col;
+    s32 x;
+    s32 words;
+    s32 lo_fill;
+    s32 hi_fill;
+    s32 lo_shadow;
+    s32 hi_shadow;
+    u32 nibbles;
+    u32 left;
+    u32 mask;
+    u32 fill;
+    u32 shade;
+    u32 acc;
+    u32 cur;
+    u32 next;
+    u32 avail;
+    u32 span;
+    s32 nib;
+
+    scratch = (u16*) 0x1F800000;
+    carry = st->unk70;
+    rows = st->unk58;
+    shift = st->unk52 - st->unk5A;
+    f = rows - 1;
+    for (m = f; m != -1; m--)
+    {
+        count = 4;
+        if (shift != 0)
+        {
+            *scratch++ = *carry++;
+        }
+        else
+        {
+            count = 5;
+        }
+        for (j = count - 1; j != -1; j--)
+        {
+            *scratch++ = 0;
+        }
+    }
+
+    lo_fill = 6;
+    if ((st->unk10 & 0xC0) == 0x40)
+    {
+        hi_fill = 0x60;
+        lo_shadow = 7;
+        hi_shadow = 0x70;
+        nibbles = (u16) width + 2;
+    }
+    else
+    {
+        switch (st->unk1B)
+        {
+        case 0:
+            lo_fill = 2;
+            hi_fill = 0x20;
+            lo_shadow = 3;
+            hi_shadow = 0x30;
+            break;
+        case 1:
+            lo_fill = 4;
+            hi_fill = 0x40;
+            lo_shadow = 5;
+            hi_shadow = 0x50;
+            break;
+        case 2:
+            lo_fill = 6;
+            hi_fill = 0x60;
+            lo_shadow = 7;
+            hi_shadow = 0x70;
+            break;
+        case 3:
+            lo_fill = 8;
+            hi_fill = 0x80;
+            lo_shadow = 9;
+            hi_shadow = 0x90;
+            break;
+        case 4:
+            lo_fill = 0xA;
+            hi_fill = 0xA0;
+            lo_shadow = 0xB;
+            hi_shadow = 0xB0;
+            break;
+        case 5:
+            lo_fill = 0xC;
+            hi_fill = 0xC0;
+            lo_shadow = 0xD;
+            hi_shadow = 0xD0;
+            break;
+        default:
+            lo_fill = 0xE;
+            hi_fill = 0xE0;
+            lo_shadow = 0xF;
+            hi_shadow = 0xF0;
+            break;
+        }
+        nibbles = (u16) width + 1;
+    }
+
+    glyph = (u16*) (0x801E1200 + (((u16) code - 0x20) * 0x18));
+    px = (u8*) (0x1F800000 + (((u32) shift & 3) >> 1));
+    fill = 0;
+    shade = fill;
+    acc = fill;
+    for (i = rows - 1; i != -1; i--)
+    {
+        u8* p = px;
+
+        nib = shift & 1;
+        mask = 0x8000;
+        if ((st->unk10 & 0xC0) == 0x40)
+        {
+            cur = 0;
+            if (i != 0)
+            {
+                next = *glyph;
+                cur = (next & 0xFFFF) >> 1;
+                next |= (next & 0xFFFF) >> 2;
+                acc |= next;
+                next |= cur;
+                shade |= next;
+            }
+            else
+            {
+                next = cur;
+            }
+            for (j = nibbles - 1; j != -1; j--)
+            {
+                if (nib == 0)
+                {
+                    if ((shade & mask) != 0)
+                    {
+                        *p = lo_shadow | (*p & 0xF0);
+                    }
+                    nib = 1;
+                    if ((fill & mask) != 0)
+                    {
+                        *p = lo_fill | (*p & 0xF0);
+                    }
+                }
+                else
+                {
+                    if ((shade & mask) != 0)
+                    {
+                        *p = hi_shadow | (*p & 0xF);
+                    }
+                    nib = 0;
+                    if ((fill & mask) != 0)
+                    {
+                        *p = hi_fill | (*p & 0xF);
+                    }
+                    p++;
+                }
+                mask >>= 1;
+            }
+            shade = acc;
+            fill = cur;
+        }
+        else
+        {
+            cur = *glyph;
+            next = cur >> 1;
+            acc |= next;
+            next |= cur;
+            for (j = nibbles - 1; j != -1; j--)
+            {
+                if (nib == 0)
+                {
+                    if ((acc & mask) != 0)
+                    {
+                        *p = lo_shadow | (*p & 0xF0);
+                    }
+                    nib = 1;
+                    if ((cur & mask) != 0)
+                    {
+                        *p = lo_fill | (*p & 0xF0);
+                    }
+                }
+                else
+                {
+                    if ((acc & mask) != 0)
+                    {
+                        *p = hi_shadow | (*p & 0xF);
+                    }
+                    nib = 0;
+                    if ((cur & mask) != 0)
+                    {
+                        *p = hi_fill | (*p & 0xF);
+                    }
+                    p++;
+                }
+                mask >>= 1;
+            }
+        }
+        glyph++;
+        acc = next;
+        px += 10;
+    }
+
+    y = st->unk5E;
+    x = st->unk5C + shift;
+    while (x >= 0x100)
+    {
+        x -= 0x100;
+        y += rows;
+    }
+
+    if ((st->unk10 & 0xC0) == 0x40)
+    {
+        avail = st->unk5A + 4;
+    }
+    else
+    {
+        avail = st->unk5A;
+    }
+    if (avail < nibbles)
+    {
+        span = avail + (shift & 3);
+    }
+    else
+    {
+        span = nibbles + (shift & 3);
+    }
+    left = (span + 3) >> 2;
+
+    scratch = (u16*) 0x1F800000;
+    if (left != 0)
+    {
+        line = (u8*) 0x801DE000 - (-(y << 7));
+        do
+        {
+            col = x >> 2;
+            dst = (u16*) (line + col * 2);
+            if ((u32) (col + left) >= 0x41U)
+            {
+                words = 0x40 - col;
+                left -= words;
+                x = 0;
+                m = rows << 7;
+                line += m;
+                y += rows;
+            }
+            else
+            {
+                x += left * 4;
+                words = left;
+                left = 0;
+            }
+            row_src = scratch;
+            for (r = rows - 1; r != -1; r--)
+            {
+                u16* s = row_src;
+
+                row_dst = dst;
+                for (j = words - 1; j != -1; j--)
+                {
+                    *row_dst++ = *s++;
+                }
+                row_src += 5;
+                dst += 0x40;
+            }
+            scratch += words;
+        } while (left != 0);
+    }
+
+    st->unk6C = x;
+    scratch = (u16*) 0x1F800000 + (((shift & 3) + (u16) width) >> 2);
+    carry = st->unk70;
+    st->unk6E = y;
+    for (f = rows - 1; f != -1; f--)
+    {
+        *carry++ = *scratch;
+        scratch += 5;
+    }
+    st->unk5A = st->unk5A - width;
+}
+
+/**
+ * @brief Erase the region the previous text step occupied in the staging buffer.
+ *
+ * The live text region is described by unk60/unk62 (left edge and top row) and
+ * unk64/unk66 (last-row width and bottom row); the staging image at 0x801DE000
+ * is 64 halfwords wide, so one row is 0x40 halfwords. Three passes clear it:
+ * the rows of the current block from the left edge across, then any whole rows
+ * between the block and the bottom, then the partial last row at the bottom.
+ * The current rectangle is then snapshotted into unk68..unk6E.
+ *
+ * @param st text-window state block (live at 0x801ED0CC).
+ */
+void func_800640B4(FieldTextState* st)
+{
+    u16* row;
+    u16* p;
+    s32 span;
+    s32 half;
+    s32 x;
+    s32 y;
+    s32 rows;
+    s32 i;
+    s32 j;
+
+    y = st->unk62;
+    x = st->unk60;
+    if (y == st->unk66)
+    {
+        span = st->unk64 - x;
+        half = span >> 1;
+    }
+    else
+    {
+        span = 0x100 - x;
+        half = span >> 1;
+    }
+    rows = st->unk58;
+    row = ((u16*) 0x801DE000 + (x >> 2)) + (y << 6);
+    for (i = rows - 1; i != -1; i--)
+    {
+        p = row;
+        j = half >> 1;
+        while (--j != -1)
+        {
+            *p++ = 0;
+        }
+        row += 0x40;
+    }
+
+    if (y != st->unk66)
+    {
+        y += rows;
+        if (y != st->unk66)
+        {
+            row = (u16*) 0x801DE000 + (y << 6);
+            i = (st->unk66 - y) << 6;
+            while (--i != -1)
+            {
+                *row++ = 0;
+            }
+        }
+        if (st->unk64 != 0)
+        {
+            row = (u16*) 0x801DE000 + (st->unk66 << 6);
+            for (i = rows - 1; i != -1; i--)
+            {
+                p = row;
+                j = st->unk64 >> 2;
+                while (--j != -1)
+                {
+                    *p++ = 0;
+                }
+                row += 0x40;
+            }
+        }
+    }
+    st->unk68 = st->unk60;
+    st->unk6A = st->unk62;
+    st->unk6C = st->unk64;
+    st->unk6E = st->unk66;
+}
+
+/**
+ * @brief Advance the text cursor to the next line, or report the window full.
+ *
+ * Adds the line advance (unk56) to the horizontal cursor (unk5C) and carries
+ * every whole 0x100 into the vertical cursor (unk5E), one text row (unk58) per
+ * carry. If the cursor lands exactly on the end of the live region
+ * (unk64/unk66) there is no room left: unk1C is set to 0x10 and the caller is
+ * told to stop. Otherwise the new cursor is committed, the remaining width on
+ * the line is reset from unk52, and the line counter unk15 is bumped.
+ *
+ * @param st text-window state block (live at 0x801ED0CC).
+ * @return 1 when the window is full and the step must end, 0 to keep going.
+ */
+s32 func_80064210(FieldTextState* st)
+{
+    u16 x;
+    u16 y;
+
+    y = st->unk5E;
+    x = st->unk5C + st->unk56;
+    while (x >= 0x100)
+    {
+        x -= 0x100;
+        y += st->unk58;
+    }
+    if ((y == st->unk66) && (x == st->unk64))
+    {
+        st->unk1C = 0x10;
+        return 1;
+    }
+    st->unk5C = x;
+    st->unk5E = y;
+    st->unk5A = st->unk52;
+    st->unk15 = st->unk15 + 1;
+    return 0;
 }
