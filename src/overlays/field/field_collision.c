@@ -6840,6 +6840,9 @@ typedef struct
     s16 unk6A;
     s16 unk6C;
     s16 unk6E;
+    /** 0x70 per-row carry buffer: the halfword of each glyph row that spilled
+        past the right edge of the previous staging block, one entry per row. */
+    u16 unk70[16];
 } FieldTextState;
 
 extern FieldTextMacro D_80122B80[];
@@ -7508,4 +7511,328 @@ store_and_return:
         return;
     }
     st->unk0 = cur;
+}
+
+/**
+ * @brief Blit one glyph into the text window's 4bpp staging buffer.
+ *
+ * Expands the 1bpp font bitmap for @p code (0x18 bytes per character at
+ * 0x801E1200, one halfword per row) into 4bpp pixels, applying a drop shadow,
+ * and merges the result into the 64-halfword-wide staging image at 0x801DE000
+ * that func_80063194 later uploads to VRAM.
+ *
+ * The expansion runs through a small staging area in the PSX scratchpad at
+ * 0x1F800000, laid out as one 10-byte (5 halfword) row per glyph row. Each row
+ * is primed from FieldTextState::unk70, the carry left over from the previous
+ * glyph, then filled nibble by nibble; @c st->unk52 - @c st->unk5A gives the
+ * sub-block pixel offset, so a glyph may straddle two 64-wide blocks. What
+ * runs past the right edge is written back to unk70 for the next call.
+ *
+ * Two colour indices are used per glyph: an even "fill" index and the odd
+ * index above it for the shadow, selected from @c st->unk1B (or forced to 6/7
+ * when @c st->unk10 has the 0xC0 field equal to 0x40, which also widens the
+ * glyph by one nibble and takes a heavier two-tap shadow).
+ *
+ * @param st    text-window state block (live at 0x801ED0CC).
+ * @param code  character code to draw; the font table is indexed from 0x20.
+ * @param width advance width of this glyph, in quarter-pixel units.
+ *
+ * @note NOT MATCHED - 92.17% (222/338 rows exact, insn count -2). Remaining
+ *       residue is register allocation plus two insns in the first loop's
+ *       preheader; see working/func_80063B6C/status.md for the probe log and
+ *       the retired hypothesis classes.
+ * @see decomp.me (92.17%) scratch not yet published
+ */
+void func_80063B6C(FieldTextState* st, s32 code, s32 width)
+{
+    u16* scratch;
+    u16* carry;
+    u16* glyph;
+    u16* line;
+    u16* dst;
+    u16* row_src;
+    u16* row_dst;
+    u8* px;
+    s32 rows;
+    s32 y;
+    s32 shift;
+    s32 i;
+    s32 j;
+    s32 r;
+    s32 f;
+    s32 m;
+    s32 count;
+    s32 col;
+    s32 x;
+    s32 words;
+    s32 lo_fill;
+    s32 hi_fill;
+    s32 lo_shadow;
+    s32 hi_shadow;
+    u32 nibbles;
+    u32 left;
+    u32 mask;
+    u32 fill;
+    u32 shade;
+    u32 acc;
+    u32 cur;
+    u32 next;
+    u32 avail;
+    u32 span;
+    s32 nib;
+
+    scratch = (u16*) 0x1F800000;
+    carry = st->unk70;
+    rows = st->unk58;
+    shift = st->unk52 - st->unk5A;
+    for (m = rows - 1; m >= 0; m--)
+    {
+        count = 4;
+        if (shift != 0)
+        {
+            *scratch++ = *carry++;
+        }
+        else
+        {
+            count = 5;
+        }
+        for (j = count - 1; j != -1; j--)
+        {
+            *scratch++ = 0;
+        }
+    }
+
+    lo_fill = 6;
+    if ((st->unk10 & 0xC0) == 0x40)
+    {
+        hi_fill = 0x60;
+        lo_shadow = 7;
+        hi_shadow = 0x70;
+        nibbles = (u16) width + 2;
+    }
+    else
+    {
+        switch (st->unk1B)
+        {
+        case 0:
+            lo_fill = 2;
+            hi_fill = 0x20;
+            lo_shadow = 3;
+            hi_shadow = 0x30;
+            break;
+        case 1:
+            lo_fill = 4;
+            hi_fill = 0x40;
+            lo_shadow = 5;
+            hi_shadow = 0x50;
+            break;
+        case 2:
+            lo_fill = 6;
+            hi_fill = 0x60;
+            lo_shadow = 7;
+            hi_shadow = 0x70;
+            break;
+        case 3:
+            lo_fill = 8;
+            hi_fill = 0x80;
+            lo_shadow = 9;
+            hi_shadow = 0x90;
+            break;
+        case 4:
+            lo_fill = 0xA;
+            hi_fill = 0xA0;
+            lo_shadow = 0xB;
+            hi_shadow = 0xB0;
+            break;
+        case 5:
+            lo_fill = 0xC;
+            hi_fill = 0xC0;
+            lo_shadow = 0xD;
+            hi_shadow = 0xD0;
+            break;
+        default:
+            lo_fill = 0xE;
+            hi_fill = 0xE0;
+            lo_shadow = 0xF;
+            hi_shadow = 0xF0;
+            break;
+        }
+        nibbles = (u16) width + 1;
+    }
+
+    fill = 0;
+    glyph = (u16*) (0x801E1200 + (((u16) code - 0x20) * 0x18));
+    px = (u8*) (0x1F800000 + (((u32) shift & 3) >> 1));
+    shade = fill;
+    acc = fill;
+    for (i = rows - 1; i != -1; i--)
+    {
+        u8* p = px;
+
+        nib = shift & 1;
+        mask = 0x8000;
+        if ((st->unk10 & 0xC0) == 0x40)
+        {
+            cur = 0;
+            if (i != 0)
+            {
+                next = *glyph;
+                cur = (next & 0xFFFF) >> 1;
+                next |= (next & 0xFFFF) >> 2;
+                acc |= next;
+                next |= cur;
+                shade |= next;
+            }
+            else
+            {
+                next = cur;
+            }
+            for (j = nibbles - 1; j != -1; j--)
+            {
+                if (nib == 0)
+                {
+                    if ((shade & mask) != 0)
+                    {
+                        *p = lo_shadow | (*p & 0xF0);
+                    }
+                    nib = 1;
+                    if ((fill & mask) != 0)
+                    {
+                        *p = lo_fill | (*p & 0xF0);
+                    }
+                }
+                else
+                {
+                    if ((shade & mask) != 0)
+                    {
+                        *p = hi_shadow | (*p & 0xF);
+                    }
+                    nib = 0;
+                    if ((fill & mask) != 0)
+                    {
+                        *p = hi_fill | (*p & 0xF);
+                    }
+                    p++;
+                }
+                mask >>= 1;
+            }
+            shade = acc;
+            fill = cur;
+        }
+        else
+        {
+            cur = *glyph;
+            next = cur >> 1;
+            acc |= next;
+            next |= cur;
+            for (j = nibbles - 1; j != -1; j--)
+            {
+                if (nib == 0)
+                {
+                    if ((acc & mask) != 0)
+                    {
+                        *p = lo_shadow | (*p & 0xF0);
+                    }
+                    nib = 1;
+                    if ((cur & mask) != 0)
+                    {
+                        *p = lo_fill | (*p & 0xF0);
+                    }
+                }
+                else
+                {
+                    if ((acc & mask) != 0)
+                    {
+                        *p = hi_shadow | (*p & 0xF);
+                    }
+                    nib = 0;
+                    if ((cur & mask) != 0)
+                    {
+                        *p = hi_fill | (*p & 0xF);
+                    }
+                    p++;
+                }
+                mask >>= 1;
+            }
+        }
+        glyph++;
+        acc = next;
+        px += 10;
+    }
+
+    y = st->unk5E;
+    x = st->unk5C + shift;
+    while (x >= 0x100)
+    {
+        x -= 0x100;
+        y += rows;
+    }
+
+    if ((st->unk10 & 0xC0) == 0x40)
+    {
+        avail = st->unk5A + 4;
+    }
+    else
+    {
+        avail = st->unk5A;
+    }
+    if (avail < nibbles)
+    {
+        span = avail + (shift & 3);
+    }
+    else
+    {
+        span = nibbles + (shift & 3);
+    }
+    left = (span + 3) >> 2;
+
+    scratch = (u16*) 0x1F800000;
+    if (left != 0)
+    {
+        line = (u16*) 0x801DE000 + (y << 6);
+        do
+        {
+            col = x >> 2;
+            dst = line + col;
+            if ((u32) (col + left) >= 0x41U)
+            {
+                words = 0x40 - col;
+                left -= words;
+                x = 0;
+                line += rows << 6;
+                y += rows;
+            }
+            else
+            {
+                x += left * 4;
+                words = left;
+                left = 0;
+            }
+            row_src = scratch;
+            for (r = rows - 1; r != -1; r--)
+            {
+                u16* s = row_src;
+
+                row_dst = dst;
+                for (j = words - 1; j != -1; j--)
+                {
+                    *row_dst++ = *s++;
+                }
+                row_src += 5;
+                dst += 0x40;
+            }
+            scratch += words;
+        } while (left != 0);
+    }
+
+    st->unk6C = x;
+    scratch = (u16*) 0x1F800000 + (((shift & 3) + (u16) width) >> 2);
+    carry = st->unk70;
+    st->unk6E = y;
+    for (f = rows - 1; f != -1; f--)
+    {
+        *carry++ = *scratch;
+        scratch += 5;
+    }
+    st->unk5A = st->unk5A - width;
 }

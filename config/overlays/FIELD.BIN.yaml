@@ -54,7 +54,7 @@ segments:
       - [0x6D95, c, field_animation]   # gcc280_g4, no expand-div
       - [0xB57D, c, field_scene_api]   # gcc280_g4, no expand-div
       - [0xB6F9, c, field_collision]   # gcc280_g4, no expand-div
-      - [0x13EFD, c, unk1_c]
+      - [0x14445, c, unk1_c]
       - [0x1462D, c, func_8006429c] # gcc280_g4
       - [0x14665, c, unk1_c_b]
       - [0x17839, c, func_800674a8] # gcc280_g4
