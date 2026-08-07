@@ -329,6 +329,19 @@ struct FieldObj
 };
 
 /**
+ * @brief Singly-linked record hanging off FieldSceneHeader::records.
+ *
+ * @note Only the link is identified. func_800630BC hands the caller @c body,
+ *       which is read there as four halfwords.
+ */
+typedef struct FieldHeaderRec FieldHeaderRec;
+struct FieldHeaderRec
+{
+    FieldHeaderRec* next; /* 0x00 */
+    s32 body;             /* 0x04 first word of the record proper */
+};
+
+/**
  * @brief Header hanging off FieldScene at offset 0.
  *
  * @note field_draw_scene_objects reads only the 0x30 halfword; the streaming
@@ -339,9 +352,13 @@ typedef struct
 {
     u8 _pad0[4];
     u16* pixel_data; /* 0x04 strip pixel-source base */
-    u8 _pad1[0x28 - 8];
+    u8 _pad1[0x10 - 8];
+    /** 0x10 head of the record list indexed by func_800630BC; null when the
+        scene carries no records. */
+    FieldHeaderRec* records;
+    u8 _pad2[0x28 - 0x14];
     u16 pixel_stride; /* 0x28 source stride, in halfwords */
-    u8 _pad2[0x30 - 0x2A];
+    u8 _pad3[0x30 - 0x2A];
     s16 unk30; /* 0x30 */
     /** 0x32 counterpart of unk30; func_8005F158 uses the pair as the scene's
         pixel extent when sizing its tile budget. */
