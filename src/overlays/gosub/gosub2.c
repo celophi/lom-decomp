@@ -188,6 +188,39 @@ s32 func_80142B18(void)
 }
 
 /**
+ * decomp.me (95%) https://decomp.me/scratch/FN7DQ
+ */
+s32 func_80142B98(void) {
+    s32 count;
+    s32 var_v1;
+    s32* var_a0;
+    s16 temp_v0;
+
+    if (g_gosub_selection_count == 0) {
+        return 0;
+    }
+
+    var_v1 = 0;
+    
+    count = g_gosub_selection_count;
+    D_801228F0 = count; 
+    
+    if (count != 0) {
+        var_a0 = &D_801229B0[0];
+        
+        do {
+           
+            temp_v0 = g_gosub_rows[g_gosub_selected_rows[var_v1]].unkA;
+            var_v1 += 1;
+            *var_a0 = (s32) temp_v0;
+            var_a0 += 1; 
+        } while (var_v1 < count); 
+    }
+    
+    return 1;
+}
+
+/**
  * decomp.me (100%) https://decomp.me/scratch/lBIH9
  */
 s32 func_80142C18(s32 arg0)
