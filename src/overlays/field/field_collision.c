@@ -6815,7 +6815,9 @@ typedef struct
     u8 unk19;
     u8 unk1A;
     u8 unk1B;
-    u8 _pad1C[2];
+    /** 0x1C set to 0x10 when the text has run out of room and the step ends. */
+    u8 unk1C;
+    u8 _pad1D;
     u8 unk1E;
     u8 unk1F;
     /** 0x20 inline string buffer, pushed as an expansion by control code 15. */
@@ -6828,7 +6830,9 @@ typedef struct
     u16 unk4C;
     u8 _pad4E[4];
     u16 unk52;
-    u8 _pad54[4];
+    u8 _pad54[2];
+    /** 0x56 horizontal advance applied when starting a new line. */
+    u16 unk56;
     u16 unk58;
     /** 0x5A space left on the current line, in the same units as the glyph
         widths from D_801E26E0. */
@@ -7924,4 +7928,41 @@ void func_800640B4(FieldTextState* st)
     st->unk6A = st->unk62;
     st->unk6C = st->unk64;
     st->unk6E = st->unk66;
+}
+
+/**
+ * @brief Advance the text cursor to the next line, or report the window full.
+ *
+ * Adds the line advance (unk56) to the horizontal cursor (unk5C) and carries
+ * every whole 0x100 into the vertical cursor (unk5E), one text row (unk58) per
+ * carry. If the cursor lands exactly on the end of the live region
+ * (unk64/unk66) there is no room left: unk1C is set to 0x10 and the caller is
+ * told to stop. Otherwise the new cursor is committed, the remaining width on
+ * the line is reset from unk52, and the line counter unk15 is bumped.
+ *
+ * @param st text-window state block (live at 0x801ED0CC).
+ * @return 1 when the window is full and the step must end, 0 to keep going.
+ */
+s32 func_80064210(FieldTextState* st)
+{
+    u16 x;
+    u16 y;
+
+    y = st->unk5E;
+    x = st->unk5C + st->unk56;
+    while (x >= 0x100)
+    {
+        x -= 0x100;
+        y += st->unk58;
+    }
+    if ((y == st->unk66) && (x == st->unk64))
+    {
+        st->unk1C = 0x10;
+        return 1;
+    }
+    st->unk5C = x;
+    st->unk5E = y;
+    st->unk5A = st->unk52;
+    st->unk15 = st->unk15 + 1;
+    return 0;
 }
