@@ -7548,18 +7548,14 @@ store_and_return:
  * @param code  character code to draw; the font table is indexed from 0x20.
  * @param width advance width of this glyph, in quarter-pixel units.
  *
- * @note NOT MATCHED - 92.17% (222/338 rows exact, insn count -2). Remaining
- *       residue is register allocation plus two insns in the first loop's
- *       preheader; see working/func_80063B6C/status.md for the probe log and
- *       the retired hypothesis classes.
- * @see decomp.me (92.17%) scratch not yet published
+ * @see decomp.me (95.46%) scratch not yet published
  */
-void func_80063B6C(FieldTextState* st, s32 code, s32 width)
+void func_80063B6C(FieldTextState* st, s32 code, u16 width)
 {
     u16* scratch;
     u16* carry;
     u16* glyph;
-    u16* line;
+    u8* line;
     u16* dst;
     u16* row_src;
     u16* row_dst;
@@ -7596,7 +7592,8 @@ void func_80063B6C(FieldTextState* st, s32 code, s32 width)
     carry = st->unk70;
     rows = st->unk58;
     shift = st->unk52 - st->unk5A;
-    for (m = rows - 1; m >= 0; m--)
+    f = rows - 1;
+    for (m = f; m != -1; m--)
     {
         count = 4;
         if (shift != 0)
@@ -7671,9 +7668,9 @@ void func_80063B6C(FieldTextState* st, s32 code, s32 width)
         nibbles = (u16) width + 1;
     }
 
-    fill = 0;
     glyph = (u16*) (0x801E1200 + (((u16) code - 0x20) * 0x18));
     px = (u8*) (0x1F800000 + (((u32) shift & 3) >> 1));
+    fill = 0;
     shade = fill;
     acc = fill;
     for (i = rows - 1; i != -1; i--)
@@ -7800,17 +7797,18 @@ void func_80063B6C(FieldTextState* st, s32 code, s32 width)
     scratch = (u16*) 0x1F800000;
     if (left != 0)
     {
-        line = (u16*) 0x801DE000 + (y << 6);
+        line = (u8*) 0x801DE000 - (-(y << 7));
         do
         {
             col = x >> 2;
-            dst = line + col;
+            dst = (u16*) (line + col * 2);
             if ((u32) (col + left) >= 0x41U)
             {
                 words = 0x40 - col;
                 left -= words;
                 x = 0;
-                line += rows << 6;
+                m = rows << 7;
+                line += m;
                 y += rows;
             }
             else
