@@ -998,3 +998,4 @@ g_cdReadyCallbackResult             = 0x801ED96C;
 g_defaultCdResource                 = 0x801ED990;
 g_SKCDPOSE_DAT                      = 0x801ED998;
 g_cdResource176                     = 0x801EDF18;
+
