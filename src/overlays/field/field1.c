@@ -14,8 +14,9 @@ typedef struct
     u16 unk62;
 } Struct_8006429C;
 
-typedef struct {
-    u8  _pad00[0x14];
+typedef struct
+{
+    u8 _pad00[0x14];
     u32 unk14;
     u32 unk18;
     u16 unk1C;
@@ -27,7 +28,8 @@ typedef struct {
     u16 unk28;
 } Struct_801ED000;
 
-typedef struct {
+typedef struct
+{
     s16 x;
     s16 y;
     s16 w;
@@ -35,6 +37,8 @@ typedef struct {
 } RECT;
 
 void func_800640B4(Struct_8006429C* arg0);
+
+extern s16 D_801ED028;
 
 /**
  * @brief Copy unk60/unk62 into unk5C/unk5E, zero unk15, store unk52 into unk5A,
@@ -106,4 +110,31 @@ void func_800642D4(void)
     }
 
     DrawSync(0);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/FQwgy
+ */
+void func_800643E0(void)
+{
+    s32 var_a0;
+    s32* var_v1;
+    s32 mask;
+    s32 limit;
+    u32 temp;
+
+    D_801ED028 = 0;
+    var_a0 = 3;
+    mask = -8;
+    limit = -1;
+    var_v1 = (s32*)0x801ED044;
+
+    do
+    {
+        temp = *var_v1;
+        var_a0 -= 1;
+        temp &= mask;
+        *var_v1 = temp;
+        var_v1 = (s32*)((u8*)var_v1 + 0x98);
+    } while (var_a0 != limit);
 }
