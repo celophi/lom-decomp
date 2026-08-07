@@ -6835,7 +6835,14 @@ typedef struct
     u16 unk5A;
     u16 unk5C;
     u16 unk5E;
-    u8 _pad60[8];
+    /** 0x60 left edge of the live text region, in quarter-pixel units. */
+    u16 unk60;
+    /** 0x62 top row of the live text region, in staging-buffer rows. */
+    u16 unk62;
+    /** 0x64 width of the last row of the live text region. */
+    u16 unk64;
+    /** 0x66 bottom row of the live text region. */
+    u16 unk66;
     s16 unk68;
     s16 unk6A;
     s16 unk6C;
@@ -7835,4 +7842,86 @@ void func_80063B6C(FieldTextState* st, s32 code, s32 width)
         scratch += 5;
     }
     st->unk5A = st->unk5A - width;
+}
+
+/**
+ * @brief Erase the region the previous text step occupied in the staging buffer.
+ *
+ * The live text region is described by unk60/unk62 (left edge and top row) and
+ * unk64/unk66 (last-row width and bottom row); the staging image at 0x801DE000
+ * is 64 halfwords wide, so one row is 0x40 halfwords. Three passes clear it:
+ * the rows of the current block from the left edge across, then any whole rows
+ * between the block and the bottom, then the partial last row at the bottom.
+ * The current rectangle is then snapshotted into unk68..unk6E.
+ *
+ * @param st text-window state block (live at 0x801ED0CC).
+ */
+void func_800640B4(FieldTextState* st)
+{
+    u16* row;
+    u16* p;
+    s32 span;
+    s32 half;
+    s32 x;
+    s32 y;
+    s32 rows;
+    s32 i;
+    s32 j;
+
+    y = st->unk62;
+    x = st->unk60;
+    if (y == st->unk66)
+    {
+        span = st->unk64 - x;
+        half = span >> 1;
+    }
+    else
+    {
+        span = 0x100 - x;
+        half = span >> 1;
+    }
+    rows = st->unk58;
+    row = ((u16*) 0x801DE000 + (x >> 2)) + (y << 6);
+    for (i = rows - 1; i != -1; i--)
+    {
+        p = row;
+        j = half >> 1;
+        while (--j != -1)
+        {
+            *p++ = 0;
+        }
+        row += 0x40;
+    }
+
+    if (y != st->unk66)
+    {
+        y += rows;
+        if (y != st->unk66)
+        {
+            row = (u16*) 0x801DE000 + (y << 6);
+            i = (st->unk66 - y) << 6;
+            while (--i != -1)
+            {
+                *row++ = 0;
+            }
+        }
+        if (st->unk64 != 0)
+        {
+            row = (u16*) 0x801DE000 + (st->unk66 << 6);
+            for (i = rows - 1; i != -1; i--)
+            {
+                p = row;
+                j = st->unk64 >> 2;
+                while (--j != -1)
+                {
+                    *p++ = 0;
+                }
+                row += 0x40;
+            }
+        }
+    }
+    st->unk68 = st->unk60;
+    st->unk6A = st->unk62;
+    st->unk6C = st->unk64;
+    st->unk6E = st->unk66;
 }
