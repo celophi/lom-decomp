@@ -13,6 +13,8 @@ typedef signed short s16;
 void func_80142C64(); /* extern */
 void func_80143B64(); /* extern */
 void func_80145CEC(); /* extern */
+void func_80146468(); /* extern */
+void func_80146538(); /* extern */
 
 typedef struct
 {
@@ -62,16 +64,51 @@ extern s32 g_gosub_row_height;
 extern s32 D_80170988;
 extern s32 D_80170990;
 
+/**
+ * @brief One row of the item list built by the gosub screen builders.
+ *
+ * Mirrors the layout documented on GosubListEntry in gosub.c; see that file
+ * for why the 0xC word and the 0x1C flag set are spelled the way they are.
+ */
 typedef struct
 {
-    u8 pad0[0xA];
-    s16 unkA;
-    u8 padC[0x14];
-} GosubRow;
+    u8* name;
+    u8* desc;
+    s16 value;
+    s16 index;
+    s32 unkC : 8;
+    s32 unkD : 8;
+    s32 unkE : 8;
+    s32 kind : 4;
+    u32 unkC_28 : 4;
+    u16 unk10;
+    u16 unk12[4];
+    u16 unk1A;
+    union
+    {
+        struct
+        {
+            u32 flag0 : 1;
+            u32 flag1 : 1;
+            u32 flag2 : 1;
+            u32 unk1C_3 : 29;
+        } f;
+        u16 half;
+        u32 word;
+    } flags;
+} GosubListEntry;
 
 extern s32 D_801228F0;
-extern GosubRow g_gosub_rows[];
+extern GosubListEntry g_gosub_rows[];
 extern u8 g_gosub_selected_rows[];
+
+extern u8 D_800EC3E2[];
+extern u32 D_8014F27C;
+extern u32 D_8014F280;
+extern u32 D_8014F288;
+extern s32 D_8016B900;
+extern u8 D_8016B960[];
+extern u8* g_gosub_title_text;
 
 #define GOSUB_MSG_PTR(off) ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
 
@@ -177,7 +214,7 @@ s32 func_80142B18(void)
 
         do
         {
-            temp_v0 = g_gosub_rows[g_gosub_selected_rows[var_v1]].unkA;
+            temp_v0 = g_gosub_rows[g_gosub_selected_rows[var_v1]].index;
             var_v1 += 1;
             *var_a0 = (s32)temp_v0;
             var_a0 += 1;
@@ -210,7 +247,7 @@ s32 func_80142B98(void) {
         
         do {
            
-            temp_v0 = g_gosub_rows[g_gosub_selected_rows[var_v1]].unkA;
+            temp_v0 = g_gosub_rows[g_gosub_selected_rows[var_v1]].index;
             var_v1 += 1;
             *var_a0 = (s32) temp_v0;
             var_a0 += 1; 
@@ -237,4 +274,109 @@ s32 func_80142C18(s32 arg0)
     }
 
     return 1;
+}
+
+/**
+ * decomp.me (86.54%) https://decomp.me/scratch/CJYqj
+ *
+ */
+void func_80142C64(u32 arg0)
+{
+    s32 i;
+    s32 j;
+    s32 count;
+    u8* buf;
+    u8* rec;
+    u8* slot;
+    GosubListEntry* e;
+    u32 word;
+
+    count = 0;
+    D_8016B900 = 1;
+
+    for (i = 0; i < 100; i++)
+    {
+        if (*(D_8012271C + i * 0x40 + 0xCE0) != 0)
+        {
+            if ((arg0 == 3) || (((*(u32*)(D_8012271C + i * 0x40 + 0xCF4) >> 8) & 3) == arg0) ||
+                ((arg0 == 4) && (((*(u32*)(D_8012271C + i * 0x40 + 0xCF4) >> 8) & 3) != 2)))
+            {
+                e = &g_gosub_rows[count];
+                buf = D_8016B960 + count * 0x50;
+
+                e->name = D_8012271C + i * 0x40 + 0xCE0;
+
+                func_80146538(buf, (u8*)&D_8014F27C + D_8014F280 +
+                    *(u16*)((u8*)&D_8014F27C + D_8014F280 +
+                        ((*(u16*)(D_8012271C + i * 0x40 + 0xCF6) & 0x3F) * 2)));
+                func_80146468(buf, D_800EC3E2 - 0x1E + (D_800EC3E2[1] << 8) + D_800EC3E2[0]);
+
+                rec = D_8012271C + i * 0x40;
+                e->unkC_28 = (*(u32*)(rec + 0xCF4) >> 8) & 3;
+                word = *(u32*)(rec + 0xCF4);
+
+                switch ((word >> 8) & 3)
+                {
+                case 0:
+                    func_80146468(buf, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                        *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                            ((word >> 9) & 0x7E)));
+                    e->unk10 = *(u16*)(D_8012271C + i * 0x40 + 0xD04);
+                    break;
+                case 1:
+                    func_80146468(buf, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                        *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                            ((word >> 9) & 0x7E) + 0x16));
+                    slot = D_8012271C + i * 0x40 + 0xCE0;
+                    for (j = 0; j < 4; j++)
+                    {
+                        e->unk12[j] = *(u16*)(slot + j * 2 + 0x24);
+                    }
+                    break;
+                default:
+                    rec = D_8012271C + i * 0x40;
+                    slot = rec + 0xCE0;
+                    e->unk10 = slot[0x26];
+                    e->unk12[0] = slot[0x25] + (slot[0x24] * 14);
+                    func_80146468(buf, (u8*)&D_8014F27C + D_8014F288 +
+                        *(u16*)((u8*)&D_8014F288 + D_8014F288 +
+                            ((*(u32*)(rec + 0xCF4) >> 9) & 0x7E) + 0x22));
+                    break;
+                }
+
+                e->desc = buf;
+                count++;
+                e->value = -1;
+                e->index = i;
+                e->kind = 4;
+            }
+        }
+    }
+
+    g_gosub_row_count = count;
+    g_gosub_visible_row_count = 8;
+
+    switch (arg0)
+    {
+    case 0:
+        g_gosub_title_text = GOSUB_MSG_PTR(0xC);
+        break;
+    case 1:
+        g_gosub_title_text = GOSUB_MSG_PTR(0xE);
+        break;
+    case 2:
+        g_gosub_title_text = GOSUB_MSG_PTR(0x10);
+        break;
+    case 3:
+        g_gosub_title_text = GOSUB_MSG_PTR(0x16);
+        break;
+    case 4:
+        g_gosub_visible_row_count = 7;
+        g_gosub_title_text = GOSUB_MSG_PTR(0x16);
+        break;
+    }
+
+    g_gosub_row_height = 0x10;
+    g_gosub_window_width = 0xE8;
+    g_gosub_window_height = (g_gosub_visible_row_count * 0x10) + 4;
 }
