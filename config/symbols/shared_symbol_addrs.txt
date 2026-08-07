@@ -857,6 +857,8 @@ akao_seq_op_branch_and_end_loop     = 0x8002CB04;
 akao_seq_op_repeat_loop             = 0x8002CB80;
 akao_seq_op_set_note_duration       = 0x8002CBD4;
 akao_seq_op_adjust_note_duration    = 0x8002CBFC;
+akao_seq_op_skip_operand_byte       = 0x8002D0A8;
+akao_seq_op_ignore_voice_reserve    = 0x8002D0BC;
 
 // psyq/libapi/A10
 WaitEvent                           = 0x800299CC;
@@ -996,3 +998,4 @@ g_cdReadyCallbackResult             = 0x801ED96C;
 g_defaultCdResource                 = 0x801ED990;
 g_SKCDPOSE_DAT                      = 0x801ED998;
 g_cdResource176                     = 0x801EDF18;
+
