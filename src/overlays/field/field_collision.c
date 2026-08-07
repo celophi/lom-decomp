@@ -243,6 +243,9 @@ extern int rsin(int a);
 
 extern long SquareRoot0(long a);
 
+/** Field allocator cursor at 0x801ED000, i.e. FieldMemState::top. */
+extern s32 D_801ED000;
+
 typedef struct Move_UnkS16 {
     s16 unk0;
     s16 unk2;
@@ -6708,5 +6711,144 @@ void func_8006304C(Query* q)
         }
         func_80060364(((s16) q->unkC + edge - 1) >> shift,
                       ((s16) q->unk10 + edge * 2 - 1) >> (shift + 1));
+    }
+}
+
+/**
+ * @brief Fetch the body of the count'th record on the scene header's list.
+ *
+ * Walks @p count links from the head, but stops advancing once it reaches the
+ * tail, so an index past the end clamps to the last record rather than running
+ * off the list. The counter is a u16, so a count of zero walks nothing and
+ * returns the head's body.
+ *
+ * @param count Number of links to walk from the head of the list.
+ * @return Pointer to the selected record's body, or NULL if the scene carries
+ *         no records at all.
+ */
+void* func_800630BC(s32 count)
+{
+    FieldHeaderRec* rec;
+    u16 i;
+
+    rec = g_field_scene.scene->header->records;
+    if (rec != NULL)
+    {
+        i = count;
+        while (i-- != 0)
+        {
+            if (rec->next != NULL)
+            {
+                rec = rec->next;
+            }
+        }
+        return &rec->body;
+    }
+    return NULL;
+}
+
+/**
+ * @brief Rebuild every attached node's span table, then regroup the scene.
+ *
+ * The field allocator cursor is pulled into a local, handed to each node's
+ * span builder in turn so the successive tables pack contiguously, and finally
+ * to the group scan. Whatever the two callees leave in the local is written
+ * back to the global cursor, so the scratch they allocated stays reserved.
+ */
+void func_8006312C(void)
+{
+    FieldNode* node;
+    s32 alloc;
+
+    node = g_field_scene.scene->nodes;
+    alloc = D_801ED000;
+    while (node != NULL)
+    {
+        func_8005E3B0((Move_UnkNode1*) node, (u8**) &alloc);
+        node = node->next;
+    }
+    func_8005F158(&alloc);
+    D_801ED000 = alloc;
+}
+
+/**
+ * @brief Unidentified state block at 0x801ED0CC.
+ *
+ * Only the two halfwords func_80063194 reads are known; their difference sets
+ * the width of the image it uploads.
+ */
+typedef struct
+{
+    u8 _pad0[0x52];
+    u16 unk52;
+    u8 _pad1[0x5A - 0x54];
+    u16 unk5A;
+} FieldUnkD0CC;
+
+/**
+ * @brief Upload the staging buffer at 0x801DE000 to VRAM as a 12-row image.
+ *
+ * The image is @c count halfwords wide, derived from the two halfwords at
+ * 0x801ED0CC, and is stored in the staging buffer as rows of stride 64.
+ *
+ * Whole 64-wide blocks go up first, stacked into a single 64 x (12 * blocks)
+ * rectangle that can be read straight out of the linear buffer; the VRAM y and
+ * the buffer cursor both advance past it, leaving only the remainder columns in
+ * @c count. Those remaining 12 rows still sit at stride 64, so rows 1..11 are
+ * packed down to stride @c count in place (row 0 is already where it belongs)
+ * before the closing @c count x 12 upload.
+ *
+ * @note The shift by 6 is deliberately left inside the two expressions that use
+ *       it rather than hoisted into a local, and the leading subtraction is a
+ *       variable of its own; both are required to match.
+ */
+void func_80063194(void)
+{
+    RECT rect;
+    u16* buf;
+    u16* src;
+    u16* dst;
+    s32 count;
+    s32 adj;
+    s32 diff;
+    s32 i;
+    s32 j;
+
+    rect.x = 0x3C0;
+    rect.y = 0x180;
+    diff = ((FieldUnkD0CC*) 0x801ED0CC)->unk52 - ((FieldUnkD0CC*) 0x801ED0CC)->unk5A;
+    count = ((diff & 3) + diff + 5) >> 2;
+    buf = (u16*) 0x801DE000;
+    if (count >= 0x40)
+    {
+        rect.w = 0x40;
+        adj = count;
+        if (count < 0)
+        {
+            adj = count + 0x3F;
+        }
+        rect.h = (adj >> 6) * 12;
+        LoadImage(&rect, (u_long*) 0x801DE000);
+        buf += rect.w * rect.h;
+        count -= (adj >> 6) * 64;
+        rect.y = rect.y + rect.h;
+    }
+    if (count > 0)
+    {
+        dst = buf + count;
+        src = buf + 0x40;
+        j = 11;
+        while (--j != -1)
+        {
+            i = count;
+            while (--i != -1)
+            {
+                *dst++ = *src++;
+            }
+            src += 0x40 - count;
+        }
+        rect.w = count;
+        rect.h = 0xC;
+        LoadImage(&rect, (u_long*) buf);
     }
 }
