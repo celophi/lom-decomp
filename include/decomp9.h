@@ -16,10 +16,15 @@ typedef struct
 /**
  * @brief AKAO's pending register image for one SPU voice.
  *
- * This is not Psy-Q's SpuVoiceAttr. In an AkaoChannelState it overlays the
- * final 0x1C bytes (0xFC..0x117): the assigned SPU voice is followed by an
- * update mask, the register values, a volume scale, and the computed stereo
- * volume. The same image is passed to both the full and selective writers.
+ * This is not Psy-Q's SpuVoiceAttr. It mirrors the final 0x1C bytes of
+ * @ref AkaoChannelState (0xFC..0x117, @c voice through @c spu_volume_right):
+ * the assigned SPU voice, an update mask, the register values, a volume scale
+ * and the computed stereo volume. The same image is passed to both the full
+ * and selective writers.
+ *
+ * @note Kept as its own type rather than folded into AkaoChannelState because
+ *       the callers pass @c channel + 0xFC, not the channel base - it is the
+ *       ABI of these writers, not a second view of the whole block.
  */
 typedef struct
 {
@@ -35,7 +40,6 @@ typedef struct
     s16 volume_right;      /**< Computed right volume. */
 } SpuVoiceParams;
 
-typedef struct AkaoChannelEffects AkaoChannelEffects;
 
 /* ---- Common (non-voice) SPU register writers ---- */
 
@@ -60,6 +64,6 @@ void spu_set_voice_sustain_mode(s32 voice, s32 sustain_bits, u32 mode_bits);
 void spu_set_voice_release_mode(s32 voice, s32 release_shift, u32 mode_bit);
 void spu_write_voice_params(s32 voice, SpuVoiceParams* params, s32 scale);
 void spu_apply_voice_updates(s32 voice, SpuVoiceParams* params);
-void akao_tick_channel_effects(AkaoChannelEffects* channel, s32 channel_bit, s32 is_sfx);
+void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 is_sfx);
 
 #endif

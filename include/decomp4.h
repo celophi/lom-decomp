@@ -15,36 +15,6 @@ extern s32 g_akao_xa_pan_current;
 extern s32 g_akao_masterpan_step;
 extern s32 g_akao_mastervol_step;
 
-/**
- * @brief One slot in @c g_sfx_channels (size 0x118). Shares the same overall
- *        size as @ref AkaoChannelState but is accessed through a different
- *        set of fields by the SFX update path, so it is typed separately.
- */
-typedef struct
-{
-    u8 _pad00[0x28];
-    u32 field_28;            /* 0x28 - flags; tested against 0x02000000 */
-    u8 _pad2C[0x58 - 0x2C];
-    u32 field_58;            /* 0x58 - tick counter */
-    u8 _pad5C[0x66 - 0x5C];
-    u16 field_66;            /* 0x66 - countdown */
-    u16 field_68;            /* 0x68 - countdown */
-    u8 _pad6A[0x118 - 0x6A];
-} SfxChannel;
-
-/**
- * @brief Shared channel header accessed by akao_release_channels.
- *        Offset 0x64 selects seq-channel mode (0) vs SFX-channel mode (non-0).
- *        Offset 0x34 is cleared unconditionally at the end of that function.
- */
-typedef struct AkaoSFXState
-{
-    u8  _pad00[0x34]; /* 0x00 - 0x33 */
-    u32 unk34;        /* 0x34 */
-    u8  _pad38[0x2C]; /* 0x38 - 0x63 */
-    u16 unk64;        /* 0x64 */
-} AkaoSFXState;
-
 /** @brief 4-sample ring buffer of timer deltas used for profiling. */
 typedef struct
 {
