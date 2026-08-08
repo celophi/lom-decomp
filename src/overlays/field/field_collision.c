@@ -6893,25 +6893,7 @@ void func_80063194(void)
  * @param st Text-window state; its cursor stack is advanced in place.
  * @param arg1 Budget of characters to emit before returning.
  *
- * @note NOT MATCHED - 97.21% (490/547 exact rows). Instruction count, frame
- *       size and every sp slot agree and the diff has no structural runs. What
- *       remains is four coupled clusters: the target folds both D_801E26E0
- *       lookups into `lbu %lo(D_801E26E0)(reg)` where this materialises the
- *       address with an extra addiu; the target hoists the lookahead
- *       jump-table base into the lookahead preheader (the same two
- *       instructions); look_run/look_count/flag rotate over t1/t3/t4 as a
- *       consequence; and the cur-selection preamble loads st->unk8 into a temp
- *       and duplicates `code = 0` into both delay slots.
- * @note The gotos are required, not m2c leftovers. Duplicating case 6's two
- *       pop blocks into case 0 costs 12 exact rows and inlining the set_break
- *       tail at its four call sites costs 15; the target really does branch
- *       into the shared blocks at 0x80063468 / 0x80063494 / 0x80063AFC.
- * @note `fresh = 1` must sit AFTER each func_80064210 call rather than before.
- *       It is dead on the returning path, so the delay-slot filler pulls it
- *       into the branch. Worth 58 exact rows.
- * @note `four` carries the constant 4 for unk14/unk19/unk1A; spelling those as
- *       a literal 4 costs 6 exact rows.
- * @see decomp.me (97.21%) TODO
+ * @see decomp.me (97.19%) TODO
  */
 void func_800632E0(FieldTextState* st, s32 arg1)
 {
