@@ -15,6 +15,7 @@ s32 func_80143310(); /* extern */
 void func_801438F0(); /* extern */
 s32 func_8014397C(); /* extern */
 s32 func_80143A28(); /* extern */
+s32 func_80143B10(); /* extern */
 void func_80145F80(); /* extern */
 void func_80143B64(); /* extern */
 void func_80143BB0(); /* extern */
@@ -332,78 +333,78 @@ s32 func_80142C18(s32 arg0)
 }
 
 /**
- * decomp.me (86.54%) https://decomp.me/scratch/CJYqj
- *
+ * decomp.me (100%) https://decomp.me/scratch/CJYqj
  */
 void func_80142C64(u32 arg0)
 {
     s32 i;
     s32 j;
     s32 count;
-    u8* buf;
     u8* rec;
+    u8* base;
+    u8* rec2;
+    s32 msg;
     u8* slot;
-    GosubListEntry* e;
     u32 word;
 
-    count = 0;
     D_8016B900 = 1;
+    count = 0;
 
     for (i = 0; i < 100; i++)
     {
-        if (*(D_8012271C + i * 0x40 + 0xCE0) != 0)
+        base = D_8012271C + i * 0x40;
+        if (*(base + 0xCE0) != 0)
         {
-            if ((arg0 == 3) || (((*(u32*)(D_8012271C + i * 0x40 + 0xCF4) >> 8) & 3) == arg0) ||
-                ((arg0 == 4) && (((*(u32*)(D_8012271C + i * 0x40 + 0xCF4) >> 8) & 3) != 2)))
+            if ((arg0 == 3) || (((*(u32*)(base + 0xCF4) >> 8) & 3) == arg0) ||
+                ((arg0 == 4) && (((*(u32*)(base + 0xCF4) >> 8) & 3) != 2)))
             {
-                e = &g_gosub_rows[count];
-                buf = D_8016B960 + count * 0x50;
 
-                e->name = D_8012271C + i * 0x40 + 0xCE0;
+                g_gosub_rows[count].name = D_8012271C + (i * 0x40 + 0xCE0);
 
-                func_80146538(buf, (u8*)&D_8014F27C + D_8014F280 +
+                func_80146538(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + D_8014F280 +
                     *(u16*)((u8*)&D_8014F27C + D_8014F280 +
-                        ((*(u16*)(D_8012271C + i * 0x40 + 0xCF6) & 0x3F) * 2)));
-                func_80146468(buf, D_800EC3E2 - 0x1E + (D_800EC3E2[1] << 8) + D_800EC3E2[0]);
+                        ((*(u16*)(D_8012271C + (i << 6) + 0xCF6) & 0x3F) * 2)));
+                msg = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
+                func_80146468(D_8016B960 + count * 0x50, D_800EC3E2[0] + msg);
 
                 rec = D_8012271C + i * 0x40;
-                e->unkC_28 = (*(u32*)(rec + 0xCF4) >> 8) & 3;
+                g_gosub_rows[count].unkC_28 = (*(u32*)(rec + 0xCF4) >> 8) & 3;
                 word = *(u32*)(rec + 0xCF4);
 
                 switch ((word >> 8) & 3)
                 {
                 case 0:
-                    func_80146468(buf, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                         *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                             ((word >> 9) & 0x7E)));
-                    e->unk10 = *(u16*)(D_8012271C + i * 0x40 + 0xD04);
+                    g_gosub_rows[count].unk10 = *(u16*)(D_8012271C + i * 0x40 + 0xD04);
                     break;
                 case 1:
-                    func_80146468(buf, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                         *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                             ((word >> 9) & 0x7E) + 0x16));
-                    slot = D_8012271C + i * 0x40 + 0xCE0;
+                    slot = (u8*)(i * 0x40 + (s32)D_8012271C + 0xCE0);
                     for (j = 0; j < 4; j++)
                     {
-                        e->unk12[j] = *(u16*)(slot + j * 2 + 0x24);
+                        g_gosub_rows[count].unk12[j] = *(u16*)(slot + j * 2 + 0x24);
                     }
                     break;
                 default:
-                    rec = D_8012271C + i * 0x40;
-                    slot = rec + 0xCE0;
-                    e->unk10 = slot[0x26];
-                    e->unk12[0] = slot[0x25] + (slot[0x24] * 14);
-                    func_80146468(buf, (u8*)&D_8014F27C + D_8014F288[0] +
+                    rec2 = (u8*)(i * 0x40 + (s32)D_8012271C);
+                    slot = rec2 + 0xCE0;
+                    g_gosub_rows[count].unk10 = slot[0x26];
+                    g_gosub_rows[count].unk12[0] = slot[0x25] + (slot[0x24] * 14);
+                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + D_8014F288[0] +
                         *(u16*)((u8*)D_8014F288 + D_8014F288[0] +
-                            ((*(u32*)(rec + 0xCF4) >> 9) & 0x7E) + 0x22));
+                            ((*(u32*)(rec2 + 0xCF4) >> 9) & 0x7E) + 0x22));
                     break;
                 }
 
-                e->desc = buf;
+                g_gosub_rows[count].desc = D_8016B960 + count * 0x50;
+                g_gosub_rows[count].value = -1;
+                g_gosub_rows[count].index = i;
+                g_gosub_rows[count].kind = 4;
                 count++;
-                e->value = -1;
-                e->index = i;
-                e->kind = 4;
             }
         }
     }
@@ -880,4 +881,26 @@ s32 func_80143A28(void)
     }
 
     return 0;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80143B10(void)
+{
+    GosubElement* p;
+    s32 i;
+
+    p = &g_gosub_fixed_element;
+
+    for (i = 0; i < 0x10; i++)
+    {
+        if (p->attr.f.unk0_0 == 1 || p->attr.f.unk0_0 == 3)
+        {
+            return 0;
+        }
+        p++;
+    }
+
+    return 1;
 }
