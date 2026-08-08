@@ -352,8 +352,9 @@ void func_8005DA7C(Move_Probe*, Move_UnkNode1*, s32*, s32*);
 
 /**
  * @see decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
- * @note local objdiff 80.21% (gcc280_g4_noexpanddiv), 2026-07-02 - active
- *       matching scratch is working/func_8005B6AC.c.
+ * @note local objdiff 84.66% (gcc280_g4_noexpanddiv), 2026-08-08 - active
+ *       matching scratch is working/func_8005B6AC/code.c; see
+ *       working/func_8005B6AC/STATUS.md for the open leads.
  */
 s32 func_8005B6AC(Move_Mover* a0) {
     Move_Probe probe;
@@ -409,12 +410,14 @@ s32 func_8005B6AC(Move_Mover* a0) {
     s16 temp_v1_8;
     s16 temp_v1_9;
     s32 var_a1;
+    s32 k_blocked;
     s32 var_a3_2;
     s16 var_s0_3;
     s16 var_s1_3;
     s32 e_x_min;
     s32 f_x_min;
     s32 f_x_max;
+    s32 f_x_max_2;
     s32 f_y_min;
     s32 f_y_max;
     s32 var_s2;
@@ -585,6 +588,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
     void* temp_t5_4;
     void* temp_t6;
     void* var_fp;
+    void* var_fp_2;
 
     sp48 = 0;
     sp4C = 0;
@@ -617,7 +621,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
             if (var_v0_5 < 0) {
                 var_v0_5 += 0xFF;
             }
-            var_fp = sp2C;
+            var_fp = sp28->nodes;
             probe.y = var_v0_5 >> 8;
             ux = (u16) probe.x;
             uy = (u16) probe.y;
@@ -638,8 +642,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                         if (((s16) ux < (((Move_UnkS16*)var_s1)->unk0 + (s16) temp_a1)) || ((((Move_UnkS16*)var_s1)->unk2 + (s16) temp_a1) < (s16) ux)) {
                                             var_s1 += 4;
                                         } else {
-                                            var_t8 = 1;
-                                            break;
+                                            goto a_hit;
                                         }
                                     } while (--var_s0 != -1);
                                 }
@@ -650,12 +653,15 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                         if (((s16) ux < ((Move_UnkS16*)var_s1)->unk0) || (((Move_UnkS16*)var_s1)->unk2 < (s16) ux)) {
                                             var_s1 += 4;
                                         } else {
-                                            var_t8 = 1;
-                                            break;
+                                            goto a_hit;
                                         }
                                     } while (--var_s0_2 != -1);
                                 }
                             }
+                                goto a_done;
+                            a_hit:
+                                var_t8 = 1;
+                            a_done:
                             if (var_t8 != 0) {
                                 temp_v1_3 = ((Move_UnkNode2*)temp_s6)->unk4 & 3;
                                 switch (temp_v1_3) { /* switch 1; irregular */
@@ -670,26 +676,27 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                         } else {
                                             temp_v1_5 = ((Move_UnkNode2*)temp_s6)->unk10 + (s16) temp_v0;
                                             if (temp_v1_5 >= var_s2) {
+                                                var_fp_2 = var_fp;
                                                 var_s2 = temp_v1_5;
-                                                a0->unk1C = var_fp;
+                                                a0->unk1C = var_fp_2;
                                             }
                                         }
                                     }
                                     break;
                                 case 1:             /* switch 1 */
                                     if ((((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
-                                        temp_s0 = func_8005DFAC(var_fp, &probe.x);
+                                        temp_s0 = func_8005DFAC(var_fp_2, &probe.x);
                                         if (var_a3 != 0) {
                                             var_a3 = 1;
                                             if (var_s2 < temp_s0) {
                                                 var_s2 = temp_s0;
-                                                a0->unk1C = var_fp;
+                                                a0->unk1C = var_fp_2;
                                             }
                                         } else {
                                             var_a3 = 1;
                                             if (var_s2 < (temp_s0 + 0x14)) {
                                                 var_s2 = temp_s0;
-                                                a0->unk1C = var_fp;
+                                                a0->unk1C = var_fp_2;
                                             }
                                         }
                                     }
@@ -904,11 +911,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
                 var_t8 = 1;
             }
         }
-        if ((sp20 == 0) && (var_t8 == 0)) {
-            var_v1 = a0->unk8 + a0->unk14;
-            a0->unk0 = (s32) (a0->unk0 + a0->unkC);
-            a0->unk8 = var_v1;
-        } else {
+        if ((sp20 != 0) || (var_t8 != 0)) {
         temp_a1_3 = a0->unkC;
         if (temp_a1_3 == 0) {
             sp58 = 0xC00;
@@ -1135,6 +1138,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
             var_t8 = 0;
             var_t0 = 0;
             var_a3_2 = 0;
+            k_blocked = 0x8000;
             sp68 = (void** )0x801E1100;
             temp_a0_11 = sp28->header;
             temp_v1_15 = temp_s0_5 + (u16) a0->unk28;
@@ -1191,9 +1195,10 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                 temp_lo_4 = (var_t1_2 - temp_a0_14) * ((u8*)temp_s6_5)[6];
                                 var_s0_9 = var_s0_8 - var_t1_2;
                                 var_s1_4 = (u8*)((Move_UnkNode1*)var_fp)->unk10 + (temp_lo_4 * 4);
+                                f_x_max_2 = f_x_max;
                                 var_s4_2 = (u8*)((Move_UnkNode1*)var_fp)->unk14 + (temp_lo_4 * 2);
                                 if (var_s0_9 != -1) {
-                                    temp_s7 = f_x_max - 1;
+                                    temp_s7 = f_x_max_2 - 1;
                                     do {
                                         var_t7 = ((u8*)temp_s6_5)[6] - 1;
                                         if (var_t7 != -1) {
@@ -1211,8 +1216,8 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                                             var_a0 = 0;
                                                             if ((f_x_min < temp_v1_18) && !(*var_s4_2 & 0x80)) {
                                                                 var_a2 = 1;
-                                                                if (temp_a1_5 >= f_x_max) {
-                                                                    var_a0 = temp_v1_18 - f_x_max;
+                                                                if (temp_a1_5 >= f_x_max_2) {
+                                                                    var_a0 = temp_v1_18 - f_x_max_2;
                                                                 }
                                                             } else {
                                                                 temp_v1_19 = *(s16*)var_t3;
@@ -1230,8 +1235,8 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                                             var_a2 = 1;
                                                             temp_v1_20 = temp_v1_18 + spAC;
                                                             var_a0 = 0;
-                                                            if ((f_x_min < temp_v1_20) && ((temp_a1_5 + spAC) >= f_x_max)) {
-                                                                var_a0 = temp_v1_20 - f_x_max;
+                                                            if ((f_x_min < temp_v1_20) && ((temp_a1_5 + spAC) >= f_x_max_2)) {
+                                                                var_a0 = temp_v1_20 - f_x_max_2;
                                                             } else if ((*(s16*)var_s1_4 + spAC) < f_x_min) {
                                                                 temp_v1_21 = *(s16*)var_t3 + spAC;
                                                                 if (temp_v1_21 < temp_s7) {
@@ -1269,14 +1274,14 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                                                         }
                                                                     }
                                                                 }
-                                                                if (var_a3_2 != 0x8000) {
+                                                                if (var_a3_2 != k_blocked) {
                                                                     if (var_a1 > 0) {
                                                                         if (var_a3_2 >= 0) {
                                                                             if (var_a3_2 < var_a1) {
                                                                                 var_a3_2 = var_a1;
                                                                             }
                                                                         } else {
-                                                                            var_a3_2 = 0x8000;
+                                                                            var_a3_2 = k_blocked;
                                                                         }
                                                                     } else if (var_a3_2 <= 0) {
                                                                         if (var_a1 < var_a3_2) {
@@ -1316,12 +1321,12 @@ s32 func_8005B6AC(Move_Mover* a0) {
             temp_a0_15 = var_t0 << 8;
             if (sp20 == 1) {
                 temp_a1_6 = var_a3_2 << 8;
-                if ((var_t0 == 0) || (var_t0 == 0x8000)) {
-                    if (var_a3_2 != 0x8000) {
+                if ((var_t0 == 0) || (var_t0 == k_blocked)) {
+                    if (var_a3_2 != k_blocked) {
                         sp60 += temp_a1_6;
                     }
                     break;
-                } else if ((var_a3_2 == 0) || (var_a3_2 == 0x8000)) {
+                } else if ((var_a3_2 == 0) || (var_a3_2 == k_blocked)) {
                     sp5C += temp_a0_15;
                     break;
                 } else {
@@ -1370,15 +1375,11 @@ s32 func_8005B6AC(Move_Mover* a0) {
             var_t8 = 0;
             if (sp20 == 0) {
                 temp_a2_3 = sp28->header;
-                if ((((Move_UnkNode3*)temp_a2_3)->unk2C & 2) && ((temp_a0_16 = (u16) a0->unk24, temp_a1_7 = (u16) a0->unk28, temp_a3_2 = (u16) probe.x - ((s32) ((s16) temp_a0_16 + ((u32) (temp_a0_16 << 0x10) >> 0x1F)) >> 1), temp_v0_14 = (u16) probe.y - ((s32) ((s16) temp_a1_7 + ((u32) (temp_a1_7 << 0x10) >> 0x1F)) >> 1), (temp_v0_14 & 0x8000)) || ((s16) (temp_v0_14 + temp_a1_7) >= ((Move_UnkNode3*)temp_a2_3)->unk32) || (temp_a3_2 & 0x8000) || ((s16) (temp_a3_2 + temp_a0_16) >= ((Move_UnkNode3*)temp_a2_3)->unk30))) {
+                if ((((Move_UnkNode3*)temp_a2_3)->unk2C & 2) && ((temp_a0_16 = (u16) a0->unk24, temp_a1_7 = (u16) a0->unk28, temp_a3_2 = (u16) probe.x - ((s32) ((s16) temp_a0_16 + ((u32) (temp_a0_16 << 0x10) >> 0x1F)) >> 1), temp_v0_14 = (u16) probe.y - ((s32) ((s16) temp_a1_7 + ((u32) (temp_a1_7 << 0x10) >> 0x1F)) >> 1), (temp_v0_14 & k_blocked)) || ((s16) (temp_v0_14 + temp_a1_7) >= ((Move_UnkNode3*)temp_a2_3)->unk32) || (temp_a3_2 & k_blocked) || ((s16) (temp_a3_2 + temp_a0_16) >= ((Move_UnkNode3*)temp_a2_3)->unk30))) {
                     var_t8 = 1;
                 }
             }
-            if ((sp20 == 0) && (var_t8 == 0)) {
-                a0->unk0 = (s32) (a0->unk0 + sp5C);
-                var_v1 = a0->unk8 + sp60;
-                a0->unk8 = var_v1;
-            } else {
+            if ((sp20 != 0) || (var_t8 != 0)) {
                 var_v0_30 = a0->unk0;
                 if (var_v0_30 < 0) {
                     var_v0_30 += 0xFF;
@@ -1391,6 +1392,9 @@ s32 func_8005B6AC(Move_Mover* a0) {
                 probe.y = var_v0_31 >> 8;
                 func_8005DA7C(&probe, sp2C, &sp20, &sp24);
                 sp50 |= 3;
+            } else {
+                a0->unk0 = (s32) (a0->unk0 + sp5C);
+                a0->unk8 = (s32) (a0->unk8 + sp60);
             }
         } else {
             var_v0_32 = a0->unk0;
@@ -1406,6 +1410,9 @@ s32 func_8005B6AC(Move_Mover* a0) {
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             sp50 |= 3;
         }
+        } else {
+            a0->unk0 = (s32) (a0->unk0 + a0->unkC);
+            a0->unk8 = (s32) (a0->unk8 + a0->unk14);
         }
         var_s7 = 0xFFFFFF;
         var_s2 = 0;
