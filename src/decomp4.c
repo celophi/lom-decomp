@@ -35,46 +35,6 @@ typedef struct
     u8 pan_and_noise;
 } AkaoNoteArticulationSlot;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 extern s16 D_8004D428[];
 
 /**

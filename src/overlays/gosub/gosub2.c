@@ -11,7 +11,14 @@ typedef unsigned short u16;
 typedef signed short s16;
 
 void func_80142C64(); /* extern */
+s32 func_80143310(); /* extern */
+void func_801438F0(); /* extern */
+s32 func_8014397C(); /* extern */
+s32 func_80143A28(); /* extern */
+s32 func_80143B10(); /* extern */
+void func_80145F80(); /* extern */
 void func_80143B64(); /* extern */
+void func_80143BB0(); /* extern */
 void func_80145CEC(); /* extern */
 void func_80146468(); /* extern */
 void func_80146538(); /* extern */
@@ -46,6 +53,7 @@ extern s32 D_801227F0;
 extern s32 D_801229B0[];
 extern s32 D_8014F29C;
 extern s32 g_gosub_cursor_row;
+extern s32 g_gosub_finished;
 extern s32 g_gosub_row_count;
 extern s32 g_gosub_visible_row_count;
 extern u8 g_gosub_screen_sequence_index;
@@ -102,17 +110,65 @@ extern s32 D_801228F0;
 extern GosubListEntry g_gosub_rows[];
 extern u8 g_gosub_selected_rows[];
 
+extern s32 D_80122988;
+extern s32 D_8016B948;
+extern s32 D_8016B95C;
+extern u8 g_gosub_screen_sequence[20];
+extern s32 g_gosub_result_rows[16];
+extern s32 (*g_gosub_select_handler)();
+extern s32 (*g_gosub_finish_handler)();
+extern s32 (*D_80174A58)(s32);
+
 extern u8 D_800EC3E2[];
 extern u32 D_8014F27C;
 extern u32 D_8014F280;
-extern u32 D_8014F288;
+extern u32 D_8014F288[];
 extern s32 D_8016B900;
 extern u8 D_8016B960[];
 extern u8* g_gosub_title_text;
 
+/**
+ * @brief A three-element range table indexed by gosub screen group.
+ *
+ * Held as a struct rather than a bare array because the game copies the whole
+ * table from rodata into a local before indexing it.
+ */
+typedef struct
+{
+    s32 v[3];
+} GosubRange;
+
+extern GosubRange D_80140068;
+extern GosubRange D_80140074;
+
 #define GOSUB_MSG_PTR(off) ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
 
+/**
+ * @brief Resolve one entry of a text archive block.
+ *
+ * The same lookup as gosub.c's ARCHIVE_ENTRY: a block begins with a u16 per
+ * entry giving that entry's offset from the archive base, so a lookup is
+ * base + block + block[idx].
+ *
+ * @param blk Block offset word, e.g. D_8014F288[0].
+ * @param idx Entry index within the block.
+ * @return Pointer to the entry.
+ */
+#define ARCHIVE_ENTRY(blk, idx) \
+    ((u8*)&D_8014F27C + (blk) + *(u16*)((u8*)&D_8014F27C + (blk) + (idx) * 2))
+
 #define GOSUB_MSG(off) func_80145CEC(GOSUB_MSG_PTR(off))
+
+/**
+ * @brief Set the top byte of an element's attr word.
+ *
+ * Must go through the whole word rather than an 8-bit bitfield; see the same
+ * macro in gosub.c.
+ *
+ * @param e Element to update.
+ * @param c New top-byte value.
+ */
+#define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 
 /**
  * decomp.me (99.94%) https://decomp.me/scratch/2OzmD
@@ -277,78 +333,78 @@ s32 func_80142C18(s32 arg0)
 }
 
 /**
- * decomp.me (86.54%) https://decomp.me/scratch/CJYqj
- *
+ * decomp.me (100%) https://decomp.me/scratch/CJYqj
  */
 void func_80142C64(u32 arg0)
 {
     s32 i;
     s32 j;
     s32 count;
-    u8* buf;
     u8* rec;
+    u8* base;
+    u8* rec2;
+    s32 msg;
     u8* slot;
-    GosubListEntry* e;
     u32 word;
 
-    count = 0;
     D_8016B900 = 1;
+    count = 0;
 
     for (i = 0; i < 100; i++)
     {
-        if (*(D_8012271C + i * 0x40 + 0xCE0) != 0)
+        base = D_8012271C + i * 0x40;
+        if (*(base + 0xCE0) != 0)
         {
-            if ((arg0 == 3) || (((*(u32*)(D_8012271C + i * 0x40 + 0xCF4) >> 8) & 3) == arg0) ||
-                ((arg0 == 4) && (((*(u32*)(D_8012271C + i * 0x40 + 0xCF4) >> 8) & 3) != 2)))
+            if ((arg0 == 3) || (((*(u32*)(base + 0xCF4) >> 8) & 3) == arg0) ||
+                ((arg0 == 4) && (((*(u32*)(base + 0xCF4) >> 8) & 3) != 2)))
             {
-                e = &g_gosub_rows[count];
-                buf = D_8016B960 + count * 0x50;
 
-                e->name = D_8012271C + i * 0x40 + 0xCE0;
+                g_gosub_rows[count].name = D_8012271C + (i * 0x40 + 0xCE0);
 
-                func_80146538(buf, (u8*)&D_8014F27C + D_8014F280 +
+                func_80146538(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + D_8014F280 +
                     *(u16*)((u8*)&D_8014F27C + D_8014F280 +
-                        ((*(u16*)(D_8012271C + i * 0x40 + 0xCF6) & 0x3F) * 2)));
-                func_80146468(buf, D_800EC3E2 - 0x1E + (D_800EC3E2[1] << 8) + D_800EC3E2[0]);
+                        ((*(u16*)(D_8012271C + (i << 6) + 0xCF6) & 0x3F) * 2)));
+                msg = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
+                func_80146468(D_8016B960 + count * 0x50, D_800EC3E2[0] + msg);
 
                 rec = D_8012271C + i * 0x40;
-                e->unkC_28 = (*(u32*)(rec + 0xCF4) >> 8) & 3;
+                g_gosub_rows[count].unkC_28 = (*(u32*)(rec + 0xCF4) >> 8) & 3;
                 word = *(u32*)(rec + 0xCF4);
 
                 switch ((word >> 8) & 3)
                 {
                 case 0:
-                    func_80146468(buf, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                         *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                             ((word >> 9) & 0x7E)));
-                    e->unk10 = *(u16*)(D_8012271C + i * 0x40 + 0xD04);
+                    g_gosub_rows[count].unk10 = *(u16*)(D_8012271C + i * 0x40 + 0xD04);
                     break;
                 case 1:
-                    func_80146468(buf, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                         *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                             ((word >> 9) & 0x7E) + 0x16));
-                    slot = D_8012271C + i * 0x40 + 0xCE0;
+                    slot = (u8*)(i * 0x40 + (s32)D_8012271C + 0xCE0);
                     for (j = 0; j < 4; j++)
                     {
-                        e->unk12[j] = *(u16*)(slot + j * 2 + 0x24);
+                        g_gosub_rows[count].unk12[j] = *(u16*)(slot + j * 2 + 0x24);
                     }
                     break;
                 default:
-                    rec = D_8012271C + i * 0x40;
-                    slot = rec + 0xCE0;
-                    e->unk10 = slot[0x26];
-                    e->unk12[0] = slot[0x25] + (slot[0x24] * 14);
-                    func_80146468(buf, (u8*)&D_8014F27C + D_8014F288 +
-                        *(u16*)((u8*)&D_8014F288 + D_8014F288 +
-                            ((*(u32*)(rec + 0xCF4) >> 9) & 0x7E) + 0x22));
+                    rec2 = (u8*)(i * 0x40 + (s32)D_8012271C);
+                    slot = rec2 + 0xCE0;
+                    g_gosub_rows[count].unk10 = slot[0x26];
+                    g_gosub_rows[count].unk12[0] = slot[0x25] + (slot[0x24] * 14);
+                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + D_8014F288[0] +
+                        *(u16*)((u8*)D_8014F288 + D_8014F288[0] +
+                            ((*(u32*)(rec2 + 0xCF4) >> 9) & 0x7E) + 0x22));
                     break;
                 }
 
-                e->desc = buf;
+                g_gosub_rows[count].desc = D_8016B960 + count * 0x50;
+                g_gosub_rows[count].value = -1;
+                g_gosub_rows[count].index = i;
+                g_gosub_rows[count].kind = 4;
                 count++;
-                e->value = -1;
-                e->index = i;
-                e->kind = 4;
             }
         }
     }
@@ -379,4 +435,472 @@ void func_80142C64(u32 arg0)
     g_gosub_row_height = 0x10;
     g_gosub_window_width = 0xE8;
     g_gosub_window_height = (g_gosub_visible_row_count * 0x10) + 4;
+}
+/**
+ * @see decomp.me (100%)
+ */
+void func_80143054(s32 group)
+{
+    s32 i;
+    GosubRange first = D_80140068;
+    GosubRange total = D_80140074;
+
+    for (i = 0; i < total.v[group]; i++)
+    {
+        GosubListEntry* e = &g_gosub_rows[i];
+        u8* p;
+
+        e->name = ARCHIVE_ENTRY(D_8014F288[0], i + first.v[group]);
+        p = ARCHIVE_ENTRY(D_8014F288[0], i + first.v[group]);
+        e->name = p;
+        e->value = -1;
+        e->index = i;
+        e->unkC_28 = 0;
+        e->desc = p;
+        e->kind = 4;
+    }
+
+    g_gosub_row_count = total.v[group];
+
+    switch (group)
+    {
+    case 0:
+        g_gosub_title_text = GOSUB_MSG_PTR(0x1A);
+        break;
+    case 1:
+        g_gosub_title_text = GOSUB_MSG_PTR(0x1C);
+        break;
+    case 2:
+        g_gosub_title_text = GOSUB_MSG_PTR(0x1E);
+        break;
+    }
+
+    g_gosub_visible_row_count = 8;
+    g_gosub_row_height = 0x10;
+    g_gosub_window_width = 0xE8;
+    g_gosub_window_height = 0x84;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80143258(s32 arg0)
+{
+    func_80143310(arg0);
+
+    if (g_gosub_finished == 0)
+    {
+        if (D_8016B8E0 != 0)
+        {
+            D_80170988 += (D_80170990 - D_80170988) / D_8016B8E0;
+            D_8016B8E0 -= 1;
+        }
+        else
+        {
+            D_80170988 = D_80170990;
+        }
+
+        func_80143BB0(arg0);
+    }
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80143310()
+{
+    GosubElement* e;
+    s32 repeat;
+    s32 row;
+    s32 top;
+
+    e = &g_gosub_fixed_element;
+    if ((e[1].attr.word & 7) == 0 && (g_gosub_fixed_element.attr.word & 7) == 0)
+    {
+        g_gosub_finished = 1;
+        return;
+    }
+
+    if (func_80143B10() == 0)
+    {
+        return;
+    }
+
+    if ((g_gosub_fixed_element.attr.word & 7) == 2)
+    {
+        if (D_8016B948 != 0)
+        {
+            if ((D_80122988 & 0x260) == 0)
+            {
+                return;
+            }
+            if (D_8016B95C == 0)
+            {
+                func_800A3938(0x7D, 0x80);
+                func_80067F28();
+                func_80143B64();
+                return;
+            }
+            g_gosub_fixed_element.attr.f.unk0_0 = 0;
+            D_8016B948 = 0;
+            return;
+        }
+
+        if (D_80122988 & 0x9000)
+        {
+            func_800A3938(0x7D, 0x80);
+            D_8016B8E8 -= 1;
+            if (D_8016B8E8 < 0)
+            {
+                D_8016B8E8 = 0xB;
+            }
+            return;
+        }
+
+        if (D_80122988 & 0x6000)
+        {
+            func_800A3938(0x7D, 0x80);
+            D_8016B8E8 += 1;
+            if (D_8016B8E8 == 0xC)
+            {
+                D_8016B8E8 = 0;
+            }
+            return;
+        }
+
+        if (D_80122988 & 0x220)
+        {
+            func_800A3938(0x7D, 0x80);
+            if (D_80174A58 == 0)
+            {
+                return;
+            }
+            if (D_80174A58(0) == 0)
+            {
+                return;
+            }
+            func_80067F28();
+            func_80143B64();
+            return;
+        }
+
+        if (D_80122988 & 0x40)
+        {
+            func_800A3938(0x7D, 0x80);
+            if (D_80174A58 == 0)
+            {
+                return;
+            }
+            if (D_80174A58(1) == 0)
+            {
+                return;
+            }
+            func_80067F28();
+            func_80143B64();
+            return;
+        }
+
+        return;
+    }
+
+    if (D_8016B8E0 != 0)
+    {
+        return;
+    }
+
+    repeat = 1;
+    if (D_80122988 & 8)
+    {
+        repeat = g_gosub_visible_row_count;
+        D_80122988 = 0x4000;
+    }
+    if (D_80122988 & 4)
+    {
+        repeat = g_gosub_visible_row_count;
+        D_80122988 = 0x1000;
+    }
+
+    if (repeat != 0)
+    {
+        do
+        {
+            if (D_80122988 & 0x1000)
+            {
+                g_gosub_cursor_row -= 1;
+                if (g_gosub_cursor_row == 0)
+                {
+                    repeat = 1;
+                }
+                if (g_gosub_cursor_row < 0)
+                {
+                    g_gosub_cursor_row = g_gosub_row_count - 1;
+                    repeat = 1;
+                }
+            }
+            if (D_80122988 & 0x4000)
+            {
+                g_gosub_cursor_row += 1;
+                if (g_gosub_cursor_row == g_gosub_row_count - 1)
+                {
+                    repeat = 1;
+                }
+                if (g_gosub_cursor_row >= g_gosub_row_count)
+                {
+                    g_gosub_cursor_row = 0;
+                    repeat = 1;
+                }
+            }
+            repeat -= 1;
+        } while (repeat != 0);
+    }
+
+    if (D_80122988 & 0x5000)
+    {
+        func_800A3938(0x7D, 0x80);
+        func_801438F0();
+        return;
+    }
+
+    if (D_80122988 & 0x220)
+    {
+        func_800A3938(0x7D, 0x80);
+        if ((g_gosub_rows[g_gosub_cursor_row].kind & 0xF) != 4)
+        {
+            return;
+        }
+        if (func_8014397C() != 0)
+        {
+            g_gosub_selected_rows[g_gosub_selection_count] = g_gosub_cursor_row;
+            g_gosub_selection_count += 1;
+            if (g_gosub_select_handler != 0)
+            {
+                if (g_gosub_select_handler() == 0)
+                {
+                    return;
+                }
+                if (func_80143A28() == 0)
+                {
+                    return;
+                }
+                func_80067F28();
+                func_80143B64();
+                return;
+            }
+            if (g_gosub_selection_count != g_gosub_required_selection_count)
+            {
+                return;
+            }
+            if (g_gosub_finish_handler == 0)
+            {
+                return;
+            }
+            if (g_gosub_finish_handler() == 0)
+            {
+                return;
+            }
+            if (func_80143A28() == 0)
+            {
+                return;
+            }
+            func_80067F28();
+            func_80143B64();
+            return;
+        }
+        if (g_gosub_select_handler == 0)
+        {
+            return;
+        }
+        if (g_gosub_select_handler() == 0)
+        {
+            return;
+        }
+        if (func_80143A28() == 0)
+        {
+            return;
+        }
+        func_80067F28();
+        func_80143B64();
+        return;
+    }
+
+    if (D_80122988 & 0x800)
+    {
+        func_800A3938(0x7D, 0x80);
+        if (g_gosub_finish_handler != 0)
+        {
+            if (g_gosub_finish_handler() == 0)
+            {
+                return;
+            }
+            if (func_80143A28() == 0)
+            {
+                return;
+            }
+            func_80067F28();
+            func_80143B64();
+            return;
+        }
+        if (func_80143A28() == 0)
+        {
+            return;
+        }
+        func_80067F28();
+        func_80143B64();
+        return;
+    }
+
+    if ((D_80122988 & 0x40) == 0)
+    {
+        return;
+    }
+
+    func_800A3938(0x7F, 0x80);
+
+    if (g_gosub_selection_count != 0)
+    {
+        g_gosub_selection_count -= 1;
+        g_gosub_cursor_row = g_gosub_selected_rows[g_gosub_selection_count];
+        func_801438F0();
+        if (g_gosub_select_handler != 0)
+        {
+            g_gosub_select_handler();
+        }
+        return;
+    }
+
+    if (g_gosub_screen_sequence_index != 0)
+    {
+        g_gosub_screen_sequence_index -= 1;
+        gosub_enter_screen(g_gosub_screen_sequence[g_gosub_screen_sequence_index]);
+        D_801228F0 -= 1;
+        row = g_gosub_result_rows[D_801228F0];
+        g_gosub_cursor_row = row;
+        D_80170988 = g_gosub_row_height * row;
+        top = (g_gosub_row_count * g_gosub_row_height) - g_gosub_window_height + 4;
+        if (top < D_80170988)
+        {
+            D_80170988 = top;
+        }
+        if (D_80170988 < 0)
+        {
+            D_80170988 = 0;
+        }
+        D_8016B8E0 = 0;
+        D_80170990 = D_80170988;
+        return;
+    }
+
+    D_801228F0 = 0;
+    func_80067F28();
+    func_80143B64();
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_801438F0(void)
+{
+    s32 offset;
+    s32 top;
+
+    top = g_gosub_cursor_row * g_gosub_row_height;
+    offset = top - D_80170988;
+
+    if ((g_gosub_window_height - g_gosub_row_height) < offset)
+    {
+        D_8016B8E0 = 4;
+        D_80170990 = (g_gosub_cursor_row - (g_gosub_visible_row_count - 1)) * g_gosub_row_height;
+    }
+
+    if (offset < 0)
+    {
+        D_80170990 = top;
+        D_8016B8E0 = 4;
+    }
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_8014397C(void)
+{
+    s32 i;
+    s32 j;
+
+    if (D_8016B8F0 != 0)
+    {
+        return 1;
+    }
+
+    for (i = 0; i < g_gosub_selection_count; i++)
+    {
+        if (g_gosub_selected_rows[i] == g_gosub_cursor_row)
+        {
+            for (j = i; j < 3; j++)
+            {
+                g_gosub_selected_rows[j] = g_gosub_selected_rows[j + 1];
+            }
+            g_gosub_selection_count -= 1;
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80143A28(void)
+{
+    GosubElement* p;
+
+    g_gosub_screen_sequence_index += 1;
+
+    if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == 0xFE)
+    {
+        return 1;
+    }
+
+    if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == 0xFF)
+    {
+        p = &g_gosub_fixed_element;
+        p->handler = (void*)&func_80145F80;
+        D_8016B8E8 = 0;
+        p->attr.f.unk0_0 = 1;
+        p->attr.f.unk0_3 = 1;
+        p->attr.f.x = 0x20;
+        p->attr.f.unk0_16 = 0x70;
+        p->unk4_0 = 1;
+        p->y = 0x24;
+        SET_ELEM_CODE(p, 0);
+    }
+    else
+    {
+        gosub_enter_screen(g_gosub_screen_sequence[g_gosub_screen_sequence_index]);
+    }
+
+    return 0;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80143B10(void)
+{
+    GosubElement* p;
+    s32 i;
+
+    p = &g_gosub_fixed_element;
+
+    for (i = 0; i < 0x10; i++)
+    {
+        if (p->attr.f.unk0_0 == 1 || p->attr.f.unk0_0 == 3)
+        {
+            return 0;
+        }
+        p++;
+    }
+
+    return 1;
 }
