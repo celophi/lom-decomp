@@ -12,6 +12,7 @@ typedef signed short s16;
 
 void func_80142C64(); /* extern */
 s32 func_80143310(); /* extern */
+void func_801438F0(); /* extern */
 void func_80143B64(); /* extern */
 void func_80143BB0(); /* extern */
 void func_80145CEC(); /* extern */
@@ -777,4 +778,28 @@ s32 func_80143310()
     D_801228F0 = 0;
     func_80067F28();
     func_80143B64();
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_801438F0(void)
+{
+    s32 offset;
+    s32 top;
+
+    top = g_gosub_cursor_row * g_gosub_row_height;
+    offset = top - D_80170988;
+
+    if ((g_gosub_window_height - g_gosub_row_height) < offset)
+    {
+        D_8016B8E0 = 4;
+        D_80170990 = (g_gosub_cursor_row - (g_gosub_visible_row_count - 1)) * g_gosub_row_height;
+    }
+
+    if (offset < 0)
+    {
+        D_80170990 = top;
+        D_8016B8E0 = 4;
+    }
 }
