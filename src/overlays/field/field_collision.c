@@ -352,8 +352,9 @@ void func_8005DA7C(Move_Probe*, Move_UnkNode1*, s32*, s32*);
 
 /**
  * @see decomp.me (57.91%) https://decomp.me/scratch/N2GNJ
- * @note local objdiff 80.21% (gcc280_g4_noexpanddiv), 2026-07-02 - active
- *       matching scratch is working/func_8005B6AC.c.
+ * @note local objdiff 84.66% (gcc280_g4_noexpanddiv), 2026-08-08 - active
+ *       matching scratch is working/func_8005B6AC/code.c; see
+ *       working/func_8005B6AC/STATUS.md for the open leads.
  */
 s32 func_8005B6AC(Move_Mover* a0) {
     Move_Probe probe;
@@ -409,12 +410,14 @@ s32 func_8005B6AC(Move_Mover* a0) {
     s16 temp_v1_8;
     s16 temp_v1_9;
     s32 var_a1;
+    s32 k_blocked;
     s32 var_a3_2;
     s16 var_s0_3;
     s16 var_s1_3;
     s32 e_x_min;
     s32 f_x_min;
     s32 f_x_max;
+    s32 f_x_max_2;
     s32 f_y_min;
     s32 f_y_max;
     s32 var_s2;
@@ -585,6 +588,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
     void* temp_t5_4;
     void* temp_t6;
     void* var_fp;
+    void* var_fp_2;
 
     sp48 = 0;
     sp4C = 0;
@@ -617,7 +621,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
             if (var_v0_5 < 0) {
                 var_v0_5 += 0xFF;
             }
-            var_fp = sp2C;
+            var_fp = sp28->nodes;
             probe.y = var_v0_5 >> 8;
             ux = (u16) probe.x;
             uy = (u16) probe.y;
@@ -638,8 +642,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                         if (((s16) ux < (((Move_UnkS16*)var_s1)->unk0 + (s16) temp_a1)) || ((((Move_UnkS16*)var_s1)->unk2 + (s16) temp_a1) < (s16) ux)) {
                                             var_s1 += 4;
                                         } else {
-                                            var_t8 = 1;
-                                            break;
+                                            goto a_hit;
                                         }
                                     } while (--var_s0 != -1);
                                 }
@@ -650,12 +653,15 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                         if (((s16) ux < ((Move_UnkS16*)var_s1)->unk0) || (((Move_UnkS16*)var_s1)->unk2 < (s16) ux)) {
                                             var_s1 += 4;
                                         } else {
-                                            var_t8 = 1;
-                                            break;
+                                            goto a_hit;
                                         }
                                     } while (--var_s0_2 != -1);
                                 }
                             }
+                                goto a_done;
+                            a_hit:
+                                var_t8 = 1;
+                            a_done:
                             if (var_t8 != 0) {
                                 temp_v1_3 = ((Move_UnkNode2*)temp_s6)->unk4 & 3;
                                 switch (temp_v1_3) { /* switch 1; irregular */
@@ -670,26 +676,27 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                         } else {
                                             temp_v1_5 = ((Move_UnkNode2*)temp_s6)->unk10 + (s16) temp_v0;
                                             if (temp_v1_5 >= var_s2) {
+                                                var_fp_2 = var_fp;
                                                 var_s2 = temp_v1_5;
-                                                a0->unk1C = var_fp;
+                                                a0->unk1C = var_fp_2;
                                             }
                                         }
                                     }
                                     break;
                                 case 1:             /* switch 1 */
                                     if ((((Move_UnkNode2*)temp_s6)->unk14 + (s16) temp_v0) < (s16) sp38) {
-                                        temp_s0 = func_8005DFAC(var_fp, &probe.x);
+                                        temp_s0 = func_8005DFAC(var_fp_2, &probe.x);
                                         if (var_a3 != 0) {
                                             var_a3 = 1;
                                             if (var_s2 < temp_s0) {
                                                 var_s2 = temp_s0;
-                                                a0->unk1C = var_fp;
+                                                a0->unk1C = var_fp_2;
                                             }
                                         } else {
                                             var_a3 = 1;
                                             if (var_s2 < (temp_s0 + 0x14)) {
                                                 var_s2 = temp_s0;
-                                                a0->unk1C = var_fp;
+                                                a0->unk1C = var_fp_2;
                                             }
                                         }
                                     }
@@ -904,11 +911,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
                 var_t8 = 1;
             }
         }
-        if ((sp20 == 0) && (var_t8 == 0)) {
-            var_v1 = a0->unk8 + a0->unk14;
-            a0->unk0 = (s32) (a0->unk0 + a0->unkC);
-            a0->unk8 = var_v1;
-        } else {
+        if ((sp20 != 0) || (var_t8 != 0)) {
         temp_a1_3 = a0->unkC;
         if (temp_a1_3 == 0) {
             sp58 = 0xC00;
@@ -1135,6 +1138,7 @@ s32 func_8005B6AC(Move_Mover* a0) {
             var_t8 = 0;
             var_t0 = 0;
             var_a3_2 = 0;
+            k_blocked = 0x8000;
             sp68 = (void** )0x801E1100;
             temp_a0_11 = sp28->header;
             temp_v1_15 = temp_s0_5 + (u16) a0->unk28;
@@ -1191,9 +1195,10 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                 temp_lo_4 = (var_t1_2 - temp_a0_14) * ((u8*)temp_s6_5)[6];
                                 var_s0_9 = var_s0_8 - var_t1_2;
                                 var_s1_4 = (u8*)((Move_UnkNode1*)var_fp)->unk10 + (temp_lo_4 * 4);
+                                f_x_max_2 = f_x_max;
                                 var_s4_2 = (u8*)((Move_UnkNode1*)var_fp)->unk14 + (temp_lo_4 * 2);
                                 if (var_s0_9 != -1) {
-                                    temp_s7 = f_x_max - 1;
+                                    temp_s7 = f_x_max_2 - 1;
                                     do {
                                         var_t7 = ((u8*)temp_s6_5)[6] - 1;
                                         if (var_t7 != -1) {
@@ -1211,8 +1216,8 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                                             var_a0 = 0;
                                                             if ((f_x_min < temp_v1_18) && !(*var_s4_2 & 0x80)) {
                                                                 var_a2 = 1;
-                                                                if (temp_a1_5 >= f_x_max) {
-                                                                    var_a0 = temp_v1_18 - f_x_max;
+                                                                if (temp_a1_5 >= f_x_max_2) {
+                                                                    var_a0 = temp_v1_18 - f_x_max_2;
                                                                 }
                                                             } else {
                                                                 temp_v1_19 = *(s16*)var_t3;
@@ -1230,8 +1235,8 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                                             var_a2 = 1;
                                                             temp_v1_20 = temp_v1_18 + spAC;
                                                             var_a0 = 0;
-                                                            if ((f_x_min < temp_v1_20) && ((temp_a1_5 + spAC) >= f_x_max)) {
-                                                                var_a0 = temp_v1_20 - f_x_max;
+                                                            if ((f_x_min < temp_v1_20) && ((temp_a1_5 + spAC) >= f_x_max_2)) {
+                                                                var_a0 = temp_v1_20 - f_x_max_2;
                                                             } else if ((*(s16*)var_s1_4 + spAC) < f_x_min) {
                                                                 temp_v1_21 = *(s16*)var_t3 + spAC;
                                                                 if (temp_v1_21 < temp_s7) {
@@ -1269,14 +1274,14 @@ s32 func_8005B6AC(Move_Mover* a0) {
                                                                         }
                                                                     }
                                                                 }
-                                                                if (var_a3_2 != 0x8000) {
+                                                                if (var_a3_2 != k_blocked) {
                                                                     if (var_a1 > 0) {
                                                                         if (var_a3_2 >= 0) {
                                                                             if (var_a3_2 < var_a1) {
                                                                                 var_a3_2 = var_a1;
                                                                             }
                                                                         } else {
-                                                                            var_a3_2 = 0x8000;
+                                                                            var_a3_2 = k_blocked;
                                                                         }
                                                                     } else if (var_a3_2 <= 0) {
                                                                         if (var_a1 < var_a3_2) {
@@ -1316,12 +1321,12 @@ s32 func_8005B6AC(Move_Mover* a0) {
             temp_a0_15 = var_t0 << 8;
             if (sp20 == 1) {
                 temp_a1_6 = var_a3_2 << 8;
-                if ((var_t0 == 0) || (var_t0 == 0x8000)) {
-                    if (var_a3_2 != 0x8000) {
+                if ((var_t0 == 0) || (var_t0 == k_blocked)) {
+                    if (var_a3_2 != k_blocked) {
                         sp60 += temp_a1_6;
                     }
                     break;
-                } else if ((var_a3_2 == 0) || (var_a3_2 == 0x8000)) {
+                } else if ((var_a3_2 == 0) || (var_a3_2 == k_blocked)) {
                     sp5C += temp_a0_15;
                     break;
                 } else {
@@ -1370,15 +1375,11 @@ s32 func_8005B6AC(Move_Mover* a0) {
             var_t8 = 0;
             if (sp20 == 0) {
                 temp_a2_3 = sp28->header;
-                if ((((Move_UnkNode3*)temp_a2_3)->unk2C & 2) && ((temp_a0_16 = (u16) a0->unk24, temp_a1_7 = (u16) a0->unk28, temp_a3_2 = (u16) probe.x - ((s32) ((s16) temp_a0_16 + ((u32) (temp_a0_16 << 0x10) >> 0x1F)) >> 1), temp_v0_14 = (u16) probe.y - ((s32) ((s16) temp_a1_7 + ((u32) (temp_a1_7 << 0x10) >> 0x1F)) >> 1), (temp_v0_14 & 0x8000)) || ((s16) (temp_v0_14 + temp_a1_7) >= ((Move_UnkNode3*)temp_a2_3)->unk32) || (temp_a3_2 & 0x8000) || ((s16) (temp_a3_2 + temp_a0_16) >= ((Move_UnkNode3*)temp_a2_3)->unk30))) {
+                if ((((Move_UnkNode3*)temp_a2_3)->unk2C & 2) && ((temp_a0_16 = (u16) a0->unk24, temp_a1_7 = (u16) a0->unk28, temp_a3_2 = (u16) probe.x - ((s32) ((s16) temp_a0_16 + ((u32) (temp_a0_16 << 0x10) >> 0x1F)) >> 1), temp_v0_14 = (u16) probe.y - ((s32) ((s16) temp_a1_7 + ((u32) (temp_a1_7 << 0x10) >> 0x1F)) >> 1), (temp_v0_14 & k_blocked)) || ((s16) (temp_v0_14 + temp_a1_7) >= ((Move_UnkNode3*)temp_a2_3)->unk32) || (temp_a3_2 & k_blocked) || ((s16) (temp_a3_2 + temp_a0_16) >= ((Move_UnkNode3*)temp_a2_3)->unk30))) {
                     var_t8 = 1;
                 }
             }
-            if ((sp20 == 0) && (var_t8 == 0)) {
-                a0->unk0 = (s32) (a0->unk0 + sp5C);
-                var_v1 = a0->unk8 + sp60;
-                a0->unk8 = var_v1;
-            } else {
+            if ((sp20 != 0) || (var_t8 != 0)) {
                 var_v0_30 = a0->unk0;
                 if (var_v0_30 < 0) {
                     var_v0_30 += 0xFF;
@@ -1391,6 +1392,9 @@ s32 func_8005B6AC(Move_Mover* a0) {
                 probe.y = var_v0_31 >> 8;
                 func_8005DA7C(&probe, sp2C, &sp20, &sp24);
                 sp50 |= 3;
+            } else {
+                a0->unk0 = (s32) (a0->unk0 + sp5C);
+                a0->unk8 = (s32) (a0->unk8 + sp60);
             }
         } else {
             var_v0_32 = a0->unk0;
@@ -1406,6 +1410,9 @@ s32 func_8005B6AC(Move_Mover* a0) {
             func_8005DA7C(&probe, sp2C, &sp20, &sp24);
             sp50 |= 3;
         }
+        } else {
+            a0->unk0 = (s32) (a0->unk0 + a0->unkC);
+            a0->unk8 = (s32) (a0->unk8 + a0->unk14);
         }
         var_s7 = 0xFFFFFF;
         var_s2 = 0;
@@ -6715,8 +6722,8 @@ void func_8006312C(void)
 typedef struct
 {
     /** 0x00 character budget for the expansion; -1 means unlimited. */
-    u16 unk0;
-    u8 _pad2[2];
+    u8 unk0;
+    u8 _pad1[3];
     /** 0x04 the replacement string itself. */
     u8* unk4;
 } FieldTextMacro;
@@ -6762,7 +6769,7 @@ typedef struct
     u8 _pad4A[2];
     /** 0x4C remaining character budget of the active macro expansion; -1
         disables the countdown. */
-    u16 unk4C;
+    s16 unk4C;
     u8 _pad4E[4];
     u16 unk52;
     u8 _pad54[2];
@@ -6797,7 +6804,7 @@ extern u8 D_801E26E0[];
 
 void func_8006429C(FieldTextState*);
 void func_8006700C(FieldTextState*, s32, u8);
-void func_80063B6C(FieldTextState*, s32, s32);
+void func_80063B6C(FieldTextState*, s32, u16);
 s32 func_80064210(FieldTextState*);
 
 /**
@@ -6886,22 +6893,7 @@ void func_80063194(void)
  * @param st Text-window state; its cursor stack is advanced in place.
  * @param arg1 Budget of characters to emit before returning.
  *
- * @note NOT MATCHED - 88.04% (310/547 exact rows). The STRUCTURE is complete:
- *       instruction count, frame size and every sp slot already agree and the
- *       diff has zero structural runs. Everything outstanding is one 3-way
- *       saved-register rotation: the target holds cur/masked-code/st in
- *       s0/s1/s2 where this holds st/cur/masked-code, and advance/fresh are
- *       swapped on s5/s6. gcc 2.8 orders allocnos by
- *       floor_log2(refs)*refs/live_len and MIPS defines no REG_ALLOC_ORDER, so
- *       the fix is a live-range nudge ([ALLOC-19] denominator lever), not a
- *       rewrite - both rivals are within 2 instructions of flipping. The
- *       measured dead ends are listed in working/func_800632E0/status.md;
- *       naming the mask, m2c's two defs of it, and every permuter candidate
- *       (89k iterations) all measure zero.
- * @note The repeated `look_exp = look;` after `look = NULL;` is required: it is
- *       what keeps the NULL store live, since `look` is otherwise immediately
- *       overwritten and gcc deletes four instructions.
- * @see decomp.me (88.04%) TODO
+ * @see decomp.me (97.19%) TODO
  */
 void func_800632E0(FieldTextState* st, s32 arg1)
 {
@@ -6933,9 +6925,9 @@ void func_800632E0(FieldTextState* st, s32 arg1)
     u16 nc;
     u16 nc2;
 
-    four = 4;
     remaining = arg1;
     width = 0;
+    advance = 0;
     first = 1;
     y = st->unk5E;
     x = (st->unk5C + st->unk52) - st->unk5A;
@@ -6958,481 +6950,470 @@ void func_800632E0(FieldTextState* st, s32 arg1)
     {
         fresh = 0;
     }
-    advance = 0;
+    four = 4;
 
-next_line:
-    cur = st->unk8;
-    if (cur == NULL)
+    while (1)
     {
-        cur = st->unk4;
+        cur = st->unk8;
         if (cur == NULL)
         {
-            cur = st->unk0;
-        }
-    }
-    code = 0;
-
-next_char:
-    if (st->unk19 != 0)
-    {
-        code = 0x20;
-        width = 5;
-        advance = 0;
-        st->unk19 = st->unk19 - 1;
-        goto have_code;
-    }
-    c = *cur;
-    cur++;
-    if (c < 0x20)
-    {
-        if (c != 0x19)
-        {
-        switch (c)
-        {
-        case 0:
-            if (st->unk8 != NULL)
+            cur = st->unk4;
+            if (cur == NULL)
             {
-                goto pop_run;
-            }
-            if (st->unk4 != NULL)
-            {
-                goto pop_expand;
-            }
-            if (st->unk18 != 0)
-            {
-                goto set_wide;
-            }
-            st->unk14 = 1;
-            goto set_break;
-        case 6:
-            if (st->unk8 != NULL)
-            {
-            pop_run:
-                cur = st->unk4;
-                st->unk8 = NULL;
-                if (cur == NULL)
-                {
-                    cur = st->unk0;
-                    v1 = code;
-                    goto have_v1;
-                }
-                goto have_code;
-            }
-            if (st->unk4 != NULL)
-            {
-            pop_expand:
                 cur = st->unk0;
-                st->unk4 = NULL;
-                goto have_code;
             }
-            st->unk0 = NULL;
-            if (st->unk10 & 0x1000)
-            {
-                func_8006700C(st, 1, c);
-                return;
-            }
-            break;
-        case 1:
-            fresh = 1;
-            if (func_80064210(st) == 1)
-            {
-                goto store_and_return;
-            }
-            st->unk49 = 0;
-            goto have_code;
-        case 2:
-            st->unk14 = 3;
-            goto set_break;
-        case 3:
-            st->unk14 = 2;
-            goto set_break;
-        case 4:
-            if (first != 0)
-            {
-                func_8006429C(st);
-                goto store_and_return;
-            }
-            break;
-        case 5:
-            st->unk14 = four;
-            goto set_break;
-        case 7:
-            if (st->unk18 == 0)
-            {
-                st->unk16 = st->unk15;
-            }
-            st->unk18 = st->unk18 + 1;
-            goto have_code;
-        case 8:
-            st->unk19 = 2;
-            goto have_code;
-        case 9:
-            st->unk19 = 3;
-            goto have_code;
-        case 10:
-            st->unk19 = four;
-            goto have_code;
-        case 11:
-            st->unk19 = *cur;
-            cur++;
-            goto have_code;
-        case 12:
-            st->unk1A = four;
-            goto store_and_return;
-        case 13:
-            st->unk1A = *cur;
-            cur++;
-            goto store_and_return;
-        case 14:
-            st->unk0 = cur + 1;
-            rec = &D_80122B80[*cur];
-            cur = rec->unk4;
-            st->unk4 = cur;
-            st->unk4C = rec->unk0;
-            goto have_code;
-        case 15:
-            st->unk0 = cur;
-            cur = st->unk20;
-            st->unk4 = cur;
-            st->unk4C = -1;
-            goto have_code;
-        case 16:
-            st->unk1B = *cur;
-            cur++;
-            goto have_code;
-        case 17:
-            st->unk1B = 0;
-            goto have_code;
-        case 19:
-            v1 = code;
-            if (fresh != 0)
-            {
-                code = 0xFFFF;
-                width = 0xC;
-                advance = 1;
-                goto have_code;
-            }
-            goto have_v1;
-        case 18:
-            cur++;
-            if (*cur == 0)
+        }
+        code = 0;
+
+        while (1)
+        {
+            if (st->unk19 != 0)
             {
                 code = 0x20;
                 width = 5;
-                advance = 2;
-            }
-            /* fallthrough */
-        case 31:
-            c = *cur + 0x1F;
-            cur++;
-            goto run_lookup;
-        default:
-        run_lookup:
-            if (st->unk4 != NULL)
-            {
-                st->unk4 = cur;
+                advance = 0;
+                st->unk19 = st->unk19 - 1;
             }
             else
             {
-                st->unk0 = cur;
-            }
-            cur = (u8*) 0x801E2780 + ((u16*) 0x801E2758)[c];
-            st->unk8 = cur;
-            goto have_code;
-        }
-        goto have_code;
-        }
-        else
-        {
-            code = *cur | ((c + 0xFFE8) << 8);
-            cur++;
-            advance = 2;
-            goto classify;
-        }
-    }
-    else
-    {
-        code = c;
-        advance = 1;
-    }
-
-classify:
-    v1 = code;
-    if (v1 == 0x80)
-    {
-        width = 0xC;
-    }
-    else if (v1 >= 0x80)
-    {
-        width = 9;
-    }
-    else
-    {
-        width = D_801E26E0[v1];
-    }
-
-have_code:
-    v1 = code;
-
-have_v1:
-    if ((v1 == 0x20) || (v1 == 0x80))
-    {
-        if (st->unk5A < width)
-        {
-            st->unk49 = 1;
-            code = 0;
-        }
-    }
-    if (code == 0)
-    {
-        goto next_char;
-    }
-    if (st->unk5A < width)
-    {
-        fresh = 1;
-        if (func_80064210(st) == 1)
-        {
-            return;
-        }
-        st->unk49 = 0;
-    }
-    flag = st->unk49;
-    if ((code == 0x20) || (code == 0x80) || (code == 0xFFFF))
-    {
-        st->unk49 = 1;
-        goto advance_cursor;
-    }
-    look_width = width;
-    if (flag != 0)
-    {
-        look_adv = advance;
-        look = cur;
-        look_str = st->unk0;
-        look_exp = st->unk4;
-        look_run = st->unk8;
-        look_count = st->unk4C;
-    look_top:
-        {
-            if (look_run != NULL)
-            {
-                look_run = look;
-            }
-            else if (look_exp != NULL)
-            {
-                nc = look_count - look_adv;
-                if ((s16) look_count != -1)
+                c = *cur;
+                cur++;
+                if ((c < 0x20) && (c != 0x19))
                 {
-                    look_count = nc;
-                    look_exp = look;
-                    if ((nc << 16) <= 0)
+                    switch (c)
                     {
-                        look = NULL;
-                        look_exp = look;
+                    case 0:
+                        if (st->unk8 != NULL)
+                        {
+                            goto pop_run;
+                        }
+                        if (st->unk4 != NULL)
+                        {
+                            goto pop_expand;
+                        }
+                        if (st->unk18 != 0)
+                        {
+                            goto set_wide;
+                        }
+                        st->unk14 = 1;
+                        goto set_break;
+                    case 6:
+                        if (st->unk8 != NULL)
+                        {
+                        pop_run:
+                            cur = st->unk4;
+                            st->unk8 = NULL;
+                            if (cur == NULL)
+                            {
+                                cur = st->unk0;
+                                v1 = code;
+                                goto have_v1;
+                            }
+                            break;
+                        }
+                        if (st->unk4 != NULL)
+                        {
+                        pop_expand:
+                            cur = st->unk0;
+                            st->unk4 = NULL;
+                            break;
+                        }
+                        st->unk0 = NULL;
+                        if (st->unk10 & 0x1000)
+                        {
+                            func_8006700C(st, 1, c);
+                        }
+                        return;
+                    case 1:
+                        if (func_80064210(st) == 1)
+                        {
+                            goto store_and_return;
+                        }
+                        fresh = 1;
+                        st->unk49 = 0;
+                        break;
+                    case 2:
+                        st->unk14 = 3;
+                        goto set_break;
+                    case 3:
+                        st->unk14 = 2;
+                        goto set_break;
+                    case 4:
+                        if (first == 0)
+                        {
+                            return;
+                        }
+                        func_8006429C(st);
+                        goto store_and_return;
+                    case 5:
+                        st->unk14 = four;
+                        goto set_break;
+                    case 7:
+                        if (st->unk18 == 0)
+                        {
+                            st->unk16 = st->unk15;
+                        }
+                        st->unk18 = st->unk18 + 1;
+                        break;
+                    case 8:
+                        st->unk19 = 2;
+                        break;
+                    case 9:
+                        st->unk19 = 3;
+                        break;
+                    case 10:
+                        st->unk19 = four;
+                        break;
+                    case 11:
+                        st->unk19 = *cur;
+                        cur++;
+                        break;
+                    case 12:
+                        st->unk1A = four;
+                        goto store_and_return;
+                    case 13:
+                        st->unk1A = *cur;
+                        cur++;
+                        goto store_and_return;
+                    case 14:
+                        c = *cur;
+                        cur++;
+                        st->unk0 = cur;
+                        rec = &D_80122B80[c];
+                        cur = rec->unk4;
+                        st->unk4 = cur;
+                        st->unk4C = rec->unk0;
+                        break;
+                    case 15:
+                        st->unk0 = cur;
+                        st->unk4 = st->unk20;
+                        cur = st->unk20;
+                        st->unk4C = -1;
+                        break;
+                    case 16:
+                        st->unk1B = *cur;
+                        cur++;
+                        break;
+                    case 17:
+                        st->unk1B = 0;
+                        break;
+                    case 19:
+                        v1 = code;
+                        if (fresh != 0)
+                        {
+                            code = 0xFFFF;
+                            width = 0xC;
+                            advance = 1;
+                            break;
+                        }
+                        goto have_v1;
+                    case 18:
+                        c = *cur;
+                        cur++;
+                        if (c == 0)
+                        {
+                            code = 0x20;
+                            width = 5;
+                            advance = 2;
+                        }
+                        /* fallthrough */
+                    case 31:
+                        c = *cur + 0x1F;
+                        cur++;
+                        /* fallthrough */
+                    default:
+                        if (st->unk4 != NULL)
+                        {
+                            st->unk4 = cur;
+                        }
+                        else
+                        {
+                            st->unk0 = cur;
+                        }
+                        st->unk8 = (u8*) 0x801E2780 + ((u16*) 0x801E2758)[c];
+                        cur = st->unk8;
+                        break;
                     }
                 }
                 else
                 {
-                    look_exp = look;
-                }
-            }
-            else
-            {
-                look_str = look;
-            }
-            look = look_run;
-            look_code = 0;
-            if (look == NULL)
-            {
-                look = look_str;
-                if (look_exp != NULL)
-                {
-                    look = look_exp;
-                }
-            }
-        look_next:
-            look_c = *look;
-            look++;
-            if (look_c < 0x20)
-            {
-                if (look_c != 0x19)
-                {
-                switch (look_c)
-                {
-                case 0:
-                case 6:
-                    if (look_run != NULL)
+                    if (c >= 0x20)
                     {
-                        look_run = NULL;
-                        look = look_str;
-                        if (look_exp != NULL)
-                        {
-                            look = look_exp;
-                        }
-                    }
-                    else if (look_exp != NULL)
-                    {
-                        look_exp = NULL;
-                        look = look_str;
+                        code = c;
+                        advance = 1;
                     }
                     else
                     {
-                        flag = 0;
+                        code = *cur | ((c + 0xFFE8) << 8);
+                        cur++;
+                        advance = 2;
                     }
-                    break;
-                case 14:
-                    look_str = look + 1;
-                    look_c = *look;
-                    rec = &D_80122B80[look_c];
-                    look = rec->unk4;
-                    look_count = rec->unk0;
-                    look_exp = look;
-                    break;
-                case 15:
-                    look_str = look;
-                    look = st->unk20;
-                    look_exp = look;
-                    look_count = -1;
-                    break;
-                case 18:
-                    look++;
-                    if (*look == 0)
+
+                    v1 = code;
+                    if (v1 == 0x80)
                     {
-                        flag = 0;
+                        width = 0xC;
                     }
-                    /* fallthrough */
-                case 31:
-                    look_c = *look + 0x1F;
-                    look++;
-                    goto look_run_lookup;
-                default:
-                look_run_lookup:
-                    if (look_exp != NULL)
+                    else if (v1 >= 0x80)
                     {
+                        width = 9;
+                    }
+                    else
+                    {
+                        width = D_801E26E0[v1];
+                    }
+                }
+            }
+
+            v1 = code;
+
+        have_v1:
+            if ((v1 == 0x20) || (v1 == 0x80))
+            {
+                if (st->unk5A < width)
+                {
+                    st->unk49 = 1;
+                    code = 0;
+                }
+            }
+            if (code == 0)
+            {
+                continue;
+            }
+            if (st->unk5A < width)
+            {
+                if (func_80064210(st) == 1)
+                {
+                    return;
+                }
+                fresh = 1;
+                st->unk49 = 0;
+            }
+            flag = st->unk49;
+            if ((code == 0x20) || (code == 0x80) || (code == 0xFFFF))
+            {
+                st->unk49 = 1;
+                break;
+            }
+            look_width = width;
+            if (flag != 0)
+            {
+                look_adv = advance;
+                look = cur;
+                look_str = st->unk0;
+                look_exp = st->unk4;
+                look_run = st->unk8;
+                look_count = st->unk4C;
+                do
+                {
+                    if (look_run != NULL)
+                    {
+                        look_run = look;
+                    }
+                    else if (look_exp != NULL)
+                    {
+                        nc = look_count - look_adv;
+                        if ((s16) look_count != -1)
+                        {
+                            look_count = nc;
+                            if ((nc << 16) <= 0)
+                            {
+                                look = NULL;
+                            }
+                        }
                         look_exp = look;
                     }
                     else
                     {
                         look_str = look;
                     }
-                    look = (u8*) 0x801E2780 + ((u16*) 0x801E2758)[look_c];
-                    look_run = look;
+                    look = look_run;
+                    look_code = 0;
+                    if (look == NULL)
+                    {
+                        look = look_str;
+                        if (look_exp != NULL)
+                        {
+                            look = look_exp;
+                        }
+                    }
+                    while (1)
+                    {
+                        look_c = *look;
+                        look++;
+                        if ((look_c < 0x20) && (look_c != 0x19))
+                        {
+                            switch (look_c)
+                            {
+                            case 0:
+                            case 6:
+                                if (look_run != NULL)
+                                {
+                                    look_run = NULL;
+                                    look = look_str;
+                                    if (look_exp != NULL)
+                                    {
+                                        look = look_exp;
+                                    }
+                                }
+                                else if (look_exp != NULL)
+                                {
+                                    look_exp = NULL;
+                                    look = look_str;
+                                }
+                                else
+                                {
+                                    flag = 0;
+                                }
+                                break;
+                            case 14:
+                                look_str = look + 1;
+                                look_c = *look;
+                                rec = &D_80122B80[look_c];
+                                look = rec->unk4;
+                                look_count = rec->unk0;
+                                look_exp = look;
+                                break;
+                            case 15:
+                                look_str = look;
+                                look = st->unk20;
+                                look_exp = look;
+                                look_count = -1;
+                                break;
+                            case 18:
+                                look_c = *look;
+                                look++;
+                                if (look_c == 0)
+                                {
+                                    flag = 0;
+                                }
+                                /* fallthrough */
+                            case 31:
+                                look_c = *look + 0x1F;
+                                look++;
+                                /* fallthrough */
+                            default:
+                                if (look_exp != NULL)
+                                {
+                                    look_exp = look;
+                                }
+                                else
+                                {
+                                    look_str = look;
+                                }
+                                look = (u8*) 0x801E2780 + ((u16*) 0x801E2758)[look_c];
+                                look_run = look;
+                                break;
+                            }
+                            if (look_code != 0)
+                            {
+                                break;
+                            }
+                            if (flag != 0)
+                            {
+                                continue;
+                            }
+                            break;
+                        }
+                        if (look_c >= 0x20)
+                        {
+                            look_code = look_c;
+                            look_adv = 1;
+                        }
+                        else
+                        {
+                            look_code = *look | ((look_c + 0xFFE8) << 8);
+                            look++;
+                            look_adv = 2;
+                        }
+                        if (look_code != 0)
+                        {
+                            if ((look_code == 0x20) || (look_code == 0x80) || (look_code == 0xFFFF))
+                            {
+                                flag = 0;
+                            }
+                            else if (look_code >= 0x80)
+                            {
+                                look_width += 9;
+                            }
+                            else
+                            {
+                                look_width += D_801E26E0[look_code];
+                            }
+                            if (look_code != 0)
+                            {
+                                break;
+                            }
+                        }
+                        if (flag == 0)
+                        {
+                            break;
+                        }
+                    }
+                } while (flag != 0);
+
+                if (st->unk5A >= look_width)
+                {
                     break;
                 }
-                if (look_code != 0)
+                if (func_80064210(st) != 1)
                 {
-                    goto look_tail;
+                    fresh = 1;
+                    st->unk49 = 0;
+                    break;
                 }
-                if (flag != 0)
-                {
-                    goto look_next;
-                }
-                goto look_tail;
-                }
-                else
-                {
-                    look_code = *look | ((look_c + 0xFFE8) << 8);
-                    look++;
-                    look_adv = 2;
-                    goto look_classify;
-                }
+                return;
             }
-            look_code = look_c;
-            look_adv = 1;
-        look_classify:
-            if (look_code != 0)
-            {
-                if ((look_code == 0x20) || (look_code == 0x80) || (look_code == 0xFFFF))
-                {
-                    flag = 0;
-                }
-                else if (look_code >= 0x80)
-                {
-                    look_width += 9;
-                }
-                else
-                {
-                    look_width += D_801E26E0[look_code];
-                }
-                if (look_code != 0)
-                {
-                    goto look_tail;
-                }
-            }
-            if (flag != 0)
-            {
-                goto look_next;
-            }
-        look_tail:;
+            break;
         }
-        if (flag != 0)
-        {
-            goto look_top;
-        }
-        if (st->unk5A >= look_width)
-        {
-            goto advance_cursor;
-        }
-        fresh = 1;
-        if (func_80064210(st) != 1)
-        {
-            st->unk49 = 0;
-            goto advance_cursor;
-        }
-        return;
-    }
 
-advance_cursor:
-    if (st->unk8 != NULL)
-    {
-        st->unk8 = cur;
-    }
-    else if (st->unk4 != NULL)
-    {
-        if ((s16) st->unk4C != -1)
+        if (st->unk8 != NULL)
         {
-            nc2 = st->unk4C - advance;
-            st->unk4C = nc2;
-            if ((nc2 << 16) <= 0)
-            {
-                cur = NULL;
-            }
+            st->unk8 = cur;
         }
-        st->unk4 = cur;
-    }
-    else
-    {
-        st->unk0 = cur;
-    }
-    emit_w = width;
-    if (code == 0xFFFF)
-    {
-        code = 0x20;
-        width = 0xC;
-        if ((st->unkC == 0) || (st->unk10 & 0x30))
+        else if (st->unk4 != NULL)
         {
-            func_80063B6C(st, 0x20, 0xC);
-            emit_w = 0xC;
+            if ((s16) st->unk4C != -1)
+            {
+                nc2 = st->unk4C - advance;
+                st->unk4C = nc2;
+                if ((nc2 << 16) <= 0)
+                {
+                    cur = NULL;
+                }
+            }
+            st->unk4 = cur;
         }
         else
         {
-            emit_w = 0xC;
+            st->unk0 = cur;
         }
-    }
-    if (emit_w != 0)
-    {
-        func_80063B6C(st, code, emit_w);
-    }
-    if ((remaining != 0) && !(st->unk10 & 0x800) && ((fresh == 0) || (code != 0x20)))
-    {
-        first = 0;
-        remaining--;
-        fresh = 0;
-        if (remaining == 0)
+        emit_w = width;
+        if (code == 0xFFFF)
         {
-            return;
+            code = 0x20;
+            width = 0xC;
+            if ((st->unkC == 0) || (st->unk10 & 0x30))
+            {
+                func_80063B6C(st, 0x20, 0xC);
+            }
+            emit_w = width;
+        }
+        if (emit_w != 0)
+        {
+            func_80063B6C(st, code, emit_w);
+        }
+        if ((remaining != 0) && !(st->unk10 & 0x800) && ((fresh == 0) || (code != 0x20)))
+        {
+            first = 0;
+            remaining--;
+            fresh = 0;
+            if (remaining == 0)
+            {
+                return;
+            }
         }
     }
-    goto next_line;
 
 set_wide:
     st->unk14 = 0x10;
