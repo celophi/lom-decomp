@@ -11,7 +11,9 @@ typedef unsigned short u16;
 typedef signed short s16;
 
 void func_80142C64(); /* extern */
+void func_80143310(); /* extern */
 void func_80143B64(); /* extern */
+void func_80143BB0(); /* extern */
 void func_80145CEC(); /* extern */
 void func_80146468(); /* extern */
 void func_80146538(); /* extern */
@@ -46,6 +48,7 @@ extern s32 D_801227F0;
 extern s32 D_801229B0[];
 extern s32 D_8014F29C;
 extern s32 g_gosub_cursor_row;
+extern s32 g_gosub_finished;
 extern s32 g_gosub_row_count;
 extern s32 g_gosub_visible_row_count;
 extern u8 g_gosub_screen_sequence_index;
@@ -451,4 +454,27 @@ void func_80143054(s32 group)
     g_gosub_row_height = 0x10;
     g_gosub_window_width = 0xE8;
     g_gosub_window_height = 0x84;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80143258(s32 arg0)
+{
+    func_80143310(arg0);
+
+    if (g_gosub_finished == 0)
+    {
+        if (D_8016B8E0 != 0)
+        {
+            D_80170988 += (D_80170990 - D_80170988) / D_8016B8E0;
+            D_8016B8E0 -= 1;
+        }
+        else
+        {
+            D_80170988 = D_80170990;
+        }
+
+        func_80143BB0(arg0);
+    }
 }
