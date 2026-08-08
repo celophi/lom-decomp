@@ -14,6 +14,8 @@ void func_80142C64(); /* extern */
 s32 func_80143310(); /* extern */
 void func_801438F0(); /* extern */
 s32 func_8014397C(); /* extern */
+s32 func_80143A28(); /* extern */
+void func_80145F80(); /* extern */
 void func_80143B64(); /* extern */
 void func_80143BB0(); /* extern */
 void func_80145CEC(); /* extern */
@@ -155,6 +157,17 @@ extern GosubRange D_80140074;
     ((u8*)&D_8014F27C + (blk) + *(u16*)((u8*)&D_8014F27C + (blk) + (idx) * 2))
 
 #define GOSUB_MSG(off) func_80145CEC(GOSUB_MSG_PTR(off))
+
+/**
+ * @brief Set the top byte of an element's attr word.
+ *
+ * Must go through the whole word rather than an 8-bit bitfield; see the same
+ * macro in gosub.c.
+ *
+ * @param e Element to update.
+ * @param c New top-byte value.
+ */
+#define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 
 /**
  * decomp.me (99.94%) https://decomp.me/scratch/2OzmD
@@ -832,4 +845,39 @@ s32 func_8014397C(void)
     }
 
     return 1;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80143A28(void)
+{
+    GosubElement* p;
+
+    g_gosub_screen_sequence_index += 1;
+
+    if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == 0xFE)
+    {
+        return 1;
+    }
+
+    if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == 0xFF)
+    {
+        p = &g_gosub_fixed_element;
+        p->handler = (void*)&func_80145F80;
+        D_8016B8E8 = 0;
+        p->attr.f.unk0_0 = 1;
+        p->attr.f.unk0_3 = 1;
+        p->attr.f.x = 0x20;
+        p->attr.f.unk0_16 = 0x70;
+        p->unk4_0 = 1;
+        p->y = 0x24;
+        SET_ELEM_CODE(p, 0);
+    }
+    else
+    {
+        gosub_enter_screen(g_gosub_screen_sequence[g_gosub_screen_sequence_index]);
+    }
+
+    return 0;
 }
