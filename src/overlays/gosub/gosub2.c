@@ -13,6 +13,7 @@ typedef signed short s16;
 void func_80142C64(); /* extern */
 s32 func_80143310(); /* extern */
 void func_801438F0(); /* extern */
+s32 func_8014397C(); /* extern */
 void func_80143B64(); /* extern */
 void func_80143BB0(); /* extern */
 void func_80145CEC(); /* extern */
@@ -802,4 +803,33 @@ void func_801438F0(void)
         D_80170990 = top;
         D_8016B8E0 = 4;
     }
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_8014397C(void)
+{
+    s32 i;
+    s32 j;
+
+    if (D_8016B8F0 != 0)
+    {
+        return 1;
+    }
+
+    for (i = 0; i < g_gosub_selection_count; i++)
+    {
+        if (g_gosub_selected_rows[i] == g_gosub_cursor_row)
+        {
+            for (j = i; j < 3; j++)
+            {
+                g_gosub_selected_rows[j] = g_gosub_selected_rows[j + 1];
+            }
+            g_gosub_selection_count -= 1;
+            return 0;
+        }
+    }
+
+    return 1;
 }
