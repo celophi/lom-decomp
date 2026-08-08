@@ -62,7 +62,7 @@ overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/func_800674a8.c \
 	src/overlays/field/func_80067598.c \
 	src/overlays/field/func_80067b8c.c \
-	src/overlays/field/func_8006429c.c
+	src/overlays/field/field1.c
 
 OVERLAYS += gname
 overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/gname.c
