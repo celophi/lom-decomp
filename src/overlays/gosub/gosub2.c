@@ -105,12 +105,40 @@ extern u8 g_gosub_selected_rows[];
 extern u8 D_800EC3E2[];
 extern u32 D_8014F27C;
 extern u32 D_8014F280;
-extern u32 D_8014F288;
+extern u32 D_8014F288[];
 extern s32 D_8016B900;
 extern u8 D_8016B960[];
 extern u8* g_gosub_title_text;
 
+/**
+ * @brief A three-element range table indexed by gosub screen group.
+ *
+ * Held as a struct rather than a bare array because the game copies the whole
+ * table from rodata into a local before indexing it.
+ */
+typedef struct
+{
+    s32 v[3];
+} GosubRange;
+
+extern GosubRange D_80140068;
+extern GosubRange D_80140074;
+
 #define GOSUB_MSG_PTR(off) ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
+
+/**
+ * @brief Resolve one entry of a text archive block.
+ *
+ * The same lookup as gosub.c's ARCHIVE_ENTRY: a block begins with a u16 per
+ * entry giving that entry's offset from the archive base, so a lookup is
+ * base + block + block[idx].
+ *
+ * @param blk Block offset word, e.g. D_8014F288[0].
+ * @param idx Entry index within the block.
+ * @return Pointer to the entry.
+ */
+#define ARCHIVE_ENTRY(blk, idx) \
+    ((u8*)&D_8014F27C + (blk) + *(u16*)((u8*)&D_8014F27C + (blk) + (idx) * 2))
 
 #define GOSUB_MSG(off) func_80145CEC(GOSUB_MSG_PTR(off))
 
@@ -338,8 +366,8 @@ void func_80142C64(u32 arg0)
                     slot = rec + 0xCE0;
                     e->unk10 = slot[0x26];
                     e->unk12[0] = slot[0x25] + (slot[0x24] * 14);
-                    func_80146468(buf, (u8*)&D_8014F27C + D_8014F288 +
-                        *(u16*)((u8*)&D_8014F288 + D_8014F288 +
+                    func_80146468(buf, (u8*)&D_8014F27C + D_8014F288[0] +
+                        *(u16*)((u8*)D_8014F288 + D_8014F288[0] +
                             ((*(u32*)(rec + 0xCF4) >> 9) & 0x7E) + 0x22));
                     break;
                 }
@@ -379,4 +407,48 @@ void func_80142C64(u32 arg0)
     g_gosub_row_height = 0x10;
     g_gosub_window_width = 0xE8;
     g_gosub_window_height = (g_gosub_visible_row_count * 0x10) + 4;
+}
+/**
+ * @see decomp.me (100%)
+ */
+void func_80143054(s32 group)
+{
+    s32 i;
+    GosubRange first = D_80140068;
+    GosubRange total = D_80140074;
+
+    for (i = 0; i < total.v[group]; i++)
+    {
+        GosubListEntry* e = &g_gosub_rows[i];
+        u8* p;
+
+        e->name = ARCHIVE_ENTRY(D_8014F288[0], i + first.v[group]);
+        p = ARCHIVE_ENTRY(D_8014F288[0], i + first.v[group]);
+        e->name = p;
+        e->value = -1;
+        e->index = i;
+        e->unkC_28 = 0;
+        e->desc = p;
+        e->kind = 4;
+    }
+
+    g_gosub_row_count = total.v[group];
+
+    switch (group)
+    {
+    case 0:
+        g_gosub_title_text = GOSUB_MSG_PTR(0x1A);
+        break;
+    case 1:
+        g_gosub_title_text = GOSUB_MSG_PTR(0x1C);
+        break;
+    case 2:
+        g_gosub_title_text = GOSUB_MSG_PTR(0x1E);
+        break;
+    }
+
+    g_gosub_visible_row_count = 8;
+    g_gosub_row_height = 0x10;
+    g_gosub_window_width = 0xE8;
+    g_gosub_window_height = 0x84;
 }
