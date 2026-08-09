@@ -17,6 +17,9 @@
 #define CD_ACTIVE_COMMAND_TIMEOUT_FRAMES 240
 #define CD_RECOVERY_READ_TIMEOUT_FRAMES 270
 #define CD_SET_MODE_DELAY_FRAMES 4
+#define CD_RECOVERY_FLUSH_DELAY_FRAMES 1
+#define CD_RECOVERY_FILTER_FILE 1
+#define CD_RECOVERY_FILTER_CHANNEL 1
 #define CD_DISC_READY_RETRY_LIMIT 13
 #define CD_IDLE_STATUS_RETRY_LIMIT 11
 #define CD_STREAM_TIMEOUT_FRAMES 30
@@ -106,6 +109,22 @@ typedef enum CdRecoveryCommand
     CD_RECOVERY_COMMAND_RETRY_READ = 0x22,
     CD_RECOVERY_COMMAND_COMPLETE = 0x23,
 } CdRecoveryCommand;
+
+typedef enum CdReconfigureState
+{
+    CD_RECONFIGURE_STATE_FLUSH = 0,
+    CD_RECONFIGURE_STATE_SET_MODE = 1,
+    CD_RECONFIGURE_STATE_SET_FILTER = 2,
+    CD_RECONFIGURE_STATE_WAIT = 3,
+} CdReconfigureState;
+
+typedef enum CdReconfigureStep
+{
+    CD_RECONFIGURE_STEP_NONE = 0,
+    CD_RECONFIGURE_STEP_SET_FILTER = 0x10,
+    CD_RECONFIGURE_STEP_DEMUTE = 0x11,
+    CD_RECONFIGURE_STEP_PAUSE = 0x12,
+} CdReconfigureStep;
 
 typedef enum CdQueueCommandError
 {
@@ -242,7 +261,7 @@ extern u8 D_801ED590;
 #define QUEUE_ITEM_CALLBACK(ptr) (*((CdCommandCallback*)(ptr) + 0x13))
 #define VCD (*(volatile CdSystem*)0x801ED800)
 
-int cdrom_recover(void);
+s32 cdrom_recover(void);
 void cdrom_complete_command(u_char intr, u_char* result);
 void cdrom_handle_recovery_sync(u_char intr, u_char* result);
 void cdrom_handle_ready_intr(u_char intr, u_char* result);
@@ -1398,63 +1417,35 @@ u32 cdrom_process_state(void)
 }
 
 /**
- * @brief Drives the CD-ROM recovery/init state machine each VSync frame.
+ * @brief Advances asynchronous CD-ROM reconfiguration after recovery.
  *
- * Advances a 4-state asynchronous state machine that reconfigures the CD-ROM
- * subsystem after an error or shell-open event. Each call advances at most
- * one state transition.
- *
- * @details
- * State machine (CD_SYSTEM.initState):
- *
- * - **State 0 — Flush:** Calls CdFlush(), advances to state 1 with a 1-frame delay.
- *
- * - **State 1 — Set mode:** Waits for the delay, configures CD mode to 0xA0
- *   (CdlModeSpeed | CdlModeSize1), installs cdrom_handle_recovery_sync,
- *   sends CdlSetmode, and waits 4 frames.
- *
- * - **State 2 — Set filter:** Installs sync callback, sends CdlSetfilter
- *   (file=1, channel=1), sets initCommand to 0x11, advances to state 3.
- *
- * - **State 3 — Dispatch:** Waits for syncComplete or 30-frame timeout, then
- *   dispatches based on initCommand:
- *     - 0x10: Re-sends CdlSetfilter
- *     - 0x11: Sends CdlDemute
- *     - 0x12: Sends CdlPause
- *
- * @return 1 if not in recovery mode (statusFlags bit 3 clear),
- *         0 while the state machine is still processing.
- *
- * @warning Must be called every frame. The 1/4/30-frame delays assume NTSC (60 Hz).
+ * @return Zero while reconfiguring, otherwise one.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/IvxZG
  */
 s32 cdrom_recover(void)
 {
-    u_char filterParams[2];
+    u8 filter_params[2];
     s32 timestamp;
-    u8 initCommandByte;
+    u8 reconfigure_step;
 
-    // Bail out if bit 3 (recovery mode) is not set
-    if (!(CD_SYSTEM.statusFlags.word & 8))
+    if (!(CD_SYSTEM.statusFlags.word & CD_STATUS_RECOVERY_PENDING))
     {
-        return 1;
+        return TRUE;
     }
 
     switch (CD_SYSTEM.initState)
     {
-    case 0:
-        // State 0: Flush pending CD commands and advance to state 1
+    case CD_RECONFIGURE_STATE_FLUSH:
         CdFlush();
-        CD_SYSTEM.initState = 1U;
-        CD_SYSTEM.vsyncTimestamp = (s32)(VSync(-1) + 1);
+        CD_SYSTEM.initState = CD_RECONFIGURE_STATE_SET_MODE;
+        CD_SYSTEM.vsyncTimestamp = VSync(-1) + CD_RECOVERY_FLUSH_DELAY_FRAMES;
         break;
-    case 1:
-        // State 1: Wait for 1-frame delay, then configure CD mode
+
+    case CD_RECONFIGURE_STATE_SET_MODE:
         timestamp = VSync(-1);
-        if (timestamp >= (s32)CD_SYSTEM.vsyncTimestamp)
+        if (timestamp >= CD_SYSTEM.vsyncTimestamp)
         {
-            // Set mode to 0xA0 (double speed + 2340-byte sectors)
             CD_SYSTEM.setModeParamAsync[0] = (CdlModeSpeed | CdlModeSize1);
             CD_SYSTEM.setModeParamAsync[1] = 0;
             CD_SYSTEM.setModeParamAsync[2] = 0;
@@ -1463,67 +1454,67 @@ s32 cdrom_recover(void)
             CdSyncCallback(cdrom_handle_recovery_sync);
 
             CdReadyCallback(NULL);
-            // initCommand 0x10 = pending setfilter; must be stored before CdControlF (not in delay slot)
-            CD_SYSTEM_V.initCommand = 0x10U;
-            CdControlF(CdlSetmode, (u8*)0x801ED954);
+            CD_SYSTEM_V.initCommand = CD_RECONFIGURE_STEP_SET_FILTER;
+            CdControlF(CdlSetmode, CD_SYSTEM.setModeParamAsync);
             timestamp = VSync(-1);
-            CD_SYSTEM.vsyncTimestamp = (s32)(timestamp + 4);
+            CD_SYSTEM.vsyncTimestamp = timestamp + CD_SET_MODE_DELAY_FRAMES;
         }
         break;
-    case 2:
-        // State 2: Send CdlSetfilter with file=1, channel=1, advance to state 3
-        CdSyncCallback(cdrom_handle_recovery_sync);
-        CD_SYSTEM.initCommand = 0x11;
 
-        filterParams[0] = 1;
-        filterParams[1] = 1;
-        CdControlF(CdlSetfilter, filterParams);
-        CD_SYSTEM.initState = 3U;
+    case CD_RECONFIGURE_STATE_SET_FILTER:
+        CdSyncCallback(cdrom_handle_recovery_sync);
+        CD_SYSTEM.initCommand = CD_RECONFIGURE_STEP_DEMUTE;
+
+        filter_params[0] = CD_RECOVERY_FILTER_FILE;
+        filter_params[1] = CD_RECOVERY_FILTER_CHANNEL;
+        CdControlF(CdlSetfilter, filter_params);
+        CD_SYSTEM.initState = CD_RECONFIGURE_STATE_WAIT;
         CD_SYSTEM.vsyncTimestamp = VSync(-1);
         break;
-    case 3:
-        // State 3: Wait for syncComplete or 30-frame timeout, then dispatch
+
+    case CD_RECONFIGURE_STATE_WAIT:
         if (CD_SYSTEM.syncComplete == 1)
         {
             CD_SYSTEM.vsyncTimestamp = VSync(-1);
-            CD_SYSTEM_V.syncComplete = 0U;
+            CD_SYSTEM_V.syncComplete = 0;
             break;
         }
 
         timestamp = VSync(-1);
-        if (timestamp < (s32)(CD_SYSTEM.vsyncTimestamp + 30))
+        if (timestamp < (CD_SYSTEM.vsyncTimestamp + CD_STATUS_POLL_FRAMES))
         {
             break;
         }
 
-        // Timeout expired — dispatch follow-up command based on initCommand
+        // Retry the step that has not reported completion.
         CdSyncCallback(cdrom_handle_recovery_sync);
 
-        initCommandByte = CD_SYSTEM.initCommand;
+        reconfigure_step = CD_SYSTEM.initCommand;
 
-        switch (initCommandByte)
+        switch (reconfigure_step)
         {
-        case 0x0:
+        case CD_RECONFIGURE_STEP_NONE:
         default:
-            filterParams[0] = 1;
-            filterParams[1] = 1;
-            CdControlF(CdlSetfilter, filterParams);
-            CD_SYSTEM_V.initCommand = 0x10U;
+            filter_params[0] = CD_RECOVERY_FILTER_FILE;
+            filter_params[1] = CD_RECOVERY_FILTER_CHANNEL;
+            CdControlF(CdlSetfilter, filter_params);
+            CD_SYSTEM_V.initCommand = CD_RECONFIGURE_STEP_SET_FILTER;
             break;
-        case 0x11:
+
+        case CD_RECONFIGURE_STEP_DEMUTE:
             CdControlF(CdlDemute, NULL);
             break;
-        case 0x12:
+
+        case CD_RECONFIGURE_STEP_PAUSE:
             CdControlF(CdlPause, NULL);
             break;
         }
 
-        // Subtract 30 to allow immediate re-entry on the next timeout cycle
-        CD_SYSTEM.vsyncTimestamp -= 30;
+        CD_SYSTEM.vsyncTimestamp -= CD_STATUS_POLL_FRAMES;
         break;
     }
 
-    return 0;
+    return FALSE;
 }
 
 /**
