@@ -20,6 +20,10 @@
 #define CD_RECOVERY_FLUSH_DELAY_FRAMES 1
 #define CD_RECOVERY_FILTER_FILE 1
 #define CD_RECOVERY_FILTER_CHANNEL 1
+#define CD_READY_CALLBACK_PENDING 1
+#define CD_SECTOR_HEADER_WORDS 3
+#define CD_SECTOR_POSITION_MASK 0x00FFFFFF
+#define CD_RECOVERY_SECTOR_RETRY_LIMIT 17
 #define CD_DISC_READY_RETRY_LIMIT 13
 #define CD_IDLE_STATUS_RETRY_LIMIT 11
 #define CD_STREAM_TIMEOUT_FRAMES 30
@@ -238,7 +242,7 @@ extern u_char g_cdAudioReady;
 extern u8 g_playbackState;
 extern u32 g_cdReadRemainingBytes;
 extern s32 g_cdResource176;
-extern s8 g_cdStatusByte3;
+extern u8 g_cdStatusByte3;
 extern u8 g_initState;
 extern s8 D_801ED801;
 extern u8 g_cdPendingQueueCount;
@@ -1518,78 +1522,57 @@ s32 cdrom_recover(void)
 }
 
 /**
- * @brief Ready callback that verifies the next sector header during error recovery.
- *
- * Invoked when the CD-ROM drive signals readiness while in a recovery state.
- * Reads the sector header, verifies the disc position matches currentLocation,
- * and either completes the sector read, retries, or falls back to CdlNop
- * after exhausting 16 retries.
- *
- * @details
- * Requires g_cdStatusByte3 == 1 to proceed; clears it to 0 on exit.
- *
- * - **Audio disabled:** Reads the sector header (3 words) and compares the lower
- *   24 bits against currentLocation. On match, calls cdrom_process_sector(1).
- *   On mismatch, increments retryCount (up to 16). After 16 failures, marks
- *   retryExhausted and issues CdlNop.
- *
- * - **Audio enabled:** Skips position check; immediately calls cdrom_process_sector(1).
- *
- * @note Installed as the CdReadyCallback after cdrom_recover() enters a waiting state.
- *
- * @warning Spin-waits on CdGetSector() until the sector header is available.
+ * @brief Validates sector position while recovering an interrupted read.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/iWEyM
  */
 void cdrom_verify_recovery(void)
 {
-    volatile CdSystem* cdSystem;
-    volatile CdSystem** new_var;
+    volatile CdSystem* cd_system = &CD_SYSTEM;
 
-    cdSystem = &CD_SYSTEM;
-
-    if ((u8)g_cdStatusByte3 != 1)
+    if (g_cdStatusByte3 != CD_READY_CALLBACK_PENDING)
     {
         return;
     }
 
-    if (cdSystem->audioEnabled != (u8)g_cdStatusByte3)
+    if (cd_system->audioEnabled != g_cdStatusByte3)
     {
-        while (CdGetSector((void*)0x801ED940, 3) == 0);
+        // Wait until the sector header is available.
+        while (CdGetSector(CD_SYSTEM.sectorHeaderBuffer, CD_SECTOR_HEADER_WORDS) == 0);
 
-        if ((CD_SYSTEM.sectorHeaderBuffer[0] & 0xFFFFFF) == (CD_SYSTEM.currentLocation.raw & 0xFFFFFF))
+        if ((CD_SYSTEM.sectorHeaderBuffer[0] & CD_SECTOR_POSITION_MASK) ==
+            (CD_SYSTEM.currentLocation.raw & CD_SECTOR_POSITION_MASK))
         {
-            cdrom_process_sector(1);
+            cdrom_process_sector(TRUE);
             return;
         }
 
-        if (CD_SYSTEM.retryCount++ <= 16)
+        if (CD_SYSTEM.retryCount++ < CD_RECOVERY_SECTOR_RETRY_LIMIT)
         {
-            CdControlF(CD_SYSTEM.currentCommand, (u8*)0x801ED958);
+            CdControlF(CD_SYSTEM.currentCommand, CD_SYSTEM.currentLocation.bytes);
         }
         else
         {
-            CD_SYSTEM.statusFlags.bytes.retryExhausted = 1;
-            CD_SYSTEM.retryCount = 0U;
+            CD_SYSTEM.statusFlags.bytes.retryExhausted = TRUE;
+            CD_SYSTEM.retryCount = 0;
             if (CD_SYSTEM.transferCallback != NULL)
             {
-                CD_SYSTEM.playbackState = 1;
+                CD_SYSTEM.playbackState = TRUE;
             }
             else
             {
-                CD_SYSTEM.playbackState = 0;
+                CD_SYSTEM.playbackState = FALSE;
             }
-            cdSystem = &CD_SYSTEM;
-            (*(new_var = &cdSystem))->currentCommand = 1U;
-            CdControlF(1U, NULL);
+            CD_SYSTEM_V.currentCommand = CdlNop;
+            CdControlF(CdlNop, NULL);
         }
     }
     else
     {
-        cdrom_process_sector(1);
+        cdrom_process_sector(TRUE);
     }
 
-    g_cdStatusByte3 = 0;
+    g_cdStatusByte3 = FALSE;
 }
 
 /**
