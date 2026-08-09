@@ -14,7 +14,7 @@
 #define CD_STREAM_TIMEOUT_FRAMES 30
 #define CD_STREAM_DECOMPRESS_GUARD_SIZE 280
 #define CD_STREAM_BUFFER_END 0x801DC118
-#define CD_DECOMPRESS_UNBOUNDED_END 0xFFFFFFFCU
+#define CD_DECOMPRESS_UNBOUNDED_END ((u8*)0xFFFFFFFCU)
 #define CD_STREAM_COPY_WORD_SIZE 4
 #define CD_STREAM_COPY_WORD_MASK 3
 #define CD_STREAM_DIRECT_MODE 0x1000
@@ -137,9 +137,17 @@ typedef struct
 
 typedef union CdStreamRelocation
 {
+    u32 address;
     s32 alignment_adjustment;
     u8* dst;
 } CdStreamRelocation;
+
+typedef union CdStreamCopyCursor
+{
+    u32 address;
+    u8* bytes;
+    u32* words;
+} CdStreamCopyCursor;
 
 typedef struct
 {
@@ -441,7 +449,7 @@ s32 cdrom_stream(s32 resource_index, u32 destination)
                 }
 
                 if (cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u8**)&destination,
-                                          decompress_end, (u8*)CD_DECOMPRESS_UNBOUNDED_END) == 0)
+                                          decompress_end, CD_DECOMPRESS_UNBOUNDED_END) == 0)
                 {
                     return destination - destination_start;
                 }
@@ -554,15 +562,16 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
     s32 staging_bytes_produced;
     s32 alignment;
     s32 copy_size;
-    s32 negative_one;
+    s32 loop_end;
     CdStreamRelocation relocation;
     u8* previous_read_ptr;
     u32 wrap_overflow;
     volatile CdStreamState* scratchpad;
     CdStreamState* stream_state;
-    s32 sentinel;
+    s32 count_sentinel;
     u8** destination_ptr;
     u8** staging_write_ptr_ref;
+    CdStreamCopyCursor alignment_cursor;
 
     scratchpad = &CD_STREAM_STATE;
     scratchpad->dropped_sectors = 0;
@@ -578,7 +587,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
 
     if (chunk_bytes_remaining == -1)
     {
-        destination_end = (u8*)CD_DECOMPRESS_UNBOUNDED_END;
+        destination_end = CD_DECOMPRESS_UNBOUNDED_END;
         direct_mode = CD_STREAM_DIRECT_MODE;
     }
     else
@@ -593,7 +602,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
 
     timestamp = VSync(-1);
     stream_state = &CD_STREAM_STATE;
-    sentinel = -1;
+    count_sentinel = -1;
     destination_ptr = &destination;
 
     while (TRUE)
@@ -637,21 +646,23 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                 while (staging_bytes_produced != 0)
                 {
 
-                    if ((staging_bytes_produced < chunk_bytes_remaining) || (chunk_bytes_remaining == sentinel))
+                    if ((staging_bytes_produced < chunk_bytes_remaining) ||
+                        (chunk_bytes_remaining == count_sentinel))
                     {
                         total_bytes_delivered += staging_bytes_produced;
                         chunk_bytes_remaining -= staging_bytes_produced;
 
                         // Align the destination before copying whole words.
-                        loop_count = (u32)destination & CD_STREAM_COPY_WORD_MASK;
+                        alignment_cursor.bytes = destination;
+                        loop_count = alignment_cursor.address & CD_STREAM_COPY_WORD_MASK;
                         if ((loop_count != 0) && (loop_count < staging_bytes_produced))
                         {
                             staging_bytes_produced -= loop_count;
                             loop_count--;
-                            if (loop_count != sentinel)
+                            if (loop_count != count_sentinel)
                             {
-                                negative_one = -1;
-                                do
+                                loop_end = -1;
+                                for (;;)
                                 {
                                     u8* dest;
                                     src_byte = *src_ptr++;
@@ -659,37 +670,52 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                                     *dest = src_byte;
                                     *destination_ptr = dest + 1;
                                     loop_count--;
-                                } while (loop_count != negative_one);
+                                    if (loop_count == loop_end)
+                                    {
+                                        break;
+                                    }
+                                }
                             }
                         }
 
-                        alignment_check = (u32)src_ptr & CD_STREAM_COPY_WORD_MASK;
+                        alignment_cursor.bytes = src_ptr;
+                        alignment_check = alignment_cursor.address & CD_STREAM_COPY_WORD_MASK;
                         if (alignment_check == 0)
                         {
                             loop_count = staging_bytes_produced >> 2;
                             staging_bytes_produced -= loop_count * CD_STREAM_COPY_WORD_SIZE;
                             loop_count--;
-                            if (loop_count != sentinel)
+                            if (loop_count != count_sentinel)
                             {
-                                negative_one = -1;
-                                do
+                                loop_end = -1;
+                                for (;;)
                                 {
-                                    u32* dest;
-                                    src_word = *(u32*)src_ptr;
-                                    src_ptr += CD_STREAM_COPY_WORD_SIZE;
-                                    dest = (u32*)*destination_ptr;
-                                    *dest = src_word;
-                                    *destination_ptr = (u8*)(dest + 1);
+                                    CdStreamCopyCursor src_cursor;
+                                    CdStreamCopyCursor dst_cursor;
+
+                                    src_cursor.bytes = src_ptr;
+                                    src_word = *src_cursor.words;
+                                    src_cursor.words++;
+                                    src_ptr = src_cursor.bytes;
+
+                                    dst_cursor.bytes = *destination_ptr;
+                                    *dst_cursor.words = src_word;
+                                    dst_cursor.words++;
+                                    *destination_ptr = dst_cursor.bytes;
                                     loop_count--;
-                                } while (loop_count != negative_one);
+                                    if (loop_count == loop_end)
+                                    {
+                                        break;
+                                    }
+                                }
                             }
                         }
 
                         staging_bytes_produced--;
-                        if (staging_bytes_produced != sentinel)
+                        if (staging_bytes_produced != count_sentinel)
                         {
-                            negative_one = -1;
-                            do
+                            loop_end = -1;
+                            for (;;)
                             {
                                 u8* dest;
                                 src_byte = *src_ptr++;
@@ -697,7 +723,11 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                                 *dest = src_byte;
                                 *destination_ptr = dest + 1;
                                 staging_bytes_produced--;
-                            } while (staging_bytes_produced != negative_one);
+                                if (staging_bytes_produced == loop_end)
+                                {
+                                    break;
+                                }
+                            }
                         }
 
                         break;
@@ -707,24 +737,27 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                     staging_bytes_produced -= chunk_bytes_remaining;
                     total_bytes_delivered += chunk_bytes_remaining;
                     chunk_bytes_remaining--;
-
-                    if (chunk_bytes_remaining != sentinel)
+                    if (chunk_bytes_remaining != count_sentinel)
                     {
-                        negative_one = -1;
-                        do
+                        loop_end = -1;
+                        for (;;)
                         {
                             u8* dest = *destination_ptr;
                             *dest = *src_ptr;
                             *destination_ptr = dest + 1;
                             src_ptr++;
                             chunk_bytes_remaining--;
-                        } while (chunk_bytes_remaining != negative_one);
+                            if (chunk_bytes_remaining == loop_end)
+                            {
+                                break;
+                            }
+                        }
                     }
 
                     if (staging_bytes_produced > 0 || decompress_result != 0)
                     {
-                        negative_one = chunk_index++;
-                        chunk_done(negative_one);
+                        loop_end = chunk_index++;
+                        chunk_done(loop_end);
                         destination = get_buffer(total_bytes_delivered, &chunk_bytes_remaining);
                     }
                 }
@@ -780,7 +813,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
                 relocation.alignment_adjustment = CD_STREAM_COPY_WORD_SIZE - alignment;
                 copy_size = relocation.alignment_adjustment & CD_STREAM_COPY_WORD_MASK;
                 loop_count = CD_STREAM_BUFFER_END;
-                relocation.dst = (u8*)(loop_count - staging_bytes_produced);
+                relocation.address = loop_count - staging_bytes_produced;
                 previous_read_ptr = (previous_read_ptr + bytes_buffered) - copy_size;
 
                 stream_state->writePtr = relocation.dst;
@@ -797,17 +830,27 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
 
                 staging_bytes_produced = (alignment >> 2);
                 staging_bytes_produced--;
-
-                if (staging_bytes_produced != sentinel)
+                if (staging_bytes_produced != count_sentinel)
                 {
-                    s32 wrap_sentinel = -1;
-                    do
+                    s32 wrap_loop_end = -1;
+                    for (;;)
                     {
-                        *(s32*)relocation.dst = *(s32*)previous_read_ptr;
-                        previous_read_ptr += CD_STREAM_COPY_WORD_SIZE;
-                        relocation.dst += CD_STREAM_COPY_WORD_SIZE;
+                        CdStreamCopyCursor relocation_cursor;
+                        CdStreamCopyCursor previous_cursor;
+
+                        relocation_cursor.bytes = relocation.dst;
+                        previous_cursor.bytes = previous_read_ptr;
+                        *relocation_cursor.words = *previous_cursor.words;
+                        previous_cursor.words++;
+                        relocation_cursor.words++;
+                        previous_read_ptr = previous_cursor.bytes;
+                        relocation.dst = relocation_cursor.bytes;
                         staging_bytes_produced--;
-                    } while (staging_bytes_produced != wrap_sentinel);
+                        if (staging_bytes_produced == wrap_loop_end)
+                        {
+                            break;
+                        }
+                    }
                 }
             }
             else
@@ -3546,7 +3589,8 @@ u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
 void cdrom_decompress_buffer(u8* srcStart, u8* dstStart)
 {
     srcStart++;
-    while (cdrom_decompress_data(&srcStart, &dstStart, (u8*)-4U, (u8*)-4U) != 0);
+    while (cdrom_decompress_data(&srcStart, &dstStart, CD_DECOMPRESS_UNBOUNDED_END,
+                                 CD_DECOMPRESS_UNBOUNDED_END) != 0);
 }
 
 /**
