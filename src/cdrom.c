@@ -127,13 +127,19 @@ typedef struct
     u8 dataReady;
     u8 bufferWrapped;
     u8 pad[2];
-    s32 readPtr;
-    s32 writePtr;
+    u8* readPtr;
+    u8* writePtr;
     s32 bytesBuffered;
     s32 wrapOverflow;
     s32 bytesConsumed;
     s32 dropped_sectors;
 } CdStreamState;
+
+typedef union CdStreamRelocation
+{
+    s32 alignment_adjustment;
+    u8* dst;
+} CdStreamRelocation;
 
 typedef struct
 {
@@ -194,7 +200,7 @@ void cdrom_handle_sync_error(void);
 void cdrom_set_audio_volume(u_char volume, int stereoChannel);
 s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 void func_80014434(void);
-s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining);
+u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining);
 void cdrom_decompress_buffer(u8* srcStart, u8* dstStart);
 void cdrom_clear_data_ready(s8* dataReady);
 void cdrom_restore_callbacks(void);
@@ -377,16 +383,16 @@ void cdrom_stop(void)
 s32 cdrom_stream(s32 resource_index, u32 destination)
 {
     s32 unprocessed_bytes;
-    s32 relocation_dst;
+    u8* relocation_dst;
     s32 bytes_buffered;
     s32 bytes_consumed;
-    s32 previous_read_ptr;
+    u8* previous_read_ptr;
     s32 copy_size;
     s32 overflow_size;
     s32 timestamp;
     s32 remaining_size;
     s32* relocation_src;
-    u32 decompress_end;
+    u8* decompress_end;
     CdStreamState* stream_state;
     CdStreamState* active_stream;
     u32 destination_start;
@@ -434,7 +440,8 @@ s32 cdrom_stream(s32 resource_index, u32 destination)
                     decompress_end = active_stream->readPtr + remaining_size;
                 }
 
-                if (cdrom_decompress_data(&CD_STREAM_STATE.writePtr, &destination, decompress_end, CD_DECOMPRESS_UNBOUNDED_END) == 0)
+                if (cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u8**)&destination,
+                                          decompress_end, (u8*)CD_DECOMPRESS_UNBOUNDED_END) == 0)
                 {
                     return destination - destination_start;
                 }
@@ -457,7 +464,7 @@ s32 cdrom_stream(s32 resource_index, u32 destination)
                 overflow_size = active_stream->wrapOverflow;
                 unprocessed_bytes = active_stream->bytesBuffered - bytes_consumed;
                 alignment = unprocessed_bytes & CD_STREAM_COPY_WORD_MASK;
-                relocation_dst = CD_STREAM_BUFFER_END - unprocessed_bytes;
+                relocation_dst = (u8*)(CD_STREAM_BUFFER_END - unprocessed_bytes);
                 previous_read_ptr = active_stream->readPtr;
 
                 // Keep logical pointers at the data start; only the copy includes alignment padding.
@@ -512,37 +519,16 @@ s32 cdrom_stream(s32 resource_index, u32 destination)
 }
 
 /**
- * @brief Streams and decompresses CD-ROM data into caller-supplied chunks via callbacks.
+ * @brief Streams decompressed CD data through caller-provided buffers.
  *
- * A variant of cdrom_stream that delivers decompressed output through a
- * callback-based chunked buffer interface instead of a single fixed destination.
- * Supports two output modes:
+ * A capacity of -1 selects direct output. Fixed-size output is staged and copied
+ * across chunks while preserving the 4 KiB LZ history when staging fills.
  *
- *   DIRECT MODE  — When pfnGetBuffer sets *outChunkSize = -1, the decompressor
- *                  writes straight into the caller's buffer (same as cdrom_stream).
+ * @param resource_index Resource table index.
+ * @param get_buffer     Returns the next output buffer and its capacity.
+ * @param chunk_done     Called after each completed or final chunk.
  *
- *   CHUNKED MODE — When pfnGetBuffer sets *outChunkSize to a positive value,
- *                  data is first decompressed into a staging buffer at 0x801DA000,
- *                  then copied out into caller-supplied chunks. Each time a chunk
- *                  is fully filled, pfnChunkDone is called and pfnGetBuffer is
- *                  called again for the next chunk.
- *
- * STAGING BUFFER (chunked mode only):
- *   0x801DA000 — stagingWritePtr starts here
- *   0x801DBBE8 — stagingEnd; decompressor stops here
- *
- *   When the staging buffer fills before the stream ends, the last 4096 bytes
- *   (the LZ sliding-window dictionary) are copied back to 0x801DA000 and
- *   decompression resumes at 0x801DB000, preserving back-reference validity.
- *
- * @param resourceIndex   CD resource index (lower 16 bits) passed to cdrom_queue_command.
- * @param pfnGetBuffer    Callback: u8* fn(int totalBytesDelivered, int* outChunkSize)
- *                          Returns the next destination buffer and sets its capacity,
- *                          or -1 for unlimited. Called at startup and after each chunk.
- * @param pfnChunkDone    Callback: void fn(int chunkIndex)
- *                          Called when each chunk is filled and once at end-of-stream.
- *
- * @see decomp.me (93.03% scratch) https://decomp.me/scratch/aZWx6
+ * @see decomp.me: (99.78%) https://decomp.me/scratch/aZWx6
  */
 void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buffer,
                           CdStreamChunkDoneCallback chunk_done)
@@ -552,7 +538,7 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
     s32 decompress_result;
     u32 src_word;
     s32 loop_count;
-    u32 decompress_end;
+    u8* decompress_end;
     u32 alignment_check;
     u8* src_ptr;
     s32 total_bytes_delivered;
@@ -569,8 +555,8 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
     s32 alignment;
     s32 copy_size;
     s32 negative_one;
-    s32 relocation_dst;
-    s32 previous_read_ptr;
+    CdStreamRelocation relocation;
+    u8* previous_read_ptr;
     u32 wrap_overflow;
     volatile CdStreamState* scratchpad;
     CdStreamState* stream_state;
@@ -578,301 +564,264 @@ void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buff
     u8** destination_ptr;
     u8** staging_write_ptr_ref;
 
-    // --- Initialise streaming state in scratchpad RAM ---
     scratchpad = &CD_STREAM_STATE;
     scratchpad->dropped_sectors = 0;
     scratchpad->dataReady = 0;
     scratchpad->bufferWrapped = 0;
 
-    // Enqueue CdlReadN for this resource; subtract 1 to get the last valid compressed-byte offset.
-    remainingDataSize = cdrom_queue_command(CdlReadN, resourceIndex, NULL, cdrom_handle_stream_data) - 1;
+    remaining_size = cdrom_queue_command(CdlReadN, resource_index, NULL, cdrom_handle_stream_data) - 1;
 
-    totalBytesDelivered = 0;
-    chunkIndex = 0;
+    total_bytes_delivered = 0;
+    chunk_index = 0;
 
-    // Ask the caller for the first destination chunk.
-    destination = pfnGetBuffer(0, &chunkBytesRemaining);
+    destination = get_buffer(0, &chunk_bytes_remaining);
 
-    if (chunkBytesRemaining == -1)
+    if (chunk_bytes_remaining == -1)
     {
-        // --- Direct mode: caller provided an "unlimited" buffer ---
-        dstEnd = (u8*)0xfffffffc;
-        isDirectMode = 0x1000;
+        destination_end = (u8*)CD_DECOMPRESS_UNBOUNDED_END;
+        direct_mode = CD_STREAM_DIRECT_MODE;
     }
     else
     {
-        // --- Chunked mode: caller provided a fixed-size chunk ---
-        // Reserve 0x418 (1048) bytes at the end as a guard region.
-        dstEnd = destination + chunkBytesRemaining - 0x418;
-        isDirectMode = 0;
+        destination_end = destination + chunk_bytes_remaining - CD_STREAM_CHUNK_GUARD_SIZE;
+        direct_mode = 0;
     }
 
-    // Staging buffer lives in main RAM. Decompressor fills this; we copy out to caller chunks.
-    srcPtr = (u8*)0x801da000;
-    stagingWritePtr = srcPtr;     // Start of staging buffer
-    stagingEnd = (u8*)0x801dbbe8; // End of staging buffer
+    src_ptr = CD_STREAM_STAGING_START;
+    staging_write_ptr = src_ptr;
+    staging_end = CD_STREAM_STAGING_END;
 
     timestamp = VSync(-1);
-    streamState = &CD_STREAM_STATE;
+    stream_state = &CD_STREAM_STATE;
     sentinel = -1;
-    pDestination = &destination; // Kept in a register so the copy loops can update `destination` indirectly
+    destination_ptr = &destination;
 
     while (TRUE)
     {
 
-        if (VSync(-1) < timestamp + 30)
+        if (VSync(-1) < timestamp + CD_STREAM_TIMEOUT_FRAMES)
         {
 
-            if (((volatile CdStreamState*)streamState)->dataReady != 1)
+            if (((volatile CdStreamState*)stream_state)->dataReady != 1)
             {
                 continue;
             }
 
-            // === Decompression loop: process all currently buffered sector data ===
             do
             {
-                bytesBuffered = streamState->bytesBuffered;
+                bytes_buffered = stream_state->bytesBuffered;
 
-                // Calculate the compressed-source end-guard for cdrom_decompress_data.
-                // Hold back 280 bytes when the full stream hasn't arrived yet,
-                // to avoid consuming an incomplete sector boundary.
-                if (bytesBuffered < remainingDataSize)
+                // Retain a guard region until the final input chunk is buffered.
+                if (bytes_buffered < remaining_size)
                 {
-                    decompressEnd = (streamState->readPtr + bytesBuffered) - 280;
+                    decompress_end = (stream_state->readPtr + bytes_buffered) - CD_STREAM_DECOMPRESS_GUARD_SIZE;
                 }
                 else
                 {
-                    decompressEnd = streamState->readPtr + remainingDataSize;
+                    decompress_end = stream_state->readPtr + remaining_size;
                 }
 
-                // --- Direct mode: decompress straight into the caller's destination ---
-                if (isDirectMode != 0 && destination < dstEnd)
+                if (direct_mode != 0 && destination < destination_end)
                 {
-                    cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&destination, decompressEnd, (u32)dstEnd);
-                    continue; // Loop back; decompressResult check happens below on exit
+                    cdrom_decompress_data(&CD_STREAM_STATE.writePtr, &destination,
+                                          decompress_end, destination_end);
+                    continue;
                 }
 
-                // --- Chunked mode: decompress into staging buffer, then copy to caller ---
-                srcPtr = stagingWritePtr; // Remember staging write position before this call
-                decompressResult = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, (u32*)&stagingWritePtr, decompressEnd, (u32)stagingEnd);
+                src_ptr = staging_write_ptr;
+                decompress_result = cdrom_decompress_data(&CD_STREAM_STATE.writePtr, &staging_write_ptr,
+                                                          decompress_end, staging_end);
 
-                // How many bytes did the decompressor write to the staging buffer this pass?
-                stagingBytesProduced = (int)stagingWritePtr - (int)srcPtr;
+                staging_bytes_produced = staging_write_ptr - src_ptr;
 
-                // === Copy staging bytes into the caller's chunk(s) ===
-                while (stagingBytesProduced != 0)
+                while (staging_bytes_produced != 0)
                 {
 
-                    if ((stagingBytesProduced < chunkBytesRemaining) || (chunkBytesRemaining == sentinel))
+                    if ((staging_bytes_produced < chunk_bytes_remaining) || (chunk_bytes_remaining == sentinel))
                     {
-                        // All remaining staging bytes fit within the current chunk (or chunk is unlimited).
-                        // Copy everything and break out.
-                        totalBytesDelivered += stagingBytesProduced;
-                        chunkBytesRemaining -= stagingBytesProduced;
+                        total_bytes_delivered += staging_bytes_produced;
+                        chunk_bytes_remaining -= staging_bytes_produced;
 
-                        // --- Destination alignment preamble ---
-                        // Byte-copy until `destination` is word-aligned.
-                        loopCount = (u32)destination & 3;
-                        if ((loopCount != 0) && (loopCount < stagingBytesProduced))
+                        // Align the destination before copying whole words.
+                        loop_count = (u32)destination & CD_STREAM_COPY_WORD_MASK;
+                        if ((loop_count != 0) && (loop_count < staging_bytes_produced))
                         {
-                            stagingBytesProduced -= loopCount;
-                            loopCount--;
-                            if (loopCount != sentinel)
+                            staging_bytes_produced -= loop_count;
+                            loop_count--;
+                            if (loop_count != sentinel)
                             {
-                                negOne = -1;
+                                negative_one = -1;
                                 do
                                 {
                                     u8* dest;
-                                    srcByte = *srcPtr++;
-                                    dest = *pDestination;
-                                    *dest = srcByte;
-                                    *pDestination = dest + 1;
-                                    loopCount--;
-                                } while (loopCount != negOne);
+                                    src_byte = *src_ptr++;
+                                    dest = *destination_ptr;
+                                    *dest = src_byte;
+                                    *destination_ptr = dest + 1;
+                                    loop_count--;
+                                } while (loop_count != negative_one);
                             }
                         }
 
-                        // --- Fast word-copy (only if source is also word-aligned) ---
-                        alignCheck = (u32)srcPtr & 3;
-                        if (alignCheck == 0)
+                        alignment_check = (u32)src_ptr & CD_STREAM_COPY_WORD_MASK;
+                        if (alignment_check == 0)
                         {
-                            loopCount = stagingBytesProduced >> 2;
-                            stagingBytesProduced -= loopCount * 4;
-                            loopCount--;
-                            if (loopCount != sentinel)
+                            loop_count = staging_bytes_produced >> 2;
+                            staging_bytes_produced -= loop_count * CD_STREAM_COPY_WORD_SIZE;
+                            loop_count--;
+                            if (loop_count != sentinel)
                             {
-                                negOne = -1;
+                                negative_one = -1;
                                 do
                                 {
                                     u32* dest;
-                                    srcWord = *(u32*)srcPtr;
-                                    srcPtr += 4;
-                                    dest = (u32*)*pDestination;
-                                    *dest = srcWord;
-                                    *pDestination = (u8*)(dest + 1);
-                                    loopCount--;
-                                } while (loopCount != negOne);
+                                    src_word = *(u32*)src_ptr;
+                                    src_ptr += CD_STREAM_COPY_WORD_SIZE;
+                                    dest = (u32*)*destination_ptr;
+                                    *dest = src_word;
+                                    *destination_ptr = (u8*)(dest + 1);
+                                    loop_count--;
+                                } while (loop_count != negative_one);
                             }
                         }
 
-                        // --- Byte-copy for any remaining tail bytes ---
-                        stagingBytesProduced--;
-                        if (stagingBytesProduced != sentinel)
+                        staging_bytes_produced--;
+                        if (staging_bytes_produced != sentinel)
                         {
-                            negOne = -1;
+                            negative_one = -1;
                             do
                             {
                                 u8* dest;
-                                srcByte = *srcPtr++;
-                                dest = *pDestination;
-                                *dest = srcByte;
-                                *pDestination = dest + 1;
-                                stagingBytesProduced--;
-                            } while (stagingBytesProduced != negOne);
+                                src_byte = *src_ptr++;
+                                dest = *destination_ptr;
+                                *dest = src_byte;
+                                *destination_ptr = dest + 1;
+                                staging_bytes_produced--;
+                            } while (staging_bytes_produced != negative_one);
                         }
 
-                        break; // Done with this batch of staging bytes
+                        break;
                     }
 
-                    // --- Staging bytes span a chunk boundary: fill the current chunk ---
-                    // Copy exactly chunkBytesRemaining bytes, fire pfnChunkDone,
-                    // then get the next chunk from the caller and keep copying.
-                    stagingBytesProduced -= chunkBytesRemaining; // Bytes that will spill into next chunk
-                    totalBytesDelivered += chunkBytesRemaining;
-                    chunkBytesRemaining--;
+                    // Fill the current chunk before requesting the next one.
+                    staging_bytes_produced -= chunk_bytes_remaining;
+                    total_bytes_delivered += chunk_bytes_remaining;
+                    chunk_bytes_remaining--;
 
-                    if (chunkBytesRemaining != sentinel)
+                    if (chunk_bytes_remaining != sentinel)
                     {
-                        negOne = -1;
+                        negative_one = -1;
                         do
                         {
-                            u8* dest = *pDestination;
-                            *dest = *srcPtr;
-                            *pDestination = dest + 1;
-                            srcPtr++;
-                            chunkBytesRemaining--;
-                        } while (chunkBytesRemaining != negOne);
+                            u8* dest = *destination_ptr;
+                            *dest = *src_ptr;
+                            *destination_ptr = dest + 1;
+                            src_ptr++;
+                            chunk_bytes_remaining--;
+                        } while (chunk_bytes_remaining != negative_one);
                     }
 
-                    // Notify caller chunk is complete and request the next one --
-                    // but only if there's still data to copy or the decompressor has more pending.
-                    if (stagingBytesProduced > 0 || decompressResult != 0)
+                    if (staging_bytes_produced > 0 || decompress_result != 0)
                     {
-                        negOne = chunkIndex++;
-                        pfnChunkDone(negOne); // Chunk complete
-                        destination = pfnGetBuffer(totalBytesDelivered, &chunkBytesRemaining); // Next chunk
+                        negative_one = chunk_index++;
+                        chunk_done(negative_one);
+                        destination = get_buffer(total_bytes_delivered, &chunk_bytes_remaining);
                     }
                 }
 
-                if (decompressResult != 0)
+                if (decompress_result != 0)
                 {
-                    // Staging buffer was exhausted before the stream ended
-                    // (decompressResult == 1 means "output buffer full, more input remains").
-                    //
-                    // Preserve the LZ back-reference sliding window (last 4096 bytes of staging
-                    // output) so that back-references remain valid on the next decompress pass.
-                    // Copy those 4096 bytes back to 0x801DA000; the decompressor will then
-                    // resume writing fresh output starting at 0x801DB000.
-                    s32 loopSentinel;
-                    stagingWritePtr = (u8*)0x801da000; // Reset staging write cursor to start
-                    srcPtr = srcPtr - 0x1000;          // Step back 4096 bytes to start of LZ window
-                    stagingBytesProduced = 0xfff;      // Loop count: copy 4096 bytes (terminates at -1)
-                    pStagingWritePtr = &stagingWritePtr;
-                    loopSentinel = -1;
+                    // Preserve the LZ history before reusing the staging buffer.
+                    s32 loop_sentinel;
+                    staging_write_ptr = CD_STREAM_STAGING_START;
+                    src_ptr = src_ptr - CD_STREAM_LZ_WINDOW_SIZE;
+                    staging_bytes_produced = CD_STREAM_LZ_WINDOW_SIZE - 1;
+                    staging_write_ptr_ref = &staging_write_ptr;
+                    loop_sentinel = -1;
 
-                    // Copy the 4096-byte LZ window to 0x801DA000.
-                    // After this, stagingWritePtr == 0x801DB000; fresh decompressor output follows there.
                     do
                     {
                         u8* dest;
-                        srcByte = *srcPtr++;
-                        dest = *pStagingWritePtr;
-                        stagingBytesProduced--;
-                        *dest = srcByte;
-                        *pStagingWritePtr = dest + 1;
-                    } while (stagingBytesProduced != loopSentinel);
+                        src_byte = *src_ptr++;
+                        dest = *staging_write_ptr_ref;
+                        staging_bytes_produced--;
+                        *dest = src_byte;
+                        *staging_write_ptr_ref = dest + 1;
+                    } while (staging_bytes_produced != loop_sentinel);
 
-                    continue; // Go back and decompress another pass into the (now reset) staging buffer
+                    continue;
                 }
 
-                // --- Decompression complete (end-of-stream opcode 0xFF was reached) ---
-                // Fire pfnChunkDone for the final (possibly partial) chunk and return.
-                pfnChunkDone(chunkIndex);
+                chunk_done(chunk_index);
                 return;
 
-            } while (bytesBuffered != CD_STREAM_STATE.bytesBuffered);
-            // Re-check: if bytesBuffered changed while we were running (new sectors arrived from
-            // the CD callback), loop again immediately to consume the fresh data.
+            } while (bytes_buffered != CD_STREAM_STATE.bytesBuffered);
 
-            // --- Update streaming state after processing all buffered data ---
-            // bytesBuffered is reused here to hold the consumed-byte count.
-            bytesBuffered = streamState->writePtr - streamState->readPtr;
-            prevReadPtr = streamState->readPtr;
+            bytes_buffered = stream_state->writePtr - stream_state->readPtr;
+            previous_read_ptr = stream_state->readPtr;
 
-            streamState->dataReady = 0; // Clear the "new data ready" flag
-            streamState->bytesConsumed = bytesBuffered;
-            remainingDataSize -= bytesBuffered;
+            stream_state->dataReady = 0;
+            stream_state->bytesConsumed = bytes_buffered;
+            remaining_size -= bytes_buffered;
 
-            if (streamState->bufferWrapped != 1)
+            if (stream_state->bufferWrapped != 1)
             {
-                // Ring buffer has not wrapped; just yield and wait for more sectors.
                 timestamp = VSync(-1);
                 continue;
             }
 
-            // --- Handle ring buffer wrap-around ---
-            // (Identical logic to cdrom_stream; see that function for detailed comments)
-            wrapOverflow = streamState->wrapOverflow;
+            wrap_overflow = stream_state->wrapOverflow;
 
-            if (wrapOverflow != 0)
+            if (wrap_overflow != 0)
             {
-                stagingBytesProduced = streamState->bytesBuffered - bytesBuffered;
-                alignRemainder = (stagingBytesProduced & 3);
-                relocDstAddr = 4 - alignRemainder;
-                copySize = relocDstAddr & 3;
-                loopCount = 0x801dc118;
-                relocDstAddr = loopCount - stagingBytesProduced;
-                prevReadPtr = (prevReadPtr + bytesBuffered) - copySize;
+                // Compact unread bytes so wrapped input remains contiguous.
+                staging_bytes_produced = stream_state->bytesBuffered - bytes_buffered;
+                alignment = (staging_bytes_produced & CD_STREAM_COPY_WORD_MASK);
+                relocation.alignment_adjustment = CD_STREAM_COPY_WORD_SIZE - alignment;
+                copy_size = relocation.alignment_adjustment & CD_STREAM_COPY_WORD_MASK;
+                loop_count = CD_STREAM_BUFFER_END;
+                relocation.dst = (u8*)(loop_count - staging_bytes_produced);
+                previous_read_ptr = (previous_read_ptr + bytes_buffered) - copy_size;
 
-                streamState->writePtr = relocDstAddr;
-                streamState->readPtr = relocDstAddr;
-                relocDstAddr = relocDstAddr - copySize;
+                stream_state->writePtr = relocation.dst;
+                stream_state->readPtr = relocation.dst;
+                relocation.dst = relocation.dst - copy_size;
 
-                alignRemainder = stagingBytesProduced + 3;
-                streamState->bytesBuffered = wrapOverflow + stagingBytesProduced;
+                alignment = staging_bytes_produced + CD_STREAM_COPY_WORD_MASK;
+                stream_state->bytesBuffered = wrap_overflow + staging_bytes_produced;
 
-                if (alignRemainder < 0)
+                if (alignment < 0)
                 {
-                    alignRemainder = stagingBytesProduced + 6;
+                    alignment = staging_bytes_produced + 6;
                 }
 
-                stagingBytesProduced = (alignRemainder >> 2);
-                stagingBytesProduced--;
+                staging_bytes_produced = (alignment >> 2);
+                staging_bytes_produced--;
 
-                if (stagingBytesProduced != sentinel)
+                if (staging_bytes_produced != sentinel)
                 {
-                    s32 wrapNegOne = -1;
+                    s32 wrap_sentinel = -1;
                     do
                     {
-                        *(s32*)relocDstAddr = *(s32*)prevReadPtr;
-                        prevReadPtr += 4;
-                        relocDstAddr += 4;
-                        stagingBytesProduced--;
-                    } while (stagingBytesProduced != wrapNegOne);
+                        *(s32*)relocation.dst = *(s32*)previous_read_ptr;
+                        previous_read_ptr += CD_STREAM_COPY_WORD_SIZE;
+                        relocation.dst += CD_STREAM_COPY_WORD_SIZE;
+                        staging_bytes_produced--;
+                    } while (staging_bytes_produced != wrap_sentinel);
                 }
             }
             else
             {
-                streamState->readPtr = prevReadPtr + bytesBuffered;
-                streamState->bytesBuffered -= bytesBuffered;
+                stream_state->readPtr = previous_read_ptr + bytes_buffered;
+                stream_state->bytesBuffered -= bytes_buffered;
             }
 
-            *(volatile u8*)streamState = 1; // Memory barrier: signal callback that buffer is ready again
+            // Publish the updated buffer state to the transfer callback.
+            *(volatile u8*)stream_state = 1;
             timestamp = VSync(-1);
             continue;
         }
 
-        // Timeout -- pump the CD command queue and reset the timer.
         cdrom_process_state();
         timestamp = VSync(-1);
     }
@@ -3440,7 +3389,7 @@ s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/UDwSD
  */
-s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
+u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
 {
     s32 unconsumed;
     s32 align_pad;
@@ -3455,13 +3404,13 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
     u32 bytes_buffered;
     u32 bytes_consumed;
     u32 wrap_overflow;
-    u32 read_ptr;
-    u32 read_ptr_b;
-    u32 read_ptr_c;
+    u8* read_ptr;
+    u8* read_ptr_b;
+    u8* read_ptr_c;
     u32 old_wrap_overflow;
-    u32 aligned_write_base;
+    u8* aligned_write_base;
     u32 chunk_size;
-    s32* result;
+    u8* result;
     volatile CdStreamState* flag_state;
 
     chunk_size = bytes_remaining;
@@ -3473,11 +3422,11 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
     if (bytes_transferred == 0)
     {
         CD_STREAM_STATE.dataReady = 1;
-        CD_STREAM_STATE.writePtr = 0x801DC001U;
-        CD_STREAM_STATE.readPtr = 0x801DC001U;
+        CD_STREAM_STATE.writePtr = (u8*)0x801DC001U;
+        CD_STREAM_STATE.readPtr = (u8*)0x801DC001U;
         CD_STREAM_STATE.bytesBuffered = (s32)(chunk_size - 1);
         CD_STREAM_STATE.wrapOverflow = 0;
-        return (s32*)0x801DC000;
+        return (u8*)0x801DC000;
     }
 
     state = (CdStreamState*)0x1F800000;
@@ -3491,12 +3440,12 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
         {
             read_ptr = state->readPtr;
             dst = (u8*)(0x801DC118 - unconsumed);
-            state->writePtr = (s32)dst;
-            state->readPtr = (s32)dst;
+            state->writePtr = dst;
+            state->readPtr = dst;
             dst -= align_pad;
             aligned_bytes = unconsumed + 3;
             CD_STREAM_STATE.bytesBuffered = (wrap_overflow + unconsumed) + chunk_size;
-            src = (u8*)((read_ptr + bytes_consumed) - align_pad);
+            src = (read_ptr + bytes_consumed) - align_pad;
             if (aligned_bytes < 0)
             {
                 aligned_bytes = unconsumed + 6;
@@ -3521,12 +3470,12 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
         {
             dst = (u8*)0x801DC000;
             aligned_bytes_b = unconsumed + 3;
-            read_ptr_b = (CD_STREAM_STATE.bytesBuffered = unconsumed + chunk_size);
+            CD_STREAM_STATE.bytesBuffered = unconsumed + chunk_size;
             read_ptr_b = state->readPtr;
-            aligned_write_base = align_pad + 0x801DC000;
+            aligned_write_base = (u8*)(align_pad + 0x801DC000);
             state->writePtr = aligned_write_base;
             state->readPtr = aligned_write_base;
-            src_b = (u8*)((read_ptr_b + bytes_consumed) - align_pad);
+            src_b = (read_ptr_b + bytes_consumed) - align_pad;
             if (aligned_bytes_b < 0)
             {
                 aligned_bytes_b = unconsumed + 6;
@@ -3545,24 +3494,24 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
             }
         }
         (*((volatile CdStreamState*)(0x1F800000))).dataReady = 1U;
-        return (s32*)dst;
+        return dst;
     }
 
     read_ptr_c = state->readPtr;
     bytes_buffered = state->bytesBuffered;
     bytes_transferred = CD_STREAM_STATE.wrapOverflow;
-    dst = (u8*)(read_ptr_c + bytes_buffered);
+    dst = read_ptr_c + bytes_buffered;
     if ((bytes_transferred != 0) || (((u32)(dst + chunk_size)) > 0x801DE000U))
     {
         dst = (u8*)(bytes_transferred + 0x801DC118);
-        if (((u32)state->writePtr) >= ((u32)(dst + chunk_size)))
+        if (state->writePtr >= (dst + chunk_size))
         {
             CD_STREAM_STATE.wrapOverflow = bytes_transferred + chunk_size;
         }
         else
         {
             CD_STREAM_STATE.dropped_sectors += 1;
-            return (void*)0;
+            return NULL;
         }
     }
     else
@@ -3571,12 +3520,12 @@ s32* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining)
         state->bytesBuffered = unconsumed + chunk_size;
     }
 
-    result = (s32*)dst;
+    result = dst;
     if (bytes_remaining == chunk_size)
     {
         flag_state = (CdStreamState*)0x1F800000;
         flag_state->bufferWrapped = 1;
-        result = (s32*)dst;
+        result = dst;
         return result;
     }
     return result;

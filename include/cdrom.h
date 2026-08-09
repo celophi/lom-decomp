@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-typedef u32* (*CdCommandCallback)(s32 bytes_transferred, u32 bytes_remaining);
+typedef u8* (*CdCommandCallback)(s32 bytes_transferred, u32 bytes_remaining);
 typedef u8* (*CdStreamGetBufferCallback)(s32 chunk_index, s32* capacity);
 typedef void (*CdStreamChunkDoneCallback)(s32 chunk_index);
 
