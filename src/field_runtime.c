@@ -1,5 +1,5 @@
 #include "field_runtime.h"
-#include "cd.h"
+#include "cdrom.h"
 #include "controller.h"
 #include "overlay_memory.h"
 #include "psyq/libgte.h"
