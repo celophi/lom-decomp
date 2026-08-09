@@ -19,6 +19,8 @@
 #define CD_RECOVERY_READ_TIMEOUT_FRAMES 270
 #define CD_SET_MODE_DELAY_FRAMES 4
 #define CD_RECOVERY_FLUSH_DELAY_FRAMES 1
+#define CD_RESOURCE_LOAD_VSYNC_OFFSET (-3)
+#define CD_DEFAULT_AUDIO_VOLUME 128
 #define CD_RECOVERY_FILTER_FILE 1
 #define CD_RECOVERY_FILTER_CHANNEL 1
 #define CD_READY_CALLBACK_PENDING 1
@@ -157,6 +159,12 @@ typedef enum CdExecutionMode
     CD_EXECUTION_MODE_COMMAND_THEN_READ = 1,
     CD_EXECUTION_MODE_READ_THEN_COMMAND = 2,
 } CdExecutionMode;
+
+typedef enum CdAudioMixMode
+{
+    CD_AUDIO_MIX_LEFT_TO_BOTH = 0,
+    CD_AUDIO_MIX_BOTH_TO_LEFT = 1,
+} CdAudioMixMode;
 
 typedef enum CdQueueCommandError
 {
@@ -2497,181 +2505,136 @@ void cdrom_reset(void)
 }
 
 /**
- * @brief Checks whether a resource index is absent from the pending command queue.
+ * @brief Tests whether a resource is absent from the pending command queue.
  *
- * Scans every pending entry in the circular command queue and returns whether
- * the given resource index is not already present, indicating it is safe to
- * enqueue a new command for that resource without creating a duplicate.
- *
- * @details
- * The scan performs the following steps:
- *
- * 1. Reads queue_read_index as the starting scan position
- * 2. Computes the number of pending entries as (queue_write_index - queue_read_index) & 0xF
- * 3. Decrements that count by 1 and compares against a sentinel of -1 to detect an
- *    empty queue (no iterations performed)
- * 4. For each pending slot, compares the stored resource_index against the lower 16
- *    bits of the argument; returns 0 immediately on a match (duplicate found)
- * 5. Advances scanIndex by masking with 0xF before incrementing to maintain circular
- *    wrap semantics within the 16-entry buffer
- * 6. Returns 1 if the full queue was scanned with no match
- *
- * @note
- * - Only the lower 16 bits of resource_index are compared, matching the u16 storage
- *   in CdCommandQueueItem
- * - The decrement-before-loop pattern and sentinel value of -1 match the original
- *   assembly's register usage exactly and must not be restructured
- * - The mask-then-increment sequence (scanIndex = (scanIndex & 0xF) + 1) matches
- *   the original assembly's andi + addiu pair for register-level equivalence
- *
- * @warning
- * - Not interrupt-safe; the queue indices and entries may change between reads if
- *   called while a CD callback is active
- * - Does not prevent a race between this check and a subsequent cdrom_queue_command call;
- *   the caller must not assume the result remains valid across VSync frames
- *
- * @param resource_index  Resource index to search for in the queue (lower 16 bits used)
- *
- * @return 1 if the resource index is not already queued (safe to enqueue),
- *         0 if a matching entry was found (duplicate present)
+ * @param resource_index Resource index to search for.
+ * @return TRUE when absent; FALSE when already queued.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/l4HlL
  */
 s32 cdrom_can_queue_resource(s32 resource_index)
 {
-    s32 queuedResourceIndex;
-    s32 scanIndex;
-    s32 remainingEntries;
+    u16 queued_resource_index;
+    u16 target_resource_index;
+    s32 scan_index;
+    s32 remaining_entries;
 
-    scanIndex = CD_SYSTEM.queue_read_index;
+    scan_index = CD_SYSTEM.queue_read_index;
+    target_resource_index = resource_index;
 
-    // Calculate number of pending entries in the circular queue
-    remainingEntries = ((CD_SYSTEM.queue_write_index - scanIndex) & 0x0F);
+    remaining_entries = (CD_SYSTEM.queue_write_index - scan_index) & CD_COMMAND_QUEUE_MASK;
 
-    // If queue is non-empty, scan all pending entries for a match
-    while (--remainingEntries != -1)
+    for (--remaining_entries; remaining_entries != -1; remaining_entries--)
     {
+        queued_resource_index = CD_SYSTEM.command_queue.items[scan_index].resource_index;
 
-        // Check if this queued entry already targets the same resource
-        queuedResourceIndex = CD_SYSTEM.command_queue.items[scanIndex].resource_index;
-
-        if ((resource_index & 0xFFFF) == queuedResourceIndex)
+        if (target_resource_index == queued_resource_index)
         {
-            return 0;
+            return FALSE;
         }
 
-        // Advance scan index with circular wrap (mod 16)
-        scanIndex &= 0xF;
-        scanIndex++;
+        scan_index &= CD_COMMAND_QUEUE_MASK;
+        scan_index++;
     }
 
-    return 1;
+    return TRUE;
 }
 
 /**
- * @brief Initializes the default CD resource and loads the resource table from disc.
+ * @brief Loads the CD resource table and initializes default read settings.
  *
- * Converts a raw LBA sector address to MSF, stores it as the default CD resource,
- * enqueues a CdlReadN to load the resource entry table, blocks until complete,
- * then applies a default audio volume of 128.
- *
- * @details
- * Synchronizes with g_cd_vsync_timestamp before issuing commands to avoid conflicts
- * with any in-flight CD operation.
- *
- * @param lba           Logical block address of the target sector.
- * @param data_sizeBytes Size in bytes stored as the default resource's data_size.
- *
- * @warning Blocks until the CD command queue is drained. Must not be called
- *          from within a CD callback.
+ * @param lba Logical block address of the resource table.
+ * @param data_size_bytes Resource table size in bytes.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Y9z7y
  */
-void cdrom_load_resource_table(s32 lba, s32 data_sizeBytes)
+void cdrom_load_resource_table(s32 lba, s32 data_size_bytes)
 {
     CdlLOCRaw* location;
-    int vsyncOffset;
-    int vsyncDelta;
-    CdSystem* cdStruct;
+    s32 vsync_offset;
+    s32 vsync_delta;
+    CdSystem* cd_system;
 
-    vsyncOffset = -3;
-    vsyncDelta = g_cd_vsync_timestamp - (VSync(-1) + vsyncOffset);
+    vsync_offset = CD_RESOURCE_LOAD_VSYNC_OFFSET;
+    vsync_delta = g_cd_vsync_timestamp - (VSync(-1) + vsync_offset);
 
-    if (vsyncDelta > 0)
+    if (vsync_delta > 0)
     {
-        if (vsyncDelta == 1)
+        if (vsync_delta == 1)
         {
-            vsyncDelta = 0;
+            // A one-frame delay is requested through VSync(0).
+            vsync_delta = 0;
         }
 
-        VSync(vsyncDelta);
+        VSync(vsync_delta);
     }
 
-    cdStruct = &CD_SYSTEM;
-    location = &cdStruct->default_cd_resource.location;
-    cdStruct->default_cd_resource.location.raw = 0;
-    cdStruct->default_cd_resource.data_size = data_sizeBytes;
+    cd_system = &CD_SYSTEM;
+    location = &cd_system->default_cd_resource.location;
+    cd_system->default_cd_resource.location.raw = 0;
+    cd_system->default_cd_resource.data_size = data_size_bytes;
 
     CdIntToPos(lba, &location->pos);
     cdrom_queue_command(CdlReadN, CD_RESOURCE_INDEX_DEFAULT, CD_RESOURCE_ENTRIES, NULL);
     cdrom_wait_queue_empty();
-    cdrom_set_audio_volume(128, 1);
+    cdrom_set_audio_volume(CD_DEFAULT_AUDIO_VOLUME, CD_AUDIO_MIX_BOTH_TO_LEFT);
 }
 
 /**
- * @brief Enqueues a CdlReadN command for the given resource and destination buffer.
+ * @brief Queues a resource read into a destination buffer.
  *
- * @param resource_index  Index into CD_RESOURCE_ENTRIES identifying the data to read.
- * @param dst_buffer      Destination buffer for the sector data.
+ * @param resource_index Resource table index.
+ * @param dst_buffer Destination buffer.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/OxunQ
  */
 void cdrom_queue_read(s32 resource_index, void* dst_buffer)
 {
-    cdrom_queue_command(CdlReadN, resource_index, dst_buffer, 0);
+    cdrom_queue_command(CdlReadN, resource_index, dst_buffer, NULL);
 }
 
 /**
- * @brief Enqueues a CdlReadN command for the given resource with a completion callback.
+ * @brief Queues a resource read handled by a transfer callback.
  *
- * Like cdrom_queue_read, but delivers sector data through a callback instead of
- * writing directly to a destination buffer. Passes only the lower 16 bits of
- * resource_index to cdrom_queue_command.
- *
- * @param resource_index  Index into CD_RESOURCE_ENTRIES (lower 16 bits used).
- * @param callback       Invoked on command completion with sector data.
+ * @param resource_index Resource table index.
+ * @param callback Transfer callback.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/5M5cV
  */
 void cdrom_queue_read_with_callback(s32 resource_index, CdCommandCallback callback)
 {
-    cdrom_queue_command(CdlReadN, resource_index & 0xFFFF, 0, callback);
+    u16 queued_resource_index;
+
+    queued_resource_index = resource_index;
+    cdrom_queue_command(CdlReadN, queued_resource_index, NULL, callback);
 }
 
 /**
- * @brief Enqueues a CdlSeekL command to pre-position the disc head.
+ * @brief Queues a logical seek to a resource.
  *
- * @param resource_index  Index into CD_RESOURCE_ENTRIES identifying the target position.
+ * @param resource_index Resource table index.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/iUUQh
  */
 void cdrom_queue_seek(s32 resource_index)
 {
-    cdrom_queue_command(CdlSeekL, resource_index, 0, 0);
+    cdrom_queue_command(CdlSeekL, resource_index, NULL, NULL);
 }
 
 /**
- * @brief Returns the data size of a CD resource entry.
+ * @brief Returns a resource's data size.
  *
- * @param resource_index  Index into CD_RESOURCE_ENTRIES (lower 16 bits used).
- *
- * @return The data_size field of the resource entry in bytes.
+ * @param resource_index Resource table index.
+ * @return Resource size in bytes.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/SGZF5
  */
 s32 cdrom_get_resource_size(s32 resource_index)
 {
-    return CD_RESOURCE_ENTRIES[resource_index & 0xffff].data_size;
+    u16 table_index;
+
+    table_index = resource_index;
+    return CD_RESOURCE_ENTRIES[table_index].data_size;
 }
 
 /**
