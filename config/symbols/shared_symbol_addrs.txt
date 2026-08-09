@@ -885,7 +885,7 @@ McxStartCom                         = 0x800319D8;
 // Globals
 g_music_track_table                = 0x800351A0;
 g_gameState                         = 0x8003522C;
-g_DiscValidationId                  = 0x80035230;
+g_disc_validation_id                = 0x80035230;
 g_akao_spu_zero_primer              = 0x8003D170;
 g_akao_opcode_len_table             = 0x8003D1B0;
 g_akao_opcode_len_table_ext         = 0x8003D210;
@@ -982,20 +982,20 @@ g_field_current_render_half         = 0x800473F4;
 
 // Globals
 g_pending_game_state                = 0x8010D018;
-g_cdAudioReady                      = 0x801ED591;
-g_cdSystem                          = 0x801ED800;
-g_cdStatusByte3                     = 0x801ED802;
-g_cdAudioEnabled                    = 0x801ED804;
-g_playbackState                     = 0x801ED805;
-g_cdPendingQueueCount               = 0x801ED806;
-g_initState                         = 0x801ED815;
-g_cdReadRemainingBytes              = 0x801ED828;
-g_cdVSyncTimestamp                  = 0x801ED94C;
+g_cd_audio_ready                    = 0x801ED591;
+g_cd_system                         = 0x801ED800;
+g_cd_status_byte_3                  = 0x801ED802;
+g_cd_audio_enabled                  = 0x801ED804;
+g_playback_state                    = 0x801ED805;
+g_cd_pending_queue_count            = 0x801ED806;
+g_cd_init_state                     = 0x801ED815;
+g_cd_read_remaining_bytes           = 0x801ED828;
+g_cd_vsync_timestamp                = 0x801ED94C;
 g_cdSetModeArg                      = 0x801ED950;
-g_cdStatusByte                      = 0x801ED960;
-g_cdSyncCallbackResult              = 0x801ED968;
-g_cdReadyCallbackResult             = 0x801ED96C;
-g_defaultCdResource                 = 0x801ED990;
+g_cd_status_byte                    = 0x801ED960;
+g_cd_sync_callback_result           = 0x801ED968;
+g_cd_ready_callback_result          = 0x801ED96C;
+g_default_cd_resource               = 0x801ED990;
 g_SKCDPOSE_DAT                      = 0x801ED998;
-g_cdResource176                     = 0x801EDF18;
+g_cd_resource_176                   = 0x801EDF18;
 

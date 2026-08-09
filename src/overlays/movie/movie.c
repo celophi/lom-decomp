@@ -364,8 +364,8 @@ struct AlternateMovieDecodeBuffers
 };
 
 /* Shared CD subsystem state referenced directly by the movie overlay. */
-extern u_char g_cdAudioReady;
-extern u8 g_cdStatusByte3;
+extern u_char g_cd_audio_ready;
+extern u8 g_cd_status_byte_3;
 
 extern AllocInfo* g_allocInfo; /* allocation descriptor used by movie_init's alternate buffer layout */
 extern u8 g_gpuMode;           /* 0=DrawSync/LoadImage path; non-zero=BreakDraw/LoadImage2 path (at 0x801ED590) */
@@ -568,7 +568,7 @@ void movie_play(s32 movie_index)
             buttons = (SCD_REGS)->pressed_buttons;
             if (((movie_index_value != MOVIE_INDEX_INTRO) ? ((buttons & MOVIE_ATTRACT_1_SKIP_MASK) != 0) : ((buttons & MOVIE_INTRO_SKIP_MASK) != 0)) != 0)
             {
-                if (g_cdAudioReady == 0)
+                if (g_cd_audio_ready == 0)
                 {
                     break;
                 }
@@ -581,7 +581,7 @@ void movie_play(s32 movie_index)
         }
 
         /* Fade XA audio after a skip request. */
-        if ((g_cdAudioReady != 0) && (audio_fade_vol != AUDIO_FADE_DISARMED))
+        if ((g_cd_audio_ready != 0) && (audio_fade_vol != AUDIO_FADE_DISARMED))
         {
             akao_cmd_e4_set_cd_volume(audio_fade_vol);
 
@@ -864,7 +864,7 @@ void movie_update(void)
 
     /* Advance XA playback and retire consumed audio sectors. */
     movie_state = MOVIE_STATE;
-    if (g_cdAudioReady != 0)
+    if (g_cd_audio_ready != 0)
     {
         if (get_next_audio_entry(&stream_entry.audio_sector) != 0)
         {
@@ -914,7 +914,7 @@ void movie_mdec_out_callback(void)
     /* Queue a standard GPU upload or defer it while drawing is busy. */
     if (g_gpuMode == MOVIE_GPU_MODE_STANDARD)
     {
-        if (g_cdStatusByte3 == CD_STATUS_RECOVERY_PENDING)
+        if (g_cd_status_byte_3 == CD_STATUS_RECOVERY_PENDING)
         {
             cdrom_verify_recovery();
         }
