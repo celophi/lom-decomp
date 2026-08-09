@@ -159,6 +159,7 @@ SRCS_G0 := \
 	src/field_runtime.c \
 	src/decomp9.c \
 	src/decomp9-func_80024B00.c \
+	src/decomp9-func_80024F60.c \
 	src/main.c
 
 SRCS_G4 := \
