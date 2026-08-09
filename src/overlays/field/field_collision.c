@@ -2048,7 +2048,7 @@ s16 func_8005DFAC(Move_UnkNode1* node, s32* pt)
  *             an earlier edge already blocked the movement.
  * @return The resolved slide direction, @p best when the earlier one still
  *         wins, or -1 when the movement is blocked.
- * @see decomp.me (97.50%, 126/130 exact) TODO
+ * @see decomp.me (100%) TODO
  */
 s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
 {
@@ -2061,10 +2061,8 @@ s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
     s32 dx;
     s32 dy;
     s32 d2;
-    s32 mid;
+    s32 tmp;
     s32 wrap;
-    s32 e1;
-    s32 e2;
 
     if (best == -1)
     {
@@ -2079,7 +2077,8 @@ s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
             ep = &tbl[run->index * 2];
             while (--scratch != -1)
             {
-                if (prev != NULL)
+                tmp = prev != NULL;
+                if (tmp)
                 {
                     if (edge == 0)
                     {
@@ -2122,10 +2121,10 @@ s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
             scratch = angle - wrap;
         }
     }
-    mid = angle + 0x800;
-    if (dir < mid)
+    tmp = angle + 0x800;
+    if (dir < tmp)
     {
-        d2 = mid - dir;
+        d2 = tmp - dir;
         if (d2 > 0x800)
         {
             wrap = angle - 0x800;
@@ -2134,7 +2133,7 @@ s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
     }
     else
     {
-        d2 = dir - mid;
+        d2 = dir - tmp;
     }
     if (scratch == d2)
     {
@@ -2149,40 +2148,39 @@ s32 func_8005E1A8(Move_UnkNode2* def, s32 edge, s32 dir, s32 best)
         return angle;
     }
 
-    e2 = best - dir;
-    e1 = angle - dir;
-    if (e1 > 0x800)
+    scratch = angle - dir;
+    if (scratch > 0x800)
     {
-        e1 -= 0x1000;
+        scratch -= 0x1000;
     }
-    else if (e1 < -0x800)
+    else if (scratch < -0x800)
     {
-        e1 += 0x1000;
+        scratch += 0x1000;
     }
-    if (e2 > 0x800)
+    d2 = best - dir;
+    if (d2 > 0x800)
     {
-        e2 -= 0x1000;
+        d2 -= 0x1000;
     }
-    else if (e2 < -0x800)
+    else if (d2 < -0x800)
     {
-        e2 += 0x1000;
+        d2 += 0x1000;
     }
 
-    if ((e1 >= 0) && (e2 >= 0))
+    if ((scratch >= 0) && (d2 >= 0))
     {
-        if (e1 < e2)
+        if (scratch < d2)
         {
             angle = best;
         }
-        else if (e1 >= 0x472)
+        else if (scratch >= 0x472)
         {
             angle = -1;
         }
     }
-    else if ((e1 <= 0) && (e2 <= 0))
+    else if ((scratch <= 0) && (d2 <= 0))
     {
-        scratch = e1;
-        if (e2 < e1)
+        if (d2 < scratch)
         {
             angle = best;
         }
