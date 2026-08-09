@@ -86,7 +86,7 @@ typedef union
     u32 word;
     struct
     {
-        u8 b0;
+        u8 flags;
         u8 defer_data_ready;
         u8 data_ready_pending;
         u8 retry_exhausted;
@@ -172,6 +172,16 @@ typedef enum CdQueueCommandError
     CD_QUEUE_ERROR_INVALID_RESOURCE = -2,
     CD_QUEUE_ERROR_LOCKED = -3,
 } CdQueueCommandError;
+
+typedef enum CdErrorStatus
+{
+    CD_ERROR_STATUS_NONE = 0,
+    CD_ERROR_STATUS_SYNC_ERROR = 1,
+    CD_ERROR_STATUS_DISC_CHECK_PENDING = 2,
+    CD_ERROR_STATUS_INVALID_DISC = 3,
+    CD_ERROR_STATUS_NO_DISC = 4,
+    CD_ERROR_STATUS_RETRIES_EXHAUSTED = 5,
+} CdErrorStatus;
 
 // CD-ROM controller commands omitted from PSYQ libcd.h.
 // Reference: https://psx-spx.consoledev.net/cdromdrive/
@@ -2638,55 +2648,44 @@ s32 cdrom_get_resource_size(s32 resource_index)
 }
 
 /**
- * @brief Returns a numeric code describing the current CD subsystem error state.
+ * @brief Returns the current CD recovery error status.
  *
- * Reads CD_SYSTEM.status_flags and maps the active error bits to a code:
- *
- *   Code  Condition
- *   ----  ---------
- *   0     No error (all flags clear, retry_exhausted == 0)
- *   1     status_flags bit 0 set
- *   2     status_flags bits 1 and 2 both set
- *   3     status_flags bit 1 set, bit 2 clear
- *   4     status_flags bit 2 set, bit 1 clear
- *   5     retry_exhausted == 1
- *
- * @return Error code (0 = OK, 1–5 = error condition).
+ * @return CdErrorStatus value.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/vfLUw
  */
 s32 cdrom_get_error_status(void)
 {
-    CdStatusFlags flags;
+    u32 status_flags;
 
-    flags = CD_SYSTEM.status_flags;
+    status_flags = CD_SYSTEM.status_flags.word;
 
-    if (flags.bytes.b0 & 1)
+    if (status_flags & CD_STATUS_SYNC_ERROR)
     {
-        return 1;
+        return CD_ERROR_STATUS_SYNC_ERROR;
     }
 
-    if ((flags.bytes.b0 & 2) != 0)
+    if ((status_flags & CD_STATUS_INVALID_DISC) != 0)
     {
-        if (flags.bytes.b0 & 4)
+        if (status_flags & CD_STATUS_NO_DISC)
         {
-            return 2;
+            return CD_ERROR_STATUS_DISC_CHECK_PENDING;
         }
 
-        return 3;
+        return CD_ERROR_STATUS_INVALID_DISC;
     }
 
-    if (flags.bytes.b0 & 4)
+    if (status_flags & CD_STATUS_NO_DISC)
     {
-        return 4;
+        return CD_ERROR_STATUS_NO_DISC;
     }
 
-    if (CD_SYSTEM.status_flags.bytes.retry_exhausted == 1)
+    if (CD_SYSTEM.status_flags.bytes.retry_exhausted == TRUE)
     {
-        return 5;
+        return CD_ERROR_STATUS_RETRIES_EXHAUSTED;
     }
 
-    return 0;
+    return CD_ERROR_STATUS_NONE;
 }
 
 /**
