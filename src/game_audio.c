@@ -1,6 +1,6 @@
 #include "game_audio.h"
 #include "akao.h"
-#include "cd.h"
+#include "cdrom.h"
 
 extern s32 g_current_song_handle;
 extern u8 g_music_data_buffer;

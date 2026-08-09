@@ -8,7 +8,7 @@
  */
 
 #include "common.h"
-#include "cd.h"
+#include "cdrom.h"
 #include "akao.h"
 #include "psyq/memory.h"
 
