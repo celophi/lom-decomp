@@ -221,7 +221,7 @@ segments:
       - [0x15760, c, decomp9-func_80024F60]
       - [0x15BE8, c, decomp9-func_800253E8]
       - [0x15C98, c, decomp9-func_80025498]
-      - [0x15C98, c, decomp9-func_80025500]
+      - [0x15D00, c, decomp9-func_80025500]
       - [0x15F60, c, unk9]
       - [0x1998C, c, psyq/libspu/S_SRMT]
       - [0x19B5C, c, psyq/libspu/S_SRA]
