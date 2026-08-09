@@ -50,6 +50,10 @@
 #define CD_STREAM_LZ_WINDOW_SIZE 0x1000
 #define CD_INIT_COMMAND_RETRY_FLAG 0x80
 #define CD_INIT_COMMAND_MASK 0x7F
+#define CD_DECOMPRESS_LOW_NIBBLE_MASK 0x0F
+#define CD_DECOMPRESS_HIGH_NIBBLE_MASK 0xF0
+#define CD_DECOMPRESS_OFFSET_MASK 0xFFFF
+#define CD_DECOMPRESS_COPY_8_BIT_BASE_LENGTH 0x14
 
 typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
@@ -182,6 +186,32 @@ typedef enum CdErrorStatus
     CD_ERROR_STATUS_NO_DISC = 4,
     CD_ERROR_STATUS_RETRIES_EXHAUSTED = 5,
 } CdErrorStatus;
+
+typedef enum CdDecompressOpcode
+{
+    CD_DECOMPRESS_REPEAT_NIBBLE = 0xF0,
+    CD_DECOMPRESS_REPEAT_BYTE = 0xF1,
+    CD_DECOMPRESS_REPEAT_NIBBLE_PAIR = 0xF2,
+    CD_DECOMPRESS_REPEAT_PAIR = 0xF3,
+    CD_DECOMPRESS_REPEAT_TRIPLET = 0xF4,
+    CD_DECOMPRESS_INTERLEAVE_BYTE = 0xF5,
+    CD_DECOMPRESS_INTERLEAVE_PAIR = 0xF6,
+    CD_DECOMPRESS_INTERLEAVE_TRIPLET = 0xF7,
+    CD_DECOMPRESS_ASCENDING_RUN = 0xF8,
+    CD_DECOMPRESS_DESCENDING_RUN = 0xF9,
+    CD_DECOMPRESS_STEPPED_RUN = 0xFA,
+    CD_DECOMPRESS_PAIR_DELTA_RUN = 0xFB,
+    CD_DECOMPRESS_COPY_12_BIT = 0xFC,
+    CD_DECOMPRESS_COPY_8_BIT = 0xFD,
+    CD_DECOMPRESS_COPY_NIBBLE = 0xFE,
+    CD_DECOMPRESS_END = 0xFF,
+} CdDecompressOpcode;
+
+typedef union CdDecompressCursor
+{
+    u32 offset;
+    u8* bytes;
+} CdDecompressCursor;
 
 // CD-ROM controller commands omitted from PSYQ libcd.h.
 // Reference: https://psx-spx.consoledev.net/cdromdrive/
@@ -329,8 +359,7 @@ void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode);
 void cdrom_verify_disc(u8 interrupt, u8* result);
 void cdrom_handle_sync_error(void);
 void cdrom_set_audio_volume(u8 volume, s32 mix_mode);
-s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
-void func_80014434(void);
+s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst_end);
 u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining);
 void cdrom_decompress_buffer(u8* srcStart, u8* dstStart);
 void cdrom_clear_data_ready(s8* data_ready);
@@ -2689,11 +2718,7 @@ s32 cdrom_get_error_status(void)
 }
 
 /**
- * @brief Restores previously saved CD callbacks and resets all subsystem state.
- *
- * Reinstalls the sync and ready callbacks that were saved before the last
- * cdrom_init or cdrom_stop call, issues a blocking CdControlB(9) to pause
- * the drive, then clears all queue indices, command state, and status flags.
+ * @brief Restores saved callbacks, pauses the drive, and clears CD state.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/HSXMR
  */
@@ -2702,25 +2727,25 @@ void cdrom_restore_callbacks(void)
     CdSyncCallback(CD_SYSTEM.previous_sync_callback);
     CdReadyCallback(CD_SYSTEM.previous_ready_callback);
 
-    while (CdControlB(9U, NULL, NULL) == 0);
+    while (CdControlB(CdlPause, NULL, NULL) == 0);
 
-    CD_SYSTEM.resource_index = 0xFFFE;
+    CD_SYSTEM.resource_index = CD_RESOURCE_INDEX_INVALID;
     CD_SYSTEM.pending_queue_count = 0;
     CD_SYSTEM.current_resource_index = 0;
     CD_SYSTEM.current_data_size = 0;
     CD_SYSTEM.target_data_size = 0;
-    CD_SYSTEM.playback_state = 0;
+    CD_SYSTEM.playback_state = FALSE;
     CD_SYSTEM.transfer_callback = NULL;
-    CD_SYSTEM.current_command = 0;
-    CD_SYSTEM.init_command = 0;
+    CD_SYSTEM.current_command = CD_COMMAND_NONE;
+    CD_SYSTEM.init_command = CD_SYNC_COMMAND_NONE;
     CD_SYSTEM.retry_count = 0;
     CD_SYSTEM.retry_counter = 0;
-    CD_SYSTEM.last_command = 0;
-    CD_SYSTEM.dst_buffer = 0;
+    CD_SYSTEM.last_command = CD_COMMAND_NONE;
+    CD_SYSTEM.dst_buffer = NULL;
     CD_SYSTEM.callback = NULL;
-    CD_SYSTEM.status_flags.word &= ~0x10;
-    CD_SYSTEM.status_flags.bytes.defer_data_ready = 0;
-    CD_SYSTEM.status_flags.bytes.data_ready_pending = 0;
+    CD_SYSTEM.status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
+    CD_SYSTEM.status_flags.bytes.defer_data_ready = FALSE;
+    CD_SYSTEM.status_flags.bytes.data_ready_pending = FALSE;
     CD_SYSTEM.vsync_timestamp = VSync(-1);
     CD_SYSTEM.queue_read_index = 0;
     CD_SYSTEM.queue_write_index = 0;
@@ -2729,54 +2754,46 @@ void cdrom_restore_callbacks(void)
 }
 
 /**
- * @brief Requests entry into CD recovery mode if the subsystem is idle.
+ * @brief Requests recovery mode when command processing is idle.
  *
- * Sets status_flags bit 3 (the recovery flag) and resets init_state to 0 only
- * when all of the following are true: no command is active (current_command == 0),
- * no init command is pending (init_command == 0), no error flags are set (bits 0-2
- * clear), and the queue is empty (queue_read_index == queue_write_index).
- *
- * @return 1 if recovery mode is active (either already set, or just entered),
- *         0 if the subsystem was busy and the request was not applied.
+ * @return TRUE if recovery is active or entered; FALSE if the subsystem is busy.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/gsUc3
  */
 s32 cdrom_enter_recovery_mode(void)
 {
-    s32 flags;
-    s32 result;
+    u32 status_flags;
+    s32 recovery_started;
 
-    flags = CD_SYSTEM.status_flags.word;
-    result = 0;
+    status_flags = CD_SYSTEM.status_flags.word;
+    recovery_started = FALSE;
 
-    if (flags & 8)
+    if (status_flags & CD_STATUS_RECOVERY_PENDING)
     {
-        return 1;
+        return TRUE;
     }
 
-    if (CD_SYSTEM.current_command == 0)
+    if (CD_SYSTEM.current_command == CD_COMMAND_NONE)
     {
-        if ((CD_SYSTEM.init_command == 0) && !(flags & 7) && (CD_SYSTEM.queue_read_index == CD_SYSTEM.queue_write_index))
+        if ((CD_SYSTEM.init_command == CD_SYNC_COMMAND_NONE) &&
+            !(status_flags & CD_STATUS_ERROR_MASK) &&
+            (CD_SYSTEM.queue_read_index == CD_SYSTEM.queue_write_index))
         {
-            result = 1;
-            CD_SYSTEM.status_flags.word |= 8;
-            CD_SYSTEM.init_state = 0;
+            recovery_started = TRUE;
+            CD_SYSTEM.status_flags.word |= CD_STATUS_RECOVERY_PENDING;
+            CD_SYSTEM.init_state = CD_RECOVERY_STATE_IDLE;
         }
     }
 
-    return result;
+    return recovery_started;
 }
 
 /**
- * @brief Sets byte 1 of CD_SYSTEM.status_flags to 1.
- *
- * Sets g_cd_defer_data_ready, signalling a status
- * condition in the CD subsystem. No callers exist in the main binary;
- * this function is invoked from overlay code.
+ * @brief Defers CD data-ready processing until the flag is cleared.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/9bgSH
  */
-void func_80014434(void)
+void cdrom_defer_data_ready(void)
 {
     g_cd_defer_data_ready = TRUE;
 }
@@ -2806,339 +2823,330 @@ void func_80014434(void)
  *   0xF9    [count] [start]                 Descending arithmetic run (count + 4 bytes)
  *   0xFA    [count] [start] [step]          Arithmetic run: start, start+step, ... (count + 5 bytes)
  *   0xFB    [count] [b0] [b1] [delta]       16-bit pair run; b0/b1 incremented by signed delta
- *   0xFC    [offLo] [offHi_cnt]             Back-reference: 12-bit offset, count = upper nibble + 4
- *   0xFD    [offset] [count]                Back-reference: 8-bit offset, count + 0x14 bytes
+ *   0xFC    [offLo] [offHi_cnt]             Back-reference: 12-bit offset + 1, count = upper nibble + 4
+ *   0xFD    [offset] [count]                Back-reference: 8-bit offset + 1, count + 0x14 bytes
  *   0xFE    [packed]                        Back-reference: offset = (upper nibble << 3) + 8, count = lower nibble + 3
  *   0xFF    (none)                          End-of-stream; updates pointers and returns 0
  *   default (opcode value)                  Raw copy: opcode + 1 bytes follow
  *
- * Terminates early (returning 1) if srcStart reaches srcEnd or dstStart reaches dstEnd.
+ * Bounds are checked between opcode expansions. Decoding pauses when either
+ * cursor reaches its end pointer.
  *
- * @param srcStart  Current source read position; updated on return.
- * @param dstStart  Current destination write position; updated on return.
- * @param srcEnd    Exclusive upper bound of the source buffer.
- * @param dstEnd    Exclusive upper bound of the destination buffer.
+ * @param src_cursor Current source position; updated on return.
+ * @param dst_cursor Current destination position; updated on return.
+ * @param src_end Exclusive source bound.
+ * @param dst_end Exclusive destination bound.
  *
- * @return 0 on 0xFF end-of-stream, 1 if a buffer limit was reached first.
+ * @return FALSE at the end marker; TRUE when a buffer bound pauses decoding.
  *
  * @warning No bounds checking on back-reference offsets (0xFC–0xFE); a malformed
  *          stream can read before the start of the destination buffer.
  *
- * @see decomp.me: (99.83%) https://decomp.me/scratch/MlH6P
+ * @see decomp.me: (99.78%) https://decomp.me/scratch/MlH6P
  */
-s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
+s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst_end)
 {
-    u8* srcPtr;
-    u8* dstPtr;
-    u32 iterations;
+    u8* src;
+    u8* dst;
+    u32 run_length;
     u32 opcode;
+    CdDecompressCursor copy_cursor;
+    u8 next_byte;
+    u8 offset_low;
+    u8 operand_0;
+    u8 operand_1;
+    u8 operand_2;
+    u8 operand_3;
+    u32 pair_high;
+    u32 pair_value;
+    s32 delta_seed;
 
-    u8* tempPtr;
-    u8 nextByte;
+    src = *src_cursor;
+    dst = *dst_cursor;
 
-    u8 offsetLow;
-
-    u8 param0;
-    u8 param1;
-    u8 param2;
-    u8 param3;
-
-    u32 something;
-    u32 tempSum;
-
-    s32 seed;
-
-    srcPtr = *srcStart;
-    dstPtr = *dstStart;
-
-    while (srcPtr < srcEnd && dstPtr < dstEnd)
+    while (src < src_end && dst < dst_end)
     {
-        opcode = *srcPtr;
+        opcode = *src;
 
         switch (opcode)
         {
-        case 0xF0:
-            param1 = srcPtr[1];
+        case CD_DECOMPRESS_REPEAT_NIBBLE:
+            operand_0 = src[1];
 
-            srcPtr += 2;
-            iterations = (param1 & 0xf) + 3;
-            param1 = param1 >> 4;
-
-            do
-            {
-                *dstPtr++ = param1;
-            } while (--iterations != 0);
-            break;
-
-        case 0xF1:
-            param1 = srcPtr[2];
-            nextByte = srcPtr[1];
-
-            srcPtr += 3;
-            iterations = nextByte + 4;
+            src += 2;
+            run_length = (operand_0 & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
+            operand_0 = operand_0 >> 4;
 
             do
             {
-                *dstPtr++ = param1;
-            } while (--iterations != 0);
+                *dst++ = operand_0;
+            } while (--run_length != 0);
             break;
 
-        case 0xF2:
-            param1 = srcPtr[2];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_REPEAT_BYTE:
+            operand_0 = src[2];
+            next_byte = src[1];
 
-            srcPtr += 3;
-            iterations = nextByte + 2;
-            param2 = param1 >> 4;
-            param1 = param1 & 0xf;
+            src += 3;
+            run_length = next_byte + 4;
 
             do
             {
-                dstPtr[0] = param1;
-                dstPtr[1] = param2;
-                dstPtr += 2;
-            } while (--iterations != 0);
+                *dst++ = operand_0;
+            } while (--run_length != 0);
             break;
 
-        case 0xF3:
-            param1 = srcPtr[2];
-            param0 = srcPtr[3];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_REPEAT_NIBBLE_PAIR:
+            operand_0 = src[2];
+            next_byte = src[1];
 
-            srcPtr += 4;
-            iterations = nextByte + 2;
+            src += 3;
+            run_length = next_byte + 2;
+            operand_2 = operand_0 >> 4;
+            operand_0 = operand_0 & CD_DECOMPRESS_LOW_NIBBLE_MASK;
 
             do
             {
-                dstPtr[0] = param1;
-                dstPtr[1] = param0;
-                dstPtr += 2;
-            } while (--iterations != 0);
+                dst[0] = operand_0;
+                dst[1] = operand_2;
+                dst += 2;
+            } while (--run_length != 0);
             break;
 
-        case 0xF4:
-            param1 = srcPtr[2];
-            param0 = srcPtr[3];
-            param3 = srcPtr[4];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_REPEAT_PAIR:
+            operand_0 = src[2];
+            operand_1 = src[3];
+            next_byte = src[1];
 
-            srcPtr += 5;
-            iterations = nextByte + 2;
+            src += 4;
+            run_length = next_byte + 2;
 
             do
             {
-                *dstPtr = param1;
-                (&dstPtr[2])[-1] = param0;
-                (&dstPtr[2])[0] = param3;
-                dstPtr += 3;
-            } while (--iterations != 0);
-
+                dst[0] = operand_0;
+                dst[1] = operand_1;
+                dst += 2;
+            } while (--run_length != 0);
             break;
 
-        case 0xF5:
-            param1 = srcPtr[2];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_REPEAT_TRIPLET:
+            operand_0 = src[2];
+            operand_1 = src[3];
+            operand_3 = src[4];
+            next_byte = src[1];
 
-            srcPtr += 3;
-            iterations = nextByte + 4;
+            src += 5;
+            run_length = next_byte + 2;
 
             do
             {
-                dstPtr[0] = param1;
-                dstPtr[1] = *srcPtr++;
-                dstPtr += 2;
-            } while (--iterations != 0);
+                dst[0] = operand_0;
+                dst[1] = operand_1;
+                dst[2] = operand_3;
+                dst += 3;
+            } while (--run_length != 0);
 
             break;
 
-        case 0xF6:
-            param1 = srcPtr[2];
-            param0 = srcPtr[3];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_INTERLEAVE_BYTE:
+            operand_0 = src[2];
+            next_byte = src[1];
 
-            srcPtr += 4;
-            tempPtr = &dstPtr[2];
-            iterations = nextByte + 3;
+            src += 3;
+            run_length = next_byte + 4;
 
             do
             {
-                *dstPtr = param1;
-                tempPtr[-1] = param0;
-                nextByte = *(u8*)srcPtr;
-                srcPtr += 1;
-                dstPtr += 3;
-                tempPtr[0] = nextByte;
-                tempPtr += 3;
-            } while (--iterations != 0);
+                dst[0] = operand_0;
+                dst[1] = *src++;
+                dst += 2;
+            } while (--run_length != 0);
 
             break;
 
-        case 0xF7:
-            param1 = srcPtr[2];
-            param0 = srcPtr[3];
-            param3 = srcPtr[4];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_INTERLEAVE_PAIR:
+            operand_0 = src[2];
+            operand_1 = src[3];
+            next_byte = src[1];
 
-            srcPtr += 5;
-            iterations = nextByte + 2;
+            src += 4;
+            run_length = next_byte + 3;
 
             do
             {
-                dstPtr[0] = param1;
-                dstPtr[1] = param0;
-                dstPtr[2] = param3;
-                dstPtr[3] = *srcPtr++;
-                dstPtr += 4;
-            } while (--iterations != 0);
+                dst[0] = operand_0;
+                dst[1] = operand_1;
+                dst[2] = *src++;
+                dst += 3;
+            } while (--run_length != 0);
 
             break;
 
-        case 0xF8:
-            param1 = srcPtr[2];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_INTERLEAVE_TRIPLET:
+            operand_0 = src[2];
+            operand_1 = src[3];
+            operand_3 = src[4];
+            next_byte = src[1];
 
-            srcPtr += 3;
-            iterations = nextByte + 4;
+            src += 5;
+            run_length = next_byte + 2;
 
             do
             {
-                *dstPtr++ = param1;
-                param1 += 1;
-            } while (--iterations != 0);
+                dst[0] = operand_0;
+                dst[1] = operand_1;
+                dst[2] = operand_3;
+                dst[3] = *src++;
+                dst += 4;
+            } while (--run_length != 0);
 
             break;
 
-        case 0xF9:
-            param1 = srcPtr[2];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_ASCENDING_RUN:
+            operand_0 = src[2];
+            next_byte = src[1];
 
-            srcPtr += 3;
-            iterations = nextByte + 4;
+            src += 3;
+            run_length = next_byte + 4;
 
             do
             {
-                *dstPtr++ = param1;
-                param1 -= 1;
-            } while (--iterations != 0);
+                *dst++ = operand_0;
+                operand_0 += 1;
+            } while (--run_length != 0);
 
             break;
 
-        case 0xFA:
-            param1 = srcPtr[2];
-            param0 = srcPtr[3];
-            nextByte = srcPtr[1];
+        case CD_DECOMPRESS_DESCENDING_RUN:
+            operand_0 = src[2];
+            next_byte = src[1];
 
-            srcPtr += 4;
-            iterations = nextByte + 5;
+            src += 3;
+            run_length = next_byte + 4;
 
             do
             {
-                *dstPtr++ = param1;
-                param1 += param0;
-            } while (--iterations != 0);
+                *dst++ = operand_0;
+                operand_0 -= 1;
+            } while (--run_length != 0);
 
             break;
 
-        case 0xFB:
-            param2 = srcPtr[2];
-            something = srcPtr[3];
-            nextByte = srcPtr[1];
-            param3 = srcPtr[4];
+        case CD_DECOMPRESS_STEPPED_RUN:
+            operand_0 = src[2];
+            operand_1 = src[3];
+            next_byte = src[1];
 
-            iterations = nextByte + 3;
-            seed = param3 << 24; // place param3 in the high byte for sign extension
-            srcPtr += 5;
+            src += 4;
+            run_length = next_byte + 5;
 
             do
             {
-                // Write the two current bytes
-                ((u8*)dstPtr)[0] = param2;
-                ((u8*)dstPtr)[1] = something;
-                dstPtr += 2;
+                *dst++ = operand_0;
+                operand_0 += operand_1;
+            } while (--run_length != 0);
 
-                // Sign-extend param3 via arithmetic right shift
-                tempSum = seed >> 24;
-
-                // Form the 16-bit value (param0 << 8) | param2
-
-                tempSum += (something << 8) | param2; // add to the sign-extended constant
-
-                // Update for next iteration
-                param2 = tempSum;           // low byte
-                something = (tempSum >> 8); // high byte
-            } while (--iterations != 0);
             break;
 
-        case 0xFC:
-            param1 = srcPtr[1];
-            offsetLow = (opcode = srcPtr[2]);
+        case CD_DECOMPRESS_PAIR_DELTA_RUN:
+            operand_2 = src[2];
+            pair_high = src[3];
+            next_byte = src[1];
+            operand_3 = src[4];
 
-            srcPtr += 3;
-            iterations = (offsetLow >> 4) + 4;
-
-            tempPtr = (u8*)((u32)param1 | (u32)((offsetLow & 0xF) << 8));
-            tempPtr = (u8*)(dstPtr - (((u32)tempPtr) & 0xFFFF));
+            run_length = next_byte + 3;
+            delta_seed = operand_3 << 24;
+            src += 5;
 
             do
             {
-                *dstPtr++ = tempPtr++ [-1];
-            } while (--iterations != 0);
+                dst[0] = operand_2;
+                dst[1] = pair_high;
+                dst += 2;
 
+                // Sign-extend the delta before advancing the little-endian pair.
+                pair_value = delta_seed >> 24;
+                pair_value += (pair_high << 8) | operand_2;
+                operand_2 = pair_value;
+                pair_high = pair_value >> 8;
+            } while (--run_length != 0);
             break;
 
-        case 0xFD:
-            param1 = srcPtr[1];
-            param2 = param1;
-            nextByte = srcPtr[2];
+        case CD_DECOMPRESS_COPY_12_BIT:
+            operand_0 = src[1];
+            opcode = src[2];
+            offset_low = opcode;
 
-            srcPtr += 3;
-            iterations = nextByte + 0x14;
-            tempPtr = (u8*)(dstPtr - param2);
+            src += 3;
+            run_length = (offset_low >> 4) + 4;
+
+            copy_cursor.offset = operand_0 |
+                                 ((offset_low & CD_DECOMPRESS_LOW_NIBBLE_MASK) << 8);
+            copy_cursor.bytes = dst - (copy_cursor.offset & CD_DECOMPRESS_OFFSET_MASK);
 
             do
             {
-                *dstPtr++ = tempPtr++ [-1];
-            } while (--iterations != 0);
+                *dst++ = copy_cursor.bytes[-1];
+                copy_cursor.bytes++;
+            } while (--run_length != 0);
 
             break;
 
-        case 0xFE:
-            param1 = srcPtr[1];
+        case CD_DECOMPRESS_COPY_8_BIT:
+            operand_0 = src[1];
+            operand_2 = operand_0;
+            next_byte = src[2];
 
-            srcPtr += 2;
-            iterations = (param1 & 0xF) + 3;
-            tempPtr = (u8*)(dstPtr - ((u32)(param1 & 0xF0) >> 1));
+            src += 3;
+            run_length = next_byte + CD_DECOMPRESS_COPY_8_BIT_BASE_LENGTH;
+            copy_cursor.bytes = dst - operand_2;
 
             do
             {
-                offsetLow = (tempPtr++)[-8];
-                *dstPtr++ = offsetLow;
-            } while (--iterations != 0);
+                *dst++ = copy_cursor.bytes[-1];
+                copy_cursor.bytes++;
+            } while (--run_length != 0);
 
             break;
 
-        case 0xFF:
-            *srcStart = &srcPtr[1];
-            *dstStart = dstPtr;
-            return 0;
+        case CD_DECOMPRESS_COPY_NIBBLE:
+            operand_0 = src[1];
+
+            src += 2;
+            run_length = (operand_0 & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
+            copy_cursor.bytes = dst - ((operand_0 & CD_DECOMPRESS_HIGH_NIBBLE_MASK) >> 1);
+
+            do
+            {
+                offset_low = copy_cursor.bytes[-8];
+                copy_cursor.bytes++;
+                *dst++ = offset_low;
+            } while (--run_length != 0);
+
+            break;
+
+        case CD_DECOMPRESS_END:
+            *src_cursor = &src[1];
+            *dst_cursor = dst;
+            return FALSE;
 
         default:
-            srcPtr++;
-            iterations = opcode + 1;
+            src++;
+            run_length = opcode + 1;
 
             do
             {
-                *dstPtr++ = *srcPtr++;
-            } while (--iterations != 0);
+                *dst++ = *src++;
+            } while (--run_length != 0);
 
             break;
         }
 
-        *srcStart = srcPtr;
+        *src_cursor = src;
     }
 
-    *dstStart = dstPtr;
-    return 1;
+    *dst_cursor = dst;
+    return TRUE;
 }
 
 /**

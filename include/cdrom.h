@@ -26,5 +26,6 @@ void cdrom_queue_read_with_callback(s32 resource_index, CdCommandCallback callba
 void cdrom_queue_seek(s32 resource_index);
 s32 cdrom_get_resource_size(s32 resource_index);
 s32 cdrom_get_error_status(void);
+void cdrom_defer_data_ready(void);
 
 #endif
