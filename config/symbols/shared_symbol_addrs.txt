@@ -982,8 +982,10 @@ g_field_current_render_half         = 0x800473F4;
 
 // Globals
 g_pending_game_state                = 0x8010D018;
+g_gpu_mode                          = 0x801ED590;
 g_cd_audio_ready                    = 0x801ED591;
 g_cd_system                         = 0x801ED800;
+g_cd_defer_data_ready               = 0x801ED801;
 g_cd_status_byte_3                  = 0x801ED802;
 g_cd_audio_enabled                  = 0x801ED804;
 g_playback_state                    = 0x801ED805;

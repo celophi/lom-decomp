@@ -364,11 +364,11 @@ struct AlternateMovieDecodeBuffers
 };
 
 /* Shared CD subsystem state referenced directly by the movie overlay. */
-extern u_char g_cd_audio_ready;
+extern u8 g_cd_audio_ready;
 extern u8 g_cd_status_byte_3;
 
 extern AllocInfo* g_allocInfo; /* allocation descriptor used by movie_init's alternate buffer layout */
-extern u8 g_gpuMode;           /* 0=DrawSync/LoadImage path; non-zero=BreakDraw/LoadImage2 path (at 0x801ED590) */
+extern u8 g_gpu_mode;          /* 0=DrawSync/LoadImage path; non-zero=BreakDraw/LoadImage2 path (at 0x801ED590) */
 extern u8 g_busy;              /* non-zero while a DMA/GPU operation is in flight (at 0x801ED596) */
 extern u8 g_mdecRetryPending;  /* MDEC decode ready but MDEC was busy; retry on next tick (at 0x801ED595) */
 extern u8 g_audioStreamState;  /* CD audio state: 0=idle, 1=sector arrived, 2=pipeline primed (at 0x801ED592) */
@@ -746,7 +746,7 @@ void movie_init(s32 resource_index, s32 flags, s32 total_frames, s32 init_buffer
     ms = MOVIE_STATE;
 
     /* Prepare display memory and VLC tables for the standard GPU path. */
-    if (g_gpuMode == MOVIE_GPU_MODE_STANDARD)
+    if (g_gpu_mode == MOVIE_GPU_MODE_STANDARD)
     {
         VSync(0);
         SetDispMask(0);
@@ -912,7 +912,7 @@ void movie_mdec_out_callback(void)
     s32 inactive = 0;
 
     /* Queue a standard GPU upload or defer it while drawing is busy. */
-    if (g_gpuMode == MOVIE_GPU_MODE_STANDARD)
+    if (g_gpu_mode == MOVIE_GPU_MODE_STANDARD)
     {
         if (g_cd_status_byte_3 == CD_STATUS_RECOVERY_PENDING)
         {
