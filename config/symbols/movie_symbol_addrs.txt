@@ -14,7 +14,6 @@ advance_audio_read                  = 0x801418B0;
 
 g_movieOverlayId = 0x80140000;
 g_allocInfo = 0x80180014;
-g_gpu_mode = 0x801ED590;
 g_busy = 0x801ED596;
 g_mdecRetryPending = 0x801ED595;
 g_audioStreamState = 0x801ED592;
