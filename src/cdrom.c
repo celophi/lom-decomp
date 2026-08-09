@@ -9,6 +9,7 @@
 #define CD_RESOURCE_INDEX_INVALID 0xFFFE
 #define CD_RESOURCE_INDEX_DEFAULT 0xFFFF
 #define CD_COMMAND_QUEUE_SIZE 16
+#define CD_COMMAND_QUEUE_INIT_OFFSET 4
 #define CD_INIT_STATE_ERROR_PAUSE 0x20
 
 typedef void (*DecDCToutCallbackHandler)();
@@ -211,7 +212,7 @@ void cdrom_init(void)
 {
     s32 queue_end_marker;
     s32 queue_count;
-    volatile CdCommandQueueItem* queue_item;
+    volatile CdCommandQueueItem* queue_base;
     CdResourceEntry* scratchpad_addr;
     CdStatusFlags* status_flags;
     s32 cd_result;
@@ -230,8 +231,8 @@ void cdrom_init(void)
 
     queue_end_marker = -1;
 
-    // Offset the base so queue_item[4] initializes items 15 through 0.
-    queue_item = &CD_SYSTEM.commandQueue.items[CD_COMMAND_QUEUE_SIZE - 5];
+    // The target addresses each queue item from a base four slots earlier.
+    queue_base = &CD_SYSTEM.commandQueue.items[CD_COMMAND_QUEUE_SIZE - CD_COMMAND_QUEUE_INIT_OFFSET - 1];
 
     CD_SYSTEM.resourceIndex = CD_RESOURCE_INDEX_INVALID;
 
@@ -269,12 +270,12 @@ void cdrom_init(void)
 
     while (queue_count != queue_end_marker)
     {
-        queue_item[4].command = 0;
-        queue_item[4].resourceIndex = 0;
-        queue_item[4].dstBuffer = scratchpad_addr;
-        queue_item[4].entry = scratchpad_addr;
-        queue_item[4].callback = 0;
-        queue_item--;
+        queue_base[CD_COMMAND_QUEUE_INIT_OFFSET].command = 0;
+        queue_base[CD_COMMAND_QUEUE_INIT_OFFSET].resourceIndex = 0;
+        queue_base[CD_COMMAND_QUEUE_INIT_OFFSET].dstBuffer = scratchpad_addr;
+        queue_base[CD_COMMAND_QUEUE_INIT_OFFSET].entry = scratchpad_addr;
+        queue_base[CD_COMMAND_QUEUE_INIT_OFFSET].callback = 0;
+        queue_base--;
         queue_count--;
     }
 

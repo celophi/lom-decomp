@@ -16,9 +16,9 @@ void func_80024B00(AkaoChannelState* channel)
     s32 flags;
     s32 lfo_pitch;
     s32 value;
-    s32 scale;
     s32 pan;
-    AkaoLfoSample* cursor;
+    s32 pitch_value;
+    s32 master_scale;
 
     flags = channel->flags;
     lfo_pitch = (((s16*)&channel->unk48)[1] * (channel->volume >> 8)) >> 7;
@@ -31,22 +31,28 @@ void func_80024B00(AkaoChannelState* channel)
             if (channel->pitch_lfo_restart == 0)
             {
                 channel->pitch_lfo_restart = *((u16*)((u8*)channel + 0xA6));
-                cursor = (AkaoLfoSample*)channel->unk1C;
-                if ((cursor->value == 0) && (cursor->unk2 == 0))
                 {
-                    channel->unk1C = (s32)(((u8*)cursor) + (cursor->relative_offset * 2));
-                }
+                    AkaoLfoSample* cursor;
+                    s16* waveform;
 
-                cursor = (AkaoLfoSample*)channel->unk1C;
-                channel->unk1C = (s32)(((u8*)cursor) + 2);
-                value = ((s32)channel->pitch_lfo_depth_scaled * cursor->value) >> 16;
-                if (value != channel->pitch_lfo_value)
-                {
-                    channel->pitch_lfo_value = value;
-                    channel->update_flags |= 0x10;
-                    if (value >= 0)
+                    cursor = (AkaoLfoSample*)channel->unk1C;
+                    if ((cursor->value == 0) && (cursor->unk2 == 0))
                     {
-                        channel->pitch_lfo_value = value << 1;
+                        channel->unk1C = (s32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                    }
+
+                    waveform = (s16*)channel->unk1C;
+                    value = *waveform++;
+                    master_scale = ((s32)channel->pitch_lfo_depth_scaled * value) >> 16;
+                    channel->unk1C = (s32)waveform;
+                }
+                if (master_scale != channel->pitch_lfo_value)
+                {
+                    channel->pitch_lfo_value = master_scale;
+                    channel->update_flags |= 0x10;
+                    if (master_scale >= 0)
+                    {
+                        channel->pitch_lfo_value = master_scale << 1;
                     }
                 }
             }
@@ -61,19 +67,25 @@ void func_80024B00(AkaoChannelState* channel)
             if (channel->volume_lfo_restart == 0)
             {
                 channel->volume_lfo_restart = *((u16*)((u8*)channel + 0xBA));
-                cursor = (AkaoLfoSample*)channel->tempo;
-                if ((cursor->value == 0) && (cursor->unk2 == 0))
                 {
-                    channel->tempo = (u32)(((u8*)cursor) + (cursor->relative_offset * 2));
-                }
+                    AkaoLfoSample* cursor;
+                    s16* waveform;
 
-                cursor = (AkaoLfoSample*)channel->tempo;
-                value = (lfo_pitch * (channel->volume_lfo_depth >> 8) << 9) >> 16;
-                scale = (value * cursor->value) >> 15;
-                channel->tempo = (u32)(((u8*)cursor) + 2);
-                if (scale != channel->volume_lfo_value)
+                    cursor = (AkaoLfoSample*)channel->tempo;
+                    if ((cursor->value == 0) && (cursor->unk2 == 0))
+                    {
+                        channel->tempo = (u32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                    }
+
+                    master_scale = (lfo_pitch * (channel->volume_lfo_depth >> 8) << 9) >> 16;
+                    waveform = (s16*)channel->tempo;
+                    value = *waveform++;
+                    master_scale = (master_scale * value) >> 15;
+                    channel->tempo = (u32)waveform;
+                }
+                if (master_scale != channel->volume_lfo_value)
                 {
-                    channel->volume_lfo_value = scale;
+                    channel->volume_lfo_value = master_scale;
                     channel->update_flags |= 3;
                 }
             }
@@ -86,18 +98,24 @@ void func_80024B00(AkaoChannelState* channel)
         if (channel->pan_lfo_restart == 0)
         {
             channel->pan_lfo_restart = channel->pan_lfo_period;
-            cursor = (AkaoLfoSample*)channel->tempo_step;
-            if ((cursor->value == 0) && (cursor->unk2 == 0))
             {
-                channel->tempo_step = (s32)(((u8*)cursor) + (cursor->relative_offset * 2));
-            }
+                AkaoLfoSample* cursor;
+                s16* waveform;
 
-            cursor = (AkaoLfoSample*)channel->tempo_step;
-            scale = (((channel->pan_lfo_depth >> 8) * cursor->value) >> 15);
-            channel->tempo_step = (s32)(((u8*)cursor) + 2);
-            if (scale != channel->pan_lfo_value)
+                cursor = (AkaoLfoSample*)channel->tempo_step;
+                if ((cursor->value == 0) && (cursor->unk2 == 0))
+                {
+                    channel->tempo_step = (s32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                }
+
+                waveform = (s16*)channel->tempo_step;
+                value = *waveform++;
+                master_scale = ((channel->pan_lfo_depth >> 8) * value) >> 15;
+                channel->tempo_step = (s32)waveform;
+            }
+            if (master_scale != channel->pan_lfo_value)
             {
-                channel->pan_lfo_value = scale;
+                channel->pan_lfo_value = master_scale;
                 channel->update_flags |= 3;
             }
         }
@@ -105,63 +123,68 @@ void func_80024B00(AkaoChannelState* channel)
 
     if (flags & 0x20)
     {
-        value = (s16)(*((u16*)((u8*)channel - 0xC)) << 1);
-        lfo_pitch = (value * (channel->volume >> 8)) >> 7;
+        lfo_pitch = ((s16)(*((u16*)((u8*)channel - 0xC)) << 1) * (channel->volume >> 8)) >> 7;
         channel->update_flags |= 3;
     }
 
+    value = flags & 0x10;
     if (channel->update_flags & 3)
     {
+        lfo_pitch += channel->volume_lfo_value;
+        lfo_pitch = (lfo_pitch * (*((u16*)((u8*)g_akao_seq_channel0 + 0x52)) & 0x7F)) >> 7;
         pan = ((channel->pan >> 8) + channel->pan_lfo_value) & 0xFF;
-        lfo_pitch = ((lfo_pitch + channel->volume_lfo_value) * (*((u16*)((u8*)g_akao_seq_channel0 + 0x52)) & 0x7F)) >> 7;
+
         if (D_8004F754 == 2)
         {
-            value = (lfo_pitch * D_8003D47C) >> 15;
-            channel->spu_volume_right = value;
-            channel->spu_volume_left = value;
+            channel->spu_volume_right = (lfo_pitch * D_8003D47C) >> 15;
+            channel->spu_volume_left = channel->spu_volume_right;
         }
         else
         {
             channel->spu_volume_left = (lfo_pitch * D_8003D37C[pan]) >> 15;
             channel->spu_volume_right = (lfo_pitch * D_8003D37C[pan ^ 0xFF]) >> 15;
         }
+        value = flags & 0x10;
     }
 
-    if (flags & 0x10)
+    if (value)
     {
-        value = *((u16*)((u8*)channel - 0xC)) + channel->pitch_lfo_value + *((s16*)((u8*)channel + 0x32));
-        scale = (g_akao_mastervol_acc & 0xFF0000) >> 16;
-        if ((g_akao_mastervol_acc & 0xFF0000) != 0)
+        master_scale = *((s16*)((u8*)channel + 0x32));
+        pitch_value = *((u16*)((u8*)channel - 0xC)) + channel->pitch_lfo_value + master_scale;
+        master_scale = g_akao_mastervol_acc & 0xFF0000;
+        if (master_scale != 0)
         {
-            if (scale < 0x80)
+            master_scale >>= 16;
+            if (master_scale < 0x80)
             {
-                value += (value * scale) >> 7;
+                pitch_value += (pitch_value * master_scale) >> 7;
             }
             else
             {
-                value = (value * scale) >> 8;
+                pitch_value = (pitch_value * master_scale) >> 8;
             }
         }
-        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + value) & 0x3FFF;
+        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_value) & 0x3FFF;
         channel->update_flags |= 0x10;
         return;
     }
 
     if (channel->update_flags & 0x10)
     {
-        value = channel->pitch + channel->pitch_lfo_value + *((s16*)((u8*)channel + 0x32));
-        scale = (g_akao_mastervol_acc & 0xFF0000) >> 16;
-        if ((g_akao_mastervol_acc & 0xFF0000) != 0)
+        pitch_value = channel->pitch + channel->pitch_lfo_value + *((s16*)((u8*)channel + 0x32));
+        master_scale = g_akao_mastervol_acc & 0xFF0000;
+        if (master_scale != 0)
         {
-            if (scale < 0x80)
+            master_scale >>= 16;
+            if (master_scale < 0x80)
             {
-                value += (value * scale) >> 7;
+                pitch_value += (pitch_value * master_scale) >> 7;
             }
             else
             {
-                value = (value * scale) >> 8;
+                pitch_value = (pitch_value * master_scale) >> 8;
             }
         }
-        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + value) & 0x3FFF;
+        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_value) & 0x3FFF;
     }
 }
