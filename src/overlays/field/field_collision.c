@@ -2870,16 +2870,16 @@ typedef struct
  *       tell "no nodes" from "too many groups".
  *
  * @note UNMATCHED. Instruction count (281), frame (-0x68) and every stack slot
- *       match; the residual is one register rotation plus a scheduling gap in
- *       the arithmetic tail. The target holds the scan index in a2, the write
- *       cursor in a0 and the scene pointer in t5, where this source gets a0, a2
- *       and t4. The scan index is the highest-priority allocno here, so GCC 2.8
- *       global.c hands it a0 first; the target instead has a0 held by the write
- *       cursor. See working/func_8005F158/status.md for the measured dead ends
- *       - in particular do NOT reorder `*alloc += total` past
- *       `scene->unk30 = *alloc`, which scores well but is semantically wrong
- *       (the target stores the post-increment value).
- * @see decomp.me (90.87%, 173/281 exact) TODO
+ *       match, and there are no structural runs left. The residual is a
+ *       register permutation: the scene pointer sits in t4 here but t5 in the
+ *       target (with the list base taking the other), and the two mode-1 flag
+ *       temps land in a1 rather than v0. Reaching the target coloring needs
+ *       the list-base allocno to outrank the scene allocno, which no ref-count
+ *       or live-range change reproduced. See working/func_8005F158/status.md
+ *       for the measured dead ends - in particular do NOT reorder
+ *       `*alloc += j` past `scene->unk30 = *alloc`, which scores well but is
+ *       semantically wrong (the target stores the post-increment value).
+ * @see decomp.me (97.70%, 239/281 exact) TODO
  */
 void func_8005F158(s32* alloc)
 {
@@ -2888,7 +2888,6 @@ void func_8005F158(s32* alloc)
     FieldNode* node;
     FieldNodeDef* def;
     FieldGroupEntry* out;
-    FieldGroupEntry* w2;
     FieldGroupEntry* p;
     FieldSceneHeader* header;
     s32 i;
@@ -2896,18 +2895,15 @@ void func_8005F158(s32* alloc)
     s32 fresh;
     s32 has_pair;
     s32 kind;
+    s32 kind2;
     s32 k;
     s32 width;
     s32 height;
-    s32 unit;
     s32 shift;
     s32 tw;
     s32 th;
-    s32 cols;
     s32 rows;
-    s32 area;
-    s32 stride;
-    s32 total;
+    s32 count4;
     u16 key;
     u16 tmp;
     u32 count;
@@ -2945,8 +2941,8 @@ void func_8005F158(s32* alloc)
                 }
                 if (fresh != 0)
                 {
-                    out->seen = 1;
                     out->id = def->base_x;
+                    out->seen = 1;
                     out++;
                     if (count >= 20)
                     {
@@ -3001,17 +2997,17 @@ void func_8005F158(s32* alloc)
                 }
                 if (fresh != 0)
                 {
-                    kind = 2;
+                    kind2 = 2;
                     if (def->base_y != 0)
                     {
                         out->id = def->base_y;
                     }
                     else
                     {
-                        kind = 3;
+                        kind2 = 3;
                         out->id = 0;
                     }
-                    out->seen = kind;
+                    out->seen = kind2;
                     out++;
                     if (count >= 20)
                     {
@@ -3027,22 +3023,23 @@ void func_8005F158(s32* alloc)
 
     if (has_pair != 0)
     {
+        i = count;
         j = 0;
-        i = count - 1;
         count = 0;
+        i--;
         if (i != -1)
         {
             p = list;
-            w2 = list;
+            out = list;
             do
             {
                 if (p->seen == 3)
                 {
                     if (j != count)
                     {
-                        w2->id = p->id;
+                        out->id = p->id;
                     }
-                    w2++;
+                    out++;
                     count++;
                 }
                 p++;
@@ -3097,33 +3094,37 @@ void func_8005F158(s32* alloc)
     header = scene->header;
     width = header->unk30;
     height = header->unk32;
-    unit = 4;
+    j = 4;
     shift = 2;
-    if ((((width + 3) >> 2) * ((height + 7) >> 3) * (s32)count) >= 0x4001)
+    i = ((width + 3) >> 2) * ((height + 7) >> 3) * (s32)count;
+    if (i >= 0x4001)
     {
-        unit = 8;
+        j = 8;
         shift = 3;
     }
-    tw = ((width + unit) - 1) >> shift;
-    cols = tw + 4;
-    th = ((height + (unit * 2)) - 1) >> (shift + 1);
+    tw = ((width + j) - 1) >> shift;
+    width = tw + 4;
+    th = ((height + (j * 2)) - 1) >> (shift + 1);
     rows = th + 4;
-    area = cols * rows;
-    scene->unk44 = area;
-    scene->unk40 = unit;
+    i = width * rows;
+    scene->unk44 = i;
+    i = i * count;
+    scene->unk40 = j;
     scene->unk41 = count;
-    scene->unk46 = cols;
+    scene->unk46 = width;
     scene->unk48 = rows;
     scene->unk2C = *alloc;
-    stride = ((u32)(tw + 0x23) >> 5) * th;
-    *alloc += ((area * count) + 3) & ~3;
-    stride = stride * 2;
-    scene->unk42 = stride;
+    j = ((u32)(tw + 0x23) >> 5) * th;
+    i = (i + 3) & ~3;
+    *alloc += i;
+    i = j * 2;
+    scene->unk42 = i;
     scene->unk28 = *alloc;
-    total = stride * (count * 4);
-    *alloc += total;
+    count4 = count * 4;
+    j = i * count4;
+    *alloc += j;
     scene->unk30 = *alloc;
-    func_8005F5BC(alloc, 0, stride, total);
+    func_8005F5BC(alloc, 0, i, j);
     return;
 
 overflow:
