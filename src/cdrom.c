@@ -37,6 +37,8 @@
 #define CD_STREAM_STAGING_START ((u8*)0x801DA000)
 #define CD_STREAM_STAGING_END ((u8*)0x801DBBE8)
 #define CD_STREAM_LZ_WINDOW_SIZE 0x1000
+#define CD_INIT_COMMAND_RETRY_FLAG 0x80
+#define CD_INIT_COMMAND_MASK 0x7F
 
 typedef void (*DecDCToutCallbackHandler)();
 typedef void (*DrawSyncCallbackHandler)();
@@ -128,7 +130,15 @@ typedef enum CdReconfigureStep
     CD_RECONFIGURE_STEP_SET_FILTER = 0x10,
     CD_RECONFIGURE_STEP_DEMUTE = 0x11,
     CD_RECONFIGURE_STEP_PAUSE = 0x12,
+    CD_RECONFIGURE_STEP_COMPLETE = 0x13,
 } CdReconfigureStep;
+
+typedef enum CdSyncCommand
+{
+    CD_SYNC_COMMAND_PAUSE = 1,
+    CD_SYNC_COMMAND_AUDIO_PAUSE = 2,
+    CD_SYNC_COMMAND_RESTORE_MODE = 3,
+} CdSyncCommand;
 
 typedef enum CdQueueCommandError
 {
@@ -136,6 +146,18 @@ typedef enum CdQueueCommandError
     CD_QUEUE_ERROR_INVALID_RESOURCE = -2,
     CD_QUEUE_ERROR_LOCKED = -3,
 } CdQueueCommandError;
+
+// CD-ROM controller commands omitted from PSYQ libcd.h.
+// Reference: https://psx-spx.consoledev.net/cdromdrive/
+typedef enum CdControllerCommand
+{
+    CD_COMMAND_INIT = 0x0A,
+    CD_COMMAND_SET_SESSION = 0x12,
+    CD_COMMAND_UNUSED_17 = 0x17,
+    CD_COMMAND_UNUSED_18 = 0x18,
+    CD_COMMAND_TEST = 0x19,
+    CD_COMMAND_GET_ID = 0x1A,
+} CdControllerCommand;
 
 typedef struct CdSystem
 {
@@ -174,7 +196,7 @@ typedef struct CdSystem
     CdlLOCRaw current_location;
     CdlLOCRaw recovery_read_position;
     u8 status_byte;
-    u8 filter_mode_flags;
+    u8 mode_flags;
     u8 u_162;
     u8 u_163;
     u32 u_164;
@@ -265,7 +287,7 @@ extern u8 D_801ED590;
 #define QUEUE_ITEM_CALLBACK(ptr) (*((CdCommandCallback*)(ptr) + 0x13))
 s32 cdrom_recover(void);
 void cdrom_complete_command(u8 intr, u8* result);
-void cdrom_handle_recovery_sync(u_char intr, u_char* result);
+void cdrom_handle_recovery_sync(u8 intr, u8* result);
 void cdrom_handle_ready_intr(u_char intr, u_char* result);
 void cdrom_process_sector(s32 arg0);
 void cdrom_run_command(u8 command, void* sectorBuffer, s32 executionMode);
@@ -1611,7 +1633,7 @@ void cdrom_complete_command(u8 intr, u8* result)
         case CdlStandby:
         case CdlStop:
         case CdlPause:
-        case 0x0A:
+        case CD_COMMAND_INIT:
         case CdlMute:
         case CdlDemute:
         case CdlSetfilter:
@@ -1619,14 +1641,14 @@ void cdrom_complete_command(u8 intr, u8* result)
         case CdlGetparam:
         case CdlGetlocL:
         case CdlGetlocP:
-        case 0x12:
+        case CD_COMMAND_SET_SESSION:
         case CdlGetTN:
         case CdlGetTD:
         case CdlSeekP:
-        case 0x17:
-        case 0x18:
-        case 0x19:
-        case 0x1A:
+        case CD_COMMAND_UNUSED_17:
+        case CD_COMMAND_UNUSED_18:
+        case CD_COMMAND_TEST:
+        case CD_COMMAND_GET_ID:
             next_command = CD_SYSTEM_V.command_queue.items[CD_SYSTEM_V.queue_read_index].command;
 
             // Discard queued probes before dispatching the next real command.
@@ -1708,55 +1730,31 @@ void cdrom_complete_command(u8 intr, u8* result)
 }
 
 /**
- * @brief Sync callback for CD-ROM init, disc validation, and error recovery.
+ * @brief Advances CD-ROM initialization and recovery after a sync event.
  *
- * Installed via CdSyncCallback() during startup and error recovery. Drives a
- * state machine (CD_SYSTEM.init_state / init_command) that configures the drive,
- * validates the disc, and transitions to normal processing via cdrom_complete_command.
+ * @param intr   CD-ROM interrupt status.
+ * @param result CD-ROM result bytes.
  *
- * @details
- * Manages four phases:
- * 1. **Initialization** – steps through states 1→6 (status check, set mode,
- *    set filter, read validation sector).
- * 2. **Disc validation** – states 7/8: verifies the disc ID string.
- * 3. **Error recovery** – on timeout or error, retries commands or enters
- *    recovery states 0x20–0x23.
- * 4. **Normal hand-off** – replaces itself with cdrom_complete_command and
- *    dispatches the first queued command.
- *
- * The high bit of init_command (0x80) is a retry flag: on command failure it is
- * set and CdlNop is re-issued; the next callback sees the pending retry.
- *
- * @param intr    Completion code from the CD-ROM drive; only acts on intr == 2 (CdlComplete).
- * @param result  Pointer to the drive's status byte; bit 4 indicates error/shell-open.
- *
- * @note Runs from the CD-ROM library's interrupt handler.
- *
- * @see decomp.me: (99.71%) https://decomp.me/scratch/0Dz2i
+ * @see decomp.me: (100%) https://decomp.me/scratch/0Dz2i
  */
-void cdrom_handle_recovery_sync(u_char intr, u_char* result)
+void cdrom_handle_recovery_sync(u8 intr, u8* result)
 {
-    s32 temp_v1;
-    s32 queue_read;
-    s32 queue_write;
-    u8 sp10[2];
-    u8 temp_a0;
-    AudioSystem* audioSystem;
-    CdSystem* cdSystem;
-    s32* new_var;
+    s32 status_flags;
+    s32 write_index;
+    s32 read_index;
+    u8 filter_params[2];
+    u8 next_command;
+    AudioSystem* audio_system;
+    CdSystem* cd_system;
+    s32* status_ptr;
 
-    // Volatile (CD_SYSTEM_V) stores of sync_complete/init_command throughout
-    // this function are required to match: they pin the stores in program
-    // order and keep the delay-slot filler from moving them into jump slots.
-    CD_SYSTEM_V.sync_complete = 1;
+    CD_SYSTEM_V.sync_complete = TRUE;
 
-    // The (s8) sign test reproduces the original's sll/bltz check of the
-    // 0x80 retry flag. cdSystem is assigned in both branches (not hoisted)
-    // to match the original register allocation.
-    if (((s8)CD_SYSTEM_V.init_command < 0) && !(CD_SYSTEM.status_flags.word & 8))
+    if (((s8)CD_SYSTEM_V.init_command < 0) &&
+        !(CD_SYSTEM.status_flags.word & CD_STATUS_RECOVERY_PENDING))
     {
-        cdSystem = &CD_SYSTEM;
-        if (*result & 0x10)
+        cd_system = &CD_SYSTEM;
+        if (*result & CdlStatShellOpen)
         {
             cdrom_handle_sync_error();
             return;
@@ -1764,122 +1762,120 @@ void cdrom_handle_recovery_sync(u_char intr, u_char* result)
     }
     else
     {
-        cdSystem = &CD_SYSTEM;
+        cd_system = &CD_SYSTEM;
     }
-    if (((cdSystem->init_command & 0x7F) == 0x21) && (cdSystem->status_byte & 1))
+
+    // Abort a failed disc-ID read if XA mode is still active.
+    if (((cd_system->init_command & CD_INIT_COMMAND_MASK) == CD_RECOVERY_COMMAND_READ_DISC_ID) &&
+        (cd_system->status_byte & CdlStatError))
     {
-        if (cdSystem->filter_mode_flags & 0x40)
+        if (cd_system->mode_flags & CdlModeRT)
         {
             CdSyncCallback(NULL);
             CdReadyCallback(NULL);
-            cdSystem->init_state = 0x20;
-            cdSystem->init_command = 0;
-            cdSystem->status_flags.word &= ~0x10;
-            cdSystem->status_flags.word &= ~4;
+            cd_system->init_state = CD_INIT_STATE_ERROR_PAUSE;
+            cd_system->init_command = 0;
+            cd_system->status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
+            cd_system->status_flags.word &= ~CD_STATUS_NO_DISC;
         }
     }
-    // Reusing queue_write for the intr test extends its live range, which
-    // demotes its register-allocation priority below temp_v1 in case 35
-    // (required to match).
-    queue_write = intr;
-    if ((queue_write & 0xFF) == 2)
+
+    if (intr == CdlComplete)
     {
-        CD_SYSTEM.init_command &= 0x7F;
-        // Volatile read forces the reload of init_command after the masking
-        // store above (required to match).
+        CD_SYSTEM.init_command &= CD_INIT_COMMAND_MASK;
+
+        // Advance the operation that completed.
         switch (CD_SYSTEM_V.init_command)
-        {       /* switch 1 */
-        case 1: /* switch 1 */
-        case 3: /* switch 1 */
+        {
+        case CD_SYNC_COMMAND_PAUSE:
+        case CD_SYNC_COMMAND_RESTORE_MODE:
             CD_SYSTEM_V.init_command = 0;
             if (CD_SYSTEM.queue_read_index != CD_SYSTEM.queue_write_index)
             {
                 CdSyncCallback(cdrom_complete_command);
-                temp_a0 = CD_SYSTEM.command_queue.items[CD_SYSTEM.queue_read_index].command;
-                if ((temp_a0 == 0x1B) && (CD_SYSTEM.audio_enabled == 0))
+                next_command = CD_SYSTEM.command_queue.items[CD_SYSTEM.queue_read_index].command;
+                if ((next_command == CdlReadS) && (CD_SYSTEM.audio_enabled == 0))
                 {
-                    CD_SYSTEM.audio_enabled = 1;
+                    CD_SYSTEM.audio_enabled = TRUE;
                 }
-                CD_SYSTEM.playback_state = 0;
+                CD_SYSTEM.playback_state = FALSE;
                 CD_SYSTEM.transfer_callback = NULL;
-                cdrom_run_command(temp_a0 & 0xFF, 0, 0);
+                cdrom_run_command(next_command, NULL, FALSE);
             }
             else
             {
                 CdSyncCallback(NULL);
             }
             break;
-        case 2: /* switch 1 */
+        case CD_SYNC_COMMAND_AUDIO_PAUSE:
             CD_SYSTEM_V.init_command = CD_SYSTEM.init_command + 1;
-            CdControlF(0xE, (u8*)0x801ED950);
+            CdControlF(CdlSetmode, CD_SYSTEM.set_mode_param_blocking);
             break;
-        case 16: /* switch 1 */
-            CD_SYSTEM.init_state = 2;
+        case CD_RECONFIGURE_STEP_SET_FILTER:
+            CD_SYSTEM.init_state = CD_RECOVERY_STATE_CHECK_DISC;
             CdSyncCallback(NULL);
             CD_SYSTEM_V.init_command = 0;
             break;
-        case 17: /* switch 1 */
+        case CD_RECONFIGURE_STEP_DEMUTE:
             CD_SYSTEM_V.init_command = CD_SYSTEM.init_command + 1;
-            CdControlF(0xC, NULL);
+            CdControlF(CdlDemute, NULL);
             break;
-        case 18: /* switch 1 */
+        case CD_RECONFIGURE_STEP_PAUSE:
             CD_SYSTEM_V.init_command = CD_SYSTEM.init_command + 1;
-            CdControlF(9, NULL);
+            CdControlF(CdlPause, NULL);
             break;
-        case 19: /* switch 1 */
+        case CD_RECONFIGURE_STEP_COMPLETE:
             CdSyncCallback(NULL);
             CD_SYSTEM.init_state = 0;
             CD_SYSTEM_V.init_command = 0;
-            CD_SYSTEM.status_flags.word &= ~8;
+            CD_SYSTEM.status_flags.word &= ~CD_STATUS_RECOVERY_PENDING;
             break;
-        case 33: /* switch 1 */
+        case CD_RECOVERY_COMMAND_READ_DISC_ID:
             CdSyncCallback(NULL);
             CD_SYSTEM_V.init_command = 0;
             break;
-        case 32: /* switch 1 */
-        case 34: /* switch 1 */
-            CD_SYSTEM.init_state = 7;
+        case CD_RECOVERY_COMMAND_SET_MODE:
+        case CD_RECOVERY_COMMAND_RETRY_READ:
+            CD_SYSTEM.init_state = CD_RECOVERY_STATE_READ_DISC_ID;
             CdSyncCallback(NULL);
             CD_SYSTEM_V.init_command = 0;
             break;
-        case 35: /* switch 1 */
+        case CD_RECOVERY_COMMAND_COMPLETE:
             CD_SYSTEM_V.init_command = 0;
             CD_SYSTEM.init_state = 0;
             CD_SYSTEM.retry_counter = 0;
-            // Single reused temp keeps gcc's combine pass from folding the
-            // ~2 and ~4 masks into one AND; the first store must be volatile
-            // or it is eliminated as dead (required to match).
-            temp_v1 = CD_SYSTEM.status_flags.word;
 
-            queue_write = CD_SYSTEM.queue_read_index;
-            queue_read = CD_SYSTEM.queue_write_index;
+            // Publish each recovery flag transition in order.
+            status_flags = CD_SYSTEM.status_flags.word;
 
-            temp_v1 &= ~1;
-            CD_SYSTEM_V.status_flags.word = temp_v1;
-            temp_v1 &= ~2;
-            temp_v1 &= ~4;
-            CD_SYSTEM.status_flags.word = *(new_var = &temp_v1);
-            if (queue_write != queue_read)
+            read_index = CD_SYSTEM.queue_read_index;
+            write_index = CD_SYSTEM.queue_write_index;
+
+            status_flags &= ~CD_STATUS_SYNC_ERROR;
+            CD_SYSTEM_V.status_flags.word = status_flags;
+            status_flags &= ~CD_STATUS_INVALID_DISC;
+            status_flags &= ~CD_STATUS_NO_DISC;
+            // The pointer assignment preserves the original register allocation.
+            CD_SYSTEM.status_flags.word = *(status_ptr = &status_flags);
+            if (read_index != write_index)
             {
-                CD_SYSTEM.current_command = 1;
-                CD_SYSTEM.status_flags.word = temp_v1 | 0x10;
+                CD_SYSTEM.current_command = CdlNop;
+                CD_SYSTEM.status_flags.word = status_flags | CD_STATUS_COMMAND_ACTIVE;
                 CdSyncCallback(cdrom_complete_command);
                 CdSync(0, NULL);
-                CdControlF(1, NULL);
+                CdControlF(CdlNop, NULL);
             }
             else
             {
                 CdSyncCallback(NULL);
-                CD_SYSTEM.status_flags.word &= ~0x10;
+                CD_SYSTEM.status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
             }
             if (g_cd_audio_enabled != 0)
             {
-                // Pointer assigned between the two tests so the base address
-                // stays in a register (required to match).
-                audioSystem = &AUDIO_SYSTEM;
+                audio_system = &AUDIO_SYSTEM;
                 if (g_cd_audio_ready != 0)
                 {
-                    audioSystem->read_flag = 1;
+                    audio_system->read_flag = TRUE;
                 }
             }
             break;
@@ -1889,51 +1885,52 @@ void cdrom_handle_recovery_sync(u_char intr, u_char* result)
     }
     if ((s8)CD_SYSTEM_V.init_command >= 0)
     {
-        CD_SYSTEM_V.init_command |= 0x80;
-        CdControlF(1, NULL);
+        CD_SYSTEM_V.init_command |= CD_INIT_COMMAND_RETRY_FLAG;
+        CdControlF(CdlNop, NULL);
         return;
     }
-    CD_SYSTEM_V.init_command &= 0x7F;
+
+    CD_SYSTEM_V.init_command &= CD_INIT_COMMAND_MASK;
+
+    // Retry the operation that failed.
     switch (CD_SYSTEM_V.init_command)
-    {       /* switch 2 */
-    case 3: /* switch 2 */
-        CdControlF(0xE, (u8*)0x801ED950);
+    {
+    case CD_SYNC_COMMAND_RESTORE_MODE:
+        CdControlF(CdlSetmode, CD_SYSTEM.set_mode_param_blocking);
         return;
-    case 16: /* switch 2 */
-        CD_SYSTEM.init_state = 1;
+    case CD_RECONFIGURE_STEP_SET_FILTER:
+        CD_SYSTEM.init_state = CD_RECOVERY_STATE_POLL_STATUS;
         CdSyncCallback(NULL);
         CD_SYSTEM_V.init_command = 0;
         return;
-    case 17: /* switch 2 */
-        // Two-byte array (not two scalars): keeps the second byte's store
-        // from being eliminated as dead (required to match).
-        sp10[0] = 1;
-        sp10[1] = 1;
-        CdControlF(0xD, sp10);
+    case CD_RECONFIGURE_STEP_DEMUTE:
+        filter_params[0] = CD_RECOVERY_FILTER_FILE;
+        filter_params[1] = CD_RECOVERY_FILTER_CHANNEL;
+        CdControlF(CdlSetfilter, filter_params);
         return;
-    case 18: /* switch 2 */
-        CdControlF(0xC, NULL);
+    case CD_RECONFIGURE_STEP_PAUSE:
+        CdControlF(CdlDemute, NULL);
         return;
-    case 1:  /* switch 2 */
-    case 2:  /* switch 2 */
-    case 19: /* switch 2 */
-        CdControlF(9, NULL);
+    case CD_SYNC_COMMAND_PAUSE:
+    case CD_SYNC_COMMAND_AUDIO_PAUSE:
+    case CD_RECONFIGURE_STEP_COMPLETE:
+        CdControlF(CdlPause, NULL);
         return;
-    case 33: /* switch 2 */
-        CdControlF(6, (u8*)0x801ED95C);
+    case CD_RECOVERY_COMMAND_READ_DISC_ID:
+        CdControlF(CdlReadN, CD_SYSTEM.recovery_read_position.bytes);
         return;
-    case 34: /* switch 2 */
-        CD_SYSTEM.init_state = 7;
+    case CD_RECOVERY_COMMAND_RETRY_READ:
+        CD_SYSTEM.init_state = CD_RECOVERY_STATE_READ_DISC_ID;
         CD_SYSTEM_V.init_command = 0;
         CdSyncCallback(NULL);
         return;
-    case 32: /* switch 2 */
-    case 35: /* switch 2 */
-        CD_SYSTEM.init_state = 6;
+    case CD_RECOVERY_COMMAND_SET_MODE:
+    case CD_RECOVERY_COMMAND_COMPLETE:
+        CD_SYSTEM.init_state = CD_RECOVERY_STATE_SET_MODE;
         CD_SYSTEM_V.init_command = 0;
         CdSyncCallback(NULL);
         return;
-    default: /* switch 2 */
+    default:
         return;
     }
 }
