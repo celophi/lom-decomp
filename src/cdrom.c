@@ -8,6 +8,7 @@
 
 #define CD_RESOURCE_INDEX_INVALID 0xFFFE
 #define CD_RESOURCE_INDEX_DEFAULT 0xFFFF
+#define CD_COMMAND_NONE 0
 #define CD_COMMAND_QUEUE_SIZE 16
 #define CD_COMMAND_QUEUE_MASK (CD_COMMAND_QUEUE_SIZE - 1)
 #define CD_COMMAND_QUEUE_BASE_OFFSET 4
@@ -23,6 +24,9 @@
 #define CD_READY_CALLBACK_PENDING 1
 #define CD_SECTOR_HEADER_WORDS 3
 #define CD_SECTOR_POSITION_MASK 0x00FFFFFF
+#define CD_DISC_VALIDATION_WORDS 8
+#define CD_IS_MULTIBYTE_ID_CHAR(character) \
+    (((u8)((character) + 0x80) < 0x20U) || ((u8)((character) + 0x20) < 0x10U))
 #define CD_DATA_SECTOR_SIZE 0x800
 #define CD_DATA_SECTOR_WORDS 0x200
 #define CD_BYTES_PER_WORD 4
@@ -103,6 +107,7 @@ typedef enum CdStatusFlag
 
 typedef enum CdRecoveryState
 {
+    CD_RECOVERY_STATE_IDLE = 0,
     CD_RECOVERY_STATE_POLL_STATUS = 1,
     CD_RECOVERY_STATE_CHECK_DISC = 2,
     CD_RECOVERY_STATE_WAIT_FOR_DISC = 3,
@@ -140,6 +145,7 @@ typedef enum CdReconfigureStep
 
 typedef enum CdSyncCommand
 {
+    CD_SYNC_COMMAND_NONE = 0,
     CD_SYNC_COMMAND_PAUSE = 1,
     CD_SYNC_COMMAND_AUDIO_PAUSE = 2,
     CD_SYNC_COMMAND_RESTORE_MODE = 3,
@@ -302,9 +308,9 @@ void cdrom_handle_recovery_sync(u8 intr, u8* result);
 void cdrom_handle_ready_intr(u8 intr, u8* result);
 void cdrom_process_sector(s32 execution_mode);
 void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode);
-void cdrom_verify_disc(u_char intr, u_char* result);
+void cdrom_verify_disc(u8 interrupt, u8* result);
 void cdrom_handle_sync_error(void);
-void cdrom_set_audio_volume(u_char volume, int stereoChannel);
+void cdrom_set_audio_volume(u8 volume, s32 mix_mode);
 s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd);
 void func_80014434(void);
 u8* cdrom_handle_stream_data(s32 bytes_transferred, u32 bytes_remaining);
@@ -2310,135 +2316,99 @@ void cdrom_run_command(u8 command, u8* sector_buffer, s32 execution_mode)
 }
 
 /**
- * @brief Verifies the disc's authenticity against a hardcoded validation ID.
+ * @brief Validates disc identification data read during recovery.
  *
- * Installed as a CdReadyCallback during initialization. Reads a specific sector
- * and compares its contents against g_disc_validation_id to confirm the disc is valid.
- *
- * @details
- * 1. **Position check:** Reads the sector header (3 words); compares lower 24 bits
- *    against recovery_read_position.
- * 2. **ID extraction:** Reads 8 words into CD_SYSTEM.disc_validation_id.
- * 3. **Comparison:** Byte-by-byte against g_disc_validation_id, with Shift-JIS
- *    two-byte character handling (lead bytes 0x80–0x9F, 0xE0–0xEF).
- * 4. **Outcome:**
- *    - Match: advances init_state, installs cdrom_handle_recovery_sync, sends CdlSetmode.
- *    - Mismatch: enters CD_INIT_STATE_ERROR_PAUSE and sends CdlPause.
- *
- * @param intr    Completion code from the CD-ROM drive.
- * @param result  Pointer to the drive's status byte.
- *
- * @note Called in interrupt context.
+ * @param interrupt CD-ROM ready callback reason.
+ * @param result Drive result buffer; unused by this callback.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/XrcPe
  */
-void cdrom_verify_disc(u_char intr, u_char* result)
+void cdrom_verify_disc(u8 interrupt, u8* result)
 {
-    s32 statusWord;
-    u_char expectedChar;
-    u_char discChar;
-    const u_char* expectedId;
-    u_char* discId;
+    u32 status_flags;
+    u8 expected_character;
+    u8 disc_character;
+    const u8* expected_id;
+    u8* disc_id;
 
     CD_SYSTEM_V.sync_complete = TRUE;
 
-    if (intr == 1)
+    if (interrupt == CdlDataReady)
     {
-        // Wait until the sector header (3 words) is ready
-        while ((expectedChar = (CdGetSector(&CD_SYSTEM.sector_header_buffer, 3) == 0)));
+        // Retaining the result assignment preserves the validation-loop register layout.
+        while ((expected_character =
+                    (CdGetSector(CD_SYSTEM.sector_header_buffer, CD_SECTOR_HEADER_WORDS) == 0)));
 
-        // Verify the sector position matches the expected recovery read position (24-bit compare)
-        if ((CD_SYSTEM.sector_header_buffer[0] & 0xFFFFFF) == (CD_SYSTEM.recovery_read_position.raw & 0xFFFFFF))
+        if ((CD_SYSTEM.sector_header_buffer[0] & CD_SECTOR_POSITION_MASK) ==
+            (CD_SYSTEM.recovery_read_position.raw & CD_SECTOR_POSITION_MASK))
         {
-            // Wait until the disc validation ID (8 words) is ready
-            while (CdGetSector(&CD_SYSTEM.disc_validation_id, 8) == 0);
+            while (CdGetSector(CD_SYSTEM.disc_validation_id, CD_DISC_VALIDATION_WORDS) == 0);
 
-            // Walk both strings simultaneously, verifying the disc contains the expected ID.
-            // Shift-JIS lead bytes (0x81-0x9F or 0xE0-0xEF) introduce two-byte characters;
-            // both the lead and trail byte must match before continuing.
-            expectedId = g_disc_validation_id;
-            discId = CD_SYSTEM.disc_validation_id;
-            expectedChar = *expectedId++;
+            expected_id = g_disc_validation_id;
+            disc_id = CD_SYSTEM.disc_validation_id;
+            expected_character = *expected_id++;
 
-            while (expectedChar != 0)
+            while (expected_character != '\0')
             {
-                // Special-range characters [0x80,0x9F] or [0xE0,0xEF] use a two-byte match
-                // expectedChar must equal *pDiscData, then the following bytes are compared.
-                if (((u8)(expectedChar + 0x80) < 0x20u) || ((u8)(expectedChar + 0x20) < 0x10u))
+                // Multibyte ID characters must match both encoded bytes.
+                if (CD_IS_MULTIBYTE_ID_CHAR(expected_character))
                 {
-                    // Two-byte character: verify the lead byte matches first
-                    if (expectedChar != *discId++)
+                    if (expected_character != *disc_id++)
                     {
-                        goto validation_failed;
+                        goto disc_invalid;
                     }
 
-                    // Then load the trail bytes from each string for the main compare below
-                    expectedChar = *discId++;
-                    discChar = *expectedId++;
+                    expected_character = *disc_id++;
+                    disc_character = *expected_id++;
                 }
                 else
                 {
-                    // Single-byte ASCII character: just advance the disc pointer
-                    discChar = *discId++;
+                    disc_character = *disc_id++;
                 }
 
-                if (expectedChar != discChar)
+                if (expected_character != disc_character)
                 {
-                validation_failed:
-                    statusWord = CD_SYSTEM.status_flags.word & ~4u;
+                disc_invalid:
+                    status_flags = CD_SYSTEM.status_flags.word & ~CD_STATUS_NO_DISC;
                     CD_SYSTEM_V.init_state = CD_INIT_STATE_ERROR_PAUSE;
-                    CD_SYSTEM_V.status_flags.word = statusWord;
-                    CD_SYSTEM.status_flags.word = statusWord & ~CdlStatShellOpen;
+                    CD_SYSTEM_V.status_flags.word = status_flags;
+                    CD_SYSTEM.status_flags.word = status_flags & ~CD_STATUS_COMMAND_ACTIVE;
                     CdReadyCallback(NULL);
                     return;
                 }
 
-                expectedChar = *expectedId++;
+                expected_character = *expected_id++;
             }
 
-            // Validation passed: set disc mode and begin CD reads
             CdReadyCallback(NULL);
-            CD_SYSTEM_V.init_command = 0x23; // TODO: name this constant
+            CD_SYSTEM_V.init_command = CD_RECOVERY_COMMAND_COMPLETE;
             CdSyncCallback(cdrom_handle_recovery_sync);
-            CdControlF(CdlSetmode, (u_char*)0x801ED950);
+            CdControlF(CdlSetmode, CD_SYSTEM.set_mode_param_blocking);
             return;
         }
     }
 
-    // Sector position mismatch or wrong interrupt type: pause and signal error
     CdReadyCallback(NULL);
-    CD_SYSTEM_V.init_command = 0x22; // TODO: name this constant
+    CD_SYSTEM_V.init_command = CD_RECOVERY_COMMAND_RETRY_READ;
     CdSyncCallback(cdrom_handle_recovery_sync);
     CdControlF(CdlPause, NULL);
 }
 
 /**
- * @brief Blocks until all pending CD-ROM commands have been processed.
- *
- * Polls cdrom_process_state() each frame, yielding via VSync(0) between calls,
- * until the command queue is empty.
- *
- * @warning Blocking; may stall for several frames. Use only when absolute
- *          synchronization is required.
+ * @brief Processes CD-ROM state once per frame until the command queue is empty.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/rE8hd
  */
 void cdrom_wait_queue_empty(void)
 {
-    int remaining;
-
-    while (remaining = cdrom_process_state(), remaining != 0)
+    while (cdrom_process_state() != 0)
     {
         VSync(0);
     }
 }
 
 /**
- * @brief Resets CD state and enters error recovery after a sync failure.
- *
- * Clears sync and ready callbacks, sets the error flag (status_flags bit 0),
- * resets all command and retry counters, clears the busy flag (bit 4),
- * and records the current VSync timestamp.
+ * @brief Clears callbacks and resets CD command state after a sync failure.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/lU7lO
  */
@@ -2447,85 +2417,82 @@ void cdrom_handle_sync_error(void)
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
 
-    CD_SYSTEM.init_state = 0;
-    CD_SYSTEM.status_flags.word |= 1;
-    CD_SYSTEM.current_command = 0;
-    CD_SYSTEM.init_command = 0;
+    CD_SYSTEM.init_state = CD_RECOVERY_STATE_IDLE;
+    CD_SYSTEM.status_flags.word |= CD_STATUS_SYNC_ERROR;
+    CD_SYSTEM.current_command = CD_COMMAND_NONE;
+    CD_SYSTEM.init_command = CD_SYNC_COMMAND_NONE;
     CD_SYSTEM.retry_count = 0;
     CD_SYSTEM.retry_counter = 0;
-    CD_SYSTEM.status_flags.word &= ~0x10;
+    CD_SYSTEM.status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
     CD_SYSTEM.vsync_timestamp = VSync(-1);
 }
 
 /**
- * @brief Sets the CD-DA audio mix volume and channel routing.
+ * @brief Configures CD audio volume and mono routing.
  *
- * @param volume         Volume level (0–255).
- * @param stereoChannel  0 = route both CD channels to SPU left only,
- *                       1 = route CD left to both speakers (mono).
+ * @param volume Volume level from 0 to 255.
+ * @param mix_mode Zero routes CD left to both SPU outputs; nonzero routes both
+ *                  CD inputs to the SPU-left output.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/lwzx1
  */
-void cdrom_set_audio_volume(u_char volume, s32 mixMode)
+void cdrom_set_audio_volume(u8 volume, s32 mix_mode)
 {
-    CdlATV audioConfig[2];
+    CdlATV audio_mix;
 
-    while (TRUE)
+    // The single-iteration form preserves the original channel-store scheduling.
+    do
     {
-        if (mixMode != 0)
+        if (mix_mode != 0)
         {
-            audioConfig[0].val0 = volume;
-            audioConfig[0].val1 = 0;
-            audioConfig[0].val2 = volume;
+            audio_mix.val0 = volume;
+            audio_mix.val1 = 0;
+            audio_mix.val2 = volume;
         }
         else
         {
-            audioConfig[0].val0 = volume;
-            audioConfig[0].val1 = volume;
-            audioConfig[0].val2 = 0;
+            audio_mix.val0 = volume;
+            audio_mix.val1 = volume;
+            audio_mix.val2 = 0;
         }
 
-        audioConfig[0].val3 = 0;
-        break;
-    }
+        audio_mix.val3 = 0;
+    } while (FALSE);
 
-    CdMix(audioConfig);
+    CdMix(&audio_mix);
 }
 
 /**
- * @brief Resets the CD subsystem and stops any ongoing XA audio playback.
- *
- * Restores DecDCT and DrawSync callbacks, clears CD sync/ready callbacks,
- * pauses the drive, stops CD audio if active, and resets all internal state.
+ * @brief Stops CD/XA playback and resets command and callback state.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/fnucZ
  */
 void cdrom_reset(void)
 {
-    AudioSystem* audioSystem = &AUDIO_SYSTEM;
+    AudioSystem* audio_system = &AUDIO_SYSTEM;
 
-    DecDCToutCallback(audioSystem->dec_dct_out_callback_handler);
-    DrawSyncCallback(audioSystem->draw_sync_callback_handler);
+    DecDCToutCallback(audio_system->dec_dct_out_callback_handler);
+    DrawSyncCallback(audio_system->draw_sync_callback_handler);
 
     CdSyncCallback(NULL);
     CdReadyCallback(NULL);
 
     while (CdControlB(CdlPause, NULL, NULL) == 0);
 
-    if (g_cd_audio_ready != 0)
+    if (g_cd_audio_ready != FALSE)
     {
         akao_cmd_e2();
     }
 
-    CD_SYSTEM.audio_enabled = 0;
-    CD_SYSTEM.current_command = 0;
-    CD_SYSTEM.init_command = 0;
+    CD_SYSTEM.audio_enabled = FALSE;
+    CD_SYSTEM.current_command = CD_COMMAND_NONE;
+    CD_SYSTEM.init_command = CD_SYNC_COMMAND_NONE;
     CD_SYSTEM.queue_read_index = 0;
     CD_SYSTEM.queue_write_index = 0;
     CD_SYSTEM.retry_counter = 0;
-    CD_SYSTEM.playback_state = 0;
+    CD_SYSTEM.playback_state = FALSE;
     CD_SYSTEM.transfer_callback = NULL;
-    CD_SYSTEM.status_flags.word &= ~0x10;
+    CD_SYSTEM.status_flags.word &= ~CD_STATUS_COMMAND_ACTIVE;
     CD_SYSTEM.vsync_timestamp = VSync(-1);
 }
 

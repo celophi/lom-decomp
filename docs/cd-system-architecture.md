@@ -14,7 +14,7 @@ Game code submits read commands to a 16-entry circular queue and receives data t
 | Frame pacing | `cdrom_process_state()` drives all progress once per VSync |
 | Error tolerance | Automatic retry with multi-state hardware recovery |
 | Throughput | Double-speed mode, 2340-byte sectors, streaming LZ decompression |
-| Disc validation | Shift-JIS ID string verified against `g_DiscValidationId` at boot |
+| Disc validation | Shift-JIS ID string verified against `g_disc_validation_id` at boot |
 
 ---
 
@@ -219,7 +219,7 @@ sequenceDiagram
     HW-->>VD: Ready IRQ (sector available)
     VD->>PsyQ: CdGetSector — read disc ID into discValidationId
 
-    alt Disc ID matches g_DiscValidationId
+    alt Disc ID matches g_disc_validation_id
         VD->>PsyQ: Install cdrom_complete_command as CdSyncCallback
         VD->>PsyQ: CdlSetmode — finalize drive config
         Note over Game: System ready for normal operation
@@ -378,7 +378,7 @@ graph TD
 | `0x801ED940` | `CD_SECTOR_HEADER_BUFFER` | 3-word sector header staging area |
 | `0x801ED950` | *(async mode param)* | `CdlSetmode` parameter buffer (async) |
 | `0x801ED958` | `CD_COMMAND_PARAM_BUFFER` | Current `CdlLOC` for active read command |
-| `0x801ED990` | `g_defaultCdResource` | Default `CdResourceEntry` (LBA + size) |
+| `0x801ED990` | `g_default_cd_resource` | Default `CdResourceEntry` (LBA + size) |
 | `0x801ED998` | `CD_RESOURCE_ENTRIES` | Resource entry table loaded from disc |
 | `0x1F800000` | `SCRATCHPAD` / `CD_STREAM_STATE` | Scratchpad RAM; aliased as `CdStreamState` during streaming |
 | `0x801DA000` | *(staging base)* | Chunked streaming staging buffer |

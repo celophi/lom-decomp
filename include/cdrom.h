@@ -17,7 +17,7 @@ s32 cdrom_queue_command(u8 command, u16 resource_index, void* dst_buffer,
 u32 cdrom_process_state(void);
 void cdrom_verify_recovery(void);
 void cdrom_wait_queue_empty(void);
-void cdrom_set_audio_volume(u8 volume, s32 stereo_channel);
+void cdrom_set_audio_volume(u8 volume, s32 mix_mode);
 void cdrom_load_resource_table(s32 lba, s32 data_size_bytes);
 void cdrom_reset(void);
 void cdrom_queue_read(s32 resource_index, void* dst_buffer);
