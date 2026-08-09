@@ -4713,7 +4713,7 @@ typedef struct
 } Req;
 
 /**
- * @see decomp.me (75.62%, 489/1586 exact) TODO
+ * @see decomp.me (78.77%, 557/1586 exact) TODO
  */
 s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
 {
@@ -4723,7 +4723,9 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     FieldScene *scene;
     Query *temp_s2;
 
+    u32 *sp4094;
     u32 sp408C;
+    s32 *sp4084;
     s32 sp4080;
     u8 sp407C;
     s32 sp4078;
@@ -4794,6 +4796,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     s32 temp_v1_41;
     s32 temp_v1_42;
     s32 temp_v1_43;
+    s32 final_x;
     s32 temp_s0;
     s32 var_a0;
     s32 var_a0_2;
@@ -4874,6 +4877,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     u8 *var_s0;
     u8 *var_s1;
     u8 *var_s2;
+    u8 *new_var;
     u8 *var_a2;
     u8 *var_v0_24;
     u8 *var_v0_25;
@@ -5085,6 +5089,8 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                     var_s7 = 1;
                     var_s2 = NULL;
                     var_a3 = 0xFA;
+                    sp4084 = &path[0][0];
+                    sp4094 = (u32 *) flags;
                     flags[0] = 1;
                     flags[3] = 0;
                     flags[2] = 0;
@@ -5104,11 +5110,11 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                         }
                         var_t0 = 0;
                         var_s5_3 = var_s7 - 1;
-                        var_fp = (u32 *) &path[var_t5][var_s7 - 1];
+                        var_fp = (u32 *) (sp4084 + (var_t5 << 10) + var_s7 - 1);
                         temp_v1_8 = (var_t5 + 1) & 3;
-                        var_s7 = flags[temp_v1_8];
-                        var_s4 = &path[(var_t5 + 3) & 3][0];
-                        var_s6 = &path[temp_v1_8][var_s7];
+                        var_s7 = sp4094[temp_v1_8];
+                        var_s4 = sp4084 + (((var_t5 + 3) & 3) << 10);
+                        var_s6 = sp4084 + (temp_v1_8 << 10) + var_s7;
                         if (var_s5_3 != -1)
                         {
                             temp_t3 = var_a3 & 0xFF;
@@ -5544,10 +5550,10 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                             return -3;
                         }
                         temp_v1_30 = var_t5 + 3;
-                        flags[var_t5] = 0;
+                        sp4094[var_t5] = 0;
                         var_t5 = (var_t5 + 1) & 3;
-                        flags[var_t5] = var_s7;
-                        flags[temp_v1_30 & 3] = var_t0;
+                        sp4094[var_t5] = var_s7;
+                        sp4094[temp_v1_30 & 3] = var_t0;
                         if (var_s2 != NULL)
                         {
                             var_s3_2 = 2;
@@ -5577,11 +5583,12 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                             temp_a0_12 = (u16) scene->unk44;
                             temp_lo = sp408C * sp4068;
                             temp_v1_32 = scene->unk2C;
+                            new_var = var_s2;
                             var_s1 = (u8 *) (temp_v1_32 + (temp_a0_12 * sp4054) + temp_lo + sp4064);
                             var_fp_3 = &path[0][0];
                             if (var_s1 != var_s2)
                             {
-                                var_v1_6 = (u32) var_s2 - (u32) temp_v1_32;
+                                var_v1_6 = (u32) new_var - (u32) temp_v1_32;
                                 if (var_v1_6 >= temp_a0_12)
                                 {
                                     var_v1_7 = var_v1_6 - temp_a0_12;
@@ -5607,7 +5614,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 }
                                 else
                                 {
-                                    rec.unk4 = (s32) var_s2;
+                                    rec.unk4 = (s32) new_var;
                                     rec.unk2C = 4;
                                     rec.unk28 = 2;
                                     rec.unk10 = sp406C;
@@ -5618,7 +5625,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                         *var_fp_3 = (s32) var_s1;
                                         var_fp_3 += 1;
                                         *var_s1 = 0xFC;
-                                        var_s1 = var_s2;
+                                        var_s1 = new_var;
                                     }
                                     else
                                     {
@@ -5878,17 +5885,18 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                         var_s5_7 = temp_s2_3;
                                         rec.unk8 = sp405C;
                                         sp407C = 0;
+                                        temp_v0 = sp4064;
                                         rec.unk0 = path[0][0];
                                         var_t1_5 = 1;
                                         rec.unkC = sp4060;
-                                        temp_s4_2 = (var_fp_5 + sp4064) / 2;
+                                        temp_s4_2 = (var_fp_5 + temp_v0) / 2;
                                         temp_s2_4 = (var_s5_7 + sp4068) / 2;
                                         rec.unk10 = temp_s4_2;
                                         rec.unk14 = temp_s2_4;
                                         if (func_80062820(&rec) != 0)
                                         {
                                             rec.unk0 = temp_s0;
-                                            rec.unk8 = sp4064;
+                                            rec.unk8 = temp_v0;
                                             rec.unkC = sp4068;
                                             if (func_80062820(&rec) != 0)
                                             {
@@ -5900,7 +5908,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 }
                                 if (sp407C != 0)
                                 {
-                                    temp_s4_3 = sp4064 - var_fp_5;
+                                    temp_s4_3 = temp_v0 - var_fp_5;
                                     var_v0_27 = temp_s4_3;
                                     rec.unk0 = path[0][0];
                                     rec.unk8 = sp405C;
@@ -5923,7 +5931,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     if (func_80062820(&rec) != 0)
                                     {
                                         rec.unk0 = temp_s0;
-                                        rec.unk8 = sp4064;
+                                        rec.unk8 = temp_v0;
                                         rec.unkC = sp4068;
                                         if (func_80062820(&rec) != 0)
                                         {
@@ -5934,7 +5942,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     }
                                 }
                                 sp407C = 1;
-                                rec.unk8 = sp4064;
+                                rec.unk8 = temp_v0;
                                 rec.unk0 = temp_s0;
                                 rec.unkC = sp4068;
                                 temp_s4_4 = (var_fp_5 + sp405C) / 2;
@@ -5950,7 +5958,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     {
                                         var_fp_5 = temp_s4_4;
                                         var_s5_7 = temp_s2_5;
-                                        rec.unk8 = sp4064;
+                                        rec.unk8 = temp_v0;
                                         sp407C = 0;
                                         rec.unk0 = temp_s0;
                                         var_t1_5 = 1;
@@ -5977,7 +5985,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     temp_s3_2 = sp405C - var_fp_5;
                                     var_v0_30 = temp_s3_2;
                                     rec.unk0 = temp_s0;
-                                    rec.unk8 = sp4064;
+                                    rec.unk8 = temp_v0;
                                     rec.unkC = sp4068;
                                     if (temp_s3_2 < 0)
                                     {
@@ -5996,7 +6004,8 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     if (func_80062820(&rec) != 0)
                                     {
                                         rec.unk0 = path[0][0];
-                                        rec.unk8 = sp405C;
+                                        final_x = sp405C;
+                                        rec.unk8 = final_x;
                                         rec.unkC = sp4060;
                                         if (func_80062820(&rec) != 0)
                                         {

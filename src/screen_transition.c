@@ -1,5 +1,5 @@
 #include "screen_transition.h"
-#include "cd.h"
+#include "cdrom.h"
 #include "controller.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"

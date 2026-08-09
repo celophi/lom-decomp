@@ -1,6 +1,6 @@
 #include "main.h"
 #include "cd_resources.h"
-#include "cd.h"
+#include "cdrom.h"
 #include "movie.h"
 #include "screen_transition.h"
 #include "game_audio.h"

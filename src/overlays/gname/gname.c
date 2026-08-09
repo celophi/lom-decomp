@@ -1,6 +1,6 @@
 #include "gname.h"
 
-#include "cd.h"
+#include "cdrom.h"
 #include "common.h"
 #include "display.h"
 #include "gpu_packet.h"
