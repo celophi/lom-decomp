@@ -15,6 +15,18 @@ typedef signed char s8;
 typedef unsigned short u16;
 typedef signed short s16;
 
+/** @brief Number of entries in the gosub UI element pool. */
+#define GOSUB_ELEMENT_COUNT 16
+
+/** @brief Lifecycle states used by a gosub UI element. */
+typedef enum GosubElementState
+{
+    GOSUB_ELEMENT_STATE_INACTIVE = 0,
+    GOSUB_ELEMENT_STATE_ENTERING = 1,
+    GOSUB_ELEMENT_STATE_ACTIVE = 2,
+    GOSUB_ELEMENT_STATE_EXITING = 3
+} GosubElementState;
+
 void field_set_default_fade_target(); /* extern */
 void func_800A8B90();    /* extern */
 void func_800AA02C();    /* extern */
@@ -107,8 +119,8 @@ extern u8* g_gosub_title_text;
  * rewrites through the whole word (see SET_ELEM_CODE), so it is exposed as a
  * union. The second word carries a flag and the y coordinate.
  *
- * @note Field meanings beyond x/y are unconfirmed; the `_N` suffixes record the
- *       bit position each one starts at.
+ * @note Field meanings beyond state/x/y are unconfirmed; the `_N` suffixes
+ *       record the bit position each one starts at.
  */
 typedef struct
 {
@@ -117,7 +129,7 @@ typedef struct
         u32 word;
         struct
         {
-            u32 unk0_0 : 3;
+            u32 state : 3;
             u32 unk0_3 : 4;
             u32 x : 9;
             u32 unk0_16 : 8;
@@ -141,7 +153,7 @@ typedef struct
 #define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 
 /** @brief UI element pool; element 0 is reserved for the fixed dialog element. */
-extern GosubElement g_gosub_elements[16];
+extern GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
 
 GosubElement* func_80143C04();
 
@@ -709,7 +721,7 @@ void gosub_initialize_fixed_element(void)
     p = &g_gosub_elements[0];
     p->draw_handler = (void*)&D_80145F80;
     g_gosub_dialog_choice = 0;
-    p->attr.f.unk0_0 = 1;
+    p->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x20;
     p->attr.f.unk0_16 = 0x70;

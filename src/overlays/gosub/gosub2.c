@@ -10,6 +10,18 @@ typedef signed char s8;
 typedef unsigned short u16;
 typedef signed short s16;
 
+/** @brief Number of entries in the gosub UI element pool. */
+#define GOSUB_ELEMENT_COUNT 16
+
+/** @brief Lifecycle states used by a gosub UI element. */
+typedef enum GosubElementState
+{
+    GOSUB_ELEMENT_STATE_INACTIVE = 0,
+    GOSUB_ELEMENT_STATE_ENTERING = 1,
+    GOSUB_ELEMENT_STATE_ACTIVE = 2,
+    GOSUB_ELEMENT_STATE_EXITING = 3
+} GosubElementState;
+
 void gosub_build_equipment_list(u32 item_kind); /* extern */
 s32 gosub_handle_input(s32 unused); /* extern */
 void gosub_scroll_to_cursor(void); /* extern */
@@ -30,7 +42,7 @@ typedef struct
         u32 word;
         struct
         {
-            u32 unk0_0 : 3;
+            u32 state : 3;
             u32 unk0_3 : 4;
             u32 x : 9;
             u32 unk0_16 : 8;
@@ -49,7 +61,7 @@ typedef struct
 } GosubPackedRecord;
 
 /** @brief UI element pool; element 0 is reserved for the fixed dialog element. */
-extern GosubElement g_gosub_elements[16];
+extern GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
 extern u8* g_pad_ctx;
 extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
@@ -233,7 +245,7 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
         g_gosub_required_selection_count = 2;
         D_8016B8FC = 2;
         g_gosub_selection_count = 0;
-        g_gosub_elements[0].attr.f.unk0_0 = 0;
+        g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
         g_gosub_screen_sequence_index -= 1;
         if (g_gosub_row_count == 0)
         {
@@ -246,7 +258,7 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
     }
     g_gosub_selection_count -= 1;
     g_gosub_screen_sequence_index -= 1;
-    g_gosub_elements[0].attr.f.unk0_0 = 0;
+    g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
     return 0;
 }
 
@@ -575,7 +587,7 @@ s32 gosub_handle_input(s32 unused)
                 func_80143B64();
                 return;
             }
-            g_gosub_elements[0].attr.f.unk0_0 = 0;
+            g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
             D_8016B948 = 0;
             return;
         }
@@ -909,7 +921,7 @@ s32 gosub_advance_screen_sequence(void)
         element = &g_gosub_elements[0];
         element->draw_handler = (void*)&func_80145F80;
         g_gosub_dialog_choice = 0;
-        element->attr.f.unk0_0 = 1;
+        element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
         element->attr.f.unk0_3 = 1;
         element->attr.f.x = 0x20;
         element->attr.f.unk0_16 = 0x70;
@@ -938,9 +950,10 @@ s32 gosub_are_elements_idle(void)
 
     element = g_gosub_elements;
 
-    for (i = 0; i < 0x10; i++)
+    for (i = 0; i < GOSUB_ELEMENT_COUNT; i++)
     {
-        if (element->attr.f.unk0_0 == 1 || element->attr.f.unk0_0 == 3)
+        if (element->attr.f.state == GOSUB_ELEMENT_STATE_ENTERING ||
+            element->attr.f.state == GOSUB_ELEMENT_STATE_EXITING)
         {
             return 0;
         }
