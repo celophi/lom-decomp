@@ -10,12 +10,12 @@ typedef signed char s8;
 typedef unsigned short u16;
 typedef signed short s16;
 
-void func_80142C64(); /* extern */
-s32 func_80143310(); /* extern */
-void func_801438F0(); /* extern */
-s32 func_8014397C(); /* extern */
-s32 func_80143A28(); /* extern */
-s32 func_80143B10(); /* extern */
+void gosub_build_equipment_list(u32 item_kind); /* extern */
+s32 gosub_handle_input(s32 unused); /* extern */
+void gosub_scroll_to_cursor(void); /* extern */
+s32 gosub_toggle_cursor_selection(void); /* extern */
+s32 gosub_advance_screen_sequence(void); /* extern */
+s32 gosub_are_elements_idle(void); /* extern */
 void func_80145F80(); /* extern */
 void func_80143B64(); /* extern */
 void func_80143BB0(); /* extern */
@@ -39,29 +39,32 @@ typedef struct
     u32 unk4_0 : 1;
     u32 y : 8;
     u32 unk4_9 : 23;
-    void* handler;
+    void* draw_handler;
 } GosubElement;
 
+/** @brief Packed four-byte record stored in the combination table. */
 typedef struct
 {
     u32 word;
-} GosubSlot;
+} GosubPackedRecord;
 
-extern GosubElement g_gosub_fixed_element;
-extern u8* D_8012271C;
+/** @brief UI element pool; element 0 is reserved for the fixed dialog element. */
+extern GosubElement g_gosub_elements[16];
+extern u8* g_pad_ctx;
 extern s32 D_801227F0;
-extern s32 D_801229B0[];
+extern s32 g_gosub_result_count;
+extern s32 g_gosub_result_values[];
 extern s32 D_8014F29C;
 extern s32 g_gosub_cursor_row;
 extern s32 g_gosub_finished;
 extern s32 g_gosub_row_count;
 extern s32 g_gosub_visible_row_count;
 extern u8 g_gosub_screen_sequence_index;
-extern s32 D_8016B8E0;
+extern s32 g_gosub_scroll_frames_remaining;
 extern s32 D_8016B8E4;
-extern s32 D_8016B8E8;
+extern s32 g_gosub_dialog_choice;
 extern s32 D_8016B8EC;
-extern s32 D_8016B8F0;
+extern s32 g_gosub_allow_duplicate_selection;
 extern u8 D_8016B8FC;
 extern u8 g_gosub_required_selection_count;
 extern s32 g_gosub_window_height;
@@ -69,8 +72,8 @@ extern s32 g_gosub_window_width;
 extern u8 g_gosub_selection_count;
 extern s32 D_8017097C;
 extern s32 g_gosub_row_height;
-extern s32 D_80170988;
-extern s32 D_80170990;
+extern s32 g_gosub_scroll_y;
+extern s32 g_gosub_scroll_target_y;
 
 /**
  * @brief One row of the item list built by the gosub screen builders.
@@ -110,21 +113,21 @@ extern s32 D_801228F0;
 extern GosubListEntry g_gosub_rows[];
 extern u8 g_gosub_selected_rows[];
 
-extern s32 D_80122988;
+extern s32 g_pad_input;
 extern s32 D_8016B948;
 extern s32 D_8016B95C;
 extern u8 g_gosub_screen_sequence[20];
 extern s32 g_gosub_result_rows[16];
 extern s32 (*g_gosub_select_handler)();
 extern s32 (*g_gosub_finish_handler)();
-extern s32 (*D_80174A58)(s32);
+extern s32 (*g_gosub_dialog_handler)(s32);
 
 extern u8 D_800EC3E2[];
 extern u32 D_8014F27C;
 extern u32 D_8014F280;
 extern u32 D_8014F288[];
 extern s32 D_8016B900;
-extern u8 D_8016B960[];
+extern u8 g_gosub_text_buffers[];
 extern u8* g_gosub_title_text;
 
 /**
@@ -135,11 +138,11 @@ extern u8* g_gosub_title_text;
  */
 typedef struct
 {
-    s32 v[3];
-} GosubRange;
+    s32 values[3];
+} GosubGroupTable;
 
-extern GosubRange D_80140068;
-extern GosubRange D_80140074;
+extern GosubGroupTable g_gosub_group_first_indices;
+extern GosubGroupTable g_gosub_group_counts;
 
 #define GOSUB_MSG_PTR(off) ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
 
@@ -171,52 +174,55 @@ extern GosubRange D_80140074;
 #define SET_ELEM_CODE(e, c) ((e)->attr.word = ((e)->attr.word & 0x00FFFFFF) | ((u32)(c) << 24))
 
 /**
- * decomp.me (99.94%) https://decomp.me/scratch/2OzmD
+ * @brief Handle the confirmation dialog for creating a two-item combination.
+ *
+ * @param dialog_result Zero to confirm; nonzero to return to the selection.
+ * @return 1 if confirming leaves no equipment rows, otherwise 0.
+ * @see decomp.me (99.94%) https://decomp.me/scratch/2OzmD
  */
-s32 func_8014289C(s32 arg0)
+s32 gosub_handle_combination_dialog(s32 dialog_result)
 {
-    s32 count;
-    GosubSlot* rec;
-    u32 tmp1;
-    u32 tmp2;
-    s32 cfg;
-    s32 c2;
-    s32 mask;
+    s32 combination_count;
+    GosubPackedRecord* record;
+    u32 packed;
+    s32 config;
+    s32 secondary_value;
+    s32 clear_config_mask;
 
-    if (arg0 == 0 && (D_8016B8E8 & 1) == 0)
+    if (dialog_result == 0 && (g_gosub_dialog_choice & 1) == 0)
     {
-        mask = ~0xFC;
-        count = *(D_8012271C + 0x29D6);
-        if (count < 0x28)
+        clear_config_mask = ~0xFC;
+        combination_count = *(g_pad_ctx + 0x29D6);
+        if (combination_count < 0x28)
         {
-            rec = (GosubSlot*)(D_8012271C + count * 4 + 0x29DC);
-            cfg = D_8017097C;
-            tmp1 = rec->word & mask;
-            tmp1 = tmp1 | ((cfg & 0x3F) << 2);
-            rec->word = tmp1;
-            c2 = D_8016B8EC;
-            arg0 = (tmp1 & ~0xF00) | ((c2 & 0xF) << 8);
-            rec->word = arg0;
-            tmp1 = ((arg0 & 0xFFFF0FFF) | ((D_8016B8E4 & 0xF) << 12) | 3) & 0xFFFF;
-            rec->word = tmp1;
-            *(D_8012271C + 0x29D6) = *(D_8012271C + 0x29D6) + 1;
-            *(D_8012271C + (D_801229B0[0] << 6) + 0xCE0) = 0;
-            *(D_8012271C + (D_801229B0[1] << 6) + 0xCE0) = 0;
+            record = (GosubPackedRecord*)(g_pad_ctx + combination_count * 4 + 0x29DC);
+            config = D_8017097C;
+            packed = record->word & clear_config_mask;
+            packed = packed | ((config & 0x3F) << 2);
+            record->word = packed;
+            secondary_value = D_8016B8EC;
+            dialog_result = (packed & ~0xF00) | ((secondary_value & 0xF) << 8);
+            record->word = dialog_result;
+            packed = ((dialog_result & 0xFFFF0FFF) | ((D_8016B8E4 & 0xF) << 12) | 3) & 0xFFFF;
+            record->word = packed;
+            *(g_pad_ctx + 0x29D6) = *(g_pad_ctx + 0x29D6) + 1;
+            *(g_pad_ctx + (g_gosub_result_values[0] << 6) + 0xCE0) = 0;
+            *(g_pad_ctx + (g_gosub_result_values[1] << 6) + 0xCE0) = 0;
             func_800A8FB4();
         }
-        if (*(D_8012271C + 0x29D6) >= 0x28)
+        if (*(g_pad_ctx + 0x29D6) >= 0x28)
         {
             func_80143B64();
             D_801227F0 = 0;
             GOSUB_MSG(-4);
             return 0;
         }
-        D_8016B8E0 = 0;
-        D_80170990 = 0;
-        D_80170988 = 0;
+        g_gosub_scroll_frames_remaining = 0;
+        g_gosub_scroll_target_y = 0;
+        g_gosub_scroll_y = 0;
         g_gosub_cursor_row = 0;
-        D_8016B8F0 = 0;
-        func_80142C64(3);
+        g_gosub_allow_duplicate_selection = 0;
+        gosub_build_equipment_list(3);
         g_gosub_visible_row_count = 6;
         g_gosub_row_height = 0x10;
         g_gosub_window_width = 0xE8;
@@ -227,7 +233,7 @@ s32 func_8014289C(s32 arg0)
         g_gosub_required_selection_count = 2;
         D_8016B8FC = 2;
         g_gosub_selection_count = 0;
-        g_gosub_fixed_element.attr.f.unk0_0 = 0;
+        g_gosub_elements[0].attr.f.unk0_0 = 0;
         g_gosub_screen_sequence_index -= 1;
         if (g_gosub_row_count == 0)
         {
@@ -240,90 +246,103 @@ s32 func_8014289C(s32 arg0)
     }
     g_gosub_selection_count -= 1;
     g_gosub_screen_sequence_index -= 1;
-    g_gosub_fixed_element.attr.f.unk0_0 = 0;
+    g_gosub_elements[0].attr.f.unk0_0 = 0;
     return 0;
 }
 
 /**
- * decomp.me (95%) https://decomp.me/scratch/pOY6i
+ * @brief Publish the selected group rows as result values.
+ *
+ * @return 1 when at least one row was published, otherwise 0.
+ * @see decomp.me (95%) https://decomp.me/scratch/pOY6i
  */
-s32 func_80142B18(void)
+s32 gosub_publish_group_selection(void)
 {
-    s32 count;
-    s32 var_v1;
-    s32* var_a0;
-    s16 temp_v0;
+    s32 selection_count;
+    s32 selection_index;
+    s32* result;
+    s16 row_index;
 
     if (g_gosub_selection_count == 0)
     {
         return 0;
     }
 
-    var_v1 = 0;
+    selection_index = 0;
 
-    count = g_gosub_selection_count;
-    D_801228F0 = count;
+    selection_count = g_gosub_selection_count;
+    g_gosub_result_count = selection_count;
 
-    if (count != 0)
+    if (selection_count != 0)
     {
-        var_a0 = &D_801229B0[0];
+        result = &g_gosub_result_values[0];
 
         do
         {
-            temp_v0 = g_gosub_rows[g_gosub_selected_rows[var_v1]].index;
-            var_v1 += 1;
-            *var_a0 = (s32)temp_v0;
-            var_a0 += 1;
-        } while (var_v1 < count);
+            row_index = g_gosub_rows[g_gosub_selected_rows[selection_index]].index;
+            selection_index += 1;
+            *result = (s32)row_index;
+            result += 1;
+        } while (selection_index < selection_count);
     }
 
     return 1;
 }
 
 /**
- * decomp.me (95%) https://decomp.me/scratch/FN7DQ
+ * @brief Publish the selected rows' entry indices as result values.
+ *
+ * @return 1 when at least one row was published, otherwise 0.
+ * @see decomp.me (95%) https://decomp.me/scratch/FN7DQ
  */
-s32 func_80142B98(void) {
-    s32 count;
-    s32 var_v1;
-    s32* var_a0;
-    s16 temp_v0;
+s32 gosub_publish_selection(void)
+{
+    s32 selection_count;
+    s32 selection_index;
+    s32* result;
+    s16 row_index;
 
-    if (g_gosub_selection_count == 0) {
+    if (g_gosub_selection_count == 0)
+    {
         return 0;
     }
 
-    var_v1 = 0;
-    
-    count = g_gosub_selection_count;
-    D_801228F0 = count; 
-    
-    if (count != 0) {
-        var_a0 = &D_801229B0[0];
-        
-        do {
-           
-            temp_v0 = g_gosub_rows[g_gosub_selected_rows[var_v1]].index;
-            var_v1 += 1;
-            *var_a0 = (s32) temp_v0;
-            var_a0 += 1; 
-        } while (var_v1 < count); 
+    selection_index = 0;
+
+    selection_count = g_gosub_selection_count;
+    g_gosub_result_count = selection_count;
+
+    if (selection_count != 0)
+    {
+        result = &g_gosub_result_values[0];
+
+        do
+        {
+            row_index = g_gosub_rows[g_gosub_selected_rows[selection_index]].index;
+            selection_index += 1;
+            *result = (s32)row_index;
+            result += 1;
+        } while (selection_index < selection_count);
     }
-    
+
     return 1;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/lBIH9
+ * @brief Test whether a row is absent from the current selection.
+ *
+ * @param row Row index to test.
+ * @return 1 if the row is unselected, otherwise 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/lBIH9
  */
-s32 func_80142C18(s32 arg0)
+s32 gosub_is_row_unselected(s32 row)
 {
     s32 i;
     s32 count = g_gosub_selection_count;
 
     for (i = 0; i < count; i++)
     {
-        if (g_gosub_selected_rows[i] == arg0)
+        if (g_gosub_selected_rows[i] == row)
         {
             return 0;
         }
@@ -333,86 +352,91 @@ s32 func_80142C18(s32 arg0)
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/CJYqj
+ * @brief Build list rows from nonempty equipment records of the requested kind.
+ *
+ * Kind 3 accepts every record; kind 4 accepts every record except kind 2.
+ *
+ * @param item_kind Equipment kind filter, or 3/4 for the aggregate filters.
+ * @see decomp.me (100%) https://decomp.me/scratch/CJYqj
  */
-void func_80142C64(u32 arg0)
+void gosub_build_equipment_list(u32 item_kind)
 {
-    s32 i;
-    s32 j;
-    s32 count;
-    u8* rec;
-    u8* base;
-    u8* rec2;
-    s32 msg;
-    u8* slot;
-    u32 word;
+    s32 item_index;
+    s32 stat_index;
+    s32 row_count;
+    u8* item_base;
+    u8* entry;
+    u8* item;
+    s32 separator_offset;
+    u8* item_data;
+    u32 attributes;
 
     D_8016B900 = 1;
-    count = 0;
+    row_count = 0;
 
-    for (i = 0; i < 100; i++)
+    for (item_index = 0; item_index < 100; item_index++)
     {
-        base = D_8012271C + i * 0x40;
-        if (*(base + 0xCE0) != 0)
+        entry = g_pad_ctx + item_index * 0x40;
+        if (*(entry + 0xCE0) != 0)
         {
-            if ((arg0 == 3) || (((*(u32*)(base + 0xCF4) >> 8) & 3) == arg0) ||
-                ((arg0 == 4) && (((*(u32*)(base + 0xCF4) >> 8) & 3) != 2)))
+            if ((item_kind == 3) || (((*(u32*)(entry + 0xCF4) >> 8) & 3) == item_kind) ||
+                ((item_kind == 4) && (((*(u32*)(entry + 0xCF4) >> 8) & 3) != 2)))
             {
 
-                g_gosub_rows[count].name = D_8012271C + (i * 0x40 + 0xCE0);
+                g_gosub_rows[row_count].name = g_pad_ctx + (item_index * 0x40 + 0xCE0);
 
-                func_80146538(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + D_8014F280 +
+                func_80146538(g_gosub_text_buffers + row_count * 0x50, (u8*)&D_8014F27C + D_8014F280 +
                     *(u16*)((u8*)&D_8014F27C + D_8014F280 +
-                        ((*(u16*)(D_8012271C + (i << 6) + 0xCF6) & 0x3F) * 2)));
-                msg = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
-                func_80146468(D_8016B960 + count * 0x50, D_800EC3E2[0] + msg);
+                        ((*(u16*)(g_pad_ctx + (item_index << 6) + 0xCF6) & 0x3F) * 2)));
+                separator_offset = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
+                func_80146468(g_gosub_text_buffers + row_count * 0x50, D_800EC3E2[0] + separator_offset);
 
-                rec = D_8012271C + i * 0x40;
-                g_gosub_rows[count].unkC_28 = (*(u32*)(rec + 0xCF4) >> 8) & 3;
-                word = *(u32*)(rec + 0xCF4);
+                item_base = g_pad_ctx + item_index * 0x40;
+                g_gosub_rows[row_count].unkC_28 = (*(u32*)(item_base + 0xCF4) >> 8) & 3;
+                attributes = *(u32*)(item_base + 0xCF4);
 
-                switch ((word >> 8) & 3)
+                switch ((attributes >> 8) & 3)
                 {
                 case 0:
-                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                    func_80146468(g_gosub_text_buffers + row_count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                         *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
-                            ((word >> 9) & 0x7E)));
-                    g_gosub_rows[count].unk10 = *(u16*)(D_8012271C + i * 0x40 + 0xD04);
+                            ((attributes >> 9) & 0x7E)));
+                    g_gosub_rows[row_count].unk10 = *(u16*)(g_pad_ctx + item_index * 0x40 + 0xD04);
                     break;
                 case 1:
-                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
+                    func_80146468(g_gosub_text_buffers + row_count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                         *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
-                            ((word >> 9) & 0x7E) + 0x16));
-                    slot = (u8*)(i * 0x40 + (s32)D_8012271C + 0xCE0);
-                    for (j = 0; j < 4; j++)
+                            ((attributes >> 9) & 0x7E) + 0x16));
+                    item_data = (u8*)(item_index * 0x40 + (s32)g_pad_ctx + 0xCE0);
+                    for (stat_index = 0; stat_index < 4; stat_index++)
                     {
-                        g_gosub_rows[count].unk12[j] = *(u16*)(slot + j * 2 + 0x24);
+                        g_gosub_rows[row_count].unk12[stat_index] = *(u16*)(item_data + stat_index * 2 + 0x24);
                     }
                     break;
                 default:
-                    rec2 = (u8*)(i * 0x40 + (s32)D_8012271C);
-                    slot = rec2 + 0xCE0;
-                    g_gosub_rows[count].unk10 = slot[0x26];
-                    g_gosub_rows[count].unk12[0] = slot[0x25] + (slot[0x24] * 14);
-                    func_80146468(D_8016B960 + count * 0x50, (u8*)&D_8014F27C + D_8014F288[0] +
+                    item = (u8*)(item_index * 0x40 + (s32)g_pad_ctx);
+                    item_data = item + 0xCE0;
+                    g_gosub_rows[row_count].unk10 = item_data[0x26];
+                    g_gosub_rows[row_count].unk12[0] = item_data[0x25] + (item_data[0x24] * 14);
+                    func_80146468(g_gosub_text_buffers + row_count * 0x50, (u8*)&D_8014F27C + D_8014F288[0] +
                         *(u16*)((u8*)D_8014F288 + D_8014F288[0] +
-                            ((*(u32*)(rec2 + 0xCF4) >> 9) & 0x7E) + 0x22));
+                            ((*(u32*)(item + 0xCF4) >> 9) & 0x7E) + 0x22));
                     break;
                 }
 
-                g_gosub_rows[count].desc = D_8016B960 + count * 0x50;
-                g_gosub_rows[count].value = -1;
-                g_gosub_rows[count].index = i;
-                g_gosub_rows[count].kind = 4;
-                count++;
+                g_gosub_rows[row_count].desc = g_gosub_text_buffers + row_count * 0x50;
+                g_gosub_rows[row_count].value = -1;
+                g_gosub_rows[row_count].index = item_index;
+                g_gosub_rows[row_count].kind = 4;
+                row_count++;
             }
         }
     }
 
-    g_gosub_row_count = count;
+    g_gosub_row_count = row_count;
     g_gosub_visible_row_count = 8;
 
-    switch (arg0)
+    switch (item_kind)
     {
     case 0:
         g_gosub_title_text = GOSUB_MSG_PTR(0xC);
@@ -437,30 +461,33 @@ void func_80142C64(u32 arg0)
     g_gosub_window_height = (g_gosub_visible_row_count * 0x10) + 4;
 }
 /**
+ * @brief Build one of the three grouped option lists from the text archive.
+ *
+ * @param group Option group index, from 0 through 2.
  * @see decomp.me (100%)
  */
-void func_80143054(s32 group)
+void gosub_build_grouped_option_list(s32 group)
 {
-    s32 i;
-    GosubRange first = D_80140068;
-    GosubRange total = D_80140074;
+    s32 option_index;
+    GosubGroupTable first_indices = g_gosub_group_first_indices;
+    GosubGroupTable counts = g_gosub_group_counts;
 
-    for (i = 0; i < total.v[group]; i++)
+    for (option_index = 0; option_index < counts.values[group]; option_index++)
     {
-        GosubListEntry* e = &g_gosub_rows[i];
-        u8* p;
+        GosubListEntry* row = &g_gosub_rows[option_index];
+        u8* text;
 
-        e->name = ARCHIVE_ENTRY(D_8014F288[0], i + first.v[group]);
-        p = ARCHIVE_ENTRY(D_8014F288[0], i + first.v[group]);
-        e->name = p;
-        e->value = -1;
-        e->index = i;
-        e->unkC_28 = 0;
-        e->desc = p;
-        e->kind = 4;
+        row->name = ARCHIVE_ENTRY(D_8014F288[0], option_index + first_indices.values[group]);
+        text = ARCHIVE_ENTRY(D_8014F288[0], option_index + first_indices.values[group]);
+        row->name = text;
+        row->value = -1;
+        row->index = option_index;
+        row->unkC_28 = 0;
+        row->desc = text;
+        row->kind = 4;
     }
 
-    g_gosub_row_count = total.v[group];
+    g_gosub_row_count = counts.values[group];
 
     switch (group)
     {
@@ -482,55 +509,62 @@ void func_80143054(s32 group)
 }
 
 /**
+ * @brief Process input, advance scroll interpolation, and draw the active screen.
+ *
+ * @param render_ctx Rendering context forwarded to the input and draw handlers.
  * @see decomp.me (100%)
  */
-void func_80143258(s32 arg0)
+void gosub_update_screen(s32 render_ctx)
 {
-    func_80143310(arg0);
+    gosub_handle_input(render_ctx);
 
     if (g_gosub_finished == 0)
     {
-        if (D_8016B8E0 != 0)
+        if (g_gosub_scroll_frames_remaining != 0)
         {
-            D_80170988 += (D_80170990 - D_80170988) / D_8016B8E0;
-            D_8016B8E0 -= 1;
+            g_gosub_scroll_y += (g_gosub_scroll_target_y - g_gosub_scroll_y) / g_gosub_scroll_frames_remaining;
+            g_gosub_scroll_frames_remaining -= 1;
         }
         else
         {
-            D_80170988 = D_80170990;
+            g_gosub_scroll_y = g_gosub_scroll_target_y;
         }
 
-        func_80143BB0(arg0);
+        func_80143BB0(render_ctx);
     }
 }
 
 /**
+ * @brief Handle dialog, navigation, selection, completion, and cancellation input.
+ *
+ * @param unused Unused rendering context.
+ * @return Undefined; callers ignore the value.
  * @see decomp.me (100%)
  */
-s32 func_80143310()
+s32 gosub_handle_input(s32 unused)
 {
-    GosubElement* e;
-    s32 repeat;
-    s32 row;
-    s32 top;
+    GosubElement* elements;
+    s32 steps_remaining;
+    s32 restored_row;
+    s32 max_scroll_y;
 
-    e = &g_gosub_fixed_element;
-    if ((e[1].attr.word & 7) == 0 && (g_gosub_fixed_element.attr.word & 7) == 0)
+    elements = g_gosub_elements;
+    if ((elements[1].attr.word & 7) == 0 && (elements[0].attr.word & 7) == 0)
     {
         g_gosub_finished = 1;
         return;
     }
 
-    if (func_80143B10() == 0)
+    if (gosub_are_elements_idle() == 0)
     {
         return;
     }
 
-    if ((g_gosub_fixed_element.attr.word & 7) == 2)
+    if ((g_gosub_elements[0].attr.word & 7) == 2)
     {
         if (D_8016B948 != 0)
         {
-            if ((D_80122988 & 0x260) == 0)
+            if ((g_pad_input & 0x260) == 0)
             {
                 return;
             }
@@ -541,41 +575,41 @@ s32 func_80143310()
                 func_80143B64();
                 return;
             }
-            g_gosub_fixed_element.attr.f.unk0_0 = 0;
+            g_gosub_elements[0].attr.f.unk0_0 = 0;
             D_8016B948 = 0;
             return;
         }
 
-        if (D_80122988 & 0x9000)
+        if (g_pad_input & 0x9000)
         {
             func_800A3938(0x7D, 0x80);
-            D_8016B8E8 -= 1;
-            if (D_8016B8E8 < 0)
+            g_gosub_dialog_choice -= 1;
+            if (g_gosub_dialog_choice < 0)
             {
-                D_8016B8E8 = 0xB;
+                g_gosub_dialog_choice = 0xB;
             }
             return;
         }
 
-        if (D_80122988 & 0x6000)
+        if (g_pad_input & 0x6000)
         {
             func_800A3938(0x7D, 0x80);
-            D_8016B8E8 += 1;
-            if (D_8016B8E8 == 0xC)
+            g_gosub_dialog_choice += 1;
+            if (g_gosub_dialog_choice == 0xC)
             {
-                D_8016B8E8 = 0;
+                g_gosub_dialog_choice = 0;
             }
             return;
         }
 
-        if (D_80122988 & 0x220)
+        if (g_pad_input & 0x220)
         {
             func_800A3938(0x7D, 0x80);
-            if (D_80174A58 == 0)
+            if (g_gosub_dialog_handler == 0)
             {
                 return;
             }
-            if (D_80174A58(0) == 0)
+            if (g_gosub_dialog_handler(0) == 0)
             {
                 return;
             }
@@ -584,14 +618,14 @@ s32 func_80143310()
             return;
         }
 
-        if (D_80122988 & 0x40)
+        if (g_pad_input & 0x40)
         {
             func_800A3938(0x7D, 0x80);
-            if (D_80174A58 == 0)
+            if (g_gosub_dialog_handler == 0)
             {
                 return;
             }
-            if (D_80174A58(1) == 0)
+            if (g_gosub_dialog_handler(1) == 0)
             {
                 return;
             }
@@ -603,72 +637,72 @@ s32 func_80143310()
         return;
     }
 
-    if (D_8016B8E0 != 0)
+    if (g_gosub_scroll_frames_remaining != 0)
     {
         return;
     }
 
-    repeat = 1;
-    if (D_80122988 & 8)
+    steps_remaining = 1;
+    if (g_pad_input & 8)
     {
-        repeat = g_gosub_visible_row_count;
-        D_80122988 = 0x4000;
+        steps_remaining = g_gosub_visible_row_count;
+        g_pad_input = 0x4000;
     }
-    if (D_80122988 & 4)
+    if (g_pad_input & 4)
     {
-        repeat = g_gosub_visible_row_count;
-        D_80122988 = 0x1000;
+        steps_remaining = g_gosub_visible_row_count;
+        g_pad_input = 0x1000;
     }
 
-    if (repeat != 0)
+    if (steps_remaining != 0)
     {
         do
         {
-            if (D_80122988 & 0x1000)
+            if (g_pad_input & 0x1000)
             {
                 g_gosub_cursor_row -= 1;
                 if (g_gosub_cursor_row == 0)
                 {
-                    repeat = 1;
+                    steps_remaining = 1;
                 }
                 if (g_gosub_cursor_row < 0)
                 {
                     g_gosub_cursor_row = g_gosub_row_count - 1;
-                    repeat = 1;
+                    steps_remaining = 1;
                 }
             }
-            if (D_80122988 & 0x4000)
+            if (g_pad_input & 0x4000)
             {
                 g_gosub_cursor_row += 1;
                 if (g_gosub_cursor_row == g_gosub_row_count - 1)
                 {
-                    repeat = 1;
+                    steps_remaining = 1;
                 }
                 if (g_gosub_cursor_row >= g_gosub_row_count)
                 {
                     g_gosub_cursor_row = 0;
-                    repeat = 1;
+                    steps_remaining = 1;
                 }
             }
-            repeat -= 1;
-        } while (repeat != 0);
+            steps_remaining -= 1;
+        } while (steps_remaining != 0);
     }
 
-    if (D_80122988 & 0x5000)
+    if (g_pad_input & 0x5000)
     {
         func_800A3938(0x7D, 0x80);
-        func_801438F0();
+        gosub_scroll_to_cursor();
         return;
     }
 
-    if (D_80122988 & 0x220)
+    if (g_pad_input & 0x220)
     {
         func_800A3938(0x7D, 0x80);
         if ((g_gosub_rows[g_gosub_cursor_row].kind & 0xF) != 4)
         {
             return;
         }
-        if (func_8014397C() != 0)
+        if (gosub_toggle_cursor_selection() != 0)
         {
             g_gosub_selected_rows[g_gosub_selection_count] = g_gosub_cursor_row;
             g_gosub_selection_count += 1;
@@ -678,7 +712,7 @@ s32 func_80143310()
                 {
                     return;
                 }
-                if (func_80143A28() == 0)
+                if (gosub_advance_screen_sequence() == 0)
                 {
                     return;
                 }
@@ -698,7 +732,7 @@ s32 func_80143310()
             {
                 return;
             }
-            if (func_80143A28() == 0)
+            if (gosub_advance_screen_sequence() == 0)
             {
                 return;
             }
@@ -714,7 +748,7 @@ s32 func_80143310()
         {
             return;
         }
-        if (func_80143A28() == 0)
+        if (gosub_advance_screen_sequence() == 0)
         {
             return;
         }
@@ -723,7 +757,7 @@ s32 func_80143310()
         return;
     }
 
-    if (D_80122988 & 0x800)
+    if (g_pad_input & 0x800)
     {
         func_800A3938(0x7D, 0x80);
         if (g_gosub_finish_handler != 0)
@@ -732,7 +766,7 @@ s32 func_80143310()
             {
                 return;
             }
-            if (func_80143A28() == 0)
+            if (gosub_advance_screen_sequence() == 0)
             {
                 return;
             }
@@ -740,7 +774,7 @@ s32 func_80143310()
             func_80143B64();
             return;
         }
-        if (func_80143A28() == 0)
+        if (gosub_advance_screen_sequence() == 0)
         {
             return;
         }
@@ -749,7 +783,7 @@ s32 func_80143310()
         return;
     }
 
-    if ((D_80122988 & 0x40) == 0)
+    if ((g_pad_input & 0x40) == 0)
     {
         return;
     }
@@ -760,7 +794,7 @@ s32 func_80143310()
     {
         g_gosub_selection_count -= 1;
         g_gosub_cursor_row = g_gosub_selected_rows[g_gosub_selection_count];
-        func_801438F0();
+        gosub_scroll_to_cursor();
         if (g_gosub_select_handler != 0)
         {
             g_gosub_select_handler();
@@ -772,73 +806,78 @@ s32 func_80143310()
     {
         g_gosub_screen_sequence_index -= 1;
         gosub_enter_screen(g_gosub_screen_sequence[g_gosub_screen_sequence_index]);
-        D_801228F0 -= 1;
-        row = g_gosub_result_rows[D_801228F0];
-        g_gosub_cursor_row = row;
-        D_80170988 = g_gosub_row_height * row;
-        top = (g_gosub_row_count * g_gosub_row_height) - g_gosub_window_height + 4;
-        if (top < D_80170988)
+        g_gosub_result_count -= 1;
+        restored_row = g_gosub_result_rows[g_gosub_result_count];
+        g_gosub_cursor_row = restored_row;
+        g_gosub_scroll_y = g_gosub_row_height * restored_row;
+        max_scroll_y = (g_gosub_row_count * g_gosub_row_height) - g_gosub_window_height + 4;
+        if (max_scroll_y < g_gosub_scroll_y)
         {
-            D_80170988 = top;
+            g_gosub_scroll_y = max_scroll_y;
         }
-        if (D_80170988 < 0)
+        if (g_gosub_scroll_y < 0)
         {
-            D_80170988 = 0;
+            g_gosub_scroll_y = 0;
         }
-        D_8016B8E0 = 0;
-        D_80170990 = D_80170988;
+        g_gosub_scroll_frames_remaining = 0;
+        g_gosub_scroll_target_y = g_gosub_scroll_y;
         return;
     }
 
-    D_801228F0 = 0;
+    g_gosub_result_count = 0;
     func_80067F28();
     func_80143B64();
 }
 
 /**
+ * @brief Scroll the list viewport toward the cursor when it leaves view.
+ *
  * @see decomp.me (100%)
  */
-void func_801438F0(void)
+void gosub_scroll_to_cursor(void)
 {
-    s32 offset;
-    s32 top;
+    s32 cursor_offset;
+    s32 cursor_y;
 
-    top = g_gosub_cursor_row * g_gosub_row_height;
-    offset = top - D_80170988;
+    cursor_y = g_gosub_cursor_row * g_gosub_row_height;
+    cursor_offset = cursor_y - g_gosub_scroll_y;
 
-    if ((g_gosub_window_height - g_gosub_row_height) < offset)
+    if ((g_gosub_window_height - g_gosub_row_height) < cursor_offset)
     {
-        D_8016B8E0 = 4;
-        D_80170990 = (g_gosub_cursor_row - (g_gosub_visible_row_count - 1)) * g_gosub_row_height;
+        g_gosub_scroll_frames_remaining = 4;
+        g_gosub_scroll_target_y = (g_gosub_cursor_row - (g_gosub_visible_row_count - 1)) * g_gosub_row_height;
     }
 
-    if (offset < 0)
+    if (cursor_offset < 0)
     {
-        D_80170990 = top;
-        D_8016B8E0 = 4;
+        g_gosub_scroll_target_y = cursor_y;
+        g_gosub_scroll_frames_remaining = 4;
     }
 }
 
 /**
+ * @brief Remove the cursor row if selected, or permit the caller to add it.
+ *
+ * @return 0 if the row was removed, otherwise 1.
  * @see decomp.me (100%)
  */
-s32 func_8014397C(void)
+s32 gosub_toggle_cursor_selection(void)
 {
-    s32 i;
-    s32 j;
+    s32 selection_index;
+    s32 shift_index;
 
-    if (D_8016B8F0 != 0)
+    if (g_gosub_allow_duplicate_selection != 0)
     {
         return 1;
     }
 
-    for (i = 0; i < g_gosub_selection_count; i++)
+    for (selection_index = 0; selection_index < g_gosub_selection_count; selection_index++)
     {
-        if (g_gosub_selected_rows[i] == g_gosub_cursor_row)
+        if (g_gosub_selected_rows[selection_index] == g_gosub_cursor_row)
         {
-            for (j = i; j < 3; j++)
+            for (shift_index = selection_index; shift_index < 3; shift_index++)
             {
-                g_gosub_selected_rows[j] = g_gosub_selected_rows[j + 1];
+                g_gosub_selected_rows[shift_index] = g_gosub_selected_rows[shift_index + 1];
             }
             g_gosub_selection_count -= 1;
             return 0;
@@ -849,11 +888,14 @@ s32 func_8014397C(void)
 }
 
 /**
+ * @brief Advance to the next screen or open the sequence's final dialog.
+ *
+ * @return 1 at the sequence terminator, otherwise 0.
  * @see decomp.me (100%)
  */
-s32 func_80143A28(void)
+s32 gosub_advance_screen_sequence(void)
 {
-    GosubElement* p;
+    GosubElement* element;
 
     g_gosub_screen_sequence_index += 1;
 
@@ -864,16 +906,16 @@ s32 func_80143A28(void)
 
     if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == 0xFF)
     {
-        p = &g_gosub_fixed_element;
-        p->handler = (void*)&func_80145F80;
-        D_8016B8E8 = 0;
-        p->attr.f.unk0_0 = 1;
-        p->attr.f.unk0_3 = 1;
-        p->attr.f.x = 0x20;
-        p->attr.f.unk0_16 = 0x70;
-        p->unk4_0 = 1;
-        p->y = 0x24;
-        SET_ELEM_CODE(p, 0);
+        element = &g_gosub_elements[0];
+        element->draw_handler = (void*)&func_80145F80;
+        g_gosub_dialog_choice = 0;
+        element->attr.f.unk0_0 = 1;
+        element->attr.f.unk0_3 = 1;
+        element->attr.f.x = 0x20;
+        element->attr.f.unk0_16 = 0x70;
+        element->unk4_0 = 1;
+        element->y = 0x24;
+        SET_ELEM_CODE(element, 0);
     }
     else
     {
@@ -884,22 +926,25 @@ s32 func_80143A28(void)
 }
 
 /**
+ * @brief Test whether all fixed elements have finished transitioning.
+ *
+ * @return 1 when all elements are idle, otherwise 0.
  * @see decomp.me (100%)
  */
-s32 func_80143B10(void)
+s32 gosub_are_elements_idle(void)
 {
-    GosubElement* p;
+    GosubElement* element;
     s32 i;
 
-    p = &g_gosub_fixed_element;
+    element = g_gosub_elements;
 
     for (i = 0; i < 0x10; i++)
     {
-        if (p->attr.f.unk0_0 == 1 || p->attr.f.unk0_0 == 3)
+        if (element->attr.f.unk0_0 == 1 || element->attr.f.unk0_0 == 3)
         {
             return 0;
         }
-        p++;
+        element++;
     }
 
     return 1;
