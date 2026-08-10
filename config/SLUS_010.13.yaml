@@ -216,8 +216,8 @@ segments:
       - [0x149A0, c, psyq/libspu/S_W]
       - [0x14A00, c, psyq/libspu/S_STM]
       - [0x14A30, c, psyq/libspu/S_STC]
-      - [0x145C0, c, decomp9]
-      - [0x14A60, c, decomp10] # -G4
+      - [0x14A60, c, decomp9]
+      - [0x14E60, c, decomp10] # -G4
       - [0x15300, c, decomp9-func_80024B00]
       - [0x15760, c, decomp9-func_80024F60]
       - [0x15BE8, c, decomp9-func_800253E8]
