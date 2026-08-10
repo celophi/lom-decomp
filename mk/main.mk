@@ -171,7 +171,7 @@ SRCS_G4 := \
 	src/overlay_memory.c \
 	src/decomp4.c \
 	src/akao_driver.c \
-	src/controller.c \ 
+	src/controller.c \
 	src/decomp10.c \
 	src/decomp9-func_80025500.c 
 
