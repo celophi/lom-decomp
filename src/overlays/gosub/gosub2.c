@@ -112,6 +112,11 @@ typedef struct
 } GosubTextArchive;
 
 #define GOSUB_EQUIPMENT_RECORD(ptr) (&((GosubSaveData*)(ptr))->equipment[0])
+#define GOSUB_EQUIPMENT_BASE_FROM_INDEX(index) (g_pad_ctx + (index) * 0x40)
+#define GOSUB_EQUIPMENT_FROM_INDEX(index) \
+    GOSUB_EQUIPMENT_RECORD((index) * 0x40 + (s32)g_pad_ctx)
+#define GOSUB_EQUIPMENT_SOURCE_FROM_INDEX(index) \
+    ((u8*)((index) * 0x40 + (s32)g_pad_ctx))
 #define GOSUB_EQUIPMENT_AT(index) \
     ((GosubEquipmentRecord*)(g_pad_ctx + ((index) * 0x40 + 0xCE0)))
 #define GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(index) \
@@ -454,7 +459,7 @@ void gosub_build_equipment_list(u32 item_kind)
 
     for (item_index = 0; item_index < 100; item_index++)
     {
-        entry = g_pad_ctx + item_index * 0x40;
+        entry = GOSUB_EQUIPMENT_BASE_FROM_INDEX(item_index);
         if (GOSUB_EQUIPMENT_RECORD(entry)->name[0] != 0)
         {
             if ((item_kind == 3) ||
@@ -472,7 +477,7 @@ void gosub_build_equipment_list(u32 item_kind)
                 separator_offset = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
                 func_80146468(GOSUB_TEXT_BUFFER(row_count), D_800EC3E2[0] + separator_offset);
 
-                item_base = g_pad_ctx + item_index * 0x40;
+                item_base = GOSUB_EQUIPMENT_BASE_FROM_INDEX(item_index);
                 g_gosub_rows[row_count].unkC_28 =
                     GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word);
                 attributes = GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word;
@@ -489,14 +494,14 @@ void gosub_build_equipment_list(u32 item_kind)
                     func_80146468(GOSUB_TEXT_BUFFER(row_count),
                         ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3],
                             GOSUB_EQUIPMENT_CATEGORY(attributes) + 0xB));
-                    record = GOSUB_EQUIPMENT_RECORD(item_index * 0x40 + (s32)g_pad_ctx);
+                    record = GOSUB_EQUIPMENT_FROM_INDEX(item_index);
                     for (stat_index = 0; stat_index < 4; stat_index++)
                     {
                         g_gosub_rows[row_count].unk12[stat_index] = record->data.kind1_stats[stat_index];
                     }
                     break;
                 default:
-                    item = (u8*)(item_index * 0x40 + (s32)g_pad_ctx);
+                    item = GOSUB_EQUIPMENT_SOURCE_FROM_INDEX(item_index);
                     record = GOSUB_EQUIPMENT_RECORD(item);
                     g_gosub_rows[row_count].unk10 = record->data.kind2.value;
                     g_gosub_rows[row_count].unk12[0] =
