@@ -143,6 +143,10 @@ extern s32 func_80025498(s32);
 extern s32 func_800253E8(s32);
 extern void spu_write_voice_params(u32, void *, u16);
 extern void spu_apply_voice_updates(u32, void *, s32);
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/wFlR3
+ */
 void func_80025500(AkaoChannelState *channel, s32 channel_mask, s32 static_voice_mask, u32 *voice_mask)
 {
   s32 bit;
