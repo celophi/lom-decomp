@@ -64,6 +64,38 @@ typedef struct
     u32 word;
 } GosubPackedRecord;
 
+/** @brief One 0x40-byte equipment record in the table at g_pad_ctx + 0xCE0. */
+typedef struct
+{
+    u8 name[0x14];
+    union
+    {
+        u32 word;
+        struct
+        {
+            u16 low;
+            u16 material;
+        } half;
+    } attributes;
+    u8 unk18[0xC];
+    union
+    {
+        u16 kind0_value;
+        u16 kind1_stats[4];
+        struct
+        {
+            u8 group;
+            u8 index;
+            u8 value;
+        } kind2;
+    } data;
+    u8 unk2C[0x14];
+} GosubEquipmentRecord;
+
+#define GOSUB_EQUIPMENT_RECORD(ptr) ((GosubEquipmentRecord*)((ptr) + 0xCE0))
+#define GOSUB_EQUIPMENT_KIND(attributes) (((attributes) >> 8) & 3)
+#define GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) (((attributes) >> 9) & 0x7E)
+
 /** @brief UI element pool; element 0 is reserved for the fixed dialog element. */
 extern GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
 extern u8* g_pad_ctx;
@@ -384,7 +416,7 @@ void gosub_build_equipment_list(u32 item_kind)
     u8* entry;
     u8* item;
     s32 separator_offset;
-    u8* item_data;
+    GosubEquipmentRecord* record;
     u32 attributes;
 
     D_8016B900 = 1;
@@ -393,50 +425,57 @@ void gosub_build_equipment_list(u32 item_kind)
     for (item_index = 0; item_index < 100; item_index++)
     {
         entry = g_pad_ctx + item_index * 0x40;
-        if (*(entry + 0xCE0) != 0)
+        if (GOSUB_EQUIPMENT_RECORD(entry)->name[0] != 0)
         {
-            if ((item_kind == 3) || (((*(u32*)(entry + 0xCF4) >> 8) & 3) == item_kind) ||
-                ((item_kind == 4) && (((*(u32*)(entry + 0xCF4) >> 8) & 3) != 2)))
+            if ((item_kind == 3) ||
+                (GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(entry)->attributes.word) == item_kind) ||
+                ((item_kind == 4) &&
+                    (GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(entry)->attributes.word) != 2)))
             {
 
-                g_gosub_rows[row_count].name = g_pad_ctx + (item_index * 0x40 + 0xCE0);
+                g_gosub_rows[row_count].name =
+                    ((GosubEquipmentRecord*)(g_pad_ctx + (item_index * 0x40 + 0xCE0)))->name;
 
                 func_80146538(g_gosub_text_buffers + row_count * 0x50, (u8*)&D_8014F27C + D_8014F280 +
                     *(u16*)((u8*)&D_8014F27C + D_8014F280 +
-                        ((*(u16*)(g_pad_ctx + (item_index << 6) + 0xCF6) & 0x3F) * 2)));
+                        ((((GosubEquipmentRecord*)(g_pad_ctx + (item_index << 6) + 0xCE0))
+                            ->attributes.half.material & 0x3F) * 2)));
                 separator_offset = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
                 func_80146468(g_gosub_text_buffers + row_count * 0x50, D_800EC3E2[0] + separator_offset);
 
                 item_base = g_pad_ctx + item_index * 0x40;
-                g_gosub_rows[row_count].unkC_28 = (*(u32*)(item_base + 0xCF4) >> 8) & 3;
-                attributes = *(u32*)(item_base + 0xCF4);
+                g_gosub_rows[row_count].unkC_28 =
+                    GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word);
+                attributes = GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word;
 
-                switch ((attributes >> 8) & 3)
+                switch (GOSUB_EQUIPMENT_KIND(attributes))
                 {
                 case 0:
                     func_80146468(g_gosub_text_buffers + row_count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                         *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
-                            ((attributes >> 9) & 0x7E)));
-                    g_gosub_rows[row_count].unk10 = *(u16*)(g_pad_ctx + item_index * 0x40 + 0xD04);
+                            GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes)));
+                    g_gosub_rows[row_count].unk10 = ((GosubEquipmentRecord*)
+                        (g_pad_ctx + (item_index * 0x40 + 0xCE0)))->data.kind0_value;
                     break;
                 case 1:
                     func_80146468(g_gosub_text_buffers + row_count * 0x50, (u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
                         *(u16*)((u8*)&D_8014F27C + *(u32*)((u8*)&D_8014F27C + 0xC) +
-                            ((attributes >> 9) & 0x7E) + 0x16));
-                    item_data = (u8*)(item_index * 0x40 + (s32)g_pad_ctx + 0xCE0);
+                            GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) + 0x16));
+                    record = GOSUB_EQUIPMENT_RECORD(item_index * 0x40 + (s32)g_pad_ctx);
                     for (stat_index = 0; stat_index < 4; stat_index++)
                     {
-                        g_gosub_rows[row_count].unk12[stat_index] = *(u16*)(item_data + stat_index * 2 + 0x24);
+                        g_gosub_rows[row_count].unk12[stat_index] = record->data.kind1_stats[stat_index];
                     }
                     break;
                 default:
                     item = (u8*)(item_index * 0x40 + (s32)g_pad_ctx);
-                    item_data = item + 0xCE0;
-                    g_gosub_rows[row_count].unk10 = item_data[0x26];
-                    g_gosub_rows[row_count].unk12[0] = item_data[0x25] + (item_data[0x24] * 14);
+                    record = GOSUB_EQUIPMENT_RECORD(item);
+                    g_gosub_rows[row_count].unk10 = record->data.kind2.value;
+                    g_gosub_rows[row_count].unk12[0] =
+                        record->data.kind2.index + (record->data.kind2.group * 14);
                     func_80146468(g_gosub_text_buffers + row_count * 0x50, (u8*)&D_8014F27C + D_8014F288[0] +
                         *(u16*)((u8*)D_8014F288 + D_8014F288[0] +
-                            ((*(u32*)(item + 0xCF4) >> 9) & 0x7E) + 0x22));
+                            GOSUB_EQUIPMENT_CATEGORY_OFFSET(GOSUB_EQUIPMENT_RECORD(item)->attributes.word) + 0x22));
                     break;
                 }
 
