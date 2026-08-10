@@ -1739,6 +1739,24 @@ typedef struct
 #define GLYPH_CHUNK_WIDTH 0x80
 
 /**
+ * @brief Write the SPRT tag word: length 4 plus the primitive code.
+ *
+ * @param p    Sprite primitive being filled in.
+ * @param code GPU primitive code byte (0x64, or 0x66 for semi-transparent).
+ *
+ * @note Required to match, and only in the glyph chunk loop (+26 rows there,
+ *       inert in the type-4 arm, which uses Psy-Q's setSprt). Passing @p code
+ *       as a PARAMETER gives the constant its own pseudo that stays live across
+ *       the `setlen` store, so loop.c hoists it; written as setSprt the
+ *       constant sits next to its own store and never is.
+ */
+static inline void set_sprt_tag(SPRT* p, s32 code)
+{
+    setlen(p, 4);
+    setcode(p, code);
+}
+
+/**
  * @brief Emit the GPU primitives for every entry of the save-slot layout table.
  *
  * @details Walks the SAVE_LAYOUT_ENTRIES entries of g_saveLayoutTable and emits
@@ -1763,46 +1781,32 @@ typedef struct
  *                 onto via addPrim.
  * @return Pointer to the byte just past the last primitive emitted.
  *
- * @note WORK IN PROGRESS - 91.64% under objdiff (332/474 exact rows, frame and
- *       sp-slot traffic both match). The residue is register allocation and
- *       scheduling only; see the "required to match" notes below before
- *       touching any of the shapes they describe.
+ * @note WORK IN PROGRESS - 92.92% (342/474 exact rows). Frame, prologue, all
+ *       six saved-register slots and sp-slot traffic match. Residue is register
+ *       coloring: `ot` and the entry giv sit one register low (t5/t1 vs t6/t2)
+ *       because the target also colours @c chunk into t1, and 0x64 is hoisted
+ *       out of the chunk loop but not all the way to the function preheader.
  *
- * @note @p e is the ONLY table cursor. The target's second pointer (entry + 2,
- *       carrying every field access at -1..+0x10) is a compiler-generated giv
- *       that gcc builds from @p e by strength reduction. Writing two source
- *       cursors makes gcc emit a THIRD pointer and costs ~25 rows.
+ * @note Shapes below are measured-required; the number is what reverting costs.
+ *       @c tile_len holds 3 as a source local while 0x64 stays a bare constant
+ *       for loop.c to hoist - the target emits `addiu s5,zero,3` before the
+ *       hoisted `lui`s and `addiu s1,zero,0x64` after them, and loop.c's fixed
+ *       preheader order (source statements, then invariants, then giv inits)
+ *       is what tells the two apart. Swapping the roles loses the entry block.
  *
- * @note @c idx is deliberately reused to carry the 0x808080 tint word. That
- *       gives the pseudo three assignments in the loop, which disqualifies it
- *       from loop.c's movable list; otherwise the three identical 0x808080
- *       stores combine (savings 3, lifetime 3) and clear move_movables'
- *       threshold, hoisting the constant into a callee-saved register and
- *       growing the frame to -0x20. The type-4 and glyph arms keep the plain
- *       literal, which then combines only two-way and stays inline.
+ * @note @p e is the ONLY table cursor (~25); the target's entry+2 pointer is a
+ *       giv gcc derives from it. @c idx is reused for the 0x808080 tint (-35).
+ *       @c tex and @c tex2 are separate single-assignment locals (21).
+ *       @c setSemiTrans is correct ONLY in the type-3 arm; the type-4 and glyph
+ *       arms are a bare `if (flags & 2) setcode(..., 0x66)` (-11).
  *
- * @note @c tex and @c tex2 are two single-assignment variables holding the same
- *       address. One variable assigned twice cannot be coalesced with either
- *       source temp, so the `addu` lands in a fresh register instead of
- *       overwriting the shifted index in place. Worth 21 rows.
+ * @note The origin offset must be its own statement (@c offx / @c offy) and the
+ *       sum (@c vx / @c vy) must be assigned BEFORE it. Inline, fold-const's
+ *       split_tree (fold-const.c:3759) rewrites `A - (B - C)` into `(A + C) - B`
+ *       and no spelling avoids it. @c vx and @c vy are u16 so gcc narrows the
+ *       s32 lerp globals to `lhu` (4); @c tpw is u32 so it does NOT narrow the
+ *       type-3 flags load (1).
  *
- * @note The empty @c do/while(0) and the nested @c if(type==2) block are a
- *       basic-block note pair. They only pay off together with @c tp_len (the
- *       hoisted DR_TPAGE length); either one alone is a regression.
- *
- * @note `(uv->ox - 4) * 8` rather than `(uv->ox * 8) - 0x20`: the second form
- *       lets fold-const reassociate the constant out into the enclosing
- *       expression (`addiu +0x20` before the `subu`). This form keeps the
- *       offset in its own subtree. The target's exact insn order
- *       (`sll 3 / addiu -0x20`) is still not reproduced - 8 rows.
- *
- * @note `setSemiTrans(poly, flags & 2)` reproduces the target's merged code
- *       store at the branch join. The type-4 and glyph arms are NOT
- *       setSemiTrans - they are a bare `if (flags & 2) setcode(..., 0x66)`.
- *
- * @see decomp.me (87.28%) https://decomp.me/scratch/UVLSm (old m2c base)
- * @see decomp.me (91.76%) https://decomp.me/scratch/P2gt5 (old m2c base,
- *      not functionally equivalent - it reused the loop counter as a scratch)
  */
 void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
 {
@@ -1810,20 +1814,25 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
     u_long* ot = ot_tag;
     u8* e = (u8*)g_saveLayoutTable;
     s32 i = 0;
-    s32 sprt_code = 0x64;
+    s32 tile_len = 3;
 
     do
     {
         s32 type = e[1];
 
-        if (type == 3)
+        if (type == tile_len)
         {
             /* Slot panel background: a single textured quad. */
             POLY_FT4* poly;
+            u16 vx;
+            s32 offx;
+            u16 vy;
+            s32 offy;
             SlotUvRect* uv;
             u8* tex;
             u8* tex2;
             s32 idx;
+            u32 tpw;
 
             if (g_slotSlideX > 0)
             {
@@ -1847,8 +1856,12 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
             /* Chained assignment: the value propagated to x2/y1 is the *short*
                result of the store, so gcc sinks the 16-bit truncation into the
                add and loads the lerp global with lhu rather than lw. */
-            poly->x2 = poly->x0 = (*(u16*)(e + 4) + g_slotSlideXLerped) - ((uv->ox - 4) * 8);
-            poly->y1 = poly->y0 = (*(u16*)(e + 6) + g_slotSlideYLerped) - ((uv->oy - 5) * 8);
+            vx = *(u16*)(e + 4) + g_slotSlideXLerped;
+            offx = uv->ox * 8 - 0x20;
+            poly->x2 = poly->x0 = vx - offx;
+            vy = *(u16*)(e + 6) + g_slotSlideYLerped;
+            offy = uv->oy * 8 - 0x28;
+            poly->y1 = poly->y0 = vy - offy;
 
             poly->x1 = poly->x3 = (poly->x0 + (uv->w * 8)) - 1;
             poly->y2 = poly->y3 = (poly->y0 + (uv->h * 8)) - 1;
@@ -1865,7 +1878,10 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
             poly->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
 
             tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-            poly->tpage = TPAGE_WORD(*(u32*)e, tex2[0x0C] & 3, *(u16*)tex2, *(u16*)(tex2 + 2));
+            /* u32 temp: assigning the word straight into the 16-bit tpage field
+               lets gcc narrow the flags load to lhu; the target keeps lw. */
+            tpw = TPAGE_WORD(*(u32*)e, tex2[0x0C] & 3, *(u16*)tex2, *(u16*)(tex2 + 2));
+            poly->tpage = tpw;
 
             addPrim(ot, poly);
         }
@@ -1873,6 +1889,10 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
         {
             /* Slot cursor / decoration: one free-size sprite. */
             SlotUvRect* uv;
+            u16 vx;
+            s32 offx;
+            u16 vy;
+            s32 offy;
             u8* tex;
             u8* tex2;
             s32 idx;
@@ -1890,8 +1910,7 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
 
             sprt = (SPRT*)ptr;
             *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
-            setlen(sprt, 4);
-            setcode(sprt, sprt_code);
+            setSprt(sprt);
 
             uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
 
@@ -1900,8 +1919,12 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                 setcode(sprt, 0x66);
             }
 
-            sprt->x0 = (*(u16*)(e + 4) + g_slotSlideXLerped) - ((uv->ox - 4) * 8);
-            sprt->y0 = (*(u16*)(e + 6) + g_slotSlideYLerped) - ((uv->oy - 5) * 8);
+            vx = *(u16*)(e + 4) + g_slotSlideXLerped;
+            offx = uv->ox * 8 - 0x20;
+            sprt->x0 = vx - offx;
+            vy = *(u16*)(e + 6) + g_slotSlideYLerped;
+            offy = uv->oy * 8 - 0x28;
+            sprt->y0 = vy - offy;
             sprt->u0 = uv->u * 8;
             sprt->v0 = uv->v * 8;
             sprt->w = uv->w * 8;
@@ -1924,11 +1947,6 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
         }
         else
         {
-            /* Block-note pair: required to match, see the docblock. */
-            do
-            {
-            } while (0);
-
             if (type == 2)
             {
                 /* Dimmed backdrop behind the slot list: one solid tile. */
@@ -1936,7 +1954,7 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                 DR_TPAGE* tp;
 
                 *(u32*)(ptr + 4) = 0x40; /* solid dark-blue fill; code byte set below */
-                setlen(tile, 3);
+                setlen(tile, tile_len);
                 setcode(tile, 0x62);
 
                 tile->x0 = *(u16*)(e + 8) + g_slotSlideXLerped;
@@ -1967,7 +1985,6 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                 s32 x;
                 s32 y;
                 s32 chunk;
-                u8 tp_len;
                 u8* tex2;
                 u8* cur;
 
@@ -1981,9 +1998,6 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                     x = *(s16*)(e + 4);
                     y = *(s16*)(e + 6);
                 }
-
-                /* Hoisted out of the chunk loop on purpose; see the docblock. */
-                tp_len = 1;
 
                 chunk = GLYPH_CHUNK_WIDTH;
                 if (remaining < GLYPH_CHUNK_WIDTH + 1)
@@ -2001,8 +2015,7 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                     DR_TPAGE* tp;
 
                     *(u32*)cur = 0x808080; /* cur is prim + 4: the packed colour word */
-                    setlen(sprt, 4);
-                    setcode(sprt, sprt_code);
+                    set_sprt_tag(sprt, 0x64);
 
                     if (*(u32*)e & 2)
                     {
@@ -2027,7 +2040,7 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                     ptr += sizeof(SPRT);
 
                     tp = (DR_TPAGE*)(cur - 4);
-                    setlen(tp, tp_len);
+                    setlen(tp, 1);
 
                     tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
                     tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, tex_x, *(u16*)(tex2 + 2)) | 0xE1000000;
