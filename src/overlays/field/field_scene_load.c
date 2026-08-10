@@ -311,7 +311,7 @@ void field_load_map(s32 arg0)
     s32 vram_addr;
     FieldObject** obj_iter;
     u16 map_id;
-    FieldScenePage* globals;
+    FieldSceneGlobals* globals;
 
     DrawSync(0);
     var_s1 = arg0;
@@ -325,7 +325,7 @@ void field_load_map(s32 arg0)
     {
         cdrom_stream((arg0 + 0xB4) & 0xFFFF, 0x80180000);
     }
-    globals = (FieldScenePage*)0x80180000;
+    globals = (FieldSceneGlobals*)0x80180000;
     var_s1 = (u32)globals->scene;
     sp[0] = 0x140;
     sp[1] = 0x100;
@@ -359,41 +359,29 @@ void field_load_map(s32 arg0)
         seen_count = 0;
         if ((*obj_iter) != 0)
         {
-            seen = &sp[4];
+            seen = (s32*)&sp[4];
             do
             {
                 obj = *obj_iter;
                 vram_addr = obj->unk4;
                 remaining = seen_count;
-                if (seen_count != 0)
+                while (remaining != 0)
                 {
-                loop_13:
-                    if ((*seen) != vram_addr)
+                    if (*seen == vram_addr)
                     {
-                        remaining -= 1;
-                        var_s1 = (u32)globals->scene;
-                        seen += 1;
-                        if (remaining != 0)
-                        {
-                            goto loop_13;
-                        }
+                        break;
                     }
-
-                    if (remaining == 0)
-                    {
-                        goto block_16;
-                    }
+                    remaining -= 1;
+                    seen += 1;
                 }
-                else
+                if (remaining == 0)
                 {
-                block_16:
                     seen_count += 1;
-
                     *seen = vram_addr;
                     field_apply_pixel_lookup(vram_addr, obj->unk2A, D_801ED490 - 1, obj);
                 }
                 obj_iter += 1;
-                seen = &sp[4];
+                seen = (s32*)&sp[4];
             } while ((*obj_iter) != 0);
         }
     }

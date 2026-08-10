@@ -31,6 +31,20 @@ gosub_validate_pending_pair_selection    = 0x80142400;
 gosub_commit_row_reorder                 = 0x80142460;
 gosub_update_group_selection             = 0x80142610;
 gosub_publish_two_row_selection          = 0x80142820;
+gosub_handle_combination_dialog          = 0x8014289C;
+gosub_publish_group_selection            = 0x80142B18;
+gosub_publish_selection                  = 0x80142B98;
+gosub_is_row_unselected                  = 0x80142C18;
+gosub_build_equipment_list               = 0x80142C64;
+gosub_build_grouped_option_list          = 0x80143054;
+
+// Screen update and navigation
+gosub_update_screen                      = 0x80143258;
+gosub_handle_input                       = 0x80143310;
+gosub_scroll_to_cursor                   = 0x801438F0;
+gosub_toggle_cursor_selection            = 0x8014397C;
+gosub_advance_screen_sequence            = 0x80143A28;
+gosub_are_elements_idle                  = 0x80143B10;
 
 // Overlay state
 g_gosub_frame_parity                     = 0x8016B8C8;
@@ -39,6 +53,9 @@ g_gosub_cursor_row                       = 0x8016B8D0;
 g_gosub_row_count                        = 0x8016B8D4;
 g_gosub_visible_row_count                = 0x8016B8D8;
 g_gosub_screen_sequence_index            = 0x8016B8DC;
+g_gosub_scroll_frames_remaining          = 0x8016B8E0;
+g_gosub_dialog_choice                    = 0x8016B8E8;
+g_gosub_allow_duplicate_selection        = 0x8016B8F0;
 g_gosub_finish_handler                   = 0x8016B8F8;
 g_gosub_required_selection_count         = 0x8016B8FD;
 g_gosub_result_rows                      = 0x8016B908;
@@ -46,9 +63,17 @@ g_gosub_selected_rows                    = 0x8016B94C;
 g_gosub_window_height                    = 0x8016B950;
 g_gosub_select_handler                   = 0x8016B954;
 g_gosub_window_width                     = 0x8016B958;
+g_gosub_text_buffers                     = 0x8016B960;
 g_gosub_selection_count                  = 0x80170960;
 g_gosub_screen_sequence                  = 0x80170968;
 g_gosub_row_height                       = 0x80170980;
+g_gosub_scroll_y                         = 0x80170988;
+g_gosub_scroll_target_y                  = 0x80170990;
 g_gosub_title_text                       = 0x80170994;
-g_gosub_fixed_element                    = 0x80170998;
+g_gosub_elements                         = 0x80170998;
 g_gosub_rows                             = 0x80170A58;
+g_gosub_dialog_handler                   = 0x80174A58;
+
+// Grouped option ranges
+g_gosub_group_first_indices              = 0x80140068;
+g_gosub_group_counts                     = 0x80140074;

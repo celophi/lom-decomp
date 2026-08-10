@@ -10,10 +10,8 @@ typedef void (*CdStreamChunkDoneCallback)(s32 chunk_index);
 void cdrom_init(void);
 void cdrom_stop(void);
 s32 cdrom_stream(s32 resource_index, u32 destination);
-void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buffer,
-                          CdStreamChunkDoneCallback chunk_done);
-s32 cdrom_queue_command(u8 command, u16 resource_index, void* dst_buffer,
-                        CdCommandCallback callback);
+void cdrom_stream_chunked(u16 resource_index, CdStreamGetBufferCallback get_buffer, CdStreamChunkDoneCallback chunk_done);
+s32 cdrom_queue_command(u8 command, u16 resource_index, void* dst_buffer, CdCommandCallback callback);
 u32 cdrom_process_state(void);
 void cdrom_verify_recovery(void);
 void cdrom_wait_queue_empty(void);
