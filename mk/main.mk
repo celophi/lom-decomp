@@ -164,6 +164,7 @@ SRCS_G0 := \
 	src/decomp9-func_80025498.c \
 	src/decomp9-func_80025500.c \
 	src/decomp9-func_80025760.c \
+	src/decomp9-func_800257E0.c \
 	src/main.c
 
 SRCS_G4 := \
