@@ -18,6 +18,10 @@ typedef signed short s16;
 /** @brief Number of entries in the gosub UI element pool. */
 #define GOSUB_ELEMENT_COUNT 16
 
+/** @brief Control entries embedded in a gosub screen sequence. */
+#define GOSUB_SCREEN_SEQUENCE_END 0xFE
+#define GOSUB_SCREEN_SEQUENCE_DIALOG 0xFF
+
 /** @brief Lifecycle states used by a gosub UI element. */
 typedef enum GosubElementState
 {
@@ -245,7 +249,8 @@ extern GosubListEntry g_gosub_rows[];
  * @brief Open the gosub overlay for a sequence of screen ids.
  *
  * @param unused Unused loader argument.
- * @param screen_sequence Pointer to an s32 array terminated by 0xFE.
+ * @param screen_sequence Pointer to an s32 array terminated by
+ *        @c GOSUB_SCREEN_SEQUENCE_END.
  *
  * decomp.me (100%) https://decomp.me/scratch/qM81L
  */
@@ -277,7 +282,7 @@ s32 gosub_update_frame(s32 render_ctx)
 }
 
 /**
- * @brief Copy and enter a 0xFE-terminated sequence of gosub screen ids.
+ * @brief Copy and enter a GOSUB_SCREEN_SEQUENCE_END-terminated screen sequence.
  *
  * decomp.me (100%) https://decomp.me/scratch/weBhP
  */
@@ -299,10 +304,10 @@ void gosub_load_screen_sequence(s32* screen_sequence)
     g_gosub_result_count = 0;
     g_gosub_dialog_handler = (void*)&D_80145744;
     screen_count = 0;
-    if (*screen_sequence != 0xFE)
+    if (*screen_sequence != GOSUB_SCREEN_SEQUENCE_END)
     {
         u8* arr = g_gosub_screen_sequence;
-        s32 sentinel = 0xFE;
+        s32 sentinel = GOSUB_SCREEN_SEQUENCE_END;
         sequence_cursor = (u8*)screen_sequence;
         do
         {

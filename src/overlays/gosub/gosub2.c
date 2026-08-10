@@ -13,6 +13,10 @@ typedef signed short s16;
 /** @brief Number of entries in the gosub UI element pool. */
 #define GOSUB_ELEMENT_COUNT 16
 
+/** @brief Control entries embedded in a gosub screen sequence. */
+#define GOSUB_SCREEN_SEQUENCE_END 0xFE
+#define GOSUB_SCREEN_SEQUENCE_DIALOG 0xFF
+
 /** @brief Lifecycle states used by a gosub UI element. */
 typedef enum GosubElementState
 {
@@ -911,12 +915,12 @@ s32 gosub_advance_screen_sequence(void)
 
     g_gosub_screen_sequence_index += 1;
 
-    if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == 0xFE)
+    if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == GOSUB_SCREEN_SEQUENCE_END)
     {
         return 1;
     }
 
-    if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == 0xFF)
+    if (g_gosub_screen_sequence[g_gosub_screen_sequence_index] == GOSUB_SCREEN_SEQUENCE_DIALOG)
     {
         element = &g_gosub_elements[0];
         element->draw_handler = (void*)&func_80145F80;
