@@ -1756,7 +1756,7 @@ static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
  * @param ot Pointer to the ordering-table entry receiving each primitive.
  * @return Pointer to the byte just past the last primitive emitted.
  *
- * @see decomp.me (99.90%)
+ * @see decomp.me (100%)
  */
 void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 {
@@ -1765,6 +1765,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
     s32 tile_len = SAVE_LAYOUT_PRIM_POLY_FT4;
     s32 idx;
     u32 tint;
+    SlotUvRect* uv;
 
     do
     {
@@ -1778,7 +1779,6 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
             s32 offx;
             u16 vy;
             s32 offy;
-            SlotUvRect* uv;
             SaveLayoutTex* tex;
             SaveLayoutTex* tex2;
             u32 tpw;
@@ -1793,9 +1793,6 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
             }
 
             uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98AC);
-
-            /* Preserve the original instruction order across packet setup. */
-            do { } while (0);
 
             poly = (POLY_FT4*)ptr;
             tint = GPU_TINT_NEUTRAL;
@@ -1841,13 +1838,11 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
             if (type == SAVE_LAYOUT_PRIM_SPRT)
             {
                 /* Slot cursor / decoration: one free-size sprite. */
-                SlotUvRect* uv;
                 u16 vx;
                 s32 offx;
                 u16 vy;
                 s32 offy;
                 SaveLayoutTex* tex;
-                SPRT* sprt;
                 DR_TPAGE* tp;
 
                 if (g_slotSlideX < 0)
@@ -1859,31 +1854,27 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                     idx = 0;
                 }
 
-                sprt = (SPRT*)ptr;
                 tint = GPU_TINT_NEUTRAL;
-                SET_BGR0_PACKED(sprt, tint);
-                setSprt(sprt);
+                SET_BGR0_PACKED((SPRT*)ptr, tint);
+                setSprt((SPRT*)ptr);
 
                 uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
-
-                if (*(u32*)entry & 2)
-                {
-                    setSemiTrans(sprt, 1);
-                }
+                setSemiTrans((SPRT*)ptr, *(u32*)entry & 2);
 
                 vx = *(u16*)&entry->x + g_slotSlideXLerped;
                 offx = uv->ox * 8 - 0x20;
-                sprt->x0 = vx - offx;
+                ((SPRT*)ptr)->x0 = vx - offx;
                 vy = *(u16*)&entry->y + g_slotSlideYLerped;
                 offy = uv->oy * 8 - 0x28;
-                sprt->y0 = vy - offy;
-                setUV0(sprt, uv->u * 8, uv->v * 8);
-                setWH(sprt, uv->w * 8, uv->h * 8);
+                ((SPRT*)ptr)->y0 = vy - offy;
+                setUV0((SPRT*)ptr, uv->u * 8, uv->v * 8);
+                setWH((SPRT*)ptr, uv->w * 8, uv->h * 8);
 
                 tex = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
-                setClut(sprt, *(u16*)&tex->clut_x, *(u16*)&tex->clut_y);
+                setClut((SPRT*)ptr, *(u16*)&tex->clut_x,
+                        *(u16*)&tex->clut_y);
 
-                addPrim(ot, sprt);
+                addPrim(ot, ptr);
                 ptr += sizeof(SPRT);
 
                 tp = (DR_TPAGE*)ptr;
