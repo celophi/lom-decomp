@@ -1764,7 +1764,7 @@ static inline void set_sprt_tag(SPRT* p, s32 code)
  * @param ot Pointer to the ordering-table entry receiving each primitive.
  * @return Pointer to the byte just past the last primitive emitted.
  *
- * @see decomp.me (99.77%)
+ * @see decomp.me (99.90%)
  */
 void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 {
@@ -1802,7 +1802,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 
             uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98AC);
 
-            /* Finish selecting the UV rectangle before initializing the packet. */
+            /* Preserve the original instruction order across packet setup. */
             do { } while (0);
 
             poly = (POLY_FT4*)ptr;
@@ -1973,10 +1973,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                         SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
                         setSprt(sprt);
 
-                        if (*(u32*)entry & 2)
-                        {
-                            setcode(sprt, 0x66);
-                        }
+                        setSemiTrans(sprt, *(u32*)entry & 2);
 
                         setXY0(sprt, x, y);
                         setUV0(sprt, u0, *(u8*)&entry->v0);
