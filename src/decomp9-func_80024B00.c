@@ -1,8 +1,9 @@
 #include "akao.h"
 #include "akao_driver.h"
-#include "decomp4.h"
 
 extern s16 D_8003D37C[];
+extern s16 D_8003D47C;
+extern s32 D_8004F754[];
 
 typedef struct
 {
@@ -11,13 +12,20 @@ typedef struct
     s16 relative_offset;
 } AkaoLfoSample;
 
-void func_80024B00(AkaoChannelState* channel)
+/**
+ * @brief Advance the per-channel pitch/volume/pan LFOs and recompute the SPU
+ *        volume and pitch registers for one AKAO sequencer channel.
+ * @param channel Channel state to update.
+ * @param channel_bit Channel mask supplied by the caller; unused here.
+ */
+void func_80024B00(AkaoChannelState* channel, s32 channel_bit)
 {
     s32 flags;
     s32 lfo_pitch;
     s32 value;
     s32 pan;
     s32 pitch_value;
+    s32 pitch_mode;
     s32 master_scale;
 
     flags = channel->flags;
@@ -127,14 +135,14 @@ void func_80024B00(AkaoChannelState* channel)
         channel->update_flags |= 3;
     }
 
-    value = flags & 0x10;
-    if (channel->update_flags & 3)
+    pitch_mode = channel->update_flags & 3;
+    if (pitch_mode)
     {
         lfo_pitch += channel->volume_lfo_value;
         lfo_pitch = (lfo_pitch * (*((u16*)((u8*)g_akao_seq_channel0 + 0x52)) & 0x7F)) >> 7;
         pan = ((channel->pan >> 8) + channel->pan_lfo_value) & 0xFF;
 
-        if (D_8004F754 == 2)
+        if (D_8004F754[0] == 2)
         {
             channel->spu_volume_right = (lfo_pitch * D_8003D47C) >> 15;
             channel->spu_volume_left = channel->spu_volume_right;
@@ -144,10 +152,10 @@ void func_80024B00(AkaoChannelState* channel)
             channel->spu_volume_left = (lfo_pitch * D_8003D37C[pan]) >> 15;
             channel->spu_volume_right = (lfo_pitch * D_8003D37C[pan ^ 0xFF]) >> 15;
         }
-        value = flags & 0x10;
     }
 
-    if (value)
+    pitch_mode = flags & 0x10;
+    if (pitch_mode)
     {
         master_scale = *((s16*)((u8*)channel + 0x32));
         pitch_value = *((u16*)((u8*)channel - 0xC)) + channel->pitch_lfo_value + master_scale;
