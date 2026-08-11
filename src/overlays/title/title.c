@@ -1333,26 +1333,17 @@ void RenderSaveSlotMenu(MenuContext* arg0)
  *    cancel scrolls back home; up/down move the slot cursor (wrapping over
  *    the 11 slots). Always re-runs the highlight-panel animation.
  *
- * @see decomp.me (99.41%) https://decomp.me/scratch/Xl8gF
+ * @see decomp.me (100%) https://decomp.me/scratch/Xl8gF
  */
 void handle_save_slot_input(void)
 {
     s32 slide_x_step;
-    s32 rng_lo;
     u8* unused_ptr;
     s32* slide_x_lerped_ptr;
     s32 prev_index;
-    int rng_hi;
     s32 next_index;
-    s32 selected_slot;
     s32 slide_y_step;
-    s32 slot_idx;
     s32 new_flags;
-    u32 copy_count;
-    u8 byte;
-    MenuLayout* layout;
-    u8* src_ptr;
-    u8* dest_ptr;
     s32 flag_mask;
     if (g_slotSlideFrames != 0)
     {
@@ -1409,32 +1400,44 @@ void handle_save_slot_input(void)
         {
             if (g_slotSlideX > 0)
             {
+                s32 rng_lo;
+                int rng_hi;
+                u8* layout;
+
                 load_sub_menu_layout(0);
                 flag_mask = ~0x7F;
-                layout = (MenuLayout*)g_menuLayoutBuffer;
-                new_flags = (layout->slot_flags) & flag_mask;
+                layout = g_menuLayoutBuffer;
+                new_flags = *(s32*)(layout + 0x608) & flag_mask;
+                *(s32*)(layout + 0x608) = new_flags;
+                rng_lo = rand();
+                rng_hi = rand();
+                rng_lo |= rng_hi << 0xF;
+                *(s16*)(layout + 0xD4) = (s16)rng_lo;
             }
             else
             {
+                s32 rng_lo;
+                int rng_hi;
+                u8* layout;
+
                 load_sub_menu_layout(1);
                 flag_mask = ~0x7F;
-                layout = (MenuLayout*)g_menuLayoutBuffer;
-                new_flags = ((layout->slot_flags) & flag_mask) | 1;
+                layout = g_menuLayoutBuffer;
+                new_flags = (*(s32*)(layout + 0x608) & flag_mask) | 1;
+                *(s32*)(layout + 0x608) = new_flags;
+                rng_lo = rand();
+                rng_hi = rand();
+                rng_lo |= rng_hi << 0xF;
+                *(s16*)(layout + 0xD4) = (s16)rng_lo;
             }
-            layout->slot_flags = new_flags;
-            rng_lo = rand();
-            rng_hi = rand();
-            rng_lo |= rng_hi << 0xF;
-            /* Cast store (not layout->rng_seed): a struct-member store is
-             * marked MEM_IN_STRUCT, which lets the gcc 2.7.2 scheduler hoist
-             * the copy-loop setup loads above it; the cast form keeps the
-             * store in place, matching the original order. */
-            *(s16*)((u8*)layout + 0xD4) = (s16)rng_lo;
-            /* The do/while(0) wrapper is required to match: its loop notes
-             * end the scheduling region after the store above, preventing
-             * the address setup below from being scheduled before it. */
-            do
             {
+                s32 selected_slot;
+                s32 slot_idx;
+                u32 copy_count;
+                u8 byte;
+                u8* src_ptr;
+                u8* dest_ptr;
+
                 dest_ptr = D_80043618;
                 src_ptr = g_saveSlotData + (g_slotSelectedIndex << 6);
                 copy_count = 0;
@@ -1461,7 +1464,7 @@ void handle_save_slot_input(void)
                     src_ptr += 4;
                 } while (slot_idx < 0xB);
                 play_title_sfx(0x7E, 0x80);
-            } while (0);
+            }
             g_titleMenuExitState = 1;
         }
         else if (g_debouncedInput & PAD_BTN_CIRCLE)
@@ -1722,17 +1725,6 @@ typedef struct
     u8 oy; /**< +0x05: Y origin offset, in 8-pixel units */
 } SlotUvRect;                  /* sizeof == 6 */
 
-/*
- * getTPage() in Psy-Q's operand order (tpage mode first, then abr, then the
- * VRAM origin), with the abr term taken straight from the entry's flags word:
- * bits 2-3 of the flags are the abr, so `(flags << 3) & 0x60` places them
- * without the separate shift-and-mask getTPage's `(abr & 3) << 5` would need.
- *   _flags: entry flags word (bits 2-3 are abr)
- *   _tp:    texture-page mode (already masked to 2 bits)
- *   _x,_y:  texture page origin in VRAM
- */
-#define TPAGE_WORD(_flags, _tp, _x, _y)                                            ((((_tp) & 3) << 7) | ((((u32)(_flags)) << 3) & 0x60) |                         (((_y) & 0x100) >> 4) | (((_x) & 0x3FF) >> 6) | (((_y) & 0x200) << 2))
-
 /** Number of entries in g_saveLayoutTable. */
 #define SAVE_LAYOUT_ENTRIES 0x1B
 
@@ -1745,16 +1737,16 @@ typedef struct
 #define SAVE_LAYOUT_PRIM_POLY_FT4 3
 #define SAVE_LAYOUT_PRIM_SPRT     4
 
-/**
- * @brief Write the SPRT tag word: length 4 plus the primitive code.
- *
- * @param p    Sprite primitive being filled in.
- * @param code GPU primitive code byte (0x64, or 0x66 for semi-transparent).
- */
-static inline void set_sprt_tag(SPRT* p, s32 code)
+static inline u32 get_save_layout_tpage(SaveLayoutTex* tex, u32 flags, s32 x)
 {
-    setlen(p, 4);
-    setcode(p, code);
+    return getTPage(tex->control & 3, flags >> 2, x,
+                    *(u16*)&tex->tex_y);
+}
+
+static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
+{
+    return getTPage(tex->control & 3, flags >> 2,
+                    *(u16*)&tex->tex_x, *(u16*)&tex->tex_y);
 }
 
 /**
@@ -1836,8 +1828,10 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 
             tex2 = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
             /* Form the texture-page value from the complete layout flags word. */
-            tpw = TPAGE_WORD(*(u32*)entry, *(u8*)&tex2->control & 3,
-                             *(u16*)&tex2->tex_x, *(u16*)&tex2->tex_y);
+            tpw = getTPage(*(u8*)&tex2->control & 3,
+                           *(u32*)entry >> 2,
+                           *(u16*)&tex2->tex_x,
+                           *(u16*)&tex2->tex_y);
             poly->tpage = tpw;
 
             addPrim(ot, poly);
@@ -1853,10 +1847,8 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 u16 vy;
                 s32 offy;
                 SaveLayoutTex* tex;
-                SaveLayoutTex* tex2;
                 SPRT* sprt;
                 DR_TPAGE* tp;
-                s32 sprt_code;
 
                 if (g_slotSlideX < 0)
                 {
@@ -1868,16 +1860,15 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 }
 
                 sprt = (SPRT*)ptr;
-                sprt_code = 0x64;
                 tint = GPU_TINT_NEUTRAL;
                 SET_BGR0_PACKED(sprt, tint);
-                set_sprt_tag(sprt, sprt_code);
+                setSprt(sprt);
 
                 uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
 
                 if (*(u32*)entry & 2)
                 {
-                    setcode(sprt, 0x66);
+                    setSemiTrans(sprt, 1);
                 }
 
                 vx = *(u16*)&entry->x + g_slotSlideXLerped;
@@ -1896,13 +1887,11 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 ptr += sizeof(SPRT);
 
                 tp = (DR_TPAGE*)ptr;
-                setlen(tp, 1);
-
-                tex2 = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
-                tp->code[0] = TPAGE_WORD(*(u32*)entry, tex2->control & 3,
-                                         *(u16*)&tex2->tex_x,
-                                         *(u16*)&tex2->tex_y) |
-                              0xE1000000;
+                setDrawTPage(
+                    tp, 0, 0,
+                    get_save_layout_base_tpage(
+                        &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot],
+                        *(u32*)entry));
 
                 addPrim(ot, tp);
                 ptr += sizeof(DR_TPAGE);
@@ -1927,8 +1916,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                     addPrim(ot, tile);
 
                     tp = (DR_TPAGE*)(ptr + sizeof(TILE));
-                    setlen(tp, 1);
-                    tp->code[0] = 0xE1000025;
+                    setDrawTPage(tp, 0, 0, 0x25);
                     addPrim(ot, tp);
 
                     ptr += sizeof(TILE) + sizeof(DR_TPAGE);
@@ -1944,7 +1932,6 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                     s32 x;
                     s32 y;
                     s32 chunk;
-                    SaveLayoutTex* tex2;
 
                     idx = *(u16*)tex0;
 
@@ -1989,13 +1976,12 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                         ptr += sizeof(SPRT);
 
                         tp = (DR_TPAGE*)ptr;
-                        setlen(tp, 1);
-
-                        tex2 = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
-                        tp->code[0] = TPAGE_WORD(*(u32*)entry,
-                                                 tex2->control & 3, idx,
-                                                 *(u16*)&tex2->tex_y) |
-                                      0xE1000000;
+                        setDrawTPage(
+                            tp, 0, 0,
+                            get_save_layout_tpage(
+                                &((SaveLayoutTex*)g_saveLayoutTexTable)
+                                     [entry->tex_slot],
+                                *(u32*)entry, idx));
 
                         addPrim(ot, ptr);
                         ptr += sizeof(DR_TPAGE);

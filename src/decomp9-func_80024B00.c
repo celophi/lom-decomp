@@ -11,6 +11,24 @@ typedef struct
     s16 relative_offset;
 } AkaoLfoSample;
 
+/**
+ * @brief Advance the per-channel pitch/volume/pan LFOs and recompute the SPU
+ *        volume and pitch registers for one AKAO sequencer channel.
+ * @param channel Channel state to update.
+ * @note Match: 99.93%. Residual is 4 register-allocation rows, no structural
+ *       diff (280/280 insns): target folds the mastervol address to
+ *       `lui v1; lw v1,%lo(g_akao_mastervol_acc)(v1)` (one register, the %hi
+ *       tied to the load destination) where we emit `lui v0; lw v1,...(v0)`.
+ *       This is [ALLOC-02] in tools/lom-dev-mcp/idioms.md. The tie is blocked
+ *       because the 0xFF0000 mask needs its own constant register, which
+ *       conflicts with the loaded value; contrast the g_akao_seq_channel0 load
+ *       above, whose `& 0x7F` is an andi immediate and which folds correctly.
+ *       Retired (measured inert or worse): giving the loaded value its own
+ *       carrier, block-local vs function-level scope, splitting the load from
+ *       the mask, commuting the &, 0x00FF0000 spelling, unsigned cast,
+ *       reordering the site-2 statements, and do/while(0) block boundaries at
+ *       every position around the read.
+ */
 void func_80024B00(AkaoChannelState* channel)
 {
     s32 flags;
@@ -19,6 +37,7 @@ void func_80024B00(AkaoChannelState* channel)
     s32 pan;
     s32 pitch_value;
     s32 master_scale;
+    s32 pitch_mode;
 
     flags = channel->flags;
     lfo_pitch = (((s16*)&channel->unk48)[1] * (channel->volume >> 8)) >> 7;
@@ -127,7 +146,6 @@ void func_80024B00(AkaoChannelState* channel)
         channel->update_flags |= 3;
     }
 
-    value = flags & 0x10;
     if (channel->update_flags & 3)
     {
         lfo_pitch += channel->volume_lfo_value;
@@ -144,10 +162,17 @@ void func_80024B00(AkaoChannelState* channel)
             channel->spu_volume_left = (lfo_pitch * D_8003D37C[pan]) >> 15;
             channel->spu_volume_right = (lfo_pitch * D_8003D37C[pan ^ 0xFF]) >> 15;
         }
-        value = flags & 0x10;
+        /* Empty do/while(0): plants a NOTE_INSN_LOOP_BEG immediately before
+         * the branch target below, so gcc 2.8 mostly_true_jump() predicts the
+         * `update_flags & 3` branch taken and fill_eager_delay_slots() clones
+         * the `flags & 0x10` andi into its delay slot instead of hoisting the
+         * fall-through lui. Required to match; removing it costs 2 exact rows
+         * and one instruction. */
+        do { } while (0);
     }
 
-    if (value)
+    pitch_mode = flags & 0x10;
+    if (pitch_mode)
     {
         master_scale = *((s16*)((u8*)channel + 0x32));
         pitch_value = *((u16*)((u8*)channel - 0xC)) + channel->pitch_lfo_value + master_scale;
