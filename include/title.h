@@ -111,10 +111,8 @@ extern u8 D_800F9AED;
  *
  * The layout has 0x1B entries × 0x18 bytes = 0x288 bytes total.
  *
- * @note g_saveLayoutTable is kept as @c u8[] so that all existing raw byte-offset
- *       accesses in the function bodies compile to unchanged codegen.
- *       Cast to @c SaveLayoutEntry* at call sites that benefit from named
- *       field access.
+ * The underlying data symbol is declared as a byte array; renderers cast it to
+ * @c SaveLayoutEntry* when named field access is useful.
  */
 typedef struct {
     u8  flags;    /**< +0x00: bit0=apply_slide, bit1=semi_transparent, bits2-3=abr */
@@ -162,9 +160,8 @@ typedef struct {
 /**
  * Texture-descriptor table for the save-slot layout: 11 entries of stride 0x10,
  * each holding VRAM coords plus the source TIM pointer/control word uploaded by
- * upload_save_layout_textures. Indexed by SaveLayoutEntry::tex_slot. Declared
- * as u8[] because RenderSaveLayoutPrims walks it with byte arithmetic;
- * upload_save_layout_textures casts it to SaveLayoutTex*.
+ * upload_save_layout_textures. Indexed by SaveLayoutEntry::tex_slot and cast to
+ * SaveLayoutTex* by consumers.
  */
 extern u8 g_saveLayoutTexTable[];
 extern u8 D_800F98AC[];
