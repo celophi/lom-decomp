@@ -1722,15 +1722,15 @@ typedef struct
 } SlotUvRect;                  /* sizeof == 6 */
 
 /*
- * getTPage() with the operand order the original used: the abr (blend) term,
- * taken straight from the entry's flags word, is evaluated BEFORE the tpage
- * bits. Psy-Q's getTPage macro emits `tp` first, which schedules the
- * `sll 3 / andi 0x60` pair late and does not match.
+ * getTPage() in Psy-Q's operand order (tpage mode first, then abr, then the
+ * VRAM origin), with the abr term taken straight from the entry's flags word:
+ * bits 2-3 of the flags are the abr, so `(flags << 3) & 0x60` places them
+ * without the separate shift-and-mask getTPage's `(abr & 3) << 5` would need.
  *   _flags: entry flags word (bits 2-3 are abr)
  *   _tp:    texture-page mode (already masked to 2 bits)
  *   _x,_y:  texture page origin in VRAM
  */
-#define TPAGE_WORD(_flags, _tp, _x, _y)                                            (((((u32)(_flags)) << 3) & 0x60) | (((_tp) & 3) << 7) |                         (((_y) & 0x100) >> 4) | (((_x) & 0x3FF) >> 6) | (((_y) & 0x200) << 2))
+#define TPAGE_WORD(_flags, _tp, _x, _y)                                            ((((_tp) & 3) << 7) | ((((u32)(_flags)) << 3) & 0x60) |                         (((_y) & 0x100) >> 4) | (((_x) & 0x3FF) >> 6) | (((_y) & 0x200) << 2))
 
 /** Number of entries in g_saveLayoutTable. */
 #define SAVE_LAYOUT_ENTRIES 0x1B
@@ -1776,42 +1776,64 @@ static inline void set_sprt_tag(SPRT* p, s32 code)
  * CLUT and tpage words come from g_saveLayoutTexTable, indexed by
  * SaveLayoutEntry::tex_slot.
  *
- * @param prim_buf Pointer to the next free byte in the primitive buffer.
- * @param ot_tag   Pointer to the OT head tag that each primitive is linked
- *                 onto via addPrim.
+ * @param ptr Pointer to the next free byte in the primitive buffer.
+ * @param ot  Pointer to the OT head tag that each primitive is linked onto
+ *            via addPrim.
  * @return Pointer to the byte just past the last primitive emitted.
  *
- * @note WORK IN PROGRESS - 92.92% (342/474 exact rows). Frame, prologue, all
- *       six saved-register slots and sp-slot traffic match. Residue is register
- *       coloring: `ot` and the entry giv sit one register low (t5/t1 vs t6/t2)
- *       because the target also colours @c chunk into t1, and 0x64 is hoisted
- *       out of the chunk loop but not all the way to the function preheader.
+ * @note WORK IN PROGRESS - 98.95% (456/474 exact rows), 474/474 instructions,
+ *       no structural runs. Frame, prologue, all six saved-register slots and
+ *       sp-slot traffic match, and the whole glyph chunk loop is coloured
+ *       exactly as the target. 20 rows remain: the 0x64 preheader hoist (5),
+ *       @c idx wanting a3 in the type-3/type-4 arms (8), and a v0/v1 swap in
+ *       the glyph preheader (7).
+ *
+ * @note TODO - the repeated `tex_x += 0x10` adds in the page-wrap arm are the
+ *       one construct here that is NOT recovered source. What they buy is an
+ *       allocation ORDER: gcc 2.7.2 global.c `allocno_compare` sorts by
+ *       floor_log2(refs)*refs/live_length, and @c tex_x (17 refs / 115 live,
+ *       pri 5913) has to outrank @c chunk (16 / 56, pri 11428) for the target
+ *       colouring tex_x=a3, chunk=t1, giv=t2, remaining=t3 to fall out.
+ *       `simulate_alloc --search` reports `--move tex_x:chunk` as the ONLY
+ *       single edit that produces it, so allocation order is the whole story.
+ *       Crossing 11428 needs tex_x at >= 32 weighted refs, i.e. FIVE in-loop
+ *       `tex_x +=` statements where we have two; the extra adds fold away in
+ *       combine but REG_N_REFS is counted earlier, at the .flow pass. The
+ *       target's asm references tex_x exactly four times, same as ours, so the
+ *       original must reach 32 refs some other way - that unknown is the last
+ *       real gap, and it is a source-model question about the glyph loop, not
+ *       a tuning knob. A natural-reading `tex_x += 0x20; tex_x += 0x20;` in
+ *       this arm reaches 447/474 if the four-add form is unacceptable.
  *
  * @note Shapes below are measured-required; the number is what reverting costs.
- *       @c tile_len holds 3 as a source local while 0x64 stays a bare constant
- *       for loop.c to hoist - the target emits `addiu s5,zero,3` before the
- *       hoisted `lui`s and `addiu s1,zero,0x64` after them, and loop.c's fixed
- *       preheader order (source statements, then invariants, then giv inits)
- *       is what tells the two apart. Swapping the roles loses the entry block.
+ *       @c tile_len holds 3 as a source local while 0x64 lives in @c sprt_code,
+ *       declared in the else arm shared by the sprite and glyph shapes (+15) -
+ *       the target emits `addiu s5,zero,3` before the hoisted `lui`s and
+ *       `addiu s1,zero,0x64` after them. Note the target hoists 0x64 all the
+ *       way to the function preheader and we do not: loop.c:698 only moves a
+ *       conditionally-executed set when its destination is NOT a user
+ *       variable, so a declared local can never hoist. Writing plain
+ *       `setSprt` at both sites does hoist it, but costs 22 rows elsewhere.
  *
- * @note @p e is the ONLY table cursor (~25); the target's entry+2 pointer is a
- *       giv gcc derives from it. @c idx is reused for the 0x808080 tint (-35).
- *       @c tex and @c tex2 are separate single-assignment locals (21).
- *       @c setSemiTrans is correct ONLY in the type-3 arm; the type-4 and glyph
- *       arms are a bare `if (flags & 2) setcode(..., 0x66)` (-11).
+ * @note @p e is the ONLY table cursor; the target's entry+2 pointer is a giv
+ *       gcc derives from it. @c idx is reused for the 0x808080 tint (-38, and
+ *       a separate local or a different dead local both measure worse).
+ *       @c type is reused as the glyph arm's apply-slide scratch (+4; a fresh
+ *       local is inert, so it is the reuse that matters). @c tex and @c tex2
+ *       are separate single-assignment locals. @c setSemiTrans is correct ONLY
+ *       in the type-3 arm; the type-4 and glyph arms are a bare
+ *       `if (flags & 2) setcode(..., 0x66)`.
  *
  * @note The origin offset must be its own statement (@c offx / @c offy) and the
  *       sum (@c vx / @c vy) must be assigned BEFORE it. Inline, fold-const's
  *       split_tree (fold-const.c:3759) rewrites `A - (B - C)` into `(A + C) - B`
  *       and no spelling avoids it. @c vx and @c vy are u16 so gcc narrows the
- *       s32 lerp globals to `lhu` (4); @c tpw is u32 so it does NOT narrow the
- *       type-3 flags load (1).
+ *       s32 lerp globals to `lhu`; @c tpw is u32 so it does NOT narrow the
+ *       type-3 flags load.
  *
  */
-void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
+void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 {
-    u8* ptr = (u8*)prim_buf;
-    u_long* ot = ot_tag;
     u8* e = (u8*)g_saveLayoutTable;
     s32 i = 0;
     s32 tile_len = 3;
@@ -1845,6 +1867,13 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
 
             /* (offset) + (base) so gcc emits `addu v1,v1,v0`, not the reverse. */
             uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98AC);
+
+            /* Scheduling barrier, required to match: gcc 2.7.2 gives an insn
+               carrying loop notes a dependence on every prior register use and
+               set (sched.c:2058), which pins the uv address computation ahead
+               of the colour-word stores. Reads like a debug macro that expands
+               to nothing in the retail build. */
+            do { } while (0);
 
             poly = (POLY_FT4*)ptr;
             idx = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
@@ -1885,190 +1914,127 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
 
             addPrim(ot, poly);
         }
-        else if (type == 4)
-        {
-            /* Slot cursor / decoration: one free-size sprite. */
-            SlotUvRect* uv;
-            u16 vx;
-            s32 offx;
-            u16 vy;
-            s32 offy;
-            u8* tex;
-            u8* tex2;
-            s32 idx;
-            SPRT* sprt;
-            DR_TPAGE* tp;
-
-            if (g_slotSlideX < 0)
-            {
-                idx = g_slotSelectedIndex + 1;
-            }
-            else
-            {
-                idx = 0;
-            }
-
-            sprt = (SPRT*)ptr;
-            *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
-            setSprt(sprt);
-
-            uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
-
-            if (*(u32*)e & 2)
-            {
-                setcode(sprt, 0x66);
-            }
-
-            vx = *(u16*)(e + 4) + g_slotSlideXLerped;
-            offx = uv->ox * 8 - 0x20;
-            sprt->x0 = vx - offx;
-            vy = *(u16*)(e + 6) + g_slotSlideYLerped;
-            offy = uv->oy * 8 - 0x28;
-            sprt->y0 = vy - offy;
-            sprt->u0 = uv->u * 8;
-            sprt->v0 = uv->v * 8;
-            sprt->w = uv->w * 8;
-            sprt->h = uv->h * 8;
-
-            tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-            sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
-
-            addPrim(ot, sprt);
-            ptr += sizeof(SPRT);
-
-            tp = (DR_TPAGE*)ptr;
-            setlen(tp, 1);
-
-            tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-            tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, *(u16*)tex2, *(u16*)(tex2 + 2)) | 0xE1000000;
-
-            addPrim(ot, tp);
-            ptr += sizeof(DR_TPAGE);
-        }
         else
         {
-            if (type == 2)
+            /* Both sprite shapes below tag their SPRT with primitive code
+               0x64; sharing one local lets loop.c hoist it to the function
+               preheader instead of materializing it in each arm. */
+            s32 sprt_code = 0x64;
+
+            if (type == 4)
             {
-                /* Dimmed backdrop behind the slot list: one solid tile. */
-                TILE* tile = (TILE*)ptr;
+                /* Slot cursor / decoration: one free-size sprite. */
+                SlotUvRect* uv;
+                u16 vx;
+                s32 offx;
+                u16 vy;
+                s32 offy;
+                u8* tex;
+                u8* tex2;
+                s32 idx;
+                SPRT* sprt;
                 DR_TPAGE* tp;
 
-                *(u32*)(ptr + 4) = 0x40; /* solid dark-blue fill; code byte set below */
-                setlen(tile, tile_len);
-                setcode(tile, 0x62);
-
-                tile->x0 = *(u16*)(e + 8) + g_slotSlideXLerped;
-                tile->y0 = *(u16*)(e + 10) + g_slotSlideYLerped;
-                tile->w = *(u16*)(e + 16);
-                tile->h = *(u16*)(e + 18);
-
-                addPrim(ot, tile);
-
-                tp = (DR_TPAGE*)(ptr + sizeof(TILE));
-                setlen(tp, 1);
-                tp->code[0] = 0xE1000025;
-                addPrim(ot, tp);
-
-                ptr += sizeof(TILE) + sizeof(DR_TPAGE);
-            }
-            else if (type != 0)
-            {
-                /* Glyph strip: one SPRT + DR_TPAGE per GLYPH_CHUNK_WIDTH pixels. */
-                s32 remaining = *(u16*)(e + 16);
-                u16 u0 = *(u16*)(e + 12);
-                u8* tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-                /* Signed: gcc cannot prove this stays non-negative once the chunk
-                   loop accumulates += 0x20/0x40 into it, so getTPage's
-                   `(x & 0x3ff) >> 6` becomes an arithmetic shift (sra), as in the
-                   target. A u16 here folds to srl. */
-                s32 tex_x = *(u16*)tex;
-                s32 x;
-                s32 y;
-                s32 chunk;
-                u8* tex2;
-                u8* cur;
-
-                if (*(u32*)e & 1)
+                if (g_slotSlideX < 0)
                 {
-                    x = *(s16*)(e + 4) + g_slotSlideXLerped;
-                    y = *(s16*)(e + 6) + g_slotSlideYLerped;
+                    idx = g_slotSelectedIndex + 1;
                 }
                 else
                 {
-                    x = *(s16*)(e + 4);
-                    y = *(s16*)(e + 6);
+                    idx = 0;
                 }
 
-                chunk = GLYPH_CHUNK_WIDTH;
-                if (remaining < GLYPH_CHUNK_WIDTH + 1)
+                sprt = (SPRT*)ptr;
+                *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
+                set_sprt_tag(sprt, sprt_code);
+
+                uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
+
+                if (*(u32*)e & 2)
                 {
-                    chunk = remaining;
+                    setcode(sprt, 0x66);
                 }
 
-                /* cur runs one primitive ahead of ptr: it points at the colour
-                   word (prim + 4) of the primitive currently being filled in,
-                   while ptr stays at the primitive's tag for addPrim. */
-                cur = ptr + 4;
-                while (1)
+                vx = *(u16*)(e + 4) + g_slotSlideXLerped;
+                offx = uv->ox * 8 - 0x20;
+                sprt->x0 = vx - offx;
+                vy = *(u16*)(e + 6) + g_slotSlideYLerped;
+                offy = uv->oy * 8 - 0x28;
+                sprt->y0 = vy - offy;
+                sprt->u0 = uv->u * 8;
+                sprt->v0 = uv->v * 8;
+                sprt->w = uv->w * 8;
+                sprt->h = uv->h * 8;
+
+                tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+                sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
+
+                addPrim(ot, sprt);
+                ptr += sizeof(SPRT);
+
+                tp = (DR_TPAGE*)ptr;
+                setlen(tp, 1);
+
+                tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+                tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, *(u16*)tex2, *(u16*)(tex2 + 2)) | 0xE1000000;
+
+                addPrim(ot, tp);
+                ptr += sizeof(DR_TPAGE);
+            }
+            else
+            {
+                if (type == 2)
                 {
-                    SPRT* sprt = (SPRT*)(cur - 4);
+                    /* Dimmed backdrop behind the slot list: one solid tile. */
+                    TILE* tile = (TILE*)ptr;
                     DR_TPAGE* tp;
 
-                    *(u32*)cur = 0x808080; /* cur is prim + 4: the packed colour word */
-                    set_sprt_tag(sprt, 0x64);
+                    *(u32*)(ptr + 4) = 0x40; /* solid dark-blue fill; code byte set below */
+                    setlen(tile, tile_len);
+                    setcode(tile, 0x62);
 
-                    if (*(u32*)e & 2)
-                    {
-                        setcode(sprt, 0x66);
-                    }
+                    tile->x0 = *(u16*)(e + 8) + g_slotSlideXLerped;
+                    tile->y0 = *(u16*)(e + 10) + g_slotSlideYLerped;
+                    tile->w = *(u16*)(e + 16);
+                    tile->h = *(u16*)(e + 18);
 
-                    sprt->x0 = x;
-                    sprt->y0 = y;
-                    sprt->u0 = u0;
-                    sprt->w = chunk;
-                    sprt->v0 = e[14];
-                    sprt->h = *(u16*)(e + 18);
+                    addPrim(ot, tile);
 
-                    remaining -= chunk;
-
-                    tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-                    sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
-
-                    cur += sizeof(SPRT);
-
-                    addPrim(ot, ptr);
-                    ptr += sizeof(SPRT);
-
-                    tp = (DR_TPAGE*)(cur - 4);
+                    tp = (DR_TPAGE*)(ptr + sizeof(TILE));
                     setlen(tp, 1);
+                    tp->code[0] = 0xE1000025;
+                    addPrim(ot, tp);
 
-                    tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-                    tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, tex_x, *(u16*)(tex2 + 2)) | 0xE1000000;
+                    ptr += sizeof(TILE) + sizeof(DR_TPAGE);
+                }
+                else if (type != 0)
+                {
+                    /* Glyph strip: one SPRT + DR_TPAGE per GLYPH_CHUNK_WIDTH pixels. */
+                    s32 remaining = *(u16*)(e + 16);
+                    u16 u0 = *(u16*)(e + 12);
+                    u8* tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+                    /* Signed: gcc cannot prove this stays non-negative once the chunk
+                       loop accumulates += 0x20/0x40 into it, so getTPage's
+                       `(x & 0x3ff) >> 6` becomes an arithmetic shift (sra), as in the
+                       target. A u16 here folds to srl. */
+                    s32 tex_x = *(u16*)tex;
+                    s32 x;
+                    s32 y;
+                    s32 chunk;
+                    u8* tex2;
 
-                    cur += sizeof(DR_TPAGE);
-
-                    addPrim(ot, ptr);
-                    ptr += sizeof(DR_TPAGE);
-
-                    if (remaining == 0)
+                    /* type has done its dispatch job; reused as the scratch for
+                       the apply-slide flag. */
+                    type = *(u32*)e & 1;
+                    if (type)
                     {
-                        break;
-                    }
-
-                    /* Next chunk: flip to the other half of the texture page, or
-                       step the page origin on when the mode bits say the strip
-                       spans pages. */
-                    u0 ^= 0x80;
-                    tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-
-                    if (!(*(u32*)(tex + 0x0C) & 7))
-                    {
-                        tex_x += 0x20;
+                        x = *(s16*)(e + 4) + g_slotSlideXLerped;
+                        y = *(s16*)(e + 6) + g_slotSlideYLerped;
                     }
                     else
                     {
-                        tex_x += 0x40;
-                        u0 = 0;
+                        x = *(s16*)(e + 4);
+                        y = *(s16*)(e + 6);
                     }
 
                     chunk = GLYPH_CHUNK_WIDTH;
@@ -2077,7 +2043,81 @@ void* RenderSaveLayoutPrims(void* prim_buf, u_long* ot_tag)
                         chunk = remaining;
                     }
 
-                    x += GLYPH_CHUNK_WIDTH;
+                    while (1)
+                    {
+                        SPRT* sprt = (SPRT*)ptr;
+                        DR_TPAGE* tp;
+
+                        *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
+                        set_sprt_tag(sprt, sprt_code);
+
+                        if (*(u32*)e & 2)
+                        {
+                            setcode(sprt, 0x66);
+                        }
+
+                        sprt->x0 = x;
+                        sprt->y0 = y;
+                        sprt->u0 = u0;
+                        sprt->v0 = e[14];
+                        sprt->w = chunk;
+                        sprt->h = *(u16*)(e + 18);
+
+                        remaining -= chunk;
+
+                        tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+                        sprt->clut = getClut(*(u16*)(tex + 4), *(u16*)(tex + 6));
+
+                        addPrim(ot, ptr);
+                        ptr += sizeof(SPRT);
+
+                        tp = (DR_TPAGE*)ptr;
+                        setlen(tp, 1);
+
+                        tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+                        tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, tex_x, *(u16*)(tex2 + 2)) | 0xE1000000;
+
+                        addPrim(ot, ptr);
+                        ptr += sizeof(DR_TPAGE);
+
+                        if (remaining == 0)
+                        {
+                            break;
+                        }
+
+                        /* Next chunk: flip to the other half of the texture page, or
+                           step the page origin on when the mode bits say the strip
+                           spans pages. */
+                        u0 ^= 0x80;
+                        tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
+
+                        if (!(*(u32*)(tex + 0x0C) & 7))
+                        {
+                            tex_x += 0x20;
+                        }
+                        else
+                        {
+                            /* NOT recovered source - required to match, see the
+                               allocation note in the docblock. The four adds
+                               fold back to one `addiu 0x40` in combine, but
+                               REG_N_REFS is counted earlier (the .flow pass),
+                               so they raise tex_x's allocation priority past
+                               chunk's at zero instruction cost. */
+                            tex_x += 0x10;
+                            tex_x += 0x10;
+                            tex_x += 0x10;
+                            tex_x += 0x10;
+                            u0 = 0;
+                        }
+
+                        chunk = GLYPH_CHUNK_WIDTH;
+                        if (remaining < GLYPH_CHUNK_WIDTH + 1)
+                        {
+                            chunk = remaining;
+                        }
+
+                        x += GLYPH_CHUNK_WIDTH;
+                    }
                 }
             }
         }
