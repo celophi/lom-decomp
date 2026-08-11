@@ -1,6 +1,7 @@
 #include "title.h"
 #include "cd_resources.h"
 #include "display.h"
+#include "gpu_packet.h"
 
 /* Width in pixels of a single save-slot panel; one horizontal slide moves the
  * stage by exactly this much. */
@@ -1744,11 +1745,15 @@ typedef struct
  * @param p    Sprite primitive being filled in.
  * @param code GPU primitive code byte (0x64, or 0x66 for semi-transparent).
  *
- * @note Required to match, and only in the glyph chunk loop (+26 rows there,
- *       inert in the type-4 arm, which uses Psy-Q's setSprt). Passing @p code
- *       as a PARAMETER gives the constant its own pseudo that stays live across
- *       the `setlen` store, so loop.c hoists it; written as setSprt the
- *       constant sits next to its own store and never is.
+ * @note Required to match, in the type-4 arm. Passing @p code as a PARAMETER
+ *       gives the constant its own pseudo that is set before the inlined body,
+ *       stretching its movable lifetime from 1 to 3; loop.c's move_movables
+ *       only hoists when threshold * savings * lifetime >= insn_count
+ *       (50 * savings * lifetime >= 479 here). The glyph chunk loop must use
+ *       plain @c setSprt instead: at lifetime 1 its constant is too small to
+ *       be hoisted out of the INNER loop (50 < 108) and so survives to be
+ *       merged with this one by combine_movables, which sums both lifetimes
+ *       and savings (2 * 7 = 14) and clears the outer gate.
  */
 static inline void set_sprt_tag(SPRT* p, s32 code)
 {
@@ -1781,48 +1786,50 @@ static inline void set_sprt_tag(SPRT* p, s32 code)
  *            via addPrim.
  * @return Pointer to the byte just past the last primitive emitted.
  *
- * @note WORK IN PROGRESS - 98.95% (456/474 exact rows), 474/474 instructions,
- *       no structural runs. Frame, prologue, all six saved-register slots and
- *       sp-slot traffic match, and the whole glyph chunk loop is coloured
- *       exactly as the target. 20 rows remain: the 0x64 preheader hoist (5),
- *       @c idx wanting a3 in the type-3/type-4 arms (8), and a v0/v1 swap in
- *       the glyph preheader (7).
+ * @note WORK IN PROGRESS - 99.77% (454/474 exact rows), 474/474 instructions,
+ *       NO structural rows: every instruction is in the right place and the
+ *       frame, prologue and sp-slot traffic all match. The whole residue is
+ *       one 4-way saved-register rotation - @c sprt_code takes s4 where the
+ *       target has s1, pushing @c i, the YLerped base and the XLerped base
+ *       each down one slot.
  *
- * @note TODO - the repeated `tex_x += 0x10` adds in the page-wrap arm are the
- *       one construct here that is NOT recovered source. What they buy is an
- *       allocation ORDER: gcc 2.7.2 global.c `allocno_compare` sorts by
- *       floor_log2(refs)*refs/live_length, and @c tex_x (17 refs / 115 live,
- *       pri 5913) has to outrank @c chunk (16 / 56, pri 11428) for the target
- *       colouring tex_x=a3, chunk=t1, giv=t2, remaining=t3 to fall out.
- *       `simulate_alloc --search` reports `--move tex_x:chunk` as the ONLY
- *       single edit that produces it, so allocation order is the whole story.
- *       Crossing 11428 needs tex_x at >= 32 weighted refs, i.e. FIVE in-loop
- *       `tex_x +=` statements where we have two; the extra adds fold away in
- *       combine but REG_N_REFS is counted earlier, at the .flow pass. The
- *       target's asm references tex_x exactly four times, same as ours, so the
- *       original must reach 32 refs some other way - that unknown is the last
- *       real gap, and it is a source-model question about the glyph loop, not
- *       a tuning knob. A natural-reading `tex_x += 0x20; tex_x += 0x20;` in
- *       this arm reaches 447/474 if the four-add form is unacceptable.
+ * @note TODO - what that rotation needs is +4 weighted REG_N_REFS on the
+ *       hoisted 0x64 pseudo, at zero instruction cost. gcc 2.7.2 global.c
+ *       `allocno_compare` sorts by floor_log2(refs)*refs/live_length, and
+ *       `reg_n_refs` is weighted by loop depth (flow.c:2067). Hoisting the
+ *       constant moves its SET from depth 2 to depth 1 and stretches
+ *       live_length 284 -> 852, dropping its priority 492 -> 140 so it loses
+ *       s1 to @c i (7 refs / 435 live, pri 321). Measured: at 10 weighted refs
+ *       the target's saved-register set falls out exactly - s0=texTable,
+ *       s1=0x64, s2=i, s3=vy, s4=vx, s5=tile_len. Two genuine store sites give
+ *       6 (1 + 2 + 3), and the extra references cannot be faked: a duplicate
+ *       store to the same address and a `sprt_code | 2` for the 0x66 case are
+ *       both folded away before the .flow pass. @c vx and @c vy cannot be
+ *       demoted below the hoisted constant instead - at 9 refs they would need
+ *       a live_length longer than the whole function. So this is a
+ *       source-model question about where the original references that byte,
+ *       not a tuning knob. Reverting to a shared `s32 sprt_code = 0x64;` in
+ *       the else arm gives up the hoist but scores 471/474 exact; that variant
+ *       is kept as working/RenderSaveLayoutPrims/code.c.
  *
  * @note Shapes below are measured-required; the number is what reverting costs.
- *       @c tile_len holds 3 as a source local while 0x64 lives in @c sprt_code,
- *       declared in the else arm shared by the sprite and glyph shapes (+15) -
- *       the target emits `addiu s5,zero,3` before the hoisted `lui`s and
- *       `addiu s1,zero,0x64` after them. Note the target hoists 0x64 all the
- *       way to the function preheader and we do not: loop.c:698 only moves a
- *       conditionally-executed set when its destination is NOT a user
- *       variable, so a declared local can never hoist. Writing plain
- *       `setSprt` at both sites does hoist it, but costs 22 rows elsewhere.
+ *       @c idx is ONE variable serving the type-3 and type-4 arms' table index
+ *       AND the glyph strip's texture X (+8) - the target colours all three
+ *       sites a3, so they are three uses of one scratch, not three variables.
+ *       @c tint is likewise ONE variable for the 0x808080 colour word shared by
+ *       the type-3 and type-4 arms (+3, and it must be a variable: written as a
+ *       literal, loop.c combines the two arms' constants and hoists them into a
+ *       SEVENTH saved register, growing the frame to -0x20). Do not extend
+ *       @c tint into the glyph loop as well (-101).
  *
  * @note @p e is the ONLY table cursor; the target's entry+2 pointer is a giv
- *       gcc derives from it. @c idx is reused for the 0x808080 tint (-38, and
- *       a separate local or a different dead local both measure worse).
- *       @c type is reused as the glyph arm's apply-slide scratch (+4; a fresh
- *       local is inert, so it is the reuse that matters). @c tex and @c tex2
- *       are separate single-assignment locals. @c setSemiTrans is correct ONLY
- *       in the type-3 arm; the type-4 and glyph arms are a bare
- *       `if (flags & 2) setcode(..., 0x66)`.
+ *       gcc derives from it. In the glyph arm the apply-slide flag must be an
+ *       unnamed temp (`if (*(u32*)e & 1)`) and the preheader's texture pointer
+ *       its own local (@c tex0), separate from the in-loop @c tex (+7 together):
+ *       as a single variable @c tex is a global allocno and takes v0 ahead of
+ *       the flags temp, which local alloc otherwise orders as the target does.
+ *       @c setSemiTrans is correct ONLY in the type-3 arm; the type-4 and glyph
+ *       arms are a bare `if (flags & 2) setcode(..., 0x66)`.
  *
  * @note The origin offset must be its own statement (@c offx / @c offy) and the
  *       sum (@c vx / @c vy) must be assigned BEFORE it. Inline, fold-const's
@@ -1830,13 +1837,14 @@ static inline void set_sprt_tag(SPRT* p, s32 code)
  *       and no spelling avoids it. @c vx and @c vy are u16 so gcc narrows the
  *       s32 lerp globals to `lhu`; @c tpw is u32 so it does NOT narrow the
  *       type-3 flags load.
- *
  */
 void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 {
     u8* e = (u8*)g_saveLayoutTable;
     s32 i = 0;
     s32 tile_len = 3;
+    s32 idx;
+    u32 tint;
 
     do
     {
@@ -1853,7 +1861,6 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
             SlotUvRect* uv;
             u8* tex;
             u8* tex2;
-            s32 idx;
             u32 tpw;
 
             if (g_slotSlideX > 0)
@@ -1876,8 +1883,8 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
             do { } while (0);
 
             poly = (POLY_FT4*)ptr;
-            idx = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
-            *(u32*)(ptr + 4) = idx;
+            tint = GPU_TINT_NEUTRAL;
+            *(u32*)(ptr + 4) = tint;
             setPolyFT4(poly);
 
             setSemiTrans(poly, *(u32*)e & 2);
@@ -1916,11 +1923,6 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
         }
         else
         {
-            /* Both sprite shapes below tag their SPRT with primitive code
-               0x64; sharing one local lets loop.c hoist it to the function
-               preheader instead of materializing it in each arm. */
-            s32 sprt_code = 0x64;
-
             if (type == 4)
             {
                 /* Slot cursor / decoration: one free-size sprite. */
@@ -1931,9 +1933,9 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 s32 offy;
                 u8* tex;
                 u8* tex2;
-                s32 idx;
                 SPRT* sprt;
                 DR_TPAGE* tp;
+                s32 sprt_code;
 
                 if (g_slotSlideX < 0)
                 {
@@ -1945,7 +1947,9 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 }
 
                 sprt = (SPRT*)ptr;
-                *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
+                sprt_code = 0x64;
+                tint = GPU_TINT_NEUTRAL;
+                *(u32*)(ptr + 4) = tint;
                 set_sprt_tag(sprt, sprt_code);
 
                 uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
@@ -2012,21 +2016,16 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                     /* Glyph strip: one SPRT + DR_TPAGE per GLYPH_CHUNK_WIDTH pixels. */
                     s32 remaining = *(u16*)(e + 16);
                     u16 u0 = *(u16*)(e + 12);
-                    u8* tex = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-                    /* Signed: gcc cannot prove this stays non-negative once the chunk
-                       loop accumulates += 0x20/0x40 into it, so getTPage's
-                       `(x & 0x3ff) >> 6` becomes an arithmetic shift (sra), as in the
-                       target. A u16 here folds to srl. */
-                    s32 tex_x = *(u16*)tex;
+                    u8* tex;
+                    u8* tex0 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
                     s32 x;
                     s32 y;
                     s32 chunk;
                     u8* tex2;
 
-                    /* type has done its dispatch job; reused as the scratch for
-                       the apply-slide flag. */
-                    type = *(u32*)e & 1;
-                    if (type)
+                    idx = *(u16*)tex0;
+
+                    if (*(u32*)e & 1)
                     {
                         x = *(s16*)(e + 4) + g_slotSlideXLerped;
                         y = *(s16*)(e + 6) + g_slotSlideYLerped;
@@ -2048,8 +2047,8 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                         SPRT* sprt = (SPRT*)ptr;
                         DR_TPAGE* tp;
 
-                        *(u32*)(ptr + 4) = 0x808080; /* r=g=b=0x80 neutral tint; code byte set below */
-                        set_sprt_tag(sprt, sprt_code);
+                        SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
+                        setSprt(sprt);
 
                         if (*(u32*)e & 2)
                         {
@@ -2075,7 +2074,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                         setlen(tp, 1);
 
                         tex2 = (u8*)((e[2] * 0x10) + (u32)g_saveLayoutTexTable);
-                        tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, tex_x, *(u16*)(tex2 + 2)) | 0xE1000000;
+                        tp->code[0] = TPAGE_WORD(*(u32*)e, *(u32*)(tex2 + 0x0C) & 3, idx, *(u16*)(tex2 + 2)) | 0xE1000000;
 
                         addPrim(ot, ptr);
                         ptr += sizeof(DR_TPAGE);
@@ -2093,20 +2092,11 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 
                         if (!(*(u32*)(tex + 0x0C) & 7))
                         {
-                            tex_x += 0x20;
+                            idx += 0x20;
                         }
                         else
                         {
-                            /* NOT recovered source - required to match, see the
-                               allocation note in the docblock. The four adds
-                               fold back to one `addiu 0x40` in combine, but
-                               REG_N_REFS is counted earlier (the .flow pass),
-                               so they raise tex_x's allocation priority past
-                               chunk's at zero instruction cost. */
-                            tex_x += 0x10;
-                            tex_x += 0x10;
-                            tex_x += 0x10;
-                            tex_x += 0x10;
+                            idx += 0x40;
                             u0 = 0;
                         }
 
