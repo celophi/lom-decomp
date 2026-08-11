@@ -1,8 +1,9 @@
 #include "akao.h"
 #include "akao_driver.h"
-#include "decomp4.h"
 
 extern s16 D_8003D37C[];
+extern s16 D_8003D47C;
+extern s32 D_8004F754[];
 
 typedef struct
 {
@@ -15,29 +16,17 @@ typedef struct
  * @brief Advance the per-channel pitch/volume/pan LFOs and recompute the SPU
  *        volume and pitch registers for one AKAO sequencer channel.
  * @param channel Channel state to update.
- * @note Match: 99.93%. Residual is 4 register-allocation rows, no structural
- *       diff (280/280 insns): target folds the mastervol address to
- *       `lui v1; lw v1,%lo(g_akao_mastervol_acc)(v1)` (one register, the %hi
- *       tied to the load destination) where we emit `lui v0; lw v1,...(v0)`.
- *       This is [ALLOC-02] in tools/lom-dev-mcp/idioms.md. The tie is blocked
- *       because the 0xFF0000 mask needs its own constant register, which
- *       conflicts with the loaded value; contrast the g_akao_seq_channel0 load
- *       above, whose `& 0x7F` is an andi immediate and which folds correctly.
- *       Retired (measured inert or worse): giving the loaded value its own
- *       carrier, block-local vs function-level scope, splitting the load from
- *       the mask, commuting the &, 0x00FF0000 spelling, unsigned cast,
- *       reordering the site-2 statements, and do/while(0) block boundaries at
- *       every position around the read.
+ * @param channel_bit Channel mask supplied by the caller; unused here.
  */
-void func_80024B00(AkaoChannelState* channel)
+void func_80024B00(AkaoChannelState* channel, s32 channel_bit)
 {
     s32 flags;
     s32 lfo_pitch;
     s32 value;
     s32 pan;
     s32 pitch_value;
-    s32 master_scale;
     s32 pitch_mode;
+    s32 master_scale;
 
     flags = channel->flags;
     lfo_pitch = (((s16*)&channel->unk48)[1] * (channel->volume >> 8)) >> 7;
@@ -146,13 +135,14 @@ void func_80024B00(AkaoChannelState* channel)
         channel->update_flags |= 3;
     }
 
-    if (channel->update_flags & 3)
+    pitch_mode = channel->update_flags & 3;
+    if (pitch_mode)
     {
         lfo_pitch += channel->volume_lfo_value;
         lfo_pitch = (lfo_pitch * (*((u16*)((u8*)g_akao_seq_channel0 + 0x52)) & 0x7F)) >> 7;
         pan = ((channel->pan >> 8) + channel->pan_lfo_value) & 0xFF;
 
-        if (D_8004F754 == 2)
+        if (D_8004F754[0] == 2)
         {
             channel->spu_volume_right = (lfo_pitch * D_8003D47C) >> 15;
             channel->spu_volume_left = channel->spu_volume_right;
@@ -162,13 +152,6 @@ void func_80024B00(AkaoChannelState* channel)
             channel->spu_volume_left = (lfo_pitch * D_8003D37C[pan]) >> 15;
             channel->spu_volume_right = (lfo_pitch * D_8003D37C[pan ^ 0xFF]) >> 15;
         }
-        /* Empty do/while(0): plants a NOTE_INSN_LOOP_BEG immediately before
-         * the branch target below, so gcc 2.8 mostly_true_jump() predicts the
-         * `update_flags & 3` branch taken and fill_eager_delay_slots() clones
-         * the `flags & 0x10` andi into its delay slot instead of hoisting the
-         * fall-through lui. Required to match; removing it costs 2 exact rows
-         * and one instruction. */
-        do { } while (0);
     }
 
     pitch_mode = flags & 0x10;
