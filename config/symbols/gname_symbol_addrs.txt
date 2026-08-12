@@ -60,8 +60,6 @@ g_kanji_cat_entries  = 0x80142CAC;
 g_tab_cursor_pos     = 0x80142E0C;
 g_tab_cursor_entries = 0x80142E14;
 g_kanji_entry_offsets = 0x80142E40;
-// Character-panel resource blob (see PanelDataHeader in gname.h): a header of
-// u32 section offsets followed by a u16 record-offset table and record data.
 g_panel_data_base      = 0x80142EF4; // type:u32 size:4
 g_panel_tbl_off        = 0x80142EF8; // type:u32 size:4
 g_kanji_panel_offset   = 0x80142EFC; // type:u32 size:4
@@ -70,7 +68,6 @@ g_random_names_off     = 0x80142F04; // type:u32 size:4
 g_panel_record_offsets = 0x80142F08; // type:u16 size:0x114
 g_name_entry_tim     = 0x80147494;
 
-// Unnamed globals (named during decomp)
 g_custom_name_buf    = 0x8014F7B0;
 g_name_source_mode   = 0x8014F7E0;
 g_overlay_result     = 0x8014F7E4;
@@ -95,3 +92,6 @@ g_scroll_target      = 0x8014F8C0;
 g_scroll_steps       = 0x8014F8C4;
 g_kanji_cat          = 0x8014F8C8;
 g_char_cursor        = 0x8014F8D0;
+pad_8014F8B1         = 0x8014F8B1;
+pad_8014F8B9         = 0x8014F8B9;
+D_8014F8D4           = 0x8014F8D4;
