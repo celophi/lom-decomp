@@ -115,17 +115,22 @@ def main() -> None:
     data = extract_data_bytes()
 
     if args.check:
-        if not REFERENCE_ASSET.exists():
-            sys.exit(f"ERROR: reference asset not found: {REFERENCE_ASSET}")
-        ref = REFERENCE_ASSET.read_bytes()
-        if data != ref:
-            sys.exit(f"MISMATCH: extracted {len(data)} vs reference {len(ref)}")
+        # Validate that the named symbols partition the whole region contiguously.
+        table_list = list(slices(data))
         total = 0
-        for name, addr, size, _ in slices(data):
+        for name, addr, size, _ in table_list:
             print(f"  0x{addr:08X}  {size:6d}  {name}")
             total += size
-        print(f"OK: {total} bytes across {len(list(slices(data)))} tables "
-              f"match {REFERENCE_ASSET.name}")
+        if total != len(data):
+            sys.exit(f"ERROR: tables sum to {total}, region is {len(data)} bytes")
+        # If the optional splat databin extract is present, confirm bytes too.
+        note = ""
+        if REFERENCE_ASSET.exists():
+            if data != REFERENCE_ASSET.read_bytes():
+                sys.exit(f"MISMATCH vs {REFERENCE_ASSET.name}")
+            note = f"; bytes match {REFERENCE_ASSET.name}"
+        print(f"OK: {total} bytes across {len(table_list)} tables "
+              f"partition the region{note}")
         return
 
     if args.scaffold:
