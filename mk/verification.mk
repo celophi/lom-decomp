@@ -89,6 +89,16 @@ build/overlays/gname/gname.raw: gname
 verify-gname: build/overlays/gname/gname.raw
 	python3 tools/verify_gname_raw.py $< $(ROM_BIN_DIR)/GNAME.BIN
 
+# Diff the generated gname_data answer-key object against the compiled C data
+# object (the objdiff "gname/gname_data" unit) and write the JSON diff.
+.PHONY: verify-gname-data
+verify-gname-data: gname-objdiff
+	@chmod +x $(OBJDIFF_CLI)
+	$(OBJDIFF_CLI) diff --format json -o build/overlays/gname/gname_data_diff.json \
+		-1 build/overlays/gname/target/gname_data.o \
+		-2 build/overlays/gname/src/overlays/gname/gname_data.o
+	@echo "Wrote build/overlays/gname/gname_data_diff.json"
+
 # Extend this aggregate when another compressed overlay becomes byte-perfect.
 verify-bins: verify-gover verify-movie
 	@echo "Verified compressed overlays: $$(cat $(COMPLETE_MANIFEST) 2>/dev/null | tr '\n' ' ')"
