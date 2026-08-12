@@ -15,7 +15,7 @@
 # generate_objdiff_config.py uses that manifest to mark its objdiff units as
 # complete.
 
-.PHONY: verify-bins verify-gover verify-movie
+.PHONY: verify-bins verify-gover verify-movie verify-gname
 
 # --- gover -------------------------------------------------------------------
 
@@ -72,6 +72,22 @@ verify-movie: build/overlays/movie/MOVIE.BIN
 			echo "[FAIL] MOVIE.BIN sha1 mismatch"; \
 			exit 1; \
 		fi
+
+# --- gname -------------------------------------------------------------------
+#
+# GNAME has no working compressor, so we cannot reproduce and SHA1-compare the
+# compressed BIN. Instead we convert the linked ELF to its raw decompressed
+# image and compare that against the decompressed original overlay. GNAME is a
+# work in progress, so this is an informative report (overall match plus the
+# gname_data .data region), not a pass/fail gate - it stays out of verify-bins.
+
+build/overlays/gname/gname.raw: gname
+	@mkdir -p $(@D)
+	$(OBJCOPY) -O binary $(STAGING)/build/overlays/gname/gname.elf $@.tmp
+	mv $@.tmp $@
+
+verify-gname: build/overlays/gname/gname.raw
+	python3 tools/verify_gname_raw.py $< $(ROM_BIN_DIR)/GNAME.BIN
 
 # Extend this aggregate when another compressed overlay becomes byte-perfect.
 verify-bins: verify-gover verify-movie
