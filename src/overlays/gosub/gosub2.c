@@ -27,17 +27,17 @@ typedef enum GosubElementState
 } GosubElementState;
 
 void gosub_build_equipment_list(u32 item_kind); /* extern */
-s32 gosub_handle_input(s32 unused); /* extern */
-void gosub_scroll_to_cursor(void); /* extern */
-s32 gosub_toggle_cursor_selection(void); /* extern */
-s32 gosub_advance_screen_sequence(void); /* extern */
-s32 gosub_are_elements_idle(void); /* extern */
-void func_80145F80(); /* extern */
-void func_80143B64(); /* extern */
-void func_80143BB0(); /* extern */
-void func_80145CEC(); /* extern */
-void func_80146468(); /* extern */
-void func_80146538(); /* extern */
+s32 gosub_handle_input(s32 unused);             /* extern */
+void gosub_scroll_to_cursor(void);              /* extern */
+s32 gosub_toggle_cursor_selection(void);        /* extern */
+s32 gosub_advance_screen_sequence(void);        /* extern */
+s32 gosub_are_elements_idle(void);              /* extern */
+void func_80145F80();                           /* extern */
+void func_80143B64();                           /* extern */
+void func_80143BB0();                           /* extern */
+void func_80145CEC();                           /* extern */
+void func_80146468();                           /* extern */
+void func_80146538();                           /* extern */
 
 typedef struct
 {
@@ -113,23 +113,17 @@ typedef struct
 
 #define GOSUB_EQUIPMENT_RECORD(ptr) (&((GosubSaveData*)(ptr))->equipment[0])
 #define GOSUB_EQUIPMENT_BASE_FROM_INDEX(index) (g_pad_ctx + (index) * 0x40)
-#define GOSUB_EQUIPMENT_FROM_INDEX(index) \
-    GOSUB_EQUIPMENT_RECORD((index) * 0x40 + (s32)g_pad_ctx)
-#define GOSUB_EQUIPMENT_SOURCE_FROM_INDEX(index) \
-    ((u8*)((index) * 0x40 + (s32)g_pad_ctx))
-#define GOSUB_EQUIPMENT_AT(index) \
-    ((GosubEquipmentRecord*)(g_pad_ctx + ((index) * 0x40 + 0xCE0)))
-#define GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(index) \
-    ((GosubEquipmentRecord*)(g_pad_ctx + ((index) << 6) + 0xCE0))
+#define GOSUB_EQUIPMENT_FROM_INDEX(index) GOSUB_EQUIPMENT_RECORD((index) * 0x40 + (s32)g_pad_ctx)
+#define GOSUB_EQUIPMENT_SOURCE_FROM_INDEX(index) ((u8*)((index) * 0x40 + (s32)g_pad_ctx))
+#define GOSUB_EQUIPMENT_AT(index) ((GosubEquipmentRecord*)(g_pad_ctx + ((index) * 0x40 + 0xCE0)))
+#define GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(index) ((GosubEquipmentRecord*)(g_pad_ctx + ((index) << 6) + 0xCE0))
 #define GOSUB_TEXT_BUFFER(index) (((GosubTextBuffer*)g_gosub_text_buffers)[index].text)
 #define GOSUB_TEXT_ARCHIVE ((GosubTextArchive*)&D_8014F27C)
 #define GOSUB_EQUIPMENT_KIND(attributes) (((attributes) >> 8) & 3)
 #define GOSUB_EQUIPMENT_CATEGORY(attributes) (((attributes) >> 10) & 0x3F)
 #define GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) (((attributes) >> 9) & 0x7E)
-#define GOSUB_KIND2_ARCHIVE_ENTRY(attributes) \
-    ((u8*)&D_8014F27C + D_8014F288[0] + \
-        *(u16*)((u8*)D_8014F288 + D_8014F288[0] + \
-            GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) + 0x22))
+#define GOSUB_KIND2_ARCHIVE_ENTRY(attributes)                                                                                                                  \
+    ((u8*)&D_8014F27C + D_8014F288[0] + *(u16*)((u8*)D_8014F288 + D_8014F288[0] + GOSUB_EQUIPMENT_CATEGORY_OFFSET(attributes) + 0x22))
 
 /** @brief UI element pool; element 0 is reserved for the fixed dialog element. */
 extern GosubElement g_gosub_elements[GOSUB_ELEMENT_COUNT];
@@ -240,8 +234,7 @@ extern GosubGroupTable g_gosub_group_counts;
  * @param idx Entry index within the block.
  * @return Pointer to the entry.
  */
-#define ARCHIVE_ENTRY(blk, idx) \
-    ((u8*)&D_8014F27C + (blk) + *(u16*)((u8*)&D_8014F27C + (blk) + (idx) * 2))
+#define ARCHIVE_ENTRY(blk, idx) ((u8*)&D_8014F27C + (blk) + *(u16*)((u8*)&D_8014F27C + (blk) + (idx) * 2))
 
 #define GOSUB_MSG(off) func_80145CEC(GOSUB_MSG_PTR(off))
 
@@ -462,38 +455,31 @@ void gosub_build_equipment_list(u32 item_kind)
         entry = GOSUB_EQUIPMENT_BASE_FROM_INDEX(item_index);
         if (GOSUB_EQUIPMENT_RECORD(entry)->name[0] != 0)
         {
-            if ((item_kind == 3) ||
-                (GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(entry)->attributes.word) == item_kind) ||
-                ((item_kind == 4) &&
-                    (GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(entry)->attributes.word) != 2)))
+            if ((item_kind == 3) || (GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(entry)->attributes.word) == item_kind) ||
+                ((item_kind == 4) && (GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(entry)->attributes.word) != 2)))
             {
 
                 g_gosub_rows[row_count].name = GOSUB_EQUIPMENT_AT(item_index)->name;
 
                 func_80146538(GOSUB_TEXT_BUFFER(row_count),
-                    ARCHIVE_ENTRY(D_8014F280,
-                        GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(item_index)->attributes.half.material & 0x3F));
+                              ARCHIVE_ENTRY(D_8014F280, GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(item_index)->attributes.half.material & 0x3F));
                 /* A typed table base folds the required D_800EC3E2 - 0x1E relocation. */
                 separator_offset = (s32)(D_800EC3E2 - 0x1E) + (D_800EC3E2[1] << 8);
                 func_80146468(GOSUB_TEXT_BUFFER(row_count), D_800EC3E2[0] + separator_offset);
 
                 item_base = GOSUB_EQUIPMENT_BASE_FROM_INDEX(item_index);
-                g_gosub_rows[row_count].unkC_28 =
-                    GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word);
+                g_gosub_rows[row_count].unkC_28 = GOSUB_EQUIPMENT_KIND(GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word);
                 attributes = GOSUB_EQUIPMENT_RECORD(item_base)->attributes.word;
 
                 switch (GOSUB_EQUIPMENT_KIND(attributes))
                 {
                 case 0:
-                    func_80146468(GOSUB_TEXT_BUFFER(row_count),
-                        ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3],
-                            GOSUB_EQUIPMENT_CATEGORY(attributes)));
+                    func_80146468(GOSUB_TEXT_BUFFER(row_count), ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3], GOSUB_EQUIPMENT_CATEGORY(attributes)));
                     g_gosub_rows[row_count].unk10 = GOSUB_EQUIPMENT_AT(item_index)->data.kind0_value;
                     break;
                 case 1:
                     func_80146468(GOSUB_TEXT_BUFFER(row_count),
-                        ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3],
-                            GOSUB_EQUIPMENT_CATEGORY(attributes) + 0xB));
+                                  ARCHIVE_ENTRY(GOSUB_TEXT_ARCHIVE->block_offsets[3], GOSUB_EQUIPMENT_CATEGORY(attributes) + 0xB));
                     record = GOSUB_EQUIPMENT_FROM_INDEX(item_index);
                     for (stat_index = 0; stat_index < 4; stat_index++)
                     {
@@ -504,10 +490,8 @@ void gosub_build_equipment_list(u32 item_kind)
                     item = GOSUB_EQUIPMENT_SOURCE_FROM_INDEX(item_index);
                     record = GOSUB_EQUIPMENT_RECORD(item);
                     g_gosub_rows[row_count].unk10 = record->data.kind2.value;
-                    g_gosub_rows[row_count].unk12[0] =
-                        record->data.kind2.index + (record->data.kind2.group * 14);
-                    func_80146468(GOSUB_TEXT_BUFFER(row_count),
-                        GOSUB_KIND2_ARCHIVE_ENTRY(GOSUB_EQUIPMENT_RECORD(item)->attributes.word));
+                    g_gosub_rows[row_count].unk12[0] = record->data.kind2.index + (record->data.kind2.group * 14);
+                    func_80146468(GOSUB_TEXT_BUFFER(row_count), GOSUB_KIND2_ARCHIVE_ENTRY(GOSUB_EQUIPMENT_RECORD(item)->attributes.word));
                     break;
                 }
 
@@ -1027,8 +1011,7 @@ s32 gosub_are_elements_idle(void)
 
     for (i = 0; i < GOSUB_ELEMENT_COUNT; i++)
     {
-        if (element->attr.f.state == GOSUB_ELEMENT_STATE_ENTERING ||
-            element->attr.f.state == GOSUB_ELEMENT_STATE_EXITING)
+        if (element->attr.f.state == GOSUB_ELEMENT_STATE_ENTERING || element->attr.f.state == GOSUB_ELEMENT_STATE_EXITING)
         {
             return 0;
         }
@@ -1036,4 +1019,53 @@ s32 gosub_are_elements_idle(void)
     }
 
     return 1;
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/RsBVl
+ */
+void func_80143B64(void)
+{
+    s32 temp_v1;
+    s32 var_a1;
+    s32* var_a0;
+    s32 temp;
+
+    var_a0 = &g_gosub_elements;
+    var_a1 = 0;
+    do
+    {
+        temp_v1 = *var_a0;
+        if (temp_v1 & 7)
+        {
+            temp = temp_v1 & ~7;
+            *var_a0 = (temp & ~0x78) | 0x40;
+        }
+        var_a1 += 1;
+        var_a0 += 3;
+    } while (var_a1 < 0x10);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/nVefu
+ */
+void func_80143BB0(void)
+{
+    func_80143C58();
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/dib6Q
+ */
+void func_80143BD0(void) {
+    s32 var_a0;
+    s32* var_v1;
+
+    var_v1 = &g_gosub_elements;
+    var_a0 = 0;
+    do {
+        var_a0 += 1;
+        *var_v1 &= ~7;
+        var_v1 += 3;
+    } while (var_a0 < 0x10);
 }
