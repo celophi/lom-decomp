@@ -151,6 +151,7 @@ extern s32 D_8017097C;
 extern s32 g_gosub_row_height;
 extern s32 g_gosub_scroll_y;
 extern s32 g_gosub_scroll_target_y;
+extern s32 D_801709A4;
 
 /**
  * @brief One row of the item list built by the gosub screen builders.
@@ -1057,15 +1058,41 @@ void func_80143BB0(void)
 /**
  * decomp.me (100%) https://decomp.me/scratch/dib6Q
  */
-void func_80143BD0(void) {
+void func_80143BD0(void)
+{
     s32 var_a0;
     s32* var_v1;
 
     var_v1 = &g_gosub_elements;
     var_a0 = 0;
-    do {
+    do
+    {
         var_a0 += 1;
         *var_v1 &= ~7;
         var_v1 += 3;
     } while (var_a0 < 0x10);
+}
+
+/**
+ * decomp.me (100%) https://decomp.me/scratch/X1pXK
+ */
+s32* func_80143C04(void)
+{
+    s32 temp_v1;
+    s32 var_a1;
+    s32* var_a0;
+
+    var_a0 = &D_801709A4;
+
+    for (var_a1 = 1; var_a1 < 0x10; var_a1++, var_a0 += 3)
+    {
+        temp_v1 = *var_a0;
+        if (!(temp_v1 & 7))
+        {
+            *var_a0 = (temp_v1 & ~7) | 1;
+            return var_a0;
+        }
+    }
+
+    return &g_gosub_elements;
 }
