@@ -21,6 +21,10 @@ output/
 src/unk*.c
 src/overlays/*/unk*.c
 
+# Generated data-initializer fragments (copyrighted values filled from disc)
+*.gen.inc
+src/overlays/*/gen/
+
 tools/splat_ext/__pycache__/
 
 assets/

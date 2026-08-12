@@ -15,19 +15,28 @@
 # refresh /staging. Run `make recopy` to force a refresh.
 COPY_SENTINEL := $(STAGING)/.sources_copied
 
-# Project inputs needed by the Make build.
-STAGE_PATHS := \
+# Project inputs that must exist before staging (splat generates asm/ and
+# linker/; the rest are checked in).
+STAGE_PATHS_REQUIRED := \
 	src \
 	asm \
 	include \
 	linker \
-	assets \
 	tools/maspsx
+
+# Optional inputs are staged only when present. `assets/` holds gitignored
+# binary data (splat databin / asset_src) and is absent when no overlay embeds
+# such data. Guarding with $(wildcard) keeps it out of the prerequisite list, so
+# a missing assets/ does not abort staging with "No rule to make target 'assets'".
+STAGE_PATHS_OPTIONAL := assets
+
+# Project inputs needed by the Make build (required plus any present optional).
+STAGE_PATHS := $(STAGE_PATHS_REQUIRED) $(wildcard $(STAGE_PATHS_OPTIONAL))
 
 # These paths are wholly managed by the Makefile. Replacing them removes files
 # deleted on the host while preserving /staging/build, /staging/mcp-work, and
 # any tool-specific staging owned by developer tooling.
-STAGE_MANAGED_PATHS := src asm include linker assets tools/maspsx
+STAGE_MANAGED_PATHS := $(STAGE_PATHS)
 
 # Text inputs that must use Linux line endings in the staged tree.
 STAGE_TEXT_FIND_EXPR := \
@@ -65,7 +74,7 @@ $(COPY_SENTINEL): $(STAGE_INPUTS)
 			exit 1; \
 		fi; \
 		rm -f "$$staging_abs/.sources_copied"; \
-		for path in $(STAGE_PATHS); do \
+		for path in $(STAGE_PATHS_REQUIRED); do \
 			if [ ! -e "$$path" ]; then \
 				echo "Missing required staging input: $$path" >&2; \
 				exit 1; \

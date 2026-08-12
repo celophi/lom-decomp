@@ -68,11 +68,20 @@ base-objects: $(COPY_SENTINEL) $(OBJDIFF_BASE_OBJS)
 
 OBJDIFF_CLI ?= tools/objdiff/objdiff-cli-linux-x86_64
 OBJDIFF_CONFIG_GENERATOR ?= tools/objdiff/generate_objdiff_config.py
+PROGRESS_REPORT ?= build/progress.json
 
 objdiff-objects: target-objects base-objects $(addsuffix -objdiff,$(OVERLAYS))
 
 objdiff-config:
 	python3 $(OBJDIFF_CONFIG_GENERATOR)
+
+# Generate the objdiff progress report (build/progress.json). Mirrors the CI
+# "Generate progress report" step.
+.PHONY: progress
+progress: objdiff-objects objdiff-config
+	@chmod +x $(OBJDIFF_CLI)
+	$(OBJDIFF_CLI) report generate -o $(PROGRESS_REPORT)
+	@echo "Wrote $(PROGRESS_REPORT)"
 
 # Run objdiff diff on every unit in objdiff.json and write JSON results under
 # build/diffs/, mirroring the unit name as a path (e.g. main/cdrom.json).
