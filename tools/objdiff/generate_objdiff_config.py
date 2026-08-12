@@ -46,6 +46,27 @@ def extract_c_subsegments(config: dict) -> list[str]:
     return names
 
 
+def extract_data_subsegments(config: dict) -> list[str]:
+    """Pull out names of standalone data translation units.
+
+    Matches [offset, '.data'|'databin', name] subsegments whose name is not also
+    a 'c' subsegment - i.e. data built by its own C file (e.g. gname_data),
+    which has a compiled base object and a generated target object to diff.
+    A '.sdata'/'.data' marker sharing the 'c' file's name is skipped.
+    """
+    c_names = set(extract_c_subsegments(config))
+    names = []
+    for segment in config.get("segments", []):
+        if not isinstance(segment, dict):
+            continue
+        for subseg in segment.get("subsegments", []):
+            if (isinstance(subseg, list) and len(subseg) >= 3
+                    and subseg[1] in (".data", "databin")
+                    and subseg[2] not in c_names):
+                names.append(subseg[2])
+    return names
+
+
 def should_skip(file_name: str) -> bool:
     return any(part in SKIP_PATHS for part in file_name.split("/"))
 
@@ -97,6 +118,19 @@ def build_overlay_units(config: dict, overlay_name: str, complete: bool = False)
 
     units = []
     for name in extract_c_subsegments(config):
+        if should_skip(name):
+            continue
+        units.append({
+            "name": f"{overlay_name}/{name}",
+            "target_path": f"{build_path}/target/{name}.o",
+            "base_path": f"{build_path}/{src_path}/{name}.o",
+            "metadata": _metadata(),
+        })
+
+    # Standalone data translation units (e.g. gname_data): the target object is
+    # generated (asm/overlays/<ov>/<name>.s, an answer-key of the original
+    # bytes); the base is the compiled C data file.
+    for name in extract_data_subsegments(config):
         if should_skip(name):
             continue
         units.append({
