@@ -35,6 +35,7 @@ s32 gosub_are_elements_idle(void);              /* extern */
 void func_80145F80();                           /* extern */
 void func_80143B64();                           /* extern */
 void func_80143BB0();                           /* extern */
+void func_80143C58();                           /* extern */
 void func_80145CEC();                           /* extern */
 void func_80146468();                           /* extern */
 void func_80146538();                           /* extern */
@@ -57,6 +58,33 @@ typedef struct
     u32 unk4_9 : 23;
     void* draw_handler;
 } GosubElement;
+
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s16 unk8;
+    s16 unkA;
+    s16 unkC;
+    u16 unkE;
+} StructS0;
+
+typedef struct
+{
+    s32 unk0;
+    u8 pad4[0x40AE];
+    s16 unk40B2;
+    u8 pad40B4[4];
+    StructS0* unk40B8;
+} Arg0Struct;
+
+typedef StructS0* (*Unk6Func)();
+
+s32 func_8001A5D4(s32, void*);                  /* extern */
+s32 func_8001C56C(void*, s32, s32, s32, s32);  /* extern */
+StructS0* func_801443E4();                      /* extern */
+StructS0* func_80144544();                      /* extern */
+void func_801448EC(void);                       /* extern */
 
 /** @brief Packed four-byte record stored in the combination table. */
 typedef struct
@@ -1095,4 +1123,339 @@ s32* func_80143C04(void)
     }
 
     return &g_gosub_elements;
+}
+
+/**
+ * @see decomp.me (97.70%)
+ * @note Remaining differences are isolated CSE and expression-order rows; see working/func_80143C58/status.md.
+ */
+void func_80143C58(Arg0Struct* arg0)
+{
+    StructS0* var_s0;
+    s32 temp_s1;
+    s32 temp_s2;
+    Arg0Struct* var_s4;
+    u32* var_s5;
+    u32 var_s6;
+    u32 var_s7;
+    s32 sp80;
+    s32 sp20[24];
+    u32 temp_t0;
+    s32 temp_t1;
+    u8 temp_a0;
+    u32 temp_a1;
+    u32 temp_a2;
+    u32 temp_a3;
+    s32 temp_v0;
+    s32 temp_v1;
+    s32 temp_mult;
+    StructS0* var_a0;
+    StructS0* var_s0_2;
+    u32 temp_t0_2;
+    u32 temp_t0_3;
+    u32 temp_a0_2;
+    s32 temp_v1_2;
+    s32 temp_a0_3;
+    s32 var_v1;
+    s32 temp_a3_2;
+    s32 var_v0;
+    s32 temp_a3_3;
+    u32 temp_v0_3;
+    u32 temp_a0_4;
+    s32 temp_a0_5;
+    s32 var_v1_2;
+    s32 temp_a3_5;
+    s32 var_v0_2;
+    s32 temp_a3_6;
+    u32 temp_v0_5;
+    u32 temp_v1_3;
+
+    var_s0 = arg0->unk40B8;
+    var_s4 = arg0;
+
+    if (arg0->unk40B2 != 0)
+    {
+        func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
+    }
+    else
+    {
+        func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
+    }
+
+    var_s5 = &g_gosub_elements;
+    sp80 = 0;
+    var_s6 = 0x00FFFFFF;
+    var_s7 = 0xFF000000;
+
+    for (; sp80 < 0x10; sp80++)
+    {
+        temp_a3 = *var_s5;
+        if (temp_a3 & 7)
+        {
+            var_a0 = var_s0;
+
+            if (*(Unk6Func*)((u8*)var_s5 + 8) == (Unk6Func)func_801448EC)
+            {
+                temp_t0 = *(u32*)((u8*)var_s5 + 4);
+                temp_t1 = (temp_t0 >> 1) & 0xFF;
+
+                temp_mult = g_gosub_row_count * g_gosub_row_height;
+                if ((g_gosub_scroll_y + temp_t1) < temp_mult)
+                {
+                    var_s0 = func_801443E4(var_a0, var_s4, (((temp_a3 >> 7) & 0x1FF) + ((temp_a3 >> 24) | ((temp_t0 & 1) << 8))) - 0x10,
+                                              (*((u8*)var_s5 + 2)) + temp_t1, 0);
+                }
+                if (g_gosub_scroll_y != 0)
+                {
+                    temp_t0_2 = *var_s5;
+                    var_s0 = func_801443E4(var_s0, var_s4,
+                                              (((temp_t0_2 >> 7) & 0x1FF) + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (temp_t0_2 >> 24))) - 0x10,
+                                              (*((u8*)var_s5 + 2)), 1);
+                }
+                func_8001A5D4((s32)var_s0, sp20);
+
+                var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
+                var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | ((s32)var_s0 & var_s6));
+
+                var_s0 = (StructS0*)((u8*)var_s0 + 0x40);
+
+                if (g_gosub_row_count != 0)
+                {
+                    var_s0->unk4 = 0xFFFF00;
+                    ((u8*)var_s0)[3] = 3;
+                    ((u8*)var_s0)[7] = 0x60;
+                    var_s0->unkC = 6;
+                    temp_v0 = (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF;
+                    var_s0->unkE = (u16)((s32)(temp_v0 * (temp_v0 / g_gosub_row_height)) / g_gosub_row_count);
+                    temp_v1_2 = *(u32*)((u8*)var_s5 + 4);
+                    temp_a0 = (temp_v1_2 >> 1) & 0xFF;
+                    if ((s16)var_s0->unkE >= (s16)(temp_a0 - 2))
+                    {
+                        var_s0->unkE = temp_a0;
+                    }
+                    var_s0->unk8 = 1;
+                    var_s0->unkA =
+                        (s16)((s32)(((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) * (g_gosub_scroll_y / g_gosub_row_height)) / g_gosub_row_count);
+                    var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
+
+                    temp_v1 = (s32)var_s0 & var_s6;
+                    var_s0 = (StructS0*)((u8*)var_s0 + 0x10);
+                    var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | temp_v1);
+                }
+                temp_t0_3 = *var_s5;
+                var_s0 = func_80144544(var_s0, var_s4,
+                                          ((temp_t0_3 >> 7) & 0x1FF) + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (temp_t0_3 >> 24)) + 3,
+                                          (*((u8*)var_s5 + 2)), 0xA, (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                var_a0 = var_s0;
+            }
+            func_8001A5D4((s32)var_a0, sp20);
+            var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
+            var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | ((s32)var_s0 & var_s6));
+
+            temp_a0_2 = *var_s5;
+            temp_v1_2 = temp_a0_2 & 7;
+
+            var_s0 = (StructS0*)((u8*)var_s0 + 0x40);
+
+            switch (temp_v1_2)
+            {
+            case 1:
+                temp_a1 = *(u32*)((u8*)var_s5 + 4);
+                temp_a2 = ((temp_a1 & 1) << 8) | (temp_a0_2 >> 24);
+                temp_a0_3 = (temp_a0_2 >> 3) & 0xF;
+                var_v1 = temp_a2 * temp_a0_3;
+                if (var_v1 < 0)
+                {
+                    var_v1 += 7;
+                }
+                temp_a3_2 = (temp_a1 >> 1) & 0xFF;
+                var_v0 = temp_a3_2 * temp_a0_3;
+                temp_s1 = var_v1 >> 3;
+                if (var_v0 < 0)
+                {
+                    var_v0 += 7;
+                }
+                temp_s2 = var_v0 >> 3;
+                temp_a3_3 = (s32)(temp_a3_2 - temp_s2);
+
+                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2), var_s4,
+                                          ((*var_s5 >> 7) & 0x1FF) +
+                                              (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (*var_s5 >> 24)) - temp_s1) / 2,
+                                          (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
+                                          arg0->unk40B2);
+                temp_v0_3 = *var_s5;
+                temp_a0_4 = (temp_v0_3 & ~0x78) | (((((temp_v0_3 >> 3) & 0xF) + 1) & 0xF) * 8);
+                *var_s5 = temp_a0_4;
+                if (((temp_a0_4 >> 3) & 0xF) == 8)
+                {
+                    *var_s5 = (temp_a0_4 & ~7) | 2;
+                }
+                break;
+
+            case 2:
+                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, 0, 0), var_s4, (*var_s5 >> 7) & 0x1FF,
+                                          (*((u8*)var_s5 + 2)), (*var_s5 >> 24) | ((*(u32*)((u8*)var_s5 + 4) & 1) << 8),
+                                          (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                break;
+
+            case 3:
+                temp_a1 = *(u32*)((u8*)var_s5 + 4);
+                temp_a2 = ((temp_a1 & 1) << 8) | (temp_a0_2 >> 24);
+                temp_a0_5 = (temp_a0_2 >> 3) & 0xF;
+                var_v1_2 = temp_a2 * temp_a0_5;
+                if (var_v1_2 < 0)
+                {
+                    var_v1_2 += 7;
+                }
+                temp_a3_5 = (temp_a1 >> 1) & 0xFF;
+                var_v0_2 = temp_a3_5 * temp_a0_5;
+                temp_s1 = var_v1_2 >> 3;
+                if (var_v0_2 < 0)
+                {
+                    var_v0_2 += 7;
+                }
+                temp_s2 = var_v0_2 >> 3;
+                temp_a3_6 = (s32)(temp_a3_5 - temp_s2);
+
+                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2), var_s4,
+                                          ((*var_s5 >> 7) & 0x1FF) +
+                                              (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (*var_s5 >> 24)) - temp_s1) / 2,
+                                          (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
+                                          arg0->unk40B2);
+                temp_v0_5 = *var_s5;
+                temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
+                *var_s5 = temp_v1_3;
+                if (!((temp_v1_3 >> 3) & 0xF))
+                {
+                    *var_s5 = temp_v1_3 & ~7;
+                }
+                D_8016B948 = 0;
+                break;
+            }
+        }
+
+        var_s5 += 3;
+    }
+
+    arg0->unk40B8 = var_s0;
+}
+
+/** @brief TODO: as-yet-unnamed main-module global (frame/animation counter);
+ *         its low bits drive the marker color. */
+extern s32 D_800F22AC;
+
+/**
+ * @brief Packed GPU packet built by func_801443E4: a Psy-Q LINE_F4 (0x1C bytes,
+ *        code 0x4C, pad 0x55555555) whose first 0x14 bytes are copied into an
+ *        immediately-following POLY_F3 (code 0x20). Field names mirror the
+ *        LINE_F4 layout in include/psyq/libgpu.h.
+ */
+typedef struct
+{
+    u8 addr[3]; /* 0x00 P_TAG addr (24-bit, set via addPrim) */
+    u8 len;     /* 0x03 P_TAG len */
+    u8 r;       /* 0x04 */
+    u8 g;       /* 0x05 */
+    u8 b;       /* 0x06 */
+    u8 code;    /* 0x07 */
+    s16 x0;     /* 0x08 */
+    s16 y0;     /* 0x0A */
+    s16 x1;     /* 0x0C */
+    s16 y1;     /* 0x0E */
+    s16 x2;     /* 0x10 */
+    s16 y2;     /* 0x12 */
+    s16 x3;     /* 0x14 */
+    s16 y3;     /* 0x16 */
+    u32 mask;   /* 0x18 LINE_F4 pad word (0x55555555) */
+} GosubPrim;    /* 0x1C */
+
+/**
+ * @brief Build a marker primitive (LINE_F4 quad outline + POLY_F3 fill) and
+ *        link both into the ordering table @p ot.
+ *
+ * The LINE_F4 receives a color derived from the low bits of D_800F22AC; @p flag
+ * selects one of two vertical vertex arrangements about center (@p x, @p y).
+ * The POLY_F3 is seeded by copying the LINE_F4's first 0x14 bytes, then its
+ * len/code/color are overwritten.
+ *
+ * @param prim Destination packet buffer (LINE_F4 immediately followed by POLY_F3 space).
+ * @param ot   Ordering-table tag both primitives are linked into (addPrim idiom).
+ * @param x    Center X coordinate.
+ * @param y    Center Y coordinate.
+ * @param flag Selects the up vs down vertex arrangement.
+ * @return Pointer just past the POLY_F3 (next free packet slot).
+ *
+ * @note WIP - best match 86.02% (gcc 2.7.2 CDK). Residual is a register-alloc
+ *       cascade: the target moves the packet pointer to t0 and parks D_800F22AC
+ *       in a0 (evicting arg0 from a0), whereas GCC here keeps arg0 in a0 and
+ *       D_800F22AC in a1, permuting the whole a0/a1/t0/t1 assignment. The clean
+ *       real-type variant (LINE_F4/POLY_F3 + setLineF4/addPrim/SET_BGR0) sits at
+ *       78.85%; see working/func_801443E4/ for both and the analysis.
+ */
+StructS0 *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
+{
+    s32 color;
+    s16 tmp_x;
+    s16 tmp_y;
+    u32 i;
+    u8 *p;
+    u8 *dst;
+    GosubPrim *prim2;
+
+    prim->len = 6;
+    (prim2 = prim)->code = 0x4C;
+    prim2->mask = 0x55555555;
+    if (D_800F22AC & 0x10)
+    {
+        color = D_800F22AC & 0xF;
+    }
+    else
+    {
+        color = (~D_800F22AC) & 0xF;
+    }
+    color = (color * 4) + 0x70;
+    prim2->b = color;
+    prim2->g = color;
+    prim2->r = color;
+    if (flag != 0)
+    {
+        prim2->y3 = y - 8;
+        prim2->y0 = y - 8;
+        tmp_x = x - 6;
+        tmp_y = y + 4;
+    }
+    else
+    {
+        prim2->y3 = y + 8;
+        prim2->y0 = y + 8;
+        tmp_x = x - 6;
+        tmp_y = y - 4;
+    }
+    prim2->x1 = tmp_x;
+    prim2->x3 = x;
+    prim2->x0 = x;
+    prim2->y1 = tmp_y;
+    prim2->x2 = x + 6;
+    prim2->y2 = tmp_y;
+
+    p = (u8 *)prim2;
+    prim2 = (GosubPrim *)(p + 0x1C);
+    dst = (u8 *)prim2;
+    *(u32 *)p = (*(u32 *)p & 0xFF000000) | (*ot & 0xFFFFFF);
+    i = 0;
+    *ot = (*ot & 0xFF000000) | ((u32)p & 0xFFFFFF);
+    do
+    {
+        i += 1;
+        *dst = *p;
+        p += 1;
+        dst += 1;
+    } while (i < 0x14U);
+
+    prim2->len = 4;
+    *(u32 *)&prim2->r = 0;
+    prim2->code = 0x20;
+    *(u32 *)prim2 = (*(u32 *)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((u32)prim2 & 0xFFFFFF);
+    return (StructS0 *)((u8 *)prim2 + 0x14);
 }
