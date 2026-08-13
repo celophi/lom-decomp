@@ -64,7 +64,7 @@ u32 g_kanji_entry_offsets[] = {
 #include "gen/g_kanji_entry_offsets.inc"
 };
 
-/* --- Character-panel data blob header (see PanelDataHeader in gname.c) -------
+/* --- Character-panel data blob header (see GnameDataHeader in gname.c) -------
  * These five u32 byte-offset fields stay as separate contiguous symbols; the
  * code derives the blob base from each field's own address at runtime. */
 
