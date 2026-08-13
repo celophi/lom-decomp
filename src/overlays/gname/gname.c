@@ -57,8 +57,8 @@
  * `name_is_blank` is a special case: it walks byte-by-byte (not
  * glyph-by-glyph) and treats both ASCII space (0x20) and byte 0x80 as blank.
  */
-#define CHAR_SPACE 0x20      /**< ASCII space; blank glyph in name buffers. */
-#define CHAR_ALT_BLANK 0x80 /**< Alternate byte value treated as blank. */
+#define NAME_BYTE_SPACE 0x20     /**< ASCII space; blank glyph in name buffers. */
+#define NAME_BYTE_ALT_BLANK 0x80 /**< Alternate byte value treated as blank. */
 
 /* True if byte is a custom 2-byte DBCS-style lead byte */
 #define IS_DBCS_LEAD_BYTE(c) ((c) >= 0x19 && (c) <= 0x1F)
@@ -585,8 +585,8 @@ static void name_copy(u8* dst, const u8* src);
 static void recalc_name_width(void);
 static void name_prepend_glyph(u8* buffer, u16 new_glyph);
 static s32 name_pop_first_glyph(u8* name);
-static void* render_glyph_append_anim(void* prim_cursor, RenderContext* ctx);
-static s32 name_is_blank(u8* name);
+static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render_ctx);
+static s32 name_is_blank(const u8* name_buf);
 
 /** Overlay header identifier stored immediately before @ref gname_run. */
 const s32 g_gname_overlay_id = 5;
@@ -2677,38 +2677,28 @@ static s32 name_pop_first_glyph(u8* name)
 
 /**
  * @brief Render and advance the glyph-append animation.
- *
- * Emits every populated glyph slot in the current frame. When the frame timer
- * expires, advances to the next frame or returns to the resting frame.
- *
- * @param prim_cursor Primitive-buffer cursor (next free byte).
- * @param ctx  Render context; @ref GNAME_OT_GLYPH_APPEND_ANIM (offset 0x30) is
- *             the OT head tag for this layer.
- * @return Primitive-buffer cursor advanced past the emitted SPRTs.
- *
+ * @param packet_cursor Next free primitive-buffer address.
+ * @param render_ctx Current render context.
+ * @return Updated primitive-buffer cursor.
  * @see decomp.me (100%) https://decomp.me/scratch/3TQG6
  */
-static void* render_glyph_append_anim(void* prim_cursor, RenderContext* ctx)
+static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render_ctx)
 {
-    u8 frame = g_glyph_append_anim_frame;
-    void* packet_cursor = prim_cursor;
-    const GlyphAppendAnimFrame* anim_frames;
-    RenderContext* ot_ctx = ctx;
+    u8 frame_index = g_glyph_append_anim_frame;
     s32 slot_index;
-    /* Separate X and Y cursors preserve the target's parallel pointer walk. */
-    const GlyphAppendAnimSlot* slot = g_glyph_append_anim_frames[frame].slots;
-    const u8* slot_y = &slot->y;
+    const GlyphAppendAnimSlot* slot = g_glyph_append_anim_frames[frame_index].slots;
     s16 glyph_id;
 
-    for (slot_index = 0; slot_index < GLYPH_APPEND_ANIM_SLOT_COUNT; slot_index++, slot_y += sizeof(GlyphAppendAnimSlot), slot++)
+    for (slot_index = 0; slot_index < GLYPH_APPEND_ANIM_SLOT_COUNT; slot_index++, slot++)
     {
-        s32 raw_glyph_id = slot_y[1];
-        /* This s32 -> s16 -> u8 path preserves a separate argument-register move. */
+        s32 raw_glyph_id = slot->glyph;
+
         glyph_id = raw_glyph_id;
+
         if (glyph_id != 0)
         {
-            packet_cursor = emit_glyph_sprt(packet_cursor, &ot_ctx->ot[GNAME_OT_GLYPH_APPEND_ANIM], (u8)glyph_id,
-                                            slot->x + GLYPH_APPEND_ANIM_X_BIAS, slot_y[0] + GLYPH_APPEND_ANIM_Y_BIAS, 0, 0, 0);
+            packet_cursor = emit_glyph_sprt(packet_cursor, &render_ctx->ot[GNAME_OT_GLYPH_APPEND_ANIM], (u8)glyph_id,
+                                            slot->x + GLYPH_APPEND_ANIM_X_BIAS, slot->y + GLYPH_APPEND_ANIM_Y_BIAS, 0, 0, FALSE);
         }
     }
 
@@ -2730,35 +2720,28 @@ static void* render_glyph_append_anim(void* prim_cursor, RenderContext* ctx)
             return packet_cursor;
         }
 
-        anim_frames = g_glyph_append_anim_frames;
-        g_glyph_append_anim_timer = anim_frames[g_glyph_append_anim_frame].slots[0].pad;
+        g_glyph_append_anim_timer = g_glyph_append_anim_frames[g_glyph_append_anim_frame].slots[0].pad;
     }
 
     return packet_cursor;
 }
 
 /**
- * @brief Test whether a name buffer is empty or contains only blanks.
- *
- * Walks @p name byte-by-byte (note: not glyph-by-glyph). The buffer is
- * blank if every byte is either ASCII space (@ref CHAR_SPACE) or the
- * alternate blank byte (@ref CHAR_ALT_BLANK). An empty (immediate-null)
- * buffer also counts as blank.
- *
- * @param name Null-terminated name buffer.
- * @return 1 if blank, 0 otherwise.
+ * @brief Check whether a name contains only blank bytes.
+ * @param name_buf Null-terminated name buffer.
+ * @return TRUE if blank, otherwise FALSE.
  * @see https://decomp.me/scratch/rdbBA (100%)
  */
-static s32 name_is_blank(u8* name)
+static s32 name_is_blank(const u8* name_buf)
 {
-    while (*name)
+    while (*name_buf != '\0')
     {
-        if (*name != CHAR_SPACE && *name != CHAR_ALT_BLANK)
+        if ((*name_buf != NAME_BYTE_SPACE) && (*name_buf != NAME_BYTE_ALT_BLANK))
         {
             return FALSE;
         }
 
-        name++;
+        name_buf++;
     }
 
     return TRUE;
