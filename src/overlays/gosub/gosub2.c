@@ -35,6 +35,7 @@ s32 gosub_are_elements_idle(void);              /* extern */
 void func_80145F80();                           /* extern */
 void func_80143B64();                           /* extern */
 void func_80143BB0();                           /* extern */
+void func_80143C58();                           /* extern */
 void func_80145CEC();                           /* extern */
 void func_80146468();                           /* extern */
 void func_80146538();                           /* extern */
@@ -57,6 +58,33 @@ typedef struct
     u32 unk4_9 : 23;
     void* draw_handler;
 } GosubElement;
+
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s16 unk8;
+    s16 unkA;
+    s16 unkC;
+    u16 unkE;
+} StructS0;
+
+typedef struct
+{
+    s32 unk0;
+    u8 pad4[0x40AE];
+    s16 unk40B2;
+    u8 pad40B4[4];
+    StructS0* unk40B8;
+} Arg0Struct;
+
+typedef StructS0* (*Unk6Func)();
+
+s32 func_8001A5D4(s32, void*);                  /* extern */
+s32 func_8001C56C(void*, s32, s32, s32, s32);  /* extern */
+StructS0* func_801443E4();                      /* extern */
+StructS0* func_80144544();                      /* extern */
+void func_801448EC(void);                       /* extern */
 
 /** @brief Packed four-byte record stored in the combination table. */
 typedef struct
@@ -1095,4 +1123,219 @@ s32* func_80143C04(void)
     }
 
     return &g_gosub_elements;
+}
+
+/**
+ * @see decomp.me (97.70%)
+ * @note Remaining differences are isolated CSE and expression-order rows; see working/func_80143C58/status.md.
+ */
+void func_80143C58(Arg0Struct* arg0)
+{
+    StructS0* var_s0;
+    s32 temp_s1;
+    s32 temp_s2;
+    Arg0Struct* var_s4;
+    u32* var_s5;
+    u32 var_s6;
+    u32 var_s7;
+    s32 sp80;
+    s32 sp20[24];
+    u32 temp_t0;
+    s32 temp_t1;
+    u8 temp_a0;
+    u32 temp_a1;
+    u32 temp_a2;
+    u32 temp_a3;
+    s32 temp_v0;
+    s32 temp_v1;
+    s32 temp_mult;
+    StructS0* var_a0;
+    StructS0* var_s0_2;
+    u32 temp_t0_2;
+    u32 temp_t0_3;
+    u32 temp_a0_2;
+    s32 temp_v1_2;
+    s32 temp_a0_3;
+    s32 var_v1;
+    s32 temp_a3_2;
+    s32 var_v0;
+    s32 temp_a3_3;
+    u32 temp_v0_3;
+    u32 temp_a0_4;
+    s32 temp_a0_5;
+    s32 var_v1_2;
+    s32 temp_a3_5;
+    s32 var_v0_2;
+    s32 temp_a3_6;
+    u32 temp_v0_5;
+    u32 temp_v1_3;
+
+    var_s0 = arg0->unk40B8;
+    var_s4 = arg0;
+
+    if (arg0->unk40B2 != 0)
+    {
+        func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
+    }
+    else
+    {
+        func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
+    }
+
+    var_s5 = &g_gosub_elements;
+    sp80 = 0;
+    var_s6 = 0x00FFFFFF;
+    var_s7 = 0xFF000000;
+
+    for (; sp80 < 0x10; sp80++)
+    {
+        temp_a3 = *var_s5;
+        if (temp_a3 & 7)
+        {
+            var_a0 = var_s0;
+
+            if (*(Unk6Func*)((u8*)var_s5 + 8) == (Unk6Func)func_801448EC)
+            {
+                temp_t0 = *(u32*)((u8*)var_s5 + 4);
+                temp_t1 = (temp_t0 >> 1) & 0xFF;
+
+                temp_mult = g_gosub_row_count * g_gosub_row_height;
+                if ((g_gosub_scroll_y + temp_t1) < temp_mult)
+                {
+                    var_s0 = func_801443E4(var_a0, var_s4, (((temp_a3 >> 7) & 0x1FF) + ((temp_a3 >> 24) | ((temp_t0 & 1) << 8))) - 0x10,
+                                              (*((u8*)var_s5 + 2)) + temp_t1, 0);
+                }
+                if (g_gosub_scroll_y != 0)
+                {
+                    temp_t0_2 = *var_s5;
+                    var_s0 = func_801443E4(var_s0, var_s4,
+                                              (((temp_t0_2 >> 7) & 0x1FF) + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (temp_t0_2 >> 24))) - 0x10,
+                                              (*((u8*)var_s5 + 2)), 1);
+                }
+                func_8001A5D4((s32)var_s0, sp20);
+
+                var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
+                var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | ((s32)var_s0 & var_s6));
+
+                var_s0 = (StructS0*)((u8*)var_s0 + 0x40);
+
+                if (g_gosub_row_count != 0)
+                {
+                    var_s0->unk4 = 0xFFFF00;
+                    ((u8*)var_s0)[3] = 3;
+                    ((u8*)var_s0)[7] = 0x60;
+                    var_s0->unkC = 6;
+                    temp_v0 = (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF;
+                    var_s0->unkE = (u16)((s32)(temp_v0 * (temp_v0 / g_gosub_row_height)) / g_gosub_row_count);
+                    temp_v1_2 = *(u32*)((u8*)var_s5 + 4);
+                    temp_a0 = (temp_v1_2 >> 1) & 0xFF;
+                    if ((s16)var_s0->unkE >= (s16)(temp_a0 - 2))
+                    {
+                        var_s0->unkE = temp_a0;
+                    }
+                    var_s0->unk8 = 1;
+                    var_s0->unkA =
+                        (s16)((s32)(((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) * (g_gosub_scroll_y / g_gosub_row_height)) / g_gosub_row_count);
+                    var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
+
+                    temp_v1 = (s32)var_s0 & var_s6;
+                    var_s0 = (StructS0*)((u8*)var_s0 + 0x10);
+                    var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | temp_v1);
+                }
+                temp_t0_3 = *var_s5;
+                var_s0 = func_80144544(var_s0, var_s4,
+                                          ((temp_t0_3 >> 7) & 0x1FF) + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (temp_t0_3 >> 24)) + 3,
+                                          (*((u8*)var_s5 + 2)), 0xA, (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                var_a0 = var_s0;
+            }
+            func_8001A5D4((s32)var_a0, sp20);
+            var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
+            var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | ((s32)var_s0 & var_s6));
+
+            temp_a0_2 = *var_s5;
+            temp_v1_2 = temp_a0_2 & 7;
+
+            var_s0 = (StructS0*)((u8*)var_s0 + 0x40);
+
+            switch (temp_v1_2)
+            {
+            case 1:
+                temp_a1 = *(u32*)((u8*)var_s5 + 4);
+                temp_a2 = ((temp_a1 & 1) << 8) | (temp_a0_2 >> 24);
+                temp_a0_3 = (temp_a0_2 >> 3) & 0xF;
+                var_v1 = temp_a2 * temp_a0_3;
+                if (var_v1 < 0)
+                {
+                    var_v1 += 7;
+                }
+                temp_a3_2 = (temp_a1 >> 1) & 0xFF;
+                var_v0 = temp_a3_2 * temp_a0_3;
+                temp_s1 = var_v1 >> 3;
+                if (var_v0 < 0)
+                {
+                    var_v0 += 7;
+                }
+                temp_s2 = var_v0 >> 3;
+                temp_a3_3 = (s32)(temp_a3_2 - temp_s2);
+
+                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2), var_s4,
+                                          ((*var_s5 >> 7) & 0x1FF) +
+                                              (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (*var_s5 >> 24)) - temp_s1) / 2,
+                                          (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
+                                          arg0->unk40B2);
+                temp_v0_3 = *var_s5;
+                temp_a0_4 = (temp_v0_3 & ~0x78) | (((((temp_v0_3 >> 3) & 0xF) + 1) & 0xF) * 8);
+                *var_s5 = temp_a0_4;
+                if (((temp_a0_4 >> 3) & 0xF) == 8)
+                {
+                    *var_s5 = (temp_a0_4 & ~7) | 2;
+                }
+                break;
+
+            case 2:
+                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, 0, 0), var_s4, (*var_s5 >> 7) & 0x1FF,
+                                          (*((u8*)var_s5 + 2)), (*var_s5 >> 24) | ((*(u32*)((u8*)var_s5 + 4) & 1) << 8),
+                                          (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                break;
+
+            case 3:
+                temp_a1 = *(u32*)((u8*)var_s5 + 4);
+                temp_a2 = ((temp_a1 & 1) << 8) | (temp_a0_2 >> 24);
+                temp_a0_5 = (temp_a0_2 >> 3) & 0xF;
+                var_v1_2 = temp_a2 * temp_a0_5;
+                if (var_v1_2 < 0)
+                {
+                    var_v1_2 += 7;
+                }
+                temp_a3_5 = (temp_a1 >> 1) & 0xFF;
+                var_v0_2 = temp_a3_5 * temp_a0_5;
+                temp_s1 = var_v1_2 >> 3;
+                if (var_v0_2 < 0)
+                {
+                    var_v0_2 += 7;
+                }
+                temp_s2 = var_v0_2 >> 3;
+                temp_a3_6 = (s32)(temp_a3_5 - temp_s2);
+
+                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2), var_s4,
+                                          ((*var_s5 >> 7) & 0x1FF) +
+                                              (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (*var_s5 >> 24)) - temp_s1) / 2,
+                                          (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
+                                          arg0->unk40B2);
+                temp_v0_5 = *var_s5;
+                temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
+                *var_s5 = temp_v1_3;
+                if (!((temp_v1_3 >> 3) & 0xF))
+                {
+                    *var_s5 = temp_v1_3 & ~7;
+                }
+                D_8016B948 = 0;
+                break;
+            }
+        }
+
+        var_s5 += 3;
+    }
+
+    arg0->unk40B8 = var_s0;
 }
