@@ -65,6 +65,9 @@
 
 /* Pack two bytes into a single 16-bit DBCS-style glyph */
 #define MAKE_DBCS_GLYPH(lo, hi) (u16)(((u16)(hi) << 8) | (u16)(lo))
+#define NAME_GLYPH_SIZE_SINGLE 1
+#define NAME_GLYPH_SIZE_DOUBLE 2
+#define NAME_GLYPH_VALUE_MASK 0xFFFFU
 
 /**
  * Button mask for confirming the current name-entry selection.
@@ -584,7 +587,7 @@ static s32 name_pop_last_glyph(u8* name);
 static void name_copy(u8* dst, const u8* src);
 static void recalc_name_width(void);
 static void name_prepend_glyph(u8* buffer, u16 new_glyph);
-static s32 name_pop_first_glyph(u8* name);
+static s32 name_pop_first_glyph(u8* name_buf);
 static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render_ctx);
 static s32 name_is_blank(const u8* name_buf);
 
@@ -2607,72 +2610,65 @@ static void name_prepend_glyph(u8* buffer, u16 new_glyph)
 }
 
 /**
- * @brief Remove the first glyph from @p name and return it.
- *
- * Reads one glyph at the head of the buffer (1 or 2 bytes per the
- * DBCS-style encoding), measures the rest of the buffer's byte length,
- * shifts the remaining bytes (plus null terminator) left by the glyph
- * size, and returns the removed glyph packed as `lead | (trail << 8)`.
- *
- * @param name Null-terminated name buffer (mutated in-place).
- * @return Removed glyph packed in low 16 bits, or 0 if @p name was empty.
+ * @brief Remove and return the first glyph in a name buffer.
+ * @param name_buf Null-terminated name buffer updated in place.
+ * @return Removed glyph packed in the low 16 bits, or 0 if empty.
  * @see https://decomp.me/scratch/ArXXq (100%)
  */
-static s32 name_pop_first_glyph(u8* name)
+static s32 name_pop_first_glyph(u8* name_buf)
 {
-    u8 first;
-    u32 width;
+    u8 first_byte;
+    u32 glyph_size;
     u16 first_glyph;
-    u8* p;
-    s32 tail_len;
-    s32 move_count;
-    s32 i;
-    u32 mask_u16;
+    u8* tail_cursor;
+    s32 tail_byte_count;
+    s32 bytes_to_move;
+    s32 byte_index;
+    u32 glyph_value_mask;
 
-    first = name[0];
+    first_byte = name_buf[0];
 
-    if (first == 0)
+    if (first_byte == '\0')
     {
         return 0;
     }
 
-    if (IS_DBCS_LEAD_BYTE(first))
+    if (IS_DBCS_LEAD_BYTE(first_byte))
     {
-        first_glyph = MAKE_DBCS_GLYPH(name[0], name[1]);
-        width = 2;
+        first_glyph = MAKE_DBCS_GLYPH(name_buf[0], name_buf[1]);
+        glyph_size = NAME_GLYPH_SIZE_DOUBLE;
     }
     else
     {
-        first_glyph = name[0];
-        width = 1;
+        first_glyph = name_buf[0];
+        glyph_size = NAME_GLYPH_SIZE_SINGLE;
     }
 
-    /* Measure tail (everything after the first glyph) in bytes. */
-    tail_len = 0;
-    p = name + width;
+    tail_byte_count = 0;
+    tail_cursor = name_buf + glyph_size;
 
-    while (*p != 0)
+    while (*tail_cursor != '\0')
     {
-        if (IS_DBCS_LEAD_BYTE(*p))
+        if (IS_DBCS_LEAD_BYTE(*tail_cursor))
         {
-            p += 2;
-            tail_len += 2;
+            tail_cursor += NAME_GLYPH_SIZE_DOUBLE;
+            tail_byte_count += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            p += 1;
-            tail_len += 1;
+            tail_cursor += NAME_GLYPH_SIZE_SINGLE;
+            tail_byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
 
-    move_count = tail_len + 1; /* +1 to also shift the null terminator */
-    mask_u16 = 0xFFFFU;
-    for (i = 0; i < move_count; i++)
+    bytes_to_move = tail_byte_count + 1; /* Include the null terminator. */
+    glyph_value_mask = NAME_GLYPH_VALUE_MASK;
+    for (byte_index = 0; byte_index < bytes_to_move; byte_index++)
     {
-        name[i] = name[i + width];
+        name_buf[byte_index] = name_buf[byte_index + glyph_size];
     }
 
-    return (s32)(first_glyph & mask_u16);
+    return (s32)(first_glyph & glyph_value_mask);
 }
 
 /**
