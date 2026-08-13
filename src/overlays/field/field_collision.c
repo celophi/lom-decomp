@@ -4712,7 +4712,7 @@ typedef struct
 } Req;
 
 /**
- * @see decomp.me (78.77%, 557/1586 exact) TODO
+ * @see decomp.me (80.76%, 670/1586 exact) TODO
  */
 s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
 {
@@ -4721,205 +4721,209 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     Req rec;            /* sp+0x4020 */
     FieldScene *scene;
     Query *temp_s2;
-
-    u32 *sp4094;
-    u32 sp408C;
-    s32 *sp4084;
-    s32 sp4080;
-    u8 sp407C;
-    s32 sp4078;
-    s32 sp4074;
-    s32 sp4070;
-    s32 sp406C;
-    s32 sp4068;
-    s32 sp4064;
-    s32 sp4060;
-    s32 sp405C;
     s32 sp4058;
-    s32 sp4054;
-    s32 sp4050;
-    s16 temp_v1_6;
-    s16 temp_v1_7;
-    s32 *temp_s1_4;
-    s32 *temp_s2_2;
-    s32 *temp_v0_12;
-    s32 *var_fp_2;
-    s32 *var_fp_3;
-    s32 *var_fp_4;
-    s32 *var_s4;
-    s32 *var_s4_2;
-    s32 *var_s4_3;
-    s32 *var_s4_4;
-    s32 *var_s6;
-    s32 *var_s6_2;
-    s32 *var_s6_3;
-    s32 *var_s6_4;
-    s32 temp_a0;
-    s32 temp_s1_3;
-    s32 temp_s2_3;
-    s32 temp_s2_4;
-    s32 temp_s2_5;
-    s32 temp_s2_6;
-    s32 temp_s2_7;
-    s32 temp_s3;
-    s32 temp_s3_2;
-    s32 temp_s4;
-    s32 temp_s4_2;
-    s32 temp_s4_3;
-    s32 temp_s4_4;
-    s32 temp_s4_5;
-    s32 temp_s4_6;
-    s32 temp_s6;
-    s32 temp_s6_2;
-    s32 temp_s6_3;
-    s32 temp_t8;
-    s32 temp_t9;
-    s32 temp_v0;
+    u8 temp_a2;
     s32 hx1;
-    s32 hz1;
-    s32 hx2;
-    s32 hz2;
-    s32 temp_v0_2;
-    s32 temp_v0_4;
-    s32 temp_v0_13;
-    s32 temp_v0_14;
     s32 temp_v1;
-    s32 temp_v1_2;
-    s32 temp_v1_3;
-    s32 temp_v1_4;
-    s32 temp_v1_5;
-    s32 temp_v1_8;
-    s32 temp_v1_30;
-    s32 temp_v1_31;
-    s32 temp_v1_32;
-    s32 temp_v1_41;
-    s32 temp_v1_42;
-    s32 temp_v1_43;
-    s32 final_x;
-    s32 temp_s0;
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 var_a1;
-    s32 var_a1_2;
-    s32 var_a1_3;
-    s32 var_fp_5;
-    s32 var_s0_2;
-    s32 var_s3;
-    s32 var_s3_2;
-    s32 var_s3_3;
-    s32 var_s3_4;
-    s32 var_s5;
-    s32 var_s5_2;
-    s32 var_s5_3;
-    s32 var_s5_4;
-    s32 var_s5_5;
-    s32 var_s5_7;
-    s32 var_s5_8;
-    s32 var_t2;
-    s32 var_t3;
-    s32 var_t5;
-    s32 var_v0;
     s32 var_v0_2;
+    s32 sp4074;
+    s32 hz1;
+    s32 temp_v1_2;
     s32 var_v0_3;
+    s32 sp4078;
+    s32 hx2;
+    s32 temp_v1_3;
     s32 var_v0_4;
+    s32 sp406C;
+    s32 hz2;
+    s32 temp_a0;
     s32 var_v0_5;
-    s32 var_v0_27;
-    s32 var_v0_28;
-    s32 var_v0_30;
-    s32 var_v0_31;
-    s32 var_v1;
-    s32 var_v1_2;
-    s32 var_v1_3;
-    s32 var_v1_4;
-    s32 var_v1_5;
-    u16 temp_a0_12;
-    u16 temp_a0_21;
+    s32 sp4070;
+    s32 temp_v1_4;
+    s32 sp4064;
+    s32 sp4068;
+    s32 temp_v0;
+    s32 sp405C;
+    s32 sp4060;
     u16 temp_t4;
+    s32 temp_v1_5;
+    s32 temp_v0_2;
+    s32 var_a0;
+    u8 temp_v0_3;
+    s32 var_s5;
+    s32 sp4054;
+    s32 var_a1;
+    s16 temp_v1_6;
+    u8 *var_s0;
+    s32 temp_v0_4;
+    s32 var_a0_2;
+    u8 temp_v0_5;
+    s32 var_s5_2;
+    s32 sp4050;
+    s16 temp_v1_7;
+    u8 *temp_s1;
+    u32 sp408C;
+    s32 var_t5;
+    u32 var_s7;
+    u8 *var_s2;
+    u8 var_a3;
+    s32 *sp4084;
+    u32 *sp4094;
+    s32 var_v0;
+    u32 var_t0;
+    s32 var_s5_3;
     u32 *var_fp;
-    u32 temp_a2_2;
+    s32 temp_v1_8;
+    s32 *var_s4;
+    s32 *var_s6;
     u32 temp_t3;
     u32 temp_v1_9;
-    u32 temp_v1_10;
-    u32 temp_v1_11;
-    u32 temp_v1_12;
-    u32 temp_v1_13;
-    u32 temp_v1_14;
-    u32 temp_v1_18;
-    u32 temp_v1_22;
-    u32 temp_v1_26;
-    u32 temp_v1_33;
-    u32 temp_v1_34;
-    u32 temp_v1_35;
-    u32 temp_v1_36;
-    u32 temp_v1_37;
-    u32 temp_v1_38;
-    u32 temp_v1_39;
-    u32 temp_v1_40;
-    u32 var_s5_6;
-    u32 var_s7;
-    u32 var_s7_2;
-    u32 var_s7_3;
-    u32 var_t0;
-    u32 var_v1_6;
-    u32 var_v1_7;
-    u32 var_v1_8;
-    u32 var_v1_9;
-    u32 temp_lo;
-    u8 *temp_a2_3;
-    u8 *temp_a2_4;
-    u8 *temp_s1;
     u8 *temp_s1_2;
-    u8 *temp_v0_7;
-    u8 *temp_v0_8;
-    u8 *temp_v0_9;
-    u8 *temp_v0_10;
-    u8 *var_s0;
-    u8 *var_s1;
-    u8 *var_s2;
-    u8 *new_var;
-    u8 *var_a2;
-    u8 *var_v0_24;
-    u8 *var_v0_25;
+    u32 temp_a2_2;
+    s32 var_a1_2;
     u8 temp_a0_3;
+    u32 temp_v1_10;
     u8 temp_a0_4;
+    u32 temp_v1_11;
     u8 temp_a0_5;
+    u32 temp_v1_12;
     u8 temp_a0_6;
+    u32 temp_v1_13;
+    u8 *temp_v0_7;
     u8 temp_a0_7;
-    u8 temp_a0_8;
-    u8 temp_a0_9;
-    u8 temp_a0_10;
-    u8 temp_a0_13;
-    u8 temp_a0_14;
-    u8 temp_a0_15;
-    u8 temp_a0_16;
-    u8 temp_a0_17;
-    u8 temp_a0_18;
-    u8 temp_a0_19;
-    u8 temp_a0_20;
-    u8 temp_a2;
-    u8 temp_v0_3;
-    u8 temp_v0_5;
+    u32 temp_v1_14;
     u8 temp_v1_15;
+    u8 var_t1;
     u8 temp_v1_16;
     u8 temp_v1_17;
+    s32 var_v1;
+    u8 *temp_v0_8;
+    u8 temp_a0_8;
+    u32 temp_v1_18;
     u8 temp_v1_19;
+    u8 var_t1_2;
     u8 temp_v1_20;
     u8 temp_v1_21;
+    s32 var_v1_2;
+    u8 *temp_v0_9;
+    u8 temp_a0_9;
+    u32 temp_v1_22;
     u8 temp_v1_23;
+    u8 var_t1_3;
     u8 temp_v1_24;
     u8 temp_v1_25;
+    s32 var_v1_3;
+    u8 *temp_v0_10;
+    u8 temp_a0_10;
+    u32 temp_v1_26;
     u8 temp_v1_27;
+    u8 var_t1_4;
     u8 temp_v1_28;
     u8 temp_v1_29;
-    u8 var_a3;
-    u8 var_a3_2;
+    s32 var_v1_4;
+    s32 temp_v1_30;
+    s32 var_s3_2;
+    s32 var_v1_5;
+    s32 neg1;
+    s32 sm_p0;
+    s32 *sm1;
+    s32 *sm2;
+    s32 *sm0;
+    s32 var_s5_4;
+    s32 *var_fp_2;
+    s32 temp_v1_31;
+    u32 temp_a0_12;
+    u32 temp_lo;
+    s32 temp_v1_32;
+    u8 *new_var;
+    u8 *var_s1;
+    s32 *var_fp_3;
+    u32 var_v1_6;
+    u32 var_v1_7;
+    u32 var_s7_2;
+    s32 var_t1_5;
+    s32 var_t2;
+    s32 var_t3;
     u8 var_t0_2;
-    u8 var_t1;
-    u8 var_t1_2;
-    u8 var_t1_3;
-    u8 var_t1_4;
-    u8 var_t1_5;
+    s32 var_a3_2;
+    u8 temp_a0_13;
+    s32 var_a1_3;
+    u32 temp_v1_33;
+    u8 temp_a0_14;
+    u32 temp_v1_34;
+    u8 *temp_a2_3;
+    u8 temp_a0_15;
+    u32 temp_v1_35;
+    u8 *temp_a2_4;
+    u8 temp_a0_16;
+    u32 temp_v1_36;
+    u8 *var_a2;
+    u8 temp_a0_17;
+    u32 temp_v1_37;
+    u8 temp_a0_18;
+    u8 *var_v0_24;
+    u32 temp_v1_38;
+    u8 temp_a0_19;
+    u8 *var_v0_25;
+    u32 temp_v1_39;
+    u8 temp_a0_20;
+    u32 temp_v1_40;
+    s32 *var_s6_2;
+    s32 *var_s4_2;
+    s32 var_s3_3;
+    s32 *var_fp_4;
+    u32 temp_a0_21;
+    u32 var_v1_8;
+    u32 var_v1_9;
+    u32 var_s7_3;
+    s32 var_s5_5;
+    s32 *var_s6_3;
+    s32 *var_s4_3;
+    s32 temp_s1_3;
+    s32 temp_t9;
+    s32 temp_v1_41;
+    s32 *temp_v0_12;
+    s32 temp_t8;
+    s32 var_s3_4;
+    s32 var_s0_2;
+    s32 *temp_s2_2;
+    s32 *temp_s1_4;
+    u32 var_s5_6;
+    u8 sp407C;
+    s32 temp_s0;
+    s32 var_fp_5;
+    s32 var_s5_7;
+    s32 temp_s6;
+    s32 temp_v0_13;
+    s32 temp_s4;
+    s32 temp_s2_3;
+    s32 temp_s4_2;
+    s32 temp_s2_4;
+    s32 temp_s4_3;
+    s32 var_v0_27;
+    s32 temp_v0_14;
+    s32 sp4080;
+    s32 temp_s3;
+    s32 var_v0_28;
+    s32 temp_s6_2;
+    s32 temp_s4_4;
+    s32 temp_s2_5;
+    s32 temp_s4_5;
+    s32 temp_s2_6;
+    s32 temp_s3_2;
+    s32 var_v0_30;
+    s32 temp_s6_3;
+    s32 temp_s2_7;
+    s32 var_v0_31;
+    s32 temp_s4_6;
+    s32 final_x;
+    s32 *var_s6_4;
+    s32 *var_s4_4;
+    s32 var_s5_8;
+    s32 var_s3;
     OutPair *var_a2_2;
+    s32 temp_v1_42;
+    s32 temp_v1_43;
 
     scene = g_field_scene.scene;
     temp_s2 = arg1;
@@ -4929,9 +4933,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
         {
             return -1;
         }
-        arg2->unk0 = temp_s2->x;
-        arg2->unk4 = temp_s2->z;
-        return 1;
+        goto write_pos;
     }
     sp4058 = 3;
     temp_a2 = scene->unk40;
@@ -5109,7 +5111,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                         }
                         var_t0 = 0;
                         var_s5_3 = var_s7 - 1;
-                        var_fp = (u32 *) (sp4084 + (var_t5 << 10) + var_s7 - 1);
+                        var_fp = (u32 *) (sp4084 + (var_t5 << 10) + var_s5_3);
                         temp_v1_8 = (var_t5 + 1) & 3;
                         var_s7 = sp4094[temp_v1_8];
                         var_s4 = sp4084 + (((var_t5 + 3) & 3) << 10);
@@ -5318,14 +5320,14 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                                 *var_s6 = var_v1;
                                                 var_s6 += 1;
                                                 var_s7 += 1;
-                                                temp_v0_7[-1] = var_a3;
+                                                *var_s0 = var_a3;
                                             }
                                             else
                                             {
                                                 *var_s4 = var_v1 | 0x60000000;
                                                 var_s4 += 1;
                                                 var_t0 += 1;
-                                                temp_v0_7[-1] = 0xFD;
+                                                *var_s0 = 0xFD;
                                             }
                                         }
                                     }
@@ -5353,7 +5355,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                             if ((temp_v1_19 == 1) || (temp_v1_19 == 0xFD))
                                             {
                                                 temp_v1_20 = temp_s1_2[1];
-                                                if ((temp_v1_20 == 1) || (temp_v1_20 == 0xFD))
+                                        if ((temp_v1_20 == 1) || (temp_v1_20 == 0xFD))
                                                 {
                                                     var_t1_2 = 1;
                                                 }
@@ -5384,14 +5386,14 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                                 *var_s6 = var_v1_2;
                                                 var_s6 += 1;
                                                 var_s7 += 1;
-                                                temp_v0_8[1] = var_a3;
+                                                *var_s0 = var_a3;
                                             }
                                             else
                                             {
                                                 *var_s4 = var_v1_2 | 0x60000000;
                                                 var_s4 += 1;
                                                 var_t0 += 1;
-                                                temp_v0_8[1] = 0xFD;
+                                                *var_s0 = 0xFD;
                                             }
                                         }
                                     }
@@ -5450,14 +5452,14 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                                 *var_s6 = var_v1_3;
                                                 var_s6 += 1;
                                                 var_s7 += 1;
-                                                temp_v0_9[-1] = var_a3;
+                                                *var_s0 = var_a3;
                                             }
                                             else
                                             {
                                                 *var_s4 = var_v1_3 | 0x60000000;
                                                 var_s4 += 1;
                                                 var_t0 += 1;
-                                                temp_v0_9[-1] = 0xFD;
+                                                *var_s0 = 0xFD;
                                             }
                                         }
                                     }
@@ -5516,14 +5518,14 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                                 *var_s6 = var_v1_4;
                                                 var_s6 += 1;
                                                 var_s7 += 1;
-                                                temp_v0_10[1] = var_a3;
+                                                *var_s0 = var_a3;
                                             }
                                             else
                                             {
                                                 *var_s4 = var_v1_4 | 0x60000000;
                                                 var_s4 += 1;
                                                 var_t0 += 1;
-                                                temp_v0_10[1] = 0xFD;
+                                                *var_s0 = 0xFD;
                                             }
                                         }
                                     }
@@ -5557,11 +5559,12 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                         {
                             var_s3_2 = 2;
                             var_v1_5 = var_t5;
+                            neg1 = -1;
                             do
                             {
                                 var_s5_4 = var_s7 - 1;
                                 var_fp_2 = &path[var_v1_5][var_s7 - 1];
-                                if (var_s5_4 != -1)
+                                if (var_s5_4 != neg1)
                                 {
                                     do
                                     {
@@ -5572,13 +5575,13 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                             *(u8 *) (temp_v1_31 & 0x801FFFFF) = 0xFD;
                                         }
                                         var_s5_4 -= 1;
-                                    } while (var_s5_4 != -1);
+                                    } while (var_s5_4 != neg1);
                                 }
                                 var_t5 = (var_t5 + 1) & 3;
                                 var_s7 = flags[var_t5];
                                 var_s3_2 -= 1;
                                 var_v1_5 = var_t5;
-                            } while (var_s3_2 != -1);
+                            } while (var_s3_2 != neg1);
                             temp_a0_12 = (u16) scene->unk44;
                             temp_lo = sp408C * sp4068;
                             temp_v1_32 = scene->unk2C;
@@ -5657,7 +5660,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 }
                                 else
                                 {
-                                    var_a1_3 = 8;
+                                    var_a1_3 |= 8;
                                 }
                                 temp_a0_14 = var_s1[1];
                                 temp_v1_34 = temp_a0_14 & 0xFF;
@@ -5672,9 +5675,10 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     var_a1_3 |= 0x10;
                                 }
                                 temp_a2_3 = var_s1 - sp408C;
+                                temp_t3 = 0xFF;
                                 temp_a0_15 = *temp_a2_3;
-                                temp_v1_35 = temp_a0_15 & 0xFF;
-                                if (((u32) ((temp_a0_15 - 4) & 0xFF) < 0xF8U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_35) && ((u32) (var_a3_2 & 0xFF) < temp_v1_35))
+                                temp_v1_35 = temp_a0_15 & temp_t3;
+                                if (((u32) ((temp_a0_15 - 4) & temp_t3) < 0xF8U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_35) && ((u32) (var_a3_2 & temp_t3) < temp_v1_35))
                                 {
                                     var_s0 = temp_a2_3;
                                     var_t2 = 2;
@@ -5686,8 +5690,8 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 }
                                 temp_a2_4 = var_s1 + sp408C;
                                 temp_a0_16 = *temp_a2_4;
-                                temp_v1_36 = temp_a0_16 & 0xFF;
-                                if (((u32) ((temp_a0_16 - 4) & 0xFF) < 0xF8U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_36) && ((u32) (var_a3_2 & 0xFF) < temp_v1_36))
+                                temp_v1_36 = temp_a0_16 & temp_t3;
+                                if (((u32) ((temp_a0_16 - 4) & temp_t3) < 0xF8U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_36) && ((u32) (var_a3_2 & temp_t3) < temp_v1_36))
                                 {
                                     var_s0 = temp_a2_4;
                                     var_t2 = 7;
@@ -5699,52 +5703,68 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 }
                                 var_a2 = var_s1 - sp408C;
                                 temp_a0_17 = var_a2[-1];
-                                if (!(var_a1_3 & 0xA) || !(var_a3_2 & 0xFF))
+                                if (!(var_a1_3 & 0xA) || !(var_a3_2 & temp_t3))
                                 {
-                                    temp_v1_37 = temp_a0_17 & 0xFF;
-                                    if ((temp_v1_37 < 0xFCU) && (temp_v1_37 >= 4U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_37) && ((u32) (var_a3_2 & 0xFF) < temp_v1_37))
+                                    temp_v1_37 = temp_a0_17 & temp_t3;
+                                    if (temp_v1_37 < 0xFCU)
                                     {
-                                        var_s0 = var_a2 - 1;
+                                    if ((temp_v1_37 >= 4U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_37) && ((u32) (var_a3_2 & temp_t3) < temp_v1_37))
+                                    {
+                                        var_s0 = (var_s1 - sp408C) - 1;
                                         var_t2 = 1;
                                         var_a3_2 = temp_a0_17;
                                     }
+                                    
+                                    }
                                 }
-                                temp_a0_18 = var_a2[1];
+                                temp_a0_18 = (var_s1 - sp408C)[1];
                                 var_v0_24 = var_s1 + sp408C;
-                                if (!(var_a1_3 & 0x12) || !(var_a3_2 & 0xFF))
+                                if (!(var_a1_3 & 0x12) || !(var_a3_2 & temp_t3))
                                 {
-                                    temp_v1_38 = temp_a0_18 & 0xFF;
-                                    if ((temp_v1_38 < 0xFCU) && (temp_v1_38 >= 4U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_38) && ((u32) (var_a3_2 & 0xFF) < temp_v1_38))
+                                    temp_v1_38 = temp_a0_18 & temp_t3;
+                                    if (temp_v1_38 < 0xFCU)
                                     {
-                                        var_s0 = var_a2 + 1;
+                                    if ((temp_v1_38 >= 4U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_38) && ((u32) (var_a3_2 & temp_t3) < temp_v1_38))
+                                    {
+                                        var_s0 = (var_s1 - sp408C) + 1;
                                         var_t2 = 3;
                                         var_a3_2 = temp_a0_18;
                                     }
+                                    
+                                    }
                                 }
-                                temp_a0_19 = var_v0_24[-1];
+                                temp_a0_19 = (var_s1 + sp408C)[-1];
                                 var_v0_25 = var_s1 + sp408C;
-                                if (!(var_a1_3 & 0x48) || !(var_a3_2 & 0xFF))
+                                if (!(var_a1_3 & 0x48) || !(var_a3_2 & temp_t3))
                                 {
-                                    temp_v1_39 = temp_a0_19 & 0xFF;
-                                    if ((temp_v1_39 < 0xFCU) && (temp_v1_39 >= 4U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_39) && ((u32) (var_a3_2 & 0xFF) < temp_v1_39))
+                                    temp_v1_39 = temp_a0_19 & temp_t3;
+                                    if (temp_v1_39 < 0xFCU)
                                     {
-                                        var_s0 = var_v0_24 - 1;
+                                    if ((temp_v1_39 >= 4U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_39) && ((u32) (var_a3_2 & temp_t3) < temp_v1_39))
+                                    {
+                                        var_s0 = (var_s1 + sp408C) - 1;
                                         var_t2 = 6;
                                         var_a3_2 = temp_a0_19;
                                     }
+                                    
+                                    }
                                 }
-                                temp_a0_20 = var_v0_25[1];
-                                if (!(var_a1_3 & 0x50) || !(var_a3_2 & 0xFF))
+                                temp_a0_20 = (var_s1 + sp408C)[1];
+                                if (!(var_a1_3 & 0x50) || !(var_a3_2 & temp_t3))
                                 {
-                                    temp_v1_40 = temp_a0_20 & 0xFF;
-                                    if ((temp_v1_40 < 0xFCU) && (temp_v1_40 >= 4U) && ((u32) (var_t0_2 & 0xFF) < temp_v1_40) && ((u32) (var_a3_2 & 0xFF) < temp_v1_40))
+                                    temp_v1_40 = temp_a0_20 & temp_t3;
+                                    if (temp_v1_40 < 0xFCU)
                                     {
-                                        var_s0 = var_v0_25 + 1;
+                                    if ((temp_v1_40 >= 4U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_40) && ((u32) (var_a3_2 & temp_t3) < temp_v1_40))
+                                    {
+                                        var_s0 = (var_s1 + sp408C) + 1;
                                         var_t2 = 8;
                                         var_a3_2 = temp_a0_20;
                                     }
+                                    
+                                    }
                                     var_v0 = -5;
-                                    if ((var_a3_2 & 0xFF) == 0)
+                                    if ((var_a3_2 & temp_t3) == 0)
                                     {
                                         return var_v0;
                                     }
@@ -5772,7 +5792,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                             rec.unk2C = 0;
                             path[1][0] = sp4074;
                             path[2][0] = sp4078;
-                            if (var_s3_3 != -1)
+                            if (var_s3_3 != neg1)
                             {
                                 do
                                 {
@@ -5793,7 +5813,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     var_s6_2 += 1;
                                     *var_s4_2 = ((var_v1_8 / sp408C) - 2) << (sp4058 + 1);
                                     var_s4_2 += 1;
-                                } while (var_s3_3 != -1);
+                                } while (var_s3_3 != neg1);
                                 var_fp_4 = &path[0][0];
                             }
                             var_s7_3 = 0;
@@ -5802,7 +5822,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                             var_s6_3 = &path[1][0];
                             *var_s4_2 = sp4070;
                             var_s4_3 = &path[2][0];
-                            if (var_s5_5 != -1)
+                            if (var_s5_5 != neg1)
                             {
                                 do
                                 {
@@ -5846,29 +5866,33 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                         } while (var_s3_4 != 0);
                                     }
                                     var_s5_5 -= 1;
-                                } while (var_s5_5 != -1);
+                                } while (var_s5_5 != neg1);
                             }
                             var_s5_6 = var_s7_3;
                             if ((var_t1_5 & 0xFF) && (var_s7_3 >= 2U))
                             {
                                 sp407C = 1;
-                                sp405C = path[1][0];
-                                sp4060 = path[2][0];
+                                sm_p0 = path[0][0];
+                                sm0 = &path[0][0];
+                                sm1 = &path[1][0];
+                                sm2 = &path[2][0];
+                                sp405C = sm1[0];
+                                sp4060 = sm2[0];
                                 temp_v0_12 = &path[0][var_s7_3];
                                 temp_v0_12[0] = *var_fp_4;
                                 temp_v0_12[0x400] = *var_s6_3;
                                 temp_v0_12[0x800] = *var_s4_3;
-                                temp_s0 = path[0][2];
-                                var_fp_5 = path[1][1];
-                                var_s5_7 = path[2][1];
-                                temp_s6 = path[1][2];
+                                temp_s0 = sm0[2];
+                                var_fp_5 = sm1[1];
+                                var_s5_7 = sm2[1];
+                                temp_s6 = sm1[2];
                                 sp4064 = temp_s6;
                                 rec.unk8 = path[1][0];
                                 temp_v0_13 = var_fp_5 + temp_s6;
-                                rec.unk0 = path[0][0];
+                                rec.unk0 = sm_p0;
                                 rec.unkC = path[2][0];
                                 var_t1_5 = 0;
-                                sp4068 = path[2][2];
+                                sp4068 = sm2[2];
                                 temp_s4 = temp_v0_13 / 2;
                                 rec.unk10 = temp_s4;
                                 temp_s2_3 = (var_s5_7 + sp4068) / 2;
@@ -5885,7 +5909,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                         rec.unk8 = sp405C;
                                         sp407C = 0;
                                         temp_v0 = sp4064;
-                                        rec.unk0 = path[0][0];
+                                        rec.unk0 = sm_p0;
                                         var_t1_5 = 1;
                                         rec.unkC = sp4060;
                                         temp_s4_2 = (var_fp_5 + temp_v0) / 2;
@@ -5909,7 +5933,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 {
                                     temp_s4_3 = temp_v0 - var_fp_5;
                                     var_v0_27 = temp_s4_3;
-                                    rec.unk0 = path[0][0];
+                                    rec.unk0 = sm_p0;
                                     rec.unk8 = sp405C;
                                     rec.unkC = sp4060;
                                     if (temp_s4_3 < 0)
@@ -5950,7 +5974,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 rec.unk14 = temp_s2_5;
                                 if (func_80062820(&rec) != 0)
                                 {
-                                    rec.unk0 = path[0][0];
+                                    rec.unk0 = sm_p0;
                                     rec.unk8 = sp405C;
                                     rec.unkC = sp4060;
                                     if (func_80062820(&rec) != 0)
@@ -5968,7 +5992,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                         rec.unk14 = temp_s2_6;
                                         if (func_80062820(&rec) != 0)
                                         {
-                                            rec.unk0 = path[0][0];
+                                            rec.unk0 = sm_p0;
                                             rec.unk8 = sp405C;
                                             rec.unkC = sp4060;
                                             if (func_80062820(&rec) != 0)
@@ -6002,7 +6026,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     rec.unk14 = temp_s4_6;
                                     if (func_80062820(&rec) != 0)
                                     {
-                                        rec.unk0 = path[0][0];
+                                        rec.unk0 = sm_p0;
                                         final_x = sp405C;
                                         rec.unk8 = final_x;
                                         rec.unkC = sp4060;
@@ -6019,7 +6043,6 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     path[1][1] = var_fp_5;
                                     path[2][1] = var_s5_7;
                                 }
-                                var_s5_6 = var_s7_3;
                             }
                             if (var_s5_6 >= 0x11U)
                             {
@@ -6029,7 +6052,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                             var_s4_4 = &path[2][var_s7_3 - 1];
                             var_s5_8 = var_s5_6 - 1;
                             var_s3 = 0;
-                            if (var_s5_8 != -1)
+                            if (var_s5_8 != neg1)
                             {
                                 var_a2_2 = arg2;
                                 do
@@ -6043,20 +6066,22 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     var_s4_4 -= 1;
                                     var_a2_2->unk4 = (temp_v1_43 + ((s32) (arg0->unk10 << 0x10) >> 0x11)) << 8;
                                     var_a2_2 += 1;
-                                } while (var_s5_8 != -1);
+                                } while (var_s5_8 != neg1);
                             }
                             return var_s3;
                         }
                     }
                 }
-                arg2->unk0 = temp_s2->x;
-                arg2->unk4 = temp_s2->z;
-                return 1;
+                goto write_pos;
             }
             return -2;
         }
     }
     return -2;
+write_pos:
+    arg2->unk0 = temp_s2->x;
+    arg2->unk4 = temp_s2->z;
+    return 1;
 }
 
 /**
