@@ -117,6 +117,7 @@
 #define GNAME_MODE_PANEL_NAV_LAST (GNAME_MODE_PANEL_BASE + 2)
 #define GNAME_MODE_PANEL_LAST (GNAME_MODE_PANEL_BASE + 3) /* hidden kanji-category tab */
 #define GNAME_MODE_GRID 0x10        /* in-grid character cursor mode */
+#define GNAME_BUTTONS_NONE 0
 
 #define GNAME_REDISPATCH_DONE 0
 #define GNAME_REDISPATCH_PENDING 0xFF
@@ -130,6 +131,7 @@
 #define GNAME_ENTRY_NONE 0xFF
 
 /* g_overlay_result values: how the overlay finished, read by the caller. */
+#define GNAME_RESULT_PENDING 0
 #define GNAME_RESULT_CANCEL 2  /* cancelled with an empty name (when allowed) */
 #define GNAME_RESULT_CONFIRM 5 /* name committed; advance to the next overlay stage */
 
@@ -146,6 +148,10 @@
 #define GNAME_SRC_RAND_ALT 5     /* random entry from g_random_names_off alternate offset table */
 
 /* Run-loop display and history-copy constants. */
+#define GNAME_RENDER_BUFFER_A 0
+#define GNAME_RENDER_BUFFER_B 1
+#define GNAME_FRAME_VSYNC_INTERVAL 2U
+#define GNAME_INIT_STACK_PAD_WORDS 2
 #define GNAME_FADE_IN_FRAMES 20
 #define GNAME_STARTUP_DELAY_FRAMES 40
 #define GNAME_HISTORY_LAYOUT_MASK 0x7F
@@ -153,8 +159,8 @@
 #define GNAME_HISTORY_COPY_SIZE 0x15
 #define GNAME_LARGE_HISTORY_STRIDE sizeof(((PadContext*)0)->large_history_names[0])
 #define GNAME_SMALL_HISTORY_STRIDE sizeof(((PadContext*)0)->small_history_names[0])
-#define GNAME_LARGE_HISTORY_OFFSET 0x2B0C
-#define GNAME_SMALL_HISTORY_OFFSET 0x2EF4
+#define GNAME_LARGE_HISTORY_OFFSET ((u32)&((PadContext*)0)->large_history_names)
+#define GNAME_SMALL_HISTORY_OFFSET ((u32)&((PadContext*)0)->small_history_names)
 #define GNAME_USES_LARGE_HISTORY(ctx) (((ctx)->unkAA8 & GNAME_HISTORY_LAYOUT_MASK) == GNAME_HISTORY_LAYOUT_LARGE)
 
 /* Maximum number of logical glyphs allowed in a name. */
@@ -185,6 +191,7 @@
 #define NAME_GRID_BACKING_PAGE0_Y NAME_GRID_Y_TOP
 #define NAME_GRID_BACKING_PAGE1_Y 0x150
 #define NAME_GRID_OVERSCAN 0x0B    /**< Glyphs partly above the window are still drawn down to y = -11. */
+#define CHAR_PANEL_STANDARD_FIRST 0 /**< First ordinary character panel. */
 #define CHAR_PANEL_STANDARD_COUNT 3 /**< Number of ordinary character panels. */
 #define CHAR_PANEL_KANJI_CATEGORY 3 /**< Dormant panel value for the kanji category list. */
 #define CHAR_PANEL_KANJI 4          /**< Dormant panel value for the kanji character picker. */
@@ -218,6 +225,7 @@
  * blending at FADE_CHAN_ADDITIVE and above; otherwise blending is subtractive. */
 #define FADE_CHAN_NEUTRAL 0x100
 #define FADE_CHAN_ADDITIVE 0x101
+#define FADE_ADDITIVE_BIAS (FADE_CHAN_ADDITIVE - FADE_CHAN_NEUTRAL)
 
 /* tpage arguments for the blend-mode DR_TPAGE emitted by render_fade_overlay.
  * The tile is flat-colored so only the abr bits matter; x=320 is the
@@ -584,10 +592,10 @@ void play_menu_sfx(int sfx_id, int volume);
  * the remaining helpers are private to this translation unit.
  */
 static void reset_fade_state(void);
-static void render_fade_overlay(RenderContext* ctx);
-static void set_fade_target(s32 r, s32 g, s32 b, s32 steps);
+static void render_fade_overlay(RenderContext* render_ctx);
+static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
 static void load_name_entry_tim(void);
-static void load_tim_to_vram(TimDstCoords* dst_coords);
+static void load_tim_to_vram(const TimDstCoords* dst_coords);
 static void gname_update_state(void);
 static void reset_run_state(void);
 static s32 handle_navigation_input(s32 mode, s32 buttons);
@@ -688,124 +696,115 @@ void field_update_audio_timer(void);
 void func_800A9E78(void);
 void func_800AA02C(void);
 
-/* func_800644FC and func_800A88A0 intentionally have no visible prototypes
- * here. Their call sites therefore use this compiler's implicit-int rules,
- * which are part of the matched declaration context. */
-
 /**
  * @brief Run the name-entry UI until the user confirms or cancels.
- *
- * On exit, when entering a history name (@c source_mode == 3) targeting the pad
- * context's history buffer, the entered name is copied back into the
- * appropriate large or compact per-slot history table.
- *
- * @param buf_base Render context base; the two double buffers are @c buf_base[0] and @c buf_base[1].
- * @param initial_name Initial name buffer (0x30 bytes) copied into @ref g_initial_name.
- * @param active_name Active name buffer the UI edits in place (stored in @ref g_active_name).
- * @param source_mode Name source mode (stored in @ref g_name_source_mode).
- * @param history_idx History list index (stored in @ref g_history_name_idx).
- * @param custom_name Custom preset name buffer (0x30 bytes) copied into @ref g_custom_name_buf.
- * @param allow_empty_cancel Allow-empty-cancel flag (stored in @ref g_allow_empty_cancel).
- * @return The overlay result code (@ref g_overlay_result): cancel or confirm.
+ * @param render_buffers Double-buffered frame render contexts.
+ * @param initial_name Name restored when the session resets.
+ * @param active_name Name buffer edited by the UI.
+ * @param source_mode Random-name source selector.
+ * @param history_index History-list entry selector.
+ * @param custom_name Custom random-name source.
+ * @param allow_empty_cancel Whether cancel may exit with an empty name.
+ * @return Final cancel or confirmation result.
  * @see https://decomp.me/scratch/FAyP7 (100%)
  */
-s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 source_mode, s32 history_idx, u8* custom_name, s32 allow_empty_cancel)
+s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_name, s32 source_mode, s32 history_index, const u8* custom_name, s32 allow_empty_cancel)
 {
-    s32 i;
-    RenderContext* draw_buf;
-    RenderContext* next_buf;
-    RenderContext* other_buf;
-    RenderContext* render_bufs;
+    s32 history_byte_index;
+    RenderContext* draw_buffer;
+    RenderContext* next_buffer;
+    RenderContext* other_buffer;
+    RenderContext* draw_env_buffers;
 
     /* Install the caller's buffers and seed the persistent name-entry state. */
-    g_render_buf_base = buf_base;
+    g_render_buf_base = render_buffers;
     bcopy(initial_name, g_initial_name, sizeof(g_initial_name));
     bcopy(custom_name, g_custom_name_buf, sizeof(g_custom_name_buf));
     g_allow_empty_cancel = allow_empty_cancel;
     g_active_name = active_name;
     g_name_source_mode = source_mode;
-    g_history_name_idx = history_idx;
+    g_history_name_idx = history_index;
 
     /* Configure the two overlapping VRAM display/draw pages. */
-    g_render_buf_base[0].clear_rect.x = 0;
-    g_render_buf_base[0].clear_rect.y = 8;
-    g_render_buf_base[0].clear_rect.w = SCREEN_WIDTH;
-    g_render_buf_base[0].clear_rect.h = VRAM_DRAW_HEIGHT;
-    g_render_buf_base[1].clear_rect.x = 0;
-    g_render_buf_base[1].clear_rect.y = SCREEN_HEIGHT;
-    g_render_buf_base[1].clear_rect.w = SCREEN_WIDTH;
-    g_render_buf_base[1].clear_rect.h = VRAM_DRAW_HEIGHT;
+    g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect.x = 0;
+    g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect.y = VRAM_BACK_DRAW_Y;
+    g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect.w = SCREEN_WIDTH;
+    g_render_buf_base[GNAME_RENDER_BUFFER_A].clear_rect.h = VRAM_DRAW_HEIGHT;
+    g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect.x = 0;
+    g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect.y = SCREEN_HEIGHT;
+    g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect.w = SCREEN_WIDTH;
+    g_render_buf_base[GNAME_RENDER_BUFFER_B].clear_rect.h = VRAM_DRAW_HEIGHT;
 
     VSync(0);
     DrawSync(0);
-    SetDefDispEnv(&g_render_buf_base[0].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv(&g_render_buf_base[1].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&g_render_buf_base[0].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv(&g_render_buf_base[1].draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDispEnv(&g_render_buf_base[GNAME_RENDER_BUFFER_A].disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&g_render_buf_base[GNAME_RENDER_BUFFER_B].disp_env, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&g_render_buf_base[GNAME_RENDER_BUFFER_A].draw_env, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&g_render_buf_base[GNAME_RENDER_BUFFER_B].draw_env, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
 
-    render_bufs = g_render_buf_base;
-    render_bufs[1].draw_env.dtd = 0;
-    render_bufs[0].draw_env.dtd = 0;
-    g_overlay_result = 0;
-    g_render_buf_base[0].frame_parity = 0;
-    g_render_buf_base[1].frame_parity = 1;
+    draw_env_buffers = g_render_buf_base;
+    draw_env_buffers[GNAME_RENDER_BUFFER_B].draw_env.dtd = FALSE;
+    draw_env_buffers[GNAME_RENDER_BUFFER_A].draw_env.dtd = FALSE;
+    g_overlay_result = GNAME_RESULT_PENDING;
+    g_render_buf_base[GNAME_RENDER_BUFFER_A].frame_parity = GNAME_RENDER_BUFFER_A;
+    g_render_buf_base[GNAME_RENDER_BUFFER_B].frame_parity = GNAME_RENDER_BUFFER_B;
 
     reset_fade_state();
     set_fade_target(FADE_CHAN_NEUTRAL, FADE_CHAN_NEUTRAL, FADE_CHAN_NEUTRAL, GNAME_FADE_IN_FRAMES);
     gname_init();
 
     /* Clear both ordering tables before enabling display output. */
-    next_buf = g_render_buf_base;
-    ClearOTagR(next_buf->ot, GNAME_OT_ENTRY_COUNT);
-    ClearOTagR(g_render_buf_base[1].ot, GNAME_OT_ENTRY_COUNT);
+    next_buffer = g_render_buf_base;
+    ClearOTagR(next_buffer->ot, GNAME_OT_ENTRY_COUNT);
+    ClearOTagR(g_render_buf_base[GNAME_RENDER_BUFFER_B].ot, GNAME_OT_ENTRY_COUNT);
     VSync(0);
-    PutDispEnv(&next_buf->disp_env);
+    PutDispEnv(&next_buffer->disp_env);
     update_controllers();
-    SetDispMask(1);
+    SetDispMask(TRUE);
     func_800AA02C();
 
     /* Render and submit frames until the overlay reports a final result. */
-    while (1)
+    while (TRUE)
     {
-        draw_buf = next_buf;
-        ClearOTagR(draw_buf->ot, GNAME_OT_ENTRY_COUNT);
-        draw_buf->prim_cursor = &draw_buf->ot[GNAME_OT_ENTRY_COUNT];
+        draw_buffer = next_buffer;
+        ClearOTagR(draw_buffer->ot, GNAME_OT_ENTRY_COUNT);
+        draw_buffer->prim_cursor = &draw_buffer->ot[GNAME_OT_ENTRY_COUNT];
         func_8006441C();
         func_800A9E78();
-        render_fade_overlay(draw_buf);
-        gname_tick(draw_buf);
+        render_fade_overlay(draw_buffer);
+        gname_tick(draw_buffer);
         func_80063194();
 
-        if (g_overlay_result != 0)
+        if (g_overlay_result != GNAME_RESULT_PENDING)
         {
             break;
         }
 
         field_update_audio_timer();
         DrawSync(0);
-        set_controller_vsync_interval(2U);
-        VSync(2);
+        set_controller_vsync_interval(GNAME_FRAME_VSYNC_INTERVAL);
+        VSync(GNAME_FRAME_VSYNC_INTERVAL);
 
-        if (g_overlay_result != 0)
+        if (g_overlay_result != GNAME_RESULT_PENDING)
         {
             break;
         }
 
-        ClearImage(&draw_buf->clear_rect, 0U, 0U, 0U);
+        ClearImage(&draw_buffer->clear_rect, 0U, 0U, 0U);
 
         /* Select the other half of the double buffer for the next frame. */
-        other_buf = g_render_buf_base;
+        other_buffer = g_render_buf_base;
 
-        if (draw_buf == g_render_buf_base)
+        if (draw_buffer == g_render_buf_base)
         {
-            other_buf = &g_render_buf_base[1];
+            other_buffer = &g_render_buf_base[GNAME_RENDER_BUFFER_B];
         }
 
-        next_buf = other_buf;
-        PutDispEnv(&other_buf->disp_env);
-        PutDrawEnv(&next_buf->draw_env);
-        DrawOTag(&draw_buf->ot[GNAME_OT_LAYOUT_BACKGROUND]);
-        draw_buf = other_buf;
+        next_buffer = other_buffer;
+        PutDispEnv(&other_buffer->disp_env);
+        PutDrawEnv(&next_buffer->draw_env);
+        DrawOTag(&draw_buffer->ot[GNAME_OT_LAYOUT_BACKGROUND]);
+        draw_buffer = other_buffer;
         update_controllers();
         cdrom_process_state();
     }
@@ -817,32 +816,31 @@ s32 gname_run(RenderContext* buf_base, u8* initial_name, u8* active_name, s32 so
     /* Persist edits only when this run targeted the pad context's history name. */
     if ((source_mode == GNAME_SRC_HISTORY) && (active_name == g_pad_ctx->gname_name))
     {
-        i = 0;
+        history_byte_index = 0;
         if (GNAME_USES_LARGE_HISTORY(g_pad_ctx))
         {
-            while (i < GNAME_HISTORY_COPY_SIZE)
+            while (history_byte_index < GNAME_HISTORY_COPY_SIZE)
             {
-                s32 history_offset = g_pad_ctx->large_history_index * GNAME_LARGE_HISTORY_STRIDE;
+                s32 history_slot_offset = g_pad_ctx->large_history_index * GNAME_LARGE_HISTORY_STRIDE;
+                u8* history_byte = (u8*)g_pad_ctx + history_slot_offset + history_byte_index;
 
-                /* Keeping the member offset on the store preserves the target register allocation. */
-                u8* history_byte = (u8*)g_pad_ctx + history_offset + i;
-                history_byte[GNAME_LARGE_HISTORY_OFFSET] = active_name[i];
-                i += 1;
+                history_byte[GNAME_LARGE_HISTORY_OFFSET] = active_name[history_byte_index];
+                history_byte_index++;
             }
         }
         else
         {
-            while (i < GNAME_HISTORY_COPY_SIZE)
+            while (history_byte_index < GNAME_HISTORY_COPY_SIZE)
             {
-                s32 history_offset = g_pad_ctx->small_history_index * GNAME_SMALL_HISTORY_STRIDE;
+                s32 history_slot_offset = g_pad_ctx->small_history_index * GNAME_SMALL_HISTORY_STRIDE;
+                u8* history_byte = (u8*)g_pad_ctx + history_slot_offset + history_byte_index;
 
-                /* See the large-history loop above: direct array indexing rotates v0/v1/a0. */
-                u8* history_byte = (u8*)g_pad_ctx + history_offset + i;
-                history_byte[GNAME_SMALL_HISTORY_OFFSET] = active_name[i];
-                i += 1;
+                history_byte[GNAME_SMALL_HISTORY_OFFSET] = active_name[history_byte_index];
+                history_byte_index++;
             }
         }
     }
+
     return g_overlay_result;
 }
 
@@ -866,39 +864,29 @@ static void reset_fade_state(void)
 }
 
 /**
- * @brief Update the fade and emit its full-screen overlay packets.
- *
- * Advances @c g_fade_current toward @c g_fade_target by one of the remaining
- * @c steps (snapping if none remain). Unless the tint is neutral, emits a
- * full-screen TILE plus a @c DR_TPAGE blend packet into @ref GNAME_OT_FRONT:
- * additive (@c FADE_TPAGE_ADD, brighten) when the red channel is >=
- * @c FADE_CHAN_ADDITIVE, otherwise subtractive (@c FADE_TPAGE_SUB, darken).
- *
- * @param ctx Render context; primitives are written at @c prim_cursor (which is
- *            advanced past them) and linked into @ref GNAME_OT_FRONT.
- *
- * @note Equivalent to TITLE.BIN's render_fade_overlay.
+ * @brief Advance and render the full-screen fade overlay.
+ * @param render_ctx Frame render context.
  * @see https://decomp.me/scratch/NvocJ (100%)
  */
-static void render_fade_overlay(RenderContext* ctx)
+static void render_fade_overlay(RenderContext* render_ctx)
 {
-    FadePrimitive* packet = ctx->prim_cursor;
-    RenderContext* ot_ctx = ctx;
-    s32 step_r;
-    s32 step_g;
-    s32 step_b;
-    s32 blend_tpage;
+    FadePrimitive* fade_packet = render_ctx->prim_cursor;
+    RenderContext* ordering_table_ctx = render_ctx;
+    s32 red_step;
+    s32 green_step;
+    s32 blue_step;
+    s32 blend_mode_tpage;
 
-    /* Lerp current toward target, or snap if no steps remain. */
+    /* Interpolate toward the target, or snap when the fade is complete. */
     if (g_fade_target.steps != 0)
     {
-        step_r = (g_fade_target.r - g_fade_current.r) / g_fade_target.steps;
-        step_g = (g_fade_target.g - g_fade_current.g) / g_fade_target.steps;
-        step_b = (g_fade_target.b - g_fade_current.b) / g_fade_target.steps;
+        red_step = (g_fade_target.r - g_fade_current.r) / g_fade_target.steps;
+        green_step = (g_fade_target.g - g_fade_current.g) / g_fade_target.steps;
+        blue_step = (g_fade_target.b - g_fade_current.b) / g_fade_target.steps;
         g_fade_target.steps--;
-        g_fade_current.r += step_r;
-        g_fade_current.g += step_g;
-        g_fade_current.b += step_b;
+        g_fade_current.r += red_step;
+        g_fade_current.g += green_step;
+        g_fade_current.b += blue_step;
     }
     else
     {
@@ -907,102 +895,92 @@ static void render_fade_overlay(RenderContext* ctx)
         g_fade_current.b = g_fade_target.b;
     }
 
-    /* Skip emit when all channels are neutral (identity tint). */
+    /* A neutral fade requires no GPU packets. */
     if ((g_fade_current.r == FADE_CHAN_NEUTRAL) &&
         (g_fade_current.g == FADE_CHAN_NEUTRAL) &&
         (g_fade_current.b == FADE_CHAN_NEUTRAL))
     {
-        ctx->prim_cursor = packet;
+        render_ctx->prim_cursor = fade_packet;
         return;
     }
 
-    /* Write RGB into the flat-quad color bytes. */
     if (g_fade_current.r >= FADE_CHAN_ADDITIVE)
     {
-        /* Additive bias: subtract 1 so FADE_CHAN_ADDITIVE maps to 0x00. */
-        packet->tile.r0 = (u8)g_fade_current.r - 1;
-        packet->tile.g0 = (u8)g_fade_current.g - 1;
-        packet->tile.b0 = (u8)g_fade_current.b - 1;
+        /* Decode additive channels with FADE_CHAN_ADDITIVE as zero intensity. */
+        fade_packet->tile.r0 = (u8)g_fade_current.r - FADE_ADDITIVE_BIAS;
+        fade_packet->tile.g0 = (u8)g_fade_current.g - FADE_ADDITIVE_BIAS;
+        fade_packet->tile.b0 = (u8)g_fade_current.b - FADE_ADDITIVE_BIAS;
     }
     else
     {
-        /* Subtractive bias: bitwise NOT so 0xFF->0x00, 0x00->0xFF.
-         * FADE_CHAN_NEUTRAL (casts to 0 as u8) is clamped to 0 explicitly. */
+        /* Decode subtractive channels while preserving neutral as zero intensity. */
         if (g_fade_current.r == FADE_CHAN_NEUTRAL)
         {
-            packet->tile.r0 = 0;
+            fade_packet->tile.r0 = 0;
         }
         else
         {
-            packet->tile.r0 = ~g_fade_current.r;
+            fade_packet->tile.r0 = ~g_fade_current.r;
         }
 
         if (g_fade_current.g == FADE_CHAN_NEUTRAL)
         {
-            packet->tile.g0 = 0;
+            fade_packet->tile.g0 = 0;
         }
         else
         {
-            packet->tile.g0 = ~g_fade_current.g;
+            fade_packet->tile.g0 = ~g_fade_current.g;
         }
 
         if (g_fade_current.b == FADE_CHAN_NEUTRAL)
         {
-            packet->tile.b0 = 0;
+            fade_packet->tile.b0 = 0;
         }
         else
         {
-            packet->tile.b0 = ~g_fade_current.b;
+            fade_packet->tile.b0 = ~g_fade_current.b;
         }
     }
 
-    setTile(&packet->tile);
-    setSemiTrans(&packet->tile, 1);
-    SET_YX0(&packet->tile, 0, 0);
-    setWH(&packet->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
-    addPrim(&ot_ctx->ot[GNAME_OT_FRONT], &packet->tile);
-    packet = NEXT_FADE_PACKET(packet, TILE);
+    setTile(&fade_packet->tile);
+    setSemiTrans(&fade_packet->tile, 1);
+    SET_YX0(&fade_packet->tile, 0, 0);
+    setWH(&fade_packet->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
+    addPrim(&ordering_table_ctx->ot[GNAME_OT_FRONT], &fade_packet->tile);
+    fade_packet = NEXT_FADE_PACKET(fade_packet, TILE);
 
-    /* The red channel selects the representation and blend mode for all channels. */
-    blend_tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
+    blend_mode_tpage = g_fade_current.r < FADE_CHAN_ADDITIVE ? FADE_TPAGE_SUB : FADE_TPAGE_ADD;
 
-    setDrawTPage(&packet->draw_mode, 0, 0, blend_tpage);
-    addPrim(&ot_ctx->ot[GNAME_OT_FRONT], &packet->draw_mode);
-    packet = NEXT_FADE_PACKET(packet, DR_TPAGE);
+    setDrawTPage(&fade_packet->draw_mode, 0, 0, blend_mode_tpage);
+    addPrim(&ordering_table_ctx->ot[GNAME_OT_FRONT], &fade_packet->draw_mode);
+    fade_packet = NEXT_FADE_PACKET(fade_packet, DR_TPAGE);
 
-    ctx->prim_cursor = packet;
+    render_ctx->prim_cursor = fade_packet;
 }
 
 /**
- * @brief Set the RGB fade target and step count.
- *
- * The next @c steps ticks of @ref render_fade_overlay lerp the current color
- * toward (r, g, b), snapping on the final tick.
- *
- * @param r     Target red; values above 0x100 select additive blending.
- * @param g     Target green intensity, encoded in the mode selected by @p r.
- * @param b     Target blue intensity, encoded in the mode selected by @p r.
- * @param steps Frames over which to interpolate. 0 means "snap immediately".
- *
+ * @brief Set the fade target color and interpolation duration.
+ * @param red Target red value and blend-mode selector.
+ * @param green Target green value.
+ * @param blue Target blue value.
+ * @param step_count Frames to reach the target, or 0 to snap.
  * @see https://decomp.me/scratch/jq3uD (100%)
  */
-static void set_fade_target(s32 r, s32 g, s32 b, s32 steps)
+static void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 {
-    g_fade_target.r = r;
-    g_fade_target.g = g;
-    g_fade_target.b = b;
-    g_fade_target.steps = steps;
+    g_fade_target.r = red;
+    g_fade_target.g = green;
+    g_fade_target.b = blue;
+    g_fade_target.steps = step_count;
 }
 
 /**
- * @brief Initialize name-entry resources and per-run state.
- *
+ * @brief Initialize name-entry resources and session state.
  * @see https://decomp.me/scratch/pnzC1 (100%)
  */
 void gname_init(void)
 {
-    /* Unused storage preserves the target stack frame. */
-    volatile int stack_pad[2];
+    volatile s32 frame_padding[GNAME_INIT_STACK_PAD_WORDS];
 
     load_name_entry_tim();
     func_800AA02C();
@@ -1013,111 +991,89 @@ void gname_init(void)
 }
 
 /**
- * @brief Upload the name-entry overlay's glyph TIM to its fixed VRAM slots.
- *
- * Builds the destination-coordinate block consumed by @ref load_tim_to_vram
- * and loads @c g_name_entry_tim. The four packed s16 coordinates are:
- *   - [0],[1] = pixel-data destination, VRAM (@c SCREEN_WIDTH, 0).
- *   - [2],[3] = CLUT destination, VRAM (0, @c VRAM_CLUT_Y).
- *
+ * @brief Upload the name-entry TIM to its fixed VRAM destinations.
  * @see https://decomp.me/scratch/EWwJI (100%)
  */
 static void load_name_entry_tim(void)
 {
-    TimDstCoords dst_coords;
-    dst_coords.pixel_x = SCREEN_WIDTH;
-    dst_coords.pixel_y = 0;
-    dst_coords.clut_x = 0;
-    dst_coords.clut_y = VRAM_CLUT_Y;
-    load_tim_to_vram(&dst_coords);
+    TimDstCoords upload_coords;
+
+    upload_coords.pixel_x = SCREEN_WIDTH;
+    upload_coords.pixel_y = 0;
+    upload_coords.clut_x = 0;
+    upload_coords.clut_y = VRAM_CLUT_Y;
+    load_tim_to_vram(&upload_coords);
 }
 
 /**
- * @brief Upload the CLUT and pixel data of @c g_name_entry_tim to VRAM.
- *
- * ORs @c GPU_STP_BIT into every non-zero CLUT entry, then uploads the CLUT and
- * pixel blocks. The TIM's embedded destination coordinates are ignored;
- * @p dst_coords supplies them.
- *
- * @param dst_coords Pixel and CLUT VRAM destination coordinates.
- *
- * @note Uses LoadImage for VRAM upload.
+ * @brief Apply CLUT transparency and upload the name-entry TIM to VRAM.
+ * @param dst_coords Pixel and CLUT upload destinations.
  * @see https://decomp.me/scratch/P3W9C (100%)
  */
-static void load_tim_to_vram(TimDstCoords* dst_coords)
+static void load_tim_to_vram(const TimDstCoords* dst_coords)
 {
-    RECT rect;
+    RECT upload_rect;
     TimBlock* pixel_block;
-    int i;
+    s32 clut_index;
 
-    Tim* tim = &g_name_entry_tim;
-    s32 clut_len = tim->clut_block.bnum;
-    u16* clut = tim->clut_data;
+    Tim* name_tim = &g_name_entry_tim;
+    s32 clut_block_size = name_tim->clut_block.bnum;
+    u16* clut_entry = name_tim->clut_data;
 
-    rect.x = dst_coords->clut_x;
-    rect.y = dst_coords->clut_y;
-    rect.w = CLUT_ENTRY_COUNT;
-    rect.h = 1;
+    upload_rect.x = dst_coords->clut_x;
+    upload_rect.y = dst_coords->clut_y;
+    upload_rect.w = CLUT_ENTRY_COUNT;
+    upload_rect.h = 1;
 
     /* Mark every non-zero CLUT entry semi-transparent. */
-    for (i = 0; i < CLUT_ENTRY_COUNT; i++)
+    for (clut_index = 0; clut_index < CLUT_ENTRY_COUNT; clut_index++)
     {
-        if (*clut)
+        if (*clut_entry != 0)
         {
-            *clut |= GPU_STP_BIT;
+            *clut_entry |= GPU_STP_BIT;
         }
-        clut++;
+        clut_entry++;
     }
 
-    LoadImage(&rect, tim->clut_data);
-    pixel_block = TIM_PIXEL_BLOCK(tim, clut_len);
+    LoadImage(&upload_rect, name_tim->clut_data);
+    pixel_block = TIM_PIXEL_BLOCK(name_tim, clut_block_size);
 
-    rect.x = dst_coords->pixel_x;
-    rect.y = dst_coords->pixel_y;
-    rect.w = pixel_block->w;
-    rect.h = pixel_block->h;
+    upload_rect.x = dst_coords->pixel_x;
+    upload_rect.y = dst_coords->pixel_y;
+    upload_rect.w = pixel_block->w;
+    upload_rect.h = pixel_block->h;
 
-    LoadImage(&rect, pixel_block + 1);
+    LoadImage(&upload_rect, pixel_block + 1);
 
-    /* The escaped RECT keeps these otherwise-unused trailing stores observable. */
-    rect.x = dst_coords->clut_x;
-    rect.y = dst_coords->clut_y + 1;
-    rect.w = CLUT_ENTRY_COUNT;
-    rect.h = 1;
+    /* Leave the rectangle positioned below the uploaded CLUT. */
+    upload_rect.x = dst_coords->clut_x;
+    upload_rect.y = dst_coords->clut_y + 1;
+    upload_rect.w = CLUT_ENTRY_COUNT;
+    upload_rect.h = 1;
 }
 
 /**
- * @brief Per-frame tick: render the frame, advance the frame counter, and
- *        update the overlay state machine.
- *
- * @param ctx Render context passed through to @ref gname_render.
- *
+ * @brief Render and update one name-entry frame.
+ * @param render_ctx Frame render context.
  * @see https://decomp.me/scratch/yYkTM (100%)
  */
-void gname_tick(RenderContext* ctx)
+void gname_tick(RenderContext* render_ctx)
 {
-    render_layout_sprite_batch(ctx);
-    gname_render(ctx);
+    render_layout_sprite_batch(render_ctx);
+    gname_render(render_ctx);
     g_frame_counter++;
     gname_update_state();
 }
 
 /**
- * @brief Per-frame state-machine update: startup countdown, strip-width lerp,
- *        and confirm-button handling.
- *
- * Once the startup delay elapses, input is handled by @ref gname_process_input.
- * On confirm (START), a valid name plays the accept SFX and sets
- * @c g_overlay_result = @c GNAME_RESULT_CONFIRM to advance the overlay; an invalid one plays the
- * reject SFX.
- *
+ * @brief Advance input gating, strip width, and START-button confirmation.
  * @see https://decomp.me/scratch/g5Rx3 (100%)
  */
 static void gname_update_state(void)
 {
-    s32 steps;
+    s32 remaining_width_steps;
 
-    /* Startup delay countdown. */
+    /* Gate input until the startup delay expires. */
     if (g_startup_delay == 0)
     {
         gname_process_input();
@@ -1127,53 +1083,47 @@ static void gname_update_state(void)
         g_startup_delay--;
     }
 
-    /* Lerp g_strip_width toward g_strip_width_target, snap when no steps remain. */
-    steps = g_strip_width_steps;
-    if (steps != 0)
+    /* Interpolate the backing strip to its target width. */
+    remaining_width_steps = g_strip_width_steps;
+    if (remaining_width_steps != 0)
     {
         g_strip_width_steps--;
-        g_strip_width += (g_strip_width_target - g_strip_width) / steps;
+        g_strip_width += (g_strip_width_target - g_strip_width) / remaining_width_steps;
     }
     else
     {
         g_strip_width = g_strip_width_target;
     }
 
-    /* Confirm-button: play accept SFX on valid entry, reject SFX otherwise. */
-    if (g_pad_input == PAD_BTN_START)
+    if (g_pad_input != PAD_BTN_START)
     {
-        /* accept */
-        if ((name_glyph_count(g_active_name) != 0) && (name_is_blank(g_active_name) == 0))
-        {
-            play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
-            g_overlay_result = GNAME_RESULT_CONFIRM;
-            return;
-        }
-
-        /* reject */
-        play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
+        return;
     }
+
+    if ((name_glyph_count(g_active_name) != 0) && (name_is_blank(g_active_name) == FALSE))
+    {
+        play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
+        g_overlay_result = GNAME_RESULT_CONFIRM;
+        return;
+    }
+
+    play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
 }
 
 /**
- * @brief Reset the overlay's run-state globals to their per-session defaults.
- *
- * Zeros the counters and indices, seeds the cursor from its initial targets,
- * computes the initial @c g_navigation_mode, and copies @c g_initial_name into
- * the active name buffer.
- *
+ * @brief Reset the name-entry state for a new session.
  * @see https://decomp.me/scratch/FboaU (100%)
  */
 static void reset_run_state(void)
 {
     g_activated_entry = GNAME_ENTRY_NONE;
-    g_navigation_mode = handle_navigation_input(0, 0);
+    g_navigation_mode = handle_navigation_input(GNAME_MODE_ACTION_OK, GNAME_BUTTONS_NONE);
     g_cursor_lerp_steps = 0;
     g_scroll_pos = 0;
     g_scroll_target = 0;
     g_scroll_steps = 0;
     g_char_cursor = 0;
-    g_name_clipboard[0] = 0;
+    g_name_clipboard[NAME_GLYPH_LEAD_INDEX] = 0;
     g_cursor_x = g_cursor_x_target;
     g_cursor_y = g_cursor_y_target;
     name_copy(g_active_name, g_initial_name);
@@ -1182,7 +1132,7 @@ static void reset_run_state(void)
     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
     g_glyph_append_anim_frame = 0;
     g_glyph_append_anim_timer = GLYPH_APPEND_ANIM_TIMER_START;
-    g_char_panel = 0;
+    g_char_panel = CHAR_PANEL_STANDARD_FIRST;
 }
 
 /**
