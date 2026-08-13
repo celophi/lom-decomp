@@ -84,6 +84,8 @@ s32 func_8001A5D4(s32, void*);                  /* extern */
 s32 func_8001C56C(void*, s32, s32, s32, s32);  /* extern */
 StructS0* func_801443E4();                      /* extern */
 StructS0* func_80144544();                      /* extern */
+StructS0* func_80144764();                      /* extern */
+StructS0* func_80146E30();                      /* extern */
 void func_801448EC(void);                       /* extern */
 
 /** @brief Packed four-byte record stored in the combination table. */
@@ -1458,4 +1460,85 @@ StructS0 *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
     *(u32 *)prim2 = (*(u32 *)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | ((u32)prim2 & 0xFFFFFF);
     return (StructS0 *)((u8 *)prim2 + 0x14);
+}
+
+/**
+ * @brief Emit a framed gosub panel: a clipped draw environment, a background,
+ *        three nested outline rectangles, a fill tile and a texture-page packet.
+ *
+ * The draw environment is inset 2 pixels inside (@p x, @p y, @p w, @p h) and
+ * biased to the bottom (0xF0) or top (8) half of the frame buffer according to
+ * @p flag; it is written into @p prim by func_8001A5D4 and linked into @p ot.
+ * The packet cursor then advances 0x40 bytes past that environment and the
+ * panel body is appended: func_80146E30 draws the background, then three
+ * func_80144764 outlines (white on the panel rect, black inset by one pixel,
+ * black outset by one pixel). Finally a TILE (code 0x62, colour 0xC0C0C0)
+ * covering the panel rect and an eight-byte DR_MODE (0xE1000045) are linked in.
+ *
+ * @param prim Destination packet buffer (the draw environment goes here).
+ * @param ot   Ordering-table tag every primitive is linked into (addPrim idiom).
+ * @param x    Panel left edge.
+ * @param y    Panel top edge.
+ * @param w    Panel width.
+ * @param h    Panel height.
+ * @param flag Non-zero selects the bottom (0xF0) frame-buffer half, zero the top (8).
+ * @return Pointer just past the DR_MODE packet (next free packet slot).
+ *
+ * @note WIP - best match 96.43% (gcc 2.7.2 CDK). Two residues remain, both
+ *       register allocation. (1) The four entry arg-copies come out in
+ *       declaration order (prim, ot, x, y) where the target defers prim's copy
+ *       to last (ot, x, y, prim); sched_oracle attributes that ordering to
+ *       sched2, i.e. it is downstream of the allocation, not an emit-order
+ *       problem. (2) The tail's packet cursor lands in v0 because local-alloc
+ *       honours its copy suggestion from the call return, so the target's
+ *       `addu a2, v0, zero` is elided and every scratch register in the tail
+ *       rotates by one (v0/v1/a0/a1/a2 -> a2/v0/v1/a0/a1). The target's cursor
+ *       must reach global-alloc instead (two disjoint live ranges or two basic
+ *       blocks); every variable-identity, alias and temp shape probed so far is
+ *       delta-exact 0. See working/func_80144544/.
+ * @note `var_s0->unkE` is deliberately assigned before `var_s0->unkC`: the
+ *       source order shortens h's live range by one insn, which is what puts
+ *       h in s5 and y in s6 as the target does (+14 exact rows).
+ */
+StructS0* func_80144544(StructS0* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag)
+{
+    StructS0* var_s0;
+    StructS0* var_a0;
+    s32 sp20[24];
+
+    if (flag != 0)
+    {
+        func_8001C56C(sp20, x + 2, y + 0xF2, w - 4, h - 4);
+    }
+    else
+    {
+        func_8001C56C(sp20, x + 2, y + 0xA, w - 4, h - 4);
+    }
+    func_8001A5D4((s32)prim, sp20);
+
+    prim->unk0 = (prim->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)prim & 0xFFFFFF);
+
+    prim = (StructS0*)((u8*)prim + 0x40);
+    var_s0 = func_80146E30(prim, ot, x, y, w, h);
+    var_s0 = func_80144764(var_s0, ot, x, y, w, h, 0xFFFFFF);
+    var_s0 = func_80144764(var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
+    var_s0 = func_80144764(var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
+
+    var_s0->unk4 = 0xC0C0C0;
+    ((u8*)var_s0)[3] = 3;
+    ((u8*)var_s0)[7] = 0x62;
+    var_s0->unk8 = x;
+    var_s0->unkA = y;
+    var_s0->unkE = h;
+    var_s0->unkC = w;
+    var_s0->unk0 = (var_s0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)var_s0 & 0xFFFFFF);
+
+    var_a0 = (StructS0*)((u8*)var_s0 + 0x10);
+    ((u8*)var_a0)[3] = 1;
+    var_a0->unk4 = 0xE1000045;
+    var_a0->unk0 = (var_a0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)var_a0 & 0xFFFFFF);
+    return (StructS0*)((u8*)var_a0 + 8);
 }
