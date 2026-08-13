@@ -233,6 +233,7 @@
 #define GNAME_SELECTION_ENTRY_END_EXCLUSIVE 13
 #define GNAME_SELECTION_ENTRY_HIDDEN 9
 #define GNAME_SELECTION_ENTRY_Y_BIAS 8
+#define GNAME_SELECTION_SHADOW_OFFSET 1
 #define GNAME_SCROLL_UP_ENTRY 0
 #define GNAME_SCROLL_DOWN_ENTRY 1
 
@@ -1748,77 +1749,68 @@ static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
 }
 
 /**
- * @brief Main per-frame render pass for the name-entry overlay.
- *
- * Runs each tick from @ref gname_tick (after @ref render_layout_sprite_batch),
- * building this frame's primitives and chaining them into @p render_ctx's OT.
- * In order:
- *  1. Action/panel selection glyphs (marking @c g_activated_entry).
- *  2. Append glyph + animation, then @ref emit_panel_tab_sprite.
- *  3. Text cursor SPRT at (@c g_cursor_x, @c g_cursor_y) + its DrawMode.
- *  4. Scroll indicator arrows, conditional on @c g_scroll_pos and the row.
- *  5. @ref emit_panel_label, @ref render_char_panel, @ref render_name_strip.
- *
- * @param render_ctx Render context; primitives are chained into its OT slots
- *                   and @c prim_cursor is advanced.
+ * @brief Render the interactive name-entry elements for one frame.
+ * @param render_ctx Render context whose ordering table and packet cursor are updated.
  * @see decomp.me (100%) https://decomp.me/scratch/a0Oye
  */
 static void gname_render(RenderContext* render_ctx)
 {
-    s32 entry_index;
+    s32 selection_index;
     s32 scroll_offset;
     const TabCursorEntry* selection_entry;
-    void* prim;
-    SPRT* cursor_sprt;
-    DR_TPAGE* cursor_tpage;
-    RenderContext* ot_ctx;
+    void* packet_cursor;
+    SPRT* cursor_sprite;
+    DR_TPAGE* cursor_draw_mode;
+    RenderContext* ordering_ctx;
     s32 cursor_x;
     s32 cursor_y;
-    ot_ctx = render_ctx;
-    prim = render_ctx->prim_cursor;
+
+    ordering_ctx = render_ctx;
+    packet_cursor = render_ctx->prim_cursor;
     selection_entry = g_tab_cursor_entries;
 
-    /* 1. Emit the action/panel selection entries and mark the selected one. */
-    for (entry_index = GNAME_SELECTION_ENTRY_FIRST; entry_index < GNAME_SELECTION_ENTRY_END_EXCLUSIVE; entry_index++, selection_entry++)
+    /* Emit the action and panel-selection glyphs. */
+    for (selection_index = GNAME_SELECTION_ENTRY_FIRST; selection_index < GNAME_SELECTION_ENTRY_END_EXCLUSIVE;
+         selection_index++, selection_entry++)
     {
-        if (entry_index != GNAME_SELECTION_ENTRY_HIDDEN)
+        if (selection_index != GNAME_SELECTION_ENTRY_HIDDEN)
         {
-            prim =
-                emit_glyph_sprt(prim, &ot_ctx->ot[GNAME_OT_CHAR_GRID], selection_entry->glyph, selection_entry->x,
-                                selection_entry->y - GNAME_SELECTION_ENTRY_Y_BIAS, 1,
-                                (entry_index - GNAME_SELECTION_ENTRY_FIRST) == g_activated_entry, 0);
+            packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_CHAR_GRID], selection_entry->glyph,
+                                            selection_entry->x, selection_entry->y - GNAME_SELECTION_ENTRY_Y_BIAS,
+                                            GNAME_SELECTION_SHADOW_OFFSET,
+                                            (selection_index - GNAME_SELECTION_ENTRY_FIRST) == g_activated_entry, FALSE);
         }
     }
 
-    /* 2. Static glyph + append animation, then panel-tab sprite. */
-    prim = emit_draw_mode_prim(prim, &ot_ctx->ot[GNAME_OT_CHAR_GRID]);
-    prim = emit_glyph_sprt(prim, &ot_ctx->ot[GNAME_OT_GLYPH_APPEND], GNAME_APPEND_GLYPH, GNAME_APPEND_X, GNAME_APPEND_Y, 0, 0, 0);
-    prim = render_glyph_append_anim(prim, ot_ctx);
-    prim = emit_draw_mode_prim(prim, &ot_ctx->ot[GNAME_OT_GLYPH_APPEND]);
-    prim = emit_panel_tab_sprite(prim, &ot_ctx->ot[GNAME_OT_FRONT]);
+    /* Render the append indicator, its animation, and the current panel tab. */
+    packet_cursor = emit_draw_mode_prim(packet_cursor, &ordering_ctx->ot[GNAME_OT_CHAR_GRID]);
+    packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_GLYPH_APPEND], GNAME_APPEND_GLYPH, GNAME_APPEND_X,
+                                    GNAME_APPEND_Y, 0, 0, FALSE);
+    packet_cursor = render_glyph_append_anim(packet_cursor, ordering_ctx);
+    packet_cursor = emit_draw_mode_prim(packet_cursor, &ordering_ctx->ot[GNAME_OT_GLYPH_APPEND]);
+    packet_cursor = emit_panel_tab_sprite(packet_cursor, &ordering_ctx->ot[GNAME_OT_FRONT]);
 
-    /* 3. Text cursor SPRT at (g_cursor_x, g_cursor_y) plus its glyph DrawTPage. */
+    /* Emit the editable-name cursor and its texture-page packet. */
     cursor_x = g_cursor_x;
     cursor_y = g_cursor_y;
-    cursor_sprt = (SPRT*)prim;
-    SET_BGR0_PACKED(cursor_sprt, GPU_TINT_NEUTRAL);
-    setSprt(cursor_sprt);
-    setXY0(cursor_sprt, cursor_x, cursor_y);
-    setUV0(cursor_sprt, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].u, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].v);
-    setWH(cursor_sprt, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].w, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].h);
-    setClut(cursor_sprt, (g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].clut & GLYPH_CLUT_X_MASK) << 4, VRAM_CLUT_Y);
-    addPrim(&ot_ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_sprt);
-    cursor_tpage = (DR_TPAGE*)(cursor_sprt + 1);
-    setDrawTPage(cursor_tpage, 0, 0, GNAME_GLYPH_TPAGE);
-    addPrim(&ot_ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_tpage);
-    prim = cursor_tpage + 1;
+    cursor_sprite = (SPRT*)packet_cursor;
+    SET_BGR0_PACKED(cursor_sprite, GPU_TINT_NEUTRAL);
+    setSprt(cursor_sprite);
+    setXY0(cursor_sprite, cursor_x, cursor_y);
+    setUV0(cursor_sprite, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].u, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].v);
+    setWH(cursor_sprite, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].w, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].h);
+    setClut(cursor_sprite, (g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].clut & GLYPH_CLUT_X_MASK) << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
+    addPrim(&ordering_ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_sprite);
+    cursor_draw_mode = (DR_TPAGE*)(cursor_sprite + 1);
+    setDrawTPage(cursor_draw_mode, 0, 0, GNAME_GLYPH_TPAGE);
+    addPrim(&ordering_ctx->ot[GNAME_OT_TEXT_CURSOR], cursor_draw_mode);
+    packet_cursor = cursor_draw_mode + 1;
 
-    /* 4. Scroll indicators: top arrow whenever scrolled, bottom arrow unless
-     * the current scroll page already shows the last glyph row. */
+    /* Show scroll indicators for content outside the visible grid window. */
     if (g_scroll_pos != 0)
     {
-        prim = emit_glyph_sprt(prim, &ot_ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].glyph,
-                               g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].x, g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].y, 0, 0, 0);
+        packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].glyph,
+                                        g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].x, g_tab_cursor_pos[GNAME_SCROLL_UP_ENTRY].y, 0, 0, FALSE);
     }
 
     if (g_char_last_row >= NAME_GRID_VISIBLE_ROWS)
@@ -1832,14 +1824,16 @@ static void gname_render(RenderContext* render_ctx)
 
         if ((scroll_offset >> NAME_GRID_CELL_SHIFT) != (g_char_last_row - (NAME_GRID_VISIBLE_ROWS - 1)))
         {
-            prim = emit_glyph_sprt(prim, &ot_ctx->ot[GNAME_OT_FRONT], g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].glyph,
-                                   g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].x, g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].y, 0, 0, 0);
+            packet_cursor = emit_glyph_sprt(packet_cursor, &ordering_ctx->ot[GNAME_OT_FRONT],
+                                            g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].glyph,
+                                            g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].x, g_tab_cursor_pos[GNAME_SCROLL_DOWN_ENTRY].y,
+                                            0, 0, FALSE);
         }
     }
 
-    /* 5. Panel label, character panel, and name strip sub-passes. */
-    prim = emit_draw_mode_prim(prim, &ot_ctx->ot[GNAME_OT_FRONT]);
-    render_ctx->prim_cursor = emit_panel_label(prim, &ot_ctx->ot[GNAME_OT_PANEL_LABEL]);
+    /* Finish with the panel label, character grid, and active-name strip. */
+    packet_cursor = emit_draw_mode_prim(packet_cursor, &ordering_ctx->ot[GNAME_OT_FRONT]);
+    render_ctx->prim_cursor = emit_panel_label(packet_cursor, &ordering_ctx->ot[GNAME_OT_PANEL_LABEL]);
     render_char_panel(render_ctx, g_char_panel);
     render_name_strip(render_ctx, g_active_name, g_strip_width);
 }
