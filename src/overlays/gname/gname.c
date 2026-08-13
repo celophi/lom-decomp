@@ -587,7 +587,7 @@ static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y);
 static void gname_render(RenderContext* render_ctx);
 static void* emit_panel_tab_sprite(void* prim_cursor, u_long* ot_entry);
 static void* emit_panel_label(void* prim_cursor, u_long* ot_entry);
-static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width);
+static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_width);
 static void render_char_panel(RenderContext* render_ctx, s32 panel_index);
 static void* emit_draw_mode_prim(DR_TPAGE* packet, u_long* ot_entry);
 static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id, s32 base_x, s32 base_y, s32 shadow_offset, s32 activation_adjust, s32 use_blue_overlay);
@@ -1919,62 +1919,53 @@ static void* emit_panel_label(void* prim_cursor, u_long* ot_entry)
 }
 
 /**
- * @brief Render the entered-name strip into its backing-page region.
- *
- * Builds, in order, into @ref GNAME_OT_NAME_STRIP:
- *   1. A DR_ENV packet built from the inactive frame's drawing environment.
- *   2. The name text, a decorative glyph, and their Draw-Mode packet.
- *   3. A DR_ENV packet that redirects drawing to a strip_width x 32 region,
- *      right-aligned on the current backing page (Y = 0x18 or 0x100).
- * Then advances @c ctx->prim_cursor past the last packet.
- *
- * @param ctx         Render context (OT, prim_cursor, frame_parity).
- * @param name_buf    Active name buffer; source data for the sprite.
- * @param strip_width Strip width in pixels; also sets its X as 0xF0 - strip_width.
- *
+ * @brief Render the active name into its backing strip.
+ * @param render_ctx Render context whose ordering table and packet cursor are updated.
+ * @param name Name buffer to render.
+ * @param strip_width Backing-strip width in pixels.
  * @see https://decomp.me/scratch/LxujJ (100%)
  */
-static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width)
+static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_width)
 {
-    u_long* ot_head;
+    u_long* ot_entry;
     DR_ENV* restore_env_packet;
     DR_ENV* packet_cursor;
     s32 backing_y;
     s32 backing_x;
-    DRAWENV* backing_env;
+    DRAWENV* strip_draw_env;
     DrawEnvScratch strip_draw_scratch;
 
-    ot_head = &ctx->ot[GNAME_OT_NAME_STRIP];
-    restore_env_packet = ctx->prim_cursor;
+    ot_entry = &render_ctx->ot[GNAME_OT_NAME_STRIP];
+    restore_env_packet = render_ctx->prim_cursor;
     /* The initial alias is required to preserve the target's register allocation. */
     packet_cursor = restore_env_packet;
 
-    /* 1. Restore the inactive frame's drawing environment after this OT pass. */
-    SetDrawEnv(restore_env_packet, &g_render_buf_base[ctx->frame_parity ^ 1].draw_env);
+    /* Restore the inactive frame's drawing environment after this OT pass. */
+    SetDrawEnv(restore_env_packet, &g_render_buf_base[render_ctx->frame_parity ^ 1].draw_env);
 
-    addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], restore_env_packet);
+    addPrim(ot_entry, restore_env_packet);
 
-    /* 2. Emit the name text, decorative glyph, and glyph Draw-Mode packet. */
-    packet_cursor = func_800A88A0(restore_env_packet + 1, ot_head, name_buf, NAME_STRIP_TEXT_COLOR, NAME_STRIP_TEXT_X, NAME_STRIP_TEXT_Y,
+    /* Emit the name text, decorative glyph, and glyph draw mode. */
+    packet_cursor = func_800A88A0(restore_env_packet + 1, ot_entry, name, NAME_STRIP_TEXT_COLOR, NAME_STRIP_TEXT_X, NAME_STRIP_TEXT_Y,
                                   NAME_STRIP_TEXT_MODE);
-    packet_cursor = emit_glyph_sprt(packet_cursor, ot_head, NAME_STRIP_DECOR_GLYPH, 0, 0, 0, 0, 0);
-    packet_cursor = emit_draw_mode_prim(packet_cursor, ot_head);
+    packet_cursor = emit_glyph_sprt(packet_cursor, ot_entry, NAME_STRIP_DECOR_GLYPH, 0, 0, 0, 0, 0);
+    packet_cursor = emit_draw_mode_prim(packet_cursor, ot_entry);
 
-    /* 3. Redirect drawing to a strip-sized region on this frame's backing page. */
-    backing_env = &strip_draw_scratch.draw_env;
+    /* Redirect rendering to the strip region on the current backing page. */
+    strip_draw_env = &strip_draw_scratch.draw_env;
     backing_x = NAME_STRIP_BACKING_RIGHT - strip_width;
     backing_y = NAME_STRIP_BACKING_PAGE0_Y;
-    if (ctx->frame_parity != 0)
+    if (render_ctx->frame_parity != 0)
     {
         backing_y = NAME_STRIP_BACKING_PAGE1_Y;
     }
 
-    SetDefDrawEnv(backing_env, backing_x, backing_y, strip_width, NAME_STRIP_BACKING_HEIGHT);
-    SetDrawEnv(packet_cursor, backing_env);
+    SetDefDrawEnv(strip_draw_env, backing_x, backing_y, strip_width, NAME_STRIP_BACKING_HEIGHT);
+    SetDrawEnv(packet_cursor, strip_draw_env);
 
-    addPrim(&ctx->ot[GNAME_OT_NAME_STRIP], packet_cursor);
-    packet_cursor += 1;
-    ctx->prim_cursor = packet_cursor;
+    addPrim(ot_entry, packet_cursor);
+    packet_cursor++;
+    render_ctx->prim_cursor = packet_cursor;
 }
 
 /**
