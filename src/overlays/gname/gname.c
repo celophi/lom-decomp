@@ -265,15 +265,22 @@
 #define NAME_MEASURE_CAPACITY 16
 #define NAME_MEASURE_TEXT_COLOR 0
 
+/* Resolve a glyph-table entry while retaining offset-plus-base evaluation order. */
+#define GLYPH_TABLE_ENTRY(table, index) \
+    ((const GlyphInfo*)(((index) * sizeof(*(table))) + (u32)(table)))
+
 /** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
  *  Bits [5:0] hold CLUT_X/16, the portion encoded in a sprite's CLUT id. */
 #define GLYPH_CLUT_X_MASK 0x3F
+#define GLYPH_CLUT_X_SHIFT 4
 
 /** CLUT-page bit pattern OR'd over the low 6 bits of @c GlyphInfo::clut
  *  before writing it into a sprite primitive (see @ref render_layout_sprite_batch,
  *  @ref emit_glyph_sprt). Encodes the fixed VRAM Y row (498) shared by all
  *  name-entry palettes; bits [5:0] are zero and supplied by @c GLYPH_CLUT_X_MASK. */
 #define GLYPH_CLUT_PAGE_BITS 0x7C80
+#define GLYPH_SECONDARY_OFFSET_SCALE 2
+#define GLYPH_SECONDARY_BLACK_TINT GPU_COLOR_WORD(0, 0, 0)
 #define GLYPH_SECONDARY_BLUE_TINT GPU_COLOR_WORD(0, 0, 0xA0)
 
 /** Number of frames in @c g_glyph_append_anim_frames; reaching this index wraps the
@@ -581,9 +588,9 @@ static void gname_render(RenderContext* render_ctx);
 static void* emit_panel_tab_sprite(void* prim_cursor, u_long* ot_entry);
 static void* emit_panel_label(void* prim_cursor, u_long* ot_entry);
 static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width);
-static void render_char_panel(RenderContext* ctx, s32 panel_idx);
-static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head);
-static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, s32 x, s32 y, s32 shadow_offset, s32 activation_adjust, s32 use_blue_secondary);
+static void render_char_panel(RenderContext* render_ctx, s32 panel_index);
+static void* emit_draw_mode_prim(DR_TPAGE* packet, u_long* ot_entry);
+static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id, s32 base_x, s32 base_y, s32 shadow_offset, s32 activation_adjust, s32 use_blue_overlay);
 static void render_layout_sprite_batch(RenderContext* render_ctx);
 static s32 name_byte_length(const u8* name_buf);
 static s32 name_glyph_count(const u8* name_buf);
@@ -1971,204 +1978,171 @@ static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width)
 }
 
 /**
- * @brief Render the visible character panel into its backing-page region.
- *
- * @param ctx       Render context (OT, primitive heap, frame parity).
- * @param panel_idx Active character panel index (0-3 non-kanji; dormant value
- *                  4 selects the kanji tables and ignores this parameter).
- *
+ * @brief Render the visible character-panel glyphs.
+ * @param render_ctx Render context whose ordering table and packet cursor are updated.
+ * @param panel_index Active standard-panel index; ignored for the kanji panel.
  * @see decomp.me (100%) https://decomp.me/scratch/ckF2S
  */
-static void render_char_panel(RenderContext* ctx, s32 panel_idx)
+static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
 {
     u_long* ot_entry;
-    u8 frame_pad[8]; /* Without this pad the stack frame is 8 bytes too small. */
+    u8 stack_padding[8]; /* Preserve the packet scratch frame size. */
     GridDrawEnvScratch grid_draw_scratch;
     DR_ENV* packet_cursor;
-    void* glyph_cursor; /* Opaque cursor advanced over variable-sized glyph packets. */
-    u8* glyph_base;
-    s32 column;
+    void* glyph_packet_cursor;
+    u8* glyph_table;
+    s32 grid_column;
     s32 glyph_index;
-    s32 glyph_limit;
-    s32 row;
-    s32 panel_y;
+    s32 glyph_end_copy;
+    s32 grid_row;
+    s32 glyph_y;
     s32 glyph_end;
-    u32 kanji_category_entry;
-    DRAWENV* backing_env;
+    u32 category_entry;
+    DRAWENV* grid_draw_env;
     s32 backing_y;
-    ot_entry = &ctx->ot[GNAME_OT_CHAR_PANEL];
-    packet_cursor = ctx->prim_cursor;
-    SetDrawEnv(packet_cursor, &g_render_buf_base[ctx->frame_parity ^ 1].draw_env);
+
+    ot_entry = &render_ctx->ot[GNAME_OT_CHAR_PANEL];
+    packet_cursor = render_ctx->prim_cursor;
+    SetDrawEnv(packet_cursor, &g_render_buf_base[render_ctx->frame_parity ^ 1].draw_env);
     addPrim(ot_entry, packet_cursor);
-    glyph_cursor = packet_cursor + 1;
+    glyph_packet_cursor = packet_cursor + 1;
+
     /* Select the glyph range from either the kanji or standard panel tables. */
     if (g_char_panel == CHAR_PANEL_KANJI)
     {
-        glyph_base = KANJI_GLYPH_TBL;
-        kanji_category_entry = g_kanji_cat_entries[g_kanji_cat];
-        glyph_index = g_kanji_entry_offsets[kanji_category_entry];
-        glyph_end = g_kanji_entry_offsets[kanji_category_entry + 1];
-        row = 0;
+        glyph_table = KANJI_GLYPH_TBL;
+        category_entry = g_kanji_cat_entries[g_kanji_cat];
+        glyph_index = g_kanji_entry_offsets[category_entry];
+        glyph_end = g_kanji_entry_offsets[category_entry + 1];
+        grid_row = 0;
     }
     else
     {
-        glyph_index = g_panel_char_offsets[panel_idx];
-        glyph_end = g_panel_char_offsets[panel_idx + 1];
-        glyph_base = (u8*)PANEL_REC_TBL;
-        /* Empty statement: required to match (it splits the basic block here). */
+        glyph_index = g_panel_char_offsets[panel_index];
+        glyph_end = g_panel_char_offsets[panel_index + 1];
+        glyph_table = (u8*)PANEL_REC_TBL;
+        /* Preserve the standard-panel branch boundary. */
         do
         {
         } while (0);
-        row = 0;
+        grid_row = 0;
     }
-    /* Copying row (always 0 here) rather than assigning 0 is required to match. */
-    column = row;
+
     /* Walk the range row-major, emitting only glyphs inside the visible window. */
-    while (1)
+    grid_column = grid_row;
+    while (TRUE)
     {
-        panel_y = (row * NAME_GRID_CELL_SIZE) - g_scroll_pos;
-        /* Reloading the limit into its own local each pass is required to match. */
-        glyph_limit = glyph_end;
-        if (NAME_GRID_ROW_VISIBLE(panel_y))
+        glyph_y = (grid_row * NAME_GRID_CELL_SIZE) - g_scroll_pos;
+        glyph_end_copy = glyph_end;
+        if (NAME_GRID_ROW_VISIBLE(glyph_y))
         {
-            glyph_cursor = func_800A88A0(glyph_cursor, ot_entry, TBL_ENTRY(glyph_base, glyph_index), CHAR_PANEL_GLYPH_COLOR,
-                                         column * NAME_GRID_CELL_SIZE, panel_y, CHAR_PANEL_GLYPH_MODE);
+            glyph_packet_cursor = func_800A88A0(glyph_packet_cursor, ot_entry, TBL_ENTRY(glyph_table, glyph_index), CHAR_PANEL_GLYPH_COLOR,
+                                                grid_column * NAME_GRID_CELL_SIZE, glyph_y, CHAR_PANEL_GLYPH_MODE);
         }
         glyph_index++;
-        if (glyph_limit == glyph_index)
+        if (glyph_end_copy == glyph_index)
         {
             break;
         }
-        column++;
-        if (column == NAME_GRID_COLUMNS)
+        grid_column++;
+        if (grid_column == NAME_GRID_COLUMNS)
         {
-            column = 0;
-            row++;
+            grid_column = 0;
+            grid_row++;
         }
     }
 
     /* Redirect this OT pass into the grid region on this frame's backing page. */
-    backing_env = &grid_draw_scratch.draw_env;
-    g_char_last_row = row;
-    g_char_last_col = column;
-    packet_cursor = glyph_cursor;
+    grid_draw_env = &grid_draw_scratch.draw_env;
+    g_char_last_row = grid_row;
+    g_char_last_col = grid_column;
+    packet_cursor = glyph_packet_cursor;
     backing_y = NAME_GRID_BACKING_PAGE0_Y;
-    if (ctx->frame_parity != 0)
+    if (render_ctx->frame_parity != 0)
     {
         backing_y = NAME_GRID_BACKING_PAGE1_Y;
     }
-    SetDefDrawEnv(backing_env, NAME_GRID_BACKING_X, backing_y, NAME_GRID_BACKING_W, NAME_GRID_VIS_HEIGHT);
-    SetDrawEnv(packet_cursor, backing_env);
+    SetDefDrawEnv(grid_draw_env, NAME_GRID_BACKING_X, backing_y, NAME_GRID_BACKING_W, NAME_GRID_VIS_HEIGHT);
+    SetDrawEnv(packet_cursor, grid_draw_env);
     addPrim(ot_entry, packet_cursor);
-    packet_cursor += 1;
-    ctx->prim_cursor = packet_cursor;
+    packet_cursor++;
+    render_ctx->prim_cursor = packet_cursor;
 }
 
 /**
- * @brief Emit a Draw-Mode (GP0 0xE1) primitive and link it to the OT.
- *
- * Writes an 8-byte packet at @p prim:
- *  - byte 3 = 1 (one-word payload).
- *  - bytes 4..7 = `0xE1000005` (GP0 Draw Mode: glyph texture page,
- *    abr=0, dither off, drawing-to-display-area disabled).
- * Then splices the packet into the 24-bit OT whose head is at @p ot_head
- * using the standard `(top_byte | next_addr & 0xFFFFFF)` chain idiom and
- * returns the heap cursor advanced by 8 bytes.
- *
- * @param prim    Destination @ref DR_TPAGE packet (8 bytes on the primitive heap).
- * @param ot_head Pointer to the 24-bit OT head entry (@ref u_long).
- * @return Heap cursor advanced past the packet (`prim + 1`, eight bytes).
- *
+ * @brief Emit the glyph texture-page draw-mode packet.
+ * @param packet Destination draw-mode packet.
+ * @param ot_entry Ordering-table entry that receives the packet.
+ * @return Next free primitive-buffer address.
  * @see https://decomp.me/scratch/EyVeo (100%)
  */
-static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head)
+static void* emit_draw_mode_prim(DR_TPAGE* packet, u_long* ot_entry)
 {
-    setDrawTPage(prim, 0, 0, GNAME_GLYPH_TPAGE);
-    addPrim(ot_head, prim);
+    setDrawTPage(packet, 0, 0, GNAME_GLYPH_TPAGE);
+    addPrim(ot_entry, packet);
 
-    return prim + 1;
+    return packet + 1;
 }
 
 /**
- * @brief Emit 1 or 2 glyph SPRT primitives and chain them onto an OT tag.
- *
- * Always writes a primary white-tinted (RGB=0x80) SPRT for glyph @p glyph_id
- * at @c (x-shadow_offset+activation_adjust,
- * y-shadow_offset+activation_adjust).
- * When @p shadow_offset is nonzero, it also emits either a black drop shadow
- * or an opaque blue selected-entry overlay.
- *
- * Both sprites pull u/v/w/h/clut from @c g_glyph_table[glyph_id] and are
- * appended to the linked list at @p ot_entry via the standard addPrim sequence.
- *
- * @param prim_cursor Pointer to the next free byte in the primitive buffer.
- * @param ot_entry    Pointer to the OT head tag (addPrim "ot" arg).
- * @param glyph_id  Glyph index into @c g_glyph_table.
- * @param x         Base X screen coordinate.
- * @param y         Base Y screen coordinate.
- * @param shadow_offset Offset distance in pixels. When 0, only the primary
- *                      SPRT is emitted.
- * @param activation_adjust Added to the primary sprite's position offset.
- *                          When equal to @p shadow_offset, it renders at
- *                          (x,y), as used for an activated entry.
- * @param use_blue_secondary 0 = black drop shadow; nonzero = blue overlay.
- * @return Pointer to the byte after the last emitted primitive.
- *
+ * @brief Emit a glyph sprite with an optional secondary sprite.
+ * @param packet_start Next free primitive-buffer address.
+ * @param ot_entry Ordering-table entry that receives the sprites.
+ * @param glyph_id Index into @c g_glyph_table.
+ * @param base_x Base screen X coordinate.
+ * @param base_y Base screen Y coordinate.
+ * @param shadow_offset Position offset; zero disables the secondary sprite.
+ * @param activation_adjust Adjustment applied to the primary and secondary positions.
+ * @param use_blue_overlay TRUE for a blue overlay; FALSE for a translucent black shadow.
+ * @return Next free primitive-buffer address.
  * @see decomp.me (100%) https://decomp.me/scratch/Au2h5
  */
-static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, s32 x, s32 y, s32 shadow_offset, s32 activation_adjust, s32 use_blue_secondary)
+static void* emit_glyph_sprt(void* packet_start, u_long* ot_entry, s32 glyph_id, s32 base_x, s32 base_y, s32 shadow_offset, s32 activation_adjust, s32 use_blue_overlay)
 {
-    u8* ptr = prim_cursor;
-    SPRT* primary_sprt = prim_cursor;
+    u8* packet_cursor = packet_start;
+    SPRT* primary_sprite = packet_start;
+    const GlyphInfo* primary_glyph_info = GLYPH_TABLE_ENTRY(g_glyph_table, glyph_id);
+    s32 secondary_position_offset;
 
-    /* (offset) + (base) form so gcc emits `addu v1,v1,v0` (vs the reverse
-       order from `&g_glyph_table[glyph_id]`). Also keeps glyph_id live for the
-       second SPRT's re-derivation below. */
-    GlyphInfo* glyph_info = (GlyphInfo*)((glyph_id << 3) + (u32)g_glyph_table);
-    s32 secondary_offset;
-
-    /* Primary glyph SPRT - white tint, fully opaque. */
-    SET_BGR0_PACKED(primary_sprt, GPU_TINT_NEUTRAL);
-    setSprt(primary_sprt);
-    setXY0(primary_sprt, x - shadow_offset + activation_adjust, y - shadow_offset + activation_adjust);
-    setUV0(primary_sprt, glyph_info->u, glyph_info->v);
-    setWH(primary_sprt, glyph_info->w, glyph_info->h);
-    setClut(primary_sprt, glyph_info->clut << 4, VRAM_CLUT_Y);
-    addPrim(ot_entry, primary_sprt);
-    ptr += sizeof(SPRT);
+    SET_BGR0_PACKED(primary_sprite, GPU_TINT_NEUTRAL);
+    setSprt(primary_sprite);
+    setXY0(primary_sprite, base_x - shadow_offset + activation_adjust, base_y - shadow_offset + activation_adjust);
+    setUV0(primary_sprite, primary_glyph_info->u, primary_glyph_info->v);
+    setWH(primary_sprite, primary_glyph_info->w, primary_glyph_info->h);
+    setClut(primary_sprite, primary_glyph_info->clut << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
+    addPrim(ot_entry, primary_sprite);
+    packet_cursor += sizeof(SPRT);
 
     if (shadow_offset != 0)
     {
-        /* Secondary SPRT: drop shadow or selected-entry blue overlay. */
-        GlyphInfo* glyph_table_base;
-        GlyphInfo* secondary_glyph_info;
+        const GlyphInfo* glyph_table;
+        const GlyphInfo* secondary_glyph_info;
 
-        /* A persistent SPRT alias here changes register allocation; cast at each write. */
-        SET_BGR0_PACKED((SPRT*)ptr, (use_blue_secondary != 0) ? GLYPH_SECONDARY_BLUE_TINT : 0);
+        SET_BGR0_PACKED((SPRT*)packet_cursor,
+                        (use_blue_overlay != FALSE) ? GLYPH_SECONDARY_BLUE_TINT : GLYPH_SECONDARY_BLACK_TINT);
 
-        setSprt((SPRT*)ptr);
+        setSprt((SPRT*)packet_cursor);
 
-        if (use_blue_secondary == 0)
+        if (use_blue_overlay == FALSE)
         {
-            setSemiTrans((SPRT*)ptr, 1);
+            setSemiTrans((SPRT*)packet_cursor, TRUE);
         }
 
-        secondary_offset = (shadow_offset - activation_adjust) * 2;
+        secondary_position_offset = (shadow_offset - activation_adjust) * GLYPH_SECONDARY_OFFSET_SCALE;
 
-        /* Force a fresh table-base materialization for the secondary lookup. */
-        glyph_table_base = g_glyph_table;
-        secondary_glyph_info = (GlyphInfo*)((glyph_id << 3) + (u32)glyph_table_base);
+        glyph_table = g_glyph_table;
+        secondary_glyph_info = GLYPH_TABLE_ENTRY(glyph_table, glyph_id);
 
-        setXY0((SPRT*)ptr, x + secondary_offset, y + secondary_offset);
-        setUV0((SPRT*)ptr, secondary_glyph_info->u, secondary_glyph_info->v);
-        setWH((SPRT*)ptr, secondary_glyph_info->w, secondary_glyph_info->h);
-        setClut((SPRT*)ptr, secondary_glyph_info->clut << 4, VRAM_CLUT_Y);
-        addPrim(ot_entry, ptr);
+        setXY0((SPRT*)packet_cursor, base_x + secondary_position_offset, base_y + secondary_position_offset);
+        setUV0((SPRT*)packet_cursor, secondary_glyph_info->u, secondary_glyph_info->v);
+        setWH((SPRT*)packet_cursor, secondary_glyph_info->w, secondary_glyph_info->h);
+        setClut((SPRT*)packet_cursor, secondary_glyph_info->clut << GLYPH_CLUT_X_SHIFT, VRAM_CLUT_Y);
+        addPrim(ot_entry, packet_cursor);
 
-        ptr += sizeof(SPRT);
+        packet_cursor += sizeof(SPRT);
     }
 
-    return ptr;
+    return packet_cursor;
 }
 
 /**
@@ -2191,7 +2165,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
 
     RenderContext* opening_ctx = render_ctx;
     RenderContext* batch_ctx;
-    GlyphInfo* glyph_table;
+    const GlyphInfo* glyph_table;
     batch_ctx = opening_ctx;
 
     packet_cursor = opening_ctx->prim_cursor;
@@ -2217,7 +2191,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
     {
         u32 glyph_id = sequence_entry->id;
         u32 packed_xy;
-        GlyphInfo* glyph_info;
+        const GlyphInfo* glyph_info;
         u8 glyph_height;
         u32 clut_word;
 
@@ -2227,7 +2201,7 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
         setSprt(sprite);
 
         packed_xy = sequence_entry->xy;
-        glyph_info = (GlyphInfo*)((glyph_id * sizeof(*glyph_table)) + (u32)glyph_table);
+        glyph_info = GLYPH_TABLE_ENTRY(glyph_table, glyph_id);
         SET_SPRT_XY0_WORD(sprite, packed_xy);
 
         sprite->u0 = glyph_info->u;
