@@ -271,14 +271,11 @@ typedef struct
 
 /* Typed views over the serialized name-entry resource. */
 #define GNAME_HEADER_OFFSET(member) ((u32)&((GnameDataHeader*)0)->member)
-#define GNAME_PANEL_RECORDS_FIELD_OFFSET GNAME_HEADER_OFFSET(panel_records_offset)
-#define GNAME_KANJI_RECORDS_FIELD_OFFSET GNAME_HEADER_OFFSET(kanji_records_offset)
+#define GNAME_HEADER_FROM_FIELD(symbol, member) \
+    ((const GnameDataHeader*)((u8*)&(symbol) - GNAME_HEADER_OFFSET(member)))
 #define GNAME_RANDOM_NAMES_FIELD_OFFSET GNAME_HEADER_OFFSET(random_names_offset)
-#define GNAME_RECORD_OFFSET_SIZE sizeof(((GnameRecordTable*)0)->offsets[0])
-#define PANEL_DATA_HEADER \
-    ((const GnameDataHeader*)(((u8*)&g_panel_tbl_off) - GNAME_PANEL_RECORDS_FIELD_OFFSET))
-#define KANJI_DATA_HEADER \
-    ((const GnameDataHeader*)(((u8*)&g_kanji_panel_offset) - GNAME_KANJI_RECORDS_FIELD_OFFSET))
+#define PANEL_DATA_HEADER GNAME_HEADER_FROM_FIELD(g_panel_tbl_off, panel_records_offset)
+#define KANJI_DATA_HEADER GNAME_HEADER_FROM_FIELD(g_kanji_panel_offset, kanji_records_offset)
 #define PANEL_RECORD_TABLE \
     ((const GnameRecordTable*)((u8*)PANEL_DATA_HEADER + g_panel_tbl_off))
 #define KANJI_RECORD_TABLE \
@@ -287,27 +284,26 @@ typedef struct
     ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + g_panel_tbl_off))
 #define KANJI_CHARACTER_TABLE \
     ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (u32)g_kanji_panel_offset))
-#define RANDOM_NAME_TABLE_BASE \
-    ((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_random_names_off)))
-#define HISTORY_NAME_TABLE_BASE \
-    ((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_history_names_off)))
-/* The u16 cast preserves the matched offset-load evaluation order. */
+#define RANDOM_NAME_TABLE \
+    ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + \
+                         (*((u32*)g_random_names_off))))
+#define HISTORY_NAME_TABLE \
+    ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + \
+                         (*((u32*)g_history_names_off))))
+/* Raw u16 indexing preserves GCC's required address evaluation. */
 #define GNAME_RECORD(table, index) ((u8*)(table) + ((u16*)(table))[(index)])
 #define GNAME_RECORD_IN_RANGE(table, range_start, index) \
-    ((u8*)(table) + \
-     *(u16*)((u8*)(table) + ((range_start) * sizeof(u16)) + ((index) * sizeof(u16))))
+    ((u8*)(table) + (&(table)->offsets[(range_start)])[(index)])
 
 #define RANDOM_NAME(index) \
-    (RANDOM_NAME_TABLE_BASE + \
-     (*((u16*)(RANDOM_NAME_TABLE_BASE + ((index) * GNAME_RECORD_OFFSET_SIZE)))))
+    ((u8*)RANDOM_NAME_TABLE + (&RANDOM_NAME_TABLE->offsets[0])[(index)])
 #define HISTORY_NAME(index) \
-    (HISTORY_NAME_TABLE_BASE + \
-     (*((u16*)(HISTORY_NAME_TABLE_BASE + ((index) * GNAME_RECORD_OFFSET_SIZE)))))
-#define HISTORY_SUFFIX_TABLE_BASE \
-    ((g_history_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_history_names_off)))
+    ((u8*)HISTORY_NAME_TABLE + (&HISTORY_NAME_TABLE->offsets[0])[(index)])
+#define HISTORY_SUFFIX_TABLE \
+    ((GnameRecordTable*)((g_history_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + \
+                         (*((u32*)g_history_names_off))))
 #define HISTORY_SUFFIX(index) \
-    (HISTORY_NAME_TABLE_BASE + \
-     (*((u16*)(HISTORY_SUFFIX_TABLE_BASE + ((index) * GNAME_RECORD_OFFSET_SIZE)))))
+    ((u8*)HISTORY_NAME_TABLE + (&HISTORY_SUFFIX_TABLE->offsets[0])[(index)])
 
 /** @brief RGB fade color with an optional remaining interpolation count. */
 typedef struct
