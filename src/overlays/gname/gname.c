@@ -70,6 +70,10 @@
 #define NAME_GLYPH_SIZE_SINGLE 1
 #define NAME_GLYPH_SIZE_DOUBLE 2
 #define NAME_GLYPH_VALUE_MASK 0xFFFFU
+#define NAME_GLYPH_LEAD_INDEX 0
+#define NAME_GLYPH_TRAIL_INDEX 1
+#define NAME_GLYPH_TERMINATOR_INDEX 2
+#define NAME_GLYPH_BUFFER_SIZE (NAME_GLYPH_TERMINATOR_INDEX + 1)
 
 /**
  * Button mask for confirming the current name-entry selection.
@@ -194,6 +198,8 @@
 #define KANJI_CATEGORY_STEP 10
 #define KANJI_CATEGORY_COUNT 50
 #define KANJI_CATEGORY_WRAP_OFFSET 41
+#define KANJI_CATEGORY_PREV_EDGE -1
+#define KANJI_CATEGORY_FIRST 0
 #define KANJI_CATEGORY_NEXT_EDGE 9
 
 /**
@@ -584,7 +590,7 @@ static void gname_update_state(void);
 static void reset_run_state(void);
 static s32 handle_navigation_input(s32 mode, s32 buttons);
 static void gname_process_input(void);
-static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y);
+static u_long* emit_cursor_glyph(u_long* packet_cursor, u_long* ot_entry, s16 x, s16 y);
 static void gname_render(RenderContext* render_ctx);
 static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry);
 static void* emit_panel_label(void* packet_cursor, u_long* ot_entry);
@@ -1509,60 +1515,41 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
 }
 
 /**
- * @brief Handle one frame of name-entry input.
- *
- * Called every frame by @ref gname_update_state once @c g_startup_delay
- * reaches zero. Dispatches pad input in priority order:
- *  - Nav/confirm (@c GNAME_BTN_NAV_MASK): delegated to
- *    @ref handle_navigation_input.
- *  - Undo (L2): move the last glyph from @c g_active_name back onto the
- *    clipboard @c g_name_clipboard.
- *  - Redo (R2): move the first clipboard character back into @c g_active_name.
- *  - Cancel (Circle): pop the last glyph, or finish with
- *    @c GNAME_RESULT_CANCEL when empty and @c g_allow_empty_cancel is set.
- *
- * In the dormant kanji grid path (@c g_navigation_mode == GNAME_MODE_GRID,
- * @c g_char_panel == @c CHAR_PANEL_KANJI), L1/R1 cycle @c g_kanji_cat by one
- * category page with wrap and reset the page. Finally, advances the cursor
- * and scroll lerps.
- *
- * @note The kanji-nav block re-tests @c GNAME_BTN_KANJI_NAV in a nested @c if
- *       that is always true (the outer @c if already guaranteed it). This
- *       redundant check is a codegen artifact and must be preserved.
+ * @brief Process name editing, kanji navigation, and cursor interpolation.
  * @see decomp.me (100%) https://decomp.me/scratch/pCzH6
  */
 static void gname_process_input(void)
 {
     s32 next_category;
     s32 category_before_step;
-    u8 clipboard_glyph[3];
-    s32 sfx_id;
+    u8 moved_glyph_bytes[NAME_GLYPH_BUFFER_SIZE];
+    s32 move_sfx_id;
     s32 previous_category;
-    u8* clipboard_ptr;
-    s32 nav_input;
+    u8* clipboard;
+    s32 navigation_input;
     s32 previous_page_category;
     s32 moved_glyph;
-    s32 scroll_step;
-    s32* scroll_pos_ptr;
-    s32 category_table_base_index;
-    u16 clipboard_glyph_u16;
+    s32 scroll_delta;
+    s32* scroll_position;
+    s32 category_record_base_index;
+    u16 glyph_value;
     u8* panel_data_base;
     u32 category_index;
     u32 category_entry;
-    u32 table_byte_offset;
-    u16* category_name_entry;
+    u32 category_name_table_offset;
+    u16* category_name_offset_entry;
     u16 category_name_offset;
-    s32 category_table_base_index_copy;
-    int volume_or_input_mask;
-    void** category_name_dst;
+    s32 category_record_base_index_copy;
+    s32 volume_or_nav_mask;
+    void** category_name_ptr;
     s32 remaining_scroll_steps;
 
     g_activated_entry = GNAME_ENTRY_NONE;
-    nav_input = g_pad_input & GNAME_BTN_NAV_MASK;
+    navigation_input = g_pad_input & GNAME_BTN_NAV_MASK;
 
-    if (nav_input != 0)
+    if (navigation_input != 0)
     {
-        g_navigation_mode = handle_navigation_input(g_navigation_mode, nav_input);
+        g_navigation_mode = handle_navigation_input(g_navigation_mode, navigation_input);
     }
     /* Undo: move the last name glyph to the front of the clipboard. */
     else if (g_pad_input & GNAME_BTN_UNDO)
@@ -1576,29 +1563,29 @@ static void gname_process_input(void)
         name_prepend_glyph(g_name_clipboard, moved_glyph);
         recalc_name_width();
         g_strip_width_steps = NAME_STRIP_LERP_STEPS;
-        sfx_id = GNAME_SFX_MOVE;
-        volume_or_input_mask = GNAME_SFX_VOLUME;
-        play_menu_sfx(sfx_id, volume_or_input_mask);
+        move_sfx_id = GNAME_SFX_MOVE;
+        volume_or_nav_mask = GNAME_SFX_VOLUME;
+        play_menu_sfx(move_sfx_id, volume_or_nav_mask);
     }
     /* Redo: move the first clipboard glyph back into the active name. */
     else if (g_pad_input & GNAME_BTN_REDO)
     {
         if (name_glyph_count(g_active_name) < NAME_MAX_GLYPHS)
         {
-            clipboard_ptr = g_name_clipboard;
-            moved_glyph = name_pop_first_glyph(clipboard_ptr);
-            clipboard_glyph_u16 = moved_glyph;
-            if (clipboard_glyph_u16 != 0)
+            clipboard = g_name_clipboard;
+            moved_glyph = name_pop_first_glyph(clipboard);
+            glyph_value = moved_glyph;
+            if (glyph_value != 0)
             {
-                clipboard_glyph[0] = moved_glyph;
-                clipboard_glyph[1] = clipboard_glyph_u16 >> 8;
-                clipboard_glyph[2] = 0;
-                name_append(g_active_name, clipboard_glyph);
+                moved_glyph_bytes[NAME_GLYPH_LEAD_INDEX] = moved_glyph;
+                moved_glyph_bytes[NAME_GLYPH_TRAIL_INDEX] = HIGH_BYTE(glyph_value);
+                moved_glyph_bytes[NAME_GLYPH_TERMINATOR_INDEX] = 0;
+                name_append(g_active_name, moved_glyph_bytes);
                 recalc_name_width();
                 g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
-            sfx_id = GNAME_SFX_MOVE;
-            play_menu_sfx(sfx_id, GNAME_SFX_VOLUME);
+            move_sfx_id = GNAME_SFX_MOVE;
+            play_menu_sfx(move_sfx_id, GNAME_SFX_VOLUME);
         }
         else
         {
@@ -1607,14 +1594,11 @@ static void gname_process_input(void)
     }
     else if (g_pad_input & GNAME_BTN_CANCEL)
     {
-        if (g_allow_empty_cancel != 0)
+        if ((g_allow_empty_cancel != 0) && (name_glyph_count(g_active_name) == 0))
         {
-            if (name_glyph_count(g_active_name) == 0)
-            {
-                g_overlay_result = GNAME_RESULT_CANCEL;
-                play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
-                return;
-            }
+            g_overlay_result = GNAME_RESULT_CANCEL;
+            play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
+            return;
         }
         play_menu_sfx(GNAME_SFX_CANCEL, GNAME_SFX_VOLUME);
         name_pop_last_glyph(g_active_name);
@@ -1635,9 +1619,9 @@ static void gname_process_input(void)
                     category_before_step = previous_category;
                     previous_page_category = category_before_step - KANJI_CATEGORY_STEP;
                     g_kanji_cat = previous_page_category;
-                    if (previous_page_category == -1)
+                    if (previous_page_category == KANJI_CATEGORY_PREV_EDGE)
                     {
-                        g_kanji_cat = 0;
+                        g_kanji_cat = KANJI_CATEGORY_FIRST;
                     }
                     else if (previous_page_category < 0)
                     {
@@ -1658,31 +1642,34 @@ static void gname_process_input(void)
                         g_kanji_cat = category_before_step - KANJI_CATEGORY_WRAP_OFFSET;
                     }
                 }
+
                 category_entry = g_kanji_cat;
-                if (g_kanji_cat_entries[category_entry] != KANJI_CATEGORY_EMPTY)
+                if (g_kanji_cat_entries[category_entry] == KANJI_CATEGORY_EMPTY)
                 {
-                    category_name_dst = &g_kanji_cat_name;
-                    g_scroll_target = 0;
-                    g_scroll_pos = 0;
-                    category_table_base_index = g_panel_char_offsets[CHAR_PANEL_KANJI_CATEGORY];
-                    volume_or_input_mask = ~GNAME_BTN_KANJI_NAV;
-                    g_scroll_steps = 0;
-                    g_char_cursor = 0;
-                    g_cursor_x_target = NAME_GRID_X_BASE;
-                    g_cursor_y_target = NAME_GRID_Y_TOP;
-                    g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
-                    category_table_base_index_copy = category_table_base_index;
-                    category_index = g_kanji_cat;
-                    table_byte_offset = (category_index * sizeof(u16)) +
-                                        ((category_table_base_index_copy * sizeof(u16)) + g_panel_tbl_off);
-                    panel_data_base = g_panel_data_base;
-                    /* Panel offsets are serialized u16 entries inside the raw byte blob. */
-                    category_name_entry = (u16*)(panel_data_base + table_byte_offset);
-                    category_name_offset = *category_name_entry;
-                    g_pad_input &= volume_or_input_mask;
-                    /* Integer address arithmetic preserves the target's final addu operand order. */
-                    *category_name_dst = (void*)(g_panel_tbl_off + (category_name_offset + ((unsigned long)panel_data_base)));
+                    continue;
                 }
+
+                category_name_ptr = &g_kanji_cat_name;
+                g_scroll_target = 0;
+                g_scroll_pos = 0;
+                category_record_base_index = g_panel_char_offsets[CHAR_PANEL_KANJI_CATEGORY];
+                volume_or_nav_mask = ~GNAME_BTN_KANJI_NAV;
+                g_scroll_steps = 0;
+                g_char_cursor = 0;
+                g_cursor_x_target = NAME_GRID_X_BASE;
+                g_cursor_y_target = NAME_GRID_Y_TOP;
+                g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
+                category_record_base_index_copy = category_record_base_index;
+                category_index = g_kanji_cat;
+                category_name_table_offset = (category_index * sizeof(u16)) +
+                                             ((category_record_base_index_copy * sizeof(u16)) + g_panel_tbl_off);
+                panel_data_base = g_panel_data_base;
+                /* Panel offsets are serialized u16 entries inside the raw byte blob. */
+                category_name_offset_entry = (u16*)(panel_data_base + category_name_table_offset);
+                category_name_offset = *category_name_offset_entry;
+                g_pad_input &= volume_or_nav_mask;
+                /* Integer address arithmetic preserves the target's final addu operand order. */
+                *category_name_ptr = (void*)(g_panel_tbl_off + (category_name_offset + ((unsigned long)panel_data_base)));
             }
         }
     }
@@ -1701,51 +1688,46 @@ static void gname_process_input(void)
     remaining_scroll_steps = g_scroll_steps;
     if (remaining_scroll_steps != 0)
     {
-        scroll_pos_ptr = &g_scroll_pos;
-        scroll_step = (g_scroll_target - *scroll_pos_ptr) / remaining_scroll_steps;
+        scroll_position = &g_scroll_pos;
+        scroll_delta = (g_scroll_target - *scroll_position) / remaining_scroll_steps;
         g_scroll_steps -= 1;
-        g_scroll_pos += scroll_step;
+        g_scroll_pos += scroll_delta;
         return;
     }
     g_scroll_pos = g_scroll_target;
 }
 
 /**
- * @brief Emit the text cursor glyph as a SPRT + DR_TPAGE pair into @p ot.
- *
- * Builds a SPRT at @p prim from @c g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID]
- * (UV, size, CLUT), then a texture-page DR_TPAGE packet right after it, and
- * chains both into @p ot.
- *
- * @param prim Write position; needs sizeof(SPRT) + sizeof(DR_TPAGE) bytes.
- * @param ot   OT slot to chain both primitives into.
- * @param x    Cursor sprite screen X.
- * @param y    Cursor sprite screen Y.
- * @return Pointer just past the written primitives.
+ * @brief Emit the editable-name cursor sprite and draw-mode packet.
+ * @param packet_cursor Next free primitive-buffer address.
+ * @param ot_entry Ordering-table entry that receives both packets.
+ * @param x Cursor X coordinate.
+ * @param y Cursor Y coordinate.
+ * @return Next free primitive-buffer address.
  * @note No current call sites; @ref gname_render emits the same packet pair inline.
  * @see decomp.me (100%) https://decomp.me/scratch/oXGkF
  */
-static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y)
+static u_long* emit_cursor_glyph(u_long* packet_cursor, u_long* ot_entry, s16 x, s16 y)
 {
-    u32 clut;
-    SPRT* sprt = (SPRT*)prim;
+    u32 clut_id;
+    SPRT* cursor_sprite = (SPRT*)packet_cursor;
 
-    SET_BGR0_PACKED(sprt, GPU_TINT_NEUTRAL);
-    setSprt(sprt);
-    setXY0(sprt, x, y);
+    SET_BGR0_PACKED(cursor_sprite, GPU_TINT_NEUTRAL);
+    setSprt(cursor_sprite);
+    setXY0(cursor_sprite, x, y);
 
-    setUV0(sprt, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].u, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].v);
-    setWH(sprt, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].w, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].h);
+    setUV0(cursor_sprite, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].u, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].v);
+    setWH(cursor_sprite, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].w, g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].h);
 
-    clut = g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].clut & GLYPH_CLUT_X_MASK;
-    sprt->clut = clut | GLYPH_CLUT_PAGE_BITS;
-    addPrim(ot, sprt);
+    clut_id = g_glyph_table[GNAME_TEXT_CURSOR_GLYPH_ID].clut & GLYPH_CLUT_X_MASK;
+    cursor_sprite->clut = clut_id | GLYPH_CLUT_PAGE_BITS;
+    addPrim(ot_entry, cursor_sprite);
 
-    prim += PRIM_WORDS(SPRT);
-    setDrawTPage(prim, 0, 0, GNAME_GLYPH_TPAGE);
-    addPrim(ot, prim);
+    packet_cursor += PRIM_WORDS(SPRT);
+    setDrawTPage(packet_cursor, 0, 0, GNAME_GLYPH_TPAGE);
+    addPrim(ot_entry, packet_cursor);
 
-    return prim + PRIM_WORDS(DR_TPAGE);
+    return packet_cursor + PRIM_WORDS(DR_TPAGE);
 }
 
 /**
