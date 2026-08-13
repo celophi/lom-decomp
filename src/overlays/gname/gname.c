@@ -261,6 +261,9 @@
 #define NAME_STRIP_BACKING_PAGE0_Y 0x18
 #define NAME_STRIP_BACKING_PAGE1_Y 0x100
 #define NAME_STRIP_BACKING_HEIGHT 0x20
+#define NAME_STRIP_HORIZONTAL_PADDING 0x18
+#define NAME_MEASURE_CAPACITY 16
+#define NAME_MEASURE_TEXT_COLOR 0
 
 /** Mask for the CLUT X-column index stored in @c GlyphInfo::clut.
  *  Bits [5:0] hold CLUT_X/16, the portion encoded in a sprite's CLUT id. */
@@ -2501,45 +2504,31 @@ static void name_copy(u8* dst, const u8* src)
 }
 
 /**
- * @brief Recompute the active name's rendered pixel width and strip target.
- *
- * Measures every glyph of @c g_active_name via @c func_800644FC (which
- * fills one @ref GlyphMeasure per glyph and returns the glyph count), sums
- * the per-glyph widths into @c g_name_pixel_width, then sets
- * @c g_strip_width_target to that width plus a fixed 0x18 margin. Called
- * whenever the name buffer changes (append, delete, reset).
- *
+ * @brief Recalculate the active name and strip widths.
  * @see https://decomp.me/scratch/y0CgJ (100%)
  */
 static void recalc_name_width(void)
 {
-    GlyphMeasure glyphs[16];
-    GlyphMeasure* cursor;
-    GlyphMeasure* entry;
-    s16 width;
+    GlyphMeasure glyphs[NAME_MEASURE_CAPACITY];
+    s16 glyph_width;
     s32 glyph_count;
-    s32 i;
+    s32 glyph_index;
 
-    glyph_count = func_800644FC(glyphs, g_active_name, 0);
-    i = 0;
-    /* TODO: This uninitialized source-level read is absent from the matched assembly. */
-    width = entry->width;
+    glyph_count = func_800644FC(glyphs, g_active_name, NAME_MEASURE_TEXT_COLOR);
+    glyph_index = 0;
     g_name_pixel_width = 0;
 
-    if (i < glyph_count)
+    if (glyph_index < glyph_count)
     {
-        cursor = glyphs;
-        while (i < glyph_count)
+        while (glyph_index < glyph_count)
         {
-            entry = cursor;
-            width = entry->width;
-            g_name_pixel_width += width;
-            cursor++;
-            i++;
+            glyph_width = glyphs[glyph_index].width;
+            g_name_pixel_width += glyph_width;
+            glyph_index++;
         }
     }
 
-    g_strip_width_target = g_name_pixel_width + 0x18;
+    g_strip_width_target = g_name_pixel_width + NAME_STRIP_HORIZONTAL_PADDING;
 }
 
 /**
