@@ -585,11 +585,11 @@ static void render_char_panel(RenderContext* ctx, s32 panel_idx);
 static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head);
 static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, s32 x, s32 y, s32 shadow_offset, s32 activation_adjust, s32 use_blue_secondary);
 static void render_layout_sprite_batch(RenderContext* ctx);
-static s32 name_byte_length(const u8* name);
-static s32 name_glyph_count(const u8* name);
-static void name_append(u8* dst, const u8* src);
-static s32 name_pop_last_glyph(u8* name);
-static void name_copy(u8* dst, const u8* src);
+static s32 name_byte_length(const u8* name_buf);
+static s32 name_glyph_count(const u8* name_buf);
+static void name_append(u8* destination, const u8* source);
+static s32 name_pop_last_glyph(u8* name_buf);
+static void name_copy(u8* destination, const u8* source);
 static void recalc_name_width(void);
 static void name_prepend_glyph(u8* name_buf, u16 new_glyph);
 static s32 name_pop_first_glyph(u8* name_buf);
@@ -2293,58 +2293,51 @@ static void render_layout_sprite_batch(RenderContext* ctx)
 }
 
 /**
- * @brief Get the encoded byte length of a name.
- *
- * @param name Null-terminated name buffer.
- * @return Byte length excluding the terminator.
- * @note No current call sites; the other name helpers retain their own matched loops.
+ * @brief Count the encoded bytes in a name buffer.
+ * @param name_buf Null-terminated name buffer.
+ * @return Number of bytes excluding the terminator.
  * @see https://decomp.me/scratch/2QgjW (100%)
  */
-static s32 name_byte_length(const u8* name)
+static s32 name_byte_length(const u8* name_buf)
 {
-    s32 byte_len;
-    u8 c;
-    const u8* cursor;
+    const u8* scan_cursor;
+    s32 byte_count;
 
-    cursor = name;
-    c = *cursor;
-    byte_len = 0;
-    if (c != 0)
+    scan_cursor = name_buf;
+    byte_count = 0;
+
+    while (*scan_cursor)
     {
-        do
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
         {
-            if (IS_DBCS_LEAD_BYTE(c))
-            {
-                cursor += 2;
-                byte_len += 2;
-            }
-            else
-            {
-                cursor += 1;
-                byte_len += 1;
-            }
-            c = *cursor;
-        } while (c != 0);
+            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
+            byte_count += NAME_GLYPH_SIZE_DOUBLE;
+        }
+        else
+        {
+            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
+            byte_count += NAME_GLYPH_SIZE_SINGLE;
+        }
     }
-    return byte_len;
+
+    return byte_count;
 }
 
 /**
- * @brief Number of logical glyphs in a name buffer.
- *
- * Like @ref name_byte_length but counts each DBCS pair as one glyph.
- *
- * @param name Null-terminated name buffer.
- * @return Glyph (character) count.
+ * @brief Count the glyphs in a name buffer.
+ * @param name_buf Null-terminated name buffer.
+ * @return Number of encoded glyphs.
  * @see https://decomp.me/scratch/c8fPe (100%)
  */
-static s32 name_glyph_count(const u8* name)
+static s32 name_glyph_count(const u8* name_buf)
 {
     s32 glyph_count = 0;
 
-    while (*name)
+    while (*name_buf)
     {
-        name += IS_DBCS_LEAD_BYTE(*name) ? 2 : 1;
+        name_buf += IS_DBCS_LEAD_BYTE(*name_buf)
+            ? NAME_GLYPH_SIZE_DOUBLE
+            : NAME_GLYPH_SIZE_SINGLE;
         glyph_count++;
     }
 
@@ -2352,155 +2345,135 @@ static s32 name_glyph_count(const u8* name)
 }
 
 /**
- * @brief Append @p src to the end of @p dst (in-place concatenation).
- *
- * Computes the byte lengths of both buffers (respecting the DBCS-style
- * encoding) and copies @p src's payload after @p dst's existing payload,
- * writing a fresh null terminator. Caller is responsible for ensuring
- * @p dst has room for both.
- *
- * @param dst Null-terminated name buffer; appended to in-place.
- * @param src Null-terminated source name to append.
+ * @brief Append one name buffer to another.
+ * @param destination Null-terminated buffer with sufficient capacity.
+ * @param source Null-terminated buffer to append.
  * @see https://decomp.me/scratch/1lsbD (100%)
  */
-static void name_append(u8* dst, const u8* src)
+static void name_append(u8* destination, const u8* source)
 {
-    const u8* p;
-    s32 dst_len;
-    s32 src_len;
-    s32 offset;
-    s32 i;
+    const u8* scan_cursor;
+    s32 destination_byte_count;
+    s32 source_byte_count;
+    s32 append_offset;
+    s32 byte_index;
 
-    p = dst;
-    dst_len = 0;
+    scan_cursor = destination;
+    destination_byte_count = 0;
 
-    while (*p)
+    while (*scan_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*p))
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
         {
-            p += 2;
-            dst_len += 2;
+            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
+            destination_byte_count += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            p += 1;
-            dst_len += 1;
+            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
+            destination_byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
 
-    p = src;
-    src_len = 0;
-    offset = dst_len;
+    scan_cursor = source;
+    source_byte_count = 0;
+    append_offset = destination_byte_count;
 
-    while (*p)
+    while (*scan_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*p))
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
         {
-            p += 2;
-            src_len += 2;
+            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
+            source_byte_count += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            p += 1;
-            src_len += 1;
+            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
+            source_byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
 
-    for (i = 0; i < src_len; i++)
+    for (byte_index = 0; byte_index < source_byte_count; byte_index++)
     {
-        dst[offset + i] = src[i];
+        destination[append_offset + byte_index] = source[byte_index];
     }
 
-    dst[offset + i] = 0;
+    destination[append_offset + byte_index] = 0;
 }
 
 /**
- * @brief Remove the last glyph from @p name and return it.
- *
- * Walks the buffer keeping a one-glyph-behind pointer; on exit @c prev_pos
- * points at the last glyph and @c scan_pos at the null. The returned
- * @c s32 packs the glyph as `lead | (trail << 8)` for a DBCS pair, or just
- * the byte value for a 1-byte glyph. The buffer is truncated by writing
- * 0 at @c prev_pos. For an empty buffer, the low byte of the result is zero
- * and the high byte is whatever already follows the terminator.
- *
- * @param name Null-terminated name buffer (truncated in-place).
- * @return Removed glyph packed as `lead | (trail << 8)`; an empty buffer
- *         guarantees only that the returned low byte is zero.
+ * @brief Remove and return the last glyph in a name buffer.
+ * @param name_buf Null-terminated buffer to truncate.
+ * @return Packed glyph; the low byte is zero when the buffer is empty.
  * @see https://decomp.me/scratch/agZ8y (100%)
  */
-static s32 name_pop_last_glyph(u8* name)
+static s32 name_pop_last_glyph(u8* name_buf)
 {
-    u8* prev_pos;
-    u8* scan_pos;
-    s32 last_glyph;
+    u8* last_glyph_cursor;
+    u8* scan_cursor;
+    s32 packed_glyph;
 
-    prev_pos = name;
-    scan_pos = prev_pos;
+    last_glyph_cursor = name_buf;
+    scan_cursor = last_glyph_cursor;
 
-    while (*scan_pos)
+    while (*scan_cursor)
     {
-        prev_pos = scan_pos;
-        if (IS_DBCS_LEAD_BYTE(*scan_pos))
+        last_glyph_cursor = scan_cursor;
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
         {
-            scan_pos += 2;
+            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            scan_pos++;
+            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
         }
     }
 
-    last_glyph = MAKE_DBCS_GLYPH(prev_pos[0], prev_pos[1]);
+    packed_glyph = MAKE_DBCS_GLYPH(last_glyph_cursor[0], last_glyph_cursor[1]);
 
-    if (prev_pos != scan_pos)
+    if (last_glyph_cursor != scan_cursor)
     {
-        *prev_pos = 0;
+        *last_glyph_cursor = 0;
     }
 
-    return last_glyph;
+    return packed_glyph;
 }
 
 /**
- * @brief Copy @p src into @p dst, including the null terminator.
- *
- * Computes the byte length of @p src walking the DBCS-style encoding, then
- * copies that many bytes and writes a terminator. Caller must ensure
- * @p dst has room.
- *
- * @param dst Destination name buffer.
- * @param src Null-terminated source name.
+ * @brief Copy a null-terminated name buffer.
+ * @param destination Destination buffer with sufficient capacity.
+ * @param source Null-terminated source buffer.
  * @see https://decomp.me/scratch/UeYRe (100%)
  */
-static void name_copy(u8* dst, const u8* src)
+static void name_copy(u8* destination, const u8* source)
 {
-    const u8* p;
-    s32 i;
-    s32 src_len;
+    const u8* scan_cursor;
+    s32 byte_index;
+    s32 byte_count;
 
-    p = src;
-    src_len = 0;
+    scan_cursor = source;
+    byte_count = 0;
 
-    while (*p)
+    while (*scan_cursor)
     {
-        if (IS_DBCS_LEAD_BYTE(*p))
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
         {
-            p += 2;
-            src_len += 2;
+            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
+            byte_count += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            p += 1;
-            src_len += 1;
+            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
+            byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
 
-    for (i = 0; i < src_len; i++)
+    for (byte_index = 0; byte_index < byte_count; byte_index++)
     {
-        dst[i] = src[i];
+        destination[byte_index] = source[byte_index];
     }
 
-    dst[i] = 0;
+    destination[byte_index] = 0;
 }
 
 /**
