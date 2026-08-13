@@ -65,6 +65,8 @@
 
 /* Pack two bytes into a single 16-bit DBCS-style glyph */
 #define MAKE_DBCS_GLYPH(lo, hi) (u16)(((u16)(hi) << 8) | (u16)(lo))
+#define LOW_BYTE(value) ((value) & 0xFFU)
+#define HIGH_BYTE(value) ((value) >> 8)
 #define NAME_GLYPH_SIZE_SINGLE 1
 #define NAME_GLYPH_SIZE_DOUBLE 2
 #define NAME_GLYPH_VALUE_MASK 0xFFFFU
@@ -586,7 +588,7 @@ static void name_append(u8* dst, const u8* src);
 static s32 name_pop_last_glyph(u8* name);
 static void name_copy(u8* dst, const u8* src);
 static void recalc_name_width(void);
-static void name_prepend_glyph(u8* buffer, u16 new_glyph);
+static void name_prepend_glyph(u8* name_buf, u16 new_glyph);
 static s32 name_pop_first_glyph(u8* name_buf);
 static void* render_glyph_append_anim(void* packet_cursor, RenderContext* render_ctx);
 static s32 name_is_blank(const u8* name_buf);
@@ -2541,71 +2543,62 @@ static void recalc_name_width(void)
 }
 
 /**
- * @brief Insert a glyph at the front of @p buffer (in-place).
- *
- * @p new_glyph packs the glyph as `lead | (trail << 8)`; the lead byte
- * decides whether it is a 1- or 2-byte glyph. The existing buffer
- * contents (including the null terminator) are shifted right by that
- * amount and the new glyph is written at offset 0. Caller must ensure
- * @p buffer has room.
- *
- * No-op if the lead byte is 0.
- *
- * @param buffer   Null-terminated name buffer.
- * @param new_glyph Glyph to prepend, packed `lead | (trail << 8)`.
+ * @brief Prepend a packed glyph to a name buffer.
+ * @param name_buf Null-terminated buffer with room for the glyph.
+ * @param new_glyph Packed glyph; a zero lead byte is ignored.
  * @see https://decomp.me/scratch/VOLcD (100%)
  */
-static void name_prepend_glyph(u8* buffer, u16 new_glyph)
+static void name_prepend_glyph(u8* name_buf, u16 new_glyph)
 {
-    u8* ptr;
-    u32 len;
+    u8* scan_cursor;
+    u32 byte_count;
     u32 glyph_size;
-    u32 move_count;
-    u32 i;
-    u16 h = new_glyph; /* copy to match register usage */
+    u32 bytes_to_move;
+    u32 byte_index;
+    u16 glyph = new_glyph;
 
-    if ((h & 0xFF) == 0)
+    if (LOW_BYTE(glyph) == 0)
     {
         return;
     }
 
-    if (IS_DBCS_LEAD_BYTE(h & 0xFF))
+    if (IS_DBCS_LEAD_BYTE(LOW_BYTE(glyph)))
     {
-        glyph_size = 2;
+        glyph_size = NAME_GLYPH_SIZE_DOUBLE;
     }
     else
     {
-        glyph_size = 1;
+        glyph_size = NAME_GLYPH_SIZE_SINGLE;
     }
 
-    ptr = buffer;
-    len = 0;
+    scan_cursor = name_buf;
+    byte_count = 0;
 
-    while (*ptr != 0)
+    while (*scan_cursor != '\0')
     {
-
-        if (IS_DBCS_LEAD_BYTE(*ptr))
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
         {
-            ptr += 2;
-            len += 2;
+            scan_cursor += NAME_GLYPH_SIZE_DOUBLE;
+            byte_count += NAME_GLYPH_SIZE_DOUBLE;
         }
         else
         {
-            ptr += 1;
-            len += 1;
+            scan_cursor += NAME_GLYPH_SIZE_SINGLE;
+            byte_count += NAME_GLYPH_SIZE_SINGLE;
         }
     }
 
-    move_count = len + 1;
-    for (i = move_count; i > 0; i--)
+    /* Include the null terminator. */
+    bytes_to_move = byte_count + 1;
+    for (byte_index = bytes_to_move; byte_index > 0; byte_index--)
     {
-        buffer[(glyph_size + i) - 1] = buffer[i - 1];
+        name_buf[(glyph_size + byte_index) - 1] = name_buf[byte_index - 1];
     }
 
-    buffer[0] = (u8)(h & 0xFF);
-    if (glyph_size == 2)
+    name_buf[0] = LOW_BYTE(glyph);
+    if (glyph_size == NAME_GLYPH_SIZE_DOUBLE)
     {
-        buffer[1] = (u8)(h >> 8);
+        name_buf[1] = HIGH_BYTE(glyph);
     }
 }
 
@@ -2661,14 +2654,15 @@ static s32 name_pop_first_glyph(u8* name_buf)
         }
     }
 
-    bytes_to_move = tail_byte_count + 1; /* Include the null terminator. */
+    /* Include the null terminator. */
+    bytes_to_move = tail_byte_count + 1;
     glyph_value_mask = NAME_GLYPH_VALUE_MASK;
     for (byte_index = 0; byte_index < bytes_to_move; byte_index++)
     {
         name_buf[byte_index] = name_buf[byte_index + glyph_size];
     }
 
-    return (s32)(first_glyph & glyph_value_mask);
+    return first_glyph & glyph_value_mask;
 }
 
 /**
