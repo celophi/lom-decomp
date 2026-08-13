@@ -83,38 +83,27 @@ void func_800258B8(void)
     voice_mask = 0;
     mask = (g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | D_8004F76C[0];
 
-    if (!(g_akao_seq_channel0->w04.song.active_mask & g_akao_seq_channel0->w04.song.key_on_mask))
+    if ((g_akao_seq_channel0->w04.song.active_mask & g_akao_seq_channel0->w04.song.key_on_mask) ||
+        ((g_akao_seq_channel1 != NULL) && (g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->w04.song.key_on_mask)))
     {
-        if (g_akao_seq_channel1 != NULL)
-        {
-            if (g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->w04.song.key_on_mask)
-            {
-                goto call_note_off;
-            }
-            goto dealloc_channel1;
-        }
-    }
-    else
-    {
-    call_note_off:
         func_800257E0(mask, D_8004F76C[0]);
-    dealloc_channel1:
-        if (g_akao_seq_channel1 != NULL)
+    }
+
+    if (g_akao_seq_channel1 != NULL)
+    {
+        g_akao_seq_channel0 = g_akao_seq_channel1;
+        dealloc_mask1 = g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->note_on_mask & ~(g_akao_seq_channel1->w04.song.static_voice_mask & mask);
+        static_voice_mask1 = g_akao_seq_channel1->w04.song.static_voice_mask;
+        key_on_submask1 = dealloc_mask1 & g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        static_voice_mask1 = dealloc_mask1 & static_voice_mask1 & ~mask;
+        if (key_on_submask1 != 0)
         {
-            g_akao_seq_channel0 = g_akao_seq_channel1;
-            dealloc_mask1 = g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->note_on_mask & ~(g_akao_seq_channel1->w04.song.static_voice_mask & mask);
-            static_voice_mask1 = g_akao_seq_channel1->w04.song.static_voice_mask;
-            key_on_submask1 = dealloc_mask1 & g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
-            static_voice_mask1 = dealloc_mask1 & static_voice_mask1 & ~mask;
-            if (key_on_submask1 != 0)
-            {
-                func_80025500((AkaoChannelState *)g_akao_pending_channels, key_on_submask1, static_voice_mask1, &voice_mask);
-                song_ptr = &g_akao_seq_channel0->w04.song;
-                dealloc_mask1 &= ~song_ptr->voice_alloc_low_mask;
-                g_akao_seq_channel0->w04.song.key_on_mask &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
-            }
-            g_akao_seq_channel0 = &g_akao_seq_master_state;
+            func_80025500((AkaoChannelState *)g_akao_pending_channels, key_on_submask1, static_voice_mask1, &voice_mask);
+            song_ptr = &g_akao_seq_channel0->w04.song;
+            dealloc_mask1 &= ~song_ptr->voice_alloc_low_mask;
+            g_akao_seq_channel0->w04.song.key_on_mask &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
         }
+        g_akao_seq_channel0 = &g_akao_seq_master_state;
     }
 
     dealloc_mask0 = g_akao_seq_channel0->w04.song.active_mask & g_akao_seq_channel0->note_on_mask & ~(g_akao_seq_channel0->w04.song.static_voice_mask & (static_voice_mask1 | mask));
