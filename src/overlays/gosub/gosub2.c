@@ -1339,3 +1339,123 @@ void func_80143C58(Arg0Struct* arg0)
 
     arg0->unk40B8 = var_s0;
 }
+
+/** @brief TODO: as-yet-unnamed main-module global (frame/animation counter);
+ *         its low bits drive the marker color. */
+extern s32 D_800F22AC;
+
+/**
+ * @brief Packed GPU packet built by func_801443E4: a Psy-Q LINE_F4 (0x1C bytes,
+ *        code 0x4C, pad 0x55555555) whose first 0x14 bytes are copied into an
+ *        immediately-following POLY_F3 (code 0x20). Field names mirror the
+ *        LINE_F4 layout in include/psyq/libgpu.h.
+ */
+typedef struct
+{
+    u8 addr[3]; /* 0x00 P_TAG addr (24-bit, set via addPrim) */
+    u8 len;     /* 0x03 P_TAG len */
+    u8 r;       /* 0x04 */
+    u8 g;       /* 0x05 */
+    u8 b;       /* 0x06 */
+    u8 code;    /* 0x07 */
+    s16 x0;     /* 0x08 */
+    s16 y0;     /* 0x0A */
+    s16 x1;     /* 0x0C */
+    s16 y1;     /* 0x0E */
+    s16 x2;     /* 0x10 */
+    s16 y2;     /* 0x12 */
+    s16 x3;     /* 0x14 */
+    s16 y3;     /* 0x16 */
+    u32 mask;   /* 0x18 LINE_F4 pad word (0x55555555) */
+} GosubPrim;    /* 0x1C */
+
+/**
+ * @brief Build a marker primitive (LINE_F4 quad outline + POLY_F3 fill) and
+ *        link both into the ordering table @p ot.
+ *
+ * The LINE_F4 receives a color derived from the low bits of D_800F22AC; @p flag
+ * selects one of two vertical vertex arrangements about center (@p x, @p y).
+ * The POLY_F3 is seeded by copying the LINE_F4's first 0x14 bytes, then its
+ * len/code/color are overwritten.
+ *
+ * @param prim Destination packet buffer (LINE_F4 immediately followed by POLY_F3 space).
+ * @param ot   Ordering-table tag both primitives are linked into (addPrim idiom).
+ * @param x    Center X coordinate.
+ * @param y    Center Y coordinate.
+ * @param flag Selects the up vs down vertex arrangement.
+ * @return Pointer just past the POLY_F3 (next free packet slot).
+ *
+ * @note WIP - best match 86.02% (gcc 2.7.2 CDK). Residual is a register-alloc
+ *       cascade: the target moves the packet pointer to t0 and parks D_800F22AC
+ *       in a0 (evicting arg0 from a0), whereas GCC here keeps arg0 in a0 and
+ *       D_800F22AC in a1, permuting the whole a0/a1/t0/t1 assignment. The clean
+ *       real-type variant (LINE_F4/POLY_F3 + setLineF4/addPrim/SET_BGR0) sits at
+ *       78.85%; see working/func_801443E4/ for both and the analysis.
+ */
+StructS0 *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
+{
+    s32 color;
+    s16 tmp_x;
+    s16 tmp_y;
+    u32 i;
+    u8 *p;
+    u8 *dst;
+    GosubPrim *prim2;
+
+    prim->len = 6;
+    (prim2 = prim)->code = 0x4C;
+    prim2->mask = 0x55555555;
+    if (D_800F22AC & 0x10)
+    {
+        color = D_800F22AC & 0xF;
+    }
+    else
+    {
+        color = (~D_800F22AC) & 0xF;
+    }
+    color = (color * 4) + 0x70;
+    prim2->b = color;
+    prim2->g = color;
+    prim2->r = color;
+    if (flag != 0)
+    {
+        prim2->y3 = y - 8;
+        prim2->y0 = y - 8;
+        tmp_x = x - 6;
+        tmp_y = y + 4;
+    }
+    else
+    {
+        prim2->y3 = y + 8;
+        prim2->y0 = y + 8;
+        tmp_x = x - 6;
+        tmp_y = y - 4;
+    }
+    prim2->x1 = tmp_x;
+    prim2->x3 = x;
+    prim2->x0 = x;
+    prim2->y1 = tmp_y;
+    prim2->x2 = x + 6;
+    prim2->y2 = tmp_y;
+
+    p = (u8 *)prim2;
+    prim2 = (GosubPrim *)(p + 0x1C);
+    dst = (u8 *)prim2;
+    *(u32 *)p = (*(u32 *)p & 0xFF000000) | (*ot & 0xFFFFFF);
+    i = 0;
+    *ot = (*ot & 0xFF000000) | ((u32)p & 0xFFFFFF);
+    do
+    {
+        i += 1;
+        *dst = *p;
+        p += 1;
+        dst += 1;
+    } while (i < 0x14U);
+
+    prim2->len = 4;
+    *(u32 *)&prim2->r = 0;
+    prim2->code = 0x20;
+    *(u32 *)prim2 = (*(u32 *)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((u32)prim2 & 0xFFFFFF);
+    return (StructS0 *)((u8 *)prim2 + 0x14);
+}
