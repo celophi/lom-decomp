@@ -584,7 +584,7 @@ static void render_name_strip(RenderContext* ctx, u8* name_buf, s32 strip_width)
 static void render_char_panel(RenderContext* ctx, s32 panel_idx);
 static void* emit_draw_mode_prim(DR_TPAGE* prim, u_long* ot_head);
 static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, s32 x, s32 y, s32 shadow_offset, s32 activation_adjust, s32 use_blue_secondary);
-static void render_layout_sprite_batch(RenderContext* ctx);
+static void render_layout_sprite_batch(RenderContext* render_ctx);
 static s32 name_byte_length(const u8* name_buf);
 static s32 name_glyph_count(const u8* name_buf);
 static void name_append(u8* destination, const u8* source);
@@ -2172,124 +2172,96 @@ static void* emit_glyph_sprt(void* prim_cursor, u_long* ot_entry, s32 glyph_id, 
 }
 
 /**
- * @brief Render the fixed background/layout sprite batch.
- *
- * Walks @c g_layout_sprite_sequence, looks each entry up in @c g_glyph_table,
- * and emits a neutral-tinted textured SPRT at its fixed packed coordinates.
- * The batch is bracketed by full-size texture-window packets and closed with
- * a @c GNAME_GLYPH_TPAGE DrawMode.
- * The render context's primitive cursor is advanced past the final packet.
- *
- * @param ctx Render context (@ref RenderContext). Reads/writes:
- *             - @ref GNAME_OT_LAYOUT_BACKGROUND (offset 0x3C) - addPrim OT entry.
- *             - @c prim_cursor at offset 0x4040 - primitive scratch-pool cursor.
- *
+ * @brief Emit the fixed background layout sprites.
+ * @param render_ctx Render context whose ordering table and packet cursor are updated.
  * @see decomp.me (100%) https://decomp.me/scratch/Q6WL2
  */
-static void render_layout_sprite_batch(RenderContext* ctx)
+static void render_layout_sprite_batch(RenderContext* render_ctx)
 {
-    RECT tw_rect;
+    RECT texture_window_rect;
 
-    s32 glyph_count;
+    s32 sprite_count;
 
     u8* packet_cursor;
-    u8* glyph_cursor;
-    DR_TWIN* tex_window;
-    SPRT* glyph_sprt;
-    DR_TPAGE* draw_mode;
-    const GlyphSeqEntry* sequence;
+    u8* sprite_cursor;
+    DR_TWIN* texture_window_packet;
+    SPRT* sprite;
+    DR_TPAGE* draw_mode_packet;
+    const GlyphSeqEntry* sequence_entry;
 
-    /* Two aliases of the same context pointer: gcc allocates them to t6/t2
-       and uses t6 for the very first addPrim/buf access and t2 for every
-       subsequent addPrim. This split is required for the asm match. */
-    RenderContext* first_ctx = ctx;
-    RenderContext* ot_ctx;
-    GlyphInfo* glyph_table_base;
-    ot_ctx = first_ctx;
+    RenderContext* opening_ctx = render_ctx;
+    RenderContext* batch_ctx;
+    GlyphInfo* glyph_table;
+    batch_ctx = opening_ctx;
 
-    packet_cursor = first_ctx->prim_cursor;
+    packet_cursor = opening_ctx->prim_cursor;
 
-    /* First TexWindow init: source order is h, w, y, x. */
-    tw_rect.h = GNAME_FULL_TEX_WINDOW_SIZE;
-    tw_rect.w = GNAME_FULL_TEX_WINDOW_SIZE;
-    tw_rect.y = 0;
-    tw_rect.x = 0;
+    /* Open with a full-size texture window. */
+    texture_window_rect.h = GNAME_FULL_TEX_WINDOW_SIZE;
+    texture_window_rect.w = GNAME_FULL_TEX_WINDOW_SIZE;
+    texture_window_rect.y = 0;
+    texture_window_rect.x = 0;
 
-    /* The first addPrim precedes the sequence/count/table assignments so gcc
-       materializes the OT address mask at the top of the prologue. */
-    tex_window = (DR_TWIN*)packet_cursor;
-    setTexWindow(tex_window, &tw_rect);
-    addPrim(&first_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], tex_window);
+    texture_window_packet = (DR_TWIN*)packet_cursor;
+    setTexWindow(texture_window_packet, &texture_window_rect);
+    addPrim(&opening_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], texture_window_packet);
 
-    sequence = g_layout_sprite_sequence;
-    glyph_count = 0;
-    glyph_table_base = g_glyph_table;
+    sequence_entry = g_layout_sprite_sequence;
+    sprite_count = 0;
+    glyph_table = g_glyph_table;
 
     packet_cursor += sizeof(DR_TWIN);
 
-    /* glyph_cursor is a separate alias of packet_cursor so
-       gcc keeps both pointers live across the loop (target uses t1 + a2 in
-       parallel). */
-    glyph_cursor = packet_cursor;
+    sprite_cursor = packet_cursor;
     do
     {
-        u32 glyph_id = sequence->id;
+        u32 glyph_id = sequence_entry->id;
         u32 packed_xy;
-        GlyphInfo* glyph;
+        GlyphInfo* glyph_info;
 
-        glyph_sprt = (SPRT*)glyph_cursor;
-        /* RGB only (high byte lands in `code`, immediately overwritten). */
-        SET_BGR0_PACKED(glyph_sprt, GPU_TINT_NEUTRAL);
-        setSprt(glyph_sprt);
+        sprite = (SPRT*)sprite_cursor;
+        /* setSprt replaces the code byte written with the packed tint. */
+        SET_BGR0_PACKED(sprite, GPU_TINT_NEUTRAL);
+        setSprt(sprite);
 
-        packed_xy = sequence->xy;
-        /* Offset + base order preserves the target's addu operand order. */
-        glyph = (GlyphInfo*)((glyph_id << 3) + (u32)glyph_table_base);
-        /* Coordinates are pre-packed and must be written with one word store. */
-        *(u32*)&glyph_sprt->x0 = packed_xy;
+        packed_xy = sequence_entry->xy;
+        glyph_info = (GlyphInfo*)((glyph_id * sizeof(*glyph_table)) + (u32)glyph_table);
+        SET_SPRT_XY0_WORD(sprite, packed_xy);
 
-        glyph_sprt->u0 = glyph->u;
-        glyph_sprt->v0 = glyph->v;
-        glyph_sprt->w = glyph->w;
+        sprite->u0 = glyph_info->u;
+        sprite->v0 = glyph_info->v;
+        sprite->w = glyph_info->w;
         {
-            /* Increment between the load and store of h to preserve scheduling. */
-            u8 glyph_height = glyph->h;
-            glyph_count++;
-            glyph_sprt->h = glyph_height;
+            u8 glyph_height = glyph_info->h;
+            sprite_count++;
+            sprite->h = glyph_height;
         }
         {
-            /* Read clut as a full word (gcc would otherwise optimize this
-               to `lhu` since only the low 16 bits affect the result). The
-               sequence advance sits between read and store to match the
-               target's instruction scheduling. */
-            u32 clut_word = glyph->clut;
-            sequence++;
-            glyph_sprt->clut = (clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
+            u32 clut_word = glyph_info->clut;
+            sequence_entry++;
+            sprite->clut = (clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
         }
 
-        addPrim(&ot_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], glyph_sprt);
-        glyph_cursor += sizeof(SPRT);
-    } while (glyph_count < GNAME_LAYOUT_SPRITE_COUNT);
-    packet_cursor = glyph_cursor;
+        addPrim(&batch_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], sprite);
+        sprite_cursor += sizeof(SPRT);
+    } while (sprite_count < GNAME_LAYOUT_SPRITE_COUNT);
+    packet_cursor = sprite_cursor;
 
-    /* Closing texture window. This field order differs from the opening call
-       and preserves the target's store order. */
-    tw_rect.w = GNAME_FULL_TEX_WINDOW_SIZE;
-    tw_rect.h = GNAME_FULL_TEX_WINDOW_SIZE;
-    tw_rect.x = 0;
-    tw_rect.y = 0;
-    tex_window = (DR_TWIN*)packet_cursor;
-    setTexWindow(tex_window, &tw_rect);
-    addPrim(&ot_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], tex_window);
+    /* Restore the full-size texture window after the sprite batch. */
+    texture_window_rect.w = GNAME_FULL_TEX_WINDOW_SIZE;
+    texture_window_rect.h = GNAME_FULL_TEX_WINDOW_SIZE;
+    texture_window_rect.x = 0;
+    texture_window_rect.y = 0;
+    texture_window_packet = (DR_TWIN*)packet_cursor;
+    setTexWindow(texture_window_packet, &texture_window_rect);
+    addPrim(&batch_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], texture_window_packet);
     packet_cursor += sizeof(DR_TWIN);
 
-    /* DrawMode terminator: tpage 5, dfe=0, dtd=0. Writes only tag + 1 word.
-       Advance from the typed packet so the final cursor is exactly 8 bytes later. */
-    draw_mode = (DR_TPAGE*)packet_cursor;
-    setDrawTPage(draw_mode, 0, 0, GNAME_GLYPH_TPAGE);
-    addPrim(&ot_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], draw_mode);
+    draw_mode_packet = (DR_TPAGE*)packet_cursor;
+    setDrawTPage(draw_mode_packet, 0, 0, GNAME_GLYPH_TPAGE);
+    addPrim(&batch_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], draw_mode_packet);
 
-    ctx->prim_cursor = draw_mode + 1;
+    render_ctx->prim_cursor = draw_mode_packet + 1;
 }
 
 /**
