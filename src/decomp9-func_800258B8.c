@@ -22,14 +22,33 @@ extern void spu_set_key_on(u32 voice_mask);
  *        channel array, then applies pending SPU hardware updates (LFO
  *        recompute, key-off frequency, reverb/noise/pitch-mod fades, and
  *        key-on) gated by g_akao_driver_flags.unk8.
- * @note 91.27% match (gcc280_g4, 217/288 exact rows), not yet 100%.
- *       Residual is register-allocation spread across several blocks
- *       (systematic s0-s4 swaps vs target) plus one extra stack spill at
- *       sp+0x14 that the target does not have; no remaining structural
- *       (control-flow) differences. `dealloc_mask1` is deliberately reused
- *       to hold the constant 0xCC (the flags_ptr offset to
- *       AkaoChannelState::update_flags) inside the SFX loop below -
- *       measured to matter for register allocation via probe_variants.
+ * @note 96.15% match (gcc280_g4, 232/288 exact rows), not yet 100%.
+ *       No structural (control-flow) differences remain. Three shapes are
+ *       required to match and were each measured via probe_variants:
+ *         - `song_ptr = &channel->w04.song` for the FIRST voice_alloc_low_mask
+ *           read at each dealloc site: the target reads that field twice (once
+ *           per statement) with the same base register. A plain repeated field
+ *           read is CSE-folded to one load; routing the first read through a
+ *           sub-struct pointer defeats CSE at cse-time, and combine later folds
+ *           the +4 back into the addressing mode, leaving two `lw x,8(base)`
+ *           exactly as the target. (`*(&field)` does NOT work - gcc folds it at
+ *           tree level.) Worth +14 exact rows across the two sites.
+ *         - the mask/D_8004F76C load is combined into one expression so the
+ *           constant is read at the point of use, not hoisted to entry.
+ *         - the SFX update_flags test is hoisted into `static_voice_mask1`
+ *           (dead by then) as a temp; +12 exact rows.
+ *       `dealloc_mask1` is reused to hold the constant 0xCC (the flags_ptr
+ *       offset to AkaoChannelState::update_flags): the variable offset stops
+ *       gcc strength-reducing flags_ptr+0xCC into a redundant giv (a 5th loop
+ *       pointer the target lacks). Removing it costs ~11 rows.
+ *       Remaining residual is a single coupled saved-register permutation:
+ *       target wants dealloc_mask1=s0 / static_voice_mask1=s4 /
+ *       dealloc_mask0=s3 / driver_flags=s3, we get them rotated. Root cause:
+ *       the 0xCC reuse above extends dealloc_mask1's live range into the SFX
+ *       loop, where it conflicts with the loop's saved regs and is forced off
+ *       s0 (explain_conflict / simulate_alloc: no single source edit flips it -
+ *       "try pairs by hand"). The fade block's base-pointer anchor
+ *       (D_8004F834 vs D_8004F830) is a knock-on of the same allocation.
  *       Full iteration history in working/func_800258B8/code.c.
  */
 void func_800258B8(void)
@@ -47,7 +66,7 @@ void func_800258B8(void)
     s32 bit;
     AkaoChannelState *sfx_channel;
     s32 *flags_ptr;
-    s32 *dealloc_mask0_ptr;
+    typeof(g_akao_seq_channel0->w04.song) *song_ptr;
     AkaoChannelState *old_channel0;
     s32 *fade0;
     s32 *fade1;
@@ -58,8 +77,7 @@ void func_800258B8(void)
     static_voice_mask1 = 0;
     dealloc_mask1 = 0;
     voice_mask = 0;
-    mask = g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10;
-    mask |= D_8004F76C;
+    mask = (g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | D_8004F76C;
 
     if (!(g_akao_seq_channel0->w04.song.active_mask & g_akao_seq_channel0->w04.song.key_on_mask))
     {
@@ -87,7 +105,8 @@ void func_800258B8(void)
             if (key_on_submask1 != 0)
             {
                 func_80025500((AkaoChannelState *)g_akao_pending_channels,key_on_submask1, static_voice_mask1, &voice_mask);
-                dealloc_mask1 &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+                song_ptr = &g_akao_seq_channel0->w04.song;
+                dealloc_mask1 &= ~song_ptr->voice_alloc_low_mask;
                 g_akao_seq_channel0->w04.song.key_on_mask &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
             }
             g_akao_seq_channel0 = &g_akao_seq_master_state;
@@ -101,7 +120,8 @@ void func_800258B8(void)
     if (key_on_submask0 != 0)
     {
         func_80025500((AkaoChannelState *)g_akao_seq_channels, key_on_submask0, static_voice_mask0, &voice_mask);
-        dealloc_mask0 &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+        song_ptr = &g_akao_seq_channel0->w04.song;
+        dealloc_mask0 &= ~song_ptr->voice_alloc_low_mask;
         g_akao_seq_channel0->w04.song.key_on_mask &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
     }
 
@@ -114,11 +134,9 @@ void func_800258B8(void)
         old_channel0->w04.song.key_on_mask = 0;
     }
 
-    dealloc_mask0_ptr = &dealloc_mask0;
-    static_voice_mask1 = dealloc_mask0 != 0;
-    if (static_voice_mask1)
+    if (dealloc_mask0 != 0)
     {
-        func_80025500((AkaoChannelState *)g_akao_seq_channels, *dealloc_mask0_ptr, static_voice_mask0, &voice_mask);
+        func_80025500((AkaoChannelState *)g_akao_seq_channels, dealloc_mask0, static_voice_mask0, &voice_mask);
         g_akao_seq_channel0->w04.song.key_on_mask = 0;
     }
 
@@ -135,7 +153,8 @@ void func_800258B8(void)
             if (sfx_active_mask & bit)
             {
                 func_80024F60(sfx_channel, bit);
-                if (*(s32 *)((u8 *)flags_ptr + dealloc_mask1) != 0)
+                static_voice_mask1 = *(s32 *)((u8 *)flags_ptr + dealloc_mask1) != 0;
+                if (static_voice_mask1)
                 {
                     spu_apply_voice_updates(*(u32 *)((u8 *)flags_ptr + 0xC8), (void *)((u8 *)sfx_channel + 0xFC), *flags_ptr);
                 }
