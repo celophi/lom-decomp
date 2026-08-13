@@ -585,8 +585,8 @@ static s32 handle_navigation_input(s32 mode, s32 buttons);
 static void gname_process_input(void);
 static u_long* emit_cursor_glyph(u_long* prim, u_long* ot, s16 x, s16 y);
 static void gname_render(RenderContext* render_ctx);
-static void* emit_panel_tab_sprite(void* prim_cursor, u_long* ot_entry);
-static void* emit_panel_label(void* prim_cursor, u_long* ot_entry);
+static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry);
+static void* emit_panel_label(void* packet_cursor, u_long* ot_entry);
 static void render_name_strip(RenderContext* render_ctx, u8* name, s32 strip_width);
 static void render_char_panel(RenderContext* render_ctx, s32 panel_index);
 static void* emit_draw_mode_prim(DR_TPAGE* packet, u_long* ot_entry);
@@ -1845,77 +1845,64 @@ static void gname_render(RenderContext* render_ctx)
 }
 
 /**
- * @brief Emit the panel-tab indicator sprite for the current character-set mode.
- *
- * Resolves a @ref PANEL_RECORD by index and draws it via @ref func_800A88A0
- * at fixed screen position (0xB0, 0xC8). The index per mode:
- *  - mode 0-7 (action/panel tabs): sprite_idx of the @ref g_tab_cursor_pos entry
- *    (mode + 2)
- *  - mode 0x10, panel 3-4:  panel + 10 (records 13-14)
- *  - mode 0x10, other:      12
- *
- * @param prim_cursor Next free position in the primitive buffer.
- * @param ot_entry Pointer into the render context OT for chaining.
- * @return Updated primitive write cursor after appending the sprite.
+ * @brief Emit the tab sprite for the current navigation mode.
+ * @param packet_cursor Next free primitive-buffer address.
+ * @param ot_entry Ordering-table entry that receives the sprite.
+ * @return Next free primitive-buffer address.
  * @see decomp.me (100%) https://decomp.me/scratch/RnoNS
  */
-static void* emit_panel_tab_sprite(void* prim_cursor, u_long* ot_entry)
+static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
 {
-    s32 mode = g_navigation_mode;
+    s32 navigation_mode = g_navigation_mode;
 
-    if (mode <= GNAME_MODE_PANEL_LAST)
+    if (navigation_mode <= GNAME_MODE_PANEL_LAST)
     {
-        /* Action and panel modes select the record stored in their tab entry. */
-        prim_cursor = func_800A88A0(prim_cursor, ot_entry, PANEL_RECORD(g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].sprite_idx),
-                                   GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
+        packet_cursor = func_800A88A0(packet_cursor, ot_entry,
+                                     PANEL_RECORD(g_tab_cursor_pos[navigation_mode + GNAME_CURSOR_POS_TABLE_OFFSET].sprite_idx),
+                                     GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
     }
-    else if (mode == GNAME_MODE_GRID)
+    else if (navigation_mode == GNAME_MODE_GRID)
     {
-        s32 panel = g_char_panel;
+        s32 panel_index = g_char_panel;
 
-        /* Unsigned range check accepts only the category and kanji panels. */
-        if ((u32)(panel - CHAR_PANEL_KANJI_CATEGORY) < (CHAR_PANEL_KANJI - CHAR_PANEL_KANJI_CATEGORY + 1))
+        /* Select specialized tabs only for the category and kanji panels. */
+        if ((u32)(panel_index - CHAR_PANEL_KANJI_CATEGORY) < (CHAR_PANEL_KANJI - CHAR_PANEL_KANJI_CATEGORY + 1))
         {
-            prim_cursor = func_800A88A0(prim_cursor, ot_entry, PANEL_RECORD(panel + GNAME_PANEL_TAB_KANJI_RECORD_OFFSET),
-                                       GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
+            packet_cursor = func_800A88A0(packet_cursor, ot_entry, PANEL_RECORD(panel_index + GNAME_PANEL_TAB_KANJI_RECORD_OFFSET),
+                                         GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
         }
         else
         {
-            prim_cursor = func_800A88A0(prim_cursor, ot_entry, PANEL_RECORD(GNAME_PANEL_TAB_DEFAULT_RECORD), GNAME_PANEL_SPRITE_COLOR,
-                                       GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
+            packet_cursor = func_800A88A0(packet_cursor, ot_entry, PANEL_RECORD(GNAME_PANEL_TAB_DEFAULT_RECORD), GNAME_PANEL_SPRITE_COLOR,
+                                         GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
         }
     }
-    return prim_cursor;
+    return packet_cursor;
 }
 
 /**
- * @brief Emit the category-label sprite for the current character panel.
- *
- * Panels 0-3 use a @ref PANEL_RECORD label; panel >= 4 (kanji) uses
- * @ref g_kanji_cat_name directly. Drawn via @ref func_800A88A0 at fixed screen
- * position (0x23, 0x47).
- *
- * @param prim_cursor Next free position in the primitive buffer.
- * @param ot_entry Pointer into the render context OT for chaining.
- * @return Updated primitive write cursor after appending the label sprite.
+ * @brief Emit the current character-panel label.
+ * @param packet_cursor Next free primitive-buffer address.
+ * @param ot_entry Ordering-table entry that receives the label.
+ * @return Next free primitive-buffer address.
  * @see decomp.me (100%) https://decomp.me/scratch/jK7bc
  */
-static void* emit_panel_label(void* prim_cursor, u_long* ot_entry)
+static void* emit_panel_label(void* packet_cursor, u_long* ot_entry)
 {
-    s32 panel = g_char_panel;
+    s32 panel_index = g_char_panel;
 
-    if (panel < CHAR_PANEL_KANJI)
+    if (panel_index < CHAR_PANEL_KANJI)
     {
-        prim_cursor = func_800A88A0(prim_cursor, ot_entry, PANEL_RECORD(panel), GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
-                                   GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
+        packet_cursor = func_800A88A0(packet_cursor, ot_entry, PANEL_RECORD(panel_index), GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
+                                     GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
     }
     else
     {
-        prim_cursor = func_800A88A0(prim_cursor, ot_entry, g_kanji_cat_name, GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
-                                   GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
+        packet_cursor = func_800A88A0(packet_cursor, ot_entry, g_kanji_cat_name, GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
+                                     GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
     }
 
-    return prim_cursor;
+    return packet_cursor;
 }
 
 /**
