@@ -118,7 +118,9 @@
 #define GNAME_MODE_PANEL_LAST (GNAME_MODE_PANEL_BASE + 3) /* hidden kanji-category tab */
 #define GNAME_MODE_GRID 0x10        /* in-grid character cursor mode */
 
+#define GNAME_REDISPATCH_DONE 0
 #define GNAME_REDISPATCH_PENDING 0xFF
+#define GNAME_NAVIGATION_STEP 1
 #define GNAME_CURSOR_POS_TABLE_OFFSET 2
 #define GNAME_TAB_CURSOR_X_BIAS 8
 #define GNAME_CURSOR_LERP_STEPS 5
@@ -1184,33 +1186,17 @@ static void reset_run_state(void)
 }
 
 /**
- * @brief Process one frame of name-entry UI input and return the new char-set mode.
- *
- * State machine for the character-selection screen. @p mode names the focused
- * UI region:
- *   - GNAME_MODE_ACTION_OK..DEFAULT (0-3): action tab bar
- *   - GNAME_MODE_PANEL_BASE..+2 (4-6): visible character-panel selector tabs
- *   - GNAME_MODE_PANEL_LAST (7): hidden kanji-category tab
- *   - GNAME_MODE_GRID (0x10): in-grid character cursor
- *
- * Updates cursor position, panel, scroll state, and the name buffer as a side
- * effect, then returns the next mode.
- *
- * @param mode    Current char-set mode (see above).
- * @param buttons Filtered pad bitmask (e.g. @c g_pad_input & @c GNAME_BTN_NAV_MASK).
- * @return        New char-set mode after processing the input.
+ * @brief Update the focused name-entry region from navigation input.
+ * @param mode Current navigation mode.
+ * @param buttons Filtered directional and confirm buttons.
+ * @return Updated navigation mode.
  * @see decomp.me (100%) https://decomp.me/scratch/jAuWs
  */
 static s32 handle_navigation_input(s32 mode, s32 buttons)
 {
-    /* 0xFF: re-run the switch with the updated mode; 0: done */
     s32 repeat_dispatch = GNAME_REDISPATCH_PENDING;
-    /*
-     * Holds the constant 1, assigned only inside the case 0-3 confirm branch
-     * but reused as an operand in later branches. Required to match the
-     * target register allocation; do not fold back to literal 1.
-     */
-    int one;
+    /* GCC carries this action-path step value across the later switch arms. */
+    s32 navigation_step;
 
     while (repeat_dispatch == GNAME_REDISPATCH_PENDING)
     {
@@ -1224,7 +1210,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
             if (buttons & GNAME_BTN_CONFIRM)
             {
                 g_activated_entry = mode;
-                one = 1;
+                navigation_step = GNAME_NAVIGATION_STEP;
                 switch (mode)
                 {
                 case GNAME_MODE_ACTION_OK:
@@ -1237,18 +1223,18 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     {
                         play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
                     }
-                    repeat_dispatch = 0;
+                    repeat_dispatch = GNAME_REDISPATCH_DONE;
                     continue;
 
                 case GNAME_MODE_ACTION_DELETE:
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                     name_pop_last_glyph(g_active_name);
                     recalc_name_width();
-                    /* empty statement required to match */
+                    /* Preserve the delete-action branch boundary. */
                     do
                     {
-                    } while (0);
-                    repeat_dispatch = 0;
+                    } while (FALSE);
+                    repeat_dispatch = GNAME_REDISPATCH_DONE;
                     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                     continue;
 
@@ -1277,7 +1263,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                             name_append(g_active_name, HISTORY_SUFFIX((rand() % RANDOM_NAME_COUNT) + HISTORY_SUFFIX_INDEX_BASE));
                         }
                     }
-                    else if (g_name_source_mode == one)
+                    else if (g_name_source_mode == navigation_step)
                     {
                         g_name_clipboard[0] = 0;
                         name_copy(g_active_name, g_custom_name_buf);
@@ -1289,7 +1275,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         name_copy(g_active_name, g_initial_name);
                     }
                     recalc_name_width();
-                    repeat_dispatch = 0;
+                    repeat_dispatch = GNAME_REDISPATCH_DONE;
                     g_strip_width_steps = NAME_STRIP_LERP_STEPS;
                     continue;
 
@@ -1300,12 +1286,12 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     break;
 
                 default:
-                    repeat_dispatch = 0;
+                    repeat_dispatch = GNAME_REDISPATCH_DONE;
                     continue;
                 }
 
                 recalc_name_width();
-                repeat_dispatch = 0;
+                repeat_dispatch = GNAME_REDISPATCH_DONE;
                 g_strip_width_steps = NAME_STRIP_LERP_STEPS;
             }
             else
@@ -1320,24 +1306,24 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     }
                     if (buttons & PAD_BTN_LEFT)
                     {
-                        mode = (mode == GNAME_MODE_ACTION_OK) ? GNAME_MODE_ACTION_DEFAULT : (mode - one);
+                        mode = (mode == GNAME_MODE_ACTION_OK) ? GNAME_MODE_ACTION_DEFAULT : (mode - navigation_step);
                     }
                     else if (buttons & PAD_BTN_RIGHT)
                     {
-                        mode = (mode < GNAME_MODE_ACTION_DEFAULT) ? (mode + 1) : GNAME_MODE_ACTION_OK;
+                        mode = (mode < GNAME_MODE_ACTION_DEFAULT) ? (mode + GNAME_NAVIGATION_STEP) : GNAME_MODE_ACTION_OK;
                     }
                 }
                 play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
                 g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
                 g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
                 g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
-                repeat_dispatch = 0;
+                repeat_dispatch = GNAME_REDISPATCH_DONE;
             }
             break;
 
         /* Left-column character-panel selector tabs. */
         case GNAME_MODE_PANEL_BASE:
-        case GNAME_MODE_PANEL_BASE + 1:
+        case GNAME_MODE_PANEL_BASE + GNAME_NAVIGATION_STEP:
         case GNAME_MODE_PANEL_NAV_LAST:
         case GNAME_MODE_PANEL_LAST:
             /* Confirm changes panels only when the selected tab is not already active. */
@@ -1353,31 +1339,29 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                 play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                 continue;
             }
-            else
+
+            if (buttons != 0)
             {
-                if (buttons != 0)
+                if (buttons & PAD_BTN_RIGHT)
                 {
-                    if (buttons & PAD_BTN_RIGHT)
-                    {
-                        mode = GNAME_MODE_GRID;
-                        buttons = 0;
-                        continue;
-                    }
-                    if (buttons & PAD_BTN_UP)
-                    {
-                        mode = (mode == GNAME_MODE_PANEL_BASE) ? GNAME_MODE_PANEL_NAV_LAST : (mode - one);
-                    }
-                    else if (buttons & PAD_BTN_DOWN)
-                    {
-                        mode = (mode < GNAME_MODE_PANEL_NAV_LAST) ? (mode + one) : GNAME_MODE_PANEL_BASE;
-                    }
+                    mode = GNAME_MODE_GRID;
+                    buttons = 0;
+                    continue;
                 }
-                play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
-                g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
-                g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
-                g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
-                repeat_dispatch = 0;
+                if (buttons & PAD_BTN_UP)
+                {
+                    mode = (mode == GNAME_MODE_PANEL_BASE) ? GNAME_MODE_PANEL_NAV_LAST : (mode - navigation_step);
+                }
+                else if (buttons & PAD_BTN_DOWN)
+                {
+                    mode = (mode < GNAME_MODE_PANEL_NAV_LAST) ? (mode + navigation_step) : GNAME_MODE_PANEL_BASE;
+                }
             }
+            play_menu_sfx(GNAME_SFX_MOVE, GNAME_SFX_VOLUME);
+            g_cursor_x_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].x - GNAME_TAB_CURSOR_X_BIAS;
+            g_cursor_y_target = g_tab_cursor_pos[mode + GNAME_CURSOR_POS_TABLE_OFFSET].y;
+            g_cursor_lerp_steps = GNAME_CURSOR_LERP_STEPS;
+            repeat_dispatch = GNAME_REDISPATCH_DONE;
             break;
 
         default:
@@ -1406,7 +1390,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                 {
                     if (g_kanji_cat_entries[g_char_cursor] == KANJI_CATEGORY_EMPTY)
                     {
-                        repeat_dispatch = 0;
+                        repeat_dispatch = GNAME_REDISPATCH_DONE;
                         continue;
                     }
                     g_kanji_cat = g_char_cursor;
@@ -1439,12 +1423,10 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                         play_menu_sfx(GNAME_SFX_ERROR, GNAME_SFX_VOLUME);
                     }
                 }
-                repeat_dispatch = 0;
+                repeat_dispatch = GNAME_REDISPATCH_DONE;
             }
             else
             {
-                s32 scroll_off;
-
                 if (buttons != 0)
                 {
                     if ((buttons & PAD_BTN_UP) && ((g_char_cursor / NAME_GRID_COLUMNS) == 0))
@@ -1469,20 +1451,16 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     }
                     else if ((buttons & PAD_BTN_LEFT) && ((g_char_cursor % NAME_GRID_COLUMNS) != 0))
                     {
-                        g_char_cursor -= 1;
+                        g_char_cursor -= GNAME_NAVIGATION_STEP;
+                    }
+                    else if ((buttons & PAD_BTN_RIGHT) && ((g_char_cursor % NAME_GRID_COLUMNS) != NAME_GRID_LAST_COL))
+                    {
+                        g_char_cursor += navigation_step;
                     }
                     else
                     {
-
-                        if ((buttons & PAD_BTN_RIGHT) && ((g_char_cursor % NAME_GRID_COLUMNS) != NAME_GRID_LAST_COL))
-                        {
-                            g_char_cursor += one;
-                        }
-                        else
-                        {
-                            repeat_dispatch = 0;
-                            continue;
-                        }
+                        repeat_dispatch = GNAME_REDISPATCH_DONE;
+                        continue;
                     }
                 }
 
@@ -1505,7 +1483,7 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                 }
 
                 g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
-                repeat_dispatch = 0;
+                repeat_dispatch = GNAME_REDISPATCH_DONE;
             }
             break;
         }
