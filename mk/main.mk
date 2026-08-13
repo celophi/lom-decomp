@@ -173,7 +173,8 @@ SRCS_G4 := \
 	src/controller.c \
 	src/decomp10.c \
 	src/decomp9-func_80024B00.c \
-	src/decomp9-func_80025500.c 
+	src/decomp9-func_80025500.c \
+	src/decomp9-func_800258B8.c
 
 # Subset of SRCS_G4 (or any G4 object) whose original code uses bare
 # `div $zero,...` and must be assembled WITHOUT --expand-div. List the .c here
