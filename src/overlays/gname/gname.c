@@ -2213,11 +2213,13 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
     packet_cursor += sizeof(DR_TWIN);
 
     sprite_cursor = packet_cursor;
-    do
+    while (sprite_count < GNAME_LAYOUT_SPRITE_COUNT)
     {
         u32 glyph_id = sequence_entry->id;
         u32 packed_xy;
         GlyphInfo* glyph_info;
+        u8 glyph_height;
+        u32 clut_word;
 
         sprite = (SPRT*)sprite_cursor;
         /* setSprt replaces the code byte written with the packed tint. */
@@ -2231,20 +2233,16 @@ static void render_layout_sprite_batch(RenderContext* render_ctx)
         sprite->u0 = glyph_info->u;
         sprite->v0 = glyph_info->v;
         sprite->w = glyph_info->w;
-        {
-            u8 glyph_height = glyph_info->h;
-            sprite_count++;
-            sprite->h = glyph_height;
-        }
-        {
-            u32 clut_word = glyph_info->clut;
-            sequence_entry++;
-            sprite->clut = (clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
-        }
+        glyph_height = glyph_info->h;
+        sprite_count++;
+        sprite->h = glyph_height;
+        clut_word = glyph_info->clut;
+        sequence_entry++;
+        sprite->clut = (clut_word & GLYPH_CLUT_X_MASK) | GLYPH_CLUT_PAGE_BITS;
 
         addPrim(&batch_ctx->ot[GNAME_OT_LAYOUT_BACKGROUND], sprite);
         sprite_cursor += sizeof(SPRT);
-    } while (sprite_count < GNAME_LAYOUT_SPRITE_COUNT);
+    }
     packet_cursor = sprite_cursor;
 
     /* Restore the full-size texture window after the sprite batch. */
