@@ -253,47 +253,61 @@ enum
 #define GLYPH_APPEND_ANIM_X_BIAS 0xE8
 #define GLYPH_APPEND_ANIM_Y_BIAS 4
 
-/* Serialized panel-blob offsets and self-relative table accessors. */
-#define PANEL_HEADER_RECORD_TABLE_OFFSET 0x04
-#define PANEL_HEADER_KANJI_DATA_OFFSET 0x08
-#define PANEL_SYMBOL_BASE_BIAS 0x10
-#define SELF_RELATIVE_INDEX_SCALE 2
+/** @brief Header of the serialized name-entry resource. */
+typedef struct
+{
+    u32 unknown_0x00;
+    u32 panel_records_offset;
+    u32 kanji_records_offset;
+    u32 history_names_offset;
+    u32 random_names_offset;
+} GnameDataHeader;
 
-/* These symbol-anchored expressions preserve GCC's matched address setup. */
-#define PANEL_DATA_BLOB (((u8*)(&g_panel_tbl_off)) - PANEL_HEADER_RECORD_TABLE_OFFSET)
-#define PANEL_REC_TBL ((u16*)(PANEL_DATA_BLOB + g_panel_tbl_off))
-#define PANEL_RECORD(index) ((u8*)PANEL_REC_TBL + PANEL_REC_TBL[(index)])
-#define KANJI_DATA_BLOB (((u32)(&g_kanji_panel_offset)) - PANEL_HEADER_KANJI_DATA_OFFSET)
-#define KANJI_GLYPH_TBL ((u8*)(KANJI_DATA_BLOB + g_kanji_panel_offset))
-#define TBL_ENTRY(table, index) ((u8*)(table) + ((u16*)(table))[(index)])
+/** @brief Table of self-relative offsets to packed name-entry records. */
+typedef struct
+{
+    u16 offsets[1];
+} GnameRecordTable;
 
-#define RANDOM_NAME_TABLE_BASE ((g_random_names_off - PANEL_SYMBOL_BASE_BIAS) + (*((u32*)g_random_names_off)))
+/* Typed views over the serialized name-entry resource. */
+#define GNAME_HEADER_OFFSET(member) ((u32)&((GnameDataHeader*)0)->member)
+#define GNAME_PANEL_RECORDS_FIELD_OFFSET GNAME_HEADER_OFFSET(panel_records_offset)
+#define GNAME_KANJI_RECORDS_FIELD_OFFSET GNAME_HEADER_OFFSET(kanji_records_offset)
+#define GNAME_RANDOM_NAMES_FIELD_OFFSET GNAME_HEADER_OFFSET(random_names_offset)
+#define GNAME_RECORD_OFFSET_SIZE sizeof(((GnameRecordTable*)0)->offsets[0])
+#define PANEL_DATA_HEADER \
+    ((const GnameDataHeader*)(((u8*)&g_panel_tbl_off) - GNAME_PANEL_RECORDS_FIELD_OFFSET))
+#define KANJI_DATA_HEADER \
+    ((const GnameDataHeader*)(((u8*)&g_kanji_panel_offset) - GNAME_KANJI_RECORDS_FIELD_OFFSET))
+#define PANEL_RECORD_TABLE \
+    ((const GnameRecordTable*)((u8*)PANEL_DATA_HEADER + g_panel_tbl_off))
+#define KANJI_RECORD_TABLE \
+    ((const GnameRecordTable*)((u32)KANJI_DATA_HEADER + (u32)g_kanji_panel_offset))
+#define PANEL_CHARACTER_TABLE \
+    ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + g_panel_tbl_off))
+#define KANJI_CHARACTER_TABLE \
+    ((GnameRecordTable*)((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (u32)g_kanji_panel_offset))
+#define RANDOM_NAME_TABLE_BASE \
+    ((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_random_names_off)))
+#define HISTORY_NAME_TABLE_BASE \
+    ((g_random_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_history_names_off)))
+/* The u16 cast preserves the matched offset-load evaluation order. */
+#define GNAME_RECORD(table, index) ((u8*)(table) + ((u16*)(table))[(index)])
+#define GNAME_RECORD_IN_RANGE(table, range_start, index) \
+    ((u8*)(table) + \
+     *(u16*)((u8*)(table) + ((range_start) * sizeof(u16)) + ((index) * sizeof(u16))))
+
 #define RANDOM_NAME(index) \
-    (RANDOM_NAME_TABLE_BASE + (*((u16*)(RANDOM_NAME_TABLE_BASE + ((index) * SELF_RELATIVE_INDEX_SCALE)))))
-
-#define HISTORY_NAME_TABLE_BASE ((g_random_names_off - PANEL_SYMBOL_BASE_BIAS) + (*((u32*)g_history_names_off)))
+    (RANDOM_NAME_TABLE_BASE + \
+     (*((u16*)(RANDOM_NAME_TABLE_BASE + ((index) * GNAME_RECORD_OFFSET_SIZE)))))
 #define HISTORY_NAME(index) \
-    (HISTORY_NAME_TABLE_BASE + (*((u16*)(HISTORY_NAME_TABLE_BASE + ((index) * SELF_RELATIVE_INDEX_SCALE)))))
-#define HISTORY_SUFFIX_TABLE_BASE ((g_history_names_off - PANEL_SYMBOL_BASE_BIAS) + (*((u32*)g_history_names_off)))
+    (HISTORY_NAME_TABLE_BASE + \
+     (*((u16*)(HISTORY_NAME_TABLE_BASE + ((index) * GNAME_RECORD_OFFSET_SIZE)))))
+#define HISTORY_SUFFIX_TABLE_BASE \
+    ((g_history_names_off - GNAME_RANDOM_NAMES_FIELD_OFFSET) + (*((u32*)g_history_names_off)))
 #define HISTORY_SUFFIX(index) \
-    (HISTORY_NAME_TABLE_BASE + (*((u16*)(HISTORY_SUFFIX_TABLE_BASE + ((index) * SELF_RELATIVE_INDEX_SCALE)))))
-
-#define PANEL_CHAR_TABLE_BASE ((g_random_names_off - PANEL_SYMBOL_BASE_BIAS) + g_panel_tbl_off)
-#define PANEL_GLYPH(panel, cursor) \
-    (PANEL_CHAR_TABLE_BASE + \
-     (*((u16*)((PANEL_CHAR_TABLE_BASE + (g_panel_char_offsets[(panel)] * SELF_RELATIVE_INDEX_SCALE)) + \
-               ((cursor) * SELF_RELATIVE_INDEX_SCALE)))))
-#define KANJI_CATEGORY_NAME(category) \
-    (PANEL_CHAR_TABLE_BASE + \
-     (*((u16*)((PANEL_CHAR_TABLE_BASE + (g_kanji_cat_names_offset * SELF_RELATIVE_INDEX_SCALE)) + \
-               ((category) * SELF_RELATIVE_INDEX_SCALE)))))
-
-#define KANJI_GLYPH_TABLE_BASE ((g_random_names_off - PANEL_SYMBOL_BASE_BIAS) + ((u32)g_kanji_panel_offset))
-#define KANJI_GLYPH(category, cursor) \
-    (KANJI_GLYPH_TABLE_BASE + \
-     (*((u16*)((KANJI_GLYPH_TABLE_BASE + \
-                (g_kanji_entry_offsets[g_kanji_cat_entries[(category)]] * SELF_RELATIVE_INDEX_SCALE)) + \
-               ((cursor) * SELF_RELATIVE_INDEX_SCALE)))))
+    (HISTORY_NAME_TABLE_BASE + \
+     (*((u16*)(HISTORY_SUFFIX_TABLE_BASE + ((index) * GNAME_RECORD_OFFSET_SIZE)))))
 
 /** @brief RGB fade color with an optional remaining interpolation count. */
 typedef struct
@@ -1136,7 +1150,10 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     {
                         u8* selected_glyph;
                         g_glyph_append_anim_timer = GLYPH_APPEND_ANIM_TIMER_START;
-                        selected_glyph = PANEL_GLYPH(g_char_panel, g_char_cursor);
+                        selected_glyph = GNAME_RECORD_IN_RANGE(
+                            PANEL_CHARACTER_TABLE,
+                            g_panel_char_offsets[g_char_panel],
+                            g_char_cursor);
                         g_glyph_append_anim_frame = 0;
                         name_append(g_active_name, selected_glyph);
                         recalc_name_width();
@@ -1164,7 +1181,10 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     g_cursor_y_target = NAME_GRID_Y_TOP;
                     g_cursor_lerp_steps = GNAME_GRID_LERP_STEPS;
                     g_char_cursor = 0;
-                    g_kanji_cat_name = KANJI_CATEGORY_NAME(g_kanji_cat);
+                    g_kanji_cat_name = GNAME_RECORD_IN_RANGE(
+                        PANEL_CHARACTER_TABLE,
+                        g_kanji_cat_names_offset,
+                        g_kanji_cat);
                     play_menu_sfx(GNAME_SFX_CONFIRM, GNAME_SFX_VOLUME);
                 }
                 else if (g_char_panel == CHAR_PANEL_KANJI)
@@ -1173,7 +1193,10 @@ static s32 handle_navigation_input(s32 mode, s32 buttons)
                     {
                         u8* selected_glyph;
                         g_glyph_append_anim_timer = GLYPH_APPEND_ANIM_TIMER_START;
-                        selected_glyph = KANJI_GLYPH(g_kanji_cat, g_char_cursor);
+                        selected_glyph = GNAME_RECORD_IN_RANGE(
+                            KANJI_CHARACTER_TABLE,
+                            g_kanji_entry_offsets[g_kanji_cat_entries[g_kanji_cat]],
+                            g_char_cursor);
                         g_glyph_append_anim_frame = 0;
                         name_append(g_active_name, selected_glyph);
                         recalc_name_width();
@@ -1404,11 +1427,9 @@ static void gname_process_input(void)
                 category_name_table_offset = (category_index * sizeof(u16)) +
                                              ((category_record_base_index_copy * sizeof(u16)) + g_panel_tbl_off);
                 panel_data_base = g_panel_data_base;
-                /* Panel offsets are serialized u16 entries inside the raw byte blob. */
                 category_name_offset_entry = (u16*)(panel_data_base + category_name_table_offset);
                 category_name_offset = *category_name_offset_entry;
                 g_pad_input &= volume_or_nav_mask;
-                /* Integer address arithmetic preserves the target's final addu operand order. */
                 *category_name_ptr = (void*)(g_panel_tbl_off + (category_name_offset + ((unsigned long)panel_data_base)));
             }
         }
@@ -1574,7 +1595,8 @@ static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
     if (navigation_mode <= GNAME_MODE_PANEL_LAST)
     {
         packet_cursor = func_800A88A0(packet_cursor, ot_entry,
-                                     PANEL_RECORD(g_tab_cursor_pos[navigation_mode + GNAME_CURSOR_POS_TABLE_OFFSET].sprite_idx),
+                                     GNAME_RECORD(PANEL_RECORD_TABLE,
+                                                  g_tab_cursor_pos[navigation_mode + GNAME_CURSOR_POS_TABLE_OFFSET].sprite_idx),
                                      GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
     }
     else if (navigation_mode == GNAME_MODE_GRID)
@@ -1584,12 +1606,14 @@ static void* emit_panel_tab_sprite(void* packet_cursor, u_long* ot_entry)
         /* Select specialized tabs only for the category and kanji panels. */
         if ((u32)(panel_index - CHAR_PANEL_KANJI_CATEGORY) < (CHAR_PANEL_KANJI - CHAR_PANEL_KANJI_CATEGORY + 1))
         {
-            packet_cursor = func_800A88A0(packet_cursor, ot_entry, PANEL_RECORD(panel_index + GNAME_PANEL_TAB_KANJI_RECORD_OFFSET),
+            packet_cursor = func_800A88A0(packet_cursor, ot_entry,
+                                         GNAME_RECORD(PANEL_RECORD_TABLE, panel_index + GNAME_PANEL_TAB_KANJI_RECORD_OFFSET),
                                          GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
         }
         else
         {
-            packet_cursor = func_800A88A0(packet_cursor, ot_entry, PANEL_RECORD(GNAME_PANEL_TAB_DEFAULT_RECORD), GNAME_PANEL_SPRITE_COLOR,
+            packet_cursor = func_800A88A0(packet_cursor, ot_entry,
+                                         GNAME_RECORD(PANEL_RECORD_TABLE, GNAME_PANEL_TAB_DEFAULT_RECORD), GNAME_PANEL_SPRITE_COLOR,
                                          GNAME_PANEL_TAB_X, GNAME_PANEL_TAB_Y, GNAME_PANEL_SPRITE_MODE);
         }
     }
@@ -1609,7 +1633,7 @@ static void* emit_panel_label(void* packet_cursor, u_long* ot_entry)
 
     if (panel_index < CHAR_PANEL_KANJI)
     {
-        packet_cursor = func_800A88A0(packet_cursor, ot_entry, PANEL_RECORD(panel_index), GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
+        packet_cursor = func_800A88A0(packet_cursor, ot_entry, GNAME_RECORD(PANEL_RECORD_TABLE, panel_index), GNAME_PANEL_SPRITE_COLOR, GNAME_PANEL_LABEL_X,
                                      GNAME_PANEL_LABEL_Y, GNAME_PANEL_SPRITE_MODE);
     }
     else
@@ -1684,7 +1708,7 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
     GridDrawEnvScratch grid_draw_scratch;
     DR_ENV* packet_cursor;
     void* glyph_packet_cursor;
-    u8* glyph_table;
+    const GnameRecordTable* glyph_table;
     s32 grid_column;
     s32 glyph_index;
     s32 glyph_end_copy;
@@ -1704,7 +1728,7 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
     /* Select the glyph range from either the kanji or standard panel tables. */
     if (g_char_panel == CHAR_PANEL_KANJI)
     {
-        glyph_table = KANJI_GLYPH_TBL;
+        glyph_table = KANJI_RECORD_TABLE;
         category_entry = g_kanji_cat_entries[g_kanji_cat];
         glyph_index = g_kanji_entry_offsets[category_entry];
         glyph_end = g_kanji_entry_offsets[category_entry + 1];
@@ -1714,7 +1738,7 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
     {
         glyph_index = g_panel_char_offsets[panel_index];
         glyph_end = g_panel_char_offsets[panel_index + 1];
-        glyph_table = (u8*)PANEL_REC_TBL;
+        glyph_table = PANEL_RECORD_TABLE;
         /* Preserve the standard-panel branch boundary. */
         do
         {
@@ -1730,7 +1754,7 @@ static void render_char_panel(RenderContext* render_ctx, s32 panel_index)
         glyph_end_copy = glyph_end;
         if (NAME_GRID_ROW_VISIBLE(glyph_y))
         {
-            glyph_packet_cursor = func_800A88A0(glyph_packet_cursor, ot_entry, TBL_ENTRY(glyph_table, glyph_index), CHAR_PANEL_GLYPH_COLOR,
+            glyph_packet_cursor = func_800A88A0(glyph_packet_cursor, ot_entry, GNAME_RECORD(glyph_table, glyph_index), CHAR_PANEL_GLYPH_COLOR,
                                                 grid_column * NAME_GRID_CELL_SIZE, glyph_y, CHAR_PANEL_GLYPH_MODE);
         }
         glyph_index++;
