@@ -2012,3 +2012,58 @@ s32 func_801452F0(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
     }
     return prim;
 }
+
+s32 func_80145620(s32); /* extern */
+
+/**
+ * @brief Dialog handler for the selected row's action prompt.
+ *
+ * A nonzero @p dialog_result cancels: the selection count is dropped and the
+ * dialog element is deactivated. On confirm, bit 0 of g_gosub_dialog_choice
+ * picks the path. When it is clear the work is handed to func_8014595C. When
+ * it is set the first selected row decides: a row with flag2 set is rejected
+ * with message 0x22 (the selection is dropped and D_8016B95C is raised),
+ * otherwise a follow-up dialog is opened with func_80145620 as its handler.
+ *
+ * @param dialog_result Zero to confirm; nonzero to cancel.
+ * @return Always 0.
+ * @see decomp.me (100%)
+ */
+s32 func_801454C4(s32 dialog_result)
+{
+    GosubElement* element;
+
+    if (dialog_result != 0)
+    {
+        g_gosub_selection_count = 0;
+        g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+        return 0;
+    }
+
+    if (g_gosub_dialog_choice & 1)
+    {
+        if (g_gosub_rows[g_gosub_selected_rows[0]].flags.f.flag2)
+        {
+            GOSUB_MSG(0x22);
+            g_gosub_selection_count = 0;
+            D_8016B95C = 1;
+            return 0;
+        }
+        element = &g_gosub_elements[0];
+        element->draw_handler = (void*)&func_80145F80;
+        g_gosub_dialog_handler = func_80145620;
+        g_gosub_dialog_choice = 0;
+        element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
+        element->attr.f.unk0_3 = 1;
+        element->attr.f.x = 0x20;
+        element->attr.f.unk0_16 = 0x70;
+        element->unk4_0 = 1;
+        element->y = 0x24;
+        SET_ELEM_CODE(element, 0);
+    }
+    else
+    {
+        func_8014595C();
+    }
+    return 0;
+}
