@@ -152,11 +152,6 @@ SRCS_G0 := \
 	src/psyq/libapi/A10.c \
 	src/psyq/libspu/S_GRMT.c \
 	src/unk8.c \
-	src/decomp12.c \
-	src/decomp14.c \
-	src/decomp16.c \
-	src/decomp18.c \
-	src/decomp20.c \
 	src/unk9.c \
 	src/screen_transition.c \
 	src/game_audio.c \
@@ -180,11 +175,7 @@ SRCS_G4 := \
 	src/decomp9-func_80024B00.c \
 	src/decomp9-func_80025500.c \
 	src/decomp9-func_800258B8.c \
-	src/decomp11.c \
-	src/decomp13.c \
-	src/decomp15.c \
-	src/decomp17.c \
-	src/decomp19.c
+	src/decomp11.c
 
 # Subset of SRCS_G4 (or any G4 object) whose original code uses bare
 # `div $zero,...` and must be assembled WITHOUT --expand-div. List the .c here
