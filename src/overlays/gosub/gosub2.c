@@ -1837,3 +1837,111 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
     }
     return mark;
 }
+
+/** @brief Sprite primitive (0x14 bytes, code 0x64), SPRT layout. */
+typedef struct
+{
+    u_long tag;  /* 0x00 P_TAG */
+    u8 r0;       /* 0x04 */
+    u8 g0;       /* 0x05 */
+    u8 b0;       /* 0x06 */
+    u8 code;     /* 0x07 */
+    s16 x0;      /* 0x08 */
+    s16 y0;      /* 0x0A */
+    u8 u0;       /* 0x0C */
+    u8 v0;       /* 0x0D */
+    u16 clut;    /* 0x0E */
+    s16 w;       /* 0x10 */
+    s16 h;       /* 0x12 */
+} GosubSprt;     /* 0x14 */
+
+/** @brief libgpu RECT (s16 x, y, w, h). */
+typedef struct
+{
+    s16 x;
+    s16 y;
+    s16 w;
+    s16 h;
+} GosubRect;
+
+extern s32 g_gosub_frame_parity;
+/** @brief Portrait archive: s32 offset table at base, pixels at +0x1C, cluts at -4. */
+extern s32 D_80152DF4[];
+
+s32 LoadImage(); /* extern */
+
+/**
+ * @brief Upload a row's portrait strip and CLUT, then emit its 48x48 sprite.
+ *
+ * The portrait index comes from the row's unkC (offset by 0x41 when flag2 is
+ * clear); the pixel and CLUT rectangles are double-buffered by
+ * g_gosub_frame_parity. Draws nothing once five portraits are on screen.
+ *
+ * @param prim  Packet cursor.
+ * @param ot    Ordering-table tag to link into.
+ * @param row   g_gosub_rows index to portray.
+ * @param x     Sprite left edge.
+ * @param y     Sprite top edge.
+ * @param count How many portraits were already emitted this frame.
+ * @return Packet cursor past the sprite (func_8014680C's return), or prim
+ *         when count is 5 or more.
+ *
+ * @note WIP - best match 93.92% (99/134 exact rows, gcc 2.7.2 CDK). The
+ *       residue is one 5-cycle saved-register rotation (count must color s1;
+ *       here it lands s5) plus three instruction-order pairs. Measured
+ *       evidence, retired probe classes and next moves are in
+ *       working/func_801450D8/STATUS.md.
+ */
+s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
+{
+    GosubSprt* sprt;
+    GosubRect rect;
+    s32* entry;
+    s32 idx;
+    s32 cell;
+
+    if (count >= 5)
+    {
+        return prim;
+    }
+
+    if (g_gosub_rows[row].flags.f.flag2)
+    {
+        idx = g_gosub_rows[row].unkC;
+    }
+    else
+    {
+        idx = g_gosub_rows[row].unkC + 0x41;
+    }
+    cell = count * 3;
+
+    rect.x = cell * 4 + 0x140;
+    rect.w = 0xC;
+    rect.h = 0x30;
+    rect.y = g_gosub_frame_parity * 0x30;
+    entry = &D_80152DF4[idx];
+    LoadImage(&rect, (u8*)D_80152DF4 + *entry + 0x1C);
+
+    rect.y = 0x1F2;
+    rect.w = 0x10;
+    rect.h = 1;
+    count = count * 0x10;
+    rect.x = count + g_gosub_frame_parity * 0x50;
+    LoadImage(&rect, (u8*)D_80152DF4 + *entry - 4);
+
+    sprt = (GosubSprt*)prim;
+    *(u32*)&sprt->r0 = 0x808080;
+    ((GosubTag*)sprt)->len = 4;
+    sprt->code = 0x64;
+    sprt->u0 = cell * 0x10;
+    sprt->x0 = x;
+    sprt->v0 = g_gosub_frame_parity * 0x30;
+    sprt->y0 = y;
+    sprt->w = 0x30;
+    sprt->h = 0x30;
+    count = count + g_gosub_frame_parity * 0x50;
+    count = ((count >> 4) & 0x3F) | 0x7C80;
+    sprt->clut = count;
+    ADD_PRIM(ot, sprt);
+    return func_8014680C(prim + 0x14, ot);
+}
