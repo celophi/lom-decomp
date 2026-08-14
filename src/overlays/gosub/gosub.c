@@ -63,6 +63,7 @@ void gosub_build_grouped_option_list(s32 group);    /* extern */
 void gosub_update_screen(s32 render_ctx);    /* extern */
 void func_80143B64();    /* extern */
 void func_80145CEC();    /* extern */
+void func_80145DA8();    /* extern */
 void func_80146468();    /* extern */
 void func_80146538();    /* extern */
 extern s32 g_gosub_frame_parity;
@@ -84,6 +85,7 @@ extern s32 g_gosub_row_count;
 extern s32 g_gosub_visible_row_count;
 extern s32 D_8016B8E4;
 extern s32 D_8016B8EC;
+extern s32 D_8016B8F4;
 extern s32 g_gosub_allow_duplicate_selection;
 extern s32 (*g_gosub_finish_handler)();
 extern u8 D_8016B8FC;
@@ -3788,4 +3790,28 @@ s32 func_80145B28(s32* ot, s32 prim, s32 x_off, s32 y_off)
     prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x22 - y_off, 2);
 
     return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80145CEC(s32 arg0)
+{
+    GosubElement* element;
+
+    D_8016B8F4 = arg0;
+    element = &g_gosub_elements[0];
+    element->draw_handler = (void*)&func_80145DA8;
+    g_gosub_dialog_choice = 0;
+    D_8016B948 = 1;
+    D_8016B95C = 0;
+    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->attr.f.unk0_3 = 1;
+    element->attr.f.x = 0x20;
+    element->attr.f.unk0_16 = 0x70;
+    element->unk4_0 = 1;
+    element->y = 0x14;
+    SET_ELEM_CODE(element, 0);
+    func_800AA02C();
+    D_801228F0 = 0;
 }
