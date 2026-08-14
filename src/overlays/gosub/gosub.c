@@ -3628,3 +3628,26 @@ void func_801458A4(void)
     SET_ELEM_CODE(element, 0x80);
     func_800AA02C();
 }
+
+void func_80145B28(); /* extern */
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_8014595C(void)
+{
+    GosubElement* element;
+
+    element = &g_gosub_elements[0];
+    element->draw_handler = (void*)&func_80145B28;
+    g_gosub_dialog_handler = func_80145800;
+    g_gosub_dialog_choice = 0;
+    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->attr.f.unk0_3 = 1;
+    element->attr.f.x = 0x80;
+    element->attr.f.unk0_16 = 0x70;
+    element->unk4_0 = 0;
+    element->y = 0x34;
+    SET_ELEM_CODE(element, 0x80);
+    func_800AA02C();
+}
