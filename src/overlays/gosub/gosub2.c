@@ -2164,3 +2164,35 @@ s32 func_80145744(s32 dialog_result)
     g_gosub_elements[0].attr.f.unk0_3 = 8;
     return 0;
 }
+
+/** @brief Toggling flag paired with g_gosub_dialog_choice to pick a sound slot. */
+extern s32 D_8017098C;
+
+/**
+ * @brief Dialog handler that plays the choice's sound and flips its bank.
+ *
+ * On confirm it hands func_80146AF8 a slot built from D_8017098C's bank bit and
+ * the dialog choice reduced modulo 3, clears the selection count, then flips
+ * bit 0 of D_8017098C so the next confirm uses the other bank. Cancelling only
+ * sets the selection count to 1. Either way element 0 is deactivated.
+ *
+ * @param dialog_result Zero to confirm; nonzero to cancel.
+ * @return Always 0.
+ * @see decomp.me (100%)
+ */
+s32 func_80145800(s32 dialog_result)
+{
+    if (dialog_result == 0)
+    {
+        func_80146AF8((D_8017098C << 7) + (g_gosub_dialog_choice % 3));
+        g_gosub_selection_count = 0;
+        D_8017098C ^= 1;
+    }
+    else
+    {
+        g_gosub_selection_count = 1;
+    }
+
+    g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+    return 0;
+}

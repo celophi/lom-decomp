@@ -43,6 +43,6 @@ segments:
       - [0x1, rodata, rodata]
       - [0x81, c, gosub]       # CDK (default)
       - [0x289D, c, gosub2]    # CDK (default)
-      - [0x5801, c, unk1]      # gcc 2.8.0 -G0
+      - [0x58A5, c, unk1]      # gcc 2.8.0 -G0
       - [0x7059, data, data]
   - [0x34A5D]
