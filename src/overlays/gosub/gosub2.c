@@ -1945,3 +1945,70 @@ s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     ADD_PRIM(ot, sprt);
     return func_8014680C(prim + 0x14, ot);
 }
+
+/** @brief Item-name archive: block offset table at base, entries at base - 0x18. */
+extern u32 D_8014F294[];
+/** @brief Separator glyph record; the string itself sits at D_800EC3DA - 0x16. */
+extern u8 D_800EC3DA[];
+
+/**
+ * @brief Draw the combination preview for the cursor row.
+ *
+ * When at least one row is selected and the cursor sits on a different row,
+ * func_800CA480 is asked whether the two rows' item indices combine. It
+ * returns the resulting item in D_8017097C and fills D_8016B8EC and
+ * D_8016B8E4; a zero result means the pair does not combine and nothing is
+ * drawn. Otherwise a frame is emitted, then the result's archive name, with
+ * D_8016B8EC's decimal form appended after a separator when it is nonzero.
+ *
+ * @param ot       Ordering-table tag every packet is linked into.
+ * @param arg_prim Packet cursor.
+ * @param x_off    Horizontal offset subtracted from every column position.
+ * @param y_off    Vertical offset subtracted from every row position.
+ * @return Packet cursor past the last packet, or the incoming cursor when
+ *         there is no combination to show.
+ *
+ * @see decomp.me (100%)
+ */
+s32 func_801452F0(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
+{
+    s32 unused[2]; /* never referenced; reserves the leading frame slot */
+    u8 buf[0x50];
+    u8 tmp[0x50];
+    s32 pair[3];
+    s32 base;
+    u8* p;
+    u8* arch;
+    s32 blk;
+    s32 prim;
+
+    D_8017097C = 0;
+    prim = arg_prim;
+    if (g_gosub_selection_count != 0)
+    {
+        if (g_gosub_cursor_row != g_gosub_selected_rows[0])
+        {
+            pair[0] = g_gosub_rows[g_gosub_selected_rows[0]].index;
+            pair[1] = g_gosub_rows[g_gosub_cursor_row].index;
+            D_8017097C = func_800CA480(pair, &D_8016B8EC, &D_8016B8E4);
+        }
+    }
+    if (D_8017097C != 0)
+    {
+        prim = func_801466B4(prim, ot, 0xC - x_off, -y_off, D_8017097C, D_8016B8E4);
+        p = buf;
+        arch = (u8*)D_8014F294;
+        base = (s32)arch;
+        base -= 0x18;
+        blk = D_8014F294[0];
+        func_80146538(p, blk + (*(u16*)(D_8017097C * 2 + blk + base) + base));
+        if (D_8016B8EC != 0)
+        {
+            func_80146468(p, D_800EC3DA - 0x16 + D_800EC3DA[0] + (D_800EC3DA[1] << 8));
+            func_800A8B90(tmp, D_8016B8EC, 1);
+            func_80146468(p, tmp);
+        }
+        prim = func_800A88A0(prim, ot, p, 4, 0x4C - x_off, 0xA - y_off, 0);
+    }
+    return prim;
+}
