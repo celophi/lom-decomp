@@ -71,20 +71,23 @@ typedef struct CollNode
  * @param q Probe query (position, footprint extents, height tolerance).
  * @return obj->unk14 of the first node hit, or -1 if nothing is hit.
  *
- * @note Matches 98.85% under gcc280_g4 (no expand-div) and is functionally
- *       faithful to the target. The residual diff is register-allocation
- *       noise in three tightly-coupled clusters (the start-x/start-z setup
- *       seeded by the uninitialised reads, the denom1 division ordering, and
- *       the denom2 ty/max2 coloring); every source rearrangement tried so
- *       far - including decomp-permuter - regresses it.
- * @see decomp.me (98.85%) https://decomp.me/scratch/ElbpA
+ * @note Matches 99.02% under gcc280_g4 (no expand-div) and is functionally
+ *       faithful to the target. The remaining residue is two register-
+ *       allocation clusters, each confirmed by multiple measured probe
+ *       alternatives to require their current shape: the z-axis setup (sz
+ *       must keep the "uninitialised read" trick described below - an
+ *       explicit temp, or reusing the dead "temp"/"ez" locals, both regress)
+ *       and the two mult/denom-divide blocks (sched_oracle flags both as
+ *       unmodelled imuldiv function-unit hazards; every reorder/indirection
+ *       variant tried regresses). Decomp-permuter finds no improvement over
+ *       this state either.
+ * @see decomp.me (99.02%) https://decomp.me/scratch/ElbpA
  */
 s16 func_8005B368(Query *q)
 {
     s32 sx;
     s32 ex;
     unsigned long new_var;
-    Query *q_dup;
     s32 sz;
     FieldScene *scene;
     s32 ez;
@@ -95,30 +98,37 @@ s16 func_8005B368(Query *q)
     s32 temp;
     CollNode *node;
     s32 hit;
+    s32 raw_y;
 
     /* half_x = (s16)unkC / 2: sign-extend, add the sign bit, then arithmetic
-     * shift right by one. The two-step (ez then >>1) and the redundant q_dup
-     * copy are kept verbatim because they are required to match. */
+     * shift right by one. The two-step (ez then >>1) is kept verbatim
+     * because it is required to match. */
     temp = q->unkC;
     half_x = ((s16) temp) + (((u32) (temp << 16)) >> 31);
-    q_dup = q;
     scene = g_field_scene.scene;
     ez = half_x;
     half_x = ((s32) ez) >> 1;
 
-    /* sx reads q->x: the explicit "sx = q->x" load is omitted so the compiler
-     * keeps q->x in sx's register (an m2c artifact, but required to match).
-     * The +0xFF before >>8 biases negative values toward zero (signed /256). */
-    if (q->x < 0)
+    /* sx: q->x is read into the dead "temp" slot (reusing it, rather than a
+     * fresh local, is required to match) and biased toward zero before the
+     * signed /256 shift. */
+    temp = q->x;
+    if (temp < 0)
     {
-        sx += 0xFF;
+        temp += 0xFF;
     }
-    sx = (sx >> 8) - half_x;
-    temp = q_dup->unk10;
+    sx = (temp >> 8) - half_x;
+    /* The nested "half_x = q->unk10" write is a dead store (half_x is
+     * immediately recomputed below); it exists only to give half_x's pseudo
+     * an extra reference, which is required to match its register coloring. */
+    temp = (half_x = q->unk10);
     ex = sx + ((s16) q->unkC);
     half_z = ((s32) (((s16) temp) + (((u32) (temp << 16)) >> 31))) >> 1;
 
-    /* sz reads q->z (same omitted-load artifact as sx). The "^ 0" is a no-op
+    /* sz reads q->z via an "uninitialised read": the compiler keeps q->z in
+     * sz's register from the branch test below, with no explicit "sz = q->z"
+     * load. Unlike sx/sy above, giving sz an explicit temp (or reusing the
+     * dead "temp"/"ez" locals) regresses - measured. The "^ 0" is a no-op
      * kept to match. */
     if (q->z >= 0)
     {
@@ -131,13 +141,14 @@ s16 func_8005B368(Query *q)
     sz -= half_z;
     start_z = sz;
     ez = start_z + ((s16) q->unk10);
-    if (q->y >= 0)
+    raw_y = q->y;
+    if (raw_y >= 0)
     {
-        sy = sy >> 8;
+        sy = raw_y >> 8;
     }
     else
     {
-        sy = (sy + 0xFF) >> 8;
+        sy = (raw_y + 0xFF) >> 8;
     }
 
     /*
@@ -4712,7 +4723,7 @@ typedef struct
 } Req;
 
 /**
- * @see decomp.me (80.76%, 670/1586 exact) TODO
+ * @see decomp.me (81.47%, 701/1586 exact) TODO
  */
 s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
 {
@@ -4720,9 +4731,12 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     s32 flags[4];       /* sp+0x4010 */
     Req rec;            /* sp+0x4020 */
     FieldScene *scene;
+    FieldScene *new_var3;
     Query *temp_s2;
     s32 sp4058;
     u8 temp_a2;
+    u8 var_closed;
+    u8 var_open;
     s32 hx1;
     s32 temp_v1;
     s32 var_v0_2;
@@ -4777,6 +4791,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     s32 *var_s4;
     s32 *var_s6;
     u32 temp_t3;
+    u32 var_bound_early;
     u32 temp_v1_9;
     u8 *temp_s1_2;
     u32 temp_a2_2;
@@ -4884,6 +4899,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     s32 temp_v1_41;
     s32 *temp_v0_12;
     s32 temp_t8;
+    s32 new_var2;
     s32 var_s3_4;
     s32 var_s0_2;
     s32 *temp_s2_2;
@@ -4926,6 +4942,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     s32 temp_v1_43;
 
     scene = g_field_scene.scene;
+    var_bound_early = 0xFF;
     temp_s2 = arg1;
     if (scene->unk28 == 0)
     {
@@ -4988,6 +5005,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
     temp_v1_4 = sp4058 + 1;
     sp4064 = (sp4074 >> sp4058) + 2;
     sp4068 = (sp4078 >> temp_v1_4) + 2;
+    new_var3 = scene;
     temp_v0 = (sp406C >> sp4058) + 2;
     sp405C = temp_v0;
     sp4060 = (sp4070 >> temp_v1_4) + 2;
@@ -5041,7 +5059,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
             {
                 var_a0_2 = (s32) (temp_v0_4 + 0xFF) >> 8;
             }
-            temp_v0_5 = scene->unk41;
+            temp_v0_5 = new_var3->unk41;
             var_s5_2 = 0;
             sp4050 = temp_v0_5 - 1;
             if (temp_v0_5 != 0)
@@ -5085,6 +5103,8 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                 rec.unk28 = arg3;
                 rec.unk1C = (s32) (s16) arg0->unk10;
                 var_t5 = 0;
+                var_closed = 0xFD;
+                var_open = 0xFC;
                 if (func_80062820(&rec) == 0)
                 {
                     var_s7 = 1;
@@ -5163,10 +5183,10 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                             var_s4 += 1;
                                             var_t0 += 1;
                                             var_a1_2 = 0x202;
-                                            *var_s0 = 0xFD;
+                                            *var_s0 = var_closed;
                                         }
                                     }
-                                    else if (temp_a0_3 == 0xFC)
+                                    else if (temp_a0_3 == var_open)
                                     {
                                         var_s2 = var_s0;
                                         if (temp_a2_2 & 0x100)
@@ -5196,10 +5216,10 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                             var_s4 += 1;
                                             var_t0 += 1;
                                             var_a1_2 |= 0x4040;
-                                            *var_s0 = 0xFD;
+                                            *var_s0 = var_closed;
                                         }
                                     }
-                                    else if (temp_a0_4 == 0xFC)
+                                    else if (temp_a0_4 == var_open)
                                     {
                                         var_s2 = var_s0;
                                         if (temp_a2_2 & 0x100)
@@ -5229,10 +5249,10 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                             var_s4 += 1;
                                             var_t0 += 1;
                                             var_a1_2 |= 0x808;
-                                            temp_s1_2[-1] = 0xFD;
+                                            temp_s1_2[-1] = var_closed;
                                         }
                                     }
-                                    else if (temp_a0_5 == 0xFC)
+                                    else if (temp_a0_5 == var_open)
                                     {
                                         var_s2 = var_s0;
                                         if (temp_a2_2 & 0x100)
@@ -5262,10 +5282,10 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                             var_s4 += 1;
                                             var_t0 += 1;
                                             var_a1_2 |= 0x1010;
-                                            temp_s1_2[1] = 0xFD;
+                                            temp_s1_2[1] = var_closed;
                                         }
                                     }
-                                    else if (temp_a0_6 == 0xFC)
+                                    else if (temp_a0_6 == var_open)
                                     {
                                         var_s2 = var_s0;
                                         if (temp_a2_2 & 0x100)
@@ -5327,11 +5347,11 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                                 *var_s4 = var_v1 | 0x60000000;
                                                 var_s4 += 1;
                                                 var_t0 += 1;
-                                                *var_s0 = 0xFD;
+                                                *var_s0 = var_closed;
                                             }
                                         }
                                     }
-                                    else if (temp_a0_7 == 0xFC)
+                                    else if (temp_a0_7 == var_open)
                                     {
                                         var_s2 = var_s0;
                                         if (temp_a2_2 & 0x100)
@@ -5393,11 +5413,11 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                                 *var_s4 = var_v1_2 | 0x60000000;
                                                 var_s4 += 1;
                                                 var_t0 += 1;
-                                                *var_s0 = 0xFD;
+                                                *var_s0 = var_closed;
                                             }
                                         }
                                     }
-                                    else if (temp_a0_8 == 0xFC)
+                                    else if (temp_a0_8 == var_open)
                                     {
                                         var_s2 = var_s0;
                                         if (temp_a2_2 & 0x100)
@@ -5459,11 +5479,11 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                                 *var_s4 = var_v1_3 | 0x60000000;
                                                 var_s4 += 1;
                                                 var_t0 += 1;
-                                                *var_s0 = 0xFD;
+                                                *var_s0 = var_closed;
                                             }
                                         }
                                     }
-                                    else if (temp_a0_9 == 0xFC)
+                                    else if (temp_a0_9 == var_open)
                                     {
                                         var_s2 = var_s0;
                                         if (temp_a2_2 & 0x100)
@@ -5525,11 +5545,11 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                                 *var_s4 = var_v1_4 | 0x60000000;
                                                 var_s4 += 1;
                                                 var_t0 += 1;
-                                                *var_s0 = 0xFD;
+                                                *var_s0 = var_closed;
                                             }
                                         }
                                     }
-                                    else if (temp_a0_10 == 0xFC)
+                                    else if (temp_a0_10 == var_open)
                                     {
                                         var_s2 = var_s0;
                                         if (temp_a2_2 & 0x100)
@@ -5675,7 +5695,7 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     var_a1_3 |= 0x10;
                                 }
                                 temp_a2_3 = var_s1 - sp408C;
-                                temp_t3 = 0xFF;
+                                temp_t3 = var_bound_early;
                                 temp_a0_15 = *temp_a2_3;
                                 temp_v1_35 = temp_a0_15 & temp_t3;
                                 if (((u32) ((temp_a0_15 - 4) & temp_t3) < 0xF8U) && ((u32) (var_t0_2 & temp_t3) < temp_v1_35) && ((u32) (var_a3_2 & temp_t3) < temp_v1_35))
@@ -5834,7 +5854,8 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                     var_s7_3 += 1;
                                     temp_v0_12 = &path[0][temp_v1_41];
                                     sp406C = temp_t9;
-                                    temp_t8 = *var_s4_3;
+                                    new_var2 = *var_s4_3;
+                                    temp_t8 = new_var2;
                                     var_s4_3 += 1;
                                     sp4070 = temp_t8;
                                     temp_v0_12[0] = temp_s1_3;
@@ -6040,8 +6061,9 @@ s32 func_80060F58(Query *arg0, Query *arg1, OutPair *arg2, s32 arg3)
                                 }
                                 if ((var_t1_5 & 0xFF) != 0)
                                 {
+                                    temp_s4_3 = 1;
                                     path[1][1] = var_fp_5;
-                                    path[2][1] = var_s5_7;
+                                    path[2][temp_s4_3] = var_s5_7;
                                 }
                             }
                             if (var_s5_6 >= 0x11U)
