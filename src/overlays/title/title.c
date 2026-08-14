@@ -22,11 +22,28 @@
  * load_menu_layout (0xC9A words). */
 #define MENU_LAYOUT_WORDS 0xC9AU
 
-/* Value g_titleSelectedItem holds when the idle countdown expires with no
- * input (set by handle_title_menu_input); dispatching it quits the title back to
- * the attract loop. The same 0xFF is also written into g_save_slot_index ("no save
- * slot selected") on the load-a-saved-game path. */
-#define TITLE_ITEM_IDLE_QUIT 0xFF
+/* Title-menu selection values dispatched by run_title. */
+#define TITLE_MENU_ITEM_NEW_GAME 0
+#define TITLE_MENU_ITEM_CONTINUE 1
+
+/* Value g_titleSelectedItem holds when the idle countdown expires. The same
+ * value marks g_save_slot_index as having no selected slot on the fallback
+ * field-entry path. */
+#define TITLE_SELECTION_SENTINEL 0xFF
+
+/* run_save_slot_menu result that returns from the picker to the title menu. */
+#define SAVE_SLOT_MENU_EXIT_CANCEL 2
+
+/* Fixed-address accesses used by run_title. */
+#define TITLE_GLOBAL_RAM_BASE             0x80100000
+#define TITLE_MENU_EXIT_STATE_WORD_INDEX  0x990
+#define TITLE_SCENE_STATE_ADDRESS         0x801ED480
+
+/* High rand() value placement in MenuLayout::rng_seed. */
+#define TITLE_RNG_HIGH_SHIFT 15
+
+/* AKAO sound command used before the fallback field-entry path. */
+#define TITLE_SELECTION_SFX_ID 0x3C
 
 /* Number of selectable slots in the title menu item-flag table
  * (g_titleMenuItemFlags), each occupying 2 bytes. */
@@ -43,93 +60,93 @@ static void scroll_slots_left(void);
  * @brief Top-level entry point and main loop of the TITLE.BIN overlay.
  *
  * @details Boots the title audio (instrument bank, SEQ, then music), then
- * repeatedly initialises the title display, runs the menu render/input loop
- * until the player makes a selection, and dispatches on @c g_titleSelectedItem
- * to choose which outer game state to return into. Mirror of @ref RunCheckPS
- * in the CHECKPS overlay. Invoked from the main state machine (g_gameState
- * case 2) as @c g_gameState = run_title(...). The previously-decompiled symbol
- * was @c title_func_8004FC74.
+ * repeatedly initializes the title display, runs the menu render/input loop,
+ * and dispatches the selected item. New Game opens the save-slot picker;
+ * canceling that picker restarts the title menu, while confirming continues to
+ * name entry. The main state machine calls this fixed address through its
+ * temporary @c func_8004FC74 declaration.
  *
- * @param base_address Base address of the double-buffered MenuContext render
- *        buffer (returned by get_title_menu_buffers in main.c); forwarded as-is to
- *        init_title_display, render_menu and run_save_slot_menu.
+ * @param menu_context_address Address of the double-buffered MenuContext
+ *        returned by get_title_menu_buffers; forwarded unchanged to the title
+ *        display and menu routines.
  * @return Next game-state code consumed by the main state machine:
- *         - 3: "New Game" confirmed in the save-slot menu (start a new field).
- *         - 7: menu item 1 selected (continue / load a saved game).
- *         - 8: idle timeout (@ref TITLE_ITEM_IDLE_QUIT); music is stopped and
- *              control returns to the attract loop.
- *         - 0: any other item; arms the load path (g_save_slot_index, layout template,
- *              RNG seed) and drops into the field/demo state.
+ *         - GAME_STATE_GNAME after New Game is confirmed.
+ *         - GAME_STATE_MENU_LOAD when Continue is selected.
+ *         - GAME_STATE_INTRO_MOVIE after the title idle timeout.
+ *         - GAME_STATE_FIELD for the fallback field-entry path.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/mEAXF
  */
-s32 run_title(s32 base_address)
+s32 run_title(s32 menu_context_address)
 {
-    s32 ctx_base;
-    S_801ED480* scene_state = (S_801ED480*)0x801ED480;
-    s32* exit_state_base;
-    MenuLayout* layout;
-    u32 idle_quit;
-    s32 rand_lo, rand_hi;
-    u8 selected_item;
-    ctx_base = base_address;
+    s32 context_address;
+    S_801ED480* persistent_scene_state =
+        (S_801ED480*)TITLE_SCENE_STATE_ADDRESS;
+    s32* global_ram_base;
+    MenuLayout* menu_layout;
+    u32 selection_sentinel;
+    s32 random_low;
+    s32 random_high;
+    u8 selection;
+
+    context_address = menu_context_address;
 
     load_title_audio_bank();
     load_title_seq(0);
     start_title_music();
-    /* 0x80100000 is the global-RAM base; g_titleMenuExitState lives at
-     * 0x80102640 (word index 0x990). The exit-state flag is read/written
-     * through this base pointer rather than via the symbol directly so the
-     * build suppresses its relocations (see config/relocations/
-     * title_reloc_addrs.txt). This indirection is load-bearing for the
-     * byte-for-byte match - do not collapse it to g_titleMenuExitState. */
-    exit_state_base = (s32*)0x80100000;
-    idle_quit = TITLE_ITEM_IDLE_QUIT;
-    layout = (MenuLayout*)g_menuLayoutBuffer;
+
+    /* Access g_titleMenuExitState at 0x80102640 through the global-RAM base so
+     * the configured MIPS_NONE relocation sites remain unchanged. */
+    global_ram_base = (s32*)TITLE_GLOBAL_RAM_BASE;
+    selection_sentinel = TITLE_SELECTION_SENTINEL;
+    menu_layout = (MenuLayout*)g_menuLayoutBuffer;
+
     while (1)
     {
-        init_title_display(ctx_base);
-        scene_state->map_id = 0;
-        scene_state->object_index = 0;
-        scene_state->unk4 = 0;
-        scene_state->unk8 = 0;
-        scene_state->unkC = 0;
+        init_title_display(context_address);
+        persistent_scene_state->map_id = 0;
+        persistent_scene_state->object_index = 0;
+        persistent_scene_state->unk4 = 0;
+        persistent_scene_state->unk8 = 0;
+        persistent_scene_state->unkC = 0;
+
         do
         {
-            render_menu(ctx_base);
-        } while (exit_state_base[0x990] == 0); /* wait until g_titleMenuExitState != 0 */
+            render_menu(context_address);
+        } while (global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] == 0);
 
         D_80042FB4 = VSync(-1);
-        selected_item = g_titleSelectedItem;
+        selection = g_titleSelectedItem;
 
-        if (selected_item == 0)
+        if (selection == TITLE_MENU_ITEM_NEW_GAME)
         {
             load_menu_layout(0);
-            exit_state_base[0x990] = 0; /* g_titleMenuExitState = 0 */
-            if (run_save_slot_menu(ctx_base) == 2)
+            global_ram_base[TITLE_MENU_EXIT_STATE_WORD_INDEX] = 0;
+            if (run_save_slot_menu(context_address) == SAVE_SLOT_MENU_EXIT_CANCEL)
             {
                 GFX_Transition(0);
                 continue;
             }
             return GAME_STATE_GNAME;
         }
-        else if (selected_item == 1)
+        else if (selection == TITLE_MENU_ITEM_CONTINUE)
         {
             return GAME_STATE_MENU_LOAD;
         }
-        else if (selected_item == idle_quit)
+        else if (selection == selection_sentinel)
         {
             stop_title_music();
             return GAME_STATE_INTRO_MOVIE;
         }
         else
         {
-            akao_cmd_c1(0, 0x3C, 0);
+            akao_cmd_c1(0, TITLE_SELECTION_SFX_ID, 0);
             load_menu_layout(-1);
-            g_save_slot_index = idle_quit;
-            rand_lo = rand();
-            rand_hi = rand();
-            layout->rng_seed = (s16)(rand_lo | (rand_hi << 0xF));
+            g_save_slot_index = selection_sentinel;
+            random_low = rand();
+            random_high = rand();
+            menu_layout->rng_seed =
+                (s16)(random_low | (random_high << TITLE_RNG_HIGH_SHIFT));
             return GAME_STATE_FIELD;
         }
     }
@@ -214,8 +231,8 @@ void render_menu(MenuContext* context)
  *
  * @param ctx_base Base address of the double-buffered MenuContext render
  *        buffer, forwarded as-is from run_title.
- * @return The final value of g_titleMenuExitState: 2 if the player
- *         confirmed a save slot, otherwise the cancel/back code.
+ * @return The final value of g_titleMenuExitState: 1 after confirmation or
+ *         SAVE_SLOT_MENU_EXIT_CANCEL when returning to the title menu.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/AKk7x
  */
@@ -2046,6 +2063,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 #define SAVE_TEX_WIDTH_SHIFT  3
 #define SAVE_TEX_HEIGHT_SHIFT 13
 #define SAVE_TEX_DIM_MASK     0x3ff
+
 unsigned short upload_save_layout_textures(void)
 {
     SaveLayoutTex* tex_entry;
@@ -2083,7 +2101,8 @@ unsigned short upload_save_layout_textures(void)
         rect.h = 1;
         rect.w = clut_pixels;
 
-        LoadImage(&rect, (u_long*)(data_ptr + 0xc), clut_pixels);
+        /* The unprototyped call preserves the original unused a2 argument. */
+        ((int (*)())LoadImage)(&rect, (u_long*)(data_ptr + 0xc), clut_pixels);
         block_ptr = data_ptr + pixel_block_offset;
         shift = SAVE_TEX_WIDTH_SHIFT;
         control = (reload_control = entry_ctrl_ptr->control);

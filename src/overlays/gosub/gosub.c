@@ -3600,7 +3600,7 @@ s32 func_80145800(s32 dialog_result)
     return 0;
 }
 
-void func_80145A14(); /* extern */
+s32 func_80145A14(s32* ot, s32 prim, s32 x_off, s32 y_off);
 
 /**
  * @brief Open the wide confirmation dialog and hand it to func_801454C4.
@@ -3627,4 +3627,165 @@ void func_801458A4(void)
     element->y = 0x24;
     SET_ELEM_CODE(element, 0x80);
     func_800AA02C();
+}
+
+s32 func_80145B28(s32* ot, s32 prim, s32 x_off, s32 y_off);
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_8014595C(void)
+{
+    GosubElement* element;
+
+    element = &g_gosub_elements[0];
+    element->draw_handler = (void*)&func_80145B28;
+    g_gosub_dialog_handler = func_80145800;
+    g_gosub_dialog_choice = 0;
+    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->attr.f.unk0_3 = 1;
+    element->attr.f.x = 0x80;
+    element->attr.f.unk0_16 = 0x70;
+    element->unk4_0 = 0;
+    element->y = 0x34;
+    SET_ELEM_CODE(element, 0x80);
+    func_800AA02C();
+}
+
+/**
+ * @brief Draw handler for element 0 of the wide confirmation dialog.
+ *
+ * Emits the two option labels through func_800A88A0, highlighting the one that
+ * matches the current selection: the color toggles between 5 (highlighted) and
+ * 4 (dim) with g_gosub_dialog_choice bit 0, inverted between the two rows. Both
+ * labels sit at x 0x40 - x_off; the rows are at y 2 - y_off and 0x12 - y_off.
+ * The label text is resolved out of the D_8014F29C archive block (offsets -0x12
+ * and -0x10 of the entry table). The @c base and @c table locals reconstruct
+ * the archive base the way the target's register roles do.
+ *
+ * @param ot    Ordering-table tag every packet links into.
+ * @param prim  Packet cursor; threaded through both draws.
+ * @param x_off Horizontal offset subtracted from the label column.
+ * @param y_off Vertical offset subtracted from both row positions.
+ * @return Packet cursor past the last emitted label.
+ *
+ * @note WIP - best match 90.87% (62/68 exact, gcc 2.7.2 CDK). The residue is a
+ *       single register-allocation artifact: the target keeps color1 in a temp
+ *       (t0) and moves it to a3 at the first call because arg3 (y_off) still
+ *       occupies a3 when color1 is materialized, whereas here color1 coalesces
+ *       straight into a3. The two calls are anti-correlated - forcing color1 into
+ *       a temp (only reachable via an undefined-on-else-path spelling) flips
+ *       color2 the wrong way - so no semantics-preserving single edit closes it.
+ * @note The glyph address uses &D_8014F29C inline rather than the @c table local
+ *       (measured +2 vs sharing the pointer), and @c base is a plain integer
+ *       offset (measured +2 vs a u8* pointer); both steer the commutative operand
+ *       order to match. Dropping @c table entirely regresses -41.
+ * @note The unused @c pad aggregate reserves the target's 0x38-byte dead frame
+ *       slot (idioms.md FRAME-01); gcc keeps the slot for a never-read array.
+ * @see working/func_80145A14/ for the measured probe log.
+ */
+s32 func_80145A14(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32* table;
+    s32 base;
+    void* glyph;
+    s32 color;
+    s32 pad[14];
+
+    table = &D_8014F29C;
+    base = (s32)table - 0x20;
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x12)));
+    color = 5;
+    if ((g_gosub_dialog_choice & 1) == 0)
+    {
+        color = 4;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 2 - y_off, 2);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x10)));
+    color = 5;
+    if ((g_gosub_dialog_choice & 1) != 0)
+    {
+        color = 4;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x12 - y_off, 2);
+
+    return prim;
+}
+
+/**
+ * @brief Draw handler for element 0 of the three-option wide confirmation dialog.
+ *
+ * Emits the three option labels through func_800A88A0, dimming the one that
+ * matches the current selection: the color is 5 (bright) unless the row index
+ * equals g_gosub_dialog_choice % 3, in which case it is 4 (dim). All labels sit
+ * at x 0x40 - x_off; the rows are at y 2 - y_off, 0x12 - y_off, and 0x22 - y_off.
+ * The label text is resolved out of the D_8014F29C archive block (offsets -0xE,
+ * -0xC, and -0xA of the entry table). The @c base and @c table locals reconstruct
+ * the archive base the way the target's register roles do; this is the
+ * three-option sibling of func_80145A14 and mirrors its proven operand shapes.
+ *
+ * @param ot    Ordering-table tag every packet links into.
+ * @param prim  Packet cursor; threaded through all three draws.
+ * @param x_off Horizontal offset subtracted from the label column.
+ * @param y_off Vertical offset subtracted from every row position.
+ * @return Packet cursor past the last emitted label.
+ *
+ * @note WIP - best match 88.58% (84/113 exact, gcc 2.7.2 CDK). Same residue as
+ *       the two-option sibling func_80145A14, one row taller. The target defers
+ *       the y_off parameter save: it keeps param3 in a3 through the entry block
+ *       and copies it to s7 in the bne delay slot, which makes y_off short-lived
+ *       so it wins s7 (ot then takes s8) and keeps a3 occupied so color1 lands in
+ *       a temp (t0). Here gcc pins the y_off save as an entry copy - a fixed
+ *       sched1 prefix, confirmed absent from the block-0 ready list - so ot wins
+ *       s7, y_off takes s8, and color1 coalesces straight into a3. That single
+ *       divergence produces every wrong row.
+ * @note No source spelling reaches the deferred save: color if/else, per-block
+ *       color scope (ALLOC-14), y-precompute, base int-vs-pointer, prim=arg_prim
+ *       aliasing, and table-in-glyph all measured inert or worse; gcc 2.8.0 and
+ *       the gnu/g4 toolchains are all worse (and frame-wrong). The permuter
+ *       (400k iters) finds only the undefined-on-else-path color hack, which
+ *       regresses. The glyph address uses &D_8014F29C inline and @c base is a
+ *       plain integer offset, both mirroring func_80145A14's measured-best order;
+ *       the unused @c pad reserves the target's 0x38-byte dead frame slot
+ *       (idioms.md FRAME-01).
+ * @see working/func_80145B28/ for the measured probe log.
+ */
+s32 func_80145B28(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32* table;
+    s32 base;
+    void* glyph;
+    s32 color;
+    s32 pad[14];
+
+    table = &D_8014F29C;
+    base = (s32)table - 0x20;
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xE)));
+    color = 5;
+    if (g_gosub_dialog_choice % 3 == 0)
+    {
+        color = 4;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 2 - y_off, 2);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xC)));
+    color = 5;
+    if (g_gosub_dialog_choice % 3 == 1)
+    {
+        color = 4;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x12 - y_off, 2);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xA)));
+    color = 5;
+    if (g_gosub_dialog_choice % 3 == 2)
+    {
+        color = 4;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x22 - y_off, 2);
+
+    return prim;
 }
