@@ -2067,3 +2067,55 @@ s32 func_801454C4(s32 dialog_result)
     }
     return 0;
 }
+
+/**
+ * @brief Dialog handler that drops the cursor row and re-clamps the list.
+ *
+ * Always deactivates the dialog element. A nonzero @p dialog_result, or bit 0
+ * of g_gosub_dialog_choice, cancels: the selection count is set to 1 and
+ * nothing else changes. On confirm the cursor row is handed to func_80146908
+ * (by entry index) and to func_801469BC (by row), the selection is cleared,
+ * and the viewport is re-clamped -- the cursor is pulled back to the last row
+ * when it now sits past the end, and the scroll target is clamped to the
+ * bottom of the shortened list over a 4-frame scroll.
+ *
+ * @param dialog_result Zero to confirm; nonzero to cancel.
+ * @return 1 when no rows remain, otherwise 0.
+ * @see decomp.me (100%)
+ */
+s32 func_80145620(s32 dialog_result)
+{
+    s32 scroll_y;
+    s32 max_scroll;
+
+    g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
+    if (dialog_result == 0 && (g_gosub_dialog_choice & 1) == 0)
+    {
+        func_80146908(g_gosub_rows[g_gosub_cursor_row].index);
+        func_801469BC(g_gosub_cursor_row);
+        g_gosub_selection_count = 0;
+        if (g_gosub_row_count == 0)
+        {
+            return 1;
+        }
+        if (g_gosub_cursor_row >= g_gosub_row_count)
+        {
+            g_gosub_cursor_row = g_gosub_row_count - 1;
+        }
+        scroll_y = g_gosub_scroll_y;
+        max_scroll = ((g_gosub_row_count * g_gosub_row_height) - g_gosub_window_height) + 4;
+        if (max_scroll < scroll_y)
+        {
+            scroll_y = max_scroll;
+        }
+        if (scroll_y < 0)
+        {
+            scroll_y = 0;
+        }
+        g_gosub_scroll_target_y = scroll_y;
+        g_gosub_scroll_frames_remaining = 4;
+        return 0;
+    }
+    g_gosub_selection_count = 1;
+    return 0;
+}
