@@ -59,6 +59,13 @@ typedef struct
     void* draw_handler;
 } GosubElement;
 
+/** @brief Screen-space position pair passed by address to the glyph writer. */
+typedef struct
+{
+    s16 x;
+    s16 y;
+} Vec2s;
+
 typedef struct
 {
     s32 unk0;
@@ -124,7 +131,7 @@ StructS0* func_801443E4();                      /* extern */
 StructS0* func_80144544();                      /* extern */
 GosubLine* func_80144764();                      /* extern */
 StructS0* func_80146E30();                      /* extern */
-void func_801448EC(void);                       /* extern */
+StructS0* func_801448EC();                      /* extern */
 
 /** @brief Packed four-byte record stored in the combination table. */
 typedef struct
@@ -200,6 +207,8 @@ extern s32 D_801227F0;
 extern s32 g_gosub_result_count;
 extern s32 g_gosub_result_values[];
 extern s32 D_8014F29C;
+extern s32 D_8014F2A4;
+extern s32 D_8014F2C4;
 extern s32 g_gosub_cursor_row;
 extern s32 g_gosub_finished;
 extern s32 g_gosub_row_count;
@@ -236,7 +245,7 @@ typedef struct
     s32 unkC : 8;
     s32 unkD : 8;
     s32 unkE : 8;
-    s32 kind : 4;
+    u32 kind : 4;
     u32 unkC_28 : 4;
     u16 unk10;
     u16 unk12[4];
@@ -291,6 +300,26 @@ extern GosubGroupTable g_gosub_group_first_indices;
 extern GosubGroupTable g_gosub_group_counts;
 
 #define GOSUB_MSG_PTR(off) ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
+
+/**
+ * @brief Resolve a message pointer against a caller-held archive base.
+ *
+ * Same lookup as GOSUB_MSG_PTR, but the caller keeps the (&D_8014F29C - 0x20)
+ * base in a local. ABS reads the offset table through &D_8014F29C, REL reads it
+ * through the base itself; the target uses both spellings and they are not
+ * interchangeable (they differ by 0x20 in @p off and in which register gcc uses).
+ *
+ * @param base Archive base, i.e. (u8*)&D_8014F29C - 0x20.
+ * @param off  Byte offset of the u16 entry within the message block.
+ * @return Pointer to the message text.
+ */
+#define GOSUB_MSG_ABS(base, off) ((base) + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
+#define GOSUB_MSG_REL(base, off) ((base) + D_8014F29C + *(u16*)((base) + D_8014F29C + (off)))
+
+s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode); /* extern */
+s32 func_800A8A78(s32* ot, s32 prim, s32 ch, s32 a3, Vec2s* pos, s32 mode);        /* extern */
+s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count);            /* extern */
+s32 func_801466B4(s32 prim, s32* ot, s32 x, s32 y, s32 w, s32 h);                  /* extern */
 
 /**
  * @brief Resolve one entry of a text archive block.
@@ -1641,4 +1670,195 @@ GosubLine *func_80144764(GosubLine *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 
     p->y1 = (y + h) - 4;
     ADD_PRIM(ot, p);
     return p + 1;
+}
+
+/**
+ * @brief Draw the gosub item list: one packet run per row, then the cursor
+ *        highlight and one highlight per selected row.
+ *
+ * Rows dispatch on @c value: -3 is a full equipment card (icon strip via
+ * func_801450D8 plus three text lines and up to one status glyph), -2 is a
+ * combination header (func_801466B4 frame plus a label), anything else is a
+ * plain label with an optional trailing glyph. Each row is culled against
+ * g_gosub_window_height before any packet is emitted. The tail appends a
+ * 0xF080F0 TILE for the cursor row and a 0x808080 TILE per entry of
+ * g_gosub_selected_rows.
+ *
+ * @param ot    Ordering-table tag every packet is linked into.
+ * @param prim  Packet cursor.
+ * @param x_off Horizontal offset subtracted from every column position.
+ * @param y_off Vertical scroll offset subtracted from every row position.
+ * @return Packet cursor just past the last highlight tile.
+ *
+ * @note WIP - best match 73.24% (189/507 exact, gcc 2.7.2 CDK). Frame comes out
+ *       -0x58 against the target's -0x60: the target keeps %hi(D_8014F29C) in its
+ *       own long-lived pseudo (s7) reused by every in-loop value read, so it needs
+ *       one more saved register; here the lui is re-materialized per read and every
+ *       later saved register slides down one. That single missing pseudo accounts
+ *       for the frame delta and, through it, most of the argdiff rows.
+ * @note The row loop is deliberately a label + goto, NOT a do/while - idioms.md
+ *       [LOOP-09]. The target shows no loop optimizations at all (in-loop lui per
+ *       use, both counters in stack slots, no reduced givs); the do/while form adds
+ *       a second induction variable and a +0xC-biased entry pointer. The tail
+ *       selection loop IS a real do/while (converting it measures -7 exact).
+ * @note `base` must be built in two statements; written as `(u8*)&D_8014F29C - 0x20`
+ *       gcc folds it to one %hi(D_8014F29C-0x20) relocation (-10 exact).
+ * @see working/func_801448EC/STATUS.md for the measured probe log and retired classes.
+ */
+StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32 row_offset;
+    Vec2s* pos_p;
+    s32 drawn_count;
+    Vec2s pos;
+    GosubListEntry* entry;
+    s32 row;
+    s32 y;
+    s32 line_y;
+    s32 label_x;
+    u8* base;
+    s32 blk;
+    StructS0* tile;
+    StructS0* mark;
+
+    row = 0;
+    drawn_count = 0;
+    if (g_gosub_row_count > 0)
+    {
+        label_x = 0x30 - x_off;
+        base = (u8*)&D_8014F29C;
+        base -= 0x20;
+        entry = &g_gosub_rows[0];
+        pos_p = &pos;
+        row_offset = 0;
+    row_loop:
+        {
+            if (entry->value == -3)
+            {
+                y = ((row * 0x30) - y_off) - g_gosub_scroll_y;
+                if (y >= -0x2F && y < g_gosub_window_height)
+                {
+                    prim = func_801450D8(prim, ot, row, -x_off, y, drawn_count);
+                    prim = func_800A88A0(prim, ot, entry->name, entry->kind, label_x, y, 0);
+                    if (entry->flags.f.flag2)
+                    {
+                        if ((entry->flags.half & 1) == 0)
+                        {
+                            line_y = y + 0x10;
+                            prim = func_800A88A0(prim, ot, GOSUB_MSG_ABS(base, 0x24), entry->kind, label_x, line_y, 0);
+                            pos.x = 0x54 - x_off;
+                            pos.y = line_y;
+                            prim = func_800A8A78(ot, prim, entry->unkD, entry->kind, pos_p, 0);
+                            blk = *(s32*)(base + 0x24);
+                            prim = func_800A88A0(prim, ot, base + blk + *(u16*)(base + blk + entry->unkC * 2),
+                                                 entry->kind, 0x84 - x_off, line_y, 0);
+                        }
+                        else
+                        {
+                            prim = func_800A88A0(prim, ot, GOSUB_MSG_ABS(base, entry->unkD * 2 + 0x44), entry->kind, label_x,
+                                                 y + 0x10, 0);
+                        }
+                    }
+                    else
+                    {
+                        blk = D_8014F2A4;
+                        prim = func_800A88A0(prim, ot, base + blk + *(u16*)(base + blk + entry->unkC * 2), entry->kind,
+                                             label_x, y + 0x10, 0);
+                    }
+                    line_y = y + 0x20;
+                    prim = func_800A88A0(prim, ot, GOSUB_MSG_ABS(base, 0x26), entry->kind, label_x, line_y, 0);
+                    pos.x = 0x48 - x_off;
+                    pos.y = line_y;
+                    prim = func_800A8A78(ot, prim, entry->unk1A, entry->kind, pos_p, 0);
+                    prim = func_800A88A0(prim, ot, base + D_8014F29C + *(u16*)((u8*)&D_8014F2C4 + D_8014F29C),
+                                         entry->kind, 0x64 - x_off, line_y, 0);
+                    pos.x = 0xB0 - x_off;
+                    pos.y = line_y;
+                    prim = func_800A8A78(ot, prim, entry->unk10, entry->kind, pos_p, 0);
+                    if (entry->unkE != 0)
+                    {
+                        prim = func_800A88A0(prim, ot, GOSUB_MSG_REL(base, 0x4A), entry->kind,
+                                             g_gosub_window_width - (x_off + 0xC), line_y, 1);
+                    }
+                    else if (entry->flags.half & 1)
+                    {
+                        prim = func_800A88A0(prim, ot, GOSUB_MSG_REL(base, 0x60), entry->kind,
+                                             g_gosub_window_width - (x_off + 0xC), line_y, 1);
+                    }
+                    else if (entry->flags.f.flag1)
+                    {
+                        prim = func_800A88A0(prim, ot, GOSUB_MSG_REL(base, 0x6E), entry->kind,
+                                             g_gosub_window_width - (x_off + 0xC), line_y, 1);
+                    }
+                    drawn_count += 1;
+                }
+            }
+            else if (entry->value == -2)
+            {
+                y = (row_offset - y_off) - g_gosub_scroll_y;
+                if (y >= -0x1F && y < g_gosub_window_height)
+                {
+                    line_y = y + 8;
+                    prim = func_801466B4(prim, ot, 0xC - x_off, y, entry->unkE, entry->unkD);
+                    prim = func_800A88A0(prim, ot, entry->name, entry->kind, 0x4C - x_off, line_y, 0);
+                    if (entry->flags.f.flag2)
+                    {
+                        prim = func_800A88A0(prim, ot, GOSUB_MSG_ABS(base, 0x20), entry->kind, 0x110 - x_off, line_y, 1);
+                    }
+                }
+            }
+            else
+            {
+                y = ((row * g_gosub_row_height) - (y_off - 2)) - g_gosub_scroll_y;
+                if (-g_gosub_row_height < y && y < g_gosub_window_height)
+                {
+                    prim = func_800A88A0(prim, ot, entry->name, entry->kind, 0xC - x_off, y, 0);
+                    pos.y = y;
+                    pos.x = g_gosub_window_width - (x_off + 0xC);
+                    if (entry->value >= 0)
+                    {
+                        prim = func_800A8A78(ot, prim, entry->value, entry->kind, pos_p, 1);
+                    }
+                }
+            }
+            entry += 1;
+            row += 1;
+            row_offset += 0x20;
+        }
+        if (row < g_gosub_row_count)
+        {
+            goto row_loop;
+        }
+    }
+
+    tile = (StructS0*)prim;
+    mark = (StructS0*)((u8*)tile + 0x10);
+    ((u8*)tile)[3] = 3;
+    tile->unk4 = 0xF080F0;
+    ((u8*)tile)[7] = 0x62;
+    row = 0;
+    tile->unkE = g_gosub_row_height - 1;
+    tile->unk8 = 1;
+    tile->unkC = g_gosub_window_width;
+    y = ((g_gosub_cursor_row * g_gosub_row_height) - (y_off - 2)) - g_gosub_scroll_y;
+    tile->unkA = y - 2;
+    ADD_PRIM(ot, tile);
+    if (g_gosub_selection_count != 0)
+    {
+        do
+        {
+            mark->unk8 = 1;
+            mark->unk4 = 0x808080;
+            ((u8*)mark)[3] = 3;
+            ((u8*)mark)[7] = 0x62;
+            mark->unkE = g_gosub_row_height - 1;
+            mark->unkC = g_gosub_window_width;
+            y = ((g_gosub_selected_rows[row] * g_gosub_row_height) - (y_off - 2)) - g_gosub_scroll_y;
+            mark->unkA = y - 2;
+            row += 1;
+            ADD_PRIM(ot, mark);
+            mark += 1;
+        } while (row < g_gosub_selection_count);
+    }
+    return mark;
 }
