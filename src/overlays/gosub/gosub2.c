@@ -352,7 +352,7 @@ s32 func_801466B4(s32 prim, s32* ot, s32 x, s32 y, s32 w, s32 h);               
  *
  * @param dialog_result Zero to confirm; nonzero to return to the selection.
  * @return 1 if confirming leaves no equipment rows, otherwise 0.
- * @see decomp.me (99.94%) https://decomp.me/scratch/2OzmD
+ * @see decomp.me (100%) https://decomp.me/scratch/2OzmD
  */
 s32 gosub_handle_combination_dialog(s32 dialog_result)
 {
@@ -360,8 +360,10 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
     GosubPackedRecord* record;
     u32 packed;
     s32 config;
+    s32 masked;
     s32 secondary_value;
     s32 clear_config_mask;
+    u16 stored_word;
 
     if (dialog_result == 0 && (g_gosub_dialog_choice & 1) == 0)
     {
@@ -377,8 +379,9 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
             secondary_value = D_8016B8EC;
             dialog_result = (packed & ~0xF00) | ((secondary_value & 0xF) << 8);
             record->word = dialog_result;
-            packed = ((dialog_result & 0xFFFF0FFF) | ((D_8016B8E4 & 0xF) << 12) | 3) & 0xFFFF;
-            record->word = packed;
+            masked = ((dialog_result & 0xFFFF0FFF) | ((D_8016B8E4 & 0xF) << 12) | 3) & 0xFFFF;
+            stored_word = masked;
+            record->word = stored_word;
             *(g_pad_ctx + 0x29D6) = *(g_pad_ctx + 0x29D6) + 1;
             GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(g_gosub_result_values[0])->name[0] = 0;
             GOSUB_EQUIPMENT_AT_SHIFTED_INDEX(g_gosub_result_values[1])->name[0] = 0;
