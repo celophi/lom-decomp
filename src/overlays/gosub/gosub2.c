@@ -80,11 +80,49 @@ typedef struct
 
 typedef StructS0* (*Unk6Func)();
 
+/**
+ * @brief Ordering-table link word at the head of every GPU packet. Mirrors the
+ *        P_TAG layout in include/psyq/libgpu.h.
+ */
+typedef struct
+{
+    u32 addr : 24; /* 0x00 next-primitive address (24-bit) */
+    u32 len : 8;   /* 0x03 packet word count */
+    u_char r0;     /* 0x04 */
+    u_char g0;     /* 0x05 */
+    u_char b0;     /* 0x06 */
+    u_char code;   /* 0x07 */
+} GosubTag;
+
+/**
+ * @brief Unconnected flat line packet (0x10 bytes, code 0x40). Field names
+ *        mirror the LINE_F2 layout in include/psyq/libgpu.h.
+ */
+typedef struct
+{
+    u_long tag;  /* 0x00 P_TAG */
+    u_char r0;   /* 0x04 */
+    u_char g0;   /* 0x05 */
+    u_char b0;   /* 0x06 */
+    u_char code; /* 0x07 */
+    s16 x0;      /* 0x08 */
+    s16 y0;      /* 0x0A */
+    s16 x1;      /* 0x0C */
+    s16 y1;      /* 0x0E */
+} GosubLine;     /* 0x10 */
+
+/** @brief libgpu setaddr(): write a packet's 24-bit ordering-table link. */
+#define SET_PRIM_ADDR(p, a) (((GosubTag *)(p))->addr = (u_long)(a))
+/** @brief libgpu getaddr(): read a packet's 24-bit ordering-table link. */
+#define GET_PRIM_ADDR(p) ((u_long)((GosubTag *)(p))->addr)
+/** @brief libgpu addPrim(): splice packet @p p in at ordering-table tag @p ot. */
+#define ADD_PRIM(ot, p) (SET_PRIM_ADDR(p, GET_PRIM_ADDR(ot)), SET_PRIM_ADDR(ot, p))
+
 s32 func_8001A5D4(s32, void*);                  /* extern */
 s32 func_8001C56C(void*, s32, s32, s32, s32);  /* extern */
 StructS0* func_801443E4();                      /* extern */
 StructS0* func_80144544();                      /* extern */
-StructS0* func_80144764();                      /* extern */
+GosubLine* func_80144764();                      /* extern */
 StructS0* func_80146E30();                      /* extern */
 void func_801448EC(void);                       /* extern */
 
@@ -1521,9 +1559,9 @@ StructS0* func_80144544(StructS0* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32
 
     prim = (StructS0*)((u8*)prim + 0x40);
     var_s0 = func_80146E30(prim, ot, x, y, w, h);
-    var_s0 = func_80144764(var_s0, ot, x, y, w, h, 0xFFFFFF);
-    var_s0 = func_80144764(var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
-    var_s0 = func_80144764(var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
+    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x, y, w, h, 0xFFFFFF);
+    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
+    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
 
     var_s0->unk4 = 0xC0C0C0;
     ((u8*)var_s0)[3] = 3;
@@ -1541,4 +1579,66 @@ StructS0* func_80144544(StructS0* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32
     var_a0->unk0 = (var_a0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | ((s32)var_a0 & 0xFFFFFF);
     return (StructS0*)((u8*)var_a0 + 8);
+}
+
+/**
+ * @brief Emit a rectangle outline as four flat lines linked into @p ot.
+ *
+ * Each edge is inset four pixels at both ends, so the four lines form an open
+ * frame with notched corners: top (left to right), right (top to bottom),
+ * bottom (right to left) and left (bottom to top). Every packet takes the same
+ * packed RGB @p color.
+ *
+ * @param p     Destination packet buffer; four LINE_F2 packets are written here.
+ * @param ot    Ordering-table tag all four lines are linked into.
+ * @param x     Rectangle left edge.
+ * @param y     Rectangle top edge.
+ * @param w     Rectangle width.
+ * @param h     Rectangle height.
+ * @param color Packed 0x00BBGGRR colour written to every line.
+ * @return Pointer just past the fourth line (next free packet slot).
+ *
+ * @see decomp.me (100%)
+ */
+GosubLine *func_80144764(GosubLine *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 color)
+{
+    *(u32 *)&p->r0 = color;
+    ((GosubTag *)p)->len = 3;
+    p->code = 0x40;
+    p->x0 = x + 4;
+    p->y0 = y;
+    p->x1 = (x + w) - 4;
+    p->y1 = y;
+    ADD_PRIM(ot, p);
+    p++;
+
+    *(u32 *)&p->r0 = color;
+    ((GosubTag *)p)->len = 3;
+    p->code = 0x40;
+    p->x0 = x + w;
+    p->y0 = y + 4;
+    p->x1 = x + w;
+    p->y1 = (y + h) - 4;
+    ADD_PRIM(ot, p);
+    p++;
+
+    *(u32 *)&p->r0 = color;
+    ((GosubTag *)p)->len = 3;
+    p->code = 0x40;
+    p->x0 = (x + w) - 4;
+    p->y0 = y + h;
+    p->x1 = x + 4;
+    p->y1 = y + h;
+    ADD_PRIM(ot, p);
+    p++;
+
+    *(u32 *)&p->r0 = color;
+    ((GosubTag *)p)->len = 3;
+    p->code = 0x40;
+    p->x0 = x;
+    p->y0 = y + 4;
+    p->x1 = x;
+    p->y1 = (y + h) - 4;
+    ADD_PRIM(ot, p);
+    return p + 1;
 }
