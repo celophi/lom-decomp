@@ -3827,3 +3827,25 @@ s32 func_80145DA8(s32* ot, s32 prim, s32 x_off, s32 y_off)
     prim = func_800A88A0(prim, ot, (void*)D_8016B8F4, 4, 0x80 - x_off, 2 - y_off, 2);
     return prim;
 }
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80145DF8(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32* table;
+    s32 base;
+    void* glyph;
+    s32 pad[14];
+
+    table = &D_8014F29C;
+    base = (s32)table - 0x20;
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x18)));
+    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 2 - y_off, 2);
+    if (D_8016B900 != 0)
+    {
+        prim = func_80146178(prim, ot, x_off, y_off);
+    }
+    return prim;
+}
