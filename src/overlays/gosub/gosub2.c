@@ -2196,3 +2196,32 @@ s32 func_80145800(s32 dialog_result)
     g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_INACTIVE;
     return 0;
 }
+
+void func_80145A14(); /* extern */
+
+/**
+ * @brief Open the wide confirmation dialog and hand it to func_801454C4.
+ *
+ * Installs func_80145A14 as element 0's draw handler and func_801454C4 as the
+ * dialog's result handler, clears the pending choice, then starts the element
+ * entering at x 0x80 / y 0x24 with code 0x80. func_800AA02C runs last.
+ *
+ * @see decomp.me (100%)
+ */
+void func_801458A4(void)
+{
+    GosubElement* element;
+
+    element = &g_gosub_elements[0];
+    element->draw_handler = (void*)&func_80145A14;
+    g_gosub_dialog_choice = 0;
+    g_gosub_dialog_handler = func_801454C4;
+    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->attr.f.unk0_3 = 1;
+    element->attr.f.x = 0x80;
+    element->attr.f.unk0_16 = 0x70;
+    element->unk4_0 = 0;
+    element->y = 0x24;
+    SET_ELEM_CODE(element, 0x80);
+    func_800AA02C();
+}
