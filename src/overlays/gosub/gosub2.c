@@ -2132,21 +2132,10 @@ s32 func_80145620(s32 dialog_result)
  * @param dialog_result Zero to confirm; nonzero to cancel.
  * @return 1 when the confirm path is taken, otherwise 0.
  *
- * @note WIP - best match 95.74% (46/47 exact rows, gcc 2.7.2 CDK). Every
- *       instruction, register, frame slot and branch target already matches;
- *       the residue is one adjacent pair in the exit block, where the target
- *       emits `addu v0, zero, zero` before `lui a1, %hi(g_gosub_elements)` and
- *       this source emits them the other way round. It is decided entirely in
- *       sched1: `lui a1` heads the longer chain, so it wins on INSN_PRIORITY,
- *       which is compared before the LUID tie-break. Measured evidence and the
- *       retired probe classes are in working/func_80145744/STATUS.md.
- * @note The `do { ... } while (0)` around the D_801228F0 decrement is required
- *       to match, not a leftover - it is idioms.md [SCHED-08]. The loop notes
- *       give the decrement its own scheduling region, which is what produces
- *       the target's load-delay `nop`. Worth +4 exact rows; `for(;;){...break;}`
- *       and `while(1){...break;}` measure identical, while `if (1) { ... }` and
- *       a plain scope block both lose those 4 rows again.
- * @see decomp.me (95.74%)
+ * @note The D_801228F0 decrement is deliberately written out in BOTH arms of
+ *       the g_gosub_select_handler test rather than once after it. Do not merge
+ *       the two into a single statement - the duplicate is required to match.
+ * @see decomp.me (100%)
  */
 s32 func_80145744(s32 dialog_result)
 {
@@ -2164,12 +2153,13 @@ s32 func_80145744(s32 dialog_result)
     if (g_gosub_select_handler != 0)
     {
         g_gosub_select_handler();
+        D_801228F0 -= 1;
     }
-
-    do
+    else
     {
         D_801228F0 -= 1;
-    } while (0);
+    }
+
     g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_EXITING;
     g_gosub_elements[0].attr.f.unk0_3 = 8;
     return 0;
