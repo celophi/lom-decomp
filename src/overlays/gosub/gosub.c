@@ -63,7 +63,8 @@ void gosub_build_grouped_option_list(s32 group);    /* extern */
 void gosub_update_screen(s32 render_ctx);    /* extern */
 void func_80143B64();    /* extern */
 void func_80145CEC();    /* extern */
-void func_80145DA8();    /* extern */
+s32 func_80145DA8();    /* extern */
+s32 func_80145DF8();    /* extern */
 void func_80146468();    /* extern */
 void func_80146538();    /* extern */
 extern s32 g_gosub_frame_parity;
@@ -102,7 +103,6 @@ extern s32 D_8017097C;
 extern s32 g_gosub_row_height;
 extern u8 D_801448EC;
 extern u8 D_801452F0;
-extern u8 D_80145DF8;
 extern u8 D_80145EA4;
 extern u8 D_801460D0;
 extern u8 D_80145F80;
@@ -698,7 +698,7 @@ void gosub_build_screen_10_elements(void)
     g_gosub_selection_count = 0;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_80145DF8;
+    p->draw_handler = (void*)&func_80145DF8;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0xB0;
@@ -1750,6 +1750,7 @@ extern GosubGroupTable g_gosub_group_counts;
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode); /* extern */
 s32 func_800A8A78(s32* ot, s32 prim, s32 ch, s32 a3, Vec2s* pos, s32 mode);        /* extern */
 s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count);            /* extern */
+s32 func_80146178(s32 prim, s32* ot, s32 x_off, s32 y_off);                        /* extern */
 s32 func_801466B4(s32 prim, s32* ot, s32 x, s32 y, s32 w, s32 h);                  /* extern */
 
 /**
@@ -3814,4 +3815,15 @@ void func_80145CEC(s32 arg0)
     SET_ELEM_CODE(element, 0);
     func_800AA02C();
     D_801228F0 = 0;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80145DA8(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32 pad[14];
+
+    prim = func_800A88A0(prim, ot, (void*)D_8016B8F4, 4, 0x80 - x_off, 2 - y_off, 2);
+    return prim;
 }
