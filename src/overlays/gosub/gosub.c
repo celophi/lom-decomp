@@ -63,6 +63,11 @@ void gosub_build_grouped_option_list(s32 group);    /* extern */
 void gosub_update_screen(s32 render_ctx);    /* extern */
 void func_80143B64();    /* extern */
 void func_80145CEC();    /* extern */
+s32 func_80145DA8();    /* extern */
+s32 func_80145DF8();    /* extern */
+s32 func_80145EA4();    /* extern */
+s32 func_80145F80();    /* extern */
+s32 func_801460D0();    /* extern */
 void func_80146468();    /* extern */
 void func_80146538();    /* extern */
 extern s32 g_gosub_frame_parity;
@@ -84,6 +89,7 @@ extern s32 g_gosub_row_count;
 extern s32 g_gosub_visible_row_count;
 extern s32 D_8016B8E4;
 extern s32 D_8016B8EC;
+extern s32 D_8016B8F4;
 extern s32 g_gosub_allow_duplicate_selection;
 extern s32 (*g_gosub_finish_handler)();
 extern u8 D_8016B8FC;
@@ -100,17 +106,17 @@ extern s32 D_8017097C;
 extern s32 g_gosub_row_height;
 extern u8 D_801448EC;
 extern u8 D_801452F0;
-extern u8 D_80145DF8;
-extern u8 D_80145EA4;
-extern u8 D_801460D0;
-extern u8 D_80145F80;
 extern u8 D_80146418;
 extern u8 g_gosub_selection_count;
 extern s32 g_gosub_dialog_choice;
 extern u8 D_800EC3DA[];
+extern u8 D_800EC3EE[];
+extern u8 D_800EC3F0[];
+extern u8 D_800EC3F2[];
 extern u32 D_8014F27C[];
 extern u32 D_8014F280[];
 extern u32 D_8014F294[];
+extern s32 D_8014F2A8;
 extern u8 g_gosub_text_buffers[];
 extern u8 D_8016B5AC[];
 extern u8* g_gosub_title_text;
@@ -655,7 +661,7 @@ void gosub_build_screen_9_elements(void)
     g_gosub_selection_count = 0;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_80145EA4;
+    p->draw_handler = (void*)&func_80145EA4;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0x10;
@@ -664,7 +670,7 @@ void gosub_build_screen_9_elements(void)
     SET_ELEM_CODE(p, 8);
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801460D0;
+    p->draw_handler = (void*)&func_801460D0;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0xB0;
@@ -696,7 +702,7 @@ void gosub_build_screen_10_elements(void)
     g_gosub_selection_count = 0;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_80145DF8;
+    p->draw_handler = (void*)&func_80145DF8;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0xB0;
@@ -726,7 +732,7 @@ void gosub_initialize_fixed_element(void)
     GosubElement* p;
 
     p = &g_gosub_elements[0];
-    p->draw_handler = (void*)&D_80145F80;
+    p->draw_handler = (void*)&func_80145F80;
     g_gosub_dialog_choice = 0;
     p->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
     p->attr.f.unk0_3 = 1;
@@ -759,7 +765,7 @@ void gosub_build_category_screen_elements(void)
     g_gosub_selection_count = 0;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801460D0;
+    p->draw_handler = (void*)&func_801460D0;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0xB0;
@@ -803,7 +809,7 @@ void gosub_build_list_screen_elements(s32 include_middle)
     if (include_middle != 0)
     {
         p = func_80143C04();
-        p->draw_handler = (void*)&D_801460D0;
+        p->draw_handler = (void*)&func_801460D0;
         p->attr.f.unk0_3 = 1;
         p->attr.f.x = 0x1C;
         p->attr.f.unk0_16 = 0xB0;
@@ -843,7 +849,7 @@ void gosub_build_screen_11_elements(void)
     g_gosub_selection_count = 0;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_801460D0;
+    p->draw_handler = (void*)&func_801460D0;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0xB0;
@@ -1518,7 +1524,7 @@ void gosub_scroll_to_cursor(void);              /* extern */
 s32 gosub_toggle_cursor_selection(void);        /* extern */
 s32 gosub_advance_screen_sequence(void);        /* extern */
 s32 gosub_are_elements_idle(void);              /* extern */
-void func_80145F80();                           /* extern */
+s32 func_80145F80();                            /* extern */
 void func_80143B64();                           /* extern */
 void func_80143BB0();                           /* extern */
 void func_80143C58();                           /* extern */
@@ -1748,6 +1754,7 @@ extern GosubGroupTable g_gosub_group_counts;
 s32 func_800A88A0(s32 prim, s32* ot, void* glyph, s32 a3, s32 x, s32 y, s32 mode); /* extern */
 s32 func_800A8A78(s32* ot, s32 prim, s32 ch, s32 a3, Vec2s* pos, s32 mode);        /* extern */
 s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count);            /* extern */
+s32 func_80146178(s32 prim, s32* ot, s32 x_off, s32 y_off);                        /* extern */
 s32 func_801466B4(s32 prim, s32* ot, s32 x, s32 y, s32 w, s32 h);                  /* extern */
 
 /**
@@ -3787,5 +3794,185 @@ s32 func_80145B28(s32* ot, s32 prim, s32 x_off, s32 y_off)
     }
     prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x22 - y_off, 2);
 
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80145CEC(s32 arg0)
+{
+    GosubElement* element;
+
+    D_8016B8F4 = arg0;
+    element = &g_gosub_elements[0];
+    element->draw_handler = (void*)&func_80145DA8;
+    g_gosub_dialog_choice = 0;
+    D_8016B948 = 1;
+    D_8016B95C = 0;
+    element->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
+    element->attr.f.unk0_3 = 1;
+    element->attr.f.x = 0x20;
+    element->attr.f.unk0_16 = 0x70;
+    element->unk4_0 = 1;
+    element->y = 0x14;
+    SET_ELEM_CODE(element, 0);
+    func_800AA02C();
+    D_801228F0 = 0;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80145DA8(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32 pad[14];
+
+    prim = func_800A88A0(prim, ot, (void*)D_8016B8F4, 4, 0x80 - x_off, 2 - y_off, 2);
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80145DF8(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32* table;
+    s32 base;
+    void* glyph;
+    s32 pad[14];
+
+    table = &D_8014F29C;
+    base = (s32)table - 0x20;
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x18)));
+    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 2 - y_off, 2);
+    if (D_8016B900 != 0)
+    {
+        prim = func_80146178(prim, ot, x_off, y_off);
+    }
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80145EA4(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32* table;
+    s32 base;
+    void* glyph;
+    s32 pad[14];
+
+    table = &D_8014F29C;
+    base = (s32)table - 0x20;
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x1C)));
+    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 2 - y_off, 2);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x1A)));
+    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 0x12 - y_off, 2);
+
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80145F80(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32* table;
+    s32 base;
+    void* glyph;
+    s32 color;
+    s32 pad[14];
+
+    table = &D_8014F29C;
+    base = (s32)table - 0x20;
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x14)));
+    prim = func_800A88A0(prim, ot, glyph, 4, 0x80 - x_off, 2 - y_off, 2);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x20)));
+    color = 5;
+    if ((g_gosub_dialog_choice & 1) == 0)
+    {
+        color = 4;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x78 - x_off, 0x12 - y_off, 1);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x1E)));
+    color = 4;
+    if ((g_gosub_dialog_choice & 1) == 0)
+    {
+        color = 5;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x88 - x_off, 0x12 - y_off, 0);
+
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_801460D0(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32 pad[12];
+
+    prim = func_800A88A0(prim, ot, g_gosub_rows[g_gosub_cursor_row].desc, 4, 0x84 - x_off, 2 - y_off, 2);
+    if (D_8016B900 != 0)
+    {
+        prim = func_80146178(prim, ot, x_off, y_off);
+    }
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80146178(s32 prim, s32* ot, s32 x_off, s32 y_off)
+{
+    s32 kind;
+    Vec2s pos;
+    u8* base;
+    s32* table;
+    s32 inner;
+
+    kind = g_gosub_rows[g_gosub_cursor_row].unkC_28;
+
+    switch (kind)
+    {
+    case 0:
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3EE - 0x2A + D_800EC3EE[0] + (D_800EC3EE[1] << 8)), 4,
+                              0x10 - x_off, 0x12 - y_off, 0);
+        pos.x = 0x68 - x_off;
+        pos.y = (s16)(0x12 - y_off);
+        prim = func_800A8A78(ot, prim, g_gosub_rows[g_gosub_cursor_row].unk10, 4, &pos, 0);
+        break;
+
+    case 1:
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F0 - 0x2C + D_800EC3F0[0] + (D_800EC3F0[1] << 8)), 4,
+                              0x10 - x_off, 0x12 - y_off, 0);
+        pos.x = 0x60 - x_off;
+        pos.y = (s16)(0x12 - y_off);
+        prim = func_800A8A78(ot, prim,
+                              g_gosub_rows[g_gosub_cursor_row].unk12[0] + g_gosub_rows[g_gosub_cursor_row].unk12[1] +
+                                  g_gosub_rows[g_gosub_cursor_row].unk12[2] + g_gosub_rows[g_gosub_cursor_row].unk12[3],
+                              4, &pos, 0);
+        break;
+
+    default:
+        table = &D_8014F2A8;
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F2 - 0x2E + D_800EC3F2[0] + (D_800EC3F2[1] << 8)), 4,
+                              0x10 - x_off, 0x12 - y_off, 0);
+        pos.x = 0x38 - x_off;
+        pos.y = (s16)(0x12 - y_off);
+        prim = func_800A8A78(ot, prim, g_gosub_rows[g_gosub_cursor_row].unk10, 4, &pos, 0);
+        base = (u8*)table;
+        base -= 0x2C;
+        inner = base + *(u16*)(g_gosub_rows[g_gosub_cursor_row].unk12[0] * 2 + D_8014F2A8 + base);
+        prim = func_800A88A0(prim, ot, (void*)(D_8014F2A8 + inner), 4, 0x60 - x_off, 0x12 - y_off, 0);
+        break;
+    }
     return prim;
 }
