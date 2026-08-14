@@ -233,7 +233,17 @@ segments:
       - [0x1A1CC, c, psyq/libapi/A10]
       - [0x1A1DC, c, psyq/libspu/S_GRMT]
       - [0x1A1EC, c, decomp4]
-      - [0x1D8DC, c, unk8]
+      - [0x1D8DC, c, decomp11] # -G4
+      - [0x1D8FC, c, decomp12]
+      - [0x1DA9C, c, decomp13] # -G4
+      - [0x1DCD8, c, decomp14]
+      - [0x1DE94, c, decomp15] # -G4
+      - [0x1DF64, c, decomp16]
+      - [0x1E5DC, c, decomp17] # -G4
+      - [0x1EA04, c, decomp18]
+      - [0x1EAE8, c, decomp19] # -G4
+      - [0x1ED40, c, decomp20]
+      - [0x1EFA8, c, unk8]
       - [0x25990, data, initialized]
 
   - name: sdata
