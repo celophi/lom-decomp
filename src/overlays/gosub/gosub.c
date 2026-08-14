@@ -66,6 +66,7 @@ void func_80145CEC();    /* extern */
 s32 func_80145DA8();    /* extern */
 s32 func_80145DF8();    /* extern */
 s32 func_80145EA4();    /* extern */
+s32 func_80145F80();    /* extern */
 void func_80146468();    /* extern */
 void func_80146538();    /* extern */
 extern s32 g_gosub_frame_parity;
@@ -105,7 +106,6 @@ extern s32 g_gosub_row_height;
 extern u8 D_801448EC;
 extern u8 D_801452F0;
 extern u8 D_801460D0;
-extern u8 D_80145F80;
 extern u8 D_80146418;
 extern u8 g_gosub_selection_count;
 extern s32 g_gosub_dialog_choice;
@@ -728,7 +728,7 @@ void gosub_initialize_fixed_element(void)
     GosubElement* p;
 
     p = &g_gosub_elements[0];
-    p->draw_handler = (void*)&D_80145F80;
+    p->draw_handler = (void*)&func_80145F80;
     g_gosub_dialog_choice = 0;
     p->attr.f.state = GOSUB_ELEMENT_STATE_ENTERING;
     p->attr.f.unk0_3 = 1;
@@ -1520,7 +1520,7 @@ void gosub_scroll_to_cursor(void);              /* extern */
 s32 gosub_toggle_cursor_selection(void);        /* extern */
 s32 gosub_advance_screen_sequence(void);        /* extern */
 s32 gosub_are_elements_idle(void);              /* extern */
-void func_80145F80();                           /* extern */
+s32 func_80145F80();                            /* extern */
 void func_80143B64();                           /* extern */
 void func_80143BB0();                           /* extern */
 void func_80143C58();                           /* extern */
@@ -3868,6 +3868,42 @@ s32 func_80145EA4(s32* ot, s32 prim, s32 x_off, s32 y_off)
 
     glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x1A)));
     prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 0x12 - y_off, 2);
+
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80145F80(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32* table;
+    s32 base;
+    void* glyph;
+    s32 color;
+    s32 pad[14];
+
+    table = &D_8014F29C;
+    base = (s32)table - 0x20;
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x14)));
+    prim = func_800A88A0(prim, ot, glyph, 4, 0x80 - x_off, 2 - y_off, 2);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x20)));
+    color = 5;
+    if ((g_gosub_dialog_choice & 1) == 0)
+    {
+        color = 4;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x78 - x_off, 0x12 - y_off, 1);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x1E)));
+    color = 4;
+    if ((g_gosub_dialog_choice & 1) == 0)
+    {
+        color = 5;
+    }
+    prim = func_800A88A0(prim, ot, glyph, color, 0x88 - x_off, 0x12 - y_off, 0);
 
     return prim;
 }
