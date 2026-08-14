@@ -110,9 +110,13 @@ extern u8 D_80146418;
 extern u8 g_gosub_selection_count;
 extern s32 g_gosub_dialog_choice;
 extern u8 D_800EC3DA[];
+extern u8 D_800EC3EE[];
+extern u8 D_800EC3F0[];
+extern u8 D_800EC3F2[];
 extern u32 D_8014F27C[];
 extern u32 D_8014F280[];
 extern u32 D_8014F294[];
+extern s32 D_8014F2A8;
 extern u8 g_gosub_text_buffers[];
 extern u8 D_8016B5AC[];
 extern u8* g_gosub_title_text;
@@ -3919,6 +3923,56 @@ s32 func_801460D0(s32* ot, s32 prim, s32 x_off, s32 y_off)
     if (D_8016B900 != 0)
     {
         prim = func_80146178(prim, ot, x_off, y_off);
+    }
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80146178(s32 prim, s32* ot, s32 x_off, s32 y_off)
+{
+    s32 kind;
+    Vec2s pos;
+    u8* base;
+    s32* table;
+    s32 inner;
+
+    kind = g_gosub_rows[g_gosub_cursor_row].unkC_28;
+
+    switch (kind)
+    {
+    case 0:
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3EE - 0x2A + D_800EC3EE[0] + (D_800EC3EE[1] << 8)), 4,
+                              0x10 - x_off, 0x12 - y_off, 0);
+        pos.x = 0x68 - x_off;
+        pos.y = (s16)(0x12 - y_off);
+        prim = func_800A8A78(ot, prim, g_gosub_rows[g_gosub_cursor_row].unk10, 4, &pos, 0);
+        break;
+
+    case 1:
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F0 - 0x2C + D_800EC3F0[0] + (D_800EC3F0[1] << 8)), 4,
+                              0x10 - x_off, 0x12 - y_off, 0);
+        pos.x = 0x60 - x_off;
+        pos.y = (s16)(0x12 - y_off);
+        prim = func_800A8A78(ot, prim,
+                              g_gosub_rows[g_gosub_cursor_row].unk12[0] + g_gosub_rows[g_gosub_cursor_row].unk12[1] +
+                                  g_gosub_rows[g_gosub_cursor_row].unk12[2] + g_gosub_rows[g_gosub_cursor_row].unk12[3],
+                              4, &pos, 0);
+        break;
+
+    default:
+        table = &D_8014F2A8;
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F2 - 0x2E + D_800EC3F2[0] + (D_800EC3F2[1] << 8)), 4,
+                              0x10 - x_off, 0x12 - y_off, 0);
+        pos.x = 0x38 - x_off;
+        pos.y = (s16)(0x12 - y_off);
+        prim = func_800A8A78(ot, prim, g_gosub_rows[g_gosub_cursor_row].unk10, 4, &pos, 0);
+        base = (u8*)table;
+        base -= 0x2C;
+        inner = base + *(u16*)(g_gosub_rows[g_gosub_cursor_row].unk12[0] * 2 + D_8014F2A8 + base);
+        prim = func_800A88A0(prim, ot, (void*)(D_8014F2A8 + inner), 4, 0x60 - x_off, 0x12 - y_off, 0);
+        break;
     }
     return prim;
 }
