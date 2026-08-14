@@ -2119,3 +2119,58 @@ s32 func_80145620(s32 dialog_result)
     g_gosub_selection_count = 1;
     return 0;
 }
+
+/**
+ * @brief Dialog handler that backs the screen sequence out one step.
+ *
+ * Does nothing and reports 1 when the dialog was confirmed with bit 0 of
+ * g_gosub_dialog_choice clear. Otherwise it releases one selection slot (only
+ * when the selection is already full), steps the screen sequence back, runs
+ * g_gosub_select_handler when one is installed, drops the nesting depth in
+ * D_801228F0, and puts element 0 into its exit animation.
+ *
+ * @param dialog_result Zero to confirm; nonzero to cancel.
+ * @return 1 when the confirm path is taken, otherwise 0.
+ *
+ * @note WIP - best match 95.74% (46/47 exact rows, gcc 2.7.2 CDK). Every
+ *       instruction, register, frame slot and branch target already matches;
+ *       the residue is one adjacent pair in the exit block, where the target
+ *       emits `addu v0, zero, zero` before `lui a1, %hi(g_gosub_elements)` and
+ *       this source emits them the other way round. It is decided entirely in
+ *       sched1: `lui a1` heads the longer chain, so it wins on INSN_PRIORITY,
+ *       which is compared before the LUID tie-break. Measured evidence and the
+ *       retired probe classes are in working/func_80145744/STATUS.md.
+ * @note The `do { ... } while (0)` around the D_801228F0 decrement is required
+ *       to match, not a leftover - it is idioms.md [SCHED-08]. The loop notes
+ *       give the decrement its own scheduling region, which is what produces
+ *       the target's load-delay `nop`. Worth +4 exact rows; `for(;;){...break;}`
+ *       and `while(1){...break;}` measure identical, while `if (1) { ... }` and
+ *       a plain scope block both lose those 4 rows again.
+ * @see decomp.me (95.74%)
+ */
+s32 func_80145744(s32 dialog_result)
+{
+    if (dialog_result == 0 && (g_gosub_dialog_choice & 1) == 0)
+    {
+        return 1;
+    }
+
+    if (g_gosub_required_selection_count == g_gosub_selection_count)
+    {
+        g_gosub_selection_count -= 1;
+    }
+
+    g_gosub_screen_sequence_index -= 1;
+    if (g_gosub_select_handler != 0)
+    {
+        g_gosub_select_handler();
+    }
+
+    do
+    {
+        D_801228F0 -= 1;
+    } while (0);
+    g_gosub_elements[0].attr.f.state = GOSUB_ELEMENT_STATE_EXITING;
+    g_gosub_elements[0].attr.f.unk0_3 = 8;
+    return 0;
+}
