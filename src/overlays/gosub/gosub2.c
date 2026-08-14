@@ -428,36 +428,22 @@ s32 gosub_handle_combination_dialog(s32 dialog_result)
  * @brief Publish the selected group rows as result values.
  *
  * @return 1 when at least one row was published, otherwise 0.
- * @see decomp.me (95%) https://decomp.me/scratch/pOY6i
+ * @see decomp.me (100%) https://decomp.me/scratch/pOY6i
  */
 s32 gosub_publish_group_selection(void)
 {
-    s32 selection_count;
-    s32 selection_index;
-    s32* result;
-    s16 row_index;
+    s32 i;
 
     if (g_gosub_selection_count == 0)
     {
         return 0;
     }
 
-    selection_index = 0;
+    g_gosub_result_count = g_gosub_selection_count;
 
-    selection_count = g_gosub_selection_count;
-    g_gosub_result_count = selection_count;
-
-    if (selection_count != 0)
+    for (i = 0; i < g_gosub_selection_count; i++)
     {
-        result = &g_gosub_result_values[0];
-
-        do
-        {
-            row_index = g_gosub_rows[g_gosub_selected_rows[selection_index]].index;
-            selection_index += 1;
-            *result = (s32)row_index;
-            result += 1;
-        } while (selection_index < selection_count);
+        g_gosub_result_values[i] = g_gosub_rows[g_gosub_selected_rows[i]].index;
     }
 
     return 1;
@@ -467,36 +453,22 @@ s32 gosub_publish_group_selection(void)
  * @brief Publish the selected rows' entry indices as result values.
  *
  * @return 1 when at least one row was published, otherwise 0.
- * @see decomp.me (95%) https://decomp.me/scratch/FN7DQ
+ * @see decomp.me (100%) https://decomp.me/scratch/FN7DQ
  */
 s32 gosub_publish_selection(void)
 {
-    s32 selection_count;
-    s32 selection_index;
-    s32* result;
-    s16 row_index;
+    s32 i;
 
     if (g_gosub_selection_count == 0)
     {
         return 0;
     }
 
-    selection_index = 0;
+    g_gosub_result_count = g_gosub_selection_count;
 
-    selection_count = g_gosub_selection_count;
-    g_gosub_result_count = selection_count;
-
-    if (selection_count != 0)
+    for (i = 0; i < g_gosub_selection_count; i++)
     {
-        result = &g_gosub_result_values[0];
-
-        do
-        {
-            row_index = g_gosub_rows[g_gosub_selected_rows[selection_index]].index;
-            selection_index += 1;
-            *result = (s32)row_index;
-            result += 1;
-        } while (selection_index < selection_count);
+        g_gosub_result_values[i] = g_gosub_rows[g_gosub_selected_rows[i]].index;
     }
 
     return 1;
