@@ -65,6 +65,7 @@ void func_80143B64();    /* extern */
 void func_80145CEC();    /* extern */
 s32 func_80145DA8();    /* extern */
 s32 func_80145DF8();    /* extern */
+s32 func_80145EA4();    /* extern */
 void func_80146468();    /* extern */
 void func_80146538();    /* extern */
 extern s32 g_gosub_frame_parity;
@@ -103,7 +104,6 @@ extern s32 D_8017097C;
 extern s32 g_gosub_row_height;
 extern u8 D_801448EC;
 extern u8 D_801452F0;
-extern u8 D_80145EA4;
 extern u8 D_801460D0;
 extern u8 D_80145F80;
 extern u8 D_80146418;
@@ -657,7 +657,7 @@ void gosub_build_screen_9_elements(void)
     g_gosub_selection_count = 0;
 
     p = func_80143C04();
-    p->draw_handler = (void*)&D_80145EA4;
+    p->draw_handler = (void*)&func_80145EA4;
     p->attr.f.unk0_3 = 1;
     p->attr.f.x = 0x1C;
     p->attr.f.unk0_16 = 0x10;
@@ -3847,5 +3847,27 @@ s32 func_80145DF8(s32* ot, s32 prim, s32 x_off, s32 y_off)
     {
         prim = func_80146178(prim, ot, x_off, y_off);
     }
+    return prim;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80145EA4(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32* table;
+    s32 base;
+    void* glyph;
+    s32 pad[14];
+
+    table = &D_8014F29C;
+    base = (s32)table - 0x20;
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x1C)));
+    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 2 - y_off, 2);
+
+    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x1A)));
+    prim = func_800A88A0(prim, ot, glyph, 4, 0x84 - x_off, 0x12 - y_off, 2);
+
     return prim;
 }
