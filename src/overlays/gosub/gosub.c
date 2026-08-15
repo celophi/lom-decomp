@@ -3057,6 +3057,17 @@ GosubLine *func_80144764(GosubLine *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 
     return p + 1;
 }
 
+/** @brief Message archive header at &D_8014F29C + D_8014F29C: u16 h[] offsets, then u16 t[]. */
+typedef struct
+{
+    u16 h[0x22];
+    u16 t[16];
+} MsgHdr;
+
+#define MSG_HDR ((MsgHdr*)((u8*)&D_8014F29C + D_8014F29C))
+#define MSG_HI(off) ((void*)(D_8014F29C + (MSG_HDR->h[(off) >> 1] + base)))
+#define MSG_LO(off) ((void*)(D_8014F29C + (*(u16*)(base + D_8014F29C + (off)) + base)))
+
 /**
  * @brief Draw the gosub item list: one packet run per row, then the cursor
  *        highlight and one highlight per selected row.
@@ -3075,34 +3086,45 @@ GosubLine *func_80144764(GosubLine *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 
  * @param y_off Vertical scroll offset subtracted from every row position.
  * @return Packet cursor just past the last highlight tile.
  *
- * @note WIP - best match 73.24% (189/507 exact, gcc 2.7.2 CDK). Frame comes out
- *       -0x58 against the target's -0x60: the target keeps %hi(D_8014F29C) in its
- *       own long-lived pseudo (s7) reused by every in-loop value read, so it needs
- *       one more saved register; here the lui is re-materialized per read and every
- *       later saved register slides down one. That single missing pseudo accounts
- *       for the frame delta and, through it, most of the argdiff rows.
- * @note The row loop is deliberately a label + goto, NOT a do/while - idioms.md
- *       [LOOP-09]. The target shows no loop optimizations at all (in-loop lui per
- *       use, both counters in stack slots, no reduced givs); the do/while form adds
- *       a second induction variable and a +0xC-biased entry pointer. The tail
- *       selection loop IS a real do/while (converting it measures -7 exact).
- * @note `base` must be built in two statements; written as `(u8*)&D_8014F29C - 0x20`
- *       gcc folds it to one %hi(D_8014F29C-0x20) relocation (-10 exact).
+ * @note WIP - best match 94.89% (441/507 exact, gcc 2.7.2 CDK; frame, byte size,
+ *       and insn count all match). Remaining residue is register-coloring ties
+ *       (tail a1/a2 mask-cursor swap, prologue s4/s6 copy order) plus the
+ *       %hi(D_8014F29C+0x44) relocation fold in the half==1 arm's sibling sites.
+ * @note Statement shapes here are measured, not stylistic: y_top/y_top2/y_top3
+ *       are per-site temps (one shared y_base variable costs -15 exact via a
+ *       long-lived register web; a bare inline (y_off - 2) gets reassociated by
+ *       fold-const into the wrong (mult + 2) - y_off form). sel_mul keeps the
+ *       in-loop y_off reload alive: with the mult inline, the y_off - 2 movable's
+ *       def-use life is ~8 and loop.c hoists it out (move_movables threshold
+ *       decays -3 per moved invariant; life-1 temps fail the test and stay).
+ * @note The selection loop must be a plain while (not if + do/while) so gcc's
+ *       duplicated loop entry test emits the beqz and cse2 can share one
+ *       lui %hi(g_gosub_selection_count) across the check and the loop.
  * @see working/func_801448EC/STATUS.md for the measured probe log and retired classes.
  */
 StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
 {
-    s32 row_offset;
-    Vec2s* pos_p;
     s32 drawn_count;
+    Vec2s* pos_p;
+    s32 row_offset;
     Vec2s pos;
-    GosubListEntry* entry;
     s32 row;
     s32 y;
     s32 line_y;
+    s32 y_top;
+    s32 sel_mul;
+    s32 msg_off;
+    u8* msg_p;
+    s32 y_top2;
+    s32 y_top3;
+    s32 line_y2;
+    s32 line_y3;
     s32 label_x;
-    u8* base;
+    s32 x_pad;
+    s32* table;
+    s32 base;
     s32 blk;
+    s32 blk2;
     StructS0* tile;
     StructS0* mark;
 
@@ -3111,113 +3133,112 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
     if (g_gosub_row_count > 0)
     {
         label_x = 0x30 - x_off;
-        base = (u8*)&D_8014F29C;
-        base -= 0x20;
-        entry = &g_gosub_rows[0];
         pos_p = &pos;
+        table = &D_8014F29C;
+        base = (s32)table - 0x20;
         row_offset = 0;
-    row_loop:
+        do
         {
-            if (entry->value == -3)
+            if (g_gosub_rows[row].value == -3)
             {
                 y = ((row * 0x30) - y_off) - g_gosub_scroll_y;
                 if (y >= -0x2F && y < g_gosub_window_height)
                 {
                     prim = func_801450D8(prim, ot, row, -x_off, y, drawn_count);
-                    prim = func_800A88A0(prim, ot, entry->name, entry->kind, label_x, y, 0);
-                    if (entry->flags.f.flag2)
+                    prim = func_800A88A0(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].kind, label_x, y, 0);
+                    if (g_gosub_rows[row].flags.f.flag2)
                     {
-                        if ((entry->flags.half & 1) == 0)
+                        if ((g_gosub_rows[row].flags.half & 1) == 0)
                         {
                             line_y = y + 0x10;
-                            prim = func_800A88A0(prim, ot, GOSUB_MSG_ABS(base, 0x24), entry->kind, label_x, line_y, 0);
+                            prim = func_800A88A0(prim, ot, MSG_HI(0x24), g_gosub_rows[row].kind, label_x, line_y, 0);
                             pos.x = 0x54 - x_off;
                             pos.y = line_y;
-                            prim = func_800A8A78(ot, prim, entry->unkD, entry->kind, pos_p, 0);
-                            blk = *(s32*)(base + 0x24);
-                            prim = func_800A88A0(prim, ot, base + blk + *(u16*)(base + blk + entry->unkC * 2),
-                                                 entry->kind, 0x84 - x_off, line_y, 0);
+                            prim = func_800A8A78(ot, prim, g_gosub_rows[row].unkD, g_gosub_rows[row].kind, pos_p, 0);
+                            blk2 = *(s32*)(base + 0x24);
+                            prim = func_800A88A0(prim, ot, (void*)(blk2 + (*(u16*)((blk2 + g_gosub_rows[row].unkC * 2) + base) + base)),
+                                                 g_gosub_rows[row].kind, 0x84 - x_off, line_y, 0);
                         }
                         else
                         {
-                            prim = func_800A88A0(prim, ot, GOSUB_MSG_ABS(base, entry->unkD * 2 + 0x44), entry->kind, label_x,
+                            msg_off = D_8014F29C + g_gosub_rows[row].unkD * 2;
+                            msg_p = (u8*)&D_8014F29C + msg_off;
+                            prim = func_800A88A0(prim, ot, (void*)(D_8014F29C + (*(u16*)(msg_p + 0x44) + base)), g_gosub_rows[row].kind, label_x,
                                                  y + 0x10, 0);
                         }
                     }
                     else
                     {
                         blk = D_8014F2A4;
-                        prim = func_800A88A0(prim, ot, base + blk + *(u16*)(base + blk + entry->unkC * 2), entry->kind,
+                        prim = func_800A88A0(prim, ot, (void*)(blk + (*(u16*)((blk + g_gosub_rows[row].unkC * 2) + base) + base)), g_gosub_rows[row].kind,
                                              label_x, y + 0x10, 0);
                     }
-                    line_y = y + 0x20;
-                    prim = func_800A88A0(prim, ot, GOSUB_MSG_ABS(base, 0x26), entry->kind, label_x, line_y, 0);
+                    line_y2 = y + 0x20;
+                    prim = func_800A88A0(prim, ot, MSG_HI(0x26), g_gosub_rows[row].kind, label_x, line_y2, 0);
                     pos.x = 0x48 - x_off;
-                    pos.y = line_y;
-                    prim = func_800A8A78(ot, prim, entry->unk1A, entry->kind, pos_p, 0);
-                    prim = func_800A88A0(prim, ot, base + D_8014F29C + *(u16*)((u8*)&D_8014F2C4 + D_8014F29C),
-                                         entry->kind, 0x64 - x_off, line_y, 0);
+                    pos.y = line_y2;
+                    prim = func_800A8A78(ot, prim, g_gosub_rows[row].unk1A, g_gosub_rows[row].kind, pos_p, 0);
+                    prim = func_800A88A0(prim, ot, (void*)(D_8014F29C + (*(u16*)((u8*)&D_8014F2C4 + D_8014F29C) + base)),
+                                         g_gosub_rows[row].kind, 0x64 - x_off, line_y2, 0);
                     pos.x = 0xB0 - x_off;
-                    pos.y = line_y;
-                    prim = func_800A8A78(ot, prim, entry->unk10, entry->kind, pos_p, 0);
-                    if (entry->unkE != 0)
+                    pos.y = line_y2;
+                    prim = func_800A8A78(ot, prim, g_gosub_rows[row].unk10, g_gosub_rows[row].kind, pos_p, 0);
+                    if (g_gosub_rows[row].unkE != 0)
                     {
-                        prim = func_800A88A0(prim, ot, GOSUB_MSG_REL(base, 0x4A), entry->kind,
-                                             g_gosub_window_width - (x_off + 0xC), line_y, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x4A), g_gosub_rows[row].kind,
+                                             g_gosub_window_width - (x_off + 0xC), line_y2, 1);
                     }
-                    else if (entry->flags.half & 1)
+                    else if (g_gosub_rows[row].flags.half & 1)
                     {
-                        prim = func_800A88A0(prim, ot, GOSUB_MSG_REL(base, 0x60), entry->kind,
-                                             g_gosub_window_width - (x_off + 0xC), line_y, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x60), g_gosub_rows[row].kind,
+                                             g_gosub_window_width - (x_off + 0xC), line_y2, 1);
                     }
-                    else if (entry->flags.f.flag1)
+                    else if (g_gosub_rows[row].flags.f.flag1)
                     {
-                        prim = func_800A88A0(prim, ot, GOSUB_MSG_REL(base, 0x6E), entry->kind,
-                                             g_gosub_window_width - (x_off + 0xC), line_y, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x6E), g_gosub_rows[row].kind,
+                                             g_gosub_window_width - (x_off + 0xC), line_y2, 1);
                     }
                     drawn_count += 1;
                 }
             }
-            else if (entry->value == -2)
+            else if (g_gosub_rows[row].value == -2)
             {
                 y = (row_offset - y_off) - g_gosub_scroll_y;
                 if (y >= -0x1F && y < g_gosub_window_height)
                 {
-                    line_y = y + 8;
-                    prim = func_801466B4(prim, ot, 0xC - x_off, y, entry->unkE, entry->unkD);
-                    prim = func_800A88A0(prim, ot, entry->name, entry->kind, 0x4C - x_off, line_y, 0);
-                    if (entry->flags.f.flag2)
+                    line_y3 = y + 8;
+                    prim = func_801466B4(prim, ot, 0xC - x_off, y, g_gosub_rows[row].unkE, g_gosub_rows[row].unkD);
+                    prim = func_800A88A0(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].kind, 0x4C - x_off, line_y3, 0);
+                    if (g_gosub_rows[row].flags.f.flag2)
                     {
-                        prim = func_800A88A0(prim, ot, GOSUB_MSG_ABS(base, 0x20), entry->kind, 0x110 - x_off, line_y, 1);
+                        prim = func_800A88A0(prim, ot, MSG_HI(0x20), g_gosub_rows[row].kind, 0x110 - x_off, line_y3, 1);
                     }
                 }
             }
             else
             {
-                y = ((row * g_gosub_row_height) - (y_off - 2)) - g_gosub_scroll_y;
+                y_top = y_off - 2;
+                y = ((row * g_gosub_row_height) - y_top) - g_gosub_scroll_y;
                 if (-g_gosub_row_height < y && y < g_gosub_window_height)
                 {
-                    prim = func_800A88A0(prim, ot, entry->name, entry->kind, 0xC - x_off, y, 0);
+                    prim = func_800A88A0(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].kind, 0xC - x_off, y, 0);
                     pos.y = y;
-                    pos.x = g_gosub_window_width - (x_off + 0xC);
-                    if (entry->value >= 0)
+                    x_pad = x_off + 0xC;
+                    pos.x = g_gosub_window_width - x_pad;
+                    if (g_gosub_rows[row].value >= 0)
                     {
-                        prim = func_800A8A78(ot, prim, entry->value, entry->kind, pos_p, 1);
+                        prim = func_800A8A78(ot, prim, g_gosub_rows[row].value, g_gosub_rows[row].kind, pos_p, 1);
                     }
                 }
             }
-            entry += 1;
-            row += 1;
             row_offset += 0x20;
-        }
-        if (row < g_gosub_row_count)
-        {
-            goto row_loop;
-        }
+            row += 1;
+        } while (row < g_gosub_row_count);
     }
 
     tile = (StructS0*)prim;
-    mark = (StructS0*)((u8*)tile + 0x10);
+    y_top2 = y_off - 2;
+    y = ((g_gosub_cursor_row * g_gosub_row_height) - y_top2) - g_gosub_scroll_y;
     ((u8*)tile)[3] = 3;
     tile->unk4 = 0xF080F0;
     ((u8*)tile)[7] = 0x62;
@@ -3225,25 +3246,26 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
     tile->unkE = g_gosub_row_height - 1;
     tile->unk8 = 1;
     tile->unkC = g_gosub_window_width;
-    y = ((g_gosub_cursor_row * g_gosub_row_height) - (y_off - 2)) - g_gosub_scroll_y;
     tile->unkA = y - 2;
     ADD_PRIM(ot, tile);
-    if (g_gosub_selection_count != 0)
+    mark = (StructS0*)((u8*)tile + 0x10);
+    while (row < g_gosub_selection_count)
     {
-        do
         {
             mark->unk8 = 1;
             mark->unk4 = 0x808080;
             ((u8*)mark)[3] = 3;
             ((u8*)mark)[7] = 0x62;
-            mark->unkE = g_gosub_row_height - 1;
+            sel_mul = g_gosub_selected_rows[row] * g_gosub_row_height;
+            y_top3 = y_off - 2;
+            y = (sel_mul - y_top3) - g_gosub_scroll_y;
             mark->unkC = g_gosub_window_width;
-            y = ((g_gosub_selected_rows[row] * g_gosub_row_height) - (y_off - 2)) - g_gosub_scroll_y;
             mark->unkA = y - 2;
+            mark->unkE = g_gosub_row_height - 1;
             row += 1;
             ADD_PRIM(ot, mark);
             mark += 1;
-        } while (row < g_gosub_selection_count);
+        }
     }
     return mark;
 }
