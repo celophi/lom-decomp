@@ -3976,3 +3976,232 @@ s32 func_80146178(s32 prim, s32* ot, s32 x_off, s32 y_off)
     }
     return prim;
 }
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80146418(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32 pad[14];
+
+    prim = func_800A88A0(prim, ot, g_gosub_title_text, 4, 0x84 - x_off, 2 - y_off, 2);
+    return prim;
+}
+
+s32 func_801464EC(const u8*); /* extern */
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80146468(u8* dst, u8* src2)
+{
+    s32 len1;
+    s32 len2;
+    s32 i;
+
+    len1 = func_801464EC(dst);
+    len2 = func_801464EC(src2);
+
+    for (i = 0; i < len2; i++)
+    {
+        dst[len1 + i] = src2[i];
+    }
+
+    dst[len1 + i] = 0;
+}
+
+#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_801464EC(const u8* name_buf)
+{
+    const u8* scan_cursor;
+    s32 byte_count;
+
+    scan_cursor = name_buf;
+    byte_count = 0;
+
+    while (*scan_cursor)
+    {
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        {
+            scan_cursor += 2;
+            byte_count += 2;
+        }
+        else
+        {
+            scan_cursor += 1;
+            byte_count += 1;
+        }
+    }
+
+    return byte_count;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80146538(u8* dst, u8* src)
+{
+    const u8* scan_cursor;
+    s32 byte_count;
+    s32 i;
+
+    scan_cursor = src;
+    byte_count = 0;
+
+    while (*scan_cursor)
+    {
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        {
+            scan_cursor += 2;
+            byte_count += 2;
+        }
+        else
+        {
+            scan_cursor += 1;
+            byte_count += 1;
+        }
+    }
+
+    for (i = 0; i < byte_count; i++)
+    {
+        dst[i] = src[i];
+    }
+
+    dst[i] = 0;
+}
+
+/** @brief VRAM upload position for an image and its CLUT (see func_801465FC). */
+typedef struct
+{
+    u16 x;
+    u16 y;
+    u16 clut_x;
+    u16 clut_y;
+} GosubImageClutPos;
+
+extern u8 D_80147058[];
+
+void func_801465FC(GosubImageClutPos* pos, u8* archive); /* extern */
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_801465BC(void)
+{
+    GosubImageClutPos pos;
+
+    pos.x = 0x140;
+    pos.y = 0;
+    pos.clut_x = 0;
+    pos.clut_y = 0x1F2;
+    func_801465FC(&pos, D_80147058);
+}
+
+/**
+ * @brief Upload an image (and, when the archive's flag bit 3 is set, its
+ *        CLUT) into VRAM via LoadImage.
+ * @param pos Destination VRAM position for the image and, if present, its
+ *            CLUT (see GosubImageClutPos).
+ * @param archive Image archive: word flags at +0x4 (bit 3 = has CLUT), word
+ *                data offset at +0x8, dimensions/pixel data at +0x10 (or
+ *                +off8+0x10 when a CLUT precedes them), CLUT pixel data at
+ *                +0x14, image pixel data at +off8+0x14.
+ * @see decomp.me (100%)
+ */
+void func_801465FC(GosubImageClutPos* pos, u8* archive)
+{
+    GosubRect rect;
+    s32 flags;
+    s32 off8;
+    u16* dims;
+
+    flags = *(s32*)(archive + 4);
+    off8 = *(s32*)(archive + 8);
+
+    if (flags & 8)
+    {
+        rect.x = pos->clut_x;
+        rect.y = pos->clut_y;
+        rect.w = 0x100;
+        rect.h = 1;
+        LoadImage(&rect, archive + 0x14);
+        dims = (u16*)(off8 - (-(s32)archive) + 0x10);
+    }
+    else
+    {
+        dims = (u16*)(archive + 0x10);
+    }
+
+    rect.x = pos->x;
+    rect.y = pos->y;
+    rect.w = dims[0];
+    rect.h = dims[1];
+    LoadImage(&rect, off8 - (-(s32)archive) + 0x14);
+}
+
+extern s32 D_800F2180[];
+extern u8 D_800F1CD0[];
+
+/**
+ * @brief Draw a table row from D_800F1CD0[row_idx] into two column buffers
+ *        via the still-unmatched func_80146860, then finalize with
+ *        func_8014680C.
+ * @param arg_prim Initial prim cursor.
+ * @param ot Ordering table, passed through unchanged to every call.
+ * @param x First coordinate base (column offset added to it below).
+ * @param y Second coordinate base (column offset added to it below).
+ * @param table_idx Index into D_800F2180[]; also offsets the header call's
+ *                   3rd arg (table_idx + 0x13) and supplies table_val, the
+ *                   loop calls' constant last arg.
+ * @param row_idx Row index into D_800F1CD0 (stride 88 bytes: count byte,
+ *                 four header fields, then a repeating {s8, s8, s16} tuple
+ *                 array of `count` entries).
+ * @return Advanced prim cursor (func_8014680C's return).
+ * @note WIP: 91.94% (57/87 exact), frame matches. Residual is a CSE/expand
+ *       ordering gap on `D_800F1CD0 + row_idx*11*8` (target computes
+ *       &D_800F1CD0 before the row_idx*88 multiply chain, this compiles it
+ *       after) - confirmed at expand time via tmp.c.rtl, NOT a sched1 issue
+ *       (sched_oracle block 0 fully satisfied). See working/func_801466B4/
+ *       STATUS.md for the full retired-class list before re-probing.
+ * @see decomp.me (91.94% WIP)
+ */
+s32 func_801466B4(s32 arg_prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_idx)
+{
+    u8* entry;
+    s32 table_val;
+    s16 field4;
+    s16 field6;
+    s8 field8;
+    s8 field9;
+    s32 col_x;
+    s32 col_y;
+    u8* item;
+    s32 i;
+    s32 prim;
+
+    table_val = D_800F2180[table_idx];
+    entry = D_800F1CD0 + row_idx * 11 * 8;
+
+    field4 = *(s16*)(entry + 4);
+    field6 = *(s16*)(entry + 6);
+    field8 = *(s8*)(entry + 8);
+    field9 = *(s8*)(entry + 9);
+
+    col_x = x + field4 * 8;
+    col_y = y + field6 * 8;
+
+    prim = func_80146860(arg_prim, ot, table_idx + 0x13, col_x + field8 * 8, col_y + field9 * 8, 9);
+
+    field6 = 0;
+    for (i = field6; i < entry[field6]; i++)
+    {
+        item = entry + 0xC + i * 4;
+        prim = func_80146860(prim, ot, *(s16*)(item + 2), col_x + *(s8*)(item + field6) * 16, col_y + *(s8*)(item + 1) * 16, table_val);
+    }
+
+    return func_8014680C(prim, ot);
+}
