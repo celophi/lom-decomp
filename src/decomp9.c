@@ -1463,7 +1463,7 @@ void func_800258B8(void)
                 func_80024F60(sfx_channel, bit);
                 if (sfx_channel->update_flags != 0)
                 {
-                    spu_apply_voice_updates(sfx_channel->voice, &sfx_channel->voice, sfx_channel->flags);
+                    spu_apply_voice_updates(sfx_channel->voice, (SpuVoiceParams*)&sfx_channel->voice, sfx_channel->flags);
                 }
                 dealloc_mask0 &= ~bit;
             }
