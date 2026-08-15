@@ -1,8 +1,9 @@
 // GOSUB.BIN
 
-// Cross-module (main-resident PSYQ library functions, outside this overlay's
-// own VRAM window, so no collision risk with the shared symbol table).
+// Cross-module (main-resident PSYQ library functions and globals, outside this
+// overlay's own VRAM window, so no collision risk with the shared symbol table).
 LoadImage                                = 0x80019A34;
+g_pad_ctx                                = 0x8012271C;
 
 // Overlay entry points
 gosub_open_screen_sequence               = 0x80140080;
