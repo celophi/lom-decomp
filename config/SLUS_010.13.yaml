@@ -217,7 +217,6 @@ segments:
       - [0x14A00, c, psyq/libspu/S_STM]
       - [0x14A30, c, psyq/libspu/S_STC]
       - [0x14A60, c, decomp9]
-      - [0x14E60, c, decomp10] # -G4
       - [0x16538, c, unk9]
       - [0x1998C, c, psyq/libspu/S_SRMT]
       - [0x19B5C, c, psyq/libspu/S_SRA]

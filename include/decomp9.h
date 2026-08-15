@@ -63,7 +63,7 @@ void spu_set_voice_sustain_level(s32 voice, s32 sustain_level);
 void spu_set_voice_sustain_mode(s32 voice, s32 sustain_bits, u32 mode_bits);
 void spu_set_voice_release_mode(s32 voice, s32 release_shift, u32 mode_bit);
 void spu_write_voice_params(s32 voice, SpuVoiceParams* params, s32 scale);
-void spu_apply_voice_updates(s32 voice, SpuVoiceParams* params);
+void spu_apply_voice_updates(s32 voice, SpuVoiceParams* params, s32 flags);
 void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 is_sfx);
 
 #endif
