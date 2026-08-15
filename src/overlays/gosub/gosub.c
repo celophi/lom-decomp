@@ -4074,28 +4074,71 @@ void func_80146538(u8* dst, u8* src)
     dst[i] = 0;
 }
 
+/** @brief VRAM upload position for an image and its CLUT (see func_801465FC). */
 typedef struct
 {
-    u16 unk0;
-    u16 unk2;
-    u16 unk4;
-    u16 unk6;
-} Unk801465FCArg;
+    u16 x;
+    u16 y;
+    u16 clut_x;
+    u16 clut_y;
+} GosubImageClutPos;
 
 extern u8 D_80147058[];
 
-void func_801465FC(Unk801465FCArg* arg, u8* archive); /* extern */
+void func_801465FC(GosubImageClutPos* pos, u8* archive); /* extern */
 
 /**
  * @see decomp.me (100%)
  */
 void func_801465BC(void)
 {
-    Unk801465FCArg arg;
+    GosubImageClutPos pos;
 
-    arg.unk0 = 0x140;
-    arg.unk2 = 0;
-    arg.unk4 = 0;
-    arg.unk6 = 0x1F2;
-    func_801465FC(&arg, D_80147058);
+    pos.x = 0x140;
+    pos.y = 0;
+    pos.clut_x = 0;
+    pos.clut_y = 0x1F2;
+    func_801465FC(&pos, D_80147058);
+}
+
+/**
+ * @brief Upload an image (and, when the archive's flag bit 3 is set, its
+ *        CLUT) into VRAM via LoadImage.
+ * @param pos Destination VRAM position for the image and, if present, its
+ *            CLUT (see GosubImageClutPos).
+ * @param archive Image archive: word flags at +0x4 (bit 3 = has CLUT), word
+ *                data offset at +0x8, dimensions/pixel data at +0x10 (or
+ *                +off8+0x10 when a CLUT precedes them), CLUT pixel data at
+ *                +0x14, image pixel data at +off8+0x14.
+ * @see decomp.me (100%)
+ */
+void func_801465FC(GosubImageClutPos* pos, u8* archive)
+{
+    GosubRect rect;
+    s32 flags;
+    s32 off8;
+    u16* dims;
+
+    flags = *(s32*)(archive + 4);
+    off8 = *(s32*)(archive + 8);
+
+    if (flags & 8)
+    {
+        rect.x = pos->clut_x;
+        rect.y = pos->clut_y;
+        rect.w = 0x100;
+        rect.h = 1;
+        LoadImage(&rect, archive + 0x14);
+        dims = (u16*)(off8 - (-(s32)archive) + 0x10);
+    }
+    else
+    {
+        dims = (u16*)(archive + 0x10);
+    }
+
+    rect.x = pos->x;
+    rect.y = pos->y;
+    rect.w = dims[0];
+    rect.h = dims[1];
+    LoadImage(&rect, off8 - (-(s32)archive) + 0x14);
 }
