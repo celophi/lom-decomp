@@ -4039,3 +4039,37 @@ s32 func_801464EC(const u8* name_buf)
 
     return byte_count;
 }
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80146538(u8* dst, u8* src)
+{
+    const u8* scan_cursor;
+    s32 byte_count;
+    s32 i;
+
+    scan_cursor = src;
+    byte_count = 0;
+
+    while (*scan_cursor)
+    {
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        {
+            scan_cursor += 2;
+            byte_count += 2;
+        }
+        else
+        {
+            scan_cursor += 1;
+            byte_count += 1;
+        }
+    }
+
+    for (i = 0; i < byte_count; i++)
+    {
+        dst[i] = src[i];
+    }
+
+    dst[i] = 0;
+}
