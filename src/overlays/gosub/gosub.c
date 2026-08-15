@@ -3976,3 +3976,66 @@ s32 func_80146178(s32 prim, s32* ot, s32 x_off, s32 y_off)
     }
     return prim;
 }
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_80146418(s32* ot, s32 prim, s32 x_off, s32 y_off)
+{
+    s32 pad[14];
+
+    prim = func_800A88A0(prim, ot, g_gosub_title_text, 4, 0x84 - x_off, 2 - y_off, 2);
+    return prim;
+}
+
+s32 func_801464EC(const u8*); /* extern */
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_80146468(u8* dst, u8* src2)
+{
+    s32 len1;
+    s32 len2;
+    s32 i;
+
+    len1 = func_801464EC(dst);
+    len2 = func_801464EC(src2);
+
+    for (i = 0; i < len2; i++)
+    {
+        dst[len1 + i] = src2[i];
+    }
+
+    dst[len1 + i] = 0;
+}
+
+#define IS_DBCS_LEAD_BYTE(byte) (((byte) >= 0x19) && ((byte) <= 0x1F))
+
+/**
+ * @see decomp.me (100%)
+ */
+s32 func_801464EC(const u8* name_buf)
+{
+    const u8* scan_cursor;
+    s32 byte_count;
+
+    scan_cursor = name_buf;
+    byte_count = 0;
+
+    while (*scan_cursor)
+    {
+        if (IS_DBCS_LEAD_BYTE(*scan_cursor))
+        {
+            scan_cursor += 2;
+            byte_count += 2;
+        }
+        else
+        {
+            scan_cursor += 1;
+            byte_count += 1;
+        }
+    }
+
+    return byte_count;
+}
