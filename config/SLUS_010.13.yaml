@@ -218,13 +218,13 @@ segments:
       - [0x14A30, c, psyq/libspu/S_STC]
       - [0x14A60, c, decomp9]
       - [0x14E60, c, decomp10] # -G4
-      - [0x15300, c, decomp9-func_80024B00]
-      - [0x15760, c, decomp9-func_80024F60]
-      - [0x15BE8, c, decomp9-func_800253E8]
-      - [0x15C98, c, decomp9-func_80025498]
+      - [0x15300, c, decomp9-func_80024B00] # -G4
+      - [0x15760, c, decomp9-func_80024F60] # -G4
+      - [0x15BE8, c, decomp9-func_800253E8] # -G4
+      - [0x15C98, c, decomp9-func_80025498] # -G4
       - [0x15D00, c, decomp9-func_80025500] # -G4
-      - [0x15F60, c, decomp9-func_80025760]
-      - [0x15FE0, c, decomp9-func_800257E0]
+      - [0x15F60, c, decomp9-func_80025760] # -G4
+      - [0x15FE0, c, decomp9-func_800257E0] # -G4
       - [0x160B8, c, decomp9-func_800258B8] # -G4
       - [0x16538, c, unk9]
       - [0x1998C, c, psyq/libspu/S_SRMT]

@@ -1,8 +1,9 @@
 #include "akao.h"
 #include "akao_driver.h"
-#include "decomp4.h"
 
 extern s16 D_8003D37C[];
+extern s16 D_8003D47C;
+extern s32 D_8004F754[];
 
 typedef struct
 {
@@ -138,7 +139,7 @@ void func_80024F60(AkaoChannelState* channel)
             pan &= 0xFF;
         }
 
-        if (D_8004F754 == 2)
+        if (D_8004F754[0] == 2)
         {
             channel->spu_volume_right = (lfo_pitch * D_8003D47C) >> 15;
             channel->spu_volume_left = channel->spu_volume_right;

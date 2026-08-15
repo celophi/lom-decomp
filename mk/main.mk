@@ -158,11 +158,6 @@ SRCS_G0 := \
 	src/akao_cmd.c \
 	src/field_runtime.c \
 	src/decomp9.c \
-	src/decomp9-func_80024F60.c \
-	src/decomp9-func_800253E8.c \
-	src/decomp9-func_80025498.c \
-	src/decomp9-func_80025760.c \
-	src/decomp9-func_800257E0.c \
 	src/main.c
 
 SRCS_G4 := \
@@ -173,7 +168,12 @@ SRCS_G4 := \
 	src/controller.c \
 	src/decomp10.c \
 	src/decomp9-func_80024B00.c \
+	src/decomp9-func_80024F60.c \
+	src/decomp9-func_800253E8.c \
+	src/decomp9-func_80025498.c \
 	src/decomp9-func_80025500.c \
+	src/decomp9-func_80025760.c \
+	src/decomp9-func_800257E0.c \
 	src/decomp9-func_800258B8.c \
 	src/decomp11.c
 

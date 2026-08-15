@@ -16,7 +16,7 @@ typedef struct VoiceAllocEntry {
 extern SeqHead* g_akao_seq_channel0;
 extern SeqHead* g_akao_seq_channel1;
 extern VoiceAllocEntry D_8004C1A0[];
-extern u8 g_akao_seq_channels;
+extern u8 g_akao_seq_channels[];
 
 void func_80025760(u8*, s32);
 
@@ -72,7 +72,7 @@ void func_800257E0(u32 mask)
                 func_8002611C(i, value);
 
                 if (*value == 0) {
-                    func_80025760(&g_akao_seq_channels, i);
+                    func_80025760(g_akao_seq_channels, i);
                 }
             }
 
