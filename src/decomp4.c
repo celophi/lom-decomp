@@ -1,5 +1,5 @@
 #include "decomp4.h"
-#include "decomp9.h"
+#include "akao_voice.h"
 
 
 /* Defined in the sdata segment (asm/data/sdata.data.s) at their gp-relative
@@ -459,7 +459,7 @@ void akao_irq_handler(void)
     /* Third conditional */
     if (((D_8004F758 | g_akao_seq_channel0->note_on_mask | D_8004D408) != 0) || ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->note_on_mask != 0)))
     {
-        func_800258B8(D_8004D408);
+        akao_flush_voice_updates(D_8004D408);
     }
 
     /* Fourth conditional */
@@ -3386,8 +3386,9 @@ void akao_seq_op_skip_operand_byte(AkaoChannelState* arg0)
  *        voice 0, ignoring the reserved voice base.
  *
  * Sets the channel's bit in the song-state mask at offset 0x08. When
- * func_80025500 keys a note on, it passes @c (song->w04.song.voice_alloc_low_mask & channel_mask) to the
- * voice allocator func_80025498: a set bit makes the free-voice search start at
+ * When akao_process_sequence_voice_updates keys a note on, it passes
+ * @c (song->w04.song.voice_alloc_low_mask & channel_mask) to the voice
+ * allocator akao_find_free_voice. A set bit makes the free-voice search start at
  * voice 0 instead of at @c song->unk38, the reserved base installed by extended
  * opcode FE 10 and cleared by FE 11. func_8002D0DC (FE 1E) clears the same bit,
  * and akao_release_channels clears it for every released channel.

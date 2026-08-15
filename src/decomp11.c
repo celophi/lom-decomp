@@ -414,7 +414,7 @@ void func_8002D4D8(s32 voice, s32 mode, u32 start, u32 end)
      * symbolic load that maspsx expands into a same-register `lui/lw` pair. The
      * target uses large-data %hi/%lo addressing with a compiler-split high
      * register (a fresh reg for the %hi part), which the unknown-size array form
-     * reproduces. See src/decomp9-func_800258B8.c for the same trick.
+     * reproduces. See akao_flush_voice_updates for the same trick.
      */
     extern s32 g_akao_xa_pan_current[];
     extern u32 D_8004F7B8[];
