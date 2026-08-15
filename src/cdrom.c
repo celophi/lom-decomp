@@ -2825,7 +2825,7 @@ void cdrom_defer_data_ready(void)
  * @warning No bounds checking on back-reference offsets (0xFC–0xFE); a malformed
  *          stream can read before the start of the destination buffer.
  *
- * @see decomp.me: (99.78%) https://decomp.me/scratch/MlH6P
+ * @see decomp.me: (100%) https://decomp.me/scratch/1Feag
  */
 
 s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
