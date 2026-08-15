@@ -4142,3 +4142,66 @@ void func_801465FC(GosubImageClutPos* pos, u8* archive)
     rect.h = dims[1];
     LoadImage(&rect, off8 - (-(s32)archive) + 0x14);
 }
+
+extern s32 D_800F2180[];
+extern u8 D_800F1CD0[];
+
+/**
+ * @brief Draw a table row from D_800F1CD0[row_idx] into two column buffers
+ *        via the still-unmatched func_80146860, then finalize with
+ *        func_8014680C.
+ * @param arg_prim Initial prim cursor.
+ * @param ot Ordering table, passed through unchanged to every call.
+ * @param x First coordinate base (column offset added to it below).
+ * @param y Second coordinate base (column offset added to it below).
+ * @param table_idx Index into D_800F2180[]; also offsets the header call's
+ *                   3rd arg (table_idx + 0x13) and supplies table_val, the
+ *                   loop calls' constant last arg.
+ * @param row_idx Row index into D_800F1CD0 (stride 88 bytes: count byte,
+ *                 four header fields, then a repeating {s8, s8, s16} tuple
+ *                 array of `count` entries).
+ * @return Advanced prim cursor (func_8014680C's return).
+ * @note WIP: 91.94% (57/87 exact), frame matches. Residual is a CSE/expand
+ *       ordering gap on `D_800F1CD0 + row_idx*11*8` (target computes
+ *       &D_800F1CD0 before the row_idx*88 multiply chain, this compiles it
+ *       after) - confirmed at expand time via tmp.c.rtl, NOT a sched1 issue
+ *       (sched_oracle block 0 fully satisfied). See working/func_801466B4/
+ *       STATUS.md for the full retired-class list before re-probing.
+ * @see decomp.me (91.94% WIP)
+ */
+s32 func_801466B4(s32 arg_prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_idx)
+{
+    u8* entry;
+    s32 table_val;
+    s16 field4;
+    s16 field6;
+    s8 field8;
+    s8 field9;
+    s32 col_x;
+    s32 col_y;
+    u8* item;
+    s32 i;
+    s32 prim;
+
+    table_val = D_800F2180[table_idx];
+    entry = D_800F1CD0 + row_idx * 11 * 8;
+
+    field4 = *(s16*)(entry + 4);
+    field6 = *(s16*)(entry + 6);
+    field8 = *(s8*)(entry + 8);
+    field9 = *(s8*)(entry + 9);
+
+    col_x = x + field4 * 8;
+    col_y = y + field6 * 8;
+
+    prim = func_80146860(arg_prim, ot, table_idx + 0x13, col_x + field8 * 8, col_y + field9 * 8, 9);
+
+    field6 = 0;
+    for (i = field6; i < entry[field6]; i++)
+    {
+        item = entry + 0xC + i * 4;
+        prim = func_80146860(prim, ot, *(s16*)(item + 2), col_x + *(s8*)(item + field6) * 16, col_y + *(s8*)(item + 1) * 16, table_val);
+    }
+
+    return func_8014680C(prim, ot);
+}
