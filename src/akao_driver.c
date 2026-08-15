@@ -1,6 +1,6 @@
 #include "akao_driver.h"
 #include "akao.h"
-#include "decomp9.h"
+#include "akao_voice.h"
 #include "psyq/libspu.h"
 
 void func_80028E34(int, volatile short, void*, int);

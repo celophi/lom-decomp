@@ -233,7 +233,7 @@ typedef struct AkaoArticulation
  *
  * @note This is now the single type for the block. It replaced 47 per-opcode
  *       ad-hoc structs in decomp4.c, @c SfxChannel and @c AkaoSFXState in
- *       decomp4.h, and @c AkaoChannelEffects in decomp9.c.
+ *       decomp4.h, and @c AkaoChannelEffects in akao_voice.c.
  *
  * @note Where the two roles disagree on a field's width or signedness the
  *       declaration follows whichever role reads the field, and the other

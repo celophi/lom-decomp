@@ -1,4 +1,4 @@
-#include "decomp9.h"
+#include "akao_voice.h"
 
 /** @brief LFO waveform sample or zero-pair relative-jump marker. */
 typedef struct

@@ -1,5 +1,5 @@
 #include "decomp4.h"
-#include "decomp9.h"
+#include "akao_voice.h"
 
 
 /* Defined in the sdata segment (asm/data/sdata.data.s) at their gp-relative

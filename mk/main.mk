@@ -165,7 +165,7 @@ SRCS_G4 := \
 	src/decomp4.c \
 	src/akao_driver.c \
 	src/controller.c \
-	src/decomp9.c \
+	src/akao_voice.c \
 	src/decomp11.c
 
 # Subset of SRCS_G4 (or any G4 object) whose original code uses bare

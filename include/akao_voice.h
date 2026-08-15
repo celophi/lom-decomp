@@ -1,5 +1,5 @@
-#ifndef _DECOMP9_H
-#define _DECOMP9_H
+#ifndef _AKAO_VOICE_H
+#define _AKAO_VOICE_H
 
 #include "akao_driver.h"
 
