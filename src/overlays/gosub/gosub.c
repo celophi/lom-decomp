@@ -4073,3 +4073,29 @@ void func_80146538(u8* dst, u8* src)
 
     dst[i] = 0;
 }
+
+typedef struct
+{
+    u16 unk0;
+    u16 unk2;
+    u16 unk4;
+    u16 unk6;
+} Unk801465FCArg;
+
+extern u8 D_80147058[];
+
+void func_801465FC(Unk801465FCArg* arg, u8* archive); /* extern */
+
+/**
+ * @see decomp.me (100%)
+ */
+void func_801465BC(void)
+{
+    Unk801465FCArg arg;
+
+    arg.unk0 = 0x140;
+    arg.unk2 = 0;
+    arg.unk4 = 0;
+    arg.unk6 = 0x1F2;
+    func_801465FC(&arg, D_80147058);
+}
