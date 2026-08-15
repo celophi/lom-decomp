@@ -1,39 +1,40 @@
 #include "decomp9.h"
 
+/** @brief LFO waveform sample or zero-pair relative-jump marker. */
 typedef struct
 {
-    s16 value;
-    s16 unk2;
+    s16 sample;
+    s16 marker;
     s16 relative_offset;
 } AkaoLfoSample;
 
 /** @brief Voice-allocation bookkeeping entry used by the AKAO mixer. */
-typedef struct VoiceAllocEntry
+typedef struct AkaoVoiceAllocation
 {
-    s32 unk0;
-    s16 unk4;
-    s16 unk6;
-} VoiceAllocEntry;
+    s32 unknown_0x00;
+    s16 envelope_level;
+    s16 unknown_0x06;
+} AkaoVoiceAllocation;
 
-/** @brief Minimal sequence-header view used by the voice-release pass. */
-typedef struct SeqHead
+/** @brief Sequence voice masks used while refreshing SPU allocations. */
+typedef struct AkaoSequenceVoiceMasks
 {
-    s32 unk0;
-    u32 mask4;
-    u32 unk8;
-    u32 maskC;
-} SeqHead;
+    s32 unknown_0x00;
+    u32 active_channel_mask;
+    u32 unknown_0x08;
+    u32 static_voice_mask;
+} AkaoSequenceVoiceMasks;
 
 extern s16 D_8003D37C[];
 extern s16 D_8003D47C;
 extern s32 D_8004F754[];
-extern VoiceAllocEntry D_8004C1A0[];
+extern AkaoVoiceAllocation D_8004C1A0[];
 extern AkaoChannelState *D_8004F7C0[];
 extern s32 D_8004F76C[];
 extern s32 D_8004D404[];
 extern s32 D_8004F834[];
 
-extern void func_80025760(u8 *channels, s32 voice);
+extern void akao_clear_voice_assignment(u8 *primary_channels, s32 voice_index);
 extern void func_80025F48(s32 *dest, s32 target, s32 current, s32 step);
 extern void func_8002613C(s32 arg0, s32 arg1);
 extern void func_800260CC(u16 arg0);
@@ -606,12 +607,12 @@ void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 i
         if ((channel->pitch_lfo_delay_ticks == 0) && (channel->pitch_lfo_restart != 1))
         {
             var_a0 = (AkaoLfoSample*)channel->unk1C;
-            if ((var_a0->value == 0) && (var_a0->unk2 == 0))
+            if ((var_a0->sample == 0) && (var_a0->marker == 0))
             {
                 var_a0 = (AkaoLfoSample*)(((u8*)var_a0) + (var_a0->relative_offset * 2));
             }
 
-            temp_a3 = ((s32)(channel->pitch_lfo_depth_scaled * var_a0->value)) >> 0x10;
+            temp_a3 = ((s32)(channel->pitch_lfo_depth_scaled * var_a0->sample)) >> 0x10;
             if (temp_a3 != channel->pitch_lfo_value)
             {
                 channel->pitch_lfo_value = (s16)temp_a3;
@@ -633,13 +634,13 @@ void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 i
         if ((channel->volume_lfo_delay_ticks == 0) && (channel->volume_lfo_restart != 1))
         {
             var_a0 = (AkaoLfoSample*)channel->tempo;
-            if ((var_a0->value == 0) && (var_a0->unk2 == 0))
+            if ((var_a0->sample == 0) && (var_a0->marker == 0))
             {
                 var_a0 = (AkaoLfoSample*)(((u8*)var_a0) + (var_a0->relative_offset * 2));
             }
 
             temp_a3 = (s32)((((s32)((((s32)(((s16*)(&channel->unk48))[1] * (channel->volume >> 8))) >> 7) * (channel->volume_lfo_depth >> 8))) << 9) >> 16);
-            temp_a3 = ((s32)(temp_a3 * var_a0->value)) >> 0xF;
+            temp_a3 = ((s32)(temp_a3 * var_a0->sample)) >> 0xF;
 
             if (temp_a3 != channel->volume_lfo_value)
             {
@@ -658,12 +659,12 @@ void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 i
         if (channel->pan_lfo_restart != 1)
         {
             var_a0 = (AkaoLfoSample*)channel->tempo_step;
-            if ((var_a0->value == 0) && (var_a0->unk2 == 0))
+            if ((var_a0->sample == 0) && (var_a0->marker == 0))
             {
                 var_a0 = (AkaoLfoSample*)(((u8*)var_a0) + (var_a0->relative_offset * 2));
             }
 
-            temp_a3 = ((s32)((((u16)channel->pan_lfo_depth) >> 8) * var_a0->value)) >> 0xF;
+            temp_a3 = ((s32)((((u16)channel->pan_lfo_depth) >> 8) * var_a0->sample)) >> 0xF;
 
             if (temp_a3 != channel->pan_lfo_value)
             {
@@ -689,25 +690,24 @@ void akao_tick_channel_effects(AkaoChannelState* channel, s32 channel_bit, s32 i
 }
 
 /**
- * @brief Advance the per-channel pitch/volume/pan LFOs and recompute the SPU
- *        volume and pitch registers for one AKAO sequencer channel.
+ * @brief Sample sequence-channel LFOs and recompute its pending SPU voice image.
  * @param channel Channel state to update.
- * @param channel_bit Channel mask supplied by the caller; unused here.
+ * @param channel_mask Channel bit retained by the original calling convention.
  */
-void func_80024B00(AkaoChannelState* channel, s32 channel_bit)
+void akao_update_sequence_channel_voice(AkaoChannelState* channel, s32 channel_mask)
 {
-    s32 flags;
-    s32 lfo_pitch;
-    s32 value;
-    s32 pan;
-    s32 pitch_value;
-    s32 pitch_mode;
-    s32 master_scale;
+    s32 effect_flags;
+    s32 scaled_volume;
+    s32 waveform_sample;
+    s32 pan_index;
+    s32 pitch_offset;
+    s32 update_mask;
+    s32 effect_value;
 
-    flags = channel->flags;
-    lfo_pitch = (((s16*)&channel->unk48)[1] * (channel->volume >> 8)) >> 7;
+    effect_flags = channel->flags;
+    scaled_volume = (((s16*)&channel->unk48)[1] * (channel->volume >> 8)) >> 7;
 
-    if (flags & 1)
+    if (effect_flags & 1)
     {
         if (channel->pitch_lfo_delay_ticks == 0)
         {
@@ -716,34 +716,34 @@ void func_80024B00(AkaoChannelState* channel, s32 channel_bit)
             {
                 channel->pitch_lfo_restart = *((u16*)((u8*)channel + 0xA6));
                 {
-                    AkaoLfoSample* cursor;
-                    s16* waveform;
+                    AkaoLfoSample* lfo_cursor;
+                    s16* lfo_samples;
 
-                    cursor = (AkaoLfoSample*)channel->unk1C;
-                    if ((cursor->value == 0) && (cursor->unk2 == 0))
+                    lfo_cursor = (AkaoLfoSample*)channel->unk1C;
+                    if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                     {
-                        channel->unk1C = (s32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                        channel->unk1C = (s32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
                     }
 
-                    waveform = (s16*)channel->unk1C;
-                    value = *waveform++;
-                    master_scale = ((s32)channel->pitch_lfo_depth_scaled * value) >> 16;
-                    channel->unk1C = (s32)waveform;
+                    lfo_samples = (s16*)channel->unk1C;
+                    waveform_sample = *lfo_samples++;
+                    effect_value = ((s32)channel->pitch_lfo_depth_scaled * waveform_sample) >> 16;
+                    channel->unk1C = (s32)lfo_samples;
                 }
-                if (master_scale != channel->pitch_lfo_value)
+                if (effect_value != channel->pitch_lfo_value)
                 {
-                    channel->pitch_lfo_value = master_scale;
+                    channel->pitch_lfo_value = effect_value;
                     channel->update_flags |= 0x10;
-                    if (master_scale >= 0)
+                    if (effect_value >= 0)
                     {
-                        channel->pitch_lfo_value = master_scale << 1;
+                        channel->pitch_lfo_value = effect_value << 1;
                     }
                 }
             }
         }
     }
 
-    if (flags & 2)
+    if (effect_flags & 2)
     {
         if (channel->volume_lfo_delay_ticks == 0)
         {
@@ -752,488 +752,493 @@ void func_80024B00(AkaoChannelState* channel, s32 channel_bit)
             {
                 channel->volume_lfo_restart = *((u16*)((u8*)channel + 0xBA));
                 {
-                    AkaoLfoSample* cursor;
-                    s16* waveform;
+                    AkaoLfoSample* lfo_cursor;
+                    s16* lfo_samples;
 
-                    cursor = (AkaoLfoSample*)channel->tempo;
-                    if ((cursor->value == 0) && (cursor->unk2 == 0))
+                    lfo_cursor = (AkaoLfoSample*)channel->tempo;
+                    if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                     {
-                        channel->tempo = (u32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                        channel->tempo = (u32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
                     }
 
-                    master_scale = (lfo_pitch * (channel->volume_lfo_depth >> 8) << 9) >> 16;
-                    waveform = (s16*)channel->tempo;
-                    value = *waveform++;
-                    master_scale = (master_scale * value) >> 15;
-                    channel->tempo = (u32)waveform;
+                    effect_value = (scaled_volume * (channel->volume_lfo_depth >> 8) << 9) >> 16;
+                    lfo_samples = (s16*)channel->tempo;
+                    waveform_sample = *lfo_samples++;
+                    effect_value = (effect_value * waveform_sample) >> 15;
+                    channel->tempo = (u32)lfo_samples;
                 }
-                if (master_scale != channel->volume_lfo_value)
+                if (effect_value != channel->volume_lfo_value)
                 {
-                    channel->volume_lfo_value = master_scale;
+                    channel->volume_lfo_value = effect_value;
                     channel->update_flags |= 3;
                 }
             }
         }
     }
 
-    if (flags & 4)
+    if (effect_flags & 4)
     {
         channel->pan_lfo_restart--;
         if (channel->pan_lfo_restart == 0)
         {
             channel->pan_lfo_restart = channel->pan_lfo_period;
             {
-                AkaoLfoSample* cursor;
-                s16* waveform;
+                AkaoLfoSample* lfo_cursor;
+                s16* lfo_samples;
 
-                cursor = (AkaoLfoSample*)channel->tempo_step;
-                if ((cursor->value == 0) && (cursor->unk2 == 0))
+                lfo_cursor = (AkaoLfoSample*)channel->tempo_step;
+                if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                 {
-                    channel->tempo_step = (s32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                    channel->tempo_step = (s32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
                 }
 
-                waveform = (s16*)channel->tempo_step;
-                value = *waveform++;
-                master_scale = ((channel->pan_lfo_depth >> 8) * value) >> 15;
-                channel->tempo_step = (s32)waveform;
+                lfo_samples = (s16*)channel->tempo_step;
+                waveform_sample = *lfo_samples++;
+                effect_value = ((channel->pan_lfo_depth >> 8) * waveform_sample) >> 15;
+                channel->tempo_step = (s32)lfo_samples;
             }
-            if (master_scale != channel->pan_lfo_value)
+            if (effect_value != channel->pan_lfo_value)
             {
-                channel->pan_lfo_value = master_scale;
+                channel->pan_lfo_value = effect_value;
                 channel->update_flags |= 3;
             }
         }
     }
 
-    if (flags & 0x20)
+    if (effect_flags & 0x20)
     {
-        lfo_pitch = ((s16)(*((u16*)((u8*)channel - 0xC)) << 1) * (channel->volume >> 8)) >> 7;
+        scaled_volume = ((s16)(*((u16*)((u8*)channel - 0xC)) << 1) * (channel->volume >> 8)) >> 7;
         channel->update_flags |= 3;
     }
 
-    pitch_mode = channel->update_flags & 3;
-    if (pitch_mode)
+    update_mask = channel->update_flags & 3;
+    if (update_mask)
     {
-        lfo_pitch += channel->volume_lfo_value;
-        lfo_pitch = (lfo_pitch * (*((u16*)((u8*)g_akao_seq_channel0 + 0x52)) & 0x7F)) >> 7;
-        pan = ((channel->pan >> 8) + channel->pan_lfo_value) & 0xFF;
+        scaled_volume += channel->volume_lfo_value;
+        scaled_volume = (scaled_volume * (*((u16*)((u8*)g_akao_seq_channel0 + 0x52)) & 0x7F)) >> 7;
+        pan_index = ((channel->pan >> 8) + channel->pan_lfo_value) & 0xFF;
 
         if (D_8004F754[0] == 2)
         {
-            channel->spu_volume_right = (lfo_pitch * D_8003D47C) >> 15;
+            channel->spu_volume_right = (scaled_volume * D_8003D47C) >> 15;
             channel->spu_volume_left = channel->spu_volume_right;
         }
         else
         {
-            channel->spu_volume_left = (lfo_pitch * D_8003D37C[pan]) >> 15;
-            channel->spu_volume_right = (lfo_pitch * D_8003D37C[pan ^ 0xFF]) >> 15;
+            channel->spu_volume_left = (scaled_volume * D_8003D37C[pan_index]) >> 15;
+            channel->spu_volume_right = (scaled_volume * D_8003D37C[pan_index ^ 0xFF]) >> 15;
         }
     }
 
-    pitch_mode = flags & 0x10;
-    if (pitch_mode)
+    update_mask = effect_flags & 0x10;
+    if (update_mask)
     {
-        master_scale = *((s16*)((u8*)channel + 0x32));
-        pitch_value = *((u16*)((u8*)channel - 0xC)) + channel->pitch_lfo_value + master_scale;
-        master_scale = g_akao_mastervol_acc & 0xFF0000;
-        if (master_scale != 0)
+        effect_value = *((s16*)((u8*)channel + 0x32));
+        pitch_offset = *((u16*)((u8*)channel - 0xC)) + channel->pitch_lfo_value + effect_value;
+        effect_value = g_akao_mastervol_acc & 0xFF0000;
+        if (effect_value != 0)
         {
-            master_scale >>= 16;
-            if (master_scale < 0x80)
+            effect_value >>= 16;
+            if (effect_value < 0x80)
             {
-                pitch_value += (pitch_value * master_scale) >> 7;
+                pitch_offset += (pitch_offset * effect_value) >> 7;
             }
             else
             {
-                pitch_value = (pitch_value * master_scale) >> 8;
+                pitch_offset = (pitch_offset * effect_value) >> 8;
             }
         }
-        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_value) & 0x3FFF;
+        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_offset) & 0x3FFF;
         channel->update_flags |= 0x10;
         return;
     }
 
     if (channel->update_flags & 0x10)
     {
-        pitch_value = channel->pitch + channel->pitch_lfo_value + *((s16*)((u8*)channel + 0x32));
-        master_scale = g_akao_mastervol_acc & 0xFF0000;
-        if (master_scale != 0)
+        pitch_offset = channel->pitch + channel->pitch_lfo_value + *((s16*)((u8*)channel + 0x32));
+        effect_value = g_akao_mastervol_acc & 0xFF0000;
+        if (effect_value != 0)
         {
-            master_scale >>= 16;
-            if (master_scale < 0x80)
+            effect_value >>= 16;
+            if (effect_value < 0x80)
             {
-                pitch_value += (pitch_value * master_scale) >> 7;
+                pitch_offset += (pitch_offset * effect_value) >> 7;
             }
             else
             {
-                pitch_value = (pitch_value * master_scale) >> 8;
+                pitch_offset = (pitch_offset * effect_value) >> 8;
             }
         }
-        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_value) & 0x3FFF;
+        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_offset) & 0x3FFF;
     }
 }
 
 /**
- * @brief Update pitch, volume, and pan effects for one SFX channel.
+ * @brief Sample SFX-channel LFOs and recompute its pending SPU voice image.
  * @param channel Channel state to update.
- * @param channel_bit Channel mask supplied by the caller; unused here.
+ * @param channel_mask Channel bit retained by the original calling convention.
  */
-void func_80024F60(AkaoChannelState* channel, s32 channel_bit)
+void akao_update_sfx_channel_voice(AkaoChannelState* channel, s32 channel_mask)
 {
-    s32 flags;
-    s32 lfo_pitch;
-    s32 value;
-    s32 pan;
-    s32 pitch_value;
-    s32 master_scale;
-    s32 next_flags;
+    s32 effect_flags;
+    s32 scaled_volume;
+    s32 waveform_sample;
+    s32 pan_index;
+    s32 pitch_offset;
+    s32 effect_value;
+    s32 unused_flags;
 
-    flags = channel->flags;
-    lfo_pitch = (((s16*)&channel->unk48)[1] * (channel->volume >> 8)) >> 7;
+    effect_flags = channel->flags;
+    scaled_volume = (((s16*)&channel->unk48)[1] * (channel->volume >> 8)) >> 7;
 
-    if (flags & 1)
+    if (effect_flags & 1)
     {
         channel->pitch_lfo_restart--;
         if (channel->pitch_lfo_restart == 0)
         {
                 channel->pitch_lfo_restart = *((u16*)((u8*)channel + 0xA6));
                 {
-                    AkaoLfoSample* cursor;
-                    s16* waveform;
+                    AkaoLfoSample* lfo_cursor;
+                    s16* lfo_samples;
 
-                    cursor = (AkaoLfoSample*)channel->unk1C;
-                    if ((cursor->value == 0) && (cursor->unk2 == 0))
+                    lfo_cursor = (AkaoLfoSample*)channel->unk1C;
+                    if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                     {
-                        channel->unk1C = (s32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                        channel->unk1C = (s32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
                     }
 
-                    waveform = (s16*)channel->unk1C;
-                    value = *waveform++;
-                    master_scale = ((s32)channel->pitch_lfo_depth_scaled * value) >> 16;
-                    channel->unk1C = (s32)waveform;
+                    lfo_samples = (s16*)channel->unk1C;
+                    waveform_sample = *lfo_samples++;
+                    effect_value = ((s32)channel->pitch_lfo_depth_scaled * waveform_sample) >> 16;
+                    channel->unk1C = (s32)lfo_samples;
                 }
-                if (master_scale != channel->pitch_lfo_value)
+                if (effect_value != channel->pitch_lfo_value)
                 {
-                    channel->pitch_lfo_value = master_scale;
+                    channel->pitch_lfo_value = effect_value;
                     channel->update_flags |= 0x10;
-                    if (master_scale >= 0)
+                    if (effect_value >= 0)
                     {
-                        channel->pitch_lfo_value = master_scale << 1;
+                        channel->pitch_lfo_value = effect_value << 1;
                     }
             }
         }
     }
 
-    if (flags & 2)
+    if (effect_flags & 2)
     {
         channel->volume_lfo_restart--;
         if (channel->volume_lfo_restart == 0)
         {
                 channel->volume_lfo_restart = *((u16*)((u8*)channel + 0xBA));
                 {
-                    AkaoLfoSample* cursor;
-                    s16* waveform;
+                    AkaoLfoSample* lfo_cursor;
+                    s16* lfo_samples;
 
-                    cursor = (AkaoLfoSample*)channel->tempo;
-                    if ((cursor->value == 0) && (cursor->unk2 == 0))
+                    lfo_cursor = (AkaoLfoSample*)channel->tempo;
+                    if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                     {
-                        channel->tempo = (u32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                        channel->tempo = (u32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
                     }
 
-                    master_scale = (lfo_pitch * (channel->volume_lfo_depth >> 8) << 9) >> 16;
-                    waveform = (s16*)channel->tempo;
-                    value = *waveform++;
-                    master_scale = (master_scale * value) >> 15;
-                    channel->tempo = (u32)waveform;
+                    effect_value = (scaled_volume * (channel->volume_lfo_depth >> 8) << 9) >> 16;
+                    lfo_samples = (s16*)channel->tempo;
+                    waveform_sample = *lfo_samples++;
+                    effect_value = (effect_value * waveform_sample) >> 15;
+                    channel->tempo = (u32)lfo_samples;
                 }
-                if (master_scale != channel->volume_lfo_value)
+                if (effect_value != channel->volume_lfo_value)
                 {
-                    channel->volume_lfo_value = master_scale;
+                    channel->volume_lfo_value = effect_value;
                     channel->update_flags |= 3;
             }
         }
     }
 
-    if (flags & 4)
+    if (effect_flags & 4)
     {
         channel->pan_lfo_restart--;
         if (channel->pan_lfo_restart == 0)
         {
             channel->pan_lfo_restart = channel->pan_lfo_period;
             {
-                AkaoLfoSample* cursor;
-                s16* waveform;
+                AkaoLfoSample* lfo_cursor;
+                s16* lfo_samples;
 
-                cursor = (AkaoLfoSample*)channel->tempo_step;
-                if ((cursor->value == 0) && (cursor->unk2 == 0))
+                lfo_cursor = (AkaoLfoSample*)channel->tempo_step;
+                if ((lfo_cursor->sample == 0) && (lfo_cursor->marker == 0))
                 {
-                    channel->tempo_step = (s32)(((u8*)cursor) + (cursor->relative_offset * 2));
+                    channel->tempo_step = (s32)(((u8*)lfo_cursor) + (lfo_cursor->relative_offset * 2));
                 }
 
-                waveform = (s16*)channel->tempo_step;
-                value = *waveform++;
-                master_scale = ((channel->pan_lfo_depth >> 8) * value) >> 15;
-                channel->tempo_step = (s32)waveform;
+                lfo_samples = (s16*)channel->tempo_step;
+                waveform_sample = *lfo_samples++;
+                effect_value = ((channel->pan_lfo_depth >> 8) * waveform_sample) >> 15;
+                channel->tempo_step = (s32)lfo_samples;
             }
-            if (master_scale != channel->pan_lfo_value)
+            if (effect_value != channel->pan_lfo_value)
             {
-                channel->pan_lfo_value = master_scale;
+                channel->pan_lfo_value = effect_value;
                 channel->update_flags |= 3;
             }
         }
     }
 
-    if (flags & 0x20)
+    if (effect_flags & 0x20)
     {
-        lfo_pitch = ((s16)(*((u16*)((u8*)channel - 0xC)) << 1) * (channel->volume >> 8)) >> 7;
+        scaled_volume = ((s16)(*((u16*)((u8*)channel - 0xC)) << 1) * (channel->volume >> 8)) >> 7;
         channel->update_flags |= 3;
     }
 
     if (channel->update_flags & 3)
     {
-        lfo_pitch += channel->volume_lfo_value;
+        scaled_volume += channel->volume_lfo_value;
         if (channel->tempo_acc & 0x02000000)
         {
-            pan = 0x80;
+            pan_index = 0x80;
         }
         else
         {
-            s32 pan_base;
-            lfo_pitch = (lfo_pitch * (s8)(channel->volume_scale >> 8)) >> 7;
-            pan_base = ((channel->pan + channel->pan_bias) >> 8) + channel->pan_lfo_value;
-            pan = pan_base + 0x80;
-            pan &= 0xFF;
+            s32 biased_pan;
+            scaled_volume = (scaled_volume * (s8)(channel->volume_scale >> 8)) >> 7;
+            biased_pan = ((channel->pan + channel->pan_bias) >> 8) + channel->pan_lfo_value;
+            pan_index = biased_pan + 0x80;
+            pan_index &= 0xFF;
         }
 
         if (D_8004F754[0] == 2)
         {
-            channel->spu_volume_right = (lfo_pitch * D_8003D47C) >> 15;
+            channel->spu_volume_right = (scaled_volume * D_8003D47C) >> 15;
             channel->spu_volume_left = channel->spu_volume_right;
         }
         else
         {
-            channel->spu_volume_left = (lfo_pitch * D_8003D37C[pan]) >> 15;
-            channel->spu_volume_right = (lfo_pitch * D_8003D37C[pan ^ 0xFF]) >> 15;
+            channel->spu_volume_left = (scaled_volume * D_8003D37C[pan_index]) >> 15;
+            channel->spu_volume_right = (scaled_volume * D_8003D37C[pan_index ^ 0xFF]) >> 15;
         }
     }
 
-    if (flags & 0x10)
+    if (effect_flags & 0x10)
     {
-        master_scale = *((s16*)((u8*)channel + 0x32));
-        pitch_value = *((u16*)((u8*)channel - 0xC)) + channel->pitch_lfo_value + master_scale;
+        effect_value = *((s16*)((u8*)channel + 0x32));
+        pitch_offset = *((u16*)((u8*)channel - 0xC)) + channel->pitch_lfo_value + effect_value;
         if (!(channel->tempo_acc & 0x02000000))
         {
-            master_scale = channel->noise_mask & 0xFF00;
-            if (master_scale != 0)
+            effect_value = channel->noise_mask & 0xFF00;
+            if (effect_value != 0)
             {
-                master_scale >>= 8;
-                if (master_scale < 0x80)
+                effect_value >>= 8;
+                if (effect_value < 0x80)
                 {
-                    pitch_value += (pitch_value * master_scale) >> 7;
+                    pitch_offset += (pitch_offset * effect_value) >> 7;
                 }
                 else
                 {
-                    pitch_value = (pitch_value * master_scale) >> 8;
+                    pitch_offset = (pitch_offset * effect_value) >> 8;
                 }
             }
         }
-        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_value) & 0x3FFF;
+        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_offset) & 0x3FFF;
         channel->update_flags |= 0x10;
         return;
     }
 
     if (channel->update_flags & 0x10)
     {
-        pitch_value = channel->pitch + channel->pitch_lfo_value + *((s16*)((u8*)channel + 0x32));
+        pitch_offset = channel->pitch + channel->pitch_lfo_value + *((s16*)((u8*)channel + 0x32));
         if (!(channel->tempo_acc & 0x02000000))
         {
-            master_scale = channel->noise_mask & 0xFF00;
-            if (master_scale != 0)
+            effect_value = channel->noise_mask & 0xFF00;
+            if (effect_value != 0)
             {
-                master_scale >>= 8;
-                if (master_scale < 0x80)
+                effect_value >>= 8;
+                if (effect_value < 0x80)
                 {
-                    pitch_value += (pitch_value * master_scale) >> 7;
+                    pitch_offset += (pitch_offset * effect_value) >> 7;
                 }
                 else
                 {
-                    pitch_value = (pitch_value * master_scale) >> 8;
+                    pitch_offset = (pitch_offset * effect_value) >> 8;
                 }
             }
         }
-        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_value) & 0x3FFF;
+        channel->spu_pitch = (*((u16*)((u8*)channel + 0x54)) + pitch_offset) & 0x3FFF;
     }
 }
 
 /**
  * @brief Select and release the quietest allocated voice.
- * @param arg0 Nonzero to search from voice zero.
+ * @param ignore_voice_reserve Nonzero to include voices below the reserve floor.
  * @return Selected voice index, or 0x18 when no voice is available.
  */
-s32 func_800253E8(s32 arg0)
+s32 akao_steal_quietest_voice(s32 ignore_voice_reserve)
 {
-    s32 index;
-    u16 best_value;
-    s32 best_index;
-    VoiceAllocEntry* entry;
+    s32 voice_index;
+    u16 quietest_level;
+    s32 quietest_voice;
+    AkaoVoiceAllocation* allocation;
 
-    if (arg0 != 0)
+    if (ignore_voice_reserve != 0)
     {
-        index = 0;
+        voice_index = 0;
     }
     else
     {
-        index = g_akao_seq_channel0->voice_alloc_base;
+        voice_index = g_akao_seq_channel0->voice_alloc_base;
     }
 
-    best_value = 0x7FFF;
-    best_index = 0x18;
-    entry = &D_8004C1A0[index];
+    quietest_level = 0x7FFF;
+    quietest_voice = 0x18;
+    allocation = &D_8004C1A0[voice_index];
 
     do
     {
-        if (entry->unk4 < (s16)best_value)
+        if (allocation->envelope_level < (s16)quietest_level)
         {
-            best_value = (u16)entry->unk4;
-            best_index = index;
+            quietest_level = (u16)allocation->envelope_level;
+            quietest_voice = voice_index;
         }
-        index++;
-        entry++;
-    } while (index < 0x18);
+        voice_index++;
+        allocation++;
+    } while (voice_index < 0x18);
 
-    if ((s16)best_value == 0x7FFF)
+    if ((s16)quietest_level == 0x7FFF)
     {
         return 0x18;
     }
 
-    func_80025760(g_akao_seq_channels, best_index);
-    return best_index;
+    akao_clear_voice_assignment(g_akao_seq_channels, quietest_voice);
+    return quietest_voice;
 }
 
 /**
  * @brief Find the first unallocated voice in the requested voice range.
- * @param arg0 Nonzero to search from voice zero.
+ * @param ignore_voice_reserve Nonzero to include voices below the reserve floor.
  * @return Available voice index, or 0x18 when none is available.
  */
-s32 func_80025498(s32 arg0)
+s32 akao_find_free_voice(s32 ignore_voice_reserve)
 {
-    VoiceAllocEntry* entry;
+    AkaoVoiceAllocation* allocation;
 
-    if (arg0 != 0)
+    if (ignore_voice_reserve != 0)
     {
-        arg0 = 0;
+        ignore_voice_reserve = 0;
     }
     else
     {
-        arg0 = g_akao_seq_channel0->voice_alloc_base;
+        ignore_voice_reserve = g_akao_seq_channel0->voice_alloc_base;
     }
 
-    entry = &D_8004C1A0[arg0];
-    if (entry->unk4 != 0)
+    allocation = &D_8004C1A0[ignore_voice_reserve];
+    if (allocation->envelope_level != 0)
     {
-        arg0++;
+        ignore_voice_reserve++;
         while (1)
         {
-            if (arg0 >= 0x18)
+            if (ignore_voice_reserve >= 0x18)
             {
                 break;
             }
 
-            entry++;
-            arg0++;
-            if (entry->unk4 != 0)
+            allocation++;
+            ignore_voice_reserve++;
+            if (allocation->envelope_level != 0)
             {
                 continue;
             }
 
-            arg0--;
+            ignore_voice_reserve--;
             break;
         }
     }
 
-    return arg0;
+    return ignore_voice_reserve;
 }
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/wFlR3
+ * @brief Recompute and commit pending voice updates for sequence channels.
+ * @param channels First channel corresponding to channel_mask bit zero.
+ * @param channel_mask Channels whose pending voice state must be processed.
+ * @param static_voice_mask Channels bound to their matching SPU voice index.
+ * @param key_on_voice_mask Accumulated SPU voices to key on after processing.
+ * @see decomp.me (100%) https://decomp.me/scratch/wFlR3
  */
-void func_80025500(AkaoChannelState *channel, s32 channel_mask, s32 static_voice_mask, u32 *voice_mask)
+void akao_process_sequence_voice_updates(AkaoChannelState *channels, s32 channel_mask, s32 static_voice_mask, u32 *key_on_voice_mask)
 {
-  s32 bit;
+  s32 channel_bit;
   s32 channel_index;
-  s32 voice;
-  s32 key_on_mask;
-  s32 one;
-  unsigned char new_var;
-  bit = 1;
+  s32 voice_index;
+  s32 pending_key_on_mask;
+  s32 voice_bit;
+  unsigned char unassigned_voice;
+  channel_bit = 1;
   channel_index = 0;
-  one = bit;
-  key_on_mask = channel_mask & g_akao_seq_channel0->w04.song.key_on_mask;
+  voice_bit = channel_bit;
+  pending_key_on_mask = channel_mask & g_akao_seq_channel0->w04.song.key_on_mask;
   do
   {
-    new_var = 0x18U;
-    if (channel_mask & bit)
+    unassigned_voice = 0x18U;
+    if (channel_mask & channel_bit)
     {
-      func_80024B00(channel, bit);
-      if (channel->update_flags != 0)
+      akao_update_sequence_channel_voice(channels, channel_bit);
+      if (channels->update_flags != 0)
       {
-        if (D_8003EC6C & bit)
+        if (D_8003EC6C & channel_bit)
         {
-          channel->spu_volume_right = 0;
-          channel->spu_volume_left = 0;
+          channels->spu_volume_right = 0;
+          channels->spu_volume_left = 0;
         }
-        if (key_on_mask & bit)
+        if (pending_key_on_mask & channel_bit)
         {
-          if (static_voice_mask & bit)
+          if (static_voice_mask & channel_bit)
           {
-            *voice_mask |= one << channel_index;
-            channel->voice = channel_index;
+            *key_on_voice_mask |= voice_bit << channel_index;
+            channels->voice = channel_index;
           }
           else
           {
-            s32 use_low;
-            use_low = (g_akao_seq_channel0->w04.song.voice_alloc_low_mask & bit) != 0;
-            voice = func_80025498(use_low);
-            if (voice == 0x18)
+            s32 ignore_voice_reserve;
+            ignore_voice_reserve = (g_akao_seq_channel0->w04.song.voice_alloc_low_mask & channel_bit) != 0;
+            voice_index = akao_find_free_voice(ignore_voice_reserve);
+            if (voice_index == 0x18)
             {
               g_akao_seq_channel0->seq_cursor = (u8 *) (((u32) g_akao_seq_channel0->seq_cursor) | 2);
-              voice = func_800253E8(use_low);
-              if (voice == 0x18)
+              voice_index = akao_steal_quietest_voice(ignore_voice_reserve);
+              if (voice_index == 0x18)
               {
-                channel->voice = voice;
+                channels->voice = voice_index;
                 g_akao_seq_channel0->seq_cursor = (u8 *) (((u32) g_akao_seq_channel0->seq_cursor) | 1);
               }
               else
               {
-                *voice_mask |= one << voice;
-                channel->voice = voice;
-                D_8004C1A0[voice].unk4 = 0x7FFF;
+                *key_on_voice_mask |= voice_bit << voice_index;
+                channels->voice = voice_index;
+                D_8004C1A0[voice_index].envelope_level = 0x7FFF;
               }
             }
             else
             {
-              *voice_mask |= one << voice;
-              channel->voice = voice;
-              D_8004C1A0[voice].unk4 = 0x7FFF;
+              *key_on_voice_mask |= voice_bit << voice_index;
+              channels->voice = voice_index;
+              D_8004C1A0[voice_index].envelope_level = 0x7FFF;
             }
           }
-          if (channel->voice < new_var)
+          if (channels->voice < unassigned_voice)
           {
-            spu_write_voice_params(channel->voice, (void *) (&channel->voice), channel->spu_volume_scale);
-            D_8004F7C0[channel->voice] = g_akao_seq_channel0;
+            spu_write_voice_params(channels->voice, (void *) (&channels->voice), channels->spu_volume_scale);
+            D_8004F7C0[channels->voice] = g_akao_seq_channel0;
             g_akao_driver_flags.unk8 |= 0x100;
           }
         }
         else
-          if (channel->voice < new_var)
+          if (channels->voice < unassigned_voice)
         {
-          spu_apply_voice_updates(channel->voice, (void *) (&channel->voice), channel->flags);
+          spu_apply_voice_updates(channels->voice, (void *) (&channels->voice), channels->flags);
         }
       }
-      channel_mask &= ~bit;
+      channel_mask &= ~channel_bit;
     }
-    bit <<= 1;
-    channel++;
+    channel_bit <<= 1;
+    channels++;
     channel_index++;
   }
   while (channel_mask != 0);
@@ -1241,115 +1246,111 @@ void func_80025500(AkaoChannelState *channel, s32 channel_mask, s32 static_voice
 
 /**
  * @brief Clear one voice assignment from active channel tables.
- * @param channels Base of the primary channel table.
- * @param voice Voice index to clear.
+ * @param primary_channels Base of the primary channel table.
+ * @param voice_index Voice index to clear.
  */
-void func_80025760(u8* channels, s32 voice)
+void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index)
 {
-    u32 i;
-    s32 none;
-    u8* pending;
+    u32 channel_index;
+    s32 unassigned_voice;
+    u8* pending_channels;
 
-    i = 0;
-    none = 0x18;
-    channels += 0xFC;
+    channel_index = 0;
+    unassigned_voice = 0x18;
+    primary_channels += 0xFC;
     do {
-        if (voice == *(s32*)channels) {
-            *(s32*)channels = none;
+        if (voice_index == *(s32*)primary_channels) {
+            *(s32*)primary_channels = unassigned_voice;
         }
-        i++;
-        channels += 0x118;
-    } while (i < 0x20U);
+        channel_index++;
+        primary_channels += 0x118;
+    } while (channel_index < 0x20U);
 
     if (g_akao_seq_channel1 != 0) {
-        i = 0;
-        pending = (u8*)(g_akao_pending_channels + 0xFC);
+        channel_index = 0;
+        pending_channels = (u8*)(g_akao_pending_channels + 0xFC);
         do {
-            if (voice == *(s32*)pending) {
-                *(s32*)pending = 0x18;
+            if (voice_index == *(s32*)pending_channels) {
+                *(s32*)pending_channels = 0x18;
             }
-            i++;
-            pending += 0x118;
-        } while (i < 0x20U);
+            channel_index++;
+            pending_channels += 0x118;
+        } while (channel_index < 0x20U);
     }
 }
 
 /**
  * @brief Refresh allocation state for every SPU voice.
- * @param mask Voices already reserved by the caller.
- * @param arg1 Secondary caller mask; unused by this function.
+ * @param reserved_voice_mask Voices already reserved by SFX or streaming audio.
+ * @param xa_voice_mask Streaming-audio voice mask retained by the original ABI.
  */
-void func_800257E0(u32 mask, s32 arg1)
+void akao_refresh_voice_allocation_state(u32 reserved_voice_mask, s32 xa_voice_mask)
 {
-    u32 used;
-    u32 i;
-    s32 one;
-    s32 max;
-    u32 m4;
-    u32 mC;
-    SeqHead* seq1;
+    u32 unavailable_voice_mask;
+    u32 voice_index;
+    s32 voice_bit;
+    s32 active_level;
+    u32 primary_active_mask;
+    u32 primary_static_mask;
+    AkaoSequenceVoiceMasks* secondary_masks;
 
-    m4 = ((SeqHead*)g_akao_seq_channel0)->mask4;
+    primary_active_mask = ((AkaoSequenceVoiceMasks*)g_akao_seq_channel0)->active_channel_mask;
     do {
-        mC = ((SeqHead*)g_akao_seq_channel0)->maskC;
+        primary_static_mask = ((AkaoSequenceVoiceMasks*)g_akao_seq_channel0)->static_voice_mask;
     } while (0);
 
-    seq1 = (SeqHead*)g_akao_seq_channel1;
+    secondary_masks = (AkaoSequenceVoiceMasks*)g_akao_seq_channel1;
 
     do {
-        used = (m4 & mC) | mask;
+        unavailable_voice_mask = (primary_active_mask & primary_static_mask) | reserved_voice_mask;
     } while (0);
 
-    if (seq1 != 0) {
-        used |= seq1->mask4 & seq1->maskC;
+    if (secondary_masks != 0) {
+        unavailable_voice_mask |= secondary_masks->active_channel_mask & secondary_masks->static_voice_mask;
     }
 
-    i = 0;
-    one = 1;
-    max = 0x7FFF;
+    voice_index = 0;
+    voice_bit = 1;
+    active_level = 0x7FFF;
 
     {
-        VoiceAllocEntry* entry;
-        s16* value;
+        AkaoVoiceAllocation* allocation;
+        s16* envelope_level;
 
-        entry = D_8004C1A0;
-        value = &entry->unk4;
+        allocation = D_8004C1A0;
+        envelope_level = &allocation->envelope_level;
 
         do {
-            s32 c0 = (used & (one << i)) != 0;
-            s32 c1 = (c0 != 0);
-            s32 c2 = (c1 != 0);
-            s32 c3 = (c2 != 0);
-            s32 c4 = (c3 != 0);
-            s32 c5 = (c4 != 0);
-            s32 c6 = (c5 != 0);
-            s32 c7 = (c6 != 0);
+            s32 is_unavailable0 = (unavailable_voice_mask & (voice_bit << voice_index)) != 0;
+            s32 is_unavailable1 = (is_unavailable0 != 0);
+            s32 is_unavailable2 = (is_unavailable1 != 0);
+            s32 is_unavailable3 = (is_unavailable2 != 0);
+            s32 is_unavailable4 = (is_unavailable3 != 0);
+            s32 is_unavailable5 = (is_unavailable4 != 0);
+            s32 is_unavailable6 = (is_unavailable5 != 0);
+            s32 is_unavailable7 = (is_unavailable6 != 0);
 
-            if (c7) {
-                *value = max;
+            if (is_unavailable7) {
+                *envelope_level = active_level;
             } else {
-                func_8002611C(i, value);
+                func_8002611C(voice_index, envelope_level);
 
-                if (*value == 0) {
-                    func_80025760(g_akao_seq_channels, i);
+                if (*envelope_level == 0) {
+                    akao_clear_voice_assignment(g_akao_seq_channels, voice_index);
                 }
             }
 
-            i++;
-            value = (s16*)((u8*)value + 8);
-        } while (i < 0x18U);
+            voice_index++;
+            envelope_level = (s16*)((u8*)envelope_level + 8);
+        } while (voice_index < 0x18U);
     }
 }
 
 /**
- * @brief Per-tick AKAO note-off / voice-deallocation pass: releases voices
- *        for notes no longer sounding on the song channel(s) and the SFX
- *        channel array, then applies pending SPU hardware updates (LFO
- *        recompute, key-off frequency, reverb/noise/pitch-mod fades, and
- *        key-on) gated by g_akao_driver_flags.unk8.
+ * @brief Flush pending sequence, SFX, and global SPU voice updates.
  * @note 99.97% match (gcc280_g4, 286/288 exact rows, +0 insns). The only
  *       residual is 2 argdiff rows: the master-state addiu/sw in the
- *       dealloc_mask1 block use s1 (sfx_channel) where the target uses v0.
+ *       secondary_update_mask block use s1 (sfx_channel) where the target uses v0.
  *       Shapes required to match, each measured via probe_variants:
  *       - array-form extern declarations above (+21 exact);
  *       - a SINGLE loop pointer with plain field accesses in the SFX loop:
@@ -1357,159 +1358,160 @@ void func_800257E0(u32 mask, s32 arg1)
  *         one reduced giv anchored at flags (channel+0x34), reproducing the
  *         target's second walker exactly. A hand-built second pointer makes
  *         the giv family anchor at +0xC8 and adds a third walker instead;
- *       - ONE variable (dealloc_mask0) reused for the channel-0 dealloc
- *         mask, the SFX active mask, and the driver update flags (+20): all
+ *       - ONE variable (work_mask) reused for the primary update mask, the SFX
+ *         active mask, and the driver update flags (+20): all
  *         three land in s3 like the target. Separate variables give each a
  *         different callee-saved reg;
- *       - `(static_voice_mask1 | mask)` inlined in both dealloc_mask0 and
- *         static_voice_mask0 (no combined_mask local, +10);
- *       - `dealloc_mask1 = 0` initialized before `static_voice_mask1 = 0`
- *         (+2); `key` as s32 not u16 (+3);
+ *       - `(secondary_static_voice_mask | reserved_voice_mask)` inlined in both work_mask and
+ *         primary_static_voice_mask (no combined_mask local, +10);
+ *       - `secondary_update_mask = 0` initialized before `secondary_static_voice_mask = 0`
+ *         (+2); `noise_frequency` as s32 not u16 (+3);
  *       - routing the master-state store through sfx_channel in the
- *         dealloc_mask1 block (+29): the early def raises sfx_channel's
- *         priority above bit (refs 12 vs 11, so it wins s1) and creates the
- *         sfx_channel x static_voice_mask0 conflict that forces
- *         static_voice_mask0 into s2 and static_voice_mask1 into s4. The
+ *         secondary_update_mask block (+29): the early def raises sfx_channel's
+ *         priority above sfx_channel_bit (refs 12 vs 11, so it wins s1) and creates the
+ *         sfx_channel x primary_static_voice_mask conflict that forces
+ *         primary_static_voice_mask into s2 and secondary_static_voice_mask into s4. The
  *         target emits that store from v0 (no sfx_channel def there), so the
  *         original produced the same allocation by some other means - that
  *         is the open 2-row residual.
- *       - fade block anchored at &D_8004F834 with `fade1 = fade0 - 1` and
+ *       - fade block anchored at &D_8004F834 with `effect_mask_base = effect_mask_center - 1` and
  *         relative loads, matching the target's addiu s2, s0, -4 shape.
+ * @param sfx_update_mask Caller SFX update mask retained by the original ABI.
  */
-void func_800258B8(void)
+void akao_flush_voice_updates(s32 sfx_update_mask)
 {
-    u32 voice_mask;
-    s32 mask;
-    s32 dealloc_mask1;
-    s32 static_voice_mask1;
-    s32 key_on_submask1;
-    s32 dealloc_mask0;
-    s32 static_voice_mask0;
-    s32 key_on_submask0;
-    s32 bit;
+    u32 key_on_voice_mask;
+    s32 reserved_voice_mask;
+    s32 secondary_update_mask;
+    s32 secondary_static_voice_mask;
+    s32 secondary_low_voice_mask;
+    s32 work_mask;
+    s32 primary_static_voice_mask;
+    s32 primary_low_voice_mask;
+    s32 sfx_channel_bit;
     AkaoChannelState *sfx_channel;
-    typeof(g_akao_seq_channel0->w04.song) *song_ptr;
-    AkaoChannelState *old_channel0;
-    s32 *fade0;
-    s32 *fade1;
-    s32 lfo_arg;
-    s32 key;
+    typeof(g_akao_seq_channel0->w04.song) *song_masks;
+    AkaoChannelState *secondary_song;
+    s32 *effect_mask_center;
+    s32 *effect_mask_base;
+    s32 master_volume;
+    s32 noise_frequency;
 
-    dealloc_mask1 = 0;
-    static_voice_mask1 = 0;
-    voice_mask = 0;
-    mask = (g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | D_8004F76C[0];
+    secondary_update_mask = 0;
+    secondary_static_voice_mask = 0;
+    key_on_voice_mask = 0;
+    reserved_voice_mask = (g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | D_8004F76C[0];
 
     if ((g_akao_seq_channel0->w04.song.active_mask & g_akao_seq_channel0->w04.song.key_on_mask) ||
         ((g_akao_seq_channel1 != NULL) && (g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->w04.song.key_on_mask)))
     {
-        func_800257E0(mask, D_8004F76C[0]);
+        akao_refresh_voice_allocation_state(reserved_voice_mask, D_8004F76C[0]);
     }
 
     if (g_akao_seq_channel1 != NULL)
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
-        dealloc_mask1 = g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->note_on_mask & ~(g_akao_seq_channel1->w04.song.static_voice_mask & mask);
-        static_voice_mask1 = g_akao_seq_channel1->w04.song.static_voice_mask;
-        key_on_submask1 = dealloc_mask1 & g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
-        static_voice_mask1 = dealloc_mask1 & static_voice_mask1 & ~mask;
-        if (key_on_submask1 != 0)
+        secondary_update_mask = g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->note_on_mask & ~(g_akao_seq_channel1->w04.song.static_voice_mask & reserved_voice_mask);
+        secondary_static_voice_mask = g_akao_seq_channel1->w04.song.static_voice_mask;
+        secondary_low_voice_mask = secondary_update_mask & g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        secondary_static_voice_mask = secondary_update_mask & secondary_static_voice_mask & ~reserved_voice_mask;
+        if (secondary_low_voice_mask != 0)
         {
-            func_80025500((AkaoChannelState *)g_akao_pending_channels, key_on_submask1, static_voice_mask1, &voice_mask);
-            song_ptr = &g_akao_seq_channel0->w04.song;
-            dealloc_mask1 &= ~song_ptr->voice_alloc_low_mask;
+            akao_process_sequence_voice_updates((AkaoChannelState *)g_akao_pending_channels, secondary_low_voice_mask, secondary_static_voice_mask, &key_on_voice_mask);
+            song_masks = &g_akao_seq_channel0->w04.song;
+            secondary_update_mask &= ~song_masks->voice_alloc_low_mask;
             g_akao_seq_channel0->w04.song.key_on_mask &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
         }
         g_akao_seq_channel0 = &g_akao_seq_master_state;
     }
 
-    dealloc_mask0 = g_akao_seq_channel0->w04.song.active_mask & g_akao_seq_channel0->note_on_mask & ~(g_akao_seq_channel0->w04.song.static_voice_mask & (static_voice_mask1 | mask));
-    static_voice_mask0 = dealloc_mask0 & g_akao_seq_channel0->w04.song.static_voice_mask & ~(static_voice_mask1 | mask);
-    key_on_submask0 = dealloc_mask0 & g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
-    if (key_on_submask0 != 0)
+    work_mask = g_akao_seq_channel0->w04.song.active_mask & g_akao_seq_channel0->note_on_mask & ~(g_akao_seq_channel0->w04.song.static_voice_mask & (secondary_static_voice_mask | reserved_voice_mask));
+    primary_static_voice_mask = work_mask & g_akao_seq_channel0->w04.song.static_voice_mask & ~(secondary_static_voice_mask | reserved_voice_mask);
+    primary_low_voice_mask = work_mask & g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    if (primary_low_voice_mask != 0)
     {
-        func_80025500((AkaoChannelState *)g_akao_seq_channels, key_on_submask0, static_voice_mask0, &voice_mask);
-        song_ptr = &g_akao_seq_channel0->w04.song;
-        dealloc_mask0 &= ~song_ptr->voice_alloc_low_mask;
+        akao_process_sequence_voice_updates((AkaoChannelState *)g_akao_seq_channels, primary_low_voice_mask, primary_static_voice_mask, &key_on_voice_mask);
+        song_masks = &g_akao_seq_channel0->w04.song;
+        work_mask &= ~song_masks->voice_alloc_low_mask;
         g_akao_seq_channel0->w04.song.key_on_mask &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
     }
 
-    if ((g_akao_seq_channel1 != NULL) && (dealloc_mask1 != 0))
+    if ((g_akao_seq_channel1 != NULL) && (secondary_update_mask != 0))
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
-        func_80025500((AkaoChannelState *)g_akao_pending_channels, dealloc_mask1, static_voice_mask1 & ~static_voice_mask0, &voice_mask);
-        old_channel0 = g_akao_seq_channel0;
+        akao_process_sequence_voice_updates((AkaoChannelState *)g_akao_pending_channels, secondary_update_mask, secondary_static_voice_mask & ~primary_static_voice_mask, &key_on_voice_mask);
+        secondary_song = g_akao_seq_channel0;
         sfx_channel = &g_akao_seq_master_state;
         g_akao_seq_channel0 = sfx_channel;
-        old_channel0->w04.song.key_on_mask = 0;
+        secondary_song->w04.song.key_on_mask = 0;
     }
 
-    if (dealloc_mask0 != 0)
+    if (work_mask != 0)
     {
-        func_80025500((AkaoChannelState *)g_akao_seq_channels, dealloc_mask0, static_voice_mask0, &voice_mask);
+        akao_process_sequence_voice_updates((AkaoChannelState *)g_akao_seq_channels, work_mask, primary_static_voice_mask, &key_on_voice_mask);
         g_akao_seq_channel0->w04.song.key_on_mask = 0;
     }
 
-    dealloc_mask0 = g_akao_sfx_control.unk0 & g_akao_sfx_control.unk8;
-    if (dealloc_mask0 != 0)
+    work_mask = g_akao_sfx_control.unk0 & g_akao_sfx_control.unk8;
+    if (work_mask != 0)
     {
-        bit = 0x1000;
+        sfx_channel_bit = 0x1000;
         sfx_channel = (AkaoChannelState *)g_sfx_channels;
-        voice_mask |= g_akao_sfx_control.unk4;
+        key_on_voice_mask |= g_akao_sfx_control.unk4;
         do
         {
-            if (dealloc_mask0 & bit)
+            if (work_mask & sfx_channel_bit)
             {
-                func_80024F60(sfx_channel, bit);
+                akao_update_sfx_channel_voice(sfx_channel, sfx_channel_bit);
                 if (sfx_channel->update_flags != 0)
                 {
                     spu_apply_voice_updates(sfx_channel->voice, (SpuVoiceParams*)&sfx_channel->voice, sfx_channel->flags);
                 }
-                dealloc_mask0 &= ~bit;
+                work_mask &= ~sfx_channel_bit;
             }
-            bit <<= 1;
+            sfx_channel_bit <<= 1;
             sfx_channel++;
-        } while (dealloc_mask0 != 0);
+        } while (work_mask != 0);
         D_8004D404[0] = 0;
     }
 
-    dealloc_mask0 = g_akao_driver_flags.unk8;
-    if (dealloc_mask0 & 0x80)
+    work_mask = g_akao_driver_flags.unk8;
+    if (work_mask & 0x80)
     {
-        lfo_arg = (s32)(g_akao_seq_channel0->unk48 << 4) >> 16;
-        func_8002613C(lfo_arg, lfo_arg);
+        master_volume = (s32)(g_akao_seq_channel0->unk48 << 4) >> 16;
+        func_8002613C(master_volume, master_volume);
         g_akao_driver_flags.unk8 &= ~0x80;
     }
 
-    if (dealloc_mask0 & 0x10)
+    if (work_mask & 0x10)
     {
         if (g_akao_sfx_control.unk0 != 0)
         {
-            key = g_akao_sfx_control.unk28;
+            noise_frequency = g_akao_sfx_control.unk28;
         }
         else
         {
-            key = g_akao_seq_channel0->noise_freq;
+            noise_frequency = g_akao_seq_channel0->noise_freq;
         }
-        func_800260CC(key);
+        func_800260CC(noise_frequency);
         g_akao_driver_flags.unk8 &= ~0x10;
     }
 
-    if (dealloc_mask0 & 0x100)
+    if (work_mask & 0x100)
     {
-        fade0 = D_8004F834;
-        func_80025F48(fade0, g_akao_seq_channel1->reverb_mask, g_akao_seq_channel0->reverb_mask, g_akao_sfx_control.reverb_mask);
-        fade1 = fade0 - 1;
-        func_80025F48(fade1, g_akao_seq_channel1->noise_mask, g_akao_seq_channel0->noise_mask, g_akao_sfx_control.noise_mask);
-        func_80025F48(fade0 + 1, g_akao_seq_channel1->pitch_mod_mask, g_akao_seq_channel0->pitch_mod_mask, g_akao_sfx_control.pitch_mod_mask);
-        spu_set_reverb_enable(fade0[-1]);
-        spu_set_noise_enable(fade1[1]);
-        spu_set_pitch_modulation_enable(fade1[2]);
+        effect_mask_center = D_8004F834;
+        func_80025F48(effect_mask_center, g_akao_seq_channel1->reverb_mask, g_akao_seq_channel0->reverb_mask, g_akao_sfx_control.reverb_mask);
+        effect_mask_base = effect_mask_center - 1;
+        func_80025F48(effect_mask_base, g_akao_seq_channel1->noise_mask, g_akao_seq_channel0->noise_mask, g_akao_sfx_control.noise_mask);
+        func_80025F48(effect_mask_center + 1, g_akao_seq_channel1->pitch_mod_mask, g_akao_seq_channel0->pitch_mod_mask, g_akao_sfx_control.pitch_mod_mask);
+        spu_set_reverb_enable(effect_mask_center[-1]);
+        spu_set_noise_enable(effect_mask_base[1]);
+        spu_set_pitch_modulation_enable(effect_mask_base[2]);
         g_akao_driver_flags.unk8 &= ~0x100;
     }
 
-    if (voice_mask != 0)
+    if (key_on_voice_mask != 0)
     {
-        spu_set_key_on(voice_mask);
+        spu_set_key_on(key_on_voice_mask);
     }
 }

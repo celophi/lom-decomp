@@ -760,6 +760,14 @@ spu_set_voice_release_mode          = 0x80024468;
 spu_write_voice_params              = 0x80024498;
 spu_apply_voice_updates             = 0x80024544;
 akao_tick_channel_effects           = 0x80024660;
+akao_update_sequence_channel_voice  = 0x80024B00;
+akao_update_sfx_channel_voice       = 0x80024F60;
+akao_steal_quietest_voice           = 0x800253E8;
+akao_find_free_voice                = 0x80025498;
+akao_process_sequence_voice_updates = 0x80025500;
+akao_clear_voice_assignment         = 0x80025760;
+akao_refresh_voice_allocation_state = 0x800257E0;
+akao_flush_voice_updates            = 0x800258B8;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;

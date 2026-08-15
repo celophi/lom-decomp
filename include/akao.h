@@ -253,7 +253,8 @@ typedef struct AkaoChannelState
                                       then sets 0x20 or 0x40 depending on the
                                       song descriptor; bit 0x40 gates the
                                       akao_cmd.c "song is running" tests, and
-                                      func_80025500 sets 0x1/0x2 when the voice
+                                      akao_process_sequence_voice_updates
+                                      sets 0x1/0x2 when the voice
                                       allocator comes up empty. The whole word
                                       is zeroed when the last channel is
                                       released. */
@@ -276,9 +277,10 @@ typedef struct AkaoChannelState
                                               descriptor +0x24, set by ext
                                               opcode FE 1D
                                               (akao_seq_op_ignore_voice_reserve),
-                                              cleared by FE 1E. func_80025500
+                                              cleared by FE 1E.
+                                              akao_process_sequence_voice_updates
                                               passes (mask & bit) to
-                                              func_80025498, which then scans
+                                              akao_find_free_voice, which then scans
                                               for a free voice from 0 instead
                                               of from voice_alloc_base. */
             u32 static_voice_mask;    /* 0x0C channels that skip voice
@@ -286,12 +288,13 @@ typedef struct AkaoChannelState
                                               SPU voice matching their own
                                               channel index. Seeded from song
                                               descriptor +0x28; honoured by
-                                              func_80025500 only while that
+                                              akao_process_sequence_voice_updates
+                                              only while that
                                               voice is not held by SFX or XA. */
             u32 key_on_mask;          /* 0x10 channels whose note still needs a
                                               voice keyed on; consumed and
                                               cleared by the key-on pass in
-                                              func_800258B8 */
+                                              akao_flush_voice_updates */
         } song;
     } w04;               /* 0x04 - 0x13 */
     u32 note_on_mask;/* 0x14 song:    channels with a note currently sounding;
@@ -322,7 +325,8 @@ typedef struct AkaoChannelState
                                       16 bits advances one musical tick
                              channel: secondary flag word. Bit 0x02000000
                                       suppresses the pan-bias / volume-scale
-                                      math in func_80024F60 and the SFX gate in
+                                      math in akao_update_sfx_channel_voice
+                                      and the SFX gate in
                                       akao_irq_handler. */
     s32 pitch;       /* 0x2C channel: current SPU pitch (akao_compute_pitch result) */
     s32 unk30;       /* 0x30 channel: pitch-bend accumulator
@@ -344,7 +348,7 @@ typedef struct AkaoChannelState
     s32 voice_alloc_base;
                      /* 0x38 song:    first SPU voice the sequencer may
                                       allocate; set by ext FE 10, cleared by
-                                      FE 11, read by func_80025498
+                                      FE 11, read by akao_find_free_voice
                              channel: SFX articulation bank index (see
                                       akao_remap_sfx_articulation) */
     u32 reverb_mask; /* 0x3C song: channels enabled in the SPU reverb bitmap */
