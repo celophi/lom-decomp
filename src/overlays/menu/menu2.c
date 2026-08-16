@@ -835,7 +835,7 @@ extern u8 D_800F0BF8[];
  *       buf to sp+0x18. Residual 3 rows: the equal arm's a1 copy and
  *       %hi(g_pad_ctx) are scheduled earlier in the target (see
  *       working/func_8014EB4C/status.md).
- * @see decomp.me (96.92%)
+ * @see decomp.me (100%) https://decomp.me/scratch/cUQBA
  */
 s32 menu_stage_best_equipment_for_slot0(void)
 {
@@ -846,6 +846,7 @@ s32 menu_stage_best_equipment_for_slot0(void)
     u8* slot_buf;
     u32 i;
     s32 diff;
+    PadContext* ctx;
 
     if (0)
     {
@@ -872,7 +873,8 @@ s32 menu_stage_best_equipment_for_slot0(void)
 done:
         if (diff == 0)
         {
-            func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, entry);
+            ctx = g_pad_ctx;
+            func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)ctx) + 0x640, entry);
             *entry = 0;
             g_item_slot_data.slot0 = 0;
         }
