@@ -45,27 +45,8 @@ s32 func_80050B14(s32 arg0)
 {
     s32 new_var2;
     s32 state = 0;
-    /*
-     * Taking these label addresses prevents GCC 2.7.2 from cross-jumping
-     * the corresponding fall-through paths.  The array itself is not part
-     * of CHECKPS; its .data section is discarded after compilation.
-     */
-    static void* label_anchors[] = {
-        &&fall3,
-        &&fall4,
-        &&fall7,
-        &&fall8,
-        &&fall10,
-        &&fall11,
-        &&fall12,
-        &&fall13,
-        &&fall15,
-        &&fall16,
-        &&fall17,
-        &&fall18,
-        &&cmd6_body,
-        &&s15_body,
-    };
+    static void* keep_labels[] = {&&fall3,  &&fall4,  &&fall7,  &&fall8,  &&fall10,    &&fall11,   &&fall12,  &&fall13,
+                                  &&fall15, &&fall16, &&fall17, &&fall18, &&cmd6_body, &&s15_body, &&neg2_18, &&bar18};
 
     for (;;)
     {
@@ -685,14 +666,17 @@ s32 func_80050B14(s32 arg0)
                 else
                 {
                     if (state == 0)
-                        goto pos_default17;
+                    {
+                        state = 16 + ((state & 1) >> 1);
+                        break;
+                    }
                     if (state != 1)
                     {
                         state = 16;
                         break;
                     }
-                    ExitCheckPS();
                     state = 16;
+                    ExitCheckPS();
                     break;
                 }
             }
@@ -707,16 +691,18 @@ s32 func_80050B14(s32 arg0)
                 new_var2 = 1;
                 g_checkPSState = new_var2;
                 state = -1;
+                break;
             }
             else
             {
             fall17:
                 if (state < 0)
                 {
-                    if (state == -2)
-                        goto neg17;
-                    state = 16;
-                    break;
+                    if (state != -2)
+                    {
+                        state = 16;
+                        break;
+                    }
                 }
                 else
                 {
@@ -728,47 +714,63 @@ s32 func_80050B14(s32 arg0)
                     case 0:
                     default:
                     pos_default17:
-                        state = 16;
-                        goto pos_exit17;
+                        state = 16 + ((state & 1) >> 1);
+                        break;
                     }
+                    break;
                 }
             }
-            break;
         neg17:
             SendCdCommand(0);
             state = 16;
             break;
 
-        case 18: /* Wait for screen 0xB response; on confirm, reset state machine to state 0 */
+        case 18:
             state = PollCdResponse(0xB);
-            if (state == -1)
-                goto neg18;
-        fall18:
-            if (state < 0)
+            if (state != -1)
             {
-                if (state == -2)
-                    goto neg2_18;
-                goto default18;
+            fall18:
+                if (state < 0)
+                {
+                    if (state != -2)
+                    {
+                        state = 18;
+                    bar18:
+                        break;
+                    }
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                    break;
+                }
+                if (state == 0)
+                {
+                }
+                else if (state != 1)
+                {
+                    state = 18;
+                    break;
+                }
+                if (state < 0)
+                {
+                neg2_18:
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                    break;
+                }
             }
-            if (state == 0)
-                goto default18;
-            if (state == 1)
-                goto one18;
-            goto default18;
-        neg2_18:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-        neg18:
-            new_var2 = 1;
-            g_checkPSState = new_var2;
-            state = -1;
-            break;
-        one18:
-            g_checkPSState = 0;
+            else
+            {
+                new_var2 = 1;
+                g_checkPSState = new_var2;
+                state = -1;
+                break;
+            }
+            if (state != 0)
+                g_checkPSState = 0;
         default18:
-            state = 18;
+            state = 18 + ((state & 1) >> 1);
             break;
 
         case 19: /* Wait 10 vsyncs, then show screen 0xB */
@@ -837,10 +839,11 @@ s32 PollCdResponse(s32 arg0)
                 g_cdIrqAccum = 0;
                 if (temp_v1 == 5)
                 {
-                    do
+                    while (1)
                     {
                         g_statusFlag.unk0 = *g_cdResponseRegister;
-                    } while (0);
+                        break;
+                    }
                     g_statusFlag.unk1 = *g_cdResponseRegister;
                     *g_cdStatusRegister = 1;
                     *g_cdDataRegister = 0x1F;

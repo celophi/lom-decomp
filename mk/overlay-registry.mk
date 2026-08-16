@@ -39,7 +39,6 @@ overlay_checkps_gcc_272_gnu_g0_srcs := \
 # object's empty .data section without contributing any linked bytes.
 overlay_checkps_gcc_272_gnu_as_extra_flags_code7 := -L
 overlay_checkps_gcc_272_gnu_objcopy_flags_code7 := --remove-section=.data --remove-section=.text --rename-section=.text.code7=.text --add-section=.data=/dev/null --set-section-flags=.data=alloc,data
-overlay_checkps_gcc_272_gnu_objcopy_flags_code7_data := --rename-section=.rodata.code7_data=.rodata
 overlay_checkps_target_as_extra_flags_code7 := -L
 
 OVERLAYS += cload
