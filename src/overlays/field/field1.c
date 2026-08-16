@@ -14,23 +14,8 @@ typedef struct
     u16 unk62;
 } Struct_8006429C;
 
-typedef struct
-{
-    u8 _pad00[0x14];
-    u32 unk14;
-    u32 unk18;
-    u16 unk1C;
-    u16 unk1E;
-    u16 unk20;
-    u16 unk22;
-    u16 unk24;
-    u16 unk26;
-    u16 unk28;
-} Struct_801ED000;
-
-
 typedef struct {
-    u32 unk0;               // 0x00
+    u8* unk0;               // 0x00
     u32 unk4;               // 0x04
     u32 unk8;               // 0x08
     u32 unkC;               // 0x0C
@@ -44,9 +29,11 @@ typedef struct {
     u8  unk1B;              // 0x1B
     u8  unk1C;              // 0x1C
     u8  unk1D;              // 0x1D
-    u8  _pad1E[0x52 - 0x1E];// 0x1E
+    u8  _pad1E[0x49 - 0x1E];// 0x1E
+    u8  unk49;              // 0x49
+    u8  _pad4A[0x52 - 0x4A];// 0x4A
     u16 unk52;              // 0x52
-    u16 _pad54;             // 0x54
+    u16 unk54;              // 0x54
     u16 unk56;              // 0x56
     u16 unk58;              // 0x58
     u16 unk5A;              // 0x5A
@@ -60,7 +47,25 @@ typedef struct {
     u16 unk6A;              // 0x6A
     u16 unk6C;              // 0x6C
     u16 unk6E;              // 0x6E
+    u16 unk70[16];          // 0x70
+    u16 _pad90[4];          // 0x90
 } Struct_801ED0CC;
+
+typedef struct
+{
+    u8 _pad00[0x14];
+    u32 unk14;
+    u32 unk18;
+    u16 unk1C;
+    u16 unk1E;
+    u16 unk20;
+    u16 unk22;
+    u16 unk24;
+    u16 unk26;
+    u16 unk28;
+    u16 _pad2A[(0x34 - 0x2A) / 2];
+    Struct_801ED0CC unk34[4];
+} Struct_801ED000;
 
 typedef struct
 {
@@ -69,6 +74,23 @@ typedef struct
     s16 w;
     s16 h;
 } RECT;
+
+/** @brief libgpu free-size sprite primitive (20 bytes). */
+typedef struct
+{
+    u32 tag;
+    u8 r0;
+    u8 g0;
+    u8 b0;
+    u8 code;
+    s16 x0;
+    s16 y0;
+    u8 u0;
+    u8 v0;
+    u16 clut;
+    s16 w;
+    s16 h;
+} SPRT;
 
 void func_800640B4(Struct_8006429C* arg0);
 
@@ -217,4 +239,173 @@ void func_8006441C(void)
 
         hw_regs->unk10 = ((((hw_regs->unk10 & ~7) | 6) & ~0xC0) | 0x800) & ~0x1000;
     } while (0);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_800644FC(SPRT* prim, u8* str, u16 mode)
+{
+    s32 count = 0;
+    Struct_801ED0CC* st = (Struct_801ED0CC*)0x801ED0CC;
+    u16* carry;
+    s32 remaining;
+    s32 start_x;
+    s32 end_x;
+    s32 tex_u;
+    s32 tex_v;
+    s32 col;
+    s32 cols;
+
+    st->unk49 = 1;
+    st->unk1B = mode & 7;
+    carry = (u16*)0x801ED13C;
+    st->unk4 = 0;
+    st->unk8 = 0;
+    st->unk19 = 0;
+    st->unk14 = 0;
+    remaining = st->unk58;
+    start_x = st->unk52 - st->unk5A;
+    st->unk0 = str;
+    while (--remaining != -1)
+    {
+        *carry = 0;
+        carry += 1;
+    }
+    func_800632E0(st, 0);
+    tex_u = start_x;
+    st->unk5A = st->unk5A & 0xFFFC;
+    end_x = st->unk52 - st->unk5A;
+    tex_v = 0;
+    while (tex_u >= 0x100)
+    {
+        tex_u -= 0x100;
+        tex_v += 0xC;
+    }
+    remaining = ((end_x - start_x) + 3) >> 2;
+    if (remaining != 0)
+    {
+        do
+        {
+            col = tex_u >> 2;
+            prim->v0 = tex_v - 0x80;
+            prim->u0 = tex_u;
+            if ((col + remaining) >= 0x41)
+            {
+                cols = 0x40 - col;
+                tex_u = 0;
+                tex_v += 0xC;
+                remaining -= cols;
+            }
+            else
+            {
+                cols = remaining;
+                remaining = 0;
+            }
+            prim->w = cols * 4;
+            prim->h = 0xC;
+            if (mode >= 8)
+            {
+                prim->clut = 0x7F13;
+            }
+            else
+            {
+                prim->clut = 0x7FD3;
+            }
+            prim += 1;
+            count += 1;
+        } while (remaining != 0);
+    }
+    return count;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80064678(u16 index)
+{
+    Struct_801ED000* base = (Struct_801ED000*)0x801ED000;
+    Struct_801ED0CC* st;
+    Struct_801ED0CC* e;
+    u32 flags;
+    s32 n;
+    s32 w;
+    s32 x;
+    s32 y;
+    u16 rem;
+
+    if ((D_801ED044 & 7) == 4)
+    {
+        func_8006700C((void*)0x801ED034, 0);
+    }
+    st = &base->unk34[index];
+    if ((st->unk10 & 7) == 2)
+    {
+        func_8006700C(st, 0);
+    }
+    flags = st->unk10;
+    if ((flags & 7) != 0)
+    {
+        st->unk10 = (flags & ~0x6000) | 0x2000;
+        func_80066FBC(index);
+        return;
+    }
+    func_80064A3C(st);
+    if (st->unkC != 0)
+    {
+        if ((base->unk28 & 1) == 0)
+        {
+            st->unk10 &= ~8;
+            base->unk28 |= 1;
+        }
+        else
+        {
+            st->unk10 |= 8;
+            base->unk28 |= 2;
+        }
+    }
+    x = 0;
+    y = 0;
+    n = index;
+    e = &base->unk34[0];
+    while (--n != -1)
+    {
+        if ((e->unk10 & 7) != 0)
+        {
+            x = e->unk64;
+            y = e->unk66;
+        }
+        e += 1;
+    }
+    n = st->unk54;
+    st->unk68 = x;
+    st->unk5C = x;
+    st->unk60 = x;
+    st->unk6A = y;
+    st->unk5E = y;
+    st->unk62 = y;
+    while (n > 0)
+    {
+        w = st->unk56;
+        while (w > 0)
+        {
+            rem = 0x100 - x;
+            if (w >= rem)
+            {
+                w -= rem;
+                x = 0;
+                y += st->unk58;
+            }
+            else
+            {
+                x += w;
+                w = 0;
+            }
+        }
+        n -= 0x10;
+    }
+    st->unk6C = x;
+    st->unk64 = x;
+    st->unk6E = y;
+    st->unk66 = y;
 }
