@@ -1546,7 +1546,7 @@ typedef struct
     s16 unk8;
     s16 unkA;
     s16 unkC;
-    u16 unkE;
+    volatile u16 unkE;
 } StructS0;
 
 typedef struct
@@ -2580,9 +2580,10 @@ GosubElement* func_80143C04(void)
 }
 
 /**
- * @see decomp.me (97.70%)
+ * @see decomp.me (100%) https://decomp.me/scratch/t79hi
  * @note Remaining differences are isolated CSE and expression-order rows; see working/func_80143C58/status.md.
  */
+
 void func_80143C58(Arg0Struct* arg0)
 {
     StructS0* var_s0;
@@ -2596,7 +2597,7 @@ void func_80143C58(Arg0Struct* arg0)
     s32 sp20[24];
     u32 temp_t0;
     s32 temp_t1;
-    u8 temp_a0;
+    u16 temp_a0;
     u32 temp_a1;
     u32 temp_a2;
     u32 temp_a3;
@@ -2656,15 +2657,27 @@ void func_80143C58(Arg0Struct* arg0)
                 temp_mult = g_gosub_row_count * g_gosub_row_height;
                 if ((g_gosub_scroll_y + temp_t1) < temp_mult)
                 {
-                    var_s0 = func_801443E4(var_a0, var_s4, (((temp_a3 >> 7) & 0x1FF) + ((temp_a3 >> 24) | ((temp_t0 & 1) << 8))) - 0x10,
-                                              (*((u8*)var_s5 + 2)) + temp_t1, 0);
+                    {
+                        u32 field;
+                        u32 high;
+                        field = (temp_a3 >> 7) & 0x1FF;
+                        high = temp_a3 >> 24;
+                        var_s0 = func_801443E4(var_a0, var_s4, (field + (((temp_t0 & 1) << 8) | high)) - 0x10,
+                                                  (*((u8*)var_s5 + 2)) + temp_t1, 0);
+                    }
                 }
                 if (g_gosub_scroll_y != 0)
                 {
-                    temp_t0_2 = *var_s5;
-                    var_s0 = func_801443E4(var_s0, var_s4,
-                                              (((temp_t0_2 >> 7) & 0x1FF) + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (temp_t0_2 >> 24))) - 0x10,
-                                              (*((u8*)var_s5 + 2)), 1);
+                    {
+                        u32 field;
+                        u32 high;
+                        temp_t0_2 = *var_s5;
+                        field = (temp_t0_2 >> 7) & 0x1FF;
+                        high = temp_t0_2 >> 24;
+                        var_s0 = func_801443E4(var_s0, var_s4,
+                                                  (field + ((( *(u32*)((u8*)var_s5 + 4) & 1) << 8) | high)) - 0x10,
+                                                  (*((u8*)var_s5 + 2)), 1);
+                    }
                 }
                 func_8001A5D4((s32)var_s0, sp20);
 
@@ -2681,11 +2694,15 @@ void func_80143C58(Arg0Struct* arg0)
                     var_s0->unkC = 6;
                     temp_v0 = (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF;
                     var_s0->unkE = (u16)((s32)(temp_v0 * (temp_v0 / g_gosub_row_height)) / g_gosub_row_count);
-                    temp_v1_2 = *(u32*)((u8*)var_s5 + 4);
-                    temp_a0 = (temp_v1_2 >> 1) & 0xFF;
-                    if ((s16)var_s0->unkE >= (s16)(temp_a0 - 2))
                     {
-                        var_s0->unkE = temp_a0;
+                        s32 clamp_h;
+                        clamp_h = (s16)var_s0->unkE;
+                        temp_v1_2 = *(u32*)((u8*)var_s5 + 4);
+                        temp_a0 = ((u32)temp_v1_2 >> 1) & 0xFF;
+                        if (clamp_h >= (s32)temp_a0 - 2)
+                        {
+                            var_s0->unkE = temp_a0;
+                        }
                     }
                     var_s0->unk8 = 1;
                     var_s0->unkA =
@@ -2696,10 +2713,16 @@ void func_80143C58(Arg0Struct* arg0)
                     var_s0 = (StructS0*)((u8*)var_s0 + 0x10);
                     var_s4->unk0 = (s32)((var_s4->unk0 & var_s7) | temp_v1);
                 }
-                temp_t0_3 = *var_s5;
-                var_s0 = func_80144544(var_s0, var_s4,
-                                          ((temp_t0_3 >> 7) & 0x1FF) + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (temp_t0_3 >> 24)) + 3,
-                                          (*((u8*)var_s5 + 2)), 0xA, (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                {
+                    u32 field;
+                    u32 high;
+                    temp_t0_3 = *var_s5;
+                    field = (temp_t0_3 >> 7) & 0x1FF;
+                    high = temp_t0_3 >> 24;
+                    var_s0 = func_80144544(var_s0, var_s4,
+                                              field + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) + 3,
+                                              (*((u8*)var_s5 + 2)), 0xA, (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                }
                 var_a0 = var_s0;
             }
             func_8001A5D4((s32)var_a0, sp20);
@@ -2732,13 +2755,22 @@ void func_80143C58(Arg0Struct* arg0)
                 temp_s2 = var_v0 >> 3;
                 temp_a3_3 = (s32)(temp_a3_2 - temp_s2);
 
-                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2), var_s4,
-                                          ((*var_s5 >> 7) & 0x1FF) +
-                                              (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (*var_s5 >> 24)) - temp_s1) / 2,
-                                          (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
-                                          arg0->unk40B2);
+                var_s0 = (*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2);
+                {
+                    u32 post_word;
+                    u32 field;
+                    u32 high;
+                    post_word = *var_s5;
+                    field = (post_word >> 7) & 0x1FF;
+                    high = post_word >> 24;
+                    var_s0 = func_80144544(var_s0, var_s4,
+                                              field + (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) - temp_s1) / 2,
+                                              (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
+                                              arg0->unk40B2);
+                }
                 temp_v0_3 = *var_s5;
-                temp_a0_4 = (temp_v0_3 & ~0x78) | (((((temp_v0_3 >> 3) & 0xF) + 1) & 0xF) * 8);
+                temp_a0_4 = temp_v0_3 & ~0x78;
+                temp_a0_4 |= (((((temp_v0_3 >> 3) & 0xF) + 1) & 0xF) * 8);
                 *var_s5 = temp_a0_4;
                 if (((temp_a0_4 >> 3) & 0xF) == 8)
                 {
@@ -2747,9 +2779,16 @@ void func_80143C58(Arg0Struct* arg0)
                 break;
 
             case 2:
-                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, 0, 0), var_s4, (*var_s5 >> 7) & 0x1FF,
-                                          (*((u8*)var_s5 + 2)), (*var_s5 >> 24) | ((*(u32*)((u8*)var_s5 + 4) & 1) << 8),
-                                          (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                var_s0 = (*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, 0, 0);
+                {
+                    u32 case_word;
+                    u32 high;
+                    case_word = *var_s5;
+                    high = case_word >> 24;
+                    var_s0 = func_80144544(var_s0, var_s4, (case_word >> 7) & 0x1FF,
+                                              (*((u8*)var_s5 + 2)), ((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high,
+                                              (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                }
                 break;
 
             case 3:
@@ -2771,11 +2810,19 @@ void func_80143C58(Arg0Struct* arg0)
                 temp_s2 = var_v0_2 >> 3;
                 temp_a3_6 = (s32)(temp_a3_5 - temp_s2);
 
-                var_s0 = func_80144544((*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2), var_s4,
-                                          ((*var_s5 >> 7) & 0x1FF) +
-                                              (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | (*var_s5 >> 24)) - temp_s1) / 2,
-                                          (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
-                                          arg0->unk40B2);
+                var_s0 = (*(Unk6Func*)((u8*)var_s5 + 8))(var_s4, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2);
+                {
+                    u32 post_word;
+                    u32 field;
+                    u32 high;
+                    post_word = *var_s5;
+                    field = (post_word >> 7) & 0x1FF;
+                    high = post_word >> 24;
+                    var_s0 = func_80144544(var_s0, var_s4,
+                                              field + (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) - temp_s1) / 2,
+                                              (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
+                                              arg0->unk40B2);
+                }
                 temp_v0_5 = *var_s5;
                 temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
                 *var_s5 = temp_v1_3;
