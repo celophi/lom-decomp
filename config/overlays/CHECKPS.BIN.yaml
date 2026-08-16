@@ -63,5 +63,4 @@ segments:
       - [0xD3F1, .bss, code]
       - [0x31441, .data, code7_data]
       - [0x31451, .bss, code2]
-      - [0x39865, .bss, code2_tail]
   - [0x39868]
