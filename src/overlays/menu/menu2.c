@@ -835,44 +835,46 @@ extern u8 D_800F0BF8[];
  *       buf to sp+0x18. Residual 3 rows: the equal arm's a1 copy and
  *       %hi(g_pad_ctx) are scheduled earlier in the target (see
  *       working/func_8014EB4C/status.md).
- * @see decomp.me (96.92%)
+ * @see decomp.me (100%) https://decomp.me/scratch/cUQBA
  */
+static inline s32 buffers_differ(u8* t, u8* p)
+{
+    u32 i = 0;
+    do
+    {
+        i += 1;
+        if (*t != *p)
+            return 1;
+        t += 1;
+        p += 1;
+    } while (i < 0x40);
+    return 0;
+}
+
+/* GCC 2.7.2 retains the maximum outgoing argument area even when a const
+ * call is eliminated.  The original target reserves space for six args. */
+extern s32 menu_stage_stack_shape(s32, s32, s32, s32, s32, s32) __attribute__((const));
+
 s32 menu_stage_best_equipment_for_slot0(void)
 {
     u8 buf[0x40];
     u8* entry;
-    u8* t;
     u8* p;
     u8* slot_buf;
-    u32 i;
     s32 diff;
+    PadContext* ctx;
 
-    if (0)
-    {
-        func_800A8F8C(0, 0, 0, 0, 0, 0);
-    }
+    menu_stage_stack_shape(0, 0, 0, 0, 0, 0);
+
     entry = (u8*)menu_find_best_equipment_for_slot0();
     if (entry != 0)
     {
-        t = D_800F0BF8;
-        i = 0;
         p = (u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640;
-        do
-        {
-            i += 1;
-            if (*t != *p)
-            {
-                diff = 1;
-                goto done;
-            }
-            t += 1;
-            p += 1;
-        } while (i < 0x40);
-        diff = 0;
-done:
+        diff = buffers_differ(D_800F0BF8, p);
         if (diff == 0)
         {
-            func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)g_pad_ctx) + 0x640, entry);
+            ctx = g_pad_ctx;
+            func_800A8F8C((u8*)((g_menu_char_slot * 0x250) + (s32)ctx) + 0x640, entry);
             *entry = 0;
             g_item_slot_data.slot0 = 0;
         }
