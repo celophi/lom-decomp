@@ -83,8 +83,10 @@ typedef struct
 
 typedef struct
 {
-    FieldScene* scene;
+    u32 padding[3];
     u32 vram_byte_count;
+    u32 dyn_count;
+    FieldScene* scene;
 } FieldSceneGlobals;
 
 typedef struct
