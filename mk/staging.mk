@@ -22,7 +22,9 @@ STAGE_PATHS_REQUIRED := \
 	asm \
 	include \
 	linker \
-	tools/maspsx
+	tools/maspsx \
+	tools/filter_gnu_as.py \
+	tools/trim_elf_section.py
 
 # Optional inputs are staged only when present. `assets/` holds gitignored
 # binary data (splat databin / asset_src) and is absent when no overlay embeds

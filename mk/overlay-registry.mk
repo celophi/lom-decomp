@@ -28,12 +28,14 @@ overlay_carda_gcc_280_g0_srcs := src/overlays/carda/unk1.c
 OVERLAYS += checkps
 overlay_checkps_gcc_272_cdk_g0_srcs := \
 	src/overlays/checkps/code.c \
-	src/overlays/checkps/code2.c
+	src/overlays/checkps/code2.c \
+	src/overlays/checkps/code2_tail.c
 overlay_checkps_gcc_280_g0_srcs := src/overlays/checkps/code3.c
 overlay_checkps_gcc_272_gnu_g0_srcs := \
-	src/overlays/checkps/code4.c \
 	src/overlays/checkps/code6.c \
 	src/overlays/checkps/code7.c
+overlay_checkps_gcc_272_gnu_trim_text_srcs := src/overlays/checkps/code7.c
+overlay_checkps_gcc_272_gnu_trim_rodata_srcs := src/overlays/checkps/code7.c
 
 OVERLAYS += cload
 overlay_cload_gcc_280_g0_srcs := src/overlays/cload/unk1.c

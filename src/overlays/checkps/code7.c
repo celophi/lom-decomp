@@ -1,34 +1,21 @@
 #include "checkps.h"
 
-/**
- * Pointer to CD-ROM status register and related I/O ports for communicating with the PS1's CD drive.
- * CD Index/Status Register (Bit0-1 R/W, Bit2-7 Read Only)
- */
-s8* g_cdStatusRegister = (s8*)0x1F801800;
-
-/**
- * Pointer to CD-ROM response register, used for reading data returned by the CD drive after issuing commands.
- * CD Response Fifo (R) (usually with Index1)
- */
-u8* g_cdResponseRegister = (s8*)0x1F801801;
-
-/**
- * Pointer to CD-ROM data register, used for sending command parameters to the CD drive after writing a command to the status register.
- * CD Data Fifo - 8bit/16bit (R) (usually with Index0..1)
- */
-u8* g_cdDataRegister = (u8*)0x1F801802;
-
-/**
- * Pointer to CD-ROM IRQ register, used for handling CD drive interrupts.
- * CD IRQ Register (R/W)
- */
-s8* g_cdIrqRegister = (s8*)0x1F801803;
-
 s32 g_vsyncTimestamp = 0;
 
 s32 g_displayMode = 0;
 
 u8 g_timeBuffer[2] = {0};
+
+const s32 D_8004FC70 = 0x11;
+
+/**
+ * decomp.me link (95%) https://decomp.me/scratch/EuGt8
+ * Matches 100% with GNU AS
+ */
+void func_80050B04(void)
+{
+    g_checkPSState = 1;
+}
 
 /**
  * @brief CheckPS state machine: drives the RTC clock-set screens via CD commands.
@@ -800,7 +787,7 @@ s32 PollCdResponse(s32 arg0)
     int new_var;
     s32 idx;
     s32 j;
-    t2 = (&g_cdCmdTable->irqThresh)[arg0 * 4];
+    t2 = D_8005CF93[arg0 * 4];
     *g_cdStatusRegister = 1;
     val1 = *((volatile u8*)g_cdIrqRegister);
     val2 = *((volatile u8*)g_cdIrqRegister);
@@ -821,7 +808,6 @@ s32 PollCdResponse(s32 arg0)
             } while (i < 4);
             if (g_cdIrqAccum >= ((s32)t2))
             {
-                j += 0;
                 g_cdIrqAccum = 0;
                 if (temp_v1 == 5)
                 {
@@ -844,28 +830,25 @@ s32 PollCdResponse(s32 arg0)
                     temp_a2 = 0;
                     idx = arg0 * 4;
                     j = temp_a2;
-                    if ((&g_cdCmdTable->respCount)[idx] != temp_a2)
+                    if (D_8005CF92[idx] != temp_a2)
                     {
                         do
                         {
                             ((u8*)(&g_statusFlag))[j] = *g_cdResponseRegister;
                             j++;
-                        } while (j < ((s32)(*((volatile u8*)(&(&g_cdCmdTable->respCount)[idx])))));
+                        } while (j < ((s32)(*((volatile u8*)(&D_8005CF92[idx])))));
                     }
                     *g_cdStatusRegister = 1;
                     *g_cdDataRegister = 0x1F;
                     if (arg0 != 0xA)
                     {
-                        j = g_statusFlag.unk0;
-
-                        // HACK
-                        __asm__ __volatile__("" : : : "$2");
-
-                        j &= 0x10;
-                        if (j)
+                        j = 0;
+                        while (1)
                         {
-                            idx = 2;
-                            return -idx;
+                            if (j) return -2;
+                            j = g_statusFlag.unk0;
+                            j &= 0x10;
+                            if (!j) break;
                         }
                     }
                     return 1;

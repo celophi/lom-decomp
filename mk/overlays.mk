@@ -69,7 +69,7 @@ $(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$(
 # Generated unk*.c files are gitignored and splat does not remove outputs from
 # older configurations. Treat tracked C files and explicitly routed generated
 # files as build inputs so stale ignored files cannot enter the build by accident.
-$(1)_TRACKED_C_SRCS := $$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null)
+$(1)_TRACKED_C_SRCS := $$(filter $$(wildcard $$($(1)_SRC_DIR)/*.c),$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null))
 $(1)_C_SRCS = $$(sort $$($(1)_TRACKED_C_SRCS) $$(filter $$($(1)_ROUTED_SRCS),$$(wildcard $$($(1)_SRC_DIR)/*.c)))
 $(1)_UNROUTED_SRCS = $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
 $(1)_UNKNOWN_ROUTED_SRCS = $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))
@@ -90,8 +90,13 @@ $(1)_GCC_280_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUIL
 $(1)_GCC_280_G4_NOEXPAND_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_NOEXPAND_SRCS))
 $(1)_GCC_272_GNU_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_GNU_G0_SRCS))
 $(1)_GCC_272_CDK_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_CDK_G0_SRCS))
+$(1)_GCC_272_GNU_TRIM_TEXT_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$(overlay_$(1)_gcc_272_gnu_trim_text_srcs))
+$(1)_GCC_272_GNU_TRIM_RODATA_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$(overlay_$(1)_gcc_272_gnu_trim_rodata_srcs))
 # Clear the div-expansion flag for the no-expand subset (target-specific var).
 $$($(1)_GCC_280_G4_NOEXPAND_OBJS): MASPSX_DIV_FLAG_G4 :=
+$$($(1)_GCC_272_GNU_TRIM_TEXT_OBJS): GNU_TEXT_TRIM := 4
+$$($(1)_GCC_272_GNU_TRIM_RODATA_OBJS): GNU_RODATA_TRIM := 12
+$$($(1)_GCC_272_GNU_TRIM_RODATA_OBJS): GNU_AS_FILTER_FLAGS := --drop-keeper-data --lower-align-3
 $(1)_C_OBJS := $$($(1)_GCC_272_CDK_G0_OBJS) $$($(1)_GCC_280_G0_OBJS) $$($(1)_GCC_272_GNU_G0_OBJS) $$($(1)_GCC_280_G4_OBJS)
 
 # ── Optional standalone binary object ──
@@ -137,7 +142,13 @@ $$($(1)_GCC_280_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$
 $$($(1)_GCC_272_GNU_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_GNU) $(CFLAGS_272_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o - | \
+		python3 tools/filter_gnu_as.py $$(GNU_AS_FILTER_FLAGS) | \
 		$(AS_272_GNU) $(ASFLAGS_272_GNU) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+	cd $(STAGING) && $(OBJCOPY) $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o \
+		$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.normalized.o
+	mv $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.normalized.o $$@
+	$$(if $$(GNU_TEXT_TRIM),cd $(STAGING) && python3 tools/trim_elf_section.py $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o .text $$(GNU_TEXT_TRIM))
+	$$(if $$(GNU_RODATA_TRIM),cd $(STAGING) && python3 tools/trim_elf_section.py $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o .rodata $$(GNU_RODATA_TRIM))
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)

@@ -17,6 +17,9 @@ options:
 
   ld_script_path: linker/overlays/checkps/checkps.ld
   ld_dependencies: True
+  ld_legacy_generation: True
+  ld_align_section_vram_end: False
+  ld_align_segment_vram_end: False
   undefined_funcs_auto_path: linker/overlays/checkps/undefined_funcs_auto.txt
   undefined_syms_auto_path: linker/overlays/checkps/undefined_syms_auto.txt
 
@@ -44,14 +47,14 @@ segments:
       - [0x1, .rodata, code7]
       - [0x55, .rodata, code6]
       - [0xA5, c, code]
-      - [0xE95, c, code4]
-      - [0xEA5, c, code7]
+      - [0xE95, c, code7]
       - [0x1BC1, c, code3]
       - [0x1DB5, c, code6]
       - [0x1F45, c, code2]
-      - [0x27B9, rodata, table]
+      - [0x27B9, data, table]
       - [0xD3E5, .data, code2]
       - [0xD3F1, .bss, code]
       - [0x31441, .data, code7]
       - [0x31451, .bss, code2]
+      - [0x39865, .bss, code2_tail]
   - [0x39868]
