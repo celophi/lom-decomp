@@ -4227,3 +4227,416 @@ s32 func_801466B4(s32 arg_prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_id
 
     return func_8014680C(prim, ot);
 }
+
+/** @brief Draw-mode packet (0x08 bytes, GPU code 0xE1). */
+typedef struct
+{
+    u_long tag;  /* 0x00 P_TAG */
+    u_long code; /* 0x04 GPU draw-mode word */
+} GosubTPage;    /* 0x08 */
+
+/** @brief Glyph cell descriptor in the 8-byte table at D_8016B634. */
+typedef struct
+{
+    u8 u0;   /* 0x00 texture u */
+    u8 unk1; /* 0x01 */
+    u8 v0;   /* 0x02 texture v */
+    u8 unk3; /* 0x03 */
+    u16 w;   /* 0x04 */
+    u16 h;   /* 0x06 */
+} GosubGlyph; /* 0x08 */
+
+/** @brief Glyph cell table indexed by the glyph id passed to func_80146860. */
+extern GosubGlyph D_8016B634[];
+/** @brief Texture archive holding the gosub font page (+0x00) and its CLUT (+0x2C). */
+extern u8 D_8016B3DC[];
+
+void func_80016E7C(); /* extern */
+void func_80019788(); /* extern */
+
+void func_80146AA8(void* dst, void* src);
+void func_80146AD0(void* dst, void* src);
+s32 func_80146CC4(s32 mode, s32 a, s32 b);
+
+/**
+ * @brief Append the texture-page packet that closes a glyph run.
+ *
+ * @param prim Packet cursor.
+ * @param ot   Ordering-table tag to link the packet into.
+ * @return Packet cursor past the 8-byte draw-mode packet.
+ * @see decomp.me (100%)
+ */
+s32 func_8014680C(s32 prim, s32* ot)
+{
+    GosubTPage* tp;
+
+    tp = (GosubTPage*)prim;
+    ((GosubTag*)tp)->len = 1;
+    tp->code = 0xE1000005;
+    ADD_PRIM(ot, tp);
+    return prim + 8;
+}
+
+/**
+ * @brief Emit one glyph sprite described by the D_8016B634 cell table.
+ *
+ * @param prim  Packet cursor.
+ * @param ot    Ordering-table tag to link the sprite into.
+ * @param glyph Index into D_8016B634 supplying the cell u/v and size.
+ * @param x     Sprite left edge.
+ * @param y     Sprite top edge.
+ * @param clut  CLUT selector; the low 6 bits index the 0x7C80 palette row.
+ * @return Packet cursor past the 0x14-byte sprite.
+ * @see decomp.me (100%)
+ */
+s32 func_80146860(s32 prim, s32* ot, s32 glyph, s32 x, s32 y, s32 clut)
+{
+    GosubSprt* sprt;
+
+    sprt = (GosubSprt*)prim;
+    *(u32*)&sprt->r0 = 0x808080;
+    ((GosubTag*)sprt)->len = 4;
+    sprt->code = 0x64;
+    sprt->x0 = x;
+    sprt->y0 = y;
+    sprt->w = D_8016B634[glyph].w;
+    sprt->h = D_8016B634[glyph].h;
+    sprt->u0 = D_8016B634[glyph].u0;
+    sprt->v0 = D_8016B634[glyph].v0;
+    sprt->clut = (clut & 0x3F) | 0x7C80;
+    ADD_PRIM(ot, sprt);
+    return prim + 0x14;
+}
+
+/**
+ * @brief Delete one 4-byte record from the table at g_pad_ctx[0x29DC].
+ *
+ * Every record above @p slot is shifted down one place and the record count at
+ * g_pad_ctx[0x29D6] is decremented.
+ *
+ * @param slot Index of the record to remove.
+ * @see decomp.me (100%)
+ */
+void func_80146908(s32 slot)
+{
+    s32 i;
+
+    for (i = slot; i < g_pad_ctx[0x29D6] - 1; i++)
+    {
+        func_80146AA8(g_pad_ctx + (i * 4 + 0x29DC), g_pad_ctx + (i * 4 + 0x29E0));
+    }
+    g_pad_ctx[0x29D6]--;
+}
+
+/**
+ * @brief Delete one row from g_gosub_rows and renumber the rows above it.
+ *
+ * Rows above @p row are shifted down one slot and g_gosub_row_count is
+ * decremented; every surviving row whose index still points past @p row has
+ * that index pulled down by one so it keeps naming the same record.
+ *
+ * @param row Index of the row to remove.
+ * @see decomp.me (100%)
+ */
+void func_801469BC(s32 row)
+{
+    s32 i;
+
+    for (i = row; i < g_gosub_row_count - 1; i++)
+    {
+        func_80146AD0(&g_gosub_rows[i], &g_gosub_rows[i + 1]);
+    }
+    g_gosub_row_count--;
+    for (i = 0; i < g_gosub_row_count; i++)
+    {
+        if (row < g_gosub_rows[i].index)
+        {
+            g_gosub_rows[i].index--;
+        }
+    }
+}
+
+/**
+ * @brief Copy one 4-byte record.
+ *
+ * @param dst Destination record.
+ * @param src Source record.
+ * @see decomp.me (100%)
+ */
+void func_80146AA8(void* dst, void* src)
+{
+    u8* d;
+    u8* s;
+    u32 i;
+
+    d = (u8*)dst;
+    s = (u8*)src;
+    i = 0;
+    do
+    {
+        i += 1;
+        *d = *s;
+        s += 1;
+        d += 1;
+    } while (i < 4U);
+}
+
+/**
+ * @brief Copy one 0x20-byte GosubListEntry.
+ *
+ * @param dst Destination row.
+ * @param src Source row.
+ * @see decomp.me (100%)
+ */
+void func_80146AD0(void* dst, void* src)
+{
+    u8* d;
+    u8* s;
+    u32 i;
+
+    d = (u8*)dst;
+    s = (u8*)src;
+    i = 0;
+    do
+    {
+        i += 1;
+        *d = *s;
+        s += 1;
+        d += 1;
+    } while (i < 0x20U);
+}
+
+/**
+ * @brief Sort the gosub row list, carrying each row's backing record with it.
+ *
+ * An insertion sort driven by func_80146CC4 builds a permutation in
+ * @c order[0..0xFF] without moving anything. The live rows and their 4-byte
+ * records are then snapshotted into the tail of that same scratch buffer
+ * (records at +0x100, rows at +0x1A0) and written back through the
+ * permutation. The packed record list is rebuilt afterwards so it agrees with
+ * the new row order.
+ *
+ * @param mode Comparison selector handed to func_80146CC4: the low nibble picks
+ *             the field and a non-zero high nibble reverses the order.
+ * @see decomp.me (95.07% WIP)
+ *
+ * @note WIP - control flow, frame size and instruction count all match; the
+ *       residue is a register permutation around the two loop induction
+ *       variables. Assigning @c dst at the top of the loop body (rather than
+ *       inside the second block) is what makes GCC strength-reduce the
+ *       g_gosub_rows address into an induction variable at all.
+ */
+void func_80146AF8(s32 mode)
+{
+    u8 order[0x6A0];
+    s32 i;
+    s32 j;
+    s32 k;
+    GosubListEntry* dst;
+
+    for (i = 0; i < g_gosub_row_count; i++)
+    {
+        for (j = 0; j < i; j++)
+        {
+            if (func_80146CC4(mode, i, order[j]) == 0)
+            {
+                break;
+            }
+        }
+        if (j != i)
+        {
+            for (k = i; k > j; k--)
+            {
+                order[k] = order[k - 1];
+            }
+        }
+        order[j] = i;
+    }
+
+    func_80016E7C(g_pad_ctx + 0x29DC, &order[0x100], 0xA0);
+    func_80016E7C(g_gosub_rows, &order[0x1A0], 0x500);
+
+    for (i = 0; i < g_gosub_row_count; i++)
+    {
+        dst = &g_gosub_rows[i];
+        j = order[i];
+        {
+            u32 n = 0;
+            u8* d = g_pad_ctx + i * 4 + 0x29DC;
+            u8* s = order + j * 4 + 0x100;
+            do
+            {
+                n += 1;
+                *d = *s;
+                s += 1;
+                d += 1;
+            } while (n < 4U);
+        }
+        {
+            u32 n = 0;
+            u8* d = (u8*)dst;
+            u8* s = order + order[i] * 0x20 + 0x1A0;
+            do
+            {
+                n += 1;
+                *d = *s;
+                s += 1;
+                d += 1;
+            } while (n < 0x20U);
+        }
+    }
+
+    gosub_build_packed_record_list();
+}
+
+/**
+ * @brief Order two g_gosub_rows entries for func_80146AF8's insertion sort.
+ *
+ * @param mode Low nibble selects the compared field (0 unkE, 1 unkC, 2 unkD);
+ *             a non-zero high nibble swaps @p a and @p b, reversing the order.
+ * @param a    First row index.
+ * @param b    Second row index.
+ * @return 1 when @p a sorts before @p b, 0 otherwise (unknown modes included).
+ * @see decomp.me (100%)
+ */
+s32 func_80146CC4(s32 mode, s32 a, s32 b)
+{
+    s32 tmp;
+
+    if (mode & 0xF0)
+    {
+        tmp = a;
+        a = b;
+        b = tmp;
+    }
+    switch (mode & 0xF)
+    {
+    case 0:
+        if (g_gosub_rows[a].unkE < g_gosub_rows[b].unkE)
+        {
+            return 1;
+        }
+        break;
+    case 1:
+        if (g_gosub_rows[a].unkC < g_gosub_rows[b].unkC)
+        {
+            return 1;
+        }
+        break;
+    case 2:
+        if (g_gosub_rows[a].unkD < g_gosub_rows[b].unkD)
+        {
+            return 1;
+        }
+        break;
+    }
+    return 0;
+}
+
+/**
+ * @brief Upload the gosub font page and its CLUT to VRAM.
+ * @see decomp.me (100%)
+ */
+void func_80146DA8(void)
+{
+    GosubRect rect;
+
+    rect.x = 0x150;
+    rect.y = 0xFF;
+    rect.w = 0x10;
+    rect.h = 1;
+    LoadImage(&rect, D_8016B3DC);
+    rect.x = 0x140;
+    rect.y = 0xF0;
+    rect.w = 0x10;
+    rect.h = 0x10;
+    LoadImage(&rect, D_8016B3DC + 0x2C);
+    func_80019788(0);
+}
+
+/**
+ * @brief Emit the four corner sprites of a gosub panel frame and close the run
+ *        with a texture-page packet.
+ *
+ * The corners sit two pixels outside (@p x, @p y) and five pixels inside the
+ * far edge; the top pair uses texture row 0xF0 and the bottom pair 0xF8.
+ *
+ * @param prim Packet cursor; four sprites and one draw-mode packet are written.
+ * @param ot   Ordering-table tag every packet is linked into.
+ * @param x    Panel left edge.
+ * @param y    Panel top edge.
+ * @param w    Panel width.
+ * @param h    Panel height.
+ * @return Packet cursor past the draw-mode packet.
+ * @see decomp.me (100%)
+ */
+StructS0* func_80146E30(GosubSprt* prim, s32* ot, s32 x, s32 y, s32 w, s32 h)
+{
+    s32 x0;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+
+    x0 = x - 2;
+    y0 = y - 2;
+
+    *(u32*)&prim->r0 = 0x808080;
+    ((GosubTag*)prim)->len = 4;
+    prim->code = 0x64;
+    prim->x0 = x0;
+    prim->y0 = y0;
+    prim->u0 = 0;
+    prim->v0 = 0xF0;
+    prim->w = 8;
+    prim->h = 8;
+    prim->clut = 0x3FD5;
+    ADD_PRIM(ot, prim);
+    prim += 1;
+
+    x1 = x + w - 5;
+    y1 = y + h - 5;
+
+    *(u32*)&prim->r0 = 0x808080;
+    ((GosubTag*)prim)->len = 4;
+    prim->code = 0x64;
+    prim->x0 = x1;
+    prim->y0 = y0;
+    prim->u0 = 8;
+    prim->v0 = 0xF0;
+    prim->w = 8;
+    prim->h = 8;
+    prim->clut = 0x3FD5;
+    ADD_PRIM(ot, prim);
+    prim += 1;
+
+    *(u32*)&prim->r0 = 0x808080;
+    ((GosubTag*)prim)->len = 4;
+    prim->code = 0x64;
+    prim->x0 = x0;
+    prim->y0 = y1;
+    prim->u0 = 0;
+    prim->v0 = 0xF8;
+    prim->w = 8;
+    prim->h = 8;
+    prim->clut = 0x3FD5;
+    ADD_PRIM(ot, prim);
+    prim += 1;
+
+    *(u32*)&prim->r0 = 0x808080;
+    ((GosubTag*)prim)->len = 4;
+    prim->code = 0x64;
+    prim->x0 = x1;
+    prim->y0 = y1;
+    prim->u0 = 8;
+    prim->v0 = 0xF8;
+    prim->w = 8;
+    prim->h = 8;
+    prim->clut = 0x3FD5;
+    ADD_PRIM(ot, prim);
+    prim += 1;
+
+    ((GosubTag*)prim)->len = 1;
+    *(u32*)&prim->r0 = 0xE1000005;
+    ADD_PRIM(ot, prim);
+    return (StructS0*)((u8*)prim + 8);
+}
