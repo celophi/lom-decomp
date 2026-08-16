@@ -26,6 +26,7 @@ src/overlays/*/unk*.c
 src/overlays/*/gen/
 
 tools/splat_ext/__pycache__/
+tools/compressor/__pycache__/
 
 assets/
 
