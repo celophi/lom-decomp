@@ -1348,35 +1348,7 @@ void akao_refresh_voice_allocation_state(u32 reserved_voice_mask, s32 xa_voice_m
 
 /**
  * @brief Flush pending sequence, SFX, and global SPU voice updates.
- * @note 99.97% match (gcc280_g4, 286/288 exact rows, +0 insns). The only
- *       residual is 2 argdiff rows: the master-state addiu/sw in the
- *       secondary_update_mask block use s1 (sfx_channel) where the target uses v0.
- *       Shapes required to match, each measured via probe_variants:
- *       - array-form extern declarations above (+21 exact);
- *       - a SINGLE loop pointer with plain field accesses in the SFX loop:
- *         gcc's loop.c combines the flags/voice/update_flags mem givs into
- *         one reduced giv anchored at flags (channel+0x34), reproducing the
- *         target's second walker exactly. A hand-built second pointer makes
- *         the giv family anchor at +0xC8 and adds a third walker instead;
- *       - ONE variable (work_mask) reused for the primary update mask, the SFX
- *         active mask, and the driver update flags (+20): all
- *         three land in s3 like the target. Separate variables give each a
- *         different callee-saved reg;
- *       - `(secondary_static_voice_mask | reserved_voice_mask)` inlined in both work_mask and
- *         primary_static_voice_mask (no combined_mask local, +10);
- *       - `secondary_update_mask = 0` initialized before `secondary_static_voice_mask = 0`
- *         (+2); `noise_frequency` as s32 not u16 (+3);
- *       - routing the master-state store through sfx_channel in the
- *         secondary_update_mask block (+29): the early def raises sfx_channel's
- *         priority above sfx_channel_bit (refs 12 vs 11, so it wins s1) and creates the
- *         sfx_channel x primary_static_voice_mask conflict that forces
- *         primary_static_voice_mask into s2 and secondary_static_voice_mask into s4. The
- *         target emits that store from v0 (no sfx_channel def there), so the
- *         original produced the same allocation by some other means - that
- *         is the open 2-row residual.
- *       - fade block anchored at &D_8004F834 with `effect_mask_base = effect_mask_center - 1` and
- *         relative loads, matching the target's addiu s2, s0, -4 shape.
- * @param sfx_update_mask Caller SFX update mask retained by the original ABI.
+ * @note decomp.me (100%) https://decomp.me/scratch/PzQRP
  */
 void akao_flush_voice_updates(s32 sfx_update_mask)
 {
@@ -1388,7 +1360,6 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
     s32 work_mask;
     s32 primary_static_voice_mask;
     s32 primary_low_voice_mask;
-    s32 sfx_channel_bit;
     AkaoChannelState *sfx_channel;
     typeof(g_akao_seq_channel0->w04.song) *song_masks;
     AkaoChannelState *secondary_song;
@@ -1441,8 +1412,7 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
         g_akao_seq_channel0 = g_akao_seq_channel1;
         akao_process_sequence_voice_updates((AkaoChannelState *)g_akao_pending_channels, secondary_update_mask, secondary_static_voice_mask & ~primary_static_voice_mask, &key_on_voice_mask);
         secondary_song = g_akao_seq_channel0;
-        sfx_channel = &g_akao_seq_master_state;
-        g_akao_seq_channel0 = sfx_channel;
+        g_akao_seq_channel0 = &g_akao_seq_master_state;
         secondary_song->w04.song.key_on_mask = 0;
     }
 
@@ -1455,21 +1425,21 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
     work_mask = g_akao_sfx_control.unk0 & g_akao_sfx_control.unk8;
     if (work_mask != 0)
     {
-        sfx_channel_bit = 0x1000;
+        do { primary_static_voice_mask = 0x1000; } while (0);
         sfx_channel = (AkaoChannelState *)g_sfx_channels;
         key_on_voice_mask |= g_akao_sfx_control.unk4;
         do
         {
-            if (work_mask & sfx_channel_bit)
+            if (work_mask & primary_static_voice_mask)
             {
-                akao_update_sfx_channel_voice(sfx_channel, sfx_channel_bit);
+                akao_update_sfx_channel_voice(sfx_channel, primary_static_voice_mask);
                 if (sfx_channel->update_flags != 0)
                 {
                     spu_apply_voice_updates(sfx_channel->voice, (SpuVoiceParams*)&sfx_channel->voice, sfx_channel->flags);
                 }
-                work_mask &= ~sfx_channel_bit;
+                work_mask &= ~primary_static_voice_mask;
             }
-            sfx_channel_bit <<= 1;
+            primary_static_voice_mask <<= 1;
             sfx_channel++;
         } while (work_mask != 0);
         D_8004D404[0] = 0;
