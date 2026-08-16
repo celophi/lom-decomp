@@ -72,7 +72,6 @@ overlay_golem_gcc_280_g0_srcs := src/overlays/golem/unk1.c
 
 OVERLAYS += gosub
 overlay_gosub_gcc_272_cdk_g0_srcs := src/overlays/gosub/gosub.c
-overlay_gosub_gcc_280_g0_srcs := src/overlays/gosub/unk1_b.c
 
 OVERLAYS += gover
 overlay_gover_gcc_272_cdk_g0_srcs := src/overlays/gover/gover.c
