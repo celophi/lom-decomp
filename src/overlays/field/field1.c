@@ -409,3 +409,90 @@ void func_80064678(u16 index)
     st->unk6E = y;
     st->unk66 = y;
 }
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80064878(u16 index)
+{
+    Struct_801ED000* base = (Struct_801ED000*)0x801ED000;
+    Struct_801ED0CC* st;
+    u32 flags;
+    s32 h;
+    s32 w;
+    s32 x;
+    s32 y;
+    u16 rem;
+
+    if ((D_801ED044 & 7) == 4)
+    {
+        func_8006700C((void*)0x801ED034, 0);
+    }
+    st = &base->unk34[index];
+    if ((st->unk10 & 7) == 2)
+    {
+        func_8006700C(st, 0);
+    }
+    flags = st->unk10;
+    if ((flags & 7) != 0)
+    {
+        st->unk10 = (flags & ~0x6000) | 0x4000;
+        func_80066FBC(index);
+        return;
+    }
+    func_80064A3C(st);
+    if (st->unkC != 0)
+    {
+        if (index == 0)
+        {
+            st->unk10 &= ~8;
+            base->unk28 |= 1;
+        }
+        else
+        {
+            st->unk10 |= 8;
+            base->unk28 |= 2;
+        }
+    }
+    if (index == 0)
+    {
+        x = 0;
+        y = 0;
+    }
+    else
+    {
+        x = 0;
+        y = 0x30;
+    }
+    h = st->unk54;
+    st->unk68 = x;
+    st->unk5C = x;
+    st->unk60 = x;
+    st->unk6A = y;
+    st->unk5E = y;
+    st->unk62 = y;
+    while (h > 0)
+    {
+        w = st->unk56;
+        while (w > 0)
+        {
+            rem = 0x100 - x;
+            if (w >= rem)
+            {
+                w -= rem;
+                x = 0;
+                y += st->unk58;
+            }
+            else
+            {
+                x += w;
+                w = 0;
+            }
+        }
+        h -= 0x10;
+    }
+    st->unk6C = x;
+    st->unk64 = x;
+    st->unk6E = y;
+    st->unk66 = y;
+}
