@@ -54,3 +54,28 @@ SendCdCommand = 0x80051620;
 ExitCheckPS = 0x80051710;
 DrawGlyph = 0x80051908;
 DrawString = 0x80051830;
+
+// Keep the switch targets as ordinary local text labels.  Using jtbl_label
+// would emit the jlabel macro, whose default visibility is global in macro.inc.
+// Plain .L labels assemble locally and make the table relocations section-relative,
+// matching GCC 2.7.2 + GNU as -L.
+.L80050B5C = 0x80050B5C; // type:label
+.L80050B78 = 0x80050B78; // type:label
+.L80050C14 = 0x80050C14; // type:label
+.L80050C90 = 0x80050C90; // type:label
+.L80050E00 = 0x80050E00; // type:label
+.L80050ED0 = 0x80050ED0; // type:label
+.L80050F68 = 0x80050F68; // type:label
+.L80050FBC = 0x80050FBC; // type:label
+.L80051020 = 0x80051020; // type:label
+.L80051060 = 0x80051060; // type:label
+.L800510BC = 0x800510BC; // type:label
+.L80051118 = 0x80051118; // type:label
+.L80051180 = 0x80051180; // type:label
+.L800511E4 = 0x800511E4; // type:label
+.L8005122C = 0x8005122C; // type:label
+.L800512B4 = 0x800512B4; // type:label
+.L80051304 = 0x80051304; // type:label
+.L80051364 = 0x80051364; // type:label
+.L800513E4 = 0x800513E4; // type:label
+.L80051424 = 0x80051424; // type:label

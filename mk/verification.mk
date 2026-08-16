@@ -15,7 +15,17 @@
 # generate_objdiff_config.py uses that manifest to mark its objdiff units as
 # complete.
 
-.PHONY: verify-bins verify-gover verify-movie verify-gname
+.PHONY: verify-bins verify-checkps-raw verify-gover verify-movie verify-gname
+
+# --- checkps -----------------------------------------------------------------
+
+build/overlays/checkps/checkps.raw: checkps
+	@mkdir -p $(@D)
+	$(OBJCOPY) -O binary $(STAGING)/build/overlays/checkps/checkps.elf $@.tmp
+	mv $@.tmp $@
+
+verify-checkps-raw: build/overlays/checkps/checkps.raw
+	python3 tools/verify_checkps_raw.py $< $(ROM_BIN_DIR)/CHECKPS.BIN
 
 # --- gover -------------------------------------------------------------------
 

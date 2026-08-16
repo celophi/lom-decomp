@@ -128,8 +128,8 @@ void InitCheckPSDisplay(CheckPSState* state)
 {
     RECT rect;
 
-    func_8001D5AC(1500);
-    func_8001D58C(160, 120);
+    SetGeomScreen(1500);
+    SetGeomOffset(160, 120);
     state->front.clearRect.x = 0;
     state->front.clearRect.y = 0;
     state->front.clearRect.w = SCREEN_WIDTH;
@@ -160,12 +160,12 @@ void InitCheckPSDisplay(CheckPSState* state)
     rect.h = 256;
 
     ClearImage(&rect, 0, 0, 0);
-    func_8005239C();
+    ResetTextRenderer();
     ResetFadeState();
     SetFadeTarget(256, 256, 256, 20);
     func_800506D0();
     D_8005D060 = 0;
-    func_80050A0C();
+    UpdateControllerInput();
 }
 
 /**
@@ -396,7 +396,7 @@ void func_80050570(void)
 {
     s32 temp_v0;
 
-    func_8005088C();
+    ProcessControllerInput();
     temp_v0 = g_frameTimer - 1;
     g_frameTimer = temp_v0;
 

@@ -69,7 +69,7 @@ $(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$(
 # Generated unk*.c files are gitignored and splat does not remove outputs from
 # older configurations. Treat tracked C files and explicitly routed generated
 # files as build inputs so stale ignored files cannot enter the build by accident.
-$(1)_TRACKED_C_SRCS := $$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null)
+$(1)_TRACKED_C_SRCS := $$(filter $$(wildcard $$($(1)_SRC_DIR)/*.c),$$(shell git ls-files -- '$$($(1)_SRC_DIR)/*.c' 2>/dev/null))
 $(1)_C_SRCS = $$(sort $$($(1)_TRACKED_C_SRCS) $$(filter $$($(1)_ROUTED_SRCS),$$(wildcard $$($(1)_SRC_DIR)/*.c)))
 $(1)_UNROUTED_SRCS = $$(filter-out $$($(1)_ROUTED_SRCS),$$($(1)_C_SRCS))
 $(1)_UNKNOWN_ROUTED_SRCS = $$(filter-out $$($(1)_C_SRCS),$$($(1)_ROUTED_SRCS))
@@ -137,7 +137,11 @@ $$($(1)_GCC_280_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$
 $$($(1)_GCC_272_GNU_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_GNU) $(CFLAGS_272_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o - | \
-		$(AS_272_GNU) $(ASFLAGS_272_GNU) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+		$(AS_272_GNU) $(ASFLAGS_272_GNU) $$(overlay_$(1)_gcc_272_gnu_as_extra_flags_$$*) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+	cd $(STAGING) && $(OBJCOPY) $$(overlay_$(1)_gcc_272_gnu_objcopy_flags_$$*) \
+		$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o \
+		$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.normalized.o
+	mv $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.normalized.o $$@
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
@@ -169,7 +173,7 @@ $$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/target/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) $$(overlay_$(1)_target_as_extra_flags_$$*) -o $$($(1)_BUILD_DIR)/target/$$*.o
 
 # ── Phony convenience targets ──
 .PHONY: $(1) $(1)-target-objects $(1)-base-objects $(1)-objdiff
