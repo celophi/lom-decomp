@@ -2821,311 +2821,326 @@ void cdrom_defer_data_ready(void)
  * @warning No bounds checking on back-reference offsets (0xFC–0xFE); a malformed
  *          stream can read before the start of the destination buffer.
  *
- * @see decomp.me: (99.78%) https://decomp.me/scratch/MlH6P
+ * @see decomp.me: (100%) https://decomp.me/scratch/1Feag
  */
-s32 cdrom_decompress_data(u8** src_cursor, u8** dst_cursor, u8* src_end, u8* dst_end)
+
+s32 cdrom_decompress_data(u8** srcStart, u8** dstStart, u8* srcEnd, u8* dstEnd)
 {
-    u8* src;
-    u8* dst;
-    u32 run_length;
+    u8* srcPtr;
+    u8* dstPtr;
+    u32 iterations;
     u32 opcode;
-    CdDecompressCursor copy_cursor;
-    u8 next_byte;
-    u8 offset_low;
-    u8 operand_0;
-    u8 operand_1;
-    u8 operand_2;
-    u8 operand_3;
-    u32 pair_high;
-    u32 pair_value;
-    s32 delta_seed;
 
-    src = *src_cursor;
-    dst = *dst_cursor;
+    u8* tempPtr;
+    u8 nextByte;
 
-    while (src < src_end && dst < dst_end)
+    u8 offsetLow;
+
+    u8 param0;
+    u8 param1;
+    u8 param2;
+    u8 param3;
+
+    u32 highB;
+    u32 wordTemp;
+    u32 tempSum;
+
+    s32 seed;
+
+    srcPtr = *srcStart;
+    dstPtr = *dstStart;
+
+    while (srcPtr < srcEnd && dstPtr < dstEnd)
     {
-        opcode = *src;
+        opcode = *srcPtr;
 
         switch (opcode)
         {
-        case CD_DECOMPRESS_REPEAT_NIBBLE:
-            operand_0 = src[1];
+        case 0xF0:
+            param1 = srcPtr[1];
 
-            src += 2;
-            run_length = (operand_0 & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
-            operand_0 = operand_0 >> 4;
-
-            do
-            {
-                *dst++ = operand_0;
-            } while (--run_length != 0);
-            break;
-
-        case CD_DECOMPRESS_REPEAT_BYTE:
-            operand_0 = src[2];
-            next_byte = src[1];
-
-            src += 3;
-            run_length = next_byte + 4;
+            srcPtr += 2;
+            iterations = (param1 & 0xf) + 3;
+            param1 = param1 >> 4;
 
             do
             {
-                *dst++ = operand_0;
-            } while (--run_length != 0);
+                *dstPtr++ = param1;
+            } while (--iterations != 0);
             break;
 
-        case CD_DECOMPRESS_REPEAT_NIBBLE_PAIR:
-            operand_0 = src[2];
-            next_byte = src[1];
+        case 0xF1:
+            param1 = srcPtr[2];
+            nextByte = srcPtr[1];
 
-            src += 3;
-            run_length = next_byte + 2;
-            operand_2 = operand_0 >> 4;
-            operand_0 = operand_0 & CD_DECOMPRESS_LOW_NIBBLE_MASK;
+            srcPtr += 3;
+            iterations = nextByte + 4;
 
             do
             {
-                dst[0] = operand_0;
-                dst[1] = operand_2;
-                dst += 2;
-            } while (--run_length != 0);
+                *dstPtr++ = param1;
+            } while (--iterations != 0);
             break;
 
-        case CD_DECOMPRESS_REPEAT_PAIR:
-            operand_0 = src[2];
-            operand_1 = src[3];
-            next_byte = src[1];
+        case 0xF2:
+            param1 = srcPtr[2];
+            nextByte = srcPtr[1];
 
-            src += 4;
-            run_length = next_byte + 2;
+            srcPtr += 3;
+            iterations = nextByte + 2;
+            highB = param1 >> 4;
+            param1 = param1 & 0xf;
 
             do
             {
-                dst[0] = operand_0;
-                dst[1] = operand_1;
-                dst += 2;
-            } while (--run_length != 0);
+                dstPtr[0] = param1;
+                dstPtr[1] = highB;
+                dstPtr += 2;
+            } while (--iterations != 0);
             break;
 
-        case CD_DECOMPRESS_REPEAT_TRIPLET:
-            operand_0 = src[2];
-            operand_1 = src[3];
-            operand_3 = src[4];
-            next_byte = src[1];
+        case 0xF3:
+            param1 = srcPtr[2];
+            param0 = srcPtr[3];
+            nextByte = srcPtr[1];
 
-            src += 5;
-            run_length = next_byte + 2;
+            srcPtr += 4;
+            iterations = nextByte + 2;
 
             do
             {
-                dst[0] = operand_0;
-                dst[1] = operand_1;
-                dst[2] = operand_3;
-                dst += 3;
-            } while (--run_length != 0);
-
+                dstPtr[0] = param1;
+                dstPtr[1] = param0;
+                dstPtr += 2;
+            } while (--iterations != 0);
             break;
 
-        case CD_DECOMPRESS_INTERLEAVE_BYTE:
-            operand_0 = src[2];
-            next_byte = src[1];
+        case 0xF4:
+            param1 = srcPtr[2];
+            param0 = srcPtr[3];
+            param3 = srcPtr[4];
+            nextByte = srcPtr[1];
 
-            src += 3;
-            run_length = next_byte + 4;
+            srcPtr += 5;
+            iterations = nextByte + 2;
 
             do
             {
-                dst[0] = operand_0;
-                dst[1] = *src++;
-                dst += 2;
-            } while (--run_length != 0);
+                *dstPtr = param1;
+                (&dstPtr[2])[-1] = param0;
+                (&dstPtr[2])[0] = param3;
+                dstPtr += 3;
+            } while (--iterations != 0);
 
             break;
 
-        case CD_DECOMPRESS_INTERLEAVE_PAIR:
-            operand_0 = src[2];
-            operand_1 = src[3];
-            next_byte = src[1];
+        case 0xF5:
+            param1 = srcPtr[2];
+            nextByte = srcPtr[1];
 
-            src += 4;
-            run_length = next_byte + 3;
+            srcPtr += 3;
+            iterations = nextByte + 4;
 
             do
             {
-                dst[0] = operand_0;
-                dst[1] = operand_1;
-                dst[2] = *src++;
-                dst += 3;
-            } while (--run_length != 0);
+                dstPtr[0] = param1;
+                dstPtr[1] = *srcPtr++;
+                dstPtr += 2;
+            } while (--iterations != 0);
 
             break;
 
-        case CD_DECOMPRESS_INTERLEAVE_TRIPLET:
-            operand_0 = src[2];
-            operand_1 = src[3];
-            operand_3 = src[4];
-            next_byte = src[1];
+        case 0xF6:
+            param1 = srcPtr[2];
+            param0 = srcPtr[3];
+            nextByte = srcPtr[1];
 
-            src += 5;
-            run_length = next_byte + 2;
+            srcPtr += 4;
+            tempPtr = &dstPtr[2];
+            iterations = nextByte + 3;
 
             do
             {
-                dst[0] = operand_0;
-                dst[1] = operand_1;
-                dst[2] = operand_3;
-                dst[3] = *src++;
-                dst += 4;
-            } while (--run_length != 0);
+                *dstPtr = param1;
+                tempPtr[-1] = param0;
+                nextByte = *(u8*)srcPtr;
+                srcPtr += 1;
+                dstPtr += 3;
+                tempPtr[0] = nextByte;
+                tempPtr += 3;
+            } while (--iterations != 0);
 
             break;
 
-        case CD_DECOMPRESS_ASCENDING_RUN:
-            operand_0 = src[2];
-            next_byte = src[1];
+        case 0xF7:
+            param1 = srcPtr[2];
+            param0 = srcPtr[3];
+            param3 = srcPtr[4];
+            nextByte = srcPtr[1];
 
-            src += 3;
-            run_length = next_byte + 4;
+            srcPtr += 5;
+            iterations = nextByte + 2;
 
             do
             {
-                *dst++ = operand_0;
-                operand_0 += 1;
-            } while (--run_length != 0);
+                dstPtr[0] = param1;
+                dstPtr[1] = param0;
+                dstPtr[2] = param3;
+                dstPtr[3] = *srcPtr++;
+                dstPtr += 4;
+            } while (--iterations != 0);
 
             break;
 
-        case CD_DECOMPRESS_DESCENDING_RUN:
-            operand_0 = src[2];
-            next_byte = src[1];
+        case 0xF8:
+            param1 = srcPtr[2];
+            nextByte = srcPtr[1];
 
-            src += 3;
-            run_length = next_byte + 4;
+            srcPtr += 3;
+            iterations = nextByte + 4;
 
             do
             {
-                *dst++ = operand_0;
-                operand_0 -= 1;
-            } while (--run_length != 0);
+                *dstPtr++ = param1;
+                param1 += 1;
+            } while (--iterations != 0);
 
             break;
 
-        case CD_DECOMPRESS_STEPPED_RUN:
-            operand_0 = src[2];
-            operand_1 = src[3];
-            next_byte = src[1];
+        case 0xF9:
+            param1 = srcPtr[2];
+            nextByte = srcPtr[1];
 
-            src += 4;
-            run_length = next_byte + 5;
+            srcPtr += 3;
+            iterations = nextByte + 4;
 
             do
             {
-                *dst++ = operand_0;
-                operand_0 += operand_1;
-            } while (--run_length != 0);
+                *dstPtr++ = param1;
+                param1 -= 1;
+            } while (--iterations != 0);
 
             break;
 
-        case CD_DECOMPRESS_PAIR_DELTA_RUN:
-            operand_2 = src[2];
-            pair_high = src[3];
-            next_byte = src[1];
-            operand_3 = src[4];
+        case 0xFA:
+            param1 = srcPtr[2];
+            param0 = srcPtr[3];
+            nextByte = srcPtr[1];
 
-            run_length = next_byte + 3;
-            delta_seed = operand_3 << 24;
-            src += 5;
+            srcPtr += 4;
+            iterations = nextByte + 5;
 
             do
             {
-                dst[0] = operand_2;
-                dst[1] = pair_high;
-                dst += 2;
+                *dstPtr++ = param1;
+                param1 += param0;
+            } while (--iterations != 0);
 
-                // Sign-extend the delta before advancing the little-endian pair.
-                pair_value = delta_seed >> 24;
-                pair_value += (pair_high << 8) | operand_2;
-                operand_2 = pair_value;
-                pair_high = pair_value >> 8;
-            } while (--run_length != 0);
             break;
 
-        case CD_DECOMPRESS_COPY_12_BIT:
-            operand_0 = src[1];
-            opcode = src[2];
-            offset_low = opcode;
+        case 0xFB:
+            param2 = srcPtr[2];
+            highB = srcPtr[3];
+            nextByte = srcPtr[1];
+            param3 = srcPtr[4];
 
-            src += 3;
-            run_length = (offset_low >> 4) + 4;
-
-            copy_cursor.offset = operand_0 | ((offset_low & CD_DECOMPRESS_LOW_NIBBLE_MASK) << 8);
-            copy_cursor.bytes = dst - (copy_cursor.offset & CD_DECOMPRESS_OFFSET_MASK);
+            iterations = nextByte + 3;
+            seed = param3 << 24; // place param3 in the high byte for sign extension
+            srcPtr += 5;
 
             do
             {
-                *dst++ = copy_cursor.bytes[-1];
-                copy_cursor.bytes++;
-            } while (--run_length != 0);
+                // Write the two current bytes
+                ((u8*)dstPtr)[0] = param2;
+                ((u8*)dstPtr)[1] = highB;
+                dstPtr += 2;
 
+                // Sign-extend param3 via arithmetic right shift
+                tempSum = seed >> 24;
+
+                // Form the 16-bit value (param0 << 8) | param2
+
+                wordTemp = highB << 8;
+                tempSum += param2 | wordTemp; // add to the sign-extended constant
+
+                // Update for next iteration
+                param2 = tempSum;           // low byte
+                highB = (tempSum >> 8); // high byte
+            } while (--iterations != 0);
             break;
 
-        case CD_DECOMPRESS_COPY_8_BIT:
-            operand_0 = src[1];
-            operand_2 = operand_0;
-            next_byte = src[2];
+        case 0xFC:
+            param1 = srcPtr[1];
+            offsetLow = (opcode = srcPtr[2]);
 
-            src += 3;
-            run_length = next_byte + CD_DECOMPRESS_COPY_8_BIT_BASE_LENGTH;
-            copy_cursor.bytes = dst - operand_2;
+            srcPtr += 3;
+            iterations = (offsetLow >> 4) + 4;
+
+            tempPtr = (u8*)((u32)param1 | (u32)((offsetLow & 0xF) << 8));
+            tempPtr = (u8*)(dstPtr - (((u32)tempPtr) & 0xFFFF));
 
             do
             {
-                *dst++ = copy_cursor.bytes[-1];
-                copy_cursor.bytes++;
-            } while (--run_length != 0);
+                *dstPtr++ = tempPtr++ [-1];
+            } while (--iterations != 0);
 
             break;
 
-        case CD_DECOMPRESS_COPY_NIBBLE:
-            operand_0 = src[1];
+        case 0xFD:
+            param1 = srcPtr[1];
+            param2 = param1;
+            nextByte = srcPtr[2];
 
-            src += 2;
-            run_length = (operand_0 & CD_DECOMPRESS_LOW_NIBBLE_MASK) + 3;
-            copy_cursor.bytes = dst - ((operand_0 & CD_DECOMPRESS_HIGH_NIBBLE_MASK) >> 1);
+            srcPtr += 3;
+            iterations = nextByte + 0x14;
+            tempPtr = (u8*)(dstPtr - param2);
 
             do
             {
-                offset_low = copy_cursor.bytes[-8];
-                copy_cursor.bytes++;
-                *dst++ = offset_low;
-            } while (--run_length != 0);
+                *dstPtr++ = tempPtr++ [-1];
+            } while (--iterations != 0);
 
             break;
 
-        case CD_DECOMPRESS_END:
-            *src_cursor = &src[1];
-            *dst_cursor = dst;
-            return FALSE;
+        case 0xFE:
+            param1 = srcPtr[1];
+
+            srcPtr += 2;
+            iterations = (param1 & 0xF) + 3;
+            tempPtr = (u8*)(dstPtr - ((u32)(param1 & 0xF0) >> 1));
+
+            do
+            {
+                offsetLow = (tempPtr++)[-8];
+                *dstPtr++ = offsetLow;
+            } while (--iterations != 0);
+
+            break;
+
+        case 0xFF:
+            *srcStart = &srcPtr[1];
+            *dstStart = dstPtr;
+            return 0;
 
         default:
-            src++;
-            run_length = opcode + 1;
+            srcPtr++;
+            iterations = opcode + 1;
 
             do
             {
-                *dst++ = *src++;
-            } while (--run_length != 0);
+                *dstPtr++ = *srcPtr++;
+            } while (--iterations != 0);
 
             break;
         }
 
-        *src_cursor = src;
+        *srcStart = srcPtr;
     }
 
-    *dst_cursor = dst;
-    return TRUE;
+    *dstStart = dstPtr;
+    return 1;
 }
+
 
 /**
  * @brief Supplies ring-buffer destinations for streamed CD sectors.
