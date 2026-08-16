@@ -77,9 +77,7 @@ OVERLAYS += gover
 overlay_gover_gcc_272_cdk_g0_srcs := src/overlays/gover/gover.c
 
 OVERLAYS += menu
-overlay_menu_gcc_272_cdk_g0_srcs := \
-	src/overlays/menu/menu.c \
-	src/overlays/menu/menu2.c
+overlay_menu_gcc_272_cdk_g0_srcs := src/overlays/menu/menu.c
 
 OVERLAYS += movie
 overlay_movie_gcc_280_g4_srcs := src/overlays/movie/movie.c
