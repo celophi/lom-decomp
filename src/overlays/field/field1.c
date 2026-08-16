@@ -37,7 +37,8 @@ typedef struct {
     FlagWord unk10;         // 0x10
     u8  unk14;              // 0x14
     u8  unk15;              // 0x15
-    u8  _pad16[2];          // 0x16
+    u8  unk16;              // 0x16
+    u8  unk17;              // 0x17
     u8  unk18;              // 0x18
     u8  unk19;              // 0x19
     u8  unk1A;              // 0x1A
@@ -94,7 +95,8 @@ typedef struct
     u16 unk8;               // 0x08
     u16 unkA;               // 0x0A
     CfgWord unkC;           // 0x0C
-    u32 unk10;              // 0x10
+    FlagWord unk10;         // 0x10
+    u32 unk14;              // 0x14
 } Struct_801ED408;
 
 typedef struct
@@ -138,7 +140,20 @@ typedef struct
     s16 h;
 } SPRT;
 
+typedef struct
+{
+    u8  unk0;               // 0x00
+    u8  unk1;               // 0x01
+    u8  _pad2[2];           // 0x02
+    u16 unk4;               // 0x04
+    u16 unk6;               // 0x06
+    u8  _pad8[4];           // 0x08
+    u32 unkC;               // 0x0C
+} Struct_801ED600;
+
 void func_800640B4(Struct_8006429C* arg0);
+
+extern Struct_801ED408* D_801ED004;
 
 extern s16 D_801ED028;
 extern s32 D_801ED044;
@@ -560,13 +575,13 @@ void func_80064A3C(Struct_801ED0CC* st)
     st->unk8C = cfg->unkC.h.lo;
     st->unk90 = 0;
     st->unk94 = cfg->unkC.h.hi;
-    st->unk10.b.unk13 = (u8)cfg->unk10;
-    temp_v1 = (st->unk10.flags & ~0xC0) | ((cfg->unk10 >> 2) & 0xC0);
+    st->unk10.b.unk13 = (u8)cfg->unk10.flags;
+    temp_v1 = (st->unk10.flags & ~0xC0) | ((cfg->unk10.flags >> 2) & 0xC0);
     st->unk10.flags = temp_v1;
     temp_a0 = temp_v1 & ~0x700;
-    temp_a0 |= (cfg->unk10 >> 4) & 0x700;
+    temp_a0 |= (cfg->unk10.flags >> 4) & 0x700;
     st->unk10.flags = temp_a0;
-    temp_a2 = cfg->unk10;
+    temp_a2 = cfg->unk10.flags;
     if ((temp_a2 & 0xC00) == 0xC00)
     {
         st->unk10.flags = temp_a0 & ~0x30;
@@ -600,7 +615,7 @@ void func_80064A3C(Struct_801ED0CC* st)
     st->unk4 = 0;
     st->unk8 = 0;
     st->unk49 = 1;
-    if ((cfg->unkC.word == 0) && ((cfg->unk10 & 0x70FF) == 0))
+    if ((cfg->unkC.word == 0) && ((cfg->unk10.flags & 0x70FF) == 0))
     {
         st->unk10.b.unk12 = 0;
     }
@@ -622,4 +637,311 @@ void func_80064A3C(Struct_801ED0CC* st)
     st->unk10.flags &= ~0x800;
     st->unk10.flags &= ~0x1000;
     st->unk10.flags &= ~0x6000;
+}
+
+/**
+ * @note Not yet matching. The instruction stream is byte-identical to the
+ *       target, but three branches (0x45C, 0x4B8, 0x4C8) land on the wrong one
+ *       of two byte-identical `st->unk14 = 0` tail blocks: the target shares
+ *       case 1 / case 3 / the `(flags & 0x1000) == 0` path and leaves case 2 its
+ *       own copy, while gcc merges case 2 here instead. The surviving copy is
+ *       picked by jump.c's `jump_chain` walk from insn UIDs, so no source shape
+ *       reaches it -- see working/func_80064C28/STATUS.md for the retired
+ *       classes before probing this again.
+ * @see decomp.me (99.97%) TODO
+ */
+void func_80064C28(s32 arg0, s32 arg1, s32 arg2)
+{
+    Struct_801ED600* pad = (Struct_801ED600*)0x801ED600;
+    Struct_801ED0CC* st = (Struct_801ED0CC*)0x801ED034;
+    Struct_801ED408* rec;
+    u8* src;
+    u8* dst;
+    s32 i;
+    s32 n;
+    s32 keys;
+    s32 mode;
+    s32 tmp;
+    u16 idx;
+
+    i = 3;
+    do
+    {
+        switch ((u8)st->unk10.flags & 7)
+        {
+        case 1:
+        case 2:
+        case 3:
+            if (st->unk1D == 1)
+            {
+                if (st->unkC != 0)
+                {
+                    func_800671D8(st->unkC, arg0, (st->unk10.flags >> 3) & 1, (st->unk10.flags & 0x30) != 0x10);
+                }
+                func_8006429C(st);
+                func_80066CC0(st, arg0);
+                st->unk1D = 0;
+            }
+            else if (arg2 == 1)
+            {
+                func_80067098(st, arg0, arg1);
+                break;
+            }
+            else
+            {
+                if (st->unk14 != 0)
+                {
+                    if (pad->unk0 < 3)
+                    {
+                        if (st->unk14 == 0x10)
+                        {
+                            switch (pad->unk0)
+                            {
+                            case 1:
+                            case 2:
+                                if (pad->unkC != 0)
+                                {
+                                    keys = pad->unk1;
+                                }
+                                else
+                                {
+                                    keys = pad->unk6;
+                                }
+                                break;
+                            case 0:
+                                keys = pad->unk6;
+                                break;
+                            default:
+                                keys = 0;
+                                break;
+                            }
+                            if ((keys & 0x10) != 0)
+                            {
+                                tmp = st->unk17;
+                                if (tmp == 0)
+                                {
+                                    tmp = st->unk18;
+                                }
+                                st->unk17 = tmp - 1;
+                                akao_play_sfx(0x7D, 0, 0x80, 0x7F);
+                            }
+                            if ((keys & 0x40) != 0)
+                            {
+                                if (st->unk17 < (st->unk18 - 1))
+                                {
+                                    st->unk17 = st->unk17 + 1;
+                                }
+                                else
+                                {
+                                    st->unk17 = 0;
+                                }
+                                akao_play_sfx(0x7D, 0, 0x80, 0x7F);
+                            }
+                            if ((pad->unk4 & 0x4002) != 0)
+                            {
+                                st->unk14 = 0;
+                                st->unk18 = 0;
+                                st->unk0 = 0;
+                                if ((st->unk10.flags & 0x1000) != 0)
+                                {
+                                    if (st->unkC != 0)
+                                    {
+                                        if ((st->unk10.flags & 8) == 0)
+                                        {
+                                            D_801ED028 &= 0xFFFE;
+                                        }
+                                        else
+                                        {
+                                            D_801ED028 &= 0xFFFD;
+                                        }
+                                    }
+                                    if ((st->unk10.flags & 0xC0) == 0x40)
+                                    {
+                                        st->unk10.flags = st->unk10.flags & ~7;
+                                    }
+                                    else
+                                    {
+                                        st->unk10.flags = (st->unk10.flags & ~7) | 3;
+                                        st->unk4A = 0;
+                                    }
+                                }
+                                akao_play_sfx(0x7E, 0, 0x80, 0x7F);
+                            }
+                        }
+                        else if (((pad->unk4 & 0x4002) != 0) && (st->unk1E != 2))
+                        {
+                            st->unk1E = 2;
+                            st->unk1F = 3;
+                        }
+                    }
+                }
+                else if ((st->unk10.flags & 7) == 2)
+                {
+                    if (st->unk1A != 0)
+                    {
+                        st->unk1A = st->unk1A - 1;
+                    }
+                    else if (st->unk1C != 0)
+                    {
+                        st->unk1C = st->unk1C - 4;
+                        if (st->unk1C == 0)
+                        {
+                            func_80066A2C(st);
+                            func_80066CC0(st, arg0);
+                        }
+                    }
+                    else if (st->unk0 != 0)
+                    {
+                        func_800632E0(st, 4);
+                        func_80066CC0(st, arg0);
+                    }
+                }
+            }
+            func_80067098(st, arg0, arg1);
+            if (st->unk14 != 0)
+            {
+                if (st->unk14 == 0x10)
+                {
+                    st->unk1F = st->unk1F - 1;
+                    if (st->unk1F == 0)
+                    {
+                        st->unk1E = st->unk1E + 1;
+                        if (st->unk1E == 4)
+                        {
+                            st->unk1E = 0;
+                        }
+                        st->unk1F = 4;
+                    }
+                }
+                else
+                {
+                    st->unk1F = st->unk1F - 1;
+                    if (st->unk1F == 0)
+                    {
+                        if (st->unk1E == 2)
+                        {
+                            switch (st->unk14)
+                            {
+                            case 1:
+                                st->unk0 = 0;
+                                if ((st->unk10.flags & 0x1000) != 0)
+                                {
+                                    if (st->unkC != 0)
+                                    {
+                                        if ((st->unk10.flags & 8) == 0)
+                                        {
+                                            D_801ED028 &= 0xFFFE;
+                                        }
+                                        else
+                                        {
+                                            D_801ED028 &= 0xFFFD;
+                                        }
+                                    }
+                                    if ((st->unk10.flags & 0xC0) == 0x40)
+                                    {
+                                        st->unk10.flags = st->unk10.flags & ~7;
+                                    }
+                                    else
+                                    {
+                                        st->unk10.flags = (st->unk10.flags & ~7) | 3;
+                                        st->unk4A = 0;
+                                    }
+                                }
+                                st->unk14 = 0;
+                                break;
+                            case 2:
+                                func_8006429C(st);
+                                func_80066CC0(st, arg0);
+                                st->unk14 = 0;
+                                break;
+                            case 3:
+                                func_80064210(st);
+                                st->unk14 = 0;
+                                break;
+                            default:
+                                st->unk14 = 0;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            st->unk1E = 1 - st->unk1E;
+                            st->unk1F = 8;
+                        }
+                    }
+                }
+            }
+            if (((st->unk10.flags & 7) == 0) && ((st->unk10.flags & 0x6000) != 0))
+            {
+                idx = 3 - i;
+                mode = (st->unk10.flags >> 13) & 3;
+                dst = (u8*)0x801ED408;
+                n = 0x17;
+                rec = &D_801ED004[idx];
+                src = (u8*)rec;
+                do
+                {
+                    *dst = *src;
+                    src += 1;
+                    n -= 1;
+                    dst += 1;
+                } while (n != -1);
+                if (mode == 1)
+                {
+                    func_80064678(idx);
+                }
+                else
+                {
+                    func_80064878(idx);
+                }
+                if (rec->unk14 != 0)
+                {
+                    func_80066F28(idx, rec->unk14, rec->unk10.b.unk12);
+                }
+            }
+            break;
+        case 4:
+            if (st->unk1D == 1)
+            {
+                st->unk4A = 0x32;
+                st->unk1D = 0;
+            }
+            if (st->unk0 != 0)
+            {
+                func_8006429C(st);
+                func_800632E0(st, 0);
+                st->unk0 = 0;
+                st->unk14 = 0;
+                st->unk68 = st->unk60;
+                st->unk6A = st->unk62;
+                st->unk6C = st->unk64;
+                st->unk6E = st->unk66;
+                func_80066CC0(st, arg0);
+            }
+            func_800654E0(st, arg0, arg1);
+            st->unk4A = st->unk4A - 1;
+            if (st->unk4A == 0)
+            {
+                if (st->unkC != 0)
+                {
+                    if ((st->unk10.flags & 8) == 0)
+                    {
+                        D_801ED028 &= 0xFFFE;
+                    }
+                    else
+                    {
+                        D_801ED028 &= 0xFFFD;
+                    }
+                }
+                st->unk10.flags = st->unk10.flags & ~7;
+            }
+            break;
+        case 5:
+        case 6:
+            break;
+        default:
+            break;
+        }
+        st = (Struct_801ED0CC*)((u8*)st + 0x98);
+    } while (--i != -1);
 }
