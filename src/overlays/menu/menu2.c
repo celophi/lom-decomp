@@ -1665,62 +1665,46 @@ s32 memory_card_scan_files(char* path, struct DIRENTRY* entry)
  * @param chan Card channel / slot to probe, passed straight to _card_read.
  * @return 1 if the card is formatted, 0 if the "MC" magic is absent, -1 if the
  *         event poll reported anything other than completion.
- * @note NOT A MATCH - 97.54%. 80 insns vs the target's 81: the ONE missing
- *       instruction is `addu s4, v0, zero` at 0x38, the loop-base copy for
- *       g_card_hw_io_event. Everything else is a saved-register permutation that
- *       cascades from that copy not existing. Target map (m2c --reg-vars):
- *       status s0, chan s1, constant-1 s2, &g_card_hw_error_event s3, &g_card_hw_io_event s4;
- *       this build gets status s3, chan s2, constant-1 s0, &g_card_hw_error_event s1.
- * @note @c new_var is required to match: assigning 0 to a local and returning
- *       it (instead of a bare `return 0`) is worth +5 exact rows and removes
- *       the spurious instruction the bare form emits. Reverting it scores
- *       93.28% with 4 `replace` rows and an extra wrong insn.
- * @note Cause is ALLOC-ORDER: the constant-1 pseudo is hoisted to the loop
- *       preheader with 9 loop-weighted refs (pri 5400) and outranks status
- *       (5 refs, pri 2500), so it takes s0 first. Underneath that is a
- *       SCHED-LUID ordering problem - the target materializes the constant in
- *       the 2nd drain delay slot and status=3 in the 4th, mine has them
- *       swapped, and the preheader-created constant can never get a luid
- *       earlier than a status=3 written before the loop.
- * @note Do not "fix" this with a shared zero local or a short-typed flag. Those
- *       reach 96.21% but emit a saved register where the target uses hardware
- *       $zero, and xori/bnez where the target has bne. See
- *       working/func_8014F8A8/status.md for the full probe log.
- * @see decomp.me (97.54%)
+ * @see decomp.me (100%) https://decomp.me/scratch/lhdFU
  */
 s32 memory_card_check_formatted(s32 chan)
 {
     u8 header[0x80];
     s32 status;
-    s32 new_var;
+    s32 one;
+    s32 *ioPtr;
+    s32 *errPtr;
 
     bzero(header, 0x80);
     TestEvent(g_card_hw_io_event);
     TestEvent(g_card_hw_error_event);
     TestEvent(g_card_hw_timeout_event);
     TestEvent(g_card_hw_new_event);
-    status = 3;
     _new_card();
-    new_var = 0;
     _card_read(chan, 0, header);
+    
     while (1)
     {
-        if (TestEvent(g_card_hw_io_event) == 1)
+        ioPtr = &g_card_hw_io_event;
+        one = 1;
+        errPtr = &g_card_hw_error_event;
+        status = 3;
+        if (TestEvent(*ioPtr) == one)
         {
             status = 0;
             break;
         }
-        if (TestEvent(g_card_hw_error_event) == 1)
+        if (TestEvent(*errPtr) == one)
         {
             status = 1;
             break;
         }
-        if (TestEvent(g_card_hw_timeout_event) == 1)
+        if (TestEvent(g_card_hw_timeout_event) == one)
         {
             status = 2;
             break;
         }
-        if (TestEvent(g_card_hw_new_event) == 1)
+        if (TestEvent(g_card_hw_new_event) == one)
         {
             break;
         }
@@ -1729,15 +1713,13 @@ s32 memory_card_check_formatted(s32 chan)
     {
         return -1;
     }
-    if (header[0] != 'M')
-    {
-        return 0;
-    }
-    if (header[1] == 'C')
+    
+    if ((header[0] == 'M') && (header[1] == 'C'))
     {
         return 1;
     }
-    return new_var;
+    
+    return 0;
 }
 
 extern u8 g_card_save_title_sjis[];
