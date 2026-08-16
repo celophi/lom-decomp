@@ -1,0 +1,4 @@
+rom:0x268D reloc:MIPS_NONE symbol:g_field_scene
+rom:0x269D reloc:MIPS_NONE symbol:g_field_scene
+rom:0x26A1 reloc:MIPS_NONE symbol:g_field_scene
+rom:0x26AD reloc:MIPS_NONE symbol:g_field_vram_byte_count
