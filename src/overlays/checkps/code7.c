@@ -839,10 +839,11 @@ s32 PollCdResponse(s32 arg0)
                 g_cdIrqAccum = 0;
                 if (temp_v1 == 5)
                 {
-                    do
+                    while (1)
                     {
                         g_statusFlag.unk0 = *g_cdResponseRegister;
-                    } while (0);
+                        break;
+                    }
                     g_statusFlag.unk1 = *g_cdResponseRegister;
                     *g_cdStatusRegister = 1;
                     *g_cdDataRegister = 0x1F;
