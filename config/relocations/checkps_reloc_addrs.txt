@@ -1,0 +1,39 @@
+// Preserve CdCmdEntry field references as g_cdCmdTable + field offset.  This
+// matches the symbol/addend pairs emitted naturally by GCC 2.7.2 instead of
+// inventing D_* symbols for interior bytes of the command descriptor table.
+rom:0x17E1 reloc:MIPS_HI16 symbol:g_cdCmdTable addend:0x3
+rom:0x17E9 reloc:MIPS_LO16 symbol:g_cdCmdTable addend:0x3
+rom:0x1909 reloc:MIPS_HI16 symbol:g_cdCmdTable addend:0x2
+rom:0x1911 reloc:MIPS_LO16 symbol:g_cdCmdTable addend:0x2
+rom:0x193D reloc:MIPS_HI16 symbol:g_cdCmdTable addend:0x2
+rom:0x1945 reloc:MIPS_LO16 symbol:g_cdCmdTable addend:0x2
+rom:0x1A1D reloc:MIPS_HI16 symbol:g_cdCmdTable addend:0x1
+rom:0x1A25 reloc:MIPS_LO16 symbol:g_cdCmdTable addend:0x1
+rom:0x1A51 reloc:MIPS_HI16 symbol:g_cdCmdTable addend:0x1
+rom:0x1A59 reloc:MIPS_LO16 symbol:g_cdCmdTable addend:0x1
+
+// func_80050B14 jump table.  GCC 2.7.2 + GNU as represents local label
+// addresses as R_MIPS_32 relocations against the .text section, with the
+// local label offset stored as the relocation addend.  Describe the recovered
+// table the same way so objdiff compares the target and compiler objects
+// structurally instead of comparing Splat's synthetic jump-label symbols.
+rom:0x5 reloc:MIPS_32 symbol:.text addend:0x920
+rom:0x9 reloc:MIPS_32 symbol:.text addend:0x58
+rom:0xD reloc:MIPS_32 symbol:.text addend:0x74
+rom:0x11 reloc:MIPS_32 symbol:.text addend:0x110
+rom:0x15 reloc:MIPS_32 symbol:.text addend:0x18C
+rom:0x19 reloc:MIPS_32 symbol:.text addend:0x2FC
+rom:0x1D reloc:MIPS_32 symbol:.text addend:0x3CC
+rom:0x21 reloc:MIPS_32 symbol:.text addend:0x464
+rom:0x25 reloc:MIPS_32 symbol:.text addend:0x4B8
+rom:0x29 reloc:MIPS_32 symbol:.text addend:0x51C
+rom:0x2D reloc:MIPS_32 symbol:.text addend:0x55C
+rom:0x31 reloc:MIPS_32 symbol:.text addend:0x5B8
+rom:0x35 reloc:MIPS_32 symbol:.text addend:0x614
+rom:0x39 reloc:MIPS_32 symbol:.text addend:0x67C
+rom:0x3D reloc:MIPS_32 symbol:.text addend:0x6E0
+rom:0x41 reloc:MIPS_32 symbol:.text addend:0x728
+rom:0x45 reloc:MIPS_32 symbol:.text addend:0x7B0
+rom:0x49 reloc:MIPS_32 symbol:.text addend:0x800
+rom:0x4D reloc:MIPS_32 symbol:.text addend:0x860
+rom:0x51 reloc:MIPS_32 symbol:.text addend:0x8E0

@@ -69,21 +69,18 @@ extern u8 g_testPatternSizeTable[][2];
  */
 extern s32 g_glyphAtlasY;
 
-/* Identical dead-data copy is duplicated into every TU that includes this
- * header in the original binary; "static" gives each includer its own
- * internal-linkage instance instead of clashing at link time. */
-static const u32 D_8004FCC4[15] = {
-    0xA790AD8B, 0xB997498F, 0xDC82B582, 0xBD82B582, 0x960A4281, 0x82CC917B, 0x91FC89AA, 0x82B382A2,
-    0x82C482EA, 0x0AE982A2, 0xBB82A882, 0xAA82EA82, 0xE882A082, 0xB782DC82, 0x00004281,
-};
+extern const u32 D_8004FCC4[15];
 
 extern u32 D_80052428;
 extern u8 D_8005B744[];
 extern u8 D_801ED600;
 extern s32 g_checkPSState;
+extern s32 g_vsyncTimestamp;
+extern s32 g_displayMode;
+extern u8 g_timeBuffer[8];
+extern const s32 D_8004FC70;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
-
 
 /**
  * Descriptor for a single CD-ROM command: opcode, parameter count, response byte count,
@@ -108,6 +105,10 @@ extern u8 g_CmdBuf[3];
 extern s32 g_cdIrqAccum;
 extern u8 g_clockMode;
 extern u8 g_RTCTimeBCD[2];
+extern s8* g_cdStatusRegister;
+extern u8* g_cdResponseRegister;
+extern u8* g_cdDataRegister;
+extern s8* g_cdIrqRegister;
 
 typedef struct
 {
@@ -234,6 +235,8 @@ GlyphInstance* CreateGlyphInstance(GlyphInstance* instance, GlyphInstance** next
  * @see decomp.me (100%) https://decomp.me/scratch/9wpJn
  */
 void InvalidateGlyphCache(void);
+void ProcessControllerInput(void);
+void UpdateControllerInput(void);
 
 /**
  * @brief Clears all invalid or unflagged entries from the glyph cache.
