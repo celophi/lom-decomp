@@ -1546,7 +1546,7 @@ typedef struct
     s16 unk8;
     s16 unkA;
     s16 unkC;
-    u16 unkE;
+    volatile u16 unkE;
 } StructS0;
 
 typedef struct
