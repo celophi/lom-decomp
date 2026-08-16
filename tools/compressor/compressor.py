@@ -26,7 +26,7 @@ def compress(src):
         raw_buf.clear()
 
     while i < n:
-        result = find_best(src, i, n, hash_table)
+        result = find_best(src, i, n, hash_table, len(raw_buf))
         if result is not None:
             flush_raw()
             encoded, advance = result
@@ -58,19 +58,24 @@ def count_backref_match(src, i, match_start, max_count):
 
 
 def f5_cnt_qualifies(src, i, fixed, cnt_q, cnt):
-    """Return True if F5 qualifies based on cnt_q and degenerate pair count."""
+    """Return True if F5 qualifies based on the strict prefix/degenerate count."""
     if cnt_q >= 4:
         return True
     if cnt_q < 1:
         return False
-    # cnt_q in [1,3]: require at least 2 degenerate (varying==fixed) pairs within cnt
-    deg = 0
-    for k in range(cnt_q, cnt):
-        if src[i + k * 2 + 1] == fixed:
-            deg += 1
-            if deg >= 2:
-                return True
-    return False
+    deg = sum(src[i + k * 2 + 1] == fixed for k in range(cnt_q, cnt))
+    # The short-prefix forms are sharply constrained in the reference core:
+    # one strict pair is followed by exactly two degenerate pairs; two/three
+    # strict pairs allow exactly one.  This rejects long accidental F5s.
+    if cnt_q == 1:
+        if deg != 2:
+            return False
+        # For the minimum four-pair form, a degenerate final varying byte is
+        # not taken as F5 in the reference core.
+        if cnt == 4 and src[i + (cnt - 1) * 2 + 1] == fixed:
+            return False
+        return True
+    return deg == 1
 
 
 def fb_qualifies_at(src, pos, n):
@@ -164,16 +169,18 @@ def best_pattern_savings(src, i, n):
     if i + 2 < n:
         b0, b1 = src[i], src[i + 1]
         cnt = 1
-        while (cnt < 258 and i + cnt * 3 + 2 < n
+        while (not (b0 == 0 and b1 == 0) and cnt < 258 and i + cnt * 3 + 2 < n
                and src[i + cnt * 3] == b0
                and src[i + cnt * 3 + 1] == b1):
             cnt += 1
         if cnt >= 3:
-            chk(4 + cnt, cnt * 3)
+            deg = sum(src[i + k * 3 + 2] == b0 for k in range(cnt)) if b0 == b1 else 0
+            if not (b0 == b1 and deg >= 3):
+                chk(4 + cnt, cnt * 3)
 
-    if i + 3 < n:
+    if n - i >= 1028:
         b0, b1, b2 = src[i], src[i + 1], src[i + 2]
-        if not (b0 == b1 == b2):
+        if not (b0 == b1 == b2 == 0):
             cnt = 1
             while (cnt < 257 and i + cnt * 4 + 3 < n
                    and src[i + cnt * 4] == b0
@@ -223,7 +230,7 @@ def best_pattern_savings(src, i, n):
     return best
 
 
-def find_best(src, i, n, hash_table):
+def find_best(src, i, n, hash_table, raw_len=0):
     """
     Select the best encoding opcode:
     - Among pattern opcodes (F0-FB): pick by max 1-level lookahead total
@@ -326,19 +333,20 @@ def find_best(src, i, n, hash_table):
     if i + 2 < n:
         b0, b1 = src[i], src[i + 1]
         cnt = 1
-        while (cnt < 258 and i + cnt * 3 + 2 < n
+        while (not (b0 == 0 and b1 == 0) and cnt < 258 and i + cnt * 3 + 2 < n
                and src[i + cnt * 3] == b0
                and src[i + cnt * 3 + 1] == b1):
             cnt += 1
         if cnt >= 3:
             varying = bytes(src[i + k * 3 + 2] for k in range(cnt))
-            pat(bytes([0xF6, cnt - 3, b0, b1]) + varying, cnt * 3, cnt)
+            if not (b0 == b1 and sum(v == b0 for v in varying) >= 3):
+                pat(bytes([0xF6, cnt - 3, b0, b1]) + varying, cnt * 3, cnt)
 
     # F7: {b0, b1, b2, var} quads, 2-257 quads → 5+cnt bytes
     # Not used when b0==b1==b2 (degenerate case handled by other opcodes).
-    if i + 3 < n:
+    if n - i >= 1028:
         b0, b1, b2 = src[i], src[i + 1], src[i + 2]
-        if not (b0 == b1 == b2):
+        if not (b0 == b1 == b2 == 0):
             cnt = 1
             while (cnt < 257 and i + cnt * 4 + 3 < n
                    and src[i + cnt * 4] == b0
@@ -394,18 +402,22 @@ def find_best(src, i, n, hash_table):
     # Back-reference opcodes FE / FD / FC
     # Pick best by max savings, then max advance, then largest offset.
     # ──────────────────────────────────────────────────────────────────
-    b_enc = None; b_sav = 0; b_adv = 0; b_ms = -1
+    b_enc = None; b_sav = 0; b_adv = 0; b_ms = -1; b_same_parity = False
 
     def bref(enc, adv, match_start):
-        nonlocal b_enc, b_sav, b_adv, b_ms
+        nonlocal b_enc, b_sav, b_adv, b_ms, b_same_parity
         sav = adv - len(enc)
         dist = i - match_start
-        # Prefer more savings; ties by largest real distance (i - match_start);
-        # final ties by largest advance.
+        # Equal-quality backrefs prefer a match start with the same byte
+        # parity as the current source position.  This reproduces all 2,798
+        # multi-candidate pure-FC decisions in the reference streams; within
+        # the preferred parity, the oldest/largest-distance match wins.
+        same_parity = ((match_start ^ i) & 1) == 0
         if (sav > b_sav
-                or (sav == b_sav and dist > b_ms)
-                or (sav == b_sav and dist == b_ms and adv > b_adv)):
-            b_enc, b_sav, b_adv, b_ms = bytearray(enc), sav, adv, dist
+                or (sav == b_sav and same_parity and not b_same_parity)
+                or (sav == b_sav and same_parity == b_same_parity and dist > b_ms)
+                or (sav == b_sav and same_parity == b_same_parity and dist == b_ms and adv > b_adv)):
+            b_enc, b_sav, b_adv, b_ms, b_same_parity = bytearray(enc), sav, adv, dist, same_parity
 
     # FE ---------------------------------------------------------------
     for upper_nibble in range(15, -1, -1):  # largest distance first for tie-break
@@ -450,6 +462,17 @@ def find_best(src, i, n, hash_table):
     if has_f5:
         candidates = [c for c in candidates if c[0][0] != 0xF7]
 
+    # F3 has priority over the variable-stream families F5/F6/F7 whenever
+    # it is itself eligible.  A zero-savings F3 is eligible only at a clean
+    # token boundary (raw_len == 0); positive-savings F3 remains eligible
+    # with pending literals. Reference evidence: GOLEM 10408 (F3 over F5)
+    # and 28128 (F3 over F7). All reference F5s overlapping F3 have cnt=2
+    # and begin after a pending raw run, where the zero-savings F3 is gated.
+    eligible_f3 = any(c[0][0] == 0xF3 and (c[2] > 0 or raw_len == 0)
+                      for c in candidates)
+    if eligible_f3:
+        candidates = [c for c in candidates if c[0][0] not in (0xF5, 0xF6, 0xF7)]
+
     # Pick best pattern using 1-level lookahead. Ties go to the candidate
     # with the larger iteration count (confirmed: FA cnt=8 beats F3 cnt=4 at
     # GNAME dec 12502, F1 cnt=19 beats F0 cnt=18 at dec 34420, F1 cnt=186
@@ -458,8 +481,15 @@ def find_best(src, i, n, hash_table):
     p_cnt = 0
     for enc, adv, sav, cnt in candidates:
         total = sav + best_pattern_savings(src, i + adv, n)
+        # Zero-savings F3 is only useful when it can replace a standalone
+        # literal run.  When literal bytes are already pending, folding four
+        # bytes into that existing run costs no extra header, so do not let
+        # lookahead make the zero-savings F3 fire early.
+        if sav == 0 and enc[0] == 0xF3 and raw_len != 0:
+            continue
         if total <= 0:
-            continue  # zero-savings candidates need a positive lookahead
+            if not (total == 0 and enc[0] == 0xF3 and raw_len == 0):
+                continue
         if p_enc is None or total > p_sav or (total == p_sav and cnt > p_cnt):
             p_enc, p_sav, p_adv, p_cnt = enc, total, adv, cnt
 
@@ -469,6 +499,15 @@ def find_best(src, i, n, hash_table):
         # p_sav here holds the lookahead total; need raw savings for efficiency
         p_raw_sav = p_adv - len(p_enc)
         if b_sav * p_adv > p_raw_sav * b_adv:
+            # F1 is checked directly against the backref when the lookahead-
+            # selected pattern loses; F0 rescues only an exact efficiency tie.
+            for want, strict in ((0xF1, True), (0xF0, False)):
+                for enc, adv, sav, cnt in candidates:
+                    if enc[0] != want:
+                        continue
+                    rel = sav * b_adv - b_sav * adv
+                    if (strict and rel > 0) or ((not strict) and rel == 0):
+                        return bytes(enc), adv
             return bytes(b_enc), b_adv
         return bytes(p_enc), p_adv
     if p_enc is not None:
