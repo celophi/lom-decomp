@@ -130,11 +130,11 @@ the overlay is rebuilt, compressed, and its SHA1 is compared against the origina
 `.BIN` file (the `verify-bins` flow), exactly as for any other overlay. That check
 covers code and data together and is the authoritative measure of correctness.
 
-Where a working compressor for an overlay is not yet available - as is currently
-the case for GNAME - a byte-for-byte comparison of the decompressed image serves as
-a temporary stand-in (`make verify-<ov>`) until the compressed comparison can be
-performed. This is a stopgap for the missing compressor, not a component of the
-data architecture.
+The compressor reproduces the original encoder byte for byte on all 17 disc
+overlays, so this check is available to any overlay that links to an exact raw
+image. It is also the only sufficient check: objdiff reporting 100% on every
+function does not imply the linked overlay is byte-perfect, because it pairs
+symbols by name and normalizes relocations, which hides a whole-TU section shift.
 
 ## Applying this to a new overlay
 
@@ -150,10 +150,11 @@ data architecture.
    already are.
 5. No change to the objdiff configuration generator is required: it already emits a
    unit for a standalone `.data` subsegment once the reference object is built.
-6. Build, then grade the data with `make verify-<ov>-data` (objdiff). Whole-overlay
-   correctness is confirmed separately by the overlay's own verification (the
-   compressed-BIN SHA1 comparison, or a decompressed comparison where no compressor
-   exists yet).
+6. Build, then confirm correctness by adding the overlay to `VERIFIED_OVERLAYS` in
+   `mk/verification.mk` and running `make verify-<ov>`. That compressed-BIN SHA1
+   comparison covers the data and the code together. While the overlay is still
+   being brought up, the objdiff unit for the `.data` subsegment serves as a
+   progress indicator.
 
 ## Considerations
 

@@ -7,120 +7,80 @@
 #
 #   1. Link the overlay ELF.
 #   2. Convert the ELF to its raw decompressed binary.
-#   3. Compress the raw binary.
+#   3. Compress the raw binary with tools/compressor/compressor.py.
 #   4. Prepend the 0x01 compression-format byte skipped by the splat configs.
 #   5. SHA1-compare the result with the original overlay BIN.
 #
 # On a match, the overlay name is added to build/complete_overlays.txt.
 # generate_objdiff_config.py uses that manifest to mark its objdiff units as
 # complete.
+#
+# The compressor reproduces the original 1999 encoder byte for byte on all 17
+# disc overlays, so any overlay that links to an exact raw image can be
+# verified this way. See tools/compressor/README.md.
 
-.PHONY: verify-bins verify-checkps-raw verify-gover verify-movie verify-gname
+# Overlays whose linked ELF reproduces the original decompressed image, and so
+# can be compressed back into an exact replica of the disc file.
+#
+# Note that objdiff reporting 100% on every function is NOT sufficient: it pairs
+# symbols by name and normalizes relocations, so a whole-TU section shift is
+# invisible to it. Add a name here only once `make verify-<name>` actually
+# passes.
+VERIFIED_OVERLAYS := gover movie gname checkps
 
-# --- checkps -----------------------------------------------------------------
+# Make has no upper-case function; overlay BINs are named in upper case.
+upper-case = $(shell echo '$(1)' | tr '[:lower:]' '[:upper:]')
 
-build/overlays/checkps/checkps.raw: checkps
-	@mkdir -p $(@D)
-	$(OBJCOPY) -O binary $(STAGING)/build/overlays/checkps/checkps.elf $@.tmp
-	mv $@.tmp $@
+.PHONY: verify-bins
 
-verify-checkps-raw: build/overlays/checkps/checkps.raw
-	python3 tools/verify_checkps_raw.py $< $(ROM_BIN_DIR)/CHECKPS.BIN
+# ── Per-overlay verification rules ───────────────────────────────────────────
+#
+#   $(1) = overlay name, lower case (e.g. "gover")
+#   $(2) = overlay BIN basename, upper case (e.g. "GOVER")
 
-# --- gover -------------------------------------------------------------------
+define compressed-overlay-rules
 
-build/overlays/gover/gover.raw: gover
-	@mkdir -p $(@D)
-	$(OBJCOPY) -O binary $(STAGING)/build/overlays/gover/gover.elf $@.tmp
-	mv $@.tmp $@
+.PHONY: verify-$(1)
 
-build/overlays/gover/GOVER.BIN: build/overlays/gover/gover.raw
-	python3 tools/compressor/compressor.py $< $@.payload
-	{ printf '\001'; cat $@.payload; } > $@.tmp
-	mv $@.tmp $@
-	rm -f $@.payload
+build/overlays/$(1)/$(1).raw: $(1)
+	@mkdir -p $$(@D)
+	$(OBJCOPY) -O binary $(STAGING)/build/overlays/$(1)/$(1).elf $$@.tmp
+	mv $$@.tmp $$@
 
-verify-gover: build/overlays/gover/GOVER.BIN
+build/overlays/$(1)/$(2).BIN: build/overlays/$(1)/$(1).raw
+	python3 tools/compressor/compressor.py $$< $$@.payload
+	{ printf '\001'; cat $$@.payload; } > $$@.tmp
+	mv $$@.tmp $$@
+	rm -f $$@.payload
+
+verify-$(1): build/overlays/$(1)/$(2).BIN
 	@mkdir -p build
 	@set -eu; \
-		expected=$$(sha1sum $(ROM_BIN_DIR)/GOVER.BIN | awk '{print $$1}'); \
-		actual=$$(sha1sum $< | awk '{print $$1}'); \
-		echo "GOVER.BIN expected: $$expected"; \
-		echo "GOVER.BIN actual:   $$actual"; \
-		if [ "$$expected" = "$$actual" ]; then \
-			echo "[OK] GOVER.BIN matches original ROM"; \
-			grep -qxF gover $(COMPLETE_MANIFEST) 2>/dev/null || echo gover >> $(COMPLETE_MANIFEST); \
+		expected=$$$$(sha1sum $(ROM_BIN_DIR)/$(2).BIN | awk '{print $$$$1}'); \
+		actual=$$$$(sha1sum $$< | awk '{print $$$$1}'); \
+		echo "$(2).BIN expected: $$$$expected"; \
+		echo "$(2).BIN actual:   $$$$actual"; \
+		if [ "$$$$expected" = "$$$$actual" ]; then \
+			echo "[OK] $(2).BIN matches original ROM"; \
+			grep -qxF $(1) $(COMPLETE_MANIFEST) 2>/dev/null || echo $(1) >> $(COMPLETE_MANIFEST); \
 		else \
-			echo "[FAIL] GOVER.BIN sha1 mismatch"; \
+			echo "[FAIL] $(2).BIN sha1 mismatch"; \
 			exit 1; \
 		fi
 
-# --- movie -------------------------------------------------------------------
+endef
 
-build/overlays/movie/movie.raw: movie
-	@mkdir -p $(@D)
-	$(OBJCOPY) -O binary $(STAGING)/build/overlays/movie/movie.elf $@.tmp
-	mv $@.tmp $@
+$(foreach name,$(VERIFIED_OVERLAYS),\
+	$(eval $(call compressed-overlay-rules,$(name),$(call upper-case,$(name)))))
 
-build/overlays/movie/MOVIE.BIN: build/overlays/movie/movie.raw
-	python3 tools/compressor/compressor.py $< $@.payload
-	{ printf '\001'; cat $@.payload; } > $@.tmp
-	mv $@.tmp $@
-	rm -f $@.payload
-
-verify-movie: build/overlays/movie/MOVIE.BIN
-	@mkdir -p build
-	@set -eu; \
-		expected=$$(sha1sum $(ROM_BIN_DIR)/MOVIE.BIN | awk '{print $$1}'); \
-		actual=$$(sha1sum $< | awk '{print $$1}'); \
-		echo "MOVIE.BIN expected: $$expected"; \
-		echo "MOVIE.BIN actual:   $$actual"; \
-		if [ "$$expected" = "$$actual" ]; then \
-			echo "[OK] MOVIE.BIN matches original ROM"; \
-			grep -qxF movie $(COMPLETE_MANIFEST) 2>/dev/null || echo movie >> $(COMPLETE_MANIFEST); \
-		else \
-			echo "[FAIL] MOVIE.BIN sha1 mismatch"; \
-			exit 1; \
-		fi
-
-# --- gname -------------------------------------------------------------------
-
-build/overlays/gname/gname.raw: gname
-	@mkdir -p $(@D)
-	$(OBJCOPY) -O binary $(STAGING)/build/overlays/gname/gname.elf $@.tmp
-	mv $@.tmp $@
-
-build/overlays/gname/GNAME.BIN: build/overlays/gname/gname.raw
-	python3 tools/compressor/compressor.py $< $@.payload
-	{ printf '\001'; cat $@.payload; } > $@.tmp
-	mv $@.tmp $@
-	rm -f $@.payload
-
-verify-gname: build/overlays/gname/GNAME.BIN
-	@mkdir -p build
-	@set -eu; \
-		expected=$$(sha1sum $(ROM_BIN_DIR)/GNAME.BIN | awk '{print $$1}'); \
-		actual=$$(sha1sum $< | awk '{print $$1}'); \
-		echo "GNAME.BIN expected: $$expected"; \
-		echo "GNAME.BIN actual:   $$actual"; \
-		if [ "$$expected" = "$$actual" ]; then \
-			echo "[OK] GNAME.BIN matches original ROM"; \
-			grep -qxF gname $(COMPLETE_MANIFEST) 2>/dev/null || echo gname >> $(COMPLETE_MANIFEST); \
-		else \
-			echo "[FAIL] GNAME.BIN sha1 mismatch"; \
-			exit 1; \
-		fi
-
-# Diff the generated gname_data answer-key object against the compiled C data
-# object (the objdiff "gname/gname_data" unit) and write the JSON diff.
-.PHONY: verify-gname-data
-verify-gname-data: gname-objdiff
-	@chmod +x $(OBJDIFF_CLI)
-	$(OBJDIFF_CLI) diff --format json -o build/overlays/gname/gname_data_diff.json \
-		-1 build/overlays/gname/target/gname_data.o \
-		-2 build/overlays/gname/src/overlays/gname/gname_data.o
-	@echo "Wrote build/overlays/gname/gname_data_diff.json"
-
-# Extend this aggregate when another compressed overlay becomes byte-perfect.
-verify-bins: verify-gover verify-movie verify-gname
+# ── Aggregate ────────────────────────────────────────────────────────────────
+#
+# Register a new overlay by adding it to VERIFIED_OVERLAYS above.
+verify-bins: $(foreach name,$(VERIFIED_OVERLAYS),verify-$(name))
 	@echo "Verified compressed overlays: $$(cat $(COMPLETE_MANIFEST) 2>/dev/null | tr '\n' ' ')"
+
+# Check the compressor itself against all 17 original overlays, without needing
+# a build. Run this after any change to tools/compressor/compressor.py.
+.PHONY: verify-compressor
+verify-compressor:
+	python3 tools/compressor/verify_exact_bins.py
