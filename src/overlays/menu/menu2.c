@@ -902,7 +902,7 @@ done:
  * @note The remaining mismatch is a pure a1/a2/a3 allocation rotation; instruction
  *       count and control-flow structure match the target. Continue from
  *       working/func_8014ECA4/.
- * @see decomp.me (98.84%)
+ * @see decomp.me (100%) https://decomp.me/scratch/hQoB8
  */
 void* menu_find_best_equipment_for_slot0(void)
 {
@@ -945,8 +945,12 @@ void* menu_find_best_equipment_for_slot0(void)
             {
                 var_v0 = ((temp_v1 >> 0xA) & 0x3F) + D_800F0BE0;
             }
+            var_a1 ^= temp_v1_2;
+            var_a1 ^= temp_v1_2;
             var_a1 |= *var_v0;
         }
+        var_a0 ^= var_a1;
+        var_a0 ^= var_a1;
         var_a0 += 1;
         var_a2 += 0x40;
     } while (var_a0 < 4);
