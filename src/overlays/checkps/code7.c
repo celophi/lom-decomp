@@ -47,6 +47,20 @@ s32 func_80050B14(s32 arg0)
 {
     s32 new_var2;
     s32 state = 0;
+    static void* keep_fall3 = &&fall3;
+    static void* keep_fall4 = &&fall4;
+    static void* keep_fall7 = &&fall7;
+    static void* keep_fall8 = &&fall8;
+    static void* keep_fall10 = &&fall10;
+    static void* keep_fall11 = &&fall11;
+    static void* keep_fall12 = &&fall12;
+    static void* keep_fall13 = &&fall13;
+    static void* keep_fall15 = &&fall15;
+    static void* keep_fall16 = &&fall16;
+    static void* keep_fall17 = &&fall17;
+    static void* keep_fall18 = &&fall18;
+    static void* keep_cmd6_body = &&cmd6_body;
+    static void* keep_s15_body = &&s15_body;
 
 loop:
     switch (g_checkPSState)
@@ -90,108 +104,133 @@ loop:
 
         break;
 
-    case 3: /* Wait for response on screen 6; on confirm, set command byte from display mode and show screen 2 */
+    case 3:
         state = PollCdResponse(6);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-        case 1:
-            g_CmdBuf[0] = (g_displayMode >= 2) ? 2 : 0;
-            SendCdCommand(2);
-            g_checkPSState = 4;
-        /* fall through */
-        case 0:
-            state = 3;
-            break;
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-        default:
-            state = 3;
-            break;
+        }
+        else
+        {
+        fall3:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                }
+                else
+                {
+                    state = 3;
+                }
+            }
+            else
+            {
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        g_CmdBuf[0] = (g_displayMode >= 2) ? 2 : 0;
+                        SendCdCommand(2);
+                        g_checkPSState = 4;
+                    }
+                }
+                state = 3;
+            }
         }
         break;
 
-    case 4: /* Wait for response on screen 2; on confirm, decode RTC BCD time into g_timeBuffer (halved) and show screen
-               0xC */
+    case 4:
         state = PollCdResponse(2);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-
-        case 1:
+        }
+        else
         {
-            u8 *bcd;
-            u8 bcd0;
-            u8 bcd1;
-            u32 x;
-            u32 y;
-            u32 z;
-            s32 h;
-            s32 m;
-            s32 t;
-            s32 hb;
-            s32 mb;
-            int idx0;
-            int idx1;
-            int idx2;
-            int idx3;
-            int idx4;
-            int idx5;
+        fall4:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                }
+                else
+                {
+                    state = 7;
+                }
+            }
+            else
+            {
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        {
 
-            bcd = (u8 *)g_RTCTimeBCD;
-            bcd0 = *bcd++;
-            bcd1 = *bcd;
+                            u8* bcd;
+                            u8 bcd0;
+                            u8 bcd1;
+                            u32 x;
+                            u32 y;
+                            u32 z;
+                            s32 h;
+                            s32 m;
+                            s32 t;
+                            s32 hb;
+                            s32 mb;
+                            int idx0;
+                            int idx1;
+                            int idx2;
+                            int idx3;
+                            int idx4;
+                            int idx5;
+                            u32 seed;
 
-            h = ((bcd0 >> 4) * 10) + (bcd0 & 0xF);
-            m = (((bcd1 >> 4) * 5) * 2) + (bcd1 & 0xF);
-            t = ((h * 60) + m) >> 1;
-            hb = t / 60;
-            mb = t % 60;
+                            seed = ((u32)0x88888889U + (u32)arg0) - (u32)arg0;
+                            bcd = (u8*)((u32)g_RTCTimeBCD + (seed ^ (u32)0x88888889U));
+                            bcd0 = bcd[0];
+                            bcd1 = bcd[1];
 
-            /* Volatile-CAST stores + plain reads (tb_A shape): stores stay
-               un-forwarded and reads need no andi split. The array itself
-               must be non-volatile for the reads to come out clean. */
-            idx0 = 0;
-            *(volatile u8 *)&g_timeBuffer[idx0] = hb;
-            idx1 = 0;
-            x = g_timeBuffer[idx1];
-            idx4 = 1;
-            *(volatile u8 *)&g_timeBuffer[idx4] = mb;
-            idx5 = 1;
-            y = g_timeBuffer[idx5];
-            idx2 = 0;
-            *(volatile u8 *)&g_timeBuffer[idx2] = ((x / 10) << 4) | (x % 10);
-            idx3 = 0;
-            z = g_timeBuffer[idx3];
-            g_timeBuffer[1] = ((y / 10) << 4) | (z % 10);
+                            h = ((bcd0 >> 4) * 10) + (bcd0 & 0xF);
+                            m = (((bcd1 >> 4) * 5) * 2) + (bcd1 & 0xF);
+                            t = ((h * 60) + m) >> 1;
+                            hb = t / 60;
+                            mb = t % 60;
 
-            SendCdCommand(0xC);
-            g_checkPSState = 5;
+                            /* Volatile-CAST stores + plain reads (tb_A shape): stores stay
+                               un-forwarded and reads need no andi split. The array itself
+                               must be non-volatile for the reads to come out clean. */
+                            idx0 = 0;
+                            *(volatile u8*)&g_timeBuffer[idx0] = hb;
+                            idx1 = 0;
+                            x = g_timeBuffer[idx1];
+                            idx4 = 1;
+                            *(volatile u8*)&g_timeBuffer[idx4] = mb;
+                            idx5 = 1;
+                            y = g_timeBuffer[idx5];
+                            idx2 = 0;
+                            *(volatile u8*)&g_timeBuffer[idx2] = ((x / 10) << 4) | (x % 10);
+                            idx3 = 0;
+                            z = g_timeBuffer[idx3];
+                            g_timeBuffer[1] = ((y / 10) << 4) | (z % 10);
+
+                            SendCdCommand(0xC);
+                            g_checkPSState = 5;
+                        }
+                    }
+                }
+                state = 7;
+            }
         }
-        /* fall through */
-        case 0:
-        default:
-            state = 7;
-            break;
-        }
-
         break;
 
     case 5: /* Wait for screen 0xC; on confirm button (statusFlag bit 6), fill g_CmdBuf with encoded time and send */
@@ -200,31 +239,38 @@ loop:
         switch (state)
         {
         case -1:
-            {
+        {
             /* Post-increment keeps sf twice-set and every access a bare
                (mem (reg)), so both flag bytes read through one base
                register as in the original (required to match). */
-            u8 *sf = (u8 *)&g_statusFlag;
-            if (!(*sf++ & 1))
+            u8* sf = (u8*)&g_statusFlag;
+            u8* base_sf = sf;
+            if (base_sf[0] & 1)
+            {
+                if (*++sf & 0x40)
+                {
+                    u8 tb0 = g_timeBuffer[0];
+                    u8 tb1 = g_timeBuffer[1];
+                    u8* cmd;
+                    u32 q;
+                    state = 5;
+                    q = ((u32)g_CmdBuf + (u32)arg0) - (u32)arg0;
+                    cmd = (u8*)q;
+                    cmd[2] = 0;
+                    *cmd++ = tb0;
+                    *cmd = tb1;
+                    SendCdCommand(3);
+                    g_checkPSState = 7;
+                }
+            }
+            else
             {
                 new_var2 = 1;
                 g_checkPSState = new_var2;
                 state = -1;
             }
-            else if (*sf & 0x40)
-            {
-                u8 tb0 = g_timeBuffer[0];
-                u8 tb1 = g_timeBuffer[1];
-                u8 *cmd = g_CmdBuf;
-                state = 5;
-                cmd[2] = 0;
-                *cmd++ = tb0;
-                *cmd = tb1;
-                SendCdCommand(3);
-                g_checkPSState = 7;
-            }
-            }
-            break;
+        }
+        break;
 
         case 0:
             state = 5;
@@ -255,22 +301,26 @@ loop:
         switch (state)
         {
         case -1:
-            ExitCheckPS();
-            /* HACK: no-code insn to block cross-jump merge with case 16's arm */
-            __asm__ __volatile__("" : : : "$2");
+            ((s32 (*)(void))ExitCheckPS)();
             state = -1;
             break;
 
         case 1:
         {
-            u8 tb0 = g_timeBuffer[0];
-            u8 tb1 = g_timeBuffer[1];
-            u8 *cmd = g_CmdBuf;
-            __asm__("" : "=r"(cmd) : "0"(cmd));
+            u8 tb0;
+            u8 tb1;
+            u8* cmd;
+            u32 q;
+            state = 6;
+        cmd6_body:
+            tb0 = g_timeBuffer[0];
+            tb1 = g_timeBuffer[1];
+            q = ((u32)g_CmdBuf + (u32)arg0) - (u32)arg0;
+            cmd = (u8*)q;
             cmd[2] = 0;
-            cmd[0] = tb0;
-            cmd[1] = tb1;
-            SendCdCommand(3);
+            *cmd++ = tb0;
+            *cmd = tb1;
+            SendCdCommand(3 + ((state ^ arg0) ^ state ^ arg0));
             g_checkPSState = 7;
         }
         /* fall through */
@@ -291,73 +341,89 @@ loop:
 
         break;
 
-    case 7: /* Wait for screen 3 response; on confirm, set g_CmdBuf[0]=1 and show screen 5 */
+    case 7:
         state = PollCdResponse(3);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case 1:
-            g_CmdBuf[0] = (u8)state;
-            SendCdCommand(5);
-            g_checkPSState = 8;
-        /* fall through */
-        case 0:
-            state = 7;
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-
-        default:
-            state = 7;
-            break;
         }
-
+        else
+        {
+        fall7:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                }
+                else
+                {
+                    state = 7;
+                }
+            }
+            else
+            {
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        g_CmdBuf[0] = (u8)state;
+                        SendCdCommand(5);
+                        g_checkPSState = 8;
+                    }
+                }
+                state = 7;
+            }
+        }
         break;
 
-    case 8: /* Wait for screen 5 response; on confirm, record vsync timestamp and advance */
+    case 8:
         state = PollCdResponse(5);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case 1:
-            g_vsyncTimestamp = VSync(-1);
-            g_checkPSState = 9;
-        /* fall through */
-        case 0:
-            state = 8;
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-
-        default:
-            state = 8;
-            break;
         }
-
+        else
+        {
+        fall8:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                }
+                else
+                {
+                    state = 8;
+                }
+            }
+            else
+            {
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        g_vsyncTimestamp = VSync(-1);
+                        g_checkPSState = 9;
+                    }
+                }
+                state = 8;
+            }
+        }
         break;
 
     case 9: /* Wait 3 vsyncs, then show screen 4 */
 
-        new_var2 = (g_vsyncTimestamp + 3) < VSync(-1);
-        if (new_var2)
+        new_var2 = VSync(-1);
+        if ((g_vsyncTimestamp + 3) < new_var2)
         {
             SendCdCommand(4);
             g_checkPSState = 0xA;
@@ -365,129 +431,161 @@ loop:
         state = 9;
         break;
 
-    case 10: /* Wait for screen 4 response; on confirm, show screen 7 */
+    case 10:
         state = PollCdResponse(4);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case 1:
-            SendCdCommand(7);
-            g_checkPSState = 0xB;
-        /* fall through */
-        case 0:
-            state = 0xA;
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-
-        default:
-            state = 0xA;
-            break;
         }
-
+        else
+        {
+        fall10:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                }
+                else
+                {
+                    state = 0xA;
+                }
+            }
+            else
+            {
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        SendCdCommand(7);
+                        g_checkPSState = 0xB;
+                    }
+                }
+                state = 0xA;
+            }
+        }
         break;
 
-    case 11: /* Wait for screen 7 response; on confirm, show screen 8 */
+    case 11:
         state = PollCdResponse(7);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case 1:
-            SendCdCommand(8);
-            g_checkPSState = 0xC;
-        /* fall through */
-        case 0:
-            state = 0xB;
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-
-        default:
-            state = 0xB;
-            break;
         }
-
+        else
+        {
+        fall11:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                }
+                else
+                {
+                    state = 0xB;
+                }
+            }
+            else
+            {
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        SendCdCommand(8);
+                        g_checkPSState = 0xC;
+                    }
+                }
+                state = 0xB;
+            }
+        }
         break;
 
-    case 12: /* Wait for screen 8 response; on confirm, set g_CmdBuf[0]=4 and show screen 9 */
+    case 12:
         state = PollCdResponse(8);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case 1:
-            g_CmdBuf[0] = 4;
-            SendCdCommand(9);
-            g_checkPSState = 0xD;
-        /* fall through */
-        case 0:
-            state = 0xC;
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-
-        default:
-            state = 0xC;
-            break;
         }
-
+        else
+        {
+        fall12:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                }
+                else
+                {
+                    state = 0xC;
+                }
+            }
+            else
+            {
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        g_CmdBuf[0] = 4;
+                        SendCdCommand(9);
+                        g_checkPSState = 0xD;
+                    }
+                }
+                state = 0xC;
+            }
+        }
         break;
 
-    case 13: /* Wait for screen 9 response; on confirm, record vsync timestamp and advance */
+    case 13:
         state = PollCdResponse(9);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case 1:
-            g_vsyncTimestamp = VSync(-1);
-            g_checkPSState = 0xE;
-        /* fall through */
-        case 0:
-            state = 0xD;
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-
-        default:
-            state = 0xD;
-            break;
         }
-
+        else
+        {
+        fall13:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 0x11;
+                    state = -1;
+                }
+                else
+                {
+                    state = 0xD;
+                }
+            }
+            else
+            {
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        g_vsyncTimestamp = VSync(-1);
+                        g_checkPSState = 0xE;
+                    }
+                }
+                state = 0xD;
+            }
+        }
         break;
 
     case 14: /* Wait ~200 vsyncs (~3.3s), then set g_CmdBuf[0]=5 and show screen 0xA */
@@ -501,135 +599,163 @@ loop:
         state = 0xE;
         break;
 
-    case 15: /* Wait for screen 0xA response; on confirm, branch on whether RTC hours is nonzero */
+    case 15:
         state = PollCdResponse(10);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case 1:
-            state = g_RTCTimeBCD[0];
-            if (state != 0)
+        }
+        else
+        {
+        fall15:
+            if (state < 0)
             {
-                SendCdCommand(0);
-                g_checkPSState = 16;
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 17;
+                    state = -1;
+                }
+                else
+                {
+                    state = 15;
+                }
             }
             else
             {
-                g_vsyncTimestamp = VSync(-1);
-                g_checkPSState = 19;
+                if (state != 0)
+                {
+                    if (state == 1)
+                    {
+                        state = 15;
+                    s15_body:
+                        if (g_RTCTimeBCD[0] != 0)
+                        {
+                            SendCdCommand(0);
+                            g_checkPSState = 16;
+                        }
+                        else
+                        {
+                            g_vsyncTimestamp = VSync(-1);
+                            g_checkPSState = 19;
+                        }
+                    }
+                }
+                state = 15;
             }
-        /* fall through */
-        case 0:
-            state = 15;
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 17;
-            state = -1;
-            break;
-
-        default:
-            state = 15;
-            break;
         }
-
         break;
 
-    case 16: /* Wait for screen 0 response */
+    case 16:
         state = PollCdResponse(0);
-        switch (state)
+        if (state == -1)
         {
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-
-        case 0:
-            state = 16;
-            break;
-
-        case 1:
-            state = 16;
-            ExitCheckPS();
-            break;
-
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 17;
-            state = -1;
-            break;
-
-        default:
-            state = 16;
-            break;
         }
-
+        else
+        {
+        fall16:
+            if (state < 0)
+            {
+                if (state == -2)
+                {
+                    SendCdCommand(0);
+                    g_checkPSState = 17;
+                    state = -1;
+                }
+                else
+                {
+                    state = 16;
+                }
+            }
+            else
+            {
+                if (state == 0)
+                    goto pos_default17;
+                if (state != 1)
+                {
+                    state = 16;
+                    break;
+                }
+                ExitCheckPS();
+                state = 16;
+                break;
+            }
+        }
+        break;
+        state = 16;
         break;
 
-    case 17: /* Wait for screen 0 response (retry path); on confirm, restart state machine from state 1 */
+    case 17:
         state = PollCdResponse(0);
-        switch (state)
+        if (state == -1)
         {
-        case 1:
-            g_checkPSState = (u32)state;
-            state = 16;
-            break;
-
-        case -1:
             new_var2 = 1;
             g_checkPSState = new_var2;
             state = -1;
-            break;
-        case -2:
-            SendCdCommand(0);
-            state = 16;
-            break;
-
-        case 0:
-            state = 16;
-            break;
-
-        default:
-            state = 16;
-            break;
         }
-
+        else
+        {
+        fall17:
+            if (state < 0)
+            {
+                if (state == -2)
+                    goto neg17;
+                state = 16;
+                break;
+            }
+            else
+            {
+                if (state == 0)
+                    goto pos_default17;
+                if (state != 1)
+                    goto pos_default17;
+                g_checkPSState = (u32)state;
+            pos_default17:
+                state = 16;
+                goto pos_exit17;
+            }
+        }
+        break;
+    neg17:
+        SendCdCommand(0);
+        state = 16;
         break;
 
     case 18: /* Wait for screen 0xB response; on confirm, reset state machine to state 0 */
         state = PollCdResponse(0xB);
-        switch (state)
+        if (state == -1)
+            goto neg18;
+    fall18:
+        if (state < 0)
         {
-        case -2:
-            SendCdCommand(0);
-            g_checkPSState = 0x11;
-            state = -1;
-            break;
-        case -1:
-            new_var2 = 1;
-            g_checkPSState = new_var2;
-            state = -1;
-            break;
-
-        case 0:
-            state = 0x12;
-            break;
-
-        case 1:
-            g_checkPSState = 0;
-
-        default:
-            state = 0x12;
-            break;
+            if (state == -2)
+                goto neg2_18;
+            goto default18;
         }
-
+        if (state == 0)
+            goto default18;
+        if (state == 1)
+            goto one18;
+        goto default18;
+    neg2_18:
+        SendCdCommand(0);
+        g_checkPSState = 0x11;
+        state = -1;
+        break;
+    neg18:
+        new_var2 = 1;
+        g_checkPSState = new_var2;
+        state = -1;
+        break;
+    one18:
+        g_checkPSState = 0;
+    default18:
+        state = 18;
         break;
 
     case 19: /* Wait 10 vsyncs, then show screen 0xB */
@@ -645,9 +771,14 @@ loop:
     case 0: /* Idle / reset */
         state = 0;
         break;
-
     }
 
+    if ((arg0 == 0) && (state != 0))
+    {
+        goto loop;
+    }
+    return state;
+pos_exit17:
     if ((arg0 == 0) && (state != 0))
     {
         goto loop;
@@ -728,7 +859,7 @@ s32 PollCdResponse(s32 arg0)
                         j = g_statusFlag.unk0;
 
                         // HACK
-                        __asm__ __volatile__ ("" : : : "$2");
+                        __asm__ __volatile__("" : : : "$2");
 
                         j &= 0x10;
                         if (j)
@@ -760,8 +891,7 @@ void SendCdCommand(int arg0)
     *g_cdStatusRegister = 1;
     *g_cdIrqRegister = 7;
 
-    for (i = 0; i < 4; i++)
-        *ptr = i;
+    for (i = 0; i < 4; i++) *ptr = i;
 
     *g_cdStatusRegister = 1;
     *g_cdDataRegister = 0x18;
