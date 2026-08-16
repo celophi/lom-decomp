@@ -14,24 +14,44 @@ typedef struct
     u16 unk62;
 } Struct_8006429C;
 
+/** @brief Bytes 2 and 3 of the 32-bit flags word at 0x10. */
+typedef struct
+{
+    u16 _lo;                // 0x10
+    u8  unk12;              // 0x12
+    u8  unk13;              // 0x13
+} FlagBytes;
+
+/** @brief The flags word at 0x10, addressed either whole or by byte. */
+typedef union
+{
+    u32 flags;              // 0x10
+    FlagBytes b;
+} FlagWord;
+
 typedef struct {
     u8* unk0;               // 0x00
     u32 unk4;               // 0x04
     u32 unk8;               // 0x08
     u32 unkC;               // 0x0C
-    u32 unk10;              // 0x10
+    FlagWord unk10;         // 0x10
     u8  unk14;              // 0x14
     u8  unk15;              // 0x15
     u8  _pad16[2];          // 0x16
     u8  unk18;              // 0x18
     u8  unk19;              // 0x19
-    u8  _pad1A;             // 0x1A
+    u8  unk1A;              // 0x1A
     u8  unk1B;              // 0x1B
     u8  unk1C;              // 0x1C
     u8  unk1D;              // 0x1D
-    u8  _pad1E[0x49 - 0x1E];// 0x1E
+    u8  unk1E;              // 0x1E
+    u8  unk1F;              // 0x1F
+    u8  _pad20[0x49 - 0x20];// 0x20
     u8  unk49;              // 0x49
-    u8  _pad4A[0x52 - 0x4A];// 0x4A
+    u16 unk4A;              // 0x4A
+    u16 _pad4C;             // 0x4C
+    u16 unk4E;              // 0x4E
+    u16 unk50;              // 0x50
     u16 unk52;              // 0x52
     u16 unk54;              // 0x54
     u16 unk56;              // 0x56
@@ -47,9 +67,35 @@ typedef struct {
     u16 unk6A;              // 0x6A
     u16 unk6C;              // 0x6C
     u16 unk6E;              // 0x6E
-    u16 unk70[16];          // 0x70
-    u16 _pad90[4];          // 0x90
+    u16 unk70[14];          // 0x70
+    u32 unk8C;              // 0x8C
+    u32 unk90;              // 0x90
+    u32 unk94;              // 0x94
 } Struct_801ED0CC;
+
+typedef struct
+{
+    u16 lo;                 // 0x0C
+    u16 hi;                 // 0x0E
+} CfgHalves;
+
+/** @brief The config word at 0x801ED414, addressed either whole or by halves. */
+typedef union
+{
+    u32 word;
+    CfgHalves h;
+} CfgWord;
+
+typedef struct
+{
+    u32 unk0;               // 0x00
+    u16 unk4;               // 0x04
+    u16 unk6;               // 0x06
+    u16 unk8;               // 0x08
+    u16 unkA;               // 0x0A
+    CfgWord unkC;           // 0x0C
+    u32 unk10;              // 0x10
+} Struct_801ED408;
 
 typedef struct
 {
@@ -237,7 +283,7 @@ void func_8006441C(void)
         hw_regs->unk1C = 0;
         hw_regs->unk1D = 0;
 
-        hw_regs->unk10 = ((((hw_regs->unk10 & ~7) | 6) & ~0xC0) | 0x800) & ~0x1000;
+        hw_regs->unk10.flags = ((((hw_regs->unk10.flags & ~7) | 6) & ~0xC0) | 0x800) & ~0x1000;
     } while (0);
 }
 
@@ -339,14 +385,14 @@ void func_80064678(u16 index)
         func_8006700C((void*)0x801ED034, 0);
     }
     st = &base->unk34[index];
-    if ((st->unk10 & 7) == 2)
+    if ((st->unk10.flags & 7) == 2)
     {
         func_8006700C(st, 0);
     }
-    flags = st->unk10;
+    flags = st->unk10.flags;
     if ((flags & 7) != 0)
     {
-        st->unk10 = (flags & ~0x6000) | 0x2000;
+        st->unk10.flags = (flags & ~0x6000) | 0x2000;
         func_80066FBC(index);
         return;
     }
@@ -355,12 +401,12 @@ void func_80064678(u16 index)
     {
         if ((base->unk28 & 1) == 0)
         {
-            st->unk10 &= ~8;
+            st->unk10.flags &= ~8;
             base->unk28 |= 1;
         }
         else
         {
-            st->unk10 |= 8;
+            st->unk10.flags |= 8;
             base->unk28 |= 2;
         }
     }
@@ -370,7 +416,7 @@ void func_80064678(u16 index)
     e = &base->unk34[0];
     while (--n != -1)
     {
-        if ((e->unk10 & 7) != 0)
+        if ((e->unk10.flags & 7) != 0)
         {
             x = e->unk64;
             y = e->unk66;
@@ -429,14 +475,14 @@ void func_80064878(u16 index)
         func_8006700C((void*)0x801ED034, 0);
     }
     st = &base->unk34[index];
-    if ((st->unk10 & 7) == 2)
+    if ((st->unk10.flags & 7) == 2)
     {
         func_8006700C(st, 0);
     }
-    flags = st->unk10;
+    flags = st->unk10.flags;
     if ((flags & 7) != 0)
     {
-        st->unk10 = (flags & ~0x6000) | 0x4000;
+        st->unk10.flags = (flags & ~0x6000) | 0x4000;
         func_80066FBC(index);
         return;
     }
@@ -445,12 +491,12 @@ void func_80064878(u16 index)
     {
         if (index == 0)
         {
-            st->unk10 &= ~8;
+            st->unk10.flags &= ~8;
             base->unk28 |= 1;
         }
         else
         {
-            st->unk10 |= 8;
+            st->unk10.flags |= 8;
             base->unk28 |= 2;
         }
     }
@@ -495,4 +541,85 @@ void func_80064878(u16 index)
     st->unk64 = x;
     st->unk6E = y;
     st->unk66 = y;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80064A3C(Struct_801ED0CC* st)
+{
+    Struct_801ED408* cfg = (Struct_801ED408*)0x801ED408;
+    u32 temp_v1;
+    u32 temp_a0;
+    u32 temp_a2;
+    s32 temp_a0_2;
+
+    st->unkC = cfg->unk0;
+    st->unk4E = cfg->unk4;
+    st->unk50 = cfg->unk6;
+    st->unk8C = cfg->unkC.h.lo;
+    st->unk90 = 0;
+    st->unk94 = cfg->unkC.h.hi;
+    st->unk10.b.unk13 = (u8)cfg->unk10;
+    temp_v1 = (st->unk10.flags & ~0xC0) | ((cfg->unk10 >> 2) & 0xC0);
+    st->unk10.flags = temp_v1;
+    temp_a0 = temp_v1 & ~0x700;
+    temp_a0 |= (cfg->unk10 >> 4) & 0x700;
+    st->unk10.flags = temp_a0;
+    temp_a2 = cfg->unk10;
+    if ((temp_a2 & 0xC00) == 0xC00)
+    {
+        st->unk10.flags = temp_a0 & ~0x30;
+    }
+    else
+    {
+        st->unk10.flags = (temp_a0 & ~0x30) | ((temp_a2 >> 6) & 0x30);
+    }
+    temp_a2 = cfg->unkA;
+    temp_a0_2 = cfg->unk8;
+    if ((st->unkC != 0) && ((st->unk10.flags & 0x30) != 0x20) && ((s32)temp_a2 < 0x30))
+    {
+        temp_a2 = 0x30;
+    }
+    st->unk5A = temp_a0_2;
+    st->unk52 = temp_a0_2;
+    st->unk54 = temp_a2;
+    if ((st->unk10.flags & 0xC0) == 0x40)
+    {
+        st->unk56 = temp_a0_2 + 4;
+        st->unk58 = 0xD;
+        st->unk10.flags = (st->unk10.flags & ~7) | 2;
+    }
+    else
+    {
+        st->unk58 = 0xC;
+        st->unk56 = temp_a0_2;
+        st->unk10.flags = (st->unk10.flags & ~7) | 1;
+    }
+    st->unk0 = 0;
+    st->unk4 = 0;
+    st->unk8 = 0;
+    st->unk49 = 1;
+    if ((cfg->unkC.word == 0) && ((cfg->unk10 & 0x70FF) == 0))
+    {
+        st->unk10.b.unk12 = 0;
+    }
+    else
+    {
+        st->unk10.b.unk12 = 1;
+    }
+    st->unk1D = 1;
+    st->unk1F = 1;
+    st->unk15 = 0;
+    st->unk1A = 0;
+    st->unk1B = 0;
+    st->unk1C = 0;
+    st->unk19 = 0;
+    st->unk14 = 0;
+    st->unk1E = 0;
+    st->unk4A = 0;
+    st->unk18 = 0;
+    st->unk10.flags &= ~0x800;
+    st->unk10.flags &= ~0x1000;
+    st->unk10.flags &= ~0x6000;
 }
