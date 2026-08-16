@@ -74,20 +74,32 @@ verify-movie: build/overlays/movie/MOVIE.BIN
 		fi
 
 # --- gname -------------------------------------------------------------------
-#
-# GNAME has no working compressor, so we cannot reproduce and SHA1-compare the
-# compressed BIN. Instead we convert the linked ELF to its raw decompressed
-# image and compare that against the decompressed original overlay. GNAME is a
-# work in progress, so this is an informative report (overall match plus the
-# gname_data .data region), not a pass/fail gate - it stays out of verify-bins.
 
 build/overlays/gname/gname.raw: gname
 	@mkdir -p $(@D)
 	$(OBJCOPY) -O binary $(STAGING)/build/overlays/gname/gname.elf $@.tmp
 	mv $@.tmp $@
 
-verify-gname: build/overlays/gname/gname.raw
-	python3 tools/verify_gname_raw.py $< $(ROM_BIN_DIR)/GNAME.BIN
+build/overlays/gname/GNAME.BIN: build/overlays/gname/gname.raw
+	python3 tools/compressor/compressor.py $< $@.payload
+	{ printf '\001'; cat $@.payload; } > $@.tmp
+	mv $@.tmp $@
+	rm -f $@.payload
+
+verify-gname: build/overlays/gname/GNAME.BIN
+	@mkdir -p build
+	@set -eu; \
+		expected=$$(sha1sum $(ROM_BIN_DIR)/GNAME.BIN | awk '{print $$1}'); \
+		actual=$$(sha1sum $< | awk '{print $$1}'); \
+		echo "GNAME.BIN expected: $$expected"; \
+		echo "GNAME.BIN actual:   $$actual"; \
+		if [ "$$expected" = "$$actual" ]; then \
+			echo "[OK] GNAME.BIN matches original ROM"; \
+			grep -qxF gname $(COMPLETE_MANIFEST) 2>/dev/null || echo gname >> $(COMPLETE_MANIFEST); \
+		else \
+			echo "[FAIL] GNAME.BIN sha1 mismatch"; \
+			exit 1; \
+		fi
 
 # Diff the generated gname_data answer-key object against the compiled C data
 # object (the objdiff "gname/gname_data" unit) and write the JSON diff.
@@ -100,5 +112,5 @@ verify-gname-data: gname-objdiff
 	@echo "Wrote build/overlays/gname/gname_data_diff.json"
 
 # Extend this aggregate when another compressed overlay becomes byte-perfect.
-verify-bins: verify-gover verify-movie
+verify-bins: verify-gover verify-movie verify-gname
 	@echo "Verified compressed overlays: $$(cat $(COMPLETE_MANIFEST) 2>/dev/null | tr '\n' ' ')"
