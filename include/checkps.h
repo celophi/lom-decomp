@@ -64,11 +64,6 @@ extern s32 g_previousGameState;
  */
 extern u8 g_testPatternSizeTable[][2];
 
-/**
- * Y coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
- */
-extern s32 g_glyphAtlasY;
-
 extern const u32 D_8004FCC4[15];
 
 extern u32 D_80052428;
