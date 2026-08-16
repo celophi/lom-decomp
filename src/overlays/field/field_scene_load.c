@@ -83,8 +83,8 @@ typedef struct
 
 typedef struct
 {
-  FieldScene *scene;
-  u32 vram_byte_count;
+    FieldScene* scene;
+    u32 vram_byte_count;
 } FieldSceneGlobals;
 
 typedef struct
@@ -296,7 +296,7 @@ void field_init_with_fmv_alloc(void)
  * field_apply_pixel_lookup.
  *
  * @param arg0 Map id; values below 15 use a blocking CD read, others stream.
- * @see decomp.me (99.67%) https://decomp.me/scratch/V1GlO
+ * @see decomp.me (100%) https://decomp.me/scratch/Pvb0P
  */
 void field_load_map(s32 arg0)
 {
@@ -311,11 +311,15 @@ void field_load_map(s32 arg0)
     s32 vram_addr;
     FieldObject** obj_iter;
     u16 map_id;
+    u32 map_temp;
     FieldSceneGlobals* globals;
 
     DrawSync(0);
-    var_s1 = arg0;
-    map_id = var_s1;
+    if (arg0 == 0)
+        map_temp = 0;
+    else
+        map_temp = arg0;
+    map_id = map_temp;
     if (map_id < 0xFU)
     {
         cdrom_queue_read((arg0 + 0xB4) & 0xFFFF, 0x80180000);
