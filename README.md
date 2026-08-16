@@ -30,7 +30,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | SLUS_010.13   | 🌱 | In progress   |
 | ADDHERO.BIN   | 💤 | Not started   |
 | CARDA.BIN     | 💤 | Not started   |
-| CHECKPS.BIN   | ☑️ | Matching      |
+| CHECKPS.BIN   | 🔒 | Fully linked  |
 | CLOAD.BIN     | 💤 | Not started   |
 | FIELD.BIN     | 🌱 | In progress   |
 | GNAME.BIN     | 🔒 | Fully linked  |
@@ -240,6 +240,7 @@ lom-decomp/
 │   ├── main.c                      # Entry point
 │   └── unk3.c ... unk9.c           # Translation units pending identification
 ├── tools/
+│   ├── compressor/                 # Byte-exact encoder for the disc .BIN overlays
 │   ├── decomp-permuter/            # Automated C permutation for function matching
 │   ├── maspsx/                     # GCC → ASPSX assembly preprocessor (submodule)
 │   ├── objdiff/                    # Function diffing and progress report generation
