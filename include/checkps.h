@@ -75,10 +75,12 @@ extern u32 D_80052428;
 extern u8 D_8005B744[];
 extern u8 D_801ED600;
 extern s32 g_checkPSState;
+extern s32 g_vsyncTimestamp;
+extern s32 g_displayMode;
+extern u8 g_timeBuffer[8];
+extern const s32 D_8004FC70;
 extern u16 D_8005D030[];
 extern u16 D_8005D018[];
-extern u8 D_8005CF92[];
-extern u8 D_8005CF93[];
 
 /**
  * Descriptor for a single CD-ROM command: opcode, parameter count, response byte count,

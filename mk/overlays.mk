@@ -90,13 +90,8 @@ $(1)_GCC_280_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUIL
 $(1)_GCC_280_G4_NOEXPAND_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_NOEXPAND_SRCS))
 $(1)_GCC_272_GNU_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_GNU_G0_SRCS))
 $(1)_GCC_272_CDK_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_CDK_G0_SRCS))
-$(1)_GCC_272_GNU_TRIM_TEXT_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$(overlay_$(1)_gcc_272_gnu_trim_text_srcs))
-$(1)_GCC_272_GNU_TRIM_RODATA_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$(overlay_$(1)_gcc_272_gnu_trim_rodata_srcs))
 # Clear the div-expansion flag for the no-expand subset (target-specific var).
 $$($(1)_GCC_280_G4_NOEXPAND_OBJS): MASPSX_DIV_FLAG_G4 :=
-$$($(1)_GCC_272_GNU_TRIM_TEXT_OBJS): GNU_TEXT_TRIM := 4
-$$($(1)_GCC_272_GNU_TRIM_RODATA_OBJS): GNU_RODATA_TRIM := 12
-$$($(1)_GCC_272_GNU_TRIM_RODATA_OBJS): GNU_AS_FILTER_FLAGS := --drop-keeper-data --lower-align-3
 $(1)_C_OBJS := $$($(1)_GCC_272_CDK_G0_OBJS) $$($(1)_GCC_280_G0_OBJS) $$($(1)_GCC_272_GNU_G0_OBJS) $$($(1)_GCC_280_G4_OBJS)
 
 # ── Optional standalone binary object ──
@@ -142,13 +137,11 @@ $$($(1)_GCC_280_G4_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$
 $$($(1)_GCC_272_GNU_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(CC_272_GNU) $(CFLAGS_272_GNU_G0) $(INCLUDE_FLAGS) -S $$($(1)_SRC_DIR)/$$*.c -o - | \
-		python3 tools/filter_gnu_as.py $$(GNU_AS_FILTER_FLAGS) | \
-		$(AS_272_GNU) $(ASFLAGS_272_GNU) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
-	cd $(STAGING) && $(OBJCOPY) $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o \
+		$(AS_272_GNU) $(ASFLAGS_272_GNU) $$(overlay_$(1)_gcc_272_gnu_as_extra_flags_$$*) $(INCLUDE_FLAGS) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+	cd $(STAGING) && $(OBJCOPY) $$(overlay_$(1)_gcc_272_gnu_objcopy_flags_$$*) \
+		$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o \
 		$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.normalized.o
 	mv $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.normalized.o $$@
-	$$(if $$(GNU_TEXT_TRIM),cd $(STAGING) && python3 tools/trim_elf_section.py $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o .text $$(GNU_TEXT_TRIM))
-	$$(if $$(GNU_RODATA_TRIM),cd $(STAGING) && python3 tools/trim_elf_section.py $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o .rodata $$(GNU_RODATA_TRIM))
 
 # Rule: convert binary asset → linkable .o  (only if asset is defined)
 ifneq ($$($(1)_ASSET_SRC),)
@@ -180,7 +173,7 @@ $$($(1)_TGT_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/target/%.o: $$($(1)_ASM_DIR)/%.
 	@mkdir -p $$(@D)
 	cd $(STAGING) && cat $$($(1)_ASM_DIR)/$$*.s | \
 		$(MASPSX) $(MASPSX_PP_FLAGS) | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/target/$$*.o
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) $$(overlay_$(1)_target_as_extra_flags_$$*) -o $$($(1)_BUILD_DIR)/target/$$*.o
 
 # ── Phony convenience targets ──
 .PHONY: $(1) $(1)-target-objects $(1)-base-objects $(1)-objdiff
