@@ -2389,3 +2389,27 @@ void func_80066F28(u16 index, u32 value, u8 flags)
     st->unk14 = 0;
     st->unk10.flags = (st->unk10.flags & ~0x1000) | ((flags & 1) << 12);
 }
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80066FBC(u16 index)
+{
+    u8* src;
+    u8* dst;
+    s32 n;
+    Struct_801ED408* rec;
+
+    src = (u8*)0x801ED408;
+    n = 0x17;
+    rec = &D_801ED004[index];
+    rec->unk14 = 0;
+    dst = (u8*)rec;
+    do
+    {
+        *dst = *src;
+        src += 1;
+        n -= 1;
+        dst += 1;
+    } while (n != -1);
+}
