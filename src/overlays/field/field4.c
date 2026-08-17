@@ -201,13 +201,24 @@ typedef struct
     u32 unk0;            /* 0x00 */
     u32 unk4;            /* 0x04 */
     u32 unk8;            /* 0x08 */
-    u8 padC[0x1C - 0xC]; /* 0x0C */
-    s32 unk1C;           /* 0x1C */
-    u8 pad20[0x25 - 0x20];
+    u8 padC[0x10 - 0xC]; /* 0x0C */
+    s16 unk10;           /* 0x10 */
+    u8 pad12[0x1B - 0x12];
+    u8 unk1B;  /* 0x1B */
+    s32 unk1C; /* 0x1C */
+    u8 pad20[0x21 - 0x20];
+    u8 unk21; /* 0x21 */
+    u8 pad22[0x25 - 0x22];
     u8 unk25; /* 0x25 */
-    u8 pad26[0x2A - 0x26];
+    u8 pad26[0x28 - 0x26];
+    u8 unk28; /* 0x28 */
+    u8 pad29[0x2A - 0x29];
     s16 unk2A; /* 0x2A */
-    u8 pad2C[0x54 - 0x2C];
+    u8 pad2C[0x3B - 0x2C];
+    u8 unk3B; /* 0x3B */
+    u8 pad3C[0x40 - 0x3C];
+    u32 unk40; /* 0x40 */
+    u8 pad44[0x54 - 0x44];
 } Struct_D800FDF58;
 
 typedef struct
@@ -301,7 +312,9 @@ typedef struct
             u8 unk1; /* offset 0x01 */
         } b;
     } u0;
-    u8 pad0[0x254 - 2];     /* 0x02 .. 0x253 */
+    u8 unk2;                /* offset 0x02 */
+    u8 unk3;                /* offset 0x03 */
+    u8 pad0[0x254 - 4];     /* 0x04 .. 0x253 */
     u16 unk254;             /* offset 0x254 */
     u8 unk256;              /* offset 0x256 */
     u8 pad1[0x268 - 0x257]; /* 0x257 .. 0x267 */
@@ -1564,9 +1577,10 @@ typedef struct
 {
     u8* start; /* 0x00 */
     u8* end;   /* 0x04 */
-    u8 pad8[1];
+    u8 unk8;   /* 0x08 */
     u8 slot_index; /* 0x09 */
-    u8 padA[6];
+    u8 padA[0xE - 0xA];
+    s16 unkE; /* 0x0E */
     u32 flags; /* 0x10 */
 } FieldResourceEntry;
 
@@ -1592,13 +1606,22 @@ extern void* g_field_resource_cursor;
 extern s32 D_801158A0;
 
 void field_relocate_resource_buffer(s32);
-void func_8006C3FC(Struct_D800FDF58*, void*);
+/*
+ * func_8006C3FC is deliberately left implicitly declared: it is called with two
+ * arguments by field_relocate_resource_buffer and with one by func_8006A9A4,
+ * and both forms are required to match. A prototype makes the one-argument call
+ * a hard error and costs field_relocate_resource_buffer 8 exact rows.
+ */
 void field_restore_default_action_animation_mappings(s32);
 s32 func_8006A88C(s32, D_800FD818_type*, s32);
 void func_8006A9A4(s32, s32, s32, s32);
 void func_8006B4D0(s32, s32);
 void func_8006B7A0(s32, s32);
-void func_8006CF88(void*, void*, s32, void*);
+/*
+ * func_8006CF88 is deliberately left implicitly declared: field_load_actor_slot
+ * calls it with four arguments and func_8006AD04 with none, and both forms are
+ * required to match. Same situation as func_8006C3FC above; see [TOOL-09].
+ */
 void func_80091438(s32);
 void func_800A3D44(s32, u8);
 
@@ -1841,4 +1864,370 @@ void field_restore_default_action_animation_mappings(void)
     g_field_action_animation_maps.map0_action5_animation_id = 0x585;
     g_field_action_animation_maps.map1_action5_disabled = 0;
     g_field_action_animation_maps.map1_action5_animation_id = 0x585;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8006A88C(s32 arg0, D_800FD818_type* entry, s32 arg2)
+{
+    if (arg2 != 0)
+    {
+        switch (entry->unk3)
+        {
+        case 0:
+            if (entry->u0.h & 2)
+            {
+                return entry->u0.b.unk1 + 0xA17;
+            }
+            return entry->u0.b.unk1 + 0xA0C;
+
+        case 1:
+            return entry->unk2 + 0xA23;
+
+        case 2:
+        default:
+            return entry->unk2 + 0xA4B;
+        }
+    }
+    else
+    {
+        switch (entry->unk3)
+        {
+        case 0:
+            return ((entry->u0.h >> 1) & 1) + 0xAEB;
+
+        case 1:
+            return entry->unk2 + 0xAEE;
+
+        case 2:
+        default:
+            return entry->unk2 + 0xB02;
+        }
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006A958(s32 arg0)
+{
+    s32 i;
+
+    for (i = 0; i < 0xD; i++)
+    {
+        func_8006B7A0(i, arg0);
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006A9A4(s32 resource_index, s32 slot_index, s32 arg2, s32 arg3)
+{
+    g_field_resource_entries[resource_index].unkE = 0x2F;
+    g_field_resource_entries[resource_index].slot_index = slot_index;
+    g_field_resource_entries[resource_index].unk8 = 0;
+    g_field_resource_entries[resource_index].flags =
+        (g_field_resource_entries[resource_index].flags & ~1) | (arg3 & 1);
+    g_field_resource_entries[resource_index].start = g_field_resource_cursor;
+    func_8006CAFC(arg2, slot_index, resource_index, arg3 & 1);
+    D_800FDF58[slot_index].unk21 &= 0x80;
+    func_8006C3FC(&D_800FDF58[slot_index]);
+    g_field_resource_entries[resource_index].end = g_field_resource_cursor;
+    g_field_resource_entries[resource_index].flags |= 2;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006AA7C(s32 arg0)
+{
+    s32 i;
+    u8* pad_base;
+    u8* pad_ptr;
+    u32 new_var;
+    s32 temp;
+
+    if (arg0 < 2)
+    {
+        func_800B08FC(0, arg0);
+        if (func_800B0850() == 0)
+        {
+            pad_base = (u8*)g_pad_ctx;
+
+            for (i = 0; i < 2; i++)
+            {
+                if (D_800FD818[i].u0.b.unk0 & 1)
+                {
+                    temp = ~0x1FF;
+                    new_var = D_800FDF58[i].unk1C & temp;
+                    temp = i * 0x250;
+                    pad_ptr = pad_base + temp;
+                    D_800FDF58[i].unk1C = new_var | ((pad_ptr[0x608] >> 7) ^ 1);
+                }
+            }
+
+            func_8008C7A8();
+            func_800B4684();
+            func_80084240();
+            func_800B01FC();
+        }
+    }
+}
+
+/**
+ * @brief Compact the resource buffer by removing entry @p arg0 + 1's payload.
+ *
+ * Copies everything above the entry down over it, then subtracts the removed
+ * size from every resource entry and every live actor buffer pointer that sat
+ * above it, and finally drops the cursor and clears the entry's in-use flag.
+ *
+ * @param arg0 Resource slot index minus one; the entry acted on is arg0 + 1.
+ *
+ * @note NOT MATCHED. Required to match, each measured by reverting it:
+ *       - both comparisons put the loop-varying term first (+8 exact rows);
+ *       - loop 3 walks a pointer rather than indexing D_800FDF58, which is what
+ *         biases its induction variable to +0x40 and supplies the 115th insn;
+ *       - `dst` is loaded after the three flag stores, not beside `src` (+26);
+ *       - the two nested do/while(0) wrappers are ALLOC-23 ref-count devices
+ *         (+7 and +10); a bare braced block measures exactly 0 at both sites.
+ *       Residue is 11 rows of compiler-temp colouring; see
+ *       working/func_8006AB38/STATUS.md for the evidence, the retired probe
+ *       classes, and why a source-model reset is the recommended next step.
+ * @see decomp.me (97.74%) TODO
+ */
+void func_8006AB38(s32 arg0)
+{
+    s32 idx = arg0 + 1;
+    s32 i;
+    u8* src;
+    u8* dst;
+    s32 size;
+    Struct_D800FDF58* p;
+
+    if (D_800FD818[idx].u0.b.unk0 & 1)
+    {
+        src = g_field_resource_entries[idx].end;
+        D_800FDF58[idx].unk25 = 0xFF;
+        do
+        {
+            do
+            {
+                D_800FD818[idx].unk256 = 0xFF;
+                D_800FD818[idx].u0.h &= 0xFFFE;
+                dst = g_field_resource_entries[idx].start;
+                size = src - dst;
+
+                while (src != g_field_resource_cursor)
+                {
+                    *dst = *src;
+                    src++;
+                    dst++;
+                }
+            } while (0);
+
+            for (i = 0; i < 8; i++)
+            {
+                if (g_field_resource_entries[i].start > g_field_resource_entries[idx].start)
+                {
+                    g_field_resource_entries[i].start -= size;
+                    g_field_resource_entries[i].end -= size;
+                }
+            }
+
+            p = D_800FDF58;
+            for (i = 0; i < 0xD; i++)
+            {
+                if ((p->unk25 != 0xFF) && (p->unk3B != 8))
+                {
+                    if ((p->unk40 | 0x80000000) > (((u32)g_field_resource_entries[idx].start) | 0x80000000))
+                    {
+                        p->unk40 -= size;
+                    }
+                }
+                p++;
+            }
+
+            g_field_resource_cursor = ((u8*)g_field_resource_cursor) - size;
+            g_field_resource_entries[idx].flags &= ~2;
+        } while (0);
+    }
+}
+
+typedef struct
+{
+    s16 unk0; /* 0x00 */
+    s16 unk2; /* 0x02 */
+} Struct_D800EB254;
+
+extern Struct_D800EB254 D_800EB254[];
+extern u8 D_800FDA81;
+
+Struct_D800FDF58* func_80087C9C(s32);
+
+/**
+ * @brief Bind a resource to actor slot @p arg2 + 1 and bring the slot online.
+ *
+ * Marks the slot in use, records its source kind, derives the resource id for
+ * that kind, loads it, seeds the actor's buffer pointers from either a cleared
+ * state (arg0 == -1), the template at D_800FDF58[0] (arg0 == -2), or a located
+ * donor slot, then resets the render state and notifies the audio side.
+ *
+ * @param arg0 Source selector: >= 0 looks the resource up via func_80087C9C,
+ *             -1 clears, -2 copies the template.
+ * @param arg1 Value stored at the slot's unk2 and used for the >= 0x41 check.
+ * @param arg2 Slot index minus one.
+ * @return 0 if the slot was already in use, -1 if the lookup failed, else 1.
+ *
+ * @note NOT MATCHED. Instruction count and frame are exact. Required to match,
+ *       each measured by reverting it:
+ *       - `id` is s32, not s16 (+7 exact rows);
+ *       - the mid-function switch reads through a pointer scoped to the switch
+ *         ALONE (+4); widening that pointer to cover the `unk2` store before it
+ *         or the `unk254` store after it both measure far worse;
+ *       - `arg1` is s32, not u8, or the 0x41 test emits andi+sltiu (+2);
+ *       - D_800FDF58[2] goes through its own pointer or the +0xA8 and +0x1C
+ *         fold into one displacement (+7);
+ *       - D_800EB254 has a 4-byte stride read as s16, not an s16 array;
+ *       - g_pad_ctx is loaded ONCE into a local and reused at the func_8009C2E0
+ *         call, which is what brings the insn count to exactly 295.
+ *       Residue is 31 rows, mostly base-address materialization order in the
+ *       arg0 == -2 arm. See working/func_8006AD04/STATUS.md.
+ * @see decomp.me (95.68%) TODO
+ */
+s32 func_8006AD04(s32 arg0, s32 arg1, s32 arg2)
+{
+    s32 slot = arg2 + 1;
+    Struct_D800FDF58* entry;
+    Struct_D800FDF58* found;
+    s32 args[3];
+    Struct_D800EB254* def;
+    D_800FD818_type* s;
+    Struct_D800FDF58* two;
+    u8* pad;
+    Struct_D800FDF58* first;
+    s32 id;
+
+    if (D_800FD818[slot].u0.b.unk0 & 1)
+    {
+        return 0;
+    }
+
+    if (arg0 >= 0)
+    {
+        found = func_80087C9C(arg0);
+        if (found == (Struct_D800FDF58*)-1)
+        {
+            return -1;
+        }
+    }
+
+    D_800FD818[slot].u0.h |= 1;
+    if (arg0 == -2)
+    {
+        D_800FD818[slot].unk3 = 0;
+    }
+    else
+    {
+        D_800FD818[slot].unk3 = slot;
+    }
+
+    D_800FD818[slot].unk2 = arg1;
+
+    s = &D_800FD818[slot];
+    switch (s->unk3)
+    {
+    case 0:
+        id = ((s->u0.h >> 1) & 1) + 0xAEB;
+        break;
+
+    case 1:
+        id = s->unk2 + 0xAEE;
+        break;
+
+    case 2:
+    default:
+        id = s->unk2 + 0xB02;
+        break;
+    }
+
+    D_800FD818[slot].unk254 = id;
+    func_8006A9A4(slot, slot, id, 0);
+    func_8006B4D0(slot, slot);
+
+    pad = (u8*)g_pad_ctx;
+    entry = &D_800FDF58[slot];
+    entry->unk1C = (entry->unk1C & ~0x1FF) | ((pad[(slot * 0x250) + 0x608] >> 7) ^ 1);
+
+    if ((slot == 2) && (arg1 >= 0x41))
+    {
+        two = &D_800FDF58[2];
+        two->unk1C = (two->unk1C & 0xFFFCFFFF) | (((pad[0x29D7] + 1) & 3) << 16);
+    }
+    else
+    {
+        D_800FDF58[slot].unk1C &= 0xFFFCFFFF;
+    }
+
+    if (arg0 == -1)
+    {
+        D_800FDF58[slot].unk0 = 0;
+        D_800FDF58[slot].unk4 = 0;
+        D_800FDF58[slot].unk8 = 0;
+        D_800FDF58[slot].unk21 = 0;
+    }
+    else if (arg0 == -2)
+    {
+        first = D_800FDF58;
+        entry = &D_800FDF58[slot];
+        entry->unk0 = first->unk0;
+        entry->unk4 = first->unk4;
+        entry->unk8 = first->unk8;
+        def = &D_800EB254[first->unk1B >> 5];
+        args[0] = def->unk0;
+        args[1] = 0;
+        args[2] = def->unk0;
+        func_8009C2E0(entry, args, pad);
+        entry->unk21 = 0;
+    }
+    else
+    {
+        D_800FDF58[slot].unk0 = found->unk0;
+        D_800FDF58[slot].unk4 = found->unk4;
+        D_800FDF58[slot].unk21 = 0;
+        D_800FDF58[slot].unk8 = found->unk8;
+        found->unk25 = 0xFF;
+        D_800FE774--;
+    }
+
+    D_800FDF58[slot].unk25 = 0;
+    D_800FDF58[slot].unk2A = 0;
+    D_800FDF58[slot].unk10 = 0;
+    D_800FDF58[slot].unk28 = 0xFF;
+    func_8006C3FC(&D_800FDF58[slot]);
+    func_800AA90C(0);
+    func_8006CF88();
+
+    if ((D_801158A0 != 0) && (slot == 1))
+    {
+        func_800A3D44(1, D_800FDA81);
+    }
+
+    func_8008C7A8();
+    func_8009C434();
+
+    switch (D_800FD818[slot].unk3)
+    {
+    case 1:
+        func_800A5174(1, D_800FD818[slot].unk2 + 0xA37);
+        func_80091438(1);
+        break;
+
+    case 2:
+        func_800A5174(2, D_800FD818[slot].unk2 + 0xA9B);
+        break;
+    }
+
+    return 1;
 }
