@@ -101,7 +101,9 @@ typedef struct
 
 typedef struct
 {
-    u8 _pad00[0x14];
+    u8 _pad00[4];
+    Struct_801ED408* unk4;  // 0x04 same object D_801ED004 points at
+    u8 _pad08[0x14 - 8];
     u32 unk14;
     u32 unk18;
     u16 unk1C;
@@ -2361,4 +2363,29 @@ void func_80066CC0(Struct_801ED0CC* st, u16** cursor, s32 arg2)
         }
     }
     *cursor = cur;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80066F28(u16 index, u32 value, u8 flags)
+{
+    Struct_801ED000* hw = (Struct_801ED000*)0x801ED000;
+    Struct_801ED0CC* st = &hw->unk34[index];
+    Struct_801ED408* rec;
+
+    if ((st->unk10.flags & 0x6000) != 0)
+    {
+        rec = &hw->unk4[index];
+        rec->unk14 = value;
+        rec->unk10.b.unk12 = flags;
+        return;
+    }
+    st->unk49 = 1;
+    st->unk0 = (u8*)value;
+    st->unk4 = 0;
+    st->unk8 = 0;
+    st->unk19 = 0;
+    st->unk14 = 0;
+    st->unk10.flags = (st->unk10.flags & ~0x1000) | ((flags & 1) << 12);
 }
