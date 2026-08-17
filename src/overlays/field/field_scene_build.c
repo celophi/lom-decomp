@@ -421,6 +421,11 @@ void *func_8005AB80(u8, u8);
 void func_8005AC50(void *, u16, s32 *);
 void func_8005AD20(u8, u16, s8 *);
 extern s32 g_field_dyn_count;
+/* Shared work-area words at 0x80180008 / 0x80180018, adjacent to g_field_scene.
+   Referencing them as symbols (rather than as offsets off a literal base) is
+   what makes gcc emit the target's %hi/%lo relocations here. */
+extern u16 D_80180008;
+extern s32 D_80180018;
 
 /**
  * @brief Build the scene's per-object render records.
@@ -430,10 +435,14 @@ extern s32 g_field_dyn_count;
  *             meaning not yet established.
  * @return Nothing.
  *
- * @note NOT YET MATCHED - 93.03% (711/1174 exact rows, gcc280_g4_noexpanddiv).
+ * @note NOT YET MATCHED - 93.04% (713/1174 exact rows, gcc280_g4_noexpanddiv).
  *       Frame size matches (-0xb0). Residue is spill-slot assignment (our
  *       0x024/0x028 and 0x034/0x03C pairs are swapped against the target) plus
  *       one 3-row structural run at tgt 0x0DE4.
+ * @note The `global_page = (u8*)0x80180000` base is required to match and must
+ *       NOT be rewritten to reference g_field_scene / g_field_node_angle_table
+ *       directly: the literal base is what makes gcc share one %hi across both
+ *       loads. Each symbol form was measured at -4 exact rows (+2 insns).
  * @note THIS FUNCTION MAY NOT BE FUNCTIONALLY EQUIVALENT. BE CAUTIOUS TO MAKE
  *       ASSUMPTIONS. It still carries matching scaffolding rather than a
  *       recovered source shape: the `scratch` union aliases sp10[3] with two
@@ -1149,7 +1158,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
     do
     {
       temp_a3 = *((Records_Unk **) (((u8 *) var_s1_2) + 4));
-      if ((((u16) (*((u16 *) 0x80180008))) >= 0x12U) && ((*(((u8 *) temp_a3) + 8)) != 0xFF))
+      if ((((u16) D_80180008) >= 0x12U) && ((*(((u8 *) temp_a3) + 8)) != 0xFF))
       {
         if ((*(((u8 *) temp_a3) + 9)) != 0xFF)
         {
@@ -1426,7 +1435,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   field_build_animation_list(arg0->unk18, &sp24, ((u8 *) sp34) + 0x1C);
   field_build_animation_list(arg0->unk1C, &sp24, ((u8 *) sp34) + 0x20);
   field_build_animation_list(arg0->unk20, &sp24, ((u8 *) sp34) + 0x24);
-  var_v1_8 = *((s32 *) (((u8 *) (&g_field_dyn_count)) + 8));
+  var_v1_8 = D_80180018;
   var_s0 = g_field_dyn_count - 1;
   new_var3 = new_var;
   var_t1_5 = (Records_Unk *) (((u8 *) sp34) + 0x14);
