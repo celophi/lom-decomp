@@ -301,7 +301,9 @@ typedef struct
             u8 unk1; /* offset 0x01 */
         } b;
     } u0;
-    u8 pad0[0x254 - 2];     /* 0x02 .. 0x253 */
+    u8 unk2;                /* offset 0x02 */
+    u8 unk3;                /* offset 0x03 */
+    u8 pad0[0x254 - 4];     /* 0x04 .. 0x253 */
     u16 unk254;             /* offset 0x254 */
     u8 unk256;              /* offset 0x256 */
     u8 pad1[0x268 - 0x257]; /* 0x257 .. 0x267 */
@@ -1841,4 +1843,45 @@ void field_restore_default_action_animation_mappings(void)
     g_field_action_animation_maps.map0_action5_animation_id = 0x585;
     g_field_action_animation_maps.map1_action5_disabled = 0;
     g_field_action_animation_maps.map1_action5_animation_id = 0x585;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8006A88C(s32 arg0, D_800FD818_type* entry, s32 arg2)
+{
+    if (arg2 != 0)
+    {
+        switch (entry->unk3)
+        {
+        case 0:
+            if (entry->u0.h & 2)
+            {
+                return entry->u0.b.unk1 + 0xA17;
+            }
+            return entry->u0.b.unk1 + 0xA0C;
+
+        case 1:
+            return entry->unk2 + 0xA23;
+
+        case 2:
+        default:
+            return entry->unk2 + 0xA4B;
+        }
+    }
+    else
+    {
+        switch (entry->unk3)
+        {
+        case 0:
+            return ((entry->u0.h >> 1) & 1) + 0xAEB;
+
+        case 1:
+            return entry->unk2 + 0xAEE;
+
+        case 2:
+        default:
+            return entry->unk2 + 0xB02;
+        }
+    }
 }
