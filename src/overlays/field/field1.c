@@ -2413,3 +2413,30 @@ void func_80066FBC(u16 index)
         dst += 1;
     } while (n != -1);
 }
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006700C(Struct_801ED0CC* st, s32 arg1)
+{
+    if (st->unkC != 0)
+    {
+        if ((st->unk10.flags & 8) == 0)
+        {
+            ((Struct_801ED000*)0x801ED000)->unk28 &= 0xFFFE;
+        }
+        else
+        {
+            ((Struct_801ED000*)0x801ED000)->unk28 &= 0xFFFD;
+        }
+    }
+    if ((arg1 == 0) || ((st->unk10.flags & 0xC0) == 0x40))
+    {
+        st->unk10.flags = st->unk10.flags & ~7;
+    }
+    else
+    {
+        st->unk10.flags = (st->unk10.flags & ~7) | 3;
+        st->unk4A = 0;
+    }
+}
