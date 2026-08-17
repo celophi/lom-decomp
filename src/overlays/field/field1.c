@@ -123,6 +123,19 @@ typedef struct
     s16 h;
 } RECT;
 
+/**
+ * @brief One queued VRAM upload.
+ * @note Mirrors FieldImageReq in field_scene_internal.h; the destination
+ *       rectangle sits inline at 0x04 so its address can be taken directly.
+ */
+typedef struct FieldImageReq FieldImageReq;
+struct FieldImageReq
+{
+    FieldImageReq* next;    // 0x00
+    RECT rect;              // 0x04 destination rectangle in VRAM
+    u_long* data;           // 0x0C source pixel data
+};
+
 /** @brief libgpu free-size sprite primitive (20 bytes). */
 typedef struct
 {
@@ -215,6 +228,28 @@ typedef struct
     u32 unk4;               // 0x04
 } OtSlot;
 
+/** @brief One scratchpad mesh vertex. */
+typedef struct
+{
+    s16 x;                  // 0x00
+    s16 y;                  // 0x02
+} Vec2s;
+
+/** @brief 40-byte textured quad primitive, packet length 9. */
+typedef struct
+{
+    u32 tag;                // 0x00
+    u32 rgbc;               // 0x04
+    u32 xy0;                // 0x08
+    u32 uv0;                // 0x0C
+    u32 xy1;                // 0x10
+    u32 uv1;                // 0x14
+    u32 xy2;                // 0x18
+    u32 uv2;                // 0x1C
+    u32 xy3;                // 0x20
+    u32 uv3;                // 0x24
+} PrimQuad;
+
 typedef struct
 {
     u8  unk0;               // 0x00
@@ -227,6 +262,7 @@ typedef struct
 } Struct_801ED600;
 
 void func_800640B4(Struct_8006429C* arg0);
+void field_queue_vram_upload(FieldImageReq* req);
 
 extern Struct_801ED408* D_801ED004;
 
@@ -1452,5 +1488,877 @@ void func_800654E0(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
     }
     last->tag = (last->tag & 0xFF000000) | (ot->unk4 & 0xFFFFFF);
     ot->unk4 = (ot->unk4 & 0xFF000000) | ((u32)first & 0xFFFFFF);
+    *cursor = cur;
+}
+
+/**
+ * @brief Build the warped (perspective) field text-window packet chain.
+ * @param st     Text-window state block.
+ * @param quad   Four screen corners the flat mesh is warped into.
+ * @param cursor In/out cursor into the packet scratch buffer.
+ * @param ot     Ordering-table slot the finished chain is linked into.
+ * @note WIP - not yet byte-matching. Insn count and frame already match; the
+ *       residue is emit order and register allocation. See
+ *       working/func_80065D38/STATUS.md.
+ * @see decomp.me (80.26%) TODO
+ */
+void func_80065D38(Struct_801ED0CC* st, Quad* quad, u8** cursor, OtSlot* ot)
+{
+    Struct_801ED000* hw = (Struct_801ED000*)0x801ED000;
+    Vec2s* p;
+    Vec2s* mesh;
+    u32* vp;
+    PrimQuad* poly;
+    PrimQuad* last;
+    u8* first;
+    u8* cur;
+    s32 w;
+    s32 span;
+    s32 v;
+    s32 y;
+    s32 n;
+    s32 m;
+    s32 rows;
+    s32 count;
+    s32 u;
+    s32 avail;
+    s32 stride;
+    s32 den_x;
+    s32 den_y;
+    s32 base_x;
+    s32 base_y;
+    s32 dx;
+    s32 dy;
+    s32 prev;
+    s32 yv;
+    s32 x0;
+    s32 y0;
+    s32 x1;
+    s32 y1;
+    s32 uv;
+    s32 clut;
+    s32 tile;
+    s32 shade;
+    s32 col;
+    s32 row_v;
+    s32 sel;
+
+    base_x = 0;
+    base_y = 0;
+    dx = 0;
+    dy = 0;
+    if ((st->unkC != 0) && (((st->unk10.flags >> 4) & 3) < 2))
+    {
+        w = st->unk52 + 0x38;
+    }
+    else
+    {
+        w = st->unk52;
+    }
+
+    /* Build the unwarped mesh in scratchpad RAM. */
+    p = (Vec2s*)0x1F800000;
+    p->x = 0;
+    p->y = 0;
+    p += 1;
+    v = 8;
+    span = w;
+    if (w > 0)
+    {
+        do
+        {
+            p->x = v;
+            p->y = 0;
+            p += 1;
+            if (span >= 0x41)
+            {
+                v += 0x40;
+                span -= 0x40;
+            }
+            else
+            {
+                v += span;
+                span = 0;
+            }
+        } while (span > 0);
+    }
+    p->x = v;
+    p->y = 0;
+    p[1].x = v + 8;
+    p[1].y = 0;
+    p += 2;
+
+    rows = st->unk54 - 1;
+    y = 8;
+    if (rows != -1)
+    {
+        do
+        {
+            p->x = 0;
+            p->y = y;
+            p += 1;
+            v = 8;
+            span = w;
+            if (w > 0)
+            {
+                do
+                {
+                    p->x = v;
+                    p->y = y;
+                    p += 1;
+                    if (span >= 0x41)
+                    {
+                        v += 0x40;
+                        span -= 0x40;
+                    }
+                    else
+                    {
+                        v += span;
+                        span = 0;
+                    }
+                } while (span > 0);
+            }
+            p->x = v;
+            p->y = y;
+            p[1].x = v + 8;
+            p[1].y = y;
+            p += 2;
+            if (rows >= 0x21)
+            {
+                y += 0x20;
+                rows -= 0x20;
+            }
+            else
+            {
+                y += rows;
+                rows = 0;
+            }
+            rows -= 1;
+        } while (rows != -1);
+    }
+
+    n = 1;
+    do
+    {
+        p->x = 0;
+        p->y = y;
+        p += 1;
+        v = 8;
+        span = w;
+        if (w > 0)
+        {
+            do
+            {
+                p->x = v;
+                p->y = y;
+                p += 1;
+                if (span >= 0x41)
+                {
+                    v += 0x40;
+                    span -= 0x40;
+                }
+                else
+                {
+                    v += span;
+                    span = 0;
+                }
+            } while (span > 0);
+        }
+        p->x = v;
+        p->y = y;
+        p[1].x = v + 8;
+        p[1].y = y;
+        p += 2;
+        n -= 1;
+        y += 8;
+    } while (n != -1);
+
+    y = 8;
+    u = st->unk60;
+    rows = (st->unk54 >> 4) - 1;
+    count = 0;
+    if (rows != -1)
+    {
+        do
+        {
+            v = 8;
+            if ((st->unkC != 0) && ((st->unk10.flags & 0x30) == 0))
+            {
+                v = 0x40;
+            }
+            span = st->unk56;
+            if (span > 0)
+            {
+                do
+                {
+                    p->x = v;
+                    p->y = y;
+                    p[1].x = v;
+                    avail = 0x100 - u;
+                    p[1].y = st->unk58 + y;
+                    p += 2;
+                    count += 2;
+                    if (span >= avail)
+                    {
+                        v += avail;
+                        span -= avail;
+                        u = 0;
+                    }
+                    else
+                    {
+                        v += span;
+                        u += span;
+                        span = 0;
+                    }
+                } while (span > 0);
+            }
+            p->x = v;
+            p->y = y;
+            p[1].x = v;
+            rows -= 1;
+            p[1].y = st->unk58 + y;
+            p += 2;
+            count += 2;
+            y += 0x10;
+        } while (rows != -1);
+    }
+
+    n = 1;
+    y = ((s32)(st->unk54 - 0x30) >> 1) + 0xA;
+    do
+    {
+        if ((st->unk10.flags & 0x30) == 0)
+        {
+            v = 0xA;
+        }
+        else
+        {
+            v = st->unk52 + 0x12;
+        }
+        m = 1;
+        do
+        {
+            p->x = v;
+            p->y = y;
+            p += 1;
+            m -= 1;
+            v += 0x30;
+        } while (m != -1);
+        n -= 1;
+        y += 0x30;
+    } while (n != -1);
+
+    n = 1;
+    y = ((s32)(st->unk54 - 0x30) >> 1) + 8;
+    do
+    {
+        if ((st->unk10.flags & 0x30) == 0)
+        {
+            v = 8;
+        }
+        else
+        {
+            v = st->unk52 + 0x10;
+        }
+        m = 1;
+        do
+        {
+            p->x = v;
+            p->y = y;
+            p += 1;
+            m -= 1;
+            v += 0x30;
+        } while (m != -1);
+        n -= 1;
+        y += 0x30;
+    } while (n != -1);
+
+    /* Warp every mesh vertex into the quad. */
+    mesh = (Vec2s*)0x1F800000;
+    prev = -1;
+    den_x = w + 0x10;
+    m = ((((st->unk54 + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3)) + count + 7;
+    den_y = st->unk54 + 0x10;
+    if (m != -1)
+    {
+        p = mesh;
+        do
+        {
+            yv = p->y;
+            if (prev != yv)
+            {
+                x0 = quad->x0;
+                y0 = quad->y0;
+                x1 = quad->x1;
+                y1 = quad->y1;
+                prev = yv;
+                base_x = (((quad->x2 - x0) * yv) / den_y) + x0;
+                base_y = (((quad->y2 - y0) * yv) / den_y) + y0;
+                dx = ((((quad->x3 - x1) * yv) / den_y) + x1) - base_x;
+                dy = ((((quad->y3 - y1) * yv) / den_y) + y1) - base_y;
+            }
+            p->y = ((dy * p->x) / den_x) + base_y;
+            m -= 1;
+            p->x = ((dx * p->x) / den_x) + base_x;
+            p += 1;
+        } while (m != -1);
+    }
+
+    /* Emit the packet chain. */
+    vp = (u32*)0x1F800000;
+    y = 8;
+    n = 1;
+    stride = ((w + 0x3F) >> 6) + 3;
+    first = *cursor;
+    cur = first;
+    clut = hw->unk20 << 16;
+    do
+    {
+        if (n == 0)
+        {
+            v = 0xF800;
+        }
+        else
+        {
+            v = 0xF000;
+        }
+        poly = (PrimQuad*)cur;
+        cur += 0x28;
+        poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+        uv = v + 8;
+        poly->uv0 = clut | v;
+        tile = y << 8;
+        poly->uv1 = 0x1F0000 | uv;
+        poly->uv2 = v + tile;
+        poly->rgbc = 0x2D808080;
+        poly->uv3 = v + (tile | 8);
+        poly->xy0 = vp[0];
+        span = w;
+        poly->xy1 = vp[1];
+        poly->xy2 = vp[stride];
+        poly->xy3 = vp[stride + 1];
+        if (w > 0)
+        {
+            do
+            {
+                poly = (PrimQuad*)cur;
+                cur += 0x28;
+                poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+                poly->rgbc = 0x2D808080;
+                if (span >= 0x41)
+                {
+                    m = 0x3F;
+                    span -= 0x40;
+                }
+                else
+                {
+                    m = span - 1;
+                    span = 0;
+                }
+                poly->uv1 = 0x1F0000 | (uv + m);
+                poly->uv0 = clut | uv;
+                poly->uv2 = uv + tile;
+                poly->uv3 = uv + (tile | m);
+                poly->xy0 = vp[0];
+                poly->xy1 = vp[1];
+                vp += 1;
+                poly->xy2 = vp[stride - 1];
+                poly->xy3 = vp[stride];
+            } while (span > 0);
+        }
+        uv += 0x40;
+        last = (PrimQuad*)cur;
+        cur += 0x28;
+        last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+        last->uv0 = clut | uv;
+        last->uv1 = 0x1F0000 | (uv + 7);
+        tile = y << 8;
+        last->rgbc = 0x2D808080;
+        last->uv2 = uv + tile;
+        last->uv3 = uv + (tile | 7);
+        last->xy0 = vp[0];
+        last->xy1 = vp[1];
+        last->xy2 = vp[stride];
+        last->xy3 = vp[stride + 1];
+        n -= 1;
+        vp = (u32*)0x1F800000 + ((((st->unk54 + 0x1F) >> 5) + 1) * stride);
+        y = 7;
+    } while (n != -1);
+
+    vp = (u32*)0x1F80000C + ((w + 0x3F) >> 6);
+    rows = st->unk54;
+    if (rows > 0)
+    {
+        do
+        {
+            uv = (0xE0 << 8) | 0xE0;
+            shade = 0x1F00;
+            if (rows < 0x20)
+            {
+                shade = rows << 8;
+            }
+            poly = (PrimQuad*)cur;
+            cur += 0x28;
+            poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+            poly->uv0 = clut | uv;
+            poly->uv1 = 0x1F0000 | (uv + 8);
+            poly->uv2 = uv + shade;
+            poly->rgbc = 0x2D808080;
+            poly->uv3 = uv + (shade | 8);
+            v = uv - 0x40;
+            poly->xy0 = vp[0];
+            span = w;
+            poly->xy1 = vp[1];
+            poly->xy2 = vp[stride];
+            poly->xy3 = vp[stride + 1];
+            vp += 1;
+            if (w > 0)
+            {
+                do
+                {
+                    poly = (PrimQuad*)cur;
+                    cur += 0x28;
+                    poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+                    poly->rgbc = 0x2D808080;
+                    if (span >= 0x41)
+                    {
+                        m = 0x40;
+                        span -= 0x40;
+                    }
+                    else
+                    {
+                        m = span;
+                        span = 0;
+                    }
+                    poly->uv1 = 0x1F0000 | (v + m);
+                    poly->uv0 = clut | v;
+                    poly->uv2 = v + shade;
+                    poly->uv3 = v + (shade | m);
+                    poly->xy0 = vp[0];
+                    poly->xy1 = vp[1];
+                    vp += 1;
+                    poly->xy2 = vp[stride - 1];
+                    poly->xy3 = vp[stride];
+                } while (span > 0);
+            }
+            v += 0x48;
+            last = (PrimQuad*)cur;
+            cur += 0x28;
+            last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+            last->uv0 = clut | v;
+            last->uv1 = 0x1F0000 | (v + 8);
+            last->uv2 = v + shade;
+            last->rgbc = 0x2D808080;
+            last->uv3 = v + (shade | 8);
+            last->xy0 = vp[0];
+            rows -= 0x20;
+            last->xy1 = vp[1];
+            last->xy2 = vp[stride];
+            last->xy3 = vp[stride + 1];
+            vp += 2;
+        } while (rows > 0);
+    }
+
+    col = st->unk60;
+    row_v = st->unk62;
+    rows = (st->unk54 >> 4) - 1;
+    vp = (u32*)0x1F800008 + ((((st->unk54 + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
+    if (rows != -1)
+    {
+        do
+        {
+            span = st->unk56;
+            v = row_v + 0x80;
+            if (span > 0)
+            {
+                do
+                {
+                    uv = (v << 8) | col;
+                    last = (PrimQuad*)cur;
+                    cur += 0x28;
+                    last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+                    last->rgbc = 0x2D808080;
+                    last->uv1 = 0x1F0000 | uv;
+                    last->uv0 = (hw->unk1C << 16) | uv;
+                    last->uv2 = uv + (st->unk58 << 8);
+                    last->uv3 = uv + (st->unk58 << 8);
+                    last->xy0 = vp[0];
+                    avail = 0x100 - col;
+                    last->xy1 = vp[1];
+                    last->xy2 = vp[2];
+                    last->xy3 = vp[3];
+                    vp += 2;
+                    if (span >= avail)
+                    {
+                        span -= avail;
+                        m = (col + avail) - 1;
+                        last->uv3 = m;
+                        last->uv1 = m;
+                        col = 0;
+                        row_v += st->unk58;
+                    }
+                    else
+                    {
+                        col += span;
+                        m = col;
+                        span = 0;
+                        last->uv3 = m;
+                        last->uv1 = m;
+                    }
+                    v = row_v + 0x80;
+                } while (span > 0);
+            }
+            rows -= 1;
+        } while (rows != -1);
+    }
+
+    if (st->unkC != 0)
+    {
+        poly = (PrimQuad*)cur;
+        cur += 0x28;
+        poly->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+        poly->rgbc = 0x2E000000;
+        uv = ((((((st->unk10.flags >> 3) & 1) * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        poly->uv0 = (hw->unk1C << 16) | uv;
+        poly->uv2 = uv + 0x3000;
+        poly->uv1 = (uv + 0x2F) | 0x1F0000;
+        poly->uv3 = uv + 0x302F;
+        vp = (u32*)0x1F800000 + count
+             + ((((st->unk54 + 0x1F) >> 5) + 3) * (((w + 0x3F) >> 6) + 3));
+        poly->xy0 = vp[0];
+        poly->xy1 = vp[1];
+        poly->xy2 = vp[2];
+        poly->xy3 = vp[3];
+        last = (PrimQuad*)cur;
+        cur += 0x28;
+        sel = (st->unk10.flags >> 3) & 1;
+        uv = ((((sel * 0x30) + 0x110) & 0xFF) << 8) | 0xD0;
+        last->uv2 = uv + 0x3000;
+        last->uv1 = (uv + 0x2F) | 0x1F0000;
+        last->tag = ((u32)cur & 0xFFFFFF) | 0x09000000;
+        last->rgbc = 0x2D808080;
+        last->uv3 = uv + 0x302F;
+        last->uv0 = ((&hw->unk24)[sel] << 16) | uv;
+        last->xy0 = vp[0];
+        last->xy1 = vp[1];
+        last->xy2 = vp[2];
+        last->xy3 = vp[3];
+    }
+    last->tag = (last->tag & 0xFF000000) | (ot->unk4 & 0xFFFFFF);
+    ot->unk4 = (ot->unk4 & 0xFF000000) | ((u32)first & 0xFFFFFF);
+    *cursor = cur;
+}
+
+/**
+ * @brief Scroll the glyph cache up by one text row, clearing the vacated row.
+ * @param st Text-window state block.
+ * @note WIP - not yet byte-matching. Frame and control flow already match; the
+ *       residue is two rematerialised -1 loop sentinels and the register
+ *       cascade from them. See working/func_80066A2C/STATUS.md.
+ * @see decomp.me (91.52%) TODO
+ */
+void func_80066A2C(Struct_801ED0CC* st)
+{
+    u16* dst;
+    u16* src;
+    u16* d;
+    u16* s;
+    s32 u;
+    s32 v;
+    s32 du;
+    s32 dv;
+    s32 su;
+    s32 sv;
+    s32 left;
+    s32 rows;
+    s32 avail;
+    s32 span;
+    s32 cap;
+    s32 lines;
+    s32 count;
+    u16 pix;
+
+    u = st->unk60;
+    v = st->unk62;
+    rows = st->unk54 - 0x10;
+    if (rows > 0)
+    {
+        do
+        {
+            du = u;
+            left = st->unk56;
+            dv = v;
+            if (left > 0)
+            {
+                avail = 0x100 - u;
+                do
+                {
+                    u += left;
+                    if (left >= avail)
+                    {
+                        left -= avail;
+                        u = 0;
+                        v += st->unk58;
+                    }
+                    else
+                    {
+                        left = 0;
+                    }
+                    avail = 0x100 - u;
+                } while (left > 0);
+            }
+            su = u;
+            left = st->unk56;
+            sv = v;
+            if (left > 0)
+            {
+                do
+                {
+                    dst = (u16*)((dv << 7) + 0x801DE000) + (du >> 2);
+                    src = (u16*)((sv << 7) + 0x801DE000) + (su >> 2);
+                    span = 0x100 - su;
+                    cap = 0x100 - du;
+                    if (cap < span)
+                    {
+                        span = cap;
+                    }
+                    if (left < span)
+                    {
+                        span = left;
+                    }
+                    du += span;
+                    left -= span;
+                    if (du >= 0x100)
+                    {
+                        do
+                        {
+                            du -= 0x100;
+                            dv += st->unk58;
+                        } while (du >= 0x100);
+                    }
+                    su += span;
+                    if (su >= 0x100)
+                    {
+                        do
+                        {
+                            su -= 0x100;
+                            sv += st->unk58;
+                        } while (su >= 0x100);
+                    }
+                    lines = st->unk58 - 1;
+                    if (lines != -1)
+                    {
+                        do
+                        {
+                            d = dst;
+                            cap = span >> 2;
+                            count = cap - 1;
+                            s = src;
+                            if (count != -1)
+                            {
+                                do
+                                {
+                                    pix = *s;
+                                    s += 1;
+                                    count -= 1;
+                                    *d = pix;
+                                    d += 1;
+                                } while (count != -1);
+                            }
+                            dst += 0x40;
+                            lines -= 1;
+                            src += 0x40;
+                        } while (lines != -1);
+                    }
+                } while (left > 0);
+            }
+            rows -= 0x10;
+        } while (rows > 0);
+    }
+    left = st->unk56;
+    if (left > 0)
+    {
+        span = u >> 2;
+        do
+        {
+            dst = (u16*)((v << 7) + 0x801DE000) + span;
+            span = 0x100 - u;
+            if (left < span)
+            {
+                span = left;
+            }
+            u += span;
+            left -= span;
+            if (u >= 0x100)
+            {
+                do
+                {
+                    u -= 0x100;
+                    v += st->unk58;
+                } while (u >= 0x100);
+            }
+            lines = st->unk58 - 1;
+            if (lines != -1)
+            {
+                do
+                {
+                    cap = span >> 2;
+                    count = cap - 1;
+                    d = dst;
+                    if (count != -1)
+                    {
+                        do
+                        {
+                            *d = 0;
+                            count -= 1;
+                            d += 1;
+                        } while (count != -1);
+                    }
+                    lines -= 1;
+                    dst += 0x40;
+                } while (lines != -1);
+            }
+            span = u >> 2;
+        } while (left > 0);
+    }
+    st->unk68 = st->unk60;
+    st->unk6A = st->unk62;
+    st->unk6C = st->unk64;
+    st->unk6E = st->unk66;
+    st->unk5A = st->unk52;
+}
+
+/**
+ * @brief Queue the dirty text-cache rows for VRAM upload, staging wrapped runs
+ *        into the packet arena.
+ * @param st     Text-window state block.
+ * @param cursor In/out cursor into the packet arena.
+ * @param arg2   Initial row count (overwritten before use in the staged path).
+ * @note WIP - not yet byte-matching. Frame matches; 4 insns short, all from
+ *       loop.c hoisting inner-loop invariants into the OUTER preheader here and
+ *       the inner one in the target. Same blocker as func_80066A2C. See
+ *       working/func_80066CC0/STATUS.md.
+ * @see decomp.me (84.01%) TODO
+ */
+void func_80066CC0(Struct_801ED0CC* st, u16** cursor, s32 arg2)
+{
+    FieldImageReq* req;
+    u16* cur;
+    u16* dst;
+    u16* src;
+    u16* s;
+    s32 rows;
+    s32 count;
+    s32 span;
+    s32 w;
+    s32 x;
+    s32 y;
+    s32 h;
+    s32 bottom;
+
+    rows = arg2;
+    cur = *cursor;
+    req = (FieldImageReq*)cur;
+    y = st->unk6A;
+    x = st->unk68;
+    cur += 8;
+    if (y == st->unk6E)
+    {
+        span = st->unk6C - x;
+    }
+    else
+    {
+        span = 0x100 - x;
+    }
+    span = span >> 1;
+    dst = (u16*)0x801DE000;
+    src = (u16*)((y << 7) + 0x801DE000) + (x >> 2);
+    h = st->unk58;
+    req->rect.x = (x >> 2) + 0x3C0;
+    w = span >> 1;
+    req->rect.y = y + 0x180;
+    req->rect.w = w;
+    req->rect.h = h;
+    if (span == 0x80)
+    {
+        req->data = (u_long*)src;
+    }
+    else
+    {
+        dst = cur;
+        req->data = (u_long*)dst;
+        rows = h - 1;
+        cur += ((w * h) + 1) & ~1;
+        if (h != 0)
+        {
+            do
+            {
+                count = (span >> 1) - 1;
+                s = src;
+                if (count != -1)
+                {
+                    do
+                    {
+                        *dst = *s;
+                        s += 1;
+                        count -= 1;
+                        dst += 1;
+                    } while (count != -1);
+                }
+                rows -= 1;
+                src += 0x40;
+            } while (rows != -1);
+        }
+    }
+    field_queue_vram_upload(req);
+    bottom = y + h;
+    if (y != st->unk6E)
+    {
+        req = (FieldImageReq*)cur;
+        if (bottom != st->unk6E)
+        {
+            cur += 8;
+            req->rect.x = 0x3C0;
+            req->rect.y = bottom + 0x180;
+            req->rect.w = 0x40;
+            req->data = (u_long*)((bottom << 7) + 0x801DE000);
+            req->rect.h = st->unk6E - bottom;
+            field_queue_vram_upload(req);
+        }
+        req = (FieldImageReq*)cur;
+        if (st->unk6C != 0)
+        {
+            req->rect.x = 0x3C0;
+            req->rect.y = st->unk6E + 0x180;
+            req->rect.h = h;
+            req->rect.w = st->unk6C >> 2;
+            dst = cur + 8;
+            rows = h - 1;
+            req->data = (u_long*)dst;
+            src = (u16*)((st->unk6E << 7) + 0x801DE000);
+            cur = dst + ((((st->unk6C >> 2) * h) + 1) & ~1);
+            if (h != 0)
+            {
+                do
+                {
+                    count = (st->unk6C >> 2) - 1;
+                    s = src;
+                    if (count != -1)
+                    {
+                        do
+                        {
+                            *dst = *s;
+                            s += 1;
+                            count -= 1;
+                            dst += 1;
+                        } while (count != -1);
+                    }
+                    rows -= 1;
+                    src += 0x40;
+                } while (rows != -1);
+            }
+            field_queue_vram_upload(req);
+        }
+    }
     *cursor = cur;
 }
