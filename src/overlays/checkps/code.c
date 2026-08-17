@@ -463,7 +463,7 @@ void func_800506D0(void)
     u32 clutSize;
     u8* imageBlock;
     u16 loadX, loadY;
-    register u16* pHeader asm("v1");
+    u16* pHeader;
 
     pRect = &rect;
     gfxBase = D_8005B744;
@@ -498,7 +498,7 @@ void func_800506D0(void)
     D_80061098 = *(u16*)(imageBlock + 8);
     D_80061094 = pHeader[1];
 
-    LoadImage(pRect, (u32*)(imageBlock + 0xC));
+    ((int (*)())LoadImage)(pRect, (u32*)(imageBlock + 0xC), D_80061098);
 }
 
 /**

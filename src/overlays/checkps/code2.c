@@ -38,12 +38,12 @@ s32 g_glyphAtlasY;
 /**
  * decomp.me link (100%) https://decomp.me/scratch/8Otmf
  */
-void func_80051BB4(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
+void* func_80051BB4(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
 {
     u16 sp20[7];
     s32 var_a0;
     s32 var_t2;
-    register s32 var_t6 asm("t6");
+    s32 var_t6;
 
     var_t2 = arg2;
     if (var_t2 < 0)
@@ -77,7 +77,8 @@ void func_80051BB4(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5
         sp20[var_a0] = 0x5B81;
     }
 
-    func_80051E58(arg0, arg1, (u8*)&sp20[var_a0], arg3, arg4, arg5, arg6);
+    arg0 = func_80051E58(arg0, arg1, (u8*)&sp20[var_a0], arg3, arg4, arg5, arg6);
+    return arg0;
 }
 
 /**
