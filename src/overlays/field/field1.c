@@ -269,6 +269,7 @@ void field_queue_vram_upload(FieldImageReq* req);
 
 extern Struct_801ED408* D_801ED004;
 
+extern u8* D_801ED008;
 extern s16 D_801ED028;
 extern s32 D_801ED044;
 
@@ -2535,4 +2536,101 @@ void func_800671D8(u8* image, u8** cursor, s32 index, s32 mirror)
     }
     field_queue_vram_upload(req);
     *cursor = cur;
+}
+
+/**
+ * @brief Reset the text window for a new string and pre-walk its glyph wrap.
+ * @param text Source text buffer.
+ * @note WIP - not yet byte-matching. Insn count and frame match; 2 rows of
+ *       sched1 residue only. See working/func_8006730C/STATUS.md.
+ * @see decomp.me (92.20%) TODO
+ */
+void func_8006730C(u8* text)
+{
+    Struct_801ED0CC* st = (Struct_801ED0CC*)0x801ED034;
+    s32 u;
+    s32 v;
+    s32 rows;
+    s32 span;
+    u16 avail;
+
+    func_80064A3C((Struct_801ED0CC*)0x801ED034);
+    u = 0;
+    rows = st->unk54;
+    v = u;
+    st->unk0 = text;
+    D_801ED008 = text;
+    st->unk68 = 0;
+    st->unk5C = 0;
+    st->unk60 = 0;
+    st->unk6A = 0;
+    st->unk5E = 0;
+    st->unk62 = 0;
+    st->unk10.flags = ((st->unk10.flags & ~7) | 0x804) & ~0x1000;
+    if (rows > 0)
+    {
+        do
+        {
+            span = st->unk56;
+            if (span > 0)
+            {
+                do
+                {
+                    avail = 0x100 - u;
+                    if (span >= avail)
+                    {
+                        u += span;
+                        span -= avail;
+                        u = 0;
+                        v += st->unk58;
+                    }
+                    else
+                    {
+                        u += span;
+                        span = 0;
+                    }
+                } while (span > 0);
+            }
+            rows -= 0x10;
+        } while (rows > 0);
+    }
+    st->unk6C = u;
+    st->unk64 = u;
+    st->unk6E = v;
+    st->unk66 = v;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_800673F8(u16 index, s32 mode)
+{
+    u8* dst;
+    u8* src;
+    s32 n;
+    Struct_801ED408* rec;
+
+    dst = (u8*)0x801ED408;
+    n = 0x17;
+    rec = &D_801ED004[index];
+    src = (u8*)rec;
+    do
+    {
+        *dst = *src;
+        src += 1;
+        n -= 1;
+        dst += 1;
+    } while (n != -1);
+    if (mode == 1)
+    {
+        func_80064678(index);
+    }
+    else
+    {
+        func_80064878(index);
+    }
+    if (rec->unk14 != 0)
+    {
+        func_80066F28(index, rec->unk14, rec->unk10.b.unk12);
+    }
 }
