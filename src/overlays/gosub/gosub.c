@@ -1549,6 +1549,25 @@ typedef struct
     volatile u16 unkE;
 } StructS0;
 
+/**
+ * @brief Same layout as StructS0, but with a plain (non-volatile) @c unkE.
+ *
+ * func_801448EC writes each highlight tile's fields once and never reads them
+ * back, so it does not need StructS0's volatile @c unkE (which exists for the
+ * scrollbar thumb's read-modify-write clamp at func_80143C58). Sharing the
+ * volatile field there costs 1.80% and one extra instruction: the volatile
+ * store cannot be scheduled among the neighbouring field stores.
+ */
+typedef struct
+{
+    s32 unk0;
+    s32 unk4;
+    s16 unk8;
+    s16 unkA;
+    s16 unkC;
+    u16 unkE;
+} GosubTile;
+
 typedef struct
 {
     s32 unk0;
@@ -1597,6 +1616,15 @@ typedef struct
 #define GET_PRIM_ADDR(p) ((u_long)((GosubTag *)(p))->addr)
 /** @brief libgpu addPrim(): splice packet @p p in at ordering-table tag @p ot. */
 #define ADD_PRIM(ot, p) (SET_PRIM_ADDR(p, GET_PRIM_ADDR(ot)), SET_PRIM_ADDR(ot, p))
+/**
+ * @brief ADD_PRIM with the incoming link masked explicitly.
+ * @note The mask is redundant against the 24-bit bitfield, but spelling it out
+ *       changes register allocation. It is worth 7 rows in func_801448EC and
+ *       costs 8 rows in func_801450D8, so the two spellings are both required
+ *       to match; do not collapse them into one macro.
+ */
+#define SET_PRIM_ADDR_MASK(p, a) (((GosubTag *)(p))->addr = ((u_long)(a) & 0xFFFFFF))
+#define ADD_PRIM_MASKED(ot, p) (SET_PRIM_ADDR_MASK(p, GET_PRIM_ADDR(ot)), SET_PRIM_ADDR(ot, p))
 
 s32 func_8001A5D4(s32, void*);                  /* extern */
 s32 func_8001C56C(void*, s32, s32, s32, s32);  /* extern */
@@ -1604,7 +1632,7 @@ StructS0* func_801443E4();                      /* extern */
 StructS0* func_80144544();                      /* extern */
 GosubLine* func_80144764();                      /* extern */
 StructS0* func_80146E30();                      /* extern */
-StructS0* func_801448EC();                      /* extern */
+GosubTile* func_801448EC();                     /* extern */
 
 /** @brief Packed four-byte record stored in the combination table. */
 typedef struct
@@ -3111,7 +3139,9 @@ typedef struct
     u16 t[16];
 } MsgHdr;
 
-#define MSG_HDR ((MsgHdr*)((u8*)&D_8014F29C + D_8014F29C))
+/* The `- -` is required to match: it keeps gcc from folding the base and the
+   offset into one %hi/%lo relocation at the MSG_HI call sites. */
+#define MSG_HDR ((MsgHdr*)((u8*)&D_8014F29C - -D_8014F29C))
 #define MSG_HI(off) ((void*)(D_8014F29C + (MSG_HDR->h[(off) >> 1] + base)))
 #define MSG_LO(off) ((void*)(D_8014F29C + (*(u16*)(base + D_8014F29C + (off)) + base)))
 
@@ -3127,16 +3157,17 @@ typedef struct
  * 0xF080F0 TILE for the cursor row and a 0x808080 TILE per entry of
  * g_gosub_selected_rows.
  *
- * @param ot    Ordering-table tag every packet is linked into.
- * @param prim  Packet cursor.
- * @param x_off Horizontal offset subtracted from every column position.
- * @param y_off Vertical scroll offset subtracted from every row position.
+ * @param ot       Ordering-table tag every packet is linked into.
+ * @param arg_prim Packet cursor; copied into the local @c prim, which is what
+ *                 the body advances (the copy is required to match).
+ * @param x_off    Horizontal offset subtracted from every column position.
+ * @param y_off    Vertical scroll offset subtracted from every row position.
  * @return Packet cursor just past the last highlight tile.
  *
- * @note WIP - best match 94.89% (441/507 exact, gcc 2.7.2 CDK; frame, byte size,
- *       and insn count all match). Remaining residue is register-coloring ties
- *       (tail a1/a2 mask-cursor swap, prologue s4/s6 copy order) plus the
- *       %hi(D_8014F29C+0x44) relocation fold in the half==1 arm's sibling sites.
+ * @note WIP - best match 99.61% (506/507 exact, gcc 2.7.2 CDK; frame, byte size,
+ *       insn count, and every sp slot match). The single residual row is the
+ *       `addiu t2, t1, 0x10` for `mark = ++tile`, which the target schedules
+ *       after the three tail %hi loads and we emit one slot before them.
  * @note Statement shapes here are measured, not stylistic: y_top/y_top2/y_top3
  *       are per-site temps (one shared y_base variable costs -15 exact via a
  *       long-lived register web; a bare inline (y_off - 2) gets reassociated by
@@ -3144,13 +3175,18 @@ typedef struct
  *       in-loop y_off reload alive: with the mult inline, the y_off - 2 movable's
  *       def-use life is ~8 and loop.c hoists it out (move_movables threshold
  *       decays -3 per moved invariant; life-1 temps fail the test and stay).
+ * @note The tiles are GosubTile, not StructS0: StructS0's volatile unkE costs
+ *       1.80% and one insn here. The two ADD_PRIM_MASKED calls must keep the
+ *       explicit mask; plain ADD_PRIM costs 7 rows (and the reverse is true in
+ *       func_801450D8, which needs the unmasked spelling).
  * @note The selection loop must be a plain while (not if + do/while) so gcc's
  *       duplicated loop entry test emits the beqz and cse2 can share one
  *       lui %hi(g_gosub_selection_count) across the check and the loop.
  * @see working/func_801448EC/STATUS.md for the measured probe log and retired classes.
  */
-StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
+GosubTile* func_801448EC(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
 {
+    s32 prim;
     s32 drawn_count;
     Vec2s* pos_p;
     s32 row_offset;
@@ -3168,31 +3204,35 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
     s32 line_y3;
     s32 label_x;
     s32 x_pad;
+    s32 status_pad;
     s32* table;
     s32 base;
     s32 blk;
     s32 blk2;
-    StructS0* tile;
-    StructS0* mark;
+    u8* d2ptr;
+    GosubTile* tile;
+    GosubTile* mark;
 
+    prim = arg_prim;
     row = 0;
     drawn_count = 0;
     if (g_gosub_row_count > 0)
     {
         label_x = 0x30 - x_off;
         pos_p = &pos;
-        table = &D_8014F29C;
-        base = (s32)table - 0x20;
         row_offset = 0;
+        d2ptr = (u8*)&D_8014F2C4;
         do
         {
+            table = &D_8014F29C;
+            base = (s32)table - 0x20;
             if (g_gosub_rows[row].value == -3)
             {
                 y = ((row * 0x30) - y_off) - g_gosub_scroll_y;
                 if (y >= -0x2F && y < g_gosub_window_height)
                 {
-                    prim = func_801450D8(prim, ot, row, -x_off, y, drawn_count);
-                    prim = func_800A88A0(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].kind, label_x, y, 0);
+                    prim = func_800A88A0(func_801450D8(prim, ot, row, -x_off, y, drawn_count),
+                                         ot, g_gosub_rows[row].name, g_gosub_rows[row].kind, label_x, y, 0);
                     if (g_gosub_rows[row].flags.f.flag2)
                     {
                         if ((g_gosub_rows[row].flags.half & 1) == 0)
@@ -3208,9 +3248,8 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
                         }
                         else
                         {
-                            msg_off = D_8014F29C + g_gosub_rows[row].unkD * 2;
-                            msg_p = (u8*)&D_8014F29C + msg_off;
-                            prim = func_800A88A0(prim, ot, (void*)(D_8014F29C + (*(u16*)(msg_p + 0x44) + base)), g_gosub_rows[row].kind, label_x,
+                            msg_off = *(u16*)((u8*)&D_8014F29C + D_8014F29C + g_gosub_rows[row].unkD * 2 + 0x44);
+                            prim = func_800A88A0(prim, ot, (void*)(D_8014F29C + (msg_off + base)), g_gosub_rows[row].kind, label_x,
                                                  y + 0x10, 0);
                         }
                     }
@@ -3225,25 +3264,29 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
                     pos.x = 0x48 - x_off;
                     pos.y = line_y2;
                     prim = func_800A8A78(ot, prim, g_gosub_rows[row].unk1A, g_gosub_rows[row].kind, pos_p, 0);
-                    prim = func_800A88A0(prim, ot, (void*)(D_8014F29C + (*(u16*)((u8*)&D_8014F2C4 + D_8014F29C) + base)),
+                    msg_off = D_8014F29C - -(*(u16*)((s32)D_8014F29C - -(s32)d2ptr) + base);
+                    prim = func_800A88A0(prim, ot, (void*)msg_off,
                                          g_gosub_rows[row].kind, 0x64 - x_off, line_y2, 0);
                     pos.x = 0xB0 - x_off;
                     pos.y = line_y2;
                     prim = func_800A8A78(ot, prim, g_gosub_rows[row].unk10, g_gosub_rows[row].kind, pos_p, 0);
                     if (g_gosub_rows[row].unkE != 0)
                     {
+                        s32 pad1;
                         prim = func_800A88A0(prim, ot, MSG_LO(0x4A), g_gosub_rows[row].kind,
-                                             g_gosub_window_width - (x_off + 0xC), line_y2, 1);
+                                             g_gosub_window_width - (pad1 = x_off, pad1 += 0xC), line_y2, 1);
                     }
                     else if (g_gosub_rows[row].flags.half & 1)
                     {
+                        s32 pad2;
                         prim = func_800A88A0(prim, ot, MSG_LO(0x60), g_gosub_rows[row].kind,
-                                             g_gosub_window_width - (x_off + 0xC), line_y2, 1);
+                                             g_gosub_window_width - (pad2 = x_off, pad2 += 0xC), line_y2, 1);
                     }
                     else if (g_gosub_rows[row].flags.f.flag1)
                     {
+                        s32 pad3;
                         prim = func_800A88A0(prim, ot, MSG_LO(0x6E), g_gosub_rows[row].kind,
-                                             g_gosub_window_width - (x_off + 0xC), line_y2, 1);
+                                             g_gosub_window_width - (pad3 = x_off, pad3 += 0xC), line_y2, 1);
                     }
                     drawn_count += 1;
                 }
@@ -3264,8 +3307,9 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
             }
             else
             {
+                status_pad = row * g_gosub_row_height;
                 y_top = y_off - 2;
-                y = ((row * g_gosub_row_height) - y_top) - g_gosub_scroll_y;
+                y = (status_pad - y_top) - g_gosub_scroll_y;
                 if (-g_gosub_row_height < y && y < g_gosub_window_height)
                 {
                     prim = func_800A88A0(prim, ot, g_gosub_rows[row].name, g_gosub_rows[row].kind, 0xC - x_off, y, 0);
@@ -3283,23 +3327,24 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
         } while (row < g_gosub_row_count);
     }
 
-    tile = (StructS0*)prim;
+    tile = (GosubTile*)prim;
+    status_pad = g_gosub_cursor_row * g_gosub_row_height;
     y_top2 = y_off - 2;
-    y = ((g_gosub_cursor_row * g_gosub_row_height) - y_top2) - g_gosub_scroll_y;
+    y = (status_pad - y_top2) - g_gosub_scroll_y;
     ((u8*)tile)[3] = 3;
     tile->unk4 = 0xF080F0;
     ((u8*)tile)[7] = 0x62;
     row = 0;
-    tile->unkE = g_gosub_row_height - 1;
-    tile->unk8 = 1;
     tile->unkC = g_gosub_window_width;
     tile->unkA = y - 2;
-    ADD_PRIM(ot, tile);
-    mark = (StructS0*)((u8*)tile + 0x10);
+    tile->unk8 = 1;
+    tile->unkE = g_gosub_row_height - 1;
+    ADD_PRIM_MASKED(ot, tile);
+    mark = ++tile;
     while (row < g_gosub_selection_count)
     {
         {
-            mark->unk8 = 1;
+            mark->unk8 = (row | 1) & 1;
             mark->unk4 = 0x808080;
             ((u8*)mark)[3] = 3;
             ((u8*)mark)[7] = 0x62;
@@ -3310,7 +3355,7 @@ StructS0* func_801448EC(s32* ot, s32 prim, s32 x_off, s32 y_off)
             mark->unkA = y - 2;
             mark->unkE = g_gosub_row_height - 1;
             row += 1;
-            ADD_PRIM(ot, mark);
+            ADD_PRIM_MASKED(ot, mark);
             mark += 1;
         }
     }

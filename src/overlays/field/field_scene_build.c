@@ -421,33 +421,56 @@ void *func_8005AB80(u8, u8);
 void func_8005AC50(void *, u16, s32 *);
 void func_8005AD20(u8, u16, s8 *);
 extern s32 g_field_dyn_count;
+/* Shared work-area words at 0x80180008 / 0x80180018, adjacent to g_field_scene.
+   Referencing them as symbols (rather than as offsets off a literal base) is
+   what makes gcc emit the target's %hi/%lo relocations here. */
+extern u16 D_80180008;
+extern s32 D_80180018;
 
 /**
- * decomp.me (88.34%) https://decomp.me/scratch/i4GmA
- * THIS FUNCTION MAY NOT BE FUNCTIONALLY EQUIVALENT. BE CAUTIOUS TO MAKE ASSUMPTIONS.
+ * @brief Build the scene's per-object render records.
+ *
+ * @param arg0 Object being built; its unk26 is set to 1 on completion.
+ * @param arg1 TODO: caller passes the low halfword of field_scene_load's arg0;
+ *             meaning not yet established.
+ * @return Nothing.
+ *
+ * @note NOT YET MATCHED - 93.04% (713/1174 exact rows, gcc280_g4_noexpanddiv).
+ *       Frame size matches (-0xb0). Residue is spill-slot assignment (our
+ *       0x024/0x028 and 0x034/0x03C pairs are swapped against the target) plus
+ *       one 3-row structural run at tgt 0x0DE4.
+ * @note The `global_page = (u8*)0x80180000` base is required to match and must
+ *       NOT be rewritten to reference g_field_scene / g_field_node_angle_table
+ *       directly: the literal base is what makes gcc share one %hi across both
+ *       loads. Each symbol form was measured at -4 exact rows (+2 insns).
+ * @note THIS FUNCTION MAY NOT BE FUNCTIONALLY EQUIVALENT. BE CAUTIOUS TO MAKE
+ *       ASSUMPTIONS. It still carries matching scaffolding rather than a
+ *       recovered source shape: the `scratch` union aliases sp10[3] with two
+ *       volatile slots to pin stack offsets, and several member accesses are
+ *       written as raw `*(T*)((u8*)p + (0xNN ^ 0))` casts. Both are m2c
+ *       artifacts to be replaced with real fields as the struct is identified.
+ * @see decomp.me (88.34%) https://decomp.me/scratch/i4GmA
+ * @see working/field_build_render_records/code.c - active matching scratch.
  */
 void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
 {
+  union { s32 sp10[3]; volatile s32 sp74; volatile int new_var6; } scratch;
   s8 sp20;
   Records_Unk *sp24;
-  s32 sp10[3];
   u16 sp28;
   Records_Unk **sp30;
   Records_Unk *sp34;
-  Records_Node30 *sp38;
+  volatile Records_Node30 *sp38;
   s32 sp3C;
   s32 sp50;
-  Records_Node30 * volatile sp54;
   s32 sp58;
   void * volatile sp5C;
   s32 sp60;
   s32 sp64;
   Records_Unk *sp68;
   Records_Unk **sp6C;
-  s32 sp74;
   s32 sp80;
-  Records_Unk *temp_a1_5;
-  Records_Unk *temp_a1_6;
+  s16 *temp_a1_5;
   Records_Node44 *temp_s1;
   Records_Unk *temp_s1_2;
   Records_Unk *temp_s2;
@@ -460,9 +483,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   char new_var3;
   Records_Node30 *var_t0_2;
   Records_Node30 *var_t0_3;
-  Records_Node30 *var_t0_4;
   Records_Node44 *var_t1;
-  Records_Node38 *var_t1_2;
   Records_Unk *var_t1_5;
   Records_Unk *var_t5;
   s16 *var_t5_2;
@@ -470,10 +491,10 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   s16 temp_a1_2;
   s16 temp_a1_3;
   s16 temp_a1_4;
-  s16 temp_a2;
   s32 temp_v0;
-  u8 *new_var12;
   int new_var;
+  s32 early_outer_end;
+  s32 early_inner_end;
   s32 temp_v0_2;
   s32 temp_v0_3;
   s32 temp_v0_4;
@@ -487,7 +508,6 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   s16 var_v0_5;
   s32 var_v1;
   s32 var_v1_2;
-  s16 *var_a1;
   s16 *var_a2;
   s32 temp_a0;
   s32 temp_a2_3;
@@ -497,38 +517,28 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   s32 temp_t3;
   s32 temp_t3_2;
   s32 temp_t4;
-  s32 temp_t4_2;
   s32 temp_t7;
-  s32 temp_t7_2;
   s32 temp_v0_10;
   s32 temp_v0_11;
   s32 temp_v0_12;
-  s32 temp_v0_13;
   s32 temp_v0_5;
   s32 temp_v0_6;
   s32 temp_v1_13;
   s32 temp_v1_14;
-  int new_var6;
   s32 temp_v1_7;
   s32 temp_v1_8;
   s32 var_fp_2;
   s32 var_s0;
-  s32 var_s0_2;
   s32 var_s0_3;
   u8 *new_var13;
   s32 var_s0_4;
   s32 var_s0_5;
   s32 var_s0_6;
-  s32 var_s0_7;
-  s32 var_s0_8;
   s32 var_s1;
   s32 var_s1_3;
   s32 var_s1_4;
   s32 var_s5;
-  s32 var_s5_2;
   s32 var_s6;
-  s32 var_s6_2;
-  s32 var_s6_3;
   s32 var_t1_4;
   s16 temp_a2_2;
   s32 var_t3;
@@ -545,7 +555,6 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   unsigned char new_var10;
   s32 var_v1_8;
   s32 *var_s3_2;
-  s32 *var_s3_3;
   u16 temp_v1;
   int new_var11;
   u16 temp_v1_2;
@@ -555,11 +564,6 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   u16 temp_v1_6;
   u32 new_var19;
   u16 var_a0;
-  u16 var_a0_2;
-  u16 var_a0_3;
-  u16 var_a0_4;
-  u16 var_a0_5;
-  u16 var_a0_6;
   u16 var_t2;
   Records_Node38 *new_var16;
   u8 *new_var17;
@@ -567,22 +571,19 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   u16 *temp_a0_2;
   u16 *var_t0;
   u32 temp_a0_3;
-  u32 temp_a0_4;
   u32 var_v0_6;
   u32 var_v0_8;
-  Records_SrcObj3 **new_var4;
   u8 temp_v0_7;
   short temp_v1_12;
   u8 temp_v1_9;
   u16 new_var5;
-  int var_v0;
+  u8 var_v0;
   Records_Unk *var_a0_7;
   int new_var8;
   u8 *var_fp;
   Records_Unk *temp_a3;
   Records_Unk *temp_s4;
   Records_Src4 *temp_s4_2;
-  Records_Unk *temp_t2;
   Records_Unk *temp_v0_8;
   Records_Unk *temp_v0_9;
   Records_Unk *temp_v1_10;
@@ -599,26 +600,26 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   Records_Unk *var_t2_4;
   Records_Unk **var_s7;
   Records_SrcObj3 **var_t6;
+  u8 *global_page;
   sp30 = (Records_Unk **) 0x801ED000;
-  var_t3 = 0;
-  var_t4 = 0;
-  var_t8 = 0;
+  var_t3 = var_t4 = var_t8 = 0;
+  global_page = (u8 *) 0x80180000;
   sp80 = 0;
   do
   {
   }
   while (0);
+  sp34 = *((Records_Unk **) (global_page + 0x14));
   sp3C = 0;
   sp24 = 0;
-  sp34 = (Records_Unk *) g_field_scene.scene;
   sp34->unk0 = arg0;
   *((s32 *) (((u8 *) sp34) + 0xC)) = 0;
   var_a3 = arg0->unk8;
   sp24 = (Records_Unk *) (((u8 *) sp34) + 0x74);
   sp28 = arg1;
   var_t1 = (Records_Node44 *) (((u8 *) sp34) + 8);
-  var_t5_2 = g_field_node_angle_table;
-  if (arg0->unk8 != (0 * 0))
+  var_t5_2 = *((s16 **) (global_page + 0x1C));
+  if (var_a3 != 0)
   {
     do
     {
@@ -648,52 +649,52 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       var_t1->unk3C = 0;
       var_t1->unk40 = 0;
       var_t1->unk18 = (s8) new_var14;
-      var_s0 = var_a3->unk18;
-      var_s0 &= 0x7FFF;
+      var_s0 = var_a3->unk18 & 0x7FFF;
       var_t0 = (u16 *) (((u8 *) var_a3) + 0x18);
       if (var_s0 != 0)
       {
         do
         {
-          var_s0_2 = var_s0 - 1;
-          new_var = -1;
-          var_a1 = var_t5_2 + (var_t0[1] * 2);
+          var_s0 = var_s0 - 1;
+          early_outer_end = -1;
+          early_inner_end = -1;
+          temp_a1_5 = var_t5_2 + (var_t0[1] * 2);
           do
           {
-            if (var_s0_2 != new_var)
+            if (var_s0 != early_outer_end)
             {
-              var_a2 = var_a1 + 1;
+              var_a2 = temp_a1_5 + 1;
               do
               {
-                var_a0 = (u16) (*var_a1);
-                if (temp_s1->unk1C < (*var_a1))
+                var_a0 = (u16) (*temp_a1_5);
+                if (temp_s1->unk1C < (*temp_a1_5))
                 {
                   var_a0 = (u16) temp_s1->unk1C;
                 }
                 temp_s1->unk1C = (s16) var_a0;
-                var_a0_2 = (u16) (*var_a1);
-                if ((*var_a1) < temp_s1->unk1E)
+                var_a0 = (u16) (*temp_a1_5);
+                if ((*temp_a1_5) < temp_s1->unk1E)
                 {
-                  var_a0_2 = (u16) temp_s1->unk1E;
+                  var_a0 = (u16) temp_s1->unk1E;
                 }
-                temp_s1->unk1E = (s16) var_a0_2;
-                var_a0_3 = (u16) (*var_a2);
+                temp_s1->unk1E = (s16) var_a0;
+                var_a0 = (u16) (*var_a2);
                 if ((*var_a2) < temp_s1->unk20)
                 {
-                  var_a0_3 = (u16) temp_s1->unk20;
+                  var_a0 = (u16) temp_s1->unk20;
                 }
-                temp_s1->unk20 = (s16) var_a0_3;
-                var_a0_4 = (u16) (*var_a2);
+                temp_s1->unk20 = (s16) var_a0;
+                var_a0 = (u16) (*var_a2);
                 if ((*var_a2) > temp_s1->unk22)
                 {
-                  var_a0_4 = (u16) (*temp_s1).unk22;
+                  var_a0 = (u16) (*temp_s1).unk22;
                 }
-                temp_s1->unk22 = (s16) var_a0_4;
+                temp_s1->unk22 = (s16) var_a0;
                 var_a2 += 2;
-                var_s0_2 -= 1;
-                var_a1 += 2;
+                var_s0 -= 1;
+                temp_a1_5 += 2;
               }
-              while (var_s0_2 != new_var);
+              while (var_s0 != early_inner_end);
             }
             var_t0 = var_t0 + 2;
             var_s0 = (*var_t0) & 0x7FFF;
@@ -708,21 +709,21 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   }
   var_t1->unk0 = 0;
   var_a3_2 = arg0->unkC;
-  var_t1_2 = (Records_Node38 *) (((u8 *) sp34) + 0x10);
+  var_t1 = (Records_Node44 *) (((u8 *) sp34) + 0x10);
   if (var_a3_2 != 0)
   {
     do
     {
       temp_t0 = sp24;
       sp24 = (Records_Unk *) (((u8 *) temp_t0) + 0x38);
-      var_t1_2->unk0 = temp_t0;
-      var_t1_2 = temp_t0;
-      var_t1_2->unk4 = var_a3_2;
-      var_t1_2->unk8 = (s16) (var_a3_2->unk4 + var_a3_2->unkC);
-      var_t1_2->unkA = (s16) (var_a3_2->unk6 + var_a3_2->unkE);
-      var_t1_2->unkC = (s16) (((u16) var_a3_2->unk8) + var_a3_2->unkC);
-      var_t1_2->unkE = (s16) (var_a3_2->unkA + var_a3_2->unkE);
-      var_a0_5 = var_a3_2->unk4;
+      ((Records_Node38 *) var_t1)->unk0 = temp_t0;
+      var_t1 = (Records_Node44 *) temp_t0;
+      ((Records_Node38 *) var_t1)->unk4 = var_a3_2;
+      ((Records_Node38 *) var_t1)->unk8 = (s16) (var_a3_2->unk4 + var_a3_2->unkC);
+      ((Records_Node38 *) var_t1)->unkA = (s16) (var_a3_2->unk6 + var_a3_2->unkE);
+      ((Records_Node38 *) var_t1)->unkC = (s16) (((u16) var_a3_2->unk8) + var_a3_2->unkC);
+      ((Records_Node38 *) var_t1)->unkE = (s16) (var_a3_2->unkA + var_a3_2->unkE);
+      var_a0 = var_a3_2->unk4;
       temp_v1 = (u16) var_a3_2->unk8;
       goto dummy_label_805487;
       dummy_label_805487:
@@ -745,51 +746,51 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       ;
       ;
       ;
-      var_t2 = var_a0_5;
-      if (((s16) var_a0_5) < var_a3_2->unk8)
+      var_t2 = var_a0;
+      if (((s16) var_a0) < var_a3_2->unk8)
       {
         var_t2 = temp_v1;
       }
-      if (var_a3_2->unk8 < ((s16) var_a0_5))
+      if (var_a3_2->unk8 < ((s16) var_a0))
       {
-        var_a0_5 = temp_v1;
+        var_a0 = temp_v1;
       }
-      temp_a1 = var_t1_2->unk8;
-      temp_v1_2 = (u16) var_t1_2->unk8;
+      temp_a1 = ((Records_Node38 *) var_t1)->unk8;
+      temp_v1_2 = (u16) ((Records_Node38 *) var_t1)->unk8;
       if (((s16) var_t2) < temp_a1)
       {
         var_t2 = temp_v1_2;
       }
-      if (temp_a1 < ((s16) var_a0_5))
+      if (temp_a1 < ((s16) var_a0))
       {
-        var_a0_5 = temp_v1_2;
+        var_a0 = temp_v1_2;
       }
-      temp_a1_2 = var_t1_2->unkC;
-      temp_v1_3 = (u16) var_t1_2->unkC;
+      temp_a1_2 = ((Records_Node38 *) var_t1)->unkC;
+      temp_v1_3 = (u16) ((Records_Node38 *) var_t1)->unkC;
       if (((s16) var_t2) < temp_a1_2)
       {
         var_t2 = temp_v1_3;
       }
-      temp_t4_2 = (s16) var_a0_5;
-      if (temp_a1_2 < temp_t4_2)
+      var_t4 = (s16) var_a0;
+      if (temp_a1_2 < var_t4)
       {
-        var_a0_5 = temp_v1_3;
+        var_a0 = temp_v1_3;
       }
-      var_t1_2->unk10 = var_t2;
-      var_t1_2->unk12 = var_a0_5;
-      var_a0_6 = var_a3_2->unk6;
+      ((Records_Node38 *) var_t1)->unk10 = var_t2;
+      ((Records_Node38 *) var_t1)->unk12 = var_a0;
+      var_a0 = var_a3_2->unk6;
       temp_v1_4 = var_a3_2->unkA;
-      var_t2_2 = var_a0_6;
-      if (((s16) var_a0_6) < ((s16) var_a3_2->unkA))
+      var_t2_2 = var_a0;
+      if (((s16) var_a0) < ((s16) var_a3_2->unkA))
       {
         var_t2_2 = temp_v1_4;
       }
-      if (((s16) var_a3_2->unkA) < ((s16) var_a0_6))
+      if (((s16) var_a3_2->unkA) < ((s16) var_a0))
       {
-        var_a0_6 = temp_v1_4;
+        var_a0 = temp_v1_4;
       }
-      temp_a1_3 = var_t1_2->unkA;
-      temp_v1_5 = (u16) var_t1_2->unkA;
+      temp_a1_3 = ((Records_Node38 *) var_t1)->unkA;
+      temp_v1_5 = (u16) ((Records_Node38 *) var_t1)->unkA;
       if (((s16) var_t2_2) < temp_a1_3)
       {
         var_t2_2 = temp_v1_5;
@@ -797,9 +798,9 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
         {
         }
       }
-      if (temp_a1_3 < ((s16) var_a0_6))
+      if (temp_a1_3 < ((s16) var_a0))
       {
-        var_a0_6 = temp_v1_5;
+        var_a0 = temp_v1_5;
       }
       temp_a1_4 = temp_t0->unkE;
       temp_v1_6 = (u16) temp_t0->unkE;
@@ -807,12 +808,12 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       {
         var_t2_2 = temp_v1_6;
       }
-      if (temp_a1_4 < ((s16) var_a0_6))
+      if (temp_a1_4 < ((s16) var_a0))
       {
-        var_a0_6 = temp_v1_6;
+        var_a0 = temp_v1_6;
       }
       temp_t0->unk14 = var_t2_2;
-      temp_t0->unk16 = var_a0_6;
+      temp_t0->unk16 = var_a0;
       temp_t0->unk18 = (s32) (temp_t0->unk8 - ((s16) var_a3_2->unk4));
       temp_v1_7 = temp_t0->unkA - ((s16) var_a3_2->unk6);
       temp_t0->unk1C = temp_v1_7;
@@ -865,28 +866,28 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
     }
     while (var_a3_2 != 0);
   }
-  new_var16 = var_t1_2;
+  new_var16 = (Records_Node38 *) var_t1;
   new_var16->unk0 = 0;
   var_t6 = arg0->unk0;
   sp38 = (Records_Node30 *) (((u8 *) sp34) + 4);
-  if ((*(new_var4 = var_t6)) != 0)
+  if ((*var_t6) != 0)
   {
     
     do
     {
       var_t0_2 = sp24;
-      var_t2_3 = *new_var4;
+      var_t2_3 = *var_t6;
       sp24 = (Records_Unk *) (((u8 *) var_t0_2) + 0x30);
       sp38->unk0 = var_t0_2;
       var_t0_2->unk4 = var_t2_3;
       new_var9 = &var_t2_3->unk10;
       var_t0_2->unk10 = (s16) (((*new_var9) << 8) / 100);
       var_t0_2->unk12 = (s16) ((var_t2_3->unk12 << 8) / 100);
-      var_s0_2 = ((0, var_t2_3))->unk14 << 8;
+      var_s0 = ((0, var_t2_3))->unk14 << 8;
       var_t0_2->unk1A = 0x100;
       var_t0_2->unk18 = 0x100;
       var_t0_2->unk16 = 0x100;
-      var_t0_2->unk14 = (s16) (var_s0_2 / 100);
+      var_t0_2->unk14 = (s16) (var_s0 / 100);
       new_var13 = &var_t0_2->unkC;
       *((s32 *) new_var13) = (s32) (((*((s32 *) new_var13)) & (~1)) | (var_t2_3->unkC & 1));
       var_t0_2->unkD = 0;
@@ -941,10 +942,9 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
           new_var5 = *((u16 *) (((u8 *) temp_s4) + 0x12));
           *((s16 *) (((u8 *) temp_s2) + 0x3A)) = 0;
           *((s16 *) (((u8 *) temp_s2) + 0x3C)) = 0;
-          var_v1_3 = 0x1000;
           *((s16 *) (((u8 *) temp_s2) + 0x3E)) = 0;
-          *((s16 *) (((u8 *) temp_s2) + 0x40)) = ((((((((var_v1_3 & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu) & 0xFFFFFFFFFFFFFFFFu;
-          *((s16 *) (((u8 *) temp_s2) + 0x42)) = var_v1_3;
+          *((s16 *) (((u8 *) temp_s2) + 0x40)) = 0x1000;
+          *((s16 *) (((u8 *) temp_s2) + 0x42)) = 0x1000;
           *((s16 *) (((u8 *) temp_s2) + 0x36)) = (u16) new_var5;
           if ((*((s32 *) (((u8 *) temp_s4) + 8))) & 0x40)
           {
@@ -1029,14 +1029,12 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
           var_s5 = ((*(((u8 *) temp_s2) + 0x21)) > 0U) * 2;
           if (var_s1_5->unk0 != 0)
           {
-            sp54 = var_t0_2;
             sp58 = (s32) var_t1_3;
-            sp5C = var_t2_3;
             sp60 = var_t3;
             sp64 = var_t4;
             sp68 = var_t5;
-            sp6C = new_var4;
-            sp74 = var_t8;
+            sp6C = var_t6;
+            scratch.sp74 = var_t8;
             temp_v0_5 = field_find_shareable_part(sp34, var_t0_2, temp_s2, var_fp);
             *((Records_Unk **) (((u8 *) temp_s2) + 8)) = temp_v0_5;
             if (temp_v0_5 == 0)
@@ -1053,6 +1051,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               {
                 var_v1_3 = var_s0_3 + 0x3E;
               }
+              new_var = -1;
               var_s0_4 = var_s0_3 - 1;
               temp_v1_14 = 0;
               temp_v0_6 = var_v1_3 >> 5;
@@ -1064,7 +1063,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               }
               while (0);
               var_s1 = 1;
-              if (var_s0_4 != new_var)
+              if (var_s0_4 != -1)
               {
                 var_a0_7 = (Records_Unk *) (var_fp + 1);
                 do
@@ -1095,7 +1094,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                       while (0);
                     }
                     else
-                      if ((var_s6 == 1) && ((var_t4 != (*((u8 *) var_a0_7 + 2))) || (var_t8 != (((*((u8 *) var_a0_7)) >> 6) & 1))))
+                      if ((var_s6 == 1) && ((var_t4 != (*((volatile u8 *) var_a0_7 + 2))) || (var_t8 != (((*((u8 *) var_a0_7)) >> 6) & 1))))
                     {
                       var_s6 = 2;
                     }
@@ -1112,7 +1111,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                   var_s0_4 -= 1;
                   var_fp += 4;
                 }
-                while (var_s0_4 != new_var);
+                while (var_s0_4 != -1);
               }
               if (var_s1 != 1)
               {
@@ -1159,7 +1158,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
     do
     {
       temp_a3 = *((Records_Unk **) (((u8 *) var_s1_2) + 4));
-      if ((((u16) (*((u16 *) 0x80180008))) >= 0x12U) && ((*(((u8 *) temp_a3) + 8)) != 0xFF))
+      if ((((u16) D_80180008) >= 0x12U) && ((*(((u8 *) temp_a3) + 8)) != 0xFF))
       {
         if ((*(((u8 *) temp_a3) + 9)) != 0xFF)
         {
@@ -1201,27 +1200,23 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   {
     do
     {
-      temp_t2 = (Records_Unk *) var_t0_3->unk4;
-      sp10[0] = var_t0_3->unk10 << 8;
-      sp10[1] = var_t0_3->unk12 << 8;
-      sp10[2] = var_t0_3->unk14 << 8;
-      temp_a0_2 = *((u16 **) (((u8 *) temp_t2) + 4));
-      sp54 = var_t0_3;
-      sp5C = temp_t2;
-      func_8005AC50(temp_a0_2 + 2, *temp_a0_2, sp10);
-      var_t0_4 = sp54;
+      var_t2_4 = (Records_Unk *) var_t0_3->unk4;
+      scratch.sp10[0] = var_t0_3->unk10 << 8;
+      scratch.sp10[1] = var_t0_3->unk12 << 8;
+      scratch.sp10[2] = var_t0_3->unk14 << 8;
+      temp_a0_2 = *((u16 **) (((u8 *) var_t2_4) + 4));
+      sp5C = var_t2_4;
+      func_8005AC50(temp_a0_2 + 2, *temp_a0_2, scratch.sp10);
       var_t2_4 = sp5C;
-      var_s2 = var_t0_4->unk8;
+      var_s2 = var_t0_3->unk8;
       sp20 = 0;
       if (var_s2 != 0)
       {
         do
         {
-          sp54 = var_t0_4;
           sp5C = var_t2_4;
           func_8005AD20((0, var_s2->unk21), *((u16 *) (*((void **) (((u8 *) var_t2_4) + 4)))), &sp20);
           temp_s4_2 = (Records_Src4 *) var_s2->unk4;
-          var_t0_4 = sp54;
           var_fp_2 = temp_s4_2->unk0;
           var_t2_4 = sp5C;
           if (var_fp_2 != 0)
@@ -1240,20 +1235,20 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
             {
               temp_v1_12 = var_s2->unk21;
               var_t1_4 = 0;
-              if (temp_v1_12 != 1)
-              {
-                if (((s32) temp_v1_12) < 2)
-                {
-                  if (!var_t0)
-                  {
-                  }
-                  var_s5_2 = 0xC;
-                  if (temp_v1_12 != 0)
-                  {
-                    var_s2->unk26 = 0U;
-                  }
-                  else
-                  {
+              if (temp_v1_12 == 1) goto block_175;
+              if (((s32) temp_v1_12) >= 2) goto quad_test;
+              if (!var_t0) { }
+              var_s5 = 0xC;
+              if (temp_v1_12 == 0) goto sprite_entry;
+              var_s2->unk26 = 0U;
+              goto part_dispatch_done;
+
+              quad_test:
+              var_s5 = 0xC;
+              if (((s32) temp_v1_12) >= 6) goto block_175;
+              goto quad_entry;
+
+              sprite_entry:
                     temp_v1_13 = var_s2->unk1C;
                     var_s7_2 = sp24;
                     var_s2->unk10 = var_s7_2;
@@ -1264,18 +1259,18 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                       {
                         temp_t4 = var_v0_6;
                         var_s2->unk1C = *((s32 *) (((temp_t4 & 0xFF) * 4) + 0x1F800000));
-                        var_s6_2 = 1;
+                        var_s6 = 1;
                         if (temp_t4 & 0x200)
                         {
                           *(((u8 *) var_s2) + 0x1F) = (u8) ((*(((u8 *) var_s2) + 0x1F)) | 2);
                         }
                       }
                       while (0);
-                      var_s5_2 = 8;
+                      var_s5 = 8;
                     }
                     else
                     {
-                      var_s6_2 = 0;
+                      var_s6 = 0;
                     }
                     temp_v0_10 = var_s2->unk18;
                     temp_t3 = temp_v0_10 - 1;
@@ -1283,25 +1278,24 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                     {
                       temp_a0_3 = temp_t3 & 0xF;
                       temp_v0_11 = temp_t3 * 2;
-                      new_var6 = 6;
+                      scratch.new_var6 = 6;
                       var_v1_4 = ((8 * temp_s4_2->unk8) & 0x180) | (temp_v0_11 & 0x60);
                       new_var19 = temp_a0_3;
                       if (temp_a0_3 >= 0xAU)
                       {
-                        var_v0_6 = ((u32) (((new_var19 << 6) - 0x80) & 0x3FF)) >> new_var6;
+                        var_v0_6 = ((u32) (((new_var19 << 6) - 0x80) & 0x3FF)) >> 6;
                       }
                       else
                       {
-                        var_v0_6 = (((u32) ((new_var19 << new_var6) + 0x140)) >> 6) | 0x10;
+                        var_v0_6 = (((u32) ((new_var19 << scratch.new_var6) + 0x140)) >> 6) | 0x10;
                       }
                       var_a1_2 = var_v1_4 | var_v0_6;
                       var_s2->unk18 = (s32) ((var_a1_2 & 0x9FF) | 0xE1000400);
-                      var_s6_2 |= 2;
-                      var_s5_2 -= 4;
+                      var_s6 |= 2;
+                      var_s5 -= 4;
                     }
                     var_s3_2 = var_s2->unkC;
-                    new_var12 = (u8 *) temp_s4_2;
-                    var_s0_5 = ((*(new_var12 + 0xA)) * (*(new_var12 + 0xB))) - 1;
+                    var_s0_5 = (*(((u8 *)temp_s4_2) + 0xA) * *(((u8 *)temp_s4_2) + 0xB)) - 1;
                     var_s1_3 = 0;
                     if (var_s0_5 != new_var)
                     {
@@ -1318,14 +1312,12 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                         if (sp3C & var_s1_3)
                         {
                           temp_a1_5 = var_s7_2;
-                          var_s7_2 = (Records_Unk *) (((u8 *) var_s7_2) + var_s5_2);
+                          var_s7_2 = (Records_Unk *) (((u8 *) var_s7_2) + var_s5);
                           temp_t1 = var_t1_4 + 1;
                           sp50 = var_v1_5;
-                          sp54 = var_t0_4;
                           new_var3 = new_var3;
                           sp58 = temp_t1;
-                          sp5C = var_t2_4;
-                          field_build_sprite_tile_record(var_fp_2, temp_a1_5, (((u32) temp_s4_2->unk8) >> 4) & 3, var_s6_2);
+                          field_build_sprite_tile_record(var_fp_2, temp_a1_5, (((u32) temp_s4_2->unk8) >> 4) & 3, var_s6);
                           var_t1_4 = temp_t1;
                         }
                         var_s1_3 *= 2;
@@ -1340,54 +1332,47 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                       goto block_173;
                     }
                     goto block_174;
-                  }
-                }
-                else
-                {
-                  var_s5_2 = 0xC;
-                  if (((s32) temp_v1_12) < new_var6)
-                  {
+
+              quad_entry:
                     temp_v1_14 = var_s2->unk1C;
                     var_s7_3 = sp24;
                     var_s2->unk10 = var_s7_3;
                     if (temp_v1_14 != 0)
                     {
-                      temp_t4_2 = temp_v1_14 - 1;
-                      var_s2->unk1C = *((s32 *) (((temp_t4_2 & 0xFF) * 4) + 0x1F800000));
-                      var_s6_3 = 1;
-                      if (temp_t4_2 & 0x200)
+                      var_t4 = temp_v1_14 - 1;
+                      var_s2->unk1C = *((s32 *) (((var_t4 & 0xFF) * 4) + 0x1F800000));
+                      var_s6 = 1;
+                      if (var_t4 & 0x200)
                       {
                         *(((u8 *) var_s2) + 0x1F) = (u8) ((*(((u8 *) var_s2) + 0x1F)) | 2);
                       }
-                      var_s5_2 = 8;
+                      var_s5 = 8;
                     }
                     else
                     {
-                      var_s6_3 = 0;
+                      var_s6 = 0;
                     }
                     temp_v0_12 = var_s2->unk18;
                     temp_t3_2 = 1;
                     temp_t3_2 = temp_v0_12 - temp_t3_2;
                     if (temp_v0_12 != 0)
                     {
-                      temp_a0_4 = temp_t3_2 & 0xF;
-                      temp_v0_13 = temp_t3_2 * 2;
-                      new_var11 = temp_v0_13 & 0x60;
-                      var_v1_6 = ((temp_s4_2->unk8 * 8) & 0x180) | new_var11;
-                      if (temp_a0_4 >= 0xAU)
+                      temp_a0_3 = temp_t3_2 & 0xF;
+                      temp_v0_11 = temp_t3_2 * 2;
+                      if (temp_a0_3 >= 0xAU)
                       {
-                        var_v0_8 = ((u32) (((temp_a0_4 << 6) - 0x80) & 0x3FF)) >> new_var6;
+                        var_v0_8 = (((temp_s4_2->unk8 * 8) & 0x180) | (temp_v0_11 & 0x60)) | (((u32) (((temp_a0_3 << 6) - 0x80) & 0x3FF)) >> 6);
                       }
                       else
                       {
-                        var_v0_8 = (((u32) ((temp_a0_4 << 6) + 0x140)) >> (6 ^ 0)) | 0x10;
+                        var_v0_8 = (((temp_s4_2->unk8 * 8) & 0x180) | (temp_v0_11 & 0x60)) | ((((u32) ((temp_a0_3 << 6) + 0x140)) >> (6 ^ 0)) | 0x10);
                       }
-                      var_s2->unk18 = (s32) (var_v1_6 | var_v0_8);
-                      var_s6_3 |= 2;
-                      var_s5_2 -= 4;
+                      var_s2->unk18 = (s32) var_v0_8;
+                      var_s6 |= 2;
+                      var_s5 -= 4;
                     }
-                    var_s3_3 = var_s2->unkC;
-                    var_s0_6 = ((*(new_var12 + 0xB)) * (*(new_var12 + 0xA))) - 1;
+                    var_s3_2 = var_s2->unkC;
+                    var_s0_6 = (*(((u8 *)temp_s4_2) + 0xA) * *(((u8 *)temp_s4_2) + 0xB)) - 1;
                     var_s1_4 = 0;
                     if (var_s0_6 != new_var)
                     {
@@ -1396,22 +1381,19 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                       {
                         if (var_s1_4 == 0)
                         {
-                          temp_t7_2 = *var_s3_3;
-                          var_s3_3++;
+                          sp3C = *var_s3_2;
+                          var_s3_2++;
                           var_s1_4 = 1;
-                          sp3C = temp_t7_2;
                         }
                         if (sp3C & var_s1_4)
                         {
-                          temp_a1_6 = var_s7_3;
-                          var_s7_3 = (Records_Unk *) (((u8 *) var_s7_3) + var_s5_2);
+                          temp_a1_5 = var_s7_3;
+                          var_s7_3 = (Records_Unk *) (((u8 *) var_s7_3) + var_s5);
                           temp_t1_2 = var_t1_4 + 1;
                           sp50 = var_v1_7;
-                          sp54 = var_t0_4;
                           sp58 = temp_t1_2;
-                          sp5C = var_t2_4;
                           new_var8 = (((u32) temp_s4_2->unk8) >> 4) & 3;
-                          field_build_quad_tile_record(var_fp_2, temp_a1_6, new_var8, var_s6_3);
+                          field_build_quad_tile_record(var_fp_2, temp_a1_5, new_var8, var_s6);
                           var_t1_4 = temp_t1_2;
                         }
                         var_s1_4 *= 2;
@@ -1424,18 +1406,14 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                     var_v0_7 = var_t1_4 & 0xFFFF;
 
                     block_174:
-                    sp24 = (Records_Unk *) (((u8 *) sp24) + (var_v0_7 * var_s5_2));
+                    sp24 = (Records_Unk *) (((u8 *) sp24) + (var_v0_7 * var_s5));
 
-                  }
-                  goto block_175;
-                }
-              }
-              else
-              {
-                block_175:
-                var_s2->unk26 = (u16) var_t1_4;
 
-              }
+              goto block_175;
+
+              block_175:
+              var_s2->unk26 = (u16) var_t1_4;
+              part_dispatch_done:
             }
           }
           else
@@ -1447,7 +1425,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
         }
         while (var_s2 != 0);
       }
-      var_t0_3 = var_t0_4->unk0;
+      var_t0_3 = var_t0_3->unk0;
     }
     while (var_t0_3 != 0);
   }
@@ -1457,11 +1435,11 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   field_build_animation_list(arg0->unk18, &sp24, ((u8 *) sp34) + 0x1C);
   field_build_animation_list(arg0->unk1C, &sp24, ((u8 *) sp34) + 0x20);
   field_build_animation_list(arg0->unk20, &sp24, ((u8 *) sp34) + 0x24);
-  var_v1_8 = *((s32 *) (((u8 *) (&g_field_dyn_count)) + 8));
-  var_s0_7 = g_field_dyn_count - 1;
+  var_v1_8 = D_80180018;
+  var_s0 = g_field_dyn_count - 1;
   new_var3 = new_var;
   var_t1_5 = (Records_Unk *) (((u8 *) sp34) + 0x14);
-  if (var_s0_7 != new_var3)
+  if (var_s0 != new_var3)
   {
     do
     {
@@ -1471,7 +1449,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       {
         var_t1_5->unk0 = temp_s1_2;
         var_t1_5 = temp_s1_2;
-        var_s0_7 = var_s0_7 - 1;
+        var_s0 = var_s0 - 1;
         *((s32 *) (((u8 *) var_t1_5) + 4)) = var_v1_8;
         var_v1_8 += 0xC;
         if (1)
@@ -1481,11 +1459,11 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       }
       while (0);
     }
-    while (var_s0_7 != new_var3);
+    while (var_s0 != new_var3);
   }
   var_t1_5->unk0 = 0;
   var_s1_5 = *((Records_Unk **) (((u8 *) sp34) + 0x14));
-  var_s0_8 = 0;
+  var_s0 = 0;
   var_s2_2 = (1 << sp28);
   if (var_s1_5 != 0)
   {
@@ -1493,10 +1471,10 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
     {
       if ((*((u8 *) (((u8 *) (*((Records_Unk **) (((u8 *) var_s1_5) + 4)))) + 1))) & var_s2_2)
       {
-        func_8005A744(var_s1_5, var_s0_8 & 0xFF);
+        func_8005A744(var_s1_5, var_s0 & 0xFF);
       }
       var_s1_5 = var_s1_5->unk0;
-      var_s0_8 += 1;
+      var_s0 += 1;
     }
     while (var_s1_5 != 0);
   }
