@@ -1130,65 +1130,64 @@ s32 akao_load_sequence(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
 s32 akao_upload_bank_slot(void* arg0, s32 arg1, s32 arg2)
 {
     s32 var_a2;
-    s32 var_a3_2;
     s32* var_t0;
     u32 var_a3;
     void* tmp = arg0;
+
     var_a3 = 0;
     var_t0 = g_akao_bank_slot_keys;
+
     do
     {
-        if ((*var_t0) == ((s32*)tmp)[1])
+        if (*var_t0 == ((s32*)tmp)[1])
         {
-            var_a3++;
-            var_a3--;
             *var_t0 = 0;
         }
+
         var_a3 += 1;
         var_t0 += 1;
-    }
+    } while (var_a3 < 6U);
 
-    while (var_a3 < 6U);
     switch (arg1)
     {
     case 1:
-        var_a3_2 = 0x47900;
+        var_a3 = 0x47900;
         var_a2 = 0x90;
         g_akao_bank_slot_keys[1] = ((s32*)tmp)[1];
         break;
 
     case 2:
-        var_a3_2 = 0x4C100;
+        var_a3 = 0x4C100;
         var_a2 = 0xA0;
         g_akao_bank_slot_keys[2] = ((s32*)tmp)[1];
         break;
 
     case 3:
-        var_a3_2 = 0x50900;
+        var_a3 = 0x50900;
         var_a2 = 0xB0;
         g_akao_bank_slot_keys[3] = ((s32*)tmp)[1];
         break;
 
     case 4:
-        var_a3_2 = 0x55100;
+        var_a3 = 0x55100;
         var_a2 = 0xC0;
         g_akao_bank_slot_keys[4] = ((s32*)tmp)[1];
         break;
 
     case 5:
-        var_a3_2 = 0x59900;
+        var_a3 = 0x59900;
         var_a2 = 0xD0;
         g_akao_bank_slot_keys[5] = ((s32*)tmp)[1];
         break;
 
     default:
-        var_a3_2 = 0x43100;
+        var_a3 = 0x43100;
         var_a2 = 0x80;
         g_akao_bank_slot_keys[0] = ((s32*)tmp)[1];
         break;
     }
 
-    akao_upload_bank(arg0, arg2, var_a2, var_a3_2);
+    akao_upload_bank(arg0, arg2, var_a2, var_a3);
     return 0;
 }
 
