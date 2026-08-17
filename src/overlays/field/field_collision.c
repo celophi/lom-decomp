@@ -1,4 +1,4 @@
-﻿#include "field_scene_internal.h"
+#include "field_scene_internal.h"
 
 /**
  * @brief Probe position and footprint passed to func_8005B368.
