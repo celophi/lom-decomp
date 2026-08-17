@@ -35,9 +35,9 @@
 #define SAVE_SLOT_MENU_EXIT_CANCEL 2
 
 /* Fixed-address accesses used by run_title. */
-#define TITLE_GLOBAL_RAM_BASE             0x80100000
-#define TITLE_MENU_EXIT_STATE_WORD_INDEX  0x990
-#define TITLE_SCENE_STATE_ADDRESS         0x801ED480
+#define TITLE_GLOBAL_RAM_BASE 0x80100000
+#define TITLE_MENU_EXIT_STATE_WORD_INDEX 0x990
+#define TITLE_SCENE_STATE_ADDRESS 0x801ED480
 
 /* High rand() value placement in MenuLayout::rng_seed. */
 #define TITLE_RNG_HIGH_SHIFT 15
@@ -80,8 +80,7 @@ static void scroll_slots_left(void);
 s32 run_title(s32 menu_context_address)
 {
     s32 context_address;
-    S_801ED480* persistent_scene_state =
-        (S_801ED480*)TITLE_SCENE_STATE_ADDRESS;
+    S_801ED480* persistent_scene_state = (S_801ED480*)TITLE_SCENE_STATE_ADDRESS;
     s32* global_ram_base;
     MenuLayout* menu_layout;
     u32 selection_sentinel;
@@ -145,8 +144,7 @@ s32 run_title(s32 menu_context_address)
             g_save_slot_index = selection_sentinel;
             random_low = rand();
             random_high = rand();
-            menu_layout->rng_seed =
-                (s16)(random_low | (random_high << TITLE_RNG_HIGH_SHIFT));
+            menu_layout->rng_seed = (s16)(random_low | (random_high << TITLE_RNG_HIGH_SHIFT));
             return GAME_STATE_FIELD;
         }
     }
@@ -792,21 +790,20 @@ void menu_cursor_up(void)
     if (item < 0)
     {
         enabled_count = 0;
-        idx = 0;
-        do
+        item = 0;
+        scan_ptr = &g_titleMenuItemFlags[0];
+
+        while (item < TITLE_MENU_SLOT_COUNT)
         {
-            scan_ptr = &g_titleMenuItemFlags[0];
-            while (idx < TITLE_MENU_SLOT_COUNT)
+            if (*scan_ptr != 0)
             {
-                if ((*scan_ptr) != 0)
-                {
-                    enabled_count++;
-                    last_enabled = idx;
-                }
-                idx++;
-                scan_ptr += 2;
-            };
-        } while (0);
+                enabled_count++;
+                last_enabled = item;
+            }
+
+            item++;
+            scan_ptr += 2;
+        }
 
         g_titleVisibleItemRank = enabled_count - 1;
         g_titleSelectedItem = (u8)last_enabled;
@@ -871,7 +868,7 @@ void render_title_menu_items(void* ctx)
     } while (slot < 0x10);
     result = (s32)emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
                                       (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
-    
+
     anim = g_titleAnimFrame;
     *((s32*)(((u8*)ctx) + 0x80B8)) = result;
     g_titleAnimFrame = anim + 1;
@@ -936,13 +933,12 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
     *((u16*)(ptr + 0x16)) = 5;      /* tpage */
     tag_mask = 0xFF000000;
     x_right = (u16)(x + width);
+    *((u16*)(ptr + 0x20)) = x_right; /* x3 */
+    *((u16*)(ptr + 0x10)) = x_right; /* x1 */
     y1_ptr = ptr + 0x12;
     *((u16*)y1_ptr) = (u16)y;       /* y1 */
     *((u16*)(ptr + 0x0A)) = (u16)y; /* y0 */
     y_bottom = (u16)(y + 0x10);
-    do
-    {
-    } while (0);
     ptr[0x1C] = (u8)u0_base; /* u2 */
     ptr[0x0C] = (u8)u0_base; /* u0 */
     u_right = (u8)(u0_base + width);
@@ -950,8 +946,6 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
     *((u16*)(ptr + 0x22)) = y_bottom; /* y3 */
     *((u16*)(ptr + 0x1A)) = y_bottom; /* y2 */
     old_word = *((u32*)ptr);
-    *((u16*)(ptr + 0x20)) = x_right;   /* x3 */
-    *((u16*)(ptr + 0x10)) = x_right;   /* x1 */
     ptr[0x24] = u_right;               /* u3 */
     ptr[0x14] = u_right;               /* u1 */
     *((u16*)(ptr + 0x0E)) = clut_word; /* clut */
@@ -1734,13 +1728,13 @@ static void scroll_slots_left(void)
  */
 typedef struct
 {
-    u8 u;  /**< +0x00: source U, in 8-pixel units */
-    u8 v;  /**< +0x01: source V, in 8-pixel units */
-    u8 w;  /**< +0x02: width, in 8-pixel units */
-    u8 h;  /**< +0x03: height, in 8-pixel units */
-    u8 ox; /**< +0x04: X origin offset, in 8-pixel units */
-    u8 oy; /**< +0x05: Y origin offset, in 8-pixel units */
-} SlotUvRect;                  /* sizeof == 6 */
+    u8 u;     /**< +0x00: source U, in 8-pixel units */
+    u8 v;     /**< +0x01: source V, in 8-pixel units */
+    u8 w;     /**< +0x02: width, in 8-pixel units */
+    u8 h;     /**< +0x03: height, in 8-pixel units */
+    u8 ox;    /**< +0x04: X origin offset, in 8-pixel units */
+    u8 oy;    /**< +0x05: Y origin offset, in 8-pixel units */
+} SlotUvRect; /* sizeof == 6 */
 
 /** Number of entries in g_saveLayoutTable. */
 #define SAVE_LAYOUT_ENTRIES 0x1B
@@ -1749,21 +1743,19 @@ typedef struct
 #define GLYPH_CHUNK_WIDTH 0x80
 
 /** Primitive selectors stored in SaveLayoutEntry::type. */
-#define SAVE_LAYOUT_PRIM_NONE     0
-#define SAVE_LAYOUT_PRIM_TILE     2
+#define SAVE_LAYOUT_PRIM_NONE 0
+#define SAVE_LAYOUT_PRIM_TILE 2
 #define SAVE_LAYOUT_PRIM_POLY_FT4 3
-#define SAVE_LAYOUT_PRIM_SPRT     4
+#define SAVE_LAYOUT_PRIM_SPRT 4
 
 static inline u32 get_save_layout_tpage(SaveLayoutTex* tex, u32 flags, s32 x)
 {
-    return getTPage(tex->control & 3, flags >> 2, x,
-                    *(u16*)&tex->tex_y);
+    return getTPage(tex->control & 3, flags >> 2, x, *(u16*)&tex->tex_y);
 }
 
 static inline u32 get_save_layout_base_tpage(SaveLayoutTex* tex, u32 flags)
 {
-    return getTPage(tex->control & 3, flags >> 2,
-                    *(u16*)&tex->tex_x, *(u16*)&tex->tex_y);
+    return getTPage(tex->control & 3, flags >> 2, *(u16*)&tex->tex_x, *(u16*)&tex->tex_y);
 }
 
 /**
@@ -1842,10 +1834,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
 
             tex2 = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
             /* Form the texture-page value from the complete layout flags word. */
-            tpw = getTPage(*(u8*)&tex2->control & 3,
-                           *(u32*)entry >> 2,
-                           *(u16*)&tex2->tex_x,
-                           *(u16*)&tex2->tex_y);
+            tpw = getTPage(*(u8*)&tex2->control & 3, *(u32*)entry >> 2, *(u16*)&tex2->tex_x, *(u16*)&tex2->tex_y);
             poly->tpage = tpw;
 
             addPrim(ot, poly);
@@ -1888,18 +1877,13 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 setWH((SPRT*)ptr, uv->w * 8, uv->h * 8);
 
                 tex = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
-                setClut((SPRT*)ptr, *(u16*)&tex->clut_x,
-                        *(u16*)&tex->clut_y);
+                setClut((SPRT*)ptr, *(u16*)&tex->clut_x, *(u16*)&tex->clut_y);
 
                 addPrim(ot, ptr);
                 ptr += sizeof(SPRT);
 
                 tp = (DR_TPAGE*)ptr;
-                setDrawTPage(
-                    tp, 0, 0,
-                    get_save_layout_base_tpage(
-                        &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot],
-                        *(u32*)entry));
+                setDrawTPage(tp, 0, 0, get_save_layout_base_tpage(&((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot], *(u32*)entry));
 
                 addPrim(ot, tp);
                 ptr += sizeof(DR_TPAGE);
@@ -1916,9 +1900,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                     setlen(tile, tile_len);
                     setcode(tile, 0x62);
 
-                    setXY0(tile,
-                           *(u16*)&entry->tile_x + g_slotSlideXLerped,
-                           *(u16*)&entry->tile_y + g_slotSlideYLerped);
+                    setXY0(tile, *(u16*)&entry->tile_x + g_slotSlideXLerped, *(u16*)&entry->tile_y + g_slotSlideYLerped);
                     setWH(tile, entry->width, entry->height);
 
                     addPrim(ot, tile);
@@ -1935,8 +1917,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                     s32 remaining = entry->width;
                     u16 u0 = entry->u0;
                     SaveLayoutTex* tex;
-                    SaveLayoutTex* tex0 =
-                        &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
+                    SaveLayoutTex* tex0 = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
                     s32 x;
                     s32 y;
                     s32 chunk;
@@ -1977,19 +1958,13 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                         remaining -= chunk;
 
                         tex = &((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot];
-                        setClut(sprt, *(u16*)&tex->clut_x,
-                                *(u16*)&tex->clut_y);
+                        setClut(sprt, *(u16*)&tex->clut_x, *(u16*)&tex->clut_y);
 
                         addPrim(ot, ptr);
                         ptr += sizeof(SPRT);
 
                         tp = (DR_TPAGE*)ptr;
-                        setDrawTPage(
-                            tp, 0, 0,
-                            get_save_layout_tpage(
-                                &((SaveLayoutTex*)g_saveLayoutTexTable)
-                                     [entry->tex_slot],
-                                *(u32*)entry, idx));
+                        setDrawTPage(tp, 0, 0, get_save_layout_tpage(&((SaveLayoutTex*)g_saveLayoutTexTable)[entry->tex_slot], *(u32*)entry, idx));
 
                         addPrim(ot, ptr);
                         ptr += sizeof(DR_TPAGE);
@@ -2059,10 +2034,10 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
  */
 /* Bit layout of SaveLayoutTex::control: bits 0-2 = TIM pixel mode, bits 3-12 =
  * texture width, bits 13-22 = texture height (widths/heights are 10-bit). */
-#define SAVE_TEX_MODE_MASK    0x7
-#define SAVE_TEX_WIDTH_SHIFT  3
+#define SAVE_TEX_MODE_MASK 0x7
+#define SAVE_TEX_WIDTH_SHIFT 3
 #define SAVE_TEX_HEIGHT_SHIFT 13
-#define SAVE_TEX_DIM_MASK     0x3ff
+#define SAVE_TEX_DIM_MASK 0x3ff
 
 unsigned short upload_save_layout_textures(void)
 {
@@ -2072,7 +2047,8 @@ unsigned short upload_save_layout_textures(void)
     u8* data_ptr;
     u32 pixel_block_offset;
     u8* block_ptr;
-    int clut_pixels;
+    u16 clut_w;
+    u16 clut_h;
     int shift;
     u32 reload_control;
     u32 control;
@@ -2091,31 +2067,21 @@ unsigned short upload_save_layout_textures(void)
         clut_h_ptr = data_ptr + 0x12;
         control = (control & ~SAVE_TEX_MODE_MASK) | (data_ptr[4] & SAVE_TEX_MODE_MASK);
         entry_ctrl_ptr->control = control;
-        clut_pixels = (*((u16*)(data_ptr + 0x10))) * (*((u16*)clut_h_ptr));
+        clut_w = *((u16*)(data_ptr + 0x10));
+        clut_h = *((u16*)clut_h_ptr);
         pixel_block_offset = *((u32*)(data_ptr + 8));
+        setRECT(&rect, tex_entry->clut_x, tex_entry->clut_y, clut_w * clut_h, 1);
         data_ptr += 8;
-        rect.x = tex_entry->clut_x;
-        clut_pixels++;
-        clut_pixels--;
-        rect.y = tex_entry->clut_y;
-        rect.h = 1;
-        rect.w = clut_pixels;
-
-        /* The unprototyped call preserves the original unused a2 argument. */
-        ((int (*)())LoadImage)(&rect, (u_long*)(data_ptr + 0xc), clut_pixels);
+        LoadImage(&rect, (u_long*)(data_ptr + 0xc));
         block_ptr = data_ptr + pixel_block_offset;
         shift = SAVE_TEX_WIDTH_SHIFT;
         control = (reload_control = entry_ctrl_ptr->control);
-        control = (control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_WIDTH_SHIFT)) |
-                  (((*((u16*)(block_ptr + 8))) & SAVE_TEX_DIM_MASK) << shift);
+        control = (control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_WIDTH_SHIFT)) | (((*((u16*)(block_ptr + 8))) & SAVE_TEX_DIM_MASK) << shift);
         tex_entry->control = control;
         control = control & ~(SAVE_TEX_DIM_MASK << SAVE_TEX_HEIGHT_SHIFT);
         control = control | (((*((u16*)(block_ptr + 0xa))) & SAVE_TEX_DIM_MASK) << SAVE_TEX_HEIGHT_SHIFT);
         tex_entry->control = control;
-        setRECT(&rect,
-                tex_entry->tex_x,
-                tex_entry->tex_y,
-                (tex_entry->control >> SAVE_TEX_WIDTH_SHIFT) & SAVE_TEX_DIM_MASK,
+        setRECT(&rect, tex_entry->tex_x, tex_entry->tex_y, (tex_entry->control >> SAVE_TEX_WIDTH_SHIFT) & SAVE_TEX_DIM_MASK,
                 (tex_entry->control >> SAVE_TEX_HEIGHT_SHIFT) & SAVE_TEX_DIM_MASK);
         LoadImage(&rect, (u_long*)(block_ptr + 0xc));
         tex_entry++;
@@ -2147,19 +2113,16 @@ void load_menu_layout(s32 use_alt)
     {
         src = (s32*)&g_menuLayoutTemplateDefault;
         g_scene_mode = 0xD;
+        g_music_track_index = 0;
+        g_layout_flag = 0;
     }
     else
     {
         src = (s32*)&g_menuLayoutTemplateAlt;
         g_scene_mode = 0;
+        g_music_track_index = 0;
+        g_layout_flag = 0;
     }
-    g_music_track_index = 0;
-    g_layout_flag = 0;
-
-    do
-    {
-    } while (0);
-
     i = 0;
     dst = (s32*)g_menuLayoutBuffer;
 
