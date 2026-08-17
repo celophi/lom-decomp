@@ -293,3 +293,25 @@ void field_initialize_subsystems(s32 arg0)
     func_800A43C0();
     func_800ADE2C();
 }
+
+void func_8006D1EC(void);
+void field_reset_global_color_scale(void);
+
+extern s32 D_800F2278[];
+extern s32 D_800F227C[];
+extern s32 D_800F2280[];
+
+/**
+ * @brief Clear the three field draw-state globals and reset the colour scale.
+ * @note WIP - 13/15 rows. Only the epilogue differs (target restores sp before
+ *       `jr ra`); see working/func_80067AA4/STATUS.md.
+ * @see decomp.me (92.00%) TODO
+ */
+void func_80067AA4(void)
+{
+    D_800F2280[0] = 0;
+    D_800F227C[0] = 0;
+    D_800F2278[0] = 0;
+    func_8006D1EC();
+    field_reset_global_color_scale();
+}
