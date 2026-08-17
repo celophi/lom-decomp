@@ -89,26 +89,11 @@ void func_80051DD4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
     Sp20Data sp;
     s32 temp;
     u16* new_var3;
-    s32 new_var4;
 
-    new_var4 = arg2;
-    if (arg2 >= 0)
-    {
-        temp = arg2;
-    }
-    else
-    {
-        temp = new_var4 + 15;
-    }
-    temp >>= 4;
+    temp = arg2 / 16;
     new_var3 = &D_8005D030[temp];
-    do
-    {
-    } while (0);
-    new_var = temp << 4;
+    new_var = arg2 % 16;
     sp.sp20 = *new_var3;
-
-    new_var = arg2 - new_var;
     sp.sp22 = D_8005D030[new_var];
     sp.sp24 = 0;
     func_80051E58((void*)arg0, (s32*)arg1, (u8*)(&sp), arg3, arg4, 0, arg5);
