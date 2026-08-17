@@ -65,7 +65,6 @@ segments:
       - [0x17F4D, c, func_80067bbc]             # gcc280_g4, expand-div
       - [0x18245, c, field5]                    # gcc280_g4, no expand-div
       - [0x18341, c, func_80067fb0]             # gcc272_cdk
-      - [0x1842D, c, unk1_f]                    # gcc272_cdk
       - [0x18551, c, func_800681c0]             # gcc272_cdk
       - [0x18575, c, unk1_g]                    # gcc272_cdk
       - [0x1861D, c, field4]                    # gcc272_cdk
