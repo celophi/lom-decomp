@@ -2476,3 +2476,63 @@ void func_80067098(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
         break;
     }
 }
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_800671D8(u8* image, u8** cursor, s32 index, s32 mirror)
+{
+    FieldImageReq* req;
+    u8* cur;
+    u8* src;
+    u8* dst;
+    u8* d;
+    s32 rows;
+    s32 n;
+    u32 b;
+
+    cur = *cursor;
+    req = (FieldImageReq*)cur;
+    cur += 0x20;
+    req->rect.x = 0x130;
+    req->rect.y = index + 0x1FA;
+    req->rect.w = 0x10;
+    req->rect.h = 1;
+    req->data = (u_long*)image;
+    field_queue_vram_upload(req);
+    req += 1;
+    req->rect.x = 0x3F4;
+    req->rect.y = (index * 48) + 0x110;
+    req->rect.w = 0xC;
+    req->rect.h = 0x30;
+    if (mirror != 0)
+    {
+        src = image + 0x20;
+        dst = cur;
+        cur += 0x480;
+        req->data = (u_long*)dst;
+        dst += 0x17;
+        rows = 0x2F;
+        do
+        {
+            d = dst;
+            n = 0x17;
+            do
+            {
+                b = *src;
+                src += 1;
+                n -= 1;
+                *d = ((b & 0xF) << 4) | (b >> 4);
+                d -= 1;
+            } while (n != -1);
+            rows -= 1;
+            dst += 0x18;
+        } while (rows != -1);
+    }
+    else
+    {
+        req->data = (u_long*)(image + 0x20);
+    }
+    field_queue_vram_upload(req);
+    *cursor = cur;
+}
