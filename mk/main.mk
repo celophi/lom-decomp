@@ -151,9 +151,8 @@ SRCS_G0 := \
 	src/psyq/libspu/S_CRWA.c \
 	src/psyq/libapi/A10.c \
 	src/psyq/libspu/S_GRMT.c \
-	src/psyq/crt0.c \
-	src/libgcc.c \
-	src/psyq/libapi/A39.c \
+	src/psyq/libsn/SNMAIN.c \
+	src/psyq/libapi/C57.c \
 	src/psyq/libpad/PADENTRY.c \
 	src/psyq/libpad/PADMAIN.c \
 	src/psyq/libpad/PADCMD.c \

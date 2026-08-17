@@ -226,9 +226,8 @@ segments:
       - [0x1A1DC, c, psyq/libspu/S_GRMT]             # psyq 4.1-4.6
       - [0x1A1EC, c, decomp4]
       - [0x1D8DC, c, decomp11] # -G4  AKAO XA/SFX driver (36 funcs 0x8002D0DC..0x8002E7A8)
-      - [0x1EFA8, c, psyq/crt0]               # Psy-Q CRT0 entry (0x8002E7A8): raw sp/gp/fp bootstrap, zeroes bss, jumps to Main. EXE header's Initial PC.
-      - [0x1F050, c, libgcc]                  # GCC libgcc __main + inlined __do_global_ctors (0x8002E850..0x8002E928): runs global ctors (list empty in this build)
-      - [0x1F128, c, psyq/libapi/A39]         # Psy-Q BIOS A(0x39) InitHeap stub (0x8002E928)
+      - [0x1EFA8, c, psyq/libsn/SNMAIN]       # SN Systems LIBSN SNMAIN.OBJ: __SN_ENTRY_POINT (0x8002E7A8, raw sp/gp/fp bootstrap + EXE header Initial PC), __main (0x8002E850, ctor runner), __do_global_dtors (0x8002E8C0)
+      - [0x1F128, c, psyq/libapi/C57]         # Psy-Q BIOS A(0x39) InitHeap stub (0x8002E928); archive member C57.OBJ
       - [0x1F138, c, psyq/libpad/PADENTRY]          # LIBPAD PADENTRY.OBJ: Pad* public wrappers # psyq 4.4-4.5 (PDMAIN2 in 4.6)
       - [0x1F5F8, c, psyq/libpad/PADMAIN]           # LIBPAD PADMAIN.OBJ: PadEnableCom + _pad* internals # psyq 4.4-4.5
       - [0x203C8, c, psyq/libpad/PADCMD]            # LIBPAD PADCMD.OBJ: _padSetAct/_padCmdParaMode + loadinfo # psyq 4.4-4.5

@@ -1073,7 +1073,7 @@ s32 func_8002E294(s32 *p)
 }
 
 /**
- * @see decomp.me (97.89%)
+ * @see decomp.me (100%)
  */
 void func_8002E2E8(void)
 {
@@ -1110,7 +1110,7 @@ void func_8002E2E8(void)
         s32 unk58;       /* 0x58 */
     } XaTrk;
     extern XaTrk g_akao_xa_tracker;
-    extern s32 g_akao_spu_xfer_pending;
+    extern volatile s32 g_akao_spu_xfer_pending;
 
     s32 ch;
     XaTrk *p;
