@@ -152,12 +152,12 @@ SRCS_G0 := \
 	src/psyq/libapi/A10.c \
 	src/psyq/libspu/S_GRMT.c \
 	src/unk8.c \
-	src/psyq/libpad/TMP_PadChkVsync.c \
-	src/psyq/libpad/TMP_PADMAIN.c \
-	src/psyq/libpad/TMP_padSetAct.c \
-	src/psyq/libpad/TMP_OBJ_800307C8.c \
-	src/psyq/libpad/TMP_PadInitDirect.c \
-	src/psyq/libpad/TMP_padInitDirSeq.c \
+	src/psyq/libpad/PADENTRY.c \
+	src/psyq/libpad/PADMAIN.c \
+	src/psyq/libpad/PADCMD.c \
+	src/psyq/libpad/PADIF.c \
+	src/psyq/libpad/PADPORTD.c \
+	src/psyq/libpad/PADSEQD.c \
 	src/psyq/libmcx/TMP_MCX.c \
 	src/unk9.c \
 	src/screen_transition.c \

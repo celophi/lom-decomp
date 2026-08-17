@@ -69,7 +69,7 @@ segments:
       - [0x1314, .rodata, akao_cmd]          # jtbl -> akao_cmd
       - [0x1328, rodata, rodata_data4]       # data constants
       - [0x1358, .rodata, decomp4]           # jtbl -> decomp4
-      - [0x1458, .rodata, psyq/libpad/TMP_PadChkVsync]  # jtbl_80010C58 -> PadInfoAct; merged into
+      - [0x1458, .rodata, psyq/libpad/PADENTRY]  # jtbl_80010C58 -> PadInfoAct; merged into
                                               # its module object so the .L local labels resolve
       - [0x1478, .rodata, psyq/libmcx/TMP_MCX]  # jtbl_80010C78/C98/CC0/CD8 -> LIBMCX funcs
       - [0x1558, c, main]
@@ -227,12 +227,12 @@ segments:
       - [0x1A1EC, c, decomp4]
       - [0x1D8DC, c, decomp11] # -G4  AKAO XA/SFX driver (36 funcs 0x8002D0DC..0x8002E7A8)
       - [0x1EFA8, c, unk8]                    # crt0/relocation glue (0x8002E7A8..0x8002E938)
-      - [0x1F138, c, psyq/libpad/TMP_PadChkVsync]   # LIBPAD: Pad* public wrappers (member code TBD)
-      - [0x1F5F8, c, psyq/libpad/TMP_PADMAIN]       # LIBPAD: PADMAIN (PadEnableCom + _pad* internals)
-      - [0x203C8, c, psyq/libpad/TMP_padSetAct]     # LIBPAD: actuator/loadinfo object (member code TBD)
-      - [0x20FC8, c, psyq/libpad/TMP_OBJ_800307C8]  # LIBPAD: all-static object (member code TBD)
-      - [0x215F8, c, psyq/libpad/TMP_PadInitDirect] # LIBPAD: PadInitDirect object (member code TBD)
-      - [0x21C58, c, psyq/libpad/TMP_padInitDirSeq] # LIBPAD: dir/mtap-seq object (member code TBD)
+      - [0x1F138, c, psyq/libpad/PADENTRY]          # LIBPAD PADENTRY.OBJ: Pad* public wrappers # psyq 4.4-4.5 (PDMAIN2 in 4.6)
+      - [0x1F5F8, c, psyq/libpad/PADMAIN]           # LIBPAD PADMAIN.OBJ: PadEnableCom + _pad* internals # psyq 4.4-4.5
+      - [0x203C8, c, psyq/libpad/PADCMD]            # LIBPAD PADCMD.OBJ: _padSetAct/_padCmdParaMode + loadinfo # psyq 4.4-4.5
+      - [0x20FC8, c, psyq/libpad/PADIF]             # LIBPAD PADIF.OBJ: pad interface polling (all-static: SendAuto/SioRW) # psyq 4.4-4.5
+      - [0x215F8, c, psyq/libpad/PADPORTD]          # LIBPAD PADPORTD.OBJ: PadInitDirect + statics # psyq 4.4-4.5
+      - [0x21C58, c, psyq/libpad/PADSEQD]           # LIBPAD PADSEQD.OBJ: _padInitDirSeq / _dirFailAuto + statics # psyq 4.4-4.5
       - [0x22118, c, psyq/libmcx/TMP_MCX]     # LIBMCX block: variant SDK build; 21 confident exports
                                               # named, rest func_* (not carved into per-object modules)
       - [0x25990, data, initialized]
