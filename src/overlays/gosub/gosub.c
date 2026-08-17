@@ -31,45 +31,45 @@ typedef enum GosubElementState
     GOSUB_ELEMENT_STATE_EXITING = 3
 } GosubElementState;
 
-void field_set_default_fade_target(); /* extern */
-void func_800A8B90();    /* extern */
-void func_800AA02C();    /* extern */
-void gosub_load_screen_sequence(s32*); /* extern */
-void gosub_build_screen_9_elements();    /* extern */
-void gosub_build_screen_10_elements();    /* extern */
-void gosub_build_category_screen_elements();    /* extern */
-void gosub_build_list_screen_elements();    /* extern */
-void gosub_build_screen_11_elements();    /* extern */
-void gosub_build_compact_list_elements();    /* extern */
-void gosub_build_screen_15_item_list();    /* extern */
-void gosub_build_screen_19_item_list();    /* extern */
-void gosub_build_screen_16_item_list();    /* extern */
-void gosub_build_screen_1_item_list();    /* extern */
-void gosub_build_screen_0_item_list();    /* extern */
-void gosub_build_packed_record_list();    /* extern */
-void gosub_build_roster_list();    /* extern */
-s32 gosub_select_row_with_validation();    /* extern */
-s32 gosub_select_row();    /* extern */
-s32 gosub_validate_pending_pair_selection();    /* extern */
-s32 gosub_commit_row_reorder();    /* extern */
-s32 gosub_update_group_selection();    /* extern */
-s32 gosub_publish_two_row_selection();    /* extern */
-s32 gosub_handle_combination_dialog(s32 dialog_result);    /* extern */
-s32 gosub_publish_group_selection(void);    /* extern */
-s32 gosub_publish_selection(void);    /* extern */
-s32 gosub_is_row_unselected(s32 row);    /* extern */
-void gosub_build_equipment_list(u32 item_kind);    /* extern */
-void gosub_build_grouped_option_list(s32 group);    /* extern */
-void gosub_update_screen(s32 render_ctx);    /* extern */
-void func_80143B64();    /* extern */
-void func_80145CEC();    /* extern */
-s32 func_80145DA8();    /* extern */
-s32 func_80145DF8();    /* extern */
-s32 func_80145EA4();    /* extern */
-s32 func_80145F80();    /* extern */
-s32 func_801460D0();    /* extern */
-void func_80146468();    /* extern */
-void func_80146538();    /* extern */
+void field_set_default_fade_target();                   /* extern */
+void func_800A8B90();                                   /* extern */
+void func_800AA02C();                                   /* extern */
+void gosub_load_screen_sequence(s32*);                  /* extern */
+void gosub_build_screen_9_elements();                   /* extern */
+void gosub_build_screen_10_elements();                  /* extern */
+void gosub_build_category_screen_elements();            /* extern */
+void gosub_build_list_screen_elements();                /* extern */
+void gosub_build_screen_11_elements();                  /* extern */
+void gosub_build_compact_list_elements();               /* extern */
+void gosub_build_screen_15_item_list();                 /* extern */
+void gosub_build_screen_19_item_list();                 /* extern */
+void gosub_build_screen_16_item_list();                 /* extern */
+void gosub_build_screen_1_item_list();                  /* extern */
+void gosub_build_screen_0_item_list();                  /* extern */
+void gosub_build_packed_record_list();                  /* extern */
+void gosub_build_roster_list();                         /* extern */
+s32 gosub_select_row_with_validation();                 /* extern */
+s32 gosub_select_row();                                 /* extern */
+s32 gosub_validate_pending_pair_selection();            /* extern */
+s32 gosub_commit_row_reorder();                         /* extern */
+s32 gosub_update_group_selection();                     /* extern */
+s32 gosub_publish_two_row_selection();                  /* extern */
+s32 gosub_handle_combination_dialog(s32 dialog_result); /* extern */
+s32 gosub_publish_group_selection(void);                /* extern */
+s32 gosub_publish_selection(void);                      /* extern */
+s32 gosub_is_row_unselected(s32 row);                   /* extern */
+void gosub_build_equipment_list(u32 item_kind);         /* extern */
+void gosub_build_grouped_option_list(s32 group);        /* extern */
+void gosub_update_screen(s32 render_ctx);               /* extern */
+void func_80143B64();                                   /* extern */
+void func_80145CEC();                                   /* extern */
+s32 func_80145DA8();                                    /* extern */
+s32 func_80145DF8();                                    /* extern */
+s32 func_80145EA4();                                    /* extern */
+s32 func_80145F80();                                    /* extern */
+s32 func_801460D0();                                    /* extern */
+void func_80146468();                                   /* extern */
+void func_80146538();                                   /* extern */
 extern s32 g_gosub_frame_parity;
 extern s32 g_gosub_finished;
 extern s32 g_gosub_scroll_frames_remaining;
@@ -228,8 +228,7 @@ extern GosubListEntry g_gosub_rows[];
  * @note The term order matters: writing the base first is what produces the
  *       target's accumulate chain (see idioms.md [EXPAND-14]).
  */
-#define ARCHIVE_ENTRY(blk, idx) \
-    ((u8*)D_8014F27C + (blk) + *(u16*)((u8*)D_8014F27C + (blk) + (idx) * 2))
+#define ARCHIVE_ENTRY(blk, idx) ((u8*)D_8014F27C + (blk) + *(u16*)((u8*)D_8014F27C + (blk) + (idx) * 2))
 
 /**
  * @brief Resolve a message-archive entry at byte offset @p off.
@@ -241,8 +240,7 @@ extern GosubListEntry g_gosub_rows[];
  * @param off Byte offset of the u16 entry index within the resolved block.
  * @return Pointer to the entry.
  */
-#define GOSUB_MSG_PTR(off) \
-    ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
+#define GOSUB_MSG_PTR(off) ((u8*)&D_8014F29C - 0x20 + D_8014F29C + *(u16*)((u8*)&D_8014F29C + D_8014F29C + (off)))
 
 /**
  * @brief Resolve the message-archive entry at @p off and hand it to func_80145CEC.
@@ -343,8 +341,7 @@ void gosub_load_screen_sequence(s32* screen_sequence)
  * @param screen_id Screen id, 0..19; anything else returns without touching state.
  * @param unused Unused by this function; passed by gosub_load_screen_sequence.
  */
-void gosub_enter_screen(screen_id, unused)
-s32 screen_id;
+void gosub_enter_screen(screen_id, unused) s32 screen_id;
 s32 unused;
 {
     g_gosub_scroll_frames_remaining = 0;
@@ -1108,8 +1105,7 @@ void gosub_build_packed_record_list(void)
         g_gosub_rows[i].desc = ARCHIVE_ENTRY(D_8014F27C[7], g_gosub_rows[i].unkE);
         g_gosub_rows[i].value = -2;
         g_gosub_rows[i].unkD = (*(u32*)(g_pad_ctx + (i << 2) + 0x29DC) >> 12) & 0xF;
-        if (((*(u32*)(g_pad_ctx + (i << 2) + 0x29DC) >> 16) & 1) != 0 ||
-            (*(u32*)(g_pad_ctx + (i << 2) + 0x29DC) & 3) != 3)
+        if (((*(u32*)(g_pad_ctx + (i << 2) + 0x29DC) >> 16) & 1) != 0 || (*(u32*)(g_pad_ctx + (i << 2) + 0x29DC) & 3) != 3)
         {
             g_gosub_rows[i].flags.word |= 4;
         }
@@ -1202,12 +1198,10 @@ void gosub_build_roster_list(s32 mode)
                 g_gosub_rows[row_count].unk10 = *(u16*)(g_pad_ctx + record_offset + 0x2B24);
                 for (stat_index = 0; stat_index < 4; stat_index++)
                 {
-                    g_gosub_rows[row_count].unk12[stat_index] =
-                        *(u16*)(g_pad_ctx + record_offset + 0x2B26 + stat_index * 2);
+                    g_gosub_rows[row_count].unk12[stat_index] = *(u16*)(g_pad_ctx + record_offset + 0x2B26 + stat_index * 2);
                 }
                 record_offset_reload = record_index * 332;
-                g_gosub_rows[row_count].unk1A =
-                    *(u16*)(g_pad_ctx + record_offset_reload + 0x2B22);
+                g_gosub_rows[row_count].unk1A = *(u16*)(g_pad_ctx + record_offset_reload + 0x2B22);
                 row_count++;
             }
         }
@@ -1234,10 +1228,8 @@ void gosub_build_roster_list(s32 mode)
                 g_gosub_rows[row_count].name = g_pad_ctx + 0x2EF4 + slot * 0x60;
                 g_gosub_rows[row_count].unkC = *(g_pad_ctx + record_offset + 0x2F09);
                 g_gosub_rows[row_count].unk10 = *(u16*)(g_pad_ctx + record_offset + 0x2F12);
-                g_gosub_rows[row_count].flags.f.flag0 =
-                    *(u32*)(g_pad_ctx + record_offset + 0x2F38) >> 31;
-                g_gosub_rows[row_count].flags.f.flag1 =
-                    (*(u32*)(g_pad_ctx + record_offset + 0x2F38) >> 30) & 1;
+                g_gosub_rows[row_count].flags.f.flag0 = *(u32*)(g_pad_ctx + record_offset + 0x2F38) >> 31;
+                g_gosub_rows[row_count].flags.f.flag1 = (*(u32*)(g_pad_ctx + record_offset + 0x2F38) >> 30) & 1;
                 g_gosub_rows[row_count].unkD = *(g_pad_ctx + record_offset + 0x2F0C);
                 if (g_gosub_rows[row_count].flags.half & 1)
                 {
@@ -1257,12 +1249,10 @@ void gosub_build_roster_list(s32 mode)
                 }
                 for (stat_index = 0; stat_index < 4; stat_index++)
                 {
-                    g_gosub_rows[row_count].unk12[stat_index] =
-                        *(u16*)(g_pad_ctx + record_offset + 0x2F14 + stat_index * 2);
+                    g_gosub_rows[row_count].unk12[stat_index] = *(u16*)(g_pad_ctx + record_offset + 0x2F14 + stat_index * 2);
                 }
                 record_offset_reload = slot * 0x60;
-                g_gosub_rows[row_count].unk1A =
-                    *(u16*)(g_pad_ctx + record_offset_reload + 0x2F10);
+                g_gosub_rows[row_count].unk1A = *(u16*)(g_pad_ctx + record_offset_reload + 0x2F10);
                 row_count++;
             }
         }
@@ -1611,9 +1601,9 @@ typedef struct
 } GosubLine;     /* 0x10 */
 
 /** @brief libgpu setaddr(): write a packet's 24-bit ordering-table link. */
-#define SET_PRIM_ADDR(p, a) (((GosubTag *)(p))->addr = (u_long)(a))
+#define SET_PRIM_ADDR(p, a) (((GosubTag*)(p))->addr = (u_long)(a))
 /** @brief libgpu getaddr(): read a packet's 24-bit ordering-table link. */
-#define GET_PRIM_ADDR(p) ((u_long)((GosubTag *)(p))->addr)
+#define GET_PRIM_ADDR(p) ((u_long)((GosubTag*)(p))->addr)
 /** @brief libgpu addPrim(): splice packet @p p in at ordering-table tag @p ot. */
 #define ADD_PRIM(ot, p) (SET_PRIM_ADDR(p, GET_PRIM_ADDR(ot)), SET_PRIM_ADDR(ot, p))
 /**
@@ -1623,16 +1613,16 @@ typedef struct
  *       costs 8 rows in func_801450D8, so the two spellings are both required
  *       to match; do not collapse them into one macro.
  */
-#define SET_PRIM_ADDR_MASK(p, a) (((GosubTag *)(p))->addr = ((u_long)(a) & 0xFFFFFF))
+#define SET_PRIM_ADDR_MASK(p, a) (((GosubTag*)(p))->addr = ((u_long)(a) & 0xFFFFFF))
 #define ADD_PRIM_MASKED(ot, p) (SET_PRIM_ADDR_MASK(p, GET_PRIM_ADDR(ot)), SET_PRIM_ADDR(ot, p))
 
-s32 func_8001A5D4(s32, void*);                  /* extern */
-s32 func_8001C56C(void*, s32, s32, s32, s32);  /* extern */
-StructS0* func_801443E4();                      /* extern */
-StructS0* func_80144544();                      /* extern */
-GosubLine* func_80144764();                      /* extern */
-StructS0* func_80146E30();                      /* extern */
-GosubTile* func_801448EC();                     /* extern */
+s32 func_8001A5D4(s32, void*);                /* extern */
+s32 func_8001C56C(void*, s32, s32, s32, s32); /* extern */
+StructS0* func_801443E4();                    /* extern */
+StructS0* func_80144544();                    /* extern */
+GosubLine* func_80144764();                   /* extern */
+StructS0* func_80146E30();                    /* extern */
+GosubTile* func_801448EC();                   /* extern */
 
 /** @brief Packed four-byte record stored in the combination table. */
 typedef struct
@@ -2690,8 +2680,7 @@ void func_80143C58(Arg0Struct* arg0)
                         u32 high;
                         field = (temp_a3 >> 7) & 0x1FF;
                         high = temp_a3 >> 24;
-                        var_s0 = func_801443E4(var_a0, var_s4, (field + (((temp_t0 & 1) << 8) | high)) - 0x10,
-                                                  (*((u8*)var_s5 + 2)) + temp_t1, 0);
+                        var_s0 = func_801443E4(var_a0, var_s4, (field + (((temp_t0 & 1) << 8) | high)) - 0x10, (*((u8*)var_s5 + 2)) + temp_t1, 0);
                     }
                 }
                 if (g_gosub_scroll_y != 0)
@@ -2702,9 +2691,7 @@ void func_80143C58(Arg0Struct* arg0)
                         temp_t0_2 = *var_s5;
                         field = (temp_t0_2 >> 7) & 0x1FF;
                         high = temp_t0_2 >> 24;
-                        var_s0 = func_801443E4(var_s0, var_s4,
-                                                  (field + ((( *(u32*)((u8*)var_s5 + 4) & 1) << 8) | high)) - 0x10,
-                                                  (*((u8*)var_s5 + 2)), 1);
+                        var_s0 = func_801443E4(var_s0, var_s4, (field + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high)) - 0x10, (*((u8*)var_s5 + 2)), 1);
                     }
                 }
                 func_8001A5D4((s32)var_s0, sp20);
@@ -2733,8 +2720,7 @@ void func_80143C58(Arg0Struct* arg0)
                         }
                     }
                     var_s0->unk8 = 1;
-                    var_s0->unkA =
-                        (s16)((s32)(((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) * (g_gosub_scroll_y / g_gosub_row_height)) / g_gosub_row_count);
+                    var_s0->unkA = (s16)((s32)(((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) * (g_gosub_scroll_y / g_gosub_row_height)) / g_gosub_row_count);
                     var_s0->unk0 = (var_s0->unk0 & var_s7) | (var_s4->unk0 & var_s6);
 
                     temp_v1 = (s32)var_s0 & var_s6;
@@ -2747,9 +2733,8 @@ void func_80143C58(Arg0Struct* arg0)
                     temp_t0_3 = *var_s5;
                     field = (temp_t0_3 >> 7) & 0x1FF;
                     high = temp_t0_3 >> 24;
-                    var_s0 = func_80144544(var_s0, var_s4,
-                                              field + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) + 3,
-                                              (*((u8*)var_s5 + 2)), 0xA, (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                    var_s0 = func_80144544(var_s0, var_s4, field + (((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) + 3, (*((u8*)var_s5 + 2)), 0xA,
+                                           (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
                 }
                 var_a0 = var_s0;
             }
@@ -2791,10 +2776,9 @@ void func_80143C58(Arg0Struct* arg0)
                     post_word = *var_s5;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    var_s0 = func_80144544(var_s0, var_s4,
-                                              field + (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) - temp_s1) / 2,
-                                              (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
-                                              arg0->unk40B2);
+                    var_s0 =
+                        func_80144544(var_s0, var_s4, field + (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) - temp_s1) / 2,
+                                      (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2, arg0->unk40B2);
                 }
                 temp_v0_3 = *var_s5;
                 temp_a0_4 = temp_v0_3 & ~0x78;
@@ -2813,9 +2797,8 @@ void func_80143C58(Arg0Struct* arg0)
                     u32 high;
                     case_word = *var_s5;
                     high = case_word >> 24;
-                    var_s0 = func_80144544(var_s0, var_s4, (case_word >> 7) & 0x1FF,
-                                              (*((u8*)var_s5 + 2)), ((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high,
-                                              (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
+                    var_s0 = func_80144544(var_s0, var_s4, (case_word >> 7) & 0x1FF, (*((u8*)var_s5 + 2)), ((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high,
+                                           (*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF, arg0->unk40B2);
                 }
                 break;
 
@@ -2846,10 +2829,9 @@ void func_80143C58(Arg0Struct* arg0)
                     post_word = *var_s5;
                     field = (post_word >> 7) & 0x1FF;
                     high = post_word >> 24;
-                    var_s0 = func_80144544(var_s0, var_s4,
-                                              field + (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) - temp_s1) / 2,
-                                              (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2,
-                                              arg0->unk40B2);
+                    var_s0 =
+                        func_80144544(var_s0, var_s4, field + (s32)((((*(u32*)((u8*)var_s5 + 4) & 1) << 8) | high) - temp_s1) / 2,
+                                      (*((u8*)var_s5 + 2)) + ((s32)((*(u32*)((u8*)var_s5 + 4) >> 1) & 0xFF) - temp_s2) / 2, temp_s1, temp_s2, arg0->unk40B2);
                 }
                 temp_v0_5 = *var_s5;
                 temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
@@ -2921,15 +2903,15 @@ typedef struct
  *       real-type variant (LINE_F4/POLY_F3 + setLineF4/addPrim/SET_BGR0) sits at
  *       78.85%; see working/func_801443E4/ for both and the analysis.
  */
-StructS0 *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
+StructS0* func_801443E4(GosubPrim* prim, s32* ot, s32 x, s32 y, s32 flag)
 {
     s32 color;
     s16 tmp_x;
     s16 tmp_y;
     u32 i;
-    u8 *p;
-    u8 *dst;
-    GosubPrim *prim2;
+    u8* p;
+    u8* dst;
+    GosubPrim* prim2;
 
     prim->len = 6;
     (prim2 = prim)->code = 0x4C;
@@ -2967,10 +2949,10 @@ StructS0 *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
     prim2->x2 = x + 6;
     prim2->y2 = tmp_y;
 
-    p = (u8 *)prim2;
-    prim2 = (GosubPrim *)(p + 0x1C);
-    dst = (u8 *)prim2;
-    *(u32 *)p = (*(u32 *)p & 0xFF000000) | (*ot & 0xFFFFFF);
+    p = (u8*)prim2;
+    prim2 = (GosubPrim*)(p + 0x1C);
+    dst = (u8*)prim2;
+    *(u32*)p = (*(u32*)p & 0xFF000000) | (*ot & 0xFFFFFF);
     i = 0;
     *ot = (*ot & 0xFF000000) | ((u32)p & 0xFFFFFF);
     do
@@ -2982,11 +2964,11 @@ StructS0 *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
     } while (i < 0x14U);
 
     prim2->len = 4;
-    *(u32 *)&prim2->r = 0;
+    *(u32*)&prim2->r = 0;
     prim2->code = 0x20;
-    *(u32 *)prim2 = (*(u32 *)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *(u32*)prim2 = (*(u32*)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | ((u32)prim2 & 0xFFFFFF);
-    return (StructS0 *)((u8 *)prim2 + 0x14);
+    return (StructS0*)((u8*)prim2 + 0x14);
 }
 
 /**
@@ -3089,10 +3071,10 @@ StructS0* func_80144544(StructS0* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32
  *
  * @see decomp.me (100%)
  */
-GosubLine *func_80144764(GosubLine *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 color)
+GosubLine* func_80144764(GosubLine* p, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 color)
 {
-    *(u32 *)&p->r0 = color;
-    ((GosubTag *)p)->len = 3;
+    *(u32*)&p->r0 = color;
+    ((GosubTag*)p)->len = 3;
     p->code = 0x40;
     p->x0 = x + 4;
     p->y0 = y;
@@ -3101,8 +3083,8 @@ GosubLine *func_80144764(GosubLine *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 
     ADD_PRIM(ot, p);
     p++;
 
-    *(u32 *)&p->r0 = color;
-    ((GosubTag *)p)->len = 3;
+    *(u32*)&p->r0 = color;
+    ((GosubTag*)p)->len = 3;
     p->code = 0x40;
     p->x0 = x + w;
     p->y0 = y + 4;
@@ -3111,8 +3093,8 @@ GosubLine *func_80144764(GosubLine *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 
     ADD_PRIM(ot, p);
     p++;
 
-    *(u32 *)&p->r0 = color;
-    ((GosubTag *)p)->len = 3;
+    *(u32*)&p->r0 = color;
+    ((GosubTag*)p)->len = 3;
     p->code = 0x40;
     p->x0 = (x + w) - 4;
     p->y0 = y + h;
@@ -3121,8 +3103,8 @@ GosubLine *func_80144764(GosubLine *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 
     ADD_PRIM(ot, p);
     p++;
 
-    *(u32 *)&p->r0 = color;
-    ((GosubTag *)p)->len = 3;
+    *(u32*)&p->r0 = color;
+    ((GosubTag*)p)->len = 3;
     p->code = 0x40;
     p->x0 = x;
     p->y0 = y + 4;
@@ -3231,8 +3213,8 @@ GosubTile* func_801448EC(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
                 y = ((row * 0x30) - y_off) - g_gosub_scroll_y;
                 if (y >= -0x2F && y < g_gosub_window_height)
                 {
-                    prim = func_800A88A0(func_801450D8(prim, ot, row, -x_off, y, drawn_count),
-                                         ot, g_gosub_rows[row].name, g_gosub_rows[row].kind, label_x, y, 0);
+                    prim =
+                        func_800A88A0(func_801450D8(prim, ot, row, -x_off, y, drawn_count), ot, g_gosub_rows[row].name, g_gosub_rows[row].kind, label_x, y, 0);
                     if (g_gosub_rows[row].flags.f.flag2)
                     {
                         if ((g_gosub_rows[row].flags.half & 1) == 0)
@@ -3243,14 +3225,13 @@ GosubTile* func_801448EC(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
                             pos.y = line_y;
                             prim = func_800A8A78(ot, prim, g_gosub_rows[row].unkD, g_gosub_rows[row].kind, pos_p, 0);
                             blk2 = *(s32*)(base + 0x24);
-                            prim = func_800A88A0(prim, ot, (void*)(blk2 + (*(u16*)((blk2 + g_gosub_rows[row].unkC * 2) + base) + base)),
-                                                 g_gosub_rows[row].kind, 0x84 - x_off, line_y, 0);
+                            prim = func_800A88A0(prim, ot, (void*)(blk2 + (*(u16*)((blk2 + g_gosub_rows[row].unkC * 2) + base) + base)), g_gosub_rows[row].kind,
+                                                 0x84 - x_off, line_y, 0);
                         }
                         else
                         {
                             msg_off = *(u16*)((u8*)&D_8014F29C + D_8014F29C + g_gosub_rows[row].unkD * 2 + 0x44);
-                            prim = func_800A88A0(prim, ot, (void*)(D_8014F29C + (msg_off + base)), g_gosub_rows[row].kind, label_x,
-                                                 y + 0x10, 0);
+                            prim = func_800A88A0(prim, ot, (void*)(D_8014F29C + (msg_off + base)), g_gosub_rows[row].kind, label_x, y + 0x10, 0);
                         }
                     }
                     else
@@ -3265,28 +3246,24 @@ GosubTile* func_801448EC(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
                     pos.y = line_y2;
                     prim = func_800A8A78(ot, prim, g_gosub_rows[row].unk1A, g_gosub_rows[row].kind, pos_p, 0);
                     msg_off = D_8014F29C - -(*(u16*)((s32)D_8014F29C - -(s32)d2ptr) + base);
-                    prim = func_800A88A0(prim, ot, (void*)msg_off,
-                                         g_gosub_rows[row].kind, 0x64 - x_off, line_y2, 0);
+                    prim = func_800A88A0(prim, ot, (void*)msg_off, g_gosub_rows[row].kind, 0x64 - x_off, line_y2, 0);
                     pos.x = 0xB0 - x_off;
                     pos.y = line_y2;
                     prim = func_800A8A78(ot, prim, g_gosub_rows[row].unk10, g_gosub_rows[row].kind, pos_p, 0);
                     if (g_gosub_rows[row].unkE != 0)
                     {
                         s32 pad1;
-                        prim = func_800A88A0(prim, ot, MSG_LO(0x4A), g_gosub_rows[row].kind,
-                                             g_gosub_window_width - (pad1 = x_off, pad1 += 0xC), line_y2, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x4A), g_gosub_rows[row].kind, g_gosub_window_width - (pad1 = x_off, pad1 += 0xC), line_y2, 1);
                     }
                     else if (g_gosub_rows[row].flags.half & 1)
                     {
                         s32 pad2;
-                        prim = func_800A88A0(prim, ot, MSG_LO(0x60), g_gosub_rows[row].kind,
-                                             g_gosub_window_width - (pad2 = x_off, pad2 += 0xC), line_y2, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x60), g_gosub_rows[row].kind, g_gosub_window_width - (pad2 = x_off, pad2 += 0xC), line_y2, 1);
                     }
                     else if (g_gosub_rows[row].flags.f.flag1)
                     {
                         s32 pad3;
-                        prim = func_800A88A0(prim, ot, MSG_LO(0x6E), g_gosub_rows[row].kind,
-                                             g_gosub_window_width - (pad3 = x_off, pad3 += 0xC), line_y2, 1);
+                        prim = func_800A88A0(prim, ot, MSG_LO(0x6E), g_gosub_rows[row].kind, g_gosub_window_width - (pad3 = x_off, pad3 += 0xC), line_y2, 1);
                     }
                     drawn_count += 1;
                 }
@@ -3365,19 +3342,19 @@ GosubTile* func_801448EC(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
 /** @brief Sprite primitive (0x14 bytes, code 0x64), SPRT layout. */
 typedef struct
 {
-    u_long tag;  /* 0x00 P_TAG */
-    u8 r0;       /* 0x04 */
-    u8 g0;       /* 0x05 */
-    u8 b0;       /* 0x06 */
-    u8 code;     /* 0x07 */
-    s16 x0;      /* 0x08 */
-    s16 y0;      /* 0x0A */
-    u8 u0;       /* 0x0C */
-    u8 v0;       /* 0x0D */
-    u16 clut;    /* 0x0E */
-    s16 w;       /* 0x10 */
-    s16 h;       /* 0x12 */
-} GosubSprt;     /* 0x14 */
+    u_long tag; /* 0x00 P_TAG */
+    u8 r0;      /* 0x04 */
+    u8 g0;      /* 0x05 */
+    u8 b0;      /* 0x06 */
+    u8 code;    /* 0x07 */
+    s16 x0;     /* 0x08 */
+    s16 y0;     /* 0x0A */
+    u8 u0;      /* 0x0C */
+    u8 v0;      /* 0x0D */
+    u16 clut;   /* 0x0E */
+    s16 w;      /* 0x10 */
+    s16 h;      /* 0x12 */
+} GosubSprt;    /* 0x14 */
 
 /** @brief libgpu RECT (s16 x, y, w, h). */
 typedef struct
@@ -3866,7 +3843,7 @@ s32 func_80145A14(s32* ot, s32 prim, s32 x_off, s32 y_off)
  *       color scope (ALLOC-14), y-precompute, base int-vs-pointer, prim=arg_prim
  *       aliasing, and table-in-glyph all measured inert or worse; gcc 2.8.0 and
  *       the gnu/g4 toolchains are all worse (and frame-wrong). The permuter
- *       (400k iters) finds only the undefined-on-else-path color hack, which
+ *       (400k iters) finds only the undefined-on-else-path color variant, which
  *       regresses. The glyph address uses &D_8014F29C inline and @c base is a
  *       plain integer offset, both mirroring func_80145A14's measured-best order;
  *       the unused @c pad reserves the target's 0x38-byte dead frame slot
@@ -4057,28 +4034,25 @@ s32 func_80146178(s32 prim, s32* ot, s32 x_off, s32 y_off)
     switch (kind)
     {
     case 0:
-        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3EE - 0x2A + D_800EC3EE[0] + (D_800EC3EE[1] << 8)), 4,
-                              0x10 - x_off, 0x12 - y_off, 0);
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3EE - 0x2A + D_800EC3EE[0] + (D_800EC3EE[1] << 8)), 4, 0x10 - x_off, 0x12 - y_off, 0);
         pos.x = 0x68 - x_off;
         pos.y = (s16)(0x12 - y_off);
         prim = func_800A8A78(ot, prim, g_gosub_rows[g_gosub_cursor_row].unk10, 4, &pos, 0);
         break;
 
     case 1:
-        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F0 - 0x2C + D_800EC3F0[0] + (D_800EC3F0[1] << 8)), 4,
-                              0x10 - x_off, 0x12 - y_off, 0);
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F0 - 0x2C + D_800EC3F0[0] + (D_800EC3F0[1] << 8)), 4, 0x10 - x_off, 0x12 - y_off, 0);
         pos.x = 0x60 - x_off;
         pos.y = (s16)(0x12 - y_off);
         prim = func_800A8A78(ot, prim,
-                              g_gosub_rows[g_gosub_cursor_row].unk12[0] + g_gosub_rows[g_gosub_cursor_row].unk12[1] +
-                                  g_gosub_rows[g_gosub_cursor_row].unk12[2] + g_gosub_rows[g_gosub_cursor_row].unk12[3],
-                              4, &pos, 0);
+                             g_gosub_rows[g_gosub_cursor_row].unk12[0] + g_gosub_rows[g_gosub_cursor_row].unk12[1] + g_gosub_rows[g_gosub_cursor_row].unk12[2] +
+                                 g_gosub_rows[g_gosub_cursor_row].unk12[3],
+                             4, &pos, 0);
         break;
 
     default:
         table = &D_8014F2A8;
-        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F2 - 0x2E + D_800EC3F2[0] + (D_800EC3F2[1] << 8)), 4,
-                              0x10 - x_off, 0x12 - y_off, 0);
+        prim = func_800A88A0(prim, ot, (void*)((u8*)D_800EC3F2 - 0x2E + D_800EC3F2[0] + (D_800EC3F2[1] << 8)), 4, 0x10 - x_off, 0x12 - y_off, 0);
         pos.x = 0x38 - x_off;
         pos.y = (s16)(0x12 - y_off);
         prim = func_800A8A78(ot, prim, g_gosub_rows[g_gosub_cursor_row].unk10, 4, &pos, 0);
@@ -4330,12 +4304,12 @@ typedef struct
 /** @brief Glyph cell descriptor in the 8-byte table at D_8016B634. */
 typedef struct
 {
-    u8 u0;   /* 0x00 texture u */
-    u8 unk1; /* 0x01 */
-    u8 v0;   /* 0x02 texture v */
-    u8 unk3; /* 0x03 */
-    u16 w;   /* 0x04 */
-    u16 h;   /* 0x06 */
+    u8 u0;    /* 0x00 texture u */
+    u8 unk1;  /* 0x01 */
+    u8 v0;    /* 0x02 texture v */
+    u8 unk3;  /* 0x03 */
+    u16 w;    /* 0x04 */
+    u16 h;    /* 0x06 */
 } GosubGlyph; /* 0x08 */
 
 /** @brief Glyph cell table indexed by the glyph id passed to func_80146860. */

@@ -8,10 +8,8 @@
 #define CHECKPS_GNU_TEXT __attribute__((section(".text.code7")))
 
 /*
- * Keep the section attribute on declarations rather than definitions.  Splat
- * scans the definitions with a deliberately simple C-function regex; placing
- * the attribute between the return type and function name makes those
- * functions look nonmatching in the generated target object.
+ * Keep the section attribute on declarations so Splat can discover each
+ * function definition normally while GNU as emits this unit into .text.code7.
  */
 void func_80050B04(void) CHECKPS_GNU_TEXT;
 s32 func_80050B14(s32 arg0) CHECKPS_GNU_TEXT;
