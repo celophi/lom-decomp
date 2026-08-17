@@ -179,8 +179,7 @@ void func_80050080(void)
     s32* ref;
     u32* offs;
 
-    if (((((g_previousGameState == 2) || (g_previousGameState == 3)) || (g_previousGameState == 0)) ||
-         (g_previousGameState == 6)) ||
+    if (((((g_previousGameState == 2) || (g_previousGameState == 3)) || (g_previousGameState == 0)) || (g_previousGameState == 6)) ||
         (g_previousGameState == 7) || (g_previousGameState == 5))
     {
         return;
@@ -299,8 +298,7 @@ void func_80050258(s32* arg0)
         g_fadeCurrent.blue = g_fadeTarget.blue;
     }
 
-    if (g_fadeCurrent.red != 0x100 || g_fadeCurrent.green != g_fadeCurrent.red ||
-        g_fadeCurrent.blue != g_fadeCurrent.green)
+    if (g_fadeCurrent.red != 0x100 || g_fadeCurrent.green != g_fadeCurrent.red || g_fadeCurrent.blue != g_fadeCurrent.green)
     {
 
         if (g_fadeCurrent.red >= 0x101)
@@ -453,6 +451,16 @@ void func_800505B4(s32 arg0)
     *((u8**)(base + 0xB8)) = prim;
 }
 
+/*
+ * The original CHECKPS codegen leaves this value in $a2 across the LoadImage
+ * call. PsyQ LoadImage consumes only $a0/$a1; the linked implementation ignores
+ * $a2. Calling through an unprototyped function pointer permits the third source
+ * argument and reproduces GCC 2.7.2's original register allocation without
+ * changing the PsyQ declaration.
+ */
+#define LoadImage3(rect, data, arg2) \
+    ((s32 (*)())LoadImage)((rect), (data), (arg2))
+
 /**
  * decomp.me link (100%) https://decomp.me/scratch/VRHxF
  */
@@ -465,7 +473,7 @@ void func_800506D0(void)
     u32 clutSize;
     u8* imageBlock;
     u16 loadX, loadY;
-    register u16* pHeader asm("v1");
+    u16* pHeader;
 
     pRect = &rect;
     gfxBase = D_8005B744;
@@ -500,7 +508,10 @@ void func_800506D0(void)
     D_80061098 = *(u16*)(imageBlock + 8);
     D_80061094 = pHeader[1];
 
-    LoadImage(pRect, (u32*)(imageBlock + 0xC));
+    // This is a hack.
+    // The alternative is do something like:
+    // register u32 tmp asm("a2");
+    LoadImage3(pRect, (u32*)(imageBlock + 0xC), D_80061098);
 }
 
 /**
@@ -513,13 +524,14 @@ s32 PollInputDevice(void)
     u32 inputMask;
     u32 rawButtons;
     u32 remappedUpper;
-    u32 workingBits;
+    u32 crossBit;
+    u32 triangleBit;
+    u32 squareBit;
+    u32 nonFaceBits;
 
     s32 axisX;
     s32 axisY;
 
-    volatile u16* axisPtrX;
-    u16* axisPtrY;
     u16 hiRead;
     u16 loRead;
     u16 axisRaw;
@@ -535,28 +547,25 @@ s32 PollInputDevice(void)
     inputMask = (((u32)hiRead) >> 8) | (((u32)loRead) << 8);
 
     rawButtons = inputMask;
-    
+
     // Remap upper nibble bits (hardware → logical layout)
     remappedUpper = (rawButtons & 0x40) >> 1;
-    workingBits   = (rawButtons & 0x20) << 1;
-    remappedUpper |= workingBits;
-    
-    workingBits   = (rawButtons & 0x80) >> 3;
-    remappedUpper |= workingBits;
-    
-    workingBits   = (rawButtons & 0x10) << 3;
-    remappedUpper |= workingBits;
-    
-    do {
-        workingBits = rawButtons & (~0xF0U);
-        inputMask = remappedUpper | workingBits;
-    } while (0);
+    crossBit = (rawButtons & 0x20) << 1;
+    remappedUpper |= crossBit;
+
+    triangleBit = (rawButtons & 0x80) >> 3;
+    remappedUpper |= triangleBit;
+
+    squareBit = (rawButtons & 0x10) << 3;
+    remappedUpper |= squareBit;
+
+    nonFaceBits = rawButtons & (~0xF0U);
+    inputMask = remappedUpper | nonFaceBits;
 
     if (regs->device_type != 0)
     {
         // X axis → left/right flags
-        axisPtrX = (volatile u16*)(((u8*)regs) + 0x2C);
-        axisRaw = *axisPtrX;
+        axisRaw = *(volatile u16*)&regs->axis_x;
         axisX = (s32)((s16)axisRaw);
 
         if (axisX < -1)
@@ -569,8 +578,7 @@ s32 PollInputDevice(void)
         }
 
         // Y axis → up/down flags
-        axisPtrY = (u16*)(((u8*)regs) + 0x2E);
-        axisRaw = *axisPtrY;
+        axisRaw = *(u16*)&regs->axis_y;
         axisY = (s32)((s16)axisRaw);
 
         if (axisY < -1)
@@ -663,9 +671,7 @@ void ProcessControllerInput(void)
 
     // 0x0B6F = L2 | R2 | L1 | R1 | Cross | Circle | Select | L3 | Start
     // = 0x0001 | 0x0002 | 0x0004 | 0x0008 | 0x0020 | 0x0040 | 0x0100 | 0x0200 | 0x0800
-    if (((finalButtonState == g_lastInputState) ||
-         ((g_lastInputState != 0) && ((finalButtonState & (g_lastInputState | 0xB6F))))) &&
-        (finalButtonState != 0))
+    if (((finalButtonState == g_lastInputState) || ((g_lastInputState != 0) && ((finalButtonState & (g_lastInputState | 0xB6F))))) && (finalButtonState != 0))
     {
         // Keep only directional bits
         if ((finalButtonState & 0xF000) != 0)
@@ -745,10 +751,10 @@ void UpdateControllerInput(void)
         // Reorder face button bits 4-7 from hardware order (Triangle, Circle, Cross, Square)
         // to game order (Square, Cross, Circle, Triangle) by swapping Triangle<->Square and Circle<->Cross.
         // Keep D-pad and shoulder button bits (0-3, 8-15) unchanged.
-        processedButtons = (((((processedButtons & PAD_BTN_CIRCLE) >> 1) | ((processedButtons & PAD_BTN_CROSS) << 1)) |
-                             ((processedButtons & PAD_BTN_TRIANGLE) >> 3)) |
-                            ((processedButtons & PAD_BTN_SQUARE) << 3)) |
-                           (processedButtons & ~0xF0);
+        processedButtons =
+            (((((processedButtons & PAD_BTN_CIRCLE) >> 1) | ((processedButtons & PAD_BTN_CROSS) << 1)) | ((processedButtons & PAD_BTN_TRIANGLE) >> 3)) |
+             ((processedButtons & PAD_BTN_SQUARE) << 3)) |
+            (processedButtons & ~0xF0);
 
         if (regs->device_type != 0)
         {
