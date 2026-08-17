@@ -203,7 +203,9 @@ typedef struct
     u32 unk8;            /* 0x08 */
     u8 padC[0x1C - 0xC]; /* 0x0C */
     s32 unk1C;           /* 0x1C */
-    u8 pad20[0x25 - 0x20];
+    u8 pad20[0x21 - 0x20];
+    u8 unk21; /* 0x21 */
+    u8 pad22[0x25 - 0x22];
     u8 unk25; /* 0x25 */
     u8 pad26[0x2A - 0x26];
     s16 unk2A; /* 0x2A */
@@ -1566,9 +1568,10 @@ typedef struct
 {
     u8* start; /* 0x00 */
     u8* end;   /* 0x04 */
-    u8 pad8[1];
+    u8 unk8;   /* 0x08 */
     u8 slot_index; /* 0x09 */
-    u8 padA[6];
+    u8 padA[0xE - 0xA];
+    s16 unkE; /* 0x0E */
     u32 flags; /* 0x10 */
 } FieldResourceEntry;
 
@@ -1594,7 +1597,12 @@ extern void* g_field_resource_cursor;
 extern s32 D_801158A0;
 
 void field_relocate_resource_buffer(s32);
-void func_8006C3FC(Struct_D800FDF58*, void*);
+/*
+ * func_8006C3FC is deliberately left implicitly declared: it is called with two
+ * arguments by field_relocate_resource_buffer and with one by func_8006A9A4,
+ * and both forms are required to match. A prototype makes the one-argument call
+ * a hard error and costs field_relocate_resource_buffer 8 exact rows.
+ */
 void field_restore_default_action_animation_mappings(s32);
 s32 func_8006A88C(s32, D_800FD818_type*, s32);
 void func_8006A9A4(s32, s32, s32, s32);
@@ -1884,4 +1892,35 @@ s32 func_8006A88C(s32 arg0, D_800FD818_type* entry, s32 arg2)
             return entry->unk2 + 0xB02;
         }
     }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006A958(s32 arg0)
+{
+    s32 i;
+
+    for (i = 0; i < 0xD; i++)
+    {
+        func_8006B7A0(i, arg0);
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006A9A4(s32 resource_index, s32 slot_index, s32 arg2, s32 arg3)
+{
+    g_field_resource_entries[resource_index].unkE = 0x2F;
+    g_field_resource_entries[resource_index].slot_index = slot_index;
+    g_field_resource_entries[resource_index].unk8 = 0;
+    g_field_resource_entries[resource_index].flags =
+        (g_field_resource_entries[resource_index].flags & ~1) | (arg3 & 1);
+    g_field_resource_entries[resource_index].start = g_field_resource_cursor;
+    func_8006CAFC(arg2, slot_index, resource_index, arg3 & 1);
+    D_800FDF58[slot_index].unk21 &= 0x80;
+    func_8006C3FC(&D_800FDF58[slot_index]);
+    g_field_resource_entries[resource_index].end = g_field_resource_cursor;
+    g_field_resource_entries[resource_index].flags |= 2;
 }
