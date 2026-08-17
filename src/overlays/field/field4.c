@@ -1924,3 +1924,41 @@ void func_8006A9A4(s32 resource_index, s32 slot_index, s32 arg2, s32 arg3)
     g_field_resource_entries[resource_index].end = g_field_resource_cursor;
     g_field_resource_entries[resource_index].flags |= 2;
 }
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006AA7C(s32 arg0)
+{
+    s32 i;
+    u8* pad_base;
+    u8* pad_ptr;
+    u32 new_var;
+    s32 temp;
+
+    if (arg0 < 2)
+    {
+        func_800B08FC(0, arg0);
+        if (func_800B0850() == 0)
+        {
+            pad_base = (u8*)g_pad_ctx;
+
+            for (i = 0; i < 2; i++)
+            {
+                if (D_800FD818[i].u0.b.unk0 & 1)
+                {
+                    temp = ~0x1FF;
+                    new_var = D_800FDF58[i].unk1C & temp;
+                    temp = i * 0x250;
+                    pad_ptr = pad_base + temp;
+                    D_800FDF58[i].unk1C = new_var | ((pad_ptr[0x608] >> 7) ^ 1);
+                }
+            }
+
+            func_8008C7A8();
+            func_800B4684();
+            func_80084240();
+            func_800B01FC();
+        }
+    }
+}
