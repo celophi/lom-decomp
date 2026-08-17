@@ -60,9 +60,8 @@ segments:
       - [0x1462D, c, field1] # gcc280_g4
       - [0x17839, c, func_800674a8] # gcc280_g4
       - [0x17929, c, func_80067598] # gcc280_g4
-      - [0x17E71, c, unk1_c_tail2]
       - [0x17F1D, c, func_80067b8c] # gcc280_g4
-      - [0x17F4D, c, unk1_c_tail3]
+      - [0x17F4D, c, func_80067bbc] # gcc280_g4
       - [0x18245, c, field5] # gcc280_g4
       - [0x18341, c, unk1_f]
       - [0x18551, c, func_800681c0] # gcc272_cdk
