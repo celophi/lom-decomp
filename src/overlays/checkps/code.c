@@ -451,6 +451,16 @@ void func_800505B4(s32 arg0)
     *((u8**)(base + 0xB8)) = prim;
 }
 
+/*
+ * The original CHECKPS codegen leaves this value in $a2 across the LoadImage
+ * call. PsyQ LoadImage consumes only $a0/$a1; the linked implementation ignores
+ * $a2. Calling through an unprototyped function pointer permits the third source
+ * argument and reproduces GCC 2.7.2's original register allocation without
+ * changing the PsyQ declaration.
+ */
+#define LoadImage3(rect, data, arg2) \
+    ((s32 (*)())LoadImage)((rect), (data), (arg2))
+
 /**
  * decomp.me link (100%) https://decomp.me/scratch/VRHxF
  */
@@ -498,7 +508,10 @@ void func_800506D0(void)
     D_80061098 = *(u16*)(imageBlock + 8);
     D_80061094 = pHeader[1];
 
-    ((int (*)())LoadImage)(pRect, (u32*)(imageBlock + 0xC), D_80061098);
+    // This is a hack.
+    // The alternative is do something like:
+    // register u32 tmp asm("a2");
+    LoadImage3(pRect, (u32*)(imageBlock + 0xC), D_80061098);
 }
 
 /**
