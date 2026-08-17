@@ -790,21 +790,20 @@ void menu_cursor_up(void)
     if (item < 0)
     {
         enabled_count = 0;
-        idx = 0;
-        do
+        item = 0;
+        scan_ptr = &g_titleMenuItemFlags[0];
+
+        while (item < TITLE_MENU_SLOT_COUNT)
         {
-            scan_ptr = &g_titleMenuItemFlags[0];
-            while (idx < TITLE_MENU_SLOT_COUNT)
+            if (*scan_ptr != 0)
             {
-                if ((*scan_ptr) != 0)
-                {
-                    enabled_count++;
-                    last_enabled = idx;
-                }
-                idx++;
-                scan_ptr += 2;
-            };
-        } while (0);
+                enabled_count++;
+                last_enabled = item;
+            }
+
+            item++;
+            scan_ptr += 2;
+        }
 
         g_titleVisibleItemRank = enabled_count - 1;
         g_titleSelectedItem = (u8)last_enabled;
@@ -934,13 +933,12 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
     *((u16*)(ptr + 0x16)) = 5;      /* tpage */
     tag_mask = 0xFF000000;
     x_right = (u16)(x + width);
+    *((u16*)(ptr + 0x20)) = x_right; /* x3 */
+    *((u16*)(ptr + 0x10)) = x_right; /* x1 */
     y1_ptr = ptr + 0x12;
     *((u16*)y1_ptr) = (u16)y;       /* y1 */
     *((u16*)(ptr + 0x0A)) = (u16)y; /* y0 */
     y_bottom = (u16)(y + 0x10);
-    do
-    {
-    } while (0);
     ptr[0x1C] = (u8)u0_base; /* u2 */
     ptr[0x0C] = (u8)u0_base; /* u0 */
     u_right = (u8)(u0_base + width);
@@ -948,8 +946,6 @@ void* emit_menu_item_quad(s32* ot_head, void* prim, s32 tex_row, s16 x, s32 y, s
     *((u16*)(ptr + 0x22)) = y_bottom; /* y3 */
     *((u16*)(ptr + 0x1A)) = y_bottom; /* y2 */
     old_word = *((u32*)ptr);
-    *((u16*)(ptr + 0x20)) = x_right;   /* x3 */
-    *((u16*)(ptr + 0x10)) = x_right;   /* x1 */
     ptr[0x24] = u_right;               /* u3 */
     ptr[0x14] = u_right;               /* u1 */
     *((u16*)(ptr + 0x0E)) = clut_word; /* clut */
@@ -2051,7 +2047,8 @@ unsigned short upload_save_layout_textures(void)
     u8* data_ptr;
     u32 pixel_block_offset;
     u8* block_ptr;
-    int clut_pixels;
+    u16 clut_w;
+    u16 clut_h;
     int shift;
     u32 reload_control;
     u32 control;
@@ -2070,18 +2067,12 @@ unsigned short upload_save_layout_textures(void)
         clut_h_ptr = data_ptr + 0x12;
         control = (control & ~SAVE_TEX_MODE_MASK) | (data_ptr[4] & SAVE_TEX_MODE_MASK);
         entry_ctrl_ptr->control = control;
-        clut_pixels = (*((u16*)(data_ptr + 0x10))) * (*((u16*)clut_h_ptr));
+        clut_w = *((u16*)(data_ptr + 0x10));
+        clut_h = *((u16*)clut_h_ptr);
         pixel_block_offset = *((u32*)(data_ptr + 8));
+        setRECT(&rect, tex_entry->clut_x, tex_entry->clut_y, clut_w * clut_h, 1);
         data_ptr += 8;
-        rect.x = tex_entry->clut_x;
-        clut_pixels++;
-        clut_pixels--;
-        rect.y = tex_entry->clut_y;
-        rect.h = 1;
-        rect.w = clut_pixels;
-
-        /* The unprototyped call preserves the original unused a2 argument. */
-        ((int (*)())LoadImage)(&rect, (u_long*)(data_ptr + 0xc), clut_pixels);
+        LoadImage(&rect, (u_long*)(data_ptr + 0xc));
         block_ptr = data_ptr + pixel_block_offset;
         shift = SAVE_TEX_WIDTH_SHIFT;
         control = (reload_control = entry_ctrl_ptr->control);
@@ -2122,19 +2113,16 @@ void load_menu_layout(s32 use_alt)
     {
         src = (s32*)&g_menuLayoutTemplateDefault;
         g_scene_mode = 0xD;
+        g_music_track_index = 0;
+        g_layout_flag = 0;
     }
     else
     {
         src = (s32*)&g_menuLayoutTemplateAlt;
         g_scene_mode = 0;
+        g_music_track_index = 0;
+        g_layout_flag = 0;
     }
-    g_music_track_index = 0;
-    g_layout_flag = 0;
-
-    do
-    {
-    } while (0);
-
     i = 0;
     dst = (s32*)g_menuLayoutBuffer;
 
