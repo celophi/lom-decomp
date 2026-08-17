@@ -51,7 +51,6 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/func_800681c0.c \
 	src/overlays/field/func_800675c8.c \
 	src/overlays/field/func_80067fb0.c \
-	src/overlays/field/unk1_g.c \
 	src/overlays/field/unk2_b.c
 overlay_field_gcc_280_g0_srcs := src/overlays/field/unk2.c
 overlay_field_gcc_280_g4_srcs := src/overlays/field/func_80067bbc.c

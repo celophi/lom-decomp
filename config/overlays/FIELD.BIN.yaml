@@ -66,7 +66,6 @@ segments:
       - [0x18245, c, field5]                    # gcc280_g4, no expand-div
       - [0x18341, c, func_80067fb0]             # gcc272_cdk
       - [0x18551, c, func_800681c0]             # gcc272_cdk
-      - [0x18575, c, unk1_g]                    # gcc272_cdk
       - [0x1861D, c, field4]                    # gcc272_cdk
       - [0x1AC1D, c, unk2]                      # gcc280_g0
       - [0x53A1D, c, field_audio]               # gcc272_cdk, covers func_800A368C .. func_800A380C
