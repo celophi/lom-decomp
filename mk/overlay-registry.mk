@@ -49,6 +49,8 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field4.c \
 	src/overlays/field/field_audio.c \
 	src/overlays/field/func_800681c0.c \
+	src/overlays/field/func_800675c8.c \
+	src/overlays/field/func_80067fb0.c \
 	src/overlays/field/unk1_f.c \
 	src/overlays/field/unk1_g.c \
 	src/overlays/field/unk2_b.c

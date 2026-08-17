@@ -60,10 +60,12 @@ segments:
       - [0x1462D, c, field1] # gcc280_g4
       - [0x17839, c, func_800674a8] # gcc280_g4
       - [0x17929, c, func_80067598] # gcc280_g4
+      - [0x17959, c, func_800675c8] # gcc272_cdk
       - [0x17F1D, c, func_80067b8c] # gcc280_g4
       - [0x17F4D, c, func_80067bbc] # gcc280_g4
       - [0x18245, c, field5] # gcc280_g4
-      - [0x18341, c, unk1_f]
+      - [0x18341, c, func_80067fb0] # gcc272_cdk
+      - [0x183B9, c, unk1_f]
       - [0x18551, c, func_800681c0] # gcc272_cdk
       - [0x18575, c, unk1_g]
       - [0x1861D, c, field4]      # CDK (default)
