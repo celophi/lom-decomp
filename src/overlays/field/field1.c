@@ -17,7 +17,8 @@ typedef struct
 /** @brief Bytes 2 and 3 of the 32-bit flags word at 0x10. */
 typedef struct
 {
-    u16 _lo;                // 0x10
+    u8  unk10;              // 0x10
+    u8  unk11;              // 0x11
     u8  unk12;              // 0x12
     u8  unk13;              // 0x13
 } FlagBytes;
@@ -2438,5 +2439,40 @@ void func_8006700C(Struct_801ED0CC* st, s32 arg1)
     {
         st->unk10.flags = (st->unk10.flags & ~7) | 3;
         st->unk4A = 0;
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80067098(Struct_801ED0CC* st, u8** cursor, OtSlot* ot)
+{
+    Quad quad;
+
+    switch (st->unk10.b.unk10 & 7)
+    {
+    case 1:
+        func_80065320(st, &quad, st->unk4A);
+        func_80065D38(st, &quad, cursor, ot);
+        st->unk4A = st->unk4A + 1;
+        if (st->unk4A == 4)
+        {
+            st->unk10.flags = (st->unk10.flags & ~7) | 2;
+        }
+        break;
+    case 2:
+        func_800654E0(st, cursor, ot);
+        break;
+    case 3:
+        st->unk4A = st->unk4A + 1;
+        func_80065320(st, &quad, 4 - st->unk4A);
+        func_80065D38(st, &quad, cursor, ot);
+        if (st->unk4A == 4)
+        {
+            st->unk10.flags = st->unk10.flags & ~7;
+        }
+        break;
+    default:
+        break;
     }
 }
