@@ -1,0 +1,22 @@
+#include "common.h"
+
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padSetAct);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padSetCmd);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padSendAtLoadInfo);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padRecvAtLoadInfo);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padGetActSize);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padLoadActInfo);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_41C);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_4C4);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padSetActAlign);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_924);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_940);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padSetMainMode);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_AA0);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_AF4);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", _padCmdParaMode);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_B74);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_B88);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_BA8);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_BC8);
+INCLUDE_ASM("asm/nonmatchings/psyq/libpad/TMP_padSetAct", TMP_padSetAct_OBJ_BE8);

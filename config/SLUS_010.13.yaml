@@ -81,149 +81,149 @@ segments:
       - [0x6458, c, field_runtime]
       - [0x695C, c, field_runtime_text]
       - [0x6F64, c, card_callbacks]
-      - [0x6F6C, c, psyq/libcard/C112]
-      - [0x6F84, c, psyq/libapi/C114]
-      - [0x6F9C, c, psyq/libapi/C159]
-      - [0x6FAC, c, psyq/libapi/A08]
-      - [0x6FBC, c, psyq/libapi/A09]
-      - [0x6FCC, c, psyq/libapi/A11]
-      - [0x6FDC, c, psyq/libapi/A12]
-      - [0x6FEC, c, psyq/libapi/A36]
-      - [0x6FFC, c, psyq/libapi/A37]
-      - [0x700C, c, psyq/libapi/A50]
-      - [0x701C, c, psyq/libapi/A52]
-      - [0x702C, c, psyq/libapi/A53]
-      - [0x703C, c, psyq/libapi/A54]
-      - [0x704C, c, psyq/libapi/A67]
-      - [0x705C, c, psyq/libapi/A68]
-      - [0x706C, c, psyq/libapi/A69]
-      - [0x707C, c, psyq/libapi/A81]
-      - [0x708C, c, psyq/libapi/A91]
-      - [0x709C, c, psyq/libapi/SC2B]
-      - [0x73CC, c, psyq/libapi/FIRST]
-      - [0x766C, c, psyq/libapi/A66]
-      - [0x767C, c, psyq/libc2/bcopy]
-      - [0x76BC, c, psyq/libc2/bzero]
-      - [0x76EC, c, psyq/libc2/memcpy]
-      - [0x772C, c, psyq/libc2/memset]
-      - [0x775C, c, psyq/libc2/rand]
-      - [0x779C, c, psyq/libc2/strcat]
-      - [0x784C, c, psyq/libc2/strcmp]
-      - [0x78BC, c, psyq/libc2/strcpy]
-      - [0x790C, c, psyq/libc2/strlen]
-      - [0x794C, c, psyq/libc2/strncmp]
-      - [0x79CC, c, psyq/libc2/strncpy]
-      - [0x7A3C, c, psyq/libc2/exit]
-      - [0x7A4C, c, psyq/libcard/C171]
-      - [0x7A5C, c, psyq/libcard/C172]
-      - [0x7A6C, c, psyq/libcard/A78]
-      - [0x7A7C, c, psyq/libcard/A79]
-      - [0x7A8C, c, psyq/libcard/A80]
-      - [0x7A9C, c, psyq/libcard/A93]
-      - [0x7AAC, c, psyq/libcard/CARD]
-      - [0x7AEC, c, psyq/libcard/INIT]
-      - [0x7BEC, c, psyq/libapi/PAD]
-      - [0x7EEC, c, psyq/libapi/A18]
-      - [0x7EFC, c, psyq/libapi/A19]
-      - [0x7F0C, c, psyq/libapi/A20]
-      - [0x7F1C, c, psyq/libapi/A21]
-      - [0x7F2C, c, psyq/libapi/L02]
-      - [0x7F3C, c, psyq/libapi/L03]
-      - [0x7F4C, c, psyq/libapi/PATCH]
-      - [0x7FEC, c, psyq/libapi/C68]
-      - [0x7FFC, c, psyq/libapi/CHCLRPAD]
-      - [0x806C, c, psyq/libcard/A74]
-      - [0x807C, c, psyq/libcard/A75]
-      - [0x808C, c, psyq/libcard/A76]
-      - [0x809C, c, psyq/libcard/PATCH]
-      - [0x82BC, c, psyq/libcard/END]
-      - [0x833C, c, psyq/libcard/FORMAT]
-      - [0x86FC, c, psyq/libcard/A92]
-      - [0x870C, c, psyq/libpress/PRESS]
-      - [0x8D9C, c, psyq/libc2/PRINTF]
-      - [0x8DDC, c, psyq/libc2/PRNT]
-      - [0x947C, c, psyq/libc2/CTYPE]
-      - [0x94EC, c, psyq/libc2/MEMCHR]
-      - [0x953C, c, psyq/libc2/PUTCHAR]
-      - [0x979C, c, psyq/libpress/VLC_C]
-      - [0x9B1C, c, psyq/libpress/BUILD]
-      - [0x9C0C, c, psyq/libgpu/SYS]
-      - [0xCB3C, c, psyq/libapi/C73]
-      - [0xCB4C, c, psyq/libgpu/BREAK]
-      - [0xCD6C, c, psyq/libgpu/EXT]
-      - [0xCE6C, c, psyq/libgpu/P17]
-      - [0xCE8C, c, psyq/libgpu/P18]
-      - [0xCEAC, c, psyq/libgte/GEO_00]
-      - [0xCF7C, c, psyq/libgte/GEO_01]
-      - [0xD01C, c, psyq/libgte/COR_02]
-      - [0xD0EC, c, psyq/libgte/COR_01]
-      - [0xD20C, c, psyq/libgte/COR_03]
-      - [0xD3F4, c, psyq/libgte/MSC00]
-      - [0xD47C, c, psyq/libgte/MSC01]
-      - [0xD50C, c, psyq/libgte/MSC02]
-      - [0xD7BC, c, psyq/libgte/MTX_003]
-      - [0xD91C, c, psyq/libgte/MTX_004]
-      - [0xDA7C, c, psyq/libgte/MTX_006]
-      - [0xDBCC, c, psyq/libgte/MTX_07]
-      - [0xDBFC, c, psyq/libgte/MTX_08]
-      - [0xDD3C, c, psyq/libgte/MTX_09]
-      - [0xDD6C, c, psyq/libgte/MTX_12]
-      - [0xDD8C, c, psyq/libgte/REG12]
-      - [0xDDAC, c, psyq/libgte/REG13]
-      - [0xDDBC, c, psyq/libgte/SMP_05]
-      - [0xDDEC, c, psyq/libgte/FGO_01]
-      - [0xE07C, c, psyq/libgte/FGO_04]
-      - [0xE21C, c, psyq/libgte/FGO_05]
-      - [0xE3BC, c, psyq/libgte/FGO_06]
-      - [0xE55C, c, psyq/libgte/RMAT_01]
-      - [0xE76C, c, psyq/libgte/RATAN]
-      - [0xE8EC, c, psyq/libgte/PATCHGTE]
-      - [0xE9CC, c, psyq/libcd/EVENT]
-      - [0xEB1C, c, psyq/libapi/A07]
-      - [0xEB2C, c, psyq/libcd/SYS]
-      - [0xF13C, c, psyq/libcd/BIOS]
-      - [0x108AC, c, psyq/libc2/PUTS]
-      - [0x1090C, c, psyq/libcd/TYPE]
-      - [0x10BBC, c, psyq/libcd/S_002]
-      - [0x10D4C, c, psyq/libetc/VSYNC]
-      - [0x10F5C, c, psyq/libapi/L10]
-      - [0x10F6C, c, psyq/libetc/INTR]
-      - [0x1162C, c, psyq/libapi/A23]
-      - [0x1163C, c, psyq/libapi/A24]
-      - [0x1164C, c, psyq/libapi/A25]
-      - [0x1165C, c, psyq/libc2/SETJMP]
-      - [0x116DC, c, psyq/libetc/INTR_VB]
-      - [0x117FC, c, psyq/libetc/INTR_DMA]
-      - [0x11A9C, c, psyq/libetc/VMODE]
-      - [0x11ACC, c, psyq/libspu/S_I]
-      - [0x11AEC, c, psyq/libspu/S_INI]
-      - [0x11C4C, c, psyq/libspu/SPU]
-      - [0x1278C, c, psyq/libspu/S_DCB]
+      - [0x6F6C, c, psyq/libcard/C112]               # psyq: version undetermined (debug/variant build)
+      - [0x6F84, c, psyq/libapi/C114]                # psyq: version-agnostic
+      - [0x6F9C, c, psyq/libapi/C159]                # psyq: version-agnostic
+      - [0x6FAC, c, psyq/libapi/A08]                 # psyq: version-agnostic
+      - [0x6FBC, c, psyq/libapi/A09]                 # psyq: version-agnostic
+      - [0x6FCC, c, psyq/libapi/A11]                 # psyq: version-agnostic
+      - [0x6FDC, c, psyq/libapi/A12]                 # psyq: version-agnostic
+      - [0x6FEC, c, psyq/libapi/A36]                 # psyq: version-agnostic
+      - [0x6FFC, c, psyq/libapi/A37]                 # psyq: version-agnostic
+      - [0x700C, c, psyq/libapi/A50]                 # psyq: version-agnostic
+      - [0x701C, c, psyq/libapi/A52]                 # psyq: version-agnostic
+      - [0x702C, c, psyq/libapi/A53]                 # psyq: version-agnostic
+      - [0x703C, c, psyq/libapi/A54]                 # psyq: version-agnostic
+      - [0x704C, c, psyq/libapi/A67]                 # psyq: version-agnostic
+      - [0x705C, c, psyq/libapi/A68]                 # psyq: version-agnostic
+      - [0x706C, c, psyq/libapi/A69]                 # psyq: version-agnostic
+      - [0x707C, c, psyq/libapi/A81]                 # psyq: version-agnostic
+      - [0x708C, c, psyq/libapi/A91]                 # psyq: version-agnostic
+      - [0x709C, c, psyq/libapi/SC2B]                # psyq 4.1-4.6
+      - [0x73CC, c, psyq/libapi/FIRST]               # psyq 4.3-4.6
+      - [0x766C, c, psyq/libapi/A66]                 # psyq: version-agnostic
+      - [0x767C, c, psyq/libc2/bcopy]                # psyq 4.1-4.6
+      - [0x76BC, c, psyq/libc2/bzero]                # psyq 4.1-4.6
+      - [0x76EC, c, psyq/libc2/memcpy]               # psyq 4.1-4.6
+      - [0x772C, c, psyq/libc2/memset]               # psyq 4.1-4.6
+      - [0x775C, c, psyq/libc2/rand]                 # psyq 4.1-4.6
+      - [0x779C, c, psyq/libc2/strcat]               # psyq 4.1-4.6
+      - [0x784C, c, psyq/libc2/strcmp]               # psyq 4.1-4.6
+      - [0x78BC, c, psyq/libc2/strcpy]               # psyq 4.1-4.6
+      - [0x790C, c, psyq/libc2/strlen]               # psyq 4.1-4.6
+      - [0x794C, c, psyq/libc2/strncmp]              # psyq 4.1-4.6
+      - [0x79CC, c, psyq/libc2/strncpy]              # psyq 4.1-4.6
+      - [0x7A3C, c, psyq/libc2/exit]                 # psyq: version-agnostic
+      - [0x7A4C, c, psyq/libcard/C171]               # psyq: version-agnostic
+      - [0x7A5C, c, psyq/libcard/C172]               # psyq: version-agnostic
+      - [0x7A6C, c, psyq/libcard/A78]                # psyq: version-agnostic
+      - [0x7A7C, c, psyq/libcard/A79]                # psyq: version-agnostic
+      - [0x7A8C, c, psyq/libcard/A80]                # psyq: version-agnostic
+      - [0x7A9C, c, psyq/libcard/A93]                # psyq: version-agnostic
+      - [0x7AAC, c, psyq/libcard/CARD]               # psyq 4.1-4.6
+      - [0x7AEC, c, psyq/libcard/INIT]               # psyq 4.5-4.6
+      - [0x7BEC, c, psyq/libapi/PAD]                 # psyq 4.3-4.5
+      - [0x7EEC, c, psyq/libapi/A18]                 # psyq: version-agnostic
+      - [0x7EFC, c, psyq/libapi/A19]                 # psyq: version-agnostic
+      - [0x7F0C, c, psyq/libapi/A20]                 # psyq: version-agnostic
+      - [0x7F1C, c, psyq/libapi/A21]                 # psyq: version-agnostic
+      - [0x7F2C, c, psyq/libapi/L02]                 # psyq: version-agnostic
+      - [0x7F3C, c, psyq/libapi/L03]                 # psyq: version-agnostic
+      - [0x7F4C, c, psyq/libapi/PATCH]               # psyq 4.1-4.6
+      - [0x7FEC, c, psyq/libapi/C68]                 # psyq: version-agnostic
+      - [0x7FFC, c, psyq/libapi/CHCLRPAD]            # psyq 4.1-4.6
+      - [0x806C, c, psyq/libcard/A74]                # psyq: version-agnostic
+      - [0x807C, c, psyq/libcard/A75]                # psyq: version-agnostic
+      - [0x808C, c, psyq/libcard/A76]                # psyq: version-agnostic
+      - [0x809C, c, psyq/libcard/PATCH]              # psyq 4.5-4.6
+      - [0x82BC, c, psyq/libcard/END]                # psyq 4.1-4.6
+      - [0x833C, c, psyq/libcard/FORMAT]             # psyq 4.5
+      - [0x86FC, c, psyq/libcard/A92]                # psyq: version-agnostic
+      - [0x870C, c, psyq/libpress/PRESS]             # psyq 4.6
+      - [0x8D9C, c, psyq/libc2/PRINTF]               # psyq 4.1-4.6
+      - [0x8DDC, c, psyq/libc2/PRNT]                 # psyq 4.1-4.6
+      - [0x947C, c, psyq/libc2/CTYPE]                # psyq 4.1-4.6
+      - [0x94EC, c, psyq/libc2/MEMCHR]               # psyq 4.1-4.6
+      - [0x953C, c, psyq/libc2/PUTCHAR]              # psyq 4.1-4.6
+      - [0x979C, c, psyq/libpress/VLC_C]             # psyq 4.3-4.6
+      - [0x9B1C, c, psyq/libpress/BUILD]             # psyq 4.1-4.6
+      - [0x9C0C, c, psyq/libgpu/SYS]                 # psyq: version undetermined (debug/variant build)
+      - [0xCB3C, c, psyq/libapi/C73]                 # psyq: version-agnostic
+      - [0xCB4C, c, psyq/libgpu/BREAK]               # psyq 4.4-4.6
+      - [0xCD6C, c, psyq/libgpu/EXT]                 # psyq 4.4-4.6
+      - [0xCE6C, c, psyq/libgpu/P17]                 # psyq 4.3-4.6
+      - [0xCE8C, c, psyq/libgpu/P18]                 # psyq 4.3-4.6
+      - [0xCEAC, c, psyq/libgte/GEO_00]              # psyq 4.1-4.6
+      - [0xCF7C, c, psyq/libgte/GEO_01]              # psyq 4.1-4.6
+      - [0xD01C, c, psyq/libgte/COR_02]              # psyq 4.1-4.6
+      - [0xD0EC, c, psyq/libgte/COR_01]              # psyq 4.1-4.6
+      - [0xD20C, c, psyq/libgte/COR_03]              # psyq 4.1-4.6
+      - [0xD3F4, c, psyq/libgte/MSC00]               # psyq: version-agnostic
+      - [0xD47C, c, psyq/libgte/MSC01]               # psyq 4.1-4.6
+      - [0xD50C, c, psyq/libgte/MSC02]               # psyq 4.1-4.6
+      - [0xD7BC, c, psyq/libgte/MTX_003]             # psyq: version-agnostic
+      - [0xD91C, c, psyq/libgte/MTX_004]             # psyq 4.1-4.6
+      - [0xDA7C, c, psyq/libgte/MTX_006]             # psyq 4.1-4.6
+      - [0xDBCC, c, psyq/libgte/MTX_07]              # psyq: version-agnostic
+      - [0xDBFC, c, psyq/libgte/MTX_08]              # psyq 4.1-4.6
+      - [0xDD3C, c, psyq/libgte/MTX_09]              # psyq: version-agnostic
+      - [0xDD6C, c, psyq/libgte/MTX_12]              # psyq: version-agnostic
+      - [0xDD8C, c, psyq/libgte/REG12]               # psyq: version-agnostic
+      - [0xDDAC, c, psyq/libgte/REG13]               # psyq: version-agnostic
+      - [0xDDBC, c, psyq/libgte/SMP_05]              # psyq: version-agnostic
+      - [0xDDEC, c, psyq/libgte/FGO_01]              # psyq: version-agnostic
+      - [0xE07C, c, psyq/libgte/FGO_04]              # psyq: version-agnostic
+      - [0xE21C, c, psyq/libgte/FGO_05]              # psyq: version-agnostic
+      - [0xE3BC, c, psyq/libgte/FGO_06]              # psyq: version-agnostic
+      - [0xE55C, c, psyq/libgte/RMAT_01]             # psyq 4.1-4.6
+      - [0xE76C, c, psyq/libgte/RATAN]               # psyq 4.1-4.6
+      - [0xE8EC, c, psyq/libgte/PATCHGTE]            # psyq 4.1-4.6
+      - [0xE9CC, c, psyq/libcd/EVENT]                # psyq 4.3-4.6
+      - [0xEB1C, c, psyq/libapi/A07]                 # psyq: version-agnostic
+      - [0xEB2C, c, psyq/libcd/SYS]                  # psyq 4.5
+      - [0xF13C, c, psyq/libcd/BIOS]                 # psyq 4.6
+      - [0x108AC, c, psyq/libc2/PUTS]                # psyq 4.1-4.6
+      - [0x1090C, c, psyq/libcd/TYPE]                # psyq 4.5
+      - [0x10BBC, c, psyq/libcd/S_002]               # psyq 4.5
+      - [0x10D4C, c, psyq/libetc/VSYNC]              # psyq 4.1-4.6
+      - [0x10F5C, c, psyq/libapi/L10]                # psyq: version-agnostic
+      - [0x10F6C, c, psyq/libetc/INTR]               # psyq 4.1-4.6
+      - [0x1162C, c, psyq/libapi/A23]                # psyq: version-agnostic
+      - [0x1163C, c, psyq/libapi/A24]                # psyq: version-agnostic
+      - [0x1164C, c, psyq/libapi/A25]                # psyq: version-agnostic
+      - [0x1165C, c, psyq/libc2/SETJMP]              # psyq: version-agnostic
+      - [0x116DC, c, psyq/libetc/INTR_VB]            # psyq 4.1-4.6
+      - [0x117FC, c, psyq/libetc/INTR_DMA]           # psyq 4.1-4.6
+      - [0x11A9C, c, psyq/libetc/VMODE]              # psyq 4.1-4.6
+      - [0x11ACC, c, psyq/libspu/S_I]                # psyq 4.1-4.6
+      - [0x11AEC, c, psyq/libspu/S_INI]              # psyq 4.1-4.6
+      - [0x11C4C, c, psyq/libspu/SPU]                # psyq: version undetermined (debug/variant build)
+      - [0x1278C, c, psyq/libspu/S_DCB]              # psyq 4.1-4.6
       - [0x127BC, c, akao_cmd]
-      - [0x13BC8, c, psyq/libspu/S_SI]
-      - [0x13D08, c, psyq/libspu/S_SIA]
-      - [0x13D48, c, psyq/libspu/S_STSA]
+      - [0x13BC8, c, psyq/libspu/S_SI]               # psyq 4.1-4.6
+      - [0x13D08, c, psyq/libspu/S_SIA]              # psyq 4.1-4.6
+      - [0x13D48, c, psyq/libspu/S_STSA]             # psyq 4.1-4.6
       - [0x13DA8, c, akao_driver]
-      - [0x14480, c, psyq/libapi/A13]
-      - [0x14490, c, psyq/libapi/A32]
-      - [0x144A0, c, psyq/libapi/COUNTER]
-      - [0x14610, c, psyq/libspu/S_Q]
-      - [0x14690, c, psyq/libspu/S_M_INIT]
-      - [0x146F0, c, psyq/libspu/S_SR]
-      - [0x147C0, c, psyq/libspu/S_M_UTIL]
-      - [0x148D0, c, psyq/libspu/S_SIC]
-      - [0x14910, c, psyq/libspu/S_CB]
-      - [0x14940, c, psyq/libspu/S_R]
-      - [0x149A0, c, psyq/libspu/S_W]
-      - [0x14A00, c, psyq/libspu/S_STM]
-      - [0x14A30, c, psyq/libspu/S_STC]
+      - [0x14480, c, psyq/libapi/A13]                # psyq: version-agnostic
+      - [0x14490, c, psyq/libapi/A32]                # psyq: version-agnostic
+      - [0x144A0, c, psyq/libapi/COUNTER]            # psyq 4.1-4.6
+      - [0x14610, c, psyq/libspu/S_Q]                # psyq 4.1-4.6
+      - [0x14690, c, psyq/libspu/S_M_INIT]           # psyq 4.1-4.6
+      - [0x146F0, c, psyq/libspu/S_SR]               # psyq 4.1-4.6
+      - [0x147C0, c, psyq/libspu/S_M_UTIL]           # psyq 4.1-4.6
+      - [0x148D0, c, psyq/libspu/S_SIC]              # psyq 4.1-4.6
+      - [0x14910, c, psyq/libspu/S_CB]               # psyq 4.1-4.6
+      - [0x14940, c, psyq/libspu/S_R]                # psyq 4.1-4.6
+      - [0x149A0, c, psyq/libspu/S_W]                # psyq 4.1-4.6
+      - [0x14A00, c, psyq/libspu/S_STM]              # psyq 4.1-4.6
+      - [0x14A30, c, psyq/libspu/S_STC]              # psyq 4.1-4.6
       - [0x14A60, c, akao_voice]
       - [0x16538, c, unk9]
-      - [0x1998C, c, psyq/libspu/S_SRMT]
-      - [0x19B5C, c, psyq/libspu/S_SRA]
-      - [0x1A02C, c, psyq/libspu/S_CRWA]
-      - [0x1A1CC, c, psyq/libapi/A10]
-      - [0x1A1DC, c, psyq/libspu/S_GRMT]
+      - [0x1998C, c, psyq/libspu/S_SRMT]             # psyq 4.1-4.6
+      - [0x19B5C, c, psyq/libspu/S_SRA]              # psyq 4.1-4.6
+      - [0x1A02C, c, psyq/libspu/S_CRWA]             # psyq 4.1-4.6
+      - [0x1A1CC, c, psyq/libapi/A10]                # psyq: version-agnostic
+      - [0x1A1DC, c, psyq/libspu/S_GRMT]             # psyq 4.1-4.6
       - [0x1A1EC, c, decomp4]
       - [0x1D8DC, c, decomp11] # -G4  AKAO XA/SFX driver (36 funcs 0x8002D0DC..0x8002E7A8)
       - [0x1EFA8, c, unk8]                    # crt0/relocation glue (0x8002E7A8..0x8002E938)
