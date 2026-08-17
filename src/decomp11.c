@@ -264,7 +264,7 @@ void func_8002D254(void)
 }
 
 /**
- * @see decomp.me (99.51%)
+ * @see decomp.me (100%)
  */
 void func_8002D29C(void *arg0, s32 arg1, s32 flag)
 {
@@ -304,6 +304,8 @@ void func_8002D29C(void *arg0, s32 arg1, s32 flag)
     s32 lead;
     u32 nmask;
     XaTracker *t;
+    XaTracker *u;
+    XaTracker *p;
     SfxControl *sc;
 
     slot = func_8002D1C4();
@@ -335,6 +337,7 @@ void func_8002D29C(void *arg0, s32 arg1, s32 flag)
     SpuSetTransferMode(0);
     SpuSetTransferStartAddr(0x1100);
     g_akao_spu_xfer_pending = 1;
+    p = &g_akao_xa_tracker;
 
     if (g_akao_xa_tracker.unk8 & 2)
     {
@@ -346,10 +349,11 @@ void func_8002D29C(void *arg0, s32 arg1, s32 flag)
     }
 
     t = &g_akao_xa_tracker;
-    t->unk4 = xfer;
+    p->unk4 = xfer;
 
     if (t->unk8 & 1)
     {
+        u = t;
         if (t->unk8 & 2)
         {
             lead = t->unk14 - ((u32)hdr->unk14 >> 1);
@@ -358,7 +362,7 @@ void func_8002D29C(void *arg0, s32 arg1, s32 flag)
         {
             lead = 0;
         }
-        t->unk1C = lead;
+        u->unk1C = lead;
         SpuSetTransferCallback(func_8002D7C8);
         size = 0x2000;
     }
@@ -1069,7 +1073,7 @@ s32 func_8002E294(s32 *p)
 }
 
 /**
- * @see decomp.me (97.89%)
+ * @see decomp.me (100%)
  */
 void func_8002E2E8(void)
 {
@@ -1106,7 +1110,7 @@ void func_8002E2E8(void)
         s32 unk58;       /* 0x58 */
     } XaTrk;
     extern XaTrk g_akao_xa_tracker;
-    extern s32 g_akao_spu_xfer_pending;
+    extern volatile s32 g_akao_spu_xfer_pending;
 
     s32 ch;
     XaTrk *p;

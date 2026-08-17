@@ -874,7 +874,12 @@ WaitEvent                           = 0x800299CC;
 // psyq/libspu/S_GRMT
 SpuGetReverbModeType                = 0x800299DC;
 
-__main                              = 0x8002E850;
+// psyq/libsn/SNMAIN
+__SN_ENTRY_POINT                     = 0x8002E7A8;
+__main                               = 0x8002E850;
+__do_global_dtors                    = 0x8002E8C0;
+
+InitHeap                             = 0x8002E928;
 
 // psyq/libpad
 PadChkVsync                         = 0x8002E938;
