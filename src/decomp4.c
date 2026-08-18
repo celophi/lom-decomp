@@ -764,7 +764,7 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
  * @param next_opcode Next-note opcode from akao_seq_skip_to_next_note; passed
  *        by the caller but not consumed by the current body. TODO: the
  *        original likely uses this; reconstructing it may close the 93% gap.
- * @see decomp.me (93.41%) https://decomp.me/scratch/0tdrk
+ * @see decomp.me (100%) https://decomp.me/scratch/0tdrk
  */
 void akao_bind_articulation_for_key(u8* channel, u32 key, s32 next_opcode)
 {
@@ -781,21 +781,19 @@ void akao_bind_articulation_for_key(u8* channel, u32 key, s32 next_opcode)
     if (((u32)temp_v1 < key) || (temp_v1 == 0xFF))
     {
         a2 = *(u8**)(a0 + 0x18);
-        v1 = a2 + 0xD;
         if (a2[0xD] != 0)
         {
-            while (*v1 != 0)
-            {
-                if (key <= (u8)v1[-0xB])
-                {
-                    break;
-                }
-                v1 += 8;
-                a2 += 8;
-            }
+            v1 = a2 + 0xD;
+loop_first_288:
+            if ((u8)v1[-0xB] >= key) goto search_done_288;
+            v1 += 8;
+            a2 += 8;
+            if (*v1 == 0) goto search_done_288;
+            goto loop_first_288;
         }
+        goto search_done_288;
     }
-    else if (key < *(s16*)((u8*)channel + 0xEE))
+    else if (key < *(s16*)((u8*)((((u32)a0 & key) | ((u32)a0 & ~key))) + 0xEE))
     {
 
         a2 = *(u8**)(channel + 0x18);
@@ -818,6 +816,7 @@ void akao_bind_articulation_for_key(u8* channel, u32 key, s32 next_opcode)
         return;
     }
 
+search_done_288:
     temp_a3 = *((u32*)(channel + 0x34));
     new_var2 = a2[0];
     a1 = g_akao_articulation_slots + (new_var2 * 0x10);
