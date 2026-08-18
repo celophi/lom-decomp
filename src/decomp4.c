@@ -563,13 +563,14 @@ extern u8 g_akao_opcode_len_table_ext[];
 extern u8 g_akao_opcode_len_table[];
 
 /**
- * decomp.me (78.79%) https://decomp.me/scratch/52mKD
+ * decomp.me (100%) https://decomp.me/scratch/52mKD
  */
 u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
 {
     u8* var_a1 = (u8*)arg0->seq_cursor;
-    u8* new_var;
     u32 var_a2 = arg0->loop_depth;
+    u8 new_var;
+    s32 lo;
     while (1)
     {
         u8 temp_v1 = *var_a1;
@@ -579,17 +580,18 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
             {
                 arg0->note_flags &= 0xFFFA;
             }
-            new_var = var_a1;
-            return *new_var;
+            new_var = *var_a1;
+            return new_var;
         }
         if (temp_v1 < 0xA0)
         {
             return 0xA0;
         }
-        temp_v1 = *new_var;
+        new_var = *(u8*)((((u32)var_a1 & var_a2) | ((u32)var_a1 & ~var_a2)));
+        temp_v1 = new_var;
         {
             u8 lookup = g_akao_opcode_len_table[temp_v1 - 0xA0];
-            if (0 != lookup)
+            if (lookup != 0)
             {
                 var_a1 += lookup;
                 continue;
@@ -598,56 +600,35 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
             {
             case 0xC9:
                 goto L_C9_common;
-
             case 0xCA:
                 goto L_CA_common;
-
             case 0xCB:
-
             case 0xCD:
-
             case 0xD1:
-
             case 0xDB:
                 goto L_CB_common;
-
             case 0xF0:
-
             case 0xF1:
-
             case 0xF2:
-
             case 0xF3:
-
             case 0xF4:
-
             case 0xF5:
-
             case 0xF6:
-
             case 0xF7:
-
             case 0xF8:
-
             case 0xF9:
-
             case 0xFA:
-
             case 0xFB:
                 return 0x83;
-
             case 0xFC:
                 return 0x84;
-
             case 0xFD:
                 return 0x8F;
-
             case 0xFE:
-            {
                 var_a1++;
                 temp_v1 = *var_a1;
                 lookup = g_akao_opcode_len_table_ext[temp_v1];
-                if (lookup != (0 & 0xFFFFu))
+                if (lookup != 0)
                 {
                     var_a1 += lookup;
                     continue;
@@ -656,106 +637,77 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
                 {
                 case 0:
                     var_a1++;
-                    if ((*var_a1) == (arg0->loop_count[var_a2] + 1))
+                    if (*var_a1 == arg0->loop_count[var_a2] + 1)
                     {
                         var_a1++;
-                        var_a2 = (var_a2 - 1) & 3;
-                        var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
+                        var_a2--;
+                        var_a2 &= 3;
+                        lo = var_a1[0]; lo += var_a1[1] * 256; var_a1 += (s16)lo;
                     }
                     else
                     {
                         var_a1 += 3;
                     }
                     continue;
-
                 case 1:
                     var_a1++;
+                    lo = var_a1[0]; lo += var_a1[1] * 256; var_a1 += (s16)lo;
                     continue;
-                    var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
-
                 case 2:
                     var_a1++;
-                    do
+                    if (g_akao_seq_channel0->unk60 >= *var_a1++)
                     {
-                        if (g_akao_seq_channel0->unk60 < (*var_a1))
-                        {
-                            var_a1++;
-                            var_a1 += 2;
-                        }
-                        else
-                        {
-                            var_a1++;
-                            var_a1 += (s16)((var_a1[1] << (8 ^ 0)) + var_a1[0]);
-                        }
-                    } while (0);
+                        lo = var_a1[0]; lo += var_a1[1] * 256; var_a1 += (s16)lo;
+                    }
+                    else
+                    {
+                        var_a1 += 2;
+                    }
                     continue;
-
                 case 3:
-                    /* 0x14 in the channel role is the subroutine return
-                     * cursor, not a mask - this is the FE 0F "return" op. */
                     var_a1 = (u8*)arg0->note_on_mask;
                     continue;
-
                 case 4:
                     goto L_C9_common;
-
                 case 5:
                     goto L_CB_common;
-
                 case 6:
                     goto L_CA_common;
-
                 case 7:
-
                 case 8:
-
                 case 9:
                     goto labelA;
                 }
-
                 continue;
-            }
-
             default:
                 goto labelA;
             }
 
         L_C9_common:
             var_a1++;
-
-            if ((*var_a1) == (arg0->loop_count[var_a2] + 1))
+            if (*var_a1 == arg0->loop_count[var_a2] + 1)
             {
                 var_a1++;
-                var_a2 = (var_a2 - 1) & 3;
+                var_a2--;
+                var_a2 &= 3;
             }
             else
             {
-                /* 0x04..0x10 in the channel role is the loop-start cursor stack. */
-/* The original reaches the loop stack through a pointer here, not
-                 * as an array member as the loop opcodes do - the two spellings
-                 * produce a different addu operand order. */
-                var_a1 = ((u8**)&arg0->w04.song.active_mask)[var_a2];
+                var_a1 = arg0->w04.loop_cursor[var_a2];
             }
             continue;
         L_CB_common:
             arg0->note_flags &= 0xFFFA;
-
             var_a1++;
             continue;
         L_CA_common:
             if (!((u32)arg0->flags & 0x200000))
             {
-                /* 0x04..0x10 in the channel role is the loop-start cursor stack. */
-/* The original reaches the loop stack through a pointer here, not
-                 * as an array member as the loop opcodes do - the two spellings
-                 * produce a different addu operand order. */
-                var_a1 = ((u8**)&arg0->w04.song.active_mask)[var_a2];
+                var_a1 = arg0->w04.loop_cursor[var_a2];
                 continue;
             }
-
         labelA:
             arg0->note_flags &= 0xFFFA;
-
             return 0xA0;
         }
     }
