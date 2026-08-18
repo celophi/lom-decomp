@@ -828,6 +828,8 @@ akao_flag_all_volume_updates           = 0x80028918;
 akao_flag_all_pan_updates               = 0x8002897C;
 akao_set_mode_flag_and_flag_all_channels = 0x800289E0;
 akao_seq_set_unk60                     = 0x80028A20;
+akao_seq_silence_unused_voices_and_pause = 0x80028A34;
+akao_seq_resume_and_apply_pending_voices = 0x80028B28;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;

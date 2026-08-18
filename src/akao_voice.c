@@ -4108,3 +4108,91 @@ void akao_seq_set_unk60(u16* param)
 {
     g_akao_seq_channel0->unk60 = *param;
 }
+
+/**
+ * @brief Silence every SPU voice not currently claimed by an SFX channel
+ *        or the XA/streaming reservation, park the primary song's
+ *        active_mask into unk1C (pausing it without releasing voices),
+ *        and set the driver "paused" mode bit.
+ * @see decomp.me (100%)
+ */
+void akao_seq_silence_unused_voices_and_pause(void)
+{
+    s32 keep_mask;
+    s32 bit;
+    s32 voice;
+    s32 active_mask;
+    s32 mode;
+
+    if (g_akao_seq_channel0->w04.song.active_mask != 0)
+    {
+        keep_mask = ~(g_akao_sfx_control.unk0 | D_8004F76C[0]) & 0xFFFFFF;
+        if (keep_mask != 0)
+        {
+            bit = 1;
+            voice = 0;
+            do
+            {
+                if (keep_mask & bit)
+                {
+                    spu_set_voice_volume(voice, 0, 0, 0);
+                    spu_set_voice_pitch(voice, 0);
+                    spu_set_voice_attack(voice, 0x7F, 1);
+                    spu_set_voice_sustain_mode(voice, 0x7F, 3);
+                    keep_mask &= ~bit;
+                }
+                bit <<= 1;
+                voice++;
+            } while (keep_mask != 0);
+        }
+        active_mask = g_akao_seq_channel0->w04.song.active_mask;
+        g_akao_seq_channel0->w04.song.active_mask = 0;
+        g_akao_seq_channel0->unk1C = active_mask;
+    }
+    mode = g_akao_driver_mode_flags;
+    mode |= 1;
+    g_akao_driver_mode_flags = mode;
+}
+
+/**
+ * @brief Resume the primary song from the paused state set by
+ *        akao_seq_silence_unused_voices_and_pause: restore active_mask
+ *        from unk1C, flag every channel that was parked for a full SPU
+ *        re-apply, and clear the driver "paused" mode bit.
+ * @see decomp.me (100%)
+ */
+void akao_seq_resume_and_apply_pending_voices(void)
+{
+    s32 raw_mask;
+    s32 mask;
+    s32 bit;
+    AkaoChannelState* channel;
+    s32 saved_mask;
+    s32 mode;
+
+    raw_mask = g_akao_seq_channel0->unk1C;
+    if (raw_mask != 0)
+    {
+        mask = raw_mask;
+        bit = 1;
+        channel = (AkaoChannelState*)g_akao_seq_channels;
+        do
+        {
+            if (mask & bit)
+            {
+                mask &= ~bit;
+                channel->update_flags |= 0x2B13;
+            }
+            bit <<= 1;
+            channel++;
+        } while (mask != 0);
+
+        saved_mask = g_akao_seq_channel0->unk1C;
+        g_akao_seq_channel0->unk1C = 0;
+        g_akao_seq_channel0->w04.song.active_mask = saved_mask;
+        g_akao_driver_flags.unk8 |= 0x100;
+    }
+    mode = g_akao_driver_mode_flags;
+    mode &= ~1;
+    g_akao_driver_mode_flags = mode;
+}
