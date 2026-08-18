@@ -820,6 +820,11 @@ akao_fade_master_pan                   = 0x8002858C;
 akao_fade_master_pan_from               = 0x800285F8;
 akao_set_driver_master_volume          = 0x80028674;
 akao_fade_driver_master_volume         = 0x80028694;
+akao_fade_driver_master_volume_from    = 0x80028700;
+akao_seq_stop_all_songs               = 0x8002877C;
+akao_seq_stop_song_by_key             = 0x800287D0;
+akao_sfx_release_all_channels          = 0x8002883C;
+akao_flag_all_volume_updates           = 0x80028918;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;

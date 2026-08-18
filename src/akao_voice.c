@@ -3985,3 +3985,79 @@ void akao_fade_driver_master_volume_from(u8* params)
     g_akao_mastervol_fade_ticks = ticks;
     g_akao_mastervol_step = step;
 }
+
+/**
+ * @brief Unconditionally stop the primary song, and the secondary song
+ *        too if one is loaded.
+ * @see decomp.me (100%)
+ */
+void akao_seq_stop_all_songs(void)
+{
+    akao_seq_stop_song(g_akao_seq_channel0, (AkaoChannelState*)g_akao_seq_channels, 0);
+    if (g_akao_seq_channel1 != NULL)
+    {
+        akao_seq_stop_song(g_akao_seq_channel1, (AkaoChannelState*)g_akao_pending_channels, 0);
+    }
+}
+
+/**
+ * @brief Stop the primary song by key, and the secondary song too if one
+ *        is loaded and the key is nonzero.
+ * @param params Song key at +0x0; see akao_seq_stop_song.
+ * @see decomp.me (100%)
+ */
+void akao_seq_stop_song_by_key(u8* params)
+{
+    s32 song_key;
+
+    akao_seq_stop_song(g_akao_seq_channel0, (AkaoChannelState*)g_akao_seq_channels, *(s32*)(params + 0x0));
+    if (g_akao_seq_channel1 != NULL)
+    {
+        song_key = *(s32*)(params + 0x0);
+        if (song_key != 0)
+        {
+            akao_seq_stop_song(g_akao_seq_channel1, (AkaoChannelState*)g_akao_pending_channels, song_key);
+        }
+    }
+}
+
+/**
+ * @brief Release every active, non-suppressed SFX channel and clear its
+ *        flags word.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_release_all_channels(void)
+{
+    AkaoChannelState* channel;
+    s32 bit;
+    u32 count;
+
+    channel = (AkaoChannelState*)g_sfx_channels;
+    bit = 0x1000;
+    for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+    {
+        if ((g_akao_sfx_control.unk0 & bit) && !(channel->tempo_acc & 0x02000000))
+        {
+            g_akao_sfx_control.unkC |= bit;
+            akao_sfx_release_channels(channel, bit);
+            channel->flags = 0;
+        }
+    }
+    g_akao_driver_flags.unk8 |= 0x110;
+}
+
+/**
+ * @brief Flag every channel of every active song and every active SFX
+ *        channel for a pending SPU volume re-apply.
+ * @see decomp.me (100%)
+ */
+void akao_flag_all_volume_updates(void)
+{
+    D_8004F754[0] = 1;
+    akao_seq_flag_volume_update(g_akao_seq_channel0, (AkaoChannelState*)g_akao_seq_channels);
+    if (g_akao_seq_channel1 != NULL)
+    {
+        akao_seq_flag_volume_update(g_akao_seq_channel1, (AkaoChannelState*)g_akao_pending_channels);
+    }
+    akao_sfx_flag_volume_update();
+}
