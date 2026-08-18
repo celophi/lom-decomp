@@ -403,9 +403,15 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
  * @c D_8003D160 timing ring used for profiling.
  *
  * @note @c D_8004D40C, @c D_8004F758, and @c D_8004D408 are declared as
- *       single-element arrays (not scalars) because that is the shape the
- *       verified GCC 2.8.0 match requires.
- * @see decomp.me (100%) https://decomp.me/scratch/ICO2k
+ *       single-element arrays (not scalars) to match the source shape used
+ *       for this scratch.
+ * @note NOT YET 100% (96.52%, 220/238 exact). Residue is confined to the
+ *       third-conditional OR-chain region: the target hoists D_8004F758's
+ *       %hi into several earlier branch delay slots (a CSE-FOLD reuse of
+ *       g_akao_seq_channel0 also differs there); the SFX loop and the
+ *       D_8003D160 profiling tail are fully exact. See
+ *       working/akao_irq_handler/status.md for history.
+ * @see decomp.me (96.52%) https://decomp.me/scratch/ICO2k
  */
 void akao_irq_handler(void)
 {

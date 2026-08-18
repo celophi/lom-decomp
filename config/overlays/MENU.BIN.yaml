@@ -39,7 +39,7 @@ segments:
   - name: menu
     type: decompress_overlay
     start: 0x1
-    vram: 0x80140000 #This is incorrect fix it later when we know the correct VRAM address
+    vram: 0x80140000
     subsegments:
       - [0x1, .rodata, menu]
       - [0x544, .rodata, unk1]

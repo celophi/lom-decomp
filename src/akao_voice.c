@@ -44,6 +44,7 @@ extern s16 D_8004C32E;
 extern s32 D_8004D39C;
 extern s32 g_akao_cdvol_step;
 extern s32 g_akao_masterpan_step;
+extern s32 g_akao_mastervol_step;
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -3917,4 +3918,70 @@ void akao_set_driver_master_volume(s8* param)
     g_akao_mastervol_fade_ticks = 0;
     volume = volume << 16;
     g_akao_mastervol_acc = volume;
+}
+
+/**
+ * @brief Start a linear fade of the driver-wide master volume accumulator
+ *        to a target level over a given tick count.
+ * @param params Tick count at +0x0 (0 is treated as 1), signed target
+ *        volume (byte) at +0x4.
+ * @see decomp.me (100%)
+ */
+void akao_fade_driver_master_volume(u8* params)
+{
+    s32 raw_ticks;
+    s32 ticks;
+    s32 target;
+    s32 step;
+
+    raw_ticks = *(s32*)(params + 0x0);
+    ticks = 1;
+    if (raw_ticks != 0)
+    {
+        ticks = raw_ticks;
+    }
+    target = *(s8*)(params + 4);
+    target = target << 16;
+    target -= g_akao_mastervol_acc;
+    step = target / ticks;
+    g_akao_mastervol_fade_ticks = ticks;
+    g_akao_mastervol_step = step;
+}
+
+/**
+ * @brief Jump the driver-wide master volume accumulator to an explicit
+ *        start level, then fade it to a target level over a given tick
+ *        count.
+ *
+ * Same offset quirk as akao_fade_master_pan_from: the tick-count zero
+ * check reads +0x4 (the same word as the start volume), the actual tick
+ * count comes from +0x0.
+ *
+ * @param params Tick count at +0x0, signed start volume (byte) at +0x4,
+ *        signed target volume (byte) at +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_fade_driver_master_volume_from(u8* params)
+{
+    s32 raw_ticks;
+    s32 ticks;
+    s32 target;
+    s32 start;
+    s32 step;
+
+    raw_ticks = *(s32*)(params + 0x4);
+    ticks = 1;
+    if (raw_ticks != 0)
+    {
+        ticks = *(s32*)(params + 0x0);
+    }
+    start = *(s8*)(params + 4);
+    start = start << 16;
+    g_akao_mastervol_acc = start;
+    target = *(s8*)(params + 8);
+    target = target << 16;
+    target -= start;
+    step = target / ticks;
+    g_akao_mastervol_fade_ticks = ticks;
+    g_akao_mastervol_step = step;
 }
