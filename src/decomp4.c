@@ -6,8 +6,8 @@
  * addresses near gp_value 0x8003EC14; declared extern here so decomp4 does not
  * emit a second (.bss) definition. */
 extern u16 g_akao_irq_frame_counter;
-s32 D_8004D40C;
-u32 D_8004F758;
+s32 D_8004D40C[1];
+u32 D_8004F758[1];
 extern s32 D_8003EC18;
 
 /** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
@@ -87,7 +87,7 @@ void akao_copy_bytes(s32* src, s32* dst, u32 num_bytes)
 }
 
 /**
- * decomp.me (86.49%) https://decomp.me/scratch/07M97
+ * decomp.me (100%) https://decomp.me/scratch/07M97
  */
 void akao_tick_fades(void)
 {
@@ -126,25 +126,29 @@ void akao_tick_fades(void)
     if ((xa->unkC != 0) && (xa->unk48 != 0))
     {
         xa->unk48--;
-        temp = xa->unk40 + xa->unk44;
+        temp_s0 = xa->unk40;
+        temp = temp_s0 + xa->unk44;
         if ((temp & 0xFF00) != (xa->unk40 & 0xFF00))
         {
-            if (D_8004F754 & 2)
+            if (D_8004F754[0] & 2)
             {
-                temp_s0 = (xa->unk40 * D_8003D47C) >> 16;
+                temp_s0 = (temp_s0 * D_8003D47C[0]) >> 16;
                 spu_set_voice_volume(xa->unk10, temp_s0, temp_s0, 0);
                 t0 = temp_s0;
-                t1 = temp_s0;
+                t1 = t0;
+                spu_set_voice_volume(xa->unk10 + 1, t0, t1, 0);
             }
             else
             {
-                t1 = (temp_s0 = (temp << 15) >> 16);
+                temp_s0 = temp << 15;
+                temp_s0 = temp_s0 >> 16;
                 spu_set_voice_volume(xa->unk10, temp_s0, 0, 0);
                 t0 = 0;
+                t1 = temp_s0;
+                spu_set_voice_volume(xa->unk10 + 1, t0, t1, 0);
             }
-            spu_set_voice_volume(xa->unk10 + 1, t0, t1, 0);
         }
-        g_akao_xa_pan_current = temp & 0xFFFF;
+        g_akao_xa_pan_current[0] = temp & 0xFFFF;
     }
     if (g_akao_masterpan_fade_ticks != 0)
     {
@@ -155,20 +159,20 @@ void akao_tick_fades(void)
     {
         new_var8 = &g_akao_mastervol_step;
         g_akao_mastervol_fade_ticks--;
-        temp_s1 = g_akao_mastervol_acc + (*new_var8);
-        if ((g_akao_mastervol_acc & 0xFF0000) != (temp_s1 & 0xFF0000))
+        temp = g_akao_mastervol_acc + (*new_var8);
+        new_var = 32;
+        if ((temp & 0xFF0000) != (g_akao_mastervol_acc & 0xFF0000))
         {
             new_var3 = 0x100;
             ptr = (u32*)(g_akao_seq_channels + new_var3);
-            i = 32;
             do
             {
                 *ptr |= 0x10;
                 ptr += 0x46;
-                i--;
-            } while (i != 0);
+                new_var--;
+            } while (new_var != 0);
         }
-        g_akao_mastervol_acc = temp_s1;
+        g_akao_mastervol_acc = temp;
     }
     seq_ptr = g_akao_seq_channel0;
     if ((*((s32*)(((u8*)seq_ptr) + 4))) != 0)
@@ -191,15 +195,16 @@ void akao_tick_fades(void)
     new_var6 = g_akao_seq_channel1;
     if ((g_akao_seq_channel1 != 0) && ((*((s32*)(((u8*)ptr28) + 4))) != 0))
     {
-        t0 = *((s16*)(((u8*)new_var6) + 0x58));
-        if (t0 != 0)
+        temp_s1 = *((s16*)(((u8*)new_var6) + 0x58));
+        t0 = *((u16*)(((u8*)ptr28) + 0x58));
+        if (temp_s1 != 0)
         {
-            u16_tmp = *((u16*)(((u8*)ptr28) + 0x58));
-            *((s16*)(((u8*)g_akao_seq_channel1) + 0x58)) = u16_tmp - 1;
+            *((s16*)(((u8*)g_akao_seq_channel1) + 0x58)) = t0 - 1;
             temp = (*((s32*)(((u8*)ptr28) + 0x50))) + (*((s32*)(((u8*)ptr28) + 0x54)));
             if ((temp & 0x7F0000) != ((*((s32*)(((u8*)g_akao_seq_channel1) + 0x50))) & 0x7F0000))
             {
-                func_80026E8C(g_akao_seq_channel1, (void*)((u32)g_akao_pending_channels), (u32)g_akao_seq_channel1);
+                t0 = (u32)g_akao_pending_channels;
+                func_80026E8C(g_akao_seq_channel1, (void*)t0, (u32)g_akao_seq_channel1);
             }
             *((s32*)(((u8*)g_akao_seq_channel1) + 0x50)) = temp;
         }
@@ -208,8 +213,9 @@ void akao_tick_fades(void)
     if (mask != 0)
     {
         new_var3 = mask;
-        sfx_base = g_sfx_channels + 0x40;
+        mask = (u32)g_sfx_channels;
         bit = 0x1000;
+        sfx_base = (u8*)(mask + 0x40);
         do
         {
             if (new_var3 & bit)
@@ -387,7 +393,25 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
 }
 
 /**
- * decomp.me (95.79%) https://decomp.me/scratch/ICO2k
+ * @brief AKAO driver per-frame IRQ callback (RCNT2 event handler).
+ *
+ * Advances the sequencer/SFX state once per frame: services pending key-offs
+ * and channel1->channel0 handoff, flushes voice register updates when any
+ * channel has a note-on pending, ticks the primary and secondary song
+ * channels, steps the SFX channel bitmask (note/gate countdown and opcode
+ * dispatch), ticks fade envelopes every 4th frame, and updates the
+ * @c D_8003D160 timing ring used for profiling.
+ *
+ * @note @c D_8004D40C, @c D_8004F758, and @c D_8004D408 are declared as
+ *       single-element arrays (not scalars) to match the source shape used
+ *       for this scratch.
+ * @note NOT YET 100% (96.52%, 220/238 exact). Residue is confined to the
+ *       third-conditional OR-chain region: the target hoists D_8004F758's
+ *       %hi into several earlier branch delay slots (a CSE-FOLD reuse of
+ *       g_akao_seq_channel0 also differs there); the SFX loop and the
+ *       D_8003D160 profiling tail are fully exact. See
+ *       working/akao_irq_handler/status.md for history.
+ * @see decomp.me (96.52%) https://decomp.me/scratch/ICO2k
  */
 void akao_irq_handler(void)
 {
@@ -395,71 +419,61 @@ void akao_irq_handler(void)
     s32 var_s3;
     s32 temp_a3;
     s32 temp_v1_3;
+    s32 temp_v0;
     u16 temp_v0_2;
     u16 temp_v1_2;
     AkaoChannelState* channel;
     u32 bitMask;
-    AkaoChannelState* new_var;
 
     temp_s5 = GetRCnt(0xF2000002);
 
-    /* First conditional block */
+    /* First/second conditional flow */
+    g_akao_irq_frame_counter += 1;
+    if ((g_akao_seq_channel0->key_off_mask == 0) && (D_8004D40C[0] == 0))
     {
-        AkaoChannelState* seq0;
-        u16 ec1c;
-        u32 unk18_val;
-
-        seq0 = g_akao_seq_channel0;
-        ec1c = g_akao_irq_frame_counter;
-        unk18_val = seq0->key_off_mask;
-        ec1c += 1;
-        g_akao_irq_frame_counter = ec1c;
-
-        if ((unk18_val == 0) && (D_8004D40C == 0))
+        if (g_akao_seq_channel1 != 0)
         {
-            if (g_akao_seq_channel1 != 0)
+            if (g_akao_seq_channel1->key_off_mask != 0)
             {
-                if (g_akao_seq_channel1->key_off_mask != 0)
-                {
-                    func_80025D98();
-                }
+                goto flush_key_offs;
             }
+            goto process_secondary;
         }
-        else
-        {
-            func_80025D98();
-        }
+        goto after_secondary;
     }
-
-    /* Second block */
+    else
     {
-        AkaoChannelState* ch28 = g_akao_seq_channel1;
-        if (ch28 != 0)
+flush_key_offs:
+        func_80025D98();
+process_secondary:
         {
-            if (ch28->w04.song.active_mask == 0)
+            AkaoChannelState* ch28 = g_akao_seq_channel1;
+            if (ch28 != 0)
             {
-                g_akao_seq_channel1 = 0;
-            }
-            else if ((g_akao_seq_channel0->w04.song.active_mask | g_akao_seq_channel0->unk1C) == 0)
-            {
-                akao_copy_bytes((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
-                akao_copy_bytes((s32*)g_akao_pending_channels, &g_akao_seq_channels, 0x2300);
+                if (ch28->w04.song.active_mask == 0)
                 {
-                    AkaoChannelState* tmp = g_akao_seq_channel1;
                     g_akao_seq_channel1 = 0;
-                    tmp->unk5E = 0;
-                    tmp->w04.song.active_mask = 0;
+                }
+                else if ((g_akao_seq_channel0->w04.song.active_mask | g_akao_seq_channel0->unk1C) == 0)
+                {
+                    akao_copy_bytes((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
+                    akao_copy_bytes((s32*)g_akao_pending_channels, &g_akao_seq_channels, 0x2300);
+                    {
+                        AkaoChannelState* tmp = g_akao_seq_channel1;
+                        g_akao_seq_channel1 = 0;
+                        tmp->unk5E = 0;
+                        tmp->w04.song.active_mask = 0;
+                    }
                 }
             }
         }
     }
-
-    new_var = &g_akao_seq_master_state;
+after_secondary:
 
     /* Third conditional */
-    if (((D_8004F758 | g_akao_seq_channel0->note_on_mask | D_8004D408) != 0) || ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->note_on_mask != 0)))
+    if (((D_8004F758[0] | g_akao_seq_channel0->note_on_mask | D_8004D408[0]) != 0) || ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->note_on_mask != 0)))
     {
-        akao_flush_voice_updates(D_8004D408);
+        akao_flush_voice_updates(D_8004D408[0]);
     }
 
     /* Fourth conditional */
@@ -473,7 +487,7 @@ void akao_irq_handler(void)
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
         akao_seq_tick_channels(g_akao_pending_channels, 1);
-        g_akao_seq_channel0 = new_var;
+        g_akao_seq_channel0 = &g_akao_seq_master_state;
     }
 
     /* SFX channel processing loop */
@@ -494,14 +508,15 @@ void akao_irq_handler(void)
                 {
                     if (var_s3 & bitMask)
                     {
-                        if (!(g_akao_driver_mode_flags & 2) || (channel->tempo_acc & 0x02000000))
+                        u8* p66 = (u8*)&channel->unk66;
+                        if (!(g_akao_driver_mode_flags & 2) || (*(u32*)(p66 - 0x3E) & 0x02000000))
                         {
-                            (*(u32*)&channel->unk58)++;
+                            (*(u32*)(p66 - 0xE))++;
 
-                            temp_v1_2 = channel->unk66 - 1;
-                            channel->unk66 = temp_v1_2;
-                            temp_v0_2 = channel->unk68 - 1;
-                            channel->unk68 = temp_v0_2;
+                            temp_v1_2 = *(u16*)(p66 + 0) - 1;
+                            *(u16*)(p66 + 0) = temp_v1_2;
+                            temp_v0_2 = *(u16*)(p66 + 2) - 1;
+                            *(u16*)(p66 + 2) = temp_v0_2;
 
                             if (temp_v1_2 == 0)
                             {
@@ -530,24 +545,32 @@ void akao_irq_handler(void)
     }
 
     /* Timing / profiling update for D_8003D160 */
-    temp_s5 = GetRCnt(0xF2000002) - temp_s5;
+    temp_s5 = (temp_a3 = GetRCnt(0xF2000002)) - temp_s5;
     if (temp_s5 <= 0)
     {
         temp_s5 += 0x44E8;
     }
 
-    var_s3 = temp_s5;
-
     {
         s32 d4 = D_8003D160.unk4;
         s32 d8 = D_8003D160.unk8;
-        temp_a3 = D_8003D160.unkC;
-        D_8003D160.unkC = var_s3;
-        D_8003D160.unk0 = d4;
-        temp_v1_3 = d4 + d8 + temp_a3;
+        do
+        {
+            temp_a3 = D_8003D160.unkC;
+            do
+            {
+                do
+                {
+                    temp_v0 = (temp_s5 & temp_a3) | (temp_s5 & ~temp_a3);
+                    D_8003D160.unkC = temp_v0;
+                } while (0);
+            } while (0);
+            D_8003D160.unk0 = d4;
+            temp_v1_3 = d4 + d8 + temp_a3;
+        } while (0);
         D_8003D160.unk4 = d8;
         D_8003D160.unk8 = temp_a3;
-        D_8003EC18 = temp_v1_3 + var_s3;
+        D_8003EC18 = temp_v1_3 + temp_v0;
     }
 }
 
@@ -557,13 +580,14 @@ extern u8 g_akao_opcode_len_table_ext[];
 extern u8 g_akao_opcode_len_table[];
 
 /**
- * decomp.me (78.79%) https://decomp.me/scratch/52mKD
+ * decomp.me (100%) https://decomp.me/scratch/52mKD
  */
 u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
 {
     u8* var_a1 = (u8*)arg0->seq_cursor;
-    u8* new_var;
     u32 var_a2 = arg0->loop_depth;
+    u8 new_var;
+    s32 lo;
     while (1)
     {
         u8 temp_v1 = *var_a1;
@@ -573,17 +597,18 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
             {
                 arg0->note_flags &= 0xFFFA;
             }
-            new_var = var_a1;
-            return *new_var;
+            new_var = *var_a1;
+            return new_var;
         }
         if (temp_v1 < 0xA0)
         {
             return 0xA0;
         }
-        temp_v1 = *new_var;
+        new_var = *(u8*)((((u32)var_a1 & var_a2) | ((u32)var_a1 & ~var_a2)));
+        temp_v1 = new_var;
         {
             u8 lookup = g_akao_opcode_len_table[temp_v1 - 0xA0];
-            if (0 != lookup)
+            if (lookup != 0)
             {
                 var_a1 += lookup;
                 continue;
@@ -592,56 +617,35 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
             {
             case 0xC9:
                 goto L_C9_common;
-
             case 0xCA:
                 goto L_CA_common;
-
             case 0xCB:
-
             case 0xCD:
-
             case 0xD1:
-
             case 0xDB:
                 goto L_CB_common;
-
             case 0xF0:
-
             case 0xF1:
-
             case 0xF2:
-
             case 0xF3:
-
             case 0xF4:
-
             case 0xF5:
-
             case 0xF6:
-
             case 0xF7:
-
             case 0xF8:
-
             case 0xF9:
-
             case 0xFA:
-
             case 0xFB:
                 return 0x83;
-
             case 0xFC:
                 return 0x84;
-
             case 0xFD:
                 return 0x8F;
-
             case 0xFE:
-            {
                 var_a1++;
                 temp_v1 = *var_a1;
                 lookup = g_akao_opcode_len_table_ext[temp_v1];
-                if (lookup != (0 & 0xFFFFu))
+                if (lookup != 0)
                 {
                     var_a1 += lookup;
                     continue;
@@ -650,106 +654,77 @@ u8 akao_seq_skip_to_next_note(AkaoChannelState* arg0)
                 {
                 case 0:
                     var_a1++;
-                    if ((*var_a1) == (arg0->loop_count[var_a2] + 1))
+                    if (*var_a1 == arg0->loop_count[var_a2] + 1)
                     {
                         var_a1++;
-                        var_a2 = (var_a2 - 1) & 3;
-                        var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
+                        var_a2--;
+                        var_a2 &= 3;
+                        lo = var_a1[0]; lo += var_a1[1] * 256; var_a1 += (s16)lo;
                     }
                     else
                     {
                         var_a1 += 3;
                     }
                     continue;
-
                 case 1:
                     var_a1++;
+                    lo = var_a1[0]; lo += var_a1[1] * 256; var_a1 += (s16)lo;
                     continue;
-                    var_a1 += (s16)((var_a1[1] << 8) + var_a1[0]);
-
                 case 2:
                     var_a1++;
-                    do
+                    if (g_akao_seq_channel0->unk60 >= *var_a1++)
                     {
-                        if (g_akao_seq_channel0->unk60 < (*var_a1))
-                        {
-                            var_a1++;
-                            var_a1 += 2;
-                        }
-                        else
-                        {
-                            var_a1++;
-                            var_a1 += (s16)((var_a1[1] << (8 ^ 0)) + var_a1[0]);
-                        }
-                    } while (0);
+                        lo = var_a1[0]; lo += var_a1[1] * 256; var_a1 += (s16)lo;
+                    }
+                    else
+                    {
+                        var_a1 += 2;
+                    }
                     continue;
-
                 case 3:
-                    /* 0x14 in the channel role is the subroutine return
-                     * cursor, not a mask - this is the FE 0F "return" op. */
                     var_a1 = (u8*)arg0->note_on_mask;
                     continue;
-
                 case 4:
                     goto L_C9_common;
-
                 case 5:
                     goto L_CB_common;
-
                 case 6:
                     goto L_CA_common;
-
                 case 7:
-
                 case 8:
-
                 case 9:
                     goto labelA;
                 }
-
                 continue;
-            }
-
             default:
                 goto labelA;
             }
 
         L_C9_common:
             var_a1++;
-
-            if ((*var_a1) == (arg0->loop_count[var_a2] + 1))
+            if (*var_a1 == arg0->loop_count[var_a2] + 1)
             {
                 var_a1++;
-                var_a2 = (var_a2 - 1) & 3;
+                var_a2--;
+                var_a2 &= 3;
             }
             else
             {
-                /* 0x04..0x10 in the channel role is the loop-start cursor stack. */
-/* The original reaches the loop stack through a pointer here, not
-                 * as an array member as the loop opcodes do - the two spellings
-                 * produce a different addu operand order. */
-                var_a1 = ((u8**)&arg0->w04.song.active_mask)[var_a2];
+                var_a1 = arg0->w04.loop_cursor[var_a2];
             }
             continue;
         L_CB_common:
             arg0->note_flags &= 0xFFFA;
-
             var_a1++;
             continue;
         L_CA_common:
             if (!((u32)arg0->flags & 0x200000))
             {
-                /* 0x04..0x10 in the channel role is the loop-start cursor stack. */
-/* The original reaches the loop stack through a pointer here, not
-                 * as an array member as the loop opcodes do - the two spellings
-                 * produce a different addu operand order. */
-                var_a1 = ((u8**)&arg0->w04.song.active_mask)[var_a2];
+                var_a1 = arg0->w04.loop_cursor[var_a2];
                 continue;
             }
-
         labelA:
             arg0->note_flags &= 0xFFFA;
-
             return 0xA0;
         }
     }

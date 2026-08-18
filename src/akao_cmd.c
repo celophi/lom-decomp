@@ -91,11 +91,13 @@ void akao_cmd_98_9a_9c_9e(u32 arg0);
  * 0x11 stop song, 0x12, 0x14, 0x19, 0x20 play SFX, 0x21, 0x24, 0x30, 0x40,
  * 0x80/0x81, 0x90/0x92, 0xA0/0xA1/0xA8/0xA9, 0xC0/0xC1, 0xF0/0xF1.
  *
- * Declared @c void here even though some call sites read its return value;
- * the original GCC 2.7.2 build tolerates the mixed declaration (callers rely
- * on the $v0 register convention).
+ * @param opcode Command opcode; only the low byte is significant.
+ * @return For opcodes 0x10/0x12/0x14/0x19 (load/change song), the newly
+ *         loaded sequence id, or 0 if the requested song was already active,
+ *         or -1 if the header failed the AKAO magic check. Unused/ignored by
+ *         most callers otherwise.
  */
-extern s32 akao_send_command(s32 opcode);
+s32 akao_send_command(u32 opcode);
 
 /**
  * @brief Public init entry — wraps akao_driver_init and returns 0.
