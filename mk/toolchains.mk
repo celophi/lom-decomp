@@ -33,6 +33,9 @@ CFLAGS_272_CDK_G0 := -O2 -G0 -msoft-float -gcoff
 CFLAGS_272_GNU_G0 := -O2 -G0
 ASFLAGS_272_GNU    := -O -EL
 CFLAGS_260_G0      := -O2 -G0 -gcoff -msoft-float
+# Same GCC 2.6.0 pipeline as CFLAGS_260_G0 but at -O1. field_runtime_glyph.c's
+# two glyph helpers only match at -O1; the rest of the 260 list stays at -O2.
+CFLAGS_260_G0_O1   := -O1 -G0 -gcoff -msoft-float
 
 # maspsx preprocesses assembly syntax and can invoke GNU as directly.
 MASPSX          := python3 tools/maspsx/maspsx.py

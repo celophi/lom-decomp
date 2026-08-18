@@ -80,6 +80,7 @@ segments:
       - [0x6418, c, overlay_memory]
       - [0x6458, c, field_runtime]
       - [0x695C, c, field_runtime_text]
+      - [0x6DCC, c, field_runtime_glyph]           # gcc272 gnuas -O1: foreign-toolchain glyph helpers
       - [0x6F64, c, card_callbacks]
       - [0x6F6C, c, psyq/libcard/C112]               # psyq: version undetermined (debug/variant build)
       - [0x6F84, c, psyq/libapi/C114]                # psyq: version-agnostic
