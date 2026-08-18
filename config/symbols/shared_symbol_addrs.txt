@@ -825,6 +825,9 @@ akao_seq_stop_all_songs               = 0x8002877C;
 akao_seq_stop_song_by_key             = 0x800287D0;
 akao_sfx_release_all_channels          = 0x8002883C;
 akao_flag_all_volume_updates           = 0x80028918;
+akao_flag_all_pan_updates               = 0x8002897C;
+akao_set_mode_flag_and_flag_all_channels = 0x800289E0;
+akao_seq_set_unk60                     = 0x80028A20;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;

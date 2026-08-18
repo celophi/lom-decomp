@@ -4061,3 +4061,50 @@ void akao_flag_all_volume_updates(void)
     }
     akao_sfx_flag_volume_update();
 }
+
+/**
+ * @brief Flag every channel of every active song and every active SFX
+ *        channel for a pending SPU update, tagged mode 2 (see
+ *        akao_flag_all_volume_updates, tagged mode 1).
+ * @see decomp.me (100%)
+ */
+void akao_flag_all_pan_updates(void)
+{
+    D_8004F754[0] = 2;
+    akao_seq_flag_volume_update(g_akao_seq_channel0, (AkaoChannelState*)g_akao_seq_channels);
+    if (g_akao_seq_channel1 != NULL)
+    {
+        akao_seq_flag_volume_update(g_akao_seq_channel1, (AkaoChannelState*)g_akao_pending_channels);
+    }
+    akao_sfx_flag_volume_update();
+}
+
+/**
+ * @brief Store a new value into D_8003EC6C, then flag every primary song
+ *        channel for a pending SPU update.
+ * @param param New value for D_8003EC6C.
+ * @see decomp.me (100%)
+ */
+void akao_set_mode_flag_and_flag_all_channels(s32* param)
+{
+    AkaoChannelState* channel;
+    u32 count;
+
+    D_8003EC6C = *param;
+    channel = (AkaoChannelState*)g_akao_seq_channels;
+    count = 0;
+    do
+    {
+        count++;
+        channel->update_flags |= 3;
+        channel++;
+    } while (count < 0x20);
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void akao_seq_set_unk60(u16* param)
+{
+    g_akao_seq_channel0->unk60 = *param;
+}
