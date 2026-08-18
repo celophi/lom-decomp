@@ -768,6 +768,8 @@ akao_process_sequence_voice_updates = 0x80025500;
 akao_clear_voice_assignment         = 0x80025760;
 akao_refresh_voice_allocation_state = 0x800257E0;
 akao_flush_voice_updates            = 0x800258B8;
+akao_collect_channel_voice_mask     = 0x80025D38;
+akao_flush_voice_key_offs           = 0x80025D98;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;

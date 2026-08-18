@@ -1497,3 +1497,114 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
         spu_set_key_on(key_on_voice_mask);
     }
 }
+
+/**
+ * @brief OR each active channel's assigned SPU voice bit into a mask, then
+ *        restrict the result to @p keep_mask.
+ *
+ * For every channel selected by @p channel_mask that owns a live voice
+ * (index < 0x18), the bit for that voice is set in @p *voice_mask. After all
+ * selected channels have been scanned the accumulated mask is ANDed with
+ * @p keep_mask.
+ *
+ * @param channels First channel corresponding to channel_mask bit zero.
+ * @param voice_mask Accumulator receiving the collected voice bits.
+ * @param channel_mask Channels to scan.
+ * @param keep_mask Mask ANDed into the result once scanning completes.
+ */
+void akao_collect_channel_voice_mask(AkaoChannelState* channels, u32* voice_mask, s32 channel_mask, s32 keep_mask)
+{
+    s32 channel_bit;
+    s32 voice_bit;
+    u32 voice;
+
+    channel_bit = 1;
+    voice_bit = channel_bit;
+    do
+    {
+        if (channel_mask & channel_bit)
+        {
+            voice = channels->voice;
+            if (voice < 0x18U)
+            {
+                *voice_mask |= voice_bit << voice;
+            }
+        }
+        channel_mask &= ~channel_bit;
+        channels++;
+        channel_bit <<= 1;
+    } while (channel_mask != 0);
+
+    *voice_mask &= keep_mask;
+}
+
+/**
+ * @brief Fold every channel's pending key-off into a single SPU key-off write.
+ *
+ * For the secondary (@c g_akao_seq_channel1 / pending set) and primary
+ * (@c g_akao_seq_channel0 / active set) songs, each song's @c key_off_mask is
+ * split into its voice-alloc-low channels (handled first) and the remainder,
+ * and the SPU voices those channels hold are gathered via
+ * @ref akao_collect_channel_voice_mask, excluding voices reserved by SFX or XA.
+ * The accumulated voices are OR'd with the SFX control key-off mask and, if any
+ * remain, keyed off in one @ref spu_set_key_off call. Each processed
+ * @c key_off_mask is cleared.
+ *
+ * @see decomp.me (100%)
+ */
+void akao_flush_voice_key_offs(void)
+{
+    u32 key_off_voice_mask;
+    s32 keep_mask;
+    s32 secondary_residual;
+    s32 primary_residual;
+    s32 secondary_active;
+    s32 primary_active;
+    typeof(g_akao_seq_channel0->w04.song)* song_masks;
+
+    secondary_residual = 0;
+    key_off_voice_mask = 0;
+    keep_mask = ~((g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | D_8004F76C[0]);
+
+    if (g_akao_seq_channel1 != NULL)
+    {
+        secondary_residual = g_akao_seq_channel1->key_off_mask;
+        secondary_active = secondary_residual & g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        if (secondary_active != 0)
+        {
+            akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_pending_channels, &key_off_voice_mask, secondary_active, keep_mask);
+            song_masks = &g_akao_seq_channel1->w04.song;
+            secondary_residual &= ~song_masks->voice_alloc_low_mask;
+            g_akao_seq_channel1->key_off_mask &= ~g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        }
+    }
+
+    primary_residual = g_akao_seq_channel0->key_off_mask;
+    primary_active = primary_residual & g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    if (primary_active != 0)
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_seq_channels, &key_off_voice_mask, primary_active, keep_mask);
+        song_masks = &g_akao_seq_channel0->w04.song;
+        primary_residual &= ~song_masks->voice_alloc_low_mask;
+        g_akao_seq_channel0->key_off_mask &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    }
+
+    if ((g_akao_seq_channel1 != NULL) && (secondary_residual != 0))
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_pending_channels, &key_off_voice_mask, secondary_residual, keep_mask);
+        g_akao_seq_channel1->key_off_mask = 0;
+    }
+
+    if (primary_residual != 0)
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_seq_channels, &key_off_voice_mask, primary_residual, keep_mask);
+        g_akao_seq_channel0->key_off_mask = 0;
+    }
+
+    key_off_voice_mask |= g_akao_sfx_control.unkC;
+    g_akao_sfx_control.unkC = 0;
+    if (key_off_voice_mask != 0)
+    {
+        spu_set_key_off(key_off_voice_mask);
+    }
+}
