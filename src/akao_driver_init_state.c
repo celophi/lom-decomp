@@ -22,7 +22,7 @@ typedef short s16;
 typedef int s32;
 
 void SpuSetReverb(int);
-void func_80028E34();
+void akao_apply_reverb_type();
 
 extern u8 D_8003EC30[];
 extern u8 g_akao_bank_slot_keys[];
@@ -62,8 +62,8 @@ typedef struct { u8 pad40[0x40]; u32 f40; } A0S40;
  * @c g_akao_seq_channels) and 0x18 SFX channels (also 0x118-byte stride, in
  * @c g_sfx_channels). Pokes the SPU master/reverb registers
  * (@c 0x1F801D80..1F801DB2, @c 0x1F801DAA control). Calls back into the
- * higher-level @c func_80028E34 / @c SpuSetReverb to install the channel state
- * pointer and reverb mode.
+ * higher-level @c akao_apply_reverb_type / @c SpuSetReverb to install the
+ * channel state pointer and reverb mode.
  *
  * @see https://decomp.me/scratch/9R0Vj (100%)
  */
@@ -212,6 +212,6 @@ void akao_driver_init_state(void)
         *((u32*)off(new_var9, 0x08)) = (*((u32*)off(new_var9, 0x08))) | 0x80;
     }
 
-    func_80028E34(4);
+    akao_apply_reverb_type(4);
     SpuSetReverb(1);
 }
