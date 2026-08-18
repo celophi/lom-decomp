@@ -2376,3 +2376,57 @@ void akao_sfx_play(u8* params, u8* seq_data0, u8* seq_data1, s32 skip_stop)
     }
     g_akao_driver_flags.unk8 |= 0x110;
 }
+
+/**
+ * @brief Resolve a program's two data pointers from the bank program table.
+ *
+ * Masks @p program_index to 10 bits and reads the two consecutive u16 offset
+ * entries from the flat u16 table @c g_akao_bank_prog_base at halfword indices
+ * @c 2*n and @c 2*n+1. Each entry is an offset into the region-C data block
+ * (@c g_akao_bank_region_c); the sentinel @c 0xFFFF resolves to a null pointer.
+ * Used by the SFX launcher to obtain the two seq-data pointers it passes to
+ * akao_sfx_play.
+ *
+ * @param out0 Receives the resolved pointer for the first entry (2*n).
+ * @param out1 Receives the resolved pointer for the second entry (2*n + 1).
+ * @param program_index Program id; masked to 0..0x3FF.
+ *
+ * @note NOT YET 100% (82.34%, 11/32 exact). Single root cause: the first
+ *       read's byte-offset shift merges with the index shift (GCC 2.8 combine
+ *       folds (n<<1)<<1 to n<<2), which resurrects the masked value and pushes
+ *       the persistent 2*n index off a2 into v1; every later register name
+ *       cascades from that. The second read already has the right shape (its
+ *       post-increment index is non-pristine, so it does not merge). Toolchain
+ *       and ~10 source shapes are confirmed inert/harmful - see
+ *       working/func_80026E0C/STATUS.md for the full evidence before retrying.
+ * @see decomp.me (82.34%)
+ */
+void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
+{
+    u16 entry;
+    s32 val;
+
+    program_index = (program_index & 0x3FF) << 1;
+    entry = *(u16*)((u8*)g_akao_bank_prog_base + (program_index << 1));
+    if (entry == 0xFFFF)
+    {
+        val = 0;
+    }
+    else
+    {
+        val = g_akao_bank_region_c + entry;
+    }
+    *out0 = val;
+
+    program_index += 1;
+    entry = *(u16*)((u8*)g_akao_bank_prog_base + (program_index << 1));
+    if (entry == 0xFFFF)
+    {
+        val = 0;
+    }
+    else
+    {
+        val = g_akao_bank_region_c + entry;
+    }
+    *out1 = val;
+}
