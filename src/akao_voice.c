@@ -2253,3 +2253,32 @@ void akao_sfx_start_channel(AkaoChannelState* channel, u8* params, s32 channel_m
         }
     }
 }
+
+/**
+ * @see decomp.me (100%)
+ */
+void akao_unassign_voice(AkaoChannelState* channels, u32 voice_index)
+{
+    u32 channel_index;
+    s32 unassigned_voice;
+    s32 bit;
+    AkaoChannelState* song;
+
+    if (voice_index < 0x18U)
+    {
+        channel_index = 0;
+        unassigned_voice = 0x18;
+        song = g_akao_seq_channel0;
+        do
+        {
+            if (channels->voice == voice_index)
+            {
+                bit = 1 << channel_index;
+                channels->voice = unassigned_voice;
+                song->note_on_mask &= ~bit;
+            }
+            channel_index++;
+            channels++;
+        } while (channel_index < 0x20U);
+    }
+}

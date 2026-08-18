@@ -780,6 +780,7 @@ akao_seq_start_song                 = 0x80026254;
 akao_seq_stop_song                  = 0x800265DC;
 akao_sfx_stop_channels              = 0x800266B0;
 akao_sfx_start_channel              = 0x80026A10;
+akao_unassign_voice                 = 0x80026BB8;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;
