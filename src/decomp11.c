@@ -115,7 +115,7 @@ extern s16 D_8003D37C[];
 
 /* ---- shared external callee prototypes (all callers agree) ---- */
 void akao_release_channels(AkaoChannelState* channel, u32 release_mask);
-void func_800266B0(s32 arg0, s32 arg1);
+void akao_sfx_stop_channels(s32 arg0, s32 arg1);
 void spu_set_key_off(u32 voice_mask);
 void spu_set_key_on(u32 voice_mask);
 void spu_set_voice_volume(s32 voice, u32 vol_l, u32 vol_r, s32 scale);
@@ -237,7 +237,7 @@ s32 func_8002D1C4(void)
             result = count + 0xB;
             return result;
         }
-        func_800266B0(0, 0x40000000);
+        akao_sfx_stop_channels(0, 0x40000000);
         if (combined == (s32)(g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10))
         {
             return -1;
