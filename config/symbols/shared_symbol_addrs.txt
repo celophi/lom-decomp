@@ -816,6 +816,7 @@ akao_sfx_fade_pitch_bend               = 0x800282C0;
 akao_sfx_set_pitch_bend_unsuppressed    = 0x80028448;
 akao_sfx_fade_pitch_bend_unsuppressed    = 0x800284A0;
 akao_set_master_pan                    = 0x8002856C;
+akao_fade_master_pan                   = 0x8002858C;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;

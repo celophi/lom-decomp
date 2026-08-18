@@ -43,6 +43,7 @@ extern u8 D_8004D450[];
 extern s16 D_8004C32E;
 extern s32 D_8004D39C;
 extern s32 g_akao_cdvol_step;
+extern s32 g_akao_masterpan_step;
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -2400,44 +2401,35 @@ void akao_sfx_play(u8* params, u8* seq_data0, u8* seq_data1, s32 skip_stop)
  * @param out1 Receives the resolved pointer for the second entry (2*n + 1).
  * @param program_index Program id; masked to 0..0x3FF.
  *
- * @note NOT YET 100% (82.34%, 11/32 exact). Single root cause: the first
- *       read's byte-offset shift merges with the index shift (GCC 2.8 combine
- *       folds (n<<1)<<1 to n<<2), which resurrects the masked value and pushes
- *       the persistent 2*n index off a2 into v1; every later register name
- *       cascades from that. The second read already has the right shape (its
- *       post-increment index is non-pristine, so it does not merge). Toolchain
- *       and ~10 source shapes are confirmed inert/harmful - see
- *       working/func_80026E0C/STATUS.md for the full evidence before retrying.
- * @see decomp.me (82.34%)
+ * @see decomp.me (100%)
  */
 void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
 {
-    u16 entry;
-    s32 val;
+    s32 result;
 
-    program_index = (program_index & 0x3FF) << 1;
-    entry = *(u16*)((u8*)g_akao_bank_prog_base + (program_index << 1));
-    if (entry == 0xFFFF)
+    program_index &= 0x3FF;
+    program_index <<= 1;
+
+    if (((u16*)g_akao_bank_prog_base)[program_index] != 0xFFFF)
     {
-        val = 0;
+        result = g_akao_bank_region_c + ((u16*)g_akao_bank_prog_base)[program_index];
     }
     else
     {
-        val = g_akao_bank_region_c + entry;
+        result = 0;
     }
-    *out0 = val;
+    *out0 = result;
 
-    program_index += 1;
-    entry = *(u16*)((u8*)g_akao_bank_prog_base + (program_index << 1));
-    if (entry == 0xFFFF)
+    program_index++;
+    if (((u16*)g_akao_bank_prog_base)[program_index] != 0xFFFF)
     {
-        val = 0;
+        result = g_akao_bank_region_c + ((u16*)g_akao_bank_prog_base)[program_index];
     }
     else
     {
-        val = g_akao_bank_region_c + entry;
+        result = 0;
     }
-    *out1 = val;
+    *out1 = result;
 }
 
 /**
@@ -3843,4 +3835,32 @@ void akao_set_master_pan(s8* param)
     g_akao_masterpan_fade_ticks = 0;
     pan = pan << 16;
     g_akao_masterpan_acc = pan;
+}
+
+/**
+ * @brief Start a linear fade of the master pan accumulator to a target
+ *        level over a given tick count.
+ * @param params Tick count at +0x0 (0 is treated as 1), signed target pan
+ *        (byte) at +0x4.
+ * @see decomp.me (100%)
+ */
+void akao_fade_master_pan(u8* params)
+{
+    s32 raw_ticks;
+    s32 ticks;
+    s32 target;
+    s32 step;
+
+    raw_ticks = *(s32*)(params + 0x0);
+    ticks = 1;
+    if (raw_ticks != 0)
+    {
+        ticks = raw_ticks;
+    }
+    target = *(s8*)(params + 4);
+    target = target << 16;
+    target -= g_akao_masterpan_acc;
+    step = target / ticks;
+    g_akao_masterpan_fade_ticks = ticks;
+    g_akao_masterpan_step = step;
 }
