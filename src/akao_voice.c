@@ -35,7 +35,7 @@ extern AkaoChannelState* D_8004F7C0[];
 extern s32 D_8004F76C[];
 extern s32 D_8004D404[];
 extern s32 D_8004F834[];
-extern s32 D_8003EC34;
+extern s32 D_8003EC34[];
 extern u8 D_8003D248[];
 extern AkaoChannelState D_8004C038[];
 
