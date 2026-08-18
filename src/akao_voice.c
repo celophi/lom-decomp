@@ -42,6 +42,7 @@ extern s32 D_8004C2FC;
 extern u8 D_8004D450[];
 extern s16 D_8004C32E;
 extern s32 D_8004D39C;
+extern s32 g_akao_cdvol_step;
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -2899,6 +2900,498 @@ void akao_sfx_play_list(u8* params)
             count--;
             index_ptr += 4;
         } while (count != 0);
+    }
+}
+
+/**
+ * @brief Stop SFX channels using a (sfx_id, mode) pair read from a buffer.
+ * @param params sfx_id at +0x0, mode at +0x4; see akao_sfx_stop_channels.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_stop_channels_from_params(u8* params)
+{
+    akao_sfx_stop_channels(*(s32*)(params + 0x0), *(s32*)(params + 0x4));
+}
+
+/**
+ * @brief Set a song's master volume directly, canceling any in-progress
+ *        fade, and flag its channels for a volume re-apply.
+ *
+ * @p params holds a song id at +0x0 (0 always means the primary song) and
+ * the new volume (7 bits) at +0x4. Matches against @c g_akao_seq_channel0
+ * first, then @c g_akao_seq_channel1, and is a no-op if neither matches.
+ *
+ * @param params Song id at +0x0, new volume at +0x4.
+ *
+ * @note NOT YET 100% (95.51%, 45/47 exact). The only residue is the order
+ *       of two independent loads (g_akao_pending_channels vs params[4])
+ *       right before the secondary-song call; the scheduler reorders them
+ *       the same way regardless of source statement order, matching the
+ *       sched1/sched2 attribution seen on other functions in this file.
+ * @see decomp.me (95.51%)
+ */
+void akao_seq_set_master_volume(u8* params)
+{
+    s32 id;
+    s32 volume;
+
+    id = *(s32*)(params + 0x0);
+    if (id == 0 || id == g_akao_seq_channel0->unk5E)
+    {
+        volume = (*(s32*)(params + 4) & 0x7F) << 16;
+        g_akao_seq_channel0->pitch_slide_step = volume;
+        g_akao_seq_channel0->unk58 = 0;
+        akao_seq_flag_volume_update(g_akao_seq_channel0, (AkaoChannelState*)g_akao_seq_channels);
+    }
+    else if (g_akao_seq_channel1 != NULL && id != 0 && id == g_akao_seq_channel1->unk5E)
+    {
+        volume = *(s32*)(params + 4);
+        g_akao_seq_channel1->unk58 = 0;
+        volume = (volume & 0x7F) << 16;
+        g_akao_seq_channel1->pitch_slide_step = volume;
+        akao_seq_flag_volume_update(g_akao_seq_channel1, (AkaoChannelState*)g_akao_pending_channels);
+    }
+}
+
+/**
+ * @brief Start a linear fade of a song's master volume to a target level
+ *        over a given tick count, and flag its channels for a volume
+ *        re-apply.
+ *
+ * @p params holds a song id at +0x0 (0 always means the primary song), a
+ * tick count at +0x4 (0 is treated as 1), and the target volume (7 bits)
+ * at +0x8. The per-tick step is computed as (target - current) / ticks and
+ * stored at detune_pitch_delta; unk58 is set to the tick count so the
+ * per-tick fade in akao_tick_channel_effects picks it up.
+ *
+ * @param params Song id at +0x0, tick count at +0x4, target volume at +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_seq_fade_master_volume(u8* params)
+{
+    s32 id;
+    s32 raw_ticks;
+    s32 ticks;
+    s32 target_volume;
+    s32 current_volume;
+    s32 step;
+    AkaoChannelState* channels;
+
+    raw_ticks = *(s32*)(params + 4);
+    ticks = 1;
+    if (raw_ticks != 0)
+    {
+        ticks = raw_ticks;
+    }
+    target_volume = (*(s32*)(params + 8) & 0x7F) << 16;
+    id = *(s32*)(params + 0x0);
+    if (id == 0 || id == g_akao_seq_channel0->unk5E)
+    {
+        current_volume = g_akao_seq_channel0->pitch_slide_step;
+        target_volume -= current_volume;
+        step = target_volume / ticks;
+        channels = (AkaoChannelState*)g_akao_seq_channels;
+        g_akao_seq_channel0->unk58 = ticks;
+        g_akao_seq_channel0->detune_pitch_delta = step;
+        akao_seq_flag_volume_update(g_akao_seq_channel0, channels);
+    }
+    else if (g_akao_seq_channel1 != NULL && id != 0 && id == g_akao_seq_channel1->unk5E)
+    {
+        current_volume = g_akao_seq_channel1->pitch_slide_step;
+        target_volume -= current_volume;
+        step = target_volume / ticks;
+        channels = (AkaoChannelState*)g_akao_pending_channels;
+        g_akao_seq_channel1->unk58 = ticks;
+        g_akao_seq_channel1->detune_pitch_delta = step;
+        akao_seq_flag_volume_update(g_akao_seq_channel1, channels);
+    }
+}
+
+/**
+ * @brief Jump a song's master volume to an explicit start level, then fade
+ *        it to a target level over a given tick count.
+ *
+ * Same song/tick resolution as akao_seq_fade_master_volume, but the start
+ * volume comes from @p params +0x8 (written immediately) instead of the
+ * song's current volume, and the target comes from +0xC.
+ *
+ * @param params Song id at +0x0, tick count at +0x4, start volume at +0x8,
+ *        target volume at +0xC.
+ * @see decomp.me (100%)
+ */
+void akao_seq_fade_master_volume_from(u8* params)
+{
+    s32 id;
+    s32 raw_ticks;
+    s32 ticks;
+    s32 start_volume;
+    s32 target_volume;
+    s32 step;
+    AkaoChannelState* channels;
+    AkaoChannelState* song;
+
+    raw_ticks = *(s32*)(params + 4);
+    ticks = 1;
+    if (raw_ticks != 0)
+    {
+        ticks = raw_ticks;
+    }
+    id = *(s32*)(params + 0x0);
+    if (id == 0 || id == g_akao_seq_channel0->unk5E)
+    {
+        song = g_akao_seq_channel0;
+        channels = (AkaoChannelState*)g_akao_seq_channels;
+    }
+    else if (g_akao_seq_channel1 != NULL && id != 0 && id == g_akao_seq_channel1->unk5E)
+    {
+        song = g_akao_seq_channel1;
+        channels = (AkaoChannelState*)g_akao_pending_channels;
+    }
+    else
+    {
+        return;
+    }
+    start_volume = (*(s32*)(params + 8) & 0x7F) << 16;
+    song->pitch_slide_step = start_volume;
+    target_volume = (*(s32*)(params + 0xC) & 0x7F) << 16;
+    target_volume -= start_volume;
+    step = target_volume / ticks;
+    song->unk58 = ticks;
+    song->detune_pitch_delta = step;
+    akao_seq_flag_volume_update(song, channels);
+}
+
+/**
+ * @brief Set the CD-audio volume accumulator directly, canceling any
+ *        in-progress fade, and push it to the SPU immediately.
+ * @param params Target volume (u16, shifted into the high half) at +0x0.
+ * @see decomp.me (100%)
+ */
+void akao_set_cd_volume(u8* params)
+{
+    s32 volume;
+
+    volume = *(u16*)(params + 0x0);
+    g_akao_cdvol_fade_ticks = 0;
+    volume = volume << 16;
+    g_akao_cdvol_acc = volume;
+    akao_apply_cdvol_to_spu();
+}
+
+/**
+ * @brief Start a linear fade of the CD-audio volume accumulator to a
+ *        target level over a given tick count.
+ *
+ * @param params Tick count at +0x0 (0 is treated as 1), target volume
+ *        (u16, shifted into the high half like the master-volume fades)
+ *        at +0x4.
+ * @see decomp.me (100%)
+ */
+void akao_fade_cd_volume(u8* params)
+{
+    s32 raw_ticks;
+    s32 ticks;
+    s32 target;
+    s32 step;
+
+    raw_ticks = *(s32*)(params + 0x0);
+    ticks = 1;
+    if (raw_ticks != 0)
+    {
+        ticks = raw_ticks;
+    }
+    target = *(u16*)(params + 4);
+    target = target << 16;
+    target -= g_akao_cdvol_acc;
+    step = target / ticks;
+    g_akao_cdvol_fade_ticks = ticks;
+    g_akao_cdvol_step = step;
+}
+
+/**
+ * @brief Jump the CD-audio volume accumulator to an explicit start level,
+ *        then fade it to a target level over a given tick count.
+ * @param params Tick count at +0x0, start volume (u16) at +0x4, target
+ *        volume (u16) at +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_fade_cd_volume_from(u8* params)
+{
+    s32 raw_ticks;
+    s32 ticks;
+    s32 target;
+    s32 start;
+    s32 step;
+
+    raw_ticks = *(s32*)(params + 0x0);
+    ticks = 1;
+    if (raw_ticks != 0)
+    {
+        ticks = raw_ticks;
+    }
+    target = *(u16*)(params + 8);
+    start = *(u16*)(params + 4);
+    target = target << 16;
+    start = start << 16;
+    target -= start;
+    step = target / ticks;
+    g_akao_cdvol_fade_ticks = ticks;
+    g_akao_cdvol_acc = start;
+    g_akao_cdvol_step = step;
+}
+
+/**
+ * @brief Apply a new volume scale to active SFX channels, selected either
+ *        by a tempo_acc mode mask or by an exact sfx id match.
+ *
+ * When @p params +0x4 is non-zero, it is used as a bitmask tested against
+ * each active channel's tempo_acc (secondary flag word). Otherwise, each
+ * active channel's reverb_mask (which doubles as the sfx id tag for SFX
+ * channels; see akao_sfx_stop_channels) is compared against @p params +0x0.
+ *
+ * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
+ *        id-match mode instead), new volume scale (7 bits) at +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_set_volume_scale(u8* params)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s32 scale;
+
+    channel = (AkaoChannelState*)g_sfx_channels;
+    active = g_akao_sfx_control.unk0;
+    bit = 0x1000;
+    if (*(s32*)(params + 4) != 0)
+    {
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && (channel->tempo_acc & *(s32*)(params + 4)))
+            {
+                scale = *(u16*)(params + 8);
+                channel->unk8E = 0;
+                channel->volume_scale = (scale & 0x7F) << 8;
+                channel->update_flags |= 3;
+            }
+        }
+    }
+    else
+    {
+        bit = 0x1000;
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && ((s32)channel->reverb_mask == *(s32*)(params + 0)))
+            {
+                scale = *(u16*)(params + 8);
+                channel->unk8E = 0;
+                channel->volume_scale = (scale & 0x7F) << 8;
+                channel->update_flags |= 3;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Start a fade of the volume scale on active SFX channels, selected
+ *        either by a tempo_acc mode mask or by an exact sfx id match (same
+ *        selection rule as akao_sfx_set_volume_scale).
+ *
+ * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
+ *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
+ *        target volume scale (7 bits) at +0xC.
+ *
+ * @note NOT YET 100% (99.90%, 86/96 exact). The only remaining residue is
+ *       which struct offset the compiler anchors the per-channel loop
+ *       cursor at (0x8E in the target, 0xE6 here); every other instruction
+ *       matches. Introducing an explicit raw-offset cursor variable made
+ *       this measurably worse (94.24%), so the natural struct-access form
+ *       above is the better basin. See working/func_80027B88/code.c.
+ * @see decomp.me (99.90%)
+ */
+void akao_sfx_fade_volume_scale(u8* params)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s16 tick_count;
+    u16 target_scale;
+    s32 current_scale;
+    s16 delta;
+
+    channel = (AkaoChannelState*)g_sfx_channels;
+    active = g_akao_sfx_control.unk0;
+    bit = 0x1000;
+    if (*(s32*)(params + 4) != 0)
+    {
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && (channel->tempo_acc & *(s32*)(params + 4)))
+            {
+                if (*(s32*)(params + 8) != 0)
+                {
+                    tick_count = *(u16*)(params + 8);
+                }
+                else
+                {
+                    tick_count = 1;
+                }
+                target_scale = (*(u16*)(params + 0xC) & 0x7F) << 8;
+                current_scale = channel->volume_scale;
+                delta = target_scale - current_scale;
+                channel->unk8E = tick_count;
+                channel->unkE6 = delta / tick_count;
+            }
+        }
+    }
+    else
+    {
+        bit = 0x1000;
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && ((s32)channel->reverb_mask == *(s32*)(params + 0)))
+            {
+                if (*(s32*)(params + 8) != 0)
+                {
+                    tick_count = *(u16*)(params + 8);
+                }
+                else
+                {
+                    tick_count = 1;
+                }
+                target_scale = (*(u16*)(params + 0xC) & 0x7F) << 8;
+                current_scale = channel->volume_scale;
+                delta = target_scale - current_scale;
+                channel->unk8E = tick_count;
+                channel->unkE6 = delta / tick_count;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Apply a new volume scale to every active SFX channel whose
+ *        tempo_acc does not have the pan/volume-suppress bit (0x02000000)
+ *        set.
+ * @param param New volume scale (7 bits, u16) to apply.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_set_volume_scale_unsuppressed(u16* param)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s32 scale;
+
+    bit = 0x1000;
+    active = g_akao_sfx_control.unk0;
+    channel = (AkaoChannelState*)g_sfx_channels;
+    for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+    {
+        if ((active & bit) && !(channel->tempo_acc & 0x02000000))
+        {
+            scale = *param;
+            channel->unk8E = 0;
+            channel->volume_scale = (scale & 0x7F) << 8;
+            channel->update_flags |= 3;
+        }
+    }
+}
+
+/**
+ * @brief Set the pan bias on active SFX channels, selected either by a
+ *        tempo_acc mode mask or by an exact sfx id match (same selection
+ *        rule as akao_sfx_set_volume_scale), and cancel any pan-bias fade.
+ * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
+ *        id-match mode instead), new pan bias (u8) at +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_set_pan_bias(u8* params)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s32 bias;
+
+    channel = (AkaoChannelState*)g_sfx_channels;
+    active = g_akao_sfx_control.unk0;
+    bit = 0x1000;
+    if (*(s32*)(params + 4) != 0)
+    {
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && (channel->tempo_acc & *(s32*)(params + 4)))
+            {
+                bias = *(u8*)(params + 8);
+                channel->pan_bias_fade_ticks = 0;
+                channel->pan_bias = bias << 8;
+                channel->update_flags |= 3;
+            }
+        }
+    }
+    else
+    {
+        bit = 0x1000;
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && ((s32)channel->reverb_mask == *(s32*)(params + 0)))
+            {
+                bias = *(u8*)(params + 8);
+                channel->pan_bias_fade_ticks = 0;
+                channel->pan_bias = bias << 8;
+                channel->update_flags |= 3;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Start a fade of the volume scale on every active SFX channel
+ *        whose tempo_acc does not have the suppress bit (0x02000000) set.
+ * @param params Tick count at +0x0 (0 is treated as 1), target volume
+ *        scale (7 bits, u16) at +0x4.
+ *
+ * @note NOT YET 100% (99.90%, 45/50 exact). Same loop-cursor anchor
+ *       residue as akao_sfx_fade_volume_scale (0x8E vs 0xE6); every other
+ *       instruction matches.
+ * @see decomp.me (99.90%)
+ */
+void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s16 tick_count;
+    u16 target_scale;
+    s32 current_scale;
+    s16 delta;
+
+    bit = 0x1000;
+    active = g_akao_sfx_control.unk0;
+    channel = (AkaoChannelState*)g_sfx_channels;
+    for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+    {
+        if ((active & bit) && !(channel->tempo_acc & 0x02000000))
+        {
+            if (*(s32*)(params + 0) != 0)
+            {
+                tick_count = *(u16*)(params + 0);
+            }
+            else
+            {
+                tick_count = 1;
+            }
+            target_scale = (*(u16*)(params + 4) & 0x7F) << 8;
+            current_scale = channel->volume_scale;
+            delta = target_scale - current_scale;
+            channel->unk8E = tick_count;
+            channel->unkE6 = delta / tick_count;
+        }
     }
 }
 

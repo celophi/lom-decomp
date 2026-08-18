@@ -221,7 +221,7 @@ segments:
       - [0x14A00, c, psyq/libspu/S_STM]              # psyq 4.1-4.6
       - [0x14A30, c, psyq/libspu/S_STC]              # psyq 4.1-4.6
       - [0x14A60, c, akao_voice]
-      - [0x17E78, c, unk9]
+      - [0x1872C, c, unk9]
       - [0x1998C, c, psyq/libspu/S_SRMT]             # psyq 4.1-4.6
       - [0x19B5C, c, psyq/libspu/S_SRA]              # psyq 4.1-4.6
       - [0x1A02C, c, psyq/libspu/S_CRWA]             # psyq 4.1-4.6

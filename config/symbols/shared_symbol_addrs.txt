@@ -796,6 +796,18 @@ akao_sfx_play_default                = 0x80027414;
 akao_sfx_play_program                = 0x80027460;
 akao_sfx_play_program_raw            = 0x800274E0;
 akao_sfx_play_list                   = 0x80027548;
+akao_sfx_stop_channels_from_params    = 0x80027678;
+akao_seq_set_master_volume            = 0x800276A4;
+akao_seq_fade_master_volume           = 0x80027760;
+akao_seq_fade_master_volume_from      = 0x80027884;
+akao_set_cd_volume                   = 0x80027988;
+akao_fade_cd_volume                  = 0x800279C0;
+akao_fade_cd_volume_from             = 0x80027A2C;
+akao_sfx_set_volume_scale             = 0x80027AA0;
+akao_sfx_fade_volume_scale            = 0x80027B88;
+akao_sfx_set_volume_scale_unsuppressed = 0x80027D08;
+akao_sfx_fade_volume_scale_unsuppressed = 0x80027D84;
+akao_sfx_set_pan_bias                = 0x80027E4C;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;
