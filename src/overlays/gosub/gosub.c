@@ -3382,20 +3382,15 @@ s32 LoadImage(); /* extern */
  * @param count How many portraits were already emitted this frame.
  * @return Packet cursor past the sprite (func_8014680C's return), or prim
  *         when count is 5 or more.
- *
- * @note WIP - best match 93.92% (99/134 exact rows, gcc 2.7.2 CDK). The
- *       residue is one 5-cycle saved-register rotation (count must color s1;
- *       here it lands s5) plus three instruction-order pairs. Measured
- *       evidence, retired probe classes and next moves are in
- *       working/func_801450D8/STATUS.md.
+ * @see decomp.me (100%)
  */
 s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
 {
     GosubSprt* sprt;
     GosubRect rect;
-    s32* entry;
     s32 idx;
     s32 cell;
+    s32 n;
 
     if (count >= 5)
     {
@@ -3410,21 +3405,21 @@ s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     {
         idx = g_gosub_rows[row].unkC + 0x41;
     }
-    cell = count * 3;
+    n = count;
+    cell = n * 3;
 
     rect.x = cell * 4 + 0x140;
     rect.w = 0xC;
     rect.h = 0x30;
     rect.y = g_gosub_frame_parity * 0x30;
-    entry = &D_80152DF4[idx];
-    LoadImage(&rect, (u8*)D_80152DF4 + *entry + 0x1C);
+    LoadImage(&rect, (u8*)D_80152DF4 + D_80152DF4[idx] + 0x1C);
 
     rect.y = 0x1F2;
     rect.w = 0x10;
     rect.h = 1;
-    count = count * 0x10;
-    rect.x = count + g_gosub_frame_parity * 0x50;
-    LoadImage(&rect, (u8*)D_80152DF4 + *entry - 4);
+    n = n * 0x10;
+    rect.x = n + g_gosub_frame_parity * 0x50;
+    LoadImage(&rect, (u8*)D_80152DF4 + D_80152DF4[idx] - 4);
 
     sprt = (GosubSprt*)prim;
     *(u32*)&sprt->r0 = 0x808080;
@@ -3436,9 +3431,7 @@ s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     sprt->y0 = y;
     sprt->w = 0x30;
     sprt->h = 0x30;
-    count = count + g_gosub_frame_parity * 0x50;
-    count = ((count >> 4) & 0x3F) | 0x7C80;
-    sprt->clut = count;
+    sprt->clut = (((n + g_gosub_frame_parity * 0x50) >> 4) & 0x3F) | 0x7C80;
     ADD_PRIM(ot, sprt);
     return func_8014680C(prim + 0x14, ot);
 }

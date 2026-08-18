@@ -26,6 +26,7 @@ typedef struct AkaoSequenceVoiceMasks
 } AkaoSequenceVoiceMasks;
 
 extern u8* D_8003D0C0;
+extern s16 D_8003D068[];
 extern s16 D_8003D37C[];
 extern s16 D_8003D47C;
 extern s32 D_8004F754[];
@@ -37,7 +38,7 @@ extern s32 D_8004F834[];
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
-extern void func_8002613C(s32 arg0, s32 arg1);
+void akao_set_reverb_volume(s32 reverb_left, s32 reverb_right);
 s32 akao_set_noise_frequency(s32 noise_freq);
 void akao_read_voice_envelope(s32 voice_index, s16* envelope_out);
 
@@ -1463,7 +1464,7 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
     if (work_mask & 0x80)
     {
         master_volume = (s32)(g_akao_seq_channel0->unk48 << 4) >> 16;
-        func_8002613C(master_volume, master_volume);
+        akao_set_reverb_volume(master_volume, master_volume);
         g_akao_driver_flags.unk8 &= ~0x80;
     }
 
@@ -1726,4 +1727,26 @@ s32 akao_set_noise_frequency(s32 noise_freq)
 void akao_read_voice_envelope(s32 voice_index, s16* envelope_out)
 {
     *envelope_out = *(u16*)(D_8003D0C0 + (voice_index * 16) + 0xC);
+}
+
+/**
+ * @brief Set the SPU reverb output volume and cache it.
+ *
+ * Writes @p reverb_left and @p reverb_right into the SPU Reverb Output Volume
+ * Left/Right registers (at @c D_8003D0C0 + 0x184 / +0x186) and mirrors both
+ * values into the @c D_8003D068 software shadow.
+ *
+ * @param reverb_left  Reverb output volume for the left channel.
+ * @param reverb_right Reverb output volume for the right channel.
+ * @see decomp.me (100%)
+ */
+void akao_set_reverb_volume(s32 reverb_left, s32 reverb_right)
+{
+    s16* shadow_l = D_8003D068;
+    s16* shadow_r = shadow_l + 1;
+
+    *(u16*)(D_8003D0C0 + 0x184) = reverb_left;
+    *(u16*)(D_8003D0C0 + 0x186) = reverb_right;
+    shadow_r[-1] = reverb_left;
+    *shadow_r = reverb_right;
 }
