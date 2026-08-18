@@ -39,6 +39,7 @@ extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
 extern void func_8002613C(s32 arg0, s32 arg1);
 s32 akao_set_noise_frequency(s32 noise_freq);
+void akao_read_voice_envelope(s32 voice_index, s16* envelope_out);
 
 /**
  * @brief Write the SPU key-on voice bitmap.
@@ -1338,7 +1339,7 @@ void akao_refresh_voice_allocation_state(u32 reserved_voice_mask, s32 xa_voice_m
             }
             else
             {
-                func_8002611C(voice_index, envelope_level);
+                akao_read_voice_envelope(voice_index, envelope_level);
 
                 if (*envelope_level == 0)
                 {
@@ -1709,4 +1710,20 @@ s32 akao_set_noise_frequency(s32 noise_freq)
     result = clamped;
     *spu_ctrl = (u16)((*spu_ctrl & 0xC0FF) | ((clamped & 0x3F) << 8));
     return result;
+}
+
+/**
+ * @brief Read a voice's current ADSR envelope volume from the SPU.
+ *
+ * Reads the ADSR Current Volume (ENVX) halfword at offset 0xC of SPU voice
+ * register block @p voice_index (each block is 16 bytes, based at
+ * @c D_8003D0C0) and stores it to @p envelope_out.
+ *
+ * @param voice_index  SPU voice number (0-23).
+ * @param envelope_out Destination for the voice's current envelope volume.
+ * @see decomp.me (100%)
+ */
+void akao_read_voice_envelope(s32 voice_index, s16* envelope_out)
+{
+    *envelope_out = *(u16*)(D_8003D0C0 + (voice_index * 16) + 0xC);
 }
