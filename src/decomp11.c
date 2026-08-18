@@ -208,7 +208,7 @@ void func_8002D140()
 }
 
 /**
- * @see decomp.me (94.44%)
+ * @see decomp.me (100%)
  */
 s32 func_8002D1C4(void)
 {
@@ -217,8 +217,9 @@ s32 func_8002D1C4(void)
     s32 result;
     u32 mask;
 
-    for (mask = 0xC00000;; mask = 0xC00000)
+    for (;;)
     {
+        mask = 0xC00000;
         count = 0xB;
         combined = g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10;
     loop_2:
@@ -231,9 +232,9 @@ s32 func_8002D1C4(void)
                 goto loop_2;
             }
         }
-        result = count + 0xB;
         if (count != 0)
         {
+            result = count + 0xB;
             return result;
         }
         func_800266B0(0, 0x40000000);
