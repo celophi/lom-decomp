@@ -2199,3 +2199,57 @@ void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
     }
     g_akao_driver_flags.unk8 |= 0x110;
 }
+
+/**
+ * @see decomp.me (100%)
+ */
+void akao_sfx_start_channel(AkaoChannelState* channel, u8* params, s32 channel_mask, u8* seq_data)
+{
+    s32 n;
+
+    channel->reverb_mask = *(s32*)(params + 0x0);
+    channel->tempo_acc = *(s32*)(params + 0x4);
+    channel->pan_bias = *(u8*)(params + 0x8) << 8;
+    channel->pan_bias_fade_ticks = 0;
+    channel->pan = 0x8000;
+    channel->pan_fade_ticks = 0;
+    channel->volume_scale = (*(u16*)(params + 0xC) & 0x7F) << 8;
+    channel->unk8E = 0;
+    channel->voice_alloc_base = *(s32*)(params + 0x10);
+    channel->unk66 = 2;
+    channel->unk68 = 1;
+    channel->is_sfx_channel = 1;
+    *(s32*)&channel->unk58 = -2;
+    channel->noise_mask = 0;
+    channel->unk88 = 0;
+    akao_channel_init_state(channel, seq_data);
+
+    D_8004F7C0[channel->voice] = NULL;
+    spu_set_voice_release_mode(channel->voice, 5, 3);
+
+    g_akao_sfx_control.unk0 |= channel_mask;
+    g_akao_sfx_control.unkC |= channel_mask;
+    channel_mask = ~channel_mask;
+    g_akao_sfx_control.unk4 &= channel_mask;
+    g_akao_sfx_control.unk8 &= channel_mask;
+    g_akao_sfx_control.reverb_mask &= channel_mask;
+    g_akao_sfx_control.noise_mask &= channel_mask;
+    g_akao_sfx_control.pitch_mod_mask &= channel_mask;
+
+    if (g_akao_driver_mode_flags & 2)
+    {
+        channel_mask = 0x1000;
+        channel = (AkaoChannelState*)g_sfx_channels;
+        for (n = 0xC; n != 0; n--, channel++, channel_mask <<= 1)
+        {
+            if (g_akao_sfx_control.unk0 & channel_mask)
+            {
+                if (!(channel->tempo_acc & 0x2000000))
+                {
+                    g_akao_sfx_control.unk0 &= ~channel_mask;
+                    g_akao_sfx_control.unk10 |= channel_mask;
+                }
+            }
+        }
+    }
+}
