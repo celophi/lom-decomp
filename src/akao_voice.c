@@ -45,6 +45,7 @@ extern s32 D_8004D39C;
 extern s32 g_akao_cdvol_step;
 extern s32 g_akao_masterpan_step;
 extern s32 g_akao_mastervol_step;
+extern s32 D_8004D410;
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -4194,5 +4195,106 @@ void akao_seq_resume_and_apply_pending_voices(void)
     }
     mode = g_akao_driver_mode_flags;
     mode &= ~1;
+    g_akao_driver_mode_flags = mode;
+}
+
+/**
+ * @brief SFX counterpart of akao_seq_silence_unused_voices_and_pause:
+ *        filters the active SFX channel mask down to non-suppressed
+ *        channels, parks it in g_akao_sfx_control.unk10, clears those bits
+ *        from unk0, silences their SPU voices, and sets the driver
+ *        "SFX paused" mode bit (0x2).
+ * @see decomp.me (100%)
+ */
+void akao_sfx_silence_unused_voices_and_pause(void)
+{
+    AkaoChannelState* channel;
+    s32 raw_active;
+    s32 voice;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s32 mode;
+
+    raw_active = g_akao_sfx_control.unk0;
+    if (raw_active != 0)
+    {
+        active = raw_active;
+        channel = (AkaoChannelState*)g_sfx_channels;
+        bit = 0x1000;
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && (channel->tempo_acc & 0x02000000))
+            {
+                active &= ~bit;
+            }
+        }
+        bit = 0x1000;
+        voice = 0xC;
+        g_akao_sfx_control.unk10 = active;
+        g_akao_sfx_control.unk0 &= ~active;
+        if (active != 0)
+        {
+            do
+            {
+                if (active & bit)
+                {
+                    spu_set_voice_volume(voice, 0, 0, 0);
+                    spu_set_voice_pitch(voice, 0);
+                    spu_set_voice_attack(voice, 0x7F, 1);
+                    spu_set_voice_sustain_mode(voice, 0x7F, 3);
+                    active &= ~bit;
+                }
+                bit <<= 1;
+                voice++;
+            } while (active != 0);
+        }
+    }
+    mode = g_akao_driver_mode_flags;
+    mode |= 2;
+    g_akao_driver_mode_flags = mode;
+}
+
+/**
+ * @brief Resume SFX channels from the paused state set by
+ *        akao_sfx_silence_unused_voices_and_pause: flag every parked
+ *        channel for a full SPU re-apply, restore the active mask from
+ *        the parked D_8004D410 value, and clear the driver "SFX paused"
+ *        mode bit.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_resume_and_apply_pending_voices(void)
+{
+    AkaoChannelState* channel;
+    s32 raw_mask;
+    s32 mask;
+    s32 bit;
+    s32 parked;
+    s32 mode;
+
+    raw_mask = D_8004D410;
+    if (raw_mask != 0)
+    {
+        mask = raw_mask;
+        channel = (AkaoChannelState*)g_sfx_channels;
+        bit = 0x1000;
+        do
+        {
+            if (mask & bit)
+            {
+                mask &= ~bit;
+                channel->update_flags |= 0x2B13;
+            }
+            bit <<= 1;
+            channel++;
+        } while (mask != 0);
+
+        parked = g_akao_sfx_control.unk10;
+        g_akao_sfx_control.unk10 = 0;
+        g_akao_sfx_control.unk0 |= parked;
+        g_akao_driver_flags.unk8 |= 0x100;
+    }
+    mode = g_akao_driver_mode_flags;
+    mode &= ~2;
     g_akao_driver_mode_flags = mode;
 }
