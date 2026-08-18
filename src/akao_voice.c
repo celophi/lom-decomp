@@ -25,6 +25,7 @@ typedef struct AkaoSequenceVoiceMasks
     u32 static_voice_mask;
 } AkaoSequenceVoiceMasks;
 
+extern u8* D_8003D0C0;
 extern s16 D_8003D37C[];
 extern s16 D_8003D47C;
 extern s32 D_8004F754[];
@@ -37,7 +38,7 @@ extern s32 D_8004F834[];
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
 extern void func_8002613C(s32 arg0, s32 arg1);
-extern void func_800260CC(u16 arg0);
+s32 akao_set_noise_frequency(s32 noise_freq);
 
 /**
  * @brief Write the SPU key-on voice bitmap.
@@ -1475,7 +1476,7 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
         {
             noise_frequency = g_akao_seq_channel0->noise_freq;
         }
-        func_800260CC(noise_frequency);
+        akao_set_noise_frequency(noise_frequency);
         g_akao_driver_flags.unk8 &= ~0x10;
     }
 
@@ -1673,4 +1674,39 @@ void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask,
     voice_mask |= sfx_effect_voices;
     *effect_voices = voice_mask;
     g_akao_driver_flags.unk8 |= 0x100;
+}
+
+/**
+ * @brief Program the SPU noise frequency field of SPUCNT.
+ *
+ * Clamps @p noise_freq to 0..0x3F (negative values become 0, values >= 0x40
+ * saturate to 0x3F) and writes it into the noise frequency step+shift field
+ * (bits 8-13) of the SPU control register (SPUCNT) at @c D_8003D0C0 + 0x1AA,
+ * preserving the remaining bits via the 0xC0FF mask.
+ *
+ * @param noise_freq Requested noise frequency; negative clamps to 0, values >= 0x40 clamp to 0x3F.
+ * @return The clamped noise frequency actually written (0..0x3F).
+ * @see decomp.me (100%)
+ */
+s32 akao_set_noise_frequency(s32 noise_freq)
+{
+    u16* spu_ctrl;
+    s32 clamped;
+    s32 result;
+
+    clamped = 0;
+    if (noise_freq >= 0)
+    {
+        result = noise_freq;
+        clamped = result;
+        if (clamped >= 0x40)
+        {
+            clamped = 0x3F;
+        }
+    }
+
+    spu_ctrl = (u16*)(D_8003D0C0 + 0x1AA);
+    result = clamped;
+    *spu_ctrl = (u16)((*spu_ctrl & 0xC0FF) | ((clamped & 0x3F) << 8));
+    return result;
 }
