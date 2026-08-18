@@ -54,7 +54,9 @@ typedef struct
     s32  unk40;      /* 0x40 - pan accumulator (seeded to 0x7F00) */
     s32  unk44;      /* 0x44 - pan step */
     s32  unk48;      /* 0x48 - pan fade-tick countdown */
-} AkaoXaTracker; /* size 0x4C */
+    u8   pad3[0x0C]; /* 0x4C - 0x57 */
+    s32  unk58;      /* 0x58 - cached pitch value for the streamed voice pair */
+} AkaoXaTracker; /* size 0x5C */
 
 extern s32 g_akao_spu_xfer_pending;
 extern u8 g_akao_articulation_slots[];

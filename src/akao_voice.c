@@ -167,7 +167,7 @@ void spu_set_voice_volume(s32 voice, u32 vol_l, u32 vol_r, s32 scale)
  * @param pitch Raw pitch value written directly to the PITCH register.
  * @see decomp.me (100%) https://decomp.me/scratch/3fXi9
  */
-void spu_set_voice_pitch(s32 voice, u16 pitch)
+void spu_set_voice_pitch(s32 voice, s32 pitch)
 {
     s32 ptr = (s32)0x1F801C04;
     voice = voice << 4;
@@ -4297,4 +4297,31 @@ void akao_sfx_resume_and_apply_pending_voices(void)
     mode = g_akao_driver_mode_flags;
     mode &= ~2;
     g_akao_driver_mode_flags = mode;
+}
+
+/**
+ * @brief Zero the pitch of the streamed XA voice pair while a stream is active.
+ * @see decomp.me (100%)
+ */
+void akao_xa_silence_voice_pitch(void)
+{
+    if (g_akao_xa_tracker.unkC != 0)
+    {
+        spu_set_voice_pitch(g_akao_xa_tracker.unk10, 0);
+        spu_set_voice_pitch(g_akao_xa_tracker.unk10 + 1, 0);
+    }
+}
+
+/**
+ * @brief Restore the streamed XA voice pair's pitch to the tracker's cached
+ *        value while a stream is active.
+ * @see decomp.me (100%)
+ */
+void akao_xa_restore_voice_pitch(void)
+{
+    if (g_akao_xa_tracker.unkC != 0)
+    {
+        spu_set_voice_pitch(g_akao_xa_tracker.unk10, g_akao_xa_tracker.unk58);
+        spu_set_voice_pitch(g_akao_xa_tracker.unk10 + 1, g_akao_xa_tracker.unk58);
+    }
 }
