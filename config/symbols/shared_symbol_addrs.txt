@@ -774,6 +774,14 @@ akao_build_effect_voice_mask        = 0x80025F48;
 akao_set_noise_frequency            = 0x800260CC;
 akao_read_voice_envelope            = 0x8002611C;
 akao_set_reverb_volume              = 0x8002613C;
+akao_channel_init_state             = 0x8002616C;
+akao_collect_voice_mask             = 0x80026208;
+akao_seq_start_song                 = 0x80026254;
+akao_seq_stop_song                  = 0x800265DC;
+akao_sfx_stop_channels              = 0x800266B0;
+akao_sfx_start_channel              = 0x80026A10;
+akao_unassign_voice                 = 0x80026BB8;
+akao_sfx_play                       = 0x80026C14;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;
