@@ -24,7 +24,7 @@ typedef struct
     s32 unkC;  /* 0x0C */
 } TimingRing;
 
-extern s32 D_8004D408;
+extern s32 D_8004D408[1];
 extern TimingRing D_8003D160;
 extern u8 g_akao_master_vol_scalar;
 

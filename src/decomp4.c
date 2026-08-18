@@ -6,8 +6,8 @@
  * addresses near gp_value 0x8003EC14; declared extern here so decomp4 does not
  * emit a second (.bss) definition. */
 extern u16 g_akao_irq_frame_counter;
-s32 D_8004D40C;
-u32 D_8004F758;
+s32 D_8004D40C[1];
+u32 D_8004F758[1];
 extern s32 D_8003EC18;
 
 /** @brief 12-entry semitone pitch-ratio table indexed by note % 12 in akao_compute_pitch. */
@@ -393,7 +393,19 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
 }
 
 /**
- * decomp.me (95.79%) https://decomp.me/scratch/ICO2k
+ * @brief AKAO driver per-frame IRQ callback (RCNT2 event handler).
+ *
+ * Advances the sequencer/SFX state once per frame: services pending key-offs
+ * and channel1->channel0 handoff, flushes voice register updates when any
+ * channel has a note-on pending, ticks the primary and secondary song
+ * channels, steps the SFX channel bitmask (note/gate countdown and opcode
+ * dispatch), ticks fade envelopes every 4th frame, and updates the
+ * @c D_8003D160 timing ring used for profiling.
+ *
+ * @note @c D_8004D40C, @c D_8004F758, and @c D_8004D408 are declared as
+ *       single-element arrays (not scalars) because that is the shape the
+ *       verified GCC 2.8.0 match requires.
+ * @see decomp.me (100%) https://decomp.me/scratch/ICO2k
  */
 void akao_irq_handler(void)
 {
@@ -401,71 +413,61 @@ void akao_irq_handler(void)
     s32 var_s3;
     s32 temp_a3;
     s32 temp_v1_3;
+    s32 temp_v0;
     u16 temp_v0_2;
     u16 temp_v1_2;
     AkaoChannelState* channel;
     u32 bitMask;
-    AkaoChannelState* new_var;
 
     temp_s5 = GetRCnt(0xF2000002);
 
-    /* First conditional block */
+    /* First/second conditional flow */
+    g_akao_irq_frame_counter += 1;
+    if ((g_akao_seq_channel0->key_off_mask == 0) && (D_8004D40C[0] == 0))
     {
-        AkaoChannelState* seq0;
-        u16 ec1c;
-        u32 unk18_val;
-
-        seq0 = g_akao_seq_channel0;
-        ec1c = g_akao_irq_frame_counter;
-        unk18_val = seq0->key_off_mask;
-        ec1c += 1;
-        g_akao_irq_frame_counter = ec1c;
-
-        if ((unk18_val == 0) && (D_8004D40C == 0))
+        if (g_akao_seq_channel1 != 0)
         {
-            if (g_akao_seq_channel1 != 0)
+            if (g_akao_seq_channel1->key_off_mask != 0)
             {
-                if (g_akao_seq_channel1->key_off_mask != 0)
-                {
-                    func_80025D98();
-                }
+                goto flush_key_offs;
             }
+            goto process_secondary;
         }
-        else
-        {
-            func_80025D98();
-        }
+        goto after_secondary;
     }
-
-    /* Second block */
+    else
     {
-        AkaoChannelState* ch28 = g_akao_seq_channel1;
-        if (ch28 != 0)
+flush_key_offs:
+        func_80025D98();
+process_secondary:
         {
-            if (ch28->w04.song.active_mask == 0)
+            AkaoChannelState* ch28 = g_akao_seq_channel1;
+            if (ch28 != 0)
             {
-                g_akao_seq_channel1 = 0;
-            }
-            else if ((g_akao_seq_channel0->w04.song.active_mask | g_akao_seq_channel0->unk1C) == 0)
-            {
-                akao_copy_bytes((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
-                akao_copy_bytes((s32*)g_akao_pending_channels, &g_akao_seq_channels, 0x2300);
+                if (ch28->w04.song.active_mask == 0)
                 {
-                    AkaoChannelState* tmp = g_akao_seq_channel1;
                     g_akao_seq_channel1 = 0;
-                    tmp->unk5E = 0;
-                    tmp->w04.song.active_mask = 0;
+                }
+                else if ((g_akao_seq_channel0->w04.song.active_mask | g_akao_seq_channel0->unk1C) == 0)
+                {
+                    akao_copy_bytes((s32*)ch28, (s32*)g_akao_seq_channel0, 0x70);
+                    akao_copy_bytes((s32*)g_akao_pending_channels, &g_akao_seq_channels, 0x2300);
+                    {
+                        AkaoChannelState* tmp = g_akao_seq_channel1;
+                        g_akao_seq_channel1 = 0;
+                        tmp->unk5E = 0;
+                        tmp->w04.song.active_mask = 0;
+                    }
                 }
             }
         }
     }
-
-    new_var = &g_akao_seq_master_state;
+after_secondary:
 
     /* Third conditional */
-    if (((D_8004F758 | g_akao_seq_channel0->note_on_mask | D_8004D408) != 0) || ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->note_on_mask != 0)))
+    if (((D_8004F758[0] | g_akao_seq_channel0->note_on_mask | D_8004D408[0]) != 0) || ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->note_on_mask != 0)))
     {
-        akao_flush_voice_updates(D_8004D408);
+        akao_flush_voice_updates(D_8004D408[0]);
     }
 
     /* Fourth conditional */
@@ -479,7 +481,7 @@ void akao_irq_handler(void)
     {
         g_akao_seq_channel0 = g_akao_seq_channel1;
         akao_seq_tick_channels(g_akao_pending_channels, 1);
-        g_akao_seq_channel0 = new_var;
+        g_akao_seq_channel0 = &g_akao_seq_master_state;
     }
 
     /* SFX channel processing loop */
@@ -500,14 +502,15 @@ void akao_irq_handler(void)
                 {
                     if (var_s3 & bitMask)
                     {
-                        if (!(g_akao_driver_mode_flags & 2) || (channel->tempo_acc & 0x02000000))
+                        u8* p66 = (u8*)&channel->unk66;
+                        if (!(g_akao_driver_mode_flags & 2) || (*(u32*)(p66 - 0x3E) & 0x02000000))
                         {
-                            (*(u32*)&channel->unk58)++;
+                            (*(u32*)(p66 - 0xE))++;
 
-                            temp_v1_2 = channel->unk66 - 1;
-                            channel->unk66 = temp_v1_2;
-                            temp_v0_2 = channel->unk68 - 1;
-                            channel->unk68 = temp_v0_2;
+                            temp_v1_2 = *(u16*)(p66 + 0) - 1;
+                            *(u16*)(p66 + 0) = temp_v1_2;
+                            temp_v0_2 = *(u16*)(p66 + 2) - 1;
+                            *(u16*)(p66 + 2) = temp_v0_2;
 
                             if (temp_v1_2 == 0)
                             {
@@ -536,24 +539,32 @@ void akao_irq_handler(void)
     }
 
     /* Timing / profiling update for D_8003D160 */
-    temp_s5 = GetRCnt(0xF2000002) - temp_s5;
+    temp_s5 = (temp_a3 = GetRCnt(0xF2000002)) - temp_s5;
     if (temp_s5 <= 0)
     {
         temp_s5 += 0x44E8;
     }
 
-    var_s3 = temp_s5;
-
     {
         s32 d4 = D_8003D160.unk4;
         s32 d8 = D_8003D160.unk8;
-        temp_a3 = D_8003D160.unkC;
-        D_8003D160.unkC = var_s3;
-        D_8003D160.unk0 = d4;
-        temp_v1_3 = d4 + d8 + temp_a3;
+        do
+        {
+            temp_a3 = D_8003D160.unkC;
+            do
+            {
+                do
+                {
+                    temp_v0 = (temp_s5 & temp_a3) | (temp_s5 & ~temp_a3);
+                    D_8003D160.unkC = temp_v0;
+                } while (0);
+            } while (0);
+            D_8003D160.unk0 = d4;
+            temp_v1_3 = d4 + d8 + temp_a3;
+        } while (0);
         D_8003D160.unk4 = d8;
         D_8003D160.unk8 = temp_a3;
-        D_8003EC18 = temp_v1_3 + var_s3;
+        D_8003EC18 = temp_v1_3 + temp_v0;
     }
 }
 

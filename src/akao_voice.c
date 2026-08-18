@@ -3864,3 +3864,57 @@ void akao_fade_master_pan(u8* params)
     g_akao_masterpan_fade_ticks = ticks;
     g_akao_masterpan_step = step;
 }
+
+/**
+ * @brief Jump the master pan accumulator to an explicit start level, then
+ *        fade it to a target level over a given tick count.
+ *
+ * Unlike the other fade functions in this file, the tick-count value and
+ * its zero-check read different offsets: the check reads +0x4 (the same
+ * word as the start pan, tested as an s32 before being reread as a
+ * signed byte), and the actual tick count comes from +0x0.
+ *
+ * @param params Tick count at +0x0, signed start pan (byte) at +0x4,
+ *        signed target pan (byte) at +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_fade_master_pan_from(u8* params)
+{
+    s32 raw_ticks;
+    s32 ticks;
+    s32 target;
+    s32 start;
+    s32 step;
+
+    raw_ticks = *(s32*)(params + 0x4);
+    ticks = 1;
+    if (raw_ticks != 0)
+    {
+        ticks = *(s32*)(params + 0x0);
+    }
+    start = *(s8*)(params + 4);
+    start = start << 16;
+    g_akao_masterpan_acc = start;
+    target = *(s8*)(params + 8);
+    target = target << 16;
+    target -= start;
+    step = target / ticks;
+    g_akao_masterpan_fade_ticks = ticks;
+    g_akao_masterpan_step = step;
+}
+
+/**
+ * @brief Set the driver-wide master volume accumulator directly,
+ *        canceling any in-progress fade.
+ * @param param Signed target volume (byte, shifted into the high half).
+ * @see decomp.me (100%)
+ */
+void akao_set_driver_master_volume(s8* param)
+{
+    s32 volume;
+
+    volume = *param;
+    g_akao_mastervol_fade_ticks = 0;
+    volume = volume << 16;
+    g_akao_mastervol_acc = volume;
+}
