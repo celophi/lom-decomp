@@ -25,6 +25,8 @@ typedef struct AkaoSequenceVoiceMasks
     u32 static_voice_mask;
 } AkaoSequenceVoiceMasks;
 
+extern u8* D_8003D0C0;
+extern s16 D_8003D068[];
 extern s16 D_8003D37C[];
 extern s16 D_8003D47C;
 extern s32 D_8004F754[];
@@ -35,9 +37,10 @@ extern s32 D_8004D404[];
 extern s32 D_8004F834[];
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
-extern void func_80025F48(s32* dest, s32 target, s32 current, s32 step);
-extern void func_8002613C(s32 arg0, s32 arg1);
-extern void func_800260CC(u16 arg0);
+void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
+void akao_set_reverb_volume(s32 reverb_left, s32 reverb_right);
+s32 akao_set_noise_frequency(s32 noise_freq);
+void akao_read_voice_envelope(s32 voice_index, s16* envelope_out);
 
 /**
  * @brief Write the SPU key-on voice bitmap.
@@ -1337,7 +1340,7 @@ void akao_refresh_voice_allocation_state(u32 reserved_voice_mask, s32 xa_voice_m
             }
             else
             {
-                func_8002611C(voice_index, envelope_level);
+                akao_read_voice_envelope(voice_index, envelope_level);
 
                 if (*envelope_level == 0)
                 {
@@ -1461,7 +1464,7 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
     if (work_mask & 0x80)
     {
         master_volume = (s32)(g_akao_seq_channel0->unk48 << 4) >> 16;
-        func_8002613C(master_volume, master_volume);
+        akao_set_reverb_volume(master_volume, master_volume);
         g_akao_driver_flags.unk8 &= ~0x80;
     }
 
@@ -1475,17 +1478,17 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
         {
             noise_frequency = g_akao_seq_channel0->noise_freq;
         }
-        func_800260CC(noise_frequency);
+        akao_set_noise_frequency(noise_frequency);
         g_akao_driver_flags.unk8 &= ~0x10;
     }
 
     if (work_mask & 0x100)
     {
         effect_mask_center = D_8004F834;
-        func_80025F48(effect_mask_center, g_akao_seq_channel1->reverb_mask, g_akao_seq_channel0->reverb_mask, g_akao_sfx_control.reverb_mask);
+        akao_build_effect_voice_mask(effect_mask_center, g_akao_seq_channel1->reverb_mask, g_akao_seq_channel0->reverb_mask, g_akao_sfx_control.reverb_mask);
         effect_mask_base = effect_mask_center - 1;
-        func_80025F48(effect_mask_base, g_akao_seq_channel1->noise_mask, g_akao_seq_channel0->noise_mask, g_akao_sfx_control.noise_mask);
-        func_80025F48(effect_mask_center + 1, g_akao_seq_channel1->pitch_mod_mask, g_akao_seq_channel0->pitch_mod_mask, g_akao_sfx_control.pitch_mod_mask);
+        akao_build_effect_voice_mask(effect_mask_base, g_akao_seq_channel1->noise_mask, g_akao_seq_channel0->noise_mask, g_akao_sfx_control.noise_mask);
+        akao_build_effect_voice_mask(effect_mask_center + 1, g_akao_seq_channel1->pitch_mod_mask, g_akao_seq_channel0->pitch_mod_mask, g_akao_sfx_control.pitch_mod_mask);
         spu_set_reverb_enable(effect_mask_center[-1]);
         spu_set_noise_enable(effect_mask_base[1]);
         spu_set_pitch_modulation_enable(effect_mask_base[2]);
@@ -1496,4 +1499,254 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
     {
         spu_set_key_on(key_on_voice_mask);
     }
+}
+
+/**
+ * @brief OR each active channel's assigned SPU voice bit into a mask, then
+ *        restrict the result to @p keep_mask.
+ *
+ * For every channel selected by @p channel_mask that owns a live voice
+ * (index < 0x18), the bit for that voice is set in @p *voice_mask. After all
+ * selected channels have been scanned the accumulated mask is ANDed with
+ * @p keep_mask.
+ *
+ * @param channels First channel corresponding to channel_mask bit zero.
+ * @param voice_mask Accumulator receiving the collected voice bits.
+ * @param channel_mask Channels to scan.
+ * @param keep_mask Mask ANDed into the result once scanning completes.
+ */
+void akao_collect_channel_voice_mask(AkaoChannelState* channels, u32* voice_mask, s32 channel_mask, s32 keep_mask)
+{
+    s32 channel_bit;
+    s32 voice_bit;
+    u32 voice;
+
+    channel_bit = 1;
+    voice_bit = channel_bit;
+    do
+    {
+        if (channel_mask & channel_bit)
+        {
+            voice = channels->voice;
+            if (voice < 0x18U)
+            {
+                *voice_mask |= voice_bit << voice;
+            }
+        }
+        channel_mask &= ~channel_bit;
+        channels++;
+        channel_bit <<= 1;
+    } while (channel_mask != 0);
+
+    *voice_mask &= keep_mask;
+}
+
+/**
+ * @brief Fold every channel's pending key-off into a single SPU key-off write.
+ *
+ * For the secondary (@c g_akao_seq_channel1 / pending set) and primary
+ * (@c g_akao_seq_channel0 / active set) songs, each song's @c key_off_mask is
+ * split into its voice-alloc-low channels (handled first) and the remainder,
+ * and the SPU voices those channels hold are gathered via
+ * @ref akao_collect_channel_voice_mask, excluding voices reserved by SFX or XA.
+ * The accumulated voices are OR'd with the SFX control key-off mask and, if any
+ * remain, keyed off in one @ref spu_set_key_off call. Each processed
+ * @c key_off_mask is cleared.
+ *
+ * @see decomp.me (100%)
+ */
+void akao_flush_voice_key_offs(void)
+{
+    u32 key_off_voice_mask;
+    s32 keep_mask;
+    s32 secondary_residual;
+    s32 primary_residual;
+    s32 secondary_active;
+    s32 primary_active;
+    typeof(g_akao_seq_channel0->w04.song)* song_masks;
+
+    secondary_residual = 0;
+    key_off_voice_mask = 0;
+    keep_mask = ~((g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | D_8004F76C[0]);
+
+    if (g_akao_seq_channel1 != NULL)
+    {
+        secondary_residual = g_akao_seq_channel1->key_off_mask;
+        secondary_active = secondary_residual & g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        if (secondary_active != 0)
+        {
+            akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_pending_channels, &key_off_voice_mask, secondary_active, keep_mask);
+            song_masks = &g_akao_seq_channel1->w04.song;
+            secondary_residual &= ~song_masks->voice_alloc_low_mask;
+            g_akao_seq_channel1->key_off_mask &= ~g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        }
+    }
+
+    primary_residual = g_akao_seq_channel0->key_off_mask;
+    primary_active = primary_residual & g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    if (primary_active != 0)
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_seq_channels, &key_off_voice_mask, primary_active, keep_mask);
+        song_masks = &g_akao_seq_channel0->w04.song;
+        primary_residual &= ~song_masks->voice_alloc_low_mask;
+        g_akao_seq_channel0->key_off_mask &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    }
+
+    if ((g_akao_seq_channel1 != NULL) && (secondary_residual != 0))
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_pending_channels, &key_off_voice_mask, secondary_residual, keep_mask);
+        g_akao_seq_channel1->key_off_mask = 0;
+    }
+
+    if (primary_residual != 0)
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_seq_channels, &key_off_voice_mask, primary_residual, keep_mask);
+        g_akao_seq_channel0->key_off_mask = 0;
+    }
+
+    key_off_voice_mask |= g_akao_sfx_control.unkC;
+    g_akao_sfx_control.unkC = 0;
+    if (key_off_voice_mask != 0)
+    {
+        spu_set_key_off(key_off_voice_mask);
+    }
+}
+
+/**
+ * @brief Build the SPU voice bitmap for one per-voice effect register.
+ *
+ * For the secondary (@c g_akao_seq_channel1 / pending set) and primary
+ * (@c g_akao_seq_channel0 / active set) songs, the channels that are both
+ * active and enabled for the effect (@c active_mask & the song's effect mask)
+ * are taken, and the SPU voices they hold are gathered via
+ * @ref akao_collect_channel_voice_mask, excluding voices reserved by SFX or XA.
+ * The gathered voices are OR'd with @p sfx_effect_voices, stored to
+ * @p *effect_voices, and an SPU effect update is flagged
+ * (@c g_akao_driver_flags.unk8 bit 0x100). Used for the reverb, noise, and
+ * pitch-modulation enable bitmaps.
+ *
+ * @param effect_voices Destination for the assembled SPU voice bitmap.
+ * @param secondary_effect_mask Secondary song's per-channel effect-enable mask.
+ * @param primary_effect_mask Primary song's per-channel effect-enable mask.
+ * @param sfx_effect_voices SFX voices already enabled for this effect.
+ * @see decomp.me (100%)
+ */
+void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices)
+{
+    u32 voice_mask;
+    s32 keep_mask;
+    s32 secondary_residual;
+    s32 primary_residual;
+    s32 secondary_active;
+    s32 primary_active;
+
+    secondary_residual = 0;
+    voice_mask = 0;
+    keep_mask = ~((g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | D_8004F76C[0]);
+
+    if (g_akao_seq_channel1 != NULL)
+    {
+        secondary_residual = g_akao_seq_channel1->w04.song.active_mask & secondary_effect_mask;
+        secondary_active = secondary_residual & g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        if (secondary_active != 0)
+        {
+            akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_pending_channels, &voice_mask, secondary_active, keep_mask);
+            secondary_residual &= ~g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        }
+    }
+
+    primary_residual = g_akao_seq_channel0->w04.song.active_mask & primary_effect_mask;
+    primary_active = primary_residual & g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    if (primary_active != 0)
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_seq_channels, &voice_mask, primary_active, keep_mask);
+        primary_residual &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    }
+
+    if ((g_akao_seq_channel1 != NULL) && (secondary_residual != 0))
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_pending_channels, &voice_mask, secondary_residual, keep_mask);
+    }
+
+    if (primary_residual != 0)
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_seq_channels, &voice_mask, primary_residual, keep_mask);
+    }
+
+    voice_mask |= sfx_effect_voices;
+    *effect_voices = voice_mask;
+    g_akao_driver_flags.unk8 |= 0x100;
+}
+
+/**
+ * @brief Program the SPU noise frequency field of SPUCNT.
+ *
+ * Clamps @p noise_freq to 0..0x3F (negative values become 0, values >= 0x40
+ * saturate to 0x3F) and writes it into the noise frequency step+shift field
+ * (bits 8-13) of the SPU control register (SPUCNT) at @c D_8003D0C0 + 0x1AA,
+ * preserving the remaining bits via the 0xC0FF mask.
+ *
+ * @param noise_freq Requested noise frequency; negative clamps to 0, values >= 0x40 clamp to 0x3F.
+ * @return The clamped noise frequency actually written (0..0x3F).
+ * @see decomp.me (100%)
+ */
+s32 akao_set_noise_frequency(s32 noise_freq)
+{
+    u16* spu_ctrl;
+    s32 clamped;
+    s32 result;
+
+    clamped = 0;
+    if (noise_freq >= 0)
+    {
+        result = noise_freq;
+        clamped = result;
+        if (clamped >= 0x40)
+        {
+            clamped = 0x3F;
+        }
+    }
+
+    spu_ctrl = (u16*)(D_8003D0C0 + 0x1AA);
+    result = clamped;
+    *spu_ctrl = (u16)((*spu_ctrl & 0xC0FF) | ((clamped & 0x3F) << 8));
+    return result;
+}
+
+/**
+ * @brief Read a voice's current ADSR envelope volume from the SPU.
+ *
+ * Reads the ADSR Current Volume (ENVX) halfword at offset 0xC of SPU voice
+ * register block @p voice_index (each block is 16 bytes, based at
+ * @c D_8003D0C0) and stores it to @p envelope_out.
+ *
+ * @param voice_index  SPU voice number (0-23).
+ * @param envelope_out Destination for the voice's current envelope volume.
+ * @see decomp.me (100%)
+ */
+void akao_read_voice_envelope(s32 voice_index, s16* envelope_out)
+{
+    *envelope_out = *(u16*)(D_8003D0C0 + (voice_index * 16) + 0xC);
+}
+
+/**
+ * @brief Set the SPU reverb output volume and cache it.
+ *
+ * Writes @p reverb_left and @p reverb_right into the SPU Reverb Output Volume
+ * Left/Right registers (at @c D_8003D0C0 + 0x184 / +0x186) and mirrors both
+ * values into the @c D_8003D068 software shadow.
+ *
+ * @param reverb_left  Reverb output volume for the left channel.
+ * @param reverb_right Reverb output volume for the right channel.
+ * @see decomp.me (100%)
+ */
+void akao_set_reverb_volume(s32 reverb_left, s32 reverb_right)
+{
+    s16* shadow_l = D_8003D068;
+    s16* shadow_r = shadow_l + 1;
+
+    *(u16*)(D_8003D0C0 + 0x184) = reverb_left;
+    *(u16*)(D_8003D0C0 + 0x186) = reverb_right;
+    shadow_r[-1] = reverb_left;
+    *shadow_r = reverb_right;
 }

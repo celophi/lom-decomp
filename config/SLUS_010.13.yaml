@@ -204,6 +204,8 @@ segments:
       - [0x13D08, c, psyq/libspu/S_SIA]              # psyq 4.1-4.6
       - [0x13D48, c, psyq/libspu/S_STSA]             # psyq 4.1-4.6
       - [0x13DA8, c, akao_driver]
+      - [0x14030, c, akao_driver_init_state] # -G4  isolated: scalar-u8 global decls for 100% (see file header)
+      - [0x142D0, c, akao_driver_boot]       # -G4  akao_driver_init / set_bank_data_ptrs / shutdown
       - [0x14480, c, psyq/libapi/A13]                # psyq: version-agnostic
       - [0x14490, c, psyq/libapi/A32]                # psyq: version-agnostic
       - [0x144A0, c, psyq/libapi/COUNTER]            # psyq 4.1-4.6
@@ -218,7 +220,7 @@ segments:
       - [0x14A00, c, psyq/libspu/S_STM]              # psyq 4.1-4.6
       - [0x14A30, c, psyq/libspu/S_STC]              # psyq 4.1-4.6
       - [0x14A60, c, akao_voice]
-      - [0x16538, c, unk9]
+      - [0x1696C, c, unk9]
       - [0x1998C, c, psyq/libspu/S_SRMT]             # psyq 4.1-4.6
       - [0x19B5C, c, psyq/libspu/S_SRA]              # psyq 4.1-4.6
       - [0x1A02C, c, psyq/libspu/S_CRWA]             # psyq 4.1-4.6
