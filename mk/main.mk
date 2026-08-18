@@ -189,6 +189,7 @@ SRCS_CDK_G0 := \
 
 SRCS_GCC_260_G0 := \
 	src/field_runtime_text.c \
+	src/field_runtime_glyph.c \
 	src/card_callbacks.c
 
 # Hand-written / splat-generated assembly (header, initialized data, sdata).
@@ -220,6 +221,11 @@ $(OBJS_G4_NOEXPAND): MASPSX_DIV_FLAG_G4 :=
 OBJS_CDK_G0 		:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_CDK_G0))
 OBJS_GCC_260_G0 	:= $(patsubst $(SRC_DIR)/%.c,$(STAGING)/build/$(SRC_DIR)/%.o,$(SRCS_GCC_260_G0))
 OBJS_ASM 			:= $(patsubst $(ASM_DIR)/%.s,$(STAGING)/build/$(ASM_DIR)/%.o,$(ASM_SRCS))
+
+# field_runtime_glyph.c uses the same 2.6.0 rule as the rest of the 260 list,
+# but built at -O1 (its glyph helpers only match at -O1). Target-specific
+# override, mirroring the MASPSX_DIV_FLAG_G4 pattern above.
+$(STAGING)/build/$(SRC_DIR)/field_runtime_glyph.o: CFLAGS_260_G0 := $(CFLAGS_260_G0_O1)
 
 OBJECTS  := $(OBJS_G0) $(OBJS_G4) $(OBJS_CDK_G0) $(OBJS_GCC_260_G0) $(OBJS_ASM)
 
