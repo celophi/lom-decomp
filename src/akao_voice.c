@@ -1837,22 +1837,11 @@ u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask)
  *        self-relative offsets (+0x30/+0x34), and a per-channel note-pointer
  *        table (+0x40). No named struct yet.
  * @param channel_mask Channels to actually start now.
- *
- * @note NOT YET 100% (92.60%, 223/226 target insns). Diagnosed precisely:
- *       the target reloads g_akao_seq_channel0's address 6 times; this
- *       compiles to only 5 reloads (missing one right before the unk30
- *       store) - a CSE-FOLD symptom (idioms.md CSE-08 family) that no tried
- *       source shape reproduces yet. ~10 hypotheses (explicit descriptor
- *       aliases, forced re-materialization, two-step self-relative address
- *       shapes, register-reuse tricks) were tried and are confirmed
- *       inert/harmful - see working/func_80026254/STATUS.md for the full
- *       list and evidence (alloc_report, tmp.c.cse) before trying more.
- * @see decomp.me (92.60%)
+ * @see decomp.me (100%)
  */
-void akao_seq_start_song(u8* descriptor, s32 channel_mask)
+void akao_seq_start_song(u8* arg0, s32 arg1)
 {
-    s32 desc_channel_mask;
-    s32 secondary_voice_mask;
+    s32 channel_mask;
     s32 flag_word;
     s32 flag_word2;
     s32 rel;
@@ -1860,82 +1849,97 @@ void akao_seq_start_song(u8* descriptor, s32 channel_mask)
     u8* note_table;
     u8* rel_table30;
     u8* rel_table34;
-    u16* note_cursor;
+    u8* desc;
     AkaoChannelState* channel;
     u32 i;
     s32 bit;
     s32 static_voice_mask;
     u8* silence_ptr;
+    s32 driver_mode;
+    AkaoChannelState* song_b;
+    AkaoChannelState* song_a;
 
-    g_akao_seq_channel0->pitch = (s32)descriptor;
-    desc_channel_mask = *(s32*)(descriptor + 0x20);
+    g_akao_seq_channel0->pitch = (s32)arg0;
+    channel_mask = *(s32*)(arg0 + 0x20);
+    desc = arg0;
 
     if (g_akao_seq_channel1 != 0)
     {
-        secondary_voice_mask = akao_collect_voice_mask((AkaoChannelState*)g_akao_pending_channels, g_akao_seq_channel1->w04.song.active_mask);
+        flag_word = (s32)g_akao_pending_channels;
+        bit = akao_collect_voice_mask((AkaoChannelState*)flag_word, g_akao_seq_channel1->w04.song.active_mask);
     }
     else
     {
-        secondary_voice_mask = 0;
+        bit = 0;
     }
 
-    g_akao_sfx_control.unkC |= ~secondary_voice_mask & (~(D_8004F76C[0] | g_akao_sfx_control.unk0) & 0xFFFFFF);
+    g_akao_sfx_control.unkC |= (~bit & 0xFFFFFF) & ~(g_akao_sfx_control.unk0 | D_8004F76C[0]);
+    driver_mode = g_akao_driver_mode_flags & 1;
 
     g_akao_seq_channel0->key_off_mask = 0;
 
-    if (g_akao_driver_mode_flags & 1)
+    if (driver_mode)
     {
         g_akao_seq_channel0->w04.song.active_mask = 0;
-        g_akao_seq_channel0->unk1C |= desc_channel_mask & channel_mask;
+        g_akao_seq_channel0->unk1C |= channel_mask & arg1;
     }
     else
     {
         g_akao_seq_channel0->unk1C = 0;
-        g_akao_seq_channel0->w04.song.active_mask |= desc_channel_mask & channel_mask;
+        g_akao_seq_channel0->w04.song.active_mask |= channel_mask & arg1;
     }
 
-    g_akao_seq_channel0->w04.song.voice_alloc_low_mask = *(s32*)(descriptor + 0x24);
-    g_akao_seq_channel0->w04.song.static_voice_mask = *(s32*)(descriptor + 0x28);
+    g_akao_seq_channel0->w04.song.voice_alloc_low_mask = *(s32*)(desc + 0x24);
+    song_a = g_akao_seq_channel0;
+    song_a->w04.song.static_voice_mask = *(s32*)(desc + 0x28);
 
-    flag_word = (s32)g_akao_seq_channel0->seq_cursor & ~0x63;
-    g_akao_seq_channel0->seq_cursor = (u8*)flag_word;
-    flag_word2 = flag_word | 0x20;
-    if (*(s32*)(descriptor + 0x14) == D_8003EC34)
+    flag_word = (s32)song_a->seq_cursor;
+    flag_word2 = flag_word & ~0x63;
+    song_a->seq_cursor = (u8*)flag_word2;
+    flag_word = *(s32*)(desc + 0x14);
+    if (flag_word == D_8003EC34[0])
     {
-        flag_word2 = flag_word | 0x40;
+        flag_word = flag_word2 | 0x40;
     }
-    g_akao_seq_channel0->seq_cursor = (u8*)flag_word2;
+    else
+    {
+        flag_word = flag_word2 | 0x20;
+    }
+    song_a->seq_cursor = (u8*)flag_word;
+
+    while (0) { }
 
     articulation_base = NULL;
-    rel = *(s32*)(descriptor + 0x30);
-    rel_table30 = descriptor + (rel + 0x30);
+    rel = *(s32*)(desc + 0x30);
+    song_b = *(AkaoChannelState* volatile *)&g_akao_seq_channel0;
+    rel_table30 = desc + (rel + 0x30);
     if (rel != 0)
     {
         articulation_base = rel_table30;
     }
-    g_akao_seq_channel0->unk30 = (s32)articulation_base;
+    song_b->unk30 = (s32)articulation_base;
 
-    note_table = NULL;
-    rel = *(s32*)(descriptor + 0x34);
-    rel_table34 = descriptor + (rel + 0x34);
+    articulation_base = NULL;
+    rel = *(s32*)(desc + 0x34);
+    rel_table34 = desc + (rel + 0x34);
     if (rel != 0)
     {
-        note_table = rel_table34;
+        articulation_base = rel_table34;
     }
 
-    i = 0;
     bit = 1;
+    i = 0;
     channel = (AkaoChannelState*)g_akao_seq_channels;
-    note_cursor = (u16*)(descriptor + 0x40);
+    arg0 += 0x40;
     silence_ptr = D_8003D248;
 
-    g_akao_seq_channel0->flags = (s32)note_table;
-    g_akao_seq_channel0->voice_alloc_base = 0;
+    song_b->flags = (s32)articulation_base;
+    song_b->voice_alloc_base = 0;
     do
     {
-        if ((desc_channel_mask & bit) & channel_mask)
+        if ((channel_mask & bit) & arg1)
         {
-            channel->seq_cursor = (u8*)note_cursor + *note_cursor;
+            channel->seq_cursor = arg0 + *(u16*)arg0;
             channel->unk66 = 4;
             channel->unk68 = 2;
             channel->volume = 0x7F00;
@@ -1961,7 +1965,7 @@ void akao_seq_start_song(u8* descriptor, s32 channel_mask)
             channel->pan_lfo_value = 0;
             channel->loop_depth = 0;
             static_voice_mask = g_akao_seq_channel0->w04.song.static_voice_mask;
-            note_cursor += 1;
+            arg0 += 2;
             channel->pan_lfo_depth = 0;
             channel->volume_lfo_depth = 0;
             channel->pitch_lfo_depth = 0;
@@ -1976,11 +1980,11 @@ void akao_seq_start_song(u8* descriptor, s32 channel_mask)
         }
         else
         {
-            if (desc_channel_mask & bit)
+            if (channel_mask & bit)
             {
-                if (!(bit & channel_mask))
+                if (!(bit & arg1))
                 {
-                    note_cursor += 1;
+                    arg0 += 2;
                 }
             }
             channel->unk66 = 3;
@@ -1990,7 +1994,7 @@ void akao_seq_start_song(u8* descriptor, s32 channel_mask)
             channel->spu_adsr_high = (channel->spu_adsr_high & 0xFFE0) | 5;
         }
         channel->voice = 0x18;
-        desc_channel_mask &= ~bit;
+        channel_mask &= ~bit;
         channel++;
         i++;
         bit <<= 1;
@@ -2429,4 +2433,31 @@ void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
         val = g_akao_bank_region_c + entry;
     }
     *out1 = val;
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void akao_seq_flag_volume_update(AkaoChannelState* song, AkaoChannelState* channels)
+{
+    s32 mask;
+    s32 bit;
+    s32 song_mask;
+
+    song_mask = song->w04.song.active_mask;
+    if (song_mask != 0)
+    {
+        mask = song_mask;
+        bit = 1;
+        do
+        {
+            if (mask & bit)
+            {
+                mask ^= bit;
+                channels->update_flags |= 3;
+            }
+            channels++;
+            bit <<= 1;
+        } while (mask != 0);
+    }
 }
