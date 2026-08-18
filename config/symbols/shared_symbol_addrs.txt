@@ -774,6 +774,9 @@ akao_build_effect_voice_mask        = 0x80025F48;
 akao_set_noise_frequency            = 0x800260CC;
 akao_read_voice_envelope            = 0x8002611C;
 akao_set_reverb_volume              = 0x8002613C;
+akao_channel_init_state             = 0x8002616C;
+akao_collect_voice_mask             = 0x80026208;
+akao_seq_start_song                 = 0x80026254;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;
