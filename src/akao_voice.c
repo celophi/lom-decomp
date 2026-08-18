@@ -45,6 +45,7 @@ s32 akao_set_noise_frequency(s32 noise_freq);
 void akao_read_voice_envelope(s32 voice_index, s16* envelope_out);
 void akao_channel_set_articulation(AkaoChannelState* channel, s32 articulation_index);
 u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask);
+void akao_sfx_release_channels(void* channel, u32 release_mask);
 
 /**
  * @brief Write the SPU key-on voice bitmap.
@@ -2056,4 +2057,145 @@ void akao_seq_stop_song(AkaoChannelState* song, AkaoChannelState* channels, s32 
             spu_set_voice_release_mode(i, 5, 3);
         }
     }
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void akao_sfx_stop_channels(s32 sfx_id, s32 mode)
+{
+    AkaoChannelState* ch;
+    s32 mask;
+    u32 i;
+    s32 active;
+    s32 flags;
+    s32 priority;
+    s32 tmp;
+
+    mask = 0x1000;
+    ch = (AkaoChannelState*)g_sfx_channels;
+    active = g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10;
+
+    if (mode & 0x0FFFFFFF)
+    {
+        for (i = 0; i < 0xC; i++, ch++, mask <<= 1)
+        {
+            if ((active & mask) && (ch->tempo_acc & mode))
+            {
+                flags = ch->flags;
+                if (flags & 0x100000)
+                {
+                    ch->flags = flags | 0x200000;
+                }
+                else
+                {
+                    g_akao_sfx_control.unkC |= mask;
+                    akao_sfx_release_channels(ch, mask);
+                    ch->flags = 0;
+                }
+            }
+        }
+    }
+    else if (mode < 0)
+    {
+        ch += sfx_id;
+        mask <<= sfx_id;
+        if (active & mask)
+        {
+            akao_sfx_stop_channels(ch->reverb_mask, 0);
+        }
+        mask <<= 1;
+        ch++;
+        if (active & mask)
+        {
+            akao_sfx_stop_channels(ch->reverb_mask, 0);
+        }
+        return;
+    }
+    else if (mode & 0x40000000)
+    {
+        for (i = 0; i < 0xC; i++, ch++, mask <<= 1)
+        {
+            if (ch->tempo_acc != 0)
+            {
+                active &= ~mask;
+            }
+        }
+
+        ch = (AkaoChannelState*)g_sfx_channels;
+        mask = 0x1000;
+        priority = 0;
+        for (i = 0; i < 0xC; i++, ch++, mask <<= 1)
+        {
+            if (active & mask)
+            {
+                tmp = *(s32*)&ch->unk58;
+                if (priority < tmp)
+                {
+                    priority = tmp;
+                }
+            }
+        }
+
+        ch = (AkaoChannelState*)g_sfx_channels;
+        mask = 0x1000;
+        for (i = 0; i < 0xC; i++, ch++, mask <<= 1)
+        {
+            if ((active & mask) && (priority == *(s32*)&ch->unk58))
+            {
+                flags = ch->flags;
+                if (flags & 0x100000)
+                {
+                    ch->flags = flags | 0x200000;
+                }
+                else
+                {
+                    g_akao_sfx_control.unkC |= mask;
+                    akao_sfx_release_channels(ch, mask);
+                    ch->flags = 0;
+                }
+            }
+        }
+    }
+    else
+    {
+        for (i = 0; i < 0xC; i++, ch++, mask <<= 1)
+        {
+            if (active & mask)
+            {
+                if (sfx_id == -1)
+                {
+                    if ((s32)ch->reverb_mask < 0)
+                    {
+                        flags = ch->flags;
+                        if (flags & 0x100000)
+                        {
+                            ch->flags = flags | 0x200000;
+                        }
+                        else
+                        {
+                            g_akao_sfx_control.unkC |= mask;
+                            akao_sfx_release_channels(ch, mask);
+                            ch->flags = 0;
+                        }
+                    }
+                }
+                else if ((s32)ch->reverb_mask == sfx_id)
+                {
+                    flags = ch->flags;
+                    if (flags & 0x100000)
+                    {
+                        ch->flags = flags | 0x200000;
+                    }
+                    else
+                    {
+                        g_akao_sfx_control.unkC |= mask;
+                        akao_sfx_release_channels(ch, mask);
+                        ch->flags = 0;
+                    }
+                }
+            }
+        }
+    }
+    g_akao_driver_flags.unk8 |= 0x110;
 }

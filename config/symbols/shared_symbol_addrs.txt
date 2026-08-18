@@ -778,6 +778,7 @@ akao_channel_init_state             = 0x8002616C;
 akao_collect_voice_mask             = 0x80026208;
 akao_seq_start_song                 = 0x80026254;
 akao_seq_stop_song                  = 0x800265DC;
+akao_sfx_stop_channels              = 0x800266B0;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;
