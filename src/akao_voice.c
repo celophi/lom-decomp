@@ -2441,6 +2441,33 @@ void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
 }
 
 /**
+ * @see decomp.me (100%)
+ */
+void akao_seq_flag_volume_update(AkaoChannelState* song, AkaoChannelState* channels)
+{
+    s32 mask;
+    s32 bit;
+    s32 song_mask;
+
+    song_mask = song->w04.song.active_mask;
+    if (song_mask != 0)
+    {
+        mask = song_mask;
+        bit = 1;
+        do
+        {
+            if (mask & bit)
+            {
+                mask ^= bit;
+                channels->update_flags |= 3;
+            }
+            channels++;
+            bit <<= 1;
+        } while (mask != 0);
+    }
+}
+
+/**
  * @brief Flag every SFX channel active in @c g_akao_sfx_control for a pending
  *        SPU volume re-apply.
  * @see decomp.me (100%)
@@ -2665,29 +2692,6 @@ void akao_seq_reload_song(u8* load_result)
 }
 
 /**
- * @brief akao_seq_reload_song, then seed the pending tick countdown from
- *        the load result.
- *
- * @param load_result Descriptor load result: passed through to
- *        akao_seq_reload_song; initial tick count at +0x10.
- * @see decomp.me (100%)
- */
-void akao_seq_reload_song_with_ticks(u8* load_result)
-{
-    s32 result;
-    s32 ticks;
-
-    akao_seq_reload_song(load_result);
-    ticks = *(s32*)(load_result + 0x10);
-    result = 0;
-    if (ticks != 0)
-    {
-        result = ticks - 1;
-    }
-    g_akao_seq_pending_ticks = result;
-}
-
-/**
  * @brief Start a freshly-loaded song descriptor with an explicit channel
  *        mask, and seed the pending tick countdown.
  *
@@ -2702,6 +2706,78 @@ void akao_seq_start_loaded_song(u8* load_result)
 
     akao_seq_start_song(*(u8**)load_result, *(s32*)(load_result + 0xC));
     g_akao_seq_channel0->unk5E = *(u16*)(load_result + 8);
+    ticks = *(s32*)(load_result + 0x10);
+    result = 0;
+    if (ticks != 0)
+    {
+        result = ticks - 1;
+    }
+    g_akao_seq_pending_ticks = result;
+}
+
+/**
+ * @brief Back up the current song state if a song is active.
+ *
+ * Counterpart to akao_seq_resume_song: saves @c g_akao_seq_channel0 (0x70
+ * bytes) and the full @c g_akao_seq_channels array into the @c D_8004C2D0 /
+ * @c D_8004D450 backup slots.
+ * @see decomp.me (100%)
+ */
+void akao_seq_suspend_song(void)
+{
+    if (g_akao_seq_channel0->w04.song.active_mask != 0)
+    {
+        akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)D_8004C2D0, 0x70);
+        akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)D_8004D450, 0x2300);
+    }
+}
+
+/**
+ * @brief Start a new primary song, demoting the current one to the
+ *        secondary slot first if it is still active and no other secondary
+ *        song already holds that slot.
+ *
+ * When @c g_akao_seq_channel0 is active and @c g_akao_seq_channel1 is either
+ * unset or not a genuinely occupied secondary song (its @c unk5E is 0), the
+ * current primary state is copied into the @c D_8004C2D0 / @c D_8004D450
+ * backup slots and @c g_akao_seq_channel1 / @c g_akao_pending_channels are
+ * repointed there, so the old song keeps ticking as the secondary while the
+ * new one takes over as primary.
+ *
+ * @param load_result Descriptor load result: u8* descriptor at +0x0, id at
+ *        +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_seq_switch_song(u8* load_result)
+{
+    if (g_akao_seq_channel0->w04.song.active_mask != 0)
+    {
+        if (g_akao_seq_channel1 == NULL || g_akao_seq_channel1->unk5E == 0)
+        {
+            g_akao_seq_channel1 = (AkaoChannelState*)D_8004C2D0;
+            g_akao_pending_channels = (s32)D_8004D450;
+            akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)D_8004C2D0, 0x70);
+            akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)g_akao_pending_channels, 0x2300);
+        }
+    }
+    akao_seq_start_song(*(u8**)load_result, -1);
+    g_akao_seq_channel0->unk5E = *(u16*)(load_result + 8);
+}
+
+/**
+ * @brief akao_seq_reload_song, then seed the pending tick countdown from
+ *        the load result.
+ *
+ * @param load_result Descriptor load result: passed through to
+ *        akao_seq_reload_song; initial tick count at +0x10.
+ * @see decomp.me (100%)
+ */
+void akao_seq_reload_song_with_ticks(u8* load_result)
+{
+    s32 result;
+    s32 ticks;
+
+    akao_seq_reload_song(load_result);
     ticks = *(s32*)(load_result + 0x10);
     result = 0;
     if (ticks != 0)
@@ -3302,6 +3378,52 @@ void akao_sfx_set_volume_scale_unsuppressed(u16* param)
 }
 
 /**
+ * @brief Start a fade of the volume scale on every active SFX channel
+ *        whose tempo_acc does not have the suppress bit (0x02000000) set.
+ * @param params Tick count at +0x0 (0 is treated as 1), target volume
+ *        scale (7 bits, u16) at +0x4.
+ *
+ * @note NOT YET 100% (99.90%, 45/50 exact). Same loop-cursor anchor
+ *       residue as akao_sfx_fade_volume_scale (0x8E vs 0xE6); every other
+ *       instruction matches.
+ * @see decomp.me (99.90%)
+ */
+void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s16 tick_count;
+    u16 target_scale;
+    s32 current_scale;
+    s16 delta;
+
+    bit = 0x1000;
+    active = g_akao_sfx_control.unk0;
+    channel = (AkaoChannelState*)g_sfx_channels;
+    for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+    {
+        if ((active & bit) && !(channel->tempo_acc & 0x02000000))
+        {
+            if (*(s32*)(params + 0) != 0)
+            {
+                tick_count = *(u16*)(params + 0);
+            }
+            else
+            {
+                tick_count = 1;
+            }
+            target_scale = (*(u16*)(params + 4) & 0x7F) << 8;
+            current_scale = channel->volume_scale;
+            delta = target_scale - current_scale;
+            channel->unk8E = tick_count;
+            channel->unkE6 = delta / tick_count;
+        }
+    }
+}
+
+/**
  * @brief Set the pan bias on active SFX channels, selected either by a
  *        tempo_acc mode mask or by an exact sfx id match (same selection
  *        rule as akao_sfx_set_volume_scale), and cancel any pan-bias fade.
@@ -3350,25 +3472,133 @@ void akao_sfx_set_pan_bias(u8* params)
 }
 
 /**
- * @brief Start a fade of the volume scale on every active SFX channel
- *        whose tempo_acc does not have the suppress bit (0x02000000) set.
- * @param params Tick count at +0x0 (0 is treated as 1), target volume
- *        scale (7 bits, u16) at +0x4.
+ * @brief Start a fade of the pan bias on active SFX channels, selected
+ *        either by a tempo_acc mode mask or by an exact sfx id match (same
+ *        selection rule as akao_sfx_set_volume_scale).
+ * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
+ *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
+ *        target pan bias (u8) at +0xC.
  *
- * @note NOT YET 100% (99.90%, 45/50 exact). Same loop-cursor anchor
- *       residue as akao_sfx_fade_volume_scale (0x8E vs 0xE6); every other
- *       instruction matches.
- * @see decomp.me (99.90%)
+ * @note NOT YET 100% (99.89%, 84/94 exact). Same loop-cursor anchor
+ *       residue as akao_sfx_fade_volume_scale: the target anchors the
+ *       per-channel cursor at pan_bias_fade_ticks (+0x70), this compile
+ *       anchors it at pan_bias_step (+0xE2) instead. This is the third
+ *       function in this file with the exact same symptom (see also
+ *       akao_sfx_fade_volume_scale, akao_sfx_fade_volume_scale_unsuppressed) -
+ *       a recurring GCC 2.8 loop-cursor choice when a fade writes one field
+ *       near the filter test and a second field far from it.
+ * @see decomp.me (99.89%)
  */
-void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
+void akao_sfx_fade_pan_bias(u8* params)
 {
     AkaoChannelState* channel;
     s32 active;
     s32 bit;
     u32 count;
     s16 tick_count;
-    u16 target_scale;
-    s32 current_scale;
+    u16 target_bias;
+    s32 current_bias;
+    s16 delta;
+
+    channel = (AkaoChannelState*)g_sfx_channels;
+    active = g_akao_sfx_control.unk0;
+    bit = 0x1000;
+    if (*(s32*)(params + 4) != 0)
+    {
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && (channel->tempo_acc & *(s32*)(params + 4)))
+            {
+                if (*(s32*)(params + 8) != 0)
+                {
+                    tick_count = *(u16*)(params + 8);
+                }
+                else
+                {
+                    tick_count = 1;
+                }
+                target_bias = *(u8*)(params + 0xC) << 8;
+                current_bias = channel->pan_bias;
+                delta = target_bias - current_bias;
+                channel->pan_bias_fade_ticks = tick_count;
+                channel->pan_bias_step = delta / tick_count;
+            }
+        }
+    }
+    else
+    {
+        bit = 0x1000;
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && ((s32)channel->reverb_mask == *(s32*)(params + 0)))
+            {
+                if (*(s32*)(params + 8) != 0)
+                {
+                    tick_count = *(u16*)(params + 8);
+                }
+                else
+                {
+                    tick_count = 1;
+                }
+                target_bias = *(u8*)(params + 0xC) << 8;
+                current_bias = channel->pan_bias;
+                delta = target_bias - current_bias;
+                channel->pan_bias_fade_ticks = tick_count;
+                channel->pan_bias_step = delta / tick_count;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Set the pan bias on every active SFX channel whose tempo_acc does
+ *        not have the suppress bit (0x02000000) set, and cancel any
+ *        pan-bias fade.
+ * @param param New pan bias (u8) to apply.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_set_pan_bias_unsuppressed(u8* param)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s32 bias;
+
+    bit = 0x1000;
+    active = g_akao_sfx_control.unk0;
+    channel = (AkaoChannelState*)g_sfx_channels;
+    for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+    {
+        if ((active & bit) && !(channel->tempo_acc & 0x02000000))
+        {
+            bias = *param;
+            channel->pan_bias_fade_ticks = 0;
+            channel->pan_bias = bias << 8;
+            channel->update_flags |= 3;
+        }
+    }
+}
+
+/**
+ * @brief Start a fade of the pan bias on every active SFX channel whose
+ *        tempo_acc does not have the suppress bit (0x02000000) set.
+ * @param params Tick count at +0x0 (0 is treated as 1), target pan bias
+ *        (u8) at +0x4.
+ *
+ * @note NOT YET 100% (99.90%, 44/49 exact). Same loop-cursor anchor
+ *       residue as akao_sfx_fade_pan_bias (0x70 vs 0xE2).
+ * @see decomp.me (99.90%)
+ */
+void akao_sfx_fade_pan_bias_unsuppressed(u8* params)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s16 tick_count;
+    u16 target_bias;
+    s32 current_bias;
     s16 delta;
 
     bit = 0x1000;
@@ -3386,87 +3616,215 @@ void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
             {
                 tick_count = 1;
             }
-            target_scale = (*(u16*)(params + 4) & 0x7F) << 8;
-            current_scale = channel->volume_scale;
-            delta = target_scale - current_scale;
-            channel->unk8E = tick_count;
-            channel->unkE6 = delta / tick_count;
+            target_bias = *(u8*)(params + 4) << 8;
+            current_bias = channel->pan_bias;
+            delta = target_bias - current_bias;
+            channel->pan_bias_fade_ticks = tick_count;
+            channel->pan_bias_step = delta / tick_count;
         }
     }
 }
 
 /**
- * @brief Back up the current song state if a song is active.
- *
- * Counterpart to akao_seq_resume_song: saves @c g_akao_seq_channel0 (0x70
- * bytes) and the full @c g_akao_seq_channels array into the @c D_8004C2D0 /
- * @c D_8004D450 backup slots.
+ * @brief Set a per-channel value at offset +0x40 (channel-role meaning not
+ *        yet identified; +0x40 is only documented for the song role, as
+ *        noise_mask) on active SFX channels, selected either by a
+ *        tempo_acc mode mask or by an exact sfx id match (same selection
+ *        rule as akao_sfx_set_volume_scale), and flag a pending pitch
+ *        update (update_flags bit 0x10).
+ * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
+ *        id-match mode instead), new value (u8, shifted into the high
+ *        byte) at +0x8.
  * @see decomp.me (100%)
  */
-void akao_seq_suspend_song(void)
+void akao_sfx_set_pitch_bend(u8* params)
 {
-    if (g_akao_seq_channel0->w04.song.active_mask != 0)
-    {
-        akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)D_8004C2D0, 0x70);
-        akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)D_8004D450, 0x2300);
-    }
-}
-
-/**
- * @brief Start a new primary song, demoting the current one to the
- *        secondary slot first if it is still active and no other secondary
- *        song already holds that slot.
- *
- * When @c g_akao_seq_channel0 is active and @c g_akao_seq_channel1 is either
- * unset or not a genuinely occupied secondary song (its @c unk5E is 0), the
- * current primary state is copied into the @c D_8004C2D0 / @c D_8004D450
- * backup slots and @c g_akao_seq_channel1 / @c g_akao_pending_channels are
- * repointed there, so the old song keeps ticking as the secondary while the
- * new one takes over as primary.
- *
- * @param load_result Descriptor load result: u8* descriptor at +0x0, id at
- *        +0x8.
- * @see decomp.me (100%)
- */
-void akao_seq_switch_song(u8* load_result)
-{
-    if (g_akao_seq_channel0->w04.song.active_mask != 0)
-    {
-        if (g_akao_seq_channel1 == NULL || g_akao_seq_channel1->unk5E == 0)
-        {
-            g_akao_seq_channel1 = (AkaoChannelState*)D_8004C2D0;
-            g_akao_pending_channels = (s32)D_8004D450;
-            akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)D_8004C2D0, 0x70);
-            akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)g_akao_pending_channels, 0x2300);
-        }
-    }
-    akao_seq_start_song(*(u8**)load_result, -1);
-    g_akao_seq_channel0->unk5E = *(u16*)(load_result + 8);
-}
-
-/**
- * @see decomp.me (100%)
- */
-void akao_seq_flag_volume_update(AkaoChannelState* song, AkaoChannelState* channels)
-{
-    s32 mask;
+    AkaoChannelState* channel;
+    s32 active;
     s32 bit;
-    s32 song_mask;
+    u32 count;
+    s32 value;
 
-    song_mask = song->w04.song.active_mask;
-    if (song_mask != 0)
+    channel = (AkaoChannelState*)g_sfx_channels;
+    active = g_akao_sfx_control.unk0;
+    bit = 0x1000;
+    if (*(s32*)(params + 4) != 0)
     {
-        mask = song_mask;
-        bit = 1;
-        do
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
         {
-            if (mask & bit)
+            if ((active & bit) && (channel->tempo_acc & *(s32*)(params + 4)))
             {
-                mask ^= bit;
-                channels->update_flags |= 3;
+                value = *(u8*)(params + 8);
+                channel->unk88 = 0;
+                *(s32*)((u8*)channel + 0x40) = value << 8;
+                channel->update_flags |= 0x10;
             }
-            channels++;
-            bit <<= 1;
-        } while (mask != 0);
+        }
+    }
+    else
+    {
+        bit = 0x1000;
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && ((s32)channel->reverb_mask == *(s32*)(params + 0)))
+            {
+                value = *(u8*)(params + 8);
+                channel->unk88 = 0;
+                *(s32*)((u8*)channel + 0x40) = value << 8;
+                channel->update_flags |= 0x10;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Start a fade of the same +0x40 per-channel value that
+ *        akao_sfx_set_pitch_bend sets, on active SFX channels selected
+ *        either by a tempo_acc mode mask or by an exact sfx id match.
+ * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
+ *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
+ *        target value (u8) at +0xC.
+ *
+ * @note NOT YET 100% (99.90%, 88/98 exact). Same recurring loop-cursor
+ *       anchor residue as akao_sfx_fade_volume_scale and akao_sfx_fade_pan_bias
+ *       (target anchors at unk88 / +0x88, this compile anchors at +0x44).
+ * @see decomp.me (99.90%)
+ */
+void akao_sfx_fade_pitch_bend(u8* params)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s16 tick_count;
+    u16 target;
+    s32 current;
+    s16 delta;
+    s16 step;
+
+    channel = (AkaoChannelState*)g_sfx_channels;
+    active = g_akao_sfx_control.unk0;
+    bit = 0x1000;
+    if (*(s32*)(params + 4) != 0)
+    {
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && (channel->tempo_acc & *(s32*)(params + 4)))
+            {
+                if (*(s32*)(params + 8) != 0)
+                {
+                    tick_count = *(u16*)(params + 8);
+                }
+                else
+                {
+                    tick_count = 1;
+                }
+                target = *(u8*)(params + 0xC) << 8;
+                current = *(u16*)((u8*)channel + 0x40);
+                delta = target - current;
+                step = delta / tick_count;
+                channel->unk88 = tick_count;
+                *(s32*)((u8*)channel + 0x44) = step;
+            }
+        }
+    }
+    else
+    {
+        bit = 0x1000;
+        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        {
+            if ((active & bit) && ((s32)channel->reverb_mask == *(s32*)(params + 0)))
+            {
+                if (*(s32*)(params + 8) != 0)
+                {
+                    tick_count = *(u16*)(params + 8);
+                }
+                else
+                {
+                    tick_count = 1;
+                }
+                target = *(u8*)(params + 0xC) << 8;
+                current = *(u16*)((u8*)channel + 0x40);
+                delta = target - current;
+                step = delta / tick_count;
+                channel->unk88 = tick_count;
+                *(s32*)((u8*)channel + 0x44) = step;
+            }
+        }
+    }
+}
+
+/**
+ * @brief Set the same +0x40 per-channel value that akao_sfx_set_pitch_bend
+ *        sets, on every SFX channel whose tempo_acc does not have the
+ *        suppress bit (0x02000000) set (no active-channel filter here).
+ * @param param New value (u8, shifted into the high byte) to apply.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_set_pitch_bend_unsuppressed(u8* param)
+{
+    AkaoChannelState* channel;
+    u32 count;
+    s32 value;
+
+    channel = (AkaoChannelState*)g_sfx_channels;
+    for (count = 0xC; count != 0; count--, channel++)
+    {
+        if (!(channel->tempo_acc & 0x02000000))
+        {
+            value = *param;
+            channel->unk88 = 0;
+            *(s32*)((u8*)channel + 0x40) = value << 8;
+            channel->update_flags |= 0x10;
+        }
+    }
+}
+
+/**
+ * @brief Start a fade of the same +0x40 per-channel value that
+ *        akao_sfx_set_pitch_bend sets, on every active SFX channel whose
+ *        tempo_acc does not have the suppress bit (0x02000000) set.
+ * @param params Tick count at +0x0 (0 is treated as 1), target value (u8)
+ *        at +0x4.
+ *
+ * @note NOT YET 100% (99.90%, 46/51 exact). Same recurring loop-cursor
+ *       anchor residue as the other fade functions in this file (target
+ *       anchors at unk88 / +0x88, this compile anchors at +0x44).
+ * @see decomp.me (99.90%)
+ */
+void akao_sfx_fade_pitch_bend_unsuppressed(u8* params)
+{
+    AkaoChannelState* channel;
+    s32 active;
+    s32 bit;
+    u32 count;
+    s16 tick_count;
+    u16 target;
+    s32 current;
+    s16 delta;
+    s16 step;
+
+    bit = 0x1000;
+    active = g_akao_sfx_control.unk0;
+    channel = (AkaoChannelState*)g_sfx_channels;
+    for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+    {
+        if ((active & bit) && !(channel->tempo_acc & 0x02000000))
+        {
+            if (*(s32*)(params + 0) != 0)
+            {
+                tick_count = *(u16*)(params + 0);
+            }
+            else
+            {
+                tick_count = 1;
+            }
+            target = *(u8*)(params + 4) << 8;
+            current = *(u16*)((u8*)channel + 0x40);
+            delta = target - current;
+            step = delta / tick_count;
+            channel->unk88 = tick_count;
+            *(s32*)((u8*)channel + 0x44) = step;
+        }
     }
 }
