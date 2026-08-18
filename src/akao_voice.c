@@ -35,7 +35,7 @@ extern s32 D_8004D404[];
 extern s32 D_8004F834[];
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
-extern void func_80025F48(s32* dest, s32 target, s32 current, s32 step);
+void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
 extern void func_8002613C(s32 arg0, s32 arg1);
 extern void func_800260CC(u16 arg0);
 
@@ -1482,10 +1482,10 @@ void akao_flush_voice_updates(s32 sfx_update_mask)
     if (work_mask & 0x100)
     {
         effect_mask_center = D_8004F834;
-        func_80025F48(effect_mask_center, g_akao_seq_channel1->reverb_mask, g_akao_seq_channel0->reverb_mask, g_akao_sfx_control.reverb_mask);
+        akao_build_effect_voice_mask(effect_mask_center, g_akao_seq_channel1->reverb_mask, g_akao_seq_channel0->reverb_mask, g_akao_sfx_control.reverb_mask);
         effect_mask_base = effect_mask_center - 1;
-        func_80025F48(effect_mask_base, g_akao_seq_channel1->noise_mask, g_akao_seq_channel0->noise_mask, g_akao_sfx_control.noise_mask);
-        func_80025F48(effect_mask_center + 1, g_akao_seq_channel1->pitch_mod_mask, g_akao_seq_channel0->pitch_mod_mask, g_akao_sfx_control.pitch_mod_mask);
+        akao_build_effect_voice_mask(effect_mask_base, g_akao_seq_channel1->noise_mask, g_akao_seq_channel0->noise_mask, g_akao_sfx_control.noise_mask);
+        akao_build_effect_voice_mask(effect_mask_center + 1, g_akao_seq_channel1->pitch_mod_mask, g_akao_seq_channel0->pitch_mod_mask, g_akao_sfx_control.pitch_mod_mask);
         spu_set_reverb_enable(effect_mask_center[-1]);
         spu_set_noise_enable(effect_mask_base[1]);
         spu_set_pitch_modulation_enable(effect_mask_base[2]);
@@ -1607,4 +1607,70 @@ void akao_flush_voice_key_offs(void)
     {
         spu_set_key_off(key_off_voice_mask);
     }
+}
+
+/**
+ * @brief Build the SPU voice bitmap for one per-voice effect register.
+ *
+ * For the secondary (@c g_akao_seq_channel1 / pending set) and primary
+ * (@c g_akao_seq_channel0 / active set) songs, the channels that are both
+ * active and enabled for the effect (@c active_mask & the song's effect mask)
+ * are taken, and the SPU voices they hold are gathered via
+ * @ref akao_collect_channel_voice_mask, excluding voices reserved by SFX or XA.
+ * The gathered voices are OR'd with @p sfx_effect_voices, stored to
+ * @p *effect_voices, and an SPU effect update is flagged
+ * (@c g_akao_driver_flags.unk8 bit 0x100). Used for the reverb, noise, and
+ * pitch-modulation enable bitmaps.
+ *
+ * @param effect_voices Destination for the assembled SPU voice bitmap.
+ * @param secondary_effect_mask Secondary song's per-channel effect-enable mask.
+ * @param primary_effect_mask Primary song's per-channel effect-enable mask.
+ * @param sfx_effect_voices SFX voices already enabled for this effect.
+ * @see decomp.me (100%)
+ */
+void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices)
+{
+    u32 voice_mask;
+    s32 keep_mask;
+    s32 secondary_residual;
+    s32 primary_residual;
+    s32 secondary_active;
+    s32 primary_active;
+
+    secondary_residual = 0;
+    voice_mask = 0;
+    keep_mask = ~((g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | D_8004F76C[0]);
+
+    if (g_akao_seq_channel1 != NULL)
+    {
+        secondary_residual = g_akao_seq_channel1->w04.song.active_mask & secondary_effect_mask;
+        secondary_active = secondary_residual & g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        if (secondary_active != 0)
+        {
+            akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_pending_channels, &voice_mask, secondary_active, keep_mask);
+            secondary_residual &= ~g_akao_seq_channel1->w04.song.voice_alloc_low_mask;
+        }
+    }
+
+    primary_residual = g_akao_seq_channel0->w04.song.active_mask & primary_effect_mask;
+    primary_active = primary_residual & g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    if (primary_active != 0)
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_seq_channels, &voice_mask, primary_active, keep_mask);
+        primary_residual &= ~g_akao_seq_channel0->w04.song.voice_alloc_low_mask;
+    }
+
+    if ((g_akao_seq_channel1 != NULL) && (secondary_residual != 0))
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_pending_channels, &voice_mask, secondary_residual, keep_mask);
+    }
+
+    if (primary_residual != 0)
+    {
+        akao_collect_channel_voice_mask((AkaoChannelState*)g_akao_seq_channels, &voice_mask, primary_residual, keep_mask);
+    }
+
+    voice_mask |= sfx_effect_voices;
+    *effect_voices = voice_mask;
+    g_akao_driver_flags.unk8 |= 0x100;
 }
