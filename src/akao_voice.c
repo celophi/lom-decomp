@@ -1,4 +1,5 @@
 #include "akao_voice.h"
+#include "psyq/libspu.h"
 
 /** @brief LFO waveform sample or zero-pair relative-jump marker. */
 typedef struct
@@ -46,6 +47,12 @@ extern s32 g_akao_cdvol_step;
 extern s32 g_akao_masterpan_step;
 extern s32 g_akao_mastervol_step;
 extern s32 D_8004D410;
+extern void* g_akaoCmdParams[];
+extern s32 D_8004D340[6];
+extern void (*D_8003DDE0[])(s32*);
+extern void (*D_8003E120)(s32*);
+extern void (*D_8003E124)(s32*);
+extern void (*D_8003E128)(s32*);
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -4301,7 +4308,7 @@ void akao_sfx_resume_and_apply_pending_voices(void)
 
 /**
  * @brief Zero the pitch of the streamed XA voice pair while a stream is active.
- * @see decomp.me (100%)
+ * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
  */
 void akao_xa_silence_voice_pitch(void)
 {
@@ -4315,7 +4322,7 @@ void akao_xa_silence_voice_pitch(void)
 /**
  * @brief Restore the streamed XA voice pair's pitch to the tracker's cached
  *        value while a stream is active.
- * @see decomp.me (100%)
+ * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
  */
 void akao_xa_restore_voice_pitch(void)
 {
@@ -4324,4 +4331,170 @@ void akao_xa_restore_voice_pitch(void)
         spu_set_voice_pitch(g_akao_xa_tracker.unk10, g_akao_xa_tracker.unk58);
         spu_set_voice_pitch(g_akao_xa_tracker.unk10 + 1, g_akao_xa_tracker.unk58);
     }
+}
+
+/**
+ * @brief Empty function; body is a bare return.
+ * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
+ */
+void func_80028E2C(void)
+{
+}
+
+/**
+ * @brief Toggle the SPU global reverb mode if @p reverb_type differs from the
+ *        currently active one; brackets the change with reverb off/on so the
+ *        SPU does not glitch mid-update.
+ * @param reverb_type New reverb mode (an @c AkaoSeqHeader::reverb_type value).
+ * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
+ */
+void akao_apply_reverb_type(s32 reverb_type)
+{
+    s32 current_mode;
+
+    SpuGetReverbModeType(&current_mode);
+    if (current_mode != reverb_type)
+    {
+        SpuSetReverb(0);
+        SpuSetReverbModeType(reverb_type | 0x100);
+        SpuSetReverb(1);
+    }
+}
+
+/**
+ * @brief Central low-level dispatcher for the AKAO sound driver.
+ *
+ * Masks @p opcode to a byte and routes it to a fixed handler-pointer table
+ * (@c D_8003DDE0), indexed either directly by the opcode or by a small set of
+ * remapped indices for opcodes that fan out into several handlers at once
+ * (0x98/0x99) or that go through a dedicated indirect callback instead of the
+ * table (0xD8/0xD9/0xDA). Opcodes 0x10/0x12/0x14/0x19 (song load/change)
+ * additionally validate the AKAO magic on @c g_akaoCmdParams[0] and skip the
+ * update entirely when the requested song is already active on both channels.
+ * The driver's rcnt2 tick event is disabled for the duration of the dispatch
+ * so a tick cannot observe a half-updated command-parameter buffer.
+ *
+ * @param opcode Command opcode; only the low byte is significant.
+ * @return For opcodes 0x10/0x12/0x14/0x19, the newly loaded sequence id, 0 if
+ *         the requested song was already active on both channels, or -1 if
+ *         the header failed the AKAO magic check. Ignored by most other
+ *         callers (see the doc comment on the forward declaration in
+ *         akao_cmd.c).
+ * @note 95.74% match (lom-dev-mcp diff tool; no decomp.me scratch created).
+ *       Residual (8 of 194 instructions) is two instances of the same
+ *       mechanism: for the 0xD9/0xDA cases, the target computes the
+ *       D_8003E124/D_8003E128 callback pointer's %hi in one place and its
+ *       %lo-offset load right before the call, while this source's
+ *       equivalent expression keeps them adjacent; measured via probe_variants
+ *       and the permuter without finding a source shape that reproduces the
+ *       target's split. Mechanism: CSE-FOLD/EXPAND-SHAPE (see idioms.md
+ *       EXPAND-29, CSE-11 - neither's stated fix measured positive here).
+ */
+s32 akao_send_command(u32 opcode)
+{
+    s32 result;
+    s32 tmp;
+    s32 masked;
+    s32* params;
+    AkaoSeqHeader* hdr;
+    u16 current_id;
+
+    result = 0;
+    DisableEvent(g_akao_rcnt2_event);
+    opcode = opcode & 0xFF;
+    params = D_8004D340;
+
+    switch (opcode)
+    {
+    case 0x10:
+    case 0x12:
+    case 0x14:
+    case 0x19:
+        if (akao_check_magic(g_akaoCmdParams[0]) == 0)
+        {
+            hdr = g_akaoCmdParams[0];
+            current_id = g_akao_seq_channel0->unk5E;
+            if ((current_id != hdr->id) ||
+                ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk5E != current_id)))
+            {
+                akao_apply_reverb_type(hdr->reverb_type);
+                params[2] = hdr->id;
+                if (opcode == 0x12)
+                {
+                    params[0] = (s32)hdr;
+                    params[4] = (s32)g_akaoCmdParams[1];
+                }
+                else
+                {
+                    tmp = (s32)g_akaoCmdParams[1];
+                    masked = -1;
+                    if (tmp != 0)
+                    {
+                        params[0] = (s32)hdr;
+                        masked = tmp | 1;
+                    }
+                    params[3] = masked;
+                    params[4] = (s32)g_akaoCmdParams[2];
+                }
+                result = hdr->id;
+            }
+            else
+            {
+                opcode = 0;
+                result = 0;
+            }
+        }
+        else
+        {
+            opcode = 0;
+            result = -1;
+        }
+        break;
+
+    case 0xD8:
+        params[0] = (s32)g_akaoCmdParams[0];
+        (*D_8003E120)(params);
+        opcode = 0xD4;
+        break;
+
+    case 0xD9:
+        params[0] = (s32)g_akaoCmdParams[0];
+        params[1] = (s32)g_akaoCmdParams[1];
+        (*D_8003E124)(params);
+        opcode = 0xD5;
+        break;
+
+    case 0xDA:
+        params[0] = (s32)g_akaoCmdParams[0];
+        params[1] = (s32)g_akaoCmdParams[1];
+        params[2] = (s32)g_akaoCmdParams[2];
+        (*D_8003E128)(params);
+        opcode = 0xD6;
+        break;
+
+    case 0x99:
+        D_8003DDE0[0x9B](params);
+        D_8003DDE0[0x9D](params);
+        opcode = 0x9F;
+        break;
+
+    case 0x98:
+        D_8003DDE0[0x9A](params);
+        D_8003DDE0[0x9C](params);
+        opcode = 0x9E;
+        break;
+
+    default:
+        params[0] = (s32)g_akaoCmdParams[0];
+        params[1] = (s32)g_akaoCmdParams[1];
+        params[2] = (s32)g_akaoCmdParams[2];
+        params[3] = (s32)g_akaoCmdParams[3];
+        params[4] = (s32)g_akaoCmdParams[4];
+        params[5] = (s32)g_akaoCmdParams[5];
+        break;
+    }
+
+    D_8003DDE0[opcode](params);
+    EnableEvent(g_akao_rcnt2_event);
+    return result;
 }
