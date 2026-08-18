@@ -784,6 +784,18 @@ akao_unassign_voice                 = 0x80026BB8;
 akao_sfx_play                       = 0x80026C14;
 akao_resolve_program_data           = 0x80026E0C;
 akao_seq_flag_volume_update         = 0x80026E8C;
+akao_sfx_flag_volume_update         = 0x80026ED4;
+akao_seq_resume_song                = 0x80026F28;
+akao_bank_find_slot                 = 0x80027190;
+akao_seq_reload_song                = 0x800271EC;
+akao_seq_start_loaded_song           = 0x80027268;
+akao_seq_suspend_song                = 0x800272C8;
+akao_seq_switch_song                 = 0x8002731C;
+akao_seq_reload_song_with_ticks      = 0x800273D4;
+akao_sfx_play_default                = 0x80027414;
+akao_sfx_play_program                = 0x80027460;
+akao_sfx_play_program_raw            = 0x800274E0;
+akao_sfx_play_list                   = 0x80027548;
 
 // Uncategorized
 akao_send_command                   = 0x80028E84;

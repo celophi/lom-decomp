@@ -38,6 +38,10 @@ extern s32 D_8004F834[];
 extern s32 D_8003EC34[];
 extern u8 D_8003D248[];
 extern AkaoChannelState D_8004C038[];
+extern s32 D_8004C2FC;
+extern u8 D_8004D450[];
+extern s16 D_8004C32E;
+extern s32 D_8004D39C;
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -2433,6 +2437,518 @@ void akao_resolve_program_data(s32* out0, s32* out1, s32 program_index)
         val = g_akao_bank_region_c + entry;
     }
     *out1 = val;
+}
+
+/**
+ * @brief Flag every SFX channel active in @c g_akao_sfx_control for a pending
+ *        SPU volume re-apply.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_flag_volume_update(void)
+{
+    s32 mask;
+    s32 bit;
+    s32 sfx_mask;
+    AkaoChannelState* channel;
+
+    channel = (AkaoChannelState*)g_sfx_channels;
+    sfx_mask = g_akao_sfx_control.unk0;
+    if (sfx_mask != 0)
+    {
+        mask = sfx_mask;
+        bit = 0x1000;
+        do
+        {
+            if (mask & bit)
+            {
+                mask ^= bit;
+                channel->update_flags |= 3;
+            }
+            channel++;
+            bit <<= 1;
+        } while (mask != 0);
+    }
+}
+
+/**
+ * @brief Restore the previously-suspended song state from the backup slots
+ *        and rebase every bytecode-relative channel pointer to @p descriptor.
+ *
+ * Restores @c g_akao_seq_channel0 (0x70 bytes) and the full @c g_akao_seq_channels
+ * array from the @c D_8004C2D0 / @c D_8004D450 backup slots, then adds the
+ * delta between @p descriptor and the previously recorded base (@c D_8004C2FC)
+ * to every pointer field that was computed relative to the old descriptor
+ * address (seq_cursor, the loop-cursor stack, key_off_mask's channel-role
+ * pointer use).
+ *
+ * @param descriptor Newly (re)loaded song descriptor; same shape consumed by
+ *        akao_seq_start_song.
+ *
+ * @note NOT YET 100% (94.42%, 139/154 exact). sched_oracle confirms the
+ *       residue is not a source-fixable emit-order issue (all inferred
+ *       constraints SATISFIED); it is register-allocation coloring
+ *       (g_akao_seq_channel0 pointer vs the masked flags value early on,
+ *       and voice_mask's register choice) plus a CSE-FOLD-shaped reordering
+ *       of the D_8004C32E store relative to the g_akao_sfx_control.unkC
+ *       update near the end. See working/func_80026F28/code.c for the
+ *       current best source and permuter session state.
+ * @see decomp.me (94.42%)
+ */
+void akao_seq_resume_song(u8* descriptor)
+{
+    AkaoChannelState* channel;
+    AkaoChannelState* song;
+    s32 flags;
+    s32 delta;
+    s32 mask;
+    s32 bit;
+    u32 i;
+    s32 voice_mask;
+    s32 keep_mask;
+
+    akao_copy_bytes((s32*)D_8004C2D0, (s32*)g_akao_seq_channel0, 0x70);
+    akao_copy_bytes((s32*)D_8004D450, (s32*)g_akao_seq_channels, 0x2300);
+
+    flags = (s32)g_akao_seq_channel0->seq_cursor & ~0x60;
+    g_akao_seq_channel0->seq_cursor = (u8*)flags;
+    song = g_akao_seq_channel0;
+    if (*(s32*)(descriptor + 0x14) == D_8003EC34[0])
+    {
+        flags |= 0x40;
+    }
+    else
+    {
+        flags |= 0x20;
+    }
+    song->seq_cursor = (u8*)flags;
+    g_akao_seq_channel0->pitch = (s32)descriptor;
+    g_akao_seq_channel0->w04.song.key_on_mask = 0;
+
+    g_akao_driver_flags.unk8 |= 0x90;
+
+    mask = g_akao_seq_channel0->w04.song.active_mask;
+    delta = (s32)descriptor - D_8004C2FC;
+    g_akao_seq_channel0->unk30 += delta;
+    g_akao_seq_channel0->flags += delta;
+    g_akao_seq_channel0->w04.song.key_on_mask = g_akao_seq_channel0->note_on_mask;
+
+    channel = (AkaoChannelState*)g_akao_seq_channels;
+    i = 0x20;
+    bit = 1;
+    do
+    {
+        if (mask & bit)
+        {
+            channel->seq_cursor += delta;
+            channel->key_off_mask += delta;
+            channel->w04.loop_cursor[0] += delta;
+            channel->w04.loop_cursor[1] += delta;
+            channel->w04.loop_cursor[2] += delta;
+            channel->w04.loop_cursor[3] += delta;
+            channel->unk66 += 2;
+            channel->unk68 += 2;
+            channel->update_flags |= 0x1FF93;
+        }
+        else
+        {
+            channel->unk66 = 4;
+            channel->unk68 = 2;
+            channel->seq_cursor = D_8003D248;
+        }
+        channel->voice = 0x18;
+        i--;
+        channel++;
+        bit <<= 1;
+    } while (i != 0);
+
+    voice_mask = 0;
+    if (g_akao_seq_channel1 != NULL)
+    {
+        voice_mask = akao_collect_voice_mask((AkaoChannelState*)g_akao_pending_channels,
+                                              g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->w04.song.voice_alloc_low_mask);
+    }
+
+    g_akao_seq_channel0->key_off_mask = 0;
+    D_8004C32E = 0;
+    keep_mask = 0xFFFFFF;
+    g_akao_sfx_control.unkC |= (~voice_mask & (~(D_8004F76C[0] | g_akao_sfx_control.unk0) & keep_mask));
+    g_akao_driver_flags.unk8 |= 0x100;
+
+    if (g_akao_driver_mode_flags & 1)
+    {
+        mask = g_akao_seq_channel0->w04.song.active_mask;
+        g_akao_seq_channel0->w04.song.active_mask = 0;
+        g_akao_seq_channel0->unk1C = mask;
+    }
+}
+
+/**
+ * @brief Find which bank program slot (0-4) holds @p key, or 5 if @p key is
+ *        the reserved "always resident" sentinel.
+ *
+ * @param key Bank program key to search for; 0 means "no bank".
+ * @return Slot index 0-4 if found among @c g_akao_bank_slot_keys, 5 if
+ *         @p key matches the @c D_8004D39C sentinel, otherwise 0.
+ *
+ * @note NOT YET 100% (62.78%, 9/23 exact). Target keeps the two branches of
+ *       the outer `key == D_8004D39C` test as genuinely separate code (a
+ *       4-instruction structural run: compare, two distinct immediate
+ *       loads, a jump) while this compiles into a single shared-value
+ *       shortcut (jump.c cross-jump merges the two paths because they both
+ *       flow into the same loop/return tail). crossjump_oracle confirms the
+ *       target's true shape is one single-exit cluster with 4 predecessors,
+ *       matching this function's structure, but does not explain why gcc
+ *       still over-merges here. Permuter mutations that scored better all
+ *       broke the actual search semantics (resetting the counter inside the
+ *       loop) and were rejected. See working/func_80027190/code.c.
+ * @see decomp.me (62.78%)
+ */
+s32 akao_bank_find_slot(s32 key)
+{
+    s32 result;
+    s32 index;
+
+    result = 0;
+    if (key != 0)
+    {
+        if (key == D_8004D39C)
+        {
+            result = 5;
+        }
+        else
+        {
+            result = 6;
+            result--;
+            while (result != 0)
+            {
+                index = result - 1;
+                if (key == g_akao_bank_slot_keys[index])
+                {
+                    result = index;
+                    break;
+                }
+                result--;
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief Dispatch a (re)loaded song descriptor to resume or a fresh start.
+ *
+ * @p load_result carries the descriptor pointer at offset 0 and an id at
+ * offset 8. If the backed-up song state's @c unk5E matches that id, the
+ * descriptor is the same song reloaded at a new address, so the suspended
+ * state is resumed (akao_seq_resume_song); otherwise it is a genuinely new
+ * song (akao_seq_start_song), and the new id is recorded for next time.
+ *
+ * @param load_result Descriptor load result: u8* descriptor at +0x0, s32 id
+ *        at +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_seq_reload_song(u8* load_result)
+{
+    AkaoChannelState* backup;
+
+    backup = (AkaoChannelState*)D_8004C2D0;
+    if (backup->unk5E != 0 && backup->unk5E == *(s32*)(load_result + 8))
+    {
+        akao_seq_resume_song(*(u8**)load_result);
+    }
+    else
+    {
+        akao_seq_start_song(*(u8**)load_result, -1);
+        g_akao_seq_channel0->unk5E = *(u16*)(load_result + 8);
+    }
+}
+
+/**
+ * @brief akao_seq_reload_song, then seed the pending tick countdown from
+ *        the load result.
+ *
+ * @param load_result Descriptor load result: passed through to
+ *        akao_seq_reload_song; initial tick count at +0x10.
+ * @see decomp.me (100%)
+ */
+void akao_seq_reload_song_with_ticks(u8* load_result)
+{
+    s32 result;
+    s32 ticks;
+
+    akao_seq_reload_song(load_result);
+    ticks = *(s32*)(load_result + 0x10);
+    result = 0;
+    if (ticks != 0)
+    {
+        result = ticks - 1;
+    }
+    g_akao_seq_pending_ticks = result;
+}
+
+/**
+ * @brief Start a freshly-loaded song descriptor with an explicit channel
+ *        mask, and seed the pending tick countdown.
+ *
+ * @param load_result Descriptor load result: u8* descriptor at +0x0, id at
+ *        +0x8, channel mask at +0xC, initial tick count at +0x10.
+ * @see decomp.me (100%)
+ */
+void akao_seq_start_loaded_song(u8* load_result)
+{
+    s32 result;
+    s32 ticks;
+
+    akao_seq_start_song(*(u8**)load_result, *(s32*)(load_result + 0xC));
+    g_akao_seq_channel0->unk5E = *(u16*)(load_result + 8);
+    ticks = *(s32*)(load_result + 0x10);
+    result = 0;
+    if (ticks != 0)
+    {
+        result = ticks - 1;
+    }
+    g_akao_seq_pending_ticks = result;
+}
+
+/**
+ * @brief Play an SFX with fixed default parameters (reverb_mask 0x400,
+ *        tempo_acc 0x1000000, pan_bias byte 0x80, volume_scale 0x7F,
+ *        voice_alloc_base 0).
+ *
+ * @p params doubles as input and output: on entry, offsets +0x0/+0x4 hold
+ * the two seq_data pointers to play; this function reads them out first,
+ * then overwrites the whole buffer with the default parameter block before
+ * calling akao_sfx_play.
+ *
+ * @param params Buffer holding the two seq_data pointers on entry; rebuilt
+ *        in place into an akao_sfx_play parameter block.
+ * @see decomp.me (100%)
+ */
+void akao_sfx_play_default(u8* params)
+{
+    u8* seq_data0;
+    u8* seq_data1;
+
+    seq_data0 = *(u8**)(params + 0x0);
+    seq_data1 = *(u8**)(params + 0x4);
+    *(s32*)(params + 0x0) = 0x400;
+    *(s32*)(params + 0x4) = 0x1000000;
+    *(s32*)(params + 0x8) = 0x80;
+    *(s32*)(params + 0xC) = 0x7F;
+    *(s32*)(params + 0x10) = 0;
+    akao_sfx_play(params, seq_data0, seq_data1, 0);
+}
+
+/**
+ * @brief Play an SFX resolved from a bank program index, tagging the
+ *        channel with the bank slot that program resolved to.
+ *
+ * @p params holds the program index at offset +0x0 on entry.
+ * akao_resolve_program_data resolves it to the two seq_data pointers, the
+ * program's key is looked up in @c g_akao_bank_region_b to find which bank
+ * slot holds it (akao_bank_find_slot), and the fixed tempo_acc/pan_bias/
+ * volume_scale fields are filled in like akao_sfx_play_default.
+ *
+ * @param params Buffer holding the program index on entry; rebuilt in
+ *        place into an akao_sfx_play parameter block.
+ *
+ * @note NOT YET 100% (87.50%, 30/32 exact). The only residue is where one
+ *       independent store (the voice_alloc_base write) lands relative to
+ *       the final akao_sfx_play call: the target schedules it into that
+ *       call's branch delay slot, this compile emits it immediately after
+ *       akao_bank_find_slot returns. sched_oracle finds no inferable
+ *       constraint here (0 constraints in the block); permuter mutations
+ *       that scored better on its own metric did not move this specific
+ *       pair when re-measured. See working/func_80027460/code.c.
+ * @see decomp.me (87.50%)
+ */
+void akao_sfx_play_program(u8* params)
+{
+    s32 seq_data0;
+    s32 seq_data1;
+    u16 program_key;
+
+    akao_resolve_program_data(&seq_data0, &seq_data1, *(s32*)(params + 0x0));
+    *(s32*)(params + 0x4) = 0x2000000;
+    *(s32*)(params + 0x8) = 0x80;
+    *(s32*)(params + 0xC) = 0x7F;
+    program_key = *(u16*)(g_akao_bank_region_b + *(s32*)(params + 0x0) * 2);
+    *(s32*)(params + 0x10) = akao_bank_find_slot(program_key);
+    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1, 0);
+}
+
+/**
+ * @brief Play an SFX resolved from a bank program index, tagging the
+ *        channel with the bank slot that program resolved to, without
+ *        touching the reverb/tempo/pan/volume fields (caller-set).
+ *
+ * @param params Buffer holding the program index at +0x0 on entry; its
+ *        voice_alloc_base (+0x10) is filled in before the call.
+ *
+ * @note NOT YET 100% (84.62%, 24/26 exact). Same residue and cause as
+ *       akao_sfx_play_program: the voice_alloc_base store lands in the
+ *       akao_sfx_play call's delay slot in the target but immediately
+ *       after akao_bank_find_slot returns here.
+ * @see decomp.me (84.62%)
+ */
+void akao_sfx_play_program_raw(u8* params)
+{
+    s32 seq_data0;
+    s32 seq_data1;
+    u16 program_key;
+
+    akao_resolve_program_data(&seq_data0, &seq_data1, *(s32*)(params + 0x0));
+    program_key = *(u16*)(g_akao_bank_region_b + *(s32*)(params + 0x0) * 2);
+    *(s32*)(params + 0x10) = akao_bank_find_slot(program_key);
+    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1, 0);
+}
+
+/**
+ * @brief Play a list of SFX entries back to back, tagging the channel with
+ *        the resolved bank slot and stopping other channels only for the
+ *        first entry.
+ *
+ * @p params holds a pointer to a list header at +0x0: +0x4 the entry
+ * count, +0x8 the bank program key (for akao_bank_find_slot), +0x10 an
+ * array of s32 offsets into the string/data region starting at +0x20. Each
+ * entry resolves two u16 sub-offsets the same way akao_resolve_program_data
+ * does (0xFFFF means no data). The first entry plays with skip_stop=0, the
+ * rest with skip_stop=1.
+ *
+ * @param params Buffer holding the list pointer on entry; voice_alloc_base
+ *        (+0x10) is filled in before the calls.
+ *
+ * @note NOT YET 100% (92.89%, 53/76 exact). Residue is a repeated small
+ *       register-role swap: the target copies the u16 entry value into its
+ *       own register before adding the cursor (`addu v0,v1,zero` then
+ *       `addu v0,v0,a0`), this compile folds the add directly. A separate
+ *       named temp for the widened entry and swapping the addition operand
+ *       order were both measured inert. See working/func_80027548/code.c.
+ * @see decomp.me (92.89%)
+ */
+void akao_sfx_play_list(u8* params)
+{
+    u8* list;
+    u8* base;
+    u8* cursor;
+    u8* index_ptr;
+    s32 count;
+    u16 entry;
+    u16 sentinel;
+    u8* seq_data0;
+    u8* seq_data1;
+
+    list = *(u8**)(params + 0x0);
+    *(s32*)(params + 0x10) = akao_bank_find_slot(*(s32*)(list + 8));
+
+    list = *(u8**)(params + 0x0);
+    index_ptr = list + 0x10;
+    base = list + 0x20;
+    count = *(s32*)(list + 4);
+
+    cursor = base + *(s32*)index_ptr;
+    entry = *(u16*)cursor;
+    if (entry != 0xFFFF)
+    {
+        seq_data0 = cursor + entry + 4;
+    }
+    else
+    {
+        seq_data0 = NULL;
+    }
+    cursor += 2;
+    entry = *(u16*)cursor;
+    if (entry != 0xFFFF)
+    {
+        seq_data1 = cursor + entry + 2;
+    }
+    else
+    {
+        seq_data1 = NULL;
+    }
+    akao_sfx_play(params, seq_data0, seq_data1, 0);
+
+    count--;
+    if (count != 0)
+    {
+        sentinel = 0xFFFF;
+        index_ptr += 4;
+        do
+        {
+            cursor = base + *(s32*)index_ptr;
+            entry = *(u16*)cursor;
+            if (entry != sentinel)
+            {
+                seq_data0 = cursor + entry + 4;
+            }
+            else
+            {
+                seq_data0 = NULL;
+            }
+            cursor += 2;
+            entry = *(u16*)cursor;
+            if (entry != sentinel)
+            {
+                seq_data1 = cursor + entry + 2;
+            }
+            else
+            {
+                seq_data1 = NULL;
+            }
+            akao_sfx_play(params, seq_data0, seq_data1, 1);
+            count--;
+            index_ptr += 4;
+        } while (count != 0);
+    }
+}
+
+/**
+ * @brief Back up the current song state if a song is active.
+ *
+ * Counterpart to akao_seq_resume_song: saves @c g_akao_seq_channel0 (0x70
+ * bytes) and the full @c g_akao_seq_channels array into the @c D_8004C2D0 /
+ * @c D_8004D450 backup slots.
+ * @see decomp.me (100%)
+ */
+void akao_seq_suspend_song(void)
+{
+    if (g_akao_seq_channel0->w04.song.active_mask != 0)
+    {
+        akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)D_8004C2D0, 0x70);
+        akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)D_8004D450, 0x2300);
+    }
+}
+
+/**
+ * @brief Start a new primary song, demoting the current one to the
+ *        secondary slot first if it is still active and no other secondary
+ *        song already holds that slot.
+ *
+ * When @c g_akao_seq_channel0 is active and @c g_akao_seq_channel1 is either
+ * unset or not a genuinely occupied secondary song (its @c unk5E is 0), the
+ * current primary state is copied into the @c D_8004C2D0 / @c D_8004D450
+ * backup slots and @c g_akao_seq_channel1 / @c g_akao_pending_channels are
+ * repointed there, so the old song keeps ticking as the secondary while the
+ * new one takes over as primary.
+ *
+ * @param load_result Descriptor load result: u8* descriptor at +0x0, id at
+ *        +0x8.
+ * @see decomp.me (100%)
+ */
+void akao_seq_switch_song(u8* load_result)
+{
+    if (g_akao_seq_channel0->w04.song.active_mask != 0)
+    {
+        if (g_akao_seq_channel1 == NULL || g_akao_seq_channel1->unk5E == 0)
+        {
+            g_akao_seq_channel1 = (AkaoChannelState*)D_8004C2D0;
+            g_akao_pending_channels = (s32)D_8004D450;
+            akao_copy_bytes((s32*)g_akao_seq_channel0, (s32*)D_8004C2D0, 0x70);
+            akao_copy_bytes((s32*)g_akao_seq_channels, (s32*)g_akao_pending_channels, 0x2300);
+        }
+    }
+    akao_seq_start_song(*(u8**)load_result, -1);
+    g_akao_seq_channel0->unk5E = *(u16*)(load_result + 8);
 }
 
 /**
