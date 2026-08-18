@@ -3828,3 +3828,19 @@ void akao_sfx_fade_pitch_bend_unsuppressed(u8* params)
         }
     }
 }
+
+/**
+ * @brief Set the master pan accumulator directly, canceling any
+ *        in-progress fade.
+ * @param param Signed target pan value (byte, shifted into the high half).
+ * @see decomp.me (100%)
+ */
+void akao_set_master_pan(s8* param)
+{
+    s32 pan;
+
+    pan = *param;
+    g_akao_masterpan_fade_ticks = 0;
+    pan = pan << 16;
+    g_akao_masterpan_acc = pan;
+}
