@@ -87,7 +87,7 @@ void akao_copy_bytes(s32* src, s32* dst, u32 num_bytes)
 }
 
 /**
- * decomp.me (86.49%) https://decomp.me/scratch/07M97
+ * decomp.me (100%) https://decomp.me/scratch/07M97
  */
 void akao_tick_fades(void)
 {
@@ -126,25 +126,29 @@ void akao_tick_fades(void)
     if ((xa->unkC != 0) && (xa->unk48 != 0))
     {
         xa->unk48--;
-        temp = xa->unk40 + xa->unk44;
+        temp_s0 = xa->unk40;
+        temp = temp_s0 + xa->unk44;
         if ((temp & 0xFF00) != (xa->unk40 & 0xFF00))
         {
-            if (D_8004F754 & 2)
+            if (D_8004F754[0] & 2)
             {
-                temp_s0 = (xa->unk40 * D_8003D47C) >> 16;
+                temp_s0 = (temp_s0 * D_8003D47C[0]) >> 16;
                 spu_set_voice_volume(xa->unk10, temp_s0, temp_s0, 0);
                 t0 = temp_s0;
-                t1 = temp_s0;
+                t1 = t0;
+                spu_set_voice_volume(xa->unk10 + 1, t0, t1, 0);
             }
             else
             {
-                t1 = (temp_s0 = (temp << 15) >> 16);
+                temp_s0 = temp << 15;
+                temp_s0 = temp_s0 >> 16;
                 spu_set_voice_volume(xa->unk10, temp_s0, 0, 0);
                 t0 = 0;
+                t1 = temp_s0;
+                spu_set_voice_volume(xa->unk10 + 1, t0, t1, 0);
             }
-            spu_set_voice_volume(xa->unk10 + 1, t0, t1, 0);
         }
-        g_akao_xa_pan_current = temp & 0xFFFF;
+        g_akao_xa_pan_current[0] = temp & 0xFFFF;
     }
     if (g_akao_masterpan_fade_ticks != 0)
     {
@@ -155,20 +159,20 @@ void akao_tick_fades(void)
     {
         new_var8 = &g_akao_mastervol_step;
         g_akao_mastervol_fade_ticks--;
-        temp_s1 = g_akao_mastervol_acc + (*new_var8);
-        if ((g_akao_mastervol_acc & 0xFF0000) != (temp_s1 & 0xFF0000))
+        temp = g_akao_mastervol_acc + (*new_var8);
+        new_var = 32;
+        if ((temp & 0xFF0000) != (g_akao_mastervol_acc & 0xFF0000))
         {
             new_var3 = 0x100;
             ptr = (u32*)(g_akao_seq_channels + new_var3);
-            i = 32;
             do
             {
                 *ptr |= 0x10;
                 ptr += 0x46;
-                i--;
-            } while (i != 0);
+                new_var--;
+            } while (new_var != 0);
         }
-        g_akao_mastervol_acc = temp_s1;
+        g_akao_mastervol_acc = temp;
     }
     seq_ptr = g_akao_seq_channel0;
     if ((*((s32*)(((u8*)seq_ptr) + 4))) != 0)
@@ -191,15 +195,16 @@ void akao_tick_fades(void)
     new_var6 = g_akao_seq_channel1;
     if ((g_akao_seq_channel1 != 0) && ((*((s32*)(((u8*)ptr28) + 4))) != 0))
     {
-        t0 = *((s16*)(((u8*)new_var6) + 0x58));
-        if (t0 != 0)
+        temp_s1 = *((s16*)(((u8*)new_var6) + 0x58));
+        t0 = *((u16*)(((u8*)ptr28) + 0x58));
+        if (temp_s1 != 0)
         {
-            u16_tmp = *((u16*)(((u8*)ptr28) + 0x58));
-            *((s16*)(((u8*)g_akao_seq_channel1) + 0x58)) = u16_tmp - 1;
+            *((s16*)(((u8*)g_akao_seq_channel1) + 0x58)) = t0 - 1;
             temp = (*((s32*)(((u8*)ptr28) + 0x50))) + (*((s32*)(((u8*)ptr28) + 0x54)));
             if ((temp & 0x7F0000) != ((*((s32*)(((u8*)g_akao_seq_channel1) + 0x50))) & 0x7F0000))
             {
-                func_80026E8C(g_akao_seq_channel1, (void*)((u32)g_akao_pending_channels), (u32)g_akao_seq_channel1);
+                t0 = (u32)g_akao_pending_channels;
+                func_80026E8C(g_akao_seq_channel1, (void*)t0, (u32)g_akao_seq_channel1);
             }
             *((s32*)(((u8*)g_akao_seq_channel1) + 0x50)) = temp;
         }
@@ -208,8 +213,9 @@ void akao_tick_fades(void)
     if (mask != 0)
     {
         new_var3 = mask;
-        sfx_base = g_sfx_channels + 0x40;
+        mask = (u32)g_sfx_channels;
         bit = 0x1000;
+        sfx_base = (u8*)(mask + 0x40);
         do
         {
             if (new_var3 & bit)
