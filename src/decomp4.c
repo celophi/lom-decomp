@@ -971,7 +971,7 @@ s32 akao_compute_pitch(AkaoArticulation* arg0, s32 arg1, s32 arg2, s32* arg3)
  * @param slot_idx Slot index into the small-slot table (base pointer from
  *             @c g_akao_seq_channel0->flags, the song-role note table).
  * @return Pitch result from @c akao_compute_pitch.
- * @see decomp.me (98.76%) https://decomp.me/scratch/9dRLX
+ * @see decomp.me (100%) https://decomp.me/scratch/9dRLX
  */
 s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
 {
@@ -982,14 +982,14 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
     u32 v1_idx;
     s32 ret;
 
-    /* Song role: 0x34 holds the note/articulation table pointer. */
-    u8* base_ptr = g_akao_seq_channel0->flags;
-    u32 chan_unk10 = g_akao_seq_channel0->w04.song.key_on_mask;
-    slot = (AkaoNoteArticulationSlot*)(base_ptr + (slot_idx << 3));
-    base_ptr = (u8*)channel;
-    ret = chan_unk10 | channel_mask;
-    v1_idx = g_akao_seq_channel0->note_on_mask & channel_mask;
-    g_akao_seq_channel0->w04.song.key_on_mask = ret;
+    u32 chan_unk10;
+    slot = (AkaoNoteArticulationSlot*)g_akao_seq_channel0->flags;
+    chan_unk10 = g_akao_seq_channel0->w04.song.key_on_mask;
+    v1_idx = g_akao_seq_channel0->note_on_mask;
+    slot += slot_idx;
+    chan_unk10 |= channel_mask;
+    v1_idx &= channel_mask;
+    g_akao_seq_channel0->w04.song.key_on_mask = chan_unk10;
     if (v1_idx)
     {
         g_akao_seq_channel0->key_off_mask |= channel_mask;
@@ -1010,7 +1010,7 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
     }
     *((u16*)(((u8*)channel) + 0x10E)) = tmp;
     tmp = (u16)(slot->attack_rate << 8);
-    *((u16*)(base_ptr + 0x10E)) |= art->pitch_misc.half.lo & 0x80FF;
+    *((u16*)(((u8*)channel) + 0x10E)) |= art->pitch_misc.half.lo & 0x80FF;
     if (!(temp_a1 & 0x08000000))
     {
         tmp = (*((u16*)(((u8*)channel) + 0x110))) & 0x201F;
@@ -1055,6 +1055,7 @@ s32 akao_channel_start_note(void* channel, s32 channel_mask, s32 slot_idx)
     g_akao_driver_flags.unk8 |= 0x100;
     return ret;
 }
+
 
 /** @brief Primary opcode dispatch table indexed by (opcode - 0xA0). */
 extern void (*g_akao_opcode_handlers[])(AkaoChannelState*, s32);
