@@ -36,7 +36,7 @@ extern s32 D_8004F76C[];
 extern s32 D_8004D404[];
 extern s32 D_8004F834[];
 extern s32 D_8003EC34;
-extern u8 D_8003D248;
+extern u8 D_8003D248[];
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -1792,6 +1792,32 @@ void akao_channel_init_state(AkaoChannelState* channel, u8* seq_data)
 }
 
 /**
+ * @see decomp.me (100%)
+ */
+u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask)
+{
+    u32 i;
+    u32 voice;
+    u32 result;
+    s32 bit;
+
+    for (i = 0, result = 0; i < 0x20; i++)
+    {
+        bit = 1 << i;
+        if (channel_mask & bit)
+        {
+            voice = channels->voice;
+            if (voice < 0x18U)
+            {
+                result |= 1 << voice;
+            }
+        }
+        channels++;
+    }
+    return result;
+}
+
+/**
  * @brief Initialize the primary song-sequencer state and start playback of a
  *        song descriptor.
  *
@@ -1810,7 +1836,7 @@ void akao_channel_init_state(AkaoChannelState* channel, u8* seq_data)
  *        table (+0x40). No named struct yet.
  * @param channel_mask Channels to actually start now.
  *
- * @note NOT YET 100% (92.58%, 223/226 target insns). Diagnosed precisely:
+ * @note NOT YET 100% (92.60%, 223/226 target insns). Diagnosed precisely:
  *       the target reloads g_akao_seq_channel0's address 6 times; this
  *       compiles to only 5 reloads (missing one right before the unk30
  *       store) - a CSE-FOLD symptom (idioms.md CSE-08 family) that no tried
@@ -1819,7 +1845,7 @@ void akao_channel_init_state(AkaoChannelState* channel, u8* seq_data)
  *       shapes, register-reuse tricks) were tried and are confirmed
  *       inert/harmful - see working/func_80026254/STATUS.md for the full
  *       list and evidence (alloc_report, tmp.c.cse) before trying more.
- * @see decomp.me (92.58%)
+ * @see decomp.me (92.60%)
  */
 void akao_seq_start_song(u8* descriptor, s32 channel_mask)
 {
@@ -1899,7 +1925,7 @@ void akao_seq_start_song(u8* descriptor, s32 channel_mask)
     bit = 1;
     channel = (AkaoChannelState*)g_akao_seq_channels;
     note_cursor = (u16*)(descriptor + 0x40);
-    silence_ptr = &D_8003D248;
+    silence_ptr = D_8003D248;
 
     g_akao_seq_channel0->flags = (s32)note_table;
     g_akao_seq_channel0->voice_alloc_base = 0;
@@ -1991,25 +2017,43 @@ void akao_seq_start_song(u8* descriptor, s32 channel_mask)
 /**
  * @see decomp.me (100%)
  */
-u32 akao_collect_voice_mask(AkaoChannelState* channels, s32 channel_mask)
+void akao_seq_stop_song(AkaoChannelState* song, AkaoChannelState* channels, s32 song_key)
 {
     u32 i;
-    u32 voice;
-    u32 result;
-    s32 bit;
 
-    for (i = 0, result = 0; i < 0x20; i++)
+    if (song->w04.song.active_mask == 0)
     {
-        bit = 1 << i;
-        if (channel_mask & bit)
-        {
-            voice = channels->voice;
-            if (voice < 0x18U)
-            {
-                result |= 1 << voice;
-            }
-        }
-        channels++;
+        return;
     }
-    return result;
+    if (song_key != 0)
+    {
+        if (song_key != song->unk5E)
+        {
+            return;
+        }
+    }
+    song->key_off_mask = -1;
+
+    i = 0x20;
+    do
+    {
+        channels->unk66 = 3;
+        channels->unk68 = 1;
+        channels->seq_cursor = D_8003D248;
+        channels++;
+        i--;
+    } while (i != 0);
+
+    song->unk5E = 0;
+    song->note_on_mask = 0;
+    song->w04.song.key_on_mask = 0;
+
+    for (i = 0; i < 0x18; i++)
+    {
+        if (D_8004F7C0[i] == song)
+        {
+            D_8004F7C0[i] = NULL;
+            spu_set_voice_release_mode(i, 5, 3);
+        }
+    }
 }
