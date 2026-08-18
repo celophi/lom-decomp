@@ -3141,30 +3141,11 @@ typedef struct
  *
  * @param ot       Ordering-table tag every packet is linked into.
  * @param arg_prim Packet cursor; copied into the local @c prim, which is what
- *                 the body advances (the copy is required to match).
+ *                 the body advances.
  * @param x_off    Horizontal offset subtracted from every column position.
  * @param y_off    Vertical scroll offset subtracted from every row position.
  * @return Packet cursor just past the last highlight tile.
- *
- * @note WIP - best match 99.61% (506/507 exact, gcc 2.7.2 CDK; frame, byte size,
- *       insn count, and every sp slot match). The single residual row is the
- *       `addiu t2, t1, 0x10` for `mark = ++tile`, which the target schedules
- *       after the three tail %hi loads and we emit one slot before them.
- * @note Statement shapes here are measured, not stylistic: y_top/y_top2/y_top3
- *       are per-site temps (one shared y_base variable costs -15 exact via a
- *       long-lived register web; a bare inline (y_off - 2) gets reassociated by
- *       fold-const into the wrong (mult + 2) - y_off form). sel_mul keeps the
- *       in-loop y_off reload alive: with the mult inline, the y_off - 2 movable's
- *       def-use life is ~8 and loop.c hoists it out (move_movables threshold
- *       decays -3 per moved invariant; life-1 temps fail the test and stay).
- * @note The tiles are GosubTile, not StructS0: StructS0's volatile unkE costs
- *       1.80% and one insn here. The two ADD_PRIM_MASKED calls must keep the
- *       explicit mask; plain ADD_PRIM costs 7 rows (and the reverse is true in
- *       func_801450D8, which needs the unmasked spelling).
- * @note The selection loop must be a plain while (not if + do/while) so gcc's
- *       duplicated loop entry test emits the beqz and cse2 can share one
- *       lui %hi(g_gosub_selection_count) across the check and the loop.
- * @see working/func_801448EC/STATUS.md for the measured probe log and retired classes.
+ * @see decomp.me (100%)
  */
 GosubTile* func_801448EC(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
 {
@@ -3194,6 +3175,11 @@ GosubTile* func_801448EC(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
     u8* d2ptr;
     GosubTile* tile;
     GosubTile* mark;
+    s32* cursor_p;
+    s32* height_p;
+    s32* scroll_p;
+    u32 cursor_color;
+    u32 addr_mask;
 
     prim = arg_prim;
     row = 0;
@@ -3305,19 +3291,29 @@ GosubTile* func_801448EC(s32* ot, s32 arg_prim, s32 x_off, s32 y_off)
     }
 
     tile = (GosubTile*)prim;
-    status_pad = g_gosub_cursor_row * g_gosub_row_height;
+    cursor_color = 0xF080F0;
+    addr_mask = 0xFFFFFF;
+    for (;;)
+    {
+        cursor_p = &g_gosub_cursor_row;
+        height_p = &g_gosub_row_height;
+        scroll_p = &g_gosub_scroll_y;
+        break;
+    }
+    mark = tile + 1;
+    status_pad = *cursor_p * *height_p;
     y_top2 = y_off - 2;
-    y = (status_pad - y_top2) - g_gosub_scroll_y;
+    y = (status_pad - y_top2) - *scroll_p;
     ((u8*)tile)[3] = 3;
-    tile->unk4 = 0xF080F0;
+    tile->unk4 = cursor_color;
     ((u8*)tile)[7] = 0x62;
     row = 0;
     tile->unkC = g_gosub_window_width;
     tile->unkA = y - 2;
     tile->unk8 = 1;
     tile->unkE = g_gosub_row_height - 1;
-    ADD_PRIM_MASKED(ot, tile);
-    mark = ++tile;
+    ((GosubTag*)tile)->addr = (GET_PRIM_ADDR(ot) & addr_mask);
+    SET_PRIM_ADDR(ot, tile);
     while (row < g_gosub_selection_count)
     {
         {
@@ -3386,20 +3382,15 @@ s32 LoadImage(); /* extern */
  * @param count How many portraits were already emitted this frame.
  * @return Packet cursor past the sprite (func_8014680C's return), or prim
  *         when count is 5 or more.
- *
- * @note WIP - best match 93.92% (99/134 exact rows, gcc 2.7.2 CDK). The
- *       residue is one 5-cycle saved-register rotation (count must color s1;
- *       here it lands s5) plus three instruction-order pairs. Measured
- *       evidence, retired probe classes and next moves are in
- *       working/func_801450D8/STATUS.md.
+ * @see decomp.me (100%)
  */
 s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
 {
     GosubSprt* sprt;
     GosubRect rect;
-    s32* entry;
     s32 idx;
     s32 cell;
+    s32 n;
 
     if (count >= 5)
     {
@@ -3414,21 +3405,21 @@ s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     {
         idx = g_gosub_rows[row].unkC + 0x41;
     }
-    cell = count * 3;
+    n = count;
+    cell = n * 3;
 
     rect.x = cell * 4 + 0x140;
     rect.w = 0xC;
     rect.h = 0x30;
     rect.y = g_gosub_frame_parity * 0x30;
-    entry = &D_80152DF4[idx];
-    LoadImage(&rect, (u8*)D_80152DF4 + *entry + 0x1C);
+    LoadImage(&rect, (u8*)D_80152DF4 + D_80152DF4[idx] + 0x1C);
 
     rect.y = 0x1F2;
     rect.w = 0x10;
     rect.h = 1;
-    count = count * 0x10;
-    rect.x = count + g_gosub_frame_parity * 0x50;
-    LoadImage(&rect, (u8*)D_80152DF4 + *entry - 4);
+    n = n * 0x10;
+    rect.x = n + g_gosub_frame_parity * 0x50;
+    LoadImage(&rect, (u8*)D_80152DF4 + D_80152DF4[idx] - 4);
 
     sprt = (GosubSprt*)prim;
     *(u32*)&sprt->r0 = 0x808080;
@@ -3440,9 +3431,7 @@ s32 func_801450D8(s32 prim, s32* ot, s32 row, s32 x, s32 y, s32 count)
     sprt->y0 = y;
     sprt->w = 0x30;
     sprt->h = 0x30;
-    count = count + g_gosub_frame_parity * 0x50;
-    count = ((count >> 4) & 0x3F) | 0x7C80;
-    sprt->clut = count;
+    sprt->clut = (((n + g_gosub_frame_parity * 0x50) >> 4) & 0x3F) | 0x7C80;
     ADD_PRIM(ot, sprt);
     return func_8014680C(prim + 0x14, ot);
 }
