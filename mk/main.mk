@@ -172,6 +172,8 @@ SRCS_G4 := \
 	src/overlay_memory.c \
 	src/decomp4.c \
 	src/akao_driver.c \
+	src/akao_driver_init_state.c \
+	src/akao_driver_boot.c \
 	src/controller.c \
 	src/akao_voice.c \
 	src/decomp11.c
