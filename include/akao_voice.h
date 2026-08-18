@@ -52,7 +52,7 @@ void spu_set_pitch_modulation_enable(u32 voice_mask);
 /* ---- Per-voice SPU register writers ---- */
 
 void spu_set_voice_volume(s32 voice, u32 vol_l, u32 vol_r, s32 scale);
-void spu_set_voice_pitch(s32 voice, u16 pitch);
+void spu_set_voice_pitch(s32 voice, s32 pitch);
 void spu_set_voice_start_addr(s32 voice, u32 addr);
 void spu_set_voice_repeat_addr(s32 voice, u32 addr);
 void spu_set_voice_adsr_low(s32 voice, u16 adsr_low);

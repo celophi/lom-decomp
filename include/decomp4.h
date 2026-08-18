@@ -9,9 +9,9 @@ extern long GetRCnt(unsigned long spec);
 /* Externs not covered by akao_driver.h */
 extern s16 g_akao_cdvol_current;
 extern s32 g_akao_cdvol_step;
-extern s32 D_8004F754;
+extern s32 D_8004F754[];
 extern s16 D_8003D47C;
-extern s32 g_akao_xa_pan_current;
+extern s32 g_akao_xa_pan_current[];
 extern s32 g_akao_masterpan_step;
 extern s32 g_akao_mastervol_step;
 
@@ -24,7 +24,7 @@ typedef struct
     s32 unkC;  /* 0x0C */
 } TimingRing;
 
-extern s32 D_8004D408;
+extern s32 D_8004D408[1];
 extern TimingRing D_8003D160;
 extern u8 g_akao_master_vol_scalar;
 

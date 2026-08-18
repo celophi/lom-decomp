@@ -160,7 +160,6 @@ SRCS_G0 := \
 	src/psyq/libpad/PADPORTD.c \
 	src/psyq/libpad/PADSEQD.c \
 	src/psyq/libmcx/TMP_MCX.c \
-	src/unk9.c \
 	src/screen_transition.c \
 	src/game_audio.c \
 	src/akao_cmd.c \

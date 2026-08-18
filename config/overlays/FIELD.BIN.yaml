@@ -71,4 +71,4 @@ segments:
       - [0x53A1D, c, field_audio]               # gcc272_cdk, covers func_800A368C .. func_800A380C
       - [0x53BE9, c, unk2_b]                    # gcc272_cdk
       - [0x7C2D5, data, data]
-  - [0xD4368]
+  - [0xD4369]
