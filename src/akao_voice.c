@@ -37,6 +37,7 @@ extern s32 D_8004D404[];
 extern s32 D_8004F834[];
 extern s32 D_8003EC34;
 extern u8 D_8003D248[];
+extern AkaoChannelState D_8004C038[];
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -2281,4 +2282,97 @@ void akao_unassign_voice(AkaoChannelState* channels, u32 voice_index)
             channels++;
         } while (channel_index < 0x20U);
     }
+}
+
+/**
+ * @see decomp.me (100%)
+ */
+void akao_sfx_play(u8* params, u8* seq_data0, u8* seq_data1, s32 skip_stop)
+{
+    AkaoChannelState* ch;
+    u32 mask;
+    s32 busy;
+    s32 n;
+    s32 stop_mask;
+
+    if (seq_data0 == 0 && seq_data1 == 0)
+    {
+        return;
+    }
+
+    if (skip_stop == 0)
+    {
+        stop_mask = *(s32*)(params + 4);
+        if (stop_mask != 0)
+        {
+            akao_sfx_stop_channels(0, stop_mask);
+        }
+    }
+
+    do
+    {
+        ch = D_8004C038;
+        mask = 0x800000;
+        busy = (g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | g_akao_xa_tracker.unkC;
+        if (seq_data0 != 0 && seq_data1 != 0)
+        {
+            n = 0xB;
+            ch--;
+            mask = 0x400000;
+        pair_scan:
+            if (busy & (mask | (mask << 1)))
+            {
+                n--;
+                ch--;
+                mask >>= 1;
+                if (n == 0)
+                {
+                    goto scan_done;
+                }
+                goto pair_scan;
+            }
+        }
+        else
+        {
+            n = 0xC;
+            for (; n != 0; n--, ch--, mask >>= 1)
+            {
+                if (!(busy & mask))
+                {
+                    break;
+                }
+            }
+        }
+    scan_done:
+        if (n != 0)
+        {
+            break;
+        }
+        akao_sfx_stop_channels(0, 0x40000000);
+        if (busy == (s32)((g_akao_sfx_control.unk0 | g_akao_sfx_control.unk10) | g_akao_xa_tracker.unkC))
+        {
+            return;
+        }
+    } while (n == 0);
+
+    if (seq_data0 != 0)
+    {
+        akao_sfx_start_channel(ch, params, mask, seq_data0);
+        akao_unassign_voice((AkaoChannelState*)g_akao_seq_channels, ch->voice);
+    }
+    if (seq_data1 != 0)
+    {
+        if (seq_data0 != 0)
+        {
+            ch++;
+            mask <<= 1;
+        }
+        akao_sfx_start_channel(ch, params, mask, seq_data1);
+        akao_unassign_voice((AkaoChannelState*)g_akao_seq_channels, ch->voice);
+        if (seq_data0 != 0)
+        {
+            ch->flags |= 0x10000;
+        }
+    }
+    g_akao_driver_flags.unk8 |= 0x110;
 }
