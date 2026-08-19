@@ -1,143 +1,127 @@
 #include "checkps.h"
 
-s32 D_8005D060;
+/* Nonzero ends the CHECKPS display loop; value 2 is used for image timeout. */
+s32 g_checkpsExitReason;
 
-s32 D_8005D064;
+/* Reserved word with no recovered CHECKPS references. */
+s32 g_checkpsUnusedWord0;
 
 FadeColor g_fadeTarget;
 
 FadeColor g_fadeCurrent;
 
-u8 D_8005D088[16384];
+/* Sequence data copied from a CHECKPS disc asset before playback. */
+u8 g_checkpsSongBuffer[16384];
 
-s32 D_80061088;
+/* Destination address used when registering the embedded AKAO bank. */
+AkaoSeqHeader* g_checkpsAkaoBank;
 
-s32 D_8006108C;
+/* Reserved word with no recovered CHECKPS references. */
+s32 g_checkpsUnusedWord1;
 
 s32 g_debouncedInput;
 
-s32 D_80061094;
+s32 g_checkpsImageHeight;
 
-s32 D_80061098;
+/* Width from the TIM-style image header, in VRAM words (4 pixels per word). */
+s32 g_checkpsImageWidthWords;
 
-s32 D_8006109C;
+/* Reserved word with no recovered CHECKPS references. */
+s32 g_checkpsUnusedWord2;
 
-s32 g_frameTimer;
+s32 g_checkpsImageFramesRemaining;
 
 s32 g_lastInputState;
 
 s32 g_inputRepeatTimer;
 
-s32 g_D_800610AC[32769];
-
-/**
- * decomp.me link (100%) https://decomp.me/scratch/bzlSh
+/*
+ * Unreferenced BSS extent between code.c and code7_data.c.  Keep the exact
+ * element count: it preserves the linked address of the following CD state globals.
  */
-s32 RunCheckPS(s32 baseAddress)
-{
-    func_80050080();
-    InitCheckPSDisplay((CheckPSState*)baseAddress);
+s32 g_checkpsReservedBss[32769];
 
+s32 RunCheckPS(s32 renderStateAddress)
+{
+    LoadEmbeddedCheckPSAudio();
+    InitCheckPSDisplay((CheckPSRenderState*)renderStateAddress);
     do
     {
-        func_8004FD68(baseAddress);
-    } while (D_8005D060 == 0);
+        RunCheckPSDisplayLoop((CheckPSRenderState*)renderStateAddress);
+    } while (g_checkpsExitReason == 0);
 
     return 8;
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/lBhMG
- */
-void func_8004FD68(int baseAddress)
+void RunCheckPSDisplayLoop(CheckPSRenderState* renderState)
 {
     RECT rect;
-    u_long* temp_s1;
-    void* var_s0;
-    void* var_v0;
+    u_long* orderingTableEnd;
+    CheckPSFrame* frame;
+    CheckPSFrame* nextFrame;
 
     DrawSync(0);
     VSync(0);
 
-    var_s0 = baseAddress;
+    frame = &renderState->frames[0];
     reset_controller_vsync_state();
 
     rect.w = SCREEN_WIDTH;
     rect.x = 0;
     rect.y = 0;
     rect.h = VRAM_BACK_DISP_Y + SCREEN_HEIGHT;
-
     ClearImage(&rect, 0, 0, 0);
-    ClearOTagR(var_s0 + 0x40, 0x1000);
-    ClearOTagR(var_s0 + 0xBD0C, 0x1000);
-    PutDispEnv(var_s0 + 0x4040);
+    ClearOTagR(frame->orderingTable, CHECKPS_ORDERING_TABLE_LENGTH);
+    ClearOTagR(renderState->frames[1].orderingTable, CHECKPS_ORDERING_TABLE_LENGTH);
+    PutDispEnv(&frame->display.disp);
     update_controllers();
     SetDispMask(1);
-
     do
     {
-        temp_s1 = (u_long*)(var_s0 + 0x40);
-        ClearOTagR(temp_s1, 0x1000);
-        *(u32*)(var_s0 + 0x80B8) = (s32)(var_s0 + 0x40B8);
-        InvalidateGlyphCache();
-        func_80050258(var_s0);
-        func_800505B4(var_s0);
-        func_80050570();
-        ClearInvalidGlyphs();
+        orderingTableEnd = frame->orderingTable;
+        ClearOTagR(orderingTableEnd, CHECKPS_ORDERING_TABLE_LENGTH);
+        frame->primitiveCursor = frame->primitiveBuffer;
+        BeginGlyphCacheFrame();
+        UpdateAndDrawFade(frame);
+        DrawCheckPSImage(frame);
+        UpdateCheckPSInputAndTimeout();
+        EvictUnusedGlyphs();
         DrawSync(0);
         set_controller_vsync_interval(2);
         VSync(2);
-        ClearImage(var_s0 + 0x40B0, 0, 0, 0);
-        var_v0 = baseAddress;
-        if (var_s0 == var_v0)
+        ClearImage(&frame->display.clearRect, 0, 0, 0);
+        nextFrame = &renderState->frames[0];
+        if (frame == nextFrame)
         {
-            var_v0 = var_s0 + 0xBCCC;
+            nextFrame = &renderState->frames[1];
         }
-        var_s0 = var_v0;
-        PutDispEnv(var_s0 + 0x4040);
-        PutDrawEnv(var_s0 + 0x4054);
-
-        temp_s1 = (u8*)temp_s1 + 0x3FFC;
-        DrawOTag(temp_s1);
+        frame = nextFrame;
+        PutDispEnv(&frame->display.disp);
+        PutDrawEnv(&frame->display.draw);
+        orderingTableEnd += CHECKPS_ORDERING_TABLE_LENGTH - 1;
+        DrawOTag(orderingTableEnd);
 
         update_controllers();
         cdrom_process_state();
-    } while (D_8005D060 == 0);
+    } while (g_checkpsExitReason == 0);
 
     reset_controller_vsync_state();
     VSync(0);
 }
-
-/**
- * @brief Initialises the double-buffered display system for the CheckPS overlay.
- *
- * @details Sets up both render frames within the CheckPSState.
- *  - Configures the screen geometry offset (160, 120) for a 320x240 display.
- *  - Writes the screen-clear rects for each frame's display area.
- *  - Clears all of VRAM (1024x512).
- *  - Calls SetDefDispEnv / SetDefDrawEnv to configure the double-buffer swap chain.
- *  - Clears the texture cache region of VRAM.
- *  - Resets the text renderer, fade state, and input state.
- *  - Triggers a fade-in to full brightness over 20 frames.
- *
- * @param state  Pointer to the CheckPS render state containing both frame buffers.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/tlBGm
- */
-void InitCheckPSDisplay(CheckPSState* state)
+/* Configure the two 320x240 frame environments and reset CHECKPS rendering state. */
+void InitCheckPSDisplay(CheckPSRenderState* renderState)
 {
     RECT rect;
-
     SetGeomScreen(1500);
     SetGeomOffset(160, 120);
-    state->front.clearRect.x = 0;
-    state->front.clearRect.y = 0;
-    state->front.clearRect.w = SCREEN_WIDTH;
-    state->front.clearRect.h = SCREEN_HEIGHT;
-    state->back.clearRect.x = 0;
-    state->back.clearRect.y = VRAM_BACK_DISP_Y;
-    state->back.clearRect.w = SCREEN_WIDTH;
-    state->back.clearRect.h = SCREEN_HEIGHT;
+    renderState->frames[0].display.clearRect.x = 0;
+    renderState->frames[0].display.clearRect.y = 0;
+    renderState->frames[0].display.clearRect.w = SCREEN_WIDTH;
+    renderState->frames[0].display.clearRect.h = SCREEN_HEIGHT;
+    renderState->frames[1].display.clearRect.x = 0;
+    renderState->frames[1].display.clearRect.y = VRAM_BACK_DISP_Y;
+    renderState->frames[1].display.clearRect.w = SCREEN_WIDTH;
+    renderState->frames[1].display.clearRect.h = SCREEN_HEIGHT;
     DrawSync(0);
     VSync(0);
 
@@ -145,151 +129,111 @@ void InitCheckPSDisplay(CheckPSState* state)
     rect.x = 0;
     rect.y = 0;
     rect.h = 512;
-
     ClearImage(&rect, 0, 0, 0);
-    SetDefDispEnv(&state->front.disp, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDispEnv(&state->back.disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
-    SetDefDrawEnv(&state->front.draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    SetDefDrawEnv(&state->back.draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
-    state->back.draw.dtd = 0;
-    state->front.draw.dtd = 0;
+    SetDefDispEnv(&renderState->frames[0].display.disp, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&renderState->frames[1].display.disp, 0, VRAM_BACK_DISP_Y, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDrawEnv(&renderState->frames[0].display.draw, 0, SCREEN_HEIGHT, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    SetDefDrawEnv(&renderState->frames[1].display.draw, 0, VRAM_BACK_DRAW_Y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
+    renderState->frames[1].display.draw.dtd = 0;
+    renderState->frames[0].display.draw.dtd = 0;
 
     rect.x = 960;
     rect.w = 64;
     rect.y = 0;
     rect.h = 256;
-
     ClearImage(&rect, 0, 0, 0);
-    ResetTextRenderer();
+    ResetGlyphRenderer();
     ResetFadeState();
     SetFadeTarget(256, 256, 256, 20);
-    func_800506D0();
-    D_8005D060 = 0;
+    LoadCheckPSImage();
+    g_checkpsExitReason = 0;
     UpdateControllerInput();
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/4wbZH
- */
-void func_80050080(void)
+void LoadEmbeddedCheckPSAudio(void)
 {
-    u8* src;
-    u8* dst;
-    u32 count;
-    s32* ref;
-    u32* offs;
-
+    u8* source;
+    u8* bankDestination;
+    u32 byteCount;
+    AkaoSeqHeader** bankSlot;
+    u32* sectionOffsets;
     if (((((g_previousGameState == 2) || (g_previousGameState == 3)) || (g_previousGameState == 0)) || (g_previousGameState == 6)) ||
         (g_previousGameState == 7) || (g_previousGameState == 5))
     {
         return;
     }
 
-    ref = &D_80061088;
-    *ref = 0x8013C000;
+    bankSlot = &g_checkpsAkaoBank;
+    *bankSlot = (AkaoSeqHeader*)0x8013C000;
 
-    offs = &D_80052428;
-    offs++;
+    sectionOffsets = &g_embeddedCheckpsAkao;
+    sectionOffsets++;
 
-    src = (u8*)&D_80052428 + offs[0];
-    dst = (u8*)0x8013C000;
-    count = offs[1] - offs[0];
-
-    bcopy(src, dst, count);
-    akao_register_bank((AkaoSeqHeader*)*ref);
-    akao_play_sequence_blocking((AkaoSeqHeader*)((u32)&D_80052428 + offs[1]), 1);
+    source = (u8*)&g_embeddedCheckpsAkao + sectionOffsets[0];
+    bankDestination = (u8*)*bankSlot;
+    byteCount = sectionOffsets[1] - sectionOffsets[0];
+    bcopy(source, bankDestination, byteCount);
+    akao_register_bank(*bankSlot);
+    akao_play_sequence_blocking((AkaoSeqHeader*)((u32)&g_embeddedCheckpsAkao + sectionOffsets[1]), 1);
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/Ptv27
- */
-void func_80050138(s32 arg0)
+void LoadCheckPSSongFromDisc(s32 songIndex)
 {
-    u32* offs;
-    u8* ref;
+    u32* sectionOffsets;
+    u8* songContainer;
 
-    cdrom_queue_read((arg0 + 0x17) & 0xFFFF, 0x80180000);
+    cdrom_queue_read((songIndex + 0x17) & 0xFFFF, 0x80180000);
     cdrom_wait_queue_empty();
 
-    offs = (u32*)0x80180004;
-    ref = (u8*)0x80180000;
-
-    bcopy(ref + offs[0], &D_8005D088, offs[1] - offs[0]);
-    akao_play_sequence_blocking((AkaoSeqHeader*)(offs[1] + (u32)ref), 1);
+    sectionOffsets = (u32*)0x80180004;
+    songContainer = (u8*)0x80180000;
+    bcopy(songContainer + sectionOffsets[0], g_checkpsSongBuffer, sectionOffsets[1] - sectionOffsets[0]);
+    akao_play_sequence_blocking((AkaoSeqHeader*)(sectionOffsets[1] + (u32)songContainer), 1);
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/K0uKO
- */
-void func_800501AC(void)
+void StopCheckPSSong(void)
 {
     akao_stop_song(0);
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/2R9zp
- */
-void func_800501CC(void)
+void PlayLoadedCheckPSSong(void)
 {
-    akao_play_song(&D_8005D088);
+    akao_play_song(&g_checkpsSongBuffer);
     akao_cmd_c0(0, 0x7F);
 }
-
-/**
- * decomp.me link (100%) https://decomp.me/scratch/Fklyd
- */
-void func_800501FC(u32 arg1, u32 arg2, u32 arg3)
+void PlayCheckPSSfx(u32 soundId, u32 volume, u32 pan)
 {
-    akao_play_sfx(arg1, 0, arg2, arg3);
+    akao_play_sfx(soundId, 0, volume, pan);
 }
-
-/**
- * @brief Resets the screen fade state to black.
- *
- * @details Zeroes both g_fadeCurrent and g_fadeTarget, setting all RGB channels
- * to 0 (fully black) and the step counter to 0. Typically called before
- * SetFadeTarget to ensure the fade starts from a known black state rather
- * than whatever colour was previously active.
- *
- * @param void No parameters.
- * @return void No return value.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/i9Kyk
- */
+/* Reset both fade endpoints to black. */
 void ResetFadeState(void)
 {
     g_fadeCurrent.red = 0;
     g_fadeCurrent.green = 0;
     g_fadeCurrent.blue = 0;
-
     g_fadeTarget.red = 0;
     g_fadeTarget.green = 0;
     g_fadeTarget.blue = 0;
     g_fadeTarget.steps = 0;
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/o9VAE
- */
-void func_80050258(s32* arg0)
+void UpdateAndDrawFade(CheckPSFrame* frame)
 {
-    s32 temp_a2, temp_a0, temp_v1;
-    s32 var_a1;
-    u8 var_v0;
-    u32* ref;
-    u32* arg0_40 = (u32*)(arg0 + 16);
+    s32 redStep, greenStep, blueStep;
+    s32 drawMode;
+    u32* primitive;
+    u32* orderingTableTag = (u32*)frame->orderingTable;
 
-    ref = *(u32**)(arg0 + 8238);
-
+    primitive = (u32*)frame->primitiveCursor;
     if (g_fadeTarget.steps != 0)
     {
-        temp_a2 = (g_fadeTarget.red - g_fadeCurrent.red) / g_fadeTarget.steps;
-        temp_a0 = (g_fadeTarget.green - g_fadeCurrent.green) / g_fadeTarget.steps;
-        temp_v1 = (g_fadeTarget.blue - g_fadeCurrent.blue) / g_fadeTarget.steps;
+        redStep = (g_fadeTarget.red - g_fadeCurrent.red) / g_fadeTarget.steps;
+        greenStep = (g_fadeTarget.green - g_fadeCurrent.green) / g_fadeTarget.steps;
+        blueStep = (g_fadeTarget.blue - g_fadeCurrent.blue) / g_fadeTarget.steps;
         g_fadeTarget.steps--;
-        g_fadeCurrent.red += temp_a2;
-        g_fadeCurrent.green += temp_a0;
-        g_fadeCurrent.blue += temp_v1;
+        g_fadeCurrent.red += redStep;
+        g_fadeCurrent.green += greenStep;
+        g_fadeCurrent.blue += blueStep;
     }
     else
     {
@@ -297,88 +241,67 @@ void func_80050258(s32* arg0)
         g_fadeCurrent.green = g_fadeTarget.green;
         g_fadeCurrent.blue = g_fadeTarget.blue;
     }
-
     if (g_fadeCurrent.red != 0x100 || g_fadeCurrent.green != g_fadeCurrent.red || g_fadeCurrent.blue != g_fadeCurrent.green)
     {
-
         if (g_fadeCurrent.red >= 0x101)
         {
-            ((u8*)ref)[4] = (u8)(g_fadeCurrent.red - 1);
-            ((u8*)ref)[5] = (u8)(g_fadeCurrent.green - 1);
-            ((u8*)ref)[6] = (u8)(g_fadeCurrent.blue - 1);
+            ((u8*)primitive)[4] = (u8)(g_fadeCurrent.red - 1);
+            ((u8*)primitive)[5] = (u8)(g_fadeCurrent.green - 1);
+            ((u8*)primitive)[6] = (u8)(g_fadeCurrent.blue - 1);
         }
         else
         {
             if (g_fadeCurrent.red == 0x100)
             {
-                ((u8*)ref)[4] = 0;
+                ((u8*)primitive)[4] = 0;
             }
             else
             {
-                ((u8*)ref)[4] = ~(u8)(g_fadeCurrent.red);
+                ((u8*)primitive)[4] = ~(u8)(g_fadeCurrent.red);
             }
             if (g_fadeCurrent.green == 0x100)
             {
-                ((u8*)ref)[5] = 0;
+                ((u8*)primitive)[5] = 0;
             }
             else
             {
-                ((u8*)ref)[5] = ~(u8)(g_fadeCurrent.green);
+                ((u8*)primitive)[5] = ~(u8)(g_fadeCurrent.green);
             }
             if (g_fadeCurrent.blue == 0x100)
             {
-                ((u8*)ref)[6] = 0;
+                ((u8*)primitive)[6] = 0;
             }
             else
             {
-                ((u8*)ref)[6] = ~(u8)(g_fadeCurrent.blue);
+                ((u8*)primitive)[6] = ~(u8)(g_fadeCurrent.blue);
             }
         }
+        ((u8*)primitive)[3] = 3;
+        ((u8*)primitive)[7] = 0x62;
+        *(u16*)((u8*)primitive + 12) = 0x140;
+        *(u16*)((u8*)primitive + 10) = 0;
+        *(u16*)((u8*)primitive + 8) = 0;
+        *(u16*)((u8*)primitive + 14) = 0xF0;
 
-        ((u8*)ref)[3] = 3;
-        ((u8*)ref)[7] = 0x62;
-        *(u16*)((u8*)ref + 12) = 0x140;
-        *(u16*)((u8*)ref + 10) = 0;
-        *(u16*)((u8*)ref + 8) = 0;
-        *(u16*)((u8*)ref + 14) = 0xF0;
-
-        *ref = (*ref & 0xFF000000) | (*arg0_40 & 0x00FFFFFF);
-        *arg0_40 = (*arg0_40 & 0xFF000000) | ((u32)ref & 0x00FFFFFF);
-
-        var_a1 = 0x25;
-        ref = (u32*)((u8*)ref + 0x10); // advance in-place; lands in delay slot
+        *primitive = (*primitive & 0xFF000000) | (*orderingTableTag & 0x00FFFFFF);
+        *orderingTableTag = (*orderingTableTag & 0xFF000000) | ((u32)primitive & 0x00FFFFFF);
+        drawMode = 0x25;
+        primitive = (u32*)((u8*)primitive + 0x10); // advance in-place; lands in delay slot
         if (g_fadeCurrent.red < 0x101)
         {
-            var_a1 = 0x45;
+            drawMode = 0x45;
         }
-        ((u8*)ref)[3] = 1;
-        *(u32*)((u8*)ref + 4) = (u32)var_a1 | 0xE1000000;
+        ((u8*)primitive)[3] = 1;
+        *(u32*)((u8*)primitive + 4) = (u32)drawMode | 0xE1000000;
 
-        *ref = (*ref & 0xFF000000) | (*arg0_40 & 0x00FFFFFF);
-        *arg0_40 = (*arg0_40 & 0xFF000000) | ((u32)ref & 0x00FFFFFF);
+        *primitive = (*primitive & 0xFF000000) | (*orderingTableTag & 0x00FFFFFF);
+        *orderingTableTag = (*orderingTableTag & 0xFF000000) | ((u32)primitive & 0x00FFFFFF);
 
-        ref = (u32*)((u8*)ref + 8); // second advance (+8), total = +0x18
+        primitive = (u32*)((u8*)primitive + 8); // second advance (+8), total = +0x18
     }
-
-    *(u32*)(arg0 + 8238) = (u32)ref;
+    frame->primitiveCursor = (u8*)primitive;
 }
-
-/**
- * @brief Sets the target colour and duration for the screen fade.
- *
- * @details Writes directly to g_fadeTarget. The fade system in func_80050258
- * reads this each frame and interpolates g_fadeCurrent toward it over the
- * given number of steps. Colour values use an internal scale where 0 = fully
- * black and 0x100 = normal brightness (no colour modulation).
- *
- * @param red   Target red channel (0 = black, 0x100 = normal).
- * @param green Target green channel (0 = black, 0x100 = normal).
- * @param blue  Target blue channel (0 = black, 0x100 = normal).
- * @param steps Number of frames to interpolate over. 0 snaps immediately.
- * @return void No return value.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/A5HgV
- */
+/* Set the RGB fade target; 0x100 is normal brightness. */
 void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
 {
     g_fadeTarget.red = red;
@@ -386,125 +309,109 @@ void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps)
     g_fadeTarget.blue = blue;
     g_fadeTarget.steps = steps;
 }
-
-/**
- * decomp.me link (100%) https://decomp.me/scratch/jEnBn
- */
-void func_80050570(void)
+void UpdateCheckPSInputAndTimeout(void)
 {
-    s32 temp_v0;
+    s32 timer;
 
     ProcessControllerInput();
-    temp_v0 = g_frameTimer - 1;
-    g_frameTimer = temp_v0;
+    timer = g_checkpsImageFramesRemaining - 1;
+    g_checkpsImageFramesRemaining = timer;
 
-    if (temp_v0 == 0)
+    if (timer == 0)
     {
-        D_8005D060 = 2;
+        g_checkpsExitReason = 2;
     }
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/WIqbI
- */
-void func_800505B4(s32 arg0)
+void DrawCheckPSImage(CheckPSFrame* frame)
 {
-    u8* base;
-    u8* prim;
-    s32 w;
-    s32 new_var;
-    s32 h;
-    u_long* ot;
-    u32 cmd;
-    volatile u32 dummy;
-
-    cmd = 0xE1000000;
-    base = ((u8*)arg0) + 0x8000;
-    prim = *((u8**)(base + 0xB8));
+    u8* primitiveCursorPage;
+    u8* primitive;
+    s32 widthWords;
+    s32 imageWidthWords;
+    s32 imageHeight;
+    u_long* orderingTable;
+    u32 drawModeCommand;
+    volatile u32 stackLayoutScratch; /* Required to preserve the original stack frame. */
+    drawModeCommand = 0xE1000000;
+    /* Keep the split +0x8000/+0xB8 addressing shape; GCC 2.7.2 emits the matched cursor load this way. */
+    primitiveCursorPage = ((u8*)frame) + 0x8000;
+    primitive = *((u8**)(primitiveCursorPage + 0xB8));
 
     // Set RGB
-    *((u32*)(prim + 4)) = 0x808080;
+    *((u32*)(primitive + 4)) = 0x808080;
 
-    setSprt((SPRT*)prim);
+    setSprt((SPRT*)primitive);
 
-    w = D_80061098;
-    h = D_80061094;
+    widthWords = g_checkpsImageWidthWords;
+    imageHeight = g_checkpsImageHeight;
 
-    setUV0((SPRT*)prim, 0, 0);
-    setClut((SPRT*)prim, 0, 480);
-    setXY0((SPRT*)prim, (0x140 - (w * 4)) >> 1, (0xE0 - h) / 2);
+    setUV0((SPRT*)primitive, 0, 0);
+    setClut((SPRT*)primitive, 0, 480);
+    setXY0((SPRT*)primitive, (0x140 - (widthWords * 4)) >> 1, (0xE0 - imageHeight) / 2);
 
-    new_var = D_80061098;
-    w = new_var;
+    imageWidthWords = g_checkpsImageWidthWords;
+    widthWords = imageWidthWords;
 
-    ot = (u_long*)(arg0 + 0x40);
+    orderingTable = frame->orderingTable;
 
-    setWH((SPRT*)prim, w * 4, D_80061094);
-    addPrim(ot, (SPRT*)prim);
+    setWH((SPRT*)primitive, widthWords * 4, g_checkpsImageHeight);
+    addPrim(orderingTable, (SPRT*)primitive);
+    primitive += 0x14;
 
-    prim += 0x14;
+    setDrawTPage((SPRT*)primitive, 0, 0, 5);
+    addPrim(orderingTable, (SPRT*)primitive);
 
-    setDrawTPage((SPRT*)prim, 0, 0, 5);
-    addPrim(ot, (SPRT*)prim);
-
-    prim += 8;
-    *((u8**)(base + 0xB8)) = prim;
+    primitive += 8;
+    *((u8**)(primitiveCursorPage + 0xB8)) = primitive;
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/VRHxF
- */
-void func_800506D0(void)
+void LoadCheckPSImage(void)
 {
-    RECT rectLoad;
-    RECT rect;
-    RECT* pRect;
-    u8* gfxBase;
-    u32 clutSize;
-    u8* imageBlock;
-    u16 loadX, loadY;
-    u16* pHeader;
+    RECT imageDestination;
+    RECT uploadRect;
+    RECT* uploadRectPtr;
+    u8* imageAsset;
+    u32 clutBlockSize;
+    u8* pixelBlock;
+    u16 imageX, imageY;
+    u16* imageHeader;
 
-    pRect = &rect;
-    gfxBase = D_8005B744;
+    uploadRectPtr = &uploadRect;
+    imageAsset = g_checkpsImageAsset;
 
-    g_frameTimer = 120;
+    g_checkpsImageFramesRemaining = 120;
+    imageDestination.x = 0x140;
+    imageDestination.y = 0;
+    imageDestination.w = 0;
+    imageDestination.h = 0x1E0;
 
-    rectLoad.x = 0x140;
-    rectLoad.y = 0;
-    rectLoad.w = 0;
-    rectLoad.h = 0x1E0;
+    uploadRect.x = 0;
+    uploadRect.y = 0x1E0;
+    uploadRect.w = *(u16*)(imageAsset + 0x10) * *(u16*)(imageAsset + 0x12);
+    uploadRect.h = 1;
 
-    rect.x = 0;
-    rect.y = 0x1E0;
-    rect.w = *(u16*)(gfxBase + 0x10) * *(u16*)(gfxBase + 0x12);
-    rect.h = 1;
+    clutBlockSize = *(u32*)(imageAsset + 8);
+    LoadImage(uploadRectPtr, (u_long*)(imageAsset + 0x14));
 
-    clutSize = *(u32*)(gfxBase + 8);
-    LoadImage(pRect, (u32*)(gfxBase + 0x14));
+    imageX = imageDestination.x;
+    imageY = imageDestination.y;
 
-    loadX = rectLoad.x;
-    loadY = rectLoad.y;
+    pixelBlock = imageAsset + (clutBlockSize + 8);
 
-    imageBlock = gfxBase + (clutSize + 8);
+    imageHeader = (u16*)(pixelBlock + 8);
+    uploadRect.x = imageX;
+    uploadRect.y = imageY;
+    uploadRect.w = imageHeader[0];
+    uploadRect.h = imageHeader[1];
 
-    pHeader = (u16*)(imageBlock + 8);
+    g_checkpsImageWidthWords = imageHeader[0];
+    g_checkpsImageHeight = imageHeader[1];
 
-    rect.x = loadX;
-    rect.y = loadY;
-    rect.w = pHeader[0];
-    rect.h = pHeader[1];
-
-    D_80061098 = pHeader[0];
-    D_80061094 = pHeader[1];
-
-    pHeader += 2;
-    LoadImage(pRect, (u32*)pHeader);
+    imageHeader += 2;
+    LoadImage(uploadRectPtr, (u_long*)imageHeader);
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/JLAOc
- */
 s32 PollInputDevice(void)
 {
     SCDRegs* regs = SCD_REGS;
@@ -519,7 +426,6 @@ s32 PollInputDevice(void)
 
     s32 axisX;
     s32 axisY;
-
     u16 hiRead;
     u16 loRead;
     u16 axisRaw;
@@ -535,7 +441,6 @@ s32 PollInputDevice(void)
     inputMask = (((u32)hiRead) >> 8) | (((u32)loRead) << 8);
 
     rawButtons = inputMask;
-
     // Remap upper nibble bits (hardware → logical layout)
     remappedUpper = (rawButtons & 0x40) >> 1;
     crossBit = (rawButtons & 0x20) << 1;
@@ -549,7 +454,6 @@ s32 PollInputDevice(void)
 
     nonFaceBits = rawButtons & (~0xF0U);
     inputMask = remappedUpper | nonFaceBits;
-
     if (regs->device_type != 0)
     {
         // X axis → left/right flags
@@ -568,7 +472,6 @@ s32 PollInputDevice(void)
         // Y axis → up/down flags
         axisRaw = *(u16*)&regs->axis_y;
         axisY = (s32)((s16)axisRaw);
-
         if (axisY < -1)
         {
             inputMask |= 0x1000U;
@@ -581,28 +484,7 @@ s32 PollInputDevice(void)
 
     return (s32)inputMask;
 }
-
-/**
- * @brief Reads controller hardware state and updates the debounced input globals.
- *
- * @details Reads the SCD registers at 0x801ED600 and transforms the raw button data
- * into the game's internal format using the same byte-swap and face button remap as
- * UpdateControllerInput. If deviceState is >= 0xFE (no controller present), the button
- * state is forced to zero. Analog stick axes are thresholded and OR'd into the same
- * D-pad bit positions if an analog controller is connected (deviceState != 0).
- *
- * After building the button state, debounce and key-repeat logic is applied:
- * - New button press: written immediately to g_debouncedInput and g_lastInputState,
- *   repeat timer reset to 15.
- * - Held button: only directional bits (0xF000) are kept; g_debouncedInput is set once
- *   the repeat timer counts down to zero, then resets to 2.
- * - No input: g_debouncedInput, g_lastInputState, and g_inputRepeatTimer are all cleared.
- *
- * @param void No parameters.
- * @return void No return value.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/BkOv2
- */
+/* Read the merged controller sample and apply CHECKPS key-repeat/debounce behavior. */
 void ProcessControllerInput(void)
 {
     SCDRegs* controllerRegs;
@@ -610,12 +492,10 @@ void ProcessControllerInput(void)
     s16 axisX;
     s16 axisY;
     s32 finalButtonState;
-
     controllerRegs = SCD_REGS;
 
-    // 0xFF = no controller (High-Z, pins floating);
-    // 0xFE = probably a defensive boundary just to be safe?
-    if (((u8)D_801ED600) >= 0xFEU)
+    /* Device types 0xFE/0xFF are unavailable controller states. */
+    if (((u8)g_controllerDeviceType) >= 0xFEU)
     {
         finalButtonState = 0;
     }
@@ -624,7 +504,6 @@ void ProcessControllerInput(void)
         // PSX sends face buttons in the high byte and D-pad in the low byte;
         // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
         processedButtons = (controllerRegs->held_buttons >> 8) | (controllerRegs->held_buttons << 8);
-
         // Remap face buttons from hardware order to game order.
         processedButtons = PAD_REMAP_FACE_BITS(processedButtons);
 
@@ -642,7 +521,6 @@ void ProcessControllerInput(void)
             }
 
             axisY = (s16)controllerRegs->axis_y;
-
             if (axisY < -1)
             {
                 processedButtons |= PAD_BTN_UP;
@@ -656,7 +534,6 @@ void ProcessControllerInput(void)
     }
 
     g_debouncedInput = 0; // current active input
-
     // 0x0B6F = L2 | R2 | L1 | R1 | Cross | Circle | Select | L3 | Start
     // = 0x0001 | 0x0002 | 0x0004 | 0x0008 | 0x0020 | 0x0040 | 0x0100 | 0x0200 | 0x0800
     if (((finalButtonState == g_lastInputState) || ((g_lastInputState != 0) && ((finalButtonState & (g_lastInputState | 0xB6F))))) && (finalButtonState != 0))
@@ -666,7 +543,6 @@ void ProcessControllerInput(void)
         {
             finalButtonState &= 0xF000;
         }
-
         if (g_inputRepeatTimer == 0)
         {
             g_debouncedInput = finalButtonState;
@@ -690,28 +566,7 @@ void ProcessControllerInput(void)
         g_inputRepeatTimer = 15;
     }
 }
-
-/**
- * @brief Reads raw controller hardware state and stores it as the new input snapshot.
- *
- * @details Reads the SCD registers at 0x801ED600 and transforms the raw button data
- * into the game's internal format. If deviceState is >= 0xFE (no controller present),
- * the button state is forced to zero. Otherwise, the 16-bit buttonData is byte-swapped
- * to place the D-pad in bits 8-15 and face buttons in bits 0-7, then face button bits
- * 4-7 are remapped from PSX hardware order (Triangle, Circle, Cross, Square) to the
- * game's order (Square, Cross, Circle, Triangle). If an analog controller is connected
- * (deviceState != 0), axis values are thresholded and OR'd into the same D-pad bit
- * positions so the rest of the game can treat analog and digital input identically.
- *
- * The result is written to g_lastInputState and g_inputRepeatTimer is reset to 15.
- * This function does not perform debouncing or key-repeat; that is handled separately
- * by the sibling function that reads g_lastInputState each frame.
- *
- * @param void No parameters.
- * @return void No return value.
- *
- * @see decomp.me (100%) https://decomp.me/scratch/qGA07
- */
+/* Seed the CHECKPS input snapshot from the merged controller sample. */
 void UpdateControllerInput(void)
 {
     SCDRegs* regs;
@@ -719,14 +574,12 @@ void UpdateControllerInput(void)
     short axisX;
     short axisY;
     unsigned int finalButtonState;
-
     regs = SCD_REGS;
 
     g_debouncedInput = 0;
 
-    // 0xFF = no controller (High-Z, pins floating);
-    // 0xFE = probably a defensive boundary just to be safe?
-    if (D_801ED600 >= 0xFEU)
+    /* Device types 0xFE/0xFF are unavailable controller states. */
+    if (g_controllerDeviceType >= 0xFEU)
     {
         finalButtonState = 0;
     }
@@ -735,7 +588,6 @@ void UpdateControllerInput(void)
         // PSX sends face buttons in the high byte and D-pad in the low byte;
         // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
         processedButtons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
-
         // Reorder face button bits 4-7 from hardware order (Triangle, Circle, Cross, Square)
         // to game order (Square, Cross, Circle, Triangle) by swapping Triangle<->Square and Circle<->Cross.
         // Keep D-pad and shoulder button bits (0-3, 8-15) unchanged.
@@ -743,7 +595,6 @@ void UpdateControllerInput(void)
             (((((processedButtons & PAD_BTN_CIRCLE) >> 1) | ((processedButtons & PAD_BTN_CROSS) << 1)) | ((processedButtons & PAD_BTN_TRIANGLE) >> 3)) |
              ((processedButtons & PAD_BTN_SQUARE) << 3)) |
             (processedButtons & ~0xF0);
-
         if (regs->device_type != 0)
         {
             axisX = regs->axis_x;
@@ -758,7 +609,6 @@ void UpdateControllerInput(void)
             }
 
             axisY = regs->axis_y;
-
             if (axisY < -1)
             {
                 processedButtons |= PAD_BTN_UP;
