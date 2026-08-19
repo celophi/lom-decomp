@@ -2815,30 +2815,23 @@ void akao_sfx_play_default(u8* params)
  *
  * @param params Buffer holding the program index on entry; rebuilt in
  *        place into an akao_sfx_play parameter block.
- *
- * @note NOT YET 100% (87.50%, 30/32 exact). The only residue is where one
- *       independent store (the voice_alloc_base write) lands relative to
- *       the final akao_sfx_play call: the target schedules it into that
- *       call's branch delay slot, this compile emits it immediately after
- *       akao_bank_find_slot returns. sched_oracle finds no inferable
- *       constraint here (0 constraints in the block); permuter mutations
- *       that scored better on its own metric did not move this specific
- *       pair when re-measured. See working/func_80027460/code.c.
- * @see decomp.me (87.50%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_play_program(u8* params)
 {
     s32 seq_data0;
     s32 seq_data1;
     u16 program_key;
+    s32 slot;
 
     akao_resolve_program_data(&seq_data0, &seq_data1, *(s32*)(params + 0x0));
     *(s32*)(params + 0x4) = 0x2000000;
     *(s32*)(params + 0x8) = 0x80;
     *(s32*)(params + 0xC) = 0x7F;
     program_key = *(u16*)(g_akao_bank_region_b + *(s32*)(params + 0x0) * 2);
-    *(s32*)(params + 0x10) = akao_bank_find_slot(program_key);
-    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1, 0);
+    slot = akao_bank_find_slot(program_key);
+    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1,
+                  (*(s32*)(params + 0x10) = slot, 0));
 }
 
 /**
