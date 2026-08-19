@@ -527,3 +527,97 @@ s32 func_8006B984(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
     rec->unk1C = (rec->unk1C & 0xFF7FFFFF) | ((arg3 & 1) << 23);
     return 0;
 }
+
+typedef struct
+{
+    s16 x;
+    s16 y;
+    s16 w;
+    s16 h;
+} RECT;
+
+/** @brief Staging buffer that field CD reads land in. */
+typedef struct
+{
+    u8 pad0[0x8];
+    s32 unk8;  /* 0x08 byte offset of the second image inside the data area */
+    u8 padC[0x14 - 0xC];
+    u16 unk14; /* 0x14 start of the image data */
+} FieldCdBuffer;
+
+extern FieldCdBuffer* D_8010D038;
+
+/**
+ * @brief Read a field texture set off the CD and upload it to VRAM: one
+ *        optional full/partial strip at y = arg4 + 0x1F4, then the tile block
+ *        for the current slot.
+ * @param arg0 CD resource index (masked to 16 bits) to queue.
+ * @param arg1 Slot index; < 2 selects the 0x380-based tile column.
+ * @param arg2 Column index scaled by 0x40 into the tile block's x.
+ * @param arg3 Selects the narrow (0x40-wide / 0x80-tall) variants.
+ * @param arg4 Base row added to 0x1F4 for the first upload's y.
+ * @see decomp.me (100%) TODO
+ */
+void func_8006BAF8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+{
+    RECT rect;
+    FieldCdBuffer* buf;
+    s32 second;
+    s32 full_width;
+
+    buf = D_8010D038;
+    full_width = 0x100;
+    cdrom_queue_read(arg0 & 0xFFFF, buf);
+    cdrom_wait_queue_empty();
+    second = buf->unk8;
+    buf->unk14 = 0;
+
+    if (arg2 == 0 || arg3 != 0)
+    {
+        if (arg3 != 0)
+        {
+            rect.x = 0xC0;
+            rect.y = arg4 + 0x1F4;
+            rect.w = 0x40;
+            rect.h = 1;
+        }
+        else
+        {
+            rect.y = arg4 + 0x1F4;
+            rect.w = full_width;
+            rect.x = 0;
+            rect.h = 1;
+        }
+        LoadImage(&rect, &buf->unk14);
+    }
+
+    if (arg1 >= 2)
+    {
+        s32 base = (arg2 << 6) + 0x340;
+        s32 off = arg1 << 6;
+        rect.x = base - off;
+        rect.w = 0x40;
+        rect.y = 0;
+        rect.h = 0x100;
+    }
+    else if (arg3 != 0)
+    {
+        s32 base = (arg2 << 6) + 0x380;
+        rect.x = base - (arg1 << 7);
+        rect.y = 0x80;
+        rect.w = 0x40;
+        rect.h = 0x80;
+    }
+    else
+    {
+        s32 base = (arg2 << 6) + 0x380;
+        s32 off = arg1 << 7;
+        rect.x = base - off;
+        rect.w = 0x40;
+        rect.y = 0;
+        rect.h = 0x100;
+    }
+
+    LoadImage(&rect, (u8*)(second + (s32)buf + 0x14));
+    DrawSync(0);
+}
