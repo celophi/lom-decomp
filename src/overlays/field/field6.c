@@ -98,7 +98,11 @@ typedef struct
     u8 pad18F[0x19C - 0x18F];
     s32 unk19C; /* 0x19C */
     s32 unk1A0; /* 0x1A0 */
-    u8 pad1A4[0x23C - 0x1A4];
+    u8 pad1A4[0x1A8 - 0x1A4];
+    u8 unk1A8; /* 0x1A8 */
+    u8 unk1A9; /* 0x1A9 */
+    u8 unk1AA; /* 0x1AA */
+    u8 pad1AB[0x23C - 0x1AB];
 } Struct_D80105AE0;
 
 extern Struct_D800FDF58 D_800FDF58[];
@@ -448,4 +452,172 @@ void func_8006B7A0(s32 arg0, s32 arg1)
     entry->unk14 = val | 0x20;
     entry->unk28 |= 0x2000000;
     entry->unk24 |= 0x100000;
+}
+
+/**
+ * @brief Broadcast a shared render/config state to every field actor slot:
+ *        stores arg0-arg2 into all 13 D_80105AE0 and D_800FE3A0 entries, folds
+ *        arg4 into the 2-bit field at bits 22-23 of each part's unk4, and folds
+ *        arg3's low bit into bit 23 of each D_800FDF58 record's unk1C.
+ * @param arg0 Byte written to unk1A8 (D_80105AE0) and unkE (D_800FE3A0).
+ * @param arg1 Byte written to unk1A9 (D_80105AE0) and unkF (D_800FE3A0).
+ * @param arg2 Byte written to unk1AA (D_80105AE0) and unk10 (D_800FE3A0).
+ * @param arg3 Low bit replaces bit 23 of every D_800FDF58 entry's unk1C.
+ * @param arg4 Low 2 bits replace bits 22-23 of every D_800FE3A0 entry's unk4.
+ * @see decomp.me (100%) TODO
+ */
+void func_8006B8DC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+{
+    s32 i;
+    u32 mode;
+    u32 flag;
+
+    mode = (arg4 & 3) << 22;
+    for (i = 0; i < 13; i++)
+    {
+        D_80105AE0[i].unk1A8 = arg0;
+        D_80105AE0[i].unk1A9 = arg1;
+        D_80105AE0[i].unk1AA = arg2;
+        D_800FE3A0[i].unkE = arg0;
+        D_800FE3A0[i].unkF = arg1;
+        D_800FE3A0[i].unk10 = arg2;
+        D_800FE3A0[i].unk4 = (D_800FE3A0[i].unk4 & 0xFF3FFFFF) | mode;
+    }
+
+    for (i = 0; i < 13; i++)
+    {
+        flag = (arg3 & 1) << 23;
+        D_800FDF58[i].unk1C = (D_800FDF58[i].unk1C & 0xFF7FFFFF) | flag;
+    }
+}
+
+Struct_D800FDF58* func_80087C9C(s32);
+
+/**
+ * @brief Apply a shared render/config state to the single field actor slot that
+ *        owns record arg5: stores arg0-arg2 into that slot's D_80105AE0 and
+ *        D_800FE3A0 entries, folds arg4 into the 2-bit field at bits 22-23 of
+ *        the part's unk4, and arg3's low bit into bit 23 of the record's unk1C.
+ * @param arg0 Byte written to unk1A8 (D_80105AE0) and unkE (D_800FE3A0).
+ * @param arg1 Byte written to unk1A9 (D_80105AE0) and unkF (D_800FE3A0).
+ * @param arg2 Byte written to unk1AA (D_80105AE0) and unk10 (D_800FE3A0).
+ * @param arg3 Low bit replaces bit 23 of the record's unk1C.
+ * @param arg4 Low 2 bits replace bits 22-23 of the part's unk4.
+ * @param arg5 Record selector passed to func_80087C9C.
+ * @return 0 on success, -1 if func_80087C9C found no record.
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8006B984(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+{
+    Struct_D800FDF58 *rec;
+
+    rec = func_80087C9C(arg5);
+    if (rec == (Struct_D800FDF58*)-1)
+    {
+        return -1;
+    }
+
+    D_80105AE0[rec->unk3A].unk1A8 = arg0;
+    D_80105AE0[rec->unk3A].unk1A9 = arg1;
+    D_80105AE0[rec->unk3A].unk1AA = arg2;
+    D_800FE3A0[rec->unk3A].unkE = arg0;
+    D_800FE3A0[rec->unk3A].unkF = arg1;
+    D_800FE3A0[rec->unk3A].unk10 = arg2;
+    D_800FE3A0[rec->unk3A].unk4 = (D_800FE3A0[rec->unk3A].unk4 & 0xFF3FFFFF) | ((arg4 & 3) << 22);
+    rec->unk1C = (rec->unk1C & 0xFF7FFFFF) | ((arg3 & 1) << 23);
+    return 0;
+}
+
+typedef struct
+{
+    s16 x;
+    s16 y;
+    s16 w;
+    s16 h;
+} RECT;
+
+/** @brief Staging buffer that field CD reads land in. */
+typedef struct
+{
+    u8 pad0[0x8];
+    s32 unk8;  /* 0x08 byte offset of the second image inside the data area */
+    u8 padC[0x14 - 0xC];
+    u16 unk14; /* 0x14 start of the image data */
+} FieldCdBuffer;
+
+extern FieldCdBuffer* D_8010D038;
+
+/**
+ * @brief Read a field texture set off the CD and upload it to VRAM: one
+ *        optional full/partial strip at y = arg4 + 0x1F4, then the tile block
+ *        for the current slot.
+ * @param arg0 CD resource index (masked to 16 bits) to queue.
+ * @param arg1 Slot index; < 2 selects the 0x380-based tile column.
+ * @param arg2 Column index scaled by 0x40 into the tile block's x.
+ * @param arg3 Selects the narrow (0x40-wide / 0x80-tall) variants.
+ * @param arg4 Base row added to 0x1F4 for the first upload's y.
+ * @see decomp.me (100%) TODO
+ */
+void func_8006BAF8(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+{
+    RECT rect;
+    FieldCdBuffer* buf;
+    s32 second;
+    s32 full_width;
+
+    buf = D_8010D038;
+    full_width = 0x100;
+    cdrom_queue_read(arg0 & 0xFFFF, buf);
+    cdrom_wait_queue_empty();
+    second = buf->unk8;
+    buf->unk14 = 0;
+
+    if (arg2 == 0 || arg3 != 0)
+    {
+        if (arg3 != 0)
+        {
+            rect.x = 0xC0;
+            rect.y = arg4 + 0x1F4;
+            rect.w = 0x40;
+            rect.h = 1;
+        }
+        else
+        {
+            rect.y = arg4 + 0x1F4;
+            rect.w = full_width;
+            rect.x = 0;
+            rect.h = 1;
+        }
+        LoadImage(&rect, &buf->unk14);
+    }
+
+    if (arg1 >= 2)
+    {
+        s32 base = (arg2 << 6) + 0x340;
+        s32 off = arg1 << 6;
+        rect.x = base - off;
+        rect.w = 0x40;
+        rect.y = 0;
+        rect.h = 0x100;
+    }
+    else if (arg3 != 0)
+    {
+        s32 base = (arg2 << 6) + 0x380;
+        rect.x = base - (arg1 << 7);
+        rect.y = 0x80;
+        rect.w = 0x40;
+        rect.h = 0x80;
+    }
+    else
+    {
+        s32 base = (arg2 << 6) + 0x380;
+        s32 off = arg1 << 7;
+        rect.x = base - off;
+        rect.w = 0x40;
+        rect.y = 0;
+        rect.h = 0x100;
+    }
+
+    LoadImage(&rect, (u8*)(second + (s32)buf + 0x14));
+    DrawSync(0);
 }
