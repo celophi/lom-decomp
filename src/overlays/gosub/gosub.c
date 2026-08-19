@@ -1618,7 +1618,7 @@ typedef struct
 
 s32 func_8001A5D4(s32, void*);                /* extern */
 s32 func_8001C56C(void*, s32, s32, s32, s32); /* extern */
-StructS0* func_801443E4();                    /* extern */
+void* func_801443E4();                        /* extern */
 StructS0* func_80144544();                    /* extern */
 GosubLine* func_80144764();                   /* extern */
 StructS0* func_80146E30();                    /* extern */
@@ -2996,6 +2996,10 @@ void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
  * @param h    Panel height.
  * @param flag Non-zero selects the bottom (0xF0) frame-buffer half, zero the top (8).
  * @return Pointer just past the DR_MODE packet (next free packet slot).
+ *
+ * @note The `do { temp_a2 = (s32)var_s0; } while (0)` copy block is required to
+ *       match: it keeps the tile cursor in its own live range so the packet
+ *       cursor lands in a2 rather than being coalesced onto the call return.
  *
  * @see decomp.me (100%)
  */
