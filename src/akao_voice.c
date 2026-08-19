@@ -2815,30 +2815,23 @@ void akao_sfx_play_default(u8* params)
  *
  * @param params Buffer holding the program index on entry; rebuilt in
  *        place into an akao_sfx_play parameter block.
- *
- * @note NOT YET 100% (87.50%, 30/32 exact). The only residue is where one
- *       independent store (the voice_alloc_base write) lands relative to
- *       the final akao_sfx_play call: the target schedules it into that
- *       call's branch delay slot, this compile emits it immediately after
- *       akao_bank_find_slot returns. sched_oracle finds no inferable
- *       constraint here (0 constraints in the block); permuter mutations
- *       that scored better on its own metric did not move this specific
- *       pair when re-measured. See working/func_80027460/code.c.
- * @see decomp.me (87.50%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_play_program(u8* params)
 {
     s32 seq_data0;
     s32 seq_data1;
     u16 program_key;
+    s32 slot;
 
     akao_resolve_program_data(&seq_data0, &seq_data1, *(s32*)(params + 0x0));
     *(s32*)(params + 0x4) = 0x2000000;
     *(s32*)(params + 0x8) = 0x80;
     *(s32*)(params + 0xC) = 0x7F;
     program_key = *(u16*)(g_akao_bank_region_b + *(s32*)(params + 0x0) * 2);
-    *(s32*)(params + 0x10) = akao_bank_find_slot(program_key);
-    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1, 0);
+    slot = akao_bank_find_slot(program_key);
+    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1,
+                  (*(s32*)(params + 0x10) = slot, 0));
 }
 
 /**
@@ -3251,13 +3244,7 @@ void akao_sfx_set_volume_scale(u8* params)
  *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
  *        target volume scale (7 bits) at +0xC.
  *
- * @note NOT YET 100% (99.90%, 86/96 exact). The only remaining residue is
- *       which struct offset the compiler anchors the per-channel loop
- *       cursor at (0x8E in the target, 0xE6 here); every other instruction
- *       matches. Introducing an explicit raw-offset cursor variable made
- *       this measurably worse (94.24%), so the natural struct-access form
- *       above is the better basin. See working/func_80027B88/code.c.
- * @see decomp.me (99.90%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_fade_volume_scale(u8* params)
 {
@@ -3290,8 +3277,8 @@ void akao_sfx_fade_volume_scale(u8* params)
                 target_scale = (*(u16*)(params + 0xC) & 0x7F) << 8;
                 current_scale = channel->volume_scale;
                 delta = target_scale - current_scale;
-                channel->unk8E = tick_count;
                 channel->unkE6 = delta / tick_count;
+                channel->unk8E = tick_count;
             }
         }
     }
@@ -3313,8 +3300,8 @@ void akao_sfx_fade_volume_scale(u8* params)
                 target_scale = (*(u16*)(params + 0xC) & 0x7F) << 8;
                 current_scale = channel->volume_scale;
                 delta = target_scale - current_scale;
-                channel->unk8E = tick_count;
                 channel->unkE6 = delta / tick_count;
+                channel->unk8E = tick_count;
             }
         }
     }
@@ -3356,16 +3343,15 @@ void akao_sfx_set_volume_scale_unsuppressed(u16* param)
  * @param params Tick count at +0x0 (0 is treated as 1), target volume
  *        scale (7 bits, u16) at +0x4.
  *
- * @note NOT YET 100% (99.90%, 45/50 exact). Same loop-cursor anchor
- *       residue as akao_sfx_fade_volume_scale (0x8E vs 0xE6); every other
- *       instruction matches.
- * @see decomp.me (99.90%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
 {
-    AkaoChannelState* channel;
+    s32* channel;
+    volatile s32* cursor;
     s32 active;
     s32 bit;
+    s32 suppress;
     u32 count;
     s16 tick_count;
     u16 target_scale;
@@ -3374,10 +3360,13 @@ void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
 
     bit = 0x1000;
     active = g_akao_sfx_control.unk0;
-    channel = (AkaoChannelState*)g_sfx_channels;
-    for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+    count = 0;
+    suppress = 0x02000000;
+    channel = (s32*)g_sfx_channels;
+    cursor = (s32*)((u8*)channel + 0x8E);
+    do
     {
-        if ((active & bit) && !(channel->tempo_acc & 0x02000000))
+        if ((active & bit) && !(*(volatile s32*)((u8*)cursor - 0x66) & suppress))
         {
             if (*(s32*)(params + 0) != 0)
             {
@@ -3388,12 +3377,15 @@ void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
                 tick_count = 1;
             }
             target_scale = (*(u16*)(params + 4) & 0x7F) << 8;
-            current_scale = channel->volume_scale;
+            current_scale = ((volatile u16*)cursor)[0x2B];
             delta = target_scale - current_scale;
-            channel->unk8E = tick_count;
-            channel->unkE6 = delta / tick_count;
+            *(volatile u16*)cursor = tick_count;
+            ((volatile s16*)cursor)[0x2C] = delta / tick_count;
         }
-    }
+        count++;
+        cursor += 0x46;
+        bit <<= 1;
+    } while (count < 0xC);
 }
 
 /**
