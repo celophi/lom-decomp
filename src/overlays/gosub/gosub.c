@@ -3756,49 +3756,40 @@ void func_8014595C(void)
  * @param y_off Vertical offset subtracted from both row positions.
  * @return Packet cursor past the last emitted label.
  *
- * @note WIP - best match 90.87% (62/68 exact, gcc 2.7.2 CDK). The residue is a
- *       single register-allocation artifact: the target keeps color1 in a temp
- *       (t0) and moves it to a3 at the first call because arg3 (y_off) still
- *       occupies a3 when color1 is materialized, whereas here color1 coalesces
- *       straight into a3. The two calls are anti-correlated - forcing color1 into
- *       a temp (only reachable via an undefined-on-else-path spelling) flips
- *       color2 the wrong way - so no semantics-preserving single edit closes it.
- * @note The glyph address uses &D_8014F29C inline rather than the @c table local
- *       (measured +2 vs sharing the pointer), and @c base is a plain integer
- *       offset (measured +2 vs a u8* pointer); both steer the commutative operand
- *       order to match. Dropping @c table entirely regresses -41.
- * @note The unused @c pad aggregate reserves the target's 0x38-byte dead frame
- *       slot (idioms.md FRAME-01); gcc keeps the slot for a never-read array.
- * @see working/func_80145A14/ for the measured probe log.
+ * @see decomp.me (100%)
  */
 s32 func_80145A14(s32* ot, s32 prim, s32 x_off, s32 y_off)
 {
     s32* table;
     s32 base;
-    void* glyph;
+    void* glyph0;
+    void* glyph1;
     s32 color;
+    s32 color0;
+    s32 p;
     s32 pad[14];
 
+    p = prim;
     table = &D_8014F29C;
     base = (s32)table - 0x20;
 
-    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x12)));
-    color = 5;
+    glyph0 = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x12)));
+    color0 = 5;
     if ((g_gosub_dialog_choice & 1) == 0)
     {
-        color = 4;
+        color0 = 4;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 2 - y_off, 2);
+    p = func_800A88A0(p, ot, glyph0, color0, 0x40 - x_off, 2 - y_off, 2);
 
-    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x10)));
+    glyph1 = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0x10)));
     color = 5;
     if ((g_gosub_dialog_choice & 1) != 0)
     {
         color = 4;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x12 - y_off, 2);
+    p = func_800A88A0(p, ot, glyph1, color, 0x40 - x_off, 0x12 - y_off, 2);
 
-    return prim;
+    return p;
 }
 
 /**
