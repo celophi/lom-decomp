@@ -270,11 +270,12 @@ void akao_tick_fades(void)
  * @param is_secondary 0 for the primary sequence pass (updates pending-tick
  *        and driver-dirty state), non-zero for the secondary channel1 pass.
  * @return The active-channel bitmask (g_akao_seq_channel0->w04.song.active_mask).
- * @see decomp.me (84.65%) https://decomp.me/scratch/XMCUh
+ * @see decomp.me (100%) https://decomp.me/scratch/XMCUh
  */
 s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
 {
     u32 var_a0;
+    u32 master_vol_scalar;
 
     s32 var_s1;
     s32 var_s2;
@@ -283,18 +284,17 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
     AkaoDriverFlags* driver_flags;
 
     var_a0 = g_akao_seq_channel0->tempo >> 16;
-    var_s2 = g_akao_master_vol_scalar;
+    master_vol_scalar = g_akao_master_vol_scalar;
 
-    if (var_s2 != 0)
+    if (master_vol_scalar != 0)
     {
-        u32 product = (u32)var_a0 * (u32)var_s2;
-        if (var_s2 < 0x80U)
+        if (master_vol_scalar < 0x80U)
         {
-            var_a0 = var_a0 + (product >> 7);
+            var_a0 = var_a0 + (((u32)var_a0 * master_vol_scalar) >> 7);
         }
         else
         {
-            var_a0 = product >> 8;
+            var_a0 = ((u32)var_a0 * master_vol_scalar) >> 8;
         }
     }
 
@@ -304,8 +304,8 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
     {
         g_akao_seq_channel0->tempo_acc = (s32)(g_akao_seq_channel0->tempo_acc & 0xFFFFU);
 
-        var_s2 = channel_base;
         driver_flags = &g_akao_driver_flags;
+        var_s2 = channel_base;
 
         do
         {
@@ -347,9 +347,16 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
             {
                 g_akao_seq_channel0->master_vol_fade_ticks = (s16)(g_akao_seq_channel0->master_vol_fade_ticks - 1);
                 g_akao_seq_channel0->unk48 = g_akao_seq_channel0->unk48 + g_akao_seq_channel0->unk4C;
-                if (is_secondary == 0)
                 {
-                    driver_flags->unk8 |= 0x80;
+                    u32 flags;
+                    do
+                    {
+                        flags = driver_flags->unk8;
+                    } while (0);
+                    if (is_secondary == 0)
+                    {
+                        driver_flags->unk8 = flags | 0x80;
+                    }
                 }
             }
 
