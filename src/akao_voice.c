@@ -3682,14 +3682,12 @@ void akao_sfx_set_pitch_bend(u8* params)
  *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
  *        target value (u8) at +0xC.
  *
- * @note NOT YET 100% (99.90%, 88/98 exact). Same recurring loop-cursor
- *       anchor residue as akao_sfx_fade_volume_scale and akao_sfx_fade_pan_bias
- *       (target anchors at unk88 / +0x88, this compile anchors at +0x44).
- * @see decomp.me (99.90%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_fade_pitch_bend(u8* params)
 {
-    AkaoChannelState* channel;
+    s32* channel;
+    volatile s32* cursor;
     s32 active;
     s32 bit;
     u32 count;
@@ -3699,14 +3697,16 @@ void akao_sfx_fade_pitch_bend(u8* params)
     s16 delta;
     s16 step;
 
-    channel = (AkaoChannelState*)g_sfx_channels;
+    channel = (s32*)g_sfx_channels;
     active = g_akao_sfx_control.unk0;
     bit = 0x1000;
     if (*(s32*)(params + 4) != 0)
     {
-        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        count = 0;
+        cursor = (s32*)((u8*)channel + 0x88);
+        do
         {
-            if ((active & bit) && (channel->tempo_acc & *(s32*)(params + 4)))
+            if ((active & bit) && (cursor[-24] & *(s32*)(params + 4)))
             {
                 if (*(s32*)(params + 8) != 0)
                 {
@@ -3717,20 +3717,25 @@ void akao_sfx_fade_pitch_bend(u8* params)
                     tick_count = 1;
                 }
                 target = *(u8*)(params + 0xC) << 8;
-                current = *(u16*)((u8*)channel + 0x40);
+                current = ((volatile u16*)cursor)[-36];
                 delta = target - current;
                 step = delta / tick_count;
-                channel->unk88 = tick_count;
-                *(s32*)((u8*)channel + 0x44) = step;
+                *(volatile u16*)cursor = tick_count;
+                cursor[-17] = step;
             }
-        }
+            count++;
+            cursor += 0x46;
+            bit <<= 1;
+        } while (count < 0xC);
     }
     else
     {
         bit = 0x1000;
-        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        count = 0;
+        cursor = (s32*)((u8*)channel + 0x88);
+        do
         {
-            if ((active & bit) && ((s32)channel->reverb_mask == *(s32*)(params + 0)))
+            if ((active & bit) && (cursor[-19] == *(s32*)(params + 0)))
             {
                 if (*(s32*)(params + 8) != 0)
                 {
@@ -3741,13 +3746,16 @@ void akao_sfx_fade_pitch_bend(u8* params)
                     tick_count = 1;
                 }
                 target = *(u8*)(params + 0xC) << 8;
-                current = *(u16*)((u8*)channel + 0x40);
+                current = ((volatile u16*)cursor)[-36];
                 delta = target - current;
                 step = delta / tick_count;
-                channel->unk88 = tick_count;
-                *(s32*)((u8*)channel + 0x44) = step;
+                *(volatile u16*)cursor = tick_count;
+                cursor[-17] = step;
             }
-        }
+            count++;
+            cursor += 0x46;
+            bit <<= 1;
+        } while (count < 0xC);
     }
 }
 
