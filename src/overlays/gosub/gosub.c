@@ -3017,38 +3017,45 @@ StructS0* func_80144544(StructS0* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32
 {
     StructS0* var_s0;
     StructS0* var_a0;
+    s32 var_a2;
     s32 sp20[24];
+    StructS0* p;
+
+
+    p = prim;
 
     if (flag != 0)
     {
-        func_8001C56C(sp20, x + 2, y + 0xF2, w - 4, h - 4);
+        var_a2 = h - 4;
+        func_8001C56C(sp20, x + 2, y + 0xF2, w - 4, var_a2);
     }
     else
     {
-        func_8001C56C(sp20, x + 2, y + 0xA, w - 4, h - 4);
+        var_a2 = h - 4;
+        func_8001C56C(sp20, x + 2, y + 0xA, w - 4, var_a2);
     }
-    func_8001A5D4((s32)prim, sp20);
+    func_8001A5D4((s32)p, sp20);
 
-    prim->unk0 = (prim->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)prim & 0xFFFFFF);
+    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
 
-    prim = (StructS0*)((u8*)prim + 0x40);
-    var_s0 = func_80146E30(prim, ot, x, y, w, h);
-    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x, y, w, h, 0xFFFFFF);
-    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
-    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
+    p = (StructS0*)((u8*)p + 0x40);
+    var_s0 = func_80146E30(p, ot, x, y, w, h);
+    var_s0 = func_80144764(var_s0, ot, x, y, w, h, 0xFFFFFF);
+    var_s0 = func_80144764(var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
+    var_a2 = (s32)func_80144764(var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
 
-    var_s0->unk4 = 0xC0C0C0;
-    ((u8*)var_s0)[3] = 3;
-    ((u8*)var_s0)[7] = 0x62;
-    var_s0->unk8 = x;
-    var_s0->unkA = y;
-    var_s0->unkE = h;
-    var_s0->unkC = w;
-    var_s0->unk0 = (var_s0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)var_s0 & 0xFFFFFF);
+    ((StructS0*)var_a2)->unk4 = 0xC0C0C0;
+    ((u8*)var_a2)[3] = 3;
+    ((u8*)var_a2)[7] = 0x62;
+    ((StructS0*)var_a2)->unk8 = ((x + x) - x);
+    ((StructS0*)var_a2)->unkA = y;
+    ((StructS0*)var_a2)->unkC = w;
+    ((StructS0*)var_a2)->unkE = h;
+    ((StructS0*)var_a2)->unk0 = (((StructS0*)var_a2)->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | (var_a2 & 0xFFFFFF);
 
-    var_a0 = (StructS0*)((u8*)var_s0 + 0x10);
+    var_a0 = (StructS0*)(var_a2 + 0x10);
     ((u8*)var_a0)[3] = 1;
     var_a0->unk4 = 0xE1000045;
     var_a0->unk0 = (var_a0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);

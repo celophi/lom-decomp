@@ -378,13 +378,22 @@ extern FieldActorPartDef D_800FE3A0[];
  *         and splitting `(unk14 & ~0xF0) | 0x20` into two statements) - both
  *         proven via probe_variants (+7 and +1 rows respectively).
  *       Residue (13 target-only / 5 yours-only rows) is the target
- *       RE-COMPUTING `&D_800FE3A0[arg0]` a second time after the arg1
- *       branch, where our compile reuses the first computation. This matches
- *       idioms.md [CSE-09] exactly (gcc 2.7.2 cse.c treats the commutative
- *       mult+add address expression as foldable across the branch); per
- *       that entry's own conclusion, no local rewrite (extra temps, an
- *       indirection variable, statement reordering) defeats it, confirmed
- *       empirically here too. A permuter run (12000+ iterations) found
+ *       RE-COMPUTING `&D_800FE3A0[arg0]` a third time for the final field
+ *       writes (unk11/unk14/unk28/unk24), where our compile reuses the entry
+ *       pointer from region 2. Root cause traced this session: the target's
+ *       `val` if/else compiles to the two-arm form (beqz; then `j`; else),
+ *       whose multi-predecessor join label is a cse.c basic-block boundary -
+ *       that reset is what forces the recompute (idioms.md [CSE-09]). Ours
+ *       instead compiles to the PRELOAD form (val=0x40 hoisted, single
+ *       branch), because arg0 dies into the region-2 entry pointer ($a2),
+ *       leaving $a3 free for val; with no join label, cse never resets and
+ *       folds region 3. So the real lever is forcing the two-arm branch /
+ *       keeping arg0 live in $a3 - NOT a local address rewrite. Measured
+ *       inert this session: default+override val form, a separate entry2
+ *       pointer, splitting the unk14 expression, and a do/while(0) barrier
+ *       (the last only shuffles a store, +1 row of scheduling noise). All
+ *       seven toolchains tried; the four gcc 2.7.2/2.8.0 ones tie at 73.82%
+ *       with this identical gap. A permuter run (70000+ iterations) found
  *       nothing beyond the two hoists above.
  */
 void func_8006B7A0(s32 arg0, s32 arg1)
