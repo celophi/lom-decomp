@@ -4290,8 +4290,8 @@ extern u8 D_8016B3DC[];
 void func_80016E7C(); /* extern */
 void func_80019788(); /* extern */
 
-void func_80146AA8(void* dst, void* src);
-void func_80146AD0(void* dst, void* src);
+inline void func_80146AA8(void* dst, void* src);
+inline void func_80146AD0(void* dst, void* src);
 s32 func_80146CC4(s32 mode, s32 a, s32 b);
 
 /**
@@ -4399,7 +4399,7 @@ void func_801469BC(s32 row)
  * @param src Source record.
  * @see decomp.me (100%)
  */
-void func_80146AA8(void* dst, void* src)
+inline void func_80146AA8(void* dst, void* src)
 {
     u8* d;
     u8* s;
@@ -4424,7 +4424,7 @@ void func_80146AA8(void* dst, void* src)
  * @param src Source row.
  * @see decomp.me (100%)
  */
-void func_80146AD0(void* dst, void* src)
+inline void func_80146AD0(void* dst, void* src)
 {
     u8* d;
     u8* s;
@@ -4454,13 +4454,14 @@ void func_80146AD0(void* dst, void* src)
  *
  * @param mode Comparison selector handed to func_80146CC4: the low nibble picks
  *             the field and a non-zero high nibble reverses the order.
- * @see decomp.me (95.07% WIP)
  *
- * @note WIP - control flow, frame size and instruction count all match; the
- *       residue is a register permutation around the two loop induction
- *       variables. Assigning @c dst at the top of the loop body (rather than
- *       inside the second block) is what makes GCC strength-reduce the
- *       g_gosub_rows address into an induction variable at all.
+ * @note The write-back loop calls func_80146AA8/func_80146AD0, which are
+ *       declared @c inline and defined ABOVE this function, so GCC expands them
+ *       here while func_80146908 and func_801469BC - both defined before those
+ *       bodies - still emit real calls, exactly as the target does. Moving
+ *       either definition or dropping @c inline breaks the match.
+ *
+ * @see decomp.me (100%)
  */
 void func_80146AF8(s32 mode)
 {
@@ -4468,7 +4469,6 @@ void func_80146AF8(s32 mode)
     s32 i;
     s32 j;
     s32 k;
-    GosubListEntry* dst;
 
     for (i = 0; i < g_gosub_row_count; i++)
     {
@@ -4492,34 +4492,15 @@ void func_80146AF8(s32 mode)
     func_80016E7C(g_pad_ctx + 0x29DC, &order[0x100], 0xA0);
     func_80016E7C(g_gosub_rows, &order[0x1A0], 0x500);
 
-    for (i = 0; i < g_gosub_row_count; i++)
+    i = 0;
+    if (g_gosub_row_count > 0)
     {
-        dst = &g_gosub_rows[i];
-        j = order[i];
+        do
         {
-            u32 n = 0;
-            u8* d = g_pad_ctx + i * 4 + 0x29DC;
-            u8* s = order + j * 4 + 0x100;
-            do
-            {
-                n += 1;
-                *d = *s;
-                s += 1;
-                d += 1;
-            } while (n < 4U);
-        }
-        {
-            u32 n = 0;
-            u8* d = (u8*)dst;
-            u8* s = order + order[i] * 0x20 + 0x1A0;
-            do
-            {
-                n += 1;
-                *d = *s;
-                s += 1;
-                d += 1;
-            } while (n < 0x20U);
-        }
+            func_80146AA8(g_pad_ctx + i * 4 + 0x29DC, order + order[i] * 4 + 0x100);
+            func_80146AD0(&g_gosub_rows[i], order + order[i] * 0x20 + 0x1A0);
+            i++;
+        } while (i < g_gosub_row_count);
     }
 
     gosub_build_packed_record_list();
