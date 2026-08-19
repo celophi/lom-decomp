@@ -50,9 +50,9 @@ extern s32 D_8004D410;
 extern void* g_akaoCmdParams[];
 extern s32 D_8004D340[6];
 extern void (*D_8003DDE0[])(s32*);
-extern void (*D_8003E120)(s32*);
-extern void (*D_8003E124)(s32*);
-extern void (*D_8003E128)(s32*);
+extern void (*D_8003E120[])(s32*);
+extern void (*D_8003E124[])(s32*);
+extern void (*D_8003E128[])(s32*);
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
