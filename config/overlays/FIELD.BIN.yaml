@@ -67,7 +67,8 @@ segments:
       - [0x18341, c, func_80067fb0]             # gcc272_cdk
       - [0x18551, c, func_800681c0]             # gcc272_cdk
       - [0x1861D, c, field4]                    # gcc272_cdk
-      - [0x1B531, c, unk2]                      # gcc280_g0
+      - [0x1B531, c, field6]                    # gcc280_g0
+      - [0x1B861, c, unk2]                      # gcc280_g0
       - [0x53A1D, c, field_audio]               # gcc272_cdk, covers func_800A368C .. func_800A380C
       - [0x53BE9, c, unk2_b]                    # gcc272_cdk
       - [0x7C2D5, data, data]
