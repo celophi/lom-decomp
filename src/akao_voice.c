@@ -2624,39 +2624,32 @@ s32 akao_bank_find_slot(s32 key)
 {
     s32 result;
     s32 index;
+    s32 *slot;
     s32 *base;
 
     result = 0;
     if (key != 0)
     {
         result = 6;
-        if (key == D_8004D39C)
+        slot = &D_8004D39C;
+        do
         {
-            result = 5;
-        }
-        else
-        {
-            switch (0)
+            if (key == *slot)
             {
-                do
-                {
-                case 0:
-                    result--;
-                    if (result == 0)
-                    {
-                        break;
-                    }
-                    base = g_akao_bank_slot_keys;
-                    index = result - 1;
-                    if (key == base[index])
-                    {
-                        result = index;
-                        break;
-                    }
-                } while (1);
+                result--;
+                break;
             }
-        }
+
+            result--;
+            if (result != 0)
+            {
+                base = g_akao_bank_slot_keys;
+                index = result - 1;
+                slot = base + index;
+            }
+        } while (result != 0);
     }
+
     return result;
 }
 
