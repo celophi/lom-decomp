@@ -3582,10 +3582,7 @@ void akao_sfx_set_pan_bias_unsuppressed(u8* param)
  *        tempo_acc does not have the suppress bit (0x02000000) set.
  * @param params Tick count at +0x0 (0 is treated as 1), target pan bias
  *        (u8) at +0x4.
- *
- * @note NOT YET 100% (99.90%, 44/49 exact). Same loop-cursor anchor
- *       residue as akao_sfx_fade_pan_bias (0x70 vs 0xE2).
- * @see decomp.me (99.90%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_fade_pan_bias_unsuppressed(u8* params)
 {
@@ -3616,8 +3613,8 @@ void akao_sfx_fade_pan_bias_unsuppressed(u8* params)
             target_bias = *(u8*)(params + 4) << 8;
             current_bias = channel->pan_bias;
             delta = target_bias - current_bias;
-            channel->pan_bias_fade_ticks = tick_count;
             channel->pan_bias_step = delta / tick_count;
+            channel->pan_bias_fade_ticks = tick_count;
         }
     }
 }
