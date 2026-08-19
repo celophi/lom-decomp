@@ -490,3 +490,40 @@ void func_8006B8DC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
         D_800FDF58[i].unk1C = (D_800FDF58[i].unk1C & 0xFF7FFFFF) | flag;
     }
 }
+
+Struct_D800FDF58* func_80087C9C(s32);
+
+/**
+ * @brief Apply a shared render/config state to the single field actor slot that
+ *        owns record arg5: stores arg0-arg2 into that slot's D_80105AE0 and
+ *        D_800FE3A0 entries, folds arg4 into the 2-bit field at bits 22-23 of
+ *        the part's unk4, and arg3's low bit into bit 23 of the record's unk1C.
+ * @param arg0 Byte written to unk1A8 (D_80105AE0) and unkE (D_800FE3A0).
+ * @param arg1 Byte written to unk1A9 (D_80105AE0) and unkF (D_800FE3A0).
+ * @param arg2 Byte written to unk1AA (D_80105AE0) and unk10 (D_800FE3A0).
+ * @param arg3 Low bit replaces bit 23 of the record's unk1C.
+ * @param arg4 Low 2 bits replace bits 22-23 of the part's unk4.
+ * @param arg5 Record selector passed to func_80087C9C.
+ * @return 0 on success, -1 if func_80087C9C found no record.
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8006B984(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+{
+    Struct_D800FDF58 *rec;
+
+    rec = func_80087C9C(arg5);
+    if (rec == (Struct_D800FDF58*)-1)
+    {
+        return -1;
+    }
+
+    D_80105AE0[rec->unk3A].unk1A8 = arg0;
+    D_80105AE0[rec->unk3A].unk1A9 = arg1;
+    D_80105AE0[rec->unk3A].unk1AA = arg2;
+    D_800FE3A0[rec->unk3A].unkE = arg0;
+    D_800FE3A0[rec->unk3A].unkF = arg1;
+    D_800FE3A0[rec->unk3A].unk10 = arg2;
+    D_800FE3A0[rec->unk3A].unk4 = (D_800FE3A0[rec->unk3A].unk4 & 0xFF3FFFFF) | ((arg4 & 3) << 22);
+    rec->unk1C = (rec->unk1C & 0xFF7FFFFF) | ((arg3 & 1) << 23);
+    return 0;
+}
