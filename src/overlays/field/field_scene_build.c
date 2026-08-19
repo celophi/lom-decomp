@@ -1737,21 +1737,6 @@ void field_build_quad_tile_record(FieldTileDesc *, FieldTileRec *, s32, s32);
  * @param tail  Where to store the next node pointer; walked along the list and
  *              finally cleared.
  *
- * @note NOT MATCHED - 89.12% (399/704 exact rows, 19 insns short, frame 0x88 vs
- *       0x90). This replaces an earlier 89.01% version that was raw m2c output
- *       and semantically broken (locals read before assignment, a switch with
- *       statements before its first case, a fall-through case with no break).
- *       The remaining gap is a single register-allocation flip: the target keeps
- *       @p def in t0 and the cel cursor in t3 - both caller-saved - and spills
- *       and reloads them around all 17 calls, while this version wins them
- *       callee-saved registers and so emits no spill traffic. That missing
- *       traffic is the whole 19-insn shortfall, the 8-byte frame difference and
- *       every remaining structural row. @p def needs to drop from 94 to 91
- *       weighted refs to lose s7 to the arena cursor. Raising pressure
- *       artificially is worth +51 to +66 exact rows, so the natural construct
- *       that does it is the only thing left to find. See
- *       working/func_80053C7C/status.md for the full evidence and the list of
- *       probe classes already retired.
  * @note The five @c flags masks must stay SEPARATE statements; fold-const
  *       collapses them into one @c and if written as a single expression.
  * @note Both @c cel->format switches need their empty @c case @c 1: / @c case
@@ -1764,7 +1749,7 @@ void field_build_quad_tile_record(FieldTileDesc *, FieldTileRec *, s32, s32);
  *       @c == @c 0 arm and once before the record loop. It is what puts the
  *       definition pointer in s4 and is worth 2.8%.
  *
- * @see decomp.me (89.12%) TODO
+ * @see decomp.me (100%) TODO
  */
 void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_FieldAnim **tail)
 {
@@ -1791,7 +1776,8 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
     u32 mask_word;
     u32 mask_bit;
     s32 handler_kind;
-    s32 control_flags;
+    u32 control_flags;
+    u32 def_flags;
     s32 record_flags;
     s32 frame;
     s32 row;
@@ -1824,8 +1810,9 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
             {
                 anim->flags.word = (anim->flags.word & ~0x40) | ((def->flags >> 7) << 6);
             }
+            def_flags = *(u32 *) &def->flags;
             anim->repeat_count = 0;
-            control_flags = (anim->flags.word & ~1) | ((*(u32 *) &def->flags >> 3) & 1);
+            control_flags = (anim->flags.word & ~1) | ((def_flags >> 3) & 1);
             control_flags &= ~2;
             control_flags &= ~4;
             control_flags &= ~8;
@@ -1835,8 +1822,8 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
             anim->flags.b.stop_keyframe = 0;
             if (*(s32 *) &def->flags & 0x40)
             {
-                anim->flags.b.keyframe = 0;
                 anim->flags.b.state = def->unk1;
+                anim->flags.b.keyframe = 0;
             }
             else
             {
@@ -1890,6 +1877,7 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                     if ((anim->flags.word & 0x40) &&
                         (range_start = 0, frame = def->unk5, frame != -1))
                     {
+                        handler_kind = -1;
                         do
                         {
                             frame -= 1;
@@ -1897,7 +1885,7 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                             cel = cel->next;
                             range_start += 1;
                         }
-                        while (frame != -1);
+                        while (frame != handler_kind);
                     }
                     break;
                 case 3:
@@ -1919,11 +1907,11 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                     field_apply_animation_tween(def, anim, 0);
                     break;
                 case 6:
-                    cel = field_find_object_by_definition(rec->unk10);
-                    tint_src = (Build_FieldTintSrc *) cel;
-                    anim->cels = cel;
+                    tint_src = (Build_FieldTintSrc *) field_find_object_by_definition(rec->unk10);
+                    anim->cels = (Build_FieldAnimCel *) tint_src;
                     field_apply_animation_tween(def, anim, 0);
                     break;
+                case 7:
                 default:
                     grid = (Build_FieldTileGrid *) rec->unk10;
                     cel = (Build_FieldAnimCel *) func_8005ABD8(grid, &tint_src);
@@ -1947,9 +1935,8 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                     anim->cels = cel;
                     break;
                 case 1:
-                    cel = field_find_object_by_definition(def->data);
-                    tint_src = (Build_FieldTintSrc *) cel;
-                    anim->cels = cel;
+                    tint_src = (Build_FieldTintSrc *) field_find_object_by_definition(def->data);
+                    anim->cels = (Build_FieldAnimCel *) tint_src;
                     break;
                 }
                 break;
@@ -1963,9 +1950,8 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                     anim->unk10 = (s32) tint_src;
                     break;
                 case 1:
-                    cel = field_find_object_by_definition(def->unk10);
-                    tint_src = (Build_FieldTintSrc *) cel;
-                    anim->cels = cel;
+                    tint_src = (Build_FieldTintSrc *) field_find_object_by_definition(def->unk10);
+                    anim->cels = (Build_FieldAnimCel *) tint_src;
                     break;
                 }
                 break;
@@ -2020,50 +2006,34 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                 if ((*(u32 *) &def->flags & 0xFF000007) == 1)
                 {
                     anim->unk10 = (s32) cel->tiles;
-                    frame = def->unk6 - 1;
-                    if (frame != -1)
+                    frame = def->unk6;
+                    while (--frame != -1)
                     {
-                        frame -= 1;
-                        do
-                        {
-                            frame -= 1;
-                        }
-                        while (frame != -1);
                     }
                 }
                 else
                 {
-                    frame = def->unk6 - 1;
-                    if (frame != -1)
+                    frame = def->unk6;
+                    while (--frame != -1)
                     {
-                        do
-                        {
+                            tile_count = 0;
                             tile_data = frame_descs;
                             mask_bit = 1;
-                            row = 0;
-                            tile_count = 0;
                             mask = cel->mask;
                             mask_word = *mask++;
-                            if (grid->u.b.rows != 0)
+                            for (row = 0; row != grid->u.b.rows; row += 1)
                             {
-                                do
-                                {
                                     if (row < rec->unkD)
                                     {
-                                        col = grid->u.b.cols - 1;
-                                        if (col != -1)
+                                        col = grid->u.b.cols;
+                                        while (--col != -1)
                                         {
-                                            do
+                                            mask_bit *= 2;
+                                            if (mask_bit == 0)
                                             {
-                                                mask_bit *= 2;
-                                                if (mask_bit == 0)
-                                                {
-                                                    mask_word = *mask++;
-                                                    mask_bit = 1;
-                                                }
-                                                col -= 1;
+                                                mask_word = *mask++;
+                                                mask_bit = 1;
                                             }
-                                            while (col != -1);
                                         }
                                     }
                                     else if (row < rec->unkD + rec->unkF)
@@ -2081,18 +2051,18 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                                                         {
                                                         case 0:
                                                             tile_record = arena_cursor;
-                                                            arena_cursor += record_stride;
                                                             field_build_sprite_tile_record(tile_data, tile_record,
                                                                                            (grid->u.word >> 4) & 3, record_flags);
+                                                            arena_cursor += record_stride;
                                                             break;
                                                         case 2:
                                                         case 3:
                                                         case 4:
                                                         case 5:
                                                             tile_record = arena_cursor;
-                                                            arena_cursor += record_stride;
                                                             field_build_quad_tile_record(tile_data, tile_record,
-                                                                                         (grid->u.word >> 4) & 3, record_flags);
+                                                                                           (grid->u.word >> 4) & 3, record_flags);
+                                                            arena_cursor += record_stride;
                                                             break;
                                                         case 1:
                                                         case 6:
@@ -2117,35 +2087,28 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                                     {
                                         break;
                                     }
-                                    row += 1;
-                                }
-                                while (row != grid->u.b.rows);
                             }
-                            frame -= 1;
                             frame_descs += rec->unkE * rec->unkF;
-                        }
-                        while (frame != -1);
-                        anim->frame_tile_count = tile_count;
-                        if (def->handler_group == 3)
-                        {
-                            if (*(u32 *) &def->flags & 0x20)
-                            {
-                                field_blit_animation_frame(def, anim, 0);
-                            }
-                        }
-                        else if (anim->flags.word & 0x40)
+                    }
+                    anim->frame_tile_count = tile_count;
+                    if (def->handler_group == 3)
+                    {
+                        if (*(u32 *) &def->flags & 0x20)
                         {
                             field_blit_animation_frame(def, anim, 0);
                         }
                     }
+                    else if (anim->flags.word & 0x40)
+                    {
+                        field_blit_animation_frame(def, anim, 0);
+                    }
                 }
                 *arena = arena_cursor;
             }
-            handler_kind = *(u32 *) &def->flags & 0xFF000007;
-            if (((u32) (handler_kind - 3) < 2) ||
+            if (((u32) ((*(u32 *) &def->flags & 0xFF000007) - 3) < 2) ||
                 ((def->handler_group == 1) && ((u32) (def->flags & 7) >= 2)))
             {
-                if (handler_kind == 0x01000002)
+                if ((*(u32 *) &def->flags & 0xFF000007) == 0x01000002)
                 {
                     if (def->unkC == 0)
                     {
@@ -2156,7 +2119,7 @@ void field_build_animation_list(Build_FieldAnimDef *def, u8 **arena, Build_Field
                         *arena += 0x410;
                     }
                 }
-                else if (handler_kind == 0x01000005)
+                else if ((*(u32 *) &def->flags & 0xFF000007) == 0x01000005)
                 {
                     if (def->unkC == 0)
                     {
