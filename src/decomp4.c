@@ -1041,33 +1041,28 @@ extern u8 D_8003D27C[];
 extern s32 g_akao_lfo_waveforms[];
 
 /**
- * decomp.me (89.58%) https://decomp.me/scratch/P4H6n
+ * decomp.me (100%) https://decomp.me/scratch/P4H6n
  */
 void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
 {
+    AkaoChannelState* channel = arg0;
+    s32 channel_mask = arg1;
     s32 sp10;
     void (**var_v0)(AkaoChannelState*, s32);
     s16 temp_v0_5;
-    s32 temp_a2_2;
     s32 temp_s1_2;
     s32 temp_v1_3;
-    s32 var_a2;
-    s32 var_s1_2;
-    s32 var_v0_3;
     u16 temp_a0;
-    u16 temp_a0_2;
     s32 temp_s1;
     u16 temp_v0_3;
     u16 temp_v0_4;
     u16 temp_v1_2;
     u16 temp_v1_4;
-    u32 temp_v1_5;
     u16 var_v1;
     u32 temp_a0_3;
-    u32 temp_a2;
+    s32 temp_a2;
     u32 temp_lo;
     u32 temp_v0;
-    u32 temp_v0_2;
     u32 temp_v1;
     u32 temp_v1_7;
     u32 var_s1;
@@ -1075,19 +1070,21 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
 
     do
     {
-        var_s1 = *(*(u8**)&arg0->seq_cursor)++;
+        var_s1 = *(*(u8**)&channel->seq_cursor)++;
 
         if (var_s1 >= 0xA0U)
         {
             temp_v1 = var_s1 - 0xF0;
             if (var_s1 == 0xFE)
             {
-                var_v0 = &g_akao_opcode_handlers_ext[*(*(u8**)&arg0->seq_cursor)++];
+                temp_a2 = *(*(u8**)&channel->seq_cursor)++;
+                var_v0 = &g_akao_opcode_handlers_ext[temp_a2];
+                (*var_v0)(channel, channel_mask);
             }
             else if (temp_v1 < 0xEU)
             {
                 var_s1 = temp_v1 * 0xB;
-                arg0->unk66 = *(*(u8**)&arg0->seq_cursor)++;
+                channel->unk66 = *(*(u8**)&channel->seq_cursor)++;
                 goto skip_call;
             }
             else
@@ -1095,215 +1092,215 @@ void akao_seq_step_opcode(AkaoChannelState* arg0, s32 arg1)
                 if (var_s1 == 0xFF)
                 {
                     var_s1 = 0xA0;
+                    goto primary_call;
                 }
-                else if (var_s1 == 0xCA)
+                if (var_s1 == 0xCA)
                 {
-                    if ((u32)arg0->flags & 0x200000)
+                    if ((u32)channel->flags & 0x200000)
                     {
                         var_s1 = 0xA0;
-                        g_akao_sfx_control.unkC |= arg1;
+                        g_akao_sfx_control.unkC |= channel_mask;
+                        goto primary_call;
                     }
                 }
-                var_v0 = &g_akao_opcode_handlers[var_s1 - 0xA0];
+            primary_call:
+                g_akao_opcode_handlers[var_s1 - 0xA0](channel, channel_mask);
             }
-            (*var_v0)(arg0, arg1);
         skip_call:;
         }
-        arg0->opcode_count++;
+        channel->opcode_count++;
     } while (var_s1 >= 0xA1U);
 
     if (var_s1 == 0xA0)
     {
-        if (arg0->is_sfx_channel == 0)
+        if (channel->is_sfx_channel == 0)
         {
-            g_akao_seq_channel0->key_off_mask |= arg1;
+            g_akao_seq_channel0->key_off_mask |= channel_mask;
         }
     }
     else
     {
-        temp_a2 = akao_seq_skip_to_next_note(arg0) & 0xFF;
-        temp_v1_2 = arg0->note_duration_adjust;
-        if ((s16)arg0->note_duration_adjust != 0)
+        temp_a2 = akao_seq_skip_to_next_note(channel) & 0xFF;
+        temp_v1_2 = channel->note_duration_adjust;
+        if ((s16)channel->note_duration_adjust != 0)
         {
-            arg0->unk68 = temp_v1_2;
-            arg0->unk66 = temp_v1_2;
+            channel->unk68 = temp_v1_2;
+            channel->unk66 = temp_v1_2;
         }
-        if (arg0->unk66 != 0)
+        if (channel->unk66 != 0)
         {
-            if ((temp_a2 >= 0x8FU) || ((temp_a2 < 0x84U) && !(arg0->note_flags & 5)))
+            if ((temp_a2 >= 0x8FU) || ((temp_a2 < 0x84U) && !(channel->note_flags & 5)))
             {
-                arg0->unk68 -= 2;
+                channel->unk68 -= 2;
             }
         }
         else
         {
-            var_v1 = g_akao_note_duration_table[var_s1 % 11];
-            arg0->unk66 = var_v1;
-            if (((temp_a2 - 0x84) >= 0xBU) && !(arg0->note_flags & 5))
+            var_v1 = channel->unk66 = g_akao_note_duration_table[var_s1 % 11];
+            if (((temp_a2 - 0x84) >= 0xBU) && !(channel->note_flags & 5))
             {
                 var_v1 -= 2;
             }
-            arg0->unk68 = var_v1;
+            channel->unk68 = var_v1;
         }
-        if ((arg0->is_sfx_channel == 0) && ((u32)arg0->flags & 0x40))
+        if ((channel->is_sfx_channel == 0) && ((u32)channel->flags & 0x40))
         {
-            arg0->unk68 = arg0->unk66;
+            channel->unk68 = channel->unk66;
         }
-        arg0->note_duration = arg0->unk66;
-        arg0->update_flags |= 0x4000;
+        channel->note_duration = channel->unk66;
+        channel->update_flags |= 0x4000;
         if (var_s1 >= 0x8FU)
         {
-            if (arg0->is_sfx_channel == 0)
+            if (channel->is_sfx_channel == 0)
             {
-                g_akao_seq_channel0->note_on_mask &= ~arg1;
-                if (*(volatile u32*)&arg0->voice < 0x18U)
+                g_akao_seq_channel0->note_on_mask &= ~channel_mask;
+                if (*(volatile u32*)&channel->voice < 0x18U)
                 {
-                    g_akao_seq_channel0->key_off_mask |= arg1;
+                    g_akao_seq_channel0->key_off_mask |= channel_mask;
                 }
             }
-            arg0->portamento_speed = 0U;
-            arg0->pitch_lfo_value = 0;
-            arg0->volume_lfo_value = 0;
-            arg0->note_flags &= 0xFFFD;
+            channel->portamento_speed = 0U;
+            channel->pitch_lfo_value = 0;
+            channel->volume_lfo_value = 0;
+            channel->note_flags &= 0xFFFD;
             return;
         }
         if (var_s1 < 0x84U)
         {
-            temp_v1_3 = (s32)arg0->flags;
-            temp_s1 = (var_s1 / 11) + (arg0->octave * 0xC);
+            temp_v1_3 = (s32)channel->flags;
+            temp_s1 = var_s1 / 11;
+            temp_s1 += channel->octave * 0xC;
             if (temp_v1_3 & 8)
             {
-                var_a2 = akao_channel_start_note(arg0, arg1, temp_s1);
+                temp_a2 = akao_channel_start_note(channel, channel_mask, temp_s1);
             }
             else
             {
-                if (!(arg0->note_flags & 2))
+                if (!(channel->note_flags & 2))
                 {
-                    if (arg0->is_sfx_channel == 0)
+                    if (channel->is_sfx_channel == 0)
                     {
                         if (temp_v1_3 & 0x1000)
                         {
-                            akao_bind_articulation_for_key(arg0, temp_s1, temp_a2);
+                            akao_bind_articulation_for_key(channel, temp_s1, temp_a2);
                         }
-                        g_akao_seq_channel0->w04.song.key_on_mask |= arg1;
-                        if ((g_akao_seq_channel0->note_on_mask & arg1) && (*(volatile u32*)&arg0->voice < 0x18U))
+                        g_akao_seq_channel0->w04.song.key_on_mask |= channel_mask;
+                        if ((g_akao_seq_channel0->note_on_mask & channel_mask) && (*(volatile u32*)&channel->voice < 0x18U))
                         {
-                            g_akao_seq_channel0->key_off_mask |= arg1;
+                            g_akao_seq_channel0->key_off_mask |= channel_mask;
                         }
-                        temp_a0 = arg0->note_expression_ticks;
+                        temp_a0 = channel->note_expression_ticks;
                         if (temp_a0 != 0)
                         {
-                            arg0->expression_fade_ticks = temp_a0;
+                            channel->expression_fade_ticks = temp_a0;
                             /* Channel role: 0x5C/0x60 are the note-start
                              * expression preset, not tempo state. */
-                            arg0->unk48 = *(s32*)&arg0->tempo_fade_ticks;
-                            arg0->unk4C = arg0->unk60;
+                            channel->unk48 = *(s32*)&channel->tempo_fade_ticks;
+                            channel->unk4C = *(s32*)&channel->unk60;
                         }
                     }
                     else
                     {
-                        g_akao_sfx_control.unk4 |= arg1;
+                        g_akao_sfx_control.unk4 |= channel_mask;
                     }
-                    arg0->pitch_slide_ticks = 0U;
+                    channel->pitch_slide_ticks = 0U;
                 }
-                temp_v1_4 = arg0->portamento_speed;
-                if ((temp_v1_4 != 0) && (arg0->prev_key != 0))
+                temp_v1_4 = channel->portamento_speed;
+                if ((temp_v1_4 != 0) && (channel->prev_key != 0))
                 {
-                    arg0->pitch_slide_duration = temp_v1_4;
-                    var_s1_2 = arg0->prev_key + arg0->prev_transpose;
-                    temp_a0_2 = arg0->prev_transpose;
-                    arg0->pitch_slide_delta = ((arg0->transpose + temp_s1) - arg0->prev_key) - temp_a0_2;
-                    arg0->note_key = arg0->prev_key - (arg0->transpose - temp_a0_2);
+                    temp_s1_2 = channel->transpose + temp_s1;
+                    temp_s1 = channel->prev_key + channel->prev_transpose;
+                    channel->pitch_slide_duration = temp_v1_4;
+                    channel->pitch_slide_delta = temp_s1_2 - channel->prev_key - channel->prev_transpose;
+                    channel->note_key = channel->prev_key - (channel->transpose - channel->prev_transpose);
                 }
                 else
                 {
-                    arg0->note_key = temp_s1;
-                    var_s1_2 = temp_s1 + (s16)arg0->transpose;
+                    channel->note_key = temp_s1;
+                    temp_s1 += (s16)channel->transpose;
                 }
-                var_a2 = akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots), var_s1_2, arg0->detune, &arg0->detune_pitch_delta);
-                temp_v1_5 = arg0->pitch_scale;
-                if (temp_v1_5 != 0)
+                temp_a2 = akao_compute_pitch((AkaoArticulation*)((channel->unk6A * 0x10) + g_akao_articulation_slots), temp_s1, channel->detune, &channel->detune_pitch_delta);
+                if (channel->pitch_scale != 0)
                 {
-                    temp_a0_3 = (u32)(var_a2 * temp_v1_5) >> 8;
+                    temp_a0_3 = (u32)(temp_a2 * channel->pitch_scale) >> 8;
                     sp10 = temp_a0_3;
                     temp_v1_6 = D_8003D27C + g_akao_cdvol_tick;
                     temp_lo = temp_a0_3 * temp_v1_6[0];
                     sp10 = temp_lo;
-                    temp_v0 = temp_lo >> 9;
                     if (temp_v1_6[0] & 0x80)
                     {
-                        sp10 = temp_v0;
-                        var_a2 -= temp_v0;
+                        sp10 = temp_lo >> 9;
+                        temp_a2 -= temp_lo >> 9;
                     }
                     else
                     {
-                        temp_v0_2 = temp_lo >> 7;
-                        sp10 = temp_v0_2;
-                        var_a2 += temp_v0_2;
+                        sp10 = temp_lo >> 7;
+                        temp_a2 += temp_lo >> 7;
                     }
                 }
             }
-            arg0->pitch = var_a2;
-            if (arg0->is_sfx_channel == 0)
+            channel->pitch = temp_a2;
+            if (channel->is_sfx_channel == 0)
             {
-                g_akao_seq_channel0->note_on_mask |= arg1;
+                g_akao_seq_channel0->note_on_mask |= channel_mask;
             }
             else
             {
-                g_akao_sfx_control.unk8 |= arg1;
+                g_akao_sfx_control.unk8 |= channel_mask;
             }
-            arg0->update_flags |= 0x13;
-            temp_s1_2 = (s32)arg0->flags;
-            var_v0_3 = temp_s1_2 & 2;
-            if (temp_s1_2 & 1)
+            channel->update_flags |= 0x13;
+            var_s1 = (u32)channel->flags;
+            if (var_s1 & 1)
             {
-                temp_v0_3 = arg0->pitch_lfo_depth;
-                temp_v1_7 = (u32)(temp_v0_3 & 0x7F00) >> 8;
-                if (!(temp_v0_3 & 0x8000))
+                temp_v0_3 = channel->pitch_lfo_depth;
+                temp_v1_7 = temp_v0_3 & 0x7F00;
+                temp_v0 = temp_v0_3 & 0x8000;
+                temp_v1_7 >>= 8;
                 {
-                    temp_lo = temp_v1_7 * ((u32)(var_a2 * 0xF) >> 8);
+                    u16 lfo_scaled;
+                    if (!temp_v0)
+                    {
+                        lfo_scaled = (temp_v1_7 * ((u32)(temp_a2 * 0xF) >> 8)) >> 7;
+                    }
+                    else
+                    {
+                        lfo_scaled = (temp_v1_7 * temp_a2) >> 7;
+                    }
+                    channel->pitch_lfo_depth_scaled = lfo_scaled;
                 }
-                else
+                if (!(channel->note_flags & 2))
                 {
-                    temp_lo = temp_v1_7 * var_a2;
+                    channel->unk1C = g_akao_lfo_waveforms[channel->pitch_lfo_waveform];
+                    channel->pitch_lfo_delay_ticks = channel->pitch_lfo_delay;
+                    channel->pitch_lfo_restart = 1;
                 }
-                arg0->pitch_lfo_depth_scaled = (s16)(temp_lo >> 7);
-                if (!(arg0->note_flags & 2))
-                {
-                    temp_v0_3 = arg0->pitch_lfo_delay;
-                    arg0->unk1C = g_akao_lfo_waveforms[arg0->pitch_lfo_waveform];
-                    arg0->pitch_lfo_restart = 1;
-                    arg0->pitch_lfo_delay_ticks = temp_v0_3;
-                }
-                var_v0_3 = temp_s1_2 & 2;
             }
-            if ((var_v0_3 != 0) && !(arg0->note_flags & 2))
+            if ((var_s1 & 2) && !(channel->note_flags & 2))
             {
-                temp_v0_3 = arg0->volume_lfo_delay;
                 /* Channel role: 0x20 is the volume-LFO waveform cursor. */
-                arg0->tempo = g_akao_lfo_waveforms[arg0->volume_lfo_waveform];
-                arg0->volume_lfo_restart = 1;
-                arg0->volume_lfo_delay_ticks = temp_v0_3;
+                channel->tempo = g_akao_lfo_waveforms[channel->volume_lfo_waveform];
+                channel->volume_lfo_delay_ticks = channel->volume_lfo_delay;
+                channel->volume_lfo_restart = 1;
             }
-            arg0->pitch_lfo_value = 0;
-            arg0->volume_lfo_value = 0;
-            arg0->unk30 = 0;
+            channel->pitch_lfo_value = 0;
+            channel->volume_lfo_value = 0;
+            channel->unk30 = 0;
         }
-        temp_v0_4 = arg0->note_flags;
-        arg0->note_flags = (temp_v0_4 & 0xFFFD) | ((temp_v0_4 & 1) * 2);
-        if ((s16)arg0->pitch_slide_delta != 0)
+        temp_v0_4 = channel->note_flags;
+        channel->note_flags = (temp_v0_4 & 0xFFFD) | ((temp_v0_4 & 1) * 2);
+        if ((s16)channel->pitch_slide_delta != 0)
         {
-            temp_v0_5 = arg0->note_key + arg0->pitch_slide_delta;
-            arg0->note_key = temp_v0_5;
-            temp_a2_2 =
-                akao_compute_pitch((AkaoArticulation*)((arg0->unk6A * 0x10) + g_akao_articulation_slots), temp_v0_5 + (s16)arg0->transpose, arg0->detune, &sp10)
+            temp_v0_5 = channel->note_key + channel->pitch_slide_delta;
+            channel->note_key = temp_v0_5;
+            temp_a2 =
+                akao_compute_pitch((AkaoArticulation*)((channel->unk6A * 0x10) + g_akao_articulation_slots), temp_v0_5 + (s16)channel->transpose, channel->detune, &sp10)
                 << 0x10;
-            arg0->pitch_slide_ticks = arg0->pitch_slide_duration;
-            arg0->pitch_slide_delta = 0U;
-            arg0->pitch_slide_step = (s32)((s32)(temp_a2_2 - ((arg0->pitch << 0x10) + arg0->unk30)) / (s32)arg0->pitch_slide_ticks);
+            channel->pitch_slide_ticks = channel->pitch_slide_duration;
+            channel->pitch_slide_delta = 0U;
+            channel->pitch_slide_step = (s32)((s32)(temp_a2 - ((channel->pitch << 0x10) + channel->unk30)) / (s32)channel->pitch_slide_ticks);
         }
-        arg0->prev_key = arg0->note_key;
-        arg0->prev_transpose = arg0->transpose;
+        channel->prev_key = channel->note_key;
+        channel->prev_transpose = channel->transpose;
     }
 }
 
