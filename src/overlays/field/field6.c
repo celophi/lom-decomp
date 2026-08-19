@@ -590,6 +590,33 @@ typedef struct
 
 extern FieldCdBuffer* D_8010D038;
 
+/*
+ * Per-element structure (stride 0x268). D_800FD818 is a 3-element array; the
+ * absolute offsets previously used by func_8006A324 (0x268, 0x4BC, 0x4D0,
+ * 0x724, ...) are elements [1] and [2] of this array.
+ */
+typedef struct
+{
+    union
+    {
+        u16 h; /* offset 0x00 as a halfword (flags) */
+        struct
+        {
+            u8 unk0; /* offset 0x00 */
+            u8 unk1; /* offset 0x01 */
+        } b;
+    } u0;
+    u8 unk2;                /* offset 0x02 */
+    u8 unk3;                /* offset 0x03 */
+    u8 pad0[0x254 - 4];     /* 0x04 .. 0x253 */
+    u16 unk254;             /* offset 0x254 */
+    u8 unk256;              /* offset 0x256 */
+    u8 pad1[0x268 - 0x257]; /* 0x257 .. 0x267 */
+} D_800FD818_type;
+
+extern D_800FD818_type D_800FD818[];
+extern u8 g_prim_rect_buf[];
+
 /**
  * @brief Read a field texture set off the CD and upload it to VRAM: one
  *        optional full/partial strip at y = arg4 + 0x1F4, then the tile block
@@ -1474,4 +1501,78 @@ s32 func_8006CE70(s32 arg0)
         return t + 0x60;
     }
     return 0x60;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006CF88(void)
+{
+    u8 *slot1;
+    u8 *slot2;
+    u8 *pad;
+    s32 idx1;
+    s32 sel;
+
+    if (D_800FD818[1].unk3 != 0)
+    {
+        idx1 = D_800FD818[1].unk2 + 2;
+    }
+    else
+    {
+        idx1 = (D_800FD818[1].u0.h >> 1) & 1;
+    }
+
+    if (D_800FD818[0].unk256 != ((D_800FD818[0].u0.h >> 1) & 1) ||
+        D_800FD818[1].unk256 != idx1 ||
+        D_800FD818[2].unk256 != D_800FD818[2].unk2 + 0xE)
+    {
+        if (D_800FD818[1].unk256 != idx1)
+        {
+            if (D_800FD818[1].unk3 != 0)
+            {
+                func_800A5174(1, D_800FD818[1].unk2 + 0xA37);
+            }
+            else
+            {
+                func_800A5174(1, 0xA37);
+            }
+        }
+        if (D_800FD818[2].unk256 != D_800FD818[2].unk2 + 0xE)
+        {
+            func_800A5174(2, D_800FD818[2].unk2 + 0xA9B);
+        }
+
+        cdrom_stream(0x5E5, D_8010D038);
+        cdrom_wait_queue_empty();
+
+        D_800FD818[0].unk256 = (D_800FD818[0].u0.h >> 1) & 1;
+        bcopy((u8 *)D_8010D038 + ((u32 *)D_8010D038)[D_800FD818[0].unk256 + 1], g_prim_rect_buf, 0x4A0);
+
+        slot1 = g_prim_rect_buf + 0x4A0;
+        D_800FD818[1].unk256 = idx1;
+        bcopy((u8 *)D_8010D038 + ((u32 *)D_8010D038)[D_800FD818[1].unk256 + 1], slot1, 0x4A0);
+
+        slot2 = g_prim_rect_buf + 0x940;
+        D_800FD818[2].unk256 = D_800FD818[2].unk2 + 0xE;
+        bcopy((u8 *)D_8010D038 + ((u32 *)D_8010D038)[D_800FD818[2].unk256 + 1], slot2, 0x4A0);
+
+        if (D_800FD818[1].unk3 == 0)
+        {
+            func_800A5638(slot1, (D_800FD818[1].u0.h >> 1) & 1);
+        }
+
+        if (g_pad_ctx[0xA90] != 0 && (*(u32 *)&g_pad_ctx[0xAA8] & 0x7F) == 4)
+        {
+            sel = *(s8 *)&g_pad_ctx[0x29D7];
+            if (sel < 3)
+            {
+                pad = g_pad_ctx;
+                pad += sel * 0x14C;
+                func_800A55E4(slot2, *(s32 *)(pad + 0x2B54));
+            }
+        }
+    }
+
+    func_80084240();
 }
