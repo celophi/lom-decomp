@@ -2997,65 +2997,50 @@ void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
  * @param flag Non-zero selects the bottom (0xF0) frame-buffer half, zero the top (8).
  * @return Pointer just past the DR_MODE packet (next free packet slot).
  *
- * @note WIP - best match 96.43% (gcc 2.7.2 CDK). Two residues remain, both
- *       register allocation. (1) The four entry arg-copies come out in
- *       declaration order (prim, ot, x, y) where the target defers prim's copy
- *       to last (ot, x, y, prim); sched_oracle attributes that ordering to
- *       sched2, i.e. it is downstream of the allocation, not an emit-order
- *       problem. (2) The tail's packet cursor lands in v0 because local-alloc
- *       honours its copy suggestion from the call return, so the target's
- *       `addu a2, v0, zero` is elided and every scratch register in the tail
- *       rotates by one (v0/v1/a0/a1/a2 -> a2/v0/v1/a0/a1). The target's cursor
- *       must reach global-alloc instead (two disjoint live ranges or two basic
- *       blocks); every variable-identity, alias and temp shape probed so far is
- *       delta-exact 0. See working/func_80144544/.
- * @note `var_s0->unkE` is deliberately assigned before `var_s0->unkC`: the
- *       source order shortens h's live range by one insn, which is what puts
- *       h in s5 and y in s6 as the target does (+14 exact rows).
+ * @see decomp.me (100%)
  */
 StructS0* func_80144544(StructS0* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag)
 {
     StructS0* var_s0;
     StructS0* var_a0;
-    s32 var_a2;
+    StructS0* buf;
     s32 sp20[24];
-    StructS0* p;
+    s32 temp_a2;
 
-
-    p = prim;
-
+    buf = prim;
     if (flag != 0)
     {
-        var_a2 = h - 4;
-        func_8001C56C(sp20, x + 2, y + 0xF2, w - 4, var_a2);
+        temp_a2 = y + 0xF2;
+        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 4);
     }
     else
     {
-        var_a2 = h - 4;
-        func_8001C56C(sp20, x + 2, y + 0xA, w - 4, var_a2);
+        temp_a2 = y + 0xA;
+        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 4);
     }
-    func_8001A5D4((s32)p, sp20);
+    func_8001A5D4((s32)buf, sp20);
 
-    p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+    buf->unk0 = (buf->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)buf & 0xFFFFFF);
 
-    p = (StructS0*)((u8*)p + 0x40);
-    var_s0 = func_80146E30(p, ot, x, y, w, h);
-    var_s0 = func_80144764(var_s0, ot, x, y, w, h, 0xFFFFFF);
-    var_s0 = func_80144764(var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
-    var_a2 = (s32)func_80144764(var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
+    buf = (StructS0*)((u8*)buf + 0x40);
+    var_s0 = func_80146E30(buf, ot, x, y, w, h);
+    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x, y, w, h, 0xFFFFFF);
+    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
+    var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
 
-    ((StructS0*)var_a2)->unk4 = 0xC0C0C0;
-    ((u8*)var_a2)[3] = 3;
-    ((u8*)var_a2)[7] = 0x62;
-    ((StructS0*)var_a2)->unk8 = ((x + x) - x);
-    ((StructS0*)var_a2)->unkA = y;
-    ((StructS0*)var_a2)->unkC = w;
-    ((StructS0*)var_a2)->unkE = h;
-    ((StructS0*)var_a2)->unk0 = (((StructS0*)var_a2)->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | (var_a2 & 0xFFFFFF);
+    do { temp_a2 = (s32)var_s0; } while (0);
+    ((StructS0*)temp_a2)->unk4 = 0xC0C0C0;
+    ((u8*)temp_a2)[3] = 3;
+    ((u8*)temp_a2)[7] = 0x62;
+    ((StructS0*)temp_a2)->unk8 = x;
+    ((StructS0*)temp_a2)->unkA = y;
+    ((StructS0*)temp_a2)->unkC = w;
+    ((StructS0*)temp_a2)->unkE = h;
+    ((StructS0*)temp_a2)->unk0 = (((StructS0*)temp_a2)->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | (temp_a2 & 0xFFFFFF);
 
-    var_a0 = (StructS0*)(var_a2 + 0x10);
+    var_a0 = (StructS0*)(temp_a2 + 0x10);
     ((u8*)var_a0)[3] = 1;
     var_a0->unk4 = 0xE1000045;
     var_a0->unk0 = (var_a0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
