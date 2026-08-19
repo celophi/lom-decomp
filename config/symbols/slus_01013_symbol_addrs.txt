@@ -1,9 +1,9 @@
 // CHECKPS.BIN
-g_testPatternVertexTable            = 0x8004FD00;
-g_testPatternVertexTablePadding     = 0x8004FD08;
+g_hardware_pattern_vertex_signs          = 0x8004FD00;
+g_hardware_pattern_vertex_padding        = 0x8004FD08;
 
 // Uncategorized
-RunCheckPS                          = 0x8004FD14;
+run_checkps                              = 0x8004FD14;
 
 // Main-only alias for the common overlay load base. This must not be shared,
 // because each overlay defines its own code symbols in the same address range.
@@ -13,32 +13,32 @@ g_field_render_buffers              = 0x80123FD8;
 g_world_map_overlay_end             = 0x801B32D8;
 
 // CHECKPS.BIN
-PollInputDevice                     = 0x800507B4;
-ProcessControllerInput              = 0x8005088C;
-UpdateControllerInput               = 0x80050A0C;
-DrawSymmetricTestPattern            = 0x80051A24;
-RenderGlyph                         = 0x80052004;
-CreateGlyphInstance                 = 0x80052218;
-InvalidateGlyphCache                = 0x80052320;
-ClearInvalidGlyphs                  = 0x8005235C;
-ResetTextRenderer                   = 0x8005239C;
-g_testPatternSizeTable              = 0x8005CFF0;
+poll_input_device                        = 0x800507B4;
+process_controller_input                 = 0x8005088C;
+update_controller_input                  = 0x80050A0C;
+draw_hardware_check_pattern              = 0x80051A24;
+render_cached_glyph                      = 0x80052004;
+emit_glyph_sprite                        = 0x80052218;
+begin_glyph_cache_frame                  = 0x80052320;
+evict_unused_glyphs                      = 0x8005235C;
+reset_glyph_renderer                     = 0x8005239C;
+g_hardware_pattern_size_table            = 0x8005CFF0;
 
 // Uncategorized
 FUN_80060814                        = 0x80060814;
 
 // CHECKPS.BIN
-D_8006108C                          = 0x8006108C;
-D_8006109C                          = 0x8006109C;
-g_D_800610AC                        = 0x800610AC;
-g_TextBuffer                        = 0x800810C0;
-g_characterCache                    = 0x800890C0;
-g_textCursorX                       = 0x800894C0;
-g_textCursorY                       = 0x800894C4;
-g_glyphBufferCursor                 = 0x800894C8;
-g_textOriginX                       = 0x800894CC;
-g_glyphAtlasX                       = 0x800894D0;
-g_glyphAtlasY                       = 0x800894D4;
+g_checkps_unused_word1                   = 0x8006108C;
+g_checkps_unused_word2                   = 0x8006109C;
+g_checkps_reserved_bss                   = 0x800610AC;
+g_glyph_raster_buffer                    = 0x800810C0;
+g_glyph_cache                            = 0x800890C0;
+g_glyph_cursor_x                         = 0x800894C0;
+g_glyph_cursor_y                         = 0x800894C4;
+g_glyph_raster_cursor                    = 0x800894C8;
+g_text_line_start_x                      = 0x800894CC;
+g_glyph_upload_x                         = 0x800894D0;
+g_glyph_upload_y                         = 0x800894D4;
 
 // jumptable
 jtbl_80010C30                       = 0x80010C30; // type:jtbl rom:0x1430
