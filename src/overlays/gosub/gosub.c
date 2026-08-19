@@ -2896,26 +2896,21 @@ typedef struct
  * @param flag Selects the up vs down vertex arrangement.
  * @return Pointer just past the POLY_F3 (next free packet slot).
  *
- * @note WIP - best match 86.02% (gcc 2.7.2 CDK). Residual is a register-alloc
- *       cascade: the target moves the packet pointer to t0 and parks D_800F22AC
- *       in a0 (evicting arg0 from a0), whereas GCC here keeps arg0 in a0 and
- *       D_800F22AC in a1, permuting the whole a0/a1/t0/t1 assignment. The clean
- *       real-type variant (LINE_F4/POLY_F3 + setLineF4/addPrim/SET_BGR0) sits at
- *       78.85%; see working/func_801443E4/ for both and the analysis.
+ * @see decomp.me (100%)
  */
-StructS0* func_801443E4(GosubPrim* prim, s32* ot, s32 x, s32 y, s32 flag)
+void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
 {
     s32 color;
     s16 tmp_x;
-    s16 tmp_y;
+    s32 tmp_y;
     u32 i;
-    u8* p;
-    u8* dst;
-    GosubPrim* prim2;
+    u32 addr_mask;
+    u8 *p;
+    GosubPrim *prim2;
 
     prim->len = 6;
-    (prim2 = prim)->code = 0x4C;
-    prim2->mask = 0x55555555;
+    prim->code = 0x4C;
+    prim->mask = 0x55555555;
     if (D_800F22AC & 0x10)
     {
         color = D_800F22AC & 0xF;
@@ -2924,51 +2919,60 @@ StructS0* func_801443E4(GosubPrim* prim, s32* ot, s32 x, s32 y, s32 flag)
     {
         color = (~D_800F22AC) & 0xF;
     }
-    color = (color * 4) + 0x70;
-    prim2->b = color;
-    prim2->g = color;
-    prim2->r = color;
+    tmp_y = color * 4;
+    color = tmp_y + 0x70;
+    prim->b = color;
+    prim->g = color;
+    prim->r = color;
     if (flag != 0)
     {
-        prim2->y3 = y - 8;
-        prim2->y0 = y - 8;
+        do {
+            prim->y3 = y - 8;
+            prim->y0 = y - 8;
+        } while (0);
         tmp_x = x - 6;
         tmp_y = y + 4;
     }
     else
     {
-        prim2->y3 = y + 8;
-        prim2->y0 = y + 8;
+        do {
+            prim->y3 = y + 8;
+            prim->y0 = y + 8;
+        } while (0);
         tmp_x = x - 6;
         tmp_y = y - 4;
     }
-    prim2->x1 = tmp_x;
-    prim2->x3 = x;
-    prim2->x0 = x;
-    prim2->y1 = tmp_y;
-    prim2->x2 = x + 6;
-    prim2->y2 = tmp_y;
+    do
+    {
+        prim->x1 = tmp_x;
+        prim->x3 = x;
+        prim->x0 = x;
+        prim->y1 = tmp_y;
+        prim->x2 = x + 6;
+        prim->y2 = tmp_y;
+    } while (0);
 
-    p = (u8*)prim2;
-    prim2 = (GosubPrim*)(p + 0x1C);
-    dst = (u8*)prim2;
-    *(u32*)p = (*(u32*)p & 0xFF000000) | (*ot & 0xFFFFFF);
+    addr_mask = 0xFFFFFF;
+    p = (u8 *)prim;
+    prim2 = (GosubPrim *)(p + 0x1C);
+    prim = prim2;
+    *(u32 *)p = (*(u32 *)p & 0xFF000000) | (*ot & addr_mask);
     i = 0;
-    *ot = (*ot & 0xFF000000) | ((u32)p & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((u32)p & addr_mask);
     do
     {
         i += 1;
-        *dst = *p;
+        *(u8 *)prim = *p;
         p += 1;
-        dst += 1;
+        prim = (GosubPrim *)((u8 *)prim + 1);
     } while (i < 0x14U);
 
     prim2->len = 4;
-    *(u32*)&prim2->r = 0;
+    *(u32 *)&prim2->r = 0;
     prim2->code = 0x20;
-    *(u32*)prim2 = (*(u32*)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *(u32 *)prim2 = (*(u32 *)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | ((u32)prim2 & 0xFFFFFF);
-    return (StructS0*)((u8*)prim2 + 0x14);
+    return (u8 *)prim2 + 0x14;
 }
 
 /**

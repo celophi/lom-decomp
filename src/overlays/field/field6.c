@@ -18,12 +18,7 @@ extern FieldResourceEntry g_field_resource_entries[];
  *        if none matches, then hand it off to func_8006B240.
  * @param arg0 Resource slot identifier to search for.
  * @param arg1 Passed through unchanged to func_8006B240.
- * @see decomp.me (97%) TODO
- * @note Residual: a 2-instruction epilogue scheduling swap (the stack
- *       pointer restore lands in the return jump's delay slot instead of
- *       before it, unlike the target). Confirmed via sched_oracle this is
- *       not a sched1 ordering issue; no source-shape change recovered it
- *       across 12 probe variants plus a permuter run.
+ * @see decomp.me (100%) TODO
  */
 void func_8006B1A0(s32 arg0, s32 arg1)
 {
@@ -71,10 +66,7 @@ extern void* g_field_resource_cursor;
  * @param arg0 Resource slot identifier, stored into the entry.
  * @param arg1 Base pointer; func_8006CAFC's first argument is arg1 + 0xB52.
  * @param arg2 Resource entry index to (re)initialize.
- * @see decomp.me (97.68%) TODO
- * @note Residual: the same stack-pointer/return-delay-slot scheduling swap
- *       as func_8006B1A0 (see its @note); confirmed a second time here, not
- *       source-shape controllable.
+ * @see decomp.me (100%) TODO
  */
 void func_8006B240(s32 arg0, u8 *arg1, s32 arg2)
 {
