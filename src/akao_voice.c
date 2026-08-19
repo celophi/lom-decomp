@@ -3784,10 +3784,7 @@ void akao_sfx_set_pitch_bend_unsuppressed(u8* param)
  * @param params Tick count at +0x0 (0 is treated as 1), target value (u8)
  *        at +0x4.
  *
- * @note NOT YET 100% (99.90%, 46/51 exact). Same recurring loop-cursor
- *       anchor residue as the other fade functions in this file (target
- *       anchors at unk88 / +0x88, this compile anchors at +0x44).
- * @see decomp.me (99.90%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_fade_pitch_bend_unsuppressed(u8* params)
 {
@@ -3820,8 +3817,8 @@ void akao_sfx_fade_pitch_bend_unsuppressed(u8* params)
             current = *(u16*)((u8*)channel + 0x40);
             delta = target - current;
             step = delta / tick_count;
-            channel->unk88 = tick_count;
             *(s32*)((u8*)channel + 0x44) = step;
+            channel->unk88 = tick_count;
         }
     }
 }
