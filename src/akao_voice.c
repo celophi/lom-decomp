@@ -2996,12 +2996,7 @@ void akao_sfx_stop_channels_from_params(u8* params)
  *
  * @param params Song id at +0x0, new volume at +0x4.
  *
- * @note NOT YET 100% (95.51%, 45/47 exact). The only residue is the order
- *       of two independent loads (g_akao_pending_channels vs params[4])
- *       right before the secondary-song call; the scheduler reorders them
- *       the same way regardless of source statement order, matching the
- *       sched1/sched2 attribution seen on other functions in this file.
- * @see decomp.me (95.51%)
+ * @see decomp.me (100%)
  */
 void akao_seq_set_master_volume(u8* params)
 {
@@ -3018,11 +3013,14 @@ void akao_seq_set_master_volume(u8* params)
     }
     else if (g_akao_seq_channel1 != NULL && id != 0 && id == g_akao_seq_channel1->unk5E)
     {
+        AkaoChannelState* pending;
+
+        pending = g_akao_pending_channels ? (AkaoChannelState*)g_akao_pending_channels : (AkaoChannelState*)g_akao_pending_channels;
         volume = *(s32*)(params + 4);
         g_akao_seq_channel1->unk58 = 0;
         volume = (volume & 0x7F) << 16;
         g_akao_seq_channel1->pitch_slide_step = volume;
-        akao_seq_flag_volume_update(g_akao_seq_channel1, (AkaoChannelState*)g_akao_pending_channels);
+        akao_seq_flag_volume_update(g_akao_seq_channel1, pending);
     }
 }
 
