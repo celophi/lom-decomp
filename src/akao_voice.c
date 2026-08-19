@@ -50,9 +50,9 @@ extern s32 D_8004D410;
 extern void* g_akaoCmdParams[];
 extern s32 D_8004D340[6];
 extern void (*D_8003DDE0[])(s32*);
-extern void (*D_8003E120)(s32*);
-extern void (*D_8003E124)(s32*);
-extern void (*D_8003E128)(s32*);
+extern void (*D_8003E120[])(s32*);
+extern void (*D_8003E124[])(s32*);
+extern void (*D_8003E128[])(s32*);
 
 extern void akao_clear_voice_assignment(u8* primary_channels, s32 voice_index);
 void akao_build_effect_voice_mask(s32* effect_voices, s32 secondary_effect_mask, s32 primary_effect_mask, s32 sfx_effect_voices);
@@ -4373,15 +4373,7 @@ void akao_apply_reverb_type(s32 reverb_type)
  *         the header failed the AKAO magic check. Ignored by most other
  *         callers (see the doc comment on the forward declaration in
  *         akao_cmd.c).
- * @note 95.74% match (lom-dev-mcp diff tool; no decomp.me scratch created).
- *       Residual (8 of 194 instructions) is two instances of the same
- *       mechanism: for the 0xD9/0xDA cases, the target computes the
- *       D_8003E124/D_8003E128 callback pointer's %hi in one place and its
- *       %lo-offset load right before the call, while this source's
- *       equivalent expression keeps them adjacent; measured via probe_variants
- *       and the permuter without finding a source shape that reproduces the
- *       target's split. Mechanism: CSE-FOLD/EXPAND-SHAPE (see idioms.md
- *       EXPAND-29, CSE-11 - neither's stated fix measured positive here).
+ * @see decomp.me (100%)
  */
 s32 akao_send_command(u32 opcode)
 {
@@ -4411,10 +4403,10 @@ s32 akao_send_command(u32 opcode)
                 ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk5E != current_id)))
             {
                 akao_apply_reverb_type(hdr->reverb_type);
-                params[2] = hdr->id;
+                *(volatile s32*)&params[0] = (s32)hdr;
+                params[2] = ((volatile AkaoSeqHeader*)hdr)->id;
                 if (opcode == 0x12)
                 {
-                    params[0] = (s32)hdr;
                     params[4] = (s32)g_akaoCmdParams[1];
                 }
                 else
@@ -4423,7 +4415,6 @@ s32 akao_send_command(u32 opcode)
                     masked = -1;
                     if (tmp != 0)
                     {
-                        params[0] = (s32)hdr;
                         masked = tmp | 1;
                     }
                     params[3] = masked;
@@ -4446,14 +4437,14 @@ s32 akao_send_command(u32 opcode)
 
     case 0xD8:
         params[0] = (s32)g_akaoCmdParams[0];
-        (*D_8003E120)(params);
+        D_8003E120[0](params);
         opcode = 0xD4;
         break;
 
     case 0xD9:
         params[0] = (s32)g_akaoCmdParams[0];
         params[1] = (s32)g_akaoCmdParams[1];
-        (*D_8003E124)(params);
+        D_8003E124[0](params);
         opcode = 0xD5;
         break;
 
@@ -4461,7 +4452,7 @@ s32 akao_send_command(u32 opcode)
         params[0] = (s32)g_akaoCmdParams[0];
         params[1] = (s32)g_akaoCmdParams[1];
         params[2] = (s32)g_akaoCmdParams[2];
-        (*D_8003E128)(params);
+        D_8003E128[0](params);
         opcode = 0xD6;
         break;
 
