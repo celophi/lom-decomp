@@ -2189,15 +2189,16 @@ void akao_seq_op_start_pitch_lfo(AkaoChannelState* arg0)
  * @param arg0 Channel state whose bytecode cursor is advanced by one byte.
  * @note The @c flags re-read of 0xAE is required to keep the base pointer in
  *       a1 to match; it leaves one residual @c andi (see status).
- * @see decomp.me (90.96%)
+ * @see decomp.me (100%)
  */
 void akao_seq_op_set_pitch_lfo_depth(AkaoChannelState* arg0)
 {
     AkaoChannelState* p;
     s32 scale;
     u8* temp_v0;
+    u16* depth_ptr;
     u32 shifted;
-    u32 flags;
+    u16 flags;
     u32 hi;
     u32 var_lo;
 
@@ -2207,7 +2208,8 @@ void akao_seq_op_set_pitch_lfo_depth(AkaoChannelState* arg0)
     p->seq_cursor = (u8*)(temp_v0 + 1);
     scale = p->pitch;
     p->pitch_lfo_depth = shifted;
-    flags = p->pitch_lfo_depth;
+    depth_ptr = &p->pitch_lfo_depth_scaled;
+    flags = depth_ptr[1];
     hi = (u32)(flags & 0x7F00) >> 8;
     if (!(flags & 0x8000))
     {
