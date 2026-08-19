@@ -3244,13 +3244,7 @@ void akao_sfx_set_volume_scale(u8* params)
  *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
  *        target volume scale (7 bits) at +0xC.
  *
- * @note NOT YET 100% (99.90%, 86/96 exact). The only remaining residue is
- *       which struct offset the compiler anchors the per-channel loop
- *       cursor at (0x8E in the target, 0xE6 here); every other instruction
- *       matches. Introducing an explicit raw-offset cursor variable made
- *       this measurably worse (94.24%), so the natural struct-access form
- *       above is the better basin. See working/func_80027B88/code.c.
- * @see decomp.me (99.90%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_fade_volume_scale(u8* params)
 {
@@ -3283,8 +3277,8 @@ void akao_sfx_fade_volume_scale(u8* params)
                 target_scale = (*(u16*)(params + 0xC) & 0x7F) << 8;
                 current_scale = channel->volume_scale;
                 delta = target_scale - current_scale;
-                channel->unk8E = tick_count;
                 channel->unkE6 = delta / tick_count;
+                channel->unk8E = tick_count;
             }
         }
     }
@@ -3306,8 +3300,8 @@ void akao_sfx_fade_volume_scale(u8* params)
                 target_scale = (*(u16*)(params + 0xC) & 0x7F) << 8;
                 current_scale = channel->volume_scale;
                 delta = target_scale - current_scale;
-                channel->unk8E = tick_count;
                 channel->unkE6 = delta / tick_count;
+                channel->unk8E = tick_count;
             }
         }
     }
