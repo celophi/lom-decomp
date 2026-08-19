@@ -3823,62 +3823,52 @@ s32 func_80145A14(s32* ot, s32 prim, s32 x_off, s32 y_off)
  * @param y_off Vertical offset subtracted from every row position.
  * @return Packet cursor past the last emitted label.
  *
- * @note WIP - best match 88.58% (84/113 exact, gcc 2.7.2 CDK). Same residue as
- *       the two-option sibling func_80145A14, one row taller. The target defers
- *       the y_off parameter save: it keeps param3 in a3 through the entry block
- *       and copies it to s7 in the bne delay slot, which makes y_off short-lived
- *       so it wins s7 (ot then takes s8) and keeps a3 occupied so color1 lands in
- *       a temp (t0). Here gcc pins the y_off save as an entry copy - a fixed
- *       sched1 prefix, confirmed absent from the block-0 ready list - so ot wins
- *       s7, y_off takes s8, and color1 coalesces straight into a3. That single
- *       divergence produces every wrong row.
- * @note No source spelling reaches the deferred save: color if/else, per-block
- *       color scope (ALLOC-14), y-precompute, base int-vs-pointer, prim=arg_prim
- *       aliasing, and table-in-glyph all measured inert or worse; gcc 2.8.0 and
- *       the gnu/g4 toolchains are all worse (and frame-wrong). The permuter
- *       (400k iters) finds only the undefined-on-else-path color variant, which
- *       regresses. The glyph address uses &D_8014F29C inline and @c base is a
- *       plain integer offset, both mirroring func_80145A14's measured-best order;
- *       the unused @c pad reserves the target's 0x38-byte dead frame slot
- *       (idioms.md FRAME-01).
- * @see working/func_80145B28/ for the measured probe log.
+ * @see decomp.me (100%)
  */
 s32 func_80145B28(s32* ot, s32 prim, s32 x_off, s32 y_off)
 {
     s32* table;
     s32 base;
-    void* glyph;
+    void* glyph0;
+    void* glyph1;
+    void* glyph2;
     s32 color;
+    s32 color0;
+    s32 p;
+    s32 rem0;
     s32 pad[14];
 
+    p = prim;
     table = &D_8014F29C;
     base = (s32)table - 0x20;
 
-    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xE)));
-    color = 5;
-    if (g_gosub_dialog_choice % 3 == 0)
+    glyph0 = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xE)));
+    rem0 = g_gosub_dialog_choice;
+    rem0 %= 3;
+    color0 = 5;
+    if (rem0 == 0)
     {
-        color = 4;
+        color0 = 4;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 2 - y_off, 2);
+    p = func_800A88A0(p, ot, glyph0, color0, 0x40 - x_off, 2 - y_off, 2);
 
-    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xC)));
+    glyph1 = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xC)));
     color = 5;
     if (g_gosub_dialog_choice % 3 == 1)
     {
         color = 4;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x12 - y_off, 2);
+    p = func_800A88A0(p, ot, glyph1, color, 0x40 - x_off, 0x12 - y_off, 2);
 
-    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xA)));
+    glyph2 = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xA)));
     color = 5;
     if (g_gosub_dialog_choice % 3 == 2)
     {
         color = 4;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x22 - y_off, 2);
+    p = func_800A88A0(p, ot, glyph2, color, 0x40 - x_off, 0x22 - y_off, 2);
 
-    return prim;
+    return p;
 }
 
 /**
