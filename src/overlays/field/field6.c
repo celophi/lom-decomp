@@ -378,7 +378,9 @@ typedef struct
     u32 unk4; /* 0x04 */
     u8 unk8; /* 0x08 */
     u8 unk9; /* 0x09 */
-    u8 padA[0xD - 0xA];
+    u8 padA;
+    u8 unkB; /* 0x0B */
+    u8 unkC; /* 0x0C */
     u8 unkD; /* 0x0D */
     u8 unkE; /* 0x0E */
     u8 unkF; /* 0x0F */
@@ -391,25 +393,81 @@ typedef struct
     u8 unk23; /* 0x23 */
     u32 unk24; /* 0x24 (overlaps byte writes at 0x24/0x25) */
     u32 unk28; /* 0x28 */
-    u8 pad2C[0x2E - 0x2C];
+    u8 unk2C; /* 0x2C */
+    u8 pad2D;
     u8 unk2E; /* 0x2E */
-    u8 pad2F[0x33 - 0x2F];
+    u8 pad2F[0x31 - 0x2F];
+    u8 unk31; /* 0x31 */
+    u8 pad32;
     u8 unk33; /* 0x33 */
-    u8 pad34[0x48 - 0x34];
+    u32 unk34; /* 0x34 */
+    u8 pad38[0x48 - 0x38];
 } FieldActorPartDef;
 
 extern FieldActorPartDef D_800FE3A0[];
 
+typedef struct FieldActorAnimationDef
+{
+    u8 unk0[2];
+    u8 pad2[0xC - 2];
+    u16 unkC;
+    u16 unkE;
+    u16 unk10;
+    u8 pad10[0x14 - 0x12];
+    u8 unk14;
+    u8 unk15;
+    u8 pad16[0x18 - 0x16];
+    u16 unk18;
+} FieldActorAnimationDef;
+
 typedef struct
 {
-    FieldActorPartDef *unk0; /* 0x00 */
-    u8 pad4[0x244 - 0x4];
+    FieldActorPartDef* unk0;
+    u8 pad4[0xC - 4];
+    FieldActorAnimationDef* unkC;
+    u8 pad10[0x24 - 0x10];
+    u8 unk24;
+    u8 unk25;
+    u8 unk26;
+    u8 unk27;
+    u8 unk28;
+    u8 unk29;
+    u8 unk2A;
+    u8 unk2B[16];
+    u8 unk3B[9][16];
+    u8 padCB;
+    u16 unkCC[9][16];
+    u16 unk1EC[9];
+    u8 pad1FE[0x222 - 0x1FE];
+    u16 unk222;
+    union
+    {
+        u32 unk224;
+        struct
+        {
+            u16 lo;
+            u16 animation_id;
+        } h;
+    } u224;
+    u8 owner_object_index;
+    u8 unk229[9];
+    u8 unk232;
+    u8 unk233;
+    u16 unk234;
+    u16 unk236;
+    u8 pad238[2];
+    u8 unk23A;
+    u8 unk23B;
+    u8 pad23C[0x240 - 0x23C];
+    u16* unk240;
 } FieldActorState;
 
 extern FieldActorState g_field_actor_slots[];
 extern s32 D_800F2298;
 extern s32 D_8012269C;
 extern s32 D_801227C8;
+extern s32 g_field_track_index;
+extern s32 D_80105760;
 
 /**
  * @brief Zero-fill D_800FE3A0 entry arg0, then set it up as a default field
@@ -1594,4 +1652,187 @@ void func_8006D1EC(void)
     }
 
     D_80105770 = 0;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006D21C(FieldActorState *actor)
+{
+    s32 i;
+    s32 owner;
+    s32 val;
+    Struct_D800FDF58 *base;
+    u8 *p;
+
+    owner = actor->unk233;
+    i = 0;
+    val = 0xFF;
+    base = D_800FF658;
+    p = (u8 *)base + 0x25;
+    while (i < 0x103)
+    {
+        if (*p != val && p[-3] == owner)
+        {
+            *p = val;
+        }
+        i++;
+        p += 0x54;
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006D270(FieldActorState *actor)
+{
+    s32 i;
+
+    if (actor->unk232 != 0)
+    {
+        for (i = 0; i < actor->unk232; i++)
+        {
+            if ((actor->unk23A >> i) & 1)
+            {
+                g_field_track_index = i;
+                func_8006D310(actor);
+            }
+        }
+    }
+    else
+    {
+        g_field_track_index = 0;
+        func_8006D310(actor);
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006D310(FieldActorState *actor)
+{
+    FieldActorPartDef *part;
+    s32 i;
+    s32 val;
+    s32 prev;
+    s32 count;
+    u8 kind;
+    u32 flags;
+
+    part = actor->unk0;
+    i = 0;
+    if (actor->unk25 != 0)
+    {
+        do
+        {
+            kind = part->unk31;
+            if (kind != 0xFE &&
+                (!(actor->unkC->unkC & 0x800) || ((actor->unk240[actor->unk29] >> i) & 1)) &&
+                part->unkB != 0xFF &&
+                (!(part->unk14 & 4) || g_field_track_index == 0))
+            {
+                if (actor->unk229[g_field_track_index] == 0xFF)
+                {
+                    if (kind == 0xFF || (part->unk34 & 0x4000000))
+                    {
+                        goto next;
+                    }
+                    if (part->unk31 > actor->unk1EC[g_field_track_index])
+                    {
+                        goto next;
+                    }
+                }
+                else if (kind != 0xFF)
+                {
+                    if (part->unk31 > actor->unk1EC[g_field_track_index])
+                    {
+                        goto next;
+                    }
+                }
+
+                if (((u8 *)part)[0x2B] & 1)
+                {
+                    val = part->unkC;
+                }
+                else
+                {
+                    val = field_evaluate_parameter_track(actor, part->unkC);
+                }
+
+                flags = part->unk28;
+                if (((flags >> 30) & 1) && actor->unkCC[g_field_track_index][i] >= val)
+                {
+                    goto next;
+                }
+
+                if ((part->unk0 >> 15) & 1)
+                {
+                    if (((flags >> 24) & 1) && actor->unk3B[g_field_track_index][i] != 0)
+                    {
+                        goto next;
+                    }
+                    if (field_get_track_counter_modulo(actor, (((u8 *)part)[7] & 0xF) + 1) != 0)
+                    {
+                        goto next;
+                    }
+                    if (actor->unk3B[g_field_track_index][i] >= val)
+                    {
+                        goto next;
+                    }
+                    do
+                    {
+                        prev = actor->unk3B[g_field_track_index][i];
+                        D_80105760 = 0;
+                        if (func_8006D79C(actor, i, 0) == -1)
+                        {
+                            goto next;
+                        }
+                        if (actor->unk3B[g_field_track_index][i] == prev)
+                        {
+                            goto next;
+                        }
+                    } while (actor->unk3B[g_field_track_index][i] < val);
+                }
+                else
+                {
+                    if (actor->unk3B[g_field_track_index][i] < val &&
+                        field_get_track_counter_modulo(actor, (((u8 *)part)[7] & 0xF) + 1) == 0)
+                    {
+                        count = (part->unk2C & 0x1F) + 1;
+                        while (count != 0)
+                        {
+                            if (actor->unk3B[g_field_track_index][i] >= val)
+                            {
+                                break;
+                            }
+                            D_80105760 = 0;
+                            if (func_8006D79C(actor, i, 0) == -1)
+                            {
+                                break;
+                            }
+                            count--;
+                        }
+                    }
+                }
+            }
+        next:
+            i++;
+            part++;
+        } while (i < actor->unk25);
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006D6A8(Struct_D800FDF58 *dst, FieldActorPartDef *part, Struct_D800FDF58 *rec)
+{
+    if (!((part->unk4 >> 11) & 1) && !((part->unk28 >> 25) & 1) && (part->unk2C >> 5) == 0 &&
+        (*(u32 *)&part->unkC & 0xFFFF0000) == 0x80800000 && part->unk10 == 0x80)
+    {
+        dst->unk1C |= 0x10008000;
+        dst->unk18 = D_800FE3A0[rec->unk3A].unkE;
+        dst->unk19 = D_800FE3A0[rec->unk3A].unkF;
+        dst->unk1A = D_800FE3A0[rec->unk3A].unk10;
+    }
 }
