@@ -1491,16 +1491,14 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   arg0->unk26 = 1;
 }
 
-void field_prepare_animation_definitions(void* head, s32 handler_group)
+void field_prepare_animation_definitions(Build_FieldAnimDefRasterView* def, s32 handler_group)
 {
-    Build_FieldAnimDefRasterView* def = (Build_FieldAnimDefRasterView*)head;
     u32 shared_page_slot = 0;
     u32 shared_color_index = 0;
     u32 shared_semitrans = 0;
     u32 shared_blend_mode = 0;
     s32 tpage_status;
     s32 code_status;
-    int minus_one;
     Build_FieldAnimDefRasterView* rec;
     Build_FieldPartDef* part_def;
     Build_FieldPart* part;
@@ -1518,10 +1516,21 @@ void field_prepare_animation_definitions(void* head, s32 handler_group)
         do
         {
             def->flags.bytes.handler_group = handler_group;
-            if (((handler_group == 0) && ((def->flags.word & 7U) < 2U)) || (handler_group == 3))
+            if (handler_group == 0)
             {
-                rec = def;
-
+                if ((def->flags.word & 7U) < 2U)
+                {
+                    rec = def;
+                    goto prepare_def;
+                }
+            }
+            if (handler_group != 3)
+            {
+                goto next_def;
+            }
+            rec = def;
+prepare_def:
+            {
                 part_def = def->part_def;
                 part = func_8005ABD8(part_def, 0);
                 if (part->linked_part != 0)
@@ -1565,15 +1574,23 @@ void field_prepare_animation_definitions(void* head, s32 handler_group)
                 }
                 if ((tpage_status != 0) || (code_status != 0))
                 {
-                    frame = def->flags.bytes.frame_count - 1;
+                    frame = def->flags.bytes.frame_count;
                     tile = rec->frame_tiles;
+                    frame--;
                     if (frame != (-1))
                     {
+                        u8 scan_width;
+                        u8 scan_height;
+                        scan_width = rec->rect_width;
+                        scan_height = rec->rect_height;
                         do
                         {
-                            tile_index = ((frame = rec->rect_width) * rec->rect_height) - 1;
+                            tile_index = scan_width * scan_height;
+                            tile_index--;
                             if (tile_index != (-1))
                             {
+                                int scan_minus_one;
+                                scan_minus_one = -1;
                                 do
                                 {
                                     if (tile->clut_slot & 0x80)
@@ -1587,20 +1604,16 @@ void field_prepare_animation_definitions(void* head, s32 handler_group)
                                                 tpage_status = 2;
                                             }
                                         }
-                                        if (code_status == 1)
+                                        if ((code_status == 1) &&
+                                            ((shared_color_index != tile->color_index) ||
+                                             (shared_semitrans != ((tile->texture_attrs >> 6) & 1))))
                                         {
-                                            u8 color_index = tile->color_index;
-                                            u8 texture_attrs = tile->texture_attrs;
-                                            if ((shared_color_index != color_index) ||
-                                                (shared_semitrans != ((texture_attrs >> 6) & 1)))
-                                            {
-                                                code_status = 2;
-                                            }
+                                            code_status = 2;
                                         }
                                     }
                                     tile++;
                                     tile_index--;
-                                } while (tile_index != (-1));
+                                } while (tile_index != scan_minus_one);
                             }
                             frame--;
                         } while (frame != (-1));
@@ -1617,8 +1630,9 @@ void field_prepare_animation_definitions(void* head, s32 handler_group)
 
                 if (((handler_group == 0) && ((def->flags.word & 7U) == 0)) || (handler_group == 3))
                 {
-                    frame = def->flags.bytes.frame_count - 1;
+                    frame = def->flags.bytes.frame_count;
                     tile = rec->frame_tiles;
+                    frame--;
                     if (frame != (-1))
                     {
                         do
@@ -1627,17 +1641,19 @@ void field_prepare_animation_definitions(void* head, s32 handler_group)
                             mask_bit = 1;
                             mask = part->bits;
                             mask_word = *mask;
+                            row = 0;
                             if (part_def->flags.bytes.rows != 0)
                             {
-                                row = 0;
                                 do
                                 {
                                     if (row < rec->rect_y)
                                     {
-                                        minus_one = -1;
-                                        col = part_def->flags.bytes.cols - 1;
-                                        if (col != minus_one)
+                                        col = part_def->flags.bytes.cols;
+                                        col--;
+                                        if (col != (-1))
                                         {
+                                            int local_minus_one;
+                                            local_minus_one = -1;
                                             do
                                             {
                                                 mask_bit <<= 1;
@@ -1649,14 +1665,14 @@ void field_prepare_animation_definitions(void* head, s32 handler_group)
                                                     mask_word = *mask;
                                                 }
                                                 col--;
-                                            } while (col != (-1));
+                                            } while (col != local_minus_one);
                                         }
                                     }
                                     else if (row < (rec->rect_y + rec->rect_height))
                                     {
+                                        col = 0;
                                         if (part_def->flags.bytes.cols != 0)
                                         {
-                                            col = 0;
                                             do
                                             {
                                                 if ((col >= rec->rect_x) &&
@@ -1697,6 +1713,7 @@ void field_prepare_animation_definitions(void* head, s32 handler_group)
                     }
                 }
             }
+next_def:
             def = def->next;
         } while (def != 0);
     }
