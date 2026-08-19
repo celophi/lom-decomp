@@ -101,7 +101,7 @@ void Main(void)
     get_field_render_buffers();
     cdrom_stream(CD_RES_CHECKPS_BIN, g_overlayLoadAddress);
     cdrom_wait_queue_empty();
-    RunCheckPS(0x80100000);
+    run_checkps(0x80100000);
     DrawSync(0);
     VSync(0);
     g_previousGameState = GAME_STATE_NONE;
