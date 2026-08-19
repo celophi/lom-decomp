@@ -6,966 +6,961 @@
  * bytes; the build renames the section back to .text with objcopy.
  */
 #define CHECKPS_GNU_TEXT __attribute__((section(".text.code7")))
+#define CHECKPS_CD_IRQ_DISK_ERROR 5
+#define CHECKPS_CD_STATUS_SHELL_OPEN 0x10
 
 /*
  * Keep the section attribute on declarations so Splat can discover each
  * function definition normally while GNU as emits this unit into .text.code7.
  */
-void func_80050B04(void) CHECKPS_GNU_TEXT;
-s32 func_80050B14(s32 arg0) CHECKPS_GNU_TEXT;
-s32 PollCdResponse(s32 arg0) CHECKPS_GNU_TEXT;
-void SendCdCommand(int arg0) CHECKPS_GNU_TEXT;
-void ExitCheckPS(void) CHECKPS_GNU_TEXT;
+void StartCdIntegrityCheck(void) CHECKPS_GNU_TEXT;
+s32 RunCdIntegrityCheck(s32 singleStep) CHECKPS_GNU_TEXT;
+CheckPSCdPollResult PollCdResponse(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
+void SendCdCommand(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
+void ShowHardwareModificationWarningAndExit(void) CHECKPS_GNU_TEXT;
 
-/**
- * decomp.me link (95%) https://decomp.me/scratch/EuGt8
- * Matches 100% with GNU AS
- */
-void func_80050B04(void)
+/** Initialize the CHECKPS CD integrity state machine. */
+void StartCdIntegrityCheck(void)
 {
-    g_checkPSState = 1;
+    g_checkpsState = CHECKPS_STATE_START_GET_TN;
 }
 
 /**
- * @brief CheckPS state machine: drives the RTC clock-set screens via CD commands.
+ * Drive the CHECKPS CD integrity command state machine.
  *
- * Matches 100% with GCC 2.7.2 + GNU AS when the compiler's local jump-table
- * labels are preserved in the comparison object.
- *
- * @param arg0 Nonzero to run a single step; zero to loop until state reaches 0.
- * @return Current state value (-1, or the active state number).
- *
- * @note The backward goto is required to match: a syntactic do/while triggers
- *       gcc's loop optimizer (invariant hoisting into s-regs, frame -0x30)
- *       and drops the match to 81%.
+ * A nonzero singleStep executes one transition. Zero keeps processing until
+ * the state machine becomes idle. The explicit gotos and label-address array
+ * are compiler-shaping constructs required by GCC 2.7.2; rewriting them as
+ * structured loops changes register allocation and code generation.
  */
-s32 func_80050B14(s32 arg0)
+s32 RunCdIntegrityCheck(s32 singleStep)
 {
-    s32 new_var2;
-    s32 state = 0;
-    static void* keep_labels[] = {&&fall3,  &&fall4,  &&fall7,  &&fall8,  &&fall10,    &&fall11,   &&fall12,  &&fall13,
-                                  &&fall15, &&fall16, &&fall17, &&fall18, &&cmd6_body, &&s15_body, &&neg2_18, &&bar18};
+    /* GCC shares this temporary between restart-state stores and VSync samples. */
+    s32 restartStateOrVsync;
+    s32 stepResult = CHECKPS_STATE_IDLE;
+    static void* compilerLabelAnchors[] = {&&init_poll_result,  &&get_td_poll_result,  &&setloc_poll_result,  &&setmode_poll_result,  &&seek_p_poll_result,    &&mute_poll_result,   &&play_poll_result,  &&test_04_poll_result,
+                                  &&test_05_poll_result, &&failure_nop_poll_result, &&recovery_nop_poll_result, &&pause_poll_result, &&get_id_apply_seek_position, &&test_05_check_response, &&pause_command_error, &&pause_done};
 
     for (;;)
     {
-        switch (g_checkPSState)
+        switch (g_checkpsState)
         {
-        case 1: /* Init — show opening screen, advance to state 2 */
-            SendCdCommand(1);
-            g_checkPSState = 2;
-            state = 1;
+        case CHECKPS_STATE_START_GET_TN: /* Start the first CD command in the sequence. */
+            SendCdCommand(CHECKPS_CD_CMD_GET_TN);
+            g_checkpsState = CHECKPS_STATE_WAIT_GET_TN;
+            stepResult = CHECKPS_STATE_START_GET_TN;
             break;
 
-        case 2: /* Wait for response on screen 1; on confirm, latch clock mode and show screen 6 */
-            state = PollCdResponse(1);
-            switch (state)
+        case CHECKPS_STATE_WAIT_GET_TN: /* Save the last-track byte returned by GetTN. */
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_GET_TN);
+            switch (stepResult)
             {
-            case -2:
-                SendCdCommand(0);
-                g_checkPSState = 0x11;
-                state = 2;
+            case CHECKPS_CD_POLL_SHELL_OPEN:
+                SendCdCommand(CHECKPS_CD_CMD_NOP);
+                g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                stepResult = CHECKPS_STATE_WAIT_GET_TN;
                 break;
 
-            case 0:
-                state = 2;
+            case CHECKPS_CD_POLL_PENDING:
+                stepResult = CHECKPS_STATE_WAIT_GET_TN;
                 break;
 
-            case 1:
-                g_displayMode = g_clockMode;
-                state = 2;
-                SendCdCommand(6);
-                g_checkPSState = 3;
+            case CHECKPS_CD_POLL_COMPLETE:
+                g_cdLastTrackBcd = g_cdResponseByte2;
+                stepResult = CHECKPS_STATE_WAIT_GET_TN;
+                SendCdCommand(CHECKPS_CD_CMD_INIT);
+                g_checkpsState = CHECKPS_STATE_WAIT_INIT;
                 break;
 
-            case -1:
-                SendCdCommand(1);
-                state = 2;
+            case CHECKPS_CD_POLL_DISK_ERROR:
+                SendCdCommand(CHECKPS_CD_CMD_GET_TN);
+                stepResult = CHECKPS_STATE_WAIT_GET_TN;
                 break;
 
             default:
-                state = 2;
+                stepResult = CHECKPS_STATE_WAIT_GET_TN;
                 break;
             }
 
             break;
 
-        case 3:
-            state = PollCdResponse(6);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_INIT:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_INIT);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall3:
-                if (state < 0)
+            init_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 0x11;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 3;
+                        stepResult = CHECKPS_STATE_WAIT_INIT;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            g_CmdBuf[0] = (g_displayMode >= 2) ? 2 : 0;
-                            SendCdCommand(2);
-                            g_checkPSState = 4;
+                            g_cdCommandParameters[0] = (g_cdLastTrackBcd >= 2) ? 2 : 0;
+                            SendCdCommand(CHECKPS_CD_CMD_GET_TD);
+                            g_checkpsState = CHECKPS_STATE_WAIT_GET_TD;
                         }
                     }
-                    state = 3;
+                    stepResult = CHECKPS_STATE_WAIT_INIT;
                 }
             }
             break;
 
-        case 4:
-            state = PollCdResponse(2);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_GET_TD:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_GET_TD);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall4:
-                if (state < 0)
+            get_td_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 0x11;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 7;
+                        stepResult = CHECKPS_STATE_WAIT_SETLOC;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
                             {
 
-                                u8* bcd;
-                                u8 bcd0;
-                                u8 bcd1;
-                                u32 x;
-                                u32 y;
-                                u32 z;
-                                s32 h;
-                                s32 m;
-                                s32 t;
-                                s32 hb;
-                                s32 mb;
-                                int idx0;
-                                int idx1;
-                                int idx2;
-                                int idx3;
-                                int idx4;
-                                int idx5;
-                                u32 seed;
-                                u32 yq;
-                                u32 zq;
+                                u8* tocTimeBcd;
+                                u8 tocMinutesBcd;
+                                u8 tocSecondsBcd;
+                                u32 midpointMinutesValue;
+                                u32 midpointSecondsValue;
+                                u32 encodedMinutes;
+                                s32 tocMinutes;
+                                s32 tocSeconds;
+                                s32 midpointTotalSeconds;
+                                s32 midpointMinutes;
+                                s32 midpointSeconds;
+                                int midpointMinutesStoreIndex;
+                                int midpointMinutesReadIndex;
+                                int encodedMinutesStoreIndex;
+                                int encodedMinutesReadIndex;
+                                int midpointSecondsStoreIndex;
+                                int midpointSecondsReadIndex;
+                                u32 addressMixer;
+                                u32 midpointSecondTens;
+                                u32 encodedMinuteTens;
 
-                                seed = ((u32)0x88888889U + (u32)arg0) - (u32)arg0;
-                                bcd = (u8*)((u32)g_RTCTimeBCD + (seed ^ (u32)0x88888889U));
-                                bcd0 = bcd[0];
-                                bcd1 = bcd[1];
+                                /* These cancelling operations preserve the original pointer
+                                   expression emitted by GCC 2.7.2. */
+                                addressMixer = ((u32)0x88888889U + (u32)singleStep) - (u32)singleStep;
+                                tocTimeBcd = (u8*)((u32)g_cdResponsePayload + (addressMixer ^ (u32)0x88888889U));
+                                tocMinutesBcd = tocTimeBcd[0];
+                                tocSecondsBcd = tocTimeBcd[1];
 
-                                h = ((bcd0 >> 4) * 10) + (bcd0 & 0xF);
-                                m = (((bcd1 >> 4) * 5) * 2) + (bcd1 & 0xF);
-                                t = ((h * 60) + m) >> 1;
-                                hb = t / 60;
-                                mb = t % 60;
+                                tocMinutes = ((tocMinutesBcd >> 4) * 10) + (tocMinutesBcd & 0xF);
+                                tocSeconds = (((tocSecondsBcd >> 4) * 5) * 2) + (tocSecondsBcd & 0xF);
+                                midpointTotalSeconds = ((tocMinutes * 60) + tocSeconds) >> 1;
+                                midpointMinutes = midpointTotalSeconds / 60;
+                                midpointSeconds = midpointTotalSeconds % 60;
 
-                                /* Volatile-CAST stores + plain reads (tb_A shape): stores stay
-                                   un-forwarded and reads need no andi split. The array itself
-                                   must be non-volatile for the reads to come out clean. */
-                                idx0 = 0;
-                                *(volatile u8*)&g_timeBuffer[idx0] = hb;
-                                idx1 = 0;
-                                x = g_timeBuffer[idx1];
-                                idx4 = 1;
-                                *(volatile u8*)&g_timeBuffer[idx4] = mb;
-                                idx5 = 1;
-                                y = g_timeBuffer[idx5];
-                                idx2 = 0;
-                                *(volatile u8*)&g_timeBuffer[idx2] = ((x / 10) << 4) | (x % 10);
-                                idx3 = 0;
-                                z = g_timeBuffer[idx3];
-                                yq = y / 10;
-                                zq = z / 10;
-                                g_timeBuffer[1] = (yq << 4) | (z - zq * 10);
+                                /* Volatile stores prevent GCC from forwarding these writes;
+                                   the following plain reads are also required for the match. */
+                                midpointMinutesStoreIndex = 0;
+                                *(volatile u8*)&g_cdSeekPositionBcd[midpointMinutesStoreIndex] = midpointMinutes;
+                                midpointMinutesReadIndex = 0;
+                                midpointMinutesValue = g_cdSeekPositionBcd[midpointMinutesReadIndex];
+                                midpointSecondsStoreIndex = 1;
+                                *(volatile u8*)&g_cdSeekPositionBcd[midpointSecondsStoreIndex] = midpointSeconds;
+                                midpointSecondsReadIndex = 1;
+                                midpointSecondsValue = g_cdSeekPositionBcd[midpointSecondsReadIndex];
+                                encodedMinutesStoreIndex = 0;
+                                *(volatile u8*)&g_cdSeekPositionBcd[encodedMinutesStoreIndex] =
+                                    ((midpointMinutesValue / 10) << 4) | (midpointMinutesValue % 10);
+                                encodedMinutesReadIndex = 0;
+                                encodedMinutes = g_cdSeekPositionBcd[encodedMinutesReadIndex];
+                                midpointSecondTens = midpointSecondsValue / 10;
+                                encodedMinuteTens = encodedMinutes / 10;
+                                g_cdSeekPositionBcd[1] = (midpointSecondTens << 4) | (encodedMinutes - encodedMinuteTens * 10);
 
-                                SendCdCommand(0xC);
-                                g_checkPSState = 5;
+                                SendCdCommand(CHECKPS_CD_CMD_READ_TOC);
+                                g_checkpsState = CHECKPS_STATE_WAIT_READ_TOC;
                             }
                         }
                     }
-                    state = 7;
+                    stepResult = CHECKPS_STATE_WAIT_SETLOC;
                 }
             }
             break;
 
-        case 5: /* Wait for screen 0xC; on confirm button (statusFlag bit 6), fill g_CmdBuf with encoded time and send */
+        case CHECKPS_STATE_WAIT_READ_TOC: /* ReadTOC can supply the position bytes later used by Setloc. */
         {
-            state = PollCdResponse(0xC);
-            switch (state)
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_READ_TOC);
+            switch (stepResult)
             {
-            case -1:
+            case CHECKPS_CD_POLL_DISK_ERROR:
             {
-                /* Post-increment keeps sf twice-set and every access a bare
-                   (mem (reg)), so both flag bytes read through one base
-                   register as in the original (required to match). */
-                u8* sf = (u8*)&g_statusFlag;
-                u8* base_sf = sf;
-                if (base_sf[0] & 1)
+                /* The post-increment is intentional: it makes both response-byte
+                   reads use one base register in the original code shape. */
+                u8* responseCursor = (u8*)&g_cdResponse;
+                u8* responseBase = responseCursor;
+                if (responseBase[0] & 1)
                 {
-                    if (*++sf & 0x40)
+                    if (*++responseCursor & 0x40)
                     {
-                        u8 tb0 = g_timeBuffer[0];
-                        u8 tb1 = g_timeBuffer[1];
-                        u8* cmd;
-                        u32 q;
-                        state = 5;
-                        q = ((u32)g_CmdBuf + (u32)arg0) - (u32)arg0;
-                        cmd = (u8*)q;
-                        cmd[2] = 0;
-                        *cmd++ = tb0;
-                        *cmd = tb1;
-                        SendCdCommand(3);
-                        g_checkPSState = 7;
+                        u8 seekMinuteBcd = g_cdSeekPositionBcd[0];
+                        u8 seekSecondBcd = g_cdSeekPositionBcd[1];
+                        u8* commandParams;
+                        u32 commandParamsAddress;
+                        stepResult = CHECKPS_STATE_WAIT_READ_TOC;
+                        commandParamsAddress =
+                            ((u32)g_cdCommandParameters + (u32)singleStep) - (u32)singleStep;
+                        commandParams = (u8*)commandParamsAddress;
+                        commandParams[2] = 0;
+                        *commandParams++ = seekMinuteBcd;
+                        *commandParams = seekSecondBcd;
+                        SendCdCommand(CHECKPS_CD_CMD_SETLOC);
+                        g_checkpsState = CHECKPS_STATE_WAIT_SETLOC;
                     }
                 }
                 else
                 {
-                    new_var2 = 1;
-                    g_checkPSState = new_var2;
-                    state = -1;
+                    restartStateOrVsync = 1;
+                    g_checkpsState = restartStateOrVsync;
+                    stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                 }
             }
             break;
 
-            case 0:
-                state = 5;
+            case CHECKPS_CD_POLL_PENDING:
+                stepResult = CHECKPS_STATE_WAIT_READ_TOC;
                 break;
 
-            case 1:
-                SendCdCommand(0xD);
-                g_checkPSState = 6;
-                state = 5;
+            case CHECKPS_CD_POLL_COMPLETE:
+                SendCdCommand(CHECKPS_CD_CMD_GET_ID);
+                g_checkpsState = CHECKPS_STATE_WAIT_GET_ID;
+                stepResult = CHECKPS_STATE_WAIT_READ_TOC;
                 break;
 
-            case -2:
-                SendCdCommand(0);
-                g_checkPSState = 0x11;
-                state = -1;
+            case CHECKPS_CD_POLL_SHELL_OPEN:
+                SendCdCommand(CHECKPS_CD_CMD_NOP);
+                g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                 break;
 
             default:
-                state = 5;
+                stepResult = CHECKPS_STATE_WAIT_READ_TOC;
                 break;
             }
 
             break;
         }
 
-        case 6: /* Wait for screen 0xD; on confirm, fill g_CmdBuf with encoded time and send */
-            state = PollCdResponse(0xD);
-            switch (state)
+        case CHECKPS_STATE_WAIT_GET_ID: /* GetID shares the Setloc parameter setup path. */
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_GET_ID);
+            switch (stepResult)
             {
-            case -1:
-                ((s32 (*)(void))ExitCheckPS)();
-                state = -1;
+            case CHECKPS_CD_POLL_DISK_ERROR:
+                ((s32 (*)(void))ShowHardwareModificationWarningAndExit)();
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                 break;
 
-            case 1:
+            case CHECKPS_CD_POLL_COMPLETE:
             {
-                u8 tb0;
-                u8 tb1;
-                u8* cmd;
-                u32 q;
-                state = 6;
-            cmd6_body:
-                tb0 = g_timeBuffer[0];
-                tb1 = g_timeBuffer[1];
-                q = ((u32)g_CmdBuf + (u32)arg0) - (u32)arg0;
-                cmd = (u8*)q;
-                cmd[2] = 0;
-                *cmd++ = tb0;
-                *cmd = tb1;
-                SendCdCommand(3 + ((state ^ arg0) ^ state ^ arg0));
-                g_checkPSState = 7;
+                u8 seekMinuteBcd;
+                u8 seekSecondBcd;
+                u8* commandParams;
+                u32 commandParamsAddress;
+                stepResult = CHECKPS_STATE_WAIT_GET_ID;
+            get_id_apply_seek_position:
+                seekMinuteBcd = g_cdSeekPositionBcd[0];
+                seekSecondBcd = g_cdSeekPositionBcd[1];
+                commandParamsAddress =
+                    ((u32)g_cdCommandParameters + (u32)singleStep) - (u32)singleStep;
+                commandParams = (u8*)commandParamsAddress;
+                commandParams[2] = 0;
+                *commandParams++ = seekMinuteBcd;
+                *commandParams = seekSecondBcd;
+                /* This cancels to SETLOC; preserve the expression shape for GCC 2.7.2 register allocation. */
+                SendCdCommand(3 + ((stepResult ^ singleStep) ^ stepResult ^ singleStep));
+                g_checkpsState = CHECKPS_STATE_WAIT_SETLOC;
             }
             /* fall through */
-            case 0:
-                state = 6;
+            case CHECKPS_CD_POLL_PENDING:
+                stepResult = CHECKPS_STATE_WAIT_GET_ID;
                 break;
 
-            case -2:
-                SendCdCommand(0);
-                g_checkPSState = 0x11;
-                state = -1;
+            case CHECKPS_CD_POLL_SHELL_OPEN:
+                SendCdCommand(CHECKPS_CD_CMD_NOP);
+                g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                 break;
 
             default:
-                state = 6;
+                stepResult = CHECKPS_STATE_WAIT_GET_ID;
                 break;
             }
 
             break;
 
-        case 7:
-            state = PollCdResponse(3);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_SETLOC:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_SETLOC);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall7:
-                if (state < 0)
+            setloc_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 0x11;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 7;
+                        stepResult = CHECKPS_STATE_WAIT_SETLOC;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            g_CmdBuf[0] = (u8)state;
-                            SendCdCommand(5);
-                            g_checkPSState = 8;
+                            g_cdCommandParameters[0] = (u8)stepResult;
+                            SendCdCommand(CHECKPS_CD_CMD_SETMODE);
+                            g_checkpsState = CHECKPS_STATE_WAIT_SETMODE;
                         }
                     }
-                    state = 7;
+                    stepResult = CHECKPS_STATE_WAIT_SETLOC;
                 }
             }
             break;
 
-        case 8:
-            state = PollCdResponse(5);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_SETMODE:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_SETMODE);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall8:
-                if (state < 0)
+            setmode_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 0x11;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 8;
+                        stepResult = CHECKPS_STATE_WAIT_SETMODE;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            g_vsyncTimestamp = VSync(-1);
-                            g_checkPSState = 9;
+                            g_checkpsVsyncTimestamp = VSync(-1);
+                            g_checkpsState = CHECKPS_STATE_SEEK_DELAY;
                         }
                     }
-                    state = 8;
+                    stepResult = CHECKPS_STATE_WAIT_SETMODE;
                 }
             }
             break;
 
-        case 9: /* Wait 3 vsyncs, then show screen 4 */
+        case CHECKPS_STATE_SEEK_DELAY: /* Delay three VSync intervals before SeekP. */
 
-            new_var2 = VSync(-1);
-            if ((g_vsyncTimestamp + 3) < new_var2)
+            restartStateOrVsync = VSync(-1);
+            if ((g_checkpsVsyncTimestamp + 3) < restartStateOrVsync)
             {
-                SendCdCommand(4);
-                g_checkPSState = 0xA;
+                SendCdCommand(CHECKPS_CD_CMD_SEEK_P);
+                g_checkpsState = CHECKPS_STATE_WAIT_SEEK_P;
             }
-            state = 9;
+            stepResult = CHECKPS_STATE_SEEK_DELAY;
             break;
 
-        case 10:
-            state = PollCdResponse(4);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_SEEK_P:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_SEEK_P);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall10:
-                if (state < 0)
+            seek_p_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 0x11;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 0xA;
+                        stepResult = CHECKPS_STATE_WAIT_SEEK_P;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            SendCdCommand(7);
-                            g_checkPSState = 0xB;
+                            SendCdCommand(CHECKPS_CD_CMD_MUTE);
+                            g_checkpsState = CHECKPS_STATE_WAIT_MUTE;
                         }
                     }
-                    state = 0xA;
+                    stepResult = CHECKPS_STATE_WAIT_SEEK_P;
                 }
             }
             break;
 
-        case 11:
-            state = PollCdResponse(7);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_MUTE:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_MUTE);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall11:
-                if (state < 0)
+            mute_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 0x11;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 0xB;
+                        stepResult = CHECKPS_STATE_WAIT_MUTE;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            SendCdCommand(8);
-                            g_checkPSState = 0xC;
+                            SendCdCommand(CHECKPS_CD_CMD_PLAY);
+                            g_checkpsState = CHECKPS_STATE_WAIT_PLAY;
                         }
                     }
-                    state = 0xB;
+                    stepResult = CHECKPS_STATE_WAIT_MUTE;
                 }
             }
             break;
 
-        case 12:
-            state = PollCdResponse(8);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_PLAY:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_PLAY);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall12:
-                if (state < 0)
+            play_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 0x11;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 0xC;
+                        stepResult = CHECKPS_STATE_WAIT_PLAY;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            g_CmdBuf[0] = 4;
-                            SendCdCommand(9);
-                            g_checkPSState = 0xD;
+                            g_cdCommandParameters[0] = 4;
+                            SendCdCommand(CHECKPS_CD_CMD_TEST_04);
+                            g_checkpsState = CHECKPS_STATE_WAIT_TEST_04;
                         }
                     }
-                    state = 0xC;
+                    stepResult = CHECKPS_STATE_WAIT_PLAY;
                 }
             }
             break;
 
-        case 13:
-            state = PollCdResponse(9);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_TEST_04:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_TEST_04);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall13:
-                if (state < 0)
+            test_04_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 0x11;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 0xD;
+                        stepResult = CHECKPS_STATE_WAIT_TEST_04;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            g_vsyncTimestamp = VSync(-1);
-                            g_checkPSState = 0xE;
+                            g_checkpsVsyncTimestamp = VSync(-1);
+                            g_checkpsState = CHECKPS_STATE_TEST_05_DELAY;
                         }
                     }
-                    state = 0xD;
+                    stepResult = CHECKPS_STATE_WAIT_TEST_04;
                 }
             }
             break;
 
-        case 14: /* Wait ~200 vsyncs (~3.3s), then set g_CmdBuf[0]=5 and show screen 0xA */
-            new_var2 = VSync(-1);
-            if ((g_vsyncTimestamp + 0xC8) < new_var2)
+        case CHECKPS_STATE_TEST_05_DELAY: /* Delay 200 VSync intervals before Test(0x05). */
+            restartStateOrVsync = VSync(-1);
+            if ((g_checkpsVsyncTimestamp + 0xC8) < restartStateOrVsync)
             {
-                g_CmdBuf[0] = 5;
-                SendCdCommand(0xA);
-                g_checkPSState = 0xF;
+                g_cdCommandParameters[0] = 5;
+                SendCdCommand(CHECKPS_CD_CMD_TEST_05);
+                g_checkpsState = CHECKPS_STATE_WAIT_TEST_05;
             }
-            state = 0xE;
+            stepResult = CHECKPS_STATE_TEST_05_DELAY;
             break;
 
-        case 15:
-            state = PollCdResponse(10);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_TEST_05:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_TEST_05);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall15:
-                if (state < 0)
+            test_05_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 17;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 15;
+                        stepResult = CHECKPS_STATE_WAIT_TEST_05;
                     }
                 }
                 else
                 {
-                    if (state != 0)
+                    if (stepResult != CHECKPS_CD_POLL_PENDING)
                     {
-                        if (state == 1)
+                        if (stepResult == CHECKPS_CD_POLL_COMPLETE)
                         {
-                            state = 15;
-                        s15_body:
-                            if (g_RTCTimeBCD[0] != 0)
+                            stepResult = CHECKPS_STATE_WAIT_TEST_05;
+                        test_05_check_response:
+                            if (g_cdResponsePayload[0] != 0)
                             {
-                                SendCdCommand(0);
-                                g_checkPSState = 16;
+                                SendCdCommand(CHECKPS_CD_CMD_NOP);
+                                g_checkpsState = CHECKPS_STATE_WAIT_FAILURE_NOP;
                             }
                             else
                             {
-                                g_vsyncTimestamp = VSync(-1);
-                                g_checkPSState = 19;
+                                g_checkpsVsyncTimestamp = VSync(-1);
+                                g_checkpsState = CHECKPS_STATE_PAUSE_DELAY;
                             }
                         }
                     }
-                    state = 15;
+                    stepResult = CHECKPS_STATE_WAIT_TEST_05;
                 }
             }
             break;
 
-        case 16:
-            state = PollCdResponse(0);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_FAILURE_NOP:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_NOP);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
             }
             else
             {
-            fall16:
-                if (state < 0)
+            failure_nop_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state == -2)
+                    if (stepResult == CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        SendCdCommand(0);
-                        g_checkPSState = 17;
-                        state = -1;
+                        SendCdCommand(CHECKPS_CD_CMD_NOP);
+                        g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                        stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     }
                     else
                     {
-                        state = 16;
+                        stepResult = CHECKPS_STATE_WAIT_FAILURE_NOP;
                     }
                 }
                 else
                 {
-                    if (state == 0)
+                    if (stepResult == CHECKPS_CD_POLL_PENDING)
                     {
-                        state = 16 + ((state & 1) >> 1);
+                        stepResult = 16 + ((stepResult & 1) >> 1);
                         break;
                     }
-                    if (state != 1)
+                    if (stepResult != CHECKPS_CD_POLL_COMPLETE)
                     {
-                        state = 16;
+                        stepResult = CHECKPS_STATE_WAIT_FAILURE_NOP;
                         break;
                     }
-                    state = 16;
-                    ExitCheckPS();
+                    stepResult = CHECKPS_STATE_WAIT_FAILURE_NOP;
+                    ShowHardwareModificationWarningAndExit();
                     break;
                 }
             }
             break;
-            state = 16;
+            stepResult = CHECKPS_STATE_WAIT_FAILURE_NOP;
             break;
 
-        case 17:
-            state = PollCdResponse(0);
-            if (state == -1)
+        case CHECKPS_STATE_WAIT_RECOVERY_NOP:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_NOP);
+            if (stepResult == CHECKPS_CD_POLL_DISK_ERROR)
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                 break;
             }
             else
             {
-            fall17:
-                if (state < 0)
+            recovery_nop_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state != -2)
+                    if (stepResult != CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        state = 16;
+                        stepResult = CHECKPS_STATE_WAIT_FAILURE_NOP;
                         break;
                     }
                 }
                 else
                 {
-                    switch (state)
+                    switch (stepResult)
                     {
-                    case 1:
-                        g_checkPSState = (u32)state;
+                    case CHECKPS_CD_POLL_COMPLETE:
+                        g_checkpsState = (u32)stepResult;
                         /* fall through */
-                    case 0:
+                    case CHECKPS_CD_POLL_PENDING:
                     default:
-                    pos_default17:
-                        state = 16 + ((state & 1) >> 1);
+                    recovery_nop_finalize:
+                        stepResult = 16 + ((stepResult & 1) >> 1);
                         break;
                     }
                     break;
                 }
             }
-        neg17:
-            SendCdCommand(0);
-            state = 16;
+        recovery_nop_reset_command:
+            SendCdCommand(CHECKPS_CD_CMD_NOP);
+            stepResult = CHECKPS_STATE_WAIT_FAILURE_NOP;
             break;
 
-        case 18:
-            state = PollCdResponse(0xB);
-            if (state != -1)
+        case CHECKPS_STATE_WAIT_PAUSE:
+            stepResult = PollCdResponse(CHECKPS_CD_CMD_PAUSE);
+            if (stepResult != CHECKPS_CD_POLL_DISK_ERROR)
             {
-            fall18:
-                if (state < 0)
+            pause_poll_result:
+                if (stepResult < 0)
                 {
-                    if (state != -2)
+                    if (stepResult != CHECKPS_CD_POLL_SHELL_OPEN)
                     {
-                        state = 18;
-                    bar18:
+                        stepResult = CHECKPS_STATE_WAIT_PAUSE;
+                    pause_done:
                         break;
                     }
-                    SendCdCommand(0);
-                    g_checkPSState = 0x11;
-                    state = -1;
+                    SendCdCommand(CHECKPS_CD_CMD_NOP);
+                    g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                    stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     break;
                 }
-                if (state == 0)
+                if (stepResult == CHECKPS_CD_POLL_PENDING)
                 {
                 }
-                else if (state != 1)
+                else if (stepResult != CHECKPS_CD_POLL_COMPLETE)
                 {
-                    state = 18;
+                    stepResult = CHECKPS_STATE_WAIT_PAUSE;
                     break;
                 }
-                if (state < 0)
+                if (stepResult < 0)
                 {
-                neg2_18:
-                    SendCdCommand(0);
-                    g_checkPSState = 0x11;
-                    state = -1;
+                pause_command_error:
+                    SendCdCommand(CHECKPS_CD_CMD_NOP);
+                    g_checkpsState = CHECKPS_STATE_WAIT_RECOVERY_NOP;
+                    stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                     break;
                 }
             }
             else
             {
-                new_var2 = 1;
-                g_checkPSState = new_var2;
-                state = -1;
+                restartStateOrVsync = 1;
+                g_checkpsState = restartStateOrVsync;
+                stepResult = CHECKPS_CD_POLL_DISK_ERROR;
                 break;
             }
-            if (state != 0)
-                g_checkPSState = 0;
-        default18:
-            state = 18 + ((state & 1) >> 1);
+            if (stepResult != CHECKPS_CD_POLL_PENDING)
+                g_checkpsState = CHECKPS_STATE_IDLE;
+        state18_finalize:
+            stepResult = 18 + ((stepResult & 1) >> 1);
             break;
 
-        case 19: /* Wait 10 vsyncs, then show screen 0xB */
-            new_var2 = VSync(-1);
-            if ((g_vsyncTimestamp + 10) < new_var2)
+        case CHECKPS_STATE_PAUSE_DELAY: /* Delay ten VSync intervals before Pause. */
+            restartStateOrVsync = VSync(-1);
+            if ((g_checkpsVsyncTimestamp + 10) < restartStateOrVsync)
             {
-                SendCdCommand(11);
-                g_checkPSState = 18;
+                SendCdCommand(CHECKPS_CD_CMD_PAUSE);
+                g_checkpsState = CHECKPS_STATE_WAIT_PAUSE;
             }
-            state = 19;
+            stepResult = CHECKPS_STATE_PAUSE_DELAY;
             break;
 
-        case 0: /* Idle / reset */
-            state = 0;
+        case CHECKPS_STATE_IDLE: /* Idle. */
+            stepResult = CHECKPS_STATE_IDLE;
             break;
         }
 
-        if ((arg0 == 0) && (state != 0))
+        if ((singleStep == 0) && (stepResult != CHECKPS_STATE_IDLE))
         {
             continue;
         }
-        return state;
-    pos_exit17:
-        if ((arg0 == 0) && (state != 0))
+        return stepResult;
+    recovery_nop_return:
+        if ((singleStep == 0) && (stepResult != CHECKPS_STATE_IDLE))
         {
             continue;
         }
-        return state;
+        return stepResult;
     }
 }
 
-/**
- * Matches 100% with GCC 2.7.2 + GNU AS.
- */
-s32 PollCdResponse(s32 arg0)
+/** Poll and consume the response for a CHECKPS CD command. */
+CheckPSCdPollResult PollCdResponse(CheckPSCdCommandIndex command)
 {
-    u8 irqThresh;
-    u8 val1;
-    u8 val2;
-    s32 temp_v1;
-    s32 temp_a2;
-    s32 i;
-    int new_var;
-    s32 j;
-    irqThresh = g_cdCmdTable[arg0].irqThresh;
+    u8 irqCodeSumTarget;
+    u8 irqSampleA;
+    u8 irqSampleB;
+    s32 irqCode;
+    s32 irqCodeByte;
+    s32 delayCounter;
+    int stableIrq;
+    s32 responseIndex;
+    irqCodeSumTarget = g_cdCommandTable[command].irqCodeSumTarget;
     *g_cdStatusRegister = 1;
-    val1 = *((volatile u8*)g_cdIrqRegister);
-    val2 = *((volatile u8*)g_cdIrqRegister);
-    if ((new_var = val1 & 7) == (val2 & 7))
+    irqSampleA = *g_cdIrqRegister;
+    irqSampleB = *g_cdIrqRegister;
+    if ((stableIrq = irqSampleA & 7) == (irqSampleB & 7))
     {
-        temp_v1 = new_var;
-        temp_a2 = (unsigned char)temp_v1;
-        if (temp_a2 != 0)
+        irqCode = stableIrq;
+        irqCodeByte = (unsigned char)irqCode;
+        if (irqCodeByte != 0)
         {
-            g_cdIrqAccum = g_cdIrqAccum + temp_a2;
+            g_cdIrqCodeSum = g_cdIrqCodeSum + irqCodeByte;
             *g_cdStatusRegister = 1;
             *g_cdIrqRegister = 7;
-            i = 0;
+            delayCounter = 0;
+            /* Preserve the original four address-zero writes used as a short hardware delay. */
             do
             {
-                *((int*)0) = i;
-                i++;
-            } while (i < 4);
-            if (g_cdIrqAccum >= (s32)irqThresh)
+                *((int*)0) = delayCounter;
+                delayCounter++;
+            } while (delayCounter < 4);
+            if (g_cdIrqCodeSum >= (s32)irqCodeSumTarget)
             {
-                g_cdIrqAccum = 0;
-                if (temp_v1 == 5)
+                g_cdIrqCodeSum = 0;
+                if (irqCode == CHECKPS_CD_IRQ_DISK_ERROR)
                 {
                     while (1)
                     {
-                        g_statusFlag.unk0 = *g_cdResponseRegister;
+                        g_cdResponse.status = *g_cdResponseRegister;
                         break;
                     }
-                    g_statusFlag.unk1 = *g_cdResponseRegister;
+                    g_cdResponse.detail = *g_cdResponseRegister;
                     *g_cdStatusRegister = 1;
                     *g_cdDataRegister = 0x1F;
-                    if (!(g_statusFlag.unk0 & 0x10))
+                    if (!(g_cdResponse.status & CHECKPS_CD_STATUS_SHELL_OPEN))
                     {
-                        return -1;
+                        return CHECKPS_CD_POLL_DISK_ERROR;
                     }
 
-                    return -2;
+                    return CHECKPS_CD_POLL_SHELL_OPEN;
                 }
                 else
                 {
-                    temp_a2 = 0;
-                    j = temp_a2;
-                    if (g_cdCmdTable[arg0].respCount != temp_a2)
+                    irqCodeByte = 0;
+                    responseIndex = irqCodeByte;
+                    if (g_cdCommandTable[command].responseCount != irqCodeByte)
                     {
                         do
                         {
-                            ((u8*)(&g_statusFlag))[j] = *g_cdResponseRegister;
-                            j++;
-                        } while (j < (s32)g_cdCmdTable[arg0].respCount);
+                            ((u8*)(&g_cdResponse))[responseIndex] = *g_cdResponseRegister;
+                            responseIndex++;
+                        } while (responseIndex < (s32)g_cdCommandTable[command].responseCount);
                     }
                     *g_cdStatusRegister = 1;
                     *g_cdDataRegister = 0x1F;
-                    if (arg0 != 0xA)
+                    if (command != CHECKPS_CD_CMD_TEST_05)
                     {
-                        j = 0;
+                        responseIndex = 0;
                         while (1)
                         {
-                            if (j)
-                                return -2;
-                            j = g_statusFlag.unk0;
-                            j &= 0x10;
-                            if (!j)
+                            if (responseIndex)
+                                return CHECKPS_CD_POLL_SHELL_OPEN;
+                            responseIndex = g_cdResponse.status;
+                            responseIndex &= 0x10;
+                            if (!responseIndex)
                                 break;
                         }
                     }
-                    return 1;
+                    return CHECKPS_CD_POLL_COMPLETE;
                 }
             }
-            return 0;
+            return CHECKPS_CD_POLL_PENDING;
         }
     }
-    return 0;
+    return CHECKPS_CD_POLL_PENDING;
 }
 
-/**
- * decomp.me link (83.42%%) https://decomp.me/scratch/vhWhP
- * Matches 100% with GNU AS
- */
-void SendCdCommand(int arg0)
+/** Write one CHECKPS command descriptor and its parameters to the CD registers. */
+void SendCdCommand(CheckPSCdCommandIndex command)
 {
-    s32 i = 0;
-    s32* ptr = 0;
-    s32 j;
-    unsigned int idx;
+    s32 delayCounter = 0;
+    s32* addressZeroDelaySink = 0;
+    s32 parameterIndex;
+    unsigned int descriptorByteOffset;
 
     *g_cdStatusRegister = 1;
     *g_cdIrqRegister = 7;
 
-    for (i = 0; i < 4; i++) *ptr = i;
+    /* The original performs four writes through address zero between CD-register
+       updates. Preserve the sequence because it affects the matched instruction stream. */
+    for (delayCounter = 0; delayCounter < 4; delayCounter++) *addressZeroDelaySink = delayCounter;
 
     *g_cdStatusRegister = 1;
     *g_cdDataRegister = 0x18;
     *g_cdStatusRegister = 0;
 
-    idx = arg0 * 4;
+    /* Keep byte indexing through the field pointer: direct table[command] field
+       accesses change GCC 2.7.2 register allocation in this matched function. */
+    descriptorByteOffset = command * sizeof(CdCommandDescriptor);
 
-    j = 0;
-    if ((&g_cdCmdTable->paramCount)[idx])
+    parameterIndex = 0;
+    if ((&g_cdCommandTable->parameterCount)[descriptorByteOffset])
     {
         do
         {
-            *g_cdDataRegister = g_CmdBuf[j];
-            j++;
-        } while (j < (&g_cdCmdTable->paramCount)[idx]);
+            *g_cdDataRegister = g_cdCommandParameters[parameterIndex];
+            parameterIndex++;
+        } while (parameterIndex < (&g_cdCommandTable->parameterCount)[descriptorByteOffset]);
     }
 
     *g_cdStatusRegister = 0;
-    *g_cdResponseRegister = (&g_cdCmdTable->opcode)[arg0 * 4];
+    *g_cdResponseRegister = (&g_cdCommandTable->opcode)[command * 4];
 }
 
-/**
- * decomp.me link (96.94%) https://decomp.me/scratch/rZ9Jk
- * Matches 100% with GNU AS
- */
-void ExitCheckPS(void)
+/** Reset the GPU, display the hardware-modification warning, and terminate. */
+void ShowHardwareModificationWarningAndExit(void)
 {
-    DRAWENV sp18;
-    DISPENV sp78;
-    DR_ENV sp90;
-    unsigned long new_var;
-    u32 spD0[3];
-    FourShorts spE;
-    s32 var_a2;
-    s32 var_s0;
+    DRAWENV drawEnv;
+    DISPENV dispEnv;
+    DR_ENV drawEnvPacket;
+    u32 gpuCommands[3];
+    KanjiDrawStateWords textState;
+    s32 textColor;
+    s32 lineIndex;
     ResetGraph(1);
     StopCallback();
     ResetGraph(5);
-    *((s16*)0x1F801DAA) = 0;
-    SetDefDrawEnv(&sp18, 0, 0, 0x140, 0xF0);
-    SetDefDispEnv(&sp78, 0, 0, 0x140, 0xF0);
-    sp18.isbg = 1;
-    SetDrawEnv(&sp90, &sp18);
-    DrawPrim(&sp90);
-    PutDispEnv(&sp78);
-    spD0[0] = 0x02000000;
-    spD0[1] = 0xE6000002;
-    spD0[2] = 0;
-    DrawPrim(spD0);
-    var_a2 = 0xFFFF;
+    *((s16*)0x1F801DAA) = 0; /* SPU control register. */
+    SetDefDrawEnv(&drawEnv, 0, 0, 0x140, 0xF0);
+    SetDefDispEnv(&dispEnv, 0, 0, 0x140, 0xF0);
+    drawEnv.isbg = 1;
+    SetDrawEnv(&drawEnvPacket, &drawEnv);
+    DrawPrim(&drawEnvPacket);
+    PutDispEnv(&dispEnv);
+    gpuCommands[0] = 0x02000000;
+    gpuCommands[1] = 0xE6000002;
+    gpuCommands[2] = 0;
+    DrawPrim(gpuCommands);
+    textColor = 0xFFFF;
 
-    spE.c = 0x10;
-    spE.d = 1;
+    textState.width = 0x10;
+    textState.height = 1;
 
-    for (var_s0 = 0; var_s0 < 2; var_s0++)
+    for (lineIndex = 0; lineIndex < 2; lineIndex++)
     {
-        spE.a = var_s0 + 0x50;
-        spE.b = var_s0 + 0x5C;
-        DrawString((const char*)&D_8004FCC4, &spE, var_a2);
-        var_a2 = 0x8000;
+        textState.x = lineIndex + 0x50;
+        textState.y = lineIndex + 0x5C;
+        DrawKanjiString((const char*)&g_hardwareModificationWarning, (KanjiDrawState*)&textState, textColor);
+        textColor = 0x8000;
     }
 
-    DrawSymmetricTestPattern();
+    DrawHardwareCheckPattern();
     SetDispMask(1);
     exit();
 }
