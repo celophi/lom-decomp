@@ -2618,49 +2618,32 @@ void akao_seq_resume_song(u8* descriptor)
  * @param key Bank program key to search for; 0 means "no bank".
  * @return Slot index 0-4 if found among @c g_akao_bank_slot_keys, 5 if
  *         @p key matches the @c D_8004D39C sentinel, otherwise 0.
- *
- * @note NOT YET 100% (62.78%, 9/23 exact). Target keeps the two branches of
- *       the outer `key == D_8004D39C` test as genuinely separate code (a
- *       4-instruction structural run: compare, two distinct immediate
- *       loads, a jump) while this compiles into a single shared-value
- *       shortcut (jump.c cross-jump merges the two paths because they both
- *       flow into the same loop/return tail). crossjump_oracle confirms the
- *       target's true shape is one single-exit cluster with 4 predecessors,
- *       matching this function's structure, but does not explain why gcc
- *       still over-merges here. Permuter mutations that scored better all
- *       broke the actual search semantics (resetting the counter inside the
- *       loop) and were rejected. See working/func_80027190/code.c.
- * @see decomp.me (62.78%)
+ * @see decomp.me (100%)
  */
 s32 akao_bank_find_slot(s32 key)
 {
     s32 result;
     s32 index;
+    s32 *base;
 
     result = 0;
     if (key != 0)
     {
+        result = 6;
         if (key == D_8004D39C)
         {
             result = 5;
+            goto done;
         }
-        else
-        {
-            result = 6;
-            result--;
-            while (result != 0)
-            {
-                index = result - 1;
-                if (key == g_akao_bank_slot_keys[index])
-                {
-                    result = index;
-                    break;
-                }
-                result--;
-            }
-        }
+decrement:
+        result--;
+        if (result == 0) goto done;
+        base = g_akao_bank_slot_keys;
+        index = result - 1;
+        if (key != base[index]) goto decrement;
+        result = index;
     }
-    return result;
+done: return result;
 }
 
 /**
