@@ -2889,49 +2889,42 @@ void akao_sfx_play_program_raw(u8* params)
  * @param params Buffer holding the list pointer on entry; voice_alloc_base
  *        (+0x10) is filled in before the calls.
  *
- * @note NOT YET 100% (92.89%, 53/76 exact). Residue is a repeated small
- *       register-role swap: the target copies the u16 entry value into its
- *       own register before adding the cursor (`addu v0,v1,zero` then
- *       `addu v0,v0,a0`), this compile folds the add directly. A separate
- *       named temp for the widened entry and swapping the addition operand
- *       order were both measured inert. See working/func_80027548/code.c.
- * @see decomp.me (92.89%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_play_list(u8* params)
 {
+    u8* list0;
     u8* list;
     u8* base;
     u8* cursor;
     u8* index_ptr;
     s32 count;
-    u16 entry;
-    u16 sentinel;
+    s32 sentinel;
     u8* seq_data0;
     u8* seq_data1;
 
-    list = *(u8**)(params + 0x0);
-    *(s32*)(params + 0x10) = akao_bank_find_slot(*(s32*)(list + 8));
+    list0 = *(u8**)(params + 0x0);
+    *(s32*)(params + 0x10) = akao_bank_find_slot(*(s32*)(list0 + 8));
 
     list = *(u8**)(params + 0x0);
     index_ptr = list + 0x10;
-    base = list + 0x20;
+    base = list;
+    base += 0x20;
     count = *(s32*)(list + 4);
 
     cursor = base + *(s32*)index_ptr;
-    entry = *(u16*)cursor;
-    if (entry != 0xFFFF)
+    if (*(u16*)cursor != 0xFFFF)
     {
-        seq_data0 = cursor + entry + 4;
+        seq_data0 = (u8*)((u32)*(u16*)cursor + (u32)cursor + 4);
     }
     else
     {
         seq_data0 = NULL;
     }
     cursor += 2;
-    entry = *(u16*)cursor;
-    if (entry != 0xFFFF)
+    if (*(u16*)cursor != 0xFFFF)
     {
-        seq_data1 = cursor + entry + 2;
+        seq_data1 = (u8*)((u32)*(u16*)cursor + (u32)cursor + 2);
     }
     else
     {
@@ -2939,28 +2932,26 @@ void akao_sfx_play_list(u8* params)
     }
     akao_sfx_play(params, seq_data0, seq_data1, 0);
 
+    sentinel = 0xFFFF;
     count--;
     if (count != 0)
     {
-        sentinel = 0xFFFF;
         index_ptr += 4;
         do
         {
             cursor = base + *(s32*)index_ptr;
-            entry = *(u16*)cursor;
-            if (entry != sentinel)
+            if (*(u16*)cursor != sentinel)
             {
-                seq_data0 = cursor + entry + 4;
+                seq_data0 = (u8*)((u32)*(u16*)cursor + (u32)cursor + 4);
             }
             else
             {
                 seq_data0 = NULL;
             }
             cursor += 2;
-            entry = *(u16*)cursor;
-            if (entry != sentinel)
+            if (*(u16*)cursor != sentinel)
             {
-                seq_data1 = cursor + entry + 2;
+                seq_data1 = (u8*)((u32)*(u16*)cursor + (u32)cursor + 2);
             }
             else
             {
