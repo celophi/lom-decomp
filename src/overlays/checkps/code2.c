@@ -1,445 +1,414 @@
 #include "checkps.h"
 
-u_long g_textureCacheResetData[] = {
+/*
+ * Nonzero prefix of the 16-color glyph CLUT.  LoadImage reads a 16x1 palette
+ * from this address; the remaining entries are zero in the following linked
+ * memory.
+ */
+u_long g_glyphClutPrefix[] = {
     0xFFFF0000,
     0x0000BDEF,
     0x00000000,
 };
 
-s8 g_TextBuffer[MAX_SHORT_VALUE + 1];
+u8 g_glyphRasterBuffer[MAX_SHORT_VALUE + 1];
 
 /**
- * Global character cache for text rendering, storing up to 256 glyph entries.
- * Each entry contains a character ID and a validity flag indicating if the glyph is currently cached.
+ * Cached character-code slots for the 16x16 text renderer.
+ * Bit 16 is a per-frame usage mark, not a persistent cache-validity bit.
  */
-GlyphCacheEntry g_characterCache[MAX_GLYPH_ENTRIES];
+GlyphCacheEntry g_glyphCache[MAX_GLYPH_ENTRIES];
 
-s32 g_textCursorX;
+s32 g_glyphCursorX;
 
-s32 g_textCursorY;
+s32 g_glyphCursorY;
+/** Next free 4bpp glyph block in the CPU-side staging buffer. */
+u8* g_glyphRasterCursor;
+
+s32 g_textLineStartX;
 
 /**
- * Global cursor pointing to the current position in the text buffer for glyph rendering.
+ * VRAM X coordinate used for the most recently uploaded glyph slot.
  */
-s32 g_glyphBufferCursor;
-
-s32 g_textOriginX;
+s32 g_glyphUploadX;
 
 /**
- * X coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
+ * VRAM Y coordinate used for the most recently uploaded glyph slot.
  */
-s32 g_glyphAtlasX;
-
-/**
- * Y coordinate in the glyph atlas texture, used for placing or retrieving glyphs.
- */
-s32 g_glyphAtlasY;
-
-/**
- * decomp.me link (100%) https://decomp.me/scratch/8Otmf
- */
-void* func_80051BB4(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
+s32 g_glyphUploadY;
+void* DrawSignedDecimal(void* primitive, u_long* otTag, s32 value, s32 x, s32 y, s32 palette, s32 alignment)
 {
-    u16 sp20[7];
-    s32 var_a0;
-    s32 var_t2;
-    s32 var_t6;
+    u16 glyphBuffer[7];
+    s32 firstDigit;
+    s32 magnitude;
+    s32 negative;
 
-    var_t2 = arg2;
-    if (var_t2 < 0)
+    magnitude = value;
+    if (magnitude < 0)
     {
-        var_t2 = -var_t2;
-        var_t6 = 1;
+        magnitude = -magnitude;
+        negative = 1;
     }
     else
     {
-        var_t6 = 0;
+        negative = 0;
     }
+    glyphBuffer[1] = g_decimalGlyphTable[magnitude / 10000];
+    glyphBuffer[2] = g_decimalGlyphTable[(magnitude % 10000) / 1000];
+    glyphBuffer[3] = g_decimalGlyphTable[(magnitude % 1000) / 100];
+    glyphBuffer[4] = g_decimalGlyphTable[(magnitude % 100) / 10];
+    glyphBuffer[5] = g_decimalGlyphTable[magnitude % 10];
 
-    sp20[1] = D_8005D018[var_t2 / 10000];
-    sp20[2] = D_8005D018[(var_t2 % 10000) / 1000];
-    sp20[3] = D_8005D018[(var_t2 % 1000) / 100];
-    sp20[4] = D_8005D018[(var_t2 % 100) / 10];
-    sp20[5] = D_8005D018[var_t2 % 10];
+    firstDigit = 1;
 
-    var_a0 = 1;
+    glyphBuffer[6] = 0;
 
-    sp20[6] = 0;
-
-    while (var_a0 < 5 && sp20[var_a0] == 0x4F82)
+    while (firstDigit < 5 && glyphBuffer[firstDigit] == 0x4F82)
     {
-        var_a0++;
+        firstDigit++;
     }
 
-    if (var_t6 != 0)
+    if (negative != 0)
     {
-        var_a0--;
-        sp20[var_a0] = 0x5B81;
+        firstDigit--;
+        glyphBuffer[firstDigit] = 0x5B81;
     }
-
-    arg0 = func_80051E58(arg0, arg1, (u8*)&sp20[var_a0], arg3, arg4, arg5, arg6);
-    return arg0;
+    primitive = DrawCachedText(primitive, otTag, (u8*)&glyphBuffer[firstDigit], x, y, palette, alignment);
+    return primitive;
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/jqJzK
- */
-void func_80051DD4(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5)
+void DrawHexByte(void* primitive, u_long* otTag, s32 value, s32 x, s32 y, s32 alignment)
 {
-    s32 new_var;
-    Sp20Data sp;
-    s32 temp;
-    u16* new_var3;
-
-    temp = arg2 / 16;
-    new_var3 = &D_8005D030[temp];
-    new_var = arg2 % 16;
-    sp.sp20 = *new_var3;
-    sp.sp22 = D_8005D030[new_var];
-    sp.sp24 = 0;
-    func_80051E58((void*)arg0, (s32*)arg1, (u8*)(&sp), arg3, arg4, 0, arg5);
+    s32 lowNibble;
+    EncodedGlyphPair glyphPair;
+    s32 highNibble;
+    u16* highGlyph;
+    highNibble = value / 16;
+    highGlyph = &g_hexGlyphTable[highNibble];
+    lowNibble = value % 16;
+    glyphPair.firstGlyph = *highGlyph;
+    glyphPair.secondGlyph = g_hexGlyphTable[lowNibble];
+    glyphPair.terminator = 0;
+    DrawCachedText(primitive, otTag, (u8*)&glyphPair, x, y, 0, alignment);
 }
 
-/**
- * decomp.me link (100%) https://decomp.me/scratch/gVtK1
- */
-void* func_80051E58(void* arg0, s32* arg1, u8* arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6)
+void* DrawCachedText(void* primitive, u_long* otTag, const u8* text, s32 x, s32 y, s32 palette, s32 alignment)
 {
-    u8* s = arg2;
-    s32 count = 0;
-    u32 old;
-    u16 val;
-    u8* p;
-
+    const u8* cursor = text;
+    s32 glyphCount = 0;
+    u32 oldTag;
+    u16 characterCode;
+    const u8* scan;
     /* Count characters */
-    if (*s >= 0x20)
+    if (*cursor >= 0x20)
     {
-        p = s;
+        scan = cursor;
         do
         {
-            val = *p;
+            characterCode = *scan;
 
-            if (val >= 0x80)
+            if (characterCode >= 0x80)
             {
-                p++;
+                scan++;
             }
 
-            p++;
-            count++;
+            scan++;
+            glyphCount++;
 
-        } while (*p >= 0x20);
+        } while (*scan >= 0x20);
     }
 
     /* Alignment adjustment */
-    switch (arg6)
+    switch (alignment)
     {
     case 1:
-        arg3 -= 16 * count;
+        x -= 16 * glyphCount;
         break;
 
     case 2:
-        arg3 -= 8 * count;
+        x -= 8 * glyphCount;
         break;
 
     case 0:
     default:
         break;
     }
-
-    g_textOriginX = arg3;
-    g_textCursorX = arg3;
-    g_textCursorY = arg4;
+    g_textLineStartX = x;
+    g_glyphCursorX = x;
+    g_glyphCursorY = y;
 
     /* Main loop */
     while (1)
     {
-        unsigned long c = *s;
+        unsigned long leadByte = *cursor;
 
-        if (c == 0x20)
+        if (leadByte == 0x20)
         {
-            s++;
-            g_textCursorX += 0x10;
+            cursor++;
+            g_glyphCursorX += 0x10;
             continue;
         }
 
-        if (c >= 0x80)
+        if (leadByte >= 0x80)
         {
-            val = s[0];
-            val = (val << 8) | s[1];
-            s += 2;
+            characterCode = cursor[0];
+            characterCode = (characterCode << 8) | cursor[1];
+            cursor += 2;
         }
         else
         {
-            if (c < 0x20)
+            if (leadByte < 0x20)
             {
                 break;
             }
-
-            val = (u16)(*s - 0x7AE1);
-            s++;
+            characterCode = (u16)(*cursor - 0x7AE1);
+            cursor++;
         }
 
-        arg0 = RenderGlyph(arg0, arg1, val, arg5);
+        primitive = RenderCachedGlyph(primitive, otTag, characterCode, palette);
     }
 
     /* Final write */
-    ((u8*)arg0)[3] = 1;
-    *((u32*)((u8*)arg0 + 4)) = 0xE100000F;
+    ((u8*)primitive)[3] = 1;
+    *((u32*)((u8*)primitive + 4)) = 0xE100000F;
 
-    old = *((u32*)arg0);
-    *((u32*)arg0) = (old & 0xFF000000) | ((*arg1) & 0xFFFFFF);
+    oldTag = *((u32*)primitive);
+    *((u32*)primitive) = (oldTag & 0xFF000000) | ((*otTag) & 0xFFFFFF);
 
-    *arg1 = ((*arg1) & 0xFF000000) | (((u32)arg0) & 0xFFFFFF);
+    *otTag = ((*otTag) & 0xFF000000) | (((u32)primitive) & 0xFFFFFF);
 
-    return ((u8*)arg0) + 8;
+    return ((u8*)primitive) + 8;
 }
-
-/**
- * decomp.me link (100%) https://decomp.me/scratch/6ygLn
- */
-s32 RenderGlyph(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void* RenderCachedGlyph(void* primitive, u_long* otTag, s32 characterCode, s32 palette)
 {
-    u32* ptr;
-    u8* font_data;
-    unsigned int new_var3;
-    int new_var4;
+    GlyphCacheEntry* cacheEntry;
+    u8* fontData;
+    unsigned int requestedCode;
+    int highNibbleColor;
     s32 slot;
-    int new_var;
-    unsigned int new_var2;
-    s32 new_var5;
+    int lowBitSet;
+    unsigned int maskAllBits;
+    s32 code;
     RECT rect;
 
-    u8* dest;
-    int inc;
-    int inc16;
-    int outer;
-    int middle;
+    u8* raster;
+    int colorIndex;
+    int highNibbleIncrement;
+    int row;
+    int sourceByte;
 
     u16 mask;
-    u8 font_byte;
-    volatile u8* vptr;
-    u8 temp;
-
-    new_var5 = arg2;
+    volatile u8* rasterByte;
+    u8 packedPixels;
+    code = characterCode;
     slot = 0;
-    new_var3 = new_var5 & 0xFFFF;
-    ptr = g_characterCache;
+    requestedCode = code & 0xFFFF;
+    cacheEntry = g_glyphCache;
 
     while (slot < 0x100)
     {
-        if (new_var3 == ((u16)(*ptr)))
+        if (requestedCode == (u16)cacheEntry->raw)
         {
-            return CreateGlyphInstance(arg0, arg1, slot);
+            return EmitGlyphSprite(primitive, otTag, slot);
         }
         slot++;
-        ptr++;
+        cacheEntry++;
     }
 
-    font_data = Krom2RawAdd(new_var5 & 0xFFFF);
-    if (font_data == ((u8*)-1))
+    fontData = (u8*)Krom2RawAdd(code & 0xFFFF);
+    if (fontData == ((u8*)-1))
     {
-        return arg0;
+        return primitive;
     }
 
-    dest = g_glyphBufferCursor;
-    inc = arg3 + 1;
-    inc16 = inc * 16;
-
-    for (outer = 0; outer < 15; outer++)
+    raster = g_glyphRasterCursor;
+    colorIndex = palette + 1;
+    highNibbleIncrement = colorIndex * 16;
+    for (row = 0; row < 15; row++)
     {
-        new_var4 = inc16;
+        highNibbleColor = highNibbleIncrement;
 
-        for (middle = 0; middle < 2; middle++)
+        for (sourceByte = 0; sourceByte < 2; sourceByte++)
         {
             mask = 0x80;
 
             for (slot = 0; slot < 4; slot++)
             {
-                *dest = ((*font_data) & mask) ? (inc) : (0);
+                *raster = ((*fontData) & mask) ? (colorIndex) : (0);
 
-                mask >>= 1 & (new_var2 = 0xFFFFu);
-                new_var = (*font_data) & mask;
+                mask >>= 1 & (maskAllBits = 0xFFFFu);
+                lowBitSet = (*fontData) & mask;
 
-                vptr = (volatile u8*)dest;
-                temp = *vptr;
-
-                if (new_var)
+                rasterByte = (volatile u8*)raster;
+                packedPixels = *rasterByte;
+                if (lowBitSet)
                 {
-                    temp += new_var4;
+                    packedPixels += highNibbleColor;
                 }
 
-                *vptr = temp;
+                *rasterByte = packedPixels;
 
                 mask >>= 1;
-                dest++;
+                raster++;
             }
 
-            font_data++;
+            fontData++;
         }
     }
 
     slot = 0;
-    while ((slot < 0x100) && (g_characterCache[slot].raw != 0))
+    while ((slot < 0x100) && (g_glyphCache[slot].raw != 0))
     {
         slot++;
     }
 
     if (slot == 0x100)
     {
-        return arg0;
+        return primitive;
     }
+    g_glyphCache[slot].raw = code & (0xFFFF & 0xFFFFFFFFu);
+    primitive = EmitGlyphSprite(primitive, otTag, slot);
 
-    g_characterCache[slot].raw = new_var5 & (0xFFFF & 0xFFFFFFFFu);
-    arg0 = CreateGlyphInstance(arg0, arg1, slot);
-
-    g_glyphAtlasX = (slot % 16) * 4;
-    g_glyphAtlasY = slot & 0xF0;
+    g_glyphUploadX = (slot % 16) * 4;
+    g_glyphUploadY = slot & 0xF0;
 
     rect.w = 4;
     rect.h = 15;
-    rect.x = g_glyphAtlasX + 0x3C0;
-    rect.y = g_glyphAtlasY;
+    rect.x = g_glyphUploadX + 0x3C0;
+    rect.y = g_glyphUploadY;
 
-    LoadImage(&rect, (u_long*)g_glyphBufferCursor);
+    LoadImage(&rect, (u_long*)g_glyphRasterCursor);
     DrawSync(0);
 
-    g_glyphBufferCursor += 0x80;
-    return arg0;
+    g_glyphRasterCursor += 0x80;
+    return primitive;
 }
-
-GlyphInstance* CreateGlyphInstance(GlyphInstance* instance, GlyphInstance** next, s32 index)
+GlyphSpritePacket* EmitGlyphSprite(GlyphSpritePacket* packet, u_long* otTag, s32 cacheSlot)
 {
-    s32 new_var;
-    s32 var_a0;
-    GlyphInstance* s = instance;
-    s32 instance_masked;
-    s32 old_x;
-    s32 new_x;
-    s32 cond;
+    u32 otTagHighByte;
+    s32 normalizedSlot;
+    GlyphSpritePacket* sprite = packet;
+    u32 packetAddress;
+    s32 oldX;
+    s32 newX;
+    s32 fitsLine;
 
-    // Mark this glyph slot as active in the cache
-    g_characterCache[index].raw |= GLYPH_CACHED_FLAG;
+    // Mark this cache slot as used by the current frame
+    g_glyphCache[cacheSlot].raw |= GLYPH_USED_FLAG;
 
-    // Initialize glyph rendering properties
-    s->u.byte.unk3 = 3;
-    s->unk7 = 0x7C;
-    s->unk5 = 0x80;
-    s->unk6 = 0x80;
-    s->unk4 = 0x80;
+    // Initialize the fixed SPRT packet fields
+    sprite->tag.byte.wordCount = 3;
+    sprite->code = 0x7C;
+    sprite->g = 0x80;
+    sprite->b = 0x80;
+    sprite->r = 0x80;
+    normalizedSlot = cacheSlot;
+    sprite->x = (s16)g_glyphCursorX;
+    sprite->y = (s16)g_glyphCursorY;
 
-    var_a0 = index;
-    s->positionX = (u16)g_textCursorX;
-    s->positionY = (u16)g_textCursorY;
-
-    // Normalize index for atlas offset calculation
-    if (index < 0)
+    // Normalize cacheSlot for atlas offset calculation
+    if (cacheSlot < 0)
     {
-        var_a0 = index + 15;
+        normalizedSlot = cacheSlot + 15;
     }
 
     // Calculate relative UV offsets based on the cache slot
-    s->unkC = (s8)((index - ((var_a0 >> 4) * 0x10)) * 0x10);
-    s->unkD = (s8)(index & 0xF0);
-    s->unkE = 0x7FC0;
+    sprite->u = (u8)((cacheSlot - ((normalizedSlot >> 4) * 0x10)) * 0x10);
+    sprite->v = (u8)(cacheSlot & 0xF0);
+    sprite->clut = 0x7FC0;
+    // Splice the packet into the ordering-table chain using its 24-bit GPU tag.
+    // The upper byte is the packet word count and must be preserved.
+    sprite->tag.raw = (sprite->tag.raw & 0xFF000000) | (*otTag & 0xFFFFFF);
 
-    // Linked List: Connect current instance to the previous instance
-    // We cast *next to u32 to perform bitwise masking on the address
-    s->u.unk0 = (s->u.unk0 & 0xFF000000) | (((u32)*next) & 0xFFFFFF);
+    packetAddress = ((s32)packet) & 0xFFFFFF;
+    otTagHighByte = *otTag & 0xFF000000;
 
-    instance_masked = ((s32)instance) & 0xFFFFFF;
-    new_var = ((u32)*next) & 0xFF000000;
-
-    // Advance the pointer to the next available instance slot (20 bytes)
-    instance = ((char*)instance) + 0x14;
-
+    /* Preserve byte-pointer +0x14 arithmetic: typed packet arithmetic changes GCC 2.7.2 codegen. */
+    packet = (GlyphSpritePacket*)(((char*)packet) + 0x14);
     // Update global X cursor and check for line wrap
-    old_x = g_textCursorX;
-    new_x = old_x + 0x10;
-    cond = (old_x + 0x20) < 640;
-    g_textCursorX = new_x;
+    oldX = g_glyphCursorX;
+    newX = oldX + 0x10;
+    fitsLine = (oldX + 0x20) < 640;
+    g_glyphCursorX = newX;
 
-    // Update the 'next' handle for the following glyph
-    // Cast result back to GlyphInstance* to store it in the double pointer
-    *next = (GlyphInstance*)(u32)(new_var | instance_masked);
+    // Update the 24-bit ordering-table link for the following packet
+    *otTag = otTagHighByte | packetAddress;
 
-    if (!cond)
+    if (!fitsLine)
     {
-        g_textCursorX = g_textOriginX;
-        g_textCursorY += 16;
+        g_glyphCursorX = g_textLineStartX;
+        g_glyphCursorY += 16;
     }
 
-    return instance;
+    return packet;
 }
-
-void InvalidateGlyphCache(void)
+void BeginGlyphCacheFrame(void)
 {
-    s32 index;
-    GlyphCacheEntry* entry;
+    s32 cacheSlot;
+    GlyphCacheEntry* cacheEntry;
 
-    g_glyphBufferCursor = (s32)&g_TextBuffer;
+    g_glyphRasterCursor = g_glyphRasterBuffer;
 
-    index = 0;
-    entry = g_characterCache;
+    cacheSlot = 0;
+    cacheEntry = g_glyphCache;
 
-    // Strip all flags (including isCached) and keep only the charId
-    while (index < MAX_GLYPH_ENTRIES)
+    // Clear the per-frame usage mark while preserving each cached character code
+    while (cacheSlot < MAX_GLYPH_ENTRIES)
     {
-        entry->raw &= 0x0000FFFF;
-        entry++;
-        index++;
+        cacheEntry->raw &= 0x0000FFFF;
+        cacheEntry++;
+        cacheSlot++;
     }
 }
 
-void ClearInvalidGlyphs(void)
+void EvictUnusedGlyphs(void)
 {
-    s32 flag;
-    s32 index;
-    GlyphCacheEntry* entry;
+    s32 usedFlag;
+    s32 cacheSlot;
+    GlyphCacheEntry* cacheEntry;
+    cacheSlot = 0;
+    usedFlag = GLYPH_USED_FLAG;
+    cacheEntry = g_glyphCache;
 
-    index = 0;
-    flag = GLYPH_CACHED_FLAG;
-    entry = g_characterCache;
-
-    while (index < MAX_GLYPH_ENTRIES)
+    while (cacheSlot < MAX_GLYPH_ENTRIES)
     {
-        if (!(entry->raw & flag))
+        if (!(cacheEntry->raw & usedFlag))
         {
-            entry->raw = 0;
+            cacheEntry->raw = 0;
         }
 
-        index++;
-        entry++;
+        cacheSlot++;
+        cacheEntry++;
     }
 }
 
-void ResetTextRenderer(void)
+void ResetGlyphRenderer(void)
 {
-    s32 index;
-    GlyphCacheEntry* entry;
-    RECT clearRect;
+    s32 cacheSlot;
+    GlyphCacheEntry* cacheEntry;
+    RECT clutRect;
 
-    // Clear the character cache entries (descending loop)
-    index = MAX_GLYPH_ENTRIES - 1;
-    entry = &g_characterCache[index];
-
-    while (index >= 0)
+    // Clear all cached character-code slots (descending loop)
+    cacheSlot = MAX_GLYPH_ENTRIES - 1;
+    cacheEntry = &g_glyphCache[cacheSlot];
+    while (cacheSlot >= 0)
     {
-        entry->raw = 0;
-        entry--;
-        index--;
+        cacheEntry->raw = 0;
+        cacheEntry--;
+        cacheSlot--;
     }
 
-    // Zero out the global text bitmap buffer (32KB)
-    for (index = 0; index <= MAX_SHORT_VALUE; index++)
+    // Zero the 32 KiB 4bpp glyph raster staging buffer
+    for (cacheSlot = 0; cacheSlot <= MAX_SHORT_VALUE; cacheSlot++)
     {
-        g_TextBuffer[index] = 0;
+        g_glyphRasterBuffer[cacheSlot] = 0;
     }
 
-    // Set up a small rectangle to reset the GPU texture state
-    clearRect.y = 511;
-    clearRect.w = 16;
-    clearRect.x = 0;
-    clearRect.h = 1;
+    // Upload the 16-entry glyph CLUT to VRAM row y=511
+    clutRect.y = 511;
+    clutRect.w = 16;
+    clutRect.x = 0;
+    clutRect.h = 1;
 
-    LoadImage(&clearRect, g_textureCacheResetData);
+    LoadImage(&clutRect, g_glyphClutPrefix);
 }
