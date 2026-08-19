@@ -2310,6 +2310,8 @@ void akao_sfx_play(u8* params, u8* seq_data0, u8* seq_data1, s32 skip_stop)
 {
     AkaoChannelState* ch;
     u32 mask;
+    u32 pair_bits;
+    u32 test_mask;
     s32 busy;
     s32 n;
     s32 stop_mask;
@@ -2338,17 +2340,22 @@ void akao_sfx_play(u8* params, u8* seq_data0, u8* seq_data1, s32 skip_stop)
             n = 0xB;
             ch--;
             mask = 0x400000;
-        pair_scan:
-            if (busy & (mask | (mask << 1)))
+            while (1)
             {
-                n--;
-                ch--;
-                mask >>= 1;
-                if (n == 0)
+                pair_bits = mask << 1;
+                test_mask = mask | pair_bits;
+                if (busy & test_mask)
                 {
-                    goto scan_done;
+                    n--;
+                    ch--;
+                    mask >>= 1;
+                    if (n == 0)
+                    {
+                        break;
+                    }
+                    continue;
                 }
-                goto pair_scan;
+                break;
             }
         }
         else
@@ -2362,7 +2369,6 @@ void akao_sfx_play(u8* params, u8* seq_data0, u8* seq_data1, s32 skip_stop)
                 }
             }
         }
-    scan_done:
         if (n != 0)
         {
             break;
