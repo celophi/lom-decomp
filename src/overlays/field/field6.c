@@ -98,7 +98,11 @@ typedef struct
     u8 pad18F[0x19C - 0x18F];
     s32 unk19C; /* 0x19C */
     s32 unk1A0; /* 0x1A0 */
-    u8 pad1A4[0x23C - 0x1A4];
+    u8 pad1A4[0x1A8 - 0x1A4];
+    u8 unk1A8; /* 0x1A8 */
+    u8 unk1A9; /* 0x1A9 */
+    u8 unk1AA; /* 0x1AA */
+    u8 pad1AB[0x23C - 0x1AB];
 } Struct_D80105AE0;
 
 extern Struct_D800FDF58 D_800FDF58[];
@@ -448,4 +452,41 @@ void func_8006B7A0(s32 arg0, s32 arg1)
     entry->unk14 = val | 0x20;
     entry->unk28 |= 0x2000000;
     entry->unk24 |= 0x100000;
+}
+
+/**
+ * @brief Broadcast a shared render/config state to every field actor slot:
+ *        stores arg0-arg2 into all 13 D_80105AE0 and D_800FE3A0 entries, folds
+ *        arg4 into the 2-bit field at bits 22-23 of each part's unk4, and folds
+ *        arg3's low bit into bit 23 of each D_800FDF58 record's unk1C.
+ * @param arg0 Byte written to unk1A8 (D_80105AE0) and unkE (D_800FE3A0).
+ * @param arg1 Byte written to unk1A9 (D_80105AE0) and unkF (D_800FE3A0).
+ * @param arg2 Byte written to unk1AA (D_80105AE0) and unk10 (D_800FE3A0).
+ * @param arg3 Low bit replaces bit 23 of every D_800FDF58 entry's unk1C.
+ * @param arg4 Low 2 bits replace bits 22-23 of every D_800FE3A0 entry's unk4.
+ * @see decomp.me (100%) TODO
+ */
+void func_8006B8DC(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4)
+{
+    s32 i;
+    u32 mode;
+    u32 flag;
+
+    mode = (arg4 & 3) << 22;
+    for (i = 0; i < 13; i++)
+    {
+        D_80105AE0[i].unk1A8 = arg0;
+        D_80105AE0[i].unk1A9 = arg1;
+        D_80105AE0[i].unk1AA = arg2;
+        D_800FE3A0[i].unkE = arg0;
+        D_800FE3A0[i].unkF = arg1;
+        D_800FE3A0[i].unk10 = arg2;
+        D_800FE3A0[i].unk4 = (D_800FE3A0[i].unk4 & 0xFF3FFFFF) | mode;
+    }
+
+    for (i = 0; i < 13; i++)
+    {
+        flag = (arg3 & 1) << 23;
+        D_800FDF58[i].unk1C = (D_800FDF58[i].unk1C & 0xFF7FFFFF) | flag;
+    }
 }
