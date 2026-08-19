@@ -3343,16 +3343,15 @@ void akao_sfx_set_volume_scale_unsuppressed(u16* param)
  * @param params Tick count at +0x0 (0 is treated as 1), target volume
  *        scale (7 bits, u16) at +0x4.
  *
- * @note NOT YET 100% (99.90%, 45/50 exact). Same loop-cursor anchor
- *       residue as akao_sfx_fade_volume_scale (0x8E vs 0xE6); every other
- *       instruction matches.
- * @see decomp.me (99.90%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
 {
-    AkaoChannelState* channel;
+    s32* channel;
+    volatile s32* cursor;
     s32 active;
     s32 bit;
+    s32 suppress;
     u32 count;
     s16 tick_count;
     u16 target_scale;
@@ -3361,10 +3360,13 @@ void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
 
     bit = 0x1000;
     active = g_akao_sfx_control.unk0;
-    channel = (AkaoChannelState*)g_sfx_channels;
-    for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+    count = 0;
+    suppress = 0x02000000;
+    channel = (s32*)g_sfx_channels;
+    cursor = (s32*)((u8*)channel + 0x8E);
+    do
     {
-        if ((active & bit) && !(channel->tempo_acc & 0x02000000))
+        if ((active & bit) && !(*(volatile s32*)((u8*)cursor - 0x66) & suppress))
         {
             if (*(s32*)(params + 0) != 0)
             {
@@ -3375,12 +3377,15 @@ void akao_sfx_fade_volume_scale_unsuppressed(u8* params)
                 tick_count = 1;
             }
             target_scale = (*(u16*)(params + 4) & 0x7F) << 8;
-            current_scale = channel->volume_scale;
+            current_scale = ((volatile u16*)cursor)[0x2B];
             delta = target_scale - current_scale;
-            channel->unk8E = tick_count;
-            channel->unkE6 = delta / tick_count;
+            *(volatile u16*)cursor = tick_count;
+            ((volatile s16*)cursor)[0x2C] = delta / tick_count;
         }
-    }
+        count++;
+        cursor += 0x46;
+        bit <<= 1;
+    } while (count < 0xC);
 }
 
 /**
