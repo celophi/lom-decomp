@@ -38,10 +38,10 @@ typedef union
     u32 raw;
     struct
     {
-        u16 characterCode;
+        u16 character_code;
         struct
         {
-            u16 usedThisFrame : 1;
+            u16 used_this_frame : 1;
             u16 reserved : 15;
         } flags;
     } data;
@@ -51,9 +51,9 @@ typedef union
 typedef struct
 {
     u8 opcode;
-    u8 parameterCount;
-    u8 responseCount;
-    u8 irqCodeSumTarget; /* sum of CD IRQ codes required before consuming the response */
+    u8 parameter_count;
+    u8 response_count;
+    u8 irq_code_sum_target; /* sum of CD IRQ codes required before consuming the response */
 } CdCommandDescriptor;
 
 typedef enum
@@ -99,7 +99,7 @@ typedef enum
     CHECKPS_STATE_PAUSE_DELAY,
 } CheckPSState;
 
-/* PollCdResponse return values. */
+/* poll_cd_response return values. */
 typedef enum
 {
     CHECKPS_CD_POLL_SHELL_OPEN = -2,
@@ -111,8 +111,8 @@ typedef enum
 /** Two Shift-JIS glyph codes followed by the text renderer's terminator. */
 typedef struct
 {
-    u16 firstGlyph;
-    u16 secondGlyph;
+    u16 first_glyph;
+    u16 second_glyph;
     s16 terminator;
 } EncodedGlyphPair;
 
@@ -136,7 +136,7 @@ typedef struct
         } coord;
         s32 packed;
     } position;
-    u32 packedSize;
+    u32 packed_size;
 } KanjiDrawState;
 
 /** GPU sprite packet used by the cached 16x16 text renderer. */
@@ -148,7 +148,7 @@ typedef struct
         struct
         {
             u8 _pad0[3];
-            u8 wordCount;
+            u8 word_count;
         } byte;
     } tag;
     u8 r;
@@ -167,18 +167,18 @@ typedef struct
 {
     DISPENV disp;      // +0x00
     DRAWENV draw;      // +0x14
-    RECT clearRect;    // +0x70
+    RECT clear_rect;    // +0x70
 } CheckPSDisplayBuffer;
 
 /** One 0xBCCC-byte CHECKPS render frame. */
 typedef struct
 {
-    u8 reservedHeader[0x40];
-    u_long orderingTable[CHECKPS_ORDERING_TABLE_LENGTH];
+    u8 reserved_header[0x40];
+    u_long ordering_table[CHECKPS_ORDERING_TABLE_LENGTH];
     CheckPSDisplayBuffer display;
-    u8 primitiveBuffer[CHECKPS_PRIMITIVE_BUFFER_SIZE];
-    u8* primitiveCursor;
-    u8 reservedTail[0x3C10];
+    u8 primitive_buffer[CHECKPS_PRIMITIVE_BUFFER_SIZE];
+    u8* primitive_cursor;
+    u8 reserved_tail[0x3C10];
 } CheckPSFrame;
 
 /** Double-buffered CHECKPS renderer state. */
@@ -190,68 +190,68 @@ typedef struct
 extern s32 g_previousGameState;
 
 /* Hardware-failure screen data. */
-extern u8 g_hardwarePatternSizeTable[][2];
-extern const u32 g_hardwareModificationWarning[15];
+extern u8 g_hardware_pattern_size_table[][2];
+extern const u32 g_hardware_modification_warning[15];
 
 /* Embedded/generated CHECKPS assets whose binary symbols are not yet split further. */
-extern u32 g_embeddedCheckpsAkao;
-extern u8 g_checkpsImageAsset[];
-extern u16 g_decimalGlyphTable[];
-extern u16 g_hexGlyphTable[];
+extern u32 g_embedded_checkps_akao;
+extern u8 g_checkps_image_asset[];
+extern u16 g_decimal_glyph_table[];
+extern u16 g_hex_glyph_table[];
 
 /* CD-ROM integrity-check state machine globals. */
-extern s32 g_checkpsState;
-extern s32 g_checkpsVsyncTimestamp;
-extern s32 g_cdLastTrackBcd;
-extern u8 g_cdSeekPositionBcd[8];
-extern const s32 g_checkpsUnusedConstant17;
-extern CdCommandDescriptor g_cdCommandTable[];
-extern u8 g_cdCommandParameters[3];
-extern CdResponsePrefix g_cdResponse;
-extern s32 g_cdIrqCodeSum;
-extern u8 g_cdResponseByte2;
-extern u8 g_cdResponsePayload[2];
-extern volatile u8* g_cdStatusRegister;
-extern volatile u8* g_cdResponseRegister;
-extern volatile u8* g_cdDataRegister;
-extern volatile u8* g_cdIrqRegister;
-extern u8 g_controllerDeviceType;
+extern s32 g_checkps_state;
+extern s32 g_checkps_vsync_timestamp;
+extern s32 g_cd_last_track_bcd;
+extern u8 g_cd_seek_position_bcd[8];
+extern const s32 g_checkps_unused_constant17;
+extern CdCommandDescriptor g_cd_command_table[];
+extern u8 g_cd_command_parameters[3];
+extern CdResponsePrefix g_cd_response;
+extern s32 g_cd_irq_code_sum;
+extern u8 g_cd_response_byte2;
+extern u8 g_cd_response_payload[2];
+extern volatile u8* g_cd_status_register;
+extern volatile u8* g_cd_response_register;
+extern volatile u8* g_cd_data_register;
+extern volatile u8* g_cd_irq_register;
+extern u8 g_controller_device_type;
 
-s32 RunCheckPS(s32 renderStateAddress);
-void RunCheckPSDisplayLoop(CheckPSRenderState* renderState);
-void InitCheckPSDisplay(CheckPSRenderState* renderState);
-void LoadEmbeddedCheckPSAudio(void);
-void LoadCheckPSSongFromDisc(s32 songIndex);
-void StopCheckPSSong(void);
-void PlayLoadedCheckPSSong(void);
-void PlayCheckPSSfx(u32 soundId, u32 volume, u32 pan);
-void ResetFadeState(void);
-void UpdateAndDrawFade(CheckPSFrame* frame);
-void SetFadeTarget(s32 red, s32 green, s32 blue, s32 steps);
-void UpdateCheckPSInputAndTimeout(void);
-void DrawCheckPSImage(CheckPSFrame* frame);
-void LoadCheckPSImage(void);
-s32 PollInputDevice(void);
-void ProcessControllerInput(void);
-void UpdateControllerInput(void);
+s32 run_checkps(s32 render_state_address);
+void run_checkps_display_loop(CheckPSRenderState* render_state);
+void init_checkps_display(CheckPSRenderState* render_state);
+void load_embedded_checkps_audio(void);
+void load_checkps_song_from_disc(s32 song_index);
+void stop_checkps_song(void);
+void play_loaded_checkps_song(void);
+void play_checkps_sfx(u32 sound_id, u32 volume, u32 pan);
+void reset_fade_state(void);
+void update_and_draw_fade(CheckPSFrame* frame);
+void set_fade_target(s32 red, s32 green, s32 blue, s32 steps);
+void update_checkps_input_and_timeout(void);
+void draw_checkps_image(CheckPSFrame* frame);
+void load_checkps_image(void);
+s32 poll_input_device(void);
+void process_controller_input(void);
+void update_controller_input(void);
 
-void* DrawSignedDecimal(void* primitive, u_long* otTag, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
-void DrawHexByte(void* primitive, u_long* otTag, s32 value, s32 x, s32 y, s32 alignment);
-void* DrawCachedText(void* primitive, u_long* otTag, const u8* text, s32 x, s32 y, s32 palette, s32 alignment);
-void* RenderCachedGlyph(void* primitive, u_long* otTag, s32 characterCode, s32 palette);
-GlyphSpritePacket* EmitGlyphSprite(GlyphSpritePacket* packet, u_long* otTag, s32 cacheSlot);
-void BeginGlyphCacheFrame(void);
-void EvictUnusedGlyphs(void);
-void ResetGlyphRenderer(void);
+void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
+void draw_hex_byte(void* primitive, u_long* ot_tag, s32 value, s32 x, s32 y, s32 alignment);
+void* draw_cached_text(void* primitive, u_long* ot_tag, const u8* text, s32 x, s32 y, s32 palette, s32 alignment);
+void* render_cached_glyph(void* primitive, u_long* ot_tag, s32 character_code, s32 palette);
+GlyphSpritePacket* emit_glyph_sprite(GlyphSpritePacket* packet, u_long* ot_tag, s32 cache_slot);
+void begin_glyph_cache_frame(void);
+void evict_unused_glyphs(void);
+void reset_glyph_renderer(void);
 
-void DrawKanjiString(const char* text, KanjiDrawState* drawState, s32 color);
-void DrawKanjiGlyph(KanjiDrawState* drawState, u8* bitmap, s32 color);
-void DrawHardwareCheckPattern(void);
+void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color);
+void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color);
+void draw_hardware_check_pattern(void);
 
-void StartCdIntegrityCheck(void);
-s32 RunCdIntegrityCheck(s32 singleStep);
-CheckPSCdPollResult PollCdResponse(CheckPSCdCommandIndex command);
-void SendCdCommand(CheckPSCdCommandIndex command);
-void ShowHardwareModificationWarningAndExit(void);
+void start_cd_integrity_check(void);
+s32 run_cd_integrity_check(s32 single_step);
+CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command);
+void send_cd_command(CheckPSCdCommandIndex command);
+void show_hardware_modification_warning_and_exit(void);
 
 #endif

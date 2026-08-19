@@ -7,7 +7,7 @@
  * Button bit masks for the game's internal controller state (g_lastInputState / g_debouncedInput).
  *
  * These differ from the raw PSX hardware bit positions. The SCD driver stores
- * the two controller bytes in reversed order, so UpdateControllerInput byte-swaps
+ * the two controller bytes in reversed order, so update_controller_input byte-swaps
  * held_buttons first. The face button bits (4-7) are then remapped so the hardware
  * order (Triangle, Circle, Cross, Square) becomes (Square, Cross, Circle, Triangle).
  *

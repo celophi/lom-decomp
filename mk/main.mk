@@ -183,8 +183,8 @@ SRCS_G4 := \
 SRCS_G4_NOEXPAND :=
 
 SRCS_CDK_G0 := \
-	src/overlays/checkps/code.c \
-	src/overlays/checkps/code2.c
+	src/overlays/checkps/init.c \
+	src/overlays/checkps/font.c
 
 SRCS_GCC_260_G0 := \
 	src/field_runtime_text.c \

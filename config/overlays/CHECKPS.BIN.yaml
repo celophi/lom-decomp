@@ -48,19 +48,19 @@ segments:
     vram: 0x8004FC70
     subsegments:
       # Data-only C TU: the auto text anchor makes Splat emit a full target
-      # code7_data.s for objdiff while linking the real sections from C.
-      - [auto, c, code7_data]
-      - [0x1, .rodata, code7_data]
-      - [0x5, .rodata, code7]
-      - [0x55, .rodata, code6]
-      - [0xA5, c, code]
-      - [0xE95, c, code7]
-      - [0x1BC1, c, code3]
-      - [0x1DB5, c, code6]
-      - [0x1F45, c, code2]
+      # cdrom_data.s for objdiff while linking the real sections from C.
+      - [auto, c, cdrom_data]
+      - [0x1, .rodata, cdrom_data]
+      - [0x5, .rodata, cdrom]
+      - [0x55, .rodata, pattern]
+      - [0xA5, c, init]
+      - [0xE95, c, cdrom]
+      - [0x1BC1, c, kanji]
+      - [0x1DB5, c, pattern]
+      - [0x1F45, c, font]
       - [0x27B9, data, table]
-      - [0xD3E5, .data, code2]
-      - [0xD3F1, .bss, code]
-      - [0x31441, .data, code7_data]
-      - [0x31451, .bss, code2]
+      - [0xD3E5, .data, font]
+      - [0xD3F1, .bss, init]
+      - [0x31441, .data, cdrom_data]
+      - [0x31451, .bss, font]
   - [0x39869]

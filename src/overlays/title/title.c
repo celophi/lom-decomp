@@ -292,7 +292,7 @@ s32 run_save_slot_menu(MenuContext* ctx_base)
 /**
  * @brief Set up the title overlay's double-buffered display/draw environments.
  *
- * @details Counterpart of InitCheckPSDisplay in the CHECKPS overlay. Clears
+ * @details Counterpart of init_checkps_display in the CHECKPS overlay. Clears
  * the hardware display registers, configures the geometry screen/offset,
  * clears all of VRAM, and sets up the front and back DISPENV/DRAWENV pairs
  * (front at ctx_base->disp_env/draw_env, back at ctx_base->disp_env2/draw_env2).
@@ -471,7 +471,7 @@ void play_title_sfx(s32 sound_id, s32 pan)
 /**
  * @brief Reset the title-screen fade state to opaque black with no fade in progress.
  *
- * @details Counterpart of CHECKPS ResetFadeState.
+ * @details Counterpart of CHECKPS reset_fade_state.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/m80gj
  */
@@ -585,7 +585,7 @@ void render_fade_overlay(MenuContext* ctx)
 /**
  * @brief Set the target fade color and step count for the title-screen fade.
  *
- * @details Counterpart of CHECKPS SetFadeTarget. render_fade_overlay
+ * @details Counterpart of CHECKPS set_fade_target. render_fade_overlay
  * interpolates g_fadeCurrent toward this target over the given number of steps.
  *
  * @param red Target red channel value.
@@ -1252,7 +1252,7 @@ void update_menu_input(void)
 }
 
 /**
- * Counterpart of CHECKPS UpdateControllerInput.
+ * Counterpart of CHECKPS update_controller_input.
  *
  * decomp.me (100%) https://decomp.me/scratch/1dQbp
  */
