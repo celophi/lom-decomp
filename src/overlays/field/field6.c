@@ -48,9 +48,9 @@ void func_8006B1A0(s32 arg0, s32 arg1)
 
 typedef struct
 {
-    u32 unk0; /* 0x00 */
+    s32 unk0; /* 0x00 */
     s32 unk4; /* 0x04 */
-    u32 unk8; /* 0x08 */
+    s32 unk8; /* 0x08 */
     u32 unkC; /* 0x0C */
     s16 unk10; /* 0x10 */
     s16 unk12; /* 0x12 */
@@ -131,6 +131,15 @@ extern s32 D_80122710;
 extern s32 D_80122714;
 extern s32 D_80122B20;
 extern s32 g_field_return_to_title_prompt_state;
+extern s32 D_800F22A0;
+extern s32 D_800F22A4;
+extern s32 D_800F22A8;
+
+typedef struct
+{
+    s16 x;
+    s16 y;
+} Vec2s;
 
 /**
  * @brief Initialize resource entry arg2 for slot arg0, then notify every
@@ -570,9 +579,12 @@ typedef struct
 /** @brief Staging buffer that field CD reads land in. */
 typedef struct
 {
-    u8 pad0[0x8];
+    u32 unk0;  /* 0x00 */
+    u32 unk4;  /* 0x04 */
     s32 unk8;  /* 0x08 byte offset of the second image inside the data area */
-    u8 padC[0x14 - 0xC];
+    u32 unkC;  /* 0x0C */
+    u16 unk10; /* 0x10 */
+    u16 unk12; /* 0x12 */
     u16 unk14; /* 0x14 start of the image data */
 } FieldCdBuffer;
 
@@ -1304,4 +1316,162 @@ u8 *func_8006C854(Struct_D800FDF58 *rec, u8 *base)
         return (u8 *)((s32)(base + q[0] + (q[1] << 8)) & 0x7FFFFFFF);
     }
     return base + q[0] + (q[1] << 8);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006CAFC(u16 arg0, s32 arg1, s32 arg2)
+{
+    FieldCdBuffer *buf;
+    s32 size;
+
+    buf = D_8010D038;
+    size = cdrom_queue_read(arg0, buf);
+    cdrom_wait_queue_empty();
+    func_8006CB6C(buf, size, arg1, arg2);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006CB6C(FieldCdBuffer *buf, s32 size, s32 arg2, s32 arg3)
+{
+    switch (buf->unk0 >> 2)
+    {
+    case 2:
+        func_8006CE00((u8 *)buf + buf->unk4, size - buf->unk4, arg2);
+        func_8006CCAC((u8 *)buf + buf->unk0, arg2, 0, arg3);
+        break;
+    case 3:
+        func_8006CE00((u8 *)buf + buf->unk8, size - buf->unk8, arg2);
+        func_8006CCAC((u8 *)buf + buf->unk0, arg2, 0, arg3);
+        func_8006CCAC((u8 *)buf + buf->unk4, arg2, 1, arg3);
+        break;
+    case 4:
+        func_8006CE00((u8 *)buf + buf->unkC, size - buf->unkC, arg2);
+        func_8006CCAC((u8 *)buf + buf->unk0, arg2, 0, arg3);
+        func_8006CCAC((u8 *)buf + buf->unk4, arg2, 1, arg3);
+        func_8006CCAC((u8 *)buf + buf->unk8, arg2, 2, arg3);
+        break;
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006CCAC(FieldCdBuffer *buf, s32 arg1, s32 arg2, s32 arg3)
+{
+    RECT rect;
+    s32 second;
+
+    second = buf->unk8;
+
+    if (arg2 == 2)
+    {
+        rect.x = 0xC0;
+        rect.y = arg3 + 0x1F4;
+        rect.w = 0x40;
+        rect.h = 1;
+    }
+    else
+    {
+        rect.y = arg3 + 0x1F4;
+        rect.w = 0x100;
+        rect.x = 0;
+        rect.h = 1;
+    }
+
+    if (arg2 != 1)
+    {
+        LoadImage(&rect, &buf->unk14);
+    }
+
+    if (arg1 >= 2)
+    {
+        s32 base = 0x340;
+        s32 off = arg1 << 6;
+        rect.x = base - off;
+        rect.w = 0x40;
+        rect.y = 0;
+        rect.h = 0x100;
+    }
+    else
+    {
+        FieldCdBuffer *hdr = (FieldCdBuffer *)(second + (s32)buf);
+        s32 w = hdr->unk10;
+        s32 h = hdr->unk12;
+
+        if (arg2 == 2)
+        {
+            rect.x = 0x3C0 - (arg1 << 7);
+            rect.y = 0x80;
+            rect.w = 0x40;
+            rect.h = 0x80;
+        }
+        else if (arg2 == 1)
+        {
+            rect.x = 0x3C0 - (arg1 << 7);
+            rect.y = 0;
+            rect.w = w;
+            rect.h = h;
+        }
+        else
+        {
+            s32 base = (arg2 << 6) + 0x380;
+            s32 off = arg1 << 7;
+            rect.x = base - off;
+            rect.w = 0x40;
+            rect.y = 0;
+            rect.h = 0x100;
+        }
+    }
+
+    LoadImage(&rect, (u8*)(second + (s32)buf + 0x14));
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006CE00(u32 *src, s32 len, s32 slot)
+{
+    u32 *dst;
+    u32 n;
+
+    dst = g_field_resource_cursor;
+    n = (u32)(len + 3) >> 2;
+    while (n != 0)
+    {
+        *dst = *src;
+        src++;
+        n--;
+        dst++;
+    }
+
+    g_field_resource_entries[slot].start = g_field_resource_cursor;
+    g_field_resource_cursor += (len + 3) & ~3;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_8006CE70(s32 arg0)
+{
+    Vec2s pos;
+    s32 t;
+
+    pos.x = 0xA0 + D_800F22A0 / 256 + D_800FDF58[arg0].unk0 / 256;
+    pos.y = 0x70 + D_800F22A4 / 256 + D_800FDF58[arg0].unk4 / 256 - D_800FDF58[arg0].unk8 / 512 - D_800F22A8 / 512;
+
+    t = pos.x;
+    if (t >= 0x10)
+    {
+        if (t >= 0x131)
+        {
+            return 0x9F;
+        }
+        t = ((t - 0x10) * 63) / 288;
+        return t + 0x60;
+    }
+    return 0x60;
 }
