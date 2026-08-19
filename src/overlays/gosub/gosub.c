@@ -1618,7 +1618,7 @@ typedef struct
 
 s32 func_8001A5D4(s32, void*);                /* extern */
 s32 func_8001C56C(void*, s32, s32, s32, s32); /* extern */
-StructS0* func_801443E4();                    /* extern */
+void* func_801443E4();                        /* extern */
 StructS0* func_80144544();                    /* extern */
 GosubLine* func_80144764();                   /* extern */
 StructS0* func_80146E30();                    /* extern */
@@ -2896,26 +2896,21 @@ typedef struct
  * @param flag Selects the up vs down vertex arrangement.
  * @return Pointer just past the POLY_F3 (next free packet slot).
  *
- * @note WIP - best match 86.02% (gcc 2.7.2 CDK). Residual is a register-alloc
- *       cascade: the target moves the packet pointer to t0 and parks D_800F22AC
- *       in a0 (evicting arg0 from a0), whereas GCC here keeps arg0 in a0 and
- *       D_800F22AC in a1, permuting the whole a0/a1/t0/t1 assignment. The clean
- *       real-type variant (LINE_F4/POLY_F3 + setLineF4/addPrim/SET_BGR0) sits at
- *       78.85%; see working/func_801443E4/ for both and the analysis.
+ * @see decomp.me (100%)
  */
-StructS0* func_801443E4(GosubPrim* prim, s32* ot, s32 x, s32 y, s32 flag)
+void *func_801443E4(GosubPrim *prim, s32 *ot, s32 x, s32 y, s32 flag)
 {
     s32 color;
     s16 tmp_x;
-    s16 tmp_y;
+    s32 tmp_y;
     u32 i;
-    u8* p;
-    u8* dst;
-    GosubPrim* prim2;
+    u32 addr_mask;
+    u8 *p;
+    GosubPrim *prim2;
 
     prim->len = 6;
-    (prim2 = prim)->code = 0x4C;
-    prim2->mask = 0x55555555;
+    prim->code = 0x4C;
+    prim->mask = 0x55555555;
     if (D_800F22AC & 0x10)
     {
         color = D_800F22AC & 0xF;
@@ -2924,51 +2919,60 @@ StructS0* func_801443E4(GosubPrim* prim, s32* ot, s32 x, s32 y, s32 flag)
     {
         color = (~D_800F22AC) & 0xF;
     }
-    color = (color * 4) + 0x70;
-    prim2->b = color;
-    prim2->g = color;
-    prim2->r = color;
+    tmp_y = color * 4;
+    color = tmp_y + 0x70;
+    prim->b = color;
+    prim->g = color;
+    prim->r = color;
     if (flag != 0)
     {
-        prim2->y3 = y - 8;
-        prim2->y0 = y - 8;
+        do {
+            prim->y3 = y - 8;
+            prim->y0 = y - 8;
+        } while (0);
         tmp_x = x - 6;
         tmp_y = y + 4;
     }
     else
     {
-        prim2->y3 = y + 8;
-        prim2->y0 = y + 8;
+        do {
+            prim->y3 = y + 8;
+            prim->y0 = y + 8;
+        } while (0);
         tmp_x = x - 6;
         tmp_y = y - 4;
     }
-    prim2->x1 = tmp_x;
-    prim2->x3 = x;
-    prim2->x0 = x;
-    prim2->y1 = tmp_y;
-    prim2->x2 = x + 6;
-    prim2->y2 = tmp_y;
+    do
+    {
+        prim->x1 = tmp_x;
+        prim->x3 = x;
+        prim->x0 = x;
+        prim->y1 = tmp_y;
+        prim->x2 = x + 6;
+        prim->y2 = tmp_y;
+    } while (0);
 
-    p = (u8*)prim2;
-    prim2 = (GosubPrim*)(p + 0x1C);
-    dst = (u8*)prim2;
-    *(u32*)p = (*(u32*)p & 0xFF000000) | (*ot & 0xFFFFFF);
+    addr_mask = 0xFFFFFF;
+    p = (u8 *)prim;
+    prim2 = (GosubPrim *)(p + 0x1C);
+    prim = prim2;
+    *(u32 *)p = (*(u32 *)p & 0xFF000000) | (*ot & addr_mask);
     i = 0;
-    *ot = (*ot & 0xFF000000) | ((u32)p & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((u32)p & addr_mask);
     do
     {
         i += 1;
-        *dst = *p;
+        *(u8 *)prim = *p;
         p += 1;
-        dst += 1;
+        prim = (GosubPrim *)((u8 *)prim + 1);
     } while (i < 0x14U);
 
     prim2->len = 4;
-    *(u32*)&prim2->r = 0;
+    *(u32 *)&prim2->r = 0;
     prim2->code = 0x20;
-    *(u32*)prim2 = (*(u32*)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *(u32 *)prim2 = (*(u32 *)prim2 & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | ((u32)prim2 & 0xFFFFFF);
-    return (StructS0*)((u8*)prim2 + 0x14);
+    return (u8 *)prim2 + 0x14;
 }
 
 /**
@@ -2993,58 +2997,54 @@ StructS0* func_801443E4(GosubPrim* prim, s32* ot, s32 x, s32 y, s32 flag)
  * @param flag Non-zero selects the bottom (0xF0) frame-buffer half, zero the top (8).
  * @return Pointer just past the DR_MODE packet (next free packet slot).
  *
- * @note WIP - best match 96.43% (gcc 2.7.2 CDK). Two residues remain, both
- *       register allocation. (1) The four entry arg-copies come out in
- *       declaration order (prim, ot, x, y) where the target defers prim's copy
- *       to last (ot, x, y, prim); sched_oracle attributes that ordering to
- *       sched2, i.e. it is downstream of the allocation, not an emit-order
- *       problem. (2) The tail's packet cursor lands in v0 because local-alloc
- *       honours its copy suggestion from the call return, so the target's
- *       `addu a2, v0, zero` is elided and every scratch register in the tail
- *       rotates by one (v0/v1/a0/a1/a2 -> a2/v0/v1/a0/a1). The target's cursor
- *       must reach global-alloc instead (two disjoint live ranges or two basic
- *       blocks); every variable-identity, alias and temp shape probed so far is
- *       delta-exact 0. See working/func_80144544/.
- * @note `var_s0->unkE` is deliberately assigned before `var_s0->unkC`: the
- *       source order shortens h's live range by one insn, which is what puts
- *       h in s5 and y in s6 as the target does (+14 exact rows).
+ * @note The `do { temp_a2 = (s32)var_s0; } while (0)` copy block is required to
+ *       match: it keeps the tile cursor in its own live range so the packet
+ *       cursor lands in a2 rather than being coalesced onto the call return.
+ *
+ * @see decomp.me (100%)
  */
 StructS0* func_80144544(StructS0* prim, s32* ot, s32 x, s32 y, s32 w, s32 h, s32 flag)
 {
     StructS0* var_s0;
     StructS0* var_a0;
+    StructS0* buf;
     s32 sp20[24];
+    s32 temp_a2;
 
+    buf = prim;
     if (flag != 0)
     {
-        func_8001C56C(sp20, x + 2, y + 0xF2, w - 4, h - 4);
+        temp_a2 = y + 0xF2;
+        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 4);
     }
     else
     {
-        func_8001C56C(sp20, x + 2, y + 0xA, w - 4, h - 4);
+        temp_a2 = y + 0xA;
+        func_8001C56C(sp20, x + 2, temp_a2, w - 4, h - 4);
     }
-    func_8001A5D4((s32)prim, sp20);
+    func_8001A5D4((s32)buf, sp20);
 
-    prim->unk0 = (prim->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)prim & 0xFFFFFF);
+    buf->unk0 = (buf->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | ((s32)buf & 0xFFFFFF);
 
-    prim = (StructS0*)((u8*)prim + 0x40);
-    var_s0 = func_80146E30(prim, ot, x, y, w, h);
+    buf = (StructS0*)((u8*)buf + 0x40);
+    var_s0 = func_80146E30(buf, ot, x, y, w, h);
     var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x, y, w, h, 0xFFFFFF);
     var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x + 1, y + 1, w - 2, h - 2, 0);
     var_s0 = (StructS0*)func_80144764((GosubLine*)var_s0, ot, x - 1, y - 1, w + 2, h + 2, 0);
 
-    var_s0->unk4 = 0xC0C0C0;
-    ((u8*)var_s0)[3] = 3;
-    ((u8*)var_s0)[7] = 0x62;
-    var_s0->unk8 = x;
-    var_s0->unkA = y;
-    var_s0->unkE = h;
-    var_s0->unkC = w;
-    var_s0->unk0 = (var_s0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
-    *ot = (*ot & 0xFF000000) | ((s32)var_s0 & 0xFFFFFF);
+    do { temp_a2 = (s32)var_s0; } while (0);
+    ((StructS0*)temp_a2)->unk4 = 0xC0C0C0;
+    ((u8*)temp_a2)[3] = 3;
+    ((u8*)temp_a2)[7] = 0x62;
+    ((StructS0*)temp_a2)->unk8 = x;
+    ((StructS0*)temp_a2)->unkA = y;
+    ((StructS0*)temp_a2)->unkC = w;
+    ((StructS0*)temp_a2)->unkE = h;
+    ((StructS0*)temp_a2)->unk0 = (((StructS0*)temp_a2)->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+    *ot = (*ot & 0xFF000000) | (temp_a2 & 0xFFFFFF);
 
-    var_a0 = (StructS0*)((u8*)var_s0 + 0x10);
+    var_a0 = (StructS0*)(temp_a2 + 0x10);
     ((u8*)var_a0)[3] = 1;
     var_a0->unk4 = 0xE1000045;
     var_a0->unk0 = (var_a0->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
@@ -3819,62 +3819,52 @@ s32 func_80145A14(s32* ot, s32 prim, s32 x_off, s32 y_off)
  * @param y_off Vertical offset subtracted from every row position.
  * @return Packet cursor past the last emitted label.
  *
- * @note WIP - best match 88.58% (84/113 exact, gcc 2.7.2 CDK). Same residue as
- *       the two-option sibling func_80145A14, one row taller. The target defers
- *       the y_off parameter save: it keeps param3 in a3 through the entry block
- *       and copies it to s7 in the bne delay slot, which makes y_off short-lived
- *       so it wins s7 (ot then takes s8) and keeps a3 occupied so color1 lands in
- *       a temp (t0). Here gcc pins the y_off save as an entry copy - a fixed
- *       sched1 prefix, confirmed absent from the block-0 ready list - so ot wins
- *       s7, y_off takes s8, and color1 coalesces straight into a3. That single
- *       divergence produces every wrong row.
- * @note No source spelling reaches the deferred save: color if/else, per-block
- *       color scope (ALLOC-14), y-precompute, base int-vs-pointer, prim=arg_prim
- *       aliasing, and table-in-glyph all measured inert or worse; gcc 2.8.0 and
- *       the gnu/g4 toolchains are all worse (and frame-wrong). The permuter
- *       (400k iters) finds only the undefined-on-else-path color variant, which
- *       regresses. The glyph address uses &D_8014F29C inline and @c base is a
- *       plain integer offset, both mirroring func_80145A14's measured-best order;
- *       the unused @c pad reserves the target's 0x38-byte dead frame slot
- *       (idioms.md FRAME-01).
- * @see working/func_80145B28/ for the measured probe log.
+ * @see decomp.me (100%)
  */
 s32 func_80145B28(s32* ot, s32 prim, s32 x_off, s32 y_off)
 {
     s32* table;
     s32 base;
-    void* glyph;
+    void* glyph0;
+    void* glyph1;
+    void* glyph2;
     s32 color;
+    s32 color0;
+    s32 p;
+    s32 rem0;
     s32 pad[14];
 
+    p = prim;
     table = &D_8014F29C;
     base = (s32)table - 0x20;
 
-    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xE)));
-    color = 5;
-    if (g_gosub_dialog_choice % 3 == 0)
+    glyph0 = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xE)));
+    rem0 = g_gosub_dialog_choice;
+    rem0 %= 3;
+    color0 = 5;
+    if (rem0 == 0)
     {
-        color = 4;
+        color0 = 4;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 2 - y_off, 2);
+    p = func_800A88A0(p, ot, glyph0, color0, 0x40 - x_off, 2 - y_off, 2);
 
-    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xC)));
+    glyph1 = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xC)));
     color = 5;
     if (g_gosub_dialog_choice % 3 == 1)
     {
         color = 4;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x12 - y_off, 2);
+    p = func_800A88A0(p, ot, glyph1, color, 0x40 - x_off, 0x12 - y_off, 2);
 
-    glyph = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xA)));
+    glyph2 = (void*)(D_8014F29C + (base + *(u16*)((u8*)&D_8014F29C + D_8014F29C - 0xA)));
     color = 5;
     if (g_gosub_dialog_choice % 3 == 2)
     {
         color = 4;
     }
-    prim = func_800A88A0(prim, ot, glyph, color, 0x40 - x_off, 0x22 - y_off, 2);
+    p = func_800A88A0(p, ot, glyph2, color, 0x40 - x_off, 0x22 - y_off, 2);
 
-    return prim;
+    return p;
 }
 
 /**
@@ -4238,13 +4228,7 @@ extern u8 D_800F1CD0[];
  *                 four header fields, then a repeating {s8, s8, s16} tuple
  *                 array of `count` entries).
  * @return Advanced prim cursor (func_8014680C's return).
- * @note WIP: 91.94% (57/87 exact), frame matches. Residual is a CSE/expand
- *       ordering gap on `D_800F1CD0 + row_idx*11*8` (target computes
- *       &D_800F1CD0 before the row_idx*88 multiply chain, this compiles it
- *       after) - confirmed at expand time via tmp.c.rtl, NOT a sched1 issue
- *       (sched_oracle block 0 fully satisfied). See working/func_801466B4/
- *       STATUS.md for the full retired-class list before re-probing.
- * @see decomp.me (91.94% WIP)
+ * @see decomp.me (100%)
  */
 s32 func_801466B4(s32 arg_prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_idx)
 {
@@ -4259,27 +4243,24 @@ s32 func_801466B4(s32 arg_prim, s32* ot, s32 x, s32 y, s32 table_idx, s32 row_id
     u8* item;
     s32 i;
     s32 prim;
-
+    u8* base;
     table_val = D_800F2180[table_idx];
-    entry = D_800F1CD0 + row_idx * 11 * 8;
-
+    base = D_800F1CD0;
+    entry = (u8*)(row_idx * 11 * 8 + (s32)base);
     field4 = *(s16*)(entry + 4);
     field6 = *(s16*)(entry + 6);
     field8 = *(s8*)(entry + 8);
     field9 = *(s8*)(entry + 9);
-
     col_x = x + field4 * 8;
     col_y = y + field6 * 8;
-
-    prim = func_80146860(arg_prim, ot, table_idx + 0x13, col_x + field8 * 8, col_y + field9 * 8, 9);
-
+    prim = func_80146860(arg_prim, ot, table_idx + 0x13, field8 * 8 + col_x, field9 * 8 + col_y, 9);
     field6 = 0;
     for (i = field6; i < entry[field6]; i++)
     {
-        item = entry + 0xC + i * 4;
-        prim = func_80146860(prim, ot, *(s16*)(item + 2), col_x + *(s8*)(item + field6) * 16, col_y + *(s8*)(item + 1) * 16, table_val);
+        u8* loop_base = &D_800F1CD0[field6];
+        item = (u8*)(row_idx * 11 * 8 + i * 4 + (s32)loop_base);
+        prim = func_80146860(prim, ot, *(s16*)(item + 0xE), *(s8*)(item + 0xC) * 16 + col_x, *(s8*)(item + 0xD) * 16 + col_y, table_val);
     }
-
     return func_8014680C(prim, ot);
 }
 
@@ -4309,8 +4290,8 @@ extern u8 D_8016B3DC[];
 void func_80016E7C(); /* extern */
 void func_80019788(); /* extern */
 
-void func_80146AA8(void* dst, void* src);
-void func_80146AD0(void* dst, void* src);
+inline void func_80146AA8(void* dst, void* src);
+inline void func_80146AD0(void* dst, void* src);
 s32 func_80146CC4(s32 mode, s32 a, s32 b);
 
 /**
@@ -4418,7 +4399,7 @@ void func_801469BC(s32 row)
  * @param src Source record.
  * @see decomp.me (100%)
  */
-void func_80146AA8(void* dst, void* src)
+inline void func_80146AA8(void* dst, void* src)
 {
     u8* d;
     u8* s;
@@ -4443,7 +4424,7 @@ void func_80146AA8(void* dst, void* src)
  * @param src Source row.
  * @see decomp.me (100%)
  */
-void func_80146AD0(void* dst, void* src)
+inline void func_80146AD0(void* dst, void* src)
 {
     u8* d;
     u8* s;
@@ -4473,13 +4454,14 @@ void func_80146AD0(void* dst, void* src)
  *
  * @param mode Comparison selector handed to func_80146CC4: the low nibble picks
  *             the field and a non-zero high nibble reverses the order.
- * @see decomp.me (95.07% WIP)
  *
- * @note WIP - control flow, frame size and instruction count all match; the
- *       residue is a register permutation around the two loop induction
- *       variables. Assigning @c dst at the top of the loop body (rather than
- *       inside the second block) is what makes GCC strength-reduce the
- *       g_gosub_rows address into an induction variable at all.
+ * @note The write-back loop calls func_80146AA8/func_80146AD0, which are
+ *       declared @c inline and defined ABOVE this function, so GCC expands them
+ *       here while func_80146908 and func_801469BC - both defined before those
+ *       bodies - still emit real calls, exactly as the target does. Moving
+ *       either definition or dropping @c inline breaks the match.
+ *
+ * @see decomp.me (100%)
  */
 void func_80146AF8(s32 mode)
 {
@@ -4487,7 +4469,6 @@ void func_80146AF8(s32 mode)
     s32 i;
     s32 j;
     s32 k;
-    GosubListEntry* dst;
 
     for (i = 0; i < g_gosub_row_count; i++)
     {
@@ -4511,34 +4492,15 @@ void func_80146AF8(s32 mode)
     func_80016E7C(g_pad_ctx + 0x29DC, &order[0x100], 0xA0);
     func_80016E7C(g_gosub_rows, &order[0x1A0], 0x500);
 
-    for (i = 0; i < g_gosub_row_count; i++)
+    i = 0;
+    if (g_gosub_row_count > 0)
     {
-        dst = &g_gosub_rows[i];
-        j = order[i];
+        do
         {
-            u32 n = 0;
-            u8* d = g_pad_ctx + i * 4 + 0x29DC;
-            u8* s = order + j * 4 + 0x100;
-            do
-            {
-                n += 1;
-                *d = *s;
-                s += 1;
-                d += 1;
-            } while (n < 4U);
-        }
-        {
-            u32 n = 0;
-            u8* d = (u8*)dst;
-            u8* s = order + order[i] * 0x20 + 0x1A0;
-            do
-            {
-                n += 1;
-                *d = *s;
-                s += 1;
-                d += 1;
-            } while (n < 0x20U);
-        }
+            func_80146AA8(g_pad_ctx + i * 4 + 0x29DC, order + order[i] * 4 + 0x100);
+            func_80146AD0(&g_gosub_rows[i], order + order[i] * 0x20 + 0x1A0);
+            i++;
+        } while (i < g_gosub_row_count);
     }
 
     gosub_build_packed_record_list();
