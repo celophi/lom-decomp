@@ -131,6 +131,8 @@ extern s32 D_80122710;
 extern s32 D_80122714;
 extern s32 D_80122B20;
 extern s32 g_field_return_to_title_prompt_state;
+extern Struct_D800FDF58 D_800FF658[];
+extern s32 D_80105770;
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
 extern s32 D_800F22A8;
@@ -1575,4 +1577,21 @@ void func_8006CF88(void)
     }
 
     func_80084240();
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8006D1EC(void)
+{
+    s32 i;
+    s32 val;
+
+    val = 0xFF;
+    for (i = 0x102; i >= 0; i--)
+    {
+        D_800FF658[i].unk25 = val;
+    }
+
+    D_80105770 = 0;
 }
