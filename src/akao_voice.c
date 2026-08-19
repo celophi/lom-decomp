@@ -2633,17 +2633,31 @@ s32 akao_bank_find_slot(s32 key)
         if (key == D_8004D39C)
         {
             result = 5;
-            goto done;
         }
-decrement:
-        result--;
-        if (result == 0) goto done;
-        base = g_akao_bank_slot_keys;
-        index = result - 1;
-        if (key != base[index]) goto decrement;
-        result = index;
+        else
+        {
+            switch (0)
+            {
+                do
+                {
+                case 0:
+                    result--;
+                    if (result == 0)
+                    {
+                        break;
+                    }
+                    base = g_akao_bank_slot_keys;
+                    index = result - 1;
+                    if (key == base[index])
+                    {
+                        result = index;
+                        break;
+                    }
+                } while (1);
+            }
+        }
     }
-done: return result;
+    return result;
 }
 
 /**
