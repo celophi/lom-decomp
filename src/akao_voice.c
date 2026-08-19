@@ -2858,23 +2858,20 @@ void akao_sfx_play_program(u8* params)
  *
  * @param params Buffer holding the program index at +0x0 on entry; its
  *        voice_alloc_base (+0x10) is filled in before the call.
- *
- * @note NOT YET 100% (84.62%, 24/26 exact). Same residue and cause as
- *       akao_sfx_play_program: the voice_alloc_base store lands in the
- *       akao_sfx_play call's delay slot in the target but immediately
- *       after akao_bank_find_slot returns here.
- * @see decomp.me (84.62%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_play_program_raw(u8* params)
 {
     s32 seq_data0;
     s32 seq_data1;
     u16 program_key;
+    s32 slot;
 
     akao_resolve_program_data(&seq_data0, &seq_data1, *(s32*)(params + 0x0));
     program_key = *(u16*)(g_akao_bank_region_b + *(s32*)(params + 0x0) * 2);
-    *(s32*)(params + 0x10) = akao_bank_find_slot(program_key);
-    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1, 0);
+    slot = akao_bank_find_slot(program_key);
+    akao_sfx_play(params, (u8*)seq_data0, (u8*)seq_data1,
+                  (*(s32*)(params + 0x10) = slot, 0));
 }
 
 /**
@@ -3475,20 +3472,12 @@ void akao_sfx_set_pan_bias(u8* params)
  * @param params sfx id at +0x0, tempo_acc mode mask at +0x4 (0 selects the
  *        id-match mode instead), tick count at +0x8 (0 is treated as 1),
  *        target pan bias (u8) at +0xC.
- *
- * @note NOT YET 100% (99.89%, 84/94 exact). Same loop-cursor anchor
- *       residue as akao_sfx_fade_volume_scale: the target anchors the
- *       per-channel cursor at pan_bias_fade_ticks (+0x70), this compile
- *       anchors it at pan_bias_step (+0xE2) instead. This is the third
- *       function in this file with the exact same symptom (see also
- *       akao_sfx_fade_volume_scale, akao_sfx_fade_volume_scale_unsuppressed) -
- *       a recurring GCC 2.8 loop-cursor choice when a fade writes one field
- *       near the filter test and a second field far from it.
- * @see decomp.me (99.89%)
+ * @see decomp.me (100%)
  */
 void akao_sfx_fade_pan_bias(u8* params)
 {
-    AkaoChannelState* channel;
+    s32* channel;
+    volatile s32* cursor;
     s32 active;
     s32 bit;
     u32 count;
@@ -3497,14 +3486,16 @@ void akao_sfx_fade_pan_bias(u8* params)
     s32 current_bias;
     s16 delta;
 
-    channel = (AkaoChannelState*)g_sfx_channels;
+    channel = (s32*)g_sfx_channels;
     active = g_akao_sfx_control.unk0;
     bit = 0x1000;
     if (*(s32*)(params + 4) != 0)
     {
-        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        count = 0;
+        cursor = (s32*)((u8*)channel + 0x70);
+        do
         {
-            if ((active & bit) && (channel->tempo_acc & *(s32*)(params + 4)))
+            if ((active & bit) && (cursor[-18] & *(s32*)(params + 4)))
             {
                 if (*(s32*)(params + 8) != 0)
                 {
@@ -3515,19 +3506,23 @@ void akao_sfx_fade_pan_bias(u8* params)
                     tick_count = 1;
                 }
                 target_bias = *(u8*)(params + 0xC) << 8;
-                current_bias = channel->pan_bias;
+                current_bias = ((volatile u16*)cursor)[-1];
                 delta = target_bias - current_bias;
-                channel->pan_bias_fade_ticks = tick_count;
-                channel->pan_bias_step = delta / tick_count;
+                *(volatile u16*)cursor = tick_count;
+                ((volatile s16*)cursor)[0x39] = delta / tick_count;
             }
-        }
+            count++;
+            cursor += 0x46;
+            bit <<= 1;
+        } while (count < 0xC);
     }
     else
     {
-        bit = 0x1000;
-        for (count = 0; count < 0xC; count++, channel++, bit <<= 1)
+        count = 0;
+        cursor = (s32*)((u8*)channel + 0x70);
+        do
         {
-            if ((active & bit) && ((s32)channel->reverb_mask == *(s32*)(params + 0)))
+            if ((active & bit) && (cursor[-13] == *(s32*)(params + 0)))
             {
                 if (*(s32*)(params + 8) != 0)
                 {
@@ -3538,12 +3533,15 @@ void akao_sfx_fade_pan_bias(u8* params)
                     tick_count = 1;
                 }
                 target_bias = *(u8*)(params + 0xC) << 8;
-                current_bias = channel->pan_bias;
+                current_bias = ((volatile u16*)cursor)[-1];
                 delta = target_bias - current_bias;
-                channel->pan_bias_fade_ticks = tick_count;
-                channel->pan_bias_step = delta / tick_count;
+                *(volatile u16*)cursor = tick_count;
+                ((volatile s16*)cursor)[0x39] = delta / tick_count;
             }
-        }
+            count++;
+            cursor += 0x46;
+            bit <<= 1;
+        } while (count < 0xC);
     }
 }
 
