@@ -2519,15 +2519,7 @@ void akao_sfx_flag_volume_update(void)
  * @param descriptor Newly (re)loaded song descriptor; same shape consumed by
  *        akao_seq_start_song.
  *
- * @note NOT YET 100% (94.42%, 139/154 exact). sched_oracle confirms the
- *       residue is not a source-fixable emit-order issue (all inferred
- *       constraints SATISFIED); it is register-allocation coloring
- *       (g_akao_seq_channel0 pointer vs the masked flags value early on,
- *       and voice_mask's register choice) plus a CSE-FOLD-shaped reordering
- *       of the D_8004C32E store relative to the g_akao_sfx_control.unkC
- *       update near the end. See working/func_80026F28/code.c for the
- *       current best source and permuter session state.
- * @see decomp.me (94.42%)
+ * @see decomp.me (100%)
  */
 void akao_seq_resume_song(u8* descriptor)
 {
@@ -2538,7 +2530,6 @@ void akao_seq_resume_song(u8* descriptor)
     s32 mask;
     s32 bit;
     u32 i;
-    s32 voice_mask;
     s32 keep_mask;
 
     akao_copy_bytes((s32*)D_8004C2D0, (s32*)g_akao_seq_channel0, 0x70);
@@ -2562,7 +2553,7 @@ void akao_seq_resume_song(u8* descriptor)
     g_akao_driver_flags.unk8 |= 0x90;
 
     mask = g_akao_seq_channel0->w04.song.active_mask;
-    delta = (s32)descriptor - D_8004C2FC;
+    delta = (s32)descriptor - D_8004C2FC[0];
     g_akao_seq_channel0->unk30 += delta;
     g_akao_seq_channel0->flags += delta;
     g_akao_seq_channel0->w04.song.key_on_mask = g_akao_seq_channel0->note_on_mask;
@@ -2596,24 +2587,23 @@ void akao_seq_resume_song(u8* descriptor)
         bit <<= 1;
     } while (i != 0);
 
-    voice_mask = 0;
+    mask = 0;
     if (g_akao_seq_channel1 != NULL)
     {
-        voice_mask = akao_collect_voice_mask((AkaoChannelState*)g_akao_pending_channels,
-                                              g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->w04.song.voice_alloc_low_mask);
+        mask = akao_collect_voice_mask((AkaoChannelState*)g_akao_pending_channels,
+                                       g_akao_seq_channel1->w04.song.active_mask & g_akao_seq_channel1->w04.song.voice_alloc_low_mask);
     }
 
     g_akao_seq_channel0->key_off_mask = 0;
-    D_8004C32E = 0;
+    D_8004C32E[0] = 0;
     keep_mask = 0xFFFFFF;
-    g_akao_sfx_control.unkC |= (~voice_mask & (~(D_8004F76C[0] | g_akao_sfx_control.unk0) & keep_mask));
+    g_akao_sfx_control.unkC |= (~mask & (~(g_akao_sfx_control.unk0 | D_8004F76C[0]) & keep_mask));
     g_akao_driver_flags.unk8 |= 0x100;
 
     if (g_akao_driver_mode_flags & 1)
     {
-        mask = g_akao_seq_channel0->w04.song.active_mask;
+        g_akao_seq_channel0->unk1C = g_akao_seq_channel0->w04.song.active_mask;
         g_akao_seq_channel0->w04.song.active_mask = 0;
-        g_akao_seq_channel0->unk1C = mask;
     }
 }
 
