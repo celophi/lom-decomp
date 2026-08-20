@@ -43,8 +43,9 @@ segments:
     type: decompress_overlay
     start: 0x1
     vram: 0x8004FC70
+    align: 4
     subsegments:
-      - [0x1, rodata, rodata]
+      - [0x1, .rodata, title]
       - [0x5, c, title]
-      - [0x2679, data, data]
+      - [0x2679, .data, title]
   - [0xB2A5D]

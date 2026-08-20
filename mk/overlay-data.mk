@@ -30,9 +30,10 @@
 
 # Overlays that build embedded ROM data from C via a generator script.
 # Each entry <ov> must define overlay_<ov>_data_gen with its generator command.
-OVERLAY_DATA := gname
+OVERLAY_DATA := gname title
 
 overlay_gname_data_gen := python3 tools/gen_gname_data.py
+overlay_title_data_gen := python3 tools/gen_title_data.py
 
 .PHONY: overlay-data $(addprefix overlay-data-,$(OVERLAY_DATA))
 
