@@ -2205,7 +2205,7 @@ void menu_update_layout(void)
  * @param base_pos Running position counter; this node occupies [base_pos, base_pos + MENU_ROW_HEIGHT).
  * @return Updated position counter after processing this node and any expanded children.
  * @note Bit 1 of u2.s.flags controls child recursion; menu_collapse_all clears it before layout.
- * @see decomp.me (99.04%) https://decomp.me/scratch/LDCeT
+ * @see decomp.me (100%) https://decomp.me/scratch/LDCeT
  */
 s32 menu_layout_node(s32 node_idx, s32 base_pos)
 {
@@ -2240,23 +2240,15 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
     /* Duplicate write (codegen artifact): both lines store (layout_y >> 1) into layout_y_hi. */
     (&g_menu_nodes[node_idx])->uA.layout_child_packed = ((&g_menu_nodes[node_idx])->uA.layout_child_packed & 0xFF00) | (0xFF & (layout_y >> 1));
     node->uA.layout_child_packed = (node->uA.layout_child_packed & 0xFF00) | ((layout_y >> 1) & 0xFF);
-    child_iter = 0;
     if (is_expanded)
     {
         s32 child_idx;
-        s32 child;
-        /* child0..child3 are consecutive bytes; treat as a 4-element array via pointer arithmetic. */
-        for (child_idx = child_iter; (child_idx < MENU_MAX_CHILDREN) != 0;)
+        child_idx = 0;
+        node2 = node;
+        for (; child_idx < MENU_MAX_CHILDREN;)
         {
-            node2 = g_menu_nodes + node_idx;
-            child_idx = (&(&(*node2).uA.s)->child0)[child_idx];
-            child = child_idx;
-            if (child == MENU_NONE)
-            {
-                break;
-            }
-            child_idx++;
-            cur_pos = menu_layout_node(child, cur_pos);
+            if (*((u8*)node2 + child_idx + 0xB) == MENU_NONE) break;
+            cur_pos = menu_layout_node(*((u8*)node2 + child_idx++ + 0xB), cur_pos);
         }
     }
     return cur_pos;
