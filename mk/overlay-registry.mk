@@ -81,7 +81,7 @@ overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field1.c
 
 OVERLAYS += gname
-overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/gname.c src/overlays/gname/gname_data.c
+overlay_gname_gcc_272_cdk_g0_srcs := src/overlays/gname/gname.c
 
 OVERLAYS += golem
 overlay_golem_gcc_280_g0_srcs := src/overlays/golem/unk1.c

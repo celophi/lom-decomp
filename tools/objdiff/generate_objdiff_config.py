@@ -50,9 +50,9 @@ def extract_data_subsegments(config: dict) -> list[str]:
     """Pull out names of standalone data translation units.
 
     Matches [offset, '.data', name] subsegments whose name is not also a 'c'
-    subsegment - i.e. data built by its own C file (e.g. gname_data), which has
-    a compiled base object and a generated target object to diff. Raw databin
-    subsegments have no compiled C base object and are intentionally omitted.
+    subsegment - i.e. data built by its own C file, which has a compiled base
+    object and a generated target object to diff. Raw databin subsegments have
+    no compiled C base object and are intentionally omitted.
     """
     c_names = set(extract_c_subsegments(config))
     names = []
@@ -127,9 +127,9 @@ def build_overlay_units(config: dict, overlay_name: str, complete: bool = False)
             "metadata": _metadata(),
         })
 
-    # Standalone data translation units (e.g. gname_data): the target object is
-    # generated (asm/overlays/<ov>/<name>.s, an answer-key of the original
-    # bytes); the base is the compiled C data file.
+    # Standalone data translation units: the target object is generated from an
+    # answer-key assembly file containing the original bytes; the base is the
+    # compiled C data file.
     for name in extract_data_subsegments(config):
         if should_skip(name):
             continue
