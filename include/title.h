@@ -70,10 +70,11 @@ extern u8 g_titleMenuItemFlags[];
 extern u8 g_titleVisibleItemRank;
 extern u8 g_titleAnimFrame;
 /**
- * 4-entry CLUT-index table that blinks the title-menu cursor; indexed by
- * (g_titleAnimFrame >> 2) & 3 in render_title_menu_items.
+ * Four-frame texture-U animation for the title-menu cursor; indexed by
+ * (g_titleAnimFrame >> 2) & 3 in render_title_menu_items. The values select
+ * adjacent 16-pixel-wide cursor images in the title-menu texture.
  */
-extern u8 g_cursorBlinkPalette[];
+extern u8 g_cursorBlinkUOffsets[];
 
 /**
  * Timer used to implement input repeating (auto-repeat).
@@ -86,7 +87,7 @@ extern s32 g_lastInputState;
 /**
  * Self-relative offset table for the two title-menu TIMs uploaded by
  * init_title_menu_state: entries [1] and [2] are byte offsets from the table's
- * own base to each TIM ([0] is unused).
+ * own base to each TIM. Entry [0] stores the asset count.
  */
 extern u32 g_titleMenuTimTable[3];
 extern u8 D_801ED600[];
@@ -101,15 +102,15 @@ extern s32 g_slotSlideYLerped;
 extern s32 g_slotHighlightFrames;
 extern u8 D_80043618[0x40];
 /**
- * Source array of save-slot records (stride 0x40); handle_save_slot_input copies
- * the record selected by g_slotSelectedIndex into D_80043618.
+ * Eleven starting-weapon equipment records (stride 0x40). The title menu copies
+ * the selected weapon preset into the new-game equipment buffer at D_80043618.
  */
-extern u8 g_saveSlotData[];
+extern u8 g_startingWeaponRecords[];
 extern u8 D_800F9AED;
 /**
  * @brief One entry in the 27-element save-slot UI layout table (g_saveLayoutTable).
  *
- * The layout has 0x1B entries × 0x18 bytes = 0x288 bytes total.
+ * The layout has 0x1B entries x 0x18 bytes = 0x288 bytes total.
  *
  * The underlying data symbol is declared as a byte array; renderers cast it to
  * @c SaveLayoutEntry* when named field access is useful.
@@ -127,7 +128,7 @@ typedef struct {
     u16 v0;       /**< +0x0E: initial V; animated by AnimateSaveSlotPanel for highlight entries */
     u16 width;    /**< +0x10: TILE.w / glyph total pixel width (chunked at 128 px) */
     u16 height;   /**< +0x12: TILE.h / glyph per-chunk sprite height */
-    u8  unk14[4]; /**< +0x14: TODO */
+    u32 reserved; /**< +0x14: zero in every initial table entry; not read at runtime */
 } SaveLayoutEntry;             /* sizeof == 0x18 */
 
 /* Home U/V texture coordinate the panel's primary entry resets to. */
@@ -164,10 +165,12 @@ typedef struct {
  * SaveLayoutTex* by consumers.
  */
 extern SaveLayoutTex g_saveLayoutTexTable[];
-extern u8 D_800F98AC[];
-extern u8 D_800F98F4[];
-/** Menu-layout template copied into g_menuLayoutBuffer for the default menu. */
-extern u32 g_menuLayoutTemplateDefault[];
+/** UV rectangles used by the save-slot background panel quads. */
+extern u8 g_saveSlotPanelUvTable[];
+/** UV rectangles used by the save-slot free-size sprites. */
+extern u8 g_saveSlotSpriteUvTable[];
+/** New-game state template copied into g_menuLayoutBuffer. */
+extern u32 g_newGameStateTemplate[];
 /** Menu-layout template copied into g_menuLayoutBuffer for the alternate menu. */
 extern u32 g_menuLayoutTemplateAlt[];
 /** Sub-menu layout table copied by load_sub_menu_layout for a new game. */

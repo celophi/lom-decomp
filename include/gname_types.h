@@ -82,7 +82,7 @@ typedef struct
     u8 x;     /* 0x0 - X position (biased by 0xE8 when drawn) */
     u8 y;     /* 0x1 - Y position (biased by 4 when drawn) */
     u8 glyph; /* 0x2 - glyph id (index into g_glyph_table); 0 = empty slot */
-    u8 pad;   /* 0x3 - slot 0: frame duration in render ticks; otherwise unused */
+    u8 pad;   /* 0x3 - slot 0: frame duration in render ticks; later values are retained but not read */
 } GlyphAppendAnimSlot;
 
 /**

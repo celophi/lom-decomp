@@ -842,7 +842,7 @@ void menu_cursor_up(void)
  * each). The currently selected item (visible_index == g_titleVisibleItemRank)
  * uses CLUT 1, the rest CLUT 2. A fixed header quad is emitted first, and the
  * cursor quad last; the cursor's U coordinate cycles through
- * g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
+ * g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
  * its Y tracks the selected rank. The advanced prim cursor is written back to
  * MenuContext::next_prim_ptr.
  *
@@ -886,7 +886,7 @@ void render_title_menu_items(void* ctx)
         flag_ptr += 2;
     } while (slot < 0x10);
     result = (s32)emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
-                                      (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
+                                      (s32)g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
 
     anim = g_titleAnimFrame;
     *((s32*)(((u8*)ctx) + 0x80B8)) = result;
@@ -1358,7 +1358,7 @@ void RenderSaveSlotMenu(MenuContext* arg0)
  *    left/right press scrolls to a side panel, and cancel quits the sub-menu
  *    (g_titleMenuExitState = 2).
  *  - Side panel: confirm loads the matching sub-menu layout, seeds its RNG,
- *    copies the selected save record into D_80043618, clears the per-slot
+ *    copies the selected starting-weapon record into D_80043618, clears the per-slot
  *    field of every other menu-layout slot, and confirms (exit state 1);
  *    cancel scrolls back home; up/down move the slot cursor (wrapping over
  *    the 11 slots). Always re-runs the highlight-panel animation.
@@ -1469,7 +1469,7 @@ void handle_save_slot_input(void)
                 u8* dest_ptr;
 
                 dest_ptr = D_80043618;
-                src_ptr = g_saveSlotData + (g_slotSelectedIndex << 6);
+                src_ptr = g_startingWeaponRecords + (g_slotSelectedIndex << 6);
                 copy_count = 0;
                 while (copy_count < 0x40U)
                 {
@@ -1741,7 +1741,7 @@ static void scroll_slots_left(void)
 }
 
 /**
- * @brief One UV/size descriptor in g_slotPolyUvTable / g_slotSprtUvTable.
+ * @brief One UV/size descriptor in the save-slot panel and sprite UV tables.
  *
  * @note Every field is in 8-pixel units; the renderer multiplies by 8 on use.
  */
@@ -1820,7 +1820,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 idx = 0;
             }
 
-            uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98AC);
+            uv = (SlotUvRect*)((idx * 6) + (u32)g_saveSlotPanelUvTable);
 
             poly = (POLY_FT4*)ptr;
             tint = GPU_TINT_NEUTRAL;
@@ -1883,7 +1883,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 SET_BGR0_PACKED((SPRT*)ptr, tint);
                 setSprt((SPRT*)ptr);
 
-                uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
+                uv = (SlotUvRect*)((idx * 6) + (u32)g_saveSlotSpriteUvTable);
                 setSemiTrans((SPRT*)ptr, *(u32*)entry & 2);
 
                 vx = *(u16*)&entry->x + g_slotSlideXLerped;
@@ -2109,12 +2109,12 @@ unsigned short upload_save_layout_textures(void)
 }
 
 /**
- * @brief Load one of the two full menu-layout templates into g_menuLayoutBuffer.
+ * @brief Load one of the two full game-state templates into g_menuLayoutBuffer.
  *
- * Copies a MENU_LAYOUT_WORDS-word (~13 KB) MenuLayout template over the working
+ * Copies a MENU_LAYOUT_WORDS-word (~13 KB) game-state template over the working
  * g_menuLayoutBuffer and sets the companion mode field g_scene_mode.
  *
- * @param use_alt Zero selects the default template (g_menuLayoutTemplateDefault,
+ * @param use_alt Zero selects the new-game template (g_newGameStateTemplate,
  *                g_scene_mode = 0xD); non-zero selects the alternate template
  *                (g_menuLayoutTemplateAlt, g_scene_mode = 0).
  *
@@ -2130,7 +2130,7 @@ void load_menu_layout(s32 use_alt)
     u32 i;
     if (use_alt == 0)
     {
-        src = (s32*)&g_menuLayoutTemplateDefault;
+        src = (s32*)&g_newGameStateTemplate;
         g_scene_mode = 0xD;
         g_music_track_index = 0;
         g_layout_flag = 0;
