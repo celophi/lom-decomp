@@ -3578,7 +3578,7 @@ typedef struct
  *       is active (g_menu_char_slot == 0); type 15 (equip) always returns 1.
  *       0xF000 action items look up an action code in D_8014FE54; codes 1 and 6-11
  *       (navigation pointer setup and audio/companion controls) return 1.
- * @see decomp.me (91%) https://decomp.me/scratch/cV0x9
+ * @see decomp.me (100%) https://decomp.me/scratch/cV0x9
  */
 int menu_item_has_action(void)
 {
@@ -3615,8 +3615,9 @@ int menu_item_has_action(void)
             {
                 if (item_subtype == 15)
                 {
-                    return 1;
+                    goto success;
                 }
+                return 0;
             }
             else
             {
@@ -3634,12 +3635,10 @@ int menu_item_has_action(void)
         {
             return 1;
         }
-        else if ((action_code != 0) && (action_code < 12))
+        else if ((action_code != 0) && (action_code < 12) && (action_code >= 6))
         {
-            if (action_code >= 6)
-            {
-                return 1;
-            }
+success:
+            return 1;
         }
     }
     return 0;
