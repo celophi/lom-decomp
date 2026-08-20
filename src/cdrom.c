@@ -374,7 +374,6 @@ extern void akao_cmd_c1(u32 param_1, u32 param_2, u32 param_3);
 extern void akao_cmd_99_9b_9d_9f(u_int param_1);
 extern undefined FUN_80140d48(void);
 extern void akao_cmd_e2(void);
-extern void akao_cmd_c0(undefined4 param_1, u_int param_2);
 
 /**
  * @brief Initializes the CD-ROM hardware and command system.

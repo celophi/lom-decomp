@@ -395,11 +395,11 @@ void load_title_audio_bank(void)
  * @brief Load a title-screen sequence and its instrument bank from CD-ROM.
  *
  * @details Counterpart of CHECKPS func_80050138. Reads CD resource
- * @c CD_RES_SONG(seq_variant) into the 0x80180000 scratch
+ * @c CD_RES_MUSIC_FILE(seq_variant) into the 0x80180000 scratch
  * buffer, splits it via its self-referential offset table, copies the
  * sequence sub-block to D_8003ECA0, then uploads the trailing instrument bank.
  *
- * @param seq_variant Zero-based title song variant.
+ * @param seq_variant Music-file index; 0 selects MSC_DATA.DAT.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/mBQ6i
  */
@@ -408,7 +408,7 @@ void load_title_seq(s32 seq_variant)
     u32* off;
     u8* base;
 
-    cdrom_queue_read(CD_RES_SONG(seq_variant), (void*)0x80180000);
+    cdrom_queue_read(CD_RES_MUSIC_FILE(seq_variant), (void*)0x80180000);
     cdrom_wait_queue_empty();
 
     off = (u32*)0x80180004;
@@ -435,14 +435,14 @@ void stop_title_music(void)
  *
  * @details Counterpart of CHECKPS func_800501CC. Plays the SEQ loaded into
  * D_8003ECA0 (by load_title_seq) and sets the song volume to maximum via
- * akao_cmd_c0.
+ * akao_set_song_volume.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/xYPkq
  */
 void start_title_music(void)
 {
     akao_play_song((AkaoHeader*)&D_8003ECA0);
-    akao_cmd_c0(0, 0x7F);
+    akao_set_song_volume(0, AKAO_VOLUME_MAX);
 }
 
 /**

@@ -349,7 +349,7 @@ void load_embedded_checkps_audio(void)
  * @brief Load a CHECKPS song container from disc and prepare it for playback.
  * @details Copies the persistent song block into the CHECKPS song buffer, then
  *          uploads the trailing instrument bank to the audio driver.
- * @param song_index Zero-based CHECKPS song index.
+ * @param song_index Music-file index; 0 selects MSC_DATA.DAT.
  */
 void load_checkps_song_from_disc(s32 song_index)
 {
@@ -359,7 +359,7 @@ void load_checkps_song_from_disc(s32 song_index)
     u32* section_offsets;
     u8* song_container;
 
-    cdrom_queue_read(CD_RES_SONG(song_index), CHECKPS_AUDIO_WORK_ADDRESS);
+    cdrom_queue_read(CD_RES_MUSIC_FILE(song_index), CHECKPS_AUDIO_WORK_ADDRESS);
     cdrom_wait_queue_empty();
 
     section_offsets = (u32*)(CHECKPS_AUDIO_WORK_ADDRESS + sizeof(u32));
@@ -385,7 +385,7 @@ void stop_checkps_song(void)
 void play_loaded_checkps_song(void)
 {
     akao_play_song((AkaoHeader*)g_checkps_song_buffer);
-    akao_cmd_c0(0, 0x7F);
+    akao_set_song_volume(0, AKAO_VOLUME_MAX);
 }
 
 /**

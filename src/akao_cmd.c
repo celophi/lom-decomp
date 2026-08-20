@@ -696,18 +696,22 @@ s32 akao_cmd_a5(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 }
 
 /**
- * @brief AKAO command 0xC0 — (a, 7-bit value).
+ * @brief Set a song's master volume through AKAO command 0xC0.
  *
- * @see https://decomp.me/scratch/QPqUd (100%)
+ * @param song_handle Song handle returned by akao_play_song, or 0 for the
+ *        primary song.
+ * @param volume Master volume; only the low 7 bits are used.
+ * @return Result returned by the AKAO command dispatcher.
+ * @see decomp.me (100%) https://decomp.me/scratch/QPqUd
  */
-s32 akao_cmd_c0(s32 arg0, s32 arg1)
+s32 akao_set_song_volume(s32 song_handle, s32 volume)
 {
-    s32 temp_a1;
+    s32 masked_volume;
 
-    g_akaoCmdParams[0] = (void*)(arg0);
-    temp_a1 = arg1 & 0x7F;
-    g_akaoCmdParams[1] = (void*)(temp_a1);
-    return akao_send_command(0xC0);
+    g_akaoCmdParams[0] = (void*)song_handle;
+    masked_volume = volume & AKAO_VOLUME_MAX;
+    g_akaoCmdParams[1] = (void*)masked_volume;
+    return akao_send_command(AKAO_CMD_SET_SONG_VOLUME);
 }
 
 /**

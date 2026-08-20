@@ -161,9 +161,6 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 /** Base CD resource for the Game Over image. */
 #define GOVER_IMAGE_RESOURCE_BASE 0xFFC
 
-/** Maximum 7-bit AKAO volume level. */
-#define AKAO_VOLUME_MAX 0x7F
-
 /** Fade level representing full brightness. */
 #define GOVER_FADE_FULL 0x80
 
@@ -275,7 +272,7 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
         func_800A368C(music_index, 0);
         g_akao_music_volume = AKAO_VOLUME_MAX;
         func_800A380C();
-        akao_cmd_c0(0, AKAO_VOLUME_MAX);
+        akao_set_song_volume(0, AKAO_VOLUME_MAX);
     }
 
     // Begin the fade-in; player input reverses it after full brightness.

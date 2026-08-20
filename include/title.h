@@ -179,7 +179,6 @@ extern s32 g_subMenuLayoutContinue[0x94];
 extern FadeCurrent g_fadeCurrent;
 extern FadeTarget g_fadeTarget;
 
-extern void akao_cmd_c0(undefined4 param_1, u_int param_2);
 extern void akao_play_sfx(s32 arg0, s32 arg1, s32 arg2, s32 arg3);
 
 #endif

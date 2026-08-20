@@ -50,7 +50,7 @@ void load_and_play_song(s32 song_index)
 
     song_handle = akao_play_song((AkaoHeader*)sequence_destination);
     g_current_song_handle = song_handle;
-    akao_cmd_c0(song_handle, 0x7f);
+    akao_set_song_volume(song_handle, AKAO_VOLUME_MAX);
 }
 
 /**

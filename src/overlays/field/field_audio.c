@@ -26,7 +26,7 @@
 #define FIELD_SEQ_MAX_INDEX 0x100
 
 /* Fixed CD resource loaded by func_800A3728. TODO: which SEQ this is has not
- * been confirmed; it is not selected through CD_RES_SONG. */
+ * been confirmed; it is not selected through CD_RES_MUSIC_FILE. */
 #define FIELD_FIXED_SEQ_RESOURCE 0x92
 
 /** @brief AKAO sequence staging area shared with the TITLE overlay. */
@@ -68,13 +68,13 @@ extern s32 D_8011588C;
  * @brief Load a field SEQ resource from CD-ROM and submit it for playback.
  *
  * @details Counterpart of TITLE's load_title_seq. Reads resource
- * @c CD_RES_SONG(music_index) into the SEQ_BLOB_BASE scratch
+ * @c CD_RES_MUSIC_FILE(music_index) into the SEQ_BLOB_BASE scratch
  * buffer, splits the blob via its leading offset table, copies the song
  * sequence to one of two staging areas, then uploads the trailing instrument
  * bank through akao_upload_bank_blocking.
  *
- * @param music_index Zero-based song index. Indices above FIELD_SEQ_MAX_INDEX
- *        are ignored and the function returns without touching the CD-ROM.
+ * @param music_index Music-file index; 0 selects MSC_DATA.DAT. Indices above
+ *        FIELD_SEQ_MAX_INDEX are ignored.
  * @param destination_index Selects the staging area for the copied sub-block:
  *        0 picks D_8003ECA0, non-zero picks D_80117EF8.
  *
@@ -88,7 +88,7 @@ void func_800A368C(s32 music_index, s32 destination_index)
 
     if (music_index < FIELD_SEQ_MAX_INDEX + 1)
     {
-        cdrom_queue_read(CD_RES_SONG(music_index), (void*)SEQ_BLOB_BASE);
+        cdrom_queue_read(CD_RES_MUSIC_FILE(music_index), (void*)SEQ_BLOB_BASE);
         cdrom_wait_queue_empty();
 
         off = (u32*)SEQ_BLOB_OFFSETS;
@@ -202,7 +202,7 @@ void func_800A380C(void)
 
     play_result = akao_play_song((AkaoHeader*)&D_8003ECA0);
     D_8011F310 = play_result;
-    akao_cmd_c0(play_result, D_8011588C);
+    akao_set_song_volume(play_result, D_8011588C);
     akao_cmd_d4(0);
     akao_cmd_d0(0);
 }

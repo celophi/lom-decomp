@@ -3,6 +3,9 @@
 
 #include "common.h"
 
+/** Maximum representable value for AKAO's 7-bit volume controls. */
+#define AKAO_VOLUME_MAX 0x7F
+
 /**
  * @brief CPU→AKAO-driver command opcodes.
  *
@@ -68,9 +71,9 @@ typedef enum AkaoCmd
     AKAO_CMD_AB                 = 0xAB, /**< master/global: (a, pan8) — counterpart of 0xA3 */
     AKAO_CMD_AC                 = 0xAC, /**< master/global: (byte8) — counterpart of 0xA4   */
     AKAO_CMD_AD                 = 0xAD, /**< master/global: (a, byte8) — counterpart of 0xA5 */
-    AKAO_CMD_C0                 = 0xC0, /**< (a, vol7) — possibly per-channel transpose / pitch-bend */
-    AKAO_CMD_C1                 = 0xC1, /**< (a, b, vol7) — 0xC0 with extra parameter        */
-    AKAO_CMD_C2                 = 0xC2, /**< (a, b, vol7, vol7) — 0xC0 with two trailing 7-bit values */
+    AKAO_CMD_SET_SONG_VOLUME    = 0xC0, /**< (song, volume7) - set song master volume       */
+    AKAO_CMD_C1                 = 0xC1, /**< (song, ticks, volume7) - fade song volume      */
+    AKAO_CMD_C2                 = 0xC2, /**< (song, ticks, start7, target7) - fade from start */
     AKAO_CMD_C8                 = 0xC8, /**< (a) — unmasked single arg; semantics TBD       */
     AKAO_CMD_C9                 = 0xC9, /**< (a, b) — unmasked args; semantics TBD          */
     AKAO_CMD_CA                 = 0xCA, /**< (a, b, c) — unmasked args; semantics TBD       */
@@ -172,6 +175,7 @@ typedef struct AkaoBankHeader
 
 s32 akao_register_bank(AkaoHeader* bank);
 s32 akao_play_song(AkaoHeader* sequence);
+s32 akao_set_song_volume(s32 song_handle, s32 volume);
 void akao_upload_bank_blocking(AkaoBankHeader* bank, s32 wait_for_completion);
 
 /**
