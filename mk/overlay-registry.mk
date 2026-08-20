@@ -7,6 +7,8 @@
 # toolchain configuration:
 #
 #   overlay_<name>_gcc_272_cdk_g0_srcs
+#   overlay_<name>_gcc_272_cdk_g0_nosched_srcs
+#   overlay_<name>_gcc_272_cdk_g0_noexpand_srcs
 #   overlay_<name>_gcc_272_gnu_g0_srcs
 #   overlay_<name>_gcc_280_g0_srcs
 #   overlay_<name>_gcc_280_g4_srcs
@@ -50,12 +52,15 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field_audio.c \
 	src/overlays/field/func_800681c0.c \
 	src/overlays/field/func_800675c8.c \
+	src/overlays/field/func_80067aa4.c \
 	src/overlays/field/func_80067fb0.c \
 	src/overlays/field/field6.c \
 	src/overlays/field/field7.c \
 	src/overlays/field/field8.c \
 	src/overlays/field/unk2.c \
 	src/overlays/field/unk2_b.c
+overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
+overlay_field_gcc_272_cdk_g0_noexpand_srcs := src/overlays/field/field3.c
 overlay_field_gcc_280_g4_srcs := src/overlays/field/func_80067bbc.c
 overlay_field_gcc_280_g4_noexpand_srcs := \
 	src/overlays/field/field_scene_load.c \

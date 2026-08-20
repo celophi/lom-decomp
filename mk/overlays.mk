@@ -61,11 +61,13 @@ $(1)_LINKER_SCRIPTS := \
 
 # ── Discover and validate source routing ──
 $(1)_GCC_272_CDK_G0_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_srcs)
+$(1)_GCC_272_CDK_G0_NOSCHED_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_nosched_srcs)
+$(1)_GCC_272_CDK_G0_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_272_cdk_g0_noexpand_srcs)
 $(1)_GCC_272_GNU_G0_SRCS := $$(overlay_$(1)_gcc_272_gnu_g0_srcs)
 $(1)_GCC_280_G0_SRCS := $$(overlay_$(1)_gcc_280_g0_srcs)
 $(1)_GCC_280_G4_SRCS := $$(overlay_$(1)_gcc_280_g4_srcs)
 $(1)_GCC_280_G4_NOEXPAND_SRCS := $$(overlay_$(1)_gcc_280_g4_noexpand_srcs)
-$(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
+$(1)_ROUTED_SRCS = $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_CDK_G0_NOSCHED_SRCS) $$($(1)_GCC_272_CDK_G0_NOEXPAND_SRCS) $$($(1)_GCC_272_GNU_G0_SRCS) $$($(1)_GCC_280_G0_SRCS) $$($(1)_GCC_280_G4_SRCS) $$($(1)_GCC_280_G4_NOEXPAND_SRCS)
 # Generated unk*.c files are gitignored and splat does not remove outputs from
 # older configurations. Treat tracked C files and explicitly routed generated
 # files as build inputs so stale ignored files cannot enter the build by accident.
@@ -89,9 +91,19 @@ $(1)_GCC_280_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUIL
 $(1)_GCC_280_G4_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_ALL_SRCS))
 $(1)_GCC_280_G4_NOEXPAND_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_280_G4_NOEXPAND_SRCS))
 $(1)_GCC_272_GNU_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_GNU_G0_SRCS))
-$(1)_GCC_272_CDK_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_CDK_G0_SRCS))
-# Clear the div-expansion flag for the no-expand subset (target-specific var).
+# The nosched and noexpand subsets share the CDK G0 compile rule; they differ
+# only by target-specific flags applied below (-fno-schedule-insns and the
+# cleared div-expansion flag, respectively).
+$(1)_GCC_272_CDK_G0_ALL_SRCS := $$($(1)_GCC_272_CDK_G0_SRCS) $$($(1)_GCC_272_CDK_G0_NOSCHED_SRCS) $$($(1)_GCC_272_CDK_G0_NOEXPAND_SRCS)
+$(1)_GCC_272_CDK_G0_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_CDK_G0_ALL_SRCS))
+$(1)_GCC_272_CDK_G0_NOSCHED_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_CDK_G0_NOSCHED_SRCS))
+$(1)_GCC_272_CDK_G0_NOEXPAND_OBJS := $$(patsubst $$($(1)_SRC_DIR)/%.c,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o,$$($(1)_GCC_272_CDK_G0_NOEXPAND_SRCS))
+# Clear the div-expansion flag for the G4 no-expand subset (target-specific var).
 $$($(1)_GCC_280_G4_NOEXPAND_OBJS): MASPSX_DIV_FLAG_G4 :=
+# Disable the instruction scheduler for the CDK nosched subset (target-specific var).
+$$($(1)_GCC_272_CDK_G0_NOSCHED_OBJS): CFLAGS_272_CDK_SCHED_FLAG := -fno-schedule-insns
+# Clear the div-expansion flag for the CDK no-expand subset (target-specific var).
+$$($(1)_GCC_272_CDK_G0_NOEXPAND_OBJS): MASPSX_CDK_DIV_FLAG :=
 $(1)_C_OBJS := $$($(1)_GCC_272_CDK_G0_OBJS) $$($(1)_GCC_280_G0_OBJS) $$($(1)_GCC_272_GNU_G0_OBJS) $$($(1)_GCC_280_G4_OBJS)
 
 # ── Optional standalone binary object ──
@@ -118,8 +130,8 @@ $$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_
 # Rule: compile C files with GCC 2.7.2 CDK G0 + maspsx.
 $$($(1)_GCC_272_CDK_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
 	@mkdir -p $$(@D)
-	cd $(STAGING) && $(CC_272_CDK) $(CFLAGS_272_CDK_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
-		$(MASPSX_AS) $(INCLUDE_FLAGS) $(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
+	cd $(STAGING) && $(CC_272_CDK) $$(CFLAGS_272_CDK_G0) $(INCLUDE_FLAGS) -c $$($(1)_SRC_DIR)/$$*.c -S -o - | \
+		$(MASPSX_AS) $(INCLUDE_FLAGS) $$(MASPSX_FLAGS_272_CDK) -o $$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/$$*.o
 
 # Rule: compile C files with GCC 2.8.0 G0 + maspsx.
 $$($(1)_GCC_280_G0_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_SRC_DIR)/%.o: $$($(1)_SRC_DIR)/%.c $(COPY_SENTINEL) | $(1)-validate
