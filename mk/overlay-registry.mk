@@ -57,6 +57,7 @@ overlay_field_gcc_272_cdk_g0_srcs := \
 	src/overlays/field/field6.c \
 	src/overlays/field/field7.c \
 	src/overlays/field/field8.c \
+	src/overlays/field/field9.c \
 	src/overlays/field/unk2.c \
 	src/overlays/field/unk2_b.c
 overlay_field_gcc_272_cdk_g0_nosched_srcs := src/overlays/field/field2.c
