@@ -786,3 +786,176 @@ loop_19:
     }
     func_8007DA80(rec, sp50, var_s1, base);
 }
+
+/**
+ * @brief Field single-primitive marker builder: places one billboard
+ *        primitive at the actor's camera-relative pan position, or (when
+ *        the part's owner tracking flag is clear and its unk4 bit 3 is set)
+ *        at a fixed local-space offset transformed through the actor's
+ *        rotation matrix via the GTE.
+ * @param rec Effect record.
+ * @param primbuf Output primitive buffer; advanced by one primitive (0x14
+ *                bytes).
+ * @param base Ordering-table / primitive base array.
+ * @note WIP - 68.94% (110/235 exact rows) at time of writing. m2c could not
+ *       resolve func_80073F7C's second and third output words (sp+0x34,
+ *       sp+0x38, its own struct's y/z alongside sp30's x); all three are
+ *       spelled here as one FieldVector output struct rather than left
+ *       undeclared. Frame is 0x10 bytes smaller than the target's (-0x70 vs
+ *       -0x80) and the GTE/pan-base locals land at different stack offsets
+ *       -- the same declaration-order/allocation residue class seen
+ *       throughout this file (func_800799C4, func_8007A104).
+ * @see decomp.me WIP
+ */
+void func_8007AA2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+{
+    FieldMatrix sp40;
+    FieldVector sp30;
+    s16 sp1C;
+    s16 sp1A;
+    s16 sp18;
+    u16 sp12;
+    u16 sp10;
+    FieldActorState *temp_s2;
+    s32 *temp_v0;
+    s32 temp_v1;
+    s32 var_a0;
+    s32 var_a0_2;
+    s32 var_a0_3;
+    s32 var_t0;
+    s32 var_v0;
+    s32 var_v0_2;
+    s32 var_v0_4;
+    s32 var_v0_5;
+    s32 var_v1;
+    s32 var_v1_2;
+    s32 var_v1_3;
+    s32 var_v1_4;
+    s8 var_v0_3;
+    FieldActorPartDef *temp_s5;
+    u8 *var_s1;
+
+    temp_s2 = &g_field_actor_slots[rec->unk22];
+    temp_s5 = &temp_s2->unk0[rec->unk23];
+    func_8007D078(temp_s5, &sp40, temp_s2);
+    gte_SetRotMatrix(&sp40);
+
+    var_v0 = D_800F22A0;
+    if (var_v0 < 0)
+    {
+        var_v0 += 0xFF;
+    }
+    var_v1 = rec->unk0;
+    if (var_v1 < 0)
+    {
+        var_v1 += 0xFF;
+    }
+    sp10 = (u16) ((var_v0 >> 8) + ((var_v1 >> 8) + 0xA0));
+    var_a0 = D_800F22A4;
+    if (var_a0 < 0)
+    {
+        var_a0 += 0xFF;
+    }
+    var_v0_2 = rec->unk4;
+    if (var_v0_2 < 0)
+    {
+        var_v0_2 += 0xFF;
+    }
+    var_v1_2 = rec->unk8;
+    if (var_v1_2 < 0)
+    {
+        var_v1_2 += 0x1FF;
+    }
+    var_t0 = D_800F22A8;
+    if (var_t0 < 0)
+    {
+        var_t0 += 0x1FF;
+    }
+    sp12 = (u16) ((((var_a0 >> 8) + ((var_v0_2 >> 8) + 0x70)) - (var_v1_2 >> 9)) - (var_t0 >> 9));
+    func_8007D8D8(temp_s2, rec, temp_s5, primbuf + 4);
+    *(s8 *) (primbuf + 3) = 4;
+    *(s8 *) (primbuf + 7) = 0x50;
+    var_v0_3 = 0x52;
+    if (!(rec->unk1C & 0x800000))
+    {
+        var_v0_3 = 0x50;
+    }
+    *(s8 *) (primbuf + 7) = var_v0_3;
+    *(s32 *) (primbuf + 0xC) = 0;
+    if (rec->unk1B != 0)
+    {
+        *(s32 *) (primbuf + 8) = (s32) sp10;
+        func_80073F7C(rec, temp_s5, &sp30);
+        var_v0_4 = D_800F22A0;
+        if (var_v0_4 < 0)
+        {
+            var_v0_4 += 0xFF;
+        }
+        var_v1_3 = sp30.vx;
+        if (var_v1_3 < 0)
+        {
+            var_v1_3 += 0xFF;
+        }
+        var_a0_2 = D_800F22A4;
+        sp10 = (u16) ((var_v0_4 >> 8) + ((var_v1_3 >> 8) + 0xA0));
+        if (var_a0_2 < 0)
+        {
+            var_a0_2 += 0xFF;
+        }
+        var_v0_5 = sp30.vy;
+        if (var_v0_5 < 0)
+        {
+            var_v0_5 += 0xFF;
+        }
+        var_a0_3 = sp30.vz;
+        if (var_a0_3 < 0)
+        {
+            var_a0_3 += 0x1FF;
+        }
+        var_v1_4 = D_800F22A8;
+        if (var_v1_4 < 0)
+        {
+            var_v1_4 += 0x1FF;
+        }
+        sp12 = (u16) ((((var_a0_2 >> 8) + ((var_v0_5 >> 8) + 0x70)) - (var_a0_3 >> 9)) - (var_v1_4 >> 9));
+        *(s32 *) (primbuf + 0x10) = (s32) sp10;
+    }
+    else if (((u32) temp_s5->unk4 >> 3) & 1)
+    {
+        sp18 = -0x1E;
+        sp1A = 0;
+        sp1C = 0;
+        gte_ldv0((FieldSVector *) &sp18);
+        gte_rtv0();
+        gte_stlvnl(&sp30);
+        *(s16 *) (primbuf + 8) = (s16) (sp10 + (u16) sp30.vx);
+        *(s32 *) (primbuf + 0x10) = (s32) sp10;
+        *(s16 *) (primbuf + 0xA) = (s16) (sp12 + (u16) sp30.vy);
+    }
+    else
+    {
+        *(s32 *) (primbuf + 0x10) = (s32) sp10;
+        *(s32 *) (primbuf + 8) = (s32) sp10;
+    }
+    temp_v1 = (s32) rec->unk8 >> 7;
+    if (temp_v1 < 0)
+    {
+        *(s32 *) (primbuf + 0) = (s32) ((*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0] & 0xFFFFFF));
+        var_s1 = primbuf + 0x14;
+        base[0] = (s32) ((base[0] & 0xFF000000) | ((s32) primbuf & 0xFFFFFF));
+    }
+    else if (temp_v1 >= 0x1000)
+    {
+        *(s32 *) (primbuf + 0) = (s32) ((*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF));
+        var_s1 = primbuf + 0x14;
+        base[0xFFF] = (s32) ((base[0xFFF] & 0xFF000000) | ((s32) primbuf & 0xFFFFFF));
+    }
+    else
+    {
+        *(s32 *) (primbuf + 0) = (s32) ((*(s32 *) (primbuf + 0) & 0xFF000000) | (*((temp_v1 * 4) + base) & 0xFFFFFF));
+        temp_v0 = (((s32) rec->unk8 >> 7) * 4) + base;
+        var_s1 = primbuf + 0x14;
+        *temp_v0 = (*temp_v0 & 0xFF000000) | ((s32) primbuf & 0xFFFFFF);
+    }
+    func_8007DA80(rec, temp_s5, var_s1, base);
+}

@@ -62,10 +62,6 @@ typedef union
     DR_TPAGE draw_mode;
 } TitleFadePrimitive;
 
-/* TITLE.BIN stores all writable globals in the file-backed .data section,
- * including the zero-initialized runtime state at the end of the overlay. */
-#define TITLE_DATA __attribute__((section(".data")))
-
 /* The first word is a non-creative section sentinel. Keeping it in this
  * translation unit makes .text begin immediately at 0x8004FC74. */
 const u32 D_8004FC70 __attribute__((section(".rodata"))) = 0x10;
@@ -73,63 +69,63 @@ const u32 D_8004FC70 __attribute__((section(".rodata"))) = 0x10;
 /* Self-relative offsets for the two title-screen TIM images which immediately
  * follow this table. The image pixels are generated from the contributor's
  * original TITLE.BIN and remain outside source control. */
-u32 g_titleMenuTimTable[3] TITLE_DATA = { 2, 0xC, 0x822C };
-u32 g_titleMenuTimImages[0x2DA38 / sizeof(u32)] TITLE_DATA = {
+u32 g_titleMenuTimTable[3] = { 2, 0xC, 0x822C };
+u32 g_titleMenuTimImages[0x2DA38 / sizeof(u32)] = {
 #include "gen/g_titleMenuTimImages.inc"
 };
 
 /* Four-frame CLUT cycle used by the title cursor. */
-u8 g_cursorBlinkPalette[4] TITLE_DATA = { 0x00, 0x10, 0x20, 0x10 };
+u8 g_cursorBlinkPalette[4] = { 0x00, 0x10, 0x20, 0x10 };
 
 /* Save/title artwork. Each region is a complete TIM image; only its schema and
  * address-order are committed, while generated fragments supply the pixels. */
-u32 D_8007FD30[0x23224 / sizeof(u32)] TITLE_DATA = {
+u32 D_8007FD30[0x23224 / sizeof(u32)] = {
 #include "gen/D_8007FD30.inc"
 };
-u32 D_800A2F54[0x8044 / sizeof(u32)] TITLE_DATA = {
+u32 D_800A2F54[0x8044 / sizeof(u32)] = {
 #include "gen/D_800A2F54.inc"
 };
-u32 D_800AAF98[0x44A4 / sizeof(u32)] TITLE_DATA = {
+u32 D_800AAF98[0x44A4 / sizeof(u32)] = {
 #include "gen/D_800AAF98.inc"
 };
-u32 D_800AF43C[0x44A4 / sizeof(u32)] TITLE_DATA = {
+u32 D_800AF43C[0x44A4 / sizeof(u32)] = {
 #include "gen/D_800AF43C.inc"
 };
-u32 D_800B38E0[0x5C4 / sizeof(u32)] TITLE_DATA = {
+u32 D_800B38E0[0x5C4 / sizeof(u32)] = {
 #include "gen/D_800B38E0.inc"
 };
-u32 D_800B3EA4[0x2444 / sizeof(u32)] TITLE_DATA = {
+u32 D_800B3EA4[0x2444 / sizeof(u32)] = {
 #include "gen/D_800B3EA4.inc"
 };
-u32 D_800B62E8[0xD244 / sizeof(u32)] TITLE_DATA = {
+u32 D_800B62E8[0xD244 / sizeof(u32)] = {
 #include "gen/D_800B62E8.inc"
 };
-u32 D_800C352C[0xD244 / sizeof(u32)] TITLE_DATA = {
+u32 D_800C352C[0xD244 / sizeof(u32)] = {
 #include "gen/D_800C352C.inc"
 };
-u32 D_800D0770[0x8C44 / sizeof(u32)] TITLE_DATA = {
+u32 D_800D0770[0x8C44 / sizeof(u32)] = {
 #include "gen/D_800D0770.inc"
 };
-u32 D_800D93B4[0x10224 / sizeof(u32)] TITLE_DATA = {
+u32 D_800D93B4[0x10224 / sizeof(u32)] = {
 #include "gen/D_800D93B4.inc"
 };
-u32 D_800E95D8[0x8CD4 / sizeof(u32)] TITLE_DATA = {
+u32 D_800E95D8[0x8CD4 / sizeof(u32)] = {
 #include "gen/D_800E95D8.inc"
 };
 
 /* The shared-symbol map names 0x800F22AC g_frame_counter, but in TITLE.BIN that
  * address falls inside the final TIM's pixel block. Preserve the label used by
  * other code while generating this overlay's image bytes locally. */
-s32 g_frame_counter TITLE_DATA =
+s32 g_frame_counter =
 #include "gen/g_frame_counter.inc"
 ;
-u32 D_800F22B0[0x7548 / sizeof(u32)] TITLE_DATA = {
+u32 D_800F22B0[0x7548 / sizeof(u32)] = {
 #include "gen/D_800F22B0.inc"
 };
-u32 D_800F97F8 TITLE_DATA = 0;
+u32 D_800F97F8 = 0;
 
 /* Mechanical VRAM destinations and pointers for the eleven TIMs above. */
-SaveLayoutTex g_saveLayoutTexTable[11] TITLE_DATA = {
+SaveLayoutTex g_saveLayoutTexTable[11] = {
     { 0x140, 0x000, 0x000, 0x1E0, (u8*)D_8007FD30, 0 },
     { 0x280, 0x000, 0x000, 0x1E1, (u8*)D_800A2F54, 0 },
     { 0x2C0, 0x000, 0x000, 0x1E2, (u8*)D_800AAF98, 0 },
@@ -145,67 +141,67 @@ SaveLayoutTex g_saveLayoutTexTable[11] TITLE_DATA = {
 
 /* Game-authored save-screen UVs, layouts, sample slot records, and menu
  * templates are generated locally for the same copyright reason as the TIMs. */
-u8 D_800F98AC[0x48] TITLE_DATA = {
+u8 D_800F98AC[0x48] = {
 #include "gen/D_800F98AC.inc"
 };
-u8 D_800F98F4[0x48] TITLE_DATA = {
+u8 D_800F98F4[0x48] = {
 #include "gen/D_800F98F4.inc"
 };
 /* D_800F9AED is a linker-defined interior alias at byte 0x1B1. Keeping this
  * as one array avoids compiler padding at that deliberately unaligned label. */
-u8 g_saveLayoutTable[0x288] TITLE_DATA = {
+u8 g_saveLayoutTable[0x288] = {
 #include "gen/g_saveLayoutTable.inc"
 };
-u8 g_saveSlotData[0x2C0] TITLE_DATA = {
+u8 g_saveSlotData[0x2C0] = {
 #include "gen/g_saveSlotData.inc"
 };
-u32 g_menuLayoutTemplateDefault[0x48F4 / sizeof(u32)] TITLE_DATA = {
+u32 g_menuLayoutTemplateDefault[0x48F4 / sizeof(u32)] = {
 #include "gen/g_menuLayoutTemplateDefault.inc"
 };
 
 /* Another shared-map label which falls inside the default menu template. */
-u8 g_prim_rect_buf[0x7C8] TITLE_DATA = {
+u8 g_prim_rect_buf[0x7C8] = {
 #include "gen/g_prim_rect_buf.inc"
 };
 
-u32 g_menuLayoutTemplateAlt[0x3260 / sizeof(u32)] TITLE_DATA = {
+u32 g_menuLayoutTemplateAlt[0x3260 / sizeof(u32)] = {
 #include "gen/g_menuLayoutTemplateAlt.inc"
 };
-s32 g_subMenuLayoutDefault[0x94] TITLE_DATA = {
+s32 g_subMenuLayoutDefault[0x94] = {
 #include "gen/g_subMenuLayoutDefault.inc"
 };
-s32 g_subMenuLayoutContinue[0x94] TITLE_DATA = {
+s32 g_subMenuLayoutContinue[0x94] = {
 #include "gen/g_subMenuLayoutContinue.inc"
 };
 
 /* Runtime state. These are initialized rather than placed in .bss because the
  * original overlay contains their zero bytes in its compressed payload. */
-s32 g_titleMenuExitState TITLE_DATA = 0;
-s32 D_80102644 TITLE_DATA = 0;
-FadeTarget g_fadeTarget TITLE_DATA = { 0, 0, 0, 0 };
-FadeCurrent g_fadeCurrent TITLE_DATA = { 0, 0, 0 };
-s32 D_80102664 TITLE_DATA = 0;
-s32 g_titleAudioBankBase TITLE_DATA = 0;
-s32 D_8010266C TITLE_DATA = 0;
-u8 g_titleMenuItemFlags[0x20] TITLE_DATA = { 0 };
-u8 g_titleVisibleItemRank TITLE_DATA = 0;
-u8 g_titleAnimFrame TITLE_DATA = 0;
-u8 g_titleSelectedItem TITLE_DATA = 0;
-u8 D_80102693 TITLE_DATA = 0;
-s32 g_lastInputState TITLE_DATA = 0;
-s32 g_inputRepeatTimer TITLE_DATA = 0;
-s32 g_debouncedInput TITLE_DATA = 0;
-s32 g_titleIdleCountdown TITLE_DATA = 0;
-s32 D_801026A4 TITLE_DATA = 0;
-s32 g_slotSlideX TITLE_DATA = 0;
-s32 g_slotSlideY TITLE_DATA = 0;
-s32 g_slotSelectedIndex TITLE_DATA = 0;
-s32 g_slotSlideFrames TITLE_DATA = 0;
-s32 g_slotHighlightX TITLE_DATA = 0;
-s32 g_slotHighlightTargetX TITLE_DATA = 0;
-s32 g_slotSlideXLerped TITLE_DATA = 0;
-s32 g_slotSlideYLerped TITLE_DATA = 0;
-s32 g_slotHighlightFrames TITLE_DATA = 0;
+s32 g_titleMenuExitState = 0;
+s32 D_80102644 = 0;
+FadeTarget g_fadeTarget = { 0, 0, 0, 0 };
+FadeCurrent g_fadeCurrent = { 0, 0, 0 };
+s32 D_80102664 = 0;
+s32 g_titleAudioBankBase = 0;
+s32 D_8010266C = 0;
+u8 g_titleMenuItemFlags[0x20] = { 0 };
+u8 g_titleVisibleItemRank = 0;
+u8 g_titleAnimFrame = 0;
+u8 g_titleSelectedItem = 0;
+u8 D_80102693 = 0;
+s32 g_lastInputState = 0;
+s32 g_inputRepeatTimer = 0;
+s32 g_debouncedInput = 0;
+s32 g_titleIdleCountdown = 0;
+s32 D_801026A4 = 0;
+s32 g_slotSlideX = 0;
+s32 g_slotSlideY = 0;
+s32 g_slotSelectedIndex = 0;
+s32 g_slotSlideFrames = 0;
+s32 g_slotHighlightX = 0;
+s32 g_slotHighlightTargetX = 0;
+s32 g_slotSlideXLerped = 0;
+s32 g_slotSlideYLerped = 0;
+s32 g_slotHighlightFrames = 0;
 
 /** Advance a fade packet cursor by the concrete packet just emitted. */
 #define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) \
