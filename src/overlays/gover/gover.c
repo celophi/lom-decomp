@@ -161,9 +161,6 @@ extern void cdrom_queue_read(s32 resource_index, void* destination);
 /** Base CD resource for the Game Over image. */
 #define GOVER_IMAGE_RESOURCE_BASE 0xFFC
 
-/** Maximum 7-bit AKAO volume level. */
-#define AKAO_VOLUME_MAX 0x7F
-
 /** Fade level representing full brightness. */
 #define GOVER_FADE_FULL 0x80
 
@@ -275,7 +272,7 @@ void gover_show_screen(Tim* image_buffer, s32 image_index, s32 music_index, s32 
         func_800A368C(music_index, 0);
         g_akao_music_volume = AKAO_VOLUME_MAX;
         func_800A380C();
-        akao_cmd_c0(0, AKAO_VOLUME_MAX);
+        akao_set_song_volume(0, AKAO_VOLUME_MAX);
     }
 
     // Begin the fade-in; player input reverses it after full brightness.
@@ -470,23 +467,25 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinati
     TimBlock* pixel_block;
     u32 clut_block_length = tim->clut_block.bnum;
 
-    setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, tim->clut_block.w * tim->clut_block.h, 1);
+    setRECT(&upload_rect, destinations->clut_x, destinations->clut_y,
+            tim->clut_block.dimensions.width * tim->clut_block.dimensions.height, 1);
     LoadImage(&upload_rect, tim->clut_data);
 
     // Locate the pixel block that follows the variable-length CLUT block.
     pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
 
-    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_block->w, pixel_block->h);
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y,
+            pixel_block->dimensions.width, pixel_block->dimensions.height);
     LoadImage(&upload_rect, pixel_block + 1);
 
-    return ALIGN64(pixel_block->w);
+    return ALIGN64(pixel_block->dimensions.width);
 }
 
 /**
  * @brief Loads and registers a Game Over SFX bank with the AKAO driver.
  *
  * Clears the previous table, copies the selected table into driver storage,
- * and registers the accompanying AKAO program.
+ * and uploads the accompanying AKAO instrument bank.
  *
  * @param sfx_bank_index Bank index, @c GOVER_SFX_DISABLED to clear the staged
  *                       bank, or @c GOVER_SFX_BANK_REUSE to keep it unchanged.
@@ -497,7 +496,7 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     ResourceOffsetTable* loaded_table;
     u8* copy_destination;
     u8* copy_source;
-    void* akao_program;
+    void* akao_bank;
     u16 resource_index;
 
     if (sfx_bank_index == GOVER_SFX_BANK_REUSE)
@@ -522,14 +521,14 @@ static void gover_load_sfx_bank(s32 sfx_bank_index)
     g_sfx_table_buffer.active_table_offset = GOVER_SFX_TABLE_DATA_OFFSET;
     loaded_table = GOVER_LOADED_SFX_TABLE;
     copy_source = loaded_table->bytes;
-    akao_program = RESOURCE_TABLE_END(loaded_table);
+    akao_bank = RESOURCE_TABLE_END(loaded_table);
     copy_destination = g_sfx_table_buffer.table_data;
 
-    // Preserve the SFX table that precedes the AKAO program.
-    while (copy_source != akao_program)
+    // Preserve the SFX table that precedes the AKAO bank.
+    while (copy_source != akao_bank)
     {
         *copy_destination++ = *copy_source++;
     }
 
-    akao_play_sequence_blocking(akao_program, 1);
+    akao_upload_bank_blocking(akao_bank, 1);
 }

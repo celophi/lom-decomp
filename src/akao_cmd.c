@@ -11,7 +11,7 @@
  * Slot 0 is dual-purpose: most opcodes treat it as a scalar (channel index,
  * sound id, volume), but several wrappers (akao_play_song, akao_register_bank,
  * akao_cmd_e0 opcode 0xE0, akao_cmd_ec opcode 0xEC) store an
- * AkaoSeqHeader-compatible **buffer pointer** there. Typed @c void* to
+ * AkaoHeader-compatible **buffer pointer** there. Typed @c void* to
  * acknowledge that dual use; scalar stores rely on GCC 2.7.2's permissive
  * implicit int→pointer conversion.
  */
@@ -60,12 +60,8 @@ extern AkaoBankHeader g_akao_bank_staging;
 
 #define AKAO_CHANNEL_STATE (*(AkaoChannelState**)0x8003EC5C)
 
-extern s32 akao_submit(AkaoBankHeader* bank, s32 wait_for_completion);
-
 s32 FUN_80021fbc(void);
 s32 func_80021FDC(void);
-s32 akao_register_bank(AkaoSeqHeader* bank);
-void akao_play_song(s32 seqData);
 void akao_stop_song(s32 arg0);
 void akao_cmd_40(void);
 void akao_cmd_14(s32 arg0, s32 arg1);
@@ -122,27 +118,27 @@ s32 func_80021FDC(void)
 /**
  * @brief Registers an AKAO instrument/sample bank with the audio driver.
  *
- * Validates the 'AKAO' magic at the start of @p bankBase via akao_check_magic;
+ * Validates the 'AKAO' magic at the start of @p bank via akao_check_magic;
  * on success, hands the payload (after the 16-byte AKAO header) to the driver
  * entry point akao_set_bank_data_ptrs, which records the bank as the active sample source.
  *
- * @param bankBase  Address of an AKAO-tagged instrument bank in main RAM.
- *                  The first 4 bytes must be "AKAO" (0x4F414B41 little-endian).
- *                  In TITLE this points to 0x8013C000 after EFFECT.SET is split.
+ * @param bank Address of an AKAO-tagged instrument bank in main RAM. The first
+ *             four bytes must be "AKAO". In TITLE this points to 0x8013C000
+ *             after EFFECT.SET is split.
  *
  * @return 0 if the magic matched and the bank was registered; otherwise the
- *         non-zero delta (*bankBase + 0xB0BEB4BF) that akao_check_magic returned.
+ *         non-zero delta (bank->magic - AKAO_MAGIC) from akao_check_magic.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/0q180
  */
-s32 akao_register_bank(AkaoSeqHeader* bank)
+s32 akao_register_bank(AkaoHeader* bank)
 {
     s32 temp_v0;
 
     temp_v0 = akao_check_magic(bank);
     if (temp_v0 == 0)
     {
-        akao_set_bank_data_ptrs((s32)bank + sizeof(AkaoSeqHeader));
+        akao_set_bank_data_ptrs((s32)bank + sizeof(AkaoHeader));
     }
     return temp_v0;
 }
@@ -150,19 +146,20 @@ s32 akao_register_bank(AkaoSeqHeader* bank)
 /**
  * @brief AKAO command 0x10 — start playback of a sequence (song).
  *
- * Loads @p seqData into the AKAO command parameter buffer and dispatches the
+ * Loads @p sequence_data into the AKAO command parameter buffer and dispatches the
  * "play song" command to the audio driver. The driver picks up the buffer
  * pointer from g_akaoCmdParams[0] when it processes the command.
  *
- * @param seqData  Pointer to a loaded AKAO-tagged sequence buffer (e.g.
- *                 @c &D_8003ECA0 in TITLE, @c &D_8005D088 in CHECKPS).
+ * @param sequence_data Pointer to a loaded AKAO-tagged sequence buffer, such
+ *                      as @c &D_8003ECA0 in TITLE.
+ * @return Song handle returned by the AKAO command dispatcher.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/iVOOb
  */
-void akao_play_song(s32 seqData)
+s32 akao_play_song(AkaoHeader* sequence_data)
 {
-    g_akaoCmdParams[0] = (void*)(seqData);
-    akao_send_command(0x10);
+    g_akaoCmdParams[0] = sequence_data;
+    return akao_send_command(0x10);
 }
 
 /**
@@ -699,18 +696,22 @@ s32 akao_cmd_a5(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
 }
 
 /**
- * @brief AKAO command 0xC0 — (a, 7-bit value).
+ * @brief Set a song's master volume through AKAO command 0xC0.
  *
- * @see https://decomp.me/scratch/QPqUd (100%)
+ * @param song_handle Song handle returned by akao_play_song, or 0 for the
+ *        primary song.
+ * @param volume Master volume; only the low 7 bits are used.
+ * @return Result returned by the AKAO command dispatcher.
+ * @see decomp.me (100%) https://decomp.me/scratch/QPqUd
  */
-s32 akao_cmd_c0(s32 arg0, s32 arg1)
+s32 akao_set_song_volume(s32 song_handle, s32 volume)
 {
-    s32 temp_a1;
+    s32 masked_volume;
 
-    g_akaoCmdParams[0] = (void*)(arg0);
-    temp_a1 = arg1 & 0x7F;
-    g_akaoCmdParams[1] = (void*)(temp_a1);
-    return akao_send_command(0xC0);
+    g_akaoCmdParams[0] = (void*)song_handle;
+    masked_volume = volume & AKAO_VOLUME_MAX;
+    g_akaoCmdParams[1] = (void*)masked_volume;
+    return akao_send_command(AKAO_CMD_SET_SONG_VOLUME);
 }
 
 /**
@@ -937,23 +938,20 @@ s32 akao_cmd_f1(void)
 }
 
 /**
- * @brief Submits an AKAO sequence to the audio driver and spins until accepted.
+ * @brief Upload an AKAO instrument bank and spin until it is accepted.
  *
- * Clears bit 0 of the driver status word, then repeatedly calls akao_submit
- * until it stops returning the "busy" sentinel. Used to hand a freshly-loaded
- * AKAO sequence (BGM or SFX program) to the driver and block until the SPU
- * transfer window opens and the data is consumed.
+ * Clears bit 0 of the driver status word, then repeatedly calls
+ * akao_submit_bank until it stops returning the busy sentinel.
  *
- * @param sequenceData       Pointer to an AKAO-tagged sequence buffer in main RAM.
- * @param waitForCompletion  When non-zero, akao_submit further blocks inside the
- *                           driver until the SPU DMA completes.
+ * @param bank Pointer to an AKAO instrument bank in main RAM.
+ * @param wait_for_completion Non-zero to wait for the SPU DMA to complete.
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/Mz7yX
  */
-void akao_play_sequence_blocking(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
+void akao_upload_bank_blocking(AkaoBankHeader* bank, s32 wait_for_completion)
 {
     g_akao_driver_flags.unk0 &= ~1;
-    while (akao_submit((AkaoBankHeader*)sequenceData, waitForCompletion) == 1);
+    while (akao_submit_bank(bank, wait_for_completion) == 1);
 }
 
 /**
@@ -1114,13 +1112,16 @@ s32 akao_streaming_upload_tick(s32 src, u32 avail, s32 wait_for_spu)
 }
 
 /**
- * @brief Wrapper: blocks via akao_play_sequence_blocking and returns 0.
+ * @brief Upload an AKAO instrument bank and return zero.
+ * @param bank Pointer to an AKAO instrument bank in main RAM.
+ * @param wait_for_completion Non-zero to wait for the SPU DMA to complete.
+ * @return 0 after the upload call returns.
  *
  * @see https://decomp.me/scratch/0f3IK (100%)
  */
-s32 akao_load_sequence(AkaoSeqHeader* sequenceData, s32 waitForCompletion)
+s32 akao_load_bank(AkaoBankHeader* bank, s32 wait_for_completion)
 {
-    akao_play_sequence_blocking(sequenceData, waitForCompletion);
+    akao_upload_bank_blocking(bank, wait_for_completion);
     return 0;
 }
 

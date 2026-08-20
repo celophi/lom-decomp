@@ -68,6 +68,18 @@ typedef enum CdResourceId
 
     /* SOUND/EFFECT.SET */
     CD_RES_SOUND_EFFECT_SET = 21,
+
+    /* SOUND/MSC_DATA.DAT */
+    CD_RES_MSC_DATA = 23,
+
+    /* SOUND/MUSIC002.SET */
+    CD_RES_MUSIC002_SET = 24,
 } CdResourceId;
+
+/**
+ * @brief Convert a music-file index to its 16-bit CD resource index.
+ * @note Index 0 selects MSC_DATA.DAT; index 1 selects MUSIC002.SET.
+ */
+#define CD_RES_MUSIC_FILE(file_index) (((file_index) + CD_RES_MSC_DATA) & 0xFFFF)
 
 #endif

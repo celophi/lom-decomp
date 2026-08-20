@@ -84,7 +84,7 @@ extern AkaoDriverFlags g_akao_driver_flags;
  * @brief Keys of the banks loaded into the 6 SPU bank slots.
  *
  * Each entry holds the loaded bank's id/length word (@c ((s32*)bank)[1], the
- * second word of its AkaoSeqHeader) and is used by akao_upload_bank_slot to
+ * second word of its AkaoHeader) and is used by akao_upload_bank_slot to
  * detect and evict a previously-loaded copy. Zeroed for all 6 slots in
  * akao_driver_init_state.
  */
@@ -99,7 +99,9 @@ extern s32 g_akao_bank_prog_base;
 extern s32 g_akao_bank_region_b;
 extern s32 g_akao_bank_region_c;
 
-extern s32 akao_check_magic(AkaoSeqHeader *hdr);
+extern s32 akao_check_magic(AkaoHeader* header);
+extern s32 akao_submit_bank(AkaoBankHeader* bank, s32 wait_for_completion);
+extern s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_base);
 extern void akao_irq_handler(void);
 
 // Fix the off() helper to accept any pointer type

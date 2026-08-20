@@ -693,9 +693,9 @@ static void render_fade_overlay(RenderContext* render_ctx)
     if (g_fade_current.red >= FADE_CHAN_ADDITIVE)
     {
         /* Decode additive channels with FADE_CHAN_ADDITIVE as zero intensity. */
-        fade_packet->tile.r0 = (u8)g_fade_current.red - FADE_ADDITIVE_BIAS;
-        fade_packet->tile.g0 = (u8)g_fade_current.green - FADE_ADDITIVE_BIAS;
-        fade_packet->tile.b0 = (u8)g_fade_current.blue - FADE_ADDITIVE_BIAS;
+        fade_packet->tile.r0 = g_fade_current.red - FADE_ADDITIVE_BIAS;
+        fade_packet->tile.g0 = g_fade_current.green - FADE_ADDITIVE_BIAS;
+        fade_packet->tile.b0 = g_fade_current.blue - FADE_ADDITIVE_BIAS;
     }
     else
     {
@@ -826,8 +826,8 @@ static void load_tim_to_vram(const TimUploadCoords* upload_coords)
 
     upload_rect.x = upload_coords->pixel_x;
     upload_rect.y = upload_coords->pixel_y;
-    upload_rect.w = pixel_block->w;
-    upload_rect.h = pixel_block->h;
+    upload_rect.w = pixel_block->dimensions.width;
+    upload_rect.h = pixel_block->dimensions.height;
 
     LoadImage(&upload_rect, pixel_block + 1);
 

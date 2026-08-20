@@ -4312,7 +4312,7 @@ void func_80028E2C(void)
  * @brief Toggle the SPU global reverb mode if @p reverb_type differs from the
  *        currently active one; brackets the change with reverb off/on so the
  *        SPU does not glitch mid-update.
- * @param reverb_type New reverb mode (an @c AkaoSeqHeader::reverb_type value).
+ * @param reverb_type New reverb mode (an @c AkaoHeader::reverb_type value).
  * @note 100% match (lom-dev-mcp diff tool; no decomp.me scratch created).
  */
 void akao_apply_reverb_type(s32 reverb_type)
@@ -4355,7 +4355,7 @@ s32 akao_send_command(u32 opcode)
     s32 tmp;
     s32 masked;
     s32* params;
-    AkaoSeqHeader* hdr;
+    AkaoHeader* header;
     u16 current_id;
 
     result = 0;
@@ -4371,14 +4371,14 @@ s32 akao_send_command(u32 opcode)
     case 0x19:
         if (akao_check_magic(g_akaoCmdParams[0]) == 0)
         {
-            hdr = g_akaoCmdParams[0];
+            header = g_akaoCmdParams[0];
             current_id = g_akao_seq_channel0->unk5E;
-            if ((current_id != hdr->id) ||
+            if ((current_id != header->id) ||
                 ((g_akao_seq_channel1 != 0) && (g_akao_seq_channel1->unk5E != current_id)))
             {
-                akao_apply_reverb_type(hdr->reverb_type);
-                *(volatile s32*)&params[0] = (s32)hdr;
-                params[2] = ((volatile AkaoSeqHeader*)hdr)->id;
+                akao_apply_reverb_type(header->reverb_type);
+                *(volatile s32*)&params[0] = (s32)header;
+                params[2] = ((volatile AkaoHeader*)header)->id;
                 if (opcode == 0x12)
                 {
                     params[4] = (s32)g_akaoCmdParams[1];
@@ -4394,7 +4394,7 @@ s32 akao_send_command(u32 opcode)
                     params[3] = masked;
                     params[4] = (s32)g_akaoCmdParams[2];
                 }
-                result = hdr->id;
+                result = header->id;
             }
             else
             {

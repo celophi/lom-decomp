@@ -981,8 +981,8 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
     vram_rect.y = layout->texture_y;
     {
         TimBlock* image_block = TIM_PIXEL_BLOCK(tim, clut_block_len);
-        vram_rect.w = image_block->w;
-        vram_rect.h = image_block->h;
+        vram_rect.w = image_block->dimensions.width;
+        vram_rect.h = image_block->dimensions.height;
         LoadImage(&vram_rect, image_block + 1); /* Pixel data follows the block header. */
     }
 

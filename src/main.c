@@ -1,4 +1,6 @@
 #include "main.h"
+#include "akao.h"
+#include "checkps.h"
 #include "cd_resources.h"
 #include "cdrom.h"
 #include "movie.h"
@@ -22,7 +24,6 @@ void __main(void);
 void _bu_init(void);
 extern void SpuInit(void);
 void McxStartCom();
-void func_8004FD14(s32);
 undefined4 FUN_80021fbc(void);
 s32 akao_cmd_f0(void);
 u32 func_8004FC8C(u32);
@@ -101,7 +102,7 @@ void Main(void)
     get_field_render_buffers();
     cdrom_stream(CD_RES_CHECKPS_BIN, g_overlayLoadAddress);
     cdrom_wait_queue_empty();
-    run_checkps(0x80100000);
+    run_checkps((CheckPSRenderState*)0x80100000);
     DrawSync(0);
     VSync(0);
     g_previousGameState = GAME_STATE_NONE;
@@ -147,7 +148,7 @@ void Main(void)
                 g_gameState = run_field_scene();
                 akao_cmd_f0();
                 akao_cmd_f1();
-                akao_cmd_c0(0, 0x7F);
+                akao_set_song_volume(0, AKAO_VOLUME_MAX);
                 g_previousGameState = GAME_STATE_FIELD;
                 break;
 
