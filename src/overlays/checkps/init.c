@@ -675,24 +675,22 @@ s32 poll_input_device(void)
 void process_controller_input(void)
 {
     SCDRegs* controller_regs;
-    u32 processed_buttons;
+    u32 buttons;
     s16 axis_x;
     s16 axis_y;
-    s32 final_button_state;
+    s32 input_state;
     controller_regs = SCD_REGS;
 
     /* Unavailable controller types produce no input. */
-    if (((u8)g_controller_device_type) >= CHECKPS_CONTROLLER_UNAVAILABLE)
+    if (g_controller_device_type >= CHECKPS_CONTROLLER_UNAVAILABLE)
     {
-        final_button_state = 0;
+        input_state = 0;
     }
     else
     {
-        // PSX sends face buttons in the high byte and D-pad in the low byte;
-        // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
-        processed_buttons = (controller_regs->held_buttons >> 8) | (controller_regs->held_buttons << 8);
-        // Remap face buttons from hardware order to game order.
-        processed_buttons = PAD_REMAP_FACE_BITS(processed_buttons);
+        /* Convert the controller protocol bits to the game's logical layout. */
+        buttons = (controller_regs->held_buttons >> 8) | (controller_regs->held_buttons << 8);
+        buttons = PAD_REMAP_FACE_BITS(buttons);
 
         if (controller_regs->device_type != 0)
         {
@@ -700,37 +698,41 @@ void process_controller_input(void)
 
             if (axis_x < -1)
             {
-                processed_buttons |= PAD_BTN_LEFT;
+                buttons |= PAD_BTN_LEFT;
             }
             else if (axis_x >= 2)
             {
-                processed_buttons |= PAD_BTN_RIGHT;
+                buttons |= PAD_BTN_RIGHT;
             }
 
             axis_y = controller_regs->axis_y.signed_value;
             if (axis_y < -1)
             {
-                processed_buttons |= PAD_BTN_UP;
+                buttons |= PAD_BTN_UP;
             }
             else if (axis_y >= 2)
             {
-                processed_buttons |= PAD_BTN_DOWN;
+                buttons |= PAD_BTN_DOWN;
             }
         }
-        final_button_state = processed_buttons;
+        input_state = buttons;
     }
 
-    g_debounced_input = 0; // current active input
-    if (((final_button_state == g_last_input_state) || ((g_last_input_state != 0) && ((final_button_state & (g_last_input_state | CHECKPS_NON_REPEAT_BUTTON_MASK))))) && (final_button_state != 0))
+    /* Publish input only when a new press or key-repeat event fires. */
+    g_debounced_input = 0;
+    if (((input_state == g_last_input_state) ||
+         ((g_last_input_state != 0) &&
+          ((input_state & (g_last_input_state | CHECKPS_NON_REPEAT_BUTTON_MASK))))) &&
+        (input_state != 0))
     {
-        // Keep only directional bits
-        if ((final_button_state & CHECKPS_DPAD_MASK) != 0)
+        /* Held input repeats directional buttons only. */
+        if ((input_state & CHECKPS_DPAD_MASK) != 0)
         {
-            final_button_state &= CHECKPS_DPAD_MASK;
+            input_state &= CHECKPS_DPAD_MASK;
         }
         if (g_input_repeat_timer == 0)
         {
-            g_debounced_input = final_button_state;
+            g_debounced_input = input_state;
             g_input_repeat_timer = CHECKPS_REPEAT_DELAY;
         }
         else
@@ -739,15 +741,15 @@ void process_controller_input(void)
             g_debounced_input = 0;
         }
     }
-    else if (final_button_state == 0)
+    else if (input_state == 0)
     {
         g_input_repeat_timer = 0;
         g_last_input_state = 0;
     }
     else
     {
-        g_debounced_input = final_button_state;
-        g_last_input_state = final_button_state;
+        g_debounced_input = input_state;
+        g_last_input_state = input_state;
         g_input_repeat_timer = CHECKPS_INITIAL_REPEAT_DELAY;
     }
 }
