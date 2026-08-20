@@ -623,11 +623,10 @@ s32 poll_input_device(void)
     u32 input_mask;
     u32 raw_buttons;
 
-    s32 axis_x;
-    s32 axis_y;
+    s16 axis_x;
+    s16 axis_y;
     u16 hi_read;
     u16 lo_read;
-    u16 axis_raw;
 
     if (regs->device_type >= CHECKPS_CONTROLLER_UNAVAILABLE)
     {
@@ -645,8 +644,7 @@ s32 poll_input_device(void)
     if (regs->device_type != 0)
     {
         /* Convert signed analog-axis thresholds to digital directions. */
-        axis_raw = regs->axis_x;
-        axis_x = (s16)axis_raw;
+        axis_x = regs->axis_x.signed_value;
 
         if (axis_x < -1)
         {
@@ -657,8 +655,7 @@ s32 poll_input_device(void)
             input_mask |= PAD_BTN_RIGHT;
         }
 
-        axis_raw = regs->axis_y;
-        axis_y = (s16)axis_raw;
+        axis_y = regs->axis_y.signed_value;
         if (axis_y < -1)
         {
             input_mask |= PAD_BTN_UP;
@@ -699,7 +696,7 @@ void process_controller_input(void)
 
         if (controller_regs->device_type != 0)
         {
-            axis_x = (s16)controller_regs->axis_x;
+            axis_x = controller_regs->axis_x.signed_value;
 
             if (axis_x < -1)
             {
@@ -710,7 +707,7 @@ void process_controller_input(void)
                 processed_buttons |= PAD_BTN_RIGHT;
             }
 
-            axis_y = (s16)controller_regs->axis_y;
+            axis_y = controller_regs->axis_y.signed_value;
             if (axis_y < -1)
             {
                 processed_buttons |= PAD_BTN_UP;
@@ -783,7 +780,7 @@ void update_controller_input(void)
         processed_buttons = PAD_REMAP_FACE_BITS(processed_buttons);
         if (regs->device_type != 0)
         {
-            axis_x = regs->axis_x;
+            axis_x = regs->axis_x.signed_value;
 
             if (axis_x < -1)
             {
@@ -794,7 +791,7 @@ void update_controller_input(void)
                 processed_buttons |= PAD_BTN_RIGHT;
             }
 
-            axis_y = regs->axis_y;
+            axis_y = regs->axis_y.signed_value;
             if (axis_y < -1)
             {
                 processed_buttons |= PAD_BTN_UP;

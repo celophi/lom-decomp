@@ -33,6 +33,13 @@ typedef enum
     PAD_BTN_LEFT = 0x8000
 } PadButton;
 
+/** @brief Signed and unsigned views of one raw controller axis sample. */
+typedef union
+{
+    u16 raw;
+    s16 signed_value;
+} PadAxisSample;
+
 /** @brief Published controller state updated asynchronously by the SCD driver. */
 typedef struct
 {
@@ -43,8 +50,8 @@ typedef struct
 
     u8 _pad2[0x28 - 2]; // 0x06-0x2B - unused here
 
-    s16 axis_x; // 0x2C - signed axis (negative/positive thresholded)
-    s16 axis_y; // 0x2E - signed axis (negative/positive thresholded)
+    PadAxisSample axis_x; // 0x2C - horizontal axis sample
+    PadAxisSample axis_y; // 0x2E - vertical axis sample
 } SCDRegs;
 
 /* Merged-controller register block lives at a fixed RAM address.

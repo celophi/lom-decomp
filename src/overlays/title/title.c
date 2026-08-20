@@ -1285,7 +1285,7 @@ static void read_pad_input(void)
         buttons = PAD_REMAP_FACE_BITS(buttons);
         if (base->device_type != 0)
         {
-            axis = base->axis_x;
+            axis = base->axis_x.signed_value;
             if (axis < (-1))
             {
                 buttons |= PAD_BTN_LEFT;
@@ -1294,7 +1294,7 @@ static void read_pad_input(void)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
-            axis = base->axis_y;
+            axis = base->axis_y.signed_value;
             if (axis < (-1))
             {
                 buttons |= PAD_BTN_UP;
