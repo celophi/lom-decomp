@@ -29,7 +29,8 @@ typedef struct
 } KanjiDrawState;
 
 /* Data shared by the hardware-warning renderer and its caller. */
-extern const u32 g_hardware_modification_warning[15];
+#define CHECKPS_HARDWARE_WARNING_WORD_COUNT 15
+extern const u32 g_hardware_modification_warning[CHECKPS_HARDWARE_WARNING_WORD_COUNT];
 
 /* CD state defined in cdrom_data.c and consumed by cdrom.c. */
 extern s32 g_checkps_vsync_timestamp;
