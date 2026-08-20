@@ -826,8 +826,8 @@ static void load_tim_to_vram(const TimUploadCoords* upload_coords)
 
     upload_rect.x = upload_coords->pixel_x;
     upload_rect.y = upload_coords->pixel_y;
-    upload_rect.w = pixel_block->w;
-    upload_rect.h = pixel_block->h;
+    upload_rect.w = pixel_block->dimensions.width;
+    upload_rect.h = pixel_block->dimensions.height;
 
     LoadImage(&upload_rect, pixel_block + 1);
 

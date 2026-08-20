@@ -467,16 +467,18 @@ static u32 gover_upload_image_to_vram(Tim* tim, TimUploadDestinations* destinati
     TimBlock* pixel_block;
     u32 clut_block_length = tim->clut_block.bnum;
 
-    setRECT(&upload_rect, destinations->clut_x, destinations->clut_y, tim->clut_block.w * tim->clut_block.h, 1);
+    setRECT(&upload_rect, destinations->clut_x, destinations->clut_y,
+            tim->clut_block.dimensions.width * tim->clut_block.dimensions.height, 1);
     LoadImage(&upload_rect, tim->clut_data);
 
     // Locate the pixel block that follows the variable-length CLUT block.
     pixel_block = TIM_PIXEL_BLOCK(tim, clut_block_length);
 
-    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y, pixel_block->w, pixel_block->h);
+    setRECT(&upload_rect, destinations->pixel_x, destinations->pixel_y,
+            pixel_block->dimensions.width, pixel_block->dimensions.height);
     LoadImage(&upload_rect, pixel_block + 1);
 
-    return ALIGN64(pixel_block->w);
+    return ALIGN64(pixel_block->dimensions.width);
 }
 
 /**

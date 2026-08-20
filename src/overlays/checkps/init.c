@@ -575,7 +575,7 @@ void load_checkps_image(void)
     u32 clut_block_size;
     TimBlock* pixel_block;
     u16 image_x, image_y;
-    u16* pixel_dimensions;
+    TimDimensions* pixel_dimensions;
 
     upload_rect_ptr = &upload_rect;
     image_asset = &g_checkps_image_asset;
@@ -588,7 +588,7 @@ void load_checkps_image(void)
 
     upload_rect.x = 0;
     upload_rect.y = CHECKPS_IMAGE_CLUT_Y;
-    upload_rect.w = image_asset->clut_block.w * image_asset->clut_block.h;
+    upload_rect.w = image_asset->clut_block.dimensions.width * image_asset->clut_block.dimensions.height;
     upload_rect.h = 1;
 
     clut_block_size = image_asset->clut_block.bnum;
@@ -599,16 +599,16 @@ void load_checkps_image(void)
 
     pixel_block = TIM_PIXEL_BLOCK(image_asset, clut_block_size);
 
-    pixel_dimensions = &pixel_block->w;
+    pixel_dimensions = &pixel_block->dimensions;
     upload_rect.x = image_x;
     upload_rect.y = image_y;
-    upload_rect.w = pixel_dimensions[0];
-    upload_rect.h = pixel_dimensions[1];
+    upload_rect.w = pixel_dimensions->width;
+    upload_rect.h = pixel_dimensions->height;
 
-    g_checkps_image_width_words = pixel_dimensions[0];
-    g_checkps_image_height = pixel_dimensions[1];
+    g_checkps_image_width_words = pixel_dimensions->width;
+    g_checkps_image_height = pixel_dimensions->height;
 
-    pixel_dimensions += 2;
+    pixel_dimensions++;
     LoadImage(upload_rect_ptr, (u_long*)pixel_dimensions);
 }
 
