@@ -11,10 +11,16 @@ GLYPH_METRICS_SOURCES := $(call rwildcard,assets,*.glyph_metrics.yaml)
 GLYPH_METRICS_BINARIES := $(patsubst %.glyph_metrics.yaml,%.glyph_metrics.bin,$(GLYPH_METRICS_SOURCES))
 TAB_CURSOR_LAYOUT_SOURCES := $(call rwildcard,assets,*.tab_cursor_layout.yaml)
 TAB_CURSOR_LAYOUT_BINARIES := $(patsubst %.tab_cursor_layout.yaml,%.tab_cursor_layout.bin,$(TAB_CURSOR_LAYOUT_SOURCES))
+INDEX_BOUNDARIES_SOURCES := $(call rwildcard,assets,*.index_boundaries.yaml)
+INDEX_BOUNDARIES_BINARIES := $(patsubst %.index_boundaries.yaml,%.index_boundaries.bin,$(INDEX_BOUNDARIES_SOURCES))
+INDEX_MAP_SOURCES := $(call rwildcard,assets,*.index_map.yaml)
+INDEX_MAP_BINARIES := $(patsubst %.index_map.yaml,%.index_map.bin,$(INDEX_MAP_SOURCES))
+NAME_ENTRY_RESOURCE_SOURCES := $(call rwildcard,assets,*.name_entry_resource.yaml)
+NAME_ENTRY_RESOURCE_BINARIES := $(patsubst %.name_entry_resource.yaml,%.name_entry_resource.bin,$(NAME_ENTRY_RESOURCE_SOURCES))
 
-.PHONY: validate-assets validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets
+.PHONY: validate-assets validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
-validate-assets: validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets
+validate-assets: validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
 validate-psx-tim-assets:
 ifneq ($(strip $(PSX_TIM_ASSETS)),)
@@ -63,6 +69,36 @@ else
 	@:
 endif
 
+%.index_boundaries.bin: %.index_boundaries.yaml tools/assets/index_boundaries.py
+	python3 tools/assets/index_boundaries.py build $< $@
+
+validate-index-boundaries-assets: $(INDEX_BOUNDARIES_BINARIES)
+ifneq ($(strip $(INDEX_BOUNDARIES_SOURCES)),)
+	python3 tools/assets/index_boundaries.py validate $(INDEX_BOUNDARIES_SOURCES)
+else
+	@:
+endif
+
+%.index_map.bin: %.index_map.yaml tools/assets/index_map.py
+	python3 tools/assets/index_map.py build $< $@
+
+validate-index-map-assets: $(INDEX_MAP_BINARIES)
+ifneq ($(strip $(INDEX_MAP_SOURCES)),)
+	python3 tools/assets/index_map.py validate $(INDEX_MAP_SOURCES)
+else
+	@:
+endif
+
+%.name_entry_resource.bin: %.name_entry_resource.yaml tools/assets/name_entry_resource.py
+	python3 tools/assets/name_entry_resource.py build $< $@
+
+validate-name-entry-resource-assets: $(NAME_ENTRY_RESOURCE_BINARIES)
+ifneq ($(strip $(NAME_ENTRY_RESOURCE_SOURCES)),)
+	python3 tools/assets/name_entry_resource.py validate $(NAME_ENTRY_RESOURCE_SOURCES)
+else
+	@:
+endif
+
 # Structured assets must be rebuilt before staging copies linker inputs to the
 # native Linux filesystem used by the legacy toolchain.
-$(COPY_SENTINEL): $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES) $(TAB_CURSOR_LAYOUT_BINARIES)
+$(COPY_SENTINEL): $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES) $(TAB_CURSOR_LAYOUT_BINARIES) $(INDEX_BOUNDARIES_BINARIES) $(INDEX_MAP_BINARIES) $(NAME_ENTRY_RESOURCE_BINARIES)

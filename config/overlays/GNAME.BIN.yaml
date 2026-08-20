@@ -45,9 +45,16 @@ segments:
       - [0x1, .rodata, gname]
       - [0x5, c, gname]
       - start: 0x2C99
-        type: databin
-        name: panel_index_tables
+        type: index_boundaries
+        name: panel_record_boundaries
         dir: gname
+        expected_count: 5
+      - start: 0x2CAD
+        type: index_map
+        name: kanji_category_map
+        dir: gname
+        expected_count: 10
+        unmapped_value: 0xFF
       - start: 0x2CD5
         type: glyph_metrics
         name: glyph_table
@@ -59,12 +66,13 @@ segments:
         dir: gname
         expected_count: 13
       - start: 0x2E41
-        type: databin
+        type: index_boundaries
         name: kanji_entry_offsets
         dir: gname
+        expected_count: 45
       - start: 0x2EF5
-        type: databin
-        name: panel_data
+        type: name_entry_resource
+        name: name_records
         dir: gname
       - start: 0x7495
         type: tim
