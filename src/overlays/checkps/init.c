@@ -18,7 +18,6 @@
 #define CHECKPS_RESERVED_BSS_WORDS 32769
 
 #define CHECKPS_FRAME_VSYNC_INTERVAL 2
-#define CHECKPS_GPU_DRAW_MODE_COMMAND 0xE1000000
 #define CHECKPS_FADE_ADDITIVE_DRAW_MODE 0x25
 #define CHECKPS_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 #define CHECKPS_IMAGE_TPAGE 5
@@ -32,7 +31,7 @@
 #define CHECKPS_GLYPH_VRAM_HEIGHT 256
 
 #define CHECKPS_AUDIO_BANK_ADDRESS ((AkaoHeader*)0x8013C000)
-#define CHECKPS_AUDIO_WORK_ADDRESS ((u8*)0x80180000)
+#define CHECKPS_AUDIO_WORK_ADDRESS ((AkaoContainerHeader*)0x80180000)
 #define CHECKPS_AUDIO_BANK_RESIDENT_STATE 6
 #define CHECKPS_AKAO_COPIED_SECTION 0
 #define CHECKPS_AKAO_UPLOAD_BANK_SECTION 1
@@ -54,15 +53,15 @@ typedef enum
 } CheckPSExitReason;
 
 /**
- * @brief Current and target RGB fade values with the remaining step count.
+ * @brief RGB fade values with the remaining interpolation step count.
  */
 typedef struct
 {
     s32 red;
     s32 green;
     s32 blue;
-    s32 steps;
-} FadeColor;
+    s32 steps_remaining;
+} CheckPSFadeState;
 
 /** @brief Packet view for a fade TILE or draw-mode command. */
 typedef union
@@ -117,37 +116,31 @@ struct CheckPSRenderState
     CheckPSFrame frames[2];
 };
 
-/* Count, two byte offsets, then variable-sized AKAO resources. */
-extern u8 g_embedded_checkps_akao[];
+extern AkaoContainerHeader g_embedded_checkps_akao;
 extern TimPrefix g_checkps_image_asset;
 extern u8 g_controller_device_type;
 
 void run_checkps_display_loop(CheckPSRenderState* render_state);
 void init_checkps_display(CheckPSRenderState* render_state);
 void load_embedded_checkps_audio(void);
-void load_checkps_song_from_disc(s32 song_index);
-void stop_checkps_song(void);
-void play_loaded_checkps_song(void);
-void play_checkps_sfx(u32 sound_id, u32 volume, u32 pan);
 void reset_fade_state(void);
 void update_and_draw_fade(CheckPSFrame* frame);
-void set_fade_target(s32 red, s32 green, s32 blue, s32 steps);
+void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count);
 void update_checkps_input_and_timeout(void);
 void draw_checkps_image(CheckPSFrame* frame);
 void load_checkps_image(void);
-s32 poll_input_device(void);
 void process_controller_input(void);
 void update_controller_input(void);
 
 /* Nonzero ends the CHECKPS display loop; value 2 is used for image timeout. */
-s32 g_checkps_exit_reason;
+CheckPSExitReason g_checkps_exit_reason;
 
 /* Reserved word with no recovered CHECKPS references. */
 s32 g_checkps_unused_word0;
 
-FadeColor g_fade_target;
+CheckPSFadeState g_fade_target;
 
-FadeColor g_fade_current;
+CheckPSFadeState g_fade_current;
 
 /* Sequence data copied from a CHECKPS disc asset before playback. */
 u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
@@ -324,15 +317,15 @@ void load_embedded_checkps_audio(void)
     bank_slot = &g_checkps_akao_bank;
     *bank_slot = CHECKPS_AUDIO_BANK_ADDRESS;
 
-    section_offsets = (u32*)g_embedded_checkps_akao;
-    section_offsets++; /* Skip the section count to reach the offset table. */
+    section_offsets = &g_embedded_checkps_akao.section_count;
+    section_offsets++; /* Advance from the count field to the offset table. */
 
-    bank_data = &g_embedded_checkps_akao[section_offsets[CHECKPS_AKAO_COPIED_SECTION]];
+    bank_data = AKAO_CONTAINER_DATA_AT(&g_embedded_checkps_akao, section_offsets[CHECKPS_AKAO_COPIED_SECTION]);
     bank_destination = (u8*)*bank_slot;
     bank_size = section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
     bcopy(bank_data, bank_destination, bank_size);
     akao_register_bank(*bank_slot);
-    upload_bank_data = &g_embedded_checkps_akao[section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]];
+    upload_bank_data = AKAO_CONTAINER_DATA_AT(&g_embedded_checkps_akao, section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]);
     akao_upload_bank_blocking((AkaoBankHeader*)upload_bank_data, 1);
 }
 
@@ -348,17 +341,17 @@ void load_checkps_song_from_disc(s32 song_index)
     u8* bank_data;
     u32 song_size;
     u32* section_offsets;
-    u8* song_container;
+    AkaoContainerHeader* song_container;
 
     cdrom_queue_read(CD_RES_MUSIC_FILE(song_index), CHECKPS_AUDIO_WORK_ADDRESS);
     cdrom_wait_queue_empty();
 
-    section_offsets = (u32*)(CHECKPS_AUDIO_WORK_ADDRESS + sizeof(u32));
     song_container = CHECKPS_AUDIO_WORK_ADDRESS;
-    song_data = &song_container[section_offsets[CHECKPS_AKAO_COPIED_SECTION]];
+    section_offsets = song_container->section_offsets;
+    song_data = AKAO_CONTAINER_DATA_AT(song_container, section_offsets[CHECKPS_AKAO_COPIED_SECTION]);
     song_size = section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
     bcopy(song_data, g_checkps_song_buffer, song_size);
-    bank_data = &song_container[section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]];
+    bank_data = AKAO_CONTAINER_DATA_AT(song_container, section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]);
     akao_upload_bank_blocking((AkaoBankHeader*)bank_data, 1);
 }
 
@@ -401,7 +394,7 @@ void reset_fade_state(void)
     g_fade_target.red = 0;
     g_fade_target.green = 0;
     g_fade_target.blue = 0;
-    g_fade_target.steps = 0;
+    g_fade_target.steps_remaining = 0;
 }
 
 /**
@@ -410,18 +403,20 @@ void reset_fade_state(void)
  */
 void update_and_draw_fade(CheckPSFrame* frame)
 {
-    s32 red_step, green_step, blue_step;
+    s32 red_step;
+    s32 green_step;
+    s32 blue_step;
     s32 draw_mode;
     CheckPSFadePrimitive* primitive;
     u_long* ordering_table_tag = frame->ordering_table;
 
     primitive = frame->primitive_cursor;
-    if (g_fade_target.steps != 0)
+    if (g_fade_target.steps_remaining != 0)
     {
-        red_step = (g_fade_target.red - g_fade_current.red) / g_fade_target.steps;
-        green_step = (g_fade_target.green - g_fade_current.green) / g_fade_target.steps;
-        blue_step = (g_fade_target.blue - g_fade_current.blue) / g_fade_target.steps;
-        g_fade_target.steps--;
+        red_step = (g_fade_target.red - g_fade_current.red) / g_fade_target.steps_remaining;
+        green_step = (g_fade_target.green - g_fade_current.green) / g_fade_target.steps_remaining;
+        blue_step = (g_fade_target.blue - g_fade_current.blue) / g_fade_target.steps_remaining;
+        g_fade_target.steps_remaining--;
         g_fade_current.red += red_step;
         g_fade_current.green += green_step;
         g_fade_current.blue += blue_step;
@@ -493,14 +488,14 @@ void update_and_draw_fade(CheckPSFrame* frame)
  * @param red Target red level.
  * @param green Target green level.
  * @param blue Target blue level.
- * @param steps Number of interpolation steps.
+ * @param step_count Number of interpolation steps.
  */
-void set_fade_target(s32 red, s32 green, s32 blue, s32 steps)
+void set_fade_target(s32 red, s32 green, s32 blue, s32 step_count)
 {
     g_fade_target.red = red;
     g_fade_target.green = green;
     g_fade_target.blue = blue;
-    g_fade_target.steps = steps;
+    g_fade_target.steps_remaining = step_count;
 }
 
 /**
@@ -531,9 +526,7 @@ void draw_checkps_image(CheckPSFrame* frame)
     s32 image_width_words;
     s32 image_height;
     u_long* ordering_table;
-    u32 draw_mode_command;
     volatile u32 stack_layout_scratch; /* Required to preserve the original stack frame. */
-    draw_mode_command = CHECKPS_GPU_DRAW_MODE_COMMAND;
     primitive = frame->primitive_cursor;
 
     SET_BGR0_PACKED(&primitive->sprite, GPU_TINT_NEUTRAL);
@@ -547,6 +540,7 @@ void draw_checkps_image(CheckPSFrame* frame)
     setClut(&primitive->sprite, 0, CHECKPS_IMAGE_CLUT_Y);
     setXY0(&primitive->sprite, (SCREEN_WIDTH - (width_words * 4)) >> 1, (VRAM_DRAW_HEIGHT - image_height) / 2);
 
+    /* Keep the second width read used by the original packet setup. */
     image_width_words = g_checkps_image_width_words;
     width_words = image_width_words;
 
@@ -565,6 +559,8 @@ void draw_checkps_image(CheckPSFrame* frame)
 
 /**
  * @brief Upload the embedded CHECKPS CLUT and image pixels to VRAM.
+ * @note The dimensions pointer is advanced separately to retain the original
+ *       pixel-payload address calculation.
  */
 void load_checkps_image(void)
 {
@@ -760,10 +756,10 @@ void process_controller_input(void)
 void update_controller_input(void)
 {
     SCDRegs* regs;
-    PadButton processed_buttons;
-    short axis_x;
-    short axis_y;
-    unsigned int final_button_state;
+    u32 buttons;
+    s16 axis_x;
+    s16 axis_y;
+    s32 input_state;
     regs = SCD_REGS;
 
     g_debounced_input = 0;
@@ -771,41 +767,39 @@ void update_controller_input(void)
     /* Unavailable controller types produce no input. */
     if (g_controller_device_type >= CHECKPS_CONTROLLER_UNAVAILABLE)
     {
-        final_button_state = 0;
+        input_state = 0;
     }
     else
     {
-        // PSX sends face buttons in the high byte and D-pad in the low byte;
-        // swap them so D-pad ends up in bits 8-15 and face buttons in bits 0-7.
-        processed_buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
-        // Reorder face buttons from controller protocol order to the game's logical order.
-        processed_buttons = PAD_REMAP_FACE_BITS(processed_buttons);
+        /* Convert the controller protocol bits to the game's logical layout. */
+        buttons = (regs->held_buttons >> 8) | (regs->held_buttons << 8);
+        buttons = PAD_REMAP_FACE_BITS(buttons);
         if (regs->device_type != 0)
         {
             axis_x = regs->axis_x.signed_value;
 
             if (axis_x < -1)
             {
-                processed_buttons |= PAD_BTN_LEFT;
+                buttons |= PAD_BTN_LEFT;
             }
             else if (axis_x >= 2)
             {
-                processed_buttons |= PAD_BTN_RIGHT;
+                buttons |= PAD_BTN_RIGHT;
             }
 
             axis_y = regs->axis_y.signed_value;
             if (axis_y < -1)
             {
-                processed_buttons |= PAD_BTN_UP;
+                buttons |= PAD_BTN_UP;
             }
             else if (axis_y >= 2)
             {
-                processed_buttons |= PAD_BTN_DOWN;
+                buttons |= PAD_BTN_DOWN;
             }
         }
-        final_button_state = processed_buttons;
+        input_state = buttons;
     }
 
-    g_last_input_state = final_button_state;
+    g_last_input_state = input_state;
     g_input_repeat_timer = CHECKPS_INITIAL_REPEAT_DELAY;
 }

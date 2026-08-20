@@ -35,7 +35,7 @@ typedef struct
     s32 unk24;
     u32 unk28;
     u8 unk2C;
-    u8 pad2D;
+    u8 unk2D;
     u8 unk2E;
     u8 unk2F;
     u8 unk30;
@@ -204,6 +204,10 @@ extern FieldResourceEntry g_field_resource_entries[];
 extern Struct_D800FDF58 D_80104A58;
 extern s32 g_field_track_index;
 extern u8 *D_801058D4;
+extern s32 D_800F22A0;
+extern s32 D_800F22A4;
+extern s32 D_800F22A8;
+extern u16 D_80105758[];
 
 /**
  * @brief Render every active field particle record, dispatching per record
@@ -398,4 +402,316 @@ void func_80074D7C(FieldRenderContext *ctx)
     }
 
     ctx->unk40B8 = cursor;
+}
+
+#include "psyq/inline_c.h"
+
+/**
+ * @brief Render one field particle record's animation frames into the display
+ *        list, spawning per-frame billboard primitives.
+ * @param rec Effect record.
+ * @param cursor Vertex-buffer cursor pointer, threaded and returned.
+ * @param base Ordering-table / primitive base array.
+ * @param item Animation data blob for this frame.
+ * @return Updated cursor pointer.
+ * @note WIP - not yet byte-matching (72.24%, 166/501 exact rows). The whole
+ *       prologue/register-save shape disagrees with the target from the
+ *       first instruction: the target keeps a0/a1/a2/a3 live in s-registers
+ *       through the gte_SetRotMatrix call and defers most callee-save stores,
+ *       while this draft copies straight into t1/s3/t2/fp and stores saves
+ *       up front. Residue is spread almost uniformly across the whole body
+ *       (EXPAND-SHAPE, +9 insns overall) rather than isolated to one region,
+ *       which points at a source-level register-role/variable-boundary
+ *       mismatch rather than a local statement-order fix. Needs a fresh
+ *       match_context pull (m2c-regvars view) before further iteration.
+ * @see decomp.me (72.24%)
+ */
+s32 *func_800754B4(Struct_D800FDF58 *rec, s32 *cursor, s32 *base, u8 *item)
+{
+    Vec2s *sxy = (Vec2s *) 0x1F800040;
+    s16 *scratch = (s16 *) 0x1F800064;
+    s32 sp4C;
+    s32 sp48;
+    s32 *sp44;
+    s32 *sp40;
+    s32 sp38;
+    s32 sp34;
+    s32 sp30;
+    s32 sp28;
+    Struct_D800FDF58 *var_t1;
+    s32 *var_s3;
+    s32 *var_t2;
+    FieldActorState *slot;
+    FieldActorPartDef *part;
+    u8 *var_fp;
+    u8 *var_s2;
+    u8 *var_s1;
+    s32 count;
+    s32 mode;
+    s16 tmp;
+    s8 var_s4;
+    s8 var_s0;
+    s8 var_v1_3;
+    s8 var_t0;
+    s32 var_t0_2;
+    s32 v0;
+    s32 v1;
+    s32 a0;
+    s32 a1;
+    s32 x0;
+    s32 x1;
+    u16 *tbl;
+
+    var_t1 = rec;
+    var_s3 = cursor;
+    var_t2 = base;
+    sp34 = 0;
+    sp38 = 2;
+    slot = &g_field_actor_slots[rec->unk22];
+    part = &slot->unk0[rec->unk23];
+    if (slot->unk228 < 2)
+    {
+        sp38 = slot->unk228;
+    }
+    sp40 = (s32 *) var_t1;
+    sp44 = var_t2;
+    sp48 = (s32) slot;
+    func_8007D078(var_t1, part, 0x1F800000, slot);
+    gte_SetRotMatrix((void *) 0x1F800000);
+
+    v0 = D_800F22A0;
+    if (v0 < 0)
+    {
+        v0 += 0xFF;
+    }
+    v1 = var_t1->unk0;
+    if (v1 < 0)
+    {
+        v1 += 0xFF;
+    }
+    a0 = D_800F22A4;
+    sxy->x = (v0 >> 8) + ((v1 >> 8) + 0xA0);
+    if (a0 < 0)
+    {
+        a0 += 0xFF;
+    }
+    v0 = var_t1->unk4;
+    if (v0 < 0)
+    {
+        v0 += 0xFF;
+    }
+    a1 = var_t1->unk8;
+    if (a1 < 0)
+    {
+        a1 += 0x1FF;
+    }
+    v1 = D_800F22A8;
+    if (v1 < 0)
+    {
+        v1 += 0x1FF;
+    }
+    sxy->y = (((a0 >> 8) + ((v0 >> 8) + 0x70)) - (a1 >> 9)) - (v1 >> 9);
+
+    var_fp = item + 1;
+    sp40 = (s32 *) var_t1;
+    sp44 = var_t2;
+    sp48 = (s32) slot;
+    sp30 = *item;
+    func_8007D8D8(slot, var_t1, part, &sp28);
+
+    if (sp30 != 0)
+    {
+        tbl = D_80105758;
+        var_s2 = var_fp + 8;
+        var_s1 = (u8 *) (var_s3 + 4);
+        do
+        {
+            u8 flags = var_s2[-1];
+            if (!(flags & 0x20))
+            {
+                var_s1[-1] = 9;
+                *(s32 *) var_s1 = sp28;
+                var_s1[3] = 0x2C;
+                if (var_t1->unk1C & 0x800000)
+                {
+                    var_s1[3] = 0x2E;
+                }
+                else
+                {
+                    var_s1[3] = 0x2C;
+                }
+                var_s0 = var_s2[-4];
+                var_s4 = var_s2[-3] - 1;
+                var_t1->unk3C = var_s4;
+                var_t0 = var_s2[-7];
+                if (!(var_t1->unk21 & 0x80))
+                {
+                    var_v1_3 = *item;
+                }
+                else
+                {
+                    var_v1_3 = -*item - var_s0;
+                }
+                var_s0 -= 1;
+                if (((Vec2s *) part)->y & 1)
+                {
+                    var_t0 -= 0x70;
+                }
+                sp40 = (s32 *) var_t1;
+                sp44 = var_t2;
+                sp48 = (s32) slot;
+                func_8007DB98(var_t1, sxy, var_s3, var_s0, var_s4, var_v1_3, var_t0, item, 0x1F800000);
+
+                if ((var_s2[-1] ^ (var_t1->unk21 >> 1)) & 0x40)
+                {
+                    v0 = var_s2[-6];
+                    var_s1[0x20] = v0;
+                    var_s1[0x10] = v0;
+                    v0 += var_s0;
+                    var_s1[0x18] = v0;
+                    var_s1[8] = v0;
+                }
+                else
+                {
+                    v0 = var_s2[-6];
+                    var_s1[0x18] = v0;
+                    var_s1[8] = v0;
+                    v0 += var_s0;
+                    var_s1[0x20] = v0;
+                    var_s1[0x10] = v0;
+                }
+                if (var_s2[-1] & 0x80)
+                {
+                    v0 = var_s2[-5];
+                    var_s1[0x21] = v0;
+                    var_s1[0x19] = v0;
+                    v0 += var_s4;
+                    var_s1[0x11] = v0;
+                    var_s1[9] = v0;
+                }
+                else
+                {
+                    v0 = var_s2[-5];
+                    var_s1[0x11] = v0;
+                    var_s1[9] = v0;
+                    v0 += var_s4;
+                    var_s1[0x21] = v0;
+                    var_s1[0x19] = v0;
+                }
+                mode = var_s2[-1] & 3;
+                if (mode == 2)
+                {
+                    var_t0_2 = 0x1F2;
+                    if (slot->unk228 < 2)
+                    {
+                        tmp = ((tbl[sp38] & 3) << 7) | (((u32) part->unk4 >> 0x11) & 0x60) | 0x10 | ((((slot->unk228 << 6) + 0x340) & 0x3FF) >> 6);
+                        *(s16 *) (var_s1 + 0x12) = tmp;
+                        var_t0_2 = (slot->unk228 * 2) + 0x1EE;
+                    }
+                    else
+                    {
+                        tmp = ((tbl[sp38] & 3) << 7) | (((u32) part->unk4 >> 0x11) & 0x60) | 5;
+                        *(s16 *) (var_s1 + 0x12) = tmp;
+                    }
+                }
+                else
+                {
+                    var_t0_2 = (mode * 2) + 0x1EA;
+                    tmp = (((u32) part->unk4 >> 0x11) & 0x60) | ((((mode << 6) + 0x180) & 0x3FF) >> 6);
+                    *(s16 *) (var_s1 + 0x12) = tmp;
+                }
+
+                if (((u32) part->unk0 >> 0x15) & 1)
+                {
+                    *(s16 *) (var_s1 + 0xA) = (var_t0_2 + 1) << 6;
+                }
+                else
+                {
+                    switch (((u32) part->unk28 >> 0xC) & 3)
+                    {
+                    case 1:
+                        v0 = part->unk2D;
+                        if (v0 >= 0x10)
+                        {
+                            x0 = (var_t0_2 + 1) << 6;
+                        }
+                        else
+                        {
+                            x0 = var_t0_2 << 6;
+                        }
+                        *(s16 *) (var_s1 + 0xA) = x0 | (v0 & 0xF);
+                        break;
+                    case 2:
+                        x1 = var_t0_2 << 6;
+                        if (slot->unk228 >= 3)
+                        {
+                            v0 = part->unk2D & 0x3F;
+                        }
+                        else
+                        {
+                            x1 = var_t0_2 << 6;
+                            v0 = var_s2[-2] & 0x3F;
+                        }
+                        *(s16 *) (var_s1 + 0xA) = x1 | v0;
+                        break;
+                    case 0:
+                        x1 = var_t0_2 << 6;
+                        v0 = var_s2[-2] & 0x3F;
+                        *(s16 *) (var_s1 + 0xA) = x1 | v0;
+                        break;
+                    }
+                }
+
+                if ((var_t1->unk1C & 0x1000) || ((v1 = var_t1->unk8 >> 7), v1 < 0))
+                {
+                    var_s1 += 0x28;
+                    *var_s3 = (*var_s3 & 0xFF000000) | (var_t2[0] & 0xFFFFFF);
+                    v1 = (s32) var_s3 & 0xFFFFFF;
+                    var_s3 += 0x28;
+                    var_t2[0] = (var_t2[0] & 0xFF000000) | v1;
+                }
+                else if (v1 >= 0x1000)
+                {
+                    var_s1 += 0x28;
+                    *var_s3 = (*var_s3 & 0xFF000000) | (var_t2[0xFFF] & 0xFFFFFF);
+                    v1 = (s32) var_s3 & 0xFFFFFF;
+                    var_s3 += 0x28;
+                    var_t2[0xFFF] = (var_t2[0xFFF] & 0xFF000000) | v1;
+                }
+                else
+                {
+                    var_s1 += 0x28;
+                    *var_s3 = (*var_s3 & 0xFF000000) | (var_t2[v1] & 0xFFFFFF);
+                    a0 = (s32) var_s3 & 0xFFFFFF;
+                    {
+                        s32 *p = &var_t2[var_t1->unk8 >> 7];
+                        var_s3 += 0x28;
+                        *p = (*p & 0xFF000000) | a0;
+                    }
+                }
+            }
+            else if (((flags & 0xF) == 2) && (part->unk24 & 0x100000))
+            {
+                scratch[0] = (*item * part->unk2E) >> 6;
+                scratch[1] = ((s8) var_s2[-7] * part->unk33) >> 6;
+                scratch[2] = ((s8) var_s2[-6] * part->unk2E) >> 6;
+                scratch[3] = ((s8) var_s2[-5] * part->unk33) >> 6;
+                scratch[4] = ((s8) var_s2[-4] * part->unk2E) >> 6;
+                scratch[5] = ((s8) var_s2[-3] * part->unk33) >> 6;
+                scratch[6] = ((s8) var_s2[-2] * part->unk2E) >> 6;
+                sp34 += 1;
+                scratch[7] = ((s8) var_s2[0] * part->unk33) >> 6;
+            }
+            var_s2 += 9;
+            var_fp += 9;
+            sp30 -= 1;
+            *(s32 *) var_s1 = *(s32 *) (var_s1 - 0x28);
+        } while (sp30 != 0);
+    }
+
+    if (sp34 != 0)
+    {
+        var_s3 = func_800871A0(var_t1, var_s3, var_t2, 0x1F800064);
+    }
+    return var_s3;
 }

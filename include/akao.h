@@ -173,6 +173,23 @@ typedef struct AkaoBankHeader
     u8  reserved[0x1C];
 } AkaoBankHeader;
 
+/**
+ * @brief Fixed prefix of an offset-based AKAO resource container.
+ *
+ * Container offsets are byte offsets from the start of this header. Known
+ * two-section resources store resident data first and an uploadable instrument
+ * bank second.
+ */
+typedef struct
+{
+    u32 section_count;
+    u32 section_offsets[2];
+} AkaoContainerHeader;
+
+/** Locate a byte offset within an AKAO container. */
+#define AKAO_CONTAINER_DATA_AT(container, offset) \
+    ((u8*)(container) + (offset))
+
 s32 akao_register_bank(AkaoHeader* bank);
 s32 akao_play_song(AkaoHeader* sequence);
 s32 akao_set_song_volume(s32 song_handle, s32 volume);
