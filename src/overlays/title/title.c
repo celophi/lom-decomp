@@ -2109,12 +2109,12 @@ unsigned short upload_save_layout_textures(void)
 }
 
 /**
- * @brief Load one of the two full menu-layout templates into g_menuLayoutBuffer.
+ * @brief Load one of the two full game-state templates into g_menuLayoutBuffer.
  *
- * Copies a MENU_LAYOUT_WORDS-word (~13 KB) MenuLayout template over the working
+ * Copies a MENU_LAYOUT_WORDS-word (~13 KB) game-state template over the working
  * g_menuLayoutBuffer and sets the companion mode field g_scene_mode.
  *
- * @param use_alt Zero selects the default template (g_menuLayoutTemplateDefault,
+ * @param use_alt Zero selects the new-game template (g_newGameStateTemplate,
  *                g_scene_mode = 0xD); non-zero selects the alternate template
  *                (g_menuLayoutTemplateAlt, g_scene_mode = 0).
  *
@@ -2130,7 +2130,7 @@ void load_menu_layout(s32 use_alt)
     u32 i;
     if (use_alt == 0)
     {
-        src = (s32*)&g_menuLayoutTemplateDefault;
+        src = (s32*)&g_newGameStateTemplate;
         g_scene_mode = 0xD;
         g_music_track_index = 0;
         g_layout_flag = 0;

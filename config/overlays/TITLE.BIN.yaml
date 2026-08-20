@@ -185,7 +185,15 @@ segments:
           - glove
           - flail
           - bow
-      - [0xAA215, databin, menu_layout_default]
+      - start: 0xAA215
+        type: game_state_template
+        name: new_game_state_template
+        dir: title
+        expected_size: 0x3268
+      - start: 0xAD47D
+        type: databin
+        name: new_game_state_template_remainder
+        dir: title
       - [0xAEB09, databin, menu_layout_default_tail]
       - [0xAF2D1, databin, menu_layout_alternate]
       - [0xB2531, databin, submenu_layout_default]

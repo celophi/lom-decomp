@@ -169,8 +169,8 @@ extern SaveLayoutTex g_saveLayoutTexTable[];
 extern u8 g_saveSlotPanelUvTable[];
 /** UV rectangles used by the save-slot free-size sprites. */
 extern u8 g_saveSlotSpriteUvTable[];
-/** Menu-layout template copied into g_menuLayoutBuffer for the default menu. */
-extern u32 g_menuLayoutTemplateDefault[];
+/** New-game state template copied into g_menuLayoutBuffer. */
+extern u32 g_newGameStateTemplate[];
 /** Menu-layout template copied into g_menuLayoutBuffer for the alternate menu. */
 extern u32 g_menuLayoutTemplateAlt[];
 /** Sub-menu layout table copied by load_sub_menu_layout for a new game. */

@@ -27,8 +27,8 @@ extern s32 g_field_entry_flag;
 /**
  * @brief Working buffer for the active menu/save layout (main executable .bss).
  *
- * Storage for a MenuLayout record. load_menu_layout copies a full 0xC9A-word
- * layout table into this buffer; load_sub_menu_layout overwrites a 0x94-word
+ * Storage for a MenuLayout/game-state record. load_menu_layout copies a full
+ * 0xC9A-word state template into this buffer; load_sub_menu_layout overwrites a 0x94-word
  * sub-region whose base is the separately-named g_gameDataBasePtr (offset
  * 0x5F0 within this same buffer). Fields accessed so far by the title overlay:
  *   +0x0D4  s16  rng_seed - composed random value (seed) written from rand()
@@ -130,7 +130,7 @@ typedef struct
     u8  layout_flags;                 /**< 0x027: copied to companion global g_layout_flag. */
     u32 unk028;                 /**< 0x028: flag word; bits 0xC tested together. */
     u8  _unk02C[0x34 - 0x2C];   /**< 0x02C: not yet mapped. */
-    s32 save_slot_data[0xB];            /**< 0x034: 11 s32 slots; cleared per non-selected save slot. */
+    u32 weapon_category_masks[0xB]; /**< 0x034: 11 weapon-category masks; non-selected entries are cleared. */
     u8  _unk060[0xD4 - 0x60];   /**< 0x060: not yet mapped. */
     s16 rng_seed;               /**< 0x0D4: composed random value (rand() based). */
     u8  _unk0D6[0x2E0 - 0xD6];  /**< 0x0D6: not yet mapped. */
