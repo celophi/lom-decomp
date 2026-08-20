@@ -2,11 +2,9 @@
  * @file gname_types.h
  * @brief Record types for the GNAME .data tables.
  *
- * Shared by gname.c (the code that reads these tables) and gname_data.c (which
- * defines them from the original ROM data). Keeping the definitions in one place
- * lets both translation units agree on the exact layout; the gname_data.o
- * byte-check (compiled bytes vs the original ROM) guards against any accidental
- * change to a struct here.
+ * These types give gname.c documented views over the packed data extracted from
+ * the original overlay. Their layouts must continue to agree with the binary
+ * records consumed by the matched code.
  */
 #ifndef GNAME_TYPES_H
 #define GNAME_TYPES_H

@@ -41,7 +41,7 @@ The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each mod
 | MOVIE.BIN     | 🔒 | Fully linked  |
 | NIKI.BIN      | 💤 | Not started   |
 | SHOP.BIN      | 💤 | Not started   |
-| TITLE.BIN     | ☑️ | Matching      |
+| TITLE.BIN     | 🔒 | Fully linked  |
 | WMAP.BIN      | 💤 | Not started   |
 | WSEL.BIN      | 💤 | Not started   |
 | ZUKAN.BIN     | 💤 | Not started   |
