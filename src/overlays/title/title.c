@@ -1741,7 +1741,7 @@ static void scroll_slots_left(void)
 }
 
 /**
- * @brief One UV/size descriptor in g_slotPolyUvTable / g_slotSprtUvTable.
+ * @brief One UV/size descriptor in the save-slot panel and sprite UV tables.
  *
  * @note Every field is in 8-pixel units; the renderer multiplies by 8 on use.
  */
@@ -1820,7 +1820,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 idx = 0;
             }
 
-            uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98AC);
+            uv = (SlotUvRect*)((idx * 6) + (u32)g_saveSlotPanelUvTable);
 
             poly = (POLY_FT4*)ptr;
             tint = GPU_TINT_NEUTRAL;
@@ -1883,7 +1883,7 @@ void* RenderSaveLayoutPrims(u8* ptr, u_long* ot)
                 SET_BGR0_PACKED((SPRT*)ptr, tint);
                 setSprt((SPRT*)ptr);
 
-                uv = (SlotUvRect*)((idx * 6) + (u32)D_800F98F4);
+                uv = (SlotUvRect*)((idx * 6) + (u32)g_saveSlotSpriteUvTable);
                 setSemiTrans((SPRT*)ptr, *(u32*)entry & 2);
 
                 vx = *(u16*)&entry->x + g_slotSlideXLerped;

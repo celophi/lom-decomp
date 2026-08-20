@@ -165,8 +165,10 @@ typedef struct {
  * SaveLayoutTex* by consumers.
  */
 extern SaveLayoutTex g_saveLayoutTexTable[];
-extern u8 D_800F98AC[];
-extern u8 D_800F98F4[];
+/** UV rectangles used by the save-slot background panel quads. */
+extern u8 g_saveSlotPanelUvTable[];
+/** UV rectangles used by the save-slot free-size sprites. */
+extern u8 g_saveSlotSpriteUvTable[];
 /** Menu-layout template copied into g_menuLayoutBuffer for the default menu. */
 extern u32 g_menuLayoutTemplateDefault[];
 /** Menu-layout template copied into g_menuLayoutBuffer for the alternate menu. */

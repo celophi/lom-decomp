@@ -139,8 +139,18 @@ segments:
           - save_layout_tim_08
           - save_layout_tim_09
           - save_layout_tim_10
-      - [0xA9C3D, databin, save_layout_uv_0]
-      - [0xA9C85, databin, save_layout_uv_1]
+      - start: 0xA9C3D
+        type: uv_rect_table
+        name: save_slot_panel_uvs
+        dir: title
+        unit_pixels: 8
+        expected_count: 12
+      - start: 0xA9C85
+        type: uv_rect_table
+        name: save_slot_sprite_uvs
+        dir: title
+        unit_pixels: 8
+        expected_count: 12
       - [0xA9CCD, databin, save_layout_table]
       - [0xA9F55, databin, save_slot_data]
       - [0xAA215, databin, menu_layout_default]

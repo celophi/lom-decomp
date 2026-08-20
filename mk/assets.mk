@@ -10,6 +10,8 @@ U8_SEQUENCE_SOURCES := $(call rwildcard,assets,*.u8_sequence.yaml)
 U8_SEQUENCE_BINARIES := $(patsubst %.u8_sequence.yaml,%.u8_sequence.bin,$(U8_SEQUENCE_SOURCES))
 TIM_UPLOAD_TABLE_SOURCES := $(call rwildcard,assets,*.tim_upload_table.yaml)
 TIM_UPLOAD_TABLE_BINARIES := $(patsubst %.tim_upload_table.yaml,%.tim_upload_table.bin,$(TIM_UPLOAD_TABLE_SOURCES))
+UV_RECT_TABLE_SOURCES := $(call rwildcard,assets,*.uv_rect_table.yaml)
+UV_RECT_TABLE_BINARIES := $(patsubst %.uv_rect_table.yaml,%.uv_rect_table.bin,$(UV_RECT_TABLE_SOURCES))
 SPRITE_LAYOUT_SOURCES := $(call rwildcard,assets,*.sprite_layout.yaml)
 SPRITE_LAYOUT_BINARIES := $(patsubst %.sprite_layout.yaml,%.sprite_layout.bin,$(SPRITE_LAYOUT_SOURCES))
 SPRITE_ANIMATION_SOURCES := $(call rwildcard,assets,*.sprite_animation.yaml)
@@ -25,9 +27,9 @@ INDEX_MAP_BINARIES := $(patsubst %.index_map.yaml,%.index_map.bin,$(INDEX_MAP_SO
 NAME_ENTRY_RESOURCE_SOURCES := $(call rwildcard,assets,*.name_entry_resource.yaml)
 NAME_ENTRY_RESOURCE_BINARIES := $(patsubst %.name_entry_resource.yaml,%.name_entry_resource.bin,$(NAME_ENTRY_RESOURCE_SOURCES))
 
-.PHONY: validate-assets validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-tim-upload-table-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
+.PHONY: validate-assets validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-tim-upload-table-assets validate-uv-rect-table-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
-validate-assets: validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-tim-upload-table-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
+validate-assets: validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-tim-upload-table-assets validate-uv-rect-table-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
 %.tim_trail.bin: %.tim tools/assets/psx_tim.py
 	python3 tools/assets/psx_tim.py build $< $@ --trailing-duplicate-word
@@ -65,6 +67,16 @@ endif
 validate-tim-upload-table-assets: $(TIM_UPLOAD_TABLE_BINARIES)
 ifneq ($(strip $(TIM_UPLOAD_TABLE_SOURCES)),)
 	python3 tools/assets/tim_upload_table.py validate $(TIM_UPLOAD_TABLE_SOURCES)
+else
+	@:
+endif
+
+%.uv_rect_table.bin: %.uv_rect_table.yaml tools/assets/uv_rect_table.py
+	python3 tools/assets/uv_rect_table.py build $< $@
+
+validate-uv-rect-table-assets: $(UV_RECT_TABLE_BINARIES)
+ifneq ($(strip $(UV_RECT_TABLE_SOURCES)),)
+	python3 tools/assets/uv_rect_table.py validate $(UV_RECT_TABLE_SOURCES)
 else
 	@:
 endif
@@ -141,4 +153,4 @@ endif
 
 # Structured assets must be rebuilt before staging copies linker inputs to the
 # native Linux filesystem used by the legacy toolchain.
-$(COPY_SENTINEL): $(PSX_TIM_DUPLICATE_WORD_BINARIES) $(ASSET_OFFSET_TABLE_BINARIES) $(U8_SEQUENCE_BINARIES) $(TIM_UPLOAD_TABLE_BINARIES) $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES) $(TAB_CURSOR_LAYOUT_BINARIES) $(INDEX_BOUNDARIES_BINARIES) $(INDEX_MAP_BINARIES) $(NAME_ENTRY_RESOURCE_BINARIES)
+$(COPY_SENTINEL): $(PSX_TIM_DUPLICATE_WORD_BINARIES) $(ASSET_OFFSET_TABLE_BINARIES) $(U8_SEQUENCE_BINARIES) $(TIM_UPLOAD_TABLE_BINARIES) $(UV_RECT_TABLE_BINARIES) $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES) $(TAB_CURSOR_LAYOUT_BINARIES) $(INDEX_BOUNDARIES_BINARIES) $(INDEX_MAP_BINARIES) $(NAME_ENTRY_RESOURCE_BINARIES)
