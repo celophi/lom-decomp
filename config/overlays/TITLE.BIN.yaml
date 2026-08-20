@@ -123,7 +123,22 @@ segments:
         name: save_layout_tim_10
         dir: title
         trailing_duplicate_word: true
-      - [0xA9B8D, databin, save_layout_texture_table]
+      - start: 0xA9B8D
+        type: tim_upload_table
+        name: save_layout_texture_table
+        dir: title
+        targets:
+          - save_layout_tim_00
+          - save_layout_tim_01
+          - save_layout_tim_02
+          - save_layout_tim_03
+          - save_layout_tim_04
+          - save_layout_tim_05
+          - save_layout_tim_06
+          - save_layout_tim_07
+          - save_layout_tim_08
+          - save_layout_tim_09
+          - save_layout_tim_10
       - [0xA9C3D, databin, save_layout_uv_0]
       - [0xA9C85, databin, save_layout_uv_1]
       - [0xA9CCD, databin, save_layout_table]
