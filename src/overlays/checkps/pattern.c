@@ -32,7 +32,17 @@ typedef struct
 
 extern u8 g_hardware_pattern_size_table[CHECKPS_PATTERN_SIZE_COUNT][2];
 
-/** Shift-JIS hardware-modification warning packed into little-endian words. */
+/**
+ * @brief Shift-JIS hardware-modification warning shown before termination.
+ *
+ * Decoded meaning:
+ *   "Execution was forcibly terminated."
+ *   "The console may have been modified."
+ *
+ * The original message is split across three display lines. It remains packed
+ * as 15 little-endian words to preserve its exact 60-byte layout, including
+ * two trailing NUL bytes.
+ */
 const u32 g_hardware_modification_warning[CHECKPS_HARDWARE_WARNING_WORD_COUNT] = {
     0xA790AD8B, 0xB997498F, 0xDC82B582, 0xBD82B582, 0x960A4281, 0x82CC917B, 0x91FC89AA, 0x82B382A2,
     0x82C482EA, 0x0AE982A2, 0xBB82A882, 0xAA82EA82, 0xE882A082, 0xB782DC82, 0x00004281,
