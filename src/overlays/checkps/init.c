@@ -18,7 +18,6 @@
 
 #define CHECKPS_FRAME_VSYNC_INTERVAL 2
 #define CHECKPS_GPU_DRAW_MODE_COMMAND 0xE1000000
-#define CHECKPS_FADE_TILE_CODE 0x62
 #define CHECKPS_FADE_ADDITIVE_DRAW_MODE 0x25
 #define CHECKPS_FADE_SUBTRACTIVE_DRAW_MODE 0x45
 #define CHECKPS_IMAGE_TPAGE 5
@@ -63,6 +62,17 @@ typedef struct
     s32 blue;
     s32 steps;
 } FadeColor;
+
+/** @brief Packet view for a fade TILE or draw-mode command. */
+typedef union
+{
+    TILE tile;
+    DR_TPAGE draw_mode;
+} CheckPSFadePrimitive;
+
+/** Advance a fade packet cursor by the concrete packet just emitted. */
+#define CHECKPS_NEXT_FADE_PRIMITIVE(primitive, type) \
+    ((CheckPSFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /**
  * @brief Rectangle stored in an embedded TIM image block.
@@ -421,10 +431,10 @@ void update_and_draw_fade(CheckPSFrame* frame)
 {
     s32 red_step, green_step, blue_step;
     s32 draw_mode;
-    u32* primitive;
-    u32* ordering_table_tag = (u32*)frame->ordering_table;
+    CheckPSFadePrimitive* primitive;
+    u_long* ordering_table_tag = frame->ordering_table;
 
-    primitive = (u32*)frame->primitive_cursor;
+    primitive = frame->primitive_cursor;
     if (g_fade_target.steps != 0)
     {
         red_step = (g_fade_target.red - g_fade_current.red) / g_fade_target.steps;
@@ -445,61 +455,56 @@ void update_and_draw_fade(CheckPSFrame* frame)
     {
         if (g_fade_current.red >= CHECKPS_FADE_ADDITIVE_THRESHOLD)
         {
-            ((u8*)primitive)[4] = (u8)(g_fade_current.red - 1);
-            ((u8*)primitive)[5] = (u8)(g_fade_current.green - 1);
-            ((u8*)primitive)[6] = (u8)(g_fade_current.blue - 1);
+            primitive->tile.r0 = g_fade_current.red - 1;
+            primitive->tile.g0 = g_fade_current.green - 1;
+            primitive->tile.b0 = g_fade_current.blue - 1;
         }
         else
         {
             if (g_fade_current.red == CHECKPS_FADE_NEUTRAL)
             {
-                ((u8*)primitive)[4] = 0;
+                primitive->tile.r0 = 0;
             }
             else
             {
-                ((u8*)primitive)[4] = ~(u8)(g_fade_current.red);
+                primitive->tile.r0 = ~g_fade_current.red;
             }
             if (g_fade_current.green == CHECKPS_FADE_NEUTRAL)
             {
-                ((u8*)primitive)[5] = 0;
+                primitive->tile.g0 = 0;
             }
             else
             {
-                ((u8*)primitive)[5] = ~(u8)(g_fade_current.green);
+                primitive->tile.g0 = ~g_fade_current.green;
             }
             if (g_fade_current.blue == CHECKPS_FADE_NEUTRAL)
             {
-                ((u8*)primitive)[6] = 0;
+                primitive->tile.b0 = 0;
             }
             else
             {
-                ((u8*)primitive)[6] = ~(u8)(g_fade_current.blue);
+                primitive->tile.b0 = ~g_fade_current.blue;
             }
         }
-        ((u8*)primitive)[3] = 3;
-        ((u8*)primitive)[7] = CHECKPS_FADE_TILE_CODE;
-        *(u16*)((u8*)primitive + 12) = SCREEN_WIDTH;
-        *(u16*)((u8*)primitive + 10) = 0;
-        *(u16*)((u8*)primitive + 8) = 0;
-        *(u16*)((u8*)primitive + 14) = SCREEN_HEIGHT;
+        setTile(&primitive->tile);
+        setSemiTrans(&primitive->tile, 1);
+        SET_YX0(&primitive->tile, 0, 0);
+        setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-        *primitive = (*primitive & CHECKPS_GPU_TAG_LENGTH_MASK) | (*ordering_table_tag & CHECKPS_GPU_TAG_ADDRESS_MASK);
-        *ordering_table_tag = (*ordering_table_tag & CHECKPS_GPU_TAG_LENGTH_MASK) | ((u32)primitive & CHECKPS_GPU_TAG_ADDRESS_MASK);
+        addPrim(ordering_table_tag, &primitive->tile);
         draw_mode = CHECKPS_FADE_ADDITIVE_DRAW_MODE;
-        primitive = (u32*)((u8*)primitive + sizeof(TILE)); // advance in-place; lands in delay slot
+        primitive = CHECKPS_NEXT_FADE_PRIMITIVE(primitive, TILE);
         if (g_fade_current.red < CHECKPS_FADE_ADDITIVE_THRESHOLD)
         {
             draw_mode = CHECKPS_FADE_SUBTRACTIVE_DRAW_MODE;
         }
-        ((u8*)primitive)[3] = 1;
-        *(u32*)((u8*)primitive + 4) = (u32)draw_mode | CHECKPS_GPU_DRAW_MODE_COMMAND;
+        setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
 
-        *primitive = (*primitive & CHECKPS_GPU_TAG_LENGTH_MASK) | (*ordering_table_tag & CHECKPS_GPU_TAG_ADDRESS_MASK);
-        *ordering_table_tag = (*ordering_table_tag & CHECKPS_GPU_TAG_LENGTH_MASK) | ((u32)primitive & CHECKPS_GPU_TAG_ADDRESS_MASK);
+        addPrim(ordering_table_tag, &primitive->draw_mode);
 
-        primitive = (u32*)((u8*)primitive + sizeof(DR_TPAGE)); // second advance (+8), total = +0x18
+        primitive = CHECKPS_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
     }
-    frame->primitive_cursor = (u8*)primitive;
+    frame->primitive_cursor = primitive;
 }
 
 /**
