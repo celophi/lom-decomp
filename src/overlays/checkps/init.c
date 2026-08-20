@@ -1,5 +1,150 @@
 #include "checkps_internal.h"
 
+#include "akao.h"
+#include "display.h"
+#include "gpu_packet.h"
+#include "main.h"
+#include "pad.h"
+#include "psyq/libapi.h"
+#include "psyq/libgpu.h"
+#include "psyq/libgte.h"
+#include "psyq/memory.h"
+
+#define CHECKPS_ORDERING_TABLE_LENGTH 0x1000
+#define CHECKPS_PRIMITIVE_BUFFER_SIZE 0x4000
+#define CHECKPS_SONG_BUFFER_SIZE 0x4000
+#define CHECKPS_RESERVED_BSS_WORDS 32769
+
+#define CHECKPS_FRAME_VSYNC_INTERVAL 2
+#define CHECKPS_GPU_DRAW_MODE_COMMAND 0xE1000000
+#define CHECKPS_FADE_TILE_CODE 0x62
+#define CHECKPS_FADE_ADDITIVE_DRAW_MODE 0x25
+#define CHECKPS_FADE_SUBTRACTIVE_DRAW_MODE 0x45
+#define CHECKPS_IMAGE_TPAGE 5
+#define CHECKPS_GEOMETRY_SCREEN_DISTANCE 1500
+#define CHECKPS_FADE_NEUTRAL 0x100
+#define CHECKPS_FADE_ADDITIVE_THRESHOLD (CHECKPS_FADE_NEUTRAL + 1)
+#define CHECKPS_DEFAULT_FADE_STEPS 20
+#define CHECKPS_IMAGE_DISPLAY_FRAMES 120
+#define CHECKPS_IMAGE_CLUT_Y 480
+#define CHECKPS_GLYPH_VRAM_WIDTH 64
+#define CHECKPS_GLYPH_VRAM_HEIGHT 256
+
+#define CHECKPS_SEQ_RESOURCE_BASE 0x17
+#define CHECKPS_AUDIO_BANK_ADDRESS ((AkaoSeqHeader*)0x8013C000)
+#define CHECKPS_AUDIO_WORK_ADDRESS ((u8*)0x80180000)
+#define CHECKPS_AUDIO_BANK_RESIDENT_STATE 6
+
+#define CHECKPS_CONTROLLER_UNAVAILABLE 0xFE
+#define CHECKPS_INITIAL_REPEAT_DELAY 15
+#define CHECKPS_REPEAT_DELAY 2
+#define CHECKPS_DPAD_MASK (PAD_BTN_UP | PAD_BTN_RIGHT | PAD_BTN_DOWN | PAD_BTN_LEFT)
+#define CHECKPS_NON_REPEAT_BUTTON_MASK \
+    (PAD_BTN_L2 | PAD_BTN_R2 | PAD_BTN_L1 | PAD_BTN_R1 | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_SELECT | PAD_BTN_L3 | PAD_BTN_START)
+
+/**
+ * @brief Conditions that end the CHECKPS display loop.
+ */
+typedef enum
+{
+    CHECKPS_EXIT_NONE = 0,
+    CHECKPS_EXIT_IMAGE_TIMEOUT = 2,
+} CheckPSExitReason;
+
+/**
+ * @brief Current and target RGB fade values with the remaining step count.
+ */
+typedef struct
+{
+    s32 red;
+    s32 green;
+    s32 blue;
+    s32 steps;
+} FadeColor;
+
+/**
+ * @brief Rectangle stored in an embedded TIM image block.
+ */
+typedef struct
+{
+    s16 x;
+    s16 y;
+    u16 w;
+    u16 h;
+} CheckPSTimRect;
+
+/**
+ * @brief Header and payload of an embedded TIM image block.
+ */
+typedef struct
+{
+    u32 size;
+    CheckPSTimRect rect;
+    u_long data[1];
+} CheckPSTimBlock;
+
+/**
+ * @brief Embedded TIM image asset used by the CHECKPS display.
+ */
+typedef struct
+{
+    u32 magic;
+    u32 mode;
+    CheckPSTimBlock clut;
+} CheckPSTimAsset;
+
+/**
+ * @brief GPU environments and clear rectangle for one display buffer.
+ */
+typedef struct
+{
+    DISPENV disp;
+    DRAWENV draw;
+    RECT clear_rect;
+} CheckPSDisplayBuffer;
+
+/**
+ * @brief Ordering table, display state, and primitive storage for one frame.
+ */
+typedef struct
+{
+    u8 reserved_header[0x40];
+    u_long ordering_table[CHECKPS_ORDERING_TABLE_LENGTH];
+    CheckPSDisplayBuffer display;
+    u8 primitive_buffer[CHECKPS_PRIMITIVE_BUFFER_SIZE];
+    void* primitive_cursor;
+    u8 reserved_tail[0x3C10];
+} CheckPSFrame;
+
+/**
+ * @brief Double-buffered rendering workspace supplied to CHECKPS.
+ */
+struct CheckPSRenderState
+{
+    CheckPSFrame frames[2];
+};
+
+extern u32 g_embedded_checkps_akao;
+extern CheckPSTimAsset g_checkps_image_asset;
+extern u8 g_controller_device_type;
+
+void run_checkps_display_loop(CheckPSRenderState* render_state);
+void init_checkps_display(CheckPSRenderState* render_state);
+void load_embedded_checkps_audio(void);
+void load_checkps_song_from_disc(s32 song_index);
+void stop_checkps_song(void);
+void play_loaded_checkps_song(void);
+void play_checkps_sfx(u32 sound_id, u32 volume, u32 pan);
+void reset_fade_state(void);
+void update_and_draw_fade(CheckPSFrame* frame);
+void set_fade_target(s32 red, s32 green, s32 blue, s32 steps);
+void update_checkps_input_and_timeout(void);
+void draw_checkps_image(CheckPSFrame* frame);
+void load_checkps_image(void);
+s32 poll_input_device(void);
+void process_controller_input(void);
+void update_controller_input(void);
+
 /* Nonzero ends the CHECKPS display loop; value 2 is used for image timeout. */
 s32 g_checkps_exit_reason;
 

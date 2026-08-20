@@ -1,5 +1,133 @@
 #include "checkps_internal.h"
 
+#include "display.h"
+#include "psyq/libapi.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+
+#define CHECKPS_GPU_FILL_RECT_COMMAND 0x02000000
+#define CHECKPS_GPU_MASK_BIT_COMMAND 0xE6000002
+
+#define CHECKPS_WARNING_LINE_COUNT 2
+#define CHECKPS_WARNING_TEXT_X 0x50
+#define CHECKPS_WARNING_TEXT_Y 0x5C
+#define CHECKPS_WARNING_TEXT_WIDTH 16
+#define CHECKPS_WARNING_PRIMARY_COLOR 0xFFFF
+#define CHECKPS_WARNING_SHADOW_COLOR 0x8000
+#define CHECKPS_SPU_CONTROL_REGISTER ((s16*)0x1F801DAA)
+
+/* These mirror CdlDiskError/CdlStatShellOpen; libcd.h is not GCC 2.7.2-clean. */
+#define CHECKPS_CD_IRQ_DISK_ERROR 5
+#define CHECKPS_CD_STATUS_SHELL_OPEN 0x10
+#define CHECKPS_CD_TEST_DELAY_FRAMES 200
+#define CHECKPS_CD_PAUSE_DELAY_FRAMES 10
+#define CHECKPS_CD_IRQ_ACK_MASK 0x1F
+#define CHECKPS_CD_PARAMETER_MODE 0x18
+#define CHECKPS_CD_IRQ_STATUS_MASK 7
+#define CHECKPS_POINTER_IDENTITY_MAGIC 0x88888889U
+
+/**
+ * @brief Named prefix of the CD controller response buffer.
+ */
+typedef struct
+{
+    u8 status;
+    u8 detail;
+} CdResponsePrefix;
+
+/**
+ * @brief Opcode and transfer counts for one CD controller command.
+ */
+typedef struct
+{
+    u8 opcode;
+    u8 parameter_count;
+    u8 response_count;
+    u8 irq_code_sum_target;
+} CdCommandDescriptor;
+
+/**
+ * @brief Indices into the CHECKPS CD command descriptor table.
+ */
+typedef enum
+{
+    CHECKPS_CD_CMD_NOP = 0,
+    CHECKPS_CD_CMD_GET_TN,
+    CHECKPS_CD_CMD_GET_TD,
+    CHECKPS_CD_CMD_SETLOC,
+    CHECKPS_CD_CMD_SEEK_P,
+    CHECKPS_CD_CMD_SETMODE,
+    CHECKPS_CD_CMD_INIT,
+    CHECKPS_CD_CMD_MUTE,
+    CHECKPS_CD_CMD_PLAY,
+    CHECKPS_CD_CMD_TEST_04,
+    CHECKPS_CD_CMD_TEST_05,
+    CHECKPS_CD_CMD_PAUSE,
+    CHECKPS_CD_CMD_READ_TOC,
+    CHECKPS_CD_CMD_GET_ID,
+} CheckPSCdCommandIndex;
+
+/**
+ * @brief States in the CHECKPS CD integrity-check state machine.
+ */
+typedef enum
+{
+    CHECKPS_STATE_IDLE = 0,
+    CHECKPS_STATE_START_GET_TN,
+    CHECKPS_STATE_WAIT_GET_TN,
+    CHECKPS_STATE_WAIT_INIT,
+    CHECKPS_STATE_WAIT_GET_TD,
+    CHECKPS_STATE_WAIT_READ_TOC,
+    CHECKPS_STATE_WAIT_GET_ID,
+    CHECKPS_STATE_WAIT_SETLOC,
+    CHECKPS_STATE_WAIT_SETMODE,
+    CHECKPS_STATE_SEEK_DELAY,
+    CHECKPS_STATE_WAIT_SEEK_P,
+    CHECKPS_STATE_WAIT_MUTE,
+    CHECKPS_STATE_WAIT_PLAY,
+    CHECKPS_STATE_WAIT_TEST_04,
+    CHECKPS_STATE_TEST_05_DELAY,
+    CHECKPS_STATE_WAIT_TEST_05,
+    CHECKPS_STATE_WAIT_FAILURE_NOP,
+    CHECKPS_STATE_WAIT_RECOVERY_NOP,
+    CHECKPS_STATE_WAIT_PAUSE,
+    CHECKPS_STATE_PAUSE_DELAY,
+} CheckPSState;
+
+/**
+ * @brief Outcomes from polling an in-flight CD controller command.
+ */
+typedef enum
+{
+    CHECKPS_CD_POLL_SHELL_OPEN = -2,
+    CHECKPS_CD_POLL_DISK_ERROR = -1,
+    CHECKPS_CD_POLL_PENDING = 0,
+    CHECKPS_CD_POLL_COMPLETE = 1,
+} CheckPSCdPollResult;
+
+/**
+ * @brief Kanji draw state viewed as four consecutive halfwords.
+ */
+typedef struct
+{
+    s16 x;
+    s16 y;
+    s16 width;
+    s16 height;
+} KanjiDrawStateWords;
+
+extern s32 g_checkps_state;
+extern CdCommandDescriptor g_cd_command_table[];
+extern u8 g_cd_command_parameters[3];
+extern CdResponsePrefix g_cd_response;
+extern s32 g_cd_irq_code_sum;
+extern u8 g_cd_response_byte2;
+extern u8 g_cd_response_payload[2];
+extern volatile u8* g_cd_status_register;
+extern volatile u8* g_cd_response_register;
+extern volatile u8* g_cd_data_register;
+extern volatile u8* g_cd_irq_register;
+
 /*
  * GNU as 2.7 pads the standard .text section to a 16-byte boundary.  Keeping
  * this translation unit's code in a custom section avoids synthetic tail

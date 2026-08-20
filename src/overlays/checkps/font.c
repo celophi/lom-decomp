@@ -1,5 +1,74 @@
 #include "checkps_internal.h"
 
+#include "display.h"
+#include "gpu_packet.h"
+#include "psyq/libapi.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+
+#define MAX_GLYPH_ENTRIES 256
+
+/* Bit 16 is cleared at frame start and set when a cache slot is emitted. */
+#define GLYPH_USED_FLAG 0x10000
+
+#define CHECKPS_GLYPH_CLUT_Y (VRAM_HEIGHT - 1)
+#define CHECKPS_GLYPH_WIDTH 16
+#define CHECKPS_GLYPH_VRAM_WORD_WIDTH 4
+#define CHECKPS_GLYPH_RASTER_SLOT_SIZE 0x80
+#define CHECKPS_GLYPH_V_COORD_MASK 0xF0
+#define CHECKPS_GLYPH_CODE_MASK 0xFFFF
+#define CHECKPS_GLYPH_SOURCE_MSB 0x80
+#define CHECKPS_GLYPH_PACKET_STRIDE 0x14
+#define CHECKPS_TEXT_WRAP_LIMIT (SCREEN_WIDTH * 2)
+#define CHECKPS_TEXT_FIRST_PRINTABLE 0x20
+#define CHECKPS_TEXT_SPACE 0x20
+#define CHECKPS_SJIS_LEAD_BYTE_THRESHOLD 0x80
+#define CHECKPS_SJIS_FULLWIDTH_ZERO 0x4F82
+#define CHECKPS_SJIS_MINUS 0x5B81
+#define CHECKPS_ASCII_TO_SJIS_BIAS 0x7AE1
+#define CHECKPS_TEXT_DRAW_MODE_COMMAND 0xE100000F
+
+/**
+ * @brief Character code and per-frame usage state for one glyph cache slot.
+ */
+typedef union
+{
+    u32 raw;
+    struct
+    {
+        u16 character_code;
+        struct
+        {
+            u16 used_this_frame : 1;
+            u16 reserved : 15;
+        } flags;
+    } data;
+} GlyphCacheEntry;
+
+/**
+ * @brief Two encoded glyphs followed by a string terminator.
+ */
+typedef struct
+{
+    u16 first_glyph;
+    u16 second_glyph;
+    s16 terminator;
+} EncodedGlyphPair;
+
+/**
+ * @brief GPU packet used to draw one cached 16-by-16 glyph.
+ */
+typedef SPRT_16 GlyphSpritePacket;
+
+extern u16 g_decimal_glyph_table[];
+extern u16 g_hex_glyph_table[];
+
+void* draw_signed_decimal(void* primitive, u_long* ot_tag, s32 value, s32 x, s32 y, s32 palette, s32 alignment);
+void draw_hex_byte(void* primitive, u_long* ot_tag, s32 value, s32 x, s32 y, s32 alignment);
+void* draw_cached_text(void* primitive, u_long* ot_tag, const void* text, s32 x, s32 y, s32 palette, s32 alignment);
+void* render_cached_glyph(void* primitive, u_long* ot_tag, s32 character_code, s32 palette);
+GlyphSpritePacket* emit_glyph_sprite(GlyphSpritePacket* packet, u_long* ot_tag, s32 cache_slot);
+
 /*
  * Nonzero prefix of the 16-color glyph CLUT.  LoadImage reads a 16x1 palette
  * from this address; the remaining entries are zero in the following linked

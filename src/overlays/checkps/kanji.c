@@ -1,4 +1,16 @@
 #include "checkps_internal.h"
+
+#include "psyq/libapi.h"
+#include "psyq/strings.h"
+
+#define CHECKPS_KANJI_LINE_HEIGHT 18
+#define CHECKPS_KANJI_ADVANCE 17
+#define CHECKPS_KANJI_PIXELS_PER_ROW 16
+#define CHECKPS_KANJI_GPU_TAG 0x0B000000
+#define CHECKPS_KANJI_GPU_LOAD_IMAGE 0xA0000000
+
+void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color);
+
 /**
  * @brief Draw a Shift-JIS string using glyphs from the PS1 Kanji ROM.
  * @param text Null-terminated Shift-JIS text; newline resets the x cursor.

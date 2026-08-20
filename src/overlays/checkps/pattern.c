@@ -1,5 +1,16 @@
 #include "checkps_internal.h"
 
+#include "display.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
+
+#define CHECKPS_PATTERN_RING_COUNT 16
+#define CHECKPS_PATTERN_QUADRANT_COUNT 4
+#define CHECKPS_PATTERN_GPU_TAG 0x05000000
+#define CHECKPS_PATTERN_GPU_POLY_F4 0x280000FF
+
+extern u8 g_hardware_pattern_size_table[][2];
+
 const u32 g_hardware_modification_warning[15] = {
     0xA790AD8B, 0xB997498F, 0xDC82B582, 0xBD82B582, 0x960A4281, 0x82CC917B, 0x91FC89AA, 0x82B382A2,
     0x82C482EA, 0x0AE982A2, 0xBB82A882, 0xAA82EA82, 0xE882A082, 0xB782DC82, 0x00004281,
