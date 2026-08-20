@@ -64,7 +64,7 @@ typedef union
 
 /* The first word is a non-creative section sentinel. Keeping it in this
  * translation unit makes .text begin immediately at 0x8004FC74. */
-const u32 D_8004FC70 __attribute__((section(".rodata"))) = 0x10;
+const u32 D_8004FC70 = 0x10;
 
 /* Self-relative offsets for the two title-screen TIM images which immediately
  * follow this table. The image pixels are generated from the contributor's
