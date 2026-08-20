@@ -2,3 +2,7 @@ rom:0x268D reloc:MIPS_NONE symbol:g_field_scene
 rom:0x269D reloc:MIPS_NONE symbol:g_field_scene
 rom:0x26A1 reloc:MIPS_NONE symbol:g_field_scene
 rom:0x26AD reloc:MIPS_NONE symbol:g_field_vram_byte_count
+
+rom:0x63D5 reloc:MIPS_NONE symbol:D_1F800008
+rom:0x650D reloc:MIPS_NONE symbol:D_1F800008
+rom:0x6745 reloc:MIPS_NONE symbol:D_1F800008

@@ -913,36 +913,12 @@ typedef union
  * @param ot_base Base of the 8-byte-per-entry ordering-table head array,
  *                indexed by CLUT id.
  *
- * @note The placement mode is `(def->u.word >> 12) & 0xF`, and the switch needs
- *       an explicit `case 5:` falling into `default:` - that is what makes gcc
- *       emit a five-entry jump table whose last slot points at the default arm.
- * @note `scaled` is assigned the vertical term BEFORE the column-fill loop, and
- *       the loop immediately overwrites it. Those 14 instructions are dead, but
- *       gcc cannot delete them because `mult` clobbers HI/LO and is not a
- *       deletable dead insn. Removing the assignment costs the whole block.
- * @note `origin->unk8 / 2` really is a plain `/ 2` here (`srl 31 / addu / sra 1`),
- *       NOT the HALF_TOWARD_ZERO branch form used elsewhere in this file.
- * @note `prim = NULL; chain = NULL;` must sit BEFORE the four rcos/rsin calls.
- *       Placed after them, prim's live range starts after the calls, it crosses
- *       none, and it takes a caller-saved register; placed before, it crosses
- *       four calls and lands in s0 like the target (+26 exact rows).
- * @note The three point-fill loops reuse `col` rather than a separate index;
- *       the target allocates a2 for both them and the column loop.
- * @note Declaration order sets the spill-slot order (see field_emit_sprite_grid's note):
- *       the locals are declared in the target's slot order, 0x10 recp through
- *       0x48 clut_right.
- * @note The visibility test is assigned to `visible` first rather than tested
- *       inline; the target materialises 0/1 in a register before branching.
- * @note `part->def` is re-read rather than cached in a local because the
- *       rcos/rsin calls clobber memory for gcc's alias model and kill the CSE.
- *
- * @see working/func_80055D20/status.md for the full match log and the residue.
- * @see decomp.me (92.08%) TODO
+ * @see decomp.me (100%) TODO
  */
-void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldViewport* origin, s32 ot_base)
+void field_emit_rotated_sprite_grid(FieldPart *part, s32 **cursor_ptr, FieldViewport *origin, s32 ot_base)
 {
-    u8* recp;
-    s32* bitp;
+    u8 *recp;
+    s32 *bitp;
     s32 tpage_word;
     s32 code_word;
     s32 bits;
@@ -955,12 +931,8 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
     s32 flip;
     s32 clut_cur;
     s32 clut_left;
-    s32 clut_right;
-    /* TODO: not recovered source. A second pseudo for `height` is what pushes
-       height out of a saved register and into its stack slot, which the target
-       reads back twice per interpolation block. Removing it costs 27 rows.
-       The real cause is register pressure; see status.md. */
-    s32 hdiv;
+    u32 clut_right;
+    s32 clut_init;
     s32 row;
     s32 col;
     s32 idx;
@@ -978,20 +950,21 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
     s32 uv_word;
     u32 clut;
     u32 clut_b;
-    FieldColStep* steps;
-    FieldPoint* pt;
-    FieldPoint* prev_row;
-    FieldPoint* this_row;
-    FieldPolyPrim* prim;
-    u8* cursor;
-    u8* chain;
+    FieldColStep *steps;
+    FieldPoint *pt;
+    FieldPoint *prev_row;
+    FieldPoint *this_row;
+    FieldPolyPrim *prim;
+    u8 *cursor;
+    u8 *chain;
 
     bits = 0;
     clut_left = 0;
-    clut_cur = part->clut_tl;
+    clut_init = part->clut_tl;
     clut_right = 0;
-    if ((clut_cur == part->clut_tr) && (clut_cur == part->clut_bl) && (clut_cur == part->clut_br))
+    if ((clut_init == part->clut_tr) && (clut_init == part->clut_bl) && (clut_init == part->clut_br))
     {
+        clut_cur = clut_init;
         interp = 0;
     }
     else
@@ -1013,16 +986,15 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
     bit = 0;
     bitp = part->bits;
     recp = part->records;
-    cursor = (u8*)*cursor_ptr;
+    cursor = (u8 *) *cursor_ptr;
     prim = NULL;
-    chain = NULL;
     width = part->def->u.b.cols;
     height = part->def->u.b.rows;
     cos_a = rcos(part->row_angle);
     cos_b = rcos(part->column_angle);
     sin_c = rsin(part->rotation_angle);
+    chain = (u8 *) prim;
     cos_c = rcos(part->rotation_angle);
-    hdiv = height;
     switch ((part->def->u.word >> 12) & 0xF)
     {
     case 1:
@@ -1053,7 +1025,7 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
         break;
     }
     scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
-    steps = (FieldColStep*)0x1F800000;
+    steps = (FieldColStep *) 0x1F800000;
     for (col = width; col != -1; col--)
     {
         scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(x_off * part->scale_x, 8) * cos_b, 12);
@@ -1062,22 +1034,25 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
         steps->cos_term = scaled * cos_c;
         steps++;
     }
+    steps = (FieldColStep *) 0x1F800000;
+    pt = (FieldPoint *) 0x1F800200;
     scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
     dx = scaled * sin_c;
     dy = scaled * cos_c;
-    steps = (FieldColStep*)0x1F800000;
-    pt = (FieldPoint*)0x1F800200;
     for (col = width; col != -1; col--)
     {
         pt->p.x = SHIFT_TOWARD_ZERO(steps->cos_term - dx, 16) + cx;
         pt->p.y = SHIFT_TOWARD_ZERO(steps->sin_term + dy, 16) + cy;
-        steps++;
+        do {
+            steps++;
+        } while (0);
         pt++;
     }
     flip = 0;
+    row = height;
+    row = row - 1;
     if (height != 0)
     {
-        row = height - 1;
         do
         {
             if (interp != 0)
@@ -1092,7 +1067,7 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
                 }
                 if (part->clut_tr != part->clut_br)
                 {
-                    clut_right = ((part->clut_tr * (row + 1)) + (part->clut_br * ((hdiv - row) - 1))) / hdiv;
+                    clut_right = ((part->clut_tr * (row + 1)) + (part->clut_br * ((height - row) - 1))) / height;
                 }
                 else
                 {
@@ -1101,22 +1076,22 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
             }
             if (flip == 0)
             {
-                prev_row = (FieldPoint*)0x1F800200;
-                this_row = (FieldPoint*)0x1F800300;
+                prev_row = (FieldPoint *) 0x1F800200;
+                this_row = (FieldPoint *) 0x1F800300;
                 flip = 1;
             }
             else
             {
-                prev_row = (FieldPoint*)0x1F800300;
-                this_row = (FieldPoint*)0x1F800200;
+                prev_row = (FieldPoint *) 0x1F800300;
+                this_row = (FieldPoint *) 0x1F800200;
                 flip = 0;
             }
             y_off += 0x10;
+            steps = (FieldColStep *) 0x1F800000;
+            pt = this_row;
             scaled = SHIFT_TOWARD_ZERO(SHIFT_TOWARD_ZERO(y_off * part->scale_y, 8) * cos_a, 12);
             dx = scaled * sin_c;
             dy = scaled * cos_c;
-            steps = (FieldColStep*)0x1F800000;
-            pt = this_row;
             for (col = width; col != -1; col--)
             {
                 pt->p.x = SHIFT_TOWARD_ZERO(steps->cos_term - dx, 16) + cx;
@@ -1133,13 +1108,29 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
                 }
                 if ((bits & bit) != 0)
                 {
-                    visible = ((prev_row[0].p.x >= 0) || (prev_row[1].p.x >= 0) || (this_row[0].p.x >= 0) || (this_row[1].p.x >= 0)) &&
-                              ((prev_row[0].p.y >= 0) || (prev_row[1].p.y >= 0) || (this_row[0].p.y >= 0) || (this_row[1].p.y >= 0)) &&
-                              ((prev_row[0].p.x < 0x140) || (prev_row[1].p.x < 0x140) || (this_row[0].p.x < 0x140) || (this_row[1].p.x < 0x140)) &&
-                              ((prev_row[0].p.y < 0xE0) || (prev_row[1].p.y < 0xE0) || (this_row[0].p.y < 0xE0) || (this_row[1].p.y < 0xE0));
+                    if (!((prev_row[0].p.x >= 0) || (prev_row[1].p.x >= 0) || (this_row[0].p.x >= 0) || (this_row[1].p.x >= 0)))
+                    {
+                        visible = 0;
+                        goto visible_done;
+                    }
+                    if (!((prev_row[0].p.y >= 0) || (prev_row[1].p.y >= 0) || (this_row[0].p.y >= 0) || (this_row[1].p.y >= 0)))
+                    {
+                        visible = 0;
+                        goto visible_done;
+                    }
+                    if (!((prev_row[0].p.x < 0x140) || (prev_row[1].p.x < 0x140) || (this_row[0].p.x < 0x140) || (this_row[1].p.x < 0x140)))
+                    {
+                        visible = 0;
+                        goto visible_done;
+                    }
+                    if ((prev_row[0].p.y < 0xE0) || (prev_row[1].p.y < 0xE0) || (this_row[0].p.y < 0xE0) || (this_row[1].p.y < 0xE0))
+                        visible = 1;
+                    else
+                        visible = 0;
+visible_done:;
                     if (visible != 0)
                     {
-                        uv_word = ((FieldCellRec*)recp)->uv_clut;
+                        uv_word = ((FieldCellRec *) recp)->uv_clut;
                         if (uv_word != -1)
                         {
                             if (interp != 0)
@@ -1162,26 +1153,30 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
                                 {
                                     if (chain != NULL)
                                     {
-                                        addPrims((FieldPolyPrim*)((clut_cur * 8) + ot_base), chain, prim);
+                                        addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
                                         chain = NULL;
                                     }
                                     clut_cur = clut;
                                 }
                             }
-                            prim = (FieldPolyPrim*)cursor;
                             if (chain == NULL)
                             {
+                                prim = (FieldPolyPrim *) cursor;
                                 chain = cursor;
                             }
+                            else
+                            {
+                                prim = (FieldPolyPrim *) cursor;
+                            }
                             cursor += 0x28;
-                            prim->tag = ((u32)cursor & 0xFFFFFF) | 0x09000000;
+                            prim->tag = ((u32) cursor & 0xFFFFFF) | 0x09000000;
                             if (code_word != 0)
                             {
                                 prim->code = code_word;
                             }
                             else
                             {
-                                prim->code = ((FieldCellRec*)recp)->rgb_code;
+                                prim->code = ((FieldCellRec *) recp)->rgb_code;
                             }
                             if (tpage_word != 0)
                             {
@@ -1189,11 +1184,11 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
                             }
                             else if (code_word != 0)
                             {
-                                prim->uv1 = ((FieldCellRec*)recp)->rgb_code;
+                                prim->uv1 = ((FieldCellRec *) recp)->rgb_code;
                             }
                             else
                             {
-                                prim->uv1 = ((FieldCellRec*)recp)->tpage;
+                                prim->uv1 = ((FieldCellRec *) recp)->tpage;
                             }
                             prim->uv0 = uv_word;
                             prim->uv2 = (uv_word & 0xFFFF) + 0xF00;
@@ -1210,14 +1205,14 @@ void field_emit_rotated_sprite_grid(FieldPart* part, s32** cursor_ptr, FieldView
                 this_row++;
                 bit <<= 1;
             }
-            row--;
+            do { row--; } while (0);
         } while (row != -1);
     }
     if (chain != NULL)
     {
-        addPrims((FieldPolyPrim*)((clut_cur * 8) + ot_base), chain, prim);
+        addPrims((FieldPolyPrim *) ((clut_cur * 8) + ot_base), chain, prim);
     }
-    *cursor_ptr = (s32*)cursor;
+    *cursor_ptr = (s32 *) cursor;
 }
 
 /**
