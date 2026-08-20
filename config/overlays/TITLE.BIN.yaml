@@ -47,29 +47,150 @@ segments:
     subsegments:
       - [0x1, .rodata, title]
       - [0x5, c, title]
-      - [0x2679, databin, title_menu_tim_table]
-      - [0x2685, databin, title_menu_tim_0]
-      - [0xA8A5, databin, title_menu_tim_1]
-      - [0x300BD, databin, cursor_blink_palette]
-      - [0x300C1, databin, save_layout_tim_00]
-      - [0x532E5, databin, save_layout_tim_01]
-      - [0x5B329, databin, save_layout_tim_02]
-      - [0x5F7CD, databin, save_layout_tim_03]
-      - [0x63C71, databin, save_layout_tim_04]
-      - [0x64235, databin, save_layout_tim_05]
-      - [0x66679, databin, save_layout_tim_06]
-      - [0x738BD, databin, save_layout_tim_07]
-      - [0x80B01, databin, save_layout_tim_08]
-      - [0x89745, databin, save_layout_tim_09]
-      - [0x99969, databin, save_layout_tim_10]
-      - [0xA9B89, databin, save_layout_gap]
-      - [0xA9B8D, databin, save_layout_texture_table]
-      - [0xA9C3D, databin, save_layout_uv_0]
-      - [0xA9C85, databin, save_layout_uv_1]
-      - [0xA9CCD, databin, save_layout_table]
-      - [0xA9F55, databin, save_slot_data]
-      - [0xAA215, databin, menu_layout_default]
-      - [0xAEB09, databin, menu_layout_default_tail]
+      - start: 0x2679
+        type: asset_offset_table
+        name: title_menu_tim_table
+        dir: title
+        targets:
+          - title_menu_tim_0
+          - title_menu_tim_1
+      - start: 0x2685
+        type: tim
+        name: title_menu_tim_0
+        dir: title
+      - start: 0xA8A5
+        type: tim
+        name: title_menu_tim_1
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x300BD
+        type: u8_sequence
+        name: cursor_blink_u_offsets
+        dir: title
+        expected_count: 4
+      - start: 0x300C1
+        type: tim
+        name: save_layout_tim_00
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x532E5
+        type: tim
+        name: save_layout_tim_01
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x5B329
+        type: tim
+        name: save_layout_tim_02
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x5F7CD
+        type: tim
+        name: save_layout_tim_03
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x63C71
+        type: tim
+        name: save_layout_tim_04
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x64235
+        type: tim
+        name: save_layout_tim_05
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x66679
+        type: tim
+        name: save_layout_tim_06
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x738BD
+        type: tim
+        name: save_layout_tim_07
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x80B01
+        type: tim
+        name: save_layout_tim_08
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x89745
+        type: tim
+        name: save_layout_tim_09
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x99969
+        type: tim
+        name: save_layout_tim_10
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0xA9B8D
+        type: tim_upload_table
+        name: save_layout_texture_table
+        dir: title
+        targets:
+          - save_layout_tim_00
+          - save_layout_tim_01
+          - save_layout_tim_02
+          - save_layout_tim_03
+          - save_layout_tim_04
+          - save_layout_tim_05
+          - save_layout_tim_06
+          - save_layout_tim_07
+          - save_layout_tim_08
+          - save_layout_tim_09
+          - save_layout_tim_10
+      - start: 0xA9C3D
+        type: uv_rect_table
+        name: save_slot_panel_uvs
+        dir: title
+        unit_pixels: 8
+        expected_count: 12
+      - start: 0xA9C85
+        type: uv_rect_table
+        name: save_slot_sprite_uvs
+        dir: title
+        unit_pixels: 8
+        expected_count: 12
+      - start: 0xA9CCD
+        type: save_layout_table
+        name: save_layout_table
+        dir: title
+        expected_count: 27
+        textures:
+          - save_layout_tim_00
+          - save_layout_tim_01
+          - save_layout_tim_02
+          - save_layout_tim_03
+          - save_layout_tim_04
+          - save_layout_tim_05
+          - save_layout_tim_06
+          - save_layout_tim_07
+          - save_layout_tim_08
+          - save_layout_tim_09
+          - save_layout_tim_10
+      - start: 0xA9F55
+        type: starting_weapon_table
+        name: starting_weapon_records
+        dir: title
+        expected_count: 11
+        categories:
+          - knife
+          - sword
+          - axe
+          - two_handed_sword
+          - two_handed_axe
+          - hammer
+          - spear
+          - staff
+          - glove
+          - flail
+          - bow
+      - start: 0xAA215
+        type: game_state_template
+        name: new_game_state_template
+        dir: title
+        expected_size: 0x50BC
+        copied_size: 0x3268
       - [0xAF2D1, databin, menu_layout_alternate]
       - [0xB2531, databin, submenu_layout_default]
       - [0xB2781, databin, submenu_layout_continue]

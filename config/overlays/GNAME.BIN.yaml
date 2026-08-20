@@ -44,10 +44,52 @@ segments:
     subsegments:
       - [0x1, .rodata, gname]
       - [0x5, c, gname]
-      - [0x2C99, databin, gname_tables]
-      - [0x2EF5, databin, gname_panel_data]
-      - [0x7495, databin, gname_name_entry_tim]
-      - [0xF6B9, databin, gname_layout_sprite_sequence]
-      - [0xF759, databin, gname_glyph_append_anim]
+      - start: 0x2C99
+        type: index_boundaries
+        name: panel_record_boundaries
+        dir: gname
+        expected_count: 5
+      - start: 0x2CAD
+        type: index_map
+        name: kanji_category_map
+        dir: gname
+        expected_count: 10
+        unmapped_value: 0xFF
+      - start: 0x2CD5
+        type: glyph_metrics
+        name: glyph_table
+        dir: gname
+        expected_count: 39
+      - start: 0x2E0D
+        type: tab_cursor_layout
+        name: tab_cursor_layout
+        dir: gname
+        expected_count: 13
+      - start: 0x2E41
+        type: index_boundaries
+        name: kanji_entry_offsets
+        dir: gname
+        expected_count: 45
+      - start: 0x2EF5
+        type: name_entry_resource
+        name: name_records
+        dir: gname
+      - start: 0x7495
+        type: tim
+        name: name_entry
+        dir: gname
+        trailing_duplicate_word: true
+      - start: 0xF6B9
+        type: sprite_layout
+        name: layout_sprite_sequence
+        dir: gname
+        expected_count: 20
+      - start: 0xF759
+        type: sprite_animation
+        name: glyph_append_anim
+        dir: gname
+        frame_count: 7
+        sprites_per_frame: 3
+        trailing_padding: 4
       - [0xF7B1, .bss, gname]
   - [0xF8D9]

@@ -27,8 +27,9 @@ src/overlays/*/gen/
 
 tools/splat_ext/__pycache__/
 tools/compressor/__pycache__/
+__pycache__/
 
-assets/
+/assets/
 
 # m2c context cache files
 *.m2c

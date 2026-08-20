@@ -63,6 +63,7 @@ rwildcard = $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2)) \
 
 include mk/staging.mk
 include mk/splat.mk
+include mk/assets.mk
 include mk/toolchains.mk
 include mk/main.mk
 include mk/overlay-registry.mk
