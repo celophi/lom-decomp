@@ -41,6 +41,7 @@ class GameStateTemplateError(ValueError):
 class GameStateTemplate:
     payload: str
     data: bytes
+    copied_size: int
     field_config: int
     option_id: int
     sub_mode: int
@@ -56,13 +57,15 @@ class GameStateTemplate:
 
     @classmethod
     def parse_binary(
-        cls, data: bytes, payload: str, expected_size: int
+        cls, data: bytes, payload: str, expected_size: int, copied_size: int
     ) -> "GameStateTemplate":
         _validate_payload_name(payload)
         _validate_size(data, expected_size)
+        _validate_copied_size(copied_size, expected_size)
         return cls(
             payload,
             data,
+            copied_size,
             struct.unpack_from("<I", data, 0x18)[0],
             struct.unpack_from("<h", data, 0x1C)[0],
             struct.unpack_from("<b", data, 0x1E)[0],
@@ -84,6 +87,7 @@ class GameStateTemplate:
         payload_data: bytes,
         expected_size: int | None = None,
         expected_payload: str | None = None,
+        expected_copied_size: int | None = None,
     ) -> "GameStateTemplate":
         if not isinstance(document, dict):
             raise GameStateTemplateError("YAML root must be a mapping")
@@ -91,12 +95,14 @@ class GameStateTemplate:
             "format",
             "version",
             "template_size",
+            "copied_size",
             "payload",
             "known_fields",
         }
         if set(document) != expected_keys:
             raise GameStateTemplateError(
-                "YAML must contain format, version, template_size, payload, and known_fields"
+                "YAML must contain format, version, template_size, copied_size, "
+                "payload, and known_fields"
             )
         if document["format"] != FORMAT_NAME:
             raise GameStateTemplateError(f"format must be '{FORMAT_NAME}'")
@@ -108,6 +114,12 @@ class GameStateTemplate:
                 f"template_size is 0x{template_size:X}; expected 0x{expected_size:X}"
             )
         _validate_size(payload_data, template_size)
+        copied_size = _validate_u32("copied_size", document["copied_size"])
+        _validate_copied_size(copied_size, template_size)
+        if expected_copied_size is not None and copied_size != expected_copied_size:
+            raise GameStateTemplateError(
+                f"copied_size is 0x{copied_size:X}; expected 0x{expected_copied_size:X}"
+            )
         payload = _validate_payload_name(document["payload"])
         if expected_payload is not None and payload != expected_payload:
             raise GameStateTemplateError(
@@ -138,6 +150,7 @@ class GameStateTemplate:
         return cls(
             payload,
             payload_data,
+            copied_size,
             _validate_u32("known_fields.field_config", fields["field_config"]),
             _validate_s16("known_fields.option_id", fields["option_id"]),
             _validate_s8("known_fields.sub_mode", fields["sub_mode"]),
@@ -188,6 +201,7 @@ class GameStateTemplate:
             "format": FORMAT_NAME,
             "version": FORMAT_VERSION,
             "template_size": len(self.data),
+            "copied_size": self.copied_size,
             "payload": self.payload,
             "known_fields": {
                 "field_config": self.field_config,
@@ -224,6 +238,15 @@ def _validate_size(data: bytes, expected_size: int) -> None:
         )
 
 
+def _validate_copied_size(copied_size: int, template_size: int) -> None:
+    if copied_size < 0x60C:
+        raise GameStateTemplateError("copied_size is too small for the mapped fields")
+    if copied_size > template_size:
+        raise GameStateTemplateError("copied_size cannot exceed template_size")
+    if copied_size % 4 != 0:
+        raise GameStateTemplateError("copied_size must be a multiple of four bytes")
+
+
 def _validate_int(label: str, value: object, minimum: int, maximum: int) -> int:
     if type(value) is not int or not minimum <= value <= maximum:
         raise GameStateTemplateError(
@@ -255,6 +278,7 @@ def _validate_u32(label: str, value: object) -> int:
 def dump_game_state_template_yaml(template: GameStateTemplate) -> str:
     document = template.document()
     document["template_size"] = _HexInt(document["template_size"])
+    document["copied_size"] = _HexInt(document["copied_size"])
     fields = document["known_fields"]
     for name in (
         "field_config",
@@ -298,7 +322,10 @@ def validate_roundtrip(yaml_path: Path, binary_path: Path) -> GameStateTemplate:
 
 
 def _summary(path: Path, template: GameStateTemplate) -> str:
-    return f"{path}: 0x{len(template.to_bytes()):X} bytes, 12 mapped field groups"
+    return (
+        f"{path}: 0x{len(template.to_bytes()):X} stored bytes, "
+        f"0x{template.copied_size:X} copied bytes, 12 mapped field groups"
+    )
 
 
 def main() -> int:

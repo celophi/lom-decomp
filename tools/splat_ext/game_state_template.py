@@ -34,6 +34,11 @@ class PSXSegGame_state_template(CommonSegDatabin):
             log.error(f"game-state segment '{self.name}' requires expected_size")
         return int(self.yaml["expected_size"])
 
+    def copied_size(self) -> int:
+        if not isinstance(self.yaml, dict) or self.yaml.get("copied_size") is None:
+            log.error(f"game-state segment '{self.name}' requires copied_size")
+        return int(self.yaml["copied_size"])
+
     def write_bin(self, rom_bytes):
         assert isinstance(self.rom_start, int)
         assert isinstance(self.rom_end, int)
@@ -41,14 +46,19 @@ class PSXSegGame_state_template(CommonSegDatabin):
         payload_path = self.payload_path()
         payload_name = payload_path.name
         expected_size = self.expected_size()
+        copied_size = self.copied_size()
         try:
             template = _tool_module.GameStateTemplate.parse_binary(
-                source, payload_name, expected_size
+                source, payload_name, expected_size, copied_size
             )
             yaml_text = _tool_module.dump_game_state_template_yaml(template)
             document = _tool_module.yaml.safe_load(yaml_text)
             rebuilt = _tool_module.GameStateTemplate.parse_document(
-                document, source, expected_size, payload_name
+                document,
+                source,
+                expected_size,
+                payload_name,
+                copied_size,
             ).to_bytes()
             if rebuilt != source:
                 raise _tool_module.GameStateTemplateError(

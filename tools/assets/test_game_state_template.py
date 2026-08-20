@@ -21,18 +21,23 @@ class GameStateTemplateTests(unittest.TestCase):
 
     def test_binary_yaml_binary_roundtrip(self):
         source = self.make_source()
-        template = GameStateTemplate.parse_binary(source, "template.payload.bin", len(source))
+        template = GameStateTemplate.parse_binary(
+            source, "template.payload.bin", len(source), 0x610
+        )
         rebuilt = GameStateTemplate.parse_document(
-            template.document(), source, len(source), "template.payload.bin"
+            template.document(), source, len(source), "template.payload.bin", 0x610
         )
 
         self.assertEqual(rebuilt.to_bytes(), source)
+        self.assertEqual(rebuilt.copied_size, 0x610)
         self.assertEqual(rebuilt.option_id, -2)
         self.assertEqual(rebuilt.weapon_category_masks[10], 10)
 
     def test_yaml_field_change_patches_payload(self):
         source = self.make_source()
-        template = GameStateTemplate.parse_binary(source, "template.payload.bin", len(source))
+        template = GameStateTemplate.parse_binary(
+            source, "template.payload.bin", len(source), 0x610
+        )
         document = template.document()
         document["known_fields"]["scene_mode"] = 7
         rebuilt = GameStateTemplate.parse_document(document, source)
@@ -41,7 +46,15 @@ class GameStateTemplateTests(unittest.TestCase):
 
     def test_rejects_wrong_payload_size(self):
         with self.assertRaisesRegex(GameStateTemplateError, "payload size"):
-            GameStateTemplate.parse_binary(bytes(0x620), "template.payload.bin", 0x624)
+            GameStateTemplate.parse_binary(
+                bytes(0x620), "template.payload.bin", 0x624, 0x610
+            )
+
+    def test_rejects_copied_size_beyond_template(self):
+        with self.assertRaisesRegex(GameStateTemplateError, "cannot exceed"):
+            GameStateTemplate.parse_binary(
+                bytes(0x620), "template.payload.bin", 0x620, 0x624
+            )
 
 
 if __name__ == "__main__":
