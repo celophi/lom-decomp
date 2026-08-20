@@ -17,8 +17,8 @@
 #define SEQ_BLOB_BASE 0x80180000
 
 /* Offset table at the head of the SEQ blob. off[0] is the byte offset of the
- * instrument/sample sub-block, off[1] the byte offset of the AKAO sequence
- * sub-block that follows it. */
+ * song sequence sub-block, off[1] the byte offset of the instrument bank that
+ * follows it. */
 #define SEQ_BLOB_OFFSETS 0x80180004
 
 /* Resource index of the first field SEQ; music_index is added to this to
@@ -31,8 +31,6 @@
 /* Fixed CD resource loaded by func_800A3728. TODO: which SEQ this is has not
  * been confirmed; it is not part of the FIELD_SEQ_RESOURCE_BASE range. */
 #define FIELD_FIXED_SEQ_RESOURCE 0x92
-
-void akao_play_sequence_blocking(AkaoSeqHeader* sequence_data, s32 wait_for_completion);
 
 /** @brief AKAO sequence staging area shared with the TITLE overlay. */
 extern unsigned char D_8003ECA0;
@@ -74,9 +72,9 @@ extern s32 D_8011588C;
  *
  * @details Counterpart of TITLE's load_title_seq. Reads resource
  * (FIELD_SEQ_RESOURCE_BASE + @p music_index) into the SEQ_BLOB_BASE scratch
- * buffer, splits the blob via its leading offset table, copies the
- * instrument/sample sub-block to one of two staging areas, then hands the
- * trailing sequence sub-block to akao_play_sequence_blocking.
+ * buffer, splits the blob via its leading offset table, copies the song
+ * sequence to one of two staging areas, then uploads the trailing instrument
+ * bank through akao_upload_bank_blocking.
  *
  * @param music_index Offset added to FIELD_SEQ_RESOURCE_BASE to select the
  *        SEQ variant. Indices above FIELD_SEQ_MAX_INDEX are ignored and the
@@ -111,7 +109,7 @@ void func_800A368C(s32 music_index, s32 destination_index)
             bcopy(src, &D_8003ECA0, count);
         }
 
-        akao_play_sequence_blocking((AkaoSeqHeader*)(off[1] + SEQ_BLOB_BASE), 1);
+        akao_upload_bank_blocking((AkaoBankHeader*)(off[1] + SEQ_BLOB_BASE), 1);
     }
 }
 
@@ -123,7 +121,7 @@ void func_800A368C(s32 music_index, s32 destination_index)
  * sub-block differently -- rather than using the first two offset-table
  * entries, it reads the blob's leading entry count and takes the LAST offset,
  * off_end[-1], using it both as the copy length and as the byte offset of the
- * AKAO sequence sub-block.
+ * AKAO instrument-bank sub-block.
  *
  * @note Unlike func_800A368C, the copy source is the blob base itself rather
  *       than base + off[0], so the copied region includes the header.
@@ -152,7 +150,7 @@ void func_800A3728(void)
     off_end = (u32*)SEQ_BLOB_OFFSETS + D_80180000;
 
     bcopy((u8*)SEQ_BLOB_BASE, dst, off_end[-1]);
-    akao_play_sequence_blocking((AkaoSeqHeader*)(off_end[-1] + SEQ_BLOB_BASE), 1);
+    akao_upload_bank_blocking((AkaoBankHeader*)(off_end[-1] + SEQ_BLOB_BASE), 1);
 }
 
 /**
@@ -195,16 +193,10 @@ void func_800A37E4(void)
 /**
  * @brief Start the field background music staged at D_8003ECA0.
  *
- * @details Submits the staged sequence with akao_play_song, records the value
- * it leaves in the return register as the stop modifier for func_800A37BC,
+ * @details Submits the staged sequence with akao_play_song, records its song
+ * handle as the stop modifier for func_800A37BC,
  * applies the current music volume, then issues AKAO commands 0xD4 and 0xD0
  * with 0. Called cross-overlay by GOVER after it stages its own sequence.
- *
- * @note akao_play_song is declared void in src/akao_cmd.c, yet this caller
- *       consumes its return register, so the original very likely declared it
- *       as returning a value. It is left implicitly declared here to preserve
- *       that. What the returned value actually means is unknown; it is only
- *       ever fed back to akao_stop_song and akao_cmd_c0.
  *
  * @see decomp.me (100%) TODO
  */
@@ -212,7 +204,7 @@ void func_800A380C(void)
 {
     s32 play_result;
 
-    play_result = akao_play_song(&D_8003ECA0);
+    play_result = akao_play_song((AkaoHeader*)&D_8003ECA0);
     D_8011F310 = play_result;
     akao_cmd_c0(play_result, D_8011588C);
     akao_cmd_d4(0);

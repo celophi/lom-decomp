@@ -11,7 +11,8 @@ extern s16 g_akao_song_cmd_arg2;
 extern s16 g_akao_song_cmd_arg3;
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/mXgky
+ * @brief Send command 0xC1 for the active song with parameter 0x12C.
+ * @see decomp.me (100%) https://decomp.me/scratch/mXgky
  */
 void akao_song_cmd_12c(void)
 {
@@ -19,14 +20,16 @@ void akao_song_cmd_12c(void)
 }
 
 /**
- * decomp.me link (100%) https://decomp.me/scratch/Oy5Dh
+ * @brief Load a song and its instrument bank, then start song playback.
+ * @param song_index Zero-based song resource index, or 0xFF to do nothing.
+ * @see decomp.me (100%) https://decomp.me/scratch/Oy5Dh
  */
 void load_and_play_song(s32 song_index)
 {
-    u32 cd_dest;
-    u32 res_index;
-    s32* seq_header;
-    u8* seq_dest;
+    u32 container_address;
+    u32 resource_index;
+    s32* section_offsets;
+    u8* sequence_destination;
     s32 song_handle;
 
     if (song_index == 0xFF)
@@ -34,18 +37,18 @@ void load_and_play_song(s32 song_index)
         return;
     }
 
-    res_index = (song_index + 0x93) & 0xFFFF;
-    cd_dest = 0x80180000;
-    cdrom_queue_read(res_index, cd_dest);
+    resource_index = (song_index + 0x93) & 0xFFFF;
+    container_address = 0x80180000;
+    cdrom_queue_read(resource_index, container_address);
     cdrom_wait_queue_empty();
-    cd_dest = 0x80180000;
-    seq_header = (s32*)0x80180004;
-    seq_dest = &g_music_data_buffer;
+    container_address = 0x80180000;
+    section_offsets = (s32*)0x80180004;
+    sequence_destination = &g_music_data_buffer;
 
-    bcopy((u_char*)((*seq_header) + cd_dest), seq_dest, seq_header[1] - (*seq_header));
-    akao_play_sequence_blocking((AkaoSeqHeader*)(seq_header[1] + cd_dest), 1);
+    bcopy((u_char*)((*section_offsets) + container_address), sequence_destination, section_offsets[1] - (*section_offsets));
+    akao_upload_bank_blocking((AkaoBankHeader*)(section_offsets[1] + container_address), 1);
 
-    song_handle = akao_play_song(seq_dest);
+    song_handle = akao_play_song((AkaoHeader*)sequence_destination);
     g_current_song_handle = song_handle;
     akao_cmd_c0(song_handle, 0x7f);
 }

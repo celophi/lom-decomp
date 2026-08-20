@@ -31,11 +31,11 @@
 #define CHECKPS_GLYPH_VRAM_HEIGHT 256
 
 #define CHECKPS_SEQ_RESOURCE_BASE 0x17
-#define CHECKPS_AUDIO_BANK_ADDRESS ((AkaoSeqHeader*)0x8013C000)
+#define CHECKPS_AUDIO_BANK_ADDRESS ((AkaoHeader*)0x8013C000)
 #define CHECKPS_AUDIO_WORK_ADDRESS ((u8*)0x80180000)
 #define CHECKPS_AUDIO_BANK_RESIDENT_STATE 6
 #define CHECKPS_AKAO_COPIED_SECTION 0
-#define CHECKPS_AKAO_SUBMITTED_SECTION 1
+#define CHECKPS_AKAO_UPLOAD_BANK_SECTION 1
 
 #define CHECKPS_CONTROLLER_UNAVAILABLE 0xFE
 #define CHECKPS_INITIAL_REPEAT_DELAY 15
@@ -162,7 +162,7 @@ FadeColor g_fade_current;
 u8 g_checkps_song_buffer[CHECKPS_SONG_BUFFER_SIZE];
 
 /* Destination address used when registering the embedded AKAO bank. */
-AkaoSeqHeader* g_checkps_akao_bank;
+AkaoHeader* g_checkps_akao_bank;
 
 /* Reserved word with no recovered CHECKPS references. */
 s32 g_checkps_unused_word1;
@@ -312,16 +312,16 @@ void init_checkps_display(CheckPSRenderState* render_state)
 }
 
 /**
- * @brief Load the embedded CHECKPS bank and play its accompanying sequence.
- * @details The embedded container stores a bank and sequence behind byte offsets.
+ * @brief Register the embedded CHECKPS program data and upload its sample bank.
+ * @details The embedded container stores both resources behind byte offsets.
  */
 void load_embedded_checkps_audio(void)
 {
     u8* bank_data;
-    u8* sequence_data;
+    u8* upload_bank_data;
     u8* bank_destination;
     u32 bank_size;
-    AkaoSeqHeader** bank_slot;
+    AkaoHeader** bank_slot;
     u32* section_offsets;
 
     if (((((g_previousGameState == GAME_STATE_TITLE) || (g_previousGameState == GAME_STATE_GNAME)) || (g_previousGameState == GAME_STATE_FIELD)) || (g_previousGameState == CHECKPS_AUDIO_BANK_RESIDENT_STATE)) ||
@@ -338,23 +338,23 @@ void load_embedded_checkps_audio(void)
 
     bank_data = &g_embedded_checkps_akao[section_offsets[CHECKPS_AKAO_COPIED_SECTION]];
     bank_destination = (u8*)*bank_slot;
-    bank_size = section_offsets[CHECKPS_AKAO_SUBMITTED_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
+    bank_size = section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
     bcopy(bank_data, bank_destination, bank_size);
     akao_register_bank(*bank_slot);
-    sequence_data = &g_embedded_checkps_akao[section_offsets[CHECKPS_AKAO_SUBMITTED_SECTION]];
-    akao_play_sequence_blocking((AkaoSeqHeader*)sequence_data, 1);
+    upload_bank_data = &g_embedded_checkps_akao[section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]];
+    akao_upload_bank_blocking((AkaoBankHeader*)upload_bank_data, 1);
 }
 
 /**
  * @brief Load a CHECKPS song container from disc and prepare it for playback.
  * @details Copies the persistent song block into the CHECKPS song buffer, then
- *          submits the trailing AKAO block to the audio driver.
+ *          uploads the trailing instrument bank to the audio driver.
  * @param song_index Zero-based CHECKPS song index.
  */
 void load_checkps_song_from_disc(s32 song_index)
 {
     u8* song_data;
-    u8* sequence_data;
+    u8* bank_data;
     u32 song_size;
     u32* section_offsets;
     u8* song_container;
@@ -365,10 +365,10 @@ void load_checkps_song_from_disc(s32 song_index)
     section_offsets = (u32*)(CHECKPS_AUDIO_WORK_ADDRESS + sizeof(u32));
     song_container = CHECKPS_AUDIO_WORK_ADDRESS;
     song_data = &song_container[section_offsets[CHECKPS_AKAO_COPIED_SECTION]];
-    song_size = section_offsets[CHECKPS_AKAO_SUBMITTED_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
+    song_size = section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
     bcopy(song_data, g_checkps_song_buffer, song_size);
-    sequence_data = &song_container[section_offsets[CHECKPS_AKAO_SUBMITTED_SECTION]];
-    akao_play_sequence_blocking((AkaoSeqHeader*)sequence_data, 1);
+    bank_data = &song_container[section_offsets[CHECKPS_AKAO_UPLOAD_BANK_SECTION]];
+    akao_upload_bank_blocking((AkaoBankHeader*)bank_data, 1);
 }
 
 /**
@@ -384,7 +384,7 @@ void stop_checkps_song(void)
  */
 void play_loaded_checkps_song(void)
 {
-    akao_play_song(&g_checkps_song_buffer);
+    akao_play_song((AkaoHeader*)g_checkps_song_buffer);
     akao_cmd_c0(0, 0x7F);
 }
 

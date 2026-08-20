@@ -40,18 +40,18 @@ void akao_relocate_articulations(AkaoArticulation* src, AkaoArticulation* dst, s
  * @brief Validates the 'AKAO' magic word at the head of an audio resource.
  *
  * The Square AKAO sound driver tags every bank/sequence with the four-byte
- * little-endian magic 0x4F414B41 ("AKAO"). Returns 0 iff @p hdr begins with
+ * little-endian magic 0x4F414B41 ("AKAO"). Returns 0 iff @p header begins with
  * that magic, by subtracting and letting the result be zero on a match.
  *
- * @param hdr  Candidate AKAO-tagged buffer.
+ * @param header Candidate AKAO-tagged buffer.
  *
- * @return 0 if the magic matches; otherwise (hdr->magic - AKAO_MAGIC).
+ * @return 0 if the magic matches; otherwise (header->magic - AKAO_MAGIC).
  *
  * @see decomp.me: (100%) https://decomp.me/scratch/scY8u
  */
-s32 akao_check_magic(AkaoSeqHeader* hdr)
+s32 akao_check_magic(AkaoHeader* header)
 {
-    return hdr->magic - AKAO_MAGIC;
+    return header->magic - AKAO_MAGIC;
 }
 
 /**
@@ -145,7 +145,7 @@ void akao_spu_wait(void)
  * SpuSetTransferStartAddr and posts the sample/articulation upload to the
  * audio driver.
  *
- * Called in a tight loop by akao_play_sequence_blocking.
+ * Called in a tight loop by akao_upload_bank_blocking.
  *
  * @param bank                Pointer to an AKAO-tagged bank buffer.
  * @param wait_for_completion When non-zero, the inner submit blocks until the
@@ -156,7 +156,7 @@ void akao_spu_wait(void)
  *
  * @see decomp.me (100%) https://decomp.me/scratch/B0eQd
  */
-s32 akao_submit(AkaoBankHeader* bank, s32 wait_for_completion)
+s32 akao_submit_bank(AkaoBankHeader* bank, s32 wait_for_completion)
 {
     if (akao_check_magic(&bank->header) == 0)
     {
@@ -204,7 +204,7 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
 
     akao_spu_wait();
     var_v0 = -1;
-    if ((hdr_copy = akao_check_magic((AkaoSeqHeader*)bank)) == 0)
+    if ((hdr_copy = akao_check_magic((AkaoHeader*)bank)) == 0)
     {
         hdr_copy = bank;
         bank_hdr = (AkaoBankHeader*)hdr_copy;
@@ -231,4 +231,3 @@ s32 akao_upload_bank(void* bank, s32 wait_for_completion, s32 bank_id, s32 spu_b
     new_var = ret_val;
     return new_var;
 }
-

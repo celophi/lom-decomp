@@ -154,12 +154,16 @@ void func_80073F60(s32 arg0, s32 arg1, s32 arg2)
  * @param arg0 Record whose unk1B selects the position source.
  * @param arg1 View/camera parameter block (rotation/flags read in modes 5/6/9).
  * @param arg2 Output position triple (unk0/unk4/unk8).
- * @note WIP - not yet byte-matching. Residual is register coloring: the
- *       per-case emit order of the g_field_actor_slots vs D_800FDF58 symbol
- *       addresses differs from the target, plus a few shared-tail block
- *       placements (block_40/41/42/45). The control-flow shape, CSE re-read
+ * @note WIP - not yet byte-matching. Residual is register coloring: most
+ *       remaining mismatches are pure a0/a1-style register swaps between
+ *       the g_field_actor_slots and D_800FDF58 base addresses within a case
+ *       (crossjump_oracle confirms cluster membership/structure already
+ *       matches the target in these spots, "reason: register" not
+ *       "reason: opcode"), plus two case14/case15 cross-jump tail-merge
+ *       points into block_45 the target reaches via two-way jumps that this
+ *       source does not yet reproduce. The control-flow shape, CSE re-read
  *       structure, and field types are established; see the working notes.
- * @see decomp.me (92.87%)
+ * @see decomp.me (93.54%)
  */
 void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *arg2)
 {
@@ -175,6 +179,7 @@ void func_80073F7C(Struct_D800FDF58 *arg0, FieldViewParams *arg1, FieldPosOut *a
     s32 var_v1;
     s32 val;
     s32 v;
+    s32 boff;
     Struct_D800FDF58 *var_v1_4;
 
     switch (arg0->unk1B)
@@ -238,7 +243,8 @@ owner6:
         {
             goto block_32;
         }
-        v = var_a2->unk0 - arg0->unk44;
+        boff = arg0->unk44;
+        v = var_a2->unk0 - boff;
         goto block_33;
     case 7:
         arg2->unk0 = D_80105AE0[g_field_actor_slots[arg0->unk22].unk229[g_field_track_index]].unk6C << 8;
@@ -295,8 +301,8 @@ block_33:
     case 10:
         var_a1 = D_800FDF58;
         pe = &D_80105AE0[g_field_actor_slots[arg0->unk22].unk228];
+        arg2->unk4 = ((pe->unk146 + pe->unk142) << 7) + D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4;
         arg2->unk0 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk0 + ((pe->unk144 + pe->unk140) << 7);
-        arg2->unk4 = D_800FDF58[g_field_actor_slots[arg0->unk22].unk228].unk4 + ((pe->unk146 + pe->unk142) << 7);
         var_v0_7 = &g_field_actor_slots[arg0->unk22];
         goto block_40;
     case 11:

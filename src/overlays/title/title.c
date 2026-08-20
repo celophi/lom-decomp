@@ -368,8 +368,8 @@ void init_title_display(MenuContext* ctx_base)
  * loads SOUND/EFFECT.SET from CD-ROM into the 0x80180000 scratch buffer,
  * splits the blob via its self-referential offset table, copies the
  * instrument/sample sub-block to g_titleAudioBankBase (0x8013C000) and
- * registers it as the active AKAO bank, then submits the trailing AKAO
- * sequence sub-block for blocking playback.
+ * registers it as the active AKAO bank, then uploads the trailing instrument
+ * bank to the SPU.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/6zUZp
  */
@@ -390,18 +390,18 @@ void load_title_audio_bank(void)
 
         bcopy(base + off[0], (u8*)g_titleAudioBankBase, (int)(off[1] - off[0]));
 
-        akao_register_bank((AkaoSeqHeader*)g_titleAudioBankBase);
-        akao_play_sequence_blocking((AkaoSeqHeader*)(base + off[1]), 1);
+        akao_register_bank((AkaoHeader*)g_titleAudioBankBase);
+        akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
     }
 }
 
 /**
- * @brief Load and play a title-screen SEQ resource from CD-ROM.
+ * @brief Load a title-screen sequence and its instrument bank from CD-ROM.
  *
  * @details Counterpart of CHECKPS func_80050138. Reads CD resource
  * (TITLE_SEQ_RESOURCE_BASE + seq_variant) into the 0x80180000 scratch
  * buffer, splits it via its self-referential offset table, copies the
- * sequence sub-block to D_8003ECA0, then submits it for blocking playback.
+ * sequence sub-block to D_8003ECA0, then uploads the trailing instrument bank.
  *
  * @param seq_variant Offset added to TITLE_SEQ_RESOURCE_BASE to select
  *        which title SEQ variant to load.
@@ -420,7 +420,7 @@ void load_title_seq(s32 seq_variant)
     base = (u8*)0x80180000;
 
     bcopy(base + off[0], (u8*)&D_8003ECA0, (int)(off[1] - off[0]));
-    akao_play_sequence_blocking((AkaoSeqHeader*)(base + off[1]), 1);
+    akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
 }
 
 /**
@@ -446,7 +446,7 @@ void stop_title_music(void)
  */
 void start_title_music(void)
 {
-    akao_play_song(&D_8003ECA0);
+    akao_play_song((AkaoHeader*)&D_8003ECA0);
     akao_cmd_c0(0, 0x7F);
 }
 

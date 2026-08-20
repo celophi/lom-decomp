@@ -110,7 +110,9 @@ typedef struct AkaoTimeStamp
 } AkaoTimeStamp;
 
 /**
- * 16-byte common header that prefixes every AKAO-tagged audio resource
+ * @brief Common 16-byte header for every AKAO-tagged audio resource.
+ *
+ * This header prefixes every AKAO-tagged audio resource
  * (sequences and sample/instrument sets alike). Validated via akao_check_magic
  * before the payload that follows is handed to the driver.
  *
@@ -121,25 +123,24 @@ typedef struct AkaoTimeStamp
  * for instrument banks the next 16 bytes are AkaoBankHeader's bank-specific
  * fields; for sequences it is a channel-opcode dispatch table.
  *
- * @note Despite the "Seq" suffix, this struct is the *common* AKAO header,
- *       not specific to sequences. AkaoBankHeader embeds it as its first
- *       member.
  */
-typedef struct AkaoSeqHeader
+typedef struct AkaoHeader
 {
     u32 magic;       /* "AKAO" in little-endian = 0x4F414B41 */
     u16 id;
     u16 length;
     u16 reverb_type;
     AkaoTimeStamp timestamp;
-} AkaoSeqHeader;
+} AkaoHeader;
 
 /**
- * 64-byte (0x40) instrument-bank header. Begins every AKAO-tagged
+ * @brief Header for an AKAO instrument bank.
+ *
+ * This 64-byte (0x40) header begins every AKAO-tagged
  * sample/instrument file (e.g. EFFECT.SET fragments).
  *
  * Layout:
- *   0x00..0x0F  AkaoSeqHeader (common AKAO magic + metadata)
+ *   0x00..0x0F  AkaoHeader (common AKAO magic + metadata)
  *   0x10        spu_dest_addr        — SPU base address for sample upload
  *   0x14        sample_size          — byte count of the sample blob
  *   0x18        bank_id              — instrument-bank slot index
@@ -160,7 +161,7 @@ typedef struct AkaoSeqHeader
  */
 typedef struct AkaoBankHeader
 {
-    AkaoSeqHeader header;
+    AkaoHeader header;
     u32 spu_dest_addr;
     u32 sample_size;
     u32 bank_id;
@@ -168,6 +169,10 @@ typedef struct AkaoBankHeader
     u32 cached_spu_addr;
     u8  reserved[0x1C];
 } AkaoBankHeader;
+
+s32 akao_register_bank(AkaoHeader* bank);
+s32 akao_play_song(AkaoHeader* sequence);
+void akao_upload_bank_blocking(AkaoBankHeader* bank, s32 wait_for_completion);
 
 /**
  * @brief One entry in an AKAO instrument-bank articulation table.
