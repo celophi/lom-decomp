@@ -49,6 +49,23 @@
  * 60 Hz) before the title times out to the attract loop. */
 #define TITLE_IDLE_COUNTDOWN_FRAMES 0xE10
 
+/* Full-screen fade encoding and blend modes. */
+#define TITLE_FADE_NEUTRAL 0x100
+#define TITLE_FADE_ADDITIVE_THRESHOLD (TITLE_FADE_NEUTRAL + 1)
+#define TITLE_FADE_ADDITIVE_DRAW_MODE 0x25
+#define TITLE_FADE_SUBTRACTIVE_DRAW_MODE 0x45
+
+/** @brief Packet view for a fade TILE or draw-mode command. */
+typedef union
+{
+    TILE tile;
+    DR_TPAGE draw_mode;
+} TitleFadePrimitive;
+
+/** Advance a fade packet cursor by the concrete packet just emitted. */
+#define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) \
+    ((TitleFadePrimitive*)((u8*)(primitive) + sizeof(type)))
+
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
 
@@ -496,21 +513,22 @@ void reset_fade_state(void)
 void render_fade_overlay(MenuContext* ctx)
 {
     MenuContext* base = ctx;
-    u32* var_t4 = (u32*)base->next_prim_ptr;
-    u32* unk40_ptr = (u32*)base->otag_buffer;
-    s32 temp_a2;
-    s32 temp_a0;
-    s32 temp_v1;
-    s32 var_a1;
+    TitleFadePrimitive* primitive = (TitleFadePrimitive*)base->next_prim_ptr;
+    u_long* ordering_table_tag = base->otag_buffer;
+    s32 red_step;
+    s32 green_step;
+    s32 blue_step;
+    s32 draw_mode;
+
     if (g_fadeTarget.steps != 0)
     {
-        temp_a2 = ((s32)(g_fadeTarget.red - g_fadeCurrent.red)) / ((s32)g_fadeTarget.steps);
-        temp_a0 = ((s32)(g_fadeTarget.green - g_fadeCurrent.green)) / ((s32)g_fadeTarget.steps);
-        temp_v1 = ((s32)(g_fadeTarget.blue - g_fadeCurrent.blue)) / ((s32)g_fadeTarget.steps);
+        red_step = (g_fadeTarget.red - g_fadeCurrent.red) / g_fadeTarget.steps;
+        green_step = (g_fadeTarget.green - g_fadeCurrent.green) / g_fadeTarget.steps;
+        blue_step = (g_fadeTarget.blue - g_fadeCurrent.blue) / g_fadeTarget.steps;
         g_fadeTarget.steps = g_fadeTarget.steps - 1;
-        g_fadeCurrent.red = g_fadeCurrent.red + temp_a2;
-        g_fadeCurrent.green = g_fadeCurrent.green + temp_a0;
-        g_fadeCurrent.blue = g_fadeCurrent.blue + temp_v1;
+        g_fadeCurrent.red = g_fadeCurrent.red + red_step;
+        g_fadeCurrent.green = g_fadeCurrent.green + green_step;
+        g_fadeCurrent.blue = g_fadeCurrent.blue + blue_step;
     }
     else
     {
@@ -518,63 +536,61 @@ void render_fade_overlay(MenuContext* ctx)
         g_fadeCurrent.green = g_fadeTarget.green;
         g_fadeCurrent.blue = g_fadeTarget.blue;
     }
-    if (!(((g_fadeCurrent.red == 0x100) && (g_fadeCurrent.green == 0x100)) && (g_fadeCurrent.blue == 0x100)))
+    if (!(((g_fadeCurrent.red == TITLE_FADE_NEUTRAL) && (g_fadeCurrent.green == TITLE_FADE_NEUTRAL)) &&
+          (g_fadeCurrent.blue == TITLE_FADE_NEUTRAL)))
     {
-        if (((s32)g_fadeCurrent.red) >= 0x101)
+        if (g_fadeCurrent.red >= TITLE_FADE_ADDITIVE_THRESHOLD)
         {
-            ((TILE*)var_t4)->r0 = ((u8)g_fadeCurrent.red) - 1;
-            ((TILE*)var_t4)->g0 = ((u8)g_fadeCurrent.green) - 1;
-            ((TILE*)var_t4)->b0 = ((u8)g_fadeCurrent.blue) - 1;
+            primitive->tile.r0 = g_fadeCurrent.red - 1;
+            primitive->tile.g0 = g_fadeCurrent.green - 1;
+            primitive->tile.b0 = g_fadeCurrent.blue - 1;
         }
         else
         {
-            if (g_fadeCurrent.red == 0x100)
+            if (g_fadeCurrent.red == TITLE_FADE_NEUTRAL)
             {
-                ((TILE*)var_t4)->r0 = 0;
+                primitive->tile.r0 = 0;
             }
             else
             {
-                ((TILE*)var_t4)->r0 = ~((u8)g_fadeCurrent.red);
+                primitive->tile.r0 = ~g_fadeCurrent.red;
             }
-            if (g_fadeCurrent.green == 0x100)
+            if (g_fadeCurrent.green == TITLE_FADE_NEUTRAL)
             {
-                ((TILE*)var_t4)->g0 = 0;
-            }
-            else
-            {
-                ((TILE*)var_t4)->g0 = ~((u8)g_fadeCurrent.green);
-            }
-            if (g_fadeCurrent.blue == 0x100)
-            {
-                ((TILE*)var_t4)->b0 = 0;
+                primitive->tile.g0 = 0;
             }
             else
             {
-                ((TILE*)var_t4)->b0 = ~((u8)g_fadeCurrent.blue);
+                primitive->tile.g0 = ~g_fadeCurrent.green;
+            }
+            if (g_fadeCurrent.blue == TITLE_FADE_NEUTRAL)
+            {
+                primitive->tile.b0 = 0;
+            }
+            else
+            {
+                primitive->tile.b0 = ~g_fadeCurrent.blue;
             }
         }
-        setlen(var_t4, 3);
-        setcode(var_t4, 0x62);
-        ((TILE*)var_t4)->w = SCREEN_WIDTH;
-        ((TILE*)var_t4)->y0 = 0;
-        ((TILE*)var_t4)->x0 = 0;
-        ((TILE*)var_t4)->h = SCREEN_HEIGHT;
-        *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
-        *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
-        ;
-        var_a1 = 0x25;
-        var_t4 = (u32*)(((u8*)var_t4) + 0x10);
-        if (((s32)g_fadeCurrent.red) < 0x101)
+
+        setTile(&primitive->tile);
+        setSemiTrans(&primitive->tile, 1);
+        SET_YX0(&primitive->tile, 0, 0);
+        setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
+        addPrim(ordering_table_tag, &primitive->tile);
+
+        draw_mode = TITLE_FADE_ADDITIVE_DRAW_MODE;
+        primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, TILE);
+        if (g_fadeCurrent.red < TITLE_FADE_ADDITIVE_THRESHOLD)
         {
-            var_a1 = 0x45;
+            draw_mode = TITLE_FADE_SUBTRACTIVE_DRAW_MODE;
         }
-        setlen(var_t4, 1);
-        ((DR_TPAGE*)var_t4)->code[0] = (s32)(var_a1 | 0xE1000000);
-        *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
-        *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
-        var_t4 = (u32*)(((u8*)var_t4) + 8);
+        setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
+        addPrim(ordering_table_tag, &primitive->draw_mode);
+
+        primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
     }
-    base->next_prim_ptr = (u_long*)var_t4;
+    base->next_prim_ptr = (u_long*)primitive;
 }
 
 /**

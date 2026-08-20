@@ -1,44 +1,25 @@
 #include "common.h"
+#include "display.h"
+#include "gpu_packet.h"
+#include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 
+#define FIELD_FADE_OT_INDEX 0x10
+#define FIELD_FADE_NEUTRAL 0x100
+#define FIELD_FADE_ADDITIVE_THRESHOLD (FIELD_FADE_NEUTRAL + 1)
+#define FIELD_FADE_ADDITIVE_DRAW_MODE 0x25
+#define FIELD_FADE_SUBTRACTIVE_DRAW_MODE 0x45
+
+/** @brief Packet view for a fade TILE or draw-mode command. */
 typedef union
 {
-    u32 word;
-    struct
-    {
-        u8 _addr[3];        // 0x00
-        u8 len;             // 0x03
-    } f;
-} PrimTag;
+    TILE tile;
+    DR_TPAGE draw_mode;
+} FieldFadePrimitive;
 
-typedef union
-{
-    u32 word;
-    struct
-    {
-        u8 r;               // 0x04
-        u8 g;               // 0x05
-        u8 b;               // 0x06
-        u8 code;            // 0x07
-    } f;
-} PrimRgbc;
-
-/** @brief 16-byte flat tile primitive. */
-typedef struct
-{
-    PrimTag tag;            // 0x00
-    PrimRgbc rgbc;          // 0x04
-    s16 x0;                 // 0x08
-    s16 y0;                 // 0x0A
-    s16 w;                  // 0x0C
-    s16 h;                  // 0x0E
-} PrimTile;
-
-/** @brief 8-byte draw-mode primitive. */
-typedef struct
-{
-    PrimTag tag;            // 0x00
-    u32 code;               // 0x04
-} PrimMode;
+/** Advance a fade packet cursor by the concrete packet just emitted. */
+#define FIELD_NEXT_FADE_PRIMITIVE(primitive, type) \
+    ((FieldFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /** @brief Fade colour triple plus its remaining step count. */
 typedef struct
@@ -51,9 +32,9 @@ typedef struct
 
 typedef struct
 {
-    u32 otag[0x1010];               // 0x0000
-    u8 _pad[0x40B8 - 0x4040];       // 0x4040
-    PrimTile* cursor;               // 0x40B8
+    u_long otag[0x1010];                 // 0x0000
+    u8 _pad[0x40B8 - 0x4040];            // 0x4040
+    FieldFadePrimitive* cursor;           // 0x40B8
 } RenderHalf;
 
 extern FieldFade g_field_fade_target;
@@ -66,13 +47,12 @@ extern FieldFade g_field_fade_current;
  */
 void func_80067BBC(RenderHalf* ctx)
 {
-    PrimTile* prim = ctx->cursor;
-    u32* ot = &ctx->otag[0x10];
-    PrimMode* mode_prim;
+    FieldFadePrimitive* primitive = ctx->cursor;
+    u_long* ordering_table_tag = &ctx->otag[FIELD_FADE_OT_INDEX];
     s32 dr;
     s32 dg;
     s32 db;
-    s32 mode;
+    s32 draw_mode;
 
     if (g_field_fade_target.steps != 0)
     {
@@ -90,64 +70,61 @@ void func_80067BBC(RenderHalf* ctx)
         g_field_fade_current.g = g_field_fade_target.g;
         g_field_fade_current.b = g_field_fade_target.b;
     }
-    if ((g_field_fade_current.r != 0x100) ||
+    if ((g_field_fade_current.r != FIELD_FADE_NEUTRAL) ||
         (g_field_fade_current.g != g_field_fade_current.r) ||
         (g_field_fade_current.b != g_field_fade_current.g))
     {
-        if (g_field_fade_current.r >= 0x101)
+        if (g_field_fade_current.r >= FIELD_FADE_ADDITIVE_THRESHOLD)
         {
-            prim->rgbc.f.r = g_field_fade_current.r - 1;
-            prim->rgbc.f.g = g_field_fade_current.g - 1;
-            prim->rgbc.f.b = g_field_fade_current.b - 1;
+            primitive->tile.r0 = g_field_fade_current.r - 1;
+            primitive->tile.g0 = g_field_fade_current.g - 1;
+            primitive->tile.b0 = g_field_fade_current.b - 1;
         }
         else
         {
-            if (g_field_fade_current.r == 0x100)
+            if (g_field_fade_current.r == FIELD_FADE_NEUTRAL)
             {
-                prim->rgbc.f.r = 0;
+                primitive->tile.r0 = 0;
             }
             else
             {
-                prim->rgbc.f.r = ~g_field_fade_current.r;
+                primitive->tile.r0 = ~g_field_fade_current.r;
             }
-            if (g_field_fade_current.g == 0x100)
+            if (g_field_fade_current.g == FIELD_FADE_NEUTRAL)
             {
-                prim->rgbc.f.g = 0;
-            }
-            else
-            {
-                prim->rgbc.f.g = ~g_field_fade_current.g;
-            }
-            if (g_field_fade_current.b == 0x100)
-            {
-                prim->rgbc.f.b = 0;
+                primitive->tile.g0 = 0;
             }
             else
             {
-                prim->rgbc.f.b = ~g_field_fade_current.b;
+                primitive->tile.g0 = ~g_field_fade_current.g;
+            }
+            if (g_field_fade_current.b == FIELD_FADE_NEUTRAL)
+            {
+                primitive->tile.b0 = 0;
+            }
+            else
+            {
+                primitive->tile.b0 = ~g_field_fade_current.b;
             }
         }
-        prim->tag.f.len = 3;
-        prim->rgbc.f.code = 0x62;
-        prim->w = 0x140;
-        mode = 0x25;
-        prim->y0 = 0;
-        prim->x0 = 0;
-        prim->h = 0xF0;
-        prim->tag.word = (prim->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((u32)prim & 0xFFFFFF);
-        prim += 1;
-        mode_prim = (PrimMode*)prim;
-        if (g_field_fade_current.r < 0x101)
+
+        setTile(&primitive->tile);
+        setSemiTrans(&primitive->tile, 1);
+        primitive->tile.w = SCREEN_WIDTH;
+        draw_mode = FIELD_FADE_ADDITIVE_DRAW_MODE;
+        SET_YX0(&primitive->tile, 0, 0);
+        primitive->tile.h = SCREEN_HEIGHT;
+        addPrim(ordering_table_tag, &primitive->tile);
+
+        primitive = FIELD_NEXT_FADE_PRIMITIVE(primitive, TILE);
+        if (g_field_fade_current.r < FIELD_FADE_ADDITIVE_THRESHOLD)
         {
-            mode = 0x45;
+            draw_mode = FIELD_FADE_SUBTRACTIVE_DRAW_MODE;
         }
-        mode_prim->tag.f.len = 1;
-        mode_prim->code = mode | 0xE1000000;
-        mode_prim->tag.word = (mode_prim->tag.word & 0xFF000000) | (*ot & 0xFFFFFF);
-        *ot = (*ot & 0xFF000000) | ((u32)mode_prim & 0xFFFFFF);
-        mode_prim += 1;
-        prim = (PrimTile*)mode_prim;
+        setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
+        addPrim(ordering_table_tag, &primitive->draw_mode);
+
+        primitive = FIELD_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
     }
-    ctx->cursor = prim;
+    ctx->cursor = primitive;
 }
