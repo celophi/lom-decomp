@@ -47,6 +47,21 @@ typedef struct
 } TimBlock;
 
 /**
+ * @brief Fixed prefix of a TIM file whose CLUT length varies by bit depth.
+ *
+ * The CLUT payload begins at @c clut_data and contains the number of entries
+ * implied by @c clut_block.bnum. The pixel block follows at that variable
+ * offset; use @c TIM_PIXEL_BLOCK to locate it.
+ */
+typedef struct
+{
+    u32 magic;
+    u32 flags;
+    TimBlock clut_block;
+    u16 clut_data[1];
+} TimPrefix;
+
+/**
  * @brief PSX TIM file header for an 8bpp (256-color) image.
  *
  * Maps the fixed portion of a TIM file: two-word file header, CLUT block

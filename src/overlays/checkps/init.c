@@ -6,6 +6,7 @@
 #include "game_state.h"
 #include "gpu_packet.h"
 #include "pad.h"
+#include "tim.h"
 #include "psyq/libapi.h"
 #include "psyq/libgte.h"
 #include "psyq/libgpu.h"
@@ -86,37 +87,6 @@ typedef union
     ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 /**
- * @brief Rectangle stored in an embedded TIM image block.
- */
-typedef struct
-{
-    s16 x;
-    s16 y;
-    u16 w;
-    u16 h;
-} CheckPSTimRect;
-
-/**
- * @brief Header and payload of an embedded TIM image block.
- */
-typedef struct
-{
-    u32 size;
-    CheckPSTimRect rect;
-    u_long data[1];
-} CheckPSTimBlock;
-
-/**
- * @brief Embedded TIM image asset used by the CHECKPS display.
- */
-typedef struct
-{
-    u32 magic;
-    u32 mode;
-    CheckPSTimBlock clut;
-} CheckPSTimAsset;
-
-/**
  * @brief GPU environments and clear rectangle for one display buffer.
  */
 typedef struct
@@ -149,7 +119,7 @@ struct CheckPSRenderState
 
 /* Count, two byte offsets, then variable-sized AKAO resources. */
 extern u8 g_embedded_checkps_akao[];
-extern CheckPSTimAsset g_checkps_image_asset;
+extern TimPrefix g_checkps_image_asset;
 extern u8 g_controller_device_type;
 
 void run_checkps_display_loop(CheckPSRenderState* render_state);
@@ -601,11 +571,11 @@ void load_checkps_image(void)
     RECT image_destination;
     RECT upload_rect;
     RECT* upload_rect_ptr;
-    CheckPSTimAsset* image_asset;
+    TimPrefix* image_asset;
     u32 clut_block_size;
-    CheckPSTimBlock* pixel_block;
+    TimBlock* pixel_block;
     u16 image_x, image_y;
-    u16* image_header;
+    u16* pixel_dimensions;
 
     upload_rect_ptr = &upload_rect;
     image_asset = &g_checkps_image_asset;
@@ -618,28 +588,28 @@ void load_checkps_image(void)
 
     upload_rect.x = 0;
     upload_rect.y = CHECKPS_IMAGE_CLUT_Y;
-    upload_rect.w = image_asset->clut.rect.w * image_asset->clut.rect.h;
+    upload_rect.w = image_asset->clut_block.w * image_asset->clut_block.h;
     upload_rect.h = 1;
 
-    clut_block_size = image_asset->clut.size;
-    LoadImage(upload_rect_ptr, image_asset->clut.data);
+    clut_block_size = image_asset->clut_block.bnum;
+    LoadImage(upload_rect_ptr, image_asset->clut_data);
 
     image_x = image_destination.x;
     image_y = image_destination.y;
 
-    pixel_block = (CheckPSTimBlock*)((u8*)&image_asset->clut + clut_block_size);
+    pixel_block = TIM_PIXEL_BLOCK(image_asset, clut_block_size);
 
-    image_header = &pixel_block->rect.w;
+    pixel_dimensions = &pixel_block->w;
     upload_rect.x = image_x;
     upload_rect.y = image_y;
-    upload_rect.w = image_header[0];
-    upload_rect.h = image_header[1];
+    upload_rect.w = pixel_dimensions[0];
+    upload_rect.h = pixel_dimensions[1];
 
-    g_checkps_image_width_words = image_header[0];
-    g_checkps_image_height = image_header[1];
+    g_checkps_image_width_words = pixel_dimensions[0];
+    g_checkps_image_height = pixel_dimensions[1];
 
-    image_header += 2;
-    LoadImage(upload_rect_ptr, (u_long*)image_header);
+    pixel_dimensions += 2;
+    LoadImage(upload_rect_ptr, (u_long*)pixel_dimensions);
 }
 
 /**
