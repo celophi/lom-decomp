@@ -842,7 +842,7 @@ void menu_cursor_up(void)
  * each). The currently selected item (visible_index == g_titleVisibleItemRank)
  * uses CLUT 1, the rest CLUT 2. A fixed header quad is emitted first, and the
  * cursor quad last; the cursor's U coordinate cycles through
- * g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
+ * g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3] for a 4-frame blink, and
  * its Y tracks the selected rank. The advanced prim cursor is written back to
  * MenuContext::next_prim_ptr.
  *
@@ -886,7 +886,7 @@ void render_title_menu_items(void* ctx)
         flag_ptr += 2;
     } while (slot < 0x10);
     result = (s32)emit_menu_item_quad(ot_head, prim, 7, 0x78, (6 * (2 * ((s32)g_titleVisibleItemRank))) + 0x9D,
-                                      (s32)g_cursorBlinkPalette[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
+                                      (s32)g_cursorBlinkUOffsets[(g_titleAnimFrame >> 2) & 3], 0x10, 0);
 
     anim = g_titleAnimFrame;
     *((s32*)(((u8*)ctx) + 0x80B8)) = result;

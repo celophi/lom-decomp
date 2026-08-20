@@ -47,7 +47,13 @@ segments:
     subsegments:
       - [0x1, .rodata, title]
       - [0x5, c, title]
-      - [0x2679, databin, title_menu_tim_table]
+      - start: 0x2679
+        type: asset_offset_table
+        name: title_menu_tim_table
+        dir: title
+        targets:
+          - title_menu_tim_0
+          - title_menu_tim_1
       - start: 0x2685
         type: tim
         name: title_menu_tim_0
@@ -56,10 +62,12 @@ segments:
         type: tim
         name: title_menu_tim_1
         dir: title
-        # Original build artifact: the final 32-bit TIM pixel word is repeated.
         trailing_duplicate_word: true
-      - [0x300BD, databin, cursor_blink_palette]
-      # These original TIM embeddings each repeat their final 32-bit pixel word.
+      - start: 0x300BD
+        type: u8_sequence
+        name: cursor_blink_u_offsets
+        dir: title
+        expected_count: 4
       - start: 0x300C1
         type: tim
         name: save_layout_tim_00

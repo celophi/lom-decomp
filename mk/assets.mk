@@ -4,6 +4,10 @@
 
 PSX_TIM_ASSETS := $(call rwildcard,assets,*.tim)
 PSX_TIM_DUPLICATE_WORD_BINARIES := $(call rwildcard,assets,*.tim_trail.bin)
+ASSET_OFFSET_TABLE_SOURCES := $(call rwildcard,assets,*.asset_offset_table.yaml)
+ASSET_OFFSET_TABLE_BINARIES := $(patsubst %.asset_offset_table.yaml,%.asset_offset_table.bin,$(ASSET_OFFSET_TABLE_SOURCES))
+U8_SEQUENCE_SOURCES := $(call rwildcard,assets,*.u8_sequence.yaml)
+U8_SEQUENCE_BINARIES := $(patsubst %.u8_sequence.yaml,%.u8_sequence.bin,$(U8_SEQUENCE_SOURCES))
 SPRITE_LAYOUT_SOURCES := $(call rwildcard,assets,*.sprite_layout.yaml)
 SPRITE_LAYOUT_BINARIES := $(patsubst %.sprite_layout.yaml,%.sprite_layout.bin,$(SPRITE_LAYOUT_SOURCES))
 SPRITE_ANIMATION_SOURCES := $(call rwildcard,assets,*.sprite_animation.yaml)
@@ -19,9 +23,9 @@ INDEX_MAP_BINARIES := $(patsubst %.index_map.yaml,%.index_map.bin,$(INDEX_MAP_SO
 NAME_ENTRY_RESOURCE_SOURCES := $(call rwildcard,assets,*.name_entry_resource.yaml)
 NAME_ENTRY_RESOURCE_BINARIES := $(patsubst %.name_entry_resource.yaml,%.name_entry_resource.bin,$(NAME_ENTRY_RESOURCE_SOURCES))
 
-.PHONY: validate-assets validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
+.PHONY: validate-assets validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
-validate-assets: validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
+validate-assets: validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
 %.tim_trail.bin: %.tim tools/assets/psx_tim.py
 	python3 tools/assets/psx_tim.py build $< $@ --trailing-duplicate-word
@@ -29,6 +33,26 @@ validate-assets: validate-psx-tim-assets validate-sprite-layout-assets validate-
 validate-psx-tim-assets: $(PSX_TIM_DUPLICATE_WORD_BINARIES)
 ifneq ($(strip $(PSX_TIM_ASSETS)),)
 	python3 tools/assets/psx_tim.py roundtrip $(PSX_TIM_ASSETS)
+else
+	@:
+endif
+
+%.asset_offset_table.bin: %.asset_offset_table.yaml tools/assets/asset_offset_table.py
+	python3 tools/assets/asset_offset_table.py build $< $@
+
+validate-asset-offset-table-assets: $(ASSET_OFFSET_TABLE_BINARIES)
+ifneq ($(strip $(ASSET_OFFSET_TABLE_SOURCES)),)
+	python3 tools/assets/asset_offset_table.py validate $(ASSET_OFFSET_TABLE_SOURCES)
+else
+	@:
+endif
+
+%.u8_sequence.bin: %.u8_sequence.yaml tools/assets/u8_sequence.py
+	python3 tools/assets/u8_sequence.py build $< $@
+
+validate-u8-sequence-assets: $(U8_SEQUENCE_BINARIES)
+ifneq ($(strip $(U8_SEQUENCE_SOURCES)),)
+	python3 tools/assets/u8_sequence.py validate $(U8_SEQUENCE_SOURCES)
 else
 	@:
 endif
@@ -105,4 +129,4 @@ endif
 
 # Structured assets must be rebuilt before staging copies linker inputs to the
 # native Linux filesystem used by the legacy toolchain.
-$(COPY_SENTINEL): $(PSX_TIM_DUPLICATE_WORD_BINARIES) $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES) $(TAB_CURSOR_LAYOUT_BINARIES) $(INDEX_BOUNDARIES_BINARIES) $(INDEX_MAP_BINARIES) $(NAME_ENTRY_RESOURCE_BINARIES)
+$(COPY_SENTINEL): $(PSX_TIM_DUPLICATE_WORD_BINARIES) $(ASSET_OFFSET_TABLE_BINARIES) $(U8_SEQUENCE_BINARIES) $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES) $(TAB_CURSOR_LAYOUT_BINARIES) $(INDEX_BOUNDARIES_BINARIES) $(INDEX_MAP_BINARIES) $(NAME_ENTRY_RESOURCE_BINARIES)

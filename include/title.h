@@ -70,10 +70,11 @@ extern u8 g_titleMenuItemFlags[];
 extern u8 g_titleVisibleItemRank;
 extern u8 g_titleAnimFrame;
 /**
- * 4-entry CLUT-index table that blinks the title-menu cursor; indexed by
- * (g_titleAnimFrame >> 2) & 3 in render_title_menu_items.
+ * Four-frame texture-U animation for the title-menu cursor; indexed by
+ * (g_titleAnimFrame >> 2) & 3 in render_title_menu_items. The values select
+ * adjacent 16-pixel-wide cursor images in the title-menu texture.
  */
-extern u8 g_cursorBlinkPalette[];
+extern u8 g_cursorBlinkUOffsets[];
 
 /**
  * Timer used to implement input repeating (auto-repeat).
@@ -86,7 +87,7 @@ extern s32 g_lastInputState;
 /**
  * Self-relative offset table for the two title-menu TIMs uploaded by
  * init_title_menu_state: entries [1] and [2] are byte offsets from the table's
- * own base to each TIM ([0] is unused).
+ * own base to each TIM. Entry [0] stores the asset count.
  */
 extern u32 g_titleMenuTimTable[3];
 extern u8 D_801ED600[];
