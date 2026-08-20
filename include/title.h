@@ -110,7 +110,7 @@ extern u8 D_800F9AED;
 /**
  * @brief One entry in the 27-element save-slot UI layout table (g_saveLayoutTable).
  *
- * The layout has 0x1B entries × 0x18 bytes = 0x288 bytes total.
+ * The layout has 0x1B entries x 0x18 bytes = 0x288 bytes total.
  *
  * The underlying data symbol is declared as a byte array; renderers cast it to
  * @c SaveLayoutEntry* when named field access is useful.
@@ -128,7 +128,7 @@ typedef struct {
     u16 v0;       /**< +0x0E: initial V; animated by AnimateSaveSlotPanel for highlight entries */
     u16 width;    /**< +0x10: TILE.w / glyph total pixel width (chunked at 128 px) */
     u16 height;   /**< +0x12: TILE.h / glyph per-chunk sprite height */
-    u8  unk14[4]; /**< +0x14: TODO */
+    u32 reserved; /**< +0x14: zero in every initial table entry; not read at runtime */
 } SaveLayoutEntry;             /* sizeof == 0x18 */
 
 /* Home U/V texture coordinate the panel's primary entry resets to. */
