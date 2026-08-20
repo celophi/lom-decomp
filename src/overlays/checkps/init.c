@@ -74,6 +74,17 @@ typedef union
 #define CHECKPS_NEXT_FADE_PRIMITIVE(primitive, type) \
     ((CheckPSFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
+/** @brief Packet view for a CHECKPS image sprite or draw-mode command. */
+typedef union
+{
+    SPRT sprite;
+    DR_TPAGE draw_mode;
+} CheckPSImagePrimitive;
+
+/** Advance an image packet cursor by the concrete packet just emitted. */
+#define CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, type) \
+    ((CheckPSImagePrimitive*)((u8*)(primitive) + sizeof(type)))
+
 /**
  * @brief Rectangle stored in an embedded TIM image block.
  */
@@ -545,7 +556,7 @@ void update_checkps_input_and_timeout(void)
  */
 void draw_checkps_image(CheckPSFrame* frame)
 {
-    u8* primitive;
+    CheckPSImagePrimitive* primitive;
     s32 width_words;
     s32 image_width_words;
     s32 image_height;
@@ -555,30 +566,30 @@ void draw_checkps_image(CheckPSFrame* frame)
     draw_mode_command = CHECKPS_GPU_DRAW_MODE_COMMAND;
     primitive = frame->primitive_cursor;
 
-    SET_BGR0_PACKED(primitive, GPU_TINT_NEUTRAL);
+    SET_BGR0_PACKED(&primitive->sprite, GPU_TINT_NEUTRAL);
 
-    setSprt((SPRT*)primitive);
+    setSprt(&primitive->sprite);
 
     width_words = g_checkps_image_width_words;
     image_height = g_checkps_image_height;
 
-    setUV0((SPRT*)primitive, 0, 0);
-    setClut((SPRT*)primitive, 0, CHECKPS_IMAGE_CLUT_Y);
-    setXY0((SPRT*)primitive, (SCREEN_WIDTH - (width_words * 4)) >> 1, (VRAM_DRAW_HEIGHT - image_height) / 2);
+    setUV0(&primitive->sprite, 0, 0);
+    setClut(&primitive->sprite, 0, CHECKPS_IMAGE_CLUT_Y);
+    setXY0(&primitive->sprite, (SCREEN_WIDTH - (width_words * 4)) >> 1, (VRAM_DRAW_HEIGHT - image_height) / 2);
 
     image_width_words = g_checkps_image_width_words;
     width_words = image_width_words;
 
     ordering_table = frame->ordering_table;
 
-    setWH((SPRT*)primitive, width_words * 4, g_checkps_image_height);
-    addPrim(ordering_table, (SPRT*)primitive);
-    primitive += sizeof(SPRT);
+    setWH(&primitive->sprite, width_words * 4, g_checkps_image_height);
+    addPrim(ordering_table, &primitive->sprite);
 
-    setDrawTPage((SPRT*)primitive, 0, 0, CHECKPS_IMAGE_TPAGE);
-    addPrim(ordering_table, (SPRT*)primitive);
+    primitive = CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, SPRT);
+    setDrawTPage(&primitive->draw_mode, 0, 0, CHECKPS_IMAGE_TPAGE);
+    addPrim(ordering_table, &primitive->draw_mode);
 
-    primitive += sizeof(DR_TPAGE);
+    primitive = CHECKPS_NEXT_IMAGE_PRIMITIVE(primitive, DR_TPAGE);
     frame->primitive_cursor = primitive;
 }
 
