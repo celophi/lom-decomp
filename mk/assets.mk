@@ -7,10 +7,12 @@ SPRITE_LAYOUT_SOURCES := $(call rwildcard,assets,*.sprite_layout.yaml)
 SPRITE_LAYOUT_BINARIES := $(patsubst %.sprite_layout.yaml,%.sprite_layout.bin,$(SPRITE_LAYOUT_SOURCES))
 SPRITE_ANIMATION_SOURCES := $(call rwildcard,assets,*.sprite_animation.yaml)
 SPRITE_ANIMATION_BINARIES := $(patsubst %.sprite_animation.yaml,%.sprite_animation.bin,$(SPRITE_ANIMATION_SOURCES))
+GLYPH_METRICS_SOURCES := $(call rwildcard,assets,*.glyph_metrics.yaml)
+GLYPH_METRICS_BINARIES := $(patsubst %.glyph_metrics.yaml,%.glyph_metrics.bin,$(GLYPH_METRICS_SOURCES))
 
-.PHONY: validate-assets validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets
+.PHONY: validate-assets validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets
 
-validate-assets: validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets
+validate-assets: validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets
 
 validate-psx-tim-assets:
 ifneq ($(strip $(PSX_TIM_ASSETS)),)
@@ -39,6 +41,16 @@ else
 	@:
 endif
 
+%.glyph_metrics.bin: %.glyph_metrics.yaml tools/assets/glyph_metrics.py
+	python3 tools/assets/glyph_metrics.py build $< $@
+
+validate-glyph-metrics-assets: $(GLYPH_METRICS_BINARIES)
+ifneq ($(strip $(GLYPH_METRICS_SOURCES)),)
+	python3 tools/assets/glyph_metrics.py validate $(GLYPH_METRICS_SOURCES)
+else
+	@:
+endif
+
 # Structured assets must be rebuilt before staging copies linker inputs to the
 # native Linux filesystem used by the legacy toolchain.
-$(COPY_SENTINEL): $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES)
+$(COPY_SENTINEL): $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES)

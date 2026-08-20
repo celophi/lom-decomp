@@ -46,7 +46,16 @@ segments:
       - [0x5, c, gname]
       - start: 0x2C99
         type: databin
-        name: tables
+        name: panel_index_tables
+        dir: gname
+      - start: 0x2CD5
+        type: glyph_metrics
+        name: glyph_table
+        dir: gname
+        expected_count: 39
+      - start: 0x2E0D
+        type: databin
+        name: cursor_and_kanji_tables
         dir: gname
       - start: 0x2EF5
         type: databin
