@@ -49,10 +49,10 @@ def extract_c_subsegments(config: dict) -> list[str]:
 def extract_data_subsegments(config: dict) -> list[str]:
     """Pull out names of standalone data translation units.
 
-    Matches [offset, '.data'|'databin', name] subsegments whose name is not also
-    a 'c' subsegment - i.e. data built by its own C file (e.g. gname_data),
-    which has a compiled base object and a generated target object to diff.
-    A '.sdata'/'.data' marker sharing the 'c' file's name is skipped.
+    Matches [offset, '.data', name] subsegments whose name is not also a 'c'
+    subsegment - i.e. data built by its own C file (e.g. gname_data), which has
+    a compiled base object and a generated target object to diff. Raw databin
+    subsegments have no compiled C base object and are intentionally omitted.
     """
     c_names = set(extract_c_subsegments(config))
     names = []
@@ -61,7 +61,7 @@ def extract_data_subsegments(config: dict) -> list[str]:
             continue
         for subseg in segment.get("subsegments", []):
             if (isinstance(subseg, list) and len(subseg) >= 3
-                    and subseg[1] in (".data", "databin")
+                    and subseg[1] == ".data"
                     and subseg[2] not in c_names):
                 names.append(subseg[2])
     return names

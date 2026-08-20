@@ -2,16 +2,3 @@
 rom:0x3D reloc:MIPS_NONE symbol:g_titleMenuExitState
 rom:0x71 reloc:MIPS_NONE symbol:g_titleMenuExitState
 rom:0xA5 reloc:MIPS_NONE symbol:g_titleMenuExitState
-
-// Texture pointers in g_saveLayoutTexTable
-rom:0xA9B95 reloc:MIPS_32 symbol:D_8007FD30
-rom:0xA9BA5 reloc:MIPS_32 symbol:D_800A2F54
-rom:0xA9BB5 reloc:MIPS_32 symbol:D_800AAF98
-rom:0xA9BC5 reloc:MIPS_32 symbol:D_800AF43C
-rom:0xA9BD5 reloc:MIPS_32 symbol:D_800B38E0
-rom:0xA9BE5 reloc:MIPS_32 symbol:D_800B3EA4
-rom:0xA9BF5 reloc:MIPS_32 symbol:D_800B62E8
-rom:0xA9C05 reloc:MIPS_32 symbol:D_800C352C
-rom:0xA9C15 reloc:MIPS_32 symbol:D_800D0770
-rom:0xA9C25 reloc:MIPS_32 symbol:D_800D93B4
-rom:0xA9C35 reloc:MIPS_32 symbol:D_800E95D8
