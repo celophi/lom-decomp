@@ -81,19 +81,19 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
     u8* source = bitmap;
     s16 foreground_color = color;
 
-    // Save position so draw_kanji_glyph leaves draw_state unchanged after upload
+    /* Preserve the caller's position across the glyph upload. */
     original_x = draw_state->position.coord.x;
     original_y = draw_state->position.coord.y;
 
-    // GPU CPU→VRAM (LoadImage) packet: tag=11 following words, code=0xA0
+    /* GPU CPU-to-VRAM packet: eleven words follow the tag. */
     packet.tag = CHECKPS_KANJI_GPU_TAG;
     packet.code = CHECKPS_KANJI_GPU_LOAD_IMAGE;
-    packet.wh = draw_state->packed_size;
+    packet.wh = draw_state->size.packed;
     for (row = 0; row < CHECKPS_GLYPH_BITMAP_ROWS; row++)
     {
         write_ptr = packet.pixels;
 
-        // Expand 2 bytes (16 bits) of 1bpp bitmap into 16 pixel values
+        /* Expand two 1bpp source bytes into 16 pixel values. */
         for (pass = 0; pass < 2; pass++)
         {
             for (bit = 7; bit >= 0; bit--)
@@ -112,7 +112,7 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
             source++;
         }
 
-        // Upload the row twice one pixel apart to thicken the glyph horizontally
+        /* Upload twice one pixel apart to thicken the row horizontally. */
         for (pass = 0; pass < 2; pass++)
         {
             packet.xy = draw_state->position.packed;

@@ -25,7 +25,15 @@ typedef struct
         } coord;
         s32 packed;
     } position;
-    u32 packed_size;
+    union
+    {
+        struct
+        {
+            s16 width;
+            s16 height;
+        } dimensions;
+        u32 packed;
+    } size;
 } KanjiDrawState;
 
 /* Data shared by the hardware-warning renderer and its caller. */
