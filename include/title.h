@@ -139,7 +139,7 @@ typedef struct {
  * AnimateSaveSlotPanel which adds the pan offset to this base). */
 #define SAVE_SCROLL_WIDTH_HOME 0x40
 
-/* 0x1B (27) entries; kept as u8[] to preserve byte-granular pointer arithmetic */
+/* 0x1B (27) entries; kept as u8[] to preserve byte-granular pointer arithmetic. */
 extern u8 g_saveLayoutTable[0x288];
 /**
  * @brief One texture-descriptor entry in g_saveLayoutTexTable (stride 0x10).
@@ -163,13 +163,13 @@ typedef struct {
  * upload_save_layout_textures. Indexed by SaveLayoutEntry::tex_slot and cast to
  * SaveLayoutTex* by consumers.
  */
-extern u8 g_saveLayoutTexTable[];
+extern SaveLayoutTex g_saveLayoutTexTable[];
 extern u8 D_800F98AC[];
 extern u8 D_800F98F4[];
 /** Menu-layout template copied into g_menuLayoutBuffer for the default menu. */
-extern MenuLayout g_menuLayoutTemplateDefault;
+extern u32 g_menuLayoutTemplateDefault[];
 /** Menu-layout template copied into g_menuLayoutBuffer for the alternate menu. */
-extern MenuLayout g_menuLayoutTemplateAlt;
+extern u32 g_menuLayoutTemplateAlt[];
 /** Sub-menu layout table copied by load_sub_menu_layout for a new game. */
 extern s32 g_subMenuLayoutDefault[0x94];
 /** Sub-menu layout table copied by load_sub_menu_layout when resuming a save. */

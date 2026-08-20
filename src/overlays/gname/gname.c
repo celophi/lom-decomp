@@ -423,7 +423,7 @@ s32 D_8014F8D4;
 /** Overlay header identifier stored immediately before @ref gname_run. */
 const s32 g_gname_overlay_id = 5;
 
-/* Packed table symbols defined by gname_data.c. */
+/* Packed table symbols extracted from the overlay data. */
 extern u32 g_panel_char_offsets[];
 extern s32 g_kanji_cat_names_offset;
 extern u32 g_kanji_cat_entries[];
