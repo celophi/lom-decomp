@@ -66,8 +66,11 @@ segments:
         dir: gname
         expected_count: 20
       - start: 0xF759
-        type: databin
+        type: sprite_animation
         name: glyph_append_anim
         dir: gname
+        frame_count: 7
+        sprites_per_frame: 3
+        trailing_padding: 4
       - [0xF7B1, .bss, gname]
   - [0xF8D9]
