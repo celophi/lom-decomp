@@ -834,7 +834,7 @@ typedef struct
 } FieldCamera;
 
 extern FieldSceneGlobals g_field_scene;
-extern s32 g_field_marker_overlay_enabled;
+extern s32 g_field_marker_overlay_enabled[2];
 extern s32 g_field_camera_x;
 extern s32 g_field_camera_y;
 extern s32 g_field_camera_z;
