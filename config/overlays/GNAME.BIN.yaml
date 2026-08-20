@@ -54,8 +54,13 @@ segments:
         dir: gname
         expected_count: 39
       - start: 0x2E0D
+        type: tab_cursor_layout
+        name: tab_cursor_layout
+        dir: gname
+        expected_count: 13
+      - start: 0x2E41
         type: databin
-        name: cursor_and_kanji_tables
+        name: kanji_entry_offsets
         dir: gname
       - start: 0x2EF5
         type: databin
