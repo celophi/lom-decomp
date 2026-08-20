@@ -31,7 +31,7 @@
 #define CHECKPS_DECIMAL_TERMINATOR_INDEX 6
 #define CHECKPS_DECIMAL_GLYPH_BUFFER_SIZE 7
 #define CHECKPS_DEFAULT_GLYPH_PALETTE 0
-#define CHECKPS_INVALID_KROM_ADDRESS ((u8*)-1)
+#define CHECKPS_INVALID_KROM_ADDRESS (-1)
 
 /** @brief Horizontal positioning modes accepted by the text renderer. */
 typedef enum
@@ -310,6 +310,7 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, s32 character_code, s
 {
     GlyphCacheEntry* cache_entry;
     u8* font_data;
+    s32 font_address;
     u32 requested_code;
     s32 row_high_nibble_color;
     s32 slot;
@@ -333,7 +334,7 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, s32 character_code, s
 
     while (slot < CHECKPS_GLYPH_CACHE_ENTRY_COUNT)
     {
-        if (requested_code == (u16)cache_entry->raw)
+        if (requested_code == (cache_entry->raw & CHECKPS_GLYPH_CACHE_CODE_MASK))
         {
             return emit_glyph_sprite(primitive, ot_tag, slot);
         }
@@ -341,8 +342,10 @@ void* render_cached_glyph(void* primitive, u_long* ot_tag, s32 character_code, s
         cache_entry++;
     }
 
-    font_data = (u8*)Krom2RawAdd(code & CHECKPS_GLYPH_CACHE_CODE_MASK);
-    if (font_data == CHECKPS_INVALID_KROM_ADDRESS)
+    font_address = Krom2RawAdd(code & CHECKPS_GLYPH_CACHE_CODE_MASK);
+    /* Psy-Q exposes the KROM pointer as a signed integer address. */
+    font_data = (u8*)font_address;
+    if (font_address == CHECKPS_INVALID_KROM_ADDRESS)
     {
         return primitive;
     }
