@@ -15,7 +15,8 @@
 #define CHECKPS_WARNING_SCANLINE_HEIGHT 1
 #define CHECKPS_WARNING_PRIMARY_COLOR 0xFFFF
 #define CHECKPS_WARNING_SHADOW_COLOR 0x8000
-#define CHECKPS_SPU_CONTROL_REGISTER ((volatile u16*)0x1F801DAA)
+/* Volatile changes GNU as address expansion and adds an instruction. */
+#define CHECKPS_SPU_CONTROL_REGISTER ((u16*)0x1F801DAA)
 
 /* These mirror CdlDiskError/CdlStatShellOpen; libcd.h is not GCC 2.7.2-clean. */
 #define CHECKPS_CD_IRQ_DISK_ERROR 5
@@ -122,6 +123,9 @@ typedef enum
     CHECKPS_CD_POLL_PENDING = 0,
     CHECKPS_CD_POLL_COMPLETE = 1,
 } CheckPSCdPollResult;
+
+/** @brief Alternate call view required by the original state-machine shape. */
+typedef s32 (*CheckPSWarningExitFunction)(void);
 
 extern s32 g_checkps_state;
 extern CheckPSCdCommandDescriptor g_cd_command_table[];
@@ -441,7 +445,7 @@ s32 run_cd_integrity_check(s32 single_step)
             switch (step_result)
             {
             case CHECKPS_CD_POLL_DISK_ERROR:
-                show_hardware_modification_warning_and_exit();
+                ((CheckPSWarningExitFunction)show_hardware_modification_warning_and_exit)();
                 step_result = CHECKPS_CD_POLL_DISK_ERROR;
                 break;
 
