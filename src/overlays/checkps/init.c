@@ -34,6 +34,8 @@
 #define CHECKPS_AUDIO_BANK_ADDRESS ((AkaoSeqHeader*)0x8013C000)
 #define CHECKPS_AUDIO_WORK_ADDRESS ((u8*)0x80180000)
 #define CHECKPS_AUDIO_BANK_RESIDENT_STATE 6
+#define CHECKPS_AKAO_COPIED_SECTION 0
+#define CHECKPS_AKAO_SUBMITTED_SECTION 1
 
 #define CHECKPS_CONTROLLER_UNAVAILABLE 0xFE
 #define CHECKPS_INITIAL_REPEAT_DELAY 15
@@ -124,7 +126,8 @@ struct CheckPSRenderState
     CheckPSFrame frames[2];
 };
 
-extern u32 g_embedded_checkps_akao;
+/* Count, two byte offsets, then variable-sized AKAO resources. */
+extern u8 g_embedded_checkps_akao[];
 extern CheckPSTimAsset g_checkps_image_asset;
 extern u8 g_controller_device_type;
 
@@ -309,15 +312,18 @@ void init_checkps_display(CheckPSRenderState* render_state)
 }
 
 /**
- * @brief Register and play the embedded CHECKPS audio data when needed.
+ * @brief Load the embedded CHECKPS bank and play its accompanying sequence.
+ * @details The embedded container stores a bank and sequence behind byte offsets.
  */
 void load_embedded_checkps_audio(void)
 {
-    u8* source;
+    u8* bank_data;
+    u8* sequence_data;
     u8* bank_destination;
-    u32 byte_count;
+    u32 bank_size;
     AkaoSeqHeader** bank_slot;
     u32* section_offsets;
+
     if (((((g_previousGameState == GAME_STATE_TITLE) || (g_previousGameState == GAME_STATE_GNAME)) || (g_previousGameState == GAME_STATE_FIELD)) || (g_previousGameState == CHECKPS_AUDIO_BANK_RESIDENT_STATE)) ||
         (g_previousGameState == GAME_STATE_MENU_LOAD) || (g_previousGameState == GAME_STATE_WORLD_SELECT))
     {
@@ -327,23 +333,29 @@ void load_embedded_checkps_audio(void)
     bank_slot = &g_checkps_akao_bank;
     *bank_slot = CHECKPS_AUDIO_BANK_ADDRESS;
 
-    section_offsets = &g_embedded_checkps_akao;
-    section_offsets++;
+    section_offsets = (u32*)g_embedded_checkps_akao;
+    section_offsets++; /* Skip the section count to reach the offset table. */
 
-    source = (u8*)&g_embedded_checkps_akao + section_offsets[0];
+    bank_data = &g_embedded_checkps_akao[section_offsets[CHECKPS_AKAO_COPIED_SECTION]];
     bank_destination = (u8*)*bank_slot;
-    byte_count = section_offsets[1] - section_offsets[0];
-    bcopy(source, bank_destination, byte_count);
+    bank_size = section_offsets[CHECKPS_AKAO_SUBMITTED_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
+    bcopy(bank_data, bank_destination, bank_size);
     akao_register_bank(*bank_slot);
-    akao_play_sequence_blocking((AkaoSeqHeader*)((u32)&g_embedded_checkps_akao + section_offsets[1]), 1);
+    sequence_data = &g_embedded_checkps_akao[section_offsets[CHECKPS_AKAO_SUBMITTED_SECTION]];
+    akao_play_sequence_blocking((AkaoSeqHeader*)sequence_data, 1);
 }
 
 /**
- * @brief Load a CHECKPS song container from disc and start its sequence.
+ * @brief Load a CHECKPS song container from disc and prepare it for playback.
+ * @details Copies the persistent song block into the CHECKPS song buffer, then
+ *          submits the trailing AKAO block to the audio driver.
  * @param song_index Zero-based CHECKPS song index.
  */
 void load_checkps_song_from_disc(s32 song_index)
 {
+    u8* song_data;
+    u8* sequence_data;
+    u32 song_size;
     u32* section_offsets;
     u8* song_container;
 
@@ -352,8 +364,11 @@ void load_checkps_song_from_disc(s32 song_index)
 
     section_offsets = (u32*)(CHECKPS_AUDIO_WORK_ADDRESS + sizeof(u32));
     song_container = CHECKPS_AUDIO_WORK_ADDRESS;
-    bcopy(song_container + section_offsets[0], g_checkps_song_buffer, section_offsets[1] - section_offsets[0]);
-    akao_play_sequence_blocking((AkaoSeqHeader*)(section_offsets[1] + (u32)song_container), 1);
+    song_data = &song_container[section_offsets[CHECKPS_AKAO_COPIED_SECTION]];
+    song_size = section_offsets[CHECKPS_AKAO_SUBMITTED_SECTION] - section_offsets[CHECKPS_AKAO_COPIED_SECTION];
+    bcopy(song_data, g_checkps_song_buffer, song_size);
+    sequence_data = &song_container[section_offsets[CHECKPS_AKAO_SUBMITTED_SECTION]];
+    akao_play_sequence_blocking((AkaoSeqHeader*)sequence_data, 1);
 }
 
 /**
