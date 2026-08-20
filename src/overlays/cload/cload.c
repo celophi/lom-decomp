@@ -12,6 +12,7 @@ extern s32 D_80122988;
 extern s32 D_80146918;
 extern s32 D_8014A920;
 extern u8 D_8014A988[];
+extern s16 D_8014EA38;
 extern s32 D_8015A310;
 extern s32 D_8015A320;
 extern s32 D_8015A328;
@@ -118,4 +119,42 @@ void func_8014019C(void)
     } while (1);
     func_800158E0();
     func_8002054C(0);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8014033C(void)
+{
+    u8 *base;
+    s16 *bank2;
+
+    /* Reserve the outgoing-argument area: a wider (7-arg) call was compiled
+       out here, so the frame keeps its space. */
+    if (0)
+    {
+        func_8002054C(0, 0, 0, 0, 0, 0, 0);
+    }
+    func_8001D5AC(0x5DC);
+    func_8001D58C(0xA0, 0x78);
+    D_8014EA38 = 0;
+    base = (u8 *)&D_8014EA38;
+    bank2 = (s16 *)(base + 0x7CC4);
+    *(s16 *)(base + 0x2) = 0;
+    *(s16 *)(base + 0x4) = 0x140;
+    *(s16 *)(base + 0x6) = 0xF0;
+    *(s16 *)(base + 0x7CC4) = 0;
+    bank2[1] = 0xE8;
+    bank2[2] = 0x140;
+    bank2[3] = 0xF0;
+    func_80019788(0);
+    func_8002054C(0);
+    func_8001C62C(base - 0x70, 0, 0, 0x140, 0xF0);
+    func_8001C62C(base + 0x7C54, 0, 0xE8, 0x140, 0xF0);
+    func_8001C56C(base - 0x5C, 0, 0xF0, 0x140, 0xE0);
+    func_8001C56C(base + 0x7C68, 0, 0x8, 0x140, 0xE0);
+    base[0x7C7E] = 0;
+    base[-0x46] = 0;
+    func_80067B8C();
+    func_80067EB4(0x100, 0x100, 0x100, 0x14);
 }
