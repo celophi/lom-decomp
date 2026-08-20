@@ -1,6 +1,7 @@
 #include "checkps_internal.h"
 
 #include "akao.h"
+#include "cd_resources.h"
 #include "display.h"
 #include "game_state.h"
 #include "gpu_packet.h"
@@ -30,7 +31,6 @@
 #define CHECKPS_GLYPH_VRAM_WIDTH 64
 #define CHECKPS_GLYPH_VRAM_HEIGHT 256
 
-#define CHECKPS_SEQ_RESOURCE_BASE 0x17
 #define CHECKPS_AUDIO_BANK_ADDRESS ((AkaoHeader*)0x8013C000)
 #define CHECKPS_AUDIO_WORK_ADDRESS ((u8*)0x80180000)
 #define CHECKPS_AUDIO_BANK_RESIDENT_STATE 6
@@ -359,7 +359,7 @@ void load_checkps_song_from_disc(s32 song_index)
     u32* section_offsets;
     u8* song_container;
 
-    cdrom_queue_read((song_index + CHECKPS_SEQ_RESOURCE_BASE) & 0xFFFF, CHECKPS_AUDIO_WORK_ADDRESS);
+    cdrom_queue_read(CD_RES_SONG(song_index), CHECKPS_AUDIO_WORK_ADDRESS);
     cdrom_wait_queue_empty();
 
     section_offsets = (u32*)(CHECKPS_AUDIO_WORK_ADDRESS + sizeof(u32));

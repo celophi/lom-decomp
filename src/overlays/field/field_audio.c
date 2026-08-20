@@ -8,6 +8,7 @@
  */
 
 #include "common.h"
+#include "cd_resources.h"
 #include "cdrom.h"
 #include "akao.h"
 #include "psyq/memory.h"
@@ -21,15 +22,11 @@
  * follows it. */
 #define SEQ_BLOB_OFFSETS 0x80180004
 
-/* Resource index of the first field SEQ; music_index is added to this to
- * select a variant. Same base TITLE uses for its own SEQ loads. */
-#define FIELD_SEQ_RESOURCE_BASE 0x17
-
 /* Largest music_index this loader accepts; anything above is ignored. */
 #define FIELD_SEQ_MAX_INDEX 0x100
 
 /* Fixed CD resource loaded by func_800A3728. TODO: which SEQ this is has not
- * been confirmed; it is not part of the FIELD_SEQ_RESOURCE_BASE range. */
+ * been confirmed; it is not selected through CD_RES_SONG. */
 #define FIELD_FIXED_SEQ_RESOURCE 0x92
 
 /** @brief AKAO sequence staging area shared with the TITLE overlay. */
@@ -71,14 +68,13 @@ extern s32 D_8011588C;
  * @brief Load a field SEQ resource from CD-ROM and submit it for playback.
  *
  * @details Counterpart of TITLE's load_title_seq. Reads resource
- * (FIELD_SEQ_RESOURCE_BASE + @p music_index) into the SEQ_BLOB_BASE scratch
+ * @c CD_RES_SONG(music_index) into the SEQ_BLOB_BASE scratch
  * buffer, splits the blob via its leading offset table, copies the song
  * sequence to one of two staging areas, then uploads the trailing instrument
  * bank through akao_upload_bank_blocking.
  *
- * @param music_index Offset added to FIELD_SEQ_RESOURCE_BASE to select the
- *        SEQ variant. Indices above FIELD_SEQ_MAX_INDEX are ignored and the
- *        function returns without touching the CD-ROM.
+ * @param music_index Zero-based song index. Indices above FIELD_SEQ_MAX_INDEX
+ *        are ignored and the function returns without touching the CD-ROM.
  * @param destination_index Selects the staging area for the copied sub-block:
  *        0 picks D_8003ECA0, non-zero picks D_80117EF8.
  *
@@ -92,7 +88,7 @@ void func_800A368C(s32 music_index, s32 destination_index)
 
     if (music_index < FIELD_SEQ_MAX_INDEX + 1)
     {
-        cdrom_queue_read((music_index + FIELD_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)SEQ_BLOB_BASE);
+        cdrom_queue_read(CD_RES_SONG(music_index), (void*)SEQ_BLOB_BASE);
         cdrom_wait_queue_empty();
 
         off = (u32*)SEQ_BLOB_OFFSETS;

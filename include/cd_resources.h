@@ -68,6 +68,12 @@ typedef enum CdResourceId
 
     /* SOUND/EFFECT.SET */
     CD_RES_SOUND_EFFECT_SET = 21,
+
+    /* First song container in the SOUND directory. */
+    CD_RES_FIRST_SONG = 23,
 } CdResourceId;
+
+/** @brief Convert a zero-based song index to its 16-bit CD resource index. */
+#define CD_RES_SONG(song_index) (((song_index) + CD_RES_FIRST_SONG) & 0xFFFF)
 
 #endif

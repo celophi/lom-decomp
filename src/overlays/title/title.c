@@ -10,10 +10,6 @@
 /* Number of frames the slide-lerper takes to animate a full panel scroll. */
 #define SLOT_SLIDE_FRAMES 8
 
-/* CD resource index of the first title SEQ. load_title_seq adds the variant
- * index to this base to obtain the actual resource passed to cdrom_queue_read. */
-#define TITLE_SEQ_RESOURCE_BASE 0x17
-
 /* Length, in 32-bit words, of each sub-menu layout table copied by
  * load_sub_menu_layout (0x94 words == 0x250 bytes). */
 #define SUB_MENU_LAYOUT_WORDS 0x94U
@@ -399,12 +395,11 @@ void load_title_audio_bank(void)
  * @brief Load a title-screen sequence and its instrument bank from CD-ROM.
  *
  * @details Counterpart of CHECKPS func_80050138. Reads CD resource
- * (TITLE_SEQ_RESOURCE_BASE + seq_variant) into the 0x80180000 scratch
+ * @c CD_RES_SONG(seq_variant) into the 0x80180000 scratch
  * buffer, splits it via its self-referential offset table, copies the
  * sequence sub-block to D_8003ECA0, then uploads the trailing instrument bank.
  *
- * @param seq_variant Offset added to TITLE_SEQ_RESOURCE_BASE to select
- *        which title SEQ variant to load.
+ * @param seq_variant Zero-based title song variant.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/mBQ6i
  */
@@ -413,7 +408,7 @@ void load_title_seq(s32 seq_variant)
     u32* off;
     u8* base;
 
-    cdrom_queue_read((seq_variant + TITLE_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)0x80180000);
+    cdrom_queue_read(CD_RES_SONG(seq_variant), (void*)0x80180000);
     cdrom_wait_queue_empty();
 
     off = (u32*)0x80180004;
