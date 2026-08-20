@@ -102,10 +102,10 @@ extern s32 g_slotSlideYLerped;
 extern s32 g_slotHighlightFrames;
 extern u8 D_80043618[0x40];
 /**
- * Source array of save-slot records (stride 0x40); handle_save_slot_input copies
- * the record selected by g_slotSelectedIndex into D_80043618.
+ * Eleven starting-weapon equipment records (stride 0x40). The title menu copies
+ * the selected weapon preset into the new-game equipment buffer at D_80043618.
  */
-extern u8 g_saveSlotData[];
+extern u8 g_startingWeaponRecords[];
 extern u8 D_800F9AED;
 /**
  * @brief One entry in the 27-element save-slot UI layout table (g_saveLayoutTable).

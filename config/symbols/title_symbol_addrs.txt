@@ -84,4 +84,4 @@ g_saveSlotPanelUvTable = 0x800F98AC;
 g_saveSlotSpriteUvTable = 0x800F98F4;
 g_saveLayoutTable = 0x800F993C;
 D_800F9AED = 0x800F9AED;
-g_saveSlotData = 0x800F9BC4;
+g_startingWeaponRecords = 0x800F9BC4;

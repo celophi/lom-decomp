@@ -1358,7 +1358,7 @@ void RenderSaveSlotMenu(MenuContext* arg0)
  *    left/right press scrolls to a side panel, and cancel quits the sub-menu
  *    (g_titleMenuExitState = 2).
  *  - Side panel: confirm loads the matching sub-menu layout, seeds its RNG,
- *    copies the selected save record into D_80043618, clears the per-slot
+ *    copies the selected starting-weapon record into D_80043618, clears the per-slot
  *    field of every other menu-layout slot, and confirms (exit state 1);
  *    cancel scrolls back home; up/down move the slot cursor (wrapping over
  *    the 11 slots). Always re-runs the highlight-panel animation.
@@ -1469,7 +1469,7 @@ void handle_save_slot_input(void)
                 u8* dest_ptr;
 
                 dest_ptr = D_80043618;
-                src_ptr = g_saveSlotData + (g_slotSelectedIndex << 6);
+                src_ptr = g_startingWeaponRecords + (g_slotSelectedIndex << 6);
                 copy_count = 0;
                 while (copy_count < 0x40U)
                 {

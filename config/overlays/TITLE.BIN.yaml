@@ -168,7 +168,23 @@ segments:
           - save_layout_tim_08
           - save_layout_tim_09
           - save_layout_tim_10
-      - [0xA9F55, databin, save_slot_data]
+      - start: 0xA9F55
+        type: starting_weapon_table
+        name: starting_weapon_records
+        dir: title
+        expected_count: 11
+        categories:
+          - knife
+          - sword
+          - axe
+          - two_handed_sword
+          - two_handed_axe
+          - hammer
+          - spear
+          - staff
+          - glove
+          - flail
+          - bow
       - [0xAA215, databin, menu_layout_default]
       - [0xAEB09, databin, menu_layout_default_tail]
       - [0xAF2D1, databin, menu_layout_alternate]

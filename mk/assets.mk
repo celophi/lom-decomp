@@ -14,6 +14,8 @@ UV_RECT_TABLE_SOURCES := $(call rwildcard,assets,*.uv_rect_table.yaml)
 UV_RECT_TABLE_BINARIES := $(patsubst %.uv_rect_table.yaml,%.uv_rect_table.bin,$(UV_RECT_TABLE_SOURCES))
 SAVE_LAYOUT_TABLE_SOURCES := $(call rwildcard,assets,*.save_layout_table.yaml)
 SAVE_LAYOUT_TABLE_BINARIES := $(patsubst %.save_layout_table.yaml,%.save_layout_table.bin,$(SAVE_LAYOUT_TABLE_SOURCES))
+STARTING_WEAPON_TABLE_SOURCES := $(call rwildcard,assets,*.starting_weapon_table.yaml)
+STARTING_WEAPON_TABLE_BINARIES := $(patsubst %.starting_weapon_table.yaml,%.starting_weapon_table.bin,$(STARTING_WEAPON_TABLE_SOURCES))
 SPRITE_LAYOUT_SOURCES := $(call rwildcard,assets,*.sprite_layout.yaml)
 SPRITE_LAYOUT_BINARIES := $(patsubst %.sprite_layout.yaml,%.sprite_layout.bin,$(SPRITE_LAYOUT_SOURCES))
 SPRITE_ANIMATION_SOURCES := $(call rwildcard,assets,*.sprite_animation.yaml)
@@ -29,9 +31,9 @@ INDEX_MAP_BINARIES := $(patsubst %.index_map.yaml,%.index_map.bin,$(INDEX_MAP_SO
 NAME_ENTRY_RESOURCE_SOURCES := $(call rwildcard,assets,*.name_entry_resource.yaml)
 NAME_ENTRY_RESOURCE_BINARIES := $(patsubst %.name_entry_resource.yaml,%.name_entry_resource.bin,$(NAME_ENTRY_RESOURCE_SOURCES))
 
-.PHONY: validate-assets validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-tim-upload-table-assets validate-uv-rect-table-assets validate-save-layout-table-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
+.PHONY: validate-assets validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-tim-upload-table-assets validate-uv-rect-table-assets validate-save-layout-table-assets validate-starting-weapon-table-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
-validate-assets: validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-tim-upload-table-assets validate-uv-rect-table-assets validate-save-layout-table-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
+validate-assets: validate-psx-tim-assets validate-asset-offset-table-assets validate-u8-sequence-assets validate-tim-upload-table-assets validate-uv-rect-table-assets validate-save-layout-table-assets validate-starting-weapon-table-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
 %.tim_trail.bin: %.tim tools/assets/psx_tim.py
 	python3 tools/assets/psx_tim.py build $< $@ --trailing-duplicate-word
@@ -89,6 +91,16 @@ endif
 validate-save-layout-table-assets: $(SAVE_LAYOUT_TABLE_BINARIES)
 ifneq ($(strip $(SAVE_LAYOUT_TABLE_SOURCES)),)
 	python3 tools/assets/save_layout_table.py validate $(SAVE_LAYOUT_TABLE_SOURCES)
+else
+	@:
+endif
+
+%.starting_weapon_table.bin: %.starting_weapon_table.yaml tools/assets/starting_weapon_table.py
+	python3 tools/assets/starting_weapon_table.py build $< $@
+
+validate-starting-weapon-table-assets: $(STARTING_WEAPON_TABLE_BINARIES)
+ifneq ($(strip $(STARTING_WEAPON_TABLE_SOURCES)),)
+	python3 tools/assets/starting_weapon_table.py validate $(STARTING_WEAPON_TABLE_SOURCES)
 else
 	@:
 endif
@@ -165,4 +177,4 @@ endif
 
 # Structured assets must be rebuilt before staging copies linker inputs to the
 # native Linux filesystem used by the legacy toolchain.
-$(COPY_SENTINEL): $(PSX_TIM_DUPLICATE_WORD_BINARIES) $(ASSET_OFFSET_TABLE_BINARIES) $(U8_SEQUENCE_BINARIES) $(TIM_UPLOAD_TABLE_BINARIES) $(UV_RECT_TABLE_BINARIES) $(SAVE_LAYOUT_TABLE_BINARIES) $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES) $(TAB_CURSOR_LAYOUT_BINARIES) $(INDEX_BOUNDARIES_BINARIES) $(INDEX_MAP_BINARIES) $(NAME_ENTRY_RESOURCE_BINARIES)
+$(COPY_SENTINEL): $(PSX_TIM_DUPLICATE_WORD_BINARIES) $(ASSET_OFFSET_TABLE_BINARIES) $(U8_SEQUENCE_BINARIES) $(TIM_UPLOAD_TABLE_BINARIES) $(UV_RECT_TABLE_BINARIES) $(SAVE_LAYOUT_TABLE_BINARIES) $(STARTING_WEAPON_TABLE_BINARIES) $(SPRITE_LAYOUT_BINARIES) $(SPRITE_ANIMATION_BINARIES) $(GLYPH_METRICS_BINARIES) $(TAB_CURSOR_LAYOUT_BINARIES) $(INDEX_BOUNDARIES_BINARIES) $(INDEX_MAP_BINARIES) $(NAME_ENTRY_RESOURCE_BINARIES)
