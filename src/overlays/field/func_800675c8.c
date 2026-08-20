@@ -6,28 +6,16 @@
  * @param arg0   Array index (low 16 bits used).
  * @param value  Number to format.
  * @param digits Column count; digits >= 10 are clamped to '9'.
- * @note WIP - not yet byte-matching. The power-of-ten loop loses its guard
- *       to loop rotation. See working/func_800675C8/STATUS.md.
- * @see decomp.me (78.20%) TODO
+ * @see decomp.me (100%) TODO
  */
 void func_800675C8(s32 arg0, u32 value, u8 digits)
 {
-    u8* dst = (u8*)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED054);
-    u32 div;
-    u32 digit;
-    s32 leading;
-
+    u8* dst; u32 div; u32 digit; s32 leading; u32 blank;
     leading = 1;
+    dst = (u8*)((u32)(arg0 & 0xFFFF) * 0x98 + 0x801ED054);
     div = 1;
-    digits = digits - 1;
-    if (digits != 0)
-    {
-        do
-        {
-            div = div * 10;
-            digits -= 1;
-        } while (digits != 0);
-    }
+    while (--digits != 0) { div = div * 10; }
+    blank = 0x20;
     if (div != 1)
     {
         do
@@ -35,7 +23,7 @@ void func_800675C8(s32 arg0, u32 value, u8 digits)
             digit = value / div;
             if ((digit == 0) && (leading != 0))
             {
-                *dst = 0x20;
+                *dst = blank;
                 dst += 1;
             }
             else
