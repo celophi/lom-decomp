@@ -60,7 +60,8 @@ segments:
       - [0x1462D, c, field1]                    # gcc280_g4, no expand-div
       - [0x17839, c, func_800674a8]             # gcc280_g4, no expand-div
       - [0x17929, c, func_80067598]             # gcc280_g4, no expand-div
-      - [0x17959, c, func_800675c8]             # gcc272_cdk
+      - [0x17959, c, field3]                    # gcc272_cdk, no-expand-div
+      - [0x17A45, c, func_800675c8]             # gcc272_cdk
       - [0x17C65, c, field2]                    # gcc272_cdk, no-schedule-insns
       - [0x17E35, c, func_80067aa4]             # gcc272_cdk
       - [0x17F1D, c, func_80067b8c]             # gcc280_g4, no expand-div

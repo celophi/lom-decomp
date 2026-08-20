@@ -50,8 +50,14 @@ MASPSX_PP_FLAGS := --macro-inc
 
 # Each maspsx-backed compiler family must emulate its original ASPSX version.
 MASPSX_FLAGS         := -no-pad-sections --aspsx-version=2.77 --expand-div
-MASPSX_FLAGS_272_CDK := -no-pad-sections --aspsx-version=2.67 --expand-div
 MASPSX_FLAGS_260     := -no-pad-sections --aspsx-version=2.34 --expand-div
+
+# GCC 2.7.2 CDK div expansion varies by source, like the G4 case below. The
+# flag defaults to --expand-div and is cleared with a target-specific
+# assignment for the no-expand subset. Recursive assignment keeps that value
+# visible here, so the CDK C rule must reference this with $$(...) (deferred).
+MASPSX_CDK_DIV_FLAG := --expand-div
+MASPSX_FLAGS_272_CDK = -no-pad-sections --aspsx-version=2.67 $(MASPSX_CDK_DIV_FLAG)
 
 # GCC 2.8.0 G4 division expansion varies by source. This flag is cleared with
 # a target-specific assignment for objects whose original code used bare div.
