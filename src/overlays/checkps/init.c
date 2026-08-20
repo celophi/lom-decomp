@@ -2,12 +2,12 @@
 
 #include "akao.h"
 #include "display.h"
+#include "game_state.h"
 #include "gpu_packet.h"
-#include "main.h"
 #include "pad.h"
 #include "psyq/libapi.h"
-#include "psyq/libgpu.h"
 #include "psyq/libgte.h"
+#include "psyq/libgpu.h"
 #include "psyq/memory.h"
 
 #define CHECKPS_ORDERING_TABLE_LENGTH 0x1000
