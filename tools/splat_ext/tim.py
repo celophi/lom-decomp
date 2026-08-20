@@ -38,7 +38,7 @@ class PSXSegTim(CommonSegDatabin):
             return (
                 options.opts.asset_path
                 / self.dir
-                / f"{self.name}.tim_with_duplicate_word.bin"
+                / f"{self.name}.tim_trail.bin"
             )
         return self.tim_path()
 

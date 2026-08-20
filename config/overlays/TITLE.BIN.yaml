@@ -59,18 +59,62 @@ segments:
         # Original build artifact: the final 32-bit TIM pixel word is repeated.
         trailing_duplicate_word: true
       - [0x300BD, databin, cursor_blink_palette]
-      - [0x300C1, databin, save_layout_tim_00]
-      - [0x532E5, databin, save_layout_tim_01]
-      - [0x5B329, databin, save_layout_tim_02]
-      - [0x5F7CD, databin, save_layout_tim_03]
-      - [0x63C71, databin, save_layout_tim_04]
-      - [0x64235, databin, save_layout_tim_05]
-      - [0x66679, databin, save_layout_tim_06]
-      - [0x738BD, databin, save_layout_tim_07]
-      - [0x80B01, databin, save_layout_tim_08]
-      - [0x89745, databin, save_layout_tim_09]
-      - [0x99969, databin, save_layout_tim_10]
-      - [0xA9B89, databin, save_layout_gap]
+      # These original TIM embeddings each repeat their final 32-bit pixel word.
+      - start: 0x300C1
+        type: tim
+        name: save_layout_tim_00
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x532E5
+        type: tim
+        name: save_layout_tim_01
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x5B329
+        type: tim
+        name: save_layout_tim_02
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x5F7CD
+        type: tim
+        name: save_layout_tim_03
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x63C71
+        type: tim
+        name: save_layout_tim_04
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x64235
+        type: tim
+        name: save_layout_tim_05
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x66679
+        type: tim
+        name: save_layout_tim_06
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x738BD
+        type: tim
+        name: save_layout_tim_07
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x80B01
+        type: tim
+        name: save_layout_tim_08
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x89745
+        type: tim
+        name: save_layout_tim_09
+        dir: title
+        trailing_duplicate_word: true
+      - start: 0x99969
+        type: tim
+        name: save_layout_tim_10
+        dir: title
+        trailing_duplicate_word: true
       - [0xA9B8D, databin, save_layout_texture_table]
       - [0xA9C3D, databin, save_layout_uv_0]
       - [0xA9C85, databin, save_layout_uv_1]

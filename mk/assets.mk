@@ -3,7 +3,7 @@
 # ============================================================================
 
 PSX_TIM_ASSETS := $(call rwildcard,assets,*.tim)
-PSX_TIM_DUPLICATE_WORD_BINARIES := $(call rwildcard,assets,*.tim_with_duplicate_word.bin)
+PSX_TIM_DUPLICATE_WORD_BINARIES := $(call rwildcard,assets,*.tim_trail.bin)
 SPRITE_LAYOUT_SOURCES := $(call rwildcard,assets,*.sprite_layout.yaml)
 SPRITE_LAYOUT_BINARIES := $(patsubst %.sprite_layout.yaml,%.sprite_layout.bin,$(SPRITE_LAYOUT_SOURCES))
 SPRITE_ANIMATION_SOURCES := $(call rwildcard,assets,*.sprite_animation.yaml)
@@ -23,7 +23,7 @@ NAME_ENTRY_RESOURCE_BINARIES := $(patsubst %.name_entry_resource.yaml,%.name_ent
 
 validate-assets: validate-psx-tim-assets validate-sprite-layout-assets validate-sprite-animation-assets validate-glyph-metrics-assets validate-tab-cursor-layout-assets validate-index-boundaries-assets validate-index-map-assets validate-name-entry-resource-assets
 
-%.tim_with_duplicate_word.bin: %.tim tools/assets/psx_tim.py
+%.tim_trail.bin: %.tim tools/assets/psx_tim.py
 	python3 tools/assets/psx_tim.py build $< $@ --trailing-duplicate-word
 
 validate-psx-tim-assets: $(PSX_TIM_DUPLICATE_WORD_BINARIES)

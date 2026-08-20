@@ -78,12 +78,7 @@ segments:
         type: tim
         name: name_entry
         dir: gname
-      # Original build artifact: duplicates the final 32-bit pixel word of name_entry.tim.
-      # It is outside the TIM's declared sections and is retained for binary matching.
-      - start: 0xF6B5
-        type: databin
-        name: name_entry_tail
-        dir: gname
+        trailing_duplicate_word: true
       - start: 0xF6B9
         type: sprite_layout
         name: layout_sprite_sequence
