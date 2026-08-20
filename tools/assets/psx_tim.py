@@ -161,6 +161,36 @@ def parse_tim(data: bytes) -> TimImage:
     return TimImage.parse(data)
 
 
+def parse_embedded_tim(
+    data: bytes, trailing_duplicate_word: bool = False
+) -> TimImage:
+    """Parse a TIM as embedded by the game, optionally with its last word repeated."""
+    if not trailing_duplicate_word:
+        return parse_tim(data)
+    if len(data) < 4:
+        raise TimFormatError("TIM embedding is too short to contain a duplicate word")
+
+    image = parse_tim(data[:-4])
+    strict_data = image.to_bytes()
+    if data[-4:] != strict_data[-4:]:
+        raise TimFormatError(
+            "TIM trailing word does not duplicate the final 32-bit TIM word"
+        )
+    return image
+
+
+def build_embedded_tim(
+    image: TimImage, trailing_duplicate_word: bool = False
+) -> bytes:
+    """Serialize a strict TIM and optionally repeat its final 32-bit word."""
+    data = image.to_bytes()
+    if trailing_duplicate_word:
+        if len(data) < 4:
+            raise TimFormatError("TIM is too short to duplicate its final word")
+        data += data[-4:]
+    return data
+
+
 def load_tim(path: Path) -> TimImage:
     """Read and parse a TIM file from disk."""
     return parse_tim(path.read_bytes())
@@ -214,6 +244,11 @@ def main() -> int:
     )
     build_parser.add_argument("source", type=Path)
     build_parser.add_argument("output", type=Path)
+    build_parser.add_argument(
+        "--trailing-duplicate-word",
+        action="store_true",
+        help="append a copy of the strict TIM's final 32-bit word",
+    )
 
     args = parser.parse_args()
 
@@ -231,7 +266,9 @@ def main() -> int:
         elif args.command == "build":
             image = load_tim(args.source)
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_bytes(image.to_bytes())
+            args.output.write_bytes(
+                build_embedded_tim(image, args.trailing_duplicate_word)
+            )
             print(f"Wrote {args.output}")
     except (OSError, TimFormatError) as error:
         print(f"error: {error}", file=sys.stderr)

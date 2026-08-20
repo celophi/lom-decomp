@@ -48,8 +48,16 @@ segments:
       - [0x1, .rodata, title]
       - [0x5, c, title]
       - [0x2679, databin, title_menu_tim_table]
-      - [0x2685, databin, title_menu_tim_0]
-      - [0xA8A5, databin, title_menu_tim_1]
+      - start: 0x2685
+        type: tim
+        name: title_menu_tim_0
+        dir: title
+      - start: 0xA8A5
+        type: tim
+        name: title_menu_tim_1
+        dir: title
+        # Original build artifact: the final 32-bit TIM pixel word is repeated.
+        trailing_duplicate_word: true
       - [0x300BD, databin, cursor_blink_palette]
       - [0x300C1, databin, save_layout_tim_00]
       - [0x532E5, databin, save_layout_tim_01]

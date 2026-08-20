@@ -4,7 +4,13 @@
 import struct
 import unittest
 
-from psx_tim import TIM_MAGIC, TimFormatError, parse_tim
+from psx_tim import (
+    TIM_MAGIC,
+    TimFormatError,
+    build_embedded_tim,
+    parse_embedded_tim,
+    parse_tim,
+)
 
 
 def make_block(x: int, y: int, width_words: int, height: int, fill: int) -> bytes:
@@ -43,6 +49,22 @@ class TimImageTests(unittest.TestCase):
     def test_rejects_trailing_bytes(self):
         with self.assertRaisesRegex(TimFormatError, "trailing bytes"):
             parse_tim(make_indexed_tim() + b"\x00\x01")
+
+    def test_validates_and_rebuilds_trailing_duplicate_word(self):
+        strict = make_indexed_tim()
+        embedded = strict + strict[-4:]
+
+        image = parse_embedded_tim(embedded, trailing_duplicate_word=True)
+
+        self.assertEqual(image.to_bytes(), strict)
+        self.assertEqual(
+            build_embedded_tim(image, trailing_duplicate_word=True), embedded
+        )
+
+    def test_rejects_nonmatching_trailing_word(self):
+        strict = make_indexed_tim()
+        with self.assertRaisesRegex(TimFormatError, "does not duplicate"):
+            parse_embedded_tim(strict + b"\x00\x01\x02\x03", True)
 
     def test_rejects_truncated_block(self):
         with self.assertRaisesRegex(TimFormatError, "past file size"):

@@ -18,23 +18,52 @@ _tool_spec.loader.exec_module(_tool_module)
 
 
 class PSXSegTim(CommonSegDatabin):
-    """Extract a strict TIM file and link it in the original `.data` section."""
+    """Extract a strict TIM and reproduce its exact in-overlay representation."""
 
-    def bin_path(self) -> Path:
+    def tim_path(self) -> Path:
         return options.opts.asset_path / self.dir / f"{self.name}.tim"
 
-    def split(self, rom_bytes):
+    def has_trailing_duplicate_word(self) -> bool:
+        value = False
+        if isinstance(self.yaml, dict):
+            value = self.yaml.get("trailing_duplicate_word", False)
+        if type(value) is not bool:
+            log.error(
+                f"TIM segment '{self.name}' trailing_duplicate_word must be true or false"
+            )
+        return value
+
+    def bin_path(self) -> Path:
+        if self.has_trailing_duplicate_word():
+            return (
+                options.opts.asset_path
+                / self.dir
+                / f"{self.name}.tim_with_duplicate_word.bin"
+            )
+        return self.tim_path()
+
+    def write_bin(self, rom_bytes):
         assert isinstance(self.rom_start, int)
         assert isinstance(self.rom_end, int)
 
         source = bytes(rom_bytes[self.rom_start : self.rom_end])
         try:
-            image = _tool_module.parse_tim(source)
-            if image.to_bytes() != source:
+            duplicate_word = self.has_trailing_duplicate_word()
+            image = _tool_module.parse_embedded_tim(source, duplicate_word)
+            rebuilt = _tool_module.build_embedded_tim(image, duplicate_word)
+            if rebuilt != source:
                 raise _tool_module.TimFormatError(
                     "parser/builder round trip differs from the extracted bytes"
                 )
         except _tool_module.TimFormatError as error:
             log.error(f"TIM segment '{self.name}' is invalid: {error}")
 
-        super().split(rom_bytes)
+        tim_path = self.tim_path()
+        tim_path.parent.mkdir(parents=True, exist_ok=True)
+        tim_path.write_bytes(image.to_bytes())
+
+        bin_path = self.bin_path()
+        if bin_path != tim_path:
+            bin_path.write_bytes(rebuilt)
+
+        self.log(f"Wrote {self.name} to {tim_path} and {bin_path}")
