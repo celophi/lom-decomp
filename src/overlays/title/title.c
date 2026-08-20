@@ -10,10 +10,6 @@
 /* Number of frames the slide-lerper takes to animate a full panel scroll. */
 #define SLOT_SLIDE_FRAMES 8
 
-/* CD resource index of the first title SEQ. load_title_seq adds the variant
- * index to this base to obtain the actual resource passed to cdrom_queue_read. */
-#define TITLE_SEQ_RESOURCE_BASE 0x17
-
 /* Length, in 32-bit words, of each sub-menu layout table copied by
  * load_sub_menu_layout (0x94 words == 0x250 bytes). */
 #define SUB_MENU_LAYOUT_WORDS 0x94U
@@ -52,6 +48,23 @@
 /* Idle countdown loaded by init_title_menu_state: 0xE10 == 3600 frames (~60 s at
  * 60 Hz) before the title times out to the attract loop. */
 #define TITLE_IDLE_COUNTDOWN_FRAMES 0xE10
+
+/* Full-screen fade encoding and blend modes. */
+#define TITLE_FADE_NEUTRAL 0x100
+#define TITLE_FADE_ADDITIVE_THRESHOLD (TITLE_FADE_NEUTRAL + 1)
+#define TITLE_FADE_ADDITIVE_DRAW_MODE 0x25
+#define TITLE_FADE_SUBTRACTIVE_DRAW_MODE 0x45
+
+/** @brief Packet view for a fade TILE or draw-mode command. */
+typedef union
+{
+    TILE tile;
+    DR_TPAGE draw_mode;
+} TitleFadePrimitive;
+
+/** Advance a fade packet cursor by the concrete packet just emitted. */
+#define TITLE_NEXT_FADE_PRIMITIVE(primitive, type) \
+    ((TitleFadePrimitive*)((u8*)(primitive) + sizeof(type)))
 
 static void scroll_slots_right(void);
 static void scroll_slots_left(void);
@@ -368,8 +381,8 @@ void init_title_display(MenuContext* ctx_base)
  * loads SOUND/EFFECT.SET from CD-ROM into the 0x80180000 scratch buffer,
  * splits the blob via its self-referential offset table, copies the
  * instrument/sample sub-block to g_titleAudioBankBase (0x8013C000) and
- * registers it as the active AKAO bank, then submits the trailing AKAO
- * sequence sub-block for blocking playback.
+ * registers it as the active AKAO bank, then uploads the trailing instrument
+ * bank to the SPU.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/6zUZp
  */
@@ -390,21 +403,20 @@ void load_title_audio_bank(void)
 
         bcopy(base + off[0], (u8*)g_titleAudioBankBase, (int)(off[1] - off[0]));
 
-        akao_register_bank((AkaoSeqHeader*)g_titleAudioBankBase);
-        akao_play_sequence_blocking((AkaoSeqHeader*)(base + off[1]), 1);
+        akao_register_bank((AkaoHeader*)g_titleAudioBankBase);
+        akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
     }
 }
 
 /**
- * @brief Load and play a title-screen SEQ resource from CD-ROM.
+ * @brief Load a title-screen sequence and its instrument bank from CD-ROM.
  *
  * @details Counterpart of CHECKPS func_80050138. Reads CD resource
- * (TITLE_SEQ_RESOURCE_BASE + seq_variant) into the 0x80180000 scratch
+ * @c CD_RES_MUSIC_FILE(seq_variant) into the 0x80180000 scratch
  * buffer, splits it via its self-referential offset table, copies the
- * sequence sub-block to D_8003ECA0, then submits it for blocking playback.
+ * sequence sub-block to D_8003ECA0, then uploads the trailing instrument bank.
  *
- * @param seq_variant Offset added to TITLE_SEQ_RESOURCE_BASE to select
- *        which title SEQ variant to load.
+ * @param seq_variant Music-file index; 0 selects MSC_DATA.DAT.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/mBQ6i
  */
@@ -413,14 +425,14 @@ void load_title_seq(s32 seq_variant)
     u32* off;
     u8* base;
 
-    cdrom_queue_read((seq_variant + TITLE_SEQ_RESOURCE_BASE) & 0xFFFF, (void*)0x80180000);
+    cdrom_queue_read(CD_RES_MUSIC_FILE(seq_variant), (void*)0x80180000);
     cdrom_wait_queue_empty();
 
     off = (u32*)0x80180004;
     base = (u8*)0x80180000;
 
     bcopy(base + off[0], (u8*)&D_8003ECA0, (int)(off[1] - off[0]));
-    akao_play_sequence_blocking((AkaoSeqHeader*)(base + off[1]), 1);
+    akao_upload_bank_blocking((AkaoBankHeader*)(base + off[1]), 1);
 }
 
 /**
@@ -440,14 +452,14 @@ void stop_title_music(void)
  *
  * @details Counterpart of CHECKPS func_800501CC. Plays the SEQ loaded into
  * D_8003ECA0 (by load_title_seq) and sets the song volume to maximum via
- * akao_cmd_c0.
+ * akao_set_song_volume.
  *
  * @see decomp.me (100%) https://decomp.me/scratch/xYPkq
  */
 void start_title_music(void)
 {
-    akao_play_song(&D_8003ECA0);
-    akao_cmd_c0(0, 0x7F);
+    akao_play_song((AkaoHeader*)&D_8003ECA0);
+    akao_set_song_volume(0, AKAO_VOLUME_MAX);
 }
 
 /**
@@ -501,21 +513,22 @@ void reset_fade_state(void)
 void render_fade_overlay(MenuContext* ctx)
 {
     MenuContext* base = ctx;
-    u32* var_t4 = (u32*)base->next_prim_ptr;
-    u32* unk40_ptr = (u32*)base->otag_buffer;
-    s32 temp_a2;
-    s32 temp_a0;
-    s32 temp_v1;
-    s32 var_a1;
+    TitleFadePrimitive* primitive = (TitleFadePrimitive*)base->next_prim_ptr;
+    u_long* ordering_table_tag = base->otag_buffer;
+    s32 red_step;
+    s32 green_step;
+    s32 blue_step;
+    s32 draw_mode;
+
     if (g_fadeTarget.steps != 0)
     {
-        temp_a2 = ((s32)(g_fadeTarget.red - g_fadeCurrent.red)) / ((s32)g_fadeTarget.steps);
-        temp_a0 = ((s32)(g_fadeTarget.green - g_fadeCurrent.green)) / ((s32)g_fadeTarget.steps);
-        temp_v1 = ((s32)(g_fadeTarget.blue - g_fadeCurrent.blue)) / ((s32)g_fadeTarget.steps);
+        red_step = (g_fadeTarget.red - g_fadeCurrent.red) / g_fadeTarget.steps;
+        green_step = (g_fadeTarget.green - g_fadeCurrent.green) / g_fadeTarget.steps;
+        blue_step = (g_fadeTarget.blue - g_fadeCurrent.blue) / g_fadeTarget.steps;
         g_fadeTarget.steps = g_fadeTarget.steps - 1;
-        g_fadeCurrent.red = g_fadeCurrent.red + temp_a2;
-        g_fadeCurrent.green = g_fadeCurrent.green + temp_a0;
-        g_fadeCurrent.blue = g_fadeCurrent.blue + temp_v1;
+        g_fadeCurrent.red = g_fadeCurrent.red + red_step;
+        g_fadeCurrent.green = g_fadeCurrent.green + green_step;
+        g_fadeCurrent.blue = g_fadeCurrent.blue + blue_step;
     }
     else
     {
@@ -523,63 +536,61 @@ void render_fade_overlay(MenuContext* ctx)
         g_fadeCurrent.green = g_fadeTarget.green;
         g_fadeCurrent.blue = g_fadeTarget.blue;
     }
-    if (!(((g_fadeCurrent.red == 0x100) && (g_fadeCurrent.green == 0x100)) && (g_fadeCurrent.blue == 0x100)))
+    if (!(((g_fadeCurrent.red == TITLE_FADE_NEUTRAL) && (g_fadeCurrent.green == TITLE_FADE_NEUTRAL)) &&
+          (g_fadeCurrent.blue == TITLE_FADE_NEUTRAL)))
     {
-        if (((s32)g_fadeCurrent.red) >= 0x101)
+        if (g_fadeCurrent.red >= TITLE_FADE_ADDITIVE_THRESHOLD)
         {
-            ((TILE*)var_t4)->r0 = ((u8)g_fadeCurrent.red) - 1;
-            ((TILE*)var_t4)->g0 = ((u8)g_fadeCurrent.green) - 1;
-            ((TILE*)var_t4)->b0 = ((u8)g_fadeCurrent.blue) - 1;
+            primitive->tile.r0 = g_fadeCurrent.red - 1;
+            primitive->tile.g0 = g_fadeCurrent.green - 1;
+            primitive->tile.b0 = g_fadeCurrent.blue - 1;
         }
         else
         {
-            if (g_fadeCurrent.red == 0x100)
+            if (g_fadeCurrent.red == TITLE_FADE_NEUTRAL)
             {
-                ((TILE*)var_t4)->r0 = 0;
+                primitive->tile.r0 = 0;
             }
             else
             {
-                ((TILE*)var_t4)->r0 = ~((u8)g_fadeCurrent.red);
+                primitive->tile.r0 = ~g_fadeCurrent.red;
             }
-            if (g_fadeCurrent.green == 0x100)
+            if (g_fadeCurrent.green == TITLE_FADE_NEUTRAL)
             {
-                ((TILE*)var_t4)->g0 = 0;
-            }
-            else
-            {
-                ((TILE*)var_t4)->g0 = ~((u8)g_fadeCurrent.green);
-            }
-            if (g_fadeCurrent.blue == 0x100)
-            {
-                ((TILE*)var_t4)->b0 = 0;
+                primitive->tile.g0 = 0;
             }
             else
             {
-                ((TILE*)var_t4)->b0 = ~((u8)g_fadeCurrent.blue);
+                primitive->tile.g0 = ~g_fadeCurrent.green;
+            }
+            if (g_fadeCurrent.blue == TITLE_FADE_NEUTRAL)
+            {
+                primitive->tile.b0 = 0;
+            }
+            else
+            {
+                primitive->tile.b0 = ~g_fadeCurrent.blue;
             }
         }
-        setlen(var_t4, 3);
-        setcode(var_t4, 0x62);
-        ((TILE*)var_t4)->w = SCREEN_WIDTH;
-        ((TILE*)var_t4)->y0 = 0;
-        ((TILE*)var_t4)->x0 = 0;
-        ((TILE*)var_t4)->h = SCREEN_HEIGHT;
-        *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
-        *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
-        ;
-        var_a1 = 0x25;
-        var_t4 = (u32*)(((u8*)var_t4) + 0x10);
-        if (((s32)g_fadeCurrent.red) < 0x101)
+
+        setTile(&primitive->tile);
+        setSemiTrans(&primitive->tile, 1);
+        SET_YX0(&primitive->tile, 0, 0);
+        setWH(&primitive->tile, SCREEN_WIDTH, SCREEN_HEIGHT);
+        addPrim(ordering_table_tag, &primitive->tile);
+
+        draw_mode = TITLE_FADE_ADDITIVE_DRAW_MODE;
+        primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, TILE);
+        if (g_fadeCurrent.red < TITLE_FADE_ADDITIVE_THRESHOLD)
         {
-            var_a1 = 0x45;
+            draw_mode = TITLE_FADE_SUBTRACTIVE_DRAW_MODE;
         }
-        setlen(var_t4, 1);
-        ((DR_TPAGE*)var_t4)->code[0] = (s32)(var_a1 | 0xE1000000);
-        *var_t4 = ((*var_t4) & 0xFF000000) | ((*unk40_ptr) & 0xFFFFFF);
-        *unk40_ptr = ((*unk40_ptr) & 0xFF000000) | (((u32)var_t4) & 0xFFFFFF);
-        var_t4 = (u32*)(((u8*)var_t4) + 8);
+        setDrawTPage(&primitive->draw_mode, 0, 0, draw_mode);
+        addPrim(ordering_table_tag, &primitive->draw_mode);
+
+        primitive = TITLE_NEXT_FADE_PRIMITIVE(primitive, DR_TPAGE);
     }
-    base->next_prim_ptr = (u_long*)var_t4;
+    base->next_prim_ptr = (u_long*)primitive;
 }
 
 /**
@@ -1274,7 +1285,7 @@ static void read_pad_input(void)
         buttons = PAD_REMAP_FACE_BITS(buttons);
         if (base->device_type != 0)
         {
-            axis = base->axis_x;
+            axis = base->axis_x.signed_value;
             if (axis < (-1))
             {
                 buttons |= PAD_BTN_LEFT;
@@ -1283,7 +1294,7 @@ static void read_pad_input(void)
             {
                 buttons |= PAD_BTN_RIGHT;
             }
-            axis = base->axis_y;
+            axis = base->axis_y.signed_value;
             if (axis < (-1))
             {
                 buttons |= PAD_BTN_UP;

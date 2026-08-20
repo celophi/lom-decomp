@@ -29,6 +29,13 @@
 /** PSX 16bpp mask bit: set on a CLUT entry to enable semi-transparency. */
 #define GPU_STP_BIT 0x8000
 
+/** @brief Width and height stored in a TIM block header. */
+typedef struct
+{
+    u16 width;
+    u16 height;
+} TimDimensions;
+
 /**
  * @brief Header of a PSX TIM pixel/CLUT block.
  *
@@ -42,9 +49,23 @@ typedef struct
     u32 bnum; /* 0x00 - block length in bytes, including this header */
     u16 dx;   /* 0x04 - VRAM destination X */
     u16 dy;   /* 0x06 - VRAM destination Y */
-    u16 w;    /* 0x08 - region width in pixels */
-    u16 h;    /* 0x0A - region height in lines */
+    TimDimensions dimensions; /* 0x08 - region size */
 } TimBlock;
+
+/**
+ * @brief Fixed prefix of a TIM file whose CLUT length varies by bit depth.
+ *
+ * The CLUT payload begins at @c clut_data and contains the number of entries
+ * implied by @c clut_block.bnum. The pixel block follows at that variable
+ * offset; use @c TIM_PIXEL_BLOCK to locate it.
+ */
+typedef struct
+{
+    u32 magic;
+    u32 flags;
+    TimBlock clut_block;
+    u16 clut_data[1];
+} TimPrefix;
 
 /**
  * @brief PSX TIM file header for an 8bpp (256-color) image.
