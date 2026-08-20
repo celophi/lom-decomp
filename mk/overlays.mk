@@ -166,7 +166,7 @@ endif
 # Rule: link the overlay ELF
 # Track every object and linker script consumed by the link command.
 # The standalone asset object is included only when asset_src is configured.
-$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $$($(1)_LINKER_SCRIPTS) | $(1)-validate
+$$($(1)_TARGET): $(COPY_SENTINEL) $$($(1)_C_OBJS) $$($(1)_DATA_OBJS) $$(if $$($(1)_ASSET_SRC),$$($(1)_ASSET_OBJ)) $$($(1)_LINKER_SCRIPTS) | $(1)-validate validate-assets
 	@mkdir -p $$(@D)
 	cd $(STAGING) && $(LD) -o $$($(1)_BUILD_DIR)/$(1).elf \
 		-T $$($(1)_LINK_DIR)/$(1).ld \
