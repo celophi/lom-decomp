@@ -1,4 +1,4 @@
-#include "checkps.h"
+#include "checkps_internal.h"
 
 s32 g_checkps_vsync_timestamp = 0;
 s32 g_cd_last_track_bcd = 0;

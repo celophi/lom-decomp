@@ -1,4 +1,4 @@
-#include "checkps.h"
+#include "checkps_internal.h"
 
 /*
  * GNU as 2.7 pads the standard .text section to a 16-byte boundary.  Keeping
@@ -6,8 +6,6 @@
  * bytes; the build renames the section back to .text with objcopy.
  */
 #define CHECKPS_GNU_TEXT __attribute__((section(".text.cdrom")))
-#define CHECKPS_CD_IRQ_DISK_ERROR 5
-#define CHECKPS_CD_STATUS_SHELL_OPEN 0x10
 
 /*
  * Keep the section attribute on declarations so Splat can discover each
@@ -19,19 +17,18 @@ CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command) CHECKPS_GNU_
 void send_cd_command(CheckPSCdCommandIndex command) CHECKPS_GNU_TEXT;
 void show_hardware_modification_warning_and_exit(void) CHECKPS_GNU_TEXT;
 
-/** Initialize the CHECKPS CD integrity state machine. */
+/**
+ * @brief Initialize the CHECKPS CD integrity state machine.
+ */
 void start_cd_integrity_check(void)
 {
     g_checkps_state = CHECKPS_STATE_START_GET_TN;
 }
 
 /**
- * Drive the CHECKPS CD integrity command state machine.
- *
- * A nonzero single_step executes one transition. Zero keeps processing until
- * the state machine becomes idle. The explicit gotos and label-address array
- * are compiler-shaping constructs required by GCC 2.7.2; rewriting them as
- * structured loops changes register allocation and code generation.
+ * @brief Advance the CHECKPS CD integrity state machine.
+ * @param single_step Nonzero to execute one transition; zero to run until idle.
+ * @return Current state/result code after processing.
  */
 s32 run_cd_integrity_check(s32 single_step)
 {
@@ -179,8 +176,8 @@ s32 run_cd_integrity_check(s32 single_step)
 
                                 /* These cancelling operations preserve the original pointer
                                    expression emitted by GCC 2.7.2. */
-                                address_mixer = ((u32)0x88888889U + (u32)single_step) - (u32)single_step;
-                                toc_time_bcd = (u8*)((u32)g_cd_response_payload + (address_mixer ^ (u32)0x88888889U));
+                                address_mixer = ((u32)CHECKPS_POINTER_IDENTITY_MAGIC + (u32)single_step) - (u32)single_step;
+                                toc_time_bcd = (u8*)((u32)g_cd_response_payload + (address_mixer ^ (u32)CHECKPS_POINTER_IDENTITY_MAGIC));
                                 toc_minutes_bcd = toc_time_bcd[0];
                                 toc_seconds_bcd = toc_time_bcd[1];
 
@@ -578,7 +575,7 @@ s32 run_cd_integrity_check(s32 single_step)
 
         case CHECKPS_STATE_TEST_05_DELAY: /* Delay 200 VSync intervals before Test(0x05). */
             restart_state_or_vsync = VSync(-1);
-            if ((g_checkps_vsync_timestamp + 0xC8) < restart_state_or_vsync)
+            if ((g_checkps_vsync_timestamp + CHECKPS_CD_TEST_DELAY_FRAMES) < restart_state_or_vsync)
             {
                 g_cd_command_parameters[0] = 5;
                 send_cd_command(CHECKPS_CD_CMD_TEST_05);
@@ -664,7 +661,7 @@ s32 run_cd_integrity_check(s32 single_step)
                 {
                     if (step_result == CHECKPS_CD_POLL_PENDING)
                     {
-                        step_result = 16 + ((step_result & 1) >> 1);
+                        step_result = CHECKPS_STATE_WAIT_FAILURE_NOP + ((step_result & 1) >> 1);
                         break;
                     }
                     if (step_result != CHECKPS_CD_POLL_COMPLETE)
@@ -711,7 +708,7 @@ s32 run_cd_integrity_check(s32 single_step)
                     case CHECKPS_CD_POLL_PENDING:
                     default:
                     recovery_nop_finalize:
-                        step_result = 16 + ((step_result & 1) >> 1);
+                        step_result = CHECKPS_STATE_WAIT_FAILURE_NOP + ((step_result & 1) >> 1);
                         break;
                     }
                     break;
@@ -767,12 +764,12 @@ s32 run_cd_integrity_check(s32 single_step)
             if (step_result != CHECKPS_CD_POLL_PENDING)
                 g_checkps_state = CHECKPS_STATE_IDLE;
         state18_finalize:
-            step_result = 18 + ((step_result & 1) >> 1);
+            step_result = CHECKPS_STATE_WAIT_PAUSE + ((step_result & 1) >> 1);
             break;
 
         case CHECKPS_STATE_PAUSE_DELAY: /* Delay ten VSync intervals before Pause. */
             restart_state_or_vsync = VSync(-1);
-            if ((g_checkps_vsync_timestamp + 10) < restart_state_or_vsync)
+            if ((g_checkps_vsync_timestamp + CHECKPS_CD_PAUSE_DELAY_FRAMES) < restart_state_or_vsync)
             {
                 send_cd_command(CHECKPS_CD_CMD_PAUSE);
                 g_checkps_state = CHECKPS_STATE_WAIT_PAUSE;
@@ -799,7 +796,11 @@ s32 run_cd_integrity_check(s32 single_step)
     }
 }
 
-/** Poll and consume the response for a CHECKPS CD command. */
+/**
+ * @brief Poll and consume the response for a CHECKPS CD command.
+ * @param command Command whose response is expected.
+ * @return Poll status describing completion, pending state, or hardware error.
+ */
 CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
 {
     u8 irq_code_sum_target;
@@ -814,7 +815,7 @@ CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
     *g_cd_status_register = 1;
     irq_sample_a = *g_cd_irq_register;
     irq_sample_b = *g_cd_irq_register;
-    if ((stable_irq = irq_sample_a & 7) == (irq_sample_b & 7))
+    if ((stable_irq = irq_sample_a & CHECKPS_CD_IRQ_STATUS_MASK) == (irq_sample_b & CHECKPS_CD_IRQ_STATUS_MASK))
     {
         irq_code = stable_irq;
         irq_code_byte = (unsigned char)irq_code;
@@ -822,7 +823,7 @@ CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
         {
             g_cd_irq_code_sum = g_cd_irq_code_sum + irq_code_byte;
             *g_cd_status_register = 1;
-            *g_cd_irq_register = 7;
+            *g_cd_irq_register = CHECKPS_CD_IRQ_STATUS_MASK;
             delay_counter = 0;
             /* Preserve the original four address-zero writes used as a short hardware delay. */
             do
@@ -842,7 +843,7 @@ CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                     }
                     g_cd_response.detail = *g_cd_response_register;
                     *g_cd_status_register = 1;
-                    *g_cd_data_register = 0x1F;
+                    *g_cd_data_register = CHECKPS_CD_IRQ_ACK_MASK;
                     if (!(g_cd_response.status & CHECKPS_CD_STATUS_SHELL_OPEN))
                     {
                         return CHECKPS_CD_POLL_DISK_ERROR;
@@ -863,7 +864,7 @@ CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                         } while (response_index < (s32)g_cd_command_table[command].response_count);
                     }
                     *g_cd_status_register = 1;
-                    *g_cd_data_register = 0x1F;
+                    *g_cd_data_register = CHECKPS_CD_IRQ_ACK_MASK;
                     if (command != CHECKPS_CD_CMD_TEST_05)
                     {
                         response_index = 0;
@@ -872,7 +873,7 @@ CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
                             if (response_index)
                                 return CHECKPS_CD_POLL_SHELL_OPEN;
                             response_index = g_cd_response.status;
-                            response_index &= 0x10;
+                            response_index &= CHECKPS_CD_STATUS_SHELL_OPEN;
                             if (!response_index)
                                 break;
                         }
@@ -886,7 +887,10 @@ CheckPSCdPollResult poll_cd_response(CheckPSCdCommandIndex command)
     return CHECKPS_CD_POLL_PENDING;
 }
 
-/** Write one CHECKPS command descriptor and its parameters to the CD registers. */
+/**
+ * @brief Write a CHECKPS command and its parameters to the CD controller.
+ * @param command Command descriptor index to send.
+ */
 void send_cd_command(CheckPSCdCommandIndex command)
 {
     s32 delay_counter = 0;
@@ -895,14 +899,14 @@ void send_cd_command(CheckPSCdCommandIndex command)
     unsigned int descriptor_byte_offset;
 
     *g_cd_status_register = 1;
-    *g_cd_irq_register = 7;
+    *g_cd_irq_register = CHECKPS_CD_IRQ_STATUS_MASK;
 
     /* The original performs four writes through address zero between CD-register
        updates. Preserve the sequence because it affects the matched instruction stream. */
     for (delay_counter = 0; delay_counter < 4; delay_counter++) *address_zero_delay_sink = delay_counter;
 
     *g_cd_status_register = 1;
-    *g_cd_data_register = 0x18;
+    *g_cd_data_register = CHECKPS_CD_PARAMETER_MODE;
     *g_cd_status_register = 0;
 
     /* Keep byte indexing through the field pointer: direct table[command] field
@@ -923,7 +927,9 @@ void send_cd_command(CheckPSCdCommandIndex command)
     *g_cd_response_register = (&g_cd_command_table->opcode)[command * 4];
 }
 
-/** Reset the GPU, display the hardware-modification warning, and terminate. */
+/**
+ * @brief Display the hardware-modification warning and terminate execution.
+ */
 void show_hardware_modification_warning_and_exit(void)
 {
     DRAWENV draw_env;
@@ -936,28 +942,28 @@ void show_hardware_modification_warning_and_exit(void)
     ResetGraph(1);
     StopCallback();
     ResetGraph(5);
-    *((s16*)0x1F801DAA) = 0; /* SPU control register. */
-    SetDefDrawEnv(&draw_env, 0, 0, 0x140, 0xF0);
-    SetDefDispEnv(&disp_env, 0, 0, 0x140, 0xF0);
+    *CHECKPS_SPU_CONTROL_REGISTER = 0;
+    SetDefDrawEnv(&draw_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    SetDefDispEnv(&disp_env, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     draw_env.isbg = 1;
     SetDrawEnv(&draw_env_packet, &draw_env);
     DrawPrim(&draw_env_packet);
     PutDispEnv(&disp_env);
-    gpu_commands[0] = 0x02000000;
-    gpu_commands[1] = 0xE6000002;
+    gpu_commands[0] = CHECKPS_GPU_FILL_RECT_COMMAND;
+    gpu_commands[1] = CHECKPS_GPU_MASK_BIT_COMMAND;
     gpu_commands[2] = 0;
     DrawPrim(gpu_commands);
-    text_color = 0xFFFF;
+    text_color = CHECKPS_WARNING_PRIMARY_COLOR;
 
-    text_state.width = 0x10;
+    text_state.width = CHECKPS_WARNING_TEXT_WIDTH;
     text_state.height = 1;
 
-    for (line_index = 0; line_index < 2; line_index++)
+    for (line_index = 0; line_index < CHECKPS_WARNING_LINE_COUNT; line_index++)
     {
-        text_state.x = line_index + 0x50;
-        text_state.y = line_index + 0x5C;
+        text_state.x = line_index + CHECKPS_WARNING_TEXT_X;
+        text_state.y = line_index + CHECKPS_WARNING_TEXT_Y;
         draw_kanji_string((const char*)&g_hardware_modification_warning, (KanjiDrawState*)&text_state, text_color);
-        text_color = 0x8000;
+        text_color = CHECKPS_WARNING_SHADOW_COLOR;
     }
 
     draw_hardware_check_pattern();

@@ -1,23 +1,9 @@
-#include "checkps.h"
+#include "checkps_internal.h"
 /**
- * @brief Renders a Shift-JIS encoded string to VRAM by uploading each glyph via draw_kanji_glyph.
- *
- * @details Walks @p text as Shift-JIS, consuming two bytes for each non-newline character, combining each pair into a 16-bit Shift-JIS
- * character code and passing the result to Krom2RawAdd() to retrieve the glyph bitmap from
- * the PS1 Kanji ROM. Each glyph is drawn at the current draw_state position and the x cursor
- * is advanced by 17px. Newline bytes (0x0A) reset x to its original value and advance y by
- * 18px instead of drawing a glyph.
- *
- * draw_state->position x/y are not restored on exit; the caller's draw cursor is left
- * at the end of the last line rendered.
- *
- * @param text      Null-terminated Shift-JIS string. Newlines are single-byte 0x0A values.
- * @param draw_state VRAM destination position and glyph size. x and y are updated in place
- *                  as each character is drawn.
- * @param color     Foreground pixel value passed to draw_kanji_glyph for each glyph.
- *
- * @return void No return value.
- *
+ * @brief Draw a Shift-JIS string using glyphs from the PS1 Kanji ROM.
+ * @param text Null-terminated Shift-JIS text; newline resets the x cursor.
+ * @param draw_state VRAM cursor and glyph dimensions, updated while drawing.
+ * @param color Foreground pixel value.
  */
 void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color)
 {
@@ -31,7 +17,7 @@ void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color)
     s32 newline;
     glyph_color = color;
     end = text + strlen(text);
-    newline = 10;
+    newline = '\n';
     saved_x = draw_state->position.coord.x;
     if (text < end)
     {
@@ -42,7 +28,7 @@ void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color)
             if (is_newline)
             {
                 draw_state->position.coord.x = saved_x;
-                draw_state->position.coord.y += 18;
+                draw_state->position.coord.y += CHECKPS_KANJI_LINE_HEIGHT;
             }
             else
             {
@@ -50,32 +36,17 @@ void draw_kanji_string(const char* text, KanjiDrawState* draw_state, s32 color)
                 text++;
                 character_code = (high_byte << 8) | (*((u8*)text));
                 draw_kanji_glyph(draw_state, (u8*)Krom2RawAdd(character_code), glyph_color);
-                draw_state->position.coord.x += 17;
+                draw_state->position.coord.x += CHECKPS_KANJI_ADVANCE;
             }
             text++;
         } while (text < text_end);
     }
 }
 /**
- * @brief Uploads a single 1bpp glyph row-by-row to VRAM using GPU LoadImage packets.
- *
- * @details For each of the 15 scanlines in the glyph, reads 2 bytes (16 bits) from
- * the raw bitmap and expands each bit into a 16-bit pixel: set bits become color,
- * clear bits become 0. The decoded row is then sent to VRAM twice via DrawPrim,
- * advancing x by one pixel between the two uploads. The duplicate upload thickens
- * each scanline horizontally; after each row, x is restored and y advances by one.
- *
- * draw_state->position x/y are restored on exit, so the caller's draw cursor
- * is not modified.
- *
- * @param draw_state VRAM destination and size for the upload. x and y are used as the
- *                  target coordinates; packed_size is passed directly to the GPU packet.
- * @param bitmap    Pointer to the raw 1bpp glyph data (2 bytes per row, 15 rows).
- *                  Typically obtained from Krom2RawAdd() for kanji/kana characters.
- * @param color     Foreground pixel value written for set bits. Clear bits write 0.
- *
- * @return void No return value.
- *
+ * @brief Expand and upload one 1bpp Kanji-ROM glyph to VRAM.
+ * @param draw_state VRAM destination and glyph dimensions.
+ * @param bitmap Raw 1bpp glyph bitmap.
+ * @param color Foreground pixel value.
  */
 void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
 {
@@ -85,7 +56,7 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
         s32 code;
         s32 xy;
         s32 wh;
-        s16 pixels[16];
+        s16 pixels[CHECKPS_KANJI_PIXELS_PER_ROW];
     } packet;
     s32 original_x;
     s32 original_y;
@@ -103,10 +74,10 @@ void draw_kanji_glyph(KanjiDrawState* draw_state, u8* bitmap, s32 color)
     original_y = draw_state->position.coord.y;
 
     // GPU CPU→VRAM (LoadImage) packet: tag=11 following words, code=0xA0
-    packet.tag = 0x0B000000;
-    packet.code = 0xA0000000;
+    packet.tag = CHECKPS_KANJI_GPU_TAG;
+    packet.code = CHECKPS_KANJI_GPU_LOAD_IMAGE;
     packet.wh = draw_state->packed_size;
-    for (row = 0; row < 15; row++)
+    for (row = 0; row < CHECKPS_GLYPH_BITMAP_ROWS; row++)
     {
         write_ptr = packet.pixels;
 
