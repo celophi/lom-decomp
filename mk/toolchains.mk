@@ -29,7 +29,12 @@ CFLAGS_G0 := -O2 -G0 -gcoff -fsigned-char -fno-builtin
 CFLAGS_G4 := -O2 -G4 -gcoff -fsigned-char
 
 # Alternate compiler and assembler flags.
-CFLAGS_272_CDK_G0 := -O2 -G0 -msoft-float -gcoff
+# The GCC 2.7.2 CDK G0 pipeline optionally disables the instruction scheduler.
+# CFLAGS_272_CDK_SCHED_FLAG is empty by default (scheduler on); it is set with a
+# target-specific assignment to -fno-schedule-insns for the nosched object
+# subset. Recursive assignment keeps that value visible here.
+CFLAGS_272_CDK_SCHED_FLAG :=
+CFLAGS_272_CDK_G0 = -O2 -G0 -msoft-float -gcoff $(CFLAGS_272_CDK_SCHED_FLAG)
 CFLAGS_272_GNU_G0 := -O2 -G0
 ASFLAGS_272_GNU    := -O -EL
 CFLAGS_260_G0      := -O2 -G0 -gcoff -msoft-float
