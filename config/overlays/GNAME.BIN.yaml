@@ -44,14 +44,30 @@ segments:
     subsegments:
       - [0x1, .rodata, gname]
       - [0x5, c, gname]
-      - [0x2C99, databin, gname_tables]
-      - [0x2EF5, databin, gname_panel_data]
-      - [0x7495, tim, gname_name_entry]
-      - [0xF6B5, databin, gname_name_entry_tail]
+      - start: 0x2C99
+        type: databin
+        name: tables
+        dir: gname
+      - start: 0x2EF5
+        type: databin
+        name: panel_data
+        dir: gname
+      - start: 0x7495
+        type: tim
+        name: name_entry
+        dir: gname
+      - start: 0xF6B5
+        type: databin
+        name: name_entry_tail
+        dir: gname
       - start: 0xF6B9
         type: sprite_layout
-        name: gname_layout_sprite_sequence
+        name: layout_sprite_sequence
+        dir: gname
         expected_count: 20
-      - [0xF759, databin, gname_glyph_append_anim]
+      - start: 0xF759
+        type: databin
+        name: glyph_append_anim
+        dir: gname
       - [0xF7B1, .bss, gname]
   - [0xF8D9]

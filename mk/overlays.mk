@@ -118,7 +118,7 @@ $(1)_ASSET_OBJ := $(STAGING)/$$($(1)_BUILD_DIR)/assets/$(1).o
 # (e.g. build/overlays/<name>/asm/overlays/<name>/data/rodata.rodata.o), so
 # they must be assembled to that exact location even though they're excluded
 # from the objdiff target-object set below.
-$(1)_DATA_ASM  := $$(wildcard $$($(1)_ASM_DIR)/data/*.s)
+$(1)_DATA_ASM  := $$(call rwildcard,$$($(1)_ASM_DIR)/data,*.s)
 $(1)_DATA_OBJS := $$(patsubst $$($(1)_ASM_DIR)/%.s,$(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o,$$($(1)_DATA_ASM))
 
 $$($(1)_DATA_OBJS): $(STAGING)/$$($(1)_BUILD_DIR)/$$($(1)_ASM_DIR)/%.o: $$($(1)_ASM_DIR)/%.s $(COPY_SENTINEL) | $(1)-validate
