@@ -622,11 +622,6 @@ s32 poll_input_device(void)
 
     u32 input_mask;
     u32 raw_buttons;
-    u32 remapped_upper;
-    u32 cross_bit;
-    u32 triangle_bit;
-    u32 square_bit;
-    u32 non_face_bits;
 
     s32 axis_x;
     s32 axis_y;
@@ -639,30 +634,19 @@ s32 poll_input_device(void)
         return 0;
     }
 
-    // Raw button read (byte-swapped via two reads)
-    hi_read = *(volatile u16*)&regs->held_buttons;
-    lo_read = *(volatile u16*)&regs->held_buttons;
-    input_mask = (((u32)hi_read) >> 8) | (((u32)lo_read) << 8);
+    /* Read twice because the controller register may change asynchronously. */
+    hi_read = regs->held_buttons;
+    lo_read = regs->held_buttons;
+    input_mask = (hi_read >> 8) | (lo_read << 8);
 
     raw_buttons = input_mask;
-    // Remap upper nibble bits (hardware → logical layout)
-    remapped_upper = (raw_buttons & PAD_BTN_CIRCLE) >> 1;
-    cross_bit = (raw_buttons & PAD_BTN_CROSS) << 1;
-    remapped_upper |= cross_bit;
-
-    triangle_bit = (raw_buttons & PAD_BTN_TRIANGLE) >> 3;
-    remapped_upper |= triangle_bit;
-
-    square_bit = (raw_buttons & PAD_BTN_SQUARE) << 3;
-    remapped_upper |= square_bit;
-
-    non_face_bits = raw_buttons & ~(PAD_BTN_SQUARE | PAD_BTN_CROSS | PAD_BTN_CIRCLE | PAD_BTN_TRIANGLE);
-    input_mask = remapped_upper | non_face_bits;
+    /* Convert the controller protocol bits to the game's logical layout. */
+    input_mask = PAD_REMAP_FACE_BITS(raw_buttons);
     if (regs->device_type != 0)
     {
-        // X axis → left/right flags
+        /* Convert signed analog-axis thresholds to digital directions. */
         axis_raw = regs->axis_x;
-        axis_x = (s32)((s16)axis_raw);
+        axis_x = (s16)axis_raw;
 
         if (axis_x < -1)
         {
@@ -673,9 +657,8 @@ s32 poll_input_device(void)
             input_mask |= PAD_BTN_RIGHT;
         }
 
-        // Y axis → up/down flags
         axis_raw = regs->axis_y;
-        axis_y = (s32)((s16)axis_raw);
+        axis_y = (s16)axis_raw;
         if (axis_y < -1)
         {
             input_mask |= PAD_BTN_UP;
