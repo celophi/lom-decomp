@@ -17,29 +17,8 @@
  * @param update_mode Mode selector: 0 advances the per-frame drift; 2 forces the
  *             unscaled camera offsets.
  *
- * @warning **THIS FUNCTION IS NOT A MATCH (99.64%) AND MAY NOT BE FUNCTIONALLY
- *          EQUIVALENT.** It is committed as work in progress. Do not rely on
- *          its exact behaviour, and re-verify before building a release image.
- *          The running analysis lives in working/func_80054CA8/status.md.
- *          Residue: 1 insn / 1 replaced row.
  *
- * @note The signed divides come in TWO forms and the choice is per-site.
- *       `x / 256` yields the compact `bgez / addiu / sra` sequence, which is
- *       what the target uses inside the part loop and for g_field_camera_y /
- *       g_field_camera_z. The head divide of g_field_camera_x and the scroll_x_px/scroll_y_px/scroll_z_px divides use
- *       a two-block form that ONLY appears if the rounding is written out as a
- *       real `if/else`. Collapsing those to `/ 256` costs ~11 exact rows.
- * @note `viewport` is one 5-word array, not five locals: viewport[2..4] are written
- *       and never read here, and survive only because the array's address is
- *       passed to field_draw_part.
- * @note `FieldObjDef.flags` must be `u32` (`srl`, not `sra`) - worth 6 rows.
- * @note The mask must be computed BEFORE loading obj->drift_x / obj->drift_y in the
- *       two wrap blocks - worth 3 rows.
- * @note Measured and rejected, despite the target visibly doing it: writing
- *       `scroll_x`/`scroll_z` as accumulate-in-place (`scroll_x = scroll_x + obj->drift_x`) scores 15-42
- *       exact rows WORSE. See status.md before retrying.
- *
- * @see decomp.me (99.64%) TODO
+ * @see decomp.me (100%) 
  */
 void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
 {
@@ -352,7 +331,7 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
             obj = obj->next;
         } while (obj != 0);
     }
-    if (g_field_marker_overlay_enabled != 0)
+    if (g_field_marker_overlay_enabled[0] != 0)
     {
         field_draw_marker_overlay((u32*)cursor_ptr, (u32*)ot_base);
     }
