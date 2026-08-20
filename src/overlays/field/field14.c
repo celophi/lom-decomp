@@ -1,11 +1,5 @@
-/**
- * @file field14.c
- * @brief Field effect-record primitive builder, carved from the top of the
- *        unk2 segment (the single-function slot right after field13.c's
- *        func_8007AA2C).
- */
-
 #include "common.h"
+#include "psyq/libgpu.h"
 
 typedef struct
 {
@@ -126,64 +120,28 @@ extern FieldActorState g_field_actor_slots[80];
  * @param base Depth-indexed color/ordering-table array.
  * @return The advanced primbuf cursor (unchanged when rec has no active
  *         link).
- * @note WIP - 92.15% (234/284 exact rows). Structure and insn count already
- *       match the target exactly (no structural gaps); all residue is
- *       register-coloring / instruction-order noise, confirmed via
- *       sched_oracle (one genuinely VIOLATED emit-order constraint in the
- *       final else-branch color-merge block: target emits the `primbuf &
- *       0xFFFFFF` AND before the `&base[rec->unk8 >> 7]` address chain;
- *       tried naming it as a separate local both immediately before and at
- *       the top of the branch, and swapping the OR's operand order - all
- *       inert or negative, so the lever is still unknown).
- *       Two proven shapes (worth generalizing to idioms.md once solved):
- *       (1) [EXPAND-32]-style constant-first grouping is required for both
- *       screen coordinates - write `t + (X / 256 + K)` (constant grouped
- *       with the per-point division term, shared temp `t` added last), NOT
- *       `K + t + X / 256`. The `x / 256` / `x / 512` division form (not a
- *       manual sign-fix + shift) is required to match the target's
- *       instruction shape.
- *       (2) `part` must be computed from `g_field_actor_slots[rec->unk22]`
- *       BEFORE `state` (as two independent expressions, not `state = ...;
- *       part = &state->unk0[...];`) - this alone was +17 exact rows. It
- *       looks like gcc keeps the array's base address live across the first
- *       use and re-derives it fresh for the second, rather than caching it
- *       in a shared pointer local.
- *       (3) The linked record's `unk3D`-indexed chase into D_800FF658 must
- *       be written as a fresh `D_800FF658[rec->unk3D]` at every field access
- *       (never cached in a named pointer) - same CSE-18-style store-kills-
- *       cache pattern as elsewhere in this segment; the final else-branch
- *       color index (`rec->unk8 >> 7`) needs the same fresh-recompute
- *       treatment for its second use.
- *       Permuter false lead: two candidates (scores 2990/1720) scored higher
- *       on the permuter's own metric by aliasing `primbuf` into the
- *       `s32 *temp_v0` local WITHOUT a cast (`temp_v0 = primbuf;`), which
- *       silently turns `temp_v0 + 0x18` into `+0x60` (s32 pointer scaling) -
- *       a real semantic bug, not a register-allocation insight. Faithfully
- *       reproducing the aliasing with correct `(u8 *)` casts measured
- *       delta-exact 0; do not re-chase this class.
- * @see decomp.me WIP
+ * @see decomp.me (100%)
  */
 u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
     FieldActorState *state;
     FieldActorPartDef *part;
-    u8 *var_s1;
-    s32 *temp_v0;
-    s32 temp_t3;
-    s32 temp_t4;
-    s8 var_v0_5;
     s32 temp_v1_2;
+    s32 first_d0;
+    s32 temp_x;
+    s32 raw_d4;
 
     part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
     state = &g_field_actor_slots[rec->unk22];
 
     if (rec->unk3D != 0xFF && D_800FF658[rec->unk3D].unk25 != 0xFF)
     {
-        temp_t3 = D_800F22A0 / 256;
-        *(u16 *) (primbuf + 0x8) = (u16) (temp_t3 + (rec->unk0 / 256 + 0xA0));
+        first_d0 = D_800F22A0 / 256;
+        temp_x = rec->unk0 / 256 + 0xA0;
+        raw_d4 = D_800F22A4;
+        *(u16 *) (primbuf + 0x8) = (u16) (first_d0 + temp_x);
 
-        temp_t4 = D_800F22A4 / 256;
-        *(u16 *) (primbuf + 0xA) = (u16) (0x70 + temp_t4 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512);
+        *(u16 *) (primbuf + 0xA) = (u16) (0x70 + raw_d4 / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512);
 
         *(s32 *) (primbuf + 0x10) = *(s32 *) (primbuf + 0x8);
         *(u16 *) (primbuf + 0x8) = (u16) (*(u16 *) (primbuf + 0x8) - (u16) rec->unk44);
@@ -191,9 +149,9 @@ u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
         *(u16 *) (primbuf + 0x10) = (u16) (*(u16 *) (primbuf + 0x10) + (u16) rec->unk44);
         *(u16 *) (primbuf + 0x12) = (u16) (*(u16 *) (primbuf + 0x12) + (u16) rec->unk48);
 
-        *(u16 *) (primbuf + 0xC) = (u16) (temp_t3 + (D_800FF658[rec->unk3D].unk0 / 256 + 0xA0));
+        *(u16 *) (primbuf + 0xC) = (u16) (D_800F22A0 / 256 + (D_800FF658[rec->unk3D].unk0 / 256 + 0xA0));
 
-        *(u16 *) (primbuf + 0xE) = (u16) (0x70 + temp_t4 + D_800FF658[rec->unk3D].unk4 / 256 - D_800FF658[rec->unk3D].unk8 / 512 - D_800F22A8 / 512);
+        *(u16 *) (primbuf + 0xE) = (u16) (0x70 + raw_d4 / 256 + D_800FF658[rec->unk3D].unk4 / 256 - D_800FF658[rec->unk3D].unk8 / 512 - D_800F22A8 / 512);
 
         *(s32 *) (primbuf + 0x14) = *(s32 *) (primbuf + 0xC);
         *(u16 *) (primbuf + 0xC) = (u16) (*(u16 *) (primbuf + 0xC) - (u16) D_800FF658[rec->unk3D].unk44);
@@ -203,37 +161,27 @@ u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 
         func_8007D8D8(state, rec, part, primbuf + 4);
 
-        *(s8 *) (primbuf + 3) = 5;
-        *(s8 *) (primbuf + 7) = 0x28;
-        var_v0_5 = 0x2A;
-        if (!(rec->unk1C & 0x800000))
-        {
-            var_v0_5 = 0x28;
-        }
-        *(s8 *) (primbuf + 7) = var_v0_5;
+        setPolyF4((POLY_F4 *) primbuf);
+        setSemiTrans((POLY_F4 *) primbuf, rec->unk1C & 0x800000);
 
         temp_v1_2 = (s32) rec->unk8 >> 7;
         if (temp_v1_2 < 0)
         {
-            *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0] & 0xFFFFFF);
-            var_s1 = primbuf + 0x18;
-            base[0] = (base[0] & 0xFF000000) | ((s32) primbuf & 0xFFFFFF);
+            addPrim(&base[0], (POLY_F4 *) primbuf);
+            primbuf += sizeof(POLY_F4);
         }
         else if (temp_v1_2 >= 0x1000)
         {
-            *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
-            var_s1 = primbuf + 0x18;
-            base[0xFFF] = (base[0xFFF] & 0xFF000000) | ((s32) primbuf & 0xFFFFFF);
+            addPrim(&base[0xFFF], (POLY_F4 *) primbuf);
+            primbuf += sizeof(POLY_F4);
         }
         else
         {
-            *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[temp_v1_2] & 0xFFFFFF);
-            temp_v0 = &base[(s32) rec->unk8 >> 7];
-            var_s1 = primbuf + 0x18;
-            *temp_v0 = (*temp_v0 & 0xFF000000) | ((s32) primbuf & 0xFFFFFF);
+            addPrim(&base[(s32) rec->unk8 >> 7], (POLY_F4 *) primbuf);
+            primbuf += sizeof(POLY_F4);
         }
 
-        primbuf = func_8007DA80(rec, part, var_s1, base);
+        primbuf = func_8007DA80(rec, part, primbuf, base);
     }
 
     return primbuf;
