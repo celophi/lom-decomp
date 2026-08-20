@@ -1294,7 +1294,7 @@ void menu_draw_window_transition(MenuRenderCtx* render_ctx, MenuSlotAnim* slot, 
  * @param rect          Window rectangle: x, y, w, h halfwords.
  * @param view_origin   View-origin offset forwarded to the content callback.
  * @param cursor_enable Cursor-highlight enable for the active slot.
- * @see decomp.me (99.73%) https://decomp.me/scratch/5k4SF
+ * @see decomp.me (100%) https://decomp.me/scratch/5k4SF
  */
 void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
 {
@@ -1306,7 +1306,6 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     s32 var_a2_2;
     s32 var_a3;
     s32* temp_a1_2;
-    s32* temp_s1;
     s32* temp_s1_2;
     s32* temp_s2;
     s32* prim_cur;
@@ -1354,10 +1353,10 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                         var_a3 = slot->active == 2;
                     }
                 }
-                temp_s1 = slot->content_cb(temp_s2, slot, var_s1, view_origin, var_a3);
+                var_s1 = slot->content_cb(temp_s2, slot, var_s1, view_origin, var_a3);
                 if (g_menu_draw_early_out != 0)
                 {
-                    gpu_work->prim_cursor = temp_s1;
+                    gpu_work->prim_cursor = var_s1;
                     return;
                 }
                 env = &sp20;
@@ -1369,9 +1368,9 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     var_a2_2 = temp_a0 + 0xF8;
                 }
                 SetDefDrawEnv(env, draw_x, var_a2_2, rect->w - 0x10, rect->h - 0x10);
-                SetDrawEnv((DR_ENV*)temp_s1, env);
-                addPrim(temp_s2, temp_s1);
-                var_s1 = temp_s1 + PRIM_WORDS(DR_ENV);
+                SetDrawEnv((DR_ENV*)var_s1, env);
+                addPrim(temp_s2, var_s1);
+                var_s1 += PRIM_WORDS(DR_ENV);
                 title_mask = 0x1FF;
                 if (slot->has_title != 0)
                 {
@@ -1410,7 +1409,8 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
                     case 25: /* switch 2 */
                         temp_s1_2 = func_800AD524((s32)var_s1, temp_s2, 0xB, sp80, 0);
                         sp80[0] += 8;
-                        var_s1 = (s32*)func_800AD208(temp_s2, temp_s1_2, menu_count_inventory_items(), 3, sp80, 0);
+                        var_s1 = temp_s1_2;
+                        var_s1 = (s32*)func_800AD208(temp_s2, var_s1, menu_count_inventory_items(), 3, sp80, 0);
                         break;
                     }
                     var_s1 = menu_emit_slot_scroll_arrows((s32)var_s1, temp_s2, slot);
@@ -1473,6 +1473,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
     setaddr(temp_s2, temp_v0_2);
     gpu_work->prim_cursor = (s32*)((char*)prim_cur + 8);
 }
+
 /**
  * @brief Emit one textured window-corner sprite.
  *
