@@ -17,11 +17,11 @@
  * @param update_mode Mode selector: 0 advances the per-frame drift; 2 forces the
  *             unscaled camera offsets.
  *
- * @warning **THIS FUNCTION IS NOT A MATCH (92.92%) AND MAY NOT BE FUNCTIONALLY
+ * @warning **THIS FUNCTION IS NOT A MATCH (99.64%) AND MAY NOT BE FUNCTIONALLY
  *          EQUIVALENT.** It is committed as work in progress. Do not rely on
  *          its exact behaviour, and re-verify before building a release image.
- *          The running analysis lives in working/func_80054CA8/status.md,
- *          including eleven measured-and-retired probe classes.
+ *          The running analysis lives in working/func_80054CA8/status.md.
+ *          Residue: 1 insn / 1 replaced row.
  *
  * @note The signed divides come in TWO forms and the choice is per-site.
  *       `x / 256` yields the compact `bgez / addiu / sra` sequence, which is
@@ -39,12 +39,13 @@
  *       `scroll_x`/`scroll_z` as accumulate-in-place (`scroll_x = scroll_x + obj->drift_x`) scores 15-42
  *       exact rows WORSE. See status.md before retrying.
  *
- * @see decomp.me (92.92%) TODO
+ * @see decomp.me (99.64%) TODO
  */
 void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
 {
     s32 viewport[5];
     FieldObj* obj;
+    FieldScene* scene;
     FieldObjDef* def;
     FieldPart* part;
     s32 scroll_x;
@@ -55,13 +56,18 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
     s32 scroll_x_px;
     s32 scroll_y_px;
     s32 scroll_z_px;
+    s32 scroll_diff;
 
     wrap_size = 0;
     wrap_height = 0;
-    viewport[2] = g_field_scene.scene->header->unk30;
+    scene = g_field_scene.scene;
+    viewport[2] = scene->header->unk30;
     {
         s32 t = g_field_camera_x;
         s32 q;
+        s32 cam_y;
+        s32 yq;
+        s32 cam_z;
 
         if (t >= 0)
         {
@@ -71,10 +77,24 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
         {
             q = (t + 0xFF) >> 8;
         }
+        cam_y = g_field_camera_y;
         viewport[3] = q;
+        if (cam_y < 0)
+        {
+            cam_y += 0xFF;
+        }
+        do
+        {
+            yq = cam_y >> 8;
+        } while (0);
+        cam_z = g_field_camera_z;
+        if (cam_z < 0)
+        {
+            cam_z += 0x1FF;
+        }
+        viewport[4] = (yq - (cam_z >> 9)) + 0xE0;
     }
-    viewport[4] = (g_field_camera_y / 256 - g_field_camera_z / 512) + 0xE0;
-    obj = g_field_scene.scene->objects;
+    obj = scene->objects;
     if (obj != 0)
     {
         do
@@ -98,19 +118,14 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
                     }
                     else
                     {
-                        u8 mag = sx & 0x7F;
-                        s32 v;
-
                         if (sx & 0x80)
                         {
-                            v = -g_field_camera_x;
+                            scroll_x = (-g_field_camera_x * (sx & 0x7F)) / 16;
                         }
                         else
                         {
-                            mag = def->scroll_scale_x;
-                            v = g_field_camera_x;
+                            scroll_x = (g_field_camera_x * def->scroll_scale_x) / 16;
                         }
-                        scroll_x = (v * mag) / 16;
                     }
                     {
                         u8 sy = def->scroll_scale_y;
@@ -122,22 +137,32 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
                         }
                         else
                         {
-                            s32 a;
-                            s32 b;
-
+                            s32 prod;
                             if (sy & 0x80)
                             {
-                                scroll_y = (-g_field_camera_y * (sy & 0x7F)) / 16;
-                                a = -g_field_camera_z;
-                                b = def->scroll_scale_y & 0x7F;
+                                s32 scale = sy & 0x7F;
+                                prod = -g_field_camera_y * scale;
+                                scroll_y = prod >> 4;
+                                if (prod < 0)
+                                    scroll_y = (prod + 0xF) >> 4;
+                                prod = (-g_field_camera_z) * (*(volatile u8*)&def->scroll_scale_y & 0x7F);
                             }
                             else
                             {
-                                a = def->scroll_scale_y;
-                                scroll_y = (g_field_camera_y * a) / 16;
-                                b = g_field_camera_z;
+                                prod = g_field_camera_y * def->scroll_scale_y;
+                                if (prod >= 0)
+                                {
+                                    scroll_y = prod >> 4;
+                                }
+                                else
+                                {
+                                    scroll_y = (prod + 0xF) >> 4;
+                                }
+                                prod = g_field_camera_z * def->scroll_scale_y;
                             }
-                            scroll_z = (b * a) / 16;
+                            scroll_z = prod >> 4;
+                            if (prod < 0)
+                                scroll_z = (prod + 0xF) >> 4;
                         }
                     }
                 }
@@ -180,59 +205,83 @@ void field_draw_scene_objects(s32 cursor_ptr, s32 ot_base, s32 update_mode)
                     }
                 }
                 {
-                    s32 tx = scroll_x + obj->drift_x;
-                    s32 tz = scroll_z + obj->drift_y;
-
-                    if (tx >= 0)
+                    s32 px;
+                    s32 py;
+                    s32 pz;
+                    scroll_x += obj->drift_x;
+                    scroll_z += obj->drift_y;
+                    if (scroll_x >= 0)
                     {
-                        scroll_x_px = tx >> 8;
+                        px = scroll_x >> 8;
                     }
                     else
                     {
-                        scroll_x_px = (tx + 0xFF) >> 8;
+                        px = (scroll_x + 0xFF) >> 8;
                     }
+                    scroll_x = px;
                     if (scroll_y >= 0)
                     {
-                        scroll_y_px = scroll_y >> 8;
+                        py = scroll_y >> 8;
                     }
                     else
                     {
-                        scroll_y_px = (scroll_y + 0xFF) >> 8;
+                        py = (scroll_y + 0xFF) >> 8;
                     }
-                    if (tz >= 0)
+                    if (scroll_z >= 0)
                     {
-                        scroll_z_px = tz >> 9;
+                        pz = scroll_z >> 9;
+                        scroll_diff = py - pz;
                     }
                     else
                     {
-                        scroll_z_px = (tz + 0x1FF) >> 9;
+                        pz = (scroll_z + 0x1FF) >> 9;
+                        scroll_diff = py - pz;
                     }
                 }
                 part = obj->parts;
+                scroll_z = scroll_diff;
                 if (part != 0)
                 {
                     do
                     {
                         if ((part->visible != 0) && (part->instance_count != 0))
                         {
-                            viewport[0] = scroll_x_px + (obj->x + part->x) / 256;
+                            viewport[0] = scroll_x + (obj->x + part->x) / 256;
                             {
-                                s32 a = (scroll_y_px - scroll_z_px) + (obj->y + part->y) / 256;
-                                s32 d = part->def->u.b.rows * 0x10 - 0xE0;
-
-                                a = a - (obj->z + part->z) / 512;
-                                viewport[1] = a - d;
+                                s32 yq;
+                                s32 a;
+                                FieldPartDef* part_def;
+                                s32 rows;
+                                s32 z;
+                                s32 mid;
+                                do
+                                {
+                                    yq = (obj->y + part->y) / 256;
+                                } while (0);
+                                a = scroll_z + yq;
+                                part_def = part->def;
+                                rows = *(volatile u8*)&part_def->u.b.rows;
+                                z = obj->z + part->z;
+                                rows *= 0x10;
+                                do
+                                {
+                                    mid = a - z / 512;
+                                } while (0);
+                                rows -= 0xE0;
+                                viewport[1] = mid - rows;
                             }
                             if (def->flags & 4)
                             {
+                                s32 vx;
                                 wrap_size = 0x100 << ((def->flags >> 4) & 3);
-                                if (viewport[0] >= 0)
+                                vx = *(volatile s32*)&viewport[0];
+                                if (vx >= 0)
                                 {
-                                    viewport[0] = viewport[0] & (wrap_size - 1);
+                                    viewport[0] = vx & (wrap_size - 1);
                                 }
                                 else
                                 {
-                                    viewport[0] = wrap_size - (-viewport[0] & (wrap_size - 1));
+                                    viewport[0] = wrap_size - (-vx & (wrap_size - 1));
                                 }
                             }
                             if (def->flags & 8)
