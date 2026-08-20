@@ -14,7 +14,7 @@ import yaml
 
 
 FORMAT_NAME = "gname_name_entry_resource"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 HEADER_SIZE = 0x14
 TABLE_NAMES = (
     "panel_records",
@@ -22,6 +22,33 @@ TABLE_NAMES = (
     "history_names",
     "random_names",
 )
+
+# The US localization's field-text renderer expands these byte sequences through
+# its dictionary table.  Keeping them as distinct YAML parts preserves the exact
+# compressed representation while making the displayed phrase readable.
+DICTIONARY_TOKENS = {
+    b"\x14": " the",
+    b"\x15": " you",
+    b"\x16": "in",
+    b"\x17": " to ",
+    b"\x18": "'s ",
+    b"\x1A": " I ",
+    b"\x1B": " and ",
+    b"\x1C": "is ",
+    b"\x1D": " so",
+    b"\x1E": " it",
+    b"\x1F\x00": " for",
+    b"\x1F\x01": "er ",
+    b"\x1F\x02": "ed ",
+    b"\x1F\x03": "ing ",
+    b"\x1F\x04": " of",
+}
+DICTIONARY_ENCODINGS = {text: encoded for encoded, text in DICTIONARY_TOKENS.items()}
+DICTIONARY_TEXT_ORDER = tuple(
+    sorted(DICTIONARY_ENCODINGS, key=lambda text: (-len(text), text))
+)
+DBCS_LEAD_MIN = 0x19
+DBCS_LEAD_MAX = 0x1F
 
 
 class NameEntryResourceError(ValueError):
@@ -101,7 +128,7 @@ class RecordTable:
             )
 
         records = tuple(
-            _parse_hex_record(value, f"tables.{label}.records[{index}]")
+            _parse_record(value, label, f"tables.{label}.records[{index}]")
             for index, value in enumerate(raw_records)
         )
         return cls(records)
@@ -129,10 +156,10 @@ class RecordTable:
             self.records
         )
 
-    def document(self) -> dict[str, object]:
+    def document(self, label: str) -> dict[str, object]:
         return {
             "record_count": len(self.records),
-            "records": [record.hex().upper() for record in self.records],
+            "records": [_record_document(record, label) for record in self.records],
         }
 
 
@@ -254,7 +281,7 @@ class NameEntryResource:
             "version": FORMAT_VERSION,
             "unknown_0x00": self.unknown_0x00,
             "tables": {
-                name: self.tables[index].document()
+                name: self.tables[index].document(name)
                 for index, name in enumerate(TABLE_NAMES)
             },
         }
@@ -270,7 +297,7 @@ def _validate_int(label: str, value: object, minimum: int, maximum: int) -> int:
     return value
 
 
-def _parse_hex_record(value: object, label: str) -> bytes:
+def _parse_hex_bytes(value: object, label: str) -> bytes:
     if not isinstance(value, str):
         raise NameEntryResourceError(f"{label} must be an uppercase hex string")
     if len(value) % 2 != 0 or any(character not in string.hexdigits for character in value):
@@ -280,19 +307,192 @@ def _parse_hex_record(value: object, label: str) -> bytes:
     return bytes.fromhex(value)
 
 
+def _validate_text(value: object, label: str) -> bytes:
+    if not isinstance(value, str):
+        raise NameEntryResourceError(f"{label} must be a string")
+    try:
+        encoded = value.encode("ascii")
+    except UnicodeEncodeError as error:
+        raise NameEntryResourceError(
+            f"{label} contains a character without a verified GNAME encoding"
+        ) from error
+    if any(byte < 0x20 or byte > 0x7E for byte in encoded):
+        raise NameEntryResourceError(
+            f"{label} may contain only printable ASCII characters"
+        )
+    return encoded
+
+
+def _parse_glyph_code(value: object, label: str) -> bytes:
+    encoded = _parse_hex_bytes(value, label)
+    if len(encoded) != 2 or not DBCS_LEAD_MIN <= encoded[0] <= DBCS_LEAD_MAX:
+        raise NameEntryResourceError(
+            f"{label} must be a four-digit encoded glyph beginning with 19-1F"
+        )
+    return encoded
+
+
+def _encode_dictionary_text(value: object, label: str) -> bytes:
+    plain = _validate_text(value, label).decode("ascii")
+    encoded = bytearray()
+    cursor = 0
+    while cursor < len(plain):
+        token_text = next(
+            (text for text in DICTIONARY_TEXT_ORDER if plain.startswith(text, cursor)),
+            None,
+        )
+        if token_text is None:
+            encoded.append(ord(plain[cursor]))
+            cursor += 1
+        else:
+            encoded.extend(DICTIONARY_ENCODINGS[token_text])
+            cursor += len(token_text)
+    return bytes(encoded)
+
+
+def _parse_record(value: object, table_name: str, label: str) -> bytes:
+    if not isinstance(value, dict):
+        raise NameEntryResourceError(f"{label} must be a mapping")
+
+    if set(value) == {"hex"}:
+        return _parse_hex_bytes(value["hex"], f"{label}.hex")
+
+    allowed_keys = {"text", "encoding", "glyph_codes", "trailing_zero_bytes"}
+    unknown_keys = set(value) - allowed_keys
+    if unknown_keys:
+        raise NameEntryResourceError(
+            f"{label} has unknown fields: {', '.join(sorted(unknown_keys))}"
+        )
+
+    content_keys = set(value) & {"text", "glyph_codes"}
+    if len(content_keys) != 1:
+        raise NameEntryResourceError(
+            f"{label} must contain exactly one text or glyph_codes field"
+        )
+
+    content_key = next(iter(content_keys))
+    if content_key == "text":
+        encoding = value.get("encoding")
+        if encoding is None:
+            encoded = _validate_text(value["text"], f"{label}.text")
+        elif encoding == "dictionary":
+            if table_name != "panel_records":
+                raise NameEntryResourceError(
+                    f"{label}.encoding dictionary is only valid in panel_records"
+                )
+            encoded = _encode_dictionary_text(value["text"], f"{label}.text")
+        else:
+            raise NameEntryResourceError(
+                f"{label}.encoding must be 'dictionary' when present"
+            )
+    else:
+        if "encoding" in value:
+            raise NameEntryResourceError(
+                f"{label}.encoding is only valid with a text field"
+            )
+        if table_name == "panel_records":
+            raise NameEntryResourceError(
+                f"{label}.glyph_codes is not valid in panel_records"
+            )
+        glyph_codes = value["glyph_codes"]
+        if not isinstance(glyph_codes, list) or not glyph_codes:
+            raise NameEntryResourceError(
+                f"{label}.glyph_codes must be a non-empty sequence"
+            )
+        encoded = b"".join(
+            _parse_glyph_code(code, f"{label}.glyph_codes[{index}]")
+            for index, code in enumerate(glyph_codes)
+        )
+
+    trailing_zero_bytes = _validate_int(
+        f"{label}.trailing_zero_bytes",
+        value.get("trailing_zero_bytes", 1),
+        1,
+        0xFFFF,
+    )
+    return encoded + bytes(trailing_zero_bytes)
+
+
+def _append_text_part(parts: list[dict[str, str]], character: str) -> None:
+    if parts and "text" in parts[-1]:
+        parts[-1]["text"] += character
+    else:
+        parts.append({"text": character})
+
+
+def _decode_record(record: bytes, table_name: str) -> tuple[list[dict[str, str]], int] | None:
+    parts: list[dict[str, str]] = []
+    cursor = 0
+    while cursor < len(record):
+        byte = record[cursor]
+        if byte == 0:
+            if any(record[cursor:]):
+                return None
+            return parts, len(record) - cursor
+
+        if 0x20 <= byte <= 0x7E:
+            _append_text_part(parts, chr(byte))
+            cursor += 1
+            continue
+
+        if table_name == "panel_records":
+            token_size = 2 if byte == 0x1F else 1
+            token = record[cursor : cursor + token_size]
+            if len(token) != token_size or token not in DICTIONARY_TOKENS:
+                return None
+            parts.append({"dictionary": DICTIONARY_TOKENS[token]})
+            cursor += token_size
+            continue
+
+        if DBCS_LEAD_MIN <= byte <= DBCS_LEAD_MAX and cursor + 1 < len(record):
+            parts.append({"glyph_code": record[cursor : cursor + 2].hex().upper()})
+            cursor += 2
+            continue
+
+        return None
+
+    return None
+
+
+def _record_document(record: bytes, table_name: str) -> dict[str, object]:
+    decoded = _decode_record(record, table_name)
+    if decoded is None:
+        return {"hex": record.hex().upper()}
+
+    parts, trailing_zero_bytes = decoded
+    has_dictionary_tokens = any("dictionary" in part for part in parts)
+    if has_dictionary_tokens:
+        document = {
+            "text": "".join(next(iter(part.values())) for part in parts),
+            "encoding": "dictionary",
+        }
+    elif len(parts) == 1 and "text" in parts[0]:
+        document: dict[str, object] = {"text": parts[0]["text"]}
+    elif not parts:
+        document = {"text": ""}
+    elif all("glyph_code" in part for part in parts):
+        document = {"glyph_codes": [part["glyph_code"] for part in parts]}
+    else:
+        return {"hex": record.hex().upper()}
+
+    if trailing_zero_bytes != 1:
+        document["trailing_zero_bytes"] = trailing_zero_bytes
+    return document
+
+
 def dump_resource_yaml(resource: NameEntryResource) -> str:
     """Serialize a GNAME record archive into canonical YAML."""
     return yaml.safe_dump(
-        resource.document(), sort_keys=False, allow_unicode=False, width=100
+        resource.document(), sort_keys=False, allow_unicode=True, width=100
     )
 
 
 def load_resource_yaml(path: Path) -> NameEntryResource:
     """Read and validate one GNAME record-archive YAML document."""
     try:
-        document = yaml.safe_load(path.read_text(encoding="ascii"))
+        document = yaml.safe_load(path.read_text(encoding="utf-8"))
     except UnicodeDecodeError as error:
-        raise NameEntryResourceError(f"{path} must contain ASCII text") from error
+        raise NameEntryResourceError(f"{path} must contain UTF-8 text") from error
     except yaml.YAMLError as error:
         raise NameEntryResourceError(f"invalid YAML in {path}: {error}") from error
     return NameEntryResource.parse_document(document)
@@ -348,7 +548,7 @@ def main() -> int:
             resource = NameEntryResource.parse_binary(args.source.read_bytes())
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(
-                dump_resource_yaml(resource), encoding="ascii", newline="\n"
+                dump_resource_yaml(resource), encoding="utf-8", newline="\n"
             )
             print(f"Wrote {args.output}")
         elif args.command == "build":

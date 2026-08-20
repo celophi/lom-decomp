@@ -45,7 +45,7 @@ class PSXSegName_entry_resource(CommonSegDatabin):
 
         yaml_path = self.yaml_path()
         yaml_path.parent.mkdir(parents=True, exist_ok=True)
-        yaml_path.write_text(yaml_text, encoding="ascii", newline="\n")
+        yaml_path.write_text(yaml_text, encoding="utf-8", newline="\n")
 
         bin_path = self.bin_path()
         bin_path.parent.mkdir(parents=True, exist_ok=True)
