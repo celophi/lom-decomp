@@ -156,19 +156,7 @@ extern FieldActorState g_field_actor_slots[80];
  * @param primbuf Output primitive buffer; advanced by 3 primitives (0x54
  *                bytes) per ring segment.
  * @param base Ordering-table / primitive base array.
- * @note WIP - 98.76% (458/464 exact rows) at time of writing, up from an
- *       earlier 72.35% draft. Packing the camera-relative pan base into a
- *       single FieldScreenPair{x,y} struct (instead of two independent u16
- *       locals) closed most of that gap. Residual is a register/scheduling
- *       choice around the primitive's semi-trans byte store: the target
- *       keeps the 0x32/0x30 constant in v0 and stores it immediately (`sb
- *       v0, 0x7(s1)`) right before loading rec->unk24 into temp_s6, while
- *       this source computes the same value but keeps it in a0 and defers
- *       both the store and the rec->unk24 load a few instructions later -
- *       same statement order and value, different register/scheduling
- *       choice (2 target-only / 3 yours-only rows at the tail of that
- *       block, mirrored again at the loop's back edge).
- * @see decomp.me WIP
+ * @see decomp.me (100%)
  */
 void func_800799C4(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
@@ -213,7 +201,6 @@ void func_800799C4(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     s32 var_v0;
     s32 var_v0_3;
     s32 var_v1;
-    s8 var_v0_2;
     s32 temp_s6;
     u8 *temp_s0;
     u8 *var_s1;
@@ -228,14 +215,8 @@ void func_800799C4(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     sp10.x = (u16) (var_a1 + (rec->unk0 / 256 + 0xA0));
     sp10.y = (u16) (0x70 + D_800F22A4 / 256 + rec->unk4 / 256 - rec->unk8 / 512 - D_800F22A8 / 512);
     func_8007D8D8(temp_s2, rec, sp50, var_s1 + 4);
-    *(s8 *) (var_s1 + 3) = 6;
-    *(s8 *) (var_s1 + 7) = 0x30;
-    var_v0_2 = 0x32;
-    if (!(rec->unk1C & 0x800000))
-    {
-        var_v0_2 = 0x30;
-    }
-    *(s8 *) (var_s1 + 7) = var_v0_2;
+    setPolyG3(var_s1);
+    setSemiTrans(var_s1, rec->unk1C & 0x800000);
     var_fp = 0;
     temp_s6 = rec->unk24;
     sp54 = &sp18;
