@@ -1106,3 +1106,409 @@ s32 func_801415B8(s32 *ot, s32 prim, s32 arg2, s32 arg3)
     }
     return result;
 }
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80141C6C(void *arg0)
+{
+    u8 *p;
+    s32 i;
+
+    p = (u8 *)arg0;
+    i = 0;
+    for (;;)
+    {
+        if (i >= 0x40)
+        {
+            return;
+        }
+        if (*p == 0)
+        {
+            while (i < 0x40)
+            {
+                *p = 0;
+                i++;
+                p++;
+            }
+            return;
+        }
+        if (*p >= 0x80)
+        {
+            p += 2;
+            i += 2;
+        }
+        else
+        {
+            p += 1;
+            i += 1;
+        }
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80141CD0(void)
+{
+    Packet *p;
+    s32 i;
+
+    p = (Packet *)&D_801468B8;
+    for (i = 0; i < 8; i++)
+    {
+        p->unk0 &= ~7;
+        p++;
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+Packet *func_80141D04(void)
+{
+    Packet *p;
+    s32 i;
+
+    p = (Packet *)&D_801468B8;
+    for (i = 0; i < 8; i++, p++)
+    {
+        if ((p->unk0 & 7) == 0)
+        {
+            p->unk4 |= 0x200;
+            p->unk0 = (p->unk0 & ~7) | 1;
+            return p;
+        }
+    }
+    return (Packet *)&D_801468B8;
+}
+
+/** @brief GPU packet emitted into the ordering table; unk0 is the OT link word. */
+typedef struct
+{
+    /* 0x0 */ s32 unk0;
+    /* 0x4 */ s32 unk4;
+    /* 0x8 */ s16 unk8;
+    /* 0xA */ s16 unkA;
+    /* 0xC */ s16 unkC;
+    /* 0xE */ u16 unkE;
+} StructS0;
+
+/** @brief Draw context at arg0 + 0x40; unk0 is the head of the ordering table. */
+typedef struct
+{
+    /* 0x0 */ s32 unk0;
+} RenderCtx;
+
+/** @brief Owning screen state passed to the element tick/draw pass. */
+typedef struct
+{
+    u8 pad0[0x40B2];
+    /* 0x40B2 */ s16 unk40B2;
+    u8 pad40B4[4];
+    /* 0x40B8 */ StructS0 *unk40B8;
+} Arg0Struct;
+
+/** @brief Per-element draw callback stored at element + 8. */
+typedef StructS0 *(*ElemDrawFunc)();
+
+StructS0 *func_801427F8();
+StructS0 *func_80142480();
+StructS0 *func_801433EC();
+
+/**
+ * @brief Advance and draw the eight pool elements for one frame.
+ *
+ * Walks the 0xC-stride element pool at D_801468B8, links each live element's
+ * packets into the ordering table, and dispatches on the low 3 bits of its
+ * state word: 1 grows, 2 holds, 3 shrinks, 4 counts down to idle.
+ *
+ * @param arg0 Owning screen state; unk40B8 is the packet cursor, read on entry
+ *             and written back on exit.
+ *
+ * @note NOT MATCHED. Residue is (a) a pure s0<->s1 allocation swap - the target
+ *       puts var_s0 in s0 and temp_s1 in s1, and alloc_report shows temp_s1
+ *       winning the priority race 10666 to 10294 - and (b) the case-1 tail
+ *       emit order, where sched_oracle reports emit[li 8] < emit[andi 15]
+ *       violated. `volatile u32 *var_s3` is required: the target emits 12 loads
+ *       of the element word and gcc CSEs 3 away without it. gosub's
+ *       func_80143C58 is the matched 100% twin of this function and is the
+ *       source model to work from. See working/func_80141D78/STATUS.md for the
+ *       measured required-to-match shapes and the ten retired hypothesis
+ *       classes.
+ * @see decomp.me (95.27%) TODO
+ */
+void func_80141D78(Arg0Struct *arg0)
+{
+    StructS0 *var_s0;
+    RenderCtx *var_s5;
+    volatile u32 *var_s3;
+    s32 temp_s1;
+    s32 temp_s2;
+    s32 sp80;
+    s32 sp20[24];
+    u32 temp_a3;
+    u32 temp_a0_2;
+    s32 temp_v1_2;
+    u32 temp_a1;
+    u32 temp_a2;
+    s32 temp_a0_3;
+    s32 var_v1;
+    s32 temp_a3_2;
+    s32 var_v0;
+    s32 temp_a3_3;
+    u32 temp_v0_3;
+    u32 temp_a0_4;
+    s32 temp_a0_5;
+    s32 var_v1_2;
+    s32 temp_a3_5;
+    s32 var_v0_2;
+    s32 temp_a3_6;
+    u32 temp_v0_5;
+    u32 temp_v1_3;
+
+    var_s0 = arg0->unk40B8;
+    var_s5 = (RenderCtx *)((u8 *)arg0 + 0x40);
+
+    if ((D_80162350 < 0x10) && ((D_801468C4 & 7) == 2))
+    {
+        if ((D_80162350 * 0xE) > (D_8015A318 + 0x49))
+        {
+            var_s0 = func_801427F8(var_s0, var_s5, 0x114, 0x87, 0);
+        }
+        if (D_8015A318 != 0)
+        {
+            var_s0 = func_801427F8(var_s0, var_s5, 0x114, 0x4A, 1);
+        }
+    }
+
+    if (arg0->unk40B2 != 0)
+    {
+        func_8001C56C(sp20, 0, 0xF0, 0x140, 0xE0);
+    }
+    else
+    {
+        func_8001C56C(sp20, 0, 8, 0x140, 0xE0);
+    }
+
+    var_s3 = (volatile u32 *)&D_801468B8;
+    sp80 = 0;
+
+    for (; sp80 < 8; sp80++, var_s3 += 3)
+    {
+        temp_a3 = *var_s3;
+        if (temp_a3 & 7)
+        {
+            func_8001A5D4((s32)var_s0, sp20);
+
+            var_s0->unk0 = (var_s0->unk0 & 0xFF000000) | (var_s5->unk0 & 0x00FFFFFF);
+            var_s5->unk0 = (s32)((var_s5->unk0 & 0xFF000000) | ((s32)var_s0 & 0x00FFFFFF));
+
+            temp_a0_2 = *var_s3;
+            temp_v1_2 = temp_a0_2 & 7;
+
+            var_s0 = (StructS0 *)((u8 *)var_s0 + 0x40);
+
+            switch (temp_v1_2)
+            {
+            case 1:
+                temp_v0_3 = *var_s3;
+                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
+                temp_a2 = (temp_v0_3 >> 24) | ((temp_a1 & 1) << 8);
+                temp_a0_3 = (temp_v0_3 >> 3) & 0xF;
+                var_v1 = temp_a2 * temp_a0_3;
+                D_80122988 = 0;
+                if (var_v1 < 0)
+                {
+                    var_v1 += 7;
+                }
+                temp_a3_2 = (temp_a1 >> 1) & 0xFF;
+                var_v0 = temp_a3_2 * temp_a0_3;
+                temp_s1 = var_v1 >> 3;
+                if (var_v0 < 0)
+                {
+                    var_v0 += 7;
+                }
+                temp_s2 = var_v0 >> 3;
+                temp_a3_3 = (s32)(temp_a3_2 - temp_s2);
+
+                var_s0 = (*(ElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_3 / 2);
+                {
+                    u32 post_word;
+                    u32 field;
+                    u32 high;
+                    post_word = *var_s3;
+                    field = (post_word >> 7) & 0x1FF;
+                    high = post_word >> 24;
+                    var_s0 = func_80142480(var_s0, var_s5,
+                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
+                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
+                                           temp_s1, temp_s2, arg0->unk40B2, (*(u32 *)((u8 *)var_s3 + 4) >> 9) & 1);
+                }
+                temp_a0_4 = *var_s3;
+                temp_a0_4 = (temp_a0_4 & ~0x78) | (((((temp_a0_4 >> 3) & 0xF) + 1) & 0xF) * 8);
+                *var_s3 = temp_a0_4;
+                if (((temp_a0_4 >> 3) & 0xF) == 8)
+                {
+                    func_800AA02C();
+                    *var_s3 = (*var_s3 & ~7) | 2;
+                }
+                break;
+
+            case 2:
+                var_s0 = (*(ElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, 0, 0);
+                {
+                    u32 case_word;
+                    u32 high;
+                    case_word = *var_s3;
+                    high = case_word >> 24;
+                    var_s0 = func_80142480(var_s0, var_s5, (case_word >> 7) & 0x1FF, (*((u8 *)var_s3 + 2)),
+                                           ((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high,
+                                           (*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF, arg0->unk40B2,
+                                           (*(u32 *)((u8 *)var_s3 + 4) >> 9) & 1);
+                }
+                temp_v1_3 = *var_s3;
+                if (((temp_v1_3 >> 3) & 0xF) != 0)
+                {
+                    *var_s3 = (temp_v1_3 & ~0x78) | (((((temp_v1_3 >> 3) & 0xF) - 1) & 0xF) * 8);
+                }
+                break;
+
+            case 3:
+                temp_v0_5 = *var_s3;
+                temp_a1 = *(u32 *)((u8 *)var_s3 + 4);
+                temp_a2 = (temp_v0_5 >> 24) | ((temp_a1 & 1) << 8);
+                temp_a0_5 = temp_v0_5 >> 3;
+                temp_a0_5 = temp_a0_5 & 0xF;
+                var_v1_2 = temp_a2 * temp_a0_5;
+                D_80122988 = 0;
+                if (var_v1_2 < 0)
+                {
+                    var_v1_2 += 7;
+                }
+                temp_a3_5 = (temp_a1 >> 1) & 0xFF;
+                var_v0_2 = temp_a3_5 * temp_a0_5;
+                temp_s1 = var_v1_2 >> 3;
+                if (var_v0_2 < 0)
+                {
+                    var_v0_2 += 7;
+                }
+                temp_s2 = var_v0_2 >> 3;
+                temp_a3_6 = (s32)(temp_a3_5 - temp_s2);
+
+                var_s0 = (*(ElemDrawFunc *)((u8 *)var_s3 + 8))(var_s5, var_s0, (s32)(temp_a2 - temp_s1) / 2, temp_a3_6 / 2);
+                {
+                    u32 post_word;
+                    u32 field;
+                    u32 high;
+                    post_word = *var_s3;
+                    field = (post_word >> 7) & 0x1FF;
+                    high = post_word >> 24;
+                    var_s0 = func_80142480(var_s0, var_s5,
+                                           field + (s32)((((*(u32 *)((u8 *)var_s3 + 4) & 1) << 8) | high) - temp_s1) / 2,
+                                           (*((u8 *)var_s3 + 2)) + ((s32)((*(u32 *)((u8 *)var_s3 + 4) >> 1) & 0xFF) - temp_s2) / 2,
+                                           temp_s1, temp_s2, arg0->unk40B2, (*(u32 *)((u8 *)var_s3 + 4) >> 9) & 1);
+                }
+                temp_a0_4 = *var_s3;
+                temp_a0_4 = (temp_a0_4 & ~0x78) | (((((temp_a0_4 >> 3) & 0xF) - 1) & 0xF) * 8);
+                *var_s3 = temp_a0_4;
+                if (!((temp_a0_4 >> 3) & 0xF))
+                {
+                    *var_s3 = (((temp_a0_4 & ~0x78) | 0x18) & ~7) | 4;
+                }
+                break;
+
+            case 4:
+                temp_v0_5 = *var_s3;
+                D_80122988 = 0;
+                temp_v1_3 = (temp_v0_5 & ~0x78) | (((((temp_v0_5 >> 3) & 0xF) - 1) & 0xF) * 8);
+                *var_s3 = temp_v1_3;
+                if (!((temp_v1_3 >> 3) & 0xF))
+                {
+                    *var_s3 = temp_v1_3 & ~7;
+                }
+                break;
+            }
+        }
+    }
+
+    arg0->unk40B8 = func_801433EC(var_s0, var_s5);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_8014232C(u8 *dest, u8 *src)
+{
+    s32 dst_len;
+    s32 src_len;
+    s32 i;
+
+    dst_len = func_801423B0(dest);
+    src_len = func_801423B0(src);
+    for (i = 0; i < src_len; i++)
+    {
+        dest[dst_len + i] = src[i];
+    }
+    dest[dst_len + i] = 0;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_801423B0(u8 *arg0)
+{
+    u8 *p;
+    u8 c;
+    s32 len;
+
+    p = arg0;
+    c = *p;
+    len = 0;
+    while (c != 0)
+    {
+        if ((u32)(c - 0x19) < 7)
+        {
+            p += 2;
+            len += 2;
+        }
+        else
+        {
+            p += 1;
+            len += 1;
+        }
+        c = *p;
+    }
+    return len;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_801423FC(u8 *dest, u8 *src)
+{
+    volatile u8 *p;
+    s32 len;
+    s32 i;
+
+    p = (volatile u8 *)src;
+    len = 0;
+    while (*p != 0)
+    {
+        if ((u32)(*p - 0x19) < 7)
+        {
+            p += 2;
+            len += 2;
+        }
+        else
+        {
+            p += 1;
+            len += 1;
+        }
+    }
+    for (i = 0; i < len; i++)
+    {
+        dest[i] = src[i];
+    }
+    dest[i] = 0;
+}
