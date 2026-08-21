@@ -266,21 +266,7 @@ typedef struct
 } Struct_801ED400;
 
 #include "psyq/inline_c.h"
-
-/*
- * inline_c.h's "Type 2" (no-operand) GTE macros, like gte_sqr0() and
- * gte_rtv0() below, emit a raw `.word` value. Sony's original PSY-Q
- * assembler recognized that value as a GTE opcode token and translated it
- * into the real COP2 instruction word. This project assembles with plain
- * GNU `as` (via the `maspsx` syntax wrapper), which has no such translation
- * step, so the `.word` bits get written out unchanged - the wrong
- * instruction, not an assembler error. The Type 1/Type 3 (load/store)
- * macros above are plain lwc2/swc2/mtc2 mnemonics with no such trick, so
- * they assemble correctly as-is. Override each Type 2 op actually used with
- * the real ROM bytes instead, as a `cop2` immediate.
- */
-#define gte_rtv0() __asm__ volatile("nop;nop;cop2 0x0486012")
-#define gte_sqr0() __asm__ volatile("nop;nop;cop2 0x0a00428")
+#include "psyq/gte_fixes.h"
 
 extern s32 g_field_track_index;
 extern s32 D_800F22A0;

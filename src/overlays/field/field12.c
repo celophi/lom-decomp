@@ -244,16 +244,7 @@ typedef struct
 } TrackPlacement;
 
 #include "psyq/inline_c.h"
-
-/*
- * inline_c.h's "Type 2" (no-operand) GTE macros, like gte_rtv0() below, emit
- * a raw `.word` value meant for Sony's original PSY-Q assembler to translate
- * into the real COP2 instruction word. This project assembles with plain GNU
- * `as` (via the maspsx syntax wrapper), which has no such translation step,
- * so override the one Type 2 op actually used here with the real ROM bytes,
- * as a `cop2` immediate, matching field7.c/field8.c/field11.c.
- */
-#define gte_rtv0() __asm__ volatile("nop;nop;cop2 0x0486012")
+#include "psyq/gte_fixes.h"
 
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;
