@@ -1,7 +1,7 @@
 /*
  * akao_xa_stream.c - consolidated AKAO XA/SPU streaming region (asm/unk8.s).
  *
- * All 36 functions from func_8002D0DC through func_8002E75C live here, in
+ * All 36 functions from akao_seq_op_obey_voice_reserve (0x8002D0DC) through func_8002E75C live here, in
  * address order, built as a single gcc280_g4 object. The region drives one
  * global, g_akao_xa_tracker, viewed through many mutually incompatible struct
  * layouts (SPU stream state, pan-fade state, XA transfer state, ...). A single
@@ -136,33 +136,51 @@ void func_8002E6FC(void);
 void func_8002E72C(void);
 
 /**
+ * @brief Extended opcode FE 1E: obey the reserved-voice window for this channel.
+ *        Clears the channel bit in voice_alloc_low_mask so note-on voice
+ *        allocation starts at the reserved base again. Inverse of FE 1D
+ *        (akao_seq_op_ignore_voice_reserve).
+ * @param channel Unused; present to match the opcode-handler signature.
+ * @param channel_mask Bit of the channel being stepped.
  * @see decomp.me (100%)
  */
-void func_8002D0DC(AkaoChannelState* channel, s32 channel_mask)
+void akao_seq_op_obey_voice_reserve(AkaoChannelState* channel, s32 channel_mask)
 {
     g_akao_seq_channel0->w04.song.voice_alloc_low_mask &= ~channel_mask;
 }
 
 /**
+ * @brief Opcode 0xE1: set the pitch-jitter depth from one operand byte.
+ *        Stores the byte into pitch_scale (0xDA), the depth of the table-driven
+ *        pitch perturbation akao_seq_step_opcode applies per note (indexes the
+ *        256-entry jitter table D_8003D27C by the free-running modulation tick).
+ * @param p Channel stream cursor; advanced past the one depth byte.
+ * @note Named by mechanism; the authoring-tool term is unconfirmed.
  * @see decomp.me (100%)
  */
-void func_8002D0FC(void *p)
+void akao_seq_op_set_pitch_jitter_depth(void *p)
 {
     *(u16 *)((char *)p + 0xDA) = *(*(u8 **)p)++;
 }
 
 /**
+ * @brief Opcode 0xE2: disable pitch jitter by clearing pitch_scale (0xDA).
+ * @param p Channel state (operand unused).
  * @see decomp.me (100%)
  */
-void func_8002D118(void *p)
+void akao_seq_op_disable_pitch_jitter(void *p)
 {
     *(u16 *)((char *)p + 0xDA) = 0;
 }
 
 /**
+ * @brief Fallback opcode handler (primary 0xE3..0xFF and unused extended slots):
+ *        end the channel by releasing it. Thin wrapper over akao_release_channels.
+ * @param arg0 Channel to release.
+ * @param arg1 Channel bit-mask to release.
  * @see decomp.me (100%)
  */
-void func_8002D120(AkaoChannelState* arg0, u32 arg1)
+void akao_seq_op_finish_channel(AkaoChannelState* arg0, u32 arg1)
 {
     akao_release_channels(arg0, arg1);
 }
