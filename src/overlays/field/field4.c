@@ -398,7 +398,7 @@ void field_update_return_to_title_prompt(s32 render_ctx)
             func_800A6F1C();
             if (g_field_return_to_title_prompt_state != 0)
             {
-                func_8006441C();
+                field_text_reset_scratch();
                 if (g_field_return_to_title_prompt_state != 0)
                 {
                     func_800A8880(render_ctx);
@@ -432,7 +432,7 @@ void field_begin_return_to_title_prompt_close(void)
     g_field_fade_target.blue = 0;
     g_field_fade_restore_color.blue = 0;
     g_field_fade_target.duration = 8;
-    func_800643E0();
+    field_text_reset_windows();
     D_8012291C = 0;
 }
 
