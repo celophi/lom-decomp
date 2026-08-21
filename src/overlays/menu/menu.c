@@ -3,16 +3,7 @@
 
 /* ----- Macros ----- */
 
-/*
- * CLUT ids for the menu's chrome glyphs/sprites. These are libgpu @c getClut
- * results; see @ref menu_upload_tim for where the two CLUT rows are placed in
- * VRAM. Each row is 256 entries wide and breaks into 16 sub-palettes of 16
- * colors (CLUT slots are 16-pixel aligned in x).
- *
- *   MENU_CLUT_GRID_BASE -> CLUT 0, slot 0  (VRAM x=0,   y=498)
- *   MENU_CLUT_GRID_ALT  -> CLUT 0, slot 1  (VRAM x=16,  y=498)
- *   MENU_CLUT_CORNER    -> CLUT 1, slot 10 (VRAM x=160, y=499)
- */
+/* Menu chrome CLUT ids produced by getClut for the rows uploaded in menu_upload_tim. */
 #define MENU_CLUT_GRID_BASE 0x7C80
 #define MENU_CLUT_GRID_ALT 0x7C81
 #define MENU_CLUT_CORNER 0x7CCA
@@ -37,18 +28,7 @@
 /** Read two adjacent CLUT colors as one packed 32-bit word. */
 #define MENU_TIM_CLUT_WORD(tim, index) (((u32*)(tim)->clut_data)[index])
 
-/*
- * Packed texture-window / UV origin constants for the menu window chrome.
- * Format: bits 15..8 = VRAM v (y), bits 7..0 = VRAM u (x).
- * The chrome tiles live in a tilesheet at u=0xD0..0xD8, v=0x70..0x90
- * (8 px per tile). The interior fill uses a separate region at u=v=0xA0.
- *
- *   v=0x70: corner row (TL at u=0xD0, TR at u=0xD8)
- *   v=0x78: corner row (BL at u=0xD0, BR at u=0xD8)
- *   v=0x80: top h-edge  (16x8 tile, single column)
- *   v=0x88: bot h-edge  (16x8 tile, single column)
- *   v=0x90: v-edge row  (left at u=0xD0, right at u=0xD8, each 8x16)
- */
+/* Packed menu-chrome UV origins: high byte V, low byte U. */
 #define MENU_TW_CORNER_TL 0x70D0
 #define MENU_TW_CORNER_TR 0x70D8
 #define MENU_TW_CORNER_BL 0x78D0
@@ -64,15 +44,7 @@
 #define MENU_WINDOW_EDGE_TEXTURE_SHORT_SIDE 8
 #define MENU_LABEL_BUFFER_SIZE 16
 
-/*
- * VRAM layout for the three menu window slots' primitive data.
- * Each slot has two regions:
- *   Strip: 16 halfwords wide x 1 scanline at x=272, y=472/473/474
- *          (cursor/highlight bar, just above the CLUT rows at y=498)
- *   Block: 12 halfwords wide x 48 scanlines at x=1012 (slots 0-1) or x=1000 (slot 2),
- *          y=288 (slot 0) or y=336 (slots 1-2) (main content texture block)
- * Source data stride between slots in g_prim_rect_buf: 0x4A0 bytes.
- */
+/* VRAM placement for each slot's cursor strip and content texture block. */
 #define PRIM_STRIP_VRAM_X 0x110  /* 272  - VRAM column                    */
 #define PRIM_STRIP_VRAM_Y0 0x1D8 /* 472  - VRAM row for slot 0            */
 #define PRIM_STRIP_W 0x10        /* 16 halfwords wide                     */
@@ -167,10 +139,7 @@
 #define MENU_TREE_DRAW_WIDTH 36
 #define MENU_TREE_DRAW_HEIGHT 170
 
-/*
- * Sound effect IDs -- passed as the first argument to menu_play_se.
- * Second arg is always MENU_SE_VOLUME.
- */
+/* Sound-effect ids passed to menu_play_se; volume is always MENU_SE_VOLUME. */
 /** @brief Scroll navigation sound (D-up / D-down / Circle to scroll). */
 #define MENU_SE_NAVIGATE 0x7D
 /** @brief Open / select sound (Circle or D-right to enter a node). */
@@ -405,10 +374,7 @@ typedef struct
     u8 unkF;
 } MenuNode;
 
-/**
- * @brief Four u32 pointers to item data for each comparison slot.
- * @note Used alongside g_item_slot_flags; each element maps to g_item_slot_flags's parallel flag.
- */
+/** @brief Four item-record pointers used by the comparison slots. */
 typedef struct
 {
     u32 slot0; /**< Slot 0 data pointer. */
@@ -417,10 +383,7 @@ typedef struct
     u32 slot3; /**< Slot 3 data pointer. */
 } ItemSlotData;
 
-/**
- * @brief Four u8 flags indicating which item comparison slots are occupied (nonzero = active).
- * @note Parallel to g_item_slot_data; checked in func_80145608 before reading slot data.
- */
+/** @brief Occupancy flags parallel to g_item_slot_data. */
 typedef struct
 {
     u8 slot0; /**< Slot 0 occupied flag. */
@@ -442,7 +405,7 @@ typedef struct
 {
     u16 packed_x; /**< Bottom 9 bits = X screen position; upper bits unknown. */
     u8 y;         /**< Y position; caller subtracts 8 when using as display offset. */
-    u8 pad[5];
+    u8 pad[5];    /**< pad[0] is the content/action id; remaining bytes are content-specific. */
 } MenuContentItem;
 
 typedef struct
@@ -467,7 +430,9 @@ typedef struct
 /** Partial view of one controller port through its large-motor command. */
 typedef struct
 {
-    u8 padding0[0x92];
+    u8 padding0[0x90];
+    u8 small_motor_command;
+    u8 padding91;
     u8 large_motor_command;
     u8 padding93[0x1B];
 } MenuControllerActuatorPort;
@@ -489,9 +454,7 @@ typedef enum
 
 /* ----- Forward declarations ----- */
 
-/* K&R-style declaration: original call site in menu_tick passes no explicit
- * argument and relies on register a0 (the caller's first parameter) being
- * live. Keep the empty parameter list to preserve that codegen exactly. */
+/* K&R form preserves the original menu_tick call-site use of live a0. */
 void menu_build_grid();
 void menu_update_slots(RenderContext* render_ctx);
 u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 allow_input);
@@ -499,14 +462,14 @@ u32 menu_step_item_selection(s32 step);
 
 /* ----- Extern globals ----- */
 
-/** @brief Pending overlay element to emit at end of @ref menu_update_slots (0 = none). */
-extern s32 g_menu_pending_overlay;
+/** @brief Optional help/description string drawn below the active menu content. */
+extern s32 g_menu_help_text;
 /** @brief Selects node-tree, content, or content-exit cursor handling. */
 extern s32 g_menu_cursor_enable;
 /** @brief Set non-zero by a content callback to abort @ref menu_draw_window early. */
 extern s32 g_menu_draw_early_out;
-/** @brief Base address of the double-buffered DRAWENV array. */
-extern s32 g_draw_buf_base;
+/** @brief Base address of the menu double-buffered DRAWENV array. */
+extern s32 g_menu_draw_buf_base;
 /** @brief When non-zero, suppresses cursor highlight even on the active slot. */
 extern s32 g_menu_suppress_cursor;
 /** @brief Scene/language selector used in window title decoration layout switches. */
@@ -514,7 +477,7 @@ extern s32 g_menu_scene_type;
 
 extern MenuNode g_menu_nodes[0x2C];
 extern u8 g_menu_prev_node;
-/** @brief Gate flag for func_80148A20: 0 = draw empty slot, nonzero = full item render. */
+/** @brief Gate flag for menu_draw_content_cursor: 0 = draw empty slot, nonzero = full item render. */
 extern s32 g_menu_content_ready;
 
 extern ItemSlotData g_item_slot_data;
@@ -522,15 +485,15 @@ extern ItemSlotFlags g_item_slot_flags;
 
 /** @brief Pointer into g_pad_ctx item data for the current category; null = no items. */
 extern s32 g_menu_item_ptr;
-extern s32 D_80169410;
-extern s32 D_80169404;
-extern s32 D_80169408;
-extern s32 D_8016911C;
-extern s32 D_80169554;
-extern s32 D_801694B0;
+extern s32 g_menu_category0_item;
+extern s32 g_menu_category1_item;
+extern s32 g_menu_category2_item;
+extern s32 g_menu_active_equipped_item;
+extern s32 g_menu_saved_category0_item;
+extern s32 g_menu_saved_category1_item;
 /** @brief Packed circular navigation entries for item sub-pages. */
 extern s32 g_menu_item_nav_entries[];
-extern void* D_801693FC;
+extern void* g_menu_equipment_base;
 /** @brief Current interpolated vertical scroll position of the node tree. */
 extern s32 g_menu_content_height;
 extern s32 g_menu_scroll_pos;
@@ -561,7 +524,8 @@ extern s32 g_menu_nav_first;
 extern s32 g_content_view_y;
 /** @brief Set to 1 to request an overlay/scene load at end of this input frame. */
 extern s32 g_menu_load_request;
-extern s32 D_80168C10;
+/** @brief Transition/result code paired with g_menu_load_request. */
+extern s32 g_menu_transition_code;
 /** @brief X pixel position of the content cursor within the content window. */
 extern s32 g_content_cursor_x;
 /** @brief Index of the item found by hit-test, or -1 if none. */
@@ -583,7 +547,8 @@ extern MenuContentItem* g_menu_content_table[];
 extern s32 g_menu_layout_end;
 
 /**
- * decomp.me (100%) https://decomp.me/scratch/Dv8qB
+ * @brief Initialize menu graphics, runtime state, window slots, and the node tree.
+ * @see decomp.me (100%) https://decomp.me/scratch/Dv8qB
  */
 void menu_init(void)
 {
@@ -593,7 +558,7 @@ void menu_init(void)
     menu_reset_slots();
     g_active_slot = -1;
     func_800AA02C();
-    g_menu_unk_e8 = 0;
+    g_menu_compare_window_active = 0;
     menu_init_prim_rects();
     g_menu_frame = 0;
     g_script_cursor = 0;
@@ -602,7 +567,6 @@ void menu_init(void)
 
 /**
  * @brief Upload each menu slot's cursor strip and content block to VRAM.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/QnGCP
  */
 void menu_init_prim_rects(void)
@@ -639,10 +603,6 @@ void menu_init_prim_rects(void)
 
 /**
  * @brief Process input and render one menu frame.
- *
- * Builds the menu grid, applies live or scripted input, then updates the
- * active menu slots.
- *
  * @param render_ctx Render context receiving the menu primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/kgN9O
  */
@@ -749,7 +709,6 @@ typedef enum
 
 /**
  * @brief Build and queue a horizontally aligned run of glyph sprites.
- *
  * @param sprite_cursor Start of the primitive-buffer region for the glyph sprites.
  * @param ot Ordering-table entry that receives the emitted packets.
  * @param src Address of the source text.
@@ -819,10 +778,7 @@ void* menu_build_text_run(
         } while (count != 0);
     }
 
-    /*
-     * addPrim prepends packets, so linking this draw mode last makes the GPU
-     * select the glyph texture page before it processes the sprites.
-     */
+    /* addPrim prepends, so link the texture-page packet after the sprites. */
     tpage = (DR_TPAGE*)sprite_cursor;
     setDrawTPage(tpage, 0, 0, 0x1F);
     addPrim(ot, tpage);
@@ -832,9 +788,7 @@ void* menu_build_text_run(
 
 /**
  * @brief Builds and queues the GPU packet sequence for the menu grid.
- *
  * @param render_ctx Render context providing the packet buffer and ordering table;
- * 
  * @see decomp.me (100%) https://decomp.me/scratch/ZtHxG
  */
 void menu_build_grid(RenderContext* render_ctx)
@@ -906,11 +860,6 @@ void menu_build_grid(RenderContext* render_ctx)
 
 /**
  * @brief Upload the menu texture and CLUTs to their reserved VRAM regions.
- *
- * The texture begins at the right edge of the display buffer, while its two
- * CLUT rows occupy the shared palette region at the bottom of VRAM.
- *
- * @see menu_upload_tim
  * @see decomp.me (100%) https://decomp.me/scratch/CKNIH
  */
 void menu_upload_graphics(void)
@@ -926,24 +875,16 @@ void menu_upload_graphics(void)
 
 /**
  * @brief Initialize the base pointer for the menu's resource tables.
- *
- * Menu text and lookup tables are addressed through offsets relative to this
- * resident data block.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/A1YTp
  */
 void menu_state_init(void)
 {
-    g_menu_state_ptr = &D_80151EBC;
+    g_menu_state_ptr = &g_menu_state_data;
 }
 
 /**
  * @brief Upload the menu texture and its two CLUTs to VRAM.
- *
- * Nonzero CLUT entries are marked semi-transparent before upload.
- *
- * @param layout VRAM destinations for the texture and first CLUT; the second
- *               CLUT is placed on the following row.
+ * @param layout VRAM destinations for the texture and first CLUT; the second CLUT is placed on the following row.
  * @see decomp.me (100%) https://decomp.me/scratch/tG03R
  */
 void menu_upload_tim(const MenuTimVramLayout* layout)
@@ -1007,7 +948,6 @@ void menu_upload_tim(const MenuTimVramLayout* layout)
 
 /**
  * @brief Allocate and initialize the first available menu window slot.
- *
  * @param ot_index Ordering-table entry used to link the slot's primitives.
  * @param rect Initial window position and dimensions.
  * @return Initialized menu slot.
@@ -1071,7 +1011,6 @@ MenuSlot* menu_slot_alloc(s32 ot_index, const MenuSlotRect* rect)
 
 /**
  * @brief Mark every menu window slot as free.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/D9BI9
  */
 void menu_reset_slots(void)
@@ -1091,24 +1030,8 @@ void menu_reset_slots(void)
 
 /**
  * @brief Per-frame update/draw pump for the four menu slots.
- *
- * Iterates @c g_menu_slots from index 3 down to 0 and dispatches on each
- * slot's @c active state: 1 = opening (advance the open animation via
- * @ref menu_draw_window_transition for 6 frames, then settle to state 2),
- * 2 = open/steady (draw via @ref menu_draw_window), 3 = closing (run the close
- * animation, free the slot when it finishes). The active slot's @c unk20
- * callback runs after its draw. Finally composites the frame and, when
- * @c g_menu_pending_overlay is set, emits an overlay element via @ref func_800A88A0.
- *
  * @param render_ctx Per-frame render context.
  * @see decomp.me (100%) https://decomp.me/scratch/BlGK5
- * @note Required to match: the loop keeps two parallel induction variables,
- *       @c var_s1 for loop control (its compare against @c g_active_slot) and a
- *       separate @c rect_i for the @c base[rect_i] indexing, both stepped from 3
- *       to -1 together. Merging them into one variable made gcc spill a value to
- *       sp+0x4C the target never touches (98.12%). The @ref menu_draw_window
- *       tile-base arg must also stay as ((u8*)g_menu_slots + 8) + (rect_i*36)
- *       written as (((rect_i*2) - rect_i) * 36).
  */
 void menu_update_slots(RenderContext* render_ctx)
 {
@@ -1128,7 +1051,7 @@ void menu_update_slots(RenderContext* render_ctx)
     u_int* frame_ot;
 
     var_a0 = 0;
-    g_menu_pending_overlay = 0;
+    g_menu_help_text = 0;
     var_s1 = 3;
     rect_i = 3;
     tmp_s5 = 2;
@@ -1219,15 +1142,14 @@ void menu_update_slots(RenderContext* render_ctx)
     }
 
     render_ctx->prim_cursor = menu_draw_frame(render_ctx->prim_cursor, frame_ot, render_ctx->frame_parity, var_a3);
-    if (g_menu_pending_overlay != 0)
+    if (g_menu_help_text != 0)
     {
-        render_ctx->prim_cursor = (void*)func_800A88A0(render_ctx->prim_cursor, (u_int*)((u8*)render_ctx + 0x34 + g_menu_pending_overlay - g_menu_pending_overlay), g_menu_pending_overlay, 1, 0xA0, 0xCA, 2);
+        render_ctx->prim_cursor = (void*)func_800A88A0(render_ctx->prim_cursor, (u_int*)((u8*)render_ctx + 0x34 + g_menu_help_text - g_menu_help_text), g_menu_help_text, 1, 0xA0, 0xCA, 2);
     }
 }
 
 /**
  * @brief Draw one frame of a menu window's opening or closing transition.
- *
  * @param render_ctx Per-frame menu rendering context.
  * @param slot Window slot being animated.
  * @param cursor_enable Nonzero to allow the active-slot cursor highlight.
@@ -1276,19 +1198,12 @@ void menu_draw_window_transition(MenuRenderCtx* render_ctx, MenuSlotAnim* slot, 
 
 /**
  * @brief Build all GPU primitives for one menu window at a given rectangle.
- *
- * Sets up the window's draw environment, then emits the background fill
- * (@ref menu_fill_window_interior), the four edges (@ref menu_build_h_edge horizontal,
- * @ref menu_build_v_edge vertical), and the four corners (@ref menu_emit_corner),
- * splicing each into the slot's primitive chain. May also run the slot's
- * @c unk1C content callback and optional title/decoration passes.
- *
- * @param slot          Slot descriptor (geometry, flags, content callback).
- * @param gpu_work      Per-frame render context (layout matches @ref RenderContext).
- * @param rect          Window rectangle: x, y, w, h halfwords.
- * @param view_origin   View-origin offset forwarded to the content callback.
+ * @param slot Slot descriptor (geometry, flags, content callback).
+ * @param gpu_work Per-frame render context (layout matches @ref RenderContext).
+ * @param rect Window rectangle: x, y, w, h halfwords.
+ * @param view_origin View-origin offset forwarded to the content callback.
  * @param cursor_enable Cursor-highlight enable for the active slot.
- * @see decomp.me (100%) https://decomp.me/scratch/5k4SF
+ * @see decomp.me (99.96%) https://decomp.me/scratch/5k4SF
  */
 void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rect, ScreenPos* view_origin, s32 cursor_enable)
 {
@@ -1335,7 +1250,7 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
         {
             if ((rect->h - 0x10) > 0)
             {
-                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
+                SetDrawEnv((DR_ENV*)var_s1, (DRAWENV*)(g_menu_draw_buf_base + ((gpu_work->draw_buf_idx ^ 1) * DRAW_BUF_STRIDE) + DRAW_BUF_DRAWENV_OFF));
                 addPrim(temp_s2, var_s1);
                 var_a3 = 0;
                 g_menu_draw_early_out = 0;
@@ -1470,12 +1385,11 @@ void menu_draw_window(MenuSlotView* slot, MenuRenderCtx* gpu_work, MenuRect* rec
 
 /**
  * @brief Emit one textured window-corner sprite.
- *
- * @param sprite   Primitive buffer location for the sprite.
+ * @param sprite Primitive buffer location for the sprite.
  * @param ot_entry Ordering-table entry to link the sprite into.
- * @param x        Screen X coordinate.
- * @param y        Screen Y coordinate.
- * @param uv       Packed texture coordinates: U in bits 7:0, V in bits 15:8.
+ * @param x Screen X coordinate.
+ * @param y Screen Y coordinate.
+ * @param uv Packed texture coordinates: U in bits 7:0, V in bits 15:8.
  * @return Primitive buffer location immediately after the sprite.
  * @see decomp.me (100%) https://decomp.me/scratch/GcWsA
  */
@@ -1499,11 +1413,10 @@ SPRT* menu_emit_corner(SPRT* sprite, u_long* ot_entry, s16 x, s16 y, u16 uv)
 
 /**
  * @brief Tile a window interior with textured sprites.
- *
- * @param sprite   Primitive buffer location for the first tile.
+ * @param sprite Primitive buffer location for the first tile.
  * @param ot_entry Ordering-table entry to link the tiles into.
- * @param rect     Screen-space region to fill.
- * @param uv       Packed texture coordinates: U in bits 7:0, V in bits 15:8.
+ * @param rect Screen-space region to fill.
+ * @param uv Packed texture coordinates: U in bits 7:0, V in bits 15:8.
  * @return Primitive buffer location immediately after the emitted tiles.
  * @see decomp.me (100%) https://decomp.me/scratch/R9mdk
  */
@@ -1569,10 +1482,9 @@ SPRT* menu_fill_window_interior(SPRT* sprite, u_long* ot_entry, const MenuRectU1
 
 /**
  * @brief Emit a textured top or bottom window edge.
- *
- * @param packet_cursor  Primitive buffer location for the edge.
- * @param ot_entry       Ordering-table entry to link the primitives into.
- * @param rect           Screen-space edge rectangle.
+ * @param packet_cursor Primitive buffer location for the edge.
+ * @param ot_entry Ordering-table entry to link the primitives into.
+ * @param rect Screen-space edge rectangle.
  * @param texture_origin Packed texture origin: U in bits 7:0, V in bits 15:8.
  * @return Primitive buffer location immediately after the emitted primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/u17Fi
@@ -1622,10 +1534,9 @@ u_long* menu_build_h_edge(
 
 /**
  * @brief Emit a textured left or right window edge.
- *
- * @param packet_cursor  Primitive buffer location for the edge.
- * @param ot_entry       Ordering-table entry to link the primitives into.
- * @param rect           Screen-space edge rectangle.
+ * @param packet_cursor Primitive buffer location for the edge.
+ * @param ot_entry Ordering-table entry to link the primitives into.
+ * @param rect Screen-space edge rectangle.
  * @param texture_origin Packed texture origin: U in bits 7:0, V in bits 15:8.
  * @return Primitive buffer location immediately after the emitted primitives.
  * @see decomp.me (100%) https://decomp.me/scratch/19jr7
@@ -1675,13 +1586,12 @@ u_long* menu_build_v_edge(
 
 /**
  * @brief Draw a sign-dependent label at a screen position.
- *
- * @param ot_entry      Ordering-table entry for the label primitives.
+ * @param ot_entry Ordering-table entry for the label primitives.
  * @param packet_cursor Primitive buffer location for the label.
- * @param position      Label screen position.
- * @param value         Selects the nonnegative or negative label.
+ * @param position Label screen position.
+ * @param value Selects the nonnegative or negative label.
  * @return Updated primitive buffer location.
- * @see decomp.me https://decomp.me/scratch/ozwB7
+ * @see decomp.me (100%) https://decomp.me/scratch/ozwB7
  */
 u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos* position, s32 value)
 {
@@ -1719,21 +1629,7 @@ u_long* menu_draw_label(u_long* ot_entry, u_long* packet_cursor, const ScreenPos
 
 /**
  * @brief Initialize the full menu node tree and global menu state.
- * @note Builds all 44 g_menu_nodes entries with hardcoded parent-child links and flags,
- *       zeroes all layout counters, runs an initial position pass, then calls into the
- *       layout and render pipeline unless a script is still active.
- * @see decomp.me (90.94%, old non-equivalent body) https://decomp.me/scratch/XJkmb
- * @note Current body is the corrected rewrite (93.00504% local match, functionally
- *       equivalent; store values/order transcribed from the target asm). The
- *       zero-init loop is an indexed do-while (var_a0[var_t0]) reusing var_t0 as
- *       the counter, and the hundreds of node-field stores are ordered exactly as
- *       the target emits them.
- * @note Not yet byte-exact (396/595 rows: 182 argdiff, 2 replace, 15 target-only,
- *       17 yours-only, +2 insns). Frame still does not match (target -0x30, this
- *       source -0x38, 8 bytes over) - sp+0x14 (target's s1 home) has no traffic
- *       here, while this source has extra traffic at sp+0x2C (s5 home) and sp+0x30
- *       (ra home). Fixing the frame size is likely the next lever; most argdiff
- *       rows are probably downstream of the uniform sp-offset shift it causes.
+ * @see decomp.me (93.01%) https://decomp.me/scratch/XJkmb
  */
 void menu_node_tree_init(void)
 {
@@ -1797,12 +1693,12 @@ void menu_node_tree_init(void)
     g_item_slot_flags.slot2 = 0;
     g_item_slot_flags.slot3 = 0;
     g_menu_item_ptr = 0;
-    D_80169410 = 0;
-    D_80169404 = 0;
-    D_80169408 = 0;
-    D_8016911C = 0;
-    D_80169554 = 0;
-    D_801694B0 = 0;
+    g_menu_category0_item = 0;
+    g_menu_category1_item = 0;
+    g_menu_category2_item = 0;
+    g_menu_active_equipped_item = 0;
+    g_menu_saved_category0_item = 0;
+    g_menu_saved_category1_item = 0;
     g_menu_nav_prev[0] = 0;
     g_menu_content_height = 0;
     g_menu_scroll_pos = 0;
@@ -1865,8 +1761,7 @@ void menu_node_tree_init(void)
     g_menu_nodes[4].idx_nav.s.self_idx = 4;
     if (D_800FDA80 & 2)
     {
-        /* Empty conditional forces a basic-block boundary the compiler needs
-           to reproduce the target's scheduling here; required to match. */
+        /* Preserve the basic-block boundary required by GCC 2.7.2 scheduling. */
         if (1)
         {
         }
@@ -2146,7 +2041,6 @@ void menu_node_tree_init(void)
 
 /**
  * @brief Collapse every menu node while preserving its other state flags.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/hyDM7
  */
 void menu_collapse_all(void)
@@ -2161,10 +2055,6 @@ void menu_collapse_all(void)
 
 /**
  * @brief Rebuild the visible node layout and update its scroll state.
- *
- * Active root nodes and their expanded descendants are assigned consecutive
- * rows. The resulting layout extent is stored in @c g_menu_layout_end.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/YhGni
  */
 void menu_update_layout(void)
@@ -2213,7 +2103,6 @@ void menu_update_layout(void)
  * @param node_idx Index into g_menu_nodes of the node to lay out.
  * @param base_pos Running position counter; this node occupies [base_pos, base_pos + MENU_ROW_HEIGHT).
  * @return Updated position counter after processing this node and any expanded children.
- * @note Bit 1 of u2.s.flags controls child recursion; menu_collapse_all clears it before layout.
  * @see decomp.me (100%) https://decomp.me/scratch/LDCeT
  */
 s32 menu_layout_node(s32 node_idx, s32 base_pos)
@@ -2224,7 +2113,7 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
     MenuNode* node;
     int is_expanded;
     u32 layout_y; /* base_pos clamped to 16 bits; packed as 9-bit value into layout_y_lsb/layout_y_hi */
-    /* Codegen artifact: separate union pointer so the compiler reads nav_y_hi via a distinct register. */
+    /* Keep this alias distinct for target register allocation. */
     union
     {
         u16 nav_y_packed;
@@ -2234,7 +2123,7 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
             u8 layout_y_lsb;
         } s;
     }* u8_alias;
-    MenuNode* node2; /* second pointer alias -- register allocation artifact, do not merge with node */
+    MenuNode* node2; /* Separate alias required for target register allocation. */
     cur_pos = base_pos;
     is_expanded = (((u16)(&g_menu_nodes[node_idx])->u2.unk2) >> 1) & 1;
     layout_y = cur_pos & 0xFFFF;
@@ -2246,7 +2135,7 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
     /* Pack 9-bit layout Y: bit 0 goes into MENU_LAYOUT_Y0_BIT of u8_u.nav_y_packed (layout_y_lsb bit 7);
      * bits 1-8 go into layout_y_hi. Reconstruct: (layout_y_hi << 1) | (layout_y_lsb >> 7). */
     node->u8_u.nav_y_packed = (*u8_alias).s.nav_y_hi | ((layout_y & 1) << 15);
-    /* Duplicate write (codegen artifact): both lines store (layout_y >> 1) into layout_y_hi. */
+    /* Preserve the target duplicate store. */
     (&g_menu_nodes[node_idx])->uA.layout_child_packed = ((&g_menu_nodes[node_idx])->uA.layout_child_packed & 0xFF00) | (0xFF & (layout_y >> 1));
     node->uA.layout_child_packed = (node->uA.layout_child_packed & 0xFF00) | ((layout_y >> 1) & 0xFF);
     if (is_expanded)
@@ -2265,11 +2154,10 @@ s32 menu_layout_node(s32 node_idx, s32 base_pos)
 
 /**
  * @brief Draw the menu frame layers and optionally dispatch navigation input.
- *
  * @param packet_cursor Primitive buffer location for the frame.
- * @param ot_entry      Ordering-table entry for the frame primitives.
- * @param frame_parity  Selects the active double-buffered VRAM page.
- * @param allow_input   Nonzero to dispatch navigation input.
+ * @param ot_entry Ordering-table entry for the frame primitives.
+ * @param frame_parity Selects the active double-buffered VRAM page.
+ * @param allow_input Nonzero to dispatch navigation input.
  * @return Primitive buffer location immediately after the frame.
  * @see decomp.me (100%) https://decomp.me/scratch/x8WyZ
  */
@@ -2287,7 +2175,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
     actuator_state = MENU_CONTROLLER_ACTUATORS;
 
     /* Emit the full-screen draw environment before the menu layers. */
-    draw_env_packet = (u8*)func_80145608(packet_cursor);
+    draw_env_packet = (u8*)menu_draw_scene_content(packet_cursor);
     draw_y = frame_parity ? SCREEN_HEIGHT : VRAM_BACK_DRAW_Y;
     SetDefDrawEnv(&draw_env, 0, draw_y, SCREEN_WIDTH, VRAM_DRAW_HEIGHT);
     SetDrawEnv(draw_env_packet, &draw_env);
@@ -2317,7 +2205,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
         break;
 
     case MENU_CURSOR_MODE_CONTENT:
-        frame_cursor = (u8*)func_80148A20(draw_env_packet, ot_entry - 1, allow_input);
+        frame_cursor = (u8*)menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
             menu_handle_input(allow_input);
@@ -2325,7 +2213,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
         break;
 
     case MENU_CURSOR_MODE_CONTENT_EXIT:
-        frame_cursor = (u8*)func_80148A20(draw_env_packet, ot_entry - 1, allow_input);
+        frame_cursor = (u8*)menu_draw_content_cursor(draw_env_packet, ot_entry - 1, allow_input);
         if (g_menu_suppress_cursor == 0)
         {
             g_menu_cursor_enable = MENU_CURSOR_MODE_NODE_TREE;
@@ -2358,6 +2246,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
 
 /**
  * @brief Process D-pad and face-button input to navigate and select menu nodes.
+ * @return Undefined; callers ignore the nominal return value.
  * @see decomp.me (100%) https://decomp.me/scratch/YoOml
  */
 unsigned int menu_handle_node_input(void)
@@ -2395,7 +2284,7 @@ unsigned int menu_handle_node_input(void)
     MenuContentItem* temp_v1_2;
     u8* new_var6;
     int new_var2;
-    const u32 browse_all_node = MENU_NODE_BROWSE_ALL; /* = 0x20, kept as local for register allocation */
+    const u32 browse_all_node = MENU_NODE_BROWSE_ALL; /* Local form preserves target codegen. */
     const u8 SENTINEL;
     temp_v0 = menu_find_nav_node_index(g_menu_active_node);
     if (temp_v0 == (-1))
@@ -2474,7 +2363,7 @@ unsigned int menu_handle_node_input(void)
         if (g_menu_active_node == 0x11)
         {
             g_menu_load_request = 1;
-            D_80168C10 = 0xA;
+            g_menu_transition_code = 0xA;
             return;
         }
         new_var11 = g_menu_nodes;
@@ -2484,7 +2373,7 @@ unsigned int menu_handle_node_input(void)
         new_var10 = temp_v0_3;
         if (temp_a1->u2.s.parent_idx == temp_v0_3) /* temp_v0_3 = MENU_NONE (0xFF) */
         {
-            D_80169408 = (D_80169404 = (D_80169410 = (g_menu_item_ptr = 0)));
+            g_menu_category2_item = (g_menu_category1_item = (g_menu_category0_item = (g_menu_item_ptr = 0)));
         }
         g_menu_prev_node = temp_v0_3;
         new_var8 = &temp_a1->idx_nav;
@@ -2585,7 +2474,6 @@ unsigned int menu_handle_node_input(void)
 
 /**
  * @brief Focus the active content item and snap the viewport to its position.
- *
  * @return 1 if an active item was found; otherwise 0.
  * @see decomp.me (100%) https://decomp.me/scratch/q39Ou
  */
@@ -2617,10 +2505,7 @@ s32 menu_focus_active_content_item(void)
 extern s32 g_menu_char_slot;
 
 /**
- * @brief Mark the active node's ancestor chain as expanded, propagate its nav cursor
- *        position to its children, update g_menu_char_slot, and re-run the full layout.
- * @note var_s3 and layout_pos are each reused for two unrelated purposes to match the
- *       compiler's register allocation exactly.
+ * @brief Mark the active node's ancestor chain as expanded, propagate its nav cursor position to its children, update g_menu_char_slot, and re-run the full layout.
  * @see decomp.me (100%) https://decomp.me/scratch/BF56X
  */
 void menu_set_active_node()
@@ -2765,11 +2650,10 @@ extern s8 D_801226B8;
 extern s32 D_801229F4;
 extern s32 D_8011F424;
 
-/** @note K&R empty parameter lists: these are declared before ScrollListState /
- *        Vec2s exist, and are only used to take their addresses as content callbacks. */
-s32 func_8014B7DC();
-s32 func_8014CC08();
-s32 func_8014C200();
+/* K&R declarations are intentional for callback-address use before the state types. */
+s32 menu_spell_list_callback();
+s32 menu_equipment_action_callback();
+s32 menu_subtype_action_callback();
 
 /**
  * @brief Marker shown while selecting two party slots to swap.
@@ -2784,39 +2668,23 @@ typedef struct
 
 /** @brief Party-sort selection marker; selected_idx is MENU_NONE when inactive. */
 extern PartySortMarker g_party_sort_marker;
-extern u8 D_801686CC[];
-extern u8 D_8014FE54[][8];
+extern u8 g_menu_content_group_ids[];
+/** @brief Action code for each content group and one of its eight encoded item slots. */
+extern u8 g_menu_content_action_codes[][8];
 /** @brief First glyph/string pointer used by confirmation and status messages. */
 extern void* g_menu_message_line1;
 /** @brief Optional second glyph/string pointer used by two-line messages. */
 extern void* g_menu_message_line2;
 extern void* D_801227D4;
-extern u8 D_801686F8[];
 
-/**
- * @brief Pad-context view exposing the party-sort order table.
- * @note Only the byte array at 0x638 is mapped here; everything before it is
- *       covered by @ref PadContext.
- */
+/** @brief Pad-context view exposing the party-sort order table. */
 typedef struct
 {
     u8 pad000[0x638]; /**< 0x000 - unmapped head of the pad context record. */
     u8 order[8];      /**< 0x638 - eight party slot indices, in display order. */
 } MenuPartyOrder;
 
-/**
- * @brief Base of the party-sort order record for the active reorder screen.
- * @return Pad-context pointer advanced to the record for the current scene.
- * @note Required to match: the pad-context base and the scene-dependent 0x250
- *       record stride are re-evaluated on every access, and the offset has to
- *       land in a variable rather than stay a bare ternary. gcc 2.7.2's fold()
- *       distributes a binary operator over a COND_EXPR operand unconditionally
- *       (fold-const.c), which collapses `base + (cond ? 0 : 0x250)` into
- *       `cond ? base : base + 0x250` and loses the target's separate offset
- *       register. Measured: bare-ternary spellings cost 20 exact rows. Inlining
- *       through this helper (instead of two function-scope temporaries) gives
- *       every access site its own offset pseudo, worth 45 exact rows.
- */
+/** @brief Return the party-sort order record for the active reorder screen. */
 static inline MenuPartyOrder* menu_sort_order_record(void)
 {
     u8* base = (u8*)g_pad_ctx;
@@ -2857,20 +2725,12 @@ static inline s32 menu_focus_active_item(void)
 
 /**
  * @brief Per-frame menu navigation, confirm/cancel and cursor-move input handler.
- * @param process_actions Non-zero to also process confirm/cancel and the four
- *                        cursor-move buttons; 0 runs only node switching.
+ * @param process_actions Non-zero to also process confirm/cancel and the four cursor-move buttons; 0 runs only node switching.
  * @see decomp.me (99.02%) https://decomp.me/scratch/DRmEd
- * @note Not yet byte-exact (1383/1429 rows: 34 argdiff, 5 replace, 7 target-only,
- *       2 yours-only). Residual mechanism is CSE-FOLD: the target re-reads
- *       g_menu_char_slot, D_8016911C, and g_menu_slots separately where this
- *       source folds them into an earlier load; the argdiff/replace rows are
- *       register-allocation fallout downstream of that fold.
- * @note Locals still carrying m2c-derived names (var_s0, var_s4, sp18, new_var7)
- *       are TODO renames; their declaration order must not change.
  */
 void menu_handle_input(s32 process_actions)
 {
-    u8* var_s4 = (u8*)0x801ED600;
+    u8* var_s4 = (u8*)0x801ED600; /* Raw view preserves menu_handle_input codegen. */
     MenuContentItem* s5;
     u32 content_type;
     MenuSlot* slots;
@@ -3201,7 +3061,7 @@ after_do_while:
                         rect.w = 0xF0;
                         rect.h = 0x60;
                         var_a3 = menu_slot_alloc(3, &rect);
-                        var_a3->content_cb = (s32 * (*)()) & func_8014B7DC;
+                        var_a3->content_cb = (s32 * (*)()) & menu_spell_list_callback;
                         var_a3->flags =
                             (var_a3->flags & 0xFE00FFFF) | ((menu_build_spell_nav_entries() & 0x1FF) << 16);
                         var_a3->has_title = 1;
@@ -3231,7 +3091,7 @@ after_do_while:
                             rect.h = 0x40;
                         }
                         var_a3 = menu_slot_alloc(3, &rect);
-                        var_a3->content_cb = (s32 * (*)()) & func_8014C200;
+                        var_a3->content_cb = (s32 * (*)()) & menu_subtype_action_callback;
                         { u8* pad_base = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250); flag = *(pad_base + content_type + 0x609); }
                         if ((flag != 0xFF) && (flag & 0x80))
                         {
@@ -3246,13 +3106,13 @@ after_do_while:
                         scroll_list_update_target(var_a3, g_menu_scroll_nav_entries);
                         new_var7 = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) + 0x90));
                         g_menu_item_ptr = new_var7;
-                        D_80169554 = g_menu_item_ptr;
-                        D_80169410 = g_menu_item_ptr;
-                        D_801694B0 = g_menu_item_ptr;
-                        D_80169404 = g_menu_item_ptr;
+                        g_menu_saved_category0_item = g_menu_item_ptr;
+                        g_menu_category0_item = g_menu_item_ptr;
+                        g_menu_saved_category1_item = g_menu_item_ptr;
+                        g_menu_category1_item = g_menu_item_ptr;
                         g_menu_nav_prev[0] = g_menu_item_ptr;
-                        D_8016911C = g_menu_item_ptr;
-                        D_80169408 = g_menu_item_ptr;
+                        g_menu_active_equipped_item = g_menu_item_ptr;
+                        g_menu_category2_item = g_menu_item_ptr;
                         menu_play_se(0x7D, 0x80);
                     }
                     break;
@@ -3268,14 +3128,14 @@ after_do_while:
                         rect.w = 0x70;
                         rect.h = 0x60;
                         var_a3 = menu_slot_alloc(3, &rect);
-                        var_a3->content_cb = (s32 * (*)()) & func_8014CC08;
+                        var_a3->content_cb = (s32 * (*)()) & menu_equipment_action_callback;
                         var_a3->flags = (var_a3->flags & 0xFE00FFFF) | 0x50000;
                         menu_init_item_nav_entries(5);
                         {
                             void* ptr = (void*)((u8*)g_pad_ctx + ((g_menu_char_slot * 0x250) + 0x5F0) + ((content_type << 6) - 0x170));
-                            D_80169554 = ptr;
-                            D_801694B0 = ptr;
-                            D_8016911C = ptr;
+                            g_menu_saved_category0_item = ptr;
+                            g_menu_saved_category1_item = ptr;
+                            g_menu_active_equipped_item = ptr;
                             g_menu_nav_prev[0] = ptr;
                             menu_play_se(0x7D, 0x80);
                         }
@@ -3322,15 +3182,15 @@ after_do_while:
                                 D_801229F4 = g_script_repeat_last;
                                 if (g_menu_scene_type == 1)
                                 {
-                                    D_80168C10 = 0xB;
+                                    g_menu_transition_code = 0xB;
                                 }
                                 else if (g_menu_scene_type == 2)
                                 {
-                                    D_80168C10 = 0xC;
+                                    g_menu_transition_code = 0xC;
                                 }
                                 else
                                 {
-                                    D_80168C10 = 1;
+                                    g_menu_transition_code = 1;
                                 }
                             }
                         }
@@ -3340,8 +3200,8 @@ after_do_while:
             }
             else if (top_nibble == 0xF000)
             {
-                table_idx = D_801686CC[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
-                val = D_8014FE54[table_idx][(packed_x >> 9) & 7];
+                table_idx = g_menu_content_group_ids[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx];
+                val = g_menu_content_action_codes[table_idx][(packed_x >> 9) & 7];
                 if (val != 0)
                 {
                     menu_play_se(0x7E, 0x80);
@@ -3384,7 +3244,7 @@ after_do_while:
                                 }
                                 D_8011F424 = count + 3;
                                 g_menu_load_request = 1;
-                                D_80168C10 = 3;
+                                g_menu_transition_code = 3;
                             }
                         }
                         break;
@@ -3528,9 +3388,9 @@ after_do_while:
                         if (g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx < 0x11)
                         {
                             g_menu_item_ptr = (void*)0;
-                            D_80169410 = (void*)0;
-                            D_80169408 = (void*)0;
-                            D_80169404 = (void*)0;
+                            g_menu_category0_item = (void*)0;
+                            g_menu_category2_item = (void*)0;
+                            g_menu_category1_item = (void*)0;
                         }
                     }
                 }
@@ -3545,7 +3405,6 @@ after_do_while:
 
 /**
  * @brief Clamp the content cursor and snap the viewport to its position.
- *
  * @see decomp.me (100%) https://decomp.me/scratch/wBlQo
  */
 void menu_snap_view_to_cursor(void)
@@ -3578,12 +3437,6 @@ typedef struct
 /**
  * @brief Return non-zero if the item currently under the cursor has a confirm action.
  * @return 1 if the item will trigger a sub-menu or named action on confirm, 0 otherwise.
- * @note For character-page nodes (0x1F = char slot 0, 0x2B = char slot 1), items
- *       17-24 are the 8 equipment/ability swap slots and always return 1.
- *       0x5000 sub-menu items with action_type 1-10 only return 1 when char slot 0
- *       is active (g_menu_char_slot == 0); type 15 (equip) always returns 1.
- *       0xF000 action items look up an action code in D_8014FE54; codes 1 and 6-11
- *       (navigation pointer setup and audio/companion controls) return 1.
  * @see decomp.me (100%) https://decomp.me/scratch/cV0x9
  */
 int menu_item_has_action(void)
@@ -3633,7 +3486,7 @@ int menu_item_has_action(void)
     }
     else if (type_nibble == 0xF000)
     {
-        action_code = D_8014FE54[D_801686CC[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx]][(item->packed_x >> 9) & 7];
+        action_code = g_menu_content_action_codes[g_menu_content_group_ids[g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx]][(item->packed_x >> 9) & 7];
         if (action_code == 0)
         {
         }
@@ -3652,11 +3505,7 @@ success:
 
 /**
  * @brief Exit content focus and restore the node-tree viewport to the active node.
- *
- * Resets the content cursor when the current scene has content, then restores
- * the viewport from the active node's packed navigation coordinates.
- *
- * @see decomp.me (100%) TODO
+ * @see decomp.me (100%)
  */
 void menu_reset_content_view(void)
 {
@@ -3696,10 +3545,6 @@ void menu_reset_content_view(void)
 
 /**
  * @brief Initialize packed positions and circular links for item navigation.
- *
- * Each entry stores a 14-bit vertical position and nine-bit previous and next
- * indices.
- *
  * @param count Number of entries to initialize (no-op if <= 0).
  * @see decomp.me (100%) https://decomp.me/scratch/x87Jm
  */
@@ -3757,10 +3602,6 @@ void menu_init_item_nav_entries(s32 count)
 
 /**
  * @brief Build circular navigation entries for the spell grid.
- *
- * Scans the 12x8 presence bitmap in g_pad_ctx and creates one vertically
- * spaced navigation entry for each set bit.
- *
  * @return Number of present grid cells.
  * @see decomp.me (100%) https://decomp.me/scratch/VjQt5
  */
@@ -3846,30 +3687,8 @@ s32 menu_build_spell_nav_entries(void)
 
 /**
  * @brief Build navigation entries for the learned Special Technique list.
- *
- * Scans the 11 weapon-type masks at g_pad_ctx + 0x34, counts their 24
- * learned-technique bits, and finds the first visible row belonging to the
- * active item's weapon type.
- *
- * @return Low 16 bits: total set-bit count. High 16 bits: index of the first
- *         entry whose bit position matches bits 15:10 of D_801693FC->unk14,
- *         or 0 if no match was found.
- * @note  Scans 11 s32 slots at g_pad_ctx + 0x34, 24 bits each (bits 0-23).
- *        The first match index defaults to 0 when the 0xFF sentinel is never
- *        cleared (no slot matched).
- * @note  Shapes required to match, all register-allocation levers:
- *        - `j` is ONE variable doing double duty: the inner bit counter, and then the
- *          index of the list-building loop. The two uses are disjoint and the original
- *          shares a2 between them; giving them separate variables costs 2% and cannot
- *          be recovered by any priority tweak.
- *        - `sentinel` holds a second copy of 0xFF so the in-loop test compares against
- *          a live register (bne t2, t3) instead of an immediate; the later test against
- *          0xFF does use an immediate.
- *        - `word = *p;` must be assigned BETWEEN `mask` and `j` so the `j` init lands in
- *          the load-delay slot of the lw.
- *        - The list loop is identical to the one in func_8014551C; see its notes for the
- *          split `x = a & M; x = x | b;` pairs and the copy through `link`.
- * @see decomp.me (100%) TODO
+ * @return Low 16 bits: total set-bit count.
+ * @see decomp.me (100%)
  */
 s32 menu_build_special_technique_nav_entries(void)
 {
@@ -3902,7 +3721,7 @@ s32 menu_build_special_technique_nav_entries(void)
         {
             if ((word & mask) != 0)
             {
-                if ((i == (s32)(((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F)) && (found == sentinel))
+                if ((i == (s32)(((u32)(*(s32*)((u8*)g_menu_equipment_base + 0x14)) >> 0xA) & 0x3F)) && (found == sentinel))
                 {
                     found = count;
                 }
@@ -3958,31 +3777,12 @@ s32 menu_build_special_technique_nav_entries(void)
 }
 
 /**
- * @brief Count entries at g_pad_ctx + 0xCE0 (stride 0x40) whose 2-bit type
- *        field matches arg0, then initialize g_menu_scroll_nav_entries as a circular packed
- *        linked list of those entries.
- * @param arg0 2-bit type value to match against bits 9:8 of each entry's
- *             s32 field at offset 0x14.
+ * @brief Count entries at g_pad_ctx + 0xCE0 (stride 0x40) whose 2-bit type field matches arg0, then initialize g_menu_scroll_nav_entries as a circular packed linked list of those entries.
+ * @param arg0 2-bit type value to match against bits 9:8 of each entry's s32 field at offset 0x14.
  * @return Number of matching entries (and entries initialized in g_menu_scroll_nav_entries).
- * @note  Scans up to 100 entries; stops early on the first entry whose byte
- *        at offset 0 is 0 (sentinel / end-of-list marker).
- * @note  Three shapes are required to match, all of them register-allocation levers
- *        (the instruction sequence is otherwise identical either way):
- *        - `active` is declared INSIDE the do-while body. That block emits a
- *          NOTE_INSN_BLOCK_BEG which stops expand_end_loop (gcc 2.7.2 stmt.c) from
- *          rotating the loop; hoisting it duplicates the exit test (+4 insns).
- *        - `link` doubles as the scratch for the first packed word, and each word is
- *          built with a split `x = a & M; x = x | b;` pair rather than one expression.
- *          MIPS defines no REG_ALLOC_ORDER, so GCC allocates ascending (v0, v1, a0...)
- *          and the split makes each word's live range start at the AND, which is what
- *          forces word_prev out of v0/v1 and into a0. Merging either pair into a single
- *          expression re-colors the whole loop.
- *        - `prev` and `next` are separate variables (they share a1 only because their
- *          live ranges are disjoint); merging them into one inflates its ref count and
- *          steals a0.
- * @see decomp.me (100%) TODO
+ * @see decomp.me (100%)
  */
-s32 func_8014551C(s32 arg0)
+s32 menu_build_inventory_nav_entries(s32 arg0)
 {
     s32 i;
     s32 prev;
@@ -4048,7 +3848,7 @@ s32 func_8014551C(s32 arg0)
     }
     return count;
 }
-/* ----- M2C macros required by func_80145608 ----- */
+/* ----- M2C macros required by menu_draw_scene_content ----- */
 typedef s32 M2C_UNK;
 typedef s8 M2C_UNK8;
 typedef s16 M2C_UNK16;
@@ -4061,17 +3861,17 @@ typedef struct
     s16 y;
 } Vec2s;
 
-/* New globals introduced by func_80145608 */
 extern s32 D_80042FB4;
 extern u16 D_800F0C1C;
 extern M2C_UNK D_80105AE0;
-extern u8 D_8014FE4E;
-extern u8 D_8014FE2C[];
-extern u16 D_80151A34;
+/** @brief Default scene content count encoded as count - 1 (value 3). */
+extern u8 g_menu_default_content_count_minus_one;
+extern u8 g_menu_content_item_counts[];
+/** @brief Base of the four default MenuContentItem descriptors used by scene -1. */
+extern u16 g_menu_default_content_items;
 extern u8 D_80168659[];
 extern u8 D_80168696[];
 extern u8 D_801686B8[];
-extern u8 D_801686CC[];
 extern u8 D_80168C01[];
 extern u8 D_80168C05[];
 extern u8 D_80168C09[];
@@ -4080,42 +3880,15 @@ extern u8* D_80168C24;
 extern u8* D_80168C30;
 extern u32 D_801694CC[];
 extern u32 D_801694DC[];
-extern u8 D_80168C1C[];
 
 /**
- * @brief Main menu item-action dispatch for the current scene.
- * @param var_s1 GPU packet cursor; the parameter itself is advanced as
- *               primitives are emitted and returned at the end.
- * @param arg1 OT entry pointer passed through to render helpers.
+ * @brief Draw the active scene's content entries.
+ * @param var_s1 GPU packet cursor advanced as primitives are emitted.
+ * @param arg1 Ordering-table entry passed to render helpers.
  * @return Updated GPU packet cursor after drawing.
- * @note  Reads the active scene content table and dispatches on item type
- *        packed in each MenuContentItem. Handles navigation, equip, buy/sell,
- *        status, companion, and script-driven actions. Rebuilds g_menu_item_nav_entries
- *        and g_menu_scroll_nav_entries circular lists via the four preceding helpers as needed.
- * @note  Content entries are 8 bytes: u16 x|type<<12, u8 y+8, u8 id. var_s3
- *        walks the u16 view and var_s4 is a byte cursor at entry+2; both
- *        advance 8 bytes per entry.
- * @note  func_800A88A0 takes 7 args here (dest, ot, text, mode, x, y, sel);
- *        GCC cross-jumps the identical call tails, so the target shows only
- *        three real jals. Most loop sites recompute x/y/sel from the entry;
- *        the spB0 label sites read pos.x/pos.y; after-loop sites pass
- *        (0xAC, 0xC, 2).
- * @note  The outer loop must be a goto loop (label + if (--spC0) goto): with
- *        loop notes, gcc 2.7.2 loop.c hoists/combines the in-loop lui pairs
- *        and reduces a var_s4+1 giv, none of which exist in the target. See
- *        idioms.md [LOOP-09]. pos_p and pad_base are the only invariants the
- *        target holds in callee-saved registers (s6 and fp), assigned in the
- *        preheader.
- * @note  The "signed value + key label" sites assign label_buf = spB0 before
- *        the key_a/key_b if, then mutate it (label_buf += ...) after the
- *        second call; the pointer spanning the arms is what keeps s1 free
- *        for var_s1 and each site's tmp2 in s0.
- * @note  In-progress match; working/func_80145608/status.md has the full log
- *        (remaining: arg1/var_s4 saved-reg pair swapped s4/s5, small
- *        structural runs at 0x22D8/0x2360/0x2704/0x01F4/0x1A94/0x0C88).
  * @see decomp.me (89.27%) https://decomp.me/scratch/D6Nba
  */
-void* func_80145608(void* var_s1, s32* arg1)
+void* menu_draw_scene_content(void* var_s1, s32* arg1)
 {
     u8 sp28[0x40];
     u8 sp68[0x40];
@@ -4154,14 +3927,14 @@ void* func_80145608(void* var_s1, s32* arg1)
 
     if (g_menu_scene_type == -1)
     {
-        var_s3 = &D_80151A34;
-        spC0 = D_8014FE4E + 1;
+        var_s3 = &g_menu_default_content_items;
+        spC0 = g_menu_default_content_count_minus_one + 1;
     }
     else
     {
         u8 idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
         var_s3 = (u16*)g_menu_content_table[idx];
-        spC0 = D_8014FE2C[D_801686CC[idx]];
+        spC0 = g_menu_content_item_counts[g_menu_content_group_ids[idx]];
     }
 
     if (var_s3 != NULL)
@@ -4175,16 +3948,16 @@ void* func_80145608(void* var_s1, s32* arg1)
             s32 off = g_menu_char_slot * 0x250;
             u8* temp_a2 = (u8*)g_pad_ctx + off + 0x5F0;
             u8* temp_a1 = temp_a2 + 0x50;
-            D_801693FC = (u32)temp_a1;
+            g_menu_equipment_base = (u32)temp_a1;
             D_80168C30 = temp_a1;
             D_80168C24 = temp_a1;
             D_80168C20 = temp_a1;
             if (g_menu_scene_type == 0x10)
             {
                 u8* temp_v1_2 = temp_a2 + 0x90;
-                D_80169410 = (u32)temp_a1;
-                D_80169404 = (u32)temp_v1_2;
-                D_80169408 = (u32)temp_v1_2;
+                g_menu_category0_item = (u32)temp_a1;
+                g_menu_category1_item = (u32)temp_v1_2;
+                g_menu_category2_item = (u32)temp_v1_2;
             }
 
             if (spC0 != 0)
@@ -4218,9 +3991,9 @@ void* func_80145608(void* var_s1, s32* arg1)
                     if ((u32)(*(u8*)(var_s4 + 1) - 2) < 8)
                     {
                         s32 a2_3 = 0;
-                        if (*(u8*)D_80169404 != 0 && D_80169404 != 0)
+                        if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
                         {
-                            a2_3 = *(u8*)(D_80169404 + 0x2C);
+                            a2_3 = *(u8*)(g_menu_category1_item + 0x2C);
                         }
                         if (((a2_3 >> (*(u8*)(var_s4 + 1) - 2)) & 1) != 0)
                         {
@@ -4234,9 +4007,9 @@ void* func_80145608(void* var_s1, s32* arg1)
                     else if ((u32)(*(u8*)(var_s4 + 1) - 0xA) < 8)
                     {
                         s32 a2_4 = 0;
-                        if (*(u8*)D_80169404 != 0 && D_80169404 != 0)
+                        if (*(u8*)g_menu_category1_item != 0 && g_menu_category1_item != 0)
                         {
-                            a2_4 = *(u8*)(D_80169404 + 0x2D);
+                            a2_4 = *(u8*)(g_menu_category1_item + 0x2D);
                         }
                         if (((a2_4 >> (*(u8*)(var_s4 + 1) - 0xA)) & 1) != 0)
                         {
@@ -4298,9 +4071,9 @@ void* func_80145608(void* var_s1, s32* arg1)
                     else if ((u32)(*(u8*)(var_s4 + 1) - 0x22) < 8)
                     {
                         t0 = 0x21;
-                        if (D_80169410 != 0)
+                        if (g_menu_category0_item != 0)
                         {
-                            if (((*(u8*)(D_80169410 + 0x2C) >> (*(u8*)(var_s4 + 1) - 0x22)) & 1) != 0)
+                            if (((*(u8*)(g_menu_category0_item + 0x2C) >> (*(u8*)(var_s4 + 1) - 0x22)) & 1) != 0)
                             {
                                 t0 = *(u8*)(var_s4 + 1) + 0x13;
                             }
@@ -4325,7 +4098,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                     {
                         if (g_menu_char_slot != 2)
                         {
-                            u8* tmp2 = (u8*)D_801693FC + (*(u8*)(var_s4 + 1) << 6) - 0xC80;
+                            u8* tmp2 = (u8*)g_menu_equipment_base + (*(u8*)(var_s4 + 1) << 6) - 0xC80;
                             t0 = 0x21;
                             if (*tmp2 != 0)
                             {
@@ -4550,27 +4323,27 @@ void* func_80145608(void* var_s1, s32* arg1)
                     case 0xE:
                     case 0xF:
                     case 0x10:
-                        if (D_80169410 != 0)
+                        if (g_menu_category0_item != 0)
                         {
                             var_a0 = var_s1;
                             var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x64));
                             {
                                 s32 a3 = 1;
-                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(D_80169410 + (tmp - 0xE + 0x1A)) * 2)));
+                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(g_menu_category0_item + (tmp - 0xE + 0x1A)) * 2)));
                                 var_s1 = func_800A88A0(var_a0, arg1, a2_2, a3, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
                         break;
                     case 0x11:
-                        if (D_80169410 != 0)
+                        if (g_menu_category0_item != 0)
                         {
-                            var_s1 = func_800A8A78(arg1, var_s1, *(u16*)(D_80169410 + 0x24), 1, pos_p, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, *(u16*)(g_menu_category0_item + 0x24), 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                     case 0x12:
-                        if (D_80169404 != 0)
+                        if (g_menu_category1_item != 0)
                         {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(D_80169404 + 0x24), 1, pos_p, ((*var_s3 >> 9) & 7));
+                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(g_menu_category1_item + 0x24), 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                     case 0x13:
@@ -4582,7 +4355,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                             void* a2_2;
                             var_a0 = var_s1;
                             a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x44));
-                            a3ptr = (u8*)D_80169408;
+                            a3ptr = (u8*)g_menu_category2_item;
                             idx = (a3ptr[0x24] * 0xE + a3ptr[0x25]) * 2;
                             a2_2 = (void*)((u8*)a2 + *(u16*)((u8*)a2 + idx));
                             var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
@@ -4594,7 +4367,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                             var_a0 = var_s1;
                             var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x28));
                             {
-                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(D_80169408 + 0x24) * 2)));
+                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(g_menu_category2_item + 0x24) * 2)));
                                 var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
@@ -4605,7 +4378,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                             var_a0 = var_s1;
                             var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x38));
                             {
-                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(D_80169408 + 0x25) * 2)));
+                                void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (*(u8*)(g_menu_category2_item + 0x25) * 2)));
                                 var_s1 = func_800A88A0(var_a0, arg1, a2_2, 1, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                             }
                         }
@@ -4613,7 +4386,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                     case 0x16:
                         if (g_menu_item_ptr != 0)
                         {
-                            var_s1 = func_800A8A78(arg1, var_s1, *(u8*)(D_80169408 + 0x26), 1, pos_p, ((*var_s3 >> 9) & 7));
+                            var_s1 = func_800A8A78(arg1, var_s1, *(u8*)(g_menu_category2_item + 0x26), 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                     case 0x17:
@@ -4746,7 +4519,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                         if (g_menu_item_ptr != 0)
                         {
                             s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2, 0);
-                            s32 v2 = menu_lookup_item_nibble((void*)D_8016911C, idx2, 0);
+                            s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2, 0);
                             s32 diff = v1 - v2;
                             u8 v0_8, a1_4;
                             u8* v1_6;
@@ -4786,7 +4559,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                         if (g_menu_item_ptr != 0)
                         {
                             s32 v1 = menu_lookup_item_nibble(g_menu_item_ptr, idx2, 0);
-                            s32 v2 = menu_lookup_item_nibble((void*)D_8016911C, idx2, 0);
+                            s32 v2 = menu_lookup_item_nibble((void*)g_menu_active_equipped_item, idx2, 0);
                             s32 diff = v1 - v2;
                             if (diff < 0)
                                 diff = -diff;
@@ -4798,9 +4571,9 @@ void* func_80145608(void* var_s1, s32* arg1)
                     case 0x40:
                     case 0x41:
                     case 0x42:
-                        if (D_80169404 != 0)
+                        if (g_menu_category1_item != 0)
                         {
-                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(D_80169404 + (tmp * 2) - 0x5A), 1, pos_p, ((*var_s3 >> 9) & 7));
+                            var_s1 = menu_draw_clamped_number(arg1, var_s1, *(u16*)(g_menu_category1_item + (tmp * 2) - 0x5A), 1, pos_p, ((*var_s3 >> 9) & 7));
                         }
                         break;
                     case 0x43:
@@ -5008,7 +4781,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                     break;
                     case 0xF:
                     {
-                        void* a2_2 = (void*)D_801693FC;
+                        void* a2_2 = (void*)g_menu_equipment_base;
                         if (*(u8*)a2_2 != 0)
                         {
                             s32 a3 = 1;
@@ -5054,14 +4827,14 @@ void* func_80145608(void* var_s1, s32* arg1)
                     case 0x15:
                     case 0x16:
                     {
-                        u8* base = (u8*)D_801693FC + (tmp << 6);
+                        u8* base = (u8*)g_menu_equipment_base + (tmp << 6);
                         if (*(u8*)(base - 0x4C0) != 0)
                         {
                             s32 a3 = 1;
                             void* a2_2;
                             if (D_80168C09[tmp] != 0)
                                 a3 = 2;
-                            a2_2 = (void*)(D_801693FC + (tmp << 6) - 0x4C0);
+                            a2_2 = (void*)(g_menu_equipment_base + (tmp << 6) - 0x4C0);
                             var_s1 = func_800A88A0(var_s1, arg1, a2_2, a3, *var_s3 & 0x1FF, *var_s4 - 8, (*var_s3 >> 9) & 7);
                         }
                     }
@@ -5114,7 +4887,7 @@ void* func_80145608(void* var_s1, s32* arg1)
                                 u8 idx;
                                 var_a0 = var_s1;
                                 var_a2 = (void*)((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + 0x20));
-                                tmpv = ((*(u32*)(D_801693FC + 0x14) >> 10) & 0x3F) * 0x30;
+                                tmpv = ((*(u32*)(g_menu_equipment_base + 0x14) >> 10) & 0x3F) * 0x30;
                                 idx = *ptr & 0x7F;
                                 {
                                     void* a2_2 = (void*)((u8*)var_a2 + *(u16*)((u8*)var_a2 + (idx * 2) + tmpv));
@@ -5657,17 +5430,12 @@ extern u8 D_800F0BE0[];
 extern u8 D_800F0BEC[];
 
 /**
- * @brief Scan up to arg0 entries in D_801693FC and OR together lookup bytes keyed by bits 10-15 of unk14.
+ * @brief Scan up to arg0 entries in g_menu_equipment_base and OR together lookup bytes keyed by bits 10-15 of unk14.
  * @param arg0 Maximum number of entries to inspect (loop exits early when the index equals this value).
  * @return Bitwise OR of the looked-up bytes from each active entry, or 0 if none are active.
- * @note Iterates at most 4 entries (indices 0-3). An entry is skipped when its byte at offset 0 is zero.
- *       Bits 8-9 of unk14 select the table: set uses D_800F0BEC, clear uses D_800F0BE0. Bits 10-15 form
- *       the 6-bit index into whichever table is selected.
- * @note The index expression must be repeated in both arms rather than hoisted into a local:
- *       hoisting it makes GCC compute the mask once before the branch and drops to 83%.
- * @see decomp.me (100%) TODO
+ * @see decomp.me (100%)
  */
-s32 func_8014824C(s32 arg0)
+s32 menu_get_equipment_ability_mask(s32 arg0)
 {
     s32 i;
     s32 result;
@@ -5675,7 +5443,7 @@ s32 func_8014824C(s32 arg0)
     u32 unk14;
 
     result = 0;
-    entry = (u8*)D_801693FC;
+    entry = (u8*)g_menu_equipment_base;
     i = 0;
     do
     {
@@ -5700,10 +5468,8 @@ s32 func_8014824C(s32 arg0)
 /**
  * @brief Initialize a one-word Draw Mode Setting primitive (GP0 0xE1000005) and link it into an OT slot.
  * @param prim Pointer to an uninitialized MenuPrimHead to fill in (must have at least 8 bytes of space).
- * @param ot   Pointer to the ordering-table entry that the new primitive should be prepended to.
+ * @param ot Pointer to the ordering-table entry that the new primitive should be prepended to.
  * @return Pointer to the byte immediately following the 8-byte primitive (next free prim slot).
- * @note Mirrors the inline OT-link pattern used throughout menu.c (e.g. around line 1361).
- *       Sets word count to 1 and hard-codes the mode word to 0xE1000005.
  * @see decomp.me (100%) https://decomp.me/scratch/3Wup8
  */
 void* menu_emit_draw_mode_primitive(MenuPrimHead* prim, s32* ot)
@@ -5717,20 +5483,10 @@ void* menu_emit_draw_mode_primitive(MenuPrimHead* prim, s32* ot)
 
 /**
  * @brief Concatenate two encoded text command streams into a destination buffer.
- * @param dst  Destination byte buffer; receives all bytes from src1, then src2, then a null terminator.
+ * @param dst Destination byte buffer; receives all bytes from src1, then src2, then a null terminator.
  * @param src1 First source stream; processed until its null terminator.
  * @param src2 Second source stream; appended after src1, processed until its null terminator.
- * @note Both streams use a variable-width encoding: bytes in the range 0x19-0x1F are two-byte codes
- *       (the control byte followed by one parameter byte); all other non-zero bytes are single-byte codes.
- *       The function tail-calls itself in the original asm to loop, so the effective max depth is bounded
- *       by the stream lengths, not the call stack.
- * @note Two shapes are required to match. The scan variable must be u32, not u8: a u8 would make
- *       GCC re-truncate it with an andi 0xff before the zero test, but the lbu already zero-extends.
- *       And `ch` must be declared INSIDE each loop body: that block emits a NOTE_INSN_BLOCK_BEG,
- *       which terminates the scan in expand_end_loop (gcc 2.7.2 stmt.c) before it finds a
- *       conditional exit to roll to the bottom, so the loop is never rotated. Hoisting `ch` to
- *       function scope lets GCC rotate the second loop's test to the bottom and drops this to 77%.
- * @see decomp.me (100%) TODO
+ * @see decomp.me (100%)
  */
 void menu_concat_encoded_text(u8* dst, u8* src1, u8* src2)
 {
@@ -5783,19 +5539,11 @@ extern s8 D_800F0C38[];
 
 /**
  * @brief Extract a 4-bit nibble from a packed u32 field in the item struct and look it up in a byte table.
- * @param item  Pointer to the item data record; nibbles are packed into the u32 at byte offset 0x1C.
- * @param index Nibble selector (0-7); selects bits [index*4 .. index*4+3] of the packed word.
- *              If >= 8 the switch is skipped and @p fallback is used as the table index instead.
+ * @param item Pointer to the item data record; nibbles are packed into the u32 at byte offset 0x1C.
+ * @param index Nibble selector (0-7), selecting four bits at a time.
  * @param fallback Default table index used when @p index is out of range.
  * @return Signed byte from D_800F0C38 at the selected nibble index.
- * @note Cases 1, 4, and 6 load the nibble via byte/halfword access rather than the full word;
- *       this reflects the original compiler output and must be preserved for match work.
- * @note Two shapes are required to match. The word must NOT be hoisted into a local before the
- *       switch -- each case reloads item+0x1C itself. And each shift/mask must be a separate
- *       statement assigning back to `nibble`: written as one expression, GCC computes the shift in
- *       a temp (v0) and only lands in the result register at the mask, whereas the original shifts
- *       in place in the destination register.
- * @see decomp.me (100%) TODO
+ * @see decomp.me (99.78%)
  */
 s8 menu_lookup_item_nibble(void* item, u32 index, u32 fallback)
 {
@@ -5841,16 +5589,11 @@ s8 menu_lookup_item_nibble(void* item, u32 index, u32 fallback)
     return D_800F0C38[nibble];
 }
 
-extern u8 D_8014FE2C[];
 
 /**
  * @brief Search the current scene's content table for the first item flagged as the active hit item.
  * @return Index into the content table array of the first matching MenuContentItem, or -1 if none found.
- * @note Looks up the current node's self_idx from g_menu_nodes[g_menu_scene_type], then resolves
- *       the item count via D_8014FE2C[D_801686CC[self_idx]] and the item array via
- *       g_menu_content_table[self_idx].  An item matches when bits 12-15 of packed_x are 0xF or 0x5
- *       AND bits 9-11 are all set (== 0xE00).
- * @see decomp.me (100%) TODO: scratch URL
+ * @see decomp.me (100%)
  */
 s32 menu_find_active_content_item(void)
 {
@@ -5868,7 +5611,7 @@ s32 menu_find_active_content_item(void)
 
     self_idx = g_menu_nodes[g_menu_scene_type].idx_nav.s.self_idx;
     items = g_menu_content_table[self_idx];
-    count = D_8014FE2C[D_801686CC[self_idx]];
+    count = g_menu_content_item_counts[g_menu_content_group_ids[self_idx]];
 
     for (i = 0; i < count; i++, items++)
     {
@@ -5886,11 +5629,8 @@ s32 menu_find_active_content_item(void)
 /**
  * @brief Find the navigation-list index of a given node ID.
  * @param node_id Node ID to search for (typically g_menu_active_node at call sites).
- * @return Zero-based index of @p node_id within the navigation list starting at g_menu_nav_first,
- *         or -1 if not found or the list is empty.
- * @note The navigation list is a flat s32 array beginning at g_menu_nav_first with g_menu_nav_count
- *       entries; each element is one node ID.
- * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte 
+ * @return Zero-based index of @p node_id within the navigation list starting at g_menu_nav_first, or -1 if not found or the list is empty.
+ * @see decomp.me (100%)
  */
 s32 menu_find_nav_node_index(s32 node_id)
 {
@@ -5919,18 +5659,11 @@ s32 menu_find_nav_node_index(s32 node_id)
 
 /**
  * @brief Emit up to two scroll-arrow SPRT primitives and a trailing draw-mode reset primitive.
- * @param buf   Destination primitive buffer; each arrow occupies 0x14 bytes, the DR_MODE tail 8 bytes.
- * @param ot    Pointer to the ordering-table entry to prepend each emitted primitive to.
- * @param state Slot view whose scroll fields drive the arrows: x/w place the arrow column,
- *              y is the top edge, h the window height, _u._s.unk6 (low 9 bits) the row count
- *              (16 px per row), and lerp_cur_b the pixel amount scrolled above the viewport.
+ * @param buf Destination primitive buffer; each arrow occupies 0x14 bytes, the DR_MODE tail 8 bytes.
+ * @param ot Pointer to the ordering-table entry to prepend each emitted primitive to.
+ * @param state Slot view whose scroll fields drive the arrows: x/w place the arrow column, y is the top edge, h the window height, _u._s.unk6 (low 9 bits) the row.
  * @return Pointer to the next free byte in @p buf after all emitted primitives.
- * @note Up arrow (v=0x10) emitted when lerp_cur_b != 0 (content hidden above).
- *       Down arrow (v=0x20) emitted when (h-16) < ((unk6 & 0x1FF)*16 - lerp_cur_b)
- *       (content hidden below); it hangs at y+h-8. If either arrow was emitted, a
- *       one-word DR_MODE (0xE1000005) restores the draw mode. Arrows are 16x16 SPRTs,
- *       CLUT 0x7C86, neutral tint.
- * @see decomp.me (100%) TODO: no scratch yet; 
+ * @see decomp.me (100%)
  */
 void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
 {
@@ -5983,14 +5716,9 @@ void* menu_emit_slot_scroll_arrows(SPRT* buf, s32* ot, MenuSlotView* state)
 /**
  * @brief Emit up to two fixed-position scroll-arrow SPRT primitives driven by global scroll state.
  * @param buf Destination primitive buffer; each arrow occupies 0x14 bytes, the Draw Mode tail 8 bytes.
- * @param ot  Pointer to the ordering-table entry to prepend each emitted primitive to.
+ * @param ot Pointer to the ordering-table entry to prepend each emitted primitive to.
  * @return Pointer to the next free byte in @p buf after all emitted primitives.
- * @note Up arrow (unkA=3)    emitted when g_menu_content_height != 0 (content scrolled up).
- *       Down arrow (unkA=0xBA) emitted when (g_menu_layout_end - g_menu_content_height) >= 0xAC
- *       (content extends below viewport). Both use fixed X=0x20, code=0x64, color=0x808080.
- *       If either arrow was emitted, appends a one-word DR_MODE (0xE1000005). Mirrors the
- *       pattern of menu_emit_slot_scroll_arrows but reads from globals rather than a state struct.
- * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte
+ * @see decomp.me (100%)
  */
 void* menu_emit_tree_scroll_arrows(SPRT* buf, s32* ot)
 {
@@ -6037,15 +5765,11 @@ s32 menu_emit_cursor(s32, s32*, s32, s32, s32);
 
 /**
  * @brief Draw the navigation cursor for the active menu node, and optionally its label.
- * @param buf   Primitive buffer pointer passed through to the rendering helpers.
- * @param ot    Pointer to the ordering-table entry used by the rendering helpers.
+ * @param buf Primitive buffer pointer passed through to the rendering helpers.
+ * @param ot Pointer to the ordering-table entry used by the rendering helpers.
  * @param label When non-zero, also draws the node's text label from the g_menu_state_ptr string table.
  * @return Updated primitive buffer pointer returned from the last rendering call.
- * @note Cursor X = ((nav_x & 0x7F) + 8); cursor Y = ((nav_y_hi << 1) | (nav_x >> 7)) -
- *       (g_menu_content_height - 0xC), clamped to [0xC, 0xA2].
- *       Label pointer: base = (u8*)g_menu_state_ptr + *(s32*)(state + 4);
- *                      text = base + *(u16*)(base + node->label_id * 2).
- * @see decomp.me (100%) TODO: no scratch yet; verified byte-for-byte
+ * @see decomp.me (100%)
  */
 s32 menu_draw_active_node_cursor(s32 buf, s32* ot, s32 label)
 {
@@ -6088,81 +5812,35 @@ extern s32 D_80168C6C;
 void* menu_emit_sort_marker(void*, s32*, s16, s16);
 s32 menu_item_is_nondefault(s32);
 
-/**
- * @brief Identity/OR helper used to hold a specific expression shape.
- *
- * Returns @c arg0 | arg1.  Also used elsewhere in this file to pack two fields;
- * here @ref MENU_TEXT_COPY passes @c (ch = *src, 0) so the result is just @c ch.
- * Reading the loop guard through this inline call stops gcc 2.7.2 from rotating
- * the copy loop (duplicating the exit test into a bottom @c bnez); it keeps the
- * single top test with @c j back-edges the original emits.
- */
-inline int inline_fn(int arg0, int arg1)
+/** @brief OR two values without exposing the expression directly to the optimizer. */
+inline int menu_or_bits(int arg0, int arg1)
 {
     return arg0 | arg1;
 }
 
-/**
- * @brief Read the first byte through a pointer to force address materialization.
- *
- * Returns @c arg0[0].  @ref func_80148A20 reads @c content_base[hit].pad[0]
- * through this inline call (as @c inline_fn2(content_base[hit].pad)) so gcc 2.7.2
- * materializes @c &content_base[hit].pad into a register before the @c lbu
- * instead of folding the whole address into the load.  That reproduces the
- * original's temp-register allocation (content_base lands in @c t1); a plain
- * @c .pad[0] lets gcc fold the address and shifts the whole per-case allocation.
- */
-inline u8 inline_fn2(u8* arg0)
+/** @brief Read a byte through a helper to preserve address materialization. */
+inline u8 menu_read_u8(u8* arg0)
 {
     return arg0[0];
 }
 
-/**
- * @brief Zero-extend a byte to 32 bits through an inline call.
- *
- * Returns @c (u32)arg0.  Because @c arg0 is declared @c u8, the argument
- * expression is truncated to 8 bits before the widen; for an 8-bit @c ch this
- * is identical in value to a plain @c (u32) cast but forces gcc 2.7.2 to
- * realize the byte in a register first.  Used in @ref MENU_TEXT_COPY's
- * two-byte-glyph test and the case 3-6/22 index math to reproduce the target's
- * codegen (a bare cast lets gcc fold the truncation into the following op and
- * shifts the copy-loop and index-scaling register allocation).
- */
-inline u32 inline_fn23(u8 arg0)
+/** @brief Zero-extend a byte through an inline call. */
+inline u32 menu_zext_u8(u8 arg0)
 {
     return (u32)arg0;
 }
 
-/**
- * @brief Add two s32 values through an inline call to pin the @c addu operand order.
- *
- * Returns @c arg0 + arg1. Used by @ref MENU_SLOT_BASE and the cases 7-10 slot
- * math so gcc 2.7.2 emits the addends in the original's order (the shifted
- * item_sub term first, the char-slot term second); a plain @c + lets gcc pick
- * the other operand order and shifts the per-case allocation.
- */
-inline s32 inline_add32(s32 arg0, s32 arg1)
+/** @brief Add two signed values while preserving operand order. */
+inline s32 menu_add_s32(s32 arg0, s32 arg1)
 {
     return arg0 + arg1;
 }
 
-/**
- * @brief Copy a menu text run from @p s into @p d until a NUL terminator.
- *
- * Bytes in the range [0x19, 0x1F] are two-byte glyph codes: the lead byte and
- * the following byte are both copied.  This is expanded inline at every use
- * site (six times inside @ref func_80148A20) to reproduce the original
- * per-branch codegen, which duplicates the loop rather than sharing it.  The
- * macro advances the caller's own pointers directly (no shared src/dst temps):
- * the original coalesces each source string pointer with the loop induction
- * register, which a copy through a shared local defeats.  The guard byte is
- * read through @ref inline_fn to keep the original's top-tested loop shape (see
- * that helper's note); @c inline_fn(ch = *(s), 0) is @c (ch | 0) != 0.
- */
+/** @brief Copy one encoded menu string, including two-byte glyph codes. */
 #define MENU_TEXT_COPY(d, s)                                                                                                                                   \
-    while (inline_fn(ch = *(s), 0))                                                                                                                            \
+    while (menu_or_bits(ch = *(s), 0))                                                                                                                            \
     {                                                                                                                                                          \
-        if (inline_fn23(ch - 0x19U) < 7U)                                                                                                                      \
+        if (menu_zext_u8(ch - 0x19U) < 7U)                                                                                                                      \
         {                                                                                                                                                      \
             *(d)++ = ch;                                                                                                                                       \
             (s)++;                                                                                                                                             \
@@ -6175,52 +5853,19 @@ inline s32 inline_add32(s32 arg0, s32 arg1)
         }                                                                                                                                                      \
     }
 
-/**
- * @brief Address of the pad-context slot block for the active character in cases 7-10.
- *
- * Recomputed (not cached) at each use so it rematerializes into the same
- * register sequence the original emits; caching it in a local would occupy a
- * callee-saved register and shift the whole allocation.
- */
-#define MENU_SLOT_BASE ((u8*)g_pad_ctx + inline_add32(((item_sub - 7) << 6), g_menu_char_slot * 0x250))
+/** @brief Address the active character equipment slot used by content subtypes 7-10. */
+#define MENU_SLOT_BASE ((u8*)g_pad_ctx + menu_add_s32(((item_sub - 7) << 6), g_menu_char_slot * 0x250))
 
-/**
- * @brief Emit the label string at @p e via func_800A88A0, expanded once per switch arm.
- *
- * Each emitting case passes the WHOLE string address as one inline expression,
- * so gcc expands the argument directly into hard register $a2 (the original's
- * "lw a2, g_menu_state_ptr; ...; addu a2, a2, v1" chain).  Naming the
- * intermediate pointer in a local instead allocates a pseudo (which lands in
- * $t0) plus a copy into $a2 at the call, shifting ~150 rows.  Every arm gets
- * its OWN call (a0=arg0, a1=arg1, a3=1 set up in-case); gcc's cross-jumping
- * merges the shared @c jal tail while the per-arm references keep arg0 in $s0
- * and arg1 in $s3, matching the original's allocation.
- */
+/** @brief Emit one content label at the fixed cursor-label position. */
 #define MENU_EMIT_EXPR(e) arg0 = func_800A88A0(arg0, arg1, (e), 1, 0xA0, 0xCA, 2)
 
-/**
- * @brief State-table base pointer: g_menu_state_ptr plus the s32 offset stored at byte @p off.
- *
- * Written as a macro so it can appear twice inside one @ref MENU_EMIT_EXPR
- * argument; gcc CSEs the duplicated loads into a single base register.
- */
+/** @brief Resolve a state-table base from its stored offset. */
 #define MENU_STATE_BASE(off) ((u8*)g_menu_state_ptr + *(s32*)((u8*)g_menu_state_ptr + (off)))
 
-/**
- * @brief String-table entry pointer: @p base + the u16 stored at @p base[idx].
- */
+/** @brief Resolve a string-table entry from a base and offset. */
 #define MENU_TAIL(base, idx) ((u8*)(base) + *(u16*)((u8*)(base) + (idx)))
 
-/**
- * @brief Emit the label string at index @p idx of the state table at byte @p off.
- *
- * The statement expression reproduces three codegen properties of the original:
- * the index is evaluated first (its lui leads the case body), the two-step
- * @c b assignment ties the table base to the state-pointer register via a copy
- * (so the base accumulates in $a2, "addu a2, a2, v1", instead of spilling to a
- * fresh $t0), and the base is named once so the two uses in the final sum share
- * one register.
- */
+/** @brief Emit one indexed state-table label. */
 #define MENU_EMIT_STATE(off, idx)                                                                                                                              \
     MENU_EMIT_EXPR(({                                                                                                                                          \
         s32 i = (idx);                                                                                                                                         \
@@ -6229,52 +5874,21 @@ inline s32 inline_add32(s32 arg0, s32 arg1)
         (u8*)b + *(u16*)((u8*)b + i);                                                                                                                          \
     }))
 
-/**
- * @brief Load a pointer through a pointer-to-pointer to pin the state-ptr @c lui order.
- *
- * Returns @c *p. Several cases read g_menu_state_ptr via this inline call so gcc
- * 2.7.2 materializes the base with the same @c lui/@c lw ordering the original
- * emits before the offset add; a plain global read reorders the lui.
- */
-inline u8* inline_state_load(u8** p)
+/** @brief Load a state pointer through a pointer-to-pointer. */
+inline u8* menu_load_ptr(u8** p)
 {
     return *p;
 }
 
 /**
  * @brief Render the content cursor, update its lerped position, and optionally render the active hit-item label.
- * @param arg0 Current primitive buffer pointer; reused as the running cursor (the
- *             original keeps it in $s0 and copies it from $a0 in the prologue).
+ * @param arg0 Current primitive buffer pointer; reused as the running cursor (the original keeps it in $s0 and copies it from $a0 in the prologue).
  * @param arg1 Pointer to the current ordering-table entry.
  * @param arg2 Non-zero to also render the label string for the active hit item.
  * @return Updated primitive buffer pointer after all emitted primitives.
- * @note The cursor position (g_content_cursor_x, g_content_cursor_y) is lerped toward
- *       (g_content_view_x, g_content_view_y) using g_menu_suppress_cursor as step count,
- *       then snapped when the counter reaches zero.  The label path dispatches via two
- *       switch statements on MenuContentItem::packed_x bits [15:12] and pad[0]:
- *       the 0xF000 family selects a string table offset from g_menu_state_ptr;
- *       the 0x5000 family additionally considers g_pad_ctx slot data and may copy
- *       encoded text into stack scratch buffers before rendering.
- *       A final sprite from g_party_sort_marker is appended and OT-linked when
- *       selected_idx != MENU_NONE.
- * @note Local match 100% (gcc272_cdk). Shapes
- *       required to match: reusing arg0 instead of a var_s0 local (prologue copies
- *       args in order), sp20 declared before sp60 (buffer stack slots), the inline
- *       argument expressions in MENU_EMIT_EXPR/MENU_EMIT_STATE (hard-$a2 expansion
- *       plus the two-step base copy and idx-first evaluation in the statement
- *       expression), block-local out/first/ch copy pointers and the parameterized
- *       MENU_TEXT_COPY (pointer coalescing), switch(kind) with a fresh unk654
- *       re-read in the default arm, the 0x5F0 grouped with the slot term in the
- *       menu_item_is_nondefault argument, the slot term first in MENU_SLOT_BASE, and the
- *       epilogue writing *arg1 before arg0 += 8, and the volatile pad-byte reads
- *       in the item_sub<0xF0 guard/then-arm (triple re-read), the lerp
- *       cursor globals read through address-taken pointers, and the two switch
- *       ladders emitted as computed-goto jump tables (jtbl_8014049C /
- *       jtbl_801404DC via GCC label-address arrays with __asm__ symbol names) so
- *       the per-arm order and the cross-jumped shared jal tail match exactly.
  * @see decomp.me (100%)
  */
-void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
+void* menu_draw_content_cursor(void* arg0, s32* arg1, s32 arg2)
 {
     u8 sp20[0x40];
     u8 sp60[0x40];
@@ -6305,13 +5919,7 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
 
     if (g_menu_suppress_cursor != 0)
     {
-        /*
-         * The cursor globals are read through address-taken pointers: the
-         * &global birth order puts the cursor hi parts (lui) ahead of the
-         * view loads and steers the a2/a3 assignment, matching the original
-         * lerp block exactly. Plain global reads swap the lui/load order.
-         * Required to match.
-         */
+        /* Address-taken cursor globals preserve the target load/register order. */
         s32* cxp = &g_content_cursor_x;
         s32 dx = (g_content_view_x - *cxp) / g_menu_suppress_cursor;
         s32* cyp = &g_content_cursor_y;
@@ -6333,22 +5941,16 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
 
         if (upper == 0xF000)
         {
-            /*
-             * The original reads the hit item's pad byte three separate times
-             * (guard, then-arm, and the switch value below). gcc 2.7.2 CSE
-             * folds plain re-reads into one, so the first two go through a
-             * volatile cast; volatile loads never enter the CSE table, which
-             * also keeps the plain reads below fresh. Required to match.
-             */
+            /* Volatile preserves the target's three independent pad-byte loads. */
             if (*(volatile u8*)content_base[g_menu_hit_item_idx].pad < 0xF0U)
             {
                 MENU_EMIT_STATE(0x4, (s32) * (volatile u8*)content_base[g_menu_hit_item_idx].pad * 2);
             }
             else
             {
-                item_sub = inline_fn2(content_base[g_menu_hit_item_idx].pad);
+                item_sub = menu_read_u8(content_base[g_menu_hit_item_idx].pad);
                 {
-                    static void * const jtbl_8014049C[16] __asm__("jtbl_8014049C") = {
+                    static void * const jtbl_8014049C[16] = {
                         &&jt1_f0, &&jt1_f1, &&jt1_f2, &&jt1_f3,
                         &&jt1_f4, &&jt1_f5, &&jt1_f6, &&jt1_f7,
                         &&jt1_f8, &&jt1_f9, &&jt1_fa, &&jt1_fb,
@@ -6360,50 +5962,50 @@ void* func_80148A20(void* arg0, s32* arg1, s32 arg2)
                     goto *jtbl_8014049C[jt1_idx];
 
 jt1_f0:
-                    MENU_EMIT_STATE(0x48, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x48, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_f1:
-                    MENU_EMIT_STATE(0x14, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x14, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_f2:
-                    MENU_EMIT_STATE(0x34, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x34, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_f3:
-                    MENU_EMIT_STATE(0x24, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x24, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_f4:
-                    MENU_EMIT_STATE(0x40, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x40, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_f5:
-                    MENU_EMIT_STATE(0x58, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x58, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_f6:
-                    MENU_EMIT_STATE(0x50, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x50, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_f7:
-                    MENU_EMIT_STATE(0x60, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x60, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_f8:
                     if (D_80168C6C != 0xFF)
                     {
                         if (D_80168C6C & 0x80)
                         {
-                            MENU_EMIT_STATE(0x40, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                            MENU_EMIT_STATE(0x40, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                         }
                         else
                         {
-                            MENU_EMIT_STATE(0x1C, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                            MENU_EMIT_STATE(0x1C, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                         }
                     }
                     goto jt1_end;
 jt1_f9:
-                    MENU_EMIT_STATE(0x1C, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x1C, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_fa:
-                    MENU_EMIT_STATE(0x3C, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x3C, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
                     goto jt1_end;
 jt1_fb:
-                    MENU_EMIT_STATE(0x2C, (s32)inline_fn2(content_base[g_menu_hit_item_idx].pad) * 2);
+                    MENU_EMIT_STATE(0x2C, (s32)menu_read_u8(content_base[g_menu_hit_item_idx].pad) * 2);
 jt1_end:
                     ;
                 }
@@ -6411,9 +6013,9 @@ jt1_end:
         }
         else if (upper == 0x5000)
         {
-            item_sub = inline_fn2(content_base[g_menu_hit_item_idx].pad);
+            item_sub = menu_read_u8(content_base[g_menu_hit_item_idx].pad);
             {
-                static void * const jtbl_801404DC[25] __asm__("jtbl_801404DC") = {
+                static void * const jtbl_801404DC[25] = {
                     &&jt2_c1, &&jt2_c1,
                     &&jt2_c3, &&jt2_c3, &&jt2_c3, &&jt2_c3,
                     &&jt2_c7, &&jt2_c7, &&jt2_c7, &&jt2_c7,
@@ -6433,7 +6035,7 @@ jt2_c1:
                 u8** pp = (u8**)&g_menu_state_ptr;
                 u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
                 u8 idx = *(pb + item_sub + 0x609);
-                u8* b = inline_state_load(pp);
+                u8* b = menu_load_ptr(pp);
                 b += *(s32*)(b + 0x3C);
                 MENU_EMIT_EXPR(b + *(u16*)(b + (s32)idx * 2));
                 goto jt2_end;
@@ -6447,19 +6049,19 @@ jt2_c3:
                 {
                     if (flag & 0x80)
                     {
-                        u8* item_ptr = pad_base + (inline_fn23(inline_fn2(flag_addr + 0x609) & 0x7F) << 6) + 0x740;
+                        u8* item_ptr = pad_base + (menu_zext_u8(menu_read_u8(flag_addr + 0x609) & 0x7F) << 6) + 0x740;
                         u8 cat = *(item_ptr + 0x24);
                         u8 entry = *(item_ptr + 0x25);
                         u8* state44 = (u8*)g_menu_state_ptr;
                         state44 += *(s32*)(state44 + 0x44);
-                        MENU_EMIT_EXPR(state44 + *(u16*)(state44 + inline_fn23(cat) * 0x1C + inline_fn23(entry) * 2));
+                        MENU_EMIT_EXPR(state44 + *(u16*)(state44 + menu_zext_u8(cat) * 0x1C + menu_zext_u8(entry) * 2));
                     }
                     else
                     {
                         u32 slot654 = *(u32*)(pad_base + 0x654);
                         u8* state1c = (u8*)g_menu_state_ptr;
                         state1c += *(s32*)(state1c + 0x1C);
-                        MENU_EMIT_EXPR(state1c + *(u16*)(state1c + inline_fn23(inline_fn2(flag_addr + 0x609) & 0x7F) * 2 +
+                        MENU_EMIT_EXPR(state1c + *(u16*)(state1c + menu_zext_u8(menu_read_u8(flag_addr + 0x609) & 0x7F) * 2 +
                                                         ((slot654 >> 0xA) & 0x3F) * 0x30));
                     }
                 }
@@ -6470,7 +6072,7 @@ jt2_c7:
                 {
                     u8** checkpp = (u8**)&g_pad_ctx;
                     u8* checkpad = *checkpp;
-                    if (*(checkpad + inline_add32(((item_sub - 7) << 6), g_menu_char_slot * 0x250) + 0x640) != 0)
+                    if (*(checkpad + menu_add_s32(((item_sub - 7) << 6), g_menu_char_slot * 0x250) + 0x640) != 0)
                     {
                         if (menu_item_is_nondefault((s32)(checkpad + ((g_menu_char_slot * 0x250) + 0x5F0) + (((s32)item_sub << 6) - 0x170))) != 0)
                         {
@@ -6492,7 +6094,7 @@ jt2_c7:
                         }
                         {
                             u8** padpp = (u8**)&g_pad_ctx;
-                            u32 unk654 = *(u32*)((u8*)*padpp + inline_add32(((item_sub - 7) << 6), g_menu_char_slot * 0x250) + 0x654);
+                            u32 unk654 = *(u32*)((u8*)*padpp + menu_add_s32(((item_sub - 7) << 6), g_menu_char_slot * 0x250) + 0x654);
                             u32 kind = (unk654 >> 8) & 3;
                             switch (kind)
                             {
@@ -6524,14 +6126,11 @@ jt2_c7:
                             }
                             default:
                             {
-                                /* Address-taken slot pointer before the unk654 recompute;
-                                   steers the state_ptr lui/regalloc order. Required to match. */
+                                /* Address-taking preserves the target state-table load order. */
                                 s32* state68_off = (s32*)((u8*)g_menu_state_ptr + 0x68);
-                                /* Item term first here (not MENU_SLOT_BASE): with state68_off
-                                   above, this arm's recompute keeps the in-arm addiu and the
-                                   target's addu operand order. Required to match. */
+                                /* Keep the item term first to preserve address-expression codegen. */
                                 u8** padpp2 = (u8**)&g_pad_ctx;
-                                u32 unk654_2 = *(u32*)((u8*)*padpp2 + inline_add32(((item_sub - 7) << 6), g_menu_char_slot * 0x250) + 0x654);
+                                u32 unk654_2 = *(u32*)((u8*)*padpp2 + menu_add_s32(((item_sub - 7) << 6), g_menu_char_slot * 0x250) + 0x654);
                                 u32 idx = (unk654_2 >> 9) & 0x7E;
                                 u8* state68 = (u8*)g_menu_state_ptr + *state68_off;
                                 u8* str2 = state68 + *(u16*)((u8*)((s32)idx + (s32)state68) + 0x2E);
@@ -6564,7 +6163,7 @@ jt2_c14:
                 u8** pp = (u8**)&g_menu_state_ptr;
                 u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
                 u8 idx = *(pb + 0x609);
-                u8* b = inline_state_load(pp);
+                u8* b = menu_load_ptr(pp);
                 b += *(s32*)(b + 0x48);
                 MENU_EMIT_EXPR(b + *(u16*)(b + (s32)idx * 2));
                 goto jt2_end;
@@ -6592,17 +6191,17 @@ jt2_c19:
 jt2_c22:
                 if (g_menu_item_ptr != 0)
                 {
-                    u8 cat = *((u8*)D_80169408 + 0x24);
-                    u8 entry = *((u8*)D_80169408 + 0x25);
-                    MENU_EMIT_EXPR((u8*)MENU_STATE_BASE(0x40) + *(u16*)((u8*)MENU_STATE_BASE(0x40) + inline_fn23(cat) * 0x1C + inline_fn23(entry) * 2));
+                    u8 cat = *((u8*)g_menu_category2_item + 0x24);
+                    u8 entry = *((u8*)g_menu_category2_item + 0x25);
+                    MENU_EMIT_EXPR((u8*)MENU_STATE_BASE(0x40) + *(u16*)((u8*)MENU_STATE_BASE(0x40) + menu_zext_u8(cat) * 0x1C + menu_zext_u8(entry) * 2));
                 }
                 goto jt2_end;
 jt2_c23:
                 if (g_menu_item_ptr != 0)
                 {
                     u8** pp = (u8**)&g_menu_state_ptr;
-                    s32* dp = &D_80169408;
-                    u8* b = inline_state_load(pp);
+                    s32* dp = &g_menu_category2_item;
+                    u8* b = menu_load_ptr(pp);
                     u8* q = (u8*)*dp;
                     u8 idx = *(q + 0x24);
                     b += *(s32*)(b + 0x24);
@@ -6613,8 +6212,8 @@ jt2_c24:
                 if (g_menu_item_ptr != 0)
                 {
                     u8** pp = (u8**)&g_menu_state_ptr;
-                    s32* dp = &D_80169408;
-                    u8* b = inline_state_load(pp);
+                    s32* dp = &g_menu_category2_item;
+                    u8* b = menu_load_ptr(pp);
                     u8* q = (u8*)*dp;
                     u8 idx = *(q + 0x25);
                     b += *(s32*)(b + 0x34);
@@ -6626,7 +6225,7 @@ jt2_c25:
                 u8** pp = (u8**)&g_menu_state_ptr;
                 u8* pb = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
                 u8 idx = *(pb + 0x633);
-                u8* b = inline_state_load(pp);
+                u8* b = menu_load_ptr(pp);
                 b += *(s32*)(b + 0x78);
                 MENU_EMIT_EXPR(b + *(u16*)(b + (s32)idx * 2));
                 goto jt2_end;
@@ -6658,11 +6257,6 @@ s32 menu_draw_node_recursive(s32, s32, s32*);
  * @param arg0 Current primitive buffer pointer.
  * @param arg1 Pointer to the ordering-table entry used by node-rendering helpers.
  * @return Updated primitive buffer pointer after rendering all active root nodes.
- * @note Resets g_menu_nav_count to 0, then iterates all MENU_NODE_COUNT nodes.
- *       Calls menu_draw_node_recursive for each node with parent_idx == MENU_NONE and flags bit 0 set.
- *       After the loop, g_menu_content_height is lerped toward g_menu_scroll_pos using
- *       g_menu_redraw_state as the step count; snaps immediately when the count reaches
- *       zero or the values are already equal.
  * @see decomp.me (100%) https://decomp.me/scratch/AIXmd
  */
 s32 menu_draw_node_tree(s32 arg0, s32* arg1)
@@ -6703,21 +6297,6 @@ void* menu_emit_icon_sprite(void*, s32*, s32, s32, s32, s32, s32, s32, s32);
  * @param arg1 Current primitive buffer pointer.
  * @param arg2 Pointer to the ordering-table entry.
  * @return Updated primitive buffer pointer after rendering this node and all expanded children.
- * @note Appends arg0 to the g_menu_nav_first list and increments g_menu_nav_count.
- *       Calls menu_emit_icon_sprite to render the node's window panel, passing position, animation
- *       counter state, and whether this node is the active scene.
- *       Decrements the 2-bit animation counter in u2.unk2 bits [3:2] when nonzero.
- *       Lerps the node's nav cursor Y toward its layout Y using node->state as step count;
- *       snaps immediately when state is zero.
- *       If the node's expanded flag (u2.s.flags bit 1) is set, recursively renders
- *       child0, child1, child2, child3 in order, stopping at the first MENU_NONE child.
- * @note Shapes required to match (see working/func_80149948/status.md for the full log):
- *       the volatile STORES on both nav_x_packed writes pin the 0x8 reload after the
- *       0x6 store; @c delta_y is ONE variable carrying target_y -> delta -> step ->
- *       new_y (the original reused it, matching the single-register div chain);
- *       @c arg1 is reused as the scratch temp (dead after the first call); the child
- *       loop sits in a do { } while (0) and @c sentinel gets two in-loop sets so the
- *       0xFF constant is rematerialized per iteration instead of hoisted.
  * @see decomp.me (91.29%) https://decomp.me/scratch/TNThR
  */
 s32 menu_draw_node_recursive(s32 arg0, s32 arg1, s32* arg2)
@@ -6828,27 +6407,21 @@ typedef struct
     u8 h;       /**< Sprite height in pixels. */
 } NodeSpriteInfo;
 
-extern NodeSpriteInfo D_8014FBF4[];
-extern u8 D_8014FDB8[];
+extern NodeSpriteInfo g_menu_icon_sprite_defs[];
+extern u8 g_menu_icon_clut_codes[];
 
 /**
- * @brief Emit one or two SPRT primitives for a single menu node's panel and OT-link them.
- * @param arg0 Current primitive buffer pointer; the function writes SPRTs starting here.
- * @param arg1 Pointer to the ordering-table entry; updated after each emitted primitive.
- * @param arg2 Content-ID index used to look up UV, size, and CLUT data in D_8014FBF4/D_8014FDB8.
- * @param arg3 Node column position (used as base X for both sprites).
- * @param arg4 Node row position (used as base Y for both sprites).
- * @param arg5 When non-zero, a second (highlight/shadow) SPRT is also emitted after the first.
- * @param arg6 Animation-in-progress flag; adjusts the pixel offset applied to both sprite positions.
- * @param arg7 Non-zero when this node is the active scene; selects opaque (0x64) vs.
- *             semi-transparent (0x66) code and blue vs. black tint for the second SPRT.
- * @param arg8 TODO: type-bits field from u2.unk2 bits [7:6]; not read inside this function.
- * @return Pointer to the next free byte in the primitive buffer after the last emitted SPRT.
- * @note First SPRT: neutral tint (0x808080), code 0x64, position (arg3-arg5+arg6, arg4-arg5+arg6).
- *       Second SPRT (when arg5 != 0): blue/black tint, position offset by (arg5-arg6)*2 from base;
- *       code 0x64 when arg7 != 0 (active scene), 0x66 otherwise (semi-transparent).
- *       CLUT is computed from D_8014FDB8[arg2]: high nibble = VRAM Y delta from row 0x1F2,
- *       low nibble = VRAM X/16.
+ * @brief Emit the sprite primitives for one menu icon.
+ * @param arg0 Primitive-buffer cursor.
+ * @param arg1 Ordering-table entry to update.
+ * @param arg2 Icon definition index.
+ * @param arg3 Base X coordinate.
+ * @param arg4 Base Y coordinate.
+ * @param arg5 Nonzero to emit the secondary sprite.
+ * @param arg6 Pixel offset applied to the sprite position.
+ * @param arg7 Nonzero to use the active secondary-sprite mode.
+ * @param arg8 Packed node style bits; currently unused.
+ * @return Next free primitive-buffer address.
  * @see decomp.me (100%) https://decomp.me/scratch/IXG0l
  */
 void* menu_emit_icon_sprite(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s32 arg7, s32 arg8)
@@ -6862,13 +6435,13 @@ void* menu_emit_icon_sprite(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4,
     p1[7] = 0x64;
     *((s16*)(p1 + 0x8)) = (s16)(new_var + arg6);
     *((s16*)(p1 + 0xA)) = (s16)((arg4 - arg5) + arg6);
-    p1[0xC] = D_8014FBF4[arg2].u_coord;
-    p1[0xD] = D_8014FBF4[arg2].v_coord;
-    *((s16*)(p1 + 0x10)) = (s16)D_8014FBF4[arg2].w;
-    *((s16*)(p1 + 0x12)) = (s16)D_8014FBF4[arg2].h;
-    *((s16*)(p1 + 0xE)) = (s16)inline_fn(((D_8014FDB8[arg2] >> 4) + 0x1F2) << 6, D_8014FDB8[arg2] & 0xF);
+    p1[0xC] = g_menu_icon_sprite_defs[arg2].u_coord;
+    p1[0xD] = g_menu_icon_sprite_defs[arg2].v_coord;
+    *((s16*)(p1 + 0x10)) = (s16)g_menu_icon_sprite_defs[arg2].w;
+    *((s16*)(p1 + 0x12)) = (s16)g_menu_icon_sprite_defs[arg2].h;
+    *((s16*)(p1 + 0xE)) = (s16)menu_or_bits(((g_menu_icon_clut_codes[arg2] >> 4) + 0x1F2) << 6, g_menu_icon_clut_codes[arg2] & 0xF);
     *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*arg1) & 0xFFFFFF);
-    *arg1 = inline_fn((*arg1) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
+    *arg1 = menu_or_bits((*arg1) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
     p1 += 0x14;
     if (arg5 != 0)
     {
@@ -6889,13 +6462,13 @@ void* menu_emit_icon_sprite(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4,
         }
         *((s16*)(p1 + 0x8)) = (s16)(arg3 + (arg5 - arg6) * 2);
         *((s16*)(p1 + 0xA)) = (s16)(arg4 + (arg5 - arg6) * 2);
-        p1[0xC] = D_8014FBF4[arg2].u_coord;
-        p1[0xD] = D_8014FBF4[arg2].v_coord;
-        *((s16*)(p1 + 0x10)) = (s16)D_8014FBF4[arg2].w;
-        *((s16*)(p1 + 0x12)) = (s16)D_8014FBF4[arg2].h;
-        *((s16*)(p1 + 0xE)) = (s16)inline_fn(((D_8014FDB8[arg2] >> 4) + 0x1F2) << 6, D_8014FDB8[arg2] & 0xF);
+        p1[0xC] = g_menu_icon_sprite_defs[arg2].u_coord;
+        p1[0xD] = g_menu_icon_sprite_defs[arg2].v_coord;
+        *((s16*)(p1 + 0x10)) = (s16)g_menu_icon_sprite_defs[arg2].w;
+        *((s16*)(p1 + 0x12)) = (s16)g_menu_icon_sprite_defs[arg2].h;
+        *((s16*)(p1 + 0xE)) = (s16)menu_or_bits(((g_menu_icon_clut_codes[arg2] >> 4) + 0x1F2) << 6, g_menu_icon_clut_codes[arg2] & 0xF);
         *((s32*)p1) = ((*((s32*)p1)) & 0xFF000000) | ((*arg1) & 0xFFFFFF);
-        *arg1 = inline_fn((*arg1) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
+        *arg1 = menu_or_bits((*arg1) & 0xFF000000, ((s32)p1) & 0xFFFFFF);
         p1 += 0x14;
     }
     return p1;
@@ -6908,8 +6481,6 @@ void* menu_emit_icon_sprite(void* arg0, s32* arg1, s32 arg2, s32 arg3, s32 arg4,
  * @param x X screen position of the sprite.
  * @param y Y screen position of the sprite.
  * @return Pointer to the next free byte after the emitted 0x14-byte SPRT.
- * @note Emits a SPRT with medium-gray tint (0x505050), code 0x64, 16x16 size,
- *       U=0x80, V=0x00, CLUT=0x7C86.
  * @see decomp.me (100%) https://decomp.me/scratch/16UQc
  */
 void* menu_emit_sort_marker(void* prim_buf, s32* ot, s16 x, s16 y)
@@ -6929,11 +6500,7 @@ void* menu_emit_sort_marker(void* prim_buf, s32* ot, s16 x, s16 y)
     return p + 0x14;
 }
 
-/**
- * @brief State block for a scrollable circular linked-list widget.
- * @note Fields 0x14/0x16/0x18 (target_x, target_y, lerp_steps) are written
- *       by scroll_list_update_target to drive smooth-scroll interpolation.
- */
+/** @brief State block for a scrollable circular list widget. */
 typedef struct
 {
     u8 unk0; /* 0x00 - set to 3 to request a state change */
@@ -6957,20 +6524,13 @@ void scroll_list_update_target(ScrollListState*, u32*);
 
 /**
  * @brief Process shoulder/D-pad scroll input for a list widget and draw its animated cursor.
- * @param prim_buf    Primitive buffer write cursor; forwarded to menu_emit_cursor.
- * @param ot          Ordering-table pointer; forwarded to menu_emit_cursor.
- * @param state       Scroll-list state block.
- * @param entries     Packed circular linked-list entry array (g_menu_scroll_nav_entries).
- *                    Each u32: bits [13:0] = item y position, [22:14] = prev index (9 bits),
- *                    [31:23] = next index (9 bits).
+ * @param prim_buf Primitive buffer write cursor; forwarded to menu_emit_cursor.
+ * @param ot Ordering-table pointer; forwarded to menu_emit_cursor.
+ * @param state Scroll-list state block.
+ * @param entries Packed circular linked-list entry array (g_menu_scroll_nav_entries).
  * @param view_origin Viewport anchor in list-local coordinates.
- * @param active      Non-zero to process input this frame; zero draws cursor only.
+ * @param active Non-zero to process input this frame; zero draws cursor only.
  * @return The advanced primitive write cursor (the value menu_emit_cursor returns).
- * @note R1 (PADR1) injects PADLdown for fast-scroll down; L1 (PADL1) injects PADLup for fast-scroll up.
- *       MENU_PAD_CONFIRM_CANCEL advances the linked-list index; PADLleft is remapped to PAD_BTN_CIRCLE.
- *       Writes g_menu_default_view_pos with the selected item's screen coordinates.
- * @note Previously typed @c void, which could not compile: every caller consumes the
- *       returned cursor. Returning menu_emit_cursor's result is what the original does.
  * @see decomp.me (99.52%) https://decomp.me/scratch/tfyt3
  */
 s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active)
@@ -7038,14 +6598,9 @@ s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries
 
 /**
  * @brief Recompute the scroll lerp targets so the selected list item is inside the viewport.
- *
- * Clamps the x scroll to a 4..(viewport_w - 0x20) band, then clamps the y scroll so the
- * selected entry's item position (low 14 bits of its packed linked-list word) is visible.
- * Restarts the 4-step scroll interpolation either way.
- *
- * @param state   Scroll-list state block to update.
+ * @param state Scroll-list state block to update.
  * @param entries Packed circular linked-list entry array; bits [13:0] hold the item y position.
- * @see decomp.me (100%) TODO
+ * @see decomp.me (100%)
  */
 void scroll_list_update_target(ScrollListState* state, u32* entries)
 {
@@ -7073,27 +6628,18 @@ void scroll_list_update_target(ScrollListState* state, u32* entries)
     state->lerp_steps = 4;
 }
 
-extern u8 D_80168C04[];
+/** @brief Three-frame cursor icon-id sequence (0x6B, 0x6C, 0x6D). */
+extern u8 g_menu_cursor_icon_ids[];
 
 /**
  * @brief Emit the animated menu cursor: one or two SPRTs plus a texpage prim, OT-linked.
- *
- * Derives a 4-phase bob offset from @c g_menu_frame (0, 1, 2, 1 across frames 9/0x10/0x17,
- * resetting the counter at 0x1E). The phase both shifts the sprite position and indexes
- * @ref D_80168C04 to pick the content id used for the UV/size lookup in @ref D_8014FBF4 and
- * the CLUT lookup in @ref D_8014FDB8. When @p active is zero the phase is forced to 0 and
- * only the first sprite is emitted.
- *
- * @param prim   Primitive write cursor; the SPRTs are built here.
- * @param ot     Ordering-table entry; updated after each emitted primitive.
- * @param x      Cursor screen X before the bob offset is applied.
- * @param y      Cursor screen Y before the bob offset is applied.
+ * @param prim Primitive write cursor; the SPRTs are built here.
+ * @param ot Ordering-table entry; updated after each emitted primitive.
+ * @param x Cursor screen X before the bob offset is applied.
+ * @param y Cursor screen Y before the bob offset is applied.
  * @param active Non-zero to animate and to emit the second, semi-transparent (0x66) SPRT.
  * @return Pointer to the next free primitive slot (past the 8-byte texpage prim).
- * @note The CLUT id is packed from D_8014FDB8[id]: high nibble = VRAM row offset from
- *       0x1F2, low nibble = VRAM x/16. The trailing prim is a one-word 0xE1000005 texpage
- *       command.
- * @see decomp.me (100%) TODO
+ * @see decomp.me (100%)
  */
 s32 menu_emit_cursor(s32 prim, s32* ot, s32 x, s32 y, s32 active)
 {
@@ -7130,16 +6676,16 @@ s32 menu_emit_cursor(s32 prim, s32* ot, s32 x, s32 y, s32 active)
     }
 
     setlen(p, 4);
-    spr = D_8014FBF4;
-    id = &D_80168C04[phase];
-    clut = D_8014FDB8;
+    spr = g_menu_icon_sprite_defs;
+    id = &g_menu_cursor_icon_ids[phase];
+    clut = g_menu_icon_clut_codes;
 
     SET_BGR0_PACKED(p, GPU_TINT_NEUTRAL);
     setcode(p, 0x64);
     setXY0(p, x - phase, y + phase);
     setUV0(p, spr[*id].u_coord, spr[*id].v_coord);
     setWH(p, spr[*id].w, spr[*id].h);
-    SET_SPRT_CLUT(p, inline_fn(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF));
+    SET_SPRT_CLUT(p, menu_or_bits(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF));
     addPrim(ot, p);
     p++;
 
@@ -7151,7 +6697,7 @@ s32 menu_emit_cursor(s32 prim, s32* ot, s32 x, s32 y, s32 active)
         setXY0(p, (x - phase) + 2, (y + phase) + 2);
         setUV0(p, spr[*id].u_coord, spr[*id].v_coord);
         setWH(p, spr[*id].w, spr[*id].h);
-        SET_SPRT_CLUT(p, inline_fn(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF));
+        SET_SPRT_CLUT(p, menu_or_bits(((clut[*id] >> 4) + 0x1F2) << 6, clut[*id] & 0xF));
         addPrim(ot, p);
         p++;
     }
@@ -7171,49 +6717,36 @@ s32 menu_emit_cursor(s32 prim, s32* ot, s32 x, s32 y, s32 active)
 
 extern u8 D_8016869F[];
 extern u8 D_801686A0[];
+/** @brief Slot-occupied flags indexed by equipment subtype; g_item_slot_flags is the subtype-7 view. */
 extern u8 g_item_slot_flags_by_subtype[];
-extern u8 D_80168C38[];
-extern s32 D_801690F0;
+extern u8 g_menu_item_description_buffer[];
+extern s32 g_menu_inventory_index;
 extern s32 g_menu_active_item_category;
+/** @brief Slot-data pointers indexed by equipment subtype; g_item_slot_data is the subtype-7 view. */
 extern s32 g_item_slot_data_by_subtype[];
 /** @brief Selected equipment row awaiting a swap, or MENU_NONE. */
 extern s32 g_menu_pending_item_row;
 
-s32 func_8014C9B0(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
-/** @note Empty parameter list (K&R) is intentional: most call sites pass (handle, addr),
- *        but func_8014CC08 has sites that pass the address alone. */
+s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
+s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active);
+/* K&R declarations preserve the original call-site register behavior. */
 void func_800A8F8C();
-/** @note Empty parameter list (K&R) is intentional: func_8014C200 passes the slot
- *        offset in a0, while the other call site in this file passes nothing. */
 void func_800A8FB4();
-/** @note Empty parameter list (K&R) is intentional: func_8014C200 passes the subtype,
- *        func_8014CC08 relies on a0 already holding it. */
 s32 func_800A9060();
 s32 menu_special_technique_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, s32 active);
 void menu_swap_item_records(s32, s32);
 
 /**
  * @brief Draw the equip/ability list for the active character and handle its input.
- *
- * Emits the scrolling item list (icon SPRT + text via @ref func_800A88A0 per visible row),
- * tracks which row is selected, mirrors the selection into the per-category pointers
- * (@c D_80169404 / @c D_80169408 / @c D_80169410), builds the hover description string in
- * @c D_80168C38, and dispatches confirm/cancel. Triangle cycles the node's icon variant;
- * Cancel backs out of the category; Confirm equips (or swaps, when a row is already
- * marked in @c g_menu_pending_item_row) and opens the follow-up window.
- *
- * @param ot          Ordering table the primitives are linked into.
- * @param st          Scroll-list state for this window (selection, scroll, viewport).
- * @param prim_buf    Primitive write cursor.
+ * @param ot Ordering table the primitives are linked into.
+ * @param st Scroll-list state for this window (selection, scroll, viewport).
+ * @param prim_buf Primitive write cursor.
  * @param view_origin Viewport anchor in list-local coordinates.
- * @param active      Non-zero when this window owns input this frame.
+ * @param active Non-zero when this window owns input this frame.
  * @return The advanced primitive write cursor.
- * @see decomp.me (71.75%) TODO
- * @note The 78.18%% previously recorded here was measured in a standalone scratch that
- *       used a different struct set (ListState / flat MenuNode); in-file it is 71.75%%.
+ * @see decomp.me (71.75%)
  */
-void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_origin, s32 active)
+void* menu_inventory_list_callback(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_origin, s32 active)
 {
     void* buf;
     void* hit_slot;
@@ -7344,10 +6877,10 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
 
     y = 0;
     g_menu_item_ptr = 0;
-    D_80169410 = 0;
-    D_80169404 = 0;
+    g_menu_category0_item = 0;
+    g_menu_category1_item = 0;
     scroll_y = st->scroll_y;
-    D_80169408 = 0;
+    g_menu_category2_item = 0;
     off = 0xCE0;
     item = (u8*)g_pad_ctx + 0xCE0;
 
@@ -7426,19 +6959,19 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
 
             if ((y >> 4) == st->sel_idx)
             {
-                D_801690F0 = idx;
+                g_menu_inventory_index = idx;
                 g_menu_item_ptr = (s32)((u8*)g_pad_ctx + off);
                 if (g_menu_active_item_category == 1)
                 {
-                    D_80169404 = g_menu_item_ptr;
+                    g_menu_category1_item = g_menu_item_ptr;
                 }
                 else if (g_menu_active_item_category == 0)
                 {
-                    D_80169410 = g_menu_item_ptr;
+                    g_menu_category0_item = g_menu_item_ptr;
                 }
                 else if (g_menu_active_item_category == 2)
                 {
-                    D_80169408 = g_menu_item_ptr;
+                    g_menu_category2_item = g_menu_item_ptr;
                 }
             }
             y += 0x10;
@@ -7463,7 +6996,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
         }
     }
 
-    LIST_WORD(st) = (LIST_WORD(st) & 0xFE00FFFF) | ((func_8014551C(g_menu_active_item_category) & 0x1FF) << 0x10);
+    LIST_WORD(st) = (LIST_WORD(st) & 0xFE00FFFF) | ((menu_build_inventory_nav_entries(g_menu_active_item_category) & 0x1FF) << 0x10);
     g_menu_page_count = (LIST_WORD(st) >> 0x10) & 0x1FF;
     g_script_repeat_last = LIST_WORD(st);
 
@@ -7513,7 +7046,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                 {
                     u32 w = PAD_ITEM_W14(g_menu_item_ptr);
                     s32 cat = (w >> 8) & 3;
-                    u8* a1 = D_80168C38;
+                    u8* a1 = g_menu_item_description_buffer;
                     u8* b68;
                     u8* src;
 
@@ -7521,7 +7054,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                     {
                         if (cat != 1)
                         {
-                            a1 = D_80168C38;
+                            a1 = g_menu_item_description_buffer;
                             b68 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x68);
                             d = sp30;
                             src = b68 + *(u16*)(b68 + (((u32)PAD_ITEM_W14(g_menu_item_ptr) >> 9) & 0x7E) + 0x2E);
@@ -7530,7 +7063,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         }
                         else
                         {
-                            a1 = D_80168C38;
+                            a1 = g_menu_item_description_buffer;
                             b68 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x68);
                             d = sp30;
                             src = b68 + *(u16*)(b68 + ((w >> 9) & 0x7E) + 0x16);
@@ -7540,7 +7073,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                     }
                     else
                     {
-                        a1 = D_80168C38;
+                        a1 = g_menu_item_description_buffer;
                         b68 = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x68);
                         d = sp30;
                         src = b68 + *(u16*)(b68 + ((w >> 9) & 0x7E));
@@ -7548,7 +7081,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         MENU_TEXT_COPY(a1, src);
                     }
                     *a1 = 0;
-                    g_menu_pending_overlay = (s32)D_80168C38;
+                    g_menu_help_text = (s32)g_menu_item_description_buffer;
                 }
             }
         }
@@ -7565,7 +7098,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                     {
                         s32 n;
 
-                        menu_swap_item_records(g_menu_item_ptr, D_8016911C);
+                        menu_swap_item_records(g_menu_item_ptr, g_menu_active_equipped_item);
                         func_800A8FB4();
                         ((u8*)g_pad_ctx)[(g_menu_char_slot * 0x250) + g_menu_active_subtype + 0x609] = (s8)((u8)g_menu_active_subtype + 0x7D);
                         menu_play_se(0x7E, 0x80);
@@ -7596,14 +7129,14 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         }
                         menu_play_se(0x7E, 0x80);
                         MENU_CLEAR_SLOTS();
-                        if (menu_item_is_nondefault(D_8016911C) != 0)
+                        if (menu_item_is_nondefault(g_menu_active_equipped_item) != 0)
                         {
-                            menu_swap_item_records(g_menu_item_ptr, D_8016911C);
+                            menu_swap_item_records(g_menu_item_ptr, g_menu_active_equipped_item);
                             g_item_slot_data_by_subtype[g_menu_active_subtype] = g_menu_item_ptr;
                         }
                         else
                         {
-                            func_800A8F8C(D_8016911C, g_menu_item_ptr);
+                            func_800A8F8C(g_menu_active_equipped_item, g_menu_item_ptr);
                             *(u8*)g_menu_item_ptr = 0;
                             g_item_slot_data_by_subtype[g_menu_active_subtype] = 0;
                         }
@@ -7614,8 +7147,8 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         rect.w = 0x70;
                         rect.h = 0x30;
                         ns = menu_slot_alloc(0, &rect);
-                        ns->content_cb = (s32 * (*)()) & func_8014DA48;
-                        g_menu_unk_e8 = 1;
+                        ns->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+                        g_menu_compare_window_active = 1;
                         ns->flags = (ns->flags & 0xFE00FFFF) | 0x20000;
                         MENU_RELINK();
                         g_menu_content_ready = 0;
@@ -7654,7 +7187,7 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
                         rect.w = 0x70;
                         rect.h = 0x30;
                         ns = menu_slot_alloc(0, &rect);
-                        ns->content_cb = (s32 * (*)()) & func_8014C9B0;
+                        ns->content_cb = (s32 * (*)()) & menu_item_followup_callback;
                         ns->flags = (ns->flags & 0xFE00FFFF) | 0x20000;
                         MENU_RELINK();
                     }
@@ -7667,10 +7200,6 @@ void* func_8014A3A4(s32* ot, ScrollListState* st, s32 prim_buf, Vec2s* view_orig
 
 /**
  * @brief Clear the four "pending" character-status bytes for the active character slot.
- *
- * Walks the 4-byte status array at offset 0x60C of the active slot in @c g_pad_ctx.
- * A byte is reset to 0xFF unless it is already 0xFF or has bit 7 set (locked/held).
- *
  * @return 1 if at least one byte was reset, 0 if none were.
  * @see decomp.me (100%)
  */
@@ -7707,24 +7236,8 @@ typedef struct
 
 /**
  * @brief Scan the item table for the next entry whose kind matches g_menu_active_item_category.
- *
- * Walks the 0x64-entry item table at g_pad_ctx + 0xCE0 starting at
- * D_801690F0 + step and stepping by @p step until the index leaves [0, 0x64)
- * (the compare is unsigned, so a -1 step exits by wrapping). The first
- * non-empty entry whose kind - bits [9:8] of @c attr - equals g_menu_active_item_category wins:
- * D_801690F0 is parked on it, g_menu_item_ptr is set, and the entry is also
- * cached in the per-kind global (0 -> D_80169410, 1 -> D_80169404,
- * 2 -> D_80169408). If nothing matched, D_801690F0 wraps to the far end and the
- * scan recurses once so the search continues from the other side.
- *
  * @param step Direction/stride to walk the table (1 = forward, -1 = backward).
  * @return Selected item-table index.
- * @note WIP 95.00% (gcc272_cdk); frame matches (-0x18). The byte offset is now
- *       tracked incrementally (@c offset += (kind = step) << 6) rather than
- *       recomputed from @c index, and @c kind doubles as the carrier of @c step
- *       past the loop (the post-loop @c kind == 1 test and the recursive
- *       @c menu_step_item_selection(kind) call). Residual is register-allocation
- *       (29 arg-permuted rows, -1 insn).
  * @see decomp.me (95.00%)
  */
 u32 menu_step_item_selection(s32 step)
@@ -7739,7 +7252,7 @@ u32 menu_step_item_selection(s32 step)
   PadContext *new_var;
   g_menu_item_ptr = 0;
   new_var = g_pad_ctx;
-  start = D_801690F0 + step;
+  start = g_menu_inventory_index + step;
   offset = (start << 6) + 0xCE0;
   index = start;
   items = (MenuItemEntry *) (((u8 *) new_var) + 0xCE0);
@@ -7751,20 +7264,20 @@ u32 menu_step_item_selection(s32 step)
       if (kind == g_menu_active_item_category)
       {
         found = (u32) (((u8 *) g_pad_ctx) + offset);
-        D_801690F0 = index;
+        g_menu_inventory_index = index;
         g_menu_item_ptr = found;
         switch (kind)
         {
           case 0:
-            D_80169410 = found;
+            g_menu_category0_item = found;
             break;
 
           case 1:
-            D_80169404 = found;
+            g_menu_category1_item = found;
             break;
 
           case 2:
-            D_80169408 = found;
+            g_menu_category2_item = found;
             break;
 
         }
@@ -7781,11 +7294,11 @@ u32 menu_step_item_selection(s32 step)
   {
     if (kind == 1)
     {
-      D_801690F0 = -1;
+      g_menu_inventory_index = -1;
     }
     else
     {
-      D_801690F0 = 0x64;
+      g_menu_inventory_index = 0x64;
     }
     result = menu_step_item_selection(kind);
   }
@@ -7797,31 +7310,15 @@ void menu_play_se(s32 sound_id, s32 volume);
 
 /**
  * @brief Draw the character's spell/ability grid and handle its selection input.
- *
- * Draws the scroll-list chrome, then walks the 12x8 grid of grid cells whose
- * presence bits live in the byte array at g_pad_ctx + 0x60 (one byte per row,
- * one bit per column). Each present cell advances the running y position by 16
- * and, when it falls inside the viewport, is drawn as a glyph via func_800A88A0.
- * The cell whose row matches the list's selection is remembered in @c sel.
- *
- * On confirm (pad bits 0x220) the selected cell index is written to the active
- * character's slot byte at g_pad_ctx + slot * 0x250 + g_menu_active_subtype +
- * 0x609. If a cell is selected, g_menu_pending_overlay is pointed at its
- * description entry.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this grid.
- * @param prim_buf    Primitive buffer write cursor.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this grid.
+ * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; the glyph origin is (0x10 - x, rel_y - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note @c list aliases @c state, and @c row is reused to hold the 0x609 slot
- *       offset inside the store expression; both are required to match. The
- *       alias raises the parameter's allocation priority so it lands in s5, and
- *       the in-expression assignment fixes the operand order of the address add.
  * @see decomp.me (100%)
  */
-s32 func_8014B7DC(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_spell_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     s32 sel;
     s32 row;
@@ -7890,7 +7387,7 @@ s32 func_8014B7DC(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     if (sel != -1)
     {
         sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x3C));
-        g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+        g_menu_help_text = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
     }
 
     return prim_buf;
@@ -7898,36 +7395,15 @@ s32 func_8014B7DC(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
 /**
  * @brief Draw a character's equipment grid and handle its selection input.
- *
- * A sibling of @ref func_8014B7DC for the equipment page. Draws the scroll-list
- * chrome, then walks a 16x8 grid of cells whose 4-bit kind codes are packed into
- * one u32 per row in the word array at g_pad_ctx + 0x104 (low nibble first).
- * A cell is present when its kind is >= 2; each present cell advances the running
- * y position by 16 and, when it falls inside the viewport, is drawn as a glyph via
- * @ref func_800A88A0. Cells with kind >= 8 additionally get an overlay icon
- * (0x70 for kind >= 0xF, 0x69 otherwise) drawn by @ref menu_emit_icon_sprite, followed by
- * a one-word Draw Mode Setting primitive (GP0 0xE1000005) linked into the OT.
- * The cell whose row matches the list's selection is remembered in @c sel and,
- * when the page is active, points @c g_menu_pending_overlay at its description entry.
- *
- * On cancel (pad bit 0x40) the page plays a sound and calls @ref menu_reset_content_view.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this grid.
- * @param prim_buf    Primitive buffer write cursor.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this grid.
+ * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; the glyph origin is (0x20 - x, rel_y - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note Three shapes are required to match. @c list aliases @c state (as in
- *       func_8014B7DC) so the parameter gets its own spill slot at 0x28 rather
- *       than its incoming home slot. The two icon calls must be written out
- *       separately per arm - hoisting the id into a variable and making one call
- *       loses the cross-jumped tail GCC emits here. And the row index must be
- *       @c row << 2, not @c row * 4: the shift form gives the address add its
- *       (pointer, index) operand order, which is what puts g_pad_ctx in v0.
  * @see decomp.me (100%)
  */
-s32 func_8014BA58(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_equipment_grid_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     ScrollListState* list;
     u32 scroll_y;
@@ -8006,7 +7482,7 @@ s32 func_8014BA58(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     if ((active != 0) && (sel != -1))
     {
         sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x84));
-        g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+        g_menu_help_text = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
     }
 
     return prim_buf;
@@ -8014,32 +7490,15 @@ s32 func_8014BA58(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
 /**
  * @brief Draw a character's key-item list and handle its selection input.
- *
- * Third sibling of @ref func_8014B7DC / @ref func_8014BA58, for the key-item page.
- * Draws the scroll-list chrome, then walks the 256-entry byte array at
- * g_pad_ctx + 0x25E0, one item id per entry. A non-zero id is a present item: it
- * advances the running y position by 16 and, when it falls inside the viewport,
- * is drawn as a glyph via @ref func_800A88A0 followed by its count/quantity via
- * @ref menu_draw_clamped_number at the anchor built in @c pos. The item whose row matches the
- * list's selection is remembered in @c sel and, when the page is active, points
- * @c g_menu_pending_overlay at its description entry.
- *
- * On cancel (pad bit 0x40) the page plays a sound and calls @ref menu_reset_content_view.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this list.
- * @param prim_buf    Primitive buffer write cursor.
- * @param view_origin Viewport anchor; the glyph origin is (0x10 - x, rel_y - y) and
- *                    the quantity anchor is (0xC0 - x, rel_y - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this list.
+ * @param prim_buf Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x10 - x, rel_y - y) and the quantity anchor is (0xC0 - x, rel_y - y).
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note @c list aliases @c state, as in func_8014B7DC: without the alias the
- *       parameter loses the ref-count tie against @c sel and the two swap saved
- *       registers (state lands in s6, sel in s5, the reverse of the original).
- *       @c menu_draw_clamped_number is called without a prototype, matching the rest of the file.
  * @see decomp.me (100%)
  */
-s32 func_8014BD48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_key_item_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
     s32 idx;
@@ -8099,7 +7558,7 @@ s32 func_8014BD48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
         if (active != 0)
         {
             sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x2C));
-            g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+            g_menu_help_text = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
         }
     }
 
@@ -8108,32 +7567,15 @@ s32 func_8014BD48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
 /**
  * @brief Draw a character's ability list and handle its selection input.
- *
- * Fourth sibling of @ref func_8014B7DC / @ref func_8014BA58 / @ref func_8014BD48.
- * Draws the scroll-list chrome, then walks the 64-entry, 0xC-byte-stride record
- * array at g_pad_ctx + 0x2F0. Bit 0 of each record's first byte marks the entry as
- * present: it advances the running y position by 16 and, when it falls inside the
- * viewport, is drawn as a glyph via @ref func_800A88A0. Bit 1 additionally draws
- * marker icon 0x2C via @ref menu_emit_icon_sprite, followed by a one-word Draw Mode Setting
- * primitive (GP0 0xE1000005) linked into the OT. The entry whose row matches the
- * list's selection is remembered in @c sel and, when the page is active, points
- * @c g_menu_pending_overlay at its description entry.
- *
- * On cancel (pad bit 0x40) the page plays a sound and calls @ref menu_reset_content_view.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this list.
- * @param prim_buf    Primitive buffer write cursor.
- * @param view_origin Viewport anchor; the glyph origin is (0x20 - x, rel_y - y) and
- *                    the marker origin is (0x10 - x, rel_y - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this list.
+ * @param prim_buf Primitive buffer write cursor.
+ * @param view_origin Viewport anchor; the glyph origin is (0x20 - x, rel_y - y) and the marker origin is (0x10 - x, rel_y - y).
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note @c list aliases @c state, as in the other three pages: without the alias the
- *       param stays in its incoming home slot (sp+0x5C) and @c sel takes s8, the
- *       reverse of the original's "state in s8, sel spilled to sp+0x2C".
  * @see decomp.me (100%)
  */
-s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_ability_list_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     u32 scroll_y;
     s32 sel;
@@ -8199,7 +7641,7 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
         if (active != 0)
         {
             sel_base = (void*)(g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x14));
-            g_menu_pending_overlay = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
+            g_menu_help_text = (s32)((u8*)sel_base + *(u16*)((u8*)sel_base + (sel * 2)));
         }
     }
 
@@ -8208,50 +7650,15 @@ s32 func_8014BF68(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
 /**
  * @brief Handle input for the equip/status page and draw its four state-table labels.
- *
- * The controller sibling of the scroll-list pages (@ref func_8014B7DC,
- * @ref func_8014BA58, @ref func_8014BD48, @ref func_8014BF68): instead of walking a
- * list it dispatches on the page's sub-view id (@c unk4).
- *
- * On cancel (pad bit 0x40) it plays a sound and requests a state change. On confirm
- * (pad bits 0x220) it plays a sound and dispatches:
- * - sub-view 0: opens a 0xF0 x 0x60 window at (0x40, 0x60) via @ref menu_slot_alloc,
- *   wires @ref menu_special_technique_list_callback as its content callback, and
- *   seeds the window's lerp from @ref menu_build_special_technique_nav_entries.
- * - sub-view 1: clears the slot pool, points the character's node at content 0x29, and
- *   reloads its content via @ref menu_open_content_page.
- * - sub-view 2: reads the equipped-item byte at g_pad_ctx + slot * 0x250 + subtype +
- *   0x609. If it has bit 0x80 the item is unequipped (@ref func_800A8F8C /
- *   @ref func_800A8FB4) unless @ref func_800A9060 reports no handle, in which case the
- *   pool is cleared and content 6 loaded instead. The byte is then reset to 0xFF.
- * - sub-view 3: when the byte at D_8016911C is set, clears the pool, points the node at
- *   content 0x1A, and re-runs the hit test to reposition the content cursor.
- *
- * Sub-views 0, 1 and 3 return without drawing. Everything else falls through to the
- * draw path: the list chrome plus four labels from the state table at offset 8
- * (entries 0x7A, 0x7C, 0x86, 0x80), stacked 0x10 apart.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this page.
- * @param prim_buf    Primitive buffer write cursor.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this page.
+ * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor (unchanged on the early-return paths).
- * @note Several shapes are required to match. @c rect must be an aggregate
- *       (MenuSlotRect): written as four scalars only the first store survives
- *       dead-store elimination. The three slot-clear loops must each use their
- *       OWN locals -- sharing one pair puts them all in a1/a2 instead of v0/v1.
- *       The @ref func_800A8F8C address must stay grouped as
- *       (base + (slot + 0x5F0)) + ((subtype << 6) + 0x90), or fold-const merges
- *       0x5F0 + 0x90 into a single addiu. The label bases use MENU_STATE_BASE /
- *       MENU_TAIL so the base is CSE'd into a2 rather than spilled to a fresh t0.
- *       Both @c list = @c state and @c buf = @c prim_buf must alias their
- *       parameters: the original emits the entry copy of @c state (a1 -> s0)
- *       before that of @c prim_buf (a2 -> s1), and aliasing the modified
- *       parameters defers their copies to first use.
  * @see decomp.me (100%)
  */
-s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_subtype_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     MenuSlotRect rect;
     s32 packed;
@@ -8322,9 +7729,9 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             menu_open_content_page(2);
             g_menu_draw_early_out = 1;
             g_menu_item_ptr = 0;
-            D_80169410 = 0;
-            D_80169404 = 0;
-            D_80169408 = 0;
+            g_menu_category0_item = 0;
+            g_menu_category1_item = 0;
+            g_menu_category2_item = 0;
             return buf;
 
         case 2:
@@ -8370,7 +7777,7 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
         }
 
         case 3:
-            if (*(u8*)D_8016911C == 0)
+            if (*(u8*)g_menu_active_equipped_item == 0)
             {
                 break;
             }
@@ -8411,28 +7818,15 @@ s32 func_8014C200(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
 /**
  * @brief Draws the confirmation page and dismisses it on any cancel/confirm press.
- *
- * When the page is active and the pad reports cancel or either confirm bit (0x260),
- * it plays the navigate SE and clears the page's sub-window and state-change bytes,
- * which returns the caller to the previous page. Regardless of input, it always draws
- * the single glyph currently held in @ref g_menu_message_line1 at (0x88 - x, -y) relative to the
- * viewport anchor.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this page.
- * @param prim_buf    Primitive buffer write cursor.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this page.
+ * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; the glyph origin is (0x88 - x, -y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note Two shapes are required to match. @c pos is never read, but an aggregate local
- *       still takes a frame slot at expand time, and without it the frame is 0x38 -> 0x30.
- *       And @c buf must alias @c prim_buf: the original emits the entry copy of
- *       @c view_origin (a3 -> s1) before that of @c prim_buf (a2 -> s0), and aliasing the
- *       modified parameter defers its copy to first use. Aliasing @c view_origin instead
- *       does nothing.
  * @see decomp.me (100%)
  */
-s32 func_8014C820(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
     ScrollListState* list;
@@ -8454,26 +7848,15 @@ s32 func_8014C820(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
 /**
  * @brief Draws the two-line confirmation page and dismisses it on cancel/confirm.
- *
- * Identical input handling to @ref func_8014C820: when the page is active and the pad
- * reports cancel or either confirm bit (0x260), it plays the navigate SE and clears the
- * page's sub-window and state-change bytes. It then always draws two glyphs, stacked
- * 0x10 apart -- @ref g_menu_message_line1 at (0x88 - x, -y) and @ref g_menu_message_line2 at
- * (0x88 - x, 0x10 - y).
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this page.
- * @param prim_buf    Primitive buffer write cursor.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this page.
+ * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; the glyph origins are (0x88 - x, N - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note The same two shapes func_8014C820 needs are required here. @c pos is never read,
- *       but an aggregate local still takes a frame slot at expand time (0x40 -> 0x38
- *       without it). And @c buf must alias @c prim_buf so the modified parameter's entry
- *       copy is deferred, letting @c view_origin copy into s2 first.
  * @see decomp.me (100%)
  */
-s32 func_8014C8C8(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_two_line_message_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     Vec2s pos;
     ScrollListState* list;
@@ -8496,33 +7879,15 @@ s32 func_8014C8C8(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
 /**
  * @brief Draws a two-glyph scroll-list page and handles its cancel/confirm input.
- *
- * On cancel (pad bit 0x40) the page plays the close SE and asks for a state change,
- * then still draws. On confirm (pad bits 0x220) it plays the navigate SE and takes one
- * of two paths, drawing nothing either way: if a row is selected (@c unk4 != 0) it
- * closes the page and clears the pending item, marking @ref g_menu_pending_item_row as "no row";
- * otherwise it descends to the next scene node -- bumps @ref g_menu_scene_type, clears
- * the four menu slots, re-runs the hit test, and parks the content cursor on the hit
- * item's position. With no input it draws the list chrome plus the two glyphs at
- * tail offsets 0x88 and 0x8A.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this page.
- * @param prim_buf    Primitive buffer write cursor.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this page.
+ * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; the glyph origins are (0x30 - x, N - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note Four shapes are required to match. @c pos (never read) restores the 0x40 frame
- *       and @c buf aliases @c prim_buf to defer that parameter's entry copy -- the same
- *       pair @ref func_8014C820 needs. The slot-clear loop must be written indexed
- *       (@c g_menu_slots[i].active), not as a hand-rolled @c s8* walk: only then is the
- *       0x24-stride pointer a strength-reduced induction register, which is allocated
- *       after the plain pseudos and leaves a0 for @c idx. And the item address must be
- *       formed as @c (idx * 8) + (s32)tbl so the add's destination ties to the shifted
- *       index rather than to the loaded table base.
  * @see decomp.me (100%)
  */
-s32 func_8014C9B0(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_item_followup_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     MenuContentItem* item;
     MenuContentItem* tbl;
@@ -8580,7 +7945,7 @@ s32 func_8014C9B0(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     return buf;
 }
 
-/* Globals and helpers used only by func_8014CC08. */
+/* Globals and helpers used only by menu_equipment_action_callback. */
 extern u8 D_8016869B[];
 extern u8 D_800F0BF8[];
 /** @brief The u32 at D_800F0BF8 + 0x14; the item-kind word of the default compare entry. */
@@ -8590,70 +7955,15 @@ s32 menu_stage_best_equipment_for_active_slot();
 
 /**
  * @brief Draw the character's equip/ability page and dispatch its confirm action.
- *
- * The largest of the scroll-list pages. Cancel (pad 0x40) plays the close SE and requests
- * a state change. Confirm (pad 0x220) plays the navigate SE and dispatches on the page's
- * sub-view id (@c unk4):
- * - sub-view 0: retargets the character's node (content 0x24 for subtype 7, 0x27 for
- *   subtypes 8-0xA), rebuilds the ability mask in @ref g_menu_ability_mask by scanning the four
- *   pad entries (an inlined copy of @ref func_8014824C), then reloads the content via
- *   @ref menu_open_content_page and returns without drawing.
- * - sub-view 1: prepares the item-slot data (@ref menu_stage_best_equipment_for_slot0 for subtype 7, otherwise
- *   clears @ref g_item_slot_data and calls @ref menu_stage_best_equipment_for_active_slot), clears the slot pool,
- *   opens a 0x70 x 0x30 window at (0xB0, 0x40) whose content callback is
- *   @ref func_8014DA48, and rebuilds @ref g_menu_item_nav_entries as a 2-entry circular nav list.
- * - sub-view 2: same window, but first re-runs the slot prep for subtypes 8, 9 and 0xA.
- * - sub-view 3: retargets the node and re-runs the hit test to park the content cursor.
- * - sub-view 4: the equip/unequip flow -- @ref func_800A9060 gets a handle, the target
- *   slot is validated by @ref menu_item_is_nondefault, then the item is moved with
- *   @ref func_800A8F8C / @ref func_800A8FB4. For subtype 7 it scans the remaining three
- *   slots for a free one; when none is found (or no handle exists at all) it parks a
- *   message in @ref g_menu_message_line1, clears the pool and loads content 6.
- *
- * Everything that does not return early falls through to the draw path: the list chrome
- * plus five labels from the state table at offset 8 (tails 0x7E, 0x82, 0x84, 0x80, 0x86),
- * stacked 0x10 apart.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param state       Scroll-list state for this page.
- * @param prim_buf    Primitive buffer write cursor.
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param state Scroll-list state for this page.
+ * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor; label origins are (0x30 - x, N - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note NOT a byte-for-byte match yet (902/912 instructions exact). Shapes already
- *       proven necessary: the subtype cascades are @c switch statements (an if-chain
- *       folds the 7..0xA range into one @c sltiu); @c list doubles as the
- *       @ref menu_slot_alloc result (the original shares s1); each of the three nav-link
- *       loops needs its OWN locals, while the two sub-view-0 arms must SHARE theirs; the
- *       case-4 "found" body must precede the zero-handle body in source order; @c buf
- *       aliases @c prim_buf to fix the entry-copy order; the nine slot-pool clears are
- *       INDEXED loops over @c g_menu_slots (gcc strength-reduces them to the pointer walk
- *       itself); and the sub-view-0 arms share one tail so @c flag_ptr keeps three
- *       references.
- * @note The sub-view-4 / subtype-7 compare needs four coupled shapes, none of which
- *       measures at all on its own: @c cmp_tbl must be assigned at its FIRST USE inside
- *       the condition (assigning it as a preceding statement lets the scheduler hoist
- *       @c &D_800F0BF8 to the top of the block); it must be passed as the second argument
- *       to BOTH @ref func_800A8F8C calls (that second reference is what stops GCC folding
- *       the address into @c lw @c %lo(D_800F0BF8+0x14)); the call addresses must be
- *       written in integer form with @c slot_off first, because the first operand of the
- *       @c addu is what coalesces with the a0 argument register; and the compare address
- *       must be spelled so CSE cannot unify it with the call addresses.
- * @note TODO: that last shape is currently written @c ctx @c - @c (-slot_off), which is
- *       semantically identical to @c ctx @c + @c slot_off and compiles to the same single
- *       @c addu (the double negation survives to RTL, defeats @c cse.c:exp_equiv_p, and
- *       @c combine then removes it). It is an unnatural spelling standing in for whatever
- *       the original really wrote; replace it when a natural equivalent is found.
- *       Operand order cannot substitute for it - gcc 2.7.2 @c exp_equiv_p explicitly
- *       checks both orders for @c PLUS.
- * @note Remaining gap (16 rows): @c arg has to be assigned above the mask loop to win the
- *       mask/idx allocation race, costing two copies the original does not have; the
- *       confirm-block @c addu lands in v0 where the original uses v1; and the sub-view-4 /
- *       subtype-8..0xA tail colours @c ctx2 into v0, which costs a load-delay nop.
- *       See working/func_8014CC08/status.md.
- * @see decomp.me (98.90%) TODO
+ * @see decomp.me (98.89%)
  */
-s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_equipment_action_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     MenuSlotRect rect;
     ScrollListState* list;
@@ -8734,7 +8044,7 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                 arg = 0;
                 flag_ptr = &g_menu_ability_mask;
                 idx = mask = 0;
-                entry = (u8*)D_801693FC;
+                entry = (u8*)g_menu_equipment_base;
                 do
                 {
                     if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
@@ -8770,7 +8080,7 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                 arg = 1;
                 flag_ptr = &g_menu_ability_mask;
                 idx = mask = 0;
-                entry = (u8*)D_801693FC;
+                entry = (u8*)g_menu_equipment_base;
                 do
                 {
                     if ((idx != (g_menu_active_subtype - 7)) && (entry[0] != 0))
@@ -8822,8 +8132,8 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                 rect.w = 0x70;
                 rect.h = 0x30;
                 list = (ScrollListState*)menu_slot_alloc(0, &rect);
-                ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
-                g_menu_unk_e8 = 1;
+                ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+                g_menu_compare_window_active = 1;
                 ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
                 j = 0;
@@ -8874,8 +8184,8 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             rect.w = 0x70;
             rect.h = 0x30;
             list = (ScrollListState*)menu_slot_alloc(0, &rect);
-            ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
-            g_menu_unk_e8 = 1;
+            ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+            g_menu_compare_window_active = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
             j1 = 0;
@@ -8931,8 +8241,8 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             rect.w = 0x70;
             rect.h = 0x30;
             list = (ScrollListState*)menu_slot_alloc(0, &rect);
-            ((MenuSlot*)list)->content_cb = (s32 * (*)()) & func_8014DA48;
-            g_menu_unk_e8 = 1;
+            ((MenuSlot*)list)->content_cb = (s32 * (*)()) & menu_equipment_compare_callback;
+            g_menu_compare_window_active = 1;
             ((MenuSlot*)list)->flags = (((MenuSlot*)list)->flags & 0xFE00FFFF) | 0x20000;
 
             j2 = 0;
@@ -8966,7 +8276,7 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             break;
 
         case 3:
-            if (*(u8*)D_8016911C == 0)
+            if (*(u8*)g_menu_active_equipped_item == 0)
             {
                 break;
             }
@@ -8978,8 +8288,8 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             }
             if (g_menu_active_subtype == 7)
             {
-                g_menu_item_ptr = D_8016911C;
-                D_80169410 = D_80169554;
+                g_menu_item_ptr = g_menu_active_equipped_item;
+                g_menu_category0_item = g_menu_saved_category0_item;
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 0x14;
                 g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = 0x12;
             }
@@ -8987,8 +8297,8 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             {
                 if (g_menu_active_subtype < 0xB)
                 {
-                    g_menu_item_ptr = D_8016911C;
-                    D_80169404 = D_801694B0;
+                    g_menu_item_ptr = g_menu_active_equipped_item;
+                    g_menu_category1_item = g_menu_saved_category1_item;
                     g_menu_nodes[(g_menu_char_slot * 3) + 1].idx_nav.s.self_idx = 0x17;
                     g_menu_nodes[(g_menu_char_slot * 3) + 1].label_id = 0x15;
                 }
@@ -9008,7 +8318,7 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             return buf;
 
         case 4:
-            if (*(u8*)D_8016911C == 0)
+            if (*(u8*)g_menu_active_equipped_item == 0)
             {
                 break;
             }
@@ -9021,8 +8331,8 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                     switch (g_menu_active_subtype)
                     {
                     case 7:
-                        D_8016911C = 0;
-                        D_80169554 = 0;
+                        g_menu_active_equipped_item = 0;
+                        g_menu_saved_category0_item = 0;
                         slot_off = g_menu_char_slot * 0x250;
                         ctx = (u8*)g_pad_ctx;
                         if ((((*(u32*)(ctx - (-slot_off) + 0x654)) >> 10) & 0x3F) == (((*(u32*)((cmp_tbl = D_800F0BF8) + 0x14)) >> 10) & 0x3F))
@@ -9082,8 +8392,8 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
                     case 8:
                     case 9:
                     case 0xA:
-                        D_8016911C = 0;
-                        D_801694B0 = 0;
+                        g_menu_active_equipped_item = 0;
+                        g_menu_saved_category1_item = 0;
                         ctx2 = (u8*)g_pad_ctx;
                         off2 = ((g_menu_active_subtype - 7) << 6) + (g_menu_char_slot * 0x250);
                         *(ctx2 + off2 + 0x640) = 0;
@@ -9117,37 +8427,16 @@ s32 func_8014CC08(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 }
 
 /**
- * @brief Content callback for the item-compare window opened by @ref func_8014CC08.
- *
- * With no confirm/cancel input pending it just draws: the scroll list over
- * @ref g_menu_item_nav_entries plus the two label strings at state-table indices 0x90 and 0x92.
- *
- * When a confirm/cancel button is down (@c 0x260) and the window is active it closes the
- * comparison instead. If the list has a selection (or Circle was pressed) it walks the four
- * compare slots: each occupied slot with item data is committed via @ref menu_swap_item_records, an
- * empty slot 0 hands its item back and re-registers the default entry (@ref D_800F0BF8),
- * and an empty slot i > 0 hands its item back and clears the slot byte. Otherwise it
- * cancels, and if the pending item's kind field differs from the current one it reloads
- * the node (@ref menu_open_content_page). Either way the four @ref g_item_slot_flags are cleared.
- *
- * @param ot          Ordering-table pointer.
- * @param state       Scroll-list state for this window.
- * @param prim_buf    Primitive buffer write cursor.
+ * @brief Content callback for the item-compare window opened by @ref menu_equipment_action_callback.
+ * @param ot Ordering-table pointer.
+ * @param state Scroll-list state for this window.
+ * @param prim_buf Primitive buffer write cursor.
  * @param view_origin Viewport anchor in list-local coordinates.
- * @param active      Non-zero when this window owns input.
+ * @param active Non-zero when this window owns input.
  * @return Updated primitive write cursor; the unchanged @p prim_buf on the close path.
- *
- * @note @c rect is deliberately unused: gcc 2.7.2 gives every declared aggregate a stack
- *       slot even when it is never referenced, and those 8 dead bytes are what makes the
- *       frame 0x50 rather than 0x48.
- * @note @c off and @c row are NOT written out as locals on purpose. Naming @c i << 6 once
- *       makes gcc build a single induction variable; leaving the two expressions inline in
- *       separate arms lets strength reduction derive two (0x50 + 64i and 64i), which is what
- *       the original does. The @c list / @c buf aliases defer the a1 and a2 entry copies so
- *       a3 is copied second, and @c slot_off is split out to fix the addu operand order.
  * @see decomp.me (100%) https://decomp.me/scratch/JSzAG
  */
-s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
+s32 menu_equipment_compare_callback(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_origin, int active)
 {
     u16 rect[4];
     ScrollListState* list;
@@ -9160,7 +8449,7 @@ s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
     buf = prim_buf;
     if ((g_pad_input & 0x260) && (active != 0))
     {
-        g_menu_unk_e8 = 0;
+        g_menu_compare_window_active = 0;
 
         if ((list->sel_idx != 0) || (g_pad_input & 0x40))
         {
@@ -9201,12 +8490,12 @@ s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
             {
                 if (g_item_slot_data.slot0 != 0)
                 {
-                    if ((PAD_ITEM_W14(g_item_slot_data.slot0) & 0xFC00) != (PAD_ITEM_W14(D_801693FC) & 0xFC00))
+                    if ((PAD_ITEM_W14(g_item_slot_data.slot0) & 0xFC00) != (PAD_ITEM_W14(g_menu_equipment_base) & 0xFC00))
                     {
                         goto reload;
                     }
                 }
-                else if ((D_800F0C0C & 0xFC00) != (PAD_ITEM_W14(D_801693FC) & 0xFC00))
+                else if ((D_800F0C0C & 0xFC00) != (PAD_ITEM_W14(g_menu_equipment_base) & 0xFC00))
                 {
                 reload:
                     if (menu_clear_pending_status() != 0)
@@ -9247,13 +8536,8 @@ s32 func_8014DA48(s32* ot, ScrollListState* state, s32 prim_buf, Vec2s* view_ori
 
 /**
  * @brief Test whether an item record differs from the default/empty compare entry.
- *
- * Compares the 0x40-byte record at @p item_addr against @ref D_800F0BF8 byte by byte.
- *
  * @param item_addr Address of the 0x40-byte item record to test.
  * @return 1 as soon as a byte differs; 0 if all 0x40 bytes are equal.
- * @note Callers use a non-zero result as "this slot holds a real item", i.e. the
- *       record is not the default entry.
  * @see decomp.me (100%) https://decomp.me/scratch/Jm6yb
  */
 s32 menu_item_is_nondefault(s32 item_addr)
@@ -9278,14 +8562,8 @@ s32 menu_item_is_nondefault(s32 item_addr)
 
 /**
  * @brief Swap two 0x40-byte item records through a stack buffer.
- *
- * Three @ref func_800A8F8C record copies: @p first_addr -> scratch,
- * @p second_addr -> @p first_addr, scratch -> @p second_addr.
- *
  * @param first_addr Address of the first 0x40-byte item record.
  * @param second_addr Address of the second 0x40-byte item record.
- * @note Used by @ref func_8014DA48 to commit an item-compare slot, exchanging the
- *       staged item with the one already equipped.
  * @see decomp.me (100%)
  */
 void menu_swap_item_records(s32 first_addr, s32 second_addr)
@@ -9299,14 +8577,6 @@ void menu_swap_item_records(s32 first_addr, s32 second_addr)
 
 /**
  * @brief Point @ref g_active_slot at the highest-numbered menu slot still in use.
- *
- * Scans all four slots of @ref g_menu_slots and records the index of every active
- * one, so the last (highest-index) active slot wins. If no slot is active
- * @ref g_active_slot keeps its previous value; callers reset it to -1 beforehand.
- *
- * @note The call site in @ref menu_update_slots passes an argument that this
- *       function ignores, so no prototype is declared for it - the implicit
- *       declaration at that call site is what the original codegen relies on.
  * @see decomp.me (100%) https://decomp.me/scratch/7whwm
  */
 void menu_update_active_slot(void)
@@ -9322,13 +8592,6 @@ void menu_update_active_slot(void)
     }
 }
 
-extern s32 g_menu_pending_overlay;
-extern s32 g_menu_char_slot;
-extern s32 g_menu_active_subtype;
-extern void* g_menu_message_line1;
-extern void* D_801693FC;
-extern u8 D_800F0BE0[];
-extern u8 D_800F0BEC[];
 
 s32 scroll_list_draw(s32 prim_buf, s32* ot, ScrollListState* state, u32* entries, Vec2s* view_origin, int active);
 void func_800A8F8C();
@@ -9339,63 +8602,20 @@ void menu_play_se(s32 sound_id, s32 volume);
 void* menu_find_best_equipment_for_active_slot(void);
 void menu_open_content_page(u32 content_id);
 
-extern s32 g_menu_draw_early_out;
-extern s32 g_menu_item_nav_entries[];
 /** @brief Active item-list category selected by content pages 0-5. */
-extern s32 g_menu_active_item_category;
-extern s32 g_menu_pending_item_row;
 
-s32 func_8014551C(s32 arg0);
+s32 menu_build_inventory_nav_entries(s32 arg0);
 s32 menu_build_equipment_nav_entries(void);
 s32 menu_build_key_item_nav_entries(void);
 s32 menu_build_ability_nav_entries(void);
 /**
  * @brief Draw the learned Special Technique list and handle technique assignment.
- *
- * The 11 words at g_pad_ctx + 0x34 are learned-technique masks, one for each
- * weapon type and with 24 technique bits per word. The function flattens their
- * set bits into a scroll list, draws each learned technique's name, and exposes
- * the selected technique's description through g_menu_pending_overlay.
- *
- * Circle (0x40) closes the page (SE 0x7F, state->unk0 = 3). On confirm (0x220),
- * the selected technique is accepted only when its weapon type matches bits
- * 15:10 of the active item record at D_801693FC. The technique index within
- * that weapon type is then written to the active character's technique slot at
- * g_pad_ctx + character * 0x250 + subtype + 0x609. An existing slot value with
- * bit 0x80 set first tries the func_800A9060 / func_800A8F8C swap path.
- * Failure clears the menu windows and opens content page 6. A weapon-type
- * mismatch plays SE 0x78.
- *
- * The draw pass uses the string table at g_menu_state_ptr + 0x20 for technique
- * names and the table at +0x1C for descriptions. Techniques belonging to the
- * active weapon type use color 1; all others use color 3.
- *
- * @note The original game manual confirms the terms "Special Techniques" and
- *       11 weapon types; the 24-technique capacity per type comes from this
- *       function's bitset layout.
- *
- * @note Previously described generically as an item/technique list. The
- *       11-by-24 learned bitset, weapon-type validation, per-technique index
- *       write, and paired name/description tables identify this specifically
- *       as the Special Technique assignment list.
- *
- * @param ot          Ordering-table pointer, forwarded to the glyph renderer.
- * @param arg1        Scroll-list state for this page (aliased into @c state).
- * @param arg2        Primitive buffer write cursor (aliased into @c prim).
+ * @param ot Ordering-table pointer, forwarded to the glyph renderer.
+ * @param arg1 Scroll-list state for this page (aliased into @c state).
+ * @param arg2 Primitive buffer write cursor (aliased into @c prim).
  * @param view_origin Viewport anchor; glyph origins are (0x10 - x, rel - y).
- * @param active      Non-zero to process input this frame; zero draws only.
+ * @param active Non-zero to process input this frame; zero draws only.
  * @return Updated primitive buffer write cursor.
- * @note Shapes required to match: @c flag_ptr and @c ctx must be SEPARATE
- *       variables (the target colors the 0x609 read chain v1 and the write
- *       chain a2; one shared local forces one color). The func_800A8F8C call
- *       and the 0x640 store must sit inside a do { } while (0) block - its
- *       block notes keep the off-chain addu out of the g_pad_ctx load-delay
- *       slot the scheduler must fill with it. @c off is assigned inside the
- *       store expression (operand-order idiom, as in func_8014B7DC). In the
- *       draw block, @c glyph is computed BEFORE the color compare, the
- *       D_801693FC deref stays inline in the compare (a named local outranks
- *       @c base and steals v1), and @c base accumulates via the two-step
- *       assignment.
  * @see decomp.me (100%)
  */
 s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg2, Vec2s* view_origin, s32 active)
@@ -9449,7 +8669,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
 
     if ((g_pad_input & 0x220) && (active != 0))
     {
-        if ((found / 24) == (s32)(((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F))
+        if ((found / 24) == (s32)(((u32)(*(s32*)((u8*)g_menu_equipment_base + 0x14)) >> 0xA) & 0x3F))
         {
             u8* flag_ptr = (u8*)g_pad_ctx + (g_menu_char_slot * 0x250);
             u8* ctx;
@@ -9536,7 +8756,7 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
                         base += *(s32*)(base + 0x20);
                         offs = *(u16*)((u8*)base + (j * 2) + (i * 0x30));
                         glyph = base + offs;
-                        if (i == (s32)(((u32)(*(s32*)((u8*)D_801693FC + 0x14)) >> 0xA) & 0x3F))
+                        if (i == (s32)(((u32)(*(s32*)((u8*)g_menu_equipment_base + 0x14)) >> 0xA) & 0x3F))
                         {
                             color = 1;
                         }
@@ -9560,36 +8780,15 @@ s32 menu_special_technique_list_callback(s32* ot, ScrollListState* arg1, s32 arg
     {
         u8* base = g_menu_state_ptr + *(s32*)(g_menu_state_ptr + 0x1C);
 
-        g_menu_pending_overlay = (s32)(base + *(u16*)(base + (found * 2)));
+        g_menu_help_text = (s32)(base + *(u16*)(base + (found * 2)));
     }
     return prim;
 }
 
 /**
  * @brief Open the menu content window for the given content page id.
- *
- * Sets g_menu_pending_item_row to 0xFF, then for ids 0-7 allocates a MenuSlot
- * window and installs its content callback:
- * - 0/1/2: 0xF0 x 0x60 window at (0x40, 0x60), callback func_8014A3A4; sets
- *   g_menu_active_item_category to the id and packs func_8014551C(id) into flags
- *   bits 24:16.
- * - 3/4/5: 0xE8 x 0x90/0x80/0x90 window at (0x40, 0x2C), callbacks
- *   func_8014BA58 / func_8014BD48 / func_8014BF68; sets
- *   g_menu_active_item_category = 3 and packs the corresponding navigation-list
- *   builder result into flags bits 24:16.
- * - 6/7: 0x120 x 0x20/0x30 window at (0x10, 0x60), callbacks func_8014C820 /
- *   func_8014C8C8, flags bits 24:16 = 1; rebuilds g_menu_item_nav_entries as a 1-entry
- *   circular nav list and sets g_menu_draw_early_out.
- * Ids >= 8 only reset g_menu_pending_item_row.
- *
- * @param content_id Content page id (0-7); out of range is a no-op beyond the
- *        g_menu_pending_item_row reset.
- * @note Shapes required to match: the rect must be a single aggregate
- *       (separate locals get their stores dead-eliminated since only the first
- *       address escapes), and the raw callee result must be held in @c v0 with
- *       the (& 0x1FF) << 16 done inside the flags assignment so gcc 2.7.2
- *       cross-jumping merges the case 1-5 tails at one label.
- * @see decomp.me (100%)
+ * @param content_id Content page id (0-7); out of range is a no-op beyond the g_menu_pending_item_row reset.
+ * @see decomp.me (99.97%)
  */
 void menu_open_content_page(u32 content_id)
 {
@@ -9613,11 +8812,11 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xF0;
         rect.h = 0x60;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & func_8014A3A4;
+        slot->content_cb = (s32 * (*)()) & menu_inventory_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
-        v0 = func_8014551C(0);
+        v0 = menu_build_inventory_nav_entries(0);
         g_menu_active_item_category = 0;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
@@ -9628,11 +8827,11 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xF0;
         rect.h = 0x60;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & func_8014A3A4;
+        slot->content_cb = (s32 * (*)()) & menu_inventory_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
-        v0 = func_8014551C(1);
+        v0 = menu_build_inventory_nav_entries(1);
         g_menu_active_item_category = 1;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
@@ -9643,11 +8842,11 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xF0;
         rect.h = 0x60;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & func_8014A3A4;
+        slot->content_cb = (s32 * (*)()) & menu_inventory_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
-        v0 = func_8014551C(2);
+        v0 = menu_build_inventory_nav_entries(2);
         g_menu_active_item_category = 2;
         slot->flags = (slot->flags & 0xFE00FFFF) | ((v0 & 0x1FF) << 16);
         break;
@@ -9658,7 +8857,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xE8;
         rect.h = 0x90;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & func_8014BA58;
+        slot->content_cb = (s32 * (*)()) & menu_equipment_grid_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -9673,7 +8872,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xE8;
         rect.h = 0x80;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & func_8014BD48;
+        slot->content_cb = (s32 * (*)()) & menu_key_item_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -9688,7 +8887,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0xE8;
         rect.h = 0x90;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & func_8014BF68;
+        slot->content_cb = (s32 * (*)()) & menu_ability_list_callback;
         slot->has_title = 1;
         slot->anim_frame = 5;
         slot->active = 2;
@@ -9703,7 +8902,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0x120;
         rect.h = 0x20;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & func_8014C820;
+        slot->content_cb = (s32 * (*)()) & menu_message_callback;
         slot->anim_frame = 5;
         slot->active = 2;
         slot->flags = (slot->flags & 0xFE00FFFF) | 0x10000;
@@ -9744,7 +8943,7 @@ void menu_open_content_page(u32 content_id)
         rect.w = 0x120;
         rect.h = 0x30;
         slot = menu_slot_alloc(3, &rect);
-        slot->content_cb = (s32 * (*)()) & func_8014C8C8;
+        slot->content_cb = (s32 * (*)()) & menu_two_line_message_callback;
         slot->anim_frame = 5;
         slot->active = 2;
         slot->flags = (slot->flags & 0xFE00FFFF) | 0x10000;
@@ -9782,24 +8981,8 @@ void menu_open_content_page(u32 content_id)
 }
 
 /**
- * @brief Count usable 4-bit entries in the pad-ctx table at +0x104 and rebuild
- *        the g_menu_scroll_nav_entries circular nav list to that size.
- *
- * Scans 16 words (128 nibbles) at g_pad_ctx + 0x104; every nibble with value
- * >= 2 adds one entry. Clears g_menu_scroll_nav_entries[0], then packs each of the count
- * entries with the same three bit-fields as menu_init_item_nav_entries
- * (bits 13:0 = i * 0x10,
- * bits 22:14 = circular prev, bits 30:23 = circular next).
- *
+ * @brief Count usable 4-bit entries in the pad-ctx table at +0x104 and rebuild the g_menu_scroll_nav_entries circular nav list to that size.
  * @return Number of entries counted (also the nav-list length).
- * @note Shapes required to match: the outer scan must index by @c i
- *       (*(u32*)((u8*)g_pad_ctx + i * 4 + 0x104)) so loop.c strength-reduces it
- *       to the a0 pointer while keeping i for the slti compare - a separate
- *       pointer walk lets check_dbra_loop reverse the loop into a countdown.
- *       The 0xF nibble mask must be a local so it stays in a register. The
- *       link loop must REUSE @c j (the nibble counter) as its induction
- *       variable and route @c prev through the @c word temp - both reuses merge
- *       pseudos so the allocator reproduces the target's a0/a1/a2 coloring.
  * @see decomp.me (100%)
  */
 s32 menu_build_equipment_nav_entries(void)
@@ -9884,25 +9067,8 @@ s32 menu_build_equipment_nav_entries(void)
 }
 
 /**
- * @brief Count active byte entries in the pad-ctx table at +0x25E0 and rebuild
- *        the g_menu_scroll_nav_entries circular nav list to that size.
- *
- * Clears the byte at g_pad_ctx + 0x26DF, then scans the 0x100 bytes at
- * g_pad_ctx + 0x25E0 counting non-zero entries. Clears
- * g_menu_scroll_nav_entries[0] and packs each counted entry with the same three
- * bit-fields as menu_init_item_nav_entries
- * (bits 13:0 = i * 0x10, bits 22:14 = circular prev, bits 30:23 = circular
- * next). This is the content-page 4 sibling of
- * menu_build_equipment_nav_entries.
- *
+ * @brief Count active byte entries in the pad-ctx table at +0x25E0 and rebuild the g_menu_scroll_nav_entries circular nav list to that size.
  * @return Number of entries counted (also the nav-list length).
- * @note Shapes required to match: unlike menu_build_equipment_nav_entries this
- *       one keeps the menu_init_item_nav_entries next/copy pair
- *       (temp_a1 = j + 1; ...; j = temp_a1) and
- *       the byte scan is a plain pointer walk (gcc's countdown reversal IS the
- *       target here). The link loop must sit inside a do { } while (0) block -
- *       its block notes shorten the live ranges so j outranks the temp_t0
- *       address temp and takes a3, cascading t0/t5/t4/t3/t2 into place.
  * @see decomp.me (100%)
  */
 s32 menu_build_key_item_nav_entries(void)
@@ -9984,21 +9150,8 @@ s32 menu_build_key_item_nav_entries(void)
 }
 
 /**
- * @brief Count entries with bit 0 set in the pad-ctx table at +0x2F0 and
- *        rebuild the g_menu_scroll_nav_entries circular nav list to that size.
- *
- * Scans 0x40 records of stride 0xC at g_pad_ctx + 0x2F0, counting those whose
- * first byte has bit 0 set. Clears g_menu_scroll_nav_entries[0] and packs each
- * counted entry with the same three bit-fields as menu_init_item_nav_entries
- * (bits 13:0 = i * 0x10,
- * bits 22:14 = circular prev, bits 30:23 = circular next). This is the
- * content-page 5 sibling of the equipment and key-item list builders.
- *
+ * @brief Count entries with bit 0 set in the pad-ctx table at +0x2F0 and rebuild the g_menu_scroll_nav_entries circular nav list to that size.
  * @return Number of entries counted (also the nav-list length).
- * @note Same shapes as menu_build_key_item_nav_entries: pointer-walk countdown
- *       scan, the menu_init_item_nav_entries next/copy pair, and the
- *       do { } while (0) wrapper around the link loop that recolors the j /
- *       temp_t0 allocation race.
  * @see decomp.me (100%)
  */
 s32 menu_build_ability_nav_entries(void)
@@ -10079,38 +9232,8 @@ s32 menu_build_ability_nav_entries(void)
 }
 
 
-extern ItemSlotData g_item_slot_data;
-extern ItemSlotFlags g_item_slot_flags;
-extern u8 D_800F0BF8[];
 
-/**
- * @brief Try to commit the pending item into the active character's slot
- *        buffer at g_pad_ctx + char_slot * 0x250 + 0x640.
- *
- * menu_find_best_equipment_for_slot0 supplies the candidate 0x40-byte record
- * (returns 0 on failure, which aborts with return 0). If the slot buffer still
- * equals the template at
- * D_800F0BF8 (byte-wise), the candidate is copied in, its first byte is
- * cleared, and g_item_slot_data.slot0 is zeroed. Otherwise the slot and the
- * candidate are exchanged through a stack buffer (three func_800A8F8C copies,
- * same pattern as menu_swap_item_records) and g_item_slot_data.slot0 points at the
- * candidate. Either way g_item_slot_flags.slot0 is set.
- *
- * @return 1 if a record was committed/exchanged, 0 if
- *         menu_find_best_equipment_for_slot0 failed.
- * @note Shapes required to match: the equality scan must use the
- *       mismatch-goto shape (every break/flag rewrite loses rows). buf must be
- *       the FIRST local so its address is virtual-stack-vars + 0 and reload
- *       rematerializes it per call (any nonzero offset routes &buf through a
- *       pseudo that cse merges across calls into a saved register). The
- *       `if (0)` six-arg call is required for that: gcc sizes the outgoing arg
- *       area (0x18) at expand time and jump1 deletes the call afterwards,
- *       which is how the original (likely a compiled-out debug call) got
- *       buf to sp+0x18. Residual 3 rows: the equal arm's a1 copy and
- *       %hi(g_pad_ctx) are scheduled earlier in the target (see
- *       working/func_8014EB4C/status.md).
- * @see decomp.me (100%) https://decomp.me/scratch/cUQBA
- */
+/** @brief Return non-zero when two 0x40-byte item records differ. */
 static inline s32 buffers_differ(u8* t, u8* p)
 {
     u32 i = 0;
@@ -10125,10 +9248,14 @@ static inline s32 buffers_differ(u8* t, u8* p)
     return 0;
 }
 
-/* GCC 2.7.2 retains the maximum outgoing argument area even when a const
- * call is eliminated.  The original target reserves space for six args. */
+/* Matching helper: preserves the original six-argument outgoing stack area. */
 extern s32 menu_stage_stack_shape(s32, s32, s32, s32, s32, s32) __attribute__((const));
 
+/**
+ * @brief Stage the best slot-0 equipment candidate for comparison.
+ * @return 1 when a candidate was staged, otherwise 0.
+ * @see decomp.me (100%) https://decomp.me/scratch/cUQBA
+ */
 s32 menu_stage_best_equipment_for_slot0(void)
 {
     u8 buf[0x40];
@@ -10168,16 +9295,7 @@ s32 menu_stage_best_equipment_for_slot0(void)
 
 /**
  * @brief Select the highest-valued eligible item record from the pad-context item table.
- *
- * Builds an exclusion mask from the other three active character-slot records, then
- * scans the 100 records at g_pad_ctx + 0xCE0. Records using the alternate lookup table
- * or an excluded category are skipped; the eligible record with the greatest halfword
- * value at offset 0x24 is returned.
- *
  * @return Pointer to the selected 0x40-byte record, or NULL if no eligible record exists.
- * @note The remaining mismatch is a pure a1/a2/a3 allocation rotation; instruction
- *       count and control-flow structure match the target. Continue from
- *       working/func_8014ECA4/.
  * @see decomp.me (100%) https://decomp.me/scratch/hQoB8
  */
 void* menu_find_best_equipment_for_slot0(void)
@@ -10205,7 +9323,7 @@ void* menu_find_best_equipment_for_slot0(void)
     var_a3 = (u8*)g_pad_ctx + 0xCE0;
     var_t0 = 0;
     var_a1 = 0;
-    var_a2 = (u8*)D_801693FC;
+    var_a2 = (u8*)g_menu_equipment_base;
     var_a0 = 0;
     do
     {
@@ -10252,76 +9370,10 @@ void* menu_find_best_equipment_for_slot0(void)
     return var_t0;
 }
 
-/**
- * @brief Slot-data pointer table indexed by equipment subtype.
- *
- * @ref g_item_slot_data is the four-entry view beginning at subtype 7.
- */
-/**
- * @brief Slot-occupied flag table indexed by equipment subtype.
- *
- * @ref g_item_slot_flags is the four-entry view beginning at subtype 7.
- */
-extern u8 g_item_slot_flags_by_subtype[];
 
 /**
- * @brief Commit the pending item into the active character's slot buffer for the
- *        CURRENT menu subtype (@ref g_menu_active_subtype).
- *
- * The subtype-indexed sibling of @ref menu_stage_best_equipment_for_slot0,
- * which handles subtype 7 (slot 0) only.
- * menu_find_best_equipment_for_active_slot supplies the candidate 0x40-byte
- * record; a NULL return aborts with 0. Any comparison slot 1..3 that still
- * points at this subtype's slot buffer is re-pointed at it first.
- *
- * If the slot buffer is empty (its first byte is 0) the candidate is copied in,
- * its own first byte cleared, and the subtype's slot-data entry zeroed.
- * Otherwise the slot and the candidate are exchanged through a stack buffer
- * (three func_800A8F8C copies, the same pattern as
- * menu_stage_best_equipment_for_slot0 and menu_swap_item_records), and the
- * subtype's slot-data entry points at the candidate. Either way the subtype's
- * slot-occupied flag is set.
- *
- * @return 1 if a record was committed or exchanged, 0 if
- *         menu_find_best_equipment_for_active_slot failed.
- *
- * @note g_item_slot_data_by_subtype and g_item_slot_flags_by_subtype are the
- *       bases of the subtype-indexed tables containing @ref g_item_slot_data
- *       (base + 7*4) and @ref g_item_slot_flags (base + 7). The relocation must
- *       name these bases, not `&g_item_slot_data - 0x1C`: the addresses are
- *       equal but the emitted symbol is not.
- *
- * @note Shapes required to match:
- *       - The two found-store blocks are OUT OF LINE. gcc 2.7.2 has no
- *         basic-block reorder pass, so the emitted order is the source order:
- *         arm A's store sits AFTER its common code and jumps backwards into it,
- *         and arm B's store sits BEFORE its scan loop, reached only by the
- *         loop's branch. The leading `goto scan_b;` is deleted by jump.c's
- *         jump-to-jump redirection but is what places found_b ahead of the
- *         loop. Writing either store inline with `break` costs ~27%: the store's
- *         address expression becomes loop-invariant, loop.c hoists it to the
- *         preheader, and CSE then shares it with the following call argument
- *         instead of recomputing it.
- *       - `slots[i]` indexing (not a `p = &g_item_slot_data.slot1` pointer walk)
- *         is what makes loop.c strength-reduce to the target's two-step
- *         `addiu v0, v0, %lo(g_item_slot_data)` + `addiu a1, v0, 0x4`.
- *       - `slots` must be assigned separately inside each arm; hoisting it
- *         above the `if` costs a fifth saved register (frame 0x68 -> 0x70).
- *       - `pad` aliases g_pad_ctx so its %hi becomes a long-lived allocno and
- *         its `lui` is emitted early, and `off` is assigned before it so the
- *         subtype `lui` comes first.
- *       - `ret` carries the 1 into the shared tail, producing the target's
- *         `li v0, 1` + `addu v1, v0, zero` pair. It only works assigned at the
- *         very end of the if/else; hoisting it anywhere earlier adds two insns.
- *       - `pad - (-(offset))` rather than `pad + offset`: gcc canonicalizes the
- *         operands of a commutative PLUS itself, so the sum coalesces into the
- *         char-slot chain's register. Routing it through MINUS preserves the
- *         operand order and gives the target's `addu a0, a0, v0`. Every
- *         plain-`+` spelling tried tops out at 99.87%.
- *       - The `if (0)` six-arg call sizes the outgoing-argument area to 0x18 so
- *         `buf` lands at sp+0x18; see
- *         menu_stage_best_equipment_for_slot0. `&buf` must never be cached in a
- *         named local - it has to rematerialize at each call.
+ * @brief Commit the pending item into the active character's slot buffer for the CURRENT menu subtype (@ref g_menu_active_subtype).
+ * @return 1 if a record was committed or exchanged, 0 if menu_find_best_equipment_for_active_slot failed.
  * @see decomp.me (100%)
  */
 s32 menu_stage_best_equipment_for_active_slot(void)
@@ -10398,45 +9450,7 @@ tail:
 
 /**
  * @brief Pick the highest-valued eligible item record for the CURRENT menu subtype.
- *
- * This is the subtype-generic sibling of
- * @ref menu_find_best_equipment_for_slot0, which handles subtype 7 only. The
- * active character's slot buffer for @ref g_menu_active_subtype supplies the
- * score to beat: the sum of its four halfwords at 0x24/0x26/0x28/0x2A, or 0
- * when the slot is empty. An exclusion mask is then built from the other three
- * comparison slots at D_801693FC, and the 100 records at g_pad_ctx + 0xCE0 are
- * scanned for the best record that is not excluded.
- *
  * @return Pointer to the winning 0x40-byte record, or NULL if none qualifies.
- *
- * @note Shapes required to match:
- *       - The opening test is a real `if/else` (`if (empty) { total = 0; } else
- *         { total = sum; }`), NOT `total = 0;` followed by a bare `if`. The
- *         target re-reads g_pad_ctx AND g_menu_active_subtype after the test
- *         (0x94-0xA8). With the bare `if`, gcc 2.7.2's CSE takes the AROUND
- *         path (`-fcse-skip-blocks`, on at -O2): cse_end_of_basic_block follows
- *         the branch around the if-body straight into the join block with its
- *         value table intact, so both globals are still live in registers there
- *         and the reloads fold away. The else arm puts a BARRIER in the way,
- *         CSE stops at the join, and both globals are re-read. Worth 9.36%.
- *       - `slot_idx` is deliberately reused after loop A as the loop-B mask
- *         carrier, and `mask` is reused inside loop B as the staging temp for
- *         `best_total`. gcc 2.7 has no live-range splitting, so one C variable
- *         is one hard register for the whole function; these two reuses are
- *         what give the target's a3 and a2 their second lives. A fresh variable
- *         in either place is coalesced away and costs the move.
- *       - `rec_flag` and `rec` walk the same records but must be ONE variable
- *         each in the roles shown: `rec_flag` for the occupancy byte, `rec` for
- *         the fields. Splitting `rec_flag` into an extra copy raises its
- *         allocation priority (pri = floor_log2(refs)*refs/live_len) above the
- *         mask carrier's and swaps a3/t0.
- * @note Measured NON-factors (probed at the 100% base, all still 100%): the
- *       `- (-(offset))` minus routing required by
- *       @ref menu_stage_best_equipment_for_active_slot is NOT needed here, and
- *       neither is splitting `char_base` out of the `best` expression. Plain
- *       `+` is used because it is the readable form and it matches; do not
- *       reintroduce the minus spelling on the assumption that a sibling's
- *       requirement transfers.
  * @see decomp.me (100%)
  */
 void* menu_find_best_equipment_for_active_slot(void)
@@ -10468,7 +9482,7 @@ void* menu_find_best_equipment_for_active_slot(void)
     best = 0;
     mask = 0;
     slot_idx = 0;
-    slot = (u8*)D_801693FC;
+    slot = (u8*)g_menu_equipment_base;
     rec_flag = (u8*)g_pad_ctx + 0xCE0;
     do
     {
@@ -10516,13 +9530,8 @@ void* menu_find_best_equipment_for_active_slot(void)
 
 /**
  * @brief Play a menu sound effect, unless a menu script is currently driving input.
- * @param sound_id Sound effect ID (see the MENU_SE_* constants in menu.c).
+ * @param sound_id Sound effect ID (see the MENU_SE_ constants in menu.c).
  * @param volume Playback volume (menu callers always pass 0x80).
- * @note Suppressed while @c g_active_script is non-zero so scripted/demo input
- *       replay does not retrigger UI blips.
- * @note func_800A3938 is left implicitly declared here, matching the rest of this
- *       translation unit. Measured non-factor: adding an explicit prototype also
- *       gives 100%.
  * @see decomp.me (100%)
  */
 void menu_play_se(s32 sound_id, s32 volume)
@@ -10535,15 +9544,7 @@ void menu_play_se(s32 sound_id, s32 volume)
 
 /**
  * @brief Count the in-use entries in the 100-slot record table at g_pad_ctx+0xCE0.
- * @return Index of the first empty (zero first byte) record, i.e. the number of
- *         occupied records; 0x64 if the table is full.
- * @note Records are 0x40 bytes apart; the same table is walked by
- *       menu_find_best_equipment_for_active_slot.
- * @note The `for` loop with a `break` on the empty slot is required to match: the
- *       equivalent `do { if (!*rec) break; ... } while (count < 0x64)` scores
- *       39.43% (gcc rotates and peels the loop) and the `while (*rec != 0)` form
- *       with the bound check inside scores 32.64%. A literal goto/label version of
- *       this same shape also reaches 100%.
+ * @return Index of the first empty (zero first byte) record, i.e.
  * @see decomp.me (100%)
  */
 s32 menu_count_inventory_items(void)
@@ -10568,14 +9569,9 @@ s32 menu_count_inventory_items(void)
  * @param prim Primitive buffer write cursor.
  * @param cursor Glyph write cursor, forwarded unchanged.
  * @param value Number to draw; anything >= 100 is drawn as 99.
- * @param arg3 Forwarded unchanged. TODO: meaning unknown (call sites pass 1).
+ * @param arg3 Forwarded unchanged.
  * @param origin Viewport anchor, forwarded unchanged.
  * @param color Palette index, forwarded unchanged.
- * @note Every other arg is a pure pass-through, which is why the asm only ever
- *       touches a2 and re-stages the two stack args.
- * @note Measured non-factors (all 100%): declaring this s32 and returning the
- *       callee's result, writing the clamp as @c value>0x63, and clamping into a
- *       separate local instead of the parameter.
  * @see decomp.me (100%)
  */
 void menu_draw_clamped_number(s32 prim, s32 cursor, s32 value, s32 arg3, Vec2s* origin, s32 color)
@@ -10606,20 +9602,6 @@ extern s32 g_card_hw_new_event;
 
 /**
  * @brief Open and enable the eight memory-card events used by the save/load menu.
- *
- * Opens the four standard card event specs (end-of-IO, error, timeout, new
- * device) against both the BIOS card driver (@c SwCARD) and the card hardware
- * (@c HwCARD), stashes the eight descriptors in their corresponding globals,
- * then enables all eight. The whole sequence runs inside a critical section.
- *
- * @note All eight events use @c EvMdNOINTR with a NULL handler, i.e. they are
- *       polled via TestEvent rather than delivering callbacks.
- * @note The eight descriptors are separate globals, not an array: the target
- *       emits a distinct @c lui per symbol and pins seven of them in saved
- *       registers, which an array base would not do.
- * @note kernel.h and libapi.h are already in scope through menu.h -> main.h ->
- *       libapi.h, so the named constants need no extra include. Measured
- *       non-factor: the raw hex form (0xF4000001, 4, 0x2000, 0) is also 100%.
  * @see decomp.me (100%)
  */
 void memory_card_open_events(void)
@@ -10647,10 +9629,6 @@ void memory_card_open_events(void)
 
 /**
  * @brief Close the eight memory-card events opened by memory_card_open_events.
- * @note Teardown counterpart to memory_card_open_events; same critical-section
- *       wrapper and descriptor order.
- * @note The descriptors are not cleared afterwards, so the globals hold stale
- *       handles until the next memory_card_open_events call overwrites them.
  * @see decomp.me (100%)
  */
 void memory_card_close_events(void)
@@ -10677,18 +9655,6 @@ extern s32 g_card_file_count;
 
 /**
  * @brief Scan memory card slot 1 and record how many save files it holds.
- *
- * Delegates to memory_card_scan_files, which globs "bu00:" + a wildcard through
- * firstfile/nextfile and fills the g_card_dir_entries directory-entry table. The
- * resulting file count is cached in g_card_file_count.
- *
- * @note The redundant-looking @c g_card_file_count=0 before the call is required to
- *       match: the target stores $zero in the jal delay slot, and dropping the
- *       statement scores 32.06%. It also leaves the count at 0 if the callee
- *       never returns (card removed mid-scan).
- * @note The "bu00:" path must be referenced as the pre-split rodata symbol
- *       g_card_slot1_path, not as a string literal: a literal emits a fresh local
- *       rodata label and scores 99.38% (2 relocation rows).
  * @see decomp.me (100%)
  */
 void memory_card_scan_slot1_files(void)
@@ -10699,25 +9665,7 @@ void memory_card_scan_slot1_files(void)
 
 /**
  * @brief Bring memory card slot 1 up to a usable state, formatting it if needed.
- *
- * Queries the card, then dispatches on the memory_card_wait_software_event
- * status code: an error (1) or timeout (2) aborts immediately, and a newly
- * inserted card (3) triggers a reset/clear cycle before the load. After
- * _card_load the status is polled again; a 3 at that point means the card is
- * unformatted, so _card_format is attempted.
- *
- * @return 1 if the card is ready for use, 0 if it was rejected up front or the
- *         format attempt failed.
- * @note The status codes come from memory_card_wait_software_event, which maps
- *       the SwCARD events opened by memory_card_open_events: 0 EvSpIOE,
- *       1 EvSpERROR, 2 EvSpTIMOUT, 3 EvSpNEW.
- * @note Testing 1 and 2 in ONE @c || condition is required to match: gcc folds
- *       the pair into the target's @c addiu/sltiu range check, and splitting
- *       them into two separate @c if statements scores 86.85%. Writing the
- *       condition explicitly as @c (u32)(status-1)<2U is a measured non-factor
- *       (also 100%), so the readable form is kept.
- * @note Measured non-factor: collapsing the trailing status/format pair into a
- *       single @c && condition is also 100%.
+ * @return 1 if the card is ready for use, 0 if it was rejected up front or the format attempt failed.
  * @see decomp.me (100%)
  */
 s32 memory_card_prepare_slot1(void)
@@ -10755,12 +9703,6 @@ extern u8 g_card_work_buffer[];
 
 /**
  * @brief Populate the card work buffer and write it as "bu00:HAND".
- * @note g_card_save_path is the pre-split rodata string "bu00:HAND"; like the
- *       "bu00:" path in memory_card_scan_slot1_files it must be referenced as
- *       the symbol rather than a literal so the relocation targets the existing
- *       rodata.
- * @note memory_card_fill_test_data fills g_card_work_buffer and
- *       memory_card_create_save_file commits it.
  * @see decomp.me (100%)
  */
 void memory_card_write_test_save(void)
@@ -10771,20 +9713,7 @@ void memory_card_write_test_save(void)
 
 /**
  * @brief Block until one of the four SwCARD events fires and report which.
- *
- * Spins over the first four descriptors opened by memory_card_open_events, in the order
- * they were opened, and returns as soon as TestEvent reports one ready. Events
- * that are not ready leave the loop running, so this busy-waits until the card
- * driver signals something.
- *
- * @return 0 for EvSpIOE (operation completed), 1 for EvSpERROR, 2 for
- *         EvSpTIMOUT, 3 for EvSpNEW (card newly inserted / unformatted).
- * @note Comparing TestEvent's result against 1 explicitly is required to match:
- *       gcc pins the constant 1 in s0 and compares with @c bne against it, so
- *       the looser @c !=0 form scores 59.74%.
- * @note The four tests must be four symmetric @c if blocks. m2c reconstructs the
- *       third as an inverted test wrapping the fourth; that shape is 75.18%.
- * @note Measured non-factor: @c while(1) instead of @c for(;;) is also 100%.
+ * @return 0 for EvSpIOE (operation completed), 1 for EvSpERROR, 2 for EvSpTIMOUT, 3 for EvSpNEW (card newly inserted / unformatted).
  * @see decomp.me (100%)
  */
 s32 memory_card_wait_software_event(void)
@@ -10812,14 +9741,6 @@ s32 memory_card_wait_software_event(void)
 
 /**
  * @brief Drain the four SwCARD events by testing each one once.
- *
- * TestEvent clears an event's ready flag as a side effect, so calling it on all
- * four descriptors and discarding the results leaves them in a known-clear state.
- * memory_card_prepare_slot1 runs this immediately before _card_load so the status poll that
- * follows can only observe events raised by that load.
- *
- * @note Same descriptor order as memory_card_open_events and memory_card_wait_software_event: EvSpIOE,
- *       EvSpERROR, EvSpTIMOUT, EvSpNEW.
  * @see decomp.me (100%)
  */
 void memory_card_clear_software_events(void)
@@ -10832,19 +9753,7 @@ void memory_card_clear_software_events(void)
 
 /**
  * @brief Block until one of the four HwCARD events fires and report which.
- *
- * Hardware-side twin of memory_card_wait_software_event: identical polling loop and identical
- * return mapping, but over the second group of descriptors opened by
- * memory_card_open_events (HwCARD rather than SwCARD).
- *
- * @return 0 for EvSpIOE (operation completed), 1 for EvSpERROR, 2 for
- *         EvSpTIMOUT, 3 for EvSpNEW (card newly inserted / unformatted).
- * @note memory_card_prepare_slot1 calls this for its blocking side effect only, discarding
- *       the result, to let the hardware settle after _card_clear.
- * @note Re-measured on this function rather than inherited from memory_card_wait_software_event:
- *       the explicit @c ==1 compare is required (@c !=0 scores 59.74%), and the
- *       four symmetric @c if blocks are required (m2c's inverted-third-test
- *       shape scores 75.18%). Same figures as the SwCARD twin.
+ * @return 0 for EvSpIOE (operation completed), 1 for EvSpERROR, 2 for EvSpTIMOUT, 3 for EvSpNEW (card newly inserted / unformatted).
  * @see decomp.me (100%)
  */
 s32 memory_card_wait_hardware_event(void)
@@ -10872,13 +9781,6 @@ s32 memory_card_wait_hardware_event(void)
 
 /**
  * @brief Drain the four HwCARD events by testing each one once.
- *
- * Hardware-side twin of memory_card_clear_software_events. memory_card_prepare_slot1 runs this first in its
- * status-3 path, so the _card_clear that follows starts from a clean slate and
- * the memory_card_wait_hardware_event poll after it can only see events that clear raised.
- *
- * @note Same descriptor order as memory_card_open_events and memory_card_wait_hardware_event: EvSpIOE,
- *       EvSpERROR, EvSpTIMOUT, EvSpNEW.
  * @see decomp.me (100%)
  */
 void memory_card_clear_hardware_events(void)
@@ -10893,24 +9795,9 @@ extern char g_card_wildcard[];
 
 /**
  * @brief Count the files on a memory card matching a path prefix.
- *
- * Builds "<path>*" in a local buffer and walks the card directory with
- * firstfile/nextfile, filling @p entry as it goes. Both BIOS calls return the
- * entry pointer they were given on success and NULL when the enumeration ends,
- * so the loop compares the result against the pointer rather than testing NULL.
- *
- * @param path Device path prefix, e.g. the "bu00:" string at g_card_slot1_path.
- * @param entry Start of the caller's directory-entry table; one struct DIRENTRY
- *              is filled per file found, so it must have room for every match.
+ * @param path Memory-card path prefix; the wildcard suffix is appended internally.
+ * @param entry Start of the caller's directory-entry table; one struct DIRENTRY is filled per file found, so it must have room for every match.
  * @return Number of files found; 0 if the card holds no match at all.
- * @note g_card_wildcard is the pre-split rodata string "*" (the wildcard suffix).
- * @note Inside the do/while, @c count must be incremented BEFORE @c entry:
- *       the reverse order scores 98.67%.
- * @note The target's trailing @c addiu s1,s1,-0x1 is NOT in the source. gcc
- *       speculatively puts the count increment in the @c beq delay slot, where
- *       it runs on both paths, then compensates on the exit path. m2c
- *       reconstructs that as a literal @c count-1 with a second variable; that
- *       shape is only 93.12%, and the clean loop below is 100%.
  * @see decomp.me (100%)
  */
 s32 memory_card_scan_files(char* path, struct DIRENTRY* entry)
@@ -10934,16 +9821,8 @@ s32 memory_card_scan_files(char* path, struct DIRENTRY* entry)
 
 /**
  * @brief Read block 0 of a memory card and report whether it is formatted.
- *
- * Drains the four HwCARD events, forces a re-detect with _new_card(), reads the
- * first block into a local buffer, then runs the same four-way event poll as
- * memory_card_wait_hardware_event with the outcome in @c status. A non-zero status (error,
- * timeout, or newly inserted card) aborts. Otherwise the block is checked for
- * the "MC" signature that starts every formatted PlayStation card.
- *
  * @param chan Card channel / slot to probe, passed straight to _card_read.
- * @return 1 if the card is formatted, 0 if the "MC" magic is absent, -1 if the
- *         event poll reported anything other than completion.
+ * @return 1 if the card is formatted, 0 if the "MC" magic is absent, -1 if the event poll reported anything other than completion.
  * @see decomp.me (100%) https://decomp.me/scratch/lhdFU
  */
 s32 memory_card_check_formatted(s32 chan)
