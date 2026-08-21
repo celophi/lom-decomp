@@ -23,6 +23,20 @@ typedef struct
     /* 0xC */ s32 unkC;
 } CdStreamCtrl;
 
+typedef struct
+{
+    s16 x;
+    s16 y;
+} Vec2s;
+
+typedef struct
+{
+    /* 0x0 */ u32 tag;
+    /* 0x4 */ u8 r0, g0, b0, code;
+    /* 0x8 */ s16 x0, y0;
+    /* 0xC */ s16 w, h;
+} TILE;
+
 extern s32 D_80122988;
 extern s32 D_80146918;
 extern CdStreamCtrl D_801468B8;
@@ -52,9 +66,29 @@ extern char D_800ECF7C[];
 extern char D_801623D0[];
 extern u8 D_80162C5F;
 extern s32 D_80162E20;
+extern char D_800ECF8C[];
+extern char D_800ECFC4[];
+extern u16 D_80145E9C;
+extern u16 D_80145E9E;
+extern u16 D_80145EA0;
+extern u16 D_80145EA2;
+extern u16 D_80145EA4;
+extern u16 D_80145EAC;
+extern u16 D_80145EAE;
+extern u16 D_80145EB0;
+extern u16 D_80145ECA;
+extern u16 D_80145ED0;
+extern u16 D_80145ED6;
+extern u16 D_80145F4C;
+extern s32 D_8016237C;
+extern s32 D_80162380[];
+extern s32 D_80162D78[];
 
 extern int strncmp(char *, char *, int);
 void func_801428DC();
+s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
+s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
+u8 *func_80141428(void *);
 
 /**
  * @see decomp.me (100%) TODO
@@ -213,7 +247,7 @@ s32 func_80140448(s32 arg0)
     return 0;
 }
 
-void func_80140DA4();
+s32 func_80140DA4(s32 *, s32, s32, s32);
 void func_80141474();
 void func_801414D0();
 void func_80141544();
@@ -640,4 +674,141 @@ void func_80140D20(void)
 void func_80140D84(void)
 {
     func_80141D78();
+}
+
+#define GLYPH_SYM(sym, off) ((void *)(((u8 *)&(sym) - (off)) + (sym)))
+#define GLYPH_OFF(base, off) ((void *)((base) + *(u16 *)((base) + (off))))
+
+/**
+ * @note WIP. Menu string/glyph-row drawing callback (state-dispatched TILE +
+ *       text renderer). Structurally correct; residue is an `ot` parameter
+ *       register-letter offset that recurs through most of the function body
+ *       (content matches, register name differs - counted as argdiff, not a
+ *       real mismatch) plus two small leftover items: a `D_80162350` reload
+ *       at the loop's zero-trip guard that the target avoids by reusing the
+ *       switch dispatch value, and one duplicated `D_80145EA4` address
+ *       computation right before the final row's string-glyph call.
+ * @see decomp.me (93.52%) TODO
+ */
+s32 func_80140DA4(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 state = D_80162350;
+
+    switch (state)
+    {
+    case 0xF8:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145ED0, 0x34), 1, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xF9:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145ED0, 0x34), 1, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFA:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145E9E, 2), 1, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFD:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EA0, 4), 1, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFB:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EAC, 0x10), 1, -arg2 + 0x84, -arg3, 2);
+        break;
+    case 0xFC:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EAE, 0x12), 1, -arg2 + 0x84, -arg3, 2);
+        break;
+    default:
+        if (D_80162E20 != 0)
+        {
+            s32 x;
+            u8 *base;
+        case 0xFF:
+            x = -arg2 + 0x84;
+            base = (u8 *)&D_80145E9C;
+            prim = func_800A88A0(prim, ot, base + D_80145E9C, 1, x, -arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x1E), 1, x, 0xE - arg3, 2);
+            prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0xB2), 1, x, 0x1C - arg3, 2);
+            break;
+        }
+        if (state > 0)
+        {
+            s32 i;
+            s32 off;
+            s32 base_x;
+            s32 *flag_ptr;
+            void *str_glyph;
+            void *misc_glyph;
+            char *entry;
+            Vec2s pos;
+            s32 row_y;
+            u8 *base;
+
+            base_x = -arg2;
+            entry = D_801623D0;
+            base = (u8 *)&D_80145E9C;
+            for (i = 0, off = 0; i < D_80162350; entry += 0x28, i++, off += 4)
+            {
+                row_y = ((i * 14) - arg3) - D_8015A318;
+                if ((u32)(row_y + 0xD) < 0x56U)
+                {
+                    flag_ptr = (s32 *)((u8 *)D_80162380 + off);
+                    if (*flag_ptr >= 0)
+                    {
+                        pos.x = base_x + 0x86;
+                        pos.y = row_y;
+                        prim = func_800A88A0(func_800A8A78(ot, prim, *(s32 *)((u8 *)D_80162D78 + off), 1, &pos, 0), ot, base + D_80145ECA, 1, base_x + 0x70, row_y, 0);
+                        if ((D_8016237C - 1) == *flag_ptr)
+                        {
+                            misc_glyph = GLYPH_OFF(base, 0x36);
+                            prim = func_800A88A0(prim, ot, misc_glyph, 1, base_x + 0xC2, row_y, 0);
+                        }
+                        else if (*flag_ptr < 2)
+                        {
+                            misc_glyph = GLYPH_OFF(base, 0x38);
+                            prim = func_800A88A0(prim, ot, misc_glyph, 1, base_x + 0xC2, row_y, 0);
+                        }
+                        if (*func_80141428((void *)((D_8014A920 * 0x320) + (s32)entry + 0xC)) == 0x2B)
+                        {
+                            prim = func_800A88A0(prim, ot, base + D_80145F4C, 1, 0xF8 - arg2, row_y, 1);
+                        }
+                    }
+                    if (strncmp(D_800ECF7C, (char *)((D_8014A920 * 0x320) + (s32)entry), 0xC) == 0)
+                    {
+                        str_glyph = base + D_80145EA2;
+                    }
+                    else if (strncmp(D_800ECF8C, (char *)((D_8014A920 * 0x320) + (s32)entry), 0xC) == 0)
+                    {
+                        str_glyph = base + D_80145ED6;
+                    }
+                    else if (strncmp(D_800ECFC4, (char *)((D_8014A920 * 0x320) + (s32)entry), 8) == 0)
+                    {
+                        str_glyph = base + D_80145EB0;
+                    }
+                    else
+                    {
+                        str_glyph = base + D_80145EA4;
+                    }
+                    prim = func_800A88A0(prim, ot, str_glyph, 1, base_x, row_y, 0);
+                }
+            }
+        }
+        {
+            s32 y0 = ((D_80162354 * 14) - arg3) - D_8015A318;
+
+            if (D_80162E20 == 0)
+            {
+                TILE *tile = (TILE *)prim;
+
+                *(u32 *)&tile->r0 = 0xF080F0;
+                *((u8 *)tile + 3) = 3;
+                tile->code = 0x62;
+                tile->y0 = (s16)(y0 - 1);
+                tile->w = 0x108;
+                tile->x0 = 0;
+                tile->h = 0xE;
+                tile->tag = (tile->tag & 0xFF000000) | (*ot & 0xFFFFFF);
+                *ot = (*ot & 0xFF000000) | ((s32)tile & 0xFFFFFF);
+                prim += 0x10;
+            }
+        }
+        break;
+    }
+    return prim;
 }

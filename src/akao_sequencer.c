@@ -1,9 +1,9 @@
-#include "decomp4.h"
+#include "akao_sequencer.h"
 #include "akao_voice.h"
 
 
 /* Defined in the sdata segment (asm/data/sdata.data.s) at their gp-relative
- * addresses near gp_value 0x8003EC14; declared extern here so decomp4 does not
+ * addresses near gp_value 0x8003EC14; declared extern here so akao_sequencer does not
  * emit a second (.bss) definition. */
 extern u16 g_akao_irq_frame_counter;
 extern s32 D_8004D40C[];
@@ -414,7 +414,7 @@ s32 akao_seq_tick_channels(s32 channel_base, s32 is_secondary)
  *       single-element arrays (not scalars) to match the source shape used
  *       for this scratch. @c D_8004D408's extern declaration must be
  *       grouped with @c D_8004D40C / @c D_8004F758 in this file rather than
- *       living in decomp4.h with the other cross-function externs: under
+ *       living in akao_sequencer.h with the other cross-function externs: under
  *       gcc280_g4, its position relative to those two changes where the
  *       target hoists its %hi computation (a delay-slot/CSE scheduling
  *       effect, not a value difference) and was the last blocker to 100%.

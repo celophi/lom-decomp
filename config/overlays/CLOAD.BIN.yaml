@@ -42,6 +42,6 @@ segments:
     subsegments:
       - [0x1, rodata, rodata]
       - [0xC5, c, cload]     # gcc272_cdk
-      - [0xDA5, c, unk1]
+      - [0x1429, c, unk1]
       - [0x5E9D, data, data]
   - [0x2B259]

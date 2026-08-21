@@ -1,5 +1,5 @@
 /*
- * decomp11.c - consolidated AKAO XA/SPU streaming region (asm/unk8.s).
+ * akao_xa_stream.c - consolidated AKAO XA/SPU streaming region (asm/unk8.s).
  *
  * All 36 functions from func_8002D0DC through func_8002E75C live here, in
  * address order, built as a single gcc280_g4 object. The region drives one
