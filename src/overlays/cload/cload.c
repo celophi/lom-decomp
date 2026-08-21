@@ -45,6 +45,7 @@ extern u8 D_8014A988[];
 extern s16 D_8014EA38;
 extern s32 D_8015A310;
 extern s32 D_8015A318;
+extern s32 D_8015A31C;
 extern s32 D_8015A320;
 extern s32 D_8015A324;
 extern s32 D_8015A328;
@@ -56,6 +57,9 @@ extern s32 D_8016235C;
 extern s32 D_80162364;
 extern s32 D_80162368;
 extern s32 D_80162370;
+extern s32 D_80162A10;
+extern s32 D_80162A14;
+extern u8 D_80162B90[];
 extern s32 D_801468C4;
 extern u8 D_8014651C[];
 extern u8 D_8014652C[];
@@ -78,20 +82,27 @@ extern u16 D_80145EAA;
 extern u16 D_80145EAC;
 extern u16 D_80145EAE;
 extern u16 D_80145EB0;
+extern u16 D_80145EC4;
 extern u16 D_80145EC8;
 extern u16 D_80145ECA;
 extern u16 D_80145ED0;
 extern u16 D_80145ED6;
+extern u16 D_80145EF0;
 extern u16 D_80145F4C;
 extern s32 D_8016237C;
 extern s32 D_80162380[];
 extern s32 D_80162D78[];
+extern u8 D_800EC3F6[2];
+extern u16 D_80146338[];
 
 extern int strncmp(char *, char *, int);
 void func_801428DC();
 s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
 u8 *func_80141428(void *);
+void func_80141C6C(void *arg0);
+s32 func_801430C8(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s32 icon, s32 index, s32 row);
+s32 func_80145764(s32 prim, s32 *ot, u8 *str, s32 x, s32 y, s32 a5, s32 a6);
 
 /**
  * @see decomp.me (100%) TODO
@@ -254,7 +265,7 @@ s32 func_80140DA4(s32 *, s32, s32, s32);
 s32 func_80141474(s32 *, s32, s32, s32);
 s32 func_801414D0(s32 *, s32, s32, s32);
 s32 func_80141544(s32 *, s32, s32, s32);
-void func_801415B8();
+s32 func_801415B8(s32 *, s32, s32, s32);
 void func_80141CD0();
 Packet *func_80141D04();
 
@@ -910,4 +921,188 @@ s32 func_80141544(s32 *ot, s32 prim, s32 arg2, s32 arg3)
         a3 = 3;
     }
     return func_800A88A0(prim, ot, glyph, a3, -arg2 + 0x40, -arg3, 2);
+}
+
+/**
+ * @note WIP. Save-slot HUD callback: draws either the elapsed-play-time
+ *       display (hours:minutes plus a 3-memcard-icon highlight strip) when
+ *       the slot name matches the empty-slot marker, or the slot's save-file
+ *       name otherwise. Structurally and semantically matched (frame, control
+ *       flow, and every field offset into the D_80162B90 status block agree
+ *       with the target); the residue is a coupled register-allocation
+ *       problem in the icon-highlight loop's func_801430C8 call: the target
+ *       tracks the "entries seen so far" count and the raw loop index as two
+ *       separate spilled locals (sp+0x18/0x1c, extra sp+0x138/0x140 spills
+ *       around the call), while reintroducing that second counter here
+ *       consistently regresses the whole function's register allocation
+ *       instead of only affecting this call. Permuter (gcc272_cdk, ~60k
+ *       iterations across two seeds) found no valid improvement past this
+ *       point.
+ * @see decomp.me (89.53%) TODO
+ */
+s32 func_801415B8(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 result;
+    Vec2s pos;
+    u8 name[0x21];
+    char unused_pad[228];
+    s32 slot[3];
+
+    result = prim;
+    if (D_80162364 == 0)
+    {
+        return result;
+    }
+    if (D_80162E20 != 0)
+    {
+        return result;
+    }
+    if (D_80162364 != 3 && D_80162350 < 0x10)
+    {
+        if (D_80162364 == 2)
+        {
+            s32 x = -arg2;
+            u8 *base;
+
+            result = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EC4, 0x28), 1, x, -arg3, 0);
+            base = (u8 *)&D_80145EC4 - 0x28;
+            return func_800A88A0(result, ot, GLYPH_OFF(base, 0x2A), 1, x, 0x10 - arg3, 0);
+        }
+        else
+        {
+            s32 term1 = D_8014A920 * 0x320;
+            s32 term2 = (D_80162354 * 0x28) + (s32)D_801623D0;
+
+            if (strncmp(D_800ECF7C, (char *)(term1 + term2), 0xC) == 0)
+            {
+                u8 *base90 = D_80162B90;
+
+                if (base90[0xCF] == 0xFF || base90[0xCF] == D_8003EC9C)
+                {
+                    s32 present_count;
+                    s32 i;
+                    s32 step;
+                    s32 half_step;
+                    s32 base_x;
+                    s32 base_y;
+                    s32 total;
+                    s32 hours;
+                    s32 minutes;
+                    s32 sign_adj;
+                    s32 time_val;
+
+                    slot[0] = (u32)(*(s32 *)(base90 + 0x18)) >> 0x19;
+                    slot[1] = ((u32)(*(s32 *)(base90 + 0x20)) >> 0x12) & 0x7F;
+                    slot[2] = (u32)(*(s32 *)(base90 + 0x20)) >> 0x19;
+                    D_8015A31C = (s32)base90[0x1F];
+
+                    present_count = 0;
+                    for (i = 0; i < 3; i++)
+                    {
+                        if (slot[i] != 0x7F)
+                        {
+                            present_count += 1;
+                        }
+                    }
+
+                    switch (present_count)
+                    {
+                    case 2:
+                        step = 0x20;
+                        half_step = 0x10;
+                        time_val = D_8015A328;
+                        if (D_8015A328 < 0)
+                        {
+                            time_val = D_8015A328 + 0x1F;
+                        }
+                        D_8015A328 -= (time_val >> 5) << 5;
+                        break;
+                    case 3:
+                        step = 0x10;
+                        half_step = 0x20;
+                        D_8015A328 %= 0x60;
+                        break;
+                    default:
+                        step = 0x10;
+                        half_step = 0x20;
+                        D_8015A328 = 0x1F;
+                        break;
+                    }
+
+                    total = 0;
+                    base_x = half_step;
+                    base_y = 0;
+                    for (i = 0; i < 3; i++)
+                    {
+                        if (slot[i] != 0x7F)
+                        {
+                            s32 adjust = step;
+                            s32 rem;
+                            s32 hi;
+                            s32 delta;
+
+                            if ((D_8015A328 >= base_y && D_8015A328 < base_x && (delta = D_8015A328 - base_y, 1))
+                                || (rem = base_x % (step * present_count), D_8015A328 >= rem && D_8015A328 < (hi = rem + step) && (delta = hi - D_8015A328, 1)))
+                            {
+                                adjust += delta;
+                            }
+                            total += adjust;
+                            result = func_801430C8(result, ot, total - arg2, -arg3, adjust, slot[i], i, i);
+                        }
+                        base_x += step;
+                        base_y += step;
+                    }
+
+                    {
+                        s32 unk30 = *(s32 *)(base90 + 0x30);
+                        s32 x = -arg2;
+                        s32 y = -arg3;
+
+                        sign_adj = unk30 >> 0x1F;
+                        pos.x = (s16)(x + 0x70);
+                        pos.y = (s16)y;
+                        hours = unk30 / 216000;
+                        result = func_800A88A0(func_800A8A78(ot, result, hours, 1, &pos, 1), ot, D_800EC3F6[0] + (D_800EC3F6[1] << 8) + ((s32)&D_800EC3F6 - 0x32), 1, x + 0x6F, y, 0);
+                        minutes = ((unk30 / 3600) - sign_adj) - (hours * 0x3C);
+                        if (minutes < 0xA)
+                        {
+                            pos.x = (s16)(x + 0x7D);
+                            pos.y = (s16)y;
+                            result = func_800A8A78(ot, result, 0, 1, &pos, 1);
+                        }
+                        pos.x = (s16)(x + 0x85);
+                        pos.y = (s16)y;
+                        result = func_800A88A0(func_800A88A0(func_800A8A78(ot, result, minutes, 1, &pos, 1), ot, base90, 1, x + 0x54, y + 0x10, 0), ot, GLYPH_OFF((u8 *)D_80146338, (*(s32 *)(base90 + 0x20) & 0x3FFFF) * 2), 1, x + 0x54, y + 0x20, 0);
+                    }
+                }
+                else
+                {
+                    result = func_800A88A0(result, ot, GLYPH_SYM(D_80145EF0, 0x54), 1, -arg2, -arg3, 0);
+                }
+            }
+            else
+            {
+                s32 j;
+
+                func_80141C6C(&D_80162A14);
+                if ((u32)(*((u8 *)&D_80162A10 + 0x24) - 1) >= 0x7FU)
+                {
+                    for (j = 0; j < 0x20; j++)
+                    {
+                        name[j] = *((u8 *)&D_80162A14 + j);
+                    }
+                    name[j] = 0;
+                    result = func_80145764(result, ot, name, -arg2, -arg3, 1, 0);
+
+                    for (j = 0; j < 0x20; j++)
+                    {
+                        name[j] = *((u8 *)&D_80162A10 + 0x24 + j);
+                    }
+                    name[j] = 0;
+                    result = func_80145764(result, ot, name, -arg2, 0x10 - arg3, 1, 0);
+                }
+            }
+        }
+    }
+    return result;
 }
