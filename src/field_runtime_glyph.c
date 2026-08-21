@@ -39,6 +39,18 @@ extern u8 g_hex_digit_table[17];
 extern FieldGlyphPrimitive* volatile g_field_primitive_cursor;
 extern FieldOrderingTableEntry* g_field_current_render_half;
 
+/**
+ * @brief Force a signed @c addi (not @c addiu) so the two glyph UV offsets match.
+ * @note GCC cannot be coaxed into emitting a trapping signed @c addi for a plain
+ *       @c +constant, so the original devs almost certainly hand-wrote inline asm
+ *       at these two sites. This macro reproduces that; it is a sanctioned
+ *       exception to the no-inline-asm rule, kept only for this function.
+ *       Note that it's possible this comes from a macro. But certainly it is 
+ *       either a macro or inline asm.
+ */
+#define FORCE_ADDI(reg, val) \
+    __asm__ ("addi %0, %1, %2" : "=r"(reg) : "r"(reg), "i"(val))
+
 void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset);
 
 /**
@@ -53,9 +65,11 @@ void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset);
  * @param character   Character code whose atlas cell is selected.
  * @param ot_depth    Ordering-table depth used to link the glyph primitive.
  * @param clut_offset Offset added to the base font CLUT identifier.
- * @see decomp.me (70%) https://decomp.me/scratch/1IyXY
- * @note WIP 95.08% under GCC 2.6.0 -O1 (maspsx 2.34); residual is
- *       register allocation plus two addi/addiu rows.
+ * @see decomp.me (97.06%) https://decomp.me/scratch/1IyXY
+ * @note WIP 97.06% under GCC 2.6.0 -O1 (maspsx 2.34). The two @c addi UV offsets
+ *       are pinned with @ref FORCE_ADDI (see its note - a sanctioned inline-asm
+ *       exception, since the original was hand-written asm here). Residual is
+ *       register allocation (24 arg-permuted rows).
  * @note gcc 2.7.2 (not CDK) produces equivalent asm
  */
 void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset)
@@ -94,9 +108,10 @@ void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset)
         clut += clut_offset;
         clut <<= 16;
         u_lo = (masked_char & 0xf) << 3;
-        uv_word = clut | (u_lo + 0x80);
+        FORCE_ADDI(u_lo, 0x80);
+        uv_word = clut | u_lo;
         row = ((u32)((masked_char - 0x20) & 0xf0)) >> 1;
-        row += 0xe0;
+        FORCE_ADDI(row, 0xe0);
         row <<= 8;
         row |= uv_word;
         primitive->texcoord_clut = row;
@@ -105,7 +120,7 @@ void field_draw_glyph(u8 character, s32 ot_depth, s32 clut_offset)
         primitive2 = g_field_primitive_cursor;
         primitive2->size = 0x80008;
         clut = (u32)g_field_current_render_half;
-        dummy = *((volatile u32*)primitive2);
+        next = (FieldGlyphPrimitive*)*((volatile u32*)primitive2);
         ot_byte_offset += clut;
         ot_entry = (FieldOrderingTableEntry*)ot_byte_offset;
         clut = ot_entry->tag; /* Reuse of clut for the OT tag is required to match. */

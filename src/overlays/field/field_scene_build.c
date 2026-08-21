@@ -428,6 +428,14 @@ extern u16 D_80180008;
 extern s32 D_80180018;
 
 /**
+ * @brief View of g_field_dyn_count that also reaches the word at +8 (== D_80180018).
+ * @note Aliased onto g_field_dyn_count via an asm label so gcc addresses both
+ *       @c count and @c d18 off one shared base, matching the target's codegen.
+ */
+typedef struct { s32 count; s32 pad; s32 d18; } Records_DynPack;
+extern Records_DynPack g_dyn_pack __asm__("g_field_dyn_count");
+
+/**
  * @brief Build the scene's per-object render records.
  *
  * @param arg0 Object being built; its unk26 is set to 1 on completion.
@@ -435,11 +443,13 @@ extern s32 D_80180018;
  *             meaning not yet established.
  * @return Nothing.
  *
- * @note NOT YET MATCHED - 94.88% (832/1174 exact rows, gcc280_g4_noexpanddiv).
+ * @note NOT YET MATCHED - 95.60% (861/1174 exact rows, gcc280_g4_noexpanddiv).
  *       Frame size matches (-0xb0). Residue is spill-slot assignment (stack
  *       slots 0x010/0x054/0x058 carry different load/store traffic than the
  *       target) plus one 3-row structural run at tgt 0x0DE4
- *       (andi v0, v0, 0x60 ; sll v1, v1, 3).
+ *       (andi v0, v0, 0x60 ; sll v1, v1, 3). The @c g_dyn_pack asm-alias view of
+ *       g_field_dyn_count (count + the +8 word) is required: it shares one base
+ *       register across both loads the way the target does.
  * @note The `global_page = (u8*)0x80180000` base is required to match and must
  *       NOT be rewritten to reference g_field_scene / g_field_node_angle_table
  *       directly: the literal base is what makes gcc share one %hi across both
@@ -450,7 +460,7 @@ extern s32 D_80180018;
  *       volatile slots to pin stack offsets, and several member accesses are
  *       written as raw `*(T*)((u8*)p + (0xNN ^ 0))` casts. Both are m2c
  *       artifacts to be replaced with real fields as the struct is identified.
- * @see decomp.me (94.88%) https://decomp.me/scratch/i4GmA
+ * @see decomp.me (95.60%) https://decomp.me/scratch/i4GmA
  * @see working/field_build_render_records/code.c - active matching scratch.
  */
 void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
@@ -475,6 +485,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   Records_Unk *sp68;
   Records_Unk **sp6C;
   s32 sp80;
+  Records_Unk *new_var23;
   s16 *temp_a1_5;
   Records_Node44 *temp_s1;
   Records_Unk *temp_s1_2;
@@ -484,6 +495,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   int new_var7;
   Records_Unk *var_s7_2;
   unsigned int new_var14;
+  u32 temp_v0_early;
   Records_Unk *var_s7_3;
   char new_var3;
   Records_Node30 *var_t0_2;
@@ -541,6 +553,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   int new_var4;
   s32 var_s1_3;
   s32 var_s1_4;
+  Records_Src4 *new_var12;
   s32 var_s5;
   s32 var_s6;
   s32 var_t1_4;
@@ -575,14 +588,18 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   u16 *temp_a0_2;
   u16 *var_t0;
   u32 temp_a0_3;
+  int clamp7ff;
+  int probe_const;
   u32 var_v0_6;
   u32 var_v0_8;
   u8 temp_v0_7;
   short temp_v1_12;
   u8 temp_v1_9;
   u16 new_var5;
+  int new_var22;
   s32 var_v0;
   Records_Unk *var_a0_7;
+  int new_var21;
   int new_var8;
   u8 *var_fp;
   Records_Unk *temp_a3;
@@ -605,6 +622,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   Records_Unk **var_s7;
   Records_SrcObj3 **var_t6;
   u8 *global_page;
+  new_var22 = 3;
   sp30 = (Records_Unk **) 0x801ED000;
   var_t3 = (var_t4 = (var_t8 = 0));
   global_page = (u8 *) 0x80180000;
@@ -635,7 +653,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       var_t1->unk4 = var_a3;
       var_t1->unk10 = 0;
       var_t1->unk14 = 0;
-      var_a0 = (u8) var_a3->unk4;
+      temp_v0_early = var_a3->unk4;
       var_t1->unk1C = 0x7FFF;
       var_t1->unk1E = 0;
       var_t1->unk20 = 0;
@@ -644,7 +662,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       var_t1->unk28 = 0;
       var_t1->unk2C = 0;
       var_t1->unk30 = 0;
-      new_var14 = var_a0 >> 7;
+      new_var14 = temp_v0_early >> 7;
       var_t1->unk34 = 0;
       var_t1->unk38 = 0;
       var_t1->unk3C = 0;
@@ -667,7 +685,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               do
               {
                 var_a0 = (u16) (*temp_a1_5);
-                if (temp_s1->unk1C < (*temp_a1_5))
+                if ((*temp_a1_5) > temp_s1->unk1C)
                 {
                   var_a0 = (u16) temp_s1->unk1C;
                 }
@@ -714,8 +732,8 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   {
     do
     {
-      temp_t0 = sp24;
-      sp24 = (Records_Unk *) (((u8 *) temp_t0) + 0x38);
+      sp24 = (Records_Unk *) (((u8 *) sp24) + 0x38);
+      temp_t0 = (Records_Node38 *) (((u8 *) sp24) - 0x38);
       ((Records_Node38 *) var_t1)->unk0 = temp_t0;
       var_t1 = (Records_Node44 *) temp_t0;
       ((Records_Node38 *) var_t1)->unk4 = var_a3_2;
@@ -790,7 +808,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       }
       temp_a1_3 = ((Records_Node38 *) var_t1)->unkA;
       temp_v1_5 = (u16) ((Records_Node38 *) var_t1)->unkA;
-      if (((s16) var_t2_2) < temp_a1_3)
+      if (((s16) var_t2_2) < (var_s0_6 = temp_a1_3))
       {
         var_t2_2 = temp_v1_5;
         if (1)
@@ -946,6 +964,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
           *((s16 *) (((u8 *) temp_s2) + 0x40)) = 0x1000;
           *((s16 *) (((u8 *) temp_s2) + 0x42)) = 0x1000;
           *((s16 *) (((u8 *) temp_s2) + 0x36)) = (u16) new_var5;
+          clamp7ff = 0x7FF;
           if ((*((s32 *) (((u8 *) temp_s4) + 8))) & 0x40)
           {
             temp_v0 = (((Records_SrcObj3 *) var_t2_4)->unk1A + (*((s16 *) (((u8 *) temp_s4) + 0x10)))) + (*((s16 *) (((u8 *) temp_s4) + 0x18)));
@@ -969,7 +988,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               var_v0_3 = temp_v0_2;
               if (temp_v0_2 >= 0x800)
               {
-                var_v0_3 = 0x7FF;
+                var_v0_3 = clamp7ff;
               }
             }
             else
@@ -984,7 +1003,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               var_v0_4 = temp_v0_3;
               if (temp_v0_3 >= 0x800)
               {
-                var_v0_4 = 0x7FF;
+                var_v0_4 = clamp7ff;
               }
             }
             else
@@ -998,7 +1017,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               var_v0_5 = temp_v0_4;
               if (temp_v0_4 >= 0x800)
               {
-                var_v0_5 = 0x7FF;
+                var_v0_5 = clamp7ff;
                 if (1)
                 {
                 }
@@ -1034,13 +1053,13 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
             sp64 = var_t4;
             sp68 = var_t5;
             sp6C = var_t6;
-            scratch.sp74 = var_t8;
             temp_v0_5 = field_find_shareable_part(sp34, (Records_Node30 *) var_s7_2, temp_s2, var_fp);
             *((Records_Unk **) (((u8 *) temp_s2) + 8)) = temp_v0_5;
             if (temp_v0_5 == 0)
             {
               var_s0 = 1;
-              if (((*((s32 *) (((u8 *) var_s1_5) + 8))) & 0xF00) != 0x100)
+              probe_const = 0x100;
+            if (((*((s32 *) (((u8 *) var_s1_5) + 8))) & 0xF00) != probe_const)
               {
                 var_s0 = *(((u8 *) var_s1_5) + 0xA);
                 var_s0 = var_s0 * (*((new_var15 = (u8 *) var_s1_5) + 0xB));
@@ -1075,10 +1094,10 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                       temp_v0_7 = *((u8 *) var_a0_7);
                       var_s5 = 1;
                       var_t3 = temp_v0_7 & 0xF;
-                      sp80 = (temp_v0_7 >> 4) & 3;
+                      sp80 = (temp_v0_7 >> 4) & new_var22;
                     }
                     else
-                      if ((var_s5 == 1) && (((temp_v1_9 = *((u8 *) var_a0_7), var_t3 != (temp_v1_9 & 0xF))) || (sp80 != ((temp_v1_9 >> 4) & 3))))
+                      if ((var_s5 == 1) && (((temp_v1_9 = *((u8 *) var_a0_7), var_t3 != (temp_v1_9 & 0xF))) || (sp80 != ((temp_v1_9 >> 4) & new_var22))))
                     {
                       var_s5 = 2;
                     }
@@ -1193,7 +1212,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   field_prepare_animation_definitions((0, arg0->unk14), 0);
   field_prepare_animation_definitions(arg0->unk18, 1);
   field_prepare_animation_definitions(arg0->unk1C, 2);
-  field_prepare_animation_definitions(arg0->unk20, 3);
+  field_prepare_animation_definitions(arg0->unk20, new_var22);
   var_t0_3 = *((Records_Node30 **) (((u8 *) sp34) + 4));
   if (var_t0_3 != 0)
   {
@@ -1202,8 +1221,9 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
       var_t2_4 = (Records_Unk *) var_t0_3->unk4;
       scratch.sp10[0] = var_t0_3->unk10 << 8;
       scratch.sp10[1] = var_t0_3->unk12 << 8;
+      new_var23 = var_t2_4;
       scratch.sp10[2] = var_t0_3->unk14 << 8;
-      temp_a0_2 = *((u16 **) (((u8 *) var_t2_4) + 4));
+      temp_a0_2 = *((u16 **) (((u8 *) new_var23) + 4));
       func_8005AC50(temp_a0_2 + 2, *temp_a0_2, scratch.sp10);
       var_s2 = var_t0_3->unk8;
       sp20 = 0;
@@ -1259,6 +1279,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               sprite_entry:
               temp_v1_13 = var_s2->unk1C;
 
+              new_var12 = temp_s4_2;
               var_s7_2 = sp24;
               var_s2->unk10 = var_s7_2;
               if (temp_v1_13 != 0)
@@ -1281,6 +1302,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
               {
                 var_s6 = 0;
               }
+              new_var21 = 6;
               temp_v0_10 = var_s2->unk18;
               temp_t3 = temp_v0_10 - 1;
               if (temp_v0_10 != 0)
@@ -1292,7 +1314,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                 new_var19 = temp_a0_3;
                 if (temp_a0_3 >= 0xAU)
                 {
-                  var_v0_6 = ((u32) (((new_var19 << 6) - 0x80) & 0x3FF)) >> 6;
+                  var_v0_6 = ((u32) (((new_var19 << new_var21) - 0x80) & 0x3FF)) >> 6;
                 }
                 else
                 {
@@ -1305,7 +1327,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                 var_s5 -= 4;
               }
               var_s3_2 = var_s2->unkC;
-              var_s0_5 = ((*(((u8 *) temp_s4_2) + 0xA)) * (*(((u8 *) temp_s4_2) + 0xB))) - 1;
+              var_s0_5 = ((*(((u8 *) temp_s4_2) + 0xA)) * (*(((u8 *) new_var12) + 0xB))) - 1;
               var_s1_3 = 0;
               new_var = -1;
               if (var_s0_5 != new_var)
@@ -1328,7 +1350,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                     sp50 = var_v1_5;
                     new_var3 = new_var3;
                     sp58 = temp_t1;
-                    field_build_sprite_tile_record(var_fp_2, temp_a1_5, (((u32) temp_s4_2->unk8) >> 4) & 3, var_s6);
+                    field_build_sprite_tile_record(var_fp_2, temp_a1_5, (((u32) temp_s4_2->unk8) >> 4) & new_var22, var_s6);
                     var_t1_4 = temp_t1;
                   }
                   var_s1_3 *= 2;
@@ -1403,7 +1425,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
                     temp_t1_2 = var_t1_4 + 1;
                     sp50 = var_v1_7;
                     sp58 = temp_t1_2;
-                    new_var8 = (((u32) temp_s4_2->unk8) >> 4) & 3;
+                    new_var8 = (((u32) temp_s4_2->unk8) >> 4) & new_var22;
                     field_build_quad_tile_record(var_fp_2, temp_a1_5, new_var8, var_s6);
                     var_t1_4 = temp_t1_2;
                   }
@@ -1447,8 +1469,9 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
   field_build_animation_list(arg0->unk18, &sp24, ((u8 *) sp34) + 0x1C);
   field_build_animation_list(arg0->unk1C, &sp24, ((u8 *) sp34) + 0x20);
   field_build_animation_list(arg0->unk20, &sp24, ((u8 *) sp34) + 0x24);
-  var_v1_8 = D_80180018;
-  var_s0 = g_field_dyn_count - 1;
+  var_s0 = g_dyn_pack.count;
+  var_v1_8 = g_dyn_pack.d18;
+  var_s0 -= 1;
   new_var3 = new_var;
   var_t1_5 = (Records_Unk *) (((u8 *) sp34) + 0x14);
   if (var_s0 != new_var3)
@@ -1467,7 +1490,7 @@ void field_build_render_records(Records_ObjArg *arg0, u16 arg1)
         if (1)
         {
         }
-        *((s32 *) (((u8 *) var_t1_5) + 8)) = (s32) ((*((s32 *) (((u8 *) var_t1_5) + 8))) & (~3));
+        *((s32 *) (((u8 *) var_t1_5) + 8)) = (s32) ((*((s32 *) (((u8 *) var_t1_5) + 8))) & (-4));
       }
       while (0);
     }
