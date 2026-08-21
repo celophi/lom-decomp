@@ -16,9 +16,16 @@ struct Packet
     /* 0x8 */ void (*unk8)();
 };
 
+typedef struct
+{
+    /* 0x0 */ s32 unk0;
+    /* 0x4 */ u8 unk4[8];
+    /* 0xC */ s32 unkC;
+} CdStreamCtrl;
+
 extern s32 D_80122988;
 extern s32 D_80146918;
-extern s32 D_801468B8;
+extern CdStreamCtrl D_801468B8;
 extern s32 D_8014A920;
 extern u8 D_8014A988[];
 extern s16 D_8014EA38;
@@ -40,6 +47,14 @@ extern u8 D_8014651C[];
 extern u8 D_8014652C[];
 extern u8 D_80146534[];
 extern u8 *D_80162374;
+extern s32 D_8003EC9C;
+extern char D_800ECF7C[];
+extern char D_801623D0[];
+extern u8 D_80162C5F;
+extern s32 D_80162E20;
+
+extern int strncmp(char *, char *, int);
+void func_801428DC();
 
 /**
  * @see decomp.me (100%) TODO
@@ -212,7 +227,7 @@ Packet *func_80141D04();
  *       are correct; the residual is a register-allocation permutation - the
  *       value temp lands in v1 (target v0) and the five hoisted mask constants
  *       occupy a permuted set of saved registers.
- * @see decomp.me (81.18%) TODO
+ * @see decomp.me (83.09%) TODO
  */
 void func_801404D4(void)
 {
@@ -230,10 +245,10 @@ void func_801404D4(void)
         func_80141CD0(0, 0, 0, 0, 0);
     }
     func_80141CD0();
-    v = D_801468B8;
+    v = D_801468B8.unk0;
     v = v & ~7;
     v = v | 1;
-    D_801468B8 = v;
+    D_801468B8.unk0 = v;
 
     p = func_80141D04();
     p->unk8 = func_80140DA4;
@@ -349,9 +364,9 @@ void func_801404D4(void)
     v = v | 0x66;
     p->unk4 = v;
 
-    v = D_801468B8;
+    v = D_801468B8.unk0;
     v = v & ~7;
-    D_801468B8 = v;
+    D_801468B8.unk0 = v;
 }
 
 /**
@@ -414,4 +429,215 @@ void func_801408A4(s32 arg0)
         D_80162350 = 0xF9;
         D_80162374 = D_80146534;
     }
+}
+
+/**
+ * @note WIP. Structurally and semantically correct (verified via probe:
+ *       the packet unk0/unk4 register roles and the loop-preheader a1/a2
+ *       roles are a coupled register-coloring pair - fixing one region's
+ *       roles regresses the other by the same amount). Every attempt to
+ *       force the target's exact roles, including a permuter candidate
+ *       that scored higher, was verified to silently drop the `| 0x56`
+ *       term from the packet unk4 store and rejected.
+ * @see decomp.me (94.25%) TODO
+ */
+s32 func_80140964(void)
+{
+    s32 pending;
+    s32 status;
+    s32 flag_a3;
+    s32 flag_a2;
+    s32 count;
+    s32 last;
+    s32 arg0;
+    Packet *p;
+
+    if ((D_801468B8.unkC & 7) == 0)
+    {
+        D_80146918 = 1;
+        return;
+    }
+    if (D_80146918 != 0)
+    {
+        return;
+    }
+    if ((D_801468B8.unkC & 7) >= 3)
+    {
+        return;
+    }
+    if ((D_801468B8.unk0 & 7) != 0)
+    {
+        return;
+    }
+    pending = D_80162350;
+    if (pending == 0xFF)
+    {
+        return;
+    }
+    if (D_80162E20 != 0)
+    {
+        return;
+    }
+    if (D_8015A310 != 0)
+    {
+        return;
+    }
+    if ((u32)(*D_80162374 - 6) < 2U)
+    {
+        return;
+    }
+    status = D_80122988;
+    if (status & 0x40)
+    {
+        D_80146918 = 1;
+        D_80162358 = 1;
+        func_800A3938(0x78, 0x80);
+        return;
+    }
+    if (status & 0xA100)
+    {
+        func_800A3938(0x7D, 0x80);
+        D_8016235C = 0;
+        D_8015A324 = 0;
+        D_8015A318 = 0;
+        D_80162354 = 0;
+        D_80162374 = NULL;
+        D_80162350 = 0xFF;
+        D_80162364 = 0;
+        D_8014A920 ^= 1;
+        func_80143DE4();
+        return;
+    }
+    if (pending >= 0x10)
+    {
+        return;
+    }
+    count = 1;
+    if (status & 8)
+    {
+        D_80122988 = 0x4000;
+        count = 1;
+    }
+    if (D_80122988 & 4)
+    {
+        D_80122988 = 0x1000;
+        count = 1;
+    }
+    last = pending - 1;
+    flag_a3 = D_80122988 & 0x1000;
+    flag_a2 = D_80122988 & 0x4000;
+    while (count != 0)
+    {
+        if (flag_a3 != 0)
+        {
+            D_80162354 -= 1;
+            if (D_80162354 < 0)
+            {
+                D_80162354 = last;
+            }
+        }
+        if (flag_a2 != 0)
+        {
+            D_80162354 += 1;
+            if (D_80162354 >= pending)
+            {
+                D_80162354 = 0;
+            }
+        }
+        count -= 1;
+    }
+    if (D_80122988 & 0x5000)
+    {
+        func_80144D18();
+        func_800A3938(0x7D, 0x80);
+        func_80140D20();
+        return;
+    }
+    if (D_80122988 & 0x220)
+    {
+        s32 term1 = D_8014A920 * 0x320;
+        s32 term2 = (D_80162354 * 0x28) + (s32)D_801623D0;
+
+        if (strncmp(D_800ECF7C, (char *)(term1 + term2), 0xC) != 0)
+        {
+            arg0 = 0x78;
+        }
+        else
+        {
+            if ((D_80162C5F == D_8003EC9C) || (D_80162C5F == 0xFF))
+            {
+                p = func_80141D04(D_80162C5F);
+                p->unk8 = func_801428DC;
+                p->unk0 = (p->unk0 & ~0x78) | 8;
+                p->unk0 = (p->unk0 & 0xFFFF007F) | 0x800;
+                *((u8 *)p + 2) = 0x5B;
+                p->unk4 = (p->unk4 | 1) & ~0x1FE;
+                p->unk4 = p->unk4 | 0x56;
+                p->unk0 = (p->unk0 & 0xFFFFFF) | 0x20000000;
+                func_80143510();
+                func_801447B4();
+                arg0 = 0x7E;
+            }
+            else
+            {
+                arg0 = 0x78;
+            }
+        }
+        func_800A3938(arg0, 0x80);
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80140CD0(void)
+{
+    s32 temp_v1;
+    s32 var_a1;
+    s32 *var_a0;
+    s32 temp;
+
+    var_a0 = (s32 *)&D_801468B8;
+    var_a1 = 0;
+    do
+    {
+        temp_v1 = *var_a0;
+        if (temp_v1 & 7)
+        {
+            temp = (temp_v1 & ~7) | 3;
+            *var_a0 = (temp & ~0x78) | 0x40;
+        }
+        var_a1 += 1;
+        var_a0 += 3;
+    } while (var_a1 < 8);
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80140D20(void)
+{
+    s32 base;
+    s32 delta;
+
+    base = D_80162354 * 14;
+    delta = base - D_8015A318;
+    if (delta >= 0x3C)
+    {
+        D_8015A324 = base - 0x38;
+        D_8016235C = 4;
+    }
+    if (delta < 0)
+    {
+        D_8015A324 = D_80162354 * 14;
+        D_8016235C = 4;
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80140D84(void)
+{
+    func_80141D78();
 }

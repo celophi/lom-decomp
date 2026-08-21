@@ -390,74 +390,61 @@ void func_800799C4(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
  * @param primbuf Output primitive buffer; advanced by 4 primitives (0x70
  *                bytes) per ring segment.
  * @param base Ordering-table / primitive base array.
- * @note WIP - 68.54% (176/596 exact rows) at time of writing. Sibling of
- *       field13.c's func_800799C4 (fixed 32-segment ring, 3 primitives/4
- *       GTE corners per segment); this one uses a variable segment count
- *       and 4 primitives / 5 GTE corners per segment, with per-corner angle
- *       shifts of 8,8,6,7,6 instead of a uniform >>6. Same m2c gaps as
- *       func_800799C4: the delay-slot pan-base stores (X->sp10, Y->sp12)
- *       and the GTE output's Y component (sp24) were recovered from the raw
- *       target asm. Frame is 8 bytes smaller than the target's (-0x90 vs
- *       -0x98) and the GTE/loop-position locals land at different stack
- *       offsets, matching the same declaration-order/allocation residue
- *       class seen throughout this file.
- * @see decomp.me WIP
+ * @see decomp.me (100%)
  */
 void func_8007A104(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 {
-    FieldMatrix sp30;
+    FieldSVector sp10;
     FieldSVector sp18;
     FieldVector sp20;
-    s32 sp68;
-    s32 sp64;
-    s32 sp60;
-    FieldVector *sp5C;
-    FieldSVector *sp58;
-    s32 sp54;
+    FieldMatrix sp30;
     FieldActorPartDef *sp50;
-    u16 sp12;
-    u16 sp10;
+    s32 sp54;
+    FieldSVector *sp58;
+    FieldVector *sp5C;
+    s32 sp60;
+    s32 sp64;
+    s32 sp68;
     s16 temp_v0;
     s16 temp_v0_2;
-    s16 temp_v1_2;
-    s16 temp_v1_3;
     s16 temp_v1_4;
     s16 temp_v1_5;
     s16 temp_v1_6;
     s16 temp_v1_7;
     s32 *temp_a1_2;
     FieldActorState *temp_s2;
+    FieldActorState *slots;
     s32 *temp_v1_10;
     s32 *temp_v1_12;
     s32 *temp_v1_14;
     s32 *temp_v1_16;
-    s32 *var_s1_2;
-    s32 *var_s1_3;
     s32 temp_a0;
+    s32 temp_a1copy;
     s32 temp_lo;
+    s16 half_src;
     s32 temp_s0_2;
     s32 temp_s0_3;
     s32 temp_v0_3;
+    s32 ot_word;
     s32 temp_v1_11;
     s32 temp_v1_13;
     s32 temp_v1_15;
     s32 temp_v1_8;
     s32 temp_v1_9;
-    s32 var_a0;
-    s32 var_a0_2;
-    s32 var_a0_3;
     s32 var_a0_4;
     s32 var_s6;
     s32 var_s7;
-    s32 var_t0;
-    s32 var_v0;
-    s32 var_v0_2;
     s32 var_v0_4;
     s32 var_v0_5;
     s32 var_v0_6;
-    s32 var_v1;
-    s32 var_v1_2;
-    s8 var_v0_3;
+    u16 ybase;
+    u16 yoff;
+    s32 var_v0_3;
+    s32 limit1;
+    s32 limit2;
+    s32 limit3;
+    s32 mask_low;
+    s32 mask_high;
     u8 var_fp;
     u8 *temp_a0_2;
     u8 *temp_a1;
@@ -466,176 +453,172 @@ void func_8007A104(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
     FieldActorPartDef *temp_v1;
 
     var_s1 = primbuf;
-    temp_s2 = &g_field_actor_slots[rec->unk22];
+    slots = g_field_actor_slots;
+    temp_s2 = &slots[rec->unk22];
     temp_v1 = &temp_s2->unk0[rec->unk23];
     sp50 = temp_v1;
     func_8007D078(rec, sp50, &sp30, temp_s2);
     gte_SetRotMatrix(&sp30);
 
-    var_v0 = D_800F22A0;
-    if (var_v0 < 0)
-    {
-        var_v0 += 0xFF;
-    }
-    var_v1 = rec->unk0;
-    if (var_v1 < 0)
-    {
-        var_v1 += 0xFF;
-    }
-    sp10 = (u16) ((var_v0 >> 8) + ((var_v1 >> 8) + 0xA0));
-    var_a0 = D_800F22A4;
-    if (var_a0 < 0)
-    {
-        var_a0 += 0xFF;
-    }
-    var_v0_2 = rec->unk4;
-    if (var_v0_2 < 0)
-    {
-        var_v0_2 += 0xFF;
-    }
-    var_v1_2 = rec->unk8;
-    if (var_v1_2 < 0)
-    {
-        var_v1_2 += 0x1FF;
-    }
-    var_t0 = D_800F22A8;
-    if (var_t0 < 0)
-    {
-        var_t0 += 0x1FF;
-    }
-    sp12 = (u16) ((((var_a0 >> 8) + ((var_v0_2 >> 8) + 0x70)) - (var_v1_2 >> 9)) - (var_t0 >> 9));
+    sp10.unk0 = (u16) ((D_800F22A0 / 0x100) + ((rec->unk0 / 0x100) + 0xA0));
+    sp10.unk2 = (u16) (((((D_800F22A4 / 0x100) + 0x70) + (rec->unk4 / 0x100)) - (rec->unk8 / 0x200)) - (D_800F22A8 / 0x200));
     func_8007D8D8(temp_s2, rec, sp50, var_s1 + 4);
     *(s8 *) (var_s1 + 3) = 6;
     *(s8 *) (var_s1 + 7) = 0x30;
-    var_v0_3 = 0x32;
-    if (!(rec->unk1C & 0x800000))
+    temp_v1_15 = 0x800000;
+    var_v0_3 = rec->unk1C & temp_v1_15;
+    if (var_v0_3)
+    {
+        var_v0_3 = 0x32;
+    }
+    else
     {
         var_v0_3 = 0x30;
     }
     *(s8 *) (var_s1 + 7) = var_v0_3;
     var_fp = 2;
-    if ((u32) (sp50->unk8 - 2) < 0x1FU)
+    var_v0_3 = sp50->unk8 - 2;
+    if ((u32) var_v0_3 < 0x1FU)
     {
-        var_fp = sp50->unk8;
+        var_fp = *(volatile u8 *) &sp50->unk8;
     }
     temp_lo = 0x1000 / (s32) var_fp;
-    var_s6 = temp_lo;
+    half_src = temp_lo;
+    var_s6 = half_src;
     if ((0x1000 % (s32) var_fp) != 0)
     {
         var_s6 += 1;
     }
     var_s7 = 0;
     sp58 = &sp18;
-    temp_a0 = temp_lo >> 1;
     sp5C = &sp20;
+    mask_low = 0xFFFFFF;
+    mask_high = 0xFF000000;
+    temp_a0 = temp_lo >> 1;
     sp54 = temp_a0;
-    sp60 = temp_a0;
+    half_src = temp_a0;
+    sp60 = half_src;
     sp64 = 0;
     sp68 = var_s6;
 loop_19:
     {
-        *(s32 *) (var_s1 + 0x10) = (s32) sp10;
+        *(s32 *) (var_s1 + 0x10) = *(s32 *) &sp10;
         sp18.unk0 = (s16) (rcos(sp64) >> 8);
-        sp18.unk4 = 0;
-        sp18.unk2 = (s16) (rsin(sp64) >> 8);
+        sp18.unk2 = 0;
+        sp18.unk4 = (s16) (rsin(sp64) >> 8);
         gte_ldv0(sp58);
         gte_rtv0();
         gte_stlvnl(sp5C);
-        temp_v1_2 = sp10 + (u16) sp20.vx;
-        *(s16 *) (var_s1 + 8) = temp_v1_2;
-        *(s16 *) (var_s1 + 0x24) = temp_v1_2;
-        temp_v1_3 = sp12 + (u16) sp20.vy;
-        *(s16 *) (var_s1 + 0xA) = temp_v1_3;
-        *(s16 *) (var_s1 + 0x26) = temp_v1_3;
-        if (var_s7 == (var_fp - 1))
+        { u32 cb; u16 co;
+            cb = (u16) sp10.unk0; co = (u16) sp20.vx; cb += co;
+            *(s16 *) (var_s1 + 8) = cb;
+            *(s16 *) (var_s1 + 0x24) = cb;
+            cb = (u16) sp10.unk2; co = (u16) sp20.vy; cb += co;
+            limit1 = var_fp - 1;
+            *(s16 *) (var_s1 + 0xA) = cb;
+            *(s16 *) (var_s1 + 0x26) = cb;
+        }
+        if (var_s7 == limit1)
         {
             var_v0_4 = rcos(0);
-            var_a0_2 = 0;
+            sp18.unk0 = (s16) (var_v0_4 >> 8);
+            sp18.unk2 = 0;
+            sp18.unk4 = (s16) (rsin(0) >> 8);
         }
         else
         {
             var_v0_4 = rcos(sp68);
-            var_a0_2 = sp68;
+            sp18.unk0 = (s16) (var_v0_4 >> 8);
+            sp18.unk2 = 0;
+            sp18.unk4 = (s16) (rsin(sp68) >> 8);
         }
-        sp18.unk0 = (s16) (var_v0_4 >> 8);
-        sp18.unk4 = 0;
-        sp18.unk2 = (s16) (rsin(var_a0_2) >> 8);
         gte_ldv0(sp58);
         gte_rtv0();
         gte_stlvnl(sp5C);
         temp_s0 = var_s1 + 0x1C;
         temp_a1 = var_s1 + 0x54;
-        temp_v1_4 = sp10 + (u16) sp20.vx;
+        temp_v1_4 = sp10.unk0 + (u16) sp20.vx;
         *(s16 *) (var_s1 + 0x18) = temp_v1_4;
         *(s16 *) (temp_s0 + 0x18) = temp_v1_4;
         *(s16 *) (temp_a1 + 8) = temp_v1_4;
         *(s16 *) (var_s1 + 0x40) = temp_v1_4;
-        temp_v0 = sp12 + (u16) sp20.vy;
+        temp_v0 = sp10.unk2 + (u16) sp20.vy;
         *(s16 *) (var_s1 + 0x1A) = temp_v0;
         *(s16 *) (temp_s0 + 0x1A) = temp_v0;
         *(s16 *) (temp_a1 + 0xA) = temp_v0;
         *(s16 *) (var_s1 + 0x42) = temp_v0;
         sp18.unk0 = (s16) (rcos(sp60) >> 6);
-        sp18.unk4 = 0;
-        sp18.unk2 = (s16) (rsin(sp60) >> 6);
+        sp18.unk2 = 0;
+        sp18.unk4 = (s16) (rsin(sp60) >> 6);
         gte_ldv0(sp58);
         gte_rtv0();
         gte_stlvnl(sp5C);
-        temp_v1_5 = sp10 + (u16) sp20.vx;
-        *(s16 *) (temp_s0 + 0x10) = temp_v1_5;
-        *(s16 *) (var_s1 + 0x48) = temp_v1_5;
-        temp_v1_6 = sp12 + (u16) sp20.vy;
-        *(s16 *) (temp_s0 + 0x12) = temp_v1_6;
-        *(s16 *) (var_s1 + 0x4A) = temp_v1_6;
-        if (var_s7 == (var_fp - 1))
+        { u32 cb; u16 co;
+            cb = (u16) sp10.unk0; co = (u16) sp20.vx; cb += co;
+            *(s16 *) (temp_s0 + 0x10) = cb;
+            *(s16 *) (var_s1 + 0x48) = cb;
+            cb = (u16) sp10.unk2; co = (u16) sp20.vy; cb += co;
+            limit2 = var_fp - 1;
+            *(s16 *) (temp_s0 + 0x12) = cb;
+            *(s16 *) (var_s1 + 0x4A) = cb;
+        }
+        if (var_s7 == limit2)
         {
             var_v0_5 = rcos(0);
-            var_a0_3 = 0;
+            sp18.unk0 = (s16) (var_v0_5 >> 7);
+            sp18.unk2 = 0;
+            sp18.unk4 = (s16) (rsin(0) >> 7);
         }
         else
         {
             temp_s0_2 = sp64 + var_s6;
             var_v0_5 = rcos(temp_s0_2);
-            var_a0_3 = temp_s0_2;
+            sp18.unk0 = (s16) (var_v0_5 >> 7);
+            sp18.unk2 = 0;
+            sp18.unk4 = (s16) (rsin(temp_s0_2) >> 7);
         }
-        sp18.unk0 = (s16) (var_v0_5 >> 7);
-        sp18.unk4 = 0;
-        sp18.unk2 = (s16) (rsin(var_a0_3) >> 7);
         gte_ldv0(sp58);
         gte_rtv0();
         gte_stlvnl(sp5C);
         temp_a0_2 = var_s1 + 0x38;
-        temp_v0_2 = sp10 + (u16) sp20.vx;
+        temp_v0_2 = sp10.unk0 + (u16) sp20.vx;
         *(s16 *) (temp_a0_2 + 0x18) = temp_v0_2;
         *(s16 *) (var_s1 + 0x64) = temp_v0_2;
-        temp_v1_7 = sp12 + (u16) sp20.vy;
-        *(s16 *) (temp_a0_2 + 0x1A) = temp_v1_7;
-        *(s16 *) (var_s1 + 0x66) = temp_v1_7;
-        if (var_s7 == (var_fp - 1))
+        temp_v1_9 = (u16) sp10.unk2 + (u16) sp20.vy;
+        limit3 = var_fp - 1;
+        *(s16 *) (temp_a0_2 + 0x1A) = temp_v1_9;
+        *(s16 *) (var_s1 + 0x66) = temp_v1_9;
+        if (var_s7 == limit3)
         {
+            var_v0_6 = rcos(sp54);
             var_a0_4 = sp54;
-            var_v0_6 = rcos(sp54) >> 6;
+            sp18.unk0 = (s16) (var_v0_6 >> 6);
+            sp18.unk2 = 0;
+            sp18.unk4 = (s16) (rsin(var_a0_4) >> 6);
         }
         else
         {
             temp_s0_3 = sp60 + var_s6;
+            var_v0_6 = rcos(temp_s0_3);
             var_a0_4 = temp_s0_3;
-            var_v0_6 = rcos(temp_s0_3) >> 6;
+            sp18.unk0 = (s16) (var_v0_6 >> 6);
+            sp18.unk2 = 0;
+            sp18.unk4 = (s16) (rsin(var_a0_4) >> 6);
         }
-        sp18.unk0 = (s16) var_v0_6;
-        sp18.unk4 = 0;
-        sp18.unk2 = (s16) (rsin(var_a0_4) >> 6);
         gte_ldv0(sp58);
         gte_rtv0();
         gte_stlvnl(sp5C);
-        *(s16 *) (var_s1 + 0x6C) = (s16) (sp10 + (u16) sp20.vx);
+        *(s16 *) (var_s1 + 0x6C) = (s16) (sp10.unk0 + (u16) sp20.vx);
         temp_v0_3 = *(s32 *) (var_s1 + 4);
+        ybase = sp10.unk2;
+        yoff = (u16) sp20.vy;
         temp_v1_8 = *(s32 *) (var_s1 + 0);
         *(s32 *) (var_s1 + 0x68) = 0;
         *(s32 *) (var_s1 + 0x60) = 0;
         *(s32 *) (var_s1 + 0x4C) = 0;
         *(s32 *) (var_s1 + 0x44) = 0;
         *(s32 *) (var_s1 + 0x28) = 0;
+        temp_a1copy = *(s32 *) (var_s1 + 4);
         *(s32 *) (var_s1 + 0x58) = temp_v0_3;
         *(s32 *) (var_s1 + 0x3C) = temp_v0_3;
         *(s32 *) (var_s1 + 0xC) = temp_v0_3;
@@ -646,95 +629,107 @@ loop_19:
         *(s32 *) (var_s1 + 0x38) = temp_v1_8;
         *(s32 *) (var_s1 + 0x54) = temp_v1_8;
         *(s32 *) (var_s1 + 0x70) = temp_v1_8;
-        *(s32 *) (var_s1 + 0x74) = temp_v0_3;
-        *(s16 *) (var_s1 + 0x6E) = (s16) (sp12 + (u16) sp20.vy);
+        *(s32 *) (var_s1 + 0x74) = temp_a1copy;
+        *(s16 *) (var_s1 + 0x6E) = (s16) (ybase + yoff);
         temp_v1_9 = (s32) rec->unk8 >> 7;
         temp_a1_2 = (s32 *) (var_s1 + 0x1C);
         if (temp_v1_9 < 0)
         {
-            *(s32 *) (var_s1 + 0) = (s32) ((*(s32 *) (var_s1 + 0) & 0xFF000000) | (base[0] & 0xFFFFFF));
-            base[0] = (s32) ((base[0] & 0xFF000000) | ((s32) var_s1 & 0xFFFFFF));
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[0] & mask_low);
+            base[0] = (base[0] & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 = (u8 *) temp_a1_2;
         }
         else if (temp_v1_9 >= 0x1000)
         {
-            *(s32 *) (var_s1 + 0) = (s32) ((*(s32 *) (var_s1 + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF));
-            base[0xFFF] = (s32) ((base[0xFFF] & 0xFF000000) | ((s32) var_s1 & 0xFFFFFF));
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[0xFFF] & mask_low);
+            base[0xFFF] = (base[0xFFF] & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 = (u8 *) temp_a1_2;
         }
         else
         {
-            *(s32 *) (var_s1 + 0) = (s32) ((*(s32 *) (var_s1 + 0) & 0xFF000000) | (*((temp_v1_9 * 4) + base) & 0xFFFFFF));
-            temp_v1_10 = (((s32) rec->unk8 >> 7) * 4) + base;
-            *temp_v1_10 = (*temp_v1_10 & 0xFF000000) | ((s32) var_s1 & 0xFFFFFF);
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[temp_v1_9] & mask_low);
+            temp_v1_10 = (s32 *) ((((s32) rec->unk8 >> 7) * 4) + (s32) base);
+            ot_word = *temp_v1_10;
+            *temp_v1_10 = (ot_word & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 = (u8 *) temp_a1_2;
         }
+
         temp_v1_11 = (s32) rec->unk8 >> 7;
         if (temp_v1_11 < 0)
         {
-            *temp_a1_2 = (*temp_a1_2 & 0xFF000000) | (base[0] & 0xFFFFFF);
-            var_s1_2 = temp_a1_2 + 7;
-            base[0] = (s32) ((base[0] & 0xFF000000) | ((s32) temp_a1_2 & 0xFFFFFF));
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[0] & mask_low);
+            base[0] = (base[0] & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
         }
         else if (temp_v1_11 >= 0x1000)
         {
-            *temp_a1_2 = (*temp_a1_2 & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
-            var_s1_2 = temp_a1_2 + 7;
-            base[0xFFF] = (s32) ((base[0xFFF] & 0xFF000000) | ((s32) temp_a1_2 & 0xFFFFFF));
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[0xFFF] & mask_low);
+            base[0xFFF] = (base[0xFFF] & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
         }
         else
         {
-            *temp_a1_2 = (*temp_a1_2 & 0xFF000000) | (*((temp_v1_11 * 4) + base) & 0xFFFFFF);
-            temp_v1_12 = (((s32) rec->unk8 >> 7) * 4) + base;
-            var_s1_2 = temp_a1_2 + 7;
-            *temp_v1_12 = (*temp_v1_12 & 0xFF000000) | ((s32) temp_a1_2 & 0xFFFFFF);
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[temp_v1_11] & mask_low);
+            temp_v1_12 = (s32 *) ((((s32) rec->unk8 >> 7) * 4) + (s32) base);
+            ot_word = *temp_v1_12;
+            *temp_v1_12 = (ot_word & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
         }
+
         temp_v1_13 = (s32) rec->unk8 >> 7;
         if (temp_v1_13 < 0)
         {
-            *var_s1_2 = (*var_s1_2 & 0xFF000000) | (base[0] & 0xFFFFFF);
-            var_s1_3 = var_s1_2 + 7;
-            base[0] = (s32) ((base[0] & 0xFF000000) | ((s32) var_s1_2 & 0xFFFFFF));
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[0] & mask_low);
+            base[0] = (base[0] & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
         }
         else if (temp_v1_13 >= 0x1000)
         {
-            *var_s1_2 = (*var_s1_2 & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
-            var_s1_3 = var_s1_2 + 7;
-            base[0xFFF] = (s32) ((base[0xFFF] & 0xFF000000) | ((s32) var_s1_2 & 0xFFFFFF));
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[0xFFF] & mask_low);
+            base[0xFFF] = (base[0xFFF] & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
         }
         else
         {
-            *var_s1_2 = (*var_s1_2 & 0xFF000000) | (*((temp_v1_13 * 4) + base) & 0xFFFFFF);
-            temp_v1_14 = (((s32) rec->unk8 >> 7) * 4) + base;
-            var_s1_3 = var_s1_2 + 7;
-            *temp_v1_14 = (*temp_v1_14 & 0xFF000000) | ((s32) var_s1_2 & 0xFFFFFF);
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[temp_v1_13] & mask_low);
+            temp_v1_14 = (s32 *) ((((s32) rec->unk8 >> 7) * 4) + (s32) base);
+            ot_word = *temp_v1_14;
+            *temp_v1_14 = (ot_word & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
         }
+
         temp_v1_15 = (s32) rec->unk8 >> 7;
         if (temp_v1_15 < 0)
         {
-            *var_s1_3 = (*var_s1_3 & 0xFF000000) | (base[0] & 0xFFFFFF);
-            var_s1 = (u8 *) (var_s1_3 + 7);
-            base[0] = (s32) ((base[0] & 0xFF000000) | ((s32) var_s1_3 & 0xFFFFFF));
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[0] & mask_low);
+            base[0] = (base[0] & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
         }
         else if (temp_v1_15 >= 0x1000)
         {
-            *var_s1_3 = (*var_s1_3 & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
-            var_s1 = (u8 *) (var_s1_3 + 7);
-            base[0xFFF] = (s32) ((base[0xFFF] & 0xFF000000) | ((s32) var_s1_3 & 0xFFFFFF));
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[0xFFF] & mask_low);
+            base[0xFFF] = (base[0xFFF] & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
         }
         else
         {
-            *var_s1_3 = (*var_s1_3 & 0xFF000000) | (*((temp_v1_15 * 4) + base) & 0xFFFFFF);
-            temp_v1_16 = (((s32) rec->unk8 >> 7) * 4) + base;
-            var_s1 = (u8 *) (var_s1_3 + 7);
-            *temp_v1_16 = (*temp_v1_16 & 0xFF000000) | ((s32) var_s1_3 & 0xFFFFFF);
+            *(s32 *) var_s1 = (*(s32 *) var_s1 & mask_high) | (base[temp_v1_15] & mask_low);
+            temp_v1_16 = (s32 *) ((((s32) rec->unk8 >> 7) * 4) + (s32) base);
+            ot_word = *temp_v1_16;
+            *temp_v1_16 = (ot_word & mask_high) | ((s32) var_s1 & mask_low);
+            var_s1 += 0x1C;
+        }
+        if (var_s7 == (var_fp - 1))
+        {
+            goto loop_exit;
         }
         var_s7 += 1;
-        if (var_s7 != (var_fp - 1))
-        {
-            sp60 += var_s6;
-            sp64 += var_s6;
-            sp68 += var_s6;
-            goto loop_19;
-        }
+        sp60 += var_s6;
+        sp64 += var_s6;
+        sp68 += var_s6;
+        goto loop_19;
     }
+loop_exit:
     func_8007DA80(rec, sp50, var_s1, base);
 }
 
