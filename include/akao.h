@@ -255,11 +255,11 @@ typedef struct AkaoArticulation
  * in the comment. Everything from 0x6E up is channel-only and unambiguous.
  * Splitting this into @c AkaoChannelState and an @c AkaoSongState is the
  * obvious cleanup; it is not done yet because it touches every matched
- * function in decomp4.c.
+ * function in akao_sequencer.c.
  *
  * @note This is now the single type for the block. It replaced 47 per-opcode
- *       ad-hoc structs in decomp4.c, @c SfxChannel and @c AkaoSFXState in
- *       decomp4.h, and @c AkaoChannelEffects in akao_voice.c.
+ *       ad-hoc structs in akao_sequencer.c, @c SfxChannel and @c AkaoSFXState in
+ *       akao_sequencer.h, and @c AkaoChannelEffects in akao_voice.c.
  *
  * @note Where the two roles disagree on a field's width or signedness the
  *       declaration follows whichever role reads the field, and the other
@@ -401,7 +401,7 @@ typedef struct AkaoChannelState
     u16 is_sfx_channel;
                      /* 0x64 channel: non-zero marks this slot as an SFX channel;
                                       selects SFX vs sequence routing all over
-                                      decomp4.c
+                                      akao_sequencer.c
                              song:    beats per measure (ext FE 15) */
     u16 unk66;       /* 0x66 channel: ticks left in the current note
                              song:    beat-within-measure counter */

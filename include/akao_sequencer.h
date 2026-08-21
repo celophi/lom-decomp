@@ -1,5 +1,5 @@
-#ifndef _DECOMP4_H
-#define _DECOMP4_H
+#ifndef _AKAO_SEQUENCER_H
+#define _AKAO_SEQUENCER_H
 
 #include "common.h"
 #include "akao_driver.h" /* provides AkaoChannelState, AkaoDriverFlags, SfxControl and most externs */

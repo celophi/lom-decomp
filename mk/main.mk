@@ -169,13 +169,13 @@ SRCS_G0 := \
 SRCS_G4 := \
 	src/cdrom.c \
 	src/overlay_memory.c \
-	src/decomp4.c \
+	src/akao_sequencer.c \
 	src/akao_driver.c \
 	src/akao_driver_init_state.c \
 	src/akao_driver_boot.c \
 	src/controller.c \
 	src/akao_voice.c \
-	src/decomp11.c
+	src/akao_xa_stream.c
 
 # Subset of SRCS_G4 (or any G4 object) whose original code uses bare
 # `div $zero,...` and must be assembled WITHOUT --expand-div. List the .c here
