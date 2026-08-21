@@ -1101,11 +1101,14 @@ void menu_reset_slots(void)
  * @c g_menu_pending_overlay is set, emits an overlay element via @ref func_800A88A0.
  *
  * @param render_ctx Per-frame render context.
- * @see decomp.me (98.12%) https://decomp.me/scratch/BlGK5
- * @note Not yet byte-exact (125/139 rows: 12 argdiff, 2 yours-only). The target
- *       has no traffic at sp+0x4C; this source spills one extra value there
- *       (looks like a $ra home slot), which is the likely source of the
- *       argdiff run. Unclassified in idioms.md - no mechanism rule matched yet.
+ * @see decomp.me (100%) https://decomp.me/scratch/BlGK5
+ * @note Required to match: the loop keeps two parallel induction variables,
+ *       @c var_s1 for loop control (its compare against @c g_active_slot) and a
+ *       separate @c rect_i for the @c base[rect_i] indexing, both stepped from 3
+ *       to -1 together. Merging them into one variable made gcc spill a value to
+ *       sp+0x4C the target never touches (98.12%). The @ref menu_draw_window
+ *       tile-base arg must also stay as ((u8*)g_menu_slots + 8) + (rect_i*36)
+ *       written as (((rect_i*2) - rect_i) * 36).
  */
 void menu_update_slots(RenderContext* render_ctx)
 {
@@ -1115,6 +1118,7 @@ void menu_update_slots(RenderContext* render_ctx)
     s32 var_a3;
     s32 var_a0;
     s32 var_s1;
+    s32 rect_i;
     u8 temp_a0;
     u8 temp_v0;
     u8 temp_v1;
@@ -1126,11 +1130,12 @@ void menu_update_slots(RenderContext* render_ctx)
     var_a0 = 0;
     g_menu_pending_overlay = 0;
     var_s1 = 3;
+    rect_i = 3;
     tmp_s5 = 2;
 
     while (var_s1 >= 0)
     {
-        temp_v1 = base[var_s1].active;
+        temp_v1 = base[rect_i].active;
         if (temp_v1 != tmp_s5)
         {
             s32 tmpCmp = temp_v1;
@@ -1138,6 +1143,7 @@ void menu_update_slots(RenderContext* render_ctx)
             {
                 if (temp_v1 != 1)
                 {
+                    rect_i -= 1;
                     var_s1 -= 1;
                     continue;
                 }
@@ -1146,51 +1152,54 @@ void menu_update_slots(RenderContext* render_ctx)
             {
                 if (temp_v1 != 3)
                 {
+                    rect_i -= 1;
                     var_s1 -= 1;
                     continue;
                 }
                 goto branch_11C;
             }
 
-            menu_draw_window_transition(render_ctx, &base[var_s1], g_menu_cursor_enable != 0);
-            temp_a0 = base[var_s1].anim_frame;
+            menu_draw_window_transition(render_ctx, &base[rect_i], g_menu_cursor_enable != 0);
+            temp_a0 = base[rect_i].anim_frame;
             temp_v0 = temp_a0 + 1;
-            base[var_s1].anim_frame = temp_v0;
+            base[rect_i].anim_frame = temp_v0;
             if ((temp_v0 & 0xff) == 6)
             {
-                base[var_s1].anim_frame = temp_a0;
-                base[var_s1].active = tmp_s5;
+                base[rect_i].anim_frame = temp_a0;
+                base[rect_i].active = tmp_s5;
             }
         }
         else
         {
             sp_pair[1] = 0;
             sp_pair[0] = 0;
-            menu_draw_window(&base[var_s1], render_ctx, (void*)((((var_s1 * 18) + 4) << 1) + (u32)base), sp_pair, g_menu_cursor_enable != 0);
+            menu_draw_window(&base[rect_i], render_ctx, (void*)(((u8*)g_menu_slots + 8) + (((rect_i * 2) - rect_i) * 36)), sp_pair, g_menu_cursor_enable != 0);
         }
 
         if (var_s1 == g_active_slot)
         {
-            temp_v0_2 = (void (*)(MenuSlot*))base[var_s1].tick_cb;
+            temp_v0_2 = (void (*)(MenuSlot*))base[rect_i].tick_cb;
             if (temp_v0_2 != 0)
             {
-                temp_v0_2(&base[var_s1]);
+                temp_v0_2(&base[rect_i]);
             }
         }
         var_a0 = 1;
+        rect_i -= 1;
         var_s1 -= 1;
         continue;
 
     branch_11C:
-        menu_draw_window_transition(render_ctx, &base[var_s1], g_menu_cursor_enable != 0);
-        temp_v0 = base[var_s1].anim_frame - 1;
-        base[var_s1].anim_frame = temp_v0;
+        menu_draw_window_transition(render_ctx, &base[rect_i], g_menu_cursor_enable != 0);
+        temp_v0 = base[rect_i].anim_frame - 1;
+        base[rect_i].anim_frame = temp_v0;
         if (!(temp_v0 & 0xFF))
         {
-            base[var_s1].active = 0;
+            base[rect_i].active = 0;
             menu_update_active_slot();
         }
         var_a0 = 1;
+        rect_i -= 1;
         var_s1 -= 1;
     }
 
