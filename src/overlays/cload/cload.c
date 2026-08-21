@@ -36,6 +36,10 @@ extern s32 D_80162364;
 extern s32 D_80162368;
 extern s32 D_80162370;
 extern s32 D_801468C4;
+extern u8 D_8014651C[];
+extern u8 D_8014652C[];
+extern u8 D_80146534[];
+extern u8 *D_80162374;
 
 /**
  * @see decomp.me (100%) TODO
@@ -378,5 +382,36 @@ void func_801407BC(void)
     else
     {
         D_8015A318 = D_8015A324;
+    }
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_801408A4(s32 arg0)
+{
+    if (D_80162350 >= 0x10)
+    {
+        if (D_80162374 == NULL)
+        {
+            D_80162374 = D_8014651C;
+        }
+    }
+    do
+    {
+        arg0 = func_8014401C(arg0);
+    } while (arg0 == 3);
+    if (arg0 == 2)
+    {
+        D_80162374 = D_80146534;
+    }
+    if (arg0 == 4)
+    {
+        D_80162374 = D_8014652C;
+    }
+    if (arg0 == 5)
+    {
+        D_80162350 = 0xF9;
+        D_80162374 = D_80146534;
     }
 }
