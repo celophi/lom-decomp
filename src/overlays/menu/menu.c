@@ -2351,7 +2351,7 @@ u8* menu_draw_frame(u8* packet_cursor, u_long* ot_entry, s32 frame_parity, s32 a
 
 /**
  * @brief Process D-pad and face-button input to navigate and select menu nodes.
- * @see decomp.me (99.42%) https://decomp.me/scratch/YoOml
+ * @see decomp.me (100%) https://decomp.me/scratch/YoOml
  */
 unsigned int menu_handle_node_input(void)
 {
@@ -2454,7 +2454,6 @@ unsigned int menu_handle_node_input(void)
     if (g_pad_input & (PAD_BTN_RIGHT | PAD_BTN_CROSS | 0x0200))
     {
         menu_play_se(MENU_SE_SELECT, MENU_SE_VOLUME);
-        new_var13 = 0xFF;
         new_var14 = browse_all_node;
         if (g_menu_active_node == new_var14)
         {
@@ -2473,7 +2472,7 @@ unsigned int menu_handle_node_input(void)
         }
         new_var11 = g_menu_nodes;
         temp_a1 = &g_menu_nodes[g_menu_active_node];
-        temp_v0_3 = new_var13;
+        temp_v0_3 = 0xFF;
         (&g_menu_nodes[g_menu_active_node])->u2.unk2 |= 0xC;
         new_var10 = temp_v0_3;
         if (temp_a1->u2.s.parent_idx == temp_v0_3) /* temp_v0_3 = MENU_NONE (0xFF) */
@@ -2520,11 +2519,11 @@ unsigned int menu_handle_node_input(void)
             return;
         }
         temp_a0_3 = (*new_var8).unk6 >> 0xF;
-        temp_v0_3 = temp_a1->u8_u.s.nav_y_hi;
+        new_var4 = temp_a1->u8_u.s.nav_y_hi;
         new_var12 = temp_a0_3;
         new_var15 = g_menu_content_height;
         g_content_cursor_y = MENU_CURSOR_Y_MIN;
-        g_content_cursor_y = ((temp_v0_3 * 2) | new_var12) - (new_var15 - g_content_cursor_y);
+        g_content_cursor_y = ((new_var4 * 2) | new_var12) - (new_var15 - g_content_cursor_y);
         if (g_content_cursor_y < MENU_CURSOR_Y_MIN)
         {
             g_content_cursor_y = MENU_CURSOR_Y_MIN;
@@ -2563,10 +2562,10 @@ unsigned int menu_handle_node_input(void)
         }
         else
         {
-            g_menu_hit_item_idx = menu_find_active_content_item(new_var12, temp_a1, &g_content_cursor_y, temp_v0_3);
+            g_menu_hit_item_idx = menu_find_active_content_item();
             if (g_menu_hit_item_idx != (-1))
             {
-                temp_v1_2 = &g_menu_content_table[new_var11[g_menu_scene_type].idx_nav.s.self_idx][g_menu_hit_item_idx];
+                temp_v1_2 = g_menu_content_table[new_var11[g_menu_scene_type].idx_nav.s.self_idx] - (-g_menu_hit_item_idx);
                 g_content_view_x = temp_v1_2->packed_x & 0x1FF;
                 new_var3 = temp_v1_2->y - 8;
                 g_menu_suppress_cursor = MENU_CURSOR_REVEAL_DELAY;
