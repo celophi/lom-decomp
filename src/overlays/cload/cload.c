@@ -35,6 +35,7 @@ extern s32 D_8016235C;
 extern s32 D_80162364;
 extern s32 D_80162368;
 extern s32 D_80162370;
+extern s32 D_801468C4;
 
 /**
  * @see decomp.me (100%) TODO
@@ -347,4 +348,35 @@ void func_801404D4(void)
     v = D_801468B8;
     v = v & ~7;
     D_801468B8 = v;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_801407BC(void)
+{
+    s32 delta;
+
+    func_80140D84();
+    D_8015A328 += 2;
+    if ((D_801468C4 & 0x7F) == 2)
+    {
+        func_801408A4();
+    }
+    if ((u16)D_80122988 == 0xFFFF)
+    {
+        D_80122988 = 0;
+    }
+    func_80140964();
+    if (D_8016235C != 0)
+    {
+        s32 base = D_8015A318;
+        delta = (D_8015A324 - D_8015A318) / D_8016235C;
+        D_8016235C -= 1;
+        D_8015A318 += delta;
+    }
+    else
+    {
+        D_8015A318 = D_8015A324;
+    }
 }
