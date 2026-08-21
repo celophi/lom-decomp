@@ -1182,3 +1182,8 @@ chkMemArea                          = 0x80034D78;
 _mcxStartFastDsr                    = 0x80034DD8;
 _mcxStopFastDsr                     = 0x80034ECC;
 _mcxVecDsr                          = 0x80034F44;
+
+// Field text renderer API exported to other overlays.
+field_text_reset_windows              = 0x800643E0;
+field_text_reset_scratch              = 0x8006441C;
+field_text_build_sprites              = 0x800644FC;
