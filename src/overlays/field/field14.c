@@ -1,5 +1,34 @@
 #include "common.h"
+#include "psyq/libgte.h"
 #include "psyq/libgpu.h"
+
+typedef struct
+{
+    s16 m[3][3];
+    s32 t[3];
+} FieldMatrix;
+
+typedef struct
+{
+    s16 unk0;
+    s16 unk2;
+    s16 unk4;
+    s16 unk6;
+} FieldSVector;
+
+typedef struct
+{
+    s32 vx;
+    s32 vy;
+    s32 vz;
+    s32 pad;
+} FieldVector;
+
+typedef struct
+{
+    s16 x;
+    s16 y;
+} Vec2s;
 
 typedef struct
 {
@@ -183,6 +212,197 @@ u8 *func_8007AE2C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
 
         primbuf = func_8007DA80(rec, part, primbuf, base);
     }
+
+    return primbuf;
+}
+
+#include "psyq/inline_c.h"
+#include "psyq/gte_dmpsx_compat.h"
+
+/**
+ * @brief Field radial fan primitive builder: transforms a ring of
+ *        rec->unk24 (or 1, if unset) directions through the actor's
+ *        rotation matrix via the GTE and emits one triangle primitive per
+ *        segment connecting a shared hub vertex to each rim point,
+ *        threading each into the depth-indexed ordering table in base[].
+ * @param rec Effect record supplying the position/rotation/segment-count
+ *            (unk24) fields.
+ * @param primbuf Output primitive buffer; advanced by one primitive (0x10
+ *                bytes) per fan segment.
+ * @param base Depth-indexed ordering-table / primitive base array.
+ * @return The advanced primbuf cursor.
+ * @see decomp.me (100%)
+ */
+u8 *func_8007B29C(Struct_D800FDF58 *rec, u8 *primbuf, s32 *base)
+{
+    FieldMatrix *mtx;
+    FieldSVector *dir;
+    FieldActorPartDef *part;
+    FieldVector *gte_out;
+    s32 radius;
+    Vec2s *base_screen;
+    FieldActorState *state;
+    u8 *var_s1;
+    s32 *temp_v0;
+    s32 angle;
+    s32 segments;
+    s32 hub_x;
+    s32 i;
+    s32 var_v0;
+    s32 var_v1;
+    s32 var_a0;
+    s32 var_t0;
+    s32 temp_v1;
+    s8 var_v0_6;
+    s8 var_v0_7;
+
+    gte_out = (FieldVector *) 0x1F800010;
+    base_screen = (Vec2s *) 0x1F800020;
+    dir = (FieldSVector *) 0x1F800050;
+    mtx = (FieldMatrix *) 0x1F800058;
+
+    part = &g_field_actor_slots[rec->unk22].unk0[rec->unk23];
+    state = &g_field_actor_slots[rec->unk22];
+
+    base_screen->x = (s16) (0xA0 + D_800F22A0 / 0x100 + rec->unk0 / 0x100);
+    base_screen->y = (s16) (0x70 + D_800F22A4 / 0x100 + rec->unk4 / 0x100 - rec->unk8 / 0x200 - D_800F22A8 / 0x200);
+
+    func_8007D078(rec, part, mtx, state);
+    gte_SetRotMatrix(mtx);
+
+    var_v0 = 0xA0 + D_800F22A0 / 0x100 + rec->unk0 / 0x100;
+    var_v1 = D_800F22A4;
+    *(s16 *) (primbuf + 0x8) = (s16) var_v0;
+    if (var_v1 < 0)
+    {
+        var_v1 += 0xFF;
+    }
+    *(s16 *) (primbuf + 0xA) = (s16) (0x70 + (var_v1 >> 8) + rec->unk4 / 0x100 - rec->unk8 / 0x200 - D_800F22A8 / 0x200);
+
+    func_8007D8D8(state, rec, part, primbuf + 4);
+
+    segments = 1;
+    if (rec->unk24 != 0)
+    {
+        segments = rec->unk24;
+    }
+
+    radius = (u32) ((part->unk23 + 1) * 5) >> 4;
+
+    dir->unk0 = (s16) ((u32) (rsin(0) * 5) >> 8);
+    dir->unk2 = 0;
+    dir->unk4 = (s16) ((s32) (rcos(0) * 0x50) >> 0xC);
+
+    gte_ldv0(dir);
+    gte_rtv0();
+    gte_stlvnl(gte_out);
+
+    *(s16 *) (primbuf + 0x8) = (s16) (base_screen->x + *(s16 *) &gte_out->vx);
+    *(s16 *) (primbuf + 0xA) = (s16) (base_screen->y + *(s16 *) &gte_out->vy);
+    hub_x = *(s32 *) (primbuf + 0x8);
+
+    i = 1;
+    if (i < segments)
+    {
+        do
+        {
+        var_s1 = primbuf + 0x14;
+        do { angle = i << 12; } while (0);
+        if (i & 1)
+        {
+            angle /= segments;
+            dir->unk0 = (s16) ((rsin(angle) * radius) >> 0xC);
+            dir->unk2 = 0;
+            dir->unk4 = (s16) ((rcos(angle) * radius) >> 0xC);
+        }
+        else
+        {
+            angle /= segments;
+            dir->unk0 = (s16) ((u32) (rsin(angle) * 5) >> 8);
+            dir->unk2 = 0;
+            dir->unk4 = (s16) ((s32) (rcos(angle) * 0x50) >> 0xC);
+        }
+
+            *(s8 *) (var_s1 - 0x11) = 3;
+            *(s8 *) (var_s1 - 0xD) = 0x40;
+            ((rec->unk1C & 0x800000) ?
+             (*(u8 *)(var_s1 - 0xD) = *(u8 *)(var_s1 - 0xD) | 2) :
+             (*(u8 *)(var_s1 - 0xD) = *(u8 *)(var_s1 - 0xD) & ~2));
+
+            gte_ldv0(dir);
+            gte_rtv0();
+            gte_stlvnl(gte_out);
+
+            *(s16 *) (var_s1 - 0x8) = (s16) (base_screen->x + *(s16 *) &gte_out->vx);
+            *(s16 *) (var_s1 - 0x6) = (s16) (base_screen->y + *(s16 *) &gte_out->vy);
+            *(s32 *) (primbuf + 0x18) = *(s32 *) (primbuf + 0x0C);
+            *(s32 *) (primbuf + 0x14) = *(s32 *) (primbuf + 0x04);
+
+            temp_v1 = (s32) rec->unk8 >> 7;
+            if (temp_v1 < 0)
+            {
+                s32 addr;
+                addr = (s32) primbuf & 0xFFFFFF;
+                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0] & 0xFFFFFF);
+                primbuf += 0x10;
+                base[0] = (base[0] & 0xFF000000) | addr;
+            }
+            else if (temp_v1 >= 0x1000)
+            {
+                s32 addr;
+                addr = (s32) primbuf & 0xFFFFFF;
+                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
+                primbuf += 0x10;
+                base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
+            }
+            else
+            {
+                s32 addr;
+                s32 *entry;
+                addr = (s32) primbuf & 0xFFFFFF;
+                *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[temp_v1] & 0xFFFFFF);
+                entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
+                primbuf += 0x10;
+                *entry = (*entry & 0xFF000000) | addr;
+            }
+                i++;
+        } while (i < segments);
+    }
+
+    *(s8 *) (primbuf + 3) = 3;
+    *(s8 *) (primbuf + 7) = 0x40;
+    ((rec->unk1C & 0x800000) ? (*(u8 *)(primbuf + 7) = *(u8 *)(primbuf + 7) | 2) : (*(u8 *)(primbuf + 7) = *(u8 *)(primbuf + 7) & ~2));
+    *(s32 *) (primbuf + 0xC) = hub_x;
+
+    temp_v1 = (s32) rec->unk8 >> 7;
+    if (temp_v1 < 0)
+    {
+        s32 addr;
+        addr = (s32) primbuf & 0xFFFFFF;
+        *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0] & 0xFFFFFF);
+        primbuf += 0x10;
+        base[0] = (base[0] & 0xFF000000) | addr;
+    }
+    else if (temp_v1 >= 0x1000)
+    {
+        s32 addr;
+        addr = (s32) primbuf & 0xFFFFFF;
+        *(s32 *) (primbuf + 0) = (*(s32 *) (primbuf + 0) & 0xFF000000) | (base[0xFFF] & 0xFFFFFF);
+        primbuf += 0x10;
+        base[0xFFF] = (base[0xFFF] & 0xFF000000) | addr;
+    }
+    else
+    {
+        s32 addr; s32 *entry; s32 srcval;
+        addr = (s32) primbuf & 0xFFFFFF;
+        srcval = base[temp_v1];
+        *(s32 *) primbuf = (*(s32 *) primbuf & 0xFF000000) | (srcval & 0xFFFFFF);
+        entry = (s32 *) ((((s32) rec->unk8 >> 7) << 2) + (s32) base);
+        primbuf += 0x10;
+        *entry = (*entry & 0xFF000000) | addr;
+    }
+
+    primbuf = func_8007DA80(rec, part, primbuf, base);
 
     return primbuf;
 }
