@@ -266,7 +266,7 @@ typedef struct
 } Struct_801ED400;
 
 #include "psyq/inline_c.h"
-#include "psyq/gte_fixes.h"
+#include "psyq/gte_dmpsx_compat.h"
 
 extern s32 g_field_track_index;
 extern s32 D_800F22A0;

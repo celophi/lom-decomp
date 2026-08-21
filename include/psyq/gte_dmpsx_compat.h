@@ -2,40 +2,22 @@
 #define _PSYQ_GTE_FIXES_H
 
 /**
- * @file gte_fixes.h
- * @brief Corrected replacements for psyq/inline_c.h's "Type 2" (no-operand)
- *        GTE macros.
+ * @file gte_dmpsx_compat.h
+ * @brief GNU-as-compatible replacements for Psy-Q DMPSX GTE macros.
  *
- * Every no-operand GTE macro in the vendored inline_c.h (gte_rtv0(),
- * gte_rtps(), gte_nclip(), and friends) hardcodes a small placeholder
- * `.word` value (0x7f, 0xbf, 0x13f, 0x117f, ...) instead of the real COP2
- * instruction word. This is not a maspsx/GNU-`as` translation issue - a
- * `.word` directive is never interpreted or rewritten by any assembler,
- * PSY-Q's own `aspsx` included, so the SDK header is simply wrong/a stub for
- * this entire macro family, on real PSY-Q too. The Castlevania: Symphony of
- * the Night decompilation (github.com/Xeeynamo/sotn-decomp,
- * include/psxsdk/libgte.h) hit the same bug independently and fixes it the
- * same way: hardcode the real opcode word directly. Their corrected values
- * agree exactly with ours for every op both projects use.
+ * Psy-Q's inline_c.h "Type 2" GTE macros emit small `.word` values such as
+ * 0x7f, 0xbf, and 0x13f. These are intentional dummy opcodes consumed by
+ * Sony's DMPSX post-compiler, which replaces them with the actual GTE/COP2
+ * instructions before assembly by ASPSX.
  *
- * `#include` this file after "psyq/inline_c.h" in any source that calls one
- * of the corrected macros below; the redefinition warning GCC prints
- * ("`gte_rtv0' redefined" / "this is the location of the previous
- * definition") is expected and harmless.
+ * This project builds C through GCC -> maspsx -> GNU as and does not run
+ * DMPSX. Without that post-processing step, GNU as emits the dummy `.word`
+ * values literally.
  *
- * Values are the standard PS1 GTE COP2 opcode encoding (bit 25 set marks a
- * GTE compute op; the remaining 25 bits are the per-instruction cofun
- * field), cross-checked against this project's own include/gte_macros.inc
- * (the GAS-macro equivalent used when reassembling splat output) and, for
- * rtv0/rtps/rtpt/nclip/avsz3/avsz4, against sotn-decomp's independently
- * derived values. gte_rtv0() (func_8007AA2C, field13.c) and gte_sqr0()
- * (func_8006D79C, field7.c, WIP) are build/diff-verified against an actual
- * matched function; the rest are transcribed from the same verified opcode
- * table but not yet exercised by a match. gte_rt(), gte_mvlvtr(), gte_nop(),
- * gte_FlipRotMatrixX(), and gte_FlipTRX() are intentionally NOT corrected
- * here - they're composite/non-arithmetic helpers with no single-opcode
- * equivalent to cross-check against. Verify by diff before trusting any one
- * of these in a new match.
+ * These compatibility definitions therefore replace the DMPSX dummy values
+ * with the final GTE instruction words directly. This is the same general
+ * approach used by other PS1 decompilation projects when building Psy-Q-style
+ * inline GTE macros with GNU tools.
  */
 
 #define gte_rtps() __asm__ volatile("nop;nop;.word 0x4A180001")

@@ -260,7 +260,7 @@ typedef struct
 } TrackPlacement;
 
 #include "psyq/inline_c.h"
-#include "psyq/gte_fixes.h"
+#include "psyq/gte_dmpsx_compat.h"
 
 extern s32 D_800F22A0;
 extern s32 D_800F22A4;

@@ -8,17 +8,30 @@ typedef struct
     s16 h;
 } RECT;
 
+typedef struct Packet Packet;
+struct Packet
+{
+    /* 0x0 */ s32 unk0;
+    /* 0x4 */ s32 unk4;
+    /* 0x8 */ void (*unk8)();
+};
+
 extern s32 D_80122988;
 extern s32 D_80146918;
+extern s32 D_801468B8;
 extern s32 D_8014A920;
 extern u8 D_8014A988[];
 extern s16 D_8014EA38;
 extern s32 D_8015A310;
+extern s32 D_8015A318;
 extern s32 D_8015A320;
+extern s32 D_8015A324;
 extern s32 D_8015A328;
 extern u8 D_8015A350[];
 extern s32 D_80162350;
+extern s32 D_80162354;
 extern s32 D_80162358;
+extern s32 D_8016235C;
 extern s32 D_80162364;
 extern s32 D_80162368;
 extern s32 D_80162370;
@@ -178,4 +191,160 @@ s32 func_80140448(s32 arg0)
     func_80063194();
     D_80162368 ^= 1;
     return 0;
+}
+
+void func_80140DA4();
+void func_80141474();
+void func_801414D0();
+void func_80141544();
+void func_801415B8();
+void func_80141CD0();
+Packet *func_80141D04();
+
+/**
+ * @brief Build the fixed 5-entry GPU primitive/callback chain for the loader.
+ * @note WIP. Structure, control flow, and the FRAME-04 dead-call frame padding
+ *       are correct; the residual is a register-allocation permutation - the
+ *       value temp lands in v1 (target v0) and the five hoisted mask constants
+ *       occupy a permuted set of saved registers.
+ * @see decomp.me (81.18%) TODO
+ */
+void func_801404D4(void)
+{
+    Packet *p;
+    s32 v;
+    s32 v1;
+
+    D_8016235C = 0;
+    D_8015A324 = 0;
+    D_8015A318 = 0;
+    D_80162354 = 0;
+    D_80162364 = 0;
+    if (0)
+    {
+        func_80141CD0(0, 0, 0, 0, 0);
+    }
+    func_80141CD0();
+    v = D_801468B8;
+    v = v & ~7;
+    v = v | 1;
+    D_801468B8 = v;
+
+    p = func_80141D04();
+    p->unk8 = func_80140DA4;
+    v = p->unk0;
+    v = v & ~0x78;
+    v = v | 8;
+    v = v & 0xFFFF007F;
+    v = v | 0xE00;
+    p->unk0 = v;
+    *((u8 *)p + 2) = 0x4A;
+    v = p->unk4;
+    v = v & ~0x200;
+    p->unk4 = v;
+    v1 = p->unk0;
+    v1 = v1 & 0xFFFFFF;
+    v1 = v1 | 0x08000000;
+    p->unk0 = v1;
+    v = v | 1;
+    v = v & ~0x1FE;
+    v = v | 0x92;
+    p->unk4 = v;
+
+    p = func_80141D04();
+    p->unk8 = func_80141474;
+    v = p->unk0;
+    v = v & ~7;
+    v = v | 2;
+    v = v & ~0x78;
+    v = v | 8;
+    v = v & 0xFFFF007F;
+    v = v | 0x2800;
+    p->unk0 = v;
+    *((u8 *)p + 2) = 0xC;
+    v = p->unk4;
+    v = v & ~0x200;
+    p->unk4 = v;
+    v1 = p->unk0;
+    v1 = v1 & 0xFFFFFF;
+    v1 = v1 | 0xA0000000;
+    p->unk0 = v1;
+    v = p->unk4;
+    v = v & ~1;
+    v = v & ~0x1FE;
+    v = v | 0x1E;
+    p->unk4 = v;
+
+    p = func_80141D04();
+    v = p->unk0;
+    v = v & ~7;
+    v = v | 2;
+    v = v & ~0x78;
+    v = v | 8;
+    v = v & 0xFFFF007F;
+    v = v | 0xC00;
+    p->unk0 = v;
+    p->unk8 = func_801414D0;
+    *((u8 *)p + 2) = 0x2C;
+    v = p->unk4;
+    v = v & ~0x200;
+    p->unk4 = v;
+    v1 = p->unk0;
+    v1 = v1 & 0xFFFFFF;
+    v1 = v1 | 0x80000000;
+    p->unk0 = v1;
+    v = v & ~1;
+    v = v & ~0x1FE;
+    v = v | 0x1E;
+    p->unk4 = v;
+
+    p = func_80141D04();
+    v = p->unk0;
+    v = v & ~7;
+    v = v | 2;
+    v = v & ~0x78;
+    v = v | 8;
+    v = v & 0xFFFF007F;
+    v = v | 0x5400;
+    p->unk0 = v;
+    p->unk8 = func_80141544;
+    *((u8 *)p + 2) = 0x2C;
+    v = p->unk4;
+    v = v & ~0x200;
+    p->unk4 = v;
+    v1 = p->unk0;
+    v1 = v1 & 0xFFFFFF;
+    v1 = v1 | 0x80000000;
+    p->unk0 = v1;
+    v = v & ~1;
+    v = v & ~0x1FE;
+    v = v | 0x1E;
+    p->unk4 = v;
+
+    p = func_80141D04();
+    p->unk8 = func_801415B8;
+    v = p->unk0;
+    v = v & ~7;
+    v = v | 2;
+    v = v & ~0x78;
+    v = v | 8;
+    v = v & 0xFFFF007F;
+    v = v | 0xF00;
+    p->unk0 = v;
+    *((u8 *)p + 2) = 0xA0;
+    v = p->unk4;
+    v = v & ~0x200;
+    p->unk4 = v;
+    v1 = p->unk0;
+    v1 = v1 & 0xFFFFFF;
+    v1 = v1 | 0x04000000;
+    p->unk0 = v1;
+    v = v | 1;
+    v = v & ~0x1FE;
+    v = v | 0x66;
+    p->unk4 = v;
+
+    v = D_801468B8;
+    v = v & ~7;
+    D_801468B8 = v;
 }

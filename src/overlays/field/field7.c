@@ -253,7 +253,7 @@ extern s32 D_80105770;
 extern u8* D_801058D4;
 extern s32 g_field_track_index;
 
-#include "psyq/gte_fixes.h"
+#include "psyq/gte_dmpsx_compat.h"
 
 /*
  * Psy-Q inline GTE (COP2) macros. The original build used the vendor
