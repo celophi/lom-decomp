@@ -760,7 +760,7 @@ typedef enum
  * @param alignment Horizontal alignment of the run relative to @p x.
  * @return Next free primitive-buffer address, immediately after the draw-mode packet.
  *
- * @see func_800644FC
+ * @see field_text_build_sprites
  * @see decomp.me (100%) https://decomp.me/scratch/AW5Sa
  */
 void* menu_build_text_run(
@@ -776,7 +776,7 @@ void* menu_build_text_run(
     buf[len] = 0;
 
     /* Populate one SPRT per decoded glyph. */
-    count = func_800644FC(sprite_cursor, buf, text_color);
+    count = field_text_build_sprites(sprite_cursor, buf, text_color);
 
     /* Convert the requested anchor into the run's left edge. */
     if (alignment != MENU_TEXT_ALIGN_RIGHT)

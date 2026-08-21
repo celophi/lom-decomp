@@ -447,7 +447,7 @@ extern u8 g_random_names_off[];
  */
 void play_menu_sfx(s32 sfx_id, s32 volume);
 void func_80063194(void);
-void func_8006441C(void);
+void field_text_reset_scratch(void);
 void field_update_audio_timer(void);
 void func_800A9E78(void);
 void func_800AA02C(void);
@@ -557,7 +557,7 @@ s32 gname_run(RenderContext* render_buffers, const u8* initial_name, u8* active_
         draw_buffer = next_buffer;
         ClearOTagR(draw_buffer->ot, GNAME_OT_ENTRY_COUNT);
         draw_buffer->prim_cursor = &draw_buffer->ot[GNAME_OT_ENTRY_COUNT];
-        func_8006441C();
+        field_text_reset_scratch();
         func_800A9E78();
         render_fade_overlay(draw_buffer);
         gname_tick(draw_buffer);
@@ -771,7 +771,7 @@ void gname_init(void)
     load_name_entry_tim();
     func_800AA02C();
     g_startup_delay = GNAME_STARTUP_DELAY_FRAMES;
-    func_8006441C();
+    field_text_reset_scratch();
     reset_run_state();
     func_80063194();
 }
@@ -2090,7 +2090,7 @@ static void recalc_name_width(void)
     s32 glyph_count;
     s32 glyph_index;
 
-    glyph_count = func_800644FC(glyphs, g_active_name, NAME_MEASURE_TEXT_COLOR);
+    glyph_count = field_text_build_sprites(glyphs, g_active_name, NAME_MEASURE_TEXT_COLOR);
     glyph_index = 0;
     g_name_pixel_width = 0;
 

@@ -353,7 +353,7 @@ void func_800642D4(void)
  * @see decomp.me (100%)
  */
 
-void func_800643E0(void)
+void field_text_reset_windows(void)
 {
     s32 slot;
     s32* flags_ptr;
@@ -382,7 +382,7 @@ void func_800643E0(void)
  * @see decomp.me (100%)
  */
 
-void func_8006441C(void)
+void field_text_reset_scratch(void)
 {
     if ((g_field_text_window0_flags & 7) == 4)
     {
@@ -431,7 +431,7 @@ void func_8006441C(void)
  * @see decomp.me (100%)
  */
 
-s32 func_800644FC(SPRT* prim, u8* text, u16 style)
+s32 field_text_build_sprites(SPRT* prim, u8* text, u16 style)
 {
     s32 count = 0;
     FieldTextState* st = (FieldTextState*)0x801ED0CC;

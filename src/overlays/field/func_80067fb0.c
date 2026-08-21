@@ -1,7 +1,7 @@
 #include "common.h"
 
 void func_800A710C(void);
-void func_8006441C(void);
+void field_text_reset_scratch(void);
 void func_800A8880(s32);
 void func_80063194(void);
 
@@ -17,7 +17,7 @@ void func_80067FB0(s32 arg0)
         func_800A710C();
         if (D_800F229C[0] != 0)
         {
-            func_8006441C();
+            field_text_reset_scratch();
             if (D_800F229C[0] != 0)
             {
                 func_800A8880(arg0);
@@ -110,7 +110,7 @@ extern Struct_D80105AE0 D_80105AE0[];
 extern D_800FD818_type D_800FD818[];
 extern s32 D_8012291C;
 
-void func_800643E0(void);
+void field_text_reset_windows(void);
 void func_8006C3FC(Struct_D800FDF58*, void*);
 void field_restore_default_action_animation_mappings(s32);
 void func_80092124(void);
@@ -126,7 +126,7 @@ void func_8006809C(void)
     g_field_fade_target.g = g_field_fade_restore_color.green;
     g_field_fade_target.b = g_field_fade_restore_color.blue;
     g_field_fade_target.steps = 5;
-    func_800643E0();
+    field_text_reset_windows();
 
     D_800F229C[0] = 0;
 

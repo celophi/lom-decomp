@@ -82,3 +82,6 @@ g_gosub_dialog_handler                   = 0x80174A58;
 // Grouped option ranges
 g_gosub_group_first_indices              = 0x80140068;
 g_gosub_group_counts                     = 0x80140074;
+
+// Field dialogue/text renderer exports used by this overlay.
+field_text_reset_scratch             = 0x8006441C;

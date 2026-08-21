@@ -44,11 +44,13 @@ extern s32 D_8014A920;
 extern u8 D_8014A988[];
 extern s16 D_8014EA38;
 extern s32 D_8015A310;
+extern s32 D_8015A314;
 extern s32 D_8015A318;
 extern s32 D_8015A31C;
 extern s32 D_8015A320;
 extern s32 D_8015A324;
 extern s32 D_8015A328;
+extern s32 D_8015A330;
 extern u8 D_8015A350[];
 extern s32 D_80162350;
 extern s32 D_80162354;
@@ -97,6 +99,10 @@ extern s32 D_80162DD0;
 extern s32 D_80162360;
 extern u16 D_80145ED0;
 extern u16 D_80145ED6;
+extern u16 D_80145ED8;
+extern u16 D_80145EDA;
+extern u16 D_80145EDC;
+extern u16 D_80145EDE;
 extern u16 D_80145EF0;
 extern u16 D_80145F4C;
 extern s32 D_8016237C;
@@ -108,7 +114,7 @@ extern u16 D_80146338[];
 extern int strncmp(char *, char *, int);
 s32 func_801428DC();
 s32 func_80142AD0(s32 ot, s32 prim, s32 arg2, s32 arg3);
-void func_80142E7C();
+s32 func_80142E7C(s32 *ot, s32 prim, s32 arg2, s32 arg3);
 s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
 u8 *func_80141428(void *);
@@ -260,11 +266,11 @@ s32 func_80140448(s32 arg0)
     if (D_80146918 != 0)
     {
         func_80144A38();
-        func_800643E0();
+        field_text_reset_windows();
         func_80019788(0);
         return 1;
     }
-    func_8006441C();
+    field_text_reset_scratch();
     func_80145C5C();
     func_801407BC(arg0);
     func_80145C98();
@@ -1958,4 +1964,189 @@ void func_80142D68(s32 arg0)
     func_80143DE4();
     D_80162374 = 0;
     D_80162360 = arg0;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80142E7C(s32 *ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 state = D_80162360;
+    u8 *base;
+
+    if (0)
+    {
+        func_80143520(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    switch (state)
+    {
+    case 0:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145ED8, 0x3C), 4, -arg2 + 0x80, -arg3, 2);
+        base = (u8 *)&D_80145ED8 - 0x3C;
+        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x56), 4, -arg2 + 0x80, -arg3 + 0x10, 2);
+        break;
+    case 1:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EDA, 0x3E), 4, -arg2 + 0x80, -arg3, 2);
+        base = (u8 *)&D_80145EDA - 0x3E;
+        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x56), 4, -arg2 + 0x80, -arg3 + 0x10, 2);
+        break;
+    case 2:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EDC, 0x40), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    case 3:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EDE, 0x42), 4, -arg2 + 0x80, -arg3, 2);
+        break;
+    case 4:
+        prim = func_800A88A0(prim, ot, GLYPH_SYM(D_80145EDA, 0x3E), 4, -arg2 + 0x80, -arg3, 2);
+        base = (u8 *)&D_80145EDA - 0x3E;
+        prim = func_800A88A0(prim, ot, GLYPH_OFF(base, 0x5C), 4, -arg2 + 0x80, -arg3 + 0x10, 2);
+        break;
+    }
+
+    if (D_80122988 & 0x220)
+    {
+        D_801468B8.unk0 &= ~7;
+        func_800AA02C();
+    }
+
+    return prim;
+}
+
+typedef struct
+{
+    /* 0x00 */ s32 unk0;
+    /* 0x04 */ s32 unk4;
+    /* 0x08 */ s16 unk8;
+    /* 0x0A */ s16 unkA;
+    /* 0x0C */ u8 unkC;
+    /* 0x0D */ u8 unkD;
+    /* 0x0E */ s16 unkE;
+    /* 0x10 */ s16 unk10;
+    /* 0x12 */ s16 unk12;
+    /* 0x14 */ u8 unk14;
+    /* 0x15 */ u8 unk15;
+    /* 0x16 */ s16 unk16;
+    /* 0x18 */ s16 unk18;
+    /* 0x1A */ s16 unk1A;
+    /* 0x1C */ u8 unk1C;
+    /* 0x1D */ u8 unk1D;
+    /* 0x1E */ s16 unk1E;
+    /* 0x20 */ s16 unk20;
+    /* 0x22 */ s16 unk22;
+    /* 0x24 */ u8 unk24;
+    /* 0x25 */ u8 unk25;
+} StructFT4;
+
+/**
+ * @brief Draw one icon-highlight row: set the text scissor window and build a
+ *        textured (POLY_FT4) quad for the icon at slot @p index, linked into
+ *        the ordering table.
+ * @param prim primitive cursor the FT4 quad is written into.
+ * @param ot ordering-table head threaded through the OT-link update.
+ * @param x quad left x (unk8/unk18).
+ * @param y quad top y (unkA/unk12).
+ * @param highlight x offset added for the quad's right edge (unk10/unk20).
+ * @param icon icon id; 0x7F skips the whole draw, <2 / <0x4F / >=0x4F pick the
+ *             scissor source (func_800A5638 vs the D_8015A314 table vs
+ *             func_800A55E4 with D_8015A31C).
+ * @param index slot index; drives the scissor x and the quad UV base (index*3).
+ * @param row when 1 and icon<2 uses the func_800A5638 scissor path.
+ * @return the advanced primitive cursor (prim + 0x28), or prim unchanged when
+ *         icon == 0x7F.
+ * @note WIP 85.14% (122/145 exact). Structure, control flow, the -0x40 frame,
+ *       prim in s2 (via `base = index * 3` kept as a single post-branch LOCAL so
+ *       local-alloc gives it s0 and the long-lived global prim keeps s2), and
+ *       the OtTag setaddr link are all in place. Residue is packet-block
+ *       scheduling in the final basic block: the target hoists the `highlight`
+ *       (sp+0x50) load and the `prim->unk0` OT-read early to hide latency, which
+ *       pushes the `uv = base * 0x10` shift later, whereas this compile emits the
+ *       uv block right after the code bytes. sched_oracle reports the block as
+ *       NON_LUID / regalloc-decided (not a clean sched1 emit-order fix), and the
+ *       permuter (v2) only found scaffolding (a stray pointer split plus a junk
+ *       `(double)` cast). Also 2 minor argdiff rows: the `row` compare temp
+ *       lands a0 vs target v1, and the func_800A55E4 path loads D_8015A31C after
+ *       &D_8015A330 (target loads it first; a statement-precompute was inert via
+ *       copy-propagation). working/func_801430C8 kept for a future 100% pass.
+ * @see decomp.me (85.14%) TODO
+ */
+s32 func_801430C8(s32 prim, s32 *ot, s32 x, s32 y, s32 highlight, s32 icon, s32 index, s32 row)
+{
+    RECT rect;
+    s32 base;
+    u8 uv;
+    u8 uv2;
+    s16 tmp;
+    s32 v;
+    s32 *ctx;
+
+    if (icon == 0x7F)
+    {
+        return prim;
+    }
+
+    rect.x = index * 0x10;
+    rect.y = 0x1F2;
+    rect.w = 0x10;
+    rect.h = 1;
+    v = icon < 0x4F;
+    if (row == 1)
+    {
+        if (icon < 2)
+        {
+            ctx = &D_8015A330;
+            func_800A5638(ctx, icon);
+            goto block_8;
+        }
+        v = icon < 0x4F;
+    }
+    if (v == 0)
+    {
+        ctx = &D_8015A330;
+        func_800A55E4(ctx, D_8015A31C);
+    block_8:
+        func_80019A34(&rect, ctx);
+        func_80019788(0);
+    }
+    else
+    {
+        func_80019A34(&rect, D_8015A314 + *(s32 *)(D_8015A314 + icon * 4 + 4));
+    }
+
+    base = index * 3;
+    rect.x = (base * 4) + 0x140;
+    rect.w = 0xC;
+    rect.h = 0x30;
+    rect.y = 0xD0;
+    func_80019A34(&rect, D_8015A314 + *(s32 *)(D_8015A314 + icon * 4 + 4) + 0x20);
+
+    ((StructFT4 *)prim)->unk4 = 0x808080;
+    ((u8 *)prim)[3] = 9;
+    ((u8 *)prim)[7] = 0x2C;
+    ((StructFT4 *)prim)->unk18 = x;
+    ((StructFT4 *)prim)->unk8 = x;
+    ((StructFT4 *)prim)->unk12 = y;
+    ((StructFT4 *)prim)->unkA = y;
+    uv = base * 0x10;
+    ((StructFT4 *)prim)->unk1C = uv;
+    ((StructFT4 *)prim)->unkC = uv;
+    uv2 = uv + 0x2F;
+    ((StructFT4 *)prim)->unk24 = uv2;
+    ((StructFT4 *)prim)->unk14 = uv2;
+    ((StructFT4 *)prim)->unk15 = 0xD0;
+    ((StructFT4 *)prim)->unkD = 0xD0;
+    tmp = x + highlight;
+    ((StructFT4 *)prim)->unk20 = tmp;
+    ((StructFT4 *)prim)->unk10 = tmp;
+    tmp = y + 0x2F;
+    ((StructFT4 *)prim)->unk22 = tmp;
+    ((StructFT4 *)prim)->unk1A = tmp;
+    ((StructFT4 *)prim)->unk25 = 0xFF;
+    ((StructFT4 *)prim)->unk1D = 0xFF;
+    ((StructFT4 *)prim)->unkE = (index & 0x3F) | 0x7C80;
+    ((StructFT4 *)prim)->unk16 = 5;
+    ((OtTag *)prim)->addr = ((OtTag *)ot)->addr;
+    ((OtTag *)ot)->addr = (u32)prim;
+
+    return prim + 0x28;
 }
