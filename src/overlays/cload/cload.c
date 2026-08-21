@@ -64,6 +64,8 @@ extern s32 D_801468C4;
 extern u8 D_8014651C[];
 extern u8 D_8014652C[];
 extern u8 D_80146534[];
+extern u8 D_8014653C[];
+extern s32 D_8014A924;
 extern u8 *D_80162374;
 extern s32 D_8003EC9C;
 extern char D_800ECF7C[];
@@ -85,6 +87,14 @@ extern u16 D_80145EB0;
 extern u16 D_80145EC4;
 extern u16 D_80145EC8;
 extern u16 D_80145ECA;
+extern u16 D_80145ECC;
+extern u16 D_80145ECE;
+extern u8 D_80146920[];
+extern u8 D_80042FD8[];
+extern s32 D_80042FB4;
+extern s32 D_80162DC8;
+extern s32 D_80162DD0;
+extern s32 D_80162360;
 extern u16 D_80145ED0;
 extern u16 D_80145ED6;
 extern u16 D_80145EF0;
@@ -96,7 +106,9 @@ extern u8 D_800EC3F6[2];
 extern u16 D_80146338[];
 
 extern int strncmp(char *, char *, int);
-void func_801428DC();
+s32 func_801428DC();
+s32 func_80142AD0(s32 ot, s32 prim, s32 arg2, s32 arg3);
+void func_80142E7C();
 s32 func_800A88A0(s32 prim, s32 *ot, void *glyph, s32 a3, s32 x, s32 y, s32 mode);
 s32 func_800A8A78(s32 *ot, s32 prim, s32 ch, s32 a3, Vec2s *pos, s32 mode);
 u8 *func_80141428(void *);
@@ -1641,4 +1653,309 @@ StructS0 *func_8014269C(StructS0 *p, s32 *ot, s32 x, s32 y, s32 w, s32 h, s32 co
     p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
     *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
     return p + 1;
+}
+
+/**
+ * @brief Ordering-table link word at the head of a GPU packet; mirrors the
+ *        P_TAG layout in include/psyq/libgpu.h.
+ * @note Writing the link through the 24-bit @c addr bitfield (setaddr) makes gcc
+ *       build the two mask constants in the order the original used; the
+ *       hand-written @c (x & 0xFF000000) | (y & 0xFFFFFF) form colours them the
+ *       other way round.
+ */
+typedef struct
+{
+    /* 0x0 */ u32 addr : 24; /* next-primitive address (24-bit) */
+    /* 0x3 */ u32 len : 8;   /* packet word count */
+} OtTag;
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+StructS0 *func_801427F8(StructS0 *p, s32 *ot, s32 x, s32 y, s32 flag)
+{
+    p->unk4 = 0x808080;
+    do
+    {
+        ((u8 *)p)[3] = 4;
+        ((u8 *)p)[7] = 0x64;
+        p->unk8 = x;
+        p->unkA = y;
+    } while (0);
+    if (flag != 0)
+    {
+        ((u8 *)p)[0xD] = 0;
+    }
+    else
+    {
+        ((u8 *)p)[0xD] = 0x10;
+    }
+    ((u8 *)p)[0xC] = 0x30;
+    *(s16 *)((u8 *)p + 0x10) = 0x10;
+    *(s16 *)((u8 *)p + 0x12) = 0x10;
+    p->unkE = 0x7D80;
+    ((OtTag *)p)->addr = ((OtTag *)ot)->addr;
+    ((OtTag *)ot)->addr = (u32)p;
+
+    p = (StructS0 *)((u8 *)p + 0x14);
+    ((u8 *)p)[3] = 1;
+    p->unk4 = 0xE100008A;
+    ((OtTag *)p)->addr = ((OtTag *)ot)->addr;
+    ((OtTag *)ot)->addr = (u32)p;
+    return (StructS0 *)((u8 *)p + 8);
+}
+
+/**
+ * @brief Draw the CD-load prompt glyph then set up the driver/GPU-packet state,
+ *        branching on the CD status (func_80144804) and the D_80122988 flags.
+ * @param ot ordering-table head threaded through the glyph/line draws.
+ * @param prim primitive buffer for the glyph draw (func_800A88A0).
+ * @param arg2 base for the row y-coordinate (-arg2 + 0x90).
+ * @param arg3 row delta applied to the draw extents.
+ * @return the StructS0* chain pointer returned by func_80143520.
+ * @note WIP 96.72% (121/125 exact). Required-to-match shapes in place:
+ *       FRAME-04 dead 9-arg call for the -0x38 outgoing-arg frame; ONE-EXIT
+ *       `goto ret` single return so the `v0 = result` copy is shared; block-C
+ *       laid out before block-B (target reaches C by branch, falls into B);
+ *       D_801468B8 accessed dually (CdStreamCtrl `.unk0` direct via %hi/%lo +
+ *       Packet* base for unk4/unk8/byte2); `tmp = 0xFFFF007F` bound before
+ *       `p->unk8` (born before the base pointer, wins its register); the unk4
+ *       update split as `tmp = (unk4 | 1) & ~0x1FE; unk4 = tmp | 0x56`.
+ *       Residual (4 rows): the split unk4 accumulator lands in a0 where the
+ *       target keeps it in v1, plus a 1-slot schedule shift on the
+ *       -0x1FF/unk4-load pair. Coupled block-B coloring; permuter best 130.
+ * @see decomp.me (96.72%) TODO
+ */
+s32 func_801428DC(s32 ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 result;
+    s32 y;
+
+    if (0)
+    {
+        func_80143520(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+    y = -arg2 + 0x90;
+    result = func_80143520(
+        func_800A88A0(prim, (s32 *)ot, (void *)((s32)&D_80145ECC - 0x30 + D_80145ECC), 4, y, -arg3, 2),
+        ot, y, 0xE - arg3);
+    if ((u32)(func_80144804() - 1) < 2)
+    {
+        D_801468B8.unk0 = D_801468B8.unk0 & ~7;
+        func_800AA02C();
+        func_800A3938(0x78, 0x80);
+        D_80162350 = 0xFF;
+        func_80143DE4();
+        D_80162374 = NULL;
+        goto ret;
+    }
+    if (D_80122988 & 0x40)
+    {
+        goto block_c;
+    }
+    if (!(D_80122988 & 0x220))
+    {
+        goto ret;
+    }
+    if (D_8014A924 == 0)
+    {
+        goto block_b;
+    }
+block_c:
+    D_801468B8.unk0 = D_801468B8.unk0 & ~7;
+    func_800AA02C();
+    func_800A3938(0x78, 0x80);
+    D_80162374 = D_80146534;
+    goto ret;
+block_b:
+    {
+        Packet *p = (Packet *)&D_801468B8;
+        s32 tmp;
+
+        func_800A3938(0x7E, 0x80);
+        D_8015A320 = 1;
+        D_80162374 = D_8014653C;
+        tmp = 0xFFFF007F;
+        p->unk8 = func_80142AD0;
+        D_801468B8.unk0 = (((((D_801468B8.unk0 & ~0x78) | 8) & ~7) | 1) & tmp) | 0x800;
+        ((u8 *)p)[2] = 0x5B;
+        tmp = (p->unk4 | 1) & ~0x1FE;
+        p->unk4 = tmp | 0x56;
+        D_801468B8.unk0 = (D_801468B8.unk0 & 0xFFFFFF) | 0x20000000;
+    }
+ret:
+    return result;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80142AD0(s32 ot, s32 prim, s32 arg2, s32 arg3)
+{
+    s32 y;
+    s32 result;
+    u8 *base;
+    u8 *p;
+    s32 vol;
+
+    if (0)
+    {
+        func_80142C58(0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    y = -arg2 + 0x90;
+    result = func_800A88A0(prim, (s32 *)ot, (void *)((s32)&D_80145ECE - 0x32 + D_80145ECE), 4, y, -arg3, 2);
+    base = (u8 *)&D_80145ECE - 0x32;
+    result = func_800A88A0(result, (s32 *)ot, GLYPH_OFF(base, 0x1E), 4, y, 0xE - arg3, 2);
+    result = func_800A88A0(result, (s32 *)ot, GLYPH_OFF(base, 0xB2), 4, y, 0x1C - arg3, 2);
+    result = func_80142C58(result, ot);
+
+    if (D_8015A320 != 0)
+    {
+        goto ret;
+    }
+
+    p = D_80146920;
+    vol = 0x80;
+    base = p;
+    if (func_80143648(base) == 0)
+    {
+        func_80142D68(4);
+        goto ret;
+    }
+
+    func_800A3938(0x7B, vol);
+    D_801468B8.unk0 = D_801468B8.unk0 & ~7;
+    func_80016E7C(base + 0x180, D_80042FD8, 0x3268);
+    D_8003EC9C = D_80042FD8[0xCF];
+    D_80042FB4 = func_8002054C(-1);
+    D_80146918 = 1;
+ret:
+    return result;
+}
+
+/**
+ * @brief Same word/half raw-store granularity as POLY_G4 in
+ *        include/psyq/libgpu.h; the r/g/b/code quad and each x/y pair are
+ *        written as single word/half stores (matching the target's
+ *        codegen), not per-channel byte assignments.
+ */
+typedef struct
+{
+    /* 0x0 */ s32 unk0;
+    /* 0x4 */ s32 unk4;
+    /* 0x8 */ s16 unk8;
+    /* 0xA */ s16 unkA;
+    /* 0xC */ s32 unkC;
+    /* 0x10 */ s16 unk10;
+    /* 0x12 */ s16 unk12;
+    /* 0x14 */ s32 unk14;
+    /* 0x18 */ s16 unk18;
+    /* 0x1A */ s16 unk1A;
+    /* 0x1C */ s32 unk1C;
+    /* 0x20 */ s16 unk20;
+    /* 0x22 */ s16 unk22;
+} PolyG4Words;
+
+/**
+ * @brief Build the CD-load progress-bar gouraud quad (a POLY_G4-shaped
+ *        packet) and link it into the ordering table.
+ * @param p packet cursor to write the quad into.
+ * @param ot ordering-table head threaded through the OT-link update.
+ * @return the advanced packet cursor (p + 0x24), or p unchanged if
+ *         D_80162DC8 is 0.
+ * @note WIP 94.26% (60/68 exact). D_80162DC8 gates the whole body; when set,
+ *       `elapsed` (VSync(-1) - D_80162DD0, clamped to 0x100) scales into the
+ *       quad's right-edge x extent (elapsed * 0x120, rounded via +0xFF for
+ *       negative values, then >>8) - a time-based progress bar. Required-to-
+ *       match shape: the two `>>8` stores are written inline
+ *       (`g->unk20 = extent >> 8; g->unk10 = extent >> 8;`), NOT through a
+ *       reassigned `extent = extent >> 8;` local - the reassignment costs
+ *       -7 exact rows (this single change was the jump from 82.28% to
+ *       94.26%, and incidentally fixed a second, separate-looking mismatch
+ *       around the OT-link mask too).
+ *       Residual (8 rows, SCHED-LUID): the target fills the elapsed-clamp
+ *       branch's delay slot with the start of the `g->unk14 = 0xFFFF00`
+ *       constant build (`lui`); this compile fills it by speculatively
+ *       re-running the `x * 9` shift with the pre-clamp value and redoing it
+ *       after the join (+1 insn). Named-local hoists of the 0xFFFF00/0xFFFFFF
+ *       constants to various earlier points all measured neutral or worse;
+ *       permuter (v2, ~16k iters) got to score 245 (from 575) via the same
+ *       inline->8 fix already applied here and did not find the remaining
+ *       delay-slot swap.
+ * @see decomp.me (94.26%) TODO
+ */
+StructS0 *func_80142C58(StructS0 *p, s32 *ot)
+{
+    PolyG4Words *g;
+    s32 elapsed;
+    s32 extent;
+
+    g = (PolyG4Words *)p;
+    if (D_80162DC8 != 0)
+    {
+        elapsed = func_8002054C(-1) - D_80162DD0;
+        if (elapsed >= 0x101)
+        {
+            elapsed = 0x100;
+        }
+        extent = elapsed * 0x120;
+        g->unk4 = 0xFF;
+        g->unkC = 0xFFFF;
+        g->unk1C = 0xFF0000;
+        ((u8 *)g)[3] = 8;
+        g->unk14 = 0xFFFF00;
+        ((u8 *)g)[7] = 0x38;
+        g->unk18 = 0;
+        g->unk8 = 0;
+        if (extent < 0)
+        {
+            extent += 0xFF;
+        }
+        g->unk20 = extent >> 8;
+        g->unk10 = extent >> 8;
+        g->unk12 = 0;
+        g->unkA = 0;
+        g->unk22 = 0x35;
+        g->unk1A = 0x35;
+        p->unk0 = (p->unk0 & 0xFF000000) | (*ot & 0xFFFFFF);
+        *ot = (*ot & 0xFF000000) | ((s32)p & 0xFFFFFF);
+        p = (StructS0 *)((u8 *)p + 0x24);
+    }
+    return p;
+}
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+void func_80142D68(s32 arg0)
+{
+    Packet *p;
+    s32 state;
+
+    func_800A3938(0x78, 0x80);
+    D_801468B8.unk0 = ((((D_801468B8.unk0 & ~0x78) | 8) & ~7 | 1) & 0xFFFF007F | 0x1000) & 0xFFFFFF;
+    p = (Packet *)&D_801468B8;
+    p->unk4 |= 1;
+    if (arg0 < 2 || arg0 == 4)
+    {
+        p->unk4 = (p->unk4 & ~0x1FE) | 0x3E;
+        state = 0x60;
+    }
+    else
+    {
+        p->unk4 = (p->unk4 & ~0x1FE) | 0x1E;
+        state = 0x70;
+    }
+    ((u8 *)p)[2] = state;
+    p->unk8 = func_80142E7C;
+    func_800AA02C();
+    D_80162370 = 0;
+    D_8015A320 = 0;
+    D_80162364 = 0;
+    D_8015A310 = 0;
+    D_80162350 = 0xFF;
+    func_80143DE4();
+    D_80162374 = 0;
+    D_80162360 = arg0;
 }
