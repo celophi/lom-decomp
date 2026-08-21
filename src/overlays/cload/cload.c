@@ -158,3 +158,24 @@ void func_8014033C(void)
     func_80067B8C();
     func_80067EB4(0x100, 0x100, 0x100, 0x14);
 }
+
+/**
+ * @see decomp.me (100%) TODO
+ */
+s32 func_80140448(s32 arg0)
+{
+    if (D_80146918 != 0)
+    {
+        func_80144A38();
+        func_800643E0();
+        func_80019788(0);
+        return 1;
+    }
+    func_8006441C();
+    func_80145C5C();
+    func_801407BC(arg0);
+    func_80145C98();
+    func_80063194();
+    D_80162368 ^= 1;
+    return 0;
+}
