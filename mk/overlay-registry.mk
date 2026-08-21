@@ -44,7 +44,9 @@ overlay_checkps_gcc_272_gnu_objcopy_flags_cdrom := --remove-section=.data --remo
 overlay_checkps_target_as_extra_flags_cdrom := -L
 
 OVERLAYS += cload
-overlay_cload_gcc_280_g0_srcs := src/overlays/cload/unk1.c
+overlay_cload_gcc_272_cdk_g0_srcs := \
+	src/overlays/cload/cload.c \
+	src/overlays/cload/unk1.c
 
 OVERLAYS += field
 overlay_field_gcc_272_cdk_g0_srcs := \
