@@ -12,6 +12,8 @@ The current target is `SLUS_010.13` (disc serial **SLUS-01013**). The goal is to
 
 This is a decompilation project, **not a PC port**. The repository does not include the game executable, overlay binaries, artwork, audio, or other copyrighted game data. You must provide the required files from your own copy of the game.
 
+The primary motivation for this project is to preserve the original game's logic and behavior for educational research and potential modding capabilities.
+
 ## Progress
 
 The project ships the main executable (`SLUS_010.13`) plus 17 overlays. Each module moves through roughly these states:
@@ -455,7 +457,12 @@ This project builds on tools and research from the wider decompilation community
 - [decomp.me](https://decomp.me)
 - [decomp.dev](https://decomp.dev)
 
-Other long-running decompilation projects such as [sotn-decomp](https://github.com/Xeeynamo/sotn-decomp) and [zeldaret/oot](https://github.com/zeldaret/oot) are also useful references for project organization and documentation.
+
+## Thanks
+
+A heartfelt thank you to Squaresoft and to everyone who had a hand in creating *Legend of Mana*. The game is full of imagination, experimentation, unusual ideas, beautiful artwork and music, and technical choices that still make it fascinating to study decades later. Projects like this exist because the original developers, artists, musicians, designers, writers, and support staff took chances and created something distinctive enough that people still care about understanding and preserving it today.
+
+This decompilation is, above all, an expression of appreciation for that work. Thank you for making such a beautiful and memorable game, and for being willing to try something different.
 
 ## Legal
 
